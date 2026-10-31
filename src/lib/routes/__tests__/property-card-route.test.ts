@@ -53,7 +53,12 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
     // 🔴 Η καρδιά της άγκυρας. Επί μήνες αυτό το αρχείο ήταν **σκέτο**
     // `redirect()` προς σελίδα που αγνοούσε την παράμετρο.
     expect(page).not.toMatch(/\bredirect\s*\(/);
-    expect(page).toContain('PropertyDetailPageContent');
+    // ADR-280 §11.8 Β4.3 — το περιεχόμενο έρχεται από το ΜΗΤΡΩΟ (το chunk φέρνει τα κείμενά του), και η εγγραφή
+    // φορτώνει ακριβώς το `PropertyDetailPageContent`. Στατικό import εδώ = όριο που χάθηκε.
+    expect(page).toContain('LazyRoutes.PropertyDetail');
+    expect(page).not.toMatch(/from\s+['"]@\/components\/properties\/detail\/PropertyDetailPageContent['"]/);
+    const registry = read('src/utils/lazyRoutes.tsx');
+    expect(registry).toMatch(/PropertyDetail:\s*\{\s*load:\s*\(\)\s*=>\s*import\('@\/components\/properties\/detail\/PropertyDetailPageContent'\)/);
   });
 
   it('Α2: η σελίδα παραδίδει την ταυτότητα της διαδρομής στο περιεχόμενο', () => {
@@ -61,7 +66,8 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
 
     // Χωρίς αυτό, η σελίδα θα υπήρχε και θα έδειχνε **οτιδήποτε** — η ακριβής
     // αστοχία του `/properties`, μια στάση πιο μέσα.
-    expect(page).toMatch(/await\s+params/);
+    // ADR-280 §11.8 Β4.3 — σελίδα πελάτη (ο server component δεν μπαίνει με τελεία στο `LazyRoutes`): `use(params)`.
+    expect(page).toMatch(/\buse\(params\)/);
     expect(page).toMatch(/propertyId=\{\s*id\s*\}/);
   });
 

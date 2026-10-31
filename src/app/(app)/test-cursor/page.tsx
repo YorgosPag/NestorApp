@@ -5,33 +5,24 @@
 import React, { useState, useEffect } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createModuleLogger } from '@/lib/telemetry';
+import { LazyHarnessSurfaces } from '@/utils/lazyHarnessRoutes';
 import '@/lib/design-system';
 const logger = createModuleLogger('TestCursorPage');
 
-// Dynamic import για SSR compatibility
-// 🏢 ENTERPRISE: Type-safe component state
-interface CursorSettingsPanelProps {
-  isVisible: boolean;
-  onClose: () => void;
-}
+// ADR-280 §11.8 Β4.3 — το πάνελ έρχεται από το μητρώο επιφανειών (`lazyHarnessRoutes`): κώδικας ΚΑΙ κείμενα σε ένα αίτημα.
+// Το χειρόγραφο `import()` εδώ δεν περίμενε τα κείμενα — ωμά κλειδιά μόλις το `dxf-viewer` βγει από την εκκίνηση (Β5).
+const CursorSettingsPanel = LazyHarnessSurfaces.HarnessCursorSettingsPanel;
 
 const TestCursorPageClient = () => {
   const colors = useSemanticColors();
-  const [CursorComponent, setCursorComponent] = useState<React.ComponentType<CursorSettingsPanelProps> | null>(null);
+  const [isPanelLoaded, setIsPanelLoaded] = useState(false);
   // 🏢 ENTERPRISE: State for cursor settings panel visibility
   const [isPanelVisible, setIsPanelVisible] = useState(true);
 
   useEffect(() => {
-    // Import the component only on client side
-    // ADR-777 §8.12 — ΑΛΙΑΣ, ΟΧΙ ΣΧΕΤΙΚΟ ΜΟΝΟΠΑΤΙ. Το `../../subapps/…` έδειχνε έξω από
-    // το `src/app` και **έσπασε σιωπηλά** όταν η σελίδα μετακόμισε ένα επίπεδο βαθύτερα
-    // (`(app)/`): έγινε `src/app/subapps/…`, που δεν υπάρχει ⇒ 500. Ήταν το **μοναδικό**
-    // σπασμένο σχετικό import σε 940 αρχεία, και το βρήκε η φωτογραφία διαδρομών — όχι
-    // ο μεταγλωττιστής, γιατί το `import()` λύνεται σε χρόνο εκτέλεσης.
-    import('@/subapps/dxf-viewer/ui/CursorSettingsPanel')
-      .then((module) => {
-        setCursorComponent(() => module.default as React.ComponentType<CursorSettingsPanelProps>);
-      })
+    // Ο ΙΔΙΟΣ φορτωτής με το mount (`preload`): η ένδειξη «loaded» σημαίνει κώδικας ΚΑΙ κείμενα.
+    CursorSettingsPanel.preload()
+      .then(() => setIsPanelLoaded(true))
       .catch((error) => {
         logger.error('Failed to load CursorSettingsPanel', { error });
       });
@@ -48,7 +39,7 @@ const TestCursorPageClient = () => {
         <div className="text-sm text-muted-foreground">
           Ανοίξτε τα Developer Tools (F12) και δείτε το Console για debug μηνύματα.
         </div>
-        {CursorComponent ? (
+        {isPanelLoaded ? (
           <div className="mt-4 text-[hsl(var(--text-success))] text-sm">
             ✓ CursorSettingsPanel loaded successfully
           </div>
@@ -59,8 +50,8 @@ const TestCursorPageClient = () => {
         )}
       </div>
       
-      {CursorComponent && (
-        <CursorComponent
+      {isPanelLoaded && (
+        <CursorSettingsPanel
           isVisible={isPanelVisible}
           onClose={() => setIsPanelVisible(false)}
         />

@@ -18,9 +18,11 @@ import { SaleInfoContent } from '@/components/sales/tabs/SaleInfoContent';
 import { PropertySummaryContent } from '@/components/sales/tabs/PropertySummaryContent';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 import dynamic from 'next/dynamic';
+import { SalesSurfaces } from '@/components/sales/sales-surfaces';
 
 const ChangePriceDialog = dynamic(() => import('@/components/sales/dialogs/ChangePriceDialog').then(m => ({ default: m.ChangePriceDialog })), { ssr: false });
-const ReserveDialog = dynamic(() => import('@/components/sales/dialogs/ReserveDialog').then(m => ({ default: m.ReserveDialog })), { ssr: false });
+// ADR-280 §11.8 Β4.3 — ο διάλογος κράτησης ονομάζει την οικογένεια `dxf-viewer`: περνά από το μητρώο επιφανειών, ώστε το chunk να φέρνει τα κείμενά του.
+const ReserveDialog = SalesSurfaces.SalesReserveDialog;
 const SellDialog = dynamic(() => import('@/components/sales/dialogs/SellDialog').then(m => ({ default: m.SellDialog })), { ssr: false });
 const RevertDialog = dynamic(() => import('@/components/sales/dialogs/RevertDialog').then(m => ({ default: m.RevertDialog })), { ssr: false });
 const ConveyanceTab = dynamic(() => import('@/components/sales/conveyance/ConveyanceTab').then(m => ({ default: m.ConveyanceTab })), { ssr: false });

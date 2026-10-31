@@ -114,14 +114,16 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
   ReportsBuilder: {
     load: () => import('@/components/reports/pages/ReportsBuilderPageContent').then(mod => ({ default: mod.ReportsBuilderPageContent })),
     // ADR-884 §9.1 Α4 — ο builder καλεί το ωμό `react-i18next` hook, που ΔΕΝ φορτώνει namespace· ίδια αιτία με το cash-flow.
-    loadingType: 'dashboard', ssr: false, namespaces: ['report-builder', 'report-builder-domains'],
+    // ADR-280 §11.8 — τα `report-builder*` τα περιμένει πλέον η γραμμή του χάρτη (`awaitedNamespaces`).
+    loadingType: 'dashboard', ssr: false,
   },
 
   ReportsCashFlow: {
     load: () => import('@/components/reports/pages/ReportsCashFlowPageContent').then(mod => ({ default: mod.ReportsCashFlowPageContent })),
     // ADR-884 §9.1 Α4 — το `cash-flow` δεν είναι CRITICAL και η σελίδα καλεί το ωμό `react-i18next` hook, που ΔΕΝ
     // φορτώνει namespace: ζωγράφιζε ωμά κλειδιά (`kpi.currentBalance`) και αγγλικές ενσωματωμένες εφεδρείες.
-    loadingType: 'dashboard', ssr: false, namespaces: ['cash-flow'],
+    // ADR-280 §11.8 — το `cash-flow` το περιμένει πλέον η γραμμή του χάρτη (`awaitedNamespaces`).
+    loadingType: 'dashboard', ssr: false,
   },
 
   // =========================================================================
@@ -282,9 +284,10 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
   // ADR-900 §3.8 — η ουρά ελέγχου επαληθεύσεων κατοχής (εργαλείο παρόχου, μόνο super_admin).
   // Οι καρτέλες βάφονται από το `property-market` στο πρώτο καρέ: μετρημένο ζωντανά 2026-10-05, ωμά κλειδιά
   // 560ms → 2.586ms. Το `admin` ταξιδεύει ολόκληρο στο κέλυφος — δεν δηλώνεται.
+  // ADR-280 §11.8 — το `property-market` το περιμένει πλέον η γραμμή του χάρτη (`awaitedNamespaces`).
   AdminOwnershipVerifications: {
     load: () => import('@/components/admin/pages/OwnershipVerificationsPageContent').then(mod => ({ default: mod.OwnershipVerificationsPageContent })),
-    loadingType: 'dashboard', ssr: false, namespaces: ['property-market'],
+    loadingType: 'dashboard', ssr: false,
   },
 
   AdminDatabaseUpdate: {
@@ -337,8 +340,9 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
 
   SharedFile: {
     load: () => import('@/components/shared/pages/SharedFilePageContent').then(mod => ({ default: mod.SharedFilePageContent })),
-    // ADR-884 §9.1 Α4 — η περιήγηση (`spatial_tour`) δεν ζωγραφίζει πριν φτάσει το namespace της.
-    loadingType: 'spinner', ssr: false, namespaces: ['spatial-tour'],
+    // ADR-884 §9.1 Α4 — η περιήγηση (`spatial_tour`) δεν ζωγραφίζει πριν φτάσει το namespace της·
+    // ADR-280 §11.8 — το περιμένει πλέον η γραμμή του χάρτη (`awaitedNamespaces`).
+    loadingType: 'spinner', ssr: false,
   },
 
   PhotoShare: {

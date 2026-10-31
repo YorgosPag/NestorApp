@@ -52,6 +52,12 @@ export const LazyRoutes = {
       loadingType: 'list', ssr: false,
     },
 
+    // ADR-280 §11.8 Β4.3 — η καρτέλα ακινήτου (`/properties/[id]`): το chunk φέρνει τα κείμενά του (BIM/κάτοψη).
+    PropertyDetail: {
+      load: () => import('@/components/properties/detail/PropertyDetailPageContent').then(mod => ({ default: mod.PropertyDetailPageContent })),
+      loadingType: 'list', ssr: false,
+    },
+
     // Form routes (ADR-294 Batch 8 — replaced placeholder components with real implementations)
     ObligationsNew: {
       load: () => import('@/components/obligations/pages/NewObligationPageContent').then(mod => ({ default: mod.NewObligationPageContent })),

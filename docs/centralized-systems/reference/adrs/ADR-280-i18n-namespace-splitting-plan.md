@@ -357,3 +357,325 @@ After full implementation:
 | 2026-04-20 | BUGFIX: `/spaces/properties` (+`/sales/available`, `/sales/sold`) rendered `filters.from`, `filters.to`, `units.operationalStatus.*` as literal keys. Root cause **two independent misroutings**: (1) `propertyListFiltersConfig.i18nNamespace: "properties"` but all labels (`FT`/`SP`/`FL`/`AFO`/`PROPERTY_FILTER_LABELS`) use prefix `filters.*` — resolver stripped `properties.` (not `filters.`) → `t('filters.allStatuses')` on `properties` ns → miss. (2) 5 option labels hardcoded `"units.operationalStatus.*"` but `operationalStatus` lives in `properties-enums.json`, not under `units` in any namespace. (3) `FilterField.tsx` hardcoded `t('filters.from')`/`.to`/`.minimum`/`.maximum`/`.all` on whatever namespace the parent config carried — no namespace's top-level has nested `filters.from`. **Fix**: (a) `i18nNamespace: "properties" → "filters"` in `propertyListFiltersConfig` so `filters.*` labels strip correctly via AdvancedFiltersPanel.translateLabel; (b) rewrote 5 option labels `"units.operationalStatus.X"` → `"properties-enums:operationalStatus.X"` (explicit `ns:key` syntax — i18next resolves cross-namespace, `properties-enums` is preloaded); (c) rewrote 5 hardcoded `t('filters.X')` calls in `FilterField.tsx` to `t('filters:X')` so they work regardless of parent config's default ns. Blast radius: 3 pages using `propertyListFiltersConfig` (Units + Sales Available + Sales Sold) all fixed identically; `FilterField.tsx` change is generic — other consumers (building/project/contact filters) previously showed same literals on range inputs, now fixed too. | Claude (Opus 4.7 1M) + Georgios Pagonis |
 | 2026-07-29 | 🔴 **BUGFIX ΚΛΑΣΗΣ — το compat στρώμα ήταν ΝΕΚΡΟ για ολόκληρη τη σύμβαση `ns:key`.** Ο wrapper του `useTranslation.ts` έκρινε την επιτυχία με **`result !== key`**. Όταν όμως το i18next **αστοχεί** σε κλειδί με πρόθεμα namespace (`dxf-viewer:import.warnings.summary`), επιστρέφει το κλειδί **χωρίς** το πρόθεμα (`import.warnings.summary`) — που φυσικά `!== key`. Άρα **κάθε** αστοχία σε `ns:key` περνούσε για **επιτυχία**: (1) το ωμό κλειδί ζωγραφιζόταν στην οθόνη σαν μετάφραση (μετρημένο ζωντανά στο DXF import toast, 2026-07-29) και (2) το `remapLegacyTranslationKey()` **δεν καλούνταν ΠΟΤΕ** για τη σύμβαση `ns:key` — δηλαδή για **όλα** τα `NOTIFICATION_KEYS` (`projects:`, `files:`, `dxf-viewer:` …) και για κάθε ρητό `ns:key` που εισήγαγε η καταχώριση 2026-04-20 παρακάτω. Δεύτερο, ανεξάρτητο: το `fullKey` χτιζόταν ως `${primaryNs}:${key}` **ακόμα κι όταν το key έφερε ήδη πρόθεμα** ⇒ `dxf-viewer:dxf-viewer:import.…`, που δεν ταιριάζει με κανέναν legacy κανόνα — άρα ακόμα κι αν η ανίχνευση αστοχίας ήταν σωστή, το remap θα αστοχούσε. **Fix:** `isUnresolved(result, key)` = «κλειδί **ή** bare-key ⇒ αστοχία», μέσω του **εξαγόμενου πλέον** `getExplicitNamespace()` του `namespace-compat.ts` (SSoT — ο wrapper πρέπει να ερμηνεύει το `:` **ακριβώς** όπως το compat, αλλιώς ξαναγεννιέται η ίδια ασυμφωνία)· κανένα διπλό πρόθεμα· και **dev-only `logger.warn`** (μία φορά ανά κλειδί) που καταγράφει κλειδί + γλώσσα + **ποια namespaces ήταν όντως φορτωμένα** — η μόνη πληροφορία που ξεχωρίζει «λείπει η μετάφραση» από «δεν είχε φορτώσει ακόμα». **Ένα ωμό κλειδί δεν επιτρέπεται πλέον να είναι σιωπηλό.** ⚠️ Το **CHECK 3.13** δεν πιάνει αυτή την κλάση: σαρώνει **μόνο** τον resolver των service forms (`translate-field-value.ts`). Tests: `src/i18n/__tests__/use-translation-prefixed-key-resolution.test.tsx` (4, **mutation-verified** — με `result !== key` το πρώτο πέφτει). Πλήρες σκεπτικό: ADR-635 §Φ C.23 Β. | Claude (Opus 5) + Georgios Pagonis |
 | 2026-07-31 | 🔴 **BUGFIX ΚΛΑΣΗΣ — ο ΠΙΝΑΚΑΣ namespaces ΔΕΝ κάνει lookup, μόνο φόρτωση.** Το `useTranslation(['dxf-viewer', …, 'files-media'])` **φόρτωνε** το `files-media` αλλά **κανείς δεν κοίταζε ποτέ μέσα του**: το react-i18next δένει το `t` στο **`namespaces[0]`** και μόνο — `node_modules/react-i18next/dist/commonjs/useTranslation.js:56` → `i18nOptions.nsMode === 'fallback' ? namespaces : namespaces[0]`, και το έργο **δεν** ορίζει `nsMode`. Μετρημένο ζωντανά (Chrome console, `localhost:3000/dxf/viewer`, 2026-07-31): 8 warnings `raw key reached the UI → dxf-viewer:floorplanImport.drawingUnits.*` **με `bundles: [… files-media=loaded]`** — δηλαδή το bundle ήταν φορτωμένο, τα κλειδιά υπήρχαν σε `el`+`en`, και ο χρήστης έβλεπε ωμά κλειδιά στο dialog «Εισαγωγή Αρχείου DXF» (ADR-716 Φ5). **Μέχρι σήμερα το ΜΟΝΟ μονοπάτι προς μη-πρωτεύον ns ήταν το compat remap** — που καλύπτει μόνο **καταγεγραμμένες ρίζες** στον `LEGACY_NAMESPACE_ROOT_MAP`· το `floorplanImport` υπάρχει μόνο κάτω από `files`, όχι κάτω από `dxf-viewer`, άρα το DXF modal έμενε ακάλυπτο. Επιφάνεια: **733 αρχεία** καλούν `useTranslation([...])` με πίνακα. **Fix:** `resolveAcrossNamespaces()` στο `useTranslation.ts` — δίχτυ **τελευταίας γραμμής** που ρωτά ρητά (`ns:key`) κάθε άλλο ns του πίνακα, **αφού** αποτύχουν και το primary και το compat, δηλαδή ακριβώς εκεί όπου σήμερα ζωγραφιζόταν ωμό κλειδί ⇒ **μηδενική επιφάνεια παλινδρόμησης by construction**· η σειρά του πίνακα παραμένει η σειρά προτεραιότητας. ⚠️ **ΜΗΝ** το αντικαταστήσεις με καθολικό `nsMode: 'fallback'` στο init: εκείνο τρέχει **πριν** το compat remap και μπορεί να αλλάξει την επίλυση κλειδιών που σήμερα δουλεύουν μέσω compat. ⚠️ Κανένα static gate δεν έπιανε αυτή την κλάση: το `resolver-reach:audit` (CHECK 3.13) βγήκε **καθαρό** στα ίδια κλειδιά, και το `validate:i18n` τα μετρά ως υπαρκτά — «το κλειδί υπάρχει» ≠ «κάποιος το ψάχνει εκεί που ζει». Tests: `use-translation-prefixed-key-resolution.test.tsx` 4 → **7**, **mutation-verified** (πρόωρο `return undefined` στο `resolveAcrossNamespaces` ⇒ πέφτει **μόνο** το νέο πρώτο test, τα 6 μένουν πράσινα). Οπτική επαλήθευση: το dialog δείχνει «Μονάδες Σχεδίου DXF / Αυτόματα / Μέτρα (m) / …» και **0** warnings `raw key`. | Claude (Opus 5) + Georgios Pagonis |
+| 2026-10-30 | 🗂️ **ΜΙΑ ΔΗΛΩΣΗ ΟΙΚΟΓΕΝΕΙΑΣ — CHECK 3.108 (§11).** Οι ~650 χειρόγραφες λίστες «γονέας + όλα τα splits» (10 οικογένειες) αναδιατυπώθηκαν σε `useTranslation('P')` με codemod **που αποδεικνύει την ισοδυναμία ανά κλήση** (654/654 ζεύγη ξαναποδείχθηκαν από το git diff). Νέα πύλη ⛔ Κ1-Κ3 + 🔴 ratchet `order-bearing` (5). Πλήρες σκεπτικό: §11. | Claude (Opus 5.5) + Georgios Pagonis |
+| 2026-10-30 | 🧩 **§11.8 Β4.1 — `defineLazySurfaces`**: οι τεμπέλικες επιφάνειες περνούν από την ΙΔΙΑ μηχανή με τις διαδρομές (ένας πυρήνας chunk, ένας βρόχος, ένας χάρτης, ένα πεδίο config)· νέος έλεγχος «καλών `defineLazy*` εκτός μητρώων ⇒ άρνηση» σε γεννήτορα + Layer 1. Χάρτης/σφράγιση αμετάβλητα. Πλήρες: §11.8 · ADR-744 §33.2. | Claude (Opus 5.5) + Georgios Pagonis |
+| 2026-10-31 | 🩺 **§11.8 Β4.3 — οι θεραπείες**: 0 dxf τριάδες με εκκίνηση χωρίς dxf (ήταν 93)· 5 σελίδες + harness από μητρώο· `SalesReserveDialog` / `PropertyDossierTab` επιφάνειες· **κανόνας Ρ** (import() στόχου εγγραφής εκτός μητρώου ⇒ άρνηση) + `preload()` από τον ίδιο πυρήνα. Εισδοχή 400→321· Κ2 57→77 (ρητό «ναι»). Πλήρες: §11.8 · ADR-744 §33.4. | Claude (Opus 5.5) + Georgios Pagonis |
+
+---
+
+## 11. Μία δήλωση οικογένειας namespaces — CHECK 3.108 (2026-10-30)
+
+### 11.1 Το πρόβλημα (μετρημένο)
+
+Η διάσπαση του §3 έγραψε τον χάρτη των splits **μία φορά**: `COMPAT_NAMESPACE_MAP` στο `src/i18n/namespace-compat.ts`.
+Τον διαβάζουν ήδη:
+- ο hook (`resolveAllNamespaces()` στο `useTranslation.ts`): `useTranslation('building')` ⇒ `building` + 5 splits·
+- τα στατικά εργαλεία (`withCompatNamespaces()` / `loadCompatNamespaces()` στο `scripts/lib/i18n-namespace-extract.js`,
+  CHECK 3.8 · 3.34).
+
+Παρ' όλα αυτά, σε κάθε component δόθηκε **με αντιγραφή** ολόκληρη η λίστα. Μετρημένο 2026-10-30: **~650 κλήσεις σε
+10 οικογένειες**:
+
+| Οικογένεια | Κλήσεις |
+|---|---|
+| building | 100 |
+| dxf-viewer | 96 |
+| accounting | 96 |
+| files | 85 |
+| projects | 70 |
+| properties | 60 |
+| crm | 59 |
+| contacts | 56 |
+| payments | 21 |
+| common | 10 |
+
+Ένα νέο split θα ήθελε 650 χειρόγραφες αλλαγές, και όποια ξεχνιόταν θα ζωγράφιζε ωμό κλειδί. **Η πηγή υπήρχε· κανείς
+δεν τη χρησιμοποιούσε.** Άρα το επίπεδο (α) δεν χρειάστηκε νέο SSoT: χρειάστηκε να σβηστούν οι επαναλήψεις και μια
+πύλη να αρνείται την επιστροφή τους.
+
+### 11.2 Πρακτική των μεγάλων
+
+- **i18next / react-i18next / Modern.js:** ένα namespace ανά feature, lazy loading, `keyPrefix`, typed keys μέσω
+  `CustomTypeOptions` (selector API από v25.4). Το component ζητά **το namespace του feature**, όχι τη λίστα αρχείων του.
+- **i18next-cli:** στατική ανάλυση ανά εμβέλεια `useTranslation`· `extract --ci` αποτυγχάνει σε απόκλιση.
+- **Lingui:** ο compiler συλλέγει τα μηνύματα· κάθε component παίρνει αυτόματα μόνο τα δικά του.
+
+Εδώ πηγαίνουμε **ένα βήμα παραπέρα από το i18next-cli**: η πύλη δεν συγκρίνει μόνο δήλωση με κλειδιά, αλλά
+**αποδεικνύει ότι η αναδιατύπωση δεν αλλάζει ΚΑΜΙΑ λέξη στην οθόνη** (§11.3) πριν γράψει.
+
+### 11.3 Η απόδειξη ισοδυναμίας: η σειρά είναι σειρά προτεραιότητας
+
+Ο hook ψάχνει με την εξής σειρά:
+1. primary (`[0]`)·
+2. compat remap·
+3. τα υπόλοιπα με τη σειρά του `resolveAllNamespaces()` (δηλωμένα **πριν** τα splits τους).
+
+Άρα το `['P', …splits(P), 'X']` γίνεται `['P', 'X']` και το X περνά **μπροστά** από τα splits. Μετρήθηκαν ~25 κοινά
+φύλλα ανάμεσα σε οικογένειες (π.χ. `common` ∩ `properties-detail` = 7) και 3 μέσα σε οικογένεια
+(`contacts-core` ∩ `contacts-relationships`).
+
+Το `scripts/lib/i18n-namespace-family/equivalence.js` αποδεικνύει, **για κάθε κλειδί που ΜΠΟΡΕΙ να ζητήσει το
+αρχείο**, σε κάθε γλώσσα, ότι το πρώτο namespace που το λύνει μένει το ίδιο, και ότι το σύνολο των φορτωμένων είναι
+ίδιο.
+
+Το «τι μπορεί να ζητήσει» το απαντά ο ταξινομητής AST του CHECK 3.34 (`key-extract.js`). Δεν γράφτηκε δεύτερη μηχανή.
+Η απάντηση γίνεται «τα πάντα» στις εξής περιπτώσεις:
+- **Διαφυγή του `t`** ως τιμή (όρισμα, prop): **190 / 588** αρχεία.
+- Ανεπίλυτο κλειδί.
+- `defaultValue`.
+
+Δύο επιπλέον κανόνες:
+- Κλειδί με ρητό `ns` που το έχει δεν επηρεάζεται από τη σειρά.
+- Ένας κόμβος-αντικείμενο μετράει μόνο με `returnObjects`. Τα `building-tabs` και `building-timeline` μοιράζονται
+  **μόνο** τον κόμβο `tabs` (§4 `LEGACY_NESTED_MAP`), κανένα φύλλο.
+
+⚠️ **Μάθημα που μετρήθηκε κατά την υλοποίηση:**
+- Το πρώτο πέρασμα του codemod δεν έλεγχε τη διαφυγή του `t`.
+- Η επανεπαλήθευση όλων των ζευγών από το `git diff` βρήκε **3** αναδιατυπώσεις που η πλήρης απόδειξη δεν
+  επιβεβαίωνε. Επανήλθαν.
+- Η επανεπαλήθευση είναι πλέον ο κανόνας: 654/654.
+
+### 11.4 Η πύλη (CHECK 3.108 · `docs/gates/3.108.md`)
+
+| | Ερώτηση | Μηχανισμός |
+|---|---|---|
+| Κ1 | γονέας P **και** split του P (εκτός `[0]`), **αποδεδειγμένα αφαιρέσιμο** | ⛔ ZERO-TOL |
+| Κ2 | **όλα** τα splits του P χωρίς τον P | ⛔ ZERO-TOL |
+| Κ3 | bundle (`namespace-bundles.ts`) με P χωρίς όλα τα splits του | ⛔ ZERO-TOL |
+| order-bearing | Κ1-σχήμα όπου η αφαίρεση θα άλλαζε λέξη | 🔴 RATCHET κατά ταυτότητα (`.i18n-namespace-family-baseline.json`, 5) |
+
+- Το `[0]` δεν μετράει ως split: ορίζει primary (`['common-photos', 'common']` = πρόθεση).
+- Το `COMMON_NAMESPACES` **μένει**. Το διαβάζουν μη-hook καταναλωτές (preload αλλαγής γλώσσας, `useLanguagePreference`),
+  που **δεν** επεκτείνουν compat. Το Κ3 κάνει την απόκλισή του από τον χάρτη μη εκφράσιμη.
+- `--fix` = το codemod, με την **ίδια** κρίση (`judge`) με την πύλη: μία απόφαση, όχι δύο.
+
+**Αποτέλεσμα:**
+- 658 αναδιατυπώσεις σε 588 αρχεία (εκ των οποίων 25 είχαν ήδη αλλαγές άλλων).
+- Κ1 = Κ2 = Κ3 = 0.
+- 5 `order-bearing`:
+  - `SalesAvailablePropertiesPageContent`
+  - `SalesSoldPageContent`
+  - `StoragePageContent`
+  - `PropertyDetailsContent`
+  - `ReadOnlyMediaViewer`
+- 21 άγκυρες· 7/7 μεταλλάξεις σκοτώθηκαν· CHECK 3.8 Layer 2 χωρίς νέα παράβαση· σχετικά tests 811/811
+  (1 άγκυρα, `property-header-status-badge`, έλεγχε το **γράμμα** της δήλωσης και διορθώθηκε να ρωτά τον χάρτη).
+
+### 11.5 Επόμενο: επίπεδο (β)
+
+Μετρημένο: **~85%** των αρχείων χρειάζονται **ένα** namespace της οικογένειας, αλλά φορτώνουν όλη την οικογένεια
+(κτίριο: ~164 KB αντί για 8–47 KB). Η κατεύθυνση:
+- κάθε component ζητά **μόνο** τα splits των κλειδιών του, με γεννήτορα + πύλη «περιττό namespace»·
+- τα 5 `order-bearing` λύνονται εκεί, με ρητό `ns`.
+
+Εκκρεμεί στο `.claude-rules/pending-ratchet-work.md`.
+
+### 11.6 Πριν την απόφαση του (β): έρευνα + μέτρηση με τη ΜΙΑ μηχανή (2026-10-30)
+
+**Έρευνα (2026-10-30)**: κανένα από τα εργαλεία της αγοράς δεν **παράγει** τη δήλωση namespaces ανά component.
+Το `i18next-cli` έχει `status --unused` (ορφανά κλειδιά ανά namespace) — **όχι** «περιττό namespace ανά αρχείο»·
+το `--ci` που επικαλούνταν το handoff είναι του `vue-i18n-extract`, όχι του i18next-cli (μη επαληθευμένο). Το Lingui
+**δεν** κόβει καταλόγους ανά διαδρομή (issue #1384: όλος ο κατάλογος κατεβαίνει). Το next-intl συστήνει `pick()` ανά
+σελίδα, δηλωμένο **με το χέρι**. Το FormatJS εξάγει μηνύματα, δεν κόβει. ⇒ Ο γεννήτορας + η πύλη δύο κατευθύνσεων
+είναι **πάνω** από την πρακτική, και η μηχανή υπάρχει ήδη (`requestOf` · `key-extract.js` · `proveEquivalent`).
+
+**Μέτρηση** (μόνο ανάγνωση, `requestOf` του 3.108 πάνω στο `el`): **871** αρχεία δηλώνουν οικογένεια· **276 (32%)**
+ζητούν «τα πάντα» (ανεπίλυτο κλειδί · `defaultValue` · διαφυγή του `t`) ⇒ **δεν** στενεύουν χωρίς χειρωνακτική
+δουλειά· **580 (67%)** στενεύουν· 26 είναι ήδη ελάχιστα. Άθροισμα ανά αρχείο: ~185 MB → ~94 MB (−49%).
+⚠️ **Αυτό ΔΕΝ είναι κέρδος δικτύου**: το `loadNamespace` κατεβάζει κάθε namespace **μία** φορά ανά συνεδρία, και τα
+route slices είναι `shell-partial` (ADR-744 §15)· κερδίζει μόνο η οθόνη όπου **κανένα** μονταρισμένο component δεν ζητά
+την υπόλοιπη οικογένεια. Το πραγματικό μέτρο είναι η **ένωση ανά διαδρομή** (κλειστότητα εισαγωγών του ADR-744,
+`route-slices.js`) — **δεν μετρήθηκε ακόμα**. Ένα «τα πάντα» στην ίδια οθόνη ακυρώνει το κέρδος των αδελφών του.
+
+### 11.7 Φάση 0: η ένωση ανά διαδρομή — μετρημένη (2026-10-30)
+
+**Ερώτημα**: για κάθε οθόνη (`page.tsx` + οι `LazyRoutes.<Κλειδί>` που ονομάζει), πόσα KB κάθε οικογένειας
+φορτώνονται **σήμερα** και πόσα **θα** φορτώνονταν αν κάθε αρχείο ζητούσε μόνο τα splits των κλειδιών του (τα «τα
+πάντα» κρατούν όλη την οικογένεια).
+
+**Καμία νέα μηχανή** (μόνο σύνθεση, script μέτρησης εκτός repo):
+- γράφος + walk: `buildModuleGraph` (`plan.js`) + `computeShellClosure` (`shell-closure.js`)· μητρώα: `readRegistries` /
+  `buildLazyRouteNamespaces` (`lazy-routes.js`, ADR-744 §27)·
+- «τι ονομάζει ένα αρχείο»: `createNamespaceDeclarationReader` + `extractExplicitTCalls` + `lazyRouteOpaqueNamespaces`
+  — η ίδια σύνθεση με το ιδιωτικό `createFileNamespaceReader`·
+- «τι ζητά ένα αρχείο»: `requestOf` (CHECK 3.108)· ιδιοκτήτες κλειδιών: `nodePaths` (`equivalence.js`) στο `el`·
+- βάση εκκίνησης: `bootNamespaces` (`lazy-routes.js`) = ολόκληρα του κελύφους ∪ `CRITICAL_NAMESPACES`.
+
+**Απόδειξη ότι η σύνθεση μετρά το σωστό**: για τις 82 τεμπέλικες διαδρομές (`ssr: false`) δίνει **ίδια** namespaces
+με τον `buildLazyRouteNamespaces` στις **82/82**. Με το δεσμευμένο `lazy-route-namespaces.json` αποκλίνει **1**
+(`AccountingAPYCertificates`): ο δίσκος έχει αστάδιοποίητη δουλειά άλλου agent στο `apy-certificates/*` — η μηχανή
+στον δίσκο συμφωνεί με τη σύνθεση. Μεταλλάξεις: «χωρίς compat επέκταση» ⇒ **59/82** αποκλίνουν· «χωρίς ρητά `t('ns:…')`» ⇒ **5/82** (σκοτώθηκαν και οι δύο).
+Δύο βάθη: **πρώτη απόδοση** (η κλειστότητα του ADR-744, κόβεται στο `import()`) και **βαθιά** (+ κάθε δυναμικό όριο,
+μεταβατικά — άνω όριο συνεδρίας της οθόνης). 238 σελίδες, 216 παραγωγής (εκτός test-harness/demo/debug).
+
+#### 11.7.1 🔴 Το αποτέλεσμα: με τη σημερινή εκκίνηση, το (β) δίνει **0 KB** σε **κάθε** οθόνη
+
+Και τα **47** namespaces των **13** οικογενειών του `COMPAT_NAMESPACE_MAP` είναι στο σύνολο εκκίνησης: το
+`config.ts` (IIFE του client) κάνει `await loadNamespace` για **κάθε** `CRITICAL_NAMESPACES` στην εκκίνηση, και η
+λίστα περιέχει **όλες** τις οικογένειες (building, dxf-viewer, contacts, properties, payments, projects, …).
+
+| μέγεθος (el, compact UTF-8) | raw | gzip |
+|---|---:|---:|
+| σύνολο εκκίνησης (81 από 128 namespaces) | **1.906,8 KB** | **532,4 KB** |
+| — από αυτά οι 13 οικογένειες (47 ns) | 1.495,7 KB | — |
+| όλα τα `el` locales | 2.620,9 KB | — |
+
+⇒ Σε **216/216** οθόνες, σε **πρώτη απόδοση και βαθιά**, «σήμερα − εκκίνηση» = ∅ για κάθε οικογένεια. Το στένεμα
+των δηλώσεων **δεν αλλάζει ούτε ένα byte** που κατεβαίνει. Το «−49% ανά αρχείο» του §11.6 δεν είναι μέτρο δικτύου.
+
+#### 11.7.2 Αντιπαράδειγμα: αν η εκκίνηση ήταν **μόνο** το κέλυφος
+
+Πρώτη απόδοση, άθροισμα ανά οθόνη (KB·οθόνες, el raw — gzip σε παρένθεση):
+
+| οικογένεια | οθόνες | με κέρδος | σήμερα | μετά (β) | κέρδος (β) | ιδανικό* |
+|---|---:|---:|---:|---:|---:|---:|
+| common | 144 | 13 | 17.254 | 15.675 | 1.580 (416) | 14.083 |
+| projects | 23 | 9 | 1.479 | 1.160 | 319 (95) | 806 |
+| contacts | 26 | 7 | 1.762 | 1.503 | 258 (83) | 1.503 |
+| crm | 32 | 19 | 1.002 | 813 | 188 (69) | 724 |
+| navigation | 34 | 25 | 157 | 42 | 115 (37) | 5 |
+| files | 38 | 2 | 2.291 | 2.261 | 31 (10) | 1.938 |
+| properties | 30 | 2 | 1.682 | 1.657 | 25 (8) | 1.562 |
+| accounting | 35 | 1 | 2.083 | 2.068 | 14 (4) | 1.685 |
+| reports | 18 | 2 | 328 | 318 | 9 (4) | 281 |
+| building · payments · dxf-viewer · geo-canvas | 14 · 7 · 8 · 8 | **0** | 1.786 · 633 · 4.756 · 375 | ίδιο | **0** | 780 · 291 · 4.232 · 375 |
+
+\* ιδανικό = αν **κάθε** «τα πάντα» στένευε στον γονέα (άνω όριο, όχι υπόσχεση).
+Βαθιά, το κέρδος συρρικνώνεται κι άλλο (common 608 · projects 248 · contacts 111 · crm 109 · navigation 55 · files 31 ·
+οι υπόλοιπες 7 οικογένειες **0**): στη βαθιά κλειστότητα σχεδόν πάντα υπάρχει ένα «τα πάντα».
+
+**Αρχεία «τα πάντα» που μπλοκάρουν** (πρώτη απόδοση, αντιπαράδειγμα · KB·οθόνες που κρατούν δεσμευμένα, άνω όριο
+μοιρασμένο με τους αδελφούς της ίδιας οθόνης):
+
+| οικογένεια | αρχείο | οθόνες | KB |
+|---|---|---:|---:|
+| common | `src/lib/listings/listing-price-label.ts` | 71 | 1.108 |
+| building | `building-management/tabs/PlaceholderTab.tsx` · `generic/UniversalTabsRenderer.tsx` | 11 | 797 |
+| dxf-viewer | `hooks/notifications/useDxfImportNotifications.ts` | 8 | 525 |
+| dxf-viewer · building | `generic/ServiceFormRenderer.tsx` · `generic/ServiceFormTabRenderer.tsx` | 6 | 394 · 288 |
+| accounting · files | `core/AdvancedFilters/AdvancedFiltersPanel.tsx` · `FilterField.tsx` | 26 | 369 · 292 |
+| building | `contacts/details/ProjectParticipationSection.tsx` | 6 | 288 |
+| projects | `ui/navigation/route-tabs.tsx` | 8 | 283 |
+| payments | `projects/tabs/project-budget/ProjectBudgetTab.tsx` | 4 | 274 |
+| common | `NotificationProvider.tsx` (50) · `SearchInput.tsx` (26) · `UnifiedBadgeSystem.tsx` (13) | — | 122 το καθένα |
+
+Τα γενικά renderers (`UniversalTabsRenderer`, `ServiceForm*`, `AdvancedFilters*`) περνούν το `t` ως τιμή ⇒ «τα
+πάντα» σε **κάθε** οικογένεια που τα μοντάρει — αυτή είναι η κλάση, όχι τα μεμονωμένα αρχεία.
+
+#### 11.7.3 Ο πραγματικός μοχλός είναι το `CRITICAL_NAMESPACES`, όχι οι δηλώσεις
+
+Ανά οθόνη παραγωγής, KB οικογενειών που **χρειάζεται** (αντιπαράδειγμα, el raw): πρώτη απόδοση **διάμεσος 122 ·
+p90 277** · βαθιά διάμεσος 188 (p90 1.423, όπου η βαθιά κλειστότητα φτάνει «όλη την εφαρμογή»). **55/216** οθόνες
+δεν χρειάζονται **κανένα** byte οικογένειας ούτε βαθιά. Απέναντι: **1.495,7 KB** οικογενειών σε **κάθε** εκκίνηση.
+Η μεγαλύτερη μεμονωμένη: `dxf-viewer` = **594,5 KB** (το `dxf-viewer-shell` μόνο του 373,6) = **31%** της εκκίνησης,
+που τη χρειάζονται στην πρώτη απόδοση **8/216** οθόνες (βαθιά 84, μέσω δυναμικών ορίων).
+
+⚠️ Γιατί η λίστα μεγάλωσε έτσι: ο κανόνας εισδοχής (ADR-279 §9, `lazy-config.ts`) δέχεται namespace που εμφανίζεται
+σε **ήδη μονταρισμένη** επιφάνεια (καρτέλα, διάλογος) χωρίς αλλαγή διαδρομής — εκεί δεν υπάρχει loading boundary και
+η τεμπέλικη λήψη ζωγραφίζει ωμό κλειδί για ένα καρέ. Δηλαδή το `CRITICAL_NAMESPACES` είναι η **χειρόγραφη** απάντηση
+στο «τι μπορεί να μονταριστεί αργότερα σε αυτή την οθόνη» — ακριβώς η **βαθιά κλειστότητα** που αυτή η μέτρηση
+**παράγει**. Ίδιο σχήμα με το ADR-744 §27, που αντικατέστησε χειρόγραφες δηλώσεις τεμπέλικων διαδρομών με
+παραγόμενες.
+
+**Συνέπεια για το §11.5 / pending (β)**: το (β) **μόνο του** είναι υγιεινή δηλώσεων (ακρίβεια, όχι bytes). Αποκτά
+αξία δικτύου **μόνο** όταν μια οικογένεια **βγει** από το `CRITICAL_NAMESPACES`, και τότε το κέρδος το καθορίζουν τα
+γενικά renderers «τα πάντα», όχι τα 580 αρχεία που στενεύουν. Η επιλογή της επόμενης κίνησης είναι του Giorgio.
+Κόστος της μέτρησης: ~2′15″ ανά πέρασμα (δίσκος, ψυχρό), `--max-old-space-size=8192`.
+
+### 11.8 Πιλότος: το `dxf-viewer` βγαίνει από το `CRITICAL_NAMESPACES` (απόφαση Giorgio 2026-10-30, επιλογή 1)
+
+Στόχος: −594,5 KB (31%) σε κάθε εκκίνηση, **χωρίς** ωμό κλειδί, και ο κανόνας εισδοχής του ADR-279 §9 να γίνει
+**αποδείξιμος από πύλη** για ό,τι βγαίνει. Έξι βήματα, σειριακά.
+
+**Αναγνώριση (μετρημένη):** (1) ο χάρτης `lazy-route-namespaces.json` **δεν** καταναλωνόταν (ADR-744 §27.10 #1)·
+(2) το `/dxf/viewer` φορτώνει το `DxfViewerApp` με δικό του `dynamic()`, όχι μέσω `LazyRoutes.DXFViewer`·
+(3) στην πρώτη απόδοση το `dxf-viewer` το ονομάζουν 8 οθόνες (Κτίρια · Επαφές · Έργα · Ακίνητα ×2 · Ρυθμίσεις
+εταιρείας · Αποθήκες · Στάθμευση) μέσω `useDxfImportNotifications` (σταθερά-κλειδί που ο ταξινομητής δεν λύνει) και
+`ServiceForm*` (`SERVICE_FORM_NAMESPACES` περιέχει `dxf-viewer` ⇒ ο hook φορτώνει και τα 6 splits, ενώ το
+`translateFieldValue` παρακάμπτει το compat)· (4) βαθιά, 91 δυναμικά όρια — σχεδόν όλα **μέσα** στο `DxfViewerApp` ή
+μέσω του prefetch `preloadRoutes.ts`.
+
+- ✅ **Β1 (2026-10-30) — ο χάρτης καταναλώνεται.** ADR-744 §33: `awaitedNamespaces` στο `defineLazyRoutes`,
+  `isSupportedNamespace` (ένας φρουρός), −4 χειρόγραφα `namespaces`. Άγκυρες Χ1–Χ4 + Π1/Π2, μεταλλάξεις 4/4.
+- ✅ **Β2 (2026-10-30) — το `/dxf/viewer` περνά από το μητρώο.** `dxf/viewer/page.tsx`: `LazyRoutes.DXFViewer` στη
+  θέση του τοπικού `dynamic()` (−`DxfViewerLoadingFallback`, −`i18n.t` σε module, −`next/dynamic`). Ο `AdminGuard`
+  μένει. ⚠️ Η όψη φόρτωσης γίνεται το `spinner` του μητρώου (αντί για `PageLoadingState` με μήνυμα) — μόνο οπτική,
+  καμία αλλαγή κειμένου UI. Η **κλάση** («`import()` εγγραφής μητρώου έξω από το μητρώο = αναμονή αόρατη στον χάρτη»)
+  κλείνει ως κανόνας της πύλης στο Β4.
+- ✅ **Β3α (2026-10-30) — η ειδοποίηση εισαγωγής DXF δεν κοστίζει στο mount.** Το κλειδί
+  `dxf-viewer:import.warnings.summary` ζει στον **γονέα** `dxf-viewer` ⇒ το αρχείο δεν μπορούσε να στενέψει σε split,
+  και ο hook επεκτείνει **πάντα** τον γονέα σε όλα τα splits (594,5 KB σε κάθε οθόνη με καρτέλα αρχείων, μέσω
+  `useFloorplanAutoProcess`). Θεραπεία της **κλάσης** «κείμενο που εμφανίζεται μόνο μετά από ασύγχρονη πράξη»: νέο
+  `src/i18n/translate-on-demand.ts` — `translateOnDemand(key, options)`: διαβάζει το namespace **από το κλειδί**
+  (SSoT `getExplicitNamespace`), φορτώνει **μόνο** αυτό (χωρίς compat splits) τη στιγμή του γεγονότος, μεταφράζει με το
+  καθολικό `i18n.t` (δίπορτη αναζήτηση ADR-798 §13 — η παγίδα `import → dxf-viewer-wizard` του 2026-07-29 καλύπτεται).
+  `useDxfImportNotifications` χωρίς `useTranslation`. Άγκυρες Δ1–Δ6
+  (`src/hooks/notifications/__tests__/useDxfImportNotifications.test.ts`), μεταλλάξεις **4/4**.
+  ⚠️ Προϋπάρχον, άσχετο κόκκινο: `registry-exhaustiveness.test.ts` Β «files» (12 κλειδιά `files:upload.listingVideo.*`
+  χωρίς ιδιοκτήτη· το `dxfImport` δεν είναι καν στους τομείς του test).
+- ✅ **Β3β (2026-10-30, απόφαση Giorgio «διόρθωση κλάσης στο 3.13») — το `dxf-viewer` βγήκε από το
+  `SERVICE_FORM_NAMESPACES`.** Η εμβέλεια του CHECK 3.13 **παράγεται** (renderers → καταναλωτές → configs τους): 14
+  αρχεία αντί για 186, **0** απρόσιτα χωρίς `dxf-viewer`. Λεπτομέρειες στο ADR-279 Decision Log 2026-10-30. Μεταλλάξεις 5/5.
+- 📏 **Β4 — μέτρηση έκθεσης πριν την πύλη (2026-10-30, μετά τα Β1–Β3).** Αν το `dxf-viewer` έβγαινε τώρα από την
+  εκκίνηση, ωμό κλειδί θα μπορούσε να ζωγραφιστεί σε:
+  (α) **5 σελίδες** που εισάγουν το περιεχόμενό τους **στατικά** αντί για την υπάρχουσα εγγραφή μητρώου (`contacts`,
+  `properties`, `properties/[id]`, `spaces/parking`, `spaces/storage`) — η κλειστότητά τους ονομάζει 10 αρχεία DXF/BIM
+  (`PolygonMaterialPanel`, `CutPlaneSliderControl`, `SnapIndicatorGlyph`, `use-bim3d-edit-interaction`…) από
+  **στατική προσβασιμότητα κώδικα**, όχι από ό,τι ζωγραφίζει στο πρώτο καρέ·
+  (β) **5 δυναμικά όρια** που δεν τα περιμένει καμία γραμμή: `LevelsSystem` (8 ρίζες), `GanttView`, `ReserveDialog`
+  (Sales: διαθέσιμα/πωλημένα), `PropertyFloorplanView`, `PropertyDossierTabs` (`(me)/dossiers/[dossierId]`)·
+  (γ) κέλυφος: **0**.
+  🔴 Συνέπεια για το κέρδος: όσο ο κώδικας BIM/canvas είναι στατικά προσβάσιμος από Επαφές/Ακίνητα/Χώρους/Κτίρια/
+  Έργα/Ρυθμίσεις, αυτές οι οθόνες θα **περιμένουν** την οικογένεια (σωστό, χωρίς ωμά κλειδιά — αλλά χωρίς κέρδος εκεί).
+  Το κέρδος (−594,5 KB) πέφτει στις συνεδρίες που δεν τις ανοίγουν. Ο πλήρης μοχλός είναι ο διαχωρισμός κώδικα
+  (ADR-744 §27.10 #3). Απόφαση σχεδίασης του Β4: Giorgio.
+- 🔬 **Β4 — σχεδίαση με έρευνα (απόφαση Giorgio: «όπως οι μεγάλοι, χωρίς εκπτώσεις»).** Google (Closure
+  `goog.getMsg`, Angular `$localize`) και Meta (fbt) ενσωματώνουν τα κείμενα στον κώδικα **κατά το build ανά γλώσσα** ⇒
+  chunk χωρίς κείμενα δομικά αδύνατο (εδώ ανέφικτο αυτούσιο: 914 δυναμικές `t()`, ADR-744 §27.3). Lingui v4
+  `extract-experimental`: κατάλογος ανά **σελίδα** από το δέντρο εξαρτήσεων (πειραματικό). remix-i18next: ανά διαδρομή,
+  χειρόγραφο. ⇒ Επιλογή: **«ένα αίτημα για κώδικα + κείμενα, ανά chunk»** σε χρόνο εκτέλεσης, **παραγόμενο** ανά όριο
+  chunk (όχι μόνο σελίδα) με πύλη και στις δύο κατευθύνσεις. Βήματα: Β4.0 parser · Β4.1 `defineLazySurfaces` ·
+  Β4.2 κανόνας εισδοχής στο CHECK 3.34 · Β4.3 οι θεραπείες (5 σελίδες μέσω μητρώου · `ReserveDialog` ·
+  `PropertyDossierTabs`).
+- ✅ **Β4.0 (2026-10-30) — η σύγχρονη κλήση `require` δεν είναι όριο chunk** (ADR-744 §33.1): νέο `kind: 'require'`
+  στον κοινό parser· κέλυφος/γραμμές/Κ2 αμετάβλητα, κλειστότητες +2 αρχεία. Μεταλλάξεις 2/2 + 1 ισοδύναμη (αφαιρέθηκε).
+- ✅ **Β4.1 (2026-10-30) — `defineLazySurfaces`: οι επιφάνειες (διάλογος, καρτέλα) στην ΙΔΙΑ μηχανή** (ADR-744 §33.2).
+  Ένας πυρήνας chunk (`lazyChunk`: κώδικας + namespaces ως ένα αίτημα) και ένας βρόχος μητρώων (`defineLazy` →
+  `awaitedNamespaces`) για διαδρομές **και** επιφάνειες· ο γεννήτορας διαβάζει και τις δύο κλήσεις (`REGISTRY_CALLS`,
+  πεδίο `kind`) ⇒ ίδιος χάρτης, ίδια Κ1/Κ2, ίδια κάλυψη Layer 1, κλειδί μοναδικό σε όλα τα μητρώα. **Απόκλιση από το
+  σχέδιο, εγκεκριμένη:** ΕΝΑ πεδίο config (`lazyRouteRegistries`), όχι δεύτερο `lazySurfaceRegistries` (θα ήταν 6 σημεία
+  που θυμούνται μια ένωση). Η κλειστότητα δίνεται από έλεγχο **και στις δύο κατευθύνσεις** που έλειπε ακόμη και για τις
+  διαδρομές: αρχείο που καλεί `defineLazy*` εκτός λίστας ⇒ άρνηση (γεννήτορας: εισαγωγείς από τον γράφο· Layer 1: τα
+  σταδιοποιημένα, από την όψη του commit). Χάρτης αμετάβλητος (82 / 57 = σφράγιση 57), καμία σφράγιση δεν αγγίχτηκε.
+  Μεταλλάξεις 6/6. Ψευδώς θετικό της πρώτης εκτέλεσης (test που καλεί το factory) ⇒ `isTestSource` του `gate-input.js`.
+- ✅ **Β4.2 (2026-10-30) — ο κανόνας εισδοχής ως πύλη** (ADR-744 §33.3 · ADR-279 Decision Log). Νέο `surface-coverage.js`:
+  ρίζες = σελίδες/layouts/route-boundaries του `src/app` + εγγραφές μητρώου· όρια = ρίζα + μεταβατικά τα `import()` που δεν
+  είναι εγγραφή· κάλυψη = εκκίνηση ∪ γραμμή(ρίζας). Ίδια μηχανή κλειστοτήτων (κοινή μνήμη με τον χάρτη), ίδια απογραφή
+  Κ1/Κ2 (`lazy-route-census.js`, παραμετρικά ονόματα). Αφετηρία **400** τριάδες / 111 ρίζες (καμία dxf) — μετά το Β5 κάθε dxf
+  τριάδα είναι νέα ⇒ ⛔ χωρίς λίστα. Κλειστό και το ανοιχτό του §33: χειρόγραφο `namespaces` πέρα από τη γραμμή ⇒ κόκκινο.
+  🔴 Κενό που έκλεισε: το CI (`--full`) δεν έκρινε καθόλου τον χάρτη. Μεταλλάξεις 6/6. Στο Β4.3 προστίθενται και **5 σελίδες
+  harness** (contact-mutation · bim-3d · dxf-canvas · test-cursor) — απόφαση Giorgio: μηδέν ωμά κλειδιά παντού.
+- ✅ **Β4.3 (2026-10-31) — οι θεραπείες: 0 dxf τριάδες** (ADR-744 §33.4 · ADR-279 Decision Log). Η απόδειξη έγινε με την
+  ΙΔΙΑ `admissionDebt` και εκκίνηση **χωρίς** τα 6 dxf namespaces: **93 → 0** τριάδες (18 → 0 κλειδιά).
+  · 5 σελίδες προϊόντος από το μητρώο: `LazyRoutes.Contacts` · `.Properties` · `.SpacesParking` · `.SpacesStorage`, οι οποίες υπήρχαν
+    χωρίς καταναλωτή, και η νέα `PropertyDetail`. Το `properties/[id]` έγινε `'use client'` + `use(params)`, γιατί ένας server
+    component δεν μπαίνει με τελεία σε client module. Το SSR δίνει πλέον μόνο skeleton.
+  · Harness: νέο λεπτό μητρώο `src/utils/lazyHarnessRoutes.tsx` (contact-mutation · bim-3d · dxf-canvas + επιφάνεια του πάνελ
+    του test-cursor). Τα stubs παραγωγής μένουν ενεργά: το alias του webpack εφαρμόζεται και στο στάδιο `file`. Άγκυρα
+    `scripts/__tests__/lazy-harness-stubs.test.js`.
+  · Επιφάνειες σε λεπτά μητρώα **ανά τομέα**: `sales-surfaces.tsx` (`SalesReserveDialog`) · `dossier-surfaces.tsx` (**ένα**
+    κλειδί `PropertyDossierTab` + dispatcher, αντί για 5 `React.lazy`).
+  · 🔴 **Τρύπα κλάσης που βρέθηκε και έκλεισε — κανόνας Ρ:** `import()` στόχου εγγραφής **έξω** από μητρώο ⇒ άρνηση, με
+    μηδενική ανοχή και χωρίς λίστα. Ο κανόνας εισδοχής σταματούσε σε κάθε τέτοιο `import()`, άρα ένα τοπικό `dynamic()` φόρτωνε
+    τον ίδιο κώδικα **χωρίς** τα κείμενα, με την πύλη πράσινη. Μετρήθηκαν δύο περιπτώσεις:
+    – ο κρυμμένος **5ος harness**, `DxfPerfHarness` → `DxfViewerApp`, που τώρα περνά από το `LazyRoutes.DXFViewer`·
+    – το `preloadRoutes.ts`, με 7 specs γραμμένα δεύτερη φορά. Τώρα καλεί το `preload()` της εγγραφής: ο ίδιος φορτωτής, κώδικας + κείμενα
+      (πρότυπο React Router `route.lazy` / Remix `intent`).
+  · Κατάστιχα: `lazyAdmissionSeal` **400 → 321** (−94 τριάδες, +15 που είναι μετακόμιση από `properties/[id]/page.tsx` σε
+    `entry:PropertyDetail`). `lazyRouteMountSeal` **57 → 77** με **ρητό «ΝΑΙ» του Giorgio**: +20 ζεύγη, 0 bytes, γιατί τα ίδια
+    namespaces από χρέος ωμού καρέ γίνονται δηλωμένη αναμονή.
+  · Μεταλλάξεις **7/7**, με επαναφορά μέσω `os.replace` και έλεγχο bytes.
+  · ⚠️ Ανοιχτό, ξένο: η WIP του ADR-923 (`catalog-ui-hooks.ts`) πρόσθεσε ήδη 3 ζεύγη `→ catalog` (77 → 80), και υπάρχουν 3 ακόμη
+    ευρήματα του catalog στον γεννήτορα. Τα κρίνει ο κάτοχός της.
+- ⏳ Β4.1 · Β4.2 · Β4.3 · Β5 · Β6. Πρώην γραμμή: Β3β `SERVICE_FORM_NAMESPACES` · Β4 ο κανόνας εισδοχής ως πύλη (επέκταση CHECK 3.34) ·
+  Β5 αφαίρεση από το `CRITICAL_NAMESPACES` (θέλει ρητό «ναι» για τη σφράγιση Κ2) · Β6 επαλήθευση el+en.

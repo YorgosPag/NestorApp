@@ -48,16 +48,16 @@ function mountOnlyPairs(rows, boot) {
 const countPairs = pairs => Object.values(pairs).reduce((sum, list) => sum + list.length, 0);
 
 /** Το σχήμα του κατάστιχου, κριμένο στη **φόρτωση** (ίδιος λόγος με τα αδέλφια του στο `config.js`). */
-function parseMountLedger(ledger) {
+function parseMountLedger(ledger, name = LEDGER) {
   if (ledger === null || typeof ledger !== 'object' || Array.isArray(ledger)) {
-    throw new Error(`${LEDGER}: απαιτείται { "<Κλειδί διαδρομής>": ["<namespace>", …] }.`);
+    throw new Error(`${name}: απαιτείται { "<Κλειδί>": ["<namespace>", …] }.`);
   }
   for (const [key, list] of Object.entries(ledger)) {
     const valid = Array.isArray(list) && list.length > 0
       && list.every(item => typeof item === 'string' && item !== '')
       && new Set(list).size === list.length;
     if (!valid) {
-      throw new Error(`${LEDGER}.${key}: απαιτείται μη κενός πίνακας ξεχωριστών namespaces — κενή εγγραφή σβήνεται, δεν αδειάζει.`);
+      throw new Error(`${name}.${key}: απαιτείται μη κενός πίνακας ξεχωριστών namespaces — κενή εγγραφή σβήνεται, δεν αδειάζει.`);
     }
   }
   return ledger;
@@ -93,12 +93,18 @@ function auditMountCensus(declared, observed, seal) {
   };
 }
 
+/**
+ * Τα ονόματα ενός κατάστιχου που κρίνει αυτή η μηχανή. ADR-280 §11.8 Β4.2: η ΙΔΙΑ μηχανή κρίνει και το
+ * χρέος εισδοχής (`surface-coverage.js`) — δεύτερη υλοποίηση της απογραφής θα ήταν δεύτερη λίστα που αποκλίνει.
+ */
+const MOUNT_LABELS = Object.freeze({ ledger: LEDGER, seal: SEAL, adr: 'ADR-744 §27', unit: 'ζεύγη (διαδρομή, namespace εκτός εκκίνησης)' });
+
 /** @param {Map} [provenance] όταν υπάρχει (γεννήτορας), το μήνυμα **ονομάζει** ποιος σέρνει το namespace. */
-function describeMountFailures(failures, provenance = new Map()) {
+function describeMountFailures(failures, provenance = new Map(), labels = MOUNT_LABELS) {
   return failures.map(failure => {
     const pair = `${failure.key} → ${failure.namespace}`;
     if (failure.verdict === CENSUS.ABSENT) {
-      return `${pair}: δηλωμένο στο ${LEDGER} αλλά ΔΕΝ περιμένεται πια — σβήσε το ζεύγος και ΚΑΤΕΒΑΣΕ τη σφράγιση`;
+      return `${pair}: δηλωμένο στο ${labels.ledger} αλλά ΔΕΝ περιμένεται πια — σβήσε το ζεύγος και ΚΑΤΕΒΑΣΕ τη σφράγιση`;
     }
     const from = (provenance.get(failure.key) && provenance.get(failure.key).get(failure.namespace)) || [];
     const who = from.length === 0 ? '' : ` — το ονομάζει: ${from.slice(0, 3).join(' · ')}${from.length > 3 ? ` (+${from.length - 3})` : ''}`;
@@ -106,20 +112,20 @@ function describeMountFailures(failures, provenance = new Map()) {
   }).join(' · ');
 }
 
-function describeMountGrowth(audit) {
-  return `${audit.count} ζεύγη (διαδρομή, namespace εκτός εκκίνησης) έναντι σφραγισμένων `
+function describeMountGrowth(audit, labels = MOUNT_LABELS) {
+  return `${audit.count} ${labels.unit} έναντι σφραγισμένων `
     + `${audit.sealed.count} (${audit.sealed.at}) — ΜΟΝΟ ΣΥΡΡΙΚΝΩΝΕΤΑΙ. Κάθε ζεύγος είναι λήψη που η διαδρομή `
     + 'περιμένει πριν ζωγραφίσει· η θεραπεία είναι διαχωρισμός κώδικα, όχι μεγαλύτερος αριθμός.';
 }
 
-function announceMountSlack(audit) {
+function announceMountSlack(audit, labels = MOUNT_LABELS) {
   const slack = audit.sealed.count - audit.count;
   if (slack <= 0) return [];
   return [announceSlack({
-    adr: 'ADR-744 §27',
+    adr: labels.adr,
     slack,
-    detail: `${audit.count} ζεύγη εκτός εκκίνησης έναντι σφράγισης ${audit.sealed.count} (${audit.sealed.at}) — ${slack} δωρεάν θέση/θέσεις`,
-    command: `κατέβασε το \`${SEAL}.count\` στο .i18n-shell-slice.json`,
+    detail: `${audit.count} ${labels.unit} έναντι σφράγισης ${audit.sealed.count} (${audit.sealed.at}) — ${slack} δωρεάν θέση/θέσεις`,
+    command: `κατέβασε το \`${labels.seal}.count\` στο .i18n-shell-slice.json`,
   })].filter(line => line !== '');
 }
 

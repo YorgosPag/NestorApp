@@ -163,13 +163,22 @@ function collectUsage(node, mod) {
   ts.forEachChild(node, child => collectUsage(child, mod));
 }
 
+/**
+ * Κλήση `import` ⇒ `dynamic` · κλήση `require` ⇒ `require` — **δύο** είδη, όχι ένα (ADR-280 §11.8 Β4.0).
+ *
+ * 🔴 Μέχρι 2026-10-30 και τα δύο γράφονταν `dynamic`. Για το ADR-700 («ζωντανό;») ήταν αδιάφορο — και τα δύο
+ * είναι αδιαφανή ⇒ ζωντανά. Για το ADR-744 («φτάνει στο ΙΔΙΟ chunk;») ήταν **λάθος**: η κλήση `import` είναι όριο
+ * chunk, η σύγχρονη `require` **δεν** είναι — ο bundler τη βάζει στο ίδιο chunk. Μετρημένο: το `LevelsSystem`
+ * έφτανε σε 8 οθόνες μόνο μέσω σύγχρονου require στο `useLevels.ts` και έλειπε από τις κλειστότητές τους.
+ * ⚠️ Μη γράψεις εδώ κυριολεκτική κλήση require με όρισμα: ο σαρωτής του toolchain (ADR-744 §30) τη διαβάζει.
+ */
 function collectDynamicImport(node, mod) {
   const isImportCall = node.expression.kind === ts.SyntaxKind.ImportKeyword;
   const isRequire = ts.isIdentifier(node.expression) && node.expression.text === 'require';
   if (!isImportCall && !isRequire) return;
   const arg = node.arguments[0];
   if (arg && ts.isStringLiteral(arg)) {
-    mod.imports.push({ spec: arg.text, kind: 'dynamic', names: [] });
+    mod.imports.push({ spec: arg.text, kind: isImportCall ? 'dynamic' : 'require', names: [] });
   }
 }
 

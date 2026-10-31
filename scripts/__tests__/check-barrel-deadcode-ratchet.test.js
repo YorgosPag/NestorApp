@@ -155,6 +155,22 @@ describe('parse-module', () => {
     expect(mod.imports).toContainEqual({ spec: './heavy', kind: 'dynamic', names: [] });
   });
 
+  // ADR-280 §11.8 Β4.0 — δύο είδη: το `import()` είναι όριο chunk, το σύγχρονο require όχι (ADR-744 walker).
+  it('records a synchronous require as its OWN kind, not as dynamic', () => {
+    const mod = parse('src/x.ts', "export const ctx = () => require('./ctx');\n");
+    expect(mod.imports).toContainEqual({ spec: './ctx', kind: 'require', names: [] });
+    expect(mod.imports.some(i => i.kind === 'dynamic')).toBe(false);
+  });
+
+  it('keeps a required module LIVE for the dead-code walk (opaque, like import())', () => {
+    const { live, bucketOf } = analyseFixture({
+      [at('src/a.ts')]: "export const a = () => require('./ctx');\n",
+      [at('src/ctx.ts')]: 'export const Unused = 1;\n',
+    }, { entries: ['src/a.ts'] });
+    expect(live.opaque.has(at('src/ctx.ts'))).toBe(true);
+    expect(bucketOf('src/ctx.ts', 'Unused')).toBe('live');
+  });
+
   it('attributes a pass-through re-export to the DECLARING module', () => {
     const mod = parse('src/hooks/index.ts', "import { useFoo } from './useFoo';\nexport { useFoo };\n");
     expect(mod.exports.find(e => e.name === 'useFoo').origin).toBe('reexport');

@@ -403,6 +403,12 @@ function reportLazyRoutes(lazy, judged) {
   }
   console.log(`${DIM}    ${keys.length - Object.keys(judged.pairs).length} διαδρομές περιμένουν ΜΟΝΟ ό,τι έχει ήδη ζητηθεί στην εκκίνηση · `
     + `κλειστότητες: ${lazy.inputs.size} αρχεία · αδιαφανείς κλήσεις χωρίς απάντηση: ${lazy.opaque.length}${NC}`);
+  if (judged.admission) {
+    // ADR-280 §11.8 Β4.2 — ο κανόνας εισδοχής (ADR-279 §9), παραγόμενος: ό,τι μοντάρεται χωρίς αλλαγή διαδρομής.
+    const roots = new Set(Object.keys(judged.admission.debt).map(key => key.split(' ⟵ ')[0]));
+    console.log(`${DIM}    εισδοχή: ${judged.admission.audit.count} τριάδες χρέους σε ${roots.size} ρίζες `
+      + `(σφράγιση ${judged.admission.audit.sealed.count})${NC}`);
+  }
 }
 
 /** Compact UTF-8 bytes — η **ίδια** μονάδα με το πρώτο κατάστιχο, ώστε τα δύο να συγκρίνονται. */

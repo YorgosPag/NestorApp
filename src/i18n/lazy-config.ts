@@ -180,6 +180,17 @@ export const SUPPORTED_NAMESPACES = [
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
+/**
+ * ADR-280 §11.8 — **ο ΕΝΑΣ** φρουρός `string → Namespace`, δίπλα στην αυθεντία του.
+ *
+ * Όσοι παίρνουν ονόματα από **δεδομένα** (το μητρώο εγκατεστημένων bundles, τον παραγόμενο χάρτη
+ * τεμπέλικων διαδρομών) τα στενεύουν εδώ, αντί για `as Namespace[]` μετά από τοπικό `Set`.
+ * ⚠️ `function`, όχι `const` σε module scope: διαβάζει το `SUPPORTED_NAMESPACES` τη στιγμή της κλήσης.
+ */
+export function isSupportedNamespace(value: string): value is Namespace {
+  return (SUPPORTED_NAMESPACES as readonly string[]).includes(value);
+}
+
 // Cache for loaded translations
 const translationCache = new Map<string, TranslationData>();
 

@@ -155,8 +155,22 @@ const DEFAULTS = Object.freeze({
    *
    * ⚠️ ΚΥΡΙΟΛΕΚΤΙΚΗ ΛΙΣΤΑ, ΚΑΙ Η ΑΣΤΟΧΙΑ ΤΗΣ ΕΙΝΑΙ ΘΟΡΥΒΩΔΗΣ: αρχείο που λείπει ή δεν
    * περιέχει καμία κλήση ⇒ `throw` (`lazy-routes.js`), ποτέ άδειος χάρτης.
+   *
+   * ADR-280 §11.8 Β4.1 — ΚΑΙ ΤΑ ΜΗΤΡΩΑ **ΕΠΙΦΑΝΕΙΩΝ** (`defineLazySurfaces`): ένα πεδίο, δύο είδη· το
+   * είδος το λέει η κλήση. Κλειστό **και στις δύο κατευθύνσεις**: αρχείο που καλεί `defineLazy*`
+   * χωρίς να είναι εδώ ⇒ άρνηση (γεννήτορας: όλοι οι εισαγωγείς · Layer 1: τα σταδιοποιημένα).
+   *
+   * ADR-280 §11.8 Β4.3 — +3 **λεπτά** μητρώα (εισάγουν μόνο το factory): σελίδες δοκιμών χωριστά από το
+   * μητρώο προϊόντος, και επιφάνειες **ανά τομέα** — ένα κεντρικό αρχείο επιφανειών θα έσερνε το namespace
+   * κάθε `fallback` (π.χ. `property-market`) στη στατική κλειστότητα **κάθε** εισαγωγέα του.
    */
-  lazyRouteRegistries: ['src/utils/lazyRoutes.tsx', 'src/utils/lazyRoutesAdr294.tsx'],
+  lazyRouteRegistries: [
+    'src/utils/lazyRoutes.tsx',
+    'src/utils/lazyRoutesAdr294.tsx',
+    'src/utils/lazyHarnessRoutes.tsx',
+    'src/components/sales/sales-surfaces.tsx',
+    'src/components/property-dossier/dossier-surfaces.tsx',
+  ],
 
   /**
    * ADR-744 §27 — η **κλειστή απογραφή** των ζευγών `(διαδρομή, namespace που φορτώνει
@@ -179,6 +193,17 @@ const DEFAULTS = Object.freeze({
 
   /** ADR-744 §27 — η σφράγιση του πλήθους των ζευγών· **μόνο συρρικνώνεται**. */
   lazyRouteMountSeal: { count: 0, at: '1970-01-01', why: 'αδήλωτο — ο generator δεν έχει τρέξει ποτέ με απογραφή τεμπέλικων διαδρομών' },
+
+  /**
+   * ADR-280 §11.8 Β4.2 · ADR-279 §9 — το **χρέος εισδοχής**: `{ '<ρίζα> ⟵ <όριο|(στατική)>': ['<ns>', …] }`.
+   * Κάθε τριάδα είναι namespace εκτός εκκίνησης που ονομάζεται σε κάτι που μοντάρεται ΧΩΡΙΣ αλλαγή διαδρομής
+   * και που η ρίζα δεν περιμένει ⇒ ωμό καρέ. Ίδια μηχανή απογραφής με το `lazyRouteMountNamespaces`.
+   * ⛔ Μόνο συρρικνώνεται· νέα τριάδα ⇒ εγγραφή μητρώου/επιφάνειας (`defineLazyRoutes`/`defineLazySurfaces`).
+   */
+  lazyAdmissionDebt: {},
+
+  /** ADR-280 §11.8 Β4.2 — η σφράγιση του πλήθους των τριάδων χρέους εισδοχής· **μόνο συρρικνώνεται**. */
+  lazyAdmissionSeal: { count: 0, at: '1970-01-01', why: 'αδήλωτο — ο generator δεν έχει τρέξει ποτέ με κανόνα εισδοχής' },
 });
 
 function readJsonIfPresent(file) {
@@ -229,6 +254,9 @@ function loadConfig(projectRoot) {
   parseMountLedger(config.lazyRouteMountNamespaces);
   parseOpaqueLedger(config.lazyRouteOpaqueNamespaces);
   parseSeal(config.lazyRouteMountSeal, LAZY_MOUNT_SEAL);
+  // ADR-280 §11.8 Β4.2 — το πέμπτο κατάστιχο, ίδιο σημείο, ίδιος λόγος, ΙΔΙΟΙ κριτές.
+  parseMountLedger(config.lazyAdmissionDebt, 'lazyAdmissionDebt');
+  parseSeal(config.lazyAdmissionSeal, 'lazyAdmissionSeal');
   return config;
 }
 

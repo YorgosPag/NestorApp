@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "bdfce84eaeb35d52c69026a2de5a5b5e3bfdbda11bcafa18c98ab60c31949905",
+    "src/i18n/generated/lazy-route-namespaces.json": "79e965ae8fe37b28f98cd812bc9451f5e4efd961dd246d92ff9b79347ecc08c2",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
@@ -103,7 +103,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "87d6b7e9278d96e830e3f5ade9b71e314a53f5d46c7d735cbb087eb4ae8dc167",
-      "lazyRouteRegistries": "70bded58e6a83e4d2e5e3d2c594b8cfe466e0dfe7d73fa2d4e9e97fce23ad110",
+      "lazyRouteRegistries": "9b5e7bd46f0b1a00e0e720c490feaaae1ff28c77b5f2238bc800a871cd2bdb04",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "3c2e6fc0f4b003408a202f5a61b7ced4a2dc8d134ae3fdd5a899406260adc3ad",
@@ -115,7 +115,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "8de0b011d6a12aef35d92d4bca042c75914672aa0b4f75afd5c818ea5523ece3",
+      "registries": "f4b449dbe9bfdf1ff8e5ecbc846ad4f4a52e57e7b22b054d59b43297b3522588",
       "supportedNamespaces": "2c4f76ec7690e672cc99f7e24fc1e164ed22b30b28c52b6705ae97b23b20f527"
     },
     "namespaceBundles": {
@@ -129,13 +129,14 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "90895c99706fec18bcf449f531ee9af11d37c25b1aa0106aa1fa2cf2f728c832",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "dd00e098d1a5263d79cce60f6049d402887478cb49d9708f2b5b9d7d0d4cf5b1",
+      "scripts/lib/i18n-shell-slice/config.js": "8ff7d457ed5c8db04b7103375007b764cec0e97c1accbd62afc4c4c90d46f628",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
-      "scripts/lib/i18n-shell-slice/global-inputs.js": "349d99a926a8c765ed80105fe186987ba9995e25a8c06c2178100749e1758031",
+      "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
       "scripts/lib/i18n-shell-slice/key-tables.js": "aba6069f1ba2adbc3d696f1171d0967f5fd740c56b2e1866c08576737325ae45",
-      "scripts/lib/i18n-shell-slice/lazy-route-census.js": "cc3aaa9baac27cf34cff7c8b62fdeda4f4bb223ff276b581aa1325dd365744b8",
-      "scripts/lib/i18n-shell-slice/lazy-routes.js": "7c54f78a427312cebff54711737480a74ca0352db651987356985b6d3a517670",
+      "scripts/lib/i18n-shell-slice/lazy-registry-read.js": "f109a93bae6b6f5d9a131ce71f70eba879553daf7510d16acc39a9761e5257ae",
+      "scripts/lib/i18n-shell-slice/lazy-route-census.js": "5e9b21b8f964bc6c314dfbc7900d30bd157b2ebe9237cb95e7db72085b4328ca",
+      "scripts/lib/i18n-shell-slice/lazy-routes.js": "e388430e068688c629a9a4b28d704dca1109a803e0d2b70b21aa1c51759ed61a",
       "scripts/lib/i18n-shell-slice/ledger.js": "365f9a9bf4f706fb56b83a7ba5a79665f7063dd45c6f7c26b9a0677c68fa5d77",
       "scripts/lib/i18n-shell-slice/manifest-build.js": "11caf33b1d10ff981955738a9bbfe25013301bc703e618976e9a47ab725c7ef7",
       "scripts/lib/i18n-shell-slice/namespace-declarations.js": "5c1b5259f46a9990026495e640fbd79af8adc08d64742a7de885c477174f64ca",
@@ -148,10 +149,11 @@
       "scripts/lib/i18n-shell-slice/shell-roots.js": "aa0f71c4b358400c105fd18aba2e47ac970abe759fc48eb6af29506a938e5c5c",
       "scripts/lib/i18n-shell-slice/slice-build.js": "3910e7e013f2edfc83e8cd663e2019c42e96b9825944ffd68ddc5ead9afb609d",
       "scripts/lib/i18n-shell-slice/source-cache.js": "346a039ec026c3d81fa8ec6990f756877492a4f65691f50ffb62c7e454ee2375",
-      "scripts/lib/module-graph/build-graph.js": "6b1bee7c6063231300d5c23824ac8f2b3269fd3b6706059f1a4ec9f745048540",
+      "scripts/lib/i18n-shell-slice/surface-coverage.js": "a3e78d8bd641c689e37b02c46e69d6bedd57f8440cca4ca13b2cbbfc165777cf",
+      "scripts/lib/module-graph/build-graph.js": "1cd1e71180a16da36607e0eb0d8831b24fcb749614804903d156a15137cce850",
       "scripts/lib/module-graph/classify-exports.js": "aacae292cc0981db53066fdfb59b5b45a2477e472d177c9873d630aeb4505a9f",
       "scripts/lib/module-graph/index.js": "c5f613d25d9d6d720feab21f3c8cef35389d1322718cbb222ecba8401ba391e7",
-      "scripts/lib/module-graph/parse-module.js": "f6a8c6553ae7291b219c4bdac913bc109e980c3a591bb024c09ff7ea63a750e5",
+      "scripts/lib/module-graph/parse-module.js": "0d0b3aff3fb3df726deb9d37d93ad54b2fd64942de5035dfeece01d5211db19e",
       "scripts/lib/module-graph/resolve-specifier.js": "75e5083e2c99cea3ae8a323ccc64321166caf385138942a388e0371c2c16c1f4",
       "scripts/lib/module-graph/scan-config.js": "322dc712b4b56d2ea0b2d060230b7cc66646edbf97b9a79df68c96eb326dd1d3",
       "scripts/lib/posix-path.js": "2563739ca7dee891f10a803ca20f936cc814de62da8ebe92b9419129b17a19e3",
@@ -173,7 +175,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ad67d129bb7cb3ba31b914fc441172bb2f3331340ad10b43f56405c4980b2665",
+  "inputsSha256": "341ae06528cc659e5b4ec5661f9db1ef6adde9281bcdfd040fbc62a5a73ed5ee",
   "languages": [
     "el"
   ],
@@ -2602,26 +2604,7 @@
         },
         "property-market": {
           "keys": [
-            "",
-            "45/35",
-            "70/55",
-            "75/65",
-            "80/60",
-            "Architectural",
-            "Demolition / AEKK",
-            "Electrical",
-            "Fire Safety",
-            "Fiscal",
-            "HSE (Health/Safety/Environment)",
-            "KENAK (Energy)",
-            "Lift / Elevator",
-            "Mechanical (HVAC/Plumbing)",
-            "Notarial/Legal",
-            "Permits",
-            "Structural",
-            "Topographic",
             "demand.space.signInNeeded",
-            "descr",
             "dossier.detail.absent",
             "dossier.detail.back",
             "dossier.detail.error",
@@ -2680,16 +2663,7 @@
             "dossier.origin.protocol.supersedes",
             "dossier.origin.protocol.supersedesValue",
             "dossier.origin.protocol.title",
-            "dossier.tabs.loading",
-            "label",
-            "Έγγραφο",
-            "Επαγγελματική Κάρτα",
-            "Κάτοψη",
-            "Λογότυπο",
-            "Φωτογραφία",
-            "Φωτογραφία Εκπροσώπου",
-            "Φωτογραφία Προφίλ",
-            "οι φάκελοί μου"
+            "dossier.tabs.loading"
           ],
           "prefixes": [
             "dossier.invariant"

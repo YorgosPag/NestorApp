@@ -235,7 +235,8 @@ function applyImport(state, mod, imp) {
   }
   imp.targetFile = target.file;
   if (imp.kind === 'side-effect') { state.sideEffect.add(target.file); state.addModule(target.file); return; }
-  if (imp.kind === 'dynamic' || imp.kind === 'namespace') { markOpaque(state, target.file); return; }
+  // `require` = ίδια κρίση με το `import()` εδώ: αδιαφανές ⇒ ζωντανό (το είδος χωρίστηκε για το ADR-744, όχι για το 700).
+  if (imp.kind === 'dynamic' || imp.kind === 'require' || imp.kind === 'namespace') { markOpaque(state, target.file); return; }
   applyNamedImport(state, mod, imp);
 }
 
@@ -283,7 +284,7 @@ function computeLiveness(graph, { isEntry, withTests = false, externalRoots = []
   // αλυσίδες re-export και barrels συμπεριφέρονται ΑΚΡΙΒΩΣ όπως για κάθε άλλη εισαγωγή.
   for (const root of externalRoots) {
     if (!graph.modules.has(root.targetFile)) continue;   // δεν είναι στο αναλυόμενο δέντρο
-    if (root.kind === 'namespace' || root.kind === 'dynamic') { markOpaque(state, root.targetFile); continue; }
+    if (root.kind === 'namespace' || root.kind === 'dynamic' || root.kind === 'require') { markOpaque(state, root.targetFile); continue; }
     if (root.kind === 'side-effect') { state.sideEffect.add(root.targetFile); state.addModule(root.targetFile); continue; }
     applyNamedImport(state, { file: root.from }, {
       targetFile: root.targetFile,

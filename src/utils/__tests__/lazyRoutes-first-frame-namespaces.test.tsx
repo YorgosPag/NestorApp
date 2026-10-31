@@ -6,6 +6,10 @@
  * Η άγκυρα εκτελεί τον **πραγματικό** loader του μητρώου — όχι αντίγραφο της δήλωσης.
  *
  * Μετάλλαξη (2026-10-05): αφαίρεση του `namespaces` από την εγγραφή ⇒ Π1 + Π2 κοκκινίζουν.
+ *
+ * ADR-280 §11.8 (2026-10-30): η εγγραφή **δεν** δηλώνει πια `namespaces` — το `property-market` έρχεται από τη
+ * γραμμή του παραγόμενου `lazy-route-namespaces.json` (`awaitedNamespaces`). Άρα το Π1/Π2 κρίνουν πλέον ότι ο
+ * χάρτης **καταναλώνεται**. Μετάλλαξη: `awaitedNamespaces` ⇒ μόνο η δήλωση ⇒ Π1 + Π2 κοκκινίζουν.
  */
 
 type Loader = () => Promise<{ default: unknown }>;
@@ -19,7 +23,11 @@ const pendingNamespaces: Array<() => void> = [];
 const loadNamespace = jest.fn(
   (_namespace: string) => new Promise<void>((resolve) => { pendingNamespaces.push(resolve); }),
 );
-jest.mock('@/i18n/lazy-config', () => ({ loadNamespace: (namespace: string) => loadNamespace(namespace) }));
+// Ο ΠΡΑΓΜΑΤΙΚΟΣ φρουρός `isSupportedNamespace` (ADR-280 §11.8)· μόνο η λήψη αντικαθίσταται.
+jest.mock('@/i18n/lazy-config', () => ({
+  ...jest.requireActual<Record<string, unknown>>('@/i18n/lazy-config'),
+  loadNamespace: (namespace: string) => loadNamespace(namespace),
+}));
 
 const Page = (): null => null;
 jest.mock('@/components/admin/pages/OwnershipVerificationsPageContent', () => ({

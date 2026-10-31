@@ -159,6 +159,17 @@ describe('Group 2 — dynamic and route boundaries (LOAD-BEARING)', () => {
     expect(closure.dynamicBoundaries).toContain('src/app/heavy.tsx');
   });
 
+  // ADR-280 §11.8 Β4.0 — μέχρι 2026-10-30 ο parser έγραφε το σύγχρονο require ως `dynamic` και ο walker το ΕΚΟΒΕ:
+  // το `LevelsSystem` (8 οθόνες) έλειπε από τις κλειστότητες. Μετάλλαξη: `require` ⇒ όριο ⇒ κόκκινο.
+  it('a synchronous require is FOLLOWED — same chunk, not a boundary', () => {
+    const root = write('src/app/layout.tsx', `const lazyCtx = () => require('./ctx');\nexport default function L() { return lazyCtx; }\n`);
+    const ctx = write('src/app/ctx.tsx', `export const Ctx = 1;\n`);
+    const closure = computeShellClosure(graphOf([root, ctx]), [root]);
+
+    expect(closure.files).toContain('src/app/ctx.tsx');
+    expect(closure.dynamicBoundaries).not.toContain('src/app/ctx.tsx');
+  });
+
   it('a page reached by a static import is CUT — it owns its own loading state', () => {
     const root = write('src/app/layout.tsx', `import { P } from './dash/page';\nexport default function L() { return P; }\n`);
     const page = write('src/app/dash/page.tsx', `export const P = () => null;\n`);

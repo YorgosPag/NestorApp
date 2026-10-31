@@ -46,6 +46,20 @@ const {
   extractExplicitTCalls,
 } = require('../i18n-namespace-extract');
 const { computeShellClosure } = require('./shell-closure');
+const {
+  REGISTRY_CALL,
+  REGISTRY_CALLS,
+  readEntry,
+  readRegistry,
+  readRegistries,
+  awaitedKeys,
+  undeclaredRegistryCallers,
+  registryCallImporters,
+  describeUndeclaredCallers,
+  registryBypasses,
+  describeRegistryBypasses,
+} = require('./lazy-registry-read');
+const { judgeAdmission } = require('./surface-coverage');
 const { parseSource } = require('./key-extract');
 const { stableStringify } = require('./slice-build');
 const { createNamespaceDeclarationReader, readDiskText } = require('./namespace-declarations');
@@ -62,9 +76,6 @@ const {
 } = require('./lazy-route-census');
 
 const ARTIFACT_NAME = 'lazy-route-namespaces.json';
-/** Η κλήση που **δηλώνει** μητρώο — το όνομα γράφεται εδώ μία φορά, για reader και μηνύματα. */
-const REGISTRY_CALL = 'defineLazyRoutes';
-
 const COVERAGE = Object.freeze({
   MISSING_ROW: 'route-without-row',
   ORPHAN_ROW: 'row-without-route',
@@ -96,90 +107,6 @@ function readStringArrayConst(projectRoot, relFile, name) {
     throw new Error(`${relFile}: η λίστα ${name} δεν διαβάστηκε ως πίνακας συμβολοσειρών — άδεια λίστα θα έκανε κάθε έλεγχο πράσινο.`);
   }
   return found;
-}
-
-/** Ο ένας `import('…')` μιας εγγραφής. Κανένας ή πολλοί ⇒ `null` — ο καλών αρνείται. */
-function importSpecOf(node) {
-  const specs = [];
-  const visit = child => {
-    if (ts.isCallExpression(child) && child.expression.kind === ts.SyntaxKind.ImportKeyword) {
-      const [arg] = child.arguments;
-      specs.push(arg && ts.isStringLiteralLike(arg) ? arg.text : null);
-    }
-    ts.forEachChild(child, visit);
-  };
-  visit(node);
-  return specs.length === 1 ? specs[0] : null;
-}
-
-/** Μία εγγραφή `Key: { load: () => import('…'), ssr?: … }`. Ό,τι δεν διαβάζεται ⇒ `throw`, ποτέ σιωπηλή παράλειψη. */
-function readEntry(property, registry, source) {
-  const where = `${registry}:${source.getLineAndCharacterOfPosition(property.getStart(source)).line + 1}`;
-  if (!ts.isPropertyAssignment(property) || !ts.isObjectLiteralExpression(property.initializer)) {
-    throw new Error(`${where}: εγγραφή του ${REGISTRY_CALL} που δεν είναι \`Κλειδί: { load, … }\` — ο χάρτης δεν μπορεί να τη δει.`);
-  }
-  const key = property.name.text;
-  const fields = new Map(property.initializer.properties
-    .filter(ts.isPropertyAssignment)
-    .map(field => [field.name.text, field.initializer]));
-  const load = fields.get('load');
-  const spec = load ? importSpecOf(load) : null;
-  if (spec === null) throw new Error(`${where}: το \`load\` της «${key}» δεν έχει ΑΚΡΙΒΩΣ ΕΝΑ κυριολεκτικό import().`);
-
-  const ssrNode = fields.get('ssr');
-  if (ssrNode && ssrNode.kind !== ts.SyntaxKind.TrueKeyword && ssrNode.kind !== ts.SyntaxKind.FalseKeyword) {
-    throw new Error(`${where}: το \`ssr\` της «${key}» δεν είναι κυριολεκτικό true/false.`);
-  }
-  return { key, spec, registry, ssr: Boolean(ssrNode) && ssrNode.kind === ts.SyntaxKind.TrueKeyword };
-}
-
-/**
- * Οι εγγραφές ενός μητρώου, με AST.
- *
- * ⚠️ Ένα `...spread` μέσα στην κλήση **δεν** είναι εγγραφή: είναι άλλο μητρώο, που
- * διαβάζεται από το δικό του αρχείο. Μητρώο χωρίς καμία κλήση ⇒ `throw` — ένα αρχείο
- * που «δεν έχει διαδρομές» επειδή άλλαξε σχήμα θα έδινε άδειο, πράσινο χάρτη.
- */
-function readRegistry(projectRoot, registry) {
-  const abs = path.join(projectRoot, registry);
-  if (!fs.existsSync(abs)) throw new Error(`μητρώο τεμπέλικων διαδρομών δεν βρέθηκε: ${registry}`);
-  const source = parseSource(abs, fs.readFileSync(abs, 'utf8'));
-  const entries = [];
-  let calls = 0;
-  const visit = node => {
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === REGISTRY_CALL) {
-      const [declarations] = node.arguments;
-      if (!declarations || !ts.isObjectLiteralExpression(declarations)) {
-        throw new Error(`${registry}: το ${REGISTRY_CALL}(…) δεν δέχεται κυριολεκτικό αντικείμενο.`);
-      }
-      calls += 1;
-      for (const property of declarations.properties) {
-        if (!ts.isSpreadAssignment(property)) entries.push(readEntry(property, registry, source));
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  if (calls === 0) throw new Error(`${registry}: καμία κλήση ${REGISTRY_CALL}(…) — δηλωμένο μητρώο χωρίς δήλωση.`);
-  return entries;
-}
-
-/** Όλα τα δηλωμένα μητρώα. Το ίδιο κλειδί δύο φορές ⇒ `throw`: ο χάρτης έχει μία γραμμή ανά κλειδί. */
-function readRegistries(projectRoot, config) {
-  const entries = config.lazyRouteRegistries.flatMap(registry => readRegistry(projectRoot, registry));
-  const seen = new Map();
-  for (const entry of entries) {
-    if (seen.has(entry.key)) {
-      throw new Error(`διπλό κλειδί τεμπέλικης διαδρομής «${entry.key}»: ${seen.get(entry.key)} και ${entry.registry}.`);
-    }
-    seen.set(entry.key, entry.registry);
-  }
-  return entries.sort((a, b) => a.key.localeCompare(b.key));
-}
-
-/** Τα κλειδιά που **οφείλουν** γραμμή στον χάρτη: όσα αποδίδουν μόνο στον browser. */
-function awaitedKeys(entries) {
-  return entries.filter(entry => !entry.ssr).map(entry => entry.key);
 }
 
 /**
@@ -248,21 +175,34 @@ function namespacesOfClosure(files, readFile, compat, supported) {
  *   (ADR-744 §32.11: τα `unresolvedSpecs` των κλειστοτήτων δεν επιστρέφονται πια — τα ζητούσε
  *   μόνο ο αποσυρμένος D· αρχείο που λύνει άλυτη εισαγωγή το βλέπει ο F, που ξαναχτίζει τον χάρτη.)
  */
-function buildLazyRouteNamespaces({ projectRoot, config, graph, sources }) {
+function buildLazyRouteNamespaces({ projectRoot, config, graph, sources, callerCandidates = [] }) {
   const entries = readRegistries(projectRoot, config);
+  // Β4.1 — πρόθυμος γράφος (γεννήτορας · Layer 2): ΟΛΟΙ οι εισαγωγείς του factory· on-demand (Layer 1):
+  // μόνο τα σταδιοποιημένα — κάθε νέος καλών περνά από εκεί τη στιγμή που εισάγεται.
+  const candidates = graph.onDemand ? callerCandidates : registryCallImporters(graph, projectRoot);
+  const undeclared = undeclaredRegistryCallers(
+    candidates, relFile => graph.readText(MG.toPosix(path.join(projectRoot, relFile))), config);
   const supported = new Set(readStringArrayConst(projectRoot, LAZY_CONFIG, 'SUPPORTED_NAMESPACES'));
   const compat = loadCompatNamespaces(projectRoot);
   const readFile = createFileNamespaceReader(projectRoot, config, graph, sources);
   const resolve = MG.createResolver(graph);
+  // Β4.2 — ΜΙΑ μνήμη κλειστοτήτων για χάρτη ΚΑΙ κανόνα εισδοχής (ίδιο walk, ίδιος resolver).
+  const closures = new Map();
+  const closureOf = file => {
+    if (!closures.has(file)) closures.set(file, computeShellClosure(graph, [file], { resolve }));
+    return closures.get(file);
+  };
 
   const rows = {};
   const provenance = new Map();
   const inputs = new Set();
   const unresolved = [];
+  const targets = new Map();
   for (const entry of entries.filter(candidate => !candidate.ssr)) {
     const target = resolve(entry.spec, MG.toPosix(path.join(projectRoot, entry.registry)));
     if (target.kind !== 'internal') { unresolved.push(entry); continue; }
-    const closure = computeShellClosure(graph, [target.file], { resolve });
+    targets.set(MG.toPosix(path.relative(projectRoot, target.file)), entry.key);
+    const closure = closureOf(target.file);
     const from = namespacesOfClosure(closure.files, readFile, compat, supported);
     rows[entry.key] = [...from.keys()].sort();
     provenance.set(entry.key, from);
@@ -275,7 +215,37 @@ function buildLazyRouteNamespaces({ projectRoot, config, graph, sources }) {
   // Η ΑΛΛΗ κατεύθυνση: απάντηση σε ερώτηση που δεν τίθεται πια είναι νεκρή ρύθμιση που
   // εξακολουθεί να προσθέτει namespaces — δηλαδή αναμονή που κανείς δεν ζήτησε.
   const deadOpaque = Object.keys(config[OPAQUE_LEDGER]).filter(file => !opaqueFiles.includes(file)).sort();
-  return { entries, rows, provenance, inputs, unresolved, opaque, deadOpaque };
+  const tools = { graph, resolve, closureOf, readFile, compat, supported, namespacesOfClosure };
+  const bypasses = findRegistryBypasses({ projectRoot, config, graph, resolve, targets, callerCandidates });
+  return { entries, rows, provenance, inputs, unresolved, opaque, deadOpaque, undeclared, bypasses, tools };
+}
+
+/**
+ * ADR-280 §11.8 Β4.3 — ο κανόνας Ρ πάνω στον γράφο: πρόθυμος ⇒ ΟΛΑ τα modules · on-demand (Layer 1) ⇒ τα σταδιοποιημένα.
+ * Η κρίση ζει στο `registryBypasses` (μία συνάρτηση, δύο είσοδοι)· εδώ μόνο οι είσοδοι.
+ */
+function findRegistryBypasses({ projectRoot, config, graph, resolve, targets, callerCandidates }) {
+  const abs = relFile => MG.toPosix(path.join(projectRoot, relFile));
+  const files = graph.onDemand
+    ? callerCandidates
+    : [...graph.modules.keys()].map(file => MG.toPosix(path.relative(projectRoot, file)));
+  const importsOf = relFile => (graph.modules.get(abs(relFile)) || {}).imports;
+  const resolveRel = (spec, relFile) => {
+    const target = resolve(spec, abs(relFile));
+    return target.kind === 'internal' ? MG.toPosix(path.relative(projectRoot, target.file)) : null;
+  };
+  return registryBypasses(files, importsOf, resolveRel, targets, config);
+}
+
+/**
+ * ADR-744 §33 (ανοιχτό) · ADR-280 §11.8 Β4.2 — χειρόγραφο `namespaces` εγγραφής που ΞΕΠΕΡΝΑ τη γραμμή της:
+ * αναμονή που ο χάρτης δεν βλέπει, άρα αόρατη στην απογραφή Κ1/Κ2. Η γραμμή είναι η αυθεντία.
+ */
+function declaredBeyondRows(entries, rows) {
+  return entries
+    .filter(entry => entry.namespaces.length > 0 && Object.prototype.hasOwnProperty.call(rows, entry.key))
+    .map(entry => ({ key: entry.key, extra: entry.namespaces.filter(ns => !rows[entry.key].includes(ns)) }))
+    .filter(found => found.extra.length > 0);
 }
 
 function renderLazyArtifact(rows) {
@@ -326,9 +296,17 @@ function describeCoverageFailures(failures) {
  * @param {string[]} wholeNamespaces όσα ταξιδεύουν ολόκληρα στο κέλυφος που ΜΟΛΙΣ χτίστηκε
  */
 function judgeLazyRoutes(projectRoot, config, lazy, wholeNamespaces) {
-  const pairs = mountOnlyPairs(lazy.rows, bootNamespaces(projectRoot, wholeNamespaces));
+  const boot = bootNamespaces(projectRoot, wholeNamespaces);
+  const pairs = mountOnlyPairs(lazy.rows, boot);
   const audit = auditMountCensus(config[LEDGER], pairs, config[SEAL]);
   const verdicts = [];
+  if (lazy.undeclared.length > 0) verdicts.push(describeUndeclaredCallers(lazy.undeclared));
+  if ((lazy.bypasses || []).length > 0) verdicts.push(describeRegistryBypasses(lazy.bypasses));
+  const beyond = declaredBeyondRows(lazy.entries, lazy.rows);
+  if (beyond.length > 0) {
+    verdicts.push(`χειρόγραφο \`namespaces\` πέρα από τη γραμμή του χάρτη (αναμονή αόρατη στο Κ1/Κ2 — σβήσ' το, `
+      + `η γραμμή παράγεται): ${beyond.map(found => `${found.key} [${found.extra.join(', ')}]`).join(' · ')}`);
+  }
   if (lazy.unresolved.length > 0) {
     verdicts.push(`τεμπέλικες διαδρομές με import() που δεν λύθηκε σε αρχείο του έργου: ${lazy.unresolved.map(e => `${e.key} (${e.spec})`).join(' · ')}`);
   }
@@ -345,7 +323,14 @@ function judgeLazyRoutes(projectRoot, config, lazy, wholeNamespaces) {
     verdicts.push(`η απογραφή των αναμονών εκτός εκκίνησης δεν κλείνει — ${describeMountFailures(audit.failures, lazy.provenance)}`);
   }
   if (audit.grew) verdicts.push(describeMountGrowth(audit));
-  return { pairs, audit, verdicts, slack: announceMountSlack(audit) };
+  // Β4.2 — ο κανόνας εισδοχής θέλει ΠΡΟΘΥΜΟ γράφο (απαρίθμηση σελίδων): γεννήτορας + CI, ποτέ το hook.
+  const admission = lazy.tools.graph.onDemand
+    ? null
+    : judgeAdmission({ projectRoot, config, graph: lazy.tools.graph, lazy, boot });
+  if (admission !== null) verdicts.push(...admission.verdicts);
+  return {
+    pairs, audit, admission, verdicts, slack: [...announceMountSlack(audit), ...(admission ? admission.slack : [])],
+  };
 }
 
 /**
@@ -385,6 +370,7 @@ function judgeLazyArtifact(root, config, wholeNamespaces) {
 module.exports = {
   ARTIFACT_NAME,
   REGISTRY_CALL,
+  REGISTRY_CALLS,
   LAZY_CONFIG,
   COVERAGE,
   artifactPath,
@@ -392,6 +378,7 @@ module.exports = {
   readRegistry,
   readRegistries,
   awaitedKeys,
+  undeclaredRegistryCallers,
   buildLazyRouteNamespaces,
   renderLazyArtifact,
   bootNamespaces,

@@ -39,8 +39,9 @@
  */
 
 import dynamic from 'next/dynamic';
-import type { ComponentType } from 'react';
-import { loadNamespace, type Namespace } from '@/i18n/lazy-config';
+import type { ComponentType, ReactElement } from 'react';
+import { loadNamespace, isSupportedNamespace, type Namespace } from '@/i18n/lazy-config';
+import generatedRouteNamespaces from '@/i18n/generated/lazy-route-namespaces.json';
 import {
   PageLoadingSpinner,
   DashboardLoadingSkeleton,
@@ -107,14 +108,29 @@ export function createLazyRoute(
 ) {
   const { loadingType = 'spinner', ssr = false, namespaces = [] } = options;
   const LoadingComponent = resolveLoadingComponent(loadingType);
+  return lazyChunk(importFn, { loading: () => <LoadingComponent />, ssr, namespaces });
+}
+
+/**
+ * ADR-280 §11.8 Β4.3 — μια εγγραφή μητρώου **ξέρει να προφορτωθεί**: το `preload()` καλεί το ΙΔΙΟ `load` με
+ * το `dynamic` (κώδικας + κείμενα, ένα αίτημα). Πρακτική React Router `route.lazy` / Remix `prefetch="intent"` /
+ * Closure `ModuleManager.prefetchModule`: το prefetch περνά από τον φορτωτή του μητρώου **με ταυτότητα**, ποτέ
+ * από δεύτερο αντίγραφο του specifier (CHECK 3.34 κανόνας Ρ). Ένα prefetch χωρίς κείμενα θα άφηνε το mount να περιμένει.
+ */
+type LazyChunkComponent = ReturnType<typeof dynamic> & { readonly preload: () => Promise<void> };
+
+/**
+ * ADR-280 §11.8 Β4.1 — ο **ένας** πυρήνας κάθε τεμπέλικου chunk (διαδρομής ή επιφάνειας): κώδικας
+ * και namespaces ως **ένα** αίτημα. Δεύτερη υλοποίηση του `Promise.all` θα ήταν δεύτερη μηχανή.
+ */
+function lazyChunk(
+  importFn: () => Promise<LazyComponentModule>,
+  { loading, ssr, namespaces }: { loading: () => ReactElement | null; ssr: boolean; namespaces: readonly Namespace[] }
+): LazyChunkComponent {
   const load = namespaces.length === 0
     ? importFn
     : () => Promise.all([importFn(), ...namespaces.map((ns) => loadNamespace(ns))]).then(([mod]) => mod);
-
-  return dynamic(load, {
-    loading: () => <LoadingComponent />,
-    ssr,
-  });
+  return Object.assign(dynamic(load, { loading, ssr }), { preload: () => load().then(() => undefined) });
 }
 
 /** Ό,τι επιστρέφει το εργοστάσιο — ο τύπος κάθε εγγραφής ενός μητρώου. */
@@ -123,6 +139,25 @@ export type LazyRouteComponent = ReturnType<typeof createLazyRoute>;
 /** Η δήλωση μιας διαδρομής μέσα στο {@link defineLazyRoutes}: ο φορτωτής και η όψη αναμονής. */
 export interface LazyRouteDeclaration extends LazyRouteOptions {
   load: () => Promise<LazyComponentModule>;
+}
+
+/**
+ * ADR-744 §27.10 #1 · ADR-280 §11.8 — **τι περιμένει** το chunk μιας διαδρομής: η δήλωση **∪** η γραμμή
+ * του παραγόμενου χάρτη `lazy-route-namespaces.json` (ίδιο κλειδί = ίδια ταυτότητα, §27.6).
+ *
+ * 🔴 Μέχρι εδώ ο χάρτης **παραγόταν, υπογραφόταν και κρινόταν** (CHECK 3.34) αλλά **δεν τον διάβαζε κανείς**:
+ * μόνο 4 εγγραφές περίμεναν namespace, οι άλλες βασίζονταν στο ότι το `CRITICAL_NAMESPACES` κατεβάζει
+ * τα πάντα στην εκκίνηση (1,9 MB στο `el`, ADR-280 §11.7). Χωρίς αυτή τη σύνδεση καμία οικογένεια δεν
+ * μπορεί να βγει από την εκκίνηση χωρίς ωμά κλειδιά στο πρώτο καρέ.
+ *
+ * 🔑 **Ένωση, όχι αντικατάσταση** (ίδια αρχή με `resolveNamespacesToPreload`): η δήλωση είναι πρόθεση.
+ * Για ό,τι είναι ήδη φορτωμένο το `loadNamespace` επιλύεται αμέσως (`isBundleComplete`)· για ό,τι
+ * φορτώνεται ήδη, ενώνεται με την ίδια λήψη (`singleFlight`) — καμία διπλή λήψη.
+ * ⚠️ Διαβάζεται **μέσα** σε συνάρτηση, όχι σε module scope — η αρχή του `resolveLoadingComponent`.
+ */
+function awaitedNamespaces(key: string, declared: readonly Namespace[]): readonly Namespace[] {
+  const generated: Readonly<Record<string, readonly string[] | undefined>> = generatedRouteNamespaces;
+  return [...new Set([...declared, ...(generated[key] ?? []).filter(isSupportedNamespace)])];
 }
 
 /**
@@ -140,9 +175,45 @@ export interface LazyRouteDeclaration extends LazyRouteOptions {
 export function defineLazyRoutes<T extends Record<string, LazyRouteDeclaration>>(
   declarations: T
 ): { readonly [K in keyof T]: LazyRouteComponent } {
-  const routes: Record<string, LazyRouteComponent> = {};
-  for (const [key, { load, ...options }] of Object.entries(declarations)) {
-    routes[key] = createLazyRoute(load, options);
+  return defineLazy(declarations, ({ load, loadingType, ssr }, namespaces) =>
+    createLazyRoute(load, { loadingType, ssr, namespaces }));
+}
+
+/**
+ * Η δήλωση μιας **επιφάνειας** (διάλογος, καρτέλα, πάνελ) μέσα στο {@link defineLazySurfaces}.
+ * ⚠️ Χωρίς `ssr`: μια επιφάνεια μοντάρεται από ενέργεια χρήστη, άρα είναι πάντα client-only — ο
+ * γεννήτορας **αρνείται** το πεδίο, ώστε καμία επιφάνεια να μη χάσει τη γραμμή της στον χάρτη.
+ */
+export interface LazySurfaceDeclaration {
+  load: () => Promise<LazyComponentModule>;
+  /** Ό,τι ζωγραφίζεται όσο φτάνουν κώδικας + κείμενα. Προεπιλογή: τίποτα (η επιφάνεια απλώς αργεί ένα καρέ). */
+  fallback?: ComponentType | null;
+  namespaces?: readonly Namespace[];
+}
+
+/**
+ * ADR-280 §11.8 Β4.1 — δηλώνει μητρώο τεμπέλικων **επιφανειών**: `{ Κλειδί: { load, fallback? } }`.
+ *
+ * 🔑 Η ΙΔΙΑ μηχανή με το {@link defineLazyRoutes}: ίδιο `awaitedNamespaces`, ίδιος χάρτης
+ * `lazy-route-namespaces.json`, ίδια απογραφή Κ1/Κ2. Το κλειδί είναι μοναδικό σε **όλα** τα μητρώα.
+ * Πρακτική Google Closure / Meta fbt («τα κείμενα ταξιδεύουν με το chunk»), σε χρόνο εκτέλεσης.
+ * ⚠️ Το αρχείο που το καλεί **οφείλει** να είναι στο `lazyRouteRegistries` — αλλιώς ο γεννήτορας αρνείται.
+ */
+export function defineLazySurfaces<T extends Record<string, LazySurfaceDeclaration>>(
+  declarations: T
+): { readonly [K in keyof T]: LazyRouteComponent } {
+  return defineLazy(declarations, ({ load, fallback: Fallback = null }, namespaces) =>
+    lazyChunk(load, { loading: () => (Fallback ? <Fallback /> : null), ssr: false, namespaces }));
+}
+
+/** Ο **ένας** βρόχος των μητρώων: κάθε κλειδί περνά από το `awaitedNamespaces` πριν χτιστεί. */
+function defineLazy<D extends { namespaces?: readonly Namespace[] }, T extends Record<string, D>>(
+  declarations: T,
+  build: (declaration: D, namespaces: readonly Namespace[]) => LazyRouteComponent
+): { readonly [K in keyof T]: LazyRouteComponent } {
+  const built: Record<string, LazyRouteComponent> = {};
+  for (const [key, declaration] of Object.entries(declarations)) {
+    built[key] = build(declaration, awaitedNamespaces(key, declaration.namespaces ?? []));
   }
-  return routes as { readonly [K in keyof T]: LazyRouteComponent };
+  return built as { readonly [K in keyof T]: LazyRouteComponent };
 }

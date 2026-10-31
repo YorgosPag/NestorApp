@@ -4,7 +4,7 @@
  * @module components/generic/mappings/propertyDossierMappings
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΟΙ ΚΑΡΤΕΛΕΣ ΦΟΡΤΩΝΟΝΤΑΙ ΜΕ ΟΡΙΟ (`React.lazy`) — ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΓΟΥΣΤΟ
+ * 🔴 ΟΙ ΚΑΡΤΕΛΕΣ ΦΟΡΤΩΝΟΝΤΑΙ ΜΕ ΟΡΙΟ (επιφάνεια `PropertyDossierTab`, ADR-280 §11.8 Β4.3) — ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΓΟΥΣΤΟ
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Με στατική εισαγωγή, η κλειστότητα της σελίδας `/dossiers/[dossierId]` έφτανε **ολόκληρο** τον κόσμο του
@@ -20,7 +20,8 @@
 import React, { type ComponentType } from 'react';
 
 import type { TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { DossierSurfaces } from '@/components/property-dossier/dossier-surfaces';
+import type { PropertyDossierTabName } from '@/components/property-dossier/property-dossier-tab-names';
 import type { PropertyDossier } from '@/types/property-dossier';
 
 /** Ό,τι δίνει ο renderer σε κάθε καρτέλα — ο φάκελος ως `data`. */
@@ -28,44 +29,22 @@ export interface PropertyDossierTabComponentProps extends TabComponentProps {
   data?: PropertyDossier;
 }
 
-type DossierTabName =
-  | 'PropertyDossierFloorplanTab'
-  | 'PropertyDossierDocumentsTab'
-  | 'PropertyDossierPhotosTab'
-  | 'PropertyDossierVideosTab'
-  | 'PropertyDossierHistoryTab';
-
-type DossierTab = ComponentType<{ readonly dossier: PropertyDossier }>;
-
-/** **Ένα** όριο φόρτωσης ανά καρτέλα — το module φορτώνεται μία φορά, όποια καρτέλα κι αν ανοίξει πρώτη. */
-function lazyTab(name: DossierTabName): React.LazyExoticComponent<DossierTab> {
-  return React.lazy(() =>
-    import('@/components/property-dossier/PropertyDossierTabs').then((tabs) => ({ default: tabs[name] })),
-  );
-}
-
-/** Η στιγμή φόρτωσης της καρτέλας — ένα μήνυμα, ίδιο για όλες. */
-function TabLoading(): React.ReactElement {
-  const { t } = useTranslation(['property-market']);
-  return React.createElement('p', { className: 'm-0 p-4 text-sm text-muted-foreground' }, t('property-market:dossier.tabs.loading'));
-}
-
-/** Προσαρμογέας: `data` του renderer → `dossier` της καρτέλας. Χωρίς φάκελο ⇒ τίποτα (ποτέ καρτέλα χωρίς οντότητα). */
-function adapt(name: DossierTabName): ComponentType<PropertyDossierTabComponentProps> {
-  const Tab = lazyTab(name);
+/**
+ * Προσαρμογέας: `data` του renderer → `dossier` της καρτέλας. Χωρίς φάκελο ⇒ τίποτα (ποτέ καρτέλα χωρίς οντότητα).
+ *
+ * ADR-280 §11.8 Β4.3 — το όριο είναι η **επιφάνεια** `PropertyDossierTab` (ένα module, μία φόρτωση, όποια καρτέλα κι
+ * αν ανοίξει πρώτη): το chunk περιμένει και τα κείμενά του, και το μήνυμα φόρτωσης είναι το `fallback` της.
+ */
+function adapt(name: PropertyDossierTabName): ComponentType<PropertyDossierTabComponentProps> {
   function DossierTabAdapter(props: PropertyDossierTabComponentProps) {
     if (!props.data) return null;
-    return React.createElement(
-      React.Suspense,
-      { fallback: React.createElement(TabLoading) },
-      React.createElement(Tab, { dossier: props.data }),
-    );
+    return React.createElement(DossierSurfaces.PropertyDossierTab, { name, dossier: props.data });
   }
   DossierTabAdapter.displayName = `DossierTab(${name})`;
   return DossierTabAdapter;
 }
 
-export const PROPERTY_DOSSIER_COMPONENT_MAPPING: Record<DossierTabName, ComponentType<PropertyDossierTabComponentProps>> = {
+export const PROPERTY_DOSSIER_COMPONENT_MAPPING: Record<PropertyDossierTabName, ComponentType<PropertyDossierTabComponentProps>> = {
   PropertyDossierFloorplanTab: adapt('PropertyDossierFloorplanTab'),
   PropertyDossierDocumentsTab: adapt('PropertyDossierDocumentsTab'),
   PropertyDossierPhotosTab: adapt('PropertyDossierPhotosTab'),

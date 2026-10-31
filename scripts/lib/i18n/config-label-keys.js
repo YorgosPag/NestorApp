@@ -56,11 +56,6 @@ function lineOf(content, index) {
 /** Ο φάκελος των ελληνικών locale — η αυθεντία κλειδιών και των δύο πυλών (σχετικός με τη ρίζα). */
 const EL_LOCALE_DIR = 'src/i18n/locales/el';
 
-/** Κάθε αρχείο του πεδίου (`--all` / `--baseline`) — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`). */
-function configLabelFiles(input) {
-  return ratchet.scopeFiles(input, ['src/config', 'src/subapps', 'src/constants/domains'], isConfigLabelScope);
-}
-
 /** Τα ευρήματα ανά αρχείο του πεδίου (`findHits(content)`) — το κείμενο από την είσοδο. */
 function scanConfigLabels(files, input, findHits) {
   return ratchet.scanFiles(files, { input, inScope: isConfigLabelScope, findHits });
@@ -77,5 +72,5 @@ function judgeConfigLabels(scanned, input, { baselineFile, ...spec }) {
 
 module.exports = {
   KEY_SHAPE, EL_LOCALE_DIR, isConfigLabelScope, labelsBlockCandidates, lineOf, normalizePath,
-  configLabelFiles, scanConfigLabels, judgeConfigLabels,
+  scanConfigLabels, judgeConfigLabels,
 };

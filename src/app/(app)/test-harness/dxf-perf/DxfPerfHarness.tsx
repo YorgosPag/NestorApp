@@ -24,7 +24,7 @@
  */
 
 import { useCallback, useEffect, type ChangeEvent } from 'react';
-import dynamic from 'next/dynamic';
+import { LazyRoutes } from '@/utils/lazyRoutes';
 import { EventBus } from '@/subapps/dxf-viewer/systems/events';
 // Ίδιος SSoT σύνθεσης κλάσεων με τη διαδρομή παραγωγής (`src/app/dxf/viewer/page.tsx`).
 import { cn } from '@/lib/design-system';
@@ -33,13 +33,14 @@ import { cn } from '@/lib/design-system';
 import '@/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css';
 
 /**
- * Ίδιο module specifier με το `src/app/dxf/viewer/page.tsx` ⇒ ο bundler μοιράζεται
- * το ΙΔΙΟ chunk. Γι' αυτό αυτός ο harness **δεν** χρειάζεται `.prod.ts` stub όπως ο
- * `dxf-canvas`: δεν προσθέτει τίποτα στο bundle παραγωγής που να μην υπάρχει ήδη.
+ * Η ΙΔΙΑ εγγραφή μητρώου με το `/dxf/viewer` (`LazyRoutes.DXFViewer`) ⇒ ο bundler μοιράζεται το ΙΔΙΟ chunk. Γι' αυτό
+ * αυτός ο harness **δεν** χρειάζεται `.prod.ts` stub όπως ο `dxf-canvas`: δεν προσθέτει τίποτα στο bundle παραγωγής.
+ *
+ * 🔴 ADR-280 §11.8 Β4.3 — ΗΤΑΝ ΤΟΠΙΚΟ `dynamic(() => import(DxfViewerApp))`: ίδιος κώδικας, αλλά **χωρίς** τα κείμενα
+ * που περιμένει το chunk του μητρώου. Μόλις το `dxf-viewer` βγει από την εκκίνηση (Β5) θα ζωγράφιζε ωμά κλειδιά — και
+ * η πύλη εισδοχής δεν το έβλεπε (σταματούσε σε κάθε `import()` στόχου εγγραφής). Πλέον το αρνείται ο κανόνας Ρ.
  */
-const DxfViewerApp = dynamic(() => import('@/subapps/dxf-viewer/DxfViewerApp'), {
-  ssr: false,
-});
+const DxfViewerApp = LazyRoutes.DXFViewer;
 
 /** Το συμβόλαιο που διαβάζει το perf spec (Α2). Μόνο getters — μηδέν παρασκήνιο. */
 interface DxfPerfHarnessApi {

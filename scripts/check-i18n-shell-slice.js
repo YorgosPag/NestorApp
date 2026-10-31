@@ -93,6 +93,7 @@ const {
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const { checkGlobalInputs, materializeGlobalInputs } = require('./lib/i18n-shell-slice/global-inputs');
 const { checkLazyRouteFreshness } = require('./lib/i18n-shell-slice/lazy-freshness');
+const { judgeLazyRoutes } = require('./lib/i18n-shell-slice/lazy-routes');
 const { checkIncrementalFreshness } = require('./lib/i18n-shell-slice/incremental-freshness');
 const { createLayerOnePass } = require('./lib/i18n-shell-slice/layer-one-pass');
 const { createIndexSources, CACHE_REL } = require('./lib/i18n-shell-slice/source-cache');
@@ -223,6 +224,16 @@ function runFull(config) {
       'classify them in .i18n-shell-slice.json → dynamicKeyPolicy',
     );
     return;
+  }
+  // 🔴 ADR-280 §11.8 Β4.2 — ΤΟ CI ΔΕΝ ΕΚΡΙΝΕ ΤΟΝ ΧΑΡΤΗ. Ως εδώ το `--full` σύγκρινε bytes αλλά ΔΕΝ καλούσε
+  // την κρίση: απογραφή Κ1/Κ2 · αδήλωτος καλών (Β4.1) · κανόνας εισδοχής ζούσαν μόνο σε γεννήτορα + hook.
+  // Ο ΙΔΙΟΣ κριτής με τον γεννήτορα, πάνω στον ΙΔΙΟ πρόθυμο γράφο — καμία δεύτερη κρίση.
+  if (complete.lazy !== null) {
+    const judged = judgeLazyRoutes(PROJECT_ROOT, config, complete.lazy, RS.wholeNamespacesOf(plan));
+    if (judged.verdicts.length > 0) {
+      fail(`ο χάρτης τεμπέλικων chunks δεν κρίνεται πράσινος — ${judged.verdicts.join(' · ')}`, 'npm run generate:i18n-shell-slice');
+      return;
+    }
   }
   const rendered = complete.rendered;
   for (const [relPath, text] of rendered.artifacts) {

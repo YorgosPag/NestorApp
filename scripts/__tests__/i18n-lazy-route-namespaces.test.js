@@ -10,6 +10,14 @@
  *   Μ4 `resolveConst` → null ⇒ Γ2 · Μ5 το `answered` αγνοείται ⇒ Γ7β · Μ6 χωρίς `deadOpaque` ⇒ Γ7γ ·
  *   Μ7 το `ABSENT` σιωπά ⇒ Α2 · Μ8 `grew` πάντα false ⇒ Α3 · Μ9 χωρίς `ORPHAN_ROW` ⇒ Κ2 ·
  *   Μ10 ο χάρτης στο `artifacts` αντί `signedOnly` ⇒ Υ1.
+ * ADR-280 §11.8 Β4.1 (2026-10-30) — επιφάνειες στον ΙΔΙΟ χάρτη (ομάδα Σ + Λ11):
+ *   Μ11 χωρίς το είδος `surface` στο reader ⇒ Σ1 · Μ12 χωρίς την άρνηση `ssr` ⇒ Σ3 ·
+ *   Μ13 το `undeclaredRegistryCallers` σιωπά ⇒ Σ4 + Λ11 · Μ16 χωρίς `isTestSource` ⇒ Σ4.
+ * ADR-280 §11.8 Β4.2 (2026-10-30) — ο κανόνας εισδοχής (ομάδα Ε): Μ17 χωρίς μεταβατικότητα ⇒ Ε2 ·
+ *   Μ18 χωρίς εξαίρεση εγγραφής ⇒ Ε3 · Μ19 η γραμμή αγνοείται ⇒ Ε4 · Μ20 χωρίς ABSENT ⇒ Ε5 ·
+ *   Μ21 χωρίς έλεγχο δήλωσης ⇒ Ε6 · Μ22 το `--full` χωρίς κρίση ⇒ Ε7.
+ * ADR-280 §11.8 Β4.3 (2026-10-31) — κανόνας Ρ (Ε8 + Λ12): Μ23 το `registryBypasses` σιωπά ⇒ Ε8 + Λ12 ·
+ *   Μ24 χωρίς `isTestSource` ⇒ Ε8 · Μ25 χωρίς εξαίρεση μητρώου ⇒ Ε8 · Μ26 Layer 1 χωρίς σταδιοποιημένα ⇒ Λ12.
  */
 
 'use strict';
@@ -36,8 +44,9 @@ const LAZY_CONFIG = (supported, critical) => `export const SUPPORTED_NAMESPACES 
   + `] as const;${NL}export type Namespace = typeof SUPPORTED_NAMESPACES[number];${NL}`
   + `export const CRITICAL_NAMESPACES: readonly Namespace[] = [${critical.map(ns => `'${ns}'`).join(', ')}];${NL}`;
 
-const registry = entries => `import { defineLazyRoutes } from './factory';${NL}export const Routes = defineLazyRoutes({${NL}`
+const registry = (entries, call = 'defineLazyRoutes') => `import { ${call} } from './factory';${NL}export const Routes = ${call}({${NL}`
   + entries.map(([key, spec, extra = '']) => `  ${key}: { load: () => import('${spec}')${extra} },${NL}`).join('') + `});${NL}`;
+const surfaces = entries => registry(entries, 'defineLazySurfaces');
 
 const uses = (ns, child) => `${child ? `import { ${child[0]} } from '${child[1]}';${NL}` : ''}`
   + `import { useTranslation } from '@/i18n/hook';${NL}`
@@ -55,7 +64,7 @@ function miniRepo(files, overrides = {}) {
   // ⚠️ `tsconfig.base.json`, ΟΧΙ `tsconfig.json`: από εκεί διαβάζει τα aliases ο resolver. Με λάθος όνομα
   // κάθε `@/…` μένει άλυτο και ο χάρτης βγαίνει ΑΔΕΙΟΣ — δηλαδή άγκυρες που δεν κοίταξαν τίποτα.
   write('tsconfig.base.json', JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } } }));
-  write('src/utils/factory.ts', `export function defineLazyRoutes(d) { return d; }${NL}`);
+  write('src/utils/factory.ts', `export function defineLazyRoutes(d) { return d; }${NL}export function defineLazySurfaces(d) { return d; }${NL}`);
   write('src/i18n/hook.ts', `export function useTranslation(ns) { return { t: (k) => k }; }${NL}`);
   if (!files['src/i18n/lazy-config.ts']) write('src/i18n/lazy-config.ts', LAZY_CONFIG(['alpha', 'beta', 'gamma', 'alpha-extra', 'boot'], ['boot']));
   for (const [rel, body] of Object.entries(files)) write(rel, body);
@@ -193,6 +202,157 @@ describe('Γ — ο χάρτης παράγεται από την κλειστό
     const lazy = ghost.build();
     expect(lazy.unresolved.map(entry => entry.key)).toEqual(['A']);
     expect(LR.judgeLazyRoutes(ghost.root, ghost.config, lazy, []).verdicts.join('\n')).toContain('A (@/pages/missing)');
+  });
+});
+
+describe('Σ — ADR-280 §11.8 Β4.1: οι ΕΠΙΦΑΝΕΙΕΣ στον ΙΔΙΟ χάρτη, την ΙΔΙΑ απογραφή, κλειστό σύνολο', () => {
+  const SURFACES = 'src/utils/surfaces.tsx';
+  const both = { lazyRouteRegistries: [REGISTRY, SURFACES] };
+
+  it('Σ1: επιφάνεια ⇒ γραμμή από την κλειστότητα του chunk της, με είδος `surface`', () => {
+    const { build } = miniRepo({
+      [REGISTRY]: registry([['A', '@/pages/a']]),
+      [SURFACES]: surfaces([['Dialog', '@/pages/dialog']]),
+      'src/pages/a.tsx': uses(`'alpha'`),
+      'src/pages/dialog.tsx': uses(`'beta'`, ['Child', './child']),
+      'src/pages/child.ts': `import { useTranslation } from '@/i18n/hook';${NL}export function Child() { return useTranslation('gamma'); }${NL}`,
+    }, both);
+    const lazy = build();
+    expect(lazy.rows).toEqual({ A: ['alpha'], Dialog: ['beta', 'gamma'] });
+    expect(lazy.entries.map(entry => [entry.key, entry.kind])).toEqual([['A', 'route'], ['Dialog', 'surface']]);
+    expect(LR.awaitedKeys(lazy.entries)).toEqual(['A', 'Dialog']);
+    expect(lazy.undeclared).toEqual([]);
+  });
+
+  it('Σ2: ΕΝΑ κλειδί σε ΟΛΑ τα μητρώα — διαδρομή και επιφάνεια με το ίδιο όνομα ⇒ ΑΡΝΕΙΤΑΙ', () => {
+    const { build } = miniRepo({
+      [REGISTRY]: registry([['A', '@/pages/a']]), [SURFACES]: surfaces([['A', '@/pages/a']]), 'src/pages/a.tsx': uses(`'alpha'`),
+    }, both);
+    expect(build).toThrow(/διπλό κλειδί τεμπέλικης διαδρομής «A»/);
+  });
+
+  it('Σ3: επιφάνεια με `ssr` ⇒ ΑΡΝΕΙΤΑΙ (θα της έσβηνε τη γραμμή)· διαδρομή με `ssr` δεκτή', () => {
+    const { build } = miniRepo({
+      [REGISTRY]: registry([['A', '@/pages/a', ', ssr: true']]), [SURFACES]: surfaces([['D', '@/pages/a', ', ssr: false']]),
+      'src/pages/a.tsx': uses(`'alpha'`),
+    }, both);
+    expect(build).toThrow(/η επιφάνεια «D» δηλώνει `ssr`/);
+  });
+
+  it('Σ4 🔴: αρχείο που ΚΑΛΕΙ `defineLazy*` χωρίς να είναι δηλωμένο μητρώο ⇒ εύρημα στην κρίση (η άλλη κατεύθυνση)', () => {
+    const ROGUE = 'src/features/rogue.tsx';
+    const repo = miniRepo({
+      [REGISTRY]: registry([['A', '@/pages/a']]),
+      [ROGUE]: `import { defineLazySurfaces } from '@/utils/factory';${NL}export const R = defineLazySurfaces({ X: { load: () => import('@/pages/a') } });${NL}`,
+      'src/features/importer-only.tsx': `import { defineLazyRoutes } from '@/utils/factory';${NL}export const f = defineLazyRoutes;${NL}`,
+      'src/features/__tests__/factory.test.tsx': `import { defineLazyRoutes } from '@/utils/factory';${NL}defineLazyRoutes({ T: { load: () => import('@/pages/a') } });${NL}`,
+      'src/pages/a.tsx': uses(`'alpha'`),
+    });
+    const lazy = repo.build();
+    expect(lazy.undeclared).toEqual([ROGUE]);                // ούτε ο εισαγωγέας ΧΩΡΙΣ κλήση ούτε το test είναι εύρημα
+    expect(LR.judgeLazyRoutes(repo.root, repo.config, lazy, []).verdicts.join(NL)).toContain(`ΧΩΡΙΣ να είναι στο lazyRouteRegistries`);
+  });
+
+  it('Σ5: η επιφάνεια μπαίνει στην ΙΔΙΑ απογραφή Κ1/Κ2 — ζεύγος εκτός εκκίνησης χωρίς δήλωση ⇒ ΚΟΚΚΙΝΟ', () => {
+    const repo = miniRepo({
+      [REGISTRY]: registry([]), [SURFACES]: surfaces([['Dialog', '@/pages/dialog']]), 'src/pages/dialog.tsx': uses(`['boot', 'beta']`),
+    }, both);
+    const judged = LR.judgeLazyRoutes(repo.root, repo.config, repo.build(), []);
+    expect(judged.pairs).toEqual({ Dialog: ['beta'] });
+    expect(judged.audit.failures).toEqual([{ key: 'Dialog', namespace: 'beta', verdict: LC.CENSUS.UNDECLARED }]);
+  });
+});
+
+describe('Ε — ADR-280 §11.8 Β4.2: ο κανόνας εισδοχής (ό,τι μοντάρεται χωρίς αλλαγή διαδρομής φέρνει τα κείμενά του)', () => {
+  const SC = require(path.join(LIB, 'surface-coverage'));
+  const SURFACES = 'src/utils/surfaces.tsx';
+  const PAGE = 'src/app/x/page.tsx';
+  const lazyImport = spec => `export const load = () => import('${spec}');${NL}`;
+  const debtOf = repo => SC.admissionDebt({
+    projectRoot: repo.root, graph: repo.graph, lazy: repo.build(), boot: LR.bootNamespaces(repo.root, []),
+  }).debt;
+  const key = (root, boundary) => SC.admissionKey(root, boundary);
+
+  it('Ε1: σελίδα που ονομάζει ns εκτός εκκίνησης στη ΣΤΑΤΙΚΗ της κλειστότητα ⇒ τριάδα· ό,τι είναι στην εκκίνηση ⇒ τίποτα', () => {
+    const repo = miniRepo({ [REGISTRY]: registry([]), [PAGE]: uses(`['boot', 'alpha']`), 'src/app/y/page.tsx': uses(`'boot'`) });
+    expect(debtOf(repo)).toEqual({ [key(PAGE, SC.STATIC)]: ['alpha'] });
+  });
+
+  it('Ε2: δυναμικό όριο που ΔΕΝ είναι εγγραφή ⇒ τριάδα — και μεταβατικά, όριο μέσα σε όριο', () => {
+    const repo = miniRepo({
+      [REGISTRY]: registry([]),
+      [PAGE]: `${lazyImport('@/features/panel')}export default function Page() { return null; }${NL}`,
+      'src/features/panel.tsx': `${lazyImport('@/features/deep')}${uses(`'beta'`)}`,
+      'src/features/deep.tsx': uses(`'gamma'`),
+    });
+    expect(debtOf(repo)).toEqual({
+      [key(PAGE, 'src/features/deep.tsx')]: ['gamma'],
+      [key(PAGE, 'src/features/panel.tsx')]: ['beta'],
+    });
+  });
+
+  it('Ε3 + Ε4: όριο που ΕΙΝΑΙ εγγραφή επιφάνειας ⇒ τίποτα για τη σελίδα· η εγγραφή κρίνει τα δικά της όρια απέναντι στη ΓΡΑΜΜΗ της', () => {
+    const files = deep => ({
+      [REGISTRY]: registry([]),
+      [SURFACES]: surfaces([['Panel', '@/features/panel']]),
+      [PAGE]: `import { Routes } from '@/utils/surfaces';${NL}export default function Page() { return Routes.Panel; }${NL}`,
+      'src/features/panel.tsx': `${lazyImport('@/features/deep')}${uses(`'beta'`)}`,
+      'src/features/deep.tsx': uses(deep),
+    });
+    const both = { lazyRouteRegistries: [REGISTRY, SURFACES] };
+    expect(debtOf(miniRepo(files(`'beta'`), both))).toEqual({});                                   // ⊆ γραμμή
+    expect(debtOf(miniRepo(files(`'gamma'`), both))).toEqual({ [key('entry:Panel', 'src/features/deep.tsx')]: ['gamma'] });
+  });
+
+  it('Ε5: η ΙΔΙΑ απογραφή — δηλωμένο ⇒ πράσινο · νέο ⇒ κόκκινο · σβησμένο ⇒ κόκκινο · πάνω από σφράγιση ⇒ κόκκινο', () => {
+    const files = { [REGISTRY]: registry([]), [PAGE]: uses(`'alpha'`) };
+    const judge = (debt, count) => {
+      const repo = miniRepo(files, {
+        lazyAdmissionDebt: debt, lazyAdmissionSeal: { count, at: '2026-10-30', why: 'άγκυρα — σφράγιση χρέους εισδοχής' },
+      });
+      return LR.judgeLazyRoutes(repo.root, repo.config, repo.build(), []).verdicts.join(NL);
+    };
+    const debt = { [key(PAGE, SC.STATIC)]: ['alpha'] };
+    expect(judge(debt, 1)).toBe('');
+    expect(judge({}, 1)).toContain('ΝΕΑ ΑΝΑΜΟΝΗ');
+    expect(judge({ ...debt, [key('src/app/z/page.tsx', SC.STATIC)]: ['beta'] }, 2)).toContain('ΔΕΝ περιμένεται πια');
+    expect(judge(debt, 0)).toContain('ΜΟΝΟ ΣΥΡΡΙΚΝΩΝΕΤΑΙ');
+  });
+
+  it('Ε6: χειρόγραφο `namespaces` πέρα από τη γραμμή ⇒ ΚΟΚΚΙΝΟ· μέσα στη γραμμή ⇒ πράσινο· μη κυριολεκτικό ⇒ ΑΡΝΕΙΤΑΙ', () => {
+    const judge = extra => {
+      const repo = miniRepo({ [REGISTRY]: registry([['A', '@/pages/a', extra]]), 'src/pages/a.tsx': uses(`'boot'`) });
+      return LR.judgeLazyRoutes(repo.root, repo.config, repo.build(), []).verdicts.join(NL);
+    };
+    expect(judge(`, namespaces: ['boot']`)).not.toContain('χειρόγραφο');
+    expect(judge(`, namespaces: ['gamma']`)).toContain('A [gamma]');
+    expect(() => judge(`, namespaces: list`)).toThrow(/δεν είναι κυριολεκτικός πίνακας/);
+  });
+
+  it('Ε8 🔴 Β4.3 κανόνας Ρ: `import()` ΣΤΟΧΟΥ ΕΓΓΡΑΦΗΣ εκτός μητρώου ⇒ ΚΟΚΚΙΝΟ· από μητρώο · του αρχείου-μητρώου · από test ⇒ τίποτα', () => {
+    const ROGUE = 'src/features/rogue.tsx';
+    const repo = miniRepo({
+      [REGISTRY]: registry([['A', '@/pages/a']]),
+      [SURFACES]: surfaces([['Panel', '@/features/panel']]),
+      'src/pages/a.tsx': uses(`'alpha'`),
+      'src/features/panel.tsx': uses(`'beta'`),
+      [ROGUE]: lazyImport('@/pages/a'),                                         // ίδιος κώδικας, ΧΩΡΙΣ τη γραμμή
+      'src/features/prefetch.tsx': lazyImport('@/utils/surfaces'),             // το ΜΗΤΡΩΟ δυναμικά: όχι στόχος
+      'src/features/__tests__/a.test.tsx': lazyImport('@/pages/a'),            // test: όχι chunk παραγωγής
+      [PAGE]: `${lazyImport('@/features/other')}export default function Page() { return null; }${NL}`,
+      'src/features/other.tsx': uses(`'boot'`),
+    }, { lazyRouteRegistries: [REGISTRY, SURFACES] });
+    const lazy = repo.build();
+    expect(lazy.bypasses).toEqual([{ file: ROGUE, target: 'src/pages/a.tsx', key: 'A' }]);
+    const verdicts = LR.judgeLazyRoutes(repo.root, repo.config, lazy, ['alpha', 'beta']).verdicts.join(NL);
+    expect(verdicts).toContain('import() στόχου εγγραφής ΕΞΩ από μητρώο');
+    expect(verdicts).toContain(`${ROGUE} → src/pages/a.tsx (εγγραφή A)`);
+  });
+
+  it('Ε7 (ΔΟΜΙΚΟ): το CI (`--full`) καλεί τον ΙΔΙΟ κριτή με τον γεννήτορα', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, '../check-i18n-shell-slice.js'), 'utf8');
+    const runFull = source.slice(source.indexOf('function runFull('), source.indexOf('// ─── CLI'));
+    expect(runFull).toMatch(/judgeLazyRoutes\(PROJECT_ROOT, config, complete\.lazy/);
   });
 });
 
@@ -527,6 +687,24 @@ describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών �
     const run = gate(root, []);
     expect(run.red).toContain('B: τεμπέλικη διαδρομή ΧΩΡΙΣ γραμμή');
     expect(run.logs).not.toContain('CHECK 3.34 F');                      // ο επανυπολογισμός ΔΕΝ έτρεξε
+  }, 60_000);
+
+  it('Λ11 🔴 ADR-280 §11.8 Β4.1: ΣΤΑΔΙΟΠΟΙΗΜΕΝΟ αρχείο που καλεί `defineLazySurfaces` εκτός μητρώων ⇒ ΚΟΚΚΙΝΟ στο Layer 1', () => {
+    const ROGUE = 'src/features/rogue.tsx';
+    const { root, write } = gateRepo();
+    write(ROGUE, `import { defineLazySurfaces } from '@/utils/factory';${NL}export const R = defineLazySurfaces({ X: { load: () => import('@/pages/a') } });${NL}`);
+    const run = gate(root, [ROGUE]);
+    expect(run.red).toContain('ΧΩΡΙΣ να είναι στο lazyRouteRegistries');
+    expect(run.red).toContain(ROGUE);
+  }, 60_000);
+
+  it('Λ12 🔴 ADR-280 §11.8 Β4.3: ΣΤΑΔΙΟΠΟΙΗΜΕΝΟ `import()` στόχου εγγραφής εκτός μητρώου ⇒ ΚΟΚΚΙΝΟ στο Layer 1', () => {
+    const ROGUE = 'src/features/rogue.tsx';
+    const { root, write } = gateRepo();
+    write(ROGUE, `export const load = () => import('@/pages/a');${NL}`);
+    const run = gate(root, [ROGUE]);
+    expect(run.red).toContain('import() στόχου εγγραφής ΕΞΩ από μητρώο');
+    expect(run.red).toContain(`${ROGUE} → src/pages/a.tsx (εγγραφή A)`);
   }, 60_000);
 });
 

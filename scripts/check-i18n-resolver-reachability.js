@@ -32,10 +32,13 @@
  *    the current `SERVICE_FORM_NAMESPACES` array (single source of truth).
  * 2. Loads `src/i18n/locales/el/<ns>.json` for each ns in that array and
  *    flattens every file into a Set of dotted keys scoped to that namespace.
- * 3. Scans every staged file in the config scope (service-config.ts,
- *    individual-config.ts, company-config.ts, persona-config.ts, modal-select
- *    field label tables) for dotted string literals that are candidate i18n
- *    keys (labels, placeholders, helpTexts, section titles).
+ * 3. Scans every staged file in the config scope for dotted string literals that
+ *    are candidate i18n keys (labels, placeholders, helpTexts, section titles).
+ *    ⚠️ ADR-280 §11.8 Β3β (2026-10-30): the scope is DERIVED — only config files
+ *    that actually reach the resolver (`lib/i18n/resolver-config-scope.js`: files
+ *    importing it → their importers → the configs those import). It used to be a
+ *    folder (186 files vs 14 reachable), and the gap inflated
+ *    SERVICE_FORM_NAMESPACES with `dxf-viewer` = 594,5 KB per service form.
  * 4. For each candidate key, simulates the runtime resolver:
  *       (a) direct hit in any SERVICE_FORM_NAMESPACES entry
  *       (b) `contacts.` prefix strip fallback (matches resolver line 87)
@@ -62,10 +65,11 @@ const path = require('path');
 const { flattenAnswerableKeys } = require('./lib/i18n/locale-keys');
 const { commitInput } = require('./lib/gate-input');
 const labels = require('./lib/i18n/config-label-keys');
+// ADR-280 §11.8 Β3β — η εμβέλεια ΠΑΡΑΓΕΤΑΙ (όσα configs φτάνουν πράγματι στον resolver), δεν είναι φάκελος.
+const { RESOLVER_FILE, resolverConfigScope } = require('./lib/i18n/resolver-config-scope');
 
 const REPO_ROOT = path.join(__dirname, '..');
 // ADR-924: σχετικά με τη ρίζα — κάθε ανάγνωση από την ΕΙΣΟΔΟ (`--index` ⇒ resolver, locale, baseline ΤΟΥ COMMIT).
-const RESOLVER_FILE = 'src/components/generic/i18n/translate-field-value.ts';
 const BASELINE_FILE = '.i18n-resolver-reachability-baseline.json';
 
 const RED = '\x1b[0;31m';
@@ -222,6 +226,28 @@ function writeBaseline(scanned, namespaces) {
 }
 
 // ---------------------------------------------------------------------------
+// 6. Εμβέλεια (ADR-280 §11.8 Β3β) — ΜΟΝΟ όσα configs φτάνουν στον resolver
+// ---------------------------------------------------------------------------
+/**
+ * `--all` ⇒ όλη η παραγόμενη εμβέλεια· αλλιώς τα σταδιοποιημένα **μέσα** σε αυτήν. Η παραγωγή (ανάγνωση του `src`)
+ * γίνεται μόνο όταν κάποιο σταδιοποιημένο αρχείο είναι στο πεδίο ρυθμίσεων — αλλιώς δεν υπάρχει τίποτα να κριθεί.
+ * Ένα config που ΔΕΝ φτάνει στον resolver το κρίνουν τα CHECK 3.8 / 3.12 (υπάρχει το κλειδί;) — όχι αυτή η πύλη.
+ */
+function scopedFiles(args, input, scanAll) {
+  const relOf = (f) => labels.normalizePath(path.isAbsolute(f) ? path.relative(input.root, f) : f);
+  const staged = args.filter((a) => !a.startsWith('--')).map(relOf);
+  if (!scanAll && !staged.some(labels.isConfigLabelScope)) return [];
+  const scope = resolverConfigScope(input);
+  console.log(
+    `${CYAN}  ℹ CHECK 3.13 εμβέλεια: ${scope.files.length} config(s) από ${scope.consumers.length} καταναλωτή(ές) `
+      + `των [${scope.renderers.map((r) => path.basename(r)).join(', ')}]${NC}`,
+  );
+  if (scanAll) return scope.files;
+  const inScope = new Set(scope.files);
+  return staged.filter((f) => inScope.has(f));
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 /** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) κρίνεται το COMMIT, όχι ο δίσκος. */
@@ -237,7 +263,13 @@ function run(args = process.argv.slice(2), input = commitInput(REPO_ROOT, args))
     return 1;
   }
   const nsIndex = loadNamespaceIndex(namespaces, input);
-  const files = scanAll ? labels.configLabelFiles(input) : args.filter((a) => !a.startsWith('--'));
+  let files;
+  try {
+    files = scopedFiles(args, input, scanAll);
+  } catch (err) {
+    console.error(`${RED}  ❌ ${err.message}${NC}`);
+    return 1;
+  }
   const scanned = labels.scanConfigLabels(files, input, (content) => unreachablesOf(content, nsIndex));
 
   if (rebuildBaseline) {

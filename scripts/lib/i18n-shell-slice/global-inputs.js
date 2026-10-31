@@ -112,6 +112,8 @@ const CONFIG_INPUTS = Object.freeze({
   lazyRouteMountNamespaces: gateOnly('judgeLazyRoutes — ετυμηγορία απογραφής, δεν γράφει artifact'),
   lazyRouteOpaqueNamespaces: projectOpaque,
   lazyRouteMountSeal: gateOnly('judgeLazyRoutes — σφράγιση πλήθους, όχι έξοδος'),
+  lazyAdmissionDebt: gateOnly('judgeAdmission (ADR-280 §11.8 Β4.2) — ετυμηγορία απογραφής, δεν γράφει artifact'),
+  lazyAdmissionSeal: gateOnly('judgeAdmission — σφράγιση πλήθους, όχι έξοδος'),
 });
 
 /** Ολικότητα: πεδίο χωρίς ταξινόμηση, ή ταξινόμηση χωρίς πεδίο ⇒ `throw` στη φόρτωση. */

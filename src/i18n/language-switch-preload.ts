@@ -20,11 +20,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-831-language-switch-preload.md
  */
 
-import { SUPPORTED_NAMESPACES, type Namespace } from './lazy-config';
+import { isSupportedNamespace, type Namespace } from './lazy-config';
 import { getRequestedNamespaces } from './bundle-registry';
-
-/** Ό,τι ξέρει να φορτώσει ο loader. Ό,τι άλλο θα κατέληγε σε άδειο bundle. */
-const LOADABLE_NAMESPACES = new Set<string>(SUPPORTED_NAMESPACES);
 
 /**
  * **Τι πρέπει να φτάσει ΠΡΙΝ γυρίσει η οθόνη** (ADR-831).
@@ -63,5 +60,6 @@ const LOADABLE_NAMESPACES = new Set<string>(SUPPORTED_NAMESPACES);
 export function resolveNamespacesToPreload(namespaceKey: string): Namespace[] {
   const declared = namespaceKey ? namespaceKey.split('|') : [];
   const union = new Set<string>([...declared, ...getRequestedNamespaces()]);
-  return [...union].filter((ns) => LOADABLE_NAMESPACES.has(ns)) as Namespace[];
+  // Ό,τι δεν ξέρει να φορτώσει ο loader θα κατέληγε σε άδειο bundle (βλ. παραπάνω).
+  return [...union].filter(isSupportedNamespace);
 }

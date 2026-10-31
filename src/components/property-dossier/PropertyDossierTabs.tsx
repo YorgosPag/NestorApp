@@ -24,6 +24,7 @@ import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entrie
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyDossier } from '@/types/property-dossier';
 import { propertyDossierMediaTab } from './property-dossier-media';
+import type { PropertyDossierTabName } from './property-dossier-tab-names';
 
 const NS = 'property-market';
 
@@ -65,4 +66,22 @@ export function PropertyDossierHistoryTab({ dossier }: DossierTabProps) {
       <ActivityTab entityType="property_dossier" entityId={dossier.id} ledger="personal" />
     </section>
   );
+}
+
+/** Όνομα καρτέλας → συστατικό. Το `Record` δίνει εξαντλητικότητα: νέο όνομα χωρίς καρτέλα δεν μεταγλωττίζεται. */
+const PROPERTY_DOSSIER_TABS: Readonly<Record<PropertyDossierTabName, React.ComponentType<DossierTabProps>>> = {
+  PropertyDossierFloorplanTab,
+  PropertyDossierDocumentsTab,
+  PropertyDossierPhotosTab,
+  PropertyDossierVideosTab,
+  PropertyDossierHistoryTab,
+};
+
+/**
+ * ADR-280 §11.8 Β4.3 — ο **ένας** δέκτης του ορίου: η επιφάνεια `PropertyDossierTab` (`dossier-surfaces.tsx`) φορτώνει
+ * αυτό το module μία φορά, με τα κείμενά του, όποια καρτέλα κι αν ανοίξει πρώτη. Ένα όριο, μία γραμμή στον χάρτη.
+ */
+export function PropertyDossierTab({ name, dossier }: DossierTabProps & { readonly name: PropertyDossierTabName }) {
+  const Tab = PROPERTY_DOSSIER_TABS[name];
+  return <Tab dossier={dossier} />;
 }

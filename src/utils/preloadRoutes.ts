@@ -18,18 +18,30 @@ const logger = createModuleLogger('RoutePreload');
 // Re-export types for backward compatibility
 export type { PreloadableRoute, UserRole };
 
-// 🏢 ENTERPRISE: Dynamic module import type
-type DynamicModuleImport = Record<string, unknown>;
+/**
+ * 🔑 ADR-280 §11.8 Β4.3 — **ΤΑΥΤΟΤΗΤΑ, ΟΧΙ ΔΕΥΤΕΡΟ ΑΝΤΙΓΡΑΦΟ ΤΟΥ SPECIFIER.** Ως εδώ ο πίνακας κρατούσε 7 δικά του
+ * `import('…')` — τα ΙΔΙΑ specs με το μητρώο, γραμμένα δεύτερη φορά, και κώδικας **χωρίς** τα κείμενά του. Πλέον
+ * δείχνει σε **κλειδί** του `LazyRoutes` και καλεί το `preload()` της εγγραφής: ο ΙΔΙΟΣ φορτωτής με το mount
+ * (κώδικας + κείμενα), όπως το React Router `route.lazy` / Remix `prefetch="intent"` / Closure `prefetchModule`.
+ *
+ * ⚠️ Το μητρώο φορτώνεται **δυναμικά** και ο τύπος διαβάζεται με `typeof import(…)`: αυτό το αρχείο είναι στο κέλυφος
+ * (sidebar), και μια στατική ακμή θα έσερνε όλο το μητρώο στην κλειστότητα της εκκίνησης.
+ */
+type LazyRouteKey = keyof (typeof import('@/utils/lazyRoutes'))['LazyRoutes'];
 
-const routePreloaders: Record<PreloadableRoute, () => Promise<DynamicModuleImport>> = {
-  'crm-dashboard': () => import('@/components/crm/dashboard/CRMDashboardPageContent'),
-  'buildings': () => import('@/components/building-management/BuildingsPageContent'),
-  'contacts': () => import('@/components/contacts/ContactsPageContent'),
-  'properties': () => import('@/components/properties/PropertiesPageContent'),
-  'dxf-viewer': () => import('@/subapps/dxf-viewer/DxfViewerApp'),
-  'obligations-new': () => import('@/components/obligations/pages/NewObligationPageContent'),
-  'obligations-edit': () => import('@/components/obligations/pages/EditObligationPageContent'),
+const ROUTE_REGISTRY_KEYS: Record<PreloadableRoute, LazyRouteKey> = {
+  'crm-dashboard': 'CRMDashboard',
+  'buildings': 'Buildings',
+  'contacts': 'Contacts',
+  'properties': 'Properties',
+  'dxf-viewer': 'DXFViewer',
+  'obligations-new': 'ObligationsNew',
+  'obligations-edit': 'ObligationsEdit',
 };
+
+function preloadFromRegistry(key: LazyRouteKey): Promise<void> {
+  return import('@/utils/lazyRoutes').then(({ LazyRoutes }) => LazyRoutes[key].preload());
+}
 
 // ============================================================================
 // 🏢 ENTERPRISE: HREF TO PRELOADABLE ROUTE MAPPING
@@ -79,9 +91,9 @@ export function getPreloadableRouteFromHref(href: string): PreloadableRoute | un
 // Preload a specific route
 export async function preloadRoute(route: PreloadableRoute): Promise<void> {
   try {
-    const preloader = routePreloaders[route];
-    if (preloader) {
-      await preloader();
+    const key = ROUTE_REGISTRY_KEYS[route];
+    if (key) {
+      await preloadFromRegistry(key);
       logger.debug(`Preloaded route: ${route}`);
     }
   } catch (error) {

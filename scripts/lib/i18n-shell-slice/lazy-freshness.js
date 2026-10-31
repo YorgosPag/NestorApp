@@ -59,9 +59,10 @@ function committedWholeNamespaces(root, config) {
  * ⚠️ ΔΕΝ κάνει `persist`: η μνήμη ανήκει στο πέρασμα (ο G τη συνεχίζει), και τη γράφει ο ιδιοκτήτης του.
  * @returns {{lazy: object, stats: object}}
  */
-function rebuildLazyMap({ root, config, pass }) {
+function rebuildLazyMap({ root, config, pass, stagedFiles = [] }) {
   const { graph, sources } = pass.commit();
-  const lazy = LR.buildLazyRouteNamespaces({ projectRoot: root, config, graph, sources });
+  const callerCandidates = stagedFiles.filter(isSourceModule);
+  const lazy = LR.buildLazyRouteNamespaces({ projectRoot: root, config, graph, sources, callerCandidates });
   return { lazy, stats: pass.stats() };
 }
 
@@ -112,7 +113,7 @@ function judgeFreshness({ config, stagedFiles, root, pass }) {
   if (committed.invalid) return { reasons: [`${artifact} is not valid JSON.`], stats: null };
 
   const started = Date.now();
-  const { lazy, stats } = rebuildLazyMap({ root, config, pass });
+  const { lazy, stats } = rebuildLazyMap({ root, config, pass, stagedFiles });
   const reasons = [];
   if (LR.renderLazyArtifact(committed.value) !== LR.renderLazyArtifact(lazy.rows)) {
     const drift = describeRowDrift(committed.value, lazy.rows, lazy.provenance);
