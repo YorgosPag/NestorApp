@@ -400,4 +400,14 @@ describe('απογραφή', () => {
     expect(workspaces[0]).toMatchObject({ branch, ahead: 1, dirty: true });
     expect(freeBytes).toBeGreaterThan(0);
   });
+
+  it('🔴 αντέχει καταχώρηση με σβησμένο φάκελο και τη δείχνει ως κατάσταση', () => {
+    const { dir, branch } = open('task-one');
+    const healthy = open('task-two');
+    fs.rmSync(dir, { recursive: true, force: true });
+    const { workspaces } = listWorkspaces(options());
+    expect(workspaces).toHaveLength(2);
+    expect(workspaces.find((item) => item.branch === branch)).toMatchObject({ missing: true, dirty: false });
+    expect(workspaces.find((item) => item.branch === healthy.branch)).toMatchObject({ missing: false });
+  });
 });

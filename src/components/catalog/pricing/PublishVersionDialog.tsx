@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { formatPercentage } from '@/lib/intl-formatting';
 import { BP_PER_WHOLE } from '@/lib/pricing/discount-rule';
-import type { PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
+import type { DiscountGroupWire, PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
 import { FAILURE_KEYS } from '../shared/catalog-labels';
 import { CatalogField } from '../shared/CatalogFormFields';
 import { useIssueMessage } from '../shared/CatalogIssues';
@@ -32,6 +32,7 @@ import { usePublishFlow } from './use-publish-flow';
 export interface PublishVersionDialogProps {
   readonly version: PriceListVersionWire;
   readonly versions: readonly PriceListVersionWire[];
+  readonly discountGroups: readonly DiscountGroupWire[];
   readonly onChanged: () => void;
   readonly onClose: () => void;
 }
@@ -64,14 +65,20 @@ function ScheduleStep({ driver, flow }: { readonly driver: Driver; readonly flow
   );
 }
 
-function ReviewStep({ driver, flow }: { readonly driver: Driver; readonly flow: Extract<PublishFlow, { step: 'review' }> }) {
+interface ReviewStepProps {
+  readonly driver: Driver;
+  readonly flow: Extract<PublishFlow, { step: 'review' }>;
+  readonly discountGroups: readonly DiscountGroupWire[];
+}
+
+function ReviewStep({ driver, flow, discountGroups }: ReviewStepProps) {
   const { t } = useCatalogText();
   const { preview } = flow;
   const fence = formatPercentage((preview.fenceBp / BP_PER_WHOLE) * 100, { maximumFractionDigits: 2 });
   return (
     <section className="flex flex-col gap-3">
       <NoticeLine notice={flow.notice} />
-      <PublishDiffList preview={preview} />
+      <PublishDiffList preview={preview} discountGroups={discountGroups} />
       {needsConfirmation(preview) ? (
         <section className="flex items-start gap-2 rounded-md border p-3">
           <Checkbox id="publish-confirm" checked={flow.confirmed} onCheckedChange={(on) => driver.dispatch({ type: 'confirm', confirmed: on === true })} />
@@ -82,12 +89,12 @@ function ReviewStep({ driver, flow }: { readonly driver: Driver; readonly flow: 
   );
 }
 
-function StepBody({ driver }: { readonly driver: Driver }) {
+function StepBody({ driver, discountGroups }: { readonly driver: Driver; readonly discountGroups: readonly DiscountGroupWire[] }) {
   const { t } = useCatalogText();
   const { flow } = driver;
   switch (flow.step) {
     case 'schedule': return <ScheduleStep driver={driver} flow={flow} />;
-    case 'review': return <ReviewStep driver={driver} flow={flow} />;
+    case 'review': return <ReviewStep driver={driver} flow={flow} discountGroups={discountGroups} />;
     case 'published': return <p className="m-0 flex items-center gap-2 text-sm" role="status"><CheckCircle2 className="h-4 w-4" aria-hidden />{t('pricing.publish.done')}</p>;
     case 'failed': return <p className="m-0 text-sm text-destructive" role="alert">{t(FAILURE_KEYS[flow.failure.kind])}</p>;
     default: return <p className="m-0 text-sm text-muted-foreground" role="status" aria-live="polite">{t(flow.step === 'publishing' ? 'pricing.publish.publishing' : 'pricing.publish.loading')}</p>;
@@ -111,7 +118,7 @@ function StepActions({ driver, onClose }: { readonly driver: Driver; readonly on
   );
 }
 
-export function PublishVersionDialog({ version, versions, onChanged, onClose }: PublishVersionDialogProps) {
+export function PublishVersionDialog({ version, versions, discountGroups, onChanged, onClose }: PublishVersionDialogProps) {
   const { t } = useCatalogText();
   const driver = usePublishFlow({ version, versions, onChanged });
   const busy = driver.flow.step === 'publishing' || driver.flow.step === 'saving';
@@ -122,7 +129,7 @@ export function PublishVersionDialog({ version, versions, onChanged, onClose }: 
           <DialogTitle>{t('pricing.publish.title', { number: version.number })}</DialogTitle>
           <DialogDescription>{t('pricing.publish.lead')}</DialogDescription>
         </DialogHeader>
-        <StepBody driver={driver} />
+        <StepBody driver={driver} discountGroups={discountGroups} />
         <DialogFooter><StepActions driver={driver} onClose={onClose} /></DialogFooter>
       </DialogContent>
     </Dialog>

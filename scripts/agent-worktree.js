@@ -13,12 +13,17 @@
 const { createWorkspace, listWorkspaces, removeWorkspace } = require('./lib/agent-worktree/lifecycle');
 const { land } = require('./lib/agent-worktree/land');
 
+function describeState({ missing, dirty }) {
+  if (missing) return 'ο φάκελος λείπει, καθάρισέ το με wt:remove';
+  return dirty ? 'αδέσμευτη δουλειά' : 'καθαρό';
+}
+
 function printList() {
   const { workspaces, freeBytes } = listWorkspaces();
   console.log(`Ελεύθερα στον δίσκο: ${(freeBytes / 1024 ** 3).toFixed(1)} GB`);
   if (workspaces.length === 0) console.log('Κανένα ενεργό worktree.');
   workspaces.forEach((item) => {
-    const state = item.dirty ? 'αδέσμευτη δουλειά' : 'καθαρό';
+    const state = describeState(item);
     console.log(`  ${item.branch} · ${item.ahead} commit μπροστά · ${state} · ${item.dir}`);
   });
 }

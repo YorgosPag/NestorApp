@@ -90,15 +90,24 @@ function createWorkspace(task, options = {}) {
   return target;
 }
 
+/**
+ * Το git κρατά την καταχώρηση και όταν ο φάκελος έχει σβηστεί («prunable»). Με `cwd` που
+ * λείπει το `execFileSync` πετά `spawnSync git ENOENT`, και μία τέτοια γραμμή έριχνε όλη
+ * την απογραφή (μετρημένο 2026-10-31). Το λέμε ως κατάσταση, δεν το κρύβουμε.
+ */
 function listWorkspaces({ cwd = process.cwd(), env = process.env } = {}) {
   const primary = primaryDir(cwd);
   const workspaces = worktrees(cwd)
     .filter((item) => item.branch && item.branch.startsWith(BRANCH_PREFIX))
-    .map((item) => ({
-      ...item,
-      dirty: isDirty(item.dir),
-      ahead: commitsAhead(primary, MAIN_BRANCH, item.branch),
-    }));
+    .map((item) => {
+      const missing = !fs.existsSync(item.dir);
+      return {
+        ...item,
+        missing,
+        dirty: !missing && isDirty(item.dir),
+        ahead: commitsAhead(primary, MAIN_BRANCH, item.branch),
+      };
+    });
   return { workspaces, freeBytes: freeBytes(nearestExisting(worktreeRoot(env))) };
 }
 

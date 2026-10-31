@@ -63,6 +63,18 @@ function sameLineContent(a: PriceListLineDefinition, b: PriceListLineDefinition)
   );
 }
 
+/** Τι άλλαξε στη γραμμή **εκτός** από την τιμή, που φαίνεται ήδη: αλλιώς ο άνθρωπος εγκρίνει «135 € → 135 €» στα τυφλά. */
+export type PriceLineSideChange = 'discountGroup' | 'breakdown';
+
+export function priceLineSideChanges(change: PriceLineChange): readonly PriceLineSideChange[] {
+  const { before, after } = change;
+  if (before === null || after === null) return [];
+  const changes: PriceLineSideChange[] = [];
+  if (before.discountGroupId !== after.discountGroupId) changes.push('discountGroup');
+  if (JSON.stringify(before.breakdown) !== JSON.stringify(after.breakdown)) changes.push('breakdown');
+  return changes;
+}
+
 function changedLine(before: PriceListLineDefinition, after: PriceListLineDefinition, fenceBp: BasisPoints): PriceLineChange {
   const changeBp = unitPriceChangeBp(before, after);
   const exceedsFence = changeBp === null || Math.abs(changeBp) > fenceBp;

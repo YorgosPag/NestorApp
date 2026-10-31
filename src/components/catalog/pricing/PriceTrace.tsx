@@ -65,7 +65,7 @@ export function PriceTrace({ listTrace, conditionTrace, listName, conditionName 
   const { t } = useCatalogText();
   return (
     <Collapsible className="flex flex-col gap-2 border-t pt-2">
-      <CollapsibleTrigger className="group flex items-center gap-1 text-xs font-medium">
+      <CollapsibleTrigger className="group flex min-h-11 items-center gap-1 text-xs font-medium sm:min-h-6">
         <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" aria-hidden />
         {t('pricing.analysis.trace.title')}
       </CollapsibleTrigger>

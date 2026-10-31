@@ -15,9 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { DiscountGroupWire, PriceListVersionWire, PriceListWire } from '@/subapps/catalog/types/pricing-views';
 import { CatalogField } from '../shared/CatalogFormFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import type { PriceListSummary } from './price-list-summary';
+import { phaseOfVersion, type PriceListSummary } from './price-list-summary';
 import { PriceLinesPanel } from './PriceLinesPanel';
-import { VERSION_STATUS_KEYS } from './pricing-labels';
+import { TIMELINE_PHASE_KEYS, VERSION_STATUS_KEYS } from './pricing-labels';
 
 export interface PriceListLinesTabProps {
   readonly list: PriceListWire;
@@ -44,6 +44,11 @@ export function defaultVersionId(summary: PriceListSummary): string | null {
 export function PriceListLinesTab(props: PriceListLinesTabProps) {
   const { t } = useCatalogText();
   const options = selectableVersions(props.summary);
+  /** Η ίδια λέξη με την καρτέλα «Εκδόσεις»: δημοσιευμένη = φάση στη χρονογραμμή, αλλιώς η κατάσταση. */
+  const standingOf = (option: PriceListVersionWire): string => {
+    const phase = phaseOfVersion(props.summary, option.id);
+    return phase === null ? t(VERSION_STATUS_KEYS[option.status]) : t(TIMELINE_PHASE_KEYS[phase]);
+  };
   const version = options.find((candidate) => candidate.id === props.versionId) ?? null;
   if (version === null) return <p className="m-0 p-4 text-sm text-muted-foreground">{t('pricing.lines.noVersion')}</p>;
   return (
@@ -55,7 +60,7 @@ export function PriceListLinesTab(props: PriceListLinesTabProps) {
               <SelectTrigger id={id}><SelectValue /></SelectTrigger>
               <SelectContent>
                 {options.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>{`${t('pricing.versions.number', { number: option.number })} · ${t(VERSION_STATUS_KEYS[option.status])}`}</SelectItem>
+                  <SelectItem key={option.id} value={option.id}>{`${t('pricing.versions.number', { number: option.number })} · ${standingOf(option)}`}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -11,7 +11,7 @@ import {
   VERSION_2_LINES,
 } from '../../__tests__/fixtures/mfp-price-list.fixture';
 import type { PriceListLineDefinition } from '../../types/price-list';
-import { diffPriceVersions } from '../diff-price-versions';
+import { diffPriceVersions, priceLineSideChanges } from '../diff-price-versions';
 import { judgeVersionPublication, publishedTimeline, versionAt, type PriceVersionRef } from '../version-timeline';
 
 const draft3: PriceVersionRef = { id: 'cplv_gen_3', number: 3, status: 'draft', validFrom: '2027-01-01T00:00:00.000Z' };
@@ -95,5 +95,19 @@ describe('diffPriceVersions', () => {
     expect(down).toMatchObject({ unitPriceChangeBp: -2000, exceedsFence: false });
     const up = diffPriceVersions([line('a', 1000)], [line('a', 1250)]).changes[0];
     expect(up).toMatchObject({ unitPriceChangeBp: 2500, exceedsFence: true });
+  });
+
+  it('🔴 ίδια τιμή, άλλη ομάδα έκπτωσης: η αλλαγή λέει τι άλλαξε', () => {
+    const grouped = { ...line('a', 1000), discountGroupId: 'cdgrp_tosh' };
+    const [change] = diffPriceVersions([line('a', 1000)], [grouped]).changes;
+    expect(change).toMatchObject({ kind: 'changed', unitPriceChangeBp: 0 });
+    expect(priceLineSideChanges(change)).toEqual(['discountGroup']);
+  });
+
+  it('αλλαγή μόνο τιμής ή νέα γραμμή: καμία πλευρική αλλαγή', () => {
+    const [priced] = diffPriceVersions([line('a', 1000)], [line('a', 1100)]).changes;
+    const [added] = diffPriceVersions([], [line('b', 100)]).changes;
+    expect(priceLineSideChanges(priced)).toEqual([]);
+    expect(priceLineSideChanges(added)).toEqual([]);
   });
 });

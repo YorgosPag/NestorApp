@@ -30,7 +30,11 @@ import { usePriceAnalysis, type PriceAnalysis } from './use-price-analysis';
 import { useAnalysisNames } from './use-price-analysis-names';
 import type { DiscountsWorkspace } from './use-discounts-workspace';
 
-function AnalysisQuery({ analysis }: { readonly analysis: PriceAnalysis }) {
+/**
+ * 🔴 Το κρυφό submit δεν είναι διακόσμηση: φόρμα με δύο πεδία κειμένου και χωρίς κουμπί υποβολής **δεν** υποβάλλεται με Enter
+ * (HTML «implicit submission»), ενώ η οδηγία της οθόνης λέει «πατήστε Enter». Μετρημένο ζωντανά 2026-10-31.
+ */
+export function AnalysisQuery({ analysis }: { readonly analysis: Pick<PriceAnalysis, 'sku' | 'lookUp' | 'quantity' | 'setQuantity' | 'day' | 'setDay'> }) {
   const { t } = useCatalogText();
   const [code, setCode] = useState('');
   const { sku } = analysis;
@@ -51,6 +55,7 @@ function AnalysisQuery({ analysis }: { readonly analysis: PriceAnalysis }) {
       <CatalogField label={t('pricing.analysis.at')}>
         {({ id }) => <DatePickerField id={id} value={analysis.day} placeholder={t('pricing.analysis.now')} onSelect={analysis.setDay} />}
       </CatalogField>
+      <button type="submit" hidden aria-hidden tabIndex={-1} />
     </form>
   );
 }

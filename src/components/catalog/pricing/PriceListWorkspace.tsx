@@ -87,7 +87,7 @@ export function PriceListWorkspace(props: PriceListWorkspaceProps) {
         <PriceListLinesTab list={record} summary={summary} versionId={versionId} onVersion={setChosenVersion} discountGroups={props.discountGroups}
           canManage={canManage} canPublish={canPublish} reportDirty={dirty.reportLines} onPublish={publish} />
       </TabsContent>
-      {publishing ? <PublishVersionDialog version={publishing} versions={own} onChanged={onChanged} onClose={() => setPublishingId(null)} /> : null}
+      {publishing ? <PublishVersionDialog version={publishing} versions={own} discountGroups={props.discountGroups} onChanged={onChanged} onClose={() => setPublishingId(null)} /> : null}
     </Tabs>
   );
 }

@@ -38,6 +38,14 @@ function phaseOf(entry: TimelineEntry<PriceListVersionWire>, current: PriceListV
   return entry.window.fromMs !== null && entry.window.fromMs > nowMs ? 'future' : 'past';
 }
 
+/**
+ * Η θέση μιας έκδοσης **τώρα**· `null` αν δεν ανήκει στη χρονογραμμή (πρόχειρη, απορριφθείσα). Το αποθηκευμένο `superseded`
+ * σημαίνει «ήρθε νεότερη δημοσίευση», ακόμη και μελλοντική, άρα μόνο του δείχνει «Αντικατεστημένη» την έκδοση που **ισχύει**.
+ */
+export function phaseOfVersion(summary: PriceListSummary, versionId: string): TimelinePhase | null {
+  return summary.bands.find((band) => band.entry.version.id === versionId)?.phase ?? null;
+}
+
 const newestFirst = (versions: readonly PriceListVersionWire[]): PriceListVersionWire[] => [...versions].sort((a, b) => b.number - a.number);
 
 /** Η σύνοψη της λίστας `priceListId` από **όλες** τις εκδόσεις της όψης. */

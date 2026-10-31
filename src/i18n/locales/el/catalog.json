@@ -1136,6 +1136,10 @@
       "noChanges": "Καμία διαφορά από την τρέχουσα δημοσιευμένη.",
       "hidden": "{count, plural, one {και # αλλαγή ακόμη} other {και # αλλαγές ακόμη}} κάτω από το όριο — δεν χρειάζονται επιβεβαίωση.",
       "unknownSku": "SKU που δεν υπάρχει πια",
+      "discountGroupChange": "Ομάδα έκπτωσης: {before} → {after}",
+      "noGroup": "χωρίς ομάδα",
+      "unknownGroup": "ομάδα που δεν υπάρχει πια",
+      "breakdownChanged": "Άλλαξε η ανάλυση κόστους.",
       "overFence": "Πάνω από το όριο",
       "fromOrToZero": "Από ή προς μηδέν",
       "kind": {

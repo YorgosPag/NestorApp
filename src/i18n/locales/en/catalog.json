@@ -1136,6 +1136,10 @@
       "noChanges": "No difference from the current published version.",
       "hidden": "{count, plural, one {and # more change} other {and # more changes}} below the threshold — no confirmation needed.",
       "unknownSku": "SKU that no longer exists",
+      "discountGroupChange": "Discount group: {before} → {after}",
+      "noGroup": "no group",
+      "unknownGroup": "group that no longer exists",
+      "breakdownChanged": "The cost breakdown changed.",
       "overFence": "Above the threshold",
       "fromOrToZero": "From or to zero",
       "kind": {

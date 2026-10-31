@@ -1,6 +1,6 @@
 import type { PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
 import type { PriceListVersionStatus } from '@/subapps/catalog/vocabulary/pricing';
-import { summarizePriceList } from '../price-list-summary';
+import { phaseOfVersion, summarizePriceList } from '../price-list-summary';
 
 const version = (id: string, number: number, status: PriceListVersionStatus, validFrom: string | null, priceListId = 'pl_a') =>
   ({ id, number, status, validFrom, priceListId, basedOnVersionId: null, seal: null }) as unknown as PriceListVersionWire;
@@ -30,6 +30,18 @@ describe('summarizePriceList — η λίστα τη στιγμή «τώρα»', 
       ['v2', 'current', Date.parse('2027-01-01T00:00:00.000Z')],
       ['v3', 'future', null],
     ]);
+  });
+
+  it('🔴 αποθηκευμένο `superseded` με μελλοντική διάδοχη: η έκδοση λέγεται «ισχύει», όχι «αντικατεστημένη»', () => {
+    const superseded = [
+      version('v1', 1, 'superseded', '2026-10-01T00:00:00.000Z'),
+      version('v2', 2, 'published', '2026-12-01T00:00:00.000Z'),
+      version('v3', 3, 'draft', null),
+    ];
+    const live = summarizePriceList('pl_a', superseded, NOW);
+    expect(phaseOfVersion(live, 'v1')).toBe('current');
+    expect(phaseOfVersion(live, 'v2')).toBe('future');
+    expect(phaseOfVersion(live, 'v3')).toBeNull();
   });
 
   it('πρόχειρες νεότερη πρώτη · εκδόσεις άλλης λίστας δεν μετρούν', () => {

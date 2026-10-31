@@ -19,9 +19,10 @@ import { useUomLabel } from '@/hooks/useUomLabel';
 import { formatMinor } from '@/lib/money/money';
 import { formatPercentage } from '@/lib/intl-formatting';
 import { BP_PER_WHOLE } from '@/lib/pricing/discount-rule';
-import type { PriceLineChange } from '@/subapps/catalog/pricing/diff-price-versions';
+import { priceLineSideChanges, type PriceLineChange } from '@/subapps/catalog/pricing/diff-price-versions';
 import type { PriceListLineDefinition } from '@/subapps/catalog/types/price-list';
 import type { PricePublicationPreview } from '@/subapps/catalog/types/price-list-requests';
+import type { DiscountGroupWire } from '@/subapps/catalog/types/pricing-views';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { subjectCodeOf } from './price-line-rows';
 import { CHANGE_KIND_ICONS, CHANGE_KIND_KEYS } from './pricing-labels';
@@ -33,7 +34,30 @@ function usePriceText() {
     line === null ? '—' : `${formatMinor(line.netPrice)} / ${line.priceQuantity} ${uom(line.unitCode)}`;
 }
 
-function ChangeRow({ change, skuIdentifiers }: { readonly change: PriceLineChange; readonly skuIdentifiers: PricePublicationPreview['skuIdentifiers'] }) {
+/** Ό,τι άλλαξε εκτός τιμής· ποτέ ωμό id ομάδας. */
+function SideChanges({ change, discountGroups }: { readonly change: PriceLineChange; readonly discountGroups: readonly DiscountGroupWire[] }) {
+  const { t, text } = useCatalogText();
+  const groupName = (groupId: string | null | undefined): string => {
+    if (groupId === null || groupId === undefined) return t('pricing.publish.noGroup');
+    const group = discountGroups.find((candidate) => candidate.id === groupId);
+    return group ? text(group.labels, group.code) : t('pricing.publish.unknownGroup');
+  };
+  return priceLineSideChanges(change).map((side) => (
+    <span key={side} className="col-span-2 text-muted-foreground">
+      {side === 'breakdown'
+        ? t('pricing.publish.breakdownChanged')
+        : t('pricing.publish.discountGroupChange', { before: groupName(change.before?.discountGroupId), after: groupName(change.after?.discountGroupId) })}
+    </span>
+  ));
+}
+
+interface ChangeRowProps {
+  readonly change: PriceLineChange;
+  readonly skuIdentifiers: PricePublicationPreview['skuIdentifiers'];
+  readonly discountGroups: readonly DiscountGroupWire[];
+}
+
+function ChangeRow({ change, skuIdentifiers, discountGroups }: ChangeRowProps) {
   const { t } = useCatalogText();
   const priceText = usePriceText();
   const subject = (change.after ?? change.before)?.subject;
@@ -53,11 +77,12 @@ function ChangeRow({ change, skuIdentifiers }: { readonly change: PriceLineChang
       ) : <span />}
       <span className="text-muted-foreground">{`${priceText(change.before)} → ${priceText(change.after)}`}</span>
       <span className="text-right font-medium tabular-nums">{delta ?? ''}</span>
+      <SideChanges change={change} discountGroups={discountGroups} />
     </li>
   );
 }
 
-export function PublishDiffList({ preview }: { readonly preview: PricePublicationPreview }) {
+export function PublishDiffList({ preview, discountGroups }: { readonly preview: PricePublicationPreview; readonly discountGroups: readonly DiscountGroupWire[] }) {
   const { t } = useCatalogText();
   const counts = changeCounts(preview.diff.changes);
   const { shown, hidden } = visibleChanges(preview.diff.changes);
@@ -71,7 +96,7 @@ export function PublishDiffList({ preview }: { readonly preview: PricePublicatio
         <p className="m-0 text-sm">{t('pricing.publish.noChanges')}</p>
       ) : (
         <ul className="m-0 max-h-80 list-none overflow-y-auto rounded-md border px-3 py-0">
-          {shown.map((change) => <ChangeRow key={change.subjectKey} change={change} skuIdentifiers={preview.skuIdentifiers} />)}
+          {shown.map((change) => <ChangeRow key={change.subjectKey} change={change} skuIdentifiers={preview.skuIdentifiers} discountGroups={discountGroups} />)}
         </ul>
       )}
       {hidden > 0 ? <p className="m-0 text-xs text-muted-foreground">{t('pricing.publish.hidden', { count: hidden })}</p> : null}

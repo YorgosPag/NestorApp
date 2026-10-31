@@ -73,9 +73,11 @@ export function CatalogListItem({ primary, secondary, icon: Icon, leading, badge
           <span className="truncate text-sm font-medium">{primary}</span>
           {secondary ? <span className="truncate font-mono text-xs text-muted-foreground">{secondary}</span> : null}
         </span>
-        {badges.map((badge) => (
-          <Badge key={badge.label} variant={badge.variant} className="shrink-0">{badge.label}</Badge>
-        ))}
+        {badges.length > 0 ? (
+          <span className="flex max-w-[60%] flex-wrap justify-end gap-1">
+            {badges.map((badge) => <Badge key={badge.label} variant={badge.variant}>{badge.label}</Badge>)}
+          </span>
+        ) : null}
         {pending ? <span className="shrink-0 text-xs text-muted-foreground">{t('common.saving')}</span> : null}
       </button>
     </span>
