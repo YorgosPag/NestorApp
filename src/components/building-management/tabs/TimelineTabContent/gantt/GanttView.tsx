@@ -89,7 +89,7 @@ export { STATUS_TO_CSS_COLOR, AVAILABLE_VIEW_MODES } from './gantt-view-config';
 // ─── Component ────────────────────────────────────────────────────────────
 
 export function GanttView({ building }: GanttViewProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const spacingTokens = useSpacingTokens();
   const iconSizes = useIconSizes();
   const typography = useTypography();

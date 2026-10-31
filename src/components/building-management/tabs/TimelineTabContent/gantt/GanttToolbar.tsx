@@ -55,7 +55,7 @@ export function GanttExportDropdown({
   buildingName,
   taskGroups,
 }: GanttExportDropdownProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const spacingTokens = useSpacingTokens();
   const iconSizes = useIconSizes();
   const [isExporting, setIsExporting] = useState(false);
@@ -164,7 +164,7 @@ export function GanttActionToolbar({
   onEnterFullscreen,
   className,
 }: GanttActionToolbarProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const spacingTokens = useSpacingTokens();
   const iconSizes = useIconSizes();
 

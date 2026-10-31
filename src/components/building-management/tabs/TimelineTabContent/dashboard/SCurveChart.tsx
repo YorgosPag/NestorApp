@@ -154,7 +154,7 @@ interface SCurveChartProps {
 // ─── Component ───────────────────────────────────────────────────────────
 
 export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const tt = (key: string) => t(`tabs.timeline.dashboard.tooltips.${key}`);
 
   const sCurveLabelMap: Record<string, string> = {
