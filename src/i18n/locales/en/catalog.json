@@ -503,7 +503,7 @@
       "ifcPset": "IFC Pset",
       "ifcProperty": "IFC property",
       "atoe": "ATOE code",
-        "description": "Work description",
+      "description": "Work description",
       "atoeHint": "The matching work item in the ATOE taxonomy."
     },
     "groups": {
@@ -1321,10 +1321,11 @@
       "tabs": {
         "conditions": "Conditions",
         "groups": "Groups",
-        "analysis": "Price analysis"
+        "analysis": "Price analysis",
+        "visibility": "Visibility"
       },
       "verdict": {
-        "valid":"Current",
+        "valid": "Current",
         "notYetValid": "Upcoming",
         "expired": "Expired"
       },
@@ -1425,6 +1426,33 @@
         "unknownGroup": "unknown group",
         "unnamed": "Unnamed contact",
         "remove": "Remove: {name}"
+      }
+    },
+    "visibility": {
+      "title": "Who sees what",
+      "lead": "Without a rule, nothing is visible outside your workspace. The most specific rule wins: audience first, then SKU, model, category, catalog.",
+      "empty": "No rules yet. The catalog is hidden from everyone.",
+      "answer": "Answer",
+      "subject": "Subject",
+      "code": "Code",
+      "add": "Add rule",
+      "remove": "Remove rule for {name}",
+      "unnamed": "No longer exists",
+      "unresolved": "No item of this kind has that code.",
+      "duplicate": "A rule already exists for this subject and audience. Change its answer in the list.",
+      "seesThis": "This viewer: {answer}.",
+      "noRule": "No rule applies to them.",
+      "tied": "Rules tied and the most restrictive one won.",
+      "values": {
+        "visible": "Visible",
+        "visibleNoPrice": "Visible without price",
+        "hidden": "Hidden"
+      },
+      "subjects": {
+        "catalog": "Entire catalog",
+        "category": "Category",
+        "productModel": "Model",
+        "variant": "SKU"
       }
     }
   }

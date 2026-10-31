@@ -6,7 +6,7 @@ import type { PriceQuoteResult } from '@/subapps/catalog/types/price-list-reques
 import type { PriceQuote } from '@/subapps/catalog/pricing/resolve-catalog-price';
 import { bucketTrace, historyListOf, isCompleteAudience, savingVersusBaseline, type AnalysisCell } from '../price-analysis';
 
-const CONTEXT = { viewer: { kind: 'anonymous' }, at: '2026-10-30T00:00:00.000Z', listTrace: [] } as const;
+const CONTEXT = { viewer: { kind: 'anonymous' }, at: '2026-10-30T00:00:00.000Z', listTrace: [], visibility: null } as const;
 
 function priced(netAmount: number, priceListId = 'list-a'): AnalysisCell {
   const quote: PriceQuote = {

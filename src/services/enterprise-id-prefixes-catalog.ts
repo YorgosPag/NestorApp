@@ -44,5 +44,7 @@ export const CATALOG_ID_PREFIXES = {
   CATALOG_IMPORT_BATCH: 'cibat',           // catalog_import_batches — παρτίδα (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση)
   CATALOG_IMPORT_PROPOSAL: 'cipsl',        // catalog_import_proposals — πρόταση (από παρτίδα + σύνολο)
   CATALOG_IMPORT_PAGE_READING: 'cipgr',    // catalog_import_page_readings — απάντηση μοντέλου (από παρτίδα + σελίδα + διαδρομή + προσπάθεια)
+  // ── Φάση 6α (ADR-923 §5.12) ──
+  CATALOG_VISIBILITY_RULE: 'cvrul',        // catalog_visibility_rules — ΕΝΑΣ κανόνας ανά (αντικείμενο, κοινό), ντετερμινιστικό
 
 } as const;

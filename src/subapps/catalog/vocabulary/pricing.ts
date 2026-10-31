@@ -9,6 +9,8 @@
  * | είδος τιμοκαταλόγου | `sales` (προς πελάτες) · `cost` (εσωτερικός master του προϋπολογισμού) | ADR-175 §4.1.3 |
  * | τύπος τιμής | `net_list` · `net_customer` — **δεν αναμιγνύονται** | BMEcat `price_type` |
  * | κοινό | `anonymous` < `signedIn` < `customerGroup` < `partner` | §12 · SAP access sequence |
+ * | ορατότητα | `visible` · `visibleNoPrice` · `hidden` | §12 · Salesforce entitlement policy |
+ * | αντικείμενο ορατότητας | `catalog` < `category` < `productModel` < `variant` | §5.12 Δ2 |
  * | υποκείμενο γραμμής | `variant` (SKU) · `costItem` (εργασία ΑΤΟΕ με ανάλυση) | RIB iTWO |
  *
  * 🔑 Σε τιμοκατάλογο `net_customer` η τιμή **είναι ήδη** η τιμή του πελάτη ⇒ εκεί δεν
@@ -80,6 +82,38 @@ export const AUDIENCE_SPECIFICITY: Readonly<Record<AudienceKind, number>> = {
   signedIn: 1,
   customerGroup: 2,
   partner: 3,
+};
+
+// ── Ορατότητα (§12 · §5.12) ──────────────────────────────────────────────────
+
+/**
+ * Τρεις απαντήσεις, από το ανοιχτό στο κλειστό. Μία τιμή αντί για δύο σημαίες (Salesforce `CanViewProduct` +
+ * `CanViewPrice`): ο άκυρος συνδυασμός «τιμή χωρίς προϊόν» δεν γράφεται καν.
+ */
+export const CATALOG_VISIBILITIES = ['visible', 'visibleNoPrice', 'hidden'] as const;
+
+export type CatalogVisibility = (typeof CATALOG_VISIBILITIES)[number];
+
+/** Χωρίς κανόνα, τίποτα δεν φεύγει από τον χώρο (§5.12 Δ3): η δημοσιότητα είναι ρητή πράξη του προμηθευτή. */
+export const DEFAULT_CATALOG_VISIBILITY: CatalogVisibility = 'hidden';
+
+/** Πόσο κλείνει κάθε απάντηση: στην ισοπαλία νικά το περιοριστικότερο, ποτέ «ο πρώτος» (§5.12 Σ8). */
+export const VISIBILITY_RESTRICTIVENESS: Readonly<Record<CatalogVisibility, number>> = {
+  visible: 0,
+  visibleNoPrice: 1,
+  hidden: 2,
+};
+
+export const VISIBILITY_SUBJECT_KINDS = ['catalog', 'category', 'productModel', 'variant'] as const;
+
+export type VisibilitySubjectKind = (typeof VISIBILITY_SUBJECT_KINDS)[number];
+
+/** Ο πρώτος βαθμός ειδικότητας του αντικειμένου: SKU > μοντέλο > κατηγορία > κατάλογος (§5.12 Δ2). */
+export const VISIBILITY_SUBJECT_SPECIFICITY: Readonly<Record<VisibilitySubjectKind, number>> = {
+  catalog: 0,
+  category: 1,
+  productModel: 2,
+  variant: 3,
 };
 
 // ── Είδος ομάδας ─────────────────────────────────────────────────────────────

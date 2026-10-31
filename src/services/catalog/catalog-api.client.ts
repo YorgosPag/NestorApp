@@ -46,7 +46,9 @@ import type {
   DiscountConditionWire,
   DiscountGroupWire,
   PriceListWire,
+  VisibilityRuleWire,
 } from '@/subapps/catalog/types/pricing-views';
+import type { VisibilityRuleDefinition } from '@/subapps/catalog/types/visibility-rule';
 import type { LocalizedText } from '@/i18n/localized-text';
 
 // ── Οι εγγραφές όπως τις δίνει ο γραφέας (σύρμα: χρονοσφραγίδες ISO) ─────────
@@ -83,6 +85,8 @@ export interface CatalogDefinitionKinds {
   readonly customerAssignment: { readonly definition: CustomerAssignmentDefinition; readonly record: CustomerAssignmentWire };
   /** Τυχαίο id, προ-γεννημένο στον πελάτη και επαληθευμένο στον διακομιστή (Γ5). */
   readonly discountCondition: { readonly definition: DiscountConditionDefinition; readonly record: DiscountConditionWire };
+  /** Ταυτότητα = (αντικείμενο, κοινό): ντετερμινιστικό id στον διακομιστή (§5.12 Δ1). */
+  readonly visibilityRule: { readonly definition: VisibilityRuleDefinition; readonly record: VisibilityRuleWire };
 }
 
 export type CatalogDefinitionKind = keyof CatalogDefinitionKinds;
@@ -106,6 +110,7 @@ const ROUTES: Readonly<Record<CatalogEntityKind, { readonly collection: string; 
   customerGroup: CATALOG_API.customerGroups,
   customerAssignment: CATALOG_API.customerAssignments,
   discountCondition: CATALOG_API.discountConditions,
+  visibilityRule: CATALOG_API.visibilityRules,
 };
 
 /** `POST` — νέα οντότητα. Ο κωδικός γίνεται ταυτότητα (ντετερμινιστικό id στον διακομιστή). */

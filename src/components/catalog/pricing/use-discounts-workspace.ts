@@ -17,6 +17,7 @@ import { useDiscountsView } from '@/hooks/catalog/usePriceListViews';
 import { usePendingHold, useReleaseWhenSettled, type PricingViewApi } from '@/hooks/catalog/usePricingView';
 import type {
   CustomerAssignmentWire,
+  VisibilityRuleWire,
   CustomerGroupWire,
   DiscountConditionWire,
   DiscountGroupWire,
@@ -29,6 +30,7 @@ const NO_DISCOUNT_GROUPS: readonly DiscountGroupWire[] = [];
 const NO_CUSTOMER_GROUPS: readonly CustomerGroupWire[] = [];
 const NO_ASSIGNMENTS: readonly CustomerAssignmentWire[] = [];
 const NO_CONDITIONS: readonly DiscountConditionWire[] = [];
+const NO_VISIBILITY_RULES: readonly VisibilityRuleWire[] = [];
 const NO_NAMES: PartyNames = {};
 
 export interface DiscountsWorkspace {
@@ -46,6 +48,7 @@ export interface DiscountsWorkspace {
   readonly customerGroups: CatalogOptimistic<CustomerGroupWire>;
   readonly assignments: CatalogOptimistic<CustomerAssignmentWire>;
   readonly conditions: CatalogOptimistic<DiscountConditionWire>;
+  readonly visibilityRules: CatalogOptimistic<VisibilityRuleWire>;
 }
 
 export function useDiscountsWorkspace(): DiscountsWorkspace {
@@ -57,7 +60,8 @@ export function useDiscountsWorkspace(): DiscountsWorkspace {
   const customerGroups = useCatalogOptimistic(view?.customerGroups ?? NO_CUSTOMER_GROUPS, notice);
   const assignments = useCatalogOptimistic(view?.assignments ?? NO_ASSIGNMENTS, notice);
   const conditions = useCatalogOptimistic(view?.conditions ?? NO_CONDITIONS, notice);
-  const pending = discountGroups.pendingKeys.size + customerGroups.pendingKeys.size + assignments.pendingKeys.size + conditions.pendingKeys.size;
+  const visibilityRules = useCatalogOptimistic(view?.visibilityRules ?? NO_VISIBILITY_RULES, notice);
+  const pending = [discountGroups, customerGroups, assignments, conditions, visibilityRules].reduce((sum, ops) => sum + ops.pendingKeys.size, 0);
   useReleaseWhenSettled(hold, pending, api.release);
   const names = usePartyNameMemory(view?.partyNames ?? NO_NAMES);
   return {
@@ -71,5 +75,6 @@ export function useDiscountsWorkspace(): DiscountsWorkspace {
     customerGroups,
     assignments,
     conditions,
+    visibilityRules,
   };
 }

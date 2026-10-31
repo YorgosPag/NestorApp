@@ -54,6 +54,7 @@ import {
   CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS,
   CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS,
   CATALOG_PUBLICATION_RUN_TRACKED_FIELDS,
+  CATALOG_VISIBILITY_RULE_TRACKED_FIELDS,
 } from '@/config/audit-tracked-fields-catalog';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
@@ -1738,6 +1739,8 @@ export function getTrackedFieldsForEntityAuditType(
       return CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS;
     case 'catalog_publication_run':
       return CATALOG_PUBLICATION_RUN_TRACKED_FIELDS;
+    case 'catalog_visibility_rule':
+      return CATALOG_VISIBILITY_RULE_TRACKED_FIELDS;
     default:
       return null;
   }

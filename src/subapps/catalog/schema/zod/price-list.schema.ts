@@ -21,7 +21,8 @@ import type {
   PricingPartyRef,
 } from '../../types/price-list';
 import type { PriceLineInput } from '../../types/price-list-requests';
-import { PRICE_LIST_KINDS, PRICE_TYPES, isPriceQuantity, type PriceQuantity } from '../../vocabulary/pricing';
+import type { VisibilityRuleDefinition, VisibilitySubject } from '../../types/visibility-rule';
+import { CATALOG_VISIBILITIES, PRICE_LIST_KINDS, PRICE_TYPES, isPriceQuantity, type PriceQuantity } from '../../vocabulary/pricing';
 import { catalogCodeSchema, entityIdSchema, labelsSchema, measurementUnitCodeSchema } from './common.schema';
 
 const isoInstantSchema = z.string().datetime({ offset: true });
@@ -102,6 +103,19 @@ export const priceListDefinitionSchema: z.ZodType<PriceListDefinition, z.ZodType
   audience: audienceSchema.nullable(),
   changeFenceBp: basisPointsSchema.nullable(),
   projectId: entityIdSchema.nullable().default(null),
+});
+
+const visibilitySubjectSchema: z.ZodType<VisibilitySubject, z.ZodTypeDef, unknown> = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('catalog') }),
+  z.object({ kind: z.literal('category'), categoryId: entityIdSchema }),
+  z.object({ kind: z.literal('productModel'), modelId: entityIdSchema }),
+  z.object({ kind: z.literal('variant'), variantId: entityIdSchema }),
+]);
+
+export const visibilityRuleDefinitionSchema: z.ZodType<VisibilityRuleDefinition, z.ZodTypeDef, unknown> = z.object({
+  subject: visibilitySubjectSchema,
+  audience: audienceSchema,
+  visibility: z.enum(CATALOG_VISIBILITIES),
 });
 
 export const discountRuleSchema: z.ZodType<DiscountRule, z.ZodTypeDef, unknown> = z.discriminatedUnion('kind', [

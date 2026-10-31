@@ -147,5 +147,8 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
   /** Κλειδί = `importPageReadingKey(…)` ⇒ το ξαναδιάβασμα της ίδιας σελίδας ξαναγράφει το ίδιο έγγραφο. */
   generateDeterministicCatalogImportPageReadingId(companyId: string, readingKey: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_IMPORT_PAGE_READING, seedOf('import-page-reading', companyId, readingKey));
+  /** Κλειδί = `visibilityRuleKey` ⇒ **ένας** κανόνας ανά (αντικείμενο, κοινό), δομικά (ADR-923 §5.12 Δ1). */
+  generateDeterministicCatalogVisibilityRuleId(companyId: string, ruleKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_VISIBILITY_RULE, seedOf('visibility-rule', companyId, ruleKey));
   }
 }

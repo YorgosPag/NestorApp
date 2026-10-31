@@ -22,9 +22,12 @@ import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocsInTransaction } from '@/server/lib/owned-contact-docs';
 import { pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
 import { pricingFreshUntil } from '@/subapps/catalog/pricing/pricing-view-freshness';
+import { visibilitySubjectKey } from '@/subapps/catalog/pricing/visibility';
 import type { PriceAudience, PricingPartyRef } from '@/subapps/catalog/types/price-list';
 import type { DiscountsView, PriceLinesPageView, PriceListsView, PriceListWire } from '@/subapps/catalog/types/pricing-views';
+import type { VisibilitySubject } from '@/subapps/catalog/types/visibility-rule';
 import { isPublishedStatus, PRICE_LINES_PER_TRANSACTION } from '@/subapps/catalog/vocabulary/pricing';
+import { readActiveByIds } from './catalog-library-reads.server';
 import { readOwned, runCatalogTransaction, type CatalogTx } from './catalog-store.server';
 import type { StoredPriceLine, StoredPriceVersion } from './price-version-aggregate.server';
 import { readListVersions, readSkuIdentifiers, versionLinesPage } from './price-version-reads.server';
@@ -69,18 +72,35 @@ export function readPriceLinesPage(ctx: AuthContext, versionId: string, cursor: 
 export function readDiscountsView(ctx: AuthContext, nowMs = Date.now()): Promise<DiscountsView> {
   return runCatalogTransaction(ctx, async (scope) => {
     const revision = await readPricingViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'discounts' });
-    const [discountGroups, customerGroups, assignments, conditions] = await Promise.all([
+    const [discountGroups, customerGroups, assignments, conditions, visibilityRules] = await Promise.all([
       readActive<DiscountsView['discountGroups'][number]>(scope, COLLECTIONS.CATALOG_DISCOUNT_GROUPS),
       readActive<DiscountsView['customerGroups'][number]>(scope, COLLECTIONS.CATALOG_CUSTOMER_GROUPS),
       readActive<DiscountsView['assignments'][number]>(scope, COLLECTIONS.CATALOG_CUSTOMER_ASSIGNMENTS),
       readActive<DiscountsView['conditions'][number]>(scope, COLLECTIONS.CATALOG_DISCOUNT_CONDITIONS),
+      readActive<DiscountsView['visibilityRules'][number]>(scope, COLLECTIONS.CATALOG_VISIBILITY_RULES),
     ]);
     const bounds = conditions.flatMap((condition) => [condition.validFrom, condition.validUntil]);
     const freshness = { revision, freshUntil: pricingFreshUntil(nowMs, bounds) };
-    const parties = [...assignments.map((assignment) => assignment.party), ...conditions.flatMap((condition) => partiesOf(condition.audience))];
+    const audiences = [...conditions, ...visibilityRules].map((entry) => entry.audience);
+    const parties = [...assignments.map((assignment) => assignment.party), ...audiences.flatMap(partiesOf)];
     const partyNames = await readPartyNames(scope, parties);
-    return { freshness, asOf: asOfOf(nowMs), discountGroups, customerGroups, assignments, conditions, partyNames };
+    const subjectNames = await readVisibilitySubjectNames(scope, visibilityRules.map((rule) => rule.subject));
+    return { freshness, asOf: asOfOf(nowMs), discountGroups, customerGroups, assignments, conditions, visibilityRules, partyNames, subjectNames };
   });
+}
+
+/** Κωδικός ανά `visibilitySubjectKey`: ίδιο `expand` με τα `skuIdentifiers`, ώστε η λίστα κανόνων να μην ανοίγει ένα έγγραφο ανά γραμμή. */
+async function readVisibilitySubjectNames(scope: CatalogTx, subjects: readonly VisibilitySubject[]): Promise<Readonly<Record<string, string>>> {
+  const idsOf = <K extends VisibilitySubject['kind']>(kind: K, read: (subject: Extract<VisibilitySubject, { kind: K }>) => string): string[] =>
+    subjects.flatMap((subject) => (subject.kind === kind ? [read(subject as Extract<VisibilitySubject, { kind: K }>)] : []));
+  const categories = await readActiveByIds<{ readonly code: string }>(scope, 'category', idsOf('category', (subject) => subject.categoryId));
+  const models = await readActiveByIds<{ readonly code: string }>(scope, 'productModel', idsOf('productModel', (subject) => subject.modelId));
+  const skus = await readSkuIdentifiers(scope, idsOf('variant', (subject) => subject.variantId).map((variantId) => ({ kind: 'variant', variantId })));
+  const names: Record<string, string> = {};
+  for (const [categoryId, category] of categories) names[visibilitySubjectKey({ kind: 'category', categoryId })] = category.code;
+  for (const [modelId, model] of models) names[visibilitySubjectKey({ kind: 'productModel', modelId })] = model.code;
+  for (const [variantId, identifier] of Object.entries(skus)) names[visibilitySubjectKey({ kind: 'variant', variantId })] = identifier;
+  return names;
 }
 
 const partiesOf = (audience: PriceAudience): readonly PricingPartyRef[] => (audience.kind === 'partner' ? [audience.party] : []);

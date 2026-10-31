@@ -135,6 +135,7 @@ export const CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS = defs(
 );
 
 export const CATALOG_PUBLICATION_RUN_TRACKED_FIELDS = defs(['recipeId', 'status', 'failure', 'audienceKey', 'inputHash'], ['retention']);
+export const CATALOG_VISIBILITY_RULE_TRACKED_FIELDS = defs(['visibility', 'isDeleted'], ['subject', 'audience']);
 
 export const CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS = defs(
   ['discountGroupId', 'validFrom', 'validUntil', 'isDeleted'],

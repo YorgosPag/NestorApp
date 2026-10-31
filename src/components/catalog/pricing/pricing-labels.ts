@@ -15,7 +15,16 @@ import type { DiscountRuleKind, DiscountTierBasis } from '@/lib/pricing/discount
 import type { ValidityVerdict } from '@/lib/pricing/validity';
 import type { PriceLineChangeKind } from '@/subapps/catalog/pricing/diff-price-versions';
 import type { PriceQuoteOutcome } from '@/subapps/catalog/types/price-list-requests';
-import type { AudienceKind, PriceListKind, PriceListVersionStatus, PriceType, PriceVersionBasis, PricingGroupKind } from '@/subapps/catalog/vocabulary/pricing';
+import type {
+  AudienceKind,
+  CatalogVisibility,
+  PriceListKind,
+  PriceListVersionStatus,
+  PriceType,
+  PriceVersionBasis,
+  PricingGroupKind,
+  VisibilitySubjectKind,
+} from '@/subapps/catalog/vocabulary/pricing';
 import type { AnalysisVerdict } from './price-analysis';
 import type { TimelinePhase } from './price-list-summary';
 import type { SkuLookup } from './use-price-analysis';
@@ -158,6 +167,19 @@ export const PRICE_OUTCOME_KEYS: Readonly<Record<Exclude<PriceQuoteOutcome['kind
 };
 
 /** Τι λέει το πεδίο κωδικού όσο δεν έχει βρει SKU. */
+export const VISIBILITY_KEYS: Readonly<Record<CatalogVisibility, string>> = {
+  visible: 'pricing.visibility.values.visible',
+  visibleNoPrice: 'pricing.visibility.values.visibleNoPrice',
+  hidden: 'pricing.visibility.values.hidden',
+};
+
+export const VISIBILITY_SUBJECT_KEYS: Readonly<Record<VisibilitySubjectKind, string>> = {
+  catalog: 'pricing.visibility.subjects.catalog',
+  category: 'pricing.visibility.subjects.category',
+  productModel: 'pricing.visibility.subjects.productModel',
+  variant: 'pricing.visibility.subjects.variant',
+};
+
 export const SKU_LOOKUP_KEYS: Readonly<Record<Exclude<SkuLookup['state'], 'ready'>, string>> = {
   empty: 'pricing.analysis.sku.empty',
   resolving: 'pricing.analysis.sku.resolving',

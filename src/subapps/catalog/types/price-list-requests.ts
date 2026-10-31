@@ -12,6 +12,7 @@ import type { PriceHistoryPoint } from '../pricing/price-history';
 import type { PriceQuote } from '../pricing/resolve-catalog-price';
 import type { PriceVersionBasis } from '../vocabulary/pricing';
 import type { PriceAudience, PriceLineSubject, PriceListLineDefinition, PricingViewer } from './price-list';
+import type { VisibilityVerdict } from './visibility-rule';
 
 /** Μία γραμμή της δέσμης — η έκδοση έρχεται από τη διαδρομή, ποτέ από το σώμα. */
 export type PriceLineInput = Omit<PriceListLineDefinition, 'versionId'>;
@@ -114,6 +115,8 @@ export interface PriceQuoteContext {
   readonly viewer: PricingViewer;
   readonly at: string;
   readonly listTrace: readonly SelectionTraceEntry<'audienceMismatch'>[];
+  /** Τι βλέπει ο θεατής για αυτό το SKU (§5.12 Δ4): η ΜΙΑ κρίση, δίπλα στην τιμή· `null` για υποκείμενο που δεν είναι SKU. */
+  readonly visibility: VisibilityVerdict | null;
 }
 
 export type PriceQuoteResult = PriceQuoteOutcome & PriceQuoteContext;

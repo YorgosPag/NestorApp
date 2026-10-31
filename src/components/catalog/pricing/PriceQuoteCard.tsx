@@ -25,6 +25,7 @@ import { Waterfall } from './DiscountExample';
 import type { AnalysisCell, AnalysisViewer } from './price-analysis';
 import { PriceTrace } from './PriceTrace';
 import { PRICE_OUTCOME_KEYS } from './pricing-labels';
+import { VisibilityVerdictLine } from './VisibilityVerdictLine';
 import type { AnalysisNames } from './use-price-analysis-names';
 
 const groupOfViewer = (viewer: PricingViewer): string | null => (viewer.kind === 'signedIn' ? viewer.customerGroupId : null);
@@ -77,8 +78,12 @@ function CellBody({ cell, saving, names }: { readonly cell: AnalysisCell; readon
   if (cell.state === 'incomplete') return <p className="m-0 text-sm text-muted-foreground">{t('pricing.analysis.pickViewer')}</p>;
   if (cell.state === 'loading') return <p className="m-0 text-sm text-muted-foreground" role="status">{t('pricing.analysis.loading')}</p>;
   if (cell.state === 'failed') return <p className="m-0 text-sm" role="alert">{t('pricing.analysis.failed')}</p>;
-  if (cell.result.kind === 'priced') return <PricedBody result={cell.result} saving={saving} names={names} />;
-  return <UnpricedBody result={cell.result} names={names} />;
+  return (
+    <>
+      {cell.result.visibility ? <VisibilityVerdictLine verdict={cell.result.visibility} /> : null}
+      {cell.result.kind === 'priced' ? <PricedBody result={cell.result} saving={saving} names={names} /> : <UnpricedBody result={cell.result} names={names} />}
+    </>
+  );
 }
 
 interface PriceQuoteCardProps {

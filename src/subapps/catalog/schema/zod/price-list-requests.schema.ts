@@ -26,6 +26,7 @@ import {
   priceLineInputSchema,
   priceLineSubjectSchema,
   priceListDefinitionSchema,
+  visibilityRuleDefinitionSchema,
 } from './price-list.schema';
 
 /** Το `linesRevision` ξεκινά από 0 (κενή έκδοση) — όχι από 1 όπως η αναθεώρηση εγγραφής. */
@@ -45,6 +46,8 @@ export const createCustomerGroupBodySchema = createBody(customerGroupDefinitionS
 export const updateCustomerGroupBodySchema = updateBody(customerGroupDefinitionSchema);
 export const createCustomerAssignmentBodySchema = createBody(customerAssignmentDefinitionSchema);
 export const updateCustomerAssignmentBodySchema = updateBody(customerAssignmentDefinitionSchema);
+export const createVisibilityRuleBodySchema = createBody(visibilityRuleDefinitionSchema);
+export const updateVisibilityRuleBodySchema = updateBody(visibilityRuleDefinitionSchema);
 /**
  * Η συνθήκη δεν έχει κωδικό (τυχαίο id `cdcnd`) ⇒ ο πελάτης **μπορεί** να προ-γεννήσει το id της αισιόδοξης εγγραφής και ο
  * διακομιστής το **επαληθεύει** (ADR-866 επ. Β · ADR-923 §5.11 «3δ» Γ5) — το ίδιο ιδίωμα με τα SKU (`createProductRequestSchema`).

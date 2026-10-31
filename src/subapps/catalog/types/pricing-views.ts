@@ -17,6 +17,7 @@ import type {
   StoredPriceListLineDefinition,
   StoredPriceListVersionDefinition,
 } from './price-list';
+import type { VisibilityRuleDefinition } from './visibility-rule';
 
 export type PriceListWire = CatalogWire<PriceListDefinition>;
 export type PriceListVersionWire = CatalogWire<StoredPriceListVersionDefinition>;
@@ -25,6 +26,7 @@ export type DiscountGroupWire = CatalogWire<DiscountGroupDefinition>;
 export type CustomerGroupWire = CatalogWire<CustomerGroupDefinition>;
 export type CustomerAssignmentWire = CatalogWire<CustomerAssignmentDefinition>;
 export type DiscountConditionWire = CatalogWire<DiscountConditionDefinition>;
+export type VisibilityRuleWire = CatalogWire<VisibilityRuleDefinition>;
 
 /** `GET /api/catalog/price-lists` — οι τιμοκατάλογοι του χώρου και **όλες** οι ενεργές εκδόσεις τους (χρονογραμμή). */
 export interface PriceListsView {
@@ -49,7 +51,7 @@ export interface PriceLinesPageView {
   readonly nextCursor: string | null;
 }
 
-/** `GET /api/catalog/discounts` — ομάδες έκπτωσης · ομάδες πελατών · αναθέσεις · συνθήκες. */
+/** `GET /api/catalog/discounts` — ομάδες έκπτωσης · ομάδες πελατών · αναθέσεις · συνθήκες · κανόνες ορατότητας. */
 export interface DiscountsView {
   readonly freshness: ViewFreshness;
   readonly asOf: string;
@@ -57,6 +59,8 @@ export interface DiscountsView {
   readonly customerGroups: readonly CustomerGroupWire[];
   readonly assignments: readonly CustomerAssignmentWire[];
   readonly conditions: readonly DiscountConditionWire[];
+  /** Οι κανόνες ορατότητας του χώρου (§12): ίδια όψη, γιατί μιλούν για τα ίδια κοινά. */
+  readonly visibilityRules: readonly VisibilityRuleWire[];
   /**
    * Το όνομα κάθε **επαφής** που αναφέρουν αναθέσεις και κοινά `partner`, κατά `pricingPartyKey` — από την **ίδια**
    * συναλλαγή (commercetools: `expand`, ίδιο ιδίωμα με τα `skuIdentifiers`). Χωρίς αυτό η ομάδα πελατών θα έδειχνε
@@ -64,4 +68,6 @@ export interface DiscountsView {
    * ⚠️ Στιγμιότυπο της ανάγνωσης: μετονομασία επαφής **δεν** αυξάνει το σήμα της όψης (φαίνεται στην επόμενη ανάγνωση).
    */
   readonly partyNames: Readonly<Record<string, string>>;
+  /** Ο κωδικός κάθε αντικειμένου ορατότητας, κατά `visibilitySubjectKey`. Απουσία κλειδιού ⇒ το αντικείμενο δεν ζει πια. */
+  readonly subjectNames: Readonly<Record<string, string>>;
 }

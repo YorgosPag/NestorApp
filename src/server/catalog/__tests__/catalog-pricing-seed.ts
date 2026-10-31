@@ -32,7 +32,7 @@ import { ARIES } from './catalog-writer-seed';
 /** Τα SKU που τιμολογεί το fixture — ενεργά προϊόντα του χώρου της Aries. */
 export function seedPricedProducts(fake: FakeFirestore, companyId = ARIES.companyId): void {
   const ids = [...MFP_SIZES.map((_, index) => mfpVariantId(index)), SIMPLE_VARIANT_ID];
-  for (const id of ids) fake.seed('catalog_products', id, { id, companyId, isDeleted: false, revision: 1 });
+  for (const id of ids) fake.seed('catalog_products', id, { id, companyId, isDeleted: false, revision: 1, modelId: null, categoryIds: [] });
   if (PARTNER.kind === 'contact') fake.seed('contacts', PARTNER.contactId, { id: PARTNER.contactId, companyId });
 }
 

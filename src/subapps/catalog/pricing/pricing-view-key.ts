@@ -9,7 +9,7 @@
  * |---|---|---|
  * | `lists` | οι τιμοκατάλογοι του χώρου + η χρονογραμμή εκδόσεών τους | λίστα · έκδοση |
  * | `list:{id}` | ό,τι ανήκει σε ΕΝΑΝ τιμοκατάλογο (εκδόσεις, γραμμές) | λίστα · έκδοση · γραμμή |
- * | `discounts` | ομάδες έκπτωσης · ομάδες πελατών · αναθέσεις · συνθήκες | αυτά τα τέσσερα |
+ * | `discounts` | ομάδες έκπτωσης · ομάδες πελατών · αναθέσεις · συνθήκες · κανόνες ορατότητας | αυτά τα πέντε |
  *
  * 🔑 Η γραμμή **δεν** αγγίζει το `lists`· η συναλλαγή γραμμών όμως αγγίζει και την **έκδοση** (`linesRevision`), άρα το
  *    `lists` αυξάνεται **μία** φορά ανά συναλλαγή — ποτέ ανά γραμμή (`distinctPricingViews`): σπορά 4.000 γραμμών = 10 σήματα.
@@ -52,6 +52,7 @@ export function pricingViewsOfWrite(kind: string, record: Readonly<Record<string
     case 'customerGroup':
     case 'customerAssignment':
     case 'discountCondition':
+    case 'visibilityRule':
       return [DISCOUNTS];
     default:
       return [];

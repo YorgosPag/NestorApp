@@ -789,6 +789,9 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'catalog_import_page_readings',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-import-page-readings.rules.test.ts',
+    collection: 'catalog_visibility_rules',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-visibility-rules.rules.test.ts',
     ...denyAllMatrix(),
   },
   {

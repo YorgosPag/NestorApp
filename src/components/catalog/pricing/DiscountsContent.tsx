@@ -26,6 +26,7 @@ import { PartyNameMemoryProvider } from './party-name-memory';
 import { PriceAnalysisPanel } from './PriceAnalysisPanel';
 import { PricingGroupsPanel } from './PricingGroupsPanel';
 import { useDiscountsWorkspace } from './use-discounts-workspace';
+import { VisibilityRulesPanel } from './VisibilityRulesPanel';
 
 // 🔴 ADR-744 §18 — το `catalog` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ωμά κλειδιά στο πρώτο καρέ.
 import routeSlice from '@/i18n/generated/routes/o__workspace__catalog__discounts.el.json';
@@ -33,12 +34,14 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
 
-const TABS = ['conditions', 'groups', 'analysis'] as const;
+
+const TABS = ['conditions', 'groups', 'visibility', 'analysis'] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_KEYS: Readonly<Record<Tab, string>> = {
   conditions: 'pricing.discounts.tabs.conditions',
   groups: 'pricing.discounts.tabs.groups',
+  visibility: 'pricing.discounts.tabs.visibility',
   analysis: 'pricing.discounts.tabs.analysis',
 };
 
@@ -75,6 +78,9 @@ export function DiscountsContent() {
             </TabsContent>
             <TabsContent value="groups" className="mt-0 flex min-h-0 flex-1 flex-col">
               <PricingGroupsPanel workspace={workspace} selection={groupSelection} unsaved={unsaved} />
+            </TabsContent>
+            <TabsContent value="visibility" className="mt-0 flex min-h-0 flex-1 flex-col">
+              <VisibilityRulesPanel workspace={workspace} />
             </TabsContent>
             <TabsContent value="analysis" className="mt-0 flex min-h-0 flex-1 flex-col">
               <PriceAnalysisPanel workspace={workspace} />

@@ -19,6 +19,7 @@ const CONTEXT = {
   viewer: { kind: 'signedIn', customerGroupId: 'group-1', party: null },
   at: '2026-10-30T00:00:00.000Z',
   listTrace: [{ id: 'list-1', verdict: 'selected' }, { id: 'list-2', verdict: 'audienceMismatch' }],
+  visibility: null,
 } as const;
 
 const PRICED: PriceQuoteResult = {

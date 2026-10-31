@@ -36,6 +36,7 @@ import {
   CATALOG_IMPORT_BATCH_TRACKED_FIELDS,
   CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS,
   CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS,
+  CATALOG_VISIBILITY_RULE_TRACKED_FIELDS,
   CATALOG_VALUES_AUDIT_FIELD,
   catalogValuesAuditRows,
 } from '@/config/audit-tracked-fields-catalog';
@@ -63,6 +64,7 @@ import {
   generateDeterministicCatalogImportBatchId,
   generateDeterministicCatalogImportProposalId,
   generateDeterministicCatalogPublicationRecipeId,
+  generateDeterministicCatalogVisibilityRuleId,
 } from '@/services/enterprise-id.service';
 
 export const CATALOG_KINDS = [
@@ -89,6 +91,8 @@ export const CATALOG_KINDS = [
   'importProposal',
   // ── Φάση 5 (ADR-923 §5.6) ──
   'publicationRecipe',
+  // ── Φάση 6α (ADR-923 §5.12) ──
+  'visibilityRule',
 ] as const;
 export type CatalogKind = (typeof CATALOG_KINDS)[number];
 
@@ -250,5 +254,12 @@ export const CATALOG_KIND_SPECS: Readonly<Record<CatalogKind, CatalogKindSpec>> 
     entityType: 'catalog_publication_recipe',
     identity: byCode(generateDeterministicCatalogPublicationRecipeId),
     trackedFields: CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS,
+  },
+  visibilityRule: {
+    collection: COLLECTIONS.CATALOG_VISIBILITY_RULES,
+    entityType: 'catalog_visibility_rule',
+    identity: byCode(generateDeterministicCatalogVisibilityRuleId),
+    trackedFields: CATALOG_VISIBILITY_RULE_TRACKED_FIELDS,
+    auditName: nameFrom((record) => record.visibility),
   },
 };

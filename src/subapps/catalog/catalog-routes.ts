@@ -68,6 +68,7 @@ export const CATALOG_API = {
   customerGroups: entity('customer-groups'),
   customerAssignments: entity('customer-assignments'),
   discountConditions: entity('discount-conditions'),
+  visibilityRules: entity('visibility-rules'),
   /** «Δες την τιμή σαν τον Χ» — εσωτερική προεπισκόπηση (3β απόφαση Δ). */
   priceQuote: `${API_ROOT}/price-quote`,
   /** Η τιμή ενός υποκειμένου μέσα από τις δημοσιευμένες εκδόσεις μιας λίστας («3δ» Τμήμα 3). */

@@ -68,6 +68,8 @@ const CATALOG_COLLECTIONS = [
   // Φάση 5 (ADR-923 §5.6) — η συνταγή περνά από τη μηχανή. ⚠️ Το `CATALOG_PUBLICATION_RUNS` ΔΕΝ μπαίνει εδώ: είναι αποτέλεσμα
   // μηχανής (καμία αναθεώρηση/ίχνος), όχι είδος της μηχανής· ένας γραφέας, `publication-run.server.ts`.
   'COLLECTIONS.CATALOG_PUBLICATION_RECIPES',
+  // Φάση 6α (ADR-923 §5.12) — οι κανόνες ορατότητας
+  'COLLECTIONS.CATALOG_VISIBILITY_RULES',
 ];
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
@@ -78,6 +80,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_pricing_view_signals',
   'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals', 'catalog_import_page_readings',
   'catalog_publication_recipes', 'catalog_publication_runs',
+  'catalog_visibility_rules',
 ];
 
 const STORE = 'src/server/catalog/catalog-store.server.ts';

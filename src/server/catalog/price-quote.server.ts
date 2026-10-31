@@ -29,6 +29,7 @@ import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subjec
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import { resolveCatalogPrice, type PricedRecord } from '@/subapps/catalog/pricing/resolve-catalog-price';
 import { versionAt } from '@/subapps/catalog/pricing/version-timeline';
+import { judgeVisibility } from '@/subapps/catalog/pricing/visibility';
 import type {
   PriceQuoteContext,
   PriceQuoteOutcome,
@@ -45,6 +46,8 @@ import type {
   PricingViewer,
   StoredPriceListLineDefinition,
 } from '@/subapps/catalog/types/price-list';
+import type { VisibilityVerdict } from '@/subapps/catalog/types/visibility-rule';
+import { DEFAULT_CATALOG_VISIBILITY } from '@/subapps/catalog/vocabulary/pricing';
 import { readActiveByIds } from './catalog-library-reads.server';
 import {
   naturalKeyId,
@@ -58,6 +61,7 @@ import {
 import { assertNoIssues } from './catalog-write-error';
 import { partyIssues } from './pricing-party-reads.server';
 import { readActivePriceLists, readListVersions, versionRefOf, type StoredPriceList } from './price-version-reads.server';
+import { readVisibilityAncestry, readVisibilityRules } from './visibility-reads.server';
 
 type StoredList = StoredPriceList;
 type OfferedList = StoredList & { readonly audience: PriceAudience };
@@ -135,13 +139,22 @@ async function readActiveConditions(scope: CatalogTx): Promise<PricedRecord<Disc
   return (await readActiveConditionRecords(scope)).map(({ record }) => record);
 }
 
-/** Η τιμή για έναν θεατή (εσωτερική προεπισκόπηση). */
+/** Η μία κρίση ορατότητας, στην ίδια συναλλαγή με την τιμή (§5.12 Δ4). Μόνο τα SKU έχουν ορατότητα· οι εργασίες ΑΤΟΕ όχι. */
+async function visibilityOf(scope: CatalogTx, request: PriceQuoteRequest, viewer: PricingViewer, atMs: number): Promise<VisibilityVerdict | null> {
+  if (request.subject.kind !== 'variant') return null;
+  const ancestry = await readVisibilityAncestry(scope, request.subject.variantId);
+  if (ancestry === null) return { visibility: DEFAULT_CATALOG_VISIBILITY, ruleId: null, tied: false, trace: [] };
+  return judgeVisibility(await readVisibilityRules(scope), ancestry, viewer, atMs);
+}
+
+/** Η τιμή για έναν θεατή (εσωτερική προεπισκόπηση): η ετυμηγορία ταξιδεύει δίπλα στο ποσό, που ανήκει στον ίδιο τον προμηθευτή. */
 export async function quoteCatalogPrice(ctx: AuthContext, request: PriceQuoteRequest): Promise<PriceQuoteResult> {
   return runCatalogTransaction(ctx, async (scope) => {
     const atMs = normalizeToMillisOrNull(request.at ?? nowISO()) ?? Date.now();
     const viewer = await viewerOf(scope, request.viewAs);
     const selected = await selectList(scope, request, viewer, atMs);
-    const context: PriceQuoteContext = { viewer, at: new Date(atMs).toISOString(), listTrace: selected.trace };
+    const visibility = await visibilityOf(scope, request, viewer, atMs);
+    const context: PriceQuoteContext = { viewer, at: new Date(atMs).toISOString(), listTrace: selected.trace, visibility };
     if (selected.kind === 'noPriceList') return { kind: selected.kind, ...context };
     if (selected.kind === 'ambiguousPriceList') return { kind: selected.kind, tiedPriceListIds: selected.tiedPriceListIds, ...context };
     return { ...(await quoteFromList(scope, request, viewer, selected.list, atMs)), ...context };

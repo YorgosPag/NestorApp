@@ -111,6 +111,7 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // 2026-10-31: +4 (ADR-923 Φ5 — `catalog_publication_recipes` · `catalog_publication_runs`: read/write `if false`) ⇒ 843,
   // και +1 στο Storage (`catalog-publications`: read, write `if false`) ⇒ 72.
   // 2026-11-01: +2 (ADR-923 Φ4 Ε6 — `catalog_import_page_readings`: read/write `if false`) ⇒ 845.
+  // +2 (ADR-923 Φ6α — `catalog_visibility_rules`: read/write `if false`) ⇒ 845.
   it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (845 + 72 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
