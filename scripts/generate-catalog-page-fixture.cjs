@@ -12,22 +12,15 @@ const path = require('node:path');
 const { REPO, withPdfService } = require('./lib/pdf-service-probe.cjs');
 
 const OUTPUT = path.join(REPO, 'src/subapps/catalog/__tests__/fixtures/aries-page-structure.data.json');
-const PRECISION = 1e5;
 const FIXTURE_DPI = 36;
 
-const rounded = (value) => Math.round(value * PRECISION) / PRECISION;
-
-function compactItem({ text, x, y, width, height }) {
-  return { text, x: rounded(x), y: rounded(y), width: rounded(width), height: rounded(height) };
-}
-
-function compactRule({ axis, at, from, to }) {
-  return { axis, at: rounded(at), from: rounded(from), to: rounded(to) };
-}
-
+/**
+ * 🔴 Ό,τι βγάζει η παραγωγή, με την **πλήρη** ακρίβειά του: στρογγυλοποίηση έκρυψε ότι το κούμπωμα δεν έκανε τίποτα, γιατί έκανε ίσες τις
+ * σχεδόν ίσες θέσεις. Η άγκυρα περνούσε και η παραγωγή έβγαζε 26 γραμμές αντί 24 (ADR-923 §5.5.1, τρίτη δοκιμή).
+ */
 async function pageOf(service, bytes, page) {
   const { items, rules, tagTables } = await service.readPdfPage(bytes, page, { dpi: FIXTURE_DPI });
-  return { items: items.map(compactItem), rules: rules.map(compactRule), tagTables };
+  return { items, rules, tagTables };
 }
 
 async function main() {

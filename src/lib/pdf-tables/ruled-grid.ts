@@ -27,7 +27,7 @@ function snapPositions(values: readonly number[]): (value: number) => number {
     else clusters.push({ sum: value, count: 1, last: value });
   }
   const centers = clusters.map(({ sum, count }) => sum / count);
-  return (value) => centers.reduce((best, center) => (Math.abs(center - value) < Math.abs(best - value) ? center : best), value);
+  return (value) => centers.reduce((best, center) => (Math.abs(center - value) < Math.abs(best - value) ? center : best), centers[0]);
 }
 
 function joinSpans(rules: readonly Ruling[]): Ruling[] {

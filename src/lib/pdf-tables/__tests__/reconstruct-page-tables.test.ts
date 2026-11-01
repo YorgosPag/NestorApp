@@ -32,11 +32,28 @@ describe.each([['85', 7], ['86', 4]] as const)('σελίδα %s', (page, variant
   it('δύο πίνακες, χωριστοί: ο κύριος και τα εξαρτήματα δεν μπλέκουν τις στήλες τους', () => {
     expect(tables).toHaveLength(2);
     expect(main.source).toBe('ruled');
-    expect(rowTexts(accessories, 0).filter((text) => text !== '')).toEqual(['ΚΩΔΙΚΟΣ', 'ΠΕΡΙΓΡΑΦΗ', 'ΤΙΜΗ (€)']);
+    expect(rowTexts(accessories, 0)).toEqual(['ΚΩΔΙΚΟΣ', 'ΠΕΡΙΓΡΑΦΗ', 'ΤΙΜΗ (€)']);
     expect(rowTexts(main, 0)).toHaveLength(variants + 1);
   });
 
   it('οι ετικέτες, ανεξάρτητη πηγή, επιβεβαιώνουν ΚΑΘΕ κελί και των δύο πινάκων', () => {
+    expect(tables.map((table) => table.witness)).toEqual(['agrees', 'agrees']);
+  });
+});
+
+describe('🔴 κούμπωμα: η τρίτη δοκιμή έβγαλε 26 γραμμές αντί 24', () => {
+  const rules = ARIES['85'].rules as readonly PageRule[];
+  const shape = (table: PageTable) => [table.rowCount, table.colCount];
+
+  it('οι διαστάσεις συμφωνούν με τις ετικέτες: 5 γραμμές × 3 στήλες τα εξαρτήματα, χωρίς κενές στήλες-φαντάσματα', () => {
+    expect(tablesOf('85').map(shape)).toEqual([[24, 11], [5, 3]]);
+  });
+
+  it('θόρυβος κάτω από το πάχος γραμμής δεν γεννά γραμμές ή στήλες', () => {
+    const jitter = (index: number): number => ((index * 7) % 11 - 5) * 0.0001;
+    const noisy = rules.map((rule, index) => ({ ...rule, at: rule.at + jitter(index) }));
+    const tables = reconstructPageTables({ words: wordsOf('85'), rules: noisy, tagTables: ARIES['85'].tagTables });
+    expect(tables.map(shape)).toEqual([[24, 11], [5, 3]]);
     expect(tables.map((table) => table.witness)).toEqual(['agrees', 'agrees']);
   });
 });

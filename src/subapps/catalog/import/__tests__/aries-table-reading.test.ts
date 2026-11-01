@@ -125,7 +125,7 @@ describe('🔴 Το κριτήριο της δεύτερης δοκιμής', ()
 
   it('Ε3: ο πίνακας εξαρτημάτων δεν γίνεται πρόταση, και μένει δηλωμένος', () => {
     expect(groups).toHaveLength(1);
-    expect(setAside).toEqual([{ page: 85, table: 't1', role: 'accessories', rows: 6, label: 'ΚΩΔΙΚΟΣ · ΠΕΡΙΓΡΑΦΗ · ΤΙΜΗ (€)' }]);
+    expect(setAside).toEqual([{ page: 85, table: 't1', role: 'accessories', rows: 5, label: 'ΚΩΔΙΚΟΣ · ΠΕΡΙΓΡΑΦΗ · ΤΙΜΗ (€)' }]);
     expect(JSON.stringify(groups)).not.toContain('099-01-010');
     expect(findings).toEqual([]);
   });
