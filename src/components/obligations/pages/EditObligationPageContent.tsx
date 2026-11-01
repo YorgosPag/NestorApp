@@ -38,8 +38,7 @@ import { getConstructionData } from '@/components/building-management/constructi
 import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
 import { getContactDisplayName, type Contact } from '@/types/contacts';
 import { createModuleLogger } from '@/lib/telemetry';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
+import { resolveBindingBuildingId } from './obligation-binding-building';
 import { compareByLocale } from '@/lib/intl-formatting';
 
 const logger = createModuleLogger('EditObligationPage');
@@ -162,27 +161,8 @@ export function EditObligationPageContent() {
     const loadConstructionBindings = async () => {
       setLoadingConstructionData(true);
       try {
-        let resolvedBuildingId = draft?.buildingId || '';
-
-        if (!resolvedBuildingId) {
-          interface BuildingsResponse {
-            buildings?: Array<{ id: string }>;
-          }
-
-          const query = draft?.projectId ? `?projectId=${encodeURIComponent(String(draft.projectId))}` : ''; // eslint-disable-line custom/no-hardcoded-strings
-          const scopedResponse = await apiClient.get<BuildingsResponse>(`${API_ROUTES.BUILDINGS.LIST}${query}`);
-          const scopedBuildings = scopedResponse?.buildings || [];
-
-          if (scopedBuildings.length > 0) {
-            resolvedBuildingId = scopedBuildings[0].id;
-          } else {
-            const allResponse = await apiClient.get<BuildingsResponse>(API_ROUTES.BUILDINGS.LIST);
-            const allBuildings = allResponse?.buildings || [];
-            if (allBuildings.length > 0) {
-              resolvedBuildingId = allBuildings[0].id;
-            }
-          }
-        }
+        const resolvedBuildingId = draft?.buildingId
+          || await resolveBindingBuildingId(draft?.projectId ? String(draft.projectId) : null);
 
         if (!resolvedBuildingId) {
           setPhaseOptions([]);

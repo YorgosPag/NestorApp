@@ -327,6 +327,20 @@ describe('Τ4 — ξένος χώρος', () => {
     expect(await response.text()).toContain(FOREIGN_MARK);
   });
 
+  for (const status of ['deleted', 'archived']) {
+    it(`Τ4.5γ — έργο με status ${status} απαντά τα κτίριά του: ο φράχτης κρίνει χώρο, όχι κύκλο ζωής (ADR-281)`, async () => {
+      seedTenantDocuments({
+        projects: { prj_a: { companyId: 'co_a', linkedCompanyId: 'cont_a', name: 'Δικό μου', status } },
+        buildings: { bld_a: { companyId: 'co_a', name: 'Το κτίριό μου', projectId: 'prj_a' } },
+      });
+      signIn('internal_user');
+      const response = await INVOKE.listBuildings(MINE);
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain('Το κτίριό μου');
+    });
+  }
+
   it('Τ4.6 — POST /api/floors αγνοεί το έργο του σώματος: κτίριο χωρίς έργο μένει όροφος χωρίς έργο', async () => {
     signIn('company_admin');
     const response = await (floorsRoute.POST as unknown as Route)(
