@@ -106,6 +106,15 @@ export const approveSupplyRequestBodySchema = z.object({
   customerGroupId: entityIdSchema.nullable(),
 }).strict();
 
+/** Η ξένη τιμή: ποιο SKU, πόσο. Κανένα κοινό, καμία λίστα, κανένας χώρος: αυτά τα ξέρει ο διακομιστής. */
+export const foreignQuoteBodySchema = z.object({
+  variantId: entityIdSchema,
+  quantity: z.number().positive().finite(),
+}).strict();
+
+/** Ο πελάτης λέει ποια γραμμή και ποιο SKU, ποτέ ποσό (§5.12 Δ7). */
+export const boqSupplierPriceBodySchema = z.object({ boqItemId: entityIdSchema, variantId: entityIdSchema }).strict();
+
 /** Ο σύνδεσμος/QR: δημοσίευση (ή ανανέωση, που ακυρώνει ό,τι τυπώθηκε) · ανάκληση. */
 export const supplyRequestLinkBodySchema = z.object({ action: z.enum(['publish', 'revoke']) }).strict();
 

@@ -22,8 +22,9 @@ import type {
   PricingPartyRef,
   PricingViewer,
 } from '@/subapps/catalog/types/price-list';
+import type { SupplyRelationship } from '@/subapps/catalog/types/supply-relationship';
 import { readActiveByIds } from './catalog-library-reads.server';
-import { readForUpsert, type CatalogTx } from './catalog-store.server';
+import { readForUpsert, type CatalogReadScope, type CatalogTx } from './catalog-store.server';
 import { assertNoIssues } from './catalog-write-error';
 import { partyIssues } from './pricing-party-reads.server';
 
@@ -36,12 +37,18 @@ async function relationshipOfParty(scope: CatalogTx, party: PricingPartyRef) {
 }
 
 /** Η ομάδα του θεατή: η **πρώτη** ταυτότητα με ανάθεση, με τη σειρά προτεραιότητας του `relationshipParties`. */
-async function assignedGroupOf(scope: CatalogTx, parties: readonly PricingPartyRef[]): Promise<string | null> {
+async function assignedGroupOf(scope: CatalogReadScope, parties: readonly PricingPartyRef[]): Promise<string | null> {
   for (const party of parties) {
     const { current } = await readForUpsert<CustomerAssignmentDefinition>(scope, 'customerAssignment', pricingPartyKey(party));
     if (current !== null) return current.customerGroupId;
   }
   return null;
+}
+
+/** **Ο ξένος θεατής** (§5.12 Δ5): χτίζεται από τη σχέση, με τις ταυτότητές της, στη σκοπιά του καταλόγου που διαβάζεται. */
+export async function viewerOfRelationship(scope: CatalogReadScope, relationship: Pick<SupplyRelationship, 'buyerCompanyId' | 'supplierContactId'>): Promise<PricingViewer> {
+  const parties = relationshipParties(relationship);
+  return { kind: 'signedIn', customerGroupId: await assignedGroupOf(scope, parties), parties };
 }
 
 async function partnerViewer(scope: CatalogTx, party: PricingPartyRef): Promise<PricingViewer> {

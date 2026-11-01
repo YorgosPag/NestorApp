@@ -29,6 +29,8 @@ export const CATALOG_API = {
   suppliers: {
     collection: `${API_ROOT}/suppliers`,
     revoke: (id: string) => `${API_ROOT}/suppliers/${encodeURIComponent(id)}/revoke`,
+    quote: (id: string) => `${API_ROOT}/suppliers/${encodeURIComponent(id)}/quote`,
+    boqPrice: (id: string) => `${API_ROOT}/suppliers/${encodeURIComponent(id)}/boq-price`,
   },
   attributes: entity('attributes'),
   attributeGroups: entity('attribute-groups'),

@@ -63,6 +63,11 @@ describe('Κ1 — η σχέση προμήθειας: έγγραφο δύο πλ
     expect(findingsOf("const snap = await db.collection(COLLECTIONS.SUPPLY_RELATIONSHIPS).where('companyId', '==', c).get();")).toEqual([]);
   });
 
+  it('⛔ ξένος κατάλογος ανοίγει ΜΟΝΟ από τον έναν αναγνώστη (Σ4)', () => {
+    expect(findingsOf('await runForeignCatalogRead(id, work);')).toEqual([gate.STATES.FOREIGN_READ_OUTSIDE]);
+    expect(findingsOf('await runForeignCatalogRead(id, work);', 'src/server/supply-relationships/supply-foreign-quote.server.ts')).toEqual([]);
+  });
+
   it('⛔ η πόρτα του MCP μένει κλειστή και για τις τρεις', () => {
     for (const name of ['supply_relationships', 'supply_invitations', 'supply_request_links']) {
       expect(gate.directDoorOpen(`const WRITE_ALLOWED_COLLECTIONS = new Set(['${name}']);`)).toBe(true);

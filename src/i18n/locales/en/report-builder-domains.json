@@ -1046,7 +1046,8 @@
         "priceAuthority": {
           "master": "Master Price List",
           "project": "Project Price List",
-          "item": "Item Override"
+          "item": "Item Override",
+          "supplier": "Supplier Price"
         }
       }
     },

@@ -52,12 +52,20 @@ interface StagedChange {
   readonly after: StoredCatalogRecord<object>;
 }
 
-/** Το πλαίσιο μιας συναλλαγής: η βάση, η συναλλαγή, ο δρων, και οι αλλαγές για το ίχνος. */
-export interface CatalogTx {
+/**
+ * **Ό,τι χρειάζεται ένας αναγνώστης** (ADR-923 §5.12 Δ5): σε ποιον κατάλογο διαβάζει, τίποτα για το ποιος ρωτά. Κάθε `read*`
+ * δέχεται αυτό και κάθε `stage*` το πλήρες {@link CatalogTx}, άρα **ο τύπος** κάνει αδύνατη την εγγραφή σε ξένο κατάλογο.
+ */
+export interface CatalogReadScope {
   readonly db: Firestore;
   readonly tx: Transaction;
-  readonly ctx: AuthContext;
+  readonly ctx: Pick<AuthContext, 'companyId'>;
   readonly now: string;
+}
+
+/** Το πλαίσιο μιας συναλλαγής: η βάση, η συναλλαγή, ο δρων, και οι αλλαγές για το ίχνος. */
+export interface CatalogTx extends CatalogReadScope {
+  readonly ctx: AuthContext;
   readonly changes: StagedChange[];
   /** Οι όψεις τιμών που άγγιξε η συναλλαγή (ADR-923 §5.11 «3δ» Ζ) — **κάθε** `stage*` τις σημειώνει, ακόμη και χωρίς ίχνος. */
   readonly pricingViews: PricingView[];
@@ -107,6 +115,16 @@ export async function runCatalogReadOnly<T>(ctx: AuthContext, work: (scope: Cata
   return db.runTransaction((tx) => work({ db, tx, ctx, now: nowISO(), changes: [], pricingViews: [] }), { readOnly: true });
 }
 
+/**
+ * **Ανάγνωση ΞΕΝΟΥ καταλόγου** (ADR-923 §5.12 Δ5): σκοπιά μόνο ανάγνωσης, σε συναλλαγή μόνο ανάγνωσης, χωρίς κανένα `AuthContext`.
+ * ⛔ Κρίνει **μόνο** τι διαβάζεται, όχι αν επιτρέπεται: ο καλών ρωτά πρώτα τη σχέση, μέσα στο `work` (Σ4). Τον καλούν μόνο οι
+ * δηλωμένοι αναγνώστες (CHECK 3.106).
+ */
+export function runForeignCatalogRead<T>(ownerCompanyId: string, work: (scope: CatalogReadScope) => Promise<T>): Promise<T> {
+  const db = getAdminFirestore();
+  return db.runTransaction((tx) => work({ db, tx, ctx: { companyId: ownerCompanyId }, now: nowISO() }), { readOnly: true });
+}
+
 async function recordChange(change: StagedChange, performedBy: string): Promise<void> {
   const spec = CATALOG_KIND_SPECS[change.kind];
   const view = (record: StoredCatalogRecord<object>): Record<string, unknown> =>
@@ -136,7 +154,7 @@ function entityNameOf(record: object): string | null {
 
 /** Η ενεργή εγγραφή **αυτού** του χώρου — ή `null` (ανύπαρκτη, διαγραμμένη ή ξένη: **ίδια** απάντηση). */
 export async function readOwnedOrNull<TDefinition>(
-  scope: CatalogTx,
+  scope: CatalogReadScope,
   kind: CatalogKind,
   id: string,
 ): Promise<StoredCatalogRecord<TDefinition> | null> {
@@ -153,7 +171,7 @@ export async function readOwnedOrNull<TDefinition>(
  * και για τα τρία, ώστε να μη διαρρέει η ύπαρξη ξένου σχήματος (ADR-742 §3.3).
  */
 export async function readOwned<TDefinition>(
-  scope: CatalogTx,
+  scope: CatalogReadScope,
   kind: CatalogKind,
   id: string,
 ): Promise<StoredCatalogRecord<TDefinition>> {
@@ -208,7 +226,7 @@ export async function readForRandomCreate(scope: CatalogTx, kind: CatalogKind, r
 }
 
 /** Το id ενός είδους με ταυτότητα **φυσικού κλειδιού** σε αυτόν τον χώρο (χωρίς ανάγνωση). */
-export function naturalKeyId(scope: CatalogTx, kind: CatalogKind, key: string): string {
+export function naturalKeyId(scope: CatalogReadScope, kind: CatalogKind, key: string): string {
   return identityOf(kind, 'code').idOf(scope.ctx.companyId, key);
 }
 
@@ -218,7 +236,7 @@ export function naturalKeyId(scope: CatalogTx, kind: CatalogKind, key: string): 
  * γραφέας αποφασίζει αν «υπάρχει» σημαίνει «αντικατάσταση» ή «διπλότυπο». Ξένο έγγραφο στο ίδιο id είναι αδύνατο
  * (το id περιέχει τον χώρο), αλλά κρίνεται ξανά — ξένο ≡ ανύπαρκτο, ποτέ αντικατάσταση.
  */
-export function readForUpsert<TDefinition>(scope: CatalogTx, kind: CatalogKind, key: string): Promise<TargetAndCurrent<TDefinition>> {
+export function readForUpsert<TDefinition>(scope: CatalogReadScope, kind: CatalogKind, key: string): Promise<TargetAndCurrent<TDefinition>> {
   return readTargetAndCurrent<TDefinition>(scope, kind, naturalKeyId(scope, kind, key));
 }
 
@@ -228,7 +246,7 @@ interface TargetAndCurrent<TDefinition> {
   readonly current: StoredCatalogRecord<TDefinition> | null;
 }
 
-async function readTargetAndCurrent<TDefinition>(scope: CatalogTx, kind: CatalogKind, id: string): Promise<TargetAndCurrent<TDefinition>> {
+async function readTargetAndCurrent<TDefinition>(scope: CatalogReadScope, kind: CatalogKind, id: string): Promise<TargetAndCurrent<TDefinition>> {
   const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
   const data = snap.data() as StoredCatalogRecord<TDefinition> | undefined;
   const current = data && !data.isDeleted && data.companyId === scope.ctx.companyId ? data : null;

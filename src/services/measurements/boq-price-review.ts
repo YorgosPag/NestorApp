@@ -35,7 +35,8 @@ function impactOf(item: BOQItem, rate: CostRate): number {
 }
 
 function reviewLinked(item: BOQItem, book: CostRateBook): BoqPriceReviewRow | null {
-  if (!item.priceSource) return null;
+  // Ξένη τιμή δεν ζει στο βιβλίο κόστους: χωρίς αυτό θα έλεγε «η λίστα χάθηκε». Η απόκλισή της έχει δικό της δρόμο (§5.12 Δ9).
+  if (!item.priceSource || item.priceSource.authority === 'supplier') return null;
   const drift = judgeCostDrift(item.priceSource, book);
   switch (drift.kind) {
     case 'current':

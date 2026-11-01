@@ -9,6 +9,7 @@
  */
 
 import type { MinorAmount } from '@/lib/money/money';
+import type { PriceAudience } from '@/subapps/catalog/types/price-list';
 import type { BOQMeasurementUnit, SourceAuthority } from './units';
 
 /** Ανάλυση τιμής όπως διαβάστηκε: λεπτά ανά `priceQuantity` μονάδες — ακριβώς ό,τι γράφει η γραμμή. */
@@ -18,9 +19,7 @@ export interface BoqPriceBreakdown {
   readonly equipment: MinorAmount;
 }
 
-export interface BoqPriceSource {
-  /** Ποιο επίπεδο έδωσε την τιμή. Πάντα `master` ή `project`: χωρίς πηγή το πεδίο είναι `null`. */
-  readonly authority: Exclude<SourceAuthority, 'item'>;
+interface BoqPriceSourceCore {
   readonly priceListId: string;
   readonly priceListVersionId: string;
   /** Ο αριθμός της έκδοσης, για να φαίνεται χωρίς ανάγνωση. */
@@ -36,3 +35,23 @@ export interface BoqPriceSource {
   readonly appliedAt: string;
   readonly appliedBy: string;
 }
+
+/** Ο δικός μας τιμοκατάλογος κόστους. */
+export interface BoqCostPriceSource extends BoqPriceSourceCore {
+  /** Ποιο επίπεδο έδωσε την τιμή. Χωρίς πηγή το πεδίο είναι `null`. */
+  readonly authority: Exclude<SourceAuthority, 'item' | 'supplier'>;
+}
+
+/**
+ * **SKU ξένου προμηθευτή** (ADR-923 §5.12 Δ8): το στιγμιότυπο ανήκει στον αγοραστή και μένει, ό,τι κι αν γίνει με τη σχέση (Σ7).
+ * Το ποσό είναι στο `material`. Έκδοση · κοινό · βήματα έκπτωσης το εξηγούν χρόνια μετά. Το γράφει ΜΟΝΟ ο διακομιστής (Δ7).
+ */
+export interface BoqSupplierPriceSource extends BoqPriceSourceCore {
+  readonly authority: 'supplier';
+  readonly supplierCompanyId: string;
+  readonly variantId: string;
+  readonly audience: PriceAudience | null;
+  readonly discountSteps: readonly number[];
+}
+
+export type BoqPriceSource = BoqCostPriceSource | BoqSupplierPriceSource;

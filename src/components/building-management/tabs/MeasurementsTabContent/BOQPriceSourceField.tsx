@@ -54,7 +54,7 @@ function driftMessage(drift: CostDrift, t: FieldsetCommon['t']): string | null {
 function LinkedSource({ form, book, onUpdateField, colors, t }: BOQPriceSourceFieldProps & { book: CostRateBook | null }) {
   const source = form.priceSource;
   if (source === null) return null;
-  const notice = book === null ? null : driftMessage(judgeCostDrift(source, book), t);
+  const notice = book === null || source.authority === 'supplier' ? null : driftMessage(judgeCostDrift(source, book), t);
   return (
     <section className="flex flex-wrap items-center gap-2 text-xs">
       <p className={cn('m-0 flex-1', colors.text.muted)}>{t('tabs.measurements.editor.priceSource.linked', { version: source.versionNumber })}</p>

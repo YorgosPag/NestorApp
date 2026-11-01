@@ -156,6 +156,6 @@ export type WastePolicy =
  * `master`: λίστα `cost` του χώρου · `project`: λίστα `cost` του έργου · `item`: καμία πηγή τιμοκαταλόγου.
  * 🔑 Παράγεται από το `BOQItem.priceSource`, δεν δηλώνεται ανεξάρτητα (`services/measurements/boq-price-source`).
  */
-export const BOQ_SOURCE_AUTHORITIES = ['master', 'project', 'item'] as const;
+export const BOQ_SOURCE_AUTHORITIES = ['master', 'project', 'item', 'supplier'] as const;
 
 export type SourceAuthority = (typeof BOQ_SOURCE_AUTHORITIES)[number];

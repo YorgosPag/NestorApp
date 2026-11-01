@@ -20,7 +20,7 @@ import type { PriceLineSubject, PriceListDefinition, PriceListKind } from '@/sub
 import type { StoredCatalogProductDefinition } from '@/subapps/catalog/types/product-derived';
 import { PRICE_LINES_PER_TRANSACTION } from '@/subapps/catalog/vocabulary/pricing';
 import { readActiveByIds } from './catalog-library-reads.server';
-import type { CatalogTx, StoredCatalogRecord } from './catalog-store.server';
+import type { CatalogReadScope, CatalogTx, StoredCatalogRecord } from './catalog-store.server';
 import type { StoredPriceLine, StoredPriceVersion } from './price-version-aggregate.server';
 
 /** Ανώτατο πλήθος εκδόσεων ανά λίστα που διαβάζει μια κρίση — πολύ πάνω από κάθε ρεαλιστικό ιστορικό. */
@@ -40,7 +40,7 @@ function versionsQuery(db: Firestore, companyId: string, priceListId: string): Q
 export type StoredPriceList = StoredCatalogRecord<PriceListDefinition>;
 
 /** Οι ενεργές λίστες ενός είδους στον χώρο, μέσα στη συναλλαγή του καλούντα. */
-export async function readActivePriceLists(scope: CatalogTx, kind: PriceListKind): Promise<StoredPriceList[]> {
+export async function readActivePriceLists(scope: CatalogReadScope, kind: PriceListKind): Promise<StoredPriceList[]> {
   const snap = await scope.tx.get(
     scope.db
       .collection(COLLECTIONS.CATALOG_PRICE_LISTS)
@@ -51,7 +51,7 @@ export async function readActivePriceLists(scope: CatalogTx, kind: PriceListKind
   return snap.docs.map((doc) => doc.data() as StoredPriceList);
 }
 
-export async function readListVersions(scope: CatalogTx, priceListId: string): Promise<StoredPriceVersion[]> {
+export async function readListVersions(scope: CatalogReadScope, priceListId: string): Promise<StoredPriceVersion[]> {
   const snap = await scope.tx.get(versionsQuery(scope.db, scope.ctx.companyId, priceListId));
   return snap.docs.map((doc) => doc.data() as StoredPriceVersion);
 }

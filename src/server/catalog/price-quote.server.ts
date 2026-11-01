@@ -49,12 +49,15 @@ import {
   readOwned,
   readOwnedOrNull,
   runCatalogTransaction,
-  type CatalogTx,
+  type CatalogReadScope,
   type StoredCatalogRecord,
 } from './catalog-store.server';
 import { viewerOf } from './pricing-viewer.server';
 import { readActivePriceLists, readListVersions, versionRefOf, type StoredPriceList } from './price-version-reads.server';
 import { readVisibilityAncestry, readVisibilityRules } from './visibility-reads.server';
+
+/** Το αίτημα χωρίς το «ως ποιον»: ο θεατής έρχεται χτισμένος. */
+type QuoteTerms = Omit<PriceQuoteRequest, 'viewAs'>;
 
 type StoredList = StoredPriceList;
 type OfferedList = StoredList & { readonly audience: PriceAudience };
@@ -68,8 +71,8 @@ type ListSelection = { readonly trace: PriceQuoteContext['listTrace'] } & (
 
 /** Η λίστα του θεατή: ρητή, ή του ειδικότερου κοινού που τον καλύπτει (ο ίδιος επιλογέας με τις συνθήκες). */
 async function selectList(
-  scope: CatalogTx,
-  request: PriceQuoteRequest,
+  scope: CatalogReadScope,
+  request: QuoteTerms,
   viewer: PricingViewer,
   atMs: number,
 ): Promise<ListSelection> {
@@ -93,7 +96,7 @@ async function selectList(
 }
 
 /** Οι ενεργές συνθήκες με την αναθεώρησή τους — ο εκδότης τη βάζει στο κλειδί ιδεμποτίας (§5.6). */
-export async function readActiveConditionRecords(scope: CatalogTx): Promise<{ readonly record: PricedRecord<DiscountConditionDefinition>; readonly revision: number }[]> {
+export async function readActiveConditionRecords(scope: CatalogReadScope): Promise<{ readonly record: PricedRecord<DiscountConditionDefinition>; readonly revision: number }[]> {
   const snap = await scope.tx.get(
     scope.db
       .collection(COLLECTIONS.CATALOG_DISCOUNT_CONDITIONS)
@@ -107,12 +110,12 @@ export async function readActiveConditionRecords(scope: CatalogTx): Promise<{ re
   });
 }
 
-async function readActiveConditions(scope: CatalogTx): Promise<PricedRecord<DiscountConditionDefinition>[]> {
+async function readActiveConditions(scope: CatalogReadScope): Promise<PricedRecord<DiscountConditionDefinition>[]> {
   return (await readActiveConditionRecords(scope)).map(({ record }) => record);
 }
 
 /** Η μία κρίση ορατότητας, στην ίδια συναλλαγή με την τιμή (§5.12 Δ4). Μόνο τα SKU έχουν ορατότητα· οι εργασίες ΑΤΟΕ όχι. */
-async function visibilityOf(scope: CatalogTx, request: PriceQuoteRequest, viewer: PricingViewer, atMs: number): Promise<VisibilityVerdict | null> {
+async function visibilityOf(scope: CatalogReadScope, request: QuoteTerms, viewer: PricingViewer, atMs: number): Promise<VisibilityVerdict | null> {
   if (request.subject.kind !== 'variant') return null;
   const ancestry = await readVisibilityAncestry(scope, request.subject.variantId);
   if (ancestry === null) return { visibility: DEFAULT_CATALOG_VISIBILITY, ruleId: null, tied: false, trace: [] };
@@ -120,22 +123,27 @@ async function visibilityOf(scope: CatalogTx, request: PriceQuoteRequest, viewer
 }
 
 /** Η τιμή για έναν θεατή (εσωτερική προεπισκόπηση): η ετυμηγορία ταξιδεύει δίπλα στο ποσό, που ανήκει στον ίδιο τον προμηθευτή. */
-export async function quoteCatalogPrice(ctx: AuthContext, request: PriceQuoteRequest): Promise<PriceQuoteResult> {
-  return runCatalogTransaction(ctx, async (scope) => {
-    const atMs = normalizeToMillisOrNull(request.at ?? nowISO()) ?? Date.now();
-    const viewer = await viewerOf(scope, request.viewAs);
-    const selected = await selectList(scope, request, viewer, atMs);
-    const visibility = await visibilityOf(scope, request, viewer, atMs);
-    const context: PriceQuoteContext = { viewer, at: new Date(atMs).toISOString(), listTrace: selected.trace, visibility };
-    if (selected.kind === 'noPriceList') return { kind: selected.kind, ...context };
-    if (selected.kind === 'ambiguousPriceList') return { kind: selected.kind, tiedPriceListIds: selected.tiedPriceListIds, ...context };
-    return { ...(await quoteFromList(scope, request, viewer, selected.list, atMs)), ...context };
-  });
+export function quoteCatalogPrice(ctx: AuthContext, request: PriceQuoteRequest): Promise<PriceQuoteResult> {
+  return runCatalogTransaction(ctx, async (scope) => quoteWithin(scope, request, await viewerOf(scope, request.viewAs)));
+}
+
+/**
+ * **Η ΜΙΑ κρίση τιμής**, για γνωστό θεατή, μέσα σε συναλλαγή του καλούντα: η εσωτερική προεπισκόπηση και η ξένη ανάγνωση (§5.12
+ * Δ4) ρωτούν το ίδιο πράγμα, ώστε το «δες σαν τον Χ» να λέει ό,τι θα δει ο Χ.
+ */
+export async function quoteWithin(scope: CatalogReadScope, request: QuoteTerms, viewer: PricingViewer): Promise<PriceQuoteResult> {
+  const atMs = normalizeToMillisOrNull(request.at ?? nowISO()) ?? Date.now();
+  const selected = await selectList(scope, request, viewer, atMs);
+  const visibility = await visibilityOf(scope, request, viewer, atMs);
+  const context: PriceQuoteContext = { viewer, at: new Date(atMs).toISOString(), listTrace: selected.trace, visibility };
+  if (selected.kind === 'noPriceList') return { kind: selected.kind, ...context };
+  if (selected.kind === 'ambiguousPriceList') return { kind: selected.kind, tiedPriceListIds: selected.tiedPriceListIds, ...context };
+  return { ...(await quoteFromList(scope, request, viewer, selected.list, atMs)), ...context };
 }
 
 async function quoteFromList(
-  scope: CatalogTx,
-  request: PriceQuoteRequest,
+  scope: CatalogReadScope,
+  request: QuoteTerms,
   viewer: PricingViewer,
   list: StoredList,
   atMs: number,

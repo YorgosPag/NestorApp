@@ -118,4 +118,44 @@ describe('boq_items.rules — summary price is derived (ADR-917 Ε2 · Α34)', (
     await seedBoqItem(env, 'l', { overrides: { materialUnitCost: 1 } });
     await assertSucceeds(member().doc('l').update({ materialUnitCost: 9 }));
   });
+
+  // 🔒 ADR-923 §5.12 Δ7 — η τιμή προμηθευτή γράφεται ΜΟΝΟ από τον διακομιστή.
+  describe('🔴 κλάδος `supplier` του δεσμού τιμής', () => {
+    const SUPPLIER_SOURCE = { authority: 'supplier', supplierCompanyId: 'company-supplier', lineId: 'line-1' };
+    const memberDocs = () => getContext(env, 'same_tenant_user').firestore().collection('boq_items');
+
+    async function seedLinked(docId: string): Promise<void> {
+      await seedBoqItem(env, docId);
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore().collection('boq_items').doc(docId).update({ priceSource: SUPPLIER_SOURCE, materialUnitCost: 12 });
+      });
+    }
+
+    it('⛔ ο πελάτης δεν γεννά γραμμή με δεσμό προμηθευτή', async () => {
+      await assertFails(memberDocs().doc('boq-new').set({
+        companyId: SAME_TENANT_COMPANY_ID, projectId: 'project-new', buildingId: 'building-new', categoryCode: 'STRUCT-002', title: 'Νέα', unit: 'm2',
+        status: 'draft', scope: 'building', estimatedQuantity: 1, createdAt: new Date(), updatedAt: new Date(), priceSource: SUPPLIER_SOURCE,
+      }));
+    });
+
+    it('⛔ ο πελάτης δεν γράφει δεσμό προμηθευτή σε υπάρχουσα γραμμή', async () => {
+      await seedBoqItem(env, 'boq-forge');
+      await assertFails(memberDocs().doc('boq-forge').update({ priceSource: SUPPLIER_SOURCE, materialUnitCost: 1 }));
+    });
+
+    it('⛔ ο πελάτης δεν αλλάζει το ποσό όσο μένει ο δεσμός', async () => {
+      await seedLinked('boq-amount');
+      await assertFails(memberDocs().doc('boq-amount').update({ materialUnitCost: 1 }));
+    });
+
+    it('✅ άλλο πεδίο σε δεμένη γραμμή περνά', async () => {
+      await seedLinked('boq-title');
+      await assertSucceeds(memberDocs().doc('boq-title').update({ title: 'Νέος τίτλος' }));
+    });
+
+    it('✅ ο πελάτης κόβει τον δεσμό και βάζει δική του τιμή', async () => {
+      await seedLinked('boq-detach');
+      await assertSucceeds(memberDocs().doc('boq-detach').update({ priceSource: null, materialUnitCost: 1 }));
+    });
+  });
 });

@@ -19,7 +19,7 @@ import type { CatalogCategoryDefinition } from '@/subapps/catalog/types/category
 import type { StoredCatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import type { WorkspaceMeasurementFamilyDefinition } from '@/subapps/catalog/types/measurement-family';
 import type { CatalogKind } from './catalog-kinds';
-import { catalogDocRef, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
+import { catalogDocRef, type CatalogReadScope, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 
 /** Όριο ασφαλείας για ερωτήματα χρήσης· ένα σχήμα με περισσότερες οικογένειες ανά ιδιότητα είναι απίθανο. */
 const USAGE_QUERY_LIMIT = 500;
@@ -46,7 +46,7 @@ export async function readMeasurementRegistry(scope: CatalogTx): Promise<Measure
  * (ξένο ≡ ανύπαρκτο). **Ένα** `getAll` για όλα — ο ένας δρόμος «διάβασε αυτά τα ids» για κάθε είδος.
  */
 export async function readActiveByIds<TDefinition>(
-  scope: CatalogTx,
+  scope: CatalogReadScope,
   kind: CatalogKind,
   ids: readonly string[],
 ): Promise<Map<string, StoredCatalogRecord<TDefinition>>> {

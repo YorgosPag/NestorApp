@@ -17,6 +17,7 @@
 import { atoeGroupCodeOf } from '@/config/boq-categories';
 import { majorFromMinor, type MinorAmount } from '@/lib/money/money';
 import { BP_PER_WHOLE } from '@/lib/pricing/discount-rule';
+import type { ForeignPrice } from '@/subapps/catalog/pricing/foreign-quote';
 import type { CostRate } from '@/subapps/catalog/types/cost-rate';
 import { BOQ_ITEM_DEFAULTS, type BOQItem, type BOQMeasurementUnit, type BoqPriceSource, type UpdateBOQItemInput } from '@/types/boq';
 import { BOQ_PRICE_FIELDS, isSummaryBoqLine } from './boq-line-role';
@@ -80,6 +81,42 @@ export function priceFieldsFromRate(item: Pick<BOQItem, 'unit' | 'wastePolicy'>,
     ...priceLinkFields(source),
     ...(item.wastePolicy === 'inherited' ? { wasteFactor: wasteFactorOf(source) } : {}),
   };
+}
+
+/** Ό,τι χρειάζεται το στιγμιότυπο SKU ξένου προμηθευτή (§5.12 Δ8). */
+export interface SupplierQuoteForLine {
+  readonly unit: BOQMeasurementUnit;
+  readonly supplierCompanyId: string;
+  readonly variantId: string;
+  readonly versionNumber: number;
+  readonly price: ForeignPrice;
+}
+
+/**
+ * Τιμές, δεσμός και προέλευση από SKU ξένου προμηθευτή (§5.12 Δ9). Το σύνολο σε λεπτά ανά την ποσότητα που τιμολογήθηκε, στο
+ * `material`: έτσι ισχύει κάθε βήμα κλίμακας χωρίς στρογγύλευση ανά μονάδα. ⚠️ Η φύρα δεν αγγίζεται: ο προμηθευτής δεν τη δηλώνει.
+ */
+export function priceFieldsFromQuote(quote: SupplierQuoteForLine, application: PriceApplication): UpdateBOQItemInput {
+  const { price } = quote;
+  const source: BoqPriceSource = {
+    authority: 'supplier',
+    supplierCompanyId: quote.supplierCompanyId,
+    variantId: quote.variantId,
+    audience: price.audience,
+    discountSteps: price.discountSteps,
+    priceListId: price.priceListId,
+    priceListVersionId: price.priceListVersionId,
+    versionNumber: quote.versionNumber,
+    lineId: price.lineId,
+    subjectKey: price.subjectKey,
+    unit: quote.unit,
+    priceQuantity: price.quantity,
+    breakdown: { material: price.netAmount, labor: 0, equipment: 0 },
+    defaultWasteBp: 0,
+    appliedAt: application.appliedAt,
+    appliedBy: application.appliedBy,
+  };
+  return { ...unitCostsOf(source), ...priceLinkFields(source) };
 }
 
 /** Ίδιος δεσμός; Η ίδια γραμμή της ίδιας έκδοσης, δηλαδή ίδια ποσά: η εγγραφή θα ήταν περιττή. */

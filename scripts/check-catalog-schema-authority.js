@@ -79,6 +79,8 @@ const CATALOG_COLLECTIONS = [
  */
 const SUPPLY_COLLECTIONS = ['COLLECTIONS.SUPPLY_RELATIONSHIPS', 'COLLECTIONS.SUPPLY_INVITATIONS', 'COLLECTIONS.SUPPLY_REQUEST_LINKS'];
 const SUPPLY_ROOT = 'src/server/supply-relationships/';
+/** Ο ΕΝΑΣ αναγνώστης ξένου καταλόγου: όποιος άλλος ανοίξει τη σκοπιά, παρακάμπτει τη σχέση. */
+const FOREIGN_READER = `${SUPPLY_ROOT}supply-foreign-quote.server.ts`;
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
   'catalog_attributes', 'catalog_attribute_groups', 'catalog_measurement_families', 'catalog_categories', 'catalog_families',
@@ -154,6 +156,8 @@ const WIRING = {
   [`${SUPPLY_ROOT}supply-relationship-writer.server.ts`]: ['runCatalogTransaction(', 'assertRevision('],
   [`${SUPPLY_ROOT}supply-invitation-issue.server.ts`]: ['runCatalogTransaction(', 'stageInvitationWithSupersede('],
   [`${SUPPLY_ROOT}supply-invitation-redeem.server.ts`]: ['redeemInvitation(', 'stageSupplyRelationship('],
+  // Η ξένη ανάγνωση ρωτά ΠΡΩΤΑ τη σχέση, μέσα στη συναλλαγή, και αφήνει να φύγει ΜΟΝΟ η προβολή (ADR-923 §5.12 Σ4 · Δ5).
+  [FOREIGN_READER]: ['runForeignCatalogRead(', 'readActiveSupplyRelationshipInTx(', 'foreignOutcomeOf('],
   // Οι υποδοχές (όπως οι κρατήσεις) δεν είναι είδη: ευρετήριο του γραφέα, χωρίς ιστορικό.
   [KINDS]: CATALOG_COLLECTIONS.filter(
     (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS'].includes(key),
@@ -176,15 +180,17 @@ const STATES = {
   DERIVED_TRACKED: 'derived-path-tracked',
   DERIVED_OUTSIDE: 'derived-write-outside-aggregate',
   SUPPLY_WRITE_OUTSIDE: 'supply-write-outside-writer',
+  FOREIGN_READ_OUTSIDE: 'foreign-read-outside-reader',
 };
 const BLOCKING = [
   STATES.WRITE_OUTSIDE, STATES.DOC_REF_OUTSIDE, STATES.STORE_UNASKED, STATES.DIRECT_DOOR_OPEN,
-  STATES.EXEMPT_NO_REASON, STATES.SOURCE_DRIFT, STATES.DERIVED_TRACKED, STATES.DERIVED_OUTSIDE, STATES.SUPPLY_WRITE_OUTSIDE,
+  STATES.EXEMPT_NO_REASON, STATES.SOURCE_DRIFT, STATES.DERIVED_TRACKED, STATES.DERIVED_OUTSIDE, STATES.SUPPLY_WRITE_OUTSIDE, STATES.FOREIGN_READ_OUTSIDE,
 ];
 const DETAIL = {
   [STATES.WRITE_OUTSIDE]: `γράφει σχήμα καταλόγου έξω από τη μηχανή — πέρασε από τους γραφείς του \`src/server/catalog/\` (${STORE})`,
   [STATES.DOC_REF_OUTSIDE]: 'αναφορά εγγράφου της μηχανής (`catalogDocRef(`/`uniqueValueRef(`) εκτός δηλωμένων αρχείων — πόρτα γύρω από τη μηχανή',
   [STATES.SUPPLY_WRITE_OUTSIDE]: `γράφει σχέση προμήθειας έξω από τον έναν γραφέα της — πέρασε από το \`${SUPPLY_ROOT}\` (ADR-923 §5.12 Σ1)`,
+  [STATES.FOREIGN_READ_OUTSIDE]: 'ανοίγει ξένο κατάλογο έξω από τον έναν αναγνώστη: παρακάμπτει τη σχέση (ADR-923 §5.12 Σ4)',
   [STATES.DERIVED_OUTSIDE]: '`stageDerived(` / `stageCopied(` εκτός μηχανής συνόλου — γράφει παράγωγα ή σπέρνει χωρίς ίχνος, χωρίς να κρίνει το σύνολο (Κ6β)',
 };
 
@@ -210,6 +216,8 @@ function findingsIn(sf, rel) {
     else if (!rel.startsWith(SUPPLY_ROOT) && isWriteTo(SUPPLY_COLLECTIONS, node, refsByKey)) findings.push(classify(sf, node, rel, STATES.SUPPLY_WRITE_OUTSIDE));
     else if (Object.entries(DOC_REF_FUNCTIONS).some(([fn, users]) => ast.isCallTo(node, fn) && !users.has(rel))) {
       findings.push(classify(sf, node, rel, STATES.DOC_REF_OUTSIDE));
+    } else if (ast.isCallTo(node, 'runForeignCatalogRead') && rel !== FOREIGN_READER) {
+      findings.push(classify(sf, node, rel, STATES.FOREIGN_READ_OUTSIDE));
     } else if (ast.isCallTo(node, 'stageDerived') && !DERIVED_USERS.has(rel)) {
       findings.push(classify(sf, node, rel, STATES.DERIVED_OUTSIDE));
     } else if (ast.isCallTo(node, 'stageCopied') && !COPIED_USERS.has(rel)) {
@@ -272,7 +280,7 @@ function wiringFindings(root, input = openGateInput({ root })) {
   return findings;
 }
 
-const RELEVANT = /COLLECTIONS\.CATALOG_|COLLECTIONS\.SUPPLY_|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|pricingViewSignalRef\(|stageDerived\(|stageCopied\(/;
+const RELEVANT = /COLLECTIONS\.CATALOG_|COLLECTIONS\.SUPPLY_|runForeignCatalogRead\(|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|pricingViewSignalRef\(|stageDerived\(|stageCopied\(/;
 
 const { measure, report, main } = defineScanGate({
   projectRoot: PROJECT_ROOT, relevant: RELEVANT, findingsIn, wiringFindings, states: STATES,
