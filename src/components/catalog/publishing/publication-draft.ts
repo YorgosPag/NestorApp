@@ -24,8 +24,6 @@ import { validatePublicationRecipe } from '@/subapps/catalog/publishing/validate
 export const DEFAULT_PRIMARY_COLOUR: LayoutColour = { rgb: '#1f3a5f', cmyk: [100, 80, 30, 20] };
 export const DEFAULT_ACCENT_COLOUR: LayoutColour = { rgb: '#d9822b', cmyk: [0, 55, 90, 0] };
 
-const DEFAULT_GRID_COLUMNS = 6;
-
 /** Η κενή συνταγή: τεχνικός κατάλογος οθόνης, όλο το εύρος, χωρίς τιμές — ό,τι δεν χρειάζεται άδεια για να δοκιμαστεί. */
 export function emptyRecipe(language: HumanLanguage): PublicationRecipeDefinition {
   return {
@@ -36,7 +34,7 @@ export function emptyRecipe(language: HumanLanguage): PublicationRecipeDefinitio
     pricing: { kind: 'none' },
     language,
     theme: { fontCode: DEFAULT_PUBLICATION_FONT, logoAssetId: null, primary: DEFAULT_PRIMARY_COLOUR, accent: DEFAULT_ACCENT_COLOUR },
-    templates: { enabled: ['cover', 'toc'], groupStyle: 'band', gridColumns: DEFAULT_GRID_COLUMNS },
+    templates: { enabled: ['cover', 'toc'], groupStyle: 'band', gridColumns: PUBLICATION_LIMITS.defaultGridColumns },
     profiles: ['screen'],
     paper: 'a4',
     footerNote: {},
@@ -87,8 +85,8 @@ export function withCmykPart(colour: LayoutColour, index: number, value: number)
 
 /** Τα όρια του πλέγματος: ένας αριθμός για οθόνη και γραφέα. */
 export const GRID_COLUMN_LIMITS = {
-  min: PUBLICATION_LIMITS.minValueColumnsPerBlock,
-  max: PUBLICATION_LIMITS.maxValueColumnsPerBlock,
+  min: PUBLICATION_LIMITS.minGridColumns,
+  max: PUBLICATION_LIMITS.maxGridColumns,
 } as const;
 
 /** Η ΙΔΙΑ σημασιολογική επικύρωση με τον γραφέα — το κουμπί αποθήκευσης δεν στέλνει γνωστό 422. */

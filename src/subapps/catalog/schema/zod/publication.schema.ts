@@ -51,7 +51,7 @@ const themeSchema = z.object({
 const templatesSchema = z.object({
   enabled: z.array(z.enum(PUBLICATION_OPTIONAL_TEMPLATES)),
   groupStyle: z.enum(TABLE_GROUP_STYLES),
-  gridColumns: z.number().int().min(1).max(5),
+  gridColumns: z.number().int().min(PUBLICATION_LIMITS.minGridColumns).max(PUBLICATION_LIMITS.maxGridColumns),
 });
 
 export const publicationRecipeDefinitionSchema = z.object({

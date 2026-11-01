@@ -14,7 +14,7 @@ import { createBundleTranslate, type BundleTranslate } from '@/i18n/bundle-trans
 import type { HumanLanguage } from '@/i18n/languages';
 import elCatalog from '@/i18n/locales/el/catalog.json';
 import enCatalog from '@/i18n/locales/en/catalog.json';
-import { localizedTextIn, type LocalizedText } from '@/i18n/localized-text';
+import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
 import { CATALOG_RENDITION_RECIPE_VERSION } from '@/subapps/catalog/renditions/catalog-renditions';
 import { composePublication, type PublicationComposeWords } from '@/subapps/catalog/publishing/compose-publication';
 import { collectLayoutAssetIds, type LayoutDocument } from '@/subapps/catalog/publishing/layout-model';
@@ -58,7 +58,7 @@ export interface PublicationSnapshot {
 
 export function publicationWords(language: HumanLanguage) {
   const t = TRANSLATE[language];
-  const text = (value: LocalizedText | undefined, fallback = ''): string => localizedTextIn(value, language) ?? fallback;
+  const text = (value: LocalizedText | undefined, fallback = ''): string => resolveLocalizedText(value, language) || fallback;
   return {
     t,
     text,

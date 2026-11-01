@@ -44,6 +44,10 @@ export const PUBLICATION_LIMITS = {
   /** Γραμμές ανά τμήμα ομάδας `rail`: 20 γραμμές δύο σειρών ≈ 160 mm, άρα το αδιαίρετο κελί χωρά πάντα σε σελίδα A4. */
   maxRailRowsPerSegment: 20,
   maxFooterNoteLength: 200,
+  /** Στήλες του πλέγματος καρτών: πάνω από 5 η κάρτα σε A4 δεν χωρά κωδικό και τίτλο. Το ανώτερο όριο το δοκιμάζει το `typst-real.test.ts`. */
+  minGridColumns: 1,
+  maxGridColumns: 5,
+  defaultGridColumns: 4,
 } as const;
 
 /**
