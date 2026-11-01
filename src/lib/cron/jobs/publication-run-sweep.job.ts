@@ -22,6 +22,13 @@ export async function runPublicationRunSweep(): Promise<CronJobResult> {
   const db = getAdminFirestore();
   const interrupted = await failInterruptedPublicationRuns(db, Date.now(), BATCH_LIMIT);
   const retention = await runPublicationRetention(db, DISPOSAL_LIMIT);
+
+  // 🔴 Ο κάδος που αρνείται δεν ρίχνει την `runPublicationRetention`, και το `logger.error` δεν φτάνει στο Sentry: χωρίς αυτό το
+  // monitor θα έμενε πράσινο όσο ένα PDF περνά την προθεσμία του. Πέρασμα που δεν έσβησε τίποτα και απέτυχε δεν είναι επιτυχία.
+  if (retention.failed > 0 && retention.disposed === 0) {
+    throw new Error(`publication-run-sweep: all ${retention.failed} disposals failed`);
+  }
+
   return {
     summary: `interrupted ${interrupted}, disposed ${retention.disposed}, deferred ${retention.deferred}, failed ${retention.failed}`,
     metrics: { interrupted, ...retention },
