@@ -209,5 +209,7 @@ export type RegistryTaxBinding =
   | { readonly state: 'matched' }
   | { readonly state: 'mismatched' }
   | { readonly state: 'not-found' }
+  /** Δεν υπάρχει ετυμηγορία για το τωρινό ζεύγος ΑΦΜ και αριθμού. */
+  | { readonly state: 'not-asked' }
   | { readonly state: 'not-comparable'; readonly gap: 'no-registration-number' | 'invalid-tax-id' }
   | { readonly state: 'undetermined'; readonly reason: RegistryUnavailableReason };

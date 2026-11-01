@@ -48,6 +48,7 @@ function routeOfTaxBinding(binding: RegistryTaxBinding): SupplierVerificationRou
     case 'matched':
       return { kind: 'verified' };
     case 'undetermined':
+    case 'not-asked':
       return ASK_REGISTRY;
     case 'not-comparable':
       return binding.gap === 'invalid-tax-id' ? { kind: 'correct-tax-id' } : REVIEW;

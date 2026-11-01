@@ -31,6 +31,10 @@ describe('routeSupplierVerification', () => {
     expect(routeSupplierVerification(VERIFIED, { state: 'undetermined', reason: 'network' })).toEqual({ kind: 'ask-registry' });
   });
 
+  it('ετυμηγορία που έπεσε ξαναρωτά το μητρώο', () => {
+    expect(routeSupplierVerification(VERIFIED, { state: 'not-asked' })).toEqual({ kind: 'ask-registry' });
+  });
+
   it('άκυρο ΑΦΜ διορθώνεται στο προφίλ', () => {
     expect(routeSupplierVerification(VERIFIED, { state: 'not-comparable', gap: 'invalid-tax-id' })).toEqual({ kind: 'correct-tax-id' });
   });

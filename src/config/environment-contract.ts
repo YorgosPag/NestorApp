@@ -343,6 +343,16 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/services/company-registry/gemi-opendata.client.ts',
   },
   {
+    name: 'SUPPLIER_TAX_FINGERPRINT_HMAC_SECRET',
+    severity: 'feature',
+    feature: 'Επιβεβαίωση προμηθευτή: δέσιμο ΑΦΜ με Αρ. ΓΕΜΗ (ADR-923 §5.13 Ε1β)',
+    consequence:
+      'Ο προμηθευτής πατά έλεγχο ΑΦΜ και η πράξη αρνείται: χωρίς αποτύπωμα δεν αποθηκεύεται ετυμηγορία, ' +
+      'άρα καμία βιτρίνα δεν επιβεβαιώνεται. ⚠️ Το μυστικό δεν αλλάζει χωρίς νέο έλεγχο: άλλο μυστικό ⇒ ' +
+      'άλλο αποτύπωμα ⇒ κάθε υπάρχουσα ετυμηγορία και έγκριση παύει να ισχύει.',
+    consumer: 'src/server/catalog/supplier-tax-fingerprint.server.ts',
+  },
+  {
     name: 'NESTOR_SEAL_CSC_BASE_URL',
     severity: 'feature',
     feature: 'Σφράγιση PDF PAdES B-T (ADR-918) — η υπηρεσία CSC v2 του παρόχου (μόνο https://)',
