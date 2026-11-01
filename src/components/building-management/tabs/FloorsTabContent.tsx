@@ -79,7 +79,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
 
   const state = useFloorsTabState(building.id, building.projectId, focusFloorId);
   // ADR-829 §7.1 — η γρήγορη ρύθμιση γράφει ορόφους ΚΑΙ τις στάθμες του κτιρίου, άρα ζητά και τα δύο.
-  const { canCreateFloor, canUpdateBuilding } = useBuildingCapabilities();
+  const { canCreateFloor, canUpdateBuilding } = useBuildingCapabilities(building.projectId);
   const {
     floors, loading, error, showCreateForm, setShowCreateForm, fetchFloors,
     continuityWarnings, stackConflicts, dialogProps, BlockedDialog,

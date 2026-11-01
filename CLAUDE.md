@@ -308,7 +308,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:d4969a7f255234756f967bc593a2ec2611222a5e87331ca7ed17d10b263a0afa -->
+     fingerprint: sha256:f6047e3e317617dc6b04fd104453af02c8b037e48e6c56fed1417b638094bc07 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -403,6 +403,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.108** | **Πύλη της μίας δήλωσης οικογένειας namespaces** (ADR-280) — «γράφει κάποιος με το χέρι μια **οικογένεια** namespaces (`['building', 'building-storage', …]`) που ο hook **ήδη** φορτώνει μόνος του από το…» · `npm run test:i18n-namespace-family` · `SKIP_I18N_NAMESPACE_FAMILY=1` · 📘 `docs/gates/3.108.md` | ⛔ ZERO-TOL (Κ1+Κ2+Κ3) + 🔴 RATCHET κατά ταυτότητα (order-bear… | `.i18n-namespace-family-baseline.json` |
 | **3.109** | **Πύλη του απομονωμένου χώρου εργασίας** (ADR-925) — «κάνει πράκτορας commit **κατευθείαν στο `main`**, αντί στο δικό του κλαδί; (ο διακόπτης `enforce` ξεκίνησε κλειστός και γυρίζει στο καθαρό σημείο)» · `npm run test:agent-worktree` · `SKIP_AGENT_WORKTREE_POLICY=1` · 📘 `docs/gates/3.109.md` | ⛔ ZERO TOL (μόνο όταν `enforce: true`) | — |
 | **3.110** | **Πύλη απόδοσης του εκδότη καταλόγου** (ADR-923) — «βγαίνει το τυπωμένο PDF σωστό **με την αληθινή μηχανή**; — κανένα κείμενο πάνω σε άλλο, κανένα έξω από το χαρτί ή κάτω από το όριο, και PDF/A κατά αν…» · `npm run test:catalog-publisher-render` · 📘 `docs/gates/3.110.md` | ⛔ ZERO TOL · μόνο CI (Typst + veraPDF) | — |
+| **3.111** | **Πύλη των πράξεων έργου** (ADR-926) — «έχει κάθε πράξη έργου **σημείο επιβολής** και γραμμή στον πίνακα — βγαίνει το έργο **μόνο από τον πόρο** — και μένει η οριστική διαγραφή στον…» · `npm run test:project-scoped-actions` · `SKIP_PROJECT_SCOPED_ACTIONS=1` · 📘 `docs/gates/3.111.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -416,8 +417,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **100** (εκτελεστής 92 + hook 21) ·
-γραμμές εδώ: **92** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **101** (εκτελεστής 93 + hook 21) ·
+γραμμές εδώ: **93** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

@@ -38,6 +38,9 @@ import {
 import type { IdempotencyPolicy } from '@/lib/api/idempotency/idempotency-contract';
 import { runIdempotently } from '@/lib/api/idempotency/with-idempotency';
 import { executeHandler } from './handler-execution';
+import { projectGrantOf, recordProjectGrants, type ProjectGrant } from './project-grant-audit';
+import { scopeOf, type PermissionResource } from './resource-project';
+import { apiErrorHandler } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('middleware');
 
@@ -63,11 +66,16 @@ export type AuthenticatedHandler<T = unknown, R = unknown> = (
 /**
  * WithAuth options.
  */
-export interface WithAuthOptions {
+export interface WithAuthOptions<R = unknown> {
   /** Required permission(s) - all must be granted */
   permissions?: PermissionId | PermissionId[];
   /** Permission check options (projectId, propertyId, etc.) */
   permissionOptions?: PermissionCheckOptions | ((request: NextRequest) => PermissionCheckOptions);
+  /**
+   * 🔑 ADR-926 Κ3 — το έργο του πόρου, από το έγγραφό του. Τρέχει **πριν** την κρίση ρόλου και οφείλει να περνά από τον
+   * φράχτη χώρου: ξένος πόρος ρίχνει 404, ίδιο με το ανύπαρκτο. Δες `lib/auth/resource-project`.
+   */
+  permissionResource?: (request: NextRequest, ctx: AuthContext, routeContext?: R) => Promise<PermissionResource>;
   /** Required global role(s) - user must have at least one of these roles */
   requiredGlobalRoles?: GlobalRole | GlobalRole[];
   /**
@@ -93,6 +101,35 @@ export interface WithAuthOptions {
   forbiddenResponse?: (permission: PermissionId) => NextResponse;
   /** Custom error response for role requirement failure */
   roleRequiredResponse?: (requiredRoles: GlobalRole[]) => NextResponse;
+}
+
+// =============================================================================
+// ΚΡΙΣΗ ΜΕ ΠΟΡΟ (ADR-926)
+// =============================================================================
+
+/** Οι στατικές επιλογές, συν το έργο του πόρου. Το έργο έρχεται ΜΟΝΟ από το `permissionResource`. */
+async function resolvePermissionOptions<R>(
+  options: WithAuthOptions<R>,
+  request: NextRequest,
+  ctx: AuthContext,
+  routeContext?: R,
+): Promise<PermissionCheckOptions> {
+  const declared = typeof options.permissionOptions === 'function'
+    ? options.permissionOptions(request)
+    : options.permissionOptions ?? {};
+  if (!options.permissionResource) return declared;
+
+  return { ...declared, ...scopeOf(await options.permissionResource(request, ctx, routeContext)) };
+}
+
+/** Ο κεντρικός χειριστής κρατά αυτούσια την απόφαση του φράχτη (404). Ο handler δεν τρέχει. */
+function refuseResource(error: unknown, request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  return apiErrorHandler.handleError(error, request, {
+    operation: request.nextUrl.pathname,
+    userId: ctx.uid,
+    endpoint: request.nextUrl.pathname,
+    metadata: { globalRole: ctx.globalRole, companyId: ctx.companyId },
+  });
 }
 
 // =============================================================================
@@ -146,7 +183,7 @@ export interface WithAuthOptions {
  */
 export function withAuth<T = unknown, R = unknown>(
   handler: AuthenticatedHandler<T, R>,
-  options: WithAuthOptions = {}
+  options: WithAuthOptions<R> = {}
 ): (request: NextRequest, routeContext?: R) => Promise<NextResponse<T | ErrorResponse>> {
   return async (request: NextRequest, routeContext?: R): Promise<NextResponse<T | ErrorResponse>> => {
     // Step 1: Build request context
@@ -204,15 +241,19 @@ export function withAuth<T = unknown, R = unknown>(
     }
 
     // Step 5: Check permissions if specified
+    const projectGrants: ProjectGrant[] = [];
     if (options.permissions) {
       const permissions = Array.isArray(options.permissions)
         ? options.permissions
         : [options.permissions];
 
-      // Resolve permission options
-      const permissionOpts = typeof options.permissionOptions === 'function'
-        ? options.permissionOptions(request)
-        : options.permissionOptions ?? {};
+      // Resolve permission options — ο πόρος ΠΡΙΝ τον ρόλο: ξένο ⇒ 404, όχι 403 (ADR-926 Κ3)
+      let permissionOpts: PermissionCheckOptions;
+      try {
+        permissionOpts = await resolvePermissionOptions(options, request, ctx, routeContext);
+      } catch (error) {
+        return (await refuseResource(error, request, ctx)) as NextResponse<ErrorResponse>;
+      }
 
       // Check all required permissions
       for (const permission of permissions) {
@@ -239,16 +280,23 @@ export function withAuth<T = unknown, R = unknown>(
 
           return errorResponse as NextResponse<ErrorResponse>;
         }
+        const grant = projectGrantOf(decision, permission, permissionOpts.projectId);
+        if (grant) projectGrants.push(grant);
       }
     }
 
     // Step 6: Call handler — ΜΙΑ φορά ανά `Idempotency-Key` (ADR-853 Ε3) — με κεντρικό χειρισμό σφαλμάτων
-    return (await runIdempotently(request, ctx.uid, options.idempotency, () =>
-      executeHandler(request, () => handler(request, ctx, cache, routeContext), {
+    return (await runIdempotently(request, ctx.uid, options.idempotency, async () => {
+      const execution = await executeHandler(request, () => handler(request, ctx, cache, routeContext), {
         userId: ctx.uid,
         metadata: { globalRole: ctx.globalRole, companyId: ctx.companyId },
-      }),
-    )) as NextResponse<T | ErrorResponse>;
+      });
+      // ADR-926 Κ8 — μέσα στο σύνορο ιδεμποτίας: η επανάληψη με ίδιο κλειδί δεν γράφει δεύτερη γραμμή.
+      if (request.method !== 'GET' && execution.response.ok) {
+        await recordProjectGrants(projectGrants, request.nextUrl.pathname, ctx);
+      }
+      return execution;
+    })) as NextResponse<T | ErrorResponse>;
   };
 }
 
@@ -277,54 +325,6 @@ export function requirePermissions<T = unknown, R = unknown>(
   handler: AuthenticatedHandler<T, R>
 ): (request: NextRequest, routeContext?: R) => Promise<NextResponse<T | ErrorResponse>> {
   return withAuth(handler, { permissions });
-}
-
-/**
- * Create a middleware for project-scoped routes.
- *
- * Automatically extracts projectId from URL params or query.
- *
- * @param permission - Required permission
- * @param handler - Authenticated handler
- * @returns Wrapped handler
- *
- * @example
- * ```typescript
- * // Route: /api/projects/[projectId]/members
- * export const GET = withProjectAuth(
- *   'projects:members:view',
- *   async (request, ctx, cache) => {
- *     // ctx.companyId already validated
- *     return NextResponse.json({ members: [] });
- *   }
- * );
- * ```
- */
-export function withProjectAuth<T = unknown>(
-  permission: PermissionId,
-  handler: AuthenticatedHandler<T>
-): (request: NextRequest, context: { params: Promise<{ projectId: string }> }) => Promise<NextResponse<T | ErrorResponse>> {
-  return async (
-    request: NextRequest,
-    routeContext: { params: Promise<{ projectId: string }> }
-  ): Promise<NextResponse<T | ErrorResponse>> => {
-    const params = await routeContext.params;
-    const projectId = params.projectId;
-
-    if (!projectId) {
-      return NextResponse.json(
-        { error: 'Project ID required', code: 'BAD_REQUEST' },
-        { status: 400 }
-      ) as NextResponse<ErrorResponse>;
-    }
-
-    const wrappedHandler = withAuth(handler, {
-      permissions: permission,
-      permissionOptions: { projectId },
-    });
-
-    return wrappedHandler(request);
-  };
 }
 
 // =============================================================================

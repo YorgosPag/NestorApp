@@ -247,6 +247,7 @@ const MIGRATED = [
   ['3.104', '../check-tour-presence-authority'],
   ['3.105', '../check-listing-terrain-authority'],
   ['3.106', '../check-catalog-schema-authority'],
+  ['3.111', '../check-project-scoped-actions'],
   ['3.58', '../check-workspace-authority'],
   ['3.59', '../check-point-vocabulary'],
   ['3.81', '../check-product-identity'],

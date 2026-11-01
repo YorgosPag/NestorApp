@@ -478,7 +478,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     };
   }, [focusFloorId, loading, floors]);
 
-  const { canUpdateFloor, canDeleteFloor } = useBuildingCapabilities();
+  const { canUpdateFloor, canDeleteFloor } = useBuildingCapabilities(projectId);
   return {
     canUpdateFloor, canDeleteFloor,
     floors, loading, error, expandedFloorId, toggleFloorExpand,

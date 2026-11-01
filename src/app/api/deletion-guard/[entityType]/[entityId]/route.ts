@@ -19,6 +19,7 @@ import { hasPermission } from '@/lib/auth/permissions';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { extractSegmentFromEnd } from '@/lib/api/route-helpers';
+import { projectOfBuilding, scopeOf } from '@/lib/auth/resource-project';
 import { checkDeletionDependencies, isArchiveOffered } from '@/lib/firestore/deletion-guard';
 import {
   isDeletableEntityType,
@@ -83,7 +84,11 @@ export const GET = withStandardRateLimit(
 
       // ── Permission check — require the matching delete permission ──
       const requiredPermission = ENTITY_PERMISSION_MAP[entityType];
-      const permitted = await hasPermission(ctx, requiredPermission, {}, cache);
+      // ADR-926 Κ3 — η προεπισκόπηση πριν τον κάδο κρίνεται με την ίδια απάντηση που θα δώσει η ίδια η διαγραφή.
+      const scope = entityType === 'building'
+        ? scopeOf(await projectOfBuilding(ctx, entityId, '/api/deletion-guard'))
+        : {};
+      const permitted = await hasPermission(ctx, requiredPermission, scope, cache);
 
       if (!permitted) {
         throw new ApiError(403, 'Permission denied', 'FORBIDDEN');

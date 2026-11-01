@@ -14,7 +14,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { requireProjectInTenant, withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth/permissions';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -39,6 +39,9 @@ export const GET = withStandardRateLimit(
     ) => {
       // Extract params first so project-scoped authorization uses the correct resource ID
       const { projectId } = await segmentData!.params;
+
+      // ADR-926 Κ3 — ο φράχτης πριν την κρίση: ο κριτής είναι αθροιστικός, άρα ο ρόλος εταιρείας δεν ρωτά πια το έργο.
+      await requireProjectInTenant({ ctx, projectId, path: '/api/projects/[projectId]/landowner-unlink-check' });
 
       // Permission check
       if (!(await hasPermission(ctx, 'projects:projects:update', { projectId }, cache))) {

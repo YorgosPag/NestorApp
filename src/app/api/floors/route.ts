@@ -16,10 +16,12 @@
 import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { projectOfBodyBuilding } from '@/lib/auth/resource-project';
 import type { ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import type { FloorCreateResponse, FloorDeleteResponse, FloorsListResponse, FloorUpdateResponse } from './floors.types';
 import { handleCreateFloor, handleDeleteFloor, handleListFloors, handleUpdateFloor } from './floors.handlers';
+import { projectOfBodyFloor } from './_shared/floor-project';
 
 export const GET = withStandardRateLimit(
   async (request: NextRequest) => {
@@ -35,7 +37,10 @@ export const GET = withStandardRateLimit(
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<FloorCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => handleCreateFloor(request, ctx),
-    { permissions: 'projects:floors:create' }
+    {
+      permissions: 'projects:floors:create',
+      permissionResource: (request, ctx) => projectOfBodyBuilding(request, ctx, '/api/floors (POST)'),
+    }
   )
 );
 
@@ -43,7 +48,10 @@ export const PATCH = withStandardRateLimit(
   async (request: NextRequest) => {
     const handler = withAuth<FloorUpdateResponse>(
       async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => handleUpdateFloor(request, ctx),
-      { permissions: 'projects:floors:update' }
+      {
+        permissions: 'projects:floors:update',
+        permissionResource: (req, ctx) => projectOfBodyFloor(req, ctx, '/api/floors (PATCH)'),
+      }
     );
 
     return handler(request);
@@ -54,6 +62,7 @@ export const DELETE = withStandardRateLimit(
   async (request: NextRequest) => {
     const handler = withAuth<FloorDeleteResponse>(
       async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => handleDeleteFloor(request, ctx),
+      // ⛔ Χωρίς `permissionResource`, επίτηδες: ο όροφος δεν έχει κάδο, η διαγραφή είναι οριστική (ADR-926 §4).
       { permissions: 'projects:floors:delete' }
     );
 

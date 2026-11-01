@@ -22,6 +22,10 @@ jest.mock('@/hooks/useIconSizes', () => ({
 jest.mock('@/ui-adapters/react/useSemanticColors', () => ({
   useSemanticColors: () => ({ text: { muted: '' }, bg: {}, border: {} }),
 }));
+let mockCanPurge = true;
+jest.mock('@/auth/hooks/useGrantedCapability', () => ({
+  useGrantedCapability: (action: string) => ({ granted: action === 'trash:entities:purge' && mockCanPurge }),
+}));
 
 const TEXT: EntityTrashText = {
   back: 'Πίσω στις Επαφές',
@@ -49,7 +53,26 @@ function renderBar(overrides: Partial<Parameters<typeof EntityTrashActionsBar>[0
 
 const restoreButton = () => screen.getByRole('button', { name: /restoreSelected/ });
 
-beforeEach(() => mockNotify.mockReset());
+beforeEach(() => {
+  mockNotify.mockReset();
+  mockCanPurge = true;
+});
+
+describe('ADR-926 §4 — η οριστική διαγραφή είναι χωριστή ικανότητα', () => {
+  it('χωρίς `trash:entities:purge` η επαναφορά μένει, το κουμπί οριστικής διαγραφής όχι', () => {
+    mockCanPurge = false;
+    renderBar({ selectedIds: ['a'] });
+
+    expect(restoreButton()).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /permanentDelete/ })).toBeNull();
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: με την ικανότητα, το κουμπί φαίνεται', () => {
+    renderBar({ selectedIds: ['a'] });
+
+    expect(screen.getByRole('button', { name: /permanentDelete/ })).toBeTruthy();
+  });
+});
 
 describe('Σ — σε ποια ids δρα η μπάρα', () => {
   it('Σ1 — τα επιλεγμένα κερδίζουν το ενεργό· χωρίς επιλογή, το ενεργό· χωρίς τίποτα, κανένα', () => {

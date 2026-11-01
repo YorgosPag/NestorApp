@@ -82,6 +82,7 @@ export const AUDIT_ACTION_TIER: Record<AuditAction, AuditTier> = {
   member_added: 'security',
   member_removed: 'security',
   member_updated: 'security',
+  project_role_exercised: 'security',
   workspace_member_removed: 'security',
   workspace_member_left: 'security',
   workspace_member_paused: 'security',

@@ -817,6 +817,8 @@ export const API_ROUTES = {
   PROJECTS: {
     LIST: '/api/projects/list',
     BY_ID: (id: string) => `/api/projects/${id}` as const,
+    /** ADR-926 Κ7 — τι επιτρέπεται στον θεατή σε αυτό το έργο, από τον κριτή του διακομιστή */
+    VIEWER_CAPABILITIES: (id: string) => `/api/projects/${encodeURIComponent(id)}/viewer-capabilities` as const,
     BY_COMPANY: (companyId: string) => `/api/projects/by-company/${companyId}` as const,
     CUSTOMERS: (projectId: string) => `/api/projects/${projectId}/customers` as const,
     STRUCTURE: (projectId: string) => `/api/projects/structure/${projectId}` as const,

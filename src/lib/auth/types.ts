@@ -87,6 +87,10 @@ export const PERMISSIONS = {
   "buildings:buildings:update": true,
   "buildings:buildings:delete": true,
 
+  // ADR-926 §4 — οριστική διαγραφή από τον κάδο, κάθε οντότητας. Χωριστό από το `*:delete`, που σημαίνει «στον κάδο»
+  // (όπως `canTrash` / `canDelete` στο Google Drive). Δεν μπαίνει ποτέ στο `PROJECT_SCOPED_ACTIONS`.
+  "trash:entities:purge": true,
+
   // DXF
   "dxf:files:view": true,
   "dxf:files:upload": true,
@@ -410,12 +414,9 @@ export interface AuthContext {
    *
    * ⚠️ **ΕΙΝΑΙ ΠΑΡΑΧΩΡΗΣΗ ΣΕ ΕΜΒΕΛΕΙΑ ΕΤΑΙΡΕΙΑΣ — ΟΧΙ ΑΝΑ ΠΟΡΟ.** Γράφεται
    * δίπλα στο `companyId` και **δεν κουβαλά** δική του εμβέλεια (σε αντίθεση με
-   * το scope της ανάθεσης στο Azure RBAC ή το `Resource` του AWS IAM). Άρα
-   * απαντά **μόνο** στο ερώτημα χωρίς πόρο. Ερώτημα με `projectId`/`propertyId`
-   * το κρίνει η **συμμετοχή στο έργο** — όπως ακριβώς και τα permissions του
-   * ρόλου, τα οποία αυτό το claim **περιέχει**. Αν κληρονομούσε προς τα κάτω,
-   * το **ίδιο** permission id θα συμπεριφερόταν αλλιώς ανάλογα με τη διαδρομή
-   * παράδοσης (ρόλος ή claim) — δύο απαντήσεις σε ένα ερώτημα, ADR-749 ξανά.
+   * το scope της ανάθεσης στο Azure RBAC ή το `Resource` του AWS IAM). Κρίνεται
+   * στον κλάδο εταιρείας, ίδια με τα permissions του ρόλου, και ισχύει για κάθε
+   * έργο του χώρου: ο κριτής είναι αθροιστικός (ADR-926 Κ1).
    *
    * ⚠️ **Απουσία (`undefined`) ≠ κενό (`[]`)**: το πρώτο λέει *«το token δεν
    * φέρει το κανάλι»*, το δεύτερο *«το φέρει, και είναι άδειο»*.

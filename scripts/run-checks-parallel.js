@@ -1192,6 +1192,11 @@ if (!process.env.SKIP_RETIRED_PROPERTY_WRITE)
 if (!process.env.SKIP_FLOOR_STACK_AUTHORITY)
   addThread('3.102', 'Floor stack authority', 'scripts/check-floor-stack-authority.js', ['--index']);
 
+// CHECK 3.111 (ADR-926) — οι πράξεις έργου. Κάθε πράξη του κλειστού καταλόγου έχει σημείο επιβολής και γραμμή στον
+// πίνακα, το έργο βγαίνει μόνο από τον πόρο, η οριστική διαγραφή μένει στον `company_admin`. AST, ZERO-TOL, χωρίς σκανδάλη.
+if (!process.env.SKIP_PROJECT_SCOPED_ACTIONS)
+  addThread('3.111', 'Project scoped actions', 'scripts/check-project-scoped-actions.js', ['--index']);
+
 // CHECK 3.103 (ADR-909 §6.9 · Γ2.8) — το μελάνι. «Βάζει αυτός ο ζωγράφος χρώμα ή πάχος στον καμβά ΧΩΡΙΣ να ρωτήσει
 // την πολιτική εκτύπωσης;» 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-10-09): Υδραυλικά ΜΠΛΕ σε «Ασπρόμαυρη» δημόσια κάτοψη. Η πύλη pixels
 // (3.101) βλέπει μόνο το δείγμα της και ό,τι αφήνει το προφίλ — στέγη, θεμέλιο, οπλισμό ΠΟΤΕ. Αυτή διαβάζει τον ΚΩΔΙΚΑ.

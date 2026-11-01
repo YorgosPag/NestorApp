@@ -8,8 +8,7 @@
  * τελικοί γραφείς. Το αναμενόμενο είναι η χειρόγραφη δήλωση `ROLE_POLICY`, όχι ο κατάλογος (OWASP Authorization Testing
  * Automation Cheat Sheet): αλλιώς μια λάθος παραχώρηση θα μετακινούσε και τις δύο πλευρές.
  *
- * ⚠️ ΟΡΙΟ — οι ρόλοι έργου (`project_manager` κ.λπ.) ΔΕΝ κρίνονται εδώ. Οι διαδρομές δεν δίνουν `projectId` στον κριτή,
- * άρα σήμερα είναι νεκροί σε αυτές (ADR-829 §7.1 «ΑΝΟΙΧΤΟ — ο ρόλος έργου»). Το Τ3 κοκκινίζει τη στιγμή που αλλάξει αυτό.
+ * Οι ρόλοι έργου κρίνονται στο Τ3 (ADR-926): ο αναγνώστης μέλους αντικαθίσταται, το έργο βγαίνει από τον πραγματικό πόρο.
  */
 
 /* global describe, it, expect, beforeEach, jest */
@@ -17,11 +16,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { NextRequest } from 'next/server';
+import { logAuditEvent } from '@/lib/auth/audit';
 import { buildRequestContext } from '@/lib/auth/auth-context';
+import { readProjectMember, type ProjectMemberRead } from '@/lib/auth/project-member-read';
+import { PROJECT_SCOPED_ACTIONS } from '@/lib/auth/project-scoped-actions';
 import { PREDEFINED_ROLES } from '@/lib/auth/role-catalogue';
 import { GLOBAL_ROLES, type GlobalRole, type PermissionId } from '@/lib/auth/types';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
+import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { assertDeletionAllowed } from '@/lib/firestore/deletion-guard';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import { withVersionCheck } from '@/lib/firestore/version-check';
 import { recordEntityUpdate } from '@/services/audit/record-entity-update';
@@ -33,6 +37,8 @@ import { writeFloorBirth } from '../../floors/floor-birth';
 import { removeFloor } from '../../floors/floor-removal';
 import {
   POLICY_OPERATIONS,
+  PROJECT_ROLE_POLICY,
+  PROJECT_STRUCTURE_WRITERS,
   ROLE_POLICY,
   ROUTES_OUTSIDE_POLICY,
   type PolicyOperation,
@@ -56,11 +62,19 @@ jest.mock('@/lib/api/admin-db', () => {
 jest.mock('@/lib/middleware/with-rate-limit', () => ({ withStandardRateLimit: <T,>(handler: T) => handler }));
 jest.mock('@/lib/auth/audit', () => ({
   ...jest.requireActual('@/lib/auth/audit'),
-  logAuditEvent: async () => undefined,
+  logAuditEvent: jest.fn(async () => undefined),
+}));
+jest.mock('@/lib/auth/project-member-read', () => ({
+  ...jest.requireActual('@/lib/auth/project-member-read'),
+  readProjectMember: jest.fn(async () => ({ outcome: 'absent' })),
 }));
 jest.mock('@/lib/firestore/entity-creation.service', () => ({ createEntity: jest.fn(async () => ({ id: 'bld_new' })) }));
 jest.mock('@/lib/firestore/entity-linking.service', () => ({ linkEntity: jest.fn(async () => undefined) }));
 jest.mock('@/lib/firestore/soft-delete-engine', () => ({ softDelete: jest.fn(async () => undefined) }));
+jest.mock('@/lib/firestore/deletion-guard', () => ({
+  ...jest.requireActual('@/lib/firestore/deletion-guard'),
+  assertDeletionAllowed: jest.fn(async () => undefined),
+}));
 jest.mock('@/lib/firestore/version-check', () => ({
   withVersionCheck: jest.fn(async () => ({ newVersion: 2, docId: 'x' })),
   ConflictError: class ConflictError extends Error {},
@@ -227,21 +241,239 @@ describe('Τ2 — ρητή παραχώρηση στο claim (ADR-829 §7.1)', (
   }
 });
 
-describe('Τ3 — οι ρόλοι έργου μένουν έξω, δηλωμένα (ADR-829 §7.1 «ΑΝΟΙΧΤΟ — ο ρόλος έργου»)', () => {
+describe('Τ3 — οι ρόλοι έργου (ADR-926)', () => {
+  /** Στόχοι μέσα στο έργο `prj_a`. */
+  const IN_PROJECT: Targets = { building: 'bld_p', project: 'prj_a', floor: 'flr_p' };
+  const PROJECT_OPERATIONS = Object.values(PROJECT_ROLE_POLICY).flatMap((row) => ('operation' in row ? [row.operation] : []));
+  const PROJECT_ROLE_IDS = Object.entries(PREDEFINED_ROLES).filter(([, role]) => role.isProjectRole).map(([id]) => id);
+
+  function memberOf(memberships: Readonly<Record<string, string>>): void {
+    (readProjectMember as jest.Mock).mockImplementation(async ({ projectId }: { projectId: string }): Promise<ProjectMemberRead> => {
+      const roleId = memberships[projectId];
+      if (roleId === undefined) return { outcome: 'absent' };
+      return { outcome: 'member', member: { roleId, permissionSetIds: [], effectivePermissions: [] } as never };
+    });
+  }
+
+  const auditedProjectRole = (): number =>
+    (logAuditEvent as jest.Mock).mock.calls.filter(([, action]) => action === 'project_role_exercised').length;
+
+  beforeEach(() => {
+    (logAuditEvent as jest.Mock).mockClear();
+    (readProjectMember as jest.Mock).mockReset();
+    (readProjectMember as jest.Mock).mockResolvedValue({ outcome: 'absent' });
+    seedTenantDocuments({
+      projects: {
+        prj_a: { companyId: 'co_a', linkedCompanyId: 'cont_a', name: 'Δικό μου' },
+        prj_c: { companyId: 'co_a', linkedCompanyId: 'cont_a', name: 'Άλλο δικό μου' },
+        prj_b: { companyId: 'co_b', linkedCompanyId: 'cont_b', name: FOREIGN_MARK },
+      },
+      buildings: {
+        bld_a: { companyId: 'co_a', name: 'Χωρίς έργο', projectId: null },
+        bld_p: { companyId: 'co_a', name: 'Στο έργο', projectId: 'prj_a' },
+        bld_c: { companyId: 'co_a', name: 'Στο άλλο έργο', projectId: 'prj_c' },
+        bld_b: { companyId: 'co_b', name: FOREIGN_MARK, projectId: 'prj_b' },
+      },
+      floors: {
+        flr_a: { companyId: 'co_a', buildingId: 'bld_a', number: 1, name: 'Ο1' },
+        flr_p: { companyId: 'co_a', buildingId: 'bld_p', number: 1, name: 'Ο1' },
+        // Το πεδίο του ορόφου λέει prj_a, το κτίριό του ανήκει στο prj_c: μετρά το κτίριο.
+        flr_lying: { companyId: 'co_a', buildingId: 'bld_c', projectId: 'prj_a', number: 1, name: 'Ο1' },
+        flr_b: { companyId: 'co_b', buildingId: 'bld_b', number: 1, name: FOREIGN_MARK },
+      },
+    });
+  });
+
   it('Τ3.1 — ο πίνακας κρίνει ακριβώς τους ρόλους που δεν είναι ρόλοι έργου', () => {
     const notProjectRoles = Object.entries(PREDEFINED_ROLES).filter(([, role]) => !role.isProjectRole).map(([id]) => id);
     expect(notProjectRoles.sort()).toEqual([...GLOBAL_ROLES].sort());
   });
 
-  it('Τ3.2 — καμία διαδρομή του εύρους δεν δίνει έργο στον κριτή: όταν αλλάξει, ο πίνακας θέλει ρόλους έργου', () => {
-    const files = [
-      ...new Set(POLICY_OPERATIONS.map((op) => ROLE_POLICY[op].routeFile as string)),
-      'src/app/api/buildings/building-update.handler.ts',
-      'src/app/api/buildings/buildings-list.handler.ts',
-    ];
-    for (const file of files) {
-      expect(fs.readFileSync(file, 'utf8')).not.toContain('permissionOptions');
+  it('Τ3.2 — κάθε πράξη του καταλόγου έχει γραμμή στον πίνακα, και κάθε γραμμή πράξη', () => {
+    expect(Object.keys(PROJECT_ROLE_POLICY).sort()).toEqual([...PROJECT_SCOPED_ACTIONS].sort());
+  });
+
+  for (const op of PROJECT_OPERATIONS) {
+    for (const roleId of PROJECT_ROLE_IDS) {
+      const allowed = PROJECT_STRUCTURE_WRITERS.includes(roleId);
+
+      it(`Τ3.3 — ${op} · μέλος ${roleId} ⇒ ${allowed ? 'allow' : 'deny'}`, async () => {
+        signIn('internal_user');
+        memberOf({ prj_a: roleId });
+        const response = await INVOKE[op](IN_PROJECT);
+
+        if (!allowed) {
+          expect(response.status).toBe(403);
+          expect(writeCount()).toBe(0);
+          return;
+        }
+        expect(response.status).toBeLessThan(300);
+        expect(writeCount()).toBeGreaterThan(0);
+        expect(auditedProjectRole()).toBe(1);
+      });
     }
+
+    it(`Τ3.4 — ${op} · μη μέλος ⇒ 403`, async () => {
+      signIn('internal_user');
+      const response = await INVOKE[op](IN_PROJECT);
+
+      expect(response.status).toBe(403);
+      expect(writeCount()).toBe(0);
+    });
+
+    it(`Τ3.5 — ${op} · PM άλλου έργου ⇒ 403`, async () => {
+      signIn('internal_user');
+      memberOf({ prj_c: 'project_manager' });
+      const response = await INVOKE[op](IN_PROJECT);
+
+      expect(response.status).toBe(403);
+      expect(writeCount()).toBe(0);
+    });
+
+    for (const outcome of ['unknown', 'unreadable'] as const) {
+      it(`Τ3.6 — ${op} · ανάγνωση μέλους ${outcome} ⇒ 403, ο company_admin περνά`, async () => {
+        (readProjectMember as jest.Mock).mockResolvedValue({ outcome, why: 'test' });
+        signIn('internal_user');
+        expect((await INVOKE[op](IN_PROJECT)).status).toBe(403);
+        expect(writeCount()).toBe(0);
+
+        signIn('company_admin');
+        expect((await INVOKE[op](IN_PROJECT)).status).toBeLessThan(300);
+        expect(auditedProjectRole()).toBe(0);
+      });
+    }
+
+    it(`Τ3.7 — ${op} · PM ξένου έργου με ίδιο id σε ξένο πόρο ⇒ 404`, async () => {
+      signIn('internal_user');
+      memberOf({ prj_b: 'project_manager' });
+      const response = await INVOKE[op](FOREIGN);
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).not.toContain(FOREIGN_MARK);
+      expect(writeCount()).toBe(0);
+    });
+
+    it(`Τ3.7α — ${op} · χωρίς κανέναν ρόλο σε ξένο πόρο ⇒ 404, ο φράχτης πριν από κρίση ρόλου (Κ3)`, async () => {
+      signIn('internal_user');
+      const response = await INVOKE[op](FOREIGN);
+
+      expect(response.status).toBe(404);
+      expect(readProjectMember).not.toHaveBeenCalled();
+      expect(writeCount()).toBe(0);
+    });
+  }
+
+  it('Τ3.8 — ο PM δεν διαγράφει όροφο: η διαγραφή είναι οριστική (§4)', async () => {
+    signIn('internal_user');
+    memberOf({ prj_a: 'project_manager' });
+    const response = await INVOKE.deleteFloor(IN_PROJECT);
+
+    expect(response.status).toBe(403);
+    expect(writeCount()).toBe(0);
+  });
+
+  it('Τ3.9 — το κτίριο στον κάδο πηγαίνει με softDelete, ποτέ με οριστική διαγραφή', async () => {
+    signIn('internal_user');
+    memberOf({ prj_a: 'project_manager' });
+    expect((await INVOKE.deleteBuilding(IN_PROJECT)).status).toBeLessThan(300);
+    expect(softDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('Τ3.9α — οι εξαρτήσεις μπλοκάρουν τον κάδο στον διακομιστή, χωρίς να περάσουμε από την προεπισκόπηση (§4)', async () => {
+    (assertDeletionAllowed as jest.Mock).mockRejectedValueOnce(new ApiError(409, 'Έχει ακίνητα', 'DELETION_BLOCKED'));
+    signIn('internal_user');
+    memberOf({ prj_a: 'project_manager' });
+
+    expect((await INVOKE.deleteBuilding(IN_PROJECT)).status).toBe(409);
+    expect(softDelete).not.toHaveBeenCalled();
+    expect(auditedProjectRole()).toBe(0);
+  });
+
+  it('Τ3.9β — από τον κάδο βγαίνει μόνο η επαναφορά: `PATCH status` απορρίπτεται', async () => {
+    seedTenantDocuments({ buildings: { bld_p: { companyId: 'co_a', name: 'Στον κάδο', projectId: 'prj_a', status: 'deleted' } } });
+    signIn('company_admin');
+    const response = await (buildingsRoute.PATCH as unknown as Route)(
+      requestOf('PATCH', '/api/buildings', { buildingId: 'bld_p', status: 'active' }));
+
+    expect(response.status).toBe(409);
+    expect(writeCount()).toBe(0);
+  });
+
+  it('Τ3.10 — Κ4: κτίριο χωρίς έργο κρίνεται μόνο από την εταιρεία', async () => {
+    signIn('internal_user');
+    memberOf({ prj_a: 'project_manager' });
+
+    for (const op of ['updateBuilding', 'deleteBuilding', 'createFloor', 'updateFloor', 'linkProject'] as const) {
+      expect((await INVOKE[op](MINE)).status).toBe(403);
+    }
+    expect(writeCount()).toBe(0);
+  });
+
+  it('Τ3.11 — AIP-203: το `projectId` του σώματος δεν δίνει ρόλο έργου', async () => {
+    signIn('internal_user');
+    memberOf({ prj_a: 'project_manager' });
+
+    const patch = await (buildingsRoute.PATCH as unknown as Route)(
+      requestOf('PATCH', '/api/buildings', { buildingId: 'bld_c', projectId: 'prj_a', name: 'Άλλο' }));
+    const floor = await (floorsRoute.POST as unknown as Route)(
+      requestOf('POST', '/api/floors', { ...FLOOR_BODY, buildingId: 'bld_c', projectId: 'prj_a' }));
+
+    expect(patch.status).toBe(403);
+    expect(floor.status).toBe(403);
+    expect(writeCount()).toBe(0);
+  });
+
+  it('Τ3.12 — το έργο του ορόφου είναι του κτιρίου του, όχι το πεδίο του', async () => {
+    signIn('internal_user');
+    memberOf({ prj_a: 'project_manager' });
+    const response = await (floorsRoute.PATCH as unknown as Route)(requestOf('PATCH', '/api/floors', { floorId: 'flr_lying', name: 'Άλλος' }));
+
+    expect(response.status).toBe(403);
+    expect(writeCount()).toBe(0);
+  });
+
+  describe('Τ3.13 — μεταφορά κτιρίου: κρίνονται και τα δύο έργα', () => {
+    const move = (projectId: string | null): Promise<Response> => (buildingsRoute.PATCH as unknown as Route)(
+      requestOf('PATCH', '/api/buildings', { buildingId: 'bld_p', projectId }));
+
+    it('στόχος όπου δεν έχει ρόλο ⇒ 403', async () => {
+      signIn('internal_user');
+      memberOf({ prj_a: 'project_manager' });
+      expect((await move('prj_c')).status).toBe(403);
+      expect(writeCount()).toBe(0);
+    });
+
+    it('`viewer` στον στόχο ⇒ 403', async () => {
+      signIn('internal_user');
+      memberOf({ prj_a: 'project_manager', prj_c: 'viewer' });
+      expect((await move('prj_c')).status).toBe(403);
+      expect(writeCount()).toBe(0);
+    });
+
+    it('PM και στα δύο ⇒ περνά', async () => {
+      signIn('internal_user');
+      memberOf({ prj_a: 'project_manager', prj_c: 'project_manager' });
+      expect((await move('prj_c')).status).toBeLessThan(300);
+      // Μία γραμμή για κάθε έργο που έδωσε την πράξη.
+      expect(auditedProjectRole()).toBe(2);
+    });
+
+    it('PM μόνο στον στόχο ⇒ 403: η πηγή κρίνεται πρώτη', async () => {
+      signIn('internal_user');
+      memberOf({ prj_c: 'project_manager' });
+      expect((await move('prj_c')).status).toBe(403);
+      expect(writeCount()).toBe(0);
+    });
+
+    it('έξω από έργο (`null`) ⇒ μόνο η εταιρεία', async () => {
+      signIn('internal_user');
+      memberOf({ prj_a: 'project_manager' });
+      expect((await move(null)).status).toBe(403);
+      expect(writeCount()).toBe(0);
+
+      signIn('company_admin');
+      expect((await move(null)).status).toBeLessThan(300);
+    });
   });
 });
 

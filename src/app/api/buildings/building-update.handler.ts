@@ -15,6 +15,10 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { checkPermission } from '@/lib/auth/permissions';
+import { projectGrantOf, recordProjectGrants, type ProjectGrant } from '@/lib/auth/project-grant-audit';
+import { projectOfBodyBuilding } from '@/lib/auth/resource-project';
+import { TRASHED_STATUS } from '@/lib/firestore/trashed-status';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { loadOwnedBuilding } from './_shared/building-owned-doc';
 import { requireProjectInBuildingTenant } from './_shared/building-ownership';
@@ -191,13 +195,32 @@ async function guardRequestedProject(
   requireProjectInBuildingTenant(project.data(), buildingData?.companyId);
 }
 
+/**
+ * ADR-926 Κ3 — η μεταφορά κτιρίου γράφει σε **δύο** έργα. Την πηγή την έκρινε ήδη το σύνορο· εδώ κρίνεται ο στόχος.
+ * Οτιδήποτε δεν είναι id έργου (λύση δεσμού, αριθμός) σημαίνει «έξω από έργο», άρα κρίνει μόνο η εταιρεία (Κ4).
+ */
+async function assertProjectTransfer(
+  ctx: AuthContext,
+  cache: PermissionCache,
+  requested: unknown,
+  buildingData: Record<string, unknown> | undefined,
+): Promise<ProjectGrant | null> {
+  if (requested === undefined || requested === buildingData?.projectId) return null;
+  const target: { projectId?: string } = typeof requested === 'string' && requested !== '' ? { projectId: requested } : {};
+  const decision = await checkPermission(ctx, 'buildings:buildings:update', target, cache);
+  if (!decision.granted) {
+    throw new ApiError(403, 'Insufficient permissions', 'FORBIDDEN');
+  }
+  return projectGrantOf(decision, 'buildings:buildings:update', target.projectId);
+}
+
 // ============================================================================
 // PATCH — Update Building
 // ============================================================================
 
 export const PATCH = withStandardRateLimit(
   withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
-    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    async (request: NextRequest, ctx: AuthContext, cache: PermissionCache) => {
     const adminDb = requireAdminFirestore();
 
     try {
@@ -225,6 +248,11 @@ export const PATCH = withStandardRateLimit(
       // 🔒 ADR-829 §7.1 — λευκή λίστα αντί για σκέτο cast, και ο στόχος του δεσμού πριν από κάθε γραφή.
       assertBuildingFieldsWritable(updates as Record<string, unknown>);
       await guardRequestedProject(adminDb, updates.projectId, buildingData);
+      const transferGrant = await assertProjectTransfer(ctx, cache, updates.projectId, buildingData);
+      // ADR-281 — από τον κάδο βγαίνει μόνο η επαναφορά: αλλιώς το κτίριο θα έμενε με μπαγιάτικο `deletedAt`.
+      if (updates.status !== undefined && buildingData?.status === TRASHED_STATUS) {
+        throw new ApiError(409, 'Use restore to bring a building back from trash');
+      }
 
       // ADR-890 Φ0 — η φόρμα κρίνει το έτος με την ΙΔΙΑ σταθερά· εδώ η πόρτα για όποιον την παρακάμψει.
       const year = updates.constructionYear;
@@ -326,6 +354,7 @@ export const PATCH = withStandardRateLimit(
       });
 
       logger.info('[Buildings] Building updated', { buildingId, email: ctx.email, _v: versionResult.newVersion });
+      if (transferGrant) await recordProjectGrants([transferGrant], '/api/buildings (PATCH)', ctx);
 
       // ADR-029 Phase D: search_documents written by Cloud Function onBuildingWrite.
 
@@ -428,6 +457,9 @@ export const PATCH = withStandardRateLimit(
       throw new ApiError(500, getErrorMessage(error, 'Failed to update building'));
     }
     },
-    { permissions: 'buildings:buildings:update' }
+    {
+      permissions: 'buildings:buildings:update',
+      permissionResource: (request, ctx) => projectOfBodyBuilding(request, ctx, '/api/buildings (PATCH)'),
+    }
   )
 );

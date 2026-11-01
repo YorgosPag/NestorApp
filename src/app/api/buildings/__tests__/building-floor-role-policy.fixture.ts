@@ -9,6 +9,7 @@
  * @see src/hooks/__tests__/building-capabilities-matrix.test.ts — τα κουμπιά
  */
 
+import type { ProjectScopedAction } from '@/lib/auth/project-scoped-actions';
 import type { GlobalRole, PermissionId } from '@/lib/auth/types';
 import type { BuildingCapabilities } from '@/hooks/useBuildingCapabilities';
 
@@ -59,6 +60,24 @@ export const ROLE_POLICY = {
 export type PolicyOperation = keyof typeof ROLE_POLICY;
 
 export const POLICY_OPERATIONS = Object.keys(ROLE_POLICY) as readonly PolicyOperation[];
+
+/**
+ * ADR-926 Κ2 — ο πίνακας των πράξεων έργου. Κάθε πράξη του `PROJECT_SCOPED_ACTIONS` έχει γραμμή: `operation` για όσες
+ * τις κρίνει η σουίτα διαδρομών εδώ, `enforcedBy` για όσες έχουν δικό τους σημείο επιβολής. Το φυλάει το CHECK 3.111.
+ */
+export const PROJECT_ROLE_POLICY: Readonly<Record<ProjectScopedAction, { operation: PolicyOperation } | { enforcedBy: string }>> = {
+  'buildings:buildings:create': { operation: 'createBuilding' },
+  'buildings:buildings:update': { operation: 'updateBuilding' },
+  'buildings:buildings:delete': { operation: 'deleteBuilding' },
+  'projects:floors:create': { operation: 'createFloor' },
+  'projects:floors:update': { operation: 'updateFloor' },
+  'projects:projects:update': { enforcedBy: 'src/app/api/projects/[projectId]/landowner-unlink-check/route.ts' },
+  'legal:conveyance:view': { enforcedBy: 'src/app/api/conveyance-cases/_shared/conveyance-route-support.ts' },
+  'legal:conveyance:manage': { enforcedBy: 'src/app/api/conveyance-cases/_shared/conveyance-route-support.ts' },
+};
+
+/** Οι ρόλοι έργου που γράφουν στη δομή του έργου τους. Όλοι οι άλλοι ρόλοι έργου απορρίπτονται. */
+export const PROJECT_STRUCTURE_WRITERS: readonly string[] = ['project_manager'];
 
 /**
  * Διαδρομές κάτω από `/api/buildings` · `/api/floors` που ΔΕΝ κρίνει ο πίνακας, με λόγο.

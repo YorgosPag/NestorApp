@@ -146,7 +146,6 @@ export type {
 export {
   withAuth,
   requirePermissions,
-  withProjectAuth,
   extractToken,
   getAuthContext,
 } from './middleware';

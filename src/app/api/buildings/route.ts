@@ -8,6 +8,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { requireProjectInTenant, withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { projectOfBodyTarget } from '@/lib/auth/resource-project';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { asApiError } from '@/lib/api/api-error-types';
 import { assertBuildingFieldsWritable } from './_shared/building-write-fields';
@@ -186,7 +187,10 @@ export const POST = withStandardRateLimit(
       throw new ApiError(500, getErrorMessage(error, 'Failed to create building'));
     }
     },
-    { permissions: 'buildings:buildings:create' }
+    {
+      permissions: 'buildings:buildings:create',
+      permissionResource: (request, ctx) => projectOfBodyTarget(request, ctx, '/api/buildings (POST)'),
+    }
   )
 );
 

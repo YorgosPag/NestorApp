@@ -62,6 +62,7 @@ export const DELETE = withStandardRateLimit(
         `${config.labelEn} permanently deleted`
       );
     },
-    {}
+    // ADR-926 §4 — μη αναστρέψιμο, μόνο ο διαχειριστής εταιρείας. Το cron εκκαθάρισης δεν περνά από εδώ.
+    { permissions: 'trash:entities:purge' }
   )
 );

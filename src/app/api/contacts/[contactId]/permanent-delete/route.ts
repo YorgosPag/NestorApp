@@ -57,6 +57,6 @@ export const DELETE = withStandardRateLimit(
         'Contact permanently deleted'
       );
     },
-    { permissions: 'crm:contacts:delete' }
+    { permissions: 'trash:entities:purge' }
   )
 );

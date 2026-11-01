@@ -12,6 +12,8 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { restoreFromTrash } from '@/lib/firestore/soft-delete-engine';
 
 export const POST = withStandardRateLimit(createLifecycleMutationRoute({
+  // Όποιος στέλνει στον κάδο, επαναφέρει: η ίδια άδεια, όπως το `canTrash` / `canUntrash` του Drive (ADR-926).
+  permissionOf: (config) => config.permission,
   run: async ({ db, entityType, entityId, ctx }) => {
     const { restoredStatus } = await restoreFromTrash(
       db, entityType, entityId, ctx.uid, ctx.companyId, ctx.email ?? undefined,

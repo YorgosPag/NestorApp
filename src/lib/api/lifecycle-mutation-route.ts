@@ -24,7 +24,9 @@ import type { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache, PermissionId } from '@/lib/auth';
-import { hasPermission } from '@/lib/auth/permissions';
+import { checkPermission } from '@/lib/auth/permissions';
+import { projectGrantOf, recordProjectGrants, type ProjectGrant } from '@/lib/auth/project-grant-audit';
+import { projectOfBuilding, scopeOf } from '@/lib/auth/resource-project';
 import { ApiError, apiSuccess } from '@/lib/api/ApiErrorHandler';
 import {
   isSoftDeletableEntity,
@@ -45,9 +47,9 @@ export interface LifecycleMutationInput {
 export interface LifecycleMutationSpec<TResult extends object> {
   /**
    * Η άδεια που απαιτεί η πράξη για αυτή την οντότητα. `undefined` ⇒ η οντότητα **δεν έχει**
-   * αυτή την πράξη (400). Παράλειψη ολόκληρου του πεδίου ⇒ αρκεί η ταυτοποίηση.
+   * αυτή την πράξη (400).
    */
-  readonly permissionOf?: (config: SoftDeleteEntityConfig) => string | undefined;
+  readonly permissionOf: (config: SoftDeleteEntityConfig) => string | undefined;
   /** Η κλήση στη μηχανή· ό,τι επιστρέψει μπαίνει στην απάντηση δίπλα στην ταυτότητα. */
   readonly run: (input: LifecycleMutationInput) => Promise<TResult>;
   /** Η πράξη όπως γράφεται στο βιβλίο ασφαλείας. */
@@ -62,18 +64,23 @@ type LifecycleSegment = { params: Promise<{ entityType: string; entityId: string
 async function assertPermitted(
   spec: Pick<LifecycleMutationSpec<object>, 'permissionOf'>,
   config: SoftDeleteEntityConfig,
+  target: { readonly entityType: SoftDeletableEntityType; readonly entityId: string },
   ctx: AuthContext,
   cache: PermissionCache,
-): Promise<void> {
-  if (!spec.permissionOf) return;
-
+): Promise<ProjectGrant | null> {
   const permission = spec.permissionOf(config);
   if (permission === undefined) {
     throw new ApiError(400, `${config.labelEn} does not support this operation`);
   }
-  if (!(await hasPermission(ctx, permission as PermissionId, {}, cache))) {
+  // ADR-926 Κ3 — όποιος έστειλε το κτίριο στον κάδο με τον ρόλο έργου του, το επαναφέρει με τον ίδιο.
+  const scope = target.entityType === 'building'
+    ? scopeOf(await projectOfBuilding(ctx, target.entityId, '/api/trash'))
+    : {};
+  const decision = await checkPermission(ctx, permission as PermissionId, scope, cache);
+  if (!decision.granted) {
     throw new ApiError(403, 'Permission denied', 'FORBIDDEN');
   }
+  return projectGrantOf(decision, permission as PermissionId, scope.projectId);
 }
 
 /**
@@ -88,7 +95,7 @@ export function createLifecycleMutationRoute<TResult extends object>(
 ) {
   return withAuth(
     async (
-      _request: NextRequest,
+      request: NextRequest,
       ctx: AuthContext,
       cache: PermissionCache,
       segmentData?: LifecycleSegment,
@@ -100,10 +107,12 @@ export function createLifecycleMutationRoute<TResult extends object>(
       }
 
       const config = SOFT_DELETE_CONFIG[entityType];
-      await assertPermitted(spec, config, ctx, cache);
+      const grant = await assertPermitted(spec, config, { entityType, entityId }, ctx, cache);
 
       const result = await spec.run({ db: getAdminFirestore(), entityType, entityId, ctx });
       const message = spec.outcome(config.labelEn);
+
+      if (grant) await recordProjectGrants([grant], request.nextUrl.pathname, ctx);
 
       await logAuditEvent(ctx, spec.securityAction, entityType, 'api', {
         newValue: { type: 'status', value: { entityId, ...result } },

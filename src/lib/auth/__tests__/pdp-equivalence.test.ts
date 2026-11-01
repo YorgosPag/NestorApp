@@ -23,8 +23,9 @@
  * ότι **δεν υπήρξε ποτέ βλάβη** (μάθημα CHECK 3.45).
  *
  * 🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ — τι ΔΕΝ συγκρίνεται, και γιατί:**
- * - **Ερώτημα ΜΕ πόρο** (`projectId`/`propertyId`): ο πελάτης **δεν έχει** τη
- *   διάσταση. Το φυλάει χωριστά η ομάδα `Α4`.
+ * - **Ερώτημα ΜΕ πόρο** (`projectId`): ο πελάτης **δεν έχει** τη διάσταση και
+ *   παίρνει την απάντηση από τον διακομιστή (ADR-926 Κ7). Τον κλάδο εταιρείας με
+ *   πόρο τον φυλάει η ομάδα `Α4`, τον κλάδο έργου το `project-role-judge.test.ts`.
  * - **Ρόλος εκτός `GLOBAL_ROLES`** (π.χ. το ιστορικό `'admin'`): ο server
  *   **δομικά** δεν τον δέχεται (`extractCustomClaims` → `isValidGlobalRole`),
  *   άρα δεν υπάρχει κοινό πεδίο. Ο πελάτης τον κρίνει `denied-unknown-role`
@@ -241,36 +242,35 @@ describe('ADR-801 §2.6 — ΙΣΟΔΥΝΑΜΙΑ ΤΩΝ ΔΥΟ PDP (ερώτημ
   // ---------------------------------------------------------------------------
   // Α4 — ΤΟ ΔΗΛΩΜΕΝΟ ΟΡΙΟ: η παραχώρηση είναι εμβέλειας ΕΤΑΙΡΕΙΑΣ
   // ---------------------------------------------------------------------------
-  describe('Α4 — το claim ΔΕΝ απαντά σε ερώτημα με πόρο', () => {
-    it('Α4.1 — με `projectId`, το ρητό claim δεν υποκαθιστά τη συμμετοχή στο έργο', async () => {
-      // Ο `external_user` με ρητό `projects:projects:update` στο claim.
-      const ctx = asAuthContext({
+  describe('Α4 — ο κριτής είναι αθροιστικός (ADR-926 Κ1)', () => {
+    it('Α4.1 — ό,τι δίνει η εταιρεία ισχύει και με `projectId`, χωρίς ανάγνωση μέλους', async () => {
+      // Το claim δίνει, ο ρόλος δίνει: καμία ανάγνωση, ο mock της βάσης θα έσκαγε.
+      const viaClaim = asAuthContext({
         label: 'x',
         globalRole: 'external_user',
         permissions: ['projects:projects:update'],
       });
+      expect(await checkPermission(viaClaim, 'projects:projects:update', { projectId: 'p1' }))
+        .toEqual({ granted: true, reason: null, source: 'company_scoped_claim' });
 
-      const unscoped = await checkPermission(ctx, 'projects:projects:update', {});
-      expect(unscoped.granted).toBe(true); // ✅ εμβέλεια εταιρείας
+      const viaRole = asAuthContext(LIVE_SUBJECTS[3]);
+      expect(await checkPermission(viaRole, 'buildings:buildings:update', { projectId: 'p1' }))
+        .toEqual({ granted: true, reason: null, source: 'global_role' });
+    });
 
-      const scoped = await checkPermission(ctx, 'projects:projects:update', { projectId: 'p1' });
-      // ⚠️ ΜΗΝ «διορθώσεις» αυτό σε `true`. Ούτε το claim ούτε ο ΡΟΛΟΣ απαντούν
-      //    σε ερώτημα **με πόρο**: εκεί κρίνει η ιδιότητα μέλους του έργου. Αν
-      //    απαντούσαν, το ΙΔΙΟ permission id θα συμπεριφερόταν αλλιώς ανάλογα
-      //    με τη διαδρομή παράδοσης.
-      //
-      // ⚠️ Η παλιά διατύπωση εδώ επικαλούνταν ότι *«το claim γράφεται ως
-      //    `rolePermissions ∪ extras`»* — **έπαψε να ισχύει** στο ADR-813 Φάση Β
-      //    (το claim κρατά μόνο extras· η αντιγραφή έσπαγε το όριο 1.000 bytes).
-      //    Το `ctx` εδώ το στήνει το ίδιο το test, οπότε η άγκυρα δεν εξαρτήθηκε
-      //    ποτέ από εκείνη τη συμπεριφορά — μόνο η **αιτιολόγηση** είχε παλιώσει.
-      expect(scoped.granted).toBe(false);
-      expect(scoped.reason).toBe('no_project_membership');
+    it('Α4.1α — χωρίς `projectId`, ο ρόλος έργου δεν έχει σημείο εφαρμογής (Κ4)', async () => {
+      const ctx = asAuthContext(LIVE_SUBJECTS[4]);
+      const result = await checkPermission(ctx, 'buildings:buildings:update', {});
+      expect(result).toEqual({ granted: false, reason: 'permission_not_in_role' });
+    });
+
+    it('Α4.1β — πράξη εκτός καταλόγου δεν ρωτά καν το έργο (Κ2)', async () => {
+      const ctx = asAuthContext(LIVE_SUBJECTS[4]);
+      const result = await checkPermission(ctx, 'projects:floors:delete', { projectId: 'p1' });
+      expect(result).toEqual({ granted: false, reason: 'permission_not_in_role' });
     });
 
     it('Α4.2 — ΠΑΡΟΝΟΜΑΣΤΗΣ: ο `super_admin` ΟΝΤΩΣ περνά και με πόρο (bypass)', async () => {
-      // Αλλιώς το Α4.1 θα ήταν πράσινο επειδή το σκέλος με πόρο αρνείται
-      // **σε όλους** — δηλαδή δεν θα απεδείκνυε τίποτα για το claim.
       const ctx = asAuthContext(LIVE_SUBJECTS[0]);
       const scoped = await checkPermission(ctx, 'projects:projects:update', { projectId: 'p1' });
       expect(scoped.granted).toBe(true);

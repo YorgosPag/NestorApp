@@ -54,6 +54,8 @@ export const AUDIT_ACTIONS = {
   member_added: true,
   member_removed: true,
   member_updated: true,
+  // ADR-926 Κ8 — εγγραφή που την έδωσε ο ρόλος έργου, όχι ο ρόλος εταιρείας
+  project_role_exercised: true,
   // Workspace membership end (ADR-892) — διακριτό από το μέλος ΕΡΓΟΥ (`member_removed`)
   workspace_member_removed: true,
   workspace_member_left: true,

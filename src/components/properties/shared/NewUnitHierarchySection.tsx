@@ -61,7 +61,7 @@ export function NewUnitHierarchySection({
   onChange,
 }: NewUnitHierarchySectionProps) {
   const { t } = useTranslation('properties');
-  const { canCreateBuilding, canUpdateBuilding, canCreateFloor } = useBuildingCapabilities();
+  const { canCreateBuilding, canUpdateBuilding, canCreateFloor } = useBuildingCapabilities(selection.projectId);
 
   // Buildings via real-time hook (SSoT)
   const { allBuildings: buildings, refetch: refetchBuildings } = useRealtimeBuildings();

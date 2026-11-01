@@ -60,8 +60,8 @@ export interface InitialTeamSeat {
  * 🔑 `project_manager` επειδή είναι ο ρόλος του `role-catalogue.ts` που φέρει
  * `projects:projects:view` **και** τις πέντε πράξεις `iso19650:containers:*` —
  * δηλαδή το ανάλογο του «Project Admin» των μεγάλων.
- * ⚠️ **Δεν διευρύνει ποτέ την πρόσβαση**: το βήμα (8) του κριτή κρίνει από τις
- * ικανότητες του **token**. Ο ρόλος έργου απαντά «τι κάνει στο έργο», όχι «τι επιτρέπεται».
+ * ⚠️ **Διευρύνει την πρόσβαση μόνο για τις δηλωμένες πράξεις** του `PROJECT_SCOPED_ACTIONS`
+ * (ADR-926 Κ2). Για τα υπόλοιπα, το βήμα (8) του κριτή κρίνει από τις ικανότητες του **token**.
  */
 export const PROJECT_CREATOR_ROLE_ID = 'project_manager';
 

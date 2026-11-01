@@ -24,6 +24,7 @@ import {
   getProjectMembership,
   type PermissionCache,
 } from './permissions/resource-lookups';
+import { isProjectScopedAction } from './project-scoped-actions';
 
 /**
  * ⚠️ **Επανεξαγωγή, ώστε η δημόσια επιφάνεια να μείνει ακέραιη**: ~118
@@ -88,11 +89,64 @@ export type PermissionSource =
 // =============================================================================
 
 /**
+ * Ο κλάδος έργου (ADR-926 Κ2 · Κ5): καλείται **μόνο** για πράξη του κλειστού καταλόγου, αφού ο κλάδος εταιρείας είπε όχι.
+ *
+ * Άρα η ιδιότητα μέλους μόνο προσθέτει. Οι αρνήσεις εδώ, MFA μαζί, δεν αφαιρούν ό,τι δίνει η εταιρεία.
+ * Το `unknown`/`unreadable` του αναγνώστη φτάνει εδώ ως `null`, δηλαδή άρνηση.
+ */
+async function checkProjectRole(
+  ctx: AuthContext,
+  permission: PermissionId,
+  projectId: string,
+  requireMfa: boolean | undefined,
+  cache: PermissionCache,
+): Promise<PermissionCheckResult> {
+  const membership = await getProjectMembership(ctx, projectId, cache);
+  if (!membership) {
+    return { granted: false, reason: 'no_project_membership' };
+  }
+
+  // Check MFA requirement for permission sets
+  for (const setId of membership.permissionSetIds) {
+    if (requiresMfaEnrollment(setId) && !ctx.mfaEnrolled) {
+      return { granted: false, reason: 'mfa_required' };
+    }
+  }
+
+  // Check explicit MFA requirement
+  if (requireMfa && !ctx.mfaEnrolled) {
+    return { granted: false, reason: 'mfa_required' };
+  }
+
+  // Check if permission is in effective permissions (precomputed)
+  if (membership.effectivePermissions.includes(permission)) {
+    return { granted: true, reason: null, source: 'project_role' };
+  }
+
+  // Fallback: compute from role + permission sets
+  if (getRolePermissions(membership.roleId).includes(permission)) {
+    return { granted: true, reason: null, source: 'project_role' };
+  }
+
+  for (const setId of membership.permissionSetIds) {
+    if (getPermissionSetPermissions(setId).includes(permission)) {
+      return { granted: true, reason: null, source: 'permission_set' };
+    }
+  }
+
+  return { granted: false, reason: 'permission_not_in_role' };
+}
+
+/**
  * Check if user has a specific permission.
+ *
+ * Αθροιστικός κριτής (ADR-926 Κ1): επιτρέπεται αν το δίνει η εταιρεία **ή** το έργο.
  *
  * Check order:
  * 1. Global role bypass (super_admin)
- * 2. Project membership (if projectId provided)
+ * 2. Ρητό claim εταιρείας
+ * 3. Καθολικός ρόλος
+ * 4. Ρόλος έργου, μόνο με `projectId` και μόνο για πράξη του `PROJECT_SCOPED_ACTIONS`
  *
  * @param ctx - Authenticated context
  * @param permission - Permission ID to check
@@ -124,67 +178,24 @@ export async function checkPermission(
     return { granted: true, reason: null, source: 'global_role_bypass' };
   }
 
-  // Check 2: Project membership
-  if (options.projectId) {
-    const membership = await getProjectMembership(ctx, options.projectId, cache);
-
-    if (membership) {
-      // Check MFA requirement for permission sets
-      for (const setId of membership.permissionSetIds) {
-        if (requiresMfaEnrollment(setId) && !ctx.mfaEnrolled) {
-          return { granted: false, reason: 'mfa_required' };
-        }
-      }
-
-      // Check explicit MFA requirement
-      if (options.requireMfa && !ctx.mfaEnrolled) {
-        return { granted: false, reason: 'mfa_required' };
-      }
-
-      // Check if permission is in effective permissions (precomputed)
-      if (membership.effectivePermissions.includes(permission)) {
-        return { granted: true, reason: null, source: 'project_role' };
-      }
-
-      // Fallback: compute from role + permission sets
-      const rolePermissions = getRolePermissions(membership.roleId);
-      if (rolePermissions.includes(permission)) {
-        return { granted: true, reason: null, source: 'project_role' };
-      }
-
-      for (const setId of membership.permissionSetIds) {
-        const setPermissions = getPermissionSetPermissions(setId);
-        if (setPermissions.includes(permission)) {
-          return { granted: true, reason: null, source: 'permission_set' };
-        }
-      }
-
-      return { granted: false, reason: 'permission_not_in_role' };
-    }
-
-    return { granted: false, reason: 'no_project_membership' };
-  }
-
   // ⛔ Το παλιό «Check 3: Property grant (for external users)» ΑΦΑΙΡΕΘΗΚΕ (ADR-862 Φ1, 2026-10-02):
   //    0 καλούντες με `propertyId`, 0 γραφείς grant, και η ανάγνωση έψαχνε στον χώρο ΤΟΥ ΚΑΛΟΥΝΤΑ — δηλαδή
   //    δομικά ανίκανη να εξυπηρετήσει τον εξωτερικό για τον οποίο γράφτηκε. Ο εξωτερικός κρίνεται πλέον ΜΟΝΟ
   //    ανά πόρο, από τη συμμετοχή του (`lib/auth/engagement-judge.ts`) — ποτέ μέσα από δικαιώματα χώρου.
 
   // ===========================================================================
-  // ΤΟ ΕΡΩΤΗΜΑ ΧΩΡΙΣ ΠΟΡΟ — εδώ και μόνο εδώ οι δύο κριτές οφείλουν να συμφωνούν
+  // Ο ΚΛΑΔΟΣ ΕΤΑΙΡΕΙΑΣ — χωρίς πόρο εδώ οι δύο κριτές οφείλουν να συμφωνούν
   // ===========================================================================
 
-  // Check 4: ρητά δοσμένο permission στο claim (ADR-801 §2.8).
+  // Check 2: ρητά δοσμένο permission στο claim (ADR-801 §2.8).
   //
   // 🔑 **Η ΘΕΣΗ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**: πριν τον ρόλο, μετά το bypass — **ίδια σειρά**
   //    με τα βήματα (5)→(6) του `decideCapability`. Η άγκυρα
   //    `__tests__/pdp-equivalence.test.ts` την κλειδώνει.
   //
-  // 🔴 **ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΨΗΛΟΤΕΡΑ, ΔΙΠΛΑ ΣΤΟ BYPASS**: αν το claim κρινόταν πριν
-  //    από τα σκέλη με πόρο, μια παραχώρηση **εμβέλειας εταιρείας** θα
-  //    παρέκαμπτε την κρίση **του πόρου** (μέλος έργου) —
-  //    δηλαδή το ίδιο permission id θα συμπεριφερόταν διαφορετικά ανάλογα με τη
-  //    διαδρομή παράδοσης. ADR-749 μέσα στη διόρθωσή του.
+  // 🔑 ADR-926 Κ1 — ο κλάδος εταιρείας κρίνεται ΠΡΙΝ από τον κλάδο έργου, γιατί η ιδιότητα μέλους μόνο προσθέτει.
+  //    Μέχρι τις 2026-11-02 ο κλάδος έργου ερχόταν πρώτος και έκλεινε τον κριτή: ο `company_admin` που δεν ήταν μέλος
+  //    απορριπτόταν, και μέλος `viewer` έχανε δικαιώματα εταιρείας.
   //
   // ⚠️ **Η ΑΙΤΙΟΛΟΓΗΣΗ ΑΛΛΑΞΕ, Ο ΚΑΝΟΝΑΣ ΟΧΙ** (ADR-813 Φάση Β): μέχρι
   //    2026-08-26 εδώ έγραφε ότι *«το claim **περιέχει** τα permissions του
@@ -203,13 +214,18 @@ export async function checkPermission(
     return { granted: true, reason: null, source: 'company_scoped_claim' };
   }
 
-  // Check 5: τα permissions του **καθολικού** ρόλου.
+  // Check 3: τα permissions του **καθολικού** ρόλου.
   const globalPermissions = getRolePermissions(ctx.globalRole);
   if (globalPermissions.includes(permission)) {
     // ⚠️ Ήταν `'project_role'` — **ψευδές**: εδώ δεν υπάρχει έργο, η παραχώρηση
     //    έρχεται από τον καθολικό ρόλο. Πέρασε απαρατήρητο επειδή **κανείς δεν
     //    διάβαζε** το `source` (μετρημένο: μηδέν καταναλωτές πριν το §2.8).
     return { granted: true, reason: null, source: 'global_role' };
+  }
+
+  // Check 4: ο ρόλος έργου, μόνο για πράξη του κλειστού καταλόγου (ADR-926 Κ2).
+  if (options.projectId && isProjectScopedAction(permission)) {
+    return checkProjectRole(ctx, permission, options.projectId, options.requireMfa, cache);
   }
 
   return { granted: false, reason: 'permission_not_in_role' };

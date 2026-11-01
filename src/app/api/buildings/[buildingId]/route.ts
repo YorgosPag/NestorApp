@@ -2,11 +2,14 @@ import { NextRequest } from 'next/server';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { projectOfBuilding } from '@/lib/auth/resource-project';
+import { extractSegmentFromEnd } from '@/lib/api/route-helpers';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { loadOwnedBuilding } from '../_shared/building-owned-doc';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
+import { assertDeletionAllowed } from '@/lib/firestore/deletion-guard';
 
 const logger = createModuleLogger('BuildingByIdRoute');
 
@@ -98,6 +101,9 @@ export const DELETE = withStandardRateLimit(
         db: adminDb,
       });
 
+      // ADR-926 §4 — οι εξαρτήσεις μπλοκάρουν και τον κάδο, στον διακομιστή: η προεπισκόπηση της οθόνης παρακάμπτεται.
+      await assertDeletionAllowed(adminDb, 'building', buildingId, String(buildingData?.companyId ?? ctx.companyId));
+
       logger.info('Moving building to trash (soft-delete)', { buildingId, companyId: ctx.companyId });
 
       // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
@@ -122,6 +128,11 @@ export const DELETE = withStandardRateLimit(
         'Building moved to trash'
       );
     },
-    { permissions: 'buildings:buildings:delete' }
+    {
+      permissions: 'buildings:buildings:delete',
+      // ADR-926 §4 — εδώ η πράξη είναι ΜΟΝΟ κάδος, γι' αυτό η πράξη δίνεται και από τον ρόλο έργου.
+      permissionResource: (request, ctx) =>
+        projectOfBuilding(ctx, extractSegmentFromEnd(request.url, 0) ?? '', '/api/buildings/[buildingId] (DELETE)'),
+    }
   )
 );

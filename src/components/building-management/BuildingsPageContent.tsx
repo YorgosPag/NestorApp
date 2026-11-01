@@ -86,7 +86,7 @@ export function BuildingsPageContent() {
   const [, startTransition] = useTransition();
 
   // ADR-829 §7.1 — τι ΔΕΙΧΝΕΙ η οθόνη· τον έλεγχο τον ξανακάνει ο διακομιστής.
-  const { canCreateBuilding, canUpdateBuilding, canDeleteBuilding } = useBuildingCapabilities();
+  const { canCreateBuilding, canUpdateBuilding, canDeleteBuilding } = useBuildingCapabilities(selectedBuilding?.projectId);
 
   // 🏢 ENTERPRISE: Lifted edit state for CompactToolbar ↔ BuildingDetails sync
   const [isEditingBuilding, setIsEditingBuilding] = useState(false);

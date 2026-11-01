@@ -95,6 +95,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "buildings:buildings:create",
       "buildings:buildings:update",
       "buildings:buildings:delete",
+      // ADR-926 §4 — μόνο ο διαχειριστής εταιρείας αδειάζει τον κάδο.
+      "trash:entities:purge",
       "settings:settings:view",
       "settings:settings:manage",
       "notifications:notifications:view",
@@ -334,7 +336,14 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "projects:members:view",
       "projects:members:manage",
       "projects:floors:view",
+      // ADR-926 Κ2 — ισχύουν στο έργο του μέλους, μέσω `PROJECT_SCOPED_ACTIONS`. `buildings:buildings:delete` = μόνο κάδος.
+      // ⛔ `projects:floors:delete` έφυγε: ο όροφος δεν έχει κάδο, η διαγραφή του είναι οριστική.
+      "projects:floors:create",
+      "projects:floors:update",
       "buildings:buildings:view",
+      "buildings:buildings:create",
+      "buildings:buildings:update",
+      "buildings:buildings:delete",
       "properties:properties:view",
       "properties:properties:create",
       "properties:properties:update",
@@ -343,7 +352,6 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "units:units:create",
       "units:units:update",
       "units:units:delete",
-      "projects:floors:delete",
       "dxf:files:view",
       "dxf:files:upload",
       "dxf:layers:view",

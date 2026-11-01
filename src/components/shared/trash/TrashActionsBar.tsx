@@ -25,6 +25,7 @@ import { ArrowLeft, RotateCcw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIconSizes } from "@/hooks/useIconSizes";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
+import { useGrantedCapability } from "@/auth/hooks/useGrantedCapability";
 import { TrashNotice, type TrashNoticeTone } from "./TrashNotice";
 
 interface TrashActionsBarProps {
@@ -65,6 +66,8 @@ export function TrashActionsBar({
   labels,
 }: TrashActionsBarProps) {
   const { t } = useTranslation("trash");
+  // ADR-926 §4 — η οριστική διαγραφή είναι χωριστή ικανότητα από τον κάδο, για κάθε οντότητα.
+  const canPurge = useGrantedCapability("trash:entities:purge").granted;
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const text: TrashActionsBarLabels = {
@@ -118,7 +121,7 @@ export function TrashActionsBar({
           {selectedIds.length > 0 && ` (${selectedIds.length})`}
         </Button>
 
-        {onPermanentDelete && (
+        {onPermanentDelete && canPurge && (
           <Button
             size="sm"
             variant="destructive"
