@@ -1,5 +1,5 @@
 /**
- * ADR-923 §5.6.1 απόφαση 40 — η προεπιλογή έκδοσης **επιζεί** μέσα σε πραγματική φόρμα, με το πραγματικό Radix Select.
+ * ADR-923 §5.6.1 αποφάσεις 40 και 43 — η έκδοση τιμών **επιζεί** μέσα σε πραγματική φόρμα, με το πραγματικό Radix Select.
  *
  * 🔴 Μετρημένο στην παραγωγή 2026-11-01: το `defaultVersionOf` έδινε σωστή τιμή και το πεδίο έμενε κενό. Μέσα σε `<form>` το Radix
  * βάζει κρυφό native `<select>`· όταν τιμή και επιλογές αλλάζουν στο ίδιο render, γράφει την τιμή πριν υπάρξει η επιλογή της,
@@ -25,21 +25,28 @@ const mockView = {
   ],
 };
 
+let mockListsState: { state: string; view?: typeof mockView } = { state: 'ready', view: mockView };
+
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));
 jest.mock('@/hooks/catalog/usePriceListViews', () => ({
-  usePriceListsView: () => ({ current: { state: 'ready', view: mockView } }),
+  usePriceListsView: () => ({ current: mockListsState }),
   useDiscountsView: () => ({ current: { state: 'ready', view: { customerGroups: [] } } }),
 }));
 
-const priced = (): PublicationRecipeDefinition => ({
+const priced = (priceListId = '', priceListVersionId = ''): PublicationRecipeDefinition => ({
   ...emptyRecipe('el'),
-  pricing: { kind: 'priced', priceListId: '', priceListVersionId: '', audience: { kind: 'anonymous' } },
+  pricing: { kind: 'priced', priceListId, priceListVersionId, audience: { kind: 'anonymous' } },
 });
 
-function Harness({ onDraft }: { readonly onDraft: (draft: PublicationRecipeDefinition) => void }) {
-  const [draft, setDraft] = useState(priced);
+interface HarnessProps {
+  readonly onDraft: (draft: PublicationRecipeDefinition) => void;
+  readonly initial?: PublicationRecipeDefinition;
+}
+
+function Harness({ onDraft, initial }: HarnessProps) {
+  const [draft, setDraft] = useState(() => initial ?? priced());
   onDraft(draft);
   return <form><PublicationPricingFields draft={draft} onChange={setDraft} issues={[]} disabled={false} /></form>;
 }
@@ -51,6 +58,20 @@ function nativeSelectWith(container: HTMLElement, value: string): HTMLSelectElem
 }
 
 describe('PublicationPricingFields — προεπιλογή έκδοσης μέσα σε φόρμα', () => {
+  beforeEach(() => { mockListsState = { state: 'ready', view: mockView }; });
+
+  it('🔴 αποθηκευμένη συνταγή: οι τιμοκατάλογοι που φτάνουν μετά δεν αδειάζουν το πρόχειρο', async () => {
+    const saved = priced('pl_a', 'v1');
+    let latest = saved;
+    mockListsState = { state: 'loading' };
+    const { rerender } = render(<Harness initial={saved} onDraft={(draft) => { latest = draft; }} />);
+    await act(async () => { await Promise.resolve(); });
+    mockListsState = { state: 'ready', view: mockView };
+    rerender(<Harness initial={saved} onDraft={(draft) => { latest = draft; }} />);
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(latest.pricing).toMatchObject({ priceListId: 'pl_a', priceListVersionId: 'v1' });
+  });
+
   it('🔴 η επιλογή τιμοκαταλόγου αφήνει γεμάτη την έκδοση που ισχύει', async () => {
     let latest = priced();
     const { container } = render(<Harness onDraft={(draft) => { latest = draft; }} />);

@@ -89,8 +89,7 @@ function PricedFields({ pricing, setPricing, issues, disabled }: PricedProps) {
           </Select>
         )}
       </CatalogField>
-      {/* 🔴 `key`: νέες επιλογές και νέα τιμή στο ίδιο render μηδενίζουν την τιμή μέσα από το κρυφό native select του Radix. */}
-      <PriceVersionSelect key={pricing.priceListId} bands={summaryOf(pricing.priceListId).bands} value={pricing.priceListVersionId} disabled={disabled}
+      <PriceVersionSelect bands={summaryOf(pricing.priceListId).bands} value={pricing.priceListVersionId} disabled={disabled}
         onChange={(priceListVersionId) => setPricing({ ...pricing, priceListVersionId })} />
       <AudienceField value={pricing.audience} allowNone={false} disabled={disabled} issues={issues}
         customerGroups={groups.state === 'ready' ? groups.view.customerGroups : []}

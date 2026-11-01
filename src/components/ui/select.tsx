@@ -13,7 +13,21 @@ import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 import { withRadixEscapeOwner } from "@/components/ui/radix-escape-ownership"
 import '@/lib/design-system';
 
-const Select = SelectPrimitive.Root
+/**
+ * 🔴 Μέσα σε `<form>` το Radix βάζει κρυφό native `<select>`. Όταν η τιμή φτάνει πριν από την επιλογή της, ο native γράφει `''`
+ * και το Radix το στέλνει πίσω ως αλλαγή, οπότε το πρόχειρο χάνει την τιμή του χωρίς να πατήσει κανείς κάτι (ADR-923 §5.6.1
+ * απόφαση 43). Το `''` είναι δεσμευμένο από το Radix (CHECK 3.48), άρα εδώ δεν είναι ποτέ επιλογή ανθρώπου.
+ */
+function Select({ onValueChange, ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
+  return (
+    <SelectPrimitive.Root
+      {...props}
+      onValueChange={(next) => {
+        if (next !== '') onValueChange?.(next)
+      }}
+    />
+  )
+}
 
 const SelectGroup = SelectPrimitive.Group
 

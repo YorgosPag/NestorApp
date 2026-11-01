@@ -54,7 +54,7 @@ export const PUBLICATION_LIMITS = {
  * Η έκδοση του **σχήματος απόδοσης**: οποιαδήποτε αλλαγή στα πρότυπα, στο μοντέλο διάταξης ή στον προσαρμογέα
  * αλλάζει τα bytes ⇒ ανεβαίνει ο αριθμός ⇒ νέο κλειδί ιδεμποτίας, άρα νέο αρχείο (ποτέ σιωπηλά παλιό PDF).
  */
-export const PUBLICATION_RENDER_SCHEMA_VERSION = 4;
+export const PUBLICATION_RENDER_SCHEMA_VERSION = 5;
 
 /** Κελί ιδιότητας χωρίς τιμή: η παύλα λέει «δεν υπάρχει στοιχείο», ενώ το κενό κελί μοιάζει με λάθος. Ίδια σε κάθε γλώσσα. */
 export const PUBLICATION_NO_VALUE = '—';

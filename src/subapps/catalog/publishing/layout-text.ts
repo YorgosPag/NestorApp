@@ -9,6 +9,7 @@
  * @module subapps/catalog/publishing/layout-text
  */
 
+import { OPERATOR_TIME_ZONE } from '@/constants/platform-operator';
 import type { HumanLanguage } from '@/i18n/languages';
 import { majorFromMinor, type MinorAmount } from '@/lib/money/money';
 import { checkRichText } from '../values/rich-text';
@@ -29,9 +30,12 @@ export function formatPublicationPrice(minor: MinorAmount, language: HumanLangua
   return new Intl.NumberFormat(LOCALE_OF[language], { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(majorFromMinor(minor));
 }
 
-/** ISO → «1/11/2026» σε UTC: το ίδιο PDF δεν αλλάζει με τη ζώνη ώρας του διακομιστή. */
+/**
+ * ISO → «1/11/2026» στη ζώνη του φορέα, γιατί η ισχύς μιας τιμής είναι ελληνική μέρα: τα μεσάνυχτα της 29/10 σε UTC είναι ακόμη 28/10.
+ * Ρητή ζώνη: το ίδιο PDF δεν αλλάζει με τη ζώνη ώρας του διακομιστή.
+ */
 export function formatPublicationDate(iso: string, language: HumanLanguage): string {
-  return new Intl.DateTimeFormat(LOCALE_OF[language], { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso));
+  return new Intl.DateTimeFormat(LOCALE_OF[language], { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: OPERATOR_TIME_ZONE }).format(new Date(iso));
 }
 
 // ── richText → μπλοκ ──────────────────────────────────────────────────────────
