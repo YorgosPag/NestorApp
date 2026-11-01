@@ -191,6 +191,7 @@ export interface TenantProject {
 export interface TenantBuilding {
   companyId: string;
   name?: string;
+  code?: string;
   projectId?: string | number;
 }
 

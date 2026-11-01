@@ -17,6 +17,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { requireBuildingInTenant } from '@/lib/auth/tenant-isolation';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import {
@@ -50,7 +51,7 @@ interface SuggestResponse {
 
 export const GET = withStandardRateLimit(
   withAuth<ApiSuccessResponse<SuggestResponse>>(
-    async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const adminDb = requireAdminFirestore();
 
       const { searchParams } = new URL(request.url);
@@ -83,14 +84,11 @@ export const GET = withStandardRateLimit(
         throw new ApiError(400, 'Cannot resolve type code for the given parameters');
       }
 
-      // Get building name for letter extraction
-      const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-      if (!buildingDoc.exists) {
-        throw new ApiError(404, 'Building not found');
-      }
-      const buildingData = buildingDoc.data() as Record<string, unknown>;
-      const buildingName = (buildingData.name as string) || '?';
-      const buildingCode = (buildingData.code as string) || undefined;
+      // 🔒 ADR-829 §7.1 — το κτίριο έρχεται από το URL: ξένο = ανύπαρκτο. Χωρίς φράχτη, κάθε ρόλος με το δικαίωμα μάθαινε
+      // ύπαρξη, γράμμα και πλήθος ξένου κτιρίου, και το παρακάτω ερώτημα κρίνει μόνο με το `buildingId`.
+      const building = await requireBuildingInTenant({ ctx, buildingId, path: '/api/entity-code/suggest' });
+      const buildingName = building.name || '?';
+      const buildingCode = building.code || undefined;
       // ADR-233 §3.4: prefer locked `code` field, fall back to free-text `name`
       const buildingLetter = extractBuildingLetter({ code: buildingCode, name: buildingName });
 
