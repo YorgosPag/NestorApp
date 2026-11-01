@@ -27,6 +27,7 @@ import { BOQSupplierPriceReviewPanel } from './MeasurementsTabContent/BOQSupplie
 import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
 import { BOQCategoryAccordion, getFloorGroupKeys } from './MeasurementsTabContent/BOQCategoryAccordion';
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
+import { liveEditedItem } from './MeasurementsTabContent/useBOQEditorState';
 import { Button } from '@/components/ui/button';
 import { Ruler, Plus, AlertCircle, ChevronRight, ChevronDown, FileText } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -90,7 +91,8 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
   // Editor dialog state
   const [editorOpen, setEditorOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<BOQItem | null>(null);
+  const [openedItem, setEditingItem] = useState<BOQItem | null>(null);
+  const editingItem = useMemo(() => liveEditedItem(items, openedItem), [items, openedItem]);
 
   // Accordion expand/collapse state (controlled mode) — ADR-395 per-floor groups.
   const allFloorKeys = useMemo(() => getFloorGroupKeys(filteredItems), [filteredItems]);

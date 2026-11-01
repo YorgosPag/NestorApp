@@ -113,7 +113,9 @@ export function useBOQItems(
 
   // --- FETCH via useAsyncData ---
 
-  const { data, loading, error: fetchError, refetch: refreshItems } = useAsyncData({
+  // 🔒 Η ανανέωση δεν σηκώνει `loading` (ADR-923 §5.12): η καρτέλα αλλάζει σε spinner, ο επεξεργαστής και το πάνελ ελέγχου τιμών
+  // ξαναγεννιούνται και χάνουν ό,τι κρατούν. Μετρημένο ζωντανά: τιμή προμηθευτή 1.050 € έγινε 0 € στο επόμενο «Αποθήκευση».
+  const { data, loading, error: fetchError, silentRefetch: refreshItems } = useAsyncData({
     fetcher: async () => {
       const result = await boqService.getByBuilding(companyId, buildingId);
       // ADR-300: Write to module-level cache so next remount skips spinner

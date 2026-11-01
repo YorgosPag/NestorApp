@@ -136,6 +136,14 @@ export function createInitialState(item: BOQItem | null, defaultCategory: string
   };
 }
 
+/**
+ * **Η γραμμή που επεξεργάζεσαι, όπως είναι τώρα** (ADR-923 §5.12): η λίστα είναι η μία πηγή, το αντίγραφο του κλικ μόνο δίχτυ όταν η
+ * γραμμή έφυγε από τη λίστα. Αλλιώς κάθε ξαναγέννημα της φόρμας θα γέμιζε από τιμές που ο διακομιστής έχει ήδη αλλάξει.
+ */
+export function liveEditedItem(items: readonly BOQItem[], opened: BOQItem | null): BOQItem | null {
+  return items.find((candidate) => candidate.id === opened?.id) ?? opened;
+}
+
 /** Τι σημαίνει η αλλαγή ενός πεδίου για τον δεσμό: η **μία** μετάβαση της φόρμας, καθαρή. */
 export function withFormField<K extends keyof EditorFormState>(form: EditorFormState, key: K, value: EditorFormState[K]): EditorFormState {
   const next = { ...form, [key]: value };
