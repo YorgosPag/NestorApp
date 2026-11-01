@@ -10,6 +10,7 @@ import { MFP_ATTRIBUTE_MAP, MFP_FAMILY, MFP_SIZES } from '../../__tests__/fixtur
 import { PLATFORM_MEASUREMENT_REGISTRY } from '../../measurement/measurement-registry';
 import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportFieldValue, ImportProfileDefinition, ImportProposalField } from '../../types/catalog-import';
 import { ANY_SLOT } from '../../types/product';
+import { CATALOG_LIMITS } from '../../vocabulary/catalog-limits';
 import { extractGroupsFromTable, resolveColumns } from '../apply-column-rules';
 import { buildAttributeRows, type AttributeProposalContext } from '../build-attribute-proposal';
 import { buildPriceRows } from '../build-price-proposal';
@@ -51,6 +52,14 @@ const groupOf = (rows: readonly ExtractedRow[]): ExtractedGroup => ({ groupKey: 
 const noLive: AttributeProposalContext = { schema, text, model: null, matches: new Map(), base: new Map() };
 const judge = (group: ExtractedGroup, context = noLive) =>
   judgeProposal({ rows: buildAttributeRows(group, context), modelCode: group.modelCode, familyId: 'fan_coil', categoryIds: [], holdings: { rootModel: null, products: new Map() }, schema, refs });
+
+describe('🔴 ό,τι θα απέρριπτε ο γραφέας φαίνεται στον έλεγχο', () => {
+  it('πάνω από το όριο απογόνων: το εύρημα συνόλου πέφτει στη γραμμή του μοντέλου, όχι στο κενό', () => {
+    const rows = Array.from({ length: CATALOG_LIMITS.maxDescendantsPerModel + 1 }, (_, index) => ({ ...rowFor(0, { h: MFP_PAGE_60.heating_h[0], m: MFP_PAGE_60.heating_m[0] }), rowKey: `r${index}` }));
+    const model = judge(groupOf(rows)).rows.find((row) => row.holderKind === 'productModel');
+    expect(model?.issues.map((issue) => issue.code)).toContain('tooManyDescendants');
+  });
+});
 
 describe('ομοιόμορφα γράμματα', () => {
   it.each([

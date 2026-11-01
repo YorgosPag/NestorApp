@@ -196,6 +196,14 @@ describe('πρόταση → έγκριση', () => {
     expect(rowIssues(proposal.rows)).toEqual([]);
   });
 
+  it('🔴 ό,τι θα απέρριπτε ο γραφέας φαίνεται στον έλεγχο: δύο γραμμές ίδιου άξονα, η έγκριση αρνείται χωρίς εγγραφή', async () => {
+    const twin: ExtractedRow = { ...rowFor(1), cells: rowFor(1).cells.map((c) => (c.text === MFP_SIZES[1] ? { ...c, text: MFP_SIZES[0] } : c)) };
+    const proposal = await proposeGroup(ARIES, await batchId(), group([rowFor(0), twin]));
+    expect(proposal.rows.find((row) => row.rowKey === 'r1')?.issues).toEqual([expect.objectContaining({ code: 'axisComboDuplicate', params: { other: 'r0' } })]);
+    expect((await rejectionOf(applyImportProposal(ARIES, proposal.id, proposal.revision))).kind).toBe('confirmationRequired');
+    expect(products()).toHaveLength(0);
+  });
+
   it('το ίδιο αρχείο μετά την έγκριση: όλα αμετάβλητα, ταιριάζουν με τον κωδικό παρά τις παύλες', async () => {
     const id = await batchId();
     const first = await proposeGroup(ARIES, id, group(faithful()));

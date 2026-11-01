@@ -111,11 +111,16 @@ function withJudgement(field: ImportProposalField, memberId: string, cells: Read
 
 /** Ευρήματα σε ιδιότητες που η πηγή δεν έφερε (π.χ. λείπει άξονας): δεν έχουν κελί, άρα ζουν στη γραμμή. */
 function rowIssuesOf(row: ImportProposalRow, memberId: string, issues: readonly CatalogIssue[]): CatalogIssue[] {
-  const prefix = `${memberPath(memberId)}.`;
-  const owned = issues.filter((issue) => issue.path.startsWith(prefix));
+  const path = memberPath(memberId);
+  const prefix = `${path}.`;
+  // Εύρημα ολόκληρου του μέλους έχει διαδρομή χωρίς τελεία (`axisComboDuplicate`): χωρίς το πρώτο σκέλος χανόταν, και ο άνθρωπος έβλεπε 422.
+  const owned = issues.filter((issue) => issue.path === path || issue.path.startsWith(prefix));
   const cellPaths = row.fields.flatMap((field) => (field.target.kind === 'attribute' ? [`${prefix}values.${field.target.attributeId}`] : []));
   return owned.filter((issue) => !cellPaths.some((path) => issue.path === path || issue.path.startsWith(`${path}.`))).map((issue) => ({ ...issue, path: issue.path.slice(prefix.length) }));
 }
+
+/** Εύρημα του συνόλου, όχι μέλους (`tooManyDescendants`): δεν έχει γραμμή δική του, άρα ζει στη γραμμή του μοντέλου. */
+const isAggregateIssue = (issue: CatalogIssue): boolean => !issue.path.startsWith(memberPath(''));
 
 /** Κρίνει την πρόταση και γράφει τα ευρήματα πάνω στα πεδία της. */
 export function judgeProposal(input: ProposalJudgeInput): ProposalVerdict {
@@ -126,7 +131,8 @@ export function judgeProposal(input: ProposalJudgeInput): ProposalVerdict {
   const cells = issuesByCell(issues);
   const rows = input.rows.map((row): ImportProposalRow => {
     const memberId = row.holderKind === 'productModel' ? (aggregate.rootId ?? row.rowKey) : memberIdOf(row);
-    return { ...row, fields: row.fields.map((field) => withJudgement(field, memberId, cells)), issues: [...row.issues, ...rowIssuesOf(row, memberId, issues)] };
+    const aggregateLevel = row.holderKind === 'productModel' ? issues.filter(isAggregateIssue) : [];
+    return { ...row, fields: row.fields.map((field) => withJudgement(field, memberId, cells)), issues: [...row.issues, ...rowIssuesOf(row, memberId, issues), ...aggregateLevel] };
   });
   return { rows, violations };
 }

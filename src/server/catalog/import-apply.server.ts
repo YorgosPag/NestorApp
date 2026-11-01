@@ -29,7 +29,7 @@ import { stagePriceLineBatch } from './price-line-writer.server';
 
 const accepted = (field: ImportProposalField): boolean => field.decision === 'accept';
 const hasAccepted = (row: ImportProposalRow): boolean => row.fields.some(accepted);
-const CATALOG_BLOCKERS = new Set(['modelCodeMissing', 'levelUnsupported', 'priceIncomplete', 'uniqueValueTaken']);
+const CATALOG_BLOCKERS = new Set(['modelCodeMissing', 'levelUnsupported', 'priceIncomplete', 'uniqueValueTaken', 'axisComboDuplicate', 'tooManyDescendants']);
 
 /** Τι εμποδίζει την έγκριση: πεδίο σε εκκρεμότητα, ή γραμμή που δεν γίνεται να γραφτεί. */
 function assertDecided(proposal: ImportProposalDefinition): void {
