@@ -17,7 +17,7 @@
 import { mergeRowCells, type PreviewRow, type TablePreview } from '../table/catalog-table';
 import type { LayoutCell, LayoutTable, LayoutTableRow } from './layout-model';
 import { withBreakHints } from './layout-text';
-import { PUBLICATION_LIMITS, type TableGroupStyle } from './publication-vocabulary';
+import { PUBLICATION_LIMITS, PUBLICATION_NO_VALUE, type TableGroupStyle } from './publication-vocabulary';
 
 export interface LayoutTableOptions {
   readonly id: string;
@@ -60,7 +60,7 @@ function rowLabel(row: AttributeRow): string {
 function attributeCells(row: AttributeRow, range: readonly [number, number], priceRow: boolean): LayoutCell[] {
   const slice = (row.cells ?? []).slice(range[0], range[1]);
   const role = priceRow ? 'price' : 'value';
-  return mergeRowCells(row.merge, slice).map((run) => cell(withBreakHints(run.text), role, run.span));
+  return mergeRowCells(row.merge, slice).map((run) => cell(run.text === '' ? PUBLICATION_NO_VALUE : withBreakHints(run.text), role, run.span));
 }
 
 /** Μία ομάδα: η κεφαλίδα της και οι γραμμές ως την επόμενη. `head: null` = γραμμές πριν από την πρώτη κεφαλίδα. */

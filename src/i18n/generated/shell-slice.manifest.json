@@ -48,7 +48,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "035216d588924a55c4586edb89ae09f195effbc3c31a105e4c8780115282445e",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "58612abe22f1005441b207e54e75e58f8d5143c9bb38cd767a98446395eda1de",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "acd562293385a8352df872e45799e17a01bc738ad4febbf868e3a59459b64909",
-    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "4825304e038a29251ebd3b9dc37d3a0a33dadcc82c9520ddb0208621b3192d7d",
+    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "5129b8d39f1d94e4463a1dc0740c28248154e20d857cfc3dedd01d9645cb7bd8",
     "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "b9bb9d3d541974680d305db1b2ab4c0c6098f4dd82313240bf66d9ce913081e4",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
@@ -178,7 +178,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3826e1017cc9b4a797a097e1793471c48ae1bf05a844dfa89d2cbcc2687270b4",
+  "inputsSha256": "0f8af789d4b2c64d40705aacd299e1322a9b3f2a225d95c581a53b882f8295be",
   "languages": [
     "el"
   ],
@@ -12334,6 +12334,9 @@
             "pricing.audience.signedIn",
             "pricing.noView",
             "pricing.versions.number",
+            "pricing.versions.phase.current",
+            "pricing.versions.phase.future",
+            "pricing.versions.phase.past",
             "products.jump.go",
             "products.jump.label",
             "products.jump.notFound",
@@ -12351,6 +12354,7 @@
             "publishing.fields.logo",
             "publishing.fields.priceList",
             "publishing.fields.priceVersion",
+            "publishing.fields.priceVersionOption",
             "publishing.fields.pricing",
             "publishing.fields.primary",
             "publishing.fields.profiles",
@@ -25282,7 +25286,7 @@
   ],
   "stats": {
     "matchedKeys": 272,
-    "sliceBytes": 1262226
+    "sliceBytes": 1262439
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

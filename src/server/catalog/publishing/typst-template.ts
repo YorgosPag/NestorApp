@@ -15,6 +15,9 @@
  *    που σε στενό κελί προτιμά μία υπερχειλισμένη γραμμή από το αναδίπλωμα, και η τιμή έπεφτε πάνω στη διπλανή. Γι' αυτό
  *    `justify: false` μέσα σε πίνακες, και το `fitted` μικραίνει το μέγεθος όταν η φαρδύτερη άθραυστη λέξη δεν χωρά, ως το
  *    `PUBLICATION_MIN_TEXT_PT`. Από εκεί και κάτω αναδιπλώνει ανάμεσα σε χαρακτήρες.
+ * 🔴 **Μία τιμή, μία γραμμή, ένα μέγεθος ανά σειρά πίνακα**: το «1058x596x250» μετριέται ολόκληρο, γιατί σπασμένο στο «x» δεν
+ *    διαβάζεται ως μία διάσταση. Οι υποδείξεις σπασίματος μένουν έσχατη λύση, και όλα τα κελιά τιμών της σειράς παίρνουν το
+ *    ίδιο μέγεθος, αλλιώς το μάτι βλέπει δύο μεγέθη δίπλα δίπλα. Σειρά που περνά όλη το `surely-fits` δεν μετριέται.
  * 🔴 **Η ομάδα δεν χάνει την ετικέτα της σε αλλαγή σελίδας**: το `rail` είναι κελί `breakable: false`, το `band` υποκεφαλίδα
  *    `level: 2` που επαναλαμβάνεται. Χωρίς αυτά, οι γραμμές της επόμενης σελίδας έμεναν χωρίς ομάδα.
  * ⚠️ Ζει ως σταθερά TypeScript και όχι ως αρχείο `.typ`: το standalone του Next αντιγράφει μόνο ό,τι ανιχνεύει ως import.
@@ -96,15 +99,36 @@ export const PUBLICATION_TYPST_TEMPLATE = String.raw`
 // Άνω όριο πλάτους: 1em ανά byte. Ό,τι χωρά με αυτό δεν μετριέται καθόλου: μέτρηση σε κάθε κελί έκανε τις 660 σελίδες 83 s αντί 7 s.
 #let surely-fits(value, room) = value.len() * cell-size <= room
 
-#let fitted(value, weight, colour, room) = {
+// Το μέγεθος στο οποίο χωρά η φαρδύτερη από τις άθραυστες λέξεις. Μετρά μόνο μέσα σε context.
+#let fit-size(tokens, weight, room) = {
+  let sample(token) = if surely-fits(token, room) { 0pt } else { measure(text(size: cell-size, weight: weight, hyphenate: false, token)).width }
+  let widest = calc.max(0pt, ..tokens.map(sample))
+  if widest > room { cell-size * (room / widest) } else { cell-size }
+}
+
+#let without-hints(value) = value.replace("\u{200B}", "")
+#let whole-tokens(value) = without-hints(value).split(regex("\\s+"))
+#let hinted-tokens(value) = value.split(regex("[\\s\u{200B}]+"))
+
+// Το κοινό μέγεθος της σειράς. Εκτός μένουν τιμές που δεν χωρούν ολόκληρες ούτε στο κάτω όριο: αυτές αναδιπλώνονται, δεν μικραίνουν τη σειρά.
+#let row-size(peers) = {
+  let sizes = peers.map(peer => fit-size(whole-tokens(peer.text), peer.weight, peer.room)).filter(size => size >= min-text-size)
+  calc.min(cell-size, ..sizes)
+}
+
+#let fitted(value, weight, colour, room, peers) = {
   let render(body, size) = text(size: size, fill: colour, weight: weight, hyphenate: false)[#body]
-  if surely-fits(value, room) { return render(value, cell-size) }
+  if peers.all(peer => surely-fits(peer.text, peer.room)) { return render(value, cell-size) }
   context {
-    let sample(token) = if surely-fits(token, room) { 0pt } else { measure(text(size: cell-size, weight: weight, hyphenate: false, token)).width }
-    let widest = calc.max(0pt, ..value.split(regex("[\\s\u{200B}]+")).map(sample))
-    let size = if widest > room { cell-size * (room / widest) } else { cell-size }
-    // Στο κάτω όριο δεν μικραίνει άλλο: αναδιπλώνεται ανάμεσα σε χαρακτήρες, αλλιώς θα έμενε ή αδιάβαστο ή πάνω στο διπλανό κελί.
-    if size >= min-text-size { render(value, size) } else { render(value.clusters().join("\u{200B}"), min-text-size) }
+    let hinted = fit-size(hinted-tokens(value), weight, room)
+    if fit-size(whole-tokens(value), weight, room) >= min-text-size {
+      render(without-hints(value), row-size(peers))
+    } else if hinted >= min-text-size {
+      render(value, hinted)
+    } else {
+      // Στο κάτω όριο δεν μικραίνει άλλο: αναδιπλώνεται ανάμεσα σε χαρακτήρες, αλλιώς θα έμενε ή αδιάβαστο ή πάνω στο διπλανό κελί.
+      render(value.clusters().join("\u{200B}"), min-text-size)
+    }
   }
 }
 
@@ -128,16 +152,23 @@ export const PUBLICATION_TYPST_TEMPLATE = String.raw`
   (fill: none, colour: ink-text, weight: "regular", align: center + horizon)
 }
 
-#let cell-of(c, room) = {
+#let row-roles = ("columnHead", "value", "price")
+#let peer-of(c, room) = (text: c.text, weight: cell-style(c.role).weight, room: room(c))
+
+#let cell-of(c, room, row-peers) = {
   let style = cell-style(c.role)
   let rail = c.role == "groupRail"
-  let body = if rail { rail-label(c, style.colour) } else { fitted(c.text, style.weight, style.colour, room(c)) }
+  let peers = if c.role in row-roles { row-peers } else if rail { () } else { (peer-of(c, room),) }
+  let body = if rail { rail-label(c, style.colour) } else { fitted(c.text, style.weight, style.colour, room(c), peers) }
   table.cell(colspan: c.colSpan, rowspan: c.rowSpan, fill: style.fill, align: style.align, breakable: if rail { false } else { auto }, body)
 }
 
 #let table-rows(rows, room) = {
   let parts = ()
-  let cells-of(row) = row.cells.map(c => cell-of(c, room))
+  let cells-of(row) = {
+    let row-peers = row.cells.filter(c => c.role in row-roles).map(c => peer-of(c, room))
+    row.cells.map(c => cell-of(c, room, row-peers))
+  }
   let head = rows.filter(row => row.header).map(cells-of).flatten()
   if head.len() > 0 { parts.push(table.header(repeat: true, ..head)) }
   for row in rows.filter(row => not row.header) {

@@ -114,6 +114,22 @@ function sampler(groupStyle: 'band' | 'rail') {
   });
 }
 
+const SEVEN_DIMENSIONS = ['858x596x250', '908x596x250', '1058x596x250', '1208x596x250', '1258x596x250', '1608x596x250', '1758x596x250'];
+
+/** Ο πίνακας της πρώτης έκδοσης στην παραγωγή: στις 7 στήλες, οι φαρδιές διαστάσεις έσπαγαν στο «x». */
+function dimensionsDocument() {
+  const columns = SEVEN_DIMENSIONS.map(() => new Map<string, string>());
+  const rows: PreviewRow[] = [
+    { kind: 'axis', id: 'size', label: 'Μέγεθος', cells: SEVEN_DIMENSIONS.map((_, column) => `MFP-${column + 1}`) },
+    { kind: 'attribute', id: 'dim', label: 'Διαστάσεις', unit: 'mm', filter: null, merge: 'none', cells: SEVEN_DIMENSIONS },
+  ];
+  const table: VariantModelEntry = { ...entry(1), preview: { columns, hiddenColumns: 0, rows } };
+  return composePublication({
+    recipe, title: 'Διαστάσεις', footer: 'Υποσέλιδο', chapters: [{ id: 'a', title: 'Fan coil', entries: [table] }],
+    words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
+  });
+}
+
 /** Οι αποσυμπιεσμένες ροές του PDF· ό,τι δεν είναι Flate μένει έξω. */
 function inflatedStreams(bytes: Uint8Array): string[] {
   const buffer = Buffer.from(bytes);
@@ -185,6 +201,13 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
       expect(verdict).toMatchObject({ overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 });
     }
   }, 300_000);
+
+  it('🔴 διαστάσεις: κάθε τιμή τυπώνεται ολόκληρη, με ίδιο μέγεθος σε όλη τη σειρά', async () => {
+    const { bytes } = await renderPublicationPdf({ ...input, document: dimensionsDocument() }, 'screen');
+    const runs = readLayoutInChildProcess(bytes).flatMap((page) => page.runs).filter((run) => /x596x/.test(run.text));
+    expect(runs.map((run) => run.text).sort()).toEqual([...SEVEN_DIMENSIONS].sort());
+    expect(new Set(runs.map((run) => Math.hypot(run.transform[0], run.transform[1]).toFixed(2))).size).toBe(1);
+  }, 60_000);
 
   it('🔑 εκτύπωση: TrimBox = A4, μέσα σε σελίδα μεγαλωμένη κατά το bleed', async () => {
     const { bytes } = await renderPublicationPdf({ ...input, document: sampler('rail') }, 'print');
