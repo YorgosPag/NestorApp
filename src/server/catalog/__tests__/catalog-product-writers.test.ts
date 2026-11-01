@@ -315,4 +315,26 @@ describe('εργασία επανυπολογισμού (Δ7)', () => {
     } while (cursor !== null);
     expect(fake.writeLog()).toEqual([]);
   });
+
+  it('🔴 SKU από πριν το `searchPrefixes` (ADR-923 §5.12): η εργασία το γεμίζει χωρίς αναθεώρηση, και η δεύτερη δεν γράφει τίποτα', async () => {
+    const { variants } = await seedMfpWithVariants();
+    const id = variants[0].id;
+    const stored = fake.getData('catalog_products', id) as Product;
+    const { searchPrefixes: _absent, ...old } = stored.derived;
+    fake.seed('catalog_products', id, { ...stored, derived: old });
+    const runAll = async () => {
+      let cursor: string | null = null;
+      do {
+        cursor = (await recomputeCatalogDerived(ARIES, { familyId: null, cursor })).nextCursor;
+      } while (cursor !== null);
+    };
+    await runAll();
+    const after = fake.getData('catalog_products', id) as Product;
+    expect(after.derived.searchPrefixes).toEqual(stored.derived.searchPrefixes);
+    expect(after.derived.searchPrefixes.length).toBeGreaterThan(0);
+    expect(after.revision).toBe(stored.revision);
+    fake.clearWriteLog();
+    await runAll();
+    expect(fake.writeLog()).toEqual([]);
+  });
 });

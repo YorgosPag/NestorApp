@@ -26,7 +26,7 @@ import { optimisticWire } from '../shared/catalog-actions';
 import { IssueSummary } from '../shared/CatalogIssues';
 import { CatalogPageFrame } from '../shared/CatalogPageFrame';
 import { EditorFooter } from '../shared/EditorFooter';
-import { RecomputePanel } from '../shared/RecomputePanel';
+import { RecomputePanel, maintenanceRecomputeNeeded } from '../shared/RecomputePanel';
 import { useCatalogCanManage, useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
 import { useDefinitionDraft } from '../shared/use-definition-draft';
 import { useUnsavedGuard } from '../shared/use-unsaved-guard';
@@ -91,9 +91,8 @@ export function SettingsContent() {
         <SettingsMatrix settings={editor.draft} usage={usage} disabled={!canManage}
           onToggle={(channel, locale) => editor.update(toggleChannelLocale(editor.draft, channel, locale))} />
         <IssueSummary issues={[...issues, ...editor.serverIssues]} title={t('editor.issuesTitle')} />
-        {recompute.needed || recompute.state.kind !== 'idle' ? (
-          <RecomputePanel recompute={recompute} familyId={null} prompt={t('settings.recomputePrompt')} />
-        ) : null}
+        <RecomputePanel recompute={recompute} familyId={null} needed={maintenanceRecomputeNeeded(recompute)}
+          prompt={t(recompute.needed ? 'settings.recomputePrompt' : 'settings.recomputeMaintenance')} />
         <EditorFooter editor={editor} issues={issues} authority="schema" onSave={save} />
       </section>
       {unsaved.dialog}

@@ -50,7 +50,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "4d7074c59502022f9e080b6f29d323c38c9fa544ca9e79d20087f52ad50d1310",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "cf5229f1c596f1ac3050a2ce664e13ee39bcf731611cb84f10b4456bffbb29d7",
     "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "ab4e19ac392846cdf1486b6f9a7fe9bdd50968c0084d2fd678608d41de2a4f89",
-    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "6ebcdc0005631dd49bf9db0f261b93df27674f106b36fe4bb17de933b3ecd7c4",
+    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "e3e6d3cda901f05a6b1a8edba13d5812ef544ce55cee7b8b2bab98f47a9ecfd3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
@@ -181,7 +181,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "39b7751d9e38469fd2377e0d8afd96ed73da8c229b2cfac4d88a1244333b0c05",
+  "inputsSha256": "b7402df44a40b2515644f651eafb21d16c96a2d5c8bfeb110f8e154fd824a2bf",
   "languages": [
     "el"
   ],
@@ -14000,6 +14000,7 @@
             "settings.lock.inUse",
             "settings.lock.lastLocale",
             "settings.matrixCaption",
+            "settings.recomputeMaintenance",
             "settings.recomputePrompt",
             "settings.usageUnknown"
           ],
@@ -26332,7 +26333,7 @@
   ],
   "stats": {
     "matchedKeys": 272,
-    "sliceBytes": 1307110
+    "sliceBytes": 1307344
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

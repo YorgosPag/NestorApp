@@ -8,7 +8,7 @@ import { render, screen } from '@testing-library/react';
 
 import type { CapabilityGate } from '@/auth/hooks/useCapability';
 import type { CatalogRecompute } from '@/hooks/catalog/useCatalogRecompute';
-import { RecomputePanel } from '../RecomputePanel';
+import { RecomputePanel, maintenanceRecomputeNeeded } from '../RecomputePanel';
 
 let gate: Partial<CapabilityGate> = { pending: true, verdict: 'denied-unauthenticated' };
 const asked: string[] = [];
@@ -22,6 +22,18 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 
 const recompute = { state: { kind: 'idle' }, needed: true, run: jest.fn() } as unknown as CatalogRecompute;
 const panel = () => render(<RecomputePanel recompute={recompute} familyId={null} prompt="stale" needed />);
+
+describe('maintenanceRecomputeNeeded — η μόνιμη ενέργεια των ρυθμίσεων (ADR-923 §5.12)', () => {
+  it('🔴 διαθέσιμη χωρίς καμία αλλαγή: νέο παράγωγο δεν αλλάζει το αποτύπωμα πληρότητας', () => {
+    expect(maintenanceRecomputeNeeded({ state: { kind: 'idle' }, needed: false })).toBe(true);
+  });
+
+  it('μετά την ολοκλήρωση σβήνει, εκτός αν ήρθε νεότερη αλλαγή', () => {
+    const done = { kind: 'done', processed: 3, rejected: 0 } as const;
+    expect(maintenanceRecomputeNeeded({ state: done, needed: false })).toBe(false);
+    expect(maintenanceRecomputeNeeded({ state: done, needed: true })).toBe(true);
+  });
+});
 
 describe('RecomputePanel — δικαιοδοσία', () => {
   it('🔴 εκκρεμεί η ταυτότητα ⇒ η πρόταση ΧΩΡΙΣ «χρειάζεται δικαίωμα», χωρίς κουμπί', () => {

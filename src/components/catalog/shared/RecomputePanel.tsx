@@ -30,6 +30,13 @@ export interface RecomputePanelProps {
 type Access = ReturnType<typeof useCatalogAccess>;
 
 /**
+ * Η μόνιμη ενέργεια συντήρησης των ρυθμίσεων: το κουμπί μένει διαθέσιμο και χωρίς αλλαγή, γιατί ένα **νέο παράγωγο** (π.χ.
+ * `searchPrefixes`, ADR-923 §5.12) δεν αλλάζει το αποτύπωμα πληρότητας, άρα κανείς δεν θα το ζητούσε. Ιδεμπότητο: ό,τι ισχύει δεν ξαναγράφεται.
+ */
+export const maintenanceRecomputeNeeded = (recompute: Pick<CatalogRecompute, 'state' | 'needed'>): boolean =>
+  recompute.needed || recompute.state.kind === 'idle';
+
+/**
  * Τι λέει το πάνελ: πρώτα ό,τι **τρέχει**, μετά ό,τι **χρειάζεται** (νεότερη αλλαγή), τελευταίο το αποτέλεσμα. Το «ποιος
  * μπορεί» μόνο σε **κριμένη** άρνηση — ζωντανά (ADR-923 §5.10.5) εμφανιζόταν όσο εκκρεμούσε η ταυτότητα.
  */

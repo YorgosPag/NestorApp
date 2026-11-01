@@ -788,6 +788,7 @@
       "lastLocale": "Every channel needs at least one language.",
       "inUse": "There are values in “{locale}” — it can't be removed from the last channel that uses it."
     },
+    "recomputeMaintenance": "Maintenance: recalculate all derived catalog data. It is safe: anything already current is not rewritten.",
     "recomputePrompt": "The languages changed — product completeness needs to be recalculated."
   },
   "recompute": {
