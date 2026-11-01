@@ -4597,20 +4597,14 @@ service cloud.firestore {
     //
     // Architecture:
     //   - Documents indexed by Cloud Functions triggers
-    //   - Tenant-scoped reads via tenantId field
-    //   - Write-only for server (Admin SDK)
+    //   - Read and written only by the server (Admin SDK)
     // =========================================================================
     match /search_documents/{searchDocId} {
 
-      // 📖 READ: Tenant-scoped - only users from the same company
-      // 🔒 SECURITY: Search results filtered by tenantId
-      allow read: if isAuthenticated()
-                  && (
-                       // Super admin can search all
-                       isSuperAdminOnly()
-                       // OR user belongs to the document's tenant
-                       || belongsToCompany(resource.data.tenantId)
-                     );
+      // 🔒 ADR-829 §7: ο ΜΟΝΟΣ αναγνώστης είναι το `GET /api/search`, που κρίνει το δικαίωμα ανά
+      // τύπο. Ανάγνωση από τον πελάτη θα παρέκαμπτε αυτό το φίλτρο: ο κανόνας ξέρει τον χώρο, όχι
+      // τον ρόλο, άρα κάθε μέλος θα έβλεπε ολόκληρο το ευρετήριο (ακόμη και τον `external_user`).
+      allow read: if false;
 
       // 🚫 WRITE: Server-side only (Cloud Functions / Admin SDK)
       // Search index is maintained by triggers, not client writes

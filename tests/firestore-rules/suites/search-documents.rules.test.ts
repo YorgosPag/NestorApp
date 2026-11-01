@@ -1,19 +1,11 @@
 /**
  * Firestore Rules — `search_documents` collection
  *
- * Pattern: searchDocumentsMatrix — tenant-scoped read via `tenantId` field
- * (NOT `companyId`); write=server-only.
+ * Pattern: searchDocumentsMatrix — no client reads or writes, for any persona (ADR-829 §7).
  *
- * Seed doc: tenantId=SAME_TENANT_COMPANY_ID (important: field is `tenantId`).
- *   - super_admin × read/list    → allow (isSuperAdminOnly)
- *   - same-tenant × read/list    → allow (belongsToCompany(tenantId))
- *   - cross_tenant × read/list   → deny (tenantId mismatch)
- *   - all × write                → deny (if false — Cloud Functions / Admin SDK)
- *
- * List contract: filter `where('tenantId', '==', SAME_TENANT_COMPANY_ID)`.
- * The tenantId field (not companyId) is the tenant isolation key here.
- *
- * See ADR-298 §4 Phase C.7 (2026-04-14).
+ * The only reader is `GET /api/search` (Admin SDK), which judges each entity type. A client
+ * read would bypass that filter, because the rule knows the tenant and not the role.
+ * The seed stays same-tenant on purpose: the denial must hold for the owner of the data too.
  *
  * @since 2026-04-14 (ADR-298 Phase C.7)
  */
@@ -30,7 +22,7 @@ export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'search_documents',
 )!;
 
-describe('search-documents.rules — tenantId-scoped read, write=false', () => {
+describe('search-documents.rules — server only, read=false write=false', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => { env = await initEmulator(); });

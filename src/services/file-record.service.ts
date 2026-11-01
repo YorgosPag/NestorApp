@@ -51,8 +51,6 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { FILE_COLLECTION, requireFileCustody } from '@/lib/files/file-custody';
 import { custodyKindOfScope, type CustodyKind } from '@/lib/workspace/custody-scope';
 import { RealtimeService } from '@/services/realtime';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: SRP-compliant modules (ADR-065)
 import {
   moveToTrash,
@@ -234,11 +232,10 @@ export class FileRecordService {
     type FinalizedSnapshot = { ext?: string; category?: string; originalFilename?: string; contentType?: string; purpose?: string; displayName?: string };
     const finalizedRecord = docSnap.data() as FinalizedSnapshot | undefined;
 
-    // 🔒 ADR-866 §2.6.8 Β6 — η αναζήτηση γραφείου και ο εμπλουτισμός (DXF · ISO 19650) είναι
-    //    λειτουργίες ΓΡΑΦΕΙΟΥ πάνω στη συλλογή `files`· ένα προσωπικό αρχείο δεν ευρετηριάζεται εκεί.
+    // 🔒 ADR-866 §2.6.8 Β6 — ο εμπλουτισμός (DXF · ISO 19650) είναι λειτουργία ΓΡΑΦΕΙΟΥ πάνω στη
+    //    συλλογή `files`. Το ίδιο και η αναζήτηση, που την ευρετηριάζει ο trigger `onFileWrite`:
+    //    ένα προσωπικό αρχείο ζει στη `files_personal`, άρα δεν φτάνει ποτέ στο ευρετήριο.
     if (input.custody === 'company') {
-      // ADR-029: Index for global search after file is ready (fire-and-forget)
-      apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'file', entityId: input.fileId }).catch(() => {});
       FileRecordService.dispatchPostFinalizeHooks(input, finalizedRecord);
     }
 

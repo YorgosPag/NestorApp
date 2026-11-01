@@ -37,6 +37,9 @@ export {
   extractStatus,
   buildSearchResultHref,
   generateSearchDocId,
+  isSearchResultAdmissible,
+  searchIndexExclusion,
+  searchReadReachStamp,
 } from './search-index-core';
 
 // =============================================================================

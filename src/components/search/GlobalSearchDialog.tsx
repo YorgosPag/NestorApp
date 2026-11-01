@@ -336,7 +336,7 @@ export function GlobalSearchDialog({
         'mx-3 my-2'
       )}>
         <AlertCircle className={iconSizes.sm} />
-        <span>{error}</span>
+        <span>{t('search.searchFailed')}</span>
       </div>
     );
   };

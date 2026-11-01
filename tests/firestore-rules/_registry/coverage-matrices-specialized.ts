@@ -21,8 +21,8 @@
  *   - audit_log (Cloud Functions) → auditLogMatrix()
  *     (super_admin-only read; write=false)
  *   - search_documents            → searchDocumentsMatrix()
- *     (tenant read via tenantId field; write=server-only)
- *   - voice_commands              → voiceCommandsMatrix()
+ *     (no client access: read=false, write=false)
+ *   - voice_commands            → voiceCommandsMatrix()
  *     (userId-owned read-only; all writes server-only)
  *
  * @module tests/firestore-rules/_registry/coverage-matrices-specialized
@@ -431,39 +431,29 @@ export function auditLogMatrix(): CoverageDefinition {
 }
 
 // ---------------------------------------------------------------------------
-// ADR-298 Phase C.7 — search_documents
+// ADR-298 Phase C.7 · ADR-829 §7 — search_documents
 // ---------------------------------------------------------------------------
 
 /**
- * Matrix for `search_documents` — tenant-scoped read via `tenantId` field,
- * write=server-only (Cloud Functions / Admin SDK).
+ * Matrix for `search_documents` — no client access at all (`allow read: if false`, ADR-829 §7).
  *
- * Rule shape:
- *   - read:  `isSuperAdminOnly() || belongsToCompany(resource.data.tenantId)`
- *            Uses `tenantId` field (NOT `companyId`). Behavior identical to
- *            adminWriteOnlyMatrix() reads; differs only in field name.
- *   - write: `allow create, update, delete: if false` — universally denied.
- *
- * Test contract: seed doc carries `tenantId=SAME_TENANT_COMPANY_ID` (not
- * companyId). The listFilter targets `where('tenantId', '==', SAME_TENANT_COMPANY_ID)`.
+ * ⚠️ Not `denyAllMatrix()`: that one declares six fewer cells. These twenty ran while the rule
+ * was tenant-scoped, and the CHECK 3.16 ratchet refuses to turn them back into open questions.
  *
  * Collections: `search_documents`.
- * See ADR-298 §4 Phase C.7 (2026-04-14).
  */
 export function searchDocumentsMatrix(): CoverageDefinition {
   return defineMatrix('searchDocumentsMatrix', [
-    // Read: isSuperAdminOnly() || belongsToCompany(tenantId)
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
-    cell('anonymous', 'read', 'deny', 'missing_claim'),
-    cell('anonymous', 'list', 'deny', 'missing_claim'),
-    // Write: if false — universally server-only
+    cell('super_admin', 'read', 'deny', 'server_only'),
+    cell('super_admin', 'list', 'deny', 'server_only'),
+    cell('same_tenant_admin', 'read', 'deny', 'server_only'),
+    cell('same_tenant_admin', 'list', 'deny', 'server_only'),
+    cell('same_tenant_user', 'read', 'deny', 'server_only'),
+    cell('same_tenant_user', 'list', 'deny', 'server_only'),
+    cell('cross_tenant_admin', 'read', 'deny', 'server_only'),
+    cell('cross_tenant_admin', 'list', 'deny', 'server_only'),
+    cell('anonymous', 'read', 'deny', 'server_only'),
+    cell('anonymous', 'list', 'deny', 'server_only'),
     cell('super_admin', 'create', 'deny', 'server_only'),
     cell('super_admin', 'update', 'deny', 'server_only'),
     cell('super_admin', 'delete', 'deny', 'server_only'),
@@ -473,7 +463,7 @@ export function searchDocumentsMatrix(): CoverageDefinition {
     cell('cross_tenant_admin', 'create', 'deny', 'server_only'),
     cell('cross_tenant_admin', 'update', 'deny', 'server_only'),
     cell('cross_tenant_admin', 'delete', 'deny', 'server_only'),
-    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    cell('anonymous', 'create', 'deny', 'server_only'),
   ], [
     ...sameTenantUserPerCollection(['create', 'update', 'delete']),
     ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),

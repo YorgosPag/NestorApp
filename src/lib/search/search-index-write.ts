@@ -1,7 +1,11 @@
 /**
  * @module lib/search/search-index-write
- * @description **Ο γραφέας του `search_documents` από τη μεριά της εφαρμογής** — ο ίδιος
+ * @description **Η ταφόπλακα του `search_documents` από τη μεριά της εφαρμογής** — ο ίδιος
  * φράχτης έκδοσης με τους Cloud Functions triggers (ADR-873 Φάση 1 · Στάδιο 1).
+ *
+ * ⚠️ Ζωντανές εγγραφές δεν γράφονται από εδώ (ADR-829 §7): τις γράφουν οι triggers, και το
+ * backfill με BulkWriter. Ο χειρόγραφος δρόμος `/api/search/reindex` διαγράφηκε, γιατί
+ * παρέκαμπτε τον κανόνα του ποιος μπαίνει στο ευρετήριο.
  *
  * ## Γιατί υπάρχουν δύο γραφείς, και γιατί αυτό ΔΕΝ είναι διπλότυπο
  *
@@ -33,7 +37,6 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   buildSearchTombstone,
   shouldApplySearchIndexTombstone,
-  shouldApplySearchIndexWrite,
   toCommitVersion,
   type CommitVersion,
   type SearchTombstoneIdentity,
@@ -46,8 +49,8 @@ export type SearchIndexOutcome = 'applied' | 'stale';
 /**
  * Η έκδοση μιας οντότητας, από το στιγμιότυπο που τη διάβασε.
  *
- * Το ίδιο νούμερο που βλέπει ο trigger για το ίδιο commit — γι' αυτό μια επανευρετηρίαση από
- * εδώ και μια εγγραφή από trigger **συγκρίνονται σωστά** αντί να αλληλοσβήνονται.
+ * Το ίδιο νούμερο που βλέπει ο trigger για το ίδιο commit — γι' αυτό ένα πέρασμα backfill και
+ * μια εγγραφή από trigger **συγκρίνονται σωστά** αντί να αλληλοσβήνονται.
  */
 export function entityCommitVersion(snapshot: DocumentSnapshot): CommitVersion | null {
   return toCommitVersion(snapshot.updateTime) ?? toCommitVersion(snapshot.readTime);
@@ -63,26 +66,6 @@ const readStored = async (
   const snapshot = await transaction.get(ref);
   return snapshot.exists ? (snapshot.data() as StoredSearchIndexState) : null;
 };
-
-/**
- * Γράψε μια εγγραφή ευρετηρίου — εκτός αν κάθεται ήδη **νεότερη** έκδοση της ίδιας οντότητας.
- *
- * Πλήρης `set()`, ποτέ merge: ένα merge θα άφηνε πίσω τα πεδία μιας προηγούμενης ταφόπλακας
- * (`deleted`, `expiresAt`) και η ζωντανή εγγραφή θα **έληγε** μια βδομάδα αργότερα.
- */
-export async function writeSearchIndexEntry(
-  db: Firestore,
-  searchDocId: string,
-  payload: Record<string, unknown>,
-  version: CommitVersion | null,
-): Promise<SearchIndexOutcome> {
-  const ref = searchDocRef(db, searchDocId);
-  return db.runTransaction(async (transaction) => {
-    if (!shouldApplySearchIndexWrite(await readStored(ref, transaction), version)) return 'stale';
-    transaction.set(ref, { ...payload, sourceUpdateTime: version });
-    return 'applied';
-  });
-}
 
 /**
  * Βγάλε την οντότητα από την αναζήτηση — ως **ταφόπλακα**, ποτέ ως τρύπα.

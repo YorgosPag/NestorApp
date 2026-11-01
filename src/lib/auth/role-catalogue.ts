@@ -197,6 +197,13 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "crm:contacts:create",
       "crm:contacts:update",
       "crm:contacts:delete",
+      // ADR-829 §7 — ό,τι βρίσκει η καθολική αναζήτηση. Τα τρία `crm:*` τα ζητά σήμερα μόνο ο πίνακας του
+      // `search-index-core`: ως εδώ δεν τα είχε κανένας ρόλος, άρα οι τύποι τους δεν θα έβγαιναν ποτέ.
+      // ⛔ Ο `internal_user` παίρνει μόνο το `search:global:execute`: τα αποτελέσματα του χώρου, όχι τα CRM.
+      "search:global:execute",
+      "crm:tasks:view",
+      "crm:opportunities:view",
+      "crm:communications:view",
       // Communications
       "comm:conversations:list",
       "comm:conversations:view",
@@ -290,6 +297,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       // της συνεδρία (N.8) — δες ADR-823 §13.
       "units:units:view",
       "notifications:notifications:view",
+      // ADR-829 §7 — ψάχνει όσα ήδη διαβάζει: έργα, κτίρια, ορόφους, ακίνητα, θέσεις, αποθήκες. Οι υπόλοιποι τύποι
+      // κόβονται ανά τύπο στο `search-access.ts`. Ο `external_user` μένει έξω: κρίνεται ανά πόρο, όχι ανά χώρο.
+      "search:global:execute",
       "asset_packs:packs:use", // ADR-655
       // ADR-923 §5.1 — ο υπάλληλος ΔΙΑΒΑΖΕΙ το σχήμα του καταλόγου· την αλλαγή του κρατά ο διαχειριστής.
       "catalog:schema:view",

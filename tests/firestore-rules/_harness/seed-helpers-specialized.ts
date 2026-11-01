@@ -339,10 +339,8 @@ export async function seedAuditLogEntry(
 /**
  * Seed a `search_documents` document.
  *
- * searchDocumentsMatrix contract:
- *   - Uses `tenantId` field (NOT `companyId`) — the read gate is
- *     `belongsToCompany(resource.data.tenantId)`.
- *   - Write: `if false` — Admin SDK only.
+ * searchDocumentsMatrix contract (ADR-829 §7): `read` and `write` are `if false`, Admin SDK only.
+ * The doc uses `tenantId` (NOT `companyId`), the field of the index.
  */
 export async function seedSearchDocument(
   env: RulesTestEnvironment,

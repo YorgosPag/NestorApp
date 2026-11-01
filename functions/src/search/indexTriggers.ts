@@ -23,6 +23,8 @@ import {
   buildSearchDocument,
   createSearchDocument,
   generateSearchDocId,
+  searchIndexExclusion,
+  SEARCH_INDEX_CONFIG,
   type SearchEntityType,
 } from './indexBuilder';
 import { REACTIVE_TRIGGER_RUNTIME } from '../config/runtime';
@@ -31,7 +33,6 @@ import {
   toCommitVersion,
   type CommitVersion,
 } from '../generated/lib/search/search-index-version';
-import { isRetired } from '../generated/lib/firestore/trashed-status';
 import { applySearchIndexTombstone, applySearchIndexWrite } from './search-index-writer';
 
 // =============================================================================
@@ -73,20 +74,21 @@ function tenantOf(change: functions.Change<functions.firestore.DocumentSnapshot>
   return typeof tenant === 'string' ? tenant : null;
 }
 
-/** `gone` — the entity was deleted · `soft-deleted` — it exists but is marked removed (ADR-281). */
-type Removal = 'gone' | 'soft-deleted';
+/**
+ * `gone` — the entity was deleted · otherwise it exists but must stay out of the index: trash,
+ * archive (ADR-281) or a reach narrower than the office (ADR-829 §7). The rule is THE portable
+ * one the backfill also runs. A file leaving WIP is an ordinary newer write: it passes the
+ * version fence over its own tombstone and re-enters the index with no special path.
+ */
+type Removal = 'gone' | NonNullable<ReturnType<typeof searchIndexExclusion>>;
 
 function removalReason(
+  entityType: SearchEntityType,
   change: functions.Change<functions.firestore.DocumentSnapshot>,
 ): Removal | null {
   if (!change.after.exists) return 'gone';
   const data = change.after.data();
-  // `isRetired` = κάδος **ή αρχείο** (ADR-281 · ADR-329 §3.9): ό,τι αποσύρθηκε από την
-  // καθημερινή δουλειά δεν βγαίνει στην αναζήτηση. Η τιμή έρχεται από την προβολή του SSoT.
-  if (data && (data.isDeleted === true || data.deletedAt || isRetired(data))) {
-    return 'soft-deleted';
-  }
-  return null;
+  return data ? searchIndexExclusion(data, SEARCH_INDEX_CONFIG[entityType]) : null;
 }
 
 // =============================================================================
@@ -97,8 +99,8 @@ function removalReason(
  * Take the entity out of the index — as a tombstone, never as a hole.
  *
  * The version comes from the snapshot that **carries** it: for a hard delete that is `before`
- * (the `after` snapshot does not exist and has no commit time), for a soft delete it is
- * `after` (the entity is still there, marked). Getting this backwards would compare a live
+ * (the `after` snapshot does not exist and has no commit time), for every exclusion it is
+ * `after` (the entity is still there). Getting this backwards would compare a live
  * version against a deleted one and refuse every deletion.
  */
 async function removeFromIndex(
@@ -136,7 +138,7 @@ async function handleEntityWrite(
     .collection(COLLECTIONS.SEARCH_DOCUMENTS)
     .doc(generateSearchDocId(entityType, entityId));
 
-  const removal = removalReason(change);
+  const removal = removalReason(entityType, change);
   if (removal) {
     await removeFromIndex(searchDocRef, entityType, entityId, change, context, removal);
     return;

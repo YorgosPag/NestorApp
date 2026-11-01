@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/config/search-index-core.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:bcd021d0cd4d5e9d95eb8ee4976344febc424b913cd960b59dbe869b59b2112d
+// sha256:3fd9002901ee5159d13979a78f2328e49a6f7cf7ef27f6d788aeb925eafcda4b
 
 /**
  * =============================================================================
@@ -9,8 +9,8 @@
  *
  * THE indexing rules: which fields of which collection become a
  * `search_documents` entry, plus the pure functions that apply them. This is
- * the single source for BOTH writers — the Next.js server (backfill, reindex)
- * and the Cloud Functions triggers, which are the production writer.
+ * the single source for BOTH writers — the Next.js backfill and the Cloud
+ * Functions triggers, which are the production writer.
  *
  * ⚠️ PORTABLE MODULE — projected verbatim into `functions/src/generated/` by
  * `npm run generate:functions-projection` (CHECK 3.93). Before ADR-874 the
@@ -26,6 +26,7 @@
  */
 
 import { COLLECTIONS } from './firestore-collections';
+import { isRetired, type MaybeTrashed } from '../lib/firestore/trashed-status';
 import {
   SEARCH_ENTITY_TYPES,
   SEARCH_AUDIENCE,
@@ -42,22 +43,39 @@ import {
  * Permission a viewer needs to see each entity type in results. Literal types
  * are kept (`as const`) so the app can prove every value is a real
  * `PermissionId` without this module importing the app's RBAC types.
+ *
+ * ⚠️ Each value is the permission of the entity's OWN list route (ADR-829 §7): a result a
+ * person can find but not open is a door into a wall. `/api/search` reads this table, never
+ * the `requiredPermission` stored on the document, so an old entry cannot grant anything.
  */
 export const SEARCH_REQUIRED_PERMISSIONS = {
   [SEARCH_ENTITY_TYPES.PROJECT]: 'projects:projects:view',
   [SEARCH_ENTITY_TYPES.BUILDING]: 'buildings:buildings:view',
-  [SEARCH_ENTITY_TYPES.FLOOR]: 'buildings:buildings:view',
+  [SEARCH_ENTITY_TYPES.FLOOR]: 'projects:floors:view',
   [SEARCH_ENTITY_TYPES.PROPERTY]: 'properties:properties:view',
   [SEARCH_ENTITY_TYPES.CONTACT]: 'crm:contacts:view',
   [SEARCH_ENTITY_TYPES.FILE]: 'dxf:files:view',
-  [SEARCH_ENTITY_TYPES.PARKING]: 'buildings:buildings:view',
-  [SEARCH_ENTITY_TYPES.STORAGE]: 'buildings:buildings:view',
+  [SEARCH_ENTITY_TYPES.PARKING]: 'units:units:view',
+  [SEARCH_ENTITY_TYPES.STORAGE]: 'units:units:view',
   [SEARCH_ENTITY_TYPES.OPPORTUNITY]: 'crm:opportunities:view',
   [SEARCH_ENTITY_TYPES.COMMUNICATION]: 'crm:communications:view',
   [SEARCH_ENTITY_TYPES.TASK]: 'crm:tasks:view',
 } as const;
 
 const P = SEARCH_REQUIRED_PERMISSIONS;
+
+/**
+ * The only reach that may enter the index: what the whole office can already read.
+ *
+ * A literal because this module is portable and `container-read-reach` is not. An anchor
+ * (`search-index-exclusion.test.ts`) proves it equals `readReachForState('SHARED')`.
+ */
+export const SEARCH_READABLE_REACH = 'tenant' as const;
+
+/** The fence the ONE CDE writer stores on every company file (ADR-862 Φ0 Β11). */
+function fileReadReach(doc: Record<string, unknown>): unknown {
+  return doc.cdeReadReach;
+}
 
 /** Published entities are visible to the public inventory; everything else is internal. */
 function publishedAudience(doc: Record<string, unknown>): SearchAudience {
@@ -161,6 +179,7 @@ export const SEARCH_INDEX_CORE: Record<SearchEntityType, SearchIndexCoreConfig> 
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: P[SEARCH_ENTITY_TYPES.FILE],
     routeTemplate: '/files/{id}',
+    readReach: fileReadReach,
   },
 
   [SEARCH_ENTITY_TYPES.PARKING]: {
@@ -224,6 +243,53 @@ export const SEARCH_INDEX_CORE: Record<SearchEntityType, SearchIndexCoreConfig> 
 // =============================================================================
 // PURE RULE APPLICATION — the same answer in every writer
 // =============================================================================
+
+/** `soft-deleted` — trash or archive (ADR-281) · `outside-reach` — not readable by the whole office. */
+export type SearchIndexExclusion = 'soft-deleted' | 'outside-reach';
+
+/**
+ * Must this entity stay out of the index? THE one answer, for the trigger and the backfill.
+ *
+ * 🔴 ADR-829 §7: `decideContainerAccess` shows a WIP file to its task team only, with no role
+ * exception, and the index has no notion of teams. Admission is therefore closed: a missing or
+ * unknown reach stays out, because a name in the results is itself the leak.
+ */
+export function searchIndexExclusion(
+  doc: Record<string, unknown>,
+  config: SearchIndexCoreConfig,
+): SearchIndexExclusion | null {
+  if (doc.isDeleted === true || doc.deletedAt || isRetired(doc as MaybeTrashed)) {
+    return 'soft-deleted';
+  }
+  if (config.readReach && config.readReach(doc) !== SEARCH_READABLE_REACH) {
+    return 'outside-reach';
+  }
+  return null;
+}
+
+/**
+ * The reach stamp of an admitted entry — a spread, because Firestore rejects `undefined`.
+ *
+ * Named `readReach`, never `cdeReadReach`: that field has one writer (CHECK 3.87 Κ1), and this
+ * is a statement about the index entry, not the file.
+ */
+export function searchReadReachStamp(
+  config: SearchIndexCoreConfig,
+): { readReach: typeof SEARCH_READABLE_REACH } | Record<string, never> {
+  return config.readReach ? { readReach: SEARCH_READABLE_REACH } : {};
+}
+
+/**
+ * May this stored entry reach a result list? Requires the stamp {@link searchReadReachStamp}
+ * writes, so entries indexed before ADR-829 §7 stay hidden until the backfill rewrites them:
+ * closing this never depends on the order of the deploys.
+ */
+export function isSearchResultAdmissible(
+  stored: { readonly readReach?: unknown },
+  config: SearchIndexCoreConfig,
+): boolean {
+  return !config.readReach || stored.readReach === SEARCH_READABLE_REACH;
+}
 
 /** Extract title from document using config. */
 export function extractTitle(doc: Record<string, unknown>, config: SearchIndexCoreConfig): string {

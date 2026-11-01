@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/types/search-core.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:00184be597c73f1e35301b19d970f8e51b1385c62f92dff95236a7fc0c017ae0
+// sha256:f0610db564055c2d9d80e26339b6d7845034f7a37009a686b7841053e2d757e8
 
 /**
  * =============================================================================
@@ -113,4 +113,10 @@ export interface SearchIndexCoreConfig {
 
   /** Route template with {id} placeholder (other {field} placeholders read the source doc) */
   routeTemplate: string;
+
+  /**
+   * Who may read the source entity, for entity types with per-document reach (ADR-829 §7).
+   * Absent = the entity type has no such fence. Read through `searchIndexExclusion`.
+   */
+  readReach?: (doc: Record<string, unknown>) => unknown;
 }

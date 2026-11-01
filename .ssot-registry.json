@@ -1588,7 +1588,7 @@
     },
     "search-index-writer": {
       "ssotFile": "src/lib/search/search-index-write.ts",
-      "description": "ΕΝΑΣ γραφέας ανά πακέτο για το `search_documents`, με φράχτη έκδοσης (ADR-873 Φ1 §9.1.2). Ωμό set()/delete() στη συλλογή σβήνει το `sourceUpdateTime` και ξανακάνει το ευρετήριο τυφλό σε καθυστερημένα γεγονότα — και σκληρή διαγραφή αφήνει ΜΟΝΙΜΟ φάντασμα. Γράψε μέσω `writeSearchIndexEntry` / `writeSearchIndexTombstone` (app) ή `applySearchIndexWrite` / `applySearchIndexTombstone` (functions).",
+      "description": "ΕΝΑΣ γραφέας ανά πακέτο για το `search_documents`, με φράχτη έκδοσης (ADR-873 Φ1 §9.1.2). Ωμό set()/delete() στη συλλογή σβήνει το `sourceUpdateTime` και ξανακάνει το ευρετήριο τυφλό σε καθυστερημένα γεγονότα — και σκληρή διαγραφή αφήνει ΜΟΝΙΜΟ φάντασμα. Ζωντανές εγγραφές γράφουν ΜΟΝΟ οι triggers (`applySearchIndexWrite` / `applySearchIndexTombstone`, functions) και το backfill. Από την εφαρμογή: `writeSearchIndexTombstone` (ADR-829 §7: το `/api/search/reindex` διαγράφηκε).",
       "forbiddenPatterns": [
         "SEARCH_DOCUMENTS"
       ],
@@ -1598,7 +1598,6 @@
         "src/config/deletion-registry.ts",
         "src/config/__tests__/deletion-registry-storage.test.ts",
         "src/app/api/search/route.ts",
-        "src/app/api/search/reindex/route.ts",
         "src/app/api/admin/search-backfill/backfill-engine.ts",
         "src/app/api/admin/search-backfill/search-backfill.handlers.ts",
         "functions/src/search/indexTriggers.ts",

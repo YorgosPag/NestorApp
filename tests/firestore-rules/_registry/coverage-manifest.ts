@@ -1816,10 +1816,9 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
   },
   {
     collection: 'search_documents',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/search-documents.rules.test.ts',
-    // Read: isSuperAdminOnly() || belongsToCompany(tenantId) — uses tenantId field.
-    // Write: if false — Cloud Functions / Admin SDK. Seed uses tenantId (not companyId).
+    // ADR-829 §7: read and write if false — the only reader is `GET /api/search` (Admin SDK).
     ...searchDocumentsMatrix(),
   },
   {

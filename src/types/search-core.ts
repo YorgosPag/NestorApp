@@ -109,4 +109,10 @@ export interface SearchIndexCoreConfig {
 
   /** Route template with {id} placeholder (other {field} placeholders read the source doc) */
   routeTemplate: string;
+
+  /**
+   * Who may read the source entity, for entity types with per-document reach (ADR-829 §7).
+   * Absent = the entity type has no such fence. Read through `searchIndexExclusion`.
+   */
+  readReach?: (doc: Record<string, unknown>) => unknown;
 }

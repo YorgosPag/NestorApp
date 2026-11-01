@@ -17,9 +17,11 @@
 
 Global Search is a tenant-isolated, Greek-normalized search over a unified
 `search_documents` Firestore collection. Documents are keyed by
-`{entityType}_{entityId}` and indexed across 10 entity types: project,
-building, property, contact, file, parking, storage, opportunity,
-communication, task.
+`{entityType}_{entityId}` and indexed across 11 entity types: project,
+building, floor, property, contact, file, parking, storage, opportunity,
+communication, task. Only files carry a per-document fence: a file enters the
+index only with `cdeReadReach: 'tenant'`, so WIP names never reach it
+(ADR-829 §7).
 
 The indexing pipeline is **reactive** — Firestore write triggers own the
 index. Main-app API surfaces are search-read-only.
@@ -59,7 +61,10 @@ index. Main-app API surfaces are search-read-only.
 Reads: `GET /api/search?q=…` queries `search_documents` using prefix
 array-contains on Greek-normalized text (Greek accent folding in
 `normalizeSearchText`). Tenant isolation via `tenantId == companyId`
-claim; audience gate via `requiredPermission` claim.
+claim. Authorization (ADR-829 §7): `search:global:execute` opens the route, and
+`SEARCH_REQUIRED_PERMISSIONS` is judged per entity type **before** the query, so a
+type the caller may not read is never asked. The `requiredPermission` stored on
+a document grants nothing. Clients cannot read the collection (`allow read: if false`).
 
 ---
 
@@ -84,12 +89,17 @@ were latent:
 ### Fix
 
 - Cloud Function triggers become the **single writer** of `search_documents`
-  per entity type (10 triggers, one per indexed collection).
+  per entity type (11 triggers, one per indexed collection; `onFloorWrite`
+  was added after this text was written).
 - Search config is a hand-maintained **mirror pair**:
   - `src/config/search-index-config.ts` — canonical SSoT
   - `functions/src/search/search-config.mirror.ts` — Cloud Function copy
 - A pre-merge sync check (`scripts/check-search-config-sync.js`) guards
   against drift.
+
+> ✅ **2026-11-01 (ADR-829 §7):** the last client reindex calls and
+> `POST|DELETE /api/search/reindex` itself are gone. Triggers are the writers
+> of live entries; the backfill is the only other one.
 
 Client-side fire-and-forget reindex calls are kept as redundant
 belt-and-suspenders until triggers are verified live; scheduled for
@@ -120,6 +130,9 @@ routeTemplate — must match byte-for-byte after normalization.
 
 ## 5. Entity Coverage (as of 2026-04-22)
 
+> ⚠️ Historical table. Since 2026-11-01 the `Client Reindex` column is empty for
+> every type (ADR-829 §7), and `floor` (`onFloorWrite`) is the eleventh type.
+
 | Entity | Main App Config | Mirror Config | Firestore Trigger | Client Reindex |
 |---|---|---|---|---|
 | project | ✅ | ✅ | `onProjectWrite` | ⚠️ legacy (to remove) |
@@ -137,9 +150,10 @@ routeTemplate — must match byte-for-byte after normalization.
 
 ## 6. Soft-Delete Handling (ADR-281 cross-cut)
 
-Triggers treat `isDeleted === true`, presence of `deletedAt`, or
-`status === 'deleted'` as a tombstone signal and delete the
-corresponding `search_documents` row. Restore flows through the normal
+Trigger and backfill run the same rule, `searchIndexExclusion`: `isDeleted === true`,
+presence of `deletedAt`, a retired `status` (trash or archive), or a reach narrower
+than the office (`outside-reach`, ADR-829 §7). The entity leaves the index as a
+tombstone (ADR-873 §9.1.2). Restore flows through the normal
 update path — the trigger re-indexes the document when the status
 transitions back to a non-deleted value.
 
@@ -207,3 +221,4 @@ enabled can be back-filled via `POST /api/admin/search-backfill`.
 | 2026-06-07 | Claude (Opus 4.8) | BUGFIX (BUG #5 follow-up — invisible floor results): `GlobalSearchDialog` showed the footer "N αποτελέσματα" but rendered **zero result rows** for floor searches. Root cause: `global-search-config.ts` `ENTITY_DISPLAY_ORDER` (which `renderResults()` iterates) was missing `SEARCH_ENTITY_TYPES.FLOOR` — floor hits were counted in `totalResults` but never rendered. Added `FLOOR` after `BUILDING` (IFC hierarchy Building→Floor→Unit). `SearchResultItem` mapping/label/`NAVIGATION_ENTITIES.floor` + `search.entityTypes.floor` i18n already existed — single-line fix. Discovered via Giorgio screenshot during BUG #5 verification. |
 | 2026-06-07 | Claude (Opus 4.8) | I18N (BUG #5 follow-up — floor group label): the search-result group header rendered the raw key `SEARCH.ENTITYTYPES.FLOOR`. `search.entityTypes` lives in `common-shared.json` (NOT `common.json`, whose same-named block sits under `audit`) and lacked a `floor` entry. Added `floor` → "Όροφος" (el) / "Floor" (en). Existing entries (project/building/property/contact/file/parking/storage) were unaffected. |
 | 2026-09-22 | Claude (Opus 5) | STRUCTURAL (ADR-874): the hand mirror is gone. Indexing rules + pure helpers split into the PORTABLE `src/config/search-index-core.ts` (+ `src/types/search-core.ts`); the Cloud Functions build receives them — and `src/lib/search/search.ts` — as a GENERATED verbatim projection, verified by CHECK 3.93 (ZERO-TOL). Finding Ε-874.1: the functions builder normalized the INDEX with its own accent map (no final-sigma fold, no NFD, no `-._/` split) while `/api/search` normalized the QUERY with the app's — «001» could not find `PRJ-001`. Now one algorithm. Existing `search_documents` keep old prefixes until rewritten → backfill = Giorgio's decision. Remaining: three document builders (functions / `search-indexer.ts` / backfill-engine) still compose the document separately (Ε-874.4, pending). |
+| 2026-11-01 | Claude (Opus 5.5) | AUTHORIZATION (ADR-829 §7.2): `/api/search` judges each entity type before the query; `search:global:execute` granted to `company_admin` + `internal_user`. Permission table aligned with the list routes (`FLOOR`, `PARKING`, `STORAGE`). Portable `searchIndexExclusion` shared by trigger and backfill: WIP files stay out and leave as tombstones; `readReach` stamp required for file results. `/api/search/reindex`, `search-indexer.ts`, `writeSearchIndexEntry` deleted. Rules: `allow read: if false`. Backfill now applies `isRetired` and resolves the floor href. Coverage corrected to 11 types. Not deployed. |

@@ -12,12 +12,12 @@
  * @enterprise ADR-029 - Global Search v1
  */
 
-import { FieldValue, type Firestore as FirebaseFirestoreType, type Query, type DocumentData, type BulkWriter } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore as FirebaseFirestoreType, type Query, type DocumentData, type BulkWriter, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
-import { entityCommitVersion } from '@/lib/search/search-index-write';
+import { entityCommitVersion, writeSearchIndexTombstone } from '@/lib/search/search-index-write';
 import type { SearchEntityType, SearchDocumentInput } from '@/types/search';
 import {
   SEARCH_INDEX_CONFIG,
@@ -26,6 +26,10 @@ import {
   determineAudience,
   extractSearchableText,
   extractStatus,
+  buildSearchResultHref,
+  generateSearchDocId,
+  searchIndexExclusion,
+  searchReadReachStamp,
   normalizeSearchText,
   generateSearchPrefixes,
   stripUndefinedDeepAnyObject,
@@ -50,6 +54,8 @@ export interface BackfillStats {
   processed: number;
   indexed: number;
   skipped: number;
+  /** Οντότητες που βγήκαν από το ευρετήριο με ταφόπλακα (ADR-829 §7): κάδος, αρχείο, WIP. */
+  withdrawn: number;
   errors: number;
   skippedDetails?: Array<{
     id: string;
@@ -121,14 +127,53 @@ export async function buildSearchDocument(
     links: {
       // ΔΡΟΜΟΣ #3: `routeTemplate` είναι ΓΛΩΣΣΑ DSL ({id} placeholder) του search
       // index builder (ο report builder ΔΕΝ έχει πια δικό του πρότυπο: δηλώνει τύπο, ADR-242 Βήμα 5).
+      // Ο ίδιος επιλύτης με τον trigger: χωρίς αυτόν ο όροφος έμενε με ωμό `{buildingId}` στο href.
       href: declaredHref(
         'search-backfill routeTemplate DSL — {id} placeholder, όχι Next [id].',
-        config.routeTemplate.replace('{id}', entityId),
+        buildSearchResultHref(config, entityId, data),
       ),
       routeParams: { id: entityId },
     },
     metadata,
+    ...searchReadReachStamp(config),
   };
+}
+
+// =============================================================================
+// ΕΞΟΔΟΣ ΑΠΟ ΤΟ ΕΥΡΕΤΗΡΙΟ
+// =============================================================================
+
+/**
+ * Βγάλε από το ευρετήριο ό,τι δεν δικαιούται να μείνει — ο ίδιος κανόνας με τον trigger.
+ *
+ * Μια απλή παράλειψη δεν φτάνει: η εγγραφή που γράφτηκε πριν ισχύσει ο κανόνας θα έμενε στη
+ * θέση της για πάντα (ADR-829 §7, τα ονόματα των WIP). Η έκδοση είναι της οντότητας, ώστε ο
+ * φράχτης να μην πατήσει πάνω σε νεότερη εγγραφή.
+ */
+async function withdrawFromIndex(
+  entityType: SearchEntityType,
+  doc: QueryDocumentSnapshot,
+  stats: BackfillStats,
+  options: BackfillRequest,
+  adminDb: FirebaseFirestoreType,
+): Promise<void> {
+  stats.withdrawn++;
+  if (options.dryRun) return;
+
+  try {
+    const tenantId = await resolveTenantId(entityType, doc.data(), adminDb);
+    await writeSearchIndexTombstone(
+      adminDb,
+      generateSearchDocId(entityType, doc.id),
+      { tenantId, entityType, entityId: doc.id },
+      entityCommitVersion(doc),
+      Date.now(),
+    );
+  } catch (error) {
+    logger.error('Withdraw failed', { entityType, entityId: doc.id, error });
+    stats.withdrawn--;
+    stats.errors++;
+  }
 }
 
 // =============================================================================
@@ -146,7 +191,7 @@ export async function backfillEntityType(
   }
 
   const config = SEARCH_INDEX_CONFIG[entityType];
-  const stats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0, skippedDetails: [] };
+  const stats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, withdrawn: 0, errors: 0, skippedDetails: [] };
 
   logger.info('Processing entity type', { entityType });
 
@@ -177,9 +222,8 @@ export async function backfillEntityType(
     stats.processed++;
     const data = doc.data() as Record<string, unknown>;
 
-    // Skip soft-deleted
-    if (data.isDeleted === true || data.deletedAt) {
-      stats.skipped++;
+    if (searchIndexExclusion(data, config)) {
+      await withdrawFromIndex(entityType, doc, stats, options, adminDb);
       continue;
     }
 
@@ -203,7 +247,7 @@ export async function backfillEntityType(
       continue;
     }
 
-    const searchDocId = `${entityType}_${doc.id}`;
+    const searchDocId = generateSearchDocId(entityType, doc.id);
     const searchDocRef = adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(searchDocId);
 
     if (options.dryRun) {
@@ -254,6 +298,7 @@ export async function backfillEntityType(
     processed: stats.processed,
     indexed: stats.indexed,
     skipped: stats.skipped,
+    withdrawn: stats.withdrawn,
     errors: stats.errors,
   });
 
@@ -295,7 +340,7 @@ export async function backfillAllTypesParallel(
 
   // Aggregate results
   const statsByType: Record<string, BackfillStats> = {};
-  const totalStats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0 };
+  const totalStats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, withdrawn: 0, errors: 0 };
 
   types.forEach((entityType, index) => {
     const stats = resultsArray[index];
@@ -303,6 +348,7 @@ export async function backfillAllTypesParallel(
     totalStats.processed += stats.processed;
     totalStats.indexed += stats.indexed;
     totalStats.skipped += stats.skipped;
+    totalStats.withdrawn += stats.withdrawn;
     totalStats.errors += stats.errors;
   });
 

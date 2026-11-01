@@ -14,6 +14,8 @@ import { JobSwitch } from "@/components/header/JobSwitch"
 import { SaveStatusIndicator } from "@/components/header/SaveStatusIndicator"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 import { useTranslation } from "@/i18n/hooks/useTranslation"
+import { useCapability } from "@/auth/hooks/useCapability"
+import { isGranted } from "@/types/capability-authority"
 import { cn } from "@/lib/utils"
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from "@/components/ui/effects"
 import '@/lib/design-system';
@@ -34,6 +36,9 @@ export function AppHeader() {
   // 🔍 Global Search Dialog state
   const [searchOpen, setSearchOpen] = React.useState(false);
 
+  // ADR-829 §7 — όσο φορτώνει η ταυτότητα το `verdict` είναι άρνηση, άρα η μπάρα εμφανίζεται μετά.
+  // Το `justify-between` κρατά τα υπόλοιπα στη θέση τους, οπότε δεν μετακινείται τίποτα.
+  const canSearch = isGranted(useCapability('search:global:execute').verdict);
 
   // 🌉 BRIDGE: Semantic colors
   const colors = useSemanticColors();
@@ -43,46 +48,50 @@ export function AppHeader() {
       <div className="flex items-center justify-between px-1 sm:px-4 py-1 w-full max-w-full overflow-hidden">
         <SidebarTrigger />
 
-        {/* 🔍 Global Search Button */}
-        <button
-          type="button"
-          onClick={() => setSearchOpen(true)}
-          className={cn(
-            "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md",
-            "text-sm", colors.text.muted,
-            "bg-muted/50 border border-border/50",
-            TRANSITION_PRESETS.SMOOTH_ALL,
-            HOVER_BACKGROUND_EFFECTS.MUTED,
-            "hover:text-foreground hover:border-border"
-          )}
-        >
-          <Search className="h-4 w-4" />
-          {/* 🏢 ENTERPRISE (2026-01-27): suppressHydrationWarning for i18n content
-              Server renders with default locale (en), client renders with user locale (el)
-              This is expected behavior for i18n - suppress the hydration warning */}
-          <span className="hidden md:inline" suppressHydrationWarning>
-            {t('search.placeholder', 'Search...')}
-          </span>
-          <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-background rounded border">
-            ⌘K
-          </kbd>
-        </button>
+        {canSearch && (
+          <>
+            {/* 🔍 Global Search Button */}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className={cn(
+                "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md",
+                "text-sm", colors.text.muted,
+                "bg-muted/50 border border-border/50",
+                TRANSITION_PRESETS.SMOOTH_ALL,
+                HOVER_BACKGROUND_EFFECTS.MUTED,
+                "hover:text-foreground hover:border-border"
+              )}
+            >
+              <Search className="h-4 w-4" />
+              {/* 🏢 ENTERPRISE (2026-01-27): suppressHydrationWarning for i18n content
+                  Server renders with default locale (en), client renders with user locale (el)
+                  This is expected behavior for i18n - suppress the hydration warning */}
+              <span className="hidden md:inline" suppressHydrationWarning>
+                {t('search.placeholder')}
+              </span>
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-background rounded border">
+                ⌘K
+              </kbd>
+            </button>
 
-        {/* 🔍 Mobile Search Icon */}
-        {/* 🏢 ENTERPRISE (2026-01-27): suppressHydrationWarning for i18n aria-label */}
-        <button
-          type="button"
-          onClick={() => setSearchOpen(true)}
-          className={cn(
-            "sm:hidden p-2 rounded-md", colors.text.muted,
-            TRANSITION_PRESETS.STANDARD_COLORS,
-            "hover:text-foreground hover:bg-muted"
-          )}
-          aria-label={t('search.globalSearch', 'Global Search')}
-          suppressHydrationWarning
-        >
-          <Search className="h-5 w-5" />
-        </button>
+            {/* 🔍 Mobile Search Icon */}
+            {/* 🏢 ENTERPRISE (2026-01-27): suppressHydrationWarning for i18n aria-label */}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className={cn(
+                "sm:hidden p-2 rounded-md", colors.text.muted,
+                TRANSITION_PRESETS.STANDARD_COLORS,
+                "hover:text-foreground hover:bg-muted"
+              )}
+              aria-label={t('search.globalSearch')}
+              suppressHydrationWarning
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </>
+        )}
 
         {/* ADR-809 §9.6 — `min-w-0`, όχι `flex-shrink-0`: ομάδα που αρνείται να στενέψει
             μέσα σε `overflow-hidden` ΚΟΒΕΤΑΙ ΑΘΟΡΥΒΑ (μετρημένο στα 390px: χειριστήρια ως
@@ -147,7 +156,7 @@ export function AppHeader() {
       </div>
 
       {/* 🔍 Global Search Dialog - Controlled mode */}
-      <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      {canSearch && <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />}
     </header>
   )
 }

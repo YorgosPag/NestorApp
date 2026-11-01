@@ -27,14 +27,12 @@ import {
   SEARCH_ENTITY_TYPES,
   SEARCH_AUDIENCE,
   SEARCH_CONFIG,
-  type SearchResult,
-  type SearchDocument,
   type SearchAuditMetadata,
 } from '@/types/search';
+import { grantedSearchEntityTypes } from '@/lib/search/search-access';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 import { parseEntityTypes, parseLimit } from './search-query-params';
-import { transformToSearchResult, type SearchResponseData } from './search-result-transform';
+import { collectSearchResults, type SearchResponseData } from './search-result-transform';
 
 const logger = createModuleLogger('SearchRoute');
 
@@ -53,13 +51,13 @@ const logger = createModuleLogger('SearchRoute');
  *
  * @enterprise
  * - Tenant isolation via companyId
- * - Permission-based filtering
+ * - Per-type permission filter inside the query, not after it (ADR-829 §7)
  * - Audit logging (privacy-conscious)
  *
  * @rateLimit HIGH (100 req/min) - Global search endpoint (high traffic expected)
  */
 const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
-  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  async (request: NextRequest, ctx: AuthContext, cache: PermissionCache) => {
     const adminDb = getAdminFirestore();
     if (!adminDb) {
       throw new Error('Database unavailable: Firebase Admin not initialized');
@@ -94,7 +92,12 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
     const searchPrefixes = generateSearchPrefixes(normalizedQuery);
 
     // === Determine Entity Types to Search ===
-    const typesToSearch = entityTypes || Object.values(SEARCH_ENTITY_TYPES);
+    // ADR-829 §7: ό,τι δεν δικαιούται ο καλών δεν ρωτιέται καν. Το ίδιο σύνολο γράφεται στο audit.
+    const typesToSearch = await grantedSearchEntityTypes(
+      ctx,
+      entityTypes || Object.values(SEARCH_ENTITY_TYPES),
+      cache,
+    );
 
     // === Build Collection Path ===
     // Note: Using root-level searchDocuments collection with tenantId filter
@@ -126,45 +129,7 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
       })
     );
 
-    const allResults: SearchResult[] = [];
-
-    for (let i = 0; i < queryResults.length; i++) {
-      const result = queryResults[i];
-      const entityType = typesToSearch[i];
-
-      if (result.status === 'rejected') {
-        const errorMessage = getErrorMessage(result.reason);
-        const isIndexError =
-          errorMessage.includes('FAILED_PRECONDITION') ||
-          errorMessage.includes('index') ||
-          errorMessage.includes('requires an index');
-
-        if (isIndexError) {
-          logger.warn('[Search] Index building or missing — degraded results for type', {
-            entityType,
-            error: errorMessage,
-            hint: 'Run: firebase deploy --only firestore:indexes',
-          });
-        } else {
-          logger.error('[Search] Query failed for entity type', {
-            entityType,
-            error: errorMessage,
-          });
-        }
-        continue;
-      }
-
-      for (const doc of result.value.docs) {
-        const searchDoc = doc.data() as SearchDocument;
-        // Ταφόπλακα (ADR-873 §9.1.2): η οντότητα έχει διαγραφεί και η εγγραφή ζει μόνο ως
-        // φορέας έκδοσης. Δεν φτάνει ως εδώ — τα `prefixes` της είναι κενά και το ερώτημα
-        // φιλτράρει με `array-contains-any` — αλλά ο φράχτης δεν στηρίζεται σε ένα μόνο σκαλί.
-        if (searchDoc.deleted === true) continue;
-        if (searchDoc.search.normalized.includes(normalizedQuery)) {
-          allResults.push(transformToSearchResult(searchDoc));
-        }
-      }
-    }
+    const allResults = collectSearchResults(queryResults, typesToSearch, normalizedQuery);
 
     logger.info('[Search] Found results', { count: allResults.length, tenantId });
 

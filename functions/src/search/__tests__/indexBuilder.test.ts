@@ -28,6 +28,16 @@ function indexed(entityType: Parameters<typeof buildSearchDocument>[0], data: Re
   return doc;
 }
 
+describe('indexBuilder — the reach stamp (ADR-829 §7)', () => {
+  it('Σ1: a file carries the stamp the results fence requires', () => {
+    expect(indexed(SEARCH_ENTITY_TYPES.FILE, { displayName: 'Κάτοψη' }).readReach).toBe('tenant');
+  });
+
+  it('Σ2: an entity type with no fence has no such key: Firestore rejects `undefined`', () => {
+    expect('readReach' in indexed(SEARCH_ENTITY_TYPES.PROJECT, { name: 'Έργο' })).toBe(false);
+  });
+});
+
 describe('indexBuilder — parity with the query side (Ε-874.1)', () => {
   it('Ι1: a code segment is findable — «001» finds PRJ-001', () => {
     const doc = indexed(SEARCH_ENTITY_TYPES.PROJECT, { name: 'Πύργος', projectCode: 'PRJ-001' });

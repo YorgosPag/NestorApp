@@ -1279,8 +1279,7 @@ await runEventOnce(db, seed, 'orphan-spike-alert', 'retain', async () => sendAle
     shouldMatch: `const ref = adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(docId);
 await db.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(searchDocId).set(searchDoc);
 await adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(docId).delete();`,
-    shouldSkip: `import { writeSearchIndexEntry, writeSearchIndexTombstone } from '@/lib/search/search-index-write';
-const outcome = await writeSearchIndexEntry(db, docId, searchDoc, sourceUpdateTime);
+    shouldSkip: `import { writeSearchIndexTombstone } from '@/lib/search/search-index-write';
 await writeSearchIndexTombstone(adminDb, docId, { tenantId, entityType, entityId }, null, Date.now());
 await applySearchIndexTombstone(searchDocRef, identity, version, Date.now());`,
   },

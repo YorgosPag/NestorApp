@@ -135,6 +135,12 @@ export interface SearchDocument {
     type?: string;
   };
 
+  /**
+   * Η σφραγίδα εμβέλειας των τύπων με φράχτη ανά έγγραφο (ADR-829 §7): τα αρχεία.
+   * Τη γράφει το `searchReadReachStamp`· εγγραφή χωρίς αυτήν δεν βγαίνει στα αποτελέσματα.
+   */
+  readReach?: string;
+
   // === Έκδοση & ταφόπλακα (ADR-873 Φ1 §9.1.2) ===
   /**
    * Η έκδοση commit της **πηγής** που παρήγαγε αυτή την εγγραφή.
@@ -168,6 +174,8 @@ export interface SearchDocumentInput {
   audience: SearchAudience;
   requiredPermission: string;
   links: SearchResultLinks;
+  /** Η σφραγίδα εμβέλειας (ADR-829 §7) — βλ. `SearchDocument.readReach`. */
+  readReach?: string;
   /**
    * 🏢 ENTERPRISE: Raw entity metadata for stats display
    * Used for floor, area, price in parking/storage cards

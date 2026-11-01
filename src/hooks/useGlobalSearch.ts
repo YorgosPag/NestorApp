@@ -14,8 +14,9 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 import {
   SEARCH_CONFIG,
   type SearchResult,
@@ -217,13 +218,8 @@ export function useGlobalSearch(
           return;
         }
 
-        // Handle API client errors
-        let errorMessage = 'Search failed';
-        if (ApiClientError.isApiClientError(err)) {
-          errorMessage = err.message;
-        } else if (err instanceof Error) {
-          errorMessage = err.message;
-        }
+        // Για καταγραφή μόνο: ο διάλογος δείχνει δικό του μεταφρασμένο μήνυμα (N.11).
+        const errorMessage = getErrorMessage(err);
 
         setResults([]);
         setError(errorMessage);

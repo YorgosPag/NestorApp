@@ -95,7 +95,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "61af3e33213ace89fb5793b9b12d328fdc9edcd890e556e28471a13d1333591b",
+    "src/i18n/generated/shell-slice.el.json": "28c46a671a71e454583e28c4a7cfe21ba81d3121b1b853b254d84b94440c1b33",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -181,7 +181,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a898d69598df9d0492bbd2cf64b7dba6f7feac2480127a6970bd121a6dc1705a",
+  "inputsSha256": "0ea3c5be80fcbf850e7b20b0a47540af6f8af8fecd40ba7b21af5d7dfc903de3",
   "languages": [
     "el"
   ],
@@ -26336,8 +26336,8 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "matchedKeys": 272,
-    "sliceBytes": 1307557
+    "matchedKeys": 273,
+    "sliceBytes": 1307607
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -27080,6 +27080,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -27536,6 +27537,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -28001,6 +28003,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -28452,6 +28455,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -28903,6 +28907,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -29371,6 +29376,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -29822,6 +29828,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -30305,6 +30312,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -30763,6 +30771,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",
@@ -31214,6 +31223,7 @@
         "search.placeholder",
         "search.results",
         "search.resultsCount",
+        "search.searchFailed",
         "search.select",
         "search.tryDifferent",
         "searchBackfill",

@@ -22,6 +22,10 @@ export {
   determineAudience,
   extractSearchableText,
   extractStatus,
+  buildSearchResultHref,
+  generateSearchDocId,
+  searchIndexExclusion,
+  searchReadReachStamp,
 } from '@/config/search-index-config';
 
 // =============================================================================

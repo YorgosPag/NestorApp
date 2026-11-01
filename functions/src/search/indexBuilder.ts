@@ -33,6 +33,8 @@ import {
   extractStatus,
   buildSearchResultHref,
   generateSearchDocId,
+  searchIndexExclusion,
+  searchReadReachStamp,
 } from '../generated/config/search-index-core';
 import { normalizeSearchText, generateSearchPrefixes } from '../generated/lib/search/search';
 import type { CommitVersion } from '../generated/lib/search/search-index-version';
@@ -42,7 +44,13 @@ const SEARCH_INDEX_CONFIG = SEARCH_INDEX_CORE;
 type SearchIndexConfig = SearchIndexCoreConfig;
 
 // Re-exports so `indexTriggers.ts` and other callers keep a stable import surface
-export { SEARCH_ENTITY_TYPES, SEARCH_AUDIENCE, SEARCH_INDEX_CONFIG, generateSearchDocId };
+export {
+  SEARCH_ENTITY_TYPES,
+  SEARCH_AUDIENCE,
+  SEARCH_INDEX_CONFIG,
+  generateSearchDocId,
+  searchIndexExclusion,
+};
 export type { SearchEntityType, SearchAudience, SearchIndexConfig };
 export { COLLECTIONS } from '../config/firestore-collections';
 
@@ -77,6 +85,8 @@ export interface SearchDocument {
   audience: SearchAudience;
   requiredPermission: string;
   links: SearchResultLinks;
+  /** Reach stamp of entity types with a per-document fence (ADR-829 §7). */
+  readReach?: string;
   createdAt: FirebaseFirestore.FieldValue;
   indexedAt: FirebaseFirestore.FieldValue;
   /**
@@ -105,6 +115,8 @@ export interface SearchDocumentInput {
   audience: SearchAudience;
   requiredPermission: string;
   links: SearchResultLinks;
+  /** Reach stamp of entity types with a per-document fence (ADR-829 §7). */
+  readReach?: string;
 }
 
 // =============================================================================
@@ -159,6 +171,7 @@ export function buildSearchDocument(
       href,
       routeParams: { id: entityId },
     },
+    ...searchReadReachStamp(config),
   };
 }
 

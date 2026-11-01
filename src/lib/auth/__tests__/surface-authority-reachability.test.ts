@@ -109,13 +109,6 @@ const UNREACHABLE_BY_DESIGN: Readonly<Record<string, string>> = {
   'platform_landing_heroes:heroes:publish':
     'ΣΚΟΠΙΜΟ — δημοσίευση των εικόνων της αρχικής του προϊόντος: πράξη πλατφόρμας, όχι εταιρείας. Οι δύο ' +
     'διαδρομές δηλώνουν requiredGlobalRoles: BYPASS_ROLES.',
-
-  'search:global:execute':
-    'ΑΝΟΙΧΤΟ ΕΥΡΗΜΑ (ADR-829) — /api/search + /api/search/reindex. Η μπάρα «Αναζήτηση ' +
-    'σε έργα, επαφές, κτίρια…» εμφανίζεται σε ΚΑΘΕ οθόνη του κελύφους, για κάθε ρόλο, ' +
-    'και κανένας μη-super_admin δεν μπορεί να την εκτελέσει: πόρτα σε τοίχο, καθολική. ' +
-    'Ο σωστός κάτοχος είναι πιθανότατα «κάθε αυθεντικοποιημένος», που είναι αλλαγή ' +
-    'πολιτικής — ανήκει σε δική της απόφαση.',
 };
 
 /**
@@ -140,6 +133,22 @@ const SURFACES: ReadonlyArray<{
       'προβολέας καλεί /api/dxf-levels + /api/floorplan-overlays (dxf:layers:view), ' +
       '/api/floors (projects:floors:view) και /api/dxf/revisions (dxf:files:view). ' +
       'Χωρίς το πρώτο, η εισαγωγή DXF αμβλώνεται ΣΙΩΠΗΛΑ.',
+  },
+  {
+    name: 'Καθολική αναζήτηση — μπάρα του κελύφους',
+    entry: 'search:global:execute',
+    needs: [
+      'projects:projects:view',
+      'buildings:buildings:view',
+      'projects:floors:view',
+      'properties:properties:view',
+      'units:units:view',
+    ],
+    why:
+      'Το AppHeader ρωτά useCapability("search:global:execute"). Μέσα, το /api/search κρίνει κάθε ' +
+      'τύπο με τον SEARCH_REQUIRED_PERMISSIONS. Χωρίς αυτά, ο κάτοχος ανοίγει μια μπάρα που ' +
+      'επιστρέφει μόνιμα κενό. Τα έξι είδη του internal_user δίνονται από πέντε δικαιώματα ' +
+      '(θέσεις και αποθήκες μοιράζονται το units:units:view).',
   },
 ];
 
