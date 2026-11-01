@@ -82,6 +82,11 @@ export function chainOf(aggregate: CatalogAggregate, memberId: string, side: Agg
   return chain;
 }
 
+/** Οι φορείς που κρίνει η `judgeAggregate` (`changed` με όψη «μετά»): ολόκληροι, με τα ζωντανά πεδία και τις κατηγορίες τους. */
+export function changedHolders(aggregate: CatalogAggregate): CatalogValueHolder[] {
+  return [...aggregate.members.values()].flatMap((member) => (member.changed && member.after ? [member.after] : []));
+}
+
 /** Τα SKU της όψης — οι «γραμμές» των κανόνων και οι φορείς της πληρότητας. */
 export function productMembers(aggregate: CatalogAggregate, side: AggregateSide): ProductMember[] {
   return liveMembers(aggregate, side).filter((member): member is ProductMember => member.kind === 'product');

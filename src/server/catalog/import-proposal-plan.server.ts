@@ -12,13 +12,13 @@ import 'server-only';
 
 import { buildAttributeRows, type ImportBaseValues, type LiveHolder } from '@/subapps/catalog/import/build-attribute-proposal';
 import { buildPriceRows, type PriceLineValues } from '@/subapps/catalog/import/build-price-proposal';
-import { judgeProposal, type ProposalVerdict } from '@/subapps/catalog/import/judge-proposal';
-import { mergeFieldsIntoValues, parseImportCell } from '@/subapps/catalog/import/proposal-values';
+import { judgeProposal, proposalAggregateOf, type ProposalVerdict } from '@/subapps/catalog/import/judge-proposal';
+import { parseImportCell } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchTarget, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
-import type { AttributeValue, CatalogValueHolder } from '@/subapps/catalog/types/product';
+import type { AttributeValue } from '@/subapps/catalog/types/product';
 import type { StoredCatalogProductDefinition, StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
 import type { DiscountGroupDefinition, StoredPriceListLineDefinition, StoredPriceListVersionDefinition } from '@/subapps/catalog/types/price-list';
 import { axisCombinationKey } from '@/subapps/catalog/values/axis-combination';
@@ -27,7 +27,7 @@ import type { ValueTextContext } from '@/subapps/catalog/values/value-text-codec
 import { axesAtDepth, leafDepth } from '@/subapps/catalog/values/attribute-levels';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
 import { readActiveByIds } from './catalog-library-reads.server';
-import { collectHolderReferences, readReferenceSnapshot, readSchemaSnapshot } from './catalog-product-reads.server';
+import { readAggregateReferences, readSchemaSnapshot } from './catalog-product-reads.server';
 import { naturalKeyId, readForUpsert, readOwned, readOwnedOrNull, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 import { readUniqueHolders, uniqueHolderKey } from './unique-reservations.server';
 
@@ -127,8 +127,6 @@ const withForeignIssue = (rows: readonly ImportProposalRow[], foreign: RowMatch[
     return key ? { ...row, issues: [...row.issues, { code: 'uniqueValueTaken' as const, path: key.attributeId }] } : row;
   });
 
-const holderOfRow = (row: ImportProposalRow): CatalogValueHolder => ({ values: mergeFieldsIntoValues({}, row.fields, () => true), noValueReasons: {}, categoryIds: [] });
-
 async function planAttributes(scope: CatalogTx, target: Extract<ImportBatchTarget, { purpose: 'attributes' }>, group: ExtractedGroup, base: ImportBaseValues): Promise<PlannedProposal> {
   const schema = await readSchemaSnapshot(scope, target.familyId, target.variantSchemeCode);
   const code = group.modelCode === null ? '' : suggestCatalogCode(group.modelCode);
@@ -137,9 +135,9 @@ async function planAttributes(scope: CatalogTx, target: Extract<ImportBatchTarge
   const products = await readRootProducts(scope, root);
   const { matches, foreign } = await matchRows(scope, group, root, products, schema);
   const built = buildAttributeRows({ ...group, modelCode }, { schema, text: textContextOf(schema), model: root ? asLive(root) : null, matches, base });
-  const rows = withForeignIssue(built, foreign);
-  const refs = await readReferenceSnapshot(scope, collectHolderReferences(rows.map(holderOfRow)));
-  const verdict = judgeProposal({ rows, modelCode, familyId: target.familyId, categoryIds: target.categoryIds, holdings: { rootModel: root, products }, schema, refs });
+  const input = { rows: withForeignIssue(built, foreign), modelCode, familyId: target.familyId, categoryIds: target.categoryIds, holdings: { rootModel: root, products }, schema };
+  const refs = await readAggregateReferences(scope, proposalAggregateOf(input));
+  const verdict = judgeProposal({ ...input, refs });
   return { ...verdict, familyId: target.familyId, variantSchemeCode: target.variantSchemeCode, modelCode, priceListVersionId: null };
 }
 

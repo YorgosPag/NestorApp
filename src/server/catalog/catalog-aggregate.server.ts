@@ -29,9 +29,8 @@ import { liveMembers, type AggregateMember, type CatalogAggregate } from '@/suba
 import { uniqueKeysOf } from '@/subapps/catalog/derived/holder-derived';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import type { CatalogValueHolder } from '@/subapps/catalog/types/product';
 import { loadAggregate, type HolderChange, type LoadedAggregate, type StoredMember } from './catalog-aggregate-load.server';
-import { collectHolderReferences, readReferenceSnapshot, readSchemaSnapshot } from './catalog-product-reads.server';
+import { readAggregateReferences, readSchemaSnapshot } from './catalog-product-reads.server';
 import {
   stageCreate,
   stageDerived,
@@ -74,10 +73,6 @@ function schemaKeyOf(aggregate: CatalogAggregate): { readonly familyId: string; 
   if (!anchor || !definition) throw new CatalogWriteError('notFound');
   const schemeCode = anchor.kind === 'productModel' && 'variantSchemeCode' in definition ? definition.variantSchemeCode : null;
   return { familyId: definition.familyId, schemeCode };
-}
-
-function changedHolders(aggregate: CatalogAggregate): CatalogValueHolder[] {
-  return [...aggregate.members.values()].flatMap((member) => (member.changed && member.after ? [member.after] : []));
 }
 
 function uniqueDeltas(aggregate: CatalogAggregate, schema: CatalogSchemaSnapshot): HolderUniqueDelta[] {
@@ -130,7 +125,7 @@ export async function commitAggregate(scope: CatalogTx, rootId: string | null, c
   const { aggregate } = loaded;
   const { familyId, schemeCode } = schemaKeyOf(aggregate);
   const schema = await readSchemaSnapshot(scope, familyId, schemeCode);
-  const refs = await readReferenceSnapshot(scope, collectHolderReferences(changedHolders(aggregate)));
+  const refs = await readAggregateReferences(scope, aggregate);
   const verdict = judgeAggregate({ aggregate, schema, refs });
   assertNoIssues(verdict.issues);
   const deltas = uniqueDeltas(aggregate, schema);

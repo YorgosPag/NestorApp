@@ -18,8 +18,8 @@ import type { RawPageCell } from '@/subapps/catalog/import/page-extraction';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { CreateImportBatchRequest } from '@/subapps/catalog/types/catalog-import-requests';
-import { ANY_SLOT, type CatalogProductDefinition } from '@/subapps/catalog/types/product';
-import { ARIES, MFP_GROUP_CODES, RIVAL, mfpFamilyWith, rejectionOf } from './catalog-writer-seed';
+import { ANY_SLOT, type CatalogProductDefinition, type CatalogProductModelDefinition } from '@/subapps/catalog/types/product';
+import { ARIES, MFP_GROUP_CODES, RIVAL, SEED_RIGHTS, mfpFamilyWith, rejectionOf } from './catalog-writer-seed';
 
 const fake = new FakeFirestore();
 const readPage = jest.fn<Promise<CatalogPageReading>, [CatalogPageInput]>();
@@ -44,14 +44,17 @@ jest.mock('../import-source.server', () => ({
 
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθούν οι γραφείς */
 import { createCatalogAttributeGroup } from '../attribute-group-writer.server';
+import { createCatalogAsset } from '../asset-writer.server';
 import { createCatalogAttribute } from '../attribute-writer.server';
 import { saveCatalogSettings } from '../catalog-settings-writer.server';
+import { createCatalogCategory } from '../category-writer.server';
 import { createCatalogFamily } from '../family-writer.server';
 import { applyImportProposal } from '../import-apply.server';
 import { createImportBatch } from '../import-batch-writer.server';
 import { readImportPage } from '../import-readers.server';
 import { proposeGroup, rejectImportProposal, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
 import { readImportBatchDetail } from '../import-reads.server';
+import { updateCatalogProductModel } from '../product-model-writer.server';
 import { updateCatalogProduct } from '../product-writer.server';
 /* eslint-enable import/first */
 
@@ -115,7 +118,11 @@ const attributesBatch = (overrides: Partial<CreateImportBatchRequest> = {}): Cre
 const batchId = async (ctx: AuthContext = ARIES): Promise<string> => (await createImportBatch(ctx, attributesBatch())).id;
 const proposals = () => Object.values(fake.getAllDocs('catalog_import_proposals')) as unknown as ImportProposalDefinition[];
 const products = () => Object.values(fake.getAllDocs('catalog_products')) as unknown as (CatalogProductDefinition & { id: string; revision: number })[];
+const models = () => Object.values(fake.getAllDocs('catalog_product_models')) as unknown as (CatalogProductModelDefinition & { id: string; revision: number })[];
 const readings = () => Object.values(fake.getAllDocs('catalog_import_page_readings'));
+const seedCategory = async (): Promise<string> => (await createCatalogCategory(ARIES, { code: 'fan_coils', labels: { el: 'Fan coils' }, parentId: null, orderKey: 'a0', mappings: { atoeCode: null } })).id;
+const seedPhoto = async (): Promise<string> => (await createCatalogAsset(ARIES, { code: 'mfp_hero', role: 'photo', kind: 'image', labels: { el: 'MFP' }, description: {}, rights: SEED_RIGHTS })).id;
+const rowIssues = (rows: readonly ImportProposalRow[]): string[] => rows.flatMap((row) => row.issues.map((issue) => `${row.rowKey}:${issue.code}:${issue.path}`));
 const fieldOf = (proposal: StoredImportProposal, rowKey: string, code: string) =>
   proposal.rows.find((row) => row.rowKey === rowKey)?.fields.find((field) => field.target.kind === 'attribute' && field.target.attributeId === attributeId(code));
 
@@ -180,6 +187,13 @@ describe('πρόταση → έγκριση', () => {
     expect(Object.keys(fake.getAllDocs('catalog_unique_values'))).toHaveLength(7);
     expect((await applyImportProposal(ARIES, proposal.id, proposal.revision)).revision).toBe(applied.revision);
     expect(products()).toHaveLength(7);
+  });
+
+  it('🔴 νέο μοντέλο σε ζωντανή κατηγορία: η κατηγορία του στόχου δεν βγαίνει `unknownReference`', async () => {
+    const categoryId = await seedCategory();
+    const batch = await createImportBatch(ARIES, attributesBatch({ target: { purpose: 'attributes', familyId: seeded.familyId, variantSchemeCode: 'by_size', categoryIds: [categoryId] } }));
+    const proposal = await proposeGroup(ARIES, batch.id, group(faithful()));
+    expect(rowIssues(proposal.rows)).toEqual([]);
   });
 
   it('το ίδιο αρχείο μετά την έγκριση: όλα αμετάβλητα, ταιριάζουν με τον κωδικό παρά τις παύλες', async () => {
@@ -522,6 +536,41 @@ describe('ανάγνωση σελίδας', () => {
       expect(skus.map((row) => row.action)).toEqual(Array(7).fill('update'));
       expect(skus.map((row) => row.label)).toEqual(MFP_PAGE_60.code);
       expect(products()).toHaveLength(7);
+    });
+
+    /** Το σχήμα της παραγωγής: φωτογραφία και κατηγορία στη ρίζα, κατηγορία και σε SKU. Γράφουν οι πραγματικοί γραφείς. */
+    async function liveCatalogWithReferences() {
+      const batch = await liveCatalogAndBatch();
+      const assetId = await seedPhoto();
+      const categoryId = await seedCategory();
+      const [root] = models();
+      const photo = { [attributeId('photo')]: { [ANY_SLOT]: { [ANY_SLOT]: { type: 'asset' as const, assetIds: [assetId] } } } };
+      await updateCatalogProductModel(ARIES, root.id, root.revision, { code: root.code, familyId: root.familyId, variantSchemeCode: root.variantSchemeCode, parentId: root.parentId, categoryIds: [categoryId], noValueReasons: root.noValueReasons, values: { ...root.values, ...photo } });
+      const [sku] = products();
+      await updateCatalogProduct(ARIES, sku.id, sku.revision, { modelId: sku.modelId, familyId: sku.familyId, categoryIds: [categoryId], noValueReasons: sku.noValueReasons, values: sku.values });
+      return { batch, assetId, categoryId, skuId: sku.id };
+    }
+
+    it('🔴 Τρίτη δοκιμή: ζωντανή φωτογραφία και κατηγορία που η σελίδα δεν αναφέρει δεν βγαίνουν `unknownReference`', async () => {
+      const { batch } = await liveCatalogWithReferences();
+      mapTables.mockResolvedValue(mapping(COOLING));
+      await readImportPage(ARIES, batch.id, 60);
+      const [proposal] = (await readImportBatchDetail(ARIES, batch.id)).proposals;
+      expect(proposal.rows.filter((row) => row.action === 'update')).toHaveLength(8);
+      expect(rowIssues(proposal.rows)).toEqual([]);
+    });
+
+    it('🔴 αναφορά που όντως χάθηκε μένει εύρημα: η διόρθωση δεν σβήνει τον κριτή', async () => {
+      const { batch, assetId, categoryId, skuId } = await liveCatalogWithReferences();
+      fake.seed('catalog_assets', assetId, { ...fake.getAllDocs('catalog_assets')[assetId], isDeleted: true });
+      fake.seed('catalog_categories', categoryId, { ...fake.getAllDocs('catalog_categories')[categoryId], isDeleted: true });
+      mapTables.mockResolvedValue(mapping(COOLING));
+      await readImportPage(ARIES, batch.id, 60);
+      const [proposal] = (await readImportBatchDetail(ARIES, batch.id)).proposals;
+      const modelRow = proposal.rows.find((row) => row.holderKind === 'productModel');
+      const skuRow = proposal.rows.find((row) => row.holderId === skuId);
+      expect(modelRow?.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'unknownReference', path: `values.${attributeId('photo')}.${ANY_SLOT}.${ANY_SLOT}.assetIds[0]` }), expect.objectContaining({ code: 'unknownReference', path: 'categoryIds[0]' })]));
+      expect(skuRow?.issues).toEqual([expect.objectContaining({ code: 'unknownReference', path: 'categoryIds[0]' })]);
     });
 
     it('Ε6: κάθε απάντηση φυλάσσεται όπως ήρθε, μαζί με ό,τι ανασυντέθηκε, και το ξαναδιάβασμα γράφει το ίδιο έγγραφο', async () => {

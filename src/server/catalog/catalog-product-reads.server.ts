@@ -7,6 +7,7 @@ import 'server-only';
  * @module server/catalog/catalog-product-reads.server
  */
 
+import { changedHolders, type CatalogAggregate } from '@/subapps/catalog/aggregate/aggregate-model';
 import { DEFAULT_CATALOG_SETTINGS, type CatalogSettingsDefinition } from '@/subapps/catalog/types/catalog-settings';
 import type { CatalogAssetDefinition } from '@/subapps/catalog/types/asset';
 import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
@@ -48,13 +49,13 @@ export async function readSchemaSnapshot(
 }
 
 /** Όλα τα μέσα / κατηγορίες / στόχοι που αναφέρουν οι φορείς — συγκεντρωμένα, ώστε να διαβαστούν με **ένα** `getAll`. */
-export interface HolderReferences {
+interface HolderReferences {
   readonly assetIds: readonly string[];
   readonly categoryIds: readonly string[];
   readonly targets: readonly CatalogReferenceTarget[];
 }
 
-export function collectHolderReferences(holders: readonly CatalogValueHolder[]): HolderReferences {
+function collectHolderReferences(holders: readonly CatalogValueHolder[]): HolderReferences {
   const assetIds = new Set<string>();
   const categoryIds = new Set<string>();
   const targets = new Map<string, CatalogReferenceTarget>();
@@ -93,8 +94,14 @@ async function readReferenceTargets(scope: CatalogTx, targets: readonly CatalogR
   return lookup;
 }
 
-/** Ό,τι αναφέρουν οι τιμές, όπως είναι **τώρα** στον χώρο (ξένα/διαγραμμένα ≡ ανύπαρκτα). */
-export async function readReferenceSnapshot(scope: CatalogTx, refs: HolderReferences): Promise<ReferenceSnapshot> {
+/**
+ * Ό,τι αναφέρουν οι φορείς που θα κρίνει η `judgeAggregate`, όπως είναι **τώρα** στον χώρο (ξένα/διαγραμμένα ≡ ανύπαρκτα).
+ *
+ * 🔑 Η **μία** πηγή: το ίδιο το σύνολο που κρίνεται. Ο κριτής βλέπει ολόκληρους φορείς, άρα λίστα αναφορών από υποσύνολό τους
+ * (π.χ. μόνο τα πεδία μιας πρότασης) δίνει ψευδές `unknownReference` σε κάθε ζωντανή αναφορά εκτός υποσυνόλου (ADR-923 §5.5.1).
+ */
+export async function readAggregateReferences(scope: CatalogTx, aggregate: CatalogAggregate): Promise<ReferenceSnapshot> {
+  const refs = collectHolderReferences(changedHolders(aggregate));
   const assetRecords = await readActiveByIds<CatalogAssetDefinition>(scope, 'asset', refs.assetIds);
   const categories = await readActiveByIds<object>(scope, 'category', refs.categoryIds);
   const references = await readReferenceTargets(scope, refs.targets);

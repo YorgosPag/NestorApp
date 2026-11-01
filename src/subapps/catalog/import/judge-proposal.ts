@@ -21,13 +21,16 @@ export interface ProposalHoldings {
   readonly products: ReadonlyMap<string, StoredProductShape>;
 }
 
-export interface ProposalJudgeInput {
+export interface ProposalAggregateInput {
   readonly rows: readonly ImportProposalRow[];
   readonly modelCode: string | null;
   readonly familyId: string;
   readonly categoryIds: readonly string[];
   readonly holdings: ProposalHoldings;
   readonly schema: CatalogSchemaSnapshot;
+}
+
+export interface ProposalJudgeInput extends ProposalAggregateInput {
   readonly refs: AggregateReferences;
 }
 
@@ -40,7 +43,7 @@ const NEW_ROOT_ID = 'import-new-model';
 const memberIdOf = (row: ImportProposalRow): string => row.holderId ?? row.rowKey;
 const proposed = (field: ImportProposalField): boolean => field.status !== 'unchanged';
 
-function rootMember(input: ProposalJudgeInput, row: ImportProposalRow | undefined): AggregateMember | null {
+function rootMember(input: ProposalAggregateInput, row: ImportProposalRow | undefined): AggregateMember | null {
   const { holdings, schema, modelCode, categoryIds, familyId } = input;
   const { rootModel } = holdings;
   const fields = row?.fields ?? [];
@@ -52,14 +55,15 @@ function rootMember(input: ProposalJudgeInput, row: ImportProposalRow | undefine
   return createdModelMember(NEW_ROOT_ID, definition);
 }
 
-function productMember(row: ImportProposalRow, rootId: string | null, input: ProposalJudgeInput): AggregateMember {
+function productMember(row: ImportProposalRow, rootId: string | null, input: ProposalAggregateInput): AggregateMember {
   const stored = row.holderId === null ? undefined : input.holdings.products.get(row.holderId);
   if (stored) return updatedProductMember(stored, { ...stored, values: mergeFieldsIntoValues(stored.values, row.fields, proposed) });
   const values = mergeFieldsIntoValues({}, row.fields, proposed);
   return createdProductMember(row.rowKey, { modelId: rootId, familyId: input.familyId, categoryIds: input.categoryIds, noValueReasons: {}, values });
 }
 
-function aggregateOf(input: ProposalJudgeInput): CatalogAggregate {
+/** Το υποθετικό σύνολο «αν εγκριθούν όλα». Το ίδιο κρίνεται και από το ίδιο διαβάζονται οι αναφορές του (`readAggregateReferences`). */
+export function proposalAggregateOf(input: ProposalAggregateInput): CatalogAggregate {
   const modelRow = input.rows.find((row) => row.holderKind === 'productModel');
   const root = rootMember(input, modelRow);
   const members = new Map<string, AggregateMember>();
@@ -115,7 +119,7 @@ function rowIssuesOf(row: ImportProposalRow, memberId: string, issues: readonly 
 
 /** Κρίνει την πρόταση και γράφει τα ευρήματα πάνω στα πεδία της. */
 export function judgeProposal(input: ProposalJudgeInput): ProposalVerdict {
-  const aggregate = aggregateOf(input);
+  const aggregate = proposalAggregateOf(input);
   const verdict = judgeAggregate({ aggregate, schema: input.schema, refs: input.refs });
   const violations = violationsOf(aggregate, input.schema);
   const issues = [...verdict.issues.filter((issue) => issue.code !== 'consistencyRuleViolated'), ...ruleIssues(violations)];
