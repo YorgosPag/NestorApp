@@ -193,3 +193,21 @@ export type RegistryLookupVerdict =
   /** Δεν ρωτήθηκε καν: ο αριθμός δεν είναι αριθμός ΓΕΜΗ. */
   | { readonly kind: 'invalid-number' }
   | { readonly kind: 'unavailable'; readonly reason: RegistryUnavailableReason };
+
+/**
+ * Τι απάντησε η **αναζήτηση με ΑΦΜ** (ADR-923 §5.13 Ε1β). Κρατά **μόνο** αριθμούς ΓΕΜΗ: το `afm` της
+ * απάντησης δεν διαβάζεται, ίδια απόφαση με το ADR-841.
+ */
+export type RegistryTaxSearchVerdict =
+  | { readonly kind: 'results'; readonly registrationNumbers: readonly string[] }
+  /** Δεν ρωτήθηκε καν: το ΑΦΜ δεν περνά τον έλεγχο mod-11. */
+  | { readonly kind: 'invalid-tax-id' }
+  | { readonly kind: 'unavailable'; readonly reason: RegistryUnavailableReason };
+
+/** Ανήκει το δηλωμένο ΑΦΜ στον δηλωμένο Αρ. ΓΕΜΗ; `undetermined` δεν είναι ποτέ «όχι» και δεν εγκρίνει ποτέ. */
+export type RegistryTaxBinding =
+  | { readonly state: 'matched' }
+  | { readonly state: 'mismatched' }
+  | { readonly state: 'not-found' }
+  | { readonly state: 'not-comparable'; readonly gap: 'no-registration-number' | 'invalid-tax-id' }
+  | { readonly state: 'undetermined'; readonly reason: RegistryUnavailableReason };
