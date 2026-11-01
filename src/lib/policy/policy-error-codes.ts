@@ -52,6 +52,12 @@ export const POLICY_ERROR_CODES = {
   // ----- Uniqueness -----
   DUPLICATE_CODE: 'POLICY_DUPLICATE_CODE',
 
+  /**
+   * ADR-829 §7.1 — ο κωδικός που στέλνει το `withAuth` σε άρνηση δικαιώματος (`lib/auth/api-denial.ts`). Χωρίς πρόθεμα
+   * `POLICY_`, επειδή είναι ο υπάρχων κωδικός του σύρματος. Χωρίς αυτή τη γραμμή ο άνθρωπος διάβαζε ωμό «Permission denied».
+   */
+  PERMISSION_DENIED: 'FORBIDDEN',
+
   /** ADR-898 §20: αποσύνδεση από κτίριο χώρου που είναι παρακολούθημα μονάδας. */
   SPACE_LINKED_TO_UNIT: 'POLICY_SPACE_LINKED_TO_UNIT',
   /** ADR-898 §21.6 Ε6: μετακίνηση χώρου (θέση · αποθήκη) σε κτίριο άλλου έργου. */

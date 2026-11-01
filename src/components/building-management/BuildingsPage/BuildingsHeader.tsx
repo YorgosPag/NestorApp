@@ -14,10 +14,7 @@ import { PageHeader, buildHeaderCustomActions } from '@/core/headers';
 import type { ViewMode } from '@/core/headers';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
-
-const logger = createModuleLogger('BuildingsHeader');
 
 // [ENTERPRISE] Type for Buildings view modes (avoids `any`)
 type BuildingsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
@@ -70,10 +67,10 @@ export function BuildingsHeader({
         viewMode: viewMode as ViewMode,
         onViewModeChange: (mode) => setViewMode(mode as BuildingsViewMode),
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
-        addButton: {
-          label: t('header.newBuilding'),
-          onClick: () => onNewBuilding?.() || logger.info('Add building')
-        },
+        // ADR-829 §7.1 — χωρίς πράξη δεν υπάρχει κουμπί: ως εδώ έμενε ανενεργό στον κάδο και ανοιχτό σε όποιον δεν δικαιούται.
+        addButton: onNewBuilding
+          ? { label: t('header.newBuilding'), onClick: onNewBuilding }
+          : undefined,
         customActions: buildHeaderCustomActions({
           showFilters,
           setShowFilters,

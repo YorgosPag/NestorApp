@@ -516,6 +516,7 @@
       },
       "floorLevel": "Level",
       "emptyState": {
+        "askAdmin": "Ask your company administrator to add it.",
         "noProjects": {
           "title": "No Projects yet",
           "description": "Every Unit must belong to a Project.",

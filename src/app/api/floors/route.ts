@@ -35,7 +35,7 @@ export const GET = withStandardRateLimit(
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<FloorCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => handleCreateFloor(request, ctx),
-    { permissions: 'projects:floors:view' }
+    { permissions: 'projects:floors:create' }
   )
 );
 
@@ -43,7 +43,7 @@ export const PATCH = withStandardRateLimit(
   async (request: NextRequest) => {
     const handler = withAuth<FloorUpdateResponse>(
       async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => handleUpdateFloor(request, ctx),
-      { permissions: 'projects:floors:view' }
+      { permissions: 'projects:floors:update' }
     );
 
     return handler(request);

@@ -164,7 +164,8 @@ describe('ADR-840 §8.2 — ο φύλακας της γραφής ΔΕΝ ρωτ�
   test('⛔ κανένας δεύτερος κριτής: η ερώτηση περνά από τον ΕΝΑ PEP (CHECK 3.68)', () => {
     const source = readCode('src/hooks/usePropertyEditCapability.ts');
 
-    expect(source).toContain("from '@/auth/hooks/useCapability'");
+    expect(source).toContain("from '@/auth/hooks/useGrantedCapability'");
+    expect(readCode('src/auth/hooks/useGrantedCapability.ts')).toContain("from '@/auth/hooks/useCapability'");
     // Καμία χειρόγραφη σύγκριση ρόλου, καμία λίστα permissions ανά ρόλο.
     expect(source).not.toMatch(/globalRole\s*===|PREDEFINED_ROLES|getRolePermissions/);
   });

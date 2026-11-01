@@ -16,9 +16,12 @@ import * as fs from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as path from 'node:path';
 
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex } from '@/lib/geo/admin-area-index-file';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
+import { hasAreaMarketPage } from '@/types/area-market';
 
-import { WITNESS_COLLECTIONS } from '../lib/emulator/golden-witnesses';
+import { WITNESS_COLLECTIONS, witnessCollectionPath } from '../lib/emulator/golden-witnesses';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const GC = require('../lib/i18n-ssr/golden-catalog');
@@ -69,13 +72,14 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
     //    και ο χρησμός τα έκρινε με συνεδρία μέλους — θεατή που ο παραλήπτης ΔΕΝ είναι ποτέ.
     // ADR-876 §5 Φ7: η πύλη προμηθευτή έφυγε από τον κατάλογο — ζει στο ΣΤΑΤΙΚΟ `/vendor/quote`, με το
     //    διαπιστευτήριο στο fragment (ο server δεν το βλέπει ⇒ τίποτα να δεθεί με golden).
-    expect([...PUBLIC].sort()).toEqual(['/attendance/check-in/[token]']);
+    expect([...PUBLIC].sort()).toEqual(['/area/[id]', '/attendance/check-in/[token]']);
     const expanded = ID.expandForPersonas(
       (O.enumerateRoutes(ROOT) as Route[]).filter((route) => PUBLIC.includes(route.template)),
       [PERSONA],
       validGolden(),
     ) as Array<Route & { persona?: string; fetchUrl?: string }>;
     expect(expanded.map((route) => [route.url, route.persona, route.dynamic])).toEqual([
+      ['/area/golden-area', undefined, false],
       ['/attendance/check-in/golden-attendanceToken', undefined, false],
     ]);
     expect(expanded.every((route) => !route.fetchUrl?.includes('golden-'))).toBe(true);
@@ -109,6 +113,8 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
       invoice: ENTERPRISE_ID_PREFIXES.INVOICE_ACC,
       ownerProperty: ENTERPRISE_ID_PREFIXES.OWNER_PROPERTY,
       quote: ENTERPRISE_ID_PREFIXES.QUOTE,
+      engagement: ENTERPRISE_ID_PREFIXES.ENGAGEMENT,
+      file: ENTERPRISE_ID_PREFIXES.FILE,
     };
     const prefixed = Object.fromEntries(Object.entries(ENTITIES).filter(([, spec]) => spec.prefix).map(([entity, spec]) => [entity, spec.prefix]));
     expect(prefixed).toEqual(authority);
@@ -118,6 +124,29 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
     const reports = fs.readFileSync(path.join(ROOT, 'src', 'subapps', 'accounting', 'types', 'reports.ts'), 'utf8');
     const union = reports.slice(reports.indexOf('export type ReportType ='), reports.indexOf(';', reports.indexOf('export type ReportType =')));
     expect(union).toContain(`| '${GC.GOLDEN_VALUES.reportType}'`);
+  });
+
+  test('Γ2γ — η περιοχή ΥΠΑΡΧΕΙ στο ευρετήριο της εικόνας και έχει σελίδα αγοράς, αλλιώς το /area απαντά 404', () => {
+    const file = path.join(ROOT, 'public', ...ADMIN_AREA_INDEX_FILE.split('/'));
+    const area = readAdminAreaIndex(JSON.parse(fs.readFileSync(file, 'utf8'))).get(GC.GOLDEN_VALUES.area);
+    expect(area).toBeDefined();
+    expect(hasAreaMarketPage(area?.level ?? 0)).toBe(true);
+  });
+
+  test('Γ2δ — το δέσιμο στέλνει την περιοχή κωδικοποιημένη, με σταθερή ταυτότητα', () => {
+    const golden = { ...validGolden(), area: GC.GOLDEN_VALUES.area };
+    expect(GB.parseGolden({ entities: golden }).area).toBe('municipality:4501');
+    expect(GB.bindRoute({ template: '/area/[id]' }, null, golden)).toEqual({
+      url: '/area/golden-area',
+      fetchUrl: '/area/municipality%3A4501',
+      dynamic: false,
+    });
+  });
+
+  test('Γ2ε — η συμμετοχή γράφεται ΚΑΤΩ από το έργο, και χωρίς έργο η σπορά αρνείται', () => {
+    expect(witnessCollectionPath('engagement', 'proj_x')).toBe(`${COLLECTIONS.PROJECTS}/proj_x/${SUBCOLLECTIONS.PROJECT_ENGAGEMENTS}`);
+    expect(() => witnessCollectionPath('engagement', null)).toThrow(/κάτω από έργο/);
+    expect(witnessCollectionPath('file', null)).toBe(COLLECTIONS.FILES);
   });
 
   test('Γ8 — οι μάρτυρες του σπορέα = ΑΚΡΙΒΩΣ η βαθμίδα witness του καταλόγου', () => {
@@ -284,7 +313,9 @@ describe('Γ6 — ό,τι διαβάζει ο SERVER σπέρνεται από �
           const position = dynamic.indexOf(`[${name}]`);
           if (position < 0) continue;
           const entity = TEMPLATES[route.template][position];
-          if (ENTITIES[entity].tier !== GC.GOLDEN_TIERS.API) offenders.push(`${route.template} · ${path.relative(ROOT, file)} · [${name}] → ${entity}`);
+          // 🔑 Απαγορεύεται ο ΜΑΡΤΥΡΑΣ: χειρόγραφο έγγραφο που ο server θα διάβαζε ως αληθινό. Η βαθμίδα
+          //    `value` δεν σπέρνεται, έρχεται από την αυθεντία της και έχει δική της άγκυρα (Γ2β · Γ2γ).
+          if (ENTITIES[entity].tier === GC.GOLDEN_TIERS.WITNESS) offenders.push(`${route.template} · ${path.relative(ROOT, file)} · [${name}] → ${entity}`);
         }
       }
     }

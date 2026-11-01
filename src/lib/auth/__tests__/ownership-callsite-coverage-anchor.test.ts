@@ -162,6 +162,11 @@ const PROVEN_AFTER_PHASE_C: Readonly<Record<string, Classification>> = {
     kind: 'empty-pair',
     suite: 'src/server/sharing/__tests__/share-create-revoke.test.ts',
   },
+  // ADR-829 §7.1 — ο στόχος ενός δεσμού κτιρίου → έργου κρίνεται απέναντι στο κτίριο.
+  'app/api/buildings/_shared/building-ownership.ts': {
+    kind: 'empty-pair',
+    suite: 'src/app/api/buildings/__tests__/building-write-fields.test.ts',
+  },
 };
 
 /** Κάθε σημείο με **απόδειξη** — ό,τι ελέγχει ο πίνακας «η σουίτα ονομάζει τη διαδρομή». */

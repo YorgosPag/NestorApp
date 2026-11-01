@@ -71,6 +71,8 @@ export const PERMISSIONS = {
   "projects:members:view": true,
   "projects:members:manage": true,
   "projects:floors:view": true,
+  "projects:floors:create": true,
+  "projects:floors:update": true,
   "projects:floors:delete": true,
 
   // Properties (ADR-269) + legacy unit aliases (parking/storage)

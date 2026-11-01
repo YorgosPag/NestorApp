@@ -20,6 +20,8 @@ interface BuildingDetailsProps {
   building: Building | null;
   /** Callback to create a new building */
   onNewBuilding?: () => void;
+  /** ADR-829 §7.1 — να φανεί η «Επεξεργασία»; Προεπιλογή `true`, ώστε οι υπάρχοντες καταναλωτές να μην αλλάξουν. */
+  canEdit?: boolean;
   /** Callback to delete the current building */
   onDeleteBuilding?: () => void;
   /** Start in edit mode (for inline creation) */
@@ -44,6 +46,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   building,
   onNewBuilding,
   onDeleteBuilding,
+  canEdit = true,
   startInEditMode,
   isEditing: externalIsEditing,
   onSetEditing,
@@ -101,7 +104,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
             building={building!}
             isEditing={isEditing}
             isSaving={isSaving}
-            onStartEdit={isTrashMode || activeTab !== 'general' ? undefined : handleStartEdit}
+            onStartEdit={isTrashMode || !canEdit || activeTab !== 'general' ? undefined : handleStartEdit}
             onSave={handleSave}
             onCancel={handleCancel}
             onNewBuilding={isTrashMode ? undefined : onNewBuilding}

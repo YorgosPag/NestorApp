@@ -47,7 +47,8 @@
  */
 
 import { ApiError } from '@/lib/api/api-error-types';
-import type { MaybeTenantOwned } from '@/lib/auth/tenant-ownership';
+import { isPayloadOwnedByCompany, type MaybeTenantOwned } from '@/lib/auth/tenant-ownership';
+import { POLICY_ERROR_CODES } from '@/lib/policy/policy-error-codes';
 import {
   createOwnershipDecision,
   type ResourceAccessCaller,
@@ -112,5 +113,25 @@ export function checkBuildingAccess(spec: BuildingAccessSpec): BuildingAccessVer
 export function requireBuildingAccess(spec: BuildingAccessSpec): void {
   if (checkBuildingAccess(spec) === 'denied') {
     throw buildingNotFound();
+  }
+}
+
+/**
+ * **Ο στόχος ενός δεσμού κτιρίου → έργου είναι στον χώρο του κτιρίου** (ADR-829 §7.1) — κρίνεται **ΠΡΙΝ** από την εγγραφή.
+ *
+ * 🔴 Ο φράχτης του `linkEntity` (ADR-249) τρέχει **μετά** την εγγραφή και οι καλούντες καταπίνουν το σφάλμα του: το
+ * κτίριο είχε ήδη δεθεί σε ξένο έργο. Μένει ως δεύτερη γραμμή· η πρώτη είναι εδώ.
+ *
+ * Κρίνεται απέναντι στο **κτίριο**, όχι στον καλούντα: ούτε ο `super_admin` δένει κτίριο σε έργο άλλου χώρου. Ξένο
+ * έργο απαντά ό,τι και ανύπαρκτο, για να μη γίνει η άρνηση μαντείο ταυτοτήτων. Κτίριο χωρίς ενοικιαστή (ADR-232)
+ * φτάνει εδώ μόνο με bypass και δεν έχει χώρο να φυλαχτεί.
+ */
+export function requireProjectInBuildingTenant(
+  project: MaybeTenantOwned | null | undefined,
+  buildingCompanyId: unknown,
+): void {
+  if (typeof buildingCompanyId !== 'string' || buildingCompanyId === '') return;
+  if (!isPayloadOwnedByCompany(project, buildingCompanyId)) {
+    throw new ApiError(400, 'Referenced Project not found.', POLICY_ERROR_CODES.PROJECT_NOT_FOUND);
   }
 }

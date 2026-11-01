@@ -103,20 +103,13 @@ const UNREACHABLE_BY_DESIGN: Readonly<Record<string, string>> = {
   'admin:data:fix':
     'ΣΚΟΠΙΜΟ — 5 διαδρομές χειροκίνητης επιδιόρθωσης δεδομένων. Πράξη πλατφόρμας ' +
     'υπό επίβλεψη· ο super_admin τη φτάνει μέσω isBypass.',
+  'admin:direct:operations':
+    'ΣΚΟΠΙΜΟ — break-glass επέμβαση στα δεδομένα (lib/api/admin-operation-route). Η φρουρά δηλώνει ' +
+    'requiredGlobalRoles: BYPASS_ROLES, άρα κανένας ρόλος εταιρείας δεν τη φτάνει ούτε με claim.',
+  'platform_landing_heroes:heroes:publish':
+    'ΣΚΟΠΙΜΟ — δημοσίευση των εικόνων της αρχικής του προϊόντος: πράξη πλατφόρμας, όχι εταιρείας. Οι δύο ' +
+    'διαδρομές δηλώνουν requiredGlobalRoles: BYPASS_ROLES.',
 
-  'buildings:buildings:create':
-    'ΑΝΟΙΧΤΟ ΕΥΡΗΜΑ (ADR-829, 2026-08-29) — το /api/buildings POST το απαιτεί και ' +
-    'ΚΑΝΕΝΑΣ ρόλος δεν το έχει, ενώ ο company_admin έχει buildings:buildings:view. ' +
-    'Ίδια κλάση με το περιστατικό του DXF προβολέα, ΑΛΛΟΣ τομέας: δεν διορθώνεται ' +
-    'εδώ χωρίς απόφαση για το ποιος οφείλει να δημιουργεί κτίρια.',
-  'buildings:buildings:update':
-    'ΑΝΟΙΧΤΟ ΕΥΡΗΜΑ (ADR-829) — 5 διαδρομές (φάσεις κατασκευής, ορόσημα, βασικές ' +
-    'γραμμές, αναθέσεις πόρων, σύνδεση έργου) το απαιτούν και κανείς δεν το έχει. ' +
-    'Ίδια απόφαση με το create· δεν στρογγυλεύεται σιωπηλά.',
-  'buildings:buildings:delete':
-    'ΑΝΟΙΧΤΟ ΕΥΡΗΜΑ (ADR-829) — /api/buildings/[buildingId] DELETE. Διαγραφή κτιρίου ' +
-    'είναι βαριά πράξη· ο κάτοχος πρέπει να αποφασιστεί ρητά, όχι να προκύψει από ' +
-    'διόρθωση κόκκινου test.',
   'search:global:execute':
     'ΑΝΟΙΧΤΟ ΕΥΡΗΜΑ (ADR-829) — /api/search + /api/search/reindex. Η μπάρα «Αναζήτηση ' +
     'σε έργα, επαφές, κτίρια…» εμφανίζεται σε ΚΑΘΕ οθόνη του κελύφους, για κάθε ρόλο, ' +
@@ -185,6 +178,25 @@ describe('Κ1 — ισχυρή πράξη σε πόρο ΧΩΡΙΣ το :view τ
     expect(permissions).toContain('projects:floors:view');
   });
 
+  it('ADR-829 §7.1 — τα κτίρια ανήκουν στον διαχειριστή, όπως τα έργα, και σε κανέναν άλλο ρόλο', () => {
+    const writes = [
+      'buildings:buildings:create', 'buildings:buildings:update', 'buildings:buildings:delete',
+      'projects:floors:create', 'projects:floors:update',
+    ];
+    for (const [name, role] of ROLES) {
+      for (const permission of writes) {
+        expect([name, permission, role.permissions.includes(permission as never)])
+          .toEqual([name, permission, name === 'company_admin']);
+      }
+    }
+  });
+
+  it('ADR-829 §7.1 — καμία διαδρομή ορόφων δεν γράφει με `:view`', () => {
+    const route = fs.readFileSync(path.resolve(__dirname, '../../../app/api/floors/route.ts'), 'utf8');
+    expect(route.match(/export const POST[\s\S]*?\n\);/)?.[0]).toContain("permissions: 'projects:floors:create'");
+    expect(route.match(/export const PATCH[\s\S]*?\n\);/)?.[0]).toContain("permissions: 'projects:floors:update'");
+  });
+
   it('ΔΕΝ στρογγυλεύτηκε — ο company_admin δεν πήρε ό,τι δεν του χρειάζεται', () => {
     // 🔑 Η διόρθωση έπρεπε να είναι ΕΛΑΧΙΣΤΗ: κάθε νέο permission αντιστοιχεί σε
     //    διαδρομή που ο προβολέας ΚΑΛΕΙ. Αν κάποιος «συμπληρώσει» την οικογένεια,
@@ -197,25 +209,32 @@ describe('Κ1 — ισχυρή πράξη σε πόρο ΧΩΡΙΣ το :view τ
 });
 
 describe('Κ2 — permission που ΑΠΑΙΤΕΙ ζωντανή διαδρομή και δεν το έχει ΚΑΝΕΙΣ', () => {
-  /** Σαρώνει τον δίσκο: `permission id` → οι διαδρομές που το απαιτούν. */
+  /**
+   * Σαρώνει τον δίσκο: `permission id` → οι διαδρομές που το απαιτούν.
+   *
+   * 🔴 ADR-829 §7.1 — ως τις 2026-11-01 κοιτούσε μόνο `route.ts` με `permissions:`. Έμεναν αόρατοι οι handlers που
+   * έχουν βγει σε δικό τους αρχείο (`building-update.handler.ts`), τα εργοστάσια διαδρομών του `lib/api` και η ενική
+   * δήλωση `permission:`. Έτσι το ADR έγραφε «5 διαδρομές» για το `buildings:update`, ενώ ήταν 7.
+   */
   const requiredByRoutes = ((): ReadonlyMap<string, ReadonlySet<string>> => {
-    const apiDir = path.resolve(__dirname, '../../../app/api');
+    const srcDir = path.resolve(__dirname, '../../..');
     const found = new Map<string, Set<string>>();
     const walk = (dir: string): void => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else if (entry.name === 'route.ts') {
+        if (entry.isDirectory()) {
+          if (entry.name !== '__tests__') walk(full);
+        } else if (/\.tsx?$/.test(entry.name) && !/\.test\./.test(entry.name)) {
           const src = fs.readFileSync(full, 'utf8');
-          for (const m of src.matchAll(/permissions:\s*'([a-z_0-9]+:[a-z_0-9]+:[a-z_0-9]+)'/g)) {
-            const rel = path.relative(apiDir, full).split(path.sep).join('/');
+          for (const m of src.matchAll(/permissions?:\s*'([a-z_0-9]+:[a-z_0-9]+:[a-z_0-9]+)'/g)) {
+            const rel = path.relative(srcDir, full).split(path.sep).join('/');
             if (!found.has(m[1]!)) found.set(m[1]!, new Set());
             found.get(m[1]!)!.add(rel);
           }
         }
       }
     };
-    walk(apiDir);
+    for (const root of ['app/api', 'lib/api', 'services/showcase-core/api']) walk(path.join(srcDir, root));
     return found;
   })();
 

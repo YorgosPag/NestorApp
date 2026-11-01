@@ -23,7 +23,8 @@
  *                 redirect). Το SSR είναι το ίδιο για κάθε id, άρα αρκεί **μάρτυρας
  *                 ύπαρξης**. Αν αύριο η σελίδα αρχίσει να τη διαβάζει, η Γ6 κοκκινίζει
  *                 και η οντότητα πρέπει να ανέβει σε `api`.
- *   • `value`   — δεν είναι οντότητα: μία τιμή από κλειστό σύνολο (`[type]`).
+ *   • `value`   — δεν είναι οντότητα: μία τιμή από κλειστό σύνολο (`[type]`) ή από στατικό
+ *                 αρχείο της εικόνας (`/area/[id]`, ευρετήριο ADR-883). Δεν σπέρνεται τίποτα.
  * =============================================================================
  */
 
@@ -49,7 +50,10 @@ const GOLDEN_ENTITIES = Object.freeze({
   invoice: { tier: GOLDEN_TIERS.WITNESS, prefix: 'inv' },
   ownerProperty: { tier: GOLDEN_TIERS.WITNESS, prefix: 'ownp' },
   quote: { tier: GOLDEN_TIERS.WITNESS, prefix: 'qt' },
+  engagement: { tier: GOLDEN_TIERS.WITNESS, prefix: 'eng' },
+  file: { tier: GOLDEN_TIERS.WITNESS, prefix: 'file' },
   reportType: { tier: GOLDEN_TIERS.VALUE, prefix: null },
+  area: { tier: GOLDEN_TIERS.VALUE, prefix: null },
 });
 
 /**
@@ -62,9 +66,11 @@ const GOLDEN_TEMPLATES = Object.freeze({
   '/o/[workspace]/accounting/invoices/[id]/edit': ['invoice'],
   '/o/[workspace]/accounting/reports/[type]': ['reportType'],
   '/o/[workspace]/buildings/[id]': ['building'],
+  '/o/[workspace]/cases/[engagementId]': ['engagement'],
   '/o/[workspace]/contacts/[id]': ['contact'],
   '/o/[workspace]/crm/leads/[id]': ['lead'],
   '/o/[workspace]/crm/tasks/[taskId]': ['task'],
+  '/o/[workspace]/files/[id]': ['file'],
   '/o/[workspace]/listings/mandates/[ownerPropertyId]': ['ownerProperty'],
   '/o/[workspace]/obligations/[id]/edit': ['obligation'],
   '/o/[workspace]/parking/[id]': ['parking'],
@@ -73,6 +79,7 @@ const GOLDEN_TEMPLATES = Object.freeze({
   '/o/[workspace]/procurement/rfqs/[id]': ['rfq'],
   '/o/[workspace]/projects/[id]': ['project'],
   '/o/[workspace]/projects/[id]/procurement': ['project'],
+  '/o/[workspace]/projects/[id]/procurement/coverage': ['project'],
   '/o/[workspace]/projects/[id]/procurement/overview': ['project'],
   '/o/[workspace]/projects/[id]/procurement/po': ['project'],
   '/o/[workspace]/projects/[id]/procurement/po/[poId]': ['project', 'purchaseOrder'],
@@ -85,6 +92,9 @@ const GOLDEN_TEMPLATES = Object.freeze({
   '/o/[workspace]/storage/[id]': ['storage'],
   // ── Δημόσιες πόρτες με υπογεγραμμένο token (ADR-876) — κρίνονται ΑΝΩΝΥΜΑ ──
   '/attendance/check-in/[token]': ['attendanceToken'],
+  // 🔴 ADR-890: η σελίδα περιοχής απαντά ΣΩΣΤΑ 404 σε άγνωστη ταυτότητα, άρα με `ssr-probe` ο χρησμός
+  //    έβγαζε ⛔ `route-unreachable`. Με πραγματική περιοχή κρίνεται η ίδια η σελίδα.
+  '/area/[id]': ['area'],
   // ⚠️ Η πύλη προμηθευτή ΔΕΝ είναι εδώ (ADR-876 §5 Φ7): ζει στο ΣΤΑΤΙΚΟ `/vendor/quote` και το
   //    διαπιστευτήριο στο fragment — ο server δεν το βλέπει ποτέ, άρα δεν υπάρχει τίποτα να δεθεί.
 });
@@ -116,9 +126,11 @@ const GOLDEN_EPHEMERAL_SECRETS = Object.freeze(['ATTENDANCE_QR_SECRET']);
 
 /**
  * Οι τιμές της βαθμίδας `value` — μέλη κλειστού συνόλου τύπων (άγκυρα Γ2β: το
- * `profit_and_loss` ΕΙΝΑΙ μέλος του `ReportType`, `src/subapps/accounting/types/reports.ts`).
+ * `profit_and_loss` ΕΙΝΑΙ μέλος του `ReportType`, `src/subapps/accounting/types/reports.ts` ·
+ * άγκυρα Γ2γ: το `municipality:4501`, Δήμος Αθηναίων, ΥΠΑΡΧΕΙ στο ευρετήριο περιοχών της εικόνας
+ * και έχει σελίδα αγοράς).
  */
-const GOLDEN_VALUES = Object.freeze({ reportType: 'profit_and_loss' });
+const GOLDEN_VALUES = Object.freeze({ reportType: 'profit_and_loss', area: 'municipality:4501' });
 
 /** Η σταθερή ταυτότητα ενός τμήματος με golden id — ποτέ το ίδιο το id (αλλάζει ανά run). */
 function goldenSegment(entity) {

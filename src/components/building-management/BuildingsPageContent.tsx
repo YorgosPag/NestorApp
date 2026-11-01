@@ -28,6 +28,7 @@ import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { deleteBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
+import { useBuildingCapabilities } from '@/hooks/useBuildingCapabilities';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
 import { useBuildingFiltersConfig } from '@/components/core/AdvancedFilters/hooks/useBuildingFiltersConfig';
 import { ListContainer, PageContainer } from '@/core/containers';
@@ -83,6 +84,9 @@ export function BuildingsPageContent() {
 
   // ✅ PERF: startTransition defers the expensive details panel re-render
   const [, startTransition] = useTransition();
+
+  // ADR-829 §7.1 — τι ΔΕΙΧΝΕΙ η οθόνη· τον έλεγχο τον ξανακάνει ο διακομιστής.
+  const { canCreateBuilding, canUpdateBuilding, canDeleteBuilding } = useBuildingCapabilities();
 
   // 🏢 ENTERPRISE: Lifted edit state for CompactToolbar ↔ BuildingDetails sync
   const [isEditingBuilding, setIsEditingBuilding] = useState(false);
@@ -315,11 +319,14 @@ export function BuildingsPageContent() {
 
   // Οι λεπτομέρειες του κτιρίου — ΜΙΑ δήλωση για τη στήλη του desktop, το φύλλο του κινητού και το side peek του
   // πλέγματος (ADR-912 §12.19). Ήταν γραμμένες δύο φορές με ίδια props σε άλλη σειρά.
+  const newBuildingAction = showTrash || !canCreateBuilding ? undefined : handleNewBuilding;
+  const deleteBuildingAction = showTrash || !canDeleteBuilding ? undefined : handleDeleteBuilding;
   const buildingDetails = (
     <BuildingDetails
       building={selectedBuilding}
-      onNewBuilding={showTrash ? undefined : handleNewBuilding}
-      onDeleteBuilding={showTrash ? undefined : handleDeleteBuilding}
+      onNewBuilding={newBuildingAction}
+      onDeleteBuilding={deleteBuildingAction}
+      canEdit={canUpdateBuilding}
       startInEditMode={showTrash ? false : startInEditMode}
       isEditing={showTrash ? false : isEditingBuilding}
       isTrashMode={showTrash}
@@ -343,9 +350,9 @@ export function BuildingsPageContent() {
           setSelectedBuilding(toggleSelect(selectedBuilding, building));
         });
       }}
-      onNewBuilding={showTrash ? undefined : handleNewBuilding}
-      onEditBuilding={selectedBuilding && !showTrash ? handleEditBuilding : undefined}
-      onDeleteBuilding={selectedBuilding && !showTrash ? handleDeleteBuilding : undefined}
+      onNewBuilding={newBuildingAction}
+      onEditBuilding={selectedBuilding && !showTrash && canUpdateBuilding ? handleEditBuilding : undefined}
+      onDeleteBuilding={selectedBuilding ? deleteBuildingAction : undefined}
     />
   );
 
@@ -358,7 +365,7 @@ export function BuildingsPageContent() {
           setShowDashboard={setShowDashboard}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
-          onNewBuilding={showTrash ? undefined : handleNewBuilding}
+          onNewBuilding={newBuildingAction}
           showTrash={showTrash}
           onToggleTrash={handleToggleTrash}
           trashCount={trashCount}

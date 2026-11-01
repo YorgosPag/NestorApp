@@ -29,6 +29,8 @@ jest.mock('@/services/entity-audit.service', () => ({
   resolveUserDisplayName: async () => 'Γιώργος',
 }));
 
+// Ο φύλακας του ενοικιαστή μένει ΠΡΑΓΜΑΤΙΚΟΣ· αντικαθίσταται μόνο το ίχνος της άρνησης.
+jest.mock('@/lib/auth/audit', () => ({ logAuditEvent: async () => undefined }));
 jest.mock('@/lib/firestore/deletion-guard', () => ({ executeDeletion: jest.fn() }));
 jest.mock('@/lib/firestore/version-check', () => ({
   withVersionCheck: jest.fn(),
@@ -105,6 +107,18 @@ const baseBody = {
 beforeEach(() => {
   createEntityMock.mockClear();
   seedBuilding();
+});
+
+describe('handleCreateFloor — ADR-829 §7.1 ο ξένος χώρος', () => {
+  it('🔴 ξένο κτίριο ⇒ 404 ίδιο με το ανύπαρκτο, ΧΩΡΙΣ γέννηση', async () => {
+    fake.seed('buildings', 'bldg_foreign', { name: 'Ξένο', companyId: 'co_2' });
+
+    await expect(handleCreateFloor(makeRequest({ ...baseBody, buildingId: 'bldg_foreign' }), ctx))
+      .rejects.toMatchObject({ statusCode: 404, message: 'Building not found' });
+    await expect(handleCreateFloor(makeRequest({ ...baseBody, buildingId: 'bldg_missing' }), ctx))
+      .rejects.toMatchObject({ statusCode: 404, message: 'Building not found' });
+    expect(createEntityMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('handleCreateFloor — ADR-461 kind persistence', () => {

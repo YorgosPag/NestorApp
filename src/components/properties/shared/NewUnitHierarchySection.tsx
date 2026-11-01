@@ -35,6 +35,7 @@ import { CREATABLE_PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/constants/p
 import { ProjectQuickCreateSheet } from '@/components/projects/dialogs/ProjectQuickCreateSheet';
 import { BuildingQuickCreateSheet } from '@/components/building-management/dialogs/BuildingQuickCreateSheet';
 import { FloorInlineCreateForm } from '@/components/building-management/tabs/FloorInlineCreateForm';
+import { useBuildingCapabilities } from '@/hooks/useBuildingCapabilities';
 import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';
 import { PropertyHierarchyEmptyStates } from './PropertyHierarchyEmptyStates';
 import { useNewUnitHierarchy, type NewUnitHierarchySelection } from './useNewUnitHierarchy';
@@ -60,6 +61,7 @@ export function NewUnitHierarchySection({
   onChange,
 }: NewUnitHierarchySectionProps) {
   const { t } = useTranslation('properties');
+  const { canCreateBuilding, canUpdateBuilding, canCreateFloor } = useBuildingCapabilities();
 
   // Buildings via real-time hook (SSoT)
   const { allBuildings: buildings, refetch: refetchBuildings } = useRealtimeBuildings();
@@ -158,10 +160,10 @@ export function NewUnitHierarchySection({
         selectedProjectName={selectedProjectName}
         selectedBuildingName={selectedBuildingName}
         onCreateProject={() => setShowAddProjectDialog(true)}
-        onCreateBuilding={handleOpenCreateBuilding}
-        onLinkBuildingToProject={() => setShowLinkBuildingDialog(true)}
+        onCreateBuilding={canCreateBuilding ? handleOpenCreateBuilding : undefined}
+        onLinkBuildingToProject={canUpdateBuilding ? () => setShowLinkBuildingDialog(true) : undefined}
         onPickAnotherBuilding={() => onChange({ buildingId: '', floorId: '', floor: 0 })}
-        onCreateFloor={() => setShowInlineFloorForm(true)}
+        onCreateFloor={canCreateFloor ? () => setShowInlineFloorForm(true) : undefined}
       />
       {showInlineFloorForm && selection.buildingId && selectedBuilding && (
         <FloorInlineCreateForm

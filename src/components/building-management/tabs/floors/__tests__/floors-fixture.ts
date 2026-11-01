@@ -23,6 +23,8 @@ export function makeFloorsState(overrides: Partial<FloorsTabState> = {}): Floors
     expandedFloorId: null,
     editingId: null,
     highlightedFloorId: null,
+    canUpdateFloor: true,
+    canDeleteFloor: true,
     deletingId: null,
     saving: false,
     editNumber: '0',

@@ -27,7 +27,8 @@ function fail(message) {
 }
 
 /** Ό,τι μπαίνει αυτούσιο σε τμήμα URL: ids (`proj_…`), base64url tokens, τιμές `snake_case`. */
-const GOLDEN_ID = /^[A-Za-z0-9._~-]{1,4096}$/;
+// ⚠️ Η `:` είναι για τις ταυτότητες περιοχής (`municipality:4501`)· το αίτημα τις στέλνει `encodeURIComponent`.
+const GOLDEN_ID = /^[A-Za-z0-9._~:-]{1,4096}$/;
 
 /**
  * `manifest.golden.entities` — ΑΚΡΙΒΩΣ οι οντότητες του καταλόγου. Μία που λείπει

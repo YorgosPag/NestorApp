@@ -69,8 +69,8 @@
 
 import { useMemo } from 'react';
 
-import { useCapability } from '@/auth/hooks/useCapability';
-import { isGranted, type CapabilityVerdict } from '@/types/capability-authority';
+import { useGrantedCapability } from '@/auth/hooks/useGrantedCapability';
+import type { CapabilityVerdict } from '@/types/capability-authority';
 import type { PermissionId } from '@/lib/auth/types';
 
 /**
@@ -104,26 +104,8 @@ export interface PropertyEditCapability {
   readonly pending: boolean;
 }
 
-/** Η ερώτηση προς τον ΕΝΑ PEP, μεταφρασμένη σε «δείξε / μη δείξεις» — κοινή σε κάθε πράξη ακινήτου. */
-function usePropertyActionCapability(permission: PermissionId): { granted: boolean; verdict: CapabilityVerdict; pending: boolean } {
-  const gate = useCapability(permission);
-
-  return useMemo(
-    () => ({
-      // fail-closed όσο εκκρεμεί: το `pending` δίνει `denied-unauthenticated`,
-      // άρα η κατεύθυνση είναι «κλειστό → ανοιχτό» και ποτέ το αντίστροφο —
-      // κουμπί που εμφανίζεται και μετά εξαφανίζεται είναι χειρότερο από κουμπί
-      // που αργεί.
-      granted: isGranted(gate.verdict),
-      verdict: gate.verdict,
-      pending: gate.pending,
-    }),
-    [gate],
-  );
-}
-
 export function usePropertyEditCapability(): PropertyEditCapability {
-  const { granted, verdict, pending } = usePropertyActionCapability(PROPERTY_EDIT_PERMISSION);
+  const { granted, verdict, pending } = useGrantedCapability(PROPERTY_EDIT_PERMISSION);
   return useMemo(() => ({ canEdit: granted, verdict, pending }), [granted, verdict, pending]);
 }
 
@@ -135,6 +117,6 @@ export function usePropertyEditCapability(): PropertyEditCapability {
 export const PROPERTY_DELETE_PERMISSION: PermissionId = 'properties:properties:delete';
 
 export function usePropertyDeleteCapability(): { readonly canDelete: boolean; readonly pending: boolean } {
-  const { granted, pending } = usePropertyActionCapability(PROPERTY_DELETE_PERMISSION);
+  const { granted, pending } = useGrantedCapability(PROPERTY_DELETE_PERMISSION);
   return useMemo(() => ({ canDelete: granted, pending }), [granted, pending]);
 }

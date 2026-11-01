@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { AuthContext } from '@/lib/auth';
+import { requireBuildingInTenant } from '@/lib/auth/tenant-isolation';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { asApiError } from '@/lib/api/api-error-types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
@@ -148,8 +150,9 @@ export async function handleCreateFloor(
     logger.info('[Floors/Create] Creating floor', { companyId: ctx.companyId, userId: ctx.uid });
 
     const db = getAdminFirestore();
-    const buildingDoc = await db.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
-    const buildingName = (buildingDoc.data()?.name as string) || body.buildingName || '';
+    // 🔒 ADR-829 §7.1 — το κτίριο έρχεται από το σώμα: ξένο = ανύπαρκτο. Δεύτερη γραμμή: το `tenantCheck` του `createEntity`.
+    const building = await requireBuildingInTenant({ ctx, buildingId: body.buildingId, path: '/api/floors (POST)' });
+    const buildingName = (building.name as string) || body.buildingName || '';
 
     const entitySpecificFields: Record<string, unknown> = {
       number: body.number,
@@ -199,7 +202,8 @@ export async function handleCreateFloor(
       `Floor "${body.name}" created successfully`
     );
   } catch (error) {
-    if (error instanceof ApiError) throw error;
+    const decided = asApiError(error);
+    if (decided) throw decided;
     logger.error('[Floors/Create] Error', { error: getErrorMessage(error), userId: ctx.uid });
     throw new ApiError(500, getErrorMessage(error, 'Failed to create floor'));
   }

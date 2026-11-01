@@ -22,9 +22,12 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 
-/** Οι οντότητες της βαθμίδας `witness` — ΙΔΙΟ σύνολο με τον κατάλογο (άγκυρα Γ8). */
+/**
+ * Οι οντότητες της βαθμίδας `witness` — ΙΔΙΟ σύνολο με τον κατάλογο (άγκυρα Γ8).
+ * ⚠️ Η συμμετοχή ζει κάτω από το έργο: τη διαδρομή της τη λύνει το {@link witnessCollectionPath}.
+ */
 export const WITNESS_COLLECTIONS = {
   contact: COLLECTIONS.CONTACTS,
   building: COLLECTIONS.BUILDINGS,
@@ -37,9 +40,18 @@ export const WITNESS_COLLECTIONS = {
   invoice: COLLECTIONS.ACCOUNTING_INVOICES,
   ownerProperty: COLLECTIONS.OWNER_PROPERTIES,
   quote: COLLECTIONS.QUOTES,
+  engagement: SUBCOLLECTIONS.PROJECT_ENGAGEMENTS,
+  file: COLLECTIONS.FILES,
 } as const;
 
 export type WitnessEntity = keyof typeof WITNESS_COLLECTIONS;
+
+/** Η διαδρομή συλλογής ενός μάρτυρα: το `projectId` το χρειάζεται μόνο η συμμετοχή. */
+export function witnessCollectionPath(entity: WitnessEntity, projectId: string | null): string {
+  if (entity !== 'engagement') return WITNESS_COLLECTIONS[entity];
+  if (projectId === null) throw new Error('ADR-875 §10: η συμμετοχή ζει κάτω από έργο, και το έργο δεν έχει γεννηθεί ακόμη');
+  return `${COLLECTIONS.PROJECTS}/${projectId}/${WITNESS_COLLECTIONS.engagement}`;
+}
 
 /** Ο πυρήνας κάθε μάρτυρα — γνωστός ΠΡΙΝ από κάθε κλήση API. */
 export interface WitnessCore {
@@ -78,6 +90,7 @@ export function witnessDocument(entity: Exclude<WitnessEntity, 'contact'>, refs:
     case 'property':
     case 'parking':
     case 'storage':
+    case 'engagement':
       return { ...core, projectId: refs.projectId };
     case 'lead':
       return { ...core, title: core.name, contactId: refs.contactId };

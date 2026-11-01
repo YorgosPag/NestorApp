@@ -23,6 +23,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useContainerClass } from '@/hooks/media/useContainerClass';
 import { getStatusColor } from '@/lib/design-system';
 import { countBuildingStoreys, isBuildingStorey } from '@/utils/floor-naming';
+import { useBuildingCapabilities } from '@/hooks/useBuildingCapabilities';
 
 // 🏢 ENTERPRISE: Extracted state hook
 import { useFloorsTabState } from './useFloorsTabState';
@@ -77,6 +78,8 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
   const iconSizes = useIconSizes();
 
   const state = useFloorsTabState(building.id, building.projectId, focusFloorId);
+  // ADR-829 §7.1 — η γρήγορη ρύθμιση γράφει ορόφους ΚΑΙ τις στάθμες του κτιρίου, άρα ζητά και τα δύο.
+  const { canCreateFloor, canUpdateBuilding } = useBuildingCapabilities();
   const {
     floors, loading, error, showCreateForm, setShowCreateForm, fetchFloors,
     continuityWarnings, stackConflicts, dialogProps, BlockedDialog,
@@ -118,12 +121,16 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
       {BlockedDialog}
 
       <BuildingSpaceTabHeader icon={<Layers className="h-5 w-5 shrink-0 text-primary" />} title={t('tabs.floors.title')}>
-        <Button variant="outline" size="sm" onClick={() => setShowQuickSetup((v) => !v)} disabled={showCreateForm}>
-          <Building2 className="mr-1 h-4 w-4" />{t('tabs.floors.quickSetup.cta')}
-        </Button>
-        <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)} disabled={showCreateForm || showQuickSetup}>
-          <Plus className="mr-1 h-4 w-4" />{t('tabs.floors.addFloor')}
-        </Button>
+        {canCreateFloor && canUpdateBuilding && (
+          <Button variant="outline" size="sm" onClick={() => setShowQuickSetup((v) => !v)} disabled={showCreateForm}>
+            <Building2 className="mr-1 h-4 w-4" />{t('tabs.floors.quickSetup.cta')}
+          </Button>
+        )}
+        {canCreateFloor && (
+          <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)} disabled={showCreateForm || showQuickSetup}>
+            <Plus className="mr-1 h-4 w-4" />{t('tabs.floors.addFloor')}
+          </Button>
+        )}
       </BuildingSpaceTabHeader>
 
       {showQuickSetup && (
@@ -158,10 +165,12 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
           <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-[hsl(var(--text-warning))]`} />
           <h3 className="text-lg font-semibold mb-2">{t('tabs.floors.empty')}</h3>
           <p className={cn('text-sm mb-3', colors.text.muted)}>{t('tabs.floors.emptyHint')}</p>
-          <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)}>
-            <Plus className={`${iconSizes.sm} mr-2`} />
-            {t('tabs.floors.addFloor')}
-          </Button>
+          {canCreateFloor && (
+            <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)}>
+              <Plus className={`${iconSizes.sm} mr-2`} />
+              {t('tabs.floors.addFloor')}
+            </Button>
+          )}
         </section>
       ) : (
         <>

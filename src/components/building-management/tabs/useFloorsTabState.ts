@@ -31,6 +31,7 @@ import {
   floorRemovalRefusalKey,
   floorSlotRefusalKey,
 } from './floor-stack-messages';
+import { useBuildingCapabilities } from '@/hooks/useBuildingCapabilities';
 import type { FloorRecord, FloorsApiResponse, FloorMutationResponse } from './useFloorsTabState.types';
 
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
@@ -477,7 +478,9 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     };
   }, [focusFloorId, loading, floors]);
 
+  const { canUpdateFloor, canDeleteFloor } = useBuildingCapabilities();
   return {
+    canUpdateFloor, canDeleteFloor,
     floors, loading, error, expandedFloorId, toggleFloorExpand,
     registerFloorRowRef, highlightedFloorId,
     // ADR-284 Batch 7 SSoT: create state extracted to FloorInlineCreateForm component

@@ -121,6 +121,7 @@ export function GeneralTabContent({
   // policy error code, we surface the matching inline recovery UI (e.g. link
   // orphan project → company) right next to the banner.
   const [saveErrorCode, setSaveErrorCode] = useState<string | null>(null);
+  const updateFailureCodeRef = React.useRef<string | null>(null);
   const [formData, setFormData] = useState(() => buildFormData(building));
   // Η φόρμα δηλώνει αν διαφέρει από το αποθηκευμένο κτίριο — το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
   const savedFormData = useMemo(() => buildFormData(building), [building]);
@@ -271,6 +272,8 @@ export function GeneralTabContent({
       buildingId: String(building.id),
       updates: { ...buildingFieldsFrom(data), _v: data._v },
     });
+    // Το `useVersionedSave` κρατά μόνο το μήνυμα· ο κωδικός μένει εδώ για το <PolicyErrorBanner> (ADR-829 §7.1).
+    updateFailureCodeRef.current = result.errorCode ?? null;
     return result;
   }, [building.id]);
 
@@ -379,7 +382,7 @@ export function GeneralTabContent({
     } catch (error) {
       logger.error('Error saving building', { error });
       setSaveError(error instanceof Error ? error.message : 'Failed to save building');
-      setSaveErrorCode(null);
+      setSaveErrorCode(updateFailureCodeRef.current);
       return false;
     } finally {
       setIsSaving(false);

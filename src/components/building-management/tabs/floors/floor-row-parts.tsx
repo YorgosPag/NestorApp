@@ -123,17 +123,21 @@ export function FloorViewActions({ row, state, withFloorplanToggle = false }: Fl
           </TooltipContent>
         </Tooltip>
       )}
-      <IconButton label={t('tabs.floors.editFloor')} onClick={() => state.startEdit(floor)}>
-        <Pencil className="h-3.5 w-3.5" />
-      </IconButton>
-      <IconButton
-        label={t('tabs.floors.deleteFloor')}
-        className="text-destructive hover:text-destructive"
-        onClick={() => state.handleDelete(floor)}
-        busy={state.deletingId === floor.id}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </IconButton>
+      {state.canUpdateFloor && (
+        <IconButton label={t('tabs.floors.editFloor')} onClick={() => state.startEdit(floor)}>
+          <Pencil className="h-3.5 w-3.5" />
+        </IconButton>
+      )}
+      {state.canDeleteFloor && (
+        <IconButton
+          label={t('tabs.floors.deleteFloor')}
+          className="text-destructive hover:text-destructive"
+          onClick={() => state.handleDelete(floor)}
+          busy={state.deletingId === floor.id}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </IconButton>
+      )}
     </nav>
   );
 }

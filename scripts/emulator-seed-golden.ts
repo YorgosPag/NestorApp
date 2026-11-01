@@ -40,6 +40,7 @@ import {
   GOLDEN_MARK,
   WITNESS_COLLECTIONS,
   companyContactDocument,
+  witnessCollectionPath,
   witnessDocument,
   witnessId,
   type WitnessEntity,
@@ -149,12 +150,12 @@ async function createAttendanceToken(session: ApiSession, projectId: string): Pr
 // 3. Η βαθμίδα `witness` + η σύνθεση
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function writeWitness(db: Firestore, entity: WitnessEntity, document: Record<string, unknown>): Promise<string> {
+async function writeWitness(db: Firestore, entity: WitnessEntity, document: Record<string, unknown>, projectId: string | null): Promise<string> {
   const prefix = GOLDEN_ENTITIES[entity].prefix;
   if (!prefix) fail(`ο μάρτυρας ${entity} δεν έχει πρόθεμα id`);
   const id = witnessId(prefix);
   const stamp = { createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() };
-  await db.collection(WITNESS_COLLECTIONS[entity]).doc(id).set({ ...document, ...stamp }, { merge: true });
+  await db.collection(witnessCollectionPath(entity, projectId)).doc(id).set({ ...document, ...stamp }, { merge: true });
   return id;
 }
 
@@ -167,14 +168,14 @@ async function seedGolden(auth: Auth, db: Firestore): Promise<GoldenIds> {
   const createdBy = (await auth.getUserByEmail(email)).uid;
   const core = { companyId: COMPANY_ID, createdBy };
 
-  const contactId = await writeWitness(db, 'contact', companyContactDocument(core));
+  const contactId = await writeWitness(db, 'contact', companyContactDocument(core), null);
   const projectId = await ensureProject(db, session, contactId);
   const rfqId = await createRfq(session, projectId);
   const refs: WitnessRefs = { ...core, contactId, projectId, rfqId };
 
   const witnesses: Record<string, string> = { contact: contactId };
   for (const entity of Object.keys(WITNESS_COLLECTIONS) as WitnessEntity[]) {
-    if (entity !== 'contact') witnesses[entity] = await writeWitness(db, entity, witnessDocument(entity, refs));
+    if (entity !== 'contact') witnesses[entity] = await writeWitness(db, entity, witnessDocument(entity, refs), projectId);
   }
   return {
     ...witnesses,
@@ -182,7 +183,7 @@ async function seedGolden(auth: Auth, db: Firestore): Promise<GoldenIds> {
     rfq: rfqId,
     purchaseOrder: await createPurchaseOrder(session, projectId, contactId),
     attendanceToken: await createAttendanceToken(session, projectId),
-    reportType: GOLDEN_VALUES.reportType,
+    ...GOLDEN_VALUES,
   } as GoldenIds;
 }
 

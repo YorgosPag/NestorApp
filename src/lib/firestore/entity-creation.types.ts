@@ -102,7 +102,9 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     idGenerator: 'generateBuildingId',
     codeType: null,
     codeField: null,
-    tenantCheck: false,
+    // ADR-829 §7.1 — ο γονιός έρχεται από το σώμα και το `companyId` κληρονομείται από αυτόν: χωρίς τον έλεγχο,
+    // ξένο `projectId` γεννούσε κτίριο ΣΤΟΝ ΞΕΝΟ χώρο. Άγκυρα: κάθε οντότητα με γονιό κρίνεται.
+    tenantCheck: true,
     auditTargetType: 'building',
     entityAuditType: 'building',
   },
@@ -113,7 +115,8 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     idGenerator: 'generateFloorId',
     codeType: null,
     codeField: null,
-    tenantCheck: false,
+    // ADR-829 §7.1 — ίδιος λόγος με το `building`: ο γονιός (κτίριο) έρχεται από το σώμα.
+    tenantCheck: true,
     auditTargetType: 'api',
     entityAuditType: 'floor',
   },

@@ -51,7 +51,7 @@ async function probe(baseUrl, expectedStatus) {
 describe('Β0 — το συμβόλαιο διαβάζεται από τον ΚΩΔΙΚΑ που ρίχνει', () => {
   test('πρόθεμα + κλειστό σύνολο εξαρτήσεων από το src/lib/errors/backend-unavailable.ts', () => {
     expect(CONTRACT.prefix).toBe('NESTOR_BACKEND_UNAVAILABLE');
-    expect([...CONTRACT.dependencies].sort()).toEqual(['agency-alias-lookup', 'agency-profile', 'workspace-lookup']);
+    expect([...CONTRACT.dependencies].sort()).toEqual(['agency-alias-lookup', 'agency-profile', 'area-market', 'workspace-lookup']);
   });
 
   test('fail-closed: SSoT χωρίς πρόθεμα ⇒ throw με όνομα, ποτέ κενό σύνολο', () => {

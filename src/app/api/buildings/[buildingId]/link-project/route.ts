@@ -30,7 +30,7 @@ import {
   apiSuccess,
   type ApiSuccessResponse,
 } from '@/lib/api/ApiErrorHandler';
-import { requireBuildingAccess } from '../../_shared/building-ownership';
+import { requireBuildingAccess, requireProjectInBuildingTenant } from '../../_shared/building-ownership';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -125,6 +125,9 @@ export async function POST(
               buildingId,
               action: 'link-project',
             });
+
+            // 🔒 ADR-829 §7.1 — και ο ΣΤΟΧΟΣ, στην ίδια συναλλαγή: το έργο έρχεται από το σώμα.
+            requireProjectInBuildingTenant(projectSnap.data(), buildingData.companyId);
 
             // Scope guard: only assign to orphans; reject cross-project moves
             if (!isBlank(buildingData.projectId)) {

@@ -88,6 +88,13 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "projects:members:view",
       "projects:members:manage",
       "buildings:buildings:view",
+      // ADR-829 §7.1 — ο διαχειριστής δημιουργεί, αλλάζει και στέλνει στον κάδο κτίρια, όπως ακριβώς και έργα
+      // (Procore · ACC: ο διαχειριστής της εταιρείας). Ως εδώ τα δικαιώματα δεν τα είχε ΚΑΝΕΝΑΣ ρόλος (403 ζωντανά).
+      // ⚠️ Δόθηκαν ΜΑΖΙ με τους φράχτες ξένου έργου. Χωρίς αυτούς, ανοίγουν εγγραφή σε ξένο χώρο.
+      // Άλλος υπάλληλος: ρητή παραχώρηση στο claim, ποτέ γραμμή σε άλλον ρόλο. Ο ρόλος έργου: ξεχωριστό ADR.
+      "buildings:buildings:create",
+      "buildings:buildings:update",
+      "buildings:buildings:delete",
       "settings:settings:view",
       "settings:settings:manage",
       "notifications:notifications:view",
@@ -181,7 +188,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "units:units:create",
       "units:units:update",
       "units:units:delete",
-      // Floors
+      // Floors — ADR-829 §7.1: η εγγραφή ζητούσε `:view`, άρα έγραφε και ο `internal_user`, ρόλος ΑΝΑΓΝΩΣΗΣ.
+      "projects:floors:create",
+      "projects:floors:update",
       "projects:floors:delete",
       // CRM — company admin has full contact access (required by floorplan wizard + CRM module)
       "crm:contacts:view",

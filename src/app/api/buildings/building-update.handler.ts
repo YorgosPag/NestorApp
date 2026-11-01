@@ -17,6 +17,8 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { loadOwnedBuilding } from './_shared/building-owned-doc';
+import { requireProjectInBuildingTenant } from './_shared/building-ownership';
+import { assertBuildingFieldsWritable } from './_shared/building-write-fields';
 import { recordEntityUpdate } from '@/services/audit/record-entity-update';
 import { BUILDING_OBJECTIVE_VALUE_BODY_KEY, patchBuildingObjectiveValue } from './building-objective-value-patch';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -174,6 +176,21 @@ interface BuildingUpdateResponse {
   positionsPending?: string[];
 }
 
+/**
+ * ADR-829 §7.1 — νέος δεσμός προς έργο κρίνεται **πριν** γραφτεί. Το `null` λύνει τον δεσμό και το ίδιο έργο δεν
+ * αλλάζει τίποτα: εκεί δεν υπάρχει στόχος να κριθεί.
+ */
+async function guardRequestedProject(
+  adminDb: ReturnType<typeof requireAdminFirestore>,
+  requested: unknown,
+  buildingData: Record<string, unknown> | undefined,
+): Promise<void> {
+  if (typeof requested !== 'string' || requested === '' || requested === buildingData?.projectId) return;
+  const project = await adminDb.collection(COLLECTIONS.PROJECTS).doc(requested).get();
+  if (!project.exists) throw new ApiError(400, 'Referenced Project not found.', POLICY_ERROR_CODES.PROJECT_NOT_FOUND);
+  requireProjectInBuildingTenant(project.data(), buildingData?.companyId);
+}
+
 // ============================================================================
 // PATCH — Update Building
 // ============================================================================
@@ -204,6 +221,10 @@ export const PATCH = withStandardRateLimit(
       if (BUILDING_OBJECTIVE_VALUE_BODY_KEY in body) {
         return await patchBuildingObjectiveValue({ adminDb, buildingId, body, ctx });
       }
+
+      // 🔒 ADR-829 §7.1 — λευκή λίστα αντί για σκέτο cast, και ο στόχος του δεσμού πριν από κάθε γραφή.
+      assertBuildingFieldsWritable(updates as Record<string, unknown>);
+      await guardRequestedProject(adminDb, updates.projectId, buildingData);
 
       // ADR-890 Φ0 — η φόρμα κρίνει το έτος με την ΙΔΙΑ σταθερά· εδώ η πόρτα για όποιον την παρακάμψει.
       const year = updates.constructionYear;

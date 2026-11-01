@@ -47,10 +47,11 @@ export interface PropertyHierarchyEmptyStatesProps {
   selectedProjectName: string;
   selectedBuildingName: string;
   onCreateProject: () => void;
-  onCreateBuilding: () => void;
-  onLinkBuildingToProject: () => void;
+  /** ADR-829 §7.1 — χωρίς δικαίωμα δεν περνά πράξη: το κουμπί δεν φαίνεται και η οθόνη λέει τι να κάνει ο άνθρωπος. */
+  onCreateBuilding?: () => void;
+  onLinkBuildingToProject?: () => void;
   onPickAnotherBuilding: () => void;
-  onCreateFloor: () => void;
+  onCreateFloor?: () => void;
 }
 
 // =============================================================================
@@ -99,16 +100,20 @@ export function PropertyHierarchyEmptyStates({
               </p>
             </div>
           </header>
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={onCreateBuilding}
-            className="self-start"
-          >
-            <Building2 className={iconSizes.xs} aria-hidden />
-            {t('dialog.addUnit.emptyState.noBuildings.cta')}
-          </Button>
+          {onCreateBuilding ? (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={onCreateBuilding}
+              className="self-start"
+            >
+              <Building2 className={iconSizes.xs} aria-hidden />
+              {t('dialog.addUnit.emptyState.noBuildings.cta')}
+            </Button>
+          ) : (
+            <p className={cn('text-xs', colors.text.muted)}>{t('dialog.addUnit.emptyState.askAdmin')}</p>
+          )}
         </section>
       )}
 
@@ -122,7 +127,7 @@ export function PropertyHierarchyEmptyStates({
             <Link2 className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
             <div className="flex-1">
               <p className={cn('font-medium', colors.text.primary)}>
-                {`Το Κτίριο "${selectedBuildingName || '—'}" δεν είναι συνδεδεμένο με Έργο`}
+                {t('dialog.addUnit.emptyState.orphanBuilding.title', { buildingName: selectedBuildingName || '—' })}
               </p>
               <p className={cn('text-xs mt-1', colors.text.muted)}>
                 {t('dialog.addUnit.emptyState.orphanBuilding.description')}
@@ -130,15 +135,17 @@ export function PropertyHierarchyEmptyStates({
             </div>
           </header>
           <nav className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={onLinkBuildingToProject}
-            >
-              <Link2 className={iconSizes.xs} aria-hidden />
-              {t('dialog.addUnit.emptyState.orphanBuilding.cta.fixNow')}
-            </Button>
+            {onLinkBuildingToProject && (
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={onLinkBuildingToProject}
+              >
+                <Link2 className={iconSizes.xs} aria-hidden />
+                {t('dialog.addUnit.emptyState.orphanBuilding.cta.fixNow')}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -161,20 +168,24 @@ export function PropertyHierarchyEmptyStates({
             <AlertTriangle className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
             <div className="flex-1">
               <p className={cn('font-medium', colors.text.primary)}>
-                {`Το Κτίριο "${selectedBuildingName || '—'}" δεν έχει ορόφους`}
+                {t('dialog.addUnit.emptyState.noFloors.title', { buildingName: selectedBuildingName || '—' })}
               </p>
             </div>
           </header>
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={onCreateFloor}
-            className="self-start"
-          >
-            <Layers className={iconSizes.xs} aria-hidden />
-            {t('dialog.addUnit.emptyState.noFloors.cta')}
-          </Button>
+          {onCreateFloor ? (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={onCreateFloor}
+              className="self-start"
+            >
+              <Layers className={iconSizes.xs} aria-hidden />
+              {t('dialog.addUnit.emptyState.noFloors.cta')}
+            </Button>
+          ) : (
+            <p className={cn('text-xs', colors.text.muted)}>{t('dialog.addUnit.emptyState.askAdmin')}</p>
+          )}
         </section>
       )}
     </>

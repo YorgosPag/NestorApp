@@ -6,9 +6,11 @@ import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { withAuth } from '@/lib/auth';
+import { requireProjectInTenant, withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { asApiError } from '@/lib/api/api-error-types';
+import { assertBuildingFieldsWritable } from './_shared/building-write-fields';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
@@ -93,6 +95,7 @@ export const POST = withStandardRateLimit(
       const parsed = safeParseBody(CreateBuildingSchema, await request.json());
       if (parsed.error) throw new ApiError(400, 'Validation failed');
       const body = parsed.data;
+      assertBuildingFieldsWritable(body);
 
       // 🔐 ADR-284 §3.0.5: Layer 0.5 Building Creation Policy (server-side enforcement)
       const adminDb = getAdminFirestore();
@@ -102,6 +105,9 @@ export const POST = withStandardRateLimit(
       }
       try {
         assertBuildingCreatePolicy(body as unknown as Record<string, unknown>);
+        // 🔒 ADR-829 §7.1 — ΠΡΙΝ από κάθε ερώτηση για το έργο: ο έλεγχος διπλότυπου κωδικού παρακάτω θα ήταν μαντείο
+        // για ξένο έργο. Ξένο = ανύπαρκτο, στο σύρμα. Δεύτερη γραμμή: το `tenantCheck` του `createEntity`.
+        await requireProjectInTenant({ ctx, projectId: String(body.projectId), path: '/api/buildings (POST)' });
         await assertBuildingUpstreamChain(adminDb, {
           projectId: String(body.projectId),
         });
@@ -174,7 +180,8 @@ export const POST = withStandardRateLimit(
         'Building created successfully'
       );
     } catch (error) {
-      if (error instanceof ApiError) throw error;
+      const decided = asApiError(error);
+      if (decided) throw decided;
       logger.error('[Buildings] Error creating building', { error });
       throw new ApiError(500, getErrorMessage(error, 'Failed to create building'));
     }

@@ -47,6 +47,7 @@ const CODE_TO_I18N_KEY: Record<PolicyErrorCode, string> = {
   [POLICY_ERROR_CODES.MULTILEVEL_FLOOR_MISMATCH]: 'policyErrors.multilevelFloorMismatch',
   [POLICY_ERROR_CODES.STANDALONE_WITH_BUILDING]: 'policyErrors.standaloneWithBuilding',
   [POLICY_ERROR_CODES.DUPLICATE_CODE]: 'policyErrors.duplicateCode',
+  [POLICY_ERROR_CODES.PERMISSION_DENIED]: 'policyErrors.permissionDenied',
   [POLICY_ERROR_CODES.SPACE_LINKED_TO_UNIT]: 'policyErrors.spaceLinkedToUnit',
   [POLICY_ERROR_CODES.SPACE_BUILDING_OTHER_PROJECT]: 'policyErrors.spaceBuildingOtherProject',
   [POLICY_ERROR_CODES.PROPERTY_PROJECT_BOUNDARY]: 'policyErrors.propertyProjectBoundary',
