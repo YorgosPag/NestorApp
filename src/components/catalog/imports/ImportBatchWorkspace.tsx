@@ -14,7 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import type { ImportBatchPages, ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
-import { useImportText } from './import-text';
+import { SET_ASIDE_KEYS, useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
 
@@ -32,6 +32,21 @@ function PageCost({ pages, remaining }: { readonly pages: ImportBatchPages; read
       {remaining > 0 ? <span>{t('batch.costEstimate', { cost: estimate })}</span> : null}
       {usage ? <span role="status">{t('batch.costSpent', { requests: usage.requests, tokens: usage.inputTokens + usage.outputTokens, cost: usage.costUsd === null ? '—' : usage.costUsd.toFixed(USD_DECIMALS) })}</span> : null}
     </p>
+  );
+}
+
+/** Ό,τι δεν έγινε πρόταση μένει ορατό: ο άνθρωπος ξέρει ότι τα εξαρτήματα της σελίδας δεν χάθηκαν. */
+function SetAsideTables({ pages }: { readonly pages: ImportBatchPages }) {
+  const { t } = useImportText();
+  const entries = pages.setAside ?? [];
+  if (entries.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-1 text-xs text-muted-foreground" aria-label={t('batch.setAsideTitle')}>
+      <h3 className="m-0 font-medium">{t('batch.setAsideTitle')}</h3>
+      <ul className="m-0 list-none p-0">
+        {entries.map((entry) => <li key={`${entry.page}:${entry.table}`}>{t(SET_ASIDE_KEYS[entry.role], { page: entry.page, label: entry.label })}</li>)}
+      </ul>
+    </section>
   );
 }
 
@@ -54,6 +69,7 @@ function PageProgress({ workspace }: { readonly workspace: Workspace }) {
         </span>
       </p>
       <PageCost pages={pages} remaining={remaining} />
+      <SetAsideTables pages={pages} />
     </section>
   );
 }

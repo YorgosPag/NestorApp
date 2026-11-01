@@ -32,7 +32,7 @@ import {
   type StoredCatalogRecord,
 } from './catalog-store.server';
 import { assertNoIssues, CatalogWriteError } from './catalog-write-error';
-import { downloadBatchFile, readBatchFileRecord } from './import-source.server';
+import { downloadBatchFile, findStoredBatchFile, readBatchFileRecord } from './import-source.server';
 
 export type StoredImportBatch = StoredCatalogRecord<ImportBatchDefinition>;
 
@@ -66,12 +66,37 @@ function pagesOf(request: CreateImportBatchRequest): ImportBatchPages | null {
 
 function definitionOf(request: CreateImportBatchRequest, code: string, profileRevision: number | null): ImportBatchDefinition {
   const { sourceKind, contentSha256, fileName, sizeBytes, target, profileId, run } = request;
-  return { code, sourceKind, contentSha256, fileName, sizeBytes, fileId: null, target, profileId, profileRevision, run, status: 'awaitingFile', pages: pagesOf(request) };
+  return { code, sourceKind, contentSha256, fileName, sizeBytes, fileId: null, fileBatchId: null, target, profileId, profileRevision, run, status: 'awaitingFile', pages: pagesOf(request) };
 }
 
 async function profileRevisionOf(scope: CatalogTx, profileId: string | null): Promise<number | null> {
   if (profileId === null) return null;
   return (await readOwned<ImportProfileDefinition>(scope, 'importProfile', profileId)).revision;
+}
+
+const statusAfterFile = (batch: Pick<ImportBatchDefinition, 'sourceKind'>): ImportBatchDefinition['status'] => (batch.sourceKind === 'pdf' ? 'extracting' : 'mapping');
+
+/** Η παρτίδα-κάτοχος του αρχείου: η ίδια, εκτός αν ξαναχρησιμοποιεί αντίγραφο άλλης. */
+export const fileOwnerOf = (batch: StoredImportBatch): string => batch.fileBatchId ?? batch.id;
+
+async function assertPageRange(batch: Pick<ImportBatchDefinition, 'sourceKind' | 'pages'>, bytes: Buffer): Promise<void> {
+  const { pages } = batch;
+  if (batch.sourceKind !== 'pdf' || !pages) return;
+  const count = await countPdfPages(bytes);
+  if (pages.to > count) assertNoIssues([{ code: 'tooMany', path: 'pageRange', params: { max: count } }]);
+}
+
+/** Ίδιο περιεχόμενο δεν ξανανεβαίνει: η νέα παρτίδα δείχνει το ζωντανό αρχείο, και ο πελάτης βλέπει ότι δεν περιμένει αρχείο (§5.5.1). */
+async function reuseStoredFile(ctx: AuthContext, batch: StoredImportBatch): Promise<StoredImportBatch> {
+  if (batch.status !== 'awaitingFile') return batch;
+  const stored = await findStoredBatchFile(ctx, batch.contentSha256, batch.id);
+  if (stored === null) return batch;
+  await assertPageRange(batch, await downloadBatchFile(stored.record));
+  return runCatalogTransaction(ctx, async (scope) => {
+    const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batch.id);
+    if (current.status !== 'awaitingFile') return current;
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), fileId: stored.fileId, fileBatchId: stored.ownerBatchId, status: statusAfterFile(current) });
+  });
 }
 
 /**
@@ -80,6 +105,10 @@ async function profileRevisionOf(scope: CatalogTx, profileId: string | null): Pr
  */
 export async function createImportBatch(ctx: AuthContext, request: CreateImportBatchRequest): Promise<StoredImportBatch> {
   await assertPurposeAuthority(ctx, request.target.purpose);
+  return reuseStoredFile(ctx, await openImportBatch(ctx, request));
+}
+
+function openImportBatch(ctx: AuthContext, request: CreateImportBatchRequest): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const profileRevision = await profileRevisionOf(scope, request.profileId);
     for (let run = request.run; run < request.run + IMPORT_MAX_RUNS; run += 1) {
@@ -97,17 +126,14 @@ export async function createImportBatch(ctx: AuthContext, request: CreateImportB
 
 export function batchDefinitionOf(batch: StoredImportBatch): ImportBatchDefinition {
   const { code, sourceKind, contentSha256, fileName, sizeBytes, fileId, target, profileId, profileRevision, run, status, pages } = batch;
-  return { code, sourceKind, contentSha256, fileName, sizeBytes, fileId, target, profileId, profileRevision, run, status, pages };
+  return { code, sourceKind, contentSha256, fileName, sizeBytes, fileId, fileBatchId: batch.fileBatchId ?? null, target, profileId, profileRevision, run, status, pages };
 }
 
 async function assertContent(batch: StoredImportBatch, bytes: Buffer): Promise<void> {
   if (createHash('sha256').update(bytes).digest('hex') !== batch.contentSha256) {
     throw new CatalogWriteError('invalid', [{ code: 'fileTypeConflict', path: 'contentSha256' }]);
   }
-  const pages = batch.pages;
-  if (batch.sourceKind === 'pdf' && pages && pages.to > (await countPdfPages(bytes))) {
-    assertNoIssues([{ code: 'tooMany', path: 'pageRange', params: { max: await countPdfPages(bytes) } }]);
-  }
+  await assertPageRange(batch, bytes);
 }
 
 /** `POST /api/catalog/imports/[id]/file` — μέτρηση έξω από τη συναλλαγή, κρίση μέσα. */
@@ -121,7 +147,7 @@ export async function attachImportBatchFile(ctx: AuthContext, id: string, expect
     return stageReplace(scope, 'importBatch', current, {
       ...batchDefinitionOf(current),
       fileId,
-      status: current.sourceKind === 'pdf' ? 'extracting' : 'mapping',
+      status: statusAfterFile(current),
     });
   });
 }

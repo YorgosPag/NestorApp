@@ -16,7 +16,7 @@ import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportTarget } from '
 import { IMPORT_UNVERIFIED_CONFIDENCE_CAP } from '../vocabulary/catalog-import';
 import { ANY_SLOT } from '../types/product';
 import { unitForm } from '../values/value-text-codec';
-import { anchorForCell, misalignedCells, unitConfirmed, type AlignedRow, type PageToken } from './page-tokens';
+import { anchorForCell, misalignedCells, unitConfirmed, unitPrintedBeside, type AlignedRow, type PageToken } from './page-tokens';
 
 export const PAGE_EXTRACTION_SCHEMA_NAME = 'catalog_page_extraction';
 
@@ -127,6 +127,7 @@ function cellFrom(raw: RawPageValue, target: ImportTarget, context: PageExtracti
 
 /** Το μοντέλο έγραψε τη μονάδα μέσα στην τιμή («1000 kW»), παρά την εντολή. Κρίνεται όπως κάθε άλλη δήλωση μονάδας. */
 const EMBEDDED_UNIT = /^[-−+]?[\d.,\s]*\d\s*([^\d.,\s].*)$/u;
+const EMBEDDED_UNIT_SUFFIX = /(?<=\d)\s*[^\d.,\s].*$/u;
 
 type UnitReading = Pick<ExtractedCell, 'unitCode' | 'flags'>;
 
@@ -140,7 +141,10 @@ function unitReadingOf(raw: RawPageCell, text: string | null, attributeId: strin
   const printed = embedded ?? stated;
   if (printed === null) return { unitCode: null, flags: [] };
   const agree = stated === null || embedded === null || unitForm(stated) === unitForm(embedded);
-  const confirmed = agree && (unitConfirmed(printed, raw.unitTokens, context.tokens) || unitConfirmed(printed, raw.sourceTokens, context.tokens));
+  const cited = raw.unitTokens.length > 0 || raw.sourceTokens.length > 0;
+  const shown = unitConfirmed(printed, raw.unitTokens, context.tokens) || unitConfirmed(printed, raw.sourceTokens, context.tokens);
+  const number = text === null ? '' : text.replace(EMBEDDED_UNIT_SUFFIX, '');
+  const confirmed = agree && (shown || (!cited && unitPrintedBeside(printed, number, context.tokens)));
   return { unitCode: embedded === null ? printed : null, flags: confirmed ? [] : [{ code: 'unitUnconfirmed', path: attributeId, params: { unit: printed } }] };
 }
 
@@ -206,6 +210,24 @@ export function extractGroupsFromPage(raw: RawPageExtraction, context: PageExtra
   return raw.tables.map((table, index) => groupFromTable(table, index, context));
 }
 
+/** Από τόσα πεδία και πάνω η εικόνα κατάρρευσης είναι μέτρηση, όχι τύχη. */
+const MIN_EVIDENCE_CELLS = 4;
+const EVIDENCE_COLLAPSE_SHARE = 0.5;
+
+/**
+ * Κατέρρευσε η επιβεβαίωση σε αυτή τη σελίδα (§5.5.1 Ε5); Η δεύτερη δοκιμή πλήρωσε ένα αίτημα ανά σελίδα με 0/140 επιβεβαιωμένα, γιατί
+ * μόνο οι κανόνες συνέπειας ζητούσαν επανάληψη. Σαρωμένη σελίδα (`verified: null`) δεν κρίνεται: εκεί δεν υπάρχει τι να επιβεβαιωθεί.
+ */
+export function evidenceFindings(groups: readonly ExtractedGroup[]): readonly string[] {
+  const cells = groups.flatMap((group) => [...group.sharedCells, ...group.rows.flatMap((row) => row.cells)]).filter((cell) => cell.text !== null);
+  const checkable = cells.filter((cell) => cell.anchor?.kind === 'page' && cell.anchor.verified !== null);
+  if (checkable.length < MIN_EVIDENCE_CELLS) return [];
+  const unproved = checkable.filter((cell) => cell.anchor?.kind === 'page' && cell.anchor.verified === false).length;
+  const unitless = checkable.filter((cell) => cell.flags.some((flag) => flag.code === 'unitUnconfirmed')).length;
+  const collapsed = unproved / checkable.length >= EVIDENCE_COLLAPSE_SHARE || unitless / checkable.length >= EVIDENCE_COLLAPSE_SHARE;
+  return collapsed ? [`Most values could not be found on the page: ${unproved} of ${checkable.length} values and ${unitless} units. Copy each value exactly as printed, and list its token ids in "sourceTokens" and "unitTokens".`] : [];
+}
+
 // ── Η εντολή προς το μοντέλο ─────────────────────────────────────────────────
 
 /** Οι οδηγίες δεν εμφανίζονται ποτέ σε άνθρωπο: είναι πρωτόκολλο με το μοντέλο, όχι κείμενο περιβάλλοντος χρήστη. */
@@ -227,7 +249,7 @@ export const PAGE_EXTRACTION_SYSTEM_PROMPT = [
 ].join('\n');
 
 /** Η μονάδα της ιδιότητας **δεν** αναφέρεται επίτηδες (§5.5.1 Δ2): όταν την έβλεπε, το μοντέλο μετέτρεπε. */
-function attributeLine(spec: PageAttributeSpec): string {
+export function attributeLine(spec: PageAttributeSpec): string {
   const options = spec.options.length > 0 ? `, one of: ${spec.options.join(' | ')}` : '';
   const identifier = spec.unique ? ', unique identifier' : '';
   const meaning = spec.description ? ` — ${spec.description}` : '';

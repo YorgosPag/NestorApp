@@ -44,7 +44,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__categories.el.json": "647afac6ce6ca90a09c8e1b87e3311e3591718ecc3575209be494c6a39c94b01",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "316853261927bae49368f4d58bd7b1a0c162bb874b15d162fdec966471aea3c9",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "39e5085eccc1400c25c43f3ccaefbb8519603d78b5e5a7db3bddc2d2c39d59c0",
-    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "5246819a91489285a123407258f1b424ec1e2b3db7a3df733c67a9f602e1c959",
+    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "5d3b2c00afe1eae5d7b73dd2145b4f5b35549b97d3282b46164d2cacc20609cb",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "035216d588924a55c4586edb89ae09f195effbc3c31a105e4c8780115282445e",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "58612abe22f1005441b207e54e75e58f8d5143c9bb38cd767a98446395eda1de",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "acd562293385a8352df872e45799e17a01bc738ad4febbf868e3a59459b64909",
@@ -178,7 +178,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0f8af789d4b2c64d40705aacd299e1322a9b3f2a225d95c581a53b882f8295be",
+  "inputsSha256": "188e1f4f175d3dac652f295c296248f30a89889db76a3f7ad1b753cc0505a1f7",
   "languages": [
     "el"
   ],
@@ -9179,6 +9179,10 @@
             "batch.pagesProgress",
             "batch.readPages",
             "batch.retryFailed",
+            "batch.setAsideAccessories",
+            "batch.setAsideOther",
+            "batch.setAsideTitle",
+            "batch.setAsideUnmapped",
             "batch.stop",
             "batch.stopping",
             "common.actions",
@@ -9365,6 +9369,10 @@
             "batch.pagesProgress",
             "batch.readPages",
             "batch.retryFailed",
+            "batch.setAsideAccessories",
+            "batch.setAsideOther",
+            "batch.setAsideTitle",
+            "batch.setAsideUnmapped",
             "batch.stop",
             "batch.stopping",
             "batchStatus.awaitingFile",
@@ -9490,6 +9498,7 @@
             "issues.tableKeyMissing",
             "issues.tableRowAttributeUnknown",
             "issues.tableSchemeUnknown",
+            "issues.tableStructureDisputed",
             "issues.tooMany",
             "issues.tooManyDescendants",
             "issues.typeLockedInUse",
@@ -9687,6 +9696,10 @@
             "batch.pagesProgress",
             "batch.readPages",
             "batch.retryFailed",
+            "batch.setAsideAccessories",
+            "batch.setAsideOther",
+            "batch.setAsideTitle",
+            "batch.setAsideUnmapped",
             "batch.stop",
             "batch.stopping",
             "pdf.fullscreen",
@@ -25286,7 +25299,7 @@
   ],
   "stats": {
     "matchedKeys": 272,
-    "sliceBytes": 1262439
+    "sliceBytes": 1263028
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

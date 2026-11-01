@@ -43,5 +43,6 @@ export const CATALOG_ID_PREFIXES = {
   CATALOG_IMPORT_PROFILE: 'ciprf',         // catalog_import_profiles — αποθηκευμένη αντιστοίχιση (από κωδικό)
   CATALOG_IMPORT_BATCH: 'cibat',           // catalog_import_batches — παρτίδα (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση)
   CATALOG_IMPORT_PROPOSAL: 'cipsl',        // catalog_import_proposals — πρόταση (από παρτίδα + σύνολο)
+  CATALOG_IMPORT_PAGE_READING: 'cipgr',    // catalog_import_page_readings — απάντηση μοντέλου (από παρτίδα + σελίδα + διαδρομή + προσπάθεια)
 
 } as const;

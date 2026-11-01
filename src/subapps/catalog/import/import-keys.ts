@@ -41,3 +41,8 @@ export function importBatchKey(input: ImportBatchKeyInput): string {
 export function importProposalKey(batchId: string, groupKey: string): string {
   return `${batchId}${SEPARATOR}${groupKey}`;
 }
+
+/** Μία απάντηση του μοντέλου: παρτίδα + σελίδα + διαδρομή + προσπάθεια. */
+export function importPageReadingKey(batchId: string, page: number, route: string, attempt: number): string {
+  return [batchId, String(page), route, String(attempt)].join(SEPARATOR);
+}

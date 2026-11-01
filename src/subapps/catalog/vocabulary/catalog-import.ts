@@ -52,6 +52,8 @@ export const IMPORT_ISSUE_CODES = [
   'unitUnconfirmed',
   /** Δύο τιμές για την ίδια ιδιότητα που δεν συμφωνούν: κανένας κανόνας δεν διαλέγει σιωπηλά. */
   'attributeRepeated',
+  /** Οι ετικέτες δομής του PDF και η γεωμετρία του πίνακα λένε άλλα κελιά. */
+  'tableStructureDisputed',
 ] as const;
 export type ImportIssueCode = (typeof IMPORT_ISSUE_CODES)[number];
 

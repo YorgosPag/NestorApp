@@ -103,6 +103,7 @@ export {
   generateDeterministicCatalogPublicationRecipeId, generateDeterministicCatalogPublicationRunId,
   generateDeterministicCatalogPricingViewSignalId,
   generateDeterministicCatalogImportProfileId, generateDeterministicCatalogImportBatchId, generateDeterministicCatalogImportProposalId,
+  generateDeterministicCatalogImportPageReadingId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,
   generateAttachmentId, generateFileId, generateDeterministicFileId, generateShareId, generateDispatchId, generatePendingId,

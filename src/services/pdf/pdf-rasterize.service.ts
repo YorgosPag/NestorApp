@@ -18,6 +18,8 @@
 
 import 'server-only';
 
+import { readPageStructure, type PageStructureRule, type PageStructureTagTable, type PdfjsOperators, type StructurePage } from './pdf-page-structure';
+
 export interface RasterizeOptions {
   dpi?: number;
   maxPages?: number;
@@ -66,6 +68,7 @@ interface CanvasFactory {
 }
 
 interface PdfjsLib {
+  OPS: PdfjsOperators;
   getDocument(opts: {
     data: Uint8Array;
     isEvalSupported: boolean;
@@ -84,9 +87,9 @@ interface PdfjsViewport {
   convertToViewportPoint(x: number, y: number): [number, number];
 }
 /** Ένα κομμάτι κειμένου της σελίδας — `hasEOL` = αλλαγή γραμμής μετά από αυτό. */
-interface PdfjsTextItem { str?: string; hasEOL?: boolean; transform?: readonly number[]; width?: number; height?: number; }
-interface PdfjsPage {
-  getTextContent(): Promise<{ items: ReadonlyArray<PdfjsTextItem> }>;
+interface PdfjsTextItem { str?: string; hasEOL?: boolean; transform?: readonly number[]; width?: number; height?: number; type?: string; id?: string; }
+interface PdfjsPage extends Pick<StructurePage, 'getOperatorList' | 'getStructTree'> {
+  getTextContent(options?: { readonly includeMarkedContent: true }): Promise<{ items: ReadonlyArray<PdfjsTextItem> }>;
   getViewport(opts: { scale: number }): PdfjsViewport;
   render(opts: { canvasContext: CanvasContextLike; viewport: PdfjsViewport }): { promise: Promise<void> };
   cleanup(): void;
@@ -242,6 +245,10 @@ export interface PdfPageReading {
   readonly png: Buffer;
   readonly items: readonly PdfPageTextItem[];
   readonly pageCount: number;
+  /** Οι ζωγραφισμένες γραμμές της σελίδας: από εκεί ανασυντίθενται οι πίνακες χωρίς μοντέλο. */
+  readonly rules: readonly PageStructureRule[];
+  /** Οι πίνακες των ετικετών δομής, όταν το PDF έχει. Δεύτερος μάρτυρας, όχι αυθεντία. */
+  readonly tagTables: readonly PageStructureTagTable[];
 }
 
 function textItemOf(item: PdfjsTextItem, viewport: PdfjsViewport): PdfPageTextItem | null {
@@ -276,7 +283,8 @@ export async function readPdfPage(
       const viewport = page.getViewport({ scale: 1 });
       const { items } = await page.getTextContent();
       const png = await renderPageToPng(page, createCanvas, limits);
-      return { png, items: items.flatMap((item) => textItemOf(item, viewport) ?? []), pageCount: doc.numPages };
+      const structure = await readPageStructure(page, viewport, pdfjs.OPS);
+      return { png, items: items.flatMap((item) => textItemOf(item, viewport) ?? []), pageCount: doc.numPages, ...structure };
     } finally {
       page.cleanup();
     }

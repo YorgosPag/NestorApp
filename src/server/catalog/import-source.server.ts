@@ -27,8 +27,7 @@ const ANY_TYPE = (): boolean => true;
 
 type FileData = Readonly<Record<string, unknown>>;
 
-/** Το έγγραφο του αρχείου, αν ανήκει σε αυτή την παρτίδα. Ξένο ≡ ανύπαρκτο. */
-export async function readBatchFileRecord(ctx: AuthContext, batchId: string, fileId: string): Promise<FileData> {
+async function acceptedFileRecord(ctx: AuthContext, batchId: string, fileId: string): Promise<FileData | null> {
   const snap = await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).get();
   const data = snap.exists ? (snap.data() ?? null) : null;
   const verdict = judgeContainerFile(fileId, data, {
@@ -37,8 +36,46 @@ export async function readBatchFileRecord(ctx: AuthContext, batchId: string, fil
     entityId: batchId,
     contentType: ANY_TYPE,
   });
-  if (verdict.kind !== 'accepted' || data === null) throw new CatalogWriteError('invalid', [{ code: 'fileNotFound', path: 'fileId' }]);
+  return verdict.kind === 'accepted' ? data : null;
+}
+
+/** Το έγγραφο του αρχείου, αν ανήκει σε αυτή την παρτίδα. Ξένο ≡ ανύπαρκτο. */
+export async function readBatchFileRecord(ctx: AuthContext, batchId: string, fileId: string): Promise<FileData> {
+  const data = await acceptedFileRecord(ctx, batchId, fileId);
+  if (data === null) throw new CatalogWriteError('invalid', [{ code: 'fileNotFound', path: 'fileId' }]);
   return data;
+}
+
+export interface StoredBatchFile {
+  readonly fileId: string;
+  /** Η παρτίδα-κάτοχος: το αρχείο ανήκει σε αυτήν, όσες κι αν το διαβάζουν. */
+  readonly ownerBatchId: string;
+  readonly record: FileData;
+}
+
+/** Πόσες παρτίδες με το ίδιο περιεχόμενο εξετάζονται: αρκεί ένα ζωντανό αντίγραφο, και το ερώτημα μένει φραγμένο. */
+const SAME_CONTENT_BATCHES = 20;
+
+/**
+ * Ζωντανό αρχείο με το ίδιο `contentSha256` στον ίδιο χώρο (§5.5.1, Storage): ίδιο PDF δεν ξανανεβαίνει σε κάθε παρτίδα. Το ίχνος έρχεται
+ * από μετρημένο sha256 της σύνδεσης, και ο κριτής δοχείου ξαναρωτά για το ίδιο το αρχείο: ό,τι μπήκε στον κάδο δεν ξαναχρησιμοποιείται.
+ */
+export async function findStoredBatchFile(ctx: AuthContext, contentSha256: string, batchId: string): Promise<StoredBatchFile | null> {
+  const snap = await getAdminFirestore()
+    .collection(COLLECTIONS.CATALOG_IMPORT_BATCHES)
+    .where('companyId', '==', ctx.companyId)
+    .where('contentSha256', '==', contentSha256)
+    .where('isDeleted', '==', false)
+    .limit(SAME_CONTENT_BATCHES)
+    .get();
+  for (const doc of snap.docs) {
+    const { fileId, fileBatchId } = doc.data() as Pick<ImportBatchDefinition, 'fileId' | 'fileBatchId'>;
+    if (doc.id === batchId || !fileId) continue;
+    const ownerBatchId = fileBatchId ?? doc.id;
+    const record = await acceptedFileRecord(ctx, ownerBatchId, fileId);
+    if (record !== null) return { fileId, ownerBatchId, record };
+  }
+  return null;
 }
 
 async function streamToBuffer(stream: ReadableStream<Uint8Array>): Promise<Buffer> {

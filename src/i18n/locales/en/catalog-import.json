@@ -51,6 +51,10 @@
     "stopping": "Finishing the current page…",
     "costEstimate": "Estimated cost: about ${cost}",
     "costSpent": "Cost so far: {requests} requests · {tokens} tokens · ${cost}",
+    "setAsideTitle": "Tables that did not become family proposals",
+    "setAsideAccessories": "Page {page}, accessories: {label}",
+    "setAsideOther": "Page {page}, other table: {label}",
+    "setAsideUnmapped": "Page {page}, not mapped: {label}",
     "noProposals": "No proposals yet."
   },
   "batchStatus": {
@@ -105,6 +109,7 @@
     "priceIncomplete": "A new price line needs a price and a unit.",
     "measurementUnitMissing": "No unit was read for this value. Enter it with the unit as in the PDF, for example “1000 W”.",
     "unitUnconfirmed": "The unit “{unit}” is not confirmed by the page text. Check it in the PDF.",
-    "attributeRepeated": "The source also gives another value for this attribute: {others}. Choose the correct one."
+    "attributeRepeated": "The source also gives another value for this attribute: {others}. Choose the correct one.",
+    "tableStructureDisputed": "The PDF tags and the table lines point to different cells. Check this value in the PDF."
   }
 }

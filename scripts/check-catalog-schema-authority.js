@@ -76,7 +76,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_price_lists', 'catalog_price_list_versions', 'catalog_price_list_lines', 'catalog_discount_groups',
   'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
   'catalog_pricing_view_signals',
-  'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals',
+  'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals', 'catalog_import_page_readings',
   'catalog_publication_recipes', 'catalog_publication_runs',
 ];
 

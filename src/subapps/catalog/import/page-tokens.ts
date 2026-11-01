@@ -14,6 +14,7 @@
  * @module subapps/catalog/import/page-tokens
  */
 
+import { cellText } from '@/lib/pdf-tables/cell-text';
 import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import { parseEnteredAmount } from '../values/decimal-amount';
 import { normalizeUniqueText } from '../values/normalize-unique';
@@ -51,7 +52,7 @@ export function tokenizePage(items: readonly PageTextItem[]): PageToken[] {
 }
 
 /** Μία μορφή σύγκρισης: «016–15–001» ≡ «016-15-001», «2,50» ≡ «2.5». */
-function comparableForm(text: string): string {
+export function comparableForm(text: string): string {
   const amount = parseEnteredAmount(text.trim());
   return amount ? `#${Number(amount.amount)}` : normalizeUniqueText(text).replace(/\s+/g, '');
 }
@@ -73,12 +74,12 @@ function tokensSay(tokens: readonly PageToken[], value: string): boolean {
 
 const regionOf = ({ x, y, width, height }: PageToken): PageRegion => ({ x, y, width, height });
 
-const unitText = (text: string): string => unitForm(normalizeMixedScriptHomoglyphs(text));
+export const unitText = (text: string): string => unitForm(normalizeMixedScriptHomoglyphs(text));
 const LETTER_OR_SLASH = /[\p{L}/]/u;
 const LETTER_DIGIT_OR_SLASH = /[\p{L}\p{N}/]/u;
 
 /** Η μονάδα εμφανίζεται ως ολόκληρη λέξη: το «W» δεν είναι μέσα στο «kW», ούτε στο «W/m²». */
-function containsUnit(printed: string, unit: string): boolean {
+export function containsUnit(printed: string, unit: string): boolean {
   for (let at = printed.indexOf(unit); at !== -1; at = printed.indexOf(unit, at + 1)) {
     const before = printed[at - 1] ?? '';
     const after = printed[at + unit.length] ?? '';
@@ -98,9 +99,51 @@ export function unitConfirmed(unit: string, citedTokenIds: readonly string[], to
   return containsUnit(unitText(cited.map((token) => token.text).join('')), wanted);
 }
 
+const WHITESPACE = /\s+/u;
+
+/**
+ * Πού τυπώνεται η τιμή, ψαγμένη από εμάς (§5.5.1 Ε1). Η τιμή πολλών λέξεων είναι διαδοχικά κομμάτια. Κομμάτια ολόκληρα: το «100» δεν
+ * βρίσκεται μέσα στο «1000».
+ */
+export function tokensPrinting(value: string, tokens: ReadonlyMap<string, PageToken>): readonly PageToken[][] {
+  const words = value.trim().split(WHITESPACE).map(comparableForm);
+  const ordered = [...tokens.values()];
+  const printing: PageToken[][] = [];
+  for (let start = 0; start + words.length <= ordered.length; start += 1) {
+    const run = ordered.slice(start, start + words.length);
+    if (run.every((token, index) => comparableForm(token.text) === words[index])) printing.push(run);
+  }
+  return printing;
+}
+
+const centerOfToken = ({ x, y, width, height }: PageToken) => ({ x: x + width / 2, y: y + height / 2 });
+
+/**
+ * Τυπώνει αυτή η ετικέτα τη μονάδα; Κρίνεται **ανά λέξη**: η μορφή μονάδας αφαιρεί τα κενά, και ολόκληρη γραμμή θα γινόταν «THMW2187»,
+ * όπου το «W» δεν στέκει πια ως λέξη.
+ */
+export function labelPrintsUnit(label: string, unit: string): boolean {
+  return label.trim().split(WHITESPACE).some((word) => containsUnit(unitText(word), unit));
+}
+
+/** Τυπώνεται η μονάδα στη **γραμμή** ή στη **στήλη** της τιμής; Το «W» κάπου αλλού στη σελίδα δεν αποδεικνύει τίποτα. */
+function unitBesideValue(unit: string, value: PageToken, tokens: ReadonlyMap<string, PageToken>): boolean {
+  const wanted = unitText(unit);
+  const { x, y } = centerOfToken(value);
+  const others = [...tokens.values()].filter((token) => token !== value);
+  const inRow = others.filter((token) => Math.abs(centerOfToken(token).y - y) <= value.height / 2);
+  const inColumn = others.filter((token) => Math.abs(centerOfToken(token).x - x) <= ALIGNMENT_TOLERANCE);
+  return labelPrintsUnit(cellText(inRow), wanted) || labelPrintsUnit(cellText(inColumn), wanted);
+}
+
+/** Η μονάδα επιβεβαιώνεται από το κείμενο δίπλα σε κάποια θέση όπου τυπώνεται η τιμή, χωρίς καμία υπόδειξη από το μοντέλο. */
+export function unitPrintedBeside(unit: string, value: string, tokens: ReadonlyMap<string, PageToken>): boolean {
+  return tokensPrinting(value, tokens).some((run) => unitBesideValue(unit, run[0], tokens));
+}
+
 /**
  * Η άγκυρα μιας τιμής: σελίδα + περιοχές + κρίση διασταύρωσης. Κομμάτια που η AI επινόησε (ανύπαρκτο id) μετρούν ως
- * διάψευση: η απόδειξή της δεν υπάρχει.
+ * διάψευση: η απόδειξή της δεν υπάρχει. Όταν δεν έδειξε τίποτα, ψάχνουμε εμείς (§5.5.1 Ε1): η επιβεβαίωση δεν περιμένει το `id`.
  */
 export function anchorForCell(
   page: number,
@@ -109,6 +152,10 @@ export function anchorForCell(
   tokens: ReadonlyMap<string, PageToken>,
 ): SourceAnchor {
   if (tokens.size === 0) return { kind: 'page', page, regions: [], verified: null };
+  if (citedTokenIds.length === 0) {
+    const [found] = tokensPrinting(value, tokens);
+    return { kind: 'page', page, regions: found ? found.map(regionOf) : [], verified: found !== undefined };
+  }
   const cited = citedTokenIds.flatMap((id) => tokens.get(id) ?? []);
   const honest = cited.length === citedTokenIds.length && cited.length > 0;
   return { kind: 'page', page, regions: cited.map(regionOf), verified: honest && tokensSay(cited, value) };
