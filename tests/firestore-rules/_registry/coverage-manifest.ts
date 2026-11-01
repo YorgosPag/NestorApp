@@ -789,6 +789,9 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'catalog_import_page_readings',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-import-page-readings.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-923 §5.12 Σ1 — έγγραφο δύο πλευρών: γραφή = ξένη ανάγνωση τιμών χωρίς αποδοχή.
     collection: 'supply_relationships',
     pattern: 'deny_all',
