@@ -327,14 +327,15 @@ describe('Τ4 — ξένος χώρος', () => {
     expect(await response.text()).toContain(FOREIGN_MARK);
   });
 
-  // 🔴 ΑΝΟΙΧΤΟ ΕΥΡΗΜΑ (ADR-829 §7.1): `it.failing` μέχρι τη διόρθωση. Μόλις διορθωθεί κοκκινίζει, και γίνεται σκέτο `it`.
-  it.failing('Τ4.6 — 🔴 POST /api/floors δεν δένει όροφο σε ξένο έργο', async () => {
+  it('Τ4.6 — POST /api/floors αγνοεί το έργο του σώματος: κτίριο χωρίς έργο μένει όροφος χωρίς έργο', async () => {
     signIn('company_admin');
     const response = await (floorsRoute.POST as unknown as Route)(
-      requestOf('POST', '/api/floors', { ...FLOOR_BODY, buildingId: 'bld_a', projectId: 'prj_b' }));
+      requestOf('POST', '/api/floors', { ...FLOOR_BODY, buildingId: 'bld_a', projectId: 'prj_b', projectName: FOREIGN_MARK }));
 
-    expect(response.status).toBeGreaterThanOrEqual(400);
-    expect(writeFloorBirth).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    const { fields } = (writeFloorBirth as jest.Mock).mock.calls[0][0] as { fields: Record<string, unknown> };
+    expect(fields).not.toHaveProperty('projectId');
+    expect(fields).not.toHaveProperty('projectName');
   });
 
   it('Τ4.7 — GET /api/floors χωρίς φίλτρο δεν γυρίζει ξένους ορόφους', async () => {

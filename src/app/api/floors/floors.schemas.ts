@@ -16,6 +16,7 @@ export const CreateFloorSchema = z.object({
   name: z.string().min(1).max(200),
   buildingId: z.string().min(1).max(128),
   buildingName: z.string().max(200).optional(),
+  // ADR-829 §7.1 — output-only: γίνονται δεκτά από τους πελάτες αλλά δεν γράφονται· το έργο βγαίνει από το κτίριο.
   projectId: z.string().max(128).optional(),
   projectName: z.string().max(200).optional(),
   units: z.number().int().min(0).max(9999).optional(),

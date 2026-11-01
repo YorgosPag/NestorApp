@@ -173,8 +173,8 @@ export async function handleCreateFloor(
     };
     if (body.finishThickness !== undefined) entitySpecificFields.finishThickness = body.finishThickness;
     if (body.mezzanineParentNumber !== undefined) entitySpecificFields.mezzanineParentNumber = body.mezzanineParentNumber;
-    if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
-    if (body.projectName) entitySpecificFields.projectName = body.projectName;
+    // 🔒 ADR-829 §7.1 — `projectId` · `projectName` του σώματος ΑΓΝΟΟΥΝΤΑΙ (output-only, Google AIP-203): ο φράχτης κρίνει
+    // το κτίριο, όχι αυτά, και ξένο έργο θα έδενε τον όροφο σε ξένο χώρο. Το έργο το κληρονομεί το `createEntity` από το κτίριο.
 
     // ADR-461 / ADR-910 — μοναδικότητα (αριθμός/είδος/όνομα), ελάχιστο ύψος ορόφου, γέννηση και επανατοποθέτηση ειδικών σταθμών (η θεμελίωση
     // κατεβαίνει όταν προστίθεται υπόγειο, η απόληξη ανεβαίνει όταν προστίθεται όροφος) σε ΜΙΑ συναλλαγή, κάτω από
