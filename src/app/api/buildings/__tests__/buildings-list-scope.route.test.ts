@@ -49,12 +49,15 @@ jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }));
 
+// ADR-829 §7.1: ο φράχτης του έργου τρέχει ΠΡΑΓΜΑΤΙΚΟΣ. Με διπλό του, το «project scoping» έδειχνε πράσινο πάνω σε ανάγνωση ξένου χώρου.
+var projectOwner = 'comp_A';
 var projectSnapshot: { empty: boolean; docs: unknown[] } = { empty: true, docs: [] };
 var companySnapshot: { empty: boolean; docs: unknown[] } = { empty: true, docs: [] };
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: () => ({
     collection: () => ({
+      doc: () => ({ get: async () => ({ exists: true, data: () => ({ companyId: projectOwner }) }) }),
       where: () => ({
         where: () => ({ get: async () => projectSnapshot }),
         get: async () => projectSnapshot,
@@ -76,6 +79,7 @@ jest.mock('@/lib/auth/tenant-scope', () => ({
 }));
 
 // POST-only collaborators — imported at module scope, never exercised here.
+jest.mock('@/lib/auth/audit', () => ({ logAuditEvent: async () => undefined }));
 jest.mock('@/lib/firestore/entity-creation.service', () => ({ createEntity: jest.fn() }));
 jest.mock('@/services/building/building-creation-policy', () => ({
   BuildingCreationPolicyError: class extends Error {},
@@ -153,6 +157,16 @@ describe('GET /api/buildings — project scope (ADR-707)', () => {
 
     expect(data?.buildings).toEqual([]);
     expect(data?.scope).toBe('project');
+  });
+
+  it('a project of another company is refused before the query and before the fallback', async () => {
+    projectOwner = 'comp_B';
+    try {
+      await expect(GET(req('?projectId=proj_TARGET&fallback=company'))).rejects.toThrow('Project not found');
+      expect(tenantScopedCollectionMock).not.toHaveBeenCalled();
+    } finally {
+      projectOwner = 'comp_A';
+    }
   });
 
   it('?fallback=company is honoured, and the response SAYS so', async () => {

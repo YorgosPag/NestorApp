@@ -15,6 +15,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { requireProjectInTenant } from '@/lib/auth/tenant-isolation';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import {
   resolveTenantScopeFromUrl,
@@ -101,8 +102,15 @@ async function resolveBuildingList(request: NextRequest, ctx: AuthContext): Prom
 
   logger.info('[Buildings] Loading for project', { projectId, companyId: fallbackScope.companyId, isSuperAdmin: listScope.isSuperAdmin });
   // 🏢 ADR-209: Single query with normalized projectId (handles string/number mismatch)
+  const queriedProjectId = normalizeProjectIdForQuery(projectId);
+  // 🔒 ADR-829 §7.1 — το φίλτρο γονέα ΔΕΝ είναι φίλτρο χώρου: ξένο έργο γύριζε ξένα κτίρια. Κρίνεται το id που ΡΩΤΑΜΕ
+  // (`007` ρωτά το έργο `7`), πριν από το ερώτημα και πριν από το `fallback`. Ξένο = ανύπαρκτο, στο σύρμα.
+  if (!listScope.isSuperAdmin) {
+    await requireProjectInTenant({ ctx, projectId: String(queriedProjectId), path: '/api/buildings (GET)' });
+  }
+
   const snapshot = await adminDb.collection(COLLECTIONS.BUILDINGS)
-    .where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(projectId))
+    .where(FIELDS.PROJECT_ID, '==', queriedProjectId)
     .get();
 
   // Without `?fallback=company` an empty project answers empty, which is the truth.

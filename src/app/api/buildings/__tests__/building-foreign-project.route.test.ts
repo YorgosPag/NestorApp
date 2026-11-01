@@ -14,6 +14,7 @@ import { PATCH } from '../building-update.handler';
 import { POST as LINK_PROJECT } from '../[buildingId]/link-project/route';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { withVersionCheck } from '@/lib/firestore/version-check';
+import { seedTenantDocuments, tenantWrites, type TenantDocuments } from './tenant-fake-firestore.fixture';
 
 jest.mock('server-only', () => ({}));
 jest.mock('next/server', () => ({
@@ -25,31 +26,22 @@ jest.mock('next/server', () => ({
 
 const CALLER = { uid: 'u_a', email: 'a@a.gr', companyId: 'co_a', globalRole: 'company_admin' };
 
-// `var`: τα `jest.mock` ανυψώνονται πάνω από τα `const`.
-var docs: Record<string, Record<string, Record<string, unknown>>> = {};
-var written: unknown[] = [];
+const SEEDED_DOCUMENTS: TenantDocuments = {
+  projects: {
+    prj_a: { companyId: 'co_a', linkedCompanyId: 'cont_a', name: 'Δικό μου' },
+    prj_b: { companyId: 'co_b', linkedCompanyId: 'cont_b', name: 'Ξένο' },
+  },
+  buildings: { bld_a: { companyId: 'co_a', name: 'Κτίριο', projectId: null } },
+};
 
-/** Ελάχιστη Firestore: μόνο ό,τι ρωτούν οι τρεις δρόμοι. */
-function fakeDb() {
-  const snap = (collection: string, id: string) => ({
-    exists: Boolean(docs[collection]?.[id]),
-    data: () => docs[collection]?.[id],
-  });
-  const db = {
-    collection: (collection: string) => ({
-      doc: (id: string) => ({ __path: [collection, id], get: async () => snap(collection, id) }),
-      where: () => ({ where: () => ({ limit: () => ({ get: async () => ({ empty: true, docs: [] }) }) }) }),
-    }),
-    runTransaction: async (run: (tx: unknown) => Promise<void>) => run({
-      get: async (ref: { __path: [string, string] }) => snap(...ref.__path),
-      update: (_ref: unknown, value: unknown) => { written.push(value); },
-    }),
-  };
-  return db;
-}
-
-jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: () => fakeDb() }));
-jest.mock('@/lib/api/admin-db', () => ({ requireAdminFirestore: () => fakeDb() }));
+jest.mock('@/lib/firebaseAdmin', () => {
+  const { tenantFakeDb } = jest.requireActual('./tenant-fake-firestore.fixture');
+  return { getAdminFirestore: () => tenantFakeDb() };
+});
+jest.mock('@/lib/api/admin-db', () => {
+  const { tenantFakeDb } = jest.requireActual('./tenant-fake-firestore.fixture');
+  return { requireAdminFirestore: () => tenantFakeDb() };
+});
 jest.mock('@/lib/middleware/with-rate-limit', () => ({ withStandardRateLimit: (handler: unknown) => handler }));
 jest.mock('@/lib/auth', () => {
   const actual = jest.requireActual('@/lib/auth/tenant-isolation');
@@ -68,7 +60,7 @@ jest.mock('@/lib/firestore/version-check', () => ({
   ConflictError: class ConflictError extends Error {},
 }));
 jest.mock('../_shared/building-owned-doc', () => ({
-  loadOwnedBuilding: async () => ({ data: docs.buildings.bld_a }),
+  loadOwnedBuilding: async () => ({ data: { companyId: 'co_a', name: 'Κτίριο', projectId: null } }),
 }));
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn(), diffFieldsWithResolution: async () => [] },
@@ -82,14 +74,7 @@ type Handler = (request: NextRequest, segment?: unknown) => Promise<{ status: nu
 const request = (body: unknown) => ({ url: 'http://x/api/buildings', json: async () => body }) as unknown as NextRequest;
 
 beforeEach(() => {
-  written = [];
-  docs = {
-    projects: {
-      prj_a: { companyId: 'co_a', linkedCompanyId: 'cont_a', name: 'Δικό μου' },
-      prj_b: { companyId: 'co_b', linkedCompanyId: 'cont_b', name: 'Ξένο' },
-    },
-    buildings: { bld_a: { companyId: 'co_a', name: 'Κτίριο', projectId: null } },
-  };
+  seedTenantDocuments(SEEDED_DOCUMENTS);
   (createEntity as jest.Mock).mockClear();
   (withVersionCheck as jest.Mock).mockClear();
 });
@@ -145,11 +130,11 @@ describe('POST /api/buildings/[buildingId]/link-project', () => {
 
   it('Σ1 — δικό μου έργο ⇒ γράφεται', async () => {
     await link('prj_a');
-    expect(written).toHaveLength(1);
+    expect(tenantWrites()).toHaveLength(1);
   });
 
   it('Σ2 — 🔴 ξένο έργο ⇒ άρνηση ΠΡΙΝ από την εγγραφή', async () => {
     await expect(link('prj_b')).rejects.toMatchObject({ statusCode: 400 });
-    expect(written).toEqual([]);
+    expect(tenantWrites()).toEqual([]);
   });
 });
