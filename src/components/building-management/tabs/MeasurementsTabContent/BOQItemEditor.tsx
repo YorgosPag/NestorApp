@@ -29,7 +29,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import type { BOQItem } from '@/types/boq';
+import type { BOQItem, BoqSupplierPriceSource } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import type { CreateBOQItemInput, UpdateBOQItemInput } from '@/types/boq';
 import { subCategoriesFor } from '@/config/boq-subcategories';
@@ -61,6 +61,8 @@ interface BOQItemEditorProps {
   categories: readonly MasterBOQCategory[];
   onSave: (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean) => Promise<void>;
   onReopenToDraft?: (id: string) => Promise<void>;
+  /** ADR-923 §5.12: a supplier price was written by the server ⇒ reload the list */
+  onPriceApplied?: () => Promise<void> | void;
   /** The building's FULL item set — a wall summary's price is derived from its layers (ADR-917 Ε2) */
   buildingItems?: readonly BOQItem[];
 }
@@ -68,7 +70,7 @@ interface BOQItemEditorProps {
 const NO_ITEMS: readonly BOQItem[] = [];
 
 export function BOQItemEditor({
-  open, onClose, item, buildingId, projectId, categories, onSave, onReopenToDraft, buildingItems = NO_ITEMS,
+  open, onClose, item, buildingId, projectId, categories, onSave, onReopenToDraft, onPriceApplied, buildingItems = NO_ITEMS,
 }: BOQItemEditorProps) {
   const { t } = useTranslation('building');
   const colors = useSemanticColors();
@@ -96,6 +98,13 @@ export function BOQItemEditor({
     && onReopenToDraft != null
     && form.status !== 'draft'
     && form.status !== 'locked';
+
+  // Η τιμή γράφτηκε ήδη στον διακομιστή: η φόρμα παίρνει το ίδιο στιγμιότυπο και η λίστα ξαναδιαβάζεται, ώστε το «Ακύρωση» να μην
+  // αφήσει παλιά εικόνα και το «Αποθήκευση» να μη γράψει παλιές τιμές (§5.12 τμήμα 4).
+  const handleSupplierApplied = (source: BoqSupplierPriceSource) => {
+    updateField('priceSource', source);
+    void onPriceApplied?.();
+  };
 
   const handleReopen = async () => {
     if (!item || !onReopenToDraft) return;
@@ -193,7 +202,9 @@ export function BOQItemEditor({
                 <>
                   <CostsFieldset
                     form={form}
+                    item={item}
                     onUpdateField={updateField}
+                    onSupplierApplied={handleSupplierApplied}
                     colors={colors}
                     t={t}
                   />

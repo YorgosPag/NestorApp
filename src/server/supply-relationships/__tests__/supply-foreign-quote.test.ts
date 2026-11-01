@@ -43,14 +43,21 @@ import { savePriceLines } from '@/server/catalog/price-line-writer.server';
 import { publishPriceListVersion } from '@/server/catalog/price-publication.server';
 import { createPriceListVersion } from '@/server/catalog/price-version-writer.server';
 import { createVisibilityRule } from '@/server/catalog/visibility-rule-writer.server';
+import { generateDeterministicCatalogProductModelId, generateDeterministicCatalogUniqueValueId } from '@/services/enterprise-id-convenience';
+import { supplierLineQuantity } from '@/services/measurements/boq-price-source';
 import { SIMPLE_VARIANT_ID } from '@/subapps/catalog/__tests__/fixtures/mfp-price-list.fixture';
+import { catalogSearchPrefixes } from '@/subapps/catalog/derived/search-prefixes';
+import { catalogSortKey } from '@/subapps/catalog/derived/sort-key';
+import { FOREIGN_SKU_RESULTS, FOREIGN_SKU_WINDOW } from '@/subapps/catalog/pricing/foreign-sku-search';
+import { uniqueValueKey } from '@/subapps/catalog/values/normalize-unique';
 import type { CatalogVisibility } from '@/subapps/catalog/vocabulary/pricing';
 import type { SupplyRelationship } from '@/subapps/catalog/types/supply-relationship';
 
+import { reviewSupplierPrices } from '../boq-supplier-drift.server';
 import { applySupplierPrice } from '../boq-supplier-price.server';
 import { issueSupplyInvitation } from '../supply-invitation-issue.server';
 import { respondToSupplyInvitation } from '../supply-invitation-redeem.server';
-import { quoteForeignPrice } from '../supply-foreign-quote.server';
+import { quoteForeignPrice, searchForeignCatalog } from '../supply-foreign-quote.server';
 import { supplyRelationshipId } from '../supply-relationship-store.server';
 import { endSupplyRelationship } from '../supply-relationship-writer.server';
 /* eslint-enable import/first */
@@ -66,7 +73,15 @@ const RELATIONSHIP_ID = () => supplyRelationshipId({ supplierCompanyId: ARIES.co
 const ITEM = 'boq_1';
 
 const quote = (ctx = BUYER, relationshipId = RELATIONSHIP_ID()) => quoteForeignPrice(ctx, { relationshipId, variantId: SIMPLE_VARIANT_ID, quantity: 1 });
-const apply = (ctx = BUYER) => applySupplierPrice(ctx, { boqItemId: ITEM, relationshipId: RELATIONSHIP_ID(), variantId: SIMPLE_VARIANT_ID });
+/** Ό,τι θα έβλεπε ο άνθρωπος για τη γραμμή όπως είναι τώρα. Χωρίς τιμή, το ποσό δεν κρίνεται ποτέ: η άρνηση έρχεται πρώτα. */
+async function seenPrice(ctx = BUYER) {
+  const quantity = supplierLineQuantity(item() as { estimatedQuantity: number });
+  const seen = await quoteForeignPrice(ctx, { relationshipId: RELATIONSHIP_ID(), variantId: SIMPLE_VARIANT_ID, quantity });
+  return seen.kind === 'priced' ? { netAmount: seen.price.netAmount, quantity: seen.price.quantity } : { netAmount: 1, quantity };
+}
+const applyAs = (ctx: typeof BUYER, acknowledged: { netAmount: number; quantity: number }, confirmFence = false) =>
+  applySupplierPrice(ctx, { boqItemId: ITEM, relationshipId: RELATIONSHIP_ID(), variantId: SIMPLE_VARIANT_ID, acknowledged, confirmFence });
+const apply = async (ctx = BUYER, confirmFence = false) => applyAs(ctx, await seenPrice(ctx), confirmFence);
 const showAll = (visibility: CatalogVisibility) => createVisibilityRule(ARIES, { subject: { kind: 'catalog' }, audience: { kind: 'signedIn' }, visibility });
 const item = () => fake.getData(COLLECTIONS.BOQ_ITEMS, ITEM);
 
@@ -163,8 +178,9 @@ describe('Δ7 · Δ8: η γραμμή BOQ', () => {
   });
 
   it('γράφει στιγμιότυπο με έκδοση, κοινό και βήματα, και το ποσό στο material', async () => {
-    expect(await apply()).toEqual({ kind: 'applied' });
+    const outcome = await apply();
     const line = item() as Record<string, unknown> & { priceSource: Record<string, unknown>; materialUnitCost: number };
+    expect(outcome).toEqual({ kind: 'applied', source: line.priceSource });
     expect(line.priceAuthority).toBe('supplier');
     expect(line.priceSource).toMatchObject({
       authority: 'supplier', supplierCompanyId: ARIES.companyId, variantId: SIMPLE_VARIANT_ID, unit: 'pcs', priceQuantity: 2, appliedBy: 'u_buyer',
@@ -222,5 +238,213 @@ describe('Δ7 · Δ8: η γραμμή BOQ', () => {
     await showAll('visibleNoPrice');
     expect(await apply()).toEqual({ kind: 'requestQuote' });
     expect(item()).toMatchObject({ materialUnitCost: 0 });
+  });
+
+  it('🔴 δεκαδική ποσότητα BOQ τιμολογείται και ελέγχεται χωρίς να σκάσει το BigInt', async () => {
+    seedItem({ estimatedQuantity: 12.5 });
+    expect((await apply()).kind).toBe('applied');
+    const [row] = (await reviewSupplierPrices(BUYER, [ITEM])).rows;
+    expect(row.drift).toEqual({ kind: 'current' });
+  });
+
+  it('🔴 ποσότητα με περισσότερα δεκαδικά από τον επιλυτή δεν γίνεται ψευδές «ζητήστε προσφορά»', async () => {
+    seedItem({ estimatedQuantity: 12.34567 });
+    expect((await apply()).kind).toBe('applied');
+    expect(item()).toMatchObject({ priceSource: { priceQuantity: 12.346 } });
+  });
+});
+
+describe('«ό,τι είδε ο άνθρωπος, αυτό γράφεται»', () => {
+  beforeEach(async () => {
+    await connect();
+    await showAll('visible');
+  });
+
+  it('🔴 άλλο ποσό από αυτό που είδε ⇒ η νέα τιμή γυρίζει, τίποτα δεν γράφεται', async () => {
+    const seen = await seenPrice();
+    const outcome = await applyAs(BUYER, { ...seen, netAmount: seen.netAmount + 1 });
+    expect(outcome).toMatchObject({ kind: 'priceMoved', price: { netAmount: seen.netAmount } });
+    expect(item()).toMatchObject({ materialUnitCost: 0 });
+  });
+
+  it('🔴 η ποσότητα της γραμμής άλλαξε ανάμεσα στην τιμή και τη γραφή ⇒ τίποτα δεν γράφεται', async () => {
+    const seen = await seenPrice();
+    mockAfterQuote = async () => { seedItem({ estimatedQuantity: 3 }); };
+    expect((await applyAs(BUYER, seen)).kind).toBe('priceMoved');
+    expect(item()).toMatchObject({ materialUnitCost: 0 });
+  });
+});
+
+describe('Δ9: απόκλιση και ανανέωση', () => {
+  beforeEach(async () => {
+    await connect();
+    await showAll('visible');
+    await apply();
+  });
+
+  /** Το στιγμιότυπο της γραμμής με παλιότερη τιμή: το `factor` είναι το ποσοστό της τρέχουσας. */
+  function ageSnapshot(factorPercent: number): void {
+    const line = item() as { priceSource: { breakdown: { material: number }; variantId: string } };
+    const material = Math.round((line.priceSource.breakdown.material * factorPercent) / 100);
+    seedItem({ ...line, priceSource: { ...line.priceSource, breakdown: { ...line.priceSource.breakdown, material } } });
+  }
+
+  it('ίδια τιμή ⇒ `current`', async () => {
+    expect((await reviewSupplierPrices(BUYER, [ITEM])).rows).toEqual([
+      { boqItemId: ITEM, relationshipId: RELATIONSHIP_ID(), variantId: SIMPLE_VARIANT_ID, drift: { kind: 'current' } },
+    ]);
+  });
+
+  it('νέα τιμή μέσα στον φράχτη ⇒ `changed`, και ανανέωση χωρίς επιβεβαίωση', async () => {
+    ageSnapshot(90);
+    const [row] = (await reviewSupplierPrices(BUYER, [ITEM])).rows;
+    expect(row.drift).toMatchObject({ kind: 'changed', exceedsFence: false });
+    expect((await apply()).kind).toBe('applied');
+  });
+
+  it('🔴 πάνω από τον φράχτη ⇒ ο διακομιστής αρνείται χωρίς επιβεβαίωση, ακόμη κι αν την παρακάμψει η οθόνη', async () => {
+    ageSnapshot(50);
+    const before = JSON.stringify(item());
+    expect((await apply()).kind).toBe('fenceRequired');
+    expect(JSON.stringify(item())).toBe(before);
+    expect((await apply(BUYER, true)).kind).toBe('applied');
+  });
+
+  it('🔴 άλλο SKU δεν είναι ανανέωση: ο φράχτης δεν το αφορά', async () => {
+    ageSnapshot(50);
+    const line = item() as { priceSource: Record<string, unknown> };
+    seedItem({ ...line, priceSource: { ...line.priceSource, variantId: 'cprod_other' } });
+    expect((await apply()).kind).toBe('applied');
+  });
+
+  it('🔴 Σ7: ανάκληση ⇒ `unavailable` χωρίς λόγο, το στιγμιότυπο μένει', async () => {
+    const relationship = fake.getData(COLLECTIONS.SUPPLY_RELATIONSHIPS, RELATIONSHIP_ID()) as SupplyRelationship;
+    await endSupplyRelationship(ARIES, relationship.id, { side: 'supplier', expectedRevision: relationship.revision });
+    const before = JSON.stringify(item());
+    expect((await reviewSupplierPrices(BUYER, [ITEM])).rows[0].drift).toEqual({ kind: 'unavailable' });
+    expect(JSON.stringify(item())).toBe(before);
+  });
+
+  it('🔴 γραμμή ξένου χώρου απλώς λείπει · γραμμή χωρίς δεσμό προμηθευτή δεν ρωτά κανέναν', async () => {
+    expect((await reviewSupplierPrices(RIVAL, [ITEM])).rows).toEqual([]);
+    fake.seed(COLLECTIONS.BOQ_ITEMS, 'boq_plain', { id: 'boq_plain', companyId: BUYER_ID, priceSource: null });
+    expect((await reviewSupplierPrices(BUYER, ['boq_plain'])).rows).toEqual([]);
+  });
+});
+
+describe('αναζήτηση SKU σε ξένο κατάλογο', () => {
+  const search = (term: string, ctx = BUYER, relationshipId = RELATIONSHIP_ID()) => searchForeignCatalog(ctx, { relationshipId, term });
+  const seedSku = (id: string, label: string, identifier: string, overrides: Record<string, unknown> = {}) => fake.seed(COLLECTIONS.CATALOG_PRODUCTS, id, {
+    id, companyId: ARIES.companyId, isDeleted: false, revision: 1, modelId: null, categoryIds: [],
+    derived: { label, identifier, sortKey: catalogSortKey(label), searchPrefixes: catalogSearchPrefixes(label, identifier) }, ...overrides,
+  });
+  const seedCodeAttribute = () => fake.seed(COLLECTIONS.CATALOG_ATTRIBUTES, 'cattr_code', { id: 'cattr_code', companyId: ARIES.companyId, isDeleted: false, unique: true, type: 'text' });
+  const reserve = (code: string, holderId: string) => fake.seed(
+    COLLECTIONS.CATALOG_UNIQUE_VALUES,
+    generateDeterministicCatalogUniqueValueId(ARIES.companyId, 'cattr_code', uniqueValueKey({ type: 'text', text: code }) ?? ''),
+    { companyId: ARIES.companyId, holderId, holderKind: 'product' },
+  );
+  const hide = (variantId: string) => createVisibilityRule(ARIES, { subject: { kind: 'variant', variantId }, audience: { kind: 'signedIn' }, visibility: 'hidden' });
+
+  beforeEach(async () => {
+    await connect();
+    await showAll('visible');
+    seedCodeAttribute();
+    seedSku('cprod_tile', 'Πλακάκι Δαπέδου 60x60', 'PL-6060');
+    seedSku('cprod_pipe', 'Σωλήνας Χαλκού 16mm', 'CU-16');
+  });
+
+  it('βρίσκει και τη δεύτερη λέξη, χωρίς τόνους, με κρίση ολόκληρου του όρου', async () => {
+    expect((await search('δαπεδου')).rows.map((row) => row.variantId)).toEqual(['cprod_tile']);
+    expect((await search('ΣΩΛΗΝΑΣ χαλκού')).rows.map((row) => row.variantId)).toEqual(['cprod_pipe']);
+    expect((await search('σωλήνας αλουμινίου')).rows).toEqual([]);
+  });
+
+  it('🔴 το πρόθεμα είναι μόνο ο σπόρος: λέξη που λείπει κόβει το αποτέλεσμα', async () => {
+    expect((await search('σωλήνας χρυσό')).rows).toEqual([]);
+  });
+
+  it('🔴 κράτηση με ξένο χώρο στο έγγραφο ≡ ανύπαρκτη', async () => {
+    seedSku('cprod_old', 'Παλιό', 'OLD-1', { derived: { label: 'Παλιό', identifier: 'OLD-1', sortKey: 'παλιο', searchPrefixes: [] } });
+    const id = generateDeterministicCatalogUniqueValueId(ARIES.companyId, 'cattr_code', uniqueValueKey({ type: 'text', text: 'OLD-1' }) ?? '');
+    fake.seed(COLLECTIONS.CATALOG_UNIQUE_VALUES, id, { companyId: RIVAL.companyId, holderId: 'cprod_old', holderKind: 'product' });
+    expect((await search('OLD-1')).rows).toEqual([]);
+  });
+
+  it('🔴 κωδικός υπο-μοντέλου ⇒ μόνο τα δικά του SKU · κλειδί μοντέλου στους απογόνους δεν είναι SKU', async () => {
+    const rootId = generateDeterministicCatalogProductModelId(ARIES.companyId, 'root-1');
+    const subId = generateDeterministicCatalogProductModelId(ARIES.companyId, 'sub-1');
+    const entry = (kind: string, parentId: string) => ({ kind, parentId, axisKey: null, completeChannels: [], facetKeys: [] });
+    const model = (id: string, parentId: string | null, descendants: Record<string, unknown>) => fake.seed(COLLECTIONS.CATALOG_PRODUCT_MODELS, id, {
+      id, companyId: ARIES.companyId, isDeleted: false, parentId, categoryIds: [], derived: { descendants },
+    });
+    model(rootId, null, { cprod_tile: entry('product', subId), cprod_pipe: entry('product', rootId), [SIMPLE_VARIANT_ID]: entry('productModel', rootId) });
+    model(subId, rootId, {});
+    expect((await search('SUB-1')).rows.map((row) => row.variantId)).toEqual(['cprod_tile']);
+    expect((await search('ROOT-1')).rows.map((row) => row.variantId).sort()).toEqual(['cprod_pipe', 'cprod_tile']);
+  });
+
+  it('🔴 ο ακριβής κωδικός βρίσκει και SKU που δεν πέρασε ακόμη από τον επανυπολογισμό', async () => {
+    const derived = { label: 'Παλιό SKU', identifier: 'OLD-1', sortKey: 'παλιο', searchPrefixes: [] };
+    seedSku('cprod_old', 'Παλιό SKU', 'OLD-1', { derived });
+    expect((await search('παλιό')).rows).toEqual([]);
+    reserve('OLD-1', 'cprod_old');
+    expect((await search('old-1')).rows.map((row) => row.variantId)).toEqual(['cprod_old']);
+  });
+
+  it('κωδικός μοντέλου ⇒ τα SKU του, με τα ορατά μόνο', async () => {
+    const modelId = generateDeterministicCatalogProductModelId(ARIES.companyId, 'mfp-99');
+    const entry = { kind: 'product', parentId: modelId, axisKey: null, completeChannels: [], facetKeys: [] };
+    fake.seed(COLLECTIONS.CATALOG_PRODUCT_MODELS, modelId, {
+      id: modelId, companyId: ARIES.companyId, isDeleted: false, parentId: null, categoryIds: [], derived: { descendants: { cprod_tile: entry, cprod_pipe: entry } },
+    });
+    await hide('cprod_pipe');
+    expect((await search('MFP-99')).rows.map((row) => row.variantId)).toEqual(['cprod_tile']);
+  });
+
+  it('🔴 κρυφό ≡ ανύπαρκτο, και με ακριβή κωδικό, και η απάντηση δεν έχει κανένα άλλο κλειδί', async () => {
+    reserve('PL-6060', 'cprod_tile');
+    await hide('cprod_tile');
+    const hidden = await search('PL-6060');
+    expect(hidden).toEqual(await search('ΑΝΥΠΑΡΚΤΟ-999'));
+    expect(hidden).toEqual({ rows: [] });
+  });
+
+  it('`visibleNoPrice` ⇒ φαίνεται, χωρίς τιμή', async () => {
+    await createVisibilityRule(ARIES, { subject: { kind: 'variant', variantId: 'cprod_pipe' }, audience: { kind: 'signedIn' }, visibility: 'visibleNoPrice' });
+    expect((await search('χαλκου')).rows).toEqual([{ variantId: 'cprod_pipe', code: 'CU-16', label: 'Σωλήνας Χαλκού 16mm', priced: false }]);
+  });
+
+  it('🔴 διαγραμμένο SKU · κρυφό που σκεπάζει το παράθυρο: μετρούν μόνο όσα φαίνονται', async () => {
+    seedSku('cprod_gone', 'Σωλήνας Παλιός', 'CU-OLD', { isDeleted: true });
+    for (let index = 0; index < FOREIGN_SKU_WINDOW; index += 1) {
+      const id = `cprod_h${String(index).padStart(3, '0')}`;
+      seedSku(id, `Αξεσουάρ ${index}`, `H-${index}`);
+      await hide(id);
+    }
+    seedSku('cprod_visible', 'Ωραίο Αξεσουάρ', 'V-1');
+    expect((await search('αξεσουαρ')).rows.map((row) => row.variantId)).toEqual(['cprod_visible']);
+    expect((await search('παλιος')).rows).toEqual([]);
+  });
+
+  it('🔴 το πλήθος φράζεται, και ο προϋπολογισμός παραθύρων τελειώνει', async () => {
+    for (let index = 0; index < FOREIGN_SKU_RESULTS + 5; index += 1) seedSku(`cprod_v${String(index).padStart(3, '0')}`, `Βίδα ${index}`, `B-${index}`);
+    expect((await search('βιδα')).rows).toHaveLength(FOREIGN_SKU_RESULTS);
+  });
+
+  it('🔴 Σ7: χωρίς σχέση · ξένη σχέση · ανύπαρκτη · ανακλημένη ⇒ ίδια κενή απάντηση', async () => {
+    const relationship = fake.getData(COLLECTIONS.SUPPLY_RELATIONSHIPS, RELATIONSHIP_ID()) as SupplyRelationship;
+    expect((await search('δαπεδου')).rows).toHaveLength(1);
+    expect(await search('δαπεδου', RIVAL)).toEqual({ rows: [] });
+    expect(await search('δαπεδου', BUYER, 'srel_ghost')).toEqual({ rows: [] });
+    await endSupplyRelationship(BUYER, relationship.id, { side: 'buyer', expectedRevision: relationship.revision });
+    expect(await search('δαπεδου')).toEqual({ rows: [] });
+  });
+
+  it('🔴 ο ξένος κατάλογος διαβάζεται μόνο σε συναλλαγή ανάγνωσης (Δ5)', async () => {
+    const transactions = jest.spyOn(fake, 'runTransaction');
+    await search('δαπεδου');
+    expect(transactions).toHaveBeenCalledWith(expect.any(Function), { readOnly: true });
+    transactions.mockRestore();
   });
 });

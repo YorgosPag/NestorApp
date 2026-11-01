@@ -1,10 +1,12 @@
 import type { PriceListLineWire } from '@/subapps/catalog/types/pricing-views';
 import {
+  MATERIAL_ISSUE_PATH,
   breakdownTotal,
   costItemSubject,
   hasPendingResolution,
   withBreakdown,
   withCostSubject,
+  withMaterialCode,
   isPriceLineDraftDirty,
   minorFromEnteredText,
   newPriceLineRow,
@@ -98,6 +100,58 @@ describe('επίλυση κωδικού SKU', () => {
     expect(resolved.rows[1]).toBe(b);
     expect(resolvePriceLineCode(draft, 'OTHER', null).rows[1].resolution).toBe('unknown');
     expect(resolvePriceLineCode(draft, 'NOBODY', 'x')).toBe(draft);
+  });
+});
+
+describe('SKU υλικού σε εργασία (ADR-923 §5.12 Δ10)', () => {
+  const costLine = (materialVariantId: string | null) => ({
+    ...stored('l_c', 'unused', 1000),
+    subject: { kind: 'costItem', atoeCode: 'OIK-4.01', region: null },
+    breakdown: { description: null, material: 1000, labor: 0, equipment: 0, defaultWasteBp: 0, materialVariantId },
+  }) as unknown as PriceListLineWire;
+  const COST_CONTEXT = { kind: 'cost', priceType: 'net_list', discountGroupIds: new Set<string>() } as const;
+  const row = () => priceLineDraftOf([costLine(null)], {}).rows[0];
+
+  it('αποθηκευμένο: ο κωδικός έρχεται από το ίδιο `expand` · SKU που δεν ζει ⇒ άγνωστο, όχι σιωπηλό κενό', () => {
+    expect(priceLineDraftOf([costLine('prod_a')], SKUS).rows[0]).toMatchObject({ materialCode: 'MFP-A', materialResolution: 'resolved' });
+    expect(priceLineDraftOf([costLine('prod_gone')], SKUS).rows[0]).toMatchObject({ materialCode: '', materialResolution: 'unknown' });
+    expect(row()).toMatchObject({ materialCode: '', materialResolution: 'resolved' });
+  });
+
+  it('🔴 νέος κωδικός ⇒ περιμένει, και η παλιά ταυτότητα φεύγει αμέσως', () => {
+    const typed = withMaterialCode(priceLineDraftOf([costLine('prod_a')], SKUS).rows[0], ' MFP-Z ');
+    expect(typed).toMatchObject({ materialCode: 'MFP-Z', materialResolution: 'pending', breakdown: { materialVariantId: null } });
+    expect(hasPendingResolution({ rows: [typed], removed: [] })).toBe(true);
+    expect(pendingCodes({ rows: [typed], removed: [] })).toEqual(['MFP-Z']);
+  });
+
+  it('ίδιος κωδικός ⇒ αμετάβλητη · κενό ⇒ κανένα SKU, χωρίς επίλυση', () => {
+    const bound = priceLineDraftOf([costLine('prod_a')], SKUS).rows[0];
+    expect(withMaterialCode(bound, 'MFP-A')).toBe(bound);
+    expect(withMaterialCode(bound, '  ')).toMatchObject({ materialCode: '', materialResolution: 'resolved', breakdown: { materialVariantId: null } });
+  });
+
+  it('🔴 η απάντηση γράφει το SKU στην ανάλυση, και η τιμή δεν αλλάζει', () => {
+    const draft = { rows: [withMaterialCode(row(), 'MFP-Z')], removed: [] };
+    const resolved = resolvePriceLineCode(draft, 'MFP-Z', 'prod_z');
+    expect(resolved.rows[0]).toMatchObject({ materialResolution: 'resolved', netPrice: 1000, breakdown: { materialVariantId: 'prod_z' } });
+    expect(priceLineChangesOf(resolved).upserts[0].breakdown).toMatchObject({ materialVariantId: 'prod_z' });
+  });
+
+  it('🔴 αργή απάντηση δεν γράφει σε γραμμή που άλλαξε κωδικό', () => {
+    const draft = { rows: [withMaterialCode(row(), 'NEW')], removed: [] };
+    expect(resolvePriceLineCode(draft, 'OLD', 'prod_old')).toBe(draft);
+  });
+
+  it('🔴 άγνωστος κωδικός ⇒ εύρημα στη στήλη του, και η γραμμή μένει χωρίς SKU', () => {
+    const draft = resolvePriceLineCode({ rows: [withMaterialCode(row(), 'NOPE')], removed: [] }, 'NOPE', null);
+    expect(draft.rows[0].breakdown).toMatchObject({ materialVariantId: null });
+    expect(priceLineIssues(draft, COST_CONTEXT).get('l_c')).toContainEqual({ code: 'priceLineSkuUnknown', path: MATERIAL_ISSUE_PATH });
+  });
+
+  it('🔴 ο ίδιος κωδικός ως υποκείμενο και ως υλικό ρωτά μία φορά', () => {
+    const subject = withEnteredCode(newPriceLineRow('variant', 'n1', 'pcs'), 'MFP-Z');
+    expect(pendingCodes({ rows: [subject, withMaterialCode(row(), 'MFP-Z')], removed: [] })).toEqual(['MFP-Z']);
   });
 });
 

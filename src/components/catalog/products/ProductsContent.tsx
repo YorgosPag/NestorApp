@@ -21,7 +21,7 @@ import { RecomputePanel } from '../shared/RecomputePanel';
 import { useCatalogCanManageProducts, useCatalogText } from '../shared/catalog-ui-hooks';
 import { useCatalogSelection } from '../shared/use-catalog-selection';
 import { useUnsavedGuard } from '../shared/use-unsaved-guard';
-import { uniqueAttributeRefsOf } from './catalog-code-jump';
+import { uniqueAttributeRefsOf } from '@/subapps/catalog/list/catalog-code-jump';
 import { CodeJumpField } from './CodeJumpField';
 import { NewProductDialog } from './NewProductDialog';
 import { ProductListGrid } from './ProductListGrid';

@@ -14,7 +14,7 @@ import { useCompanyId } from '@/hooks/useCompanyId';
 import type { CatalogReferenceTarget } from '@/subapps/catalog/types/product';
 
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { resolveCatalogCode, uniqueAttributeRefsOf } from '../products/catalog-code-jump';
+import { resolveCatalogCode, uniqueAttributeRefsOf } from '@/subapps/catalog/list/catalog-code-jump';
 import { catalogCodeReader } from '../products/use-catalog-code-resolver';
 import type { ProductCatalogContext } from '../products/use-product-catalog-context';
 import type { ValueEditorEnv } from './value-editor-types';

@@ -64,6 +64,18 @@ const book = (current: readonly CostRate[]): CostRateBook => ({
 
 const linked = (): BoqPriceSource => priceSourceOf(RATE, 'm2', APPLICATION);
 
+describe('materialVariantId (§5.12 Δ10)', () => {
+  it('το στιγμιότυπο κρατά το SKU του υλικού', () => {
+    const rate = { ...RATE, breakdown: { ...RATE.breakdown, materialVariantId: 'cprod_1' } };
+    expect(priceSourceOf(rate, 'm2', APPLICATION)).toMatchObject({ materialVariantId: 'cprod_1' });
+  });
+
+  it('🔴 γραμμή παλιότερη από το πεδίο ⇒ `null`, ποτέ `undefined` προς τη Firestore', () => {
+    const { materialVariantId: _omitted, ...old } = RATE.breakdown;
+    expect(priceSourceOf({ ...RATE, breakdown: old as typeof RATE.breakdown }, 'm2', APPLICATION)).toHaveProperty('materialVariantId', null);
+  });
+});
+
 describe('priceFieldsFromRate — τιμές, δεσμός, προέλευση σε ένα σύνολο', () => {
   it('η τιμή «ανά 10» διαιρείται: 80 € ανά 10 = 8 € ανά μονάδα', () => {
     expect(priceFieldsFromRate(item(), RATE, APPLICATION)).toMatchObject({ materialUnitCost: 8, laborUnitCost: 3, equipmentUnitCost: 1, priceAuthority: 'master' });

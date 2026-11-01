@@ -18,13 +18,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useCostRateBook } from '@/hooks/catalog/usePriceListViews';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
-import { formatCurrency, formatNumber } from '@/lib/intl-utils';
+import { formatCurrency } from '@/lib/intl-utils';
 import { majorFromMinor } from '@/lib/money/money';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { boqService } from '@/services/measurements';
 import { applicableReviewRows, reviewBoqPrices, reviewImpact, type BoqPriceReviewRow } from '@/services/measurements/boq-price-review';
 import { priceFieldsFromRate } from '@/services/measurements/boq-price-source';
 import type { BOQItem } from '@/types/boq';
+import { BOQPriceReviewTable, signedPercent, type PriceReviewCells } from './BOQPriceReviewTable';
 
 interface BOQPriceReviewPanelProps {
   items: readonly BOQItem[];
@@ -44,47 +45,21 @@ const ROW_KEYS: Readonly<Record<BoqPriceReviewRow['kind'], string>> = {
   listGone: 'tabs.measurements.priceReview.kinds.listGone',
 };
 
-const signedPercent = (bp: number | null): string =>
-  bp === null ? '—' : `${bp > 0 ? '+' : ''}${formatNumber(bp / 100, { maximumFractionDigits: 2 })}%`;
-
 const nextPrice = (row: BoqPriceReviewRow): string =>
   'rate' in row ? formatCurrency(majorFromMinor(row.rate.netPrice) / row.rate.priceQuantity) : '—';
 
-function ReviewRow({ row }: { row: BoqPriceReviewRow }) {
-  const { t } = useTranslation(['building-tabs']);
+const cellsOf = (row: BoqPriceReviewRow, state: string): PriceReviewCells => {
   const { item } = row;
-  return (
-    <tr className="border-t border-border/50">
-      <td className="py-1 pr-2">{item.title}</td>
-      <td className="py-1 pr-2">{t(ROW_KEYS[row.kind])}</td>
-      <td className="py-1 pr-2 text-right tabular-nums">{formatCurrency(item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost)}</td>
-      <td className="py-1 pr-2 text-right tabular-nums">{nextPrice(row)}</td>
-      <td className="py-1 pr-2 text-right tabular-nums">{'changeBp' in row ? signedPercent(row.changeBp) : '—'}</td>
-      <td className="py-1 text-right tabular-nums">{'impact' in row ? formatCurrency(row.impact) : '—'}</td>
-    </tr>
-  );
-}
-
-function ReviewTable({ rows }: { rows: readonly BoqPriceReviewRow[] }) {
-  const { t } = useTranslation(['building-tabs']);
-  return (
-    <section className="overflow-x-auto">
-      <table className="w-full min-w-[36rem] text-xs">
-        <thead>
-          <tr className="text-left">
-            <th scope="col" className="pr-2 font-medium">{t('tabs.measurements.priceReview.columns.line')}</th>
-            <th scope="col" className="pr-2 font-medium">{t('tabs.measurements.priceReview.columns.state')}</th>
-            <th scope="col" className="pr-2 text-right font-medium">{t('tabs.measurements.priceReview.columns.current')}</th>
-            <th scope="col" className="pr-2 text-right font-medium">{t('tabs.measurements.priceReview.columns.next')}</th>
-            <th scope="col" className="pr-2 text-right font-medium">{t('tabs.measurements.priceReview.columns.change')}</th>
-            <th scope="col" className="text-right font-medium">{t('tabs.measurements.priceReview.columns.impact')}</th>
-          </tr>
-        </thead>
-        <tbody>{rows.map((row) => <ReviewRow key={row.item.id} row={row} />)}</tbody>
-      </table>
-    </section>
-  );
-}
+  return {
+    id: item.id,
+    line: item.title,
+    state,
+    current: formatCurrency(item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost),
+    next: nextPrice(row),
+    change: 'changeBp' in row ? signedPercent(row.changeBp) : '—',
+    impact: 'impact' in row ? formatCurrency(row.impact) : '—',
+  };
+};
 
 function useApply({ companyId, userId, onApplied }: BOQPriceReviewPanelProps) {
   const { t } = useTranslation(['building-tabs']);
@@ -136,7 +111,7 @@ export function BOQPriceReviewPanel(props: BOQPriceReviewPanelProps) {
           {t('tabs.measurements.priceReview.confirmFence')}
         </label>
       ) : null}
-      <ReviewTable rows={rows} />
+      <BOQPriceReviewTable rows={rows.map((row) => cellsOf(row, t(ROW_KEYS[row.kind])))} />
     </aside>
   );
 }

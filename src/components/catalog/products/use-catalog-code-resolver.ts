@@ -14,7 +14,7 @@ import { useCallback, useMemo } from 'react';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import type { AttributeRecord } from '@/services/catalog/catalog-api.client';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import { resolveCatalogCode, uniqueAttributeRefsOf, type CodeJumpReader, type CodeJumpTarget } from './catalog-code-jump';
+import { resolveCatalogCode, uniqueAttributeRefsOf, type CodeJumpReader, type CodeJumpTarget } from '@/subapps/catalog/list/catalog-code-jump';
 
 /** Ο αναγνώστης εγγράφων του άλματος — μία ανάγνωση εγγράφου ανά ερώτηση, κανένα ερώτημα λίστας. */
 export const catalogCodeReader: CodeJumpReader = (collection, id) => firestoreQueryService.getById<Record<string, unknown>>(collection, id);

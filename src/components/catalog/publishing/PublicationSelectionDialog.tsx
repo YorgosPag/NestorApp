@@ -26,7 +26,7 @@ import { useCatalogSettings } from '@/hooks/catalog/useCatalogSettings';
 import type { FacetSelection } from '@/subapps/catalog/list/catalog-list-query';
 import { PUBLICATION_LIMITS } from '@/subapps/catalog/publishing/publication-vocabulary';
 import type { PublicationSelectionEntry } from '@/subapps/catalog/types/publication';
-import { uniqueAttributeRefsOf } from '../products/catalog-code-jump';
+import { uniqueAttributeRefsOf } from '@/subapps/catalog/list/catalog-code-jump';
 import { CodeJumpField } from '../products/CodeJumpField';
 import { rowIdentifier, rowLabel, type CatalogListRow } from '../products/product-list-rows';
 import { useProductList } from '../products/use-product-list';

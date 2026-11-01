@@ -11,7 +11,7 @@ import type { PriceAudience } from '@/subapps/catalog/types/price-list';
 import type { VisibilityRuleWire } from '@/subapps/catalog/types/pricing-views';
 import type { VisibilitySubject } from '@/subapps/catalog/types/visibility-rule';
 import { VISIBILITY_SUBJECT_SPECIFICITY, type VisibilitySubjectKind } from '@/subapps/catalog/vocabulary/pricing';
-import type { CodeJumpTarget } from '../products/catalog-code-jump';
+import type { CodeJumpTarget } from '@/subapps/catalog/list/catalog-code-jump';
 
 /** Ποια είδη επιλύονται με κωδικό· ο κατάλογος δεν έχει, η κατηγορία έχει λίστα. */
 export function needsCode(kind: VisibilitySubjectKind): kind is 'productModel' | 'variant' {

@@ -19,7 +19,8 @@ import { majorFromMinor, type MinorAmount } from '@/lib/money/money';
 import { BP_PER_WHOLE } from '@/lib/pricing/discount-rule';
 import type { ForeignPrice } from '@/subapps/catalog/pricing/foreign-quote';
 import type { CostRate } from '@/subapps/catalog/types/cost-rate';
-import { BOQ_ITEM_DEFAULTS, type BOQItem, type BOQMeasurementUnit, type BoqPriceSource, type UpdateBOQItemInput } from '@/types/boq';
+import { ORDER_QUANTITY_DECIMALS } from '@/subapps/catalog/vocabulary/pricing';
+import { BOQ_ITEM_DEFAULTS, type BOQItem, type BOQMeasurementUnit, type BoqPriceSource, type BoqSupplierPriceSource, type UpdateBOQItemInput } from '@/types/boq';
 import { BOQ_PRICE_FIELDS, isSummaryBoqLine } from './boq-line-role';
 
 /** Ποιος και πότε έδεσε την τιμή — έρχεται από τον καλούντα, ώστε η συνάρτηση να μένει καθαρή. */
@@ -38,9 +39,11 @@ export function canApplyPrice(item: PricedLine): boolean {
 const unitCost = (amount: MinorAmount, priceQuantity: number): number => majorFromMinor(amount) / priceQuantity;
 
 export function priceSourceOf(rate: CostRate, unit: BOQMeasurementUnit, application: PriceApplication): BoqPriceSource {
-  const { material, labor, equipment, defaultWasteBp } = rate.breakdown;
+  const { material, labor, equipment, defaultWasteBp, materialVariantId } = rate.breakdown;
   return {
     authority: rate.projectId === null ? 'master' : 'project',
+    // Γραμμή παλιότερη από το πεδίο: η Firestore απορρίπτει το `undefined`.
+    materialVariantId: materialVariantId ?? null,
     priceListId: rate.priceListId,
     priceListVersionId: rate.versionId,
     versionNumber: rate.versionNumber,
@@ -93,12 +96,18 @@ export interface SupplierQuoteForLine {
 }
 
 /**
- * Τιμές, δεσμός και προέλευση από SKU ξένου προμηθευτή (§5.12 Δ9). Το σύνολο σε λεπτά ανά την ποσότητα που τιμολογήθηκε, στο
- * `material`: έτσι ισχύει κάθε βήμα κλίμακας χωρίς στρογγύλευση ανά μονάδα. ⚠️ Η φύρα δεν αγγίζεται: ο προμηθευτής δεν τη δηλώνει.
+ * Η ποσότητα με την οποία τιμολογείται η γραμμή: η κλίμακα θέλει ποσότητα, και γραμμή χωρίς μετρημένη ποσότητα τιμολογείται για
+ * μία μονάδα. Στα δεκαδικά που δέχεται ο επιλυτής: 12,3456 αλλιώς θα έβγαινε «άκυρη ποσότητα», δηλαδή ψευδές «ζητήστε προσφορά».
  */
-export function priceFieldsFromQuote(quote: SupplierQuoteForLine, application: PriceApplication): UpdateBOQItemInput {
+export function supplierLineQuantity(item: Pick<BOQItem, 'estimatedQuantity'>): number {
+  const quantity = Number(item.estimatedQuantity.toFixed(ORDER_QUANTITY_DECIMALS));
+  return quantity > 0 ? quantity : 1;
+}
+
+/** Το στιγμιότυπο SKU ξένου προμηθευτή: το σύνολο σε λεπτά ανά την ποσότητα που τιμολογήθηκε, στο `material`, ώστε κάθε βήμα κλίμακας να ισχύει χωρίς στρογγύλευση ανά μονάδα. */
+export function supplierSourceOf(quote: SupplierQuoteForLine, application: PriceApplication): BoqSupplierPriceSource {
   const { price } = quote;
-  const source: BoqPriceSource = {
+  return {
     authority: 'supplier',
     supplierCompanyId: quote.supplierCompanyId,
     variantId: quote.variantId,
@@ -116,6 +125,10 @@ export function priceFieldsFromQuote(quote: SupplierQuoteForLine, application: P
     appliedAt: application.appliedAt,
     appliedBy: application.appliedBy,
   };
+}
+
+/** Τιμές, δεσμός και προέλευση από SKU ξένου προμηθευτή (§5.12 Δ9). ⚠️ Η φύρα δεν αγγίζεται: ο προμηθευτής δεν τη δηλώνει. */
+export function priceFieldsFromSupplierSource(source: BoqSupplierPriceSource): UpdateBOQItemInput {
   return { ...unitCostsOf(source), ...priceLinkFields(source) };
 }
 

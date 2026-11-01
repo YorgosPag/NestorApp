@@ -17,13 +17,14 @@ import { basisPointsFromPercent, effectivePercent } from '@/lib/pricing/discount
 import { parseEnteredAmount } from '@/subapps/catalog/values/decimal-amount';
 import {
   MONEY_DIGITS,
+  SkuCodeCell,
   quantityColumn,
   reject,
   unitColumn,
   type PriceLineColumn as Column,
   type PriceLineColumnsInput,
 } from './price-line-columns';
-import { EMPTY_BREAKDOWN, breakdownTotal, minorFromEnteredText, withBreakdown, withCostSubject, type PriceLineRow } from './price-line-rows';
+import { EMPTY_BREAKDOWN, breakdownTotal, minorFromEnteredText, withBreakdown, withCostSubject, withMaterialCode, type PriceLineRow } from './price-line-rows';
 
 type BreakdownPart = 'material' | 'labor' | 'equipment';
 
@@ -83,6 +84,23 @@ function partColumn(input: PriceLineColumnsInput, part: BreakdownPart, title: st
   };
 }
 
+/**
+ * Ο κωδικός SKU του υλικού (§5.12 Δ10 · RIB iTWO: οι πόροι της ανάλυσης δείχνουν σε προϊόν). Περνά από την ίδια επίλυση με τη στήλη
+ * SKU των πωλήσεων: καμία δεύτερη αναζήτηση, και επικολλούνται 400 κωδικοί από Excel με ένα αίτημα ανά μοναδικό κωδικό.
+ */
+function materialSkuColumn(input: PriceLineColumnsInput): Column {
+  const { t } = input.words;
+  return {
+    id: 'materialCode',
+    header: t('pricing.lines.columns.materialSku'),
+    label: t('pricing.lines.columns.materialSku'),
+    width: 'lg',
+    text: (row) => row.materialCode,
+    render: (row) => <SkuCodeCell code={row.materialCode} resolving={row.materialResolution === 'pending'} label={t('pricing.lines.resolving')} />,
+    parse: (text, row) => ({ ok: true, row: withMaterialCode(row, text) }),
+  };
+}
+
 function wasteColumn(input: PriceLineColumnsInput): Column {
   const { t } = input.words;
   return {
@@ -115,6 +133,7 @@ export function costLineColumns(input: PriceLineColumnsInput): Column[] {
     unitColumn(input),
     quantityColumn(input),
     partColumn(input, 'material', t('pricing.lines.columns.material')),
+    materialSkuColumn(input),
     partColumn(input, 'labor', t('pricing.lines.columns.labor')),
     partColumn(input, 'equipment', t('pricing.lines.columns.equipment')),
     wasteColumn(input),

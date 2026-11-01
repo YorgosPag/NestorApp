@@ -26,12 +26,18 @@ import { cn } from '@/lib/utils';
 import { costRatesForLine, priceSourceOf } from '@/services/measurements/boq-price-source';
 import { judgeCostDrift, type CostDrift } from '@/subapps/catalog/pricing/cost-rate';
 import type { CostRate, CostRateBook } from '@/subapps/catalog/types/cost-rate';
+import type { BOQItem, BoqSupplierPriceSource } from '@/types/boq';
 import type { FieldsetCommon } from './BOQEditorFieldsets';
+import { BOQSupplierLinkedSource } from './BOQSupplierLinkedSource';
+import { BOQSupplierPriceField } from './BOQSupplierPriceField';
 import type { EditorFormState } from './useBOQEditorState';
 
 interface BOQPriceSourceFieldProps extends FieldsetCommon {
   form: EditorFormState;
+  /** Η αποθηκευμένη γραμμή· `null` σε νέα. Η τιμή προμηθευτή γράφεται στον διακομιστή, άρα θέλει υπαρκτή γραμμή. */
+  item: BOQItem | null;
   onUpdateField: <K extends keyof EditorFormState>(key: K, value: EditorFormState[K]) => void;
+  onSupplierApplied: (source: BoqSupplierPriceSource) => void;
 }
 
 const rateLabel = (rate: CostRate, name: string): string => {
@@ -51,10 +57,13 @@ function driftMessage(drift: CostDrift, t: FieldsetCommon['t']): string | null {
   }
 }
 
-function LinkedSource({ form, book, onUpdateField, colors, t }: BOQPriceSourceFieldProps & { book: CostRateBook | null }) {
+function LinkedSource({ form, item, book, onUpdateField, onSupplierApplied, colors, t }: BOQPriceSourceFieldProps & { book: CostRateBook | null }) {
   const source = form.priceSource;
   if (source === null) return null;
-  const notice = book === null || source.authority === 'supplier' ? null : driftMessage(judgeCostDrift(source, book), t);
+  if (source.authority === 'supplier') {
+    return <BOQSupplierLinkedSource source={source} item={item} onApplied={onSupplierApplied} onDetach={() => onUpdateField('priceSource', null)} colors={colors} t={t} />;
+  }
+  const notice = book === null ? null : driftMessage(judgeCostDrift(source, book), t);
   return (
     <section className="flex flex-wrap items-center gap-2 text-xs">
       <p className={cn('m-0 flex-1', colors.text.muted)}>{t('tabs.measurements.editor.priceSource.linked', { version: source.versionNumber })}</p>
@@ -91,6 +100,7 @@ export function BOQPriceSourceField(props: BOQPriceSourceFieldProps) {
         </SelectContent>
       </Select>
       <LinkedSource {...props} book={book} />
+      {form.priceSource?.authority === 'supplier' ? null : <BOQSupplierPriceField form={form} item={props.item} onApplied={props.onSupplierApplied} colors={colors} t={t} />}
     </section>
   );
 }

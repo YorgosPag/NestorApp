@@ -23,7 +23,7 @@ import { readOwnedContactDocsInTransaction } from '@/server/lib/owned-contact-do
 import { pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
 import { pricingFreshUntil } from '@/subapps/catalog/pricing/pricing-view-freshness';
 import { visibilitySubjectKey } from '@/subapps/catalog/pricing/visibility';
-import type { PriceAudience, PricingPartyRef } from '@/subapps/catalog/types/price-list';
+import type { PriceAudience, PriceLineSubject, PricingPartyRef } from '@/subapps/catalog/types/price-list';
 import type { DiscountsView, PriceLinesPageView, PriceListsView, PriceListWire } from '@/subapps/catalog/types/pricing-views';
 import type { VisibilitySubject } from '@/subapps/catalog/types/visibility-rule';
 import { isPublishedStatus, PRICE_LINES_PER_TRANSACTION } from '@/subapps/catalog/vocabulary/pricing';
@@ -53,6 +53,12 @@ export function readPriceListsView(ctx: AuthContext, nowMs = Date.now()): Promis
   });
 }
 
+/** Τα SKU που ονομάζει μια γραμμή: το υποκείμενο και, σε εργασία, το υλικό της ανάλυσης (§5.12 Δ10). */
+function skuSubjectsOfLine(line: StoredPriceLine): readonly PriceLineSubject[] {
+  const material = line.breakdown?.materialVariantId ?? null;
+  return material === null ? [line.subject] : [line.subject, { kind: 'variant', variantId: material }];
+}
+
 /** `list:{id}` — μία σελίδα γραμμών μιας έκδοσης, μετά τον δρομέα (id εγγράφου). */
 /** Κωδικός SKU ανά `variantId` για τις ζωντανές παραλλαγές της σελίδας — **μία** `getAll` στη συναλλαγή της όψης. */
 export function readPriceLinesPage(ctx: AuthContext, versionId: string, cursor: string | null, nowMs = Date.now()): Promise<PriceLinesPageView> {
@@ -63,7 +69,7 @@ export function readPriceLinesPage(ctx: AuthContext, versionId: string, cursor: 
     const snap = await scope.tx.get(versionLinesPage(scope.db, ctx.companyId, version.id, cursor));
     const lines = snap.docs.map((doc) => doc.data() as StoredPriceLine);
     const nextCursor = lines.length === PRICE_LINES_PER_TRANSACTION ? lines[lines.length - 1].id : null;
-    const skuIdentifiers = await readSkuIdentifiers(scope, lines.map((line) => line.subject));
+    const skuIdentifiers = await readSkuIdentifiers(scope, lines.flatMap(skuSubjectsOfLine));
     return { freshness: { revision, freshUntil: pricingFreshUntil(nowMs, []) }, version, lines, skuIdentifiers, nextCursor };
   });
 }

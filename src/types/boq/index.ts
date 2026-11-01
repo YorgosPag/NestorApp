@@ -55,4 +55,4 @@ export type {
 } from './cost';
 
 // Stored link to the cost price list (ADR-923 §5.11 «3ε»)
-export type { BoqPriceBreakdown, BoqPriceSource } from './price-source';
+export type { BoqPriceBreakdown, BoqPriceSource, BoqSupplierPriceSource } from './price-source';

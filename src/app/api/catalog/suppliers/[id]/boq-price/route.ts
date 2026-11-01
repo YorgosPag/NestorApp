@@ -11,5 +11,5 @@ import { boqSupplierPriceBodySchema } from '@/subapps/catalog/schema/zod/supply-
 import { catalogEntityRoute } from '../../../_shared/catalog-route';
 
 export const POST = catalogEntityRoute({ category: 'STANDARD', authority: 'pricingView' }, boqSupplierPriceBodySchema, (auth, id, body) =>
-  applySupplierPrice(auth, { relationshipId: id, boqItemId: body.boqItemId, variantId: body.variantId }),
+  applySupplierPrice(auth, { ...body, relationshipId: id }),
 );

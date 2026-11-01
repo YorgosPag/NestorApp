@@ -40,6 +40,8 @@ interface BoqPriceSourceCore {
 export interface BoqCostPriceSource extends BoqPriceSourceCore {
   /** Ποιο επίπεδο έδωσε την τιμή. Χωρίς πηγή το πεδίο είναι `null`. */
   readonly authority: Exclude<SourceAuthority, 'item' | 'supplier'>;
+  /** Το SKU του υλικού της εργασίας (ADR-923 §5.12 Δ10). Στιγμιότυπα πριν από το πεδίο δεν το έχουν: διαβάζεται ως «κανένα». */
+  readonly materialVariantId?: string | null;
 }
 
 /**

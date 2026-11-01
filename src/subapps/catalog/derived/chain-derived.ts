@@ -29,6 +29,7 @@ import type {
 import { resolveInheritedValues, type InheritanceLink } from '../values/resolve-inherited';
 import { mapCatalogChannels } from '../vocabulary/channels';
 import { facetKeysOf, productIdentifierOf, productLabelOf } from './holder-derived';
+import { catalogSearchPrefixes } from './search-prefixes';
 import { catalogSortKey } from './sort-key';
 
 /** Ό,τι ξέρει ο γραφέας για το σχήμα τη στιγμή της εγγραφής — κοινό για όλη την αλυσίδα. */
@@ -56,6 +57,7 @@ export function productChainDerived(
     label,
     identifier,
     sortKey: catalogSortKey(label ?? identifier),
+    searchPrefixes: catalogSearchPrefixes(label, identifier),
     facetKeys: facetKeysOf(resolved),
     completeness,
     completenessHash: completenessInputsHash({ ...schema, chain }),

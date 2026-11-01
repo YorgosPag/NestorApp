@@ -54,6 +54,8 @@ export interface CatalogProductDerived extends CatalogHolderDerived {
    * φυσική σειρά αριθμών. ⚠️ Το `orderBy` της Firestore **αποκλείει** έγγραφα χωρίς το πεδίο ⇒ πάντα γραμμένο (`''`).
    */
   readonly sortKey: string;
+  /** Τα προθέματα λέξεων ετικέτας και κωδικού (`catalogSearchPrefixes`): η αναζήτηση SKU από ξένο χώρο (§5.12 τμήμα 4). */
+  readonly searchPrefixes: readonly string[];
   /** Κλειδιά φίλτρων: `attr=option` · `attr:true|false` (Δ11). */
   readonly facetKeys: readonly string[];
   readonly completeness: CompletenessMatrix;

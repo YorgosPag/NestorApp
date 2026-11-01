@@ -41,6 +41,9 @@ export interface PriceLineRow {
   readonly unitCode: string;
   readonly discountGroupId: string | null;
   readonly breakdown: CostBreakdown | null;
+  /** Ο κωδικός SKU του υλικού (`breakdown.materialVariantId`), όπως τον βλέπει ο άνθρωπος: κενό ⇒ κανένα SKU. */
+  readonly materialCode: string;
+  readonly materialResolution: SubjectResolution;
   /** `null` ⇒ νέα, δεν έχει γραφτεί ακόμη. */
   readonly stored: PriceListLineWire | null;
 }
@@ -60,7 +63,10 @@ export function minorFromEnteredText(text: string): MinorAmount | null {
   return minorFromMajor(parsed.value);
 }
 
-export const EMPTY_BREAKDOWN: CostBreakdown = { description: null, material: 0, labor: 0, equipment: 0, defaultWasteBp: 0, materialVariantId: null };
+/** Η διαδρομή του ευρήματος «άγνωστο SKU υλικού»: η στήλη το διαβάζει με αυτήν. */
+export const MATERIAL_ISSUE_PATH = 'breakdown.materialVariantId';
+
+export const EMPTY_BREAKDOWN: CostBreakdown ={ description: null, material: 0, labor: 0, equipment: 0, defaultWasteBp: 0, materialVariantId: null };
 
 /** Η τιμή μιας γραμμής εργασίας **είναι** το άθροισμα της ανάλυσής της. */
 export const breakdownTotal = (breakdown: CostBreakdown): MinorAmount =>
@@ -77,6 +83,8 @@ export function subjectCodeOf(subject: PriceLineSubject, skuIdentifiers: Readonl
 export function rowOfStored(line: PriceListLineWire, skuIdentifiers: Readonly<Record<string, string>>): PriceLineRow {
   const { subject } = line;
   const code = subjectCodeOf(subject, skuIdentifiers);
+  const materialId = line.breakdown?.materialVariantId ?? null;
+  const materialCode = materialId === null ? '' : skuIdentifiers[materialId] ?? '';
   return {
     key: line.id,
     code: code ?? '',
@@ -89,6 +97,8 @@ export function rowOfStored(line: PriceListLineWire, skuIdentifiers: Readonly<Re
     unitCode: line.unitCode,
     discountGroupId: line.discountGroupId,
     breakdown: line.breakdown,
+    materialCode,
+    materialResolution: materialId !== null && materialCode === '' ? 'unknown' : 'resolved',
     stored: line,
   };
 }
@@ -110,6 +120,8 @@ export function newPriceLineRow(mode: PriceLineSubjectKind, key: string, unitCod
     unitCode,
     discountGroupId: null,
     breakdown: mode === 'costItem' ? EMPTY_BREAKDOWN : null,
+    materialCode: '',
+    materialResolution: 'resolved',
     stored: null,
   };
 }
@@ -125,20 +137,30 @@ export function withEnteredCode(row: PriceLineRow, text: string): PriceLineRow {
  * γίνεται «άγνωστο SKU». Γραμμή που στο μεταξύ άλλαξε κωδικό δεν αγγίζεται — αργή απάντηση δεν γράφει σε ξένη γραμμή.
  */
 export function resolvePriceLineCode(draft: PriceLineDraft, code: string, variantId: string | null): PriceLineDraft {
-  let touched = false;
-  const rows = draft.rows.map((row) => {
-    if (row.resolution !== 'pending' || row.code !== code) return row;
-    touched = true;
-    return variantId === null
-      ? { ...row, subject: null, resolution: 'unknown' as const }
-      : { ...row, subject: { kind: 'variant' as const, variantId }, resolution: 'resolved' as const };
-  });
-  return touched ? { ...draft, rows } : draft;
+  const rows = draft.rows.map((row) => withResolvedMaterial(withResolvedSubject(row, code, variantId), code, variantId));
+  return rows.some((row, index) => row !== draft.rows[index]) ? { ...draft, rows } : draft;
 }
 
-/** Οι κωδικοί που περιμένουν επίλυση (μοναδικοί). */
+function withResolvedSubject(row: PriceLineRow, code: string, variantId: string | null): PriceLineRow {
+  if (row.resolution !== 'pending' || row.code !== code) return row;
+  return variantId === null
+    ? { ...row, subject: null, resolution: 'unknown' }
+    : { ...row, subject: { kind: 'variant', variantId }, resolution: 'resolved' };
+}
+
+/** Ίδια επίλυση για το SKU του υλικού: ο ίδιος κωδικός σε δύο γραμμές ρωτά μία φορά (ADR-923 §5.12 Δ10). */
+function withResolvedMaterial(row: PriceLineRow, code: string, variantId: string | null): PriceLineRow {
+  if (row.materialResolution !== 'pending' || row.materialCode !== code) return row;
+  return variantId === null
+    ? { ...row, materialResolution: 'unknown' }
+    : { ...withBreakdown(row, { materialVariantId: variantId }), materialResolution: 'resolved' };
+}
+
+const entriesOf = (row: PriceLineRow): readonly (readonly [string, SubjectResolution])[] => [[row.code, row.resolution], [row.materialCode, row.materialResolution]];
+
+/** Οι κωδικοί που περιμένουν επίλυση (μοναδικοί), του υποκειμένου και του υλικού. */
 export const pendingCodes = (draft: PriceLineDraft): readonly string[] =>
-  [...new Set(draft.rows.filter((row) => row.resolution === 'pending' && row.code !== '').map((row) => row.code))];
+  [...new Set(draft.rows.flatMap(entriesOf).filter(([code, resolution]) => resolution === 'pending' && code.trim() !== '').map(([code]) => code))];
 
 /** Κωδικός ΑΤΟΕ + περιοχή ⇒ υποκείμενο (σύγχρονα — δεν χρειάζεται αναζήτηση). */
 export function costItemSubject(code: string, region: string | null): PriceLineSubject | null {
@@ -156,6 +178,13 @@ export function withCostSubject(row: PriceLineRow, code: string, region: string 
 export function withBreakdown(row: PriceLineRow, patch: Partial<CostBreakdown>): PriceLineRow {
   const breakdown = { ...(row.breakdown ?? EMPTY_BREAKDOWN), ...patch };
   return { ...row, breakdown, netPrice: breakdownTotal(breakdown) };
+}
+
+/** Ο άνθρωπος έγραψε κωδικό υλικού: η παλιά ταυτότητα φεύγει αμέσως, ποτέ νέος κωδικός με παλιό SKU. Κενό ⇒ κανένα SKU, χωρίς επίλυση. */
+export function withMaterialCode(row: PriceLineRow, text: string): PriceLineRow {
+  const materialCode = text.trim();
+  if (materialCode === row.materialCode) return row;
+  return { ...withBreakdown(row, { materialVariantId: null }), materialCode, materialResolution: materialCode === '' ? 'resolved' : 'pending' };
 }
 
 /** Η γραμμή όπως θα σταλεί — `null` αν λείπει υποκείμενο ή τιμή (δεν στέλνεται, φαίνεται ως εύρημα). */
@@ -214,13 +243,13 @@ function subjectIssues(row: PriceLineRow): CatalogIssue[] {
 function ownIssues(row: PriceLineRow, context: PriceLineContext): CatalogIssue[] {
   const subject = subjectIssues(row);
   const price: CatalogIssue[] = row.netPrice === null ? [{ code: 'priceAmountInvalid', path: 'netPrice' }] : [];
+  const material: CatalogIssue[] = row.materialResolution === 'unknown' ? [{ code: 'priceLineSkuUnknown', path: MATERIAL_ISSUE_PATH }] : [];
   const definition = definitionOf(row);
-  return [...subject, ...price, ...(definition === null ? [] : validatePriceListLine(definition, context))];
+  return [...subject, ...price, ...material, ...(definition === null ? [] : validatePriceListLine(definition, context))];
 }
 
-/** Κάποια γραμμή περιμένει ακόμη την επίλυση του κωδικού της ⇒ η αποθήκευση περιμένει. */
-export const hasPendingResolution = (draft: PriceLineDraft): boolean =>
-  draft.rows.some((row) => row.resolution === 'pending' && row.code.trim() !== '');
+/** Κάποια γραμμή περιμένει ακόμη την επίλυση κωδικού ⇒ η αποθήκευση περιμένει. */
+export const hasPendingResolution = (draft: PriceLineDraft): boolean => pendingCodes(draft).length > 0;
 
 /** Ευρήματα ανά γραμμή (κλειδί γραμμής → ευρήματα με διαδρομή **πεδίου**), μαζί με τα διπλότυπα υποκειμένου. */
 export function priceLineIssues(draft: PriceLineDraft, context: PriceLineContext): ReadonlyMap<string, readonly CatalogIssue[]> {

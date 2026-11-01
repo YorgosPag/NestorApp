@@ -299,7 +299,36 @@
           "lineGone": "The work item is not in the version in force.",
           "unitChanged": "The work item changed unit in the version in force.",
           "changed": "Version {version} has a new price: choose the work item again to update.",
-          "upcoming": "Version {version} will change this price soon."
+          "upcoming": "Version {version} will change this price soon.",
+          "supplier": {
+            "label": "From supplier",
+            "pickSupplier": "Choose a supplier",
+            "unnamed": "Unnamed supplier",
+            "searchPlaceholder": "Product code or name",
+            "noResults": "Nothing found. Try the exact code or more words.",
+            "onRequest": "On request",
+            "offer": "{price} per unit, for quantity {quantity}",
+            "apply": "Apply to line",
+            "immediate": "A supplier price applies immediately and stays, even if you close the form without saving.",
+            "linked": "Supplier price, version {version}. Changing the price unlinks the line.",
+            "changed": "New supplier price: {before} → {after} ({change}).",
+            "refresh": "Update price",
+            "confirmFence": "I confirm the change above the threshold",
+            "gate": {
+              "unsaved": "Save the line first: the supplier price depends on the saved quantity and unit.",
+              "locked": "A supplier price can only go on a draft line."
+            },
+            "notices": {
+              "unavailable": "The source of this price is not available. The line keeps its price.",
+              "requestQuote": "The supplier gives this price on request.",
+              "unitMismatch": "This product is priced in a different unit from the line. Units are not converted automatically.",
+              "unitChanged": "This product is now priced in a different unit from the line.",
+              "notApplicable": "This line cannot take a price.",
+              "priceMoved": "The price changed in the meantime. Check the new price before applying it.",
+              "fenceRequired": "The change is above the threshold. Press again to confirm.",
+              "failed": "Something went wrong. Please try again."
+            }
+          }
         },
         "createTitle": "New Item",
         "editTitle": "Edit Item",
@@ -504,6 +533,18 @@
           "unitChanged": "Unit changed",
           "lineGone": "Work item removed",
           "listGone": "Price list removed"
+        },
+        "supplier": {
+          "title": "Supplier price check",
+          "summary": "{count} lines with a supplier price need a check",
+          "confirmFence": "I also confirm the changes above the threshold",
+          "partial": "Some prices were not applied. Check the remaining lines.",
+          "kinds": {
+            "changed": "New price",
+            "unavailable": "Source not available",
+            "requestQuote": "On request",
+            "unitChanged": "Unit changed"
+          }
         }
       },
       "coverage": {

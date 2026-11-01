@@ -28,7 +28,7 @@ import { isCatalogCode } from '@/subapps/catalog/vocabulary/catalog-limits';
 import { CatalogCodeField } from '../shared/CatalogFormFields';
 import { IssueSummary } from '../shared/CatalogIssues';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import type { CodeJumpTarget } from './catalog-code-jump';
+import type { CodeJumpTarget } from '@/subapps/catalog/list/catalog-code-jump';
 
 type NewKind = 'model' | 'simple';
 const NEW_KINDS: readonly NewKind[] = ['model', 'simple'];

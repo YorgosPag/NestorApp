@@ -9,7 +9,7 @@
  * @see ADR-175 §4.4.3, ADR-329 §3.1, §3.2, §3.3
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   BOQItem,
   BOQItemStatus,
@@ -143,12 +143,14 @@ export function withFormField<K extends keyof EditorFormState>(form: EditorFormS
   if (key === 'wasteFactor') return { ...next, wastePolicy: 'overridden' };
   if (key !== 'priceSource' || next.priceSource === null) return next;
   const costs = unitCostsOf(next.priceSource);
+  // Ο προμηθευτής δεν δηλώνει φύρα: το `defaultWasteBp: 0` του στιγμιότυπου δεν είναι «μηδέν φύρα», και ο γραφέας δεν την αγγίζει.
+  const inheritsWaste = next.wastePolicy === 'inherited' && next.priceSource.authority !== 'supplier';
   return {
     ...next,
     materialUnitCost: String(costs.materialUnitCost),
     laborUnitCost: String(costs.laborUnitCost),
     equipmentUnitCost: String(costs.equipmentUnitCost),
-    wasteFactor: next.wastePolicy === 'inherited' ? String(wasteFactorOf(next.priceSource) * 100) : next.wasteFactor,
+    wasteFactor: inheritsWaste ? String(wasteFactorOf(next.priceSource) * 100) : next.wasteFactor,
   };
 }
 
@@ -240,9 +242,16 @@ export function useBOQEditorState({
   const [form, setForm] = useState<EditorFormState>(() => createInitialState(item, defaultCategory, projectId));
   const [saving, setSaving] = useState(false);
 
+  // Η φόρμα γεμίζει όταν ανοίγει, αλλάζει γραμμή ή αλλάζει κατάσταση (επαναφορά σε πρόχειρο). ΟΧΙ σε κάθε νέο `item`: η τιμή
+  // προμηθευτή γράφεται στον διακομιστή, η λίστα ξαναδιαβάζεται, και ένα γέμισμα εδώ θα έσβηνε ό,τι δεν έχει αποθηκευτεί (§5.12 Δ9).
+  const latestItem = useRef(item);
+  latestItem.current = item;
+  const itemId = item?.id ?? null;
+  const itemStatus = item?.status ?? null;
+
   useEffect(() => {
-    if (open) setForm(createInitialState(item, defaultCategory, projectId));
-  }, [open, item, defaultCategory, projectId]);
+    if (open) setForm(createInitialState(latestItem.current, defaultCategory, projectId));
+  }, [open, itemId, itemStatus, defaultCategory, projectId]);
 
   const scopeLocked = isEdit && form.status !== 'draft';
 

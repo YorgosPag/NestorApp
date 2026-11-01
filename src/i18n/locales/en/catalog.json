@@ -1269,6 +1269,7 @@
         "priceQuantity": "Per",
         "netPrice": "Net price (€)",
         "material": "Material (€)",
+        "materialSku": "Material SKU code",
         "labor": "Labour (€)",
         "equipment": "Equipment (€)",
         "waste": "Waste %",

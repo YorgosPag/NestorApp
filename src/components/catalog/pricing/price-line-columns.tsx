@@ -26,7 +26,7 @@ import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { DiscountGroupWire } from '@/subapps/catalog/types/pricing-views';
 import { isPriceQuantity, PRICE_QUANTITIES } from '@/subapps/catalog/vocabulary/pricing';
 import type { useCatalogText } from '../shared/catalog-ui-hooks';
-import { minorFromEnteredText, withEnteredCode, type PriceLineRow } from './price-line-rows';
+import { MATERIAL_ISSUE_PATH, minorFromEnteredText, withEnteredCode, type PriceLineRow } from './price-line-rows';
 
 export type PriceLineColumn = DataGridColumn<PriceLineRow>;
 type Column = PriceLineColumn;
@@ -47,10 +47,21 @@ export const PRICE_LINE_ISSUE_PATHS: Readonly<Record<string, string>> = {
   netPrice: 'netPrice',
   discountGroup: 'discountGroupId',
   material: 'breakdown',
+  materialCode: MATERIAL_ISSUE_PATH,
   waste: 'breakdown.defaultWasteBp',
 };
 
 export const reject = (input: PriceLineColumnsInput, code: CatalogIssue['code']) => ({ ok: false as const, issue: input.message({ code, path: '' }) });
+
+/** Ο κωδικός SKU σε κελί, με ένδειξη όσο επιλύεται: ίδιο για το υποκείμενο και για το υλικό. */
+export function SkuCodeCell({ code, resolving, label }: { readonly code: string; readonly resolving: boolean; readonly label: string }) {
+  return (
+    <span className="flex items-center gap-1 font-mono">
+      {resolving ? <Loader2 className="h-3 w-3 animate-spin" aria-label={label} /> : null}
+      {code}
+    </span>
+  );
+}
 
 function codeColumn(input: PriceLineColumnsInput): Column {
   const { t } = input.words;
@@ -61,12 +72,7 @@ function codeColumn(input: PriceLineColumnsInput): Column {
     width: 'lg',
     sticky: true,
     text: (row) => row.code,
-    render: (row) => (
-      <span className="flex items-center gap-1 font-mono">
-        {row.resolution === 'pending' && row.code !== '' ? <Loader2 className="h-3 w-3 animate-spin" aria-label={t('pricing.lines.resolving')} /> : null}
-        {row.code}
-      </span>
-    ),
+    render: (row) => <SkuCodeCell code={row.code} resolving={row.resolution === 'pending' && row.code !== ''} label={t('pricing.lines.resolving')} />,
     parse: (text, row) => ({ ok: true, row: withEnteredCode(row, text) }),
     lock: (row) => (row.stored !== null ? { reason: t('pricing.lines.skuLocked') } : null),
   };

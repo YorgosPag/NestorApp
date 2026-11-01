@@ -1269,6 +1269,7 @@
         "priceQuantity": "Ανά",
         "netPrice": "Καθαρή τιμή (€)",
         "material": "Υλικό (€)",
+        "materialSku": "Κωδικός SKU υλικού",
         "labor": "Εργασία (€)",
         "equipment": "Εξοπλισμός (€)",
         "waste": "Φύρα %",

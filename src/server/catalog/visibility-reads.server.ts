@@ -53,11 +53,17 @@ async function readCategoryDepths(scope: CatalogReadScope, categoryIds: readonly
   return depths;
 }
 
+/** Ό,τι χρειάζεται η θέση από το SKU: ο αναγνώστης της λίστας το έχει ήδη, και δεν το ξαναδιαβάζει. */
+export type VisibilityHolder = Pick<StoredCatalogRecord<CatalogProductDefinition>, 'id' | 'modelId' | 'categoryIds'>;
+
+export async function ancestryOfHolder(scope: CatalogReadScope, holder: VisibilityHolder): Promise<VisibilityAncestry> {
+  const models = await readModelChain(scope, holder.modelId);
+  const categoryIds = [...holder.categoryIds, ...models.flatMap((model) => model.categoryIds)];
+  return { variantId: holder.id, modelIds: models.map((model) => model.id), categoryDepths: await readCategoryDepths(scope, categoryIds) };
+}
+
 /** Η θέση του SKU· `null` ⇒ ανύπαρκτο, διαγραμμένο ή ξένο: ίδια απάντηση (ADR-742 §3.3). */
 export async function readVisibilityAncestry(scope: CatalogReadScope, variantId: string): Promise<VisibilityAncestry | null> {
   const product = await readOwnedOrNull<CatalogProductDefinition>(scope, 'product', variantId);
-  if (product === null) return null;
-  const models = await readModelChain(scope, product.modelId);
-  const categoryIds = [...product.categoryIds, ...models.flatMap((model) => model.categoryIds)];
-  return { variantId, modelIds: models.map((model) => model.id), categoryDepths: await readCategoryDepths(scope, categoryIds) };
+  return product === null ? null : ancestryOfHolder(scope, product);
 }

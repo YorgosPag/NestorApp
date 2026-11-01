@@ -10,7 +10,7 @@
  * Η κράτηση μπορεί να είναι **μπαγιάτικη** (κάτοχος διαγραμμένος): ο κάτοχος επαληθεύεται ότι **ζει** — όπως το
  * `isLive` του διακομιστή. Ο αναγνώστης εγχέεται ⇒ δοκιμάζεται χωρίς Firestore.
  *
- * @module components/catalog/products/catalog-code-jump
+ * @module subapps/catalog/list/catalog-code-jump
  */
 
 import {

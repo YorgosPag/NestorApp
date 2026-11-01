@@ -12,6 +12,8 @@ import { INVITATION_TOKEN_MAX_LENGTH, INVITATION_TOKEN_MIN_LENGTH } from '@/cont
 import { ACTING_WORKSPACE_REQUEST_SCHEMA } from '@/lib/auth/acting-workspace';
 import { INVITATION_STATES } from '@/types/invitation-core';
 
+import { FOREIGN_SKU_TERM_MAX } from '../../pricing/foreign-sku-search';
+import { SUPPLIER_DRIFT_BATCH } from '../../pricing/supplier-drift';
 import type { SupplyInvitation } from '../../types/supply-invitation';
 import {
   SUPPLY_RELATIONSHIP_ORIGINS,
@@ -112,8 +114,22 @@ export const foreignQuoteBodySchema = z.object({
   quantity: z.number().positive().finite(),
 }).strict();
 
-/** Ο πελάτης λέει ποια γραμμή και ποιο SKU, ποτέ ποσό (§5.12 Δ7). */
-export const boqSupplierPriceBodySchema = z.object({ boqItemId: entityIdSchema, variantId: entityIdSchema }).strict();
+/** Ο όρος της αναζήτησης SKU στον ξένο κατάλογο (§5.12 τμήμα 4). */
+export const foreignSkuSearchBodySchema = z.object({ term: z.string().trim().min(1).max(FOREIGN_SKU_TERM_MAX) }).strict();
+
+/**
+ * Ο πελάτης λέει ποια γραμμή και ποιο SKU (§5.12 Δ7). `acknowledged` = ό,τι διάβασε ο άνθρωπος, μόνο για σύγκριση: κανένα ποσό δεν
+ * γράφεται από εδώ. `confirmFence` = ρητή επιβεβαίωση ανανέωσης πάνω από τον φράχτη (Δ9).
+ */
+export const boqSupplierPriceBodySchema = z.object({
+  boqItemId: entityIdSchema,
+  variantId: entityIdSchema,
+  acknowledged: z.object({ netAmount: z.number().int().nonnegative(), quantity: z.number().positive().finite() }).strict(),
+  confirmFence: z.boolean(),
+}).strict();
+
+/** Ποιες γραμμές θα ελεγχθούν (Δ9): τα υπόλοιπα τα ξέρει το στιγμιότυπο. */
+export const boqSupplierDriftBodySchema = z.object({ boqItemIds: z.array(entityIdSchema).min(1).max(SUPPLIER_DRIFT_BATCH) }).strict();
 
 /** Ο σύνδεσμος/QR: δημοσίευση (ή ανανέωση, που ακυρώνει ό,τι τυπώθηκε) · ανάκληση. */
 export const supplyRequestLinkBodySchema = z.object({ action: z.enum(['publish', 'revoke']) }).strict();

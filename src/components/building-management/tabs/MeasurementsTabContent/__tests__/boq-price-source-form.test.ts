@@ -28,6 +28,13 @@ describe('withFormField', () => {
     expect(withFormField(empty(), 'priceSource', SOURCE)).toMatchObject({ materialUnitCost: '8', laborUnitCost: '3', equipmentUnitCost: '1', wasteFactor: '5' });
   });
 
+  it('🔴 τιμή προμηθευτή: η φύρα μένει, γιατί ο προμηθευτής δεν τη δηλώνει', () => {
+    const supplier: BoqPriceSource = { ...SOURCE, authority: 'supplier', supplierCompanyId: 'comp_s', variantId: 'cprod_1', audience: null, discountSteps: [], defaultWasteBp: 0 };
+    const before = empty().wasteFactor;
+    expect(Number(before)).toBeGreaterThan(0);
+    expect(withFormField(empty(), 'priceSource', supplier)).toMatchObject({ wasteFactor: before, materialUnitCost: '8' });
+  });
+
   it('φύρα που όρισε ο άνθρωπος δεν αγγίζεται', () => {
     const own = withFormField(empty(), 'wasteFactor', '12');
     expect(own.wastePolicy).toBe('overridden');

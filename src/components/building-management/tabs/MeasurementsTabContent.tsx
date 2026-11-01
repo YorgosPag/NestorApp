@@ -23,6 +23,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { BOQSummaryCards } from './MeasurementsTabContent/BOQSummaryCards';
 import { BOQCoverageIndicator } from './MeasurementsTabContent/BOQCoverageIndicator';
 import { BOQPriceReviewPanel } from './MeasurementsTabContent/BOQPriceReviewPanel';
+import { BOQSupplierPriceReviewPanel } from './MeasurementsTabContent/BOQSupplierPriceReviewPanel';
 import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
 import { BOQCategoryAccordion, getFloorGroupKeys } from './MeasurementsTabContent/BOQCategoryAccordion';
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
@@ -253,6 +254,9 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
       {/* ADR-923 §5.11 «3ε» — price review against the cost rate book; renders nothing when there is nothing to review */}
       <BOQPriceReviewPanel items={items} projectId={building.projectId} companyId={resolvedCompanyId} userId={user?.uid ?? ''} onApplied={refreshItems} />
 
+      {/* ADR-923 §5.12 Δ9 — the same check against the suppliers' current prices */}
+      <BOQSupplierPriceReviewPanel items={items} onApplied={refreshItems} />
+
       {/* Filter Bar + Actions */}
       <header className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
         <section className="flex-1 w-full">
@@ -321,6 +325,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
         projectId={building.projectId}
         categories={categories}
         onSave={handleSave}
+        onPriceApplied={refreshItems}
         buildingItems={items}
       />
     </FullscreenOverlay>

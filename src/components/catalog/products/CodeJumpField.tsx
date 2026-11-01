@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { useCompanyId } from '@/hooks/useCompanyId';
 
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { resolveCatalogCode, type CodeJumpTarget, type UniqueAttributeRef } from './catalog-code-jump';
+import { resolveCatalogCode, type CodeJumpTarget, type UniqueAttributeRef } from '@/subapps/catalog/list/catalog-code-jump';
 import { catalogCodeReader } from './use-catalog-code-resolver';
 
 export interface CodeJumpFieldProps {

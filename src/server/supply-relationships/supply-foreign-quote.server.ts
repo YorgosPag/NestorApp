@@ -17,15 +17,22 @@ import { readOwnedOrNull, runForeignCatalogRead, type CatalogReadScope } from '@
 import { quoteWithin } from '@/server/catalog/price-quote.server';
 import { viewerOfRelationship } from '@/server/catalog/pricing-viewer.server';
 import { FOREIGN_UNAVAILABLE, foreignOutcomeOf, type ForeignPrice, type ForeignQuote } from '@/subapps/catalog/pricing/foreign-quote';
+import { FOREIGN_SKU_NONE, type ForeignSkuSearch } from '@/subapps/catalog/pricing/foreign-sku-search';
 import { supplyRelationshipFromDocument } from '@/subapps/catalog/schema/zod/supply-relationship.schema';
 import type { SupplyRelationship } from '@/subapps/catalog/types/supply-relationship';
 
+import { searchCatalogInScope } from './supply-foreign-search.server';
 import { readActiveSupplyRelationshipInTx } from './supply-relationship-store.server';
 
 export interface ForeignQuoteRequest {
   readonly relationshipId: string;
   readonly variantId: string;
   readonly quantity: number;
+}
+
+export interface ForeignSearchRequest {
+  readonly relationshipId: string;
+  readonly term: string;
 }
 
 /** Η τιμή **και** η έκδοσή της: ο αριθμός φαίνεται στη γραμμή BOQ χωρίς ανάγνωση (Δ8). */
@@ -65,4 +72,17 @@ export async function quoteForeignLine(ctx: AuthContext, request: ForeignQuoteRe
 export async function quoteForeignPrice(ctx: AuthContext, request: ForeignQuoteRequest): Promise<ForeignQuote> {
   const quoted = await quoteForeignLine(ctx, request);
   return quoted.kind === 'priced' ? { kind: 'priced', price: quoted.price } : quoted;
+}
+
+async function searchInScope(scope: CatalogReadScope, buyerCompanyId: string, term: string): Promise<ForeignSkuSearch> {
+  const relationship = await readActiveSupplyRelationshipInTx(scope.tx, scope.db, { supplierCompanyId: scope.ctx.companyId, buyerCompanyId });
+  if (relationship === null) return FOREIGN_SKU_NONE;
+  return { rows: await searchCatalogInScope(scope, await viewerOfRelationship(scope, relationship), term) };
+}
+
+/** Τα SKU που βλέπει ο αγοραστής για έναν όρο. Ξένη, ανύπαρκτη, ανακλημένη σχέση ⇒ ίδια κενή απάντηση με «δεν βρέθηκε τίποτα» (Σ7). */
+export async function searchForeignCatalog(ctx: AuthContext, request: ForeignSearchRequest): Promise<ForeignSkuSearch> {
+  const relationship = await readBuyerRelationship(ctx, request.relationshipId);
+  if (relationship === null) return FOREIGN_SKU_NONE;
+  return runForeignCatalogRead(relationship.companyId, (scope) => searchInScope(scope, ctx.companyId, request.term));
 }

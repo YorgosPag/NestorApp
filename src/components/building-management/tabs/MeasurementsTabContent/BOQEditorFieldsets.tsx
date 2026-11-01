@@ -20,7 +20,7 @@ import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import { UomSelect } from '@/components/shared/UomSelect';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import type { BOQItemStatus, BOQMeasurementUnit } from '@/types/boq';
+import type { BOQItem, BOQItemStatus, BOQMeasurementUnit, BoqSupplierPriceSource } from '@/types/boq';
 import { BOQPriceSourceField } from './BOQPriceSourceField';
 import type { EditorFormState } from './useBOQEditorState';
 import '@/lib/design-system';
@@ -119,10 +119,12 @@ export function QuantitiesFieldset({ form, isEdit, allowedUnits, grossQuantity, 
 
 interface CostsProps extends FieldsetCommon {
   form: EditorFormState;
+  item: BOQItem | null;
   onUpdateField: <K extends keyof EditorFormState>(key: K, value: EditorFormState[K]) => void;
+  onSupplierApplied: (source: BoqSupplierPriceSource) => void;
 }
 
-export function CostsFieldset({ form, onUpdateField, colors, t }: CostsProps) {
+export function CostsFieldset({ form, item, onUpdateField, onSupplierApplied, colors, t }: CostsProps) {
   return (
     <fieldset className="space-y-2">
       <legend className={cn('text-sm font-semibold', colors.text.muted)}>
@@ -143,7 +145,7 @@ export function CostsFieldset({ form, onUpdateField, colors, t }: CostsProps) {
           </article>
         ))}
       </section>
-      <BOQPriceSourceField form={form} onUpdateField={onUpdateField} colors={colors} t={t} />
+      <BOQPriceSourceField form={form} item={item} onUpdateField={onUpdateField} onSupplierApplied={onSupplierApplied} colors={colors} t={t} />
     </fieldset>
   );
 }
