@@ -211,7 +211,12 @@
       },
       "noView": "Οι τιμές δεν εμφανίζονται — η προβολή τιμοκαταλόγων απαιτεί δικαίωμα προβολής τιμών.",
       "versions": {
-        "number": "Έκδοση {number}"
+        "number": "Έκδοση {number}",
+        "phase": {
+          "current": "Ισχύει",
+          "future": "Μελλοντική",
+          "past": "Έληξε"
+        }
       }
     },
     "products": {
@@ -249,6 +254,7 @@
         "logo": "Λογότυπο",
         "priceList": "Τιμοκατάλογος",
         "priceVersion": "Έκδοση τιμών",
+        "priceVersionOption": "{version} · {phase} · από {date}",
         "pricing": "Τιμές",
         "primary": "Κύριο χρώμα",
         "profiles": "Προφίλ εξόδου",

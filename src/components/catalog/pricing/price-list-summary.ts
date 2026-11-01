@@ -46,6 +46,14 @@ export function phaseOfVersion(summary: PriceListSummary, versionId: string): Ti
   return summary.bands.find((band) => band.entry.version.id === versionId)?.phase ?? null;
 }
 
+/**
+ * Η εύλογη έκδοση όταν κάποιος διαλέγει λίστα χωρίς να έχει πει ποια: αυτή που ισχύει, αλλιώς η επόμενη που θα ισχύσει.
+ * Ποτέ «ο μεγαλύτερος αριθμός»: με μελλοντικές δημοσιευμένες, αυτός είναι τιμή που δεν ισχύει ακόμη.
+ */
+export function defaultVersionOf(summary: Pick<PriceListSummary, 'current' | 'future'>): PriceListVersionWire | null {
+  return summary.current ?? summary.future[0] ?? null;
+}
+
 const newestFirst = (versions: readonly PriceListVersionWire[]): PriceListVersionWire[] => [...versions].sort((a, b) => b.number - a.number);
 
 /** Η σύνοψη της λίστας `priceListId` από **όλες** τις εκδόσεις της όψης. */

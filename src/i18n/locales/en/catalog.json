@@ -981,6 +981,7 @@
       "pricing": "Prices",
       "priceList": "Price list",
       "priceVersion": "Price version",
+      "priceVersionOption": "{version} · {phase} · from {date}",
       "audience": "Audience",
       "profiles": "Output profiles",
       "templates": "Templates",

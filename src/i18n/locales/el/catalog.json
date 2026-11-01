@@ -981,6 +981,7 @@
       "pricing": "Τιμές",
       "priceList": "Τιμοκατάλογος",
       "priceVersion": "Έκδοση τιμών",
+      "priceVersionOption": "{version} · {phase} · από {date}",
       "audience": "Κοινό",
       "profiles": "Προφίλ εξόδου",
       "templates": "Πρότυπα",

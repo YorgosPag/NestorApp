@@ -1,6 +1,6 @@
 import type { PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
 import type { PriceListVersionStatus } from '@/subapps/catalog/vocabulary/pricing';
-import { phaseOfVersion, summarizePriceList } from '../price-list-summary';
+import { defaultVersionOf, phaseOfVersion, summarizePriceList } from '../price-list-summary';
 
 const version = (id: string, number: number, status: PriceListVersionStatus, validFrom: string | null, priceListId = 'pl_a') =>
   ({ id, number, status, validFrom, priceListId, basedOnVersionId: null, seal: null }) as unknown as PriceListVersionWire;
@@ -53,5 +53,27 @@ describe('summarizePriceList — η λίστα τη στιγμή «τώρα»', 
 
   it('πριν από την πρώτη δημοσίευση ⇒ καμία τρέχουσα', () => {
     expect(summarizePriceList('pl_a', versions, Date.parse('2025-01-01T00:00:00.000Z')).current).toBeNull();
+  });
+});
+
+describe('defaultVersionOf — ποια έκδοση προτείνεται όταν κανείς δεν είπε', () => {
+  const week = [
+    version('v1', 1, 'superseded', '2026-10-29T00:00:00.000Z'),
+    version('v2', 2, 'superseded', '2026-11-02T00:00:00.000Z'),
+    version('v3', 3, 'published', '2026-11-16T00:00:00.000Z'),
+  ];
+  const defaultAt = (iso: string) => defaultVersionOf(summarizePriceList('pl_a', week, Date.parse(iso)))?.id ?? null;
+
+  it('🔴 με μελλοντικές δημοσιευμένες διαλέγει αυτή που ισχύει, όχι τον μεγαλύτερο αριθμό', () => {
+    expect(defaultAt('2026-11-01T12:00:00.000Z')).toBe('v1');
+  });
+
+  it('χωρίς τρέχουσα διαλέγει την επόμενη που θα ισχύσει, όχι την τελευταία', () => {
+    expect(defaultAt('2026-10-01T12:00:00.000Z')).toBe('v1');
+    expect(defaultVersionOf(summarizePriceList('pl_a', week.slice(1), Date.parse('2026-10-01T12:00:00.000Z')))?.id).toBe('v2');
+  });
+
+  it('χωρίς καμία δημοσιευμένη δεν προτείνει τίποτα', () => {
+    expect(defaultVersionOf(summarizePriceList('pl_a', [version('v9', 1, 'draft', null)], Date.parse('2026-10-01T12:00:00.000Z')))).toBeNull();
   });
 });

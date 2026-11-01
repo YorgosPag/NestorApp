@@ -39,6 +39,23 @@ describe('layoutTables — συνέχεια στηλών (12 παραλλαγέ�
   });
 });
 
+describe('layoutTables — κελί χωρίς τιμή', () => {
+  it('🔴 τυπώνει παύλα, όχι κενό', () => {
+    const [table] = layoutTables(preview([attr('w', ['', '12', '', ''])]), { ...options, maxValueColumns: 4 });
+    expect(table.rows[0].cells.slice(1).map((cell) => cell.text)).toEqual(['—', '12', '—', '—']);
+  });
+
+  it('η τιμή «0» είναι τιμή, όχι έλλειψη', () => {
+    const [table] = layoutTables(preview([attr('w', ['0', '0', '0', '0'])]), { ...options, maxValueColumns: 4 });
+    expect(table.rows[0].cells.slice(1).map((cell) => cell.text)).toEqual(['0', '0', '0', '0']);
+  });
+
+  it('συγχωνευμένα κενά δίνουν μία παύλα σε όλο το πλάτος τους', () => {
+    const [table] = layoutTables(preview([attr('e', ['', '', '', ''], 'all')]), { ...options, maxValueColumns: 4 });
+    expect(table.rows[0].cells[1]).toMatchObject({ text: '—', colSpan: 4 });
+  });
+});
+
 describe('layoutTables — ομάδες', () => {
   const rows = [axis, group, attr('h', ['1', '2', '3', '4']), attr('m', ['1', '2', '3', '4'])];
 
