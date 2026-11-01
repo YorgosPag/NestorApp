@@ -32,9 +32,10 @@ MeasurementsTabContent, useBOQEditorState, PublicationPricingFields.tsx. Commit 
 Ξεκινά μόνο μετά το ρητό «εγκρίνω» του Giorgio στο `HANDOFFS/2026-11-01_ADR-923_phase-6b-plan.md` §8α.
 
 ```text
-Ανέλαβε τη Φ6β του ADR-923 από το βήμα Σ0, σε νέο worktree: npm run wt:new -- adr-923-phase6b-s0.
+Ανέλαβε τη Φ6β του ADR-923 από το βήμα Σ0, στο worktree adr-923-phase6b που άνοιξε η συνεδρία 5d.
 
-Διάβασε από το κλαδί agent/adr-923-phase3-close το HANDOFFS/2026-11-01_ADR-923_phase-6b-plan.md.
+Διάβασε το HANDOFFS/2026-11-01_ADR-923_phase-6b-plan.md από το commit 8a32b767 ή νεότερο του
+κλαδιού agent/adr-923-phase3-close, όχι το v2.
 Το §8α υπερισχύει του §7. Ξαναμέτρησε τους ισχυρισμούς του §9 στο τρέχον main.
 
 Το Σ0 είναι μόνο ADR: νέο §5.13, διόρθωση §13, ADR-923 §9, χωρίς κώδικα. Πριν κλείσει, πρότεινε
