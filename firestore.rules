@@ -6422,6 +6422,10 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    match /catalog_import_page_readings/{readingId} {
+      allow read: if false;
+      allow write: if false;
+    }
     // 📡 ADR-923 §5.11 «3δ» Ζ · ADR-905 — ΣΗΜΑ ΑΝΑ ΟΨΗ ΤΙΜΩΝ: μόνο `{ companyId, view, revision, changedAt }`, ΠΟΤΕ τιμή.
     // GET για τα μέλη του χώρου (ίδιο σύνορο με τον κατάλογο) — `resource == null` κρατά τον listener ζωντανό πριν από
     // την πρώτη αύξηση (ανύπαρκτο έγγραφο = τίποτα να διαρρεύσει). `list`/γραφή: ΠΟΤΕ — γράφει ΜΟΝΟ η μηχανή του καταλόγου.

@@ -6,10 +6,14 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 import type { AuthContext } from '@/lib/auth';
+import type { PageRule, PageTagTable } from '@/lib/pdf-tables/page-table-types';
+import ARIES_PAGES from '@/subapps/catalog/__tests__/fixtures/aries-page-structure.data.json';
+import type { RawTableMapping } from '@/subapps/catalog/import/page-table-mapping';
+import type { PageTextItem } from '@/subapps/catalog/import/page-tokens';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { MFP_ATTRIBUTES, MFP_SIZES } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil.fixture';
 import { MFP_PAGE_60, MFP_SETTINGS } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil-products.fixture';
-import type { CatalogPageInput, CatalogPageReading } from '@/subapps/catalog/import/page-analyzer';
+import type { CatalogPageInput, CatalogPageReading, CatalogTableMapInput, CatalogTableMapping } from '@/subapps/catalog/import/page-analyzer';
 import type { RawPageCell } from '@/subapps/catalog/import/page-extraction';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
@@ -19,15 +23,18 @@ import { ARIES, MFP_GROUP_CODES, RIVAL, mfpFamilyWith, rejectionOf } from './cat
 
 const fake = new FakeFirestore();
 const readPage = jest.fn<Promise<CatalogPageReading>, [CatalogPageInput]>();
+const mapTables = jest.fn<Promise<CatalogTableMapping>, [CatalogTableMapInput]>();
+const EMPTY_PDF_PAGE = { items: [] as readonly PageTextItem[], rules: [] as readonly PageRule[], tagTables: [] as readonly PageTagTable[] };
+const mockPdfPage = { current: EMPTY_PDF_PAGE };
 const pricingAllowed = jest.fn(async () => true);
 
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: (): Firestore => fake as unknown as Firestore }));
 jest.mock('@/services/entity-audit-tracked-write', () => ({ recordTrackedEntityWrite: async () => undefined }));
 jest.mock('@/lib/auth', () => ({ ...jest.requireActual('@/lib/auth'), hasPermission: () => pricingAllowed() }));
-jest.mock('../import-page-analyzer.server', () => ({ createCatalogPageAnalyzer: () => ({ readPage }) }));
+jest.mock('../import-page-analyzer.server', () => ({ createCatalogPageAnalyzer: () => ({ readPage, mapTables }) }));
 jest.mock('@/services/pdf/pdf-rasterize.service', () => ({
   countPdfPages: async () => 100,
-  readPdfPage: async () => ({ png: Buffer.from('png'), pageCount: 100, items: [] }),
+  readPdfPage: async () => ({ png: Buffer.from('png'), pageCount: 100, ...mockPdfPage.current }),
 }));
 jest.mock('../import-source.server', () => ({
   ...jest.requireActual('../import-source.server'),
@@ -108,12 +115,15 @@ const attributesBatch = (overrides: Partial<CreateImportBatchRequest> = {}): Cre
 const batchId = async (ctx: AuthContext = ARIES): Promise<string> => (await createImportBatch(ctx, attributesBatch())).id;
 const proposals = () => Object.values(fake.getAllDocs('catalog_import_proposals')) as unknown as ImportProposalDefinition[];
 const products = () => Object.values(fake.getAllDocs('catalog_products')) as unknown as (CatalogProductDefinition & { id: string; revision: number })[];
+const readings = () => Object.values(fake.getAllDocs('catalog_import_page_readings'));
 const fieldOf = (proposal: StoredImportProposal, rowKey: string, code: string) =>
   proposal.rows.find((row) => row.rowKey === rowKey)?.fields.find((field) => field.target.kind === 'attribute' && field.target.attributeId === attributeId(code));
 
 beforeEach(async () => {
   fake.reset();
   readPage.mockReset();
+  mapTables.mockReset();
+  mockPdfPage.current = EMPTY_PDF_PAGE;
   pricingAllowed.mockReset().mockResolvedValue(true);
   seeded = await seedSchema();
 });
@@ -323,6 +333,50 @@ describe('κύκλος ζωής παρτίδας', () => {
   });
 });
 
+describe('🔴 ίδιο περιεχόμενο δεν ξανανεβαίνει (93,2 MB ορφανά, ένα πλήρες αντίγραφο ανά παρτίδα)', () => {
+  const FILE_ID = 'file_live';
+  const liveFile = (owner: string, overrides: Record<string, unknown> = {}) => ({ companyId: ARIES.companyId, entityType: 'catalog_import_batch', entityId: owner, status: 'ready', storagePath: 'x/y.pdf', ...overrides });
+  const pdf = (from: number, to: number) => attributesBatch({ sourceKind: 'pdf', fileName: 'aries.pdf', pageRange: { from, to } });
+
+  async function attachedDonor() {
+    const donor = await createImportBatch(ARIES, pdf(85, 86));
+    fake.seed('catalog_import_batches', donor.id, { ...donor, fileId: FILE_ID, status: 'reviewing' });
+    return donor;
+  }
+
+  it('νέα παρτίδα ίδιου αρχείου: δείχνει το ζωντανό αρχείο και δεν περιμένει ανέβασμα', async () => {
+    const donor = await attachedDonor();
+    fake.seed('files', FILE_ID, liveFile(donor.id));
+    const next = await createImportBatch(ARIES, pdf(87, 88));
+    expect(next).toMatchObject({ fileId: FILE_ID, fileBatchId: donor.id, status: 'extracting' });
+  });
+
+  it('τρίτη παρτίδα: ο κάτοχος μένει ο αρχικός, όχι η ενδιάμεση που δανείστηκε', async () => {
+    const donor = await attachedDonor();
+    fake.seed('files', FILE_ID, liveFile(donor.id));
+    await createImportBatch(ARIES, pdf(87, 88));
+    fake.reset();
+    const middle = { id: 'cibat_mid', companyId: ARIES.companyId, contentSha256: SHA, fileId: FILE_ID, fileBatchId: donor.id, isDeleted: false };
+    seeded = await seedSchema();
+    fake.seed('catalog_import_batches', middle.id, middle);
+    fake.seed('files', FILE_ID, liveFile(donor.id));
+    expect(await createImportBatch(ARIES, pdf(89, 90))).toMatchObject({ fileBatchId: donor.id });
+  });
+
+  it('αρχείο στον κάδο δεν ξαναχρησιμοποιείται: ο πελάτης ανεβάζει', async () => {
+    const donor = await attachedDonor();
+    fake.seed('files', FILE_ID, liveFile(donor.id, { isDeleted: true }));
+    expect(await createImportBatch(ARIES, pdf(87, 88))).toMatchObject({ fileId: null, status: 'awaitingFile' });
+  });
+
+  it('🔒 ίδιο περιεχόμενο σε άλλον χώρο δεν μοιράζεται', async () => {
+    const donor = await attachedDonor();
+    fake.seed('files', FILE_ID, liveFile(donor.id));
+    fake.seed('catalog_import_batches', donor.id, { ...donor, companyId: 'comp-other', fileId: FILE_ID, status: 'reviewing' });
+    expect(await createImportBatch(ARIES, pdf(87, 88))).toMatchObject({ fileId: null, status: 'awaitingFile' });
+  });
+});
+
 describe('ανάγνωση σελίδας', () => {
   const USED = { requests: 1, inputTokens: 1000, outputTokens: 100, costUsd: 0.01 };
   const rawCell = (attribute: string, value: string): RawPageCell => ({ attribute, value, confidence: 0.95, sourceTokens: [], unit: null, unitTokens: [] });
@@ -331,7 +385,7 @@ describe('ανάγνωση σελίδας', () => {
     shared: [],
     variants: [{ cells: [rawCell('size', MFP_SIZES[index]), rawCell('model_code', MFP_PAGE_60.code[index]), rawCell('heating_h', `${heating_h} W`), rawCell('heating_m', '1950 W')] }],
   });
-  const reading = (heating_h: number): CatalogPageReading => ({ kind: 'read', usage: USED, extraction: { tables: [tableOf(0, heating_h)] } });
+  const reading = (heating_h: number): CatalogPageReading => ({ kind: 'read', model: 'gpt-4o', rawText: null, usage: USED, value: { tables: [tableOf(0, heating_h)] } });
   const active = () => proposals().filter((proposal) => !(proposal as unknown as { isDeleted: boolean }).isDeleted);
   const pdfBatch = () => createImportBatch(ARIES, attributesBatch({ sourceKind: 'pdf', fileName: 'aries.pdf', pageRange: { from: 60, to: 61 } }));
 
@@ -371,7 +425,7 @@ describe('ανάγνωση σελίδας', () => {
 
   it('η δεύτερη ανάγνωση βρίσκει λιγότερους πίνακες: η πρόταση που αποσύρθηκε φεύγει από τον έλεγχο', async () => {
     const batch = await attachedBatch();
-    const two: CatalogPageReading = { kind: 'read', usage: USED, extraction: { tables: [tableOf(0, 1000), tableOf(1, 4050)] } };
+    const two: CatalogPageReading = { kind: 'read', model: 'gpt-4o', rawText: null, usage: USED, value: { tables: [tableOf(0, 1000), tableOf(1, 4050)] } };
     readPage.mockResolvedValueOnce(two).mockResolvedValueOnce(reading(2700));
     await readImportPage(ARIES, batch.id, 60);
     expect(proposals()).toHaveLength(2);
@@ -381,7 +435,7 @@ describe('ανάγνωση σελίδας', () => {
 
   it('η χρήση αθροίζεται ανά ανάγνωση, και η αποτυχημένη απάντηση μετρά: πληρώθηκε', async () => {
     const batch = await attachedBatch();
-    readPage.mockResolvedValueOnce(reading(1000)).mockResolvedValueOnce(reading(2700)).mockResolvedValueOnce({ kind: 'failed', usage: USED });
+    readPage.mockResolvedValueOnce(reading(1000)).mockResolvedValueOnce(reading(2700)).mockResolvedValueOnce({ kind: 'failed', usage: USED, model: 'gpt-4o', rawText: null });
     await readImportPage(ARIES, batch.id, 60);
     const after = await readImportPage(ARIES, batch.id, 61);
     expect(after.pages?.usage).toEqual({ requests: 3, inputTokens: 3000, outputTokens: 300, costUsd: expect.closeTo(0.03) });
@@ -390,14 +444,14 @@ describe('ανάγνωση σελίδας', () => {
   it('μοντέλο χωρίς τιμή στον πίνακα: το κόστος μένει άγνωστο, δεν γίνεται μικρότερο', async () => {
     const batch = await attachedBatch();
     readPage.mockResolvedValueOnce(reading(2700));
-    readPage.mockResolvedValueOnce({ kind: 'read', extraction: { tables: [] }, usage: { ...USED, costUsd: null } });
+    readPage.mockResolvedValueOnce({ kind: 'read', model: 'gpt-4o', rawText: null, value: { tables: [] }, usage: { ...USED, costUsd: null } });
     await readImportPage(ARIES, batch.id, 60);
     expect((await readImportPage(ARIES, batch.id, 61)).pages?.usage?.costUsd).toBeNull();
   });
 
   it('🔴 το «1000» της σελίδας 86 χωρίς μονάδα: απόφαση ανθρώπου, και η έγκριση αρνείται', async () => {
     const batch = await attachedBatch();
-    const bare: CatalogPageReading = { kind: 'read', usage: USED, extraction: { tables: [{ modelCode: { value: 'mfp', confidence: 1, sourceTokens: [] }, shared: [], variants: [{ cells: [rawCell('model_code', MFP_PAGE_60.code[0]), rawCell('cooling_h', '1000')] }] }] } };
+    const bare: CatalogPageReading = { kind: 'read', model: 'gpt-4o', rawText: null, usage: USED, value: { tables: [{ modelCode: { value: 'mfp', confidence: 1, sourceTokens: [] }, shared: [], variants: [{ cells: [rawCell('model_code', MFP_PAGE_60.code[0]), rawCell('cooling_h', '1000')] }] }] } };
     readPage.mockResolvedValue(bare);
     await readImportPage(ARIES, batch.id, 60);
     const [stored] = (await readImportBatchDetail(ARIES, batch.id)).proposals;
@@ -419,9 +473,9 @@ describe('ανάγνωση σελίδας', () => {
     await applyImportProposal(ARIES, first.id, first.revision);
     const batch = await attachedBatch();
     const printed: CatalogPageReading = {
-      kind: 'read',
+      kind: 'read', model: 'gpt-4o', rawText: null,
       usage: USED,
-      extraction: { tables: [{ modelCode: { value: null, confidence: 0, sourceTokens: [] }, shared: [], variants: [{ cells: [rawCell('model_code', 'MFP-34ΤΜ'), rawCell('model_code', MFP_PAGE_60.code[0]), rawCell('heating_h', '2800 W')] }] }] },
+      value: { tables: [{ modelCode: { value: null, confidence: 0, sourceTokens: [] }, shared: [], variants: [{ cells: [rawCell('model_code', 'MFP-34ΤΜ'), rawCell('model_code', MFP_PAGE_60.code[0]), rawCell('heating_h', '2800 W')] }] }] },
     };
     readPage.mockResolvedValue(printed);
     await readImportPage(ARIES, batch.id, 60);
@@ -432,9 +486,86 @@ describe('ανάγνωση σελίδας', () => {
     expect(products()).toHaveLength(7);
   });
 
+  describe('🔴 πραγματική σελίδα 85: ο διακομιστής διαβάζει, το μοντέλο αντιστοιχίζει', () => {
+    const page85 = (): void => {
+      mockPdfPage.current = ARIES_PAGES['85'] as typeof EMPTY_PDF_PAGE;
+    };
+    const tableAnswer = (table: string, lines: RawTableMapping['lines']): RawTableMapping => ({ table, role: 'variants', variantsIn: 'columns', lines, imageCheck: [] });
+    const mapping = (lines: RawTableMapping['lines'], imageCheck: RawTableMapping['imageCheck'] = []): CatalogTableMapping => ({
+      kind: 'read',
+      model: 'gpt-4o',
+      rawText: '{}',
+      usage: USED,
+      value: { tables: [{ ...tableAnswer('t0', lines), imageCheck }, { table: 't1', role: 'accessories', variantsIn: 'rows', lines: [], imageCheck: [] }] },
+    });
+    /** Οι γραμμές του πραγματικού πλέγματος: H και M της ψύξης, χωρίς καμία τιμή και χωρίς γραμμή κωδικών. */
+    const COOLING = [{ line: 5, attribute: 'cooling_h', confidence: 0.95 }, { line: 7, attribute: 'cooling_m', confidence: 0.95 }];
+
+    async function liveCatalogAndBatch() {
+      const first = await proposeGroup(ARIES, await batchId(), group(MFP_SIZES.map((_, index) => rowFor(index))));
+      await applyImportProposal(ARIES, first.id, first.revision);
+      page85();
+      return attachedBatch();
+    }
+
+    it('7/7 `update` στα ζωντανά SKU, μία κλήση, καμία ανάγνωση τιμών από το μοντέλο, εξαρτήματα στην άκρη', async () => {
+      const batch = await liveCatalogAndBatch();
+      mapTables.mockResolvedValue(mapping(COOLING));
+      const read = await readImportPage(ARIES, batch.id, 60);
+      expect(mapTables).toHaveBeenCalledTimes(1);
+      expect(readPage).not.toHaveBeenCalled();
+      expect(read.pages?.setAside).toEqual([expect.objectContaining({ table: 't1', role: 'accessories' })]);
+      const [proposal, ...others] = (await readImportBatchDetail(ARIES, batch.id)).proposals;
+      expect(others).toEqual([]);
+      expect(proposal.modelCode).toBe('mfp');
+      const skus = proposal.rows.filter((row) => row.holderKind === 'product');
+      expect(skus.map((row) => row.action)).toEqual(Array(7).fill('update'));
+      expect(skus.map((row) => row.label)).toEqual(MFP_PAGE_60.code);
+      expect(products()).toHaveLength(7);
+    });
+
+    it('Ε6: κάθε απάντηση φυλάσσεται όπως ήρθε, μαζί με ό,τι ανασυντέθηκε, και το ξαναδιάβασμα γράφει το ίδιο έγγραφο', async () => {
+      const batch = await liveCatalogAndBatch();
+      mapTables.mockResolvedValue(mapping(COOLING));
+      await readImportPage(ARIES, batch.id, 60);
+      const [kept, ...rest] = readings();
+      expect(rest).toEqual([]);
+      expect(kept).toMatchObject({ companyId: ARIES.companyId, batchId: batch.id, page: 60, route: 'table', attempt: 0, model: 'gpt-4o', rawText: '{}', outcome: 'read', abandoned: false, rawTextClipped: false });
+      expect((kept as unknown as { tables: readonly { witness: string }[] }).tables.map((table) => table.witness)).toEqual(['agrees', 'agrees']);
+    });
+
+    it('Ε6: μένει και η απάντηση που δεν διαβάστηκε: μόνο αυτή εξηγεί την αποτυχία', async () => {
+      const batch = await liveCatalogAndBatch();
+      const failed: CatalogTableMapping = { kind: 'failed', usage: USED, model: 'gpt-4o', rawText: 'not json' };
+      mapTables.mockResolvedValue(failed);
+      await readImportPage(ARIES, batch.id, 60);
+      expect(readings().map((kept) => (kept as unknown as { outcome: string }).outcome)).toEqual(['failed']);
+      expect((readings()[0] as unknown as { rawText: string }).rawText).toBe('not json');
+    });
+
+    it('η εικόνα διαψεύδει τη στρώση κειμένου: καμία πρόταση από το πλέγμα, η σελίδα διαβάζεται με όραση, μέσα στο ίδιο όριο', async () => {
+      const batch = await liveCatalogAndBatch();
+      const seen = [[5, 5], [7, 5], [8, 6]].map(([row, col]) => ({ cell: `r${row}c${col}`, seen: '7' }));
+      mapTables.mockResolvedValue(mapping(COOLING, seen));
+      readPage.mockResolvedValue(reading(2700));
+      await readImportPage(ARIES, batch.id, 60);
+      expect(mapTables).toHaveBeenCalledTimes(1);
+      expect(readPage).toHaveBeenCalledTimes(1);
+      expect(mapTables.mock.calls.length + readPage.mock.calls.length).toBeLessThanOrEqual(2);
+    });
+
+    it('Ε5: γραμμή χωρίς μονάδα της ποσότητας ξαναρωτιέται μία φορά, με το εύρημα', async () => {
+      const batch = await liveCatalogAndBatch();
+      mapTables.mockResolvedValue(mapping([...COOLING, { line: 12, attribute: 'heating_h', confidence: 0.95 }]));
+      await readImportPage(ARIES, batch.id, 60);
+      expect(mapTables).toHaveBeenCalledTimes(2);
+      expect(mapTables.mock.calls[1][0].feedback.join(' ')).toContain('heating_h');
+    });
+  });
+
   it('κακή απάντηση: η σελίδα μετρά αποτυχημένη, χωρίς πρόταση, και ξαναδοκιμάζεται', async () => {
     const batch = await attachedBatch();
-    readPage.mockResolvedValueOnce({ kind: 'failed', usage: USED });
+    readPage.mockResolvedValueOnce({ kind: 'failed', usage: USED, model: 'gpt-4o', rawText: null });
     expect((await readImportPage(ARIES, batch.id, 60)).pages?.failed).toEqual([60]);
     expect(proposals()).toHaveLength(0);
     readPage.mockResolvedValueOnce(reading(2700));
@@ -450,7 +581,7 @@ describe('ανάγνωση σελίδας', () => {
 
   it('όλες οι σελίδες κριμένες ⇒ η παρτίδα περνά σε έλεγχο', async () => {
     const batch = await attachedBatch();
-    readPage.mockResolvedValue({ kind: 'read', extraction: { tables: [] }, usage: USED });
+    readPage.mockResolvedValue({ kind: 'read', model: 'gpt-4o', rawText: null, value: { tables: [] }, usage: USED });
     await readImportPage(ARIES, batch.id, 60);
     expect((await readImportPage(ARIES, batch.id, 61)).status).toBe('reviewing');
   });

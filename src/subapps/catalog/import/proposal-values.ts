@@ -6,12 +6,14 @@
  */
 
 import { canonicalJson } from '@/lib/legal/canonical-json';
+import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import type { ImportFieldValue, ImportIssue, ImportProposalField, ImportTarget } from '../types/catalog-import';
 import type { AttributeValue, ProductValues } from '../types/product';
+import { normalizeUniqueText } from '../values/normalize-unique';
 import { standardAmountOf } from '../values/standard-amount';
-import { isBareAmountText, parseAttributeText, type ValueTextContext } from '../values/value-text-codec';
+import { isBareAmountText, optionCodeOf, parseAttributeText, type ValueTextContext } from '../values/value-text-codec';
 import type { ImportValueEquality } from './field-diff';
 
 /** Σταθερό κλειδί στόχου: η βάση της σύγκρισης τριών σημείων και οι αποφάσεις του ανθρώπου δένουν εδώ, όχι σε θέση πίνακα. */
@@ -51,6 +53,24 @@ export type ImportCellParse =
   | { readonly ok: true; readonly value: AttributeValue | null }
   | { readonly ok: false; readonly issue: ImportIssue['code']; readonly params?: Readonly<Record<string, string | number>> };
 
+const printedForm = (text: string): string => normalizeUniqueText(normalizeMixedScriptHomoglyphs(text));
+const NEXT_IS_DIGIT = /^\d/u;
+
+/**
+ * Η επιλογή που εννοεί ένα τυπωμένο κείμενο (§5.5.1 Ε4): ακριβώς, αλλιώς **μόνη** επιλογή που είναι αρχή του (`MFP-34ΤΜ` → `MFP-34`). Το
+ * «MFP-3» δεν είναι αρχή του «MFP-34», γιατί ακολουθεί ψηφίο. Δύο υποψήφιες ⇒ καμία: κανένας κανόνας δεν διαλέγει σιωπηλά.
+ */
+export function selectOptionFor(attribute: CatalogAttributeDefinition, text: string): string | null {
+  if (attribute.type !== 'select') return null;
+  const { options } = attribute.config;
+  const exact = optionCodeOf(options, text);
+  if (exact) return exact;
+  const printed = printedForm(text);
+  const opensWith = (form: string): boolean => form !== '' && printed.startsWith(form) && !NEXT_IS_DIGIT.test(printed.slice(form.length));
+  const found = options.filter((option) => [option.code, ...Object.values(option.labels)].some((label) => label !== undefined && opensWith(printedForm(label))));
+  return found.length === 1 ? found[0].code : null;
+}
+
 /**
  * Κείμενο πηγής → τιμή: ο **ένας** δρόμος για την πρόταση και την αντιστοίχιση. Εδώ κλείνει η σιωπηλή προεπιλογή: στο πλέγμα ο
  * γυμνός αριθμός παίρνει τη μονάδα της ιδιότητας, γιατί την έχει μπροστά του ο άνθρωπος. Στην εισαγωγή δεν την έχει κανείς.
@@ -59,6 +79,8 @@ export function parseImportCell(attribute: CatalogAttributeDefinition, cell: Imp
   if (attribute.type === 'measurement' && cell.unitCode === null && isBareAmountText(cell.text)) {
     return { ok: false, issue: 'measurementUnitMissing' };
   }
+  const option = attribute.type === 'select' ? selectOptionFor(attribute, cell.text) : null;
+  if (option !== null) return { ok: true, value: { type: 'select', optionCode: option } };
   return parseAttributeText(attribute, importCellText(cell), context);
 }
 

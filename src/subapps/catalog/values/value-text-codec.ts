@@ -62,7 +62,7 @@ export function displayAmount(amount: string, language: HumanLanguage): string {
   return amount.replace('.', decimalSeparator(language)).replace(/^-/, '−');
 }
 
-function optionCodeOf(options: readonly { readonly code: string; readonly labels: Readonly<Partial<Record<string, string>>> }[], text: string): string | null {
+export function optionCodeOf(options: readonly { readonly code: string; readonly labels: Readonly<Partial<Record<string, string>>> }[], text: string): string | null {
   const wanted = norm(text);
   const match = options.find((option) => norm(option.code) === wanted || Object.values(option.labels).some((label) => label && norm(label) === wanted));
   return match?.code ?? null;

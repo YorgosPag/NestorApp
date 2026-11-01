@@ -1124,6 +1124,8 @@ export const COLLECTIONS = {
   CATALOG_IMPORT_BATCHES: process.env.NEXT_PUBLIC_CATALOG_IMPORT_BATCHES_COLLECTION || 'catalog_import_batches',
   /** Προτάσεις εισαγωγής με διαφορά ανά πεδίο. Κουβαλούν τιμές ⇒ ανάγνωση μόνο από διακομιστή. IDs via cipsl_*. */
   CATALOG_IMPORT_PROPOSALS: process.env.NEXT_PUBLIC_CATALOG_IMPORT_PROPOSALS_COLLECTION || 'catalog_import_proposals',
+  /** Η ακατέργαστη απάντηση του μοντέλου ανά ανάγνωση σελίδας (ADR-923 §5.5.1 Ε6). Μόνο διακομιστής. IDs via cipgr_*. */
+  CATALOG_IMPORT_PAGE_READINGS: process.env.NEXT_PUBLIC_CATALOG_IMPORT_PAGE_READINGS_COLLECTION || 'catalog_import_page_readings',
 
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */

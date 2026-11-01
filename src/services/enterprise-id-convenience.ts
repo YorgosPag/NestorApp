@@ -475,6 +475,7 @@ export {
   generateDeterministicCatalogImportProfileId,
   generateDeterministicCatalogImportBatchId,
   generateDeterministicCatalogImportProposalId,
+  generateDeterministicCatalogImportPageReadingId,
 } from './enterprise-id-convenience-catalog';
 
 // Optimistic & Temporary

@@ -171,7 +171,11 @@ describe('το κείμενο της σελίδας ως απόδειξη', () =
     expect(anchorForCell(60, '3,5', ['t2'], tokens)).toMatchObject({ verified: false });
     expect(anchorForCell(60, '2,5', ['t999'], tokens)).toMatchObject({ verified: false });
     expect(anchorForCell(60, '2,5', ['t2', 't999'], tokens)).toMatchObject({ verified: false });
-    expect(anchorForCell(60, '2,5', [], tokens)).toMatchObject({ verified: false });
+  });
+
+  it('χωρίς καμία υπόδειξη του μοντέλου ψάχνουμε εμείς, και ό,τι δεν τυπώνεται μένει αδιασταύρωτο (§5.5.1 Ε1)', () => {
+    expect(anchorForCell(60, '2,5', [], tokens)).toMatchObject({ verified: true });
+    expect(anchorForCell(60, '3,5', [], tokens)).toMatchObject({ verified: false, regions: [] });
   });
 
   it('σαρωμένη σελίδα: δεν κρίνεται, δεν επιβεβαιώνεται', () => {

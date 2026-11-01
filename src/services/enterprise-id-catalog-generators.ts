@@ -143,4 +143,9 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
   generateDeterministicCatalogImportProposalId(companyId: string, proposalKey: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_IMPORT_PROPOSAL, seedOf('import-proposal', companyId, proposalKey));
   }
+
+  /** Κλειδί = `importPageReadingKey(…)` ⇒ το ξαναδιάβασμα της ίδιας σελίδας ξαναγράφει το ίδιο έγγραφο. */
+  generateDeterministicCatalogImportPageReadingId(companyId: string, readingKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_IMPORT_PAGE_READING, seedOf('import-page-reading', companyId, readingKey));
+  }
 }

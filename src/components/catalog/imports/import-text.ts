@@ -14,7 +14,7 @@ import { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { CATALOG_IMPORT_NAMESPACES } from '@/i18n/namespace-bundles';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import type { ImportIssue } from '@/subapps/catalog/types/catalog-import';
+import type { ImportIssue, ImportPageSetAside } from '@/subapps/catalog/types/catalog-import';
 import {
   IMPORT_ISSUE_CODES,
   type ImportBatchStatus,
@@ -41,6 +41,7 @@ const ISSUE_KEYS: Readonly<Record<ImportIssueCode, string>> = {
   measurementUnitMissing: 'issues.measurementUnitMissing',
   unitUnconfirmed: 'issues.unitUnconfirmed',
   attributeRepeated: 'issues.attributeRepeated',
+  tableStructureDisputed: 'issues.tableStructureDisputed',
 };
 
 export const FIELD_STATUS_KEYS: Readonly<Record<ImportFieldStatus, string>> = {
@@ -48,6 +49,12 @@ export const FIELD_STATUS_KEYS: Readonly<Record<ImportFieldStatus, string>> = {
   changed: 'status.changed',
   unchanged: 'status.unchanged',
   conflict: 'status.conflict',
+};
+
+export const SET_ASIDE_KEYS: Readonly<Record<ImportPageSetAside['role'], string>> = {
+  accessories: 'batch.setAsideAccessories',
+  other: 'batch.setAsideOther',
+  unmapped: 'batch.setAsideUnmapped',
 };
 
 export const PROPOSAL_STATUS_KEYS: Readonly<Record<ImportProposalStatus, string>> = {

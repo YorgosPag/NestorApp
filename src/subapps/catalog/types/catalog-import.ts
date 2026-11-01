@@ -185,6 +185,39 @@ export interface ImportPagesUsage {
   readonly costUsd: number | null;
 }
 
+/** Ποια ερώτηση έγινε στο μοντέλο: αντιστοίχιση ανασυντεθειμένων πινάκων ή ανάγνωση με όραση. */
+export type ImportPageRoute = 'table' | 'vision';
+
+/** Μία απάντηση του μοντέλου, όπως ήρθε (§5.5.1 Ε6): εξηγεί μια αστοχία χωρίς νέα πληρωμένη κλήση. */
+export interface ImportPageReadingDefinition {
+  readonly batchId: string;
+  readonly page: number;
+  readonly route: ImportPageRoute;
+  readonly attempt: number;
+  readonly model: string;
+  /** `null` = κενή απάντηση. */
+  readonly rawText: string | null;
+  readonly outcome: 'read' | 'failed';
+  /** Η απάντηση απορρίφθηκε γιατί η εικόνα διέψευσε τη στρώση κειμένου. */
+  readonly abandoned: boolean;
+  readonly usage: ImportPagesUsage;
+  /** Όσα ζητήθηκαν στην ανατροφοδότηση αυτής της ερώτησης. */
+  readonly feedback: readonly string[];
+  /** Τι ανασυντέθηκε από το PDF: η εξήγηση της ερώτησης, χωρίς ξανά άνοιγμα του αρχείου. */
+  readonly tables: readonly { readonly key: string; readonly source: string; readonly witness: string; readonly rows: number; readonly columns: number }[];
+}
+
+/** Πίνακας της σελίδας που **δεν** έγινε πρόταση της οικογένειας (§5.5.1 Ε3). Δηλωμένος, ώστε να μη χαθεί σιωπηλά. */
+export interface ImportPageSetAside {
+  readonly page: number;
+  readonly table: string;
+  /** `unmapped` = έμοιαζε με πίνακα παραλλαγών, αλλά δεν αντιστοιχίστηκε. */
+  readonly role: 'accessories' | 'other' | 'unmapped';
+  readonly rows: number;
+  /** Η πρώτη γραμμή του πίνακα, όπως τυπώνεται. */
+  readonly label: string;
+}
+
 /** Πρόοδος ανάγνωσης PDF, ανά σελίδα. Το `usage` λείπει από παρτίδες παλαιότερες της μέτρησης. */
 export interface ImportBatchPages {
   readonly from: number;
@@ -192,6 +225,7 @@ export interface ImportBatchPages {
   readonly done: readonly number[];
   readonly failed: readonly number[];
   readonly usage?: ImportPagesUsage;
+  readonly setAside?: readonly ImportPageSetAside[];
 }
 
 export interface ImportBatchDefinition {
@@ -201,8 +235,10 @@ export interface ImportBatchDefinition {
   readonly contentSha256: string;
   readonly fileName: string;
   readonly sizeBytes: number;
-  /** Το `FileRecord` της πηγής (κάτοχος: η παρτίδα). `null` πριν ολοκληρωθεί το ανέβασμα. */
+  /** Το `FileRecord` της πηγής. `null` πριν ολοκληρωθεί το ανέβασμα. */
   readonly fileId: string | null;
+  /** Η παρτίδα που κατέχει το αρχείο, όταν ξαναχρησιμοποιείται αντίγραφο ίδιου περιεχομένου. `null`/απούσα = η ίδια. */
+  readonly fileBatchId?: string | null;
   readonly target: ImportBatchTarget;
   /** Το προφίλ αντιστοίχισης και η έκδοσή του — μέρος του κλειδιού: διορθωμένο προφίλ ξαναπερνά. */
   readonly profileId: string | null;

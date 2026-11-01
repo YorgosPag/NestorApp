@@ -31,12 +31,12 @@ export interface StructuredDocumentRequest {
   readonly schema: StructuredSchema;
 }
 
-/** Κάθε έκβαση κουβαλά τη χρήση: και η σπασμένη απάντηση πληρώνεται. */
+/** Κάθε έκβαση κουβαλά τη χρήση, γιατί και η σπασμένη απάντηση πληρώνεται, και το ακατέργαστο κείμενο, γιατί μόνο αυτό εξηγεί μια αστοχία. */
 export type StructuredDocumentOutcome = (
   | { readonly kind: 'parsed'; readonly value: unknown }
   | { readonly kind: 'empty' }
   | { readonly kind: 'unparseable' }
-) & { readonly usage: ResponsesUsage | null };
+) & { readonly usage: ResponsesUsage | null; readonly text: string | null };
 
 /** Η μεταφορά από το περιβάλλον — `null` χωρίς κλειδί (ο καλών πέφτει στο stub του). */
 export function readDocumentAnalyzerTransport(): ResponsesRequestConfig | null {
@@ -64,7 +64,7 @@ export async function requestStructuredDocument(
   });
   const usage = extractResponsesUsage(payload);
   const text = extractOutputText(payload);
-  if (!text) return { kind: 'empty', usage };
+  if (!text) return { kind: 'empty', usage, text: null };
   const value = safeJsonParse<unknown>(text, null);
-  return value === null ? { kind: 'unparseable', usage } : { kind: 'parsed', value, usage };
+  return value === null ? { kind: 'unparseable', usage, text } : { kind: 'parsed', value, usage, text };
 }

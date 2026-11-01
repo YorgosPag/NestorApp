@@ -60,3 +60,5 @@ export const generateDeterministicCatalogImportBatchId = (companyId: string, bat
   enterpriseIdService.generateDeterministicCatalogImportBatchId(companyId, batchKey);
 export const generateDeterministicCatalogImportProposalId = (companyId: string, proposalKey: string) =>
   enterpriseIdService.generateDeterministicCatalogImportProposalId(companyId, proposalKey);
+export const generateDeterministicCatalogImportPageReadingId = (companyId: string, readingKey: string) =>
+  enterpriseIdService.generateDeterministicCatalogImportPageReadingId(companyId, readingKey);

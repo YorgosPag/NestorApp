@@ -1,0 +1,300 @@
+/**
+ * Ε1–Ε5 πάνω στις **πραγματικές** σελίδες 85–86 της Aries, χωρίς AI (ADR-923 §5.5.1). Τι απάντησε το μοντέλο το ορίζει το test, και
+ * δεν περιέχει ούτε μία τιμή: οι τιμές έρχονται μόνο από το PDF. Οι ισχυρισμοί στηρίζονται στα κριτήρια της δεύτερης δοκιμής, όπου
+ * 0/140 πεδία επιβεβαιώθηκαν, 17/17 γραμμές βγήκαν `create` και 14/14 παραλλαγές είχαν `axisValueMissing`.
+ */
+
+import ARIES from '../../__tests__/fixtures/aries-page-structure.data.json';
+import { schemaSnapshotOf } from '../../aggregate/edit-aggregate';
+import { MFP_ASSETS, MFP_MODEL, MFP_SETTINGS } from '../../__tests__/fixtures/mfp-fan-coil-products.fixture';
+import { MFP_ATTRIBUTE_MAP, MFP_FAMILY } from '../../__tests__/fixtures/mfp-fan-coil.fixture';
+import { reconstructPageTables } from '@/lib/pdf-tables/reconstruct-page-tables';
+import type { PageRule, PageTable } from '@/lib/pdf-tables/page-table-types';
+import { PLATFORM_MEASUREMENT_REGISTRY } from '../../measurement/measurement-registry';
+import type { ExtractedCell, ExtractedGroup, ImportProposalField, ImportProposalRow } from '../../types/catalog-import';
+import { buildAttributeRows, type AttributeProposalContext, type LiveHolder } from '../build-attribute-proposal';
+import { judgeProposal } from '../judge-proposal';
+import { evidenceFindings, type PageExtractionContext } from '../page-extraction';
+import { pageMappingPrompt, pageMappingSchema, imageCheckCells, textLayerDoubted, type RawTableMapping } from '../page-table-mapping';
+import { readPageTables, type PageTableContext } from '../page-table-reading';
+import { anchorForCell, tokenizePage, unitPrintedBeside } from '../page-tokens';
+import { selectOptionFor } from '../proposal-values';
+
+type AriesPage = '85' | '86';
+
+const schema = schemaSnapshotOf({ family: MFP_FAMILY, attributes: MFP_ATTRIBUTE_MAP, registry: PLATFORM_MEASUREMENT_REGISTRY, settings: MFP_SETTINGS, variantSchemeCode: 'by_size' });
+const text = { registry: PLATFORM_MEASUREMENT_REGISTRY, language: 'el' as const, assetIdByCode: new Map(), assetCodeById: new Map(), yes: 'Ναι', no: 'Όχι' };
+const attributesByCode = new Map([...MFP_ATTRIBUTE_MAP].map(([id, attribute]) => [attribute.code, { ...attribute, id }]));
+
+const tokensOf = (page: AriesPage) => tokenizePage(ARIES[page].items);
+const tablesOf = (page: AriesPage): PageTable[] =>
+  reconstructPageTables({ words: tokensOf(page), rules: ARIES[page].rules as readonly PageRule[], tagTables: ARIES[page].tagTables });
+
+const contextOf = (page: AriesPage, tables = tablesOf(page)): PageTableContext => ({
+  page: Number(page),
+  tables,
+  attributesByCode,
+  registry: PLATFORM_MEASUREMENT_REGISTRY,
+  axisAttributeIds: ['size'],
+});
+
+const lineOf = (table: PageTable, printed: string): number => {
+  const cell = table.cells.find((candidate) => candidate.text === printed);
+  if (!cell) throw new Error(`ο πίνακας δεν τυπώνει «${printed}»`);
+  return cell.row;
+};
+
+/** Η απάντηση ενός ειλικρινούς μοντέλου: μόνο «ποια γραμμή είναι τι», με αφετηρία κάποια τιμή της γραμμής. */
+function variantsMapping(table: PageTable, lines: readonly (readonly [string, string])[], confidence = 0.95): RawTableMapping {
+  return { table: table.key, role: 'variants', variantsIn: 'columns', imageCheck: [], lines: lines.map(([printed, attribute]) => ({ line: lineOf(table, printed), attribute, confidence })) };
+}
+
+const accessories = (table: PageTable): RawTableMapping => ({ table: table.key, role: 'accessories', variantsIn: 'rows', lines: [], imageCheck: [] });
+
+const PAGE_85_LINES = [
+  ['1800', 'cooling_h'], ['1458', 'cooling_m'], ['1134', 'cooling_l'],
+  ['2700', 'heating_h'], ['1950', 'heating_m'], ['1290', 'heating_l'],
+  ['340', 'airflow_h'], ['280', 'airflow_m'], ['180', 'airflow_l'],
+  ['15,4', 'weight'],
+] as const;
+
+/** Στη σελ. 85 το «2700» τυπώνεται και στην ψύξη: η γραμμή θέρμανσης δείχνεται από τιμή που τυπώνεται μόνο εκεί. */
+const page85Lines = PAGE_85_LINES.map(([printed, attribute]) => [attribute === 'heating_h' ? '13500' : printed, attribute] as const);
+const PAGE_86_LINES = [['1000', 'cooling_h'], ['800', 'cooling_m'], ['14,5', 'weight']] as const;
+
+function readPage(page: AriesPage, lines: readonly (readonly [string, string])[]) {
+  const context = contextOf(page);
+  const [main, parts] = context.tables;
+  return readPageTables({ tables: [variantsMapping(main, lines), accessories(parts)] }, context);
+}
+
+const attributeOf = (cell: ExtractedCell): string | null => (cell.target.kind === 'attribute' ? cell.target.attributeId : null);
+const cellsOf = (group: ExtractedGroup, attribute: string): readonly ExtractedCell[] => group.rows.flatMap((row) => row.cells).filter((cell) => attributeOf(cell) === attribute);
+
+function liveOf(code: string, index: number): LiveHolder {
+  return { id: `cpr_${index}`, revision: 1, values: { model_code: { '*': { '*': { type: 'text', text: code } } }, size: { '*': { '*': { type: 'select', optionCode: 'mfp_34' } } } } };
+}
+
+/** Ό,τι κάνει ο `matchRows` στον διακομιστή: ο κωδικός της γραμμής που κρατά ζωντανό SKU. */
+function matchesOf(group: ExtractedGroup, codes: readonly string[]): AttributeProposalContext['matches'] {
+  return new Map(group.rows.flatMap((row) => {
+    const index = codes.findIndex((code) => row.cells.some((cell) => attributeOf(cell) === 'model_code' && cell.text === code));
+    return index === -1 ? [] : [[row.rowKey, liveOf(codes[index], index)] as const];
+  }));
+}
+
+const CODES_85 = ['099-01-001', '099-01-002', '099-01-003', '099-01-004', '099-01-005', '099-01-006', '099-01-007'];
+
+function rowsAgainstLive(group: ExtractedGroup, codes: readonly string[]): readonly ImportProposalRow[] {
+  const context: AttributeProposalContext = { schema, text, model: null, matches: matchesOf(group, codes), base: new Map() };
+  return buildAttributeRows({ ...group, modelCode: MFP_MODEL.code }, context).filter((row) => row.holderKind === 'product');
+}
+
+const fieldOf = (row: ImportProposalRow, attribute: string): ImportProposalField | undefined =>
+  row.fields.find((field) => field.target.kind === 'attribute' && field.target.attributeId === attribute);
+
+describe('🔴 Το κριτήριο της δεύτερης δοκιμής', () => {
+  const { groups, setAside, findings } = readPage('85', page85Lines);
+  const [group] = groups;
+
+  it('Ε2: 7/7 παραλλαγές ταυτίζονται με τα ζωντανά SKU, χωρίς το μοντέλο να αντιστοιχίσει καμία γραμμή κωδικών', () => {
+    const rows = rowsAgainstLive(group, CODES_85);
+    expect(rows).toHaveLength(7);
+    expect(rows.map((row) => row.action)).toEqual(Array(7).fill('update'));
+    expect(rows.map((row) => row.label)).toEqual(CODES_85);
+    expect(page85Lines.some(([, attribute]) => attribute === 'model_code')).toBe(false);
+  });
+
+  it('Ε1: κάθε τιμή επιβεβαιωμένη, με περιοχή, καμία απόφαση λόγω απόδειξης', () => {
+    const cells = group.rows.flatMap((row) => row.cells);
+    expect(cells.length).toBeGreaterThan(70);
+    expect(cells.every((cell) => cell.anchor?.kind === 'page' && cell.anchor.verified === true && cell.anchor.regions.length > 0)).toBe(true);
+    expect(evidenceFindings(groups)).toEqual([]);
+    const fields = rowsAgainstLive(group, CODES_85).flatMap((row) => row.fields);
+    expect(fields.flatMap((field) => field.issues.map((issue) => issue.code))).not.toContain('unitUnconfirmed');
+    expect(fields.flatMap((field) => field.issues.map((issue) => issue.code))).not.toContain('measurementUnitMissing');
+  });
+
+  it('Ε1: η μονάδα έρχεται από το κελί της γραμμής, και το ενωμένο m³/h φτάνει και στις τρεις', () => {
+    expect(cellsOf(group, 'cooling_m')[0]).toMatchObject({ text: '1458', unitCode: 'W' });
+    expect(cellsOf(group, 'weight')[1]).toMatchObject({ text: '18,00', unitCode: 'kg' });
+    expect(['airflow_h', 'airflow_m', 'airflow_l'].map((attribute) => cellsOf(group, attribute)[6].unitCode)).toEqual(['m³/h', 'm³/h', 'm³/h']);
+    const [first] = rowsAgainstLive(group, CODES_85);
+    expect(fieldOf(first, 'cooling_m')?.incoming).toEqual({ type: 'measurement', amount: '1458', unitCode: 'W' });
+  });
+
+  it('Ε3: ο πίνακας εξαρτημάτων δεν γίνεται πρόταση, και μένει δηλωμένος', () => {
+    expect(groups).toHaveLength(1);
+    expect(setAside).toEqual([{ page: 85, table: 't1', role: 'accessories', rows: 6, label: 'ΚΩΔΙΚΟΣ · ΠΕΡΙΓΡΑΦΗ · ΤΙΜΗ (€)' }]);
+    expect(JSON.stringify(groups)).not.toContain('099-01-010');
+    expect(findings).toEqual([]);
+  });
+
+  it('Ε4: καμία παραλλαγή χωρίς άξονα, ακόμη κι όταν δεν υπάρχει ζωντανό SKU', () => {
+    expect(cellsOf(group, 'size').map((cell) => cell.text)).toEqual(['MFP-34ΤΜ', 'MFP-51ΤΜ', 'MFP-68ΤΜ', 'MFP-85ΤΜ', 'MFP-102ΤΜ', 'MFP-136ΤΜ', 'MFP-170ΤΜ']);
+    const rows = buildAttributeRows({ ...group, modelCode: 'mfp' }, { schema, text, model: null, matches: new Map(), base: new Map() });
+    const verdict = judgeProposal({ rows, modelCode: 'mfp', familyId: 'fan_coil', categoryIds: [], holdings: { rootModel: null, products: new Map() }, schema, refs: { assets: MFP_ASSETS, categories: new Set(['cat_fan_coils']), references: new Map() } });
+    expect(JSON.stringify(verdict.rows)).not.toContain('axisValueMissing');
+  });
+});
+
+describe('🔴 Σελίδα 86: το σφάλμα ×1000', () => {
+  const { groups } = readPage('86', PAGE_86_LINES);
+  const [group] = groups;
+
+  it('1000 με W από τη γραμμή του, ποτέ kW', () => {
+    expect(cellsOf(group, 'cooling_h')[0]).toMatchObject({ text: '1000', unitCode: 'W' });
+  });
+
+  it('η γραμμή Btu/h μπαίνει χωρίς το μοντέλο, και η ανεξάρτητη διασταύρωση ασκείται', () => {
+    expect(cellsOf(group, 'cooling_h').filter((cell) => cell.unitCode === 'BTU/h').map((cell) => cell.text)).toEqual(['3412', '6142', '8189', '10236']);
+    const field = fieldOf(rowsAgainstLive(group, [])[0], 'cooling_h');
+    expect(field).toMatchObject({ incoming: { amount: '1000', unitCode: 'W' }, issues: [] });
+  });
+
+  it('το 3412 που γίνεται 34120 πιάνεται: η δεύτερη μονάδα καταγγέλλει την πρώτη', () => {
+    const [row] = group.rows;
+    const doubled = { ...group, rows: [{ ...row, cells: row.cells.map((cell) => (cell.text === '3412' ? { ...cell, text: '34120' } : cell)) }] };
+    expect(fieldOf(rowsAgainstLive(doubled, [])[0], 'cooling_h')?.issues.map((issue) => issue.code)).toEqual(['attributeRepeated']);
+  });
+});
+
+describe('Ε1: η μονάδα κρίνεται με τη γραμμή της', () => {
+  it('🔴 γραμμή αντιστοιχισμένη σε ποσότητα που δεν τυπώνει: χωρίς μονάδα, με εύρημα, ποτέ η μονάδα της ιδιότητας', () => {
+    const { groups, findings } = readPage('85', [['1800', 'cooling_h'], ['37', 'cooling_m']]);
+    expect(cellsOf(groups[0], 'cooling_m')[0]).toMatchObject({ unitCode: null });
+    expect(findings).toEqual([expect.stringContaining('cooling_m')]);
+  });
+
+  it('χαμηλή βεβαιότητα αντιστοίχισης ζητά άνθρωπο, όσο σωστή κι αν είναι η τιμή', () => {
+    const context = contextOf('85');
+    const [main, parts] = context.tables;
+    const { groups } = readPageTables({ tables: [variantsMapping(main, page85Lines, 0.5), accessories(parts)] }, context);
+    expect(fieldOf(rowsAgainstLive(groups[0], [])[0], 'cooling_h')?.decision).toBe('pending');
+  });
+
+  it('τιμή που δεν ανέφερε το μοντέλο βρίσκεται από εμάς, και μόνο ολόκληρη', () => {
+    const tokens = new Map(tokensOf('85').map((token) => [token.id, token]));
+    expect(anchorForCell(85, '1458', [], tokens)).toMatchObject({ verified: true });
+    expect(anchorForCell(85, '145', [], tokens)).toMatchObject({ verified: false, regions: [] });
+  });
+
+  it('🔴 μονάδα χωρίς κελί: μετρά η γραμμή ή η στήλη της τιμής, όχι το ότι υπάρχει στη σελίδα', () => {
+    const tokens = new Map(tokensOf('85').map((token) => [token.id, token]));
+    expect(unitPrintedBeside('W', '1458', tokens)).toBe(true);
+    expect(unitPrintedBeside('Btu/h', '1458', tokens)).toBe(false);
+    expect(unitPrintedBeside('Btu/h', '6142', tokens)).toBe(true);
+  });
+});
+
+describe('Ε2 / Ε4: χωρίς μαντεψιές', () => {
+  it('οι διαστάσεις δεν είναι κωδικός: τυπώνουν μονάδα', () => {
+    const [group] = readPage('85', page85Lines).groups;
+    expect(cellsOf(group, 'model_code').map((cell) => cell.text)).not.toContain('858x596x250');
+  });
+
+  it('κανένα ζωντανό SKU: ο άνθρωπος βλέπει και τις δύο σειρές κωδικών', () => {
+    const [group] = readPage('85', page85Lines).groups;
+    const [row] = rowsAgainstLive(group, []);
+    expect(fieldOf(row, 'model_code')?.issues[0]).toMatchObject({ code: 'attributeRepeated' });
+  });
+
+  const size = attributesByCode.get('size');
+
+  it('επιλογή με μονοσήμαντη αρχή, ανεξάρτητα από ελληνικό ή λατινικό Τ', () => {
+    expect(size && selectOptionFor(size, 'MFP-34ΤΜ')).toBe('mfp_34');
+    expect(size && selectOptionFor(size, 'MFP-34TM')).toBe('mfp_34');
+    expect(size && selectOptionFor(size, 'MFP-20CM')).toBeNull();
+  });
+
+  it('το «MFP-3» δεν πιάνει το «MFP-34», ούτε το «MFP-1» το «MFP-102»', () => {
+    const one = { ...size, config: { options: [{ code: 'mfp_3', labels: { el: 'MFP-3' } }] } } as NonNullable<typeof size>;
+    expect(selectOptionFor(one, 'MFP-34ΤΜ')).toBeNull();
+  });
+});
+
+describe('Ε3 / Ε5: η αντιστοίχιση που δεν στέκει', () => {
+  it('πίνακας «παραλλαγών» χωρίς αντιστοιχίσεις μπαίνει στην άκρη, με ανατροφοδότηση', () => {
+    const { groups, setAside, findings } = readPage('85', []);
+    expect(groups).toEqual([]);
+    expect(setAside.map((entry) => entry.role)).toEqual(['unmapped', 'accessories']);
+    expect(findings).toEqual([expect.stringContaining('t0')]);
+  });
+
+  it('πίνακας χωρίς απάντηση ζητείται ξανά', () => {
+    const context = contextOf('85');
+    expect(readPageTables({ tables: [] }, context).findings).toHaveLength(2);
+  });
+});
+
+describe('Το συμβόλαιο με το μοντέλο', () => {
+  const [main] = tablesOf('85');
+
+  it('🔴 το σχήμα δεν έχει πεδίο τιμής: ό,τι δεν γράφει, δεν το επινοεί', () => {
+    const schemaText = JSON.stringify(pageMappingSchema(['cooling_h']));
+    expect(schemaText).not.toContain('"value"');
+    expect(schemaText).not.toContain('"unit"');
+    expect(schemaText).toContain('"seen"');
+  });
+
+  it('η εντολή δίνει το πλέγμα με τις γραμμές και τα κελιά ελέγχου, όχι τη μονάδα της ιδιότητας', () => {
+    const prompt = pageMappingPrompt([{ code: 'cooling_h', label: 'Ψύξη H', description: null, type: 'measurement', level: 'variant', unique: false, options: [] }], [main], []);
+    expect(prompt).toContain('Table t0:');
+    expect(prompt).toContain('1458');
+    expect(prompt).toContain('Check cells:');
+    expect(prompt).not.toContain('kW');
+  });
+});
+
+describe('🚀 Η εικόνα ελέγχει τη στρώση κειμένου', () => {
+  const [main] = tablesOf('85');
+  const cells = imageCheckCells(main);
+  const idOf = (row: number, col: number): string => `r${row}c${col}`;
+  const answer = (seen: (printed: string, index: number) => string | null) => ({ imageCheck: cells.map((cell, index) => ({ cell: idOf(cell.row, cell.col), seen: seen(cell.text, index) })) });
+
+  it('διαλέγονται διασκορπισμένα κελιά, με σταθερή επιλογή', () => {
+    expect(cells).toHaveLength(6);
+    expect(new Set(cells.map((cell) => cell.row)).size).toBeGreaterThan(3);
+    expect(imageCheckCells(main)).toEqual(cells);
+  });
+
+  it('ίδια κελιά ⇒ καμία αμφιβολία, και ένα ολίσθημα ανάγνωσης δεν κρίνει τη στρώση', () => {
+    expect(textLayerDoubted(main, answer((printed) => printed))).toBe(false);
+    expect(textLayerDoubted(main, answer((printed, index) => (index === 0 ? '999' : printed)))).toBe(false);
+  });
+
+  it('🔴 χαλασμένη κωδικοποίηση: η μαζική διαφωνία εγκαταλείπει τη διαδρομή', () => {
+    const context = contextOf('85');
+    const mapping = { ...variantsMapping(context.tables[0], page85Lines), ...answer(() => '7') };
+    expect(readPageTables({ tables: [mapping, accessories(context.tables[1])] }, context).doubted).toBe(true);
+  });
+
+  it('ό,τι δεν διαβάστηκε στην εικόνα δεν είναι διαφωνία', () => {
+    expect(textLayerDoubted(main, answer(() => null))).toBe(false);
+  });
+});
+
+describe('Ο δεύτερος μάρτυρας', () => {
+  it('🔴 διαφωνία ετικετών: κάθε τιμή του πίνακα ζητά άνθρωπο', () => {
+    const tables = reconstructPageTables({ words: tokensOf('85'), rules: ARIES['85'].rules as readonly PageRule[], tagTables: [{ rows: [['ΚΩΔΙΚΟΣ', '1458']] }] });
+    expect(tables[0].witness).toBe('disputed');
+    const context = contextOf('85', tables);
+    const { groups } = readPageTables({ tables: [variantsMapping(tables[0], page85Lines), accessories(tables[1])] }, context);
+    expect(fieldOf(rowsAgainstLive(groups[0], [])[0], 'cooling_h')).toMatchObject({ decision: 'pending', issues: [expect.objectContaining({ code: 'tableStructureDisputed' })] });
+  });
+});
+
+describe('Η όραση μένει ζώνη ασφαλείας (Ε5)', () => {
+  const context: PageExtractionContext = { page: 85, tokens: new Map(), attributesByCode };
+  const unproved = (verified: boolean | null): ExtractedCell => ({ target: { kind: 'modelCode' }, text: 'x', confidence: 0.6, anchor: { kind: 'page', page: context.page, regions: [], verified }, unitCode: null, flags: [] });
+  const groupOf = (cells: readonly ExtractedCell[]): ExtractedGroup => ({ groupKey: 'g', modelCode: null, sharedCells: [], rows: [{ rowKey: 'r', cells }], pages: [85] });
+
+  it('🔴 κατάρρευση επιβεβαίωσης είναι λόγος επανάληψης', () => {
+    expect(evidenceFindings([groupOf(Array(8).fill(unproved(false)))])).toHaveLength(1);
+  });
+
+  it('σαρωμένη σελίδα ή λίγα πεδία δεν κρίνονται', () => {
+    expect(evidenceFindings([groupOf(Array(8).fill(unproved(null)))])).toEqual([]);
+    expect(evidenceFindings([groupOf(Array(2).fill(unproved(false)))])).toEqual([]);
+  });
+});

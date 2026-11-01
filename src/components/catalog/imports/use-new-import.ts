@@ -5,7 +5,8 @@
  * @module components/catalog/imports/use-new-import
  *
  * Η σειρά είναι ιδεμπότητη σε κάθε βήμα: το αποτύπωμα υπολογίζεται **πριν** το ανέβασμα, άρα ίδιο αρχείο ανοίγει την ίδια
- * παρτίδα αντί να ξανανέβει. Το προφίλ σώζεται πρώτο, γιατί η έκδοσή του μπαίνει στο κλειδί της παρτίδας.
+ * παρτίδα αντί να ξανανέβει, και ίδιο περιεχόμενο σε νέα παρτίδα ξαναχρησιμοποιεί το ζωντανό αρχείο. Το προφίλ σώζεται πρώτο,
+ * γιατί η έκδοσή του μπαίνει στο κλειδί της παρτίδας.
  */
 
 import { useCallback, useState } from 'react';
@@ -15,7 +16,6 @@ import { ENTITY_TYPES, FILE_CATEGORIES, FILE_DOMAINS } from '@/config/domain-con
 import { useCompanyId } from '@/hooks/useCompanyId';
 import type { RawTable } from '@/lib/tabular-import/tabular-types';
 import {
-  attachImportFile,
   createImportBatch,
   createImportProfile,
   fetchImportProfiles,
@@ -29,6 +29,7 @@ import type { ImportBatchTarget, ImportColumnRule, ImportProfileDefinition } fro
 import type { ImportBatchWire } from '@/subapps/catalog/types/catalog-import-requests';
 import type { ImportSourceKind } from '@/subapps/catalog/vocabulary/catalog-import';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
+import { attachUploadedFile } from './attach-import-file';
 import { proposeColumns, readTablePreview, sha256Of, sourceKindOf, type AttributeChoice } from './import-source-file';
 
 export interface NewImportSource {
@@ -100,12 +101,14 @@ async function uploadBatchFile(uploader: Uploader, batch: ImportBatchWire, file:
   return fileId;
 }
 
-/** Παρτίδα που περιμένει αρχείο ανεβαίνει· όποια έχει ήδη αρχείο απλώς ανοίγει. */
+/**
+ * Παρτίδα που περιμένει αρχείο ανεβαίνει. Ο διακομιστής απαντά ότι δεν περιμένει όταν το ίδιο περιεχόμενο υπάρχει ήδη: τότε τίποτα δεν
+ * ξανανεβαίνει. Πίνακας που έμεινε στην αντιστοίχιση περνά από το προφίλ, ιδεμπότητα.
+ */
 async function runImport(uploader: Uploader, source: NewImportSource, form: NewImportForm, target: ImportBatchTarget): Promise<string> {
   const batch = await batchFor(source, form, target);
-  if (batch.status !== 'awaitingFile') return batch.id;
-  const attached = await attachImportFile(batch.id, batch.revision, await uploadBatchFile(uploader, batch, source.file));
-  if (attached.status === 'mapping') await mapImportBatch(batch.id);
+  const ready = batch.status === 'awaitingFile' ? await attachUploadedFile(batch, await uploadBatchFile(uploader, batch, source.file)) : batch;
+  if (ready.status === 'mapping') await mapImportBatch(batch.id);
   return batch.id;
 }
 
