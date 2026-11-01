@@ -150,21 +150,16 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   );
 
   const handleSave = useCallback(
-    async (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean) => {
+    async (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean, nextStatus: BOQItemStatus | null = null) => {
       if (isNew) {
         await createItem(data as CreateBOQItemInput);
       } else if (editingItem) {
-        const updateData = data as UpdateBOQItemInput;
-
-        // Check if status changed (separate governance call)
-        if (editingItem.status !== (updateData as UpdateBOQItemInput & { status?: BOQItemStatus }).status) {
-          // Not handled here — status is managed via updateStatus
-        }
-
-        await updateItem(editingItem.id, updateData);
+        // Πρώτα τα πεδία, όσο η γραμμή επιτρέπει αλλαγές· η μετάβαση περνά χωριστά από την πολιτική κατάστασης.
+        const saved = await updateItem(editingItem.id, data as UpdateBOQItemInput);
+        if (saved && nextStatus !== null) await updateStatus(editingItem.id, nextStatus);
       }
     },
-    [createItem, updateItem, editingItem]
+    [createItem, updateItem, updateStatus, editingItem]
   );
 
   const handleEditorClose = useCallback(() => {

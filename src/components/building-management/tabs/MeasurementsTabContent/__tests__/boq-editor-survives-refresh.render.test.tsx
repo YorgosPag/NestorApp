@@ -60,12 +60,24 @@ jest.mock('../BOQSupplierPriceReviewPanel', () => {
 });
 
 const mockEditorMounted = jest.fn();
-interface EditorProps { readonly item: { readonly materialUnitCost: number } | null; readonly open: boolean; readonly onPriceApplied?: () => Promise<void> }
+interface EditorProps {
+  readonly item: { readonly materialUnitCost: number } | null;
+  readonly open: boolean;
+  readonly onPriceApplied?: () => Promise<void>;
+  readonly onSave: (data: { readonly title: string }, isNew: boolean, nextStatus?: string | null) => Promise<void>;
+}
 jest.mock('../BOQItemEditor', () => {
   const { useEffect } = jest.requireActual<typeof React>('react');
-  return { BOQItemEditor: ({ item, open, onPriceApplied }: EditorProps) => {
+  return { BOQItemEditor: ({ item, open, onPriceApplied, onSave }: EditorProps) => {
     useEffect(() => { mockEditorMounted(); }, []);
-    return open ? <aside><output data-testid="live">{String(item?.materialUnitCost)}</output><button type="button" onClick={() => void onPriceApplied?.()}>applied</button></aside> : null;
+    return open ? (
+      <aside>
+        <output data-testid="live">{String(item?.materialUnitCost)}</output>
+        <button type="button" onClick={() => void onPriceApplied?.()}>applied</button>
+        <button type="button" onClick={() => void onSave({ title: 'x' }, false, 'submitted')}>save-submitted</button>
+        <button type="button" onClick={() => void onSave({ title: 'x' }, false, null)}>save-same-status</button>
+      </aside>
+    ) : null;
   } };
 });
 
@@ -110,6 +122,38 @@ describe('η ανανέωση της λίστας', () => {
     fireEvent.click(screen.getByRole('button', { name: 'panel-refresh' }));
     await waitFor(() => expect(screen.getByTestId('live').textContent).toBe('100'));
     expect(mockPanelMounted).not.toHaveBeenCalled();
+  });
+});
+
+describe('η αποθήκευση της φόρμας', () => {
+  const gateway = jest.requireMock<{ updateBOQItemWithPolicy: jest.Mock; transitionBOQItemWithPolicy: jest.Mock }>('@/services/measurements/boq-mutation-gateway');
+
+  beforeEach(() => {
+    gateway.updateBOQItemWithPolicy.mockReset().mockResolvedValue(true);
+    gateway.transitionBOQItemWithPolicy.mockReset().mockResolvedValue(true);
+  });
+
+  it('🔴 η κατάσταση που διάλεξε ο άνθρωπος γράφεται, μετά τα πεδία', async () => {
+    await openEditor('bldg_status');
+    fireEvent.click(screen.getByRole('button', { name: 'save-submitted' }));
+    await waitFor(() => expect(gateway.transitionBOQItemWithPolicy).toHaveBeenCalledWith(expect.objectContaining({ id: 'boq_1', status: 'submitted' })));
+    expect(gateway.updateBOQItemWithPolicy.mock.invocationCallOrder[0]).toBeLessThan(gateway.transitionBOQItemWithPolicy.mock.invocationCallOrder[0]);
+  });
+
+  it('χωρίς αλλαγή κατάστασης δεν ζητείται μετάβαση', async () => {
+    await openEditor('bldg_same');
+    fireEvent.click(screen.getByRole('button', { name: 'save-same-status' }));
+    await waitFor(() => expect(gateway.updateBOQItemWithPolicy).toHaveBeenCalled());
+    expect(gateway.transitionBOQItemWithPolicy).not.toHaveBeenCalled();
+  });
+
+  it('αποτυχία των πεδίων δεν μετακινεί τη γραμμή', async () => {
+    gateway.updateBOQItemWithPolicy.mockResolvedValue(false);
+    await openEditor('bldg_failed');
+    fireEvent.click(screen.getByRole('button', { name: 'save-submitted' }));
+    await waitFor(() => expect(gateway.updateBOQItemWithPolicy).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
+    expect(gateway.transitionBOQItemWithPolicy).not.toHaveBeenCalled();
   });
 });
 

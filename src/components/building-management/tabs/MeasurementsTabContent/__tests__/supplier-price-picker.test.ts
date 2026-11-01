@@ -153,6 +153,16 @@ describe('useBOQEditorState: η φόρμα μετά από εφαρμογή στ
     expect(result.current.form.status).toBe('draft');
   });
 
+  it('🔴 η αποθήκευση περνά στον καλούντα τη μετάβαση κατάστασης, και μόνο όταν υπάρχει', async () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => useBOQEditorState({ ...params({ ...ITEM, title: 'Γραμμή' } as BOQItem), onSave }));
+    await act(async () => { await result.current.handleSave(); });
+    expect(onSave).toHaveBeenLastCalledWith(expect.anything(), false, null);
+    act(() => result.current.updateField('status', 'submitted'));
+    await act(async () => { await result.current.handleSave(); });
+    expect(onSave).toHaveBeenLastCalledWith(expect.anything(), false, 'submitted');
+  });
+
   it('άλλη γραμμή ⇒ άλλη φόρμα', () => {
     const { result, rerender } = renderHook((item: BOQItem) => useBOQEditorState(params(item)), { initialProps: ITEM });
     rerender({ ...ITEM, id: 'boq_2', title: 'Άλλη' } as BOQItem);

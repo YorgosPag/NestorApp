@@ -40,8 +40,15 @@ export interface BoqSupplierPriceRequest {
 
 const items = () => getAdminFirestore().collection(COLLECTIONS.BOQ_ITEMS);
 
-export const ownedBoqItem = (data: unknown, companyId: string): BOQItem | null =>
-  (data !== undefined && isPayloadOwnedByCompany(data as Readonly<Record<string, unknown>>, companyId) ? (data as BOQItem) : null);
+/**
+ * Η γραμμή, αν ανήκει σε αυτόν τον χώρο. 🔑 Το `id` έρχεται από το **έγγραφο**: το σώμα δεν το περιέχει, και χωρίς αυτό το `BOQItem`
+ * δήλωνε πεδίο που δεν υπήρχε, οπότε ο έλεγχος τιμών έστελνε γραμμές χωρίς ταυτότητα και το πάνελ έμενε κενό (§5.12).
+ */
+export function ownedBoqItem(snap: { readonly id: string; data(): unknown }, companyId: string): BOQItem | null {
+  const data = snap.data();
+  if (data === undefined || !isPayloadOwnedByCompany(data as Readonly<Record<string, unknown>>, companyId)) return null;
+  return { ...(data as Omit<BOQItem, 'id'>), id: snap.id };
+}
 
 /** Ανανέωση του **ίδιου** SKU πάνω από τον φράχτη. Άλλο SKU είναι νέα επιλογή, όχι αλλαγή τιμής. */
 function fenceRefusal(item: BOQItem, price: ForeignPrice, request: BoqSupplierPriceRequest): BoqSupplierPriceOutcome | null {
@@ -60,14 +67,14 @@ function refusalOf(item: BOQItem, price: ForeignPrice, request: BoqSupplierPrice
 }
 
 export async function applySupplierPrice(ctx: AuthContext, request: BoqSupplierPriceRequest): Promise<BoqSupplierPriceOutcome> {
-  const current = ownedBoqItem((await items().doc(request.boqItemId).get()).data(), ctx.companyId);
+  const current = ownedBoqItem(await items().doc(request.boqItemId).get(), ctx.companyId);
   if (current === null || !canApplyPrice(current)) return { kind: 'notApplicable' };
   const quoted = await quoteForeignLine(ctx, { relationshipId: request.relationshipId, variantId: request.variantId, quantity: supplierLineQuantity(current) });
   if (quoted.kind !== 'priced') return quoted;
   const db = getAdminFirestore();
   return db.runTransaction<BoqSupplierPriceOutcome>(async (tx) => {
     const ref = items().doc(request.boqItemId);
-    const item = ownedBoqItem((await tx.get(ref)).data(), ctx.companyId);
+    const item = ownedBoqItem(await tx.get(ref), ctx.companyId);
     if (item === null || !canApplyPrice(item)) return { kind: 'notApplicable' };
     const ends = { supplierCompanyId: quoted.relationship.companyId, buyerCompanyId: ctx.companyId };
     if ((await readActiveSupplyRelationshipInTx(tx, db, ends)) === null) return { kind: 'unavailable' };

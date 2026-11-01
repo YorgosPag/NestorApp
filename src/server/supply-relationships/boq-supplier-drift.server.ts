@@ -39,7 +39,7 @@ async function driftOf(ctx: AuthContext, line: SupplierLine): Promise<BoqSupplie
 export async function reviewSupplierPrices(ctx: AuthContext, boqItemIds: readonly string[]): Promise<BoqSupplierDriftReview> {
   const db = getAdminFirestore();
   const snaps = await db.getAll(...boqItemIds.map((id) => db.collection(COLLECTIONS.BOQ_ITEMS).doc(id)));
-  const lines = snaps.map((snap) => ownedBoqItem(snap.data(), ctx.companyId)).filter(isSupplierLine);
+  const lines = snaps.map((snap) => ownedBoqItem(snap, ctx.companyId)).filter(isSupplierLine);
   const rows: BoqSupplierDriftRow[] = [];
   for (let start = 0; start < lines.length; start += CONCURRENT_QUOTES) {
     rows.push(...await Promise.all(lines.slice(start, start + CONCURRENT_QUOTES).map((line) => driftOf(ctx, line))));

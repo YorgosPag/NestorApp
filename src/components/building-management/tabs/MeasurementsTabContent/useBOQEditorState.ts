@@ -207,7 +207,8 @@ interface UseBOQEditorParams {
   categories: readonly MasterBOQCategory[];
   buildingId: string;
   projectId: string;
-  onSave: (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean) => Promise<void>;
+  /** `nextStatus`: η μετάβαση που ζήτησε η φόρμα· περνά από την πολιτική κατάστασης, όχι από το σώμα της ενημέρωσης. */
+  onSave: (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean, nextStatus?: BOQItemStatus | null) => Promise<void>;
   onClose: () => void;
   /** ADR-917 Ε2 — a wall summary: its price is derived from its layers ⇒ the price fields are NEVER sent */
   pricesLocked?: boolean;
@@ -340,7 +341,7 @@ export function useBOQEditorState({
     try {
       if (isEdit) {
         const numbers = { numericEstimated, numericWaste, materialCost, laborCost, equipmentCost };
-        await onSave(buildBOQUpdatePayload(form, numbers, pricesLocked), false);
+        await onSave(buildBOQUpdatePayload(form, numbers, pricesLocked), false, form.status === itemStatus ? null : form.status);
       } else {
         const createData: CreateBOQItemInput = {
           projectId, buildingId,
@@ -369,7 +370,7 @@ export function useBOQEditorState({
   }, [
     form, isEdit, scopeValidation.valid, customAllocationsValid,
     numericEstimated, numericWaste, materialCost, laborCost, equipmentCost,
-    projectId, buildingId, buildScopePayload, onSave, onClose, pricesLocked,
+    projectId, buildingId, buildScopePayload, onSave, onClose, pricesLocked, itemStatus,
   ]);
 
   return {

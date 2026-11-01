@@ -17,6 +17,7 @@ import { computeItemCost, countableBoqLines } from '@/services/measurements';
 import { Package, Wrench, Truck, Calculator } from 'lucide-react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
+import { BOQ_COST_ACCENTS } from './boq-cost-accents';
 
 // ============================================================================
 // TYPES
@@ -67,26 +68,25 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
       labelKey: 'tabs.measurements.summary.materials',
       amount: totals.materialCost,
       icon: Package,
-      // ⛔ ΟΧΙ `text-primary`: στο σκοτεινό θέμα `--primary` ≡ `--card` ⇒ το ποσό ήταν ΑΟΡΑΤΟ (CHECK 3.38, ADR-770).
-      accentClass: 'text-[hsl(var(--text-info))]',
+      accentClass: BOQ_COST_ACCENTS.material,
     },
     {
       labelKey: 'tabs.measurements.summary.labor',
       amount: totals.laborCost,
       icon: Wrench,
-      accentClass: 'text-[hsl(var(--text-warning))]',
+      accentClass: BOQ_COST_ACCENTS.labor,
     },
     {
       labelKey: 'tabs.measurements.summary.equipment',
       amount: totals.equipmentCost,
       icon: Truck,
-      accentClass: 'text-[hsl(var(--text-success))]',
+      accentClass: BOQ_COST_ACCENTS.equipment,
     },
     {
       labelKey: 'tabs.measurements.summary.total',
       amount: totals.totalCost,
       icon: Calculator,
-      accentClass: 'text-foreground',
+      accentClass: BOQ_COST_ACCENTS.total,
     },
   ];
 

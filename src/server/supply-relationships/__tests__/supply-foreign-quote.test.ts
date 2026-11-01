@@ -94,8 +94,9 @@ async function connect(): Promise<SupplyRelationship> {
   return fake.getData(COLLECTIONS.SUPPLY_RELATIONSHIPS, RELATIONSHIP_ID()) as SupplyRelationship;
 }
 
+// ⛔ Χωρίς `id` στο σώμα, όπως το πραγματικό έγγραφο: με `id` εδώ η ταυτότητα της γραμμής «υπήρχε» μόνο στο test (§5.12).
 const seedItem = (overrides: Record<string, unknown> = {}) => fake.seed(COLLECTIONS.BOQ_ITEMS, ITEM, {
-  id: ITEM, companyId: BUYER_ID, status: 'draft', unit: 'pcs', estimatedQuantity: 2, wastePolicy: 'inherited', wasteFactor: 0.08,
+  companyId: BUYER_ID, status: 'draft', unit: 'pcs', estimatedQuantity: 2, wastePolicy: 'inherited', wasteFactor: 0.08,
   materialUnitCost: 0, laborUnitCost: 0, equipmentUnitCost: 0, ...overrides,
 });
 
@@ -327,7 +328,7 @@ describe('Δ9: απόκλιση και ανανέωση', () => {
 
   it('🔴 γραμμή ξένου χώρου απλώς λείπει · γραμμή χωρίς δεσμό προμηθευτή δεν ρωτά κανέναν', async () => {
     expect((await reviewSupplierPrices(RIVAL, [ITEM])).rows).toEqual([]);
-    fake.seed(COLLECTIONS.BOQ_ITEMS, 'boq_plain', { id: 'boq_plain', companyId: BUYER_ID, priceSource: null });
+    fake.seed(COLLECTIONS.BOQ_ITEMS, 'boq_plain', { companyId: BUYER_ID, priceSource: null });
     expect((await reviewSupplierPrices(BUYER, ['boq_plain'])).rows).toEqual([]);
   });
 });
