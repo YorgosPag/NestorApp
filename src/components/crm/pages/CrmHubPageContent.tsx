@@ -71,7 +71,7 @@ export function CrmHubPageContent() {
               <Card className={cn('h-full cursor-pointer group flex flex-col', COMPLEX_HOVER_EFFECTS.FEATURE_CARD)}>
                 <CardHeader className="flex flex-row items-center gap-4 space-y-0">
                     <div className={cn('p-3 rounded-full bg-muted', TRANSITION_PRESETS.STANDARD_COLORS)}>
-                      <section.icon className={cn(iconSizes.lg, 'text-primary')} />
+                      <section.icon className={cn(iconSizes.lg, colors.text.info)} />
                     </div>
                     <CardTitle className="text-lg">{t(section.titleKey)}</CardTitle>
                 </CardHeader>
