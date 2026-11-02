@@ -7,6 +7,7 @@
  * |---|---|
  * | `verified` | αυτόματη επιβεβαίωση: ενεργή εταιρεία, ίδια επωνυμία, ΑΦΜ στον ίδιο αριθμό |
  * | `ask-registry` | ρώτα ξανά το μητρώο· ουρά δεν ανοίγει για βλάβη ή άγνοια |
+ * | `submit-document` | δεν υπάρχει μητρώο να ρωτηθεί: Βεβαίωση Μητρώου ΑΑΔΕ (Ε1γ) |
  * | `adopt-legal-name` | η υπάρχουσα υιοθέτηση επωνυμίας του ΓΕΜΗ |
  * | `correct-tax-id` | διόρθωση ΑΦΜ στο προφίλ |
  * | `manual-review` με `approvable: true` | έλεγχος διαχειριστή με έγγραφα |
@@ -22,6 +23,7 @@ import type { RegistryIdentityGap, RegistryIdentityJudgment, RegistryTaxBinding 
 export type SupplierVerificationRoute =
   | { readonly kind: 'verified' }
   | { readonly kind: 'ask-registry' }
+  | { readonly kind: 'submit-document' }
   | { readonly kind: 'adopt-legal-name' }
   | { readonly kind: 'correct-tax-id' }
   | { readonly kind: 'manual-review'; readonly approvable: boolean };
@@ -71,5 +73,22 @@ export function routeSupplierVerification(
  * επωνυμίας και άκυρο ΑΦΜ δεν εγκρίνονται ποτέ.
  */
 export function routeAllowsApproval(route: SupplierVerificationRoute): boolean {
-  return route.kind === 'ask-registry' || (route.kind === 'manual-review' && route.approvable);
+  return (
+    route.kind === 'ask-registry' ||
+    route.kind === 'submit-document' ||
+    (route.kind === 'manual-review' && route.approvable)
+  );
+}
+
+/**
+ * Ανοίγει αίτηση ελέγχου; Το ένα σημείο εισόδου, όποιος κι αν είναι ο δρόμος του εγγράφου. Το `ask-registry` μένει
+ * έξω: όσο το μητρώο μπορεί να ρωτηθεί, η βλάβη του δεν γίνεται ουρά.
+ */
+export function routeOpensReview(route: SupplierVerificationRoute): boolean {
+  return route.kind === 'submit-document' || (route.kind === 'manual-review' && route.approvable);
+}
+
+/** Χωρίς κλειδί ΓΕΜΗ το «ρώτα ξανά» δεν τελειώνει ποτέ: η μόνη διέξοδος είναι το έγγραφο (Ε1γ). */
+export function routeWithoutRegistry(route: SupplierVerificationRoute): SupplierVerificationRoute {
+  return route.kind === 'ask-registry' ? { kind: 'submit-document' } : route;
 }

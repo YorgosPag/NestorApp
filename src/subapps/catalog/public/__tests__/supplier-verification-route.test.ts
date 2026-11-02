@@ -2,7 +2,13 @@
  * @fileoverview Άγκυρες της διαλογής επιβεβαίωσης προμηθευτή — ADR-923 §5.13 Ε1α.
  */
 
-import { routeSupplierVerification } from '@/subapps/catalog/public/supplier-verification-route';
+import {
+  routeAllowsApproval,
+  routeOpensReview,
+  routeSupplierVerification,
+  routeWithoutRegistry,
+  type SupplierVerificationRoute,
+} from '@/subapps/catalog/public/supplier-verification-route';
 import type {
   RegistryCheck,
   RegistryIdentityGap,
@@ -62,4 +68,35 @@ describe('routeSupplierVerification', () => {
       expect(routeSupplierVerification(gap('inactive'), binding)).toEqual({ kind: 'manual-review', approvable: false });
     },
   );
+});
+
+describe('routeWithoutRegistry', () => {
+  it('χωρίς μητρώο το «ρώτα ξανά» γίνεται έγγραφο', () => {
+    expect(routeWithoutRegistry({ kind: 'ask-registry' })).toEqual({ kind: 'submit-document' });
+  });
+
+  it.each<[SupplierVerificationRoute]>([
+    [{ kind: 'verified' }],
+    [{ kind: 'adopt-legal-name' }],
+    [{ kind: 'correct-tax-id' }],
+    [{ kind: 'manual-review', approvable: false }],
+    [{ kind: 'manual-review', approvable: true }],
+  ])('οι άλλες διαλογές δεν αλλάζουν: %j', (route) => {
+    expect(routeWithoutRegistry(route)).toEqual(route);
+  });
+});
+
+describe('ποια διαλογή επιτρέπει τι', () => {
+  it.each<[SupplierVerificationRoute, boolean, boolean]>([
+    [{ kind: 'verified' }, false, false],
+    [{ kind: 'ask-registry' }, true, false],
+    [{ kind: 'submit-document' }, true, true],
+    [{ kind: 'adopt-legal-name' }, false, false],
+    [{ kind: 'correct-tax-id' }, false, false],
+    [{ kind: 'manual-review', approvable: true }, true, true],
+    [{ kind: 'manual-review', approvable: false }, false, false],
+  ])('%j ⇒ έγκριση %s · αίτηση %s', (route, approval, review) => {
+    expect(routeAllowsApproval(route)).toBe(approval);
+    expect(routeOpensReview(route)).toBe(review);
+  });
 });
