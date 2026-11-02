@@ -95,7 +95,7 @@ export function LeadDetailPageContent() {
               <div className={cn('flex items-center', spacing.gap.sm)}>
                 <User className={cn(iconSizes.lg, colors.text.info)} />
                 <div>
-                  <h1 className={cn('text-2xl font-bold', colors.text.primary)}>{lead.fullName}</h1>
+                  <h1 className={cn('text-2xl font-bold', colors.text.primary)}>{lead.title || lead.fullName}</h1>
                   <p className={colors.text.muted}>{t('leadDetails.headerTitle')}</p>
                 </div>
               </div>
@@ -127,7 +127,7 @@ export function LeadDetailPageContent() {
             <section className={cn(getResponsiveClass('lg', 'col-span-2'), spacing.spaceBetween.lg)} aria-label={t('leadDetails.tasksSectionAria')}>
               <UpcomingTasks tasks={tasks} router={router} />
               <article className={cn(colors.bg.primary, 'rounded-lg shadow', spacing.padding.lg)}>
-                <CommunicationsHistory contactId={lead.id ?? ''} />
+                <CommunicationsHistory contactId={lead.contactId} />
               </article>
             </section>
           </div>

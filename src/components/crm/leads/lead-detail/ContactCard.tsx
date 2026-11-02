@@ -2,6 +2,9 @@
 
 import React from 'react';
 import { User, Mail, Phone, Tag, Calendar } from 'lucide-react';
+import { Link } from '@/lib/workspace/navigation';
+import { ContextualNavigationService } from '@/services/navigation/ContextualNavigationService';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -35,7 +38,18 @@ export function ContactCard({ lead }: ContactCardProps) {
         <div className={cn('flex items-center', spacing.gap.md)}>
           <User className={cn(iconSizes.md, colors.text.muted)} />
           <div>
-            <p className="font-medium">{lead.fullName}</p>
+            <p className="font-medium">
+              {lead.contactId ? (
+                <Link
+                  href={ContextualNavigationService.generateRoute('contact', lead.contactId)}
+                  className={cn('text-link', INTERACTIVE_PATTERNS.LINK_PRIMARY)}
+                >
+                  {lead.fullName}
+                </Link>
+              ) : (
+                lead.fullName
+              )}
+            </p>
             <p className={cn('text-sm', colors.text.muted)}>{t('contactCard.fullName')}</p>
           </div>
         </div>
