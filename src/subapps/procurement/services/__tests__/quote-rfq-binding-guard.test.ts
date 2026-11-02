@@ -18,12 +18,12 @@ jest.mock('server-only', () => ({}));
 const mockGetRfq = jest.fn();
 const mockReadLines = jest.fn();
 jest.mock('../rfq-service', () => ({ getRfq: (...a: unknown[]) => mockGetRfq(...a) }));
-jest.mock('../rfq-line-service', () => ({ readRfqLinesPublic: (...a: unknown[]) => mockReadLines(...a) }));
+jest.mock('../rfq-line-service', () => ({ readRfqLines: (...a: unknown[]) => mockReadLines(...a) }));
 
 import type { QuoteLine } from '../../types/quote';
 import type { PublicRfqLine } from '../../types/rfq-line';
 import type { RfqLineAnswers } from '../../utils/rfq-line-binding';
-import { assertPmRfqBinding } from '../quote-rfq-binding-guard';
+import { bindPmRfqLines } from '../quote-rfq-binding-guard';
 
 const rfqLine = (id: string): PublicRfqLine => ({
   id, description: id, trade: 'demolition', categoryCode: null, quantity: 1, unit: 'pcs', notes: null, displayOrder: 0,
@@ -39,36 +39,43 @@ beforeEach(() => {
   mockReadLines.mockReset().mockResolvedValue([rfqLine('L1'), rfqLine('L2')]);
 });
 
-describe('assertPmRfqBinding', () => {
+describe('bindPmRfqLines', () => {
   it('Φ1 χωρίς δήλωση γραμμής RFQ ⇒ καμία ανάγνωση', async () => {
-    await expect(assertPmRfqBinding('c1', 'rfq1', answers({ lines: [line('a'), line('b', null)] }))).resolves.toBeUndefined();
+    await expect(bindPmRfqLines('c1', 'rfq1', answers({ lines: [line('a'), line('b', null)] }))).resolves.toHaveLength(2);
     expect(mockGetRfq).not.toHaveBeenCalled();
     expect(mockReadLines).not.toHaveBeenCalled();
   });
 
+  it('Φ1α 🔴 ADR-923 §5.8: το SKU της γραμμής RFQ γράφεται στη γραμμή του PM, αλλιώς μια επεξεργασία θα το έσβηνε σιωπηλά', async () => {
+    const sku = { supplierCompanyId: 'comp-aries', variantId: 'var_1' };
+    mockReadLines.mockResolvedValueOnce([{ ...rfqLine('L1'), catalogRef: sku }, rfqLine('L2')]);
+    const lines = await bindPmRfqLines('c1', 'rfq1', answers({ lines: [line('a', 'L1'), line('b', 'L2'), line('c', null)] }));
+    expect(lines.map((l) => l.catalogRef)).toEqual([sku, undefined, undefined]);
+  });
+
   it('Φ2 ξένο id ⇒ binding:unknown_rfq_line', async () => {
-    await expect(assertPmRfqBinding('c1', 'rfq1', answers({ lines: [line('a', 'L9')] }))).rejects.toThrow('binding:unknown_rfq_line');
+    await expect(bindPmRfqLines('c1', 'rfq1', answers({ lines: [line('a', 'L9')] }))).rejects.toThrow('binding:unknown_rfq_line');
     expect(mockGetRfq).toHaveBeenCalledWith('c1', 'rfq1');
   });
 
   it('Φ3 δύο γραμμές στην ίδια γραμμή RFQ ⇒ binding:duplicate_answer', async () => {
-    await expect(assertPmRfqBinding('c1', 'rfq1', answers({ lines: [line('a', 'L1'), line('b', 'L1')] })))
+    await expect(bindPmRfqLines('c1', 'rfq1', answers({ lines: [line('a', 'L1'), line('b', 'L1')] })))
       .rejects.toThrow('binding:duplicate_answer');
   });
 
   it('Φ4 αναπάντητη γραμμή RFQ επιτρέπεται', async () => {
-    await expect(assertPmRfqBinding('c1', 'rfq1', answers({ lines: [line('a', 'L2'), line('b', null)] }))).resolves.toBeUndefined();
+    await expect(bindPmRfqLines('c1', 'rfq1', answers({ lines: [line('a', 'L2'), line('b', null)] }))).resolves.toHaveLength(2);
   });
 
   it('Φ5 χωρίς RFQ, με δήλωση γραμμής ⇒ απόρριψη', async () => {
-    await expect(assertPmRfqBinding('c1', null, answers({ lines: [line('a', 'L1')] }))).rejects.toThrow('binding:unknown_rfq_line');
+    await expect(bindPmRfqLines('c1', null, answers({ lines: [line('a', 'L1')] }))).rejects.toThrow('binding:unknown_rfq_line');
     mockGetRfq.mockResolvedValueOnce(null);
-    await expect(assertPmRfqBinding('c1', 'gone', answers({ lines: [line('a', 'L1')] }))).rejects.toThrow('binding:unknown_rfq_line');
+    await expect(bindPmRfqLines('c1', 'gone', answers({ lines: [line('a', 'L1')] }))).rejects.toThrow('binding:unknown_rfq_line');
   });
 
   it('Φ6 «εξαιρείται» του προμηθευτή + τιμή του PM στην ίδια γραμμή ⇒ binding:duplicate_answer', async () => {
     const scopeResponses = [{ rfqLineId: 'L1', response: 'excluded' as const, note: null, description: 'L1' }];
-    await expect(assertPmRfqBinding('c1', 'rfq1', answers({ lines: [line('a', 'L1')], scopeResponses })))
+    await expect(bindPmRfqLines('c1', 'rfq1', answers({ lines: [line('a', 'L1')], scopeResponses })))
       .rejects.toThrow('binding:duplicate_answer');
   });
 });

@@ -20,8 +20,9 @@ import type {
   PublicRfqLine,
   RfqLinesHolder,
   InternalRfqLine,
+  RfqLineCatalogFields,
 } from '../types/rfq-line';
-import { toPublicRfqLine, toPublicLine, rfqLinesLocation, resolveInternalRfqLines } from '../types/rfq-line';
+import { toPublicRfqLine, toPublicLine, rfqLinesLocation, resolveInternalRfqLines, rfqLineCatalogFields } from '../types/rfq-line';
 import { RFQ_FROM_BOQ_MAX_ITEMS, type RFQ } from '../types/rfq';
 
 const logger = createModuleLogger('RFQ_LINE_SERVICE');
@@ -61,8 +62,10 @@ function buildRfqLine(spec: {
   readonly dto: CreateRfqLineDTO;
   readonly displayOrder: number;
   readonly now: FirebaseFirestore.Timestamp;
+  /** ADR-923 §5.8. 🔑 Χωριστά από το DTO: το DTO έρχεται από το σώμα, και ο δεσμός SKU γράφεται μόνο από τον διακομιστή. */
+  readonly catalog?: RfqLineCatalogFields;
 }): RfqLine {
-  const { rfqId, companyId, dto, displayOrder, now } = spec;
+  const { rfqId, companyId, dto, displayOrder, now, catalog = rfqLineCatalogFields(null) } = spec;
   return {
     id: generateRfqLineId(),
     rfqId,
@@ -77,6 +80,7 @@ function buildRfqLine(spec: {
     unitPrice: dto.unitPrice ?? null,
     notes: dto.notes ?? null,
     displayOrder,
+    ...catalog,
     createdAt: now,
     updatedAt: now,
   };
@@ -250,6 +254,7 @@ export async function snapshotFromBoq(
         dto: boqItemToLineDto(item, trade),
         displayOrder: startOrder + idx,
         now,
+        catalog: rfqLineCatalogFields(item.priceSource),
       }),
     );
 

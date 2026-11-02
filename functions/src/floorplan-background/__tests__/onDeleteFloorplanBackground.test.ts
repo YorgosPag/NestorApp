@@ -95,7 +95,8 @@ describe('onDeleteFloorplanBackground — παράδοση στην ΜΙΑ αγ�
       updatedAt: SERVER_TS,
     });
     // Το ερώτημα του cron: `purgeAt <= nowISO()` ως συμβολοσειρά.
-    expect(fields.purgeAt >= before && (fields.purgeAt as string) <= new Date().toISOString()).toBe(true);
+    const purgeAt = fields.purgeAt as string;
+    expect(purgeAt >= before && purgeAt <= new Date().toISOString()).toBe(true);
   });
 
   it('🔴 Π2 — καμία διαγραφή εγγραφής (το επιτύμβιο + το ίχνος τα γράφει ο γραφέας)', async () => {

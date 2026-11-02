@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { SupplierSkuRef } from '@/subapps/catalog/types/supply-relationship';
 import type { TradeCode } from './trade';
 import { roundMajor } from '@/lib/money/money';
 
@@ -64,6 +65,12 @@ export interface QuoteLine {
    * - in `Quote.alternates`: the RFQ line the alternate would REPLACE — always set.
    */
   rfqLineId?: string | null;
+  /**
+   * ADR-923 §5.8 — **το SKU που ζήτησε** η γραμμή RFQ. Γεγονός του αιτήματος, όχι του προμηθευτή που απαντά: άλλο προϊόν είναι εναλλακτική
+   * και δεν το έχει. Το γράφει μόνο ο διακομιστής από τη γραμμή RFQ (`rfq-line-binding`), και **δεν** φεύγει ποτέ προς την πύλη.
+   * Γραμμές παλιότερες από το πεδίο δεν το έχουν: διαβάζονται ως «κανένα».
+   */
+  catalogRef?: SupplierSkuRef | null;
 }
 
 // ============================================================================

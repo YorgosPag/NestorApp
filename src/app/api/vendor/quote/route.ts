@@ -32,7 +32,7 @@ import {
   markInviteSubmitted,
 } from '@/subapps/procurement/services/vendor-invite-service';
 import { getRfq } from '@/subapps/procurement/services/rfq-service';
-import { readRfqLinesPublic } from '@/subapps/procurement/services/rfq-line-service';
+import { readRfqLines, readRfqLinesPublic } from '@/subapps/procurement/services/rfq-line-service';
 import { vendorInvitePermits } from '@/subapps/procurement/services/vendor-invite-resolver';
 import { vendorQuoteEditWindowEnd } from '@/subapps/procurement/utils/vendor-invite-status';
 import {
@@ -43,13 +43,13 @@ import { dispatchProcurementNotification } from '@/server/notifications/notifica
 import { NOTIFICATION_EVENT_TYPES, NOTIFICATION_ENTITY_TYPES } from '@/config/notification-events';
 import type { Quote } from '@/subapps/procurement/types/quote';
 import { rfqLeadTrade, type RFQ, type RfqResponseLock } from '@/subapps/procurement/types/rfq';
-import type { PublicRfqLine } from '@/subapps/procurement/types/rfq-line';
+import type { InternalRfqLine, PublicRfqLine } from '@/subapps/procurement/types/rfq-line';
 import {
   vendorPortalError,
   withVendorLinkDoor,
   type OpenVendorInvite,
 } from '@/server/vendor-portal/vendor-link-door';
-import { applyRfqLineAuthority, checkRfqLineAnswers } from '@/subapps/procurement/utils/rfq-line-binding';
+import { applyRfqLineAuthority, checkRfqLineAnswers, toVendorQuoteLine } from '@/subapps/procurement/utils/rfq-line-binding';
 import { resolveResponseLock } from '@/subapps/procurement/utils/rfq-response-lock';
 import { vendorNotificationTitle, vendorSnapshotFromInvite } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { notificationFallbackTitle } from '@/server/notifications/notification-title';
@@ -117,8 +117,8 @@ function quoteView(existing: ExistingQuote) {
   const { data } = existing;
   return {
     id: data.id,
-    lines: data.lines,
-    alternates: data.alternates ?? [],
+    lines: data.lines.map(toVendorQuoteLine),
+    alternates: (data.alternates ?? []).map(toVendorQuoteLine),
     scopeResponses: data.scopeResponses ?? [],
     totals: data.totals,
     paymentTerms: data.paymentTerms,
@@ -190,7 +190,7 @@ function notifyPm(opened: OpenVendorInvite, rfq: RFQ, quoteId: string, isFirstSu
  */
 function bindSubmission(
   submission: ParsedSubmission,
-  lines: readonly PublicRfqLine[],
+  lines: readonly InternalRfqLine[],
   lock: RfqResponseLock,
 ): { submission: ParsedSubmission } | { error: NextResponse } {
   const error = checkRfqLineAnswers(lines, submission, { requireEveryLine: lines.length > 0 });
@@ -247,7 +247,8 @@ const basePOST = withVendorLinkDoor({ purpose: 'submit' }, async (request, opene
 
   const rfq = await getRfq(invite.companyId, invite.rfqId);
   if (!rfq) return vendorPortalError('rfq_not_found', 404);
-  const rfqLines = await readRfqLinesPublic(rfq);
+  // Εσωτερική πλευρά: το SKU της γραμμής πάει στην προσφορά (ADR-923 §5.8). Τίποτα από εδώ δεν γυρίζει στην απάντηση.
+  const rfqLines = await readRfqLines(rfq);
   const bound = bindSubmission(submission, rfqLines, resolveResponseLock(rfq));
   if ('error' in bound) return bound.error;
 

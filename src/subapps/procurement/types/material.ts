@@ -14,6 +14,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import type { BOQMeasurementUnit } from '@/types/boq';
+import type { SupplierSkuLink, SupplierSkuRef } from '@/subapps/catalog/types/supply-relationship';
 
 export const MAX_PREFERRED_SUPPLIERS = 5;
 
@@ -29,6 +30,11 @@ export interface Material {
   avgPrice: number | null;
   lastPrice: number | null;
   lastPurchaseDate: Timestamp | null;
+  /**
+   * ADR-923 §5.8 — το SKU του πωλητή που **δείχνει** αυτό το υλικό: δείκτης, όχι αντίγραφο.
+   * Έγγραφα παλιότερα από το πεδίο δεν το έχουν: διαβάζεται ως «κανένα». Το γράφει μόνο ο διακομιστής, από τη σχέση.
+   */
+  catalogRef?: SupplierSkuRef | null;
   isDeleted: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -45,6 +51,7 @@ export interface CreateMaterialDTO {
   avgPrice?: number | null;
   lastPrice?: number | null;
   lastPurchaseDate?: string | null;        // ISO at API boundary
+  catalogLink?: SupplierSkuLink | null;    // ADR-923 §5.8 — ο πελάτης ονομάζει τη σχέση του, ποτέ χώρο
 }
 
 export interface UpdateMaterialDTO {
@@ -57,6 +64,7 @@ export interface UpdateMaterialDTO {
   avgPrice?: number | null;
   lastPrice?: number | null;
   lastPurchaseDate?: string | null;
+  catalogLink?: SupplierSkuLink | null;    // `null` = αποσύνδεση
 }
 
 export interface MaterialFilters {

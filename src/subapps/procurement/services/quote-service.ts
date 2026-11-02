@@ -5,7 +5,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.service';
 import { getNextQuoteNumber } from './quote-counters';
-import { assertPmRfqBinding } from './quote-rfq-binding-guard';
+import { bindPmRfqLines } from './quote-rfq-binding-guard';
 import { quoteChangeStamp } from './quote-change-stamp';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate, compareInstantsDesc } from '@/lib/date-local';
@@ -99,12 +99,11 @@ export async function createQuote(
   dto: CreateQuoteDTO
 ): Promise<Quote> {
   // ADR-327 §8.5.4 — δέσιμο γραμμών χειροκίνητης προσφοράς: οι ίδιοι κανόνες με την πύλη, ΠΡΙΝ από αριθμό/εγγραφή.
-  await assertPmRfqBinding(ctx.companyId, dto.rfqId ?? null, { lines: dto.lines ?? [], alternates: [], scopeResponses: [] });
+  const lines = await bindPmRfqLines(ctx.companyId, dto.rfqId ?? null, { lines: dto.lines ?? [], alternates: [], scopeResponses: [] });
   return safeFirestoreOperation(async (db) => {
     const id = generateQuoteId();
     const displayNumber = await getNextQuoteNumber(ctx.companyId);
     const now = admin.firestore.Timestamp.now();
-    const lines = dto.lines ?? [];
 
     const quote: Quote = {
       id,
@@ -248,13 +247,10 @@ export async function updateQuote(
       }
     }
 
-    if (dto.lines !== undefined) {
-      // ADR-327 §8.5.4 — αποδοχή δεσίματος στον έλεγχο σάρωσης / επεξεργασία: απέναντι στις γραμμές του RFQ της προσφοράς.
-      await assertPmRfqBinding(ctx.companyId, current.rfqId, {
-        lines: dto.lines, alternates: current.alternates ?? [], scopeResponses: current.scopeResponses ?? [],
-      });
-    }
-    const newLines = dto.lines ?? current.lines;
+    // ADR-327 §8.5.4 — αποδοχή δεσίματος στον έλεγχο σάρωσης / επεξεργασία: απέναντι στις γραμμές του RFQ της προσφοράς.
+    const newLines = dto.lines === undefined ? current.lines : await bindPmRfqLines(ctx.companyId, current.rfqId, {
+      lines: dto.lines, alternates: current.alternates ?? [], scopeResponses: current.scopeResponses ?? [],
+    });
     const newQuotedTotal = dto.quotedTotal !== undefined ? dto.quotedTotal : (current.quotedTotal ?? null);
     const newAudit = [...current.auditTrail];
     if (dto.status && dto.status !== current.status) {
