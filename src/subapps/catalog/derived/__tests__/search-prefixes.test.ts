@@ -6,7 +6,8 @@ import { catalogSearchPlan, catalogSearchPrefixes, catalogSearchText, matchesCat
 
 const finds = (label: string, identifier: string | null, term: string): boolean => {
   const { seed, tokens } = catalogSearchPlan(term);
-  return seed !== null && catalogSearchPrefixes(label, identifier).includes(seed) && matchesCatalogSearch(catalogSearchText(label, identifier), tokens);
+  const text = catalogSearchText(label, identifier);
+  return seed !== null && catalogSearchPrefixes(text).includes(seed) && matchesCatalogSearch(text, tokens);
 };
 
 describe('από τον γραφέα στο ερώτημα', () => {
@@ -20,6 +21,9 @@ describe('από τον γραφέα στο ερώτημα', () => {
     ['στίξη στα άκρα του όρου', 'Βίδα Inox', null, '(inox)'],
     ['μακρύτερη λέξη από το πρόθεμα', 'Θερμομόνωση', null, 'θερμομονωση'],
     ['όλες οι λέξεις', 'Σωλήνας Χαλκού 16mm', null, 'χαλκου σωληνας'],
+    ['🔴 «fan-coil» βρίσκει το «Fan coil»', 'Fan coil δαπέδου', null, 'fan-coil'],
+    ['«fan coil» βρίσκει το «Fan-coil»', 'Fan-coil δαπέδου', null, 'fan coil'],
+    ['«fan-coil» βρίσκει το «Fan-coil»', 'Fan-coil δαπέδου', null, 'FAN-COIL'],
   ])('%s', (_name, label, identifier, term) => {
     expect(finds(label, identifier, term)).toBe(true);
   });
@@ -36,16 +40,21 @@ describe('από τον γραφέα στο ερώτημα', () => {
     expect(catalogSearchPlan('16 σωλήνας').seed).toBe('σωλην');
   });
 
+  it('🔴 όρος με ψηφία είναι κωδικός: μένει ακέραιος, δεν κρίνεται σε κομμάτια', () => {
+    expect(catalogSearchPlan('099-01').tokens).toEqual(['099-01']);
+    expect(catalogSearchPlan('fan-coil').tokens).toEqual(['fan', 'coil']);
+  });
+
   it('όρος χωρίς αρκετά γράμματα ⇒ κανένα ερώτημα λέξεων', () => {
     expect(catalogSearchPlan('16 mm').seed).toBeNull();
     expect(catalogSearchPlan('   ').seed).toBeNull();
   });
 
   it('🔴 ίδιο SKU ⇒ ίδιος πίνακας: ο επανυπολογισμός δεν γράφει χωρίς λόγο', () => {
-    expect(catalogSearchPrefixes('Βίδα Inox', 'B-1')).toEqual(catalogSearchPrefixes('ΒΙΔΑ inox', 'B-1'));
+    expect(catalogSearchPrefixes(catalogSearchText('Βίδα Inox', 'B-1'))).toEqual(catalogSearchPrefixes(catalogSearchText('ΒΙΔΑ inox', 'B-1')));
   });
 
   it('χωρίς ετικέτα και κωδικό ⇒ κενός πίνακας', () => {
-    expect(catalogSearchPrefixes(null, null)).toEqual([]);
+    expect(catalogSearchPrefixes(catalogSearchText(null, null))).toEqual([]);
   });
 });

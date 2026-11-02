@@ -4,11 +4,11 @@
  * Ζωντανά: «…χρειάζεται επανυπολογισμός. Μπορεί να τον εκτελέσει όποιος διαχειρίζεται προϊόντα.» σε άνθρωπο που
  * **έχει** το δικαίωμα — το `canRun: boolean` είχε χάσει το `pending` (ίδια κλάση με το υποσέλιδο).
  */
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import type { CapabilityGate } from '@/auth/hooks/useCapability';
 import type { CatalogRecompute } from '@/hooks/catalog/useCatalogRecompute';
-import { RecomputePanel, maintenanceRecomputeNeeded } from '../RecomputePanel';
+import { RecomputePanel, SearchIndexRecompute, maintenanceRecomputeNeeded } from '../RecomputePanel';
 
 let gate: Partial<CapabilityGate> = { pending: true, verdict: 'denied-unauthenticated' };
 const asked: string[] = [];
@@ -32,6 +32,30 @@ describe('maintenanceRecomputeNeeded — η μόνιμη ενέργεια των
     const done = { kind: 'done', processed: 3, rejected: 0 } as const;
     expect(maintenanceRecomputeNeeded({ state: done, needed: false })).toBe(false);
     expect(maintenanceRecomputeNeeded({ state: done, needed: true })).toBe(true);
+  });
+});
+
+describe('SearchIndexRecompute — η πρόταση μετά από αλλαγή σχήματος (ADR-923 §5.12)', () => {
+  const job = (over: Partial<CatalogRecompute>): CatalogRecompute =>
+    ({ state: { kind: 'idle' }, needed: false, invalidate: jest.fn(), run: jest.fn(), ...over });
+
+  it('🔴 χωρίς αλλαγή δεν εμφανίζεται τίποτα', () => {
+    const { container } = render(<SearchIndexRecompute recompute={job({})} familyId={null} />);
+    expect(container.textContent).toBe('');
+  });
+
+  it('🔴 μετά την αλλαγή προτείνει επανυπολογισμό της ίδιας οικογένειας', () => {
+    gate = { pending: false, verdict: 'granted-by-role' };
+    const run = jest.fn();
+    render(<SearchIndexRecompute recompute={job({ needed: true, run })} familyId="cfam_1" />);
+    expect(screen.getByRole('status').textContent).toBe('recompute.searchIndexPrompt');
+    fireEvent.click(screen.getByRole('button', { name: 'recompute.run' }));
+    expect(run).toHaveBeenCalledWith('cfam_1');
+  });
+
+  it('το αποτέλεσμα μένει ορατό όταν τελειώσει', () => {
+    render(<SearchIndexRecompute recompute={job({ state: { kind: 'done', processed: 2, rejected: 0 } })} familyId={null} />);
+    expect(screen.getByRole('status').textContent).toBe('recompute.done');
   });
 });
 

@@ -65,6 +65,11 @@ export const CATALOG_LIMITS = {
   maxAmountSignificantDigits: 15,
   /** Μέγιστες κατηγορίες σε ένα μοντέλο ή προϊόν. */
   maxCategoriesPerProduct: 50,
+  // ── Ευρετήριο αναζήτησης SKU (ADR-923 §5.12) ──
+  /** Πόσοι χαρακτήρες μιας τιμής μετρούν στο ευρετήριο: μια μακριά περιγραφή δεν στερεί χώρο από τις υπόλοιπες. */
+  maxSearchValueLength: 160,
+  /** Το σύνολο του `derived.searchText`: 600 ελληνικοί ≈ 1.200 bytes, κάτω από το όριο 1.500 της Firestore. */
+  maxSearchTextLength: 600,
 } as const;
 
 /**

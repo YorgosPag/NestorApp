@@ -54,8 +54,15 @@ export interface CatalogProductDerived extends CatalogHolderDerived {
    * φυσική σειρά αριθμών. ⚠️ Το `orderBy` της Firestore **αποκλείει** έγγραφα χωρίς το πεδίο ⇒ πάντα γραμμένο (`''`).
    */
   readonly sortKey: string;
-  /** Τα προθέματα λέξεων ετικέτας και κωδικού (`catalogSearchPrefixes`): η αναζήτηση SKU από ξένο χώρο (§5.12 τμήμα 4). */
+  /** Τα προθέματα λέξεων του `searchText`: ο σπόρος της αναζήτησης SKU από ξένο χώρο (§5.12 τμήμα 4). */
   readonly searchPrefixes: readonly string[];
+  /**
+   * Το κείμενο όπου κρίνεται ολόκληρος ο όρος (`catalogSearchIndexOf`, §5.12). 🔒 Δεν ταξιδεύει ποτέ προς τον αγοραστή.
+   * Το γράφει πάντα ο γραφέας· λείπει μόνο από έγγραφα πριν από τον επανυπολογισμό.
+   */
+  readonly searchText?: string;
+  /** Το αποτύπωμα σχήματος του ευρετηρίου (`catalogSearchIndexHash`): η μπαγιατίλα αποδεικνύεται στην ανάγνωση. */
+  readonly searchIndexHash?: string;
   /** Κλειδιά φίλτρων: `attr=option` · `attr:true|false` (Δ11). */
   readonly facetKeys: readonly string[];
   readonly completeness: CompletenessMatrix;
@@ -88,6 +95,8 @@ export interface CatalogProductModelDerived extends CatalogHolderDerived {
   readonly label: string | null;
   /** `catalogSortKey` της ετικέτας, αλλιώς του κωδικού — η ίδια σειρά με τα απλά SKU στο ενιαίο πλέγμα. */
   readonly sortKey: string;
+  /** Το αποτύπωμα σχήματος του ευρετηρίου των SKU του: το μοντέλο είναι η γραμμή της λίστας που το δείχνει. */
+  readonly searchIndexHash?: string;
   /**
    * Το ευρετήριο **όλων** των απογόνων (υπο-μοντέλα + SKU), ≤ 200 (`CATALOG_LIMITS.maxDescendantsPerModel`).
    * 🔑 Κάθε εγγραφή απογόνου **ξαναγράφει** τη ρίζα ⇒ όλες οι εγγραφές μιας οικογένειας παραλλαγών

@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/search/search.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:9313ced199b2e603edba715f9773fd1a59f2063864a759007220496c53fc90c9
+// sha256:af2596ca4e001410fb548a53c0ef8b1f0c3571fda29144b8b0a772a13eb064c9
 
 /**
  * 🏢 ENTERPRISE SEARCH v1
@@ -64,6 +64,9 @@ export function normalizeSearchText(value: Searchable): string {
 /** Max prefix length (must match SEARCH_CONFIG.MAX_PREFIX_LENGTH in types/search.ts) */
 const MAX_PREFIX_LENGTH = 5;
 
+/** Internal word separators: "prj-001" also indexes "prj" and "001". */
+export const SEARCH_WORD_SEPARATORS = /[-._/]/;
+
 /**
  * Generate search prefixes (3-MAX chars) from normalized text.
  * Each word produces prefixes of length 3..MAX for Firestore array-contains-any.
@@ -82,7 +85,7 @@ export function generateSearchPrefixes(text: string): string[] {
     // Collect tokens: full word + sub-tokens split on internal separators
     // e.g. "prj-001" → ["prj-001", "prj", "001"] so searching "001" finds PRJ-001
     const tokens: string[] = [word];
-    for (const part of word.split(/[-._/]/)) {
+    for (const part of word.split(SEARCH_WORD_SEPARATORS)) {
       const sub = part.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
       if (sub && sub !== word) tokens.push(sub);
     }

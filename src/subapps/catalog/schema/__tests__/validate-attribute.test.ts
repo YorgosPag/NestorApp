@@ -69,6 +69,14 @@ describe('validateAttribute', () => {
       .toEqual(expect.arrayContaining(['uniqueNotSupported', 'localizableNotSupported']));
   });
 
+  it('searchable: μόνο κείμενο, και ποτέ με τιμή ανά κανάλι (ADR-923 §5.12)', () => {
+    const text = { maxLength: null, pattern: null };
+    expect(codes({ ...base, searchable: true, type: 'text', config: text })).toEqual([]);
+    expect(codes({ ...base, searchable: true, localizable: true, type: 'text', config: text })).toEqual([]);
+    expect(codes({ ...base, searchable: true, scopable: true, type: 'text', config: text })).toEqual(['searchableScoped']);
+    expect(codes({ ...base, searchable: true, type: 'richText', config: { maxLength: null } })).toEqual(['searchableNotSupported']);
+  });
+
   it('requires a code and a label', () => {
     expect(codes({ ...base, code: 'Bad Code', labels: { el: ' ' }, type: 'boolean', config: {} }))
       .toEqual(expect.arrayContaining(['invalidCode', 'labelRequired']));

@@ -16,16 +16,19 @@ import React, { useEffect, useMemo } from 'react';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { CatalogOptimistic } from '@/hooks/catalog/useCatalogOptimistic';
+import { useCatalogRecompute } from '@/hooks/catalog/useCatalogRecompute';
 import type { AttributeGroupRecord, AttributeRecord, FamilyRecord } from '@/services/catalog/catalog-api.client';
 import { DEFAULT_LANGUAGE } from '@/i18n/languages';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
+import { isSearchableAttribute, type CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import {
   ATTRIBUTE_TYPES,
   isLocalizableAttributeType,
+  isSearchableAttributeType,
   isUniqueCapableAttributeType,
 } from '@/subapps/catalog/vocabulary/attribute-types';
+import { CATALOG_LIMITS } from '@/subapps/catalog/vocabulary/catalog-limits';
 import { deleteDefinition, newEntityKey, optimisticWire, saveDefinition } from '../shared/catalog-actions';
 import { ATTRIBUTE_TYPE_ICONS, ATTRIBUTE_TYPE_KEYS } from '../shared/catalog-labels';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
@@ -33,6 +36,7 @@ import { CatalogCodeField, CatalogField, SwitchField } from '../shared/CatalogFo
 import { IssueSummary } from '../shared/CatalogIssues';
 import { EditorFooter } from '../shared/EditorFooter';
 import { LocalizedTextField } from '../shared/LocalizedTextField';
+import { SearchIndexRecompute } from '../shared/RecomputePanel';
 import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import { AttributeConfigFields, AttributeMappingsFields } from './AttributeConfigFields';
 import { attributeDraftOf, familiesUsing, storedAttributeOf, validateAttributeDraft, withAttributeType } from './attribute-draft';
@@ -122,7 +126,11 @@ function FlagFields({ draft, update, disabled }: { readonly draft: CatalogAttrib
       {isLocalizableAttributeType(draft.type) ? (
         <SwitchField label={t('attributes.fields.localizable')} hint={t('attributes.fields.localizableHint')} checked={draft.localizable} disabled={disabled} onChange={(localizable) => update({ ...draft, localizable })} />
       ) : null}
-      <SwitchField label={t('attributes.fields.scopable')} hint={t('attributes.fields.scopableHint')} checked={draft.scopable} disabled={disabled} onChange={(scopable) => update({ ...draft, scopable })} />
+      <SwitchField label={t('attributes.fields.scopable')} hint={t('attributes.fields.scopableHint')} checked={draft.scopable} disabled={disabled}
+        onChange={(scopable) => update({ ...draft, scopable, searchable: draft.searchable === true && !scopable })} />
+      {isSearchableAttributeType(draft.type) && !draft.scopable ? (
+        <SwitchField label={t('attributes.fields.searchable')} hint={t('attributes.fields.searchableHint', { max: CATALOG_LIMITS.maxSearchValueLength })} checked={draft.searchable === true} disabled={disabled} onChange={(searchable) => update({ ...draft, searchable })} />
+      ) : null}
     </fieldset>
   );
 }
@@ -133,6 +141,7 @@ export function AttributeEditor(props: AttributeEditorProps) {
   const { editor, clientIssues, usedBy, issues } = useAttributeEditor(props);
   const { draft, update } = editor;
   const disabled = !canManage;
+  const recompute = useCatalogRecompute();
   const familyOptions = useMemo(() => families.map((family) => ({ code: family.code, label: text(family.labels, family.code) })), [families, text]);
   const save = () => saveDefinition(ops, {
     kind: 'attribute',
@@ -140,7 +149,10 @@ export function AttributeEditor(props: AttributeEditorProps) {
     definition: draft,
     optimistic: optimisticWire(storedAttributeOf(draft), record, newEntityKey(draft.code)),
     baseRevision: editor.baseRevision,
-    onSettled: editor.beginSave<AttributeRecord>((saved) => { if (!record) onCreated(saved); }),
+    onSettled: editor.beginSave<AttributeRecord>((saved) => {
+      if (!record) onCreated(saved);
+      else if (usedBy.length > 0 && isSearchableAttribute(record) !== isSearchableAttribute(draft)) recompute.invalidate();
+    }),
   });
   const remove = record && onDeleted ? () => { deleteDefinition(ops, 'attribute', record); onDeleted(); } : undefined;
   return (
@@ -160,6 +172,7 @@ export function AttributeEditor(props: AttributeEditorProps) {
         </section>
         <AttributeMappingsFields mappings={draft.mappings} issues={issues} disabled={disabled} onChange={(mappings) => update({ ...draft, mappings })} />
         <IssueSummary issues={editor.status === 'dirty' ? clientIssues : []} title={t('editor.issuesTitle')} />
+        <SearchIndexRecompute recompute={recompute} familyId={null} />
       </section>
       <EditorFooter
         editor={editor}

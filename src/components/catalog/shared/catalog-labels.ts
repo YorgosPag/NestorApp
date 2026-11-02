@@ -184,6 +184,8 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   tableKeyColumnType: 'issues.tableKeyColumnType',
   tableColumnMeasurementMissing: 'issues.tableColumnMeasurementMissing',
   uniqueNotSupported: 'issues.uniqueNotSupported',
+  searchableNotSupported: 'issues.searchableNotSupported',
+  searchableScoped: 'issues.searchableScoped',
   localizableNotSupported: 'issues.localizableNotSupported',
   invalidPattern: 'issues.invalidPattern',
   assetKindsRequired: 'issues.assetKindsRequired',

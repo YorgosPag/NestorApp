@@ -53,6 +53,12 @@ export type NumericAttributeType = (typeof NUMERIC_ATTRIBUTE_TYPES)[number];
 /** Τύποι που δέχονται τη σημαία `unique` (μοναδική τιμή στον κατάλογο). */
 export const UNIQUE_CAPABLE_ATTRIBUTE_TYPES = ['text', 'number'] as const satisfies readonly AttributeType[];
 
+/**
+ * Τύποι που δέχονται τη σημαία `searchable`: μόνο σύντομο κείμενο (ADR-923 §5.12). Το `richText` έχει μορφοποίηση και
+ * όριο 65.535, οι επιλογές έχουν τα φίλτρα τους.
+ */
+export const SEARCHABLE_ATTRIBUTE_TYPES = ['text'] as const satisfies readonly AttributeType[];
+
 /** Τύποι που μπορούν να έχουν τιμή **ανά γλώσσα** (`localizable`). */
 export const LOCALIZABLE_ATTRIBUTE_TYPES = [
   'text',
@@ -70,6 +76,10 @@ export function isNumericAttributeType(type: AttributeType): type is NumericAttr
 
 export function isUniqueCapableAttributeType(type: AttributeType): boolean {
   return (UNIQUE_CAPABLE_ATTRIBUTE_TYPES as readonly AttributeType[]).includes(type);
+}
+
+export function isSearchableAttributeType(type: AttributeType): boolean {
+  return (SEARCHABLE_ATTRIBUTE_TYPES as readonly AttributeType[]).includes(type);
 }
 
 export function isLocalizableAttributeType(type: AttributeType): boolean {

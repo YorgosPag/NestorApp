@@ -44,6 +44,8 @@ export const CATALOG_ISSUE_CODES = [
   'tableKeyColumnType',
   'tableColumnMeasurementMissing',
   'uniqueNotSupported',
+  'searchableNotSupported',
+  'searchableScoped',
   'localizableNotSupported',
   'invalidPattern',
   'assetKindsRequired',

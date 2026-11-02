@@ -16,6 +16,7 @@ import { mergeLiveWindows, type LiveWindow, type MergedWindows } from '@/lib/fir
 import type { ProductModelRecord, ProductRecord } from '@/services/catalog/catalog-api.client';
 import { completenessPercent } from '@/subapps/catalog/completeness/compute-completeness';
 import { isCompletenessStale, type CompletenessHashInput } from '@/subapps/catalog/completeness/inputs-hash';
+import { isSearchIndexStale } from '@/subapps/catalog/derived/search-index';
 import { keysMatchSelection, type CatalogListSort, type FacetSelection } from '@/subapps/catalog/list/catalog-list-query';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 
@@ -113,16 +114,18 @@ export function rowPassesFacets(row: CatalogListRow, selection: FacetSelection):
   return matches.total === 0 ? keysMatchSelection(row.record.derived.facetKeys ?? [], selection) : matches.matching > 0;
 }
 
-export type StaleReason = 'sortKey' | 'completeness';
+export type StaleReason = 'sortKey' | 'searchIndex' | 'completeness';
 
 /**
  * Μπαγιάτικο παράγωγο, **αποδείξιμο στην ανάγνωση** (Δ7). Παλιό έγγραφο χωρίς `sortKey` (γράφτηκε πριν το Β2 — το
- * `orderBy` θα το έκρυβε) · SKU-απλό με άλλο αποτύπωμα πληρότητας. Μοντέλα: η αλυσίδα θέλει τις αναθεωρήσεις όλων των
- * απογόνων ⇒ κρίνονται όταν ανοίξουν (δηλωμένο όριο).
+ * `orderBy` θα το έκρυβε) · ευρετήριο αναζήτησης με άλλο αποτύπωμα σχήματος, και για μοντέλα · SKU-απλό με άλλο αποτύπωμα
+ * πληρότητας. Μοντέλα: η πληρότητα θέλει τις αναθεωρήσεις όλων των απογόνων ⇒ κρίνεται όταν ανοίξουν (δηλωμένο όριο).
  */
 export function rowStaleReason(row: CatalogListRow, hashInput: Omit<CompletenessHashInput, 'chain'> | null): StaleReason | null {
   if (typeof row.record.derived.sortKey !== 'string') return 'sortKey';
-  if (row.kind !== 'product' || row.record.modelId !== null || hashInput === null) return null;
+  if (hashInput === null) return null;
+  if (isSearchIndexStale(row.record.derived.searchIndexHash ?? null, hashInput.family, hashInput.attributes)) return 'searchIndex';
+  if (row.kind !== 'product' || row.record.modelId !== null) return null;
   const chain = [{ id: row.id, kind: 'product' as const, revision: row.record.revision }];
   return isCompletenessStale(row.record.derived.completenessHash ?? null, { ...hashInput, chain }) ? 'completeness' : null;
 }

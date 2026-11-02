@@ -71,8 +71,9 @@ async function exactRows(scope: CatalogReadScope, term: string, judge: JudgeSkus
   return judge(await skusOfTarget(scope, target));
 }
 
+/** Το δίχτυ κρατά τα SKU που δεν πέρασαν ακόμη από τον επανυπολογισμό: τα προθέματά τους είναι ετικέτα και κωδικός. */
 const matches = (plan: CatalogSearchPlan) => (sku: StoredSku): boolean =>
-  matchesCatalogSearch(catalogSearchText(sku.derived.label, sku.derived.identifier), plan.tokens);
+  matchesCatalogSearch(sku.derived.searchText ?? catalogSearchText(sku.derived.label, sku.derived.identifier), plan.tokens);
 
 /** Παράθυρα κατά `sortKey`, ώσπου να γεμίσει η λίστα. Το τέλος του προϋπολογισμού ⇒ «γράψε κι άλλο», ποτέ δρομέας προς τον πελάτη. */
 async function wordRows(scope: CatalogReadScope, plan: CatalogSearchPlan, judge: JudgeSkus): Promise<readonly ForeignSkuRow[]> {

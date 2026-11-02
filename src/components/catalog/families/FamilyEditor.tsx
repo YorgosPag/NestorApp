@@ -18,7 +18,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { CatalogLibrary } from '@/hooks/catalog/useCatalogLibrary';
 import type { CatalogOptimistic } from '@/hooks/catalog/useCatalogOptimistic';
+import { useCatalogRecompute } from '@/hooks/catalog/useCatalogRecompute';
 import type { FamilyRecord } from '@/services/catalog/catalog-api.client';
+import { catalogSearchIndexHash } from '@/subapps/catalog/derived/search-index';
 import { IssueCollector, type CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import { deleteDefinition, newEntityKey, optimisticWire, saveDefinition } from '../shared/catalog-actions';
@@ -26,6 +28,7 @@ import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { IssueSummary } from '../shared/CatalogIssues';
 import { EditorFooter } from '../shared/EditorFooter';
 import { isEditorSelf } from '../shared/editor-self';
+import { SearchIndexRecompute } from '../shared/RecomputePanel';
 import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import type { FamilyTabProps } from './AttributePicker';
 import { FamilyAttributesTab } from './FamilyAttributesTab';
@@ -89,6 +92,7 @@ export function FamilyEditor(props: FamilyEditorProps) {
   const { editor, clientIssues, issues, inFamily, counts } = useFamilyEditor(props);
   const [tab, setTab] = useState<FamilyTab>('general');
   const [duplicating, setDuplicating] = useState(false);
+  const recompute = useCatalogRecompute();
   const tabProps: FamilyTabProps = { draft: editor.draft, update: editor.update, issues, disabled: !canManage, library, inFamily };
   const save = () => saveDefinition(ops, {
     kind: 'family',
@@ -96,7 +100,10 @@ export function FamilyEditor(props: FamilyEditorProps) {
     definition: editor.draft,
     optimistic: optimisticWire(storedFamilyOf(editor.draft), record, newEntityKey(editor.draft.code)),
     baseRevision: editor.baseRevision,
-    onSettled: editor.beginSave<FamilyRecord>((saved) => { if (!record) onCreated(saved.id); }),
+    onSettled: editor.beginSave<FamilyRecord>((saved) => {
+      if (!record) onCreated(saved.id);
+      else if (catalogSearchIndexHash(record, library.attributeById) !== catalogSearchIndexHash(editor.draft, library.attributeById)) recompute.invalidate();
+    }),
   });
   const remove = record ? () => { deleteDefinition(ops, 'family', record); onDeleted(); } : undefined;
   return (
@@ -116,6 +123,7 @@ export function FamilyEditor(props: FamilyEditorProps) {
         <TabsContent value="table"><FamilyTableTab {...tabProps} /></TabsContent>
         <TabsContent value="rules"><FamilyRulesTab {...tabProps} /></TabsContent>
         <IssueSummary issues={editor.dirty ? clientIssues : []} title={t('editor.issuesTitle')} />
+        <SearchIndexRecompute recompute={recompute} familyId={record?.id ?? null} />
       </Tabs>
       <EditorFooter
         editor={editor}

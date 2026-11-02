@@ -46,7 +46,7 @@ import { createVisibilityRule } from '@/server/catalog/visibility-rule-writer.se
 import { generateDeterministicCatalogProductModelId, generateDeterministicCatalogUniqueValueId } from '@/services/enterprise-id-convenience';
 import { supplierLineQuantity } from '@/services/measurements/boq-price-source';
 import { SIMPLE_VARIANT_ID } from '@/subapps/catalog/__tests__/fixtures/mfp-price-list.fixture';
-import { catalogSearchPrefixes } from '@/subapps/catalog/derived/search-prefixes';
+import { catalogSearchPrefixes, catalogSearchText } from '@/subapps/catalog/derived/search-prefixes';
 import { catalogSortKey } from '@/subapps/catalog/derived/sort-key';
 import { FOREIGN_SKU_RESULTS, FOREIGN_SKU_WINDOW } from '@/subapps/catalog/pricing/foreign-sku-search';
 import { uniqueValueKey } from '@/subapps/catalog/values/normalize-unique';
@@ -337,7 +337,11 @@ describe('αναζήτηση SKU σε ξένο κατάλογο', () => {
   const search = (term: string, ctx = BUYER, relationshipId = RELATIONSHIP_ID()) => searchForeignCatalog(ctx, { relationshipId, term });
   const seedSku = (id: string, label: string, identifier: string, overrides: Record<string, unknown> = {}) => fake.seed(COLLECTIONS.CATALOG_PRODUCTS, id, {
     id, companyId: ARIES.companyId, isDeleted: false, revision: 1, modelId: null, categoryIds: [],
-    derived: { label, identifier, sortKey: catalogSortKey(label), searchPrefixes: catalogSearchPrefixes(label, identifier) }, ...overrides,
+    derived: { label, identifier, sortKey: catalogSortKey(label), searchPrefixes: catalogSearchPrefixes(catalogSearchText(label, identifier)) }, ...overrides,
+  });
+  /** SKU που πέρασε από το ευρετήριο §5.12: το όνομα της οικογένειας ζει στο κείμενο, όχι στην ετικέτα. */
+  const seedIndexedSku = (id: string, code: string, searchText: string) => seedSku(id, code, code, {
+    derived: { label: code, identifier: code, sortKey: catalogSortKey(code), searchText, searchPrefixes: catalogSearchPrefixes(searchText) },
   });
   const seedCodeAttribute = () => fake.seed(COLLECTIONS.CATALOG_ATTRIBUTES, 'cattr_code', { id: 'cattr_code', companyId: ARIES.companyId, isDeleted: false, unique: true, type: 'text' });
   const reserve = (code: string, holderId: string) => fake.seed(
@@ -359,6 +363,37 @@ describe('αναζήτηση SKU σε ξένο κατάλογο', () => {
     expect((await search('δαπεδου')).rows.map((row) => row.variantId)).toEqual(['cprod_tile']);
     expect((await search('ΣΩΛΗΝΑΣ χαλκού')).rows.map((row) => row.variantId)).toEqual(['cprod_pipe']);
     expect((await search('σωλήνας αλουμινίου')).rows).toEqual([]);
+  });
+
+  describe('όνομα οικογένειας και αναζητήσιμες ιδιότητες (§5.12)', () => {
+    beforeEach(() => {
+      seedIndexedSku('cprod_fan', 'FC-100', 'fc-100 fan coil τετραπλη κασετα');
+    });
+
+    it('🔴 το «fan coil» βρίσκει SKU με ετικέτα τον κωδικό, και το «fan-coil» το ίδιο', async () => {
+      expect((await search('fan coil')).rows.map((row) => row.variantId)).toEqual(['cprod_fan']);
+      expect((await search('fan-coil')).rows.map((row) => row.variantId)).toEqual(['cprod_fan']);
+      expect((await search('τετραπλή κασέτα')).rows.map((row) => row.variantId)).toEqual(['cprod_fan']);
+    });
+
+    it('🔴 κρυφό ≡ ανύπαρκτο και στον νέο δρόμο: ίδια απάντηση με τον ανύπαρκτο όρο', async () => {
+      await hide('cprod_fan');
+      expect(await search('fan coil')).toEqual(await search('ανύπαρκτη λέξη'));
+      expect(await search('fan coil')).toEqual({ rows: [] });
+    });
+
+    it('🔴 το κείμενο του ευρετηρίου δεν ταξιδεύει: η γραμμή έχει μόνο τα τέσσερα πεδία', async () => {
+      const { rows } = await search('fan coil');
+      expect(rows).toEqual([{ variantId: 'cprod_fan', code: 'FC-100', label: 'FC-100', priced: true }]);
+    });
+
+    it('🔴 κρίνεται το `searchText`, όχι η ετικέτα: το ίδιο πρόθεμα με άλλη δεύτερη λέξη κόβεται', async () => {
+      expect((await search('fan αλουμινίου')).rows).toEqual([]);
+    });
+
+    it('🔴 SKU χωρίς `searchText`: κρίνεται ετικέτα και κωδικός, χωρίς διακοπή ως τον επανυπολογισμό', async () => {
+      expect((await search('σωλήνας')).rows.map((row) => row.variantId)).toEqual(['cprod_pipe']);
+    });
   });
 
   it('🔴 το πρόθεμα είναι μόνο ο σπόρος: λέξη που λείπει κόβει το αποτέλεσμα', async () => {

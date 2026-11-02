@@ -23,6 +23,7 @@ import {
 } from '@/subapps/catalog/types/attribute';
 import {
   isLocalizableAttributeType,
+  isSearchableAttributeType,
   isUniqueCapableAttributeType,
   type AttributeType,
 } from '@/subapps/catalog/vocabulary/attribute-types';
@@ -85,6 +86,7 @@ export function emptyAttributeDraft(groupId: string, orderKey: string, registry:
     localizable: false,
     scopable: false,
     unique: false,
+    searchable: false,
     orderKey,
     mappings: NO_MAPPINGS,
     ...defaultConfigFor('text', registry),
@@ -94,7 +96,7 @@ export function emptyAttributeDraft(groupId: string, orderKey: string, registry:
 /** Μόνο ο ορισμός — χωρίς περίβλημα εγγραφής και χωρίς παράγωγα. */
 export function attributeDraftOf(record: AttributeRecord): CatalogAttributeDefinition {
   const { code, groupId, labels, description, localizable, scopable, unique, orderKey, mappings } = record;
-  return { code, groupId, labels, description, localizable, scopable, unique, orderKey, mappings, ...typedConfig(record.type, record.config) };
+  return { code, groupId, labels, description, localizable, scopable, unique, searchable: record.searchable ?? false, orderKey, mappings, ...typedConfig(record.type, record.config) };
 }
 
 /** Νέος τύπος: νέα ρύθμιση, και οι σημαίες που δεν υποστηρίζει σβήνουν. */
@@ -108,6 +110,7 @@ export function withAttributeType(
     ...draft,
     ...defaultConfigFor(type, registry),
     unique: draft.unique && isUniqueCapableAttributeType(type),
+    searchable: draft.searchable === true && isSearchableAttributeType(type),
     localizable: draft.localizable && isLocalizableAttributeType(type),
   };
 }

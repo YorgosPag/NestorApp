@@ -51,6 +51,16 @@ function statusText(props: RecomputePanelProps, access: Access, t: ReturnType<ty
     : t('recompute.done', { count: state.processed });
 }
 
+/**
+ * Μετά από αποθήκευση σχήματος που αλλάζει το ευρετήριο αναζήτησης (ADR-923 §5.12): η πρόταση εμφανίζεται εκεί όπου έγινε η
+ * αλλαγή. Αν ο άνθρωπος φύγει, την ίδια ανάγκη την αποδεικνύει η λίστα προϊόντων.
+ */
+export function SearchIndexRecompute({ recompute, familyId }: Pick<RecomputePanelProps, 'recompute' | 'familyId'>) {
+  const { t } = useCatalogText();
+  if (!recompute.needed && recompute.state.kind === 'idle') return null;
+  return <RecomputePanel recompute={recompute} familyId={familyId} prompt={t('recompute.searchIndexPrompt')} />;
+}
+
 export function RecomputePanel(props: RecomputePanelProps) {
   const { t } = useCatalogText();
   // Η εργασία γράφει παράγωγα προϊόντων ⇒ η δικαιοδοσία των προϊόντων — το πάνελ τη ρωτά μόνο του (εκκρεμεί · ναι · όχι).

@@ -189,6 +189,8 @@
     "tableKeyColumnType": "The first (key) column must be a choice, text, number or measurement.",
     "tableColumnMeasurementMissing": "A measurement column needs a family and a unit.",
     "uniqueNotSupported": "Unique values are supported only for text and number.",
+    "searchableNotSupported": "Search is supported only for text attributes.",
+    "searchableScoped": "A searchable attribute cannot have per-channel values: search does not belong to a channel.",
     "localizableNotSupported": "This type has no per-language value.",
     "invalidPattern": "Invalid regular expression.",
     "assetKindsRequired": "Choose at least one kind of file.",
@@ -456,6 +458,8 @@
       "localizableHint": "A different value for Greek and English — e.g. a description.",
       "scopable": "Per-channel value",
       "scopableHint": "A different value for the printed catalogue, storefront etc. — e.g. a short description for print.",
+      "searchable": "Searchable by customers",
+      "searchableHint": "Customers who can see the product will find it with words from this field, in all its languages. The value is not shown in the result. The first {max} characters count.",
       "settings": "Type settings"
     },
     "config": {
@@ -554,6 +558,7 @@
       "rules": "Rules"
     },
     "general": {
+      "labelsSearchHint": "Customers who can see a product of this family will also find it by this name, in all languages.",
       "labelAttribute": "Product name from",
       "labelAttributeHint": "A text attribute of the family — e.g. the model code.",
       "imageAttribute": "Main image from",
@@ -792,7 +797,8 @@
     "recomputePrompt": "The languages changed — product completeness needs to be recalculated."
   },
   "recompute": {
-    "run": "Recalculate completeness",
+    "run": "Recalculate",
+    "searchIndexPrompt": "This change affects search: products must be recalculated before customers can see it.",
     "retry": "Try again",
     "needsPermission": "Anyone who manages products can run it.",
     "running": "Recalculating… {count, plural, one {# group} other {# groups}}",
@@ -813,7 +819,7 @@
       "empty": "No products yet. Start with “New”.",
       "more": "Load more",
       "failed": "The list could not be loaded.",
-      "stale": "{count, plural, one {# row has} other {# rows have}} stale derived data (completeness or order) — recalculation needed.",
+      "stale": "{count, plural, one {# row has} other {# rows have}} stale derived data (completeness, order or search) — recalculation needed.",
       "unavailable": "No products are shown while the list fails to load."
     },
     "columns": {

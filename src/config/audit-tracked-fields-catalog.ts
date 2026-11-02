@@ -46,7 +46,7 @@ function defs(scalars: readonly string[], complexes: readonly string[]): Record<
 }
 
 export const CATALOG_ATTRIBUTE_TRACKED_FIELDS = defs(
-  ['type', 'groupId', 'localizable', 'scopable', 'unique', 'orderKey', 'isDeleted'],
+  ['type', 'groupId', 'localizable', 'scopable', 'unique', 'searchable', 'orderKey', 'isDeleted'],
   ['labels', 'description', 'config', 'mappings'],
 );
 

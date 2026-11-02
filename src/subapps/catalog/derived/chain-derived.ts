@@ -29,7 +29,7 @@ import type {
 import { resolveInheritedValues, type InheritanceLink } from '../values/resolve-inherited';
 import { mapCatalogChannels } from '../vocabulary/channels';
 import { facetKeysOf, productIdentifierOf, productLabelOf } from './holder-derived';
-import { catalogSearchPrefixes } from './search-prefixes';
+import { catalogSearchIndexHash, catalogSearchIndexOf } from './search-index';
 import { catalogSortKey } from './sort-key';
 
 /** Ό,τι ξέρει ο γραφέας για το σχήμα τη στιγμή της εγγραφής — κοινό για όλη την αλυσίδα. */
@@ -57,7 +57,8 @@ export function productChainDerived(
     label,
     identifier,
     sortKey: catalogSortKey(label ?? identifier),
-    searchPrefixes: catalogSearchPrefixes(label, identifier),
+    ...catalogSearchIndexOf(resolved, schema.family, schema.attributes, { label, identifier }),
+    searchIndexHash: catalogSearchIndexHash(schema.family, schema.attributes),
     facetKeys: facetKeysOf(resolved),
     completeness,
     completenessHash: completenessInputsHash({ ...schema, chain }),
@@ -81,10 +82,13 @@ export function summarizeDescendants(
 }
 
 /** Τα παράγωγα της ρίζας: δικά της + ευρετήριο + περίληψη + ένωση facets + ευρήματα κανόνων. */
-/** Ετικέτα + κλειδί ταξινόμησης ενός μοντέλου πάνω στην αλυσίδα του (ρίζα ή ρίζα › υπο-μοντέλο). */
+/**
+ * Ετικέτα + κλειδί ταξινόμησης ενός μοντέλου πάνω στην αλυσίδα του (ρίζα ή ρίζα › υπο-μοντέλο). Το αποτύπωμα ευρετηρίου
+ * γράφεται και εδώ: τα SKU μιας παραλλαγής δεν είναι γραμμές της λίστας, το μοντέλο είναι.
+ */
 function modelNaming(schema: CatalogSchemaSnapshot, resolved: ReturnType<typeof resolveInheritedValues>, code: string) {
   const label = productLabelOf(resolved, schema.family);
-  return { label, sortKey: catalogSortKey(label ?? code) };
+  return { label, sortKey: catalogSortKey(label ?? code), searchIndexHash: catalogSearchIndexHash(schema.family, schema.attributes) };
 }
 
 export function rootModelDerived(

@@ -16,11 +16,12 @@
  */
 
 import type { LocalizedText } from '@/i18n/localized-text';
-import type {
-  AssetKind,
-  AttributeType,
-  ReferenceRelation,
-  TableColumnType,
+import {
+  isSearchableAttributeType,
+  type AssetKind,
+  type AttributeType,
+  type ReferenceRelation,
+  type TableColumnType,
 } from '../vocabulary/attribute-types';
 
 // ── Ρυθμίσεις ανά τύπο ───────────────────────────────────────────────────────
@@ -161,12 +162,22 @@ interface AttributeDefinitionBase {
   readonly scopable: boolean;
   /** Μοναδική τιμή σε όλο τον κατάλογο (π.χ. κωδικός είδους). */
   readonly unique: boolean;
+  /**
+   * Οι τιμές μπαίνουν στο ευρετήριο αναζήτησης των SKU (ADR-923 §5.12, commercetools `isSearchable`). Ρητή απόφαση
+   * δημοσιότητας του προμηθευτή: όποιος βλέπει το προϊόν το βρίσκει με αυτές τις λέξεις. Έλλειψη = όχι: διάβαζε
+   * **μόνο** με το `isSearchableAttribute`.
+   */
+  readonly searchable?: boolean;
   /** Κλειδί σειράς μέσα στην ομάδα (fractional index). */
   readonly orderKey: string;
   readonly mappings: AttributeMappings;
 }
 
 export type CatalogAttributeDefinition = AttributeDefinitionBase & TypedAttributeConfig;
+
+/** Ευρετηριάζεται η ιδιότητα; Ο τύπος και το κανάλι ξαναρωτιούνται εδώ: τιμή μόνο για ένα κανάλι δεν βγαίνει ποτέ προς τα έξω. */
+export const isSearchableAttribute = (attribute: Pick<CatalogAttributeDefinition, 'searchable' | 'scopable' | 'type'>): boolean =>
+  attribute.searchable === true && !attribute.scopable && isSearchableAttributeType(attribute.type);
 
 /**
  * Η αποθηκευμένη μορφή προσθέτει το **παράγωγο** `measurementFamilyCodes` (για `array-contains`: «ποιες

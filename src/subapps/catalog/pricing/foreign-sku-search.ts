@@ -31,6 +31,10 @@ export interface ForeignSkuRow {
   readonly priced: boolean;
 }
 
+/** Ό,τι διαβάζει ο αγοραστής: όταν η ετικέτα του SKU είναι ο ίδιος ο κωδικός, γράφεται μία φορά. */
+export const foreignSkuRowText = (row: Pick<ForeignSkuRow, 'code' | 'label'>): string =>
+  [...new Set([row.code, row.label])].filter(Boolean).join(' — ');
+
 export interface ForeignSkuSearch {
   readonly rows: readonly ForeignSkuRow[];
 }

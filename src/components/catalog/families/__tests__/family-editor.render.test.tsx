@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { CatalogLibrary } from '@/hooks/catalog/useCatalogLibrary';
@@ -101,5 +101,37 @@ describe('FamilyEditor — το Fan coil από το UI', () => {
     await user.click(screen.getByRole('button', { name: 'common.save' }));
     expect(familyOps.submit).toHaveBeenCalledTimes(1);
     expect(familyOps.submit).toHaveBeenCalledWith(expect.objectContaining({ key: 'fan_coil' }));
+  });
+
+  describe('αναζήτηση (ADR-923 §5.12)', () => {
+    const settle = (familyOps: CatalogOptimistic<FamilyRecord>) => {
+      const [operation] = (familyOps.submit as jest.Mock).mock.calls[0];
+      act(() => operation.onSettled({ ok: true, record: family }));
+    };
+
+    it('η οθόνη λέει ότι το όνομα είναι αναζητήσιμο', () => {
+      renderEditor();
+      expect(screen.getByText('families.general.labelsSearchHint')).toBeInTheDocument();
+    });
+
+    it('🔴 αλλαγή ονόματος ⇒ η πρόταση επανυπολογισμού μετά την αποθήκευση, για ΑΥΤΗ την οικογένεια', async () => {
+      const user = userEvent.setup();
+      const familyOps = renderEditor();
+      expect(screen.queryByText('recompute.searchIndexPrompt')).not.toBeInTheDocument();
+      await user.type(screen.getAllByRole('textbox')[0], ' 2');
+      await user.click(screen.getByRole('button', { name: 'common.save' }));
+      settle(familyOps);
+      expect(screen.getByText('recompute.searchIndexPrompt')).toBeInTheDocument();
+    });
+
+    it('🔴 αλλαγή που δεν αγγίζει το ευρετήριο ⇒ καμία πρόταση', async () => {
+      const user = userEvent.setup();
+      const familyOps = renderEditor();
+      await user.click(screen.getByRole('tab', { name: 'families.tabs.attributes' }));
+      await user.click(screen.getAllByRole('button', { name: 'families.attributes.removeOf' })[10]);
+      await user.click(screen.getByRole('button', { name: 'common.save' }));
+      settle(familyOps);
+      expect(screen.queryByText('recompute.searchIndexPrompt')).not.toBeInTheDocument();
+    });
   });
 });

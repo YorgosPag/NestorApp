@@ -17,6 +17,7 @@ import type {
 } from '../types/attribute';
 import {
   isLocalizableAttributeType,
+  isSearchableAttributeType,
   isUniqueCapableAttributeType,
   TABLE_KEY_COLUMN_TYPES,
 } from '../vocabulary/attribute-types';
@@ -147,6 +148,9 @@ export function validateAttribute(
   // Η κράτηση μοναδικότητας (ADR-923 §5.10 Δ3) είναι ΜΙΑ τιμή ανά προϊόν: «μοναδικό ανά γλώσσα»
   // θα έδινε δύο κωδικούς στο ίδιο SKU και κανένα κλειδί κράτησης (Akeneo: identifier ποτέ localizable).
   if (attribute.unique && (attribute.localizable || attribute.scopable)) collector.add('uniqueLocalizedOrScoped', 'unique');
+  if (attribute.searchable && !isSearchableAttributeType(attribute.type)) collector.add('searchableNotSupported', 'searchable');
+  // Η αναζήτηση δεν ανήκει σε κανάλι: τιμή που γράφτηκε μόνο για ένα κανάλι δεν βγαίνει σε άλλο (ADR-923 §5.12).
+  if (attribute.searchable && attribute.scopable) collector.add('searchableScoped', 'searchable');
   if (attribute.localizable && !isLocalizableAttributeType(attribute.type)) {
     collector.add('localizableNotSupported', 'localizable');
   }

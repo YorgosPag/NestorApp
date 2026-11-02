@@ -73,6 +73,7 @@ const definitionBaseShape = {
   localizable: z.boolean().default(false),
   scopable: z.boolean().default(false),
   unique: z.boolean().default(false),
+  searchable: z.boolean().default(false),
   orderKey: orderKeySchema,
   mappings: mappingsSchema.default({}),
 };

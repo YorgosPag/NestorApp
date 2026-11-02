@@ -5,6 +5,7 @@ import type { ProductModelRecord, ProductRecord } from '@/services/catalog/catal
 import { MFP_ATTRIBUTE_MAP, MFP_FAMILY } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil.fixture';
 import { MFP_SETTINGS } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil-products.fixture';
 import { completenessInputsHash } from '@/subapps/catalog/completeness/inputs-hash';
+import { catalogSearchIndexHash } from '@/subapps/catalog/derived/search-index';
 
 import {
   listRowComparator,
@@ -23,23 +24,23 @@ import {
 const meta = { companyId: 'c', isDeleted: false, createdAt: '', createdBy: '', updatedBy: '', deletedAt: null, deletedBy: null };
 const descendant = (facetKeys: string[], completeChannels: string[] = []) => ({ kind: 'product' as const, parentId: 'm', axisKey: null, completeChannels, facetKeys });
 
-function model(id: string, over: { updatedAt?: string; sortKey?: string; facetKeys?: string[]; descendants?: Record<string, ReturnType<typeof descendant>> } = {}): ProductModelRecord {
+function model(id: string, over: { updatedAt?: string; sortKey?: string; facetKeys?: string[]; descendants?: Record<string, ReturnType<typeof descendant>>; searchIndexHash?: string } = {}): ProductModelRecord {
   return {
     ...meta, id, revision: 1, updatedAt: over.updatedAt ?? '2026-10-26T10:00:00.000Z',
     code: id, familyId: 'fam', variantSchemeCode: 'by_size', parentId: null, values: {}, noValueReasons: {}, categoryIds: [],
     derived: {
       valueAttributeIds: [], valueLocales: [], assetIds: [], uniqueKeys: {}, standardAmounts: {}, warnings: [],
-      rootModelId: null, label: null, sortKey: over.sortKey ?? id, descendants: over.descendants ?? {},
+      rootModelId: null, label: null, sortKey: over.sortKey ?? id, searchIndexHash: over.searchIndexHash, descendants: over.descendants ?? {},
       summary: { print: { el: { complete: 5, total: 7 } }, storefront: { el: { complete: 7, total: 7 } }, portal: { el: { complete: 0, total: 7 } }, quote: { el: { complete: 0, total: 0 } } },
       facetKeys: over.facetKeys ?? [], findings: [],
     },
   } as ProductModelRecord;
 }
 
-function product(id: string, over: { updatedAt?: string; sortKey?: string | undefined; hash?: string; revision?: number } = {}): ProductRecord {
+function product(id: string, over: { updatedAt?: string; sortKey?: string | undefined; hash?: string; revision?: number; searchIndexHash?: string } = {}): ProductRecord {
   const derived: Record<string, unknown> = {
     valueAttributeIds: [], valueLocales: [], assetIds: [], uniqueKeys: {}, standardAmounts: {}, warnings: [],
-    rootModelId: null, label: null, identifier: '016-15-001', facetKeys: ['size=s1'],
+    rootModelId: null, label: null, identifier: '016-15-001', facetKeys: ['size=s1'], searchIndexHash: over.searchIndexHash,
     completeness: { print: { el: { required: 4, filled: 3, missing: [] } } }, completenessHash: over.hash ?? 'c1:x', completeChannels: [],
   };
   if ('sortKey' in over ? over.sortKey !== undefined : true) derived.sortKey = over.sortKey ?? id;
@@ -113,6 +114,7 @@ describe('στήλες', () => {
 
 describe('μπαγιατίλα αποδείξιμη στην ανάγνωση (Δ7)', () => {
   const input = { family: MFP_FAMILY, attributes: MFP_ATTRIBUTE_MAP, settings: MFP_SETTINGS, scheme: null };
+  const searchIndexHash = catalogSearchIndexHash(MFP_FAMILY, MFP_ATTRIBUTE_MAP);
 
   it('έγγραφο ΧΩΡΙΣ sortKey (πριν το Β2) ⇒ «sortKey» — το orderBy θα το έκρυβε', () => {
     expect(rowStaleReason(productRow(product('p', { sortKey: undefined })), input)).toBe('sortKey');
@@ -120,13 +122,27 @@ describe('μπαγιατίλα αποδείξιμη στην ανάγνωση (�
 
   it('απλό SKU: ίδιο αποτύπωμα ⇒ φρέσκο · άλλη αναθεώρηση/ρυθμίσεις ⇒ «completeness»', () => {
     const hash = completenessInputsHash({ ...input, chain: [{ id: 'p', kind: 'product', revision: 3 }] });
-    expect(rowStaleReason(productRow(product('p', { hash, revision: 3 })), input)).toBeNull();
-    expect(rowStaleReason(productRow(product('p', { hash, revision: 4 })), input)).toBe('completeness');
+    expect(rowStaleReason(productRow(product('p', { hash, revision: 3, searchIndexHash })), input)).toBeNull();
+    expect(rowStaleReason(productRow(product('p', { hash, revision: 4, searchIndexHash })), input)).toBe('completeness');
     const settings = { channelLocales: { ...MFP_SETTINGS.channelLocales, print: ['el', 'en'] as const } };
-    expect(rowStaleReason(productRow(product('p', { hash, revision: 3 })), { ...input, settings })).toBe('completeness');
+    expect(rowStaleReason(productRow(product('p', { hash, revision: 3, searchIndexHash })), { ...input, settings })).toBe('completeness');
   });
 
-  it('μοντέλα: η αλυσίδα θέλει τους απογόνους ⇒ δεν κρίνονται στη λίστα (δηλωμένο όριο)', () => {
-    expect(rowStaleReason(modelRow(model('m')), input)).toBeNull();
+  it('μοντέλα: η πληρότητα θέλει τους απογόνους ⇒ δεν κρίνεται στη λίστα (δηλωμένο όριο)', () => {
+    expect(rowStaleReason(modelRow(model('m', { searchIndexHash })), input)).toBeNull();
+  });
+
+  it('🔴 ευρετήριο αναζήτησης: έγγραφο χωρίς αποτύπωμα ⇒ μπαγιάτικο, σε SKU ΚΑΙ σε μοντέλο', () => {
+    expect(rowStaleReason(productRow(product('p')), input)).toBe('searchIndex');
+    expect(rowStaleReason(modelRow(model('m')), input)).toBe('searchIndex');
+  });
+
+  it('🔴 μετονομασία οικογένειας ⇒ το μοντέλο αποδεικνύεται μπαγιάτικο, και η πληρότητα δεν αγγίζεται', () => {
+    const renamed = { ...input, family: { ...MFP_FAMILY, labels: { el: 'Άλλο όνομα' } } };
+    expect(rowStaleReason(modelRow(model('m', { searchIndexHash })), renamed)).toBe('searchIndex');
+  });
+
+  it('χωρίς οικογένεια στη μνήμη δεν κρίνεται τίποτα', () => {
+    expect(rowStaleReason(modelRow(model('m')), null)).toBeNull();
   });
 });

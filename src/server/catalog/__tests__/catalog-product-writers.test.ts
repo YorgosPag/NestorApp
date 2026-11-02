@@ -11,6 +11,7 @@ import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { CatalogProductDefinition } from '@/subapps/catalog/types/product';
 import type { StoredCatalogProductDefinition, StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
 import { MFP_ATTRIBUTES } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil.fixture';
+import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import {
   AI_SHIFTED_HEATING,
   ARIES_DUPLICATE_CODE,
@@ -336,5 +337,49 @@ describe('εργασία επανυπολογισμού (Δ7)', () => {
     fake.clearWriteLog();
     await runAll();
     expect(fake.writeLog()).toEqual([]);
+  });
+
+  describe('ευρετήριο αναζήτησης (§5.12)', () => {
+    const runAll = async () => {
+      let cursor: string | null = null;
+      do {
+        cursor = (await recomputeCatalogDerived(ARIES, { familyId: null, cursor })).nextCursor;
+      } while (cursor !== null);
+    };
+    const sku = (id: string) => fake.getData('catalog_products', id) as Product;
+
+    it('κάθε εγγραφή γράφει κείμενο και αποτύπωμα, στο SKU και στο μοντέλο, με το όνομα της οικογένειας', async () => {
+      const { model, variants } = await seedMfpWithVariants();
+      expect(sku(variants[0].id).derived.searchText).toContain('fan coil');
+      expect(sku(variants[0].id).derived.searchIndexHash).toBeTruthy();
+      expect((fake.getData('catalog_product_models', model.id) as Model).derived.searchIndexHash).toBe(sku(variants[0].id).derived.searchIndexHash);
+    });
+
+    it('🔴 μετονομασία οικογένειας ⇒ τίποτα δεν αλλάζει μόνο του· ο επανυπολογισμός το φέρνει σε κάθε SKU, χωρίς αναθεώρηση', async () => {
+      const { seeded, variants } = await seedMfpWithVariants();
+      const family = fake.getData('catalog_families', seeded.familyId) as { revision: number };
+      await updateCatalogFamily(ARIES, seeded.familyId, family.revision, { ...mfpFamilyWith(seeded.ids), labels: { el: 'Κασέτα οροφής' } });
+      expect(sku(variants[0].id).derived.searchText).not.toContain('κασετα');
+      await runAll();
+      expect(variants.every((variant) => sku(variant.id).derived.searchText?.includes('κασετα οροφησ'))).toBe(true);
+      expect(sku(variants[0].id).revision).toBe(variants[0].revision);
+      fake.clearWriteLog();
+      await runAll();
+      expect(fake.writeLog()).toEqual([]);
+    });
+
+    it('🔴 σημαία σε ιδιότητα του μοντέλου ⇒ η τιμή του φτάνει σε κάθε SKU, και το σβήσιμο την αφαιρεί', async () => {
+      const { seeded, variants } = await seedMfpWithVariants();
+      const attributeId = seeded.ids.get('power_supply') ?? '';
+      const stored = fake.getData('catalog_attributes', attributeId) as CatalogAttributeDefinition & { revision: number };
+      const definition = { ...MFP_ATTRIBUTES.find((attribute) => attribute.code === 'power_supply'), groupId: stored.groupId } as CatalogAttributeDefinition;
+      const before = sku(variants[0].id).derived.searchText ?? '';
+      const saved = await updateCatalogAttribute(ARIES, attributeId, stored.revision, { ...definition, searchable: true });
+      await runAll();
+      expect(variants.every((variant) => sku(variant.id).derived.searchText?.includes('230v-50hz-1ph'))).toBe(true);
+      await updateCatalogAttribute(ARIES, attributeId, saved.revision, { ...definition, searchable: false });
+      await runAll();
+      expect(sku(variants[0].id).derived.searchText).toBe(before);
+    });
   });
 });

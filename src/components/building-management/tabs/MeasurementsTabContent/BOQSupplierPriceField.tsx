@@ -20,7 +20,7 @@ import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import { foreignUnitPrice, supplierPickerGate } from '@/services/measurements/boq-supplier-review';
 import type { ForeignPrice } from '@/subapps/catalog/pricing/foreign-quote';
-import type { ForeignSkuRow } from '@/subapps/catalog/pricing/foreign-sku-search';
+import { foreignSkuRowText, type ForeignSkuRow } from '@/subapps/catalog/pricing/foreign-sku-search';
 import type { BOQItem, BoqSupplierPriceSource } from '@/types/boq';
 import type { FieldsetCommon } from './BOQEditorFieldsets';
 import type { EditorFormState } from './useBOQEditorState';
@@ -34,8 +34,6 @@ interface BOQSupplierPriceFieldProps extends FieldsetCommon {
   onApplied: (source: BoqSupplierPriceSource) => void;
 }
 
-const rowText = (row: ForeignSkuRow): string => [row.code, row.label].filter(Boolean).join(' — ');
-
 function SkuResults({ rows, onChoose, colors, t }: FieldsetCommon & { rows: readonly ForeignSkuRow[]; onChoose: (row: ForeignSkuRow) => void }) {
   if (rows.length === 0) return <p className={cn('m-0 text-xs', colors.text.muted)}>{t(`${KEY}.noResults`)}</p>;
   return (
@@ -43,7 +41,7 @@ function SkuResults({ rows, onChoose, colors, t }: FieldsetCommon & { rows: read
       {rows.map((row) => (
         <li key={row.variantId}>
           <Button type="button" variant="ghost" size="sm" className="h-auto w-full justify-between whitespace-normal text-left" onClick={() => onChoose(row)}>
-            <span>{rowText(row)}</span>
+            <span>{foreignSkuRowText(row)}</span>
             {row.priced ? null : <span className={cn('shrink-0 text-xs', colors.text.muted)}>{t(`${KEY}.onRequest`)}</span>}
           </Button>
         </li>
@@ -84,7 +82,7 @@ function ActivePicker({ form, item, onApplied, relationships, colors, t }: BOQSu
         <Input value={state.term} onChange={(event) => changeTerm(event.target.value)} placeholder={t(`${KEY}.searchPlaceholder`)} aria-label={t(`${KEY}.searchPlaceholder`)} />
       )}
       {state.rows !== null && state.selected === null ? <SkuResults {...common} rows={state.rows} onChoose={(row) => void chooseSku(row)} /> : null}
-      {state.selected === null ? null : <p className="m-0 text-xs font-medium">{rowText(state.selected)}</p>}
+      {state.selected === null ? null : <p className="m-0 text-xs font-medium">{foreignSkuRowText(state.selected)}</p>}
       {state.price === null ? null : <PriceOffer price={state.price} unit={form.unit} busy={state.busy} onApply={() => void apply()} t={t} />}
       {state.notice === null ? null : <p className="m-0 text-xs" role="status">{t(`${KEY}.notices.${state.notice}`)}</p>}
       <p className={cn('m-0 text-xs', colors.text.muted)}>{t(`${KEY}.immediate`)}</p>

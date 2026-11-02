@@ -28,6 +28,7 @@ export function FamilyGeneralTab({ draft, update, issues, disabled, inFamily, co
   return (
     <section className="flex flex-col gap-4">
       <LocalizedTextField label={t('common.labels')} value={draft.labels} disabled={disabled} issues={issues} path="labels" onChange={(labels) => update({ ...draft, labels })} />
+      <p className="m-0 text-xs text-muted-foreground">{t('families.general.labelsSearchHint')}</p>
       <CatalogCodeField value={draft.code} locked={codeLocked} disabled={disabled} suggestFrom={draft.labels[DEFAULT_LANGUAGE] ?? ''} issues={issues} onChange={(code) => update({ ...draft, code })} />
       <LocalizedTextField label={t('common.description')} multiline value={draft.description} disabled={disabled} onChange={(description) => update({ ...draft, description })} />
       <div className="grid gap-3 sm:grid-cols-2">
