@@ -37,7 +37,7 @@ jest.mock('../procurement-owned-doc', () => ({
   loadOwnedProcurementDoc: async () => ({ ref: { update }, current }),
   readOwnedProcurementDoc: jest.fn(),
 }));
-jest.mock('../quote-rfq-binding-guard', () => ({ assertPmRfqBinding: jest.fn() }));
+jest.mock('../quote-rfq-binding-guard', () => ({ bindPmRfqLines: jest.fn(async (_companyId: string, _rfqId: string | null, answers: { lines: unknown[] }) => answers.lines) }));
 jest.mock('../quote-change-stamp', () => ({ quoteChangeStamp: () => ({}) }));
 jest.mock('../quote-counters', () => ({ getNextQuoteNumber: jest.fn() }));
 jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: jest.fn() } }));

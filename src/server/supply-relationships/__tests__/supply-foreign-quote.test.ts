@@ -57,7 +57,7 @@ import { reviewSupplierPrices } from '../boq-supplier-drift.server';
 import { applySupplierPrice } from '../boq-supplier-price.server';
 import { issueSupplyInvitation } from '../supply-invitation-issue.server';
 import { respondToSupplyInvitation } from '../supply-invitation-redeem.server';
-import { quoteForeignPrice, searchForeignCatalog } from '../supply-foreign-quote.server';
+import { quoteForeignPrice, resolveForeignSku, searchForeignCatalog } from '../supply-foreign-quote.server';
 import { supplyRelationshipId } from '../supply-relationship-store.server';
 import { endSupplyRelationship } from '../supply-relationship-writer.server';
 /* eslint-enable import/first */
@@ -115,6 +115,39 @@ async function seedWorld(): Promise<void> {
 beforeEach(async () => {
   mockAfterQuote = async () => undefined;
   await seedWorld();
+});
+
+describe('ADR-923 §5.8: ο δεσμός υλικού με SKU', () => {
+  const link = (relationshipId = RELATIONSHIP_ID(), variantId = SIMPLE_VARIANT_ID) => ({ relationshipId, variantId });
+  const SKU = () => ({ supplierCompanyId: ARIES.companyId, variantId: SIMPLE_VARIANT_ID });
+
+  it('ορατό SKU με ενεργή σχέση: ο προμηθευτής βγαίνει από τη σχέση', async () => {
+    await connect();
+    await showAll('visible');
+    expect(await resolveForeignSku(BUYER, link())).toEqual(SKU());
+  });
+
+  it('`visibleNoPrice`: το SKU φαίνεται, άρα δένεται, χωρίς τιμή', async () => {
+    await connect();
+    await showAll('visibleNoPrice');
+    expect(await resolveForeignSku(BUYER, link())).toEqual(SKU());
+  });
+
+  it('🔴 κάθε «όχι» είναι το ίδιο `null`: χωρίς σχέση · ξένη σχέση · ανύπαρκτη · ανύπαρκτο SKU · ανακλημένη', async () => {
+    await showAll('visible');
+    expect(await resolveForeignSku(BUYER, link())).toBeNull();
+    const relationship = await connect();
+    expect(await resolveForeignSku(RIVAL, link())).toBeNull();
+    expect(await resolveForeignSku(BUYER, link('srel_ghost'))).toBeNull();
+    expect(await resolveForeignSku(BUYER, link(RELATIONSHIP_ID(), 'var_ghost'))).toBeNull();
+    await endSupplyRelationship(ARIES, relationship.id, { side: 'supplier', expectedRevision: relationship.revision });
+    expect(await resolveForeignSku(BUYER, link())).toBeNull();
+  });
+
+  it('κρυφό SKU: χωρίς κανόνα η προεπιλογή είναι `hidden`', async () => {
+    await connect();
+    expect(await resolveForeignSku(BUYER, link())).toBeNull();
+  });
 });
 
 describe('Σ4 · Σ7: κάθε «όχι» είναι η ίδια απάντηση', () => {

@@ -55,6 +55,9 @@ jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn().mockResolvedValue(null) },
 }));
 
+// Ο δεσμός SKU (ADR-923 §5.8) ανοίγει τον ξένο κατάλογο· εδώ κρίνεται μόνο ο φράχτης tenant.
+jest.mock('@/server/supply-relationships/supply-foreign-quote.server', () => ({ resolveForeignSku: jest.fn() }));
+
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: jest.fn(() => ({
     info: jest.fn(),

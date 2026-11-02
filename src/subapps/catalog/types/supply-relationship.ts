@@ -32,6 +32,21 @@ export interface SupplyRelationshipEnds {
   readonly buyerCompanyId: string;
 }
 
+/**
+ * **Ο ΕΝΑΣ δεσμός με SKU ξένου προμηθευτή** (ADR-923 §5.8 · §5.12 Δ8): το δείχνει η γραμμή BOQ, το υλικό, η γραμμή RFQ και η γραμμή
+ * προσφοράς. Δείκτης, όχι αντίγραφο: ό,τι ανήκει στο SKU το ξανακρίνει ο κατάλογος του πωλητή. Το γράφει ΜΟΝΟ ο διακομιστής.
+ */
+export interface SupplierSkuRef {
+  readonly supplierCompanyId: string;
+  readonly variantId: string;
+}
+
+/** Τι ονομάζει ο πελάτης: **τη σχέση του** και το SKU. Ο προμηθευτής βγαίνει από τη σχέση, ποτέ από το σώμα (Σ7). */
+export interface SupplierSkuLink {
+  readonly relationshipId: string;
+  readonly variantId: string;
+}
+
 export interface SupplyRelationship {
   readonly id: string;
   /** Ο προμηθευτής. */

@@ -6,7 +6,7 @@
  * αντικαθιστούν (`alternates`) και πρόσθετες γραμμές του προμηθευτή (`rfqLineId: null`).
  *
  * 🔴 Ο server **ποτέ** δεν εμπιστεύεται το `rfqLineId` του client: `checkRfqLineAnswers` τρέχει απέναντι στις
- * γραμμές που διάβασε ο ΕΝΑΣ αναγνώστης (`readRfqLinesPublic`) για το RFQ **της πρόσκλησης** — ξένο id = 400.
+ * γραμμές που διάβασε ο ΕΝΑΣ αναγνώστης (`readRfqLines`) για το RFQ **της πρόσκλησης** — ξένο id = 400.
  *
  * @module subapps/procurement/utils/rfq-line-binding
  * @enterprise ADR-327 §8.5
@@ -14,7 +14,7 @@
 
 import { normalizeGreekText } from '@/utils/greek-text';
 import type { QuoteLine, RfqScopeResponse } from '../types/quote';
-import type { PublicRfqLine } from '../types/rfq-line';
+import type { InternalRfqLine, PublicRfqLine } from '../types/rfq-line';
 import type { RfqResponseLock } from '../types/rfq';
 import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
 import { quoteLineTotal } from './quote-line-total';
@@ -108,6 +108,42 @@ function withLockedFields(line: QuoteLine, rfqLine: PublicRfqLine, lock: RfqResp
   };
 }
 
+/** Ό,τι κρίνει το δέσιμο από μια γραμμή RFQ. Ο δεσμός SKU υπάρχει μόνο στην εσωτερική πλευρά· η δημόσια γραμμή απλώς δεν τον έχει. */
+export type RfqBindingLine = Omit<InternalRfqLine, 'estimateUnitPrice'>;
+
+/** ADR-923 §5.8 — το SKU που ζήτησε η γραμμή RFQ, στη βασική της απάντηση: ο ένας κανόνας για πύλη και PM. */
+function withRequestedSku(line: QuoteLine, rfqLine: RfqBindingLine | undefined): QuoteLine {
+  return rfqLine?.catalogRef ? { ...line, catalogRef: rfqLine.catalogRef } : line;
+}
+
+/** Οι γραμμές του PM με το SKU της γραμμής RFQ τους. Ο πελάτης δεν το στέλνει ποτέ: ξαναπαράγεται σε κάθε αποθήκευση. */
+export function stampRequestedSku(lines: readonly QuoteLine[], rfqLines: readonly RfqBindingLine[]): QuoteLine[] {
+  const byId = new Map(rfqLines.map((l) => [l.id, l] as const));
+  return lines.map((line) => withRequestedSku(line, line.rfqLineId ? byId.get(line.rfqLineId) : undefined));
+}
+
+/** Τι βλέπει ο προμηθευτής από τη δική του γραμμή προσφοράς. */
+export type VendorQuoteLine = Omit<QuoteLine, 'catalogRef'>;
+
+/**
+ * 🔒 Η ΜΙΑ προβολή γραμμής προσφοράς προς την πύλη: λίστα επιτρεπόμενων, πεδίο προς πεδίο, ποτέ `...line`. Το ποιον προμηθευτή ζήτησε
+ * ο αγοραστής δεν φτάνει σε προμηθευτή ούτε μέσω της δικής του προσφοράς, και κάθε μελλοντικό πεδίο μένει κλειστό εξ ορισμού.
+ */
+export function toVendorQuoteLine(line: QuoteLine): VendorQuoteLine {
+  return {
+    id: line.id,
+    description: line.description,
+    categoryCode: line.categoryCode,
+    quantity: line.quantity,
+    unit: line.unit,
+    unitPrice: line.unitPrice,
+    vatRate: line.vatRate,
+    lineTotal: line.lineTotal,
+    notes: line.notes,
+    rfqLineId: line.rfqLineId,
+  };
+}
+
 /**
  * **Η γραμμή RFQ είναι η αυθεντία του ΤΙ ζητήθηκε**: η απάντηση σε γραμμή RFQ (με τιμή ή χωρίς) παίρνει περιγραφή και κωδικό
  * (ΑΤΟΕ, το κλειδί σύνδεσης με BOQ/PO) από τη γραμμή — ο προμηθευτής δεν «μετονομάζει» το ζητούμενο,
@@ -116,7 +152,7 @@ function withLockedFields(line: QuoteLine, rfqLine: PublicRfqLine, lock: RfqResp
  * απλώς τα δείχνει μόνο-ανάγνωσης· ένας πειραγμένος client δεν αλλάζει τίποτα). Οι εναλλακτικές μένουν ελεύθερες.
  */
 export function applyRfqLineAuthority(
-  rfqLines: readonly PublicRfqLine[],
+  rfqLines: readonly RfqBindingLine[],
   answers: RfqLineAnswers,
   lock: RfqResponseLock = UNLOCKED_RESPONSE,
 ): RfqLineAnswers {
@@ -125,7 +161,7 @@ export function applyRfqLineAuthority(
     const rfqLine = line.rfqLineId ? byId.get(line.rfqLineId) : undefined;
     if (!rfqLine) return line;
     const authored = { ...line, description: rfqLine.description, categoryCode: rfqLine.categoryCode };
-    return withLockedFields(authored, rfqLine, lock);
+    return withLockedFields(withRequestedSku(authored, rfqLine), rfqLine, lock);
   };
   const alternate = (line: QuoteLine): QuoteLine => {
     const rfqLine = line.rfqLineId ? byId.get(line.rfqLineId) : undefined;

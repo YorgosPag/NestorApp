@@ -19,7 +19,7 @@ import { viewerOfRelationship } from '@/server/catalog/pricing-viewer.server';
 import { FOREIGN_UNAVAILABLE, foreignOutcomeOf, type ForeignPrice, type ForeignQuote } from '@/subapps/catalog/pricing/foreign-quote';
 import { FOREIGN_SKU_NONE, type ForeignSkuSearch } from '@/subapps/catalog/pricing/foreign-sku-search';
 import { supplyRelationshipFromDocument } from '@/subapps/catalog/schema/zod/supply-relationship.schema';
-import type { SupplyRelationship } from '@/subapps/catalog/types/supply-relationship';
+import type { SupplierSkuLink, SupplierSkuRef, SupplyRelationship } from '@/subapps/catalog/types/supply-relationship';
 
 import { searchCatalogInScope } from './supply-foreign-search.server';
 import { readActiveSupplyRelationshipInTx } from './supply-relationship-store.server';
@@ -72,6 +72,18 @@ export async function quoteForeignLine(ctx: AuthContext, request: ForeignQuoteRe
 export async function quoteForeignPrice(ctx: AuthContext, request: ForeignQuoteRequest): Promise<ForeignQuote> {
   const quoted = await quoteForeignLine(ctx, request);
   return quoted.kind === 'priced' ? { kind: 'priced', price: quoted.price } : quoted;
+}
+
+/**
+ * Ο δεσμός με SKU που **βλέπει** αυτός ο αγοραστής, ή `null`. Δεν ρωτά τιμή: και το `requestQuote` είναι ορατό SKU.
+ * Ξένη, ανύπαρκτη, ανακλημένη σχέση και κρυφό SKU δίνουν την **ίδια** απάντηση (Σ7), και ο προμηθευτής βγαίνει από τη σχέση.
+ */
+export async function resolveForeignSku(ctx: AuthContext, link: SupplierSkuLink): Promise<SupplierSkuRef | null> {
+  const relationship = await readBuyerRelationship(ctx, link.relationshipId);
+  if (relationship === null) return null;
+  const request = { ...link, quantity: 1 };
+  const outcome = await runForeignCatalogRead(relationship.companyId, (scope) => quoteInScope(scope, ctx.companyId, request));
+  return outcome.kind === 'unavailable' ? null : { supplierCompanyId: relationship.companyId, variantId: link.variantId };
 }
 
 async function searchInScope(scope: CatalogReadScope, buyerCompanyId: string, term: string): Promise<ForeignSkuSearch> {

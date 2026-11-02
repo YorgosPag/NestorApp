@@ -269,6 +269,34 @@ describe('snapshotFromBoq — Q29 snapshot semantics', () => {
   });
 });
 
+describe('snapshotFromBoq — ADR-923 §5.8 SKU + price snapshot', () => {
+  const SUPPLIER_SOURCE = { authority: 'supplier', supplierCompanyId: 'comp-aries', variantId: 'var_1', priceListVersionId: 'plv_1', breakdown: { material: 1234, labor: 0, equipment: 0 } };
+
+  const snapshot = async (priceSource: unknown) => {
+    mockBoqCollection.get.mockResolvedValueOnce({ docs: [{ id: 'boq1', data: () => makeBoqItem({ priceSource } as Partial<BOQItem>) }] });
+    return (await snapshotFromBoq(ctx, 'rfq1', ['boq1'], 'concrete'))[0];
+  };
+
+  it('a supplier-priced BOQ line carries its SKU and frozen snapshot into the RFQ line', async () => {
+    const line = await snapshot(SUPPLIER_SOURCE);
+    expect(line.catalogRef).toEqual({ supplierCompanyId: 'comp-aries', variantId: 'var_1' });
+    expect(line.priceSnapshot).toEqual(SUPPLIER_SOURCE);
+  });
+
+  it('a cost-priced or unpriced BOQ line has neither', async () => {
+    for (const source of [{ authority: 'master', materialVariantId: 'var_own' }, null, undefined]) {
+      expect(await snapshot(source)).toMatchObject({ catalogRef: null, priceSnapshot: null });
+    }
+  });
+});
+
+describe('addRfqLine — ADR-923 §5.8 the body cannot write a SKU', () => {
+  it('🔴 a forged catalogRef/priceSnapshot in the DTO is ignored by the factory', async () => {
+    const forged = { source: 'ad_hoc', description: 'x', trade: 'concrete', catalogRef: { supplierCompanyId: 'evil', variantId: 'v' }, priceSnapshot: { authority: 'supplier' } } as CreateRfqLineDTO;
+    expect(await addRfqLine(ctx, 'rfq1', forged)).toMatchObject({ catalogRef: null, priceSnapshot: null });
+  });
+});
+
 describe('listRfqLinesPublic — strips internal fields', () => {
   it('removes unitPrice, boqItemId, source, companyId from public projection', async () => {
     mockLinesCollection.get.mockResolvedValue({

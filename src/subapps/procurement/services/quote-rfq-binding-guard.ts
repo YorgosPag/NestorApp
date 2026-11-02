@@ -6,19 +6,22 @@ import 'server-only';
  * Η πύλη προμηθευτή επικύρωνε ήδη κάθε `rfqLineId` απέναντι στις γραμμές του RFQ (`bindSubmission`)· οι δρόμοι του PM
  * (χειροκίνητη προσφορά, έλεγχος σάρωσης) τα έγραφαν **αυτούσια**. Ξένο ή διπλό δέσιμο έσπαγε σιωπηλά το leveling
  * (δύο τιμές στο ίδιο κελί, ή τιμή σε γραμμή άλλου RFQ). Τώρα: ΟΙ ΙΔΙΟΙ κανόνες (`checkRfqLineAnswers`), ο ΙΔΙΟΣ
- * αναγνώστης (`readRfqLinesPublic`) — χωρίς `requireEveryLine`: ο PM καταγράφει ό,τι έστειλε ο προμηθευτής, και η
+ * αναγνώστης (`readRfqLines`, εσωτερική πλευρά: εδώ δεν υπάρχει έξοδος προς προμηθευτή) — χωρίς `requireEveryLine`: ο PM καταγράφει ό,τι έστειλε ο προμηθευτής, και η
  * αναπάντητη γραμμή είναι **εύρημα** της Σύγκρισης (κενό → κάλυψη), όχι σφάλμα καταχώρισης.
  *
  * Δεν εφαρμόζει `applyRfqLineAuthority`: η περιγραφή της σαρωμένης γραμμής είναι **τεκμήριο** του εγγράφου του
  * προμηθευτή και το κλείδωμα ποσότητας/μονάδας είναι περιορισμός της **πύλης** — ο PM μεταγράφει, δεν απαντά.
+ * 🔑 Το SKU της γραμμής RFQ όμως γράφεται (ADR-923 §5.8): είναι γεγονός του αιτήματος, και το zod το πετά από το σώμα,
+ * άρα χωρίς αυτό το βήμα μια επεξεργασία του PM θα το έσβηνε σιωπηλά (ίδιο σχήμα με το `rfqLineId` στο `quote-line-schema`).
  *
  * @module subapps/procurement/services/quote-rfq-binding-guard
  * @enterprise ADR-327 §8.5.4
  */
 
 import { getRfq } from './rfq-service';
-import { readRfqLinesPublic } from './rfq-line-service';
-import { checkRfqLineAnswers, type RfqLineAnswers } from '../utils/rfq-line-binding';
+import { readRfqLines } from './rfq-line-service';
+import type { QuoteLine } from '../types/quote';
+import { checkRfqLineAnswers, stampRequestedSku, type RfqLineAnswers } from '../utils/rfq-line-binding';
 
 /** Κάποια απάντηση δηλώνει γραμμή RFQ; Αλλιώς τίποτα να επικυρωθεί — καμία ανάγνωση. */
 function claimsRfqLine(answers: RfqLineAnswers): boolean {
@@ -28,11 +31,13 @@ function claimsRfqLine(answers: RfqLineAnswers): boolean {
 /**
  * Πετά `binding:<code>` (κλειστό σύνολο, `RfqBindingErrorCode`) όταν οι απαντήσεις δεν στέκουν απέναντι στις γραμμές
  * του RFQ της προσφοράς. Προσφορά χωρίς RFQ που δηλώνει γραμμή RFQ = `unknown_rfq_line` (fail-closed).
+ * Επιστρέφει τις γραμμές που γράφονται: οι ίδιες, με το SKU της γραμμής RFQ τους.
  */
-export async function assertPmRfqBinding(companyId: string, rfqId: string | null, answers: RfqLineAnswers): Promise<void> {
-  if (!claimsRfqLine(answers)) return;
+export async function bindPmRfqLines(companyId: string, rfqId: string | null, answers: RfqLineAnswers): Promise<QuoteLine[]> {
+  if (!claimsRfqLine(answers)) return [...answers.lines];
   const rfq = rfqId ? await getRfq(companyId, rfqId) : null;
-  const rfqLines = rfq ? await readRfqLinesPublic(rfq) : [];
+  const rfqLines = rfq ? await readRfqLines(rfq) : [];
   const error = checkRfqLineAnswers(rfqLines, answers, { requireEveryLine: false });
   if (error) throw new Error(`binding:${error.code}`);
+  return stampRequestedSku(answers.lines, rfqLines);
 }

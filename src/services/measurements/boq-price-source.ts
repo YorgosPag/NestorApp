@@ -19,6 +19,7 @@ import { majorFromMinor, type MinorAmount } from '@/lib/money/money';
 import { BP_PER_WHOLE } from '@/lib/pricing/discount-rule';
 import type { ForeignPrice } from '@/subapps/catalog/pricing/foreign-quote';
 import type { CostRate } from '@/subapps/catalog/types/cost-rate';
+import type { SupplierSkuRef } from '@/subapps/catalog/types/supply-relationship';
 import { ORDER_QUANTITY_DECIMALS } from '@/subapps/catalog/vocabulary/pricing';
 import { BOQ_ITEM_DEFAULTS, type BOQItem, type BOQMeasurementUnit, type BoqPriceSource, type BoqSupplierPriceSource, type UpdateBOQItemInput } from '@/types/boq';
 import { BOQ_PRICE_FIELDS, isSummaryBoqLine } from './boq-line-role';
@@ -87,10 +88,8 @@ export function priceFieldsFromRate(item: Pick<BOQItem, 'unit' | 'wastePolicy'>,
 }
 
 /** Ό,τι χρειάζεται το στιγμιότυπο SKU ξένου προμηθευτή (§5.12 Δ8). */
-export interface SupplierQuoteForLine {
+export interface SupplierQuoteForLine extends SupplierSkuRef {
   readonly unit: BOQMeasurementUnit;
-  readonly supplierCompanyId: string;
-  readonly variantId: string;
   readonly versionNumber: number;
   readonly price: ForeignPrice;
 }

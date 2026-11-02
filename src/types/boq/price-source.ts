@@ -10,6 +10,7 @@
 
 import type { MinorAmount } from '@/lib/money/money';
 import type { PriceAudience } from '@/subapps/catalog/types/price-list';
+import type { SupplierSkuRef } from '@/subapps/catalog/types/supply-relationship';
 import type { BOQMeasurementUnit, SourceAuthority } from './units';
 
 /** Ανάλυση τιμής όπως διαβάστηκε: λεπτά ανά `priceQuantity` μονάδες — ακριβώς ό,τι γράφει η γραμμή. */
@@ -48,10 +49,8 @@ export interface BoqCostPriceSource extends BoqPriceSourceCore {
  * **SKU ξένου προμηθευτή** (ADR-923 §5.12 Δ8): το στιγμιότυπο ανήκει στον αγοραστή και μένει, ό,τι κι αν γίνει με τη σχέση (Σ7).
  * Το ποσό είναι στο `material`. Έκδοση · κοινό · βήματα έκπτωσης το εξηγούν χρόνια μετά. Το γράφει ΜΟΝΟ ο διακομιστής (Δ7).
  */
-export interface BoqSupplierPriceSource extends BoqPriceSourceCore {
+export interface BoqSupplierPriceSource extends BoqPriceSourceCore, SupplierSkuRef {
   readonly authority: 'supplier';
-  readonly supplierCompanyId: string;
-  readonly variantId: string;
   readonly audience: PriceAudience | null;
   readonly discountSteps: readonly number[];
 }

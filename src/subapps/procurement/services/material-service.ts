@@ -11,7 +11,9 @@ import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { resolveForeignSku } from '@/server/supply-relationships/supply-foreign-quote.server';
 import type { AuthContext } from '@/lib/auth';
+import type { SupplierSkuLink, SupplierSkuRef } from '@/subapps/catalog/types/supply-relationship';
 import {
   PROCUREMENT_RESOURCE,
   loadOwnedProcurementDoc,
@@ -85,6 +87,42 @@ function validateName(name: string): string {
   return trimmed;
 }
 
+/**
+ * ADR-923 §5.8: ο δεσμός με το SKU, κριμένος **στη στιγμή της εγγραφής** από τον ίδιο αναγνώστη με το BOQ.
+ * Μία άρνηση για όλες τις αιτίες, ώστε το route να μην είναι όργανο απαρίθμησης ξένου καταλόγου (Σ7).
+ */
+async function resolveCatalogRef(ctx: AuthContext, link: SupplierSkuLink | null): Promise<SupplierSkuRef | null> {
+  if (link === null) return null;
+  const ref = await resolveForeignSku(ctx, link);
+  if (ref === null) throw new MaterialValidationError('catalogLink', 'Catalog SKU is not available');
+  return ref;
+}
+
+const skuLabel = (ref: SupplierSkuRef | null | undefined): string | null =>
+  ref ? `${ref.supplierCompanyId}/${ref.variantId}` : null;
+
+/** Το ιστορικό μιας εγγραφής υλικού — ένα σημείο για δημιουργία και αλλαγή. */
+function recordMaterialChange(
+  ctx: AuthContext,
+  material: Pick<Material, 'id' | 'code' | 'name'>,
+  action: 'created' | 'updated',
+  changes: { field: string; oldValue: string | null; newValue: string | null }[],
+): void {
+  safeFireAndForget(
+    EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.MATERIAL,
+      entityId: material.id,
+      entityName: `${material.code} — ${material.name}`,
+      action,
+      changes,
+      performedBy: ctx.uid,
+      performedByName: null,
+      companyId: ctx.companyId,
+    }),
+    action === 'created' ? 'material-service.create' : 'material-service.update',
+  );
+}
+
 async function ensureCodeUnique(
   db: FirebaseFirestore.Firestore,
   companyId: string,
@@ -119,6 +157,7 @@ export async function createMaterial(
     validateAtoeCategory(dto.atoeCategoryCode);
     const preferred = validatePreferredSuppliers(dto.preferredSupplierContactIds);
     await ensureCodeUnique(db, ctx.companyId, code);
+    const catalogRef = await resolveCatalogRef(ctx, dto.catalogLink ?? null);
 
     const id = generateMaterialId();
     const now = admin.firestore.Timestamp.now();
@@ -134,6 +173,7 @@ export async function createMaterial(
       avgPrice: dto.avgPrice ?? null,
       lastPrice: dto.lastPrice ?? null,
       lastPurchaseDate: toAdminTimestampOrNull(dto.lastPurchaseDate),
+      catalogRef,
       isDeleted: false,
       createdAt: now,
       updatedAt: now,
@@ -141,19 +181,7 @@ export async function createMaterial(
     };
 
     await db.collection(COLLECTIONS.MATERIALS).doc(id).set(sanitizeForFirestore(material));
-    safeFireAndForget(
-      EntityAuditService.recordChange({
-        entityType: ENTITY_TYPES.MATERIAL,
-        entityId: id,
-        entityName: `${code} — ${name}`,
-        action: 'created',
-        changes: [],
-        performedBy: ctx.uid,
-        performedByName: null,
-        companyId: ctx.companyId,
-      }),
-      'material-service.create',
-    );
+    recordMaterialChange(ctx, material, 'created', []);
     logger.info('Material created', { id, code, companyId: ctx.companyId });
     return material;
   });
@@ -260,22 +288,14 @@ export async function updateMaterial(
     if (dto.lastPurchaseDate !== undefined) {
       updates.lastPurchaseDate = toAdminTimestampOrNull(dto.lastPurchaseDate);
     }
+    if (dto.catalogLink !== undefined) {
+      updates.catalogRef = await resolveCatalogRef(ctx, dto.catalogLink);
+    }
 
     await ref.update(sanitizeForFirestore(updates));
-    const next = { ...current, ...updates } as Material;
-    safeFireAndForget(
-      EntityAuditService.recordChange({
-        entityType: ENTITY_TYPES.MATERIAL,
-        entityId: materialId,
-        entityName: `${next.code} — ${next.name}`,
-        action: 'updated',
-        changes: [],
-        performedBy: ctx.uid,
-        performedByName: null,
-        companyId: ctx.companyId,
-      }),
-      'material-service.update',
-    );
+    const next = { ...current, id: materialId, ...updates } as Material;
+    const [before, after] = [skuLabel(current.catalogRef), skuLabel(next.catalogRef)];
+    recordMaterialChange(ctx, next, 'updated', before === after ? [] : [{ field: 'catalogRef', oldValue: before, newValue: after }]);
     logger.info('Material updated', { id: materialId, fields: Object.keys(updates) });
     return next;
   });

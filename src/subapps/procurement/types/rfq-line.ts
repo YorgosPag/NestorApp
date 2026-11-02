@@ -1,4 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { SupplierSkuRef } from '@/subapps/catalog/types/supply-relationship';
+import type { BoqPriceSource, BoqSupplierPriceSource } from '@/types/boq/price-source';
 import type { TradeCode } from './trade';
 
 // ============================================================================
@@ -37,8 +39,23 @@ export interface RfqLine {
   unitPrice: number | null;          // INTERNAL estimate, NOT exposed to vendors
   notes: string | null;
   displayOrder: number;
+  /**
+   * ADR-923 §5.8 — το SKU που ζητά η γραμμή. Γραμμές παλιότερες από τα δύο πεδία δεν τα έχουν: διαβάζονται ως «κανένα».
+   * ⛔ Μόνο εσωτερικά: το ποιον προμηθευτή ζήτησε ο αγοραστής δεν φτάνει ποτέ σε προμηθευτή (`PublicRfqLine`).
+   */
+  catalogRef?: SupplierSkuRef | null;
+  /** Το στιγμιότυπο τιμής του BOQ, παγωμένο μαζί με τη γραμμή (Q29). Ζητούμενο SKU χωρίς τιμή ⇒ `null`. */
+  priceSnapshot?: BoqSupplierPriceSource | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export type RfqLineCatalogFields = Required<Pick<RfqLine, 'catalogRef' | 'priceSnapshot'>>;
+
+/** Δεσμός και στιγμιότυπο από την πηγή τιμής, πάντα μαζί, ώστε να μη μπορούν να διαφωνήσουν. Ο τιμοκατάλογος κόστους δεν είναι SKU προμηθευτή. */
+export function rfqLineCatalogFields(source: BoqPriceSource | null | undefined): RfqLineCatalogFields {
+  if (source?.authority !== 'supplier') return { catalogRef: null, priceSnapshot: null };
+  return { catalogRef: { supplierCompanyId: source.supplierCompanyId, variantId: source.variantId }, priceSnapshot: source };
 }
 
 export interface CreateRfqLineDTO {
@@ -83,7 +100,11 @@ export interface PublicRfqLine {
   displayOrder: number;
 }
 
-export function toPublicRfqLine(line: RfqLine): PublicRfqLine {
+/**
+ * 🔒 Η ΜΙΑ προβολή προς προμηθευτή: λίστα επιτρεπόμενων, πεδίο προς πεδίο, ποτέ `...line`. Ό,τι δεν γράφεται εδώ δεν ταξιδεύει,
+ * άρα κάθε μελλοντικό πεδίο μένει κλειστό εξ ορισμού (ADR-923 §5.8: το στιγμιότυπο είναι τιμή ενός προμηθευτή και το RFQ φτάνει σε άλλους).
+ */
+export function toPublicRfqLine(line: PublicRfqLine): PublicRfqLine {
   return {
     id: line.id,
     description: line.description,
@@ -136,10 +157,11 @@ export function rfqLinesLocation(rfq: RfqLinesHolder): RfqLinesLocation {
  */
 export interface InternalRfqLine extends PublicRfqLine {
   estimateUnitPrice: number | null;
+  catalogRef?: SupplierSkuRef | null;
 }
 
 function toInternalRfqLine(line: RfqLine): InternalRfqLine {
-  return { ...toPublicRfqLine(line), estimateUnitPrice: line.unitPrice ?? null };
+  return { ...toPublicRfqLine(line), estimateUnitPrice: line.unitPrice ?? null, catalogRef: line.catalogRef ?? null };
 }
 
 /** A legacy inline line, made whole: its stored subset lacks `displayOrder` (array order IS the order). */
@@ -154,9 +176,9 @@ function legacyInlineToInternal(line: RfqLine, index: number): InternalRfqLine {
   };
 }
 
-/** Internal → vendor-safe: drops the estimate (the ONE place it is removed). */
-export function toPublicLine({ estimateUnitPrice: _estimate, ...line }: InternalRfqLine): PublicRfqLine {
-  return line;
+/** Internal → vendor-safe, through the ONE allowlist: the estimate and the requested SKU are simply not on it. */
+export function toPublicLine(line: InternalRfqLine): PublicRfqLine {
+  return toPublicRfqLine(line);
 }
 
 /**

@@ -14,7 +14,7 @@
 
 import type { QuoteLine } from '../../types/quote';
 import type { PublicRfqLine } from '../../types/rfq-line';
-import { applyRfqLineAuthority, checkRfqLineAnswers, inferRfqLineId, proposeRfqLineBindings, rfqBindingErrorKey, draftLinesForUnansweredRfqLines, type RfqLineAnswers } from '../rfq-line-binding';
+import { applyRfqLineAuthority, checkRfqLineAnswers, inferRfqLineId, proposeRfqLineBindings, rfqBindingErrorKey, draftLinesForUnansweredRfqLines, stampRequestedSku, toVendorQuoteLine, type RfqLineAnswers } from '../rfq-line-binding';
 
 const rfqLine = (id: string, description: string, categoryCode: string | null = null): PublicRfqLine => ({
   id, description, trade: 'demolition', categoryCode, quantity: 1, unit: 'pcs', notes: null, displayOrder: 0,
@@ -72,6 +72,34 @@ describe('applyRfqLineAuthority', () => {
     expect(bound.scopeResponses[0].description).toBe('Μεταφορά μπάζων');
     expect(bound.lines.map((l) => [l.description, l.categoryCode])).toEqual([['Καθαίρεση', 'ΟΙΚ-22'], ['πρόσθετο', null]]);
     expect(bound.alternates[0]).toMatchObject({ description: 'Άλλη μέθοδος', categoryCode: 'ΟΙΚ-22' });
+  });
+});
+
+describe('ADR-923 §5.8: το SKU της γραμμής RFQ', () => {
+  const SKU = { supplierCompanyId: 'comp-aries', variantId: 'var_1' };
+  const ASKED = [{ ...rfqLine('L1', 'Τσιμέντο'), catalogRef: SKU }, rfqLine('L2', 'Άμμος')];
+
+  it('Κ5α η βασική απάντηση παίρνει το SKU· πρόσθετη, εναλλακτική και γραμμή χωρίς SKU όχι', () => {
+    const bound = applyRfqLineAuthority(ASKED, answers({ lines: [line('L1'), line('L2'), line(null, 'πρόσθετο')], alternates: [line('L1', 'Άλλο προϊόν')] }));
+    expect(bound.lines[0].catalogRef).toEqual(SKU);
+    expect(bound.lines[1]).not.toHaveProperty('catalogRef');
+    expect(bound.lines[2]).not.toHaveProperty('catalogRef');
+    expect(bound.alternates[0]).not.toHaveProperty('catalogRef');
+  });
+
+  it('Κ5β ο PM παίρνει τον ίδιο κανόνα, ξαναπαραγμένο σε κάθε αποθήκευση', () => {
+    const stamped = stampRequestedSku([line('L1'), line(null, 'πρόσθετο')], ASKED);
+    expect(stamped[0].catalogRef).toEqual(SKU);
+    expect(stamped[1]).not.toHaveProperty('catalogRef');
+  });
+});
+
+describe('ADR-923 §5.8: προβολή γραμμής προσφοράς προς την πύλη', () => {
+  it('Κ5γ 🔒 λίστα επιτρεπόμενων: ούτε το SKU ούτε μελλοντικό πεδίο φεύγει', () => {
+    const stored = { ...line('L1'), catalogRef: { supplierCompanyId: 'comp-aries', variantId: 'var_1' }, futureInternalField: 'μυστικό' };
+    expect(Object.keys(toVendorQuoteLine(stored)).sort()).toEqual([
+      'categoryCode', 'description', 'id', 'lineTotal', 'notes', 'quantity', 'rfqLineId', 'unit', 'unitPrice', 'vatRate',
+    ]);
   });
 });
 
