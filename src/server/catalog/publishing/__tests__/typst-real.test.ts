@@ -53,7 +53,7 @@ function entry(index: number, imageAssetId: string | null = null): VariantModelE
   ];
   return {
     kind: 'variantModel', id: `m${index}`, title: `Μοντέλο ${index}`, descriptionHtml: '<p>Ηλεκτρομηχανολογικές εγκαταστάσεις υψηλότατης απόδοσης, με <strong>ελληνικό</strong> συλλαβισμό.</p>',
-    imageAssetId, preview: { columns, hiddenColumns: 0, rows }, priceRowIds: new Set(), listingKind: 'product',
+    imageAssetId, preview: { columns, hiddenColumns: 0, rows }, tableOverflow: 'continue', priceRowIds: new Set(), listingKind: 'product',
     codes: [{ code: `C-${index}`, label: `Μοντέλο ${index}` }],
   };
 }
@@ -134,6 +134,25 @@ function dimensionsDocument() {
   const table: VariantModelEntry = { ...entry(1), preview: { columns, hiddenColumns: 0, rows } };
   return composePublication({
     recipe, title: 'Διαστάσεις', footer: 'Υποσέλιδο', chapters: [{ id: 'a', title: 'Fan coil', entries: [table] }],
+    words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
+  });
+}
+
+/** Δώδεκα παραλλαγές που δεν χωρούν: η οικογένεια δηλώνει αναστροφή, με ομάδες, μία συγχώνευση και φαρδιές διαστάσεις. */
+function transposedDocument() {
+  const twelve = (text: (index: number) => string) => Array.from({ length: 12 }, (_, index) => text(index));
+  const attribute = (id: string, label: string, merge: 'none' | 'all', cells: readonly string[]): PreviewRow => ({ kind: 'attribute', id, label, unit: 'kW', filter: null, merge, cells });
+  const rows: PreviewRow[] = [
+    { kind: 'axis', id: 'size', label: 'Μέγεθος', cells: twelve((index) => `MFP-${index + 1}`) },
+    { kind: 'groupHeader', id: 'cool', label: 'Ψύξη' },
+    attribute('total', 'Συνολική ψυκτική ισχύς', 'none', twelve((index) => `${index + 1},5`)),
+    attribute('voltage', 'Τροφοδοσία', 'all', twelve(() => '230V-50Hz-1Ph')),
+    { kind: 'groupHeader', id: 'size-group', label: 'Διαστάσεις' },
+    attribute('dimensions', 'Διαστάσεις', 'none', twelve((index) => SEVEN_DIMENSIONS[index % SEVEN_DIMENSIONS.length])),
+  ];
+  const table: VariantModelEntry = { ...entry(1), tableOverflow: 'transpose', preview: { columns: Array.from({ length: 12 }, () => new Map<string, string>()), hiddenColumns: 0, rows } };
+  return composePublication({
+    recipe, title: 'Αναστροφή', footer: 'Υποσέλιδο', chapters: [{ id: 'a', title: 'Fan coil', entries: [table] }],
     words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
   });
 }
@@ -274,6 +293,14 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
     const runs = readLayoutInChildProcess(bytes).flatMap((page) => page.runs).filter((run) => /x596x/.test(run.text));
     expect(runs.map((run) => run.text).sort()).toEqual([...SEVEN_DIMENSIONS].sort());
     expect(new Set(runs.map((run) => Math.hypot(run.transform[0], run.transform[1]).toFixed(2))).size).toBe(1);
+  }, 60_000);
+
+  it('🔴 ανεστραμμένος πίνακας: ένα μπλοκ, χωρίς επικάλυψη, χωρίς κομμένο ή μικροσκοπικό κείμενο', async () => {
+    const document = transposedDocument();
+    const tables = document.sections.flatMap((section) => section.blocks).filter((block) => block.kind === 'table');
+    expect(tables).toHaveLength(1);
+    const { bytes } = await renderPublicationPdf({ ...input, document }, 'screen');
+    expect(judgePublicationLayout(readLayoutInChildProcess(bytes), 0)).toMatchObject({ overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 });
   }, 60_000);
 
   it('🔑 εκτύπωση: TrimBox = A4, μέσα σε σελίδα μεγαλωμένη κατά το bleed', async () => {

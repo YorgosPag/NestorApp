@@ -15,6 +15,7 @@
  */
 
 import { mergeRowCells, type PreviewRow, type TablePreview } from '../table/catalog-table';
+import type { TableOverflowMode } from '../types/family';
 import type { LayoutCell, LayoutTable, LayoutTableRow } from './layout-model';
 import { withBreakHints } from './layout-text';
 import { PUBLICATION_LIMITS, PUBLICATION_NO_VALUE, type TableGroupStyle } from './publication-vocabulary';
@@ -24,6 +25,9 @@ export interface LayoutTableOptions {
   readonly caption: string;
   readonly groupStyle: TableGroupStyle;
   readonly maxValueColumns: number;
+  /** Πόσες στήλες χωρούν ανεστραμμένες: χωρίς στήλη ομάδας, γιατί οι ομάδες ανεβαίνουν στην κεφαλίδα. */
+  readonly maxTransposedColumns: number;
+  readonly overflow: TableOverflowMode;
   readonly labelColumnMm: number;
   readonly railColumnMm: number;
   /** Οι κωδικοί στηλών που είναι **τιμές** (`id` γραμμής): άλλος ρόλος, άλλη όψη· ποτέ υπολογισμός από το κείμενο. */
@@ -31,6 +35,7 @@ export interface LayoutTableOptions {
 }
 
 type AttributeRow = Extract<PreviewRow, { kind: 'attribute' }>;
+type AxisRow = Extract<PreviewRow, { kind: 'axis' }>;
 
 const cell = (text: string, role: LayoutCell['role'], colSpan = 1, rowSpan = 1): LayoutCell => ({ text, role, colSpan, rowSpan });
 
@@ -142,11 +147,79 @@ function buildPart(preview: TablePreview, range: readonly [number, number], opti
   };
 }
 
+// ── Αναστροφή (§5.6): παραλλαγή = γραμμή, ιδιότητα = στήλη ──────────────────────
+
+/** Η ετικέτα γραμμής της παραλλαγής `index`: οι τιμές των αξόνων, από την πρώτη εμφάνιση κάθε άξονα. */
+function variantLabel(axes: readonly AxisRow[], index: number): string {
+  return axes.map((axis) => axis.cells[index] ?? '').join(' · ');
+}
+
+function distinctAxes(rows: readonly PreviewRow[]): AxisRow[] {
+  const byLabel = new Map<string, AxisRow>();
+  for (const row of rows) if (row.kind === 'axis' && !byLabel.has(row.label)) byLabel.set(row.label, row);
+  return [...byLabel.values()];
+}
+
+/** Η γραμμή ομάδων πάνω από τις στήλες. Όχι `groupBand`: εκείνος ο ρόλος πιάνει όλο το πλάτος στο πρότυπο. */
+function groupHeadRow(groups: readonly RowGroup[], id: string): LayoutTableRow | null {
+  const spans = groups.flatMap((group) => {
+    const span = group.rows.filter((row) => row.kind === 'attribute').length;
+    return span > 0 ? [{ label: group.head?.label ?? '', span }] : [];
+  });
+  if (!spans.some((item) => item.label !== '')) return null;
+  return { id: `${id}-groups`, header: true, cells: [cell('', 'corner'), ...spans.map((item) => cell(item.label, 'columnHead', item.span))] };
+}
+
+/** Τα κελιά μιας στήλης, ανά γραμμή: τα κατειλημμένα από `rowSpan` μένουν απόντα, όπως στη στήλη ομάδας. */
+function columnCells(row: AttributeRow, variants: number, priceRow: boolean): (readonly LayoutCell[])[] {
+  const values = Array.from({ length: variants }, (_, index) => row.cells?.[index] ?? '');
+  const column: LayoutCell[][] = values.map(() => []);
+  const role = priceRow ? 'price' : 'value';
+  let start = 0;
+  for (const segment of evenSegments(values, PUBLICATION_LIMITS.maxRailRowsPerSegment)) {
+    let at = start;
+    for (const run of mergeRowCells(row.merge, segment)) {
+      column[at] = [cell(run.text === '' ? PUBLICATION_NO_VALUE : withBreakHints(run.text), role, 1, run.span)];
+      at += run.span;
+    }
+    start += segment.length;
+  }
+  return column;
+}
+
+/**
+ * Ο πίνακας ανεστραμμένος, ή `null` όταν η αναστροφή δεν λύνει το πρόβλημα: όταν λείπει άξονας ή όταν οι ιδιότητες δεν
+ * χωρούν ούτε αυτές. Τότε ισχύει η συνέχεια, γιατί ένας πίνακας που βγαίνει έξω από το χαρτί δεν είναι επιλογή.
+ */
+function transposedTable(preview: TablePreview, options: LayoutTableOptions): LayoutTable | null {
+  const attributes = preview.rows.filter((row): row is AttributeRow => row.kind === 'attribute');
+  const axes = distinctAxes(preview.rows);
+  if (axes.length === 0 || attributes.length === 0 || attributes.length > options.maxTransposedColumns) return null;
+  const variants = preview.columns.length;
+  const columns = attributes.map((row) => columnCells(row, variants, options.priceRowIds.has(row.id)));
+  const heads = attributes.map((row) => cell(withBreakHints(rowLabel(row)), 'columnHead'));
+  const groups = groupHeadRow(groupRows(preview.rows), options.id);
+  const header: LayoutTableRow = { id: `${options.id}-head`, header: true, cells: [cell(axes.map((axis) => axis.label).join(' · '), 'corner'), ...heads] };
+  const body = Array.from({ length: variants }, (_, index): LayoutTableRow => ({
+    id: `${options.id}-v${index}`,
+    header: false,
+    cells: [cell(withBreakHints(variantLabel(axes, index)), 'rowHead'), ...columns.flatMap((column) => column[index])],
+  }));
+  return {
+    id: options.id, caption: options.caption, columnCount: attributes.length + 1, railColumn: false,
+    labelColumnMm: options.labelColumnMm, railColumnMm: options.railColumnMm, part: 1, parts: 1,
+    rows: [...(groups ? [groups] : []), header, ...body],
+  };
+}
+
 /**
  * Ο πίνακας ως **ένα ή περισσότερα** μπλοκ. Στη σελίδα ο μηχανικός διαβάζει κάθε μπλοκ μόνο του: οι ετικέτες γραμμών και
  * οι ομάδες επαναλαμβάνονται σε κάθε συνέχεια, αλλιώς οι στήλες 9–12 θα ήταν αριθμοί χωρίς νόημα.
+ * 🔑 Η αναστροφή τρέχει μόνο όταν χρειάζεται: πίνακας που χωρά μένει όπως τον δήλωσε η οικογένεια.
  */
 export function layoutTables(preview: TablePreview, options: LayoutTableOptions): LayoutTable[] {
   const chunks = columnChunks(preview.columns.length, options.maxValueColumns);
+  const transposed = chunks.length > 1 && options.overflow === 'transpose' ? transposedTable(preview, options) : null;
+  if (transposed) return [transposed];
   return chunks.map((range, index) => buildPart(preview, range, options, [index + 1, chunks.length]));
 }

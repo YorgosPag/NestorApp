@@ -11,6 +11,14 @@ describe('zod body schemas', () => {
     expect(familyDefinitionSchema.parse(MFP_FAMILY)).toEqual(MFP_FAMILY);
   });
 
+  it('🔑 η δήλωση υπερχείλισης του πίνακα: έγκυρη τιμή περνά, παλιά εγγραφή χωρίς πεδίο μένει ίδια, άγνωστη τιμή απορρίπτεται', () => {
+    const spec = { variantSchemeCode: 'by_size', rows: [] };
+    const family = { ...MFP_FAMILY, tableSpec: spec };
+    expect(familyDefinitionSchema.parse(family).tableSpec).toEqual(spec);
+    expect(familyDefinitionSchema.parse({ ...family, tableSpec: { ...spec, overflow: 'transpose' } }).tableSpec?.overflow).toBe('transpose');
+    expect(familyDefinitionSchema.safeParse({ ...family, tableSpec: { ...spec, overflow: 'rotate' } }).success).toBe(false);
+  });
+
   it('normalizes labels and fills mapping defaults', () => {
     const parsed = attributeDefinitionSchema.parse({ ...MFP_ATTRIBUTES[0], labels: { el: '  Κωδικός ', pseudo: 'x' }, mappings: {} });
     expect(parsed.labels).toEqual({ el: 'Κωδικός' });

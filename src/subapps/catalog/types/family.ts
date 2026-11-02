@@ -73,11 +73,21 @@ export type FamilyTableRow =
       readonly merge: TableRowMergeMode;
     };
 
+/** Τι γίνεται όταν οι παραλλαγές δεν χωρούν στο πλάτος: συνέχεια σε νέο μπλοκ, ή αναστροφή αξόνων (§5.6). */
+export const TABLE_OVERFLOW_MODES = ['continue', 'transpose'] as const;
+export type TableOverflowMode = (typeof TABLE_OVERFLOW_MODES)[number];
+export const DEFAULT_TABLE_OVERFLOW: TableOverflowMode = 'continue';
+
 export interface FamilyTableSpec {
   /** Το σχήμα παραλλαγών που δίνει τις **στήλες** του πίνακα. */
   readonly variantSchemeCode: string;
   readonly rows: readonly FamilyTableRow[];
+  /** Έλλειψη = `continue`: διάβαζε **μόνο** με το `tableOverflowOf`. */
+  readonly overflow?: TableOverflowMode;
 }
+
+export const tableOverflowOf = (spec: Pick<FamilyTableSpec, 'overflow'> | null): TableOverflowMode =>
+  spec?.overflow ?? DEFAULT_TABLE_OVERFLOW;
 
 // ── Κανόνες συνέπειας (Φάση 0 §21.3: πιάνουν κάθε μετατόπιση γραμμής της AI) ─
 
