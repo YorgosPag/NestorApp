@@ -154,6 +154,5 @@ export interface DialogEntityProps extends SmartDialogProps {
   onContactsDeleted?: () => void;
   onContactsArchived?: () => void;
   onPropertyAdded?: () => void;
-  onTaskCreated?: () => void;
   onCompanySelected?: (contact: Record<string, unknown>) => void;
 }

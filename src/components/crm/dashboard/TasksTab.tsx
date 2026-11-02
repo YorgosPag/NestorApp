@@ -11,7 +11,6 @@ import { useRealtimeTasks } from '@/services/realtime';
 import { Clock } from 'lucide-react';
 import { isPast, isToday, isTomorrow } from 'date-fns';
 import { useNotifications } from '@/providers/NotificationProvider';
-import CreateTaskModal from './dialogs/CreateTaskModal';
 import { TaskEditDialog } from './dialogs/TaskEditDialog';
 import type { CrmTask, Opportunity } from '@/types/crm';
 import type { AppointmentDocument } from '@/types/appointment';
@@ -55,7 +54,6 @@ interface TaskMetadata {
 interface TasksTabProps {
   /** Centralized filters from AdvancedFiltersPanel (page level). Uses defaults if not provided. */
   filters?: TaskFilterState;
-  onTaskCreated?: () => void;
   /** Legacy: passed from GenericCRMDashboardTabsRenderer */
   selectedPeriod?: string;
   /** Appointments to merge into the unified activity list */
@@ -72,7 +70,7 @@ interface TasksTabProps {
   onCountChange?: (count: number) => void;
 }
 
-export function TasksTab({ filters: externalFilters, onTaskCreated, appointments, externalLeads, externalTasks, selectionMode = false, selectedActivityId, onSelectActivity, onCountChange }: TasksTabProps) {
+export function TasksTab({ filters: externalFilters, appointments, externalLeads, externalTasks, selectionMode = false, selectedActivityId, onSelectActivity, onCountChange }: TasksTabProps) {
   // 🏢 ENTERPRISE: Use externally provided filters or defaults
   const filters = externalFilters ?? defaultTaskFilters;
   const { success, error: notifyError } = useNotifications();
@@ -262,7 +260,6 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
           />
         ))
       )}
-      <CreateTaskModal isOpen={false} onClose={() => {}} onTaskCreated={() => { onTaskCreated?.(); }} />
       {editingTask && (
         <TaskEditDialog
           task={editingTask}

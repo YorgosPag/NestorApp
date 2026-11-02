@@ -284,6 +284,7 @@ sections.calendar.*         -> CRM landing page card
 | 2026-03-14 | Fix: CalendarSidebar mini calendar `required` prop — prevent deselect in react-day-picker v9 | Claude Code |
 | 2026-03-14 | Feature: Edit button in CalendarEventDialog → opens TaskEditDialog for task-source events | Claude Code |
 | 2026-03-14 | Cleanup: TaskEditDialog remove hardcoded defaultValue Greek strings, add proper i18n keys | Claude Code |
+| 2026-11-03 | Fix: η «Νέα Εργασία» του lead έδειχνε το placeholder του `createSmartDialog` και **δεν αποθήκευε τίποτα**. Το `CreateTaskModal` διαγράφηκε· η σελίδα του lead ανοίγει το `CalendarCreateDialog` (`dialogTitle` + `leadId` + `initialContactId`), που είναι πλέον η ΜΙΑ φόρμα δημιουργίας εργασίας. Το μήνυμα επιτυχίας έγινε `tasks.messages.created` (έλεγε απλώς «Αποθήκευση»). Αφαιρέθηκε το αόρατο `CreateTaskModal` (`isOpen={false}`) του `TasksTab` | Claude Code |
 
 ---
 

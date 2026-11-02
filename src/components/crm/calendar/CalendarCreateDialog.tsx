@@ -4,6 +4,8 @@
  * =============================================================================
  *
  * Dialog for creating a new calendar event (creates a CrmTask via TasksService).
+ * Η ΜΙΑ φόρμα δημιουργίας εργασίας: την ανοίγει και η σελίδα του lead, δένοντας
+ * την εργασία μέσω `leadId` (ADR-089).
  * Uses Radix Dialog + Radix Select (per ADR-001).
  * All values from centralized design system hooks — zero hardcoded values.
  *
@@ -80,6 +82,12 @@ interface CalendarCreateDialogProps {
   initialDate?: Date;
   /** Callback after successful creation */
   onCreated?: () => void;
+  /** Τίτλος παραθύρου, μεταφρασμένος από τον καταναλωτή. Προεπιλογή: ο τίτλος του ημερολογίου. */
+  dialogTitle?: string;
+  /** Το lead στο οποίο δένεται η εργασία — χωρίς αυτό δεν φαίνεται στη σελίδα του lead. */
+  leadId?: string;
+  /** Προεπιλεγμένη επαφή, επανέρχεται σε κάθε άνοιγμα. */
+  initialContactId?: string;
 }
 
 // ============================================================================
@@ -91,6 +99,9 @@ export function CalendarCreateDialog({
   onOpenChange,
   initialDate,
   onCreated,
+  dialogTitle,
+  leadId,
+  initialContactId = '',
 }: CalendarCreateDialogProps) {
   const { t } = useTranslation('crm');
   const { success, error: notifyError } = useNotifications();
@@ -102,7 +113,7 @@ export function CalendarCreateDialog({
   const [time, setTime] = useState('09:00');
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [reminderOffset, setReminderOffset] = useState<ReminderOffset>('none');
-  const [contactId, setContactId] = useState<string>('');
+  const [contactId, setContactId] = useState<string>(initialContactId);
   const [projectId, setProjectId] = useState<string>('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -131,7 +142,7 @@ export function CalendarCreateDialog({
     setTime('09:00');
     setEndDate(undefined);
     setReminderOffset('none');
-    setContactId('');
+    setContactId(initialContactId);
     setProjectId('');
     setDescription('');
   };
@@ -145,7 +156,7 @@ export function CalendarCreateDialog({
       }
     }
     // resetForm is stable within render -- intentionally omitted from deps
-  }, [open, initialDate]);
+  }, [open, initialDate, initialContactId]);
 
   const handleSubmit = async () => {
     if (!title.trim() || !date) return;
@@ -173,9 +184,10 @@ export function CalendarCreateDialog({
         contactId: contactId || null,
         projectId: projectId || null,
         reminderDate,
+        ...(leadId ? { leadId } : {}),
       });
 
-      success(t('calendarPage.dialog.actions.save'));
+      success(t('tasks.messages.created', { title: title.trim() }));
       resetForm();
       onOpenChange(false);
       onCreated?.();
@@ -192,7 +204,7 @@ export function CalendarCreateDialog({
       open={open}
       onOpenChange={onOpenChange}
       icon={Plus}
-      title={t('calendarPage.dialog.createTitle')}
+      title={dialogTitle ?? t('calendarPage.dialog.createTitle')}
       onSubmit={handleSubmit}
       submitting={submitting}
       submitDisabled={!title.trim()}

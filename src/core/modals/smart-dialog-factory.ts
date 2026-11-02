@@ -171,8 +171,6 @@ function handlePrimaryAction(
     props.onContactsArchived();
   } else if (props.onPropertyAdded) {
     props.onPropertyAdded();
-  } else if (props.onTaskCreated) {
-    props.onTaskCreated();
   } else if (props.onCompanySelected && props.contact) {
     props.onCompanySelected(props.contact);
   }

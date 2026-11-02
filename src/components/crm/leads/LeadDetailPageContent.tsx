@@ -17,7 +17,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 import CommunicationsHistory from '@/components/CommunicationsHistory';
 import SendEmailModal from '@/components/email/SendEmailModal';
-import CreateTaskModal from '@/components/crm/dashboard/dialogs/CreateTaskModal';
+import { CalendarCreateDialog } from '@/components/crm/calendar/CalendarCreateDialog';
 import { EditOpportunityModal } from '@/components/crm/dashboard/EditOpportunityModal';
 
 import { ContactCard } from './lead-detail/ContactCard';
@@ -148,11 +148,13 @@ export function LeadDetailPageContent() {
           onLeadUpdated={handleLeadUpdated}
         />
       )}
-      <CreateTaskModal
-        isOpen={showTaskModal}
-        onClose={() => setShowTaskModal(false)}
-        onTaskCreated={handleTaskCreated}
-        preselectedLead={lead}
+      <CalendarCreateDialog
+        open={showTaskModal}
+        onOpenChange={setShowTaskModal}
+        onCreated={handleTaskCreated}
+        dialogTitle={t('tasks.newTask')}
+        leadId={id}
+        initialContactId={lead.contactId}
       />
     </>
   );
