@@ -64,7 +64,6 @@ interface UseContactDetailsControllerResult {
   handleSaveEdit: () => Promise<void>;
   handleSelectChange: (name: string, value: string) => void;
   handleStartEdit: () => void;
-  handleUnitAdded: () => void;
   handleUploadedLogoURL: (logoURL: string) => void;
   handleUploadedPhotoURL: (photoURL: string) => void;
   handleFileChange: (file: File | null) => void;
@@ -464,8 +463,6 @@ export function useContactDetailsController({
     }
   }, [contact, photoModal]);
 
-  const handleUnitAdded = useCallback(() => { /* refresh on unit add */ }, []);
-
   return {
     activeTab,
     contactGuardDialogs,
@@ -482,7 +479,6 @@ export function useContactDetailsController({
     handleSaveEdit,
     handleSelectChange,
     handleStartEdit,
-    handleUnitAdded,
     handleUploadedLogoURL,
     handleUploadedPhotoURL,
     isEditing,

@@ -51,7 +51,7 @@ export function useOpportunities() {
           const opportunityData: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'> = {
               title: data.title || '',
               contactId: data.contactId || '',
-              assignedTo: data.assignedTo || process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'current-user-id',
+              assignedTo: data.assignedTo || '', // κενό ⇒ ο δημιουργός, από το `addOpportunity`
               status: data.status || 'active',
               stage: data.stage || 'initial_contact',
               lastActivity: data.lastActivity || new Date(),

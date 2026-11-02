@@ -1,14 +1,12 @@
 'use client';
 
 import '@/lib/design-system';
-import React from 'react';
 import { Users } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PersonaType } from '@/types/contacts/personas';
 import { DetailsContainer } from '@/core/containers';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
-import { AddPropertyToContactDialog } from './AddPropertyToContactDialog';
 import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { ContactNameReviewNotice } from './ContactNameReviewNotice';
 import { useContactDetailsController } from './contact-details/useContactDetailsController';
@@ -24,7 +22,6 @@ export function ContactDetails({
   readOnly = false,
 }: ContactDetailsProps) {
   const { t } = useTranslation('contacts');
-  const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
   const {
     activeTab,
     contactGuardDialogs,
@@ -41,7 +38,6 @@ export function ContactDetails({
     handleSaveEdit,
     handleSelectChange,
     handleStartEdit,
-    handleUnitAdded,
     handleUploadedLogoURL,
     handleUploadedPhotoURL,
     isEditing,
@@ -119,15 +115,6 @@ export function ContactDetails({
           onFieldBlur={isEditing ? handleFieldBlur : undefined}
         />
       </DetailsContainer>
-
-      {contact?.id && (
-        <AddPropertyToContactDialog
-          open={isAddUnitDialogOpen}
-          onOpenChange={setIsAddUnitDialogOpen}
-          contactId={contact.id}
-          onPropertyAdded={handleUnitAdded}
-        />
-      )}
 
       {contactGuardDialogs}
     </ContactEditFocusProvider>

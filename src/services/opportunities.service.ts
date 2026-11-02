@@ -19,7 +19,7 @@ import {
   type DocumentData,
 } from 'firebase/firestore';
 import { generateOpportunityId } from '@/services/enterprise-id.service';
-import { firestoreQueryService } from '@/services/firestore';
+import { firestoreQueryService, resolveEffectiveCompanyId } from '@/services/firestore';
 import type { Opportunity } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withIsoDateFields } from '@/lib/date-local';
@@ -76,14 +76,29 @@ export async function getOpportunityById(id: string): Promise<Opportunity | null
 
 // --- WRITE methods: unchanged ---
 
-/** Προσθήκη νέας ευκαιρίας */
+/**
+ * Προσθήκη νέας ευκαιρίας.
+ *
+ * Η εταιρεία βγαίνει από τον ενεργό χώρο, όχι από τον καλούντα: ο κανόνας `crmCanCreate`
+ * απορρίπτει έγγραφο χωρίς `companyId`, και χωρίς αυτό το πεδίο καμία ευκαιρία δεν
+ * περνούσε από εδώ.
+ */
 export async function addOpportunity(opportunityData: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ id: string; success: boolean }> {
   try {
+    const ctx = await firestoreQueryService.requireAuthContext();
+    const companyId = resolveEffectiveCompanyId(ctx) ?? ctx.companyId;
+    if (!companyId) {
+      throw new Error('VALIDATION_ERROR: companyId is required to create an opportunity');
+    }
+
     // ADR-210: Enterprise ID generation — setDoc with pre-generated ID
     const id = generateOpportunityId();
     await setDoc(doc(db, OPPORTUNITIES_COLLECTION, id), {
       ...opportunityData,
+      assignedTo: opportunityData.assignedTo || ctx.uid,
       id,
+      companyId,
+      createdBy: ctx.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

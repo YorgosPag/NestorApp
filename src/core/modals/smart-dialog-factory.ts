@@ -37,9 +37,15 @@ const logger = createModuleLogger('SmartDialogFactory');
 // SMART DIALOG COMPONENT FACTORY
 // =============================================================================
 
+/**
+ * Μόνο πράξεις επιβεβαίωσης. Το factory δεν έχει πεδία φόρμας, άρα μια πράξη `create`
+ * ή `edit` θα έδειχνε κουμπί που δεν αποθηκεύει τίποτα (ADR-251): ο τύπος την κλείνει.
+ */
+type SmartDialogConfirmOperation = Extract<DialogOperationType, 'delete' | 'archive'>;
+
 export function createSmartDialog(config: {
   entityType: DialogEntityType;
-  operationType: DialogOperationType;
+  operationType: SmartDialogConfirmOperation;
   copyVariant?: DialogCopyVariant;
   configurationOverrides?: Partial<SmartDialogConfiguration>;
   props?: SmartDialogProps;
@@ -114,7 +120,7 @@ export function createSmartDialog(config: {
 
 function getContentForEntity(
   entityType: DialogEntityType,
-  operationType: DialogOperationType,
+  operationType: SmartDialogConfirmOperation,
   props: DialogEntityProps,
   dialogConfig: SmartDialogConfiguration
 ): React.ReactElement {
@@ -126,27 +132,14 @@ function getContentForEntity(
     );
   }
 
-  if (operationType === 'delete' || operationType === 'archive') {
-    const operationTitle = i18n.t(`dialogs.operations.${operationType}.title`, { ns: 'common' });
-    const entitySingular = i18n.t(`dialogs.entities.${entityType}.singular`, { ns: 'common' });
-    const entityDisplayName = getEntityDisplayName(props);
-
-    return React.createElement(
-      'div',
-      { className: 'text-center py-4' },
-      `${operationTitle} ${entitySingular.toLowerCase()} - ${entityDisplayName}`
-    );
-  }
+  const operationTitle = i18n.t(`dialogs.operations.${operationType}.title`, { ns: 'common' });
+  const entitySingular = i18n.t(`dialogs.entities.${entityType}.singular`, { ns: 'common' });
+  const entityDisplayName = getEntityDisplayName(props);
 
   return React.createElement(
     'div',
-    { className: 'space-y-4' },
-    React.createElement(
-      'p',
-      { className: 'text-muted-foreground' },
-      // eslint-disable-next-line custom/no-hardcoded-strings
-      `Smart Factory form για ${entityType} ${operationType} - Configuration από Smart Dialog Engine`
-    )
+    { className: 'text-center py-4' },
+    `${operationTitle} ${entitySingular.toLowerCase()} - ${entityDisplayName}`
   );
 }
 
@@ -156,7 +149,7 @@ function getContentForEntity(
 
 function handlePrimaryAction(
   entityType: DialogEntityType,
-  operationType: DialogOperationType,
+  operationType: SmartDialogConfirmOperation,
   props: DialogEntityProps
 ): void {
   logger.info(`Smart Factory: ${operationType} ${entityType}`);

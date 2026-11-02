@@ -1,31 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { updateOpportunityWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Opportunity } from '@/types/crm';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { OpportunityFormDialog } from './dialogs/OpportunityFormDialog';
 import '@/lib/design-system';
-import { pickChangedOpportunityFields, STAGE_IDS } from '../utils/opportunity-utils';
-import { OpportunityContactField, type OpportunityContactValue } from './OpportunityContactField';
-import { OpportunityDealFields } from './OpportunityDealFields';
+import { pickChangedOpportunityFields } from '../utils/opportunity-utils';
 
 const logger = createModuleLogger('EditOpportunityModal');
 
@@ -36,42 +19,15 @@ interface EditOpportunityModalProps {
   onLeadUpdated: () => void;
 }
 
-type OpportunityStage = Opportunity['stage'];
-
-const EMPTY_FORM_DATA: Partial<Opportunity> = {};
-
 export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdated }: EditOpportunityModalProps) {
-  const iconSizes = useIconSizes();
-  // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('crm');
-  const [formData, setFormData] = useState<Partial<Opportunity>>(EMPTY_FORM_DATA);
-  const [loading, setLoading] = useState(false);
   const notifications = useNotifications();
 
-  useEffect(() => {
-    if (isOpen && opportunity) {
-      setFormData(opportunity);
-    } else {
-      setFormData(EMPTY_FORM_DATA);
-    }
-  }, [isOpen, opportunity]);
-
-  const handleClose = useCallback(() => {
-    setFormData(EMPTY_FORM_DATA);
-    onClose();
-  }, [onClose]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loading || !opportunity?.id) return;
+  const handleSave = async (formData: Partial<Opportunity>) => {
+    if (!opportunity?.id) return;
 
     const updates = pickChangedOpportunityFields(opportunity, formData);
-    if (Object.keys(updates).length === 0) {
-      handleClose();
-      return;
-    }
-
-    setLoading(true);
+    if (Object.keys(updates).length === 0) return;
 
     try {
       await updateOpportunityWithPolicy({
@@ -80,111 +36,20 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
       });
       notifications.success(t('opportunities.editModal.messages.success'));
       onLeadUpdated();
-      handleClose();
     } catch (error) {
       notifications.error(t('opportunities.editModal.messages.error'));
       logger.error('Error updating opportunity', { error });
-    } finally {
-      setLoading(false);
+      throw error;
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-  
-  const handleSelectChange = (name: keyof Opportunity, value: OpportunityStage) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  }
-
-  const handleFieldChange = useCallback((field: keyof Opportunity, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  // Νέος πελάτης: όνομα και `contactId` μαζί· email/τηλέφωνο μόνο αν τα έχει η επαφή.
-  const handleContactChange = useCallback((value: OpportunityContactValue) => {
-    setFormData(prev => ({
-      ...prev,
-      fullName: value.fullName,
-      contactId: value.contactId,
-      email: value.email ?? prev.email,
-      phone: value.phone ?? prev.phone,
-    }));
-  }, []);
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t('opportunities.editModal.title')}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <OpportunityContactField
-            fullName={formData.fullName ?? ''}
-            contactId={formData.contactId}
-            disabled={loading}
-            onChange={handleContactChange}
-          />
-          {formData.contactId ? (
-            <p className="text-sm text-muted-foreground">{t('opportunities.editModal.linkedContactHint')}</p>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('opportunities.editModal.labels.email')}</Label>
-                <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleChange} required disabled={loading} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">{t('opportunities.editModal.labels.phone')}</Label>
-                <Input id="phone" name="phone" value={formData.phone || ''} onChange={handleChange} disabled={loading} />
-              </div>
-            </>
-          )}
-          <OpportunityDealFields
-            values={formData}
-            disabled={loading}
-            onTextChange={handleFieldChange}
-            onNumberChange={handleFieldChange}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="stage">{t('opportunities.editModal.labels.stage')}</Label>
-            <Select
-              name="stage"
-              value={formData.stage ?? undefined}
-              onValueChange={(value) => handleSelectChange('stage', value as OpportunityStage)}
-              disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('opportunities.editModal.labels.stagePlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {STAGE_IDS.map(stageId => (
-                  <SelectItem key={stageId} value={stageId}>{t(`opportunities.stages.${stageId}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">{t('opportunities.editModal.labels.notes')}</Label>
-            <Textarea id="notes" name="notes" value={formData.notes || ''} onChange={handleChange} disabled={loading} />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={handleClose} disabled={loading}>{t('opportunities.editModal.buttons.cancel')}</Button>
-            <Button type="submit" disabled={loading || !formData.fullName?.trim()}>
-              {loading ? (
-                <>
-                  <Spinner size="small" color="inherit" className="mr-2" />
-                  {t('opportunities.editModal.buttons.saving')}
-                </>
-              ) : (
-                <>
-                  <Save className={`mr-2 ${iconSizes.sm}`} />
-                  {t('opportunities.editModal.buttons.save')}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <OpportunityFormDialog
+      title={t('opportunities.editModal.title')}
+      open={isOpen}
+      onClose={onClose}
+      initialData={opportunity}
+      onSave={handleSave}
+    />
   );
 }

@@ -1,22 +1,17 @@
 /**
- * 🏢 CREATE TASK MODAL - SMART FACTORY IMPLEMENTATION
+ * Νέα εργασία από την καρτέλα lead.
  *
- * ENTERPRISE-CLASS: 88% code reduction using Smart Dialog Engine
+ * Λεπτό περίβλημα του `CalendarCreateDialog`, που είναι το SSoT δημιουργίας εργασίας:
+ * εδώ ζει μόνο η μετάφραση των props της καρτέλας και το δέσιμο με το lead.
  *
- * ✅ CENTRALIZED: Smart Dialog Engine (800 lines)
- * ✅ CENTRALIZED: Task types და priority configuration
- * ✅ ZERO hardcoded values, ZERO duplicates, ZERO manual state
- * ✅ Enterprise task management patterns
- *
- * @created 2025-12-27 - Smart Factory Conversion
- * @author Claude AI Assistant (Enterprise Standards)
- * @version 2.0.0 - Smart Factory Pattern
+ * @module components/crm/dashboard/dialogs/CreateTaskModal
+ * @see ADR-251
  */
 
 'use client';
 
-import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
-import type { CrmTask, Opportunity } from '@/types/crm';
+import { CalendarCreateDialog, type TaskLeadLink } from '@/components/crm/calendar/CalendarCreateDialog';
+import type { Opportunity } from '@/types/crm';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -25,40 +20,25 @@ interface CreateTaskModalProps {
   preselectedLead?: Opportunity | null;
 }
 
-/**
- * 🎯 Smart Factory Dialog - 88% CODE REDUCTION
- *
- * WAS: 266 lines με complex state, hardcoded task types, manual validation
- * NOW: 12 lines configuration με centralized systems
- *
- * ELIMINATED:
- * - taskTypes array με hardcoded values (62 lines)
- * - Complex useEffect logic (40+ lines)
- * - Manual form state management (50+ lines)
- * - Manual validation και error handling (30+ lines)
- */
-export default function CreateTaskModal(props: CreateTaskModalProps) {
-  return createSmartDialog({
-    entityType: 'task',
-    operationType: 'create',
-    props: {
-      ...props,
-      // Mapping modal props to dialog props
-      open: props.isOpen,
-      onOpenChange: (open: boolean) => {
-        if (!open) {
-          props.onClose();
-        }
-      },
-      // 🏢 ENTERPRISE: Type conversion - SmartDialogEngine provides generic Record<string, unknown>
-      onSubmit: async (data?: Record<string, unknown>) => {
-        // Type assertion for type safety - we know data is Partial<CrmTask> from Smart Factory
-        const taskData = data as Partial<CrmTask>;
-        // Smart Factory handles task creation με leads linking
-        if (props.onTaskCreated) {
-          props.onTaskCreated();
-        }
-      }
-    }
-  });
+function toLeadLink(lead: Opportunity | null | undefined): TaskLeadLink | undefined {
+  if (!lead?.id) return undefined;
+  return { id: lead.id, companyId: lead.companyId, contactId: lead.contactId };
+}
+
+export default function CreateTaskModal({
+  isOpen,
+  onClose,
+  onTaskCreated,
+  preselectedLead,
+}: CreateTaskModalProps) {
+  return (
+    <CalendarCreateDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      onCreated={onTaskCreated}
+      lead={toLeadLink(preselectedLead)}
+    />
+  );
 }

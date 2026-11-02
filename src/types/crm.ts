@@ -9,6 +9,7 @@ export type FirestoreishTimestamp = Date | string | { toDate(): Date };
 // Main Opportunity/Lead type
 export interface Opportunity {
   id?: string;
+  companyId?: string; // Tenant isolation — απαιτείται από τον κανόνα `crmCanCreate`
   title: string;
   contactId: string; // Ref to contacts collection
   fullName?: string;

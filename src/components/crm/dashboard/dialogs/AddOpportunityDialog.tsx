@@ -1,22 +1,18 @@
 /**
- * 🏢 ADD OPPORTUNITY DIALOG - SMART FACTORY IMPLEMENTATION
+ * Νέο lead από τη Ροή Πωλήσεων.
  *
- * ENTERPRISE-CLASS: 90% code reduction using Smart Dialog Engine
+ * Η φόρμα είναι η κοινή `OpportunityFormDialog`. Αν ο χρήστης δεν δώσει τίτλο, η
+ * ευκαιρία παίρνει το όνομα του πελάτη, γιατί το σχήμα απαιτεί τίτλο.
  *
- * ✅ CENTRALIZED: Smart Dialog Engine (800 lines)
- * ✅ CENTRALIZED: Modal Select System (1,919 lines)
- * ✅ ZERO hardcoded values, ZERO duplicates, ZERO inline styles
- * ✅ Enterprise configuration-driven architecture
- *
- * @created 2025-12-27 - Smart Factory Conversion
- * @author Claude AI Assistant (Enterprise Standards)
- * @version 2.0.0 - Smart Factory Pattern
+ * @module components/crm/dashboard/dialogs/AddOpportunityDialog
+ * @see ADR-251
  */
 
 'use client';
 
-import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';
+import { OpportunityFormDialog } from './OpportunityFormDialog';
 
 interface AddOpportunityDialogProps {
   open: boolean;
@@ -24,21 +20,21 @@ interface AddOpportunityDialogProps {
   onSubmit: (data: Partial<Opportunity>) => Promise<void>;
 }
 
-/**
- * 🎯 Smart Factory Dialog - 90% CODE REDUCTION
- *
- * WAS: 112 lines με duplicates, hardcoded values, manual form handling
- * NOW: 8 lines configuration με centralized systems
- */
-export function AddOpportunityDialog(props: AddOpportunityDialogProps) {
-  return createSmartDialog({
-    entityType: 'opportunity',
-    operationType: 'create',
-    props: {
-      ...props,
-      // 🏢 ENTERPRISE: Type assertion needed - SmartDialogEngine expects generic Record<string, unknown>
-      // Our specific onSubmit: (data: Partial<Opportunity>) => Promise<void> is compatible
-      onSubmit: props.onSubmit as ((data?: Record<string, unknown>) => Promise<void>)
-    }
-  });
+const NEW_LEAD_DEFAULTS: Partial<Opportunity> = { stage: 'initial_contact' };
+
+export function AddOpportunityDialog({ open, onOpenChange, onSubmit }: AddOpportunityDialogProps) {
+  const { t } = useTranslation('crm');
+
+  return (
+    <OpportunityFormDialog
+      title={t('pipeline.newLead')}
+      open={open}
+      onClose={() => onOpenChange(false)}
+      initialData={NEW_LEAD_DEFAULTS}
+      onSave={(data) => {
+        const fullName = data.fullName?.trim() ?? '';
+        return onSubmit({ ...data, fullName, title: data.title?.trim() || fullName });
+      }}
+    />
+  );
 }

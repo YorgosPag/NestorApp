@@ -3,7 +3,9 @@
  * ENTERPRISE: CALENDAR CREATE EVENT DIALOG
  * =============================================================================
  *
- * Dialog for creating a new calendar event (creates a CrmTask via TasksService).
+ * Dialog for creating a new calendar event (creates a CrmTask via the CRM gateway).
+ * Με `lead`, η εργασία δένεται στο lead και στην εταιρεία του (SSoT για τη δημιουργία
+ * εργασίας: το `CreateTaskModal` είναι λεπτό περίβλημα αυτού του dialog).
  * Uses Radix Dialog + Radix Select (per ADR-001).
  * All values from centralized design system hooks — zero hardcoded values.
  *
@@ -27,7 +29,7 @@ import { EnumSelect } from '@/components/ui/enum-select';
 import { TaskDialogShell } from '@/components/crm/shared/TaskDialogShell';
 import { TaskFormField } from '@/components/crm/shared/TaskFormField';
 
-import { addTask } from '@/services/tasks.service';
+import { createTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import { subscribeToContacts } from '@/services/contacts-query.service';
 import { useProjectsList } from '@/hooks/useProjectsList';
 import type { Contact } from '@/types/contacts/contracts';
@@ -73,6 +75,13 @@ const REMINDER_OFFSET_VALUES: readonly ReminderOffset[] = [
 // PROPS
 // ============================================================================
 
+/** Το lead στο οποίο δένεται η νέα εργασία. */
+export interface TaskLeadLink {
+  id: string;
+  companyId?: string;
+  contactId?: string;
+}
+
 interface CalendarCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -80,6 +89,20 @@ interface CalendarCreateDialogProps {
   initialDate?: Date;
   /** Callback after successful creation */
   onCreated?: () => void;
+  /** Δένει την εργασία στο lead, στην εταιρεία του και στην επαφή του. */
+  lead?: TaskLeadLink;
+}
+
+/**
+ * Τα πεδία σύνδεσης με το lead. Μπαίνουν μόνο όταν υπάρχουν, γιατί η Firestore
+ * απορρίπτει τιμές `undefined`.
+ */
+function leadLinkFields(lead: TaskLeadLink | undefined) {
+  if (!lead) return {};
+  return {
+    leadId: lead.id,
+    ...(lead.companyId ? { companyId: lead.companyId } : {}),
+  };
 }
 
 // ============================================================================
@@ -91,6 +114,7 @@ export function CalendarCreateDialog({
   onOpenChange,
   initialDate,
   onCreated,
+  lead,
 }: CalendarCreateDialogProps) {
   const { t } = useTranslation('crm');
   const { success, error: notifyError } = useNotifications();
@@ -131,7 +155,7 @@ export function CalendarCreateDialog({
     setTime('09:00');
     setEndDate(undefined);
     setReminderOffset('none');
-    setContactId('');
+    setContactId(lead?.contactId ?? '');
     setProjectId('');
     setDescription('');
   };
@@ -161,21 +185,24 @@ export function CalendarCreateDialog({
           ? null
           : new Date(dueDate.getTime() - offsetMs).toISOString();
 
-      await addTask({
-        title: title.trim(),
-        type,
-        dueDate: dueDate.toISOString(),
-        endDate: endDate ? endDate.toISOString() : null,
-        description: description.trim() || null,
-        status: 'pending',
-        priority: 'medium',
-        assignedTo: user?.uid ?? '',
-        contactId: contactId || null,
-        projectId: projectId || null,
-        reminderDate,
+      await createTaskWithPolicy({
+        data: {
+          title: title.trim(),
+          type,
+          dueDate: dueDate.toISOString(),
+          endDate: endDate ? endDate.toISOString() : null,
+          description: description.trim() || null,
+          status: 'pending',
+          priority: 'medium',
+          assignedTo: user?.uid ?? '',
+          contactId: contactId || null,
+          projectId: projectId || null,
+          reminderDate,
+          ...leadLinkFields(lead),
+        },
       });
 
-      success(t('calendarPage.dialog.actions.save'));
+      success(t('tasks.messages.created', { title: title.trim() }));
       resetForm();
       onOpenChange(false);
       onCreated?.();
@@ -192,7 +219,7 @@ export function CalendarCreateDialog({
       open={open}
       onOpenChange={onOpenChange}
       icon={Plus}
-      title={t('calendarPage.dialog.createTitle')}
+      title={lead ? t('tasks.newTask') : t('calendarPage.dialog.createTitle')}
       onSubmit={handleSubmit}
       submitting={submitting}
       submitDisabled={!title.trim()}
