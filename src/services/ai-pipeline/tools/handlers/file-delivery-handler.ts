@@ -25,7 +25,7 @@ import {
   auditWrite,
   logger,
 } from '../executor-shared';
-import { fileReachesViewer } from '../file-cde-reach';
+import { fileVisibleToViewer } from '../file-cde-reach';
 
 // ============================================================================
 // CONSTANTS
@@ -158,7 +158,6 @@ export class FileDeliveryHandler implements ToolHandler {
     sourceId: string,
     ctx: AgenticContext
   ): Promise<Array<{ url: string; mediaType: 'photo' | 'document'; filename: string; contentType: string }> | ToolResult> {
-    const { isAdmin, contactMeta: contact } = ctx;
     const fileDoc = await db.collection(COLLECTIONS.FILES).doc(sourceId).get();
     if (!fileDoc.exists) {
       return { success: false, error: 'Το αρχείο δεν βρέθηκε.' };
@@ -170,29 +169,8 @@ export class FileDeliveryHandler implements ToolHandler {
     }
 
     // Customer access check — admin has unrestricted file access
-    if (!isAdmin && contact) {
-      const entityType = String(fileData.entityType ?? '');
-      const entityId = String(fileData.entityId ?? '');
-      const fileProjectId = String(fileData.projectId ?? '');
-      const linkedPropertyIds = contact.linkedPropertyIds ?? [];
-
-      const linkedProjectIds = [...new Set(
-        (contact.projectRoles ?? []).map(r => r.projectId).filter(Boolean),
-      )];
-
-      let hasAccess = false;
-      if (entityType === 'property') {
-        hasAccess = linkedPropertyIds.includes(entityId);
-      } else if (entityType === 'building' || entityType === 'project') {
-        hasAccess = linkedProjectIds.includes(fileProjectId);
-      } else {
-        hasAccess = fileProjectId ? linkedProjectIds.includes(fileProjectId) : false;
-      }
-
-      // ADR-901 Φ2 — ανήκει στο ακίνητό του ≠ φτάνει σε αυτόν: ένα WIP μηχανικού δεν φεύγει στο chat.
-      if (!hasAccess || !fileReachesViewer(fileData, ctx)) {
-        return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το αρχείο.' };
-      }
+    if (!fileVisibleToViewer(sourceId, fileData, ctx)) {
+      return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το αρχείο.' };
     }
 
     const downloadUrl = String(fileData.downloadUrl ?? '');

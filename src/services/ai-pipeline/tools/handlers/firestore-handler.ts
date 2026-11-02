@@ -30,11 +30,13 @@ import {
 } from '../executor-shared';
 import { aiAgentStamp } from '../../shared/ai-performer';
 import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
-import { reachIsPerRecord, recordReachesViewer } from '../file-cde-reach';
+import { reachIsPerRecord, recordVisibleToViewer } from '../file-cde-reach';
 import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 import {
   buildFallbackAttempts,
   buildFilteredQuery,
+  planScopedRead,
+  recordMatchesScope,
   tenantEqualityFilter,
   withScopedRead,
 } from './firestore-query-plan';
@@ -101,7 +103,7 @@ export class FirestoreHandler implements ToolHandler {
 
       const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
 
-      const results = docs.filter(doc => recordReachesViewer(collection, doc.data(), ctx)).map(doc => {
+      const results = docs.filter(doc => recordVisibleToViewer(collection, doc.id, doc.data(), ctx)).map(doc => {
         const raw = redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx);
         let result: Record<string, unknown> = { id: doc.id, ...flattenNestedFields(raw) };
 
@@ -162,8 +164,13 @@ export class FirestoreHandler implements ToolHandler {
 
     const data = owned.data;
 
-    // ADR-901 Φ2 — εκτός εμβέλειας ≡ «δεν υπάρχει», με το ΙΔΙΟ σχήμα απάντησης (βλ. παραπάνω).
-    if (!recordReachesViewer(collection, data, ctx)) return notFound();
+    // ADR-257 — η ΙΔΙΑ αλυσίδα με το `firestore_query`: τα φίλτρα εύρους κρίνουν εδώ το συγκεκριμένο έγγραφο.
+    const scope = planScopedRead({ collection }, ctx);
+    if (!scope.ok) return scope.result;
+
+    // Ξένο ή εκτός εμβέλειας (ADR-901 Φ2) ≡ «δεν υπάρχει», με το ΙΔΙΟ σχήμα απάντησης (βλ. παραπάνω).
+    const inScope = ctx.isAdmin || reachIsPerRecord(collection, ctx) || recordMatchesScope(doc.id, data, scope.filters);
+    if (!inScope || !recordVisibleToViewer(collection, doc.id, data, ctx)) return notFound();
 
     let result: Record<string, unknown> = {
       id: doc.id,
@@ -195,7 +202,7 @@ export class FirestoreHandler implements ToolHandler {
       // ότι υπάρχει WIP. Το εύρος του πελάτη είναι τα δικά του ακίνητα, άρα το `MAX_QUERY_RESULTS` είναι ανεκτό.
       if (reachIsPerRecord(collection, ctx)) {
         const docs = await this.executeWithFallback(db, collection, safeFilters, null, 'asc', { limit: MAX_QUERY_RESULTS, liveOnly }, ctx);
-        const count = docs.filter(doc => recordReachesViewer(collection, doc.data(), ctx)).length;
+        const count = docs.filter(doc => recordVisibleToViewer(collection, doc.id, doc.data(), ctx)).length;
         return { success: true, data: { count }, count };
       }
 

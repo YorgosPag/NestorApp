@@ -81,6 +81,20 @@ export function buildFilteredQuery(
 }
 
 /**
+ * Ικανοποιεί αυτή η εγγραφή τα φίλτρα εύρους; Για ανάγνωση **κατά id**, όπου δεν τρέχει ερώτημα: τα ίδια φίλτρα
+ * κρίνουν το έγγραφο, άρα δεν υπάρχει δεύτερος κανόνας. Fail-closed: τελεστής που δεν ξέρουμε ⇒ όχι. Το `companyId`
+ * το έκρινε ήδη ο `resolveOwnedToolDoc`.
+ */
+export function recordMatchesScope(id: string, data: Record<string, unknown>, filters: readonly QueryFilter[]): boolean {
+  return filters.every((filter) => {
+    if (filter.field === 'companyId') return true;
+    const actual = filter.field === 'id' ? id : data[filter.field];
+    if (filter.operator === '==') return actual === filter.value;
+    return filter.operator === 'in' && Array.isArray(filter.value) && filter.value.includes(actual);
+  });
+}
+
+/**
  * Το φίλτρο tenant του **τελευταίου καταφυγίου**: ισότητα, πάντα.
  *
  * 🔴 Ο `operator` **απορρίπτεται επίτηδες**. Το καταφύγιο τρέχει όταν όλα τα

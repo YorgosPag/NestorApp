@@ -34,6 +34,11 @@ export interface RoleAccessConfig {
   /** Collections this role CAN query. Everything else is denied. */
   allowedCollections: readonly string[];
   /**
+   * Tools this role CAN use. Everything else is denied, so a new tool is admin-only until a role
+   * opts in. Enforced outside the model on every call (`tools/tool-access`, OWASP LLM06).
+   */
+  allowedTools: readonly string[] | 'all';
+  /**
    * Nested fields to redact from query results (e.g. 'commercial.askingPrice').
    * Flat forms (e.g. '_askingPrice') are auto-derived by deriveBlockedFieldSet().
    * Define ONLY the nested form here — no manual duplication.
@@ -197,12 +202,39 @@ const ALL_COLLECTIONS = [
   COLLECTIONS.CONTACT_LINKS,
 ] as const;
 
+// ============================================================================
+// SHARED TOOL SETS (DRY)
+// ============================================================================
+
+/** Reading tools — each one still judges the concrete record (`allowedCollections` · file scope · CDE). */
+const READ_TOOLS = [
+  'firestore_query',
+  'firestore_get_document',
+  'firestore_count',
+  'search_text',
+  'read_document',
+] as const;
+
+/** Project-linked professionals: reading, plus the schema they query by. */
+const PROFESSIONAL_TOOLS = [...READ_TOOLS, 'get_collection_schema'] as const;
+
+/** Buyer/owner/tenant: what the shared customer prompts offer (SPEC-257D/E/F/G). */
+const CUSTOMER_TOOLS = [
+  ...READ_TOOLS,
+  'get_collection_schema',
+  'create_complaint_task',
+  'append_contact_info',
+  'deliver_file_to_chat',
+  'search_knowledge_base',
+] as const;
+
 export const AI_ROLE_ACCESS_MATRIX = {
 
   // ── SUPER ADMIN — Full access, read + write ──
   super_admin: {
     label: 'Super Admin',
     allowedCollections: ALL_COLLECTIONS,
+    allowedTools: 'all',
     blockedFields: [],
     promptDescription: `Ο χρήστης είναι ο Super Admin. Έχεις ΠΛΗΡΗ πρόσβαση σε ΟΛΑ τα δεδομένα — μπορείς να ΔΙΑΒΑΖΕΙΣ ΚΑΙ ΝΑ ΓΡΑΦΕΙΣ σε ΟΛΑ τα collections. ΠΟΤΕ μη λες "δεν έχω δικαίωμα" — ΕΧΕΙΣ. Αν κάτι αποτύχει, ΔΟΚΙΜΑΣΕ.
 
@@ -252,6 +284,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
   supervisor: {
     label: 'Επιβλέπων Μηχανικός',
     allowedCollections: TECHNICAL_COLLECTIONS,
+    allowedTools: PROFESSIONAL_TOOLS,
     blockedFields: ALL_FINANCIAL_FIELDS,
     promptDescription: `ΡΟΛΟΣ: ΕΠΙΒΛΕΠΩΝ ΜΗΧΑΝΙΚΟΣ (supervisor)
 ΠΡΟΣΒΑΣΗ: ΟΛΑ τα τεχνικά δεδομένα των συνδεδεμένων έργων:
@@ -264,6 +297,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
   // ── ΕΡΓΟΛΑΒΟΣ — Construction-focused ──
   contractor: {
     label: 'Εργολάβος',
+    allowedTools: PROFESSIONAL_TOOLS,
     allowedCollections: [
       COLLECTIONS.PROJECTS,
       COLLECTIONS.BUILDINGS,
@@ -283,6 +317,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
   // ── ΑΡΧΙΤΕΚΤΟΝΑΣ / ΜΗΧΑΝΙΚΟΣ — Shared base config ──
   architect: {
     label: 'Αρχιτέκτονας',
+    allowedTools: PROFESSIONAL_TOOLS,
     allowedCollections: [
       COLLECTIONS.PROJECTS,
       COLLECTIONS.BUILDINGS,
@@ -318,6 +353,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
   buyer: {
     label: 'Αγοραστής',
     allowedCollections: CUSTOMER_COLLECTIONS,
+    allowedTools: CUSTOMER_TOOLS,
     blockedFields: [
       ...COMMERCIAL_PRICING_FIELDS,
       ...BUYER_IDENTITY_FIELDS,
@@ -335,6 +371,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
   owner: {
     label: 'Ιδιοκτήτης',
     allowedCollections: CUSTOMER_COLLECTIONS,
+    allowedTools: CUSTOMER_TOOLS,
     blockedFields: ['commercial.askingPrice'],
     promptDescription: `ΡΟΛΟΣ: ΙΔΙΟΚΤΗΤΗΣ
 ΒΑΣΙΚΗ ΠΡΟΣΒΑΣΗ:
@@ -347,6 +384,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
   // ── ΕΝΟΙΚΙΑΣΤΗΣ — Minimum access ──
   tenant: {
     label: 'Ενοικιαστής',
+    allowedTools: CUSTOMER_TOOLS,
     allowedCollections: [
       COLLECTIONS.PROPERTIES,
       COLLECTIONS.BUILDINGS,
@@ -369,6 +407,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
 export const UNLINKED_ACCESS: RoleAccessConfig = {
   label: 'Χωρίς σύνδεση σε έργο',
   allowedCollections: PUBLIC_COLLECTIONS,
+  allowedTools: READ_TOOLS,
   blockedFields: [...BUYER_IDENTITY_FIELDS, ...PAYMENT_SUMMARY_FIELDS],
   promptDescription: `ΔΕΝ είναι συνδεδεμένος/η σε κάποιο έργο.
 Μπορείς ΜΟΝΟ να:

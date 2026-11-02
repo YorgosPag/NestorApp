@@ -13,6 +13,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { resolveAccessConfig, UNLINKED_ACCESS, deriveBlockedFieldSet } from '@/config/ai-role-access-matrix';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -93,10 +94,11 @@ export function getAccessConfig(ctx: AgenticContext): import('@/config/ai-role-a
   if (ctx._resolvedAccess) return ctx._resolvedAccess;
 
   const roles = ctx.contactMeta?.projectRoles ?? [];
-  const linkedProjectIds = [...new Set(roles.map(r => r.projectId).filter(Boolean))];
-  const config = linkedProjectIds.length > 0
-    ? resolveAccessConfig(roles)
-    : UNLINKED_ACCESS;
+  const resolved = resolveAccessConfig(roles);
+  // Η σύνδεση ακινήτου γράφεται με `projectId: ''` (`contact-linker`): ο ρόλος ακινήτου στέκει με οποιαδήποτε
+  // σύνδεση, αλλά ρόλος **έργου** χωρίς έργο μένει `UNLINKED`, αλλιώς τα φίλτρα έργου δεν θα είχαν τιμές.
+  const hasScope = resolved.scopeLevel === 'property' || roles.some(r => r.projectId);
+  const config = hasScope ? resolved : UNLINKED_ACCESS;
 
   ctx._resolvedAccess = config;
   return config;
@@ -142,7 +144,18 @@ export function enforceRoleAccess(
         }];
       }
     }
-    const propertyIdScopedCollections = new Set([COLLECTIONS.FILES, COLLECTIONS.PAYMENTS, COLLECTIONS.TASKS]);
+    // Τα αρχεία ανήκουν σε οντότητα (`entityType`/`entityId`): δεν έχουν `propertyId`.
+    if (collection === COLLECTIONS.FILES) {
+      return {
+        allowed: true,
+        filters: [
+          ...filters,
+          { field: 'entityType', operator: '==', value: ENTITY_TYPES.PROPERTY },
+          { field: 'entityId', operator: 'in', value: linkedPropertyIds.slice(0, 30) },
+        ],
+      };
+    }
+    const propertyIdScopedCollections = new Set([COLLECTIONS.PAYMENTS, COLLECTIONS.TASKS]);
     if (propertyIdScopedCollections.has(collection)) {
       const hasPropertyFilter = filters.some(f => f.field === 'propertyId');
       if (!hasPropertyFilter) {
@@ -157,7 +170,7 @@ export function enforceRoleAccess(
   }
 
   // Project-level scoping
-  const projectScopedByProjectId = new Set([COLLECTIONS.BUILDINGS, COLLECTIONS.PROPERTIES]);
+  const projectScopedByProjectId = new Set([COLLECTIONS.BUILDINGS, COLLECTIONS.PROPERTIES, COLLECTIONS.FILES]);
   if (projectScopedByProjectId.has(collection) && linkedProjectIds.length > 0) {
     const hasProjectFilter = filters.some(f => f.field === 'projectId');
     if (!hasProjectFilter) {

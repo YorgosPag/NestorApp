@@ -4005,12 +4005,13 @@
 - **Fix**: `ViewerToolbarButton` στα κουμπιά· για το transform του φύλλου, `viewTransformOf` (`zoom-pan-math`) εφαρμοσμένο imperative.
 - **Σκόπιμα ΕΚΤΟΣ**: `PdfCanvasViewer` — έγγραφο με κύλιση και re-render σελίδων, άλλο μοντέλο από το `useZoomPan`.
 
-### 🔐 AI: τα εργαλεία αρχείων δεν περνούν από το φίλτρο εμβέλειας CDE (προτεραιότητα ΥΨΗΛΗ — ασφάλεια, 2026-10-31, ADR-901 Φ2 · ADR-257 · ADR-862 — το πήρε ο claude-89)
-- **Μετρημένο**: **κανένας** αναγνώστης CDE μέσα στο `services/ai-pipeline/` (0 για `readContainerState` / `isContainerVisible`). Το KB ήταν ο μικρότερος δρόμος: διέρρεε ύπαρξη· οι παρακάτω διαρρέουν **περιεχόμενο**.
-- `file-delivery-handler.ts` (`resolveFile`): στέλνει το `downloadUrl` σε πελάτη μόνο με έλεγχο ακινήτου/έργου ⇒ **WIP αρχείο φεύγει στο chat**.
-- `document-reader-handler.ts` (`read_document`): μόνο έλεγχος μισθωτή, καμία εμβέλεια πελάτη. Το `agentic-path-executor` δίνει **όλα** τα εργαλεία σε κάθε χρήστη ⇒ ⏳ να επαληθευτεί ζωντανά αν φτάνει σε πελάτη, και τότε διαβάζει οποιοδήποτε αρχείο της εταιρείας με γνωστό id.
-- `firestore-handler.ts` (`query` / `get_document` / `count` σε `files`): μεταδεδομένα WIP (όνομα, κατάσταση) στον πελάτη. Το φίλτρο είναι μόνο κατά `propertyId`.
-- **Fix**: ο **ΕΝΑΣ** κριτής (`decideEngagedEvidenceReach`), όχι τρίτο αντίγραφο του `reaches()`.
+### 🔐 AI: εργαλεία πράκτορα — RBAC τριών επιπέδων: κώδικας έτοιμος, ⏳ μένει η απόδειξη μεταλλάξεων (προτεραιότητα ΥΨΗΛΗ — ασφάλεια, 2026-11-02, ADR-257 · ADR-901 · OWASP LLM06 — claude-89, uncommitted)
+- ✅ **Κώδικας**: `allowedTools` στο `ai-role-access-matrix` (deny-by-default) · `tools/tool-access.ts` (το μοντέλο βλέπει μόνο όσα δικαιούται + έλεγχος σε **κάθε** κλήση στον `AgenticToolExecutor`) · `fileVisibleToViewer` στο `file-cde-reach.ts` (ένας κριτής αρχείου· δικά του ανεβάσματα από `ctx.attachments` ή επαληθευμένο κανάλι, **όχι** email) · `search_text` και `firestore_get_document` στην αλυσίδα `planScopedRead` · `getAccessConfig`: ο αγοραστής με σύνδεση μόνο ακινήτου έπεφτε σε `UNLINKED` · τα `files` φιλτράρονταν με `propertyId`, πεδίο που τα αρχεία δεν έχουν.
+- ✅ **Ελεγμένο**: ai-pipeline 86/86 σουίτες, 1.363 tests (πριν την τελευταία άγκυρα).
+- ⏳ **Μένει** (η μνήμη του μηχανήματος έκοψε το `mutate4` στις 2/11): 6 μεταλλάξεις χωρίς αποτέλεσμα (`scope-predicate` · `search-scope` · `spoofable-email` · `no-own-upload` · `any-file` · `no-cde`). Από τις 7 που ολοκληρώθηκαν οι 6 πιάστηκαν· η `blind-files-filter` επέζησε ⇒ νέα άγκυρα στο `tool-access.test.ts`, που **δεν έχει τρέξει ακόμη**. Μετά: ξανά `blind-files-filter` και σουίτα ai-pipeline.
+- ⏳ **Εύρος έργου ελλιπές**: το `enforceRoleAccess` φιλτράρει κατά έργο μόνο κτίρια/ακίνητα/αρχεία ⇒ επαγγελματίας διαβάζει `projects` · `floors` · `construction_phases` · `construction_tasks` · `appointments` · `tasks` **όλης** της εταιρείας. Κάθε συλλογή έχει άλλο κλειδί (π.χ. `buildingId`) ⇒ θέλει μέτρηση ανά συλλογή.
+- ⏳ **Παλιά συλλογή `floorplans`** (`resolveFloorplan`): χωρίς CDE και με όριο μόνο έργου ⇒ αγοραστής με σύνδεση ακινήτου δεν παίρνει κάτοψη από εκεί. Οι σύγχρονες κατόψεις είναι `FileRecord` και περνούν από τον φρουρό. Φωτογραφίες ακινήτου: υλικό προβολής, εκτός CDE.
+- Δεν ελέγχθηκε ζωντανά με πραγματικό μοντέλο σε κανάλι.
 
 ### 🧪 `conveyance-engagement-flow.test.ts` — ωρολογιακή βόμβα (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-31)
 - Το test «Procore Save & Send Invitation» έχει παγωμένο `NOW = 2026-10-03` στην έκδοση πρόσκλησης, ενώ η ανάγνωση κρίνει με το πραγματικό ρολόι ⇒ `expired` αντί `pending` από όταν πέρασε η λήξη. Κόκκινο **ανεξάρτητα** από κώδικα (μετρημένο: ίδιο αποτέλεσμα χωρίς την αλλαγή του 31/10). Fix: `nowMs` στο `listCaseProfessionalSlots` ή πάγωμα ρολογιού στο test.

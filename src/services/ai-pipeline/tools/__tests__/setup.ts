@@ -118,17 +118,20 @@ jest.mock('@/config/ai-role-access-matrix', () => ({
     super_admin: {
       label: 'Super Admin',
       allowedCollections: ['contacts', 'projects', 'buildings', 'properties'],
+      allowedTools: 'all',
       blockedFields: [],
       promptDescription: 'Ο χρήστης είναι ο SUPER ADMIN. Έχεις ΠΛΗΡΗ πρόσβαση σε ΟΛΑ τα δεδομένα.',
     },
   },
   resolveAccessConfig: jest.fn(() => ({
     allowedCollections: ['contacts', 'projects', 'buildings', 'properties'],
+    allowedTools: 'all',
     scopeLevel: 'project',
     blockedFields: new Set<string>(),
   })),
   UNLINKED_ACCESS: {
     allowedCollections: ['contacts'],
+    allowedTools: 'all',
     scopeLevel: 'none',
     blockedFields: new Set<string>(),
     promptDescription: 'Πρόσβαση μόνο στα δικά σου δεδομένα.',
