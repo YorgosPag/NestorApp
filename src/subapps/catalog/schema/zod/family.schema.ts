@@ -16,6 +16,7 @@ import {
   COMPARE_OPERATORS,
   ORDER_DIRECTIONS,
   RULE_SEVERITIES,
+  TABLE_OVERFLOW_MODES,
   TABLE_ROW_MERGE_MODES,
 } from '../../types/family';
 import { CATALOG_CHANNELS } from '../../vocabulary/channels';
@@ -59,6 +60,7 @@ const tableRowSchema: z.ZodType<FamilyTableRow, z.ZodTypeDef, unknown> = z.discr
 const tableSpecSchema: z.ZodType<FamilyTableSpec, z.ZodTypeDef, unknown> = z.object({
   variantSchemeCode: catalogCodeSchema,
   rows: z.array(tableRowSchema).max(CATALOG_LIMITS.maxTableSpecRows),
+  overflow: z.enum(TABLE_OVERFLOW_MODES).optional(),
 });
 
 const ruleBase = { id: localIdSchema, severity: z.enum(RULE_SEVERITIES) };

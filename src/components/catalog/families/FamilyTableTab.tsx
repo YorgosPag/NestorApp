@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SortableList } from '@/components/ui/sortable/SortableList';
 import { reorderByMove } from '@/components/ui/sortable/sortable-model';
-import type { CatalogFamilyDefinition, FamilyTableRow, FamilyTableSpec } from '@/subapps/catalog/types/family';
+import { tableOverflowOf, type CatalogFamilyDefinition, type FamilyTableRow, type FamilyTableSpec, type TableOverflowMode } from '@/subapps/catalog/types/family';
 import { CATALOG_LIMITS } from '@/subapps/catalog/vocabulary/catalog-limits';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogField } from '../shared/CatalogFormFields';
@@ -88,6 +88,25 @@ function TableRows({ spec, props }: { readonly spec: FamilyTableSpec; readonly p
   );
 }
 
+function OverflowField({ spec, props }: { readonly spec: FamilyTableSpec; readonly props: FamilyTabProps }) {
+  const { t } = useCatalogText();
+  const { draft, update, disabled, issues } = props;
+  return (
+    <CatalogField label={t('families.table.overflow')} hint={t('families.table.overflowHint')} issues={issues} path="tableSpec.overflow">
+      {({ id, describedBy }) => (
+        <Select value={tableOverflowOf(spec)} disabled={disabled}
+          onValueChange={(overflow: TableOverflowMode) => update(withSpec(draft, { ...spec, overflow }))}>
+          <SelectTrigger id={id} aria-describedby={describedBy} className="w-56"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="continue">{t('families.table.overflowContinue')}</SelectItem>
+            <SelectItem value="transpose">{t('families.table.overflowTranspose')}</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
+    </CatalogField>
+  );
+}
+
 export function FamilyTableTab(props: FamilyTabProps) {
   const { t, text } = useCatalogText();
   const { draft, update, disabled, issues } = props;
@@ -101,12 +120,13 @@ export function FamilyTableTab(props: FamilyTabProps) {
         <CatalogField label={t('families.table.scheme')} issues={issues} path="tableSpec.variantSchemeCode">
           {({ id, describedBy }) => (
             <Select value={spec && schemes.some((scheme) => scheme.code === spec.variantSchemeCode) ? spec.variantSchemeCode : ''} disabled={disabled}
-              onValueChange={(code) => update(withSpec(draft, { variantSchemeCode: code, rows: spec?.rows ?? [] }))}>
+              onValueChange={(code) => update(withSpec(draft, { ...spec, variantSchemeCode: code, rows: spec?.rows ?? [] }))}>
               <SelectTrigger id={id} aria-describedby={describedBy} className="w-56"><SelectValue placeholder={t('families.table.chooseScheme')} /></SelectTrigger>
               <SelectContent>{schemes.map((scheme) => <SelectItem key={scheme.code} value={scheme.code}>{text(scheme.labels, scheme.code)}</SelectItem>)}</SelectContent>
             </Select>
           )}
         </CatalogField>
+        {spec ? <OverflowField spec={spec} props={props} /> : null}
         {spec ? <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => update(withSpec(draft, null))}>{t('families.table.remove')}</Button> : null}
       </div>
       {spec ? <TableRows spec={spec} props={props} /> : null}

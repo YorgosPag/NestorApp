@@ -68,8 +68,9 @@ function variantSection(entry: VariantModelEntry, input: PublicationCompositionI
   const { groupStyle } = recipe.templates;
   const reservedMm = LABEL_COLUMN_MM + (tableUsesRail(entry.preview, groupStyle) ? RAIL_COLUMN_MM : 0);
   const maxValueColumns = fitValueColumns({ areaMm: tableArea(PUBLICATION_A4), labelMm: reservedMm, minColumnMm: MIN_VALUE_COLUMN_MM });
+  const maxTransposedColumns = fitValueColumns({ areaMm: tableArea(PUBLICATION_A4), labelMm: LABEL_COLUMN_MM, minColumnMm: MIN_VALUE_COLUMN_MM });
   const tables = layoutTables(entry.preview, {
-    id: entry.id, caption: entry.title, groupStyle, maxValueColumns, labelColumnMm: LABEL_COLUMN_MM, railColumnMm: RAIL_COLUMN_MM, priceRowIds: entry.priceRowIds,
+    id: entry.id, caption: entry.title, groupStyle, maxValueColumns, maxTransposedColumns, overflow: entry.tableOverflow, labelColumnMm: LABEL_COLUMN_MM, railColumnMm: RAIL_COLUMN_MM, priceRowIds: entry.priceRowIds,
   });
   const blocks: LayoutBlock[] = [
     { kind: 'anchor', anchor: anchorOf(entry.id) },

@@ -7,21 +7,25 @@
  * Οι άγκυρες χρώματος/προτύπου διαβάζουν το **ίδιο το PDF** (αποσυμπιεσμένες ροές), όχι τον κώδικα του προτύπου.
  * ⚠️ Διάταξη (επικαλύψεις, ετικέτες ομάδων) ελέγχθηκε με το μάτι σε PNG σελίδων· κανένα από αυτά τα tests δεν τη βλέπει.
  */
+import { execFile } from 'node:child_process';
+import { appendFileSync, existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { availableParallelism, tmpdir } from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { inflateSync } from 'node:zlib';
 
 import { PDFDocument } from 'pdf-lib';
 
 import { composePublication } from '@/subapps/catalog/publishing/compose-publication';
+import { collectLayoutAssetIds, renditionUseOf } from '@/subapps/catalog/publishing/layout-model';
 import { judgePublicationLayout } from '@/subapps/catalog/publishing/publication-layout-judge';
 import type { PublicationChapter, VariantModelEntry } from '@/subapps/catalog/publishing/publication-entries';
 import type { PreviewRow } from '@/subapps/catalog/table/catalog-table';
 import type { PublicationRecipeDefinition } from '@/subapps/catalog/types/publication';
 import { fontDirectoryOf, renderPublicationPdf, renderPublicationPreview } from '../typst-adapter';
-import { assertTypstAvailable, runTypst } from '../typst-engine.server';
-import { readLayoutInChildProcess } from './pdf-layout-oracle';
+import { assertTypstAvailable, runTypst, typstJobsFor, type TypstRunner } from '../typst-engine.server';
+import { measurePdfCheckPeakInChildProcess, readLayoutInChildProcess } from './pdf-layout-oracle';
 
 jest.mock('server-only', () => ({}));
 
@@ -37,7 +41,7 @@ const recipe: PublicationRecipeDefinition = {
   profiles: ['print', 'screen'], paper: 'a4', footerNote: {},
 };
 
-function entry(index: number): VariantModelEntry {
+function entry(index: number, imageAssetId: string | null = null): VariantModelEntry {
   const columns = Array.from({ length: 12 }, () => new Map<string, string>());
   const cells = (make: (column: number) => string) => columns.map((_, column) => make(column));
   const rows: PreviewRow[] = [
@@ -49,19 +53,23 @@ function entry(index: number): VariantModelEntry {
   ];
   return {
     kind: 'variantModel', id: `m${index}`, title: `Μοντέλο ${index}`, descriptionHtml: '<p>Ηλεκτρομηχανολογικές εγκαταστάσεις υψηλότατης απόδοσης, με <strong>ελληνικό</strong> συλλαβισμό.</p>',
-    imageAssetId: null, preview: { columns, hiddenColumns: 0, rows }, priceRowIds: new Set(), listingKind: 'product',
+    imageAssetId, preview: { columns, hiddenColumns: 0, rows }, tableOverflow: 'continue', priceRowIds: new Set(), listingKind: 'product',
     codes: [{ code: `C-${index}`, label: `Μοντέλο ${index}` }],
   };
 }
 
-const chapters: PublicationChapter[] = Array.from({ length: 10 }, (_, chapter) => ({
-  id: `c${chapter}`, title: `Κεφάλαιο ${chapter + 1}`, entries: Array.from({ length: FAMILY_PAGES / 10 }, (_, index) => entry(chapter * 100 + index)),
-}));
+function volume(imageOf: (index: number) => string | null) {
+  const chapters: PublicationChapter[] = Array.from({ length: 10 }, (_, chapter) => ({
+    id: `c${chapter}`, title: `Κεφάλαιο ${chapter + 1}`,
+    entries: Array.from({ length: FAMILY_PAGES / 10 }, (_, index) => entry(chapter * 100 + index, imageOf(chapter * 100 + index))),
+  }));
+  return composePublication({
+    recipe, title: 'Κατάλογος', footer: 'Τιμές έκδοσης 3, ισχύς από 1/11/2026', chapters,
+    words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
+  });
+}
 
-const document = composePublication({
-  recipe, title: 'Κατάλογος', footer: 'Τιμές έκδοσης 3, ισχύς από 1/11/2026', chapters,
-  words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
-});
+const document = volume(() => null);
 
 const input = { document, fontCode: 'liberationSans' as const, dataAsOfEpoch: 1790000000, readAsset: async () => new Uint8Array(), run: runTypst };
 
@@ -130,6 +138,25 @@ function dimensionsDocument() {
   });
 }
 
+/** Δώδεκα παραλλαγές που δεν χωρούν: η οικογένεια δηλώνει αναστροφή, με ομάδες, μία συγχώνευση και φαρδιές διαστάσεις. */
+function transposedDocument() {
+  const twelve = (text: (index: number) => string) => Array.from({ length: 12 }, (_, index) => text(index));
+  const attribute = (id: string, label: string, merge: 'none' | 'all', cells: readonly string[]): PreviewRow => ({ kind: 'attribute', id, label, unit: 'kW', filter: null, merge, cells });
+  const rows: PreviewRow[] = [
+    { kind: 'axis', id: 'size', label: 'Μέγεθος', cells: twelve((index) => `MFP-${index + 1}`) },
+    { kind: 'groupHeader', id: 'cool', label: 'Ψύξη' },
+    attribute('total', 'Συνολική ψυκτική ισχύς', 'none', twelve((index) => `${index + 1},5`)),
+    attribute('voltage', 'Τροφοδοσία', 'all', twelve(() => '230V-50Hz-1Ph')),
+    { kind: 'groupHeader', id: 'size-group', label: 'Διαστάσεις' },
+    attribute('dimensions', 'Διαστάσεις', 'none', twelve((index) => SEVEN_DIMENSIONS[index % SEVEN_DIMENSIONS.length])),
+  ];
+  const table: VariantModelEntry = { ...entry(1), tableOverflow: 'transpose', preview: { columns: Array.from({ length: 12 }, () => new Map<string, string>()), hiddenColumns: 0, rows } };
+  return composePublication({
+    recipe, title: 'Αναστροφή', footer: 'Υποσέλιδο', chapters: [{ id: 'a', title: 'Fan coil', entries: [table] }],
+    words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
+  });
+}
+
 /** Οι αποσυμπιεσμένες ροές του PDF· ό,τι δεν είναι Flate μένει έξω. */
 function inflatedStreams(bytes: Uint8Array): string[] {
   const buffer = Buffer.from(bytes);
@@ -146,6 +173,50 @@ function inflatedStreams(bytes: Uint8Array): string[] {
 
 const NON_CMYK_OPERATOR = /(?:^|\s)(?:[\d.]+ [\d.]+ [\d.]+ (?:rg|RG)|[\d.]+ (?:g|G))\s/;
 
+/** GNU time: η κορυφή έρχεται από τον πυρήνα (`wait4`), όχι από δειγματοληψία. Χωρίς αυτό το test βγαίνει `skipped` και το workflow κοκκινίζει. */
+const TIME_BINARY = '/usr/bin/time';
+const itWithPeakMeter = existsSync(TIME_BINARY) ? it : it.skip;
+const execFileAsync = promisify(execFile);
+
+/**
+ * 20 cm στα 300 dpi, με θόρυβο: κάθε αρχείο είναι διαφορετικό, αλλιώς το Typst θα κρατούσε ένα αντίγραφο για όλα.
+ * Ο θόρυβος γεννιέται μία φορά και κάθε εικόνα είναι μετατοπισμένη κατά `index` εικονοστοιχεία: 320 γεννήσεις έφαγαν τα 10 λεπτά του test.
+ */
+const VOLUME_IMAGE = { width: 2400, height: 1600 };
+const VOLUME_CHANNELS = 3;
+const bytesToMb = (bytes: number) => Number((bytes / 1048576).toFixed(1));
+const kbToMb = (kb: number) => Number((kb / 1024).toFixed(1));
+
+async function volumeImages(ids: readonly string[], use: 'print' | 'web'): Promise<ReadonlyMap<string, Uint8Array>> {
+  const { default: sharp } = await import('sharp');
+  const noise = await sharp({ create: { ...VOLUME_IMAGE, channels: VOLUME_CHANNELS, background: '#808080', noise: { type: 'gaussian', mean: 128, sigma: 40 } } }).blur(1.2).raw().toBuffer();
+  const encode = (index: number) => {
+    const at = index * VOLUME_CHANNELS;
+    const source = sharp(Buffer.concat([noise.subarray(at), noise.subarray(0, at)]), { raw: { ...VOLUME_IMAGE, channels: VOLUME_CHANNELS } });
+    return (use === 'print' ? source.toColourspace('cmyk') : source.resize({ width: 2048 })).jpeg({ quality: 85 }).toBuffer();
+  };
+  const images = new Map<string, Uint8Array>();
+  const batch = availableParallelism();
+  for (let from = 0; from < ids.length; from += batch) {
+    const slice = ids.slice(from, from + batch);
+    const encoded = await Promise.all(slice.map((_, offset) => encode(from + offset + 1)));
+    slice.forEach((id, offset) => images.set(id, encoded[offset]));
+  }
+  return images;
+}
+
+/** Ο πραγματικός `typst` με τα ίδια ορίσματα και το ίδιο `--jobs`, κάτω από το GNU time. */
+function peakMeasuredRun(metricFile: string): TypstRunner {
+  return async ({ cwd, args, timeoutMs }) => {
+    await execFileAsync(TIME_BINARY, ['-f', '%M', '-o', metricFile, binary as string, ...args, '--jobs', String(typstJobsFor(availableParallelism()))], { cwd, timeout: timeoutMs });
+  };
+}
+
+function reportMemory(line: string): void {
+  process.stdout.write(`${line}\n`);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n\n`);
+}
+
 describeReal('πραγματικό Typst — κατάλογος 300+ σελίδων', () => {
   it('η μηχανή είναι η μετρημένη έκδοση', async () => {
     await expect(assertTypstAvailable()).resolves.toBe('0.15.1');
@@ -158,6 +229,33 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
     expect(pages).toBeGreaterThanOrEqual(300);
     expect(rendered.pageCount).toBe(pages);
   }, 300_000);
+
+  // Μετρά, δεν κρίνει: κατώφλι μπαίνει μόνο όταν γνωρίζουμε τη μνήμη του διακομιστή. Οι έλεγχοι εδώ αποδεικνύουν ότι η μέτρηση είναι αληθινή.
+  itWithPeakMeter.each(['print', 'screen'] as const)('🧮 μνήμη %s: κορυφή Typst και ελέγχου του web server σε 300+ σελίδες με εικόνες', async (profile) => {
+    const illustrated = volume((index) => `volume_${index}`);
+    const images = await volumeImages(collectLayoutAssetIds(illustrated), renditionUseOf(profile));
+    const directory = await mkdtemp(path.join(tmpdir(), 'nestor-memory-'));
+    try {
+      const metricFile = path.join(directory, 'peak-kb');
+      const rendered = await renderPublicationPdf({ ...input, document: illustrated, readAsset: async (assetId) => images.get(assetId) as Uint8Array, run: peakMeasuredRun(metricFile) }, profile);
+      const typstPeakKb = Number((await readFile(metricFile, 'utf8')).trim());
+      const check = measurePdfCheckPeakInChildProcess(rendered.bytes, profile);
+      const imageBytes = [...images.values()].reduce((sum, image) => sum + image.length, 0);
+      reportMemory(`[μνήμη ${profile}] ${JSON.stringify({
+        pages: rendered.pageCount, images: images.size, imagesMb: bytesToMb(imageBytes), pdfMb: bytesToMb(rendered.bytes.length), renderMs: rendered.renderMs,
+        documentJsonMb: bytesToMb(JSON.stringify(illustrated).length), typstJobs: typstJobsFor(availableParallelism()), typstPeakMb: kbToMb(typstPeakKb),
+        nodeBaselineMb: kbToMb(check.baselineRssKb), nodePeakMb: kbToMb(check.peakRssKb), nodeAddedMb: kbToMb(check.peakRssKb - check.baselineRssKb), warnings: check.warnings,
+      })}`);
+      expect(rendered.pageCount).toBeGreaterThanOrEqual(300);
+      expect(check.pages).toBe(rendered.pageCount);
+      expect(check.runs).toBeGreaterThan(1000);
+      expect(rendered.bytes.length).toBeGreaterThan(imageBytes / 2);
+      expect(typstPeakKb).toBeGreaterThan(rendered.bytes.length / 2048);
+      expect(check.peakRssKb).toBeGreaterThan(check.baselineRssKb);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 900_000);
 
   it('🔑 ντετερμινισμός: ίδιες είσοδοι ⇒ ίδια bytes', async () => {
     const [first, second] = [await renderPublicationPdf(input, 'screen'), await renderPublicationPdf(input, 'screen')];
@@ -207,6 +305,14 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
     const runs = readLayoutInChildProcess(bytes).flatMap((page) => page.runs).filter((run) => /x596x/.test(run.text));
     expect(runs.map((run) => run.text).sort()).toEqual([...SEVEN_DIMENSIONS].sort());
     expect(new Set(runs.map((run) => Math.hypot(run.transform[0], run.transform[1]).toFixed(2))).size).toBe(1);
+  }, 60_000);
+
+  it('🔴 ανεστραμμένος πίνακας: ένα μπλοκ, χωρίς επικάλυψη, χωρίς κομμένο ή μικροσκοπικό κείμενο', async () => {
+    const document = transposedDocument();
+    const tables = document.sections.flatMap((section) => section.blocks).filter((block) => block.kind === 'table');
+    expect(tables).toHaveLength(1);
+    const { bytes } = await renderPublicationPdf({ ...input, document }, 'screen');
+    expect(judgePublicationLayout(readLayoutInChildProcess(bytes), 0)).toMatchObject({ overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 });
   }, 60_000);
 
   it('🔑 εκτύπωση: TrimBox = A4, μέσα σε σελίδα μεγαλωμένη κατά το bleed', async () => {

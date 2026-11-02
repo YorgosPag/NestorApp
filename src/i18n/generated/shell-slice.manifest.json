@@ -44,7 +44,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__categories.el.json": "85a4cf53f16afd7adc01d82c1f97ebcc2f86a86695b35f74ff3511e89ca0f44d",
     "src/i18n/generated/routes/o__workspace__catalog__connections.el.json": "3ef0050adaba364fb22d7056c04a515d30ed6bf3ab31f69affa2854f1d4baf94",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "0a619d916f8848ed48488331648730b76b94428c33f1914cd14bc297328f9eb2",
-    "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "ea9623ce64636b91f67c43a160aaa223349ab2ae081854e92874a62d761b335c",
+    "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "cb6b3f0695e406718973c3e9af8fcce9870e24d4613f82784922df42c9846c59",
     "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "a764bdc592c3cdfdabd3ff67aa081dce55a512f3fbdc130733b7617a4893bd2b",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "1ac06d32a9b0173a19c15e7131794744743c5d25901d3f3514ba8220e22fc62d",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "6e2a18bb9a256d16292d0b393c57399fb8123360599ec9763d942ed17edfffef",
@@ -181,7 +181,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3139fbbf017e9c713d2bd07739866fbb940036f5f552819ebcdffac447d77636",
+  "inputsSha256": "c58019d8f8f937fcd342123c03e25e9d46320e1334bc96c961e18cf9c8e539e2",
   "languages": [
     "el"
   ],
@@ -9314,6 +9314,10 @@
             "families.table.needScheme",
             "families.table.noFilter",
             "families.table.onlyFor",
+            "families.table.overflow",
+            "families.table.overflowContinue",
+            "families.table.overflowHint",
+            "families.table.overflowTranspose",
             "families.table.preview",
             "families.table.remove",
             "families.table.removeRow",
@@ -9649,6 +9653,10 @@
             "families.table.chooseScheme",
             "families.table.lead",
             "families.table.needScheme",
+            "families.table.overflow",
+            "families.table.overflowContinue",
+            "families.table.overflowHint",
+            "families.table.overflowTranspose",
             "families.table.remove",
             "families.table.removeRow",
             "families.table.rowAt",
@@ -26386,7 +26394,7 @@
   ],
   "stats": {
     "matchedKeys": 273,
-    "sliceBytes": 1315297
+    "sliceBytes": 1315750
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

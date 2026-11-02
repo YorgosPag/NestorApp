@@ -308,7 +308,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:f6047e3e317617dc6b04fd104453af02c8b037e48e6c56fed1417b638094bc07 -->
+     fingerprint: sha256:f54e1bf4b70d0b01560e58fd83703f9e527e1405db73d3d7967f52dcd9118891 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |

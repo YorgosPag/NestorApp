@@ -17,7 +17,7 @@ import type { HumanLanguage } from '@/i18n/languages';
 import { catalogSortKey } from '../derived/sort-key';
 import { buildTablePreview, realTableColumn, type PreviewRow, type PreviewWords, type TableAttribute, type TablePreview } from '../table/catalog-table';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
-import type { CatalogFamilyDefinition, VariantScheme } from '../types/family';
+import { tableOverflowOf, type CatalogFamilyDefinition, type TableOverflowMode, type VariantScheme } from '../types/family';
 import { resolveInheritedValues, type InheritanceLink, type ResolvedValues } from '../values/resolve-inherited';
 import { readSlot } from '../values/value-shape';
 import type { ValueTextContext } from '../values/value-text-codec';
@@ -39,6 +39,7 @@ export interface VariantModelEntry {
   readonly descriptionHtml: string | null;
   readonly imageAssetId: string | null;
   readonly preview: TablePreview;
+  readonly tableOverflow: TableOverflowMode;
   readonly priceRowIds: ReadonlySet<string>;
   readonly codes: readonly PublicationCode[];
   readonly listingKind: CatalogListingKind;
@@ -190,6 +191,7 @@ export function variantModelEntry(input: VariantEntryInput): VariantModelEntry |
     descriptionHtml: descriptionOf(input),
     imageAssetId: firstImage(model, family.imageAttributeId, attributeById, language),
     preview: { ...preview, rows },
+    tableOverflow: tableOverflowOf(family.tableSpec),
     priceRowIds: new Set([...(input.priceOf ? [PRICE_ROW_ID] : []), ...(hasInstallation ? [INSTALLATION_PRICE_ROW_ID] : [])]),
     listingKind: input.listingKind ?? DEFAULT_LISTING_KIND,
     codes: ordered.flatMap(({ variant }) => (variant.identifier ? [{ code: variant.identifier, label: variant.label ?? variant.identifier }] : [])),

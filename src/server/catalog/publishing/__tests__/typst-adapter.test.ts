@@ -14,6 +14,7 @@ import { UNCHECKED_PUBLICATION_LAYOUT } from '@/subapps/catalog/types/publicatio
 import { applyPrintBoxes, inspectRenderedLayout, renderPublicationPdf, typstCompileArgs, typstPreviewArgs } from '../typst-adapter';
 import { parseTypstVersion, typstJobsFor, type TypstRunner } from '../typst-engine.server';
 import { PUBLICATION_TYPST_TEMPLATE } from '../typst-template';
+import { measurePdfCheckPeakInChildProcess, parsePeakOutput } from './pdf-layout-oracle';
 
 jest.mock('server-only', () => ({}));
 jest.mock('@/services/pdf/pdf-rasterize.service', () => ({ readPdfTextLayout: jest.fn() }));
@@ -152,6 +153,23 @@ describe('typstJobsFor', () => {
     expect(typstJobsFor(1)).toBe(1);
     expect(typstJobsFor(0)).toBe(1);
   });
+});
+
+describe('μέτρηση μνήμης του ελέγχου (CHECK 3.110)', () => {
+  it('🔴 προειδοποίηση βιβλιοθήκης στο stdout δεν χαλά το αποτέλεσμα, και αναφέρεται μία φορά', () => {
+    const result = '{"baselineRssKb":1,"peakRssKb":2,"pages":3,"runs":4}';
+    expect(parsePeakOutput(`Warning: Χ\nWarning: Χ\n${result}`)).toEqual({ baselineRssKb: 1, peakRssKb: 2, pages: 3, runs: 4, warnings: ['Warning: Χ'] });
+    expect(parsePeakOutput(result).warnings).toEqual([]);
+  });
+
+  it.each(['print', 'screen'] as const)('προφίλ %s: η διεργασία διαβάζει πραγματικό PDF και αναφέρει αληθινή κορυφή', async (profile) => {
+    const pdf = await PDFDocument.create();
+    pdf.addPage().drawText('Katalogos');
+    const peak = measurePdfCheckPeakInChildProcess(await pdf.save(), profile);
+    expect(peak).toMatchObject({ pages: 1, runs: 1 });
+    expect(peak.baselineRssKb).toBeGreaterThan(10_000);
+    expect(peak.peakRssKb).toBeGreaterThanOrEqual(peak.baselineRssKb);
+  }, 30_000);
 });
 
 describe('parseTypstVersion', () => {

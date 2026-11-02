@@ -5,13 +5,75 @@
 import type { PreviewRow, TablePreview } from '../../table/catalog-table';
 import { columnChunks, evenSegments, fitValueColumns, layoutTables, tableUsesRail, type LayoutTableOptions } from '../layout-table';
 import { ZERO_WIDTH_SPACE, formatPublicationDate, formatPublicationPrice, richTextBlocks, withBreakHints } from '../layout-text';
+import { PUBLICATION_LIMITS } from '../publication-vocabulary';
 
-const options: LayoutTableOptions = { id: 't', caption: 'MFP', groupStyle: 'band', maxValueColumns: 3, labelColumnMm: 52, railColumnMm: 10, priceRowIds: new Set() };
+const options: LayoutTableOptions = { id: 't', caption: 'MFP', groupStyle: 'band', maxValueColumns: 3, maxTransposedColumns: 3, overflow: 'continue', labelColumnMm: 52, railColumnMm: 10, priceRowIds: new Set() };
 const axis: PreviewRow = { kind: 'axis', id: 'a', label: 'Μέγεθος', cells: ['34', '51', '68', '85'] };
 const group: PreviewRow = { kind: 'groupHeader', id: 'g', label: 'Ψύξη' };
 const attr = (id: string, cells: string[], merge: 'none' | 'equalAdjacent' | 'all' = 'none'): PreviewRow =>
   ({ kind: 'attribute', id, label: id, unit: 'kW', filter: null, merge, cells });
 const preview = (rows: readonly PreviewRow[]): TablePreview => ({ columns: [new Map(), new Map(), new Map(), new Map()], hiddenColumns: 0, rows });
+
+describe('layoutTables — αναστροφή (§5.6)', () => {
+  const transpose: LayoutTableOptions = { ...options, overflow: 'transpose' };
+  const texts = (row: { readonly cells: readonly { readonly text: string }[] }) => row.cells.map((item) => item.text.replaceAll(ZERO_WIDTH_SPACE, ''));
+
+  it('παραλλαγή = γραμμή, ιδιότητα = στήλη, με κεφαλίδα που επαναλαμβάνεται', () => {
+    const tables = layoutTables(preview([axis, attr('kw', ['1', '2', '3', '4']), attr('db', ['5', '6', '7', '8'])]), transpose);
+    expect(tables).toHaveLength(1);
+    const [table] = tables;
+    expect(table).toMatchObject({ columnCount: 3, railColumn: false, parts: 1 });
+    expect(texts(table.rows[0])).toEqual(['Μέγεθος', 'kw (kW)', 'db (kW)']);
+    expect(table.rows[0].header).toBe(true);
+    expect(texts(table.rows[1])).toEqual(['34', '1', '5']);
+    expect(table.rows).toHaveLength(5);
+    expect(table.rows.slice(1).every((row) => !row.header)).toBe(true);
+  });
+
+  it('🔴 πίνακας που χωρά δεν αναστρέφεται: η δήλωση αφορά την υπερχείλιση', () => {
+    const [table] = layoutTables(preview([axis, attr('kw', ['1', '2', '3', '4'])]), { ...transpose, maxValueColumns: 4 });
+    expect(table.columnCount).toBe(5);
+  });
+
+  it('🔴 αν οι ιδιότητες δεν χωρούν ούτε ανεστραμμένες, ισχύει η συνέχεια', () => {
+    const rows = [axis, attr('a', ['1', '2', '3', '4']), attr('b', ['1', '2', '3', '4'])];
+    expect(layoutTables(preview(rows), { ...transpose, maxTransposedColumns: 1 })).toHaveLength(2);
+  });
+
+  it('🔴 χωρίς άξονα δεν υπάρχει ετικέτα γραμμής: συνέχεια, όχι γραμμές χωρίς όνομα', () => {
+    expect(layoutTables(preview([attr('a', ['1', '2', '3', '4'])]), transpose)).toHaveLength(2);
+  });
+
+  it('η δηλωμένη συγχώνευση γίνεται rowSpan, και κανένα κελί δεν περισσεύει', () => {
+    const [table] = layoutTables(preview([axis, attr('v', ['230V', '230V', '230V', '230V'], 'all'), attr('kw', ['1', '2', '3', '4'])]), transpose);
+    const [head, first, second] = table.rows;
+    expect(head.cells).toHaveLength(3);
+    expect(first.cells[1]).toMatchObject({ text: '230V', rowSpan: 4 });
+    expect(second.cells.map((item) => item.text)).toEqual(['51', '2']);
+  });
+
+  it('🔴 rowSpan δεν περνά το όριο τμήματος: το κελί δεν κόβεται σε σελίδες', () => {
+    const count = PUBLICATION_LIMITS.maxRailRowsPerSegment + 1;
+    const wide = { ...preview([]), columns: Array.from({ length: count }, () => new Map<string, string>()) };
+    const rows = [{ ...axis, cells: Array.from({ length: count }, (_, index) => `${index}`) }, attr('v', Array.from({ length: count }, () => 'A'), 'all')];
+    const [table] = layoutTables({ ...wide, rows }, transpose);
+    const spans = table.rows.flatMap((row) => row.cells).filter((item) => item.role === 'value').map((item) => item.rowSpan);
+    expect(spans.reduce((sum, span) => sum + span, 0)).toBe(count);
+    expect(Math.max(...spans)).toBeLessThanOrEqual(PUBLICATION_LIMITS.maxRailRowsPerSegment);
+  });
+
+  it('οι ομάδες ανεβαίνουν σε γραμμή κεφαλίδας με colSpan, χωρίς στήλη ομάδας ακόμη και σε `rail`', () => {
+    const [table] = layoutTables(preview([axis, group, attr('kw', ['1', '2', '3', '4']), attr('db', ['5', '6', '7', '8'])]), { ...transpose, groupStyle: 'rail' });
+    expect(table.railColumn).toBe(false);
+    expect(table.rows[0].header).toBe(true);
+    expect(table.rows[0].cells[1]).toMatchObject({ text: 'Ψύξη', colSpan: 2, role: 'columnHead' });
+  });
+
+  it('🔑 η στήλη τιμής κρατά τον ρόλο `price`', () => {
+    const [table] = layoutTables(preview([axis, attr('p', ['10', '20', '30', '40'])]), { ...transpose, priceRowIds: new Set(['p']) });
+    expect(table.rows[1].cells[1].role).toBe('price');
+  });
+});
 
 describe('layoutTables — συνέχεια στηλών (12 παραλλαγές, §21.1)', () => {
   it('σπάει σε μπλοκ και κάθε συνέχεια κρατά ετικέτα γραμμής και κεφαλίδα', () => {
