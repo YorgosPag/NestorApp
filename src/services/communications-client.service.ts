@@ -15,16 +15,18 @@
 import { orderBy, where, type DocumentData } from 'firebase/firestore';
 import type { Communication } from '@/types/crm';
 import { firestoreQueryService } from '@/services/firestore';
-import { normalizeToISO } from '@/lib/date-local';
+import { withIsoDateFields } from '@/lib/date-local';
 
-const toCommunication = (raw: DocumentData & { id: string }): Communication => {
-  const communication: Record<string, unknown> = {};
-  for (const key in raw) {
-    const iso = normalizeToISO(raw[key]);
-    communication[key] = iso ?? raw[key];
-  }
-  return communication as unknown as Communication;
-};
+/** Τα μόνα πεδία στιγμής του `Communication` (ADR-218). */
+const COMMUNICATION_DATE_FIELDS = [
+  'meetingDate',
+  'followUpDate',
+  'createdAt',
+  'updatedAt',
+] as const satisfies readonly (keyof Communication)[];
+
+export const toCommunication = (raw: DocumentData & { id: string }): Communication =>
+  withIsoDateFields(raw, COMMUNICATION_DATE_FIELDS) as unknown as Communication;
 
 /**
  * 🎯 ENTERPRISE: Επικοινωνίες ανά επαφή (tenant-aware)

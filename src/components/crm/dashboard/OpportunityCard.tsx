@@ -65,12 +65,16 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                 </h4>
                 <CommonBadge
                   status="company"
-                  customLabel={opportunity.stage || ''}
+                  customLabel={opportunity.stage ? t(`opportunities.stages.${opportunity.stage}`) : ''}
                   size="sm"
                   className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor('lead', opportunity.stage, { colors })}`}
                 />
             </div>
-            
+
+            {opportunity.fullName && opportunity.title && (
+                <p className="mb-2 text-sm text-foreground">{opportunity.title}</p>
+            )}
+
             <div className={cn("space-y-1.5 text-xs", colors.text.muted)}>
                 {opportunity.email && (
                     <div className="flex items-center gap-2">
@@ -86,7 +90,11 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                 )}
                 <div className="flex items-center gap-2">
                     <Calendar className={iconSizes.xs} />
-                    <span>{getCreatedAtLabel(opportunity.createdAt, t('opportunities.unknownDate'))}</span>
+                    <span>
+                        {t('opportunities.card.createdAt', {
+                            date: getCreatedAtLabel(opportunity.createdAt, t('opportunities.unknownDate')),
+                        })}
+                    </span>
                 </div>
             </div>
 

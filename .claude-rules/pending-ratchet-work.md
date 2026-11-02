@@ -5166,3 +5166,11 @@ working tree). Θεραπεία: `git rm` του αρχείου + αφαίρεσ
 **Εκτίμηση:** ~1 ώρα, 4 πύλες ⇒ απόφαση Giorgio για προτεραιότητα.
 
 ---
+
+### 🔀 CRM ευκαιρίες: δύο λεξιλόγια σταδίων και εγγραφή χωρίς έλεγχο server (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-03, ADR-252)
+- **Τι**: ο server (`opportunities-server.service.ts`, `VALID_STAGES`) δέχεται `lead · qualified · proposal · negotiation · won · lost`, ενώ ο τύπος `Opportunity` και η οθόνη χρησιμοποιούν `initial_contact · qualification · viewing · proposal · negotiation · contract · closed_won · closed_lost`. Ο server γράφει και άλλα πεδία (`name`, `value`) από όσα διαβάζει η οθόνη (`title`, `estimatedValue`).
+- **Πού**: η οθόνη δεν περνά από το `/api/opportunities`: το `EditOpportunityModal` και το `addOpportunity` γράφουν απευθείας με `updateDoc` / `setDoc` (`crm-mutation-gateway` → `opportunities.service.ts`), άρα η επικύρωση του ADR-252 δεν ισχύει για αυτή τη διαδρομή. Το `addOpportunity` δεν βάζει ρητά `companyId`· ⏳ να μετρηθεί αν η κανονική ροή «Νέο Lead» δουλεύει.
+- **Fix**: ένα λεξιλόγιο σταδίων από τον τύπο και οι εγγραφές μέσω του API.
+- **Μένει και**: το ακίνητο στο παράθυρο είναι μόνο για ανάγνωση, γιατί το μοντέλο είναι πίνακας `propertyIds` και ο επιλογέας μονός.
+
+---

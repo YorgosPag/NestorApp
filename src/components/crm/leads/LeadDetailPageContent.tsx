@@ -21,6 +21,7 @@ import CreateTaskModal from '@/components/crm/dashboard/dialogs/CreateTaskModal'
 import { EditOpportunityModal } from '@/components/crm/dashboard/EditOpportunityModal';
 
 import { ContactCard } from './lead-detail/ContactCard';
+import { OpportunityDetailsCard } from './lead-detail/OpportunityDetailsCard';
 import { QuickActions } from './lead-detail/QuickActions';
 import { TasksSummary } from './lead-detail/TasksSummary';
 import { UpcomingTasks } from './lead-detail/UpcomingTasks';
@@ -114,6 +115,7 @@ export function LeadDetailPageContent() {
         <section className={cn('container mx-auto', spacing.padding.x.lg, spacing.padding.y.lg)}>
           <div className={cn('grid grid-cols-1 lg:grid-cols-3', spacing.gap.lg)}>
             <aside className={cn(getResponsiveClass('lg', 'col-span-1'), spacing.spaceBetween.lg)} aria-label={t('leadDetails.contactSectionAria')}>
+              <OpportunityDetailsCard lead={lead} />
               <ContactCard lead={lead} person={person} onPreview={() => setShowContactPreview(true)} />
               {lead.notes && (
                 <article className={cn(colors.bg.primary, 'rounded-lg shadow', spacing.padding.lg)}>

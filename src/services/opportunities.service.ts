@@ -22,19 +22,23 @@ import { generateOpportunityId } from '@/services/enterprise-id.service';
 import { firestoreQueryService } from '@/services/firestore';
 import type { Opportunity } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { normalizeToISO } from '@/lib/date-local';
+import { withIsoDateFields } from '@/lib/date-local';
 
 const OPPORTUNITIES_COLLECTION = COLLECTIONS.OPPORTUNITIES;
 
+/** Τα μόνα πεδία στιγμής του `Opportunity` (ADR-218). */
+const OPPORTUNITY_DATE_FIELDS = [
+  'expectedCloseDate',
+  'lastActivity',
+  'nextActionDate',
+  'wonDate',
+  'createdAt',
+  'updatedAt',
+] as const satisfies readonly (keyof Opportunity)[];
+
 /** Transform raw DocumentData (from firestoreQueryService) to Opportunity */
-const toOpportunity = (raw: DocumentData & { id: string }): Opportunity => {
-  const opportunity: Record<string, unknown> = {};
-  for (const key in raw) {
-    const iso = normalizeToISO(raw[key]);
-    opportunity[key] = iso ?? raw[key];
-  }
-  return opportunity as unknown as Opportunity;
-};
+export const toOpportunity = (raw: DocumentData & { id: string }): Opportunity =>
+  withIsoDateFields(raw, OPPORTUNITY_DATE_FIELDS) as unknown as Opportunity;
 
 // --- READ methods: ADR-214 Phase 4 (tenant-aware via firestoreQueryService) ---
 

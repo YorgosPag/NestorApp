@@ -23,4 +23,5 @@ export {
   type UseLinkedSinglePickerConfig,
 } from './use-linked-single-picker';
 export { LinkedSinglePickerView, type LinkedSinglePickerViewProps } from './LinkedSinglePickerView';
+export { useCachedPickerOptions } from './use-cached-picker-options';
 export { useContactPickerTranslation, CONTACT_PICKER_NAMESPACES } from './contact-picker-i18n';

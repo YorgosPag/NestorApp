@@ -76,6 +76,20 @@
   },
   "opportunities": {
     "unknownDate": "Unknown date",
+    "card": {
+      "createdAt": "Created: {date}"
+    },
+    "details": {
+      "title": "Opportunity Details",
+      "name": "Title",
+      "estimatedValue": "Estimated value",
+      "probability": "Closing probability",
+      "probabilityValue": "{value}%",
+      "nextAction": "Next action",
+      "expectedClose": "Expected close",
+      "property": "Property",
+      "propertyUnnamed": "Unnamed property"
+    },
     "deleteDialog": {
       "title": "Confirm Deletion",
       "message": "Are you sure you want to delete the opportunity \"{name}\"?",
@@ -87,11 +101,20 @@
       "title": "Edit Opportunity",
       "linkedContactHint": "Name, email and phone come from the linked contact. Change them there.",
       "labels": {
-        "name": "Name",
+        "customer": "Customer",
+        "customerPlaceholder": "Search contacts by name...",
+        "customerClear": "Clear",
+        "customerLinked": "Linked contact",
+        "customerNotLinked": "This name is not linked to a contact.",
+        "customerResults": "Contacts",
+        "customerNoResults": "No contact found",
+        "customerFreeText": "Use without linking a contact",
+        "title": "Opportunity title",
+        "estimatedValue": "Value (€)",
+        "probability": "Probability (%)",
+        "nextAction": "Next action",
         "email": "Email",
         "phone": "Phone",
-        "contactId": "Customer ID (soldTo)",
-        "contactIdPlaceholder": "Enter contact ID...",
         "stage": "Stage",
         "stagePlaceholder": "Select stage...",
         "notes": "Notes"
@@ -530,7 +553,7 @@
     "backToLeads": "Back to Leads",
     "navAria": "Lead profile navigation",
     "backAria": "Back",
-    "headerTitle": "Lead Profile",
+    "headerTitle": "Opportunity Profile",
     "contactSectionAria": "Contact details and quick actions",
     "notesTitle": "Notes",
     "tasksSectionAria": "Tasks and communication history",

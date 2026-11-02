@@ -76,6 +76,20 @@
   },
   "opportunities": {
     "unknownDate": "Άγνωστη ημερομηνία",
+    "card": {
+      "createdAt": "Δημιουργία: {date}"
+    },
+    "details": {
+      "title": "Στοιχεία Ευκαιρίας",
+      "name": "Τίτλος",
+      "estimatedValue": "Εκτιμώμενη αξία",
+      "probability": "Πιθανότητα κλεισίματος",
+      "probabilityValue": "{value}%",
+      "nextAction": "Επόμενη ενέργεια",
+      "expectedClose": "Αναμενόμενο κλείσιμο",
+      "property": "Ακίνητο",
+      "propertyUnnamed": "Ακίνητο χωρίς όνομα"
+    },
     "deleteDialog": {
       "title": "Επιβεβαίωση Διαγραφής",
       "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε την ευκαιρία \"{name}\";",
@@ -87,11 +101,20 @@
       "title": "Επεξεργασία Ευκαιρίας",
       "linkedContactHint": "Το όνομα, το email και το τηλέφωνο έρχονται από τη συνδεδεμένη επαφή. Αλλάζουν εκεί.",
       "labels": {
-        "name": "Όνομα",
+        "customer": "Πελάτης",
+        "customerPlaceholder": "Αναζήτηση επαφής με το όνομα...",
+        "customerClear": "Καθαρισμός",
+        "customerLinked": "Συνδεδεμένη επαφή",
+        "customerNotLinked": "Το όνομα δεν είναι συνδεδεμένο με επαφή.",
+        "customerResults": "Επαφές",
+        "customerNoResults": "Δεν βρέθηκε επαφή",
+        "customerFreeText": "Χρήση χωρίς σύνδεση με επαφή",
+        "title": "Τίτλος ευκαιρίας",
+        "estimatedValue": "Αξία (€)",
+        "probability": "Πιθανότητα (%)",
+        "nextAction": "Επόμενη ενέργεια",
         "email": "Email",
         "phone": "Τηλέφωνο",
-        "contactId": "ID Πελάτη (soldTo)",
-        "contactIdPlaceholder": "Εισάγετε το ID της επαφής...",
         "stage": "Στάδιο",
         "stagePlaceholder": "Επιλογή σταδίου...",
         "notes": "Σημειώσεις"
@@ -530,7 +553,7 @@
     "backToLeads": "Πίσω στους Ενδιαφερόμενους",
     "navAria": "Πλοήγηση προφίλ lead",
     "backAria": "Πίσω",
-    "headerTitle": "Προφίλ Lead",
+    "headerTitle": "Προφίλ Ευκαιρίας",
     "contactSectionAria": "Στοιχεία επικοινωνίας και γρήγορες ενέργειες",
     "notesTitle": "Σημειώσεις",
     "tasksSectionAria": "Εργασίες και ιστορικό επικοινωνίας",

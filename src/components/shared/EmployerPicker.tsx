@@ -15,14 +15,18 @@
  * @module components/shared/EmployerPicker
  */
 
-import React, { useRef, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { cn } from '@/lib/utils';
 import { Building2 } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
 import type { CompanyContact } from '@/types/contacts';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { LinkedSinglePickerView, useContactPickerTranslation } from '@/components/shared/pickers';
+import {
+  LinkedSinglePickerView,
+  useCachedPickerOptions,
+  useContactPickerTranslation,
+} from '@/components/shared/pickers';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -64,6 +68,30 @@ interface CompanySearchResult {
   vatNumber?: string;
 }
 
+async function loadCompanyContacts(): Promise<readonly CompanySearchResult[]> {
+  try {
+    // Fetch all contacts without type filter to avoid composite index requirement.
+    // Client-side filtering is more resilient and company count is typically <500.
+    const { contacts } = await ContactsService.getAllContacts({ limitCount: 500 });
+
+    const mapped: CompanySearchResult[] = contacts
+      .filter((c): c is CompanyContact => c.type === 'company')
+      .map((c) => ({
+        id: c.id ?? '',
+        companyName: c.companyName ?? '',
+        tradeName: c.tradeName,
+        vatNumber: c.vatNumber,
+      }))
+      .filter((c) => c.id && c.companyName);
+
+    logger.info('Company contacts cached', { count: mapped.length });
+    return mapped;
+  } catch (error) {
+    logger.error('Failed to fetch company contacts', { error });
+    throw error;
+  }
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -79,39 +107,7 @@ export function EmployerPicker({
   const colors = useSemanticColors();
 
   // Cache: all company contacts (fetched once, filtered client-side)
-  const companyCacheRef = useRef<CompanySearchResult[] | null>(null);
-  const fetchingRef = useRef(false);
-
-  const fetchCompanyContacts = useCallback(async (): Promise<CompanySearchResult[]> => {
-    if (companyCacheRef.current) return companyCacheRef.current;
-    if (fetchingRef.current) return [];
-
-    fetchingRef.current = true;
-    try {
-      // Fetch all contacts without type filter to avoid composite index requirement.
-      // Client-side filtering is more resilient and company count is typically <500.
-      const { contacts } = await ContactsService.getAllContacts({ limitCount: 500 });
-
-      const mapped: CompanySearchResult[] = contacts
-        .filter((c): c is CompanyContact => c.type === 'company')
-        .map((c) => ({
-          id: c.id ?? '',
-          companyName: c.companyName ?? '',
-          tradeName: c.tradeName,
-          vatNumber: c.vatNumber,
-        }))
-        .filter((c) => c.id && c.companyName);
-
-      companyCacheRef.current = mapped;
-      logger.info('Company contacts cached', { count: mapped.length });
-      return mapped;
-    } catch (error) {
-      logger.error('Failed to fetch company contacts', { error });
-      return [];
-    } finally {
-      fetchingRef.current = false;
-    }
-  }, []);
+  const fetchCompanyContacts = useCachedPickerOptions(loadCompanyContacts);
 
   // Data source — owns filtering + slicing
   const search = useCallback(async (query: string): Promise<CompanySearchResult[]> => {

@@ -137,6 +137,29 @@ export function normalizeToISO(val: unknown): string | null {
 }
 
 /**
+ * Αντίγραφο εγγράφου με ISO στιγμές **μόνο** στα δηλωμένα πεδία.
+ *
+ * 🔴 Το `normalizeToISO` δέχεται και αριθμούς και κείμενα, γιατί τα επίσημα σχήματα
+ * μιας στιγμής είναι πολλά. Περασμένο σε **όλα** τα πεδία ενός εγγράφου, αλλοιώνει
+ * σιωπηλά τα μη-ημερομηνίες: 170000 → `1970-01-01T00:02:50.000Z` (ποσό «NaN €»),
+ * «Επίσκεψη στο T-D-2.02» → `2001-02-01…`. Γι' αυτό τα πεδία δηλώνονται ρητά.
+ *
+ * Πεδίο που δεν λύνεται σε στιγμή μένει όπως ήταν.
+ * @see ADR-218
+ */
+export function withIsoDateFields(
+  raw: Readonly<Record<string, unknown>>,
+  dateFields: readonly string[],
+): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...raw };
+  for (const field of dateFields) {
+    const iso = normalizeToISO(raw[field]);
+    if (iso !== null) normalized[field] = iso;
+  }
+  return normalized;
+}
+
+/**
  * Extract a Firestore document field as ISO string.
  * Replaces scattered `getTimestampString()` / `toISOStringOrPassthrough()` helpers.
  * @see ADR-218
