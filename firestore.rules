@@ -1347,6 +1347,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ADR-923 §5.13 Ε4 · Δ1 — Το δημόσιο έγγραφο μοντέλου: κανένα ποσό, κλειστό σχήμα. Το γράφει μόνο ο αδειαστής.
+    match /public_catalog_models/{modelId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ADR-923 §5.13 Δ3 — Το outbox της δημόσιας προβολής: το γράφει η μηχανή του καταλόγου, το αδειάζει ο διακομιστής.
     match /catalog_public_outbox/{outboxId} {
       allow read: if false;

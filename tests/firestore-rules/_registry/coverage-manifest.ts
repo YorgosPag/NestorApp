@@ -241,6 +241,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...publicWorldMatrix(),
   },
   {
+    // ADR-923 §5.13 Ε4 · Δ1 — Το δημόσιο έγγραφο μοντέλου. Ίδιος πίνακας με το `public_listings`.
+    collection: 'public_catalog_models',
+    pattern: 'public_world',
+    testFile: 'tests/firestore-rules/suites/public-catalog-models.rules.test.ts',
+    ...publicWorldMatrix(),
+  },
+  {
     // ADR-827 §9 — Η ΒΙΤΡΙΝΑ ΤΟΥ ΓΡΑΦΕΙΟΥ. **Ίδιος πίνακας με το `public_listings`,
     // ΔΙΑΦΟΡΕΤΙΚΟ ερώτημα ασφαλείας** — και η διαφορά είναι ο λόγος που υπάρχει
     // ξεχωριστή σουίτα αντί για δεύτερη γραμμή δίπλα στην προηγούμενη.

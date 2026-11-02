@@ -50,6 +50,7 @@ import {
   type CatalogRenditionUse,
 } from '@/subapps/catalog/renditions/catalog-renditions';
 import { CATALOG_ASSET_MAX_BYTES } from '@/subapps/catalog/vocabulary/asset-files';
+import { PUBLIC_CATALOG_SCOPE, signalPublicScopesInTx } from './public/public-outbox.server';
 
 const logger = createModuleLogger('CatalogAssetRenditions');
 
@@ -76,6 +77,7 @@ const queue = createPriorityTaskQueue(RENDITION_ENCODE_CONCURRENCY);
 
 /** Η εγγραφή όσο τη χρειάζεται ο γραφέας. */
 export interface CatalogRenditionRecord {
+  readonly companyId?: string;
   readonly storagePath?: string;
   readonly storagePlacement?: unknown;
   readonly catalogRenditions?: CatalogRenditions;
@@ -168,6 +170,23 @@ function isCurrent(recorded: CatalogRenditions | undefined, generation: string):
 }
 
 /**
+ * Η έκβαση και η σημείωση της βιτρίνας στην ίδια συναλλαγή (ADR-923 §5.13 Σ3): η απόδοση αλλάζει το έγγραφο αρχείου, όχι εγγραφή
+ * καταλόγου, άρα το `noteWrite` δεν τη βλέπει. Ποια μοντέλα αγγίζει δεν το ξέρουμε φθηνά, γι' αυτό `catalog`.
+ */
+async function recordRenditions(adminDb: AdminFirestore, target: CatalogRenditionTarget, state: CatalogRenditions): Promise<void> {
+  const ref = adminDb.collection(COLLECTIONS[FILE_COLLECTION[target.custody]]).doc(target.fileId);
+  const { companyId } = target.record;
+  if (target.custody !== 'company' || !companyId) {
+    await ref.update({ catalogRenditions: state });
+    return;
+  }
+  await adminDb.runTransaction(async (tx) => {
+    tx.update(ref, { catalogRenditions: state });
+    signalPublicScopesInTx(tx, adminDb, companyId, [PUBLIC_CATALOG_SCOPE]);
+  });
+}
+
+/**
  * **Εξασφαλίζει τις αποδόσεις** — επιστρέφει την καταγεγραμμένη έκβαση της **τρέχουσας** συνταγής και γενιάς, ή `null`
  * όταν η εγγραφή δεν έχει bytes. Πετά **μόνο** σε βλάβη υποδομής (τίποτα δεν καταγράφεται — η επόμενη κλήση ξαναδοκιμάζει).
  */
@@ -186,7 +205,7 @@ export async function ensureCatalogAssetRenditions(
   const source: RenditionSource = { fileId, storagePath, bucket, generation: stat.generation };
   const key = `${fileId}@${CATALOG_RENDITION_RECIPE_VERSION}@${stat.generation}`;
   const state = await queue.schedule(key, { priority: 0, group: 'catalog-renditions' }, () => render(source, stat.size));
-  await adminDb.collection(COLLECTIONS[FILE_COLLECTION[target.custody]]).doc(fileId).update({ catalogRenditions: state });
+  await recordRenditions(adminDb, target, state);
   logger.info('Catalog renditions recorded', { fileId, status: state.status, recipe: state.recipe, generation: stat.generation });
   return state;
 }

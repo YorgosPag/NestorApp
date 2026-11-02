@@ -282,6 +282,8 @@
     "test:paper-ink": "jest scripts/__tests__/paper-ink-gate.test.js",
     "listing-terrain-authority:report": "node scripts/check-listing-terrain-authority.js",
     "test:listing-terrain-authority": "jest scripts/__tests__/listing-terrain-authority-gate.test.js",
+    "public-catalog-authority:report": "node scripts/check-public-catalog-authority.js",
+    "test:public-catalog-authority": "jest scripts/__tests__/public-catalog-authority-gate.test.js",
     "catalog-schema-authority:report": "node scripts/check-catalog-schema-authority.js",
     "test:catalog-schema-authority": "jest scripts/__tests__/catalog-schema-authority-gate.test.js",
     "tour-presence-authority:report": "node scripts/check-tour-presence-authority.js",

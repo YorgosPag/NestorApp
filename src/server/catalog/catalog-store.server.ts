@@ -41,6 +41,7 @@ import { CATALOG_KIND_SPECS, type CatalogKind, type CatalogKindIdentity } from '
 import { CatalogWriteError } from './catalog-write-error';
 import { distinctPublicScopes, publicScopesOfWrite, type PublicScope } from '@/subapps/catalog/public/public-scopes-of-write';
 import { signalPricingViewsInTx } from './pricing-view-signal.server';
+import { schedulePublicDrain } from './public/public-drain-schedule.server';
 import { signalPublicScopesInTx } from './public/public-outbox.server';
 import { revisionAfterWrite } from '@/subapps/catalog/aggregate/aggregate-members';
 
@@ -99,15 +100,18 @@ export { revisionAfterWrite };
 export async function runCatalogTransaction<T>(ctx: AuthContext, work: (scope: CatalogTx) => Promise<T>): Promise<T> {
   const db = getAdminFirestore();
   let staged: StagedChange[] = [];
+  let touched: readonly PublicScope[] = [];
   const result = await db.runTransaction(async (tx) => {
     const scope: CatalogTx = { db, tx, ctx, now: nowISO(), changes: [], pricingViews: [], publicScopes: [] };
     const value = await work(scope);
     signalPricingViewsInTx(tx, db, ctx.companyId, distinctPricingViews(scope.pricingViews));
-    signalPublicScopesInTx(tx, db, ctx.companyId, distinctPublicScopes(scope.publicScopes));
+    touched = distinctPublicScopes(scope.publicScopes);
+    signalPublicScopesInTx(tx, db, ctx.companyId, touched);
     staged = scope.changes;
     return value;
   });
   for (const change of staged) await recordChange(change, ctx.uid);
+  schedulePublicDrain(ctx.companyId, touched);
   return result;
 }
 
@@ -259,7 +263,7 @@ async function readTargetAndCurrent<TDefinition>(scope: CatalogReadScope, kind: 
 }
 
 /** Το singleton του χώρου (ρυθμίσεις): ο στόχος και η τρέχουσα ενεργή εγγραφή, αν υπάρχει. */
-export function readSingleton<TDefinition>(scope: CatalogTx, kind: CatalogKind): Promise<TargetAndCurrent<TDefinition>> {
+export function readSingleton<TDefinition>(scope: CatalogReadScope, kind: CatalogKind): Promise<TargetAndCurrent<TDefinition>> {
   return readTargetAndCurrent<TDefinition>(scope, kind, identityOf(kind, 'singleton').idOf(scope.ctx.companyId));
 }
 

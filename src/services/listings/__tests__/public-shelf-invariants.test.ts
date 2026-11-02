@@ -184,6 +184,8 @@ describe('Κ4 — ο γραφέας είναι ΑΥΣΤΗΡΟΣ, ο αναγνώ
       showcases: 'comp_9c7c1a50',
       // ADR-881: η έκδοση ήρωα — επίπεδο πλατφόρμας.
       'landing-heroes': 'lhrev_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757',
+      // ADR-923 §5.13: η ρίζα ενός μοντέλου καταλόγου.
+      'catalog-models': 'cpmod_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757',
     };
 
     for (const kind of PUBLIC_SHELF_KINDS) {

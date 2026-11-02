@@ -17,13 +17,13 @@ import { referenceTargetKey, type AssetLookup, type ReferenceLookup } from '@/su
 import { findVariantScheme } from '@/subapps/catalog/values/attribute-levels';
 import { listSlots } from '@/subapps/catalog/values/value-shape';
 import { readActiveByIds, readAttributesByIds, readMeasurementRegistry } from './catalog-library-reads.server';
-import { readOwned, readSingleton, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
+import { readOwned, readSingleton, type CatalogReadScope, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 
 export type StoredFamilyRecord = StoredCatalogRecord<CatalogFamilyDefinition>;
 
 /** Οι ρυθμίσεις του χώρου — ή οι προεπιλογές, αν δεν αποθηκεύτηκαν ποτέ (Δ6). */
-export async function readCatalogSettings(scope: CatalogTx): Promise<CatalogSettingsDefinition> {
+export async function readCatalogSettings(scope: CatalogReadScope): Promise<CatalogSettingsDefinition> {
   const { current } = await readSingleton<CatalogSettingsDefinition>(scope, 'settings');
   return current ? { channelLocales: current.channelLocales } : DEFAULT_CATALOG_SETTINGS;
 }
@@ -33,7 +33,7 @@ export async function readCatalogSettings(scope: CatalogTx): Promise<CatalogSett
  * Άγνωστο σχήμα ⇒ `scheme: null` — η τοποθέτηση το αναφέρει (`variantSchemeUnknown`), όχι εξαίρεση εδώ.
  */
 export async function readSchemaSnapshot(
-  scope: CatalogTx,
+  scope: CatalogReadScope,
   familyId: string,
   variantSchemeCode: string | null,
 ): Promise<CatalogSchemaSnapshot & { readonly familyRecord: StoredFamilyRecord }> {
@@ -55,7 +55,7 @@ interface HolderReferences {
   readonly targets: readonly CatalogReferenceTarget[];
 }
 
-function collectHolderReferences(holders: readonly CatalogValueHolder[]): HolderReferences {
+export function collectHolderReferences(holders: readonly CatalogValueHolder[]): HolderReferences {
   const assetIds = new Set<string>();
   const categoryIds = new Set<string>();
   const targets = new Map<string, CatalogReferenceTarget>();

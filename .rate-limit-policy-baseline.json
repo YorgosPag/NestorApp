@@ -148,6 +148,7 @@
     "createScanCronRoute::/api/cron/stay-channel-import",
     "createScanCronRoute::/api/cron/stay-hold-expiry",
     "createScanCronRoute::/api/cron/storage-bucket-drift",
+    "createScanCronRoute::/api/cron/public-catalog-sweep",
     "createScanCronRoute::/api/cron/publication-run-sweep",
     "createScanCronRoute::/api/cron/tour-tileset-bake",
     "createShowcaseEmailRoute::/api/buildings/[buildingId]/showcase/email",

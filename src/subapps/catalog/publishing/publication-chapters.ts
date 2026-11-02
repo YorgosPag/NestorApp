@@ -80,7 +80,7 @@ function linkOf(id: string, kind: InheritanceLink['kind'], record: StoredModel |
   return { id, kind, revision: record.revision, holder: record };
 }
 
-function chainOf(product: StoredProduct, models: ReadonlyMap<string, StoredModel>): InheritanceLink[] {
+export function chainOf(product: StoredProduct, models: ReadonlyMap<string, StoredModel>): InheritanceLink[] {
   const direct = product.modelId ? models.get(product.modelId) : undefined;
   const parent = direct?.parentId ? models.get(direct.parentId) : undefined;
   return [...(parent ? [linkOf(parent.id, 'productModel', parent)] : []), ...(direct ? [linkOf(direct.id, 'productModel', direct)] : []), linkOf(product.id, 'product', product)];

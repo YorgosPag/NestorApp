@@ -675,6 +675,16 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
       'από 2026-05-09).',
   },
   {
+    slug: 'public-catalog-sweep',
+    path: '/api/cron/public-catalog-sweep',
+    description: 'Δίχτυ δημόσιας βιτρίνας καταλόγου: άδειασμα outbox · κρίση χώρων · ημερήσιο πλήρες πέρασμα (ADR-923 §5.13 Δ3)',
+    enabled: false,
+    disabledReason: 'never-scheduled',
+    reactivateWhen:
+      'Αφού αναπτυχθούν οι δύο δείκτες του catalog_public_outbox (χωρίς αυτούς τα ερωτήματα απαντούν FAILED_PRECONDITION) ' +
+      'και συνδεθεί ο αναγνώστης της επιβεβαίωσης στο public-standing.server.ts. Πρόγραμμα κάθε 10 λεπτά, γιατί είναι δίχτυ.',
+  },
+  {
     slug: 'ai-pipeline',
     path: '/api/cron/ai-pipeline',
     description: 'Επεξεργασία παρτίδας ουράς AI pipeline (ADR-080)',

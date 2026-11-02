@@ -38,6 +38,7 @@ import { LISTING_TERRAIN_SNAPSHOT_VERSION } from '@/lib/terrain/publication/list
 import { LISTING_TERRAIN_SOURCE_VERSION } from '@/lib/terrain/publication/listing-terrain-source';
 import { isValidPathSegment } from './storage-path-validation';
 import { LANDING_HERO_SHELF } from './public-shelf-landing-hero-kind';
+import { CATALOG_MODEL_SHELF, isPublicShelfCatalogSubject } from './public-shelf-catalog-kind';
 import type { VideoShelfKind } from './public-shelf-video-kind';
 import type { TerrainShelfKind } from './public-shelf-terrain-kind';
 
@@ -291,6 +292,8 @@ export function isPublicShelfListingId(value: string): boolean {
   if (!isSafeSubjectSegment(value)) return false;
   // 🖼️ ADR-881: ταυτότητα έκδοσης ήρωα ανήκει στη ΔΙΚΗ της ρίζα — «το πολύ μία ρίζα» (Κ2β).
   if (isLandingHeroRevisionId(value)) return false;
+  // 🛒 ADR-923 §5.13: ρίζα καταλόγου ανήκει στη ΔΙΚΗ της ρίζα, ίδιος λόγος.
+  if (isPublicShelfCatalogSubject(value)) return false;
   return !value.startsWith(TENANT_IDENTITY_PREFIX);
 }
 
@@ -490,4 +493,5 @@ export const PUBLIC_SHELF_KINDS: readonly AnyPublicShelfKind[] = [
   LANDING_HERO_SHELF,
   LISTING_VIDEO_SHELF,
   LISTING_TERRAIN_SHELF,
+  CATALOG_MODEL_SHELF,
 ];

@@ -313,6 +313,14 @@ const BOUNDARIES = [
     module: 'stay-calendar-from-document',
     remedy: '«stayChannelsFromDocument(raw, propertyId)»',
   },
+  {
+    // ADR-923 §5.13 Σ2: το διαβάζει ανώνυμος με `read: if true`, ίδιο διακύβευμα με τη βλάβη της 31/08.
+    adr: 'ADR-923 §5.13',
+    typeName: 'PublicCatalogModel',
+    custodian: 'src/subapps/catalog/public/public-catalog-from-document.ts',
+    module: 'public-catalog-from-document',
+    remedy: '«publicCatalogModelFromDocument(raw, id)»',
+  },
 ];
 
 /**
