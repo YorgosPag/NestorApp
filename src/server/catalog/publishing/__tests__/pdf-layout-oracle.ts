@@ -56,6 +56,8 @@ export interface PdfCheckPeak {
   readonly peakRssKb: number;
   readonly pages: number;
   readonly runs: number;
+  /** Οι διακριτές προειδοποιήσεις των βιβλιοθηκών κατά την ανάγνωση. */
+  readonly warnings: readonly string[];
 }
 
 function runOnPdf(script: string, bytes: Uint8Array, ...args: readonly string[]): string {
@@ -73,6 +75,14 @@ export function readLayoutInChildProcess(bytes: Uint8Array): JudgedPage[] {
   return JSON.parse(runOnPdf(ORACLE, bytes)) as JudgedPage[];
 }
 
+/** Οι βιβλιοθήκες γράφουν προειδοποιήσεις στο stdout: το αποτέλεσμα είναι η τελευταία γραμμή, και οι υπόλοιπες αναφέρονται, δεν χάνονται. */
+export function parsePeakOutput(output: string): PdfCheckPeak {
+  const lines = output.trim().split('\n');
+  const result = lines[lines.length - 1];
+  const warnings = [...new Set(lines.slice(0, -1).map((line) => line.trim()).filter((line) => line !== ''))];
+  return { ...(JSON.parse(result) as Omit<PdfCheckPeak, 'warnings'>), warnings };
+}
+
 export function measurePdfCheckPeakInChildProcess(bytes: Uint8Array, profile: 'print' | 'screen'): PdfCheckPeak {
-  return JSON.parse(runOnPdf(PEAK_PROBE, bytes, profile)) as PdfCheckPeak;
+  return parsePeakOutput(runOnPdf(PEAK_PROBE, bytes, profile));
 }

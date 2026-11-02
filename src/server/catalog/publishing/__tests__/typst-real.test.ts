@@ -178,17 +178,29 @@ const TIME_BINARY = '/usr/bin/time';
 const itWithPeakMeter = existsSync(TIME_BINARY) ? it : it.skip;
 const execFileAsync = promisify(execFile);
 
-/** 20 cm στα 300 dpi, με θόρυβο: κάθε αρχείο είναι διαφορετικό, αλλιώς το Typst θα κρατούσε ένα αντίγραφο για όλα. */
+/**
+ * 20 cm στα 300 dpi, με θόρυβο: κάθε αρχείο είναι διαφορετικό, αλλιώς το Typst θα κρατούσε ένα αντίγραφο για όλα.
+ * Ο θόρυβος γεννιέται μία φορά και κάθε εικόνα είναι μετατοπισμένη κατά `index` εικονοστοιχεία: 320 γεννήσεις έφαγαν τα 10 λεπτά του test.
+ */
 const VOLUME_IMAGE = { width: 2400, height: 1600 };
+const VOLUME_CHANNELS = 3;
 const bytesToMb = (bytes: number) => Number((bytes / 1048576).toFixed(1));
 const kbToMb = (kb: number) => Number((kb / 1024).toFixed(1));
 
 async function volumeImages(ids: readonly string[], use: 'print' | 'web'): Promise<ReadonlyMap<string, Uint8Array>> {
   const { default: sharp } = await import('sharp');
+  const noise = await sharp({ create: { ...VOLUME_IMAGE, channels: VOLUME_CHANNELS, background: '#808080', noise: { type: 'gaussian', mean: 128, sigma: 40 } } }).blur(1.2).raw().toBuffer();
+  const encode = (index: number) => {
+    const at = index * VOLUME_CHANNELS;
+    const source = sharp(Buffer.concat([noise.subarray(at), noise.subarray(0, at)]), { raw: { ...VOLUME_IMAGE, channels: VOLUME_CHANNELS } });
+    return (use === 'print' ? source.toColourspace('cmyk') : source.resize({ width: 2048 })).jpeg({ quality: 85 }).toBuffer();
+  };
   const images = new Map<string, Uint8Array>();
-  for (const id of ids) {
-    const source = sharp({ create: { ...VOLUME_IMAGE, channels: 3, background: '#808080', noise: { type: 'gaussian', mean: 128, sigma: 40 } } }).blur(1.2);
-    images.set(id, await (use === 'print' ? source.toColourspace('cmyk') : source.resize({ width: 2048 })).jpeg({ quality: 85 }).toBuffer());
+  const batch = availableParallelism();
+  for (let from = 0; from < ids.length; from += batch) {
+    const slice = ids.slice(from, from + batch);
+    const encoded = await Promise.all(slice.map((_, offset) => encode(from + offset + 1)));
+    slice.forEach((id, offset) => images.set(id, encoded[offset]));
   }
   return images;
 }
@@ -232,7 +244,7 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
       reportMemory(`[μνήμη ${profile}] ${JSON.stringify({
         pages: rendered.pageCount, images: images.size, imagesMb: bytesToMb(imageBytes), pdfMb: bytesToMb(rendered.bytes.length), renderMs: rendered.renderMs,
         documentJsonMb: bytesToMb(JSON.stringify(illustrated).length), typstJobs: typstJobsFor(availableParallelism()), typstPeakMb: kbToMb(typstPeakKb),
-        nodeBaselineMb: kbToMb(check.baselineRssKb), nodePeakMb: kbToMb(check.peakRssKb), nodeAddedMb: kbToMb(check.peakRssKb - check.baselineRssKb),
+        nodeBaselineMb: kbToMb(check.baselineRssKb), nodePeakMb: kbToMb(check.peakRssKb), nodeAddedMb: kbToMb(check.peakRssKb - check.baselineRssKb), warnings: check.warnings,
       })}`);
       expect(rendered.pageCount).toBeGreaterThanOrEqual(300);
       expect(check.pages).toBe(rendered.pageCount);
@@ -243,7 +255,7 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
-  }, 600_000);
+  }, 900_000);
 
   it('🔑 ντετερμινισμός: ίδιες είσοδοι ⇒ ίδια bytes', async () => {
     const [first, second] = [await renderPublicationPdf(input, 'screen'), await renderPublicationPdf(input, 'screen')];
