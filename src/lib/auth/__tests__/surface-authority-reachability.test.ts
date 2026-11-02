@@ -61,7 +61,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { isProjectScopedAction } from '../project-scoped-actions';
 import { PREDEFINED_ROLES } from '../role-catalogue';
+import { GLOBAL_ROLES } from '../types';
 import { PERMISSIONS } from '../types';
 
 const ROLES = Object.entries(PREDEFINED_ROLES).filter(([, r]) => !r.isBypass);
@@ -187,17 +189,37 @@ describe('Κ1 — ισχυρή πράξη σε πόρο ΧΩΡΙΣ το :view τ
     expect(permissions).toContain('projects:floors:view');
   });
 
-  it('ADR-829 §7.1 — τα κτίρια ανήκουν στον διαχειριστή, όπως τα έργα, και σε κανέναν άλλο ρόλο', () => {
+  describe('ADR-829 §7.1 · ADR-926 Κ2 — ποιος γράφει κτίρια και ορόφους', () => {
     const writes = [
       'buildings:buildings:create', 'buildings:buildings:update', 'buildings:buildings:delete',
       'projects:floors:create', 'projects:floors:update',
-    ];
-    for (const [name, role] of ROLES) {
-      for (const permission of writes) {
-        expect([name, permission, role.permissions.includes(permission as never)])
-          .toEqual([name, permission, name === 'company_admin']);
+    ] as const;
+    const holders = new Set(['company_admin', 'project_manager']);
+
+    it('στον χώρο μόνο ο διαχειριστής, στο έργο μόνο ο project_manager, και σε κανέναν άλλο ρόλο', () => {
+      for (const [name, role] of ROLES) {
+        for (const permission of writes) {
+          expect([name, permission, role.permissions.includes(permission as never)])
+            .toEqual([name, permission, holders.has(name)]);
+        }
       }
-    }
+    });
+
+    // 🔑 Το παραπάνω δεν ξεχωρίζει τα δύο επίπεδα. Αυτά τα δύο ισχύουν ΜΟΝΟ μαζί: ο `project_manager` δεν είναι
+    //    καθολικός ρόλος, και ο κριτής του δίνει την πράξη μόνο από τον κλειστό κατάλογο, με `projectId`.
+    it('ο project_manager δεν γίνεται ποτέ καθολικός ρόλος: αλλιώς θα έγραφε σε κάθε έργο του χώρου', () => {
+      expect(GLOBAL_ROLES).toContain('company_admin');
+      expect(GLOBAL_ROLES).not.toContain('project_manager');
+    });
+
+    it('κάθε τέτοια εγγραφή είναι πράξη έργου, δηλωμένη στον κλειστό κατάλογο', () => {
+      expect(writes.filter((permission) => !isProjectScopedAction(permission))).toEqual([]);
+    });
+
+    it('η οριστική διαγραφή ορόφου δεν είναι πράξη έργου: ο όροφος δεν έχει κάδο (ADR-926 §4)', () => {
+      expect(PREDEFINED_ROLES.project_manager!.permissions).not.toContain('projects:floors:delete');
+      expect(isProjectScopedAction('projects:floors:delete')).toBe(false);
+    });
   });
 
   it('ADR-829 §7.1 — καμία διαδρομή ορόφων δεν γράφει με `:view`', () => {

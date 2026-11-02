@@ -22,6 +22,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
+import { isProjectRoleId } from '@/lib/auth/roles';
 import {
   enrollProjectMembers,
   removeProjectMember,
@@ -47,6 +48,14 @@ function memberKeyOf({ ctx, validated }: MutationContext): ProjectMemberKey {
 /** Η κοινή άρνηση των `update`/`remove` — **ένα** σχήμα, για να μην αποκλίνουν (ADR-742 §7septies). */
 function notAMember(): NextResponse {
   return NextResponse.json({ success: false, error: NOT_A_MEMBER_MESSAGE }, { status: 404 });
+}
+
+/** ADR-926: καθολικός ή άγνωστος ρόλος σε μέλος έργου δεν δίνει πρόσβαση, άρα δεν γράφεται. */
+function invalidProjectRole(): NextResponse {
+  return NextResponse.json(
+    { success: false, error: 'roleId must be a project role' },
+    { status: 400 },
+  );
 }
 
 /** Το ίχνος «πριν» — ρόλος και σύνολα, όπως τα κατέγραφε ο προκάτοχος. */
@@ -75,6 +84,7 @@ export async function assignMember(mutation: MutationContext): Promise<NextRespo
       { status: 400 },
     );
   }
+  if (!isProjectRoleId(roleId)) return invalidProjectRole();
 
   const [enrolled] = await enrollProjectMembers(db, [
     {
@@ -119,6 +129,9 @@ export async function assignMember(mutation: MutationContext): Promise<NextRespo
 export async function updateMember(mutation: MutationContext): Promise<NextResponse> {
   const { db, ctx, validated } = mutation;
   const { projectId, uid, reason } = validated;
+  if (validated.roleId !== undefined && !isProjectRoleId(validated.roleId)) {
+    return invalidProjectRole();
+  }
   // 🔑 Η **μετακίνηση ομάδας** είναι πράξη εξουσιοδότησης, άρα περνά από την ίδια πόρτα με
   //    τον ρόλο — και καταγράφεται στο **ίδιο** ίχνος, με `reason`.
   const changes = {

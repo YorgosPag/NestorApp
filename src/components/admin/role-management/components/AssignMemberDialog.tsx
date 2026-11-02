@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select';
 import type { CompanyUser, UserListResponse, ProjectMemberEntry } from '../types';
 import { PERMISSION_SETS } from '@/lib/auth/permission-sets';
-import { GLOBAL_ROLES } from '@/lib/auth/types';
+import { getProjectRoles } from '@/lib/auth/roles';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
@@ -52,13 +52,10 @@ interface AssignMemberDialogProps {
 type WizardStep = 1 | 2 | 3;
 
 // =============================================================================
-// ROLE OPTIONS (project-level roles from permission sets)
+// ROLE OPTIONS (ρόλοι έργου του καταλόγου, ADR-926)
 // =============================================================================
 
-const PROJECT_ROLE_OPTIONS = GLOBAL_ROLES.map((role) => ({
-  value: role,
-  label: role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-}));
+const PROJECT_ROLE_IDS = getProjectRoles();
 
 const PERMISSION_SET_OPTIONS = Object.entries(PERMISSION_SETS).map(([id, def]) => ({
   id,
@@ -233,9 +230,9 @@ export function AssignMemberDialog({
                   <SelectValue placeholder={t('roleManagement.roleChange.selectRole', 'Select role')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {PROJECT_ROLE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {PROJECT_ROLE_IDS.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {t(`common:globalRoles.${role}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -140,6 +140,19 @@ export function getProjectRoles(): string[] {
 }
 
 /**
+ * Είναι αυτό το αναγνωριστικό ρόλος **έργου** του καταλόγου; (ADR-926)
+ *
+ * Το ρωτά το σύνορο της ανάθεσης: ένας καθολικός ρόλος σε έγγραφο μέλους δεν δίνει
+ * τίποτα ουσιαστικό και ένας άγνωστος δίνει μηδέν, και στις δύο περιπτώσεις σιωπηλά.
+ *
+ * @param roleId - Role identifier
+ * @returns True μόνο για δηλωμένο ρόλο με `isProjectRole`
+ */
+export function isProjectRoleId(roleId: string): boolean {
+  return Object.hasOwn(PREDEFINED_ROLES, roleId) && PREDEFINED_ROLES[roleId].isProjectRole;
+}
+
+/**
  * Get all global roles.
  *
  * @returns Array of global role IDs
