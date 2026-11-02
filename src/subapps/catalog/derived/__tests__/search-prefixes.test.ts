@@ -2,7 +2,19 @@
  * Τα προθέματα αναζήτησης: ό,τι γράφει ο γραφέας πρέπει να το βρίσκει το ερώτημα (ADR-923 §5.12 τμήμα 4).
  */
 
-import { catalogSearchPlan, catalogSearchPrefixes, catalogSearchText, matchesCatalogSearch } from '../search-prefixes';
+import { catalogSearchPlan, catalogSearchPrefixes, catalogSearchText, matchesCatalogSearch, skuMatchesCatalogSearch } from '../search-prefixes';
+
+describe('skuMatchesCatalogSearch', () => {
+  it('κρίνει στο ευρετήριο, όχι στην ετικέτα, όταν υπάρχει', () => {
+    const derived = { label: 'Βίδα', identifier: 'V-1', searchText: 'v-1 βιδα ανοξειδωτη' };
+    expect(skuMatchesCatalogSearch(derived, ['ανοξειδωτη'])).toBe(true);
+    expect(skuMatchesCatalogSearch({ ...derived, searchText: 'v-1' }, ['βιδα'])).toBe(false);
+  });
+
+  it('🔴 SKU χωρίς επανυπολογισμό κρίνεται με ετικέτα και κωδικό', () => {
+    expect(skuMatchesCatalogSearch({ label: 'Βίδα', identifier: 'V-1' }, ['βιδα', 'v-1'])).toBe(true);
+  });
+});
 
 const finds = (label: string, identifier: string | null, term: string): boolean => {
   const { seed, tokens } = catalogSearchPlan(term);

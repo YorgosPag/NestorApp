@@ -5,7 +5,9 @@
  * (`optionFacetKey` · `booleanFacetKey`) — φίλτρο και παράγωγο δεν μπορούν να αποκλίνουν. Facets έχουν μόνο
  * επιλογή · πολλαπλή επιλογή · ναι/όχι (ό,τι το `facetKeysOf` ευρετηριάζει).
  *
- * @module components/catalog/products/product-facets
+ * 🔑 Ζει εδώ, όχι στα `components/`: την ίδια κρίση χρειάζονται η οθόνη, ο γραφέας συνταγών και το στιγμιότυπο έκδοσης.
+ *
+ * @module subapps/catalog/list/product-facets
  */
 
 import type { LocalizedText } from '@/i18n/localized-text';

@@ -11,12 +11,16 @@ const mockAssets = new Map<string, unknown>();
 const mockModels = new Set<string>();
 const mockProducts = new Set<string>();
 const mockFiles = new Map<string, Record<string, unknown>>();
+const mockFamilies = new Map<string, unknown>();
+const mockAttributes = new Map<string, unknown>();
 
 jest.mock('@/lib/files/file-custody', () => ({ FILE_COLLECTION: { company: 'FILES' } }));
 jest.mock('@/config/firestore-collections', () => ({ COLLECTIONS: { FILES: 'files' } }));
 jest.mock('../publication-prices.server', () => ({ assertPublicationPricing: jest.fn() }));
 jest.mock('../../catalog-library-reads.server', () => ({
   readActiveByIds: jest.fn(async (_scope: unknown, kind: string, ids: readonly string[]) => {
+    if (kind === 'family') return new Map(ids.flatMap((id) => (mockFamilies.has(id) ? [[id, mockFamilies.get(id)]] : [])) as [string, unknown][]);
+    if (kind === 'attribute') return new Map(ids.flatMap((id) => (mockAttributes.has(id) ? [[id, mockAttributes.get(id)]] : [])) as [string, unknown][]);
     const has = (id: string) => (kind === 'asset' ? mockAssets.has(id) : kind === 'productModel' ? mockModels.has(id) : kind === 'product' ? mockProducts.has(id) : true);
     return new Map(ids.filter(has).map((id) => [id, mockAssets.get(id) ?? { id }]));
   }),
@@ -55,6 +59,8 @@ describe('γραφέας συνταγών: αναφορές', () => {
     mockModels.clear();
     mockProducts.clear();
     mockFiles.clear();
+    mockFamilies.clear();
+    mockAttributes.clear();
   });
 
   it('δέχεται λογότυπο με ρόλο logo και εικόνα που αποδίδεται', async () => {
@@ -95,5 +101,36 @@ describe('γραφέας συνταγών: αναφορές', () => {
       { code: 'unknownReference', path: 'scope.entries[1]' },
       { code: 'unknownReference', path: 'scope.entries[3]' },
     ]);
+  });
+
+  describe('εύρος `filter`', () => {
+    const withFilter = (familyId: string | null, groups: readonly (readonly string[])[]): PublicationRecipeDefinition => ({
+      ...base,
+      scope: { kind: 'filter', filter: { familyId, facetGroups: groups.map((keys) => ({ keys })) } },
+    });
+
+    beforeEach(() => {
+      mockFamilies.set('fam', { id: 'fam', attributes: [{ attributeId: 'colour' }] });
+      mockAttributes.set('colour', { type: 'select', code: 'colour', labels: {}, config: { options: [{ code: 'red', labels: {} }] } });
+    });
+
+    it('δέχεται οικογένεια του χώρου με τιμές που προσφέρει', async () => {
+      await expect(issuesOf(withFilter('fam', [['colour=red']]))).resolves.toEqual([]);
+      await expect(issuesOf(withFilter('fam', []))).resolves.toEqual([]);
+    });
+
+    it('🔴 ξένη ή σβησμένη οικογένεια ≡ ανύπαρκτη', async () => {
+      await expect(issuesOf(withFilter('foreign', []))).resolves.toEqual([{ code: 'unknownReference', path: 'scope.filter.familyId' }]);
+    });
+
+    it('🔴 τιμή που η οικογένεια δεν προσφέρει κρίνεται στη δική της διαδρομή', async () => {
+      await expect(issuesOf(withFilter('fam', [['colour=red', 'colour=blue']]))).resolves.toEqual([
+        { code: 'unknownReference', path: 'scope.filter.facetGroups[0].keys[1]' },
+      ]);
+    });
+
+    it('χωρίς οικογένεια αρνείται η ίδια επικύρωση με τη φόρμα', async () => {
+      await expect(issuesOf(withFilter(null, []))).resolves.toEqual([{ code: 'publicationScopeEmpty', path: 'scope.filter.familyId' }]);
+    });
   });
 });

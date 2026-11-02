@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Το εύρος της έκδοσης** — όλος ο κατάλογος, επιλεγμένες κατηγορίες ή χειροκίνητη επιλογή (ADR-923 §5.6.1).
+ * @fileoverview **Το εύρος της έκδοσης** — όλος ο κατάλογος, επιλεγμένες κατηγορίες, χειροκίνητη επιλογή ή φίλτρο (ADR-923 §5.6.1).
  * @module components/catalog/publishing/PublicationScopeFields
  *
  * 🔑 Οι κατηγορίες διαβάζονται από την ίδια ζωντανή συλλογή με τη σελίδα «Κατηγορίες» — καμία δεύτερη ανάγνωση.
@@ -13,12 +13,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { EnumSelect } from '@/components/ui/enum-select';
 import { Label } from '@/components/ui/label';
 import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
+import { EMPTY_PUBLICATION_FILTER } from '@/subapps/catalog/publishing/publication-filter';
 import { PUBLICATION_SCOPE_KINDS, type PublicationScopeKind } from '@/subapps/catalog/publishing/publication-vocabulary';
 import type { PublicationScope } from '@/subapps/catalog/types/publication';
 import { CatalogField } from '../shared/CatalogFormFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { FieldIssues } from '../shared/CatalogIssues';
 import type { PublicationFieldsProps } from './publication-draft';
+import { PublicationFilterField } from './PublicationFilterField';
 import { PublicationSelectionField } from './PublicationSelectionField';
 
 /** Ένα νέο εύρος του είδους `kind` — κρατά ό,τι ήδη ταιριάζει. */
@@ -28,6 +30,7 @@ function scopeOfKind(kind: PublicationScopeKind, previous: PublicationScope): Pu
     case 'all': return { kind };
     case 'categories': return { kind, categoryIds: [] };
     case 'selection': return { kind, entries: [] };
+    case 'filter': return { kind, filter: EMPTY_PUBLICATION_FILTER };
   }
 }
 
@@ -72,6 +75,10 @@ export function PublicationScopeFields({ draft, onChange, issues, disabled }: Pu
       {scope.kind === 'selection' ? (
         <PublicationSelectionField entries={scope.entries} disabled={disabled}
           onChange={(entries) => onChange({ ...draft, scope: { kind: 'selection', entries } })} />
+      ) : null}
+      {scope.kind === 'filter' ? (
+        <PublicationFilterField filter={scope.filter} disabled={disabled}
+          onChange={(filter) => onChange({ ...draft, scope: { kind: 'filter', filter } })} />
       ) : null}
       <FieldIssues issues={issues} path="scope" />
     </section>

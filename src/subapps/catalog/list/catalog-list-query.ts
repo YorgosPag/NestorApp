@@ -81,11 +81,20 @@ export function catalogListQueryPlan(holder: CatalogListHolder, spec: CatalogLis
   };
 }
 
+/**
+ * Αναζήτηση λέξεων σε SKU, με τον σπόρο του `catalogSearchPlan` (§5.12). Όλα τα SKU, και οι παραλλαγές: χωρίς φίλτρο ρίζας,
+ * και χωρίς οικογένεια, γιατί ο δείκτης του `derived.searchPrefixes` δεν την έχει. Οικογένεια και πλήρης όρος κρίνονται στο παράθυρο.
+ */
+export function catalogSearchQueryPlan(seed: string): CatalogListQueryPlan {
+  return { equalities: [['isDeleted', false]], arrayContainsAny: ['derived.searchPrefixes', [seed]], orderBy: LIST_ORDER.label };
+}
+
 /** Κάθε σχήμα που μπορεί να ζητήσει η λίστα — για την άγκυρα δεικτών. */
 export function everyCatalogListPlan(): readonly { readonly holder: CatalogListHolder; readonly plan: CatalogListQueryPlan }[] {
   const holders: CatalogListHolder[] = ['model', 'product'];
   const families = [null, 'fam'];
   const facets = [null, ['attr=option'], ['attr=a', 'attr=b']];
-  return holders.flatMap((holder) => families.flatMap((familyId) => facets.flatMap((facetKeys) =>
+  const lists = holders.flatMap((holder) => families.flatMap((familyId) => facets.flatMap((facetKeys) =>
     CATALOG_LIST_SORTS.map((sort) => ({ holder, plan: catalogListQueryPlan(holder, { familyId, facetKeys, sort }) })))));
+  return [...lists, { holder: 'product', plan: catalogSearchQueryPlan('fan') }];
 }

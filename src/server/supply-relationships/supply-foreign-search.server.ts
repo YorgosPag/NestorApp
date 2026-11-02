@@ -20,7 +20,7 @@ import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { readActiveByIds } from '@/server/catalog/catalog-library-reads.server';
 import { readOwnedOrNull, type CatalogReadScope, type StoredCatalogRecord } from '@/server/catalog/catalog-store.server';
 import { ancestryOfHolder, readVisibilityRules } from '@/server/catalog/visibility-reads.server';
-import { catalogSearchPlan, catalogSearchText, matchesCatalogSearch, type CatalogSearchPlan } from '@/subapps/catalog/derived/search-prefixes';
+import { catalogSearchPlan, skuMatchesCatalogSearch, type CatalogSearchPlan } from '@/subapps/catalog/derived/search-prefixes';
 import { resolveCatalogCode, type CodeJumpReader, type CodeJumpTarget, type UniqueAttributeRef } from '@/subapps/catalog/list/catalog-code-jump';
 import { FOREIGN_SKU_RESULTS, FOREIGN_SKU_WINDOW, FOREIGN_SKU_WINDOWS, foreignSkuRowOf, type ForeignSkuRow } from '@/subapps/catalog/pricing/foreign-sku-search';
 import { judgeVisibility } from '@/subapps/catalog/pricing/visibility';
@@ -71,9 +71,7 @@ async function exactRows(scope: CatalogReadScope, term: string, judge: JudgeSkus
   return judge(await skusOfTarget(scope, target));
 }
 
-/** Το δίχτυ κρατά τα SKU που δεν πέρασαν ακόμη από τον επανυπολογισμό: τα προθέματά τους είναι ετικέτα και κωδικός. */
-const matches = (plan: CatalogSearchPlan) => (sku: StoredSku): boolean =>
-  matchesCatalogSearch(sku.derived.searchText ?? catalogSearchText(sku.derived.label, sku.derived.identifier), plan.tokens);
+const matches = (plan: CatalogSearchPlan) => (sku: StoredSku): boolean => skuMatchesCatalogSearch(sku.derived, plan.tokens);
 
 /** Παράθυρα κατά `sortKey`, ώσπου να γεμίσει η λίστα. Το τέλος του προϋπολογισμού ⇒ «γράψε κι άλλο», ποτέ δρομέας προς τον πελάτη. */
 async function wordRows(scope: CatalogReadScope, plan: CatalogSearchPlan, judge: JudgeSkus): Promise<readonly ForeignSkuRow[]> {

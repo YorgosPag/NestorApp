@@ -59,3 +59,11 @@ export function catalogSearchPlan(term: string): CatalogSearchPlan {
 export function matchesCatalogSearch(text: string, tokens: readonly string[]): boolean {
   return tokens.every((token) => text.includes(token));
 }
+
+/** Η μία κρίση SKU: το δίχτυ κρατά όσα δεν πέρασαν ακόμη από τον επανυπολογισμό, με προθέματα από ετικέτα και κωδικό. */
+export function skuMatchesCatalogSearch(
+  derived: { readonly searchText?: string; readonly label: string | null; readonly identifier: string | null },
+  tokens: readonly string[],
+): boolean {
+  return matchesCatalogSearch(derived.searchText ?? catalogSearchText(derived.label, derived.identifier), tokens);
+}

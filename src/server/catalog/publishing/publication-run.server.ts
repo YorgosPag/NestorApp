@@ -34,6 +34,7 @@ import { publicationBucket } from '@/server/catalog/publishing/publication-bucke
 import { createObjectOnce } from '@/server/storage/create-object-once.server';
 import { generateDeterministicCatalogPublicationRunId } from '@/services/enterprise-id.service';
 import { countLayoutSections } from '@/subapps/catalog/publishing/layout-model';
+import { countUntransposedTables } from '@/subapps/catalog/publishing/publication-preflight';
 import { isPublicationRunReusable, publicationRunOf, retentionPatch } from '@/subapps/catalog/publishing/publication-retention';
 import {
   EMPTY_PUBLICATION_REPORT,
@@ -216,7 +217,7 @@ export function publicationFailureOf(cause: unknown): PublicationFailure {
 }
 
 function reportOf(snapshot: PublicationSnapshot, assets: PublicationAssets, layout: PublicationLayoutReport): PublicationReport {
-  return { ...EMPTY_PUBLICATION_REPORT, ...snapshot.report, lowResolutionImageCount: assets.lowResolutionImageCount, nonCmykImageCount: assets.nonCmykImageCount, ...layout };
+  return { ...EMPTY_PUBLICATION_REPORT, ...snapshot.report, lowResolutionImageCount: assets.lowResolutionImageCount, nonCmykImageCount: assets.nonCmykImageCount, untransposedTableCount: countUntransposedTables(snapshot.document), ...layout };
 }
 
 /** Η απόδοση, μέσα στο `after` της αίτησης. Δεν πετά ποτέ: κάθε αποτυχία γίνεται κατάσταση της έκδοσης. */

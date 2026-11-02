@@ -29,6 +29,7 @@ export function validatePublicationRecipe(recipe: PublicationRecipeDefinition): 
   if (recipe.profiles.length === 0) issues.add('publicationProfileRequired', 'profiles');
   if (recipe.scope.kind === 'categories' && recipe.scope.categoryIds.length === 0) issues.add('publicationScopeEmpty', 'scope.categoryIds');
   if (recipe.scope.kind === 'selection' && recipe.scope.entries.length === 0) issues.add('publicationScopeEmpty', 'scope.entries');
+  if (recipe.scope.kind === 'filter' && recipe.scope.filter.familyId === null) issues.add('publicationScopeEmpty', 'scope.filter.familyId');
   checkTheme(recipe.theme, issues);
   return issues.issues;
 }

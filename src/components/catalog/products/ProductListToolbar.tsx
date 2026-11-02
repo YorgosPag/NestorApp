@@ -13,17 +13,16 @@ import { useMemo } from 'react';
 import { ClearableSelect } from '@/components/ui/clearable-select';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ToggleButton } from '@/components/ui/toggle-button';
-import { Button } from '@/components/ui/button';
 import type { HumanLanguage } from '@/i18n/languages';
 import type { FamilyRecord } from '@/services/catalog/catalog-api.client';
 import type { CatalogSettingsDefinition } from '@/subapps/catalog/types/catalog-settings';
 import { CATALOG_LIST_SORTS, type CatalogListSort } from '@/subapps/catalog/list/catalog-list-query';
+import type { FacetGroup } from '@/subapps/catalog/list/product-facets';
 import { CATALOG_CHANNELS, type CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 
 import { CHANNEL_KEYS, LANGUAGE_KEYS } from '../shared/catalog-labels';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { isFacetSelected, toggleFacet, type FacetGroup } from './product-facets';
+import { ProductFacetBar } from './ProductFacetBar';
 import type { ProductListFilter } from './use-product-list';
 
 export interface ListScope {
@@ -65,31 +64,6 @@ export function ScopeSelect(props: { readonly settings: CatalogSettingsDefinitio
   );
 }
 
-function FacetBar({ props }: { readonly props: ProductListToolbarProps }) {
-  const { t, text } = useCatalogText();
-  const { filter } = props;
-  if (filter.familyId === null) return <p className="m-0 text-sm text-muted-foreground">{t('products.filter.familyFirst')}</p>;
-  if (props.facetGroups.length === 0) return null;
-  return (
-    <section className="flex flex-wrap items-center gap-3" aria-label={t('products.filter.facets')}>
-      {props.facetGroups.map((group) => (
-        <fieldset key={group.attributeId} className="flex flex-wrap items-center gap-1 border-0 p-0">
-          <legend className="mr-1 text-xs text-muted-foreground">{text(group.labels, group.code)}</legend>
-          {group.values.map((value) => (
-            <ToggleButton key={value.key} size="sm" pressed={isFacetSelected(filter.facets, value.key)}
-              onClick={() => props.onFilter({ ...filter, facets: toggleFacet(filter.facets, group, value.key) })}>
-              {value.kind === 'option' ? text(value.labels, value.code) : t(value.value ? 'products.filter.yes' : 'products.filter.no')}
-            </ToggleButton>
-          ))}
-        </fieldset>
-      ))}
-      {filter.facets.length > 0 ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => props.onFilter({ ...filter, facets: [] })}>{t('products.filter.clearFacets')}</Button>
-      ) : null}
-    </section>
-  );
-}
-
 export function ProductListToolbar(props: ProductListToolbarProps) {
   const { t, text } = useCatalogText();
   const { filter } = props;
@@ -113,7 +87,9 @@ export function ProductListToolbar(props: ProductListToolbarProps) {
         </span>
         <ScopeSelect settings={props.settings} scope={props.scope} onScope={props.onScope} />
       </section>
-      <FacetBar props={props} />
+      {filter.familyId === null
+        ? <p className="m-0 text-sm text-muted-foreground">{t('products.filter.familyFirst')}</p>
+        : <ProductFacetBar groups={props.facetGroups} selection={filter.facets} onChange={(facets) => props.onFilter({ ...filter, facets })} />}
     </section>
   );
 }

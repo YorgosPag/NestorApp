@@ -31,10 +31,22 @@ export type PublicationSelectionEntry =
   | { readonly kind: 'productModel'; readonly id: string }
   | { readonly kind: 'product'; readonly id: string };
 
+/** Μία ιδιότητα του φίλτρου: OR μέσα στην ομάδα. Αντικείμενο, γιατί η Firestore δεν αποθηκεύει πίνακα μέσα σε πίνακα. */
+export interface PublicationFacetGroup {
+  readonly keys: readonly string[];
+}
+
+/** Το φίλτρο της οθόνης προϊόντων, χωρίς ταξινόμηση: τη σειρά την ορίζει ο συνθέτης. `familyId: null` υπάρχει μόνο στο πρόχειρο. */
+export interface PublicationFilter {
+  readonly familyId: string | null;
+  readonly facetGroups: readonly PublicationFacetGroup[];
+}
+
 export type PublicationScope =
   | { readonly kind: 'all' }
   | { readonly kind: 'categories'; readonly categoryIds: readonly string[] }
-  | { readonly kind: 'selection'; readonly entries: readonly PublicationSelectionEntry[] };
+  | { readonly kind: 'selection'; readonly entries: readonly PublicationSelectionEntry[] }
+  | { readonly kind: 'filter'; readonly filter: PublicationFilter };
 
 /** `none` = τεχνικός κατάλογος χωρίς τιμές · `priced` = **δημοσιευμένη** έκδοση για ένα κοινό. */
 export type PublicationPricing =
@@ -119,12 +131,14 @@ export interface PublicationReport {
   readonly incompleteSkuCount: number;
   /** SKU χωρίς γραμμή στην έκδοση ⇒ τυπώνεται «ζητήστε προσφορά». */
   readonly unpricedSkuCount: number;
-  /** Επιλογές του εύρους `selection` που διαγράφηκαν μετά την αποθήκευση της συνταγής. */
+  /** Επιλογές του εύρους `selection`, ή τιμές του εύρους `filter`, που διαγράφηκαν μετά την αποθήκευση της συνταγής. */
   readonly missingSelectionCount: number;
   /** Εικόνες κάτω από 300 dpi στο τυπωμένο μέγεθος. */
   readonly lowResolutionImageCount: number;
   /** Εικόνες που στο προφίλ εκτύπωσης δεν είναι CMYK. */
   readonly nonCmykImageCount: number;
+  /** Πίνακες που η οικογένεια θέλει ανεστραμμένους, αλλά οι ιδιότητες δεν χώρεσαν και συνεχίστηκαν σε νέο μπλοκ. */
+  readonly untransposedTableCount: number;
   /** `false` ⇒ ο έλεγχος διάταξης **δεν έγινε**, άρα τα τρία μηδενικά παρακάτω δεν σημαίνουν «καθαρό». */
   readonly layoutChecked: boolean;
   /** Κομμάτια κειμένου που πατούν άλλο κείμενο στο τελικό PDF. */
@@ -208,6 +222,7 @@ export const EMPTY_PUBLICATION_REPORT: PublicationReport = {
   missingSelectionCount: 0,
   lowResolutionImageCount: 0,
   nonCmykImageCount: 0,
+  untransposedTableCount: 0,
   ...UNCHECKED_PUBLICATION_LAYOUT,
 };
 

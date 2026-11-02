@@ -1023,17 +1023,23 @@
     "scope": {
       "all": "The whole catalogue",
       "categories": "Selected categories",
-      "selection": "Manual selection"
+      "selection": "Manual selection",
+      "filter": "Product filter"
+    },
+    "filter": {
+      "chooseFamily": "Choose a family",
+      "matches": "Matching list rows: {rows}"
     },
     "selection": {
       "pick": "Choose products",
-      "description": "A model brings all its variants. For one specific item, type its code.",
+      "description": "A model brings all its variants. For one specific item, search for it.",
       "count": "{count, plural, one {# selected} other {# selected}}",
       "empty": "Nothing selected yet.",
       "remove": "Remove {name}",
       "showAll": "Show all",
       "family": "Family",
       "allFamilies": "All families",
+      "search": "Name or word",
       "noCode": "No code",
       "noRows": "No products found.",
       "unavailable": "The product list did not load.",
@@ -1094,6 +1100,7 @@
       "unpriced": "{count, plural, one {# SKU without a price} other {# SKUs without a price}}",
       "lowResolution": "{count, plural, one {# image below 300 dpi} other {# images below 300 dpi}}",
       "nonCmyk": "{count, plural, one {# image not in CMYK} other {# images not in CMYK}}",
+      "untransposed": "{count, plural, one {# table did not fit transposed} other {# tables did not fit transposed}}",
       "overlappingText": "{count, plural, one {# place where text overlaps other text} other {# places where text overlaps other text}}",
       "clippedText": "{count, plural, one {# text runs off the paper} other {# texts run off the paper}}",
       "undersizedText": "{count, plural, one {# text too small to read} other {# texts too small to read}}",

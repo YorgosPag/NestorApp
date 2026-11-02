@@ -40,6 +40,14 @@ describe('layoutTables — αναστροφή (§5.6)', () => {
     expect(layoutTables(preview(rows), { ...transpose, maxTransposedColumns: 1 })).toHaveLength(2);
   });
 
+  it('🔴 η αναστροφή που δεν χώρεσε σημειώνεται· η δηλωμένη συνέχεια και η πετυχημένη αναστροφή όχι', () => {
+    const rows = [axis, attr('a', ['1', '2', '3', '4']), attr('b', ['1', '2', '3', '4'])];
+    const flags = (input: LayoutTableOptions) => layoutTables(preview(rows), input).map((table) => table.transposeUnmet);
+    expect(flags({ ...transpose, maxTransposedColumns: 1 })).toEqual([true, true]);
+    expect(flags(options)).toEqual([false, false]);
+    expect(flags(transpose)).toEqual([false]);
+  });
+
   it('🔴 χωρίς άξονα δεν υπάρχει ετικέτα γραμμής: συνέχεια, όχι γραμμές χωρίς όνομα', () => {
     expect(layoutTables(preview([attr('a', ['1', '2', '3', '4'])]), transpose)).toHaveLength(2);
   });

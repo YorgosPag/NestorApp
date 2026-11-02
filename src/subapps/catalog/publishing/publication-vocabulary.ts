@@ -8,7 +8,7 @@
  * | Σύνολο | Τιμές | Γιατί κλειστό |
  * |---|---|---|
  * | προφίλ εξόδου | `print` · `screen` | δύο **χωριστές** αποδόσεις: το Typst αρνείται PDF/A με CMYK (§5.6) |
- * | εύρος | `all` · `categories` · `selection` | ό,τι μπορεί να διαβάσει ντετερμινιστικά ο διακομιστής |
+ * | εύρος | `all` · `categories` · `selection` · `filter` | ό,τι μπορεί να διαβάσει ντετερμινιστικά ο διακομιστής |
  * | πρότυπα | εξώφυλλο … οπισθόφυλλο | κάθε πρότυπο είναι κώδικας **και** αρχείο Typst |
  *
  * @module subapps/catalog/publishing/publication-vocabulary
@@ -17,7 +17,7 @@
 export const PUBLICATION_OUTPUT_PROFILES = ['print', 'screen'] as const;
 export type PublicationOutputProfile = (typeof PUBLICATION_OUTPUT_PROFILES)[number];
 
-export const PUBLICATION_SCOPE_KINDS = ['all', 'categories', 'selection'] as const;
+export const PUBLICATION_SCOPE_KINDS = ['all', 'categories', 'selection', 'filter'] as const;
 export type PublicationScopeKind = (typeof PUBLICATION_SCOPE_KINDS)[number];
 
 /** Τα προαιρετικά πρότυπα. Η σελίδα οικογένειας και το πλέγμα είναι το σώμα: δεν απενεργοποιούνται. */
@@ -38,6 +38,10 @@ export type PublicationPaperSize = (typeof PUBLICATION_PAPER_SIZES)[number];
 export const PUBLICATION_LIMITS = {
   maxSelectionEntries: 2000,
   maxCategories: 500,
+  /** Ιδιότητες του φίλτρου και τιμές ανά ιδιότητα. Το κλειδί είναι `<id ιδιότητας>=<κωδικός επιλογής>`. */
+  maxFilterGroups: 50,
+  maxFilterKeysPerGroup: 200,
+  maxFilterKeyLength: 200,
   /** Ανώτερο όριο στηλών τιμών ανά μπλοκ — πάνω από αυτό το κελί δεν διαβάζεται τυπωμένο, όσο στενό κι αν είναι το κείμενο. */
   maxValueColumnsPerBlock: 14,
   minValueColumnsPerBlock: 2,

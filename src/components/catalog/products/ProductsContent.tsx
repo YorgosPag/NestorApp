@@ -22,12 +22,12 @@ import { useCatalogCanManageProducts, useCatalogText } from '../shared/catalog-u
 import { useCatalogSelection } from '../shared/use-catalog-selection';
 import { useUnsavedGuard } from '../shared/use-unsaved-guard';
 import { uniqueAttributeRefsOf } from '@/subapps/catalog/list/catalog-code-jump';
+import { facetGroupsOf } from '@/subapps/catalog/list/product-facets';
 import { CodeJumpField } from './CodeJumpField';
 import { NewProductDialog } from './NewProductDialog';
 import { ProductListGrid } from './ProductListGrid';
 import { ProductListToolbar, type ListScope } from './ProductListToolbar';
 import { ProductEditorView } from './editor/ProductEditorView';
-import { facetGroupsOf } from './product-facets';
 import { useProductCatalogContext } from './use-product-catalog-context';
 import { useProductList, type ProductListFilter } from './use-product-list';
 

@@ -30,10 +30,20 @@ const colourSchema = z.object({
 
 const selectionEntrySchema = z.object({ kind: z.enum(['productModel', 'product']), id: entityIdSchema });
 
+const facetGroupSchema = z.object({
+  keys: z.array(z.string().min(1).max(PUBLICATION_LIMITS.maxFilterKeyLength)).min(1).max(PUBLICATION_LIMITS.maxFilterKeysPerGroup),
+}).strict();
+
+const filterSchema = z.object({
+  familyId: entityIdSchema.nullable(),
+  facetGroups: z.array(facetGroupSchema).max(PUBLICATION_LIMITS.maxFilterGroups),
+}).strict();
+
 const scopeSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('all') }),
   z.object({ kind: z.literal('categories'), categoryIds: z.array(entityIdSchema).max(PUBLICATION_LIMITS.maxCategories) }),
   z.object({ kind: z.literal('selection'), entries: z.array(selectionEntrySchema).max(PUBLICATION_LIMITS.maxSelectionEntries) }),
+  z.object({ kind: z.literal('filter'), filter: filterSchema }),
 ]);
 
 const pricingSchema = z.discriminatedUnion('kind', [

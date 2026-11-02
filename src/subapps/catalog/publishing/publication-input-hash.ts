@@ -14,6 +14,7 @@ import { createHash } from 'node:crypto';
 
 import { canonicalJson } from '@/lib/legal/canonical-json';
 import type { PublicationRecipeDefinition } from '../types/publication';
+import { canonicalRecipeScope } from './publication-filter';
 
 /** Μία έκδοση δεδομένου: `kind:id@revision`. */
 export interface DataVersionRef {
@@ -34,6 +35,6 @@ export interface PublicationInputs {
 const sorted = (refs: readonly DataVersionRef[]) => [...refs].map(({ key, revision }) => `${key}@${revision}`).sort();
 
 export function publicationInputHash(inputs: PublicationInputs): string {
-  const canonical = canonicalJson({ ...inputs, data: sorted(inputs.data), pricing: sorted(inputs.pricing) });
+  const canonical = canonicalJson({ ...inputs, recipe: canonicalRecipeScope(inputs.recipe), data: sorted(inputs.data), pricing: sorted(inputs.pricing) });
   return createHash('sha256').update(canonical).digest('hex');
 }

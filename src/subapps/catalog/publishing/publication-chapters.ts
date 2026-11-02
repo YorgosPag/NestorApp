@@ -21,7 +21,7 @@ import type { CatalogCategoryDefinition } from '../types/category';
 import { listingKindOf, type CatalogFamilyDefinition, type VariantScheme } from '../types/family';
 import type { CatalogProductDefinition, CatalogProductModelDefinition } from '../types/product';
 import type { CatalogProductDerived } from '../types/product-derived';
-import type { PublicationScope } from '../types/publication';
+import type { PublicationFilter, PublicationScope } from '../types/publication';
 import type { InheritanceLink } from '../values/resolve-inherited';
 import { readSlot } from '../values/value-shape';
 import { formatAttributeValue, type ValueTextContext } from '../values/value-text-codec';
@@ -35,6 +35,7 @@ import {
   type PublicationVariant,
   type SimpleProductCard,
 } from './publication-entries';
+import { productPassesFilter, unknownFilterKeys } from './publication-filter';
 
 interface Stored {
   readonly id: string;
@@ -44,7 +45,7 @@ interface Stored {
 export type StoredCategory = CatalogCategoryDefinition & Stored & { readonly ancestorIds: readonly string[]; readonly orderKey: string };
 export type StoredFamily = CatalogFamilyDefinition & Stored;
 export type StoredModel = CatalogProductModelDefinition & Stored;
-export type StoredProduct = CatalogProductDefinition & Stored & { readonly derived: Pick<CatalogProductDerived, 'identifier' | 'label' | 'completeChannels' | 'sortKey'> };
+export type StoredProduct = CatalogProductDefinition & Stored & { readonly derived: Pick<CatalogProductDerived, 'identifier' | 'label' | 'completeChannels' | 'sortKey'> & Partial<Pick<CatalogProductDerived, 'facetKeys'>> };
 
 export interface PublicationDataSet {
   readonly scope: PublicationScope;
@@ -86,9 +87,10 @@ function chainOf(product: StoredProduct, models: ReadonlyMap<string, StoredModel
   return [...(parent ? [linkOf(parent.id, 'productModel', parent)] : []), ...(direct ? [linkOf(direct.id, 'productModel', direct)] : []), linkOf(product.id, 'product', product)];
 }
 
-function inScope(scope: PublicationScope, categoryIds: readonly string[], ids: readonly string[], categories: ReadonlyMap<string, StoredCategory>): boolean {
+function inScope(scope: PublicationScope, product: StoredProduct, categoryIds: readonly string[], ids: readonly string[], categories: ReadonlyMap<string, StoredCategory>): boolean {
   if (scope.kind === 'all') return true;
   if (scope.kind === 'selection') return scope.entries.some((entry) => ids.includes(entry.id));
+  if (scope.kind === 'filter') return productPassesFilter(product, scope.filter);
   const wanted = new Set(scope.categoryIds);
   return categoryIds.some((id) => wanted.has(id) || (categories.get(id)?.ancestorIds ?? []).some((ancestor) => wanted.has(ancestor)));
 }
@@ -209,7 +211,7 @@ function groupProducts(data: PublicationDataSet, models: ReadonlyMap<string, Sto
   for (const product of data.products) {
     const chain = chainOf(product, models);
     const categoryIds = chain.flatMap((link) => link.holder.categoryIds);
-    if (!inScope(data.scope, categoryIds, chain.map((link) => link.id), categories)) continue;
+    if (!inScope(data.scope, product, categoryIds, chain.map((link) => link.id), categories)) continue;
     if (!data.ignoreCompleteness && !isComplete(product, data.language)) { incomplete += 1; continue; }
     const model = product.modelId ? models.get(product.modelId) : undefined;
     if (model) {
@@ -249,8 +251,15 @@ function countUnpriced(chapters: readonly PublicationChapter[], words: Publicati
   return count;
 }
 
+/** Τιμές του φίλτρου που δεν υπάρχουν πια. Οικογένεια που σβήστηκε μετρά μία: δεν μένει τίποτα να κριθεί απέναντί της. */
+function countMissingFilterValues(data: PublicationDataSet, filter: PublicationFilter): number {
+  const family = data.families.find((candidate) => candidate.id === filter.familyId);
+  return family ? unknownFilterKeys(filter, family, data.attributes).length : 1;
+}
+
 /** Επιλογές που δεν αντιστοιχούν πια σε ζωντανή εγγραφή: ο γραφέας τις κόβει στην αποθήκευση, η διαγραφή έρχεται μετά. */
 function countMissingSelection(data: PublicationDataSet, models: ReadonlyMap<string, StoredModel>): number {
+  if (data.scope.kind === 'filter') return countMissingFilterValues(data, data.scope.filter);
   if (data.scope.kind !== 'selection') return 0;
   const productIds = new Set(data.products.map((product) => product.id));
   return data.scope.entries.filter((entry) => !(entry.kind === 'productModel' ? models.has(entry.id) : productIds.has(entry.id))).length;

@@ -35,6 +35,7 @@ const REPORT_LINES: readonly { readonly field: PublicationReportCount; readonly 
   { field: 'missingSelectionCount', key: 'publishing.report.missingSelection' },
   { field: 'lowResolutionImageCount', key: 'publishing.report.lowResolution' },
   { field: 'nonCmykImageCount', key: 'publishing.report.nonCmyk' },
+  { field: 'untransposedTableCount', key: 'publishing.report.untransposed' },
   { field: 'overlappingTextCount', key: 'publishing.report.overlappingText' },
   { field: 'clippedTextCount', key: 'publishing.report.clippedText' },
   { field: 'undersizedTextCount', key: 'publishing.report.undersizedText' },

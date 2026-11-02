@@ -10,11 +10,14 @@ import 'server-only';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
+import { unknownFilterKeys } from '@/subapps/catalog/publishing/publication-filter';
 import { isPublicationLogo } from '@/subapps/catalog/publishing/publication-logo';
 import { validatePublicationRecipe } from '@/subapps/catalog/publishing/validate-publication-recipe';
 import { assetFileTypeFactsOf } from '@/subapps/catalog/schema/judge-asset-file';
 import type { CatalogAssetDefinition } from '@/subapps/catalog/types/asset';
+import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import type { CatalogCategoryDefinition } from '@/subapps/catalog/types/category';
+import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import type { PublicationRecipeDefinition, PublicationScope, PublicationSelectionEntry } from '@/subapps/catalog/types/publication';
 import { readActiveByIds } from '../catalog-library-reads.server';
 import {
@@ -65,11 +68,26 @@ async function assertSelection(scope: CatalogTx, publicationScope: PublicationSc
   assertNoIssues(entries.flatMap((entry, index) => ((entry.kind === 'productModel' ? models : products).has(entry.id) ? [] : [{ code: 'unknownReference' as const, path: `scope.entries[${index}]` }])));
 }
 
+/** Η οικογένεια του φίλτρου είναι ζωντανή και προσφέρει ακόμη κάθε τιμή του. Το πού περνά ένα προϊόν το κρίνει το στιγμιότυπο. */
+async function assertFilter(scope: CatalogTx, publicationScope: PublicationScope): Promise<void> {
+  if (publicationScope.kind !== 'filter') return;
+  const { filter } = publicationScope;
+  const family = filter.familyId === null ? undefined : (await readActiveByIds<CatalogFamilyDefinition>(scope, 'family', [filter.familyId])).get(filter.familyId);
+  if (!family) {
+    assertNoIssues([{ code: 'unknownReference', path: 'scope.filter.familyId' }]);
+    return;
+  }
+  const attributes = await readActiveByIds<CatalogAttributeDefinition>(scope, 'attribute', family.attributes.map((binding) => binding.attributeId));
+  const unknown = new Set(unknownFilterKeys(filter, family, attributes));
+  assertNoIssues(filter.facetGroups.flatMap((group, groupIndex) => group.keys.flatMap((key, keyIndex) => (unknown.has(key) ? [{ code: 'unknownReference' as const, path: `scope.filter.facetGroups[${groupIndex}].keys[${keyIndex}]` }] : []))));
+}
+
 async function assertReferences(scope: CatalogTx, definition: PublicationRecipeDefinition): Promise<void> {
   const categoryIds = definition.scope.kind === 'categories' ? definition.scope.categoryIds : [];
   const categories = await readActiveByIds<CatalogCategoryDefinition>(scope, 'category', categoryIds);
   assertNoIssues(categoryIds.flatMap((id, index) => (categories.has(id) ? [] : [{ code: 'unknownReference' as const, path: `scope.categoryIds[${index}]` }])));
   await assertSelection(scope, definition.scope);
+  await assertFilter(scope, definition.scope);
   await assertLogo(scope, definition.theme.logoAssetId);
 }
 

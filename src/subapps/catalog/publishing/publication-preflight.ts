@@ -21,6 +21,12 @@ function placedImages(document: Pick<LayoutDocument, 'sections'>): LayoutImageRe
   }));
 }
 
+/** Πίνακες όπου η αναστροφή που δήλωσε η οικογένεια δεν χώρεσε. Μετρά τον πίνακα μία φορά, όσα μέρη κι αν έχει. */
+export function countUntransposedTables(document: Pick<LayoutDocument, 'sections'>): number {
+  return document.sections.flatMap((section) => section.blocks)
+    .filter((block) => block.kind === 'table' && block.table.transposeUnmet && block.table.part === 1).length;
+}
+
 export function placedDpi(widthPx: number, widthMm: number): number {
   return widthPx / (widthMm / MM_PER_INCH);
 }

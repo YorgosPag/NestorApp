@@ -1023,15 +1023,21 @@
     "scope": {
       "all": "Όλος ο κατάλογος",
       "categories": "Επιλεγμένες κατηγορίες",
-      "selection": "Χειροκίνητη επιλογή"
+      "selection": "Χειροκίνητη επιλογή",
+      "filter": "Φίλτρο προϊόντων"
+    },
+    "filter": {
+      "chooseFamily": "Διαλέξτε οικογένεια",
+      "matches": "Γραμμές της λίστας που ταιριάζουν: {rows}"
     },
     "selection": {
       "pick": "Επιλογή προϊόντων",
-      "description": "Ένα μοντέλο φέρνει όλες τις παραλλαγές του. Για κάτι συγκεκριμένο, γράψτε τον κωδικό του.",
+      "description": "Ένα μοντέλο φέρνει όλες τις παραλλαγές του. Για κάτι συγκεκριμένο, αναζητήστε το.",
       "count": "{count, plural, one {# επιλεγμένο} other {# επιλεγμένα}}",
       "empty": "Δεν έχει επιλεγεί τίποτα ακόμη.",
       "remove": "Αφαίρεση {name}",
       "showAll": "Εμφάνιση όλων",
+      "search": "Όνομα ή λέξη",
       "family": "Οικογένεια",
       "allFamilies": "Όλες οι οικογένειες",
       "noCode": "Χωρίς κωδικό",
@@ -1091,9 +1097,10 @@
     "report": {
       "title": "Έλεγχος έκδοσης",
       "incomplete": "{count, plural, one {# ημιτελές SKU έμεινε απέξω} other {# ημιτελή SKU έμειναν απέξω}}",
-      "unpriced": "{count, plural, one {# SKU χωρίς τιμή} other {# SKU χωρίς τιμή}}",
+      "unpriced": "{count, plural, other {# SKU χωρίς τιμή}}",
       "lowResolution": "{count, plural, one {# εικόνα κάτω από 300 dpi} other {# εικόνες κάτω από 300 dpi}}",
       "nonCmyk": "{count, plural, one {# εικόνα όχι σε CMYK} other {# εικόνες όχι σε CMYK}}",
+      "untransposed": "{count, plural, one {# πίνακας χωρίς αναστροφή} other {# πίνακες χωρίς αναστροφή}}",
       "overlappingText": "{count, plural, one {# σημείο όπου κείμενο πατά άλλο κείμενο} other {# σημεία όπου κείμενο πατά άλλο κείμενο}}",
       "clippedText": "{count, plural, one {# κείμενο βγαίνει έξω από το χαρτί} other {# κείμενα βγαίνουν έξω από το χαρτί}}",
       "undersizedText": "{count, plural, one {# κείμενο πολύ μικρό για ανάγνωση} other {# κείμενα πολύ μικρά για ανάγνωση}}",

@@ -49,7 +49,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "1ac06d32a9b0173a19c15e7131794744743c5d25901d3f3514ba8220e22fc62d",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "6e2a18bb9a256d16292d0b393c57399fb8123360599ec9763d942ed17edfffef",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "620a205755885c9dab488b23edd79616425ecae367dfe1f63658b73ec806ed0c",
-    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "c0daddda60bbdcdbbef978032d36fcb45b5467ab9bbb07f875be89dd0d4d9aaa",
+    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "a9e52549e5498e7e0eaabe4857af7b17566eba89d617910ac4ee46a9ee28979d",
     "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "57ffa9b9714030ef9c7431cfd6899a015510b3bc32398cee0d6e528d48b47409",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
@@ -181,7 +181,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c58019d8f8f937fcd342123c03e25e9d46320e1334bc96c961e18cf9c8e539e2",
+  "inputsSha256": "bae816451d3c87c23cdacb81a059b12d45435c17c627b49d7ae565d77b29a76b",
   "languages": [
     "el"
   ],
@@ -13254,6 +13254,10 @@
             "pricing.versions.phase.current",
             "pricing.versions.phase.future",
             "pricing.versions.phase.past",
+            "products.filter.clearFacets",
+            "products.filter.facets",
+            "products.filter.no",
+            "products.filter.yes",
             "products.jump.go",
             "products.jump.label",
             "products.jump.notFound",
@@ -13277,6 +13281,8 @@
             "publishing.fields.profiles",
             "publishing.fields.scope",
             "publishing.fields.templates",
+            "publishing.filter.chooseFamily",
+            "publishing.filter.matches",
             "publishing.logo.choose",
             "publishing.logo.hint",
             "publishing.logo.missing",
@@ -13297,6 +13303,7 @@
             "publishing.report.title",
             "publishing.report.undersizedText",
             "publishing.report.unpriced",
+            "publishing.report.untransposed",
             "publishing.requested",
             "publishing.retention.delete",
             "publishing.retention.deleteDescription",
@@ -13310,6 +13317,7 @@
             "publishing.runs",
             "publishing.saved",
             "publishing.scope.categories",
+            "publishing.scope.filter",
             "publishing.scope.selection",
             "publishing.selection.allFamilies",
             "publishing.selection.count",
@@ -13323,6 +13331,7 @@
             "publishing.selection.noRows",
             "publishing.selection.pick",
             "publishing.selection.remove",
+            "publishing.selection.search",
             "publishing.selection.showAll",
             "publishing.selection.unavailable",
             "publishing.subtitle",
@@ -13389,6 +13398,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13440,6 +13450,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13493,6 +13504,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13544,6 +13556,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13595,6 +13608,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13646,6 +13660,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13697,6 +13712,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13748,6 +13764,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13799,6 +13816,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -13850,6 +13868,7 @@
             "publishing.selection.noCode",
             "publishing.selection.noRows",
             "publishing.selection.pick",
+            "publishing.selection.search",
             "publishing.selection.unavailable"
           ],
           "prefixes": [],
@@ -26394,7 +26413,7 @@
   ],
   "stats": {
     "matchedKeys": 273,
-    "sliceBytes": 1315750
+    "sliceBytes": 1316308
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

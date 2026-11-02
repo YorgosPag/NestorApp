@@ -143,6 +143,8 @@ function buildPart(preview: TablePreview, range: readonly [number, number], opti
     railColumnMm: options.railColumnMm,
     part: part[0],
     parts: part[1],
+    // Εδώ φτάνει ο πίνακας μόνο αν δεν αναστράφηκε, άρα σε συνέχεια η δήλωση της οικογένειας δεν τηρήθηκε.
+    transposeUnmet: part[1] > 1 && options.overflow === 'transpose',
     rows: markHeader(rows, preview.rows),
   };
 }
@@ -207,7 +209,7 @@ function transposedTable(preview: TablePreview, options: LayoutTableOptions): La
   }));
   return {
     id: options.id, caption: options.caption, columnCount: attributes.length + 1, railColumn: false,
-    labelColumnMm: options.labelColumnMm, railColumnMm: options.railColumnMm, part: 1, parts: 1,
+    labelColumnMm: options.labelColumnMm, railColumnMm: options.railColumnMm, part: 1, parts: 1, transposeUnmet: false,
     rows: [...(groups ? [groups] : []), header, ...body],
   };
 }

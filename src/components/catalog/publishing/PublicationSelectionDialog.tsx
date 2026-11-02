@@ -1,13 +1,15 @@
 'use client';
 
 /**
- * @fileoverview **Ο διάλογος χειροκίνητης επιλογής** — μοντέλα και απλά προϊόντα, με οικογένεια και άλμα σε κωδικό
+ * @fileoverview **Ο διάλογος χειροκίνητης επιλογής** — μοντέλα και απλά προϊόντα, με οικογένεια, λέξεις και άλμα σε κωδικό
  *   (ADR-923 §5.6.1).
  * @related products/use-product-list.ts (τα ίδια ζωντανά παράθυρα με τη σελίδα προϊόντων) · products/CodeJumpField.tsx
  * @module components/catalog/publishing/PublicationSelectionDialog
  *
  * 🔑 **Καμία δεύτερη λίστα προϊόντων**: οι γραμμές είναι του `useProductList`, το άλμα του `CodeJumpField`. Το άλμα φτάνει ως τις
  *    παραλλαγές, που η λίστα δεν δείχνει, και βρίσκει κωδικό σε όλο τον κατάλογο, όχι μόνο στο φορτωμένο παράθυρο.
+ * 🔑 Οι λέξεις δίνουν **SKU**, και παραλλαγές, από το ίδιο ευρετήριο με τον αγοραστή (`useCatalogSkuSearch`). Κάτω από τρεις
+ *    χαρακτήρες μένει η λίστα της οικογένειας.
  * ⚠️ Ο καλών το αποδίδει **μόνο όσο είναι ανοιχτό**: τα παράθυρα είναι ζωντανοί ακροατές και μια συνταγή δεν τους χρειάζεται.
  * ⚠️ Το `CodeJumpField` είναι `<form>`: ζει μέσα σε πύλη διαλόγου, άρα δεν φωλιάζει στη φόρμα της συνταγής.
  */
@@ -18,21 +20,22 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClearableSelect } from '@/components/ui/clearable-select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SelectItem } from '@/components/ui/select';
-import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
-import { useCatalogLibrary } from '@/hooks/catalog/useCatalogLibrary';
-import { useCatalogSettings } from '@/hooks/catalog/useCatalogSettings';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import type { FacetSelection } from '@/subapps/catalog/list/catalog-list-query';
 import { PUBLICATION_LIMITS } from '@/subapps/catalog/publishing/publication-vocabulary';
 import type { PublicationSelectionEntry } from '@/subapps/catalog/types/publication';
 import { uniqueAttributeRefsOf } from '@/subapps/catalog/list/catalog-code-jump';
 import { CodeJumpField } from '../products/CodeJumpField';
 import { rowIdentifier, rowLabel, type CatalogListRow } from '../products/product-list-rows';
-import { useProductList } from '../products/use-product-list';
-import { useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
+import { useCatalogSkuSearch } from '../products/use-catalog-sku-search';
+import { useCatalogText } from '../shared/catalog-ui-hooks';
+import { usePublicationProductList } from './use-publication-product-list';
 
 const NO_FACETS: FacetSelection = [];
+const SEARCH_DEBOUNCE_MS = 300;
 
 export interface PublicationSelectionDialogProps {
   readonly entries: readonly PublicationSelectionEntry[];
@@ -43,16 +46,13 @@ export interface PublicationSelectionDialogProps {
 const entryOf = (row: CatalogListRow): PublicationSelectionEntry => ({ kind: row.kind === 'model' ? 'productModel' : 'product', id: row.id });
 
 function usePickerList() {
-  const notice = useCatalogFailureNotice();
-  const library = useCatalogLibrary(notice);
-  const settings = useCatalogSettings();
-  const families = useCatalogCollection('CATALOG_FAMILIES').items;
-  const familyById = useMemo(() => new Map(families.map((family) => [family.id, family])), [families]);
   const [familyId, setFamilyId] = useState<string | null>(null);
-  const filter = useMemo(() => ({ familyId, facets: NO_FACETS, sort: 'label' as const }), [familyId]);
-  const list = useProductList({ filter, families: familyById, attributes: library.attributeById, settings: settings.definition });
+  const [term, setTerm] = useState('');
+  const applyTerm = useDebouncedCallback(setTerm, SEARCH_DEBOUNCE_MS);
+  const { families, library, list: familyList } = usePublicationProductList(familyId, NO_FACETS);
+  const search = useCatalogSkuSearch(term, familyId);
   const uniqueAttributes = useMemo(() => uniqueAttributeRefsOf(library.attributes), [library.attributes]);
-  return { families, familyId, setFamilyId, list, uniqueAttributes };
+  return { families, familyId, setFamilyId, applyTerm, list: search.searching ? search.list : familyList, uniqueAttributes };
 }
 
 function FamilyFilter({ picker }: { readonly picker: ReturnType<typeof usePickerList> }) {
@@ -65,6 +65,17 @@ function FamilyFilter({ picker }: { readonly picker: ReturnType<typeof usePicker
         onValueChange={(value) => picker.setFamilyId(value === '' ? null : value)}>
         {picker.families.map((family) => <SelectItem key={family.id} value={family.id}>{text(family.labels, family.code)}</SelectItem>)}
       </ClearableSelect>
+    </span>
+  );
+}
+
+function SearchFilter({ picker }: { readonly picker: ReturnType<typeof usePickerList> }) {
+  const { t } = useCatalogText();
+  const id = useId();
+  return (
+    <span className="grid gap-1">
+      <Label htmlFor={id}>{t('publishing.selection.search')}</Label>
+      <Input id={id} type="search" onChange={(event) => picker.applyTerm(event.target.value)} />
     </span>
   );
 }
@@ -117,6 +128,7 @@ export function PublicationSelectionDialog({ entries, onToggle, onClose }: Publi
         </DialogHeader>
         <section className="flex min-w-0 flex-col gap-3">
           <CodeJumpField uniqueAttributes={picker.uniqueAttributes} onFound={(target) => onToggle(target, true)} />
+          <SearchFilter picker={picker} />
           <FamilyFilter picker={picker} />
           <PickerRows picker={picker} entries={entries} onToggle={onToggle} />
         </section>

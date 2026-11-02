@@ -84,6 +84,8 @@ export interface LayoutTable {
   /** Η θέση στη συνέχεια όταν οι στήλες δεν χωρούν (`1 από 2`). Μονό μπλοκ ⇒ 1 από 1. */
   readonly part: number;
   readonly parts: number;
+  /** Η οικογένεια ζήτησε αναστροφή, αλλά οι ιδιότητες δεν χώρεσαν ούτε ανεστραμμένες: ο πίνακας συνεχίστηκε σε νέο μπλοκ. */
+  readonly transposeUnmet: boolean;
   readonly rows: readonly LayoutTableRow[];
 }
 
