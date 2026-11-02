@@ -381,5 +381,24 @@ describe('εργασία επανυπολογισμού (Δ7)', () => {
       await runAll();
       expect(sku(variants[0].id).derived.searchText).toBe(before);
     });
+
+    it('🔴 αλλαγή ΤΙΜΗΣ στο μοντέλο ⇒ φτάνει σε κάθε SKU με την ίδια την αποθήκευση, χωρίς επανυπολογισμό, και το σβήσιμο τη βγάζει', async () => {
+      const { seeded, model, variants } = await seedMfpWithVariants();
+      const attributeId = seeded.ids.get('power_supply') ?? '';
+      const stored = fake.getData('catalog_attributes', attributeId) as CatalogAttributeDefinition & { revision: number };
+      const definition = { ...MFP_ATTRIBUTES.find((attribute) => attribute.code === 'power_supply'), groupId: stored.groupId } as CatalogAttributeDefinition;
+      await updateCatalogAttribute(ARIES, attributeId, stored.revision, { ...definition, searchable: true });
+      await runAll();
+      const original = model.values[attributeId];
+      const withSupply = (slots: unknown) => mfpModelWith({ ...model, values: { ...model.values, [attributeId]: slots } } as typeof MFP_MODEL, seeded.ids);
+      const everySkuFinds = (word: string) => variants.every((variant) => sku(variant.id).derived.searchText?.includes(word));
+
+      const saved = (await updateCatalogProductModel(ARIES, model.id, model.revision, withSupply({ '*': { '*': { type: 'text', text: 'Ανεμιστηρόπηνιο' } } }))) as Model;
+      expect(everySkuFinds('ανεμιστηροπηνιο')).toBe(true);
+      expect(sku(variants[0].id).revision).toBe(variants[0].revision);
+
+      await updateCatalogProductModel(ARIES, model.id, saved.revision, withSupply(original));
+      expect(variants.some((variant) => sku(variant.id).derived.searchText?.includes('ανεμιστηροπηνιο'))).toBe(false);
+    });
   });
 });

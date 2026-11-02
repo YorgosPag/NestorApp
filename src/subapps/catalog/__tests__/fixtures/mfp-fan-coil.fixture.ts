@@ -24,6 +24,7 @@ const base = (code: string, groupId: string, el: string) => ({
   localizable: false,
   scopable: false,
   unique: false,
+  searchable: false,
   orderKey: 'a0',
   mappings: NO_MAPPINGS,
 });
