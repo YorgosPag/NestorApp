@@ -18,9 +18,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, type AuthContext, type PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { signedDownloadUrl } from '@/lib/storage/signed-download-url';
 import { createModuleLogger } from '@/lib/telemetry';
-import { fileRecordBucket } from '@/server/files/file-record-bucket';
+import { signedUrlOfFileRecord } from '@/server/files/file-record-signed-url';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { OwnershipVerification } from '@/types/ownership-verification';
 
@@ -36,14 +35,8 @@ async function evidenceUrl(verificationId: string, reviewerUid: string): Promise
   const verification = snap.data() as OwnershipVerification;
 
   const fileSnap = await db.collection(COLLECTIONS.FILES_PERSONAL).doc(verification.evidence.fileId).get();
-  const storagePath = fileSnap.get('storagePath');
-  if (!fileSnap.exists || typeof storagePath !== 'string') return { error: 'NOT_FOUND' };
-
-  const signed = await signedDownloadUrl({
-    bucket: fileRecordBucket({ storagePlacement: fileSnap.get('storagePlacement') }),
-    storagePath,
-  });
-  if (signed.outcome !== 'signed') return { error: 'UNAVAILABLE' };
+  const signed = await signedUrlOfFileRecord(fileSnap);
+  if ('error' in signed) return signed;
 
   await EntityAuditService.recordChange({
     entityType: 'owner_property',

@@ -88,6 +88,11 @@ const LIVE_TRANSPORT: RegistryTransport = {
   env: process.env,
 };
 
+/** Υπάρχει κλειδί; Η μόνη απάντηση που κρίνει τον δρόμο εγγράφου, χωρίς κλήση στο μητρώο (ADR-923 §5.13 Ε1γ). */
+export function isRegistryConfigured(env: EnvironmentSource = LIVE_TRANSPORT.env): boolean {
+  return readConfiguredValue(env, API_KEY_ENV) !== null;
+}
+
 type Fetched =
   | { readonly kind: 'ok'; readonly body: unknown }
   | { readonly kind: 'status'; readonly status: number }

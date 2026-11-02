@@ -34,7 +34,7 @@ export function taxBindingFromStored(stored: StoredTaxBinding | null, facts: Sup
   return { state: stored.outcome };
 }
 
-function sameFacts(snapshot: SupplierApprovalSnapshot, facts: SupplierIdentityFacts): boolean {
+export function sameSupplierFacts(snapshot: SupplierApprovalSnapshot, facts: SupplierIdentityFacts): boolean {
   return (
     snapshot.legalName === facts.legalName &&
     canonicalGemiNumber(snapshot.gemiNumber) === canonicalGemiNumber(facts.gemiNumber) &&
@@ -53,7 +53,7 @@ export interface SupplierStandingInputs {
 export function judgeSupplierStanding(inputs: SupplierStandingInputs): SupplierStanding {
   const route = routeSupplierVerification(inputs.registry, inputs.taxBinding);
   if (route.kind === 'verified') return { kind: 'verified', basis: 'registry' };
-  if (routeAllowsApproval(route) && inputs.approval !== null && sameFacts(inputs.approval, inputs.facts)) {
+  if (routeAllowsApproval(route) && inputs.approval !== null && sameSupplierFacts(inputs.approval, inputs.facts)) {
     return { kind: 'verified', basis: 'manual-review' };
   }
   return { kind: 'unverified' };
