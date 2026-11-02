@@ -110,7 +110,8 @@
     "image": "Εικόνα",
     "document": "Έγγραφο",
     "bim": "Αντικείμενο BIM",
-    "video": "Βίντεο"
+    "video": "Βίντεο",
+    "font": "Γραμματοσειρά"
   },
   "referenceRelations": {
     "accessory": "Εξάρτημα",
@@ -303,6 +304,13 @@
     "fenceDigestStale": "Η διαφορά άλλαξε από τότε που την ελέγξατε — δείτε την ξανά.",
     "unknownParty": "Ο συμβαλλόμενος δεν βρέθηκε σε αυτόν τον χώρο.",
     "publicationFontNotLicensed": "Η γραμματοσειρά δεν ανήκει στις εγκεκριμένες, με ελεγμένη άδεια.",
+    "publicationCompareInvalid": "Η σύγκριση θέλει παλαιότερη έκδοση της ίδιας λίστας.",
+    "publicationFontFamilyInvalid": "Οι όψεις πρέπει να είναι μία οικογένεια, με κανονική όψη.",
+    "publicationFontNoGreek": "Η γραμματοσειρά δεν έχει ελληνικούς χαρακτήρες.",
+    "publicationFontLicenseRequired": "Δηλώστε ότι έχετε άδεια ενσωμάτωσης.",
+    "fontFileUnreadable": "Το αρχείο δεν διαβάζεται ως TTF ή OTF.",
+    "fontEmbeddingForbidden": "Η άδεια του αρχείου απαγορεύει την ενσωμάτωση σε PDF.",
+    "fontVariableUnsupported": "Ανεβάστε στατικές όψεις, όχι μεταβλητή γραμματοσειρά.",
     "publicationColourInvalid": "Το χρώμα χρειάζεται τιμή RGB και τιμές CMYK από 0 έως 100.",
     "publicationTitleRequired": "Ο τίτλος στη γλώσσα της έκδοσης είναι υποχρεωτικός.",
     "publicationProfileRequired": "Διάλεξε τουλάχιστον ένα προφίλ εξόδου.",
@@ -677,7 +685,8 @@
       "epd": "Περιβαλλοντική δήλωση (EPD)",
       "bim": "Αντικείμενο BIM",
       "video": "Βίντεο",
-      "logo": "Λογότυπο"
+      "logo": "Λογότυπο",
+      "font": "Γραμματοσειρά"
     },
     "colour": {
       "models": {
@@ -974,7 +983,17 @@
       "contents": "Περιεχόμενα",
       "codeIndex": "Ευρετήριο κωδικών",
       "tablePart": "Μέρος {part} από {parts}",
-      "pricesEdition": "Τιμές έκδοσης {version}, ισχύς από {date}"
+      "pricesEdition": "Τιμές έκδοσης {version}, ισχύς από {date}",
+      "changes": {
+        "title": "Τι άλλαξε",
+        "added": "Νέα προϊόντα",
+        "removed": "Καταργήσεις",
+        "raised": "Αυξήσεις τιμών",
+        "lowered": "Μειώσεις τιμών",
+        "before": "Πριν €",
+        "after": "Τώρα €",
+        "change": "Μεταβολή"
+      }
     },
     "title": "Εκδόσεις καταλόγου",
     "subtitle": "Συνταγές και έτοιμα PDF για εκτύπωση ή οθόνη.",
@@ -997,6 +1016,8 @@
       "pricing": "Τιμές",
       "priceList": "Τιμοκατάλογος",
       "priceVersion": "Έκδοση τιμών",
+      "compareVersion": "Σύγκριση με έκδοση",
+      "noCompare": "Χωρίς σύγκριση",
       "priceVersionOption": "{version} · {phase} · από {date}",
       "audience": "Κοινό",
       "profiles": "Προφίλ εξόδου",
@@ -1007,6 +1028,7 @@
       "primary": "Κύριο χρώμα",
       "accent": "Χρώμα έμφασης",
       "font": "Γραμματοσειρά",
+      "fontLicense": "Έχω άδεια ενσωμάτωσης σε PDF",
       "logo": "Λογότυπο"
     },
     "retention": {
@@ -1059,7 +1081,8 @@
     },
     "profile": {
       "print": "Εκτύπωση (CMYK, περιθώριο κοπής)",
-      "screen": "Οθόνη (RGB, PDF/A)"
+      "screen": "Οθόνη (RGB, PDF/A)",
+      "idml": "InDesign (IDML, με φάκελο Links)"
     },
     "template": {
       "cover": "Εξώφυλλο",
@@ -1095,6 +1118,7 @@
       "priceAmbiguous": "Δύο εκπτώσεις ισχύουν ταυτόχρονα για το ίδιο κοινό.",
       "priceVersionUnpublished": "Η έκδοση τιμών δεν είναι δημοσιευμένη.",
       "renditionMissing": "Κάποια εικόνα δεν έχει έτοιμη απόδοση.",
+      "fontMissing": "Η γραμματοσειρά της συνταγής δεν είναι πια διαθέσιμη.",
       "emptyScope": "Δεν υπάρχει πλήρες προϊόν στο εύρος της έκδοσης.",
       "storageFailed": "Η αποθήκευση του αρχείου απέτυχε.",
       "interrupted": "Ο διακομιστής επανεκκίνησε. Ξαναζήτησε την έκδοση.",
@@ -1106,6 +1130,7 @@
       "unpriced": "{count, plural, other {# SKU χωρίς τιμή}}",
       "lowResolution": "{count, plural, one {# εικόνα κάτω από 300 dpi} other {# εικόνες κάτω από 300 dpi}}",
       "nonCmyk": "{count, plural, one {# εικόνα όχι σε CMYK} other {# εικόνες όχι σε CMYK}}",
+      "fencedChange": "{count, plural, one {# αλλαγή τιμής πάνω από το όριο} other {# αλλαγές τιμών πάνω από το όριο}}",
       "untransposed": "{count, plural, one {# πίνακας χωρίς αναστροφή} other {# πίνακες χωρίς αναστροφή}}",
       "overlappingText": "{count, plural, one {# σημείο όπου κείμενο πατά άλλο κείμενο} other {# σημεία όπου κείμενο πατά άλλο κείμενο}}",
       "clippedText": "{count, plural, one {# κείμενο βγαίνει έξω από το χαρτί} other {# κείμενα βγαίνουν έξω από το χαρτί}}",

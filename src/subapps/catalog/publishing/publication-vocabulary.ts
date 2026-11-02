@@ -7,15 +7,28 @@
  *
  * | Σύνολο | Τιμές | Γιατί κλειστό |
  * |---|---|---|
- * | προφίλ εξόδου | `print` · `screen` | δύο **χωριστές** αποδόσεις: το Typst αρνείται PDF/A με CMYK (§5.6) |
+ * | προφίλ εξόδου | `print` · `screen` · `idml` | δύο **χωριστές** αποδόσεις: το Typst αρνείται PDF/A με CMYK (§5.6) · και πακέτο InDesign |
  * | εύρος | `all` · `categories` · `selection` · `filter` | ό,τι μπορεί να διαβάσει ντετερμινιστικά ο διακομιστής |
  * | πρότυπα | εξώφυλλο … οπισθόφυλλο | κάθε πρότυπο είναι κώδικας **και** αρχείο Typst |
  *
  * @module subapps/catalog/publishing/publication-vocabulary
  */
 
-export const PUBLICATION_OUTPUT_PROFILES = ['print', 'screen'] as const;
+export const PUBLICATION_OUTPUT_PROFILES = ['print', 'screen', 'idml'] as const;
 export type PublicationOutputProfile = (typeof PUBLICATION_OUTPUT_PROFILES)[number];
+/** Ό,τι περνά από τη μηχανή Typst. Το `idml` είναι δεύτερος προσαρμογέας πάνω στο ίδιο μοντέλο. */
+export type PublicationPdfProfile = Exclude<PublicationOutputProfile, 'idml'>;
+
+/** Το αρχείο κάθε προφίλ: ένα σημείο για την εγγραφή και για τη λήψη. */
+export const PUBLICATION_PROFILE_FILES: Readonly<Record<PublicationOutputProfile, { readonly extension: string; readonly contentType: string }>> = {
+  print: { extension: 'pdf', contentType: 'application/pdf' },
+  screen: { extension: 'pdf', contentType: 'application/pdf' },
+  idml: { extension: 'zip', contentType: 'application/zip' },
+};
+
+/** Το IDML θέλει το πλήθος σελίδων του PDF, άρα τρέχει τελευταίο. */
+export const pdfProfilesFirst = (profiles: readonly PublicationOutputProfile[]): readonly PublicationOutputProfile[] =>
+  [...profiles.filter((profile) => profile !== 'idml'), ...profiles.filter((profile) => profile === 'idml')];
 
 export const PUBLICATION_SCOPE_KINDS = ['all', 'categories', 'selection', 'filter'] as const;
 export type PublicationScopeKind = (typeof PUBLICATION_SCOPE_KINDS)[number];
@@ -52,6 +65,8 @@ export const PUBLICATION_LIMITS = {
   minGridColumns: 1,
   maxGridColumns: 5,
   defaultGridColumns: 4,
+  /** Κανονική · έντονη · πλάγια · έντονη πλάγια: όσες όψεις ζητά το πρότυπο. */
+  maxFontFaces: 4,
 } as const;
 
 /**

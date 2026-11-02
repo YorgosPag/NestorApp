@@ -21,15 +21,17 @@ import 'server-only';
 import { normalizeToMillisOrNull } from '@/lib/date-local';
 import { audienceIdentity } from '@/subapps/catalog/pricing/price-audience';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
+import { diffPriceVersions } from '@/subapps/catalog/pricing/diff-price-versions';
 import { resolveCatalogPrice, type PricedRecord } from '@/subapps/catalog/pricing/resolve-catalog-price';
 import { formatPublicationPrice } from '@/subapps/catalog/publishing/layout-text';
 import { publicationListMayServe, publicationVersionPrintable } from '@/subapps/catalog/publishing/publication-price-fence';
+import { publicationPriceChanges, type PublicationPriceChange, type PublicationQuoter } from '@/subapps/catalog/publishing/publication-price-changes';
 import type { DataVersionRef } from '@/subapps/catalog/publishing/publication-input-hash';
 import type { PublicationPriceLookup } from '@/subapps/catalog/publishing/publication-entries';
 import type { HumanLanguage } from '@/i18n/languages';
 import type { PriceListDefinition, PriceListLineDefinition, StoredPriceListVersionDefinition } from '@/subapps/catalog/types/price-list';
 import type { PublicationFailure, PublicationPricing } from '@/subapps/catalog/types/publication';
-import { readOwned, type CatalogTx } from '../catalog-store.server';
+import { readOwned, type CatalogTx, type StoredCatalogRecord } from '../catalog-store.server';
 import { assertNoIssues } from '../catalog-write-error';
 import { readActiveConditionRecords } from '../price-quote.server';
 import { viewerOf } from '../pricing-viewer.server';
@@ -49,14 +51,18 @@ export interface PublicationPriceSheet {
   readonly audienceKey: string;
   /** Για το υποσέλιδο: αριθμός έκδοσης + ισχύς. `null` = τεχνικός κατάλογος. */
   readonly edition: { readonly versionNumber: number; readonly validFrom: string } | null;
+  /** Η σύγκριση με παλαιότερη έκδοση, για το κοινό της συνταγής· κενό ⇒ χωρίς σύγκριση. */
+  readonly changes: readonly PublicationPriceChange[];
 }
 
-const NO_PRICES: PublicationPriceSheet = { priceOf: null, refs: [], audienceKey: 'none', edition: null };
+const NO_PRICES: PublicationPriceSheet = { priceOf: null, refs: [], audienceKey: 'none', edition: null, changes: [] };
 
 type PricedPricing = Extract<PublicationPricing, { kind: 'priced' }>;
+type StoredListRecord = StoredCatalogRecord<PriceListDefinition>;
+type StoredLine = Awaited<ReturnType<typeof readVersionLines>>[number];
 
-async function readPublishedVersion(scope: CatalogTx, pricing: PricedPricing) {
-  const version = await readOwned<StoredPriceListVersionDefinition>(scope, 'priceListVersion', pricing.priceListVersionId);
+async function readPublishedVersion(scope: CatalogTx, pricing: Pick<PricedPricing, 'priceListId'>, versionId: string) {
+  const version = await readOwned<StoredPriceListVersionDefinition>(scope, 'priceListVersion', versionId);
   if (version.priceListId !== pricing.priceListId) throw new PublicationRunError('priceVersionUnpublished');
   if (!publicationVersionPrintable(version) || version.validFrom === null || version.seal === null) throw new PublicationRunError('priceVersionUnpublished');
   return { ...version, validFrom: version.validFrom, seal: version.seal };
@@ -66,11 +72,51 @@ function assertListMayServe(list: PriceListDefinition, viewer: Awaited<ReturnTyp
   assertNoIssues(publicationListMayServe(list, viewer) ? [] : [{ code: 'publicationAudienceNotCovered', path: 'pricing.audience' }]);
 }
 
+/** Η έκδοση σύγκρισης: ίδια λίστα, αμετάβλητη, και παλαιότερη. Το «πριν» δεν μπορεί να είναι νεότερο από το «μετά». */
+async function readCompareVersion(scope: CatalogTx, pricing: PricedPricing, versionNumber: number) {
+  if (pricing.compareVersionId === undefined) return null;
+  const compare = await readPublishedVersion(scope, pricing, pricing.compareVersionId);
+  assertNoIssues(compare.number < versionNumber ? [] : [{ code: 'publicationCompareInvalid', path: 'pricing.compareVersionId' }]);
+  return compare;
+}
+
 /** Το φράγμα χωρίς τις γραμμές: ό,τι κρίνει ο γραφέας συνταγής μέσα στη συναλλαγή του. */
 export async function assertPublicationPricing(scope: CatalogTx, pricing: PublicationPricing): Promise<void> {
   if (pricing.kind === 'none') return;
   assertListMayServe(await readOwned<PriceListDefinition>(scope, 'priceList', pricing.priceListId), await viewerOf(scope, pricing.audience));
-  await readPublishedVersion(scope, pricing);
+  const version = await readPublishedVersion(scope, pricing, pricing.priceListVersionId);
+  await readCompareVersion(scope, pricing, version.number);
+}
+
+interface QuoterInput {
+  readonly list: StoredListRecord;
+  readonly versions: Parameters<typeof resolveCatalogPrice>[0]['versions'];
+  readonly conditions: Awaited<ReturnType<typeof readActiveConditionRecords>>;
+  readonly viewer: Awaited<ReturnType<typeof viewerOf>>;
+}
+
+/** Οι τιμές μιας έκδοσης, στη στιγμή της ισχύος της. Ο ίδιος δρόμος για τις σελίδες και για το «πριν» της σύγκρισης. */
+function quoterOf(input: QuoterInput, lines: readonly StoredLine[], validFrom: string): PublicationQuoter {
+  const lineBySubject = new Map(lines.map((line) => [priceLineSubjectKey(line.subject), line]));
+  const atMs = normalizeToMillisOrNull(validFrom) ?? 0;
+  const priceRecord: PricedRecord<PriceListDefinition> = { id: input.list.id, definition: input.list };
+  return (variantId) => {
+    const subject = { kind: 'variant' as const, variantId };
+    const line = lineBySubject.get(priceLineSubjectKey(subject));
+    if (!line) return null;
+    const resolution = resolveCatalogPrice({
+      priceList: priceRecord,
+      versions: input.versions,
+      lineFor: (versionId): PricedRecord<PriceListLineDefinition> | null => (versionId === line.versionId ? { id: line.id, definition: line } : null),
+      conditions: input.conditions.map(({ record }) => record),
+      viewer: input.viewer,
+      subject,
+      quantity: line.priceQuantity,
+      atMs,
+    });
+    if (resolution.kind === 'ambiguousDiscount') throw new PublicationRunError('priceAmbiguous');
+    return resolution.kind === 'priced' ? { netPrice: resolution.quote.netAmount, priceQuantity: line.priceQuantity } : null;
+  };
 }
 
 /** Το φύλλο τιμών ενός κοινού. Πετά `PublicationRunError` ή `CatalogWriteError`, ποτέ δεν επιστρέφει μισές τιμές. */
@@ -79,37 +125,26 @@ export async function readPublicationPriceSheet(scope: CatalogTx, pricing: Publi
   const viewer = await viewerOf(scope, pricing.audience);
   const list = await readOwned<PriceListDefinition>(scope, 'priceList', pricing.priceListId);
   assertListMayServe(list, viewer);
-  const version = await readPublishedVersion(scope, pricing);
-  const versions = (await readListVersions(scope, list.id)).map(versionRefOf);
-  const conditions = await readActiveConditionRecords(scope);
+  const version = await readPublishedVersion(scope, pricing, pricing.priceListVersionId);
+  const compare = await readCompareVersion(scope, pricing, version.number);
+  const quoter: QuoterInput = { list, versions: (await readListVersions(scope, list.id)).map(versionRefOf), conditions: await readActiveConditionRecords(scope), viewer };
+  const { conditions } = quoter;
   const lines = await readVersionLines(scope.db, scope.ctx.companyId, version.id);
-  const lineBySubject = new Map(lines.map((line) => [priceLineSubjectKey(line.subject), line]));
-  const atMs = normalizeToMillisOrNull(version.validFrom) ?? 0;
-  const priceRecord: PricedRecord<PriceListDefinition> = { id: list.id, definition: list };
+  const quote = quoterOf(quoter, lines, version.validFrom);
   const priceOf: PublicationPriceLookup = (variantId) => {
-    const subject = { kind: 'variant' as const, variantId };
-    const line = lineBySubject.get(priceLineSubjectKey(subject));
-    if (!line) return null;
-    const resolution = resolveCatalogPrice({
-      priceList: priceRecord,
-      versions,
-      lineFor: (versionId): PricedRecord<PriceListLineDefinition> | null => (versionId === line.versionId ? { id: line.id, definition: line } : null),
-      conditions: conditions.map(({ record }) => record),
-      viewer,
-      subject,
-      quantity: line.priceQuantity,
-      atMs,
-    });
-    if (resolution.kind === 'ambiguousDiscount') throw new PublicationRunError('priceAmbiguous');
-    return resolution.kind === 'priced' ? formatPublicationPrice(resolution.quote.netAmount, language) : null;
+    const found = quote(variantId);
+    return found ? formatPublicationPrice(found.netPrice, language) : null;
   };
+  const compareLines = compare ? await readVersionLines(scope.db, scope.ctx.companyId, compare.id) : [];
   return {
     priceOf,
+    changes: compare ? publicationPriceChanges(diffPriceVersions(compareLines, lines), quoterOf(quoter, compareLines, compare.validFrom), quote) : [],
     audienceKey: audienceIdentity(pricing.audience),
     edition: { versionNumber: version.number, validFrom: version.validFrom },
     refs: [
       { key: `priceList:${list.id}`, revision: list.revision },
       { key: `priceVersion:${version.id}:${version.seal.linesHash}`, revision: version.revision },
+      ...(compare ? [{ key: `priceVersion:${compare.id}:${compare.seal.linesHash}`, revision: compare.revision }] : []),
       ...conditions.map(({ record, revision }) => ({ key: `discountCondition:${record.id}`, revision })),
     ],
   };

@@ -9,6 +9,7 @@ import 'server-only';
  *   1. **Μέτρηση** του αντικειμένου από τον κάδο (`statStorageObject`) — το όριο ανά είδος κρίνεται πάνω σε αυτό, όχι
  *      στο `sizeBytes` που δήλωσε ο πελάτης.
  *   2. **Αποδόσεις** (web + εκτύπωση) για εικόνα που αποδίδεται — `ensureCatalogAssetRenditions`, ιδεμπότητο.
+ *   2β. **Γραμματοσειρά** (ADR-923 §5.6.1): τα bytes διαβάζονται μόνο αν χωρούν στο όριο του είδους, και τα γεγονότα γράφονται στο μέσο.
  *   3. **Συναλλαγή** (`attachCatalogAssetFile`): ξαναδιαβάζει μέσο **και** αρχείο, κρίνει (`judgeAssetFile`), γράφει `fileId`.
  *
  * 🔒 Τα βήματα 1–2 τρέχουν **μόνο** για αρχείο που ήδη ανήκει σε αυτό το μέσο της ίδιας εταιρείας και είναι ζωντανό
@@ -27,9 +28,10 @@ import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { needsCatalogRenditions } from '@/subapps/catalog/renditions/catalog-renditions';
 import { assetFileTypeFactsOf } from '@/subapps/catalog/schema/judge-asset-file';
 import type { AttachAssetFileBody } from '@/subapps/catalog/schema/zod/asset.schema';
-import { assetKindAcceptsFile } from '@/subapps/catalog/vocabulary/asset-files';
+import { assetKindAcceptsFile, CATALOG_ASSET_MAX_BYTES } from '@/subapps/catalog/vocabulary/asset-files';
 import { attachCatalogAssetFile } from './asset-writer.server';
 import { ensureCatalogAssetRenditions, type CatalogRenditionRecord } from './catalog-asset-renditions.server';
+import { inspectFontFile, type FontInspection } from './publishing/publication-font-file.server';
 
 /** Για την **προετοιμασία** ο τύπος δεν κρίνεται — τον κρίνει η συναλλαγή, με το είδος του μέσου. */
 const ANY_TYPE = (): boolean => true;
@@ -59,17 +61,28 @@ async function storedSizeOf(data: FileData): Promise<number | null> {
   return stat.kind === 'found' ? stat.size : null;
 }
 
+/** `undefined` ⇒ δεν είναι γραμματοσειρά, ή δεν χωρά στο όριο: τότε η κρίση της συναλλαγής λέει το γιατί, χωρίς λήψη. */
+async function fontInspectionOf(data: FileData, storedSizeBytes: number | null): Promise<FontInspection | undefined> {
+  const storagePath = typeof data.storagePath === 'string' ? data.storagePath : '';
+  if (assetKindAcceptsFile('font', assetFileTypeFactsOf(data)) !== 'accepted' || storagePath === '') return undefined;
+  if (storedSizeBytes === null || storedSizeBytes > CATALOG_ASSET_MAX_BYTES.font) return undefined;
+  const [bytes] = await fileRecordBucket(data).file(storagePath).download();
+  return inspectFontFile(bytes);
+}
+
 /** `POST /api/catalog/assets/[id]/file` — μέτρηση → αποδόσεις → συναλλαγή. */
 export async function attachFileToCatalogAsset(ctx: AuthContext, assetId: string, body: AttachAssetFileBody) {
   const db = getAdminFirestore();
   const snap = await db.collection(COLLECTIONS.FILES).doc(body.fileId).get();
   const data = snap.exists ? (snap.data() ?? null) : null;
   let storedSizeBytes: number | null = null;
+  let font: FontInspection | undefined;
   if (ownedLiveFile(ctx, assetId, body.fileId, data)) {
     storedSizeBytes = await storedSizeOf(data);
     if (rendersAsImage(data)) {
       await ensureCatalogAssetRenditions(db, { custody: 'company', fileId: body.fileId, record: data as CatalogRenditionRecord });
     }
+    font = await fontInspectionOf(data, storedSizeBytes);
   }
-  return attachCatalogAssetFile(ctx, assetId, body.expectedRevision, body.fileId, { storedSizeBytes });
+  return attachCatalogAssetFile(ctx, assetId, body.expectedRevision, body.fileId, { storedSizeBytes, font });
 }

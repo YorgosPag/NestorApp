@@ -89,7 +89,7 @@ export function isLocalizableAttributeType(type: AttributeType): boolean {
 // ── Υπο-λεξιλόγια ρυθμίσεων ανά τύπο ────────────────────────────────────────
 
 /** Είδη αρχείου που δέχεται ιδιότητα `asset`. */
-export const ASSET_KINDS = ['image', 'document', 'bim', 'video'] as const;
+export const ASSET_KINDS = ['image', 'document', 'bim', 'video', 'font'] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 
 /**

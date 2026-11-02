@@ -87,7 +87,7 @@ describe('το πρότυπο', () => {
 });
 
 describe('renderPublicationPdf', () => {
-  const input = (run: TypstRunner, profile = 0) => ({ document, fontCode: 'liberationSans' as const, dataAsOfEpoch: profile + 1, readAsset: async () => new Uint8Array([1, 2, 3]), run });
+  const input = (run: TypstRunner, profile = 0) => ({ document, fontCode: 'liberationSans' as const, fonts: [], dataAsOfEpoch: profile + 1, readAsset: async () => new Uint8Array([1, 2, 3]), run });
 
   it('γράφει πρότυπο + JSON + εικόνες, και το κείμενο μένει JSON (όχι κώδικας)', async () => {
     const seen: { files: string[]; json: LayoutDocument | null } = { files: [], json: null };
@@ -102,6 +102,18 @@ describe('renderPublicationPdf', () => {
     expect(seen.files).toEqual(['assets', 'catalog.typ', 'document.json']);
     expect(result.pageCount).toBe(2);
     expect(result.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('🔑 οι όψεις του προμηθευτή μπαίνουν στον φάκελο εργασίας, με τη γραμματοσειρά της πλατφόρμας ως εφεδρεία', async () => {
+    const seen: { font: boolean; args: readonly string[] } = { font: false, args: [] };
+    const run: TypstRunner = async ({ cwd, args }) => {
+      seen.font = existsSync(path.join(cwd, 'fonts', 'a.ttf'));
+      seen.args = args;
+      writeFileSync(path.join(cwd, 'output.pdf'), await pdfBytes(1));
+    };
+    await renderPublicationPdf({ ...input(run), fonts: [{ name: 'a.ttf', bytes: new Uint8Array([1]) }] }, 'screen');
+    expect(seen.font).toBe(true);
+    expect(seen.args.filter((arg, index) => seen.args[index - 1] === '--font-path')).toEqual(['fonts', expect.stringContaining('fonts')]);
   });
 
   it('🔴 ο φάκελος εργασίας σβήνεται και σε αποτυχία', async () => {

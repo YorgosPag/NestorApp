@@ -42,6 +42,8 @@ jest.mock('../../catalog-store.server', () => {
 
 const ctx = { companyId: 'comp_test', uid: 'u' } as unknown as AuthContext;
 const base: PublicationRecipeDefinition = { ...emptyRecipe('el'), code: 'tech_2026', title: { el: 'Κατάλογος' } };
+const withFonts = (fontAssetIds: readonly string[], fontLicenseConfirmed = true): PublicationRecipeDefinition => ({ ...base, theme: { ...base.theme, fontAssetIds, fontLicenseConfirmed } });
+const fontAsset = (family: string, coversGreek = true) => ({ role: 'font', kind: 'font', fileId: 'f', font: { family, weight: 400, italic: false, coversGreek } });
 const withLogo = (logoAssetId: string): PublicationRecipeDefinition => ({ ...base, theme: { ...base.theme, logoAssetId } });
 
 const issuesOf = async (definition: PublicationRecipeDefinition): Promise<readonly { readonly code: string; readonly path: string }[]> => {
@@ -82,6 +84,29 @@ describe('γραφέας συνταγών: αναφορές', () => {
   it('απορρίπτει μέσο που το αρχείο του έχει σβηστεί', async () => {
     mockAssets.set('a1', { id: 'a1', role: 'logo', kind: 'image', fileId: 'gone' });
     await expect(issuesOf(withLogo('a1'))).resolves.toEqual([{ code: 'publicationLogoNotEligible', path: 'theme.logoAssetId' }]);
+  });
+
+  describe('γραμματοσειρά προμηθευτή', () => {
+    const path = 'theme.fontAssetIds';
+
+    it('περνά μία οικογένεια με ελληνικά και δήλωση άδειας', async () => {
+      mockAssets.set('font_a', fontAsset('Acme'));
+      await expect(createPublicationRecipe(ctx, withFonts(['font_a']))).resolves.toBeDefined();
+    });
+
+    it('🔴 χωρίς δήλωση άδειας αρνείται πριν από κάθε ανάγνωση', async () => {
+      mockAssets.set('font_a', fontAsset('Acme'));
+      await expect(issuesOf(withFonts(['font_a'], false))).resolves.toEqual([{ code: 'publicationFontLicenseRequired', path: 'theme.fontLicenseConfirmed' }]);
+    });
+
+    it('🔴 ξένο ή διαγραμμένο μέσο ≡ ανύπαρκτο', async () => {
+      await expect(issuesOf(withFonts(['font_gone']))).resolves.toEqual([{ code: 'publicationFontFamilyInvalid', path }]);
+    });
+
+    it('🔴 ελληνική συνταγή με γραμματοσειρά χωρίς ελληνικά αρνείται', async () => {
+      mockAssets.set('font_l', fontAsset('Latin', false));
+      await expect(issuesOf(withFonts(['font_l']))).resolves.toEqual([{ code: 'publicationFontNoGreek', path }]);
+    });
   });
 
   it('ξένο ή ανύπαρκτο μέσο ≡ ανύπαρκτη αναφορά', async () => {

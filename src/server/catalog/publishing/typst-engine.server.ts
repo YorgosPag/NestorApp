@@ -98,6 +98,13 @@ export async function assertTypstAvailable(): Promise<string> {
   return version;
 }
 
+/** Το όνομα οικογένειας όπως το ξέρει η μηχανή, για το ένα αρχείο του φακέλου. `null` ⇒ η μηχανή δεν το διάβασε ως γραμματοσειρά. */
+export async function readTypstFontFamily(directory: string): Promise<string | null> {
+  const args = ['fonts', '--ignore-system-fonts', '--ignore-embedded-fonts', '--font-path', '.'];
+  const { stdout } = await runProcess({ cwd: directory, args, timeoutMs: TYPST_PREVIEW_TIMEOUT_MS });
+  return stdout.split(/\r?\n/).map((line) => line.trim()).find((line) => line !== '') ?? null;
+}
+
 /** Ένας πυρήνας μένει πάντα στον web server· σε μηχάνημα ενός πυρήνα η απόδοση τρέχει σειριακά. */
 export function typstJobsFor(cores: number): number {
   return Math.max(1, cores - 1);

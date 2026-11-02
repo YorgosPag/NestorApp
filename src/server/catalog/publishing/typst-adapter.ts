@@ -28,7 +28,7 @@ import { readPdfTextLayout } from '@/services/pdf/pdf-rasterize.service';
 import { collectLayoutAssetIds, renditionUseOf, type LayoutDocument, type LayoutPage } from '@/subapps/catalog/publishing/layout-model';
 import { PUBLICATION_FONTS, type PublicationFontCode } from '@/subapps/catalog/publishing/publication-fonts';
 import { judgePublicationLayout } from '@/subapps/catalog/publishing/publication-layout-judge';
-import type { PublicationOutputProfile } from '@/subapps/catalog/publishing/publication-vocabulary';
+import type { PublicationPdfProfile } from '@/subapps/catalog/publishing/publication-vocabulary';
 import { UNCHECKED_PUBLICATION_LAYOUT, type PublicationLayoutReport } from '@/subapps/catalog/types/publication';
 import { TYPST_PREVIEW_TIMEOUT_MS, TYPST_RENDER_TIMEOUT_MS, type TypstRunner } from './typst-engine.server';
 import { PUBLICATION_TYPST_TEMPLATE, TYPST_ASSET_DIR, TYPST_DOCUMENT_FILENAME, TYPST_TEMPLATE_FILENAME } from './typst-template';
@@ -41,9 +41,17 @@ const PREVIEW_PPI = 110;
 /** Τα bytes μιας εικόνας για ένα προφίλ — τα φέρνει ο καλών από τις καταγεγραμμένες αποδόσεις. */
 export type AssetBytesReader = (assetId: string, use: 'print' | 'web') => Promise<Uint8Array>;
 
+/** Μία όψη γραμματοσειράς προμηθευτή, έτοιμη για τον φάκελο εργασίας. */
+export interface PublicationFontFile {
+  readonly name: string;
+  readonly bytes: Uint8Array;
+}
+
 export interface RenderInput {
   readonly document: LayoutDocument;
   readonly fontCode: PublicationFontCode;
+  /** Οι όψεις του προμηθευτή. Η γραμματοσειρά της πλατφόρμας μένει στη διαδρομή, ως εφεδρεία για ό,τι λείπει. */
+  readonly fonts: readonly PublicationFontFile[];
   /** Χρονοσφραγίδα των δεδομένων, δευτερόλεπτα epoch — όχι «τώρα». */
   readonly dataAsOfEpoch: number;
   readonly readAsset: AssetBytesReader;
@@ -61,38 +69,47 @@ export function fontDirectoryOf(fontCode: PublicationFontCode): string {
   return path.resolve(process.cwd(), path.dirname(PUBLICATION_FONTS[fontCode].files[0]));
 }
 
+/** Ο φάκελος των όψεων ζει μέσα στον φάκελο εργασίας, που σβήνεται πάντα. */
+const TYPST_FONT_DIR = 'fonts';
+
+function fontPathArgs(input: { readonly fontDirectory: string; readonly supplierFonts?: boolean }): string[] {
+  return [...(input.supplierFonts ? ['--font-path', TYPST_FONT_DIR] : []), '--font-path', input.fontDirectory];
+}
+
 /** Τα ορίσματα της απόδοσης — καθαρά, για να κλειδώνονται με άγκυρα: η διαφορά των προφίλ ζει **μόνο** εδώ. */
-export function typstCompileArgs(input: { readonly profile: PublicationOutputProfile; readonly fontDirectory: string; readonly dataAsOfEpoch: number; readonly output: string }): string[] {
+export function typstCompileArgs(input: { readonly profile: PublicationPdfProfile; readonly fontDirectory: string; readonly supplierFonts?: boolean; readonly dataAsOfEpoch: number; readonly output: string }): string[] {
   const common = [
     'compile', TYPST_TEMPLATE_FILENAME, input.output,
     '--root', '.',
     '--input', `profile=${input.profile}`,
     '--ignore-system-fonts',
-    '--font-path', input.fontDirectory,
+    ...fontPathArgs(input),
     '--creation-timestamp', String(input.dataAsOfEpoch),
     '--diagnostic-format', 'short',
   ];
   return input.profile === 'print' ? [...common, '--no-pdf-tags'] : [...common, '--pdf-standard', 'a-2b'];
 }
 
-export function typstPreviewArgs(input: { readonly fontDirectory: string; readonly output: string }): string[] {
+export function typstPreviewArgs(input: { readonly fontDirectory: string; readonly supplierFonts?: boolean; readonly output: string }): string[] {
   return [
     'compile', TYPST_TEMPLATE_FILENAME, input.output,
     '--root', '.',
     '--input', 'profile=screen',
     '--ignore-system-fonts',
-    '--font-path', input.fontDirectory,
+    ...fontPathArgs(input),
     '--format', 'png',
     '--pages', '1',
     '--ppi', String(PREVIEW_PPI),
   ];
 }
 
-async function prepareWorkspace(document: LayoutDocument, profile: PublicationOutputProfile, readAsset: AssetBytesReader): Promise<string> {
+async function prepareWorkspace(document: LayoutDocument, profile: PublicationPdfProfile, readAsset: AssetBytesReader, fonts: readonly PublicationFontFile[]): Promise<string> {
   const directory = await mkdtemp(path.join(tmpdir(), 'nestor-publication-'));
   await writeFile(path.join(directory, TYPST_TEMPLATE_FILENAME), PUBLICATION_TYPST_TEMPLATE, 'utf8');
   await writeFile(path.join(directory, TYPST_DOCUMENT_FILENAME), JSON.stringify(document), 'utf8');
   await mkdir(path.join(directory, TYPST_ASSET_DIR));
+  if (fonts.length > 0) await mkdir(path.join(directory, TYPST_FONT_DIR));
+  for (const font of fonts) await writeFile(path.join(directory, TYPST_FONT_DIR, font.name), font.bytes);
   const use = renditionUseOf(profile);
   for (const assetId of collectLayoutAssetIds(document)) {
     await writeFile(path.join(directory, TYPST_ASSET_DIR, `${assetId}.jpg`), await readAsset(assetId, use));
@@ -112,7 +129,7 @@ export async function applyPrintBoxes(bytes: Uint8Array, page: LayoutPage): Prom
   return { bytes: await pdf.save({ updateFieldAppearances: false }), pageCount: pdf.getPageCount() };
 }
 
-async function finishPdf(bytes: Uint8Array, profile: PublicationOutputProfile, page: LayoutPage) {
+async function finishPdf(bytes: Uint8Array, profile: PublicationPdfProfile, page: LayoutPage) {
   if (profile === 'print') return applyPrintBoxes(bytes, page);
   const pdf = await PDFDocument.load(bytes, { updateMetadata: false });
   return { bytes, pageCount: pdf.getPageCount() };
@@ -122,7 +139,7 @@ async function finishPdf(bytes: Uint8Array, profile: PublicationOutputProfile, p
  * Ο **έλεγχος διάταξης στο ίδιο το PDF**, σε κάθε έκδοση. Μετρά, δεν μπλοκάρει: το αρχείο ανήκει στον άνθρωπο, όπως στον προέλεγχο.
  * 🔑 Ο έλεγχος δεν ρίχνει ποτέ την έκδοση. Αν αποτύχει ή δεν βρει κείμενο, η αναφορά λέει «δεν ελέγχθηκε», ποτέ μηδενικά που μοιάζουν καθαρά.
  */
-export async function inspectRenderedLayout(bytes: Uint8Array, profile: PublicationOutputProfile, page: LayoutPage): Promise<PublicationLayoutReport> {
+export async function inspectRenderedLayout(bytes: Uint8Array, profile: PublicationPdfProfile, page: LayoutPage): Promise<PublicationLayoutReport> {
   try {
     const bleedPt = profile === 'print' ? page.bleedMm * MM_TO_POINTS : 0;
     const verdict = judgePublicationLayout(await readPdfTextLayout(bytes), bleedPt);
@@ -137,12 +154,12 @@ export async function inspectRenderedLayout(bytes: Uint8Array, profile: Publicat
 }
 
 /** Μία απόδοση ενός προφίλ. Ο φάκελος εργασίας σβήνεται πάντα. */
-export async function renderPublicationPdf(input: RenderInput, profile: PublicationOutputProfile): Promise<RenderedPdf> {
+export async function renderPublicationPdf(input: RenderInput, profile: PublicationPdfProfile): Promise<RenderedPdf> {
   const started = performance.now();
-  const directory = await prepareWorkspace(input.document, profile, input.readAsset);
+  const directory = await prepareWorkspace(input.document, profile, input.readAsset, input.fonts);
   try {
     const output = 'output.pdf';
-    const args = typstCompileArgs({ profile, fontDirectory: fontDirectoryOf(input.fontCode), dataAsOfEpoch: input.dataAsOfEpoch, output });
+    const args = typstCompileArgs({ profile, fontDirectory: fontDirectoryOf(input.fontCode), supplierFonts: input.fonts.length > 0, dataAsOfEpoch: input.dataAsOfEpoch, output });
     await input.run({ cwd: directory, args, timeoutMs: TYPST_RENDER_TIMEOUT_MS });
     const finished = await finishPdf(new Uint8Array(await readFile(path.join(directory, output))), profile, input.document.page);
     const sha256 = createHash('sha256').update(finished.bytes).digest('hex');
@@ -153,11 +170,11 @@ export async function renderPublicationPdf(input: RenderInput, profile: Publicat
 }
 
 /** Η πρώτη σελίδα σε PNG — η προεπισκόπηση «έτσι θα τυπωθεί». */
-export async function renderPublicationPreview(input: Pick<RenderInput, 'document' | 'fontCode' | 'readAsset' | 'run'>): Promise<Uint8Array> {
-  const directory = await prepareWorkspace(input.document, 'screen', input.readAsset);
+export async function renderPublicationPreview(input: Pick<RenderInput, 'document' | 'fontCode' | 'fonts' | 'readAsset' | 'run'>): Promise<Uint8Array> {
+  const directory = await prepareWorkspace(input.document, 'screen', input.readAsset, input.fonts);
   try {
     const output = 'preview.png';
-    await input.run({ cwd: directory, args: typstPreviewArgs({ fontDirectory: fontDirectoryOf(input.fontCode), output }), timeoutMs: TYPST_PREVIEW_TIMEOUT_MS });
+    await input.run({ cwd: directory, args: typstPreviewArgs({ fontDirectory: fontDirectoryOf(input.fontCode), supplierFonts: input.fonts.length > 0, output }), timeoutMs: TYPST_PREVIEW_TIMEOUT_MS });
     return await readFile(path.join(directory, output));
   } finally {
     await rm(directory, { recursive: true, force: true });

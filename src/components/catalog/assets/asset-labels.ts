@@ -12,7 +12,7 @@
  * ⚠️ Κυριολεκτικά κλειδιά (όχι template): οι γεννήτορες i18n (route slice · CHECK 3.8) τα **λύνουν** στατικά.
  */
 
-import { Award, Box, Clapperboard, FileText, Image as ImageIcon, Leaf, NotebookText, PencilRuler, Stamp, type LucideIcon } from 'lucide-react';
+import { Award, Box, Clapperboard, FileText, Image as ImageIcon, Leaf, NotebookText, PencilRuler, Stamp, Type, type LucideIcon } from 'lucide-react';
 
 import type { MediaLicensePurposeIn } from '@/constants/media-rights-vocabulary';
 import type { ImageColourModel } from '@/lib/images/image-colour';
@@ -32,6 +32,7 @@ export const ASSET_ROLE_KEYS: Readonly<Record<CatalogAssetRole, string>> = {
   bim: 'assets.roles.bim',
   video: 'assets.roles.video',
   logo: 'assets.roles.logo',
+  font: 'assets.roles.font',
 };
 
 export const ASSET_ROLE_ICONS: Readonly<Record<CatalogAssetRole, LucideIcon>> = {
@@ -44,6 +45,7 @@ export const ASSET_ROLE_ICONS: Readonly<Record<CatalogAssetRole, LucideIcon>> = 
   bim: Box,
   video: Clapperboard,
   logo: Stamp,
+  font: Type,
 };
 
 export const COLOUR_MODEL_KEYS: Readonly<Record<ImageColourModel, string>> = {

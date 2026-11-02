@@ -152,17 +152,26 @@ function entityNameOf(record: object): string | null {
 
 // ── Αναγνώσεις ──────────────────────────────────────────────────────────────
 
+/** Και διαγραμμένη εγγραφή του χώρου: για όσα ονομάζουν το παρελθόν, όπως οι καταργήσεις μιας έκδοσης. Ξένη εγγραφή ≡ ανύπαρκτη. */
+export async function readOwnedEvenDeleted<TDefinition>(
+  scope: CatalogReadScope,
+  kind: CatalogKind,
+  id: string,
+): Promise<StoredCatalogRecord<TDefinition> | null> {
+  const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
+  return ownedOrNull(snap.data() as StoredCatalogRecord<TDefinition> | undefined, scope.ctx.companyId, {
+    resource: CATALOG_KIND_SPECS[kind].collection,
+    resourceId: id,
+  });
+}
+
 /** Η ενεργή εγγραφή **αυτού** του χώρου — ή `null` (ανύπαρκτη, διαγραμμένη ή ξένη: **ίδια** απάντηση). */
 export async function readOwnedOrNull<TDefinition>(
   scope: CatalogReadScope,
   kind: CatalogKind,
   id: string,
 ): Promise<StoredCatalogRecord<TDefinition> | null> {
-  const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
-  const owned = ownedOrNull(snap.data() as StoredCatalogRecord<TDefinition> | undefined, scope.ctx.companyId, {
-    resource: CATALOG_KIND_SPECS[kind].collection,
-    resourceId: id,
-  });
+  const owned = await readOwnedEvenDeleted<TDefinition>(scope, kind, id);
   return owned === null || owned.isDeleted ? null : owned;
 }
 

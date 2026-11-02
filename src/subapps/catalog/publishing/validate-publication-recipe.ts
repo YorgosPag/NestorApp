@@ -18,6 +18,7 @@ function colourValid(colour: LayoutColour): boolean {
 
 function checkTheme(theme: PublicationTheme, issues: IssueCollector): void {
   if (!isPublicationFontCode(theme.fontCode)) issues.add('publicationFontNotLicensed', 'theme.fontCode');
+  if (theme.fontAssetIds && theme.fontLicenseConfirmed !== true) issues.add('publicationFontLicenseRequired', 'theme.fontLicenseConfirmed');
   if (!colourValid(theme.primary)) issues.add('publicationColourInvalid', 'theme.primary');
   if (!colourValid(theme.accent)) issues.add('publicationColourInvalid', 'theme.accent');
 }
@@ -30,6 +31,7 @@ export function validatePublicationRecipe(recipe: PublicationRecipeDefinition): 
   if (recipe.scope.kind === 'categories' && recipe.scope.categoryIds.length === 0) issues.add('publicationScopeEmpty', 'scope.categoryIds');
   if (recipe.scope.kind === 'selection' && recipe.scope.entries.length === 0) issues.add('publicationScopeEmpty', 'scope.entries');
   if (recipe.scope.kind === 'filter' && recipe.scope.filter.familyId === null) issues.add('publicationScopeEmpty', 'scope.filter.familyId');
+  if (recipe.pricing.kind === 'priced' && recipe.pricing.compareVersionId === recipe.pricing.priceListVersionId) issues.add('publicationCompareInvalid', 'pricing.compareVersionId');
   checkTheme(recipe.theme, issues);
   return issues.issues;
 }

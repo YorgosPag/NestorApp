@@ -16,7 +16,7 @@
  */
 
 import type { HumanLanguage } from '@/i18n/languages';
-import type { PublicationOutputProfile, PublicationTemplate } from './publication-vocabulary';
+import type { PublicationPdfProfile, PublicationTemplate } from './publication-vocabulary';
 
 /** Το ίδιο χρώμα στους δύο χώρους: `rgb` = `#rrggbb` · `cmyk` = ποσοστά 0–100. */
 export interface LayoutColour {
@@ -139,7 +139,7 @@ export function countLayoutSections(document: Pick<LayoutDocument, 'sections'>):
 }
 
 /** Ποιο αρχείο ζητά ένα προφίλ: εκτύπωση ⇒ πλήρης ανάλυση στον χώρο της πηγής · οθόνη ⇒ ελαφρύ sRGB. */
-export function renditionUseOf(profile: PublicationOutputProfile): 'print' | 'web' {
+export function renditionUseOf(profile: PublicationPdfProfile): 'print' | 'web' {
   return profile === 'print' ? 'print' : 'web';
 }
 

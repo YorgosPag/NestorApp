@@ -51,10 +51,22 @@ export type PublicationScope =
 /** `none` = τεχνικός κατάλογος χωρίς τιμές · `priced` = **δημοσιευμένη** έκδοση για ένα κοινό. */
 export type PublicationPricing =
   | { readonly kind: 'none' }
-  | { readonly kind: 'priced'; readonly priceListId: string; readonly priceListVersionId: string; readonly audience: PriceAudience };
+  | {
+      readonly kind: 'priced';
+      readonly priceListId: string;
+      readonly priceListVersionId: string;
+      readonly audience: PriceAudience;
+      /** Παλαιότερη έκδοση της ίδιας λίστας ⇒ ο κατάλογος ανοίγει με «τι άλλαξε». Λείπει σε συνταγή χωρίς σύγκριση: το hash των παλιών μένει ίδιο. */
+      readonly compareVersionId?: string;
+    };
 
 export interface PublicationTheme {
+  /** Η γραμματοσειρά της πλατφόρμας: μένει και ως εφεδρεία για χαρακτήρες που δεν έχει η γραμματοσειρά του προμηθευτή. */
   readonly fontCode: PublicationFontCode;
+  /** Οι όψεις μιας οικογένειας προμηθευτή (μέσα με ρόλο `font`). Λείπει σε συνταγή χωρίς δική της: το hash παλιών συνταγών μένει ίδιο. */
+  readonly fontAssetIds?: readonly string[];
+  /** Ο άνθρωπος δηλώνει ότι έχει άδεια ενσωμάτωσης σε PDF. Το `fsType` δεν είναι άδεια· ποιος το δήλωσε το λέει το ιστορικό της συνταγής. */
+  readonly fontLicenseConfirmed?: boolean;
   /** Μέσο του χώρου με ρόλο `logo` και εικόνα που αποδίδεται (`isPublicationLogo`)· `null` = χωρίς. */
   readonly logoAssetId: string | null;
   readonly primary: LayoutColour;
@@ -100,6 +112,7 @@ export const PUBLICATION_FAILURES = [
   'priceAmbiguous',
   'priceVersionUnpublished',
   'renditionMissing',
+  'fontMissing',
   'emptyScope',
   'storageFailed',
   'interrupted',
@@ -139,6 +152,8 @@ export interface PublicationReport {
   readonly nonCmykImageCount: number;
   /** Πίνακες που η οικογένεια θέλει ανεστραμμένους, αλλά οι ιδιότητες δεν χώρεσαν και συνεχίστηκαν σε νέο μπλοκ. */
   readonly untransposedTableCount: number;
+  /** Αλλαγές τιμών πάνω από τον φράχτη της δημοσίευσης (§18), μέσα στο εύρος: θέλουν μια ματιά πριν φύγει το αρχείο. */
+  readonly fencedPriceChangeCount: number;
   /** `false` ⇒ ο έλεγχος διάταξης **δεν έγινε**, άρα τα τρία μηδενικά παρακάτω δεν σημαίνουν «καθαρό». */
   readonly layoutChecked: boolean;
   /** Κομμάτια κειμένου που πατούν άλλο κείμενο στο τελικό PDF. */
@@ -223,6 +238,7 @@ export const EMPTY_PUBLICATION_REPORT: PublicationReport = {
   lowResolutionImageCount: 0,
   nonCmykImageCount: 0,
   untransposedTableCount: 0,
+  fencedPriceChangeCount: 0,
   ...UNCHECKED_PUBLICATION_LAYOUT,
 };
 

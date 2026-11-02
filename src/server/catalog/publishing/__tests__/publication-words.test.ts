@@ -13,7 +13,7 @@ import type { CatalogTx } from '../../catalog-store.server';
 jest.mock('../../catalog-library-reads.server', () => ({ readActiveByIds: jest.fn(), readMeasurementRegistry: jest.fn(async () => new Map()) }));
 jest.mock('../publication-prices.server', () => ({
   PublicationRunError: class extends Error {},
-  readPublicationPriceSheet: jest.fn(async () => ({ priceOf: null, audienceKey: 'none', refs: [], edition: null })),
+  readPublicationPriceSheet: jest.fn(async () => ({ priceOf: null, audienceKey: 'none', refs: [], edition: null, changes: [] })),
 }));
 
 describe('readPublicationSnapshot: η πραγματική διαδρομή ως τον έλεγχο εύρους', () => {

@@ -30,6 +30,11 @@ export function formatPublicationPrice(minor: MinorAmount, language: HumanLangua
   return new Intl.NumberFormat(LOCALE_OF[language], { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(majorFromMinor(minor));
 }
 
+/** Μεταβολή σε μονάδες βάσης → «+7,1%»: πάντα με πρόσημο, για να διαβάζεται η κατεύθυνση χωρίς τη στήλη δίπλα. */
+export function formatPublicationChange(basisPoints: number, language: HumanLanguage): string {
+  return new Intl.NumberFormat(LOCALE_OF[language], { style: 'percent', signDisplay: 'always', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(basisPoints / 10000);
+}
+
 /**
  * ISO → «1/11/2026» στη ζώνη του φορέα, γιατί η ισχύς μιας τιμής είναι ελληνική μέρα: τα μεσάνυχτα της 29/10 σε UTC είναι ακόμη 28/10.
  * Ρητή ζώνη: το ίδιο PDF δεν αλλάζει με τη ζώνη ώρας του διακομιστή.

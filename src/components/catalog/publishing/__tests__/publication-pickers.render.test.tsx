@@ -7,8 +7,9 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import type { AssetRecord } from '@/services/catalog/catalog-api.client';
 import type { PublicationRecipeDefinition } from '@/subapps/catalog/types/publication';
-import { emptyRecipe, toggleSelectionEntry } from '../publication-draft';
+import { emptyRecipe, toggleSelectionEntry, withSupplierFont } from '../publication-draft';
 import { PublicationFilterField } from '../PublicationFilterField';
+import { PublicationFontField } from '../PublicationFontField';
 import { PublicationLogoField } from '../PublicationLogoField';
 import { PublicationSelectionField } from '../PublicationSelectionField';
 
@@ -82,6 +83,27 @@ const draft = (logoAssetId: string | null): PublicationRecipeDefinition => {
   const recipe = emptyRecipe('el');
   return { ...recipe, theme: { ...recipe.theme, logoAssetId } };
 };
+
+describe('PublicationFontField', () => {
+  const font = (id: string, family: string) => ({ id, role: 'font', fileId: 'f', font: { family, weight: 400, italic: false } });
+
+  it('🔴 επιλεγμένη οικογένεια ζητά δήλωση άδειας, και νέα οικογένεια τη μηδενίζει', () => {
+    mockAssets.items = [font('a', 'Acme') as Partial<AssetRecord>];
+    const onChange = jest.fn();
+    const chosen = withSupplierFont(draft(null), ['a']);
+    expect(chosen.theme.fontLicenseConfirmed).toBe(false);
+    render(<PublicationFontField draft={chosen} onChange={onChange} issues={[]} disabled={false} />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'publishing.fields.fontLicense' }));
+    expect(onChange.mock.calls[0][0].theme).toMatchObject({ fontAssetIds: ['a'], fontLicenseConfirmed: true });
+  });
+
+  it('🔴 χωρίς οικογένεια δεν ζητά τίποτα, και η επιστροφή στην πλατφόρμα σβήνει τα κλειδιά', () => {
+    mockAssets.items = [];
+    render(<PublicationFontField draft={draft(null)} onChange={jest.fn()} issues={[]} disabled={false} />);
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(Object.keys(withSupplierFont(withSupplierFont(draft(null), ['a']), null).theme)).toEqual(Object.keys(draft(null).theme));
+  });
+});
 
 describe('PublicationFilterField', () => {
   const familyRecord = { id: 'fam', code: 'fam', labels: {}, attributes: [{ attributeId: 'colour' }] };

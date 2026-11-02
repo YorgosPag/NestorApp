@@ -14,10 +14,10 @@
 
 import type { HumanLanguage } from '@/i18n/languages';
 import type { PublicationRecipeDefinition, PublicationTheme } from '../types/publication';
-import type { LayoutBlock, LayoutCodeIndexEntry, LayoutDocument, LayoutImageRef, LayoutPage, LayoutSection, LayoutTheme } from './layout-model';
+import type { LayoutBlock, LayoutCell, LayoutCodeIndexEntry, LayoutDocument, LayoutImageRef, LayoutPage, LayoutSection, LayoutTable, LayoutTheme } from './layout-model';
 import { fitValueColumns, layoutTables, tableUsesRail } from './layout-table';
 import { richTextBlocks, withBreakHints } from './layout-text';
-import type { ProductGridEntry, PublicationChapter, PublicationEntry, SimpleProductCard, VariantModelEntry } from './publication-entries';
+import type { PriceChangeGroup, PriceChangesEntry, ProductGridEntry, PublicationChapter, PublicationEntry, SimpleProductCard, VariantModelEntry } from './publication-entries';
 import { PUBLICATION_FONTS } from './publication-fonts';
 import { PUBLICATION_RENDER_SCHEMA_VERSION, type PublicationOptionalTemplate } from './publication-vocabulary';
 
@@ -34,6 +34,8 @@ export interface PublicationCompositionInput {
   readonly title: string;
   /** Το υποσέλιδο, έτοιμο: σημείωση + «τιμές έκδοσης Χ, ισχύς από…». */
   readonly footer: string;
+  /** Το όνομα της οικογένειας προμηθευτή, όπως το ξέρει η μηχανή. Λείπει ⇒ η γραμματοσειρά της πλατφόρμας. */
+  readonly supplierFontFamily?: string;
   readonly chapters: readonly PublicationChapter[];
   readonly words: PublicationComposeWords;
 }
@@ -47,13 +49,15 @@ const TINT_INK = { rgb: '#f0f2f5', cmyk: [3, 2, 0, 3] as const };
 
 const LABEL_COLUMN_MM = 52;
 const RAIL_COLUMN_MM = 10;
+/** Κωδικός και όνομα χωρούν μαζί: οι στήλες τιμών είναι το πολύ τρεις. */
+const CHANGE_LABEL_COLUMN_MM = 90;
 const MIN_VALUE_COLUMN_MM = 15;
 const MODEL_IMAGE_MM = 60;
 const GRID_IMAGE_MM = 45;
 const CODE_INDEX_COLUMNS = 3;
 
-function themeOf(theme: PublicationTheme): LayoutTheme {
-  return { fontFamily: PUBLICATION_FONTS[theme.fontCode].family, primary: theme.primary, accent: theme.accent, tint: TINT_INK, text: TEXT_INK, rule: RULE_INK };
+function themeOf(theme: PublicationTheme, supplierFamily: string | undefined): LayoutTheme {
+  return { fontFamily: supplierFamily ?? PUBLICATION_FONTS[theme.fontCode].family, primary: theme.primary, accent: theme.accent, tint: TINT_INK, text: TEXT_INK, rule: RULE_INK };
 }
 
 const imageRef = (assetId: string, alt: string, widthMm: number): LayoutImageRef => ({ assetId, alt, widthMm });
@@ -108,17 +112,44 @@ function gridSection(entry: ProductGridEntry, input: PublicationCompositionInput
   };
 }
 
+const plainCell = (text: string, role: LayoutCell['role']): LayoutCell => ({ text, role, colSpan: 1, rowSpan: 1 });
+
+function changeTable(group: PriceChangeGroup, entryId: string, entryTitle: string): LayoutTable {
+  const head = { id: `${group.id}-head`, header: true, cells: [plainCell('', 'corner'), ...group.columns.map((column) => plainCell(column, 'columnHead'))] };
+  const body = group.rows.map((row) => ({ id: row.id, header: false, cells: [plainCell(row.label, 'rowHead'), ...row.cells.map((text) => plainCell(text, 'price'))] }));
+  return {
+    id: `${entryId}-${group.id}`, caption: `${entryTitle}: ${group.title}`, columnCount: group.columns.length + 1, railColumn: false,
+    labelColumnMm: CHANGE_LABEL_COLUMN_MM, railColumnMm: RAIL_COLUMN_MM, part: 1, parts: 1, transposeUnmet: false, rows: [head, ...body],
+  };
+}
+
+/** Τα ίδια μπλοκ με τη σελίδα οικογένειας, άρα το πρότυπο Typst δεν αλλάζει και οι παλιές εκδόσεις κρατούν τα bytes τους. */
+function changesSection(entry: PriceChangesEntry): LayoutSection {
+  const groups = entry.groups.flatMap((group): LayoutBlock[] => [
+    { kind: 'heading', level: 3, text: group.title, outlined: false },
+    { kind: 'table', table: changeTable(group, entry.id, entry.title) },
+  ]);
+  return { id: entry.id, template: 'family', blocks: [{ kind: 'anchor', anchor: anchorOf(entry.id) }, { kind: 'heading', level: 2, text: entry.title, outlined: true }, ...groups] };
+}
+
 /** Ο **ένας** πίνακας «είδος καταχώρισης → πρότυπο». Νέο είδος χωρίς γραμμή = σφάλμα μεταγλώττισης. */
 const ENTRY_SECTION: { readonly [K in PublicationEntry['kind']]: (entry: Extract<PublicationEntry, { kind: K }>, input: PublicationCompositionInput) => LayoutSection } = {
   variantModel: variantSection,
   productGrid: gridSection,
+  priceChanges: changesSection,
 };
 
 function entrySection(entry: PublicationEntry, input: PublicationCompositionInput): LayoutSection {
-  return entry.kind === 'variantModel' ? ENTRY_SECTION.variantModel(entry, input) : ENTRY_SECTION.productGrid(entry, input);
+  switch (entry.kind) {
+    case 'variantModel': return ENTRY_SECTION.variantModel(entry, input);
+    case 'productGrid': return ENTRY_SECTION.productGrid(entry, input);
+    case 'priceChanges': return ENTRY_SECTION.priceChanges(entry, input);
+  }
 }
 
 function entryCodes(entry: PublicationEntry): LayoutCodeIndexEntry[] {
+  // Η σύγκριση δεν είναι σπίτι κανενός κωδικού: το ευρετήριο δείχνει τη σελίδα του προϊόντος.
+  if (entry.kind === 'priceChanges') return [];
   const codes = entry.kind === 'variantModel'
     ? entry.codes
     : entry.cards.flatMap((card) => (card.code ? [{ code: card.code, label: card.title }] : []));
@@ -132,7 +163,7 @@ export function codeIndexEntries(chapters: readonly PublicationChapter[], langua
 }
 
 function chapterSections(chapter: PublicationChapter, input: PublicationCompositionInput, divider: boolean): LayoutSection[] {
-  const head: LayoutSection[] = divider
+  const head: LayoutSection[] = divider && chapter.entries.every((entry) => entry.kind !== 'priceChanges')
     ? [{ id: `chapter-${chapter.id}`, template: 'chapterDivider', blocks: [{ kind: 'heading', level: 1, text: chapter.title, outlined: true }] }]
     : [];
   return [...head, ...chapter.entries.map((entry) => entrySection(entry, input))];
@@ -170,7 +201,7 @@ function documentShell(input: PublicationCompositionInput, sections: readonly La
     schemaVersion: PUBLICATION_RENDER_SCHEMA_VERSION,
     title: input.title,
     language: input.recipe.language,
-    theme: themeOf(input.recipe.theme),
+    theme: themeOf(input.recipe.theme, input.supplierFontFamily),
     page: PUBLICATION_A4,
     footer: input.footer,
     sections,

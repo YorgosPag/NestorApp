@@ -11,6 +11,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { unknownFilterKeys } from '@/subapps/catalog/publishing/publication-filter';
+import { publicationFontRefusal } from '@/subapps/catalog/publishing/publication-font-rights';
 import { isPublicationLogo } from '@/subapps/catalog/publishing/publication-logo';
 import { validatePublicationRecipe } from '@/subapps/catalog/publishing/validate-publication-recipe';
 import { assetFileTypeFactsOf } from '@/subapps/catalog/schema/judge-asset-file';
@@ -39,6 +40,7 @@ import { supersedeRecipeRuns } from './publication-run.server';
 export type StoredPublicationRecipe = StoredCatalogRecord<PublicationRecipeDefinition>;
 
 const LOGO_PATH = 'theme.logoAssetId';
+const FONTS_PATH = 'theme.fontAssetIds';
 
 /** Το αρχείο του λογότυπου: ο πελάτης λέει μόνο ποιο μέσο θέλει, το τι bytes έχει το κρίνει ο διακομιστής. */
 async function logoFileFacts(scope: CatalogTx, fileId: string | null) {
@@ -56,6 +58,16 @@ async function assertLogo(scope: CatalogTx, logoId: string | null): Promise<void
   }
   const file = await logoFileFacts(scope, asset.fileId);
   assertNoIssues(isPublicationLogo(asset, file) ? [] : [{ code: 'publicationLogoNotEligible', path: LOGO_PATH }]);
+}
+
+/** Οι όψεις είναι ζωντανά μέσα του χώρου και κρίνονται μαζί: μία οικογένεια, με βασική όψη και το κείμενο της γλώσσας. */
+async function assertFonts(scope: CatalogTx, definition: PublicationRecipeDefinition): Promise<void> {
+  const ids = definition.theme.fontAssetIds ?? [];
+  if (ids.length === 0) return;
+  const assets = await readActiveByIds<CatalogAssetDefinition>(scope, 'asset', ids);
+  const found = ids.flatMap((id) => assets.get(id) ?? []);
+  const refusal = found.length === ids.length ? publicationFontRefusal(found, definition.language) : 'publicationFontFamilyInvalid';
+  assertNoIssues(refusal === null ? [] : [{ code: refusal, path: FONTS_PATH }]);
 }
 
 /** Κάθε επιλογή δείχνει σε ζωντανό μοντέλο ή SKU του χώρου: ξένο id ≡ ανύπαρκτο. */
@@ -89,6 +101,7 @@ async function assertReferences(scope: CatalogTx, definition: PublicationRecipeD
   await assertSelection(scope, definition.scope);
   await assertFilter(scope, definition.scope);
   await assertLogo(scope, definition.theme.logoAssetId);
+  await assertFonts(scope, definition);
 }
 
 export async function createPublicationRecipe(ctx: AuthContext, definition: PublicationRecipeDefinition): Promise<StoredPublicationRecipe> {

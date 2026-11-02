@@ -244,7 +244,7 @@ function countUnpriced(chapters: readonly PublicationChapter[], words: Publicati
   let count = 0;
   for (const entry of chapters.flatMap((chapter) => chapter.entries)) {
     if (entry.kind === 'productGrid') count += entry.cards.filter((card) => card.price === words.askForQuote).length;
-    else for (const row of entry.preview.rows) {
+    else if (entry.kind === 'variantModel') for (const row of entry.preview.rows) {
       if (row.kind === 'attribute' && entry.priceRowIds.has(row.id)) count += (row.cells ?? []).filter((cell) => cell === words.askForQuote).length;
     }
   }
@@ -263,6 +263,16 @@ function countMissingSelection(data: PublicationDataSet, models: ReadonlyMap<str
   if (data.scope.kind !== 'selection') return 0;
   const productIds = new Set(data.products.map((product) => product.id));
   return data.scope.entries.filter((entry) => !(entry.kind === 'productModel' ? models.has(entry.id) : productIds.has(entry.id))).length;
+}
+
+/** Ποια από αυτά τα SKU ανήκουν στο εύρος της συνταγής: η ίδια κρίση με τα κεφάλαια, και για SKU που διαγράφηκαν (η σύγκριση τα ονομάζει). */
+export function productsInScope(data: Pick<PublicationDataSet, 'scope' | 'models' | 'categories'>, products: readonly StoredProduct[]): readonly StoredProduct[] {
+  const models = new Map(data.models.map((model) => [model.id, model]));
+  const categories = new Map(data.categories.map((category) => [category.id, category]));
+  return products.filter((product) => {
+    const chain = chainOf(product, models);
+    return inScope(data.scope, product, chain.flatMap((link) => link.holder.categoryIds), chain.map((link) => link.id), categories);
+  });
 }
 
 /** Το σύνολο της έκδοσης: κεφάλαια, εκδόσεις δεδομένων για το κλειδί, και ό,τι έμεινε απέξω. */

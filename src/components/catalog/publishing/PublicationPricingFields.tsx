@@ -16,6 +16,7 @@
 
 import React, { useMemo } from 'react';
 
+import { ClearableSelect } from '@/components/ui/clearable-select';
 import { EnumSelect } from '@/components/ui/enum-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDiscountsView, usePriceListsView } from '@/hooks/catalog/usePriceListViews';
@@ -70,6 +71,28 @@ function PriceVersionSelect({ bands, value, disabled, onChange }: VersionSelectP
   );
 }
 
+/** Χωρίς το κλειδί: συνταγή χωρίς σύγκριση κρατά το hash της. */
+function withoutCompare({ compareVersionId: _compare, ...pricing }: Priced): Priced {
+  return pricing;
+}
+
+/** Μόνο παλαιότερες εκδόσεις της ίδιας λίστας. Αλλαγή λίστας ή έκδοσης αδειάζει την επιλογή. */
+function CompareVersionSelect({ bands, pricing, setPricing, issues, disabled }: Pick<PricedProps, 'pricing' | 'setPricing' | 'issues' | 'disabled'> & { readonly bands: readonly TimelineBand[] }) {
+  const { t } = useCatalogText();
+  const current = bands.find((band) => band.entry.version.id === pricing.priceListVersionId)?.entry.version.number ?? 0;
+  const older = bands.filter((band) => band.entry.version.number < current);
+  return (
+    <CatalogField label={t('publishing.fields.compareVersion')} issues={issues} path="pricing.compareVersionId">
+      {({ id }) => (
+        <ClearableSelect id={id} value={pricing.compareVersionId ?? ''} disabled={disabled || older.length === 0} placeholder={t('publishing.fields.noCompare')} clearLabel={t('publishing.fields.noCompare')}
+          onValueChange={(value) => setPricing(value === '' ? withoutCompare(pricing) : { ...pricing, compareVersionId: value })}>
+          {[...older].reverse().map((band) => <SelectItem key={band.entry.version.id} value={band.entry.version.id}>{t('pricing.versions.number', { number: band.entry.version.number })}</SelectItem>)}
+        </ClearableSelect>
+      )}
+    </CatalogField>
+  );
+}
+
 function PricedFields({ pricing, setPricing, issues, disabled }: PricedProps) {
   const { t, text } = useCatalogText();
   const lists = usePriceListsView().current;
@@ -78,7 +101,7 @@ function PricedFields({ pricing, setPricing, issues, disabled }: PricedProps) {
   const sales = useMemo(() => (view?.lists ?? NO_LISTS).filter((list) => list.kind === 'sales'), [view]);
   const summaryOf = (priceListId: string) => summarizePriceList(priceListId, view?.versions ?? NO_VERSIONS, view ? Date.parse(view.asOf) : 0);
   const pickList = (priceListId: string) =>
-    setPricing({ ...pricing, priceListId, priceListVersionId: defaultVersionOf(summaryOf(priceListId))?.id ?? '' });
+    setPricing({ ...withoutCompare(pricing), priceListId, priceListVersionId: defaultVersionOf(summaryOf(priceListId))?.id ?? '' });
   return (
     <>
       <CatalogField label={t('publishing.fields.priceList')}>
@@ -90,7 +113,8 @@ function PricedFields({ pricing, setPricing, issues, disabled }: PricedProps) {
         )}
       </CatalogField>
       <PriceVersionSelect bands={summaryOf(pricing.priceListId).bands} value={pricing.priceListVersionId} disabled={disabled}
-        onChange={(priceListVersionId) => setPricing({ ...pricing, priceListVersionId })} />
+        onChange={(priceListVersionId) => setPricing({ ...withoutCompare(pricing), priceListVersionId })} />
+      <CompareVersionSelect bands={summaryOf(pricing.priceListId).bands} pricing={pricing} setPricing={setPricing} issues={issues} disabled={disabled} />
       <AudienceField value={pricing.audience} allowNone={false} disabled={disabled} issues={issues}
         customerGroups={groups.state === 'ready' ? groups.view.customerGroups : []}
         onChange={(audience) => setPricing({ ...pricing, audience: audience ?? { kind: 'anonymous' } })} />

@@ -78,6 +78,12 @@ export function withTheme(draft: PublicationRecipeDefinition, patch: Partial<Pub
   return { ...draft, theme: { ...draft.theme, ...patch } };
 }
 
+/** `null` ⇒ η γραμματοσειρά της πλατφόρμας. Τα κλειδιά φεύγουν, ώστε η φόρμα να μη δείχνει αλλαγή και το hash να μένει ίδιο. Νέα οικογένεια ⇒ νέα δήλωση άδειας. */
+export function withSupplierFont(draft: PublicationRecipeDefinition, fontAssetIds: readonly string[] | null): PublicationRecipeDefinition {
+  const { fontAssetIds: _ids, fontLicenseConfirmed: _confirmed, ...theme } = draft.theme;
+  return { ...draft, theme: fontAssetIds === null ? theme : { ...theme, fontAssetIds, fontLicenseConfirmed: false } };
+}
+
 export function withCmykPart(colour: LayoutColour, index: number, value: number): LayoutColour {
   const cmyk = colour.cmyk.map((part, position) => (position === index ? value : part));
   return { ...colour, cmyk: [cmyk[0] ?? 0, cmyk[1] ?? 0, cmyk[2] ?? 0, cmyk[3] ?? 0] };

@@ -53,7 +53,7 @@ import { nowISO } from '@/lib/date-local';
 import { attachmentDisposition } from '@/lib/http/content-disposition';
 import { fileCallerUid, withFileCustodyAuth, type FileCustodyCaller } from '../_shared/file-custody-route';
 import { loadOwnedFileBytes } from '../_shared/owned-file-bytes';
-import { buildZip, uniqueZipNames, type ZipEntry } from './zip-builder';
+import { buildZip, uniqueZipNames, type ZipEntry } from '@/lib/zip/zip-builder';
 
 const logger = createModuleLogger('BatchDownloadRoute');
 

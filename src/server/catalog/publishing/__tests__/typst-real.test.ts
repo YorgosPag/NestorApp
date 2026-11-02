@@ -23,7 +23,8 @@ import { judgePublicationLayout } from '@/subapps/catalog/publishing/publication
 import type { PublicationChapter, VariantModelEntry } from '@/subapps/catalog/publishing/publication-entries';
 import type { PreviewRow } from '@/subapps/catalog/table/catalog-table';
 import type { PublicationRecipeDefinition } from '@/subapps/catalog/types/publication';
-import { fontDirectoryOf, renderPublicationPdf, renderPublicationPreview } from '../typst-adapter';
+import { inspectFontFile } from '../publication-font-file.server';
+import { fontDirectoryOf, renderPublicationPdf, renderPublicationPreview, type PublicationFontFile } from '../typst-adapter';
 import { assertTypstAvailable, runTypst, typstJobsFor, type TypstRunner } from '../typst-engine.server';
 import { measurePdfCheckPeakInChildProcess, readLayoutInChildProcess } from './pdf-layout-oracle';
 
@@ -71,7 +72,7 @@ function volume(imageOf: (index: number) => string | null) {
 
 const document = volume(() => null);
 
-const input = { document, fontCode: 'liberationSans' as const, dataAsOfEpoch: 1790000000, readAsset: async () => new Uint8Array(), run: runTypst };
+const input = { document, fontCode: 'liberationSans' as const, fonts: [] as readonly PublicationFontFile[], dataAsOfEpoch: 1790000000, readAsset: async () => new Uint8Array(), run: runTypst };
 
 /** Άθραυστος κωδικός σε στενή στήλη: το δυσκολότερο κελί του πίνακα. */
 const UNBREAKABLE_CODE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123';
@@ -338,6 +339,21 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
       await writeFile(path.join(pdfOutDirectory as string, name), bytes);
     }
   }, 300_000);
+
+  it('🔴 γραμματοσειρά προμηθευτή: το όνομα της μηχανής ζητά το σωστό αρχείο, και αυτό ενσωματώνεται', async () => {
+    const bytes = await readFile(path.resolve(process.cwd(), 'public/fonts/LiberationMono-Regular.ttf'));
+    const inspected = await inspectFontFile(bytes);
+    if (inspected.kind !== 'ready') throw new Error(inspected.code);
+    expect(inspected.facts.family).toBe('Liberation Mono');
+    const themed = { ...sampler('rail'), theme: { ...sampler('rail').theme, fontFamily: inspected.facts.family } };
+    const rendered = await renderPublicationPdf({ ...input, document: themed, fonts: [{ name: 'supplier.ttf', bytes }] }, 'screen');
+    expect(Buffer.from(rendered.bytes).toString('latin1')).toMatch(/LiberationMono/);
+  });
+
+  it('🔴 όνομα με κατάληξη βάρους: η μηχανή δίνει το δικό της, όχι το αρχείο', async () => {
+    const bytes = await readFile(path.resolve(process.cwd(), 'public/fonts/LiberationSans-Bold.ttf'));
+    await expect(inspectFontFile(bytes)).resolves.toMatchObject({ kind: 'ready', facts: { family: 'Liberation Sans', weight: 700 } });
+  });
 
   it('προεπισκόπηση: βγάζει PNG μέσα στο χρονικό της όριο', async () => {
     const png = await renderPublicationPreview({ ...input, document: sampler('rail') });

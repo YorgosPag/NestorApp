@@ -5,7 +5,7 @@
  * `publication-fonts.test.ts` διαβάζοντας το μητρώο.
  *
  * ⚠️ Το Typst διαβάζει TTF/OTF, όχι WOFF2 ⇒ το Roboto του `public/fonts/roboto/` **δεν** μπαίνει εδώ. Γραμματοσειρά που
- * ανεβάζει ο ίδιος ο προμηθευτής = ανοιχτή ραφή: θέλει έλεγχο `fsType` + άδειας στο ανέβασμα (§5.6.1).
+ * ανεβάζει ο ίδιος ο προμηθευτής δεν ανήκει εδώ: είναι μέσο του χώρου, με κρίση στο `publication-font-rights.ts` (§5.6.1).
  * @module subapps/catalog/publishing/publication-fonts
  */
 

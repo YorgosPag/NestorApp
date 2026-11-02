@@ -63,7 +63,23 @@ export interface ProductGridEntry {
   readonly listingKind: CatalogListingKind;
 }
 
-export type PublicationEntry = VariantModelEntry | ProductGridEntry;
+/** Μία ομάδα της σύγκρισης: νέα, καταργήσεις, αυξήσεις ή μειώσεις. */
+export interface PriceChangeGroup {
+  readonly id: string;
+  readonly title: string;
+  readonly columns: readonly string[];
+  readonly rows: readonly { readonly id: string; readonly label: string; readonly cells: readonly string[] }[];
+}
+
+/** «Τι άλλαξε» ανάμεσα σε δύο εκδόσεις τιμών ⇒ πίνακες, με τα ίδια μπλοκ της σελίδας οικογένειας. */
+export interface PriceChangesEntry {
+  readonly kind: 'priceChanges';
+  readonly id: string;
+  readonly title: string;
+  readonly groups: readonly PriceChangeGroup[];
+}
+
+export type PublicationEntry = VariantModelEntry | ProductGridEntry | PriceChangesEntry;
 
 export interface PublicationChapter {
   readonly id: string;

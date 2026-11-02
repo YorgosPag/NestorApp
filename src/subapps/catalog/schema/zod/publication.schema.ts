@@ -48,11 +48,13 @@ const scopeSchema = z.discriminatedUnion('kind', [
 
 const pricingSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('none') }),
-  z.object({ kind: z.literal('priced'), priceListId: entityIdSchema, priceListVersionId: entityIdSchema, audience: priceAudienceSchema }),
+  z.object({ kind: z.literal('priced'), priceListId: entityIdSchema, priceListVersionId: entityIdSchema, audience: priceAudienceSchema, compareVersionId: entityIdSchema.optional() }),
 ]);
 
 const themeSchema = z.object({
   fontCode: z.enum(PUBLICATION_FONT_CODES as unknown as [string, ...string[]]),
+  fontAssetIds: z.array(entityIdSchema).min(1).max(PUBLICATION_LIMITS.maxFontFaces).optional(),
+  fontLicenseConfirmed: z.boolean().optional(),
   logoAssetId: entityIdSchema.nullable(),
   primary: colourSchema,
   accent: colourSchema,

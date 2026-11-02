@@ -48,12 +48,13 @@ import {
   type PublicationReport,
   type PublicationRunDefinition,
 } from '@/subapps/catalog/types/publication';
-import type { PublicationOutputProfile } from '@/subapps/catalog/publishing/publication-vocabulary';
+import { pdfProfilesFirst, PUBLICATION_PROFILE_FILES, type PublicationOutputProfile } from '@/subapps/catalog/publishing/publication-vocabulary';
 import { readOwned, runCatalogReadOnly, type StoredCatalogRecord } from '../catalog-store.server';
-import { resolvePublicationAssets, type PublicationAssets } from './publication-assets.server';
+import { renderPublicationIdml } from './idml-package.server';
+import { readPublicationFonts, resolvePublicationAssets, type PublicationAssets } from './publication-assets.server';
 import { PublicationRunError } from './publication-prices.server';
 import { readPublicationSnapshot, type PublicationSnapshot } from './publication-snapshot.server';
-import { inspectRenderedLayout, renderPublicationPdf } from './typst-adapter';
+import { inspectRenderedLayout, renderPublicationPdf, type PublicationFontFile } from './typst-adapter';
 import { assertTypstAvailable, runTypst, TypstFailedError, TypstUnavailableError, type TypstRunner } from './typst-engine.server';
 
 const logger = createModuleLogger('CatalogPublicationRun');
@@ -74,7 +75,7 @@ const runRef = (db: Firestore, id: string): DocumentReference => db.collection(C
 const storedRunOf = (data: unknown): StoredPublicationRun | undefined => (data ? publicationRunOf(data as StoredPublicationRun) : undefined);
 
 export function publicationArtifactPath(companyId: string, runId: string, profile: PublicationOutputProfile): string {
-  return `catalog-publications/${companyId}/${runId}/${profile}.pdf`;
+  return `catalog-publications/${companyId}/${runId}/${profile}.${PUBLICATION_PROFILE_FILES[profile].extension}`;
 }
 
 function queuedRun(id: string, ctx: AuthContext, recipe: StoredCatalogRecord<PublicationRecipeDefinition>, snapshot: PublicationSnapshot, attempts: number, createdAt: string | null): StoredPublicationRun {
@@ -194,17 +195,19 @@ async function renderProfile(input: {
   readonly requested: RequestedRun;
   readonly profile: PublicationOutputProfile;
   readonly assets: PublicationAssets;
+  readonly fonts: readonly PublicationFontFile[];
+  /** Οι σελίδες του πρώτου PDF, ή οι ενότητες όταν η συνταγή ζητά μόνο IDML. */
+  readonly pageCount: number;
   readonly run: TypstRunner;
 }): Promise<{ readonly artifact: PublicationArtifact; readonly bytes: Uint8Array }> {
   const { requested, profile, assets } = input;
   const { snapshot, recipe } = requested;
-  const rendered = await renderPublicationPdf(
-    { document: snapshot.document, fontCode: recipe.theme.fontCode, dataAsOfEpoch: snapshot.dataAsOfEpoch, readAsset: assets.read, run: input.run },
-    profile,
-  );
+  const rendered = profile === 'idml'
+    ? await renderPublicationIdml({ document: snapshot.document, pageCount: input.pageCount, readAsset: assets.read })
+    : await renderPublicationPdf({ document: snapshot.document, fontCode: recipe.theme.fontCode, fonts: input.fonts, dataAsOfEpoch: snapshot.dataAsOfEpoch, readAsset: assets.read, run: input.run }, profile);
   const storagePath = publicationArtifactPath(recipe.companyId, requested.run.id, profile);
   // 🔑 Μόνο δημιουργία: το κλειδί είναι ντετερμινιστικό, άρα επανάληψη μετά από διακοπή βρίσκει τα ίδια bytes (`exists`).
-  await createObjectOnce(publicationBucket(), storagePath, rendered.bytes, 'application/pdf');
+  await createObjectOnce(publicationBucket(), storagePath, rendered.bytes, PUBLICATION_PROFILE_FILES[profile].contentType);
   const artifact = { profile, storagePath, sizeBytes: rendered.bytes.length, pageCount: rendered.pageCount, sha256: rendered.sha256, renderMs: rendered.renderMs };
   return { artifact, bytes: rendered.bytes };
 }
@@ -230,15 +233,16 @@ export async function executePublicationRun(requested: RequestedRun, run: TypstR
     await assertTypstAvailable();
     await updateRun(ref, { status: 'running', progress: progress('reading', 0) });
     const assets = await resolvePublicationAssets(snapshot.document, snapshot.assets);
+    const fonts = await readPublicationFonts(snapshot.fonts);
     await updateRun(ref, { progress: progress('composing', pagesTotal) });
     const artifacts: PublicationArtifact[] = [];
     let layout = UNCHECKED_PUBLICATION_LAYOUT;
-    for (const profile of recipe.profiles) {
+    for (const profile of pdfProfilesFirst(recipe.profiles)) {
       await updateRun(ref, { progress: progress('rendering', pagesTotal) });
-      const rendered = await renderProfile({ requested, profile, assets, run });
+      const rendered = await renderProfile({ requested, profile, assets, fonts, pageCount: artifacts[0]?.pageCount ?? pagesTotal, run });
       artifacts.push(rendered.artifact);
       // Η διάταξη είναι κοινή στα δύο προφίλ: μετράται μία φορά, στο πρώτο.
-      if (artifacts.length === 1) layout = await inspectRenderedLayout(rendered.bytes, profile, snapshot.document.page);
+      if (artifacts.length === 1 && profile !== 'idml') layout = await inspectRenderedLayout(rendered.bytes, profile, snapshot.document.page);
       await updateRun(ref, { progress: progress('storing', pagesTotal), artifacts });
     }
     await updateRun(ref, { status: 'ready', progress: progress('done', pagesTotal), report: reportOf(snapshot, assets, layout), finishedAt: nowISO() });

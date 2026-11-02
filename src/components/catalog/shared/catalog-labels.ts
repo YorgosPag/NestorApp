@@ -91,6 +91,7 @@ export const ASSET_KIND_KEYS: Readonly<Record<AssetKind, string>> = {
   document: 'assetKinds.document',
   bim: 'assetKinds.bim',
   video: 'assetKinds.video',
+  font: 'assetKinds.font',
 };
 
 export const REFERENCE_RELATION_KEYS: Readonly<Record<ReferenceRelation, string>> = {
@@ -298,6 +299,13 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   fenceDigestStale: 'issues.fenceDigestStale',
   unknownParty: 'issues.unknownParty',
   publicationFontNotLicensed: 'issues.publicationFontNotLicensed',
+  publicationCompareInvalid: 'issues.publicationCompareInvalid',
+  publicationFontFamilyInvalid: 'issues.publicationFontFamilyInvalid',
+  publicationFontNoGreek: 'issues.publicationFontNoGreek',
+  publicationFontLicenseRequired: 'issues.publicationFontLicenseRequired',
+  fontFileUnreadable: 'issues.fontFileUnreadable',
+  fontEmbeddingForbidden: 'issues.fontEmbeddingForbidden',
+  fontVariableUnsupported: 'issues.fontVariableUnsupported',
   publicationColourInvalid: 'issues.publicationColourInvalid',
   publicationTitleRequired: 'issues.publicationTitleRequired',
   publicationProfileRequired: 'issues.publicationProfileRequired',

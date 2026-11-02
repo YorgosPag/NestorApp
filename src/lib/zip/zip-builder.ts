@@ -22,7 +22,7 @@
  *
  * ⛔ **ΜΗΝ εισαγάγεις εδώ `firebaseAdmin`, `next/server` ή οτιδήποτε διαβάζει.**
  *
- * @module app/api/files/batch-download/zip-builder
+ * @module lib/zip/zip-builder
  */
 
 import { deflateRawSync } from 'zlib';
@@ -30,19 +30,22 @@ import { deflateRawSync } from 'zlib';
 export interface ZipEntry {
   readonly filename: string;
   readonly data: Uint8Array;
+  /** Χωρίς συμπίεση: το απαιτεί το `mimetype` του IDML, και το JPEG δεν κερδίζει τίποτα. */
+  readonly stored?: boolean;
 }
 
 /**
  * CRC-32 (πολυώνυμο 0xEDB88320) — το απαιτεί η ίδια η μορφή, σε **δύο** κεφαλίδες.
  */
+const CRC_TABLE = Uint32Array.from({ length: 256 }, (_, byte) => {
+  let value = byte;
+  for (let bit = 0; bit < 8; bit++) value = (value >>> 1) ^ (value & 1 ? 0xEDB88320 : 0);
+  return value;
+});
+
 function crc32(data: Uint8Array): number {
   let crc = 0xFFFFFFFF;
-  for (let i = 0; i < data.length; i++) {
-    crc ^= data[i];
-    for (let j = 0; j < 8; j++) {
-      crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
-    }
-  }
+  for (let i = 0; i < data.length; i++) crc = CRC_TABLE[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
   return (crc ^ 0xFFFFFFFF) >>> 0;
 }
 
@@ -52,6 +55,8 @@ interface EntryShape {
   readonly compressed: Uint8Array;
   readonly crc: number;
   readonly rawSize: number;
+  /** 0 = stored · 8 = deflate. */
+  readonly method: number;
 }
 
 /** Local file header: 30 bytes + όνομα. */
@@ -61,7 +66,7 @@ function localHeader(shape: EntryShape): Uint8Array {
   view.setUint32(0, 0x04034b50, true);            // Signature
   view.setUint16(4, 20, true);                    // Version needed (2.0)
   view.setUint16(6, 0x0800, true);                // Flags: bit 11 = UTF-8 ονόματα
-  view.setUint16(8, 8, true);                     // Compression: deflate
+  view.setUint16(8, shape.method, true);          // Compression
   view.setUint16(10, 0, true);                    // Mod time
   view.setUint16(12, 0, true);                    // Mod date
   view.setUint32(14, shape.crc, true);
@@ -81,7 +86,7 @@ function centralHeader(shape: EntryShape, offset: number): Uint8Array {
   view.setUint16(4, 20, true);                    // Version made by
   view.setUint16(6, 20, true);                    // Version needed
   view.setUint16(8, 0x0800, true);                // Flags: bit 11 = UTF-8 ονόματα
-  view.setUint16(10, 8, true);                    // Compression: deflate
+  view.setUint16(10, shape.method, true);         // Compression
   view.setUint16(12, 0, true);                    // Mod time
   view.setUint16(14, 0, true);                    // Mod date
   view.setUint32(16, shape.crc, true);
@@ -129,9 +134,10 @@ export function buildZip(entries: readonly ZipEntry[]): Uint8Array {
   for (const entry of entries) {
     const shape: EntryShape = {
       nameBytes: new TextEncoder().encode(entry.filename),
-      compressed: new Uint8Array(deflateRawSync(entry.data)),
+      compressed: entry.stored ? entry.data : new Uint8Array(deflateRawSync(entry.data)),
       crc: crc32(entry.data),
       rawSize: entry.data.length,
+      method: entry.stored ? 0 : 8,
     };
 
     locals.push(localHeader(shape), shape.compressed);

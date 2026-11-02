@@ -64,6 +64,7 @@ const ALL_CATEGORIES: readonly FileCategory[] = [
   'archive',
   'text',
   'bim',
+  'font',
   'unknown',
 ] as const;
 

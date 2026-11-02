@@ -39,19 +39,21 @@ export const ASSET_KIND_FILE_CATEGORIES: Readonly<Record<AssetKind, readonly Fil
   document: ['pdf'],
   bim: ['bim'],
   video: ['video'],
+  font: ['font'],
 };
 
 const MIB = 1024 * 1024;
 
 /**
  * Μέγιστο μέγεθος αρχείου ανά είδος. Εικόνα 200 MB (TIFF εκτύπωσης με προφίλ) · έγγραφο 100 MB · BIM 500 MB (οικογένειες
- * Revit/μοντέλα IFC) · βίντεο 500 MB.
+ * Revit/μοντέλα IFC) · βίντεο 500 MB · γραμματοσειρά 15 MB (όσο το Canva): τα bytes της διαβάζονται στη μνήμη, στη σύνδεση.
  */
 export const CATALOG_ASSET_MAX_BYTES: Readonly<Record<AssetKind, number>> = {
   image: 200 * MIB,
   document: 100 * MIB,
   bim: 500 * MIB,
   video: 500 * MIB,
+  font: 15 * MIB,
 };
 
 /** Το ταβάνι που επιβάλλουν οι κανόνες Storage στη διαδρομή `catalog_asset` — το μέγιστο των ορίων ανά είδος. */
@@ -71,6 +73,7 @@ export const CATALOG_ASSET_UPLOAD_TARGET: Readonly<Record<CatalogAssetRole, { re
   bim: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.MODELS },
   video: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.VIDEOS },
   logo: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.PHOTOS },
+  font: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.DOCUMENTS },
 };
 
 /** Ό,τι χρειάζεται η κρίση από ένα αρχείο — δομικό (το `FileRecord` το ικανοποιεί). */

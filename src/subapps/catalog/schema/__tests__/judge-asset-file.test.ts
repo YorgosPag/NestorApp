@@ -96,6 +96,28 @@ describe('judgeAssetFile', () => {
 });
 
 // ADR-923 §5.10.4 — ο προέλεγχος της οθόνης και η κρίση της σύνδεσης είναι ΤΑ ΙΔΙΑ σκέλη τύπου/μεγέθους.
+describe('judgeAssetFile — γραμματοσειρά (§5.6.1)', () => {
+  const target: AssetFileTarget = { ...PHOTO, kind: 'font' };
+  const record = (ext: string) => file({ ext, contentType: '', sizeBytes: 1000, catalogRenditions: undefined });
+
+  it('🔴 χωρίς ανάγνωση των bytes δεν δένεται', () => {
+    expect(judgeAssetFile(target, 'f', record('ttf')).map((found) => found.code)).toEqual(['fileNotReady']);
+  });
+
+  it('μεταφέρει την άρνηση της ανάγνωσης, και δέχεται ό,τι διαβάστηκε', () => {
+    expect(judgeAssetFile(target, 'f', record('otf'), { storedSizeBytes: 1000, font: { kind: 'refused', code: 'fontEmbeddingForbidden' } }).map((found) => found.code)).toEqual(['fontEmbeddingForbidden']);
+    expect(judgeAssetFile(target, 'f', record('otf'), { storedSizeBytes: 1000, font: { kind: 'ready' } })).toEqual([]);
+  });
+
+  it('🔴 WOFF δεν γίνεται δεκτό: η μηχανή δεν το διαβάζει', () => {
+    expect(judgeAssetUpload('font', { ext: 'woff2', contentType: 'font/woff2', sizeBytes: 1 }).map((found) => found.code)).toEqual(['fileKindMismatch']);
+  });
+
+  it('🔴 πάνω από 15 MB αρνείται, όποιο κι αν είναι το περιεχόμενο', () => {
+    expect(judgeAssetUpload('font', { ext: 'ttf', contentType: 'font/ttf', sizeBytes: 16 * 1024 * 1024 }).map((found) => found.code)).toEqual(['fileTooLarge']);
+  });
+});
+
 describe('judgeAssetUpload — πριν από κάθε byte', () => {
   it('🔴 Π1 ίδιοι κωδικοί με τη σύνδεση: είδος · αντίφαση · μέγεθος (με όριο), με αυτή τη σειρά', () => {
     expect(judgeAssetUpload('image', { ext: 'pdf', contentType: 'application/pdf', sizeBytes: 1 })).toEqual([{ code: 'fileKindMismatch', path: 'fileId', params: { kind: 'image' } }]);

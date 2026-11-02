@@ -12,7 +12,7 @@ import type { AuthContext } from '@/lib/auth';
 import { previewRecipeOf } from '@/subapps/catalog/publishing/compose-publication';
 import type { PublicationPreviewWire, PublicationRecipeDefinition } from '@/subapps/catalog/types/publication';
 import { readOwned, runCatalogReadOnly } from '../catalog-store.server';
-import { resolvePublicationAssets } from './publication-assets.server';
+import { readPublicationFonts, resolvePublicationAssets } from './publication-assets.server';
 import { publicationFailureOf } from './publication-run.server';
 import { readPublicationSnapshot } from './publication-snapshot.server';
 import { readPublicationRecipes } from './publication-views.server';
@@ -38,7 +38,8 @@ export async function renderPublicationEntryPreview(ctx: AuthContext, input: { r
       return { recipe: stored, snapshot: await readPublicationSnapshot(scope, previewRecipe(stored, input.modelId), { ignoreCompleteness: true }) };
     });
     const assets = await resolvePublicationAssets(snapshot.document, snapshot.assets);
-    const png = await renderPublicationPreview({ document: snapshot.document, fontCode: recipe.theme.fontCode, readAsset: assets.read, run: runTypst });
+    const fonts = await readPublicationFonts(snapshot.fonts);
+    const png = await renderPublicationPreview({ document: snapshot.document, fontCode: recipe.theme.fontCode, fonts, readAsset: assets.read, run: runTypst });
     return { status: 'ready', pngBase64: Buffer.from(png).toString('base64') };
   } catch (cause) {
     const failure = publicationFailureOf(cause);

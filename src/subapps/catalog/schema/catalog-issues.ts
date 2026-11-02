@@ -171,6 +171,13 @@ export const CATALOG_ISSUE_CODES = [
   'unknownParty',
   // ── Φάση 5: εκδότης καταλόγου (ADR-923 §5.6) ──
   'publicationFontNotLicensed',
+  'publicationCompareInvalid',
+  'publicationFontFamilyInvalid',
+  'publicationFontNoGreek',
+  'publicationFontLicenseRequired',
+  'fontFileUnreadable',
+  'fontEmbeddingForbidden',
+  'fontVariableUnsupported',
   'publicationColourInvalid',
   'publicationTitleRequired',
   'publicationProfileRequired',

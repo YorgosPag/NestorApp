@@ -5,24 +5,22 @@
  *   (ADR-923 §5.6.1).
  * @module components/catalog/publishing/PublicationThemeFields
  *
- * 🔑 Η γραμματοσειρά είναι **κλειστό σύνολο** με ελεγμένη άδεια (`PUBLICATION_FONTS`)· δεν υπάρχει ελεύθερο όνομα.
+ * 🔑 Η γραμματοσειρά είναι **κλειστό σύνολο**, χωρίς ελεύθερο όνομα: της πλατφόρμας ή μέσο προμηθευτή που πέρασε την κρίση (`PublicationFontField`).
  * 🔑 Το ίδιο χρώμα δηλώνεται και στους δύο χώρους, γιατί το Typst δεν μετατρέπει: η εκτύπωση παίρνει ακριβώς τα CMYK που
  *    έγραψε ο άνθρωπος. Η επικύρωση (`#rrggbb`, 0–100) είναι η ίδια συνάρτηση με του γραφέα.
  */
 
 import React, { useId } from 'react';
 
-import { EnumSelect } from '@/components/ui/enum-select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NumericField } from '@/components/ui/numeric-field';
-import { PUBLICATION_FONTS, PUBLICATION_FONT_CODES } from '@/subapps/catalog/publishing/publication-fonts';
 import type { LayoutColour } from '@/subapps/catalog/publishing/layout-model';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import { CatalogField } from '../shared/CatalogFormFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { FieldIssues } from '../shared/CatalogIssues';
 import { withCmykPart, withTheme, type PublicationFieldsProps } from './publication-draft';
+import { PublicationFontField } from './PublicationFontField';
 import { PublicationLogoField } from './PublicationLogoField';
 
 /** Τα τέσσερα μελάνια — διεθνείς συντομογραφίες, όχι μεταφράσιμο κείμενο. */
@@ -64,12 +62,7 @@ export function PublicationThemeFields({ draft, onChange, issues, disabled }: Pu
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <PublicationLogoField draft={draft} onChange={onChange} issues={issues} disabled={disabled} />
-      <CatalogField label={t('publishing.fields.font')} issues={issues} path="theme.fontCode">
-        {({ id }) => (
-          <EnumSelect id={id} value={theme.fontCode} values={PUBLICATION_FONT_CODES} disabled={disabled}
-            getLabel={(code) => PUBLICATION_FONTS[code].family} onValueChange={(fontCode) => onChange(withTheme(draft, { fontCode }))} />
-        )}
-      </CatalogField>
+      <PublicationFontField draft={draft} onChange={onChange} issues={issues} disabled={disabled} />
       <ColourField legend={t('publishing.fields.primary')} value={theme.primary} disabled={disabled} issues={issues} path="theme.primary"
         onChange={(primary) => onChange(withTheme(draft, { primary }))} />
       <ColourField legend={t('publishing.fields.accent')} value={theme.accent} disabled={disabled} issues={issues} path="theme.accent"

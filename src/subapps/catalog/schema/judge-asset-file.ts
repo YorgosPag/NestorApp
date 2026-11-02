@@ -33,6 +33,8 @@ export interface AssetFileTarget {
  */
 export interface AssetFileMeasurement {
   readonly storedSizeBytes: number | null;
+  /** Μόνο σε είδος `font`: η ανάγνωση των bytes από τον διακομιστή. Λείπει ⇒ δεν έγινε, άρα δεν δένεται. */
+  readonly font?: { readonly kind: 'ready' } | { readonly kind: 'refused'; readonly code: CatalogIssueCode };
 }
 
 const FILE_PATH = 'fileId';
@@ -90,6 +92,12 @@ export function attachedFileKindIssues(nextKind: AssetKind, attached: AssetFileT
 }
 
 /** Οι αποδόσεις του αρχείου ως προς την **τρέχουσα** συνταγή (μόνο για εικόνες που αποδίδονται). */
+function fontIssues(kind: AssetKind, font: AssetFileMeasurement['font']): readonly CatalogIssue[] {
+  if (kind !== 'font') return [];
+  if (!font) return issue('fileNotReady');
+  return font.kind === 'refused' ? issue(font.code) : [];
+}
+
 function renditionIssues(kind: AssetKind, data: Readonly<Record<string, unknown>>): readonly CatalogIssue[] {
   if (!needsCatalogRenditions(kind, assetFileTypeFactsOf(data))) return [];
   const recorded = data.catalogRenditions as CatalogRenditions | undefined;
@@ -105,7 +113,7 @@ function renditionIssues(kind: AssetKind, data: Readonly<Record<string, unknown>
 
 /**
  * **Η κρίση**: κενός πίνακας = το αρχείο δένεται. Ένα εύρημα κάθε φορά, με τη σειρά «υπάρχει → δικό σου → έτοιμο → τύπος →
- * μέγεθος → αποδόσεις» — η πρώτη αποτυχία είναι αυτή που μπορεί να διορθώσει ο άνθρωπος.
+ * μέγεθος → γραμματοσειρά → αποδόσεις» — η πρώτη αποτυχία είναι αυτή που μπορεί να διορθώσει ο άνθρωπος.
  */
 export function judgeAssetFile(
   target: AssetFileTarget,
@@ -128,5 +136,7 @@ export function judgeAssetFile(
   // Fail-closed: ένα «έτοιμο» αρχείο χωρίς μέγεθος δεν έχει περάσει από οριστικοποίηση που ξέρουμε.
   if (sizeBytes === null) return issue('fileNotReady');
   const bySize = sizeIssues(target.kind, sizeBytes);
-  return bySize.length > 0 ? bySize : renditionIssues(target.kind, record);
+  if (bySize.length > 0) return bySize;
+  const byFont = fontIssues(target.kind, measurement.font);
+  return byFont.length > 0 ? byFont : renditionIssues(target.kind, record);
 }

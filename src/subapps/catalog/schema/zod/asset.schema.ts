@@ -23,7 +23,7 @@ const CATALOG_RIGHTS = mediaRightsSchemaFor('catalog');
 const mediaRightsSchema = z.custom<MediaRights>((value) => CATALOG_RIGHTS.safeParse(value).success);
 
 /** Ό,τι στέλνει ο άνθρωπος — ο ορισμός **χωρίς** `fileId`. */
-export type CatalogAssetInput = Omit<CatalogAssetDefinition, 'fileId'>;
+export type CatalogAssetInput = Omit<CatalogAssetDefinition, 'fileId' | 'font'>;
 
 export const assetDefinitionSchema: z.ZodType<CatalogAssetInput, z.ZodTypeDef, unknown> = z.object({
   code: catalogCodeSchema,

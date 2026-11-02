@@ -37,6 +37,7 @@ import {
   type StoredCatalogRecord,
 } from './catalog-store.server';
 import { assertNoIssues, CatalogWriteError } from './catalog-write-error';
+import type { FontInspection } from './publishing/publication-font-file.server';
 
 type StoredAsset = StoredCatalogRecord<CatalogAssetDefinition>;
 
@@ -73,7 +74,7 @@ export async function updateCatalogAsset(
     const current = await readOwned<CatalogAssetDefinition>(scope, 'asset', id);
     assertRevision(current, expectedRevision);
     assertCodeUnchanged(current, input.code);
-    const definition: CatalogAssetDefinition = { ...input, fileId: current.fileId };
+    const definition: CatalogAssetDefinition = { ...input, fileId: current.fileId, ...(current.font && input.kind === 'font' ? { font: current.font } : {}) };
     assertNoIssues(validateCatalogAsset(definition));
     if (definition.kind !== current.kind && (await assetInUse(scope, id))) {
       throw new CatalogWriteError('immutable', [{ code: 'typeLockedInUse', path: 'kind' }]);
@@ -92,7 +93,7 @@ export async function attachCatalogAssetFile(
   id: string,
   expectedRevision: number,
   fileId: string,
-  measurement: AssetFileMeasurement,
+  measurement: AssetFileMeasurement & { readonly font?: FontInspection },
 ): Promise<StoredAsset> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<CatalogAssetDefinition>(scope, 'asset', id);
@@ -101,7 +102,8 @@ export async function attachCatalogAssetFile(
     const target = { companyId: scope.ctx.companyId, assetId: id, kind: current.kind };
     assertNoIssues(judgeAssetFile(target, fileId, await readFileRecord(scope, fileId), measurement));
     const { code, role, kind, labels, description, rights } = current;
-    return stageReplace(scope, 'asset', current, { code, role, kind, labels, description, rights, fileId });
+    const font = measurement.font?.kind === 'ready' ? { font: measurement.font.facts } : {};
+    return stageReplace(scope, 'asset', current, { code, role, kind, labels, description, rights, fileId, ...font });
   });
 }
 

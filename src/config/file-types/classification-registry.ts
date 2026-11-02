@@ -54,6 +54,8 @@ export type FileCategory =
   | 'text'
   /** Building model (IFC · Revit family) — ADR-923 §5.10.3. Never previewed in the browser. */
   | 'bim'
+  /** Static TrueType/OpenType font — ADR-923 §5.6.1. WOFF is excluded: the publisher engine does not read it. */
+  | 'font'
   | 'unknown';
 
 /** Body-text extraction strategy run before the AI classification call. */
@@ -325,6 +327,15 @@ export const FILE_TYPE_REGISTRY: readonly FileTypeSpec[] = [
     classifiable: false,
     previewType: 'unsupported',
     category: 'bim',
+  },
+  {
+    id: 'font',
+    mimeTypes: ['font/ttf', 'font/otf'],
+    extensions: ['ttf', 'otf'],
+    canonicalMimeByExt: { ttf: 'font/ttf', otf: 'font/otf' },
+    classifiable: false,
+    previewType: 'unsupported',
+    category: 'font',
   },
 ];
 

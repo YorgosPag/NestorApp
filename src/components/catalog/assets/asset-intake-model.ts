@@ -31,6 +31,7 @@ const DEFAULT_ROLE_OF_KIND: Readonly<Record<AssetKind, CatalogAssetRole>> = {
   document: 'datasheet',
   bim: 'bim',
   video: 'video',
+  font: 'font',
 };
 
 export const INTAKE_STAGES = ['create', 'upload', 'attach'] as const;

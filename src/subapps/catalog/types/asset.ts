@@ -21,6 +21,26 @@ import type { MediaRights } from '@/types/media-rights';
 import type { CatalogAssetRole } from '../vocabulary/asset-roles';
 import type { AssetKind } from '../vocabulary/attribute-types';
 
+/** Τι επιτρέπει το `fsType` του αρχείου. Η ανοιχτή τιμή είναι το `installable`. */
+export type CatalogFontEmbedding = 'installable' | 'editable' | 'previewPrint';
+
+/** Τα γεγονότα μιας γραμματοσειράς, μετρημένα από τον διακομιστή στη σύνδεση του αρχείου. Ο πελάτης δεν τα γράφει ποτέ. */
+export interface CatalogFontFacts {
+  /** Το όνομα όπως το ξέρει η μηχανή απόδοσης (`typst fonts`): αυτό ζητά το πρότυπο. */
+  readonly family: string;
+  /** `usWeightClass` του `OS/2`. */
+  readonly weight: number;
+  readonly italic: boolean;
+  readonly embedding: CatalogFontEmbedding;
+  readonly coversLatin: boolean;
+  readonly coversGreek: boolean;
+  /** Ό,τι γράφει το ίδιο το αρχείο (`name` 0, 13, 14), ως απόδειξη για τον άνθρωπο. Δεν κρίνεται. */
+  readonly copyright: string | null;
+  readonly license: string | null;
+  readonly licenseUrl: string | null;
+  readonly sha256: string;
+}
+
 export interface CatalogAssetDefinition {
   /** Αμετάβλητος από τη δημιουργία (ταυτότητα για εισαγωγή/εξαγωγή). */
   readonly code: string;
@@ -33,4 +53,6 @@ export interface CatalogAssetDefinition {
   readonly rights: MediaRights;
   /** Το τρέχον `FileRecord`· `null` όσο το ανέβασμα δεν έχει ολοκληρωθεί. */
   readonly fileId: string | null;
+  /** Μόνο σε είδος `font` με δεμένο αρχείο. Νέο αρχείο ⇒ νέα μέτρηση. */
+  readonly font?: CatalogFontFacts;
 }

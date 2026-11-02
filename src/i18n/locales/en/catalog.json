@@ -110,7 +110,8 @@
     "image": "Image",
     "document": "Document",
     "bim": "BIM object",
-    "video": "Video"
+    "video": "Video",
+    "font": "Font"
   },
   "referenceRelations": {
     "accessory": "Accessory",
@@ -303,6 +304,13 @@
     "fenceDigestStale": "The difference changed since you reviewed it — review it again.",
     "unknownParty": "The party was not found in this workspace.",
     "publicationFontNotLicensed": "This font is not among the approved fonts with a checked licence.",
+    "publicationCompareInvalid": "Comparison needs an older version of the same list.",
+    "publicationFontFamilyInvalid": "The faces must be one family with a regular face.",
+    "publicationFontNoGreek": "This font has no Greek characters.",
+    "publicationFontLicenseRequired": "Confirm that you hold an embedding licence.",
+    "fontFileUnreadable": "The file cannot be read as TTF or OTF.",
+    "fontEmbeddingForbidden": "The file's licence forbids embedding in a PDF.",
+    "fontVariableUnsupported": "Upload static faces, not a variable font.",
     "publicationColourInvalid": "The colour needs an RGB value and CMYK values from 0 to 100.",
     "publicationTitleRequired": "A title in the publication language is required.",
     "publicationProfileRequired": "Choose at least one output profile.",
@@ -677,7 +685,8 @@
       "epd": "Environmental declaration (EPD)",
       "bim": "BIM object",
       "video": "Video",
-      "logo": "Logo"
+      "logo": "Logo",
+      "font": "Font"
     },
     "colour": {
       "models": {
@@ -974,6 +983,16 @@
       "contents": "Contents",
       "codeIndex": "Code index",
       "tablePart": "Part {part} of {parts}",
+      "changes": {
+        "title": "What changed",
+        "added": "New products",
+        "removed": "Discontinued",
+        "raised": "Price increases",
+        "lowered": "Price decreases",
+        "before": "Before €",
+        "after": "Now €",
+        "change": "Change"
+      },
       "pricesEdition": "Prices of version {version}, valid from {date}"
     },
     "title": "Catalogue publications",
@@ -997,6 +1016,8 @@
       "pricing": "Prices",
       "priceList": "Price list",
       "priceVersion": "Price version",
+      "compareVersion": "Compare with version",
+      "noCompare": "No comparison",
       "priceVersionOption": "{version} · {phase} · from {date}",
       "audience": "Audience",
       "profiles": "Output profiles",
@@ -1007,6 +1028,7 @@
       "primary": "Primary colour",
       "accent": "Accent colour",
       "font": "Font",
+      "fontLicense": "I hold a licence to embed it in PDFs",
       "logo": "Logo"
     },
     "retention": {
@@ -1059,7 +1081,8 @@
     },
     "profile": {
       "print": "Print (CMYK, bleed)",
-      "screen": "Screen (RGB, PDF/A)"
+      "screen": "Screen (RGB, PDF/A)",
+      "idml": "InDesign (IDML, with Links folder)"
     },
     "template": {
       "cover": "Cover",
@@ -1095,6 +1118,7 @@
       "priceAmbiguous": "Two discounts apply at once for the same audience.",
       "priceVersionUnpublished": "The price version is not published.",
       "renditionMissing": "An image has no finished rendition.",
+      "fontMissing": "The recipe's font is no longer available.",
       "emptyScope": "There is no complete product in the scope of this publication.",
       "storageFailed": "Storing the file failed.",
       "interrupted": "The server restarted. Request the publication again.",
@@ -1106,6 +1130,7 @@
       "unpriced": "{count, plural, one {# SKU without a price} other {# SKUs without a price}}",
       "lowResolution": "{count, plural, one {# image below 300 dpi} other {# images below 300 dpi}}",
       "nonCmyk": "{count, plural, one {# image not in CMYK} other {# images not in CMYK}}",
+      "fencedChange": "{count, plural, one {# price change above the limit} other {# price changes above the limit}}",
       "untransposed": "{count, plural, one {# table did not fit transposed} other {# tables did not fit transposed}}",
       "overlappingText": "{count, plural, one {# place where text overlaps other text} other {# places where text overlaps other text}}",
       "clippedText": "{count, plural, one {# text runs off the paper} other {# texts run off the paper}}",

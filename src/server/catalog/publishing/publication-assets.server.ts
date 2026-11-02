@@ -7,6 +7,8 @@ import 'server-only';
  * @module server/catalog/publishing/publication-assets.server
  */
 
+import { createHash } from 'node:crypto';
+
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { fileCompanionPath } from '@/lib/files/file-companion-objects';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
@@ -20,7 +22,7 @@ import type { CatalogAssetDefinition } from '@/subapps/catalog/types/asset';
 import { ensureCatalogAssetRenditions, type CatalogRenditionRecord } from '../catalog-asset-renditions.server';
 import type { StoredCatalogRecord } from '../catalog-store.server';
 import { PublicationRunError } from './publication-prices.server';
-import type { AssetBytesReader } from './typst-adapter';
+import type { AssetBytesReader, PublicationFontFile } from './typst-adapter';
 
 type Ready = Extract<CatalogRenditions, { status: 'ready' }>;
 
@@ -42,6 +44,19 @@ async function resolveAsset(asset: StoredCatalogRecord<CatalogAssetDefinition>):
   const renditions = await ensureCatalogAssetRenditions(db, { custody: 'company', fileId: asset.fileId, record });
   if (renditions?.status !== 'ready') throw new PublicationRunError('renditionMissing');
   return { record, renditions };
+}
+
+/** Τα bytes των όψεων, μία φορά για όλα τα προφίλ. Το αποτύπωμα της σύνδεσης ξανακρίνεται: άλλα bytes σημαίνουν άλλο αρχείο από αυτό που ελέγχθηκε. */
+export async function readPublicationFonts(fonts: readonly StoredCatalogRecord<CatalogAssetDefinition>[]): Promise<readonly PublicationFontFile[]> {
+  const db = getAdminFirestore();
+  return Promise.all(fonts.map(async (asset) => {
+    const snap = asset.fileId === null ? null : await db.collection(COLLECTIONS[FILE_COLLECTION.company]).doc(asset.fileId).get();
+    const data = snap?.data();
+    if (!data || typeof data.storagePath !== 'string') throw new PublicationRunError('fontMissing');
+    const [bytes] = await fileRecordBucket(data).file(data.storagePath).download();
+    if (createHash('sha256').update(bytes).digest('hex') !== asset.font?.sha256) throw new PublicationRunError('fontMissing');
+    return { name: `${asset.id}.ttf`, bytes };
+  }));
 }
 
 export interface PublicationAssets {
