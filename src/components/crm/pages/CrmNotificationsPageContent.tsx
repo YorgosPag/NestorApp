@@ -2,11 +2,14 @@
 
 /**
  * =============================================================================
- * CRM NOTIFICATIONS PAGE CONTENT - NOTIFICATION TESTING & MANAGEMENT
+ * CRM NOTIFICATIONS PAGE CONTENT - NOTIFICATION MANAGEMENT
  * =============================================================================
  *
  * Enterprise Pattern: PageHeader + UnifiedDashboard
  * Features: Notification listing, mark-read, test notifications (dev only)
+ *
+ * ADR-253: μόνο το εργαλείο δοκιμών είναι development. Η σελίδα είναι προϊόν και
+ * ανοίγει στην παραγωγή· φραγή σε επίπεδο σελίδας την έκρυβε από όλους.
  *
  * @module components/crm/pages/CrmNotificationsPageContent
  * @performance ADR-294 Batch 4 — lazy-loaded via LazyRoutes
@@ -14,12 +17,11 @@
 
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Bell, BellRing, CheckCheck, Filter, AlertCircle, Inbox, FlaskConical, Trash2 } from 'lucide-react';
+import { Bell, BellRing, CheckCheck, AlertCircle, Inbox, FlaskConical } from 'lucide-react';
 import { useNotifications } from '@/components/crm/notifications/useNotifications';
 import { CrmNotificationCard } from '@/components/crm/notifications/NotificationCard';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { dismissNotification } from '@/services/notificationService';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageLoadingState } from '@/core/states';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -38,7 +40,6 @@ export function CrmNotificationsPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { user } = useAuth();
-  const [testNotificationId, setTestNotificationId] = useState<string | null>(null);
   const [isCreatingTest, setIsCreatingTest] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const {
@@ -61,7 +62,6 @@ export function CrmNotificationsPageContent() {
       });
       const data = await res.json() as { success: boolean; message?: string };
       if (data.success) {
-        setTestNotificationId('seeded');
         logger.info('Test notifications created via API');
       } else {
         logger.error('Seed API failed', { response: data });
@@ -72,28 +72,6 @@ export function CrmNotificationsPageContent() {
       setIsCreatingTest(false);
     }
   }, [user?.uid]);
-
-  const deleteTestNotification = useCallback(async () => {
-    if (!testNotificationId) return;
-
-    try {
-      // Dismiss = update delivery.state (allowed in rules), functionally hides from UI
-      await dismissNotification(testNotificationId);
-      setTestNotificationId(null);
-      logger.info('Test notification dismissed');
-    } catch (err) {
-      logger.error('Failed to dismiss test notification', { error: err instanceof Error ? err.message : 'Unknown error' });
-    }
-  }, [testNotificationId]);
-
-  // ADR-253: Production guard
-  if (process.env.NODE_ENV === 'production') {
-    return (
-      <main className="flex items-center justify-center min-h-screen">
-        <p className={colors.text.muted}>Notification testing is disabled in production.</p>{/* eslint-disable-line custom/no-hardcoded-strings */}
-      </main>
-    );
-  }
 
   const dashboardStats: DashboardStat[] = [
     { title: t('notifications.stats.total'), value: notifications.length, icon: Bell, color: 'blue' },
@@ -111,45 +89,22 @@ export function CrmNotificationsPageContent() {
       React.createElement(CheckCheck, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
       t('notifications.markAllRead'),
     ),
-    React.createElement(Button, {
-      key: 'filter',
-      variant: 'outline' as const,
-      size: 'sm',
-    },
-      React.createElement(Filter, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
-      t('notifications.filters'),
-    ),
   ];
 
   if (process.env.NODE_ENV === 'development') {
-    if (!testNotificationId) {
-      customActions.push(
-        React.createElement(Button, {
-          key: 'dev-test-create',
-          variant: 'outline' as const,
-          size: 'sm',
-          onClick: () => void createTestNotification(),
-          disabled: isCreatingTest || !user,
-          className: 'border-dashed',
-        },
-          React.createElement(FlaskConical, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
-          isCreatingTest ? t('notifications.test.creating') : t('notifications.test.create'),
-        )
-      );
-    } else {
-      customActions.push(
-        React.createElement(Button, {
-          key: 'dev-test-delete',
-          variant: 'outline' as const,
-          size: 'sm',
-          onClick: () => void deleteTestNotification(),
-          className: 'border-dashed text-destructive hover:text-destructive',
-        },
-          React.createElement(Trash2, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
-          t('notifications.test.delete'),
-        )
-      );
-    }
+    customActions.push(
+      React.createElement(Button, {
+        key: 'dev-test-create',
+        variant: 'outline' as const,
+        size: 'sm',
+        onClick: () => void createTestNotification(),
+        disabled: isCreatingTest || !user,
+        className: 'border-dashed',
+      },
+        React.createElement(FlaskConical, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
+        isCreatingTest ? t('notifications.test.creating') : t('notifications.test.create'),
+      )
+    );
   }
 
   return (

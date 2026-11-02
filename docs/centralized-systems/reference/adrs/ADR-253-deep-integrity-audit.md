@@ -711,3 +711,4 @@ For each client-side write, the migration path is:
 | 2026-03-20 | Initial audit — 4 axes, 59 findings documented | Claude (ADR-253) |
 | 2026-03-20 | Update: +15 findings from 3 parallel audit agents. Added RC-10/11/12, AR-3/5, CW-11/12, A7/A8, B0 | Claude (ADR-253) |
 | 2026-03-20 | Verification pass: AR-2 (MFA) and AR-4 (enterprise-ids) confirmed false positives — both properly protected. AR-3 downgraded to HIGH. Final count: 71 | Claude (ADR-253) |
+| 2026-11-03 | Διόρθωση υπερβολικής φραγής: το `NODE_ENV === 'production'` στο `CrmNotificationsPageContent` έκλεινε ολόκληρη τη σελίδα Ειδοποιήσεις από τις 2026-03-20, ενώ ο στόχος ήταν μόνο το εργαλείο δοκιμών. Η φραγή αφαιρέθηκε· το κουμπί δοκιμής μένει μόνο σε development και η εγγραφή περνά από το `POST /api/notifications/seed` (`BYPASS_ROLES`). | Claude (ADR-253) |
