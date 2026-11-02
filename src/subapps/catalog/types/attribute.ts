@@ -54,6 +54,8 @@ export interface SelectOption {
   /** Αμετάβλητος κωδικός επιλογής — η ταυτότητα που διαβάζει η εισαγωγή. */
   readonly code: string;
   readonly labels: LocalizedText;
+  /** Η τιμή ETIM (`EV000138`) που σημαίνει αυτή η επιλογή. Έλλειψη = αδέσμευτη. */
+  readonly etimValue?: string | null;
 }
 
 /** Η σειρά των επιλογών είναι η σειρά του πίνακα (δηλωμένη σειρά σε **ένα** έγγραφο). */
@@ -142,6 +144,8 @@ export type PlatformTermBinding =
 
 export interface AttributeMappings {
   readonly etimFeature: string | null;
+  /** Μονάδα της οικογένειας μέτρησης στην οποία το ETIM γράφει αυτό το χαρακτηριστικό: το xChange δίνει γυμνό αριθμό. */
+  readonly etimUnitCode?: string | null;
   readonly bsddUri: string | null;
   readonly ifc: { readonly pset: string; readonly property: string } | null;
   readonly atoeCode: string | null;

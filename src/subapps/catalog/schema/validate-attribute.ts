@@ -22,6 +22,7 @@ import {
   TABLE_KEY_COLUMN_TYPES,
 } from '../vocabulary/attribute-types';
 import { CATALOG_LIMITS, isCatalogCode } from '../vocabulary/catalog-limits';
+import { ETIM_FEATURE_CODE_PATTERN, ETIM_VALUE_CODE_PATTERN } from '../vocabulary/etim';
 import { IssueCollector, reportDuplicates, type CatalogIssue } from './catalog-issues';
 
 function checkRange(collector: IssueCollector, path: string, min: number | null, max: number | null): void {
@@ -58,8 +59,11 @@ function checkOptions(collector: IssueCollector, path: string, options: readonly
   options.forEach((option, index) => {
     if (!isCatalogCode(option.code)) collector.add('invalidCode', `${path}[${index}].code`);
     if (!hasAnyLocalizedText(option.labels)) collector.add('labelRequired', `${path}[${index}].labels`);
+    if (option.etimValue && !ETIM_VALUE_CODE_PATTERN.test(option.etimValue)) collector.add('invalidEtimCode', `${path}[${index}].etimValue`);
   });
   reportDuplicates(collector, options.map((option) => option.code), (index) => `${path}[${index}].code`);
+  // Δύο επιλογές με την ίδια τιμή ETIM: η εισαγωγή θα διάλεγε σιωπηλά την πρώτη.
+  reportDuplicates(collector, options.map((option) => option.etimValue ?? `#${option.code}`), (index) => `${path}[${index}].etimValue`);
 }
 
 function checkTable(collector: IssueCollector, registry: MeasurementRegistry, config: TableAttributeConfig): void {
@@ -155,5 +159,15 @@ export function validateAttribute(
     collector.add('localizableNotSupported', 'localizable');
   }
   checkTypedConfig(collector, registry, attribute);
+  checkEtimMappings(collector, registry, attribute);
   return collector.issues;
+}
+
+/** Ο κωδικός όπως τον ζητά το επίσημο σχήμα, και η μονάδα μέσα στην οικογένεια μέτρησης: αλλιώς η μετατροπή θα έσκαγε στην εξαγωγή. */
+function checkEtimMappings(collector: IssueCollector, registry: MeasurementRegistry, attribute: CatalogAttributeDefinition): void {
+  const { etimFeature, etimUnitCode } = attribute.mappings;
+  if (etimFeature && !ETIM_FEATURE_CODE_PATTERN.test(etimFeature)) collector.add('invalidEtimCode', 'mappings.etimFeature');
+  if (!etimUnitCode) return;
+  const units = attribute.type === 'measurement' ? registry.get(attribute.config.measurementFamilyCode)?.units ?? [] : [];
+  if (!units.some((unit) => unit.code === etimUnitCode)) collector.add('invalidEtimCode', 'mappings.etimUnitCode');
 }

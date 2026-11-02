@@ -125,8 +125,8 @@ function openImportBatch(ctx: AuthContext, request: CreateImportBatchRequest): P
 }
 
 export function batchDefinitionOf(batch: StoredImportBatch): ImportBatchDefinition {
-  const { code, sourceKind, contentSha256, fileName, sizeBytes, fileId, target, profileId, profileRevision, run, status, pages } = batch;
-  return { code, sourceKind, contentSha256, fileName, sizeBytes, fileId, fileBatchId: batch.fileBatchId ?? null, target, profileId, profileRevision, run, status, pages };
+  const { code, sourceKind, contentSha256, fileName, sizeBytes, fileId, target, profileId, profileRevision, run, status, pages, xchangeReport } = batch;
+  return { code, sourceKind, contentSha256, fileName, sizeBytes, fileId, fileBatchId: batch.fileBatchId ?? null, target, profileId, profileRevision, run, status, pages, ...(xchangeReport ? { xchangeReport } : {}) };
 }
 
 async function assertContent(batch: StoredImportBatch, bytes: Buffer): Promise<void> {

@@ -4,8 +4,11 @@
  */
 
 /** Από πού έρχονται τα δεδομένα. Νέα πηγή (§18 σύνδεσμος · ETIM xChange, Φάση 7) = νέα γραμμή εδώ και προσαρμογέας προς `ExtractedGroup`. */
-export const IMPORT_SOURCE_KINDS = ['delimited', 'spreadsheet', 'pdf'] as const;
+export const IMPORT_SOURCE_KINDS = ['delimited', 'spreadsheet', 'pdf', 'etimXchange'] as const;
 export type ImportSourceKind = (typeof IMPORT_SOURCE_KINDS)[number];
+
+/** Πηγή με πίνακα, άρα με προφίλ στηλών. Το PDF έχει σελίδες, και το xChange δικό του σχήμα. */
+export const isTableImportSource = (kind: ImportSourceKind): boolean => kind === 'delimited' || kind === 'spreadsheet';
 
 /** `attributes` = μοντέλα/SKU · `priceLines` = «μόνο τιμές»: δεν αγγίζει τίποτα εκτός από γραμμές τιμοκαταλόγου (§5.4). */
 export const IMPORT_PURPOSES = ['attributes', 'priceLines'] as const;

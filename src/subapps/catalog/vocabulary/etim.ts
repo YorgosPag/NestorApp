@@ -1,0 +1,32 @@
+/**
+ * Το λεξιλόγιο του ETIM xChange (ADR-923 §5.5 · Φάση 7). Τα μοτίβα είναι αυτά του επίσημου σχήματος 2.0, αντιγραμμένα
+ * αυτούσια: κωδικός που περνά εδώ περνά και τον validator του ETIM. Άγκυρα: `interop/etim/__tests__`.
+ * @module subapps/catalog/vocabulary/etim
+ */
+
+import type { HumanLanguage } from '@/i18n/languages';
+import type { NoValueReason } from '../types/product';
+
+export const ETIM_XCHANGE_SCHEMA_VERSION = '2.0';
+
+export const ETIM_CLASS_CODE_PATTERN = /^EC[0-9]{6}$/;
+export const ETIM_FEATURE_CODE_PATTERN = /^EF([0-9]{6}|I[0-9]{5}|[A-Z]{2}[0-9]{4})$/;
+export const ETIM_VALUE_CODE_PATTERN = /^EV[0-9]{6}$/;
+
+/** Ο αγγλοσαξονικός δίδυμος ενός μετρικού χαρακτηριστικού: το `EFI06272` λέει σε ίντσες ό,τι το `EF006272` σε mm. */
+export const isEtimImperialFeature = (code: string): boolean => code.startsWith('EFI');
+
+/** `Pattern` του `EtimValueNumeric`: έως 12 ακέραια και 4 δεκαδικά, τελεία ως υποδιαστολή, χωρίς ομαδοποίηση. */
+export const ETIM_MAX_FRACTION_DIGITS = 4;
+export const ETIM_NUMERIC_PATTERN = /^-?[0-9]{1,12}\.?[0-9]{0,4}$/;
+
+/** Το `ReasonNoValue` του ETIM. Το `MV` (missing value) είναι απλώς κενό, γι' αυτό δεν έχει αντίστοιχο στο `NoValueReason`. */
+export const ETIM_REASON_OF: Readonly<Record<NoValueReason, 'NA' | 'UN'>> = { notApplicable: 'NA', unknown: 'UN' };
+
+export const ETIM_NO_VALUE_REASON_OF: Readonly<Record<string, NoValueReason | undefined>> = { NA: 'notApplicable', UN: 'unknown' };
+
+/** Η γλώσσα του xChange (`el-GR`), όπως τη ζητά το σχήμα. */
+export const ETIM_LANGUAGE_TAG: Readonly<Record<HumanLanguage, string>> = { el: 'el-GR', en: 'en-GB' };
+
+/** UNECE Rec 20 «τεμάχιο». Η μόνη μονάδα παραγγελίας και τιμής που γράφουμε χωρίς να τη γνωρίζει ο τιμοκατάλογος. */
+export const ETIM_PIECE_UNIT = 'C62';

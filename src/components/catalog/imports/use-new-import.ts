@@ -27,7 +27,7 @@ import { validateUploadAuth } from '@/services/filesystem/file-mutation-gateway'
 import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
 import type { ImportBatchTarget, ImportColumnRule, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchWire } from '@/subapps/catalog/types/catalog-import-requests';
-import type { ImportSourceKind } from '@/subapps/catalog/vocabulary/catalog-import';
+import { isTableImportSource, type ImportSourceKind } from '@/subapps/catalog/vocabulary/catalog-import';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
 import { attachUploadedFile } from './attach-import-file';
 import { proposeColumns, readTablePreview, sha256Of, sourceKindOf, type AttributeChoice } from './import-source-file';
@@ -67,16 +67,15 @@ async function savedProfileId(source: NewImportSource, form: NewImportForm, targ
 }
 
 async function batchFor(source: NewImportSource, form: NewImportForm, target: ImportBatchTarget): Promise<ImportBatchWire> {
-  const tabular = source.kind !== 'pdf';
   return createImportBatch({
     sourceKind: source.kind,
     contentSha256: source.sha256,
     fileName: source.file.name,
     sizeBytes: source.file.size,
     target,
-    profileId: tabular ? await savedProfileId(source, form, target) : null,
+    profileId: isTableImportSource(source.kind) ? await savedProfileId(source, form, target) : null,
     run: form.run,
-    pageRange: tabular ? null : { from: form.pageFrom, to: form.pageTo },
+    pageRange: source.kind === 'pdf' ? { from: form.pageFrom, to: form.pageTo } : null,
   });
 }
 
@@ -131,13 +130,13 @@ function useImportSource(attributes: readonly AttributeChoice[]) {
     if (kind === null) return;
     const next = { file, kind, sha256: await sha256Of(file) };
     setSource(next);
-    if (kind === 'pdf') setTable(null);
-    else await reloadTable(next, {});
+    if (isTableImportSource(kind)) await reloadTable(next, {});
+    else setTable(null);
   }, [reloadTable]);
 
   const patchForm = useCallback(async (patch: Partial<NewImportForm>) => {
     const reshapes = 'skipRows' in patch || 'sheetIndex' in patch || 'target' in patch;
-    if (source && source.kind !== 'pdf' && reshapes) await reloadTable(source, patch);
+    if (source && isTableImportSource(source.kind) && reshapes) await reloadTable(source, patch);
     else setForm((current) => ({ ...current, ...patch }));
   }, [reloadTable, source]);
 

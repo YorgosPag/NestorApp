@@ -18,6 +18,7 @@ export function sourceKindOf(fileName: string): ImportSourceKind | null {
   const extension = fileName.split('.').pop()?.toLowerCase();
   if (extension === 'pdf') return 'pdf';
   if (extension === 'xlsx') return 'spreadsheet';
+  if (extension === 'json') return 'etimXchange';
   return extension === 'csv' || extension === 'txt' ? 'delimited' : null;
 }
 

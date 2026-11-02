@@ -26,6 +26,7 @@ import { CatalogWriteError } from './catalog-write-error';
 import { assertPurposeAuthority, batchDefinitionOf, fileOwnerOf, type StoredImportBatch } from './import-batch-writer.server';
 import { readAndProposePage, type PageSpecs } from './import-page-flow.server';
 import { proposeGroup, type StoredImportProposal } from './import-proposal-writer.server';
+import { buildXChangeProposals } from './import-xchange.server';
 import { downloadBatchFile, readBatchFileRecord, readBatchTable } from './import-source.server';
 
 async function readBatchFile(ctx: AuthContext, batch: StoredImportBatch): Promise<Buffer> {
@@ -44,10 +45,12 @@ function setStatus(ctx: AuthContext, id: string, status: ImportBatchDefinition['
 export async function buildTableProposals(ctx: AuthContext, id: string): Promise<readonly StoredImportProposal[]> {
   const { batch, profile } = await runCatalogTransaction(ctx, async (scope) => {
     const stored = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
+    if (stored.sourceKind === 'etimXchange') return { batch: stored, profile: null };
     if (stored.profileId === null) throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'profileId' }]);
     return { batch: stored, profile: await readOwned<ImportProfileDefinition>(scope, 'importProfile', stored.profileId) };
   });
   await assertPurposeAuthority(ctx, batch.target.purpose);
+  if (profile === null) return buildXChangeProposals(ctx, batch, await readBatchFile(ctx, batch));
   const table = await readBatchTable(batch, await readBatchFile(ctx, batch), profile);
   const proposals: StoredImportProposal[] = [];
   for (const group of extractGroupsFromTable(table, profile)) proposals.push(await proposeGroup(ctx, id, group));

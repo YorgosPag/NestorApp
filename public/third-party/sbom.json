@@ -2,11 +2,11 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "metadata": {
-    "timestamp": "2026-10-26T11:55:31.512Z",
+    "timestamp": "2026-11-02T20:20:22.423Z",
     "properties": [
       {
         "name": "nestor:inputsFingerprint",
-        "value": "sha256:b5ac4113ddd9ec384356e02be3fa20c48663e57a9f0d849f1bff0051c4c03567"
+        "value": "sha256:fbc0da12900e4b9b6367e4f7a6673897d6c264a8d9d2c8a093c3297de5786d6a"
       }
     ]
   },

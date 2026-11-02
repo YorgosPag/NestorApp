@@ -12,6 +12,7 @@ import {
   REFERENCE_RELATIONS,
 } from '../../vocabulary/attribute-types';
 import { CATALOG_LIMITS } from '../../vocabulary/catalog-limits';
+import { ETIM_VALUE_CODE_PATTERN } from '../../vocabulary/etim';
 import {
   catalogCodeSchema,
   descriptionSchema,
@@ -29,6 +30,7 @@ const lengthSchema = z.number().int().positive().nullable();
 const selectOptionSchema: z.ZodType<SelectOption, z.ZodTypeDef, unknown> = z.object({
   code: catalogCodeSchema,
   labels: labelsSchema,
+  etimValue: z.string().regex(ETIM_VALUE_CODE_PATTERN).nullable().optional(),
 });
 const optionsSchema = z.array(selectOptionSchema).max(CATALOG_LIMITS.maxSelectOptions);
 
@@ -58,6 +60,7 @@ const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable();
 
 const mappingsSchema: z.ZodType<AttributeMappings, z.ZodTypeDef, unknown> = z.object({
   etimFeature: z.string().max(40).nullable().default(null),
+  etimUnitCode: z.string().min(1).max(40).nullable().optional(),
   bsddUri: z.string().url().max(500).nullable().default(null),
   ifc: z.object({ pset: z.string().min(1).max(100), property: z.string().min(1).max(100) }).nullable().default(null),
   atoeCode: z.string().max(40).nullable().default(null),

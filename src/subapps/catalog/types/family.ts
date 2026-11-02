@@ -156,6 +156,8 @@ export interface CatalogFamilyDefinition {
   readonly listingKind?: CatalogListingKind;
   /** Ιδιότητα `reference` προς την υπηρεσία τοποθέτησης· μόνο στο `productWithInstallation` (§22 Υ5). */
   readonly installationAttributeId?: string | null;
+  /** Η κλάση ETIM (`EC011533`) αυτής της οικογένειας. Έλλειψη = αδέσμευτη. Μία κλάση, γιατί η οικογένεια είναι ένα σχήμα. */
+  readonly etimClass?: string | null;
 }
 
 export const listingKindOf = (family: Pick<CatalogFamilyDefinition, 'listingKind'>): CatalogListingKind =>

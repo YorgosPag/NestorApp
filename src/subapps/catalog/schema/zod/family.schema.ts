@@ -21,6 +21,7 @@ import {
 } from '../../types/family';
 import { CATALOG_CHANNELS } from '../../vocabulary/channels';
 import { CATALOG_LIMITS } from '../../vocabulary/catalog-limits';
+import { ETIM_CLASS_CODE_PATTERN } from '../../vocabulary/etim';
 import { CATALOG_LISTING_KINDS } from '../../vocabulary/listing-kinds';
 import {
   catalogCodeSchema,
@@ -109,6 +110,7 @@ export const familyDefinitionSchema: z.ZodType<CatalogFamilyDefinition, z.ZodTyp
   consistencyRules: z.array(consistencyRuleSchema).max(CATALOG_LIMITS.maxConsistencyRules),
   listingKind: z.enum(CATALOG_LISTING_KINDS).optional(),
   installationAttributeId: entityIdSchema.nullable().optional(),
+  etimClass: z.string().regex(ETIM_CLASS_CODE_PATTERN).nullable().optional(),
 });
 
 export const createFamilyBodySchema = z.object({ definition: familyDefinitionSchema });

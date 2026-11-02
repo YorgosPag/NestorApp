@@ -195,6 +195,7 @@
     "invalidPattern": "Μη έγκυρη κανονική έκφραση.",
     "assetKindsRequired": "Επιλέξτε τουλάχιστον ένα είδος αρχείου.",
     "invalidUri": "Μη έγκυρη διεύθυνση — πρέπει να αρχίζει με http:// ή https://.",
+    "invalidEtimCode": "Μη έγκυρος κωδικός ETIM, ή διπλή αντιστοίχιση. Μορφές: EC000000 · EF000000 · EV000000.",
     "mappingIncomplete": "Συμπληρώστε και το Pset και την ιδιότητα IFC, ή κανένα από τα δύο.",
     "attributeUnknown": "Η ιδιότητα δεν υπάρχει (ή διαγράφηκε).",
     "attributeDuplicate": "Η ιδιότητα υπάρχει ήδη στην οικογένεια.",
@@ -495,7 +496,8 @@
       "bulkAdd": "Προσθήκη",
       "codeOf": "Κωδικός επιλογής {index}",
       "labelOf": "Ετικέτα επιλογής {index}",
-      "removeOf": "Αφαίρεση επιλογής {index}"
+      "removeOf": "Αφαίρεση επιλογής {index}",
+      "etimOf": "Τιμή ETIM επιλογής {index}"
     },
     "columns": {
       "title": "Στήλες του πίνακα",
@@ -512,6 +514,8 @@
       "lead": "Συνδέουν την ιδιότητα με ETIM, buildingSMART bSDD, IFC και ΑΤΟΕ — για εξαγωγή σε BIM και ανταλλαγή δεδομένων. Δεν είναι υποχρεωτικές.",
       "etim": "ETIM feature",
       "etimHint": "Π.χ. EF000008.",
+      "etimUnit": "Μονάδα στο ETIM",
+      "etimUnitHint": "Το ETIM γράφει σκέτο αριθμό. Δηλώστε σε ποια μονάδα τον ορίζει η κλάση.",
       "bsdd": "bSDD URI",
       "bsddHint": "Η διεύθυνση της ιδιότητας στο λεξικό buildingSMART.",
       "ifcPset": "IFC Pset",
@@ -565,6 +569,8 @@
       "imageAttributeHint": "Ιδιότητα αρχείου εικόνας της οικογένειας.",
       "listingKind": "Είδος καταχώρισης",
       "listingKindHint": "Κλειδώνει όταν η οικογένεια αποκτήσει προϊόντα.",
+      "etimClass": "Κλάση ETIM",
+      "etimClassHint": "Π.χ. EC011533. Τη χρησιμοποιούν η εισαγωγή και η εξαγωγή ETIM xChange.",
       "installationAttribute": "Υπηρεσία τοποθέτησης από",
       "installationAttributeHint": "Ιδιότητα αναφοράς της οικογένειας. Προϊόν και τοποθέτηση κρατούν ξεχωριστή τιμή."
     },

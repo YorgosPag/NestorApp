@@ -7,7 +7,7 @@
   },
   "new": {
     "title": "New import",
-    "file": "File (PDF, Excel or CSV)",
+    "file": "File (PDF, Excel, CSV or ETIM xChange)",
     "unsupported": "This file type is not supported. Save it as .xlsx or .csv.",
     "purpose": "What are you importing",
     "purposeAttributes": "Products and attributes",
@@ -39,6 +39,15 @@
       "unitCode": "Pricing unit",
       "discountGroup": "Discount group"
     }
+  },
+  "xchange": {
+    "title": "ETIM xChange report",
+    "imported": "{imported} of {products} products entered review.",
+    "otherClass": "{count} products were left out because they belong to another class: {classes}.",
+    "unmapped": "{count} features have no attribute: {codes}.",
+    "ranges": "Value ranges not imported, as no attribute holds a range: {codes}.",
+    "noValue": "{count} “not applicable” or “unknown” declarations were not written.",
+    "tradeItems": "{count} products have several trade items: the first was kept."
   },
   "batch": {
     "loading": "Loading batch…",

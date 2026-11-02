@@ -50,7 +50,7 @@ function cellOf(rule: ImportColumnRule, index: number, row: readonly string[], r
   };
 }
 
-interface TableRow {
+export interface TableRow {
   readonly modelCode: string | null;
   readonly row: ExtractedRow;
 }
@@ -81,7 +81,8 @@ function chunksOf(prefix: string, modelCode: string | null, rows: readonly Extra
   return groups;
 }
 
-function byModel(rows: readonly TableRow[]): ExtractedGroup[] {
+/** Η ομαδοποίηση γραμμών σε σύνολα, κοινή για κάθε πινακοειδή πηγή: αρχείο και ETIM xChange. */
+export function byModelCode(rows: readonly TableRow[]): ExtractedGroup[] {
   const models = new Map<string, ExtractedRow[]>();
   const standalone: ExtractedGroup[] = [];
   for (const { modelCode, row } of rows) {
@@ -104,5 +105,5 @@ export function extractGroupsFromTable(table: RawTable, profile: ImportProfileDe
   if (profile.purpose === 'priceLines') {
     return chunksOf('prices', null, rows.map(({ row }) => row), IMPORT_PRICE_LINES_PER_PROPOSAL);
   }
-  return byModel(rows);
+  return byModelCode(rows);
 }

@@ -190,6 +190,7 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   invalidPattern: 'issues.invalidPattern',
   assetKindsRequired: 'issues.assetKindsRequired',
   invalidUri: 'issues.invalidUri',
+  invalidEtimCode: 'issues.invalidEtimCode',
   mappingIncomplete: 'issues.mappingIncomplete',
   attributeUnknown: 'issues.attributeUnknown',
   attributeDuplicate: 'issues.attributeDuplicate',

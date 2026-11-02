@@ -44,6 +44,7 @@ export function emptyFamilyDraft(): CatalogFamilyDefinition {
     tableSpec: null,
     consistencyRules: [],
     listingKind: DEFAULT_LISTING_KIND,
+    etimClass: null,
     installationAttributeId: null,
   };
 }
@@ -51,7 +52,7 @@ export function emptyFamilyDraft(): CatalogFamilyDefinition {
 export function familyDraftOf(record: FamilyRecord): CatalogFamilyDefinition {
   const { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules } = record;
   // Κανονικοποίηση: παλιά εγγραφή χωρίς τα πεδία της §22 δεν πρέπει να φαίνεται αλλαγμένη.
-  const listing = { listingKind: listingKindOf(record), installationAttributeId: record.installationAttributeId ?? null };
+  const listing = { listingKind: listingKindOf(record), installationAttributeId: record.installationAttributeId ?? null, etimClass: record.etimClass ?? null };
   return { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules, ...listing };
 }
 

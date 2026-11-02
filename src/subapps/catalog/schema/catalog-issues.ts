@@ -50,6 +50,7 @@ export const CATALOG_ISSUE_CODES = [
   'invalidPattern',
   'assetKindsRequired',
   'invalidUri',
+  'invalidEtimCode',
   'mappingIncomplete',
   // ── οικογένεια προϊόντων ──
   'attributeUnknown',

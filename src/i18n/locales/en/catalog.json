@@ -195,6 +195,7 @@
     "invalidPattern": "Invalid regular expression.",
     "assetKindsRequired": "Choose at least one kind of file.",
     "invalidUri": "Invalid address — it must start with http:// or https://.",
+    "invalidEtimCode": "Invalid ETIM code, or a duplicate mapping. Formats: EC000000 · EF000000 · EV000000.",
     "mappingIncomplete": "Fill in both the IFC Pset and the property, or neither.",
     "attributeUnknown": "The attribute does not exist (or was deleted).",
     "attributeDuplicate": "The attribute is already in the family.",
@@ -495,7 +496,8 @@
       "bulkAdd": "Add",
       "codeOf": "Code of option {index}",
       "labelOf": "Label of option {index}",
-      "removeOf": "Remove option {index}"
+      "removeOf": "Remove option {index}",
+      "etimOf": "ETIM value of option {index}"
     },
     "columns": {
       "title": "Table columns",
@@ -512,6 +514,8 @@
       "lead": "They link the attribute to ETIM, buildingSMART bSDD, IFC and ATOE — for BIM export and data exchange. They are not required.",
       "etim": "ETIM feature",
       "etimHint": "E.g. EF000008.",
+      "etimUnit": "Unit in ETIM",
+      "etimUnitHint": "ETIM writes a bare number. Declare the unit its class defines.",
       "bsdd": "bSDD URI",
       "bsddHint": "The property's address in the buildingSMART dictionary.",
       "ifcPset": "IFC Pset",
@@ -565,6 +569,8 @@
       "imageAttributeHint": "An image-file attribute of the family.",
       "listingKind": "Listing kind",
       "listingKindHint": "Locks once the family has products.",
+      "etimClass": "ETIM class",
+      "etimClassHint": "E.g. EC011533. Used by ETIM xChange import and export.",
       "installationAttribute": "Installation service from",
       "installationAttributeHint": "A reference attribute of the family. Product and installation keep separate prices."
     },

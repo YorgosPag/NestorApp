@@ -16,6 +16,7 @@ import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import { listingKindOf, type CatalogFamilyDefinition } from '../types/family';
 import { CATALOG_LIMITS, isCatalogCode } from '../vocabulary/catalog-limits';
+import { ETIM_CLASS_CODE_PATTERN } from '../vocabulary/etim';
 import { IssueCollector, type CatalogIssue } from './catalog-issues';
 import { familyAttribute, type FamilyValidationContext } from './family-validation-context';
 import { validateFamilyRules } from './validate-family-rules';
@@ -72,6 +73,7 @@ export function validateFamily(
   const collector = new IssueCollector();
   if (!isCatalogCode(family.code)) collector.add('invalidCode', 'code');
   if (!hasAnyLocalizedText(family.labels)) collector.add('labelRequired', 'labels');
+  if (family.etimClass && !ETIM_CLASS_CODE_PATTERN.test(family.etimClass)) collector.add('invalidEtimCode', 'etimClass');
   const context: FamilyValidationContext = {
     family,
     attributes,

@@ -15,6 +15,7 @@
 import React from 'react';
 
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { AttributeMappings, CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
@@ -82,14 +83,19 @@ export function AttributeConfigFields({ draft, onChange, registry, families, iss
 /** Κενό ⇒ `null` (το «δεν αντιστοιχίζεται» είναι ρητό στο σχήμα). */
 const orNull = (value: string): string | null => (value.trim().length > 0 ? value.trim() : null);
 
+/** Κενό δεν επιτρέπεται στο Radix Select (CHECK 3.48): η «καμία μονάδα» έχει δικό της κωδικό, που δεν αποθηκεύεται ποτέ. */
+const NO_ETIM_UNIT = 'none';
+
 interface AttributeMappingsFieldsProps {
+  /** Οι μονάδες της οικογένειας μέτρησης. Μόνο σε ιδιότητα `measurement`: το xChange γράφει γυμνό αριθμό. */
+  readonly etimUnits?: readonly { readonly code: string; readonly symbol: string }[];
   readonly mappings: AttributeMappings;
   readonly onChange: (mappings: AttributeMappings) => void;
   readonly issues: readonly CatalogIssue[];
   readonly disabled: boolean;
 }
 
-export function AttributeMappingsFields({ mappings, onChange, issues, disabled }: AttributeMappingsFieldsProps) {
+export function AttributeMappingsFields({ mappings, onChange, issues, disabled, etimUnits }: AttributeMappingsFieldsProps) {
   const { t } = useCatalogText();
   const ifc = mappings.ifc ?? { pset: '', property: '' };
   const setIfc = (next: { pset: string; property: string }) =>
@@ -107,6 +113,19 @@ export function AttributeMappingsFields({ mappings, onChange, issues, disabled }
       <p className="m-0 mt-2 text-xs text-muted-foreground">{t('attributes.mappings.lead')}</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {text('etimFeature', 'attributes.mappings.etim', 'attributes.mappings.etimHint')}
+        {etimUnits ? (
+          <CatalogField label={t('attributes.mappings.etimUnit')} hint={t('attributes.mappings.etimUnitHint')} issues={issues} path="mappings.etimUnitCode">
+            {({ id, describedBy }) => (
+              <Select value={mappings.etimUnitCode ?? NO_ETIM_UNIT} disabled={disabled} onValueChange={(value) => onChange({ ...mappings, etimUnitCode: value === NO_ETIM_UNIT ? null : value })}>
+                <SelectTrigger id={id} aria-describedby={describedBy}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_ETIM_UNIT}>{t('common.none')}</SelectItem>
+                  {etimUnits.map((unit) => <SelectItem key={unit.code} value={unit.code}>{unit.symbol}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          </CatalogField>
+        ) : null}
         {text('bsddUri', 'attributes.mappings.bsdd', 'attributes.mappings.bsddHint')}
         <CatalogField label={t('attributes.mappings.ifcPset')} issues={issues} path="mappings.ifc">
           {({ id }) => <Input id={id} className="font-mono" disabled={disabled} value={ifc.pset} onChange={(event) => setIfc({ ...ifc, pset: event.target.value })} />}

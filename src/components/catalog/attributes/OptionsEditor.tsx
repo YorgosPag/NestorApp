@@ -71,7 +71,7 @@ function OptionRow({ row, handle, path, issues, disabled, onChange, onRemove }: 
   // Ο κωδικός ακολουθεί την κύρια ετικέτα όσο ήταν η πρότασή της (δεν τον έχει αγγίξει ο άνθρωπος).
   const setLabels = (labels: LocalizedText) => {
     const followCode = option.code === suggestCatalogCode(option.labels[DEFAULT_LANGUAGE] ?? '');
-    onChange({ code: followCode ? suggestCatalogCode(labels[DEFAULT_LANGUAGE] ?? '') : option.code, labels });
+    onChange({ ...option, code: followCode ? suggestCatalogCode(labels[DEFAULT_LANGUAGE] ?? '') : option.code, labels });
   };
   return (
     <div className="flex flex-col gap-1 py-1">
@@ -79,6 +79,7 @@ function OptionRow({ row, handle, path, issues, disabled, onChange, onRemove }: 
         {handle}
         <Input className="w-36 font-mono" aria-label={t('attributes.options.codeOf', { index: index + 1 })} value={option.code} disabled={disabled} onChange={(event) => onChange({ ...option, code: event.target.value })} />
         <InlineLocalizedInputs value={option.labels} disabled={disabled} label={t('attributes.options.labelOf', { index: index + 1 })} onChange={setLabels} />
+        <Input className="w-28 font-mono" placeholder="EV000000" aria-label={t('attributes.options.etimOf', { index: index + 1 })} value={option.etimValue ?? ''} disabled={disabled} onChange={(event) => onChange({ ...option, etimValue: event.target.value.trim() === '' ? null : event.target.value.trim() })} />
         <Button type="button" variant="ghost" size="icon" disabled={disabled} aria-label={t('attributes.options.removeOf', { index: index + 1 })} onClick={onRemove}>
           <Trash2 className="h-4 w-4" aria-hidden />
         </Button>

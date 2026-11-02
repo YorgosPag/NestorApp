@@ -8,6 +8,7 @@
 
 import React from 'react';
 
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DEFAULT_LANGUAGE } from '@/i18n/languages';
 import { listingKindOf } from '@/subapps/catalog/types/family';
@@ -50,6 +51,12 @@ export function FamilyGeneralTab({ draft, update, issues, disabled, inFamily, co
             )}
           </CatalogField>
         ) : null}
+        <CatalogField label={t('families.general.etimClass')} hint={t('families.general.etimClassHint')} issues={issues} path="etimClass">
+          {({ id, describedBy }) => (
+            <Input id={id} aria-describedby={describedBy} className="font-mono" placeholder="EC000000" disabled={disabled} value={draft.etimClass ?? ''}
+              onChange={(event) => update({ ...draft, etimClass: event.target.value.trim() === '' ? null : event.target.value.trim() })} />
+          )}
+        </CatalogField>
         <CatalogField label={t('families.general.labelAttribute')} hint={t('families.general.labelAttributeHint')} issues={issues} path="labelAttributeId">
           {({ id, describedBy }) => (
             <AttributePicker id={id} describedBy={describedBy} disabled={disabled} value={draft.labelAttributeId} options={textAttributes(inFamily)}

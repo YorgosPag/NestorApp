@@ -170,7 +170,7 @@ export function AttributeEditor(props: AttributeEditorProps) {
           <h3 className="m-0 text-sm font-semibold text-foreground">{t('attributes.fields.settings')}</h3>
           <AttributeConfigFields draft={draft} onChange={update} registry={registry} families={familyOptions} issues={issues} disabled={disabled} />
         </section>
-        <AttributeMappingsFields mappings={draft.mappings} issues={issues} disabled={disabled} onChange={(mappings) => update({ ...draft, mappings })} />
+        <AttributeMappingsFields mappings={draft.mappings} issues={issues} disabled={disabled} etimUnits={draft.type === 'measurement' ? registry.get(draft.config.measurementFamilyCode)?.units ?? [] : undefined} onChange={(mappings) => update({ ...draft, mappings })} />
         <IssueSummary issues={editor.status === 'dirty' ? clientIssues : []} title={t('editor.issuesTitle')} />
         <SearchIndexRecompute recompute={recompute} familyId={null} />
       </section>

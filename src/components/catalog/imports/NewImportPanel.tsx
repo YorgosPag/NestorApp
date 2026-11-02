@@ -10,6 +10,7 @@ import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { isTableImportSource } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
 import { ColumnMappingTable } from './ColumnMappingTable';
 import { useImportText } from './import-text';
@@ -20,10 +21,10 @@ import { useNewImport } from './use-new-import';
 type Flow = ReturnType<typeof useNewImport>;
 type Target = ReturnType<typeof useImportTarget>;
 
-function TargetField({ flow, target, isPdf }: { readonly flow: Flow; readonly target: Target; readonly isPdf: boolean }) {
+function TargetField({ flow, target, familyOnly }: { readonly flow: Flow; readonly target: Target; readonly familyOnly: boolean }) {
   const { t } = useImportText();
   const current = flow.form.target;
-  if (target.purpose === 'attributes' || isPdf) {
+  if (target.purpose === 'attributes' || familyOnly) {
     return <ChoiceField id="import-family" label={t('new.family')} value={target.familyId} choices={target.familyChoices} onChange={(id) => void flow.patchForm({ target: target.targetOfFamily(id) })} />;
   }
   return (
@@ -42,13 +43,15 @@ function SourceOptions({ flow, target }: { readonly flow: Flow; readonly target:
   const { source, table, form } = flow;
   if (!source) return null;
   const isPdf = source.kind === 'pdf';
+  const isTable = isTableImportSource(source.kind);
   const patch = (next: Parameters<Flow['patchForm']>[0]) => void flow.patchForm(next);
   const purposes = [{ value: 'attributes', label: t('new.purposeAttributes') }, { value: 'priceLines', label: t('new.purposePrices') }];
   return (
     <>
-      {isPdf ? null : <ChoiceField id="import-purpose" label={t('new.purpose')} value={target.purpose} choices={purposes} onChange={(value) => target.setPurpose(value === 'priceLines' ? 'priceLines' : 'attributes')} />}
-      <TargetField flow={flow} target={target} isPdf={isPdf} />
-      {isPdf ? <PageRangeFields form={form} onChange={patch} /> : <SheetFields form={form} onChange={patch} spreadsheet={source.kind === 'spreadsheet'} />}
+      {isTable ? <ChoiceField id="import-purpose" label={t('new.purpose')} value={target.purpose} choices={purposes} onChange={(value) => target.setPurpose(value === 'priceLines' ? 'priceLines' : 'attributes')} /> : null}
+      <TargetField flow={flow} target={target} familyOnly={!isTable} />
+      {isPdf ? <PageRangeFields form={form} onChange={patch} /> : null}
+      {isTable ? <SheetFields form={form} onChange={patch} spreadsheet={source.kind === 'spreadsheet'} /> : null}
       {table && form.target ? <ColumnMappingTable table={table} purpose={form.target.purpose} attributes={target.familyAttributes} columns={form.columns} onChange={(columns) => patch({ columns })} /> : null}
       <footer className="flex justify-end">
         <Button type="button" disabled={flow.busy || form.target === null} onClick={() => void flow.start()}>{flow.busy ? t('new.working') : t('new.start')}</Button>
@@ -72,7 +75,7 @@ export function NewImportPanel({ onReady }: { readonly onReady: (batchId: string
       <h2 className="m-0 text-lg font-semibold">{t('new.title')}</h2>
       <p className="m-0 flex flex-col gap-1">
         <Label htmlFor="import-file">{t('new.file')}</Label>
-        <Input id="import-file" type="file" accept=".pdf,.xlsx,.csv,.txt" disabled={flow.busy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void flow.chooseFile(file); }} />
+        <Input id="import-file" type="file" accept=".pdf,.xlsx,.csv,.txt,.json" disabled={flow.busy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void flow.chooseFile(file); }} />
       </p>
       {flow.unsupported ? <p className="m-0 text-sm text-destructive" role="alert">{t('new.unsupported')}</p> : null}
       <SourceOptions flow={flow} target={target} />

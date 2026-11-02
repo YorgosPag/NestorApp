@@ -20,6 +20,7 @@
  */
 
 import type { MinorAmount } from '@/lib/money/money';
+import type { XChangeImportReport } from '../interop/etim/xchange-report';
 import type { CatalogIssue } from '../schema/catalog-issues';
 import type { AttributeValue, ChannelSlot, LocaleSlot } from './product';
 import type { ConsistencyViolation } from '../rules/evaluate-consistency';
@@ -247,6 +248,8 @@ export interface ImportBatchDefinition {
   readonly run: number;
   readonly status: ImportBatchStatus;
   readonly pages: ImportBatchPages | null;
+  /** Τι μπήκε και τι όχι από αρχείο ETIM xChange: ό,τι μένει απέξω φαίνεται στον άνθρωπο, δεν χάνεται σιωπηλά. */
+  readonly xchangeReport?: XChangeImportReport;
 }
 
 /** Μια στήλη του αρχείου → πού πάει. */
