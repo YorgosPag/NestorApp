@@ -57,6 +57,11 @@ export function PreviewBanner({ preview, t }: PreviewBannerProps) {
             files: preview.fileRecordCount,
           })}
         </p>
+        {preview.heldFileCount > 0 && (
+          <p className="text-xs text-[hsl(var(--text-warning))]">
+            {t('floorplanImport.wipePreview.heldLine', { held: preview.heldFileCount })}
+          </p>
+        )}
         {hasBim && (
           <p className="text-xs text-[hsl(var(--text-warning))]">
             {t('floorplanImport.wipePreview.bimLine', {
@@ -169,6 +174,11 @@ export function WipeConfirmDialog({
               files: preview.fileRecordCount,
             })}
           </AlertDialogDescription>
+          {preview.heldFileCount > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {t('floorplanImport.wipeDialog.heldNotice', { held: preview.heldFileCount })}
+            </p>
+          )}
           {hasBim && (
             <p className="text-sm font-medium text-[hsl(var(--text-warning))]">
               {t('floorplanImport.wipeDialog.bimWarning', {
