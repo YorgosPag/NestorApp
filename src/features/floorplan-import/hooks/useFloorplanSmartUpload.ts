@@ -61,6 +61,8 @@ export interface FloorWipePreview {
   floorplanOverlayCount: number;
   floorplanBackgroundCount: number;
   fileRecordCount: number;
+  /** Files that STAY — hold · preservation · record (ADR-899 §2.2.1). */
+  heldFileCount: number;
   totalPolygons: number;
   /** BIM entity docs across the 20 floor-scoped collections (ADR-420). */
   bimEntityCount: number;

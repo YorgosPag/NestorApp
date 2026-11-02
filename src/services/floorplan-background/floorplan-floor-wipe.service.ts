@@ -14,7 +14,8 @@
  * Property views — their level binding, FileRecord and bytes — are never
  * touched here: replacing one view must not delete another.
  *
- * HARD delete only. No trash, no soft-delete, no recovery.
+ * HARD delete of the floor's own docs (polygons, backgrounds). FILES are different (ADR-899 §2.2.1):
+ * the wipe is one more door of the ONE purge pipeline — it never deletes a FileRecord or its bytes itself.
  *
  * Wipes (per floor + tenant):
  *   1. floorplan_overlays  (ADR-340 polygons)
@@ -22,9 +23,17 @@
  *   3. dxf_viewer_levels (storey levels only) — CONTENT cleared (sceneFileId/sceneFileName → null),
  *      structure preserved so the active editing session keeps a valid
  *      `currentLevelId` and the next wizard re-import re-binds the same doc.
- *   4. floorplan_backgrounds docs (ADR-340)
- *   5. files/{fileId} docs (canonical FILES collection, ADR-292)
- *   6. Storage objects (Firebase Storage binaries)
+ *   4. files/{fileId} (canonical FILES collection, ADR-292) — per `floorFileFate`: free ones are
+ *      handed to the purge queue (`fileTrashFields`, `purgeAt = now`, one activity row each); HELD ones
+ *      (hold · preservation · record — `isFileHeld`) stay exactly as they are and are counted.
+ *      The cron then purges through `purgeFileRecord`: hold judge again · original + every companion ·
+ *      refusal ⇒ retried · tombstone. Runs BEFORE step 5.
+ *   5. floorplan_backgrounds docs (ADR-340) — detached (`fileId: null`) in a commit of its own, then deleted,
+ *      so `onDeleteFloorplanBackground` never re-decides a file this wipe already judged.
+ *   6. Storage objects WITHOUT any record (ADR-709 orphan net) — never an object a record claims.
+ *
+ * 🔴 Until 2026-11-02: `files` docs were hard-deleted BEFORE their bytes (best-effort), with no hold
+ *    judge, no tombstone and no activity row; the folder sweep deleted held bytes too.
  *
  * @module services/floorplan-background/floorplan-floor-wipe.service
  * @enterprise ADR-340 Phase 4 reborn — unified replace pre-flight
@@ -37,8 +46,12 @@ import {
   getAdminFirestore,
   type Firestore,
 } from '@/lib/firebaseAdmin';
-import { deleteStorageObjects, sumTallies, sweepFloorCategoryPath } from './floor-wipe-storage';
-import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { claimedByFileRows, sumTallies, sweepFloorCategoryPath } from './floor-wipe-storage';
+import { FILE_DOMAINS, FILE_CATEGORIES, FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
+import { fileTrashFields } from '@/lib/files/file-trash-fields';
+import { nowISO } from '@/lib/date-local';
+import { recordFileAudit } from '@/services/file-audit-admin.service';
+import { partitionFloorFiles } from './floor-wipe-file-fate';
 import {
   buildCategoryStoragePrefix,
   buildLegacyProjectScopedPrefix,
@@ -55,10 +68,8 @@ import {
 import {
   listBackgrounds,
   listStoreyDxfLevels,
-  loadFileRows,
-  listAllFloorFileRows,
+  gatherFloorFileRows,
   loadFloorProjectId,
-  collectFileIds,
   type BackgroundRow,
   type DxfLevelRow,
   type FileRow,
@@ -80,13 +91,15 @@ export interface WipeAllForFloorResult {
    */
   dxfLevelsCleared: number;
   floorplanBackgroundsDeleted: number;
-  fileRecordsDeleted: number;
+  /** FileRecords handed to the ONE purge pipeline (trash, `purgeAt = now`) — the cron deletes their bytes. */
+  fileRecordsTrashed: number;
+  /** FileRecords left exactly as they were because `isFileHeld` (hold · preservation · record). */
+  fileRecordsHeld: number;
+  /** Orphan objects (claimed by NO record) removed by the floor-category prefix sweep (ADR-709). */
   storageObjectsDeleted: number;
   storageObjectsFailed: number;
-  /** Extra storage objects removed by canonical floor-category prefix sweep
-   * (orphans not tracked by FileRecord rows; e.g. derivations from earlier
-   * wipes that had already lost their parent FileRecord). */
-  categoryPathSweptCount: number;
+  /** Objects under the prefix that belong to a record (held, or queued for purge) — left alone. */
+  storageObjectsSpared: number;
   /** BIM entities deleted (only when `wipeBim` requested; 0 otherwise). */
   bimEntitiesDeleted: number;
   /** Auto-BOQ items deleted (only when `wipeBim` requested; 0 otherwise). */
@@ -96,7 +109,10 @@ export interface WipeAllForFloorResult {
 export interface FloorWipePreview {
   floorplanOverlayCount: number;
   floorplanBackgroundCount: number;
+  /** FileRecords the wipe will hand to the purge pipeline — exactly `fileRecordsTrashed` of the wipe. */
   fileRecordCount: number;
+  /** FileRecords that will STAY (hold · preservation · record) — the person must learn what won't be deleted. */
+  heldFileCount: number;
   totalPolygons: number;
   /** BIM entity docs across the 20 floor-scoped collections (ADR-420). */
   bimEntityCount: number;
@@ -115,7 +131,15 @@ export interface WipeAllForFloorOptions {
   wipeBim?: boolean;
   /** Performer for the BIM-delete audit trail (best-effort). */
   audit?: BimWipeAuditContext;
+  /**
+   * 🔑 Who wiped — `trashedBy` of every FileRecord sent to the purge queue and `performedBy` of its activity row
+   * (ADR-866 §2.6.11). Required: the wipe never writes an anonymous trace.
+   */
+  performedBy: string;
 }
+
+/** The activity row's reason — the floor-wipe door, distinct from a person's own trash. */
+export const FLOOR_WIPE_TRASH_REASON = 'floor_wipe';
 
 // Re-export row types so callers that previously imported them from here keep
 // working (backward-compatible public surface).
@@ -164,6 +188,61 @@ async function clearDxfLevelsInChunks(
   return cleared;
 }
 
+/**
+ * 🔗 Detach, THEN delete the floor's backgrounds — two commits, never one batch.
+ *
+ * The wipe has already decided every file's fate (`floorFileFate`). `onDeleteFloorplanBackground` would decide AGAIN
+ * from the deleted doc's `fileId`, without the hold judge: the version still deployed hard-deletes `storagePath` and
+ * `files/{fileId}` (ADR-899 §2.2.1 — before the redeploy), the current source trashes even a held file. A doc that
+ * dies with `fileId: null` makes the trigger stop at its own guard («no fileId on deleted doc»). Two commits because the
+ * trigger reads the state committed BEFORE the delete — an update in the same atomic batch would be invisible to it.
+ */
+async function detachThenDeleteBackgrounds(db: Firestore, backgrounds: readonly BackgroundRow[]): Promise<number> {
+  const bound = backgrounds.filter((b) => b.fileId.length > 0);
+  for (let i = 0; i < bound.length; i += BATCH_DELETE_CHUNK) {
+    const batch = db.batch();
+    for (const row of bound.slice(i, i + BATCH_DELETE_CHUNK)) {
+      batch.update(row.ref, { fileId: null, updatedAt: FieldValue.serverTimestamp() });
+    }
+    await batch.commit();
+  }
+  return deleteRefsInChunks(db, backgrounds.map((b) => b.ref));
+}
+
+/**
+ * Hand the free FileRecords to the ONE purge pipeline — the same trash fields as every other door (`fileTrashFields`),
+ * `purgeAt = now` (like `onDeleteFloorplanBackground`), then one activity row each in the owner's book.
+ * The rows were already filtered by tenant (`gatherFloorFileRows`) and by `floorFileFate`.
+ */
+async function trashFileRowsInChunks(
+  db: Firestore,
+  companyId: string,
+  floorId: string,
+  rows: readonly FileRow[],
+  performedBy: string,
+): Promise<number> {
+  const fields = fileTrashFields({
+    trashedState: FILE_LIFECYCLE_STATES.TRASHED,
+    by: performedBy,
+    purgeAt: nowISO(),
+    now: FieldValue.serverTimestamp(),
+  });
+  for (let i = 0; i < rows.length; i += BATCH_DELETE_CHUNK) {
+    const batch = db.batch();
+    for (const row of rows.slice(i, i + BATCH_DELETE_CHUNK)) batch.update(row.ref, fields);
+    await batch.commit();
+  }
+  // Ίχνος ΜΕΤΑ τη γραφή — ο γραφέας δεν πετά ποτέ· αποτυχία του δεν ακυρώνει πράξη που έγινε (ADR-862 §5.7).
+  await Promise.all(rows.map((row) => recordFileAudit({
+    fileId: row.ref.id,
+    action: 'delete',
+    performedBy,
+    companyId,
+    metadata: { reason: FLOOR_WIPE_TRASH_REASON, floorId },
+  })));
+  return rows.length;
+}
+
 // ============================================================================
 // SERVICE
 // ============================================================================
@@ -178,24 +257,23 @@ export class FloorplanFloorWipeService {
     floorId: string,
   ): Promise<FloorWipePreview> {
     const db = getDb();
-    const [polygonState, backgrounds, dxfLevels, allFloorFiles, bimCounts] =
+    const [polygonState, backgrounds, dxfLevels, bimCounts] =
       await Promise.all([
         FloorplanCascadeDeleteService.getFloorPolygonState(companyId, floorId),
         listBackgrounds(db, companyId, floorId),
         listStoreyDxfLevels(db, companyId, floorId),
-        listAllFloorFileRows(db, companyId, floorId),
         countBimForFloor(companyId, floorId),
       ]);
 
-    // ADR-351: union referenced + orphan FileRecord ids so the preview count
-    // matches what executeWipe actually deletes (no surprise "ghost" leftovers).
-    const referencedIds = new Set(collectFileIds(backgrounds, dxfLevels));
-    for (const row of allFloorFiles) referencedIds.add(row.ref.id);
+    // ADR-351 + ADR-899 §2.2.1: the SAME gathering and the SAME partition as executeWipe, so the
+    // dialog says exactly what will happen — including what will NOT be deleted.
+    const files = partitionFloorFiles(await gatherFloorFileRows(db, companyId, floorId, backgrounds, dxfLevels));
 
     return {
       floorplanOverlayCount: polygonState.floorplanOverlayCount,
       floorplanBackgroundCount: backgrounds.length,
-      fileRecordCount: referencedIds.size,
+      fileRecordCount: files.trash.length,
+      heldFileCount: files.held.length,
       totalPolygons: polygonState.total,
       bimEntityCount: bimCounts.bimEntityCount,
       boqItemCount: bimCounts.boqItemCount,
@@ -203,13 +281,13 @@ export class FloorplanFloorWipeService {
   }
 
   /**
-   * HARD-wipe everything tied to a floor. Idempotent: zero-state input
-   * returns success no-op. Best-effort on Storage (failures logged).
+   * Wipe everything tied to a floor (files through the purge pipeline — see the module header).
+   * Idempotent: zero-state input returns success no-op. Best-effort on the orphan sweep (failures logged).
    */
   static async wipeAllForFloor(
     companyId: string,
     floorId: string,
-    opts: WipeAllForFloorOptions = {},
+    opts: WipeAllForFloorOptions,
   ): Promise<WipeAllForFloorResult> {
     try {
       const result = await executeWipe(companyId, floorId, opts);
@@ -244,17 +322,15 @@ async function executeWipe(
     ? await wipeBimForFloor(companyId, floorId, opts.audit)
     : { bimEntitiesDeleted: 0, boqItemsDeleted: 0 };
 
-  const fileIds = collectFileIds(backgrounds, dxfLevels);
-  const referencedFileRows = await loadFileRows(db, companyId, fileIds);
-
-  // ADR-351: union the referenced rows with EVERY FileRecord pointing at this
-  // floor — catches orphan FileRecords (created but never linked from a
-  // background/level doc) that previous wipes ignored.
-  const allFloorFileRows = await listAllFloorFileRows(db, companyId, floorId);
-  const fileRowsById = new Map<string, FileRow>();
-  for (const row of referencedFileRows) fileRowsById.set(row.ref.id, row);
-  for (const row of allFloorFileRows) fileRowsById.set(row.ref.id, row);
-  const fileRows = Array.from(fileRowsById.values());
+  // ADR-351: referenced rows ∪ EVERY FileRecord of this floor (catches never-linked orphans).
+  const fileRows = await gatherFloorFileRows(db, companyId, floorId, backgrounds, dxfLevels);
+  const files = partitionFloorFiles(fileRows);
+  if (files.held.length > 0) {
+    // «Κρατημένο μένει, με ίχνος» (ίδιο μοτίβο με το `CASCADE_PRESERVATION` του deletion-guard).
+    logger.info('Floor wipe: held files stay', {
+      companyId, floorId, held: files.held.map((row) => row.ref.id),
+    });
+  }
 
   // Polygons FIRST — cascade reads dxf_viewer_levels (still alive here).
   const cascade = await FloorplanCascadeDeleteService.cascadeAllPolygonsForFloor(
@@ -262,18 +338,17 @@ async function executeWipe(
     floorId,
   );
 
-  const [dxfLevelsCleared, floorplanBackgroundsDeleted, fileRecordsDeleted] =
-    await Promise.all([
-      clearDxfLevelsInChunks(db, dxfLevels),
-      deleteRefsInChunks(db, backgrounds.map((b) => b.ref)),
-      deleteRefsInChunks(db, fileRows.map((f) => f.ref)),
-    ]);
+  // Files to the purge queue BEFORE the backgrounds go, and the backgrounds die DETACHED: their `onDelete`
+  // trigger must never re-decide a file the wipe already judged (held ⇒ stays; free ⇒ already queued).
+  const [dxfLevelsCleared, fileRecordsTrashed] = await Promise.all([
+    clearDxfLevelsInChunks(db, dxfLevels),
+    trashFileRowsInChunks(db, companyId, floorId, files.trash, opts.performedBy),
+  ]);
+  const floorplanBackgroundsDeleted = await detachThenDeleteBackgrounds(db, backgrounds);
 
-  const storage = await deleteStorageObjects(fileRows);
-
-  // Extra sweep: catch orphan binaries left under the floor-category prefix
-  // (derivations whose parent FileRecord was already deleted by an earlier wipe
-  // that lacked prefix-list logic).
+  // Orphan net: binaries under the floor-category prefix that NO record claims (derivations whose parent
+  // FileRecord was hard-deleted by a pre-2026-11-02 wipe). Every record of the floor — held, queued, or a
+  // tombstone — claims its original and companions (`claimedByFileRows`), so this never deletes their bytes.
   //
   // ADR-709: the canonical prefix is ALWAYS swept — it no longer depends on the
   // floor's project being resolvable, which is what previously made this sweep
@@ -291,17 +366,18 @@ async function executeWipe(
         })]
       : []),
   ];
-  const sweepResults = await Promise.all(sweepPrefixes.map(sweepFloorCategoryPath));
-  const sweep = sumTallies(sweepResults);
+  const isClaimed = claimedByFileRows(fileRows);
+  const sweep = sumTallies(await Promise.all(sweepPrefixes.map((prefix) => sweepFloorCategoryPath(prefix, isClaimed))));
 
   return {
     floorplanOverlaysDeleted: cascade.floorplanOverlaysDeleted,
     dxfLevelsCleared,
     floorplanBackgroundsDeleted,
-    fileRecordsDeleted,
-    storageObjectsDeleted: storage.deleted + sweep.deleted,
-    storageObjectsFailed: storage.failed + sweep.failed,
-    categoryPathSweptCount: sweep.deleted,
+    fileRecordsTrashed,
+    fileRecordsHeld: files.held.length,
+    storageObjectsDeleted: sweep.deleted,
+    storageObjectsFailed: sweep.failed,
+    storageObjectsSpared: sweep.spared,
     bimEntitiesDeleted: bim.bimEntitiesDeleted,
     boqItemsDeleted: bim.boqItemsDeleted,
   };

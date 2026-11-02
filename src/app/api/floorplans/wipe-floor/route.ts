@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * GET   /api/floorplans/wipe-floor?floorId=X — preview counts (no mutations)
- * POST  /api/floorplans/wipe-floor           — body { floorId } — HARD wipe
+ * POST  /api/floorplans/wipe-floor           — body { floorId } — wipe (files → purge queue; held files stay)
  *
  * Used by the unified Wizard upload flow (DXF + PDF + Image) to clear all
  * prior state before a new background is uploaded. Replace flow guarantees:
@@ -90,12 +90,13 @@ async function handlePost(
     const performedByName = wipeBim
       ? await resolveUserDisplayName(ctx.uid, ctx.email)
       : null;
+    // ADR-899 §2.2.1 — ο αιτών υπογράφει κάθε εγγραφή που πάει στην ουρά εκκαθάρισης (`trashedBy` + ίχνος).
     const result = await FloorplanFloorWipeService.wipeAllForFloor(
       ctx.companyId,
       floorId,
       wipeBim
-        ? { wipeBim, audit: { performedBy: ctx.uid, performedByName } }
-        : {},
+        ? { wipeBim, audit: { performedBy: ctx.uid, performedByName }, performedBy: ctx.uid }
+        : { performedBy: ctx.uid },
     );
     return NextResponse.json({ result });
   } catch (err) {

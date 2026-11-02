@@ -77,6 +77,7 @@ const ZERO_PREVIEW: FloorWipePreview = {
   floorplanOverlayCount: 0,
   floorplanBackgroundCount: 0,
   fileRecordCount: 0,
+  heldFileCount: 0,
   totalPolygons: 0,
   bimEntityCount: 0,
   boqItemCount: 0,

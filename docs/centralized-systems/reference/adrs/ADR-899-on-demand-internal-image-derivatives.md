@@ -76,8 +76,18 @@
 | cascade οντότητας (ADR-226) | ✅ σάρωση προθέματος | ✅ deletion-guard | αμετάβλητο |
 | **`scheduledFilePurge`** (Functions, 03:00 UTC, **ζωντανό** — ADR-873 γρ. 28) | ❌ μόνο `storagePath` | ❌ καθρέφτης `hold !== 'none'`: **αγνοεί** `isPreserved` και σημάδι Πρωτοκόλλου· ό,τι το cron της εφαρμογής **παρέλειπε** σκόπιμα (κρατημένο, ληγμένο `purgeAt`) το έσβηνε αυτό | **αφαιρέθηκε** από τον κώδικα (`functions/src/index.ts` 376 → 70 γρ.)· από το cloud: `firebase deploy --only functions` ρωτά — **απόφαση Giorgio** |
 | **`onDeleteFloorplanBackground`** (ADR-340 D4) | ❌ μόνο `storagePath`, **μετά** διαγραφή της εγγραφής ⇒ τα συνοδευτικά έχαναν τον τελευταίο δείκτη | ❌ κανένας | **παραδίδει** στον κάδο με `purgeAt = τώρα` (`lib/files/file-trash-fields`, προβάλλεται) ⇒ το cron περνά από τον ένα κριτή + γραφέα |
-| floor wipe (ADR-340 Phase 4) | ✅ σάρωση φακέλου κατηγορίας | ❓ **κανένα** `isFileHeld` (μετρημένο) | ⏳ ανοιχτό — pending |
+| **floor wipe** (ADR-340 Phase 4) | ❌ δεύτερος γραφέας (`deleteStorageObjects`: `{storagePath}*`, όχι συνοδευτικά στελέχους) + σάρωση φακέλου που έσβηνε **και** bytes κρατημένων· εγγραφή σβηνόταν **πριν** από τα bytes | ❌ κανένα `isFileHeld` (μετρημένο) | ✅ **2026-11-02**: ελεύθερες ⇒ **κάδος** (`fileTrashFields`, `purgeAt = τώρα`, γραμμή `delete` στο βιβλίο του κατόχου) **πριν** σβηστούν τα υπόβαθρα · υπόβαθρα **αποσυνδέονται** (`fileId: null`, δικό τους commit) πριν σβηστούν ⇒ το trigger δεν ξανακρίνει · κρατημένες ⇒ **μένουν** ανέγγιχτες + μετρώνται (`heldFileCount` στην προεπισκόπηση) · σάρωση = δίχτυ **ορφανών μόνο** (`claimedByFileRows`, ίδιος φρουρός `isCompanionPathOf`) |
 
+- **Floor wipe (2026-11-02)** — `floor-wipe-file-fate.ts` (`floorFileFate`: `held` → `settled` → `trash`, η ΜΙΑ μοιρασιά για
+  προεπισκόπηση **και** wipe) · `floor-wipe-storage.ts` (`claimedByFileRows` + `sweepFloorCategoryPath(prefix, isClaimed)`).
+  🔑 Γιατί το κρατημένο **δεν** πάει καν στον κάδο (ενώ ο άνθρωπος μπορεί να πετάξει αρχείο σε σιωπηλή δέσμευση): μαζική πράξη
+  συστήματος, όχι απόφαση για το αρχείο· και το cron **παραλείπει χωρίς να βγάζει από την ουρά** (βλ. pending «🗑️ Η αγωγός οριστικής
+  διαγραφής»). Ήδη στον κάδο / επιτύμβιο ⇒ ανέγγιχτα (ούτε νέο `purgeAt`, ούτε hard delete επιτυμβίου).
+  🔗 **Αποσύνδεση πριν από τη διαγραφή**: το `onDeleteFloorplanBackground` αποφασίζει από το `fileId` του σβησμένου εγγράφου
+  **χωρίς** κριτή δέσμευσης (η έκδοση που τρέχει ακόμη στο cloud σβήνει bytes + εγγραφή· η νέα πετά στον κάδο και κρατημένο) ⇒
+  το wipe γράφει `fileId: null` σε **δικό του** commit (το trigger διαβάζει την κατάσταση πριν από τη διαγραφή) και το trigger
+  σταματά στον φρουρό του. Μία απόφαση ανά αρχείο, σε ένα σημείο.
+  Άγκυρες: `floorplan-floor-wipe-view-scope.test.ts` (in-memory Firestore) + `floor-wipe-storage.test.ts` — 9/9 μεταλλάξεις κόκκινες.
 - **Άγκυρα κλάσης** (`functions/src/floorplan-background/__tests__/onDeleteFloorplanBackground.test.ts` Κ1): κανένα
   `.file(…).delete(` / `.deleteFiles(` στα Functions έξω από τον sweeper ορφανών (ADR-694 Α3) — με παρονομαστή.
 - **Επιτύμβιο έξω από την ουρά**: ο γραφέας **και** η ΓΚΠΔ γράφουν `purgedRecordFields` ⇒ `purgeAt: null`. Πριν, το ερώτημα της
@@ -1063,6 +1073,8 @@ File is in the owner's trash»* — **μήνυμα, όχι προβολή**· τ
 
 ## Changelog
 
+- **2026-11-02** — §2.2.1: η πόρτα **floor wipe** κλείνει — κάδος για τις ελεύθερες, ανέγγιχτες οι κρατημένες (με αριθμό
+  στον διάλογο), σάρωση φακέλου μόνο για ορφανά· αφαιρέθηκε ο δεύτερος γραφέας bytes `deleteStorageObjects`.
 - **2026-10-31** — §2.2.1: δύο πόρτες οριστικής διαγραφής παρέκαμπταν τον γραφέα purge (`scheduledFilePurge` — αφαιρέθηκε ·
   `onDeleteFloorplanBackground` — παραδίδει στον κάδο)· επιτύμβιο με `purgeAt: null` (γραφέας + ΓΚΠΔ)· `FILE_LIFECYCLE_STATES` σε φύλλο που προβάλλεται.
 - **2026-10-14** — **Δεύτερη οικογένεια «γεγονότων για τα bytes» δίπλα στα `measuredKeys`** (ADR-915 Φ3α): `documentFactsKeys` / `documentFactsUnchanged` / `documentFactsBornAbsent` στο `firestore.rules`. Παγώνουν το `FileRecord.documentFacts` (είδος · έκδοση · τυπωμένη λήξη) για τον πελάτη, με το **ίδιο** ιδίωμα και στα **ίδια** σημεία (γέννηση και σκέλη ενημέρωσης του `files` · `files_personal`). Η οικογένεια είναι **χωριστή**, όχι προσθήκη στο `measuredKeys`: τα γεγονότα εγγράφου γράφει και **άνθρωπος** μέσω διακομιστή (`attested`), άρα δεν είναι «μετρημένα». Ο ΕΝΑΣ γραφέας είναι ο `server/files/document-facts-writer`.

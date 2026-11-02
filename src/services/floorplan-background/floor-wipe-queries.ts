@@ -38,11 +38,14 @@ export interface DxfLevelRow {
   sceneFileId: string | null;
 }
 
+/**
+ * Μια εγγραφή `files` του ορόφου — **ολόκληρη**: την κρίνουν ο κριτής δέσμευσης (`isFileHeld`), ο κριτής του κάδου
+ * (`isInTrash`) και ο φρουρός των συνοδευτικών (`isCompanionPathOf`). Ως τις 2026-11-02 κρατούσε μόνο `storagePath` +
+ * `storagePlacement` ⇒ κανείς δεν μπορούσε να ρωτήσει «κρατείται;» (ADR-899 §2.2.1).
+ */
 export interface FileRow {
   ref: FirebaseFirestore.DocumentReference;
-  storagePath: string | null;
-  /** ADR-895 — σε ποιον κάδο ζουν τα bytes (απόν ⇒ legacy)· το κρίνει ο `fileRecordBucket`. */
-  storagePlacement?: unknown;
+  data: Readonly<FirebaseFirestore.DocumentData>;
 }
 
 // ============================================================================
@@ -108,7 +111,7 @@ export async function loadFileRows(
     fileIds.map(async (id) => {
       const snap = await db.collection(COLLECTIONS.FILES).doc(id).get();
       if (!snap.exists) return null;
-      const data = snap.data() as { companyId?: string; storagePath?: string; storagePlacement?: unknown };
+      const data = snap.data() ?? {};
       // ADR-742 §4 — αρχείο **χωρίς** μισθωτή δεν ανήκει σε κανέναν, άρα δεν
       // σβήνεται από κανέναν. Σε **wipe** η κατεύθυνση του σφάλματος έχει
       // σημασία: fail-closed είναι παράλειψη, fail-open είναι απώλεια δεδομένων.
@@ -116,12 +119,7 @@ export async function loadFileRows(
         logger.warn('Cross-tenant file skipped during wipe', { fileId: id });
         return null;
       }
-      return {
-        ref: snap.ref,
-        storagePath:
-          typeof data.storagePath === 'string' ? data.storagePath : null,
-        storagePlacement: data.storagePlacement,
-      } satisfies FileRow;
+      return { ref: snap.ref, data } satisfies FileRow;
     }),
   );
   return rows.filter((r): r is FileRow => r !== null);
@@ -145,15 +143,28 @@ export async function listAllFloorFileRows(
     .where('entityType', '==', 'floor')
     .where('entityId', '==', floorId)
     .get();
-  return snap.docs.map((d) => {
-    const data = d.data() as { storagePath?: string; storagePlacement?: unknown };
-    return {
-      ref: d.ref,
-      storagePath:
-        typeof data.storagePath === 'string' ? data.storagePath : null,
-      storagePlacement: data.storagePlacement,
-    } satisfies FileRow;
-  });
+  return snap.docs.map((d) => ({ ref: d.ref, data: d.data() }) satisfies FileRow);
+}
+
+/**
+ * ADR-351: **κάθε** εγγραφή του ορόφου — όσες δείχνουν υπόβαθρα/επίπεδα **∪** όσες έχουν τον όροφο ως οντότητα,
+ * χωρίς διπλότυπα. Η ΜΙΑ συλλογή που μοιράζονται η προεπισκόπηση και το wipe, ώστε ο αριθμός του διαλόγου να είναι
+ * ακριβώς ό,τι θα γίνει.
+ */
+export async function gatherFloorFileRows(
+  db: Firestore,
+  companyId: string,
+  floorId: string,
+  backgrounds: BackgroundRow[],
+  dxfLevels: DxfLevelRow[],
+): Promise<FileRow[]> {
+  const [referenced, entityRows] = await Promise.all([
+    loadFileRows(db, companyId, collectFileIds(backgrounds, dxfLevels)),
+    listAllFloorFileRows(db, companyId, floorId),
+  ]);
+  const byId = new Map<string, FileRow>();
+  for (const row of [...referenced, ...entityRows]) byId.set(row.ref.id, row);
+  return [...byId.values()];
 }
 
 export async function loadFloorProjectId(
