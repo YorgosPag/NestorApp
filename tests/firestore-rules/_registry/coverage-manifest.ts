@@ -767,6 +767,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-923 §5.13 Δ3 — το outbox της δημόσιας προβολής: αριθμός, γράφει και αδειάζει μόνο ο διακομιστής.
+    collection: 'catalog_public_outbox',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-public-outbox.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-923 §5.5.1 — ο αγωγός εισαγωγής: οι προτάσεις κουβαλούν τιμές ⇒ ίδια απόφαση με την τιμολόγηση.
     collection: 'catalog_import_profiles',
     pattern: 'deny_all',

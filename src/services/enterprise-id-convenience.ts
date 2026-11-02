@@ -472,6 +472,7 @@ export {
   generateDeterministicCatalogPublicationRunId,
   generateDeterministicCatalogPricingSlotId,
   generateDeterministicCatalogPricingViewSignalId,
+  generateDeterministicCatalogPublicOutboxId,
   generateDeterministicCatalogImportProfileId,
   generateDeterministicCatalogImportBatchId,
   generateDeterministicCatalogImportProposalId,

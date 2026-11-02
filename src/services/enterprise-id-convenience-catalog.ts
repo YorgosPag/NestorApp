@@ -52,6 +52,8 @@ export const generateDeterministicCatalogPricingSlotId = (companyId: string, slo
   enterpriseIdService.generateDeterministicCatalogPricingSlotId(companyId, slotKey);
 export const generateDeterministicCatalogPricingViewSignalId = (companyId: string, viewKey: string) =>
   enterpriseIdService.generateDeterministicCatalogPricingViewSignalId(companyId, viewKey);
+export const generateDeterministicCatalogPublicOutboxId = (companyId: string, scopeKey: string) =>
+  enterpriseIdService.generateDeterministicCatalogPublicOutboxId(companyId, scopeKey);
 
 // Εισαγωγή (ADR-923 §5.5.1): ντετερμινιστικά από φυσικό κλειδί
 export const generateDeterministicCatalogImportProfileId = (companyId: string, code: string) =>

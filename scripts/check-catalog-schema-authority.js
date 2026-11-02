@@ -61,6 +61,8 @@ const CATALOG_COLLECTIONS = [
   'COLLECTIONS.CATALOG_PRICING_SLOTS',
   // Φάση 3δ (ADR-923 §5.11 «3δ» Ζ · ADR-905) — τα σήματα όψεων τιμών: γράφει ΜΟΝΟ ο γραφέας τους, καλεσμένος από τη μηχανή
   'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS',
+  // Φάση 6β (ADR-923 §5.13 Δ3) — το outbox της δημόσιας προβολής: το γράφει ΜΟΝΟ ο γραφέας του, καλεσμένος από τη μηχανή
+  'COLLECTIONS.CATALOG_PUBLIC_OUTBOX',
   // Φάση 4 (ADR-923 §5.5.1) — ο αγωγός εισαγωγής
   'COLLECTIONS.CATALOG_IMPORT_PROFILES',
   'COLLECTIONS.CATALOG_IMPORT_BATCHES',
@@ -87,7 +89,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_product_models', 'catalog_products', 'catalog_assets', 'catalog_settings', 'catalog_unique_values',
   'catalog_price_lists', 'catalog_price_list_versions', 'catalog_price_list_lines', 'catalog_discount_groups',
   'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
-  'catalog_pricing_view_signals',
+  'catalog_pricing_view_signals', 'catalog_public_outbox',
   'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals', 'catalog_import_page_readings',
   'catalog_publication_recipes', 'catalog_publication_runs',
   'catalog_visibility_rules',
@@ -160,7 +162,7 @@ const WIRING = {
   [FOREIGN_READER]: ['runForeignCatalogRead(', 'readActiveSupplyRelationshipInTx(', 'foreignOutcomeOf('],
   // Οι υποδοχές (όπως οι κρατήσεις) δεν είναι είδη: ευρετήριο του γραφέα, χωρίς ιστορικό.
   [KINDS]: CATALOG_COLLECTIONS.filter(
-    (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS'].includes(key),
+    (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS', 'COLLECTIONS.CATALOG_PUBLIC_OUTBOX'].includes(key),
   ),
 };
 

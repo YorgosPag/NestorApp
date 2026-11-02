@@ -128,6 +128,11 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
     return this.mintDeterministicV4Id(P.CATALOG_PRICING_VIEW_SIGNAL, seedOf('pricing-view-signal', companyId, viewKey));
   }
 
+  /** Outbox δημόσιας προβολής (ADR-923 §5.13 Δ3): ένα έγγραφο ανά `{ companyId, scope }`, γραφέας και αδειαστής υπολογίζουν το id. */
+  generateDeterministicCatalogPublicOutboxId(companyId: string, scopeKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PUBLIC_OUTBOX, seedOf('public-outbox', companyId, scopeKey));
+  }
+
   // ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή ──
 
   generateDeterministicCatalogImportProfileId(companyId: string, code: string): string {

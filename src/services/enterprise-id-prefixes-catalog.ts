@@ -39,6 +39,7 @@ export const CATALOG_ID_PREFIXES = {
   CATALOG_PUBLICATION_RECIPE: 'cpubr',     // catalog_publication_recipes — συνταγή έκδοσης (από κωδικό, ADR-923 §5.6)
   CATALOG_PUBLICATION_RUN: 'cpubx',        // catalog_publication_runs — αποτέλεσμα έκδοσης (από το hash εισόδων)
   CATALOG_PRICING_VIEW_SIGNAL: 'cpvs',     // catalog_pricing_view_signals — σήμα ΜΙΑΣ όψης τιμών (μόνο αριθμός) — ντετερμινιστικό
+  CATALOG_PUBLIC_OUTBOX: 'cpobx',          // catalog_public_outbox — σημείωση επαναπροβολής ΜΙΑΣ δημόσιας προβολής (§5.13 Δ3) — ντετερμινιστικό
   // ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή. Ντετερμινιστικά από φυσικό κλειδί: ίδια είσοδος ⇒ ίδιο έγγραφο, δομικά ──
   CATALOG_IMPORT_PROFILE: 'ciprf',         // catalog_import_profiles — αποθηκευμένη αντιστοίχιση (από κωδικό)
   CATALOG_IMPORT_BATCH: 'cibat',           // catalog_import_batches — παρτίδα (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση)
