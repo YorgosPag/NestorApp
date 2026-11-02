@@ -5,7 +5,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { Send, PhoneCall, Plus, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import type { Opportunity } from '@/types/crm';
+import type { LeadPerson } from './lead-person';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -14,7 +14,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/design-system';
 
 interface QuickActionsProps {
-  lead: Opportunity;
+  lead: LeadPerson;
   onEdit: () => void;
   onNewTask: () => void;
   onSendEmail?: () => void;

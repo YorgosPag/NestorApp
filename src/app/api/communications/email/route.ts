@@ -5,6 +5,7 @@ import { withAuth, logAuditEvent, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getRequiredEmailFunctionUrl } from '@/config/admin-env';
 import { createModuleLogger } from '@/lib/telemetry';
+import { recordSentEmail } from './record-sent-email';
 // Ensure Firebase Admin is initialized
 import '@/server/admin/admin-guards';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -17,6 +18,7 @@ interface EmailPayload {
   subject: string;
   message: string;
   leadId?: string;
+  contactId?: string;
   priority?: 'low' | 'normal' | 'high';
   category?: string;
 }
@@ -97,6 +99,18 @@ export const POST = withStandardRateLimit(
           metadata: extractRequestMetadata(request),
         }
       );
+
+      if (typeof payload.contactId === 'string' && payload.contactId) {
+        await recordSentEmail({
+          auth: ctx,
+          contactId: payload.contactId,
+          opportunityId: payload.leadId,
+          to: payload.to,
+          subject: payload.subject,
+          content: payload.message,
+          providerMessageId: result.messageId,
+        });
+      }
 
       return NextResponse.json({
         id: result.messageId,

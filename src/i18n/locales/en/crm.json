@@ -85,6 +85,7 @@
     },
     "editModal": {
       "title": "Edit Opportunity",
+      "linkedContactHint": "Name, email and phone come from the linked contact. Change them there.",
       "labels": {
         "name": "Name",
         "email": "Email",
@@ -402,6 +403,13 @@
       "call": "Call",
       "message": "Message",
       "edit": "Edit"
+    },
+    "preview": {
+      "open": "Preview",
+      "description": "Contact preview",
+      "otherDeals": "Other opportunities",
+      "noOtherDeals": "No other opportunities for this contact",
+      "openFull": "Open full contact"
     }
   },
   "leadCard": {

@@ -107,18 +107,24 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
           <DialogTitle>{t('opportunities.editModal.title')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">{t('opportunities.editModal.labels.name')}</Label>
-            <Input id="fullName" name="fullName" value={formData.fullName || ''} onChange={handleChange} required disabled={loading} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">{t('opportunities.editModal.labels.email')}</Label>
-            <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleChange} required disabled={loading} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">{t('opportunities.editModal.labels.phone')}</Label>
-            <Input id="phone" name="phone" value={formData.phone || ''} onChange={handleChange} disabled={loading} />
-          </div>
+          {opportunity?.contactId ? (
+            <p className="text-sm text-muted-foreground">{t('opportunities.editModal.linkedContactHint')}</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">{t('opportunities.editModal.labels.name')}</Label>
+                <Input id="fullName" name="fullName" value={formData.fullName || ''} onChange={handleChange} required disabled={loading} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">{t('opportunities.editModal.labels.email')}</Label>
+                <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleChange} required disabled={loading} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">{t('opportunities.editModal.labels.phone')}</Label>
+                <Input id="phone" name="phone" value={formData.phone || ''} onChange={handleChange} disabled={loading} />
+              </div>
+            </>
+          )}
           <div className="space-y-2">
             <Label htmlFor="contactId">{t('opportunities.editModal.labels.contactId')}</Label>
             <Input id="contactId" name="contactId" value={formData.contactId || ''} onChange={handleChange} placeholder={t('opportunities.editModal.labels.contactIdPlaceholder')} disabled={loading} />

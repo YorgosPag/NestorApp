@@ -14,6 +14,7 @@ import {
   updateDoc,
   deleteDoc,
   orderBy,
+  where,
   serverTimestamp,
   type DocumentData,
 } from 'firebase/firestore';
@@ -47,6 +48,14 @@ export async function getOpportunities(): Promise<Opportunity[]> {
   } catch (error) {
     throw error;
   }
+}
+
+/** Οι ευκαιρίες μιας επαφής (with automatic tenant filtering) */
+export async function getOpportunitiesByContact(contactId: string): Promise<Opportunity[]> {
+  const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OPPORTUNITIES', {
+    constraints: [where('contactId', '==', contactId)],
+  });
+  return result.documents.map(toOpportunity);
 }
 
 /** Ανάκτηση μίας ευκαιρίας με βάση το ID */

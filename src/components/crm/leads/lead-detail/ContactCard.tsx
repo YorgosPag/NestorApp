@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { User, Mail, Phone, Tag, Calendar } from 'lucide-react';
+import { User, Mail, Phone, Tag, Calendar, PanelRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { LeadPerson } from './lead-person';
 import { Link } from '@/lib/workspace/navigation';
 import { ContextualNavigationService } from '@/services/navigation/ContextualNavigationService';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -18,9 +20,11 @@ import { cn } from '@/lib/design-system';
 
 interface ContactCardProps {
   lead: Opportunity;
+  person: LeadPerson;
+  onPreview?: () => void;
 }
 
-export function ContactCard({ lead }: ContactCardProps) {
+export function ContactCard({ lead, person, onPreview }: ContactCardProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
@@ -44,29 +48,35 @@ export function ContactCard({ lead }: ContactCardProps) {
                   href={ContextualNavigationService.generateRoute('contact', lead.contactId)}
                   className={cn('text-link', INTERACTIVE_PATTERNS.LINK_PRIMARY)}
                 >
-                  {lead.fullName}
+                  {person.fullName}
                 </Link>
               ) : (
-                lead.fullName
+                person.fullName
               )}
             </p>
             <p className={cn('text-sm', colors.text.muted)}>{t('contactCard.fullName')}</p>
           </div>
+          {lead.contactId && onPreview && (
+            <Button type="button" variant="ghost" size="sm" className="ml-auto" onClick={onPreview}>
+              <PanelRight className={iconSizes.sm} aria-hidden="true" />
+              {t('contactCard.preview.open')}
+            </Button>
+          )}
         </div>
-        {lead.email && (
+        {person.email && (
           <div className={cn('flex items-center', spacing.gap.md)}>
             <Mail className={cn(iconSizes.md, colors.text.muted)} />
             <div>
-              <p className="font-medium">{lead.email}</p>
+              <p className="font-medium">{person.email}</p>
               <p className={cn('text-sm', colors.text.muted)}>{t('contactCard.email')}</p>
             </div>
           </div>
         )}
-        {lead.phone && (
+        {person.phone && (
           <div className={cn('flex items-center', spacing.gap.md)}>
             <Phone className={cn(iconSizes.md, colors.text.muted)} />
             <div>
-              <p className="font-medium">{lead.phone}</p>
+              <p className="font-medium">{person.phone}</p>
               <p className={cn('text-sm', colors.text.muted)}>{t('contactCard.phone')}</p>
             </div>
           </div>

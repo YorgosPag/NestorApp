@@ -15,7 +15,7 @@ import { gridPatterns } from '@/styles/design-tokens';
 
 // 🏢 ENTERPRISE: Lead data can come from Opportunity which has optional fields
 interface SendEmailModalProps {
-  lead: { id?: string; fullName?: string; email?: string } | null;
+  lead: { id?: string; contactId?: string; fullName?: string; email?: string } | null;
   isOpen: boolean;
   onClose: () => void;
   onEmailSent?: () => void;

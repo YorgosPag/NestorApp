@@ -11,7 +11,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 const logger = createModuleLogger('useSendEmailModal');
 
 // 🏢 ENTERPRISE: Lead type with optional fields to match Opportunity type
-type Lead = { id?: string; fullName?: string; email?: string };
+type Lead = { id?: string; contactId?: string; fullName?: string; email?: string };
 
 export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEmailSent?: () => void) {
   const { t } = useTranslation('crm');
@@ -53,6 +53,7 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
     message: string;
     templateId: string;
     leadId?: string;
+    contactId?: string;
     priority?: string;
     category?: string;
   }) => {
@@ -101,6 +102,7 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
         message: formData.message,
         templateId: formData.templateType,
         leadId: lead.id,
+        contactId: lead.contactId,
         priority: 'normal' as const,
         category: getEmailCategory(formData.templateType)
       };

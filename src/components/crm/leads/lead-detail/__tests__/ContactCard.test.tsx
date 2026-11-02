@@ -39,17 +39,27 @@ const leadWith = (contactId: string, fullName: string): Opportunity => ({
 
 describe('ContactCard — σύνδεσμος ονόματος', () => {
   it('κάθε πρόσωπο οδηγεί στη ΔΙΚΗ του επαφή', () => {
-    const { unmount } = render(<ContactCard lead={leadWith('cont_a', 'Άλφα')} />);
+    const { unmount } = render(<ContactCard lead={leadWith('cont_a', 'Άλφα')} person={{ fullName: 'Άλφα' }} />);
     expect(screen.getByRole('link', { name: 'Άλφα' })).toHaveAttribute('href', '/contacts?contactId=cont_a');
     unmount();
 
-    render(<ContactCard lead={leadWith('cont_b', 'Βήτα')} />);
+    render(<ContactCard lead={leadWith('cont_b', 'Βήτα')} person={{ fullName: 'Βήτα' }} />);
     expect(screen.getByRole('link', { name: 'Βήτα' })).toHaveAttribute('href', '/contacts?contactId=cont_b');
   });
 
   it('χωρίς συνδεδεμένη επαφή το όνομα μένει κείμενο, όχι νεκρός σύνδεσμος', () => {
-    render(<ContactCard lead={leadWith('', 'Γάμμα')} />);
+    render(<ContactCard lead={leadWith('', 'Γάμμα')} person={{ fullName: 'Γάμμα' }} onPreview={jest.fn()} />);
     expect(screen.getByText('Γάμμα')).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'contactCard.preview.open' })).not.toBeInTheDocument();
+  });
+
+  it('δείχνει τα στοιχεία του προσώπου, όχι τα αντίγραφα της ευκαιρίας', () => {
+    const lead = { ...leadWith('cont_a', 'Άλφα'), email: 'old@example.test', phone: '6900000004' };
+    render(<ContactCard lead={lead} person={{ fullName: 'Άλφα', email: 'real@example.test' }} onPreview={jest.fn()} />);
+    expect(screen.getByText('real@example.test')).toBeInTheDocument();
+    expect(screen.queryByText('old@example.test')).not.toBeInTheDocument();
+    expect(screen.queryByText('6900000004')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'contactCard.preview.open' })).toBeInTheDocument();
   });
 });

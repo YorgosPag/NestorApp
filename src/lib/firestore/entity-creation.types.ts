@@ -34,7 +34,8 @@ export type ServerEntityType =
   | 'dxfLevel'
   | 'dimStyle'
   | 'cadFile'
-  | 'dxfOverlayItem';
+  | 'dxfOverlayItem'
+  | 'sentEmailRecord';
 
 /**
  * Determines how companyId is resolved.
@@ -53,7 +54,8 @@ export type EntityIdGeneratorName =
   | 'generateLevelId'
   | 'generateDimStyleId'
   | 'generateFileId'
-  | 'generateOverlayId';
+  | 'generateOverlayId'
+  | 'generateMessageId';
 
 /** Entity types that support ADR-233 code generation */
 export type EntityCodeType = 'property' | 'parking' | 'storage';
@@ -224,6 +226,21 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     hierarchy: 'tenant-scoped',
     parentField: null,
     idGenerator: 'generateOverlayId',
+    codeType: null,
+    codeField: null,
+    tenantCheck: false,
+    auditTargetType: 'api',
+    entityAuditType: null,
+  },
+  /**
+   * ADR-016: email που στάλθηκε από τον άνθρωπο και γράφεται στο ιστορικό της επαφής.
+   * Το `explicitId` παράγεται από το id του παρόχου, ώστε το ίδιο email να δίνει ίδιο έγγραφο.
+   */
+  sentEmailRecord: {
+    collection: COLLECTIONS.MESSAGES,
+    hierarchy: 'tenant-scoped',
+    parentField: null,
+    idGenerator: 'generateMessageId',
     codeType: null,
     codeField: null,
     tenantCheck: false,

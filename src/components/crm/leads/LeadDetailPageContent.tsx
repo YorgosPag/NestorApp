@@ -24,7 +24,10 @@ import { ContactCard } from './lead-detail/ContactCard';
 import { QuickActions } from './lead-detail/QuickActions';
 import { TasksSummary } from './lead-detail/TasksSummary';
 import { UpcomingTasks } from './lead-detail/UpcomingTasks';
+import { LeadContactPreviewSheet } from './lead-detail/LeadContactPreviewSheet';
+import { resolveLeadPerson } from './lead-detail/lead-person';
 import { useLead } from './lead-detail/hooks/useLead';
+import { useLeadContact } from './lead-detail/hooks/useLeadContact';
 import { useLeadTasks } from './lead-detail/hooks/useLeadTasks';
 
 const logger = createModuleLogger('crm/lead-profile');
@@ -41,7 +44,10 @@ export function LeadDetailPageContent() {
 
   const { lead, loading: loadingLead, error: leadError, refetch: refetchLead } = useLead(id);
   const { tasks, loading: loadingTasks, refetch: refetchTasks } = useLeadTasks(id);
+  const contact = useLeadContact(lead?.contactId);
 
+  const [showContactPreview, setShowContactPreview] = useState(false);
+  const [historyVersion, setHistoryVersion] = useState(0);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -79,6 +85,8 @@ export function LeadDetailPageContent() {
     );
   }
 
+  const person = resolveLeadPerson(lead, contact);
+
   return (
     <>
       <main className={cn('min-h-screen', colors.bg.secondary)}>
@@ -106,7 +114,7 @@ export function LeadDetailPageContent() {
         <section className={cn('container mx-auto', spacing.padding.x.lg, spacing.padding.y.lg)}>
           <div className={cn('grid grid-cols-1 lg:grid-cols-3', spacing.gap.lg)}>
             <aside className={cn(getResponsiveClass('lg', 'col-span-1'), spacing.spaceBetween.lg)} aria-label={t('leadDetails.contactSectionAria')}>
-              <ContactCard lead={lead} />
+              <ContactCard lead={lead} person={person} onPreview={() => setShowContactPreview(true)} />
               {lead.notes && (
                 <article className={cn(colors.bg.primary, 'rounded-lg shadow', spacing.padding.lg)}>
                   <h4 className={cn('font-medium', spacing.margin.bottom.sm)}>{t('leadDetails.notesTitle')}</h4>
@@ -116,7 +124,7 @@ export function LeadDetailPageContent() {
                 </article>
               )}
               <QuickActions
-                lead={lead}
+                lead={person}
                 onEdit={() => setShowEditModal(true)}
                 onNewTask={() => setShowTaskModal(true)}
                 onSendEmail={() => setShowEmailModal(true)}
@@ -127,7 +135,7 @@ export function LeadDetailPageContent() {
             <section className={cn(getResponsiveClass('lg', 'col-span-2'), spacing.spaceBetween.lg)} aria-label={t('leadDetails.tasksSectionAria')}>
               <UpcomingTasks tasks={tasks} router={router} />
               <article className={cn(colors.bg.primary, 'rounded-lg shadow', spacing.padding.lg)}>
-                <CommunicationsHistory contactId={lead.contactId} />
+                <CommunicationsHistory key={historyVersion} contactId={lead.contactId} />
               </article>
             </section>
           </div>
@@ -135,11 +143,23 @@ export function LeadDetailPageContent() {
       </main>
 
       <SendEmailModal
-        lead={lead ? { id: lead.id || '', fullName: lead.fullName || '', email: lead.email || '' } : null}
+        lead={{ id: lead.id || '', contactId: lead.contactId, fullName: person.fullName || '', email: person.email || '' }}
         isOpen={showEmailModal}
         onClose={() => setShowEmailModal(false)}
-        onEmailSent={() => logger.info('Lead email sent', { leadId: lead?.id })}
+        onEmailSent={() => {
+          logger.info('Lead email sent', { leadId: lead.id });
+          setHistoryVersion((version) => version + 1);
+        }}
       />
+      {lead.contactId && (
+        <LeadContactPreviewSheet
+          contactId={lead.contactId}
+          currentLeadId={lead.id}
+          person={person}
+          open={showContactPreview}
+          onOpenChange={setShowContactPreview}
+        />
+      )}
       {lead && (
         <EditOpportunityModal
           opportunity={lead}
