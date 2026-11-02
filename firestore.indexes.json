@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "supplier_verifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "ownership_verifications",
       "queryScope": "COLLECTION",
       "fields": [

@@ -26,3 +26,25 @@ export type SupplierApprovalSnapshot = SupplierIdentityFacts;
 export type SupplierStanding =
   | { readonly kind: 'verified'; readonly basis: 'registry' | 'manual-review' }
   | { readonly kind: 'unverified' };
+
+export const SUPPLIER_REVIEW_STATUSES = ['pending-review', 'approved', 'rejected', 'revoked'] as const;
+export type SupplierReviewStatus = (typeof SUPPLIER_REVIEW_STATUSES)[number];
+
+/**
+ * Ένα έγγραφο ανά χώρο (`supplier_verifications/{companyId}`), άρα δομικά μία εκκρεμής αίτηση.
+ * `approval` υπάρχει μόνο σε `approved`: είναι τα `submitted` της στιγμής της απόφασης, όχι τα τρέχοντα στοιχεία.
+ */
+export interface SupplierReviewRecord {
+  readonly companyId: string;
+  readonly status: SupplierReviewStatus;
+  readonly submitted: SupplierIdentityFacts;
+  readonly taxBinding: StoredTaxBinding | null;
+  readonly evidenceFileId: string;
+  readonly approval: SupplierApprovalSnapshot | null;
+  /** Η θέση στην ουρά: κρατιέται όταν ανανεώνεται εκκρεμής αίτηση. */
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly decidedAt: string | null;
+  readonly decidedBy: string | null;
+  readonly reviewNote: string | null;
+}

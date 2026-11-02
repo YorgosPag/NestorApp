@@ -155,3 +155,7 @@ export const CATALOG_IMPORT_PROFILE_TRACKED_FIELDS = defs(['label', 'purpose', '
 export const CATALOG_IMPORT_BATCH_TRACKED_FIELDS = defs(['status', 'fileName', 'contentSha256', 'sourceKind', 'fileId', 'profileId', 'profileRevision', 'run', 'isDeleted'], ['target']);
 
 export const CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS = defs(['status', 'groupKey', 'appliedAt', 'appliedBy', 'isDeleted'], []);
+
+// ── Φάση 6β (ADR-923 §5.13 Ε1α) — έλεγχος προμηθευτή. Παρακολουθείται η πράξη· το αποτύπωμα ΑΦΜ δεν μπαίνει ποτέ στο ιστορικό.
+
+export const SUPPLIER_VERIFICATION_TRACKED_FIELDS = defs(['status', 'evidenceFileId', 'decidedBy', 'reviewNote'], []);

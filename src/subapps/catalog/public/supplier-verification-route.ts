@@ -64,3 +64,12 @@ export function routeSupplierVerification(
 ): SupplierVerificationRoute {
   return registry.state === 'declared' ? ROUTE_OF_GAP[registry.gap] : routeOfTaxBinding(binding);
 }
+
+/**
+ * Το ένα σημείο που λέει αν άνθρωπος μπορεί να εγκρίνει. Το ρωτούν η κρίση στην ανάγνωση και η απόφαση της ουράς:
+ * το `ask-registry` μετρά, γιατί η άγνοια του μητρώου δεν ακυρώνει έλεγχο εγγράφου. Κλεισμένη εταιρεία, διαφορά
+ * επωνυμίας και άκυρο ΑΦΜ δεν εγκρίνονται ποτέ.
+ */
+export function routeAllowsApproval(route: SupplierVerificationRoute): boolean {
+  return route.kind === 'ask-registry' || (route.kind === 'manual-review' && route.approvable);
+}

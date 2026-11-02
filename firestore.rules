@@ -7694,5 +7694,12 @@ service cloud.firestore {
       allow read, write: if false; // Server-side only via Admin SDK
     }
 
+    // ─── ADR-923 §5.13 Ε1α: ΕΛΕΓΧΟΣ ΠΡΟΜΗΘΕΥΤΗ ──────────────────────────────────────
+    // ✍️ WRITE: ΚΑΝΕΝΑΣ πελάτης. Όποιος γράφει εδώ εγκρίνει τον εαυτό του ως επιβεβαιωμένο προμηθευτή.
+    // 📖 READ: ΚΑΝΕΝΑΣ. Το έγγραφο κρατά αποτύπωμα ΑΦΜ και τη σημείωση του διαχειριστή.
+    match /supplier_verifications/{companyId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
   }
 }

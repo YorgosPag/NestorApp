@@ -2059,6 +2059,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/ownership-verifications.rules.test.ts',
     ...denyAllMatrix(),
   },
+  // ─── ΕΛΕΓΧΟΣ ΠΡΟΜΗΘΕΥΤΗ (ADR-923 §5.13 Ε1α) ────────────────────────────────
+  // Γραφή εδώ = αυτο-έγκριση ως επιβεβαιωμένος προμηθευτής. Ανάγνωση = αποτύπωμα ΑΦΜ.
+  {
+    collection: 'supplier_verifications',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/supplier-verifications.rules.test.ts',
+    ...denyAllMatrix(),
+  },
   {
     collection: 'ownership_kaek_claims',
     pattern: 'deny_all',

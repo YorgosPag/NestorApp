@@ -14,7 +14,7 @@
  */
 
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
-import { routeSupplierVerification } from '@/subapps/catalog/public/supplier-verification-route';
+import { routeAllowsApproval, routeSupplierVerification } from '@/subapps/catalog/public/supplier-verification-route';
 import type {
   StoredTaxBinding,
   SupplierApprovalSnapshot,
@@ -53,8 +53,7 @@ export interface SupplierStandingInputs {
 export function judgeSupplierStanding(inputs: SupplierStandingInputs): SupplierStanding {
   const route = routeSupplierVerification(inputs.registry, inputs.taxBinding);
   if (route.kind === 'verified') return { kind: 'verified', basis: 'registry' };
-  const approvalCounts = route.kind === 'ask-registry' || (route.kind === 'manual-review' && route.approvable);
-  if (approvalCounts && inputs.approval !== null && sameFacts(inputs.approval, inputs.facts)) {
+  if (routeAllowsApproval(route) && inputs.approval !== null && sameFacts(inputs.approval, inputs.facts)) {
     return { kind: 'verified', basis: 'manual-review' };
   }
   return { kind: 'unverified' };

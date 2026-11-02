@@ -276,6 +276,7 @@ export const AUDIT_ENTITIES = {
   catalog_import_profile: { collectionKey: 'CATALOG_IMPORT_PROFILES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_import_batch: { collectionKey: 'CATALOG_IMPORT_BATCHES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_import_proposal: { collectionKey: 'CATALOG_IMPORT_PROPOSALS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  supplier_verification: { collectionKey: 'SUPPLIER_VERIFICATIONS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_visibility_rule: { collectionKey: 'CATALOG_VISIBILITY_RULES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   // ADR-923 §5.12 Σ1 — έγγραφο ΔΥΟ πλευρών: ο γραφέας γράφει ίχνος στο βιβλίο ΚΑΙ των δύο χώρων.
   supply_relationship: { collectionKey: 'SUPPLY_RELATIONSHIPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },

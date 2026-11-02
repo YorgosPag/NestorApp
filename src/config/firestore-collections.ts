@@ -1118,6 +1118,8 @@ export const COLLECTIONS = {
    * διακομιστή· ο πελάτης ακούει εδώ πότε να ξαναρωτήσει. Γράφει ΜΟΝΟ η μηχανή του καταλόγου. IDs via cpvs_*.
    */
   CATALOG_PRICING_VIEW_SIGNALS: process.env.NEXT_PUBLIC_CATALOG_PRICING_VIEW_SIGNALS_COLLECTION || 'catalog_pricing_view_signals',
+  /** Χειροκίνητος έλεγχος προμηθευτή (ADR-923 §5.13 Ε1α). Ένα έγγραφο ανά χώρο, ID = companyId. Γράφει ΜΟΝΟ ο διακομιστής. */
+  SUPPLIER_VERIFICATIONS: process.env.NEXT_PUBLIC_SUPPLIER_VERIFICATIONS_COLLECTION || 'supplier_verifications',
   /** Αποθηκευμένες αντιστοιχίσεις στηλών ανά προμηθευτή/αρχείο (ADR-923 §5.5.1). IDs via ciprf_* (από κωδικό). */
   CATALOG_IMPORT_PROFILES: process.env.NEXT_PUBLIC_CATALOG_IMPORT_PROFILES_COLLECTION || 'catalog_import_profiles',
   /** Παρτίδες εισαγωγής. IDs via cibat_* (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση ⇒ ιδεμπότητες δομικά). */
