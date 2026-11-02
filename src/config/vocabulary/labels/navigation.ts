@@ -219,7 +219,7 @@ export const VOCAB_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
   storages: 'placeholders.searchStorages',
   parking: 'placeholders.searchParking',
   communications: 'placeholders.searchCommunications',
-  tasks: 'tasks.searchPlaceholder',
+  tasks: 'crm:tasks.searchPlaceholder',
 } as const;
 
 /**
