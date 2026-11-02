@@ -31,6 +31,7 @@ import type { ChatMessage } from './vercel-ai-engine';
 // ===== END TOGGLE ============================================================
 import { getChatHistoryService } from './chat-history-service';
 import { ALL_AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-catalog';
+import { toolsForViewer } from './tools/tool-access';
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import { sendChannelReply, extractChannelIds } from './shared/channel-reply-dispatcher';
 import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
@@ -211,7 +212,7 @@ export async function executeAgenticPath(
     const agenticResult = await executeAgenticLoop(
       enrichedMessage,
       history,
-      ALL_AGENTIC_TOOL_DEFINITIONS,
+      toolsForViewer(ALL_AGENTIC_TOOL_DEFINITIONS, agenticCtx),
       agenticCtx
     );
 

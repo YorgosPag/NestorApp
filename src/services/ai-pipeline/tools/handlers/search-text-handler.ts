@@ -18,13 +18,15 @@ import { isRetired } from '@/lib/firestore/trashed-status';
 import { greekToLatin, stripDiacritics, stemGreekWord } from '../../shared/greek-nlp';
 import {
   type AgenticContext,
+  type QueryFilter,
   type ToolResult,
   redactSensitiveFields,
   redactRoleBlockedFields,
   ALLOWED_READ_COLLECTIONS,
 } from '../executor-shared';
 import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
-import { recordReachesViewer } from '../file-cde-reach';
+import { recordVisibleToViewer } from '../file-cde-reach';
+import { buildFilteredQuery, planScopedRead } from './firestore-query-plan';
 
 // ============================================================================
 // CONSTANTS
@@ -82,11 +84,16 @@ export async function executeSearchText(
   let totalCount = 0;
 
   for (const collection of collections) {
-    const snap = await db
-      .collection(collection)
-      .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
-      .limit(MAX_FIRESTORE_SCAN)
-      .get();
+    // ADR-257 — η ΙΔΙΑ αλυσίδα με το `firestore_query`: συλλογή εκτός ρόλου δεν ψάχνεται καθόλου.
+    const scope = planScopedRead({ collection }, ctx);
+    if (!scope.ok) continue;
+
+    // Ο μισθωτής μένει ρητός: το `enforceCompanyScope` τον αφαιρεί από κτίρια/ορόφους/φάσεις.
+    const filters: QueryFilter[] = [
+      { field: FIELDS.COMPANY_ID, operator: '==', value: ctx.companyId },
+      ...scope.filters.filter(f => f.field !== FIELDS.COMPANY_ID),
+    ];
+    const snap = await buildFilteredQuery(db, collection, filters, { limit: MAX_FIRESTORE_SCAN }).get();
 
     const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
 
@@ -95,7 +102,7 @@ export async function executeSearchText(
 
     const scored = snap.docs
       .filter(doc => !(hasLifecycle && isRetired(doc.data())))
-      .filter(doc => recordReachesViewer(collection, doc.data(), ctx))
+      .filter(doc => recordVisibleToViewer(collection, doc.id, doc.data(), ctx))
       .map(doc => ({ doc, score: scoreDocument(doc.data(), wordVariants) }))
       .filter(entry => entry.score > 0)
       .sort((a, b) => b.score - a.score)

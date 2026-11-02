@@ -21,7 +21,7 @@ import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 import type { AgenticContext, ToolResult, ToolHandler } from '../executor-shared';
-import { fileReachesViewer } from '../file-cde-reach';
+import { fileVisibleToViewer } from '../file-cde-reach';
 import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 import {
   downloadAndValidateFile,
@@ -119,8 +119,8 @@ export class DocumentReaderHandler implements ToolHandler {
 
     const fileData = owned.data;
 
-    // ADR-901 Φ2 — εκτός εμβέλειας ≡ «δεν υπάρχει»: το περιεχόμενο ενός WIP δεν φτάνει στον πελάτη.
-    if (!fileReachesViewer(fileData, ctx)) return notFound();
+    // ADR-257 · ADR-901 Φ2 — ξένο ή εκτός εμβέλειας ≡ «δεν υπάρχει»: το περιεχόμενο δεν φτάνει στον πελάτη.
+    if (!fileVisibleToViewer(fileRecordId, fileData, ctx)) return notFound();
 
     const downloadUrl = String(fileData.downloadUrl ?? '');
     const filename = String(fileData.filename ?? fileData.originalFilename ?? 'unknown');

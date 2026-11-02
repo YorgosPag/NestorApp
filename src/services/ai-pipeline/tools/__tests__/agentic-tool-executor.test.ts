@@ -40,6 +40,7 @@ jest.mock('../executor-shared', () => ({
   logger: {
     info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(),
   },
+  getAccessConfig: jest.fn(() => ({ allowedTools: 'all' })),
   redactSensitiveFields: jest.fn((data: unknown) => data),
   redactRoleBlockedFields: jest.fn((data: unknown) => data),
   flattenNestedFields: jest.fn((data: unknown) => data),

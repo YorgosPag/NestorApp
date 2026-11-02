@@ -39,6 +39,8 @@ import {
 } from './executor-shared';
 export type { AgenticContext, ToolResult } from './executor-shared';
 
+import { isToolAllowed } from './tool-access';
+
 // Domain handlers
 import { FirestoreHandler } from './handlers/firestore-handler';
 import { ContactHandler } from './handlers/contact-handler';
@@ -114,10 +116,16 @@ export class AgenticToolExecutor {
 
     try {
       const handler = this.handlerMap.get(toolName);
+      const allowed = isToolAllowed(toolName, ctx);
+      if (!allowed) {
+        logger.warn('Tool denied for viewer', { tool: toolName, requestId: ctx.requestId, contactId: ctx.contactMeta?.contactId });
+      }
 
-      const result = handler
-        ? await handler.execute(toolName, args, ctx)
-        : { success: false, error: `Unknown tool: ${toolName}` } as ToolResult;
+      const result: ToolResult = !allowed
+        ? { success: false, error: 'Δεν έχετε πρόσβαση σε αυτή την ενέργεια.' }
+        : handler
+          ? await handler.execute(toolName, args, ctx)
+          : { success: false, error: `Unknown tool: ${toolName}` };
 
       const elapsed = Date.now() - startTime;
       logger.info('Tool execution completed', {
