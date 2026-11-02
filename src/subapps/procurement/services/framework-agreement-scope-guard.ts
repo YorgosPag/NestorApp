@@ -18,7 +18,11 @@ import 'server-only';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { findATOECategory } from '@/config/boq-categories';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
-import { FrameworkAgreementValidationError, type FrameworkAgreementLike } from '../types/framework-agreement';
+import {
+  FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE,
+  FrameworkAgreementValidationError,
+  type FrameworkAgreementLike,
+} from '../types/framework-agreement';
 import { findAgreementTies } from '../utils/framework-agreement-ambiguity';
 
 export type VendorAgreementsLoader = () => Promise<readonly FrameworkAgreementLike[]>;
@@ -65,7 +69,11 @@ async function assertNoTies(agreement: FrameworkAgreementLike, loadVendorAgreeme
   const ties = findAgreementTies(agreement, await loadVendorAgreements());
   if (ties.length > 0) {
     const numbers = ties.map((tie) => tie.agreementNumber).join(', ');
-    throw new FrameworkAgreementValidationError('scope', `Ambiguous with active agreement(s) ${numbers}: equally specific scope and overlapping validity`);
+    throw new FrameworkAgreementValidationError(
+      'scope',
+      `Ambiguous with active agreement(s) ${numbers}: equally specific scope and overlapping validity`,
+      FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE,
+    );
   }
 }
 

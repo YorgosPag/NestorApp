@@ -39,7 +39,10 @@ import {
   scopeFormIssues,
   type AgreementScopeForm,
 } from './agreement-scope-form';
+import { explainProcurementError } from '../explain-procurement-error';
 import {
+  FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE,
+  FRAMEWORK_AGREEMENT_NUMBER_TAKEN_CODE,
   FRAMEWORK_AGREEMENT_STATUSES,
   DISCOUNT_TYPES,
   type FrameworkAgreement,
@@ -188,7 +191,10 @@ export function FrameworkAgreementFormDialog({
     !tieBlocks;
 
   const { submitting, error, handleSubmit, clearError } = useFormSubmission({
-    submit: () => onSubmit(buildPayload(), initial?.id),
+    submit: () => explainProcurementError(() => onSubmit(buildPayload(), initial?.id), {
+      [FRAMEWORK_AGREEMENT_NUMBER_TAKEN_CODE]: t('hub.frameworkAgreements.form.numberTaken'),
+      [FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE]: t('hub.frameworkAgreements.form.ambiguous'),
+    }),
     canSubmit,
     onSuccess: () => onOpenChange(false),
     errorFallback: t('hub.frameworkAgreements.form.saveFailed'),

@@ -30,7 +30,7 @@ import { usePurchaseOrderForm, usePOPricing } from '@/hooks/procurement';
 import { POTotalsSummary } from './POTotalsSummary';
 import { PORepricingNotice } from './PORepricingNotice';
 import { PORepricingDialog } from './PORepricingDialog';
-import { ApiClientError } from '@/lib/api/api-client-types';
+import { explainProcurementError } from './explain-procurement-error';
 import { PO_PRICING_CONFLICT_CODE } from '@/config/versioning-config';
 import { useMaterials } from '@/hooks/procurement/useMaterials';
 import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
@@ -41,19 +41,6 @@ import { PODeliveryAddressField } from './PODeliveryAddressField';
 import type { FirestoreProject } from '@/hooks/useFirestoreProjects';
 import { formatAddressLine } from '@/types/project/address-helpers';
 import type { PurchaseOrderSaveResult } from '@/services/procurement/procurement-mutation-gateway';
-
-/**
- * ADR-923 «3γ» Α9: ο server αρνήθηκε (409) γιατί οι όροι άλλαξαν μετά την προεπισκόπηση. Η φόρμα
- * έχει ήδη τη νέα τιμολόγηση (ζωντανή συνδρομή συμβάσεων) — εξηγεί, ώστε ο άνθρωπος να ξαναδεί.
- */
-async function saveOrExplainConflict<T>(save: () => Promise<T>, conflictMessage: string): Promise<T> {
-  try {
-    return await save();
-  } catch (caught) {
-    if (caught instanceof ApiClientError && caught.errorCode === PO_PRICING_CONFLICT_CODE) throw new Error(conflictMessage);
-    throw caught;
-  }
-}
 
 interface PurchaseOrderFormProps {
   existingPO?: PurchaseOrder | null;
@@ -103,7 +90,12 @@ export function PurchaseOrderForm({
   // σε πεδίο (implicit submission της HTML) δημιουργεί πρόχειρο, δεν αποστέλλει τίποτα.
   const { submitting, error, handleSubmit } = useFormSubmission({
     canSubmit: isValid,
-    submit: () => saveOrExplainConflict(() => save(existingPO?.id, pricing.totals.total), t('form.pricingConflict')),
+    // ADR-923 «3γ» Α9: οι όροι άλλαξαν μετά την προεπισκόπηση ⇒ 409. Η φόρμα έχει ήδη τη νέα τιμολόγηση
+    // (ζωντανή συνδρομή συμβάσεων) και εξηγεί, ώστε ο άνθρωπος να ξαναδεί.
+    submit: () => explainProcurementError(
+      () => save(existingPO?.id, pricing.totals.total),
+      { [PO_PRICING_CONFLICT_CODE]: t('form.pricingConflict') },
+    ),
     onSuccess,
     errorFallback: t('form.saveFailed'),
     // A new PO navigates to its page: keep the lock until the route changes (no second PO on a 2nd click).

@@ -8,6 +8,8 @@
  */
 
 import { useAsyncData } from '@/hooks/useAsyncData';
+import { API_ROUTES } from '@/config/domain-constants';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
   SupplierMetrics,
   SupplierPriceTrend,
@@ -29,17 +31,13 @@ interface MetricsResponse {
   priceTrend: SupplierPriceTrend[] | null;
 }
 
-async function fetchMetrics(
+function fetchMetrics(
   supplierId: string,
   categoryCode: string | null
 ): Promise<MetricsResponse> {
-  const params = new URLSearchParams({ supplierId });
-  if (categoryCode) params.set('categoryCode', categoryCode);
-
-  const res = await fetch(`/api/procurement/supplier-metrics?${params}`);
-  const json = await res.json() as { success: boolean; data: MetricsResponse; error?: string };
-  if (!json.success) throw new Error(json.error ?? 'Failed to fetch supplier metrics');
-  return json.data;
+  return apiClient.get<MetricsResponse>(API_ROUTES.PROCUREMENT.SUPPLIER_METRICS, {
+    params: { supplierId, ...(categoryCode ? { categoryCode } : {}) },
+  });
 }
 
 /** Fetch metrics for a single supplier */
@@ -75,11 +73,8 @@ export function useSupplierMetrics(
 // SUPPLIER COMPARISON
 // ============================================================================
 
-async function fetchComparison(): Promise<SupplierComparison> {
-  const res = await fetch('/api/procurement/supplier-metrics/comparison');
-  const json = await res.json() as { success: boolean; data: SupplierComparison; error?: string };
-  if (!json.success) throw new Error(json.error ?? 'Failed to fetch supplier comparison');
-  return json.data;
+function fetchComparison(): Promise<SupplierComparison> {
+  return apiClient.get<SupplierComparison>(API_ROUTES.PROCUREMENT.SUPPLIER_COMPARISON);
 }
 
 /** Fetch comparison of all suppliers */

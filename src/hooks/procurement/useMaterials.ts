@@ -3,7 +3,7 @@
 /**
  * useMaterials — Material Catalog hook (ADR-330 Phase 4)
  *
- * Reads via firestoreQueryService.subscribe (ADR-355 SSoT, ADR-361 equality-guarded; ADR-300 stale cache).
+ * Reads via `useProcurementCatalogList` (ADR-355 SSoT, ADR-361 equality-guarded; ADR-300 stale cache).
  * Writes via API routes (`/api/procurement/materials`) — Firestore rules
  * block direct client writes; mutations go through Admin SDK with audit trail.
  *
@@ -12,22 +12,33 @@
  * @see ADR-300 — Stale-while-revalidate
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { where } from 'firebase/firestore';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { API_ROUTES } from '@/config/domain-constants';
+import { procurementCatalogApi } from './procurement-catalog-api';
+import { useProcurementCatalogList, type ProcurementCatalogListConfig } from './useProcurementCatalogList';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache } from '@/lib/stale-cache';
-import { useAuth } from '@/hooks/useAuth';
-import { useCompanyId } from '@/hooks/useCompanyId';
 import type {
   Material,
   CreateMaterialDTO,
   UpdateMaterialDTO,
 } from '@/subapps/procurement/types/material';
 
-const logger = createModuleLogger('useMaterials');
+function createdSeconds(material: Material): number {
+  return (material.createdAt as unknown as { seconds?: number })?.seconds ?? 0;
+}
 
-const materialsCache = createStaleCache<Material[]>('materials-list');
+const materialsList: ProcurementCatalogListConfig<Material> = {
+  collection: 'MATERIALS',
+  cache: createStaleCache<Material[]>('materials-list'),
+  compare: (a, b) => createdSeconds(b) - createdSeconds(a),
+  logger: createModuleLogger('useMaterials'),
+  label: 'Materials',
+};
+
+const materialsApi = procurementCatalogApi<Material, CreateMaterialDTO, UpdateMaterialDTO>(
+  API_ROUTES.PROCUREMENT.MATERIALS,
+  API_ROUTES.PROCUREMENT.MATERIAL_BY_ID,
+);
 
 interface UseMaterialsReturn {
   materials: Material[];
@@ -39,106 +50,13 @@ interface UseMaterialsReturn {
 }
 
 export function useMaterials(): UseMaterialsReturn {
-  const { user, loading: authLoading } = useAuth();
-  const companyResult = useCompanyId();
-  const companyId = companyResult?.companyId;
-
-  const [materials, setMaterials] = useState<Material[]>(materialsCache.get() ?? []);
-  const [loading, setLoading] = useState(!materialsCache.hasLoaded());
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setLoading(false);
-      setError('AUTH_REQUIRED');
-      return;
-    }
-    if (!companyId) {
-      setLoading(false);
-      setError('COMPANY_ID_UNAVAILABLE');
-      return;
-    }
-
-    setLoading(!materialsCache.hasLoaded());
-
-    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown>>(
-      'MATERIALS',
-      (result) => {
-        const items = result.documents
-          .map((d) => d as unknown as Material)
-          .filter((m) => m.isDeleted === false)
-          .sort((a, b) => {
-            const ta = (a.createdAt as unknown as { seconds?: number })?.seconds ?? 0;
-            const tb = (b.createdAt as unknown as { seconds?: number })?.seconds ?? 0;
-            return tb - ta;
-          });
-
-        materialsCache.set(items);
-        setMaterials(items);
-        setLoading(false);
-        setError(null);
-        logger.info('Materials loaded', { count: items.length });
-      },
-      (err) => {
-        logger.error('Materials subscription error', { error: err.message });
-        setError('SUBSCRIPTION_ERROR');
-        setLoading(false);
-      },
-      {
-        // companyId auto-injected by firestoreQueryService (tenant-config default)
-        constraints: [where('isDeleted', '==', false)],
-      },
-    );
-
-    return unsubscribe;
-  }, [authLoading, user, companyId]);
-
-  const createMaterial = useCallback(async (dto: CreateMaterialDTO): Promise<Material> => {
-    const res = await fetch('/api/procurement/materials', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dto),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || `HTTP ${res.status}`);
-    }
-    return json.data as Material;
-  }, []);
-
-  const updateMaterial = useCallback(
-    async (id: string, dto: UpdateMaterialDTO): Promise<Material> => {
-      const res = await fetch(`/api/procurement/materials/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dto),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || `HTTP ${res.status}`);
-      }
-      return json.data as Material;
-    },
-    [],
-  );
-
-  const deleteMaterial = useCallback(async (id: string): Promise<void> => {
-    const res = await fetch(`/api/procurement/materials/${id}`, {
-      method: 'DELETE',
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || `HTTP ${res.status}`);
-    }
-  }, []);
-
+  const { items, loading, error } = useProcurementCatalogList(materialsList);
   return {
-    materials,
+    materials: items,
     loading,
     error,
-    createMaterial,
-    updateMaterial,
-    deleteMaterial,
+    createMaterial: materialsApi.create,
+    updateMaterial: materialsApi.update,
+    deleteMaterial: materialsApi.remove,
   };
 }

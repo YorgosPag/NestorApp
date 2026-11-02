@@ -66,8 +66,12 @@ export interface MaterialFilters {
   includeDeleted?: boolean;
 }
 
+/** 409 code: another material already holds this code. The form translates it (ADR-923 §5.11 «3γ» Βήμα 2). */
+export const MATERIAL_CODE_TAKEN_CODE = 'MATERIAL_CODE_TAKEN' as const;
+
 export class MaterialCodeConflictError extends Error {
   readonly conflictingMaterialId: string;
+  readonly errorCode = MATERIAL_CODE_TAKEN_CODE;
   constructor(code: string, conflictingMaterialId: string) {
     super(`Material code "${code}" already exists`);
     this.name = 'MaterialCodeConflictError';

@@ -40,7 +40,7 @@ import 'server-only';
 
 import type { NextRequest, NextResponse } from 'next/server';
 import type { z } from 'zod';
-import { httpError } from '@/lib/api/define-route';
+import { ApiError } from '@/lib/api/api-error-types';
 import type { AuthContext } from '@/lib/auth';
 import { resolveProcurementErrorOutcome } from './procurement-error-outcome';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -98,6 +98,6 @@ export async function runProcurementMutation<TSchema extends z.ZodTypeAny>(
     });
     // Το log κρατά την **αλήθεια** ακόμη κι όταν το σύρμα παίρνει τη μεταμφίεση.
     logger.error(logMessage, { ...(logContext ?? {}), error: outcome.logMessage });
-    httpError(outcome.status, outcome.message);
+    throw new ApiError(outcome.status, outcome.message, outcome.errorCode);
   }
 }

@@ -164,8 +164,15 @@ export interface FrameworkAgreementFilters {
   includeDeleted?: boolean;
 }
 
+/** 409 code: another agreement already holds this number. The form translates it (ADR-923 §5.11 «3γ» Βήμα 2). */
+export const FRAMEWORK_AGREEMENT_NUMBER_TAKEN_CODE = 'FRAMEWORK_AGREEMENT_NUMBER_TAKEN' as const;
+
+/** 400 code: as active, this agreement would tie with another active one of the vendor. */
+export const FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE = 'FRAMEWORK_AGREEMENT_AMBIGUOUS' as const;
+
 export class FrameworkAgreementNumberConflictError extends Error {
   readonly conflictingAgreementId: string;
+  readonly errorCode = FRAMEWORK_AGREEMENT_NUMBER_TAKEN_CODE;
   constructor(agreementNumber: string, conflictingAgreementId: string) {
     super(`Framework agreement number "${agreementNumber}" already exists`);
     this.name = 'FrameworkAgreementNumberConflictError';
@@ -175,9 +182,12 @@ export class FrameworkAgreementNumberConflictError extends Error {
 
 export class FrameworkAgreementValidationError extends Error {
   readonly field: string;
-  constructor(field: string, message: string) {
+  /** Present only on the refusals the form can name in the user's language. */
+  readonly errorCode?: string;
+  constructor(field: string, message: string, errorCode?: string) {
     super(message);
     this.name = 'FrameworkAgreementValidationError';
     this.field = field;
+    this.errorCode = errorCode;
   }
 }

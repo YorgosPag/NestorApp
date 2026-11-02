@@ -617,6 +617,7 @@
         "create": "Create",
         "saving": "Saving...",
         "saveFailed": "Saving failed. Please try again.",
+        "codeTaken": "This material code is already in use. Choose another.",
         "cancel": "Cancel"
       }
     },
@@ -723,6 +724,8 @@
         "create": "Create",
         "saving": "Saving...",
         "saveFailed": "Saving failed. Please try again.",
+        "numberTaken": "This agreement number is already in use. Choose another.",
+        "ambiguous": "This agreement ties with another active agreement of the vendor. Change its scope or validity period.",
         "cancel": "Cancel",
         "scope": {
           "title": "Scope",

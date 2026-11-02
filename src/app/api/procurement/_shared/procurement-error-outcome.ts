@@ -59,6 +59,17 @@ export interface ProcurementErrorOutcome {
   readonly message: string;
   /** Η **αλήθεια**, για το log. Ποτέ μεταμφιεσμένη. */
   readonly logMessage: string;
+  /**
+   * Σταθερός κωδικός για τη φόρμα, όταν τον δηλώνει το ίδιο το σφάλμα. Μόνο στον τελικό κλάδο: τα
+   * σφάλματα ιδιοκτησίας/ύπαρξης δεν έχουν κωδικό, ώστε η μεταμφίεση να μη διακρίνεται από το γνήσιο 404.
+   */
+  readonly errorCode?: string;
+}
+
+/** Ο κωδικός που δηλώνει το σφάλμα (`errorCode`), αν έχει. */
+function declaredErrorCode(error: unknown): string | undefined {
+  const code = (error as { errorCode?: unknown } | null | undefined)?.errorCode;
+  return typeof code === 'string' ? code : undefined;
 }
 
 export interface ProcurementErrorOutcomeOptions extends ProcurementErrorStatusOptions {
@@ -126,9 +137,11 @@ export function resolveProcurementErrorOutcome(
   }
 
   const message = getErrorMessage(error, fallbackError);
+  const errorCode = declaredErrorCode(error);
   return {
     status: resolveProcurementErrorStatus(error, statusOptions),
     message,
     logMessage: message,
+    ...(errorCode && { errorCode }),
   };
 }

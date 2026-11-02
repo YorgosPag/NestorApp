@@ -191,6 +191,14 @@ describe('materials — GET/POST', () => {
     expect((await res.json()).error).toBe('dup code');
   });
 
+  it('POST conflict that declares a code ⇒ the code reaches the wire, so the form can translate it', async () => {
+    const conflict = Object.assign(named('MaterialCodeConflictError', 'dup code'), { errorCode: 'MATERIAL_CODE_TAKEN' });
+    materialSvc.createMaterial.mockRejectedValue(conflict);
+    const res = (await matPost(req(validMaterial))) as Envelope;
+    expect(res.status).toBe(409);
+    expect((await res.json()).errorCode).toBe('MATERIAL_CODE_TAKEN');
+  });
+
   it('POST validation-error → 400', async () => {
     materialSvc.createMaterial.mockRejectedValue(named('MaterialValidationError', 'bad'));
     const res = (await matPost(req(validMaterial))) as Envelope;
