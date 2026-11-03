@@ -21,7 +21,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O.
  */
 
-import { formatCurrency } from '@/lib/intl-formatting';
+import { formatCurrency, formatCurrencyIn } from '@/lib/intl-formatting';
 
 /** Ακέραιο ποσό σε **λεπτά** του ευρώ. Ο τύπος είναι ονομαστικός για τον αναγνώστη. */
 export type MinorAmount = number;
@@ -82,4 +82,9 @@ export function sumMinor(amounts: readonly MinorAmount[]): MinorAmount {
 /** Μορφοποίηση ποσού σε λεπτά με τη γλώσσα του χρήστη (π.χ. «454,30 €»). */
 export function formatMinor(minor: MinorAmount): string {
   return formatCurrency(majorFromMinor(minor), MONEY_CURRENCY);
+}
+
+/** Το ίδιο σε **ρητή** γλώσσα — έγγραφο με δική του γλώσσα, ή server (ADR-928 §5.17). */
+export function formatMinorIn(minor: MinorAmount, locale: string): string {
+  return formatCurrencyIn(locale, majorFromMinor(minor), MONEY_CURRENCY);
 }

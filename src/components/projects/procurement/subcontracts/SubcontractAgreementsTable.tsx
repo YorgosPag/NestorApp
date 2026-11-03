@@ -26,7 +26,10 @@ interface SubcontractAgreementsTableProps {
   readonly actionsOf: (agreement: SubcontractAgreement) => readonly RowAction[];
   readonly pendingIds: ReadonlySet<string>;
   readonly onRun: (agreement: SubcontractAgreement, action: RowAction) => void;
+  readonly onPreview: (agreement: SubcontractAgreement) => void;
 }
+
+type RowHandlers = Pick<SubcontractAgreementsTableProps, 'onRun' | 'onPreview'>;
 
 function ValueCell({ row }: { row: SubcontractListRow }) {
   const { t } = useTranslation('procurement');
@@ -80,7 +83,7 @@ function WorkCell({ agreement }: { agreement: SubcontractAgreement }) {
   );
 }
 
-function AgreementRow({ row, actions, pending, onRun }: { row: SubcontractListRow; actions: readonly RowAction[]; pending: boolean; onRun: SubcontractAgreementsTableProps['onRun'] }) {
+function AgreementRow({ row, actions, pending, onRun, onPreview }: RowHandlers & { row: SubcontractListRow; actions: readonly RowAction[]; pending: boolean }) {
   const { t } = useTranslation('procurement');
   const { agreement } = row;
   return (
@@ -98,13 +101,13 @@ function AgreementRow({ row, actions, pending, onRun }: { row: SubcontractListRo
       <TableCell><StatusCell row={row} /></TableCell>
       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(agreement.updatedAt)}</TableCell>
       <TableCell className="w-10 text-right">
-        <SubcontractRowActions agreement={agreement} actions={actions} pending={pending} onRun={onRun} />
+        <SubcontractRowActions agreement={agreement} actions={actions} pending={pending} onRun={onRun} onPreview={onPreview} />
       </TableCell>
     </TableRow>
   );
 }
 
-export function SubcontractAgreementsTable({ rows, actionsOf, pendingIds, onRun }: SubcontractAgreementsTableProps) {
+export function SubcontractAgreementsTable({ rows, actionsOf, pendingIds, onRun, onPreview }: SubcontractAgreementsTableProps) {
   const { t } = useTranslation('procurement');
   return (
     <Table aria-label={t('subcontracts.list.ariaLabel')}>
@@ -128,6 +131,7 @@ export function SubcontractAgreementsTable({ rows, actionsOf, pendingIds, onRun 
             actions={actionsOf(row.agreement)}
             pending={pendingIds.has(row.agreement.id)}
             onRun={onRun}
+            onPreview={onPreview}
           />
         ))}
       </TableBody>

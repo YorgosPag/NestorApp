@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,6 +35,9 @@ import routeSlice from '@/i18n/generated/routes/o__workspace__projects__id__proc
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
+
+// Μοντέλο εγγράφου, bundles εγγράφου και ολογράφως φτάνουν μόνο όταν ζητηθεί προεπισκόπηση (ADR-744 §34 · ADR-928 §5.17).
+const AgreementPreviewDialog = dynamic(() => import('@/components/procurement/subcontracts/document/AgreementPreviewDialog'), { ssr: false });
 
 interface Props {
   readonly projectId: string;
@@ -62,6 +66,9 @@ function SubcontractsBody({ projectId, agreements }: Props & { agreements: reado
   const totals = useMemo(() => statusTotals(rows), [rows]);
   const actionsOf = useRowActions(projectId);
   const transition = useAgreementTransition();
+  // Το id, όχι το αντικείμενο: η προεπισκόπηση ακολουθεί τη ζωντανή εκδοχή του εγγράφου.
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewing = previewId === null ? null : agreements.find((agreement) => agreement.id === previewId) ?? null;
 
   return (
     <>
@@ -69,8 +76,9 @@ function SubcontractsBody({ projectId, agreements }: Props & { agreements: reado
       <SearchInput value={search} onChange={setSearch} placeholder={t('subcontracts.list.search')} debounceMs={150} showClearButton />
       {visible.length === 0
         ? <ProcurementTableNotice>{t('subcontracts.list.emptyFiltered')}</ProcurementTableNotice>
-        : <SubcontractAgreementsTable rows={visible} actionsOf={actionsOf} pendingIds={transition.pendingIds} onRun={transition.run} />}
+        : <SubcontractAgreementsTable rows={visible} actionsOf={actionsOf} pendingIds={transition.pendingIds} onRun={transition.run} onPreview={(agreement) => setPreviewId(agreement.id)} />}
       <ConfirmDialog {...transition.dialogProps} />
+      {previewing && <AgreementPreviewDialog agreement={previewing} onClose={() => setPreviewId(null)} />}
     </>
   );
 }

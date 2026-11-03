@@ -1,0 +1,212 @@
+{
+  "document": {
+    "role": {
+      "offer": "Subcontract offer",
+      "agreement": "Private subcontract agreement"
+    },
+    "number": "Document number {number}",
+    "validUntil": "Valid until {day}",
+    "prevailing": "This text is a translation. Only the Greek text is legally binding.",
+    "untranslatedClause": "This term has no approved translation; the Greek text is shown."
+  },
+  "sections": {
+    "parties": "Parties",
+    "project": "Project",
+    "lines": "Scope and prices",
+    "terms": "Commercial terms",
+    "paymentPlan": "Payment plan",
+    "clauses": "Terms"
+  },
+  "parties": {
+    "issuer": "Employer",
+    "subcontractor": "Subcontractor",
+    "projectOwner": "Project owner",
+    "projectOwnersCollective": "The owners of the plot",
+    "signatory": "Signing for the employer: {name}",
+    "vat": "VAT no. {vat}",
+    "taxOffice": "Tax office {office}",
+    "fatherName": "son/daughter of {name}"
+  },
+  "project": {
+    "name": "Project",
+    "address": "Address",
+    "license": "Building permit",
+    "issuingAuthority": "Issuing authority",
+    "block": "Urban block",
+    "plot": "Plot number",
+    "multi": "For the projects the employer assigns, with a work order per project.",
+    "assignment": "Work order"
+  },
+  "lines": {
+    "columns": {
+      "number": "No.",
+      "description": "Description",
+      "unit": "Unit",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "amount": "Amount"
+    },
+    "kind": {
+      "labor": "Labour",
+      "supply": "Supply",
+      "supply_and_install": "Supply and installation"
+    },
+    "pricing": {
+      "unit_rate": "Unit rate",
+      "lump_sum": "Lump sum",
+      "day_rate": "Day rate"
+    },
+    "byMeasurement": "as measured",
+    "inWords": "In words: {words}"
+  },
+  "totals": {
+    "value": "Estimated value",
+    "lowerBound": "at least {amount}",
+    "unpriced": "{count, plural, one {# line without an estimated quantity} other {# lines without an estimated quantity}}",
+    "vatExcluded": "Prices exclude VAT at {rate}.",
+    "vatIncluded": "Prices include VAT at {rate}."
+  },
+  "terms": {
+    "withholding": "Tax withholding of {rate} on each payment.",
+    "noWithholding": "No tax withholding.",
+    "penalty": "Penalty of {perDay} for each day of delay, up to {cap} of the value.",
+    "crew": "{count, plural, one {Minimum crew of # person.} other {Minimum crew of # people.}}",
+    "crewMember": "{role}: ratio {parts}",
+    "crewWage": "{role}: ratio {parts}, daily wage {wage}",
+    "costSharing": "{description}: {shares}.",
+    "share": "{party} {share}",
+    "requiredDocuments": "Required documents: {documents}.",
+    "requiredDocument": "{document} ({when})",
+    "documentKind": {
+      "tax_clearance": "tax clearance certificate",
+      "insurance_clearance": "social insurance clearance certificate",
+      "liability_insurance": "liability insurance",
+      "personnel_list": "personnel list",
+      "efka_registration": "e-EFKA registration",
+      "safety_plan": "health and safety plan"
+    },
+    "documentWhen": {
+      "days_before_start": "{days, plural, one {# day before the start} other {# days before the start}}",
+      "on_start": "at the start",
+      "before_each_payment": "before each payment"
+    },
+    "cashLimit": "Cash limit per payment: {amount}."
+  },
+  "plan": {
+    "basis": {
+      "measured_progress": "Certified measured quantities are paid at the unit price.",
+      "stage_completion": "The share of each completed stage is paid.",
+      "milestone": "The amounts of the milestones achieved are paid.",
+      "time_and_materials": "Days worked are paid at the agreed daily wage.",
+      "labor_advance_capped": "Days worked are advanced at the agreed daily wage, capped at the work produced, and settled at the end.",
+      "lump_sum_on_completion": "The whole amount is paid on completion of the works.",
+      "advance_payment": "An advance is paid and offset against the payment applications."
+    },
+    "schedule": {
+      "on_completion": "Payment is made on completion of the works",
+      "on_milestones": "Payment is made as each milestone is achieved",
+      "on_request": "Payment is made when a payment application is submitted",
+      "every": {
+        "day": "{count, plural, one {Payment is made every day} other {Payment is made every # days}}",
+        "week": "{count, plural, one {Payment is made every week} other {Payment is made every # weeks}}",
+        "month": "{count, plural, one {Payment is made every month} other {Payment is made every # months}}"
+      },
+      "anchor": {
+        "weekday": "{weekday}",
+        "month_days": "on day {days} of the month",
+        "start_date": "counting from the start date"
+      },
+      "holidayShift": {
+        "previous_business_day": "on the previous business day if that day is not a business day",
+        "next_business_day": "on the next business day if that day is not a business day"
+      }
+    },
+    "final": {
+      "milestone": "Final payment is made at the milestone \"{milestone}\"",
+      "final_acceptance": "Final payment is made on final acceptance",
+      "days_after_completion": "{days, plural, one {Final payment is made # day after completion of the works} other {Final payment is made # days after completion of the works}}"
+    },
+    "settlement": {
+      "regular": "Payment method: {shares}.",
+      "final": "Final payment method: {shares}.",
+      "whole": "{instrument}",
+      "part": "{share} {instrument}",
+      "instrument": {
+        "bank_transfer": "by bank transfer",
+        "cash": "in cash",
+        "set_off": "by set-off"
+      },
+      "chequeMonths": "{months, plural, one {by cheque at # month} other {by cheque at # months}}",
+      "chequeDays": "{days, plural, one {by cheque at # day} other {by cheque at # days}}",
+      "chequeSight": "by sight cheque"
+    },
+    "capAtEarnedValue": "No payment exceeds the work produced.",
+    "advance": {
+      "per_payment": "Advance of {amount}, offset by {rate} on each payment application.",
+      "on_final": "Advance of {amount}, offset at the final settlement."
+    },
+    "milestone": "{amount} at the milestone \"{milestone}\".",
+    "retention": "Performance retention of {rate}, released {releases}.",
+    "release": {
+      "provisional_acceptance": "{share} on provisional acceptance",
+      "final_acceptance": "{share} on final acceptance",
+      "months_after_provisional": "{share} {months, plural, one {# month after provisional acceptance} other {# months after provisional acceptance}}",
+      "months_after_final": "{share} {months, plural, one {# month after final acceptance} other {# months after final acceptance}}"
+    }
+  },
+  "parameter": {
+    "missing": "[missing value]",
+    "days": "{count, plural, one {# day} other {# days}}",
+    "party": {
+      "employer": "the employer",
+      "subcontractor": "the subcontractor",
+      "project_owner": "the project owner",
+      "shared": "shared equally"
+    },
+    "weekday": {
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+      "7": "Sunday"
+    },
+    "onWeekday": {
+      "1": "on Monday",
+      "2": "on Tuesday",
+      "3": "on Wednesday",
+      "4": "on Thursday",
+      "5": "on Friday",
+      "6": "on Saturday",
+      "7": "on Sunday"
+    }
+  },
+  "milestones": {
+    "structure": {
+      "frame_complete": "completion of the load-bearing structure"
+    }
+  },
+  "calendar": {
+    "title": "Payment calendar (estimate)",
+    "columns": {
+      "date": "Date",
+      "kind": "Payment",
+      "gross": "Produced",
+      "retention": "Retention",
+      "withholding": "Withholding",
+      "net": "Payable",
+      "instruments": "Method"
+    },
+    "kind": {
+      "advance": "Advance",
+      "periodic": "Payment application {number}",
+      "final": "Final payment",
+      "retentionRelease": "Retention release"
+    },
+    "onEvent": "on the event",
+    "cashOverLimit": "Cash ({amount}) exceeds the per-payment limit ({limit}).",
+    "estimateNote": "Estimate with the estimated value spread evenly between start and completion.",
+    "noValue": "There is no estimated value to project amounts."
+  }
+}

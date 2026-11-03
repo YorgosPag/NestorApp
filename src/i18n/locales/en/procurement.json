@@ -901,8 +901,19 @@
       "statusFigure": "{count} · {amount}",
       "filterLabel": "Status filter"
     },
+    "preview": {
+      "title": "Document preview {number}",
+      "description": "As it will be printed on issue, from the same data.",
+      "loading": "Loading the term texts…",
+      "unavailable": "Terms whose pinned version is no longer in force are not rendered: {clauses}.",
+      "translationMissing": "The second language will not be printed: some terms have no approved translation.",
+      "calendar": "Payment calendar",
+      "start": "Start",
+      "end": "Completion"
+    },
     "actions": {
       "menu": "Actions for {number}",
+      "preview": "Document preview",
       "checking": "Checking the clause library…",
       "transition": {
         "issue": "Issue",

@@ -112,6 +112,7 @@ export const SUPPORTED_NAMESPACES = [
   'report-builder-domains', // 🏢 Report Builder domain/field labels (ADR-268)
   'cash-flow',              // 🏢 Cash Flow Forecast (ADR-268 Phase 8)
   'procurement',            // 🏢 Procurement / Purchase Orders
+  'subcontract-document',   // 🏢 Subcontract document texts, in the DOCUMENT's language (ADR-928 §5.17)
   'saved-reports',          // 🏢 Saved Reports management
   'building-storage',       // 🏢 Building storage/parking/spaces (split from building — ADR-280)
   'building-address',       // 🏢 Building address/associations/photos (split from building — ADR-280)

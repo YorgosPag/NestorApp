@@ -4,10 +4,11 @@
  * Το μενού ενεργειών μιας γραμμής (ADR-928 §5.5 · Φ3α-2): οι μεταβάσεις **από** την τρέχουσα κατάσταση. Η ανενεργή
  * λέει **γιατί** κάτω από την ετικέτα της — με τη λέξη που θα έλεγε ο γραφέας (ίδιοι πίνακες μηνυμάτων). Ο Procore
  * απλώς κρύβει· εδώ ο άνθρωπος μαθαίνει τι λείπει πριν το κλικ (π.χ. «απόκλιση περιμένει έγκριση»).
- * Χωρίς δικαίωμα στο έγγραφο ⇒ καθόλου μενού (κρύβει, δεν προστατεύει — ο γραφέας ξανακρίνει).
+ * Χωρίς δικαίωμα στο έγγραφο ⇒ καμία μετάβαση (κρύβει, δεν προστατεύει — ο γραφέας ξανακρίνει)· η «Προεπισκόπηση
+ * εγγράφου» μένει πάντα, γιατί είναι ανάγνωση (ADR-928 §5.17).
  */
 
-import { Loader2, MoreHorizontal } from 'lucide-react';
+import { FileText, Loader2, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -31,6 +32,8 @@ interface SubcontractRowActionsProps {
   readonly actions: readonly RowAction[];
   readonly pending: boolean;
   readonly onRun: (agreement: SubcontractAgreement, action: RowAction) => void;
+  /** Η προεπισκόπηση είναι **ανάγνωση**: τη βλέπει όποιος βλέπει τη λίστα, χωρίς δικαίωμα διαχείρισης. */
+  readonly onPreview: (agreement: SubcontractAgreement) => void;
 }
 
 function useBlockReason(open: boolean): (block: RowActionBlock) => string {
@@ -57,10 +60,9 @@ function ActionItem({ action, reason, onSelect }: { action: RowAction; reason: s
   );
 }
 
-export function SubcontractRowActions({ agreement, actions, pending, onRun }: SubcontractRowActionsProps) {
+export function SubcontractRowActions({ agreement, actions, pending, onRun, onPreview }: SubcontractRowActionsProps) {
   const { t } = useTranslation('procurement');
   const reasonOf = useBlockReason(actions.some((action) => action.block !== null));
-  if (actions.length === 0) return null;
   const forward = actions.filter((action) => !action.destructive);
   const closing = actions.filter((action) => action.destructive);
   const item = (action: RowAction) => (
@@ -81,6 +83,11 @@ export function SubcontractRowActions({ agreement, actions, pending, onRun }: Su
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>{agreement.documentNumber}</DropdownMenuLabel>
+        <DropdownMenuItem onSelect={() => onPreview(agreement)}>
+          <FileText className="mr-2 h-4 w-4" aria-hidden />
+          {t('subcontracts.actions.preview')}
+        </DropdownMenuItem>
+        {actions.length > 0 && <DropdownMenuSeparator />}
         {forward.map(item)}
         {forward.length > 0 && closing.length > 0 && <DropdownMenuSeparator />}
         {closing.map(item)}

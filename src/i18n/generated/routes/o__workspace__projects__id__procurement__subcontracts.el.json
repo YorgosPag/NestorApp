@@ -28,6 +28,7 @@
           "withdraw": "Το {number} αποσύρθηκε"
         },
         "menu": "Ενέργειες για {number}",
+        "preview": "Προεπισκόπηση εγγράφου",
         "transition": {
           "accept": "Αποδοχή",
           "complete": "Ολοκλήρωση",

@@ -1,0 +1,212 @@
+{
+  "document": {
+    "role": {
+      "offer": "Προσφορά υπεργολαβίας",
+      "agreement": "Ιδιωτικό συμφωνητικό υπεργολαβίας"
+    },
+    "number": "Αριθμός εγγράφου {number}",
+    "validUntil": "Ισχύει έως {day}",
+    "prevailing": "Το κείμενο αυτό είναι μετάφραση. Νομικά δεσμευτικό είναι μόνο το ελληνικό κείμενο.",
+    "untranslatedClause": "Δεν υπάρχει εγκεκριμένη μετάφραση αυτού του όρου· εμφανίζεται το ελληνικό κείμενο."
+  },
+  "sections": {
+    "parties": "Συμβαλλόμενοι",
+    "project": "Έργο",
+    "lines": "Αντικείμενο και τιμές",
+    "terms": "Εμπορικοί όροι",
+    "paymentPlan": "Σχέδιο πληρωμών",
+    "clauses": "Όροι"
+  },
+  "parties": {
+    "issuer": "Εργοδότης",
+    "subcontractor": "Υπεργολάβος",
+    "projectOwner": "Κύριος του έργου",
+    "projectOwnersCollective": "Οι ιδιοκτήτες του οικοπέδου",
+    "signatory": "Υπογράφει για τον εργοδότη: {name}",
+    "vat": "ΑΦΜ {vat}",
+    "taxOffice": "ΔΟΥ {office}",
+    "fatherName": "του {name}"
+  },
+  "project": {
+    "name": "Έργο",
+    "address": "Διεύθυνση",
+    "license": "Άδεια δόμησης",
+    "issuingAuthority": "Εκδούσα αρχή",
+    "block": "Οικοδομικό τετράγωνο",
+    "plot": "Αριθμός οικοπέδου",
+    "multi": "Για όσα έργα αναθέσει ο εργοδότης, με εντολή εργασίας ανά έργο.",
+    "assignment": "Εντολή εργασίας"
+  },
+  "lines": {
+    "columns": {
+      "number": "Α/Α",
+      "description": "Περιγραφή",
+      "unit": "Μονάδα",
+      "quantity": "Ποσότητα",
+      "unitPrice": "Τιμή μονάδας",
+      "amount": "Ποσό"
+    },
+    "kind": {
+      "labor": "Εργασία",
+      "supply": "Υλικό",
+      "supply_and_install": "Υλικό και εργασία"
+    },
+    "pricing": {
+      "unit_rate": "Τιμή μονάδας",
+      "lump_sum": "Κατ' αποκοπή",
+      "day_rate": "Ημερομίσθιο"
+    },
+    "byMeasurement": "κατά επιμέτρηση",
+    "inWords": "Ολογράφως: {words}"
+  },
+  "totals": {
+    "value": "Εκτιμώμενη αξία",
+    "lowerBound": "τουλάχιστον {amount}",
+    "unpriced": "{count, plural, one {# γραμμή χωρίς εκτίμηση ποσότητας} other {# γραμμές χωρίς εκτίμηση ποσότητας}}",
+    "vatExcluded": "Οι τιμές δεν περιλαμβάνουν ΦΠΑ {rate}.",
+    "vatIncluded": "Οι τιμές περιλαμβάνουν ΦΠΑ {rate}."
+  },
+  "terms": {
+    "withholding": "Παρακράτηση φόρου {rate} σε κάθε πληρωμή.",
+    "noWithholding": "Χωρίς παρακράτηση φόρου.",
+    "penalty": "Ποινική ρήτρα {perDay} για κάθε ημέρα καθυστέρησης, έως {cap} της αξίας.",
+    "crew": "{count, plural, one {Ελάχιστο συνεργείο # άτομο.} other {Ελάχιστο συνεργείο # άτομα.}}",
+    "crewMember": "{role}: αναλογία {parts}",
+    "crewWage": "{role}: αναλογία {parts}, ημερομίσθιο {wage}",
+    "costSharing": "{description}: {shares}.",
+    "share": "{party} {share}",
+    "requiredDocuments": "Απαιτούμενα έγγραφα: {documents}.",
+    "requiredDocument": "{document} ({when})",
+    "documentKind": {
+      "tax_clearance": "φορολογική ενημερότητα",
+      "insurance_clearance": "ασφαλιστική ενημερότητα",
+      "liability_insurance": "ασφάλιση αστικής ευθύνης",
+      "personnel_list": "κατάσταση προσωπικού",
+      "efka_registration": "εγγραφή στον e-ΕΦΚΑ",
+      "safety_plan": "σχέδιο ασφάλειας και υγείας"
+    },
+    "documentWhen": {
+      "days_before_start": "{days, plural, one {# ημέρα πριν την έναρξη} other {# ημέρες πριν την έναρξη}}",
+      "on_start": "κατά την έναρξη",
+      "before_each_payment": "πριν από κάθε πληρωμή"
+    },
+    "cashLimit": "Όριο μετρητών ανά πληρωμή: {amount}."
+  },
+  "plan": {
+    "basis": {
+      "measured_progress": "Πληρώνονται οι πιστοποιημένες επιμετρημένες ποσότητες επί την τιμή μονάδας.",
+      "stage_completion": "Πληρώνεται το ποσοστό κάθε σταδίου που ολοκληρώθηκε.",
+      "milestone": "Πληρώνονται τα ποσά των οροσήμων που επιτεύχθηκαν.",
+      "time_and_materials": "Πληρώνονται απολογιστικά οι ημέρες εργασίας επί το συμφωνημένο ημερομίσθιο.",
+      "labor_advance_capped": "Προκαταβάλλονται μεροκάματα επί το συμφωνημένο ημερομίσθιο, με ανώτατο όριο το παραχθέν έργο, και εκκαθαρίζονται στο τέλος.",
+      "lump_sum_on_completion": "Ολόκληρο το ποσό πληρώνεται με το πέρας των εργασιών.",
+      "advance_payment": "Πληρώνεται προκαταβολή που συμψηφίζεται με τους λογαριασμούς."
+    },
+    "schedule": {
+      "on_completion": "Η πληρωμή γίνεται με το πέρας των εργασιών",
+      "on_milestones": "Η πληρωμή γίνεται με την επίτευξη κάθε ορόσημου",
+      "on_request": "Η πληρωμή γίνεται με την υποβολή λογαριασμού",
+      "every": {
+        "day": "{count, plural, one {Η πληρωμή γίνεται κάθε ημέρα} other {Η πληρωμή γίνεται κάθε # ημέρες}}",
+        "week": "{count, plural, one {Η πληρωμή γίνεται κάθε εβδομάδα} other {Η πληρωμή γίνεται κάθε # εβδομάδες}}",
+        "month": "{count, plural, one {Η πληρωμή γίνεται κάθε μήνα} other {Η πληρωμή γίνεται κάθε # μήνες}}"
+      },
+      "anchor": {
+        "weekday": "{weekday}",
+        "month_days": "στις {days} του μήνα",
+        "start_date": "με αφετηρία την ημερομηνία έναρξης"
+      },
+      "holidayShift": {
+        "previous_business_day": "αν η ημέρα δεν είναι εργάσιμη, την προηγούμενη εργάσιμη",
+        "next_business_day": "αν η ημέρα δεν είναι εργάσιμη, την επόμενη εργάσιμη"
+      }
+    },
+    "final": {
+      "milestone": "Η εξόφληση γίνεται με το ορόσημο «{milestone}»",
+      "final_acceptance": "Η εξόφληση γίνεται με την οριστική παραλαβή",
+      "days_after_completion": "{days, plural, one {Η εξόφληση γίνεται # ημέρα μετά το πέρας των εργασιών} other {Η εξόφληση γίνεται # ημέρες μετά το πέρας των εργασιών}}"
+    },
+    "settlement": {
+      "regular": "Τρόπος πληρωμής: {shares}.",
+      "final": "Τρόπος εξόφλησης: {shares}.",
+      "whole": "{instrument}",
+      "part": "{share} {instrument}",
+      "instrument": {
+        "bank_transfer": "με τραπεζική μεταφορά",
+        "cash": "σε μετρητά",
+        "set_off": "με συμψηφισμό"
+      },
+      "chequeMonths": "{months, plural, one {με επιταγή # μήνα} other {με επιταγή # μηνών}}",
+      "chequeDays": "{days, plural, one {με επιταγή # ημέρας} other {με επιταγή # ημερών}}",
+      "chequeSight": "με επιταγή όψεως"
+    },
+    "capAtEarnedValue": "Καμία πληρωμή δεν υπερβαίνει το έργο που έχει παραχθεί.",
+    "advance": {
+      "per_payment": "Προκαταβολή {amount}, που συμψηφίζεται κατά {rate} σε κάθε λογαριασμό.",
+      "on_final": "Προκαταβολή {amount}, που συμψηφίζεται στην εκκαθάριση."
+    },
+    "milestone": "{amount} με το ορόσημο «{milestone}».",
+    "retention": "Κράτηση καλής εκτέλεσης {rate}, που αποδίδεται {releases}.",
+    "release": {
+      "provisional_acceptance": "{share} στην προσωρινή παραλαβή",
+      "final_acceptance": "{share} στην οριστική παραλαβή",
+      "months_after_provisional": "{share} {months, plural, one {# μήνα μετά την προσωρινή παραλαβή} other {# μήνες μετά την προσωρινή παραλαβή}}",
+      "months_after_final": "{share} {months, plural, one {# μήνα μετά την οριστική παραλαβή} other {# μήνες μετά την οριστική παραλαβή}}"
+    }
+  },
+  "parameter": {
+    "missing": "[τιμή που λείπει]",
+    "days": "{count, plural, one {# ημέρα} other {# ημέρες}}",
+    "party": {
+      "employer": "ο εργοδότης",
+      "subcontractor": "ο υπεργολάβος",
+      "project_owner": "ο κύριος του έργου",
+      "shared": "εξ ημισείας"
+    },
+    "weekday": {
+      "1": "Δευτέρα",
+      "2": "Τρίτη",
+      "3": "Τετάρτη",
+      "4": "Πέμπτη",
+      "5": "Παρασκευή",
+      "6": "Σάββατο",
+      "7": "Κυριακή"
+    },
+    "onWeekday": {
+      "1": "τη Δευτέρα",
+      "2": "την Τρίτη",
+      "3": "την Τετάρτη",
+      "4": "την Πέμπτη",
+      "5": "την Παρασκευή",
+      "6": "το Σάββατο",
+      "7": "την Κυριακή"
+    }
+  },
+  "milestones": {
+    "structure": {
+      "frame_complete": "ολοκλήρωση του φέροντος οργανισμού"
+    }
+  },
+  "calendar": {
+    "title": "Ημερολόγιο πληρωμών (εκτίμηση)",
+    "columns": {
+      "date": "Ημερομηνία",
+      "kind": "Πληρωμή",
+      "gross": "Παραχθέν",
+      "retention": "Κράτηση",
+      "withholding": "Παρακράτηση",
+      "net": "Πληρωτέο",
+      "instruments": "Μέσο"
+    },
+    "kind": {
+      "advance": "Προκαταβολή",
+      "periodic": "Λογαριασμός {number}",
+      "final": "Εξόφληση",
+      "retentionRelease": "Απόδοση κράτησης"
+    },
+    "onEvent": "με το συμβάν",
+    "cashOverLimit": "Τα μετρητά ({amount}) ξεπερνούν το όριο ανά πληρωμή ({limit}).",
+    "estimateNote": "Εκτίμηση με γραμμική κατανομή της εκτιμώμενης αξίας ανάμεσα στην έναρξη και το πέρας.",
+    "noValue": "Δεν υπάρχει εκτιμώμενη αξία για προβολή ποσών."
+  }
+}

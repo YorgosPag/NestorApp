@@ -282,9 +282,18 @@ export const formatCurrency = (
   amount: number,
   currency: string = 'EUR',
   options?: Intl.NumberFormatOptions
-): string => {
-  const locale = getCurrentLocale();
+): string => formatCurrencyIn(getCurrentLocale(), amount, currency, options);
 
+/**
+ * Το ίδιο, σε **ρητή** γλώσσα — για έγγραφο που έχει τη δική του γλώσσα, όχι της οθόνης (ADR-928 §5.17:
+ * συμφωνητικό στα αγγλικά ενώ η οθόνη είναι ελληνική · server χωρίς UI locale).
+ */
+export const formatCurrencyIn = (
+  locale: string,
+  amount: number,
+  currency: string = 'EUR',
+  options?: Intl.NumberFormatOptions
+): string => {
   // Ακέραιο ⇒ «124 €» · δεκαδικό ⇒ ΠΑΝΤΑ δύο ψηφία «111,60 €». Με `minimumFractionDigits: 0` έβγαινε
   // «111,6 €» — γραφή ποσού που δεν χρησιμοποιεί κανένα λογιστικό σύστημα (ADR-327 changelog 2026-10-28).
   const defaultOptions: Intl.NumberFormatOptions = {
@@ -324,9 +333,11 @@ export const formatNumber = (number: number, options?: Intl.NumberFormatOptions)
 /**
  * Format percentage according to current locale
  */
-export const formatPercentage = (value: number, options?: Intl.NumberFormatOptions): string => {
-  const locale = getCurrentLocale();
+export const formatPercentage = (value: number, options?: Intl.NumberFormatOptions): string =>
+  formatPercentageIn(getCurrentLocale(), value, options);
 
+/** Το ίδιο, σε ρητή γλώσσα (βλ. {@link formatCurrencyIn}). `value` σε ποσοστό: 50 = 50%. */
+export const formatPercentageIn = (locale: string, value: number, options?: Intl.NumberFormatOptions): string => {
   const defaultOptions: Intl.NumberFormatOptions = {
     style: 'percent',
     minimumFractionDigits: 0,

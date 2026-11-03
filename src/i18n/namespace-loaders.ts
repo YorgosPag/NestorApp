@@ -128,6 +128,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'reports-extended': return () => import('./locales/el/reports-extended.json');
     case 'cash-flow': return () => import('./locales/el/cash-flow.json');
     case 'procurement': return () => import('./locales/el/procurement.json');
+    case 'subcontract-document': return () => import('./locales/el/subcontract-document.json');
     case 'report-builder': return () => import('./locales/el/report-builder.json');
     case 'report-builder-domains': return () => import('./locales/el/report-builder-domains.json');
     case 'saved-reports': return () => import('./locales/el/saved-reports.json');
@@ -269,6 +270,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'reports-extended': return () => import('./locales/en/reports-extended.json');
     case 'cash-flow': return () => import('./locales/en/cash-flow.json');
     case 'procurement': return () => import('./locales/en/procurement.json');
+    case 'subcontract-document': return () => import('./locales/en/subcontract-document.json');
     case 'report-builder': return () => import('./locales/en/report-builder.json');
     case 'report-builder-domains': return () => import('./locales/en/report-builder-domains.json');
     case 'saved-reports': return () => import('./locales/en/saved-reports.json');

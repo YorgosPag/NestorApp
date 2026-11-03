@@ -134,6 +134,8 @@ export interface SubcontractClauseLibrary {
   readonly clauses: readonly SubcontractClause[];
   /** Η είσοδος του κριτή — ίδια μορφή με του γραφέα. */
   readonly library: ApprovedLibrary;
+  /** Οι εκδόσεις σε ισχύ ανά id ρήτρας — τα κείμενα που χρειάζεται η προεπισκόπηση εγγράφου (ADR-928 §5.17). */
+  readonly versions: ReadonlyMap<string, SubcontractClauseVersion>;
   /** Ρήτρες ή εκδόσεις σε ισχύ που δεν έχουν φτάσει ακόμη. */
   readonly loading: boolean;
   readonly error: string | null;
@@ -144,5 +146,5 @@ export function useSubcontractClauseLibrary(): SubcontractClauseLibrary {
   const { items: clauses, loading, error } = useProcurementCatalogList(clausesList);
   const pinned = usePinnedVersions(clauses);
   const library = useMemo(() => approvedLibraryFrom(clauses, pinned.versions), [clauses, pinned.versions]);
-  return { clauses, library, loading: loading || pinned.pending, error };
+  return { clauses, library, versions: pinned.versions, loading: loading || pinned.pending, error };
 }
