@@ -832,6 +832,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/supply-request-links.rules.test.ts',
     ...denyAllMatrix(),
   },
+  // ADR-928 Φ1 — βιβλιοθήκη ρητρών υπεργολαβίας: διαβάζει ο χώρος, γράφει ΜΟΝΟ ο διακομιστής (`src/server/subcontracts/`).
+  // Η υποσυλλογή `subcontract_clause_versions` δεν είναι στη μήτρα (ένθετη)· την ελέγχουν ρητές άγκυρες στη σουίτα των ρητρών.
+  {
+    collection: 'subcontract_clauses',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/subcontract-clauses.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'subcontract_trade_templates',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/subcontract-trade-templates.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
   {
     collection: 'catalog_visibility_rules',
     pattern: 'deny_all',

@@ -7,7 +7,6 @@
  * ειδικότητα επιτρέπονται (σκυροδετήσεις / ξυλότυποι, μάρμαρα υλικά / τοποθέτηση): ο κωδικός τα χωρίζει.
  */
 
-import type { Timestamp } from 'firebase/firestore';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import type { AgreementLine } from './agreement-line';
 import type { ClauseKey } from './clause';
@@ -38,7 +37,17 @@ export interface SubcontractTradeTemplate {
   readonly clauses: readonly TemplateClauseRef[];
   readonly defaultTerms: CommercialTerms;
   readonly isArchived: boolean;
-  readonly createdAt: Timestamp;
-  readonly updatedAt: Timestamp;
+  /** CAS (ADR-923 §5.9): κάθε αλλαγή +1. */
+  readonly revision: number;
+  /** ISO 8601 (ADR-663 §4 · ADR-928 Φ1 απόφαση 1). */
+  readonly createdAt: string;
+  readonly updatedAt: string;
   readonly createdBy: string;
+  readonly updatedBy: string;
 }
+
+/** Ό,τι ορίζει ο άνθρωπος — το περίβλημα (id, χώρος, αναθεώρηση, σφραγίδες) το γράφει ο γραφέας. */
+export type SubcontractTradeTemplateDefinition = Pick<
+  SubcontractTradeTemplate,
+  'code' | 'trade' | 'title' | 'defaultDocumentMode' | 'lines' | 'clauses' | 'defaultTerms'
+>;

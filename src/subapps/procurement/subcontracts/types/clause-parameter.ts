@@ -88,7 +88,16 @@ export interface OptionTolerance {
   readonly forbidden: readonly string[];
 }
 
-export type ClauseParameterTolerance = NumericTolerance | OptionTolerance;
+/**
+ * «Μόνο η προτιμώμενη περνά ελεύθερα»: κάθε άλλη έγκυρη τιμή θέλει έγκριση. Για είδη χωρίς εύρος ή επιλογές
+ * (`weekday` · `milestone` · `party` · `unit` · `ratio` · `text`) όπου η εταιρεία θέλει να ελέγχει κάθε αλλαγή.
+ */
+export interface FixedTolerance {
+  readonly kind: 'fixed';
+}
+
+/** `null` στον ορισμό ⇒ καμία ζώνη: κάθε έγκυρη τιμή είναι αποδεκτή. */
+export type ClauseParameterTolerance = NumericTolerance | OptionTolerance | FixedTolerance;
 
 /** Επιλογή παραμέτρου `enum` — κλειδί αμετάβλητο, ετικέτα ανά γλώσσα. */
 export interface ClauseParameterOption {
@@ -96,12 +105,36 @@ export interface ClauseParameterOption {
   readonly label: LocalizedText;
 }
 
+/**
+ * 🔑 **Δέσιμο σε εμπορικό όρο** (ADR-928 §5.2 · Φ1 απόφαση 2). Οι όροι που τροφοδοτούν υπολογισμούς ζουν **μία** φορά,
+ * στα δεδομένα (`CommercialTerms`). Η ρήτρα που τους διατυπώνει **δεν** κρατά δεύτερη τιμή: η παράμετρός της δένεται
+ * στον όρο, παίρνει από εκεί την τιμή κατά την απόδοση, και οι **ζώνες ανοχής** της κρίνουν τα δεδομένα («κράτηση < 3%
+ * απαγορεύεται» πιάνει το `CommercialTerms`). Κλειστό σύνολο· ο αναγνώστης κάθε δεσίματος ζει στο
+ * `clauses/commercial-term-bindings.ts` ως ολικός `Record` (νέο κλειδί χωρίς αναγνώστη = σφάλμα μεταγλώττισης).
+ */
+export const COMMERCIAL_TERM_BINDING_KEYS = [
+  'retention.rate',
+  'withholding.rate',
+  'penalty.perDay',
+  'penalty.cap',
+  'cash.limitPerPayment',
+  'vat.treatment',
+  'payment.anchorWeekday',
+] as const;
+export type CommercialTermBindingKey = (typeof COMMERCIAL_TERM_BINDING_KEYS)[number];
+
+/** Από πού παίρνει τιμή η παράμετρος: από το ίδιο το έγγραφο (ανά ρήτρα) ή από δεσμευμένο εμπορικό όρο. */
+export type ClauseParameterSource =
+  | { readonly kind: 'clause' }
+  | { readonly kind: 'term'; readonly term: CommercialTermBindingKey };
+
 /** Ο ορισμός μιας παραμέτρου μέσα σε έκδοση ρήτρας. */
 export interface ClauseParameterDefinition {
   /** Σταθερό μέσα στη ρήτρα (π.χ. `rate`, `cap`, `anchor_weekday`). */
   readonly key: string;
   readonly kind: ClauseParameterKind;
   readonly label: LocalizedText;
+  readonly source: ClauseParameterSource;
   /** Η προτιμώμενη τιμή — η προεπιλογή κάθε νέου συμφωνητικού. */
   readonly preferred: ClauseParameterValue;
   readonly tolerance: ClauseParameterTolerance | null;

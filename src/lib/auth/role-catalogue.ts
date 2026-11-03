@@ -79,6 +79,11 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "catalog:pricing:view",
       "catalog:pricing:manage",
       "catalog:pricing:publish",
+      // ADR-928 §5.2.1 — ο διαχειριστής κρατά τη βιβλιοθήκη ρητρών και τα πρότυπα υπεργολαβίας (Ironclad: «μόνο
+      // διαχειριστές» εξ ορισμού). Το `propose` το έχει κι αυτός, ώστε να γράφει προτάσεις που εγκρίνει ΑΛΛΟΣ.
+      "subcontracts:clauses:manage",
+      "subcontracts:clauses:propose",
+      "subcontracts:templates:manage",
       "users:users:view",
       "users:users:manage",
       "projects:projects:view",

@@ -796,5 +796,34 @@
     "currentTotal": "Πληρωτέο μετά",
     "keepTerms": "Κράτησε τους όρους",
     "confirm": "Επανατιμολόγηση"
+  },
+  "subcontracts": {
+    "audit": {
+      "fields": {
+        "clauseKey": "Κλειδί ρήτρας",
+        "title": "Τίτλος",
+        "currentVersion": "Έκδοση σε ισχύ",
+        "latestVersion": "Τελευταία έκδοση",
+        "openProposal": "Ανοιχτή πρόταση",
+        "isArchived": "Αρχειοθετημένο",
+        "version": "Έκδοση",
+        "state": "Κατάσταση",
+        "professionalReview": "Επαγγελματικός έλεγχος",
+        "effectiveFrom": "Ισχύει από",
+        "supersededBy": "Αντικαταστάθηκε από",
+        "contentHash": "Αποτύπωμα περιεχομένου",
+        "proposalReason": "Αιτιολογία πρότασης",
+        "decisionReason": "Αιτιολογία απόφασης",
+        "decidedBy": "Απόφαση από",
+        "reviewedBy": "Έλεγχος από",
+        "translationStatus": "Μεταφράσεις",
+        "code": "Κωδικός",
+        "trade": "Ειδικότητα",
+        "defaultDocumentMode": "Τρόπος έκδοσης",
+        "lines": "Γραμμές",
+        "clauses": "Ρήτρες",
+        "defaultTerms": "Προεπιλεγμένοι όροι"
+      }
+    }
   }
 }

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🚧 IN PROGRESS — Φ0 ✅ (2026-11-03) · επόμενο βήμα Φ1 · πρώτη παράδοση Φ0–Φ4 |
+| **Status** | 🚧 IN PROGRESS — Φ0 ✅ · Φ1 ✅ (2026-11-03) · επόμενο βήμα Φ2 · πρώτη παράδοση Φ0–Φ4 |
 | **Date** | 2026-11-03 |
 | **Category** | Procurement / Subcontracting |
 | **Canonical Location** | `src/subapps/procurement/subcontracts/` (τύποι από τη Φ0) |
@@ -106,7 +106,7 @@
 | Οντότητα | Συλλογή | Prefix | Id |
 |---|---|---|---|
 | Ρήτρα βιβλιοθήκης | `subcontract_clauses` | `sccl` | ντετερμινιστικό από (χώρος, `clauseKey`) |
-| Έκδοση ρήτρας | `subcontract_clauses/{id}/versions` | `sccv` | ντετερμινιστικό από (ρήτρα, αριθμός) |
+| Έκδοση ρήτρας | `subcontract_clauses/{id}/subcontract_clause_versions` (Φ1: όνομα **μοναδικό**, όχι `versions` — §5.13) | `sccv` | ντετερμινιστικό από (ρήτρα, αριθμός) |
 | Πρότυπο ειδικότητας | `subcontract_trade_templates` | `sctt` | ντετερμινιστικό από (χώρος, κωδικός προτύπου) |
 | Συμφωνητικό υπεργολαβίας | `subcontract_agreements` | `sca` | τυχαίο (ο αριθμός εγγράφου είναι ιδιότητα από μετρητή) |
 | Αμετάβλητη αναθεώρηση | `subcontract_agreements/{id}/revisions` | `scrv` | ντετερμινιστικό από (συμφωνητικό, αριθμός) |
@@ -204,7 +204,7 @@ draft ──issue──▶ issued ──accept──▶ accepted ──mobilize�
                    └─expire (validUntil)
 ```
 
-- Ένας γραφέας (server route + mutation gateway, όπως οι ADR-862/867/910)· οι κανόνες Firestore κλείνουν τον πελάτη. Νέα πύλη «ενός γραφέα» στο πρότυπο των CHECK 3.88 / 3.112.
+- Ένας γραφέας (server route + mutation gateway, όπως οι ADR-862/867/910)· οι κανόνες Firestore κλείνουν τον πελάτη. Η πύλη «ενός γραφέα» υπάρχει από τη Φ1 (**CHECK 3.113**, §5.13)· η Φ2 προσθέτει τα συμφωνητικά στο μητρώο της.
 - `mobilize` = ημερομηνία εγκατάστασης στο εργοτάξιο → είναι ακριβώς το Υ.Γ. του 2009 («γίνεται συμφωνητικό με την έναρξη εργασιών»).
 - **Δύο τρόποι έκδοσης** (Δ1, §8.1) — πεδίο `documentMode`:
   - `offer_becomes_agreement` (Τρόπος Α, οικογένεια 2009): **ένα** έγγραφο. Η προσφορά γίνεται συμφωνητικό με το `mobilize`· δεν εκδίδεται δεύτερο χαρτί, η εφαρμογή καταγράφει την ημερομηνία έναρξης και η ρήτρα του Υ.Γ. τυπώνεται στην προσφορά.
@@ -273,6 +273,47 @@ draft ──issue──▶ issued ──accept──▶ accepted ──mobilize�
 Αρχές των τύπων: ποσά σε `MinorAmount`, ποσοστά σε `BasisPoints` (μερίδια = ακριβώς 10.000), ποσότητες σε χιλιοστά της μονάδας — **κανένας** float σε νομικό έγγραφο. Το ολογράφως **δεν αποθηκεύεται**, παράγεται. Οι ένθετες στιγμές (ανάθεση) είναι ISO 8601, ώστε το στιγμιότυπο να περνά από canonical JSON.
 
 Tests: `lib/money/__tests__/amount-in-words.test.ts` (56) · `accounting/services/config/__tests__/vat-rates.test.ts` · `services/__tests__/enterprise-id-subcontract-generators.test.ts` · `subcontracts/types/__tests__/agreement-fsm.test.ts`. Το συμβόλαιο της κλάσης `enterprise-id.service.test.ts` **ήταν ήδη κόκκινο**: 19 ντετερμινιστικοί γεννήτορες (ADR-923 Φ3β–Φ6α, ADR-917) είχαν προστεθεί χωρίς χρυσό id και χωρίς δήλωση «μόνο ντετερμινιστικός». Δηλώθηκαν μαζί με τους 4 της Φ0, με τιμές καταγεγραμμένες από τους ίδιους τους γεννήτορες.
+
+### 5.13 Φ1 — βιβλιοθήκη ρητρών: αποφάσεις και χάρτης κώδικα
+
+**Αποφάσεις** (με τη γενική αρχή §8 απόφαση 5, χωρίς ερώτηση):
+
+1. **Χρόνος = ISO 8601 `string`** στη ρήτρα, την έκδοση και το πρότυπο (όχι `Timestamp` όπως στους τύπους της Φ0): μία αναπαράσταση σε βάση, σύρμα και πελάτη (ADR-663 §4, όπως ο κατάλογος ADR-923), και το έγγραφο περνά αυτούσιο από canonical JSON. Το `agreement.ts` μένει ως έχει — το αποφασίζει η Φ2.
+2. **Δέσιμο παραμέτρου σε εμπορικό όρο** — λύνει αντίφαση της Φ0: το `commercial-terms.ts` έλεγε «ένας όρος δεν γράφεται ποτέ και στα δύο», ενώ η §5.2 έδινε την κράτηση και την παρακράτηση ως ρήτρες με παραμέτρους. Τώρα `ClauseParameterDefinition.source = {kind:'clause'} | {kind:'term', term}`, με κλειστό `COMMERCIAL_TERM_BINDING_KEYS` (`retention.rate` · `withholding.rate` · `penalty.perDay` · `penalty.cap` · `cash.limitPerPayment` · `vat.treatment` · `payment.anchorWeekday`) και **ολικό** πίνακα αναγνωστών (`commercial-term-bindings.ts`). Η τιμή ζει **μία** φορά, στα δεδομένα· η ρήτρα κρατά κείμενο **και ζώνες**, και οι ζώνες κρίνουν τα δεδομένα: «κράτηση < 3%» πιάνεται στο `CommercialTerms`.
+3. **Μία ανοιχτή πρόταση ανά ρήτρα, δομικά**: νέα έκδοση = `latestVersion + 1` με ντετερμινιστικό id και `create()` ⇒ δύο ταυτόχρονες προτάσεις συγκρούονται· όποια φτάσει μετά βλέπει `openProposal` ⇒ 409 `proposalPending`.
+4. **Διακυβέρνηση = καθαρή μηχανή** (`clause-governance.ts`): `proposed → approved` μόνο από **άλλον** (403 `selfApproval`)· η έγκριση γράφει **τρία** έγγραφα σε μία συναλλαγή (νέα `approved` · προηγούμενη `superseded` + `supersededBy` · ρήτρα → νέα)· απόρριψη (manage) ή **απόσυρση** (μόνο ο προτείνων, αλλιώς 403 `notProposer`)· ο επαγγελματικός έλεγχος είναι χωριστή πράξη σε **αποφασισμένη** έκδοση, μία φορά. Νέα ζώνη `fixed` («μόνο η προτιμώμενη περνά ελεύθερα»), για είδη χωρίς εύρος (ημέρα, ορόσημο, αναλογία…). Χωρίς ζώνη (`null`) ⇒ κάθε έγκυρη τιμή αποδεκτή.
+5. **Σπορά προεπιλογών ως προτάσεις του συστήματος** (`DEFAULT_LIBRARY_PROPOSER = 'system:default-library'`): ο άνθρωπος του χώρου **εγκρίνει κάθε ρήτρα**, άρα τη διαβάζει, και η διάκριση καθηκόντων μένει ακέραιη (Ironclad). Ιδεμποτική (ντετερμινιστικά ids, `getAll` πριν από κάθε εγγραφή). Τα πρότυπα περνούν από τον **ίδιο** έλεγχο απέναντι στην **εγκεκριμένη** βιβλιοθήκη· όσα δεν περνούν ακόμη επιστρέφονται ως **εκκρεμή με ευρήματα** και γράφονται σε επόμενη σπορά — καμία πόρτα γύρω από την επικύρωση.
+6. **Μεταφράσεις**: πρόχειρο (`human` · `machine_draft`) πάνω στο `sourceHash` **της έκδοσης** (όχι του πελάτη)· η έγκριση κρίνει ισότητα hash (409 `translationStale`), **ίδιο σύνολο** παραμέτρων με το ελληνικό, και ότι εγκρίνει άλλος. Η νέα έκδοση **κληρονομεί** τις μεταφράσεις· αν άλλαξε το ελληνικό, η εγκεκριμένη υποβιβάζεται σε πρόχειρο με το παλιό hash (`carriedTranslations`) — η δουλειά δεν χάνεται, το δίγλωσσο μπλοκάρεται.
+7. **CHECK 3.113 — ένας γραφέας της υπεργολαβίας** (`docs/gates/3.113.md`): μητρώο `.subcontract-authority.json` (`COLLECTIONS.SUBCONTRACT_*` / `SUBCOLLECTIONS.SUBCONTRACT_CLAUSE_VERSIONS` → μόνο ο store· `runSubcontractTransaction` → μόνο οι 5 δηλωμένοι γραφείς) + καμία `subcontract_*` στη λίστα απευθείας εγγραφής του MCP. Η κρίση **εξήχθη** από την 3.112 σε κοινό `scripts/lib/write-authority/symbol-owner-gate.js` (έξοδος 3.112 ταυτόσημη πριν/μετά· μετάλλαξη στο κοινό module κοκκινίζει **και τις δύο** σουίτες). Η Φ2 την επεκτείνει στα συμφωνητικά.
+8. **Δικαιώματα** (CHECK 3.68, χωρίς έλεγχο ρόλου στον κώδικα): `subcontracts:clauses:propose` · `subcontracts:clauses:manage` · `subcontracts:templates:manage`, πίνακας δικαιοδοσιών `SUBCONTRACT_AUTHORITY_PERMISSIONS` κοινός για διακομιστή και οθόνη. Εξ ορισμού **μόνο** ο `company_admin` (και τα τρία)· οι `project_manager` / `engineer` / `accountant` είναι **ρόλοι έργου** ενώ η βιβλιοθήκη είναι της εταιρείας ⇒ σε άλλους δίνεται με **ρητή παραχώρηση** στο claim (ίδιο σχήμα με τα κτίρια, ADR-829 §7.1).
+9. **Όνομα υποσυλλογής `subcontract_clause_versions`**, όχι `versions`: το collection group σαρώνει κατά όνομα (μάθημα `WORKSPACE_MEMBERS`). Δηλωμένη στο `SUBCOLLECTIONS` + `SUBCOLLECTION_PARENTS` (backup ADR-313)· στο μητρώο ιστορικού με το σχήμα του `engagement` (`collectionKey: null`, `'top-level'`), γιατί το `'subcollection'` εκεί σημαίνει `companies/{c}/<col>`.
+10. **Δεν μπαίνει module στο `.ssot-registry.json`**: τον φρουρό «κανείς δεν γράφει έξω από τον γραφέα» τον κρατά η 3.113· δεύτερη μηχανή για το ίδιο ερώτημα θα ήταν το σφάλμα του ADR-749.
+
+**Χάρτης κώδικα — Φ1**
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `subcontracts/clauses/validate-clause-parameter.ts` · `validate-parameter-definition.ts` | Τιμή ↔ είδος (υπάρχοντες φρουροί: `isBasisPoints` — εξήχθη από το `discount-rule.ts`, `isMinorAmount`, `ISO_WEEKDAYS`, `isUomCode`)· συνέπεια ζωνών (προτιμώμενη ⊆ αποδεκτή ⊆ επιτρεπτή)· δέσιμο του σωστού είδους |
+| `…/clauses/tolerance-verdict.ts` | `toleranceVerdict` — ο ένας κριτής για πρότυπα (Φ1), αποκλίσεις (Φ2), επιφυλάξεις διαγωνισμού (§5.9) |
+| `…/clauses/validate-clause-body.ts` · `validate-clause-version.ts` | Σώμα ↔ παράμετροι, καμία ορφανή **προς καμία κατεύθυνση**· ισοδυναμία `{param}` στις μεταφράσεις· ταυτότητα (`CLAUSE_KEY_PATTERN`) |
+| `…/clauses/clause-content-hash.ts` | `contentHash` (σώμα + παράμετροι) · `sourceHash` (ελληνικό σώμα) = `sha256HexOfText(canonicalJson(…))` — επαναχρήση ADR-861 |
+| `…/clauses/clause-governance.ts` | Καθαρή μηχανή διακυβέρνησης + `carriedTranslations` |
+| `…/clauses/commercial-term-bindings.ts` · `clause-issues.ts` · `clause-body-builders.ts` | Δέσιμο σε όρους · κλειστό λεξιλόγιο ευρημάτων (κωδικοί, N.11) · ευανάγνωστη γραφή μπλοκ |
+| `…/shares/validate-shares.ts` | «Σ = ακριβώς 10.000» — στάδια, επιμερισμός, μερίδια πληρωμής, δόσεις κράτησης |
+| `…/lines/validate-agreement-line.ts` · `terms/validate-commercial-terms.ts` · `terms/validate-payment-plan.ts` | Γραμμές, εμπορικοί όροι, σχέδιο πληρωμών — κοινά με τη Φ2 |
+| `…/templates/validate-trade-template.ts` | Πρότυπο μόνο του (καθαρό) + απέναντι στην εγκεκριμένη βιβλιοθήκη (μέσα στη συναλλαγή)· τιμές πάντα `preferred`/`acceptable` |
+| `…/schema/clause.schema.ts` · `trade-template.schema.ts` | zod: σχήμα και μέγεθος (`SUBCONTRACT_LIMITS`), κάθε σχήμα δηλώνει τον τύπο του |
+| `…/vocabulary/subcontract-authorities.ts` | Δικαιοδοσία → δικαιώματα |
+| `src/server/subcontracts/subcontract-store.server.ts` | Ο ένας γραφέας: συναλλαγή, ιδιοκτησία (ξένο ≡ ανύπαρκτο), CAS, `create()` για δομική μοναδικότητα, ίχνος μετά το commit |
+| `…/clause-library-writer.server.ts` · `clause-governance-writer.server.ts` · `clause-translation-writer.server.ts` · `trade-template-writer.server.ts` · `clause-library-reads.server.ts` · `default-library-seed.server.ts` · `subcontract-write-error.ts` | Πράξεις, αναγνώσεις βιβλιοθήκης (2 `getAll`), σπορά, κλειστά είδη σφάλματος → HTTP |
+| `src/app/api/subcontracts/**` (13 διαδρομές) · `_shared/subcontract-route.ts` | `defineRoute` ⇒ `withAuth` ⇒ ιδεμποτία (CHECK 3.92)· βαθμίδα δηλωμένη στο route (3.78) |
+| `src/config/subcontracts/default-clause-library.ts` · `default-trade-templates.ts` | 29 ρήτρες και 2 πρότυπα (`reinforcement.placement` Τρόπος Α · `plastering.three_coat` Τρόπος Β) από τα έγγραφα 2005–2009, ξαναγραμμένα στο πλαίσιο της §4· χωρίς στοιχεία προσώπων |
+| `src/config/audit-tracked-field-builders.ts` · `audit-tracked-fields-subcontracts.ts` | Οι κατασκευαστές πεδίων ιστορικού **εξήχθησαν** από το `audit-tracked-fields-catalog.ts` (ήταν καρφωμένοι στο `catalog:`) |
+| `firestore.rules` · `tests/firestore-rules/suites/subcontract-*.rules.test.ts` | Διαβάζει ο χώρος, γράφει μόνο ο διακομιστής· ρητές άγκυρες για την υποσυλλογή εκδόσεων |
+
+**Επαλήθευση**: jest 100/100 (τομέας 47 · άγκυρα δεδομένων 36 — κάθε ρήτρα και πρότυπο από τους ίδιους επικυρωτές με τον γραφέα, και ο έλεγχος **πιάνει** κράτηση 2% · γραφείς στο επαληθευμένο fake 13 · FSM 4) · κανόνες στον emulator 77/77, μετάλλαξη «η έκδοση ξεχνά τον μισθωτή» ⇒ 2 κόκκινες · πύλη 3.113: 8/8 + 8 κάτοχοι στο δέντρο · 3.28 (59 αρχεία) καθαρό · 3.16/3.66/3.68/3.78/3.92/3.33/3.34 πράσινα.
+
+**Δηλωμένα όρια της Φ1**: καμία οθόνη (Φ3)· η απόκλιση ανά συμφωνητικό (§5.2.1 τρόπος 3) ζει στη Φ2· η μηχανική μετάφραση έχει μόνο το πεδίο `origin`· το επαληθευμένο fake **δεν** επιβάλλει «όλες οι αναγνώσεις πριν από κάθε εγγραφή» — οι γραφείς το τηρούν με κατασκευή (`read*` → κρίση → `stage*`, η σπορά με `getAll`).
 
 ## 6. Φάσεις
 
@@ -363,3 +404,4 @@ Tests: `lib/money/__tests__/amount-in-words.test.ts` (56) · `accounting/service
 | 2026-11-03 | Διευκρινίσεις Δ1–Δ9 (§8.1) και γενική αρχή (§8 απόφαση 5): δύο τρόποι έκδοσης (§5.5) · εμβέλεια ενός/πολλών έργων (§5.4) · τρεις δρόμοι τιμολόγησης πάνω στο RFQ (§5.9) · συνθέσιμο σχέδιο πληρωμών (§5.4.1) · διακυβέρνηση βιβλιοθήκης με ζώνες ανοχής (§5.2.1) · γλώσσες (§5.2.2) · τιμή προς πελάτη, οικοπεδούχοι, είδη γραμμών (§5.4). |
 | 2026-11-03 | **Αλλαγή αριθμού 927 → 928** (κανόνας 7 του `CLAUDE.md`, CHECK 3.49): το 927 το πήρε πρώτο στο `main` το «Inbox ειδοποιήσεων» (`agent/crm-notifications-page`). Μετονομάστηκαν το αρχείο και το handoff· καμία αναφορά σε κώδικα. |
 | 2026-11-03 | **Φ0 ✅**: τύποι domain (§5.12) · προθέματα και γεννήτορες `sca` `scrv` `scas` `sccl` `sccv` `sctt` (§5.1, +`sccv` για τις εκδόσεις ρητρών, +`scas` για τις αναθέσεις) · ποσό ολογράφως στο `lib/money/amount-in-words` (όχι `lib/intl`, που δεν υπάρχει) · ενιαίος ΦΠΑ πάνω στον **υπάρχοντα** πίνακα της λογιστικής, 13 σημεία αντί για τα 2 που είχε μετρήσει το audit (§5.10) · πηγή λογοτύπου `companies/{id}.logoURL` + εύρημα λογοτύπου Παγώνη σε κάθε χώρο (§5.11) · συμβόλαιο γεννητόρων που ήταν ήδη κόκκινο: 19 αδήλωτοι γεννήτορες δηλώθηκαν. Διορθώσεις του audit της 2026-11-03: το SSoT του ΦΠΑ υπήρχε (§3). |
+| 2026-11-03 | **Φ1 ✅** (§5.13): βιβλιοθήκη ρητρών με εκδόσεις και διακυβέρνηση (πρόταση → έγκριση από άλλον · απόσυρση · επαγγελματικός έλεγχος · μία ανοιχτή πρόταση δομικά) · επικύρωση παραμέτρων και ετυμηγορία ζώνης (+ζώνη `fixed`) · **δέσιμο παραμέτρου σε εμπορικό όρο** (λύνει αντίφαση της Φ0) · μεταφράσεις με `sourceHash` και κληρονομιά · πρότυπα ειδικότητας απέναντι στην εγκεκριμένη βιβλιοθήκη · προεπιλεγμένη βιβλιοθήκη 29 ρητρών + 2 προτύπων (ξαναεξαγωγή των εγγράφων 2005–2009, πλαίσιο 2026, όλα `needs_professional_review`, σπορά ως προτάσεις του συστήματος) · ένας γραφέας `src/server/subcontracts/` + 13 διαδρομές · κανόνες + σουίτες · ιστορικό (3 τύποι) · 3 δικαιώματα · **CHECK 3.113** πάνω σε κρίση εξαγμένη από την 3.112. Τύποι της Φ0: χρόνος ISO, `latestVersion`/`openProposal`/`revision`. SSoT που εξήχθησαν αντί για αντίγραφο: `isBasisPoints` · `trackedFieldDefsIn` · `symbol-owner-gate`. |

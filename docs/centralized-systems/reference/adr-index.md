@@ -910,7 +910,7 @@
 | **ADR-925** | Ένα worktree ανά πράκτορα: η ρίζα του χάσματος «δίσκος ≠ commit» | ✅ ✅ **ΥΛΟΠΟΙΗΘΗΚΕ (2026-10-31)** · εντολές `wt:*` + CHECK 3.109 · η επιβολή (`enforce`) ενεργοποιείται στο καθαρό σημείο (§10) | 2026-10-30 | Tooling / Multi-agent workflow | [📄](./adrs/ADR-925-worktree-per-agent.md) |
 | **ADR-926** | Εξουσιοδότηση με εμβέλεια έργου | ✅ ✅ ACCEPTED (Giorgio, 2026-11-02) — υλοποιήθηκε στο κλαδί `agent/adr-923-phase3-close` και βρίσκεται στο `main` (`4491fc34`). Ο ζωντανός έλεγχος με λογαριασμό `project_manager` έχει γίνει μερικώς (`7654ab20`) | 2026-11-01 · έγκριση 2026-11-02 | Security / Authorization | [📄](./adrs/ADR-926-project-scoped-authorization.md) |
 | **ADR-927** | Inbox ειδοποιήσεων — μία ροή, ένα store, ενέργειες σε ένα hook | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-927-notifications-inbox.md) |
-| **ADR-928** | Προσφορά / Ιδιωτικό Συμφωνητικό Υπεργολαβίας: δομημένοι όροι, αμετάβλητες εκδόσεις, έγγραφο έτοιμο για υπογραφή | ✅ 🚧 IN PROGRESS — Φ0 ✅ (2026-11-03) · επόμενο βήμα Φ1 · πρώτη παράδοση Φ0–Φ4 | 2026-11-03 | Procurement / Subcontracting | [📄](./adrs/ADR-928-subcontract-offer-agreement.md) |
+| **ADR-928** | Προσφορά / Ιδιωτικό Συμφωνητικό Υπεργολαβίας: δομημένοι όροι, αμετάβλητες εκδόσεις, έγγραφο έτοιμο για υπογραφή | ✅ 🚧 IN PROGRESS — Φ0 ✅ · Φ1 ✅ (2026-11-03) · επόμενο βήμα Φ2 · πρώτη παράδοση Φ0–Φ4 | 2026-11-03 | Procurement / Subcontracting | [📄](./adrs/ADR-928-subcontract-offer-agreement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

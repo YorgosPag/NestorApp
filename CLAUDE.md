@@ -308,7 +308,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:fe9764e5eab9b30c2e6e29c2d3a193b3b97ec42a25412139f981d81638990cd6 -->
+     fingerprint: sha256:7430b32fb4a5140135e10d71a2b1d24924de0f8c9c80188064f334524fc73e16 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -405,6 +405,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.110** | **Πύλη απόδοσης του εκδότη καταλόγου** (ADR-923) — «βγαίνει το τυπωμένο PDF σωστό **με την αληθινή μηχανή**; — κανένα κείμενο πάνω σε άλλο, κανένα έξω από το χαρτί ή κάτω από το όριο, και PDF/A κατά αν…» · `npm run test:catalog-publisher-render` · 📘 `docs/gates/3.110.md` | ⛔ ZERO TOL · μόνο CI (Typst + veraPDF) | — |
 | **3.111** | **Πύλη των πράξεων έργου** (ADR-926) — «έχει κάθε πράξη έργου **σημείο επιβολής** και γραμμή στον πίνακα — βγαίνει το έργο **μόνο από τον πόρο** — και μένει η οριστική διαγραφή στον…» · `npm run test:project-scoped-actions` · `SKIP_PROJECT_SCOPED_ACTIONS=1` · 📘 `docs/gates/3.111.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
 | **3.112** | **Πύλη του ενός γραφέα της δημόσιας βιτρίνας** (ADR-923) — «αγγίζει κάποιος το δημόσιο έγγραφο καταλόγου, το outbox του ή το ράφι του **έξω από τους δηλωμένους κατόχους**; (οι κανόνες κλείνουν τον πελάτη…» · `npm run test:public-catalog-authority` · `SKIP_PUBLIC_CATALOG_AUTHORITY=1` · 📘 `docs/gates/3.112.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3) | — |
+| **3.113** | **Πύλη του ενός γραφέα της υπεργολαβίας** (ADR-928) — «γράφει κάποιος ρήτρα, έκδοση ρήτρας ή πρότυπο ειδικότητας **έξω από τους γραφείς του `src/server/subcontracts/`** — δηλαδή χωρίς διάκριση καθηκόντων…» · `npm run test:subcontract-authority` · `SKIP_SUBCONTRACT_AUTHORITY=1` · 📘 `docs/gates/3.113.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -418,8 +419,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **102** (εκτελεστής 94 + hook 21) ·
-γραμμές εδώ: **94** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **103** (εκτελεστής 95 + hook 21) ·
+γραμμές εδώ: **95** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

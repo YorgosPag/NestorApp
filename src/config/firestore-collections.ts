@@ -1148,6 +1148,12 @@ export const COLLECTIONS = {
   /** Ο ανακλητός σύνδεσμος/QR του προμηθευτή (Σ2 πόρτα β): ΕΝΑΣ ανά χώρο. IDs via srql_* (ντετερμινιστικά). */
   SUPPLY_REQUEST_LINKS: process.env.NEXT_PUBLIC_SUPPLY_REQUEST_LINKS_COLLECTION || 'supply_request_links',
 
+  // 📜 ΥΠΕΡΓΟΛΑΒΙΑ — ADR-928 (companyId-scoped· ΕΝΑΣ γραφέας `src/server/subcontracts/`, CHECK 3.113)
+  /** Βιβλιοθήκη ρητρών: η ταυτότητα της ρήτρας (§5.2). Εκδόσεις στην υποσυλλογή `SUBCOLLECTIONS.SUBCONTRACT_CLAUSE_VERSIONS`. IDs via sccl_* (ντετερμινιστικά). */
+  SUBCONTRACT_CLAUSES: process.env.NEXT_PUBLIC_SUBCONTRACT_CLAUSES_COLLECTION || 'subcontract_clauses',
+  /** Πρότυπα ειδικότητας (§5.3). IDs via sctt_* (ντετερμινιστικά από χώρο + κωδικό). */
+  SUBCONTRACT_TRADE_TEMPLATES: process.env.NEXT_PUBLIC_SUBCONTRACT_TRADE_TEMPLATES_COLLECTION || 'subcontract_trade_templates',
+
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */
   FLOORPLAN_STAIRS: process.env.NEXT_PUBLIC_FLOORPLAN_STAIRS_COLLECTION || 'floorplan_stairs',
@@ -1473,6 +1479,10 @@ export const SUBCOLLECTIONS = {
 
   // Landing hero revisions (ADR-881 §4.2 — ΑΜΕΤΑΒΛΗΤΕΣ εκδόσεις, subcollection under settings/landing_heroes)
   LANDING_HERO_REVISIONS: 'revisions',
+
+  // 📜 ADR-928 §5.2 — αμετάβλητες εκδόσεις ρήτρας, κάτω από `subcontract_clauses/{sccl}`. IDs via sccv_*.
+  // ⚠️ Όνομα ΜΟΝΑΔΙΚΟ, όχι `'versions'`: ένα collection group σαρώνει κατά όνομα (μάθημα `WORKSPACE_MEMBERS`).
+  SUBCONTRACT_CLAUSE_VERSIONS: process.env.NEXT_PUBLIC_SUBCONTRACT_CLAUSE_VERSIONS_SUBCOL || 'subcontract_clause_versions',
 } as const;
 
 // ============================================================================
@@ -1614,6 +1624,9 @@ export const SUBCOLLECTION_PARENTS: Readonly<Record<string, string | readonly st
 
   // Network inbox subcollection → NETWORK_INBOX (ADR-867 §4.5 Β10)
   NETWORK_INBOX_UNREAD: 'NETWORK_INBOX',
+
+  // Εκδόσεις ρήτρας → SUBCONTRACT_CLAUSES (ADR-928 §5.2)
+  SUBCONTRACT_CLAUSE_VERSIONS: 'SUBCONTRACT_CLAUSES',
 
   // Spatial tour subcollections → ΚΑΙ ΤΑ ΔΥΟ διαμερίσματα (ADR-884 Φ0.2). Ίδια σειρά με το
   // `SPATIAL_TOUR_COLLECTION` (company → personal) — την κλειδώνει άγκυρα jest (το config δεν εισάγει από lib).

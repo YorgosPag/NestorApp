@@ -18,32 +18,9 @@
  */
 
 import type { TrackedFieldDef } from '@/lib/audit/audit-diff';
-import { canonicalJson } from '@/lib/legal/canonical-json';
+import { structuredAuditValue as structured, trackedFieldDefsIn } from './audit-tracked-field-builders';
 
-/** Προβολή σύνθετης τιμής σε σταθερό κείμενο ιστορικού. */
-function structured(value: unknown): string | null {
-  return value === null || value === undefined ? null : canonicalJson(value).trim();
-}
-
-const scalar = (field: string): TrackedFieldDef => ({
-  kind: 'scalar',
-  label: field,
-  labelKey: `catalog:audit.fields.${field}`,
-});
-
-const complex = (field: string): TrackedFieldDef => ({
-  kind: 'scalar',
-  label: field,
-  labelKey: `catalog:audit.fields.${field}`,
-  value: structured,
-});
-
-function defs(scalars: readonly string[], complexes: readonly string[]): Record<string, TrackedFieldDef> {
-  return Object.fromEntries([
-    ...scalars.map((field) => [field, scalar(field)] as const),
-    ...complexes.map((field) => [field, complex(field)] as const),
-  ]);
-}
+const defs = trackedFieldDefsIn('catalog:audit.fields');
 
 export const CATALOG_ATTRIBUTE_TRACKED_FIELDS = defs(
   ['type', 'groupId', 'localizable', 'scopable', 'unique', 'searchable', 'orderKey', 'isDeleted'],

@@ -284,6 +284,14 @@ export const AUDIT_ENTITIES = {
   supply_relationship: { collectionKey: 'SUPPLY_RELATIONSHIPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   supply_request_link: { collectionKey: 'SUPPLY_REQUEST_LINKS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
 
+  // ── Υπεργολαβία (ADR-928) — ΕΝΑΣ γραφέας `src/server/subcontracts/` (CHECK 3.113) ──────────────────────────
+  subcontract_clause: { collectionKey: 'SUBCONTRACT_CLAUSES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  // Η διακυβέρνηση της έκδοσης (πρόταση · έγκριση · απόρριψη · έλεγχος · μεταφράσεις). Ζει στο
+  // `subcontract_clauses/{id}/subcontract_clause_versions/{v}` ⇒ σχήμα `engagement`: `collectionKey: null` + `'top-level'`
+  // (το `'subcollection'` σημαίνει `companies/{c}/<col>`). Backup: `SUBCOLLECTION_PARENTS.SUBCONTRACT_CLAUSE_VERSIONS`.
+  subcontract_clause_version: { collectionKey: null, scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: false },
+  subcontract_trade_template: { collectionKey: 'SUBCONTRACT_TRADE_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+
   // ── Μηχανή κειμένου (ADR-651 / ADR-344) — server-only services ────────────
   text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
   custom_dictionary_entry: { collectionKey: 'TEXT_CUSTOM_DICTIONARY', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },

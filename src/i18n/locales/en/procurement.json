@@ -796,5 +796,34 @@
     "currentTotal": "Payable after",
     "keepTerms": "Keep terms",
     "confirm": "Reprice"
+  },
+  "subcontracts": {
+    "audit": {
+      "fields": {
+        "clauseKey": "Clause key",
+        "title": "Title",
+        "currentVersion": "Version in force",
+        "latestVersion": "Latest version",
+        "openProposal": "Open proposal",
+        "isArchived": "Archived",
+        "version": "Version",
+        "state": "State",
+        "professionalReview": "Professional review",
+        "effectiveFrom": "Effective from",
+        "supersededBy": "Superseded by",
+        "contentHash": "Content fingerprint",
+        "proposalReason": "Proposal reason",
+        "decisionReason": "Decision reason",
+        "decidedBy": "Decided by",
+        "reviewedBy": "Reviewed by",
+        "translationStatus": "Translations",
+        "code": "Code",
+        "trade": "Trade",
+        "defaultDocumentMode": "Document mode",
+        "lines": "Lines",
+        "clauses": "Clauses",
+        "defaultTerms": "Default terms"
+      }
+    }
   }
 }

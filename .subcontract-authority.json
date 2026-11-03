@@ -1,0 +1,37 @@
+{
+  "$doc": "ADR-928 · CHECK 3.113 — Η ΜΙΑ ΠΗΓΗ για το «ποιος γράφει την υπεργολαβία». Η διακυβέρνηση της βιβλιοθήκης ρητρών (διάκριση καθηκόντων, μία ανοιχτή πρόταση, CAS, ίχνος) ΔΕΝ εκφράζεται σε κανόνα Firestore: οι κανόνες κλείνουν τον πελάτη, όχι το Admin SDK. Κάθε γραμμή του `guards` είναι ένα σύμβολο και οι μόνοι νόμιμοι κάτοχοί του, με λόγο. Τη διαβάζουν η πύλη (`scripts/check-subcontract-authority.js`, AST) και το self-test της — ποτέ δεύτερη λίστα.",
+  "guards": [
+    {
+      "kind": "member",
+      "name": "COLLECTIONS.SUBCONTRACT_CLAUSES",
+      "owners": {
+        "src/server/subcontracts/subcontract-store.server.ts": "Ο ένας γραφέας: η μόνη διεύθυνση της ρήτρας, πίσω από τη συναλλαγή με CAS και ίχνος μετά το commit."
+      }
+    },
+    {
+      "kind": "member",
+      "name": "SUBCOLLECTIONS.SUBCONTRACT_CLAUSE_VERSIONS",
+      "owners": {
+        "src/server/subcontracts/subcontract-store.server.ts": "Ο ένας γραφέας: η μόνη διεύθυνση της έκδοσης ρήτρας, που γράφεται μόνο με πρόταση ή απόφαση διακυβέρνησης."
+      }
+    },
+    {
+      "kind": "member",
+      "name": "COLLECTIONS.SUBCONTRACT_TRADE_TEMPLATES",
+      "owners": {
+        "src/server/subcontracts/subcontract-store.server.ts": "Ο ένας γραφέας: η μόνη διεύθυνση του προτύπου ειδικότητας, πίσω από τον έλεγχο απέναντι στη βιβλιοθήκη."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "runSubcontractTransaction",
+      "owners": {
+        "src/server/subcontracts/clause-library-writer.server.ts": "Δημιουργία ρήτρας και πρόταση νέας έκδοσης: επικύρωση, αποτυπώματα, μία ανοιχτή πρόταση.",
+        "src/server/subcontracts/clause-governance-writer.server.ts": "Έγκριση, απόρριψη, απόσυρση, επαγγελματικός έλεγχος, αρχειοθέτηση, με διάκριση καθηκόντων.",
+        "src/server/subcontracts/clause-translation-writer.server.ts": "Πρόχειρη και εγκεκριμένη μετάφραση, πάνω στο τρέχον ελληνικό αποτύπωμα.",
+        "src/server/subcontracts/trade-template-writer.server.ts": "Πρότυπα ειδικότητας, κρινόμενα απέναντι στην εγκεκριμένη βιβλιοθήκη μέσα στη συναλλαγή.",
+        "src/server/subcontracts/default-library-seed.server.ts": "Ιδεμποτική σπορά της προεπιλεγμένης βιβλιοθήκης, με τους ίδιους επικυρωτές και χωρίς πόρτα γύρω τους."
+      }
+    }
+  ]
+}

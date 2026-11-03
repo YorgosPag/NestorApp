@@ -61,6 +61,11 @@ import {
   SUPPLY_RELATIONSHIP_TRACKED_FIELDS,
   SUPPLY_REQUEST_LINK_TRACKED_FIELDS,
 } from '@/config/audit-tracked-fields-catalog';
+import {
+  SUBCONTRACT_CLAUSE_TRACKED_FIELDS,
+  SUBCONTRACT_CLAUSE_VERSION_TRACKED_FIELDS,
+  SUBCONTRACT_TRADE_TEMPLATE_TRACKED_FIELDS,
+} from '@/config/audit-tracked-fields-subcontracts';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 import { UNDECLARED_COMMON_CHARGES } from '@/lib/common-charges/common-charges';
@@ -1756,6 +1761,12 @@ export function getTrackedFieldsForEntityAuditType(
       return SUPPLY_RELATIONSHIP_TRACKED_FIELDS;
     case 'supply_request_link':
       return SUPPLY_REQUEST_LINK_TRACKED_FIELDS;
+    case 'subcontract_clause':
+      return SUBCONTRACT_CLAUSE_TRACKED_FIELDS;
+    case 'subcontract_clause_version':
+      return SUBCONTRACT_CLAUSE_VERSION_TRACKED_FIELDS;
+    case 'subcontract_trade_template':
+      return SUBCONTRACT_TRADE_TEMPLATE_TRACKED_FIELDS;
     default:
       return null;
   }

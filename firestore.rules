@@ -6473,6 +6473,22 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    // 📜 ADR-928 Φ1 — ΒΙΒΛΙΟΘΗΚΗ ΡΗΤΡΩΝ ΥΠΕΡΓΟΛΑΒΙΑΣ: διαβάζει ο χώρος, γράφει ΜΟΝΟ ο διακομιστής (`src/server/subcontracts/`,
+    // CHECK 3.113). Η διακυβέρνηση (διάκριση καθηκόντων, CAS, μία ανοιχτή πρόταση) ΔΕΝ εκφράζεται σε κανόνα — γι' αυτό ο
+    // πελάτης δεν γράφει ποτέ. Οι εκδόσεις φέρουν δικό τους `companyId` ⇒ κρίνονται χωρίς `get()` του γονέα.
+    match /subcontract_clauses/{clauseId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+
+      match /subcontract_clause_versions/{versionId} {
+        allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+        allow write: if false;
+      }
+    }
+    match /subcontract_trade_templates/{templateId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
     // 📡 ADR-923 §5.11 «3δ» Ζ · ADR-905 — ΣΗΜΑ ΑΝΑ ΟΨΗ ΤΙΜΩΝ: μόνο `{ companyId, view, revision, changedAt }`, ΠΟΤΕ τιμή.
     // GET για τα μέλη του χώρου (ίδιο σύνορο με τον κατάλογο) — `resource == null` κρατά τον listener ζωντανό πριν από
     // την πρώτη αύξηση (ανύπαρκτο έγγραφο = τίποτα να διαρρεύσει). `list`/γραφή: ΠΟΤΕ — γράφει ΜΟΝΟ η μηχανή του καταλόγου.

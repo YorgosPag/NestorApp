@@ -60,7 +60,8 @@ export interface DiscountApplication {
   readonly net: MinorAmount;
 }
 
-function isBasisPoints(value: unknown): value is BasisPoints {
+/** `true` για ακέραιες μονάδες βάσης στο 0..100% — ο ΕΝΑΣ φρουρός (κατάλογος ADR-923 · υπεργολαβία ADR-928). */
+export function isBasisPoints(value: unknown): value is BasisPoints {
   return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= BP_PER_WHOLE;
 }
 

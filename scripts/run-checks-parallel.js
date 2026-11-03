@@ -1230,6 +1230,12 @@ if (!process.env.SKIP_LISTING_TERRAIN_AUTHORITY)
 if (!process.env.SKIP_PUBLIC_CATALOG_AUTHORITY)
   addThread('3.112', 'Public catalog authority', 'scripts/check-public-catalog-authority.js', ['--index']);
 
+// CHECK 3.113 (ADR-928) — ο ένας γραφέας της υπεργολαβίας. «Γράφει κάποιος ρήτρα, έκδοση ρήτρας ή πρότυπο ειδικότητας ΕΞΩ
+// από τους γραφείς του `src/server/subcontracts/` — χωρίς διάκριση καθηκόντων, CAS, ίχνος;» + καμία `subcontract_*` στη λίστα
+// εγγραφής του MCP. Λίστα: `.subcontract-authority.json`. Ίδια κρίση με την 3.112 (`symbol-owner-gate`). AST, ZERO-TOL.
+if (!process.env.SKIP_SUBCONTRACT_AUTHORITY)
+  addThread('3.113', 'Subcontract authority', 'scripts/check-subcontract-authority.js', ['--index']);
+
 // CHECK 3.106 (ADR-923 §5.9) — ο ένας γραφέας του σχήματος καταλόγου. «Γράφει κάποιος ιδιότητα · ομάδα · οικογένεια
 // μέτρησης · κατηγορία · οικογένεια ΕΞΩ από τη μηχανή `src/server/catalog/catalog-store.server.ts` — δηλαδή χωρίς
 // επικύρωση απέναντι στη βιβλιοθήκη, χωρίς CAS, χωρίς ίχνος;» Οι κανόνες κλείνουν τον πελάτη, όχι τον Admin SDK.
