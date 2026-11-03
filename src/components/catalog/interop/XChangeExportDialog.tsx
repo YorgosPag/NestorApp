@@ -9,6 +9,8 @@
  * 🔑 **Ένα κοινό ανά αρχείο**: προεπιλογή η δημόσια τιμή καταλόγου· εναλλακτικά **μία** λίστα πώλησης που προσφέρεται σε κοινό.
  *    Οι τιμές λύνονται **μόνο** στον διακομιστή: εδώ στέλνεται μόνο το id της λίστας.
  * 🔑 Οι λίστες φορτώνουν **μόνο** όταν ανοίξει το παράθυρο (το component μοντάρεται τότε).
+ * 🔒 **Προέλεγχος πριν το κλικ** (§5.14.1 · Ε3): για κάθε κοινό, πόσα προϊόντα θα γραφτούν. Κανένα ⇒ η αιτία και ο δρόμος της
+ *    διόρθωσης, και το κουμπί κλειστό: το σχήμα δεν δέχεται κενό αρχείο, άρα δεν υπάρχει «κατέβασέ το έτσι κι αλλιώς».
  */
 
 import React, { useMemo, useState } from 'react';
@@ -20,10 +22,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { usePriceListsView } from '@/hooks/catalog/usePriceListViews';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import type { PriceListWire } from '@/subapps/catalog/types/pricing-views';
-import { useIssueMessage } from '../shared/CatalogIssues';
 import { CatalogField } from '../shared/CatalogFormFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { useXChangeExport } from './use-xchange-export';
+import { useXChangeExportPreview } from './use-xchange-export-preview';
+import { XChangeExportPreviewNote, XChangeIssueList, xchangePreviewAllowsExport } from './XChangeExportPreviewNote';
 import { XChangeExportReport } from './XChangeExportReport';
 
 /** Η τιμή της επιλογής «δημόσια τιμή». Τα ids λίστας έχουν πρόθεμα, άρα δεν συγκρούονται. */
@@ -54,10 +57,12 @@ function AudienceSelect({ value, disabled, onChange }: { readonly value: string;
 
 function XChangeExportDialog({ onOpenChange }: { readonly onOpenChange: (open: boolean) => void }) {
   const { t, language } = useCatalogText();
-  const message = useIssueMessage();
   const [choice, setChoice] = useState(PUBLIC_CHOICE);
+  const priceListId = choice === PUBLIC_CHOICE ? null : choice;
   const { state, run, reset } = useXChangeExport();
+  const preview = useXChangeExportPreview(priceListId);
   const exporting = state.kind === 'exporting';
+  const allowed = xchangePreviewAllowsExport(preview.state);
   const close = () => { reset(); onOpenChange(false); };
   const choose = (next: string) => { reset(); setChoice(next); };
   return (
@@ -67,17 +72,14 @@ function XChangeExportDialog({ onOpenChange }: { readonly onOpenChange: (open: b
           <DialogTitle>{t('xchangeExport.title')}</DialogTitle>
           <DialogDescription>{t('xchangeExport.lead')}</DialogDescription>
         </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void run(choice === PUBLIC_CHOICE ? null : choice, resolveHumanLanguage(language)); }}>
+        <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void run(priceListId, resolveHumanLanguage(language)); }}>
           <AudienceSelect value={choice} disabled={exporting} onChange={choose} />
-          {state.kind === 'refused' ? (
-            <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-sm text-destructive" role="alert">
-              {state.issues.map((issue, index) => <li key={`${issue.code}-${index}`}>{message(issue)}</li>)}
-            </ul>
-          ) : null}
+          {state.kind === 'refused' ? <XChangeIssueList issues={state.issues} /> : null}
           {state.kind === 'done' ? <XChangeExportReport summary={state.summary} /> : null}
+          {state.kind === 'idle' || state.kind === 'exporting' ? <XChangeExportPreviewNote state={preview.state} /> : null}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={close}>{t('xchangeExport.close')}</Button>
-            <Button type="submit" disabled={exporting}>{exporting ? t('xchangeExport.exporting') : t('xchangeExport.export')}</Button>
+            <Button type="submit" disabled={exporting || !allowed}>{exporting ? t('xchangeExport.exporting') : t('xchangeExport.export')}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -10,9 +10,14 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { CATALOG_API } from '@/subapps/catalog/catalog-routes';
-import type { XChangeExportWire } from '@/subapps/catalog/types/xchange-export';
+import type { XChangeExportPreview, XChangeExportWire } from '@/subapps/catalog/types/xchange-export';
 
 /** `priceListId === null` ⇒ η δημόσια τιμή καταλόγου (απόφαση Ε1). */
 export function fetchXChangeExport(priceListId: string | null, language: string): Promise<XChangeExportWire> {
   return apiClient.get<XChangeExportWire>(CATALOG_API.xchangeExport(priceListId, language));
+}
+
+/** Ο προέλεγχος για το ίδιο κοινό (§5.14.1 · Ε3): η μέτρηση της εξαγωγής, χωρίς έγγραφο. */
+export function fetchXChangeExportPreview(priceListId: string | null): Promise<XChangeExportPreview> {
+  return apiClient.get<XChangeExportPreview>(CATALOG_API.xchangeExportPreview(priceListId));
 }

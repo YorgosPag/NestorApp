@@ -191,6 +191,7 @@ export const CATALOG_ISSUE_CODES = [
   // ── Φάση 7 (§5.14): εξαγωγή ETIM xChange ──
   'xchangePriceListNotOffered',
   'xchangeSupplierNameMissing',
+  'xchangeNothingToExport',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

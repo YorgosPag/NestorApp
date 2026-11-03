@@ -166,6 +166,7 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   publicationAlreadyOnHold: 'issues.publicationAlreadyOnHold',
   xchangePriceListNotOffered: 'issues.xchangePriceListNotOffered',
   xchangeSupplierNameMissing: 'issues.xchangeSupplierNameMissing',
+  xchangeNothingToExport: 'issues.xchangeNothingToExport',
   supplyNotRequested: 'issues.supplyNotRequested',
   contactAlreadyBound: 'issues.contactAlreadyBound',
   contactWithoutEmail: 'issues.contactWithoutEmail',

@@ -336,6 +336,7 @@
     "publicationAlreadyOnHold": "Η έκδοση έχει ήδη δικαστική δέσμευση.",
     "xchangePriceListNotOffered": "Η λίστα δεν προσφέρεται σε κοινό.",
     "xchangeSupplierNameMissing": "Λείπει η επωνυμία της εταιρείας.",
+    "xchangeNothingToExport": "{cause, select, catalogEmpty {Ο κατάλογος δεν έχει προϊόντα.} noVisibilityRules {Δεν υπάρχει κανένας κανόνας ορατότητας, άρα όλα τα προϊόντα είναι κρυφά.} hiddenForAudience {Όλα τα προϊόντα είναι κρυφά για αυτό το κοινό.} noUsableIdentifier {Κανένα ορατό προϊόν δεν έχει κωδικό έως {max} χαρακτήρες.} other {Δεν υπάρχει προϊόν για εξαγωγή.}} Το πρότυπο xChange δεν δέχεται αρχείο χωρίς προϊόντα.",
     "supplyNotRequested": "Δεν υπάρχει εκκρεμές αίτημα.",
     "contactAlreadyBound": "Αυτή η επαφή είναι ήδη δεμένη με άλλον χώρο.",
     "contactWithoutEmail": "Η επαφή δεν έχει email."
@@ -1695,6 +1696,16 @@
     "export": "Εξαγωγή και λήψη",
     "exporting": "Γίνεται εξαγωγή…",
     "close": "Κλείσιμο",
+    "preview": {
+      "loading": "Υπολογίζεται τι θα εξαχθεί…",
+      "emptyTitle": "Κανένα προϊόν για εξαγωγή σε αυτό το κοινό",
+      "ready": "{count, plural, one {Θα εξαχθεί # προϊόν.} other {Θα εξαχθούν # προϊόντα.}}",
+      "left": "{count, plural, one {# μένει εκτός: κρυφό ή χωρίς κατάλληλο κωδικό.} other {# μένουν εκτός: κρυφά ή χωρίς κατάλληλο κωδικό.}}",
+      "fix": {
+        "products": "Άνοιγμα προϊόντων",
+        "visibility": "Ρύθμιση ορατότητας"
+      }
+    },
     "report": {
       "title": "Αναφορά εξαγωγής",
       "exported": "{count, plural, one {# προϊόν γράφτηκε} other {# προϊόντα γράφτηκαν}} στο {file}.",

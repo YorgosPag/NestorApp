@@ -29,7 +29,7 @@ import { savePriceLines } from '../price-line-writer.server';
 import { publishPriceListVersion } from '../price-publication.server';
 import { createPriceListVersion } from '../price-version-writer.server';
 import { createVisibilityRule } from '../visibility-rule-writer.server';
-import { exportXChangeCatalog } from '../xchange-export.server';
+import { exportXChangeCatalog, previewXChangeExport } from '../xchange-export.server';
 /* eslint-enable import/first */
 
 const validator = new Ajv2020({ strict: false, validateFormats: false, allErrors: true }).compile(schema20);
@@ -127,5 +127,49 @@ describe('μία λίστα πελάτη (απόφαση Ε1, εναλλακτι
     expect(leak.issues).toEqual([{ code: 'xchangePriceListNotOffered', path: 'priceListId' }]);
     const foreign = await rejectionOf(exportXChangeCatalog(RIVAL, { audience: { kind: 'priceList', priceListId: seeded.priceListId }, language: 'el' }));
     expect(foreign.kind).toBe('notFound');
+  });
+});
+
+describe('ο προέλεγχος και η κενή εξαγωγή (§5.14.1 · απόφαση Ε3)', () => {
+  /** Ο κατάλογος και οι τιμές χωρίς κανέναν κανόνα ορατότητας: Δ3 ⇒ όλα κρυφά. */
+  async function seedWithoutVisibility(): Promise<void> {
+    fake.reset();
+    seeded = await seedPricing(fake);
+    seedCatalog();
+    await publishVersion1(seeded);
+  }
+
+  it('ο προέλεγχος μετρά ό,τι γράφει η εξαγωγή — ίδια κρίση, ίδιοι αριθμοί', async () => {
+    const preview = await previewXChangeExport(ARIES, PUBLIC);
+    const { summary } = await exportXChangeCatalog(ARIES, { audience: PUBLIC, language: 'el' });
+    // Η στιγμή (`at`) είναι η μόνη διαφορά δύο κρίσεων με απόσταση χιλιοστών· όλα τα άλλα πρέπει να ταυτίζονται.
+    const { audience, priceSource, exported, hidden, unfitIdentifier, onRequest } = summary;
+    expect(preview).toEqual({ audience, priceSource, at: expect.any(String), exported, hidden, unfitIdentifier, onRequest, emptyCause: null, blockers: [] });
+  });
+
+  it('κανένας κανόνας ⇒ ο προέλεγχος λέει την αιτία, και η εξαγωγή ΑΡΝΕΙΤΑΙ αντί για άκυρο αρχείο με Product: []', async () => {
+    await seedWithoutVisibility();
+    await expect(previewXChangeExport(ARIES, PUBLIC)).resolves.toMatchObject({ exported: 0, hidden: 8, emptyCause: 'noVisibilityRules' });
+    const refused = await rejectionOf(exportXChangeCatalog(ARIES, { audience: PUBLIC, language: 'el' }));
+    expect(refused.issues).toEqual([{ code: 'xchangeNothingToExport', path: 'audience', params: { cause: 'noVisibilityRules', max: 35 } }]);
+  });
+
+  it('κανόνες υπάρχουν, όλα κρυφά για το κοινό ⇒ hiddenForAudience', async () => {
+    await seedWithoutVisibility();
+    await createVisibilityRule(ARIES, { subject: { kind: 'catalog' }, audience: { kind: 'anonymous' }, visibility: 'hidden' });
+    await expect(previewXChangeExport(ARIES, PUBLIC)).resolves.toMatchObject({ exported: 0, emptyCause: 'hiddenForAudience' });
+  });
+
+  it('χωρίς επωνυμία ο προέλεγχος ΔΕΝ πετά: το εμπόδιο φαίνεται πριν το κλικ, μαζί με τη μέτρηση', async () => {
+    taxDeclaration.mockResolvedValue({ kind: 'absent' });
+    await expect(previewXChangeExport(ARIES, PUBLIC)).resolves.toMatchObject({
+      exported: 7, emptyCause: null, blockers: [{ code: 'xchangeSupplierNameMissing', path: 'supplier' }],
+    });
+  });
+
+  it('λίστα που δεν προσφέρεται ⇒ ο προέλεγχος αρνείται όπως η εξαγωγή', async () => {
+    const cost = await createCatalogPriceList(ARIES, { ...MFP_PRICE_LIST.definition, code: 'master', kind: 'cost', priceType: 'net_customer', audience: null });
+    const refused = await rejectionOf(previewXChangeExport(ARIES, { kind: 'priceList', priceListId: cost.id }));
+    expect(refused.issues).toEqual([{ code: 'xchangePriceListNotOffered', path: 'priceListId' }]);
   });
 });

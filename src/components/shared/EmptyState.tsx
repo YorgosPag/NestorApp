@@ -56,6 +56,11 @@ export interface EmptyStateProps {
   description?: string;
   /** Optional action button */
   action?: EmptyStateAction;
+  /**
+   * Optional custom action content (e.g. a navigation link to where the empty state is fixed), rendered below the
+   * description. Use when the action is a destination rather than a click handler.
+   */
+  children?: React.ReactNode;
   /** Size preset: sm (compact inline), md (standard), lg (full-page) */
   size?: 'sm' | 'md' | 'lg';
   /** Wrap in a Card component */
@@ -112,6 +117,7 @@ export function EmptyState({
   title,
   description,
   action,
+  children,
   size = 'md',
   variant = 'plain',
   className,
@@ -154,6 +160,7 @@ export function EmptyState({
           {action.label}
         </Button>
       )}
+      {children && <footer className="mt-3">{children}</footer>}
     </section>
   );
 

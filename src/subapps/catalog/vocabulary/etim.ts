@@ -70,3 +70,13 @@ export const XCHANGE_ON_REQUEST_REASONS = [
 ] as const;
 
 export type XChangeOnRequestReason = (typeof XCHANGE_ON_REQUEST_REASONS)[number];
+
+/**
+ * Γιατί μια εξαγωγή xChange **δεν θα είχε κανένα προϊόν** (ADR-923 §5.14.1 · απόφαση Ε3). Το σχήμα 2.0 ζητά `Product` με
+ * `minItems: 1`: κενό αρχείο είναι **άκυρο** έγγραφο, άρα ποτέ δεν γράφεται. Η σειρά είναι η σειρά της διάγνωσης: ο κατάλογος
+ * χωρίς προϊόντα · κανένας κανόνας ορατότητας (Δ3: χωρίς κανόνα ⇒ κρυφό) · όλα κρυφά για **αυτό** το κοινό · τα ορατά χωρίς
+ * κωδικό που χωρά στο σχήμα.
+ */
+export const XCHANGE_EMPTY_CAUSES = ['catalogEmpty', 'noVisibilityRules', 'hiddenForAudience', 'noUsableIdentifier'] as const;
+
+export type XChangeEmptyCause = (typeof XCHANGE_EMPTY_CAUSES)[number];

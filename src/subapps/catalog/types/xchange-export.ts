@@ -10,7 +10,8 @@
 
 import type { LocalizedText } from '@/i18n/localized-text';
 import type { XChangeExportReport } from '../interop/etim/catalog-to-xchange';
-import type { XChangeOnRequestReason } from '../vocabulary/etim';
+import type { CatalogIssue } from '../schema/catalog-issues';
+import type { XChangeEmptyCause, XChangeOnRequestReason } from '../vocabulary/etim';
 
 /** Το κοινό των τιμών του αρχείου. */
 export type XChangeExportAudience =
@@ -26,22 +27,39 @@ export interface XChangeExportPriceSource {
   readonly version: { readonly id: string; readonly number: number; readonly validFrom: string } | null;
 }
 
-export interface XChangeExportSummary {
+/**
+ * Η κρίση του κοινού πάνω στον κατάλογο: **μία** μέτρηση, που τη μοιράζονται ο προέλεγχος και η αναφορά εξαγωγής (ADR-923
+ * §5.14.1 · Ε3). Βγαίνει από την ίδια συναρμολόγηση με το αρχείο.
+ */
+export interface XChangeExportCounts {
   readonly audience: XChangeExportAudience;
   readonly priceSource: XChangeExportPriceSource | null;
   /** Η στιγμή της κρίσης τιμής και ορατότητας (ISO). */
   readonly at: string;
-  readonly fileName: string;
-  /** SKU που γράφτηκαν στο αρχείο. */
+  /** SKU που γράφονται (ή γράφτηκαν) στο αρχείο. */
   readonly exported: number;
   /** Κρυφά για το κοινό (απόφαση Ε2): **δεν** γράφονται. */
   readonly hidden: number;
   /** Ορατά, αλλά χωρίς κωδικό SKU ή με κωδικό μακρύτερο από όσο δέχεται το σχήμα: δεν γράφονται. */
   readonly unfitIdentifier: number;
-  /** Γράφτηκαν ως `PriceOnRequest`, ανά αιτία. */
+  /** Γράφονται ως `PriceOnRequest`, ανά αιτία. */
   readonly onRequest: Readonly<Partial<Record<XChangeOnRequestReason, number>>>;
+}
+
+export interface XChangeExportSummary extends XChangeExportCounts {
+  readonly fileName: string;
   /** Τι έμεινε εκτός από το περιεχόμενο των SKU που γράφτηκαν. */
   readonly content: XChangeExportReport;
+}
+
+/**
+ * `GET /api/catalog/xchange-export/preview`: τι **θα** έβγαινε, πριν τη λήψη (ADR-923 §5.14.1 · Ε3). Χωρίς έγγραφο.
+ * `emptyCause !== null` ⇔ `exported === 0`: η εξαγωγή θα αρνιόταν. `blockers`: ό,τι θα την έκανε να αρνηθεί για άλλο λόγο
+ * (π.χ. χωρίς επωνυμία), ώστε να φαίνεται **πριν** το κλικ.
+ */
+export interface XChangeExportPreview extends XChangeExportCounts {
+  readonly emptyCause: XChangeEmptyCause | null;
+  readonly blockers: readonly CatalogIssue[];
 }
 
 /** `GET /api/catalog/xchange-export`: το έγγραφο αυτούσιο και, δίπλα του, η αναφορά. */

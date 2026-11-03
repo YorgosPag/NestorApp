@@ -11,10 +11,11 @@
  */
 
 import { chainOf, type StoredFamily, type StoredModel, type StoredProduct } from '../../publishing/publication-chapters';
+import type { CatalogIssue } from '../../schema/catalog-issues';
 import type { NoValueReason, ValueSlots } from '../../types/product';
 import { findVariantScheme } from '../../values/attribute-levels';
 import { resolveInheritedValues, type InheritanceLink } from '../../values/resolve-inherited';
-import { ETIM_ITEM_NUMBER_MAX, type XChangeOnRequestReason } from '../../vocabulary/etim';
+import { ETIM_ITEM_NUMBER_MAX, type XChangeEmptyCause, type XChangeOnRequestReason } from '../../vocabulary/etim';
 import type { XChangeProductSource } from './catalog-to-xchange';
 import type { XChangeSkuPricing } from './xchange-pricing';
 
@@ -77,4 +78,27 @@ export function assembleXChangeProducts(input: XChangeAssemblyInput): XChangeAss
     sources.push(sourceOf(product, identifier, chain, input, pricing.kind === 'priced' ? pricing.price : null));
   }
   return { sources, hidden, unfitIdentifier, onRequest };
+}
+
+/** Τα στοιχεία της διάγνωσης πέρα από τη συναρμολόγηση: πόσα SKU διαβάστηκαν και πόσοι κανόνες ορατότητας υπάρχουν στον χώρο. */
+export interface XChangeEmptyFacts {
+  readonly productCount: number;
+  readonly visibilityRuleCount: number;
+}
+
+/**
+ * Γιατί η συναρμολόγηση **δεν έχει κανένα προϊόν** (ADR-923 §5.14.1 · Ε3)· `null` όταν έχει. Βγαίνει από την **ίδια**
+ * συναρμολόγηση με το αρχείο, άρα ο προέλεγχος και η εξαγωγή δεν μπορούν να διαφωνήσουν. Μία αιτία, η πρώτη που
+ * εξηγεί το κενό: ό,τι λείπει νωρίτερα στη σειρά κρύβει τα επόμενα.
+ */
+export function xchangeEmptyCause(assembly: XChangeAssembly, facts: XChangeEmptyFacts): XChangeEmptyCause | null {
+  if (assembly.sources.length > 0) return null;
+  if (facts.productCount === 0) return 'catalogEmpty';
+  if (assembly.hidden < facts.productCount) return 'noUsableIdentifier';
+  return facts.visibilityRuleCount === 0 ? 'noVisibilityRules' : 'hiddenForAudience';
+}
+
+/** Το **ένα** εύρημα της άρνησης: το ρίχνει ο διακομιστής, το δείχνει ο προέλεγχος, ίδια φράση στα δύο. */
+export function xchangeNothingToExportIssue(cause: XChangeEmptyCause): CatalogIssue {
+  return { code: 'xchangeNothingToExport', path: 'audience', params: { cause, max: ETIM_ITEM_NUMBER_MAX } };
 }

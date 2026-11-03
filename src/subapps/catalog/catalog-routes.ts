@@ -123,6 +123,11 @@ export const CATALOG_API = {
     if (priceListId !== null) query.set(XCHANGE_PRICE_LIST_PARAM, priceListId);
     return `${API_ROOT}/xchange-export?${query.toString()}`;
   },
+  /** Ο προέλεγχος (§5.14.1 · Ε3): τι θα έβγαινε για το κοινό, χωρίς έγγραφο. Η γλώσσα δεν αλλάζει τη μέτρηση. */
+  xchangeExportPreview: (priceListId: string | null) => {
+    const query = priceListId === null ? '' : `?${new URLSearchParams({ [XCHANGE_PRICE_LIST_PARAM]: priceListId }).toString()}`;
+    return `${API_ROOT}/xchange-export/preview${query}`;
+  },
 } as const;
 
 /** Το έργο του βιβλίου τιμών κόστους (`GET …/cost-rates?projectId=…`). */
@@ -162,6 +167,9 @@ export function supplyRequestHref(token: string): string {
 
 /** Η καρτέλα του αγοραστή στις «Συνδέσεις»: ο σύνδεσμος της ειδοποίησης ανοίγει ακριβώς εκεί. */
 export const SUPPLIERS_TAB_QUERY = '?tab=suppliers';
+
+/** Η καρτέλα «Ορατότητα» των «Εκπτώσεων»: εκεί διορθώνεται εξαγωγή όπου όλα είναι κρυφά (ADR-923 §5.14.1 · Ε3). */
+export const VISIBILITY_TAB_QUERY = '?tab=visibility';
 
 /** Τμήματα σελίδων μέσα στον χώρο. */
 export const CATALOG_PAGES = {
