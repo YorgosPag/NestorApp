@@ -18,6 +18,15 @@
 - `f9947206` (land στον `main` με εντολή Giorgio, **push εκκρεμεί**, το ζήτησε από τη συντονίστρια): η σελίδα `/crm/notifications` ήταν κλειστή στην παραγωγή από τις 2026-03-20 (`c78a69ba`, ADR-253), γιατί το `NODE_ENV === 'production'` έκλεινε όλη τη σελίδα αντί για το εργαλείο δοκιμών. Αφαιρέθηκε. Το κουμπί δοκιμής μένει μόνο σε development. Η κάρτα αποδίδει τίτλο/σώμα από το SSoT `components/notifications/notification-display-title.ts` (όπως ο drawer). Αφαιρέθηκαν τα νεκρά κουμπιά «Φίλτρα» και «Διαγραφή δοκιμής». Test: `src/components/crm/pages/__tests__/CrmNotificationsPageContent.test.tsx`, 3 tests, μεταλλάξεις 3/3.
 - ⚠️ Δεν ελέγχθηκε σε τρέχουσα εφαρμογή ούτε στην παραγωγή.
 
+## ✅ ΕΓΙΝΑΝ 2026-11-03 (δεύτερη συνεδρία) — ΧΩΡΙΣ land
+
+- `0985fa52` — Α: πλήρες Inbox, **ADR-927** (νέο· το «ADR-027» ήταν φάντασμα). Μία δανεική ροή ανά χρήστη, ένα store, κοινό hook ενεργειών. Tests: 4 σουίτες, μεταλλάξεις 6/6.
+- `5da3d165` — Β: αφαίρεση «Ενημέρωση Βάσης», «Μετεγκατάσταση Enterprise», νεκρού `core/configuration/*` (μένει μόνο το `business-rules.ts`) και `config/contact-info-config.ts`. ADR-927 §8.
+- Μένουν: (1) ζωντανός έλεγχος στην εφαρμογή (Inbox, συρτάρι, αναίρεση, «Παλαιότερες»)· (2) `wt:land` + push **μόνο με εντολή Giorgio**, αφού ενημερωθεί η συντονίστρια (`rfq-public-showroom-quote-request` [211e2d], πρώην `project-scope-authorization-adr-926`).
+- Προϋπάρχοντα κόκκινα που δεν προκλήθηκαν εδώ: `email-type-preferences` Μ1 · `notification-title-key-reach` Κ0β · `notification-destination-custody` Κ1/Κ2 · `workspace-scope-gate` Ι7.
+
+Το κείμενο παρακάτω είναι το αρχικό σχέδιο, για ιστορικό.
+
 ## Επόμενο Α: Ειδοποιήσεις, στάδιο 2 (πλήρες Inbox)
 
 Σημερινά κενά, μετρημένα στον κώδικα:
