@@ -433,6 +433,7 @@
       "submit": "Send",
       "cancel": "Cancel",
       "submitting": "Sending...",
+      "autoDescription": "These measurements were taken while the view was running slowly. Review them, add a comment if you like, and send.",
       "successToast": "Diagnostic sent",
       "errorToast": "Failed to send",
       "screenshotAlt": "3D scene screenshot",
@@ -460,16 +461,13 @@
       "openHud": "Open HUD"
     },
     "autoSubmit": {
-      "title": "Low performance detected",
-      "body": "We are seeing {fps} FPS for 5+ seconds. Send diagnostics automatically to help us improve?",
-      "bodyGeneric": "We are seeing low performance for 5+ seconds. Send diagnostics automatically to help us improve?",
-      "acceptButton": "Yes, send",
-      "declineButton": "No thanks",
-      "permanentOptOutButton": "No and do not ask again",
-      "cooldownNotice": "We will not ask again for 30 minutes.",
-      "toggle": "Auto-report low performance",
-      "toggleDescription": "When FPS drops below 10 for 5+ seconds, we will ask permission to send diagnostics.",
-      "autoComment": "[Auto-submission — FPS < 10 for 5+ seconds]"
+      "toastTitle": "The 3D view is running slowly",
+      "toastBody": "{fps} FPS for more than 5 seconds. You can send a report to support — you will see exactly what is sent first.",
+      "reviewButton": "Report…",
+      "notNowButton": "Not now",
+      "permanentOptOutButton": "Don't ask again",
+      "toggle": "Offer a report when performance is low",
+      "toggleDescription": "When FPS stays below 10 for more than 5 seconds, we offer to send a report. Nothing is sent without your review."
     },
     "telemetry": {
       "title": "Anonymous performance improvement participation",

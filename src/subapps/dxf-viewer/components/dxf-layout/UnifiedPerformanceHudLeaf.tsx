@@ -13,13 +13,15 @@
  *   - '2d'  → the live dxf Canvas2D (via getCanvas2D)
  *   - 3D    → the three.js renderer canvas (active-scene-manager registry, ADR-453)
  *
- * ADR-040: only low-freq subscriptions (mode + auth/hierarchy) — the HUD itself
- * is a 1-subscriber micro-leaf.
+ * ADR-040: only low-freq subscriptions (mode + hierarchy) — the HUD itself is a
+ * 1-subscriber micro-leaf, and so is PerformanceAlertsLeaf (auto-submit phase).
+ * No auth here any more: the diagnostics route takes uid/companyId from the
+ * verified token (withAuth), never from client-supplied props.
  */
 
-import { useAuth } from '@/auth/hooks/useAuth';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { PerformanceHUD } from '../../bim-3d/performance/PerformanceHUD';
+import { PerformanceAlertsLeaf } from '../../bim-3d/performance/PerformanceAlertsLeaf';
 import { usePerformanceModeBridge } from '../../bim-3d/performance/usePerformanceModeBridge';
 import { getActiveSceneManager } from '../../bim-3d/scene/active-scene-manager-registry';
 
@@ -30,7 +32,6 @@ interface UnifiedPerformanceHudLeafProps {
 
 export function UnifiedPerformanceHudLeaf({ getCanvas2D }: UnifiedPerformanceHudLeafProps) {
   const mode = usePerformanceModeBridge();
-  const { user } = useAuth();
   const hierarchy = useProjectHierarchyOptional();
   const projectId = hierarchy?.selectedProject?.id ?? null;
 
@@ -39,11 +40,11 @@ export function UnifiedPerformanceHudLeaf({ getCanvas2D }: UnifiedPerformanceHud
     : getActiveSceneManager()?.getRendererCanvas() ?? null;
 
   return (
-    <PerformanceHUD
-      canvas={canvas}
-      projectId={projectId}
-      userId={user?.uid ?? null}
-      companyId={user?.companyId ?? null}
-    />
+    <>
+      <PerformanceHUD canvas={canvas} projectId={projectId} />
+      {/* ADR-366 §C.7.Q4/Q5 — sibling, NOT child: the HUD renders null while hidden,
+          and the low-FPS prompt exists for exactly those users. */}
+      <PerformanceAlertsLeaf canvas={canvas} projectId={projectId} />
+    </>
   );
 }

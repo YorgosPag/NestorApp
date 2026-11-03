@@ -1,59 +1,79 @@
 /**
  * performance-snapshot-service — ADR-366 §B.5 + §C.7.Q4
  *
- * Client-side facade that posts a performance diagnostic snapshot to the
- * server-side route `/api/performance-diagnostics`. The server handles
- * Storage upload (Admin SDK), Firestore write, and EntityAuditService audit
- * — clients never write directly to `performance_diagnostics` (see
- * firestore.rules and the related Boy Scout that hardened the rule block).
+ * Client-side SSoT for the diagnostic report: ONE screenshot capture and ONE
+ * send path, shared by the manual «Αποστολή στην υποστήριξη» flow (B.5) and the
+ * low-FPS prompt (C.7.Q4). The server handles Storage upload (Admin SDK),
+ * Firestore write and EntityAuditService audit — clients never write directly
+ * to `performance_diagnostics` (see firestore.rules).
+ *
+ * «What you see is what is sent»: the review dialog shows the data URL from
+ * `captureDiagnosticScreenshot()` and `sendDiagnostic()` uploads THAT data URL.
+ * There is no second capture, so the report cannot differ from the preview.
  *
  * Sources accepted by the route:
- *   - 'manual'      → user clicked "Send to support" in the HUD dialog (B.5)
- *   - 'auto_submit' → §C.7.Q4 FSM accepted prompt (sustained FPS<10)
+ *   - 'manual'      → user opened the dialog from the HUD (B.5)
+ *   - 'auto_submit' → user accepted the low-FPS prompt (C.7.Q4)
  */
 
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
+import type { HudRenderMode } from './hud-render-mode';
 import { getActiveSceneManager } from '../scene/active-scene-manager-registry';
 
+const SCREENSHOT_TYPE = 'image/png';
+const SCREENSHOT_QUALITY = 0.92;
+
+export type DiagnosticSource = 'manual' | 'auto_submit';
+
 export interface DiagnosticInput {
-  companyId: string;
-  userId: string;
   projectId: string | null;
   metrics: PerformanceMetricsSnapshot;
-  renderMode: string;
-  canvas: HTMLCanvasElement;
+  renderMode: HudRenderMode;
+  /** Data URL produced by `captureDiagnosticScreenshot` — the one the user previewed. */
+  screenshotDataUrl: string;
   comment: string;
-  /** Defaults to 'manual' for backward compatibility with existing call sites. */
-  source?: 'manual' | 'auto_submit';
+  source: DiagnosticSource;
 }
 
-export async function sendDiagnostic(input: DiagnosticInput): Promise<void> {
-  const { metrics, renderMode, canvas, comment, projectId, source = 'manual' } = input;
-
-  // ADR-366 §B.5 — the main renderer runs with `preserveDrawingBuffer:false` (per-frame
-  // fill-rate win), so a bare `canvas.toDataURL()` here (a user click, outside the render
-  // loop) would read a cleared buffer. Capture via the active manager, which force-renders
-  // ONE frame and reads it in the same task. Fallback to the raw canvas if no manager is
-  // registered (e.g. read-only Properties pipeline) — harmless, may be blank.
-  const dataUrl = getActiveSceneManager()?.captureFrameDataURL('image/png', 0.92)
-    ?? canvas.toDataURL('image/png', 0.92);
-  const screenshotBase64 = dataUrl.split(',')[1] ?? dataUrl;
-
-  const response = await fetch('/api/performance-diagnostics', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      projectId,
-      metrics,
-      renderMode,
-      comment: comment || null,
-      source,
-      screenshotBase64,
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => response.statusText);
-    throw new Error(`performance-diagnostics POST failed: ${response.status} ${text}`);
+/**
+ * Capture the screenshot for a diagnostic report.
+ *
+ * 3D: the main renderer runs with `preserveDrawingBuffer:false` (per-frame
+ * fill-rate win), so a bare `canvas.toDataURL()` outside the render loop reads
+ * a CLEARED buffer — a blank image. The active scene manager force-renders one
+ * frame and reads it in the same task. `||` (not `??`): a disposed manager
+ * returns '' and must fall back too.
+ *
+ * 2D: the Canvas2D keeps its pixels, so the canvas itself is the source. The 3D
+ * manager is NOT consulted — in 2D it would capture the wrong view.
+ */
+export function captureDiagnosticScreenshot(
+  canvas: HTMLCanvasElement,
+  renderMode: HudRenderMode,
+): string {
+  if (renderMode !== '2d') {
+    const frame = getActiveSceneManager()?.captureFrameDataURL(SCREENSHOT_TYPE, SCREENSHOT_QUALITY);
+    if (frame) return frame;
   }
+  return canvas.toDataURL(SCREENSHOT_TYPE, SCREENSHOT_QUALITY);
+}
+
+/**
+ * POST the report. Goes through `apiClient`, so it carries an `Idempotency-Key`
+ * and a network/5xx retry cannot record the same report twice (ADR-853 Ε3).
+ * Throws on failure — the caller owns the user-facing feedback.
+ */
+export async function sendDiagnostic(input: DiagnosticInput): Promise<void> {
+  const { metrics, renderMode, screenshotDataUrl, comment, projectId, source } = input;
+  const screenshotBase64 = screenshotDataUrl.split(',')[1] ?? screenshotDataUrl;
+
+  await apiClient.post('/api/performance-diagnostics', {
+    projectId,
+    metrics,
+    renderMode,
+    comment: comment || null,
+    source,
+    screenshotBase64,
+  });
 }

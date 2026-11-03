@@ -22,16 +22,21 @@ import { PerformanceHUDExpanded } from './PerformanceHUDExpanded';
 import { PerformanceDiagnosticDialog } from './PerformanceDiagnosticDialog';
 import { copyStatsToClipboard } from './clipboard-stats-writer';
 import { downloadStatsAndScreenshot } from './file-download-writer';
-import { sendDiagnostic } from './performance-snapshot-service';
+import { captureDiagnosticScreenshot, sendDiagnostic } from './performance-snapshot-service';
+import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
 
 interface PerformanceHUDProps {
   canvas: HTMLCanvasElement | null;
   projectId: string | null;
-  userId: string | null;
-  companyId: string | null;
 }
 
-export function PerformanceHUD({ canvas, projectId, userId, companyId }: PerformanceHUDProps) {
+/** What the review dialog shows — frozen when it opens, sent unchanged. */
+interface ManualReport {
+  metrics: PerformanceMetricsSnapshot;
+  screenshotDataUrl: string;
+}
+
+export function PerformanceHUD({ canvas, projectId }: PerformanceHUDProps) {
   const { t } = useTranslation('bim3d');
 
   const { enabled, expanded, metrics, renderMode } = useSyncExternalStore(
@@ -46,7 +51,7 @@ export function PerformanceHUD({ canvas, projectId, userId, companyId }: Perform
     () => false,
   );
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [report, setReport] = useState<ManualReport | null>(null);
 
   const onExpand = useCallback(() => {
     if (!expanded) usePerformanceHUDStore.getState().toggleExpanded();
@@ -76,8 +81,24 @@ export function PerformanceHUD({ canvas, projectId, userId, companyId }: Perform
   }, [metrics, renderMode, canvas, t]);
 
   const onSendToSupport = useCallback(() => {
-    setDialogOpen(true);
-  }, []);
+    if (!metrics || !canvas) {
+      toast.error(t('performance.dialog.errorToast'));
+      return;
+    }
+    setReport({ metrics, screenshotDataUrl: captureDiagnosticScreenshot(canvas, renderMode) });
+  }, [metrics, canvas, renderMode, t]);
+
+  const onSubmitReport = useCallback(async (comment: string) => {
+    if (!report) return;
+    await sendDiagnostic({
+      projectId,
+      metrics: report.metrics,
+      renderMode,
+      screenshotDataUrl: report.screenshotDataUrl,
+      comment,
+      source: 'manual',
+    });
+  }, [report, projectId, renderMode]);
 
   if (!enabled) return null;
 
@@ -113,25 +134,15 @@ export function PerformanceHUD({ canvas, projectId, userId, companyId }: Perform
         />
       </div>
 
-      {canvas && dialogOpen && metrics && (
+      {report && (
         <PerformanceDiagnosticDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          metrics={metrics}
+          open
+          onOpenChange={(open) => { if (!open) setReport(null); }}
+          metrics={report.metrics}
           renderMode={renderMode}
-          canvas={canvas}
-          onSubmit={async (comment) => {
-            if (!metrics || !canvas || !companyId || !userId) return;
-            await sendDiagnostic({
-              companyId,
-              userId,
-              projectId,
-              metrics,
-              renderMode,
-              canvas,
-              comment,
-            });
-          }}
+          screenshotDataUrl={report.screenshotDataUrl}
+          variant="manual"
+          onSubmit={onSubmitReport}
         />
       )}
     </div>
