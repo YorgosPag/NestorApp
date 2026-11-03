@@ -137,7 +137,8 @@ describe('ΠΑΡΟΝΟΜΑΣΤΗΣ — το πραγματικό δέντρο', 
     expect(findings.filter((f) => gate.BLOCKING.includes(f.state))).toEqual([]);
   });
 
-  it('το «0» σημαίνει ότι κοίταξε: και οι 8 πράξεις έχουν αποδεδειγμένο σημείο επιβολής', () => {
-    expect(tally[gate.STATES.ENFORCED]).toBe(8);
+  // ADR-928 §5.15: +2 (`subcontracts:agreements:manage` · `:assign`, σημείο επιβολής `agreement-resource.server.ts`).
+  it('το «0» σημαίνει ότι κοίταξε: και οι 10 πράξεις έχουν αποδεδειγμένο σημείο επιβολής', () => {
+    expect(tally[gate.STATES.ENFORCED]).toBe(10);
   });
 });

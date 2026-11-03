@@ -32,16 +32,25 @@ export function scopeOf(resource: PermissionResource): { projectId?: string } {
   return resource.projectId === null ? {} : { projectId: resource.projectId };
 }
 
-/** Ένα πεδίο κειμένου του σώματος, χωρίς να καταναλωθεί το αίτημα. Οτιδήποτε άλλο ⇒ `null`. */
-export async function bodyText(request: NextRequest, field: string): Promise<string | null> {
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> => typeof value === 'object' && value !== null;
+
+/**
+ * Ένα πεδίο κειμένου του σώματος σε **διαδρομή** (`['draft', 'scope', 'projectId']`), χωρίς να καταναλωθεί το αίτημα.
+ * Οτιδήποτε άλλο (χαλασμένο JSON, κενό, άλλος τύπος) ⇒ `null`.
+ */
+export async function bodyTextAt(request: NextRequest, path: readonly string[]): Promise<string | null> {
   try {
-    const body: unknown = await request.clone().json();
-    if (typeof body !== 'object' || body === null) return null;
-    const value = (body as Record<string, unknown>)[field];
+    let value: unknown = await request.clone().json();
+    for (const field of path) value = isRecord(value) ? value[field] : undefined;
     return typeof value === 'string' && value.length > 0 ? value : null;
   } catch {
     return null;
   }
+}
+
+/** Ένα πεδίο κειμένου στην κορυφή του σώματος. */
+export function bodyText(request: NextRequest, field: string): Promise<string | null> {
+  return bodyTextAt(request, [field]);
 }
 
 /** Τα κτίρια κρατούν ιστορικά και αριθμητικά id έργου. Κενό ⇒ χωρίς έργο. */

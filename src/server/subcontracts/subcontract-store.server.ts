@@ -35,6 +35,7 @@ import type { AuthContext } from '@/lib/auth';
 import { ownedOrNull } from '@/lib/auth/tenant-ownership';
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { isAddressableDocId } from '@/lib/firestore/doc-id';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { revisionAfterWrite } from '@/subapps/catalog/aggregate/aggregate-members';
 import type { SubcontractAgreementCounter } from '@/subapps/procurement/subcontracts/agreements/agreement-document-number';
@@ -193,6 +194,17 @@ export async function readOwnedOrNull<K extends SubcontractKind>(
 ): Promise<SubcontractRecords[K] | null> {
   const snap = await scope.tx.get(ref);
   return ownedOrNull(snap.data() as SubcontractRecords[K] | undefined, scope.ctx.companyId, { resource: ref.parent.id, resourceId: ref.id });
+}
+
+/**
+ * Το συμφωνητικό **αυτού** του χώρου, **εκτός** συναλλαγής, μόνο για την κρίση δικαιώματος (ADR-926 Κ3: «σε ποιο έργο
+ * ανήκει ο πόρος;»). Ανύπαρκτο ή ξένο ⇒ `null`. Δεν τροφοδοτεί ποτέ εγγραφή: ο γραφέας ξαναδιαβάζει μέσα στη συναλλαγή.
+ */
+export async function readAgreementForAuthorization(ctx: AuthContext, agreementId: string): Promise<SubcontractAgreement | null> {
+  if (!isAddressableDocId(agreementId)) return null;
+  const ref = agreementDocRef(getAdminFirestore(), agreementId);
+  const snap = await ref.get();
+  return ownedOrNull(snap.data() as SubcontractAgreement | undefined, ctx.companyId, { resource: ref.parent.id, resourceId: ref.id });
 }
 
 /** Όπως το `readOwnedOrNull`, αλλά ανύπαρκτο ή ξένο ⇒ `notFound`. */

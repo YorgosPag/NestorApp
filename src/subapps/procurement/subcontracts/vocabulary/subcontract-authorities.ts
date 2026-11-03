@@ -9,11 +9,13 @@
  * | `manage` | έγκριση · απόρριψη · επαγγελματικός έλεγχος · αρχειοθέτηση | Ironclad: η βιβλιοθήκη ανήκει στους διαχειριστές |
  * | `templates` | πρότυπα ειδικότητας — το καλούπι κάθε συμφωνητικού | Procore: πρότυπα συμβάσεων |
  * | `seed` | σπορά της προεπιλεγμένης βιβλιοθήκης: γράφει προτάσεις **και** πρότυπα ⇒ θέλει **και τα δύο** | — |
- * | `agreements` | συμφωνητικό: πρόχειρο, μεταβάσεις κύκλου ζωής, αναθέσεις εργοταξίου (Φ2) | Procore: Commitments admin |
+ * | `agreements` | συμφωνητικό: πρόχειρο, μεταβάσεις κύκλου ζωής (Φ2) | Procore: Commitments admin |
+ * | `assign` | **εντολή εργασίας**: ανάθεση εργοταξίου σε κύρια σύμβαση πολλών έργων (§5.15) | AIA A422 · Procore «Create Work Order Contract» |
  * | `approveDeviation` | έγκριση/απόρριψη **απόκλισης** ενός συμφωνητικού από τις ζώνες της εταιρείας (§5.2.1 τρόπος 3) | DocuSign CLM: έγκριση εξαίρεσης |
  *
- * 🔑 Τα δικαιώματα συμφωνητικού είναι **της εταιρείας**, όχι του έργου (Φ2 απόφαση 11): ένα `multi_project` έγγραφο
- * δεν έχει **ένα** έργο-πόρο, και το ADR-926 Κ3 δέχεται έργο **μόνο** από τον πόρο.
+ * 🔑 Εμβέλεια (§5.15): το `agreements` ισχύει **και στο έργο** για συμφωνητικό `single_project`, το `assign` στο
+ * **έργο-στόχο** της ανάθεσης· η κύρια σύμβαση (`multi_project`) και το `approveDeviation` μένουν **της εταιρείας**.
+ * Το έργο το δίνει **μόνο** ο πόρος (`agreement-resource.server.ts`, ADR-926 Κ3).
  *
  * @module subapps/procurement/subcontracts/vocabulary/subcontract-authorities
  */
@@ -26,6 +28,7 @@ export const SUBCONTRACT_AUTHORITY_PERMISSIONS = {
   templates: ['subcontracts:templates:manage'],
   seed: ['subcontracts:clauses:manage', 'subcontracts:templates:manage'],
   agreements: ['subcontracts:agreements:manage'],
+  assign: ['subcontracts:agreements:assign'],
   approveDeviation: ['subcontracts:agreements:approve_deviation'],
 } as const satisfies Readonly<Record<string, readonly PermissionId[]>>;
 

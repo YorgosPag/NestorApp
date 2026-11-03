@@ -74,6 +74,8 @@ export const PROJECT_ROLE_POLICY: Readonly<Record<ProjectScopedAction, { operati
   'projects:projects:update': { enforcedBy: 'src/app/api/projects/[projectId]/landowner-unlink-check/route.ts' },
   'legal:conveyance:view': { enforcedBy: 'src/app/api/conveyance-cases/_shared/conveyance-route-support.ts' },
   'legal:conveyance:manage': { enforcedBy: 'src/app/api/conveyance-cases/_shared/conveyance-route-support.ts' },
+  'subcontracts:agreements:manage': { enforcedBy: 'src/server/subcontracts/agreement-resource.server.ts' },
+  'subcontracts:agreements:assign': { enforcedBy: 'src/server/subcontracts/agreement-resource.server.ts' },
 };
 
 /** Οι ρόλοι έργου που γράφουν στη δομή του έργου τους. Όλοι οι άλλοι ρόλοι έργου απορρίπτονται. */

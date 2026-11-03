@@ -12,11 +12,9 @@ import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { AuthContext } from '@/lib/auth';
 import type { CompanyProfile } from '@/subapps/accounting/types/company';
 import { paymentInstrument, retentionBody } from '@/subapps/procurement/subcontracts/clauses/__tests__/clause-fixtures';
-import { boundRetention, plasteringTerms } from '@/subapps/procurement/subcontracts/agreements/__tests__/agreement-fixtures';
+import { boundRetention, sampleDraftInput } from '@/subapps/procurement/subcontracts/agreements/__tests__/agreement-fixtures';
 import { agreementSnapshotHash } from '@/subapps/procurement/subcontracts/agreements/agreement-snapshot';
-import type { SubcontractAgreementDraftInput } from '@/subapps/procurement/subcontracts/agreements/agreement-draft';
 import type { SubcontractAgreement, SubcontractAgreementRevision } from '@/subapps/procurement/subcontracts/types/agreement';
-import type { AgreementLine } from '@/subapps/procurement/subcontracts/types/agreement-line';
 
 const fake = new FakeFirestore();
 const audited: { entityType: string; entityId: string }[] = [];
@@ -67,26 +65,7 @@ async function approvedLibrary(): Promise<void> {
   }
 }
 
-const LINE: AgreementLine = {
-  id: 'plaster', kind: 'labor', pricing: 'unit_rate', description: { el: 'Επίχρισμα τριπτό' }, atoeCode: null, skuRef: null,
-  unit: 'm2', estimatedMilliQuantity: null, unitPrice: 900, clientUnitPrice: null, printClientPrice: false, comment: null,
-  measurementRule: null, stages: [], insuredDaysCap: null, paymentOverride: null,
-};
-
-function draft(patch: Partial<SubcontractAgreementDraftInput> = {}): SubcontractAgreementDraftInput {
-  return {
-    documentMode: 'offer_becomes_agreement', origin: { kind: 'direct' }, trade: 'plastering', templateId: null,
-    title: { el: 'Επιχρίσματα Β΄ φάσης' }, scope: { kind: 'single_project', projectId: 'proj_1', buildingIds: ['bld_1'] },
-    subcontractorContactId: 'ct_sub', projectOwners: { kind: 'collective' }, issuerSignatory: null,
-    lines: [LINE], terms: { ...plasteringTerms, minimumOutputs: [] },
-    clauses: [
-      { clauseKey: 'retention.performance', version: 1, parameterValues: {}, deviationReasons: {} },
-      { clauseKey: 'payment.instruments', version: 1, parameterValues: { instrument: { kind: 'enum', value: 'bank' } }, deviationReasons: {} },
-    ],
-    languages: { secondary: null }, validUntil: '2099-12-31',
-    ...patch,
-  };
-}
+const draft = sampleDraftInput;
 
 const chequeClauses = (reason: string) => draft().clauses.map((clause) => clause.clauseKey !== 'payment.instruments' ? clause : {
   ...clause, parameterValues: { instrument: { kind: 'enum' as const, value: 'cheque' } }, deviationReasons: { instrument: reason },

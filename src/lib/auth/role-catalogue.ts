@@ -84,8 +84,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "subcontracts:clauses:manage",
       "subcontracts:clauses:propose",
       "subcontracts:templates:manage",
-      // ADR-928 Φ2 — συμφωνητικά και έγκριση αποκλίσεων. Σε άλλον: ρητή παραχώρηση στο claim (όχι ρόλος έργου).
+      // ADR-928 Φ2 + §5.15 — συμφωνητικά, εντολές εργασίας, έγκριση αποκλίσεων (η τελευταία μόνο εταιρείας).
       "subcontracts:agreements:manage",
+      "subcontracts:agreements:assign",
       "subcontracts:agreements:approve_deviation",
       "users:users:view",
       "users:users:manage",
@@ -348,6 +349,10 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       // ⛔ `projects:floors:delete` έφυγε: ο όροφος δεν έχει κάδο, η διαγραφή του είναι οριστική.
       "projects:floors:create",
       "projects:floors:update",
+      // ADR-928 §5.15 — συμφωνητικό του έργου του (`single_project`) και εντολή εργασίας στο έργο του (Procore:
+      // Commitments ανά έργο). ⛔ Όχι κύρια σύμβαση, όχι έγκριση απόκλισης: είναι της εταιρείας.
+      "subcontracts:agreements:manage",
+      "subcontracts:agreements:assign",
       "buildings:buildings:view",
       "buildings:buildings:create",
       "buildings:buildings:update",

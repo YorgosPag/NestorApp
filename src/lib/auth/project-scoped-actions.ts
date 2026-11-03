@@ -31,6 +31,10 @@ export const PROJECT_SCOPED_ACTIONS = [
   /** Ζωντανά πριν από το ADR-926: `authorizeForProperty` (υπόθεση μεταβίβασης, ADR-901). */
   'legal:conveyance:view',
   'legal:conveyance:manage',
+  /** ADR-928 §5.15 — μόνο `single_project`· η κύρια σύμβαση δεν δίνει έργο-πόρο, άρα κρίνει μόνο η εταιρεία. */
+  'subcontracts:agreements:manage',
+  /** ADR-928 §5.15 — εντολή εργασίας (AIA A422): στο έργο-στόχο της ανάθεσης. */
+  'subcontracts:agreements:assign',
 ] as const satisfies readonly PermissionId[];
 
 export type ProjectScopedAction = (typeof PROJECT_SCOPED_ACTIONS)[number];

@@ -13,11 +13,12 @@
 
 import 'server-only';
 
-import type { NextResponse } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 import type { z } from 'zod';
 
 import { badRequest, created, defineRoute, ok, type RateLimitTier } from '@/lib/api/define-route';
 import type { AuthContext } from '@/lib/auth';
+import type { PermissionResource } from '@/lib/auth/resource-project';
 import type { PermissionId } from '@/lib/auth/types';
 import type { RateLimitCategory } from '@/lib/middleware/rate-limit-config';
 import type { VersionTarget } from '@/server/subcontracts/clause-governance-writer.server';
@@ -33,6 +34,12 @@ type SubcontractRateCategory = Extract<RateLimitCategory, 'HIGH' | 'STANDARD' | 
 export interface SubcontractRoutePolicy {
   readonly category: SubcontractRateCategory;
   readonly authority: SubcontractAuthority;
+  /**
+   * 🔑 ADR-928 §5.15 · ADR-926 Κ3 — ο **πόρος** της πράξης (`agreement-resource.server.ts`): το έργο έρχεται από το
+   * έγγραφο ή από το έργο-στόχο που περνά τον φράχτη χώρου, **ποτέ** ως `projectId` επιλογή του αιτήματος. Χωρίς πόρο
+   * κρίνει μόνο η εταιρεία. Ο ρόλος έργου ισχύει **μόνο** για όσα δηλώνει το `PROJECT_SCOPED_ACTIONS`.
+   */
+  readonly resource?: (request: NextRequest, ctx: AuthContext) => Promise<PermissionResource>;
 }
 
 const TIER_OF: Readonly<Record<SubcontractRateCategory, RateLimitTier>> = { HIGH: 'high', STANDARD: 'standard', SENSITIVE: 'sensitive' };
@@ -62,7 +69,7 @@ export function subcontractWriteRoute<TSchema extends z.ZodTypeAny, TParams exte
   return defineRoute<TSchema, TParams>({
     rateLimit: TIER_OF[policy.category],
     schema,
-    auth: { permissions: permissionsOf(policy) },
+    auth: { permissions: permissionsOf(policy), ...(policy.resource ? { permissionResource: policy.resource } : {}) },
     fallbackError: FALLBACK_ERROR,
     handler: ({ auth, body, params }) => respond(envelope, () => run(auth, body, params)),
   });

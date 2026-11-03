@@ -245,11 +245,12 @@ export const PERMISSIONS = {
   "subcontracts:clauses:manage": true,
   "subcontracts:clauses:propose": true,
   "subcontracts:templates:manage": true,
-  // ADR-928 Φ2 — ΣΥΜΦΩΝΗΤΙΚΟ ΥΠΕΡΓΟΛΑΒΙΑΣ: `manage` = πρόχειρο, μεταβάσεις κύκλου ζωής, αναθέσεις εργοταξίου·
-  // `approve_deviation` = έγκριση/απόρριψη ΑΠΟΚΛΙΣΗΣ ενός εγγράφου από τις ζώνες της εταιρείας (§5.2.1 τρόπος 3), από
-  // ΑΛΛΟΝ από αυτόν που τη ζήτησε (κρίνεται στα δεδομένα). Δικαιώματα ΕΤΑΙΡΕΙΑΣ, όχι έργου: ένα `multi_project`
-  // συμφωνητικό δεν έχει ένα έργο-πόρο (ADR-926 Κ3).
+  // ADR-928 Φ2 + §5.15 — ΣΥΜΦΩΝΗΤΙΚΟ ΥΠΕΡΓΟΛΑΒΙΑΣ (AIA A421/A422 · Procore Commitments): `manage` = πρόχειρο,
+  // μεταβάσεις κύκλου ζωής — ισχύει ΚΑΙ στο έργο για `single_project`· `assign` = ΕΝΤΟΛΗ ΕΡΓΑΣΙΑΣ (ανάθεση εργοταξίου
+  // σε κύρια σύμβαση), στο έργο-στόχο· `approve_deviation` = έγκριση/απόρριψη ΑΠΟΚΛΙΣΗΣ από τις ζώνες της εταιρείας
+  // (§5.2.1 τρόπος 3), από ΑΛΛΟΝ από αυτόν που τη ζήτησε — μόνο ΕΤΑΙΡΕΙΑΣ. Το έργο το δίνει μόνο ο πόρος (ADR-926 Κ3).
   "subcontracts:agreements:manage": true,
+  "subcontracts:agreements:assign": true,
   "subcontracts:agreements:approve_deviation": true,
   // ADR-923 §5.11 «3δ» απόφαση Ζ — η ΠΡΟΒΟΛΗ τιμών (λίστες · εκδόσεις · γραμμές · ομάδες · συνθήκες). SAP: προβολή
   // συνθηκών (VK13) ≠ συντήρηση (VK11/12)· commercetools: `view_*` ≠ `manage_*`. Επιβάλλεται ΜΟΝΟ στον διακομιστή
