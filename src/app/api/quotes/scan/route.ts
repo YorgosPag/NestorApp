@@ -5,14 +5,14 @@
  *   1. Auth + rate limit (sensitive)
  *   2. Parse multipart formData (file + projectId + vendorContactId + trade [+rfqId,buildingId])
  *   3. Validate file type/size (image ≤10MB, pdf ≤10MB per ADR-327 Q25)
- *   4. Create draft Quote (source: 'scan')
+ *   4. Create draft Quote (source: 'scan', `extraction.status = 'pending'` in the SAME write — §6.10)
  *   5. Upload file to Storage → companies/{companyId}/quotes/{quoteId}/scan-{fileId}.{ext}
  *   6. Attach to quote
- *   7. Fire-and-forget: classify + extract + applyExtractedData
+ *   7. Fire-and-forget: classify + extract → `succeeded` | `failed` + code
  *   8. Return 202 { quoteId, status: 'processing' }
  *
- * Client polls GET /api/quotes/{id} until extractedData is populated, then
- * shows ExtractedDataReviewPanel for human review (Q6 default = always review).
+ * Client polls GET /api/quotes/{id} while `resolveQuoteIntakeView` says `extracting`, then shows the review
+ * station (Q6 default = always review) — or the failure card with retry (`/api/quotes/{id}/rescan`).
  *
  * @see ADR-327 §6 — AI Extraction Strategy (Phase 2)
  */
@@ -36,12 +36,10 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import { createQuote } from '@/subapps/procurement/services/quote-service';
+import { markQuoteExtractionFailed } from '@/subapps/procurement/services/quote-extraction-lifecycle';
 import { quoteChangeStamp } from '@/subapps/procurement/services/quote-change-stamp';
-import { createOpenAIQuoteAnalyzer } from '@/subapps/procurement/services/external/openai-quote-analyzer';
-import { QuoteAnalyzerStub } from '@/subapps/procurement/services/external/quote-analyzer.stub';
-import type { IQuoteAnalyzer } from '@/subapps/procurement/types/quote-analyzer';
 import type { Quote, QuoteAttachment } from '@/subapps/procurement/types/quote';
-import { processScanAsync } from './process';
+import { processScanAsync, resolveQuoteAnalyzer } from './process';
 import { writeQuoteFileRecord } from './quote-file-record-writer';
 import admin from 'firebase-admin';
 
@@ -207,6 +205,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             vendorContactId,
             trade,
             source: 'scan',
+            requestExtraction: true,
             rfqId,
             buildingId,
           });
@@ -222,20 +221,28 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         } catch (err) {
           const message = getErrorMessage(err, 'Failed to upload scan file');
           logger.error('uploadAndAttach failed', { quoteId: quote.id, error: message });
+          // §6.10 — η προσφορά υπάρχει ήδη ως `pending`: χωρίς αρχείο δεν θα τελειώσει ποτέ ⇒ ρητή αποτυχία.
+          await markQuoteExtractionFailed(ctx, quote.id, 'document_unavailable', quote.extraction?.attempt ?? 1)
+            .catch((markErr: unknown) => logger.error('Failed to record upload failure', { quoteId: quote.id, error: getErrorMessage(markErr) }));
           return jsonError(message, 500);
         }
 
-        const analyzer: IQuoteAnalyzer =
-          createOpenAIQuoteAnalyzer() ?? new QuoteAnalyzerStub();
+        const analyzer = resolveQuoteAnalyzer();
 
         // Capture bytes now — avoids GCS re-download inside after() where bucket
         // resolution can be inconsistent across request boundaries.
         const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-        // Fire-and-forget AI processing — uses Next.js 15 `after()` so it survives
-        // beyond response flush on Vercel serverless.
+        // Fire-and-forget AI processing — Next.js `after()` survives beyond the response flush.
+        // If the process dies mid-way, the attempt stays `pending` and the reviewer sees it as stalled (§6.10).
         after(async () => {
-          await processScanAsync(ctx, quote.id, attachment.fileUrl, attachment.mimeType, analyzer, fileBuffer);
+          await processScanAsync(ctx, {
+            quoteId: quote.id,
+            fileUrl: attachment.fileUrl,
+            mimeType: attachment.mimeType,
+            fileBuffer,
+            attempt: quote.extraction?.attempt ?? 1,
+          }, analyzer);
         });
 
         logger.info('Quote scan accepted', {

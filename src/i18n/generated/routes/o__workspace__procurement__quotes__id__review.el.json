@@ -151,6 +151,21 @@
     }
   },
   "quotes": {
+    "comparison": {
+      "leveling": {
+        "state": {
+          "excluded": "Εξαιρείται",
+          "included": "Περιλαμβάνεται"
+        }
+      }
+    },
+    "detail": {
+      "archiveQuote": "Αρχειοθέτηση Προσφοράς",
+      "editQuote": "Επεξεργασία Προσφοράς"
+    },
+    "list": {
+      "createQuote": "Νέα Προσφορά"
+    },
     "quotes": {
       "actions": {
         "removeLine": "Αφαίρεση"
@@ -174,8 +189,23 @@
       "errors": {
         "updateFailed": "Αποτυχία ενημέρωσης προσφοράς"
       },
+      "intake": {
+        "documentUnavailable": "Το αρχείο της προσφοράς δεν αποθηκεύτηκε. Ανεβάστε το ξανά ή καταχωρίστε την προσφορά χειροκίνητα.",
+        "enterManually": "Χειροκίνητη καταχώριση",
+        "failedHint": "Η AI δεν μπόρεσε να εξαγάγει τα στοιχεία. Ξαναδοκιμάστε ή καταχωρίστε την προσφορά χειροκίνητα.",
+        "rescanErrors": {
+          "failed": "Η επανάληψη δεν ξεκίνησε. Δοκιμάστε ξανά.",
+          "file_unavailable": "Το αρχείο δεν είναι διαθέσιμο αυτή τη στιγμή. Δοκιμάστε ξανά σε λίγο.",
+          "no_document": "Δεν βρέθηκε το αρχείο της προσφοράς για νέα σάρωση.",
+          "not_retryable": "Αυτή η προσφορά δεν χρειάζεται νέα σάρωση."
+        },
+        "retry": "Επανάληψη",
+        "stalledHint": "Η εξαγωγή στοιχείων σταμάτησε πριν τελειώσει. Ξαναδοκιμάστε ή καταχωρίστε την προσφορά χειροκίνητα.",
+        "stalledTitle": "Η επεξεργασία AI δεν ολοκληρώθηκε"
+      },
       "lineDescription": "Περιγραφή",
       "lineTotal": "Σύνολο Γραμμής",
+      "lines": "Γραμμές Προσφοράς",
       "loading": "Φόρτωση...",
       "notFound": {
         "goBack": "Επιστροφή",
@@ -189,6 +219,10 @@
       "number": "Αριθμός",
       "paymentTerms": "Όροι Πληρωμής",
       "quantity": "Ποσότητα",
+      "rfqAnswers": {
+        "alternatesTitle": "Εναλλακτικές προτάσεις (εκτός συνόλου)",
+        "title": "Απαντήσεις χωρίς τιμή"
+      },
       "saveSuccess": "Η προσφορά αποθηκεύτηκε",
       "scan": {
         "archive": "Αρχειοθέτηση",
@@ -204,6 +238,7 @@
         "linesSection": "Γραμμές",
         "metaSection": "Στοιχεία Προσφοράς",
         "noLinesExtracted": "Δεν εξήχθησαν γραμμές. Προσθέστε χειροκίνητα.",
+        "notAQuote": "Το αρχείο δεν αναγνωρίστηκε ως προσφορά. Ελέγξτε χειροκίνητα.",
         "originalDocument": {
           "badge": "Πρωτότυπο",
           "download": "Λήψη",
@@ -214,6 +249,7 @@
         "overallConfidence": "Συνολική Αξιοπιστία",
         "pricingTypeLumpSum": "Συνολική τιμολόγηση (χωρίς μοναδιαίες τιμές)",
         "processing": "Επεξεργασία AI σε εξέλιξη...",
+        "processingFailed": "Αποτυχία επεξεργασίας AI",
         "processingHint": "Η εξαγωγή στοιχείων διαρκεί συνήθως 10-30 δευτερόλεπτα.",
         "quoteDate": "Ημερομηνία Έκδοσης",
         "quoteReference": "Αρ. Προσφοράς",
@@ -294,16 +330,86 @@
         "reverseLabelLabel": "Αντίστροφος ρόλος (προαιρετικό)",
         "reverseLabelPlaceholder": "π.χ. Πωλητής εκπρόσωπος"
       },
+      "sources": {
+        "email_inbox": "Email",
+        "manual": "Χειροκίνητη",
+        "portal": "Portal Προμηθευτή",
+        "scan": "Σάρωση"
+      },
+      "statuses": {
+        "accepted": "Εγκρίθηκε",
+        "archived": "Αρχείο",
+        "draft": "Πρόχειρο",
+        "expired": "Έληξε",
+        "rejected": "Απορρίφθηκε",
+        "sent_to_vendor": "Απεστάλη",
+        "submitted": "Υποβλήθηκε",
+        "superseded": "Αντικαταστάθηκε",
+        "under_review": "Υπό Εξέταση"
+      },
       "subtotal": "Υποσύνολο",
+      "titleSingle": "Προσφορά",
       "total": "Σύνολο",
       "undo": "Αναίρεση",
       "unit": "Μονάδα",
       "unitPrice": "Τιμή Μον.",
       "validUntil": "Ισχύει έως",
       "vatAmount": "ΦΠΑ",
-      "vendor": "Προμηθευτής"
+      "vendor": "Προμηθευτής",
+      "vendorAddresseeFallback": "συνεργάτη",
+      "vendorContact": {
+        "add": "Προσθήκη στις επαφές",
+        "created": "Δημιουργήθηκε η επαφή «{vendorName}» και δέθηκε στην προσφορά",
+        "failed": "Η προσθήκη στις επαφές απέτυχε",
+        "linked": "Η προσφορά δέθηκε στην υπάρχουσα επαφή «{vendorName}»",
+        "notInContacts": "Ο προμηθευτής δεν είναι στις επαφές σας ({email})."
+      },
+      "vendorUnknown": "Άγνωστος προμηθευτής",
+      "vendorUnknownWithQuote": "Άγνωστος προμηθευτής · {quote}",
+      "vendorWithQuote": "{vendor} · {quote}",
+      "warranty": "Εγγύηση"
     },
     "rfqs": {
+      "comments": {
+        "add": "Προσθήκη",
+        "addFailed": "Το σχόλιο δεν προστέθηκε. Δοκιμάστε ξανά.",
+        "cancel": "Ακύρωση",
+        "closeAria": "Κλείσιμο σχολίων",
+        "composerLabel": "Νέο σχόλιο",
+        "confirmDelete": "Διαγραφή σχολίου;",
+        "delete": "Διαγραφή",
+        "edit": "Επεξεργασία",
+        "edited": "επεξεργάστηκε",
+        "empty": "Δεν υπάρχουν σχόλια ακόμα",
+        "internalOnly": "Εσωτερικά — μη ορατά στον προμηθευτή",
+        "placeholder": "Γράψτε σχόλιο... (@ για αναφορά συνεργάτη)",
+        "save": "Αποθήκευση",
+        "title": "Σχόλια"
+      },
+      "editDialog": {
+        "cancel": "Ακύρωση",
+        "headerSection": "Στοιχεία Προσφοράς",
+        "inclusionsSection": "Περιλαμβάνει",
+        "laborIncluded": "Εργατικά περιλαμβάνονται",
+        "linesSection": "Γραμμές Προσφοράς",
+        "lockedTooltip": "Εγκεκριμένη προσφορά — επαναφέρετε για επεξεργασία",
+        "placeholders": {
+          "deliveryTerms": "π.χ. FCA αποθήκη",
+          "paymentTerms": "π.χ. 30 ημέρες",
+          "warranty": "π.χ. 12 μήνες"
+        },
+        "save": "Αποθήκευση",
+        "saving": "Αποθήκευση...",
+        "title": "Επεξεργασία Προσφοράς",
+        "vatIncluded": "ΦΠΑ περιλαμβάνεται"
+      },
+      "expiry": {
+        "banner": {
+          "requestRenewalCta": "Ζήτησε ανανέωση",
+          "title": "Η προσφορά έληξε στις {date} (πριν {daysAgo} ημέρα)",
+          "titlePlural": "Η προσφορά έληξε στις {date} (πριν {daysAgo} ημέρες)"
+        }
+      },
       "lineEdit": {
         "error": {
           "descriptionRequired": "Η περιγραφή είναι υποχρεωτική",
@@ -323,12 +429,91 @@
           "zeroQuantityWithPrice": "Ποσότητα 0 — δωρεάν δείγμα ή λάθος;"
         }
       },
+      "mobile": {
+        "backToList": "Πίσω στη λίστα"
+      },
+      "offline": {
+        "requiresConnection": "Απαιτείται σύνδεση για αυτή την ενέργεια"
+      },
+      "pdfPanel": {
+        "closeAria": "Κλείσιμο PDF"
+      },
       "quoteEdit": {
         "warning": {
           "linesSumMismatch": "Άθροισμα γραμμών ({sum}) δεν ταιριάζει με το συνολικό ποσό ({stated})"
         }
       },
+      "quoteHeader": {
+        "action": {
+          "approve": "Έγκριση Νικητή",
+          "confirm": "Επιβεβαίωση",
+          "createPo": "Δημιουργία Παραγγελίας",
+          "delete": "Διαγραφή",
+          "duplicate": "Αντιγραφή ως νέα",
+          "edit": "Επεξεργασία",
+          "reject": "Απόρριψη",
+          "restore": "Επαναφορά",
+          "viewPo": "Δες Παραγγελία"
+        },
+        "tooltip": {
+          "comingSoon": "Έρχεται σύντομα",
+          "comments": "Σχολιασμός",
+          "disabledByAward": "Έχει ήδη επιλεγεί νικητής",
+          "download": "Λήψη αρχικού PDF",
+          "hidePdf": "Κλείσε αρχικό PDF",
+          "viewPdf": "Δες αρχικό PDF"
+        }
+      },
       "title": "Αιτήματα Προσφορών (RFQ)"
+    },
+    "trades": {
+      "allGroups": "Όλες",
+      "aluminum_frames": "Αλουμίνια / Κουφώματα Εξωτερικά",
+      "concrete": "Μπετόν / Μπετατζής",
+      "data_telecoms": "Δίκτυα Δεδομένων",
+      "demolition": "Κατεδάφιση / Εκσκαφή",
+      "electrical": "Ηλεκτρολογικά",
+      "elevator": "Ανελκυστήρας",
+      "equipment_rental": "Ενοικίαση Εξοπλισμού",
+      "facade": "Πρόσοψη / ETICS",
+      "fire_protection": "Πυρόσβεση / Πυρανίχνευση",
+      "flooring_wood": "Ξύλινα Δάπεδα / Parquet",
+      "formwork": "Ξυλότυπος",
+      "gas": "Φυσικό Αέριο",
+      "glazing": "Τζαμαδόρος / Υαλοπίνακες",
+      "groups": {
+        "claddings": "Επενδύσεις",
+        "external": "Εξωτερικά",
+        "finishing": "Φινίρισμα",
+        "frames": "Κουφώματα",
+        "networks": "Δίκτυα (Η/Μ)",
+        "services": "Υπηρεσίες / Logistics",
+        "special": "Ειδικές Εγκαταστάσεις",
+        "structure": "Σκελετός"
+      },
+      "gypsum": "Γυψοκαρτές / Οροφές",
+      "hvac": "Μηχανολογικά / HVAC",
+      "insulation": "Μονώσεις",
+      "interior_frames": "Εσωτερικά Κουφώματα / Πόρτες",
+      "landscaping": "Διαμόρφωση Εξωτερικών",
+      "marble": "Μάρμαρα / Φυσικός Λίθος",
+      "masonry": "Τοιχοποιία / Κτίστης",
+      "materials_general": "Υλικά (Γενικά)",
+      "noResults": "Δεν βρέθηκαν ειδικότητες",
+      "painting": "Ελαιοχρωματισμοί",
+      "plastering": "Σοβατίσματα",
+      "plumbing": "Υδραυλικά",
+      "pool": "Πισίνα",
+      "prefab": "Προκατασκευή / Μεταλλικές Κατ.",
+      "reinforcement": "Σιδεράς / Σιδηροπλέγματα",
+      "rolling_shutters": "Ρολά / Σήτες",
+      "roofing": "Στέγη / Κεραμοσκεπή",
+      "search": "Αναζήτηση ειδικότητας...",
+      "select": "Επιλέξτε ειδικότητα",
+      "tiling": "Πλακάκια / Κεραμικά",
+      "title": "Ειδικότητες",
+      "waterproofing": "Στεγανοποίηση / Ασφαλτικά",
+      "woodwork": "Ξυλουργικά / Έπιπλα"
     }
   },
   "uom": {

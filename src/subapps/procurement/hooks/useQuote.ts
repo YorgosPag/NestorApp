@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Quote } from '@/subapps/procurement/types/quote';
+import { isQuoteIntakeSettled } from '@/subapps/procurement/utils/quote-intake-view';
 
 interface UseQuoteOptions {
   /**
@@ -11,7 +12,9 @@ interface UseQuoteOptions {
   pollIntervalMs?: number;
   /**
    * Predicate evaluated after every fetch — when it returns `true`
-   * polling stops automatically. Default: stops when `extractedData` is set.
+   * polling stops automatically. Default: stops once the AI intake is no longer
+   * running (`isQuoteIntakeSettled`, ADR-327 §6.10) — i.e. on success, failure,
+   * stall, or for quotes that never requested extraction (portal / manual).
    */
   stopWhen?: (quote: Quote | null) => boolean;
 }
@@ -24,7 +27,8 @@ interface UseQuoteResult {
   refetch: () => Promise<void>;
 }
 
-const defaultStopWhen = (q: Quote | null): boolean => q !== null && q.extractedData !== null;
+// ⚠️ Ήταν `q.extractedData !== null` ⇒ αποτυχημένη σάρωση = polling ανά 2s **για πάντα** (ADR-327 §6.10).
+const defaultStopWhen = (q: Quote | null): boolean => isQuoteIntakeSettled(q, Date.now());
 
 interface FetchResult {
   quote: Quote | null;

@@ -27,11 +27,12 @@ import type {
   CreateQuoteDTO,
   UpdateQuoteDTO,
   QuoteFilters,
-  QuoteAuditEntry,
   QuoteLine,
   ExtractedQuoteData,
   QuoteSource,
 } from '../types/quote';
+import { quoteAuditEntry as auditEntry } from './quote-audit-entry';
+import { finishedExtraction, pendingExtraction } from './quote-extraction-lifecycle';
 import { QUOTE_STATUS_TRANSITIONS, computeQuoteTotals, isTransitionAllowed } from '../types/quote';
 import type { AuthContext } from '@/lib/auth';
 
@@ -40,24 +41,6 @@ const logger = createModuleLogger('QUOTE_SERVICE');
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function auditEntry(
-  userId: string,
-  action: string,
-  prev: string | null = null,
-  next: string | null = null,
-  source: QuoteAuditEntry['source'] = 'system'
-): QuoteAuditEntry {
-  return {
-    timestamp: admin.firestore.Timestamp.now(),
-    userId,
-    action,
-    previousValue: prev,
-    newValue: next,
-    source,
-    ip: null,
-  };
-}
 
 /** Ο πόρος αυτού του αρχείου — ένα σημείο, ώστε το όνομα να μη διαφωνήσει ποτέ. */
 const subjectOf = (quoteId: string) =>
@@ -126,6 +109,8 @@ export async function createQuote(
       notes: dto.notes ?? null,
       attachments: [],
       extractedData: null,
+      // ADR-327 §6.10 — η εξαγωγή γεννιέται «σε εξέλιξη» ΜΑΖΙ με την προσφορά (καμία στιγμή χωρίς κατάσταση).
+      extraction: dto.requestExtraction ? pendingExtraction(now, 1) : null,
       overallConfidence: null,
       acceptanceMode: null,
       overrideReason: null,
@@ -406,6 +391,8 @@ export async function applyExtractedData(
 
     const updates: Partial<Quote> = {
       extractedData: extracted,
+      // §6.10 — δεδομένα και κατάσταση στην ΙΔΙΑ εγγραφή: κανείς δεν βλέπει «succeeded» χωρίς δεδομένα ή το ανάποδο.
+      extraction: finishedExtraction(current.extraction, 'succeeded', null),
       overallConfidence: extracted.overallConfidence ?? 0,
       lines: newLines,
       totals: computeQuoteTotals(newLines, quotedTotal),

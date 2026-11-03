@@ -2,7 +2,7 @@
 
 - **Worktree:** `C:\Nestor_Worktrees\quote-review-state`
 - **Κλαδί:** `agent/quote-review-state` (από `main` `fe7bc02a`)
-- **Κατάσταση:** μόνο διάγνωση. **Καμία αλλαγή κώδικα ακόμη.**
+- **Κατάσταση:** ✅ υλοποιήθηκε στο κλαδί (ADR-327 §6.10, changelog 2026-11-03). Η πηγή της QT-0002 μετρήθηκε: **πύλη**, όχι σάρωση. Μένει: ζωντανός έλεγχος οθόνης · απόφαση για το νεκρό polling του `useScanQueue`.
 - **Συντονίστρια:** η συνεδρία `project-scope-authorization-adr-926` συμφώνησε να προχωρήσουμε.
   **ΜΗΝ αγγίξεις** τα `rfq-service.ts`, `rfq-line-service.ts`, `rfq-schemas.ts`, `vendor-invite-service.ts`, `RfqBuilder.tsx` (ροή Ε6 της).
 

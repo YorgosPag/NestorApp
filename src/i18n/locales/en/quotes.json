@@ -129,6 +129,20 @@
       "updateFailed": "Failed to update quote",
       "invalidTransition": "Invalid status transition"
     },
+    "intake": {
+      "stalledTitle": "AI processing did not finish",
+      "stalledHint": "Data extraction stopped before completing. Try again or enter the quote manually.",
+      "failedHint": "The AI could not extract the data. Try again or enter the quote manually.",
+      "documentUnavailable": "The quote file was not saved. Upload it again or enter the quote manually.",
+      "retry": "Retry",
+      "enterManually": "Enter manually",
+      "rescanErrors": {
+        "not_retryable": "This quote does not need a new scan.",
+        "no_document": "The quote file for a new scan was not found.",
+        "file_unavailable": "The file is not available right now. Try again shortly.",
+        "failed": "The retry did not start. Try again."
+      }
+    },
     "scan": {
       "title": "Scan Quote (AI)",
       "description": "Upload an image or PDF of a vendor quote for automatic data extraction.",

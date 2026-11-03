@@ -10,6 +10,7 @@ import { Download, MessageSquare } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Quote, QuoteStatus } from '../types/quote';
 import type { RFQ } from '../types/rfq';
+import { quoteHasOriginalDocument } from './quote-intake-view';
 
 // ============================================================================
 // ACTION DESCRIPTOR TYPES
@@ -89,10 +90,6 @@ function isEditLocked(quote: Quote): boolean {
   return EDIT_LOCKED_STATUSES.includes(quote.status);
 }
 
-function hasPdfSource(quote: Quote): boolean {
-  return quote.source === 'scan' || quote.source === 'email_inbox';
-}
-
 // ============================================================================
 // FACTORY
 // ============================================================================
@@ -111,7 +108,7 @@ export function buildQuoteHeaderActions(p: BuildQuoteHeaderActionsParams): Quote
       icon: Download,
       tooltip: p.t('rfqs.quoteHeader.tooltip.download'),
       onClick: p.onDownload,
-      disabled: !hasPdfSource(p.quote),
+      disabled: !quoteHasOriginalDocument(p.quote),
     },
     {
       id: 'comments',

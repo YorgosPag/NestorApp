@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
@@ -8,11 +8,9 @@ import { FileText, Inbox, Eye, CheckCircle, Clock } from 'lucide-react';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteRightPane } from '@/subapps/procurement/components/QuoteRightPane';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
-import { usePatchQuoteStatus } from '@/subapps/procurement/hooks/usePatchQuoteStatus';
-import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
+import { useQuoteDetailActions } from '@/subapps/procurement/hooks/useQuoteDetailActions';
 import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useConnectivity } from '@/hooks/useConnectivity';
 import { toast } from 'sonner';
 import type { Quote } from '@/subapps/procurement/types/quote';
 import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__quotes.el.json';
@@ -28,7 +26,6 @@ export default function QuotesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const isConnected = useConnectivity();
 
   const { quotes, loading } = useQuotes();
 
@@ -51,9 +48,6 @@ export default function QuotesPage() {
     [router, searchParams, pathname],
   );
 
-  // ── Local UI state ────────────────────────────────────────────────────────
-  const [pdfOpen, setPdfOpen] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
   const chrome = useProcurementHubChrome();
   const { viewMode } = chrome;
 
@@ -72,12 +66,7 @@ export default function QuotesPage() {
     ];
   }, [quotes, tQ]);
 
-  const handleTogglePdf = useCallback(() => setPdfOpen((v) => !v), []);
-  const handleToggleComments = useCallback(() => setCommentsOpen((v) => !v), []);
-
   // ── Quote mutations ───────────────────────────────────────────────────────
-  const patchQuoteStatus = usePatchQuoteStatus(selectedQuote, tQ);
-
   const handleDeleteQuote = useCallback(async () => {
     if (!selectedQuote) return;
     const res = await fetch(`/api/quotes/${selectedQuote.id}`, { method: 'DELETE' });
@@ -85,44 +74,12 @@ export default function QuotesPage() {
     else toast.error(tQ('quotes.errors.updateFailed'));
   }, [selectedQuote, handleSelectQuote, tQ]);
 
-  const handleStub = useCallback(
-    () => void toast.info(tQ('rfqs.quoteHeader.tooltip.comingSoon')),
-    [tQ],
-  );
-
-  // ── Action objects for QuoteRightPane ─────────────────────────────────────
-  const { primaryActions, secondaryActions, overflowActions } = useMemo(
-    () =>
-      selectedQuote
-        ? buildQuoteHeaderActions({
-            quote: selectedQuote,
-            rfq: null,
-            onConfirm: () => void patchQuoteStatus('under_review'),
-            onApprove: () => void patchQuoteStatus('accepted'),
-            onReject: () => void patchQuoteStatus('rejected'),
-            onRestore: () => void patchQuoteStatus('submitted'),
-            onCreatePo: handleStub,
-            onViewPo: handleStub,
-            onDownload: handleTogglePdf,
-            onOpenComments: handleToggleComments,
-            onEdit: handleStub,
-            onDuplicate: handleStub,
-            onDelete: handleDeleteQuote,
-            t: tQ,
-            isConnected,
-          })
-        : { primaryActions: [], secondaryActions: [], overflowActions: [] },
-    [
-      selectedQuote,
-      patchQuoteStatus,
-      handleStub,
-      handleTogglePdf,
-      handleToggleComments,
-      handleDeleteQuote,
-      tQ,
-      isConnected,
-    ],
-  );
+  // ── Action objects for QuoteRightPane (ΕΝΑ hook με τη σελίδα της προσφοράς — ADR-327 §6.10) ──
+  const {
+    primaryActions, secondaryActions, overflowActions,
+    pdfOpen, commentsOpen, togglePdf: handleTogglePdf, toggleComments: handleToggleComments,
+    notYetAvailable: handleStub,
+  } = useQuoteDetailActions(selectedQuote, { onDelete: handleDeleteQuote });
 
   // ── Action-required: pin quotes needing decision at top ───────────────────
   const actionRequired = useMemo(

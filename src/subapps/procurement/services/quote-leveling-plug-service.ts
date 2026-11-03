@@ -26,6 +26,7 @@ import type { AuthContext } from '@/lib/auth';
 import type { Quote, QuoteAuditEntry, QuoteLevelingPlug } from '../types/quote';
 import { PROCUREMENT_RESOURCE, requireOwnedSnapshot } from './procurement-owned-doc';
 import { quoteChangeStamp } from './quote-change-stamp';
+import { quoteAuditEntry } from './quote-audit-entry';
 import { getRfq } from './rfq-service';
 import { readRfqLines } from './rfq-line-service';
 import {
@@ -46,15 +47,12 @@ async function assertRfqLine(ctx: AuthContext, rfqId: string | null, rfqLineId: 
 }
 
 function plugAudit(uid: string, change: LevelingPlugChange, previous: QuoteLevelingPlug | null): QuoteAuditEntry {
-  return {
-    timestamp: admin.firestore.Timestamp.now(),
-    userId: uid,
-    action: change.amount === null ? 'leveling_plug_cleared' : 'leveling_plug_set',
-    previousValue: `${change.rfqLineId}:${describePlugValue(previous)}`,
-    newValue: `${change.rfqLineId}:${change.amount === null ? '—' : describePlugValue({ amount: change.amount })}`,
-    source: 'system',
-    ip: null,
-  };
+  return quoteAuditEntry(
+    uid,
+    change.amount === null ? 'leveling_plug_cleared' : 'leveling_plug_set',
+    `${change.rfqLineId}:${describePlugValue(previous)}`,
+    `${change.rfqLineId}:${change.amount === null ? '—' : describePlugValue({ amount: change.amount })}`,
+  );
 }
 
 export async function setQuoteLevelingPlug(

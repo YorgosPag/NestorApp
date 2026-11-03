@@ -321,7 +321,7 @@ Trade (SSoT registry)
 ```
 1. User uploads photo/PDF → /api/quotes/scan
 2. Server: save to Firebase Storage + capture buffer (zero re-download)
-3. Non-blocking after(): call OpenAIQuoteAnalyzer.classifyQuote() → if not quote → mark rejected
+3. Non-blocking after(): call OpenAIQuoteAnalyzer.classifyQuote() → if not quote → `extraction.status='failed'`, `errorCode='not_a_quote'` (§6.10)
 4. ┌─ extractQuote() loop (max 1 + maxValidationRetries):
    │  a) Build vision content (PDF base64 inline OR image_url)
    │  b) Call OpenAI Responses API with QUOTE_EXTRACT_SCHEMA (strict + CoT)
@@ -331,7 +331,7 @@ Trade (SSoT registry)
    └─ After max retries → return last attempt (UI shows low confidence + issues)
 5. Flatten components → ExtractedQuoteLine[] με parentRowNumber preserved
 6. Auto-suggest vendorContactId (fuzzy contacts), trade (από tradeHint)
-7. Update quote: extractedData + materialized lines + status='draft'
+7. Update quote: extractedData + materialized lines + status='draft' + `extraction.status='succeeded'` (ONE write, §6.10)
 8. UI: review screen με highlighted low-confidence cells + parent-grouping
 9. PM accepts → status='under_review' (ready for comparison)
 ```
@@ -438,6 +438,49 @@ PM review confirm → status `under_review` (NOT `submitted` — `submitted` is 
 **Esempio nel prompt body**: lump-sum checkbox-list con 5 righe (1 numerica + 2 `√` + 1 `[ ]` + 1 numerica) → 4 lineItems estratti, riga unchecked omessa, totale 6.000 €.
 
 **Generic by design**: il pattern copre tutti i fornitori — THERMOLAND usa `√`, altri possono usare `x`, `[X]`, `☑`, ecc. Nessuna template-specific knowledge: l'AI sceglie via reasoning quale marker è presente.
+
+### 6.10 Κύκλος ζωής εξαγωγής — ρητός, ποτέ συμπέρασμα από απουσία (2026-11-03)
+
+**Περιστατικό**: η `QT-0002` έδειχνε «Επεξεργασία AI σε εξέλιξη…» για πάντα. Μετρημένο στη βάση: `source: 'portal'`, `status: 'submitted'`, 0 συνημμένα, καμία σάρωση στο ιστορικό. Από τις 4 προσφορές, οι **3** (2 πύλης, 1 χειροκίνητη) δεν είχαν ζητήσει ποτέ εξαγωγή. Η οθόνη έδειχνε spinner για **κάθε** `extractedData === null`, και το `null` σήμαινε τέσσερα πράγματα: «τρέχει» · «απέτυχε» (το `process.ts` έγραφε μόνο ωμό ελληνικό στο `notes`) · «κόπηκε η διεργασία» (restart μέσα στο `after()`) · «δεν ζητήθηκε». Επιπλέον, το `/review` είναι στην πράξη **η σελίδα κάθε προσφοράς**: η διαδρομή χωρίς `/review` ανακατευθύνει εκεί, και η λίστα έργου, η καρτέλα επαφής και η χειροκίνητη καταχώριση στέλνουν εκεί κάθε προσφορά.
+
+**Πρακτική**: Rossum, `importing → to_review | failed_import`, ρητή κατάσταση ανά έγγραφο. Procore: ό,τι υποβάλλει ο προμηθευτής στη φόρμα είναι ήδη δομημένα δεδομένα και πηγαίνει κατευθείαν στην προβολή της προσφοράς, όχι σε έλεγχο εξαγωγής.
+
+**Μοντέλο** (`types/quote.ts`): `Quote.extraction?: { status: 'pending'|'succeeded'|'failed'; startedAt; finishedAt; errorCode: 'not_a_quote'|'analyzer_failed'|'document_unavailable'|null; attempt }`. Κωδικός, ποτέ κείμενο (N.11).
+
+**Ένας γραφέας** (`services/quote-extraction-lifecycle.ts`):
+
+| Μετάβαση | Πού |
+|---|---|
+| — → `pending` (1) | `createQuote({ requestExtraction: true })`, στην **ίδια** εγγραφή με τη δημιουργία (μόνο η σάρωση) |
+| `failed`/κολλημένη → `pending` (n+1) | `markQuoteExtractionPending`: συναλλαγή compare-and-set, δύο κλικ ⇒ μία προσπάθεια |
+| `pending` → `succeeded` | `applyExtractedData`, **μαζί** με τα δεδομένα |
+| `pending` → `failed` + κωδικός | `markQuoteExtractionFailed` (`process.ts`, και το ανέβασμα της σάρωσης όταν αποτύχει) |
+
+🔑 **Fencing token = `attempt`**: η διεργασία μιας προσπάθειας που κρίθηκε κολλημένη μπορεί να τελειώσει **μετά** την επανάληψη. Γράφει `failed` μόνο αν είναι ακόμη η τρέχουσα, και ποτέ πάνω σε υπάρχοντα δεδομένα. Κάθε μετάβαση αφήνει γραμμή στο `auditTrail` (`extraction_retried` · `extraction_failed`), μέσω του **ενός** `quoteAuditEntry`.
+
+**Ένας κριτής** (`utils/quote-intake-view.ts`, καθαρός, πελάτης + server): `resolveQuoteIntakeView(quote, now)` → `extracting | stalled | failed | review_extraction | quote_detail`. Τα δεδομένα εξαγωγής κερδίζουν πάντα. Όριο «κόλλησε»: `QUOTE_EXTRACTION_STALE_AFTER_MS` = 5′ (το `maxDuration` της σάρωσης είναι 180s). Έγγραφα πριν το §6.10 κρίνονται από την πηγή (≠ `scan` ⇒ `quote_detail`), τη σημείωση `[AI scan]` (⇒ `failed`) και την ηλικία. Τον ρωτούν η σελίδα, το `useQuote` (προεπιλεγμένο `stopWhen` = `isQuoteIntakeSettled`, ώστε το polling να σταματά και σε αποτυχία) και η επανάληψη.
+
+**Οθόνη** (`QuoteReviewClient`):
+- `extracting` ⇒ spinner.
+- `failed`/`stalled` ⇒ `QuoteIntakeStatusCard` με λόγο, «Επανάληψη» και «Χειροκίνητη καταχώριση».
+- `review_extraction` ⇒ ο σταθμός ελέγχου (§8.5.4).
+- `quote_detail` ⇒ `QuoteRightPane` (σύνοψη · επεξεργασία γραμμών · σχόλια), με το **ίδιο** hook ενεργειών με το κέντρο προσφορών (`useQuoteDetailActions`).
+
+**Επανάληψη**: `POST /api/quotes/[id]/rescan`:
+1. φθηνός έλεγχος με τον κριτή.
+2. bytes μέσω `loadOwnedFileBytes` (μισθωτής → ορατότητα δοχείου → κάδος της εγγραφής), ποτέ `fetch(url)`.
+3. compare-and-set.
+4. `after()` → ο **ίδιος** `processScanAsync` με τον νέο αριθμό.
+
+Απαντήσεις: 202 · 409 `{ code: in_progress | not_retryable | no_document }` · 503. Ιδεμποτία μέσω `withAuth` (CHECK 3.92) · `withSensitiveRateLimit`, όπως η σάρωση.
+
+**Boy-scout (N.0.2)**:
+- (α) Η γραμμή `auditTrail` ήταν χειρόγραφη σε 2 γραφείς και θα γινόταν τρίτη ⇒ `services/quote-audit-entry.ts`. Το `vendor-portal-submit-service` μένει χωριστά επίτηδες, γιατί σφραγίζει με Timestamp πελάτη και hash IP.
+- (β) Το «έχει πρωτότυπο έγγραφο;» ήταν `source === 'scan' || 'email_inbox'` σε δύο σημεία ⇒ `quoteHasOriginalDocument` (από τα **συνημμένα**).
+- (γ) Ο αναλυτής (`OpenAI ?? stub`) ⇒ `resolveQuoteAnalyzer`, ένα σημείο για σάρωση και επανάληψη.
+- (δ) Η σύνδεση του `QuoteRightPane` στο κέντρο προσφορών ⇒ `useQuoteDetailActions`. Το `RfqDetailClient` μένει χωριστά, γιατί εκεί η «Έγκριση» είναι ανάθεση.
+
+⚠️ **Δεν έγινε**: το `useScanQueue` κάνει ακόμη polling με `extractedData`. Το `enqueue` του **δεν το καλεί κανείς** (μετρημένο με grep), οπότε ο βρόχος είναι νεκρός κώδικας και θέλει ξεχωριστή απόφαση: διαγραφή ή σύνδεση.
 
 ---
 
@@ -967,3 +1010,4 @@ These four decisions evolve the original §5.1 domain model (which had `invitedV
 | 2026-10-30 | **§8.5.4 — συνέχεια (ζ): 💬 η πλατφόρμα social ΔΕΜΕΝΗ στη ρίζα, ΕΝΑ μητρώο προφίλ.** Η ρίζα `SOCIAL_PLATFORMS` εγγράφηκε στο CHECK 3.73 (`social-platform`, κατώφλι 6, παράγωγα `NamedSocialPlatform` · `SocialPlatformType`). **12** αδέσμευτα σώματα σε **6** αρχεία (το handoff μέτρησε 9 σε 5: τα 2 του `socialUrlGenerator` ήταν **κρυμμένα** από ομώνυμο τοπικό τύπο, βλ. ADR-812 changelog 2026-10-30). Νέο SSoT `lib/contact/social-platform-profiles.ts` (καθαρά δεδομένα, server-safe): όνομα μάρκας + πρότυπο URL προφίλ, `satisfies Record<NamedSocialPlatform, …>` — ζούσε σε **τρία** σημεία που διαφωνούσαν (`x.com` vs `twitter.com` στο branding). Θεραπείες: branding με `isSocialPlatform` (πριν `tiktok/whatsapp/telegram` ⇒ `other` ⇒ λογαριασμός με μόνο όνομα χρήστη **χανόταν**) · **ένα** `ShowcaseContactSocial` (το `property-showcase/types.ts` επανεξάγει από τον resolver· `ShowcaseCompanyBrand = Omit<ShowcaseCompanyBranding,'source'>`, ήταν δίδυμο — CHECK 3.28) · εικονίδια βιτρίνας από `UNIFIED_SOCIAL_PLATFORMS` · email χωρίς `SOCIAL_DISPLAY` και χωρίς τυφλό `as EmailSocialPlatform` · `SocialPlatformType = NamedSocialPlatform \| 'email'` (**δέσιμο, όχι εξαίρεση**: οι στόχοι κοινοποίησης είναι οι πλατφόρμες της ρίζας + το κανάλι email ⇒ νέα πλατφόρμα απαιτεί γραμμή και στο μητρώο κοινοποίησης) · `socialUrlGenerator` χωρίς τοπικό ομώνυμο· η φόρμα χτίζει πλέον URL και για WhatsApp (`wa.me/<ψηφία>`) / Telegram (`t.me/`) — πριν κενό. Νεκρά `SOCIAL_URL_TEMPLATES`/`SOCIAL_URL_PLACEHOLDERS` του generator αφαιρέθηκαν. **Δεδομένα (μόνο ανάγνωση)**: 0/22 επαφές έχουν social ⇒ καμία μετάπτωση, η διόρθωση είναι προληπτική. Άγκυρες: `company-branding-socials.test.ts` (Β1–Β3, 17) · `social-platform-profiles.test.ts` (Π1–Π2, 11). **7/7 μεταλλάξεις σκοτώθηκαν**. Ζωντανός έλεγχος οθόνης δεν έγινε (καμία επαφή με social για να φανεί). |
 | 2026-10-30 | **§8.5.4 — συνέχεια (η): 🔗 ΜΙΑ ανίχνευση πλατφόρμας από URL, ΕΝΑ όνομα τύπου πλατφόρμας** (Opus 5.5). **Μετρημένο στην αναγνώριση**: όχι δύο αλλά **τρία** σώματα (`socialUrlGenerator` 7 · `platform-utils` 9 · catch του `ProfileService.findPlatformFromPartialUrl`, **νεκρό** — η ανίχνευση δεν πετά ποτέ) και **τρία** `export type SocialPlatform =` (ρίζα · `profile-service` = κανάλια κοινοποίησης με `email` · `ui/effects` = κλειδιά hover `FACEBOOK`…`EMAIL`), τα δύο τελευταία **χωρίς κανέναν καταναλωτή**. 🔴 **Και τα τρία σώματα ταίριαζαν με `hostname.includes`** ⇒ `wix.com`/`dropbox.com`/`box.com` = Twitter, `chat.me` = Telegram, `linkedin.com.evil.io` = LinkedIn — η κλάση, όχι το διπλότυπο. **Θεραπεία**: `hosts` στο μητρώο ταυτότητας `lib/contact/social-platform-profiles.ts` (κανονικός πρώτα + σύντομοι: `lnkd.in` · `fb.com`/`fb.me` · `instagr.am` · `twitter.com` · `youtu.be` · `whatsapp.com` · `telegram.me`/`.org`), `satisfies Record<NamedSocialPlatform,…>` ⇒ νέα πλατφόρμα χωρίς τομείς = σφάλμα μεταγλώττισης· **ΜΙΑ** `detectPlatformFromUrl` εκεί: host **ίσος** ή **υποτομέας** (πρακτική same-site/registrable domain — όχι PSL, οι τομείς είναι δηλωμένοι), τελική τελεία FQDN αφαιρείται. `platform-utils` την **επανεξάγει** (ίδια αναφορά συνάρτησης, όχι αντίγραφο)· το σώμα του generator + η εξαγωγή του barrel, η νεκρή εφεδρεία και τα δύο ομώνυμα αφαιρέθηκαν. **Αλλαγή συμπεριφοράς (σκόπιμη)**: τα ψευδώς θετικά πάνε σε `null`· οι σύντομοι τομείς αναγνωρίζονται πλέον. Άγκυρα `lib/contact/__tests__/social-platform-detection.test.ts` (Δ1–Δ5, 49: συμπεριφορά **από το μητρώο** · υποτομείς · η κλάση · συνέπεια τομέων · **δομική** σάρωση `src/` με μη-κενότητα: ΕΝΑΣ ορισμός `detectPlatformFromUrl`, ΕΝΑ `export type SocialPlatform =`). **7/7 μεταλλάξεις σκοτώθηκαν** (substring · μόνο ακριβές · χαμένος τομέας · διπλός τομέας · δεύτερο σώμα · ομώνυμο · τοπικό αντίγραφο). Σχετικά: 37/37 σουίτες (469)· CHECK 3.73 πράσινο· `jscpd:diff` καθαρό. Το CHECK 3.73 **δεν** επεκτάθηκε: απαριθμεί δηλώσεις τιμών, οι αλυσίδες `if` δεν είναι δηλώσεις ⇒ η άγκυρα ζει δίπλα στο μητρώο. |
 | 2026-11-02 | **ADR-923 §5.8 (Φ6β Σ8): SKU στη γραμμή RFQ και προσφοράς, και η έξοδος προς προμηθευτή ως λίστα επιτρεπόμενων.** `RfqLine.catalogRef` + `priceSnapshot` αντιγράφονται παγωμένα από το BOQ (Q29)· ο πελάτης δεν τα γράφει, γιατί το εργοστάσιο τα παίρνει χωριστά από το DTO. `QuoteLine.catalogRef` = το SKU που **ζητήθηκε**, γεγονός του αιτήματος: το παίρνει η βασική απάντηση, όχι η εναλλακτική. Ο φρουρός του PM έγινε `bindPmRfqLines` και το ξαναπαράγει σε κάθε αποθήκευση, γιατί το zod το πετά από το σώμα, ίδιο σχήμα με το παλιό `rfqLineId`. 🔴 Το στιγμιότυπο είναι τιμή του προμηθευτή Α και το RFQ φτάνει στον Β· το `quoteView` έστελνε `data.lines` αυτούσιες. Τώρα `toPublicRfqLine` είναι η μία προβολή γραμμής RFQ και `toVendorQuoteLine` της προσφοράς, και οι δύο πεδίο προς πεδίο. **Έξοδοι που μετρήθηκαν:** GET/POST `/api/vendor/quote` · decline · renew · email πρόσκλησης · notify-vendor · request-renewal · παραγγελία (PDF, email, δημόσιος σύνδεσμος). Άγκυρα `vendor-egress-sku.test.ts` πάνω στους πραγματικούς handlers, μεταλλάξεις 15/15. ⚠️ `notify-vendor` · `request-renewal`: ελεύθερο κείμενο του αγοραστή, δεν ελέγχεται. |
+| 2026-11-03 | **§6.10: κύκλος ζωής εξαγωγής ρητός, και τέλος στο ατελείωτο spinner.** Η `QT-0002` (πύλη, `submitted`, 0 συνημμένα) έδειχνε «Επεξεργασία AI σε εξέλιξη» για πάντα, όπως και 2 από τις υπόλοιπες 3 προσφορές της βάσης. Ρίζα: η οθόνη συμπέραινε «τρέχει» από `extractedData === null`, ενώ η αποτυχημένη σάρωση έγραφε μόνο ωμό ελληνικό στο `notes` (ψέμα του docstring: «marks `under_review`»). Νέα: `Quote.extraction` (`pending/succeeded/failed` + κωδικός + `attempt`). Ένας γραφέας `quote-extraction-lifecycle` (compare-and-set στην επανάληψη, fencing token στην αποτυχία). Ένας κριτής `quote-intake-view`, τον ρωτούν η σελίδα, το polling του `useQuote` και η επανάληψη. `POST /api/quotes/[id]/rescan` (`loadOwnedFileBytes` · `after()`). Η σελίδα αποδίδει πλέον και την προβολή προσφοράς (`QuoteRightPane`) για πύλη/χειροκίνητη, και κάρτα αποτυχίας με «Επανάληψη»/«Χειροκίνητη καταχώριση». Boy-scout: `quoteAuditEntry` (2 χειρόγραφα) · `quoteHasOriginalDocument` (2 αντίγραφα κριτηρίου πηγής) · `resolveQuoteAnalyzer` · `useQuoteDetailActions` (σύνδεση κέντρου προσφορών). i18n: `quotes.intake.*` (el/en), στατικά κλειδιά ώστε το route slice να μην αρνηθεί. Το route slice σφραγίστηκε ξανά, 16230 → 23812 bytes, με γραμμένο `why`: η σελίδα έγινε σελίδα κάθε προσφοράς, τα ns μειώθηκαν 7 → 6. Άγκυρες: `quote-intake-view.test.ts` · `quote-extraction-lifecycle.test.ts` · `scan/__tests__/process.test.ts`. **Μεταλλάξεις 5/5 σκοτώθηκαν** (fencing · compare-and-set · πύλη ως σάρωση · όριο «κόλλησε» · κωδικός αποτυχίας). ⚠️ Ζωντανός έλεγχος οθόνης δεν έγινε σε αυτή τη συνεδρία. ⚠️ Το `useScanQueue` έμεινε, γιατί το `enqueue` του δεν το καλεί κανείς (νεκρός βρόχος, ξεχωριστή απόφαση). |

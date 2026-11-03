@@ -21,6 +21,7 @@ import { QuoteDetailSummary } from './QuoteDetailSummary';
 import { QuoteEditMode, type QuoteEditModeHandle } from './QuoteEditMode';
 import { QuoteOriginalDocumentPanel } from './QuoteOriginalDocumentPanel';
 import type { Quote } from '../types/quote';
+import { quoteHasOriginalDocument } from '../utils/quote-intake-view';
 import type {
   QuoteHeaderPrimaryAction,
   QuoteHeaderSecondaryAction,
@@ -67,7 +68,7 @@ export function QuoteRightPane({
   const { user } = useAuth();
   const companyId = user?.companyId ?? '';
   const isMobile = useIsMobile();
-  const hasPdf = quote.source === 'scan' || quote.source === 'email_inbox';
+  const hasPdf = quoteHasOriginalDocument(quote);
 
   const [editMode, setEditMode] = useState(false);
   const [editSaving, setEditSaving] = useState(false);

@@ -44,6 +44,32 @@ export type QuoteSource = 'manual' | 'scan' | 'portal' | 'email_inbox';
 export type AcceptanceMode = 'manual' | 'auto';
 
 // ============================================================================
+// AI EXTRACTION LIFECYCLE — ADR-327 §6.10
+// ============================================================================
+
+/**
+ * Ο κύκλος ζωής της εξαγωγής AI, **ρητός** (Rossum `importing → to_review | failed_import`).
+ * Πριν το §6.10 η οθόνη συμπέραινε «τρέχει» από την **απουσία** `extractedData` — που σήμαινε επίσης
+ * «απέτυχε», «κόπηκε η διεργασία» και «δεν ζητήθηκε ποτέ» (πύλη / χειροκίνητη) ⇒ spinner για πάντα.
+ */
+export const QUOTE_EXTRACTION_STATUSES = ['pending', 'succeeded', 'failed'] as const;
+export type QuoteExtractionStatus = (typeof QUOTE_EXTRACTION_STATUSES)[number];
+
+/** Γιατί απέτυχε — κωδικός, ποτέ κείμενο (το κείμενο το δίνει το i18n του πελάτη, N.11). */
+export const QUOTE_EXTRACTION_ERROR_CODES = ['not_a_quote', 'analyzer_failed', 'document_unavailable'] as const;
+export type QuoteExtractionErrorCode = (typeof QUOTE_EXTRACTION_ERROR_CODES)[number];
+
+export interface QuoteExtractionState {
+  status: QuoteExtractionStatus;
+  /** Πότε ξεκίνησε η **τρέχουσα** προσπάθεια — μετρά το όριο «κόλλησε» (`QUOTE_EXTRACTION_STALE_AFTER_MS`). */
+  startedAt: Timestamp;
+  finishedAt: Timestamp | null;
+  errorCode: QuoteExtractionErrorCode | null;
+  /** 1 = πρώτη σάρωση· κάθε επανάληψη +1. */
+  attempt: number;
+}
+
+// ============================================================================
 // QUOTE LINE
 // ============================================================================
 
@@ -278,6 +304,12 @@ export interface Quote {
   notes: string | null;
   attachments: QuoteAttachment[];
   extractedData: ExtractedQuoteData | null;
+  /**
+   * ADR-327 §6.10 — ο κύκλος ζωής της εξαγωγής. Γραφέας ΜΟΝΟ το `quote-service` (`createQuote` με
+   * `requestExtraction` · `markQuoteExtractionPending` · `markQuoteExtractionFailed` · `applyExtractedData`).
+   * `null`/απόν ⇒ δεν ζητήθηκε ποτέ, ή έγγραφο πριν το §6.10. Διαβάζεται ΜΟΝΟ μέσω `resolveQuoteIntakeView`.
+   */
+  extraction?: QuoteExtractionState | null;
   overallConfidence: number | null;
   acceptanceMode: AcceptanceMode | null;
   overrideReason: string | null;
@@ -326,6 +358,8 @@ export interface CreateQuoteDTO {
   vendorContactId: string;
   trade: TradeCode;
   source: QuoteSource;
+  /** ADR-327 §6.10 — η δημιουργία ζητά εξαγωγή AI ⇒ `extraction.status = 'pending'` στην ΙΔΙΑ εγγραφή. */
+  requestExtraction?: boolean;
   lines?: QuoteLine[];
   validUntil?: string | null;
   paymentTerms?: string | null;
