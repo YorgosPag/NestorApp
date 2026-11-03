@@ -11,6 +11,8 @@
  *    ήταν τρίτο αντίγραφο του locale, και η άγκυρα θα επιβεβαίωνε τον εαυτό της.
  * 2. **Το ICU είναι μέρος της άγκυρας**: τα locale γράφονται σε μονό άγκιστρο (`{count, plural, …}`)
  *    και το CHECK 3.9 το επιβάλλει. Χωρίς το plugin οι πληθυντικοί ζωγραφίζονται **ωμοί**.
+ * 3. **Η τυπογραφία της παραγωγής** (`sentence-period`): ό,τι διαβάζει ο άνθρωπος περνά από τον ίδιο
+ *    postProcessor με το `i18n/config.ts`, αλλιώς η άγκυρα θα έβλεπε «μ.μ..» που η οθόνη δεν δείχνει.
  *
  * ⚠️ Εξήχθη όταν ήρθε το **τέταρτο** αντίγραφο (ADR-777 §8.71). Ο hook του έργου αντικαθίσταται
  * ακόμη **σε κάθε αρχείο** με τον γνήσιο `useTranslation` του `react-i18next` (ο factory του
@@ -28,6 +30,7 @@ import ICU from 'i18next-icu';
 import { initReactI18next } from 'react-i18next';
 
 import { getNamespaceLoader } from '@/i18n/namespace-loaders';
+import { SENTENCE_PERIOD, sentencePeriodPostProcessor } from '@/i18n/sentence-period';
 
 type Resources = Record<string, Record<string, unknown>>;
 
@@ -50,8 +53,10 @@ export async function createRealI18n(namespaces: readonly string[], lng = 'el'):
   const instance = i18next.createInstance();
   await instance
     .use(new ICU({ bindI18n: 'languageChanged', bindI18nStore: 'added removed' }))
+    .use(sentencePeriodPostProcessor)
     .use(initReactI18next)
     .init({
+      postProcess: [SENTENCE_PERIOD],
       lng,
       fallbackLng: lng,
       resources: { [lng]: resources },

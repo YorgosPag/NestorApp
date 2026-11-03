@@ -22,6 +22,7 @@
  */
 
 import { getExplicitNamespace } from './namespace-compat';
+import { absorbSentencePeriod } from './sentence-period';
 
 /** Μεταφραστής με την υπογραφή που ζητούν τα καθαρά lib (`PriceLabelT`). */
 export type BundleTranslate = (key: string, params?: Readonly<Record<string, unknown>>) => string;
@@ -80,10 +81,12 @@ export function formatBundleText(
   locale = 'en',
 ): string {
   const safe = params ?? {};
-  return Object.entries(safe).reduce(
+  const rendered = Object.entries(safe).reduce(
     (result, [name, replacement]) => result.replaceAll(`{${name}}`, String(replacement)),
     resolvePlural(resolveSelectOrdinal(text, safe, locale), safe),
   );
+  // Ο ΙΔΙΟΣ κανόνας τυπογραφίας με τον postProcessor του client: server και οθόνη γράφουν την ίδια πρόταση.
+  return absorbSentencePeriod(rendered, safe);
 }
 
 /**

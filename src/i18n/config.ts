@@ -9,6 +9,7 @@ import ICU from 'i18next-icu';
 import { loadNamespace, CRITICAL_NAMESPACES, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
 import { createCompatibleTranslate, type TranslateAdapter } from './compat-translate';
 import { pseudoPostProcessor, PSEUDO_LANGUAGE } from './pseudo-post-processor';
+import { sentencePeriodPostProcessor, SENTENCE_PERIOD } from './sentence-period';
 
 // 🏢 ADR-744: the ONLY locale data imported synchronously — generated, not written.
 import shellSlice from './generated/shell-slice.el.json';
@@ -119,6 +120,7 @@ i18n
       bindI18nStore: 'added removed',
     }),
   )
+  .use(sentencePeriodPostProcessor)
   .use(pseudoPostProcessor)
   .use(initReactI18next)
   .init({
@@ -128,7 +130,8 @@ i18n
     debug: false, // Disabled to reduce console noise
 
     // 🧪 ADR-666: το pseudo παράγεται runtime από το el — δεν έχει resource αρχεία
-    postProcess: [PSEUDO_LANGUAGE],
+    // 🔑 Σειρά: πρώτα η τυπογραφία στο πραγματικό κείμενο, μετά η ψευδο-μετάφραση πάνω στο διορθωμένο.
+    postProcess: [SENTENCE_PERIOD, PSEUDO_LANGUAGE],
 
     interpolation: {
       escapeValue: false, // React already escapes values

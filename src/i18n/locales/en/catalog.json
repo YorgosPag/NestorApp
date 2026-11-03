@@ -314,7 +314,7 @@
     "fenceOutOfBounds": "The confirmation threshold must be between {min}% and {max}%.",
     "priceListAudienceAmbiguous": "A sales price list already exists for the same audience — which one would apply?",
     "versionSeeding": "Copying the lines from the base version has not finished.",
-    "fenceConfirmationRequired": "{count} lines change price beyond the threshold — review and confirm the difference before publishing.",
+    "fenceConfirmationRequired": "{count, plural, one {# line changes} other {# lines change}} price beyond the threshold — review and confirm the difference before publishing.",
     "fenceDigestStale": "The difference changed since you reviewed it — review it again.",
     "unknownParty": "The party was not found in this workspace.",
     "publicationFontNotLicensed": "This font is not among the approved fonts with a checked licence.",

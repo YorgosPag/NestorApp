@@ -250,13 +250,13 @@
         "noPriceList": "{count} χωρίς λίστα τιμών",
         "noVersion": "{count} χωρίς έκδοση σε ισχύ",
         "unitUnmapped": "{count} με μονάδα χωρίς κωδικό xChange",
-        "visibleNoPrice": "{count} ορατά χωρίς τιμή"
+        "visibleNoPrice": "{count, plural, one {# ορατό χωρίς τιμή} other {# ορατά χωρίς τιμή}}"
       },
       "report": {
         "at": "Τιμές και ορατότητα όπως ίσχυαν στις {date}.",
         "codesOnly": "Το αρχείο περιέχει μόνο κωδικούς ETIM, όχι ονόματα.",
         "exported": "{count, plural, one {# προϊόν γράφτηκε} other {# προϊόντα γράφτηκαν}} στο {file}.",
-        "hidden": "{count, plural, one {# προϊόν είναι κρυφό} other {# προϊόντα είναι κρυφά}} για το κοινό και δεν εξήχθη.",
+        "hidden": "{count, plural, one {# προϊόν είναι κρυφό για το κοινό και δεν εξήχθη} other {# προϊόντα είναι κρυφά για το κοινό και δεν εξήχθησαν}}.",
         "noPriceList": "Καμία λίστα τιμών για αυτό το κοινό.",
         "onRequest": "{count, plural, one {# προϊόν} other {# προϊόντα}} με «ζητήστε προσφορά»: {reasons}.",
         "optionUnmapped": "Χαρακτηριστικά με επιλογή χωρίς κωδικό ETIM, δεν γράφτηκαν: {codes}.",
