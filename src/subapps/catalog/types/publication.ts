@@ -116,6 +116,8 @@ export const PUBLICATION_FAILURES = [
   'emptyScope',
   'storageFailed',
   'interrupted',
+  /** Απόφαση Giorgio 4 (§5.13 Σ7): QR σε βάση που δεν είναι δημόσια `https` δεν τυπώνεται ποτέ. */
+  'qrOriginNotPublic',
   'internal',
 ] as const;
 export type PublicationFailure = (typeof PUBLICATION_FAILURES)[number];

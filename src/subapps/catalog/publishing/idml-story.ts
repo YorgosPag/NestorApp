@@ -140,9 +140,18 @@ function tocXml(block: Extract<LayoutBlock, { kind: 'toc' }>, document: LayoutDo
 
 const HEADING_STYLE: Readonly<Record<1 | 2 | 3, IdmlStyle>> = { 1: 'Heading1', 2: 'Heading2', 3: 'Heading3' };
 
+/**
+ * Η επικεφαλίδα, και κάτω της η διεύθυνση του QR ως κείμενο (§5.13 Σ7). Το IDML δεν έχει στοιχείο QR: ο σχεδιαστής το
+ * γεννά από αυτό το κείμενο με το «Generate QR Code» του InDesign, και η διεύθυνση μένει η ίδια με του PDF.
+ */
+function headingXml(block: Extract<LayoutBlock, { kind: 'heading' }>): string {
+  const title = paragraph(HEADING_STYLE[block.level], textRun(block.text));
+  return block.qr ? title + paragraph('Body', textRun(`${block.qr.caption}: ${block.qr.url}`)) : title;
+}
+
 function blockXml(block: LayoutBlock, ctx: StoryContext, document: LayoutDocument): string {
   switch (block.kind) {
-    case 'heading': return paragraph(HEADING_STYLE[block.level], textRun(block.text));
+    case 'heading': return headingXml(block);
     case 'paragraph': return paragraph('Body', block.inlines.map(inlineRun).join(''));
     case 'bullets': return block.items.map((item) => paragraph('Bullet', item.map(inlineRun).join(''))).join('');
     case 'image': return paragraph('Body', run(imageFrame(block.image, ctx)));

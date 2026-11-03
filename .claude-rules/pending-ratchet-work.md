@@ -3845,11 +3845,6 @@
 
 ## Pending tasks (priority order)
 
-### 📚 Δύο αναγνώστες «όλος ο κατάλογος του χώρου» (προτεραιότητα ΧΑΜΗΛΗ, 2026-11-03, ADR-923 §5.14.1 · N.0.2)
-- **Τι:** το `readExportData` (`src/server/catalog/xchange-export.server.ts`) και το ιδιωτικό `readCatalogData` (`src/server/catalog/publishing/publication-snapshot.server.ts`) διαβάζουν τις ίδιες συλλογές (οικογένειες · ιδιότητες · μοντέλα · SKU · κατηγορίες · μητρώο μονάδων) με ισότητες σε `companyId` + `isDeleted`.
-- **Γιατί δεν ενώθηκαν:** ο φάκελος `server/catalog/publishing/**` ήταν εκτός ορίων της εργασίας (άλλος πράκτορας γράφει εκεί).
-- **Fix:** ένας εξαγόμενος αναγνώστης στο `server/catalog/` (π.χ. `catalog-dataset-reads.server.ts`), που τον καλούν και οι δύο, με ρητό `COLLECTIONS.X` σε κάθε ερώτημα (CHECK 3.91).
-
 ### 📨 «Διάβασε JSON ή 400» γραμμένο ξεχωριστά σε 17 routes (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-30, ADR-225 Phase 2 Boy Scout · ADR-245 · N.0.2)
 - **Τι**: `try { raw = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }` σε 17 αρχεία του `src/app/api` (`grep -rn "Invalid JSON body" src/app/api`)· δύο τοπικά προοίμια το έχουν ήδη κλείσει στη γειτονιά τους (`admin/bim-diagnostics/[id]/_request-preamble.ts` · `telemetry/bim-performance/_session-request.ts`).
 - **Γιατί**: το `jscpd --diff` (CHECK 3.28) τα ονομάζει μόνο όταν δύο αδέλφια μπουν στο ίδιο commit — δηλαδή μπλοκάρει άσχετα commits.

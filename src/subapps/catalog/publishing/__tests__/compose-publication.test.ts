@@ -11,6 +11,7 @@ import { codeIndexEntries, composePublication, previewRecipeOf, type Publication
 import { collectLayoutAssetIds, countLayoutSections, type LayoutBlock, type LayoutTable } from '../layout-model';
 import { variantModelEntry, type PublicationChapter, type VariantEntryInput, type VariantModelEntry } from '../publication-entries';
 import { publicationInputHash, type PublicationInputs } from '../publication-input-hash';
+import { publicationQrCode } from '../publication-qr';
 
 const attributeById = new Map([...MFP_ATTRIBUTE_MAP].map(([id, attribute]) => [id, { ...attribute, id }]));
 const words = { text: (value: Partial<Record<string, string>> | undefined, fallback?: string) => value?.el ?? fallback ?? '', yes: 'Ναι', no: 'Όχι', sample: 'δείγμα', price: 'Τιμή €', askForQuote: 'Ζητήστε προσφορά' };
@@ -116,6 +117,24 @@ describe('composePublication', () => {
   });
 });
 
+describe('composePublication — QR της σελίδας οικογένειας (§5.13 Σ7)', () => {
+  const qr = publicationQrCode('https://nestorconstruct.gr/q/mfp', 'Σαρώστε');
+  const headingsOf = (document: ReturnType<typeof composePublication>) =>
+    document.sections.flatMap((section) => section.blocks).flatMap((block) => (block.kind === 'heading' && block.level === 2 ? [block] : []));
+
+  it('το QR του μοντέλου μπαίνει στην επικεφαλίδα της σελίδας του', () => {
+    const document = composePublication({ ...composeInput(entryOf(null)), qrCodes: new Map([['mfp', qr]]) });
+    expect(headingsOf(document)).toEqual([expect.objectContaining({ text: expect.any(String), outlined: true, qr })]);
+  });
+
+  it('🔑 χωρίς QR η επικεφαλίδα μένει ακριβώς η παλιά, χωρίς κλειδί `qr`', () => {
+    for (const qrCodes of [undefined, new Map([['other', qr]])]) {
+      const [heading] = headingsOf(composePublication({ ...composeInput(entryOf(null)), qrCodes }));
+      expect(heading).not.toHaveProperty('qr');
+    }
+  });
+});
+
 describe('previewRecipeOf', () => {
   it('η πρώτη κατά κωδικό, ανεξάρτητα από τη σειρά ανάγνωσης · καμία ⇒ null', () => {
     expect(previewRecipeOf([{ code: 'b' }, { code: 'a' }])?.code).toBe('a');
@@ -150,11 +169,12 @@ describe('codeIndexEntries', () => {
 describe('publicationInputHash — κλειδί ιδεμποτίας', () => {
   const inputs: PublicationInputs = {
     companyId: 'c1', recipe, data: [{ key: 'product:a', revision: 1 }, { key: 'product:b', revision: 2 }],
-    audienceKey: 'customerGroup:w', pricing: [{ key: 'version:v', revision: 1 }], renderVersion: 'r1',
+    audienceKey: 'customerGroup:w', pricing: [{ key: 'version:v', revision: 1 }], renderVersion: 'r1', links: ['https://x.gr/q/a', 'https://x.gr/q/b'],
   };
 
   it('🔑 ανεξάρτητο από τη σειρά ανάγνωσης', () => {
     expect(publicationInputHash({ ...inputs, data: [...inputs.data].reverse() })).toBe(publicationInputHash(inputs));
+    expect(publicationInputHash({ ...inputs, links: [...inputs.links].reverse() })).toBe(publicationInputHash(inputs));
   });
 
   it.each([
@@ -163,6 +183,8 @@ describe('publicationInputHash — κλειδί ιδεμποτίας', () => {
     ['έκδοση τιμών', { pricing: [{ key: 'version:v2', revision: 1 }] }],
     ['έκδοση απόδοσης', { renderVersion: 'r2' }],
     ['🔒 χώρος', { companyId: 'c2' }],
+    ['§5.13 Σ7: μοντέλο που απέκτησε ή έχασε QR', { links: ['https://x.gr/q/a'] }],
+    ['§5.13 Σ7: άλλη βάση διεύθυνσης', { links: ['https://y.gr/q/a', 'https://y.gr/q/b'] }],
     ['γλώσσα συνταγής', { recipe: { ...recipe, language: 'en' as const } }],
   ])('αλλάζει με: %s', (_name, change) => {
     expect(publicationInputHash({ ...inputs, ...change })).not.toBe(publicationInputHash(inputs));

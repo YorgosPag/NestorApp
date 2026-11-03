@@ -24,6 +24,7 @@ import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subjec
 import { diffPriceVersions } from '@/subapps/catalog/pricing/diff-price-versions';
 import { resolveCatalogPrice, type PricedRecord } from '@/subapps/catalog/pricing/resolve-catalog-price';
 import { formatPublicationPrice } from '@/subapps/catalog/publishing/layout-text';
+import { publicationPriceEdition, type PublicationPriceEdition } from '@/subapps/catalog/publishing/publication-price-edition';
 import { publicationListMayServe, publicationVersionPrintable } from '@/subapps/catalog/publishing/publication-price-fence';
 import { publicationPriceChanges, type PublicationPriceChange, type PublicationQuoter } from '@/subapps/catalog/publishing/publication-price-changes';
 import type { DataVersionRef } from '@/subapps/catalog/publishing/publication-input-hash';
@@ -49,8 +50,8 @@ export interface PublicationPriceSheet {
   readonly priceOf: PublicationPriceLookup | null;
   readonly refs: readonly DataVersionRef[];
   readonly audienceKey: string;
-  /** Για το υποσέλιδο: αριθμός έκδοσης + ισχύς. `null` = τεχνικός κατάλογος. */
-  readonly edition: { readonly versionNumber: number; readonly validFrom: string } | null;
+  /** Για το υποσέλιδο: αριθμός έκδοσης + ισχύς από/έως. `null` = τεχνικός κατάλογος. */
+  readonly edition: PublicationPriceEdition | null;
   /** Η σύγκριση με παλαιότερη έκδοση, για το κοινό της συνταγής· κενό ⇒ χωρίς σύγκριση. */
   readonly changes: readonly PublicationPriceChange[];
 }
@@ -127,7 +128,8 @@ export async function readPublicationPriceSheet(scope: CatalogTx, pricing: Publi
   assertListMayServe(list, viewer);
   const version = await readPublishedVersion(scope, pricing, pricing.priceListVersionId);
   const compare = await readCompareVersion(scope, pricing, version.number);
-  const quoter: QuoterInput = { list, versions: (await readListVersions(scope, list.id)).map(versionRefOf), conditions: await readActiveConditionRecords(scope), viewer };
+  const versions = (await readListVersions(scope, list.id)).map(versionRefOf);
+  const quoter: QuoterInput = { list, versions, conditions: await readActiveConditionRecords(scope), viewer };
   const { conditions } = quoter;
   const lines = await readVersionLines(scope.db, scope.ctx.companyId, version.id);
   const quote = quoterOf(quoter, lines, version.validFrom);
@@ -140,7 +142,7 @@ export async function readPublicationPriceSheet(scope: CatalogTx, pricing: Publi
     priceOf,
     changes: compare ? publicationPriceChanges(diffPriceVersions(compareLines, lines), quoterOf(quoter, compareLines, compare.validFrom), quote) : [],
     audienceKey: audienceIdentity(pricing.audience),
-    edition: { versionNumber: version.number, validFrom: version.validFrom },
+    edition: publicationPriceEdition(version, versions),
     refs: [
       { key: `priceList:${list.id}`, revision: list.revision },
       { key: `priceVersion:${version.id}:${version.seal.linesHash}`, revision: version.revision },

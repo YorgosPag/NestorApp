@@ -26,6 +26,7 @@ const document: LayoutDocument = {
     { id: 'm', template: 'family', blocks: [
       { kind: 'anchor', anchor: 'a' },
       { kind: 'heading', level: 2, text: '#import "x"', outlined: true },
+      { kind: 'heading', level: 2, text: 'Με QR', outlined: true, qr: { url: 'https://nestorconstruct.gr/q/cpm_a&b', caption: 'Σαρώστε', modules: 21, quietModules: 4, moduleMm: 0.5, runs: [[0, 0, 7]], ink: colour } },
       { kind: 'image', image: { assetId: 'img', alt: '', widthMm: 60 } },
       { kind: 'paragraph', inlines: [{ text: 'έντονο', strong: true }, { text: ' κείμενο' }] },
       { kind: 'bullets', ordered: false, items: [[{ text: 'ένα' }]] },
@@ -78,6 +79,13 @@ describe('το πακέτο', () => {
 });
 
 describe('το κείμενο', () => {
+  it('§5.13 Σ7: το QR φτάνει στο InDesign ως η ΙΔΙΑ διεύθυνση σε κείμενο, κάτω από την επικεφαλίδα του', () => {
+    const text = story().documentElement.textContent ?? '';
+    expect(text).toContain('Με QR');
+    expect(text).toContain('Σαρώστε: https://nestorconstruct.gr/q/cpm_a&b');
+    expect(text.indexOf('Σαρώστε')).toBeGreaterThan(text.indexOf('Με QR'));
+  });
+
   it('🔴 ο πίνακας μένει πραγματικός: επαναλαμβανόμενη κεφαλίδα, πλήθη που συμφωνούν, στήλες στο ωφέλιμο πλάτος', () => {
     const element = [...story().querySelectorAll('Table')].find((node) => node.getAttribute('HeaderRowCount') === '1');
     if (!element) throw new Error('table');

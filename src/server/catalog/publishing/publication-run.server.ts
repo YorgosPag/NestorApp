@@ -52,6 +52,7 @@ import { pdfProfilesFirst, PUBLICATION_PROFILE_FILES, type PublicationOutputProf
 import { readOwned, runCatalogReadOnly, type StoredCatalogRecord } from '../catalog-store.server';
 import { renderPublicationIdml } from './idml-package.server';
 import { readPublicationFonts, resolvePublicationAssets, type PublicationAssets } from './publication-assets.server';
+import { publicationLinkReader } from './publication-links.server';
 import { PublicationRunError } from './publication-prices.server';
 import { readPublicationSnapshot, type PublicationSnapshot } from './publication-snapshot.server';
 import { inspectRenderedLayout, renderPublicationPdf, type PublicationFontFile } from './typst-adapter';
@@ -171,7 +172,7 @@ export interface RequestedRun {
 export async function requestPublicationRun(ctx: AuthContext, recipeId: string): Promise<RequestedRun> {
   const { recipe, snapshot } = await runCatalogReadOnly(ctx, async (scope) => {
     const stored = await readOwned<PublicationRecipeDefinition>(scope, 'publicationRecipe', recipeId);
-    return { recipe: stored, snapshot: await readPublicationSnapshot(scope, stored) };
+    return { recipe: stored, snapshot: await readPublicationSnapshot(scope, stored, { links: publicationLinkReader('final') }) };
   });
   const db = getAdminFirestore();
   const id = generateDeterministicCatalogPublicationRunId(ctx.companyId, snapshot.inputHash);
@@ -230,6 +231,8 @@ export async function executePublicationRun(requested: RequestedRun, run: TypstR
   const pagesTotal = countLayoutSections(snapshot.document);
   const progress = (phase: PublicationProgress['phase'], pagesDone: number): PublicationProgress => ({ phase, pagesDone, pagesTotal });
   try {
+    // Απόφαση 4 (§5.13 Σ7): η άρνηση κρίθηκε στο στιγμιότυπο· εδώ γίνεται κατάσταση της έκδοσης, πριν από κάθε απόδοση.
+    if (snapshot.refusal !== null) throw new PublicationRunError(snapshot.refusal);
     await assertTypstAvailable();
     await updateRun(ref, { status: 'running', progress: progress('reading', 0) });
     const assets = await resolvePublicationAssets(snapshot.document, snapshot.assets);

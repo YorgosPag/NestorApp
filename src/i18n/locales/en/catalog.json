@@ -1045,7 +1045,9 @@
         "after": "Now €",
         "change": "Change"
       },
-      "pricesEdition": "Prices of version {version}, valid from {date}"
+      "pricesEdition": "Prices of version {version}, valid from {date}",
+      "pricesEditionClosed": "Prices of version {version}, valid from {from} until {until}",
+      "qrCaption": "Scan for current details"
     },
     "title": "Catalogue publications",
     "subtitle": "Recipes and finished PDFs for print or screen.",
@@ -1174,6 +1176,7 @@
       "emptyScope": "There is no complete product in the scope of this publication.",
       "storageFailed": "Storing the file failed.",
       "interrupted": "The server restarted. Request the publication again.",
+      "qrOriginNotPublic": "The application address is not a public https address, so the QR codes would not open from paper. Set NEXT_PUBLIC_APP_URL.",
       "internal": "Something went wrong."
     },
     "report": {

@@ -21,7 +21,6 @@ import 'server-only';
  * @module server/catalog/xchange-export.server
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import type { HumanLanguage } from '@/i18n/languages';
 import type { AuthContext } from '@/lib/auth';
 import { localDateOf, normalizeToMillisOrNull } from '@/lib/date-local';
@@ -39,9 +38,8 @@ import {
 import { xchangeSkuPricing } from '@/subapps/catalog/interop/etim/xchange-pricing';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { judgeVisibility } from '@/subapps/catalog/pricing/visibility';
-import type { StoredCategory, StoredFamily, StoredModel, StoredProduct } from '@/subapps/catalog/publishing/publication-chapters';
+import type { StoredProduct } from '@/subapps/catalog/publishing/publication-chapters';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import type { StoredCatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import type { PriceListDefinition, PricingViewer } from '@/subapps/catalog/types/price-list';
 import type {
   XChangeExportAudience,
@@ -51,8 +49,8 @@ import type {
   XChangeExportWire,
 } from '@/subapps/catalog/types/xchange-export';
 import type { XChangeEmptyCause } from '@/subapps/catalog/vocabulary/etim';
-import { readMeasurementRegistry } from './catalog-library-reads.server';
-import { readOwned, runCatalogReadOnly, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
+import { readCatalogDataSet } from './catalog-dataset-reads.server';
+import { readOwned, runCatalogReadOnly, type CatalogTx } from './catalog-store.server';
 import { CatalogWriteError, assertNoIssues } from './catalog-write-error';
 import { basisVersion, quoteOnBasis, readQuoteBasis, type QuoteBasis, type QuoteLine } from './price-quote.server';
 import { readVersionLines } from './price-version-reads.server';
@@ -106,23 +104,12 @@ async function audienceTermsOf(scope: CatalogTx, audience: XChangeExportAudience
   return { viewer: await viewerOf(scope, list.audience), priceListId: list.id };
 }
 
-async function readActive<T>(scope: CatalogTx, query: FirebaseFirestore.Query): Promise<T[]> {
-  return (await scope.tx.get(query)).docs.map((doc) => doc.data() as T);
-}
+const byId = <T extends { readonly id: string }>(records: readonly T[]) => new Map(records.map((record) => [record.id, record]));
 
-/** Ο κατάλογος του χώρου. Ισότητες σε `companyId` + `isDeleted`: κανένας σύνθετος δείκτης (CHECK 3.91, ρητό `COLLECTIONS.X`). */
+/** Ο κατάλογος του χώρου από τον έναν αναγνώστη (`readCatalogDataSet`, ίδιος με τον εκδότη), σε χάρτες για τον προσαρμογέα. */
 async function readExportData(scope: CatalogTx) {
-  const { db, ctx } = scope;
-  const active = (query: FirebaseFirestore.Query) => query.where('companyId', '==', ctx.companyId).where('isDeleted', '==', false);
-  const [families, attributes, models, products, categories] = await Promise.all([
-    readActive<StoredFamily>(scope, active(db.collection(COLLECTIONS.CATALOG_FAMILIES))),
-    readActive<StoredCatalogRecord<StoredCatalogAttributeDefinition>>(scope, active(db.collection(COLLECTIONS.CATALOG_ATTRIBUTES))),
-    readActive<StoredModel>(scope, active(db.collection(COLLECTIONS.CATALOG_PRODUCT_MODELS))),
-    readActive<StoredProduct>(scope, active(db.collection(COLLECTIONS.CATALOG_PRODUCTS))),
-    readActive<StoredCategory>(scope, active(db.collection(COLLECTIONS.CATALOG_CATEGORIES))),
-  ]);
-  const byId = <T extends { readonly id: string }>(records: readonly T[]) => new Map(records.map((record) => [record.id, record]));
-  return { families: byId(families), attributes: byId(attributes), models: byId(models), products, categories: byId(categories), registry: await readMeasurementRegistry(scope) };
+  const { families, attributes, models, products, categories, registry } = await readCatalogDataSet(scope);
+  return { families: byId(families), attributes: byId(attributes), models: byId(models), products, categories: byId(categories), registry };
 }
 
 /** Οι γραμμές της έκδοσης που ισχύει, μία φορά, ανά υποκείμενο. Δημοσιευμένη έκδοση = αμετάβλητη, άρα η ανάγνωση είναι συνεπής. */

@@ -105,8 +105,26 @@ export interface LayoutCodeIndexEntry {
   readonly anchor: string;
 }
 
+/**
+ * Ο **ζωντανός σύνδεσμος** μιας καταχώρισης ως QR (ADR-923 §5.13 Σ7): **γεωμετρία**, όχι εικόνα, ώστε η μηχανή να τον
+ * ζωγραφίζει με το δικό της μελάνι ({@link LayoutColour}): CMYK στην εκτύπωση, RGB στην οθόνη, πάντα διάνυσμα.
+ * 🔑 Η κωδικοποίηση γίνεται εδώ, πριν από τη μηχανή: το πρότυπο δεν ξέρει τίποτα για QR, μόνο για ορθογώνια.
+ */
+export interface LayoutQrCode {
+  /** Η απόλυτη διεύθυνση που κωδικοποιεί το σύμβολο. Ζει και ως κείμενο, για τον προσαρμογέα IDML. */
+  readonly url: string;
+  /** Πλευρά του συμβόλου σε μονάδες, χωρίς τη ζώνη ησυχίας. */
+  readonly modules: number;
+  readonly quietModules: number;
+  readonly moduleMm: number;
+  /** Οι σκούρες μονάδες ως οριζόντιες σειρές `[γραμμή, στήλη, μήκος]`. */
+  readonly runs: readonly (readonly [number, number, number])[];
+  readonly ink: LayoutColour;
+  readonly caption: string;
+}
+
 export type LayoutBlock =
-  | { readonly kind: 'heading'; readonly level: 1 | 2 | 3; readonly text: string; readonly outlined: boolean }
+  | { readonly kind: 'heading'; readonly level: 1 | 2 | 3; readonly text: string; readonly outlined: boolean; readonly qr?: LayoutQrCode }
   | { readonly kind: 'paragraph'; readonly inlines: readonly LayoutInline[] }
   | { readonly kind: 'bullets'; readonly ordered: boolean; readonly items: readonly (readonly LayoutInline[])[] }
   | { readonly kind: 'image'; readonly image: LayoutImageRef }

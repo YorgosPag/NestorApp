@@ -1,7 +1,8 @@
 /**
  * @fileoverview **Ο ΚΩΔΙΚΑΣ QR** — μία γέννηση, προκαθορισμένες χρήσεις (ADR-841 §7 Α21.17).
  * @related hooks/mandate/useShowcaseQr.ts · app/api/attendance/qr/generate · services/two-factor ·
- *   subapps/dxf-viewer/text-engine/title-block/qr-image-client.ts
+ *   subapps/dxf-viewer/text-engine/title-block/qr-image-client.ts ·
+ *   subapps/catalog/publishing/publication-qr.ts (τυπωμένος κατάλογος, μέσω `qrModuleRuns`, ADR-923 §5.13 Σ7)
  * @module lib/qr/qr-code
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -42,6 +43,41 @@ export interface QrColors {
 /** **Διανυσματικός** κωδικός — για εκτύπωση σε οποιοδήποτε μέγεθος. */
 export function qrSvg(payload: string, preset: QrPreset, colors?: QrColors): Promise<string> {
   return QRCode.toString(payload, { type: 'svg', ...QR_PRESETS[preset], color: colors });
+}
+
+/** Μία οριζόντια σειρά σκούρων μονάδων: γραμμή, πρώτη στήλη, μήκος — σε μονάδες του συμβόλου, χωρίς τη ζώνη. */
+export type QrModuleRun = readonly [row: number, column: number, length: number];
+
+/** Ο κωδικός ως **γεωμετρία**, για μηχανή που ζωγραφίζει μόνη της (Typst): ίδιο σύμβολο με το {@link qrSvg}. */
+export interface QrModuleRuns {
+  /** Πλευρά του συμβόλου σε μονάδες, χωρίς τη ζώνη ησυχίας. */
+  readonly size: number;
+  /** Η ζώνη ησυχίας της χρήσης, σε μονάδες, σε κάθε πλευρά. */
+  readonly quietModules: number;
+  readonly runs: readonly QrModuleRun[];
+}
+
+function rowRuns(row: number, size: number, dark: (row: number, column: number) => boolean): QrModuleRun[] {
+  const runs: QrModuleRun[] = [];
+  for (let column = 0; column < size; column += 1) {
+    if (!dark(row, column)) continue;
+    const start = column;
+    while (column + 1 < size && dark(row, column + 1)) column += 1;
+    runs.push([row, start, column - start + 1]);
+  }
+  return runs;
+}
+
+/**
+ * **Σειρές σκούρων μονάδων** — ο κωδικός για χρώμα που δεν είναι RGB. Το SVG του `qrcode` γράφει `#000000`, άρα σε CMYK
+ * αρχείο θα έμπαινε RGB· η μηχανή που ζωγραφίζει από γεωμετρία βάζει το δικό της μελάνι. Σύγχρονο και ντετερμινιστικό.
+ */
+export function qrModuleRuns(payload: string, preset: QrPreset): QrModuleRuns {
+  const { errorCorrectionLevel, margin } = QR_PRESETS[preset];
+  const { modules } = QRCode.create(payload, { errorCorrectionLevel });
+  const dark = (row: number, column: number) => modules.get(row, column) === 1;
+  const runs = Array.from({ length: modules.size }, (_, row) => rowRuns(row, modules.size, dark)).flat();
+  return { size: modules.size, quietModules: margin, runs };
 }
 
 /** **PNG ως data URL** — για email, για ενσωμάτωση σε PDF, για όπου το SVG δεν γίνεται δεκτό. */

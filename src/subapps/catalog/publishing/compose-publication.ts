@@ -14,7 +14,7 @@
 
 import type { HumanLanguage } from '@/i18n/languages';
 import type { PublicationRecipeDefinition, PublicationTheme } from '../types/publication';
-import type { LayoutBlock, LayoutCell, LayoutCodeIndexEntry, LayoutDocument, LayoutImageRef, LayoutPage, LayoutSection, LayoutTable, LayoutTheme } from './layout-model';
+import type { LayoutBlock, LayoutCell, LayoutCodeIndexEntry, LayoutDocument, LayoutImageRef, LayoutPage, LayoutQrCode, LayoutSection, LayoutTable, LayoutTheme } from './layout-model';
 import { fitValueColumns, layoutTables, tableUsesRail } from './layout-table';
 import { richTextBlocks, withBreakHints } from './layout-text';
 import type { PriceChangeGroup, PriceChangesEntry, ProductGridEntry, PublicationChapter, PublicationEntry, SimpleProductCard, VariantModelEntry } from './publication-entries';
@@ -38,6 +38,11 @@ export interface PublicationCompositionInput {
   readonly supplierFontFamily?: string;
   readonly chapters: readonly PublicationChapter[];
   readonly words: PublicationComposeWords;
+  /**
+   * Το QR κάθε σελίδας οικογένειας, κατά id μοντέλου (§5.13 Σ7). Λείπει ⇒ χωρίς QR: μόνο μοντέλο που βλέπει ο ανώνυμος έχει
+   * δημόσια σελίδα, και το αποφασίζει ο διακομιστής, όχι ο συνθέτης.
+   */
+  readonly qrCodes?: ReadonlyMap<string, LayoutQrCode>;
 }
 
 /** A4 με περιθώριο 15 mm· το bleed το βάζει το προφίλ εκτύπωσης στον προσαρμογέα. */
@@ -67,6 +72,11 @@ function tableArea(page: LayoutPage): number {
   return page.widthMm - 2 * page.marginMm;
 }
 
+/** Η επικεφαλίδα της σελίδας οικογένειας, με το QR της όταν υπάρχει. Χωρίς QR μένει ακριβώς η παλιά επικεφαλίδα. */
+function entryHeading(text: string, qr: LayoutQrCode | undefined): LayoutBlock {
+  return qr ? { kind: 'heading', level: 2, text, outlined: true, qr } : { kind: 'heading', level: 2, text, outlined: true };
+}
+
 function variantSection(entry: VariantModelEntry, input: PublicationCompositionInput): LayoutSection {
   const { recipe, words } = input;
   const { groupStyle } = recipe.templates;
@@ -78,7 +88,7 @@ function variantSection(entry: VariantModelEntry, input: PublicationCompositionI
   });
   const blocks: LayoutBlock[] = [
     { kind: 'anchor', anchor: anchorOf(entry.id) },
-    { kind: 'heading', level: 2, text: entry.title, outlined: true },
+    entryHeading(entry.title, input.qrCodes?.get(entry.id)),
     ...(entry.imageAssetId ? [{ kind: 'image' as const, image: imageRef(entry.imageAssetId, entry.title, MODEL_IMAGE_MM) }] : []),
     ...(entry.descriptionHtml ? richTextBlocks(entry.descriptionHtml) : []),
     ...tables.flatMap((table): LayoutBlock[] => [

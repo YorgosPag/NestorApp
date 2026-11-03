@@ -108,7 +108,11 @@ const RESERVED_HOST_SUFFIXES: readonly string[] = [
   '.home.arpa', '.test', '.invalid', '.example', '.lan',
 ];
 
-function isPubliclyReachableHttps(candidate: string): boolean {
+/**
+ * Εξάγεται και για το **τυπωμένο QR** του εκδότη καταλόγου (ADR-923 §5.13 Σ7): ό,τι ζει χρόνια σε χαρτί κρίνεται με την
+ * ίδια ερώτηση με τις εικόνες email, «είναι αυτή η διεύθυνση δημόσια;», όχι με δεύτερο αντίγραφο του κανόνα.
+ */
+export function isPubliclyReachableHttps(candidate: string): boolean {
   let url: URL;
   try {
     url = new URL(candidate);

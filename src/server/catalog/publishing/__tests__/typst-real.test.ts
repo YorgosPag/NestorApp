@@ -15,12 +15,14 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { inflateSync } from 'node:zlib';
 
+import jsQR from 'jsqr';
 import { PDFDocument } from 'pdf-lib';
 
 import { composePublication } from '@/subapps/catalog/publishing/compose-publication';
 import { collectLayoutAssetIds, renditionUseOf } from '@/subapps/catalog/publishing/layout-model';
 import { judgePublicationLayout } from '@/subapps/catalog/publishing/publication-layout-judge';
 import type { PublicationChapter, VariantModelEntry } from '@/subapps/catalog/publishing/publication-entries';
+import { printedModelUrl, publicationQrCode } from '@/subapps/catalog/publishing/publication-qr';
 import type { PreviewRow } from '@/subapps/catalog/table/catalog-table';
 import type { PublicationRecipeDefinition } from '@/subapps/catalog/types/publication';
 import { inspectFontFile } from '../publication-font-file.server';
@@ -99,6 +101,10 @@ async function renderRaw(source: string): Promise<Uint8Array> {
   }
 }
 
+/** Η διεύθυνση του QR στα δείγματα: πραγματικό μήκος id, άρα πραγματική έκδοση συμβόλου. */
+const QR_URL = printedModelUrl('https://nestorconstruct.gr', 'catpm_8f3c2a10-5b7e-4c1d-9a2f-0e6b1d4c7a99');
+const QR_CODES = new Map([['m1', publicationQrCode(QR_URL, 'Σαρώστε για τα τρέχοντα στοιχεία')]]);
+
 const hostile = '<p>#import "x.typ": * και #read("/etc/passwd") και $x^2$ και *έντονο* και @ref</p>';
 
 /** Μικρό έγγραφο με ό,τι ο όγκος δεν έχει: κακόβουλο κείμενο, τιμές, ζώνες ομάδας, πλέγμα καρτών. */
@@ -120,7 +126,34 @@ function sampler(groupStyle: 'band' | 'rail') {
     title: 'Δείγμα', footer: 'Υποσέλιδο',
     chapters: [{ id: 'a', title: 'Κλιματισμός και εξαερισμός επαγγελματικών χώρων', entries: [priced, { kind: 'productGrid', id: 'grid', title: 'Εξαρτήματα', listingKind: 'product', cards }] }],
     words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
+    qrCodes: QR_CODES,
   });
+}
+
+/** Το δείγμα του QR: μόνο η σελίδα οικογένειας, ώστε η πρώτη σελίδα της προεπισκόπησης να είναι αυτή. */
+function qrDocument() {
+  return composePublication({
+    recipe: { ...recipe, templates: { ...recipe.templates, enabled: [] } }, title: 'QR', footer: 'Υποσέλιδο',
+    chapters: [{ id: 'a', title: 'Fan coil', entries: [entry(1)] }], qrCodes: QR_CODES,
+    words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
+  });
+}
+
+/** 300 ppi: η μονάδα 0,5 mm γίνεται ~6 εικονοστοιχεία, όσο μια φωτογραφία κινητού από 20 cm. */
+const QR_SCAN_PPI = '300';
+
+/** Η πρώτη σελίδα σε PNG από τον ΙΔΙΟ δρόμο με την προεπισκόπηση, με άλλη ανάλυση και, για το print, με το CMYK πρότυπο. */
+function scanRunner(profile: 'print' | 'screen'): TypstRunner {
+  return (invocation) => runTypst({
+    ...invocation,
+    args: invocation.args.map((arg, index, all) => (all[index - 1] === '--ppi' ? QR_SCAN_PPI : arg === 'profile=screen' ? `profile=${profile}` : arg)),
+  });
+}
+
+async function decodePagePng(png: Uint8Array): Promise<string | null> {
+  const { default: sharp } = await import('sharp');
+  const { data, info } = await sharp(Buffer.from(png)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  return jsQR(new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), info.width, info.height)?.data ?? null;
 }
 
 const SEVEN_DIMENSIONS = ['858x596x250', '908x596x250', '1058x596x250', '1208x596x250', '1258x596x250', '1608x596x250', '1758x596x250'];
@@ -354,6 +387,26 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
     const bytes = await readFile(path.resolve(process.cwd(), 'public/fonts/LiberationSans-Bold.ttf'));
     await expect(inspectFontFile(bytes)).resolves.toMatchObject({ kind: 'ready', facts: { family: 'Liberation Sans', weight: 700 } });
   });
+
+  it.each(['print', 'screen'] as const)('🔴 QR %s: ανεξάρτητος αποκωδικοποιητής διαβάζει την ΑΠΟΛΥΤΗ διεύθυνση από τη σελίδα της μηχανής', async (profile) => {
+    const png = await renderPublicationPreview({ ...input, document: qrDocument(), run: scanRunner(profile) });
+    await expect(decodePagePng(png)).resolves.toBe(QR_URL);
+  }, 60_000);
+
+  it('🧪 μάρτυρας: χωρίς QR στο έγγραφο ο αποκωδικοποιητής δεν βρίσκει τίποτα', async () => {
+    const png = await renderPublicationPreview({ ...input, document: { ...qrDocument(), sections: qrDocument().sections.map((section) => ({ ...section, blocks: section.blocks.map((block) => (block.kind === 'heading' ? { ...block, qr: undefined } : block)) })) }, run: scanRunner('screen') });
+    await expect(decodePagePng(png)).resolves.toBeNull();
+  }, 60_000);
+
+  it('🔴 QR εκτύπωση: το σύμβολο ζωγραφίζεται με CMYK, και η λεζάντα δεν πατά την επικεφαλίδα', async () => {
+    const { bytes } = await renderPublicationPdf({ ...input, document: qrDocument() }, 'print');
+    const content = inflatedStreams(bytes).filter((stream) => /\bTf\b/.test(stream));
+    // K 100: το μαύρο του συμβόλου, ενός μελανιού. Κανένα κείμενο του δείγματος δεν είναι K 100 (το κείμενο είναι K 90).
+    expect(content.some((stream) => /\s0 0 0 1 k\s/.test(stream))).toBe(true);
+    expect(content.filter((stream) => NON_CMYK_OPERATOR.test(stream))).toEqual([]);
+    const verdict = judgePublicationLayout(readLayoutInChildProcess(bytes), qrDocument().page.bleedMm * (72 / 25.4));
+    expect(verdict).toMatchObject({ overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 });
+  }, 60_000);
 
   it('προεπισκόπηση: βγάζει PNG μέσα στο χρονικό της όριο', async () => {
     const png = await renderPublicationPreview({ ...input, document: sampler('rail') });

@@ -15,7 +15,7 @@ import { publicationInputHash } from '../publication-input-hash';
 
 const filter = (groups: readonly (readonly string[])[], familyId: string | null = 'fam'): PublicationFilter => ({ familyId, facetGroups: groups.map((keys) => ({ keys })) });
 const recipe = (scope: PublicationRecipeDefinition['scope']): PublicationRecipeDefinition => ({ ...emptyRecipe('el'), code: 'tech', title: { el: 'Τ' }, scope });
-const hashOf = (definition: PublicationRecipeDefinition) => publicationInputHash({ companyId: 'c', recipe: definition, data: [], audienceKey: 'a', pricing: [], renderVersion: 'r' });
+const hashOf = (definition: PublicationRecipeDefinition) => publicationInputHash({ companyId: 'c', recipe: definition, data: [], audienceKey: 'a', pricing: [], renderVersion: 'r', links: [] });
 
 describe('σχήμα αποθήκευσης', () => {
   it('🔴 κανένας πίνακας μέσα σε πίνακα: η Firestore τον αρνείται', () => {
@@ -58,7 +58,7 @@ describe('κανονική μορφή', () => {
     for (const scope of [{ kind: 'all' }, { kind: 'categories', categoryIds: ['c'] }, { kind: 'selection', entries: [{ kind: 'product', id: 'p' }] }] as const) {
       const definition = recipe(scope);
       expect(canonicalRecipeScope(definition)).toBe(definition);
-      const before = canonicalJson({ companyId: 'c', recipe: definition, data: [], audienceKey: 'a', pricing: [], renderVersion: 'r' });
+      const before = canonicalJson({ companyId: 'c', recipe: definition, data: [], audienceKey: 'a', pricing: [], renderVersion: 'r', links: [] });
       expect(hashOf(definition)).toBe(createHash('sha256').update(before).digest('hex'));
     }
   });

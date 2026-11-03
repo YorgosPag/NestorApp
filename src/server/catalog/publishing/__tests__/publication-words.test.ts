@@ -20,7 +20,7 @@ describe('readPublicationSnapshot: η πραγματική διαδρομή ως
   it('χωρίς περιεχόμενο καταλήγει στη δηλωμένη άρνηση, όχι σε σφάλμα προγράμματος', async () => {
     const query = { where: () => query };
     const scope = { ctx: { companyId: 'comp_test' }, db: { collection: () => query }, tx: { get: async () => ({ docs: [] }) } } as unknown as CatalogTx;
-    await expect(readPublicationSnapshot(scope, { ...emptyRecipe('el'), code: 'tech_2026', title: { el: 'Κατάλογος' } })).rejects.toThrow('emptyScope');
+    await expect(readPublicationSnapshot(scope, { ...emptyRecipe('el'), code: 'tech_2026', title: { el: 'Κατάλογος' } }, { links: async () => new Map() })).rejects.toThrow('emptyScope');
   });
 });
 

@@ -21,6 +21,8 @@
  * 🔴 **Η ομάδα δεν χάνει την ετικέτα της σε αλλαγή σελίδας**: το `rail` είναι κελί `breakable: false`, το `band` υποκεφαλίδα
  *    `level: 2` που επαναλαμβάνεται. Χωρίς αυτά, οι γραμμές της επόμενης σελίδας έμεναν χωρίς ομάδα.
  * ⚠️ Ζει ως σταθερά TypeScript και όχι ως αρχείο `.typ`: το standalone του Next αντιγράφει μόνο ό,τι ανιχνεύει ως import.
+ * 🔴 **Το QR είναι γεωμετρία, όχι εικόνα** (§5.13 Σ7): ένα SVG θα έμπαινε RGB μέσα στο CMYK αρχείο. Το `qr-symbol` ζωγραφίζει
+ *    τις σειρές μονάδων του μοντέλου ως ένα σχήμα, με το μελάνι του `ink()`, και κρατά τη ζώνη ησυχίας λευκή.
  * ⚠️ Κάθε αλλαγή εδώ αλλάζει bytes ⇒ ανέβασε το `PUBLICATION_RENDER_SCHEMA_VERSION`.
  *
  * @module server/catalog/publishing/typst-template
@@ -225,8 +227,42 @@ export const PUBLICATION_TYPST_TEMPLATE = String.raw`
   })
 }
 
+// Το QR ως ΕΝΑ σχήμα: κάθε σειρά σκούρων μονάδων είναι ένα ορθογώνιο υπο-μονοπάτι του ίδιου γεμίσματος. Ένα γέμισμα δεν
+// αφήνει αραιές ραφές ανάμεσα στις μονάδες στην οθόνη, και το μελάνι περνά από το ink(): K 100 στο print, ποτέ RGB.
+#let qr-symbol(code) = {
+  let x = code.moduleMm * 1mm
+  let q = code.quietModules
+  let side = (code.modules + 2 * q) * x
+  let square(run) = {
+    let (row, column, count) = run
+    let (x0, y0) = ((q + column) * x, (q + row) * x)
+    let x1 = x0 + count * x
+    (curve.move((x0, y0)), curve.line((x1, y0)), curve.line((x1, y0 + x)), curve.line((x0, y0 + x)), curve.close(mode: "straight"))
+  }
+  box(width: side, height: side, fill: paper-blank, place(top + left, curve(fill: ink(code.ink), stroke: none, ..code.runs.map(square).flatten())))
+}
+
+#let qr-figure(code) = {
+  let side = (code.modules + 2 * code.quietModules) * code.moduleMm * 1mm
+  set par(justify: false)
+  block(breakable: false, width: side, {
+    qr-symbol(code)
+    align(center, text(size: 6.5pt, fill: ink-text, hyphenate: false)[#code.caption])
+  })
+}
+
+// Η επικεφαλίδα μένει heading (περιεχόμενα, ευρετήριο), και το QR στέκεται δεξιά της, στον δικό του χώρο της ροής: κανένα
+// place() πάνω σε κείμενο, άρα τίποτα που ο κριτής διάταξης (που βλέπει μόνο κείμενο) δεν θα έβλεπε.
+#let heading-of(b) = {
+  let title = heading(level: b.level, outlined: b.outlined)[#b.text]
+  let qr = b.at("qr", default: none)
+  if qr == none { title } else {
+    block(sticky: true, below: 4mm, grid(columns: (1fr, auto), column-gutter: 4mm, align: (left + top, right + top), title, qr-figure(qr)))
+  }
+}
+
 #let block-of(b) = if b.kind == "heading" {
-  heading(level: b.level, outlined: b.outlined)[#b.text]
+  heading-of(b)
 } else if b.kind == "paragraph" {
   par(inlines-of(b.inlines))
 } else if b.kind == "bullets" {

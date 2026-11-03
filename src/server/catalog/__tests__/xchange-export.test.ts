@@ -100,6 +100,17 @@ describe('η δημόσια τιμή καταλόγου (απόφαση Ε1, π�
     expect(JSON.stringify(document)).not.toContain('SKU-1"');
   });
 
+  it('κρυφό μοντέλο κρύβει τα SKU του: τα μοντέλα του κοινού αναγνώστη φτάνουν στην κρίση ορατότητας', async () => {
+    const { companyId } = ARIES;
+    fake.seed('catalog_product_models', 'mdl', { companyId, isDeleted: false, revision: 1, id: 'mdl', familyId: 'fan', parentId: null, categoryIds: [], values: {}, noValueReasons: {}, variantSchemeCode: null });
+    const variantId = mfpVariantId(0);
+    fake.seed('catalog_products', variantId, { ...fake.getData('catalog_products', variantId), modelId: 'mdl' });
+    await createVisibilityRule(ARIES, { subject: { kind: 'productModel', modelId: 'mdl' }, audience: { kind: 'anonymous' }, visibility: 'hidden' });
+    const { document, summary } = await exportXChangeCatalog(ARIES, { audience: PUBLIC, language: 'el' });
+    expect(summary).toMatchObject({ exported: 6, hidden: 2 });
+    expect(JSON.stringify(document)).not.toContain('SKU-0"');
+  });
+
   it('χωρίς έγκυρο ΑΦΜ το πεδίο λείπει · χωρίς επωνυμία η εξαγωγή αρνείται με κωδικό', async () => {
     taxDeclaration.mockResolvedValue(present('Aries ΑΕ', '123'));
     expect((await exportXChangeCatalog(ARIES, { audience: PUBLIC, language: 'el' })).document).not.toHaveProperty('Supplier.0.SupplierVatNo');
