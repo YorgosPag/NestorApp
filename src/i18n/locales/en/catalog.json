@@ -24,6 +24,7 @@
     "yes": "Yes",
     "no": "No",
     "clear": "Clear",
+    "issuePending": "Needs attention.",
     "labelIn": "{label} ({language})"
   },
   "language": {
@@ -333,6 +334,8 @@
     "publicationNotDeletable": "This PDF cannot be deleted by hand: it has been downloaded or is under legal hold.",
     "publicationNotHoldable": "A hold can only be placed on a ready publication that still has its file.",
     "publicationAlreadyOnHold": "This publication is already under legal hold.",
+    "xchangePriceListNotOffered": "The list is not offered to an audience.",
+    "xchangeSupplierNameMissing": "The company legal name is missing.",
     "supplyNotRequested": "There is no pending request.",
     "contactAlreadyBound": "This contact is already linked to another workspace.",
     "contactWithoutEmail": "This contact has no email."
@@ -1681,6 +1684,42 @@
       "manual-review": "An administrator needs to review this.",
       "closed": "The registry shows this company as closed, so it cannot be approved.",
       "identity-incomplete": "Add the legal name and a valid tax id to the company profile to request a review."
+    }
+  },
+  "xchangeExport": {
+    "open": "ETIM xChange export",
+    "title": "ETIM xChange 2.0 export",
+    "lead": "The catalogue as an ETIM xChange JSON file, with the prices of one audience. Products hidden from that audience are not exported.",
+    "audience": "Prices for",
+    "public": "Public catalogue price (anonymous visitor)",
+    "export": "Export and download",
+    "exporting": "Exporting…",
+    "close": "Close",
+    "report": {
+      "title": "Export report",
+      "exported": "{count, plural, one {# product was written} other {# products were written}} to {file}.",
+      "priceSource": "Prices from “{list}”, version {version}, valid from {date}.",
+      "priceSourceNoVersion": "Prices from “{list}”: no version is in force.",
+      "noPriceList": "No price list applies to this audience.",
+      "at": "Prices and visibility as of {date}.",
+      "hidden": "{count, plural, one {# product is hidden} other {# products are hidden}} from the audience and not exported.",
+      "unfitIdentifier": "{count, plural, one {# product was not exported} other {# products were not exported}}: no code, or a code longer than 35 characters.",
+      "onRequest": "{count, plural, one {# product} other {# products}} with “price on request”: {reasons}.",
+      "withoutClass": "{count, plural, one {# product} other {# products}} in a family without an ETIM class, with no technical data.",
+      "unitUndeclared": "Features without a declared ETIM unit, not written: {codes}.",
+      "optionUnmapped": "Features with an option that has no ETIM code, not written: {codes}.",
+      "typeUnsupported": "Features that xChange cannot express, not written: {codes}.",
+      "codesOnly": "The file contains ETIM codes only, not names."
+    },
+    "reason": {
+      "visibleNoPrice": "{count} visible without price",
+      "noPriceList": "{count} without a price list",
+      "ambiguousPriceList": "{count} with an ambiguous price list",
+      "noVersion": "{count} without a version in force",
+      "noLine": "{count} without a price line",
+      "ambiguousDiscount": "{count} with an ambiguous discount",
+      "invalidQuantity": "{count} with an invalid quantity",
+      "unitUnmapped": "{count} with a unit that has no xChange code"
     }
   }
 }

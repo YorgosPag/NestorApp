@@ -4,7 +4,8 @@
  * 🔑 Κριτήριο εξόδου της φάσης: το έγγραφο περνά το **επίσημο** σχήμα. Άγκυρα: `etim-xchange-roundtrip.test.ts`, με Ajv.
  * 🔑 **Καμία μαντεψιά στην έξοδο**: ό,τι δεν εκφράζεται με βεβαιότητα (ιδιότητα σε μονάδα χωρίς δήλωση, επιλογή χωρίς κωδικό
  * ETIM, οικογένεια χωρίς κλάση) παραλείπεται και μετριέται στην {@link XChangeExportReport}, ποτέ σιωπηλά.
- * 🔒 Οι τιμές έρχονται **μόνο** ως `price` του κάθε SKU, κριμένες για το κοινό από τον διακομιστή (§12). Χωρίς τιμή ⇒ `PriceOnRequest`.
+ * 🔒 Οι τιμές έρχονται **μόνο** ως `price` του κάθε SKU, κριμένες για το κοινό από τον διακομιστή (§12, `xchange-pricing.ts`).
+ *    Χωρίς τιμή ⇒ `PriceOnRequest`. Η μονάδα παραγγελίας είναι η μονάδα της τιμής· χωρίς τιμή μένει το «τεμάχιο».
  * @module subapps/catalog/interop/etim/catalog-to-xchange
  */
 
@@ -16,6 +17,7 @@ import type { CatalogFamilyDefinition } from '../../types/family';
 import type { AttributeValue, NoValueReason, ValueSlots } from '../../types/product';
 import { readSlot } from '../../values/value-shape';
 import { ETIM_LANGUAGE_TAG, ETIM_MAX_FRACTION_DIGITS, ETIM_PIECE_UNIT, ETIM_REASON_OF, ETIM_XCHANGE_SCHEMA_VERSION } from '../../vocabulary/etim';
+import type { XChangeTradePrice } from './xchange-pricing';
 
 export interface XChangeProductSource {
   readonly identifier: string;
@@ -24,8 +26,8 @@ export interface XChangeProductSource {
   /** Οι τιμές **με την κληρονομιά λυμένη**: το xChange δεν έχει μοντέλο. */
   readonly values: ReadonlyMap<string, ValueSlots>;
   readonly noValueReasons: ReadonlyMap<string, NoValueReason>;
-  /** Τιμή μονάδας χωρίς ΦΠΑ, σε μηχανική μορφή (`"120.50"`). `null` = «ζητήστε προσφορά». */
-  readonly price: string | null;
+  /** Η τιμή για το κοινό του αρχείου, χωρίς ΦΠΑ. `null` = «ζητήστε προσφορά». */
+  readonly price: XChangeTradePrice | null;
 }
 
 export interface XChangeExportInput {
@@ -33,6 +35,8 @@ export interface XChangeExportInput {
   readonly language: HumanLanguage;
   readonly validFrom: string;
   readonly generatedOn: string;
+  /** Από πότε ισχύουν οι τιμές (η έκδοση του τιμοκαταλόγου), ως ημερομηνία· `null` ⇒ αρχείο χωρίς τιμές. */
+  readonly priceValidityDate: string | null;
   readonly currency: string;
   readonly supplier: { readonly name: string; readonly vatNumber: string | null };
   readonly families: ReadonlyMap<string, Pick<CatalogFamilyDefinition, 'etimClass' | 'attributes'>>;
@@ -120,12 +124,22 @@ function classificationOf(product: XChangeProductSource, input: XChangeExportInp
 /** Μήκος `MinimalProductDescription` στο σχήμα. */
 const MINIMAL_DESCRIPTION_MAX = 80;
 
-function tradeItemOf(product: XChangeProductSource) {
-  const price = product.price === null ? { PriceOnRequest: true } : { GrossListPrice: product.price };
+function pricingOf(price: XChangeTradePrice | null, validityDate: string | null) {
+  if (price === null) return { PriceUnit: ETIM_PIECE_UNIT, PriceQuantity: '1', PriceOnRequest: true };
+  return {
+    PriceUnit: price.unit,
+    PriceQuantity: String(price.quantity),
+    ...(price.grossList === null ? {} : { GrossListPrice: price.grossList }),
+    ...(price.net === null ? {} : { NetPrice: price.net }),
+    ...(validityDate === null ? {} : { PriceValidityDate: validityDate }),
+  };
+}
+
+function tradeItemOf(product: XChangeProductSource, input: XChangeExportInput) {
   return {
     ItemIdentification: { SupplierItemNumber: product.identifier },
-    Ordering: { OrderUnit: ETIM_PIECE_UNIT, MinimumOrderQuantity: '1', OrderStepSize: '1' },
-    Pricing: [{ PriceUnit: ETIM_PIECE_UNIT, PriceQuantity: '1', ...price }],
+    Ordering: { OrderUnit: product.price?.unit ?? ETIM_PIECE_UNIT, MinimumOrderQuantity: '1', OrderStepSize: '1' },
+    Pricing: [pricingOf(product.price, input.priceValidityDate)],
   };
 }
 
@@ -136,7 +150,7 @@ function productOf(product: XChangeProductSource, input: XChangeExportInput, not
       ProductDescriptions: [{ DescriptionLanguage: ETIM_LANGUAGE_TAG[input.language], MinimalProductDescription: product.label.slice(0, MINIMAL_DESCRIPTION_MAX) }],
     },
     ...classificationOf(product, input, notes),
-    TradeItem: [tradeItemOf(product)],
+    TradeItem: [tradeItemOf(product, input)],
   };
 }
 
@@ -165,3 +179,6 @@ export function buildXChangeDocument(input: XChangeExportInput) {
   };
   return { document, report };
 }
+
+/** Το έγγραφο όπως το χτίζει ο προσαρμογέας: αυτό κρίνει το επίσημο σχήμα. */
+export type XChangeDocument = ReturnType<typeof buildXChangeDocument>['document'];

@@ -54,8 +54,8 @@ function useCommittedText(props: ValueEditorProps<TextLikeType>) {
 }
 
 export function TextValueEditor(props: ValueEditorProps<TextLikeType>) {
-  const message = useIssueMessage();
   const { text, issue, setText, commit } = useCommittedText(props);
+  const message = useIssueMessage(issue !== null);
   const unit = unitHintOf(props, text);
   const issueId = `${props.id}-parse`;
   const describedBy = [props.describedBy, issue ? issueId : null].filter(Boolean).join(' ') || undefined;

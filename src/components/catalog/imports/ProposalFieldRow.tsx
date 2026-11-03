@@ -60,7 +60,7 @@ interface ProposalFieldRowProps {
 
 /** Η εισερχόμενη τιμή: κλικ ⇒ διόρθωση της **πηγής**, και ο διακομιστής ξανακρίνει. */
 function IncomingCell({ field, label, readOnly, onEdit }: Pick<ProposalFieldRowProps, 'field' | 'readOnly' | 'onEdit'> & { readonly label: string }) {
-  const message = useImportIssueMessage();
+  const message = useImportIssueMessage(field.issues.length > 0);
   const [draft, setDraft] = useState<string | null>(null);
   return (
     <td className="p-2">

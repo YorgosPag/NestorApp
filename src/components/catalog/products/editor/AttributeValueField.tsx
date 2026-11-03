@@ -104,7 +104,7 @@ function NoValueToggle({ props }: { readonly props: AttributeValueFieldProps }) 
  */
 function FieldIssueList({ id, issues, onOpen }: { readonly id: string; readonly issues: readonly CatalogIssue[]; readonly onOpen: (id: string) => void }) {
   const { t } = useCatalogText();
-  const message = useIssueMessage();
+  const message = useIssueMessage(issues.length > 0);
   if (issues.length === 0) return null;
   return (
     <ul id={id} className="m-0 flex list-none flex-col gap-0.5 p-0 text-xs text-destructive" role="alert">

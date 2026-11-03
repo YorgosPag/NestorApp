@@ -17,6 +17,7 @@ import { AssetEditor } from '../AssetEditor';
 import { AssetIntakeSheet } from '../AssetIntakeSheet';
 import type { AssetIntake } from '../use-asset-intake';
 import { intakeRowsFor } from '../asset-intake-model';
+import { markBundlesComplete } from '@/test-utils/i18n-mock';
 
 jest.setTimeout(60_000);
 
@@ -60,6 +61,9 @@ function intakeWith(files: readonly File[]): AssetIntake & { start: jest.Mock } 
   };
 }
 
+// ADR-744 §34: τα ευρήματα θέλουν πίνακα ΚΑΙ πλήρες bundle — εδώ ο hook μετάφρασης είναι mock, άρα το δηλώνουμε.
+beforeAll(() => markBundlesComplete(['catalog', 'catalog-import']));
+
 describe('Νέα μέσα', () => {
   it('Α1 — PDF ως «φωτογραφία» ⇒ εύρημα στη γραμμή μετά την απόπειρα· ξεκινά μόνο η καθαρή γραμμή', async () => {
     const files = [{ name: 'a.jpg', type: 'image/jpeg', size: 10 } as File, { name: 'b.pdf', type: 'application/pdf', size: 10 } as File];
@@ -70,7 +74,7 @@ describe('Νέα μέσα', () => {
     await userEvent.click(screen.getByRole('button', { name: 'assets.intake.start' }));
     expect(intake.start).toHaveBeenCalledTimes(1);
     expect(intake.start.mock.calls[0][0].map((row: { key: string }) => row.key)).toEqual(['k0']);
-    expect(screen.getByText('issues.fileKindMismatch')).toBeTruthy();
+    expect(await screen.findByText('issues.fileKindMismatch')).toBeTruthy(); // ADR-744 §34: ο πίνακας εκτός πρώτου καρέ
   });
 
   it('Α2 — τα select ρόλου/είδους έχουν προσβάσιμο όνομα (η κεφαλίδα του πίνακα δεν ονομάζει το πεδίο)', () => {
@@ -92,7 +96,7 @@ describe('Επεξεργαστής μέσου', () => {
     render(<AssetEditor {...props} />);
     await userEvent.click(screen.getAllByRole('combobox')[1]);
     await userEvent.click(await screen.findByRole('option', { name: 'assetKinds.image' }));
-    expect(screen.getByText('issues.fileKindMismatch')).toBeTruthy();
+    expect(await screen.findByText('issues.fileKindMismatch')).toBeTruthy(); // ADR-744 §34: ο πίνακας εκτός πρώτου καρέ
     expect((screen.getByRole('button', { name: 'common.save' }) as HTMLButtonElement).disabled).toBe(true);
   });
 

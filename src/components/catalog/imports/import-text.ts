@@ -24,25 +24,14 @@ import {
   type ImportProposalStatus,
   type ImportRowAction,
 } from '@/subapps/catalog/vocabulary/catalog-import';
-import { useIssueMessage } from '../shared/CatalogIssues';
+import { useDeferredMessage } from '@/i18n/hooks/useDeferredMessageTable';
+import { useIssueMessage, useIssuePending } from '../shared/CatalogIssues';
+import { IMPORT_ISSUE_TABLE } from './import-issue-messages';
 
 export function useImportText() {
-  const { t } = useTranslation(CATALOG_IMPORT_NAMESPACES);
-  return { t };
+  const { t, i18n } = useTranslation(CATALOG_IMPORT_NAMESPACES);
+  return { t, uiLanguage: i18n.language };
 }
-
-const ISSUE_KEYS: Readonly<Record<ImportIssueCode, string>> = {
-  misaligned: 'issues.misaligned',
-  sharedDisagrees: 'issues.sharedDisagrees',
-  levelUnsupported: 'issues.levelUnsupported',
-  modelCodeMissing: 'issues.modelCodeMissing',
-  skuUnknown: 'issues.skuUnknown',
-  priceIncomplete: 'issues.priceIncomplete',
-  measurementUnitMissing: 'issues.measurementUnitMissing',
-  unitUnconfirmed: 'issues.unitUnconfirmed',
-  attributeRepeated: 'issues.attributeRepeated',
-  tableStructureDisputed: 'issues.tableStructureDisputed',
-};
 
 export const FIELD_STATUS_KEYS: Readonly<Record<ImportFieldStatus, string>> = {
   new: 'status.new',
@@ -87,10 +76,13 @@ export const PRICE_FIELD_KEYS: Readonly<Record<ImportPriceField, string>> = {
 const isImportCode = (code: ImportIssue['code']): code is ImportIssueCode => (IMPORT_ISSUE_CODES as readonly string[]).includes(code);
 
 /** Το μήνυμα ενός ευρήματος, από όποιο από τα δύο σύνολα κι αν ήρθε. */
-export function useImportIssueMessage(): (issue: ImportIssue) => string {
-  const { t } = useImportText();
-  const catalogMessage = useIssueMessage();
+export function useImportIssueMessage(needed = false): (issue: ImportIssue) => string {
+  const { t, uiLanguage } = useImportText();
+  const catalogMessage = useIssueMessage(needed);
+  // ADR-744 §34: ο πίνακας της εισαγωγής φτάνει εκτός πρώτου καρέ· μέχρι τότε η ίδια γενική λέξη με του καταλόγου.
+  const pending = useIssuePending();
+  const translate = useDeferredMessage(IMPORT_ISSUE_TABLE, { language: uiLanguage, needed, t, pending });
   return useCallback((issue: ImportIssue) => (
-    isImportCode(issue.code) ? t(ISSUE_KEYS[issue.code], issue.params ?? {}) : catalogMessage(issue as CatalogIssue)
-  ), [catalogMessage, t]);
+    isImportCode(issue.code) ? translate(issue.code, issue.params) : catalogMessage(issue as CatalogIssue)
+  ), [catalogMessage, translate]);
 }

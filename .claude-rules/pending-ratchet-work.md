@@ -3836,12 +3836,10 @@
 
 ## Pending tasks (priority order)
 
-### 🧳 Τα slices του καταλόγου κουβαλούν και τις 149 ετικέτες σφαλμάτων (ADR-744 · ADR-923)
-
-- **Τι:** το `ISSUE_KEYS` (`src/components/catalog/shared/catalog-labels.ts`) φέρνει όλο το `catalog:issues.*` σε κάθε σελίδα που εισάγει το `CatalogIssues`.
-- **Μέτρηση 2026-11-02:** στη διαδρομή `catalog/publications`, 18.833 από τα 30.807 bytes (61%). Η σελίδα ξανασφραγίστηκε 24551 → 30819 στο rebase της Φ7 επειδή απαγορευόταν νέος κώδικας, και το ταβάνι ανέβηκε περίπου στα 38,5K.
-- **Γιατί μετρά:** μήνυμα σφάλματος δεν βγαίνει ποτέ στο πρώτο καρέ, ενώ το περιθώριο του +25% κρύβει την επόμενη παλινδρόμηση.
-- **Θεραπεία:** μηχανισμός γεννήτορα που αφήνει κλειδιά εκτός πρώτου καρέ, ή στένεμα ανά σελίδα όπως το `TOUR_VIEW_REFUSAL_KEY`, με ασφαλή εφεδρεία ώστε κωδικός εκτός υποσυνόλου να μη βγαίνει ωμός. Ξεχωριστό κλαδί και απόφαση στο ADR-744 (το §27.3 απορρίπτει slice ανά κλειδί για τις τεμπέλικες διαδρομές), για τις 12 διαδρομές καταλόγου, με σφραγίσεις προς τα κάτω.
+### 📚 Δύο αναγνώστες «όλος ο κατάλογος του χώρου» (προτεραιότητα ΧΑΜΗΛΗ, 2026-11-03, ADR-923 §5.14.1 · N.0.2)
+- **Τι:** το `readExportData` (`src/server/catalog/xchange-export.server.ts`) και το ιδιωτικό `readCatalogData` (`src/server/catalog/publishing/publication-snapshot.server.ts`) διαβάζουν τις ίδιες συλλογές (οικογένειες · ιδιότητες · μοντέλα · SKU · κατηγορίες · μητρώο μονάδων) με ισότητες σε `companyId` + `isDeleted`.
+- **Γιατί δεν ενώθηκαν:** ο φάκελος `server/catalog/publishing/**` ήταν εκτός ορίων της εργασίας (άλλος πράκτορας γράφει εκεί).
+- **Fix:** ένας εξαγόμενος αναγνώστης στο `server/catalog/` (π.χ. `catalog-dataset-reads.server.ts`), που τον καλούν και οι δύο, με ρητό `COLLECTIONS.X` σε κάθε ερώτημα (CHECK 3.91).
 
 ### 📨 «Διάβασε JSON ή 400» γραμμένο ξεχωριστά σε 17 routes (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-30, ADR-225 Phase 2 Boy Scout · ADR-245 · N.0.2)
 - **Τι**: `try { raw = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }` σε 17 αρχεία του `src/app/api` (`grep -rn "Invalid JSON body" src/app/api`)· δύο τοπικά προοίμια το έχουν ήδη κλείσει στη γειτονιά τους (`admin/bim-diagnostics/[id]/_request-preamble.ts` · `telemetry/bim-performance/_session-request.ts`).
