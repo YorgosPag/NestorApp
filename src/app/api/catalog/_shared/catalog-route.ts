@@ -23,6 +23,7 @@ import type { z } from 'zod';
 
 import { badRequest, created, defineRoute, ok, type RateLimitTier } from '@/lib/api/define-route';
 import type { AuthContext } from '@/lib/auth';
+import { withPrivateNoStore } from '@/lib/http/cache-control';
 import type { RateLimitCategory } from '@/lib/middleware/rate-limit-config';
 import { CatalogWriteError, toCatalogApiError } from '@/server/catalog/catalog-write-error';
 import { CURSOR_PARAM, EXPECTED_REVISION_PARAM } from '@/subapps/catalog/catalog-routes';
@@ -41,13 +42,19 @@ export interface CatalogRoutePolicy {
 const TIER_OF: Readonly<Record<CatalogRateCategory, RateLimitTier>> = { HIGH: 'high', STANDARD: 'standard', SENSITIVE: 'sensitive' };
 // Ποια εξουσία κρίνει τη διαδρομή — ο ΕΝΑΣ πίνακας δικαιοδοσία → δικαίωμα (κοινός με τον πελάτη).
 const authOf = (policy: CatalogRoutePolicy) => ({ permissions: CATALOG_AUTHORITY_PERMISSIONS[policy.authority ?? 'schema'] });
+// Το μήνυμα της απρόβλεπτης βλάβης λέει την πράξη που έγινε: σε GET δεν «απέτυχε εγγραφή» (ADR-923 §5.14.1 Ζ24).
 const FALLBACK_ERROR = 'Catalog schema write failed';
+const READ_FALLBACK_ERROR = 'Catalog read failed';
 
 type IdParams = { id: string };
 
+/**
+ * Κάθε επιτυχής απόκριση του καταλόγου ανήκει σε **έναν** χώρο και συχνά σε **ένα** κοινό τιμών ⇒ `private, no-store`
+ * σε **ένα** σημείο για όλα τα factories (ADR-923 §5.14.1 Ζ23). Ο route που δηλώνει δική του πολιτική (αρχείο) κερδίζει.
+ */
 async function respond<T>(envelope: (data: T) => NextResponse, run: () => Promise<T>): Promise<NextResponse> {
   try {
-    return envelope(await run());
+    return withPrivateNoStore(envelope(await run()));
   } catch (error) {
     if (error instanceof CatalogWriteError) throw toCatalogApiError(error);
     throw error;
@@ -107,7 +114,7 @@ export function catalogReadRoute<TResult, TParams extends Record<string, string>
   return defineRoute<z.ZodTypeAny, TParams>({
     rateLimit: TIER_OF[policy.category],
     auth: authOf(policy),
-    fallbackError: FALLBACK_ERROR,
+    fallbackError: READ_FALLBACK_ERROR,
     handler: ({ req, auth, params }) => respond(ok, () => run(auth, params, new URL(req.url).searchParams)),
   });
 }
@@ -120,7 +127,7 @@ export function catalogFileRoute(
   return defineRoute<z.ZodTypeAny, IdParams>({
     rateLimit: TIER_OF[policy.category],
     auth: authOf(policy),
-    fallbackError: FALLBACK_ERROR,
+    fallbackError: READ_FALLBACK_ERROR,
     handler: ({ req, auth, params }) => respond((response: NextResponse) => response, () => run(auth, params.id, new URL(req.url).searchParams)),
   });
 }

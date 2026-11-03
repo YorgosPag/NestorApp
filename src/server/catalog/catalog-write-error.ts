@@ -19,7 +19,8 @@ export class CatalogWriteError extends Error {
     readonly issues: readonly CatalogIssue[] = [],
     readonly details: Readonly<Record<string, string | number>> = {},
   ) {
-    super(`catalog write rejected: ${kind}`);
+    // Ουδέτερο ως προς την πράξη: το ίδιο σφάλμα ρίχνουν και οι αναγνώστες (`notFound` σε GET) — ADR-923 §5.14.1 Ζ24.
+    super(`catalog request rejected: ${kind}`);
     this.name = 'CatalogWriteError';
   }
 }

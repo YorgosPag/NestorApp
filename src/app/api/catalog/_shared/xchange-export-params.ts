@@ -10,16 +10,22 @@ import 'server-only';
 import { badRequest } from '@/lib/api/define-route';
 import { DEFAULT_LANGUAGE, isHumanLanguage } from '@/i18n/languages';
 import { XCHANGE_LANGUAGE_PARAM, XCHANGE_PRICE_LIST_PARAM } from '@/subapps/catalog/catalog-routes';
-import { entityIdSchema } from '@/subapps/catalog/schema/zod/common.schema';
+import { isEnterpriseIdOfPrefix } from '@/services/enterprise-id-parse';
+import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import type { XChangeExportAudience } from '@/subapps/catalog/types/xchange-export';
 
-/** Χωρίς `priceListId` ⇒ η δημόσια τιμή καταλόγου· με `priceListId` ⇒ το κοινό **εκείνης** της λίστας (απόφαση Ε1). */
+/**
+ * Χωρίς `priceListId` ⇒ η δημόσια τιμή καταλόγου· με `priceListId` ⇒ το κοινό **εκείνης** της λίστας (απόφαση Ε1).
+ *
+ * 🔑 Η μορφή κρίνεται από το **μητρώο ταυτοτήτων** (πρόθεμα `cprl` + uuid v4), όχι από «1–128 χαρακτήρες»: κάτι που δεν
+ * μπορεί καν να είναι τιμοκατάλογος είναι **λάθος αίτημα** (400), όχι «δεν βρέθηκε» (404) — ADR-923 §5.14.1 Ζ24.
+ * Έγκυρη μορφή χωρίς έγγραφο μένει 404, από τον αναγνώστη.
+ */
 export function xchangeAudienceOf(search: URLSearchParams): XChangeExportAudience {
   const raw = search.get(XCHANGE_PRICE_LIST_PARAM);
   if (raw === null) return { kind: 'public' };
-  const parsed = entityIdSchema.safeParse(raw);
-  if (!parsed.success) badRequest(`${XCHANGE_PRICE_LIST_PARAM} is invalid`);
-  return { kind: 'priceList', priceListId: parsed.data };
+  if (!isEnterpriseIdOfPrefix(raw, ENTERPRISE_ID_PREFIXES.CATALOG_PRICE_LIST)) badRequest(`${XCHANGE_PRICE_LIST_PARAM} is invalid`);
+  return { kind: 'priceList', priceListId: raw };
 }
 
 export function xchangeLanguageOf(search: URLSearchParams) {
