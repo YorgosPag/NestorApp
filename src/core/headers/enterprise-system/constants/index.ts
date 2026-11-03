@@ -23,12 +23,16 @@ import i18n from '@/i18n/config';
 // ============================================================================
 
 export const HEADER_THEME: HeaderTheme = {
-  // Variant classes with mobile-first design
+  // Variant classes — the ONE declaration, read by `PageHeader` (ADR-927 §11: it used to keep its own inline copy,
+  // and this one was dead). `shrink-0` on every variant: a page header is the top of a flex column
+  // (`PageContainer`). Without it, tall content SQUEEZED the header to 18px under the next sibling (measured in
+  // production on /crm/notifications, 2026-11-03). The margins of `sticky-rounded` come from the layout tokens
+  // (`pageHeaderMargins`), so `PageHeader` appends them.
   variants: {
-    sticky: "border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50",
-    static: "border-b bg-card",
-    floating: "rounded-lg border bg-card shadow-sm",
-    "sticky-rounded": "rounded-lg border bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm mx-1 mt-1 sm:mx-4 sm:mt-4"
+    sticky: "shrink-0 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50",
+    static: "shrink-0 border-b bg-card",
+    floating: "shrink-0 rounded-lg border bg-card shadow-sm",
+    "sticky-rounded": "shrink-0 rounded-lg border bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm"
   },
 
   // Layout classes with responsive design
