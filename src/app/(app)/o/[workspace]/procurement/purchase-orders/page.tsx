@@ -14,6 +14,10 @@ import { parseFilterArray } from '@/lib/url-filters/multi-value';
 import { emitSpendAnalyticsInvalidate } from '@/lib/cache/spend-analytics-bus';
 import type { PurchaseOrder, AnalyticsDrillFilters } from '@/types/procurement';
 import { isCalendarDay } from '@/lib/date/calendar-day';
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__purchase-orders.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 /** An existing calendar day `YYYY-MM-DD` (`2027-02-30` is not one, ADR-919); `null` for absent/invalid params. */
 function parseDateParam(s: string | null): string | null {

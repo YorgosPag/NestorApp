@@ -146,6 +146,12 @@ async function createAttendanceToken(session: ApiSession, projectId: string): Pr
   return field(await post(session, route, { projectId }), route, 'token');
 }
 
+/** Ο δημόσιος σύνδεσμος της παραγγελίας: η ίδια κοπή με το κουμπί κοινοποίησης (`POShareLink`). */
+async function createPoShareToken(session: ApiSession, purchaseOrderId: string): Promise<string> {
+  const route = `/api/procurement/${purchaseOrderId}/share`;
+  return field(await post(session, route, {}), route, 'data', 'token');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. Η βαθμίδα `witness` + η σύνθεση
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,7 +159,7 @@ async function createAttendanceToken(session: ApiSession, projectId: string): Pr
 async function writeWitness(db: Firestore, entity: WitnessEntity, document: Record<string, unknown>, projectId: string | null): Promise<string> {
   const prefix = GOLDEN_ENTITIES[entity].prefix;
   if (!prefix) fail(`ο μάρτυρας ${entity} δεν έχει πρόθεμα id`);
-  const id = witnessId(prefix);
+  const id = witnessId(entity, prefix);
   const stamp = { createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() };
   await db.collection(witnessCollectionPath(entity, projectId)).doc(id).set({ ...document, ...stamp }, { merge: true });
   return id;
@@ -177,11 +183,13 @@ async function seedGolden(auth: Auth, db: Firestore): Promise<GoldenIds> {
   for (const entity of Object.keys(WITNESS_COLLECTIONS) as WitnessEntity[]) {
     if (entity !== 'contact') witnesses[entity] = await writeWitness(db, entity, witnessDocument(entity, refs), projectId);
   }
+  const purchaseOrder = await createPurchaseOrder(session, projectId, contactId);
   return {
     ...witnesses,
     project: projectId,
     rfq: rfqId,
-    purchaseOrder: await createPurchaseOrder(session, projectId, contactId),
+    purchaseOrder,
+    poShareToken: await createPoShareToken(session, purchaseOrder),
     attendanceToken: await createAttendanceToken(session, projectId),
     ...GOLDEN_VALUES,
   } as GoldenIds;

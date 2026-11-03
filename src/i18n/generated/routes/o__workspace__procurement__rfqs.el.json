@@ -1,0 +1,41 @@
+{
+  "procurement": {
+    "nav": {
+      "agreements": "Συμβάσεις",
+      "analytics": "Αναλυτικά",
+      "ariaLabel": "Ενότητες προμηθειών",
+      "hub": "Hub Προμηθειών",
+      "materials": "Υλικά",
+      "purchaseOrders": "Παραγγελίες",
+      "quotes": "Προσφορές",
+      "rfqs": "RFQ",
+      "vendors": "Προμηθευτές"
+    }
+  },
+  "quotes": {
+    "quotes": {
+      "status": "Κατάσταση"
+    },
+    "rfqs": {
+      "awardMode": "Τρόπος Ανάθεσης",
+      "awardModes": {
+        "cherry_pick": "Επιλογή ανά γραμμή",
+        "whole_package": "Πακέτο (1 προμηθευτής)"
+      },
+      "create": "Νέο RFQ",
+      "deadline": "Προθεσμία",
+      "empty": "Δεν υπάρχουν αιτήματα",
+      "loading": "Φόρτωση...",
+      "searchPlaceholder": "Αναζήτηση RFQ...",
+      "statuses": {
+        "active": "Ενεργό",
+        "archived": "Αρχείο",
+        "cancelled": "Ακυρώθηκε",
+        "closed": "Κλειστό",
+        "draft": "Πρόχειρο"
+      },
+      "title": "Αιτήματα Προσφορών (RFQ)",
+      "titleField": "Τίτλος"
+    }
+  }
+}

@@ -1,0 +1,624 @@
+{
+  "common-shared": {
+    "filters": {
+      "all": "Όλες",
+      "channels": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των καναλιών",
+        "ariaLabel": "Φίλτρα καναλιών",
+        "email": "Email",
+        "emailTooltip": "Email μηνύματα",
+        "sms": "SMS",
+        "smsTooltip": "SMS μηνύματα",
+        "telegram": "Telegram",
+        "telegramTooltip": "Telegram μηνύματα"
+      },
+      "common": {
+        "area": "Εμβαδόν",
+        "building": "Κτίριο",
+        "level": "Επίπεδο",
+        "price": "Τιμή",
+        "project": "Έργο",
+        "search": "Αναζήτηση",
+        "type": "Τύπος",
+        "updateDate": "Ημ/νία Ενημέρωσης"
+      },
+      "contactTypes": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των επαφών",
+        "ariaLabel": "Φίλτρα τύπου επαφής",
+        "company": "Εταιρεία",
+        "individual": "Φυσικό",
+        "service": "Υπηρεσία"
+      },
+      "filterBy": "Φιλτράρισμα:",
+      "propertyTypes": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των τύπων",
+        "apartment": "Διαμέρισμα",
+        "apartmentTooltip": "Διαμέρισμα",
+        "ariaLabel": "Φίλτρα τύπου ακινήτου",
+        "maisonette": "Μεζονέτα",
+        "maisonetteTooltip": "Μεζονέτα",
+        "office": "Γραφείο",
+        "officeTooltip": "Γραφείο",
+        "shop": "Κατάστημα",
+        "shopTooltip": "Κατάστημα",
+        "studio": "Studio",
+        "studioTooltip": "Studio / Γκαρσονιέρα"
+      },
+      "title": "Φίλτρα",
+      "typeAriaLabel": "Φίλτρα τύπου",
+      "typeLabel": "Τύπος:"
+    },
+    "toolbar": {
+      "labels": {
+        "favoritesManagement": "Διαχείριση αγαπημένων",
+        "share": "Κοινοποίηση"
+      },
+      "search": {
+        "placeholder": "Αναζήτηση..."
+      },
+      "sort": {
+        "date": {
+          "asc": "Παλαιότερα πρώτα",
+          "desc": "Νεότερα πρώτα"
+        },
+        "name": {
+          "asc": "Αύξουσα κατά όνομα",
+          "desc": "Φθίνουσα κατά όνομα"
+        },
+        "number": {
+          "asc": "Αύξουσα κατά αριθμό",
+          "desc": "Φθίνουσα κατά αριθμό"
+        },
+        "status": {
+          "asc": "Κατάσταση (Α-Ω)",
+          "desc": "Κατάσταση (Ω-Α)"
+        },
+        "value": {
+          "asc": "Αύξουσα κατά αξία",
+          "desc": "Φθίνουσα κατά αξία"
+        }
+      },
+      "tooltips": {
+        "archive": "Αρχειοθέτηση",
+        "copy": "Αντιγραφή",
+        "exportData": "Εξαγωγή δεδομένων",
+        "favorites": "Προσθήκη στα αγαπημένα",
+        "filters": "Φίλτρα",
+        "help": "Βοήθεια",
+        "preview": "Προεπισκόπηση",
+        "refreshData": "Ανανέωση δεδομένων",
+        "reports": "Αναφορές",
+        "settings": "Ρυθμίσεις",
+        "sorting": "Ταξινόμηση"
+      },
+      "ui": {
+        "clearAllCount": "Καθαρισμός ({count})",
+        "itemsSelected": "{count} επιλεγμένα"
+      }
+    }
+  },
+  "crm": {
+    "tasks": {
+      "quickFilters": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των δραστηριοτήτων",
+        "ariaLabel": "Γρήγορα φίλτρα εργασιών",
+        "completed": "Ολοκληρωμένα",
+        "completedTooltip": "Ολοκληρωμένες εργασίες",
+        "inProgress": "Σε εξέλιξη",
+        "inProgressTooltip": "Εργασίες σε εξέλιξη",
+        "overdue": "Εκπρόθεσμα",
+        "overdueTooltip": "Εκπρόθεσμες εργασίες",
+        "pending": "Εκκρεμείς",
+        "pendingTooltip": "Εκκρεμείς εργασίες",
+        "today": "Σήμερα",
+        "todayTooltip": "Εργασίες για σήμερα"
+      }
+    }
+  },
+  "files": {
+    "floorplan": {
+      "processingInProgress": "Επεξεργασία σε εξέλιξη"
+    },
+    "list": {
+      "download": "Λήψη"
+    },
+    "pdf": {
+      "fullscreen": "Πλήρης οθόνη",
+      "loadFailed": "Το PDF δεν μπόρεσε να ανοίξει. Δοκιμάστε ξανά ή κατεβάστε το αρχείο.",
+      "loading": "Φόρτωση PDF...",
+      "nextPage": "Επόμενη σελίδα",
+      "previousPage": "Προηγούμενη σελίδα"
+    },
+    "preview": {
+      "docxError": "Δεν ήταν δυνατή η προεπισκόπηση του εγγράφου",
+      "docxLoading": "Φόρτωση εγγράφου...",
+      "dxfEmpty": "Το σχέδιο δεν περιέχει οντότητες προς εμφάνιση",
+      "dxfError": "Δεν ήταν δυνατή η προεπισκόπηση του σχεδίου DXF",
+      "dxfLoading": "Ανάλυση σχεδίου DXF...",
+      "excelError": "Δεν ήταν δυνατή η προεπισκόπηση του αρχείου Excel",
+      "excelLoading": "Φόρτωση αρχείου Excel...",
+      "fitToWidth": "Προσαρμογή στο πλάτος",
+      "htmlError": "Δεν ήταν δυνατή η προεπισκόπηση του αρχείου HTML",
+      "htmlLoading": "Φόρτωση αρχείου HTML...",
+      "rotate": "Περιστροφή",
+      "txtError": "Δεν ήταν δυνατή η προεπισκόπηση του αρχείου κειμένου",
+      "txtLoading": "Φόρτωση αρχείου κειμένου...",
+      "unsupported": "Δεν υποστηρίζεται προεπισκόπηση για αυτόν τον τύπο αρχείου.",
+      "xmlError": "Δεν ήταν δυνατή η προεπισκόπηση του αρχείου XML",
+      "xmlLoading": "Φόρτωση αρχείου XML...",
+      "zoomIn": "Μεγέθυνση",
+      "zoomOut": "Σμίκρυνση"
+    },
+    "technical": {
+      "unavailable": "Μη διαθέσιμο"
+    }
+  },
+  "filters": {
+    "clearFilters": "Καθαρισμός"
+  },
+  "procurement": {
+    "detail": {
+      "emptyDescription": "Κάντε κλικ σε μια παραγγελία για να δείτε τις λεπτομέρειες",
+      "emptyTitle": "Επιλέξτε παραγγελία"
+    },
+    "filters": {
+      "agreementStatus": {
+        "active": "Ενεργές",
+        "activeTooltip": "Ενεργές συμβάσεις σε ισχύ",
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των συμβάσεων",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες συμβάσεις (μη ενεργές ακόμη)",
+        "expired": "Ληγμένες",
+        "expiredTooltip": "Συμβάσεις που έχουν λήξει",
+        "expiring": "Λήγουν",
+        "expiringTooltip": "Συμβάσεις που λήγουν τις επόμενες 30 ημέρες"
+      },
+      "agreementStatusAriaLabel": "Φίλτρα κατάστασης σύμβασης",
+      "materialStatus": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των υλικών",
+        "inactive": "Ανενεργά",
+        "inactiveTooltip": "Υλικά χωρίς αγορές πάνω από 180 ημέρες",
+        "no_supplier": "Χωρίς προμηθευτή",
+        "no_supplierTooltip": "Υλικά χωρίς ορισμένους προτιμώμενους προμηθευτές",
+        "recently_used": "Πρόσφατα",
+        "recently_usedTooltip": "Υλικά με αγορά τις τελευταίες 90 ημέρες"
+      },
+      "materialStatusAriaLabel": "Φίλτρα κατάστασης υλικού",
+      "poStatus": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των παραγγελιών",
+        "approved": "Εγκεκριμένες",
+        "approvedTooltip": "Εγκεκριμένες παραγγελίες (έτοιμες για αποστολή)",
+        "cancelled": "Ακυρωμένες",
+        "cancelledTooltip": "Ακυρωμένες παραγγελίες",
+        "closed": "Ολοκληρωμένες",
+        "closedTooltip": "Έχουν τιμολογηθεί και κλείσει",
+        "delivered": "Παραδοθείσες",
+        "deliveredTooltip": "Έχουν παραληφθεί πλήρως",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες παραγγελίες (μη εγκεκριμένες)",
+        "ordered": "Παραγγελμένες",
+        "orderedTooltip": "Έχουν αποσταλεί στον προμηθευτή",
+        "partially_delivered": "Μερική Παραλαβή",
+        "partially_deliveredTooltip": "Έχει παραληφθεί μέρος της παραγγελίας"
+      },
+      "poStatusAriaLabel": "Φίλτρα κατάστασης παραγγελίας",
+      "vendorStatus": {
+        "active": "Ενεργοί",
+        "activeTooltip": "Προμηθευτές με παραγγελίες τους τελευταίους 12 μήνες",
+        "all": "Όλοι",
+        "allTooltip": "Εμφάνιση όλων των προμηθευτών",
+        "inactive": "Ανενεργοί",
+        "inactiveTooltip": "Προμηθευτές χωρίς πρόσφατες παραγγελίες",
+        "new": "Νέοι",
+        "newTooltip": "Προμηθευτές που προστέθηκαν τις τελευταίες 30 ημέρες",
+        "preferred": "Προτιμώμενοι",
+        "preferredTooltip": "Κορυφαίοι προμηθευτές βάσει συνολικής δαπάνης"
+      },
+      "vendorStatusAriaLabel": "Φίλτρα κατάστασης προμηθευτή"
+    },
+    "hub": {
+      "frameworkAgreements": {
+        "create": "Νέα Σύμβαση",
+        "searchPlaceholder": "Αναζήτηση σύμβασης (αριθμός ή τίτλος)..."
+      },
+      "materialCatalog": {
+        "create": "Νέο Υλικό",
+        "searchPlaceholder": "Αναζήτηση υλικού (κωδικός ή όνομα)..."
+      },
+      "quotes": {
+        "description": "Προσφορές από προμηθευτές — σύγκριση και αξιολόγηση"
+      },
+      "vendorMaster": {
+        "addVendorHint": "Προσθέστε επαφές με τύπο Προμηθευτής στον κατάλογο επαφών",
+        "searchPlaceholder": "Αναζήτηση προμηθευτή..."
+      }
+    },
+    "list": {
+      "createPO": "Νέα Παραγγελία",
+      "entityName": "Παραγγελίες",
+      "searchPlaceholder": "Αναζήτηση παραγγελίας ή προμηθευτή..."
+    },
+    "nav": {
+      "agreements": "Συμβάσεις",
+      "analytics": "Αναλυτικά",
+      "ariaLabel": "Ενότητες προμηθειών",
+      "hub": "Hub Προμηθειών",
+      "materials": "Υλικά",
+      "purchaseOrders": "Παραγγελίες",
+      "quotes": "Προσφορές",
+      "rfqs": "RFQ",
+      "vendors": "Προμηθευτές"
+    }
+  },
+  "quotes": {
+    "comparison": {
+      "leveling": {
+        "state": {
+          "excluded": "Εξαιρείται",
+          "included": "Περιλαμβάνεται"
+        }
+      }
+    },
+    "detail": {
+      "archiveQuote": "Αρχειοθέτηση Προσφοράς",
+      "editQuote": "Επεξεργασία Προσφοράς",
+      "emptyDescription": "Επίλεξε μια προσφορά από τη λίστα για προβολή λεπτομερειών.",
+      "emptyTitle": "Δεν έχει επιλεγεί προσφορά"
+    },
+    "filters": {
+      "quoteStatus": {
+        "accepted": "Εγκεκριμένες",
+        "acceptedTooltip": "Έχουν εγκριθεί",
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των προσφορών",
+        "archived": "Αρχειοθετημένες",
+        "archivedTooltip": "Έχουν αρχειοθετηθεί",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες προσφορές (μη απεσταλμένες)",
+        "expired": "Ληγμένες",
+        "expiredTooltip": "Έχουν λήξει — απαιτείται απόφαση (ανανέωση/αρχειοθέτηση)",
+        "rejected": "Απορριφθείσες",
+        "rejectedTooltip": "Έχουν απορριφθεί",
+        "sent_to_vendor": "Απεσταλμένες",
+        "sent_to_vendorTooltip": "Έχουν αποσταλεί στον προμηθευτή — αναμονή υποβολής",
+        "submitted": "Υποβληθείσες",
+        "submittedTooltip": "Νέα προσφορά υποβλήθηκε — απαιτεί έλεγχο",
+        "under_review": "Υπό Εξέταση",
+        "under_reviewTooltip": "Σε εξέλιξη αξιολόγηση — απαιτείται απόφαση"
+      },
+      "quoteStatusAriaLabel": "Φίλτρα κατάστασης προσφοράς"
+    },
+    "list": {
+      "allQuotes": "Όλες οι προσφορές",
+      "ariaLabel": "Λίστα προσφορών",
+      "cardAriaLabel": "Προσφορά {number} από {vendor}",
+      "createQuote": "Νέα Προσφορά",
+      "dateLabel": "Ημερομηνία",
+      "emptyDescription": "Σαρώστε την πρώτη προσφορά για να ξεκινήσετε.",
+      "emptyTitle": "Δεν υπάρχουν προσφορές",
+      "entityName": "Προσφορές",
+      "requiresAction": "Απαιτούν ενέργεια",
+      "searchPlaceholder": "Αναζήτηση προσφοράς, προμηθευτή ή ειδικότητας...",
+      "totalLabel": "Σύνολο",
+      "validUntilLabel": "Ισχύει έως",
+      "vendorLabel": "Προμηθευτής"
+    },
+    "quotes": {
+      "actions": {
+        "removeLine": "Αφαίρεση"
+      },
+      "deliveryTerms": "Όροι Παράδοσης",
+      "errors": {
+        "updateFailed": "Αποτυχία ενημέρωσης προσφοράς"
+      },
+      "lineDescription": "Περιγραφή",
+      "lineTotal": "Σύνολο Γραμμής",
+      "lines": "Γραμμές Προσφοράς",
+      "loading": "Φόρτωση...",
+      "paymentTerms": "Όροι Πληρωμής",
+      "quantity": "Ποσότητα",
+      "rfqAnswers": {
+        "alternatesTitle": "Εναλλακτικές προτάσεις (εκτός συνόλου)",
+        "title": "Απαντήσεις χωρίς τιμή"
+      },
+      "scan": {
+        "confidence": "Αξιοπιστία",
+        "noLinesExtracted": "Δεν εξήχθησαν γραμμές. Προσθέστε χειροκίνητα.",
+        "originalDocument": {
+          "badge": "Πρωτότυπο",
+          "download": "Λήψη",
+          "empty": "Χωρίς συνημμένο",
+          "openExternal": "Άνοιγμα σε νέα καρτέλα",
+          "title": "Πρωτότυπο Έγγραφο"
+        },
+        "rowNumber": "Α/Α"
+      },
+      "sources": {
+        "email_inbox": "Email",
+        "manual": "Χειροκίνητη",
+        "portal": "Portal Προμηθευτή",
+        "scan": "Σάρωση"
+      },
+      "statuses": {
+        "accepted": "Εγκρίθηκε",
+        "archived": "Αρχείο",
+        "draft": "Πρόχειρο",
+        "expired": "Έληξε",
+        "rejected": "Απορρίφθηκε",
+        "sent_to_vendor": "Απεστάλη",
+        "submitted": "Υποβλήθηκε",
+        "superseded": "Αντικαταστάθηκε",
+        "under_review": "Υπό Εξέταση"
+      },
+      "subtotal": "Υποσύνολο",
+      "titleSingle": "Προσφορά",
+      "total": "Σύνολο",
+      "unit": "Μονάδα",
+      "unitPrice": "Τιμή Μον.",
+      "validUntil": "Ισχύει έως",
+      "vatAmount": "ΦΠΑ",
+      "vendor": "Προμηθευτής",
+      "vendorAddresseeFallback": "συνεργάτη",
+      "vendorContact": {
+        "add": "Προσθήκη στις επαφές",
+        "created": "Δημιουργήθηκε η επαφή «{vendorName}» και δέθηκε στην προσφορά",
+        "failed": "Η προσθήκη στις επαφές απέτυχε",
+        "linked": "Η προσφορά δέθηκε στην υπάρχουσα επαφή «{vendorName}»",
+        "notInContacts": "Ο προμηθευτής δεν είναι στις επαφές σας ({email})."
+      },
+      "vendorUnknown": "Άγνωστος προμηθευτής",
+      "vendorUnknownWithQuote": "Άγνωστος προμηθευτής · {quote}",
+      "vendorWithQuote": "{vendor} · {quote}",
+      "warranty": "Εγγύηση"
+    },
+    "rfqs": {
+      "comments": {
+        "add": "Προσθήκη",
+        "addFailed": "Το σχόλιο δεν προστέθηκε. Δοκιμάστε ξανά.",
+        "cancel": "Ακύρωση",
+        "closeAria": "Κλείσιμο σχολίων",
+        "composerLabel": "Νέο σχόλιο",
+        "confirmDelete": "Διαγραφή σχολίου;",
+        "delete": "Διαγραφή",
+        "edit": "Επεξεργασία",
+        "edited": "επεξεργάστηκε",
+        "empty": "Δεν υπάρχουν σχόλια ακόμα",
+        "internalOnly": "Εσωτερικά — μη ορατά στον προμηθευτή",
+        "placeholder": "Γράψτε σχόλιο... (@ για αναφορά συνεργάτη)",
+        "save": "Αποθήκευση",
+        "title": "Σχόλια"
+      },
+      "editDialog": {
+        "cancel": "Ακύρωση",
+        "headerSection": "Στοιχεία Προσφοράς",
+        "inclusionsSection": "Περιλαμβάνει",
+        "laborIncluded": "Εργατικά περιλαμβάνονται",
+        "linesSection": "Γραμμές Προσφοράς",
+        "lockedTooltip": "Εγκεκριμένη προσφορά — επαναφέρετε για επεξεργασία",
+        "placeholders": {
+          "deliveryTerms": "π.χ. FCA αποθήκη",
+          "paymentTerms": "π.χ. 30 ημέρες",
+          "warranty": "π.χ. 12 μήνες"
+        },
+        "save": "Αποθήκευση",
+        "saving": "Αποθήκευση...",
+        "title": "Επεξεργασία Προσφοράς",
+        "vatIncluded": "ΦΠΑ περιλαμβάνεται"
+      },
+      "expiry": {
+        "badge": {
+          "expired": "⏳ Έληξε στις {date}",
+          "expiringSoon": "⚠️ Λήγει σε {days} ημέρες"
+        },
+        "banner": {
+          "requestRenewalCta": "Ζήτησε ανανέωση",
+          "title": "Η προσφορά έληξε στις {date} (πριν {daysAgo} ημέρα)",
+          "titlePlural": "Η προσφορά έληξε στις {date} (πριν {daysAgo} ημέρες)"
+        }
+      },
+      "lineEdit": {
+        "error": {
+          "descriptionRequired": "Η περιγραφή είναι υποχρεωτική",
+          "priceInvalid": "Η τιμή πρέπει να είναι αριθμός",
+          "quantityInvalid": "Η ποσότητα πρέπει να είναι ≥ 0",
+          "unitRequired": "Επίλεξε μονάδα μέτρησης",
+          "vatRateRequired": "Επίλεξε συντελεστή ΦΠΑ"
+        },
+        "totalAuto": "Auto",
+        "totalOverride": "Override",
+        "warning": {
+          "negativePrice": "Αρνητική τιμή — βεβαιωθείτε ότι είναι discount line",
+          "quantityMismatch": "Ο vendor προσφέρει {vendorQty} αντί για {requestedQty} που ζητήσατε",
+          "totalMismatch": "Σύνολο δεν ταιριάζει με qty × τιμή. Στο PDF: {statedTotal}, υπολογισμός: {computedTotal}",
+          "zeroQuantityWithPrice": "Ποσότητα 0 — δωρεάν δείγμα ή λάθος;"
+        }
+      },
+      "mobile": {
+        "backToList": "Πίσω στη λίστα"
+      },
+      "notify": {
+        "sentBadge": "✉️ Ενημερώθηκε στις {date}",
+        "staleBadge": "✉️ Ενημερώθηκε (παλαιό)"
+      },
+      "offline": {
+        "requiresConnection": "Απαιτείται σύνδεση για αυτή την ενέργεια"
+      },
+      "pdfPanel": {
+        "closeAria": "Κλείσιμο PDF"
+      },
+      "quoteHeader": {
+        "action": {
+          "approve": "Έγκριση Νικητή",
+          "confirm": "Επιβεβαίωση",
+          "createPo": "Δημιουργία Παραγγελίας",
+          "delete": "Διαγραφή",
+          "duplicate": "Αντιγραφή ως νέα",
+          "edit": "Επεξεργασία",
+          "reject": "Απόρριψη",
+          "restore": "Επαναφορά",
+          "viewPo": "Δες Παραγγελία"
+        },
+        "tooltip": {
+          "comingSoon": "Έρχεται σύντομα",
+          "comments": "Σχολιασμός",
+          "disabledByAward": "Έχει ήδη επιλεγεί νικητής",
+          "download": "Λήψη αρχικού PDF",
+          "hidePdf": "Κλείσε αρχικό PDF",
+          "viewPdf": "Δες αρχικό PDF"
+        }
+      },
+      "scan": {
+        "placeholder": {
+          "delete": "Διαγραφή",
+          "failed": "Αποτυχία επεξεργασίας",
+          "retry": "Δοκίμασε ξανά"
+        },
+        "stage": {
+          "extracting": "Εξαγωγή στοιχείων με AI...",
+          "processing": "Επεξεργασία...",
+          "reading": "Ανάγνωση PDF...",
+          "validating": "Επικύρωση δεδομένων..."
+        },
+        "toast": {
+          "processingMultiple": "Επεξεργασία {count} αρχείων ({done}/{count} έτοιμο)",
+          "processingSingle": "Επεξεργασία αρχείου..."
+        }
+      },
+      "search": {
+        "empty": {
+          "suggestion": {
+            "price": "Τιμή (π.χ. 12500)",
+            "quoteNumber": "Αριθμό προσφοράς (π.χ. Q-2026-0042)",
+            "vendor": "Όνομα προμηθευτή (π.χ. Thermoland)"
+          },
+          "suggestionsTitle": "Δοκίμασε να ψάξεις με:",
+          "title": "Δεν βρέθηκαν προσφορές με «{query}»"
+        }
+      },
+      "sort": {
+        "label": "Ταξινόμηση",
+        "option": {
+          "priceAsc": "Φθηνότερη πρώτα",
+          "priceDesc": "Ακριβότερη πρώτα",
+          "recent": "Πιο πρόσφατες",
+          "statusPriceDefault": "Κατάσταση + Τιμή (προεπιλογή)",
+          "vendorAsc": "Προμηθευτής (Α-Ω)"
+        }
+      },
+      "versioning": {
+        "collapseButton": "Απόκρυψη παλαιότερων versions",
+        "expandButton": "Εμφάνιση παλαιότερων versions"
+      }
+    },
+    "trades": {
+      "allGroups": "Όλες",
+      "aluminum_frames": "Αλουμίνια / Κουφώματα Εξωτερικά",
+      "concrete": "Μπετόν / Μπετατζής",
+      "data_telecoms": "Δίκτυα Δεδομένων",
+      "demolition": "Κατεδάφιση / Εκσκαφή",
+      "electrical": "Ηλεκτρολογικά",
+      "elevator": "Ανελκυστήρας",
+      "equipment_rental": "Ενοικίαση Εξοπλισμού",
+      "facade": "Πρόσοψη / ETICS",
+      "fire_protection": "Πυρόσβεση / Πυρανίχνευση",
+      "flooring_wood": "Ξύλινα Δάπεδα / Parquet",
+      "formwork": "Ξυλότυπος",
+      "gas": "Φυσικό Αέριο",
+      "glazing": "Τζαμαδόρος / Υαλοπίνακες",
+      "groups": {
+        "claddings": "Επενδύσεις",
+        "external": "Εξωτερικά",
+        "finishing": "Φινίρισμα",
+        "frames": "Κουφώματα",
+        "networks": "Δίκτυα (Η/Μ)",
+        "services": "Υπηρεσίες / Logistics",
+        "special": "Ειδικές Εγκαταστάσεις",
+        "structure": "Σκελετός"
+      },
+      "gypsum": "Γυψοκαρτές / Οροφές",
+      "hvac": "Μηχανολογικά / HVAC",
+      "insulation": "Μονώσεις",
+      "interior_frames": "Εσωτερικά Κουφώματα / Πόρτες",
+      "landscaping": "Διαμόρφωση Εξωτερικών",
+      "marble": "Μάρμαρα / Φυσικός Λίθος",
+      "masonry": "Τοιχοποιία / Κτίστης",
+      "materials_general": "Υλικά (Γενικά)",
+      "noResults": "Δεν βρέθηκαν ειδικότητες",
+      "painting": "Ελαιοχρωματισμοί",
+      "plastering": "Σοβατίσματα",
+      "plumbing": "Υδραυλικά",
+      "pool": "Πισίνα",
+      "prefab": "Προκατασκευή / Μεταλλικές Κατ.",
+      "reinforcement": "Σιδεράς / Σιδηροπλέγματα",
+      "rolling_shutters": "Ρολά / Σήτες",
+      "roofing": "Στέγη / Κεραμοσκεπή",
+      "search": "Αναζήτηση ειδικότητας...",
+      "select": "Επιλέξτε ειδικότητα",
+      "tiling": "Πλακάκια / Κεραμικά",
+      "title": "Ειδικότητες",
+      "waterproofing": "Στεγανοποίηση / Ασφαλτικά",
+      "woodwork": "Ξυλουργικά / Έπιπλα"
+    }
+  },
+  "uom": {
+    "name": {
+      "bag": "Σακί",
+      "box": "Κουτί",
+      "container": "Δοχείο",
+      "day": "Ημέρα",
+      "g": "Γραμμάριο",
+      "hr": "Ώρα",
+      "kW": "Κιλοβάτ",
+      "kWp": "Κιλοβάτ αιχμής",
+      "kg": "Κιλό",
+      "lt": "Λίτρο",
+      "lump": "Κατ' αποκοπή",
+      "m": "Μέτρο",
+      "m2": "Τετραγωνικό μέτρο",
+      "m3": "Κυβικό μέτρο",
+      "ml": "Χιλιοστόλιτρο",
+      "month": "Μήνας",
+      "pack": "Πακέτο",
+      "pair": "Ζεύγος",
+      "pallet": "Παλέτα",
+      "pcs": "Τεμάχιο",
+      "point": "Σημείο",
+      "roll": "Ρολό",
+      "set": "Σετ",
+      "ton": "Τόνος"
+    },
+    "symbol": {
+      "bag": "σακιά",
+      "box": "κουτιά",
+      "container": "δοχεία",
+      "day": "ημ.",
+      "g": "g",
+      "hr": "ώρ.",
+      "kW": "kW",
+      "kWp": "kWp",
+      "kg": "kg",
+      "lt": "lt",
+      "lump": "κ.α.",
+      "m": "μ.",
+      "m2": "τ.μ.",
+      "m3": "κ.μ.",
+      "ml": "ml",
+      "month": "μήν.",
+      "pack": "πακέτα",
+      "pair": "ζεύγη",
+      "pallet": "παλέτες",
+      "pcs": "τεμ.",
+      "point": "σημεία",
+      "roll": "ρολά",
+      "set": "σετ",
+      "ton": "t"
+    }
+  }
+}

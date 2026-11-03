@@ -15,6 +15,10 @@ import { PageContainer } from '@/core/containers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { AnalyticsPageContent } from './AnalyticsPageContent';
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__analytics.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export function AnalyticsPageShell() {
   const { t } = useTranslation('procurement');

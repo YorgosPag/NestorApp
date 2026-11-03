@@ -24,6 +24,10 @@ import { KpiTotalCommittedSpend } from './kpi/KpiTotalCommittedSpend';
 import { KpiBoqCoverage } from './kpi/KpiBoqCoverage';
 import { ChartBudgetVsCommitted } from './kpi/ChartBudgetVsCommitted';
 import { KpiCardSkeleton, KpiChartSkeleton } from './skeleton/KpiSkeleton';
+import routeSlice from '@/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 interface Props {
   projectId: string;

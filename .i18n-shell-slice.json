@@ -103,6 +103,14 @@
       "keys": [
         "quotes:list.searchPlaceholder",
         "quotes:list.createQuote",
+        "procurement:list.searchPlaceholder",
+        "procurement:list.createPO",
+        "procurement:hub.vendorMaster.searchPlaceholder",
+        "procurement:hub.vendorMaster.addVendorHint",
+        "procurement:hub.materialCatalog.searchPlaceholder",
+        "procurement:hub.materialCatalog.create",
+        "procurement:hub.frameworkAgreements.searchPlaceholder",
+        "procurement:hub.frameworkAgreements.create",
         "common:tooltips.editSelected",
         "common:tooltips.deleteSelected",
         "common-shared:toolbar.labels.share",
@@ -111,10 +119,12 @@
       "prefixes": [
         "common-shared:toolbar.tooltips"
       ],
-      "reason": "ADR-327 (2026-10-28) — έγινε ορατό όταν η σελίδα του RFQ απέκτησε route slice (το `QuoteList` αποδίδει το `CompactToolbar` στο ΠΡΩΤΟ καρέ, `hidden md:block`). Οι δύο δυναμικές κλήσεις `t(placeholder)` (γρ. 30) και `t(tooltipKey)` (γρ. 44) διαβάζουν ΜΟΝΟ από το `config` που δίνει ο καλών — `config.searchPlaceholder` και `config.tooltips.*` του `createToolbarConfig` (`configs.ts`). ΜΕΤΡΗΜΕΝΟ 2026-10-28 για τη ΜΟΝΗ διαμόρφωση της κλειστότητας, το `quotesToolbarConfig`: placeholder `quotes:list.searchPlaceholder` · tooltips `quotes:list.createQuote` (`NEW_ITEM_TOOLTIP_BY_TYPE`) · `tooltips.editSelected`/`deleteSelected` (common) · `toolbar.labels.share`/`favoritesManagement` · και τα 12 `toolbar.tooltips.*` του common-shared (όλο το υποδέντρο, γι' αυτό πρόθεμα). Οι αποτυχημένες μεταφράσεις επιστρέφουν το ΙΔΙΟ το κλειδί (`translated !== placeholder`), άρα χωρίς slice βάφεται ωμό. ⚠️ ΑΝΑ ΑΡΧΕΙΟ, όχι ανά διαμόρφωση: όποια νέα διαδρομή με route slice αποδίδει ΑΛΛΗ διαμόρφωση (`buildingsConfig`, `vendorsConfig` …) οφείλει να προσθέσει ΕΔΩ τα δικά της κλειδιά."
+      "reason": "ADR-327 (2026-10-28) — έγινε ορατό όταν η σελίδα του RFQ απέκτησε route slice (το `QuoteList` αποδίδει το `CompactToolbar` στο ΠΡΩΤΟ καρέ, `hidden md:block`). Οι δύο δυναμικές κλήσεις `t(placeholder)` (γρ. 30) και `t(tooltipKey)` (γρ. 44) διαβάζουν ΜΟΝΟ από το `config` που δίνει ο καλών — `config.searchPlaceholder` και `config.tooltips.*` του `createToolbarConfig` (`configs.ts`). ΜΕΤΡΗΜΕΝΟ 2026-10-28 για τη ΜΟΝΗ διαμόρφωση της κλειστότητας, το `quotesToolbarConfig`: placeholder `quotes:list.searchPlaceholder` · tooltips `quotes:list.createQuote` (`NEW_ITEM_TOOLTIP_BY_TYPE`) · `tooltips.editSelected`/`deleteSelected` (common) · `toolbar.labels.share`/`favoritesManagement` · και τα 12 `toolbar.tooltips.*` του common-shared (όλο το υποδέντρο, γι' αυτό πρόθεμα). Οι αποτυχημένες μεταφράσεις επιστρέφουν το ΙΔΙΟ το κλειδί (`translated !== placeholder`), άρα χωρίς slice βάφεται ωμό. ⚠️ ΑΝΑ ΑΡΧΕΙΟ, όχι ανά διαμόρφωση: όποια νέα διαδρομή με route slice αποδίδει ΑΛΛΗ διαμόρφωση (`buildingsConfig`, `vendorsConfig` …) οφείλει να προσθέσει ΕΔΩ τα δικά της κλειδιά. ΠΡΟΣΤΕΘΗΚΑΝ 2026-11-02 (ADR-781 §19) οι διαμορφώσεις `procurement`/`vendors`/`materials`/`agreements`, όταν οι σελίδες προμηθειών απέκτησαν route slice· η άγκυρα `toolbar-slice-policy.test.ts` το ΕΚΤΕΛΕΙ."
     },
     "src/components/core/CompactToolbar/CompactToolbarActions.tsx": {
       "keys": [
+        "common-shared:toolbar.sort.name.asc",
+        "common-shared:toolbar.sort.name.desc",
         "common-shared:toolbar.sort.date.asc",
         "common-shared:toolbar.sort.date.desc",
         "common-shared:toolbar.sort.number.asc",
@@ -390,6 +400,12 @@
       ],
       "reason": "ADR-846 Φ4 (2026-09-08) — η ΜΟΝΗ δυναμική κλήση είναι `t(ADMIN_LEVEL_LABEL_KEYS[level])` (γρ. 121), και ο πίνακας ζει σε **ΑΛΛΟ** module (`hooks/useAdministrativeHierarchy` γρ. 115) — γι' αυτό ο τεμαχιστής δεν τον επιλύει μόνος του, σε αντίθεση με τα `MODE_KEYS`/`COVERAGE_RELATION_KEYS` που είναι εντός module. ΜΕΤΡΗΜΕΝΟ: οκτώ τιμές, ΟΛΕΣ κυριολεκτικές και ΟΛΕΣ κάτω από ΑΥΤΟ το πρόθεμα (`majorGeo` · `decentAdmin` · `region` · `regionalUnit` · `municipality` · `municipalUnit` · `community` · `settlement`) — οι οκτώ βαθμίδες του Καλλικράτη, κλειστό σύνολο εξ ορισμού του νόμου. 🔶 **ΕΔΩ ΤΟ ΠΡΟΘΕΜΑ ΕΙΝΑΙ ΥΠΟΔΕΝΤΡΟ ΚΑΙ ΟΧΙ ΑΚΡΙΒΗ ΚΛΕΙΔΙΑ, ΕΠΙΤΗΔΕΣ**: το `hierarchy.levels` περιέχει **ΑΚΡΙΒΩΣ** αυτά τα οκτώ και τίποτε άλλο, οπότε η απαρίθμηση θα ήταν οκτώ γραμμές που λένε ό,τι λέει μία — και θα σάπιζε αν κάποια βαθμίδα μετονομαστεί. ⚠️ **ΤΙ ΔΕΝ ΕΓΓΥΑΤΑΙ Ο ΜΕΤΑΓΛΩΤΤΙΣΤΗΣ, ΚΑΙ ΤΟ ΓΡΑΦΩ**: ο τύπος είναι `Record<number, string>` — **ΟΧΙ** union — άρα ένατη βαθμίδα **δεν** σπάει τη μεταγλώττιση, σε αντίθεση με τα δύο αδέρφια εγγραφές παρακάτω. Ο φρουρός είναι το `OFFERED_LEVELS` που τρέφει τον βρόχο: αν κάποιος προσθέσει βαθμίδα εκεί χωρίς κλειδί, η οθόνη θα βάψει ωμό κλειδί. Ξαναεπαλήθευσέ το αν το `ADMIN_LEVELS` μεγαλώσει.",
       "$note": "Το κλειδί ήρθε από το ratchet «ADMIN_LEVEL_LABELS hardcoded ελληνικά» (καταγράφηκε 2026-09-08 στο pending-ratchet-work.md): οι ετικέτες ήταν γραμμένες κατευθείαν στα ελληνικά και ο τρίτος καταναλωτής τους ζει στον ΔΗΜΟΣΙΟ δίγλωσσο /pro."
+    },
+    "src/components/projects/procurement/buyout/BuyoutTable.tsx": {
+      "prefixes": [
+        "procurement:categories"
+      ],
+      "reason": "ADR-781 §19 (2026-11-02) — Η ΜΟΝΗ δυναμική κλήση είναι `t(costCodeLabelParts(group.categoryCode).groupLabelKey)` (γρ. 77). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: το κλειδί το φτιάχνει ΜΟΝΟ το `costCodeLabelKey` του `src/config/cost-taxonomy.ts`, δηλαδή `procurement:categories.<ομάδα>`, άρα το πρόθεμα είναι ΟΛΟ το σύνολο των απαντήσεων. Έγινε ορατό όταν η καρτέλα `coverage` απέκτησε route slice."
     },
     "src/components/mandate/CoverageAreaPicker.tsx": {
       "prefixes": [
@@ -2252,6 +2268,175 @@
         }
       ],
       "reason": "ADR-884 Φ2στ · §4.12 Μέρος Δ. Η ΣΕΛΙΔΑ ΚΑΤΟΨΗΣ — ίδια οικογένεια με το `/listing/[id]/tour` (Κ3β): δημόσια, στο `(light)`, συνήθως ανώνυμος επισκέπτης, άρα το πρώτο καρέ χρειάζεται το slice του (ADR-744 §18)."
+    },
+    "src/app/(auth)/attendance/check-in/[token]/page.tsx": {
+      "sealed": 2769,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 2769,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 2769 bytes, namespaces [attendance]."
+        }
+      ],
+      "reason": "ADR-876 — ΤΟ CHECK-IN ΤΟΥ ΕΡΓΑΤΗ (`/attendance/check-in/[token]`): δημόσια σελίδα στο κινητό, χωρίς λογαριασμό. Το `attendance` ΔΕΝ είναι στο κέλυφος, άρα το πρώτο καρέ έβαφε ωμά κλειδιά (`pageTitle`, `validatingQr`, run 41349947612). Καταχωρείται από το `CheckInClient` (client module· το `page.tsx` είναι Server Component και εκεί η εγγραφή θα πήγαινε σε ΑΛΛΟ στιγμιότυπο i18next)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/agreements/page.tsx": {
+      "sealed": 14979,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 14979,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 14979 bytes, namespaces [common-shared, crm, filters, procurement, quotes]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/materials/page.tsx": {
+      "sealed": 13137,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 13137,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 13137 bytes, namespaces [common-shared, crm, filters, procurement, quotes, uom]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/purchase-orders/page.tsx": {
+      "sealed": 13757,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 13757,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 13757 bytes, namespaces [common-shared, crm, filters, procurement, quotes, uom]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/quotes/page.tsx": {
+      "sealed": 22036,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 22036,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 22036 bytes, namespaces [common-shared, crm, files, filters, procurement, quotes, uom]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/rfqs/page.tsx": {
+      "sealed": 963,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 963,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 963 bytes, namespaces [procurement, quotes]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/rfqs/new/page.tsx": {
+      "sealed": 5391,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 5391,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 5391 bytes, namespaces [procurement, quotes, uom]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/vendors/page.tsx": {
+      "sealed": 9799,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 9799,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 9799 bytes, namespaces [common-shared, crm, filters, procurement, quotes]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/analytics/page.tsx": {
+      "sealed": 8993,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 8993,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 8993 bytes, namespaces [errors, procurement]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το `AnalyticsPageShell` (client module· το `page.tsx` είναι Server Component)."
+    },
+    "src/app/(app)/o/[workspace]/projects/[id]/procurement/coverage/page.tsx": {
+      "sealed": 3631,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 3631,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 3631 bytes, namespaces [procurement]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΚΑΡΤΕΛΑ ΠΡΟΜΗΘΕΙΩΝ ΕΡΓΟΥ: ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το client module της καρτέλας (το `page.tsx` είναι Server Component), που δεν το εισάγει άλλη σελίδα."
+    },
+    "src/app/(app)/o/[workspace]/projects/[id]/procurement/overview/page.tsx": {
+      "sealed": 4596,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 4596,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 4596 bytes, namespaces [errors, procurement]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΚΑΡΤΕΛΑ ΠΡΟΜΗΘΕΙΩΝ ΕΡΓΟΥ: ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το client module της καρτέλας (το `page.tsx` είναι Server Component), που δεν το εισάγει άλλη σελίδα."
+    },
+    "src/app/(app)/o/[workspace]/projects/[id]/procurement/po/page.tsx": {
+      "sealed": 9186,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 9186,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 9186 bytes, namespaces [common-shared, crm, procurement, quotes]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΚΑΡΤΕΛΑ ΠΡΟΜΗΘΕΙΩΝ ΕΡΓΟΥ: ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το client module της καρτέλας (το `page.tsx` είναι Server Component), που δεν το εισάγει άλλη σελίδα."
+    },
+    "src/app/(app)/o/[workspace]/projects/[id]/procurement/rfq/page.tsx": {
+      "sealed": 780,
+      "sealedAt": "2026-11-01",
+      "history": [
+        {
+          "from": 0,
+          "to": 780,
+          "at": "2026-11-01",
+          "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 780 bytes, namespaces [procurement, quotes]."
+        }
+      ],
+      "reason": "ADR-781 §19 — ΚΑΡΤΕΛΑ ΠΡΟΜΗΘΕΙΩΝ ΕΡΓΟΥ: ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το client module της καρτέλας (το `page.tsx` είναι Server Component), που δεν το εισάγει άλλη σελίδα."
     }
   },
   "$lazyRouteOpaqueNamespaces": "ADR-744 §27 — η γραπτή απάντηση σε κάθε `useTranslation(<prop>)` μέσα σε κλειστότητα τεμπέλικης διαδρομής: ποια namespaces μπορούν να φτάσουν εκεί. Ο generator ΑΡΝΕΙΤΑΙ χωρίς εγγραφή· εγγραφή χωρίς αδιαφανή κλήση πια είναι ΝΕΚΡΗ και μπλοκάρει. Κάθε `reason` είναι μέτρηση της 2026-10-05 (απαρίθμηση ΟΛΩΝ των καλούντων) — ξαναμέτρησε όταν προσθέτεις καλούντα.",
@@ -2439,11 +2624,8 @@
     "src/app/(app)/terms/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
     "src/app/(app)/terms/versions/page.tsx ⟵ (στατική)": ["legal"],
     "src/app/(app)/test-harness/first-contact-proof/page.tsx ⟵ (στατική)": ["property-market"],
-    "src/app/(app)/test-harness/handover-invite/page.tsx ⟵ (στατική)": ["property-market"],
-    "src/app/(app)/test-harness/handover-protocol-verify/page.tsx ⟵ (στατική)": ["legal"],
     "src/app/(app)/test-harness/listing-shapes/page.tsx ⟵ (στατική)": ["search-focus", "search-region"],
     "src/app/(app)/test-harness/listing-shapes/page.tsx ⟵ src/components/search-results/ClusterApproximationKey.tsx": ["search-focus"],
-    "src/app/(app)/test-harness/property-handover-tab/page.tsx ⟵ (στατική)": ["property-market"],
     "src/app/(auth)/attendance/check-in/[token]/page.tsx ⟵ (στατική)": ["attendance"],
     "src/app/(auth)/card-email/[token]/page.tsx ⟵ (στατική)": ["property-market"],
     "src/app/(auth)/supply-invite/[token]/not-found.tsx ⟵ (στατική)": ["catalog", "conveyance"],
@@ -2461,6 +2643,9 @@
     "src/app/(auth)/tour-invite/[token]/not-found.tsx ⟵ (στατική)": ["spatial-tour"],
     "src/app/(auth)/tour-invite/[token]/page.tsx ⟵ (στατική)": ["spatial-tour"],
     "src/app/(auth)/vendor/quote/page.tsx ⟵ (στατική)": ["vendor-portal"],
+    "src/app/(bare)/test-harness/handover-invite/page.tsx ⟵ (στατική)": ["property-market"],
+    "src/app/(bare)/test-harness/handover-protocol-verify/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(bare)/test-harness/property-handover-tab/page.tsx ⟵ (στατική)": ["property-market"],
     "src/app/(bare)/test-harness/tour-viewer/page.tsx ⟵ (στατική)": ["spatial-tour"],
     "src/app/(bare)/test-harness/tour-viewer/page.tsx ⟵ src/components/spatial-tour/viewer/TourViewer.tsx": ["spatial-tour"],
     "src/app/(light)/area/[id]/page.tsx ⟵ (στατική)": ["area-market", "market-contracts", "price-map"],

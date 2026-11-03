@@ -784,3 +784,31 @@ hook με δύο κλήσεις `useTranslation` **δεν** δίνει ένωσ�
 **Διόρθωση**: `check-i18n-ssr-raw-keys.js --index` (έτσι το καλεί ο δρομολογητής Phase 1). Διαβάζει το manifest **του ευρετηρίου** (`git show`), και υλοποιεί σε προσωρινό φάκελο **μόνο** ό,τι διαβάζει το Layer 1: κλειστότητα (~866) · `src/i18n` · config · key constants · σταδιοποιημένα (`scripts/lib/git-index-snapshot.js`). Οι Κ1/Κ2 έμειναν αμετάβλητοι — άλλαξε μόνο η **ρίζα**. Το `--full` μένει στον δίσκο (CI, καθαρό checkout).
 
 **Μετρημένο**: δίσκος ⇒ ΚΟΚΚΙΝΟ (ξένο αρχείο) · ευρετήριο ⇒ ΠΡΑΣΙΝΟ, 7,5 s. ⚠️ Τα pathspecs **δεν** περνούν ως ορίσματα στο git (~900 ⇒ `ENAMETOOLONG` στα Windows, μετρημένο)· φιλτράρονται στη JS πάνω σε μία `ls-files`.
+
+## §19. Ο δρόμος προς την ξανασπορά: slices για ό,τι βρέθηκε ωμό (2026-11-02)
+
+**Μετρημένο στο run `41349947612`** (εικόνα του `94134210`): 369 διαδρομές · `clean 265 · raw-key 30 · surface-shell-only 20 · withheld-but-answered 7 · route-redirected 5 · surface-synthetic-id 34 · route-withheld 8`, και η σπορά αρνήθηκε (34 > 25). Το synthetic-id κλείνει στο [ADR-875 §15](./ADR-875-oracle-golden-tenant.md).
+
+### 19.1 Route slices (μηχανή ADR-744 §15, καμία νέα)
+
+Δηλώθηκαν 13 σελίδες: `/attendance/check-in/[token]` · 8 hub προμηθειών (`agreements`, `analytics`, `materials`, `purchase-orders`, `quotes`, `rfqs`, `rfqs/new`, `vendors`) · 4 καρτέλες έργου (`coverage`, `overview`, `po`, `rfq`). Από 780 bytes (`rfq`) ως 22.036 (`quotes`), όλα μέσα στον κανόνα Κ1. Σε Server Component η εγγραφή ζει στο client module, γιατί στο `page.tsx` θα πήγαινε σε άλλο στιγμιότυπο i18next. Μετρήθηκε ότι κανένα από αυτά τα client modules δεν το εισάγει άλλη σελίδα.
+
+**Το `nav.ariaLabel` δεν θέλει φθηνότερο δρόμο.** Ζει στο `ProcurementSubNav`, που το εισάγει κάθε σελίδα, άρα ταξιδεύει με το slice της. Το μοντέλο δένει το slice με τη σελίδα (§15), οπότε δεύτερος μηχανισμός για ένα κλειδί δεν έχει θέση.
+
+### 19.2 🔴 Το εύρημα που θα περνούσε αόρατο
+
+Το πρώτο πέρασμα έβγαινε πράσινο στον γεννήτορα, αλλά η αντιπαραβολή με τα κλειδιά του χρησμού έδειξε δύο που **έμεναν ωμά**: `hub.vendorMaster.addVendorHint` (`vendors`) και `list.createPO` (`po`). Το `CompactToolbar` καλεί `t(tooltipKey)` πάνω σε ό,τι δίνει ο καλών, και το `dynamicKeyPolicy` ήταν αληθές μόνο για τη διαμόρφωση `quotes`. Προστέθηκαν οι διαμορφώσεις `procurement`/`vendors`/`materials`/`agreements`. Η νέα άγκυρα `toolbar-slice-policy.test.ts` ΕΚΤΕΛΕΙ τη λίστα απέναντι στις πραγματικές διαμορφώσεις (μεταλλάξεις 3/3), ώστε η επόμενη απόκλιση να μη χρειάζεται τον χρησμό. Το `BuyoutTable` πήρε εγγραφή για το `procurement:categories`.
+
+**Αντιπαραβολή** (`.i18n-ssr-oracle-baseline.json` + ταυτότητες του log): 148 κλειδιά στις 11 σελίδες με ονομασμένα κλειδιά, 0 αναπάντητα. Για `quotes` και `coverage` το log δεν τυπώνει τα κλειδιά, οπότε ελέγχθηκαν με το χέρι όσα ονόμασε η διαλογή. ⚠️ Η τελική απόδειξη είναι το επόμενο run του χρησμού: δεν εκτελέστηκε SSR τοπικά.
+
+### 19.3 Τι μένει στη baseline, με λόγο
+
+`construction/portfolio` · `/onboarding/organization` · `/demo/addresses*` (raw-key, ήδη δηλωμένα) · τα 20 shell-only του ανώνυμου `(me)`/`/` · τα 5 redirected · όσα harness του `(app)` μένουν (`bim-3d`, `contact-mutation`, `dxf-perf`, `first-contact-proof`).
+
+### 19.4 Τρία harness στο `(bare)`: 404 αντί για 200 μετά τη ροή
+
+Τα `handover-invite`, `handover-protocol-verify` και `property-handover-tab` έβγαιναν `withheld-but-answered`: στο `(app)` το `loading.tsx` ανοίγει τη ροή πριν ρίξει το `notFound()`, οπότε ο κωδικός μένει 200 (το φυσικό πείραμα είναι τεκμηριωμένο στο `probe.js`). Το `(bare)` δεν έχει `loading.tsx` και απαντά 404, χωρίς αλλαγή URL. Επιλέχθηκε μετακίνηση αντί για γραμμή στη baseline, επειδή οι τρεις γκαλερί κρίνουν καταστάσεις δικών τους components, όχι το κέλυφος. Τα υπόλοιπα harness του `(app)` δεν εξετάστηκαν εδώ.
+
+**Εξαρτήσεις, μετρημένες στη μεταβατική κλειστότητα εισαγωγών** (448 · 134 · 301 modules): το `(bare)` δεν έχει τους providers του `(app)`, και από όσους πετούν χωρίς provider αυτά τα harness φτάνουν μόνο το `useNotifications` (μέσω `useFileDownload`), στα `handover-invite` και `property-handover-tab`. Γι' αυτό τα δύο `page.tsx` τυλίγονται σε `NotificationProvider`. Τα `AuthProvider`/`UserRoleProvider` είναι στο root layout. Η πραγματική σελίδα `/handover-invite/[token]` δεν επηρεάζεται, γιατί το `PropertyDossierOrigin` το εισάγει μόνο η γκαλερί.
+
+⚠️ Η απάντηση 404 είναι πρόβλεψη από το φυσικό πείραμα του 2026-08-22, όχι μέτρηση σε αυτές τις διαδρομές: επιβεβαιώνεται στο πρώτο run μετά το merge. Η μετακίνηση **δεν** βγάζει τα harness από το production bundle, γιατί οι στατικές εισαγωγές παραμένουν.

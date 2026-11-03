@@ -23,8 +23,10 @@
  *                 redirect). Το SSR είναι το ίδιο για κάθε id, άρα αρκεί **μάρτυρας
  *                 ύπαρξης**. Αν αύριο η σελίδα αρχίσει να τη διαβάζει, η Γ6 κοκκινίζει
  *                 και η οντότητα πρέπει να ανέβει σε `api`.
- *   • `value`   — δεν είναι οντότητα: μία τιμή από κλειστό σύνολο (`[type]`) ή από στατικό
- *                 αρχείο της εικόνας (`/area/[id]`, ευρετήριο ADR-883). Δεν σπέρνεται τίποτα.
+ *   • `value`   — δεν είναι οντότητα: μία τιμή από κλειστό σύνολο (`[type]`), από στατικό αρχείο
+ *                 της εικόνας (`/area/[id]`, ευρετήριο ADR-883 · `/…/versions/[version]`, παγωμένα
+ *                 νομικά κείμενα ADR-861) ή ο χώρος που έσπειρε ήδη ο `emulator-seed-personas`
+ *                 (`/pro/[alias]`). Ο σπορέας golden δεν γράφει τίποτα.
  * =============================================================================
  */
 
@@ -39,6 +41,7 @@ const GOLDEN_ENTITIES = Object.freeze({
   rfq: { tier: GOLDEN_TIERS.API, prefix: 'rfq' },
   purchaseOrder: { tier: GOLDEN_TIERS.API, prefix: 'po' },
   attendanceToken: { tier: GOLDEN_TIERS.API, prefix: null },
+  poShareToken: { tier: GOLDEN_TIERS.API, prefix: null },
   contact: { tier: GOLDEN_TIERS.WITNESS, prefix: 'cont' },
   building: { tier: GOLDEN_TIERS.WITNESS, prefix: 'bldg' },
   property: { tier: GOLDEN_TIERS.WITNESS, prefix: 'prop' },
@@ -52,15 +55,21 @@ const GOLDEN_ENTITIES = Object.freeze({
   quote: { tier: GOLDEN_TIERS.WITNESS, prefix: 'qt' },
   engagement: { tier: GOLDEN_TIERS.WITNESS, prefix: 'eng' },
   file: { tier: GOLDEN_TIERS.WITNESS, prefix: 'file' },
+  demand: { tier: GOLDEN_TIERS.WITNESS, prefix: 'dmnd' },
+  dossier: { tier: GOLDEN_TIERS.WITNESS, prefix: 'pdos' },
+  networkThread: { tier: GOLDEN_TIERS.WITNESS, prefix: 'nthr' },
+  handoverProtocol: { tier: GOLDEN_TIERS.WITNESS, prefix: 'phpr' },
   reportType: { tier: GOLDEN_TIERS.VALUE, prefix: null },
   area: { tier: GOLDEN_TIERS.VALUE, prefix: null },
+  legalVersion: { tier: GOLDEN_TIERS.VALUE, prefix: null },
+  agencyAlias: { tier: GOLDEN_TIERS.VALUE, prefix: null },
 });
 
 /**
  * Πρότυπο διαδρομής → οντότητες, **θεσιακά** ανά δυναμικό τμήμα (πλην του `[workspace]`).
- * Κλειστό σύνολο: η άγκυρα Γ1 απαιτεί να είναι ΑΚΡΙΒΩΣ τα δυναμικά πρότυπα `/o` του
- * `enumerateRoutes` **συν** τις δημόσιες πόρτες του {@link GOLDEN_PUBLIC_TEMPLATES} —
- * ούτε ένα λιγότερο (άκριτο), ούτε ένα περισσότερο (μπαγιάτικο).
+ * Κλειστό σύνολο: η άγκυρα Γ1 απαιτεί ο κατάλογος **και** το {@link GOLDEN_UNBOUND} να
+ * είναι μαζί ΑΚΡΙΒΩΣ τα δυναμικά πρότυπα του `enumerateRoutes` — ούτε ένα λιγότερο
+ * (άκριτο, χωρίς κανείς να το αποφάσισε), ούτε ένα περισσότερο (μπαγιάτικο).
  */
 const GOLDEN_TEMPLATES = Object.freeze({
   '/o/[workspace]/accounting/invoices/[id]/edit': ['invoice'],
@@ -97,6 +106,70 @@ const GOLDEN_TEMPLATES = Object.freeze({
   '/area/[id]': ['area'],
   // ⚠️ Η πύλη προμηθευτή ΔΕΝ είναι εδώ (ADR-876 §5 Φ7): ζει στο ΣΤΑΤΙΚΟ `/vendor/quote` και το
   //    διαπιστευτήριο στο fragment — ο server δεν το βλέπει ποτέ, άρα δεν υπάρχει τίποτα να δεθεί.
+  '/shared/po/[token]': ['poShareToken'],
+  // ── Τα παγωμένα νομικά κείμενα (ADR-861): ζουν στην εικόνα, η σελίδα αποδίδει το ΑΛΗΘΙΝΟ κείμενο ──
+  '/data-deletion/versions/[version]': ['legalVersion'],
+  '/handover-protocol/versions/[version]': ['legalVersion'],
+  '/privacy-policy/versions/[version]': ['legalVersion'],
+  '/private-marketing-disclosure/versions/[version]': ['legalVersion'],
+  '/terms/versions/[version]': ['legalVersion'],
+  '/pro/[alias]': ['agencyAlias'],
+  '/handover-protocol/verify/[protocolId]': ['handoverProtocol'],
+  // ── Ο ιδιωτικός χώρος `(me)`: client σελίδες, κρίνονται ΑΝΩΝΥΜΑ όπως τα 16 στατικά αδέλφια τους ──
+  // 🔑 Ο χρησμός δεν έχει persona «άνθρωπος χωρίς γραφείο». Το αποτέλεσμα λέει τι βλέπει ο ανώνυμος
+  //    (κέλυφος, 🔴 ratchet κατά ταυτότητα), ΟΧΙ τι βλέπει ο κάτοχος: αυτό παραμένει ΑΜΕΤΡΗΤΟ.
+  '/demands/[demandId]': ['demand'],
+  '/dossiers/[dossierId]': ['dossier'],
+  '/engagements/[engagementId]': ['engagement'],
+  '/messages/[threadId]': ['networkThread'],
+  '/offers/[offerId]': ['ownerProperty'],
+  '/offers/[offerId]/calendar': ['ownerProperty'],
+  '/offers/[offerId]/improve': ['ownerProperty'],
+  '/offers/[offerId]/tour': ['ownerProperty'],
+});
+
+/** Γιατί ένα δυναμικό πρότυπο ΔΕΝ δένεται με golden id — κλειστό σύνολο, κάθε τιμή με λόγο. */
+const UNBOUND_REASONS = Object.freeze({
+  /**
+   * Υπογεγραμμένο διαπιστευτήριο που ζει ΜΟΝΟ στο email του παραλήπτη: το API δεν το επιστρέφει,
+   * και η υπογραφή θέλει το μυστικό του `environment-contract`. Τα δεδομένα από πίσω τα διαβάζει ο
+   * server, άρα ούτε μάρτυρας (Γ6). Δένονται μόνο με σπορά που εκδίδει το ΙΔΙΟ το token.
+   */
+  MAIL_CREDENTIAL: 'mail-credential',
+  /** Χρειάζεται ΠΛΗΡΗ ροή τομέα (δημοσίευση, κοινοποίηση αρχείου, PDF)· μάρτυρας θα ήταν δεύτερη αλήθεια. */
+  DOMAIN_FIXTURE: 'domain-fixture',
+  /** Ανακατευθύνει ΠΑΝΤΑ, για κάθε id: ποτέ `surface-synthetic-id`, μετρούνται ως `route-redirected`. */
+  ALWAYS_REDIRECTS: 'always-redirects',
+});
+
+/**
+ * 🔑 **ΤΑ ΔΥΝΑΜΙΚΑ ΠΡΟΤΥΠΑ ΠΟΥ ΔΕΝ ΔΕΝΟΝΤΑΙ — ΔΗΛΩΜΕΝΑ, ΜΕ ΛΟΓΟ.**
+ *
+ * 🔴 **Το κενό που κλείνει (run `41349947612`):** το Γ1 κοιτούσε μόνο τα `/o`. Οι δημόσιες δυναμικές
+ * σελίδες έμπαιναν στον κάδο 🔶 χωρίς καμία απόφαση, 21 → 34, και το έμαθε **ο χρησμός, μετά το merge**.
+ * Τώρα νέα δυναμική σελίδα κοκκινίζει στο jest (Γ1, Γ1ε): ή δένεται, ή δηλώνεται εδώ με λόγο.
+ */
+const GOLDEN_UNBOUND = Object.freeze({
+  '/card-email/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/case-invite/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/contact/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/email/preferences/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/handover-invite/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/hours-question/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/invite/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/mandate/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/supply-invite/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/tour-invite/[token]': UNBOUND_REASONS.MAIL_CREDENTIAL,
+  '/listing/[id]': UNBOUND_REASONS.DOMAIN_FIXTURE,
+  '/listing/[id]/floorplan': UNBOUND_REASONS.DOMAIN_FIXTURE,
+  '/listing/[id]/photos': UNBOUND_REASONS.DOMAIN_FIXTURE,
+  '/listing/[id]/tour': UNBOUND_REASONS.DOMAIN_FIXTURE,
+  '/share/photo/[id]': UNBOUND_REASONS.DOMAIN_FIXTURE,
+  '/shared/[token]': UNBOUND_REASONS.DOMAIN_FIXTURE,
+  '/showcase/[token]': UNBOUND_REASONS.DOMAIN_FIXTURE,
+  '/supply-request/[token]': UNBOUND_REASONS.DOMAIN_FIXTURE,
+  '/[...unprefixed]': UNBOUND_REASONS.ALWAYS_REDIRECTS,
+  '/n/[notificationId]': UNBOUND_REASONS.ALWAYS_REDIRECTS,
 });
 
 /**
@@ -128,9 +201,15 @@ const GOLDEN_EPHEMERAL_SECRETS = Object.freeze(['ATTENDANCE_QR_SECRET']);
  * Οι τιμές της βαθμίδας `value` — μέλη κλειστού συνόλου τύπων (άγκυρα Γ2β: το
  * `profit_and_loss` ΕΙΝΑΙ μέλος του `ReportType`, `src/subapps/accounting/types/reports.ts` ·
  * άγκυρα Γ2γ: το `municipality:4501`, Δήμος Αθηναίων, ΥΠΑΡΧΕΙ στο ευρετήριο περιοχών της εικόνας
- * και έχει σελίδα αγοράς).
+ * και έχει σελίδα αγοράς · άγκυρα Γ2ζ: η έκδοση `1` ΥΠΑΡΧΕΙ για ΚΑΘΕ νομικό έγγραφο του μητρώου
+ * · άγκυρα Γ2η: το ψευδώνυμο = `COMPANY_ALIAS` του σπορέα personas).
  */
-const GOLDEN_VALUES = Object.freeze({ reportType: 'profit_and_loss', area: 'municipality:4501' });
+const GOLDEN_VALUES = Object.freeze({
+  reportType: 'profit_and_loss',
+  area: 'municipality:4501',
+  legalVersion: '1',
+  agencyAlias: 'alpha-techniki',
+});
 
 /** Η σταθερή ταυτότητα ενός τμήματος με golden id — ποτέ το ίδιο το id (αλλάζει ανά run). */
 function goldenSegment(entity) {
@@ -142,6 +221,8 @@ module.exports = {
   GOLDEN_ENTITIES,
   GOLDEN_TEMPLATES,
   GOLDEN_PUBLIC_TEMPLATES,
+  GOLDEN_UNBOUND,
+  UNBOUND_REASONS,
   GOLDEN_EPHEMERAL_SECRETS,
   GOLDEN_VALUES,
   goldenSegment,

@@ -5,6 +5,10 @@ import { RfqList } from '@/subapps/procurement/components/RfqList';
 import { useRfqs } from '@/subapps/procurement/hooks/useRfqs';
 import { PageContainer } from '@/core/containers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__rfqs.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export default function RfqsPage() {
   const { t } = useTranslation('procurement');

@@ -19,6 +19,10 @@ import type {
   CreateMaterialDTO,
   UpdateMaterialDTO,
 } from '@/subapps/procurement/types/material';
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__materials.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export default function MaterialsPage() {
   const { t } = useTranslation('procurement');

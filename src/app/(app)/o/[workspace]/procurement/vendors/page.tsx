@@ -14,6 +14,10 @@ import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { Contact } from '@/types/contacts';
 import type { VendorCardData } from '@/components/procurement/vendors/VendorCard';
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__vendors.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export default function VendorsPage() {
   const { t } = useTranslation('procurement');

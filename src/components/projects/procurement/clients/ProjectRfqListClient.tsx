@@ -20,6 +20,10 @@ import { RFQ_STATUS_TRANSITIONS } from '@/subapps/procurement/types/rfq';
 import { getNewRfqUrl } from '@/lib/navigation/procurement-urls';
 import { useStatusDrillParam } from './useStatusDrillParam';
 import { StatusDrillNotice } from './StatusDrillNotice';
+import routeSlice from '@/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export interface ProjectRfqListClientProps {
   projectId: string;

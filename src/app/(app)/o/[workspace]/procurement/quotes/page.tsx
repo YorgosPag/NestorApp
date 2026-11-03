@@ -15,6 +15,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useConnectivity } from '@/hooks/useConnectivity';
 import { toast } from 'sonner';
 import type { Quote } from '@/subapps/procurement/types/quote';
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__quotes.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 const ACTION_REQUIRED_STATUSES = new Set(['submitted', 'under_review', 'expired']);
 

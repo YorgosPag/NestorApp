@@ -1,0 +1,376 @@
+{
+  "common-shared": {
+    "filters": {
+      "all": "Όλες",
+      "channels": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των καναλιών",
+        "ariaLabel": "Φίλτρα καναλιών",
+        "email": "Email",
+        "emailTooltip": "Email μηνύματα",
+        "sms": "SMS",
+        "smsTooltip": "SMS μηνύματα",
+        "telegram": "Telegram",
+        "telegramTooltip": "Telegram μηνύματα"
+      },
+      "common": {
+        "area": "Εμβαδόν",
+        "building": "Κτίριο",
+        "level": "Επίπεδο",
+        "price": "Τιμή",
+        "project": "Έργο",
+        "search": "Αναζήτηση",
+        "type": "Τύπος",
+        "updateDate": "Ημ/νία Ενημέρωσης"
+      },
+      "contactTypes": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των επαφών",
+        "ariaLabel": "Φίλτρα τύπου επαφής",
+        "company": "Εταιρεία",
+        "individual": "Φυσικό",
+        "service": "Υπηρεσία"
+      },
+      "filterBy": "Φιλτράρισμα:",
+      "propertyTypes": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των τύπων",
+        "apartment": "Διαμέρισμα",
+        "apartmentTooltip": "Διαμέρισμα",
+        "ariaLabel": "Φίλτρα τύπου ακινήτου",
+        "maisonette": "Μεζονέτα",
+        "maisonetteTooltip": "Μεζονέτα",
+        "office": "Γραφείο",
+        "officeTooltip": "Γραφείο",
+        "shop": "Κατάστημα",
+        "shopTooltip": "Κατάστημα",
+        "studio": "Studio",
+        "studioTooltip": "Studio / Γκαρσονιέρα"
+      },
+      "title": "Φίλτρα",
+      "typeAriaLabel": "Φίλτρα τύπου",
+      "typeLabel": "Τύπος:"
+    },
+    "toolbar": {
+      "labels": {
+        "favoritesManagement": "Διαχείριση αγαπημένων",
+        "share": "Κοινοποίηση"
+      },
+      "search": {
+        "placeholder": "Αναζήτηση..."
+      },
+      "sort": {
+        "date": {
+          "asc": "Παλαιότερα πρώτα",
+          "desc": "Νεότερα πρώτα"
+        },
+        "name": {
+          "asc": "Αύξουσα κατά όνομα",
+          "desc": "Φθίνουσα κατά όνομα"
+        },
+        "number": {
+          "asc": "Αύξουσα κατά αριθμό",
+          "desc": "Φθίνουσα κατά αριθμό"
+        },
+        "status": {
+          "asc": "Κατάσταση (Α-Ω)",
+          "desc": "Κατάσταση (Ω-Α)"
+        },
+        "value": {
+          "asc": "Αύξουσα κατά αξία",
+          "desc": "Φθίνουσα κατά αξία"
+        }
+      },
+      "tooltips": {
+        "archive": "Αρχειοθέτηση",
+        "copy": "Αντιγραφή",
+        "exportData": "Εξαγωγή δεδομένων",
+        "favorites": "Προσθήκη στα αγαπημένα",
+        "filters": "Φίλτρα",
+        "help": "Βοήθεια",
+        "preview": "Προεπισκόπηση",
+        "refreshData": "Ανανέωση δεδομένων",
+        "reports": "Αναφορές",
+        "settings": "Ρυθμίσεις",
+        "sorting": "Ταξινόμηση"
+      },
+      "ui": {
+        "clearAllCount": "Καθαρισμός ({count})",
+        "itemsSelected": "{count} επιλεγμένα"
+      }
+    }
+  },
+  "crm": {
+    "tasks": {
+      "quickFilters": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των δραστηριοτήτων",
+        "ariaLabel": "Γρήγορα φίλτρα εργασιών",
+        "completed": "Ολοκληρωμένα",
+        "completedTooltip": "Ολοκληρωμένες εργασίες",
+        "inProgress": "Σε εξέλιξη",
+        "inProgressTooltip": "Εργασίες σε εξέλιξη",
+        "overdue": "Εκπρόθεσμα",
+        "overdueTooltip": "Εκπρόθεσμες εργασίες",
+        "pending": "Εκκρεμείς",
+        "pendingTooltip": "Εκκρεμείς εργασίες",
+        "today": "Σήμερα",
+        "todayTooltip": "Εργασίες για σήμερα"
+      }
+    }
+  },
+  "filters": {
+    "clearFilters": "Καθαρισμός"
+  },
+  "procurement": {
+    "categories": {
+      "OIK-1": "Χωματουργικά",
+      "OIK-10": "Μονώσεις",
+      "OIK-11": "Σοβατεπί / Ποδιές",
+      "OIK-12": "Μεταλλικά",
+      "OIK-13": "Ανελκυστήρες",
+      "OIK-14": "Πισίνες",
+      "OIK-15": "Φωτοβολταϊκά",
+      "OIK-16": "Ξυλουργικά / Κουζίνες",
+      "OIK-2": "Σκυροδέματα",
+      "OIK-3": "Τοιχοποιίες",
+      "OIK-4": "Επιχρίσματα",
+      "OIK-5": "Πατώματα / Δάπεδα",
+      "OIK-6": "Κουφώματα",
+      "OIK-7": "Χρωματισμοί",
+      "OIK-8": "Υδραυλικά",
+      "OIK-9": "Ηλεκτρολογικά",
+      "OTHER": "Χωρίς κωδικό κόστους",
+      "SOFT-CONTINGENCY": "Απρόβλεπτα",
+      "SOFT-DESIGN": "Μελέτες & επίβλεψη",
+      "SOFT-EFKA": "Εισφορές ΕΦΚΑ",
+      "SOFT-FINANCE": "Χρηματοδότηση & τόκοι",
+      "SOFT-INSURANCE": "Ασφάλιση έργου",
+      "SOFT-LAND": "Οικόπεδο",
+      "SOFT-LEGAL": "Νομικά & συμβολαιογραφικά",
+      "SOFT-MARKETING": "Προβολή & μεσιτικά",
+      "SOFT-PERMITS": "Άδειες & τέλη",
+      "SOFT-UTILITIES": "Συνδέσεις ΔΕΚΟ"
+    },
+    "filters": {
+      "agreementStatus": {
+        "active": "Ενεργές",
+        "activeTooltip": "Ενεργές συμβάσεις σε ισχύ",
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των συμβάσεων",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες συμβάσεις (μη ενεργές ακόμη)",
+        "expired": "Ληγμένες",
+        "expiredTooltip": "Συμβάσεις που έχουν λήξει",
+        "expiring": "Λήγουν",
+        "expiringTooltip": "Συμβάσεις που λήγουν τις επόμενες 30 ημέρες"
+      },
+      "agreementStatusAriaLabel": "Φίλτρα κατάστασης σύμβασης",
+      "materialStatus": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των υλικών",
+        "inactive": "Ανενεργά",
+        "inactiveTooltip": "Υλικά χωρίς αγορές πάνω από 180 ημέρες",
+        "no_supplier": "Χωρίς προμηθευτή",
+        "no_supplierTooltip": "Υλικά χωρίς ορισμένους προτιμώμενους προμηθευτές",
+        "recently_used": "Πρόσφατα",
+        "recently_usedTooltip": "Υλικά με αγορά τις τελευταίες 90 ημέρες"
+      },
+      "materialStatusAriaLabel": "Φίλτρα κατάστασης υλικού",
+      "poStatus": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των παραγγελιών",
+        "approved": "Εγκεκριμένες",
+        "approvedTooltip": "Εγκεκριμένες παραγγελίες (έτοιμες για αποστολή)",
+        "cancelled": "Ακυρωμένες",
+        "cancelledTooltip": "Ακυρωμένες παραγγελίες",
+        "closed": "Ολοκληρωμένες",
+        "closedTooltip": "Έχουν τιμολογηθεί και κλείσει",
+        "delivered": "Παραδοθείσες",
+        "deliveredTooltip": "Έχουν παραληφθεί πλήρως",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες παραγγελίες (μη εγκεκριμένες)",
+        "ordered": "Παραγγελμένες",
+        "orderedTooltip": "Έχουν αποσταλεί στον προμηθευτή",
+        "partially_delivered": "Μερική Παραλαβή",
+        "partially_deliveredTooltip": "Έχει παραληφθεί μέρος της παραγγελίας"
+      },
+      "poStatusAriaLabel": "Φίλτρα κατάστασης παραγγελίας",
+      "vendorStatus": {
+        "active": "Ενεργοί",
+        "activeTooltip": "Προμηθευτές με παραγγελίες τους τελευταίους 12 μήνες",
+        "all": "Όλοι",
+        "allTooltip": "Εμφάνιση όλων των προμηθευτών",
+        "inactive": "Ανενεργοί",
+        "inactiveTooltip": "Προμηθευτές χωρίς πρόσφατες παραγγελίες",
+        "new": "Νέοι",
+        "newTooltip": "Προμηθευτές που προστέθηκαν τις τελευταίες 30 ημέρες",
+        "preferred": "Προτιμώμενοι",
+        "preferredTooltip": "Κορυφαίοι προμηθευτές βάσει συνολικής δαπάνης"
+      },
+      "vendorStatusAriaLabel": "Φίλτρα κατάστασης προμηθευτή"
+    },
+    "hub": {
+      "frameworkAgreements": {
+        "create": "Νέα Σύμβαση",
+        "searchPlaceholder": "Αναζήτηση σύμβασης (αριθμός ή τίτλος)..."
+      },
+      "materialCatalog": {
+        "avgPrice": "Μέση Τιμή",
+        "cardAriaLabel": "Υλικό {name} ({code})",
+        "create": "Νέο Υλικό",
+        "delete": "Διαγραφή",
+        "deleteConfirm": {
+          "description": "Σίγουρα θέλετε να διαγράψετε το υλικό «{name}»; Η ενέργεια αυτή θα κρύψει το υλικό από τον κατάλογο.",
+          "title": "Διαγραφή Υλικού"
+        },
+        "description": "Ενιαίος κατάλογος με κωδικούς ΑΤΟΕ, ιστορικό τιμών και προτιμώμενους προμηθευτές",
+        "detail": {
+          "emptyDescription": "Επιλέξτε ένα υλικό από τη λίστα για να δείτε τις λεπτομέρειες",
+          "emptyTitle": "Επιλέξτε υλικό",
+          "lastPurchase": "Τελευταία Αγορά",
+          "noPreferredSuppliers": "Δεν έχουν οριστεί προτιμώμενοι προμηθευτές",
+          "preferredSuppliers": "Προτιμώμενοι Προμηθευτές",
+          "priceHistory": "Ιστορικό Τιμών"
+        },
+        "edit": "Επεξεργασία",
+        "emptySearch": "Δεν βρέθηκαν υλικά",
+        "form": {
+          "addSupplier": "Προσθήκη",
+          "addSupplierPlaceholder": "Επιλέξτε προμηθευτή...",
+          "atoeCategory": "Κατηγορία ΑΤΟΕ",
+          "cancel": "Ακύρωση",
+          "code": "Κωδικός",
+          "codePlaceholder": "π.χ. CEM-001",
+          "create": "Δημιουργία",
+          "createTitle": "Νέο Υλικό",
+          "description": "Συμπληρώστε τα στοιχεία του υλικού. Ο κωδικός πρέπει να είναι μοναδικός.",
+          "descriptionField": "Περιγραφή",
+          "descriptionPlaceholder": "Πρόσθετες πληροφορίες (προαιρετικά)",
+          "editTitle": "Επεξεργασία Υλικού",
+          "lastPurchaseDate": "Τελευταία Αγορά",
+          "name": "Όνομα",
+          "namePlaceholder": "π.χ. Τσιμέντο Πόρτλαντ 32.5",
+          "noSupplier": "Δεν βρέθηκαν προμηθευτές",
+          "preferredSuppliers": "Προτιμώμενοι Προμηθευτές",
+          "removeSupplier": "Αφαίρεση",
+          "save": "Αποθήκευση",
+          "saveFailed": "Η αποθήκευση απέτυχε. Δοκιμάστε ξανά.",
+          "saving": "Αποθήκευση...",
+          "unit": "Μονάδα"
+        },
+        "lastPrice": "Τελευταία Τιμή",
+        "noMaterialsYet": "Δεν υπάρχουν εγγεγραμμένα υλικά",
+        "searchPlaceholder": "Αναζήτηση υλικού (κωδικός ή όνομα)...",
+        "title": "Κατάλογος Υλικών",
+        "toast": {
+          "created": "Το υλικό δημιουργήθηκε",
+          "deleted": "Το υλικό διαγράφηκε",
+          "updated": "Το υλικό ενημερώθηκε"
+        }
+      },
+      "vendorMaster": {
+        "addVendorHint": "Προσθέστε επαφές με τύπο Προμηθευτής στον κατάλογο επαφών",
+        "searchPlaceholder": "Αναζήτηση προμηθευτή..."
+      }
+    },
+    "list": {
+      "createPO": "Νέα Παραγγελία",
+      "searchPlaceholder": "Αναζήτηση παραγγελίας ή προμηθευτή..."
+    },
+    "nav": {
+      "agreements": "Συμβάσεις",
+      "analytics": "Αναλυτικά",
+      "ariaLabel": "Ενότητες προμηθειών",
+      "hub": "Hub Προμηθειών",
+      "materials": "Υλικά",
+      "purchaseOrders": "Παραγγελίες",
+      "quotes": "Προσφορές",
+      "rfqs": "RFQ",
+      "vendors": "Προμηθευτές"
+    }
+  },
+  "quotes": {
+    "filters": {
+      "quoteStatus": {
+        "accepted": "Εγκεκριμένες",
+        "acceptedTooltip": "Έχουν εγκριθεί",
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των προσφορών",
+        "archived": "Αρχειοθετημένες",
+        "archivedTooltip": "Έχουν αρχειοθετηθεί",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες προσφορές (μη απεσταλμένες)",
+        "expired": "Ληγμένες",
+        "expiredTooltip": "Έχουν λήξει — απαιτείται απόφαση (ανανέωση/αρχειοθέτηση)",
+        "rejected": "Απορριφθείσες",
+        "rejectedTooltip": "Έχουν απορριφθεί",
+        "sent_to_vendor": "Απεσταλμένες",
+        "sent_to_vendorTooltip": "Έχουν αποσταλεί στον προμηθευτή — αναμονή υποβολής",
+        "submitted": "Υποβληθείσες",
+        "submittedTooltip": "Νέα προσφορά υποβλήθηκε — απαιτεί έλεγχο",
+        "under_review": "Υπό Εξέταση",
+        "under_reviewTooltip": "Σε εξέλιξη αξιολόγηση — απαιτείται απόφαση"
+      },
+      "quoteStatusAriaLabel": "Φίλτρα κατάστασης προσφοράς"
+    },
+    "list": {
+      "createQuote": "Νέα Προσφορά",
+      "searchPlaceholder": "Αναζήτηση προσφοράς, προμηθευτή ή ειδικότητας..."
+    }
+  },
+  "uom": {
+    "name": {
+      "bag": "Σακί",
+      "box": "Κουτί",
+      "container": "Δοχείο",
+      "day": "Ημέρα",
+      "g": "Γραμμάριο",
+      "hr": "Ώρα",
+      "kW": "Κιλοβάτ",
+      "kWp": "Κιλοβάτ αιχμής",
+      "kg": "Κιλό",
+      "lt": "Λίτρο",
+      "lump": "Κατ' αποκοπή",
+      "m": "Μέτρο",
+      "m2": "Τετραγωνικό μέτρο",
+      "m3": "Κυβικό μέτρο",
+      "ml": "Χιλιοστόλιτρο",
+      "month": "Μήνας",
+      "pack": "Πακέτο",
+      "pair": "Ζεύγος",
+      "pallet": "Παλέτα",
+      "pcs": "Τεμάχιο",
+      "point": "Σημείο",
+      "roll": "Ρολό",
+      "set": "Σετ",
+      "ton": "Τόνος"
+    },
+    "symbol": {
+      "bag": "σακιά",
+      "box": "κουτιά",
+      "container": "δοχεία",
+      "day": "ημ.",
+      "g": "g",
+      "hr": "ώρ.",
+      "kW": "kW",
+      "kWp": "kWp",
+      "kg": "kg",
+      "lt": "lt",
+      "lump": "κ.α.",
+      "m": "μ.",
+      "m2": "τ.μ.",
+      "m3": "κ.μ.",
+      "ml": "ml",
+      "month": "μήν.",
+      "pack": "πακέτα",
+      "pair": "ζεύγη",
+      "pallet": "παλέτες",
+      "pcs": "τεμ.",
+      "point": "σημεία",
+      "roll": "ρολά",
+      "set": "σετ",
+      "ton": "t"
+    }
+  }
+}

@@ -20,6 +20,10 @@ import type {
   CreateFrameworkAgreementDTO,
   UpdateFrameworkAgreementDTO,
 } from '@/subapps/procurement/types/framework-agreement';
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__agreements.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export default function AgreementsPage() {
   const { t } = useTranslation('procurement');

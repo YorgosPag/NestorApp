@@ -23,6 +23,10 @@ import { BuyoutSummary } from './BuyoutSummary';
 import { BuyoutTable } from './BuyoutTable';
 import { BuyoutActionBar } from './BuyoutActionBar';
 import { countInProgress, filterBuyoutItems, groupBuyoutItems, pruneSelection, toggleGroupSelection, type BuyoutGroup } from './buyout-view';
+import routeSlice from '@/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 interface Props {
   projectId: string;

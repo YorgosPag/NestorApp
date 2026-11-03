@@ -39,6 +39,10 @@ import { usePhotoCapture } from '@/hooks/usePhotoCapture';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { QrCheckInResponse } from '@/components/projects/ika/contracts';
 import { STATUS_CLASSES, formatCheckInDateGreek } from './check-in-styles';
+import routeSlice from '@/i18n/generated/routes/attendance__check-in__token.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 // =============================================================================
 // TYPES

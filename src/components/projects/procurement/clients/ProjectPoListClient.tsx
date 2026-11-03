@@ -21,6 +21,10 @@ import { getPoDetailUrl } from '@/lib/navigation/procurement-urls';
 import { PO_STATUS_TRANSITIONS, type AnalyticsDrillFilters } from '@/types/procurement';
 import { useStatusDrillParam } from './useStatusDrillParam';
 import { StatusDrillNotice } from './StatusDrillNotice';
+import routeSlice from '@/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export interface ProjectPoListClientProps {
   projectId: string;

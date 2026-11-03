@@ -20,7 +20,7 @@
  */
 
 const { SYNTHETIC_SEGMENT } = require('./states');
-const { GOLDEN_ENTITIES, GOLDEN_TEMPLATES, GOLDEN_TIERS, goldenSegment } = require('./golden-catalog');
+const { GOLDEN_ENTITIES, GOLDEN_TEMPLATES, GOLDEN_TIERS, GOLDEN_UNBOUND, goldenSegment } = require('./golden-catalog');
 
 function fail(message) {
   throw new Error(`CHECK 3.51 Χ (ADR-875 §10): ${message}`);
@@ -57,7 +57,8 @@ function parseGolden(golden) {
 /** Ο κατάλογος πρέπει να αντιστοιχεί σε υπαρκτά πρότυπα — αλλιώς είναι μπαγιάτικος. */
 function assertCatalogMatchesRoutes(routes) {
   const templates = new Set(routes.map((route) => route.template));
-  const stale = Object.keys(GOLDEN_TEMPLATES).filter((template) => !templates.has(template));
+  const declared = [...Object.keys(GOLDEN_TEMPLATES), ...Object.keys(GOLDEN_UNBOUND)];
+  const stale = declared.filter((template) => !templates.has(template));
   if (stale.length > 0) fail(`μπαγιάτικος κατάλογος golden — πρότυπα που δεν υπάρχουν πια: ${stale.join(', ')}`);
 }
 

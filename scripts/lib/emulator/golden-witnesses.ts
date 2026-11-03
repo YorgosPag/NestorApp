@@ -42,6 +42,10 @@ export const WITNESS_COLLECTIONS = {
   quote: COLLECTIONS.QUOTES,
   engagement: SUBCOLLECTIONS.PROJECT_ENGAGEMENTS,
   file: COLLECTIONS.FILES,
+  demand: COLLECTIONS.PROPERTY_DEMANDS,
+  dossier: COLLECTIONS.PROPERTY_DOSSIERS,
+  networkThread: COLLECTIONS.NETWORK_THREADS,
+  handoverProtocol: COLLECTIONS.PROPERTY_HANDOVER_PROTOCOLS,
 } as const;
 
 export type WitnessEntity = keyof typeof WITNESS_COLLECTIONS;
@@ -68,8 +72,14 @@ export interface WitnessRefs extends WitnessCore {
 
 export const GOLDEN_MARK = 'ADR-875 golden';
 
-export function witnessId(prefix: string): string {
-  return `${prefix}_alpha_golden`;
+/**
+ * ⚠️ Το `/handover-protocol/verify/[protocolId]` δέχεται ΜΟΝΟ έγκυρο `phpr_<uuid v4>`, αλλιώς 404
+ * στην ίδια τη σελίδα (άγκυρα Γ2θ) — άρα εκεί η μορφή `<πρόθεμα>_alpha_golden` δεν θα έκρινε τίποτα.
+ */
+const WITNESS_UUID: Partial<Record<WitnessEntity, string>> = { handoverProtocol: '00000000-0000-4000-8000-0000000a1fa0' };
+
+export function witnessId(entity: WitnessEntity, prefix: string): string {
+  return `${prefix}_${WITNESS_UUID[entity] ?? 'alpha_golden'}`;
 }
 
 function coreFields(entity: WitnessEntity, core: WitnessCore): Record<string, unknown> & { name: string } {

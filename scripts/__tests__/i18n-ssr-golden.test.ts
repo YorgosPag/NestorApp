@@ -18,10 +18,13 @@ import * as path from 'node:path';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex } from '@/lib/geo/admin-area-index-file';
+import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import { hasAreaMarketPage } from '@/types/area-market';
+import legalManifest from '@/config/legal-document-versions/manifest.json';
 
-import { WITNESS_COLLECTIONS, witnessCollectionPath } from '../lib/emulator/golden-witnesses';
+import { WITNESS_COLLECTIONS, witnessCollectionPath, witnessId } from '../lib/emulator/golden-witnesses';
+import { COMPANY_ALIAS } from '../lib/emulator/personas';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const GC = require('../lib/i18n-ssr/golden-catalog');
@@ -32,6 +35,8 @@ const O = require('../lib/i18n-ssr/oracle');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ID = require('../lib/i18n-ssr/identity');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const ST = require('../lib/i18n-ssr/states');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { withServer } = require('./i18n-ssr-probe-fixture');
 
 interface EntitySpec { tier: string; prefix: string | null }
@@ -41,7 +46,9 @@ const ROOT = path.join(__dirname, '..', '..');
 const ENTITIES = GC.GOLDEN_ENTITIES as Record<string, EntitySpec>;
 const TEMPLATES = GC.GOLDEN_TEMPLATES as Record<string, string[]>;
 const PUBLIC = GC.GOLDEN_PUBLIC_TEMPLATES as readonly string[];
+const UNBOUND = GC.GOLDEN_UNBOUND as Record<string, string>;
 const PERSONA = { class: 'organization:company_admin', email: 'a@b.local', workspaceSegment: 'alpha-techniki' };
+const SECOND_PERSONA = { ...PERSONA, class: 'organization:internal_user', email: 'c@b.local' };
 
 const validGolden = (): Record<string, string> =>
   Object.fromEntries(
@@ -51,10 +58,11 @@ const validGolden = (): Record<string, string> =>
     ]),
   );
 
-const workspaceDynamicTemplates = (): string[] =>
+/** Κάθε πρότυπο με δυναμικό τμήμα ΠΕΡΑ από το `[workspace]`, που το γεμίζει η συνεδρία. */
+const dynamicTemplates = (): string[] =>
   (O.enumerateRoutes(ROOT) as Route[])
     .map((route) => route.template)
-    .filter((template) => template.startsWith('/o/[workspace]/') && template.slice('/o/[workspace]'.length).includes('['))
+    .filter((template) => template.replace('[workspace]', '').includes('['))
     .sort();
 
 // ===========================================================================
@@ -62,9 +70,28 @@ const workspaceDynamicTemplates = (): string[] =>
 // ===========================================================================
 
 describe('Γ — ο κατάλογος golden απέναντι στο src/', () => {
-  test('Γ1 — ΑΚΡΙΒΩΣ τα δυναμικά πρότυπα /o του enumerateRoutes + οι δημόσιες πόρτες: κανένα άκριτο, κανένα μπαγιάτικο', () => {
-    expect(Object.keys(TEMPLATES).sort()).toEqual([...workspaceDynamicTemplates(), ...PUBLIC].sort());
+  test('Γ1 — κατάλογος + δηλωμένα αδέσμευτα = ΑΚΡΙΒΩΣ τα δυναμικά πρότυπα: κανένα αδήλωτο, κανένα μπαγιάτικο', () => {
+    expect([...Object.keys(TEMPLATES), ...Object.keys(UNBOUND)].sort()).toEqual(dynamicTemplates());
     expect(() => GB.assertCatalogMatchesRoutes(O.enumerateRoutes(ROOT))).not.toThrow();
+  });
+
+  test('Γ1ε — ΠΡΟΒΟΛΗ ΣΤΟ JEST: τα 🔶 που θα μετρήσει ο χρησμός χωρούν στο ταβάνι, ΠΡΙΝ το merge', () => {
+    // 🔑 Το ταβάνι έως τώρα κοκκίνιζε μόνο στον χρησμό, μετά το merge (run 41349947612: 34 > 25).
+    const expanded = ID.expandForPersonas(O.enumerateRoutes(ROOT), [PERSONA, SECOND_PERSONA], validGolden()) as Route[];
+    const counted = expanded.filter((route) => route.dynamic && UNBOUND[route.template] !== GC.UNBOUND_REASONS.ALWAYS_REDIRECTS);
+    const ceiling = Math.floor(ST.X_COUNTED_CEILING[ST.X_STATES.SYNTHETIC_ID] * expanded.length);
+    expect(counted.length).toBeLessThanOrEqual(ceiling);
+    expect(counted.map((route) => route.template).sort()).toEqual(
+      Object.entries(UNBOUND).filter(([, reason]) => reason !== GC.UNBOUND_REASONS.ALWAYS_REDIRECTS).map(([template]) => template).sort(),
+    );
+  });
+
+  test('Γ1στ — κάθε λόγος μη-δεσίματος ανήκει στο κλειστό σύνολο, και κανένα πρότυπο δεν είναι και στα δύο', () => {
+    const reasons = Object.values(GC.UNBOUND_REASONS as Record<string, string>);
+    for (const [template, reason] of Object.entries(UNBOUND)) {
+      expect([template, reasons.includes(reason)]).toEqual([template, true]);
+      expect([template, template in TEMPLATES]).toEqual([template, false]);
+    }
   });
 
   test('Γ1γ — ADR-876: οι δημόσιες πόρτες με token είναι ΕΚΤΟΣ χώρου και κρίνονται ΑΝΩΝΥΜΑ', () => {
@@ -72,16 +99,17 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
     //    και ο χρησμός τα έκρινε με συνεδρία μέλους — θεατή που ο παραλήπτης ΔΕΝ είναι ποτέ.
     // ADR-876 §5 Φ7: η πύλη προμηθευτή έφυγε από τον κατάλογο — ζει στο ΣΤΑΤΙΚΟ `/vendor/quote`, με το
     //    διαπιστευτήριο στο fragment (ο server δεν το βλέπει ⇒ τίποτα να δεθεί με golden).
-    expect([...PUBLIC].sort()).toEqual(['/area/[id]', '/attendance/check-in/[token]']);
+    expect(PUBLIC).toEqual(expect.arrayContaining(['/area/[id]', '/attendance/check-in/[token]', '/shared/po/[token]']));
     const expanded = ID.expandForPersonas(
       (O.enumerateRoutes(ROOT) as Route[]).filter((route) => PUBLIC.includes(route.template)),
       [PERSONA],
       validGolden(),
     ) as Array<Route & { persona?: string; fetchUrl?: string }>;
-    expect(expanded.map((route) => [route.url, route.persona, route.dynamic])).toEqual([
-      ['/area/golden-area', undefined, false],
-      ['/attendance/check-in/golden-attendanceToken', undefined, false],
-    ]);
+    expect(expanded).toHaveLength(PUBLIC.length);
+    expect(expanded.every((route) => route.persona === undefined && !route.dynamic)).toBe(true);
+    expect(expanded.map((route) => route.url)).toEqual(
+      expect.arrayContaining(['/area/golden-area', '/attendance/check-in/golden-attendanceToken', '/shared/po/golden-poShareToken']),
+    );
     expect(expanded.every((route) => !route.fetchUrl?.includes('golden-'))).toBe(true);
   });
 
@@ -115,6 +143,10 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
       quote: ENTERPRISE_ID_PREFIXES.QUOTE,
       engagement: ENTERPRISE_ID_PREFIXES.ENGAGEMENT,
       file: ENTERPRISE_ID_PREFIXES.FILE,
+      demand: ENTERPRISE_ID_PREFIXES.PROPERTY_DEMAND,
+      dossier: ENTERPRISE_ID_PREFIXES.PROPERTY_DOSSIER,
+      networkThread: ENTERPRISE_ID_PREFIXES.NETWORK_THREAD,
+      handoverProtocol: ENTERPRISE_ID_PREFIXES.PROPERTY_HANDOVER_PROTOCOL,
     };
     const prefixed = Object.fromEntries(Object.entries(ENTITIES).filter(([, spec]) => spec.prefix).map(([entity, spec]) => [entity, spec.prefix]));
     expect(prefixed).toEqual(authority);
@@ -141,6 +173,27 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
       fetchUrl: '/area/municipality%3A4501',
       dynamic: false,
     });
+  });
+
+  test('Γ2ζ — η έκδοση ΥΠΑΡΧΕΙ για ΚΑΘΕ νομικό έγγραφο του μητρώου, αλλιώς η σελίδα δείχνει «δεν υπάρχει»', () => {
+    const version = Number(GC.GOLDEN_VALUES.legalVersion);
+    const documents = legalManifest.documents as Record<string, ReadonlyArray<{ version: number }>>;
+    for (const [document, rows] of Object.entries(documents)) {
+      expect([document, rows.some((row) => row.version === version)]).toEqual([document, true]);
+    }
+    const versionPages = dynamicTemplates().filter((template) => template.endsWith('/versions/[version]'));
+    expect(versionPages).toHaveLength(Object.keys(documents).length);
+    for (const template of versionPages) expect([template, TEMPLATES[template]]).toEqual([template, ['legalVersion']]);
+  });
+
+  test('Γ2η — το ψευδώνυμο = ο χώρος που έσπειρε ο σπορέας personas (αλλιώς το /pro κρίνει «δεν βρέθηκε»)', () => {
+    expect(GC.GOLDEN_VALUES.agencyAlias).toBe(COMPANY_ALIAS);
+  });
+
+  test('Γ2θ — ο μάρτυρας πρωτοκόλλου είναι ΕΓΚΥΡΟ id: η σελίδα δέχεται μόνο `phpr_<uuid v4>`, αλλιώς 404', () => {
+    const prefix = ENTERPRISE_ID_PREFIXES.PROPERTY_HANDOVER_PROTOCOL;
+    expect(enterpriseIdFromRequest(witnessId('handoverProtocol', prefix), prefix)).not.toBeNull();
+    expect(witnessId('building', ENTERPRISE_ID_PREFIXES.BUILDING)).toBe('bldg_alpha_golden');
   });
 
   test('Γ2ε — η συμμετοχή γράφεται ΚΑΤΩ από το έργο, και χωρίς έργο η σπορά αρνείται', () => {
@@ -289,11 +342,11 @@ function destructuredParams(file: string): string[] {
   return names;
 }
 
-/** page.tsx + κάθε layout.tsx από το `[workspace]` μέχρι τη σελίδα. */
+/** page.tsx + κάθε layout.tsx από τη σελίδα μέχρι το `src/app` — και για τις δημόσιες πόρτες. */
 function serverChain(pageFile: string): string[] {
-  const workspaceDir = path.join(ROOT, 'src', 'app', '(app)', 'o', '[workspace]');
+  const appDir = path.join(ROOT, 'src', 'app');
   const chain = [pageFile];
-  for (let dir = path.dirname(pageFile); dir.startsWith(workspaceDir) && dir !== workspaceDir; dir = path.dirname(dir)) {
+  for (let dir = path.dirname(pageFile); dir.startsWith(appDir) && dir !== appDir; dir = path.dirname(dir)) {
     const layout = path.join(dir, 'layout.tsx');
     if (fs.existsSync(layout)) chain.push(layout);
   }

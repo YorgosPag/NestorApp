@@ -6,6 +6,10 @@ import { useSearchParams } from 'next/navigation';
 import { RfqBuilder } from '@/subapps/procurement/components/RfqBuilder';
 import type { RfqBuilderInitialState } from '@/subapps/procurement/components/RfqBuilder';
 import { Spinner } from '@/components/ui/spinner';
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 export default function NewRfqPage() {
   const router = useRouter();

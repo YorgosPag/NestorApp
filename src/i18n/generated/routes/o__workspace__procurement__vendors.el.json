@@ -1,0 +1,270 @@
+{
+  "common-shared": {
+    "filters": {
+      "all": "Όλες",
+      "channels": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των καναλιών",
+        "ariaLabel": "Φίλτρα καναλιών",
+        "email": "Email",
+        "emailTooltip": "Email μηνύματα",
+        "sms": "SMS",
+        "smsTooltip": "SMS μηνύματα",
+        "telegram": "Telegram",
+        "telegramTooltip": "Telegram μηνύματα"
+      },
+      "common": {
+        "area": "Εμβαδόν",
+        "building": "Κτίριο",
+        "level": "Επίπεδο",
+        "price": "Τιμή",
+        "project": "Έργο",
+        "search": "Αναζήτηση",
+        "type": "Τύπος",
+        "updateDate": "Ημ/νία Ενημέρωσης"
+      },
+      "contactTypes": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των επαφών",
+        "ariaLabel": "Φίλτρα τύπου επαφής",
+        "company": "Εταιρεία",
+        "individual": "Φυσικό",
+        "service": "Υπηρεσία"
+      },
+      "filterBy": "Φιλτράρισμα:",
+      "propertyTypes": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των τύπων",
+        "apartment": "Διαμέρισμα",
+        "apartmentTooltip": "Διαμέρισμα",
+        "ariaLabel": "Φίλτρα τύπου ακινήτου",
+        "maisonette": "Μεζονέτα",
+        "maisonetteTooltip": "Μεζονέτα",
+        "office": "Γραφείο",
+        "officeTooltip": "Γραφείο",
+        "shop": "Κατάστημα",
+        "shopTooltip": "Κατάστημα",
+        "studio": "Studio",
+        "studioTooltip": "Studio / Γκαρσονιέρα"
+      },
+      "title": "Φίλτρα",
+      "typeAriaLabel": "Φίλτρα τύπου",
+      "typeLabel": "Τύπος:"
+    },
+    "toolbar": {
+      "labels": {
+        "favoritesManagement": "Διαχείριση αγαπημένων",
+        "share": "Κοινοποίηση"
+      },
+      "search": {
+        "placeholder": "Αναζήτηση..."
+      },
+      "sort": {
+        "date": {
+          "asc": "Παλαιότερα πρώτα",
+          "desc": "Νεότερα πρώτα"
+        },
+        "name": {
+          "asc": "Αύξουσα κατά όνομα",
+          "desc": "Φθίνουσα κατά όνομα"
+        },
+        "number": {
+          "asc": "Αύξουσα κατά αριθμό",
+          "desc": "Φθίνουσα κατά αριθμό"
+        },
+        "status": {
+          "asc": "Κατάσταση (Α-Ω)",
+          "desc": "Κατάσταση (Ω-Α)"
+        },
+        "value": {
+          "asc": "Αύξουσα κατά αξία",
+          "desc": "Φθίνουσα κατά αξία"
+        }
+      },
+      "tooltips": {
+        "archive": "Αρχειοθέτηση",
+        "copy": "Αντιγραφή",
+        "exportData": "Εξαγωγή δεδομένων",
+        "favorites": "Προσθήκη στα αγαπημένα",
+        "filters": "Φίλτρα",
+        "help": "Βοήθεια",
+        "preview": "Προεπισκόπηση",
+        "refreshData": "Ανανέωση δεδομένων",
+        "reports": "Αναφορές",
+        "settings": "Ρυθμίσεις",
+        "sorting": "Ταξινόμηση"
+      },
+      "ui": {
+        "clearAllCount": "Καθαρισμός ({count})",
+        "itemsSelected": "{count} επιλεγμένα"
+      }
+    }
+  },
+  "crm": {
+    "tasks": {
+      "quickFilters": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των δραστηριοτήτων",
+        "ariaLabel": "Γρήγορα φίλτρα εργασιών",
+        "completed": "Ολοκληρωμένα",
+        "completedTooltip": "Ολοκληρωμένες εργασίες",
+        "inProgress": "Σε εξέλιξη",
+        "inProgressTooltip": "Εργασίες σε εξέλιξη",
+        "overdue": "Εκπρόθεσμα",
+        "overdueTooltip": "Εκπρόθεσμες εργασίες",
+        "pending": "Εκκρεμείς",
+        "pendingTooltip": "Εκκρεμείς εργασίες",
+        "today": "Σήμερα",
+        "todayTooltip": "Εργασίες για σήμερα"
+      }
+    }
+  },
+  "filters": {
+    "clearFilters": "Καθαρισμός"
+  },
+  "procurement": {
+    "filters": {
+      "agreementStatus": {
+        "active": "Ενεργές",
+        "activeTooltip": "Ενεργές συμβάσεις σε ισχύ",
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των συμβάσεων",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες συμβάσεις (μη ενεργές ακόμη)",
+        "expired": "Ληγμένες",
+        "expiredTooltip": "Συμβάσεις που έχουν λήξει",
+        "expiring": "Λήγουν",
+        "expiringTooltip": "Συμβάσεις που λήγουν τις επόμενες 30 ημέρες"
+      },
+      "agreementStatusAriaLabel": "Φίλτρα κατάστασης σύμβασης",
+      "materialStatus": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των υλικών",
+        "inactive": "Ανενεργά",
+        "inactiveTooltip": "Υλικά χωρίς αγορές πάνω από 180 ημέρες",
+        "no_supplier": "Χωρίς προμηθευτή",
+        "no_supplierTooltip": "Υλικά χωρίς ορισμένους προτιμώμενους προμηθευτές",
+        "recently_used": "Πρόσφατα",
+        "recently_usedTooltip": "Υλικά με αγορά τις τελευταίες 90 ημέρες"
+      },
+      "materialStatusAriaLabel": "Φίλτρα κατάστασης υλικού",
+      "poStatus": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των παραγγελιών",
+        "approved": "Εγκεκριμένες",
+        "approvedTooltip": "Εγκεκριμένες παραγγελίες (έτοιμες για αποστολή)",
+        "cancelled": "Ακυρωμένες",
+        "cancelledTooltip": "Ακυρωμένες παραγγελίες",
+        "closed": "Ολοκληρωμένες",
+        "closedTooltip": "Έχουν τιμολογηθεί και κλείσει",
+        "delivered": "Παραδοθείσες",
+        "deliveredTooltip": "Έχουν παραληφθεί πλήρως",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες παραγγελίες (μη εγκεκριμένες)",
+        "ordered": "Παραγγελμένες",
+        "orderedTooltip": "Έχουν αποσταλεί στον προμηθευτή",
+        "partially_delivered": "Μερική Παραλαβή",
+        "partially_deliveredTooltip": "Έχει παραληφθεί μέρος της παραγγελίας"
+      },
+      "poStatusAriaLabel": "Φίλτρα κατάστασης παραγγελίας",
+      "vendorStatus": {
+        "active": "Ενεργοί",
+        "activeTooltip": "Προμηθευτές με παραγγελίες τους τελευταίους 12 μήνες",
+        "all": "Όλοι",
+        "allTooltip": "Εμφάνιση όλων των προμηθευτών",
+        "inactive": "Ανενεργοί",
+        "inactiveTooltip": "Προμηθευτές χωρίς πρόσφατες παραγγελίες",
+        "new": "Νέοι",
+        "newTooltip": "Προμηθευτές που προστέθηκαν τις τελευταίες 30 ημέρες",
+        "preferred": "Προτιμώμενοι",
+        "preferredTooltip": "Κορυφαίοι προμηθευτές βάσει συνολικής δαπάνης"
+      },
+      "vendorStatusAriaLabel": "Φίλτρα κατάστασης προμηθευτή"
+    },
+    "hub": {
+      "frameworkAgreements": {
+        "create": "Νέα Σύμβαση",
+        "searchPlaceholder": "Αναζήτηση σύμβασης (αριθμός ή τίτλος)..."
+      },
+      "materialCatalog": {
+        "create": "Νέο Υλικό",
+        "searchPlaceholder": "Αναζήτηση υλικού (κωδικός ή όνομα)..."
+      },
+      "vendorMaster": {
+        "addVendorHint": "Προσθέστε επαφές με τύπο Προμηθευτής στον κατάλογο επαφών",
+        "cardAriaLabel": "Προμηθευτής {name}",
+        "description": "Κατάλογος προμηθευτών με δείκτες απόδοσης και κατηγοριοποίηση",
+        "detail": {
+          "emptyDescription": "Επιλέξτε έναν προμηθευτή από τη λίστα για να δείτε τις λεπτομέρειες",
+          "emptyTitle": "Επιλέξτε προμηθευτή",
+          "kpis": {
+            "avgOrderValue": "Μέση Αξία",
+            "onTimeRate": "Εγκαιρότητα",
+            "totalOrders": "Παραγγελίες",
+            "totalSpend": "Σύνολο Δαπανών"
+          },
+          "noRecentOrders": "Χωρίς παραγγελίες",
+          "recentOrders": "Πρόσφατες Παραγγελίες",
+          "viewInCrm": "Προβολή στο CRM"
+        },
+        "emptySearch": "Δεν βρέθηκαν αποτελέσματα",
+        "lastOrder": "Τελευταία παραγγελία",
+        "noOrders": "Χωρίς παραγγελίες ακόμα",
+        "noVendorsYet": "Δεν υπάρχουν εγγεγραμμένοι προμηθευτές",
+        "onTimeRate": "Εγκαιρότητα",
+        "searchPlaceholder": "Αναζήτηση προμηθευτή...",
+        "statusBadge": {
+          "active": "Ενεργός",
+          "inactive": "Ανενεργός"
+        },
+        "title": "Μητρώο Προμηθευτών",
+        "totalOrders": "Παραγγελίες",
+        "totalSpend": "Σύνολο δαπανών"
+      }
+    },
+    "list": {
+      "createPO": "Νέα Παραγγελία",
+      "searchPlaceholder": "Αναζήτηση παραγγελίας ή προμηθευτή..."
+    },
+    "nav": {
+      "agreements": "Συμβάσεις",
+      "analytics": "Αναλυτικά",
+      "ariaLabel": "Ενότητες προμηθειών",
+      "hub": "Hub Προμηθειών",
+      "materials": "Υλικά",
+      "purchaseOrders": "Παραγγελίες",
+      "quotes": "Προσφορές",
+      "rfqs": "RFQ",
+      "vendors": "Προμηθευτές"
+    }
+  },
+  "quotes": {
+    "filters": {
+      "quoteStatus": {
+        "accepted": "Εγκεκριμένες",
+        "acceptedTooltip": "Έχουν εγκριθεί",
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των προσφορών",
+        "archived": "Αρχειοθετημένες",
+        "archivedTooltip": "Έχουν αρχειοθετηθεί",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες προσφορές (μη απεσταλμένες)",
+        "expired": "Ληγμένες",
+        "expiredTooltip": "Έχουν λήξει — απαιτείται απόφαση (ανανέωση/αρχειοθέτηση)",
+        "rejected": "Απορριφθείσες",
+        "rejectedTooltip": "Έχουν απορριφθεί",
+        "sent_to_vendor": "Απεσταλμένες",
+        "sent_to_vendorTooltip": "Έχουν αποσταλεί στον προμηθευτή — αναμονή υποβολής",
+        "submitted": "Υποβληθείσες",
+        "submittedTooltip": "Νέα προσφορά υποβλήθηκε — απαιτεί έλεγχο",
+        "under_review": "Υπό Εξέταση",
+        "under_reviewTooltip": "Σε εξέλιξη αξιολόγηση — απαιτείται απόφαση"
+      },
+      "quoteStatusAriaLabel": "Φίλτρα κατάστασης προσφοράς"
+    },
+    "list": {
+      "createQuote": "Νέα Προσφορά",
+      "searchPlaceholder": "Αναζήτηση προσφοράς, προμηθευτή ή ειδικότητας..."
+    }
+  }
+}
