@@ -41,25 +41,3 @@ export function getRequiredAdminCompanyName(): string {
   return companyName;
 }
 
-// ============================================================================
-// COMMUNICATIONS / EMAIL CONFIG (RFC v6 Phase 1)
-// ============================================================================
-
-/**
- * Get email function URL from server-only env var.
- * Required for sending emails via Firebase Cloud Function.
- *
- * @returns Email function URL
- * @throws Error if EMAIL_FUNCTION_URL is not set
- */
-export function getRequiredEmailFunctionUrl(): string {
-  const url = process.env.EMAIL_FUNCTION_URL;
-  if (!url) {
-    throw new Error(
-      '[admin-env] EMAIL_FUNCTION_URL env var is required but not set. ' +
-      'Add it to .env.local: EMAIL_FUNCTION_URL="https://your-function-url"'
-    );
-  }
-  return url;
-}
-
