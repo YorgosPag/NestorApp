@@ -825,7 +825,26 @@
         "defaultDocumentMode": "Document mode",
         "lines": "Lines",
         "clauses": "Clauses",
-        "defaultTerms": "Default terms"
+        "defaultTerms": "Default terms",
+        "documentNumber": "Document number",
+        "role": "Document type",
+        "documentMode": "Issue mode",
+        "status": "Status",
+        "templateId": "Template",
+        "validUntil": "Valid until",
+        "mobilizedOn": "Site mobilisation",
+        "issuedRevision": "Issued revision",
+        "sourceOfferId": "Source offer",
+        "agreementId": "Agreement",
+        "parties": "Parties",
+        "scope": "Scope",
+        "terms": "Commercial terms",
+        "languages": "Languages",
+        "deviationStatus": "Deviations",
+        "revisionNumber": "Revision",
+        "amends": "Amends",
+        "pdfFileId": "PDF file",
+        "sealed": "Sealed"
       }
     }
   }

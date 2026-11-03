@@ -1,28 +1,29 @@
 /**
  * @fileoverview **Προσφορά / Ιδιωτικό Συμφωνητικό Υπεργολαβίας** — το έγγραφο, τα μέρη, η εμβέλεια, ο κύκλος
- *   ζωής και οι αμετάβλητες αναθεωρήσεις (ADR-928 §5.4 – §5.6).
+ *   ζωής και οι αμετάβλητες αναθεωρήσεις (ADR-928 §5.4 – §5.6 · Φ2 §5.14).
  * @module subapps/procurement/subcontracts/types/agreement
  *
- * Συλλογές: `subcontract_agreements/{sca}` · `subcontract_agreements/{sca}/revisions/{scrv}`.
+ * Συλλογές: `subcontract_agreements/{sca}` · `subcontract_agreements/{sca}/subcontract_agreement_revisions/{scrv}`
+ * (όνομα **μοναδικό**, όχι `revisions`: το collection group σαρώνει κατά όνομα — Φ1 απόφαση 9).
  * Όνομα: **Subcontract Agreement** — διακριτό από `fwa` (πλαίσιο προμηθευτή, ADR-330), `lc` (πώληση ακινήτου),
  * `offr` (προσφορά ακινήτου).
  *
- * 🔑 **Τριάδα αναπαραστάσεων** (ADR-663 §4 μέρος 5, όπως το `FrameworkAgreement`): τα πεδία-στιγμές δηλώνονται
- * **μία** φορά (`SubcontractAgreementTimestampField`) και οι μορφές wire/like παράγονται από αυτά.
+ * 🔑 **Χρόνος = ISO 8601 `string`** σε βάση, σύρμα και πελάτη (ADR-663 §4 · Φ2 απόφαση 1, ίδια με τη Φ1 απόφαση 1):
+ * **μία** αναπαράσταση, άρα καμία τριάδα doc/wire/like, και το στιγμιότυπο περνά αυτούσιο από canonical JSON.
  *
- * 🔑 **Στιγμιότυπα, όχι αναφορές, για ό,τι τυπώνεται**: εκδότης, υπεργολάβος, έργο αντιγράφονται τη στιγμή της
- * έκδοσης (όπως το `InvoiceIssuer`, ADR-ACC-018). Η αλλαγή διεύθυνσης της επαφής αύριο δεν ξαναγράφει χαρτί
- * που υπογράφηκε χθες.
+ * 🔑 **Στιγμιότυπα, όχι αναφορές, για ό,τι τυπώνεται** — και τα γράφει **μόνο ο διακομιστής** (Φ2 απόφαση 4): ο
+ * πελάτης στέλνει ids, ο γραφέας διαβάζει τις πηγές (`buildIssuer`, επαφές, έργο). Η αλλαγή διεύθυνσης της επαφής
+ * αύριο δεν ξαναγράφει χαρτί που υπογράφηκε χθες.
  */
 
-import type { Timestamp } from 'firebase/firestore';
 import type { CalendarDay } from '@/constants/platform-operator';
 import type { InvoiceIssuer } from '@/subapps/accounting/types/invoice';
 import type { ContactParty } from '@/subapps/accounting/utils/contact-party';
 import type { SignatoryFieldSet } from '@/subapps/procurement/types/signatory-fields';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import type { AgreementLine } from './agreement-line';
-import type { ClauseLanguage, LocalizedText } from './clause-parameter';
+import type { ClauseBody, ClauseKey, ClauseTranslation } from './clause';
+import type { ClauseLanguage, ClauseParameterDefinition, ClauseParameterValue, LocalizedText } from './clause-parameter';
 import type { ClauseSelection, CommercialTerms } from './commercial-terms';
 import type { AgreementDocumentMode } from './trade-template';
 
@@ -34,11 +35,16 @@ export interface SubcontractorSnapshot extends ContactParty {
   readonly fatherName: string | null;
 }
 
+/** Οικοπεδούχος ονομαστικά: στιγμιότυπο + η επαφή του, ώστε το `issue` να ξαναδιαβάσει την πηγή (§5.4). */
+export interface ProjectOwnerSnapshot extends ContactParty {
+  readonly contactId: string;
+}
+
 /** Κύριος του έργου (Δ8): οι οικοπεδούχοι, ονομαστικά ή συλλογικά («ΙΔΙΟΚΤΗΤΕΣ ΟΙΚΟΠΕΔΟΥ»). */
 export type ProjectOwnersPresentation =
   | { readonly kind: 'none' }
   | { readonly kind: 'collective' }
-  | { readonly kind: 'named'; readonly owners: readonly ContactParty[] };
+  | { readonly kind: 'named'; readonly owners: readonly ProjectOwnerSnapshot[] };
 
 export interface AgreementParties {
   /** Ο φορέας — από `accounting_settings` μέσω `buildIssuer`, όπως το τιμολόγιο και το PO. */
@@ -72,10 +78,6 @@ export interface SiteAssignment {
   readonly durationDays: number | null;
   readonly note: string | null;
   readonly assignedBy: string;
-  /**
-   * ISO 8601. Όχι `Timestamp`: η ανάθεση ζει **μέσα** στο έγγραφο και στο στιγμιότυπο της αναθεώρησης, που
-   * περνά από canonical JSON — ένθετο `Timestamp` θα έσπαγε και την τριάδα και το hash.
-   */
   readonly assignedAt: string;
 }
 
@@ -111,8 +113,8 @@ export const SUBCONTRACT_AGREEMENT_TRANSITIONS = [
 export type SubcontractAgreementTransition = (typeof SUBCONTRACT_AGREEMENT_TRANSITIONS)[number];
 
 /**
- * Ο πίνακας μεταβάσεων — η ΜΙΑ περιγραφή του διαγράμματος του ADR. Ο γραφέας (Φ2) τον ρωτά· κανένας
- * καταναλωτής δεν ξαναγράφει «από ποια κατάσταση επιτρέπεται…».
+ * Ο πίνακας μεταβάσεων — η ΜΙΑ περιγραφή του διαγράμματος του ADR. Ο γραφέας τον ρωτά μέσω της καθαρής μηχανής
+ * (`agreements/agreement-lifecycle.ts`)· κανένας καταναλωτής δεν ξαναγράφει «από ποια κατάσταση επιτρέπεται…».
  */
 export const SUBCONTRACT_AGREEMENT_FSM: Readonly<
   Record<SubcontractAgreementTransition, { readonly from: readonly SubcontractAgreementStatus[]; readonly to: SubcontractAgreementStatus }>
@@ -131,6 +133,13 @@ export const SUBCONTRACT_AGREEMENT_FSM: Readonly<
 export const AGREEMENT_DOCUMENT_ROLES = ['offer', 'agreement'] as const;
 export type AgreementDocumentRole = (typeof AGREEMENT_DOCUMENT_ROLES)[number];
 
+/** Πηγή τιμών (§5.9): απευθείας, ανάθεση RFQ, ή καταχώριση εκ μέρους του υποψηφίου. */
+export const AGREEMENT_ENTRY_CHANNELS = ['phone', 'paper', 'link'] as const;
+export type AgreementOrigin =
+  | { readonly kind: 'direct' }
+  | { readonly kind: 'rfq_award'; readonly rfqId: string; readonly quoteId: string }
+  | { readonly kind: 'entered_on_behalf'; readonly channel: (typeof AGREEMENT_ENTRY_CHANNELS)[number] };
+
 /** Γλώσσες του εκτυπωμένου εγγράφου (§5.2.2): πάντα ελληνικά· προαιρετικά δεύτερη σε παράλληλη στήλη. */
 export interface AgreementLanguages {
   readonly secondary: ClauseLanguage | null;
@@ -139,53 +148,88 @@ export interface AgreementLanguages {
 // ── Το έγγραφο ──────────────────────────────────────────────────────────────
 
 export interface SubcontractAgreement {
-  id: string;                                    // sca_*
-  companyId: string;
-  /** Αριθμός εγγράφου από μετρητή, μοναδικός ανά χώρο (π.χ. «ΣΥΜ-2026-014»). */
-  documentNumber: string;
-  role: AgreementDocumentRole;
-  documentMode: AgreementDocumentMode;
+  readonly id: string;                           // sca_*
+  readonly companyId: string;
+  /** Αριθμός εγγράφου από μετρητή ανά χώρο και έτος (π.χ. «ΣΥΜ-2026-014») — Φ2 απόφαση 7. */
+  readonly documentNumber: string;
+  readonly role: AgreementDocumentRole;
+  readonly documentMode: AgreementDocumentMode;
   /** Τρόπος Β: η προσφορά που γέννησε αυτό το συμφωνητικό / το συμφωνητικό που γέννησε αυτή η προσφορά. */
-  sourceOfferId: string | null;
-  agreementId: string | null;
-  /** Πηγή τιμών (§5.9): απευθείας, ανάθεση RFQ, ή καταχώριση εκ μέρους του υποψηφίου. */
-  origin:
-    | { kind: 'direct' }
-    | { kind: 'rfq_award'; rfqId: string; quoteId: string }
-    | { kind: 'entered_on_behalf'; channel: 'phone' | 'paper' | 'link' };
-  trade: TradeCode;
-  templateId: string | null;
-  title: LocalizedText;
-  status: SubcontractAgreementStatus;
-  parties: AgreementParties;
-  scope: AgreementScope;
-  lines: AgreementLine[];
-  terms: CommercialTerms;
-  clauses: ClauseSelection[];
-  languages: AgreementLanguages;
-  /** Ισχύς προσφοράς — μετά, `expire`. */
-  validUntil: CalendarDay | null;
+  readonly sourceOfferId: string | null;
+  readonly agreementId: string | null;
+  readonly origin: AgreementOrigin;
+  readonly trade: TradeCode;
+  readonly templateId: string | null;
+  readonly title: LocalizedText;
+  readonly status: SubcontractAgreementStatus;
+  readonly parties: AgreementParties;
+  readonly scope: AgreementScope;
+  /**
+   * Παράγωγο του `scope` — το γράφει **μόνο** ο γραφέας (Φ2 απόφαση 12): ένα `array-contains` για τη λίστα ανά έργο,
+   * είτε το συμφωνητικό είναι ενός έργου είτε πολλών.
+   */
+  readonly projectIds: readonly string[];
+  readonly lines: readonly AgreementLine[];
+  readonly terms: CommercialTerms;
+  readonly clauses: readonly ClauseSelection[];
+  readonly languages: AgreementLanguages;
+  /** Ισχύς προσφοράς — μετά, `expire` (και το `accept` αρνείται). */
+  readonly validUntil: CalendarDay | null;
   /** Ημερομηνία εγκατάστασης στο εργοτάξιο — το Υ.Γ. του 2009. */
-  mobilizedOn: CalendarDay | null;
-  /** Η τελευταία παγωμένη αναθεώρηση, ή `null` πριν το `issue`. */
-  currentRevision: number | null;
-  /** CAS του γραφέα (ADR-928 §5.5): κάθε μετάβαση ελέγχει και αυξάνει. */
-  writeVersion: number;
-  isDeleted: boolean;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  issuedAt: Timestamp | null;
-  acceptedAt: Timestamp | null;
-  createdBy: string;
+  readonly mobilizedOn: CalendarDay | null;
+  /** Η τελευταία παγωμένη αναθεώρηση, ή `null` πριν το `issue`. (Όχι CAS — αυτό είναι το `revision`.) */
+  readonly issuedRevision: number | null;
+  /** CAS (ADR-923 §5.9 · Φ2 απόφαση 2): κάθε αλλαγή +1, όπως η ρήτρα και το πρότυπο. */
+  readonly revision: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly issuedAt: string | null;
+  readonly acceptedAt: string | null;
+  readonly createdBy: string;
+  readonly updatedBy: string;
 }
 
-/** Αμετάβλητη αναθεώρηση (§5.6): πλήρες στιγμιότυπο → canonical JSON → sha256 → PDF. */
+/** Το περίβλημα που γράφει **μόνο** ο γραφέας (ταυτότητα, αριθμός, κύκλος ζωής, σφραγίδες). */
+export type SubcontractAgreementEnvelopeField =
+  | 'id' | 'companyId' | 'documentNumber' | 'role' | 'sourceOfferId' | 'agreementId' | 'status' | 'mobilizedOn'
+  | 'issuedRevision' | 'revision' | 'createdAt' | 'updatedAt' | 'issuedAt' | 'acceptedAt' | 'createdBy' | 'updatedBy';
+
+/** Το περιεχόμενο του εγγράφου — ό,τι ορίζει ο άνθρωπος + ό,τι έλυσε ο διακομιστής από τις πηγές (μέρη, έργο). */
+export type SubcontractAgreementContent = Omit<SubcontractAgreement, SubcontractAgreementEnvelopeField>;
+
+/**
+ * Το κείμενο μιας ρήτρας **όπως πάγωσε** (§5.6): σώμα, παράμετροι και **εγκεκριμένες** μεταφράσεις της καρφωμένης
+ * έκδοσης. Η αναθεώρηση διαβάζεται χωρίς τη βιβλιοθήκη· το `contentHash` δένει με την έκδοση της βιβλιοθήκης.
+ */
+export interface FrozenClause {
+  readonly clauseId: string;
+  readonly clauseKey: ClauseKey;
+  readonly version: number;
+  readonly contentHash: string;
+  readonly title: LocalizedText;
+  readonly body: ClauseBody;
+  readonly parameters: readonly ClauseParameterDefinition[];
+  readonly translations: Readonly<Record<ClauseLanguage, ClauseTranslation>>;
+  /** Οι τιμές που τυπώνονται — των δεσμευμένων παραμέτρων διαβασμένες από τα `CommercialTerms` του εγγράφου. */
+  readonly values: Readonly<Record<string, ClauseParameterValue>>;
+}
+
+/** Πεδία κύκλου ζωής / αποθήκευσης που ΔΕΝ παγώνουν. */
+export type SubcontractAgreementLifecycleField =
+  | 'status' | 'issuedRevision' | 'revision' | 'createdAt' | 'updatedAt' | 'issuedAt' | 'acceptedAt' | 'updatedBy';
+
+/** Ό,τι παγώνει: το έγγραφο χωρίς τον κύκλο ζωής, με τα **κείμενα** των ρητρών ενσωματωμένα. */
+export type SubcontractAgreementSnapshot = Readonly<Omit<SubcontractAgreement, SubcontractAgreementLifecycleField>> & {
+  readonly frozenClauses: readonly FrozenClause[];
+};
+
+/** Αμετάβλητη αναθεώρηση (§5.6): πλήρες στιγμιότυπο → canonical JSON → sha256 → PDF (Φ4). Γράφεται **μία** φορά. */
 export interface SubcontractAgreementRevision {
   readonly id: string;                           // scrv_*
   readonly companyId: string;
   readonly agreementId: string;
-  readonly revision: number;                     // 1, 2, 3…
-  /** Η αναθεώρηση που τροποποιεί αυτή (μετά το `accepted` κάθε αλλαγή είναι τροποποίηση). */
+  readonly revisionNumber: number;               // 1, 2, 3…
+  /** Η αναθεώρηση που τροποποιεί αυτή (μετά το `accepted` κάθε αλλαγή είναι τροποποίηση — μελλοντικά). */
   readonly amends: number | null;
   readonly snapshot: SubcontractAgreementSnapshot;
   /** sha256 του canonical JSON του `snapshot`. */
@@ -194,28 +238,5 @@ export interface SubcontractAgreementRevision {
   readonly pdfFileId: string | null;
   readonly sealed: boolean;
   readonly issuedBy: string;
-  readonly issuedAt: Timestamp;
+  readonly issuedAt: string;
 }
-
-/**
- * Ό,τι παγώνει: το έγγραφο χωρίς τα πεδία κύκλου ζωής/αποθήκευσης, με τα **κείμενα** των ρητρών στην ακριβή τους
- * έκδοση ενσωματωμένα από τον γραφέα (Φ2) — η αναθεώρηση διαβάζεται χωρίς τη βιβλιοθήκη.
- */
-export type SubcontractAgreementSnapshot = Readonly<
-  Omit<SubcontractAgreement, 'status' | 'currentRevision' | 'writeVersion' | 'isDeleted' | SubcontractAgreementTimestampField>
->;
-
-// ── Τριάδα αναπαραστάσεων (ADR-663 §4 μέρος 5) ──────────────────────────────
-
-export type SubcontractAgreementTimestampField = 'createdAt' | 'updatedAt' | 'issuedAt' | 'acceptedAt';
-
-/** JSON-ασφαλής μορφή στο σύνορο HTTP: στιγμές σε ISO 8601 (AIP-142). */
-export type SubcontractAgreementWire =
-  Omit<SubcontractAgreement, SubcontractAgreementTimestampField> &
-  Record<'createdAt' | 'updatedAt', string> &
-  Record<'issuedAt' | 'acceptedAt', string | null>;
-
-/** Οποιαδήποτε από τις τρεις μορφές — για κώδικα που διαβάζει στιγμές μέσω `normalizeToDate` (ADR-218). */
-export type SubcontractAgreementLike =
-  Omit<SubcontractAgreement, SubcontractAgreementTimestampField> &
-  Record<SubcontractAgreementTimestampField, unknown>;

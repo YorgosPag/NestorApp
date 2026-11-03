@@ -291,6 +291,10 @@ export const AUDIT_ENTITIES = {
   // (το `'subcollection'` σημαίνει `companies/{c}/<col>`). Backup: `SUBCOLLECTION_PARENTS.SUBCONTRACT_CLAUSE_VERSIONS`.
   subcontract_clause_version: { collectionKey: null, scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: false },
   subcontract_trade_template: { collectionKey: 'SUBCONTRACT_TRADE_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  // ADR-928 Φ2 — το συμφωνητικό (πρόχειρο · μεταβάσεις · αποκλίσεις · αναθέσεις) και οι αμετάβλητες αναθεωρήσεις του.
+  // Αναθεώρηση = ένθετη υποσυλλογή ⇒ σχήμα `engagement`, όπως η έκδοση ρήτρας. Backup: `SUBCOLLECTION_PARENTS`.
+  subcontract_agreement: { collectionKey: 'SUBCONTRACT_AGREEMENTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  subcontract_agreement_revision: { collectionKey: null, scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: false },
 
   // ── Μηχανή κειμένου (ADR-651 / ADR-344) — server-only services ────────────
   text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },

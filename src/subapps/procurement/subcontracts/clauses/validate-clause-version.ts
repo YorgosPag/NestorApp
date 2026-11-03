@@ -30,10 +30,18 @@ export function validateClauseContent(body: ClauseBody, parameters: readonly Cla
   return [...validateParameterDefinitions(parameters, 'parameters'), ...validateClauseBody(body, parameters, 'body')];
 }
 
-/** Μετάφραση: γλώσσα ≠ ελληνικά (η αυθεντία δεν «μεταφράζεται»), ίδιο σύνολο παραμέτρων με το ελληνικό. */
+/**
+ * Δεύτερη γλώσσα: έγκυρος κωδικός **και** όχι τα ελληνικά (η αυθεντία δεν «μεταφράζεται»). Κοινό για τη μετάφραση
+ * ρήτρας και για τη δεύτερη στήλη του συμφωνητικού (§5.2.2).
+ */
+export function isSecondaryLanguage(language: ClauseLanguage): boolean {
+  return LANGUAGE_PATTERN.test(language) && language !== CLAUSE_AUTHORITATIVE_LANGUAGE;
+}
+
+/** Μετάφραση: γλώσσα ≠ ελληνικά, ίδιο σύνολο παραμέτρων με το ελληνικό. */
 export function validateClauseTranslation(language: ClauseLanguage, source: ClauseBody, translation: ClauseBody): SubcontractIssue[] {
   const issues: SubcontractIssue[] = [];
-  if (!LANGUAGE_PATTERN.test(language) || language === CLAUSE_AUTHORITATIVE_LANGUAGE) {
+  if (!isSecondaryLanguage(language)) {
     issues.push({ code: 'translationLanguageInvalid', path: 'language' });
   }
   issues.push(...validateTranslationBody(source, translation, joinPath('translation')));

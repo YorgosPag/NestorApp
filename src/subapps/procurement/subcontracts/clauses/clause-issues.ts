@@ -60,6 +60,18 @@ export const SUBCONTRACT_ISSUE_CODES = [
   'termOutsideTolerance',
   'vatRateInvalid',
   'scheduleInvalid',
+  // ── Συμφωνητικό (Φ2) ───────────────────────────────────────────────────────
+  'clauseVersionOutdated',
+  'deviationForbidden',
+  'deviationReasonRequired',
+  'translationMissing',
+  'issuerProfileMissing',
+  'contactUnknown',
+  'projectUnknown',
+  'buildingNotInProject',
+  'scopeMismatch',
+  'notEditable',
+  'validUntilPast',
 ] as const;
 
 export type SubcontractIssueCode = (typeof SUBCONTRACT_ISSUE_CODES)[number];

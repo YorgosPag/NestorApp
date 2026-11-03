@@ -57,7 +57,7 @@ describe('CHECK 3.113', () => {
   it('Μ0: πράσινη στο πραγματικό δέντρο — και ο σαρωτής ΕΙΔΕ τους κατόχους', () => {
     const result = measure({});
     expect(blockers(result)).toEqual([]);
-    expect(result.tally[STATES.OWNER]).toBeGreaterThanOrEqual(8);
+    expect(result.tally[STATES.OWNER]).toBeGreaterThanOrEqual(14);
   });
 
   it('υγιής κόσμος: οι κάτοχοι μετρούνται, σχόλιο και ορισμός δεν είναι χρήση', () => {
@@ -91,6 +91,20 @@ describe('CHECK 3.113', () => {
   it('Μ5: συλλογή `subcontract_*` στη λίστα απευθείας εγγραφής του MCP', () => {
     const rogue = `const WRITE_ALLOWED_COLLECTIONS = new Set([\n  'tasks',\n  'subcontract_clauses',\n]);`;
     expect(blockers(measured({ [MCP_ACCESS_CONTROL]: rogue }))).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: MCP_ACCESS_CONTROL })]);
+  });
+
+  it('Μ7 (Φ2): το ΠΡΑΓΜΑΤΙΚΟ μητρώο φρουρεί συμφωνητικό, αναθεώρηση και μετρητή', () => {
+    const real = JSON.parse(fs.readFileSync(path.join(process.cwd(), REGISTRY_FILE), 'utf8'));
+    const rogue = {
+      'src/server/rogue.ts': [
+        `export const a = (db) => db.collection(COLLECTIONS.SUBCONTRACT_AGREEMENTS).doc('x').set({});`,
+        `export const b = (ref) => ref.collection(SUBCOLLECTIONS.SUBCONTRACT_AGREEMENT_REVISIONS).doc('y').set({});`,
+        `export const c = (db) => db.collection(COLLECTIONS.SUBCONTRACT_AGREEMENT_COUNTERS).doc('z').set({});`,
+      ].join('\n'),
+    };
+    const outside = measure({ ...worldWith(rogue, real), registry: real }).findings
+      .filter((finding) => finding.state === STATES.OUTSIDE && finding.file === 'src/server/rogue.ts');
+    expect(outside.map((finding) => finding.line)).toEqual([1, 2, 3]);
   });
 
   it('Μ6: χωρίς λίστα MCP η πύλη ΑΡΝΕΙΤΑΙ — δεν λέει «καθαρό» στα τυφλά', () => {

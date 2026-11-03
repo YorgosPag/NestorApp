@@ -6489,6 +6489,22 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
       allow write: if false;
     }
+    // 📜 ADR-928 Φ2 — ΣΥΜΦΩΝΗΤΙΚΟ ΥΠΕΡΓΟΛΑΒΙΑΣ: διαβάζει ο χώρος, γράφει ΜΟΝΟ ο διακομιστής (CHECK 3.113). Ο κύκλος ζωής,
+    // οι αποκλίσεις με διάκριση καθηκόντων και τα στιγμιότυπα μερών ΔΕΝ εκφράζονται σε κανόνα. Οι αναθεωρήσεις είναι
+    // αμετάβλητες και φέρουν δικό τους `companyId` ⇒ κρίνονται χωρίς `get()` του γονέα.
+    match /subcontract_agreements/{agreementId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+
+      match /subcontract_agreement_revisions/{revisionId} {
+        allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+        allow write: if false;
+      }
+    }
+    // Μετρητής αριθμών εγγράφου (doc id = companyId): μόνο Admin SDK — καμία πρόσβαση πελάτη, όπως `quote_counters`.
+    match /subcontract_agreement_counters/{companyId} {
+      allow read, write: if false;
+    }
     // 📡 ADR-923 §5.11 «3δ» Ζ · ADR-905 — ΣΗΜΑ ΑΝΑ ΟΨΗ ΤΙΜΩΝ: μόνο `{ companyId, view, revision, changedAt }`, ΠΟΤΕ τιμή.
     // GET για τα μέλη του χώρου (ίδιο σύνορο με τον κατάλογο) — `resource == null` κρατά τον listener ζωντανό πριν από
     // την πρώτη αύξηση (ανύπαρκτο έγγραφο = τίποτα να διαρρεύσει). `list`/γραφή: ΠΟΤΕ — γράφει ΜΟΝΟ η μηχανή του καταλόγου.

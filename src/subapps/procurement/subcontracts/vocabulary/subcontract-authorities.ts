@@ -9,6 +9,11 @@
  * | `manage` | έγκριση · απόρριψη · επαγγελματικός έλεγχος · αρχειοθέτηση | Ironclad: η βιβλιοθήκη ανήκει στους διαχειριστές |
  * | `templates` | πρότυπα ειδικότητας — το καλούπι κάθε συμφωνητικού | Procore: πρότυπα συμβάσεων |
  * | `seed` | σπορά της προεπιλεγμένης βιβλιοθήκης: γράφει προτάσεις **και** πρότυπα ⇒ θέλει **και τα δύο** | — |
+ * | `agreements` | συμφωνητικό: πρόχειρο, μεταβάσεις κύκλου ζωής, αναθέσεις εργοταξίου (Φ2) | Procore: Commitments admin |
+ * | `approveDeviation` | έγκριση/απόρριψη **απόκλισης** ενός συμφωνητικού από τις ζώνες της εταιρείας (§5.2.1 τρόπος 3) | DocuSign CLM: έγκριση εξαίρεσης |
+ *
+ * 🔑 Τα δικαιώματα συμφωνητικού είναι **της εταιρείας**, όχι του έργου (Φ2 απόφαση 11): ένα `multi_project` έγγραφο
+ * δεν έχει **ένα** έργο-πόρο, και το ADR-926 Κ3 δέχεται έργο **μόνο** από τον πόρο.
  *
  * @module subapps/procurement/subcontracts/vocabulary/subcontract-authorities
  */
@@ -20,6 +25,8 @@ export const SUBCONTRACT_AUTHORITY_PERMISSIONS = {
   manage: ['subcontracts:clauses:manage'],
   templates: ['subcontracts:templates:manage'],
   seed: ['subcontracts:clauses:manage', 'subcontracts:templates:manage'],
+  agreements: ['subcontracts:agreements:manage'],
+  approveDeviation: ['subcontracts:agreements:approve_deviation'],
 } as const satisfies Readonly<Record<string, readonly PermissionId[]>>;
 
 export type SubcontractAuthority = keyof typeof SUBCONTRACT_AUTHORITY_PERMISSIONS;

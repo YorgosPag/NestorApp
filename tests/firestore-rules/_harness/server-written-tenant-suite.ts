@@ -12,7 +12,7 @@
 
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import type { CoverageCell } from '../_registry/coverage-manifest';
-import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
+import { CROSS_TENANT_COMPANY_ID, SAME_TENANT_COMPANY_ID, type Persona } from '../_registry/personas';
 import { assertCell, type AssertTarget } from './assertions';
 import { getContext, withSeedContext } from './auth-contexts';
 import type { EnvAccessor } from './deny-all-suite';
@@ -76,6 +76,42 @@ function defineNoClientWriteAnchor(env: EnvAccessor, collection: string, payload
     const col = getContext(env(), 'same_tenant_admin').firestore().collection(collection);
     await assertFails(col.doc(docId).update({ revision: 99 }));
     await assertFails(col.doc(`${collection}-forged`).set(payload(SAME_TENANT_COMPANY_ID)));
+    await assertFails(col.doc(docId).delete());
+  });
+}
+
+/**
+ * ADR-928 — **ένθετη** υποσυλλογή με το ίδιο σύνορο (διαβάζει ο χώρος, γράφει μόνο ο διακομιστής): εκδόσεις ρήτρας,
+ * αναθεωρήσεις συμφωνητικού. Είναι εκτός μήτρας του CHECK 3.16, άρα **οι ίδιες** άγκυρες πάνω στη δική της διαδρομή —
+ * αλλιώς ένας κανόνας που θα ξεχνούσε το ένθετο μπλοκ θα έμενε πράσινος. Ρητή διαδρομή, γιατί το `docIdOf` χτίζει το id
+ * από το όνομα της συλλογής και με διαδρομή υποσυλλογής σπέρνει σε λάθος θέση.
+ */
+export function defineServerWrittenNestedAnchors(env: EnvAccessor, path: string, docId: string, payload: TenantPayload): void {
+  const nested = (persona: Persona) => getContext(env(), persona).firestore().collection(path);
+  const seedBoth = () => withSeedContext(env(), async (ctx) => {
+    await ctx.firestore().collection(path).doc(docId).set(payload(SAME_TENANT_COMPANY_ID));
+    await ctx.firestore().collection(path).doc(`${docId}-rival`).set(payload(CROSS_TENANT_COMPANY_ID));
+  });
+
+  it(`🔴 ${path}: ο χώρος διαβάζει το δικό του· ξένος χώρος και ανώνυμος ΟΧΙ`, async () => {
+    await seedBoth();
+    await assertSucceeds(nested('same_tenant_user').doc(docId).get());
+    await assertFails(nested('cross_tenant_user').doc(docId).get());
+    await assertFails(nested('anonymous').doc(docId).get());
+  });
+
+  it(`🔴 ${path}: rules are not filters — η αφιλτράριστη λίστα απορρίπτεται, η φιλτραρισμένη δεν διαρρέει`, async () => {
+    await seedBoth();
+    await assertFails(nested('same_tenant_user').get());
+    const snap = await assertSucceeds(nested('same_tenant_user').where('companyId', '==', SAME_TENANT_COMPANY_ID).get());
+    expect(snap.docs.map((doc) => doc.id)).toEqual([docId]);
+  });
+
+  it(`🔴 ${path}: ούτε ο διαχειριστής του ίδιου μισθωτή γράφει — ζει μόνο στον ΕΝΑ γραφέα`, async () => {
+    await seedBoth();
+    const col = nested('same_tenant_admin');
+    await assertFails(col.doc(docId).update({ revision: 99 }));
+    await assertFails(col.doc(`${docId}-forged`).set(payload(SAME_TENANT_COMPANY_ID)));
     await assertFails(col.doc(docId).delete());
   });
 }

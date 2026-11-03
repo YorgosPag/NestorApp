@@ -8,6 +8,7 @@
 import { ApiError } from '@/lib/api/api-error-types';
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
 import type { ClauseGovernanceRefusal } from '@/subapps/procurement/subcontracts/clauses/clause-governance';
+import type { AgreementLifecycleRefusal } from '@/subapps/procurement/subcontracts/agreements/agreement-lifecycle';
 
 export const SUBCONTRACT_WRITE_ERROR_KINDS = {
   invalid: 422,
@@ -19,8 +20,13 @@ export const SUBCONTRACT_WRITE_ERROR_KINDS = {
   translationStale: 409,
   selfApproval: 403,
   notProposer: 403,
+  // ── Κύκλος ζωής συμφωνητικού (Φ2 · `agreement-lifecycle.ts`) ──────────────
+  deviationsPending: 409,
+  offerExpired: 409,
+  notYetExpired: 409,
+  mobilizeOnOffer: 409,
 } as const satisfies Readonly<Record<string, number>>;
-// Κάθε άρνηση της διακυβέρνησης είναι είδος σφάλματος: το `assertGovernance` δεν μεταγλωττίζεται αλλιώς.
+// Κάθε άρνηση της διακυβέρνησης ή του κύκλου ζωής είναι είδος σφάλματος: το `assertGovernance` δεν μεταγλωττίζεται αλλιώς.
 
 export type SubcontractWriteErrorKind = keyof typeof SUBCONTRACT_WRITE_ERROR_KINDS;
 
@@ -40,8 +46,8 @@ export function assertNoSubcontractIssues(issues: readonly SubcontractIssue[]): 
   if (issues.length > 0) throw new SubcontractWriteError('invalid', issues);
 }
 
-/** Η άρνηση της διακυβέρνησης (καθαρή μηχανή) γίνεται σφάλμα γραφέα — `null` ⇒ καμία άρνηση. */
-export function assertGovernance(refusal: ClauseGovernanceRefusal | null): void {
+/** Η άρνηση μιας καθαρής μηχανής (διακυβέρνηση, κύκλος ζωής) γίνεται σφάλμα γραφέα — `null` ⇒ καμία άρνηση. */
+export function assertGovernance(refusal: ClauseGovernanceRefusal | AgreementLifecycleRefusal | null): void {
   if (refusal !== null) throw new SubcontractWriteError(refusal);
 }
 

@@ -846,6 +846,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/subcontract-trade-templates.rules.test.ts',
     ...serverWrittenTenantInternalMatrix(),
   },
+  // ADR-928 Φ2 — συμφωνητικό: ίδιο σύνορο· η υποσυλλογή `subcontract_agreement_revisions` με ρητές άγκυρες στη σουίτα.
+  {
+    collection: 'subcontract_agreements',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/subcontract-agreements.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    // Ο μετρητής αριθμών εγγράφου: ούτε ανάγνωση ούτε γραφή από τον πελάτη.
+    collection: 'subcontract_agreement_counters',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/subcontract-agreement-counters.rules.test.ts',
+    ...denyAllMatrix(),
+  },
   {
     collection: 'catalog_visibility_rules',
     pattern: 'deny_all',

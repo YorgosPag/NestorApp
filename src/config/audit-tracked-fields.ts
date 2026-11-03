@@ -65,6 +65,8 @@ import {
   SUBCONTRACT_CLAUSE_TRACKED_FIELDS,
   SUBCONTRACT_CLAUSE_VERSION_TRACKED_FIELDS,
   SUBCONTRACT_TRADE_TEMPLATE_TRACKED_FIELDS,
+  SUBCONTRACT_AGREEMENT_TRACKED_FIELDS,
+  SUBCONTRACT_AGREEMENT_REVISION_TRACKED_FIELDS,
 } from '@/config/audit-tracked-fields-subcontracts';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
@@ -1767,6 +1769,10 @@ export function getTrackedFieldsForEntityAuditType(
       return SUBCONTRACT_CLAUSE_VERSION_TRACKED_FIELDS;
     case 'subcontract_trade_template':
       return SUBCONTRACT_TRADE_TEMPLATE_TRACKED_FIELDS;
+    case 'subcontract_agreement':
+      return SUBCONTRACT_AGREEMENT_TRACKED_FIELDS;
+    case 'subcontract_agreement_revision':
+      return SUBCONTRACT_AGREEMENT_REVISION_TRACKED_FIELDS;
     default:
       return null;
   }

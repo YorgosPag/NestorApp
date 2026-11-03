@@ -27,3 +27,18 @@ export const SUBCONTRACT_TRADE_TEMPLATE_TRACKED_FIELDS = defs(
   ['code', 'trade', 'defaultDocumentMode', 'isArchived'],
   ['title', 'lines', 'clauses', 'defaultTerms'],
 );
+
+/**
+ * Συμφωνητικό (Φ2). 🔑 Οι αποκλίσεις προβάλλονται ως `{κλειδί.παράμετρος: απόφαση}` (`deviationStatus`, ο γραφέας το
+ * κάνει πριν από τη σύγκριση): «εγκρίθηκε η απόκλιση της κράτησης» είναι η αλλαγή που διαβάζει ο άνθρωπος (§5.2.1).
+ */
+export const SUBCONTRACT_AGREEMENT_TRACKED_FIELDS = defs(
+  ['documentNumber', 'role', 'documentMode', 'status', 'trade', 'templateId', 'validUntil', 'mobilizedOn', 'issuedRevision', 'sourceOfferId', 'agreementId'],
+  ['title', 'parties', 'scope', 'lines', 'terms', 'clauses', 'languages', 'deviationStatus'],
+);
+
+/** Αμετάβλητη αναθεώρηση: γράφεται μία φορά — το ίχνος λέει ποιο αποτύπωμα πάγωσε και πότε. */
+export const SUBCONTRACT_AGREEMENT_REVISION_TRACKED_FIELDS = defs(
+  ['revisionNumber', 'amends', 'contentHash', 'pdfFileId', 'sealed'],
+  [],
+);

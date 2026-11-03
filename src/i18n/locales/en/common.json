@@ -867,6 +867,8 @@
       "subcontract_clause": "Subcontract clause",
       "subcontract_clause_version": "Subcontract clause version",
       "subcontract_trade_template": "Subcontract trade template",
+      "subcontract_agreement": "Subcontract agreement",
+      "subcontract_agreement_revision": "Subcontract agreement revision",
       "catalog_attribute": "Catalog attribute",
       "catalog_attribute_group": "Attribute group",
       "catalog_measurement_family": "Unit-of-measure family",

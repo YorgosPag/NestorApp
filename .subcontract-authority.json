@@ -23,6 +23,27 @@
       }
     },
     {
+      "kind": "member",
+      "name": "COLLECTIONS.SUBCONTRACT_AGREEMENTS",
+      "owners": {
+        "src/server/subcontracts/subcontract-store.server.ts": "Ο ένας γραφέας (Φ2): η μόνη διεύθυνση του συμφωνητικού, πίσω από τον κύκλο ζωής, τις αποκλίσεις με διάκριση καθηκόντων και τον CAS."
+      }
+    },
+    {
+      "kind": "member",
+      "name": "SUBCOLLECTIONS.SUBCONTRACT_AGREEMENT_REVISIONS",
+      "owners": {
+        "src/server/subcontracts/subcontract-store.server.ts": "Ο ένας γραφέας (Φ2): η αμετάβλητη αναθεώρηση γράφεται μόνο με create() μέσα στο issue, με το αποτύπωμα του στιγμιοτύπου."
+      }
+    },
+    {
+      "kind": "member",
+      "name": "COLLECTIONS.SUBCONTRACT_AGREEMENT_COUNTERS",
+      "owners": {
+        "src/server/subcontracts/subcontract-store.server.ts": "Ο ένας γραφέας (Φ2): ο μετρητής αυξάνεται μόνο στη συναλλαγή που γράφει το έγγραφο που παίρνει τον αριθμό."
+      }
+    },
+    {
       "kind": "call",
       "name": "runSubcontractTransaction",
       "owners": {
@@ -30,7 +51,10 @@
         "src/server/subcontracts/clause-governance-writer.server.ts": "Έγκριση, απόρριψη, απόσυρση, επαγγελματικός έλεγχος, αρχειοθέτηση, με διάκριση καθηκόντων.",
         "src/server/subcontracts/clause-translation-writer.server.ts": "Πρόχειρη και εγκεκριμένη μετάφραση, πάνω στο τρέχον ελληνικό αποτύπωμα.",
         "src/server/subcontracts/trade-template-writer.server.ts": "Πρότυπα ειδικότητας, κρινόμενα απέναντι στην εγκεκριμένη βιβλιοθήκη μέσα στη συναλλαγή.",
-        "src/server/subcontracts/default-library-seed.server.ts": "Ιδεμποτική σπορά της προεπιλεγμένης βιβλιοθήκης, με τους ίδιους επικυρωτές και χωρίς πόρτα γύρω τους."
+        "src/server/subcontracts/default-library-seed.server.ts": "Ιδεμποτική σπορά της προεπιλεγμένης βιβλιοθήκης, με τους ίδιους επικυρωτές και χωρίς πόρτα γύρω τους.",
+        "src/server/subcontracts/agreement-writer.server.ts": "Πρόχειρο συμφωνητικού και αναθέσεις εργοταξίου: μέρη από τις πηγές τους, ρήτρες κριμένες απέναντι στην εγκεκριμένη βιβλιοθήκη, αριθμός στην ίδια συναλλαγή.",
+        "src/server/subcontracts/agreement-lifecycle-writer.server.ts": "Μεταβάσεις κύκλου ζωής από την καθαρή μηχανή· το issue παγώνει αναθεώρηση, το accept του Τρόπου Β γεννά το συμφωνητικό.",
+        "src/server/subcontracts/agreement-deviation-writer.server.ts": "Απόφαση απόκλισης ενός εγγράφου, μόνο από άλλον από αυτόν που τη ζήτησε."
       }
     }
   ]

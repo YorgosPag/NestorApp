@@ -1153,6 +1153,10 @@ export const COLLECTIONS = {
   SUBCONTRACT_CLAUSES: process.env.NEXT_PUBLIC_SUBCONTRACT_CLAUSES_COLLECTION || 'subcontract_clauses',
   /** Πρότυπα ειδικότητας (§5.3). IDs via sctt_* (ντετερμινιστικά από χώρο + κωδικό). */
   SUBCONTRACT_TRADE_TEMPLATES: process.env.NEXT_PUBLIC_SUBCONTRACT_TRADE_TEMPLATES_COLLECTION || 'subcontract_trade_templates',
+  /** Προσφορές / συμφωνητικά (§5.4–§5.6). Αναθεωρήσεις στην υποσυλλογή `SUBCOLLECTIONS.SUBCONTRACT_AGREEMENT_REVISIONS`. IDs via sca_* (τυχαία). */
+  SUBCONTRACT_AGREEMENTS: process.env.NEXT_PUBLIC_SUBCONTRACT_AGREEMENTS_COLLECTION || 'subcontract_agreements',
+  /** Μετρητής αριθμών εγγράφου ανά χώρο (doc id = companyId, όπως `QUOTE_COUNTERS`). Admin SDK μόνο — καμία πρόσβαση πελάτη. */
+  SUBCONTRACT_AGREEMENT_COUNTERS: process.env.NEXT_PUBLIC_SUBCONTRACT_AGREEMENT_COUNTERS_COLLECTION || 'subcontract_agreement_counters',
 
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */
@@ -1483,6 +1487,10 @@ export const SUBCOLLECTIONS = {
   // 📜 ADR-928 §5.2 — αμετάβλητες εκδόσεις ρήτρας, κάτω από `subcontract_clauses/{sccl}`. IDs via sccv_*.
   // ⚠️ Όνομα ΜΟΝΑΔΙΚΟ, όχι `'versions'`: ένα collection group σαρώνει κατά όνομα (μάθημα `WORKSPACE_MEMBERS`).
   SUBCONTRACT_CLAUSE_VERSIONS: process.env.NEXT_PUBLIC_SUBCONTRACT_CLAUSE_VERSIONS_SUBCOL || 'subcontract_clause_versions',
+
+  // 📜 ADR-928 §5.6 — αμετάβλητες αναθεωρήσεις συμφωνητικού, κάτω από `subcontract_agreements/{sca}`. IDs via scrv_*.
+  // ⚠️ Όνομα ΜΟΝΑΔΙΚΟ, όχι `'revisions'` (το έχει ήδη το `LANDING_HERO_REVISIONS`) — ίδιο μάθημα με τις εκδόσεις ρήτρας.
+  SUBCONTRACT_AGREEMENT_REVISIONS: process.env.NEXT_PUBLIC_SUBCONTRACT_AGREEMENT_REVISIONS_SUBCOL || 'subcontract_agreement_revisions',
 } as const;
 
 // ============================================================================
@@ -1627,6 +1635,8 @@ export const SUBCOLLECTION_PARENTS: Readonly<Record<string, string | readonly st
 
   // Εκδόσεις ρήτρας → SUBCONTRACT_CLAUSES (ADR-928 §5.2)
   SUBCONTRACT_CLAUSE_VERSIONS: 'SUBCONTRACT_CLAUSES',
+  // Αναθεωρήσεις συμφωνητικού → SUBCONTRACT_AGREEMENTS (ADR-928 §5.6)
+  SUBCONTRACT_AGREEMENT_REVISIONS: 'SUBCONTRACT_AGREEMENTS',
 
   // Spatial tour subcollections → ΚΑΙ ΤΑ ΔΥΟ διαμερίσματα (ADR-884 Φ0.2). Ίδια σειρά με το
   // `SPATIAL_TOUR_COLLECTION` (company → personal) — την κλειδώνει άγκυρα jest (το config δεν εισάγει από lib).

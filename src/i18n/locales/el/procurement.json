@@ -825,7 +825,26 @@
         "defaultDocumentMode": "Τρόπος έκδοσης",
         "lines": "Γραμμές",
         "clauses": "Ρήτρες",
-        "defaultTerms": "Προεπιλεγμένοι όροι"
+        "defaultTerms": "Προεπιλεγμένοι όροι",
+        "documentNumber": "Αριθμός εγγράφου",
+        "role": "Είδος εγγράφου",
+        "documentMode": "Τρόπος έκδοσης",
+        "status": "Κατάσταση",
+        "templateId": "Πρότυπο",
+        "validUntil": "Ισχύει έως",
+        "mobilizedOn": "Εγκατάσταση στο εργοτάξιο",
+        "issuedRevision": "Εκδοθείσα αναθεώρηση",
+        "sourceOfferId": "Προσφορά προέλευσης",
+        "agreementId": "Συμφωνητικό",
+        "parties": "Συμβαλλόμενοι",
+        "scope": "Εμβέλεια",
+        "terms": "Εμπορικοί όροι",
+        "languages": "Γλώσσες",
+        "deviationStatus": "Αποκλίσεις",
+        "revisionNumber": "Αναθεώρηση",
+        "amends": "Τροποποιεί",
+        "pdfFileId": "Αρχείο PDF",
+        "sealed": "Σφραγισμένο"
       }
     }
   }

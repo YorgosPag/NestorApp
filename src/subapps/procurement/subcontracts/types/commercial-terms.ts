@@ -87,15 +87,25 @@ export interface CommercialTerms {
   readonly cashLimitPerPayment: MinorAmount;
 }
 
+export const CLAUSE_DEVIATION_DECISIONS = ['pending', 'approved', 'rejected'] as const;
+export type ClauseDeviationDecision = (typeof CLAUSE_DEVIATION_DECISIONS)[number];
+
 /**
  * Απόκλιση από τη ζώνη ανοχής (§5.2.1, τρόπος 3): η βιβλιοθήκη μένει ίδια, αλλάζει μόνο αυτό το έγγραφο. Η
- * έκδοση **μπλοκάρεται** όσο υπάρχει απόκλιση χωρίς απόφαση.
+ * έκδοση **μπλοκάρεται** όσο υπάρχει απόκλιση που δεν είναι `approved`.
+ *
+ * 🔑 **Η έγκριση δένεται με την ΤΙΜΗ, όχι με το κλειδί** (Φ2 απόφαση 6): αν η τιμή αλλάξει μετά την έγκριση, η απόφαση
+ * γυρίζει σε `pending`. Αλλιώς κάποιος θα εγκρίνει «κράτηση 4%» και θα τυπωθεί «κράτηση 3,1%». Το `decision` το
+ * γράφει **μόνο** ο γραφέας — ο πελάτης στέλνει μόνο τιμή και λόγο.
  */
 export interface ClauseDeviation {
+  readonly value: ClauseParameterValue;
   readonly reason: string;
   readonly requestedBy: string;
-  readonly decision: 'pending' | 'approved' | 'rejected';
+  readonly decision: ClauseDeviationDecision;
   readonly decidedBy: string | null;
+  readonly decidedAt: string | null;
+  readonly decisionReason: string | null;
 }
 
 /** Ρήτρα της βιβλιοθήκης μέσα σε συμφωνητικό: **καρφωμένη έκδοση** + τιμές παραμέτρων. */

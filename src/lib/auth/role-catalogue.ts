@@ -84,6 +84,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "subcontracts:clauses:manage",
       "subcontracts:clauses:propose",
       "subcontracts:templates:manage",
+      // ADR-928 Φ2 — συμφωνητικά και έγκριση αποκλίσεων. Σε άλλον: ρητή παραχώρηση στο claim (όχι ρόλος έργου).
+      "subcontracts:agreements:manage",
+      "subcontracts:agreements:approve_deviation",
       "users:users:view",
       "users:users:manage",
       "projects:projects:view",

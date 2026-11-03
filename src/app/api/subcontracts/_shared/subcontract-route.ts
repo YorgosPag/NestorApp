@@ -23,6 +23,10 @@ import type { RateLimitCategory } from '@/lib/middleware/rate-limit-config';
 import type { VersionTarget } from '@/server/subcontracts/clause-governance-writer.server';
 import { SubcontractWriteError, toSubcontractApiError } from '@/server/subcontracts/subcontract-write-error';
 import { SUBCONTRACT_AUTHORITY_PERMISSIONS, type SubcontractAuthority } from '@/subapps/procurement/subcontracts/vocabulary/subcontract-authorities';
+import {
+  SUBCONTRACT_AGREEMENT_TRANSITIONS,
+  type SubcontractAgreementTransition,
+} from '@/subapps/procurement/subcontracts/types/agreement';
 
 type SubcontractRateCategory = Extract<RateLimitCategory, 'HIGH' | 'STANDARD' | 'SENSITIVE'>;
 
@@ -32,7 +36,7 @@ export interface SubcontractRoutePolicy {
 }
 
 const TIER_OF: Readonly<Record<SubcontractRateCategory, RateLimitTier>> = { HIGH: 'high', STANDARD: 'standard', SENSITIVE: 'sensitive' };
-const FALLBACK_ERROR = 'Subcontract library write failed';
+const FALLBACK_ERROR = 'Subcontract write failed';
 
 const permissionsOf = (policy: SubcontractRoutePolicy): PermissionId[] => [...SUBCONTRACT_AUTHORITY_PERMISSIONS[policy.authority]];
 
@@ -78,6 +82,21 @@ function versionNumberOf(segment: string): number {
   const version = Number(segment);
   if (!Number.isSafeInteger(version) || version < 1) badRequest('Invalid clause version');
   return version;
+}
+
+/** Τα τμήματα `…/agreements/[id]/…`. */
+export type AgreementParams = { id: string };
+
+/** Τα τμήματα `…/agreements/[id]/transitions/[transition]`. */
+export type AgreementTransitionParams = { id: string; transition: string };
+
+const KNOWN_TRANSITIONS: ReadonlySet<string> = new Set(SUBCONTRACT_AGREEMENT_TRANSITIONS);
+const isAgreementTransition = (segment: string): segment is SubcontractAgreementTransition => KNOWN_TRANSITIONS.has(segment);
+
+/** Η μετάβαση από το τμήμα `[transition]` — μέλος του κλειστού λεξιλογίου, αλλιώς 400. */
+export function agreementTransitionOf(segment: string): SubcontractAgreementTransition {
+  if (!isAgreementTransition(segment)) return badRequest('Invalid agreement transition');
+  return segment;
 }
 
 /** Τα τμήματα `…/clauses/[id]/versions/[version]/…`. */

@@ -22,9 +22,17 @@ export type ClauseGovernanceRefusal = 'invalidTransition' | 'selfApproval' | 'no
 
 type VersionFacts = Pick<SubcontractClauseVersion, 'state' | 'proposedBy' | 'professionalReview' | 'sourceHash'>;
 
+/**
+ * Η **μία** διάκριση καθηκόντων: όποιος ζήτησε δεν αποφασίζει. Την ρωτούν η έγκριση έκδοσης, η έγκριση μετάφρασης
+ * και η απόφαση απόκλισης συμφωνητικού (Φ2) — ένας κανόνας, όχι τρία αντίγραφα.
+ */
+export function refuseOwnRequest(requestedBy: string, actorUid: string): 'selfApproval' | null {
+  return requestedBy === actorUid ? 'selfApproval' : null;
+}
+
 export function refuseApproval(version: VersionFacts, actorUid: string): ClauseGovernanceRefusal | null {
   if (version.state !== 'proposed') return 'invalidTransition';
-  return version.proposedBy === actorUid ? 'selfApproval' : null;
+  return refuseOwnRequest(version.proposedBy, actorUid);
 }
 
 export function refuseRejection(version: VersionFacts): ClauseGovernanceRefusal | null {
@@ -59,7 +67,7 @@ export function refuseTranslationApproval(
 ): ClauseGovernanceRefusal | null {
   if (refuseTranslationProposal(version) !== null || translation.status !== 'draft') return 'invalidTransition';
   if (translation.sourceHash !== version.sourceHash) return 'translationStale';
-  return translation.proposedBy === actorUid ? 'selfApproval' : null;
+  return refuseOwnRequest(translation.proposedBy, actorUid);
 }
 
 /**

@@ -23,6 +23,8 @@ import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/f
 
 import type { AuditEntityType } from '@/config/audit-entity-registry';
 import {
+  SUBCONTRACT_AGREEMENT_REVISION_TRACKED_FIELDS,
+  SUBCONTRACT_AGREEMENT_TRACKED_FIELDS,
   SUBCONTRACT_CLAUSE_TRACKED_FIELDS,
   SUBCONTRACT_CLAUSE_VERSION_TRACKED_FIELDS,
   SUBCONTRACT_TRADE_TEMPLATE_TRACKED_FIELDS,
@@ -35,6 +37,8 @@ import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { revisionAfterWrite } from '@/subapps/catalog/aggregate/aggregate-members';
+import type { SubcontractAgreementCounter } from '@/subapps/procurement/subcontracts/agreements/agreement-document-number';
+import type { SubcontractAgreement, SubcontractAgreementRevision } from '@/subapps/procurement/subcontracts/types/agreement';
 import type { SubcontractClause, SubcontractClauseVersion } from '@/subapps/procurement/subcontracts/types/clause';
 import type { SubcontractTradeTemplate } from '@/subapps/procurement/subcontracts/types/trade-template';
 import { SubcontractWriteError } from './subcontract-write-error';
@@ -44,8 +48,13 @@ interface SubcontractRecords {
   readonly clause: SubcontractClause;
   readonly clauseVersion: SubcontractClauseVersion;
   readonly tradeTemplate: SubcontractTradeTemplate;
+  readonly agreement: SubcontractAgreement;
+  /** Αμετάβλητη: γράφεται **μόνο** με `stageCreate` (δεν είναι `UpdatableKind`). */
+  readonly agreementRevision: SubcontractAgreementRevision;
 }
 export type SubcontractKind = keyof SubcontractRecords;
+/** Τα είδη που αλλάζουν μετά τη γέννησή τους — έχουν CAS (`revision`) και σφραγίδα ενημέρωσης. */
+export type UpdatableKind = Exclude<SubcontractKind, 'agreementRevision'>;
 type AnyRecord = SubcontractRecords[SubcontractKind];
 
 interface KindSpec<K extends SubcontractKind> {
@@ -58,6 +67,12 @@ interface KindSpec<K extends SubcontractKind> {
 
 const translationStatusOf = (version: SubcontractClauseVersion): Record<string, string> =>
   Object.fromEntries(Object.entries(version.translations).map(([language, translation]) => [language, translation.status]));
+
+/** `{ 'retention.performance.rate': 'approved' }` — η απόφαση κάθε απόκλισης, όπως τη διαβάζει ο άνθρωπος στο ιστορικό. */
+const deviationStatusOf = (agreement: SubcontractAgreement): Record<string, string> =>
+  Object.fromEntries(agreement.clauses.flatMap((selection) =>
+    Object.entries(selection.deviations).map(([key, deviation]) => [`${selection.clauseKey}.${key}`, deviation.decision]),
+  ));
 
 const KIND_SPECS: { readonly [K in SubcontractKind]: KindSpec<K> } = {
   clause: {
@@ -77,6 +92,18 @@ const KIND_SPECS: { readonly [K in SubcontractKind]: KindSpec<K> } = {
     trackedFields: SUBCONTRACT_TRADE_TEMPLATE_TRACKED_FIELDS,
     entityName: (template) => template.code,
     auditView: (template) => ({ ...template }),
+  },
+  agreement: {
+    entityType: 'subcontract_agreement',
+    trackedFields: SUBCONTRACT_AGREEMENT_TRACKED_FIELDS,
+    entityName: (agreement) => agreement.documentNumber,
+    auditView: (agreement) => ({ ...agreement, deviationStatus: deviationStatusOf(agreement) }),
+  },
+  agreementRevision: {
+    entityType: 'subcontract_agreement_revision',
+    trackedFields: SUBCONTRACT_AGREEMENT_REVISION_TRACKED_FIELDS,
+    entityName: (revision) => `${revision.snapshot.documentNumber} r${revision.revisionNumber}`,
+    auditView: (revision) => ({ ...revision }),
   },
 };
 
@@ -108,6 +135,19 @@ export function clauseVersionDocRef(db: Firestore, clauseId: string, versionId: 
 
 export function tradeTemplateDocRef(db: Firestore, templateId: string): DocumentReference {
   return db.collection(COLLECTIONS.SUBCONTRACT_TRADE_TEMPLATES).doc(templateId);
+}
+
+export function agreementDocRef(db: Firestore, agreementId: string): DocumentReference {
+  return db.collection(COLLECTIONS.SUBCONTRACT_AGREEMENTS).doc(agreementId);
+}
+
+export function agreementRevisionDocRef(db: Firestore, agreementId: string, revisionId: string): DocumentReference {
+  return agreementDocRef(db, agreementId).collection(SUBCOLLECTIONS.SUBCONTRACT_AGREEMENT_REVISIONS).doc(revisionId);
+}
+
+/** Ο μετρητής αριθμών εγγράφου του χώρου — doc id = companyId (όπως `QUOTE_COUNTERS`): ένας ανά χώρο, κατασκευαστικά. */
+function agreementCounterRef(scope: SubcontractTx): DocumentReference {
+  return scope.db.collection(COLLECTIONS.SUBCONTRACT_AGREEMENT_COUNTERS).doc(scope.ctx.companyId);
 }
 
 // ── Συναλλαγή ──────────────────────────────────────────────────────────────
@@ -179,6 +219,17 @@ export async function readOwnedMany<K extends SubcontractKind>(
   );
 }
 
+/** Ο μετρητής του χώρου (ή `null` πριν από το πρώτο έγγραφο) — ανάγνωση ΠΡΙΝ από κάθε εγγραφή, όπως όλες. */
+export async function readAgreementCounter(scope: SubcontractTx): Promise<SubcontractAgreementCounter | null> {
+  const snap = await scope.tx.get(agreementCounterRef(scope));
+  return (snap.data() as SubcontractAgreementCounter | undefined) ?? null;
+}
+
+/** Ο νέος μετρητής — στην ίδια συναλλαγή με το έγγραφο που παίρνει τον αριθμό. Χωρίς ίχνος: δεν είναι οντότητα. */
+export function stageAgreementCounter(scope: SubcontractTx, counter: SubcontractAgreementCounter): void {
+  scope.tx.set(agreementCounterRef(scope), counter);
+}
+
 /** Ο CAS: ο πελάτης στέλνει την αναθεώρηση που διάβασε· αν άλλαξε στο μεταξύ ⇒ 409 με την τρέχουσα. */
 export function assertRevision(record: { readonly revision: number }, expectedRevision: number): void {
   if (record.revision !== expectedRevision) {
@@ -199,7 +250,7 @@ export function stageCreate<K extends SubcontractKind>(scope: SubcontractTx, kin
 }
 
 /** Αλλαγή υπάρχοντος: αναθεώρηση +1 και σφραγίδα ενημέρωσης — ο **ένας** δρόμος. */
-export function stageUpdate<K extends SubcontractKind>(
+export function stageUpdate<K extends UpdatableKind>(
   scope: SubcontractTx,
   kind: K,
   ref: DocumentReference,
