@@ -371,3 +371,14 @@ export function useNotifications(): NotificationContextValue {
   return context;
 }
 
+/**
+ * Ίδιο με το `useNotifications`, αλλά επιστρέφει `null` έξω από τον πάροχο αντί να πετά.
+ *
+ * Για επιφάνειες που ζουν ΠΑΝΩ από κάθε πάροχο — ο καθολικός drawer ειδοποιήσεων αποδίδεται στο ριζικό
+ * `app/layout.tsx`, ενώ ο πάροχος ζει στα `(app)`/`(me)` layouts. Με το `useNotifications` εκεί, το
+ * prerender του `/_not-found` έριξε το production build (ADR-927 §9, 2026-11-03).
+ */
+export function useOptionalNotifications(): NotificationContextValue | null {
+  return useContext(NotificationContext);
+}
+

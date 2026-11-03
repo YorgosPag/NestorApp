@@ -96,7 +96,20 @@
 - Αφαιρείται το `config/contact-info-config.ts` (δοκιμαστικά τηλέφωνα/email): μοναδικός του καταναλωτής ήταν το seed. Το βρήκε το CHECK 3.22. Βγήκε και η εγγραφή του στο `.ssot-registry.json`.
 - Οι εξαιρέσεις και τα baselines των πυλών που έδειχναν τα αρχεία καθαρίστηκαν: 3.17 · 3.38 · 3.51 · catalog-columns. Το κείμενο του `.workspace-scope.json` ενημερώθηκε.
 
+## 9. Ο drawer ζει πάνω από τον πάροχο toasts
+
+Ο καθολικός drawer αποδίδεται στο ριζικό `app/layout.tsx` (ADR-834 §6), ενώ ο `NotificationProvider` ζει στα `(app)`/`(me)` layouts. Άρα από τον drawer το context των toasts **δεν είναι προσβάσιμο**.
+
+Το `useNotificationActions` ζητούσε το `useNotifications`, που πετά έξω από τον πάροχο. Το prerender του `/_not-found` και του `/debug/token-info` έσπασε, και μαζί όλο το production build του `384bb147`. Η παραγωγή έμεινε στην προηγούμενη έκδοση. Τα jest tests δεν το έπιασαν, γιατί αποδίδουν τη σελίδα χωρίς το ριζικό layout.
+
+- Νέο `useOptionalNotifications()` στον πάροχο: επιστρέφει `null` αντί να πετά.
+- Το hook ενεργειών το χρησιμοποιεί. Στη σελίδα Inbox η απόρριψη έχει toast αναίρεσης. Στον drawer γίνεται **χωρίς** αναίρεση, όπως πριν από αυτό το ADR.
+- Άγκυρα: `useNotificationActions.outside-provider.test.tsx`. Η μετάλλαξη (επαναφορά του `useNotifications`) πιάνεται.
+- ⚠️ Ανοιχτό: για αναίρεση και στον drawer χρειάζεται ξενιστής toasts **πάνω** από τον drawer, ΕΝΑΣ μόνο `Toaster`, ώστε να μη διπλασιάζονται τα toasts.
+
 ## Changelog
+
+- **2026-11-03 (γ)** — §9: το production build του `384bb147` έσπασε στο prerender (`useNotifications must be used within NotificationProvider`). Διορθώθηκε με το `useOptionalNotifications` και άγκυρα με μετάλλαξη.
 
 - **2026-11-03 (β)** — §8: «Ενημέρωση Βάσης» και «Μετεγκατάσταση Enterprise» βγήκαν από το προϊόν, μαζί με το νεκρό `core/configuration/*` (−5.433 γραμμές). Το `business-rules.ts` έγινε αυτοτελές.
 

@@ -19,7 +19,7 @@ import { useTranslation } from '@/i18n';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useRouter } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
-import { useNotifications as useToasts } from '@/providers/NotificationProvider';
+import { useOptionalNotifications } from '@/providers/NotificationProvider';
 import { NotificationClient } from '@/api/notificationClient';
 import { API_ROUTES } from '@/config/domain-constants';
 import { drawerDestination } from '@/components/notifications/drawer-destination';
@@ -71,7 +71,9 @@ export function useNotificationActions(options: NotificationActionsOptions = {})
   const { onBeforeNavigate } = options;
   const router = useRouter();
   const { t } = useTranslation(COMMON_NAMESPACES);
-  const { notify } = useToasts();
+  // ⚠️ Ο drawer αποδίδεται στο ριζικό layout, ΠΑΝΩ από τον πάροχο toasts ⇒ εκεί `null`, και η απόρριψη
+  //    γίνεται χωρίς toast αναίρεσης (ADR-927 §9). Το `useNotifications` εκεί έριξε το production build.
+  const notify = useOptionalNotifications()?.notify;
 
   const markRead = useCallback(async (ids?: readonly string[]) => {
     const s = center();
@@ -117,7 +119,7 @@ export function useNotificationActions(options: NotificationActionsOptions = {})
       logger.error('Failed to persist dismiss', { error });
       return;
     }
-    notify(t('notifications.dismissed'), {
+    notify?.(t('notifications.dismissed'), {
       type: 'info',
       id: DISMISS_TOAST_ID,
       actions: [{ label: t('notifications.undo'), onClick: () => void undoDismiss(previous) }],

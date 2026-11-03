@@ -26,7 +26,7 @@ jest.mock('@/services/notificationService', () => ({
 jest.mock('@/hooks/useFirestoreNotifications', () => ({ useFirestoreNotifications: () => undefined }));
 jest.mock('@/lib/workspace/navigation', () => ({ useRouter: () => ({ push: mockPush, replace: mockReplace }) }));
 jest.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(mockQuery) }));
-jest.mock('@/providers/NotificationProvider', () => ({ useNotifications: () => ({ notify: mockNotify }) }));
+jest.mock('@/providers/NotificationProvider', () => ({ useOptionalNotifications: () => ({ notify: mockNotify }) }));
 jest.mock('@/auth/contexts/AuthContext', () => ({ useAuth: () => ({ user: { uid: 'user_1' } }) }));
 jest.mock('@/hooks/useUserTimeZone', () => ({ useUserTimeZone: () => 'Europe/Athens' }));
 const mockT = (key: string) => (key === 'notifications.keyed.title' ? 'Μεταφρασμένος τίτλος' : key);
