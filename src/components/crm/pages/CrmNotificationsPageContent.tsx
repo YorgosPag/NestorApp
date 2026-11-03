@@ -17,9 +17,12 @@
 
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Bell, BellRing, CheckCheck, AlertCircle, Inbox, FlaskConical } from 'lucide-react';
-import { useNotifications } from '@/components/crm/notifications/useNotifications';
-import { CrmNotificationCard } from '@/components/crm/notifications/NotificationCard';
+import { Bell, BellRing, CheckCheck, AlertCircle, FlaskConical, RefreshCw } from 'lucide-react';
+import { NotificationInbox } from '@/components/crm/notifications/NotificationInbox';
+import { useNotificationActions } from '@/components/notifications/useNotificationActions';
+import { useFirestoreNotifications } from '@/hooks/useFirestoreNotifications';
+import { useNotificationCenter } from '@/stores/notificationCenter';
+import { restartNotificationFeed } from '@/stores/notification-feed';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,8 +32,6 @@ import { PageHeader } from '@/core/headers';
 import { PageContainer } from '@/core/containers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('crm/notifications');
@@ -38,17 +39,18 @@ const logger = createModuleLogger('crm/notifications');
 export function CrmNotificationsPageContent() {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
   const { user } = useAuth();
   const [isCreatingTest, setIsCreatingTest] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
-  const {
-    notifications,
-    loading,
-    error,
-    unreadCount,
-    markAllAsRead,
-  } = useNotifications();
+
+  // 🔑 ADR-927 — η σελίδα ΔΑΝΕΙΖΕΤΑΙ τη μία ροή (ίδια με το κουδούνι) και διαβάζει το ίδιο store.
+  useFirestoreNotifications({ userId: user?.uid ?? '', enabled: Boolean(user?.uid) });
+  const total = useNotificationCenter((s) => s.order.length);
+  const unreadCount = useNotificationCenter((s) => s.unread);
+  const status = useNotificationCenter((s) => s.status);
+  const error = useNotificationCenter((s) => s.error);
+  const { markRead } = useNotificationActions();
+  const loading = status === 'loading' || (status === 'idle' && Boolean(user?.uid));
 
   const createTestNotification = useCallback(async () => {
     if (!user?.uid) return;
@@ -74,15 +76,15 @@ export function CrmNotificationsPageContent() {
   }, [user?.uid]);
 
   const dashboardStats: DashboardStat[] = [
-    { title: t('notifications.stats.total'), value: notifications.length, icon: Bell, color: 'blue' },
+    { title: t('notifications.stats.total'), value: total, icon: Bell, color: 'blue' },
     { title: t('notifications.stats.unread'), value: unreadCount, icon: BellRing, color: 'orange' },
-    { title: t('notifications.stats.read'), value: notifications.length - unreadCount, icon: CheckCheck, color: 'green' },
+    { title: t('notifications.stats.read'), value: total - unreadCount, icon: CheckCheck, color: 'green' },
   ];
 
   const customActions: React.ReactNode[] = [
     React.createElement(Button, {
       key: 'mark-all-read',
-      onClick: () => void markAllAsRead(),
+      onClick: () => void markRead(),
       disabled: unreadCount === 0 || loading,
       size: 'sm',
     },
@@ -133,34 +135,20 @@ export function CrmNotificationsPageContent() {
         />
       )}
 
-      <div>
-        {loading && (
-          <PageLoadingState icon={Bell} message={t('notifications.loading')} layout="contained" />
-        )}
-
-        {!loading && error && (
-          <div className="flex items-center justify-center gap-3 rounded-lg border border-destructive/20 bg-destructive/10 py-8 text-destructive">
-            <AlertCircle className="h-6 w-6" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {!loading && !error && notifications.length === 0 && (
-          <div className={cn("flex flex-col items-center justify-center py-12", colors.text.muted)}>
-            <Inbox className="h-12 w-12 mb-4" />
-            <p className="text-lg font-medium">{t('notifications.empty')}</p>
-            <p className="text-sm">{t('notifications.emptyDescription')}</p>
-          </div>
-        )}
-
-        {!loading && !error && notifications.length > 0 && (
-          <div className="space-y-4">
-            {notifications.map((n) => (
-              <CrmNotificationCard key={n.id} notification={n} />
-            ))}
-          </div>
-        )}
-      </div>
+      {loading && total === 0 ? (
+        <PageLoadingState icon={Bell} message={t('notifications.loading')} layout="contained" />
+      ) : error ? (
+        <section role="alert" className="flex flex-col items-center justify-center gap-3 rounded-lg border border-destructive/20 bg-destructive/10 py-8 text-destructive">
+          <AlertCircle className="h-6 w-6" aria-hidden="true" />
+          <p>{t('notifications.errors.loadFailed')}</p>
+          <Button variant="outline" size="sm" onClick={restartNotificationFeed}>
+            <RefreshCw className={`${iconSizes.sm} mr-2`} aria-hidden="true" />
+            {t('notifications.inbox.retry')}
+          </Button>
+        </section>
+      ) : (
+        <NotificationInbox />
+      )}
     </PageContainer>
   );
 }

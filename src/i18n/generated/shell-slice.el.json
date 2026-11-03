@@ -2243,7 +2243,8 @@
         "view_page": "Προβολή Σελίδας"
       },
       "count": "{count} ειδοποιήσεις",
-      "dismiss": "Διαγραφή",
+      "dismiss": "Απόρριψη",
+      "dismissed": "Η ειδοποίηση απορρίφθηκε",
       "email": {
         "newFrom": "Νέο email από {sender}"
       },
@@ -2255,6 +2256,7 @@
       "markRead": "Προβλήθηκε",
       "retry": "Δοκιμή ξανά",
       "title": "Ειδοποιήσεις",
+      "undo": "Αναίρεση",
       "unknownSender": "Άγνωστος"
     },
     "obligations": {

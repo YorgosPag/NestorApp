@@ -2,7 +2,7 @@
  * @fileoverview **ΤΙ ΣΗΜΑΙΝΕΙ Η ΚΑΤΑΣΤΑΣΗ ΜΙΑΣ ΕΙΔΟΠΟΙΗΣΗΣ** — ένας κριτής για το κουδούνι, το συρτάρι και τη σελίδα
  * ειδοποιήσεων (ADR-867 Β9(β) Ε10).
  * @related types/notification.ts (`DeliveryState`) · stores/notificationCenter.ts · NotificationDrawer.enterprise.tsx ·
- *   crm/notifications/useNotifications.ts · server/notifications/notification-withdraw.ts
+ *   crm/notifications/NotificationInbox.tsx · server/notifications/notification-withdraw.ts
  * @module lib/notifications/notification-state
  *
  * 🔴 **ΤΕΣΣΕΡΙΣ ΔΙΑΤΥΠΩΣΕΙΣ, ΔΥΟ ΑΠΑΝΤΗΣΕΙΣ** (μετρημένο 2026-09-21): το κουδούνι μετρούσε αδιάβαστο το

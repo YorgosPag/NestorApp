@@ -49,7 +49,7 @@
     "error": "Failed to load",
     "retry": "Retry",
     "loadMore": "Load More",
-    "dismiss": "Delete",
+    "dismiss": "Dismiss",
     "actions": {
       "view_email": "View",
       "view_page": "View Page"
@@ -57,7 +57,9 @@
     "unknownSender": "Unknown",
     "email": {
       "newFrom": "New email from {sender}"
-    }
+    },
+    "dismissed": "Notification dismissed",
+    "undo": "Undo"
   },
   "header": {
     "notifications": {

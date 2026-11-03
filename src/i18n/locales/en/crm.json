@@ -560,29 +560,11 @@
     "errorComponent": "Lead Details"
   },
   "notifications": {
-    "types": {
-      "newLead": "New Lead",
-      "taskDue": "Task",
-      "meetingReminder": "Meeting",
-      "contractSigned": "Contract",
-      "other": "Other"
-    },
-    "time": {
-      "justNow": "Just now",
-      "minute": "{count} minute ago",
-      "minutes": "{count} minutes ago",
-      "hour": "{count} hour ago",
-      "hours": "{count} hours ago",
-      "day": "{count} day ago",
-      "days": "{count} days ago"
-    },
     "errors": {
-      "loadFailed": "Failed to load notifications",
-      "updateFailed": "Failed to update notifications"
+      "loadFailed": "Failed to load notifications"
     },
     "title": "Notifications",
     "description": "View and manage your notifications",
-    "filters": "Filters",
     "markAllRead": "Mark all as read",
     "loading": "Loading notifications...",
     "empty": "No notifications",
@@ -594,10 +576,38 @@
     },
     "test": {
       "create": "Test",
-      "creating": "Creating...",
-      "delete": "Delete test",
-      "title": "Test: New lead from website",
-      "body": "A test notification for CRM lead activity. (This is a development-only notification)"
+      "creating": "Creating..."
+    },
+    "inbox": {
+      "listLabel": "Notification list",
+      "filterLabel": "Notification filters",
+      "views": {
+        "all": "All",
+        "unread": "Unread"
+      },
+      "categoriesLabel": "Categories",
+      "categoryAll": "All categories",
+      "categoryOther": "Other",
+      "groups": {
+        "today": "Today",
+        "yesterday": "Yesterday"
+      },
+      "unreadMarker": "Unread",
+      "actions": {
+        "open": "Open",
+        "markRead": "Mark as read",
+        "markUnread": "Mark as unread",
+        "dismiss": "Dismiss"
+      },
+      "emptyUnread": "You have no unread notifications.",
+      "emptyFiltered": "No notifications match this filter.",
+      "clearFilter": "Show all",
+      "loadOlder": "Older notifications",
+      "loadingOlder": "Loading older…",
+      "loadOlderFailed": "Older notifications could not be loaded. Please try again.",
+      "retry": "Try again",
+      "shortcutsHint": "Keys: j / k move · Enter open · e dismiss · Shift+I read · Shift+U unread",
+      "rowActions": "Notification actions"
     }
   },
   "teams": {

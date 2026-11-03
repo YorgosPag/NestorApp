@@ -1,14 +1,12 @@
 // hooks/useFirestoreNotifications.ts
-// ✅ Real-time Firestore notifications με onSnapshot
+// ✅ Real-time Firestore notifications — δανεισμός της ΜΙΑΣ ροής (`stores/notification-feed.ts`).
+//
+// 🔑 Όσα σημεία κι αν το καλούν (κουδούνι, σελίδα ειδοποιήσεων), ανοίγει **ένας** ακροατής ανά χρήστη.
+//    Ήταν απευθείας `subscribeToNotifications` εδώ **και** δεύτερος στη σελίδα — δύο αναγνώσεις, δύο μνήμες
+//    (ADR-927). Η λογική σφάλματος («δεν έχεις εταιρεία» ≠ βλάβη) μετακόμισε μαζί με τη ροή.
 
 import { useEffect } from 'react';
-import { isMissingTenantError } from '@/services/firestore/auth-context';
-import { subscribeToNotifications } from '@/services/notificationService';
-import { useNotificationCenter } from '@/stores/notificationCenter';
-import type { Notification } from '@/types/notification';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('useFirestoreNotifications');
+import { acquireNotificationFeed } from '@/stores/notification-feed';
 
 export interface FirestoreNotificationOptions {
   userId: string;
@@ -16,48 +14,15 @@ export interface FirestoreNotificationOptions {
 }
 
 /**
- * Real-time Firestore notifications hook
- * Χρησιμοποιεί onSnapshot για instant updates χωρίς polling
+ * Κρατά ανοιχτή τη ροή ειδοποιήσεων του `userId` όσο είναι mounted ο καλών.
+ * Τα δεδομένα διαβάζονται από το `useNotificationCenter`.
  */
-export function useFirestoreNotifications(opts: FirestoreNotificationOptions) {
-  const { ingest, setStatus, setError } = useNotificationCenter();
+export function useFirestoreNotifications(opts: FirestoreNotificationOptions): void {
+  const { userId, enabled } = opts;
 
   useEffect(() => {
     // Skip if disabled, SSR, or no authenticated user
-    if (typeof window === 'undefined' || opts.enabled === false || !opts.userId) return;
-
-    setStatus('loading');
-
-    const unsubscribe = subscribeToNotifications(
-      opts.userId,
-      (notifications: Notification[]) => {
-        ingest(notifications);
-        setStatus('ready');
-      },
-      (error: Error) => {
-        // 🔴 **«ΔΕΝ ΕΧΕΙΣ ΕΤΑΙΡΕΙΑ» ΔΕΝ ΕΙΝΑΙ ΒΛΑΒΗ** (ADR-807 · ADR-813 Φάση Β).
-        //    Ο αυτόνομος επαγγελματίας **νόμιμα** δεν ανήκει σε οργανισμό· τα
-        //    ειδοποιητήρια εταιρείας απλώς δεν τον αφορούν. Η καταγραφή του ως
-        //    κόκκινο `[ERROR]` έκανε **κανονική κατάσταση** να μοιάζει με
-        //    αποτυχία σε **κάθε φόρτωση σελίδας**.
-        //
-        // ⚠️ Ο έλεγχος γίνεται με το **brand** (`isMissingTenantError`), ποτέ με
-        //    σύγκριση κειμένου: το μήνυμα αλλάζει, η ταυτότητα όχι — και το
-        //    brand επιβιώνει όταν το module φορτωθεί σε δεύτερο γράφο (Server ≠
-        //    Client), όπου το `instanceof` απαντά ψευδώς `false`.
-        if (isMissingTenantError(error)) {
-          setStatus('ready');
-          return;
-        }
-        logger.error('Firestore listener error', { error });
-        setError(error.message);
-        setStatus('error');
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
-    // ✅ FIX: Only re-run when userId or enabled changes, not when store functions change
-  }, [opts.userId, opts.enabled, ingest, setStatus, setError]);
+    if (typeof window === 'undefined' || enabled === false || !userId) return;
+    return acquireNotificationFeed(userId);
+  }, [userId, enabled]);
 }

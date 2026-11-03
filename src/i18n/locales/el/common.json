@@ -49,7 +49,7 @@
     "error": "Αποτυχία φόρτωσης",
     "retry": "Δοκιμή ξανά",
     "loadMore": "Φόρτωση περισσότερων",
-    "dismiss": "Διαγραφή",
+    "dismiss": "Απόρριψη",
     "actions": {
       "view_email": "Προβολή",
       "view_page": "Προβολή Σελίδας"
@@ -57,7 +57,9 @@
     "unknownSender": "Άγνωστος",
     "email": {
       "newFrom": "Νέο email από {sender}"
-    }
+    },
+    "dismissed": "Η ειδοποίηση απορρίφθηκε",
+    "undo": "Αναίρεση"
   },
   "header": {
     "notifications": {

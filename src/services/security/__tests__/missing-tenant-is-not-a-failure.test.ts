@@ -129,7 +129,9 @@ describe('Β — το υποσύστημα ρόλων ΕΦΥΓΕ, και μαζ�
     const path = require('node:path');
     const root = path.join(__dirname, '..', '..', '..');
     const readers = [
-      path.join(root, 'hooks', 'useFirestoreNotifications.ts'),
+      // ⚠️ **ΜΕΤΑΚΟΜΙΣΕ 2026-11-03 (ADR-927)**: ήταν το `hooks/useFirestoreNotifications.ts`· ο
+      //    ακροατής έγινε **ΕΝΑΣ** κοινός (κουδούνι + σελίδα) και ο χειρισμός πήγε μαζί του.
+      path.join(root, 'stores', 'notification-feed.ts'),
       // ⚠️ **ΜΕΤΑΚΟΜΙΣΕ 2026-08-26 (ADR-798 §21)**: ήταν ο `useRealtimeBuildings`,
       //    ο **μόνος** από τους πέντε αδελφούς που ρωτούσε. Όταν το CHECK 3.28
       //    επέβαλε εξαγωγή, ο αναγνώστης έγινε **ΕΝΑΣ** για όλους. Η πρόθεση αυτής

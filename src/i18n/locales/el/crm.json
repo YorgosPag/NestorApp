@@ -560,29 +560,11 @@
     "errorComponent": "Λεπτομέρειες Lead"
   },
   "notifications": {
-    "types": {
-      "newLead": "Νέο Lead",
-      "taskDue": "Εργασία",
-      "meetingReminder": "Συνάντηση",
-      "contractSigned": "Συμβόλαιο",
-      "other": "Άλλο"
-    },
-    "time": {
-      "justNow": "Μόλις τώρα",
-      "minute": "Πριν {count} λεπτό",
-      "minutes": "Πριν {count} λεπτά",
-      "hour": "Πριν {count} ώρα",
-      "hours": "Πριν {count} ώρες",
-      "day": "Πριν {count} ημέρα",
-      "days": "Πριν {count} ημέρες"
-    },
     "errors": {
-      "loadFailed": "Αποτυχία φόρτωσης ειδοποιήσεων",
-      "updateFailed": "Αποτυχία ενημέρωσης ειδοποιήσεων"
+      "loadFailed": "Αποτυχία φόρτωσης ειδοποιήσεων"
     },
     "title": "Ειδοποιήσεις",
     "description": "Προβολή και διαχείριση των ειδοποιήσεών σας",
-    "filters": "Φίλτρα",
     "markAllRead": "Σήμανση όλων ως αναγνωσμένα",
     "loading": "Φόρτωση ειδοποιήσεων...",
     "empty": "Δεν υπάρχουν ειδοποιήσεις",
@@ -594,10 +576,38 @@
     },
     "test": {
       "create": "Δοκιμή",
-      "creating": "Δημιουργία...",
-      "delete": "Διαγραφή δοκιμής",
-      "title": "Δοκιμή: Νέο lead από ιστοσελίδα",
-      "body": "Δοκιμαστική ειδοποίηση για CRM lead. (Μόνο για development)"
+      "creating": "Δημιουργία..."
+    },
+    "inbox": {
+      "listLabel": "Λίστα ειδοποιήσεων",
+      "filterLabel": "Φίλτρα ειδοποιήσεων",
+      "views": {
+        "all": "Όλες",
+        "unread": "Μη αναγνωσμένες"
+      },
+      "categoriesLabel": "Κατηγορίες",
+      "categoryAll": "Όλες οι κατηγορίες",
+      "categoryOther": "Άλλες",
+      "groups": {
+        "today": "Σήμερα",
+        "yesterday": "Χθες"
+      },
+      "unreadMarker": "Μη αναγνωσμένη",
+      "actions": {
+        "open": "Άνοιγμα",
+        "markRead": "Σήμανση ως αναγνωσμένη",
+        "markUnread": "Σήμανση ως μη αναγνωσμένη",
+        "dismiss": "Απόρριψη"
+      },
+      "emptyUnread": "Δεν έχετε μη αναγνωσμένες ειδοποιήσεις.",
+      "emptyFiltered": "Καμία ειδοποίηση σε αυτό το φίλτρο.",
+      "clearFilter": "Εμφάνιση όλων",
+      "loadOlder": "Παλαιότερες ειδοποιήσεις",
+      "loadingOlder": "Φόρτωση παλαιότερων…",
+      "loadOlderFailed": "Οι παλαιότερες ειδοποιήσεις δεν φορτώθηκαν. Δοκιμάστε ξανά.",
+      "retry": "Δοκιμή ξανά",
+      "shortcutsHint": "Πλήκτρα: j / k μετακίνηση · Enter άνοιγμα · e απόρριψη · Shift+I αναγνωσμένη · Shift+U μη αναγνωσμένη",
+      "rowActions": "Ενέργειες ειδοποίησης"
     }
   },
   "teams": {

@@ -1,5 +1,10 @@
 # Enterprise Notification System
 
+> ⚠️ **Μερικώς μπαγιάτικο (2026-11-03).** Η ροή του πελάτη άλλαξε με το **ADR-927**: ένας δανεικός ακροατής ανά
+> χρήστη (`stores/notification-feed.ts`), το `notificationCenter` με `hasMore`/`loadingOlder` αντί για `cursor`,
+> σελιδοποίηση στη βάση (`fetchNotificationsBefore`) αντί για `NotificationClient.list`, και οι ενέργειες στο
+> `components/notifications/useNotificationActions.ts`. Όπου αυτό το κείμενο διαφωνεί, ισχύει το ADR-927.
+
 ## 📋 Overview
 
 Πλήρες enterprise-grade notification system με **Firestore real-time integration**, SSR compatibility, accessibility, και i18n support.

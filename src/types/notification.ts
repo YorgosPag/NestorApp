@@ -30,6 +30,20 @@ export interface TraceMeta {
   spanId?: string;
 }
 
+/**
+ * Ό,τι γράφει ο orchestrator στο `meta` (`server/notifications/notification-orchestrator.ts`, βήμα 6).
+ * 🔑 Το `eventType` είναι ο **δηλωμένος** τύπος του παραγωγού — η μόνη έγκυρη βάση για ομαδοποίηση
+ * ανά κατηγορία (`config/notification-events.ts` → `EVENT_CATEGORY_MAP`). Ποτέ μαντεψιά από κείμενο
+ * ή από το `source.feature` (ADR-841 §7 Α18). Προαιρετικό: παλιά και δοκιμαστικά έγγραφα δεν το έχουν.
+ */
+export interface NotificationMeta extends TraceMeta {
+  dedupeKey?: string;
+  eventType?: string;
+  eventId?: string;
+  entityId?: string | null;
+  entityType?: string | null;
+}
+
 export type Notification = {
   id: string;
   tenantId: string;
@@ -50,7 +64,7 @@ export type Notification = {
 
   channel: Channel; // where it was delivered
   delivery: { state: DeliveryState; attempts: number; lastError?: string };
-  meta?: TraceMeta;
+  meta?: NotificationMeta;
 
   /** i18n key for client-side translation (falls back to title if missing) */
   titleKey?: string;

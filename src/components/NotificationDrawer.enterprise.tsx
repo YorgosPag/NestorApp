@@ -5,96 +5,46 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useNotificationDrawer } from '@/stores/notificationDrawer';
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { useRouter } from '@/lib/workspace/navigation';
-import { declaredHref } from '@/lib/workspace/route-worlds';
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw, Eye, CheckCheck } from 'lucide-react';
+import { X, AlertCircle, RefreshCw, Eye, CheckCheck } from 'lucide-react';
 import { useUserTimeZone } from '@/hooks/useUserTimeZone';
-import { useNotificationCenter } from '@/stores/notificationCenter';
+import { notificationListOf, useNotificationCenter } from '@/stores/notificationCenter';
+import { loadOlderNotifications, restartNotificationFeed } from '@/stores/notification-feed';
 import { useTranslation } from '@/i18n';
-import type { Notification, Severity } from '@/types/notification';
-import { NotificationClient } from '@/api/notificationClient';
+import type { Notification } from '@/types/notification';
 import { notificationDisplayBody, notificationDisplayTitle } from '@/components/notifications/notification-display-title';
-import { drawerDestination, type DrawerDestination } from '@/components/notifications/drawer-destination';
-import { markNotificationsAsRead, dismissNotification } from '@/services/notificationService';
+import { drawerDestination } from '@/components/notifications/drawer-destination';
+import { useNotificationActions } from '@/components/notifications/useNotificationActions';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { createModuleLogger } from '@/lib/telemetry';
 import { isNotificationUnread } from '@/lib/notifications/notification-state';
-import { API_ROUTES } from '@/config/domain-constants';
+import { SEVERITY_ICON, SEVERITY_TEXT_CLASS } from '@/components/notifications/notification-severity';
 import '@/lib/design-system';
-
-const logger = createModuleLogger('NotificationDrawer');
 
 // 🔑 Ο ΔΙΑΚΟΠΤΗΣ ΖΕΙ ΣΤΟ `stores/notificationDrawer` (ADR-834). Ήταν εδώ, και
 //    όποιος ήθελε μόνο να ΑΝΟΙΞΕΙ το συρτάρι φόρτωνε ΟΛΟΚΛΗΡΟ αυτό το αρχείο —
 //    μαζί με `useAuth` → `AuthContext` → firebase/auth. Το μέτρησε άγκυρα που
 //    κοκκίνισε (`shell-utilities-identity.test.tsx`), όχι ανάγνωση.
 
-const iconMap: Record<Severity, React.ComponentType<{ className?: string }>> = {
-  success: CheckCircle,
-  error: AlertCircle,
-  warning: AlertTriangle,
-  info: Info,
-  critical: AlertCircle
-};
-
-const colorMap: Record<Severity, string> = {
-  success: 'text-[hsl(var(--text-success))]',
-  error: 'text-destructive',
-  warning: 'text-[hsl(var(--text-warning))]',
-  info: 'text-primary',
-  critical: 'text-destructive',
-};
-
 export function NotificationDrawer() {
-  const router = useRouter();
-
   const { isOpen, close } = useNotificationDrawer();
-  const { items, order, markRead: markReadLocal, dismiss: dismissLocal, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
+  const items = useNotificationCenter(s => s.items);
+  const order = useNotificationCenter(s => s.order);
+  const status = useNotificationCenter(s => s.status);
+  const storeError = useNotificationCenter(s => s.error);
+  const hasMore = useNotificationCenter(s => s.hasMore);
+  const loadingOlder = useNotificationCenter(s => s.loadingOlder);
 
   // 🏢 ENTERPRISE: Persistent card selection (like project management cards)
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // 🏢 ENTERPRISE: Mark as read with Firestore persistence
-  const markRead = useCallback(async (ids?: string[]) => {
-    // 1. Optimistic local update
-    markReadLocal(ids);
-
-    // 2. Persist to Firestore
-    const targetIds = ids ?? order.filter(id => {
-      const n = items.get(id);
-      return n && isNotificationUnread(n.delivery.state);
-    });
-
-    if (targetIds.length > 0) {
-      try {
-        await markNotificationsAsRead(targetIds);
-      } catch (error) {
-        logger.error('Failed to persist mark as read', { error });
-        // Note: The real-time subscription will sync the correct state
-      }
-    }
-  }, [markReadLocal, order, items]);
-
-  // 🏢 ENTERPRISE: Dismiss notification (hide from panel, keep email record)
-  const handleDismiss = useCallback(async (id: string) => {
-    // 1. Optimistic local removal
-    dismissLocal(id);
-
-    // 2. Persist to Firestore
-    try {
-      await dismissNotification(id);
-    } catch (error) {
-      logger.error('Failed to persist dismiss', { error });
-      // Real-time subscription will sync the correct state
-    }
-  }, [dismissLocal]);
+  // 🔑 ADR-927 — οι ενέργειες ζουν σε ΕΝΑ hook, κοινό με τη σελίδα ειδοποιήσεων.
+  const { markRead, dismiss: handleDismiss, open: openNotification } = useNotificationActions({ onBeforeNavigate: close });
 
   const { t, i18n } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
@@ -103,73 +53,18 @@ export function NotificationDrawer() {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  // ✅ SSR-safe: Lazy initialization of NotificationClient
-  const clientRef = useRef<NotificationClient | null>(null);
-  if (!clientRef.current && typeof window !== 'undefined') {
-    clientRef.current = new NotificationClient({ baseUrl: API_ROUTES.NOTIFICATIONS.LIST });
-  }
-
   // 🕐 Η ζώνη του ανθρώπου από το ΕΝΑ SSoT (`user_notification_settings/{uid}`), ζωντανά.
   //    ⚠️ Ήταν fetch στο `/api/notifications/preferences` — αποθήκη-φάντασμα που κανείς δεν
   //    έγραφε, πίσω από `withAuth` ⇒ 401 + `[ERROR]` σε ΚΑΘΕ φόρτωση για κάθε πολίτη.
   const userTimeZone = useUserTimeZone();
 
-  // ✅ ENTERPRISE: Retry handler
-  const handleRetry = async () => {
-    if (!clientRef.current) return; // SSR-safe
-    try {
-      setStatus('loading');
-      setError(undefined);
-      const { items: newItems } = await clientRef.current.list({ limit: 50 });
-      ingest(newItems as Notification[]);
-      setStatus('ready');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load notifications');
-      setStatus('error');
-    }
-  };
+  // ✅ ENTERPRISE: Retry — ξανανοίγει τη ΜΙΑ ροή (ήταν REST `list` που αντικαθιστούσε σιωπηλά τον ακροατή).
+  const handleRetry = () => restartNotificationFeed();
 
-  // ✅ ENTERPRISE: Load More με cursor pagination
-  const handleLoadMore = async () => {
-    if (!clientRef.current || !cursor) return; // SSR-safe
-    try {
-      const { items: newItems, cursor: nextCursor } = await clientRef.current.list({ cursor, limit: 50 });
-      ingest(newItems as Notification[]);
-      setCursor(nextCursor);
-    } catch (error) {
-      logger.error('Load more failed', { error });
-    }
-  };
-
-  // ✅ ENTERPRISE: Notification action handler (CTAs)
-  const handleAction = async (notificationId: string, actionId: string, destination: DrawerDestination) => {
-    try {
-      if (destination.kind === 'external') {
-        window.open(destination.href, '_blank', 'noopener,noreferrer');
-      } else {
-        close();
-        // ΔΡΟΜΟΣ #3: ο μόνιμος σύνδεσμος `/n/{id}` (ADR-849 Β1) ή η ιστορική ευρετική —
-        // ο μεταγλωττιστής δεν βλέπει ποια ειδοποίηση θα πατηθεί.
-        router.push(
-          declaredHref('Μόνιμος σύνδεσμος ειδοποίησης — ο χώρος-στόχος λύνεται στον διακομιστή.', destination.href),
-        );
-      }
-
-      // 🔑 ADR-849 Β1 — ο μόνιμος σύνδεσμος ΓΡΑΦΕΙ ο ίδιος το «ανοίχτηκε» (ένας συγγραφέας
-      //    για email και κουδούνι)· το `act` μένει μόνο για τους άλλους δύο δρόμους.
-      if (destination.kind !== 'permalink' && clientRef.current) {
-        await clientRef.current.act({ id: notificationId, actionId });
-      }
-
-      // Mark notification as acted (update local state)
-      const notification = items.get(notificationId);
-      if (notification) {
-        const updated = { ...notification, delivery: { ...notification.delivery, state: 'acted' as const } };
-        ingest([updated]);
-      }
-    } catch (error) {
-      logger.error('Action failed', { error });
-    }
+  // ✅ ENTERPRISE: Παλαιότερες — δρομέας-τιμή στη βάση. ⚠️ Ήταν `GET /api/notifications?cursor=…`, που
+  //    **αγνοούσε** το `cursor` ⇒ γύριζε ξανά την πρώτη σελίδα και το κουμπί δεν έφευγε ποτέ (2026-11-03).
+  const handleLoadMore = () => {
+    loadOlderNotifications().catch(() => undefined); // καταγράφεται στη ροή· το κουμπί μένει για επανάληψη
   };
 
   // 🌐 Γλώσσα = η γλώσσα της ΟΘΟΝΗΣ (ό,τι διαβάζει ο άνθρωπος τώρα)· ζώνη = η δηλωμένη.
@@ -244,7 +139,7 @@ export function NotificationDrawer() {
   if (!isOpen) return null;
 
   // Convert Map to array για rendering
-  const notificationsList: Notification[] = order.map(id => items.get(id)!).filter(Boolean);
+  const notificationsList: Notification[] = notificationListOf({ items, order });
 
   return (
     <>
@@ -308,8 +203,8 @@ export function NotificationDrawer() {
           ) : (
             <div className="p-2 space-y-2">
               {notificationsList.map(n => {
-                const Icon = iconMap[n.severity];
-                const colorClass = colorMap[n.severity];
+                const Icon = SEVERITY_ICON[n.severity];
+                const colorClass = SEVERITY_TEXT_CLASS[n.severity];
                 const isUnread = isNotificationUnread(n.delivery.state);
 
                 // 🔴 **Η ΑΠΟΦΑΣΗ ΕΦΥΓΕ ΑΠΟ ΤΟ RENDER** (ADR-841 §7 Α18.10). Ζούσε εδώ ως
@@ -380,7 +275,7 @@ export function NotificationDrawer() {
                         <Button
                           variant="default"
                           size="xs"
-                          onClick={(e) => { e.stopPropagation(); void handleAction(n.id, n.actions?.[0]?.id ?? 'view', destination); }}
+                          onClick={(e) => { e.stopPropagation(); void openNotification(n); }}
                         >
                           <Eye className="h-3.5 w-3.5" />
                           {t('notifications.actions.view_email')}
@@ -406,9 +301,9 @@ export function NotificationDrawer() {
           )}
 
           {/* ✅ ENTERPRISE: Load More με cursor pagination */}
-          {cursor && status === 'ready' && notificationsList.length > 0 && (
+          {hasMore && status === 'ready' && notificationsList.length > 0 && (
             <div className="p-2 pt-0">
-              <Button variant="secondary" size="sm" className="w-full" onClick={handleLoadMore}>
+              <Button variant="secondary" size="sm" className="w-full" onClick={handleLoadMore} disabled={loadingOlder}>
                 {t('notifications.loadMore')}
               </Button>
             </div>
