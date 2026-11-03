@@ -29,7 +29,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageLoadingState } from '@/core/states';
 import { createModuleLogger } from '@/lib/telemetry';
 import { PageHeader } from '@/core/headers';
-import { PageContainer } from '@/core/containers';
+import { PageContainer, PageScrollBody } from '@/core/containers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import '@/lib/design-system';
@@ -39,7 +39,7 @@ const logger = createModuleLogger('crm/notifications');
 export function CrmNotificationsPageContent() {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isCreatingTest, setIsCreatingTest] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
 
@@ -50,7 +50,9 @@ export function CrmNotificationsPageContent() {
   const status = useNotificationCenter((s) => s.status);
   const error = useNotificationCenter((s) => s.error);
   const { markRead } = useNotificationActions();
-  const loading = status === 'loading' || (status === 'idle' && Boolean(user?.uid));
+  // ADR-927 §13: όσο λύνεται η αυθεντικοποίηση το `user` είναι `null` ⇒ το παλιό `idle && user` έβγαινε `false` και
+  // η σελίδα αναβόσβηνε «Καμία ειδοποίηση» πριν φτάσουν οι πρώτες (μετρημένο στην παραγωγή 2026-11-03).
+  const loading = authLoading || status === 'loading' || (status === 'idle' && Boolean(user?.uid));
 
   const createTestNotification = useCallback(async () => {
     if (!user?.uid) return;
@@ -128,6 +130,8 @@ export function CrmNotificationsPageContent() {
         }}
       />
 
+      {/* ADR-927 §11: το ΜΟΝΟ σώμα που κυλά — χωρίς αυτό η λίστα κοβόταν στην πρώτη οθόνη. */}
+      <PageScrollBody>
       {showDashboard && (
         <UnifiedDashboard
           stats={dashboardStats}
@@ -149,6 +153,7 @@ export function CrmNotificationsPageContent() {
       ) : (
         <NotificationInbox />
       )}
+      </PageScrollBody>
     </PageContainer>
   );
 }

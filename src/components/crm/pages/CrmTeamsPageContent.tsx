@@ -34,7 +34,7 @@ import { getInitials } from '@/types/contacts/helpers';
 import { PageHeader } from '@/core/headers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-import { PageContainer } from '@/core/containers';
+import { PageContainer, PageScrollBody } from '@/core/containers';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
 import { gridPatterns } from '@/styles/design-tokens';
@@ -201,6 +201,8 @@ export function CrmTeamsPageContent() {
         }}
       />
 
+      {/* ADR-927 §11: σελίδα ροής μέσα σε `PageContainer` (overflow-hidden) ⇒ χρειάζεται το ΔΙΚΟ της σώμα που κυλά. */}
+      <PageScrollBody>
       {showDashboard && (
         <section className="w-full" role="region" aria-label={t('teams.stats.totalTeams')}>
           <UnifiedDashboard
@@ -276,6 +278,7 @@ export function CrmTeamsPageContent() {
           ))}
         </section>
       )}
+      </PageScrollBody>
     </PageContainer>
   );
 }

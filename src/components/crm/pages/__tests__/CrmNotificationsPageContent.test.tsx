@@ -27,7 +27,8 @@ jest.mock('@/hooks/useFirestoreNotifications', () => ({ useFirestoreNotification
 jest.mock('@/lib/workspace/navigation', () => ({ useRouter: () => ({ push: mockPush, replace: mockReplace }) }));
 jest.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(mockQuery) }));
 jest.mock('@/providers/NotificationProvider', () => ({ useOptionalNotifications: () => ({ notify: mockNotify }) }));
-jest.mock('@/auth/contexts/AuthContext', () => ({ useAuth: () => ({ user: { uid: 'user_1' } }) }));
+let mockAuthLoading = false;
+jest.mock('@/auth/contexts/AuthContext', () => ({ useAuth: () => ({ user: mockAuthLoading ? null : { uid: 'user_1' }, loading: mockAuthLoading }) }));
 jest.mock('@/hooks/useUserTimeZone', () => ({ useUserTimeZone: () => 'Europe/Athens' }));
 const mockT = (key: string) => (key === 'notifications.keyed.title' ? 'Μεταφρασμένος τίτλος' : key);
 jest.mock('@/i18n/hooks/useTranslation', () => ({ useTranslation: () => ({ t: mockT, i18n: { language: 'el' } }) }));
@@ -39,6 +40,7 @@ jest.mock('@/hooks/useIconSizes', () => ({ useIconSizes: () => ({ xs: '', sm: ''
 jest.mock('@/core/states', () => ({ PageLoadingState: () => <p>loading</p> }));
 jest.mock('@/core/containers', () => ({
   PageContainer: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+  PageScrollBody: ({ children }: { children: React.ReactNode }) => <section data-testid="page-scroll-body">{children}</section>,
 }));
 jest.mock('@/core/headers', () => ({
   PageHeader: ({ title, actions }: { title: { title: string }; actions: { customActions: React.ReactNode[] } }) => (
@@ -83,6 +85,7 @@ const rows = () => screen.queryAllByRole('article');
 beforeEach(() => {
   jest.clearAllMocks();
   mockQuery = '';
+  mockAuthLoading = false;
   useNotificationCenter.getState().reset();
   givenNodeEnv('production');
 });
@@ -105,6 +108,21 @@ describe('CrmNotificationsPageContent — προϊόν (ADR-253)', () => {
     givenNodeEnv('development');
     renderPage();
     expect(screen.getByRole('button', { name: 'notifications.test.create' })).toBeTruthy();
+  });
+});
+
+describe('CrmNotificationsPageContent — διάταξη και φόρτωση (ADR-927 §11 · §13)', () => {
+  it('η λίστα ζει ΜΕΣΑ στο σώμα που κυλά (αλλιώς το PageContainer την κόβει στην πρώτη οθόνη)', () => {
+    seed(n('a'));
+    renderPage();
+    expect(screen.getByTestId('page-scroll-body').contains(rows()[0])).toBe(true);
+  });
+
+  it('όσο λύνεται η αυθεντικοποίηση δείχνει φόρτωση — ΟΧΙ «καμία ειδοποίηση»', () => {
+    mockAuthLoading = true;
+    renderPage();
+    expect(screen.getByText('loading')).toBeTruthy();
+    expect(screen.queryByText('notifications.empty')).toBeNull();
   });
 });
 
@@ -147,6 +165,25 @@ describe('CrmNotificationsPageContent — ενέργειες', () => {
     await act(async () => { options.actions[0].onClick(); });
     expect(service.setNotificationDeliveryState).toHaveBeenCalledWith('a', 'delivered');
     expect(rows()).toHaveLength(2);
+  });
+
+  it('ελληνική διάταξη (ADR-927 §12): «ξ» από το σώμα εστιάζει γραμμή, Shift+«Ι» τη σημαίνει αναγνωσμένη', async () => {
+    seed(n('a'), n('b', { createdAt: '2026-11-03T07:00:00.000Z' }));
+    renderPage();
+    act(() => { (document.activeElement as HTMLElement | null)?.blur(); });
+    act(() => { fireEvent.keyDown(document.body, { key: 'ξ', code: 'KeyJ' }); });
+    expect(document.activeElement).toBe(rows()[0]);
+
+    await act(async () => { fireEvent.keyDown(rows()[0], { key: 'Ι', code: 'KeyI', shiftKey: true }); });
+    expect(service.markNotificationsAsRead).toHaveBeenCalledWith(['a']);
+  });
+
+  it('Caps Lock χωρίς Shift («I») ΔΕΝ γράφει τίποτα', async () => {
+    seed(n('a'));
+    renderPage();
+    act(() => rows()[0].focus());
+    await act(async () => { fireEvent.keyDown(rows()[0], { key: 'I', code: 'KeyI' }); });
+    expect(service.markNotificationsAsRead).not.toHaveBeenCalled();
   });
 
   it('το άνοιγμα περνά ΜΟΝΟ από τον μόνιμο σύνδεσμο (ADR-849 Β1), ποτέ από την ωμή διαδρομή', async () => {

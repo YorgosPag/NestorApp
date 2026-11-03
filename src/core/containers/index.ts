@@ -4,6 +4,8 @@ export { EntityListColumn } from './EntityListColumn';
 export type { EntityListColumnProps } from './EntityListColumn';
 export { PageContainer } from './PageContainer';
 export type { PageContainerProps } from './PageContainer';
+export { PageScrollBody } from './PageScrollBody';
+export type { PageScrollBodyProps } from './PageScrollBody';
 export { FullscreenOverlay, FullscreenToggleButton } from './FullscreenOverlay';
 export type { FullscreenOverlayProps } from './FullscreenOverlay';
 

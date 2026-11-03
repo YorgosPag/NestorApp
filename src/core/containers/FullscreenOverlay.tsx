@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 import { FullscreenToggleButton } from './FullscreenToggleButton';
+import { SCROLL_BODY_CLASS } from './PageScrollBody';
 import { useStableHost } from './fullscreen/use-stable-host';
 import { useFullscreenOpener, useFullscreenSurface } from './fullscreen/use-fullscreen-surface';
 
@@ -58,7 +59,7 @@ const SURFACE_CLASS = 'fixed inset-0 z-[var(--z-index-fullscreen-surface)] flex 
  * συρρικνώνει τα παιδιά του (η κεφαλίδα του Πίνακα Ελέγχου Χρονοδιαγράμματος μετρήθηκε ύψος 0 όταν η επιφάνεια ήταν
  * η ίδια στήλη flex που κυλούσε — ADR-332 D27 Ζ8). Όποιος καταναλωτής θέλει διάταξη flex τη ζητά ρητά.
  */
-const SURFACE_BODY_CLASS = 'min-h-0 flex-1 overflow-y-auto';
+const SURFACE_BODY_CLASS = SCROLL_BODY_CLASS;
 
 export function FullscreenOverlay({
   children,

@@ -15,6 +15,7 @@ import { HeaderTitle } from './HeaderTitle';
 import { HeaderSearch } from './HeaderSearch';
 import { HeaderFilters } from './HeaderFilters';
 import { HeaderActions, type UnifiedHeaderActionsProps } from './HeaderActions';
+import { HEADER_THEME } from '../constants';
 import { LucideIcon } from 'lucide-react';
 import '@/lib/design-system';
 
@@ -108,12 +109,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   // 🏢 ENTERPRISE: Centralized layout classes
   const layoutTokens = useLayoutClasses();
 
-  // Base classes for different variants
+  // Variant classes — ONE declaration (`HEADER_THEME.variants`, ADR-927 §11); only the token margins are added here.
   const variantClasses = {
-    sticky: "border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50",
-    static: "border-b bg-card",
-    floating: "rounded-lg border bg-card shadow-sm",
-    "sticky-rounded": `rounded-lg border bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm ${layoutTokens.pageHeaderMargins}`
+    ...HEADER_THEME.variants,
+    "sticky-rounded": `${HEADER_THEME.variants['sticky-rounded']} ${layoutTokens.pageHeaderMargins}`
   };
 
   // Spacing classes - UNIFIED MOBILE-FIRST SYSTEM (using centralized tokens)

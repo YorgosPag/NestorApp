@@ -11,9 +11,14 @@
  *
  * Μετά από απόρριψη η εστίαση πάει στο **επόμενο** (ή στο προηγούμενο, αν ήταν τελευταίο) — όπως το Gmail
  * μετά την αρχειοθέτηση: ο άνθρωπος συνεχίζει χωρίς να ξαναβρεί τη θέση του.
+ *
+ * 🔴 ADR-927 §12 (μετρημένο στην παραγωγή 2026-11-03): η σύγκριση `event.key === 'j'` δεν δούλευε ΠΟΤΕ με
+ *    ελληνική διάταξη (`ξ`), και το `'I'` ταίριαζε με Caps Lock χωρίς Shift. Η πρόθεση βγαίνει πλέον από το
+ *    `inboxIntentOf` (`latinLetterOf` + `shiftKey`). Και η μετακίνηση δουλεύει και από το `body`.
  */
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { latinLetterOf, type LetterKeyEvent } from '@/lib/keyboard/latin-letter';
 
 export interface InboxKeyboardHandlers {
   readonly open: (id: string) => void;
@@ -32,6 +37,35 @@ export interface InboxKeyboard {
 }
 
 const TEXT_ENTRY = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
+
+export type InboxIntent = 'next' | 'prev' | 'first' | 'last' | 'open' | 'dismiss' | 'read' | 'unread';
+
+/** Γράμμα χωρίς Shift → πρόθεση· με Shift → πρόθεση. Το Shift κρίνεται ΜΟΝΟ από το `shiftKey` (όχι Caps Lock). */
+const PLAIN_LETTERS: Readonly<Record<string, InboxIntent>> = { j: 'next', k: 'prev', o: 'open', e: 'dismiss' };
+const SHIFT_LETTERS: Readonly<Record<string, InboxIntent>> = { i: 'read', u: 'unread' };
+const NAMED_KEYS: Readonly<Record<string, InboxIntent>> = {
+  ArrowDown: 'next', ArrowUp: 'prev', Home: 'first', End: 'last', Enter: 'open',
+};
+
+interface IntentKeyEvent extends LetterKeyEvent {
+  readonly shiftKey: boolean;
+  readonly ctrlKey: boolean;
+  readonly altKey: boolean;
+  readonly metaKey: boolean;
+}
+
+/**
+ * **Τι ζητά το πλήκτρο;** — ανεξάρτητα από τη διάταξη (`latinLetterOf`: `ξ` ⇒ `j`, `Ι` ⇒ `i`). Ποτέ με
+ * Ctrl/Alt/Meta (ανήκουν στον browser και στο λειτουργικό).
+ */
+export function inboxIntentOf(event: IntentKeyEvent): InboxIntent | null {
+  if (event.ctrlKey || event.altKey || event.metaKey) return null;
+  const named = NAMED_KEYS[event.key];
+  if (named) return named;
+  const letter = latinLetterOf(event);
+  if (letter === null) return null;
+  return (event.shiftKey ? SHIFT_LETTERS[letter] : PLAIN_LETTERS[letter]) ?? null;
+}
 
 function isOnRow(event: KeyboardEvent<HTMLElement>): boolean {
   const target = event.target as HTMLElement;
@@ -87,26 +121,57 @@ export function useInboxKeyboard(ids: readonly string[], handlers: InboxKeyboard
     focusRow(ids[Math.min(ids.length - 1, Math.max(0, i + delta))] ?? null);
   }, [activeId, focusRow, ids]);
 
-  const onKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
-    if (event.ctrlKey || event.altKey || event.metaKey) return;
-    if (TEXT_ENTRY.has((event.target as HTMLElement).tagName)) return;
-    const current = activeId;
-    const run = (action: () => void) => { event.preventDefault(); action(); };
+  const navigate = useCallback((intent: InboxIntent): boolean => {
+    switch (intent) {
+      case 'next': move(1); return true;
+      case 'prev': move(-1); return true;
+      case 'first': focusRow(ids[0] ?? null); return true;
+      case 'last': focusRow(ids[ids.length - 1] ?? null); return true;
+      default: return false;
+    }
+  }, [focusRow, ids, move]);
 
-    switch (event.key) {
-      case 'j': case 'ArrowDown': return run(() => move(1));
-      case 'k': case 'ArrowUp': return run(() => move(-1));
-      case 'Home': return run(() => focusRow(ids[0] ?? null));
-      case 'End': return run(() => focusRow(ids[ids.length - 1] ?? null));
+  const act = useCallback((intent: InboxIntent, current: string): boolean => {
+    switch (intent) {
+      case 'open': handlers.open(current); return true;
+      case 'dismiss': focusRow(neighbourAfterRemoval(ids, current)); handlers.dismiss(current); return true;
+      case 'read': handlers.markRead(current); return true;
+      case 'unread': handlers.markUnread(current); return true;
+      default: return false;
     }
-    if (current === null || !isOnRow(event)) return;
-    switch (event.key) {
-      case 'Enter': case 'o': return run(() => handlers.open(current));
-      case 'e': return run(() => { focusRow(neighbourAfterRemoval(ids, current)); handlers.dismiss(current); });
-      case 'I': return run(() => handlers.markRead(current));
-      case 'U': return run(() => handlers.markUnread(current));
-    }
-  }, [activeId, focusRow, handlers, ids, move]);
+  }, [focusRow, handlers, ids]);
+
+  const onKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
+    if (TEXT_ENTRY.has((event.target as HTMLElement).tagName)) return;
+    const intent = inboxIntentOf(event);
+    if (intent === null) return;
+    const handled = navigate(intent) || (activeId !== null && isOnRow(event) && act(intent, activeId));
+    if (handled) event.preventDefault();
+  }, [act, activeId, navigate]);
+
+  useBodyNavigation(activeId, ids, focusRow);
 
   return { activeId, setActiveId: setRequestedId, register, onKeyDown };
+}
+
+/**
+ * 🔑 **Από το σώμα της σελίδας** (Gmail): μετά τη φόρτωση η εστίαση είναι στο `body` — το `j` πρέπει να δουλεύει
+ *    χωρίς να πατήσει κανείς πρώτα Tab. Μόνο **μετακίνηση**: οι ενέργειες (e · I · U · Enter) θέλουν πάντα
+ *    εστιασμένη γραμμή, ώστε ένα αδέσποτο πλήκτρο να μη γράψει ποτέ σε ειδοποίηση που ο άνθρωπος δεν βλέπει.
+ *    Το πρώτο j/k εστιάζει την **τρέχουσα** γραμμή (όχι την επόμενη): ο άνθρωπος δεν έχει διαλέξει ακόμη καμία.
+ */
+function useBodyNavigation(activeId: string | null, ids: readonly string[], focusRow: (id: string | null) => void): void {
+  useEffect(() => {
+    const onWindowKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.target !== document.body || event.defaultPrevented) return;
+      const intent = inboxIntentOf(event);
+      if (intent === 'next' || intent === 'prev') focusRow(activeId);
+      else if (intent === 'first') focusRow(ids[0] ?? null);
+      else if (intent === 'last') focusRow(ids[ids.length - 1] ?? null);
+      else return;
+      event.preventDefault();
+    };
+    window.addEventListener('keydown', onWindowKeyDown);
+    return () => window.removeEventListener('keydown', onWindowKeyDown);
+  }, [activeId, focusRow, ids]);
 }

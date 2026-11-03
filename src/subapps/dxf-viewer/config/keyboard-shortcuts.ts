@@ -14,6 +14,7 @@
 
 import type { ToolType } from '../ui/toolbar/types';
 import { DXF_TIMING } from './dxf-timing';
+import { latinLetterOf } from '@/lib/keyboard/latin-letter';
 
 // ============================================================================
 // 📋 TYPE DEFINITIONS
@@ -1192,11 +1193,11 @@ export const matchesShortcutDef = (
   // (U+0396), which never equals the Latin 'Z' (U+005A). event.code reports the
   // physical key position ('KeyZ') regardless of layout, so single Latin
   // letter shortcuts keep working in any language. (AutoCAD-style behavior.)
-  if (eventKey === shortcutKey) return true;
-  if (/^[A-Z]$/.test(shortcutKey) && event.code === `Key${shortcutKey}`) {
-    return true;
-  }
-  return false;
+  // ADR-927 §12: ONE judge with the notifications inbox (`latinLetterOf`). A Latin
+  // `event.key` wins over the physical position, so on AZERTY the physical Q key
+  // (which types 'a') no longer ALSO fires the Q shortcut.
+  if (/^[A-Z]$/.test(shortcutKey)) return latinLetterOf(event) === shortcutKey.toLowerCase();
+  return eventKey === shortcutKey;
 };
 
 /**
