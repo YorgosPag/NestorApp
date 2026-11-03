@@ -12,7 +12,7 @@
  *    φραγμένης διαφοράς — χωρίς αυτό η οθόνη δεν θα μπορούσε να ξαναδείξει ό,τι ζητά ο διακομιστής να επιβεβαιωθεί.
  */
 
-import { ApiClientError, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
+import { currentRevisionOf, TRANSPORT_REFUSAL_KINDS, writerRefusalOf } from '@/lib/api/writer-refusal';
 import { CATALOG_ISSUE_CODES, type CatalogIssue, type CatalogIssueCode } from '@/subapps/catalog/schema/catalog-issues';
 import { CATALOG_WRITE_ERROR_KIND_NAMES, type CatalogWriteErrorKind } from '@/subapps/catalog/schema/catalog-write-kinds';
 
@@ -20,7 +20,7 @@ import { CATALOG_WRITE_ERROR_KIND_NAMES, type CatalogWriteErrorKind } from '@/su
 const WRITER_KINDS = CATALOG_WRITE_ERROR_KIND_NAMES;
 type WriterKind = CatalogWriteErrorKind;
 
-export const CATALOG_FAILURE_KINDS = [...WRITER_KINDS, 'forbidden', 'network', 'unknown'] as const;
+export const CATALOG_FAILURE_KINDS = [...WRITER_KINDS, ...TRANSPORT_REFUSAL_KINDS] as const;
 export type CatalogFailureKind = (typeof CATALOG_FAILURE_KINDS)[number];
 
 export interface CatalogFailure {
@@ -38,37 +38,29 @@ export interface CatalogFenceDemand {
   readonly fencedCount: number;
 }
 
-const ERROR_CODE_PREFIX = 'catalog.';
-
 function isIssueCode(value: unknown): value is CatalogIssueCode {
   return (CATALOG_ISSUE_CODES as readonly unknown[]).includes(value);
 }
 
-function issuesOf(raw: unknown): CatalogIssue[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((item): CatalogIssue[] => {
-    if (item === null || typeof item !== 'object') return [];
-    const { code, path, params } = item as Record<string, unknown>;
-    if (!isIssueCode(code) || typeof path !== 'string') return [];
-    const safeParams = params !== null && typeof params === 'object' ? (params as Record<string, string | number>) : undefined;
-    return [safeParams ? { code, path, params: safeParams } : { code, path }];
-  });
+/** Ένα εύρημα από το σύρμα — με τις παραμέτρους ICU του, όταν υπάρχουν. */
+function issueOf(raw: Readonly<Record<string, unknown>>): CatalogIssue | null {
+  const { code, path, params } = raw;
+  if (!isIssueCode(code) || typeof path !== 'string') return null;
+  const safeParams = params !== null && typeof params === 'object' ? (params as Record<string, string | number>) : undefined;
+  return safeParams ? { code, path, params: safeParams } : { code, path };
 }
 
-function isWriterKind(value: string): value is WriterKind {
-  return (WRITER_KINDS as readonly string[]).includes(value);
-}
+/** Η κοινή ερμηνεία (`writer-refusal`, ADR-928 Φ3α-2 — ως τότε ζούσε εδώ) με το λεξιλόγιο του καταλόγου. */
+const CATALOG_REFUSAL = { errorCodePrefix: 'catalog.', kinds: WRITER_KINDS, issueOf } as const;
 
-function writerKindOf(errorCode: unknown): WriterKind | null {
-  if (typeof errorCode !== 'string' || !errorCode.startsWith(ERROR_CODE_PREFIX)) return null;
-  const kind = errorCode.slice(ERROR_CODE_PREFIX.length);
-  return isWriterKind(kind) ? kind : null;
+function isWriterKind(kind: CatalogFailureKind): kind is WriterKind {
+  return (WRITER_KINDS as readonly string[]).includes(kind);
 }
 
 /** Το αποτύπωμα fnv1a64 του φράχτη (ίδιο σχήμα με το `diffDigestSchema` του συνόρου). */
 const DIFF_DIGEST = /^[0-9a-f]{16}$/;
 
-function fenceOf(body: Record<string, unknown> | null): CatalogFenceDemand | null {
+function fenceOf(body: Readonly<Record<string, unknown>> | null): CatalogFenceDemand | null {
   const diffDigest = body?.diffDigest;
   const fencedCount = body?.fencedCount;
   if (typeof diffDigest !== 'string' || !DIFF_DIGEST.test(diffDigest)) return null;
@@ -76,24 +68,14 @@ function fenceOf(body: Record<string, unknown> | null): CatalogFenceDemand | nul
   return { diffDigest, fencedCount };
 }
 
-function writerFailure(kind: WriterKind, body: Record<string, unknown> | null): CatalogFailure {
-  const revision = body?.currentRevision;
-  return {
-    kind,
-    issues: issuesOf(body?.issues),
-    currentRevision: typeof revision === 'number' ? revision : null,
-    fence: kind === 'confirmationRequired' ? fenceOf(body) : null,
-  };
-}
-
 /** **Η μία ερμηνεία** μιας αποτυχημένης εγγραφής καταλόγου. */
 export function catalogFailureOf(cause: unknown): CatalogFailure {
-  const none = { issues: [], currentRevision: null, fence: null } as const;
-  if (!ApiClientError.isApiClientError(cause)) return { kind: 'network', ...none };
-  const body = apiErrorBodyOf(cause);
-  const kind = writerKindOf(body?.errorCode ?? cause.errorCode);
-  if (kind) return writerFailure(kind, body);
-  if (cause.statusCode === 401 || cause.statusCode === 403) return { kind: 'forbidden', ...none };
-  if (cause.statusCode === 0) return { kind: 'network', ...none };
-  return { kind: 'unknown', ...none };
+  const { kind, issues, body } = writerRefusalOf(cause, CATALOG_REFUSAL);
+  if (!isWriterKind(kind)) return { kind, issues: [], currentRevision: null, fence: null };
+  return {
+    kind,
+    issues,
+    currentRevision: currentRevisionOf(body),
+    fence: kind === 'confirmationRequired' ? fenceOf(body) : null,
+  };
 }

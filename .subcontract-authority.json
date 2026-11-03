@@ -12,7 +12,8 @@
       "kind": "member",
       "name": "SUBCOLLECTIONS.SUBCONTRACT_CLAUSE_VERSIONS",
       "owners": {
-        "src/server/subcontracts/subcontract-store.server.ts": "Ο ένας γραφέας: η μόνη διεύθυνση της έκδοσης ρήτρας, που γράφεται μόνο με πρόταση ή απόφαση διακυβέρνησης."
+        "src/server/subcontracts/subcontract-store.server.ts": "Ο ένας γραφέας: η μόνη διεύθυνση της έκδοσης ρήτρας, που γράφεται μόνο με πρόταση ή απόφαση διακυβέρνησης.",
+        "src/hooks/procurement/subcontracts/useSubcontractLibrary.ts": "Ο ένας αναγνώστης του πελάτη (ADR-928 Φ3α-2): ΜΟΝΟ ζωντανή ανάγνωση της έκδοσης σε ισχύ κάθε ρήτρας, για να τρέξει στην οθόνη ο ίδιος κριτής με τον γραφέα. Καμία εγγραφή: οι κανόνες λένε `allow write: if false` και το hook δεν έχει μέθοδο εγγραφής."
       }
     },
     {

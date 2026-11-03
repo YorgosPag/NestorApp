@@ -9,26 +9,12 @@ import { ApiError } from '@/lib/api/api-error-types';
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
 import type { ClauseGovernanceRefusal } from '@/subapps/procurement/subcontracts/clauses/clause-governance';
 import type { AgreementLifecycleRefusal } from '@/subapps/procurement/subcontracts/agreements/agreement-lifecycle';
-
-export const SUBCONTRACT_WRITE_ERROR_KINDS = {
-  invalid: 422,
-  notFound: 404,
-  duplicate: 409,
-  revisionMismatch: 409,
-  proposalPending: 409,
-  invalidTransition: 409,
-  translationStale: 409,
-  selfApproval: 403,
-  notProposer: 403,
-  // ── Κύκλος ζωής συμφωνητικού (Φ2 · `agreement-lifecycle.ts`) ──────────────
-  deviationsPending: 409,
-  offerExpired: 409,
-  notYetExpired: 409,
-  mobilizeOnOffer: 409,
-} as const satisfies Readonly<Record<string, number>>;
-// Κάθε άρνηση της διακυβέρνησης ή του κύκλου ζωής είναι είδος σφάλματος: το `assertGovernance` δεν μεταγλωττίζεται αλλιώς.
-
-export type SubcontractWriteErrorKind = keyof typeof SUBCONTRACT_WRITE_ERROR_KINDS;
+import {
+  SUBCONTRACT_ERROR_CODE_PREFIX,
+  SUBCONTRACT_WRITE_ERROR_KINDS,
+  type SubcontractWriteErrorKind,
+} from '@/subapps/procurement/subcontracts/schema/subcontract-write-kinds';
+// Ο πίνακας ειδών ζει στο καθαρό `subcontract-write-kinds` (ADR-928 Φ3α-2): τον διαβάζει και η οθόνη.
 
 export class SubcontractWriteError extends Error {
   constructor(
@@ -53,7 +39,7 @@ export function assertGovernance(refusal: ClauseGovernanceRefusal | AgreementLif
 
 /** Η **μία** μετάφραση σε σφάλμα API: status από τον πίνακα, `errorCode` = είδος, ευρήματα στο σώμα. */
 export function toSubcontractApiError(error: SubcontractWriteError): ApiError {
-  return new ApiError(SUBCONTRACT_WRITE_ERROR_KINDS[error.kind], error.message, `subcontracts.${error.kind}`, {
+  return new ApiError(SUBCONTRACT_WRITE_ERROR_KINDS[error.kind], error.message, `${SUBCONTRACT_ERROR_CODE_PREFIX}${error.kind}`, {
     issues: error.issues,
     ...error.details,
   });

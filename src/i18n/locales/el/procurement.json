@@ -846,6 +846,181 @@
         "pdfFileId": "Αρχείο PDF",
         "sealed": "Σφραγισμένο"
       }
+    },
+    "status": {
+      "draft": "Πρόχειρο",
+      "issued": "Εκδόθηκε",
+      "accepted": "Αποδεκτό",
+      "in_execution": "Σε εκτέλεση",
+      "completed": "Ολοκληρώθηκε",
+      "discarded": "Απορρίφθηκε",
+      "withdrawn": "Αποσύρθηκε",
+      "expired": "Έληξε",
+      "terminated": "Καταγγέλθηκε"
+    },
+    "list": {
+      "title": "Συμφωνητικά υπεργολαβίας",
+      "subtitle": "Προσφορές και συμφωνητικά του έργου, μαζί με τις κύριες συμβάσεις που έχουν εντολή εργασίας εδώ.",
+      "search": "Αναζήτηση με αριθμό, υπεργολάβο, ΑΦΜ ή τίτλο…",
+      "empty": "Δεν υπάρχουν ακόμη συμφωνητικά υπεργολαβίας για αυτό το έργο.",
+      "emptyFiltered": "Κανένα συμφωνητικό δεν ταιριάζει στα φίλτρα.",
+      "error": "Δεν ήταν δυνατή η φόρτωση των συμφωνητικών.",
+      "ariaLabel": "Συμφωνητικά υπεργολαβίας του έργου",
+      "deviationsOpen": "Απόκλιση σε εκκρεμότητα",
+      "columns": {
+        "document": "Έγγραφο",
+        "work": "Εργασία",
+        "subcontractor": "Υπεργολάβος",
+        "scope": "Εμβέλεια",
+        "value": "Αξία (χωρίς ΦΠΑ)",
+        "status": "Κατάσταση",
+        "updated": "Ενημέρωση",
+        "actions": "Ενέργειες"
+      },
+      "role": {
+        "offer": "Προσφορά",
+        "agreement": "Συμφωνητικό"
+      },
+      "scope": {
+        "single": "Αυτό το έργο",
+        "master": "Κύρια σύμβαση",
+        "workOrder": "Εντολή εργασίας",
+        "workOrderFrom": "Εντολή εργασίας από {date}"
+      },
+      "value": {
+        "atLeast": "≥ {amount}",
+        "unpricedLines": "{count, plural, one {# γραμμή χωρίς ποσότητα} other {# γραμμές χωρίς ποσότητα}}",
+        "unitRatesOnly": "Μόνο τιμές μονάδας"
+      }
+    },
+    "summary": {
+      "ariaLabel": "Σύνοψη συμφωνητικών",
+      "committed": "Δεσμευμένο",
+      "pending": "Σε εκκρεμότητα",
+      "documents": "{count, plural, one {# έγγραφο} other {# έγγραφα}}",
+      "statusFigure": "{count} · {amount}",
+      "filterLabel": "Φίλτρο κατάστασης"
+    },
+    "actions": {
+      "menu": "Ενέργειες για {number}",
+      "checking": "Ελέγχεται η βιβλιοθήκη ρητρών…",
+      "transition": {
+        "issue": "Έκδοση",
+        "accept": "Αποδοχή",
+        "mobilize": "Εγκατάσταση στο εργοτάξιο",
+        "complete": "Ολοκλήρωση",
+        "discard": "Απόρριψη πρόχειρου",
+        "withdraw": "Απόσυρση",
+        "expire": "Λήξη προσφοράς",
+        "terminate": "Καταγγελία"
+      },
+      "done": {
+        "issue": "Το {number} εκδόθηκε",
+        "accept": "Το {number} έγινε αποδεκτό",
+        "mobilize": "Το {number} πέρασε σε εκτέλεση",
+        "complete": "Το {number} ολοκληρώθηκε",
+        "discard": "Το πρόχειρο {number} απορρίφθηκε",
+        "withdraw": "Το {number} αποσύρθηκε",
+        "expire": "Το {number} σημειώθηκε ως ληγμένο",
+        "terminate": "Το {number} καταγγέλθηκε"
+      },
+      "confirm": {
+        "discard": {
+          "title": "Απόρριψη του πρόχειρου {number};",
+          "description": "Το πρόχειρο δεν θα εκδοθεί. Μένει στη λίστα ως «Απορρίφθηκε» και ο αριθμός του δεν ξαναδίνεται."
+        },
+        "withdraw": {
+          "title": "Απόσυρση του {number};",
+          "description": "Το έγγραφο αποσύρεται από τον υπεργολάβο. Η ενέργεια δεν αναιρείται."
+        },
+        "terminate": {
+          "title": "Καταγγελία του {number};",
+          "description": "Η εκτέλεση σταματά και το συμφωνητικό κλείνει ως «Καταγγέλθηκε». Η ενέργεια δεν αναιρείται."
+        }
+      }
+    },
+    "messages": {
+      "pending": "Χρειάζεται διόρθωση"
+    },
+    "issues": {
+      "parameterKeyInvalid": "Μη έγκυρο κλειδί παραμέτρου",
+      "parameterKeyDuplicate": "Το κλειδί παραμέτρου υπάρχει ήδη",
+      "parameterKindMismatch": "Η τιμή δεν ταιριάζει με το είδος της παραμέτρου",
+      "parameterValueInvalid": "Μη έγκυρη τιμή παραμέτρου",
+      "parameterOptionsMissing": "Η παράμετρος επιλογής χρειάζεται επιλογές",
+      "parameterOptionDuplicate": "Η επιλογή υπάρχει δύο φορές",
+      "parameterOptionUnknown": "Η επιλογή δεν υπάρχει στη λίστα",
+      "parameterTermsMissing": "Λείπουν οι όροι που χρειάζεται η παράμετρος",
+      "parameterRatioLength": "Ο λόγος έχει λάθος πλήθος όρων",
+      "parameterTextTooLong": "Το κείμενο είναι πολύ μεγάλο",
+      "parameterLabelRequired": "Η παράμετρος χρειάζεται ετικέτα",
+      "toleranceKindMismatch": "Η ζώνη ανοχής δεν ταιριάζει με το είδος της παραμέτρου",
+      "toleranceRangeInvalid": "Μη έγκυρο εύρος ζώνης ανοχής",
+      "tolerancePreferredOutsideAcceptable": "Η προτιμώμενη τιμή είναι έξω από την αποδεκτή ζώνη",
+      "toleranceAcceptableOutsideWalkAway": "Η αποδεκτή ζώνη ξεπερνά το όριο αποχώρησης",
+      "toleranceOptionUnknown": "Η ζώνη ανοχής αναφέρει άγνωστη επιλογή",
+      "bindingKindMismatch": "Ο δεσμευμένος όρος έχει άλλο είδος από την παράμετρο",
+      "bindingTermMissing": "Ο δεσμευμένος εμπορικός όρος λείπει",
+      "clauseKeyInvalid": "Μη έγκυρο κλειδί ρήτρας",
+      "clauseTitleRequired": "Η ρήτρα χρειάζεται τίτλο",
+      "headingRequired": "Χρειάζεται επικεφαλίδα",
+      "bodyEmpty": "Το κείμενο της ρήτρας είναι κενό",
+      "blockEmpty": "Κενή παράγραφος ή λίστα",
+      "inlineTextEmpty": "Κενό τμήμα κειμένου",
+      "paramReferenceUnknown": "Το κείμενο αναφέρει άγνωστη παράμετρο",
+      "parameterUnreferenced": "Η παράμετρος δεν εμφανίζεται στο κείμενο",
+      "translationParamsMismatch": "Η μετάφραση δεν έχει τις ίδιες παραμέτρους με το ελληνικό κείμενο",
+      "translationLanguageInvalid": "Μη υποστηριζόμενη γλώσσα μετάφρασης",
+      "sharesEmpty": "Χρειάζεται τουλάχιστον ένα μερίδιο",
+      "shareInvalid": "Μη έγκυρο μερίδιο",
+      "sharesNotWhole": "Τα μερίδια πρέπει να αθροίζουν 100%",
+      "shareKeyDuplicate": "Το μερίδιο υπάρχει δύο φορές",
+      "templateCodeInvalid": "Μη έγκυρος κωδικός προτύπου",
+      "tradeUnknown": "Άγνωστη ειδικότητα",
+      "lineIdDuplicate": "Η γραμμή υπάρχει δύο φορές",
+      "lineDescriptionRequired": "Η γραμμή χρειάζεται περιγραφή",
+      "unitUnknown": "Άγνωστη μονάδα μέτρησης",
+      "amountInvalid": "Μη έγκυρο ποσό",
+      "quantityInvalid": "Μη έγκυρη ποσότητα",
+      "clauseRefDuplicate": "Η ρήτρα έχει μπει δύο φορές",
+      "clauseRefUnknown": "Η ρήτρα δεν υπάρχει στη βιβλιοθήκη",
+      "clauseRefNotApproved": "Η ρήτρα δεν έχει εγκεκριμένη έκδοση",
+      "overrideUnknownParameter": "Τιμή για παράμετρο που η ρήτρα δεν έχει",
+      "overrideOnBoundParameter": "Η παράμετρος παίρνει την τιμή της από τους εμπορικούς όρους",
+      "overrideNeedsApproval": "Η τιμή είναι έξω από την προτιμώμενη ζώνη και θέλει έγκριση",
+      "overrideForbidden": "Η τιμή είναι έξω από όσα δέχεται η εταιρεία",
+      "termOutsideTolerance": "Ο εμπορικός όρος είναι έξω από τη ζώνη ανοχής",
+      "vatRateInvalid": "Μη έγκυρος συντελεστής ΦΠΑ",
+      "scheduleInvalid": "Μη έγκυρο σχέδιο πληρωμών",
+      "clauseVersionOutdated": "Η βιβλιοθήκη ρητρών έχει νεότερη εγκεκριμένη έκδοση — ενημερώστε το έγγραφο",
+      "deviationForbidden": "Η απόκλιση είναι στην απαγορευμένη ζώνη",
+      "deviationReasonRequired": "Η απόκλιση χρειάζεται αιτιολογία",
+      "translationMissing": "Λείπει εγκεκριμένη μετάφραση για το δίγλωσσο έγγραφο",
+      "issuerProfileMissing": "Λείπουν τα στοιχεία της εταιρείας για την κεφαλίδα",
+      "contactUnknown": "Η επαφή δεν βρέθηκε",
+      "projectUnknown": "Το έργο δεν βρέθηκε",
+      "buildingNotInProject": "Το κτίριο δεν ανήκει στο έργο",
+      "scopeMismatch": "Η εμβέλεια δεν ταιριάζει με το έγγραφο",
+      "notEditable": "Το έγγραφο δεν αλλάζει πια — έχει εκδοθεί",
+      "validUntilPast": "Η ημερομηνία ισχύος έχει ήδη περάσει"
+    },
+    "failure": {
+      "invalid": "Το έγγραφο έχει σημεία προς διόρθωση",
+      "notFound": "Το έγγραφο δεν βρέθηκε",
+      "duplicate": "Υπάρχει ήδη",
+      "revisionMismatch": "Άλλαξε από άλλον στο μεταξύ — η λίστα δείχνει ήδη τη νέα εκδοχή",
+      "proposalPending": "Υπάρχει ήδη ανοιχτή πρόταση",
+      "invalidTransition": "Η ενέργεια δεν ισχύει σε αυτή την κατάσταση",
+      "translationStale": "Η μετάφραση έχει μείνει πίσω από το ελληνικό κείμενο",
+      "selfApproval": "Δεν εγκρίνετε δικό σας αίτημα — χρειάζεται άλλος",
+      "notProposer": "Μόνο όποιος έκανε την πρόταση μπορεί να την αποσύρει",
+      "deviationsPending": "Απόκλιση περιμένει έγκριση ή απορρίφθηκε",
+      "offerExpired": "Η προσφορά έχει λήξει",
+      "notYetExpired": "Η προσφορά ισχύει ακόμη",
+      "mobilizeOnOffer": "Εγκαθίσταται το συμφωνητικό, όχι η προσφορά",
+      "forbidden": "Δεν έχετε δικαίωμα για αυτή την ενέργεια",
+      "network": "Δεν ήταν δυνατή η σύνδεση — δοκιμάστε ξανά",
+      "unknown": "Κάτι πήγε στραβά — δοκιμάστε ξανά"
     }
   }
 }

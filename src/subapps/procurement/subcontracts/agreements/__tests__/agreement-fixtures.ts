@@ -7,6 +7,7 @@ import { paymentInstrument, retentionRate } from '../../clauses/__tests__/clause
 import type { ClauseParameterDefinition } from '../../types/clause-parameter';
 import type { CommercialTerms } from '../../types/commercial-terms';
 import type { AgreementLine } from '../../types/agreement-line';
+import type { ProjectIdentitySnapshot, SubcontractAgreement } from '../../types/agreement';
 import type { SubcontractAgreementDraftInput } from '../agreement-draft';
 import type { ApprovedLibrary, ClauseSelectionInput } from '../judge-deviations';
 
@@ -47,6 +48,42 @@ export const SAMPLE_LINE: AgreementLine = {
   unit: 'm2', estimatedMilliQuantity: null, unitPrice: 900, clientUnitPrice: null, printClientPrice: false, comment: null,
   measurementRule: null, stages: [], insuredDaysCap: null, paymentOverride: null,
 };
+
+/** Ταυτότητα έργου όπως τη στιγμιοτυπεί ο γραφέας. */
+export function sampleProjectIdentity(projectId = 'proj_1'): ProjectIdentitySnapshot {
+  return {
+    projectId, name: 'Πολυκατοικία Ευόσμου', address: 'Μ. Αλεξάνδρου 12, Εύοσμος', licenseNumber: null, issuingAuthority: null,
+    buildingBlock: null, plotNumber: null, buildingIds: ['bld_1'],
+  };
+}
+
+/**
+ * Αποθηκευμένο συμφωνητικό όπως το διαβάζει η οθόνη (Φ3α-2: λίστα, ενέργειες) — πρόχειρο `single_project` με τις δύο
+ * ρήτρες του `LIBRARY`, καρφωμένες στις εκδόσεις του. Ένα σημείο για κάθε σουίτα της οθόνης.
+ */
+export function sampleAgreement(patch: Partial<SubcontractAgreement> = {}): SubcontractAgreement {
+  const party = { profession: null, hasTaxIdentity: true, taxOffice: null, street: '', city: null, postalCode: null, country: null, phone: null, email: null };
+  return {
+    id: 'sca_1', companyId: 'comp_1', documentNumber: 'ΠΡΟΣ-2026-001', role: 'offer', documentMode: 'offer_becomes_agreement',
+    sourceOfferId: null, agreementId: null, origin: { kind: 'direct' }, trade: 'plastering', templateId: null,
+    title: { el: 'Επιχρίσματα Β΄ φάσης', en: 'Plastering, phase B' }, status: 'draft',
+    parties: {
+      issuer: { name: 'Παγώνης ΑΕ', vatNumber: '099999999', taxOffice: 'Ζ΄ Θεσσαλονίκης', address: '', city: '', postalCode: '', phone: null, mobile: null, email: null, website: null, profession: '', bankAccounts: [] },
+      subcontractor: { ...party, contactId: 'ct_sub', fatherName: null, name: 'Ιωάννης Σοβατζής', vatNumber: '123456789' },
+      projectOwners: { kind: 'collective' }, issuerSignatory: null,
+    },
+    scope: { kind: 'single_project', project: sampleProjectIdentity() }, projectIds: ['proj_1'],
+    lines: [SAMPLE_LINE], terms: { ...plasteringTerms, minimumOutputs: [] },
+    clauses: [
+      { clauseId: 'sccl_retention', clauseKey: 'retention.performance', version: 1, parameterValues: {}, deviations: {} },
+      { clauseId: 'sccl_instruments', clauseKey: 'payment.instruments', version: 2, parameterValues: { instrument: { kind: 'enum', value: 'bank' } }, deviations: {} },
+    ],
+    languages: { secondary: null }, validUntil: '2099-12-31', mobilizedOn: null, issuedRevision: null, revision: 3,
+    createdAt: '2026-11-01T08:00:00.000Z', updatedAt: '2026-11-02T08:00:00.000Z', issuedAt: null, acceptedAt: null,
+    createdBy: 'u_author', updatedBy: 'u_author',
+    ...patch,
+  };
+}
 
 /** Έγκυρο πρόχειρο `single_project` (γραφείς Φ2 · κριτής δικαιωμάτων §5.15) — ένα σημείο, όχι αντίγραφο ανά σουίτα. */
 export function sampleDraftInput(patch: Partial<SubcontractAgreementDraftInput> = {}): SubcontractAgreementDraftInput {

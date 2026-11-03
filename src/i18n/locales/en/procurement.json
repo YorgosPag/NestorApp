@@ -846,6 +846,181 @@
         "pdfFileId": "PDF file",
         "sealed": "Sealed"
       }
+    },
+    "status": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "accepted": "Accepted",
+      "in_execution": "In progress",
+      "completed": "Completed",
+      "discarded": "Discarded",
+      "withdrawn": "Withdrawn",
+      "expired": "Expired",
+      "terminated": "Terminated"
+    },
+    "list": {
+      "title": "Subcontract agreements",
+      "subtitle": "Offers and agreements for this project, plus master agreements with a work order here.",
+      "search": "Search by number, subcontractor, VAT number or title…",
+      "empty": "There are no subcontract agreements for this project yet.",
+      "emptyFiltered": "No agreement matches the filters.",
+      "error": "The agreements could not be loaded.",
+      "ariaLabel": "Subcontract agreements of the project",
+      "deviationsOpen": "Deviation pending",
+      "columns": {
+        "document": "Document",
+        "work": "Work",
+        "subcontractor": "Subcontractor",
+        "scope": "Scope",
+        "value": "Value (excl. VAT)",
+        "status": "Status",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "role": {
+        "offer": "Offer",
+        "agreement": "Agreement"
+      },
+      "scope": {
+        "single": "This project",
+        "master": "Master agreement",
+        "workOrder": "Work order",
+        "workOrderFrom": "Work order from {date}"
+      },
+      "value": {
+        "atLeast": "≥ {amount}",
+        "unpricedLines": "{count, plural, one {# line without quantity} other {# lines without quantity}}",
+        "unitRatesOnly": "Unit rates only"
+      }
+    },
+    "summary": {
+      "ariaLabel": "Agreements summary",
+      "committed": "Committed",
+      "pending": "Pending",
+      "documents": "{count, plural, one {# document} other {# documents}}",
+      "statusFigure": "{count} · {amount}",
+      "filterLabel": "Status filter"
+    },
+    "actions": {
+      "menu": "Actions for {number}",
+      "checking": "Checking the clause library…",
+      "transition": {
+        "issue": "Issue",
+        "accept": "Accept",
+        "mobilize": "Mobilise on site",
+        "complete": "Complete",
+        "discard": "Discard draft",
+        "withdraw": "Withdraw",
+        "expire": "Mark offer as expired",
+        "terminate": "Terminate"
+      },
+      "done": {
+        "issue": "{number} was issued",
+        "accept": "{number} was accepted",
+        "mobilize": "{number} is now in progress",
+        "complete": "{number} was completed",
+        "discard": "Draft {number} was discarded",
+        "withdraw": "{number} was withdrawn",
+        "expire": "{number} was marked as expired",
+        "terminate": "{number} was terminated"
+      },
+      "confirm": {
+        "discard": {
+          "title": "Discard draft {number}?",
+          "description": "The draft will not be issued. It stays in the list as “Discarded” and its number is not reused."
+        },
+        "withdraw": {
+          "title": "Withdraw {number}?",
+          "description": "The document is withdrawn from the subcontractor. This cannot be undone."
+        },
+        "terminate": {
+          "title": "Terminate {number}?",
+          "description": "Work stops and the agreement closes as “Terminated”. This cannot be undone."
+        }
+      }
+    },
+    "messages": {
+      "pending": "Needs attention"
+    },
+    "issues": {
+      "parameterKeyInvalid": "Invalid parameter key",
+      "parameterKeyDuplicate": "Duplicate parameter key",
+      "parameterKindMismatch": "The value does not match the parameter type",
+      "parameterValueInvalid": "Invalid parameter value",
+      "parameterOptionsMissing": "A choice parameter needs options",
+      "parameterOptionDuplicate": "Duplicate option",
+      "parameterOptionUnknown": "The option is not in the list",
+      "parameterTermsMissing": "Terms required by the parameter are missing",
+      "parameterRatioLength": "The ratio has the wrong number of parts",
+      "parameterTextTooLong": "The text is too long",
+      "parameterLabelRequired": "The parameter needs a label",
+      "toleranceKindMismatch": "The tolerance does not match the parameter type",
+      "toleranceRangeInvalid": "Invalid tolerance range",
+      "tolerancePreferredOutsideAcceptable": "The preferred value lies outside the acceptable range",
+      "toleranceAcceptableOutsideWalkAway": "The acceptable range exceeds the walk-away limit",
+      "toleranceOptionUnknown": "The tolerance refers to an unknown option",
+      "bindingKindMismatch": "The bound term has a different type from the parameter",
+      "bindingTermMissing": "The bound commercial term is missing",
+      "clauseKeyInvalid": "Invalid clause key",
+      "clauseTitleRequired": "The clause needs a title",
+      "headingRequired": "A heading is required",
+      "bodyEmpty": "The clause text is empty",
+      "blockEmpty": "Empty paragraph or list",
+      "inlineTextEmpty": "Empty text segment",
+      "paramReferenceUnknown": "The text refers to an unknown parameter",
+      "parameterUnreferenced": "The parameter is not used in the text",
+      "translationParamsMismatch": "The translation does not use the same parameters as the Greek text",
+      "translationLanguageInvalid": "Unsupported translation language",
+      "sharesEmpty": "At least one share is required",
+      "shareInvalid": "Invalid share",
+      "sharesNotWhole": "Shares must add up to 100%",
+      "shareKeyDuplicate": "Duplicate share",
+      "templateCodeInvalid": "Invalid template code",
+      "tradeUnknown": "Unknown trade",
+      "lineIdDuplicate": "Duplicate line",
+      "lineDescriptionRequired": "The line needs a description",
+      "unitUnknown": "Unknown unit of measure",
+      "amountInvalid": "Invalid amount",
+      "quantityInvalid": "Invalid quantity",
+      "clauseRefDuplicate": "The clause is included twice",
+      "clauseRefUnknown": "The clause is not in the library",
+      "clauseRefNotApproved": "The clause has no approved version",
+      "overrideUnknownParameter": "A value for a parameter the clause does not have",
+      "overrideOnBoundParameter": "This parameter takes its value from the commercial terms",
+      "overrideNeedsApproval": "The value is outside the preferred range and needs approval",
+      "overrideForbidden": "The value is outside what the company accepts",
+      "termOutsideTolerance": "The commercial term is outside its tolerance",
+      "vatRateInvalid": "Invalid VAT rate",
+      "scheduleInvalid": "Invalid payment schedule",
+      "clauseVersionOutdated": "The clause library has a newer approved version — update the document",
+      "deviationForbidden": "The deviation is in the forbidden range",
+      "deviationReasonRequired": "The deviation needs a reason",
+      "translationMissing": "An approved translation is missing for the bilingual document",
+      "issuerProfileMissing": "Company details for the letterhead are missing",
+      "contactUnknown": "Contact not found",
+      "projectUnknown": "Project not found",
+      "buildingNotInProject": "The building does not belong to the project",
+      "scopeMismatch": "The scope does not match the document",
+      "notEditable": "The document can no longer be edited — it has been issued",
+      "validUntilPast": "The validity date has already passed"
+    },
+    "failure": {
+      "invalid": "The document has items to fix",
+      "notFound": "Document not found",
+      "duplicate": "It already exists",
+      "revisionMismatch": "Someone else changed it meanwhile — the list already shows the new version",
+      "proposalPending": "A proposal is already open",
+      "invalidTransition": "This action does not apply in the current status",
+      "translationStale": "The translation is behind the Greek text",
+      "selfApproval": "You cannot approve your own request — someone else must",
+      "notProposer": "Only the proposer can withdraw this",
+      "deviationsPending": "A deviation is awaiting approval or was rejected",
+      "offerExpired": "The offer has expired",
+      "notYetExpired": "The offer is still valid",
+      "mobilizeOnOffer": "Mobilisation happens on the agreement, not on the offer",
+      "forbidden": "You are not allowed to do this",
+      "network": "Could not connect — please try again",
+      "unknown": "Something went wrong — please try again"
     }
   }
 }

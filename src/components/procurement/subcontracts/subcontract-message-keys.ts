@@ -1,0 +1,94 @@
+/**
+ * @fileoverview **Οι πίνακες `κωδικός → κλειδί` της υπεργολαβίας** (ADR-928 Φ3α-2 · ADR-744 §34).
+ * @module components/procurement/subcontracts/subcontract-message-keys
+ *
+ * ⚠️ **ΜΗΝ το εισαγάγεις στατικά.** Το φορτώνει **μόνο** το `import()` του `subcontract-messages.ts` — το όριο που ο
+ *    γεννήτορας του slice σέβεται. Στατική εισαγωγή θα ξανάβαζε ~80 κλειδιά στο πρώτο καρέ κάθε σελίδας προμηθειών.
+ * 🔑 **Ολικοί** πίνακες (`satisfies Record<…>`): νέος κωδικός ευρήματος ή νέο είδος άρνησης δεν μεταγλωττίζεται χωρίς
+ *    γραμμή εδώ — και η γραμμή χωρίς κλειδί στα locales κοκκινίζει στο CHECK 3.8.
+ */
+
+import type { SubcontractFailureKind } from '@/services/procurement/subcontracts/subcontract-failure';
+import type { SubcontractIssueCode } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
+
+export const SUBCONTRACT_ISSUE_KEYS = {
+  parameterKeyInvalid: 'subcontracts.issues.parameterKeyInvalid',
+  parameterKeyDuplicate: 'subcontracts.issues.parameterKeyDuplicate',
+  parameterKindMismatch: 'subcontracts.issues.parameterKindMismatch',
+  parameterValueInvalid: 'subcontracts.issues.parameterValueInvalid',
+  parameterOptionsMissing: 'subcontracts.issues.parameterOptionsMissing',
+  parameterOptionDuplicate: 'subcontracts.issues.parameterOptionDuplicate',
+  parameterOptionUnknown: 'subcontracts.issues.parameterOptionUnknown',
+  parameterTermsMissing: 'subcontracts.issues.parameterTermsMissing',
+  parameterRatioLength: 'subcontracts.issues.parameterRatioLength',
+  parameterTextTooLong: 'subcontracts.issues.parameterTextTooLong',
+  parameterLabelRequired: 'subcontracts.issues.parameterLabelRequired',
+  toleranceKindMismatch: 'subcontracts.issues.toleranceKindMismatch',
+  toleranceRangeInvalid: 'subcontracts.issues.toleranceRangeInvalid',
+  tolerancePreferredOutsideAcceptable: 'subcontracts.issues.tolerancePreferredOutsideAcceptable',
+  toleranceAcceptableOutsideWalkAway: 'subcontracts.issues.toleranceAcceptableOutsideWalkAway',
+  toleranceOptionUnknown: 'subcontracts.issues.toleranceOptionUnknown',
+  bindingKindMismatch: 'subcontracts.issues.bindingKindMismatch',
+  bindingTermMissing: 'subcontracts.issues.bindingTermMissing',
+  clauseKeyInvalid: 'subcontracts.issues.clauseKeyInvalid',
+  clauseTitleRequired: 'subcontracts.issues.clauseTitleRequired',
+  headingRequired: 'subcontracts.issues.headingRequired',
+  bodyEmpty: 'subcontracts.issues.bodyEmpty',
+  blockEmpty: 'subcontracts.issues.blockEmpty',
+  inlineTextEmpty: 'subcontracts.issues.inlineTextEmpty',
+  paramReferenceUnknown: 'subcontracts.issues.paramReferenceUnknown',
+  parameterUnreferenced: 'subcontracts.issues.parameterUnreferenced',
+  translationParamsMismatch: 'subcontracts.issues.translationParamsMismatch',
+  translationLanguageInvalid: 'subcontracts.issues.translationLanguageInvalid',
+  sharesEmpty: 'subcontracts.issues.sharesEmpty',
+  shareInvalid: 'subcontracts.issues.shareInvalid',
+  sharesNotWhole: 'subcontracts.issues.sharesNotWhole',
+  shareKeyDuplicate: 'subcontracts.issues.shareKeyDuplicate',
+  templateCodeInvalid: 'subcontracts.issues.templateCodeInvalid',
+  tradeUnknown: 'subcontracts.issues.tradeUnknown',
+  lineIdDuplicate: 'subcontracts.issues.lineIdDuplicate',
+  lineDescriptionRequired: 'subcontracts.issues.lineDescriptionRequired',
+  unitUnknown: 'subcontracts.issues.unitUnknown',
+  amountInvalid: 'subcontracts.issues.amountInvalid',
+  quantityInvalid: 'subcontracts.issues.quantityInvalid',
+  clauseRefDuplicate: 'subcontracts.issues.clauseRefDuplicate',
+  clauseRefUnknown: 'subcontracts.issues.clauseRefUnknown',
+  clauseRefNotApproved: 'subcontracts.issues.clauseRefNotApproved',
+  overrideUnknownParameter: 'subcontracts.issues.overrideUnknownParameter',
+  overrideOnBoundParameter: 'subcontracts.issues.overrideOnBoundParameter',
+  overrideNeedsApproval: 'subcontracts.issues.overrideNeedsApproval',
+  overrideForbidden: 'subcontracts.issues.overrideForbidden',
+  termOutsideTolerance: 'subcontracts.issues.termOutsideTolerance',
+  vatRateInvalid: 'subcontracts.issues.vatRateInvalid',
+  scheduleInvalid: 'subcontracts.issues.scheduleInvalid',
+  clauseVersionOutdated: 'subcontracts.issues.clauseVersionOutdated',
+  deviationForbidden: 'subcontracts.issues.deviationForbidden',
+  deviationReasonRequired: 'subcontracts.issues.deviationReasonRequired',
+  translationMissing: 'subcontracts.issues.translationMissing',
+  issuerProfileMissing: 'subcontracts.issues.issuerProfileMissing',
+  contactUnknown: 'subcontracts.issues.contactUnknown',
+  projectUnknown: 'subcontracts.issues.projectUnknown',
+  buildingNotInProject: 'subcontracts.issues.buildingNotInProject',
+  scopeMismatch: 'subcontracts.issues.scopeMismatch',
+  notEditable: 'subcontracts.issues.notEditable',
+  validUntilPast: 'subcontracts.issues.validUntilPast',
+} as const satisfies Readonly<Record<SubcontractIssueCode, string>>;
+
+export const SUBCONTRACT_FAILURE_KEYS = {
+  invalid: 'subcontracts.failure.invalid',
+  notFound: 'subcontracts.failure.notFound',
+  duplicate: 'subcontracts.failure.duplicate',
+  revisionMismatch: 'subcontracts.failure.revisionMismatch',
+  proposalPending: 'subcontracts.failure.proposalPending',
+  invalidTransition: 'subcontracts.failure.invalidTransition',
+  translationStale: 'subcontracts.failure.translationStale',
+  selfApproval: 'subcontracts.failure.selfApproval',
+  notProposer: 'subcontracts.failure.notProposer',
+  deviationsPending: 'subcontracts.failure.deviationsPending',
+  offerExpired: 'subcontracts.failure.offerExpired',
+  notYetExpired: 'subcontracts.failure.notYetExpired',
+  mobilizeOnOffer: 'subcontracts.failure.mobilizeOnOffer',
+  forbidden: 'subcontracts.failure.forbidden',
+  network: 'subcontracts.failure.network',
+  unknown: 'subcontracts.failure.unknown',
+} as const satisfies Readonly<Record<SubcontractFailureKind, string>>;

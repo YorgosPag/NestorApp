@@ -240,3 +240,39 @@ export interface SubcontractAgreementRevision {
   readonly issuedBy: string;
   readonly issuedAt: string;
 }
+
+// ── Πράξεις: είσοδος και αποτέλεσμα (Φ3α-2) ─────────────────────────────────
+// Ένας ορισμός για τον γραφέα (`src/server/subcontracts/`) και τον πελάτη (`subcontract-agreements-api.client`):
+// ως τη Φ3α-1 ζούσαν σε αρχεία `server-only`, όπου η οθόνη δεν μπορούσε να τα δει.
+
+/** Μετάβαση κύκλου ζωής: η αναθεώρηση που διάβασε ο πελάτης (CAS) + η ημέρα εγκατάστασης στο `mobilize`. */
+export interface AgreementTransitionInput {
+  readonly expectedRevision: number;
+  readonly mobilizedOn: CalendarDay | null;
+}
+
+/** Το `issue` παγώνει αναθεώρηση· το `accept` του Τρόπου Β γεννά συμφωνητικό. */
+export interface AgreementTransitionResult {
+  readonly agreement: SubcontractAgreement;
+  readonly revision: SubcontractAgreementRevision | null;
+  readonly spawnedAgreement: SubcontractAgreement | null;
+}
+
+/** Εντολή εργασίας (§5.15): ανάθεση εργοταξίου σε κύρια σύμβαση. */
+export interface AgreementAssignmentInput {
+  readonly expectedRevision: number;
+  readonly projectId: string;
+  readonly buildingIds: readonly string[];
+  readonly startDate: CalendarDay | null;
+  readonly durationDays: number | null;
+  readonly note: string | null;
+}
+
+/** Απόφαση απόκλισης από **άλλον** από τον αιτούντα (§5.2.1 τρόπος 3). */
+export interface AgreementDeviationDecisionInput {
+  readonly expectedRevision: number;
+  readonly clauseKey: string;
+  readonly parameterKey: string;
+  readonly decision: 'approved' | 'rejected';
+  readonly reason: string | null;
+}

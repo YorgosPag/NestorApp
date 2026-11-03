@@ -14,7 +14,6 @@ import 'server-only';
  * @module server/subcontracts/agreement-lifecycle-writer.server
  */
 
-import type { CalendarDay } from '@/constants/platform-operator';
 import type { AuthContext } from '@/lib/auth';
 import { todayLocalDate } from '@/lib/date-local';
 import { generateDeterministicSubcontractRevisionId, generateSubcontractAgreementId } from '@/services/enterprise-id.service';
@@ -34,6 +33,8 @@ import {
 } from '@/subapps/procurement/subcontracts/agreements/agreement-snapshot';
 import { selectionInputsOf } from '@/subapps/procurement/subcontracts/agreements/judge-deviations';
 import type {
+  AgreementTransitionInput,
+  AgreementTransitionResult,
   SubcontractAgreement,
   SubcontractAgreementRevision,
   SubcontractAgreementTransition,
@@ -55,18 +56,6 @@ import {
 } from './subcontract-store.server';
 import { assertGovernance, assertNoSubcontractIssues } from './subcontract-write-error';
 
-export interface TransitionInput {
-  readonly expectedRevision: number;
-  /** Μόνο `mobilize`: η μέρα εγκατάστασης· προεπιλογή σήμερα (Ελλάδα). */
-  readonly mobilizedOn: CalendarDay | null;
-}
-
-/** Το αποτέλεσμα μιας μετάβασης: το έγγραφο, και ό,τι γεννήθηκε μαζί του. */
-export interface TransitionResult {
-  readonly agreement: SubcontractAgreement;
-  readonly revision: SubcontractAgreementRevision | null;
-  readonly spawnedAgreement: SubcontractAgreement | null;
-}
 
 /** Το περιεχόμενο του εγγράφου όπως είναι αποθηκευμένο, ως αίτημα επίλυσης — για την ανανέωση στο `issue`. */
 function storedContentRequest(agreement: SubcontractAgreement): AgreementContentRequest {
@@ -86,7 +75,7 @@ function storedContentRequest(agreement: SubcontractAgreement): AgreementContent
 }
 
 /** `issue`: ανανέωση + πάγωμα. Επιστρέφει το ενημερωμένο έγγραφο και την αναθεώρηση. */
-async function stageIssue(scope: SubcontractTx, current: SubcontractAgreement, issuer: PartyRead<InvoiceIssuer>): Promise<TransitionResult> {
+async function stageIssue(scope: SubcontractTx, current: SubcontractAgreement, issuer: PartyRead<InvoiceIssuer>): Promise<AgreementTransitionResult> {
   const today = todayLocalDate();
   assertGovernance(refuseTransition(current, 'issue', today));
   const resolved = await resolveAgreementContent(scope, storedContentRequest(current), issuer);
@@ -123,7 +112,7 @@ async function stageIssue(scope: SubcontractTx, current: SubcontractAgreement, i
 }
 
 /** `accept`: και, στον Τρόπο Β, το συμφωνητικό που γεννά η αποδεκτή προσφορά — με δικό του αριθμό. */
-async function stageAccept(scope: SubcontractTx, current: SubcontractAgreement): Promise<TransitionResult> {
+async function stageAccept(scope: SubcontractTx, current: SubcontractAgreement): Promise<AgreementTransitionResult> {
   const spawns = spawnsAgreementOnAccept(current);
   const counter = spawns ? await readAgreementCounter(scope) : null;
   assertGovernance(refuseTransition(current, 'accept', todayLocalDate()));
@@ -143,7 +132,7 @@ async function stageAccept(scope: SubcontractTx, current: SubcontractAgreement):
 }
 
 /** Οι απλές μεταβάσεις: μόνο κατάσταση (και η μέρα εγκατάστασης στο `mobilize`). */
-function stageSimple(scope: SubcontractTx, current: SubcontractAgreement, transition: SubcontractAgreementTransition, input: TransitionInput): TransitionResult {
+function stageSimple(scope: SubcontractTx, current: SubcontractAgreement, transition: SubcontractAgreementTransition, input: AgreementTransitionInput): AgreementTransitionResult {
   const today = todayLocalDate();
   assertGovernance(refuseTransition(current, transition, today));
   const extra = transition === 'mobilize' ? { mobilizedOn: input.mobilizedOn ?? today } : {};
@@ -156,8 +145,8 @@ export async function transitionSubcontractAgreement(
   ctx: AuthContext,
   id: string,
   transition: SubcontractAgreementTransition,
-  input: TransitionInput,
-): Promise<TransitionResult> {
+  input: AgreementTransitionInput,
+): Promise<AgreementTransitionResult> {
   const issuer = transition === 'issue' ? await readIssuer(ctx.companyId, ctx.uid) : null;
   return runSubcontractTransaction(ctx, async (scope) => {
     const current = await readOwned(scope, 'agreement', agreementDocRef(scope.db, id));

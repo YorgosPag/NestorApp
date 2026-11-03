@@ -11,7 +11,6 @@ import 'server-only';
  */
 
 import { generateDeterministicSubcontractClauseId, generateDeterministicSubcontractClauseVersionId } from '@/services/enterprise-id.service';
-import type { ApprovedLibrary } from '@/subapps/procurement/subcontracts/agreements/judge-deviations';
 import type { PinnedClause } from '@/subapps/procurement/subcontracts/agreements/agreement-snapshot';
 import type { ClauseKey, SubcontractClause } from '@/subapps/procurement/subcontracts/types/clause';
 import type { ClauseParameterDefinition } from '@/subapps/procurement/subcontracts/types/clause-parameter';
@@ -46,12 +45,4 @@ export async function readApprovedLibrary(
 ): Promise<ReadonlyMap<ClauseKey, readonly ClauseParameterDefinition[] | null>> {
   const pinned = await readApprovedClauses(scope, clauseKeys);
   return new Map([...pinned].map(([key, entry]) => [key, entry ? entry.version.parameters : null]));
-}
-
-/** Προβολή για τον κριτή αποκλίσεων του συμφωνητικού (`judge-deviations`). */
-export function approvedLibraryOf(pinned: ReadonlyMap<ClauseKey, PinnedClause | null>): ApprovedLibrary {
-  return new Map([...pinned].map(([key, entry]) => [
-    key,
-    entry ? { clauseId: entry.clause.id, version: entry.version.version, parameters: entry.version.parameters } : null,
-  ]));
 }

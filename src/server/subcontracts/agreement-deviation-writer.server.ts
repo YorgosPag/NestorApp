@@ -14,21 +14,13 @@ import 'server-only';
 import type { AuthContext } from '@/lib/auth';
 import { refuseDeviationDecision } from '@/subapps/procurement/subcontracts/agreements/agreement-lifecycle';
 import { refuseOwnRequest } from '@/subapps/procurement/subcontracts/clauses/clause-governance';
-import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
+import type { AgreementDeviationDecisionInput, SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
 import type { ClauseDeviation, ClauseSelection } from '@/subapps/procurement/subcontracts/types/commercial-terms';
 import { agreementDocRef, assertRevision, readOwned, runSubcontractTransaction, stageUpdate } from './subcontract-store.server';
 import { assertGovernance, SubcontractWriteError } from './subcontract-write-error';
 
-export interface DeviationDecisionInput {
-  readonly expectedRevision: number;
-  readonly clauseKey: string;
-  readonly parameterKey: string;
-  readonly decision: 'approved' | 'rejected';
-  readonly reason: string | null;
-}
-
 /** Η απόκλιση-στόχος, ή `notFound` (ανύπαρκτη ρήτρα/παράμετρος ≡ καμία απόκλιση εκεί). */
-function targetDeviation(agreement: SubcontractAgreement, input: DeviationDecisionInput): ClauseDeviation {
+function targetDeviation(agreement: SubcontractAgreement, input: AgreementDeviationDecisionInput): ClauseDeviation {
   const selection = agreement.clauses.find((clause) => clause.clauseKey === input.clauseKey);
   const deviation = selection?.deviations[input.parameterKey];
   if (!deviation) throw new SubcontractWriteError('notFound', [], { clauseKey: input.clauseKey, parameterKey: input.parameterKey });
@@ -36,13 +28,13 @@ function targetDeviation(agreement: SubcontractAgreement, input: DeviationDecisi
 }
 
 /** Οι επιλογές με την απόφαση γραμμένη στη μία απόκλιση — όλα τα άλλα αμετάβλητα. */
-function withDecision(clauses: readonly ClauseSelection[], input: DeviationDecisionInput, decided: ClauseDeviation): ClauseSelection[] {
+function withDecision(clauses: readonly ClauseSelection[], input: AgreementDeviationDecisionInput, decided: ClauseDeviation): ClauseSelection[] {
   return clauses.map((selection) => selection.clauseKey !== input.clauseKey
     ? selection
     : { ...selection, deviations: { ...selection.deviations, [input.parameterKey]: decided } });
 }
 
-export function decideSubcontractAgreementDeviation(ctx: AuthContext, agreementId: string, input: DeviationDecisionInput): Promise<SubcontractAgreement> {
+export function decideSubcontractAgreementDeviation(ctx: AuthContext, agreementId: string, input: AgreementDeviationDecisionInput): Promise<SubcontractAgreement> {
   return runSubcontractTransaction(ctx, async (scope) => {
     const ref = agreementDocRef(scope.db, agreementId);
     const current = await readOwned(scope, 'agreement', ref);

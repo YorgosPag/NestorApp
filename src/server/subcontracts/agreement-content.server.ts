@@ -23,7 +23,8 @@ import type {
 import type { ClauseKey } from '@/subapps/procurement/subcontracts/types/clause';
 import type { ClauseSelection, CommercialTerms } from '@/subapps/procurement/subcontracts/types/commercial-terms';
 import type { SignatoryFieldSet } from '@/subapps/procurement/types/signatory-fields';
-import { approvedLibraryOf, readApprovedClauses } from './clause-library-reads.server';
+import { approvedLibraryOf } from '@/subapps/procurement/subcontracts/agreements/approved-library';
+import { readApprovedClauses } from './clause-library-reads.server';
 import { issuesOf, readContactParties, readProjectIdentity, type PartyRead } from './agreement-parties.server';
 import type { SubcontractTx } from './subcontract-store.server';
 import { assertNoSubcontractIssues } from './subcontract-write-error';

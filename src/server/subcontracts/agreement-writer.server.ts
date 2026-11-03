@@ -20,6 +20,7 @@ import { validateAgreementDraft, type SubcontractAgreementDraftInput } from '@/s
 import { refuseAssignment, refuseContentEdit } from '@/subapps/procurement/subcontracts/agreements/agreement-lifecycle';
 import type { InvoiceIssuer } from '@/subapps/accounting/types/invoice';
 import type {
+  AgreementAssignmentInput,
   AgreementDocumentRole,
   SiteAssignment,
   SubcontractAgreement,
@@ -143,17 +144,8 @@ export async function updateSubcontractAgreementDraft(
   });
 }
 
-export interface AddAssignmentInput {
-  readonly expectedRevision: number;
-  readonly projectId: string;
-  readonly buildingIds: readonly string[];
-  readonly startDate: CalendarDay | null;
-  readonly durationDays: number | null;
-  readonly note: string | null;
-}
-
 /** Ανάθεση εργοταξίου σε συμφωνητικό πολλών έργων (Δ2) — **χωρίς** νέο έγγραφο, με στιγμιότυπο έργου και ιστορικό. */
-export function addSubcontractAgreementAssignment(ctx: AuthContext, id: string, input: AddAssignmentInput): Promise<SubcontractAgreement> {
+export function addSubcontractAgreementAssignment(ctx: AuthContext, id: string, input: AgreementAssignmentInput): Promise<SubcontractAgreement> {
   return runSubcontractTransaction(ctx, async (scope) => {
     const ref = agreementDocRef(scope.db, id);
     const current = await readOwned(scope, 'agreement', ref);

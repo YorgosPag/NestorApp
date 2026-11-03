@@ -11,8 +11,8 @@
 import { typedHref, withQuery } from '@/lib/workspace/route-worlds';
 import { serializeFilterArray } from '@/lib/url-filters/multi-value';
 
-/** Οι όψεις της ενότητας προμηθειών ενός έργου (ADR-330 §5.1 S2 · `coverage` = Buyout, S3.2). */
-export type ProjectProcurementSection = 'overview' | 'rfq' | 'quote' | 'po' | 'coverage';
+/** Οι όψεις της ενότητας προμηθειών ενός έργου (ADR-330 §5.1 S2 · `coverage` = Buyout, S3.2 · `subcontracts` = ADR-928 Φ3α-2). */
+export type ProjectProcurementSection = 'overview' | 'rfq' | 'quote' | 'po' | 'coverage' | 'subcontracts';
 
 /** Νέο αίτημα προσφοράς του έργου — με εργασίες επιμέτρησης, προσυμπληρωμένο από αυτές (ADR-327 P5-BOQ). */
 export function getNewRfqUrl(projectId: string, boqItemIds: readonly string[] = []) {

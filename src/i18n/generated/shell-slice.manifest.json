@@ -73,6 +73,7 @@
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json": "b7c1e20776fb9ad6be26039d9bd0c71dfac687f97998a872687dc3e47c997c48",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json": "9cf0c913c9f586ae7850ab0f1a6bfcb1c47dc4862db39dc9fb8acc4fec81b907",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "56252485b00d77dfd679a239ab1670c4b50ed0648dd7fac748c3b94e01a58450",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "afd271fe04907656674fb526d61e3445da8f3fba1dff33168f558b2420e00a84",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "833f1f75349ec3140684597ec67c5f6690725809f226b26eb378bb77f9358190",
@@ -111,7 +112,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "ddd1d619dc562edf6ffbdfbdd895613fc49b5dc336925e23fb2d4da0b724617e",
+    "src/i18n/generated/shell-slice.el.json": "82ccce1212ba247b8750e6345e530d97c9bf0bad0bcf16b544756123f67e00d3",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -127,7 +128,7 @@
       "lazyRouteRegistries": "9b5e7bd46f0b1a00e0e720c490feaaae1ff28c77b5f2238bc800a871cd2bdb04",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "1cef8fc39395aa1e7bf8e398d36450363e4ca614c6c8c9ae2b9c48dcbe754681",
+      "routeSlices": "b449238091668debe8bb06435f34fa61b78d51cd838036af4e936cf92eaa174e",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -197,7 +198,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e27ae42287b3e2b6b1f01c85c4fb8d559097f3941721cd24d8399d1ca4d2b2ad",
+  "inputsSha256": "9a3fb441be4f014ba8d14efd07fa8df1b8b8077e1c772633ad81d092e236124f",
   "languages": [
     "el"
   ],
@@ -31667,6 +31668,211 @@
         }
       }
     },
+    "o__workspace__projects__id__procurement__subcontracts": {
+      "page": "src/app/(app)/o/[workspace]/projects/[id]/procurement/subcontracts/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "procurement": {
+          "keys": [
+            "subcontracts.actions.checking",
+            "subcontracts.actions.menu",
+            "subcontracts.list.ariaLabel",
+            "subcontracts.list.columns.actions",
+            "subcontracts.list.columns.document",
+            "subcontracts.list.columns.scope",
+            "subcontracts.list.columns.status",
+            "subcontracts.list.columns.subcontractor",
+            "subcontracts.list.columns.updated",
+            "subcontracts.list.columns.value",
+            "subcontracts.list.columns.work",
+            "subcontracts.list.deviationsOpen",
+            "subcontracts.list.empty",
+            "subcontracts.list.emptyFiltered",
+            "subcontracts.list.error",
+            "subcontracts.list.scope.master",
+            "subcontracts.list.scope.single",
+            "subcontracts.list.scope.workOrder",
+            "subcontracts.list.scope.workOrderFrom",
+            "subcontracts.list.search",
+            "subcontracts.list.subtitle",
+            "subcontracts.list.title",
+            "subcontracts.list.value.atLeast",
+            "subcontracts.list.value.unitRatesOnly",
+            "subcontracts.list.value.unpricedLines",
+            "subcontracts.messages.pending",
+            "subcontracts.summary.ariaLabel",
+            "subcontracts.summary.committed",
+            "subcontracts.summary.documents",
+            "subcontracts.summary.filterLabel",
+            "subcontracts.summary.pending",
+            "subcontracts.summary.statusFigure"
+          ],
+          "prefixes": [
+            "subcontracts.actions.confirm",
+            "subcontracts.actions.done",
+            "subcontracts.actions.transition",
+            "subcontracts.list.role",
+            "subcontracts.status"
+          ],
+          "whole": false
+        },
+        "quotes": {
+          "keys": [
+            "subcontracts.list.ariaLabel",
+            "subcontracts.list.columns.actions",
+            "subcontracts.list.columns.document",
+            "subcontracts.list.columns.scope",
+            "subcontracts.list.columns.status",
+            "subcontracts.list.columns.subcontractor",
+            "subcontracts.list.columns.updated",
+            "subcontracts.list.columns.value",
+            "subcontracts.list.columns.work",
+            "subcontracts.list.deviationsOpen",
+            "subcontracts.list.scope.master",
+            "subcontracts.list.scope.single",
+            "subcontracts.list.scope.workOrder",
+            "subcontracts.list.scope.workOrderFrom",
+            "subcontracts.list.value.atLeast",
+            "subcontracts.list.value.unitRatesOnly",
+            "subcontracts.list.value.unpricedLines"
+          ],
+          "prefixes": [
+            "subcontracts.list.role",
+            "trades"
+          ],
+          "whole": false
+        }
+      }
+    },
     "o__workspace__settings__agency-profile": {
       "page": "src/app/(app)/o/[workspace]/settings/agency-profile/page.tsx",
       "wants": {
@@ -37090,8 +37296,8 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "matchedKeys": 273,
-    "sliceBytes": 1231179
+    "matchedKeys": 274,
+    "sliceBytes": 1238681
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -37888,6 +38094,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -38347,6 +38554,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -38815,6 +39023,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -39269,6 +39478,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -39723,6 +39933,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -40194,6 +40405,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -40648,6 +40860,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -41139,6 +41352,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -41595,6 +41809,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -42049,6 +42264,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -42401,6 +42617,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system",
@@ -42524,6 +42741,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system"
@@ -42641,6 +42859,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system"
@@ -42841,6 +43060,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system"
@@ -43002,6 +43222,7 @@
         "tabs.subtabs.procurement.po",
         "tabs.subtabs.procurement.quote",
         "tabs.subtabs.procurement.rfq",
+        "tabs.subtabs.procurement.subcontracts",
         "theme.dark",
         "theme.light",
         "theme.system"
