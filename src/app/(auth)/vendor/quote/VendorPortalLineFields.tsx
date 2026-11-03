@@ -16,10 +16,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { LockedFields } from '@/subapps/procurement/utils/rfq-response-lock';
 import type { QuoteLineDraft } from './types';
+import { GREEK_VAT_RATE_PERCENTS, isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 import { draftLineTotal } from './vendor-quote-draft';
 import { useVendorUomLabel, useVendorUomOptions } from './useVendorUomOptions';
 
-const VAT_RATES: readonly QuoteLineDraft['vatRate'][] = [24, 13, 6, 0];
 
 type PriceFields = Pick<QuoteLineDraft, 'quantity' | 'unit' | 'unitPrice' | 'vatRate'>;
 
@@ -53,10 +53,13 @@ export function VendorPortalLineFields({ line, onChange, locked }: Props) {
         <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.vatRate')}</span>
         <select
           value={line.vatRate}
-          onChange={(e) => onChange({ vatRate: Number(e.target.value) as QuoteLineDraft['vatRate'] })}
+          onChange={(e) => {
+            const rate = Number(e.target.value);
+            if (isGreekVatRatePercent(rate)) onChange({ vatRate: rate });
+          }}
           className={INPUT}
         >
-          {VAT_RATES.map((rate) => <option key={rate} value={rate}>{rate}%</option>)}
+          {GREEK_VAT_RATE_PERCENTS.map((rate) => <option key={rate} value={rate}>{rate}%</option>)}
         </select>
       </label>
       {anyLocked && (

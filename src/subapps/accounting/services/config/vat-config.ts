@@ -8,7 +8,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
-import type { VATRate, VATDeductibilityRule } from '../../types/vat';
+import type { VATDeductibilityRule } from '../../types/vat';
 import type { ExpenseCategory } from '../../types/common';
 import { ACCOUNT_CATEGORIES } from '../../config/account-categories';
 
@@ -16,49 +16,8 @@ import { ACCOUNT_CATEGORIES } from '../../config/account-categories';
 // GREEK VAT RATES (Ν.2859/2000 — Κώδικας ΦΠΑ)
 // ============================================================================
 
-/**
- * Ελληνικοί συντελεστές ΦΠΑ (ηπειρωτική Ελλάδα)
- *
- * Ισχύοντες από 01/06/2016:
- * - 24% Κανονικός (Ν.4389/2016)
- * - 13% Μειωμένος
- * - 6% Υπερμειωμένος
- * - 0% Απαλλαγή (αρ.22 Ν.2859/2000)
- */
-export const GREEK_VAT_RATES: readonly VATRate[] = [
-  {
-    code: 'standard_24',
-    rate: 24,
-    mydataCategory: 1,
-    label: 'vatConfig.labels.standard_24',
-    validFrom: '2016-06-01',
-    validTo: null,
-  },
-  {
-    code: 'reduced_13',
-    rate: 13,
-    mydataCategory: 2,
-    label: 'vatConfig.labels.reduced_13',
-    validFrom: '2016-06-01',
-    validTo: null,
-  },
-  {
-    code: 'super_reduced_6',
-    rate: 6,
-    mydataCategory: 3,
-    label: 'vatConfig.labels.super_reduced_6',
-    validFrom: '2016-06-01',
-    validTo: null,
-  },
-  {
-    code: 'exempt_0',
-    rate: 0,
-    mydataCategory: 8,
-    label: 'vatConfig.labels.exempt_0',
-    validFrom: '2016-06-01',
-    validTo: null,
-  },
-] as const;
+/** Ο πίνακας ζει στο ελαφρύ `vat-rates.ts` (ADR-928 Φ0)· επανεξάγεται εδώ για τους υπάρχοντες εισαγωγείς. */
+export { GREEK_VAT_RATES } from './vat-rates';
 
 // ============================================================================
 // VAT DEDUCTIBILITY RULES (Ν.2859/2000, αρ.30)

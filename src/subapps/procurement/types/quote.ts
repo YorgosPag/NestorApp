@@ -2,6 +2,7 @@ import type { Timestamp } from 'firebase/firestore';
 import type { SupplierSkuRef } from '@/subapps/catalog/types/supply-relationship';
 import type { TradeCode } from './trade';
 import { roundMajor } from '@/lib/money/money';
+import { GREEK_STANDARD_VAT_RATE, type GreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 
 // ============================================================================
 // QUOTE STATUS FSM — ADR-327 §5.1
@@ -80,7 +81,7 @@ export interface QuoteLine {
   quantity: number;
   unit: string;
   unitPrice: number;
-  vatRate: 0 | 6 | 13 | 24;
+  vatRate: GreekVatRatePercent;
   lineTotal: number;
   notes: string | null;
   /**
@@ -293,7 +294,7 @@ export interface Quote {
     subtotal: number;
     vatAmount: number;
     total: number;
-    vatRate: 0 | 6 | 13 | 24;
+    vatRate: GreekVatRatePercent;
   };
   /** Declared lump-sum total from the scanned document. Used as fallback when line prices are 0. */
   quotedTotal: number | null;
@@ -413,7 +414,7 @@ export function computeQuoteTotals(
   const subtotal = roundMajor(lines.reduce((s, l) => s + l.lineTotal, 0));
   const vatAmount = roundMajor(lines.reduce((s, l) => s + l.lineTotal * (l.vatRate / 100), 0));
   const computedTotal = roundMajor(subtotal + vatAmount);
-  const dominantVatRate = lines[0]?.vatRate ?? 24;
+  const dominantVatRate = lines[0]?.vatRate ?? GREEK_STANDARD_VAT_RATE;
   if (computedTotal === 0 && quotedTotal != null && quotedTotal > 0) {
     return { subtotal: quotedTotal, vatAmount: 0, total: quotedTotal, vatRate: dominantVatRate };
   }

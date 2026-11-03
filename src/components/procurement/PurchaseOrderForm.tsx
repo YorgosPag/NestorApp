@@ -25,7 +25,8 @@ import {
 import { cn } from '@/lib/design-system';
 import { Save, X, AlertCircle } from 'lucide-react';
 import { PO_VAT_RATES } from '@/types/procurement';
-import type { PurchaseOrder, POVatRate } from '@/types/procurement';
+import type { PurchaseOrder } from '@/types/procurement';
+import { isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 import { usePurchaseOrderForm, usePOPricing } from '@/hooks/procurement';
 import { POTotalsSummary } from './POTotalsSummary';
 import { PORepricingNotice } from './PORepricingNotice';
@@ -211,9 +212,10 @@ export function PurchaseOrderForm({
               <Label htmlFor={`${idBase}-vat-rate`}>{t('form.vatRate')}</Label>
               <Select
                 value={String(form.taxRate)}
-                onValueChange={(v) =>
-                  setField('taxRate', parseInt(v, 10) as POVatRate)
-                }
+                onValueChange={(v) => {
+                  const rate = Number(v);
+                  if (isGreekVatRatePercent(rate)) setField('taxRate', rate);
+                }}
               >
                 <SelectTrigger id={`${idBase}-vat-rate`}>
                   <SelectValue />

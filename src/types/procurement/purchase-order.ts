@@ -13,6 +13,10 @@
  */
 
 import type { POPricingMode } from '@/lib/procurement/po-pricing-carry';
+import {
+  GREEK_VAT_RATE_PERCENTS,
+  type GreekVatRatePercent,
+} from '@/subapps/accounting/services/config/vat-rates';
 
 // ============================================================================
 // STATUS & WORKFLOW
@@ -126,15 +130,17 @@ export const PO_CANCELLATION_REASONS: Record<POCancellationReason, {
 // VAT RATES
 // ============================================================================
 
-/** ΦΠΑ rate — PO-level (24% default, 0% ενδοκοινοτικές) */
-export type POVatRate = 24 | 13 | 6 | 0;
+/**
+ * ΦΠΑ rate — PO-level. **Παράγεται** από τον ΕΝΑ πίνακα συντελεστών (ADR-928 Φ0), ποτέ γραμμένο εδώ.
+ *
+ * Η ετικέτα είναι το ποσοστό, όχι λέξη: η παλιά «0% (Ενδοκοινοτική)» ήταν ωμά ελληνικά (N.11) **και**
+ * ανακριβής — το 0% καλύπτει και απαλλαγές, όχι μόνο ενδοκοινοτικές παραδόσεις.
+ */
+export type POVatRate = GreekVatRatePercent;
 
-export const PO_VAT_RATES: { value: POVatRate; label: string }[] = [
-  { value: 24, label: '24%' },
-  { value: 13, label: '13%' },
-  { value: 6,  label: '6%' },
-  { value: 0,  label: '0% (Ενδοκοινοτική)' },
-];
+export const PO_VAT_RATES: readonly { value: POVatRate; label: string }[] = GREEK_VAT_RATE_PERCENTS.map(
+  (value) => ({ value, label: `${value}%` }),
+);
 
 // ============================================================================
 // ATTACHMENT

@@ -12,7 +12,7 @@ import 'server-only';
 import { publicUrl } from '@/lib/http/public-origin';
 import { formatEuro } from '@/lib/number/greek-decimal';
 import { formatOperatorDate } from '@/lib/operator-time-format';
-import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config';
+import { GREEK_STANDARD_VAT_RATE } from '@/subapps/accounting/services/config/vat-rates';
 import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
 import { BRAND, escapeHtml } from '@/services/email-templates';
 import { resolveTenantNotificationEmail } from '@/services/org-structure/org-routing-resolver';
@@ -24,8 +24,8 @@ import type { SalesAccountingEvent } from './types';
 // VAT — derived from centralized vat-config (SSoT)
 // ============================================================================
 
-/** Standard Greek VAT rate, derived from GREEK_VAT_RATES (vat-config.ts SSoT) */
-const STANDARD_VAT_RATE = GREEK_VAT_RATES.find(r => r.code === 'standard_24')!.rate;
+/** Standard Greek VAT rate — from the ONE rate table (vat-rates.ts SSoT, ADR-928 Φ0). */
+const STANDARD_VAT_RATE = GREEK_STANDARD_VAT_RATE;
 /** Divisor for extracting net amount from gross: grossAmount / VAT_DIVISOR = netAmount */
 export const VAT_DIVISOR = 1 + STANDARD_VAT_RATE / 100;
 

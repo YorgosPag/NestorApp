@@ -13,6 +13,11 @@ import admin from 'firebase-admin';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { toStoredUom } from '@/lib/uom/uom-registry';
+import {
+  GREEK_STANDARD_VAT_RATE,
+  isGreekVatRatePercent,
+  type GreekVatRatePercent,
+} from '@/subapps/accounting/services/config/vat-rates';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { recordEntityUpdate } from '@/services/audit/record-entity-update';
 import { ownedContactNameResolver } from '@/server/lib/owned-contact-name-resolver';
@@ -326,8 +331,7 @@ function materializeQuoteLines(extracted: ExtractedQuoteData): QuoteLine[] {
     const computedTotal = qty * price;
     const total = explicitTotal && explicitTotal > 0 ? explicitTotal : computedTotal;
     const vatRaw = item.vatRate.value;
-    const vatRate: 0 | 6 | 13 | 24 =
-      vatRaw === 0 || vatRaw === 6 || vatRaw === 13 ? vatRaw : 24;
+    const vatRate: GreekVatRatePercent = isGreekVatRatePercent(vatRaw) ? vatRaw : GREEK_STANDARD_VAT_RATE;
     return {
       id: `${generateOptimisticId()}_line_${idx}`,
       description: item.description.value || '',

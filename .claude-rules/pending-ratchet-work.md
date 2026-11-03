@@ -15,6 +15,23 @@
   **Θεραπεία:** ανά πύλη το πρότυπο της §8.8 (είσοδος στη `measure` · άγκυρα `MIGRATED`/`MIGRATED_FULL` · `compare` δίσκος/`--index`
   · `jscpd:diff`) και `npm run gate-commit-view:baseline`. **Μέγεθος:** > 1h, 30+ αρχεία.
 
+- 🔴 **03/11 — ΛΟΓΟΤΥΠΟ ΠΑΓΩΝΗ ΣΕ ΚΑΘΕ ΧΩΡΟ: ΤΙΜΟΛΟΓΙΑ, ΑΠΥ, ΒΙΤΡΙΝΕΣ** *(ADR-928 §5.11 · ADR-ACC-018 · ADR-312)*
+
+  **Τι:** το `subapps/accounting/services/pdf/logo-data.ts` (`PAGONIS_LOGO_BASE64`, 65 KB σε κώδικα) τυπώνεται **σε κάθε χώρο**
+  από 5 καταναλωτές: `invoice-pdf-exporter.ts` · `apy-certificate-pdf-exporter.ts` · `api/accounting/invoices/[id]/send-email` ·
+  `api/accounting/apy-certificates/[id]/send-email` (+ mock στο `adr603-batch3.route.test.ts`). Το `property-showcase/brand-logo-assets.ts`
+  πέφτει στο `pagonis-energo-logo.png` όταν ο χώρος δεν έχει λογότυπο. Δηλαδή έγγραφο άλλης εταιρείας με το δικό μας σήμα.
+  **Θεραπεία:** πηγή `companies/{companyId}.logoURL` μέσω του κλάδου `tenant` του `company-branding-resolver` (ADR-928 §5.11)·
+  εφεδρεία **κανένα** λογότυπο (κεφαλίδα κειμένου), ποτέ ξένο. Ένα κοινό `resolveTenantLogoAsset(companyId)` για jsPDF και Typst.
+  **Μέγεθος:** > 1h, 6+ αρχεία, 2 τομείς.
+
+- 🟡 **03/11 — ΔΥΟ ΣΗΜΕΙΑ ΦΠΑ ΕΚΤΟΣ ΤΟΥ ΕΝΟΣ ΠΙΝΑΚΑ** *(ADR-928 §5.10 · ADR-ACC-004)*
+
+  **Τι:** μετά την ενοποίηση της Φ0 μένουν: `subapps/accounting/components/shared/VATRateSelector.tsx` (λίστα `[24, 13, 6, 0]` με
+  δικά της κλειδιά `common.vatRates.*`) και `services/sales-accounting/sales-accounting-helpers.ts` `VAT_RATE = 24` (κανόνας ΦΠΑ
+  νεόδμητων: να αποφασιστεί αν είναι ο κανονικός συντελεστής ή ξεχωριστή παράμετρος). **Θεραπεία:** ο επιλογέας από
+  `GREEK_VAT_RATES` (`vat-rates.ts`) με τα `vatConfig.labels.*` του πίνακα. **Μέγεθος:** < 1h.
+
 - 🔴 **01/11 — Η ΠΥΛΗ TYPESCRIPT ΔΕΝ ΒΛΕΠΕΙ ΝΕΑ ΣΦΑΛΜΑΤΑ** *(ADR-027 · ADR-598 G1 · ADR-923 §5.6.1)*
 
   **Τι:** το `scripts/enterprise-ts-gate.js` μετρά μόνο το **σύνολο**: στο `9a687ffb` έγραψε 817 σφάλματα έναντι baseline 3005.

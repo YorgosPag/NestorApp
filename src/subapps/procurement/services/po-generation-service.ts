@@ -9,6 +9,7 @@ import type { AuthContext } from '@/lib/auth';
 import type { Quote, QuoteLine } from '../types/quote';
 import { quoteChangeStamp } from './quote-change-stamp';
 import type { POVatRate } from '@/types/procurement';
+import { GREEK_STANDARD_VAT_RATE, isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 import { toStoredUom, type UomCode } from '@/lib/uom/uom-registry';
 
 const LUMP_SUM_UOM: UomCode = 'lump';
@@ -31,7 +32,8 @@ function mapLine(line: QuoteLine) {
 
 function dominantVatRate(quote: Quote): POVatRate {
   const r = quote.totals.vatRate;
-  return (r === 0 || r === 6 || r === 13 || r === 24) ? r : 24;
+  // Φρουρά για αποθηκευμένα έγγραφα πριν από τον τύπο· ο ΕΝΑΣ πίνακας αποφασίζει (ADR-928 Φ0).
+  return isGreekVatRatePercent(r) ? r : GREEK_STANDARD_VAT_RATE;
 }
 
 export async function generatePoFromAwardedQuote(

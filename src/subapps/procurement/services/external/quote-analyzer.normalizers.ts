@@ -20,6 +20,7 @@ import type {
 } from './quote-analyzer.schemas';
 import { structuredText, structuredTextList } from '@/lib/ai-structured-output';
 import { QUOTE_EXTRACTION_NORMALIZATION_VERSION } from './quote-extraction-version';
+import { GREEK_STANDARD_VAT_RATE } from '@/subapps/accounting/services/config/vat-rates';
 
 // ============================================================================
 // FIELD WRAPPER
@@ -110,7 +111,7 @@ function normalizeComponent(c: RawComponent, parentRowNumber: string | null, par
     unit: { value: structuredText(c.unit) ?? '', confidence: c.unitConfidence ?? 0 },
     unitPrice: { value: c.unitPrice ?? 0, confidence: c.unitPriceConfidence ?? 0 },
     discountPercent: { value: c.discountPercent, confidence: c.discountPercentConfidence ?? 0 },
-    vatRate: { value: c.vatRate ?? 24, confidence: c.vatRateConfidence ?? 0 },
+    vatRate: { value: c.vatRate ?? GREEK_STANDARD_VAT_RATE, confidence: c.vatRateConfidence ?? 0 },
     lineTotal: { value: c.lineTotal ?? 0, confidence: c.lineTotalConfidence ?? 0 },
     parentRowNumber,
   };

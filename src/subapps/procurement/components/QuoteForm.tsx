@@ -31,6 +31,7 @@ import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
 import type { QuoteLine, CreateQuoteDTO } from '@/subapps/procurement/types/quote';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
+import { GREEK_STANDARD_VAT_RATE } from '@/subapps/accounting/services/config/vat-rates';
 
 // ============================================================================
 // TYPES
@@ -56,7 +57,7 @@ const EMPTY_LINE: Omit<QuoteLine, 'id'> = {
   quantity: 1,
   unit: DEFAULT_UOM,
   unitPrice: 0,
-  vatRate: 24,
+  vatRate: GREEK_STANDARD_VAT_RATE,
   lineTotal: 0,
   notes: null,
 };

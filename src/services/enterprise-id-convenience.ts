@@ -486,6 +486,18 @@ export {
   generateDeterministicSupplierBrandClaimId,
 } from './enterprise-id-convenience-catalog';
 
+// Συμφωνητικό υπεργολαβίας (ADR-928 §5.1) — ντετερμινιστικά από φυσικό κλειδί, εκτός συμφωνητικού/ανάθεσης
+export const generateSubcontractAgreementId = () => enterpriseIdService.generateSubcontractAgreementId();
+export const generateDeterministicSubcontractRevisionId = (agreementId: string, revisionNumber: number) =>
+  enterpriseIdService.generateDeterministicSubcontractRevisionId(agreementId, revisionNumber);
+export const generateSubcontractAssignmentId = () => enterpriseIdService.generateSubcontractAssignmentId();
+export const generateDeterministicSubcontractClauseId = (companyId: string, clauseKey: string) =>
+  enterpriseIdService.generateDeterministicSubcontractClauseId(companyId, clauseKey);
+export const generateDeterministicSubcontractClauseVersionId = (clauseId: string, version: number) =>
+  enterpriseIdService.generateDeterministicSubcontractClauseVersionId(clauseId, version);
+export const generateDeterministicSubcontractTradeTemplateId = (companyId: string, templateCode: string) =>
+  enterpriseIdService.generateDeterministicSubcontractTradeTemplateId(companyId, templateCode);
+
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();

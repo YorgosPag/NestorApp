@@ -7,6 +7,11 @@
  * faster.
  */
 
+import { GREEK_VAT_RATE_PERCENTS } from '@/subapps/accounting/services/config/vat-rates';
+
+/** «0|6|13|24» από τον ΕΝΑ πίνακα (ADR-928 Φ0) — αύξουσα σειρά, ίδια bytes με το παλιό literal. */
+const VAT_RATE_CHOICES = [...GREEK_VAT_RATE_PERCENTS].sort((a, b) => a - b).join('|');
+
 export const QUOTE_CLASSIFY_PROMPT = `Είσαι AI σύστημα ταξινόμησης παραστατικών για ελληνικό τεχνικό γραφείο/εργολάβο.
 
 Στόχος: Διάγνωσε αν το αρχείο είναι **προσφορά προμηθευτή** (quote/quotation/προσφορά τιμών).
@@ -181,7 +186,7 @@ export const QUOTE_EXTRACT_PROMPT = `Είσαι AI σύστημα εξαγωγή
 - \`unit\`: Μονάδα (τμχ/m/m²/m³/kg/lt/kit/h).
 - \`unitPrice\`: Καθαρή τιμή μονάδος (ΠΡΙΝ έκπτωση).
 - \`discountPercent\`: Ποσοστό έκπτωσης (π.χ. 47 για 47%). Αν δεν υπάρχει στήλη → null.
-- \`vatRate\`: 0|6|13|24.
+- \`vatRate\`: ${VAT_RATE_CHOICES}.
 - \`lineTotal\`: Τελική αξία υπο-εξαρτήματος ΜΕΤΑ έκπτωση (π.χ. 240,6).
 
 Δώσε confidence 0-100 για ΚΑΘΕ πεδίο.

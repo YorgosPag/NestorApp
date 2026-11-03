@@ -342,6 +342,42 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicCatalogSupplierProfileId',
       'generateDeterministicSupplierBrandClaimId',
       'generateDeterministicCatalogUniqueValueId',
+      // ⚠️ Τα επόμενα 19 προστέθηκαν ΧΩΡΙΣ δήλωση (ADR-923 Φ3β–Φ6α, ADR-917) και κοκκίνιζαν αυτή τη σουίτα· βρέθηκαν
+      // 2026-11-03 όταν η ADR-928 Φ0 πρόσθεσε τους δικούς της. Μετρημένο: ΚΑΝΕΝΑΣ δεν έχει τυχαίο αδελφό, όλοι από
+      // φυσικό κλειδί, όπως δηλώνει το `enterprise-id-prefixes-catalog.ts`.
+      // ADR-923 §5.11 — τιμοκατάλογοι: λίστα/ομάδα από κωδικό, έκδοση από (λίστα, αριθμό), γραμμή από (έκδοση, υποκείμενο),
+      // ανάθεση από συμβαλλόμενο, υποδοχή = ευρετήριο γραφέα. Τυχαίο id = δεύτερη γραμμή για το ίδιο SKU στην ίδια έκδοση.
+      'generateDeterministicCatalogPriceListId',
+      'generateDeterministicCatalogPriceListVersionId',
+      'generateDeterministicCatalogPriceListLineId',
+      'generateDeterministicCatalogDiscountGroupId',
+      'generateDeterministicCatalogCustomerGroupId',
+      'generateDeterministicCatalogCustomerAssignmentId',
+      'generateDeterministicCatalogPricingSlotId',
+      // ADR-923 §5.6 / «3δ» / §5.13 — συνταγή από κωδικό, εκτέλεση από hash εισόδων, σήμα ΜΙΑΣ όψης, σημείωση outbox
+      // ΜΙΑΣ προβολής. Τυχαίο id = δεύτερη εκτέλεση για τις ίδιες εισόδους / δεύτερο σήμα που ο listener δεν βλέπει.
+      'generateDeterministicCatalogPublicationRecipeId',
+      'generateDeterministicCatalogPublicationRunId',
+      'generateDeterministicCatalogPricingViewSignalId',
+      'generateDeterministicCatalogPublicOutboxId',
+      // ADR-923 §5.5.1 — εισαγωγή: ίδια είσοδος ⇒ ίδιο έγγραφο, δομικά (επανάληψη παρτίδας = καμία διπλή πρόταση).
+      'generateDeterministicCatalogImportProfileId',
+      'generateDeterministicCatalogImportBatchId',
+      'generateDeterministicCatalogImportProposalId',
+      'generateDeterministicCatalogImportPageReadingId',
+      // ADR-923 §5.12 — ΕΝΑΣ κανόνας ανά (αντικείμενο, κοινό), ΜΙΑ σχέση ανά (προμηθευτής, αγοραστής), ΕΝΑΣ σύνδεσμος ανά χώρο.
+      'generateDeterministicCatalogVisibilityRuleId',
+      'generateDeterministicSupplyRelationshipId',
+      'generateDeterministicSupplyRequestLinkId',
+      // ADR-917 — ΜΙΑ εγγραφή ημερολογίου ανά (εταιρεία, παραστατικό): διπλό «Επιβεβαίωση» = ίδιο έγγραφο, όχι διπλό έξοδο.
+      'generateDeterministicExpenseJournalEntryId',
+      // ADR-928 §5.1 — ρήτρα από (χώρος, clauseKey), έκδοση από (ρήτρα, αριθμό), πρότυπο από (χώρος, κωδικό), αναθεώρηση
+      // από (συμφωνητικό, αριθμό). Τυχαίο id = δεύτερη «αναθεώρηση 2» όταν δύο «Έκδοση» φτάσουν μαζί. (Το ίδιο το
+      // συμφωνητικό και η ανάθεση εργοταξίου είναι τυχαία ΑΠΟ ΣΧΕΔΙΑΣΜΟ και δεν έχουν ντετερμινιστικό αδελφό.)
+      'generateDeterministicSubcontractClauseId',
+      'generateDeterministicSubcontractClauseVersionId',
+      'generateDeterministicSubcontractTradeTemplateId',
+      'generateDeterministicSubcontractRevisionId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -490,6 +526,32 @@ describe('EnterpriseIdService', () => {
       generateDeterministicDepreciationJournalEntryId: 'je_aa044400-10b9-4583-865f-97901fb1d075',
       // ADR-ACC-010 §2.1.1 Φ6 — δύο παράμετροι, ένα όρισμα ⇒ σπόρος `'anchor-seed:undefined'` (ίδιο uuid με το `je_`).
       generateDeterministicFiscalPeriodId: 'fp_aa044400-10b9-4583-865f-97901fb1d075',
+      // ADR-923 Φ3β–Φ6α · ADR-917 — καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-11-03 (έλειπαν, η σουίτα κοκκίνιζε).
+      generateDeterministicCatalogPriceListId: 'cprl_319df660-2458-4640-889c-d178261b3c03',
+      generateDeterministicCatalogPriceListVersionId: 'cplv_5e737f48-5987-42cf-8f3c-6b6305015129',
+      generateDeterministicCatalogPriceListLineId: 'cplln_87c24040-b15e-4a2f-858a-f6bb2e85c6ab',
+      generateDeterministicCatalogDiscountGroupId: 'cdgrp_26b746bd-411c-4e99-8aba-966329d310ba',
+      generateDeterministicCatalogCustomerGroupId: 'ccgrp_b8f66f77-b4cc-4aed-81b5-a4758de01a46',
+      generateDeterministicCatalogCustomerAssignmentId: 'ccasg_124798cf-2bfa-4524-897d-9c3ae8da23d2',
+      generateDeterministicCatalogPricingSlotId: 'cpslt_fc017d48-d886-4348-8386-489349760f64',
+      generateDeterministicCatalogPublicationRecipeId: 'cpubr_f1a9bbaf-4768-4f52-8db9-6bd9ccefaf8f',
+      generateDeterministicCatalogPublicationRunId: 'cpubx_5a5de9c4-c380-49b3-8d3f-743cf0a804fe',
+      generateDeterministicCatalogPricingViewSignalId: 'cpvs_18fea526-e4f8-4f35-864e-8f109a93d831',
+      generateDeterministicCatalogPublicOutboxId: 'cpobx_cf10f160-bdbe-4220-81b9-3c7278bc0d4f',
+      generateDeterministicCatalogImportProfileId: 'ciprf_a769375f-579a-48a4-851d-db136b7c72aa',
+      generateDeterministicCatalogImportBatchId: 'cibat_14ad05af-93df-425e-8a22-03ea7240b242',
+      generateDeterministicCatalogImportProposalId: 'cipsl_d1413ee3-667e-4ec3-84b0-13fde3d67a0a',
+      generateDeterministicCatalogImportPageReadingId: 'cipgr_58c5dfd7-f233-452c-86c1-408be1905c36',
+      generateDeterministicCatalogVisibilityRuleId: 'cvrul_f3fba08c-d5f5-422b-802e-918b416a292c',
+      generateDeterministicSupplyRelationshipId: 'srel_980a4c08-54cc-410f-896b-33f3ff28f694',
+      generateDeterministicSupplyRequestLinkId: 'srql_757fa58c-b8fe-465c-8788-4cd319590e8d',
+      generateDeterministicExpenseJournalEntryId: 'je_ad2bbfb9-4463-4ba7-81bf-a021f9cc8d4b',
+      // ADR-928 §5.1 — σπόρος `subcontract:<είδος>:anchor-seed:` (δύο παράμετροι, ένα όρισμα ⇒ το `undefined` γίνεται
+      //    κενό από το `join`). Καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-11-03.
+      generateDeterministicSubcontractClauseId: 'sccl_aba0b598-6176-44f8-8635-7029dd94980f',
+      generateDeterministicSubcontractClauseVersionId: 'sccv_2f5c2aea-3d1a-4a94-84cb-4e187ab2bf2d',
+      generateDeterministicSubcontractTradeTemplateId: 'sctt_f9154670-cba9-44e4-8e08-db20e0a6efe0',
+      generateDeterministicSubcontractRevisionId: 'scrv_968ca1e7-e8f8-46a9-8aa6-9ed001efdc55',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

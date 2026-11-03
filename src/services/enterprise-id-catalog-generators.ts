@@ -1,8 +1,10 @@
 /**
  * Γεννήτορες ταυτοτήτων του σχήματος καταλόγου (ADR-923 §5.9) — κρίκος της αλυσίδας
- * γεννητόρων, ακριβώς κάτω από την `EnterpriseIdService`:
+ * γεννητόρων, κάτω από την `EnterpriseIdService` και τους γεννήτορες υπεργολαβίας (ADR-928):
  *
  *   EnterpriseIdService
+ *     ↑ extends
+ *   SubcontractIdGenerators
  *     ↑ extends
  *   CatalogIdGenerators        ← εδώ
  *     ↑ extends

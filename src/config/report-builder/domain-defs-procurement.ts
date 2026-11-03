@@ -8,6 +8,7 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition } from './report-builder-types';
 import { docAgeDays } from './report-computed-days';
+import { GREEK_VAT_RATE_PERCENTS } from '@/subapps/accounting/services/config/vat-rates';
 
 // ============================================================================
 // Enum Constants (SSoT)
@@ -18,7 +19,7 @@ const PO_STATUSES = [
   'delivered', 'closed', 'cancelled',
 ] as const;
 
-const PO_VAT_RATES = [24, 13, 6, 0] as const;
+const PO_VAT_RATES = GREEK_VAT_RATE_PERCENTS;
 
 const PO_AGING_BUCKETS = ['0-30', '31-60', '61-90', '90+'] as const;
 

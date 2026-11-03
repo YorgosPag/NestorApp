@@ -20,12 +20,12 @@ import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { ServicePreset } from '@/subapps/accounting/types';
 import { toStoredUom } from '@/lib/uom/uom-registry';
+import { GREEK_VAT_RATE_PERCENTS, isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 
 // =============================================================================
 // VALIDATION
 // =============================================================================
 
-const VALID_VAT_RATES = [0, 6, 13, 24];
 
 function validatePreset(preset: Partial<ServicePreset>, index: number): string | null {
   if (!preset.presetId || typeof preset.presetId !== 'string') {
@@ -40,8 +40,8 @@ function validatePreset(preset: Partial<ServicePreset>, index: number): string |
   if (typeof preset.unitPrice !== 'number' || preset.unitPrice < 0) {
     return `presets[${index}].unitPrice must be >= 0`;
   }
-  if (typeof preset.vatRate !== 'number' || !VALID_VAT_RATES.includes(preset.vatRate)) {
-    return `presets[${index}].vatRate must be one of ${VALID_VAT_RATES.join(', ')}`;
+  if (typeof preset.vatRate !== 'number' || !isGreekVatRatePercent(preset.vatRate)) {
+    return `presets[${index}].vatRate must be one of ${GREEK_VAT_RATE_PERCENTS.join(', ')}`;
   }
   if (!preset.mydataCode || typeof preset.mydataCode !== 'string') {
     return `presets[${index}].mydataCode is required`;

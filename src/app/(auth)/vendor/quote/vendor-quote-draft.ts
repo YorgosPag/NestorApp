@@ -12,6 +12,7 @@
 
 import { generateOptimisticId } from '@/services/enterprise-id.service';
 import { DEFAULT_UOM, toStoredUom } from '@/lib/uom/uom-registry';
+import { GREEK_STANDARD_VAT_RATE } from '@/subapps/accounting/services/config/vat-rates';
 import { inferRfqLineId } from '@/subapps/procurement/utils/rfq-line-binding';
 import { lockedFieldsOf, UNLOCKED_RESPONSE } from '@/subapps/procurement/utils/rfq-response-lock';
 import type { RfqResponseLock } from '@/subapps/procurement/types/rfq';
@@ -31,7 +32,7 @@ import type {
 export type DraftValidationError = 'validationLines' | 'validationAnswers' | 'validationAlternate';
 
 export function emptyLineDraft(): QuoteLineDraft {
-  return { description: '', quantity: '', unit: DEFAULT_UOM, unitPrice: '', vatRate: 24, notes: '' };
+  return { description: '', quantity: '', unit: DEFAULT_UOM, unitPrice: '', vatRate: GREEK_STANDARD_VAT_RATE, notes: '' };
 }
 
 export function newAdditionalLine(): AdditionalLineDraft {
@@ -81,7 +82,7 @@ function freshAnswer(rfqLine: PublicRfqLine): RfqAnswerDraft {
     quantity: rfqLine.quantity != null ? String(rfqLine.quantity) : '',
     unit: toStoredUom(rfqLine.unit),
     unitPrice: '',
-    vatRate: 24,
+    vatRate: GREEK_STANDARD_VAT_RATE,
     notes: '',
   };
 }

@@ -14,7 +14,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import type { POVatRate, PurchaseOrderStatus, CreatePurchaseOrderDTO } from '@/types/procurement';
-import { PO_VAT_RATES } from '@/types/procurement';
+import { GREEK_STANDARD_VAT_RATE, isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 import { toStoredUom } from '@/lib/uom/uom-registry';
 import { createPO, getPO, listPOs } from '@/services/procurement';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
@@ -25,12 +25,6 @@ import {
   type ToolResult,
   logger,
 } from '../executor-shared';
-
-// ============================================================================
-// VALID VAT RATES (derived from SSoT: PO_VAT_RATES)
-// ============================================================================
-
-const VALID_VAT_RATES = new Set<number>(PO_VAT_RATES.map(r => r.value));
 
 // ============================================================================
 // HANDLER
@@ -80,10 +74,8 @@ export class ProcurementHandler implements ToolHandler {
       return { success: false, error: 'items must be a non-empty array of {description, quantity, unit, unitPrice, categoryCode}.' };
     }
 
-    const rawTaxRate = typeof args.taxRate === 'number' ? args.taxRate : 24;
-    const taxRate: POVatRate = VALID_VAT_RATES.has(rawTaxRate)
-      ? (rawTaxRate as POVatRate)
-      : 24;
+    // Συντελεστής από τον ΕΝΑ πίνακα (ADR-928 Φ0)· άγνωστος ή απών ⇒ ο κανονικός.
+    const taxRate: POVatRate = isGreekVatRatePercent(args.taxRate) ? args.taxRate : GREEK_STANDARD_VAT_RATE;
 
     const dto: CreatePurchaseOrderDTO = {
       projectId: resolved.projectId,

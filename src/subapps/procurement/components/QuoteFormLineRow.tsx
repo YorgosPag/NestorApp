@@ -16,8 +16,8 @@ import { UomSelect } from '@/components/shared/UomSelect';
 import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
 import { AtoeCategoryCodeSelect } from './AtoeCategoryCodeSelect';
 import type { QuoteLine } from '@/subapps/procurement/types/quote';
+import { GREEK_VAT_RATE_PERCENTS, isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 
-const VAT_RATES = [0, 6, 13, 24] as const;
 
 export interface LineRowProps {
   line: QuoteLine;
@@ -95,11 +95,14 @@ export function LineRow({ line, index, suggestedAtoeCodes, onUpdate, onRemove }:
       <td className="py-1 pr-2 w-20">
         <Select
           value={String(line.vatRate)}
-          onValueChange={(v) => onUpdate(index, 'vatRate', parseInt(v, 10) as QuoteLine['vatRate'])}
+          onValueChange={(v) => {
+            const rate = Number(v);
+            if (isGreekVatRatePercent(rate)) onUpdate(index, 'vatRate', rate);
+          }}
         >
           <SelectTrigger aria-label={t('quotes.vatRate')} className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {VAT_RATES.map((r) => (
+            {GREEK_VAT_RATE_PERCENTS.map((r) => (
               <SelectItem key={r} value={String(r)}>{r}%</SelectItem>
             ))}
           </SelectContent>

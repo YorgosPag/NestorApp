@@ -7,6 +7,7 @@
 
 import { DXF_BIM_ID_PREFIXES } from './enterprise-id-prefixes-dxf-bim';
 import { CATALOG_ID_PREFIXES } from './enterprise-id-prefixes-catalog';
+import { SUBCONTRACT_ID_PREFIXES } from './enterprise-id-prefixes-subcontract';
 
 // Enterprise prefix mappings for namespace isolation
 export const ENTERPRISE_ID_PREFIXES = {
@@ -511,6 +512,9 @@ export const ENTERPRISE_ID_PREFIXES = {
 
   // Κατάλογος προμηθευτή — σχήμα (ADR-923 §5.9)
   ...CATALOG_ID_PREFIXES,
+
+  // Συμφωνητικό υπεργολαβίας (ADR-928 §5.1)
+  ...SUBCONTRACT_ID_PREFIXES,
 
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
