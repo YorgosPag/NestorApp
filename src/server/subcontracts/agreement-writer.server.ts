@@ -19,6 +19,7 @@ import { nextAgreementNumber } from '@/subapps/procurement/subcontracts/agreemen
 import { validateAgreementDraft, type SubcontractAgreementDraftInput } from '@/subapps/procurement/subcontracts/agreements/agreement-draft';
 import { refuseAssignment, refuseContentEdit } from '@/subapps/procurement/subcontracts/agreements/agreement-lifecycle';
 import type { InvoiceIssuer } from '@/subapps/accounting/types/invoice';
+import { contentFieldsOf, projectIdsOf } from '@/subapps/procurement/subcontracts/agreements/agreement-content-fields';
 import type {
   AgreementAssignmentInput,
   AgreementDocumentRole,
@@ -26,7 +27,7 @@ import type {
   SubcontractAgreement,
   SubcontractAgreementContent,
 } from '@/subapps/procurement/subcontracts/types/agreement';
-import { projectIdsOf, resolveAgreementContent, type AgreementContentRequest, type ResolvedAgreementContent } from './agreement-content.server';
+import { resolveAgreementContent, type AgreementContentRequest } from './agreement-content.server';
 import { readIssuer, readProjectIdentity, type PartyRead } from './agreement-parties.server';
 import {
   agreementDocRef,
@@ -52,25 +53,6 @@ function contentRequestOf(input: SubcontractAgreementDraftInput, current: Subcon
     terms: input.terms,
     clauses: input.clauses,
     previousClauses: current?.clauses ?? [],
-  };
-}
-
-/** Τα πεδία που γράφει ο άνθρωπος + ό,τι έλυσε ο διακομιστής — κοινά σε δημιουργία και αποθήκευση. */
-function contentFieldsOf(input: SubcontractAgreementDraftInput, resolved: ResolvedAgreementContent): SubcontractAgreementContent {
-  return {
-    documentMode: input.documentMode,
-    origin: input.origin,
-    trade: input.trade,
-    templateId: input.templateId,
-    title: input.title,
-    parties: resolved.parties,
-    scope: resolved.scope,
-    projectIds: resolved.projectIds,
-    lines: input.lines,
-    terms: input.terms,
-    clauses: resolved.clauses,
-    languages: input.languages,
-    validUntil: input.validUntil,
   };
 }
 

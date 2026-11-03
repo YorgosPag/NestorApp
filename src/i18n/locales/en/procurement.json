@@ -1032,6 +1032,141 @@
       "forbidden": "You are not allowed to do this",
       "network": "Could not connect — please try again",
       "unknown": "Something went wrong — please try again"
+    },
+    "editor": {
+      "sections": {
+        "identity": "Identity",
+        "parties": "Parties",
+        "clauses": "Clauses"
+      },
+      "formLabel": "Agreement form",
+      "tabs": {
+        "form": "Form",
+        "preview": "Preview"
+      },
+      "breadcrumb": "Breadcrumb",
+      "notFound": "The agreement was not found or does not belong to this workspace.",
+      "lifecycle": "Lifecycle actions",
+      "saveFirst": "Save your changes first",
+      "status": {
+        "clean": "All changes saved",
+        "dirty": "Unsaved changes",
+        "saving": "Saving…",
+        "saved": "Saved"
+      },
+      "save": {
+        "action": "Save",
+        "blockedConflict": "First choose what happens with the other person's change",
+        "blockedIssues": "{count, plural, one {Fix # issue to save} other {Fix # issues to save}}"
+      },
+      "discard": {
+        "action": "Discard changes",
+        "title": "Discard your changes?",
+        "description": "The draft will return to the saved version. Your changes will be lost.",
+        "confirm": "Discard"
+      },
+      "conflict": {
+        "message": "Someone else changed this agreement while you were editing it. Choose whether to load the new version or keep your changes on top of it.",
+        "reload": "Load the new version",
+        "reloadTitle": "Load the new version?",
+        "reloadDescription": "Your unsaved changes will be lost.",
+        "keepMine": "Keep my changes"
+      },
+      "zone": {
+        "free": "Free",
+        "needsApproval": "Needs approval",
+        "forbidden": "Forbidden"
+      },
+      "deviation": {
+        "pending": "Awaiting approval",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "identity": {
+        "title": "Title",
+        "titleSecondary": "Title (second language)",
+        "mode": "Issuing mode",
+        "modes": {
+          "offer_becomes_agreement": "A · the offer becomes the agreement at mobilisation",
+          "offer_then_agreement": "B · the accepted offer creates a separate agreement"
+        },
+        "secondaryLanguage": "Second document language",
+        "noSecondary": "Greek only",
+        "validUntil": "Offer valid until",
+        "noValidity": "No expiry"
+      },
+      "parties": {
+        "subcontractor": "Subcontractor",
+        "chooseContact": "Choose a contact",
+        "noContacts": "No contacts found",
+        "owners": "Project owner",
+        "ownerKinds": {
+          "none": "Not printed",
+          "collective": "Collectively (\"Plot owners\")",
+          "named": "By name"
+        },
+        "addOwner": "Add plot owner",
+        "removeOwner": "Remove {owner}",
+        "buildings": "Project buildings",
+        "noBuildings": "The project has no buildings."
+      },
+      "clauses": {
+        "empty": "No clauses.",
+        "add": "Add a clause from the library",
+        "remove": "Remove clause {clause}",
+        "fromTerms": "from the commercial terms",
+        "resetPreferred": "Preferred value",
+        "reason": "Reason for deviation",
+        "reasonPlaceholder": "Why is this value needed? The approver will see it.",
+        "unknown": "The clause no longer exists in the library.",
+        "notApproved": "The clause has no approved version in force.",
+        "outdated": "Pinned to version {pinned} — version {current} is in force.",
+        "upgrade": "Update to the version in force"
+      },
+      "preview": {
+        "title": "Document preview",
+        "stale": {
+          "subcontractor": "The new subcontractor will appear in the document after saving.",
+          "projectOwners": "The plot owners will appear by name after saving.",
+          "scope": "The project change will appear after saving."
+        }
+      },
+      "deviations": {
+        "title": "Deviations",
+        "clause": "Clause",
+        "value": "Value",
+        "reason": "Reason",
+        "requestedBy": "Requested by",
+        "state": "Status",
+        "actions": "Actions",
+        "unknownUser": "Unknown user",
+        "approve": "Approve",
+        "reject": "Reject",
+        "done": {
+          "approved": "Deviation approved",
+          "rejected": "Deviation rejected"
+        },
+        "dialog": {
+          "approved": "Approve deviation",
+          "rejected": "Reject deviation",
+          "reason": "Explanation",
+          "reasonRequired": "A rejection needs an explanation, so the requester knows what to change.",
+          "cancel": "Cancel"
+        }
+      },
+      "new": {
+        "action": "New agreement",
+        "title": "New subcontract agreement",
+        "description": "Choose a trade template and a subcontractor. Lines, terms and clauses come from the template and you continue in the editor.",
+        "template": "Trade template",
+        "chooseTemplate": "Choose a template",
+        "noTemplates": "There are no trade templates in the library.",
+        "scope": "Scope",
+        "scopeProject": "For this project",
+        "scopeMaster": "Master agreement (for several projects, with work orders)",
+        "unresolved": "Template clauses {clauses} have no approved version in force and will be left out.",
+        "create": "Create"
+      }
     }
   }
 }

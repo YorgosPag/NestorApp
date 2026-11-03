@@ -35,7 +35,16 @@ export const DESTRUCTIVE_TRANSITIONS: ReadonlySet<SubcontractAgreementTransition
 export type RowActionBlock =
   | { readonly kind: 'refusal'; readonly refusal: AgreementLifecycleRefusal }
   | { readonly kind: 'issue'; readonly issue: SubcontractIssue }
-  | { readonly kind: 'checking' };
+  | { readonly kind: 'checking' }
+  /** Ο επεξεργαστής έχει μη αποθηκευμένες αλλαγές: η μετάβαση θα έκρινε την αποθηκευμένη εκδοχή, όχι ό,τι βλέπει ο άνθρωπος. */
+  | { readonly kind: 'unsaved' };
+
+const UNSAVED: RowActionBlock = { kind: 'unsaved' };
+
+/** Με μη αποθηκευμένες αλλαγές καμία μετάβαση δεν προσφέρεται — η δική της αιτία, αν έχει, μένει πρώτη. */
+export function blockedWhileUnsaved(actions: readonly RowAction[], unsaved: boolean): readonly RowAction[] {
+  return unsaved ? actions.map((action) => ({ ...action, block: action.block ?? UNSAVED })) : actions;
+}
 
 export interface RowAction {
   readonly transition: SubcontractAgreementTransition;

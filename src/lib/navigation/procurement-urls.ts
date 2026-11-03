@@ -78,6 +78,15 @@ export function getQuoteDetailUrl(
   return typedHref(base);
 }
 
+/**
+ * Η σελίδα ενός συμφωνητικού υπεργολαβίας (ADR-928 Φ3γ): επεξεργαστής όσο είναι πρόχειρο, έγγραφο + αποκλίσεις +
+ * αναθέσεις μετά. Κύρια σύμβαση ανοίγει μέσα από **οποιοδήποτε** έργο έχει εντολή εργασίας — το `projectId` είναι το
+ * έργο του πλαισίου πλοήγησης, όχι ιδιότητα του εγγράφου.
+ */
+export function getSubcontractAgreementUrl(projectId: string, agreementId: string) {
+  return typedHref(`/projects/${projectId}/procurement/subcontracts/${agreementId}`);
+}
+
 export function getRfqDetailUrl(projectId: string, rfqId: string) {
   return typedHref(`/projects/${projectId}/procurement/rfq/${rfqId}`);
 }

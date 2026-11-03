@@ -1,0 +1,79 @@
+{
+  "procurement": {
+    "subcontracts": {
+      "editor": {
+        "breadcrumb": "Πλοήγηση",
+        "notFound": "Το συμφωνητικό δεν βρέθηκε ή δεν ανήκει σε αυτόν τον χώρο."
+      },
+      "list": {
+        "role": {
+          "agreement": "Συμφωνητικό",
+          "offer": "Προσφορά"
+        },
+        "title": "Συμφωνητικά υπεργολαβίας"
+      },
+      "status": {
+        "accepted": "Αποδεκτό",
+        "completed": "Ολοκληρώθηκε",
+        "discarded": "Απορρίφθηκε",
+        "draft": "Πρόχειρο",
+        "expired": "Έληξε",
+        "in_execution": "Σε εκτέλεση",
+        "issued": "Εκδόθηκε",
+        "terminated": "Καταγγέλθηκε",
+        "withdrawn": "Αποσύρθηκε"
+      }
+    }
+  },
+  "quotes": {
+    "trades": {
+      "allGroups": "Όλες",
+      "aluminum_frames": "Αλουμίνια / Κουφώματα Εξωτερικά",
+      "concrete": "Μπετόν / Μπετατζής",
+      "data_telecoms": "Δίκτυα Δεδομένων",
+      "demolition": "Κατεδάφιση / Εκσκαφή",
+      "electrical": "Ηλεκτρολογικά",
+      "elevator": "Ανελκυστήρας",
+      "equipment_rental": "Ενοικίαση Εξοπλισμού",
+      "facade": "Πρόσοψη / ETICS",
+      "fire_protection": "Πυρόσβεση / Πυρανίχνευση",
+      "flooring_wood": "Ξύλινα Δάπεδα / Parquet",
+      "formwork": "Ξυλότυπος",
+      "gas": "Φυσικό Αέριο",
+      "glazing": "Τζαμαδόρος / Υαλοπίνακες",
+      "groups": {
+        "claddings": "Επενδύσεις",
+        "external": "Εξωτερικά",
+        "finishing": "Φινίρισμα",
+        "frames": "Κουφώματα",
+        "networks": "Δίκτυα (Η/Μ)",
+        "services": "Υπηρεσίες / Logistics",
+        "special": "Ειδικές Εγκαταστάσεις",
+        "structure": "Σκελετός"
+      },
+      "gypsum": "Γυψοκαρτές / Οροφές",
+      "hvac": "Μηχανολογικά / HVAC",
+      "insulation": "Μονώσεις",
+      "interior_frames": "Εσωτερικά Κουφώματα / Πόρτες",
+      "landscaping": "Διαμόρφωση Εξωτερικών",
+      "marble": "Μάρμαρα / Φυσικός Λίθος",
+      "masonry": "Τοιχοποιία / Κτίστης",
+      "materials_general": "Υλικά (Γενικά)",
+      "noResults": "Δεν βρέθηκαν ειδικότητες",
+      "painting": "Ελαιοχρωματισμοί",
+      "plastering": "Σοβατίσματα",
+      "plumbing": "Υδραυλικά",
+      "pool": "Πισίνα",
+      "prefab": "Προκατασκευή / Μεταλλικές Κατ.",
+      "reinforcement": "Σιδεράς / Σιδηροπλέγματα",
+      "rolling_shutters": "Ρολά / Σήτες",
+      "roofing": "Στέγη / Κεραμοσκεπή",
+      "search": "Αναζήτηση ειδικότητας...",
+      "select": "Επιλέξτε ειδικότητα",
+      "tiling": "Πλακάκια / Κεραμικά",
+      "title": "Ειδικότητες",
+      "waterproofing": "Στεγανοποίηση / Ασφαλτικά",
+      "woodwork": "Ξυλουργικά / Έπιπλα"
+    }
+  }
+}

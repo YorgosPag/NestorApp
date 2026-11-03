@@ -20,12 +20,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-import {
-  useSubcontractFailureMessage,
-  useSubcontractIssueMessage,
-} from '@/components/procurement/subcontracts/subcontract-messages';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
-import type { RowAction, RowActionBlock } from './subcontract-row-actions';
+import type { RowAction } from './subcontract-row-actions';
+import { useRowActionBlockReason } from './useSubcontractRowActions';
 
 interface SubcontractRowActionsProps {
   readonly agreement: SubcontractAgreement;
@@ -34,16 +31,6 @@ interface SubcontractRowActionsProps {
   readonly onRun: (agreement: SubcontractAgreement, action: RowAction) => void;
   /** Η προεπισκόπηση είναι **ανάγνωση**: τη βλέπει όποιος βλέπει τη λίστα, χωρίς δικαίωμα διαχείρισης. */
   readonly onPreview: (agreement: SubcontractAgreement) => void;
-}
-
-function useBlockReason(open: boolean): (block: RowActionBlock) => string {
-  const { t } = useTranslation('procurement');
-  const failure = useSubcontractFailureMessage(open);
-  const issue = useSubcontractIssueMessage(open);
-  return (block) => {
-    if (block.kind === 'checking') return t('subcontracts.actions.checking');
-    return block.kind === 'refusal' ? failure(block.refusal) : issue(block.issue);
-  };
 }
 
 function ActionItem({ action, reason, onSelect }: { action: RowAction; reason: string | null; onSelect: () => void }) {
@@ -62,7 +49,7 @@ function ActionItem({ action, reason, onSelect }: { action: RowAction; reason: s
 
 export function SubcontractRowActions({ agreement, actions, pending, onRun, onPreview }: SubcontractRowActionsProps) {
   const { t } = useTranslation('procurement');
-  const reasonOf = useBlockReason(actions.some((action) => action.block !== null));
+  const reasonOf = useRowActionBlockReason(actions.some((action) => action.block !== null));
   const forward = actions.filter((action) => !action.destructive);
   const closing = actions.filter((action) => action.destructive);
   const item = (action: RowAction) => (

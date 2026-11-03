@@ -19,6 +19,7 @@ export const SUBCONTRACT_ID_PREFIXES = {
   SUBCONTRACT_AGREEMENT: 'sca',          // subcontract_agreements — προσφορά / συμφωνητικό (ΤΥΧΑΙΟ)
   SUBCONTRACT_REVISION: 'scrv',          // subcontract_agreements/{id}/revisions — αμετάβλητη έκδοση (από συμφωνητικό + αριθμό)
   SUBCONTRACT_ASSIGNMENT: 'scas',        // ανάθεση εργοταξίου σε συμφωνητικό `multi_project` (ΤΥΧΑΙΟ)
+  SUBCONTRACT_AGREEMENT_LINE: 'scal',    // γραμμή συμφωνητικού που προσθέτει ο άνθρωπος στον επεξεργαστή (ΤΥΧΑΙΟ, Φ3γ)
   SUBCONTRACT_CLAUSE: 'sccl',            // subcontract_clauses — ρήτρα βιβλιοθήκης (από χώρο + clauseKey)
   SUBCONTRACT_CLAUSE_VERSION: 'sccv',    // subcontract_clauses/{id}/versions — έκδοση ρήτρας (από ρήτρα + αριθμό)
   SUBCONTRACT_TRADE_TEMPLATE: 'sctt',    // subcontract_trade_templates — πρότυπο ειδικότητας (από χώρο + κωδικό)

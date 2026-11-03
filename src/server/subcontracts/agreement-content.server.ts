@@ -24,6 +24,7 @@ import type { ClauseKey } from '@/subapps/procurement/subcontracts/types/clause'
 import type { ClauseSelection, CommercialTerms } from '@/subapps/procurement/subcontracts/types/commercial-terms';
 import type { SignatoryFieldSet } from '@/subapps/procurement/types/signatory-fields';
 import { approvedLibraryOf } from '@/subapps/procurement/subcontracts/agreements/approved-library';
+import { projectIdsOf } from '@/subapps/procurement/subcontracts/agreements/agreement-content-fields';
 import { readApprovedClauses } from './clause-library-reads.server';
 import { issuesOf, readContactParties, readProjectIdentity, type PartyRead } from './agreement-parties.server';
 import type { SubcontractTx } from './subcontract-store.server';
@@ -50,12 +51,6 @@ export interface ResolvedAgreementContent {
   readonly clauses: readonly ClauseSelection[];
   /** Η ρήτρα και η καρφωμένη έκδοση ανά κλειδί — για το πάγωμα στο `issue`. */
   readonly pinned: ReadonlyMap<ClauseKey, PinnedClause | null>;
-}
-
-/** Τα έργα ενός εγγράφου — η **μία** παραγωγή του `projectIds` (Φ2 απόφαση 12). */
-export function projectIdsOf(scope: AgreementScope): string[] {
-  if (scope.kind === 'single_project') return [scope.project.projectId];
-  return [...new Set(scope.assignments.map((assignment) => assignment.project.projectId))];
 }
 
 async function readScope(scope: SubcontractTx, request: AgreementContentRequest): Promise<PartyRead<AgreementScope>> {

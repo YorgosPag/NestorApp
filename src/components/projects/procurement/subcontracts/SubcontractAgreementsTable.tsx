@@ -16,12 +16,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SubcontractAgreementStatusBadge } from '@/components/procurement/subcontracts/SubcontractAgreementStatusBadge';
 import { formatCalendarDate, formatDate } from '@/lib/intl-utils';
 import { formatMinor } from '@/lib/money/money';
+import { getSubcontractAgreementUrl } from '@/lib/navigation/procurement-urls';
+import { Link } from '@/lib/workspace/navigation';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
 import type { SubcontractListRow } from './subcontract-list-view';
 import type { RowAction } from './subcontract-row-actions';
 import { SubcontractRowActions } from './SubcontractRowActions';
 
 interface SubcontractAgreementsTableProps {
+  /** Το έργο του πλαισίου: η σελίδα λεπτομέρειας ανοίγει μέσα σε αυτό (και για κύρια σύμβαση με εντολή εργασίας εδώ). */
+  readonly projectId: string;
   readonly rows: readonly SubcontractListRow[];
   readonly actionsOf: (agreement: SubcontractAgreement) => readonly RowAction[];
   readonly pendingIds: ReadonlySet<string>;
@@ -29,7 +33,7 @@ interface SubcontractAgreementsTableProps {
   readonly onPreview: (agreement: SubcontractAgreement) => void;
 }
 
-type RowHandlers = Pick<SubcontractAgreementsTableProps, 'onRun' | 'onPreview'>;
+type RowHandlers = Pick<SubcontractAgreementsTableProps, 'projectId' | 'onRun' | 'onPreview'>;
 
 function ValueCell({ row }: { row: SubcontractListRow }) {
   const { t } = useTranslation('procurement');
@@ -83,14 +87,14 @@ function WorkCell({ agreement }: { agreement: SubcontractAgreement }) {
   );
 }
 
-function AgreementRow({ row, actions, pending, onRun, onPreview }: RowHandlers & { row: SubcontractListRow; actions: readonly RowAction[]; pending: boolean }) {
+function AgreementRow({ projectId, row, actions, pending, onRun, onPreview }: RowHandlers & { row: SubcontractListRow; actions: readonly RowAction[]; pending: boolean }) {
   const { t } = useTranslation('procurement');
   const { agreement } = row;
   return (
     <TableRow aria-busy={pending || undefined}>
       <TableCell className="whitespace-nowrap">
         <span className="flex flex-col">
-          <span className="font-mono text-sm">{agreement.documentNumber}</span>
+          <Link href={getSubcontractAgreementUrl(projectId, agreement.id)} className="font-mono text-sm underline-offset-4 hover:underline">{agreement.documentNumber}</Link>
           <span className="text-xs text-muted-foreground">{t(`subcontracts.list.role.${agreement.role}`)}</span>
         </span>
       </TableCell>
@@ -107,7 +111,7 @@ function AgreementRow({ row, actions, pending, onRun, onPreview }: RowHandlers &
   );
 }
 
-export function SubcontractAgreementsTable({ rows, actionsOf, pendingIds, onRun, onPreview }: SubcontractAgreementsTableProps) {
+export function SubcontractAgreementsTable({ projectId, rows, actionsOf, pendingIds, onRun, onPreview }: SubcontractAgreementsTableProps) {
   const { t } = useTranslation('procurement');
   return (
     <Table aria-label={t('subcontracts.list.ariaLabel')}>
@@ -127,6 +131,7 @@ export function SubcontractAgreementsTable({ rows, actionsOf, pendingIds, onRun,
         {rows.map((row) => (
           <AgreementRow
             key={row.agreement.id}
+            projectId={projectId}
             row={row}
             actions={actionsOf(row.agreement)}
             pending={pendingIds.has(row.agreement.id)}

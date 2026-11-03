@@ -109,6 +109,7 @@ export {
   generateDeterministicSupplyRelationshipId, generateSupplyInvitationId, generateDeterministicSupplyRequestLinkId,
   generateDeterministicSupplierBrandClaimId,
   generateSubcontractAgreementId, generateDeterministicSubcontractRevisionId, generateSubcontractAssignmentId,
+  generateSubcontractAgreementLineId,
   generateDeterministicSubcontractClauseId, generateDeterministicSubcontractClauseVersionId,
   generateDeterministicSubcontractTradeTemplateId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,

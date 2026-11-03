@@ -46,6 +46,12 @@ export interface DocumentLocale {
 
 const BUNDLES: Readonly<Record<HumanLanguage, unknown>> = { el: elDocument, en: enDocument };
 
+/**
+ * Τα ορόσημα έργου που έχουν ετικέτα σήμερα — ό,τι μπορεί να διαλέξει ο επεξεργαστής χωρίς να τυπωθεί ωμό κλειδί
+ * (ADR-928 Φ3γ). Το ελληνικό bundle είναι η αυθεντία· το λεξιλόγιο οροσήμων της εταιρείας είναι δηλωμένο όριο της Φ3β.
+ */
+export const MILESTONE_KEYS: readonly string[] = Object.keys(elDocument.milestones);
+
 function dayFormatter(language: HumanLanguage): (calendarDay: string) => string {
   const format = new Intl.DateTimeFormat(language, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
   return (calendarDay) => {

@@ -491,6 +491,7 @@ export const generateSubcontractAgreementId = () => enterpriseIdService.generate
 export const generateDeterministicSubcontractRevisionId = (agreementId: string, revisionNumber: number) =>
   enterpriseIdService.generateDeterministicSubcontractRevisionId(agreementId, revisionNumber);
 export const generateSubcontractAssignmentId = () => enterpriseIdService.generateSubcontractAssignmentId();
+export const generateSubcontractAgreementLineId = () => enterpriseIdService.generateSubcontractAgreementLineId();
 export const generateDeterministicSubcontractClauseId = (companyId: string, clauseKey: string) =>
   enterpriseIdService.generateDeterministicSubcontractClauseId(companyId, clauseKey);
 export const generateDeterministicSubcontractClauseVersionId = (clauseId: string, version: number) =>

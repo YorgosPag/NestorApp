@@ -154,12 +154,16 @@ export function judgeClauseSelections(
   return { issues, selections };
 }
 
-/** Οι επιλογές ως είσοδος — για να ξανακριθεί ένα αποθηκευμένο πρόχειρο (π.χ. στο `issue`) με τον ίδιο κριτή. */
+/**
+ * Οι επιλογές ως είσοδος — για να ξανακριθεί ένα αποθηκευμένο πρόχειρο (π.χ. στο `issue`) με τον ίδιο κριτή, και για να
+ * ανοίξει στον επεξεργαστή (ADR-928 Φ3γ). Οι λόγοι των αποκλίσεων **ταξιδεύουν**: ίδια τιμή + ίδιος λόγος ⇒ ο κριτής
+ * κρατά την απόφαση, άρα το αποτέλεσμα είναι το ίδιο με τον κενό λόγο — αλλά ο άνθρωπος βλέπει τι γράφτηκε.
+ */
 export function selectionInputsOf(selections: readonly ClauseSelection[]): ClauseSelectionInput[] {
   return selections.map((selection) => ({
     clauseKey: selection.clauseKey,
     version: selection.version,
     parameterValues: selection.parameterValues,
-    deviationReasons: {},
+    deviationReasons: Object.fromEntries(Object.entries(selection.deviations).map(([key, deviation]) => [key, deviation.reason])),
   }));
 }

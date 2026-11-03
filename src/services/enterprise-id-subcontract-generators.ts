@@ -41,6 +41,14 @@ export abstract class SubcontractIdGenerators extends CatalogIdGenerators {
     return this.generateId(P.SUBCONTRACT_ASSIGNMENT).id;
   }
 
+  /**
+   * Γραμμή συμφωνητικού που πρόσθεσε ο άνθρωπος — **τυχαίο**: οι γραμμές του προτύπου κρατούν το δικό τους κλειδί
+   * (`placement`), η νέα γραμμή δεν έχει φυσικό. Μοναδικό μέσα στο έγγραφο (`lineIdDuplicate`).
+   */
+  generateSubcontractAgreementLineId(): string {
+    return this.generateId(P.SUBCONTRACT_AGREEMENT_LINE).id;
+  }
+
   /** Ρήτρα βιβλιοθήκης — από (χώρος, `clauseKey`). */
   generateDeterministicSubcontractClauseId(companyId: string, clauseKey: string): string {
     return this.mintDeterministicV4Id(P.SUBCONTRACT_CLAUSE, seedOf('clause', companyId, clauseKey));

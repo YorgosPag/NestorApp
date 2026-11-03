@@ -79,6 +79,11 @@ export function basisPointsFromPercent(percent: number): BasisPoints | null {
   return scaledInteger(percent, 100);
 }
 
+/** Μονάδες βάσης → ποσοστό για φόρμα (`525` → `5.25`) — το αντίστροφο του `basisPointsFromPercent`, ακριβές. */
+export function percentFromBasisPoints(basisPoints: BasisPoints): number {
+  return basisPoints / 100;
+}
+
 function assertApplicable(gross: MinorAmount, steps: readonly BasisPoints[]): void {
   if (!Number.isSafeInteger(gross) || gross < 0) {
     throw new RangeError(`Discount base must be a non-negative integer minor amount, got ${gross}`);

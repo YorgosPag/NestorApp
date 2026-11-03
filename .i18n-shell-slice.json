@@ -2517,7 +2517,7 @@
       "reason": "ADR-781 §19 — ΚΑΡΤΕΛΑ ΠΡΟΜΗΘΕΙΩΝ ΕΡΓΟΥ: ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το client module της καρτέλας (το `page.tsx` είναι Server Component), που δεν το εισάγει άλλη σελίδα."
     },
     "src/app/(app)/o/[workspace]/projects/[id]/procurement/subcontracts/page.tsx": {
-      "sealed": 6002,
+      "sealed": 6193,
       "sealedAt": "2026-11-03",
       "history": [
         {
@@ -2525,9 +2525,28 @@
           "to": 6002,
           "at": "2026-11-03",
           "why": "ADR-928 Φ3α-2 (2026-11-03) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 6002 bytes · 3,4% κελύφους · 2 ns [procurement, quotes]. Ο πίνακας (στήλες, εμβέλεια, αξία ως κατώτατο), οι 9 καταστάσεις, οι 8 μεταβάσεις με επιβεβαίωση/ειδοποίηση και οι ετικέτες ειδικότητας (`quotes:trades.*`, γιατί η ειδικότητα τυπώνεται σε κάθε γραμμή). Χωρίς τα ~80 κλειδιά ευρημάτων/αρνήσεων: πίσω από `import()` (ADR-744 §34)."
+        },
+        {
+          "from": 6002,
+          "to": 6193,
+          "at": "2026-11-03",
+          "why": "ADR-928 Φ3γ — +191 bytes, ΜΕΤΡΗΜΕΝΟ με `--measure`: το κουμπί «Νέο συμφωνητικό» της κεφαλίδας (`subcontracts.editor.new.action`) και η αιτία «αποθήκευσε πρώτα» (`subcontracts.editor.saveFirst`) του κοινού μενού ενεργειών. Ο διάλογος «Νέο» είναι πίσω από `import()` και δεν μετρά εδώ."
         }
       ],
       "reason": "ADR-928 Φ3α-2 — Η ΚΑΡΤΕΛΑ «ΥΠΕΡΓΟΛΑΒΙΕΣ» ΤΩΝ ΠΡΟΜΗΘΕΙΩΝ ΤΟΥ ΕΡΓΟΥ (`/o/[workspace]/projects/[id]/procurement/subcontracts`). Ίδιο σχήμα με τις αδελφές καρτέλες `po`/`coverage`: ο πίνακας, οι διακόπτες κατάστασης και το μενού ενεργειών ζωγραφίζουν στο πρώτο καρέ κλειδιά `procurement:subcontracts.*` και `quotes:trades.*` που το κέλυφος δεν έχει. Καταχωρείται από το client module της καρτέλας (`ProjectSubcontractsClient` — το `page.tsx` είναι Server Component), που δεν το εισάγει άλλη σελίδα. ⚠️ Τα ευρήματα και οι αρνήσεις του γραφέα (`subcontracts.issues.*` · `subcontracts.failure.*`) ΔΕΝ μπαίνουν εδώ: ζουν πίσω από `import()` (`subcontract-message-keys.ts`, ADR-744 §34) και φτάνουν με το πλήρες bundle."
+    },
+    "src/app/(app)/o/[workspace]/projects/[id]/procurement/subcontracts/[agreementId]/page.tsx": {
+      "sealed": 2764,
+      "sealedAt": "2026-11-03",
+      "history": [
+        {
+          "from": 0,
+          "to": 2764,
+          "at": "2026-11-03",
+          "why": "ADR-928 Φ3γ (2026-11-03) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 2764 bytes · 1,6% κελύφους · 2 ns [procurement, quotes]. Κεφαλίδα (αριθμός, τίτλος, κατάσταση, ειδικότητα `quotes:trades.*`, ρόλος εγγράφου), πλοήγηση πίσω, «δεν βρέθηκε». Ο επεξεργαστής και ό,τι κρίνει/αποδίδει είναι πίσω από `import()`."
+        }
+      ],
+      "reason": "ADR-928 Φ3γ — Η ΣΕΛΙΔΑ ΕΝΟΣ ΣΥΜΦΩΝΗΤΙΚΟΥ ΥΠΕΡΓΟΛΑΒΙΑΣ (`/o/[workspace]/projects/[id]/procurement/subcontracts/[agreementId]`). Η κεφαλίδα (αριθμός, τίτλος, κατάσταση, ειδικότητα, υπεργολάβος, ρόλος εγγράφου) και η πλοήγηση πίσω ζωγραφίζουν στο πρώτο καρέ κλειδιά `procurement:subcontracts.*` και `quotes:trades.*` που το κέλυφος δεν έχει. Καταχωρείται από το client module της σελίδας (`SubcontractAgreementDetailClient` — το `page.tsx` είναι Server Component), που δεν το εισάγει άλλη σελίδα. ⚠️ Ο επεξεργαστής, ο κριτής, το μοντέλο εγγράφου και τα μηνύματα ευρημάτων ΔΕΝ μπαίνουν εδώ: ζουν πίσω από `import()` (`AgreementDetailBody` · `subcontract-message-keys.ts`, ADR-744 §34) και φτάνουν με το πλήρες bundle."
     }
   },
   "$lazyRouteOpaqueNamespaces": "ADR-744 §27 — η γραπτή απάντηση σε κάθε `useTranslation(<prop>)` μέσα σε κλειστότητα τεμπέλικης διαδρομής: ποια namespaces μπορούν να φτάσουν εκεί. Ο generator ΑΡΝΕΙΤΑΙ χωρίς εγγραφή· εγγραφή χωρίς αδιαφανή κλήση πια είναι ΝΕΚΡΗ και μπλοκάρει. Κάθε `reason` είναι μέτρηση της 2026-10-05 (απαρίθμηση ΟΛΩΝ των καλούντων) — ξαναμέτρησε όταν προσθέτεις καλούντα.",
