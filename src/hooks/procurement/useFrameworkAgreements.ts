@@ -3,7 +3,7 @@
 /**
  * useFrameworkAgreements — Framework Agreements hook (ADR-330 Phase 5)
  *
- * Reads via firestoreQueryService.subscribe (ADR-355 SSoT, ADR-361 equality-guarded; ADR-300 stale cache).
+ * Reads via `useProcurementCatalogList` (ADR-355 SSoT, ADR-361 equality-guarded; ADR-300 stale cache).
  * Writes via API routes (`/api/procurement/agreements`) — Firestore rules
  * block direct client writes; mutations go through Admin SDK with audit trail.
  *
@@ -12,13 +12,11 @@
  * @see ADR-300 — Stale-while-revalidate
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { where } from 'firebase/firestore';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { API_ROUTES } from '@/config/domain-constants';
+import { procurementCatalogApi } from './procurement-catalog-api';
+import { useProcurementCatalogList, type ProcurementCatalogListConfig } from './useProcurementCatalogList';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache } from '@/lib/stale-cache';
-import { useAuth } from '@/hooks/useAuth';
-import { useCompanyId } from '@/hooks/useCompanyId';
 import { compareInstantsDesc } from '@/lib/date-local';
 import type {
   FrameworkAgreement,
@@ -27,30 +25,18 @@ import type {
   UpdateFrameworkAgreementDTO,
 } from '@/subapps/procurement/types/framework-agreement';
 
-const logger = createModuleLogger('useFrameworkAgreements');
+const agreementsList: ProcurementCatalogListConfig<FrameworkAgreement> = {
+  collection: 'FRAMEWORK_AGREEMENTS',
+  cache: createStaleCache<FrameworkAgreement[]>('framework-agreements-list'),
+  compare: (a, b) => compareInstantsDesc(a.createdAt, b.createdAt),
+  logger: createModuleLogger('useFrameworkAgreements'),
+  label: 'Framework agreements',
+};
 
-const agreementsCache = createStaleCache<FrameworkAgreement[]>('framework-agreements-list');
-
-/**
- * One agreements-API round-trip + envelope unwrap. Throws on `!ok`/`!success`.
- * The three mutations (create/update/delete) differ only in verb, url and body —
- * SSoT so they cannot drift into parallel twins.
- */
-async function agreementRequest<T>(
-  url: string,
-  method: 'POST' | 'PATCH' | 'DELETE',
-  body?: unknown,
-): Promise<T> {
-  const res = await fetch(url, {
-    method,
-    ...(body !== undefined
-      ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-      : {}),
-  });
-  const json = await res.json();
-  if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
-  return json.data as T;
-}
+const agreementsApi = procurementCatalogApi<FrameworkAgreementWire, CreateFrameworkAgreementDTO, UpdateFrameworkAgreementDTO>(
+  API_ROUTES.PROCUREMENT.AGREEMENTS,
+  API_ROUTES.PROCUREMENT.AGREEMENT_BY_ID,
+);
 
 interface UseFrameworkAgreementsReturn {
   agreements: FrameworkAgreement[];
@@ -62,83 +48,13 @@ interface UseFrameworkAgreementsReturn {
 }
 
 export function useFrameworkAgreements(): UseFrameworkAgreementsReturn {
-  const { user, loading: authLoading } = useAuth();
-  const companyResult = useCompanyId();
-  const companyId = companyResult?.companyId;
-
-  const [agreements, setAgreements] = useState<FrameworkAgreement[]>(
-    agreementsCache.get() ?? [],
-  );
-  const [loading, setLoading] = useState(!agreementsCache.hasLoaded());
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setLoading(false);
-      setError('AUTH_REQUIRED');
-      return;
-    }
-    if (!companyId) {
-      setLoading(false);
-      setError('COMPANY_ID_UNAVAILABLE');
-      return;
-    }
-
-    setLoading(!agreementsCache.hasLoaded());
-
-    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown>>(
-      'FRAMEWORK_AGREEMENTS',
-      (result) => {
-        const items = result.documents
-          .map((d) => d as unknown as FrameworkAgreement)
-          .filter((a) => a.isDeleted === false)
-          .sort((a, b) => compareInstantsDesc(a.createdAt, b.createdAt));
-
-        agreementsCache.set(items);
-        setAgreements(items);
-        setLoading(false);
-        setError(null);
-        logger.info('Framework agreements loaded', { count: items.length });
-      },
-      (err) => {
-        logger.error('Framework agreements subscription error', { error: err.message });
-        setError('SUBSCRIPTION_ERROR');
-        setLoading(false);
-      },
-      {
-        // companyId auto-injected by firestoreQueryService (tenant-config default)
-        constraints: [where('isDeleted', '==', false)],
-      },
-    );
-
-    return unsubscribe;
-  }, [authLoading, user, companyId]);
-
-  const createAgreement = useCallback(
-    (dto: CreateFrameworkAgreementDTO): Promise<FrameworkAgreementWire> =>
-      agreementRequest<FrameworkAgreementWire>('/api/procurement/agreements', 'POST', dto),
-    [],
-  );
-
-  const updateAgreement = useCallback(
-    (id: string, dto: UpdateFrameworkAgreementDTO): Promise<FrameworkAgreementWire> =>
-      agreementRequest<FrameworkAgreementWire>(`/api/procurement/agreements/${id}`, 'PATCH', dto),
-    [],
-  );
-
-  const deleteAgreement = useCallback(
-    (id: string): Promise<void> =>
-      agreementRequest<void>(`/api/procurement/agreements/${id}`, 'DELETE'),
-    [],
-  );
-
+  const { items, loading, error } = useProcurementCatalogList(agreementsList);
   return {
-    agreements,
+    agreements: items,
     loading,
     error,
-    createAgreement,
-    updateAgreement,
-    deleteAgreement,
+    createAgreement: agreementsApi.create,
+    updateAgreement: agreementsApi.update,
+    deleteAgreement: agreementsApi.remove,
   };
 }

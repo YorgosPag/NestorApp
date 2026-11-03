@@ -29,7 +29,9 @@ import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { atoeCategoryOptions } from '@/lib/procurement/scope-options';
 import { usePOSupplierContacts, supplierContactsToOptions, supplierNamesById } from '@/hooks/procurement/usePOSupplierContacts';
+import { explainProcurementError } from '../explain-procurement-error';
 import {
+  MATERIAL_CODE_TAKEN_CODE,
   MAX_PREFERRED_SUPPLIERS,
   type Material,
   type CreateMaterialDTO,
@@ -151,7 +153,9 @@ export function MaterialFormDialog({
   const isEdit = initial !== null;
   const canSubmit = !!form.code.trim() && !!form.name.trim();
   const { submitting, error, handleSubmit, clearError } = useFormSubmission({
-    submit: () => onSubmit(buildPayload(), initial?.id),
+    submit: () => explainProcurementError(() => onSubmit(buildPayload(), initial?.id), {
+      [MATERIAL_CODE_TAKEN_CODE]: t('hub.materialCatalog.form.codeTaken'),
+    }),
     canSubmit,
     onSuccess: () => onOpenChange(false),
     errorFallback: t('hub.materialCatalog.form.saveFailed'),

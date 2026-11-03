@@ -4,7 +4,7 @@
  */
 
 import type { AuthContext } from '@/lib/auth';
-import { FrameworkAgreementValidationError } from '../../types/framework-agreement';
+import { FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE, FrameworkAgreementValidationError } from '../../types/framework-agreement';
 import { makeAgreement } from '../../__fixtures__/framework-agreement-fixture';
 
 jest.mock('firebase-admin', () => ({
@@ -87,10 +87,15 @@ beforeEach(() => {
   seed('projects', [{ id: 'p_1', companyId: 'co_1' }]);
 });
 
+/**
+ * Μόνο η ισοπαλία φέρει τον κωδικό που η φόρμα μεταφράζει σε «ισοβαθμεί με άλλη σύμβαση» (ADR-923 §5.11 «3γ»
+ * Βήμα 2). Κάθε άλλη άρνηση μένει **χωρίς** κωδικό: αλλιώς ο άνθρωπος θα διάβαζε ισοπαλία εκεί που λείπει υλικό.
+ */
 async function expectRejected(promise: Promise<unknown>, field: string): Promise<void> {
   const error = await promise.catch((caught: unknown) => caught);
   expect(error).toBeInstanceOf(FrameworkAgreementValidationError);
   expect((error as FrameworkAgreementValidationError).field).toBe(field);
+  expect((error as FrameworkAgreementValidationError).errorCode).toBe(field === 'scope' ? FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE : undefined);
   expect(writes).toEqual([]);
 }
 

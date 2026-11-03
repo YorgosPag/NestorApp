@@ -17,6 +17,13 @@ import {
   ProcurementCrossTenantError,
   procurementNotFound,
 } from '@/subapps/procurement/services/procurement-ownership';
+import {
+  FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE,
+  FRAMEWORK_AGREEMENT_NUMBER_TAKEN_CODE,
+  FrameworkAgreementNumberConflictError,
+  FrameworkAgreementValidationError,
+} from '@/subapps/procurement/types/framework-agreement';
+import { MATERIAL_CODE_TAKEN_CODE, MaterialCodeConflictError } from '@/subapps/procurement/types/material';
 
 const SUBJECT = {
   resource: PROCUREMENT_RESOURCE.MATERIAL,
@@ -36,6 +43,30 @@ const BASE = {
 function outcomeFor(error: unknown, callerGlobalRole: string) {
   return resolveProcurementErrorOutcome(error, { ...BASE, callerGlobalRole });
 }
+
+describe('δηλωμένος κωδικός σφάλματος (ADR-923 §5.11 «3γ» Βήμα 2)', () => {
+  it('το σφάλμα που τον δηλώνει τον φτάνει στο σύρμα, για να τον μεταφράσει η φόρμα', () => {
+    const ambiguous = new FrameworkAgreementValidationError('scope', 'Ambiguous', FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE);
+    expect(outcomeFor(ambiguous, NORMAL_ROLE).errorCode).toBe(FRAMEWORK_AGREEMENT_AMBIGUOUS_CODE);
+    expect(outcomeFor(new MaterialCodeConflictError('M1', 'mat_1'), NORMAL_ROLE).errorCode).toBe(MATERIAL_CODE_TAKEN_CODE);
+    expect(
+      outcomeFor(new FrameworkAgreementNumberConflictError('F1', 'fwa_1'), NORMAL_ROLE).errorCode,
+    ).toBe(FRAMEWORK_AGREEMENT_NUMBER_TAKEN_CODE);
+  });
+
+  it('σφάλμα χωρίς κωδικό ⇒ κανένα πεδίο, όχι `undefined`', () => {
+    expect(outcomeFor(new Error('kaboom'), NORMAL_ROLE)).not.toHaveProperty('errorCode');
+    expect(outcomeFor(new FrameworkAgreementValidationError('title', 'Title is required'), NORMAL_ROLE)).not.toHaveProperty('errorCode');
+  });
+
+  it('η μεταμφίεση δεν αποκτά κωδικό που θα τη διέκρινε από το γνήσιο 404', () => {
+    const concealed = outcomeFor(
+      new ProcurementCrossTenantError({ ...SUBJECT, expectedCompanyId: 'co1', actualCompanyId: 'co2' }),
+      NORMAL_ROLE,
+    );
+    expect(concealed).not.toHaveProperty('errorCode');
+  });
+});
 
 /** Ό,τι βλέπει ο έξω κόσμος — και **μόνο** αυτό. */
 function wire(outcome: { status: number; message: string }) {
