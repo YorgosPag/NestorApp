@@ -9,7 +9,7 @@
  *     υποκείμενο · ανάθεση = συμβαλλόμενος (`pricing/pricing-keys.ts`) — ίδια μηχανή, ίδια δομική μοναδικότητα·
  *   - `random` — το **SKU** (Δ3): ο κωδικός του είναι ιδιότητα με κράτηση, όχι ταυτότητα· η **συνθήκη έκπτωσης** (καμία
  *     φυσική ταυτότητα: ίδιο κοινό σε άλλη περίοδο είναι νόμιμο — την επικάλυψη τη φυλά η υποδοχή ασάφειας)·
- *   - `singleton` — οι ρυθμίσεις: **ένα** έγγραφο ανά χώρο.
+ *   - `singleton` — οι ρυθμίσεις και το προφίλ παρόχου: **ένα** έγγραφο ανά χώρο.
  * @module server/catalog/catalog-kinds
  */
 
@@ -25,6 +25,7 @@ import {
   CATALOG_PRODUCT_MODEL_TRACKED_FIELDS,
   CATALOG_PRODUCT_TRACKED_FIELDS,
   CATALOG_SETTINGS_TRACKED_FIELDS,
+  CATALOG_SUPPLIER_PROFILE_TRACKED_FIELDS,
   CATALOG_PRICE_LIST_TRACKED_FIELDS,
   CATALOG_PRICE_LIST_VERSION_TRACKED_FIELDS,
   CATALOG_PRICE_LIST_LINE_TRACKED_FIELDS,
@@ -53,6 +54,7 @@ import {
   generateDeterministicCatalogMeasurementFamilyId,
   generateDeterministicCatalogProductModelId,
   generateDeterministicCatalogSettingsId,
+  generateDeterministicCatalogSupplierProfileId,
   generateDeterministicCatalogPriceListId,
   generateDeterministicCatalogPriceListVersionId,
   generateDeterministicCatalogPriceListLineId,
@@ -93,6 +95,8 @@ export const CATALOG_KINDS = [
   'publicationRecipe',
   // ── Φάση 6α (ADR-923 §5.12) ──
   'visibilityRule',
+  // ── Φάση 6β (ADR-923 §22 Υ8) ──
+  'supplierProfile',
 ] as const;
 export type CatalogKind = (typeof CATALOG_KINDS)[number];
 
@@ -261,5 +265,11 @@ export const CATALOG_KIND_SPECS: Readonly<Record<CatalogKind, CatalogKindSpec>> 
     identity: byCode(generateDeterministicCatalogVisibilityRuleId),
     trackedFields: CATALOG_VISIBILITY_RULE_TRACKED_FIELDS,
     auditName: nameFrom((record) => record.visibility),
+  },
+  supplierProfile: {
+    collection: COLLECTIONS.CATALOG_SUPPLIER_PROFILES,
+    entityType: 'catalog_supplier_profile',
+    identity: { mode: 'singleton', idOf: generateDeterministicCatalogSupplierProfileId },
+    trackedFields: CATALOG_SUPPLIER_PROFILE_TRACKED_FIELDS,
   },
 };

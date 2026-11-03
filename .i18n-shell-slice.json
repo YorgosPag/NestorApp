@@ -613,8 +613,8 @@
       "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/measurements` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
     },
     "src/app/(app)/o/[workspace]/catalog/settings/page.tsx": {
-      "sealed": 21069,
-      "sealedAt": "2026-10-29",
+      "sealed": 27079,
+      "sealedAt": "2026-11-02",
       "history": [
         {
           "from": 0,
@@ -627,6 +627,12 @@
           "to": 21069,
           "at": "2026-10-29",
           "why": "ADR-923 §5.11 «3β»/«3δ» (τιμολόγηση). ΜΕΤΡΗΜΕΝΟ από το index (`generate:i18n-shell-slice:index`): 21069 bytes, ΙΔΙΟ ΕΝΑ namespace (`catalog`) — η κλειστότητα ΔΕΝ μεγάλωσε, μεγάλωσε το ίδιο το namespace (κλειδιά τιμοκαταλόγων · εκπτώσεων · `issues.priceLine*`). ΓΙΑΤΙ ΟΧΙ ΟΡΙΟ: η σελίδα αποδίδει από το `catalog` στο πρώτο καρέ, και όριο `next/dynamic` = spinner ή ωμό κλειδί (ίδιο σκεπτικό με την πρώτη σφράγιση)· ο σωστός μοχλός, αν το namespace συνεχίσει να μεγαλώνει, είναι διάσπαση του `catalog` σε υπο-namespaces ανά οθόνη, όχι φράγμα εδώ."
+        },
+        {
+          "from": 21069,
+          "to": 27079,
+          "at": "2026-11-02",
+          "why": "ADR-923 §5.13 και §22 Υ8. ΜΕΤΡΗΜΕΝΟ με `--measure`: 27079 bytes, ΙΔΙΟ ΕΝΑ namespace (`catalog`). Η αύξηση από τις 21069 ήρθε από το πάνελ επιβεβαίωσης και τα κλειδιά του namespace, και το ταβάνι 26336 το πέρασε ο επεξεργαστής προφίλ. ΓΙΑΤΙ ΟΧΙ ΟΡΙΟ: ίδιο σκεπτικό με την προηγούμενη σφράγιση. Το κόψιμο κειμένου απορρίφθηκε από τον Giorgio ως έκπτωση ποιότητας."
         }
       ],
       "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/settings` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
@@ -1853,6 +1859,24 @@
       ],
       "reason": "ADR-890 Φ1 — δημόσια σελίδα `/area/[id]` (Δήμος / Δημοτική Ενότητα). Κλάση Β: το `area-market` ΔΕΝ είναι στο κέλυφος (18 namespaces) και ΔΕΝ πρέπει να μπει — θα κόστιζε ~6 KB σε κάθε διαδρομή για μία σελίδα. Χωρίς slice, το SSR θα έβαφε ωμά κλειδιά (CHECK 3.51) σε σελίδα που υπάρχει ΓΙΑ την οργανική αναζήτηση (ADR-890 §5.5). Η εγγραφή του slice ζει στο client component `AreaMarketContent.tsx` (ADR-744 §18), όχι στο server `page.tsx`."
     },
+    "src/app/(light)/suppliers/[alias]/page.tsx": {
+      "sealed": 753,
+      "sealedAt": "2026-11-02",
+      "history": [{ "from": 0, "to": 485, "at": "2026-11-02", "why": "ΓΕΝΝΗΣΗ ΤΗΣ ΣΕΛΙΔΑΣ ΠΡΟΜΗΘΕΥΤΗ (ADR-923 §5.13 Σ4). ΕΝΑ namespace (`public-catalog`), μετρημένο με `--measure`: επωνυμία, κατηγορίες, κάρτες και «Κατόπιν προσφοράς» στο πρώτο καρέ του SSR, γιατί η σελίδα υπάρχει για την αναζήτηση (CHECK 3.51)." }, { "from": 485, "to": 753, "at": "2026-11-02", "why": "ΠΡΟΦΙΛ ΠΑΡΟΧΟΥ (ADR-923 §22 Υ8): έξι κλειδιά για περιοχή, ιστοσελίδα και λογότυπο, μετρημένα με `--measure`. Το κείμενο αποδίδεται στον διακομιστή, άρα `next/dynamic` δεν το μειώνει. Το κόψιμο ετικετών απορρίφθηκε από τον Giorgio ως έκπτωση ποιότητας. Ίδιο namespace, χρέος εισδοχής αμετάβλητο (336)." }],
+      "reason": "ADR-923 §5.13 Σ4 — δημόσια σελίδα προμηθευτή. Κλάση Β, όπως το `/area/[id]`: το `public-catalog` δεν μπαίνει στο κέλυφος, γιατί θα βάραινε κάθε διαδρομή, και χωρίς slice το SSR θα έβαφε ωμά κλειδιά σε σελίδα που υπάρχει για την αναζήτηση. Η εγγραφή ζει στο client component `SupplierCatalogView.tsx`."
+    },
+    "src/app/(light)/suppliers/[alias]/c/[category]/page.tsx": {
+      "sealed": 753,
+      "sealedAt": "2026-11-02",
+      "history": [{ "from": 0, "to": 485, "at": "2026-11-02", "why": "ΓΕΝΝΗΣΗ ΤΗΣ ΣΕΛΙΔΑΣ ΚΑΤΗΓΟΡΙΑΣ (ADR-923 §5.13 Σ4). ΕΝΑ namespace (`public-catalog`), μετρημένο με `--measure`: η ίδια οθόνη με τη σελίδα προμηθευτή, στο πρώτο καρέ του SSR (CHECK 3.51)." }, { "from": 485, "to": 753, "at": "2026-11-02", "why": "ΠΡΟΦΙΛ ΠΑΡΟΧΟΥ (ADR-923 §22 Υ8): η ίδια οθόνη με τη σελίδα προμηθευτή, άρα τα ίδια έξι κλειδιά στην κλειστότητα, μετρημένα με `--measure`. Ίδιο namespace, χρέος εισδοχής αμετάβλητο (336)." }],
+      "reason": "ADR-923 §5.13 Σ4 — δημόσια σελίδα κατηγορίας. Ίδια οθόνη και ίδια λέξεις με τη σελίδα προμηθευτή, με δική της εγγραφή στο client component `SupplierCategoryView.tsx`, ώστε κάθε διαδρομή να φέρνει το δικό της slice."
+    },
+    "src/app/(light)/suppliers/[alias]/p/[model]/page.tsx": {
+      "sealed": 302,
+      "sealedAt": "2026-11-02",
+      "history": [{ "from": 0, "to": 302, "at": "2026-11-02", "why": "ΓΕΝΝΗΣΗ ΤΗΣ ΣΕΛΙΔΑΣ ΜΟΝΤΕΛΟΥ (ADR-923 §5.13 Σ4). ΕΝΑ namespace (`public-catalog`), μετρημένο με `--measure`: τίτλος, κωδικός, χαρακτηριστικά, παραλλαγές και «Κατόπιν προσφοράς» στο πρώτο καρέ του SSR (CHECK 3.51)." }],
+      "reason": "ADR-923 §5.13 Σ4 — δημόσια σελίδα μοντέλου. Κλάση Β: τα χαρακτηριστικά και το «Κατόπιν προσφοράς» πρέπει να είναι στο πρώτο καρέ του SSR. Η εγγραφή ζει στο client component `PublicModelView.tsx`."
+    },
     "src/app/(light)/ergaleia/antikeimeniki-axia/page.tsx": {
       "sealed": 15339,
       "sealedAt": "2026-10-01",
@@ -2468,6 +2492,9 @@
     "src/app/(light)/offers/new/page.tsx ⟵ src/components/owner-property/OwnerPropertyFormContent.tsx": ["property-market"],
     "src/app/(light)/page.tsx ⟵ (στατική)": ["property-market"],
     "src/app/(light)/pro/[alias]/page.tsx ⟵ (στατική)": ["property-market"],
+    "src/app/(light)/suppliers/[alias]/page.tsx ⟵ (στατική)": ["public-catalog"],
+    "src/app/(light)/suppliers/[alias]/c/[category]/page.tsx ⟵ (στατική)": ["public-catalog"],
+    "src/app/(light)/suppliers/[alias]/p/[model]/page.tsx ⟵ (στατική)": ["public-catalog"],
     "src/app/(light)/pro/[alias]/page.tsx ⟵ src/components/contact/FirstContactDialog.tsx": ["property-market"],
     "src/app/(light)/pro/[alias]/page.tsx ⟵ src/components/contact/FirstContactStandIn.tsx": ["property-market"],
     "src/app/(light)/pro/page.tsx ⟵ (στατική)": ["conveyance", "document-registry", "legality", "property-market", "search-focus"],
@@ -2546,8 +2573,8 @@
     "src/app/(me)/workspace/new/page.tsx ⟵ (στατική)": ["onboarding"]
   },
   "lazyAdmissionSeal": {
-    "count": 333,
-    "at": "2026-10-31",
-    "why": "ADR-923 §5.12 (2026-10-31) — ΑΥΞΗΣΗ 324 → 333, ΜΕΤΡΗΜΕΝΗ: τρεις νέες σελίδες, ίδιο είδος με τις αδελφές τους. `/catalog/connections` 1 τριάδα (`catalog`), όπως κάθε σελίδα καταλόγου. `/supply-invite` · `/supply-request` από 4 τριάδες η καθεμία (page + not-found × `catalog` · `conveyance`), ίδιο σχήμα με το `/case-invite`: ο άνθρωπος φτάνει χωρίς ταυτότητα, και τα κείμενα του πρώτου καρέ τα καλύπτει το route slice. Το `conveyance` είναι το ΕΝΑ πεδίο χώρου (`ActingWorkspaceField`), που επαναχρησιμοποιείται αντί για δεύτερο. ADR-923 §5.5.1 (2026-10-31) — ΑΥΞΗΣΗ 321 → 323: η ΝΕΑ σελίδα `/catalog/imports` φέρνει 2 τριάδες (`catalog` · `catalog-import`), ίδιο είδος με τις 9 αδελφές σελίδες καταλόγου, που καθεμία έχει τη δική της. Τα κείμενά της τα καλύπτει το route slice της στο πρώτο καρέ, άρα η αναμονή είναι μόνο για τα κλειδιά έξω από το slice· όριο `next/dynamic` θα χώριζε το PDF από την πρόταση που οδηγεί. ADR-280 §11.8 Β4.3 (2026-10-31) — ΜΕΙΩΣΗ 400 → 321, ΜΕΤΡΗΜΕΝΗ με την ΙΔΙΑ μηχανή της πύλης (admissionDebt). Έπαψαν 94 τριάδες: οι 5 σελίδες προϊόντος (contacts · properties · properties/[id] · spaces/parking · spaces/storage) περνούν πλέον από εγγραφή μητρώου, το contact-mutation από το lazyHarnessRoutes, ο ReserveDialog (×2 ρίζες) και οι καρτέλες του φακέλου ακινήτου έγιναν επιφάνειες (defineLazySurfaces). +15 είναι ΜΕΤΑΚΟΜΙΣΗ, όχι νέο χρέος: τα ίδια 15 (όριο, namespace) του properties/[id]/page.tsx ανήκουν πλέον στη ρίζα entry:PropertyDetail. Με εκκίνηση ΧΩΡΙΣ τα 6 dxf namespaces η ίδια συνάρτηση δίνει 0 τριάδες dxf (ήταν 93). Μόνο συρρικνώνεται. +1 (2026-10-31, ADR-923 §5.6.1): η νέα σελίδα `catalog/publications` δηλώνεται στον ίδιο χάρτη με τις αδελφές της (`⟵ (στατική)`, namespace `catalog`) — ΙΔΙΑ τριάδα χρέους με αυτές, όχι νέο είδος: τα κείμενά της τα καλύπτει το route slice στο πρώτο καρέ. Η μέτρηση έγινε πάνω στο ενωμένο δέντρο Φ4 + Φ5, με τη μηχανή της πύλης: 321 → 323 (imports) → 324 (publications). Έγκριση σφράγισης: Giorgio, 2026-10-31."
+    "count": 336,
+    "at": "2026-11-02",
+    "why": "ADR-923 §5.13 Σ4 (2026-11-02) — ΑΥΞΗΣΗ 333 → 336, ΜΕΤΡΗΜΕΝΗ: τρεις νέες δημόσιες σελίδες (`/suppliers` · `/c` · `/p`), από 1 τριάδα η καθεμία (`public-catalog`), ίδιο είδος με `/area` και `/pro`. Τα κείμενα του πρώτου καρέ τα καλύπτει το route slice (485 · 485 · 302 bytes). Κριτήριο Giorgio 2026-11-02: η πρακτική των μεγάλων παικτών, χωρίς εκπτώσεις. Έρευνα: οι κατάλογοι ανά σελίδα από το δέντρο εξαρτήσεων είναι το σχήμα του Lingui, ενώ το namespace στο κέλυφος θα βάραινε κάθε διαδρομή. ADR-923 §5.12 (2026-10-31) — ΑΥΞΗΣΗ 324 → 333, ΜΕΤΡΗΜΕΝΗ: τρεις νέες σελίδες, ίδιο είδος με τις αδελφές τους. `/catalog/connections` 1 τριάδα (`catalog`), όπως κάθε σελίδα καταλόγου. `/supply-invite` · `/supply-request` από 4 τριάδες η καθεμία (page + not-found × `catalog` · `conveyance`), ίδιο σχήμα με το `/case-invite`: ο άνθρωπος φτάνει χωρίς ταυτότητα, και τα κείμενα του πρώτου καρέ τα καλύπτει το route slice. Το `conveyance` είναι το ΕΝΑ πεδίο χώρου (`ActingWorkspaceField`), που επαναχρησιμοποιείται αντί για δεύτερο. ADR-923 §5.5.1 (2026-10-31) — ΑΥΞΗΣΗ 321 → 323: η ΝΕΑ σελίδα `/catalog/imports` φέρνει 2 τριάδες (`catalog` · `catalog-import`), ίδιο είδος με τις 9 αδελφές σελίδες καταλόγου, που καθεμία έχει τη δική της. Τα κείμενά της τα καλύπτει το route slice της στο πρώτο καρέ, άρα η αναμονή είναι μόνο για τα κλειδιά έξω από το slice· όριο `next/dynamic` θα χώριζε το PDF από την πρόταση που οδηγεί. ADR-280 §11.8 Β4.3 (2026-10-31) — ΜΕΙΩΣΗ 400 → 321, ΜΕΤΡΗΜΕΝΗ με την ΙΔΙΑ μηχανή της πύλης (admissionDebt). Έπαψαν 94 τριάδες: οι 5 σελίδες προϊόντος (contacts · properties · properties/[id] · spaces/parking · spaces/storage) περνούν πλέον από εγγραφή μητρώου, το contact-mutation από το lazyHarnessRoutes, ο ReserveDialog (×2 ρίζες) και οι καρτέλες του φακέλου ακινήτου έγιναν επιφάνειες (defineLazySurfaces). +15 είναι ΜΕΤΑΚΟΜΙΣΗ, όχι νέο χρέος: τα ίδια 15 (όριο, namespace) του properties/[id]/page.tsx ανήκουν πλέον στη ρίζα entry:PropertyDetail. Με εκκίνηση ΧΩΡΙΣ τα 6 dxf namespaces η ίδια συνάρτηση δίνει 0 τριάδες dxf (ήταν 93). Μόνο συρρικνώνεται. +1 (2026-10-31, ADR-923 §5.6.1): η νέα σελίδα `catalog/publications` δηλώνεται στον ίδιο χάρτη με τις αδελφές της (`⟵ (στατική)`, namespace `catalog`) — ΙΔΙΑ τριάδα χρέους με αυτές, όχι νέο είδος: τα κείμενά της τα καλύπτει το route slice στο πρώτο καρέ. Η μέτρηση έγινε πάνω στο ενωμένο δέντρο Φ4 + Φ5, με τη μηχανή της πύλης: 321 → 323 (imports) → 324 (publications). Έγκριση σφράγισης: Giorgio, 2026-10-31."
   }
 }

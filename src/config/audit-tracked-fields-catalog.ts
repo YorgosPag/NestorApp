@@ -108,6 +108,8 @@ export const CATALOG_ASSET_TRACKED_FIELDS = defs(['role', 'kind', 'fileId', 'isD
 
 export const CATALOG_SETTINGS_TRACKED_FIELDS = defs([], ['channelLocales']);
 
+export const CATALOG_SUPPLIER_PROFILE_TRACKED_FIELDS = defs([], ['description', 'projects']);
+
 // ── Φάση 3β (ADR-923 §5.11) — τιμοκατάλογοι. Τα παράγωγα (`derived`: `linesRevision`, σπορά, κλειδιά δεικτών) ΔΕΝ
 //    παρακολουθούνται. Η σφραγίδα (`seal`) ναι: είναι η **πράξη** της δημοσίευσης, με ποιον φράχτη και τι επιβεβαιώθηκε.
 
@@ -155,3 +157,9 @@ export const CATALOG_IMPORT_PROFILE_TRACKED_FIELDS = defs(['label', 'purpose', '
 export const CATALOG_IMPORT_BATCH_TRACKED_FIELDS = defs(['status', 'fileName', 'contentSha256', 'sourceKind', 'fileId', 'profileId', 'profileRevision', 'run', 'isDeleted'], ['target']);
 
 export const CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS = defs(['status', 'groupKey', 'appliedAt', 'appliedBy', 'isDeleted'], []);
+
+// ── Φάση 6β (ADR-923 §5.13 Ε1α) — έλεγχος προμηθευτή. Παρακολουθείται η πράξη· το αποτύπωμα ΑΦΜ δεν μπαίνει ποτέ στο ιστορικό.
+
+export const SUPPLIER_BRAND_CLAIM_TRACKED_FIELDS = defs(['status', 'relation', 'evidenceFileId', 'decidedBy', 'reviewNote'], ['grant']);
+
+export const SUPPLIER_VERIFICATION_TRACKED_FIELDS = defs(['status', 'evidenceFileId', 'decidedBy', 'reviewNote'], []);

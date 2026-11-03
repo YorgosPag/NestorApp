@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "79e965ae8fe37b28f98cd812bc9451f5e4efd961dd246d92ff9b79347ecc08c2",
+    "src/i18n/generated/lazy-route-namespaces.json": "5dba7f7c3bbddef174b6438556057b98df86a4413dce3ec82e9355f431bbdfe4",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
@@ -50,7 +50,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "299118acf0a0d557f0da7f5dc548a94e869ba824b2e13d87392a8acf7c9308f8",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "35fff66c27dd03476903b8c18f7378efb81948db331846b55d047c7f67843a5b",
     "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "96359d464882d45ec6af834d71c24fe01f0d301171e65a03ac20fe43b1a2c8c1",
-    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "93ba3d8c8eca6121d8ab927295d0c7e9f076b29a897b38f9f2dc9bc5324213f9",
+    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "7b3160d0331e21919a74f28e5a6e456efb3486076501ffcdb9139378efd81790",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
@@ -85,6 +85,9 @@
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
     "src/i18n/generated/routes/search__results.el.json": "b6ec3a0e49bc98af506acda00e125c7c4458af00fb27aa03088731e848760734",
     "src/i18n/generated/routes/stay.el.json": "3044270a27d1268903929dd44a0a20afa30e6ac91fa1d554ceeba748ba062886",
+    "src/i18n/generated/routes/suppliers__alias.el.json": "cd89dc81264c9c5b8f78862171c971615b4ccb38fddbd229ad403b6a7d156dbe",
+    "src/i18n/generated/routes/suppliers__alias__c__category.el.json": "cd89dc81264c9c5b8f78862171c971615b4ccb38fddbd229ad403b6a7d156dbe",
+    "src/i18n/generated/routes/suppliers__alias__p__model.el.json": "fc07b8ce3aff33fffd978210d44cec3dafdae2c5e619f5644c065d5c21eb3ca4",
     "src/i18n/generated/routes/supply-invite__token.el.json": "4de7e5a2e7be1e7a22c54c367ddf9b7a3d260b5c0326857fb0c69f936c70abd1",
     "src/i18n/generated/routes/supply-request__token.el.json": "4de7e5a2e7be1e7a22c54c367ddf9b7a3d260b5c0326857fb0c69f936c70abd1",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -95,7 +98,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "28c46a671a71e454583e28c4a7cfe21ba81d3121b1b853b254d84b94440c1b33",
+    "src/i18n/generated/shell-slice.el.json": "25d4aa7dabebf3e302d80c4e00b49698f2710fb60965f16807cdfcb5da45f318",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -111,7 +114,7 @@
       "lazyRouteRegistries": "9b5e7bd46f0b1a00e0e720c490feaaae1ff28c77b5f2238bc800a871cd2bdb04",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "64d351d94c6aea6f1726183d93a5e91910ccbed35923b3dda1c610827bc26b80",
+      "routeSlices": "06963e319b94a2a0bf67978467de3f5a86fd018aaae232a2cbdd4e793602659d",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -120,8 +123,8 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "f4b449dbe9bfdf1ff8e5ecbc846ad4f4a52e57e7b22b054d59b43297b3522588",
-      "supportedNamespaces": "6714cb878e9b2d7b45974978585ea2fd8b84b75d55c06c3b23d52b1be448335d"
+      "registries": "dd8b68a3d4ebe978c3a5c9a5ebff4528216d12f3133e81b71d1451d63901cebf",
+      "supportedNamespaces": "8a1567ecabc7d4c5b5855c535f4f16750a71191cb862b4b9c954ca0d964a78b8"
     },
     "namespaceBundles": {
       "AUDIT_TIMELINE_NAMESPACES": "18e38e5883fc36d385a27c7604dbf4144948e21b9761bdbee3c1dd700b95eb67",
@@ -181,7 +184,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b6e3501bf62c4fac5d19ea99cae5c386281ded94dd09760496915bc948005599",
+  "inputsSha256": "644f23e3cbb5a576a5de6a9ee20661ebab79150c0e496bc20dd0138e379fdb6c",
   "languages": [
     "el"
   ],
@@ -14012,6 +14015,7 @@
             "common.actions",
             "common.delete",
             "common.discard",
+            "common.labelIn",
             "common.loadFailed",
             "common.loading",
             "common.readOnly",
@@ -14199,6 +14203,16 @@
             "language.en",
             "pages.settings.lead",
             "pages.settings.title",
+            "profile.addImage",
+            "profile.addProject",
+            "profile.description",
+            "profile.lead",
+            "profile.projectDescription",
+            "profile.projectTitle",
+            "profile.projectYear",
+            "profile.removeImage",
+            "profile.removeProject",
+            "profile.title",
             "recompute.done",
             "recompute.doneWithRejected",
             "recompute.failed",
@@ -14214,7 +14228,44 @@
             "settings.matrixCaption",
             "settings.recomputeMaintenance",
             "settings.recomputePrompt",
-            "settings.usageUnknown"
+            "settings.usageUnknown",
+            "supplierBrands.active",
+            "supplierBrands.brandName",
+            "supplierBrands.document",
+            "supplierBrands.empty",
+            "supplierBrands.expired",
+            "supplierBrands.failed",
+            "supplierBrands.lead",
+            "supplierBrands.manufacturer",
+            "supplierBrands.pending",
+            "supplierBrands.rejected",
+            "supplierBrands.relation",
+            "supplierBrands.representative",
+            "supplierBrands.revoked",
+            "supplierBrands.title",
+            "supplierBrands.uploading",
+            "supplierVerification.document",
+            "supplierVerification.failed",
+            "supplierVerification.publish",
+            "supplierVerification.publishFailed",
+            "supplierVerification.published",
+            "supplierVerification.route.adopt-legal-name",
+            "supplierVerification.route.ask-registry",
+            "supplierVerification.route.closed",
+            "supplierVerification.route.correct-tax-id",
+            "supplierVerification.route.identity-incomplete",
+            "supplierVerification.route.manual-review",
+            "supplierVerification.route.submit-document",
+            "supplierVerification.route.verified",
+            "supplierVerification.status.approved",
+            "supplierVerification.status.none",
+            "supplierVerification.status.pending-review",
+            "supplierVerification.status.rejected",
+            "supplierVerification.status.revoked",
+            "supplierVerification.title",
+            "supplierVerification.uploading",
+            "values.assets.none",
+            "values.assets.search"
           ],
           "prefixes": [],
           "whole": false
@@ -25705,6 +25756,84 @@
         }
       }
     },
+    "suppliers__alias": {
+      "page": "src/app/(light)/suppliers/[alias]/page.tsx",
+      "wants": {
+        "public-catalog": {
+          "keys": [
+            "model.priceOnRequest",
+            "model.variantCount",
+            "supplier.about",
+            "supplier.allCategories",
+            "supplier.areaNationwide",
+            "supplier.areaOutline",
+            "supplier.areaRadius",
+            "supplier.areaServed",
+            "supplier.brandManufacturer",
+            "supplier.brandRepresentative",
+            "supplier.brands",
+            "supplier.categories",
+            "supplier.empty",
+            "supplier.logoAlt",
+            "supplier.next",
+            "supplier.portfolio",
+            "supplier.products",
+            "supplier.verified",
+            "supplier.website"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "suppliers__alias__c__category": {
+      "page": "src/app/(light)/suppliers/[alias]/c/[category]/page.tsx",
+      "wants": {
+        "public-catalog": {
+          "keys": [
+            "model.priceOnRequest",
+            "model.variantCount",
+            "supplier.about",
+            "supplier.allCategories",
+            "supplier.areaNationwide",
+            "supplier.areaOutline",
+            "supplier.areaRadius",
+            "supplier.areaServed",
+            "supplier.brandManufacturer",
+            "supplier.brandRepresentative",
+            "supplier.brands",
+            "supplier.categories",
+            "supplier.empty",
+            "supplier.logoAlt",
+            "supplier.next",
+            "supplier.portfolio",
+            "supplier.products",
+            "supplier.verified",
+            "supplier.website"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "suppliers__alias__p__model": {
+      "page": "src/app/(light)/suppliers/[alias]/p/[model]/page.tsx",
+      "wants": {
+        "public-catalog": {
+          "keys": [
+            "model.backToSupplier",
+            "model.code",
+            "model.no",
+            "model.priceOnRequest",
+            "model.specifications",
+            "model.variants",
+            "model.yes"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
     "supply-invite__token": {
       "page": "src/app/(auth)/supply-invite/[token]/page.tsx",
       "wants": {
@@ -26545,7 +26674,7 @@
   ],
   "stats": {
     "matchedKeys": 273,
-    "sliceBytes": 1330980
+    "sliceBytes": 1339505
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -26840,6 +26969,7 @@
     "sidebar.spaces",
     "sidebar.storage",
     "status.loading",
+    "supplierVerifications",
     "theme.dark",
     "theme.light",
     "theme.system",
@@ -27334,6 +27464,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -27791,6 +27922,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -28257,6 +28389,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -28709,6 +28842,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -29161,6 +29295,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -29630,6 +29765,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -30082,6 +30218,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -30571,6 +30708,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -31025,6 +31163,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -31477,6 +31616,7 @@
         "sidebar.spaces",
         "sidebar.storage",
         "status.loading",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -31830,6 +31970,7 @@
         "sidebar.soldProperties",
         "sidebar.spaces",
         "sidebar.storage",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -31952,6 +32093,7 @@
         "roleManagement",
         "searchBackfill",
         "setup",
+        "supplierVerifications",
         "tabs.subtabs.procurement.backToProject",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.navLabel",
@@ -32072,6 +32214,7 @@
         "roleManagement",
         "searchBackfill",
         "setup",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -32273,6 +32416,7 @@
         "roleManagement",
         "searchBackfill",
         "setup",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",
@@ -32435,6 +32579,7 @@
         "site.home",
         "site.nav",
         "site.signIn",
+        "supplierVerifications",
         "tabs.subtabs.procurement.coverage",
         "tabs.subtabs.procurement.overview",
         "tabs.subtabs.procurement.po",

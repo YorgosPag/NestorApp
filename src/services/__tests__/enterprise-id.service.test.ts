@@ -339,6 +339,8 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicCatalogProductModelId',
       'generateDeterministicCatalogAssetId',
       'generateDeterministicCatalogSettingsId',
+      'generateDeterministicCatalogSupplierProfileId',
+      'generateDeterministicSupplierBrandClaimId',
       'generateDeterministicCatalogUniqueValueId',
     ];
 
@@ -431,6 +433,8 @@ describe('EnterpriseIdService', () => {
       //    κράτηση τρεις ⇒ `…:anchor-seed:undefined:undefined`). Καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-10-25.
       generateDeterministicCatalogProductModelId: 'cpmod_c33dea45-c517-4453-8e33-081359d81c55',
       generateDeterministicCatalogAssetId: 'casst_5712c1d2-fd9a-4f12-8db9-2b91a8d1c876',
+      generateDeterministicSupplierBrandClaimId: 'sbrnd_0b74798d-14d6-40ed-8c4d-cb7f4c157855',
+      generateDeterministicCatalogSupplierProfileId: 'cspro_023c2373-06c6-4899-85e5-4f0aa52d464f',
       generateDeterministicCatalogSettingsId: 'cset_8aa8a3f5-50c0-451c-8df4-eacfa0828dd1',
       generateDeterministicCatalogUniqueValueId: 'cuval_063bceee-787f-4e5a-8fd9-87c43f424c3b',
       // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,

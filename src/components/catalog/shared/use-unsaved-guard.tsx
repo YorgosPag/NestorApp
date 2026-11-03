@@ -73,6 +73,14 @@ export function useUnsavedGuard(): UnsavedGuard {
  * δηλώνει «βρώμικο» αν **οποιοδήποτε** είναι βρώμικο. Χωρίς αυτό, το «καθαρό» του ενός θα έσβηνε το «βρώμικο» του
  * άλλου (μία boolean, δύο γραφείς). Κάθε μέρος παίρνει **σταθερό** reporter (ασφαλές ως εξάρτηση effect).
  */
+/** Ο φύλακας ενός επεξεργαστή που κρατά δικό του πρόχειρο: κοινός για ρυθμίσεις και προφίλ παρόχου. */
+export function useDraftUnsavedGuard(unsaved: boolean): UnsavedGuard {
+  const guard = useUnsavedGuard();
+  const { reportDirty } = guard;
+  useEffect(() => reportDirty(unsaved), [unsaved, reportDirty]);
+  return guard;
+}
+
 export function useDirtyParts(report: (dirty: boolean) => void): (part: string) => (dirty: boolean) => void {
   const [parts, setParts] = useState<Readonly<Record<string, boolean>>>({});
   useEffect(() => report(Object.values(parts).some(Boolean)), [parts, report]);

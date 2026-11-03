@@ -290,6 +290,12 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
     loadingType: 'dashboard', ssr: false,
   },
 
+  // ADR-923 §5.13 Ε1α — η ουρά ελέγχου προμηθευτών (εργαλείο παρόχου, μόνο super_admin).
+  AdminSupplierVerifications: {
+    load: () => import('@/components/admin/pages/SupplierVerificationsPageContent').then(mod => ({ default: mod.SupplierVerificationsPageContent })),
+    loadingType: 'dashboard', ssr: false,
+  },
+
   AdminDatabaseUpdate: {
     load: () => import('@/components/admin/pages/DatabaseUpdatePageContent').then(mod => ({ default: mod.DatabaseUpdatePageContent })),
     loadingType: 'form', ssr: false,

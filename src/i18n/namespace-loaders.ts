@@ -66,6 +66,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'short-stay': return () => import('./locales/el/short-stay.json');
     case 'stay-landing': return () => import('./locales/el/stay-landing.json');
     case 'property-market': return () => import('./locales/el/property-market.json');
+    case 'public-catalog': return () => import('./locales/el/public-catalog.json');
     case 'network-messaging': return () => import('./locales/el/network-messaging.json');
     case 'crm': return () => import('./locales/el/crm.json');
     case 'crm-inbox': return () => import('./locales/el/crm-inbox.json');
@@ -206,6 +207,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'short-stay': return () => import('./locales/en/short-stay.json');
     case 'stay-landing': return () => import('./locales/en/stay-landing.json');
     case 'property-market': return () => import('./locales/en/property-market.json');
+    case 'public-catalog': return () => import('./locales/en/public-catalog.json');
     case 'network-messaging': return () => import('./locales/en/network-messaging.json');
     case 'crm': return () => import('./locales/en/crm.json');
     case 'crm-inbox': return () => import('./locales/en/crm-inbox.json');

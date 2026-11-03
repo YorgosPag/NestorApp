@@ -32,6 +32,7 @@ import { redirectFromMiddleware } from '@/lib/http/request-origin';
 import { personalWorkspaceLanding } from '@/lib/workspace/personal-workspace-surface';
 import { EMAIL_SUBSCRIPTION_API } from '@/lib/notifications/email-subscription-routes';
 import { withRequestPath } from '@/lib/http/request-path';
+import { isSearchEngineOnOpenPath } from '@/lib/middleware/search-engine-access';
 
 // ============================================================================
 // BOT & SCANNER DETECTION
@@ -274,7 +275,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(EMAIL_SUBSCRIPTION_API) ||
     pathname.startsWith('/.well-known/oauth-');
 
-  if (!isMachineEndpoint && userAgent) {
+  // ADR-923 §5.13 Ε2 — η βιτρίνα προμηθευτών, και μόνο αυτή, είναι ανοιχτή στις μηχανές αναζήτησης.
+  if (!isMachineEndpoint && !isSearchEngineOnOpenPath(pathname, userAgent) && userAgent) {
     const isBot = BLOCKED_BOT_PATTERNS.some((pattern) =>
       userAgent.includes(pattern)
     );

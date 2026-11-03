@@ -72,6 +72,7 @@ import {
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 import { createModuleLogger } from '@/lib/telemetry';
+import { revalidatePublicCompany } from '@/server/catalog/public/public-model-revalidate.server';
 
 const logger = createModuleLogger('agency-profile.service');
 
@@ -379,6 +380,8 @@ export async function withdrawAgencyProfile(
       transaction.delete(channelsRef);
       transaction.delete(profileRef);
     });
+    // ADR-923 §22 Υ8: η σελίδα προμηθευτή διαβάζει λογότυπο και περιοχή από εδώ, και η απόσυρση δεν περιμένει το παράθυρο.
+    revalidatePublicCompany(companyId);
     return { kind: 'withdrawn' };
   } catch (error) {
     logger.error('[AGENCY-PROFILE] Η απόσυρση απέτυχε', {

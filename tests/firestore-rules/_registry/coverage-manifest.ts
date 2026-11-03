@@ -241,6 +241,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...publicWorldMatrix(),
   },
   {
+    // ADR-923 §5.13 Ε4 · Δ1 — Το δημόσιο έγγραφο μοντέλου. Ίδιος πίνακας με το `public_listings`.
+    collection: 'public_catalog_models',
+    pattern: 'public_world',
+    testFile: 'tests/firestore-rules/suites/public-catalog-models.rules.test.ts',
+    ...publicWorldMatrix(),
+  },
+  {
     // ADR-827 §9 — Η ΒΙΤΡΙΝΑ ΤΟΥ ΓΡΑΦΕΙΟΥ. **Ίδιος πίνακας με το `public_listings`,
     // ΔΙΑΦΟΡΕΤΙΚΟ ερώτημα ασφαλείας** — και η διαφορά είναι ο λόγος που υπάρχει
     // ξεχωριστή σουίτα αντί για δεύτερη γραμμή δίπλα στην προηγούμενη.
@@ -693,6 +700,12 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...serverWrittenTenantInternalMatrix(),
   },
   {
+    collection: 'catalog_supplier_profiles',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-supplier-profiles.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
     collection: 'catalog_settings',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/catalog-settings.rules.test.ts',
@@ -764,6 +777,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'catalog_pricing_slots',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-pricing-slots.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-923 §5.13 Δ3 — το outbox της δημόσιας προβολής: αριθμός, γράφει και αδειάζει μόνο ο διακομιστής.
+    collection: 'catalog_public_outbox',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-public-outbox.rules.test.ts',
     ...denyAllMatrix(),
   },
   {
@@ -2057,6 +2077,32 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'ownership_verifications',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/ownership-verifications.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  // ─── ΕΛΕΓΧΟΣ ΠΡΟΜΗΘΕΥΤΗ (ADR-923 §5.13 Ε1α) ────────────────────────────────
+  // Γραφή εδώ = αυτο-έγκριση ως επιβεβαιωμένος προμηθευτής. Ανάγνωση = αποτύπωμα ΑΦΜ.
+  {
+    collection: 'supplier_verifications',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/supplier-verifications.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'public_supplier_profiles',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/public-supplier-profiles.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'supplier_brand_claims',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/supplier-brand-claims.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'public_supplier_showcases',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/public-supplier-showcases.rules.test.ts',
     ...denyAllMatrix(),
   },
   {

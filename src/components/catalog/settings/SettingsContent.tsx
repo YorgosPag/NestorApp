@@ -10,7 +10,7 @@
  * @module components/catalog/settings/SettingsContent
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { useCatalogLocaleUsage } from '@/hooks/catalog/useCatalogLocaleUsage';
 import { useCatalogOptimistic } from '@/hooks/catalog/useCatalogOptimistic';
@@ -29,9 +29,12 @@ import { EditorFooter } from '../shared/EditorFooter';
 import { RecomputePanel, maintenanceRecomputeNeeded } from '../shared/RecomputePanel';
 import { useCatalogCanManage, useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
 import { useDefinitionDraft } from '../shared/use-definition-draft';
-import { useUnsavedGuard } from '../shared/use-unsaved-guard';
+import { useDraftUnsavedGuard } from '../shared/use-unsaved-guard';
 import { SettingsMatrix } from './SettingsMatrix';
 import { settingsChangeAffectsCompleteness, toggleChannelLocale } from './settings-model';
+import { SupplierBrandClaimsPanel } from './SupplierBrandClaimsPanel';
+import { SupplierProfilePanel } from './SupplierProfilePanel';
+import { SupplierVerificationPanel } from './SupplierVerificationPanel';
 
 // 🔴 ADR-744 §18 · ADR-923 §5.10.4 Β7 — το `catalog` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ωμά κλειδιά στο πρώτο καρέ.
 // Καταχωρείται από client component (όχι από το `page.tsx`, που είναι Server Component).
@@ -63,9 +66,7 @@ export function SettingsContent() {
   const usage = useCatalogLocaleUsage();
   const recompute = useCatalogRecompute();
   const canManage = useCatalogCanManage();
-  const unsaved = useUnsavedGuard();
-  const { reportDirty } = unsaved;
-  useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
+  const unsaved = useDraftUnsavedGuard(editor.unsaved);
 
   const save = () => {
     if (!id) return;
@@ -94,6 +95,9 @@ export function SettingsContent() {
         <RecomputePanel recompute={recompute} familyId={null} needed={maintenanceRecomputeNeeded(recompute)}
           prompt={t(recompute.needed ? 'settings.recomputePrompt' : 'settings.recomputeMaintenance')} />
         <EditorFooter editor={editor} issues={issues} authority="schema" onSave={save} />
+        <SupplierVerificationPanel />
+        <SupplierProfilePanel />
+        <SupplierBrandClaimsPanel />
       </section>
       {unsaved.dialog}
     </CatalogPageFrame>

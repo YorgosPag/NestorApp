@@ -73,7 +73,6 @@ import { permanentRedirect } from 'next/navigation';
 import { AgencyProfileContent } from '@/components/mandate/AgencyProfileContent';
 import { agencyProfileRoute } from '@/components/mandate/agency-directory-route';
 import { JsonLdScript } from '@/components/seo/JsonLdScript';
-import { canonicalShowcaseSegment } from '@/lib/agency/showcase-canonical-segment';
 import { throwBackendUnavailable } from '@/lib/errors/backend-unavailable';
 import { showcaseStructuredData } from '@/lib/agency/showcase-structured-data';
 import { athensClockAt } from '@/lib/calendar/weekly-hours';
@@ -81,14 +80,13 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { publicUrl } from '@/lib/http/public-origin';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import type { JsonLdValue } from '@/lib/seo/json-ld';
-import { resolveAlias, type AliasResolution } from '@/lib/workspace/alias-registry';
+import { resolveAlias } from '@/lib/workspace/alias-registry';
+import { publishedCanonicalSegment } from '@/lib/workspace/published-canonical-segment';
 import { createModuleLogger } from '@/lib/telemetry';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import type { PublicShowcaseLookup } from '@/types/agency-profile';
 
 const logger = createModuleLogger('pro-alias-page');
-
-type FoundAlias = Extract<AliasResolution, { readonly outcome: 'found' }>;
 
 /** **Η μία ανάγνωση της βιτρίνας** στον διακομιστή — βλάβη ⇒ `unavailable`, ποτέ εξαίρεση. */
 async function readShowcaseOf(companyId: string): Promise<PublicShowcaseLookup> {
@@ -123,22 +121,6 @@ function structuredDataFor(lookup: PublicShowcaseLookup): JsonLdValue | null {
   }
 }
 
-/**
- * **Πού πρέπει να ζει αυτή η σελίδα;** — I/O μόνο όταν χρειάζεται: η αυθεντία ρωτιέται
- * **μόνο** για διεύθυνση-ταυτότητα με δημοσιευμένο ψευδώνυμο.
- */
-async function canonicalSegmentFor(
-  requested: FoundAlias,
-  lookup: PublicShowcaseLookup,
-): Promise<string | null> {
-  const publishedAlias = lookup.outcome === 'found' ? lookup.showcase.alias : null;
-  const publishedAliasResolution =
-    requested.form === 'identity' && publishedAlias !== null
-      ? await resolveAlias(publishedAlias).catch(() => null)
-      : null;
-  return canonicalShowcaseSegment({ requested, publishedAlias, publishedAliasResolution });
-}
-
 interface AgencyProfilePageProps {
   readonly params: Promise<{ readonly alias: string }>;
 }
@@ -160,7 +142,7 @@ export default async function AgencyProfilePage({ params }: AgencyProfilePagePro
   const lookup = await readShowcaseOf(resolution.companyId);
 
   // ⛔ ΕΚΤΟΣ `try` — δες την κεφαλίδα. Η σύγκριση με το `alias` φυλά από βρόχο.
-  const canonical = await canonicalSegmentFor(resolution, lookup);
+  const canonical = await publishedCanonicalSegment(resolution, lookup.outcome === 'found' ? lookup.showcase.alias : null);
   if (canonical !== null && canonical !== alias) {
     permanentRedirect(agencyProfileRoute(canonical));
   }

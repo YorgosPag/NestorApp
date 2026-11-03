@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { CATALOG_LIMITS } from '../../vocabulary/catalog-limits';
 import { entityIdSchema, expectedRevisionSchema } from './common.schema';
 import { catalogSettingsSchema, createProductBodySchema, productDefinitionSchema } from './product.schema';
+import { supplierProfileSchema } from './supplier-profile.schema';
 
 /** Δημιουργία SKU με **προ-γεννημένο** id (αισιόδοξη οθόνη) — ο διακομιστής το ελέγχει, δεν το εμπιστεύεται. */
 export const createProductRequestSchema = createProductBodySchema.extend({ id: entityIdSchema.optional() });
@@ -35,6 +36,12 @@ export const variantBatchBodySchema = z.object({
 export const saveCatalogSettingsBodySchema = z.object({
   expectedRevision: z.number().int().min(0),
   definition: catalogSettingsSchema,
+});
+
+/** Προφίλ παρόχου (§22 Υ8), ίδιο σχήμα singleton με τις ρυθμίσεις. */
+export const saveSupplierProfileBodySchema = z.object({
+  expectedRevision: z.number().int().min(0),
+  definition: supplierProfileSchema,
 });
 
 /** Μία σελίδα της εργασίας επανυπολογισμού παραγώγων. */

@@ -206,6 +206,32 @@ const BOUNDARIES = [
     remedy: '«propertyHandoverProtocolFromDocument(raw, id)»',
   },
   {
+    // 🛒 ADR-923 §5.13 Σ4 — ΤΟ ΔΗΜΟΣΙΟ ΕΓΓΡΑΦΟ ΜΟΝΤΕΛΟΥ. Το διαβάζει ανώνυμος με `read: if true`, και το σχήμα είναι κλειστό
+    //    ώστε κανένα ποσό να μη φτάσει ποτέ στην οθόνη. Ωμό `as` θα το παρέκαμπτε. Αναγνώστες: ο αναγνώστης της βιτρίνας, ο γραφέας.
+    adr: 'ADR-923 §5.13 Σ4',
+    typeName: 'PublicCatalogModel',
+    custodian: 'src/subapps/catalog/public/public-catalog-from-document.ts',
+    module: 'public-catalog-from-document',
+    remedy: '«publicCatalogModelFromDocument(raw, id)»',
+  },
+  {
+    // 🛒 ADR-923 §5.13 Δ6 — Η ΒΙΤΡΙΝΑ ΠΡΟΜΗΘΕΥΤΗ. Η παρουσία της είναι η πύλη κάθε δημόσιας σελίδας του, άρα χαλασμένο έγγραφο
+    //    πρέπει να κλείνει, όχι να ανοίγει με μισά στοιχεία.
+    adr: 'ADR-923 §5.13 Δ6',
+    typeName: 'SupplierShowcaseRecord',
+    custodian: 'src/subapps/catalog/public/supplier-showcase-from-document.ts',
+    module: 'supplier-showcase-from-document',
+    remedy: '«supplierShowcaseFromDocument(raw, companyId)»',
+  },
+  {
+    // 🛒 ADR-923 §22 Υ8 — Το δημόσιο προφίλ παρόχου: ίδιο κλειστό σχήμα, ίδιο διακύβευμα με το δημόσιο μοντέλο.
+    adr: 'ADR-923 §22 Υ8',
+    typeName: 'PublicSupplierProfile',
+    custodian: 'src/subapps/catalog/public/public-supplier-profile.ts',
+    module: 'public-supplier-profile',
+    remedy: '«publicSupplierProfileFromDocument(raw, companyId)»',
+  },
+  {
     // 🔴 ADR-862 Φ0 Β1 — Η ΠΕΜΠΤΗ ΓΡΑΜΜΗ, ΚΑΙ Η ΠΡΩΤΗ ΠΟΥ ΦΥΛΑΕΙ **ΟΡΑΤΟΤΗΤΑ**, ΟΧΙ ΟΘΟΝΗ.
     //
     // Τα τέσσερα προηγούμενα σύνορα φυλάνε **οθόνη**: πεδίο που λείπει ⇒ λευκή σελίδα.
@@ -312,6 +338,14 @@ const BOUNDARIES = [
     custodian: 'src/lib/stay/stay-calendar-from-document.ts',
     module: 'stay-calendar-from-document',
     remedy: '«stayChannelsFromDocument(raw, propertyId)»',
+  },
+  {
+    // ADR-923 §5.13 Σ2: το διαβάζει ανώνυμος με `read: if true`, ίδιο διακύβευμα με τη βλάβη της 31/08.
+    adr: 'ADR-923 §5.13',
+    typeName: 'PublicCatalogModel',
+    custodian: 'src/subapps/catalog/public/public-catalog-from-document.ts',
+    module: 'public-catalog-from-document',
+    remedy: '«publicCatalogModelFromDocument(raw, id)»',
   },
 ];
 

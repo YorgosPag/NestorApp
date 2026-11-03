@@ -165,6 +165,24 @@ export function parseGemiCompany(
   });
 }
 
+/**
+ * Το σώμα του `GET /companies?afm=` (ADR-923 §5.13 Ε1β) — **μόνο** οι αριθμοί ΓΕΜΗ.
+ *
+ * ⛔ Το `afm` των αποτελεσμάτων δεν διαβάζεται, ούτε τα υπόλοιπα πεδία του `Company`.
+ * 🔴 `null` όταν λείπουν αποτελέσματα από τη σελίδα ή ένα δεν έχει αριθμό: «δεν είδαμε όλη την απάντηση» δεν είναι «δεν ταιριάζει».
+ */
+export function parseGemiTaxSearch(payload: unknown): readonly string[] | null {
+  if (!isLoose(payload) || !isLoose(payload.searchMetadata) || !Array.isArray(payload.searchResults)) return null;
+  if (payload.searchMetadata.totalCount !== payload.searchResults.length) return null;
+  const numbers: string[] = [];
+  for (const entry of payload.searchResults) {
+    const number = isLoose(entry) ? canonicalGemiNumber(numberLike(entry.arGemi)) : null;
+    if (number === null) return null;
+    numbers.push(number);
+  }
+  return numbers;
+}
+
 /** Το αποθηκευμένο αντίγραφο — `null` αν δεν είναι **ακριβώς** δικό μας σχήμα. */
 export function parseStoredRegistryRecord(raw: unknown): RegistryCompanyRecord | null {
   if (!isLoose(raw) || raw.source !== GEMI_REGISTRY_SOURCE) return null;

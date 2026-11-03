@@ -61,6 +61,8 @@ const CATALOG_COLLECTIONS = [
   'COLLECTIONS.CATALOG_PRICING_SLOTS',
   // Φάση 3δ (ADR-923 §5.11 «3δ» Ζ · ADR-905) — τα σήματα όψεων τιμών: γράφει ΜΟΝΟ ο γραφέας τους, καλεσμένος από τη μηχανή
   'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS',
+  // Φάση 6β (ADR-923 §5.13 Δ3) — το outbox της δημόσιας προβολής: το γράφει ΜΟΝΟ ο γραφέας του, καλεσμένος από τη μηχανή
+  'COLLECTIONS.CATALOG_PUBLIC_OUTBOX',
   // Φάση 4 (ADR-923 §5.5.1) — ο αγωγός εισαγωγής
   'COLLECTIONS.CATALOG_IMPORT_PROFILES',
   'COLLECTIONS.CATALOG_IMPORT_BATCHES',
@@ -70,6 +72,8 @@ const CATALOG_COLLECTIONS = [
   'COLLECTIONS.CATALOG_PUBLICATION_RECIPES',
   // Φάση 6α (ADR-923 §5.12) — οι κανόνες ορατότητας
   'COLLECTIONS.CATALOG_VISIBILITY_RULES',
+  // Φάση 6β (ADR-923 §22 Υ8) — το προφίλ παρόχου
+  'COLLECTIONS.CATALOG_SUPPLIER_PROFILES',
 ];
 /**
  * Φάση 6α (ADR-923 §5.12 Σ1) — οι τρεις συλλογές της σχέσης προμήθειας. ⚠️ ΔΕΝ είναι είδη της μηχανής: η σχέση είναι
@@ -81,16 +85,18 @@ const SUPPLY_COLLECTIONS = ['COLLECTIONS.SUPPLY_RELATIONSHIPS', 'COLLECTIONS.SUP
 const SUPPLY_ROOT = 'src/server/supply-relationships/';
 /** Ο ΕΝΑΣ αναγνώστης ξένου καταλόγου: όποιος άλλος ανοίξει τη σκοπιά, παρακάμπτει τη σχέση. */
 const FOREIGN_READER = `${SUPPLY_ROOT}supply-foreign-quote.server.ts`;
+/** Ο αδειαστής της βιτρίνας διαβάζει τον κατάλογο χωρίς δρώντα: ο αγοραστής δεν υπάρχει, η ορατότητα κρίνεται για ανώνυμο (§5.13). */
+const PUBLIC_SNAPSHOT_READER = 'src/server/catalog/public/public-model-snapshot.server.ts';
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
   'catalog_attributes', 'catalog_attribute_groups', 'catalog_measurement_families', 'catalog_categories', 'catalog_families',
   'catalog_product_models', 'catalog_products', 'catalog_assets', 'catalog_settings', 'catalog_unique_values',
   'catalog_price_lists', 'catalog_price_list_versions', 'catalog_price_list_lines', 'catalog_discount_groups',
   'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
-  'catalog_pricing_view_signals',
+  'catalog_pricing_view_signals', 'catalog_public_outbox',
   'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals', 'catalog_import_page_readings',
   'catalog_publication_recipes', 'catalog_publication_runs',
-  'catalog_visibility_rules',
+  'catalog_visibility_rules', 'catalog_supplier_profiles',
   'supply_relationships', 'supply_invitations', 'supply_request_links',
 ];
 
@@ -158,9 +164,10 @@ const WIRING = {
   [`${SUPPLY_ROOT}supply-invitation-redeem.server.ts`]: ['redeemInvitation(', 'stageSupplyRelationship('],
   // Η ξένη ανάγνωση ρωτά ΠΡΩΤΑ τη σχέση, μέσα στη συναλλαγή, και αφήνει να φύγει ΜΟΝΟ η προβολή (ADR-923 §5.12 Σ4 · Δ5).
   [FOREIGN_READER]: ['runForeignCatalogRead(', 'readActiveSupplyRelationshipInTx(', 'foreignOutcomeOf('],
+  [PUBLIC_SNAPSHOT_READER]: ['runForeignCatalogRead('],
   // Οι υποδοχές (όπως οι κρατήσεις) δεν είναι είδη: ευρετήριο του γραφέα, χωρίς ιστορικό.
   [KINDS]: CATALOG_COLLECTIONS.filter(
-    (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS'].includes(key),
+    (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS', 'COLLECTIONS.CATALOG_PUBLIC_OUTBOX'].includes(key),
   ),
 };
 
@@ -216,7 +223,7 @@ function findingsIn(sf, rel) {
     else if (!rel.startsWith(SUPPLY_ROOT) && isWriteTo(SUPPLY_COLLECTIONS, node, refsByKey)) findings.push(classify(sf, node, rel, STATES.SUPPLY_WRITE_OUTSIDE));
     else if (Object.entries(DOC_REF_FUNCTIONS).some(([fn, users]) => ast.isCallTo(node, fn) && !users.has(rel))) {
       findings.push(classify(sf, node, rel, STATES.DOC_REF_OUTSIDE));
-    } else if (ast.isCallTo(node, 'runForeignCatalogRead') && rel !== FOREIGN_READER) {
+    } else if (ast.isCallTo(node, 'runForeignCatalogRead') && rel !== FOREIGN_READER && rel !== PUBLIC_SNAPSHOT_READER) {
       findings.push(classify(sf, node, rel, STATES.FOREIGN_READ_OUTSIDE));
     } else if (ast.isCallTo(node, 'stageDerived') && !DERIVED_USERS.has(rel)) {
       findings.push(classify(sf, node, rel, STATES.DERIVED_OUTSIDE));

@@ -43,9 +43,14 @@ import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { readConfiguredValue, type EnvironmentSource } from '@/lib/environment/environment-audit';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { RegistryLookupVerdict, RegistryUnavailableReason } from '@/types/company-registry';
+import { isValidGreekVat, normalizeVat } from '@/lib/validation/greek-vat-number';
+import type {
+  RegistryLookupVerdict,
+  RegistryTaxSearchVerdict,
+  RegistryUnavailableReason,
+} from '@/types/company-registry';
 
-import { parseGemiCompany, parseGemiStatusCatalog, type StatusCatalog } from './gemi-opendata-parse';
+import { parseGemiCompany, parseGemiStatusCatalog, parseGemiTaxSearch, type StatusCatalog } from './gemi-opendata-parse';
 
 const logger = createModuleLogger('gemi-opendata.client');
 
@@ -61,6 +66,9 @@ const TIMEOUT_MS = Number.parseInt(process.env.GEMI_OPENDATA_TIMEOUT_MS || '8000
  * σχήμα διαδρομής Storage για το SSoT ratchet (`storage-path-construction`), και εδώ δεν είναι.
  */
 const COMPANY_ENDPOINT = '/companies';
+
+/** Το ανώτατο `resultsSize` του OpenAPI. Περισσότερα από τόσα ⇒ ο αναλυτής αρνείται, δεν κόβει. */
+const TAX_SEARCH_PAGE_SIZE = 200;
 
 const CACHE_PREFIX = 'gemi-registry:v1';
 const COMPANY_FOUND_TTL_MS = 5 * 60_000;
@@ -80,6 +88,11 @@ const LIVE_TRANSPORT: RegistryTransport = {
   env: process.env,
 };
 
+/** Υπάρχει κλειδί; Η μόνη απάντηση που κρίνει τον δρόμο εγγράφου, χωρίς κλήση στο μητρώο (ADR-923 §5.13 Ε1γ). */
+export function isRegistryConfigured(env: EnvironmentSource = LIVE_TRANSPORT.env): boolean {
+  return readConfiguredValue(env, API_KEY_ENV) !== null;
+}
+
 type Fetched =
   | { readonly kind: 'ok'; readonly body: unknown }
   | { readonly kind: 'status'; readonly status: number }
@@ -95,7 +108,12 @@ const companyCache = createVerdictCache<RegistryLookupVerdict>({
   onUnstored: (key) => logger.info('ΓΕΜΗ: «δεν μάθαμε» — δεν αποθηκεύεται', { data: { key } }),
 });
 
-async function getJson(path: string, apiKey: string, transport: RegistryTransport): Promise<Fetched> {
+async function getJson(
+  path: string,
+  apiKey: string,
+  transport: RegistryTransport,
+  logFailureDetail = true,
+): Promise<Fetched> {
   try {
     const response = await transport.fetchImpl(`${BASE_URL}${path}`, {
       method: 'GET',
@@ -107,7 +125,7 @@ async function getJson(path: string, apiKey: string, transport: RegistryTranspor
     const body: unknown = await response.json().catch(() => undefined);
     return { kind: 'ok', body };
   } catch (error) {
-    logger.warn('ΓΕΜΗ — δεν απάντησε', { error: getErrorMessage(error) });
+    logger.warn('ΓΕΜΗ — δεν απάντησε', logFailureDetail ? { error: getErrorMessage(error) } : {});
     return { kind: 'network' };
   }
 }
@@ -166,6 +184,31 @@ export function lookupRegistryCompany(
   return companyCache.lookup(`${CACHE_PREFIX}|company|${canonical}`, () =>
     fetchRegistryCompany(canonical, transport),
   );
+}
+
+/**
+ * **Ποιοι Αρ. ΓΕΜΗ έχουν αυτό το ΑΦΜ;** (ADR-923 §5.13 Ε1β) — η μόνη κλήση που στέλνει ΑΦΜ στο μητρώο.
+ *
+ * 🔒 Το ΑΦΜ είναι στη διεύθυνση, άρα **καμία** μνήμη και **καμία** λεπτομέρεια σφάλματος στο log, όπου ένα
+ * μήνυμα δικτύου θα μπορούσε να το μεταφέρει. Κάθε κλήση αντιστοιχεί σε ανθρώπινη πράξη, όπως το {@link lookupRegistryCompany}.
+ * ⚠️ 404 και 400 εδώ **δεν** σημαίνουν «δεν υπάρχει»: η άδεια απάντηση είναι `200` με `searchResults: []`.
+ */
+export async function lookupRegistryNumbersByTaxId(
+  taxId: string,
+  transport: RegistryTransport = LIVE_TRANSPORT,
+): Promise<RegistryTaxSearchVerdict> {
+  if (!isValidGreekVat(taxId)) return { kind: 'invalid-tax-id' };
+  const apiKey = readConfiguredValue(transport.env, API_KEY_ENV);
+  if (apiKey === null) return { kind: 'unavailable', reason: 'not-configured' };
+
+  const query = new URLSearchParams({ afm: normalizeVat(taxId), resultsSize: String(TAX_SEARCH_PAGE_SIZE) });
+  const fetched = await getJson(`${COMPANY_ENDPOINT}?${query.toString()}`, apiKey, transport, false);
+  if (fetched.kind === 'network') return { kind: 'unavailable', reason: 'network' };
+  if (fetched.kind === 'status') return { kind: 'unavailable', reason: unavailableReasonOf(fetched.status) };
+
+  const registrationNumbers = parseGemiTaxSearch(fetched.body);
+  if (registrationNumbers === null) return { kind: 'unavailable', reason: 'malformed-response' };
+  return { kind: 'results', registrationNumbers };
 }
 
 /** Αδειάζει **όλη** τη μνήμη του ΓΕΜΗ (επιχειρήσεις + κατάλογο καταστάσεων) — για απομόνωση αγκυρών. */

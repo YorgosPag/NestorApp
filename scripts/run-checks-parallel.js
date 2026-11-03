@@ -1224,6 +1224,12 @@ if (!process.env.SKIP_TOUR_PRESENCE_AUTHORITY)
 if (!process.env.SKIP_LISTING_TERRAIN_AUTHORITY)
   addThread('3.105', 'Listing terrain authority', 'scripts/check-listing-terrain-authority.js', ['--index']);
 
+// CHECK 3.112 (ADR-923 §5.13) — ο ένας γραφέας της δημόσιας βιτρίνας. «Αγγίζει κάποιος το δημόσιο έγγραφο, το outbox ή το
+// ράφι του έξω από τους δηλωμένους κατόχους;» Οι κανόνες κλείνουν τον πελάτη, ΟΧΙ το Admin SDK. Λίστα: `.public-catalog-authority.json`.
+// AST, ZERO-TOL, καμία baseline. 🔴 ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: νέος γραφέας γεννιέται οπουδήποτε.
+if (!process.env.SKIP_PUBLIC_CATALOG_AUTHORITY)
+  addThread('3.112', 'Public catalog authority', 'scripts/check-public-catalog-authority.js', ['--index']);
+
 // CHECK 3.106 (ADR-923 §5.9) — ο ένας γραφέας του σχήματος καταλόγου. «Γράφει κάποιος ιδιότητα · ομάδα · οικογένεια
 // μέτρησης · κατηγορία · οικογένεια ΕΞΩ από τη μηχανή `src/server/catalog/catalog-store.server.ts` — δηλαδή χωρίς
 // επικύρωση απέναντι στη βιβλιοθήκη, χωρίς CAS, χωρίς ίχνος;» Οι κανόνες κλείνουν τον πελάτη, όχι τον Admin SDK.

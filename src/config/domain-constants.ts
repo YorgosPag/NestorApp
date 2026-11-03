@@ -162,6 +162,10 @@ export const ENTITY_TYPES = {
   CATALOG_ASSET: 'catalog_asset',
   /** Το αρχείο-πηγή μιας παρτίδας εισαγωγής καταλόγου (`catalog_import_batches`): Excel · CSV · PDF (ADR-923 §5.5.1). */
   CATALOG_IMPORT_BATCH: 'catalog_import_batch',
+  /** Το έγγραφο ελέγχου προμηθευτή (`supplier_verifications`): Βεβαίωση Μητρώου ΑΑΔΕ, ADR-923 §5.13 Ε1γ. */
+  SUPPLIER_VERIFICATION: 'supplier_verification',
+  /** Η κατοχή μάρκας (`supplier_brand_claims`, ADR-923 §16). Η απόδειξη ζει στο ίδιο δοχείο με το έγγραφο ελέγχου. */
+  SUPPLIER_BRAND_CLAIM: 'supplier_brand_claim',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];

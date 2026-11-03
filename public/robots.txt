@@ -1,7 +1,9 @@
-# Pagonis — Private enterprise application
-# No pages should be indexed by search engines
+# Nestor: private enterprise application, with one public section.
+# Only the supplier showcase may be indexed (ADR-923 §5.13 E2). The middleware enforces the same rule.
 
 User-agent: *
+Allow: /suppliers/
+Allow: /_next/static/
 Disallow: /
 
 # Explicitly block aggressive crawlers
@@ -26,4 +28,4 @@ Disallow: /
 User-agent: ByteSpider
 Disallow: /
 
-# No sitemap — private application
+Sitemap: https://nestorconstruct.gr/suppliers/sitemap.xml

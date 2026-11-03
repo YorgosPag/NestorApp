@@ -111,6 +111,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/admin/landing-heroes', labelKey: 'landingHeroes', icon: ImageIcon, superAdminOnly: true },
       // ADR-900 §3.8 — ποιος αποδεδειγμένα κατέχει τι: της πλατφόρμας, ποτέ ενός χώρου.
       { href: '/admin/ownership-verifications', labelKey: 'ownershipVerifications', icon: ShieldCheck, superAdminOnly: true },
+      { href: '/admin/supplier-verifications', labelKey: 'supplierVerifications', icon: ShieldCheck, superAdminOnly: true },
     ],
   },
   {

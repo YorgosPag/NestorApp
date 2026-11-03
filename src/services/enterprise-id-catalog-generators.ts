@@ -62,6 +62,16 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
     return this.mintDeterministicV4Id(P.CATALOG_ASSET, seedOf('asset', companyId, code));
   }
 
+  /** Το προφίλ του παρόχου — **ένα** έγγραφο ανά χώρο (ADR-923 §22 Υ8). */
+  generateDeterministicCatalogSupplierProfileId(companyId: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_SUPPLIER_PROFILE, `catalog:supplier-profile:${companyId}`);
+  }
+
+  /** Ένα έργο του portfolio: καμία φυσική ταυτότητα, δύο έργα μπορούν να έχουν το ίδιο όνομα. */
+  generateCatalogPortfolioProjectId(): string {
+    return this.generateId(P.CATALOG_PORTFOLIO_PROJECT).id;
+  }
+
   /** Οι ρυθμίσεις του καταλόγου — **ένα** έγγραφο ανά χώρο (singleton). */
   generateDeterministicCatalogSettingsId(companyId: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_SETTINGS, `catalog:settings:${companyId}`);
@@ -128,6 +138,11 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
     return this.mintDeterministicV4Id(P.CATALOG_PRICING_VIEW_SIGNAL, seedOf('pricing-view-signal', companyId, viewKey));
   }
 
+  /** Outbox δημόσιας προβολής (ADR-923 §5.13 Δ3): ένα έγγραφο ανά `{ companyId, scope }`, γραφέας και αδειαστής υπολογίζουν το id. */
+  generateDeterministicCatalogPublicOutboxId(companyId: string, scopeKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PUBLIC_OUTBOX, seedOf('public-outbox', companyId, scopeKey));
+  }
+
   // ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή ──
 
   generateDeterministicCatalogImportProfileId(companyId: string, code: string): string {
@@ -164,6 +179,11 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
   }
 
   /** **Ένας** σύνδεσμος ανά χώρο, δομικά: η ανανέωση ανεβάζει τη γενιά του, δεν γεννά δεύτερο (Σ2). */
+  /** Η κατοχή μάρκας: **ένα** έγγραφο ανά (χώρος, μάρκα), άρα η ανανέωση ξαναγράφει το ίδιο (ADR-923 §16). */
+  generateDeterministicSupplierBrandClaimId(companyId: string, brandKey: string): string {
+    return this.mintDeterministicV4Id(P.SUPPLIER_BRAND_CLAIM, seedOf('supplier-brand-claim', companyId, brandKey));
+  }
+
   generateDeterministicSupplyRequestLinkId(companyId: string): string {
     return this.mintDeterministicV4Id(P.SUPPLY_REQUEST_LINK, seedOf('supply-request-link', companyId));
   }

@@ -431,6 +431,9 @@
   "AdminSetup": [
     "admin"
   ],
+  "AdminSupplierVerifications": [
+    "admin"
+  ],
   "Buildings": [
     "accounting",
     "accounting-setup",

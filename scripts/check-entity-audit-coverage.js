@@ -106,6 +106,7 @@ const TRACKED_COLLECTION_KEYS = new Set([
   'CATALOG_PRODUCTS',
   'CATALOG_ASSETS',
   'CATALOG_SETTINGS',
+  'CATALOG_SUPPLIER_PROFILES',
   // ADR-344 Phase 7.B — DXF text templates (audit entityType: 'text_template')
   'TEXT_TEMPLATES',
   // ADR-363 Phase 1D-C — BIM wall entities (audit via wall-audit-client.ts → /api/audit-trail/record)

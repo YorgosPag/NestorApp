@@ -25,12 +25,16 @@ import 'server-only';
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
+import { refreshSupplierShowcaseStanding } from '@/server/catalog/supplier-showcase.server';
 import { repairCompanyDocument } from '@/services/company-document.service';
 import { refreshAgencyNameOnListings } from '@/services/listings/agency-name-refresh';
 import {
   refreshShowcaseLegalIdentity,
   type LegalIdentityRefresh,
 } from '@/services/mandate/showcase-legal-identity-custody';
+
+/** Η ανανέωση χωρίς ανθρώπινη πράξη: ο καλών ξέρει τον οργανισμό, όχι ποιος προκάλεσε την αλλαγή. */
+const SYSTEM_ACTOR = 'system';
 
 export interface CompanyRenameOutcome {
   readonly name: string;
@@ -52,6 +56,7 @@ export async function propagateCompanyRename(
   actorUid: string,
 ): Promise<CompanyRenameOutcome> {
   const repair = await repairCompanyDocument(companyId, actorUid);
+  await refreshSupplierShowcaseStanding(adminDb, companyId, actorUid);
   const showcase = await refreshShowcaseLegalIdentity(adminDb, companyId);
   // 🔑 Αγγελίες **μία** φορά, και μόνο αν άλλαξε κάποιο από τα δύο ονόματα που μπορεί να λένε.
   if (!repair.wasRepaired && !publicNameChanged(showcase)) return { ...repair, showcase, republished: null };
@@ -67,6 +72,7 @@ export async function reconcileShowcaseLegalIdentity(
   adminDb: AdminFirestore,
   companyId: string,
 ): Promise<LegalIdentityRefresh> {
+  await refreshSupplierShowcaseStanding(adminDb, companyId, SYSTEM_ACTOR);
   const showcase = await refreshShowcaseLegalIdentity(adminDb, companyId);
   if (publicNameChanged(showcase)) {
     await refreshAgencyNameOnListings(adminDb, companyId, 'legal-identity-refreshed');

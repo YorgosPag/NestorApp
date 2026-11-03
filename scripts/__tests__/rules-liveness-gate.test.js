@@ -113,10 +113,12 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // 2026-11-01: +2 (ADR-923 Φ4 Ε6 — `catalog_import_page_readings`: read/write `if false`) ⇒ 845.
   // +2 (ADR-923 Φ6α — `catalog_visibility_rules`: read/write `if false`) ⇒ 847.
   // +6 (ADR-923 §5.12 — `supply_relationships` · `supply_invitations` · `supply_request_links`: read/write `if false`) ⇒ 853.
-  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (853 + 72 allow)', () => {
+  // 2026-11-02: +6 (ADR-923 §5.13 — η δημόσια βιτρίνα, χωρίς ενημέρωση αυτής της άγκυρας) και +3 (§22 Υ8 — `catalog_supplier_profiles` read/write ·
+  // `public_supplier_profiles` read, write) ⇒ 862. +1 (§16 — `supplier_brand_claims`) ⇒ 863.
+  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (863 + 72 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
-    expect(result.perFile.map((f) => f.allows)).toEqual([853, 72]);
+    expect(result.perFile.map((f) => f.allows)).toEqual([863, 72]);
     expect(result.tally[GATE_STATES.COVERED]).toBeGreaterThan(600);
     expect(result.claimName).toBe('revokedSignIns');
   });

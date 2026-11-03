@@ -25,6 +25,9 @@ export const generateDeterministicCatalogProductModelId = (companyId: string, co
 export const generateCatalogProductId = () => enterpriseIdService.generateCatalogProductId();
 export const generateDeterministicCatalogAssetId = (companyId: string, code: string) =>
   enterpriseIdService.generateDeterministicCatalogAssetId(companyId, code);
+export const generateDeterministicCatalogSupplierProfileId = (companyId: string) =>
+  enterpriseIdService.generateDeterministicCatalogSupplierProfileId(companyId);
+export const generateCatalogPortfolioProjectId = () => enterpriseIdService.generateCatalogPortfolioProjectId();
 export const generateDeterministicCatalogSettingsId = (companyId: string) =>
   enterpriseIdService.generateDeterministicCatalogSettingsId(companyId);
 export const generateDeterministicCatalogUniqueValueId = (companyId: string, attributeId: string, uniqueKey: string) =>
@@ -52,6 +55,8 @@ export const generateDeterministicCatalogPricingSlotId = (companyId: string, slo
   enterpriseIdService.generateDeterministicCatalogPricingSlotId(companyId, slotKey);
 export const generateDeterministicCatalogPricingViewSignalId = (companyId: string, viewKey: string) =>
   enterpriseIdService.generateDeterministicCatalogPricingViewSignalId(companyId, viewKey);
+export const generateDeterministicCatalogPublicOutboxId = (companyId: string, scopeKey: string) =>
+  enterpriseIdService.generateDeterministicCatalogPublicOutboxId(companyId, scopeKey);
 
 // Εισαγωγή (ADR-923 §5.5.1): ντετερμινιστικά από φυσικό κλειδί
 export const generateDeterministicCatalogImportProfileId = (companyId: string, code: string) =>
@@ -67,5 +72,7 @@ export const generateDeterministicCatalogVisibilityRuleId = (companyId: string, 
 export const generateDeterministicSupplyRelationshipId = (supplierCompanyId: string, buyerCompanyId: string) =>
   enterpriseIdService.generateDeterministicSupplyRelationshipId(supplierCompanyId, buyerCompanyId);
 export const generateSupplyInvitationId = () => enterpriseIdService.generateSupplyInvitationId();
+export const generateDeterministicSupplierBrandClaimId = (companyId: string, brandKey: string) =>
+  enterpriseIdService.generateDeterministicSupplierBrandClaimId(companyId, brandKey);
 export const generateDeterministicSupplyRequestLinkId = (companyId: string) =>
   enterpriseIdService.generateDeterministicSupplyRequestLinkId(companyId);

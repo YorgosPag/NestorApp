@@ -1118,6 +1118,19 @@ export const COLLECTIONS = {
    * διακομιστή· ο πελάτης ακούει εδώ πότε να ξαναρωτήσει. Γράφει ΜΟΝΟ η μηχανή του καταλόγου. IDs via cpvs_*.
    */
   CATALOG_PRICING_VIEW_SIGNALS: process.env.NEXT_PUBLIC_CATALOG_PRICING_VIEW_SIGNALS_COLLECTION || 'catalog_pricing_view_signals',
+  /** Χειροκίνητος έλεγχος προμηθευτή (ADR-923 §5.13 Ε1α). Ένα έγγραφο ανά χώρο, ID = companyId. Γράφει ΜΟΝΟ ο διακομιστής. */
+  SUPPLIER_VERIFICATIONS: process.env.NEXT_PUBLIC_SUPPLIER_VERIFICATIONS_COLLECTION || 'supplier_verifications',
+  /** Outbox δημόσιας προβολής (ADR-923 §5.13 Δ3): αριθμός ανά `{ companyId, scope }`, ποτέ δεδομένα. Μόνο διακομιστής. IDs via cpobx_*. */
+  /** Κατοχή μάρκας (ADR-923 §16). ΕΝΑ έγγραφο ανά (χώρος, μάρκα). IDs via sbrnd_*. */
+  SUPPLIER_BRAND_CLAIMS: process.env.NEXT_PUBLIC_SUPPLIER_BRAND_CLAIMS_COLLECTION || 'supplier_brand_claims',
+  CATALOG_PUBLIC_OUTBOX: process.env.NEXT_PUBLIC_CATALOG_PUBLIC_OUTBOX_COLLECTION || 'catalog_public_outbox',
+  PUBLIC_CATALOG_MODELS: process.env.NEXT_PUBLIC_PUBLIC_CATALOG_MODELS_COLLECTION || 'public_catalog_models',
+  /** Προφίλ παρόχου (ADR-923 §22 Υ8): περιγραφή και portfolio. ΕΝΑ έγγραφο ανά χώρο. IDs via cspro_*. */
+  CATALOG_SUPPLIER_PROFILES: process.env.NEXT_PUBLIC_CATALOG_SUPPLIER_PROFILES_COLLECTION || 'catalog_supplier_profiles',
+  /** Το δημόσιο αντίγραφο του προφίλ (§22 Υ8). ID = companyId. Κανένα ποσό, μόνο μέσα με ελεγμένα δικαιώματα. */
+  PUBLIC_SUPPLIER_PROFILES: process.env.NEXT_PUBLIC_PUBLIC_SUPPLIER_PROFILES_COLLECTION || 'public_supplier_profiles',
+  /** Βιτρίνα προμηθευτή (ADR-923 §5.13 Δ6). ID = companyId. Υπάρχει μόνο μετά από ρητή δημοσίευση. Γράφει ΜΟΝΟ ο διακομιστής. */
+  SUPPLIER_SHOWCASES: process.env.NEXT_PUBLIC_SUPPLIER_SHOWCASES_COLLECTION || 'public_supplier_showcases',
   /** Αποθηκευμένες αντιστοιχίσεις στηλών ανά προμηθευτή/αρχείο (ADR-923 §5.5.1). IDs via ciprf_* (από κωδικό). */
   CATALOG_IMPORT_PROFILES: process.env.NEXT_PUBLIC_CATALOG_IMPORT_PROFILES_COLLECTION || 'catalog_import_profiles',
   /** Παρτίδες εισαγωγής. IDs via cibat_* (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση ⇒ ιδεμπότητες δομικά). */

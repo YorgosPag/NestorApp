@@ -19,6 +19,7 @@ export const CATALOG_ISSUE_CODES = [
   'duplicateCode',
   'labelRequired',
   'tooMany',
+  'portfolioProjectImagesRequired',
   'unknownReference',
   // ── σχέση προμήθειας (§5.12) ──
   'supplyNotRequested',

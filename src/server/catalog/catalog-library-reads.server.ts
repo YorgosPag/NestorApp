@@ -29,7 +29,7 @@ const USAGE_QUERY_LIMIT = 500;
 //    προσπερνά σιωπηλά — πράσινο που θα σήμαινε «δεν κοίταξα».
 
 /** Το μητρώο μονάδων του χώρου: πλατφόρμα + οι **ενεργές** οικογένειες μέτρησης του χώρου. */
-export async function readMeasurementRegistry(scope: CatalogTx): Promise<MeasurementRegistry> {
+export async function readMeasurementRegistry(scope: CatalogReadScope): Promise<MeasurementRegistry> {
   const snap = await scope.tx.get(
     scope.db
       .collection(COLLECTIONS.CATALOG_MEASUREMENT_FAMILIES)
@@ -63,7 +63,7 @@ export async function readActiveByIds<TDefinition>(
 
 /** Ενεργές ιδιότητες αυτού του χώρου ανά id — οι ξένες/διαγραμμένες/ανύπαρκτες απλώς λείπουν. */
 export async function readAttributesByIds(
-  scope: CatalogTx,
+  scope: CatalogReadScope,
   ids: readonly string[],
 ): Promise<Map<string, CatalogAttributeDefinition>> {
   return readActiveByIds<CatalogAttributeDefinition>(scope, 'attribute', ids);

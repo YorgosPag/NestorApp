@@ -1,0 +1,74 @@
+{
+  "$doc": "ADR-923 §5.13 · CHECK 3.112 — Η ΜΙΑ ΠΗΓΗ για το «ποιος αγγίζει τη δημόσια βιτρίνα». Το έγγραφο το διαβάζει ανώνυμος με `read: if true`, και κάθε εγγραφή του πρέπει να περάσει από τη συνθήκη δημοσίευσης, το κλειστό σχήμα και τον φράχτη CAS. Κάθε γραμμή του `guards` είναι ένα σύμβολο και οι μόνοι νόμιμοι κάτοχοί του, με λόγο. Τη διαβάζουν η πύλη (`scripts/check-public-catalog-authority.js`, AST) και το self-test της — ποτέ δεύτερη λίστα.",
+  "guards": [
+    {
+      "kind": "member",
+      "name": "COLLECTIONS.PUBLIC_CATALOG_MODELS",
+      "owners": {
+        "src/server/catalog/public/public-model-writer.server.ts": "Ο ένας γραφέας: έγγραφο και `drainedRevision` στην ίδια συναλλαγή, πίσω από συνθήκη και φράχτη.",
+        "src/services/public-catalog/public-catalog.reader.ts": "Ο ένας αναγνώστης: μόνο ανάγνωση, πίσω από την πύλη της βιτρίνας και το σύνορο του σχήματος, με tags για την ανάκληση."
+      }
+    },
+    {
+      "kind": "member",
+      "name": "COLLECTIONS.CATALOG_PUBLIC_OUTBOX",
+      "owners": {
+        "src/server/catalog/public/public-outbox.server.ts": "Το σπίτι του outbox: η μόνη διεύθυνση και ο μόνος τρόπος σημείωσης ενός scope.",
+        "src/server/catalog/public/public-catalog-sweep.server.ts": "Η σάρωση ρωτά την κοινή ουρά και τους χώρους, χωρίς να φτιάχνει σημειώσεις με το χέρι."
+      }
+    },
+    {
+      "kind": "member",
+      "name": "COLLECTIONS.PUBLIC_SUPPLIER_PROFILES",
+      "owners": {
+        "src/server/catalog/public/public-profile-writer.server.ts": "Ο ένας γραφέας του δημόσιου προφίλ, με τον κοινό δρόμο CAS.",
+        "src/services/public-catalog/public-catalog.reader.ts": "Ο ένας αναγνώστης: πίσω από την πύλη της βιτρίνας και το σύνορο του σχήματος, με tags για την ανάκληση."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "projectPublicProfile",
+      "owners": {
+        "src/server/catalog/public/public-profile-writer.server.ts": "Μόνο ο γραφέας φτιάχνει δημόσιο προφίλ: κάθε άλλος θα παρέκαμπτε τη συνθήκη δημοσίευσης."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "drainPublicProfile",
+      "owners": {
+        "src/server/catalog/public/public-catalog-sweep.server.ts": "Το δίχτυ: ουρά, μετρητές και επανατοποθέτηση σε αποτυχία.",
+        "src/server/catalog/public/public-drain-schedule.server.ts": "Το άμεσο άδειασμα μετά την αποθήκευση του προφίλ."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "projectPublicModel",
+      "owners": {
+        "src/server/catalog/public/public-model-writer.server.ts": "Μόνο ο γραφέας φτιάχνει δημόσιο έγγραφο: κάθε άλλος θα παρέκαμπτε τη συνθήκη δημοσίευσης."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "drainPublicModel",
+      "owners": {
+        "src/server/catalog/public/public-catalog-sweep.server.ts": "Το δίχτυ: η ουρά με τα βρώμικα scopes, με μετρητές και επανατοποθέτηση σε αποτυχία.",
+        "src/server/catalog/public/public-drain-schedule.server.ts": "Το άμεσο άδειασμα μετά το commit, με όριο πλήθους και χωρίς το scope catalog."
+      }
+    },
+    {
+      "kind": "reference",
+      "name": "CATALOG_MODEL_SHELF",
+      "owners": {
+        "src/server/catalog/public/public-model-media.server.ts": "Το ράφι ακολουθεί το έγγραφο: κανείς άλλος δεν βάζει ιδιωτικό αρχείο σε δημόσια διαδρομή.",
+        "src/services/upload/utils/public-shelf-kinds.ts": "Ο πίνακας των ειδών του ραφιού: τον διαβάζουν οι άγκυρες «για κάθε γραμμή», δεν δημοσιεύει τίποτα."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "isPublicAsset",
+      "owners": {
+        "src/server/catalog/public/public-model-snapshot.server.ts": "Η μία πόρτα των μέσων: ό,τι δεν περνά εδώ δεν γίνεται ποτέ πηγή του ραφιού, ούτε για το μοντέλο ούτε για το προφίλ."
+      }
+    }
+  ]
+}

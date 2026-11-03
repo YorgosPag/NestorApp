@@ -38,6 +38,9 @@ import {
 } from '@/services/mandate/agency-profile.service';
 import type { ClassifiedOccupation, PublicShowcase } from '@/types/agency-profile';
 import { COMPANY_PROFILE, givenCompanyProfile, LEGAL_NAME_CHOICE } from './showcase-legal-fixture';
+import { revalidatePublicCompany } from '@/server/catalog/public/public-model-revalidate.server';
+
+jest.mock('@/server/catalog/public/public-model-revalidate.server', () => ({ revalidatePublicCompany: jest.fn() }));
 
 const COMPANY = 'comp_grafeio_a';
 
@@ -255,6 +258,7 @@ describe('Π — η δημοσίευση είναι πράξη ΤΟΥ ΕΠΑΓΓ
     // Δεν μένει έγγραφο με `isPublished: false` — δεν υπάρχει τέτοιο πεδίο, και
     // δεν πρέπει να υπάρξει ποτέ (ADR-749: σημαία που διαφωνεί με την ύπαρξη).
     expect(await readStored(fake, COMPANY)).toBeUndefined();
+    expect(revalidatePublicCompany).toHaveBeenCalledWith(COMPANY);
   });
 
   it('🔑 Π2β — η απόσυρση ΔΕΝ απαιτεί απόδειξη: τρέχει ΑΚΡΙΒΩΣ όταν η ικανότητα χάθηκε', async () => {

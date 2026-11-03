@@ -74,6 +74,7 @@ export const SUPPORTED_NAMESPACES = [
   'landing-heroes-admin', // ADR-881 — to ergaleio eikonwn irwa tou parochou; DIKO tou, gia na min fortwnetai sto shell (to 'admin' einai eggyimeno)
   'stay-landing',     // ADR-777 8.82 — i aktina /stay (iroas); DIKO tis, gia na min fortwnei to /search/results
   'property-market',  // ADR-777 8.38 — ζητηση + προσφορα + εντολη (ο,τι συντασσει ο ανθρωπος)
+  'public-catalog',   // ADR-923 5.13 S4 — i dimosia vitrina promitheyti (/suppliers)
   'network-messaging', // ADR-867 B7 — minymata anamesa se synergates (nima · poioi diavazoun · apousia · omada)
   'crm',
   'navigation',

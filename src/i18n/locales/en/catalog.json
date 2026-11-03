@@ -44,6 +44,18 @@
     "unsavedTitle": "Discard unsaved changes?",
     "unsavedDescription": "You have changes that were not saved. If you continue, they will be lost."
   },
+  "profile": {
+    "title": "Provider profile",
+    "lead": "Shown on your public page. Logo, website and service area come from your professional showcase.",
+    "description": "Description",
+    "addProject": "Add project",
+    "removeProject": "Remove project",
+    "projectTitle": "Project title",
+    "projectDescription": "Project description",
+    "projectYear": "Year",
+    "addImage": "Add image",
+    "removeImage": "Remove image"
+  },
   "pages": {
     "measurements": {
       "title": "Units of measure",
@@ -171,6 +183,7 @@
     "duplicateCode": "The code “{code}” already exists here.",
     "labelRequired": "A label is required, in at least one language.",
     "tooMany": "Up to {max}.",
+    "portfolioProjectImagesRequired": "A project needs at least one image.",
     "unknownReference": "Points to something that does not exist.",
     "codeImmutable": "The code cannot change after creation.",
     "typeLockedInUse": "Cannot change while in use.",
@@ -1624,6 +1637,50 @@
       "officeRefused": "You do not belong to this office.",
       "sameWorkspace": "This is your own workspace: choose another office.",
       "contactBound": "This contact is already linked to another office. Ask the supplier for a new invitation."
+    }
+  },
+  "supplierBrands": {
+    "title": "Brands",
+    "lead": "Manufacturer or authorised representative: with proof, platform approval and an expiry date.",
+    "empty": "You have not declared a brand.",
+    "brandName": "Brand name",
+    "relation": "Relation to the brand",
+    "manufacturer": "Manufacturer",
+    "representative": "Authorised representative",
+    "document": "Proof (PDF)",
+    "submit": "Submit request",
+    "uploading": "Uploading…",
+    "failed": "The request was not submitted. Try again.",
+    "pending": "Under review",
+    "active": "Valid until {date}",
+    "expired": "Expired on {date}",
+    "rejected": "Rejected",
+    "revoked": "Revoked"
+  },
+  "supplierVerification": {
+    "title": "Supplier verification",
+    "document": "Tax registry certificate from myAADE (PDF)",
+    "uploading": "Submitting…",
+    "publish": "Publish showcase",
+    "published": "Your showcase is published.",
+    "publishFailed": "The showcase was not published. Please try again.",
+    "failed": "The document was not submitted. Check that it is a PDF and try again.",
+    "status": {
+      "none": "You have not submitted a request.",
+      "pending-review": "Your request is under review.",
+      "approved": "Your request was approved.",
+      "rejected": "Your request was rejected.",
+      "revoked": "The approval was revoked."
+    },
+    "route": {
+      "verified": "The company was verified by the registry.",
+      "ask-registry": "The registry has not answered yet. Try the verification again later.",
+      "submit-document": "Submit the tax registry certificate for review.",
+      "adopt-legal-name": "The legal name differs from the registry. Adopt the registry name in the profile.",
+      "correct-tax-id": "Correct the tax id in the company profile.",
+      "manual-review": "An administrator needs to review this.",
+      "closed": "The registry shows this company as closed, so it cannot be approved.",
+      "identity-incomplete": "Add the legal name and a valid tax id to the company profile to request a review."
     }
   }
 }

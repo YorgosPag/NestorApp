@@ -30,6 +30,7 @@ import type {
   CategoryRecord,
   FamilyRecord,
   MeasurementFamilyRecord,
+  SupplierProfileRecord,
 } from '@/services/catalog/catalog-api.client';
 
 const logger = createModuleLogger('useCatalogCollection');
@@ -45,6 +46,8 @@ export interface CatalogCollectionItems {
   readonly CATALOG_ASSETS: AssetRecord;
   /** Ρυθμίσεις (singleton, ADR-923 §5.10.4 Β5) — 0 ή 1 έγγραφο· το διαβάζει το `useCatalogSettings`. */
   readonly CATALOG_SETTINGS: CatalogSettingsRecord;
+  /** Προφίλ παρόχου (singleton, ADR-923 §22 Υ8) — 0 ή 1 έγγραφο. */
+  readonly CATALOG_SUPPLIER_PROFILES: SupplierProfileRecord;
 }
 
 export type CatalogCollectionKey = keyof CatalogCollectionItems;
@@ -66,6 +69,7 @@ const CACHES: CatalogCaches = {
   CATALOG_FAMILIES: createStaleCache('catalog:families'),
   CATALOG_ASSETS: createStaleCache('catalog:assets'),
   CATALOG_SETTINGS: createStaleCache('catalog:settings'),
+  CATALOG_SUPPLIER_PROFILES: createStaleCache('catalog:supplier-profiles'),
 };
 
 function initialLoad<T>(cache: StaleCache<readonly T[]>, companyId: string | null): CatalogLoad<T> {

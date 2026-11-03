@@ -188,6 +188,27 @@ export async function readCompanyRegistryDeclaration(
   return { kind: 'present', declaration: registryDeclarationOf(read.data) };
 }
 
+export type CompanyTaxDeclarationRead =
+  | {
+      readonly kind: 'present';
+      readonly declaration: CompanyRegistryDeclaration;
+      /** Ωμό ΑΦΜ: δεν αποθηκεύεται, δεν καταγράφεται, μόνο περνά από αποτύπωμα (ADR-923 §5.13 Ε1β). */
+      readonly taxId: string | null;
+    }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'unavailable' };
+
+/** The declaration plus the tax id, from ONE read of the profile: the two facts judged together. */
+export async function readCompanyTaxDeclaration(companyId: string): Promise<CompanyTaxDeclarationRead> {
+  const read = await readProfileDocument(companyId);
+  if (read.kind !== 'present') return read;
+  return {
+    kind: 'present',
+    declaration: registryDeclarationOf(read.data),
+    taxId: readStringField(read.data, 'vatNumber') ?? null,
+  };
+}
+
 // ============================================================================
 // PURE PARSERS — ADR-841 §7 Α23 (the profile read INSIDE a transaction)
 // ============================================================================

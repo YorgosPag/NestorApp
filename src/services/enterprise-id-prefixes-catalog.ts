@@ -39,15 +39,19 @@ export const CATALOG_ID_PREFIXES = {
   CATALOG_PUBLICATION_RECIPE: 'cpubr',     // catalog_publication_recipes — συνταγή έκδοσης (από κωδικό, ADR-923 §5.6)
   CATALOG_PUBLICATION_RUN: 'cpubx',        // catalog_publication_runs — αποτέλεσμα έκδοσης (από το hash εισόδων)
   CATALOG_PRICING_VIEW_SIGNAL: 'cpvs',     // catalog_pricing_view_signals — σήμα ΜΙΑΣ όψης τιμών (μόνο αριθμός) — ντετερμινιστικό
+  CATALOG_PUBLIC_OUTBOX: 'cpobx',          // catalog_public_outbox — σημείωση επαναπροβολής ΜΙΑΣ δημόσιας προβολής (§5.13 Δ3) — ντετερμινιστικό
   // ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή. Ντετερμινιστικά από φυσικό κλειδί: ίδια είσοδος ⇒ ίδιο έγγραφο, δομικά ──
   CATALOG_IMPORT_PROFILE: 'ciprf',         // catalog_import_profiles — αποθηκευμένη αντιστοίχιση (από κωδικό)
   CATALOG_IMPORT_BATCH: 'cibat',           // catalog_import_batches — παρτίδα (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση)
   CATALOG_IMPORT_PROPOSAL: 'cipsl',        // catalog_import_proposals — πρόταση (από παρτίδα + σύνολο)
   CATALOG_IMPORT_PAGE_READING: 'cipgr',    // catalog_import_page_readings — απάντηση μοντέλου (από παρτίδα + σελίδα + διαδρομή + προσπάθεια)
   // ── Φάση 6α (ADR-923 §5.12) ──
-  CATALOG_VISIBILITY_RULE: 'cvrul',        // catalog_visibility_rules — ΕΝΑΣ κανόνας ανά (αντικείμενο, κοινό), ντετερμινιστικό
+  CATALOG_SUPPLIER_PROFILE: 'cspro',       // catalog_supplier_profiles — ΕΝΑ προφίλ παρόχου ανά χώρο (§22 Υ8), ντετερμινιστικό
+  CATALOG_PORTFOLIO_PROJECT: 'cprjt',      // έργο portfolio, μέσα στο προφίλ (§22 Υ8) — τυχαίο, όπως το SKU
+  CATALOG_VISIBILITY_RULE: 'cvrul',      // catalog_visibility_rules — ΕΝΑΣ κανόνας ανά (αντικείμενο, κοινό), ντετερμινιστικό
   SUPPLY_RELATIONSHIP: 'srel',             // supply_relationships — ΜΙΑ σχέση ανά (προμηθευτής, αγοραστής), ντετερμινιστικό
   SUPPLY_INVITATION: 'sinv',               // supply_invitations — πρόσκληση σχέσης από επαφή (πόρτα α)
+  SUPPLIER_BRAND_CLAIM: 'sbrnd',           // supplier_brand_claims — ΕΝΑ έγγραφο ανά (χώρος, μάρκα), ντετερμινιστικό (§16)
   SUPPLY_REQUEST_LINK: 'srql',             // supply_request_links — ΕΝΑΣ σύνδεσμος/QR ανά χώρο, ντετερμινιστικό
 
 } as const;

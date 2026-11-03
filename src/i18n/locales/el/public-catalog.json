@@ -1,0 +1,31 @@
+{
+  "supplier": {
+    "verified": "Επιβεβαιωμένος προμηθευτής",
+    "products": "Προϊόντα",
+    "empty": "Δεν υπάρχουν ακόμη δημόσια προϊόντα.",
+    "categories": "Κατηγορίες",
+    "allCategories": "Όλα τα προϊόντα",
+    "next": "Επόμενα προϊόντα",
+    "logoAlt": "Λογότυπο: {name}",
+    "areaServed": "Περιοχή εξυπηρέτησης",
+    "areaNationwide": "Όλη η Ελλάδα",
+    "areaRadius": "Έως {km} χλμ.",
+    "areaOutline": "Δηλωμένη περιοχή ~{km2} τ.χλμ.",
+    "website": "Ιστοσελίδα",
+    "about": "Σχετικά",
+    "brands": "Μάρκες",
+    "brandManufacturer": "Κατασκευαστής",
+    "brandRepresentative": "Επίσημος αντιπρόσωπος",
+    "portfolio": "Έργα"
+  },
+  "model": {
+    "code": "Κωδικός: {code}",
+    "specifications": "Χαρακτηριστικά",
+    "variants": "Παραλλαγές",
+    "variantCount": "{count, plural, one {# παραλλαγή} other {# παραλλαγές}}",
+    "priceOnRequest": "Κατόπιν προσφοράς",
+    "yes": "Ναι",
+    "no": "Όχι",
+    "backToSupplier": "Όλα τα προϊόντα του προμηθευτή"
+  }
+}

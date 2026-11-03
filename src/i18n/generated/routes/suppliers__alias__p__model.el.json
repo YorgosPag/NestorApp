@@ -1,0 +1,13 @@
+{
+  "public-catalog": {
+    "model": {
+      "backToSupplier": "Όλα τα προϊόντα του προμηθευτή",
+      "code": "Κωδικός: {code}",
+      "no": "Όχι",
+      "priceOnRequest": "Κατόπιν προσφοράς",
+      "specifications": "Χαρακτηριστικά",
+      "variants": "Παραλλαγές",
+      "yes": "Ναι"
+    }
+  }
+}

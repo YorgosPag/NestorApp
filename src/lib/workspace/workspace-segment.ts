@@ -106,7 +106,7 @@ export type WorkspaceSegmentResolution =
  *          μπορέσαμε να ρωτήσουμε. **Και οι τρεις σημαίνουν το ίδιο για τον
  *          καλούντα**: «δεν έχω κανονικό όνομα — δοκίμασε την ταυτότητα».
  */
-async function readCanonicalAlias(companyId: string): Promise<string | null> {
+export async function readCanonicalAlias(companyId: string): Promise<string | null> {
   if (!isFirebaseAdminAvailable()) {
     logger.warn('[SEGMENT] Firebase Admin μη διαθέσιμο — πέφτουμε στην ταυτότητα', { companyId });
     return null;

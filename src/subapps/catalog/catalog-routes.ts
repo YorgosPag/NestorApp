@@ -65,6 +65,7 @@ export const CATALOG_API = {
     file: (id: string) => `${API_ROOT}/assets/${encodeURIComponent(id)}/file`,
   },
   settings: `${API_ROOT}/settings`,
+  supplierProfile: `${API_ROOT}/supplier-profile`,
   /** Μία σελίδα της εργασίας επανυπολογισμού παραγώγων (δρομέας). */
   recomputeDerived: `${API_ROOT}/derived/recompute`,
   // ── Φάση 3β (ADR-923 §5.11) — τιμολόγηση ──

@@ -143,6 +143,16 @@ export class FakeQuery {
     return this.with({ after: { id: snapshot.id, data: snapshot.data?.() } });
   }
 
+  /** Προβολή πεδίων, όπως στο SDK: ό,τι δεν ζητήθηκε **λείπει** από το έγγραφο, ώστε test να μη βασίζεται σε πεδίο που δεν έρχεται. */
+  select(...fields: readonly string[]): FakeQuery {
+    return this.with({ fields });
+  }
+
+  private projected(data: Doc): Doc {
+    const { fields } = this.spec;
+    return fields ? Object.fromEntries(fields.flatMap((field) => (field in data ? [[field, data[field]]] : []))) : data;
+  }
+
   private scan(): ScannedDoc[] {
     const paths = this.group ? this.ctx.store.groupPaths(this.collectionName) : [this.collectionName];
     return paths.flatMap((path) => [...this.ctx.store.bucket(path).entries()].map(([id, data]) => ({ path, id, data })));
@@ -152,7 +162,8 @@ export class FakeQuery {
     assertReadable(this.ctx);
     const docs = runQuery(this.scan(), this.spec).map((row) => {
       const ref = new FakeDocRef(this.ctx, row.path, row.id);
-      return { ...snapshotOf(ref, row.data), data: () => row.data };
+      const data = this.projected(row.data);
+      return { ...snapshotOf(ref, data), data: () => data };
     });
     return { docs, size: docs.length, empty: docs.length === 0, forEach: (callback) => docs.forEach(callback) };
   }

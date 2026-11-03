@@ -29,6 +29,7 @@ export interface QuerySpec {
   readonly order: OrderSpec | null;
   readonly cap: number | null;
   readonly after: CursorSpec | null;
+  readonly fields?: readonly string[];
 }
 
 export const EMPTY_SPEC: QuerySpec = { clauses: [], order: null, cap: null, after: null };

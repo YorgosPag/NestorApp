@@ -1,6 +1,30 @@
 {
   "indexes": [
     {
+      "collectionGroup": "supplier_verifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_public_outbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dirty", "order": "ASCENDING" },
+        { "fieldPath": "queuedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_public_outbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "scope", "order": "ASCENDING" },
+        { "fieldPath": "queuedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "ownership_verifications",
       "queryScope": "COLLECTION",
       "fields": [

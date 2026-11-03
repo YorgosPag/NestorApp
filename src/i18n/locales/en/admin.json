@@ -1258,7 +1258,8 @@
       "bimDiagnostics": "BIM Diagnostics",
       "publicSite": "Public site",
       "landingHeroes": "Hero images",
-      "ownershipVerifications": "Ownership verifications"
+      "ownershipVerifications": "Ownership verifications",
+      "supplierVerifications": "Supplier verifications"
     }
   },
   "bimDiagnostics": {
@@ -1381,5 +1382,31 @@
     "openCertificate": "Open certificate",
     "approve": "Approve",
     "reject": "Reject"
+  },
+  "supplierBrandClaims": {
+    "refused": "Refused: check the date, the company verification and whether the brand already has a manufacturer.",
+    "title": "Brand ownership",
+    "relationManufacturer": "Manufacturer",
+    "relationRepresentative": "Authorised representative",
+    "validUntil": "Valid until"
+  },
+  "supplierVerifications": {
+    "title": "Supplier verifications",
+    "description": "Certificates submitted by suppliers. Open the document, compare it with the workspace details and decide.",
+    "tabPending": "Pending",
+    "tabApproved": "Approved",
+    "loading": "Loading queue…",
+    "failed": "The queue did not load. Please try again.",
+    "empty": "There are no requests.",
+    "unnamed": "No legal name",
+    "gemiNumber": "Registry number",
+    "noGemiNumber": "Not declared",
+    "notApprovable": "Cannot be approved: the company is closed or its details changed after the request.",
+    "refused": "The action did not complete. The request changed in the meantime.",
+    "note": "Note (optional)",
+    "openDocument": "Open document",
+    "approve": "Approve",
+    "reject": "Reject",
+    "revoke": "Revoke"
   }
 }

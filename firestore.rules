@@ -1347,6 +1347,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ADR-923 §5.13 Ε4 · Δ1 — Το δημόσιο έγγραφο μοντέλου: κανένα ποσό, κλειστό σχήμα. Το γράφει μόνο ο αδειαστής.
+    match /public_catalog_models/{modelId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ADR-923 §5.13 Δ3 — Το outbox της δημόσιας προβολής: το γράφει η μηχανή του καταλόγου, το αδειάζει ο διακομιστής.
+    match /catalog_public_outbox/{outboxId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     // =========================================================================
     // 🎯 ADR-827 §9 — Η ΒΙΤΡΙΝΑ ΤΟΥ ΓΡΑΦΕΙΟΥ
     // =========================================================================
@@ -6364,6 +6376,11 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
       allow write: if false;
     }
+    // ADR-923 §22 Υ8 — το προφίλ παρόχου. Το διαβάζει η οθόνη του χώρου, το γράφει μόνο η μηχανή.
+    match /catalog_supplier_profiles/{profileId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
     match /catalog_unique_values/{reservationId} {
       allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
       allow write: if false;
@@ -7691,6 +7708,25 @@ service cloud.firestore {
       allow read, write: if false; // Server-side only via Admin SDK
     }
     match /tax_identity_claims/{claimId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
+    // ─── ADR-923 §5.13 Ε1α: ΕΛΕΓΧΟΣ ΠΡΟΜΗΘΕΥΤΗ ──────────────────────────────────────
+    // ✍️ WRITE: ΚΑΝΕΝΑΣ πελάτης. Όποιος γράφει εδώ εγκρίνει τον εαυτό του ως επιβεβαιωμένο προμηθευτή.
+    // 📖 READ: ΚΑΝΕΝΑΣ. Το έγγραφο κρατά αποτύπωμα ΑΦΜ και τη σημείωση του διαχειριστή.
+    match /supplier_verifications/{companyId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+    // Βιτρίνα προμηθευτή: ο ανώνυμος τη βλέπει από τη σελίδα του διακομιστή, ποτέ από τον πελάτη.
+    // Κατοχή μάρκας (ADR-923 §16): όποιος γράφει εδώ δηλώνει τον εαυτό του κάτοχο. Η οθόνη διαβάζει από τον διακομιστή.
+    match /supplier_brand_claims/{claimId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+    match /public_supplier_showcases/{companyId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+    // Το δημόσιο αντίγραφο του προφίλ (ADR-923 §22 Υ8): ίδια διαδρομή, μόνο από τη σελίδα του διακομιστή.
+    match /public_supplier_profiles/{companyId} {
       allow read, write: if false; // Server-side only via Admin SDK
     }
 

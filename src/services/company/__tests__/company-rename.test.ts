@@ -13,7 +13,9 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 jest.mock('@/services/company-document.service', () => ({ repairCompanyDocument: jest.fn() }));
 jest.mock('@/services/listings/agency-name-refresh', () => ({ refreshAgencyNameOnListings: jest.fn() }));
 jest.mock('@/services/mandate/showcase-legal-identity-custody', () => ({ refreshShowcaseLegalIdentity: jest.fn() }));
+jest.mock('@/server/catalog/supplier-showcase.server', () => ({ refreshSupplierShowcaseStanding: jest.fn() }));
 
+import { refreshSupplierShowcaseStanding } from '@/server/catalog/supplier-showcase.server';
 import { repairCompanyDocument } from '@/services/company-document.service';
 import { refreshAgencyNameOnListings } from '@/services/listings/agency-name-refresh';
 import { refreshShowcaseLegalIdentity } from '@/services/mandate/showcase-legal-identity-custody';
@@ -33,6 +35,22 @@ beforeEach(() => {
   showcase.mockReset();
   refresh.mockResolvedValue(null);
   showcase.mockResolvedValue({ kind: 'not-applicable' });
+});
+
+describe('Π — η βιτρίνα προμηθευτή ξανακρίνεται και στους δύο δρόμους (ADR-923 §5.13 Δ6)', () => {
+  const supplierShowcase = refreshSupplierShowcaseStanding as jest.MockedFunction<typeof refreshSupplierShowcaseStanding>;
+  beforeEach(() => supplierShowcase.mockReset());
+
+  it('Π1 — η μετονομασία τη ζητά με τον άνθρωπο της πράξης', async () => {
+    repair.mockResolvedValue({ name: 'ΙΔΙΟ ΑΕ', wasRepaired: false });
+    await propagateCompanyRename(DB, 'comp_a', 'uid_a');
+    expect(supplierShowcase).toHaveBeenCalledWith(DB, 'comp_a', 'uid_a');
+  });
+
+  it('Π2 — η αλλαγή στοιχείων χωρίς μετονομασία τη ζητά επίσης', async () => {
+    await reconcileShowcaseLegalIdentity(DB, 'comp_a');
+    expect(supplierShowcase).toHaveBeenCalledWith(DB, 'comp_a', 'system');
+  });
 });
 
 describe('Μ — η μετονομασία κατέχει τη συνέπειά της', () => {

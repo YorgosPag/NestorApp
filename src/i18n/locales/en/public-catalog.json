@@ -1,0 +1,31 @@
+{
+  "supplier": {
+    "verified": "Verified supplier",
+    "products": "Products",
+    "empty": "No public products yet.",
+    "categories": "Categories",
+    "allCategories": "All products",
+    "next": "More products",
+    "logoAlt": "Logo: {name}",
+    "areaServed": "Service area",
+    "areaNationwide": "All of Greece",
+    "areaRadius": "Up to {km} km",
+    "areaOutline": "Declared area of ~{km2} sq km",
+    "website": "Website",
+    "about": "About",
+    "brands": "Brands",
+    "brandManufacturer": "Manufacturer",
+    "brandRepresentative": "Authorised representative",
+    "portfolio": "Projects"
+  },
+  "model": {
+    "code": "Code: {code}",
+    "specifications": "Specifications",
+    "variants": "Variants",
+    "variantCount": "{count, plural, one {# variant} other {# variants}}",
+    "priceOnRequest": "Price on request",
+    "yes": "Yes",
+    "no": "No",
+    "backToSupplier": "All products from this supplier"
+  }
+}

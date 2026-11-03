@@ -1310,6 +1310,7 @@
         "roleManagement": "Ρόλοι & Χρήστες",
         "searchBackfill": "Ανανέωση Αναζήτησης",
         "setup": "Ρυθμίσεις Συστήματος",
+        "supplierVerifications": "Έλεγχος προμηθευτών",
         "system": "Σύστημα",
         "userManagement": "Διαχείριση Χρηστών"
       },
@@ -1347,6 +1348,32 @@
         "title": "Στατιστικά ακινήτων",
         "total": "Σύνολο"
       }
+    },
+    "supplierBrandClaims": {
+      "refused": "Δεν έγινε δεκτή: ελέγξτε την ημερομηνία, την επιβεβαίωση της εταιρείας και αν η μάρκα έχει ήδη κατασκευαστή.",
+      "relationManufacturer": "Κατασκευαστής",
+      "relationRepresentative": "Επίσημος αντιπρόσωπος",
+      "title": "Κατοχή μάρκας",
+      "validUntil": "Ισχύς έως"
+    },
+    "supplierVerifications": {
+      "approve": "Έγκριση",
+      "description": "Βεβαιώσεις που υπέβαλαν οι προμηθευτές. Ανοίξτε το έγγραφο, συγκρίνετε με τα στοιχεία του χώρου και αποφασίστε.",
+      "empty": "Δεν υπάρχουν αιτήσεις.",
+      "failed": "Η ουρά δεν φορτώθηκε. Δοκιμάστε ξανά.",
+      "gemiNumber": "Αρ. ΓΕΜΗ",
+      "loading": "Φόρτωση ουράς…",
+      "noGemiNumber": "Δεν δηλώθηκε",
+      "notApprovable": "Δεν εγκρίνεται: η εταιρεία είναι κλειστή ή τα στοιχεία της άλλαξαν μετά την αίτηση.",
+      "note": "Σημείωση (προαιρετική)",
+      "openDocument": "Άνοιγμα εγγράφου",
+      "refused": "Η πράξη δεν έγινε. Η αίτηση άλλαξε στο μεταξύ.",
+      "reject": "Απόρριψη",
+      "revoke": "Ανάκληση",
+      "tabApproved": "Εγκεκριμένες",
+      "tabPending": "Εκκρεμείς",
+      "title": "Έλεγχος προμηθευτών",
+      "unnamed": "Χωρίς επωνυμία"
     },
     "units": {
       "allLabel": "(Όλα)",
@@ -1507,6 +1534,7 @@
         "catalog_publication_recipe": "Συνταγή έκδοσης",
         "catalog_publication_run": "Έκδοση καταλόγου",
         "catalog_settings": "Ρυθμίσεις καταλόγου",
+        "catalog_supplier_profile": "Προφίλ παρόχου",
         "catalog_visibility_rule": "Κανόνας ορατότητας",
         "column": "Υποστύλωμα",
         "company": "Εταιρεία",
@@ -1552,6 +1580,8 @@
         "stair": "Κλίμακα",
         "storage": "Αποθήκη",
         "storage_unit": "Αποθηκευτικός χώρος",
+        "supplier_brand_claim": "Κατοχή μάρκας",
+        "supplier_verification": "Έλεγχος προμηθευτή",
         "supply_relationship": "Σχέση προμήθειας",
         "supply_request_link": "Σύνδεσμος αιτήματος σύνδεσης",
         "text_template": "Πρότυπο κειμένου",

@@ -401,4 +401,40 @@ describe('εργασία επανυπολογισμού (Δ7)', () => {
       expect(variants.some((variant) => sku(variant.id).derived.searchText?.includes('ανεμιστηροπηνιο'))).toBe(false);
     });
   });
+
+  describe('outbox δημόσιας προβολής (§5.13 Δ3)', () => {
+    const outbox = () => Object.values(fake.getAllDocs('catalog_public_outbox')) as Array<{ scope: string; revision: number; companyId: string }>;
+    const revisionOf = (scope: string) => outbox().find((entry) => entry.scope === scope)?.revision ?? 0;
+
+    it('δέσμη 7 παραλλαγών ⇒ μία μόνο εγγραφή για το μοντέλο, στον χώρο του', async () => {
+      const { model } = await seedMfpWithVariants();
+      expect(outbox().filter((entry) => entry.scope.startsWith('model:')).map((entry) => entry.scope)).toEqual([`model:${model.id}`]);
+      expect(outbox().every((entry) => entry.companyId === ARIES.companyId)).toBe(true);
+    });
+
+    it('🔴 αλλαγή στη ρίζα σημειώνεται και από τις παραλλαγές με `stageDerived`, μία φορά ανά συναλλαγή', async () => {
+      const { seeded, model } = await seedMfpWithVariants();
+      const before = revisionOf(`model:${model.id}`);
+      await updateCatalogProductModel(ARIES, model.id, model.revision, mfpModelWith(model as typeof MFP_MODEL, seeded.ids));
+      expect(revisionOf(`model:${model.id}`)).toBe(before + 1);
+    });
+
+    it('🔴 ο επανυπολογισμός που αλλάζει μόνο παράγωγα σημειώνεται, και ο κενός δεν γράφει τίποτα', async () => {
+      const { seeded, model } = await seedMfpWithVariants();
+      const family = fake.getData('catalog_families', seeded.familyId) as { revision: number };
+      await updateCatalogFamily(ARIES, seeded.familyId, family.revision, { ...mfpFamilyWith(seeded.ids), labels: { el: 'Κασέτα οροφής' } });
+      const before = revisionOf(`model:${model.id}`);
+      const recompute = async () => {
+        let cursor: string | null = null;
+        do {
+          cursor = (await recomputeCatalogDerived(ARIES, { familyId: null, cursor })).nextCursor;
+        } while (cursor !== null);
+      };
+      await recompute();
+      expect(revisionOf(`model:${model.id}`)).toBeGreaterThan(before);
+      const settled = revisionOf(`model:${model.id}`);
+      await recompute();
+      expect(revisionOf(`model:${model.id}`)).toBe(settled);
+    });
+  });
 });

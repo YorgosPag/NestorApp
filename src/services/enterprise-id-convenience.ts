@@ -460,6 +460,8 @@ export {
   generateCatalogProductId,
   generateDeterministicCatalogAssetId,
   generateDeterministicCatalogSettingsId,
+  generateDeterministicCatalogSupplierProfileId,
+  generateCatalogPortfolioProjectId,
   generateDeterministicCatalogUniqueValueId,
   generateDeterministicCatalogPriceListId,
   generateDeterministicCatalogPriceListVersionId,
@@ -472,6 +474,7 @@ export {
   generateDeterministicCatalogPublicationRunId,
   generateDeterministicCatalogPricingSlotId,
   generateDeterministicCatalogPricingViewSignalId,
+  generateDeterministicCatalogPublicOutboxId,
   generateDeterministicCatalogImportProfileId,
   generateDeterministicCatalogImportBatchId,
   generateDeterministicCatalogImportProposalId,
@@ -480,6 +483,7 @@ export {
   generateDeterministicSupplyRelationshipId,
   generateSupplyInvitationId,
   generateDeterministicSupplyRequestLinkId,
+  generateDeterministicSupplierBrandClaimId,
 } from './enterprise-id-convenience-catalog';
 
 // Optimistic & Temporary
