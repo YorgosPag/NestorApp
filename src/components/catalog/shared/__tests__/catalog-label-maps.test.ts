@@ -8,7 +8,7 @@
  */
 
 import { CATALOG_ISSUE_CODES } from '@/subapps/catalog/schema/catalog-issues';
-import { ISSUE_KEYS } from '../catalog-labels';
+import { ISSUE_KEYS } from '../catalog-issue-keys';
 
 jest.mock('lucide-react', () => new Proxy({}, { get: () => () => null }));
 

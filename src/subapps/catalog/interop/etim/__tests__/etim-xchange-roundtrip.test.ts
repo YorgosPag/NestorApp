@@ -16,6 +16,7 @@ import { extractGroupsFromXChange, type XChangeAttribute, type XChangeImportSche
 import sample11 from './fixtures/xchange-1.1.sample.json';
 import sample20 from './fixtures/xchange-2.0.sample.json';
 import schema20 from './fixtures/xchange-2.0.schema.json';
+import { ETIM_XCHANGE_UNITS } from '../../../vocabulary/etim';
 
 const validator = new Ajv2020({ strict: false, validateFormats: false, allErrors: true }).compile(schema20);
 const errorsOf = (document: unknown) => (validator(document) ? [] : (validator.errors ?? []).map((error) => `${error.instancePath} ${error.message}`));
@@ -55,7 +56,7 @@ function source(overrides: Partial<XChangeProductSource> = {}): XChangeProductSo
       ['dimmable', slots({ type: 'boolean', value: true })],
     ]),
     noValueReasons: new Map<string, NoValueReason>(),
-    price: '120.50',
+    price: { unit: 'C62', quantity: 1, grossList: '120.50', net: null },
     ...overrides,
   };
 }
@@ -66,6 +67,7 @@ function exportInput(overrides: Partial<XChangeExportInput> = {}): XChangeExport
     language: 'el',
     validFrom: '2026-10-29',
     generatedOn: '2026-11-02',
+    priceValidityDate: '2026-10-29',
     currency: 'EUR',
     supplier: { name: 'Aries', vatNumber: 'EL094014201' },
     families: new Map([['fan', { etimClass: 'EC011533', attributes: ATTRIBUTES.map((attribute) => ({ attributeId: attribute.id, requiredChannels: [] })) }]]),
@@ -139,6 +141,31 @@ describe('εξαγωγή', () => {
     const { document } = buildXChangeDocument(exportInput({ products: [source({ noValueReasons: new Map<string, NoValueReason>([['dimmable', 'notApplicable']]) })] }));
     expect(errorsOf(document)).toEqual([]);
     expect(JSON.stringify(document)).toContain('"EtimFeatureCode":"EF000003","ReasonNoValue":"NA"');
+  });
+});
+
+describe('τιμές στο εμπορεύσιμο είδος', () => {
+  const pricingOf = (document: ReturnType<typeof buildXChangeDocument>['document']) => document.Supplier[0].Product[0].TradeItem[0];
+
+  it('οι μονάδες του λεξιλογίου είναι ακριβώς του σχήματος, για τιμή ΚΑΙ παραγγελία', () => {
+    const tradeItem = schema20.properties.Supplier.items.properties.Product.items.properties.TradeItem.items.properties;
+    expect([...ETIM_XCHANGE_UNITS]).toEqual(tradeItem.Pricing.items.properties.PriceUnit.enum);
+    expect([...ETIM_XCHANGE_UNITS]).toEqual(tradeItem.Ordering.properties.OrderUnit.enum);
+  });
+  it('τιμή λίστας με έκπτωση κοινού, ανά 100 μέτρα: περνά το σχήμα, και η μονάδα παραγγελίας είναι η μονάδα της τιμής', () => {
+    const price = { unit: 'MTR', quantity: 100, grossList: '250.00', net: '225.00' } as const;
+    const { document } = buildXChangeDocument(exportInput({ products: [source({ price })] }));
+    expect(errorsOf(document)).toEqual([]);
+    expect(pricingOf(document)).toMatchObject({
+      Ordering: { OrderUnit: 'MTR' },
+      Pricing: [{ PriceUnit: 'MTR', PriceQuantity: '100', GrossListPrice: '250.00', NetPrice: '225.00', PriceValidityDate: '2026-10-29' }],
+    });
+  });
+  it('τιμή πελάτη: μόνο NetPrice · χωρίς ημερομηνία ισχύος δεν γράφεται PriceValidityDate', () => {
+    const price = { unit: 'C62', quantity: 1, grossList: null, net: '99.90' } as const;
+    const { document } = buildXChangeDocument(exportInput({ priceValidityDate: null, products: [source({ price })] }));
+    expect(errorsOf(document)).toEqual([]);
+    expect(pricingOf(document).Pricing).toEqual([{ PriceUnit: 'C62', PriceQuantity: '1', NetPrice: '99.90' }]);
   });
 });
 

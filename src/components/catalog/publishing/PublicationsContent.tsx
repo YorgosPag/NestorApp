@@ -8,6 +8,7 @@
  *    ζωντανή μόνο όσο τρέχει έκδοση (`usePublicationsView`: ρολόι 3 s που σβήνει μόλις τελειώσουν όλες).
  * 🔑 **Χωρίς δικαίωμα προβολής** ⇒ το λέμε με το **δικό** μας κλειδί (`pricing.noView`), όχι γενικό «δεν φορτώθηκε».
  * 🔑 Η επιλογή ζει στη διεύθυνση (`?recipe=<κωδικός>`) — ο κωδικός είναι σταθερός από τη δημιουργία.
+ * 🔑 Η εξαγωγή ETIM xChange (§5.14) ζει εδώ: ίδιος κριτής (`pricingView`), γιατί το αρχείο κουβαλά τιμές. Φαίνεται σε όποιον βλέπει τη σελίδα.
  */
 
 import React, { useCallback, useState } from 'react';
@@ -16,6 +17,7 @@ import { BookOpen, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePublicationsView } from '@/hooks/catalog/usePublicationsView';
 import type { PublicationRecipeWire, PublicationRunWire, PublicationsViewWire } from '@/subapps/catalog/types/publication';
+import { XChangeExportButton } from '../interop/XChangeExportDialog';
 import { useCatalogAccess, useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogPageFrame } from '../shared/CatalogPageFrame';
 import { CatalogSplit } from '../shared/CatalogSplit';
@@ -82,8 +84,11 @@ export function PublicationsContent() {
       title={t('publishing.title')}
       lead={t('publishing.subtitle')}
       state={forbidden ? 'ready' : api.current.state}
-      actions={canManage && view ? (
-        <Button type="button" onClick={() => choose(NEW_SELECTION)}><Plus className="mr-1 h-4 w-4" aria-hidden />{t('publishing.newRecipe')}</Button>
+      actions={view ? (
+        <>
+          <XChangeExportButton />
+          {canManage ? <Button type="button" onClick={() => choose(NEW_SELECTION)}><Plus className="mr-1 h-4 w-4" aria-hidden />{t('publishing.newRecipe')}</Button> : null}
+        </>
       ) : null}
     >
       {forbidden || view === null ? (

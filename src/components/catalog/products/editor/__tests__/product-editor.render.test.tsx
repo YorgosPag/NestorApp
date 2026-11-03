@@ -19,6 +19,7 @@ import { AttributeValueField } from '../AttributeValueField';
 import { computeCompleteness } from '@/subapps/catalog/completeness/compute-completeness';
 import { MFP_SETTINGS } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil-products.fixture';
 import { editorGroups, groupOfAttribute, levelSchema } from '../editor-layout';
+import { markBundlesComplete } from '@/test-utils/i18n-mock';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key), i18n: { language: 'el' } }),
@@ -38,6 +39,9 @@ const env: ValueEditorEnv = {
   assets: [], assetById: new Map(), files: new Map(), text: (value, fallback = '') => value?.el ?? fallback,
   references: { resolve: async () => null, describe: (target) => target.id },
 };
+
+// ADR-744 §34: τα ευρήματα θέλουν πίνακα ΚΑΙ πλήρες bundle — εδώ ο hook μετάφρασης είναι mock, άρα το δηλώνουμε.
+beforeAll(() => markBundlesComplete(['catalog', 'catalog-import']));
 
 describe('editorGroups — ό,τι φαίνεται σε κάθε επίπεδο (Δ1)', () => {
   it('ρίζα (βάθος 0): μόνο ιδιότητες της ρίζας · παραλλαγή (βάθος 1): όλες, οι της ρίζας κληρονομημένες', () => {
@@ -104,7 +108,7 @@ describe('AttributeValueField', () => {
     expect(screen.getByText('kW')).toBeTruthy();
   });
 
-  it('🔴 απορριπτέο κείμενο ⇒ ΚΑΜΙΑ δέσμευση, μήνυμα δίπλα, το κείμενο μένει', () => {
+  it('🔴 απορριπτέο κείμενο ⇒ ΚΑΜΙΑ δέσμευση, μήνυμα δίπλα, το κείμενο μένει', async () => {
     const { onHolder } = renderField({ values: {}, noValueReasons: {}, categoryIds: [] });
     const input = screen.getByLabelText('Ψυκτική ισχύς H') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '2,5 furlong' } });
@@ -112,7 +116,8 @@ describe('AttributeValueField', () => {
     expect(onHolder).not.toHaveBeenCalled();
     expect(input.value).toBe('2,5 furlong');
     expect(input.getAttribute('aria-invalid')).toBe('true');
-    expect(screen.getByText(/issues\.measurementUnitUnknown/)).toBeTruthy();
+    // ADR-744 §34: το ακριβές μήνυμα φτάνει με τον πίνακα ευρημάτων, εκτός πρώτου καρέ.
+    expect(await screen.findByText(/issues\.measurementUnitUnknown/)).toBeTruthy();
   });
 
   it('«Δεν εφαρμόζεται» ⇒ λόγος απουσίας, η τιμή σβήνει (Δ5)', async () => {

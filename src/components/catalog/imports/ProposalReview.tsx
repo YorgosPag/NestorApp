@@ -69,7 +69,7 @@ function RowFields({ row, proposal, focused, onFocus, onChange }: RowProps) {
 function RowSection(props: RowProps) {
   const { row, proposal, onChange } = props;
   const { t } = useImportText();
-  const message = useImportIssueMessage();
+  const message = useImportIssueMessage(row.issues.length > 0);
   const acceptAll = () => onChange(proposal, {
     decisions: row.fields.filter((field) => field.incoming !== null).map((field) => ({ rowKey: row.rowKey, targetKey: importTargetKey(field.target), decision: 'accept' as const })),
   });

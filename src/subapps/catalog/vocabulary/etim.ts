@@ -30,3 +30,43 @@ export const ETIM_LANGUAGE_TAG: Readonly<Record<HumanLanguage, string>> = { el: 
 
 /** UNECE Rec 20 «τεμάχιο». Η μόνη μονάδα παραγγελίας και τιμής που γράφουμε χωρίς να τη γνωρίζει ο τιμοκατάλογος. */
 export const ETIM_PIECE_UNIT = 'C62';
+
+/** Μέγιστο μήκος `SupplierItemNumber` / `ManufacturerProductNumber` στο σχήμα 2.0. Μακρύτερος κωδικός δεν κόβεται ποτέ: θα ήταν άλλο SKU. */
+export const ETIM_ITEM_NUMBER_MAX = 35;
+
+/**
+ * Οι μονάδες που δέχονται το `PriceUnit` **και** το `OrderUnit` του σχήματος 2.0, αυτούσιες (οι δύο λίστες είναι ίδιες). Η άγκυρα
+ * `etim-xchange-roundtrip.test.ts` τις συγκρίνει με το επίσημο σχήμα, ώστε νέα έκδοσή του να μη μείνει αθέατη.
+ */
+export const ETIM_XCHANGE_UNITS = [
+  'ANN', 'BE', 'BG', 'BO', 'BX', 'C62', 'CA', 'CI', 'CL', 'CMK', 'CMQ', 'CMT', 'CQ', 'CR', 'CS', 'CT', 'D99', 'DAY', 'DR', 'DZN', 'FOT',
+  'FTQ', 'GRM', 'HLT', 'HUR', 'INH', 'INQ', 'KG', 'KGM', 'KTM', 'LBR', 'LTN', 'LTR', 'MGM', 'MIN', 'MLT', 'MMK', 'MMQ', 'MMT', 'MTK',
+  'MTQ', 'MTR', 'ONZ', 'PA', 'PF', 'PK', 'PL', 'PR', 'PU', 'RG', 'RL', 'RO', 'SA', 'SEC', 'SET', 'SMI', 'ST', 'TN', 'TNE', 'TU', 'WEE',
+  'YRD', 'Z2', 'Z3',
+] as const;
+
+export type EtimXChangeUnit = (typeof ETIM_XCHANGE_UNITS)[number];
+
+/**
+ * Κωδικοί UNECE του μητρώου μονάδων μας που το xChange γράφει αλλιώς. Το ETIM λέει «τεμάχιο» με `C62` («one»), εμείς με `H87`
+ * («piece»). Οι συσκευασίες του Rec 21 (`X` + κωδικός) είναι στο σχήμα με τον παλιό κωδικό του Rec 20, χωρίς το `X`. Κάθε άλλη
+ * απόκλιση **δεν** μαντεύεται: η τιμή γίνεται «ζητήστε προσφορά» και μετριέται (Ζ5).
+ */
+export const ETIM_UNECE_EQUIVALENTS: Readonly<Record<string, EtimXChangeUnit>> = { H87: 'C62', XBG: 'BG', XBX: 'BX', XRO: 'RO', XPK: 'PK' };
+
+/**
+ * Γιατί ένα ορατό SKU βγήκε με `PriceOnRequest` (ADR-923 §5.14 Ζ9): ορατό χωρίς τιμή για το κοινό · οι αιτίες της μηχανής τιμής ·
+ * μονάδα τιμής χωρίς κωδικό του σχήματος. Η σειρά είναι η σειρά της αναφοράς.
+ */
+export const XCHANGE_ON_REQUEST_REASONS = [
+  'visibleNoPrice',
+  'noPriceList',
+  'ambiguousPriceList',
+  'noVersion',
+  'noLine',
+  'ambiguousDiscount',
+  'invalidQuantity',
+  'unitUnmapped',
+] as const;
+
+export type XChangeOnRequestReason = (typeof XCHANGE_ON_REQUEST_REASONS)[number];

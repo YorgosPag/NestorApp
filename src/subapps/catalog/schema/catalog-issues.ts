@@ -188,6 +188,9 @@ export const CATALOG_ISSUE_CODES = [
   'publicationNotDeletable',
   'publicationNotHoldable',
   'publicationAlreadyOnHold',
+  // ── Φάση 7 (§5.14): εξαγωγή ETIM xChange ──
+  'xchangePriceListNotOffered',
+  'xchangeSupplierNameMissing',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

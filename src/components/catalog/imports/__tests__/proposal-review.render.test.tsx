@@ -2,13 +2,14 @@
  * **Ο έλεγχος πρότασης αποδίδει ό,τι είπε ο διακομιστής** (ADR-923 §5.5): η έγκριση κλειδώνει όσο υπάρχει πεδίο σε εκκρεμότητα,
  * οι αποφάσεις φεύγουν με το σταθερό κλειδί του στόχου, το κλικ εστιάζει το πεδίο για το PDF, και το εφαρμοσμένο δεν αλλάζει.
  */
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportProposalField, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { ANY_SLOT } from '@/subapps/catalog/types/product';
 import { ProposalReview } from '../ProposalReview';
+import { markBundlesComplete } from '@/test-utils/i18n-mock';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
@@ -50,6 +51,9 @@ function setup(value: ImportProposalWire) {
   return handlers;
 }
 
+// ADR-744 §34: τα ευρήματα θέλουν πίνακα ΚΑΙ πλήρες bundle — εδώ ο hook μετάφρασης είναι mock, άρα το δηλώνουμε.
+beforeAll(() => markBundlesComplete(['catalog', 'catalog-import']));
+
 describe('ProposalReview', () => {
   it('όλα αποφασισμένα: η έγκριση στέλνει την πρόταση', () => {
     const value = proposal([row([field()])]);
@@ -71,14 +75,15 @@ describe('ProposalReview', () => {
     expect(onChange).toHaveBeenCalledWith(value, { decisions: [{ rowKey: 'r0', targetKey: importTargetKey(target), decision: 'accept' }] });
   });
 
-  it('τιμή που δεν διαβάστηκε δεν γίνεται αποδεκτή, και η μαζική αποδοχή την προσπερνά', () => {
+  it('τιμή που δεν διαβάστηκε δεν γίνεται αποδεκτή, και η μαζική αποδοχή την προσπερνά', async () => {
     const unread = field({ incoming: null, decision: 'pending', issues: [{ code: 'misaligned', path: 'cattr_power' }] });
     const value = proposal([row([unread])]);
     const { onChange } = setup(value);
     expect(screen.getByRole('button', { name: 'review.accept' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'review.acceptRow' }));
     expect(onChange).toHaveBeenCalledWith(value, { decisions: [] });
-    expect(screen.getByRole('alert')).toHaveTextContent('issues.misaligned');
+    // ADR-744 §34: πρώτα η λέξη αναμονής, μετά το ακριβές μήνυμα — ποτέ ωμό κλειδί ενδιάμεσα.
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('issues.misaligned'));
   });
 
   it('το κλικ στο πεδίο το εστιάζει, με την άγκυρά του για το PDF', () => {

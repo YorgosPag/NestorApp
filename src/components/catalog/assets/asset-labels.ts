@@ -17,7 +17,7 @@ import { Award, Box, Clapperboard, FileText, Image as ImageIcon, Leaf, NotebookT
 import type { MediaLicensePurposeIn } from '@/constants/media-rights-vocabulary';
 import type { ImageColourModel } from '@/lib/images/image-colour';
 import type { MediaLicenseStanding } from '@/lib/media-rights/media-license-standing';
-import type { DraftTermKind, MediaRightsDraftIssue } from '@/lib/media-rights/media-rights-draft';
+import type { DraftTermKind } from '@/lib/media-rights/media-rights-draft';
 import type { CatalogRenditionFailure, CatalogRenditionsStanding, CatalogRenditionUse } from '@/subapps/catalog/renditions/catalog-renditions';
 import type { CatalogAssetRole } from '@/subapps/catalog/vocabulary/asset-roles';
 import type { IntakeStage } from './asset-intake-model';
@@ -81,12 +81,6 @@ export const CATALOG_LICENSE_PURPOSE_KEYS: Readonly<Record<MediaLicensePurposeIn
 export const LICENSE_TERM_KIND_KEYS: Readonly<Record<DraftTermKind, string>> = {
   perpetual: 'assets.licence.termKinds.perpetual',
   date: 'assets.licence.termKinds.date',
-};
-
-/** Ίδιες λέξεις με τα ευρήματα του γραφέα (`catalog:issues.*`) — μία ετικέτα ανά αστοχία, όχι δύο. */
-export const LICENSE_DRAFT_ISSUE_KEYS: Readonly<Record<MediaRightsDraftIssue, string>> = {
-  creatorRequired: 'issues.rightsCreatorRequired',
-  termDateRequired: 'issues.rightsTermDateRequired',
 };
 
 export const LICENSE_STANDING_KEYS: Readonly<Record<MediaLicenseStanding, string>> = {

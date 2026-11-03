@@ -117,6 +117,12 @@ export const CATALOG_API = {
     apply: (id: string) => `${API_ROOT}/import-proposals/${encodeURIComponent(id)}/apply`,
     reject: (id: string) => `${API_ROOT}/import-proposals/${encodeURIComponent(id)}/reject`,
   },
+  // ── Φάση 7 (ADR-923 §5.14) — εξαγωγή ETIM xChange: ένα κοινό τιμών ανά αρχείο ──
+  xchangeExport: (priceListId: string | null, language: string) => {
+    const query = new URLSearchParams({ [XCHANGE_LANGUAGE_PARAM]: language });
+    if (priceListId !== null) query.set(XCHANGE_PRICE_LIST_PARAM, priceListId);
+    return `${API_ROOT}/xchange-export?${query.toString()}`;
+  },
 } as const;
 
 /** Το έργο του βιβλίου τιμών κόστους (`GET …/cost-rates?projectId=…`). */
@@ -124,6 +130,12 @@ export const COST_RATES_PROJECT_PARAM = 'projectId';
 
 /** Η παράμετρος αναθεώρησης της διαγραφής (`DELETE …?expectedRevision=N`) — ένα όνομα για πελάτη και route. */
 export const EXPECTED_REVISION_PARAM = 'expectedRevision';
+
+/** Η λίστα πελάτη της εξαγωγής xChange· απούσα ⇒ η δημόσια τιμή καταλόγου (ADR-923 §5.14 απόφαση Ε1). */
+export const XCHANGE_PRICE_LIST_PARAM = 'priceListId';
+
+/** Η γλώσσα των περιγραφών του αρχείου xChange. */
+export const XCHANGE_LANGUAGE_PARAM = 'language';
 
 /** Ο δρομέας σελίδας μιας όψης (`GET …?cursor=<id εγγράφου>`) — ένα όνομα για πελάτη και route. */
 export const CURSOR_PARAM = 'cursor';

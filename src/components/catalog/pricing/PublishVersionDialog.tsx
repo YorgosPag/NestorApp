@@ -52,7 +52,7 @@ function NoticeLine({ notice }: { readonly notice: PublishNotice | null }) {
 
 function ScheduleStep({ driver, flow }: { readonly driver: Driver; readonly flow: Extract<PublishFlow, { step: 'schedule' }> }) {
   const { t } = useCatalogText();
-  const message = useIssueMessage();
+  const message = useIssueMessage(Boolean(driver.issue));
   const value = driver.validFrom ? new Date(driver.validFrom) : undefined;
   return (
     <section className="flex flex-col gap-3">

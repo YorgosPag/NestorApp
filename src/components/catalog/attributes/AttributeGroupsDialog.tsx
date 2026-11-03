@@ -26,6 +26,7 @@ import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog
 import { deleteDefinition, newEntityKey, optimisticWire, saveDefinition } from '../shared/catalog-actions';
 import { orderKeyAtEnd, orderKeyBetween } from '../shared/catalog-ordering';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
+import { useIssueMessage } from '../shared/CatalogIssues';
 import { InlineLocalizedInputs } from '../shared/LocalizedTextField';
 
 interface AttributeGroupsDialogProps {
@@ -83,6 +84,7 @@ function NewGroupForm({ groups, ops }: { readonly groups: readonly AttributeGrou
   const [labels, setLabels] = useState<LocalizedText>({});
   const code = suggestCatalogCode(labels[DEFAULT_LANGUAGE] ?? '');
   const taken = groups.some((group) => group.code === code);
+  const message = useIssueMessage(taken);
   const create = () => {
     saveGroup(ops, null, { code, labels, orderKey: orderKeyAtEnd(groups) });
     setLabels({});
@@ -92,7 +94,7 @@ function NewGroupForm({ groups, ops }: { readonly groups: readonly AttributeGrou
       <InlineLocalizedInputs value={labels} onChange={setLabels} label={t('attributes.groups.newLabelOf')} />
       <code className="text-xs text-muted-foreground">{code || '—'}</code>
       <Button type="submit" size="sm" disabled={code.length === 0 || taken}>{t('attributes.groups.create')}</Button>
-      {taken ? <span className="w-full text-xs text-destructive" role="alert">{t('issues.duplicateCode', { code })}</span> : null}
+      {taken ? <span className="w-full text-xs text-destructive" role="alert">{message({ code: 'duplicateCode', path: 'code', params: { code } })}</span> : null}
     </form>
   );
 }

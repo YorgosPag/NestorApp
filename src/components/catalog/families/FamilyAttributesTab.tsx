@@ -24,7 +24,7 @@ import type { FamilyAttributeBinding } from '@/subapps/catalog/types/family';
 import { CATALOG_CHANNELS, type CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 import { ATTRIBUTE_TYPE_ICONS, ATTRIBUTE_TYPE_KEYS, CHANNEL_KEYS } from '../shared/catalog-labels';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { FieldIssues } from '../shared/CatalogIssues';
+import { FieldIssues, useIssueMessage } from '../shared/CatalogIssues';
 import { AttributePicker, type FamilyTabProps } from './AttributePicker';
 import { withoutFamilyAttribute } from './family-draft';
 import { NewAttributeDialog } from './NewAttributeDialog';
@@ -50,6 +50,7 @@ function BindingRow({ binding, index, handle, props }: {
   const { t, text } = useCatalogText();
   const { draft, update, disabled, library, issues } = props;
   const attribute = library.attributeById.get(binding.attributeId);
+  const message = useIssueMessage(attribute === undefined);
   const name = attribute ? text(attribute.labels, attribute.code) : binding.attributeId;
   const Icon = attribute ? ATTRIBUTE_TYPE_ICONS[attribute.type] : null;
   const replace = (next: FamilyAttributeBinding) => update({ ...draft, attributes: draft.attributes.map((item, at) => (at === index ? next : item)) });
@@ -61,7 +62,7 @@ function BindingRow({ binding, index, handle, props }: {
           {Icon ? <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : null}
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-sm">{name}</span>
-            <span className="truncate font-mono text-xs text-muted-foreground">{attribute ? `${attribute.code} · ${t(ATTRIBUTE_TYPE_KEYS[attribute.type])}` : t('issues.attributeUnknown')}</span>
+            <span className="truncate font-mono text-xs text-muted-foreground">{attribute ? `${attribute.code} · ${t(ATTRIBUTE_TYPE_KEYS[attribute.type])}` : message({ code: 'attributeUnknown', path: 'attributes' })}</span>
           </span>
         </span>
         {CATALOG_CHANNELS.map((channel) => (

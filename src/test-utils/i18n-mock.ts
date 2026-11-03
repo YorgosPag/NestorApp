@@ -35,6 +35,7 @@
  * ```
  */
 
+import { recordLoaderInstall } from '@/i18n/bundle-registry';
 import type { Language } from '@/i18n/languages';
 
 /** Ό,τι χρειάζεται και το `react-i18next` mock και ο hook του έργου. */
@@ -53,4 +54,13 @@ export function keyEchoTranslation(language: Language = 'el'): KeyEchoTranslatio
     ready: true,
     currentLanguage: language,
   };
+}
+
+/**
+ * Δηλώνει **πλήρη** τα bundles — ό,τι θα έκανε ο loader στην εφαρμογή. Χρειάζεται όπου το test κάνει mock τον hook
+ * μετάφρασης αλλά αποδίδει κάτι που περιμένει την αυθεντία πληρότητας: οι πίνακες μηνυμάτων εκτός πρώτου καρέ
+ * (ADR-744 §34) δίνουν το ακριβές μήνυμα **μόνο** με πίνακα **και** πλήρες bundle.
+ */
+export function markBundlesComplete(namespaces: readonly string[], language: Language = 'el'): void {
+  for (const namespace of namespaces) recordLoaderInstall(language, namespace);
 }

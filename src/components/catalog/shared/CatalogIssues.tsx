@@ -10,8 +10,9 @@
 
 import React, { useCallback } from 'react';
 
+import { useDeferredMessage } from '@/i18n/hooks/useDeferredMessageTable';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import { ISSUE_KEYS } from './catalog-labels';
+import { CATALOG_ISSUE_TABLE } from './catalog-issue-messages';
 import { useCatalogText } from './catalog-ui-hooks';
 
 /** Τα ευρήματα **στο** `path` ή **κάτω** από αυτό (`attributes` ⇒ και `attributes[3].attributeId`). */
@@ -21,10 +22,24 @@ export function issuesUnder(issues: readonly CatalogIssue[], path: string): Cata
   );
 }
 
-/** Η μετάφραση ενός ευρήματος. */
-export function useIssueMessage(): (issue: CatalogIssue) => string {
+/**
+ * Η μετάφραση ενός ευρήματος (ADR-744 §34). Ο πίνακας φτάνει εκτός πρώτου καρέ· μέχρι τότε η γενική λέξη του slice.
+ * @param needed υπάρχει **τώρα** εύρημα να δειχτεί ⇒ φόρτωση αμέσως, αντί για προφόρτωση σε αδράνεια.
+ */
+export function useIssueMessage(needed = false): (issue: CatalogIssue) => string {
+  const { t, uiLanguage } = useCatalogText();
+  const pending = useIssuePending();
+  const translate = useDeferredMessage(CATALOG_ISSUE_TABLE, { language: uiLanguage, needed, t, pending });
+  return useCallback((issue: CatalogIssue) => translate(issue.code, issue.params), [translate]);
+}
+
+/**
+ * Η λέξη όσο φορτώνεται ένας πίνακας ευρημάτων (καταλόγου **ή** εισαγωγής): αληθινή για ΚΑΘΕ εύρημα («χρειάζεται
+ * διόρθωση» — όχι «μη έγκυρη τιμή»: πολλά δεν είναι τιμές), σύντομη, και ζει στο slice. Αντικαθίσταται μόλις φτάσει η ακριβής.
+ */
+export function useIssuePending(): string {
   const { t } = useCatalogText();
-  return useCallback((issue: CatalogIssue) => t(ISSUE_KEYS[issue.code], issue.params ?? {}), [t]);
+  return t('common.issuePending');
 }
 
 interface FieldIssuesProps {
@@ -37,8 +52,8 @@ interface FieldIssuesProps {
 
 /** Τα ευρήματα ενός πεδίου — συνδέεται με το πεδίο μέσω `aria-describedby={id}`. */
 export function FieldIssues({ issues, path, exact = false, id }: FieldIssuesProps) {
-  const message = useIssueMessage();
   const mine = exact ? issues.filter((issue) => issue.path === path) : issuesUnder(issues, path);
+  const message = useIssueMessage(mine.length > 0);
   if (mine.length === 0) return null;
   return (
     <ul id={id} className="m-0 flex list-none flex-col gap-0.5 p-0 text-xs text-destructive" role="alert">
@@ -73,7 +88,7 @@ function IssuePlace({ issue, locate }: { readonly issue: CatalogIssue; readonly 
 
 /** Όλα τα ευρήματα μαζί (π.χ. πάνω από τις καρτέλες) — με το σημείο τους. */
 export function IssueSummary({ issues, title, locate }: IssueSummaryProps) {
-  const message = useIssueMessage();
+  const message = useIssueMessage(issues.length > 0);
   if (issues.length === 0) return null;
   return (
     <section className="rounded-md border border-destructive/40 bg-destructive/5 p-3" aria-live="polite">

@@ -26,7 +26,8 @@ export { useCatalogAccess };
 export function useCatalogText() {
   const { t, i18n } = useTranslation(CATALOG_NAMESPACES);
   const { text, language } = useLocalizedTextReader(i18n.language);
-  return { t, text, language };
+  // `uiLanguage` = η γλώσσα του i18n (κλειδί του μητρώου bundles)· `language` = η γλώσσα περιεχομένου. Δεν ταυτίζονται.
+  return { t, text, language, uiLanguage: i18n.language };
 }
 
 /** Η μία ειδοποίηση αποτυχίας εγγραφής — ίδια λέξη για ίδιο είδος, σε κάθε οθόνη του καταλόγου. */

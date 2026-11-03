@@ -27,7 +27,7 @@ import { audienceCovers, audienceSpecificity } from '@/subapps/catalog/pricing/p
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import { resolveCatalogPrice, type PricedRecord } from '@/subapps/catalog/pricing/resolve-catalog-price';
-import { versionAt } from '@/subapps/catalog/pricing/version-timeline';
+import { versionAt, type PriceVersionRef } from '@/subapps/catalog/pricing/version-timeline';
 import { judgeVisibility } from '@/subapps/catalog/pricing/visibility';
 import type {
   PriceQuoteContext,
@@ -39,6 +39,7 @@ import type {
   DiscountConditionDefinition,
   PriceAudience,
   PriceListDefinition,
+  PriceListLineDefinition,
   PricingViewer,
   StoredPriceListLineDefinition,
 } from '@/subapps/catalog/types/price-list';
@@ -64,7 +65,7 @@ type OfferedList = StoredList & { readonly audience: PriceAudience };
 
 const isOffered = (list: StoredList): list is OfferedList => list.audience !== null;
 
-type ListSelection = { readonly trace: PriceQuoteContext['listTrace'] } & (
+export type ListSelection = { readonly trace: PriceQuoteContext['listTrace'] } & (
   | { readonly kind: 'list'; readonly list: StoredList }
   | Extract<PriceQuoteOutcome, { kind: 'noPriceList' | 'ambiguousPriceList' }>
 );
@@ -72,7 +73,7 @@ type ListSelection = { readonly trace: PriceQuoteContext['listTrace'] } & (
 /** Η λίστα του θεατή: ρητή, ή του ειδικότερου κοινού που τον καλύπτει (ο ίδιος επιλογέας με τις συνθήκες). */
 async function selectList(
   scope: CatalogReadScope,
-  request: QuoteTerms,
+  request: Pick<QuoteTerms, 'priceListId'>,
   viewer: PricingViewer,
   atMs: number,
 ): Promise<ListSelection> {
@@ -132,38 +133,68 @@ export function quoteCatalogPrice(ctx: AuthContext, request: PriceQuoteRequest):
  * Δ4) ρωτούν το ίδιο πράγμα, ώστε το «δες σαν τον Χ» να λέει ό,τι θα δει ο Χ.
  */
 export async function quoteWithin(scope: CatalogReadScope, request: QuoteTerms, viewer: PricingViewer): Promise<PriceQuoteResult> {
-  const atMs = normalizeToMillisOrNull(request.at ?? nowISO()) ?? Date.now();
-  const selected = await selectList(scope, request, viewer, atMs);
-  const visibility = await visibilityOf(scope, request, viewer, atMs);
-  const context: PriceQuoteContext = { viewer, at: new Date(atMs).toISOString(), listTrace: selected.trace, visibility };
-  if (selected.kind === 'noPriceList') return { kind: selected.kind, ...context };
-  if (selected.kind === 'ambiguousPriceList') return { kind: selected.kind, tiedPriceListIds: selected.tiedPriceListIds, ...context };
-  return { ...(await quoteFromList(scope, request, viewer, selected.list, atMs)), ...context };
+  const basis = await readQuoteBasis(scope, request, viewer);
+  const visibility = await visibilityOf(scope, request, viewer, basis.atMs);
+  return quoteOnBasis(basis, request, await readBasisLine(scope, basis, request.subject), visibility);
 }
 
-async function quoteFromList(
-  scope: CatalogReadScope,
-  request: QuoteTerms,
-  viewer: PricingViewer,
-  list: StoredList,
-  atMs: number,
-): Promise<PriceQuoteOutcome> {
-  const versions = (await readListVersions(scope, list.id)).map(versionRefOf);
-  const version = versionAt(versions, atMs);
+/**
+ * Ό,τι είναι **κοινό σε κάθε υποκείμενο** ενός θεατή: η στιγμή, η λίστα, οι εκδόσεις της, οι συνθήκες. Η μαζική ανάγνωση (εξαγωγή
+ * xChange, §5.14) το διαβάζει **μία** φορά και κρίνει κάθε SKU με το {@link quoteOnBasis}, ώστε να μη γραφτεί δεύτερη μηχανή.
+ */
+export interface QuoteBasis {
+  readonly viewer: PricingViewer;
+  readonly atMs: number;
+  readonly selected: ListSelection;
+  readonly versions: readonly PriceVersionRef[];
+  readonly conditions: readonly PricedRecord<DiscountConditionDefinition>[];
+}
+
+/** Η γραμμή τιμής όπως τη ζητά η κρίση: ορισμός με id. */
+export type QuoteLine = PriceListLineDefinition & { readonly id: string };
+
+export async function readQuoteBasis(scope: CatalogReadScope, terms: Pick<QuoteTerms, 'priceListId' | 'at'>, viewer: PricingViewer): Promise<QuoteBasis> {
+  const atMs = normalizeToMillisOrNull(terms.at ?? nowISO()) ?? Date.now();
+  const selected = await selectList(scope, terms, viewer, atMs);
+  if (selected.kind !== 'list') return { viewer, atMs, selected, versions: [], conditions: [] };
+  const versions = (await readListVersions(scope, selected.list.id)).map(versionRefOf);
+  return { viewer, atMs, selected, versions, conditions: await readActiveConditions(scope) };
+}
+
+/** Η έκδοση της βάσης που ισχύει στη στιγμή της· `null` χωρίς λίστα ή πριν από την πρώτη δημοσίευση. */
+export function basisVersion(basis: QuoteBasis): PriceVersionRef | null {
+  return basis.selected.kind === 'list' ? versionAt(basis.versions, basis.atMs) : null;
+}
+
+/** Μία γραμμή, με ντετερμινιστικό id: η ανάγνωση της μεμονωμένης κρίσης. */
+async function readBasisLine(scope: CatalogReadScope, basis: QuoteBasis, subject: QuoteTerms['subject']): Promise<QuoteLine | null> {
+  const version = basisVersion(basis);
+  if (version === null) return null;
+  const lineId = naturalKeyId(scope, 'priceListLine', priceListLineKey(version.id, priceLineSubjectKey(subject)));
+  return readOwnedOrNull<StoredPriceListLineDefinition>(scope, 'priceListLine', lineId);
+}
+
+/** **Η κρίση πάνω σε διαβασμένη βάση**: καθαρή, ίδια για τη μία τιμή και για τη μαζική ανάγνωση. */
+export function quoteOnBasis(basis: QuoteBasis, request: Pick<QuoteTerms, 'subject' | 'quantity'>, line: QuoteLine | null, visibility: VisibilityVerdict | null): PriceQuoteResult {
+  const { selected } = basis;
+  const context: PriceQuoteContext = { viewer: basis.viewer, at: new Date(basis.atMs).toISOString(), listTrace: selected.trace, visibility };
+  if (selected.kind === 'noPriceList') return { kind: selected.kind, ...context };
+  if (selected.kind === 'ambiguousPriceList') return { kind: selected.kind, tiedPriceListIds: selected.tiedPriceListIds, ...context };
+  return { ...quoteFromList(basis, selected.list, request, line), ...context };
+}
+
+function quoteFromList(basis: QuoteBasis, list: StoredList, request: Pick<QuoteTerms, 'subject' | 'quantity'>, line: QuoteLine | null): PriceQuoteOutcome {
   const subjectKey = priceLineSubjectKey(request.subject);
-  const lineId = version === null ? null : naturalKeyId(scope, 'priceListLine', priceListLineKey(version.id, subjectKey));
-  const line = lineId === null ? null : await readOwnedOrNull<StoredPriceListLineDefinition>(scope, 'priceListLine', lineId);
-  const conditions = await readActiveConditions(scope);
   const resolution = resolveCatalogPrice({
     priceList: { id: list.id, definition: list },
-    versions,
+    versions: basis.versions,
     lineFor: (versionId, key) =>
       line !== null && line.versionId === versionId && key === subjectKey ? { id: line.id, definition: line } : null,
-    conditions,
-    viewer,
+    conditions: basis.conditions,
+    viewer: basis.viewer,
     subject: request.subject,
     quantity: request.quantity,
-    atMs,
+    atMs: basis.atMs,
   });
   switch (resolution.kind) {
     case 'priced': {

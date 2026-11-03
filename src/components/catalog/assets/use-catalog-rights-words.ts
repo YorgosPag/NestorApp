@@ -13,10 +13,13 @@ import { useMemo } from 'react';
 
 import type { MediaRightsWords } from '@/components/shared/media-rights/MediaRightsFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { CATALOG_LICENSE_PURPOSE_KEYS, LICENSE_DRAFT_ISSUE_KEYS, LICENSE_TERM_KIND_KEYS } from './asset-labels';
+import { useIssueMessage } from '../shared/CatalogIssues';
+import { CATALOG_LICENSE_PURPOSE_KEYS, LICENSE_TERM_KIND_KEYS } from './asset-labels';
 
 export function useCatalogRightsWords(): MediaRightsWords<'catalog'> {
   const { t } = useCatalogText();
+  // Τα ευρήματα του προσχεδίου είναι ΟΙ ΙΔΙΟΙ κωδικοί με του γραφέα ⇒ ο ένας δρόμος των ευρημάτων (ADR-744 §34).
+  const message = useIssueMessage();
   return useMemo(() => ({
     legend: t('assets.licence.legend'),
     creator: t('assets.licence.creator'),
@@ -34,8 +37,8 @@ export function useCatalogRightsWords(): MediaRightsWords<'catalog'> {
     },
     termKinds: { perpetual: t(LICENSE_TERM_KIND_KEYS.perpetual), date: t(LICENSE_TERM_KIND_KEYS.date) },
     issues: {
-      creatorRequired: t(LICENSE_DRAFT_ISSUE_KEYS.creatorRequired),
-      termDateRequired: t(LICENSE_DRAFT_ISSUE_KEYS.termDateRequired),
+      creatorRequired: message({ code: 'rightsCreatorRequired', path: 'creator' }),
+      termDateRequired: message({ code: 'rightsTermDateRequired', path: 'term' }),
     },
-  }), [t]);
+  }), [message, t]);
 }
