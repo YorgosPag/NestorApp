@@ -245,10 +245,9 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
   // Note: ai-inbox + operator-inbox are Server Components — not lazy-loaded
   // =========================================================================
 
-  AdminEnterpriseMigration: {
-    load: () => import('@/components/admin/pages/EnterpriseMigrationPageContent').then(mod => ({ default: mod.EnterpriseMigrationPageContent })),
-    loadingType: 'form', ssr: false,
-  },
+  // ⛔ `AdminEnterpriseMigration` + `AdminDatabaseUpdate` ΑΦΑΙΡΕΘΗΚΑΝ (ADR-927 §8, 2026-11-03): εργαλεία δεδομένων
+  //    μέσα στο προϊόν — ψεύτικη μετεγκατάσταση που δεν μπορούσε να γράψει, και seed από τον browser. Το seed
+  //    ζει στον emulator (`scripts/emulator-seed-*.ts`, ADR-745)· οι μετεγκαταστάσεις στον διακομιστή, με dry-run.
 
   AdminRoleManagement: {
     load: () => import('@/components/admin/pages/RoleManagementPageContent').then(mod => ({ default: mod.RoleManagementPageContent })),
@@ -294,11 +293,6 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
   AdminSupplierVerifications: {
     load: () => import('@/components/admin/pages/SupplierVerificationsPageContent').then(mod => ({ default: mod.SupplierVerificationsPageContent })),
     loadingType: 'dashboard', ssr: false,
-  },
-
-  AdminDatabaseUpdate: {
-    load: () => import('@/components/admin/pages/DatabaseUpdatePageContent').then(mod => ({ default: mod.DatabaseUpdatePageContent })),
-    loadingType: 'form', ssr: false,
   },
 
   AdminBackup: {

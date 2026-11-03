@@ -375,12 +375,6 @@
   "AdminClaimsRepair": [
     "admin"
   ],
-  "AdminDatabaseUpdate": [
-    "admin"
-  ],
-  "AdminEnterpriseMigration": [
-    "admin"
-  ],
   "AdminLandingHeroes": [
     "landing-heroes-admin"
   ],

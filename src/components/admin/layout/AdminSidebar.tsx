@@ -17,8 +17,6 @@ import {
   FileText,
   Archive,
   Settings,
-  Database,
-  Building2,
   Search,
   Bot,
   MessageSquare,
@@ -99,8 +97,8 @@ const NAV_GROUPS: NavGroup[] = [
     groupKey: 'system',
     items: [
       { href: '/admin/setup', labelKey: 'setup', icon: Settings },
-      { href: '/admin/database-update', labelKey: 'databaseUpdate', icon: Database },
-      { href: '/admin/enterprise-migration', labelKey: 'enterpriseMigration', icon: Building2 },
+      // ADR-927 §8 — «Ενημέρωση Βάσης» και «Μετεγκατάσταση Enterprise» ΑΦΑΙΡΕΘΗΚΑΝ: εργαλεία δεδομένων δεν ζουν
+      // στο UI του προϊόντος (seed → emulator, μετεγκατάσταση → διακομιστής με dry-run).
       { href: '/admin/search-backfill', labelKey: 'searchBackfill', icon: Search },
     ],
   },

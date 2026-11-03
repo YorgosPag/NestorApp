@@ -1383,7 +1383,7 @@
   `rfq-service.ts` · `vendor-invite-service.ts` · `api/attendance/qr/generate/route.ts` ·
   `api/alerts/schedule-check/route.ts` · `sales-accounting/notification-helpers.ts` ·
   `ShowcasePublicDoor.tsx` · `PhotoSharePageContent.tsx` · `usePhotoPreviewState.ts` ·
-  `social-platform-system/analytics-service.ts` · `core/configuration/index.ts` ·
+  `social-platform-system/analytics-service.ts` ·
   `title-block-fingerprint.ts` (να κριθεί χωριστά — ίσως δεν είναι σύνδεσμος).
 
   🔴 **Δεν είναι μόνο διπλότυπο (17 αναγνώστες του `NEXT_PUBLIC_APP_URL`) — είναι ΑΣΦΑΛΕΙΑ.** Το

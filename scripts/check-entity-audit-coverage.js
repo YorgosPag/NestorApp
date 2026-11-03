@@ -147,7 +147,6 @@ const HARD_EXEMPT_PATTERNS = [
   /[\\/]lib[\\/]auth[\\/]audit-core\.ts$/,
   // Client-SDK files — EntityAuditService has `import 'server-only'` and cannot be
   // imported from browser context. These files use firebase/firestore (client SDK).
-  /[\\/]components[\\/]admin[\\/]pages[\\/]DatabaseUpdatePageContent\.tsx$/, // dev-only, production-blocked
   /[\\/]components[\\/]debug[\\/]FirestoreTestData\.tsx$/,                   // debug test-data seeder
   /[\\/]database[\\/]migrations[\\/]002_normalize_floors_collection\.ts$/,   // client-SDK migration
   /[\\/]services[\\/]ownership[\\/]ownership-table-service\.ts$/,            // client-SDK; millesimalShares writes in finalizeTable

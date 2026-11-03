@@ -255,46 +255,6 @@
       "statsHint": "\"How many properties do we have?\" — Unit stats"
     }
   },
-  "databaseUpdate": {
-    "title": "Database Update",
-    "subtitle": "Add new contacts and create relationships with units",
-    "productionDisabled": "Database update tools are disabled in production.",
-    "cards": {
-      "newContacts": "New Contacts",
-      "add": "Add",
-      "updates": "Updates",
-      "contacts": "Contacts",
-      "units": "Units",
-      "newStatuses": "New Statuses",
-      "relationships": "Relationships"
-    },
-    "roleAssignmentsPreview": "Role Assignments Preview",
-    "more": "+{count} more",
-    "button": {
-      "executing": "Executing...",
-      "execute": "Execute Database Update"
-    },
-    "browserWarning": "Do not close the browser during the update",
-    "executionLogs": "Execution Logs",
-    "logs": {
-      "addingContacts": "Adding new contacts...",
-      "contactAdded": "Added: {name} ({id})",
-      "contactsAdded": "Added {count} new contacts",
-      "contactAddError": "Error adding contacts: {error}",
-      "updatingContacts": "Updating existing contacts...",
-      "contactUpdated": "Updated contact {id}: {role}",
-      "contactsUpdated": "Updated {count} existing contacts",
-      "contactUpdateError": "Error updating contacts: {error}",
-      "updatingUnits": "Updating units with new statuses...",
-      "unitUpdated": "Unit {id}: {status} ← Contact {contactId}",
-      "unitsUpdated": "Updated {count} units with relationships",
-      "unitUpdateError": "Error updating units: {error}",
-      "starting": "Starting database update...",
-      "completed": "Database update completed successfully!",
-      "error": "Error: {error}",
-      "role": "Role: {role}"
-    }
-  },
   "setup": {
     "loginRequired": "Login Required",
     "loginRequiredDescription": "You must sign in to access admin settings.",
@@ -1171,64 +1131,6 @@
       "empty": "No logs yet..."
     }
   },
-  "enterpriseMigration": {
-    "title": "Enterprise Hardcoded Values Migration",
-    "subtitle": "Eliminate all hardcoded values and transform your application to be fully database-driven",
-    "systemStatus": {
-      "title": "System Status",
-      "healthScore": "Health Score",
-      "healthy": "System is healthy and ready for migration",
-      "errorsDetected": "{count} error(s) detected",
-      "warningsDetected": "{count} warning(s) detected",
-      "loading": "Loading system status..."
-    },
-    "controls": {
-      "title": "Migration Controls",
-      "start": "Start Enterprise Migration",
-      "running": "Migration Running...",
-      "reset": "Reset Migration",
-      "progress": "Progress",
-      "phaseLabel": "Phase: {phase} — {item}"
-    },
-    "status": {
-      "success": "Migration completed successfully",
-      "failed": "Migration failed"
-    },
-    "logs": {
-      "title": "Migration Logs",
-      "clear": "Clear",
-      "empty": "No logs yet...",
-      "healthCheckHealthy": "System health check: Healthy (Score: {score}/100)",
-      "healthCheckIssues": "System health check: Issues detected (Score: {score}/100)",
-      "healthCheckFailed": "System health check failed: {error}",
-      "alreadyRunning": "Migration is already running",
-      "starting": "Starting Enterprise Hardcoded Values Migration...",
-      "phase": "Phase {current}/{total}: {label}",
-      "executing": "Executing actual migration...",
-      "completed": "Enterprise Migration completed successfully!",
-      "allHardcodedEliminated": "All hardcoded values have been eliminated",
-      "databaseDriven": "Application is now fully database-driven",
-      "failed": "Migration failed: {error}",
-      "reset": "Migration state reset"
-    },
-    "phases": {
-      "preparing": "Preparing migration...",
-      "backup": "Creating secure backup...",
-      "validation": "Validating configuration...",
-      "migrating": "Migrating hardcoded values...",
-      "verification": "Verifying migration...",
-      "completed": "Migration completed!"
-    },
-    "benefits": {
-      "title": "Migration Benefits",
-      "item1": "Eliminates all 150+ hardcoded values identified",
-      "item2": "Transforms application to be fully database-driven",
-      "item3": "Enables dynamic configuration without code deployments",
-      "item4": "Improves maintainability and enterprise compliance",
-      "item5": "Provides centralized configuration management",
-      "item6": "Includes rollback capabilities for safety"
-    }
-  },
   "companySwitcher": {
     "label": "Company",
     "selectCompany": "Select company",
@@ -1249,8 +1151,6 @@
       "backup": "Backup",
       "system": "System",
       "setup": "System Setup",
-      "databaseUpdate": "Database Update",
-      "enterpriseMigration": "Enterprise Migration",
       "searchBackfill": "Search Backfill",
       "communications": "Communications",
       "aiInbox": "AI Inbox",

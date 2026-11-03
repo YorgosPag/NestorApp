@@ -1,28 +1,19 @@
 /**
  * ============================================================================
- * 🏢 ENTERPRISE BUSINESS RULES UTILITIES
+ * 🏢 OBLIGATIONS BUSINESS RULES — κατώφλια ποιότητας/προόδου/λέξεων/ανάγνωσης
  * ============================================================================
  *
- * Κεντρικοποιημένες business rules που αντικαθιστούν hardcoded values
- * Χρησιμοποιεί το Enterprise Configuration Management System
+ * Οι τιμές που διαβάζουν τα `lib/obligations/*`. Μία πηγή, χωρίς σκληρές τιμές σκορπισμένες.
  *
- * Microsoft/Google/Apple enterprise pattern:
- * - Configuration-driven business logic
- * - Type-safe constants extraction
- * - Fallback to sensible defaults
- * - Single source of truth
- *
- * ============================================================================
+ * 🔴 **ΓΙΑΤΙ ΕΙΝΑΙ ΑΥΤΟΤΕΛΕΣ (ADR-927 §8, 2026-11-03)**: οι τιμές ζούσαν μέσα στο `DEFAULT_SYSTEM_CONFIG` ενός
+ *    «Enterprise Configuration Management System» (`core/configuration/*`, ~3.000 γραμμές) που φόρτωνε ρύθμιση από
+ *    `system/settings` και είχε σελίδα «Μετεγκατάσταση Enterprise». Μετρήθηκε ότι η μόνη χρήση του συστήματος ήταν
+ *    εκείνη η σελίδα. Η «μετεγκατάσταση» έγραφε από τον browser σε συλλογή με `allow write: if false` και άρα δεν
+ *    μπορούσε να πετύχει ποτέ. Η σελίδα αφαιρέθηκε, και μαζί της το σύστημα. Εδώ έμειναν μόνο οι τιμές που
+ *    διαβάζονται πράγματι, **ίδιες** με πριν.
  */
 
-import { DEFAULT_SYSTEM_CONFIG } from './enterprise-config-management';
-import type { SystemConfiguration } from './enterprise-config-management';
-
-// ============================================================================
-// 🎯 OBLIGATIONS BUSINESS RULES
-// ============================================================================
-
-export interface ObligationsBusinessRules {
+interface ObligationsBusinessRules {
   readonly qualityThreshold: number;
   readonly progressThresholds: {
     readonly excellent: number;
@@ -36,52 +27,14 @@ export interface ObligationsBusinessRules {
   readonly defaultReadingSpeed: number;
 }
 
-/**
- * Εξάγει τα obligations business rules από το configuration system
- * Χρησιμοποιεί fallback στα defaults αν δεν υπάρχει configuration
- */
-export function getObligationsBusinessRules(config?: SystemConfiguration): ObligationsBusinessRules {
-  const systemConfig = config || DEFAULT_SYSTEM_CONFIG;
-  return systemConfig.businessRules.obligations;
-}
+const OBLIGATIONS_RULES: ObligationsBusinessRules = {
+  qualityThreshold: 50,
+  progressThresholds: { excellent: 90, good: 70, moderate: 50 },
+  wordCountThresholds: { minimum: 10, excellent: 200 },
+  defaultReadingSpeed: 200,
+};
 
-/**
- * Εξάγει το quality threshold από το configuration
- */
-export function getQualityThreshold(config?: SystemConfiguration): number {
-  return getObligationsBusinessRules(config).qualityThreshold;
-}
-
-/**
- * Εξάγει τα progress thresholds από το configuration
- */
-export function getProgressThresholds(config?: SystemConfiguration) {
-  return getObligationsBusinessRules(config).progressThresholds;
-}
-
-/**
- * Εξάγει τα word count thresholds από το configuration
- */
-export function getWordCountThresholds(config?: SystemConfiguration) {
-  return getObligationsBusinessRules(config).wordCountThresholds;
-}
-
-/**
- * Εξάγει την default reading speed από το configuration
- */
-export function getDefaultReadingSpeed(config?: SystemConfiguration): number {
-  return getObligationsBusinessRules(config).defaultReadingSpeed;
-}
-
-// ============================================================================
-// 🚀 CONVENIENCE EXPORTS FOR COMMON USAGE
-// ============================================================================
-
-/**
- * Άμεσος export των συνηθέστερων constants για εύκολη χρήση
- * Αυτά θα χρησιμοποιηθούν στα modular files
- */
-export const QUALITY_THRESHOLD = getQualityThreshold();
-export const PROGRESS_THRESHOLDS = getProgressThresholds();
-export const WORD_COUNT_THRESHOLDS = getWordCountThresholds();
-export const DEFAULT_READING_SPEED = getDefaultReadingSpeed();
+export const QUALITY_THRESHOLD = OBLIGATIONS_RULES.qualityThreshold;
+export const PROGRESS_THRESHOLDS = OBLIGATIONS_RULES.progressThresholds;
+export const WORD_COUNT_THRESHOLDS = OBLIGATIONS_RULES.wordCountThresholds;
+export const DEFAULT_READING_SPEED = OBLIGATIONS_RULES.defaultReadingSpeed;
