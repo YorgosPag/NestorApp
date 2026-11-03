@@ -9,14 +9,19 @@
 
 ## Κατάσταση
 - Φ0–Φ2 στο `main` (`a296e382`) **και push** (εντολή Giorgio). Η σύγκρουση rebase ήταν μόνο σε παραγόμενα i18n → γεννήτορες.
-- **Δείκτες Firebase**: η γραμμή παραγωγής (ADR-865 §11) περίμενε **έγκριση Giorgio** στο run `41684653779`
-  (Actions → Review deployments → Approve). Έλεγξε κατάσταση: `gh run view 41684653779`. Χωρίς αυτό η λίστα ανά έργο δίνει
-  `FAILED_PRECONDITION`. ⛔ Μην αναπτύξεις τοπικά (`firestore:deploy` = μόνο έκτακτη ανάγκη).
+- **Δείκτες Firebase ✅**: η γραμμή παραγωγής (ADR-865 §11) τους ανέπτυξε — run `41684653779` = `completed success`.
+  Η λίστα ανά έργο (`companyId + projectIds CONTAINS + updatedAt↓`) έχει δείκτη στην παραγωγή.
+  ⛔ Ποτέ τοπικό `firestore:deploy` (μόνο έκτακτη ανάγκη)· νέος δείκτης = commit + push + έγκριση Giorgio στη γραμμή.
 - **Φ3α-1 ✅ (commit στο κλαδί)**: ρόλος έργου (§5.15) — `agreement-resource.server.ts`, `assign`, `project_manager`,
   `PROJECT_ROLE_POLICY` `enforcedBy`. 23/23 μέσα από το πραγματικό `withAuth`, 4/4 μεταλλάξεις κόκκινες, 3.111 227/227.
 - **Δεν** έχει γίνει `wt:land` της Φ3α-1 (μόνο με εντολή Giorgio).
 
 ## Επόμενα (από το πλάνο, με τη σειρά)
+**➡️ ΤΩΡΑ: Φ3α-2** (εντολή Giorgio). Ροή: N.14 δήλωσε μοντέλο (Opus) → SSoT audit με grep **πριν** από κώδικα (επαλήθευσε
+ότι τα SSoT της λίστας πιο κάτω υπάρχουν ακόμη) → Plan Mode (N.8: 5+ αρχεία) → υλοποίηση → jest + μεταλλάξεις → ADR §5.16
+(χάρτης κώδικα + changelog) → commit στο κλαδί. Έρευνα στο διαδίκτυο για τη λίστα (Procore Commitments list: στήλες,
+φίλτρα, κατάσταση· Autodesk Build Contracts) — ακολούθησε και ξεπέρασε.
+
 1. **Φ3α-2** — δεδομένα/λίστα: επέκταση `useProcurementCatalogList` (προαιρετικά `constraints` + φίλτρο διαγραφής, χωρίς
    αλλαγή στους 2 καταναλωτές) · `useProjectSubcontractAgreements` · hooks βιβλιοθήκης/προτύπων → `ApprovedLibrary` ·
    `subcontract-agreements-api.ts` (πάνω στο `apiClient`, Idempotency-Key αυτόματο) · `subcontract-messages.ts`
