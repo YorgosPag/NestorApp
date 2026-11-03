@@ -95,6 +95,14 @@ function scheduleFlush(): void {
 
 export const telemetryBatcher = {
   /**
+   * True iff the user opted in — lets the collector skip building a full
+   * snapshot (scene traversal) when nobody would consume it.
+   */
+  isActive(): boolean {
+    return telemetryStore.getState().optIn;
+  },
+
+  /**
    * Observe one sample. Called from PerformanceCollector tick.
    * Returns true iff a flush was scheduled (for tests).
    */
