@@ -49,7 +49,17 @@ describe('RFQ dashboard stats', () => {
     expect(lines.description).toBe('rfqs.dashboard.setup.linesAllBoq');
     expect(lines.onActivate).toBeUndefined();
     const mixed = buildRfqDashboardStats(input({ lines: [line('boq', 'm3', 1), line('ad_hoc', 'kg', 1)] }))[0];
-    expect(mixed.description).toBe('rfqs.dashboard.setup.linesBySource');
+    expect(mixed.description).toContain('rfqs.dashboard.setup.linesPart.boq');
+    expect(mixed.description).toContain('rfqs.dashboard.setup.linesPart.adHoc');
+  });
+
+  it('ADR-923 §5.13 Τ4 — η γραμμή καταλόγου μετρά ως κατάλογος, όχι ως «χειροκίνητη»', () => {
+    const only = buildRfqDashboardStats(input({ lines: [line('catalog', 'pcs', 2)] }))[0];
+    expect(only.description).toBe('rfqs.dashboard.setup.linesAllCatalog');
+    const mixed = buildRfqDashboardStats(input({ lines: [line('boq', 'm3', 1), line('catalog', 'pcs', 2)] }))[0];
+    expect(mixed.description).toContain('rfqs.dashboard.setup.linesPart.catalog');
+    expect(mixed.description).not.toContain('linesPart.adHoc');
+    expect(mixed.description).not.toContain('linesAllBoq');
   });
 
   it('Κ2 — καμία κάρτα δεν αθροίζει ποσότητες (m3 + kg δεν έχουν άθροισμα)', () => {

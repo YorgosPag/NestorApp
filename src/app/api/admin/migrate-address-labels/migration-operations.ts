@@ -26,7 +26,7 @@
  *
  * @module app/api/admin/migrate-address-labels/migration-operations
  * @enterprise ADR-319 (contact address taxonomy) · N.11 (i18n SSoT)
- * @see ADR-704 — flushInBatches/BATCH_WRITE_LIMIT· ο `db` έρχεται από τον envelope
+ * @see ADR-704 — flushInBatches/SAFE_BATCH_WRITES· ο `db` έρχεται από τον envelope
  * @see ADR-195 §Φάση 3 — CDC coverage για contacts
  */
 

@@ -76,3 +76,6 @@ export const generateDeterministicSupplierBrandClaimId = (companyId: string, bra
   enterpriseIdService.generateDeterministicSupplierBrandClaimId(companyId, brandKey);
 export const generateDeterministicSupplyRequestLinkId = (companyId: string) =>
   enterpriseIdService.generateDeterministicSupplyRequestLinkId(companyId);
+// ADR-923 §5.13 Ε6γ — εισάγεται ΑΠΕΥΘΕΙΑΣ από εδώ: το barrel `enterprise-id-convenience.ts` είναι ήδη πάνω από 500 γραμμές.
+export const generateDeterministicPlatformCompanyContactId = (buyerCompanyId: string, supplierCompanyId: string) =>
+  enterpriseIdService.generateDeterministicPlatformCompanyContactId(buyerCompanyId, supplierCompanyId);

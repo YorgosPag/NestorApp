@@ -70,9 +70,21 @@ jest.mock('@/lib/date-local', () => ({
 }));
 
 jest.mock('../rfq-line-service', () => ({
-  snapshotFromBoq: jest.fn(async () => []),
-  addRfqLinesBulk: jest.fn(async () => []),
+  recordRfqLinesAdded: jest.fn(),
+  buildRfqLine: jest.fn(),
+  boqItemToLineDto: jest.fn(),
+  rfqLinesRef: jest.fn(() => ({ doc: jest.fn() })),
 }));
+
+// ADR-923 §5.13 Τ4 — η δημιουργία RFQ ζει πλέον στο σχέδιο + τη συναλλαγή (`rfq-create.test.ts`, πάνω στο ψεύτικο
+// Firestore). Εδώ οι εξαρτήσεις τους είναι κενά stubs, ώστε η σουίτα να φορτώνει χωρίς τον κατάλογο.
+jest.mock('@/server/supply-relationships/supply-quote-sku.server', () => ({ resolveQuoteSku: jest.fn() }));
+jest.mock('@/services/public-catalog/public-catalog.reader', () => ({ readPublicSupplier: jest.fn() }));
+jest.mock('@/server/catalog/public/public-model-snapshot.server', () => ({ supplierAcceptsQuotesInTx: jest.fn() }));
+jest.mock('@/services/contact/platform-company-contact-resolver', () => ({ resolvePlatformCompanyContact: jest.fn() }));
+jest.mock('@/services/contact/account-contact-resolver', () => ({ recordAccountContactBirth: jest.fn() }));
+jest.mock('@/server/lib/performer-stamp', () => ({ resolvePerformer: jest.fn() }));
+jest.mock('@/services/enterprise-id-convenience-catalog', () => ({ generateDeterministicPlatformCompanyContactId: jest.fn() }));
 
 jest.mock('../sourcing-event-service', () => ({
   recomputeSourcingEventStatus: jest.fn(async () => 'partial'),
@@ -93,18 +105,19 @@ const mockDocRef = {
   get: jest.fn(() => mockContactSnap.get()),
   update: jest.fn().mockResolvedValue(undefined),
 };
-const mockBatch = { set: jest.fn(), commit: jest.fn().mockResolvedValue(undefined) };
+const mockTx = { get: jest.fn(), set: jest.fn(), update: jest.fn() };
 const mockDb = {
+  runTransaction: jest.fn(async (body: (tx: typeof mockTx) => Promise<unknown>) => body(mockTx)),
   collection: jest.fn(() => ({
     doc: jest.fn(() => mockDocRef),
     where: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     get: jest.fn().mockResolvedValue({ docs: [] }),
   })),
-  batch: jest.fn(() => mockBatch),
 };
 
 jest.mock('@/lib/firebaseAdmin', () => ({
+  getAdminFirestore: () => mockDb,
   safeFirestoreOperation: jest.fn(async (op: (db: typeof mockDb) => Promise<unknown>) =>
     op(mockDb),
   ),

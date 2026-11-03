@@ -180,13 +180,24 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
     return this.generateId(P.SUPPLY_INVITATION).id;
   }
 
-  /** **Ένας** σύνδεσμος ανά χώρο, δομικά: η ανανέωση ανεβάζει τη γενιά του, δεν γεννά δεύτερο (Σ2). */
   /** Η κατοχή μάρκας: **ένα** έγγραφο ανά (χώρος, μάρκα), άρα η ανανέωση ξαναγράφει το ίδιο (ADR-923 §16). */
   generateDeterministicSupplierBrandClaimId(companyId: string, brandKey: string): string {
     return this.mintDeterministicV4Id(P.SUPPLIER_BRAND_CLAIM, seedOf('supplier-brand-claim', companyId, brandKey));
   }
 
+  /** **Ένας** σύνδεσμος ανά χώρο, δομικά: η ανανέωση ανεβάζει τη γενιά του, δεν γεννά δεύτερο (Σ2). */
   generateDeterministicSupplyRequestLinkId(companyId: string): string {
+    // ⛔ Μην «διορθώσεις» το δεύτερο όρισμα που λείπει: το id είναι η διεύθυνση ήδη γραμμένων εγγράφων (GOLDEN_IDS).
     return this.mintDeterministicV4Id(P.SUPPLY_REQUEST_LINK, seedOf('supply-request-link', companyId));
+  }
+
+  /**
+   * Η επαφή **προμηθευτή της πλατφόρμας** στις επαφές του αγοραστή (ADR-923 §5.13 Ε6γ): **μία** ανά (αγοραστής,
+   * προμηθευτής), με πρόθεμα `cont_`, ώστε το «υπάρχει ήδη;» να είναι ένα `tx.get` χωρίς ερώτημα και δείκτη, και
+   * δύο ταυτόχρονα αιτήματα προσφοράς να συγκλίνουν στο ίδιο έγγραφο. Η σειρά είναι ταυτότητα: η επαφή ανήκει
+   * στον αγοραστή. Χωρίς τυχαίο αδελφό από σχεδιασμό (`DETERMINISTIC_ONLY`): η τυχαία επαφή είναι το `generateContactId`.
+   */
+  generateDeterministicPlatformCompanyContactId(buyerCompanyId: string, supplierCompanyId: string): string {
+    return this.mintDeterministicV4Id(P.CONTACT, seedOf('platform-company-contact', buyerCompanyId, supplierCompanyId));
   }
 }

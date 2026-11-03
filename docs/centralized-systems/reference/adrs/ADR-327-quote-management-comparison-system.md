@@ -18,6 +18,7 @@
 ### Changelog
 | Date | Changes |
 |------|---------|
+| 2026-11-03 | 📘 **§5.1 διορθώθηκε κατά τον κώδικα** (ADR-923 §5.13 Ε6): `trade` ανά γραμμή, `invitedVendorIds` με προσκλήσεις στο `vendor_invites`, πέντε καταστάσεις RFQ, κανάλια χωρίς `telegram` και με `copy_link`, λήξη πρόσκλησης ως ημερομηνία. Προστέθηκε η `RfqLine` με τα `catalogRef`/`priceSnapshot`. Η ροή «Ζητήστε προσφορά» της βιτρίνας επεκτείνει αυτό το RFQ με τρίτη πηγή γραμμής `catalog`. Μόνο τεκμηρίωση. |
 | 2026-10-31 | 🔴 **Ο `rasterizePdfPages` δεν δούλευε στην παραγωγή.** Το standalone δεν είχε το `pdf.worker.mjs` (δυναμική φόρτωση, αόρατη στον ιχνηλάτη), και ο αναλυτής έπεφτε σιωπηλά στο εγγενές `input_file`, χωρίς να φαίνεται στον χρήστη. Βρέθηκε από τη δοκιμή PDF του ADR-923 §5.5.1. Διόρθωση: vendor του worker και smoke του ίδιου service από το standalone πριν από το image. Από πότε ίσχυε: δεν μετρήθηκε. |
 | 2026-10-28 | 🟢 **§8.5 Β + Γ + συμπληρώσεις Α (handoff `2026-10-28_ADR-327_bid-leveling-B-G-live`).** **(1) Ζωντανός έλεγχος πύλης** με νέα πρόσκληση `copy_link` (`vi_1424c892-…`, επαληθευμένο από τον κώδικα: `copy-link-channel.ts` επιστρέφει `success` χωρίς αποστολή) — **ΧΩΡΙΣ υποβολή**. Βρέθηκαν και διορθώθηκαν **δύο σφάλματα αντίθεσης**: (α) η πύλη είχε `bg-white` σε κάθε κάρτα/header/dialog (10 σημεία, 4 αρχεία) με `text-foreground` ⇒ στο σκοτεινό θέμα **λευκό σε λευκό** (τίτλοι, ετικέτες, «Περιλαμβάνεται/Εξαιρείται» αόρατα) → `bg-card`· (β) «+ Πρόταση εναλλακτικής» με `text-primary` (≡ `--card` στο σκοτεινό, CHECK 3.38) → `text-foreground` + `VISIBLE_LINK_CLASS` (και τα «Αφαίρεση» → ορατή υπογράμμιση). Τυφλό σημείο του CHECK 3.26 (`white`/`black` δεν είναι παλέτα) → `pending-ratchet-work.md`. **(2) Β — Κλείδωμα ποσότητας/μονάδας** (Procore «Unit & Quantity Lock», Feb 2026): `RFQ.responseLock {quantity, unit}` · κανόνες ΜΙΑ φορά στο `utils/rfq-response-lock.ts` (`defaultResponseLock` · `resolveResponseLock` = ο ΜΟΝΟΣ αναγνώστης · `lockedFieldsOf`) · επιβολή ΜΟΝΟ στο `applyRfqLineAuthority(rfqLines, answers, lock)` (ποσότητα/μονάδα από τη γραμμή RFQ, `lineTotal` ξαναϋπολογίζεται με το νέο SSoT `quoteLineTotal`, που πήρε και το `parsing.ts`) · η πύλη: `initialVendorDraft(…, lock)` ξεκινά με τις κλειδωμένες τιμές και το `VendorPortalLineFields` τις δείχνει ως **τιμή** (`<output>`, όχι disabled input) με υπόδειξη «για άλλη λύση, εναλλακτική» · εναλλακτικές/πρόσθετες ελεύθερες · PM: `RfqResponseLockControl` στην καρτέλα «Ρύθμιση RFQ» (optimistic, τελευταίος κερδίζει, επαναφορά στην επιβεβαιωμένη τιμή, `apiClient` + νέο `API_ROUTES.RFQS.BY_ID`) · server: ιδεμποτικό, γραμμή ιστορικού `response_lock_change` (`quantity:off,unit:off → quantity:on,unit:off`), **άρνηση** μετά την ανάθεση/σε κλειστό κύκλο ζωής (ίδιο σύνορο με το UI, `deriveSetupLockState`). **Πού ξεπερνάμε τον Procore**: προεπιλογή **από την προέλευση** — RFQ από επιμέτρηση (`linesStorage: 'boq'`) γεννιέται κλειδωμένο (γραμμένο ΤΗ ΣΤΙΓΜΗ της δημιουργίας), ad-hoc ελεύθερο (στον Procore πάντα off)· κλειδώνει μόνο ό,τι ορίζει η γραμμή (χωρίς ποσότητα ⇒ ελεύθερο πεδίο)· έγγραφα χωρίς πεδίο = ελεύθερα (καμία σιωπηλή αλλαγή). Ζωντανά: διακόπτες → 2 γραμμές ιστορικού · πύλη: «1 · κ.μ.» μόνο-ανάγνωσης, εναλλακτική με επεξεργάσιμα πεδία. **(3) Γ — Ταυτότητα χωρίς επαφή** (BuildingConnected «Unknown Company»): `Quote.vendorSnapshot {name, email, inviteId}` σε **κάθε** προσφορά πύλης (`vendorSnapshotFromInvite`) · ενεργός ιστορικού `vendor:invite:{id}` αντί για σκέτο `vendor:` (`vendorActorId`) · ΕΝΑΣ κανόνας ονόματος `quoteVendorDisplayName` (επαφή → στιγμιότυπο → σάρωση → `null`) — **7 σημεία** του UI ρωτούσαν μόνο τη σάρωση (`extractedData.vendorName`) ⇒ οι προσφορές πύλης έδειχναν «Προμηθευτής»/«—»· + server `resolveVendorName` · η κάρτα προσφοράς δείχνει πλέον και το όνομα **επαφής** (`useContactById`) · «Προσθήκη στις επαφές» (`QuoteVendorContactAction`) — ποτέ αυτόματα. **SSoT**: η ροή «εύρεση/δημιουργία επαφής → δέσιμο» ζούσε μέσα στο `QuoteReviewClient` → `useBindQuoteVendor` (και οι δύο καταναλωτές) · το `/api/contacts/resolve` απέκτησε **ντετερμινιστικό ταίριασμα email** (ΑΦΜ → email → όνομα → νέα· πριν έστελνε `email: null` και στον έλεγχο διπλοτύπων ⇒ το email του προμηθευτή δεν έβρισκε ποτέ την υπάρχουσα επαφή) και τα **τρία** αντίγραφα «εμπλουτισμού επαφής» έγιναν ΕΝΑ `enrichMatchedContact` · `updateQuote` γράφει πλέον `vendor_contact_change` (πριν: αλλαγή προμηθευτή χωρίς ιστορικό). **(4α) Χειροκίνητη κάλυψη κενού** (BuildingConnected «plug»): `Quote.levelingPlugs[]` · ΕΝΑΣ γραφέας `quote-leveling-plug-service` (**συναλλαγή** — δύο PM σε διαφορετικές γραμμές δεν σβήνουν ο ένας τον άλλον · φράχτης εταιρείας + «η γραμμή ανήκει στο RFQ της προσφοράς» · ιδεμποτικό `upsertLevelingPlug` · `leveling_plug_set/cleared` + entity audit) · `PUT /api/quotes/[id]/leveling-plugs` · ο κινητήρας: πηγή `manual` **υπερισχύει** αλλά κρατά δίπλα την αυτόματη (`plug.automatic`) — ο PM βλέπει πόσο απέχει · σε γραμμή με τιμή αγνοείται · UI `LevelingPlugEditor` (popover, `NumericField` ADR-706). Ο φλοιός `quoteIdRoute` μετακόμισε στο `api/quotes/_shared/quote-id-route.ts`. **(4β) Πρόταση δεσίματος** στον έλεγχο σαρωμένης προσφοράς: `proposeRfqLineBindings` (στο `rfq-line-binding.ts`, πάνω στο `inferRfqLineId`: ρητά δεσίματα δεσμεύουν τη γραμμή τους, συμπέρασμα μόνο σε ελεύθερη, μία φορά) · `QuoteRfqBindingReview` — «Πρόταση» μέχρι να την αποδεχτεί ο PM· η αποδοχή γράφει **όλες** τις γραμμές μαζί (μία ρητή γραμμή κάνει την προσφορά ρητά δεμένη για τον κινητήρα) · το `isDirty` του ελέγχου βλέπει πλέον αλλαγή δεσίματος. **Tests**: `rfq-response-lock.test.ts` · `quote-vendor-identity.test.ts` · `leveling-plugs.test.ts` · `contacts/resolve/__tests__/resolve-matching.test.ts` · νέα Κ στα `bid-leveling` (Κ10), `rfq-line-binding` (Κ7), `vendor-quote-draft` (Κ7), `rfq-service` (responseLock) — **379+** πράσινα στο procurement/πύλη. jscpd diff καθαρό (27 αρχεία) · i18n missing keys 0 · `generate:i18n-types` + `generate:i18n-shell-slice` (`/vendor/quote` 7834/9392). ⚠️ Παλιές προσφορές πύλης (πριν το Γ) **δεν** έχουν `vendorSnapshot` — δεν γίνεται backfill σιωπηλά. **Δεν ελέγχθηκε ζωντανά**: υποβολή (χρειάζεται άδεια), «Προσθήκη στις επαφές», επεξεργαστής κάλυψης, πρόταση δεσίματος. |
 | 2026-10-28 | 🟢 **§8.5 ΝΕΟ — Bid leveling ανά γραμμή RFQ (Α του handoff 27/10).** Η `QuoteLine` απέκτησε `rfqLineId` και η σύγκριση ενώνει πλέον με **αυτό**, όχι με περιγραφή/`categoryCode` (το `lineKey` καταργήθηκε). **Μοντέλο** (Procore Base Bid / Alternates / Include-Exclude · BuildingConnected Additional Items): `Quote.lines` = βασική προσφορά (απαντήσεις σε γραμμές RFQ + πρόσθετες με `rfqLineId: null`) · `Quote.alternates` = εναλλακτικές δεμένες στη γραμμή που αντικαθιστούν, **εκτός** `totals`/PO · `Quote.scopeResponses` = «περιλαμβάνεται»/«εξαιρείται» με αιτιολογία και στιγμιότυπο περιγραφής. **Server = αυθεντία**: `checkRfqLineAnswers` απέναντι στο `readRfqLinesPublic` της πρόσκλησης (ξένο/διπλό id, αναπάντητη γραμμή ⇒ 400 `binding:<code>`) · `applyRfqLineAuthority` (περιγραφή + ΑΤΟΕ από τη γραμμή RFQ). **Leveling** (`utils/bid-leveling.ts`, καθαρό): αξία = τιμή μονάδας × ποσότητα **του RFQ** · μονάδες μέσω `resolveUom` (m ≠ m² ⇒ `unitMismatch`) · κενά καλυμμένα με **ορατή πηγή** (εκτίμηση PM, αλλιώς η υψηλότερη συγκρίσιμη) · lump sum = «όλα περιλαμβάνονται» · παλιές/σαρωμένες προσφορές δένονται **με συμπέρασμα, σημαδεμένο**. Το TCO (`levelingDelta`) και το cherry pick (`utils/cherry-pick.ts`) διαβάζουν τον ΙΔΙΟ πίνακα. **Πύλη**: μία απάντηση ανά γραμμή RFQ (Τιμολογώ/Περιλαμβάνεται/Εξαιρείται), εναλλακτικές ανά γραμμή, πρόσθετες γραμμές, μονάδα = λίστα του μητρώου UoM (τέλος το `'τμχ'`, ADR-923 «3γ» 4β για την πύλη). **PM**: πίνακας `BidLevelingTable` στη σύγκριση + `QuoteRfqAnswers` στην καρτέλα. **SSoT**: ΕΝΑΣ αναγνώστης γραμμών, δύο προβολές (`readRfqLines` PM με εκτίμηση / `readRfqLinesPublic` χωρίς) · ΕΝΑ zod `QuoteLineSchema` (ήταν 2 — το zod θα έσβηνε το `rfqLineId` σε κάθε επεξεργασία PM) · ΕΝΑ config ορίων συνημμένων (ήταν 2) · `generateQuoteLineId` (`qtln`, αντί για `Date.now()`). Tests: `bid-leveling` (10) · `rfq-line-binding` (6) · `vendor-quote-draft` (6). ⏳ **Ανοιχτά**: Β (κλείδωμα ποσότητας/μονάδας) · Γ (ταυτότητα προμηθευτή χωρίς επαφή) · χειροκίνητη κάλυψη κενού από τον PM · πρόταση δεσίματος στον έλεγχο σαρωμένης προσφοράς · ζωντανός έλεγχος πύλης. |
@@ -185,16 +186,29 @@ PM γράφει χειροκίνητα τις προσφορές, σύγκρισ
 
 ### 5.1 Domain Model
 
+> **Διόρθωση κατά τον κώδικα (2026-11-03, ADR-923 §5.13 Ε6).** Το αρχικό μοντέλο έγραφε `trade` στο RFQ,
+> `invitedVendors: VendorInvite[]` μέσα στο έγγραφο, τρεις καταστάσεις, κανάλι `telegram` και κατάσταση πρόσκλησης
+> `expired`. Ο κώδικας (`types/rfq.ts`, `types/rfq-line.ts`, `types/vendor-invite.ts`) έχει το `trade` **ανά γραμμή**,
+> μόνο `invitedVendorIds` (ids **επαφών του αγοραστή**) με τις προσκλήσεις στη συλλογή `vendor_invites`, πέντε
+> καταστάσεις (ADR-335), κανάλια `email | whatsapp | sms | copy_link` και λήξη ως `expiresAt`, όχι ως κατάσταση.
+> Το token δεν ζει στην πρόσκληση: ζει ως hash στο server-only `vendor_invite_credentials` (ADR-876).
+
 ```
 RFQ (Request For Quotation)
- ├─ id: rfq_<nanoid>
- ├─ projectId
- ├─ buildingId? / boqItemIds[]?     ← link σε BOQ items (ΑΤΟΕ codes)
- ├─ trade: TradeCode                  ← μπετατζής/ελαιοχρωματιστής/...
- ├─ description, deadlineDate
- ├─ status: draft | active | closed
- ├─ invitedVendors: VendorInvite[]    ← contacts + token + delivery channel
+ ├─ id: rfq_…                         ← enterprise-id, πρόθεμα `rfq`
+ ├─ projectId, buildingId?, companyId
+ ├─ title, description, deadlineDate
+ ├─ status: draft | active | closed | cancelled | archived   ← ADR-335
+ ├─ awardMode, reminderTemplate, comparisonTemplateId, responseLock
+ ├─ invitedVendorIds: string[]        ← ids επαφών του αγοραστή· οι προσκλήσεις ζουν στο `vendor_invites`
+ ├─ sourcingEventId?, invitedVendorCount?, respondedCount?, linesStorage?
  └─ winnerQuoteId?                    ← τελική επιλογή
+
+RfqLine (sub-collection rfqs/{rfqId}/lines, §17 Q29)
+ ├─ source: boq | ad_hoc              ← ADR-923 §5.13 Ε6ε: τρίτη πηγή `catalog` (σε υλοποίηση)
+ ├─ boqItemId?, description, trade: TradeCode, categoryCode?
+ ├─ quantity, unit, unitPrice?        ← unitPrice: εσωτερική εκτίμηση, ποτέ στον προμηθευτή
+ └─ catalogRef?, priceSnapshot?       ← ADR-923 §5.8: το SKU που ζητήθηκε, ποτέ στον προμηθευτή
 
 Quote (1 RFQ → N Quotes, 1 ad-hoc Quote without RFQ)
  ├─ id: qt_<nanoid>           (display: QT-NNNN από counter)
@@ -228,13 +242,14 @@ QuoteComparison (computed view, not stored or denormalized cache)
  ├─ scoring: { quoteId, totalScore, breakdown: { price, supplierMetrics, terms } }[]
  └─ recommendation: { quoteId, reason, weights }
 
-VendorInvite
- ├─ id, rfqId, vendorContactId
- ├─ token (HMAC-signed)
- ├─ deliveryChannel: 'email' | 'telegram' | 'sms' | 'whatsapp'
- ├─ deliveredAt, openedAt, submittedAt
- ├─ expiresAt
- └─ status: sent | opened | submitted | expired
+VendorInvite (συλλογή vendor_invites)
+ ├─ id, rfqId, companyId, vendorContactId   ← '' όταν η πρόσκληση έγινε με χειροκίνητο email
+ ├─ deliveryChannel, preferredChannel: 'email' | 'whatsapp' | 'sms' | 'copy_link'
+ ├─ recipientEmail, recipientName           ← στιγμιότυπο τη στιγμή της δημιουργίας
+ ├─ deliveredAt, openedAt, submittedAt, declinedAt, declineReason
+ ├─ expiresAt, editWindowExpiresAt          ← η λήξη είναι ημερομηνία, όχι κατάσταση
+ ├─ quoteId                                 ← μία πρόσκληση, μία απάντηση (ADR-876)
+ └─ status: pending | sent | opened | submitted | declined | revoked
 
 Trade (SSoT registry)
  ├─ code: 'concrete' | 'painting' | 'tiling' | ...

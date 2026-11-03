@@ -1,16 +1,15 @@
 import 'server-only';
 
-import { safeFirestoreOperation, FieldValue } from '@/lib/firebaseAdmin';
+import { getAdminFirestore, safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateRfqId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
 import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters, RfqDraftLine, RfqFromBoqDraft } from '../types/rfq';
-import { RFQ_STATUS_TRANSITIONS, RFQ_FROM_BOQ_MAX_ITEMS } from '../types/rfq';
-import { toAdminTimestampOrNull, patchAdminTimestamp } from './procurement-timestamps';
+import { RFQ_STATUS_TRANSITIONS, RFQ_FALLBACK_TRADE } from '../types/rfq';
+import { patchAdminTimestamp } from './procurement-timestamps';
 import {
-  defaultResponseLock,
   describeResponseLock,
   resolveResponseLock,
   sameResponseLock,
@@ -20,14 +19,16 @@ import type { AuthContext } from '@/lib/auth';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { readOwnedProcurementDoc } from './procurement-owned-doc';
 import { loadOwnedRfq, rfqRef, rfqSubject } from './rfq-ownership';
-import type { BOQItem } from '@/types/boq/boq';
 import { getTradeCodeForAtoeCategory } from '../data/trades';
 import type { TradeCode } from '../types/trade';
-import { snapshotFromBoq, addRfqLinesBulk } from './rfq-line-service';
+import { recordRfqLinesAdded } from './rfq-line-service';
+import { boqItemsByIdQuery, ownedBoqItems } from './rfq-boq-items';
+import { newRfqDocument, planRfqCreate, type RfqCreatePlan } from './rfq-create-plan';
+import { runRfqCreateTransaction, type RfqCreateCommit } from './rfq-create-transaction';
+import { recordAccountContactBirth } from '@/services/contact/account-contact-resolver';
 import { recomputeSourcingEventStatus } from './sourcing-event-service';
 import { emailVendorInviteChannel } from './channels/email-channel';
 import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
-import { prepareVendorInvite, writePreparedVendorInvite } from './vendor-invite-issue';
 const logger = createModuleLogger('RFQ_SERVICE');
 
 // ============================================================================
@@ -51,7 +52,7 @@ async function dispatchRfqInviteEmails(
   rfq: RFQ,
   inviteMeta: InviteMeta[],
 ): Promise<void> {
-  const db = admin.firestore();
+  const db = getAdminFirestore();
   const results = await Promise.allSettled(
     inviteMeta.map(async (meta) => {
       const snap = await db.collection(COLLECTIONS.CONTACTS).doc(meta.vendorId).get();
@@ -102,131 +103,47 @@ async function dispatchRfqInviteEmails(
 // CREATE
 // ============================================================================
 
-/**
- * Sub-collection line writes — after the RFQ doc exists (Q29). A builder form may mix both kinds: BOQ snapshot
- * first, then ad-hoc, each appended after the current max `displayOrder`, so neither overwrites the other's order.
- * (Until ADR-330 §5.1 S3.2 this was `if/else` — the ad-hoc lines of a mixed form were silently lost.)
- */
-async function writeCreatedRfqLines(ctx: AuthContext, rfqId: string, dto: CreateRfqDTO): Promise<void> {
-  if (dto.boqItemIds?.length) {
-    await snapshotFromBoq(ctx, rfqId, dto.boqItemIds, 'materials_general');
-  }
-  if (dto.adHocLines?.length) {
-    await addRfqLinesBulk(ctx, rfqId, dto.adHocLines);
+/** Το ίχνος ADR-195 κάθε επαφής προμηθευτή που **γεννήθηκε** στη συναλλαγή — μετά το commit, ποτέ για υπάρχουσα. */
+function recordSupplierContactBirths(ctx: AuthContext, committed: RfqCreateCommit): void {
+  for (const contact of committed.bornContacts) {
+    void recordAccountContactBirth({
+      contactId: contact.contactId,
+      displayName: contact.displayName,
+      companyId: ctx.companyId,
+      performedBy: ctx.uid,
+      origin: { field: 'platformCompanyId', value: contact.supplierCompanyId, label: 'Προμηθευτής πλατφόρμας' },
+    });
   }
 }
 
-export async function createRfq(
-  ctx: AuthContext,
-  dto: CreateRfqDTO
-): Promise<RFQ> {
-  const result = await safeFirestoreOperation(async (db) => {
-    const id = generateRfqId();
-    const now = admin.firestore.Timestamp.now();
-    const invitedVendorIds = dto.invitedVendorIds ?? [];
+/** Παρενέργειες **μετά** το commit, χωρίς να μπλοκάρουν την απάντηση: ίχνη και αποστολή (ADR-327 §7 βήμα h). */
+function afterRfqCreated(ctx: AuthContext, rfq: RFQ, dto: CreateRfqDTO, plan: RfqCreatePlan, committed: RfqCreateCommit): void {
+  recordSupplierContactBirths(ctx, committed);
+  if (dto.adHocLines?.length) recordRfqLinesAdded(ctx, rfq.id, dto.adHocLines.length, 'bulk');
+  if (plan.catalogLines.length > 0) recordRfqLinesAdded(ctx, rfq.id, plan.catalogLines.length, 'catalog');
+  const inviteMeta: InviteMeta[] = plan.invites.map((prepared) => ({
+    inviteId: prepared.invite.id,
+    vendorId: prepared.invite.vendorContactId,
+    portalUrl: prepared.link.portalUrl,
+    declineUrl: prepared.link.declineUrl,
+    expiresAt: prepared.link.expiresAtIso,
+  }));
+  if (inviteMeta.length > 0) void dispatchRfqInviteEmails(ctx, rfq, inviteMeta);
+}
 
-    const linesStorage =
-      dto.boqItemIds?.length ? 'boq' :
-      dto.adHocLines?.length ? 'ad_hoc' :
-      dto.lines?.length ? 'inline_legacy' :
-      null;
-
-    const newRfq: RFQ = {
-      id,
-      projectId: dto.projectId,
-      buildingId: dto.buildingId ?? null,
-      companyId: ctx.companyId,
-      title: dto.title,
-      description: dto.description ?? null,
-      lines: dto.lines ?? [],
-      deadlineDate: toAdminTimestampOrNull(dto.deadlineDate),
-      status: 'draft',
-      awardMode: dto.awardMode ?? 'whole_package',
-      reminderTemplate: dto.reminderTemplate ?? 'standard',
-      invitedVendorIds,
-      winnerQuoteId: null,
-      comparisonTemplateId: dto.comparisonTemplateId ?? 'standard',
-      auditTrail: [{
-        timestamp: now,
-        userId: ctx.uid,
-        action: 'created',
-        detail: null,
-      }],
-      createdAt: now,
-      updatedAt: now,
-      createdBy: ctx.uid,
-      // Multi-Vendor extension fields (Q28-Q31)
-      sourcingEventId: dto.sourcingEventId ?? null,
-      sourcingEventStatus: null,
-      invitedVendorCount: invitedVendorIds.length,
-      respondedCount: 0,
-      linesStorage,
-      // ADR-327 §8.5 Β — γραμμένο ΤΗ ΣΤΙΓΜΗ της δημιουργίας (επιμέτρηση ⇒ κλειδωμένο), ποτέ συμπέρασμα αργότερα.
-      responseLock: dto.responseLock ?? defaultResponseLock(linesStorage),
-    };
-
-    const needsBatch = invitedVendorIds.length > 0 || !!dto.sourcingEventId;
-    const inviteMeta: InviteMeta[] = [];
-
-    if (needsBatch) {
-      const batch = db.batch();
-      batch.set(db.collection(COLLECTIONS.RFQS).doc(id), sanitizeForFirestore(newRfq));
-
-      // Q28 fan-out: πρόσκληση + πρώτος σύνδεσμος, ατομικά με το RFQ (ΕΝΑΣ κατασκευαστής, ADR-876 §5 Σ3)
-      for (const vendorId of invitedVendorIds) {
-        const prepared = await prepareVendorInvite({
-          companyId: ctx.companyId,
-          rfqId: id,
-          vendorContactId: vendorId,
-          deliveryChannel: 'email',
-          preferredChannel: null,
-          status: 'sent',
-          recipientEmail: null,
-          recipientName: null,
-          issuedVia: 'rfq_fanout',
-          issuedBy: ctx.uid,
-        });
-        writePreparedVendorInvite(batch, db, prepared);
-        inviteMeta.push({
-          inviteId: prepared.invite.id,
-          vendorId,
-          portalUrl: prepared.link.portalUrl,
-          declineUrl: prepared.link.declineUrl,
-          expiresAt: prepared.link.expiresAtIso,
-        });
-      }
-
-      // Q31: link to parent sourcing event atomically
-      if (dto.sourcingEventId) {
-        batch.update(
-          db.collection(COLLECTIONS.SOURCING_EVENTS).doc(dto.sourcingEventId),
-          sanitizeForFirestore({
-            rfqIds: FieldValue.arrayUnion(id),
-            rfqCount: FieldValue.increment(1),
-            updatedAt: now,
-          }),
-        );
-      }
-
-      await batch.commit();
-    } else {
-      await db.collection(COLLECTIONS.RFQS).doc(id).set(sanitizeForFirestore(newRfq));
-    }
-
-    logger.info('RFQ created', { id, companyId: ctx.companyId, linesStorage });
-    return { rfq: newRfq, inviteMeta };
-  });
-
-  if (!result) throw new Error('Failed to create RFQ');
-  const { rfq, inviteMeta } = result;
-
-  await writeCreatedRfqLines(ctx, rfq.id, dto);
-
-  // Email dispatch — fire-and-forget, does not block RFQ creation response (step h)
-  if (inviteMeta.length > 0) {
-    void dispatchRfqInviteEmails(ctx, rfq, inviteMeta);
-  }
-
+/**
+ * **Δημιουργία RFQ — ΜΙΑ συναλλαγή, όλο ή τίποτα** (ADR-923 §5.13 Ε6γ, Τ4). Σχέδιο πριν (κρίσεις, αρνήσεις, προσκλήσεις),
+ * συναλλαγή στη μέση (αναγνώσεις πριν από εγγραφές), παρενέργειες μετά. Ισχύει για **όλες** τις ροές: BOQ, ad-hoc, inline,
+ * κατάλογος — μία διαδρομή, ώστε καμία ροή να μη γεννά RFQ χωρίς γραμμές.
+ */
+export async function createRfq(ctx: AuthContext, dto: CreateRfqDTO): Promise<RFQ> {
+  const plan = await planRfqCreate(ctx, dto, generateRfqId());
+  const now = admin.firestore.Timestamp.now();
+  const rfq = newRfqDocument(ctx, dto, plan, now);
+  const committed = await safeFirestoreOperation((db) => runRfqCreateTransaction(db, { companyId: ctx.companyId, dto, plan, rfq, now }));
+  if (!committed) throw new Error('Failed to create RFQ');
+  logger.info('RFQ created', { id: rfq.id, companyId: ctx.companyId, linesStorage: rfq.linesStorage, lines: committed.lines.length });
+  afterRfqCreated(ctx, rfq, dto, plan, committed);
   return rfq;
 }
 
@@ -406,17 +323,8 @@ export async function createRfqFromBoqItems(
   if (boqItemIds.length === 0) {
     return { projectId: '', title: '', lines: [] };
   }
-  // Firestore `in` limit — the route's zod rejects more, this is the last guard
-  const ids = boqItemIds.slice(0, RFQ_FROM_BOQ_MAX_ITEMS);
-
   return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.BOQ_ITEMS)
-      .where(admin.firestore.FieldPath.documentId(), 'in', ids)
-      .get();
-
-    const items = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() } as BOQItem))
-      .filter((item) => item.companyId === ctx.companyId);
+    const items = ownedBoqItems(await boqItemsByIdQuery(db, boqItemIds).get(), ctx.companyId);
 
     if (items.length === 0) {
       return { projectId: '', title: '', lines: [] };
@@ -431,7 +339,7 @@ export async function createRfqFromBoqItems(
       if (item.linkedContractorId) vendorIdSet.add(item.linkedContractorId);
 
       const tradeCode: TradeCode =
-        getTradeCodeForAtoeCategory(item.categoryCode) ?? 'materials_general';
+        getTradeCodeForAtoeCategory(item.categoryCode) ?? RFQ_FALLBACK_TRADE;
 
       return {
         id: `rfql_boq_${idx}_${Date.now()}`,

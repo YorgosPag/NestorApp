@@ -549,7 +549,11 @@
       },
       "setup": {
         "totalLines": "Γραμμές",
-        "linesBySource": "{boq} επιμέτρ. · {adHoc} χειροκ.",
+        "linesPart": {
+          "boq": "{count, plural, one {# από επιμέτρηση} other {# από επιμετρήσεις}}",
+          "adHoc": "{count, plural, one {# χειροκίνητη} other {# χειροκίνητες}}",
+          "catalog": "{count, plural, one {# από κατάλογο} other {# από κατάλογο}}"
+        },
         "deadline": "Προθεσμία",
         "deadlineNotSet": "Δεν έχει οριστεί",
         "deadlinePassed": "Έληξε",
@@ -557,7 +561,8 @@
         "responded": "Απάντησαν {responded} από {invited}",
         "attention": "Χρειάζονται προσοχή",
         "linesAllBoq": "Από επιμετρήσεις",
-        "linesAllAdHoc": "Χειροκίνητες"
+        "linesAllAdHoc": "Χειροκίνητες",
+        "linesAllCatalog": "Από κατάλογο"
       }
     },
     "mobile": {

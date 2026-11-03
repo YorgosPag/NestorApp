@@ -1,5 +1,5 @@
 import type { AuthContext } from '@/lib/auth';
-import type { RFQ, CreateRfqDTO } from '../../types/rfq';
+import type { RFQ } from '../../types/rfq';
 
 // ============================================================================
 // MOCKS
@@ -75,14 +75,17 @@ jest.mock('../../data/trades', () => ({
 }));
 
 // Sub-service mocks
-const mockSnapshotFromBoq = jest.fn().mockResolvedValue([]);
-const mockAddRfqLinesBulk = jest.fn().mockResolvedValue([]);
 const mockRecomputeStatus = jest.fn().mockResolvedValue('partial');
 
-jest.mock('../rfq-line-service', () => ({
-  snapshotFromBoq: (...args: unknown[]) => mockSnapshotFromBoq(...args),
-  addRfqLinesBulk: (...args: unknown[]) => mockAddRfqLinesBulk(...args),
-}));
+// ADR-923 §5.13 Τ4 — η δημιουργία RFQ ζει πλέον στο σχέδιο + τη συναλλαγή (`rfq-create.test.ts`, πάνω στο ψεύτικο
+// Firestore). Εδώ οι εξαρτήσεις τους είναι κενά stubs, ώστε η σουίτα να φορτώνει χωρίς τον κατάλογο.
+jest.mock('@/server/supply-relationships/supply-quote-sku.server', () => ({ resolveQuoteSku: jest.fn() }));
+jest.mock('@/services/public-catalog/public-catalog.reader', () => ({ readPublicSupplier: jest.fn() }));
+jest.mock('@/server/catalog/public/public-model-snapshot.server', () => ({ supplierAcceptsQuotesInTx: jest.fn() }));
+jest.mock('@/services/contact/platform-company-contact-resolver', () => ({ resolvePlatformCompanyContact: jest.fn() }));
+jest.mock('@/services/contact/account-contact-resolver', () => ({ recordAccountContactBirth: jest.fn() }));
+jest.mock('@/server/lib/performer-stamp', () => ({ resolvePerformer: jest.fn() }));
+jest.mock('@/services/enterprise-id-convenience-catalog', () => ({ generateDeterministicPlatformCompanyContactId: jest.fn() }));
 
 jest.mock('../sourcing-event-service', () => ({
   recomputeSourcingEventStatus: (...args: unknown[]) => mockRecomputeStatus(...args),
@@ -111,6 +114,7 @@ const mockDb = {
 };
 
 jest.mock('@/lib/firebaseAdmin', () => ({
+  getAdminFirestore: () => mockDb,
   // Transparent mock — errors propagate; !rfq guard in createRfq handles undefined
   safeFirestoreOperation: jest.fn(async (op: (db: typeof mockDb) => Promise<unknown>) => {
     try { return await op(mockDb); } catch { return undefined; }
@@ -146,149 +150,9 @@ function makeRfqSnap(overrides: Partial<RFQ> = {}) {
 // TESTS
 // ============================================================================
 
-import { createRfq, createRfqFromBoqItems, updateRfq } from '../rfq-service';
+import { createRfqFromBoqItems, updateRfq } from '../rfq-service';
 
 beforeEach(() => jest.clearAllMocks());
-
-describe('createRfq — new optional fields (Q28-Q31)', () => {
-  it('populates invitedVendorCount, respondedCount=0, linesStorage=null for empty dto', async () => {
-    const dto: CreateRfqDTO = { projectId: 'proj1', title: 'Test RFQ' };
-    const rfq = await createRfq(ctx, dto);
-
-    expect(rfq.invitedVendorCount).toBe(0);
-    expect(rfq.respondedCount).toBe(0);
-    expect(rfq.linesStorage).toBeNull();
-    expect(rfq.sourcingEventId).toBeNull();
-  });
-
-  it('sets linesStorage=inline_legacy when dto.lines provided', async () => {
-    const dto: CreateRfqDTO = {
-      projectId: 'proj1',
-      title: 'Test',
-      lines: [{ id: 'l1', description: 'x', trade: 'concrete', categoryCode: null, quantity: null, unit: null, notes: null }],
-    };
-    const rfq = await createRfq(ctx, dto);
-    expect(rfq.linesStorage).toBe('inline_legacy');
-  });
-
-  it('sets linesStorage=boq when dto.boqItemIds provided', async () => {
-    const dto: CreateRfqDTO = { projectId: 'proj1', title: 'Test', boqItemIds: ['boq1'] };
-    const rfq = await createRfq(ctx, dto);
-    expect(rfq.linesStorage).toBe('boq');
-  });
-});
-
-describe('createRfq — Q28 atomic fan-out', () => {
-  it('uses batch when invitedVendorIds is non-empty', async () => {
-    const dto: CreateRfqDTO = {
-      projectId: 'proj1',
-      title: 'Multi-vendor RFQ',
-      invitedVendorIds: ['v1', 'v2'],
-    };
-    await createRfq(ctx, dto);
-
-    expect(mockBatch.commit).toHaveBeenCalledTimes(1);
-    // 1 RFQ + ανά προμηθευτή {πρόσκληση + διαπιστευτήριο} — ΣΤΟ ΙΔΙΟ batch (ADR-876 §5)
-    expect(mockBatch.set).toHaveBeenCalledTimes(5);
-  });
-
-  it('🔴 ADR-876 §5: η πρόσκληση γράφεται ΧΩΡΙΣ token· ο σύνδεσμος ζει μόνο ως διαπιστευτήριο', async () => {
-    const dto: CreateRfqDTO = {
-      projectId: 'proj1',
-      title: 'RFQ',
-      invitedVendorIds: ['v1', 'v2'],
-    };
-    await createRfq(ctx, dto);
-
-    const written = (mockBatch.set.mock.calls as Array<[unknown, Record<string, unknown>]>).map(([, data]) => data);
-    const invites = written.filter((d) => 'vendorContactId' in d);
-    const credentials = written.filter((d) => 'nonceHash' in d);
-
-    expect(invites).toHaveLength(2);
-    expect(invites[0]).toMatchObject({ vendorContactId: 'v1', status: 'sent', companyId: 'co1' });
-    expect(invites[1]).toMatchObject({ vendorContactId: 'v2', status: 'sent', companyId: 'co1' });
-    for (const invite of invites) expect(invite).not.toHaveProperty('token');
-    // ένα διαπιστευτήριο ανά πρόσκληση, δεμένο με το ID της
-    expect(credentials.map((c) => c.inviteId)).toEqual(invites.map((i) => i.id));
-    expect(new Set(invites.map((i) => i.id)).size).toBe(2);
-    expect(JSON.stringify(written)).not.toContain('tok_');
-  });
-
-  it('links to sourcing event in same batch when sourcingEventId provided', async () => {
-    const dto: CreateRfqDTO = {
-      projectId: 'proj1',
-      title: 'RFQ',
-      sourcingEventId: 'sevent_abc',
-    };
-    await createRfq(ctx, dto);
-
-    expect(mockBatch.commit).toHaveBeenCalled();
-    expect(mockBatch.update).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ rfqCount: expect.objectContaining({ _increment: 1 }) }),
-    );
-  });
-
-  it('atomic: batch failure prevents any doc write', async () => {
-    mockBatch.commit.mockRejectedValueOnce(new Error('Firestore unavailable'));
-
-    const dto: CreateRfqDTO = {
-      projectId: 'proj1',
-      title: 'RFQ',
-      invitedVendorIds: ['v1'],
-    };
-
-    await expect(createRfq(ctx, dto)).rejects.toThrow('Failed to create RFQ');
-    expect(mockSnapshotFromBoq).not.toHaveBeenCalled();
-    expect(mockDocRef.set).not.toHaveBeenCalled();
-  });
-});
-
-describe('createRfq — Q29 sub-collection line writes', () => {
-  it('calls snapshotFromBoq after RFQ is created', async () => {
-    const dto: CreateRfqDTO = {
-      projectId: 'proj1',
-      title: 'RFQ',
-      boqItemIds: ['boq1', 'boq2'],
-    };
-    await createRfq(ctx, dto);
-
-    expect(mockSnapshotFromBoq).toHaveBeenCalledWith(ctx, 'rfq_test123', ['boq1', 'boq2'], 'materials_general');
-  });
-
-  it('calls addRfqLinesBulk for adHocLines', async () => {
-    const adhocLines = [{ source: 'ad_hoc' as const, description: 'x', trade: 'concrete' as import('../../types/trade').TradeCode }];
-    const dto: CreateRfqDTO = { projectId: 'proj1', title: 'RFQ', adHocLines: adhocLines };
-    await createRfq(ctx, dto);
-
-    expect(mockAddRfqLinesBulk).toHaveBeenCalledWith(ctx, 'rfq_test123', adhocLines);
-  });
-
-  it('🔴 ADR-330 §5.1 S3.2: a mixed form keeps BOTH — BOQ snapshot first, then the ad-hoc lines', async () => {
-    const order: string[] = [];
-    mockSnapshotFromBoq.mockImplementationOnce(async () => { order.push('boq'); return []; });
-    mockAddRfqLinesBulk.mockImplementationOnce(async () => { order.push('ad_hoc'); return []; });
-    const adHocLines = [{ source: 'ad_hoc' as const, description: 'x', trade: 'concrete' as const }];
-    const dto: CreateRfqDTO = { projectId: 'proj1', title: 'RFQ', boqItemIds: ['boq1'], adHocLines };
-    await createRfq(ctx, dto);
-
-    expect(mockSnapshotFromBoq).toHaveBeenCalledWith(ctx, 'rfq_test123', ['boq1'], 'materials_general');
-    expect(mockAddRfqLinesBulk).toHaveBeenCalledWith(ctx, 'rfq_test123', adHocLines);
-    expect(order).toEqual(['boq', 'ad_hoc']);
-  });
-});
-
-describe('createRfq — deadline (ADR-330 §5.1 S3.2)', () => {
-  it('🔴 the form deadline is stored — it used to be written null whatever was sent', async () => {
-    const rfq = await createRfq(ctx, { projectId: 'proj1', title: 'RFQ', deadlineDate: '2026-11-15' });
-    expect(rfq.deadlineDate).not.toBeNull();
-  });
-
-  it('no deadline ⇒ null', async () => {
-    const rfq = await createRfq(ctx, { projectId: 'proj1', title: 'RFQ', deadlineDate: null });
-    expect(rfq.deadlineDate).toBeNull();
-  });
-});
 
 describe('updateRfq — Q31 status propagation', () => {
   it('calls recomputeSourcingEventStatus when RFQ closes with parent event', async () => {
@@ -323,14 +187,6 @@ describe('updateRfq — Q31 status propagation', () => {
 });
 
 describe('responseLock — ADR-327 §8.5 Β', () => {
-  it('γεννιέται κλειδωμένο από επιμέτρηση, ελεύθερο από ad-hoc · ρητή τιμή του DTO κερδίζει', async () => {
-    expect((await createRfq(ctx, { projectId: 'p', title: 'B', boqItemIds: ['boq1'] })).responseLock)
-      .toEqual({ quantity: true, unit: true });
-    expect((await createRfq(ctx, { projectId: 'p', title: 'E' })).responseLock).toEqual({ quantity: false, unit: false });
-    expect((await createRfq(ctx, { projectId: 'p', title: 'X', boqItemIds: ['b'], responseLock: { quantity: false, unit: true } })).responseLock)
-      .toEqual({ quantity: false, unit: true });
-  });
-
   it('αλλαγή ⇒ γραμμή ιστορικού· ίδια τιμή ⇒ καμία (ιδεμποτικό)', async () => {
     mockDocRef.get.mockResolvedValueOnce(makeRfqSnap({ status: 'active' }));
     const changed = await updateRfq(ctx, 'rfq_test123', { responseLock: { quantity: true, unit: false } });

@@ -85,7 +85,7 @@ export const CATALOG_ASSET_TRACKED_FIELDS = defs(['role', 'kind', 'fileId', 'isD
 
 export const CATALOG_SETTINGS_TRACKED_FIELDS = defs([], ['channelLocales']);
 
-export const CATALOG_SUPPLIER_PROFILE_TRACKED_FIELDS = defs([], ['description', 'projects']);
+export const CATALOG_SUPPLIER_PROFILE_TRACKED_FIELDS = defs([], ['description', 'projects', 'quoteIntake']);
 
 // ── Φάση 3β (ADR-923 §5.11) — τιμοκατάλογοι. Τα παράγωγα (`derived`: `linesRevision`, σπορά, κλειδιά δεικτών) ΔΕΝ
 //    παρακολουθούνται. Η σφραγίδα (`seal`) ναι: είναι η **πράξη** της δημοσίευσης, με ποιον φράχτη και τι επιβεβαιώθηκε.

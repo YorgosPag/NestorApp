@@ -10,6 +10,8 @@ import type { TradeCode } from './trade';
 // Per Q29 (HYBRID Γ): BOQ-first with ad-hoc escape hatch.
 //   - source = 'boq'    → snapshot from BOQ at RFQ creation time
 //   - source = 'ad_hoc' → entered ad-hoc by PM in wizard
+//   - source = 'catalog' → a supplier SKU picked from the catalog (ADR-923 §5.13 Ε6, Τ4): written ONLY by the
+//     server, with the description taken from the SKU, never from the client
 //
 // Snapshot semantics: we DO NOT live-update from BOQ. If a BOQ item changes
 // after the RFQ is sent, the RFQ line keeps its original snapshot to
@@ -23,7 +25,9 @@ import type { TradeCode } from './trade';
 // `unitPrice` is an OPTIONAL internal estimate. NEVER shown to vendors —
 // stripped server-side when generating the public portal payload.
 
-export type RfqLineSource = 'boq' | 'ad_hoc';
+/** Οι προελεύσεις γραμμής, με τη σειρά που διαβάζονται (φόρμα, πίνακας): ΕΝΑΣ κατάλογος, τύπος και επανάληψη από εδώ. */
+export const RFQ_LINE_SOURCES = ['boq', 'ad_hoc', 'catalog'] as const;
+export type RfqLineSource = (typeof RFQ_LINE_SOURCES)[number];
 
 export interface RfqLine {
   id: string;
@@ -69,6 +73,18 @@ export interface CreateRfqLineDTO {
   unitPrice?: number | null;
   notes?: string | null;
   displayOrder?: number;
+}
+
+/**
+ * Μια γραμμή «Ζητήστε προσφορά» από τον κατάλογο (ADR-923 §5.13 Ε6, Τ4): η **διεύθυνση** του SKU και η ζήτηση του αγοραστή.
+ * 🔒 Καμία περιγραφή, τιμή ή SKU ref από τον πελάτη: ο διακομιστής κρίνει το SKU (`resolveQuoteSku`) και γράφει το κείμενό του.
+ */
+export interface CreateRfqCatalogLineDTO {
+  supplierCompanyId: string;
+  modelId: string;
+  variantId: string;
+  quantity: number;
+  unit: string;
 }
 
 export interface UpdateRfqLineDTO {

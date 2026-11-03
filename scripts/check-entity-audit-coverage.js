@@ -205,6 +205,10 @@ const HARD_EXEMPT_PATTERNS = [
   // `services/mandate/__tests__/mandate-decision.test.ts`.
   /[\\/]server[\\/]spatial-tour[\\/]tour-access-decision\.ts$/,
   /[\\/]services[\\/]mandate[\\/]mandate-acceptance\.service\.ts$/,
+  //   · ίδιο σχήμα, ADR-923 §5.13 Τ4: η επαφή προμηθευτή πλατφόρμας γράφεται στη ΜΙΑ συναλλαγή του `createRfq`, και το
+  //     ίχνος το γράφει ο ίδιος γραφέας (`recordAccountContactBirth`) στο `rfq-service.ts` μετά το commit, μόνο για `new`.
+  //     Άγκυρα: `subapps/procurement/services/__tests__/rfq-create.test.ts` («το ίχνος της νέας επαφής…», μετάλλαξη M15).
+  /[\\/]subapps[\\/]procurement[\\/]services[\\/]rfq-create-transaction\.ts$/,
   // 2026-10-06 — ΜΕΤΑΠΤΩΣΕΙΣ ΜΟΡΦΗΣ που έγιναν ορατές με το δηλωμένο πεδίο γραφής (`flushInBatches`). Ονομαστικά,
   // με λόγο — ΠΟΤΕ σιωπηλή baseline. Καμία δεν είναι πράξη ανθρώπου· την ίδια την εκτέλεση την καταγράφει ο φάκελος
   // της μετάπτωσης (`logMigrationExecuted`, ADR-704):

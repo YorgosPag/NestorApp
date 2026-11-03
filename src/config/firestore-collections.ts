@@ -1703,11 +1703,20 @@ export const FIRESTORE_LIMITS = {
   MAX_COMPOSITE_FILTERS: 30,
 
   /**
-   * Recommended batch size for write operations
-   * Firestore hard limit: 500 operations per batch
+   * Το ταβάνι πράξεων ανά commit (batch ή συναλλαγή) — **η ΜΙΑ τιμή** του έργου (ADR-923 §5.13 Τ4).
+   *
+   * ⚠️ Μετρημένο 2026-11-04 στο https://firebase.google.com/docs/firestore/quotas: η σελίδα **δεν** δηλώνει πλέον
+   * αριθμό εγγραφών ανά commit. Το ρητό όριο είναι το **μέγεθος αιτήματος 10 MiB** (και 270 s ανά συναλλαγή).
+   * Το 500 είναι το ιστορικό όριο του Firestore, που κρατάμε ως **συντηρητικό** ταβάνι του έργου.
    */
-  BATCH_WRITE_LIMIT: 500
+  BATCH_WRITE_LIMIT: 500,
+
+  /** Το περιθώριο κάτω από το ταβάνι: χώρος για τις εγγραφές που προσθέτει ο καλών γύρω από τις δικές του. */
+  BATCH_WRITE_HEADROOM: 50,
 } as const;
+
+/** Οι πράξεις που επιτρέπεται να στείλει **ένα** commit του έργου: το ταβάνι μείον το περιθώριο (= 450). */
+export const SAFE_BATCH_WRITES = FIRESTORE_LIMITS.BATCH_WRITE_LIMIT - FIRESTORE_LIMITS.BATCH_WRITE_HEADROOM;
 
 // ============================================================================
 // TYPE EXPORTS

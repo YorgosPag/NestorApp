@@ -8,13 +8,13 @@
  */
 
 import { CreateRfqSchema } from '../rfq-schemas';
-import { RFQ_FROM_BOQ_MAX_ITEMS, type CreateRfqDTO } from '@/subapps/procurement/types/rfq';
+import { RFQ_CATALOG_LINES_MAX, RFQ_FROM_BOQ_MAX_ITEMS, type CreateRfqDTO } from '@/subapps/procurement/types/rfq';
 
 /** Νέο πεδίο στο DTO χωρίς γραμμή εδώ ⇒ σφάλμα τύπου· χωρίς δήλωση στο schema ⇒ κόκκινο test. */
 const DTO_KEYS = {
   projectId: true, buildingId: true, title: true, description: true, lines: true, deadlineDate: true,
   awardMode: true, reminderTemplate: true, comparisonTemplateId: true, invitedVendorIds: true,
-  sourcingEventId: true, boqItemIds: true, adHocLines: true, responseLock: true,
+  sourcingEventId: true, boqItemIds: true, adHocLines: true, catalogLines: true, responseLock: true,
 } satisfies Record<keyof CreateRfqDTO, true>;
 
 /** Ό,τι στέλνει το `RfqBuilder` για μικτή φόρμα (γραμμή BOQ + χειροκίνητη) με προμηθευτή και πακέτο. */
@@ -60,3 +60,26 @@ describe('CreateRfqSchema — δεν πετά τίποτα από όσα δια�
     expect(CreateRfqSchema.safeParse(smuggled).success).toBe(false);
   });
 });
+
+describe('catalogLines — ADR-923 §5.13 Τ4: μόνο διεύθυνση SKU και ζήτηση', () => {
+  const LINE = { supplierCompanyId: 'comp_aries', modelId: 'cpmod_1', variantId: 'cprod_1', quantity: 2, unit: 'pcs' };
+  const parse = (catalogLines: unknown) => CreateRfqSchema.safeParse({ projectId: 'p', title: 'T', catalogLines });
+
+  it('η διεύθυνση και η ζήτηση περνούν αυτούσιες', () => {
+    const parsed = parse([LINE]);
+    expect(parsed.success && parsed.data.catalogLines).toEqual([LINE]);
+  });
+
+  it('🔒 περιγραφή, τιμή ή SKU ref από τον πελάτη ⇒ 400, όχι σιωπηλό πέταμα', () => {
+    expect(parse([{ ...LINE, description: 'Δικό μου κείμενο' }]).success).toBe(false);
+    expect(parse([{ ...LINE, unitPrice: 1 }]).success).toBe(false);
+  });
+
+  it('ποσότητα θετική, μονάδα μη κενή, το πολύ RFQ_CATALOG_LINES_MAX γραμμές', () => {
+    expect(parse([{ ...LINE, quantity: 0 }]).success).toBe(false);
+    expect(parse([{ ...LINE, unit: '  ' }]).success).toBe(false);
+    expect(parse(Array.from({ length: RFQ_CATALOG_LINES_MAX }, () => LINE)).success).toBe(true);
+    expect(parse(Array.from({ length: RFQ_CATALOG_LINES_MAX + 1 }, () => LINE)).success).toBe(false);
+  });
+});
+

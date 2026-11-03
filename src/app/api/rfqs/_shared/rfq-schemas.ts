@@ -11,12 +11,12 @@
 
 import { z } from 'zod';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
-import { RFQ_FROM_BOQ_MAX_ITEMS } from '@/subapps/procurement/types/rfq';
+import { RFQ_CATALOG_LINES_MAX, RFQ_FROM_BOQ_MAX_ITEMS } from '@/subapps/procurement/types/rfq';
 import { RfqLineItemSchema } from '@/app/api/procurement/_shared/rfq-line-schema';
 
 const RFQ_INLINE_LINES_MAX = 100;
 
-/** Each invited vendor adds writes to the ONE create batch (Firestore: 500 ops) — bounded well inside it. */
+/** Each invited vendor adds writes to the ONE create transaction (`SAFE_BATCH_WRITES`) — bounded well inside it; the service re-counts. */
 const RFQ_INVITED_VENDORS_MAX = 100;
 
 /** Legacy inline line (`RFQ.lines[]`, `linesStorage: 'inline_legacy'`). */
@@ -34,6 +34,18 @@ const RfqInlineLinesSchema = z.array(RfqInlineLineSchema).max(RFQ_INLINE_LINES_M
 
 /** Q29 escape hatch — sub-collection lines typed by hand; a BOQ line travels as `boqItemIds`, never here. */
 const AdHocLineSchema = RfqLineItemSchema.omit({ boqItemId: true }).extend({ source: z.literal('ad_hoc') });
+
+/**
+ * ADR-923 §5.13 Τ4 — the ADDRESS of a catalog SKU and the buyer's demand. 🔒 No description, price or SKU ref: the server
+ * judges the SKU (`resolveQuoteSku`) and writes its text. `.strict()`: a client-sent `description` is a 400, not silently dropped.
+ */
+const CatalogLineSchema = z.object({
+  supplierCompanyId: z.string().min(1),
+  modelId: z.string().min(1),
+  variantId: z.string().min(1),
+  quantity: z.number().positive().finite(),
+  unit: z.string().trim().min(1).max(20),
+}).strict();
 
 /** ADR-327 §8.5 Β — Procore «Unit & Quantity Lock». Absent on create ⇒ `defaultResponseLock(linesStorage)`. */
 const RfqResponseLockSchema = z.object({
@@ -53,6 +65,7 @@ export const CreateRfqSchema = z.object({
   comparisonTemplateId: z.string().nullable().optional(),
   boqItemIds: z.array(z.string().min(1)).min(1).max(RFQ_FROM_BOQ_MAX_ITEMS).optional(),
   adHocLines: z.array(AdHocLineSchema).min(1).max(RFQ_INLINE_LINES_MAX).optional(),
+  catalogLines: z.array(CatalogLineSchema).min(1).max(RFQ_CATALOG_LINES_MAX).optional(),
   invitedVendorIds: z.array(z.string().min(1)).max(RFQ_INVITED_VENDORS_MAX).optional(),
   sourcingEventId: z.string().min(1).nullable().optional(),
   responseLock: RfqResponseLockSchema.optional(),

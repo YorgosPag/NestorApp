@@ -57,6 +57,13 @@
     "addImage": "Add image",
     "removeImage": "Remove image"
   },
+  "quoteIntake": {
+    "title": "Quote requests",
+    "lead": "Signed-in buyers can ask for a quote from the public page of each of your products. The request reaches you as an invitation to quote.",
+    "enabled": "Accept quote requests from the storefront",
+    "recipientEmail": "Email that receives requests",
+    "privacy": "The email is never shown publicly. The storefront only shows that you accept requests."
+  },
   "pages": {
     "measurements": {
       "title": "Units of measure",
@@ -186,6 +193,8 @@
     "tooMany": "Up to {max}.",
     "portfolioProjectImagesRequired": "A project needs at least one image.",
     "unknownReference": "Points to something that does not exist.",
+    "quoteRecipientEmailRequired": "Accepting requests needs an email to receive them.",
+    "emailInvalid": "The email is not valid.",
     "codeImmutable": "The code cannot change after creation.",
     "typeLockedInUse": "Cannot change while in use.",
     "unitLockedInUse": "The family is in use: existing units and the standard cannot change — you can only add new ones.",

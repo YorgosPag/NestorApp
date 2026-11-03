@@ -20,6 +20,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { CreateRfqSchema } from './_shared/rfq-schemas';
+import { rfqCreateErrorResponse } from './_shared/rfq-error-response';
 
 const logger = createModuleLogger('RFQS_API');
 
@@ -69,9 +70,8 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: result }, { status: 201 });
       } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create RFQ');
-        logger.error('RFQ create error', { error: message });
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        logger.error('RFQ create error', { error: getErrorMessage(error, 'Failed to create RFQ') });
+        return rfqCreateErrorResponse(error);
       }
     }
   );

@@ -712,7 +712,12 @@
           "deadlinePassed": "Έληξε",
           "linesAllAdHoc": "Χειροκίνητες",
           "linesAllBoq": "Από επιμετρήσεις",
-          "linesBySource": "{boq} επιμέτρ. · {adHoc} χειροκ.",
+          "linesAllCatalog": "Από κατάλογο",
+          "linesPart": {
+            "adHoc": "{count, plural, one {# χειροκίνητη} other {# χειροκίνητες}}",
+            "boq": "{count, plural, one {# από επιμέτρηση} other {# από επιμετρήσεις}}",
+            "catalog": "{count, plural, one {# από κατάλογο} other {# από κατάλογο}}"
+          },
           "responded": "Απάντησαν {responded} από {invited}",
           "totalLines": "Γραμμές"
         },

@@ -75,8 +75,17 @@ function byDocumentId(rows: readonly ScannedDoc[]): ScannedDoc[] {
   return [...rows].sort((a, b) => compareValues(a.id, b.id) || compareValues(a.path, b.path));
 }
 
+/**
+ * Η τιμή που κρίνει μια συνθήκη: για `FieldPath.documentId()` (σειριοποιημένο `__name__`) το **id** του εγγράφου, αλλιώς τα
+ * δεδομένα του (συμβόλαιο Q13). Πριν, το fake έψαχνε πεδίο `__name__` και δεν ταίριαζε ποτέ τίποτα.
+ */
+function matchesRow(row: ScannedDoc, clause: QuerySpec['clauses'][number]): boolean {
+  if (String(clause.field) !== DOCUMENT_ID) return matchesClause(row.data, clause);
+  return matchesClause({ [DOCUMENT_ID]: row.id }, { ...clause, field: DOCUMENT_ID });
+}
+
 export function runQuery(rows: readonly ScannedDoc[], spec: QuerySpec): ScannedDoc[] {
-  let result = rows.filter((row) => spec.clauses.every((clause) => matchesClause(row.data, clause)));
+  let result = rows.filter((row) => spec.clauses.every((clause) => matchesRow(row, clause)));
   result = spec.order !== null ? ordered(result, spec.order) : byDocumentId(result);
   if (spec.after !== null) result = afterCursor(result, spec.after, spec.order);
   return spec.cap === null ? result : result.slice(0, spec.cap);

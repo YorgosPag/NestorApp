@@ -11,6 +11,7 @@
 
 import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
 import type { AuditPerformer } from '@/lib/audit/audit-performer';
+import type { PersonaData } from '@/types/contacts/personas';
 
 /** Result of a successful contact match */
 export interface ContactMatch {
@@ -81,6 +82,10 @@ export interface CreateContactParams {
    * επιβεβαίωση. Προαιρετικό για τον ίδιο λόγο με το `vatNumber` — `undefined` ⇒ κανένα σήμα.
    */
   nameReview?: ContactNameReview | null;
+  /** ADR-923 §5.13 Ε6γ — μόνο για εταιρική επαφή χώρου της πλατφόρμας (`CompanyContact.platformCompanyId`). */
+  platformCompanyId?: string | null;
+  /** Ρόλοι από τη γέννηση (π.χ. `supplier`, ώστε να φαίνεται στους προμηθευτές του RFQ). `undefined` ⇒ κανένας, όπως πριν. */
+  personas?: readonly PersonaData[];
 }
 
 /** Result of a successful contact creation */

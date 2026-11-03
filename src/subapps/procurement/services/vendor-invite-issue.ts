@@ -129,14 +129,22 @@ function newInviteDoc(
   };
 }
 
-/** Γράψε πρόσκληση + διαπιστευτήριο στο batch του καλούντος — **ποτέ** χωριστά. */
+/**
+ * Ό,τι έχουν κοινό το `WriteBatch` και το `Transaction`: το `set`. Ο καλών γράφει την πρόσκληση στη **δική του** πράξη, είτε
+ * batch (νέα πρόσκληση σε υπάρχον RFQ) είτε συναλλαγή (ολόκληρο το `createRfq`, ADR-923 §5.13 Τ4). Ένας γραφέας, όχι δύο.
+ */
+export interface InviteDocumentWriter {
+  set(ref: admin.firestore.DocumentReference, data: admin.firestore.DocumentData): unknown;
+}
+
+/** Γράψε πρόσκληση + διαπιστευτήριο στην πράξη του καλούντος — **ποτέ** χωριστά. */
 export function writePreparedVendorInvite(
-  batch: admin.firestore.WriteBatch,
+  writer: InviteDocumentWriter,
   db: admin.firestore.Firestore,
   prepared: { readonly invite: VendorInvite; readonly link: IssuedVendorLink },
 ): void {
-  batch.set(db.collection(COLLECTIONS.VENDOR_INVITES).doc(prepared.invite.id), sanitizeForFirestore(prepared.invite));
-  batch.set(
+  writer.set(db.collection(COLLECTIONS.VENDOR_INVITES).doc(prepared.invite.id), sanitizeForFirestore(prepared.invite));
+  writer.set(
     db.collection(COLLECTIONS.VENDOR_INVITE_CREDENTIALS).doc(prepared.link.credential.id),
     prepared.link.credential,
   );

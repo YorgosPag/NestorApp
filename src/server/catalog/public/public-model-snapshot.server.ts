@@ -11,7 +11,10 @@ import 'server-only';
  * @module server/catalog/public/public-model-snapshot.server
  */
 
+import type { Firestore, Transaction } from 'firebase-admin/firestore';
+
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { nowISO } from '@/lib/date-local';
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import type { LocalizedText } from '@/i18n/localized-text';
@@ -22,7 +25,9 @@ import type { CatalogRenditions } from '@/subapps/catalog/renditions/catalog-ren
 import type { CatalogAssetDefinition } from '@/subapps/catalog/types/asset';
 import type { CatalogCategoryDefinition } from '@/subapps/catalog/types/category';
 import { generateDeterministicCatalogSupplierProfileId } from '@/services/enterprise-id.service';
-import type { CatalogSupplierProfileDefinition } from '@/subapps/catalog/types/supplier-profile';
+import { quoteIntakeAccepts } from '@/subapps/catalog/schema/validate-supplier-profile';
+import { storedQuoteIntakeOf } from '@/subapps/catalog/schema/zod/supplier-profile.schema';
+import type { CatalogQuoteIntake, CatalogSupplierProfileDefinition, CatalogSupplierProfileStored } from '@/subapps/catalog/types/supplier-profile';
 import type { CatalogValueHolderKind } from '@/subapps/catalog/types/product';
 import type { StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
 import { readActiveByIds } from '../catalog-library-reads.server';
@@ -128,6 +133,8 @@ async function snapshotOfTree(scope: CatalogReadScope, rootId: string, tree: Mod
 
 export interface PublicProfileSnapshot {
   readonly definition: CatalogSupplierProfileDefinition;
+  /** Μόνο για να κριθεί το «δέχεται» (§5.13 Ε6β). Το email δεν περνά στην προβολή. */
+  readonly quoteIntake: CatalogQuoteIntake;
   readonly assets: ReadonlyMap<string, PublicAssetFacts>;
 }
 
@@ -138,11 +145,25 @@ export interface PublicProfileSnapshot {
 export function readPublicProfileSnapshot(companyId: string, nowMs: number): Promise<PublicProfileSnapshot | null> {
   return runForeignCatalogRead(companyId, async (scope) => {
     const id = generateDeterministicCatalogSupplierProfileId(companyId);
-    const stored = await readOwnedOrNull<CatalogSupplierProfileDefinition>(scope, 'supplierProfile', id);
+    const stored = await readOwnedOrNull<CatalogSupplierProfileStored>(scope, 'supplierProfile', id);
     if (stored === null) return null;
     const definition: CatalogSupplierProfileDefinition = { description: stored.description, projects: stored.projects };
-    return { definition, assets: await readPublicAssetFacts(scope, stored.projects.flatMap((project) => project.assetIds), nowMs) };
+    const quoteIntake = storedQuoteIntakeOf(stored.quoteIntake);
+    return { definition, quoteIntake, assets: await readPublicAssetFacts(scope, stored.projects.flatMap((project) => project.assetIds), nowMs) };
   });
+}
+
+/**
+ * **«Δέχεται αιτήματα προσφοράς;»** μέσα στη συναλλαγή του καλούντα (ADR-923 §5.13 Ε6β, Τ4): το κλείσιμο του opt-in κερδίζει
+ * κάθε αγώνα με τη δημιουργία RFQ. Ζει εδώ για τον ίδιο λόγο με το προφίλ: ο ένας δηλωμένος αναγνώστης του ιδιωτικού
+ * `supplierProfile` ξένου χώρου (CHECK 3.106). 🔒 Επιστρέφει **μόνο** το ναι/όχι: το email δεν φεύγει από εδώ.
+ * Ανύπαρκτο, διαγραμμένο ή χαλασμένο προφίλ ⇒ «όχι» (`storedQuoteIntakeOf`: η αμφιβολία κλείνει την πόρτα).
+ */
+export async function supplierAcceptsQuotesInTx(tx: Transaction, db: Firestore, supplierCompanyId: string): Promise<boolean> {
+  const scope: CatalogReadScope = { db, tx, ctx: { companyId: supplierCompanyId }, now: nowISO() };
+  const id = generateDeterministicCatalogSupplierProfileId(supplierCompanyId);
+  const stored = await readOwnedOrNull<CatalogSupplierProfileStored>(scope, 'supplierProfile', id);
+  return stored !== null && quoteIntakeAccepts(storedQuoteIntakeOf(stored.quoteIntake));
 }
 
 /** `null` ⇒ δεν υπάρχει (πια) δημοσιεύσιμη ρίζα με αυτό το id: ο αδειαστής σβήνει το έγγραφο. */

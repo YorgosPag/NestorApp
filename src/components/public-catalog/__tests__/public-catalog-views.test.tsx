@@ -102,7 +102,7 @@ describe('SupplierCatalogView', () => {
   it('περιγραφή και έργα: εξώφυλλο, μικρογραφία, έτος · η εναλλακτική εικόνας πέφτει στον τίτλο', () => {
     const image = (assetId: string) => ({ assetId, url: `https://s/${assetId}.webp`, labels: {} });
     const projects = [{ projectId: 'p1', title: { el: 'Κατοικία' }, description: { el: 'Ανακαίνιση' }, year: 2024, images: [image('a'), image('b')] }];
-    render(<SupplierCatalogView {...CATALOG} profile={{ schemaVersion: 1, companyId: 'c', description: { el: 'Εταιρεία' }, projects }} />);
+    render(<SupplierCatalogView {...CATALOG} profile={{ schemaVersion: 2, acceptsQuoteRequests: false, companyId: 'c', description: { el: 'Εταιρεία' }, projects }} />);
     expect(screen.getByRole('heading', { level: 2, name: 'supplier.about' })).toBeTruthy();
     expect(screen.getByText('Εταιρεία')).toBeTruthy();
     expect(screen.getByRole('heading', { level: 3, name: 'Κατοικία' })).toBeTruthy();
@@ -110,13 +110,13 @@ describe('SupplierCatalogView', () => {
     expect(screen.getAllByRole('img', { name: 'Κατοικία' })).toHaveLength(2);
   });
 
-  it('κενό προφίλ: καμία κενή ενότητα · έργο χωρίς έτος ή περιγραφή', () => {
+  it('κενό προφίλ (π.χ. μόνο «δέχεται αιτήματα», Ε6β): καμία κενή ενότητα · έργο χωρίς έτος ή περιγραφή', () => {
     const image = { assetId: 'a', url: 'https://s/a.webp', labels: {} };
-    const { unmount } = render(<SupplierCatalogView {...CATALOG} profile={{ schemaVersion: 1, companyId: 'c', description: {}, projects: [] }} />);
+    const { unmount } = render(<SupplierCatalogView {...CATALOG} profile={{ schemaVersion: 2, acceptsQuoteRequests: true, companyId: 'c', description: {}, projects: [] }} />);
     expect(screen.queryByText('supplier.about')).toBeNull();
     expect(screen.queryByText('supplier.portfolio')).toBeNull();
     unmount();
-    render(<SupplierCatalogView {...CATALOG} profile={{ schemaVersion: 1, companyId: 'c', description: {}, projects: [{ projectId: 'p', title: { el: 'Έργο' }, description: {}, year: null, images: [image] }] }} />);
+    render(<SupplierCatalogView {...CATALOG} profile={{ schemaVersion: 2, acceptsQuoteRequests: false, companyId: 'c', description: {}, projects: [{ projectId: 'p', title: { el: 'Έργο' }, description: {}, year: null, images: [image] }] }} />);
     expect(screen.getByRole('heading', { level: 2, name: 'supplier.portfolio' })).toBeTruthy();
     expect(screen.getAllByRole('img')).toHaveLength(1);
   });

@@ -51,7 +51,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "75c179fc0d473ebff5e7b759acde4b7d4e3236f3bbff4b2c647ee29e2ccf8a4d",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "b0321d9dae3dfae38270e12fb129ec6b3bd175ef4063005258896a44cf2f225f",
     "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "b3fe50928805e2bb7e1465bee0abfeb81ac7c78540bccd2efbbb74e954078702",
-    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "3fa63572ec7f3cd998573f3ddf7794ccc3366fb77fe2c652c570d7d957d2711a",
+    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "64338e6f77964cbe955770503ed51b4624cb89b5f3e9f181f212e4535c79b757",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
@@ -72,7 +72,7 @@
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json": "b7c1e20776fb9ad6be26039d9bd0c71dfac687f97998a872687dc3e47c997c48",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json": "9cf0c913c9f586ae7850ab0f1a6bfcb1c47dc4862db39dc9fb8acc4fec81b907",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "56252485b00d77dfd679a239ab1670c4b50ed0648dd7fac748c3b94e01a58450",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "ce840d5c88ac8b79c0d70b626922ac22960a13cb0764ac0a9a5f475e1b5e68ba",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "afd271fe04907656674fb526d61e3445da8f3fba1dff33168f558b2420e00a84",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
@@ -198,7 +198,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ec53ccf07cda3ec51f4cad810ac71d66695ebe7fae2574f5921c1cbe81cbdfd7",
+  "inputsSha256": "79939289989643ebb7d4125d30900198a5795cb6b9be2ba0bdb316808f00e71e",
   "languages": [
     "el"
   ],
@@ -12401,6 +12401,11 @@
             "profile.removeImage",
             "profile.removeProject",
             "profile.title",
+            "quoteIntake.enabled",
+            "quoteIntake.lead",
+            "quoteIntake.privacy",
+            "quoteIntake.recipientEmail",
+            "quoteIntake.title",
             "recompute.done",
             "recompute.doneWithRejected",
             "recompute.failed",
@@ -31385,7 +31390,10 @@
             "rfqs.dashboard.setup.deadlinePassed",
             "rfqs.dashboard.setup.linesAllAdHoc",
             "rfqs.dashboard.setup.linesAllBoq",
-            "rfqs.dashboard.setup.linesBySource",
+            "rfqs.dashboard.setup.linesAllCatalog",
+            "rfqs.dashboard.setup.linesPart.adHoc",
+            "rfqs.dashboard.setup.linesPart.boq",
+            "rfqs.dashboard.setup.linesPart.catalog",
             "rfqs.dashboard.setup.responded",
             "rfqs.dashboard.setup.totalLines",
             "rfqs.dashboard.toggle",
@@ -37303,7 +37311,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1239738
+    "sliceBytes": 1240748
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

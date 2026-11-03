@@ -36,3 +36,25 @@ export interface CatalogSupplierProfileDefinition {
 }
 
 export const EMPTY_SUPPLIER_PROFILE: CatalogSupplierProfileDefinition = { description: {}, projects: [] };
+
+/** RFC 5321: το μέγιστο μήκος διεύθυνσης που περνά από SMTP. */
+export const MAX_QUOTE_RECIPIENT_EMAIL_LENGTH = 254;
+
+/**
+ * **Αιτήματα προσφοράς από τη βιτρίνα** (ADR-923 §5.13 Ε6β): opt-in του προμηθευτή.
+ * 🔒 Το email **δεν** φεύγει ποτέ στο δημόσιο έγγραφο: εκεί πάει μόνο το «δέχεται». Λύνεται τη στιγμή της αποστολής (Ε6δ).
+ */
+export interface CatalogQuoteIntake {
+  readonly enabled: boolean;
+  readonly recipientEmail: string | null;
+}
+
+export const QUOTE_INTAKE_OFF: CatalogQuoteIntake = { enabled: false, recipientEmail: null };
+
+/**
+ * Το έγγραφο όπως αποθηκεύεται. Δύο πράξεις, ένα CAS: το προφίλ γράφει περιγραφή και έργα, η ρύθμιση γράφει το `quoteIntake`,
+ * και καθεμία κρατά το κομμάτι της άλλης. Έγγραφα παλιότερα από το Ε6β δεν έχουν `quoteIntake` και διαβάζονται ως «όχι».
+ */
+export interface CatalogSupplierProfileStored extends CatalogSupplierProfileDefinition {
+  readonly quoteIntake?: CatalogQuoteIntake;
+}

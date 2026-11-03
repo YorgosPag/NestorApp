@@ -182,7 +182,8 @@ describe('περιγραφή και portfolio (§22 Υ8)', () => {
   it('με βιτρίνα βγαίνει · χαλασμένο έγγραφο δίνει `null` · το tag το αδειάζει', async () => {
     fake.seed(SHOWCASES, COMPANY, publishedShowcase());
     fake.seed(PROFILES, COMPANY, PROFILE_DOC);
-    await expect(readPublicSupplierProfile(COMPANY)).resolves.toMatchObject({ description: { el: 'Κείμενο' } });
+    // Έγγραφο έκδοσης 1, γραμμένο πριν από το Ε6β (§5.13): ανοίγει, ως «δεν δέχεται αιτήματα».
+    await expect(readPublicSupplierProfile(COMPANY)).resolves.toMatchObject({ description: { el: 'Κείμενο' }, acceptsQuoteRequests: false });
     fake.seed(PROFILES, COMPANY, { ...PROFILE_DOC, taxId: '1' });
     revalidatePublicCompany(COMPANY);
     await expect(readPublicSupplierProfile(COMPANY)).resolves.toBeNull();

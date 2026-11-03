@@ -19,7 +19,8 @@ jest.mock('next/server', () => {
   return { NextResponse: MockNextResponse, NextRequest: class {} };
 });
 
-import { rfqErrorResponse, rfqNotFoundResponse } from '../rfq-error-response';
+import { rfqCreateErrorResponse, rfqErrorResponse, rfqNotFoundResponse } from '../rfq-error-response';
+import { RfqCreateRefusal } from '@/subapps/procurement/types/rfq-create-refusal';
 import {
   PROCUREMENT_RESOURCE,
   ProcurementCrossTenantError,
@@ -135,3 +136,20 @@ describe('rfqNotFoundResponse — το γνήσιο της GET', () => {
     });
   });
 });
+
+describe('rfqCreateErrorResponse — ADR-923 §5.13 Τ4', () => {
+  const wire = async (response: { status: number; json: () => Promise<unknown> }) => ({ status: response.status, body: await response.json() });
+
+  it('άρνηση δημιουργίας ⇒ ο κωδικός της και σταθερό `errorCode` για τη φόρμα', async () => {
+    const refusal = new RfqCreateRefusal('supplierNotAcceptingQuotes', 'comp_aries');
+    expect(await wire(rfqCreateErrorResponse(refusal) as never)).toEqual({
+      status: 409, body: { success: false, error: refusal.message, errorCode: 'supplierNotAcceptingQuotes' },
+    });
+    expect((await wire(rfqCreateErrorResponse(new RfqCreateRefusal('catalogSkuUnavailable', 'x')) as never)).status).toBe(422);
+  });
+
+  it('κάθε άλλο σφάλμα μένει όπως ήταν: 400 με το μήνυμα, χωρίς κωδικό', async () => {
+    expect(await wire(rfqCreateErrorResponse(new Error('boom')) as never)).toEqual({ status: 400, body: { success: false, error: 'boom' } });
+  });
+});
+

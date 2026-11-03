@@ -26,6 +26,7 @@ import type {
 } from 'firebase-admin/firestore';
 import { getErrorMessage } from '@/lib/error-utils';
 import { CDC_WATCHED_COLLECTIONS } from '@/config/audit-cdc-coverage';
+import { SAFE_BATCH_WRITES } from '@/config/firestore-collections';
 import { performerStamp, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 
 // ---------------------------------------------------------------------------
@@ -38,8 +39,8 @@ export const BATCH_SIZE_READ = 500;
 /** Read + write operations (POST migrate/fix endpoints) */
 export const BATCH_SIZE_WRITE = 200;
 
-/** Batched writes — conservative flush size (Firestore hard max is 500) */
-export const BATCH_WRITE_LIMIT = 450;
+// Batched writes: το μέγεθος flush είναι το `SAFE_BATCH_WRITES` του `config/firestore-collections`, η ΜΙΑ τιμή
+// (ταβάνι μείον ονομασμένο περιθώριο). Εδώ ζούσε δεύτερο `BATCH_WRITE_LIMIT = 450`, δίπλα σε ένα 500 (ADR-923 §5.13 Τ4).
 
 
 // ---------------------------------------------------------------------------
@@ -181,7 +182,7 @@ export interface DeclaredWriteScope {
    * βγαίνει `cdc_unknown` (ADR-195 · ADR-704, 2026-10-30). Στις υπόλοιπες συλλογές δεν αγγίζει τίποτα.
    */
   readonly performer?: ResolvedPerformer;
-  /** Πράξεις ανά commit (προεπιλογή `BATCH_WRITE_LIMIT` = 450). */
+  /** Πράξεις ανά commit (προεπιλογή `SAFE_BATCH_WRITES` = 450). */
   readonly batchSize?: number;
 }
 
@@ -302,7 +303,7 @@ export async function flushInBatches(
     assertStampable(ref, scope.performer);
   }
 
-  const batchSize = scope.batchSize ?? BATCH_WRITE_LIMIT;
+  const batchSize = scope.batchSize ?? SAFE_BATCH_WRITES;
   const result: FlushResult = { written: 0, errors: [] };
 
   for (let i = 0; i < updates.length; i += batchSize) {

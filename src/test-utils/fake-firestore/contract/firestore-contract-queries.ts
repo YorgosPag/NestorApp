@@ -125,4 +125,12 @@ export const contractCasesQueries: readonly ContractCase[] = [
       expect(await idsOf(page().startAfter('b').limit(2))).toEqual(['d', 'e']);
     },
   },
+  {
+    id: 'Q13',
+    title: '`where(FieldPath.documentId(), "in", ids)` ταιριάζει το ID εγγράφου, όχι πεδίο — ανύπαρκτο id απλώς λείπει (ADR-923 §5.13 Τ4)',
+    async run(db) {
+      await seedDocs(db, 'q13', { a: { n: 1 }, b: { n: 2 }, c: { n: 3 } });
+      expect(await idsOf(db.collection('q13').where(FieldPath.documentId(), 'in', ['c', 'a', 'ghost']))).toEqual(['a', 'c']);
+    },
+  },
 ];

@@ -9,6 +9,7 @@ import type { PublicCatalogMedia } from '@/subapps/catalog/public/public-catalog
 import type { SupplierStandingRead } from '@/subapps/catalog/public/public-publication-condition';
 import { PUBLIC_PROFILE_SCOPE, publicScopeKey } from '@/subapps/catalog/public/public-scopes-of-write';
 import { PUBLIC_SUPPLIER_PROFILE_SCHEMA_VERSION } from '@/subapps/catalog/public/public-supplier-profile';
+import { QUOTE_INTAKE_OFF } from '@/subapps/catalog/types/supplier-profile';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { PublicAssetFacts, PublicProfileSnapshot } from '../public/public-model-snapshot.server';
 import { PUBLIC_CATALOG_SCOPE, publicOutboxRef } from '../public/public-outbox.server';
@@ -20,7 +21,8 @@ const OPEN: SupplierStandingRead = { kind: 'known', standing: { kind: 'verified'
 const CLOSED: SupplierStandingRead = { kind: 'known', standing: { kind: 'unverified' } };
 const ASSET: PublicAssetFacts = { assetId: 'cast_1', labels: { el: 'Φωτό' }, storagePath: 'c/1.jpg' };
 const PROJECT = { id: 'cprjt_1', title: { el: 'Κατοικία' }, description: {}, year: 2024, assetIds: ['cast_1', 'cast_gone'] };
-const SNAPSHOT: PublicProfileSnapshot = { definition: { description: { el: 'Περιγραφή' }, projects: [PROJECT] }, assets: new Map([['cast_1', ASSET]]) };
+const SNAPSHOT: PublicProfileSnapshot = { definition: { description: { el: 'Περιγραφή' }, projects: [PROJECT] }, quoteIntake: QUOTE_INTAKE_OFF, assets: new Map([['cast_1', ASSET]]) };
+const ACCEPTING = { enabled: true, recipientEmail: 'quotes@aries.example' };
 
 let fake: FakeFirestore;
 let db: Firestore;
@@ -87,15 +89,32 @@ describe('drainPublicProfile', () => {
 
   it('όλα τα μέσα έπεσαν και δεν υπάρχει περιγραφή ⇒ καμία κενή κάρτα, κανένα έγγραφο', async () => {
     const definition = { description: {}, projects: [PROJECT] };
-    await expect(drainPublicProfile(db, COMPANY, AT, depsWith({ readSnapshot: async () => ({ definition, assets: new Map() }) }))).resolves.toBe('unchanged');
+    await expect(drainPublicProfile(db, COMPANY, AT, depsWith({ readSnapshot: async () => ({ definition, quoteIntake: QUOTE_INTAKE_OFF, assets: new Map() }) }))).resolves.toBe('unchanged');
     expect(publicDoc()).toBeUndefined();
+  });
+
+  it('🔒 Ε6β: κενό προφίλ που δέχεται αιτήματα δημοσιεύεται με το «δέχεται» και **χωρίς** το email', async () => {
+    const definition = { description: {}, projects: [] };
+    await expect(drainPublicProfile(db, COMPANY, AT, depsWith({ readSnapshot: async () => ({ definition, quoteIntake: ACCEPTING, assets: new Map() }) }))).resolves.toBe('published');
+    expect(publicDoc()).toMatchObject({ acceptsQuoteRequests: true, projects: [] });
+    expect(JSON.stringify(publicDoc())).not.toContain(ACCEPTING.recipientEmail);
+  });
+
+  it('🔑 Ε6β: η απενεργοποίηση φτάνει τη βιτρίνα ως `false`, με ακύρωση μνήμης', async () => {
+    await drainPublicProfile(db, COMPANY, AT, depsWith({ readSnapshot: async () => ({ ...SNAPSHOT, quoteIntake: ACCEPTING }) }));
+    expect(publicDoc()).toMatchObject({ acceptsQuoteRequests: true });
+    await outbox().set({ revision: 2 }, { merge: true });
+    const deps = depsWith();
+    await expect(drainPublicProfile(db, COMPANY, AT, deps)).resolves.toBe('published');
+    expect(publicDoc()).toMatchObject({ acceptsQuoteRequests: false });
+    expect(deps.revalidate).toHaveBeenCalledWith(COMPANY);
   });
 
   it('🔑 δημοσιευμένο προφίλ που έχασε όλα τα μέσα: αποσύρεται με ακύρωση μνήμης και άδειο ράφι', async () => {
     await drainPublicProfile(db, COMPANY, AT, depsWith());
     await outbox().set({ revision: 2 }, { merge: true });
     const definition = { description: {}, projects: [PROJECT] };
-    const deps = depsWith({ readSnapshot: async () => ({ definition, assets: new Map() }) });
+    const deps = depsWith({ readSnapshot: async () => ({ definition, quoteIntake: QUOTE_INTAKE_OFF, assets: new Map() }) });
     await expect(drainPublicProfile(db, COMPANY, AT, deps)).resolves.toBe('withdrawn');
     expect(publicDoc()).toBeUndefined();
     expect(deps.revalidate).toHaveBeenCalledWith(COMPANY);

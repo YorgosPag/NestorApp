@@ -30,6 +30,7 @@ import { RecomputePanel, maintenanceRecomputeNeeded } from '../shared/RecomputeP
 import { useCatalogCanManage, useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
 import { useDefinitionDraft } from '../shared/use-definition-draft';
 import { useDraftUnsavedGuard } from '../shared/use-unsaved-guard';
+import { QuoteIntakePanel } from './QuoteIntakePanel';
 import { SettingsMatrix } from './SettingsMatrix';
 import { settingsChangeAffectsCompleteness, toggleChannelLocale } from './settings-model';
 import { SupplierBrandClaimsPanel } from './SupplierBrandClaimsPanel';
@@ -97,6 +98,7 @@ export function SettingsContent() {
         <EditorFooter editor={editor} issues={issues} authority="schema" onSave={save} />
         <SupplierVerificationPanel />
         <SupplierProfilePanel />
+        <QuoteIntakePanel />
         <SupplierBrandClaimsPanel />
       </section>
       {unsaved.dialog}

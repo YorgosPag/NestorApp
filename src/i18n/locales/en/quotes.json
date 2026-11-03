@@ -549,7 +549,11 @@
       },
       "setup": {
         "totalLines": "Lines",
-        "linesBySource": "{boq} take-off · {adHoc} manual",
+        "linesPart": {
+          "boq": "{count, plural, one {# from take-off} other {# from take-off}}",
+          "adHoc": "{count, plural, one {# manual} other {# manual}}",
+          "catalog": "{count, plural, one {# from catalog} other {# from catalog}}"
+        },
         "deadline": "Deadline",
         "deadlineNotSet": "Not set",
         "deadlinePassed": "Passed",
@@ -557,7 +561,8 @@
         "responded": "{responded} of {invited} responded",
         "attention": "Need attention",
         "linesAllBoq": "From take-off",
-        "linesAllAdHoc": "Manual"
+        "linesAllAdHoc": "Manual",
+        "linesAllCatalog": "From catalog"
       }
     },
     "mobile": {

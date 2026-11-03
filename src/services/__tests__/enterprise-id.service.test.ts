@@ -369,6 +369,9 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicCatalogVisibilityRuleId',
       'generateDeterministicSupplyRelationshipId',
       'generateDeterministicSupplyRequestLinkId',
+      // ADR-923 §5.13 Ε6γ — ΜΙΑ επαφή προμηθευτή πλατφόρμας ανά (αγοραστής, προμηθευτής), πρόθεμα `cont_`. Ο τυχαίος
+      // `generateContactId` είναι η ΑΛΛΗ επαφή (χειρόγραφη)· τυχαίο id εδώ = δεύτερη καρτέλα στο δεύτερο αίτημα προσφοράς.
+      'generateDeterministicPlatformCompanyContactId',
       // ADR-917 — ΜΙΑ εγγραφή ημερολογίου ανά (εταιρεία, παραστατικό): διπλό «Επιβεβαίωση» = ίδιο έγγραφο, όχι διπλό έξοδο.
       'generateDeterministicExpenseJournalEntryId',
       // ADR-928 §5.1 — ρήτρα από (χώρος, clauseKey), έκδοση από (ρήτρα, αριθμό), πρότυπο από (χώρος, κωδικό), αναθεώρηση
@@ -545,6 +548,8 @@ describe('EnterpriseIdService', () => {
       generateDeterministicCatalogVisibilityRuleId: 'cvrul_f3fba08c-d5f5-422b-802e-918b416a292c',
       generateDeterministicSupplyRelationshipId: 'srel_980a4c08-54cc-410f-896b-33f3ff28f694',
       generateDeterministicSupplyRequestLinkId: 'srql_757fa58c-b8fe-465c-8788-4cd319590e8d',
+      // ADR-923 §5.13 Ε6γ — καταγεγραμμένο από τον ίδιο τον γεννήτορα, 2026-11-03 (σπόρος με κενό δεύτερο άκρο).
+      generateDeterministicPlatformCompanyContactId: 'cont_e045a89d-3ccc-4357-8ead-661b5abd4866',
       generateDeterministicExpenseJournalEntryId: 'je_ad2bbfb9-4463-4ba7-81bf-a021f9cc8d4b',
       // ADR-928 §5.1 — σπόρος `subcontract:<είδος>:anchor-seed:` (δύο παράμετροι, ένα όρισμα ⇒ το `undefined` γίνεται
       //    κενό από το `join`). Καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-11-03.

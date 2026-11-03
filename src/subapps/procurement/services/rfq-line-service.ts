@@ -23,7 +23,8 @@ import type {
   RfqLineCatalogFields,
 } from '../types/rfq-line';
 import { toPublicRfqLine, toPublicLine, rfqLinesLocation, resolveInternalRfqLines, rfqLineCatalogFields } from '../types/rfq-line';
-import { RFQ_FROM_BOQ_MAX_ITEMS, type RFQ } from '../types/rfq';
+import type { RFQ } from '../types/rfq';
+import { boqItemsByIdQuery, ownedBoqItems } from './rfq-boq-items';
 
 const logger = createModuleLogger('RFQ_LINE_SERVICE');
 
@@ -31,7 +32,8 @@ const logger = createModuleLogger('RFQ_LINE_SERVICE');
 // HELPERS
 // ============================================================================
 
-function linesRef(
+/** Η υποσυλλογή γραμμών ενός RFQ — μία διεύθυνση και για τη συναλλαγή του `createRfq`. */
+export function rfqLinesRef(
   db: FirebaseFirestore.Firestore,
   rfqId: string,
 ): FirebaseFirestore.CollectionReference {
@@ -56,7 +58,7 @@ const lineSubject = (lineId: string) =>
  * σε κανέναν (ADR-742 §4), δηλαδή γίνεται αόρατο στον ίδιο του τον ιδιοκτήτη.
  * Ένα εργοστάσιο = η αποκανονικοποίηση δεν μπορεί να παραλειφθεί.
  */
-function buildRfqLine(spec: {
+export function buildRfqLine(spec: {
   readonly rfqId: string;
   readonly companyId: string;
   readonly dto: CreateRfqLineDTO;
@@ -115,7 +117,7 @@ async function writeLinesBatch(
 ): Promise<void> {
   const batch = db.batch();
   for (const line of lines) {
-    batch.set(linesRef(db, rfqId).doc(line.id), sanitizeForFirestore(line));
+    batch.set(rfqLinesRef(db, rfqId).doc(line.id), sanitizeForFirestore(line));
   }
   await batch.commit();
 }
@@ -125,7 +127,7 @@ async function writeLinesBatch(
  * ιδιαίτερο στο στιγμιότυπο (Q29). Η τιμή αθροίζεται από τα τρία κόστη και
  * μηδενικό άθροισμα γράφεται ως `null` (άγνωστη τιμή, όχι «δωρεάν»).
  */
-function boqItemToLineDto(item: BOQItem, fallbackTrade: TradeCode): CreateRfqLineDTO {
+export function boqItemToLineDto(item: BOQItem, fallbackTrade: TradeCode): CreateRfqLineDTO {
   const unitPrice =
     (item.materialUnitCost ?? 0) + (item.laborUnitCost ?? 0) + (item.equipmentUnitCost ?? 0);
   return {
@@ -141,11 +143,28 @@ function boqItemToLineDto(item: BOQItem, fallbackTrade: TradeCode): CreateRfqLin
   };
 }
 
+/**
+ * Το ίχνος «προστέθηκαν γραμμές» (ADR-195) — **παρενέργεια μετά την εγγραφή**, fire-and-forget. Ένα σημείο για τη μαζική
+ * εισαγωγή και για τη δημιουργία RFQ (ADR-923 §5.13 Τ4), ώστε η γραμμή ιστορικού να μη γράφεται δύο φορές με δύο μορφές.
+ */
+export function recordRfqLinesAdded(ctx: AuthContext, rfqId: string, count: number, origin: 'bulk' | 'catalog'): void {
+  void EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: rfqId,
+    entityName: null,
+    action: 'updated',
+    changes: [{ field: 'lines', oldValue: null, newValue: `${count} lines added (${origin})` }],
+    performedBy: ctx.uid,
+    performedByName: null,
+    companyId: ctx.companyId,
+  });
+}
+
 async function getNextDisplayOrder(
   db: FirebaseFirestore.Firestore,
   rfqId: string,
 ): Promise<number> {
-  const snap = await linesRef(db, rfqId).count().get();
+  const snap = await rfqLinesRef(db, rfqId).count().get();
   return snap.data().count;
 }
 
@@ -169,7 +188,7 @@ export async function addRfqLine(
       now: admin.firestore.Timestamp.now(),
     });
 
-    await linesRef(db, rfqId).doc(line.id).set(sanitizeForFirestore(line));
+    await rfqLinesRef(db, rfqId).doc(line.id).set(sanitizeForFirestore(line));
     logger.info('RfqLine created', { id: line.id, rfqId, companyId: ctx.companyId });
     return line;
   });
@@ -201,16 +220,7 @@ export async function addRfqLinesBulk(
 
     await writeLinesBatch(db, rfqId, lines);
 
-    void EntityAuditService.recordChange({
-      entityType: 'purchase_order',
-      entityId: rfqId,
-      entityName: null,
-      action: 'updated',
-      changes: [{ field: 'lines', oldValue: null, newValue: `${lines.length} lines added (bulk)` }],
-      performedBy: ctx.uid,
-      performedByName: null,
-      companyId: ctx.companyId,
-    });
+    recordRfqLinesAdded(ctx, rfqId, lines.length, 'bulk');
 
     logger.info('RfqLines bulk created', { rfqId, count: lines.length, companyId: ctx.companyId });
     return lines;
@@ -232,16 +242,7 @@ export async function snapshotFromBoq(
   return safeFirestoreOperation(async (db) => {
     const { startOrder, now } = await beginBulkInsert(db, rfqId, ctx.companyId);
 
-    // Firestore `in` limit — the boundaries (zod) reject more, this is the last guard
-    const ids = boqItemIds.slice(0, RFQ_FROM_BOQ_MAX_ITEMS);
-    const boqSnap = await db
-      .collection(COLLECTIONS.BOQ_ITEMS)
-      .where(admin.firestore.FieldPath.documentId(), 'in', ids)
-      .get();
-
-    const items = boqSnap.docs
-      .map((d) => ({ id: d.id, ...d.data() } as BOQItem))
-      .filter((item) => item.companyId === ctx.companyId); // CHECK 3.10 tenant guard
+    const items = ownedBoqItems(await boqItemsByIdQuery(db, boqItemIds).get(), ctx.companyId);
 
     if (items.length === 0) return [];
 
@@ -278,7 +279,7 @@ async function fetchSubcollectionLines(
   rfqId: string,
   companyId: string,
 ): Promise<RfqLine[]> {
-  const snap = await linesRef(db, rfqId).orderBy('displayOrder', 'asc').get();
+  const snap = await rfqLinesRef(db, rfqId).orderBy('displayOrder', 'asc').get();
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() } as RfqLine))
     .filter((line) => line.companyId === companyId);
@@ -341,7 +342,7 @@ export async function updateRfqLine(
 ): Promise<RfqLine> {
   return safeFirestoreOperation(async (db) => {
     const { ref: lineRef, current } = await loadOwnedProcurementDoc<RfqLine>(
-      linesRef(db, rfqId).doc(lineId),
+      rfqLinesRef(db, rfqId).doc(lineId),
       ctx.companyId,
       lineSubject(lineId),
     );
@@ -376,7 +377,7 @@ export async function deleteRfqLine(
     // Το προηγούμενο `snap.data() as { companyId: string }` ήταν υπόσχεση χωρίς
     // απόδειξη· ο φορτωτής ρωτά το ωμό φορτίο (ADR-742 §7.5).
     const { ref: lineRef } = await loadOwnedProcurementDoc<RfqLine>(
-      linesRef(db, rfqId).doc(lineId),
+      rfqLinesRef(db, rfqId).doc(lineId),
       ctx.companyId,
       lineSubject(lineId),
     );

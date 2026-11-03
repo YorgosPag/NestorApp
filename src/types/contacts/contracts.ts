@@ -190,7 +190,14 @@ export interface CompanyContact extends BaseContact {
   companyName: string;
   legalName?: string;
   tradeName?: string;
-  
+  /**
+   * ADR-923 §5.13 Ε6γ — ο **χώρος της πλατφόρμας** που είναι αυτή η εταιρεία (προμηθευτής από τη βιτρίνα).
+   * Τίθεται **μόνο** από τον διακομιστή, στη γέννηση της επαφής (`resolvePlatformCompanyContact`), και ισχύει
+   * **μόνο** όταν το id της επαφής είναι το ντετερμινιστικό του ζεύγους (αγοραστής, προμηθευτής) — ένα πεδίο σε
+   * άλλη καρτέλα δεν αποδεικνύει τίποτα (`isPlatformCompanyContact`). Καμία διεύθυνση email δεν αντιγράφεται εδώ.
+   */
+  platformCompanyId?: string;
+
   // Νομικά στοιχεία
   legalForm?: 'ΑΕ' | 'ΕΠΕ' | 'ΟΕ' | 'ΕΕ' | 'ΙΚΕ' | 'ΚΟΙΝΣΕΠ' | 'OTHER';
   vatNumber: string; // ΑΦΜ

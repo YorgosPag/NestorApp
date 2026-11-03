@@ -66,6 +66,8 @@ export const CATALOG_API = {
   },
   settings: `${API_ROOT}/settings`,
   supplierProfile: `${API_ROOT}/supplier-profile`,
+  /** Αιτήματα προσφοράς από τη βιτρίνα (ADR-923 §5.13 Ε6β): ίδιο singleton με το προφίλ. */
+  quoteIntake: `${API_ROOT}/supplier-profile/quote-intake`,
   /** Μία σελίδα της εργασίας επανυπολογισμού παραγώγων (δρομέας). */
   recomputeDerived: `${API_ROOT}/derived/recompute`,
   // ── Φάση 3β (ADR-923 §5.11) — τιμολόγηση ──

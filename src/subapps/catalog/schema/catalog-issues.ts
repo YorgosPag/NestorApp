@@ -21,6 +21,9 @@ export const CATALOG_ISSUE_CODES = [
   'tooMany',
   'portfolioProjectImagesRequired',
   'unknownReference',
+  // ── αιτήματα προσφοράς από τη βιτρίνα (§5.13 Ε6β) ──
+  'quoteRecipientEmailRequired',
+  'emailInvalid',
   // ── σχέση προμήθειας (§5.12) ──
   'supplyNotRequested',
   'contactAlreadyBound',

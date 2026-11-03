@@ -20,9 +20,15 @@ export const UNLOCKED_RESPONSE: RfqResponseLock = Object.freeze({ quantity: fals
 
 const LOCKED_RESPONSE: RfqResponseLock = Object.freeze({ quantity: true, unit: true });
 
-/** Η προεπιλογή **κατά τη δημιουργία** του RFQ: επιμέτρηση ⇒ κλειδωμένο· οτιδήποτε άλλο ⇒ ελεύθερο. */
+/** Οι προελεύσεις όπου η ποσότητα είναι **ζήτηση του αγοραστή** (επιμέτρηση · SKU καταλόγου, ADR-923 §5.13 Τ4). */
+const BUYER_DEMAND_SOURCES: ReadonlySet<RfqLineSource | 'inline_legacy' | null> = new Set<RfqLineSource>(['boq', 'catalog']);
+
+/**
+ * Η προεπιλογή **κατά τη δημιουργία** του RFQ: ζήτηση του αγοραστή ⇒ κλειδωμένο· οτιδήποτε άλλο ⇒ ελεύθερο. Ο κατάλογος
+ * κλειδώνει όπως το BOQ: ο αγοραστής ζήτησε συγκεκριμένο SKU σε δική του ποσότητα, και οι προσφορές πρέπει να συγκρίνονται.
+ */
 export function defaultResponseLock(linesStorage: RfqLineSource | 'inline_legacy' | null): RfqResponseLock {
-  return linesStorage === 'boq' ? { ...LOCKED_RESPONSE } : { ...UNLOCKED_RESPONSE };
+  return BUYER_DEMAND_SOURCES.has(linesStorage) ? { ...LOCKED_RESPONSE } : { ...UNLOCKED_RESPONSE };
 }
 
 /** Ο ΜΟΝΟΣ αναγνώστης του `RFQ.responseLock`: έγγραφα πριν το §8.5 Β (χωρίς πεδίο) = ελεύθερα, ποτέ σιωπηλή αλλαγή. */

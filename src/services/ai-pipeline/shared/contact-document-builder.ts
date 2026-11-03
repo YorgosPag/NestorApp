@@ -43,6 +43,7 @@ import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
 import { splitCountryCallingCode } from '@/lib/contact/channel-phone';
 
 import { performerStamp, type ResolvedPerformer } from '@/server/lib/performer-stamp';
+import { getActivePersonaTypes } from '@/types/contacts/personas';
 
 import type { CreateContactParams } from './contact-lookup-types';
 
@@ -136,6 +137,20 @@ export function buildContactDocument(
       ...(params.nameReview ? { nameReview: params.nameReview } : {}),
       taxOffice: null,
       profession: null,
+      ...originFields(params),
     },
+  };
+}
+
+/**
+ * Πεδία που υπάρχουν **μόνο** όταν τα ξέρει ο δημιουργός — απουσία = ίδιο έγγραφο με πριν.
+ * Οι ρόλοι γράφονται μαζί με το `personaTypes` από το **ίδιο** SSoT (`getActivePersonaTypes`, ADR-268 Q88) που
+ * χρησιμοποιεί και το `contacts.service`, ώστε η λίστα προμηθευτών του RFQ να βρίσκει την επαφή.
+ */
+function originFields(params: CreateContactParams): Record<string, unknown> {
+  const personas = params.personas ?? [];
+  return {
+    ...(params.type === 'company' && params.platformCompanyId ? { platformCompanyId: params.platformCompanyId } : {}),
+    ...(personas.length > 0 ? { personas: [...personas], personaTypes: getActivePersonaTypes([...personas]) } : {}),
   };
 }

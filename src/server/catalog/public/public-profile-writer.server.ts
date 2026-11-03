@@ -40,11 +40,11 @@ export const LIVE_PUBLIC_PROFILE_DEPS: PublicProfileDrainDeps = {
 function draftOf(snapshot: PublicProfileSnapshot | null, companyId: string): PublicProfileSnapshot | null {
   if (snapshot === null) return null;
   const media = new Map([...snapshot.assets].map(([id, asset]) => [id, { assetId: id, url: '', labels: asset.labels }]));
-  return projectPublicProfile({ companyId, definition: snapshot.definition, media }) === null ? null : snapshot;
+  return projectPublicProfile({ companyId, definition: snapshot.definition, quoteIntake: snapshot.quoteIntake, media }) === null ? null : snapshot;
 }
 
 function finalDocument(snapshot: PublicProfileSnapshot, media: ReadonlyMap<string, PublicCatalogMedia>, companyId: string): PublicSupplierProfile | null {
-  const document = projectPublicProfile({ companyId, definition: snapshot.definition, media });
+  const document = projectPublicProfile({ companyId, definition: snapshot.definition, quoteIntake: snapshot.quoteIntake, media });
   return document === null ? null : publicSupplierProfileSchema.parse(document);
 }
 

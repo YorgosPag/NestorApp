@@ -58,6 +58,14 @@ jest.mock('@/services/entity-audit.service', () => ({
 // Ο δεσμός SKU (ADR-923 §5.8) ανοίγει τον ξένο κατάλογο· εδώ κρίνεται μόνο ο φράχτης tenant.
 jest.mock('@/server/supply-relationships/supply-foreign-quote.server', () => ({ resolveForeignSku: jest.fn() }));
 
+// ADR-923 §5.13 Τ4 — η δημιουργία RFQ (σχέδιο + συναλλαγή) έχει δική της σουίτα (`rfq-create.test.ts`)· εδώ κενά stubs.
+jest.mock('@/server/supply-relationships/supply-quote-sku.server', () => ({ resolveQuoteSku: jest.fn() }));
+jest.mock('@/services/public-catalog/public-catalog.reader', () => ({ readPublicSupplier: jest.fn() }));
+jest.mock('@/server/catalog/public/public-model-snapshot.server', () => ({ supplierAcceptsQuotesInTx: jest.fn() }));
+jest.mock('@/services/contact/platform-company-contact-resolver', () => ({ resolvePlatformCompanyContact: jest.fn() }));
+jest.mock('@/services/contact/account-contact-resolver', () => ({ recordAccountContactBirth: jest.fn() }));
+jest.mock('@/services/enterprise-id-convenience-catalog', () => ({ generateDeterministicPlatformCompanyContactId: jest.fn() }));
+
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: jest.fn(() => ({
     info: jest.fn(),

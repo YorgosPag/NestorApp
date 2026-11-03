@@ -31,7 +31,7 @@
  *
  * @module app/api/admin/migrate-postal-codes/migration-operations
  * @enterprise ADR-332 D16 — κανονικός Τ.Κ. στη βάση, μάσκα στην οθόνη
- * @see ADR-704 — flushInBatches/BATCH_WRITE_LIMIT· ο `db` έρχεται από τον envelope
+ * @see ADR-704 — flushInBatches/SAFE_BATCH_WRITES· ο `db` έρχεται από τον envelope
  * @see ADR-195 §Φάση 3 — CDC coverage για contacts
  */
 

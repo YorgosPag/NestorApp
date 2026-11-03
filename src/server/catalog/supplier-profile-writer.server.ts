@@ -12,9 +12,15 @@ import 'server-only';
 
 import type { AuthContext } from '@/lib/auth';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import { validateSupplierProfile } from '@/subapps/catalog/schema/validate-supplier-profile';
+import { validateQuoteIntake, validateSupplierProfile } from '@/subapps/catalog/schema/validate-supplier-profile';
+import { storedQuoteIntakeOf } from '@/subapps/catalog/schema/zod/supplier-profile.schema';
 import type { CatalogAssetDefinition } from '@/subapps/catalog/types/asset';
-import type { CatalogSupplierProfileDefinition } from '@/subapps/catalog/types/supplier-profile';
+import {
+  EMPTY_SUPPLIER_PROFILE,
+  type CatalogQuoteIntake,
+  type CatalogSupplierProfileDefinition,
+  type CatalogSupplierProfileStored,
+} from '@/subapps/catalog/types/supplier-profile';
 import { readActiveByIds } from './catalog-library-reads.server';
 import {
   assertRevision,
@@ -28,7 +34,7 @@ import {
 import { assertNoIssues } from './catalog-write-error';
 import { enrolCompanyInPublicSweepInTx } from './public/public-outbox.server';
 
-type StoredProfile = StoredCatalogRecord<CatalogSupplierProfileDefinition>;
+type StoredProfile = StoredCatalogRecord<CatalogSupplierProfileStored>;
 
 async function unknownAssetIssues(scope: CatalogTx, definition: CatalogSupplierProfileDefinition): Promise<readonly CatalogIssue[]> {
   const assetIds = definition.projects.flatMap((project) => project.assetIds);
@@ -37,14 +43,35 @@ async function unknownAssetIssues(scope: CatalogTx, definition: CatalogSupplierP
     known.has(assetId) ? [] : [{ code: 'unknownReference' as const, path: `projects[${index}].assetIds[${position}]` }]));
 }
 
+/**
+ * Ένα CAS, δύο πράξεις: καθεμία φέρνει το δικό της κομμάτι και κρατά το άλλο από το τρέχον έγγραφο. Έτσι ένας πελάτης που
+ * αποθηκεύει το προφίλ δεν σβήνει ποτέ το opt-in, ούτε αντίστροφα.
+ */
+async function stageProfile(
+  scope: CatalogTx,
+  expectedRevision: number,
+  build: (current: CatalogSupplierProfileStored | null) => Promise<CatalogSupplierProfileStored>,
+): Promise<StoredProfile> {
+  const { target, current } = await readSingleton<CatalogSupplierProfileStored>(scope, 'supplierProfile');
+  assertRevision({ revision: current?.revision ?? 0 }, expectedRevision);
+  const stored = await build(current);
+  enrolCompanyInPublicSweepInTx(scope.tx, scope.db, scope.ctx.companyId);
+  return current ? stageReplace(scope, 'supplierProfile', current, stored) : stageCreate(scope, 'supplierProfile', target, stored);
+}
+
 export async function saveSupplierProfile(ctx: AuthContext, expectedRevision: number, definition: CatalogSupplierProfileDefinition): Promise<StoredProfile> {
   assertNoIssues(validateSupplierProfile(definition));
-  return runCatalogTransaction(ctx, async (scope) => {
-    const { target, current } = await readSingleton<CatalogSupplierProfileDefinition>(scope, 'supplierProfile');
-    assertRevision({ revision: current?.revision ?? 0 }, expectedRevision);
+  return runCatalogTransaction(ctx, (scope) => stageProfile(scope, expectedRevision, async (current) => {
     assertNoIssues(await unknownAssetIssues(scope, definition));
-    enrolCompanyInPublicSweepInTx(scope.tx, scope.db, scope.ctx.companyId);
-    const stored: CatalogSupplierProfileDefinition = { description: definition.description, projects: definition.projects };
-    return current ? stageReplace(scope, 'supplierProfile', current, stored) : stageCreate(scope, 'supplierProfile', target, stored);
-  });
+    return { description: definition.description, projects: definition.projects, quoteIntake: storedQuoteIntakeOf(current?.quoteIntake) };
+  }));
+}
+
+/** Η ρύθμιση αιτημάτων προσφοράς (ADR-923 §5.13 Ε6β). Η δημόσια προβολή παίρνει μόνο το «δέχεται», από το `noteWrite`. */
+export async function saveQuoteIntake(ctx: AuthContext, expectedRevision: number, intake: CatalogQuoteIntake): Promise<StoredProfile> {
+  assertNoIssues(validateQuoteIntake(intake));
+  return runCatalogTransaction(ctx, (scope) => stageProfile(scope, expectedRevision, async (current) => {
+    const content = current ?? EMPTY_SUPPLIER_PROFILE;
+    return { description: content.description, projects: content.projects, quoteIntake: { enabled: intake.enabled, recipientEmail: intake.recipientEmail } };
+  }));
 }

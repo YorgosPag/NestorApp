@@ -47,6 +47,7 @@ import {
   procurementNotFound,
 } from '@/subapps/procurement/services/procurement-ownership';
 import { getErrorMessage } from '@/lib/error-utils';
+import { RfqCreateRefusal } from '@/subapps/procurement/types/rfq-create-refusal';
 
 /** Το σώμα σφάλματος αυτής της οικογένειας — μία γραφή, όχι έξι. */
 function errorBody(message: string, code: string | null): NextResponse {
@@ -107,4 +108,16 @@ export function rfqErrorResponse(error: unknown, options: RfqErrorOptions): Next
  */
 export function rfqNotFoundResponse(message = 'Not found'): NextResponse {
   return NextResponse.json({ success: false, error: message }, { status: 404 });
+}
+
+/**
+ * Η απόκριση της `POST /api/rfqs` (ADR-923 §5.13 Τ4): άρνηση δημιουργίας ⇒ ο κωδικός της και σταθερό `errorCode`, που η φόρμα
+ * μεταφράζει (`explainProcurementError`). Όλα τα άλλα μένουν όπως ήταν: `400` με το μήνυμα της υπηρεσίας.
+ * ⚠️ Η δημιουργία δεν ελέγχει ιδιοκτησία εγγράφου, άρα εδώ δεν υπάρχει κλάδος μεταμφίεσης.
+ */
+export function rfqCreateErrorResponse(error: unknown): NextResponse {
+  if (error instanceof RfqCreateRefusal) {
+    return NextResponse.json({ success: false, error: error.message, errorCode: error.errorCode }, { status: error.status });
+  }
+  return errorBody(getErrorMessage(error, 'Failed to create RFQ'), null);
 }

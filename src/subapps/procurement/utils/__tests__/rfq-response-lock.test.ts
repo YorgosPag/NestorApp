@@ -33,6 +33,8 @@ const line = (rfqLineId: string | null, quantity: number, unit: string, unitPric
 describe('defaultResponseLock / resolveResponseLock', () => {
   it('Κ1 — επιμέτρηση ⇒ κλειδωμένο· όλα τα άλλα ⇒ ελεύθερο', () => {
     expect(defaultResponseLock('boq')).toEqual(LOCKED);
+    // ADR-923 §5.13 Τ4: η ποσότητα του SKU καταλόγου είναι ζήτηση του αγοραστή, όπως η επιμέτρηση.
+    expect(defaultResponseLock('catalog')).toEqual(LOCKED);
     expect(defaultResponseLock('ad_hoc')).toEqual(UNLOCKED_RESPONSE);
     expect(defaultResponseLock('inline_legacy')).toEqual(UNLOCKED_RESPONSE);
     expect(defaultResponseLock(null)).toEqual(UNLOCKED_RESPONSE);

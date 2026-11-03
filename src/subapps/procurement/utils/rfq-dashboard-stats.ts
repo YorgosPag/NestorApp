@@ -22,13 +22,13 @@ import type { TFunction } from 'i18next';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { StatusDrill } from '@/components/projects/procurement/clients/useStatusDrillParam';
 import { normalizeToMillisOrNull, deadlineDaysLeft } from '@/lib/date-local';
-import { formatCurrency, formatDate, formatDeadlineRelative } from '@/lib/intl-formatting';
+import { formatCurrency, formatDate, formatDeadlineRelative, formatList } from '@/lib/intl-formatting';
 import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
 import { quoteVendorDisplayName, quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 import type { VendorInvite } from '@/subapps/procurement/types/vendor-invite';
 import type { QuoteComparisonResult } from '@/subapps/procurement/types/comparison';
 import type { RFQ } from '@/subapps/procurement/types/rfq';
-import type { RfqLine } from '@/subapps/procurement/types/rfq-line';
+import { RFQ_LINE_SOURCES, type RfqLine, type RfqLineSource } from '@/subapps/procurement/types/rfq-line';
 import type { RfqTabValue } from '@/subapps/procurement/hooks/useRfqUrlState';
 import { INVITE_FOCUS_PREDICATES, inviteResponded, type InviteFocus } from './vendor-invite-status';
 
@@ -138,14 +138,24 @@ function comparisonTab({ quotes, comparison, onOpenQuote, t }: RfqDashboardInput
   ];
 }
 
-/** Προέλευση γραμμών — μόνο ό,τι ισχύει («Από επιμετρήσεις», όχι «1 από επιμετρήσεις · 0 χειροκίνητες»). */
+/** Τα κλειδιά κάθε προέλευσης: «όλες από εδώ» και «N από εδώ». Εξαντλητικό: νέα προέλευση χωρίς κλειδί δεν μεταγλωττίζεται. */
+const LINE_SOURCE_KEYS: Readonly<Record<RfqLineSource, { readonly all: string; readonly part: string }>> = {
+  boq: { all: 'rfqs.dashboard.setup.linesAllBoq', part: 'rfqs.dashboard.setup.linesPart.boq' },
+  ad_hoc: { all: 'rfqs.dashboard.setup.linesAllAdHoc', part: 'rfqs.dashboard.setup.linesPart.adHoc' },
+  catalog: { all: 'rfqs.dashboard.setup.linesAllCatalog', part: 'rfqs.dashboard.setup.linesPart.catalog' },
+};
+
+/**
+ * Προέλευση γραμμών — μόνο ό,τι ισχύει («Από επιμετρήσεις», όχι «1 από επιμετρήσεις · 0 χειροκίνητες»). Μετρά **κάθε**
+ * προέλευση χωριστά: πριν από το ADR-923 §5.13 Τ4 το «χειροκίνητες» ήταν «όλες εκτός επιμέτρησης», άρα μετρούσε και τον κατάλογο.
+ */
 function linesSourceText(lines: readonly RfqLine[], t: TFunction): string | undefined {
-  const boq = lines.filter((l) => l.source === 'boq').length;
-  const adHoc = lines.length - boq;
-  if (lines.length === 0) return undefined;
-  if (adHoc === 0) return t('rfqs.dashboard.setup.linesAllBoq');
-  if (boq === 0) return t('rfqs.dashboard.setup.linesAllAdHoc');
-  return t('rfqs.dashboard.setup.linesBySource', { boq, adHoc });
+  const present = RFQ_LINE_SOURCES
+    .map((source) => ({ source, count: lines.filter((line) => line.source === source).length }))
+    .filter(({ count }) => count > 0);
+  if (present.length === 0) return undefined;
+  if (present.length === 1) return t(LINE_SOURCE_KEYS[present[0].source].all);
+  return formatList(present.map(({ source, count }) => t(LINE_SOURCE_KEYS[source].part, { count })), 'unit');
 }
 
 function linesCard({ lines, linesLoading, t }: RfqDashboardInput): DashboardStat {

@@ -25,7 +25,7 @@ import type { CatalogFamilyDefinition, StoredCatalogFamilyDefinition } from '@/s
 import type { WorkspaceMeasurementFamilyDefinition } from '@/subapps/catalog/types/measurement-family';
 import type { CatalogAssetInput } from '@/subapps/catalog/schema/zod/asset.schema';
 import type { CatalogSettingsDefinition } from '@/subapps/catalog/types/catalog-settings';
-import type { CatalogSupplierProfileDefinition } from '@/subapps/catalog/types/supplier-profile';
+import type { CatalogQuoteIntake, CatalogSupplierProfileDefinition, CatalogSupplierProfileStored } from '@/subapps/catalog/types/supplier-profile';
 import type { CatalogProductDefinition, CatalogProductModelDefinition } from '@/subapps/catalog/types/product';
 import type { StoredCatalogProductDefinition, StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
 import type {
@@ -65,7 +65,7 @@ export type ProductModelRecord = CatalogWire<StoredCatalogProductModelDefinition
 /** SKU ή απλό προϊόν (`modelId: null`). */
 export type ProductRecord = CatalogWire<StoredCatalogProductDefinition>;
 export type CatalogSettingsRecord = CatalogWire<CatalogSettingsDefinition>;
-export type SupplierProfileRecord = CatalogWire<CatalogSupplierProfileDefinition>;
+export type SupplierProfileRecord = CatalogWire<CatalogSupplierProfileStored>;
 export type VariantBatchResult = VariantBatchResultOf<ProductModelRecord, ProductRecord>;
 
 /** Τα είδη που γράφονται ως **ολόκληρος ορισμός** (δημιουργία · αντικατάσταση · διαγραφή). */
@@ -208,6 +208,11 @@ export function saveCatalogSettings(expectedRevision: number, definition: Catalo
 /** Προφίλ παρόχου (singleton): το **πρώτο** αποθηκευμένο έγγραφο ζητά `expectedRevision: 0`. */
 export function saveSupplierProfile(expectedRevision: number, definition: CatalogSupplierProfileDefinition): Promise<SupplierProfileRecord> {
   return apiClient.put<SupplierProfileRecord>(CATALOG_API.supplierProfile, { expectedRevision, definition });
+}
+
+/** Αιτήματα προσφοράς (ADR-923 §5.13 Ε6β): ίδιο singleton και ίδια αναθεώρηση με το προφίλ. */
+export function saveQuoteIntake(expectedRevision: number, quoteIntake: CatalogQuoteIntake): Promise<SupplierProfileRecord> {
+  return apiClient.put<SupplierProfileRecord>(CATALOG_API.quoteIntake, { expectedRevision, quoteIntake });
 }
 
 /** **Μία** σελίδα της εργασίας επανυπολογισμού — ο καλών συνεχίζει ως `nextCursor === null`. */

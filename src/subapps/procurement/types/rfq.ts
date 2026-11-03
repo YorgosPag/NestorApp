@@ -169,6 +169,15 @@ export interface RfqResponseLock {
  */
 export const RFQ_FROM_BOQ_MAX_ITEMS = 30;
 
+/**
+ * Πόσα SKU καταλόγου χωρούν σε ΕΝΑ αίτημα (ADR-923 §5.13 Τ4). Κάθε γραμμή κοστίζει μία κρίση SKU πριν από τη συναλλαγή,
+ * και κάθε νέος προμηθευτής μία πρόσκληση και μία επαφή μέσα σε αυτήν.
+ */
+export const RFQ_CATALOG_LINES_MAX = 20;
+
+/** Ο κλάδος μιας γραμμής χωρίς δικό της κωδικό ΑΤΟΕ (στιγμιότυπο BOQ χωρίς αντιστοίχιση, γραμμή καταλόγου): ΕΝΑ σημείο. */
+export const RFQ_FALLBACK_TRADE: TradeCode = 'materials_general';
+
 export interface CreateRfqDTO {
   projectId: string;
   buildingId?: string | null;
@@ -188,6 +197,8 @@ export interface CreateRfqDTO {
   boqItemIds?: string[];
   /** Ad-hoc line definitions for Q29 escape-hatch path. */
   adHocLines?: import('./rfq-line').CreateRfqLineDTO[];
+  /** ADR-923 §5.13 Ε6 Τ4 — SKU καταλόγου· ο διακομιστής τα κρίνει και γράφει τις γραμμές στην ΙΔΙΑ συναλλαγή με το RFQ. */
+  catalogLines?: import('./rfq-line').CreateRfqCatalogLineDTO[];
 }
 
 /** What `POST /api/rfqs/from-boq` returns: a builder pre-fill whose lines keep their BOQ origin. */

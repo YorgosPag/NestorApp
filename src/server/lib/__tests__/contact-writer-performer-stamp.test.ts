@@ -44,6 +44,8 @@ const STAMP_EXEMPT: Readonly<Record<string, string>> = {
     'γράφει το έγγραφο του `buildContactDocument` (σφραγισμένο εκεί· Σ4) μέσα στη συναλλαγή',
   'services/mandate/mandate-acceptance.service.ts':
     'γράφει το έγγραφο του `buildContactDocument` (σφραγισμένο εκεί· Σ4) μέσα στη συναλλαγή',
+  'subapps/procurement/services/rfq-create-transaction.ts':
+    'γράφει το έγγραφο του `buildContactDocument` (μέσω `resolvePlatformCompanyContact`, σφραγισμένο εκεί· Σ4) στη συναλλαγή του RFQ',
   'services/ai-pipeline/tools/handlers/banking-handler.ts':
     'γράφει στην υποσυλλογή `bankAccounts` — όχι στο έγγραφο επαφής που παρακολουθεί ο CDC',
 };

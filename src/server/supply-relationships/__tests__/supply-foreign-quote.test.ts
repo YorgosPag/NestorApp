@@ -57,7 +57,7 @@ import { reviewSupplierPrices } from '../boq-supplier-drift.server';
 import { applySupplierPrice } from '../boq-supplier-price.server';
 import { issueSupplyInvitation } from '../supply-invitation-issue.server';
 import { respondToSupplyInvitation } from '../supply-invitation-redeem.server';
-import { quoteForeignPrice, resolveForeignSku, searchForeignCatalog } from '../supply-foreign-quote.server';
+import { quoteForeignPrice, resolveForeignSku, resolveVisibleForeignSku, searchForeignCatalog } from '../supply-foreign-quote.server';
 import { supplyRelationshipId } from '../supply-relationship-store.server';
 import { endSupplyRelationship } from '../supply-relationship-writer.server';
 /* eslint-enable import/first */
@@ -125,6 +125,15 @@ describe('ADR-923 §5.8: ο δεσμός υλικού με SKU', () => {
     await connect();
     await showAll('visible');
     expect(await resolveForeignSku(BUYER, link())).toEqual(SKU());
+  });
+
+  it('ADR-923 §5.13 Τ4: το κείμενο της γραμμής RFQ βγαίνει από το SKU της ίδιας ξένης ανάγνωσης, όχι από τον πελάτη', async () => {
+    await connect();
+    await showAll('visible');
+    const stored = fake.getData(COLLECTIONS.CATALOG_PRODUCTS, SIMPLE_VARIANT_ID) ?? {};
+    fake.seed(COLLECTIONS.CATALOG_PRODUCTS, SIMPLE_VARIANT_ID, { ...stored, derived: { ...(stored.derived as object), identifier: 'TC-1', label: 'Καλώδιο' } });
+    expect(await resolveVisibleForeignSku(BUYER, link())).toEqual({ ref: SKU(), text: 'TC-1 — Καλώδιο' });
+    expect(await resolveVisibleForeignSku(RIVAL, link())).toBeNull();
   });
 
   it('`visibleNoPrice`: το SKU φαίνεται, άρα δένεται, χωρίς τιμή', async () => {

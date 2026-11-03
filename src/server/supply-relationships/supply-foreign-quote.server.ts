@@ -17,8 +17,10 @@ import { readOwnedOrNull, runForeignCatalogRead, type CatalogReadScope } from '@
 import { quoteWithin } from '@/server/catalog/price-quote.server';
 import { viewerOfRelationship } from '@/server/catalog/pricing-viewer.server';
 import { FOREIGN_UNAVAILABLE, foreignOutcomeOf, type ForeignPrice, type ForeignQuote } from '@/subapps/catalog/pricing/foreign-quote';
-import { FOREIGN_SKU_NONE, type ForeignSkuSearch } from '@/subapps/catalog/pricing/foreign-sku-search';
+import { FOREIGN_SKU_NONE, foreignSkuRowText, type ForeignSkuSearch } from '@/subapps/catalog/pricing/foreign-sku-search';
 import { supplyRelationshipFromDocument } from '@/subapps/catalog/schema/zod/supply-relationship.schema';
+import type { CatalogProductDefinition } from '@/subapps/catalog/types/product';
+import type { CatalogProductDerived } from '@/subapps/catalog/types/product-derived';
 import type { SupplierSkuLink, SupplierSkuRef, SupplyRelationship } from '@/subapps/catalog/types/supply-relationship';
 
 import { searchCatalogInScope } from './supply-foreign-search.server';
@@ -74,16 +76,41 @@ export async function quoteForeignPrice(ctx: AuthContext, request: ForeignQuoteR
   return quoted.kind === 'priced' ? { kind: 'priced', price: quoted.price } : quoted;
 }
 
+/** Ένα SKU που **βλέπει** ο αγοραστής, με το κείμενο που θα διαβάσει (κωδικός και ετικέτα, `foreignSkuRowText`). */
+export interface VisibleForeignSku {
+  readonly ref: SupplierSkuRef;
+  readonly text: string;
+}
+
+type SkuTextSource = CatalogProductDefinition & { readonly derived?: Partial<Pick<CatalogProductDerived, 'identifier' | 'label'>> };
+
+/** Το κείμενο του SKU, στην **ίδια** ξένη ανάγνωση με την κρίση ορατότητας: ό,τι δεν φαίνεται δεν έχει κείμενο. */
+async function visibleSkuTextInScope(scope: CatalogReadScope, buyerCompanyId: string, link: SupplierSkuLink): Promise<string | null> {
+  const outcome = await quoteInScope(scope, buyerCompanyId, { ...link, quantity: 1 });
+  if (outcome.kind === 'unavailable') return null;
+  // ⚠️ Το είδος του καταλόγου για το SKU είναι `product` (η «παραλλαγή» είναι SKU του μοντέλου), όχι `variant`.
+  // Τα παράγωγα γράφονται από τη μηχανή του συνόλου, άρα μπορεί να λείπουν σε SKU που δεν έχει ακόμη παραχθεί: κενό κείμενο.
+  const sku = await readOwnedOrNull<SkuTextSource>(scope, 'product', link.variantId);
+  return sku === null ? null : foreignSkuRowText({ code: sku.derived?.identifier ?? null, label: sku.derived?.label ?? null });
+}
+
 /**
- * Ο δεσμός με SKU που **βλέπει** αυτός ο αγοραστής, ή `null`. Δεν ρωτά τιμή: και το `requestQuote` είναι ορατό SKU.
- * Ξένη, ανύπαρκτη, ανακλημένη σχέση και κρυφό SKU δίνουν την **ίδια** απάντηση (Σ7), και ο προμηθευτής βγαίνει από τη σχέση.
+ * Το SKU που **βλέπει** αυτός ο αγοραστής **και** το κείμενό του, ή `null` (ADR-923 §5.13 Τ4: η περιγραφή της γραμμής RFQ
+ * βγαίνει από εδώ, ποτέ από τον πελάτη). Ξένη, ανύπαρκτη, ανακλημένη σχέση και κρυφό SKU δίνουν την **ίδια** απάντηση (Σ7).
  */
-export async function resolveForeignSku(ctx: AuthContext, link: SupplierSkuLink): Promise<SupplierSkuRef | null> {
+export async function resolveVisibleForeignSku(ctx: AuthContext, link: SupplierSkuLink): Promise<VisibleForeignSku | null> {
   const relationship = await readBuyerRelationship(ctx, link.relationshipId);
   if (relationship === null) return null;
-  const request = { ...link, quantity: 1 };
-  const outcome = await runForeignCatalogRead(relationship.companyId, (scope) => quoteInScope(scope, ctx.companyId, request));
-  return outcome.kind === 'unavailable' ? null : { supplierCompanyId: relationship.companyId, variantId: link.variantId };
+  const text = await runForeignCatalogRead(relationship.companyId, (scope) => visibleSkuTextInScope(scope, ctx.companyId, link));
+  return text === null ? null : { ref: { supplierCompanyId: relationship.companyId, variantId: link.variantId }, text };
+}
+
+/**
+ * Ο δεσμός με SKU που **βλέπει** αυτός ο αγοραστής, ή `null`. Δεν ρωτά τιμή: και το `requestQuote` είναι ορατό SKU.
+ * Η μία κρίση είναι του {@link resolveVisibleForeignSku}· εδώ μένει μόνο ο δεσμός, για όσους δεν χρειάζονται κείμενο.
+ */
+export async function resolveForeignSku(ctx: AuthContext, link: SupplierSkuLink): Promise<SupplierSkuRef | null> {
+  return (await resolveVisibleForeignSku(ctx, link))?.ref ?? null;
 }
 
 async function searchInScope(scope: CatalogReadScope, buyerCompanyId: string, term: string): Promise<ForeignSkuSearch> {

@@ -13,7 +13,10 @@ import {
   MAX_PORTFOLIO_PROJECTS,
   MAX_PORTFOLIO_YEAR,
   MAX_PROFILE_TEXT_LENGTH,
+  MAX_QUOTE_RECIPIENT_EMAIL_LENGTH,
   MIN_PORTFOLIO_YEAR,
+  QUOTE_INTAKE_OFF,
+  type CatalogQuoteIntake,
   type CatalogSupplierProfileDefinition,
 } from '../../types/supplier-profile';
 import { entityIdSchema } from './common.schema';
@@ -37,3 +40,25 @@ export const supplierProfileSchema: z.ZodType<CatalogSupplierProfileDefinition, 
     projects: z.array(portfolioProjectSchema).max(MAX_PORTFOLIO_PROJECTS),
   })
   .strict();
+
+/** Κενό ή μόνο κενά ⇒ `null`, ώστε «δεν έδωσε» να είναι ένα πράγμα. Η εγκυρότητα κρίνεται στο `validateQuoteIntake`. */
+const recipientEmailSchema = z
+  .string()
+  .trim()
+  .max(MAX_QUOTE_RECIPIENT_EMAIL_LENGTH)
+  .nullable()
+  .transform((email) => (email === null || email === '' ? null : email));
+
+/** Το σύρμα της ρύθμισης «δέχομαι αιτήματα προσφοράς» (ADR-923 §5.13 Ε6β). */
+export const quoteIntakeSchema: z.ZodType<CatalogQuoteIntake, z.ZodTypeDef, unknown> = z
+  .object({ enabled: z.boolean(), recipientEmail: recipientEmailSchema })
+  .strict();
+
+/**
+ * Το σύνορο ανάγνωσης του αποθηκευμένου `quoteIntake`. Απόν (έγγραφο πριν από το Ε6β) ή χαλασμένο ⇒ «δεν δέχεται»: η αμφιβολία
+ * κλείνει την πόρτα, δεν την ανοίγει.
+ */
+export function storedQuoteIntakeOf(raw: unknown): CatalogQuoteIntake {
+  const parsed = quoteIntakeSchema.safeParse(raw);
+  return parsed.success ? parsed.data : QUOTE_INTAKE_OFF;
+}
