@@ -5283,3 +5283,8 @@ working tree). Θεραπεία: `git rm` του αρχείου + αφαίρεσ
 - **Fix**: εξαγωγή `MM_PER_METRE` (ή χρήση του `mmToSceneUnits`) από το `utils/scene-units.ts`, και εισαγωγή του στα 6 αρχεία. Μετά, μοτίβο στο `.ssot-registry.json` ώστε να μη ξαναγραφτεί.
 
 ---
+### 🧾 Παραγγελίες (PO): τρία κενά που βρήκε η ανασκόπηση της Λ5 — ADR-923 κύμα 3 · 2026-11-04
+Ο φράχτης εταιρείας (`src/services/procurement/po-tenant-scope.ts`, κλαδί Λ5β) κλείνει το «ξένη εταιρεία βλέπει/γράφει PO». Μένουν, προϋπάρχοντα:
+- **RBAC μέσα στην εταιρεία (μέτριο):** `/api/procurement/[poId]` (+`share`, `email`) δεν δηλώνουν `permissions` στο `defineRoute` ⇒ κάθε μέλος με οποιονδήποτε ρόλο εγκρίνει/ακυρώνει/σβήνει/κοινοποιεί. Θέλει πίνακα ρόλων ανά πράξη (`src/lib/auth/roles.ts`).
+- **Δημόσιο `/api/procurement/public/[token]` (μέτριο):** εκτός ασπίδας — χωρίς `no-store`, χωρίς δηλωμένο όριο ρυθμού (`undeclared` στο 3.78), διαφορετικά μηνύματα expired/revoked/deleted μαρτυρούν διαγραφή. Μεταφορά σε `createPublicTokenRouteExport` με ενιαίο 404.
+- **Ξένα `projectId`/`supplierId` στο DTO (μικρό-μέτριο):** `procurement-service.ts` `createPO`/`updatePO` δεν ελέγχουν ότι έργο/προμηθευτής ανήκουν στην εταιρεία ⇒ PO μπορεί να δείχνει σε ξένο έργο.
