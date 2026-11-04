@@ -47,7 +47,7 @@ import {
 } from '@/subapps/procurement/services/procurement-ownership';
 import { getErrorMessage } from '@/lib/error-utils';
 import { ApiError } from '@/lib/api/api-error-types';
-import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
+import { ProcurementRuleError, PurchaseOrderNotFoundError } from '@/subapps/procurement/services/procurement-rule-error';
 import { resolveProcurementErrorStatus, type ProcurementErrorStatusOptions } from './error-status';
 
 /**
@@ -173,6 +173,7 @@ export function rethrowProcurementFailure(error: unknown, callerGlobalRole: stri
     throw new ApiError(outcome.status, outcome.message);
   }
   if (error instanceof ProcurementRuleError) throw new ApiError(400, error.message);
+  if (error instanceof PurchaseOrderNotFoundError) throw new ApiError(404, error.message);
   if (error instanceof Error && error.message.includes('not found')) throw new ApiError(400, error.message);
   throw error;
 }

@@ -203,7 +203,17 @@ export const POST = defineRoute({
 - **ΧΑ-4 · μετάφραση**: **δεν** υπάρχει γενικός μηχανισμός μετάφρασης `errorCode` στον client (μόνο ανά τομέα, π.χ.
   `policy-error-translator`). Το `INTERNAL_SERVER_ERROR` είναι **αναγνωρίσιμο**, όχι ακόμη μεταφρασμένο ⇒ pending.
 
+- **Οπισθοδρόμηση μηνυμάτων κανόνα — έκλεισε** (2026-11-04, δεύτερος γύρος): απογραφή `throw new Error(` στις υπηρεσίες
+  των routes προμηθειών του factory ⇒ **11 σημεία**. 2 κανόνες («Cannot update a deleted material / framework agreement»)
+  έγιναν `ProcurementRuleError`· 9 «PO not found: <id>» έγιναν `PurchaseOrderNotFoundError` με μήνυμα `PO not found`
+  **χωρίς id** — ίδιο κείμενο με την άρνηση ιδιοκτησίας των routes (`notFound('PO not found')`), άρα αδιάκριτο στο σύρμα
+  (ADR-742). Σε PATCH/DELETE της παραγγελίας η απουσία απαντά πλέον **404** αντί για 400. Άγκυρα κώδικα
+  `procurement-typed-errors-anchor.test.ts` (κλειστή λίστα 7 υπηρεσιών, κανένα σκέτο `throw new Error(`). Οι υπηρεσίες
+  RFQ/προσφορών (routes εκτός factory, χωρίς οπισθοδρόμηση σήμερα) ⇒ λίστα στο pending.
+
 ## Changelog
+- **2026-11-04** — Δεύτερος γύρος: 11 σκέτα `Error` των υπηρεσιών προμηθειών τυποποιήθηκαν (`ProcurementRuleError` ×2,
+  `PurchaseOrderNotFoundError` ×9)· άγκυρα κώδικα + 2 άγκυρες routes· μεταλλάξεις M15–M18.
 - **2026-11-04** — **Διορθώσεις ανασκόπησης ασφαλείας** της ασπίδας (κύμα 3 Λ5): `ApiError` ≥500 χωρίς μήνυμα στο σύρμα
   (factory + `ApiErrorHandler`)· `ProcurementRuleError` + `rethrowProcurementFailure`· `resolveProcurementErrorOutcome`
   κρύβει ό,τι δεν είναι τυποποιημένο· σταθερό 502 στο `send-email`· σβήσιμο `CDN-Cache-Control`/`Surrogate-Control`/`Expires`·

@@ -15,3 +15,17 @@ export class ProcurementRuleError extends Error {
     this.name = 'ProcurementRuleError';
   }
 }
+
+/**
+ * Το μήνυμα του «δεν βρέθηκε» της παραγγελίας — **ίδιο** με το `notFound('PO not found')` των routes, χωρίς id.
+ * Η γνήσια απουσία και η άρνηση ιδιοκτησίας πρέπει να είναι αδιάκριτες στο σύρμα (ADR-742 · `resource-concealment-anchor`).
+ */
+export const PO_NOT_FOUND_MESSAGE = 'PO not found';
+
+/** Η παραγγελία δεν υπάρχει. Τυποποιημένο ώστε το σύνορο να απαντά 404 χωρίς να διαβάζει κείμενο. */
+export class PurchaseOrderNotFoundError extends Error {
+  constructor() {
+    super(PO_NOT_FOUND_MESSAGE);
+    this.name = 'PurchaseOrderNotFoundError';
+  }
+}

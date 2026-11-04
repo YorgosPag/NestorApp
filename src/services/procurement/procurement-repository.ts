@@ -28,6 +28,7 @@ import type {
 import type { POItemInput } from '@/types/procurement/purchase-order';
 import type { POPricedRecord } from '@/lib/procurement/price-purchase-order-pure';
 import { nowISO } from '@/lib/date-local';
+import { PurchaseOrderNotFoundError } from '@/subapps/procurement/services/procurement-rule-error';
 
 // ============================================================================
 // HELPERS
@@ -287,7 +288,7 @@ export async function recordDelivery(
   dto: RecordDeliveryDTO
 ): Promise<{ newStatus: PurchaseOrderStatus }> {
   const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  if (!po) throw new PurchaseOrderNotFoundError();
 
   // Update item quantities
   const updatedItems = po.items.map((item) => {

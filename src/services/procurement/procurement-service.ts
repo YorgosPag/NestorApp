@@ -8,7 +8,7 @@
  * @see ADR-267 §4.3 (Status State Machine)
  */
 
-import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
+import { ProcurementRuleError, PurchaseOrderNotFoundError } from '@/subapps/procurement/services/procurement-rule-error';
 import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import {
@@ -230,7 +230,7 @@ export async function updatePO(
   dto: UpdatePurchaseOrderDTO
 ): Promise<void> {
   const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  if (!po) throw new PurchaseOrderNotFoundError();
 
   // Only draft/approved POs can be edited
   if (!['draft', 'approved'].includes(po.status)) {
@@ -333,7 +333,7 @@ export async function recordPODelivery(
   dto: RecordDeliveryDTO
 ): Promise<{ newStatus: PurchaseOrderStatus }> {
   const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  if (!po) throw new PurchaseOrderNotFoundError();
 
   if (!['ordered', 'partially_delivered'].includes(po.status)) {
     throw new ProcurementRuleError(`Cannot record delivery for PO in status: ${po.status}`);
@@ -375,7 +375,7 @@ export async function deletePO(
   poId: string
 ): Promise<void> {
   const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  if (!po) throw new PurchaseOrderNotFoundError();
 
   await softDeletePurchaseOrder(poId);
 
@@ -404,7 +404,7 @@ export async function duplicatePO(
   sourcePoId: string
 ): Promise<{ id: string; poNumber: string }> {
   const source = await getPurchaseOrder(sourcePoId);
-  if (!source) throw new Error(`Source PO not found: ${sourcePoId}`);
+  if (!source) throw new PurchaseOrderNotFoundError();
 
   const dto: CreatePurchaseOrderDTO = {
     projectId: source.projectId,

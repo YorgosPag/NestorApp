@@ -16,7 +16,7 @@
 
 import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
-import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
+import { ProcurementRuleError, PurchaseOrderNotFoundError } from '@/subapps/procurement/services/procurement-rule-error';
 import type {
   PurchaseOrderStatus,
   POCancellationReason,
@@ -63,7 +63,7 @@ export async function approvePO(
   poId: string,
 ): Promise<void> {
   const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  if (!po) throw new PurchaseOrderNotFoundError();
 
   assertTransition(po.status, 'approved');
 
@@ -94,7 +94,7 @@ export async function markOrdered(
   poId: string,
 ): Promise<void> {
   const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  if (!po) throw new PurchaseOrderNotFoundError();
 
   assertTransition(po.status, 'ordered');
 
@@ -128,7 +128,7 @@ export async function closePO(
   poId: string,
 ): Promise<void> {
   const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  if (!po) throw new PurchaseOrderNotFoundError();
 
   assertTransition(po.status, 'closed');
 
@@ -163,7 +163,7 @@ export async function cancelPO(
   comment?: string,
 ): Promise<void> {
   const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  if (!po) throw new PurchaseOrderNotFoundError();
 
   assertTransition(po.status, 'cancelled');
 

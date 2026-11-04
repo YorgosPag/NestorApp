@@ -84,6 +84,7 @@ jest.mock('@/subapps/procurement/services/framework-agreement-service', () => ({
 }));
 
 import type { NextRequest } from 'next/server';
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import {
   PROCUREMENT_RESOURCE,
   ProcurementCrossTenantError,
@@ -237,6 +238,13 @@ describe('materials/[materialId] — GET/PATCH/DELETE', () => {
     const res = (await matIdPatch(req({ name: 'X' }), seg)) as Envelope;
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true, data: { id: 'm1', name: 'X' } });
+  });
+
+  it('PATCH rule error (deleted material) → 400 WITH its message — the user learns why (ADR-603 §Ασπίδα)', async () => {
+    materialSvc.updateMaterial.mockRejectedValue(new ProcurementRuleError('Cannot update a deleted material'));
+    const res = (await matIdPatch(req({ name: 'X' }), seg)) as Envelope;
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('Cannot update a deleted material');
   });
 
   it('PATCH not-found message → 404 (mutation)', async () => {

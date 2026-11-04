@@ -74,7 +74,7 @@ jest.mock('@/services/procurement', () => ({
   duplicatePO: (...a: unknown[]) => poSvc.duplicatePO(...a),
 }));
 
-import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
+import { ProcurementRuleError, PurchaseOrderNotFoundError } from '@/subapps/procurement/services/procurement-rule-error';
 import type { NextRequest } from 'next/server';
 import { GET as listGet, POST as listPost } from '../route';
 import { GET as poGet, PATCH as poPatch, DELETE as poDelete } from '../[poId]/route';
@@ -268,5 +268,12 @@ describe('procurement/[poId] — DELETE', () => {
     const res = (await poDelete(req(), seg)) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('locked');
+  });
+
+  it('DELETE missing PO → 404 «PO not found», without the id (same text as the ownership refusal)', async () => {
+    poSvc.deletePO.mockRejectedValue(new PurchaseOrderNotFoundError());
+    const res = (await poDelete(req(), seg)) as Envelope;
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('PO not found');
   });
 });
