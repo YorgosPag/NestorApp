@@ -4,6 +4,7 @@
  */
 
 import { AlertTriangle } from 'lucide-react';
+import { Table } from '@/components/ui/table';
 import type { DocumentLocale } from '@/subapps/procurement/subcontracts/document/document-locale';
 import type { ProjectedPayment } from '@/subapps/procurement/subcontracts/document/payment-schedule-projection';
 import { describeShares } from '@/subapps/procurement/subcontracts/document/describe-payment-plan';
@@ -53,7 +54,7 @@ export function PaymentCalendarPreview({ payments, locale, cashLimit, hasValue }
       {!hasValue ? (
         <p className="text-sm text-muted-foreground">{locale.phrase('calendar.noValue')}</p>
       ) : (
-        <table className="w-full text-xs">
+        <Table className="text-xs">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
               {COLUMNS.map((column) => <th key={column} scope="col" className="py-1 pr-2">{locale.phrase(`calendar.columns.${column}`)}</th>)}
@@ -62,7 +63,7 @@ export function PaymentCalendarPreview({ payments, locale, cashLimit, hasValue }
           <tbody>
             {payments.map((payment) => <PaymentRow key={`${payment.kind}-${payment.sequence}`} payment={payment} locale={locale} cashLimit={cashLimit} />)}
           </tbody>
-        </table>
+        </Table>
       )}
       <p className="text-xs text-muted-foreground">{locale.phrase('calendar.estimateNote')}</p>
     </section>

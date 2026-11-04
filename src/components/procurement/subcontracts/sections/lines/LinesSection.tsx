@@ -27,7 +27,7 @@ import { joinPath } from '@/subapps/procurement/subcontracts/clauses/clause-issu
 import { documentLocaleOf } from '@/subapps/procurement/subcontracts/document/document-locale';
 import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
 import { estimatedAgreementValue } from '@/subapps/procurement/subcontracts/lines/line-amount';
-import { duplicateLine, newAgreementLine } from '@/subapps/procurement/subcontracts/lines/line-edits';
+import { duplicateLine, nextAgreementLine } from '@/subapps/procurement/subcontracts/lines/line-edits';
 import type { AgreementLine } from '@/subapps/procurement/subcontracts/types/agreement-line';
 import { FieldIssues } from '../../editor/FieldIssues';
 import type { SectionProps } from '../section-types';
@@ -72,7 +72,7 @@ export function LinesSection(props: LinesSectionProps) {
   const { value, onChange, path, issues, language } = props;
   const { remove, dialogProps } = useLineRemoval(props);
   const indexOf = new Map(value.map((line, index) => [line.id, index]));
-  const add = () => onChange([...value, newAgreementLine(generateSubcontractAgreementLineId(), value.at(-1)?.unit ?? PROCUREMENT_UNIT_OPTIONS[0])]);
+  const add = () => onChange([...value, nextAgreementLine(generateSubcontractAgreementLineId(), value, PROCUREMENT_UNIT_OPTIONS[0])]);
   return (
     <section aria-labelledby="editor-lines" className="space-y-3">
       <h3 id="editor-lines" className="text-base font-semibold">{t('subcontracts.sections.lines.title')}</h3>

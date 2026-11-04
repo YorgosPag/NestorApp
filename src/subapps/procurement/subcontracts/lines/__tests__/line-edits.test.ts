@@ -1,10 +1,29 @@
 import { validateAgreementLine } from '../validate-agreement-line';
-import { duplicateLine, newAgreementLine, newLineStage, optionalText, remainderShare, setLinePricing, shareTotal } from '../line-edits';
+import { duplicateLine, newAgreementLine, newLineStage, nextAgreementLine, optionalText, remainderShare, setLinePricing, shareTotal } from '../line-edits';
 
 describe('line-edits (ADR-928 Φ3γ-2)', () => {
   it('νέα γραμμή: ο επικυρωτής ζητά ΜΟΝΟ την περιγραφή', () => {
     const issues = validateAgreementLine(newAgreementLine('scal_1', 'm2'), 'lines.0');
     expect(issues).toEqual([{ code: 'lineDescriptionRequired', path: 'lines.0.description' }]);
+  });
+
+  describe('nextAgreementLine — η νέα γραμμή συνεχίζει την τελευταία ως ζεύγος (μετρημένο στην παραγωγή)', () => {
+    const lumpSum = { ...newAgreementLine('scal_1', 'lump'), kind: 'supply' as const, pricing: 'lump_sum' as const, unitPrice: 70_000 };
+
+    it('μετά από κατ\' αποκοπή: κατ\' αποκοπή + ίδια μονάδα — ποτέ «τιμή μονάδας · κ.α.»', () => {
+      const next = nextAgreementLine('scal_2', [lumpSum], 'm2');
+      expect([next.kind, next.pricing, next.unit, next.estimatedMilliQuantity]).toEqual(['supply', 'lump_sum', 'lump', null]);
+    });
+
+    it('μετά από τιμή μονάδας: ίδιο ζεύγος, ποτέ η τιμή ή η περιγραφή της προηγούμενης', () => {
+      const unitRate = { ...newAgreementLine('scal_1', 'm2'), description: { el: 'Σοβάς' }, unitPrice: 320, estimatedMilliQuantity: 5_000 };
+      const next = nextAgreementLine('scal_2', [lumpSum, unitRate], 'pcs');
+      expect(next).toEqual({ ...newAgreementLine('scal_2', 'm2') });
+    });
+
+    it('χωρίς γραμμές: η προεπιλογή του καλούντος, τιμή μονάδας', () => {
+      expect(nextAgreementLine('scal_1', [], 'm2')).toEqual(newAgreementLine('scal_1', 'm2'));
+    });
   });
 
   it('διπλασιασμός: νέο id, ίδιο περιεχόμενο', () => {

@@ -23,6 +23,17 @@ export function newAgreementLine(id: string, unit: UomCode): AgreementLine {
   };
 }
 
+/**
+ * Η γραμμή που προστίθεται **μετά** από τις υπάρχουσες: συνεχίζει την τελευταία ως **ζεύγος** (είδος + τιμολόγηση + μονάδα),
+ * όπως η επόμενη σειρά ενός υπολογιστικού φύλλου. Ποτέ μόνο η μονάδα: μετά από κατ' αποκοπή γραμμή («κ.α.») θα έβγαινε
+ * «τιμή μονάδας · κ.α. · κατά επιμέτρηση» — μετρημένο στην παραγωγή (ADR-928 §5.21, επαλήθευση).
+ */
+export function nextAgreementLine(id: string, lines: readonly AgreementLine[], fallbackUnit: UomCode): AgreementLine {
+  const last = lines.at(-1);
+  const line = newAgreementLine(id, last?.unit ?? fallbackUnit);
+  return last ? setLinePricing({ ...line, kind: last.kind }, last.pricing) : line;
+}
+
 /** Αντίγραφο με **νέο** id: οι αναθεωρήσεις και οι πιστοποιήσεις δένουν στο id, άρα δεν μοιράζεται ποτέ. */
 export function duplicateLine(line: AgreementLine, id: string): AgreementLine {
   return { ...line, id };

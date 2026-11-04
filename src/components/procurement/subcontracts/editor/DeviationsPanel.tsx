@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Table } from '@/components/ui/table';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserDisplayNames } from '@/hooks/useUserDisplayNames';
 import { useSubcontractClauseLibrary } from '@/hooks/procurement/subcontracts/useSubcontractLibrary';
@@ -112,7 +113,7 @@ export function DeviationsPanel({ agreement, canApprove, unsaved }: DeviationsPa
   return (
     <section aria-labelledby="agreement-deviations" className="space-y-2">
       <h3 id="agreement-deviations" className="text-base font-semibold">{t('subcontracts.editor.deviations.title')}</h3>
-      <table className="w-full text-sm">
+      <Table>
         <DeviationsHead />
         <tbody>
           {rows.map((row) => (
@@ -126,7 +127,7 @@ export function DeviationsPanel({ agreement, canApprove, unsaved }: DeviationsPa
             />
           ))}
         </tbody>
-      </table>
+      </Table>
       {deciding && (
         <DecideDeviationDialog
           agreement={agreement}

@@ -3,6 +3,7 @@
  * αποδοσμένο από το `AgreementDocument` — καμία μορφοποίηση εδώ, άρα τίποτα που να διαφωνεί με το PDF (Φ4).
  */
 
+import { Table } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import type {
   AgreementDocument,
@@ -61,7 +62,7 @@ function LineRow({ line, byMeasurement }: { line: DocumentLineRow; byMeasurement
 function LinesTable({ document }: { document: AgreementDocument }) {
   const { columns } = document.labels;
   return (
-    <table className="w-full text-sm">
+    <Table>
       <thead>
         <tr className="border-b text-left text-xs text-muted-foreground">
           <th scope="col" className="py-1 pr-2">{columns.number}</th>
@@ -79,7 +80,7 @@ function LinesTable({ document }: { document: AgreementDocument }) {
           <td className="py-2 text-right font-semibold tabular-nums">{document.totals.value}</td>
         </tr>
       </tfoot>
-    </table>
+    </Table>
   );
 }
 

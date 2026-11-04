@@ -7,6 +7,8 @@
  *
  * 🔑 Κάρτα, όχι γραμμή πίνακα: η φόρμα ζει σε στήλη 35–55% της οθόνης. Δέκα στήλες εκεί δεν διαβάζονται (μετρημένο στη
  *    Φ3γ-1), και η ίδια κάρτα δουλεύει και στο κινητό.
+ * 🔑 Τα πεδία τιμής μοιράζονται το πλάτος **της κάρτας**, όχι της οθόνης (`auto-fill` + `minmax`): το `lg:grid-cols-5`
+ *    ρωτούσε την οθόνη, και στη στήλη 55% έκοβε «Τιμή μονάδας» σε «Τιμή…» (μετρημένο στην παραγωγή).
  * 🔑 Το ποσό είναι **μόνο ανάγνωση** (`estimatedLineAmount`, ο ίδιος υπολογισμός με τη λίστα και το έγγραφο). Τιμή μονάδας
  *    χωρίς ποσότητα λέει «κατά επιμέτρηση», όχι μηδέν.
  */
@@ -61,7 +63,7 @@ function PriceFields({ value, onChange, path, issues, language, index }: LineCar
   const id = `line-${index}`;
   const field = (name: string) => ({ id: `${id}-${name}`, issues: issuesAt(issues, joinPath(path, name)) });
   return (
-    <fieldset className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <fieldset className="grid grid-cols-[repeat(auto-fill,minmax(min(10rem,100%),1fr))] gap-3">
       <EditorField {...field('kind')} label={t('subcontracts.sections.lines.kind')}>
         <EnumSelect id={`${id}-kind`} value={value.kind} values={AGREEMENT_LINE_KINDS} getLabel={(kind) => locale.phrase(`lines.kind.${kind}`)} onValueChange={(kind) => onChange({ ...value, kind })} />
       </EditorField>

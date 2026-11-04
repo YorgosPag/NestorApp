@@ -10,6 +10,7 @@
  *    γλώσσα του UI — όπως το έγγραφο κάνει ήδη (`renderParameterValue` ανά γλώσσα εγγράφου).
  */
 
+import { Table } from '@/components/ui/table';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { documentLocaleOf, type DocumentLocale } from '@/subapps/procurement/subcontracts/document/document-locale';
@@ -74,7 +75,7 @@ export function ClauseParametersTable({ parameters }: { readonly parameters: rea
   const locale = documentLocaleOf(resolveHumanLanguage(i18n.language));
   if (parameters.length === 0) return <p className="text-sm text-muted-foreground">{t('subcontracts.library.parameters.none')}</p>;
   return (
-    <table className="w-full text-sm">
+    <Table>
       <caption className="sr-only">{t('subcontracts.library.parameters.title')}</caption>
       <thead className="text-left text-xs text-muted-foreground">
         <tr>
@@ -85,6 +86,6 @@ export function ClauseParametersTable({ parameters }: { readonly parameters: rea
         </tr>
       </thead>
       <tbody>{parameters.map((parameter) => <ParameterRow key={parameter.key} parameter={parameter} locale={locale} />)}</tbody>
-    </table>
+    </Table>
   );
 }
