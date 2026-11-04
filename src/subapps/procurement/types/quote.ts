@@ -36,6 +36,13 @@ export const QUOTE_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
   superseded:     ['archived'],
 } as const;
 
+/**
+ * «Σε αναμονή» — η προσφορά έφτασε και περιμένει απόφαση. Το ΕΝΑ σύνολο που μετρά η κάρτα του hub **και**
+ * φιλτράρει η λίστα όπου οδηγεί (`?status=submitted,under_review`, ADR-330 §5.1 S3.4) — η κάρτα δεν λέει 4
+ * για να δείξει η λίστα 5.
+ */
+export const QUOTE_PENDING_STATUSES: readonly QuoteStatus[] = ['submitted', 'under_review'];
+
 // ============================================================================
 // QUOTE SOURCE
 // ============================================================================

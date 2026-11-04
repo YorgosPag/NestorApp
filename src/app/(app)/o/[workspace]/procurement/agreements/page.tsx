@@ -14,6 +14,14 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFrameworkAgreements } from '@/hooks/procurement/useFrameworkAgreements';
+import {
+  AGREEMENT_BUCKET_PREDICATES,
+  countAgreementBuckets,
+  matchesAgreementBuckets,
+} from '@/subapps/procurement/utils/framework-agreement-buckets';
+import { useStatusDrillParam } from '@/components/projects/procurement/clients/useStatusDrillParam';
+import { statusFilterCard } from '@/components/projects/procurement/clients/status-filter-card';
+import { StatusDrillNotice } from '@/components/projects/procurement/clients/StatusDrillNotice';
 import { usePOSupplierContacts, supplierNamesById } from '@/hooks/procurement/usePOSupplierContacts';
 import type {
   FrameworkAgreement,
@@ -50,32 +58,23 @@ export default function AgreementsPage() {
     [agreements, selectedAgreementId],
   );
 
+  // ADR-330 §5.1 S3.4 — `?status=` = κουβάς (ενεργές · λήγουν · ληγμένες · πρόχειρες)· ΕΝΑΣ ορισμός με την κάρτα του hub.
+  const drill = useStatusDrillParam(AGREEMENT_BUCKET_PREDICATES);
+  const visibleAgreements = useMemo(() => {
+    const nowMs = Date.now();
+    return agreements.filter((a) => matchesAgreementBuckets(a, drill.statuses, nowMs));
+  }, [agreements, drill.statuses]);
+
   const dashboardStats = useMemo(() => {
-    const now = Date.now();
-    const total = agreements.length;
-    const active = agreements.filter((a) => {
-      const ms = a.validUntil?.toMillis?.() ?? 0;
-      return a.status === 'active' && ms > now;
-    }).length;
-    const expiring = agreements.filter((a) => {
-      if (a.status !== 'active') return false;
-      const ms = a.validUntil?.toMillis?.() ?? 0;
-      const days = (ms - now) / 86400000;
-      return days >= 0 && days <= 30;
-    }).length;
-    const expired = agreements.filter((a) => {
-      const ms = a.validUntil?.toMillis?.() ?? 0;
-      return a.status === 'expired' || ms < now;
-    }).length;
-    const drafts = agreements.filter((a) => a.status === 'draft').length;
+    const c = countAgreementBuckets(agreements, Date.now());
     return [
-      { title: t('hub.frameworkAgreements.title'), value: total, icon: ScrollText, color: 'blue' as const },
-      { title: t('filters.agreementStatus.active'), value: active, icon: CheckCircle, color: 'green' as const },
-      { title: t('filters.agreementStatus.expiring'), value: expiring, icon: AlertTriangle, color: 'orange' as const },
-      { title: t('filters.agreementStatus.expired'), value: expired, icon: Clock, color: 'red' as const },
-      { title: t('filters.agreementStatus.draft'), value: drafts, icon: FileEdit, color: 'gray' as const },
+      { title: t('hub.frameworkAgreements.title'), value: agreements.length, icon: ScrollText, color: 'blue' as const },
+      { title: t('filters.agreementStatus.active'), value: c.active, icon: CheckCircle, color: 'green' as const, ...statusFilterCard(drill, 'active', c.active) },
+      { title: t('filters.agreementStatus.expiring'), value: c.expiring, icon: AlertTriangle, color: 'orange' as const, ...statusFilterCard(drill, 'expiring', c.expiring) },
+      { title: t('filters.agreementStatus.expired'), value: c.expired, icon: Clock, color: 'red' as const, ...statusFilterCard(drill, 'expired', c.expired) },
+      { title: t('filters.agreementStatus.draft'), value: c.draft, icon: FileEdit, color: 'gray' as const, ...statusFilterCard(drill, 'draft', c.draft) },
     ];
-  }, [agreements, t]);
+  }, [agreements, drill, t]);
 
   const handleSelectAgreement = useCallback(
     (agreement: FrameworkAgreement) => {
@@ -140,7 +139,7 @@ export default function AgreementsPage() {
   }, [agreements]);
 
   const listProps = {
-    agreements,
+    agreements: visibleAgreements,
     vendorNamesById,
     loading,
     selectedAgreementId,
@@ -168,7 +167,15 @@ export default function AgreementsPage() {
       dashboardColumns={5}
       chrome={chrome}
       dashboardStats={dashboardStats}
-      list={<AgreementSlimList {...listProps} />}
+      list={
+        <>
+          <StatusDrillNotice
+            labels={drill.statuses.map((s) => t(`filters.agreementStatus.${s}`))}
+            onClear={drill.clear}
+          />
+          <AgreementSlimList {...listProps} />
+        </>
+      }
       detail={rightPane}
       emptyState={{
         icon: ScrollText,

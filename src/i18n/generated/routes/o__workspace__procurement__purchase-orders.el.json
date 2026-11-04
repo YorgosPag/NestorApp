@@ -267,6 +267,12 @@
       "rfqs": "RFQ",
       "vendors": "Προμηθευτές"
     },
+    "overview": {
+      "drill": {
+        "activeFilter": "Φίλτρο κατάστασης: {statuses}",
+        "clear": "Εμφάνιση όλων"
+      }
+    },
     "pdf": {
       "exportButton": "Εξαγωγή PDF"
     },

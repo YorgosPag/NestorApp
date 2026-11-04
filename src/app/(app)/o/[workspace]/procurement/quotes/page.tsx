@@ -12,7 +12,10 @@ import { useQuoteDetailActions } from '@/subapps/procurement/hooks/useQuoteDetai
 import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { toast } from 'sonner';
-import type { Quote } from '@/subapps/procurement/types/quote';
+import { QUOTE_STATUS_TRANSITIONS, type Quote } from '@/subapps/procurement/types/quote';
+import { useStatusDrillParam } from '@/components/projects/procurement/clients/useStatusDrillParam';
+import { applyStatusDrill, statusFilterCard } from '@/components/projects/procurement/clients/status-filter-card';
+import { StatusDrillNotice } from '@/components/projects/procurement/clients/StatusDrillNotice';
 import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__quotes.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
@@ -28,6 +31,13 @@ export default function QuotesPage() {
   const pathname = usePathname();
 
   const { quotes, loading } = useQuotes();
+
+  // ── ADR-330 §5.1 S3.4: `?status=` = ΤΟ φίλτρο (γραφείς: κάρτα «σε αναμονή» του hub + κάρτες αυτής της σελίδας) ──
+  const drill = useStatusDrillParam(QUOTE_STATUS_TRANSITIONS);
+  const visibleQuotes = useMemo(
+    () => applyStatusDrill(quotes, drill.statuses, (q) => q.status),
+    [quotes, drill.statuses],
+  );
 
   // ── Master-detail: URL-persistent selection ──────────────────────────────
   const selectedQuoteId = searchParams.get('quoteId');
@@ -59,12 +69,12 @@ export default function QuotesPage() {
     const expired = quotes.filter((q) => q.status === 'expired').length;
     return [
       { title: tQ('list.entityName'), value: total, icon: FileText, color: 'blue' as const },
-      { title: tQ('filters.quoteStatus.submitted'), value: submitted, icon: Inbox, color: 'green' as const },
-      { title: tQ('filters.quoteStatus.under_review'), value: underReview, icon: Eye, color: 'orange' as const },
-      { title: tQ('filters.quoteStatus.accepted'), value: accepted, icon: CheckCircle, color: 'purple' as const },
-      { title: tQ('filters.quoteStatus.expired'), value: expired, icon: Clock, color: 'red' as const },
+      { title: tQ('filters.quoteStatus.submitted'), value: submitted, icon: Inbox, color: 'green' as const, ...statusFilterCard(drill, 'submitted', submitted) },
+      { title: tQ('filters.quoteStatus.under_review'), value: underReview, icon: Eye, color: 'orange' as const, ...statusFilterCard(drill, 'under_review', underReview) },
+      { title: tQ('filters.quoteStatus.accepted'), value: accepted, icon: CheckCircle, color: 'purple' as const, ...statusFilterCard(drill, 'accepted', accepted) },
+      { title: tQ('filters.quoteStatus.expired'), value: expired, icon: Clock, color: 'red' as const, ...statusFilterCard(drill, 'expired', expired) },
     ];
-  }, [quotes, tQ]);
+  }, [quotes, tQ, drill]);
 
   // ── Quote mutations ───────────────────────────────────────────────────────
   const handleDeleteQuote = useCallback(async () => {
@@ -83,12 +93,12 @@ export default function QuotesPage() {
 
   // ── Action-required: pin quotes needing decision at top ───────────────────
   const actionRequired = useMemo(
-    () => quotes.filter((q) => ACTION_REQUIRED_STATUSES.has(q.status)),
-    [quotes],
+    () => visibleQuotes.filter((q) => ACTION_REQUIRED_STATUSES.has(q.status)),
+    [visibleQuotes],
   );
 
   const listProps = {
-    quotes,
+    quotes: visibleQuotes,
     actionRequired,
     loading,
     onCreateNew: () => router.push('/procurement/quotes/scan'),
@@ -121,7 +131,15 @@ export default function QuotesPage() {
       dashboardColumns={5}
       chrome={chrome}
       dashboardStats={dashboardStats}
-      list={<QuoteList {...listProps} />}
+      list={
+        <>
+          <StatusDrillNotice
+            labels={drill.statuses.map((s) => tQ(`quotes.statuses.${s}`))}
+            onClear={drill.clear}
+          />
+          <QuoteList {...listProps} />
+        </>
+      }
       detail={rightPane}
       emptyState={{
         icon: FileText,

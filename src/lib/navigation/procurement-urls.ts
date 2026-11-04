@@ -28,9 +28,16 @@ export function getNewRfqUrl(projectId: string, boqItemIds: readonly string[] = 
  */
 export const PROCUREMENT_STATUS_PARAM = 'status';
 
-/** Φίλτρο που κουβαλά ένας σύνδεσμος drill-down (ADR-330 §5.1 S3.1). */
+/** Φίλτρο που κουβαλά ένας σύνδεσμος drill-down (ADR-330 §5.1 S3.1) — ίδιο σχήμα για έργο **και** hub. */
 export interface ProjectProcurementFilter {
   readonly status?: readonly string[];
+}
+
+/** Το ερώτημα ενός φίλτρου drill-down· `undefined` όταν δεν φιλτράρει τίποτα (καθαρή διεύθυνση, όχι `?status=`). */
+function drillQuery(filter: ProjectProcurementFilter | undefined): string | undefined {
+  const status = serializeFilterArray(filter?.status);
+  if (status === undefined) return undefined;
+  return new URLSearchParams({ [PROCUREMENT_STATUS_PARAM]: status }).toString();
 }
 
 /** Η ενότητα προμηθειών ενός έργου — προεπιλογή η επισκόπηση, όπου προσγειώνεται η καρτέλα του έργου. */
@@ -39,10 +46,22 @@ export function getProjectProcurementUrl(
   section: ProjectProcurementSection = 'overview',
   filter?: ProjectProcurementFilter,
 ) {
-  const status = serializeFilterArray(filter?.status);
-  if (status === undefined) return typedHref(`/projects/${projectId}/procurement/${section}`);
-  const query = new URLSearchParams({ [PROCUREMENT_STATUS_PARAM]: status });
-  return typedHref(`/projects/${projectId}/procurement/${section}?${query.toString()}`);
+  const query = drillQuery(filter);
+  if (query === undefined) return typedHref(`/projects/${projectId}/procurement/${section}`);
+  return typedHref(`/projects/${projectId}/procurement/${section}?${query}`);
+}
+
+/** Οι λίστες του hub προμηθειών όλης της εταιρείας (ADR-330 §5.1 S3.4). */
+export type ProcurementHubSection = 'rfqs' | 'quotes' | 'purchase-orders' | 'vendors' | 'materials' | 'agreements';
+
+/**
+ * Μια λίστα του hub, προαιρετικά **ήδη φιλτραρισμένη** σε ό,τι μέτρησε η κάρτα που οδήγησε εκεί
+ * (ADR-330 §5.1 S3.4). Ο αναγνώστης είναι το `useStatusDrillParam` της λίστας — ΕΝΑ κλειδί `?status=`.
+ */
+export function getProcurementHubUrl(section: ProcurementHubSection, filter?: ProjectProcurementFilter) {
+  const query = drillQuery(filter);
+  if (query === undefined) return typedHref(`/procurement/${section}`);
+  return typedHref(`/procurement/${section}?${query}`);
 }
 
 export function getPoDetailUrl(projectId: string, poId: string) {

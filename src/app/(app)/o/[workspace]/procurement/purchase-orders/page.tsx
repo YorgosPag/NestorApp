@@ -12,7 +12,10 @@ import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procur
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { parseFilterArray } from '@/lib/url-filters/multi-value';
 import { emitSpendAnalyticsInvalidate } from '@/lib/cache/spend-analytics-bus';
-import type { PurchaseOrder, AnalyticsDrillFilters } from '@/types/procurement';
+import { PO_STATUS_TRANSITIONS, type PurchaseOrder, type AnalyticsDrillFilters } from '@/types/procurement';
+import { useStatusDrillParam } from '@/components/projects/procurement/clients/useStatusDrillParam';
+import { applyStatusDrill, statusFilterCard } from '@/components/projects/procurement/clients/status-filter-card';
+import { StatusDrillNotice } from '@/components/projects/procurement/clients/StatusDrillNotice';
 import { isCalendarDay } from '@/lib/date/calendar-day';
 import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__purchase-orders.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
@@ -31,6 +34,10 @@ export default function PurchaseOrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // ADR-330 §5.1 S3.4 — `?status=` (κάρτες hub + κάρτες αυτής της σελίδας): επικυρωμένο, ζωντανό, εφαρμόζεται
+  // ΜΕΤΑ τη μέτρηση των καρτών ώστε οι υπόλοιπες να μένουν πατήσιμες (όχι 0 επειδή φιλτράρει άλλη).
+  const statusDrill = useStatusDrillParam(PO_STATUS_TRANSITIONS);
+
   // ADR-331 Phase F — analytics drill-down URL params (set by buildPurchaseOrdersUrl in chart-utils.ts)
   const analyticsDrill = useMemo<AnalyticsDrillFilters>(
     () => ({
@@ -39,30 +46,38 @@ export default function PurchaseOrdersPage() {
       projectIds: parseFilterArray(searchParams.get('projectId')),
       supplierIds: parseFilterArray(searchParams.get('supplierId')),
       categoryCodes: parseFilterArray(searchParams.get('categoryCode')),
-      statuses: parseFilterArray(searchParams.get('status')),
+      statuses: [],
     }),
     [searchParams],
   );
 
-  const { purchaseOrders, actionRequired, loading } = usePurchaseOrders(analyticsDrill);
+  const { purchaseOrders: scopedPOs, actionRequired: scopedActionRequired, loading } = usePurchaseOrders(analyticsDrill);
+  const purchaseOrders = useMemo(
+    () => applyStatusDrill(scopedPOs, statusDrill.statuses, (p) => p.status),
+    [scopedPOs, statusDrill.statuses],
+  );
+  const actionRequired = useMemo(
+    () => applyStatusDrill(scopedActionRequired, statusDrill.statuses, (p) => p.status),
+    [scopedActionRequired, statusDrill.statuses],
+  );
 
   const chrome = useProcurementHubChrome();
   const { viewMode } = chrome;
 
   const dashboardStats = useMemo(() => {
-    const total = purchaseOrders.length;
-    const drafts = purchaseOrders.filter((p) => p.status === 'draft').length;
-    const approved = purchaseOrders.filter((p) => p.status === 'approved').length;
-    const ordered = purchaseOrders.filter((p) => p.status === 'ordered').length;
-    const overdue = actionRequired.length;
+    const total = scopedPOs.length;
+    const drafts = scopedPOs.filter((p) => p.status === 'draft').length;
+    const approved = scopedPOs.filter((p) => p.status === 'approved').length;
+    const ordered = scopedPOs.filter((p) => p.status === 'ordered').length;
+    const overdue = scopedActionRequired.length;
     return [
       { title: t('list.entityName'), value: total, icon: Package, color: 'blue' as const },
-      { title: t('filters.poStatus.draft'), value: drafts, icon: FileEdit, color: 'gray' as const },
-      { title: t('filters.poStatus.approved'), value: approved, icon: CheckCircle, color: 'green' as const },
-      { title: t('filters.poStatus.ordered'), value: ordered, icon: Send, color: 'orange' as const },
+      { title: t('filters.poStatus.draft'), value: drafts, icon: FileEdit, color: 'gray' as const, ...statusFilterCard(statusDrill, 'draft', drafts) },
+      { title: t('filters.poStatus.approved'), value: approved, icon: CheckCircle, color: 'green' as const, ...statusFilterCard(statusDrill, 'approved', approved) },
+      { title: t('filters.poStatus.ordered'), value: ordered, icon: Send, color: 'orange' as const, ...statusFilterCard(statusDrill, 'ordered', ordered) },
       { title: t('list.requiresAction'), value: overdue, icon: AlertTriangle, color: 'red' as const },
     ];
-  }, [purchaseOrders, actionRequired, t]);
+  }, [scopedPOs, scopedActionRequired, statusDrill, t]);
 
   // ── Master-detail: URL-persistent selection ──────────────────────────────
   const selectedPoId = searchParams.get('poId');
@@ -190,7 +205,15 @@ export default function PurchaseOrdersPage() {
       dashboardColumns={5}
       chrome={chrome}
       dashboardStats={dashboardStats}
-      list={<PurchaseOrderList {...listProps} />}
+      list={
+        <>
+          <StatusDrillNotice
+            labels={statusDrill.statuses.map((s) => t(`status.${s}`))}
+            onClear={statusDrill.clear}
+          />
+          <PurchaseOrderList {...listProps} />
+        </>
+      }
       detail={detailProps ? <PurchaseOrderDetail {...detailProps} /> : null}
       emptyState={{
         icon: Package,

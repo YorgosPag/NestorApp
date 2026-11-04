@@ -7,7 +7,7 @@
  * @see ADR-330 §3 Phase 6
  */
 
-import { Link } from '@/lib/workspace/navigation';
+import { Link, type WorkspaceHref } from '@/lib/workspace/navigation';
 import type { LucideIcon } from 'lucide-react';
 import { BarChart3, ChevronRight, ShoppingCart, TrendingUp, Truck, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,27 +15,55 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { useProcurementDashboard } from '@/hooks/procurement/useProcurementDashboard';
 import type { CategorySpend, MonthlyPoint } from '@/hooks/procurement/useProcurementDashboard';
+import { getProcurementHubUrl } from '@/lib/navigation/procurement-urls';
+import { PO_COMMITTED_STATUSES, PO_DELIVERED_STATUSES } from '@/types/procurement';
+import type { VendorActivity } from '@/components/procurement/vendors/vendor-activity';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // KPI CARD
 // ============================================================================
 
-interface KpiCardProps {
+/** Τα ΙΔΙΑ σύνολα που αθροίζει το `useProcurementDashboard` — η λίστα δείχνει ό,τι μέτρησε η κάρτα. */
+const COMMITTED_FILTER = { status: [...PO_COMMITTED_STATUSES] };
+const DELIVERED_FILTER = { status: [...PO_DELIVERED_STATUSES] };
+const ACTIVE_VENDOR_FILTER: { status: readonly VendorActivity[] } = { status: ['active'] };
+
+interface KpiCardProps<T extends string> {
   icon: LucideIcon;
   label: string;
   value: string | number;
   loading: boolean;
+  /**
+   * Προορισμός drill-down (ADR-330 §5.1 S3.4)· απών ⇒ στατική κάρτα. Ο καλών τον αφήνει απόντα όταν ο
+   * δείκτης είναι 0: σύνδεσμος προς άδεια λίστα είναι αδιέξοδο — ίδιο δόγμα με το `KpiCard` του έργου.
+   */
+  href?: WorkspaceHref<T>;
 }
 
-function KpiCard({ icon: Icon, label, value, loading }: KpiCardProps) {
-  return (
-    <article className="flex items-center gap-3 rounded-lg border bg-card p-4">
+function KpiCard<T extends string>({ icon: Icon, label, value, loading, href }: KpiCardProps<T>) {
+  const tile = (
+    <article
+      className={cn(
+        'flex h-full items-center gap-3 rounded-lg border bg-card p-4',
+        href && 'cursor-pointer transition-colors hover:bg-accent/50',
+      )}
+    >
       <Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
       <div className="min-w-0">
         <p className="truncate text-xs text-muted-foreground">{label}</p>
         <p className="text-lg font-semibold">{loading ? '—' : value}</p>
       </div>
     </article>
+  );
+  if (!href || loading) return tile;
+  return (
+    <Link
+      href={href}
+      className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    >
+      {tile}
+    </Link>
   );
 }
 
@@ -161,24 +189,28 @@ export function ProcurementDashboardSection() {
           label={t('hub.dashboard.totalPOs')}
           value={stats.totalPOs}
           loading={stats.loading}
+          href={stats.totalPOs > 0 ? getProcurementHubUrl('purchase-orders') : undefined}
         />
         <KpiCard
           icon={TrendingUp}
           label={t('hub.dashboard.committed')}
           value={formatCurrency(stats.committedAmount, 'EUR')}
           loading={stats.loading}
+          href={stats.committedCount > 0 ? getProcurementHubUrl('purchase-orders', COMMITTED_FILTER) : undefined}
         />
         <KpiCard
           icon={Truck}
           label={t('hub.dashboard.delivered')}
           value={formatCurrency(stats.deliveredAmount, 'EUR')}
           loading={stats.loading}
+          href={stats.deliveredCount > 0 ? getProcurementHubUrl('purchase-orders', DELIVERED_FILTER) : undefined}
         />
         <KpiCard
           icon={Users}
           label={t('hub.dashboard.activeSuppliers')}
           value={stats.activeSuppliersCount}
           loading={stats.loading}
+          href={stats.activeSuppliersCount > 0 ? getProcurementHubUrl('vendors', ACTIVE_VENDOR_FILTER) : undefined}
         />
       </div>
 

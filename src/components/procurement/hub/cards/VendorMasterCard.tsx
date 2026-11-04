@@ -1,35 +1,24 @@
 'use client';
 
-import { useRouter } from '@/lib/workspace/navigation';
 import { Users2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
+import { getProcurementHubUrl } from '@/lib/navigation/procurement-urls';
+import { HubSectionCard } from './HubSectionCard';
 
+/** Μετρά **όλο** το μητρώο ⇒ οδηγεί στη λίστα χωρίς φίλτρο (ADR-330 §5.1 S3.4). */
 export function VendorMasterCard() {
   const { t } = useTranslation('procurement');
-  const router = useRouter();
   const { suppliers, loading } = usePOSupplierContacts();
 
   return (
-    <Card
-      className="cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      onClick={() => router.push('/procurement/vendors')}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && router.push('/procurement/vendors')}
-      aria-label={t('hub.vendorMaster.title')}
-    >
-      <CardHeader className="pb-2">
-        <Users2 className="h-8 w-8 text-[hsl(var(--text-success))]" aria-hidden />
-        <CardTitle className="text-lg">{t('hub.vendorMaster.title')}</CardTitle>
-        <CardDescription>{t('hub.vendorMaster.description')}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-bold text-foreground">
-          {loading ? '—' : t('hub.vendorMaster.supplierCount', { count: suppliers.length })}
-        </p>
-      </CardContent>
-    </Card>
+    <HubSectionCard
+      icon={Users2}
+      iconClassName="text-[hsl(var(--text-success))]"
+      title={t('hub.vendorMaster.title')}
+      description={t('hub.vendorMaster.description')}
+      href={getProcurementHubUrl('vendors')}
+      metric={loading ? '—' : t('hub.vendorMaster.supplierCount', { count: suppliers.length })}
+    />
   );
 }

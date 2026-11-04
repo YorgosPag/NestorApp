@@ -10,6 +10,12 @@
       "quotes": "Προσφορές",
       "rfqs": "RFQ",
       "vendors": "Προμηθευτές"
+    },
+    "overview": {
+      "drill": {
+        "activeFilter": "Φίλτρο κατάστασης: {statuses}",
+        "clear": "Εμφάνιση όλων"
+      }
     }
   },
   "quotes": {

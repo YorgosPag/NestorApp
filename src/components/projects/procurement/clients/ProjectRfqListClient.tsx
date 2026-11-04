@@ -20,6 +20,7 @@ import { RFQ_STATUS_TRANSITIONS } from '@/subapps/procurement/types/rfq';
 import { getNewRfqUrl } from '@/lib/navigation/procurement-urls';
 import { useStatusDrillParam } from './useStatusDrillParam';
 import { StatusDrillNotice } from './StatusDrillNotice';
+import { applyStatusDrill } from './status-filter-card';
 import routeSlice from '@/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
@@ -35,10 +36,7 @@ export function ProjectRfqListClient({ projectId }: ProjectRfqListClientProps) {
   const { rfqs, loading } = useRfqs({ projectId });
   const drill = useStatusDrillParam(RFQ_STATUS_TRANSITIONS);
 
-  const visibleRfqs = useMemo(
-    () => (drill.statuses.length === 0 ? rfqs : rfqs.filter((r) => drill.statuses.includes(r.status))),
-    [rfqs, drill.statuses],
-  );
+  const visibleRfqs = useMemo(() => applyStatusDrill(rfqs, drill.statuses, (r) => r.status), [rfqs, drill.statuses]);
 
   const handleCreate = () => {
     router.push(getNewRfqUrl(projectId));

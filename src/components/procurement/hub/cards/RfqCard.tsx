@@ -1,38 +1,30 @@
 'use client';
 
-import { useRouter } from '@/lib/workspace/navigation';
 import { ClipboardList } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useRfqs } from '@/subapps/procurement/hooks/useRfqs';
+import { getProcurementHubUrl } from '@/lib/navigation/procurement-urls';
+import type { RfqStatus } from '@/subapps/procurement/types/rfq';
+import { HubSectionCard } from './HubSectionCard';
 
+/** Η ΙΔΙΑ κατάσταση που ζητά η κάρτα από τον server και φιλτράρει η λίστα όπου οδηγεί. */
+const ACTIVE_RFQ: RfqStatus = 'active';
+
+/** «N ενεργά» ⇒ η λίστα RFQ φιλτραρισμένη στα ίδια ενεργά (ADR-330 §5.1 S3.4). */
 export function RfqCard() {
   const { t } = useTranslation('procurement');
-  const router = useRouter();
-  const { rfqs, loading } = useRfqs({ status: 'active' });
+  const { rfqs, loading } = useRfqs({ status: ACTIVE_RFQ });
+  const count = rfqs.length;
 
   return (
-    <Card
-      className="cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      onClick={() => router.push('/procurement/rfqs')}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && router.push('/procurement/rfqs')}
-      aria-label={t('hub.rfq.title')}
-    >
-      <CardHeader className="pb-2">
-        <ClipboardList className="h-8 w-8 text-[hsl(var(--text-info))]" aria-hidden />
-        <CardTitle className="text-lg">{t('hub.rfq.title')}</CardTitle>
-        <CardDescription>{t('hub.rfq.description')}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-bold text-foreground">
-          {loading ? '—' : t('hub.rfq.activeCount', { count: rfqs.length })}
-        </p>
-        {!loading && rfqs.length === 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">{t('hub.rfq.noActive')}</p>
-        )}
-      </CardContent>
-    </Card>
+    <HubSectionCard
+      icon={ClipboardList}
+      iconClassName="text-[hsl(var(--text-info))]"
+      title={t('hub.rfq.title')}
+      description={t('hub.rfq.description')}
+      href={getProcurementHubUrl('rfqs', count > 0 ? { status: [ACTIVE_RFQ] } : undefined)}
+      metric={loading ? '—' : t('hub.rfq.activeCount', { count })}
+      hint={!loading && count === 0 ? t('hub.rfq.noActive') : undefined}
+    />
   );
 }

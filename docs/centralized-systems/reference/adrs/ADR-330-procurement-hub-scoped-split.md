@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-11-04 | ✅ **S3.4 — drill-down από τις κάρτες του hub `/procurement`** (βλ. §5.1 S3.4): οι 6 κάρτες-ενότητες και οι 4 κάρτες «Επισκόπηση εταιρείας» είναι πλέον **σύνδεσμοι** (`<a>`, όχι `div role="button"`) προς τη λίστα **ήδη φιλτραρισμένη** (`?status=`) σε ό,τι μέτρησαν· οι κάρτες πάνω από κάθε λίστα (προσφορές · παραγγελίες · προμηθευτές · συμβάσεις) είναι **φίλτρα-διακόπτες επί τόπου**. Διορθώθηκε απόκλιση «ενεργή σύμβαση» hub (μόνο `status`) ≠ λίστα (`status` **και** λήξη) ⇒ ένας ορισμός `framework-agreement-buckets.ts`. Νέα SSoT: `getProcurementHubUrl` · `QUOTE_PENDING_STATUSES` · `statusFilterCard`/`applyStatusDrill` (`status-filter-card.ts`, ήταν ιδιωτικό στο `rfq-dashboard-stats`) · `HubSectionCard` · `vendor-activity.ts`. Άγκυρα `hub/__tests__/hub-drill-down.test.tsx`. |
 | 2026-11-02 | **`Material.catalogRef` (ADR-923 §5.8 · Φ6β Σ8):** προαιρετικός δείκτης σε SKU πωλητή, χωρίς αντίγραφο και χωρίς μετανάστευση. Ο πελάτης στέλνει `catalogLink { relationshipId, variantId }` στο `POST`/`PATCH`· `null` αποσυνδέει. Άρνηση = μία απάντηση 400 για όλες τις αιτίες. Η αλλαγή δεσμού γράφεται στο ιστορικό, που ως τώρα είχε `changes: []`. |
 | 2026-10-27 | ✅ **S3.3 «⚠️ Ανοιχτό» → έκλεισε**: πύλη προμηθευτή + aggregate πακέτου διαβάζουν πλέον τις γραμμές από τον ΕΝΑ αναγνώστη `readRfqLinesPublic` (σέβεται το `linesStorage`) — λεπτομέρειες στο ADR-327 changelog 2026-10-27. |
 | 2026-10-27 | ✅ **S3.3 — κάρτες της σελίδας RFQ** (βλ. §5.1 S3.3): «Γραμμές» μετρά την υποσυλλογή (έλεγε 0 ενώ υπήρχε 1) · αφαιρέθηκε ο «Συνολικός Όγκος» (άθροιζε m3+kg) · «Εκκρεμείς» → «Χρειάζονται προσοχή» + νέες «Αναμένουν απάντηση» και «Προθεσμία» · ετικέτα ειδικότητας στον πίνακα γραμμών. Κάρτες-φίλτρα επί τόπου μόνο πάνω από λίστα (`?status=`, `useStatusDrillParam`)· κάρτες τιμής/σύστασης ανοίγουν την προσφορά. Διορθώθηκε το badge «προσοχή» της καρτέλας (ρωτούσε `status === 'expired'`, που δεν αποθηκεύεται ποτέ). Άγκυρα `rfq-dashboard-stats.test.ts`. |
@@ -480,6 +481,46 @@ fetchProjectBoqSourcing ── ανοιχτά RFQ → lines (source='boq') ─�
 **Αρχεία:** `utils/rfq-dashboard-stats.ts` (αναδόμηση, είσοδος-αντικείμενο) · `utils/vendor-invite-status.ts` (`inviteNeedsAttention`, `inviteAwaitingResponse`, `INVITE_FOCUS_PREDICATES`, `inviteMatchesFocus`, `inviteResponded`) · `RfqDetailClient.tsx` · `QuoteList.tsx` + `QuoteListRows.tsx` (NEW) · `VendorInviteSection.tsx` · `RfqLinesPanel.tsx` (`t('trades.…')`) · `hooks/useRfqUrlState.ts` · `useStatusDrillParam.ts` · i18n `quotes.rfqs.dashboard.setup.*` + `quotes.invites.emptyFiltered`.
 
 **Άγκυρα:** `utils/__tests__/rfq-dashboard-stats.test.ts` (Κ1 υποσυλλογή · Κ2 όχι άθροισμα μονάδων · Κ3 φίλτρο/μηδέν/ξεπάτημα · Κ4 άνοιγμα προσφοράς · Κ5 μέτρηση == φιλτραρισμένη λίστα · Κ6 sent/opened μετά την προθεσμία).
+
+---
+
+#### S3.4 — Drill-down από τις κάρτες του hub `/procurement` ✅ 2026-11-04
+
+**Αίτημα Giorgio:** «οι κάρτες του Hub, όταν τις πατάω, να λειτουργούν ως φίλτρα ή να με οδηγούν στις κατάλληλες σελίδες ή και τα δύο;»
+
+**Απόφαση = το δόγμα S3.1/S3.3 εφαρμοσμένο στο hub** (πρότυπο Salesforce/Stripe/Linear/Procore): η κάρτα **δεν** διαλέγει «φίλτρο ή πλοήγηση» — κάνει ό,τι ταιριάζει στη **θέση** της:
+
+| Θέση κάρτας | Συμπεριφορά | Υλοποίηση |
+|---|---|---|
+| Στο hub (καμία λίστα από κάτω) | **Σύνδεσμος** προς τη λίστα, ήδη φιλτραρισμένη σε ό,τι μέτρησε | `HubSectionCard` / `KpiCard` + `getProcurementHubUrl(section, { status })` |
+| Πάνω από τη δική της λίστα | **Διακόπτης φίλτρου** επί τόπου (πατημένη ⇔ μόνη τιμή, 2ο κλικ αφαιρεί) | `statusFilterCard(drill, value, count)` → `UnifiedDashboard` `onActivate`/`pressed` |
+| Αριθμός 0 | Κάρτα-ενότητα ⇒ η ενότητα **χωρίς** φίλτρο (είναι και είσοδος)· καθαρός δείκτης ⇒ **όχι** σύνδεσμος | — |
+
+**Χάρτης καρτών hub:**
+
+| Κάρτα | Προορισμός | Φίλτρο (ΙΔΙΟ σύνολο με τη μέτρηση) |
+|---|---|---|
+| Αιτήματα «N ενεργά» | `rfqs` | `['active']` |
+| Προσφορές «N σε αναμονή» | `quotes` | `QUOTE_PENDING_STATUSES` |
+| Παραγγελίες / Σύνολο Παραγγελιών | `purchase-orders` | — |
+| Δεσμευμένα | `purchase-orders` | `PO_COMMITTED_STATUSES` (+ νέο `committedCount`) |
+| Παραδοθέντα | `purchase-orders` | `PO_DELIVERED_STATUSES` (+ νέο `deliveredCount`· ήταν inline `delivered\|\|closed`) |
+| Μητρώο Προμηθευτών | `vendors` | — |
+| Ενεργοί Προμηθευτές | `vendors` | `['active']` = `VENDOR_ACTIVITY_PREDICATES` |
+| Κατάλογος Υλικών | `materials` | — (χωρίς μετρητή) |
+| Συμβάσεις «N ενεργές» | `agreements` | `['active']` = `AGREEMENT_BUCKET_PREDICATES` |
+
+**🔴 Εύρημα (η κάρτα έλεγε άλλο από τη λίστα):** «ενεργή σύμβαση» στο hub = `status === 'active'`· στη λίστα = `status === 'active'` **και** `validUntil` στο μέλλον. Σύμβαση με λήξη χθες μετρούσε ενεργή στο hub, ληγμένη στη λίστα. ⇒ `utils/framework-agreement-buckets.ts` (active · expiring · expired · draft), που διαβάζουν η κάρτα hub, οι κάρτες της σελίδας **και** το `?status=`.
+
+**Παραγγελίες — φίλτρο ΜΕΤΑ τη μέτρηση:** το `?status=` δεν περνά πια στο `usePurchaseOrders` (drill overlay) αλλά εφαρμόζεται στη σελίδα με `applyStatusDrill` πάνω στο ήδη scoped (ημερομηνίες/έργο/προμηθευτής) σύνολο ⇒ οι κάρτες μετρούν το scoped σύνολο και μένουν πατήσιμες· διαφορετικά «Πρόχειρα» πατημένο ⇒ οι άλλες κάρτες 0 ⇒ αδιέξοδο. Το `?status=` του analytics drill (`buildPurchaseOrdersUrl`) τιμάται όπως πριν, τώρα **επικυρωμένο** με `PO_STATUS_TRANSITIONS`.
+
+**⚠️ Γνωστό όριο:** «Ενεργοί Προμηθευτές» του hub = διακριτοί `supplierId` μη ακυρωμένων παραγγελιών· η λίστα = επαφές-προμηθευτές με `metrics.totalOrders > 0` (ίδιο κριτήριο στον `supplier-metrics-service`). Αποκλίνουν **μόνο** αν παραγγελία δείχνει σε προμηθευτή που δεν υπάρχει ως επαφή.
+
+**Boy scout:** οι 6 κάρτες hub ήταν κλώνοι (`div` + `onClick` + `onKeyDown`) ⇒ `HubSectionCard` · `filterCard` του `rfq-dashboard-stats` → `status-filter-card.ts` (καθαρό module) · `ProjectRfqListClient` → `applyStatusDrill`.
+
+**Αρχεία:** `lib/navigation/procurement-urls.ts` · `types/quote.ts` · `utils/framework-agreement-buckets.ts` (NEW) · `vendors/vendor-activity.ts` (NEW) · `clients/status-filter-card.ts` (NEW) · `hub/cards/HubSectionCard.tsx` (NEW) + οι 6 κάρτες · `ProcurementDashboardSection.tsx` · `useProcurementDashboard.ts` · σελίδες `quotes` · `rfqs` · `purchase-orders` · `vendors` · `agreements`.
+
+**Άγκυρα:** `components/procurement/hub/__tests__/hub-drill-down.test.tsx` (σύνδεσμος όχι κουμπί · φίλτρο == σύνολο μέτρησης · 0 ⇒ χωρίς φίλτρο · κουβάδες: αριθμός == γραμμές λίστας · διακόπτης/ξεπάτημα/μηδέν).
 
 ---
 

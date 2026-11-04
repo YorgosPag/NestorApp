@@ -58,16 +58,16 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "350097eba2f420fb82624e73c7434a5df4de7386d9c52171f0524611cc37d690",
+    "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "87ff5272771d101295822b9323ec29087d0779985dcfc4f4b79df603ff2f52d8",
     "src/i18n/generated/routes/o__workspace__procurement__analytics.el.json": "a712d0cda7fd747e8a244e07ec385c4e087c0027c883077af6f53d723dc4f037",
     "src/i18n/generated/routes/o__workspace__procurement__materials.el.json": "1a0b3aa16a7ec9d2f8525887c11289a4e8af4217ecaa1909796c7efe1eb93eaf",
-    "src/i18n/generated/routes/o__workspace__procurement__purchase-orders.el.json": "fa4bd86629d46ceff0c1e9bb10907839878a6d02bb359100141386f1a94e0f59",
-    "src/i18n/generated/routes/o__workspace__procurement__quotes.el.json": "42ce91273748884d1a818a48eca6d2eb83443dfb14a9e740906b881b38c2a808",
+    "src/i18n/generated/routes/o__workspace__procurement__purchase-orders.el.json": "1863bf316836bd8696ba4b7d8450e57f13c3886dde655264a3663010dc1ed78f",
+    "src/i18n/generated/routes/o__workspace__procurement__quotes.el.json": "068110a0002f5a176a872e4770f22bb71452adc8f96287703bebbfef1f601611",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "5998b0309e74b4b352593365609f082619804601c73371e6c739f4111657808b",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
-    "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "00c149ea4f4a256caf419ceb5c687f44be208ef299961fac2f4c8cccd6257375",
+    "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "4360b67033c31b8a077b7c378ead5f7397a871761909dc7bd31653646a2dc772",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "a3070cfb8da8557345ec5f25dce26ffe81e00c0fdf80c7ebba5117498f3161dc",
-    "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "4a788320344088c6283fab54243155838012bb502b56adeacd07c34ef326d6a8",
+    "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "24e8aacf568e57c234b1fa49bfb9c37663d607cc65e574fdd37bc2d6b9ec2274",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json": "b7c1e20776fb9ad6be26039d9bd0c71dfac687f97998a872687dc3e47c997c48",
@@ -198,7 +198,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "79939289989643ebb7d4125d30900198a5795cb6b9be2ba0bdb316808f00e71e",
+  "inputsSha256": "411c9bed75999c9bccb4d130bd8ba33bef7430b94aa7c1d0655d29cb729d51af",
   "languages": [
     "el"
   ],
@@ -15568,6 +15568,8 @@
             "navigation.entities.storage.label",
             "navigation.entities.task.label",
             "navigation.entities.vat.label",
+            "overview.drill.activeFilter",
+            "overview.drill.clear",
             "tasks.quickFilters.ariaLabel",
             "vatConfig.labels.exempt_0",
             "vatConfig.labels.reduced_13",
@@ -15583,6 +15585,7 @@
           ],
           "prefixes": [
             "categories",
+            "filters.agreementStatus",
             "hub.frameworkAgreements.discount.type",
             "hub.frameworkAgreements.status"
           ],
@@ -19523,6 +19526,8 @@
             "navigation.entities.storage.label",
             "navigation.entities.task.label",
             "navigation.entities.vat.label",
+            "overview.drill.activeFilter",
+            "overview.drill.clear",
             "pdf.exportButton",
             "share.copied",
             "share.copiedShort",
@@ -21664,6 +21669,8 @@
             "navigation.entities.storage.label",
             "navigation.entities.task.label",
             "navigation.entities.vat.label",
+            "overview.drill.activeFilter",
+            "overview.drill.clear",
             "quotes.errors.updateFailed",
             "ribbon.commands.columnEditor.catalogProfile.shearWall.c2025",
             "ribbon.commands.columnEditor.catalogProfile.shearWall.c2530",
@@ -21734,7 +21741,9 @@
             "Φωτογραφία Εκπροσώπου",
             "Φωτογραφία Προφίλ"
           ],
-          "prefixes": [],
+          "prefixes": [
+            "quotes.statuses"
+          ],
           "whole": false
         },
         "quotes": {
@@ -23043,13 +23052,18 @@
             "nav.purchaseOrders",
             "nav.quotes",
             "nav.rfqs",
-            "nav.vendors"
+            "nav.vendors",
+            "overview.drill.activeFilter",
+            "overview.drill.clear"
           ],
-          "prefixes": [],
+          "prefixes": [
+            "rfqs.statuses"
+          ],
           "whole": false
         },
         "quotes": {
           "keys": [
+            "nav.rfqs",
             "quotes.status",
             "rfqs.awardMode",
             "rfqs.create",
@@ -24820,6 +24834,8 @@
             "navigation.entities.storage.label",
             "navigation.entities.task.label",
             "navigation.entities.vat.label",
+            "overview.drill.activeFilter",
+            "overview.drill.clear",
             "tasks.quickFilters.ariaLabel",
             "vatConfig.labels.exempt_0",
             "vatConfig.labels.reduced_13",
@@ -24827,6 +24843,7 @@
             "vatConfig.labels.super_reduced_6"
           ],
           "prefixes": [
+            "hub.vendorMaster.statusBadge",
             "trades"
           ],
           "whole": false
@@ -37311,7 +37328,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1240748
+    "sliceBytes": 1241588
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

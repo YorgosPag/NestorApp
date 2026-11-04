@@ -1,42 +1,27 @@
 'use client';
 
-import { useRouter } from '@/lib/workspace/navigation';
 import { FileText } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
+import { QUOTE_PENDING_STATUSES } from '@/subapps/procurement/types/quote';
+import { getProcurementHubUrl } from '@/lib/navigation/procurement-urls';
+import { HubSectionCard } from './HubSectionCard';
 
-const PENDING_STATUSES = new Set(['submitted', 'under_review']);
-
+/** «N σε αναμονή» ⇒ η λίστα προσφορών φιλτραρισμένη στο ΙΔΙΟ σύνολο καταστάσεων (ADR-330 §5.1 S3.4). */
 export function QuotesCard() {
   const { t } = useTranslation('procurement');
-  const router = useRouter();
   const { quotes, loading } = useQuotes();
-
-  const pendingCount = quotes.filter((q) => PENDING_STATUSES.has(q.status)).length;
+  const count = quotes.filter((q) => QUOTE_PENDING_STATUSES.includes(q.status)).length;
 
   return (
-    <Card
-      className="cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      onClick={() => router.push('/procurement/quotes')}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && router.push('/procurement/quotes')}
-      aria-label={t('hub.quotes.title')}
-    >
-      <CardHeader className="pb-2">
-        <FileText className="h-8 w-8 text-[hsl(var(--text-warning))]" aria-hidden />
-        <CardTitle className="text-lg">{t('hub.quotes.title')}</CardTitle>
-        <CardDescription>{t('hub.quotes.description')}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-bold text-foreground">
-          {loading ? '—' : t('hub.quotes.pendingCount', { count: pendingCount })}
-        </p>
-        {!loading && pendingCount === 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">{t('hub.quotes.noPending')}</p>
-        )}
-      </CardContent>
-    </Card>
+    <HubSectionCard
+      icon={FileText}
+      iconClassName="text-[hsl(var(--text-warning))]"
+      title={t('hub.quotes.title')}
+      description={t('hub.quotes.description')}
+      href={getProcurementHubUrl('quotes', count > 0 ? { status: QUOTE_PENDING_STATUSES } : undefined)}
+      metric={loading ? '—' : t('hub.quotes.pendingCount', { count })}
+      hint={!loading && count === 0 ? t('hub.quotes.noPending') : undefined}
+    />
   );
 }

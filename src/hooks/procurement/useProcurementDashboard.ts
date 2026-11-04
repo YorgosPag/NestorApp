@@ -12,7 +12,7 @@
 
 import { useMemo } from 'react';
 import { usePurchaseOrders } from './usePurchaseOrders';
-import { PO_COMMITTED_STATUSES } from '@/types/procurement';
+import { PO_COMMITTED_STATUSES, PO_DELIVERED_STATUSES } from '@/types/procurement';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
 
 // ============================================================================
@@ -32,7 +32,11 @@ export interface MonthlyPoint {
 export interface ProcurementDashboardStats {
   totalPOs: number;
   committedAmount: number;
+  /** Πόσες παραγγελίες αθροίζει το `committedAmount` — ό,τι δείχνει η λίστα `?status=` της κάρτας (ADR-330 S3.4). */
+  committedCount: number;
   deliveredAmount: number;
+  /** Πόσες παραγγελίες αθροίζει το `deliveredAmount`. */
+  deliveredCount: number;
   activeSuppliersCount: number;
   statusCounts: Partial<Record<PurchaseOrderStatus, number>>;
   topCategories: CategorySpend[];
@@ -46,7 +50,9 @@ export interface ProcurementDashboardStats {
 
 function computeStats(pos: PurchaseOrder[]): Omit<ProcurementDashboardStats, 'loading'> {
   let committedAmount = 0;
+  let committedCount = 0;
   let deliveredAmount = 0;
+  let deliveredCount = 0;
   const supplierIds = new Set<string>();
   const statusCounts: Partial<Record<PurchaseOrderStatus, number>> = {};
   const categoryTotals: Record<string, number> = {};
@@ -63,9 +69,11 @@ function computeStats(pos: PurchaseOrder[]): Omit<ProcurementDashboardStats, 'lo
     }
     if (PO_COMMITTED_STATUSES.has(po.status)) {
       committedAmount += po.total;
+      committedCount += 1;
     }
-    if (po.status === 'delivered' || po.status === 'closed') {
+    if (PO_DELIVERED_STATUSES.has(po.status)) {
       deliveredAmount += po.total;
+      deliveredCount += 1;
     }
 
     for (const item of po.items) {
@@ -97,7 +105,9 @@ function computeStats(pos: PurchaseOrder[]): Omit<ProcurementDashboardStats, 'lo
   return {
     totalPOs: pos.length,
     committedAmount,
+    committedCount,
     deliveredAmount,
+    deliveredCount,
     activeSuppliersCount: supplierIds.size,
     statusCounts,
     topCategories,

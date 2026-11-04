@@ -21,6 +21,7 @@ import {
 import type { TFunction } from 'i18next';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { StatusDrill } from '@/components/projects/procurement/clients/useStatusDrillParam';
+import { statusFilterCard } from '@/components/projects/procurement/clients/status-filter-card';
 import { normalizeToMillisOrNull, deadlineDaysLeft } from '@/lib/date-local';
 import { formatCurrency, formatDate, formatDeadlineRelative, formatList } from '@/lib/intl-formatting';
 import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
@@ -65,14 +66,8 @@ export function countInvitesNeedingAttention(
   return invites.filter((i) => INVITE_FOCUS_PREDICATES.attention(i, deadlineMs, nowMs)).length;
 }
 
-/** Κάρτα-φίλτρο εναλλαγής: πατημένη ⇔ το φίλτρο είναι ακριβώς αυτή η τιμή· κλικ ξανά ⇒ αφαίρεση. */
-function filterCard<S extends string>(
-  drill: StatusDrill<S>, value: S, count: number,
-): Pick<DashboardStat, 'pressed' | 'onActivate'> {
-  const pressed = drill.statuses.length === 1 && drill.statuses[0] === value;
-  if (count === 0 && !pressed) return {};
-  return { pressed, onActivate: () => drill.set(pressed ? [] : [value]) };
-}
+/** Η κάρτα-φίλτρο εναλλαγής — SSoT στο `status-filter-card` (μοιράζεται με τις λίστες του hub, ADR-330 S3.4). */
+const filterCard = statusFilterCard;
 
 interface PricedQuote {
   readonly id: string; readonly displayNumber: string; readonly total: number; readonly vendorName: string | null;

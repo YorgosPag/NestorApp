@@ -14,6 +14,10 @@ import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { Contact } from '@/types/contacts';
 import type { VendorCardData } from '@/components/procurement/vendors/VendorCard';
+import { VENDOR_ACTIVITY_PREDICATES, matchesVendorActivity } from '@/components/procurement/vendors/vendor-activity';
+import { useStatusDrillParam } from '@/components/projects/procurement/clients/useStatusDrillParam';
+import { statusFilterCard } from '@/components/projects/procurement/clients/status-filter-card';
+import { StatusDrillNotice } from '@/components/projects/procurement/clients/StatusDrillNotice';
 import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__vendors.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
@@ -32,6 +36,9 @@ export default function VendorsPage() {
 
   const isLoading = contactsLoading || metricsLoading;
 
+  // ADR-330 §5.1 S3.4 — `?status=active` (κάρτα «Ενεργοί Προμηθευτές» του hub + κάρτα αυτής της σελίδας).
+  const drill = useStatusDrillParam(VENDOR_ACTIVITY_PREDICATES);
+
   const metricsById = useMemo(() => {
     if (!comparison) return new Map();
     return new Map(comparison.suppliers.map((m) => [m.supplierId, m]));
@@ -48,7 +55,7 @@ export default function VendorsPage() {
 
   const dashboardStats = useMemo(() => {
     const totalVendors = vendorCards.length;
-    const activeVendors = vendorCards.filter((v) => (v.metrics?.totalOrders ?? 0) > 0).length;
+    const activeVendors = vendorCards.filter(VENDOR_ACTIVITY_PREDICATES.active).length;
     const totalSpend = vendorCards.reduce((sum, v) => sum + (v.metrics?.totalSpend ?? 0), 0);
     const avgOnTime = comparison?.suppliers.length
       ? Math.round(
@@ -58,12 +65,12 @@ export default function VendorsPage() {
       : 0;
     return [
       { title: t('hub.vendorMaster.title'), value: totalVendors, icon: Users2, color: 'blue' as const },
-      { title: t('hub.vendorMaster.statusBadge.active'), value: activeVendors, icon: Star, color: 'green' as const },
+      { title: t('hub.vendorMaster.statusBadge.active'), value: activeVendors, icon: Star, color: 'green' as const, ...statusFilterCard(drill, 'active', activeVendors) },
       { title: t('hub.vendorMaster.totalSpend'), value: formatCurrency(totalSpend), icon: DollarSign, color: 'purple' as const },
       { title: t('hub.vendorMaster.onTimeRate'), value: `${avgOnTime}%`, icon: TrendingUp, color: 'orange' as const },
       { title: t('hub.vendorMaster.detail.kpis.totalOrders'), value: comparison?.suppliers.reduce((s, m) => s + m.totalOrders, 0) ?? 0, icon: PackageCheck, color: 'cyan' as const },
     ];
-  }, [vendorCards, comparison, t]);
+  }, [vendorCards, comparison, drill, t]);
 
   const selectedVendorId = searchParams.get('vendorId') ?? undefined;
 
@@ -87,8 +94,13 @@ export default function VendorsPage() {
     router.replace(`/procurement/vendors?${params.toString()}`);
   }, [router, searchParams]);
 
+  const visibleVendors = useMemo(
+    () => vendorCards.filter((v) => matchesVendorActivity(v, drill.statuses)),
+    [vendorCards, drill.statuses],
+  );
+
   const listProps = {
-    vendors: vendorCards,
+    vendors: visibleVendors,
     loading: isLoading,
     selectedVendorId,
     onSelectVendor: handleSelectVendor,
@@ -105,7 +117,15 @@ export default function VendorsPage() {
       dashboardColumns={5}
       chrome={chrome}
       dashboardStats={dashboardStats}
-      list={<VendorList {...listProps} />}
+      list={
+        <>
+          <StatusDrillNotice
+            labels={drill.statuses.map((s) => t(`hub.vendorMaster.statusBadge.${s}`))}
+            onClear={drill.clear}
+          />
+          <VendorList {...listProps} />
+        </>
+      }
       detail={rightPane}
       emptyState={{
         icon: Users2,

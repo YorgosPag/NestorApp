@@ -1,29 +1,21 @@
 'use client';
 
-import { useRouter } from '@/lib/workspace/navigation';
 import { Layers } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { getProcurementHubUrl } from '@/lib/navigation/procurement-urls';
+import { HubSectionCard } from './HubSectionCard';
 
+/** Κάρτα χωρίς μετρητή — καθαρή είσοδος στον κατάλογο υλικών (ADR-330 §5.1 S3.4). */
 export function MaterialCatalogCard() {
   const { t } = useTranslation('procurement');
-  const router = useRouter();
 
   return (
-    <Card
-      className="cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      onClick={() => router.push('/procurement/materials')}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && router.push('/procurement/materials')}
-      aria-label={t('hub.materialCatalog.title')}
-    >
-      <CardHeader className="pb-2">
-        <Layers className="h-8 w-8 text-[hsl(var(--text-warning))]" aria-hidden />
-        <CardTitle className="text-lg">{t('hub.materialCatalog.title')}</CardTitle>
-        <CardDescription>{t('hub.materialCatalog.description')}</CardDescription>
-      </CardHeader>
-      <CardContent />
-    </Card>
+    <HubSectionCard
+      icon={Layers}
+      iconClassName="text-[hsl(var(--text-warning))]"
+      title={t('hub.materialCatalog.title')}
+      description={t('hub.materialCatalog.description')}
+      href={getProcurementHubUrl('materials')}
+    />
   );
 }

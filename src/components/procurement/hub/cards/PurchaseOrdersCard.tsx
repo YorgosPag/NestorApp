@@ -1,38 +1,25 @@
 'use client';
 
-import { useRouter } from '@/lib/workspace/navigation';
 import { Package } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePurchaseOrders } from '@/hooks/procurement/usePurchaseOrders';
+import { getProcurementHubUrl } from '@/lib/navigation/procurement-urls';
+import { HubSectionCard } from './HubSectionCard';
 
+/** Μετρά **όλες** τις παραγγελίες ⇒ οδηγεί στη λίστα χωρίς φίλτρο (ADR-330 §5.1 S3.4). */
 export function PurchaseOrdersCard() {
   const { t } = useTranslation('procurement');
-  const router = useRouter();
   const { allCount, loading } = usePurchaseOrders();
 
   return (
-    <Card
-      className="cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      onClick={() => router.push('/procurement/purchase-orders')}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && router.push('/procurement/purchase-orders')}
-      aria-label={t('hub.purchaseOrders.title')}
-    >
-      <CardHeader className="pb-2">
-        <Package className="h-8 w-8 text-primary" aria-hidden />
-        <CardTitle className="text-lg">{t('hub.purchaseOrders.title')}</CardTitle>
-        <CardDescription>{t('hub.purchaseOrders.description')}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-bold text-foreground">
-          {loading ? '—' : t('hub.purchaseOrders.count', { count: allCount })}
-        </p>
-        {!loading && allCount === 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">{t('hub.purchaseOrders.noOrders')}</p>
-        )}
-      </CardContent>
-    </Card>
+    <HubSectionCard
+      icon={Package}
+      iconClassName="text-primary"
+      title={t('hub.purchaseOrders.title')}
+      description={t('hub.purchaseOrders.description')}
+      href={getProcurementHubUrl('purchase-orders')}
+      metric={loading ? '—' : t('hub.purchaseOrders.count', { count: allCount })}
+      hint={!loading && allCount === 0 ? t('hub.purchaseOrders.noOrders') : undefined}
+    />
   );
 }
