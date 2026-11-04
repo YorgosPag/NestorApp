@@ -73,6 +73,20 @@ export async function approveSubcontractClauseVersion(ctx: AuthContext, target: 
   });
 }
 
+/**
+ * Η πρόταση γίνεται `rejected` — **μόνο** η έκδοση· το `openProposal` της ρήτρας το γράφει ο καλών, ώστε μία συναλλαγή να
+ * ενημερώνει τη ρήτρα **μία** φορά (η σπορά την ξαναγράφει αμέσως με τη διάδοχη, §5.20).
+ */
+export function stageClosedProposal(
+  scope: SubcontractTx,
+  version: SubcontractClauseVersion,
+  decision: { readonly decidedBy: string; readonly reason: string | null },
+): SubcontractClauseVersion {
+  return stageUpdate(scope, 'clauseVersion', versionRefOf(scope, version.clauseId, version.version), version, {
+    state: 'rejected', decidedBy: decision.decidedBy, decidedAt: scope.now, decisionReason: decision.reason,
+  });
+}
+
 /** Κλείνει την ανοιχτή πρόταση ως `rejected` — απόρριψη (manage) ή απόσυρση (ο ίδιος ο προτείνων). */
 function closeProposal(
   ctx: AuthContext,
@@ -84,9 +98,7 @@ function closeProposal(
     const { clause, version } = await readTarget(scope, target);
     assertGovernance(refuse(version));
     stageUpdate(scope, 'clause', clauseDocRef(scope.db, clause.id), clause, { openProposal: null });
-    return stageUpdate(scope, 'clauseVersion', versionRefOf(scope, clause.id, version.version), version, {
-      state: 'rejected', decidedBy: ctx.uid, decidedAt: scope.now, decisionReason: reason,
-    });
+    return stageClosedProposal(scope, version, { decidedBy: ctx.uid, reason });
   });
 }
 

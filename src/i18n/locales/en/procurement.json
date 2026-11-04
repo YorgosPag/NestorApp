@@ -1200,6 +1200,7 @@
       "report": {
         "title": "The proposed library was loaded",
         "clauses": "Clauses: {created} new proposals · {existing} already existed.",
+        "updates": "Nestor App library updates: {proposed} proposed for approval · {deferred} wait for an open proposal to close.",
         "templates": "Templates: {created} written · {pending} waiting for clause approvals.",
         "dismiss": "Close"
       },
@@ -1217,6 +1218,7 @@
         "arriving": "More proposals are arriving…",
         "newClause": "New clause",
         "replaces": "Replaces version {version}",
+        "succeedsProposal": "Succeeds the proposal of version {version}, which was not approved",
         "proposedBy": "Proposed by: {name}",
         "text": "Text as it will print",
         "emptyTitle": "Nothing to review",
@@ -1266,6 +1268,7 @@
       "diff": {
         "title": "Comparison",
         "titleAgainst": "Comparison with the version in force ({version})",
+        "titleAgainstProposal": "Comparison with the previous proposal (version {version})",
         "firstVersion": "First version — there is no previous one to compare with.",
         "text": "Text",
         "parameters": "Parameters",

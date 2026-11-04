@@ -67,7 +67,7 @@
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e694c874d3bf13e0bfd63e2e8d3c8e1dc5aa5ca4db51fed6136570844b6bd2eb",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "70ff86b387164f7aa34e10cc99658b265d8ab51103c23042c6a629c861641892",
-    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "62b9a8955bda59b9bcaf00cadc555a27c859b95208ad0e836eaa184c26b14299",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "e54ac253f8fed79bd6132c5e651409102f473ad6ccd78b19a8a4f84762761319",
     "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "ed27faaf054aff06555fb73e987982799aae7ecef3366d7511d1c369f8483e31",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
@@ -200,7 +200,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d2ed52a74a24a6e707675ee0709655e88dab2b7789b91ded50472709f763f664",
+  "inputsSha256": "db3aab79d9a911c66a0ec11e2be4aee8238bc892b4ba3d9dabf33d6227ab75b9",
   "languages": [
     "el"
   ],
@@ -23649,6 +23649,7 @@
             "subcontracts.library.report.dismiss",
             "subcontracts.library.report.templates",
             "subcontracts.library.report.title",
+            "subcontracts.library.report.updates",
             "subcontracts.library.review.arriving",
             "subcontracts.library.review.chooseDescription",
             "subcontracts.library.review.chooseTitle",
@@ -37842,7 +37843,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1261386
+    "sliceBytes": 1261624
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

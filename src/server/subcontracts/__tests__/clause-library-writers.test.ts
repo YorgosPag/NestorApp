@@ -13,7 +13,7 @@ import type { AuthContext } from '@/lib/auth';
 import { DEFAULT_CLAUSE_LIBRARY } from '@/config/subcontracts/default-clause-library';
 import { DEFAULT_TRADE_TEMPLATES } from '@/config/subcontracts/default-trade-templates';
 import { retentionBody, retentionRate } from '@/subapps/procurement/subcontracts/clauses/__tests__/clause-fixtures';
-import type { SubcontractClause, SubcontractClauseVersion } from '@/subapps/procurement/subcontracts/types/clause';
+import { DEFAULT_LIBRARY_PROPOSER, type SubcontractClause, type SubcontractClauseVersion } from '@/subapps/procurement/subcontracts/types/clause';
 
 const fake = new FakeFirestore();
 
@@ -53,6 +53,21 @@ async function rejectionOf(promise: Promise<unknown>): Promise<SubcontractWriteE
 const versionsOf = (clauseId: string) =>
   Object.values(fake.getAllDocs(`subcontract_clauses/${clauseId}/subcontract_clause_versions`)) as unknown as SubcontractClauseVersion[];
 const clauseOf = (clauseId: string) => fake.getData('subcontract_clauses', clauseId) as unknown as SubcontractClause;
+
+const VERSIONS = (clauseId: string) => `subcontract_clauses/${clauseId}/subcontract_clause_versions`;
+const versionAt = (clauseId: string, version: number) => versionsOf(clauseId).find((entry) => entry.version === version);
+const seededClause = (clauseKey: string) => fake.all<SubcontractClause>('subcontract_clauses').find((clause) => clause.clauseKey === clauseKey)!;
+const CHANGED_KEY = 'personnel.obligations';
+
+/**
+ * «Ο Νέστορας άλλαξε το κείμενό του από την τελευταία προσφορά»: το αποθηκευμένο αποτύπωμα των προσφορών του συστήματος
+ * παύει να ταιριάζει με το σημερινό `DEFAULT_CLAUSE_LIBRARY` — ακριβώς ό,τι βλέπει η σπορά μετά από μια διόρθωση.
+ */
+function simulateNestorTextChange(clauseId: string): void {
+  for (const version of versionsOf(clauseId)) {
+    if (version.proposedBy === DEFAULT_LIBRARY_PROPOSER) fake.seed(VERSIONS(clauseId), version.id, { ...version, contentHash: 'hash-before-the-fix' });
+  }
+}
 
 const draft = { clauseKey: 'retention.performance', title: { el: 'Κράτηση' }, body: retentionBody, parameters: [retentionRate] };
 const create = (who = ENGINEER) => createSubcontractClause(who, { draft, proposalReason: 'Από το συμφωνητικό του 2008' });
@@ -161,6 +176,45 @@ describe('προεπιλεγμένη βιβλιοθήκη και πρότυπα'
     const report = await seedDefaultSubcontractLibrary(ADMIN);
     expect(report.templatesCreated).toEqual(DEFAULT_TRADE_TEMPLATES.map((template) => template.code));
     expect(report.templatesPending).toEqual([]);
+  });
+
+  it('ενημέρωση του Νέστορα πάνω σε ΔΙΚΗ του ανοιχτή πρόταση: η παλιά κλείνει, η νέα τη διαδέχεται — μία φορά', async () => {
+    await seedDefaultSubcontractLibrary(ADMIN);
+    const clause = seededClause(CHANGED_KEY);
+    simulateNestorTextChange(clause.id);
+    const report = await seedDefaultSubcontractLibrary(ADMIN);
+    expect(report.clausesUpdateProposed).toEqual([CHANGED_KEY]);
+    expect(report.clausesUpdateDeferred).toEqual([]);
+    expect(versionAt(clause.id, 1)).toMatchObject({ state: 'rejected', decidedBy: DEFAULT_LIBRARY_PROPOSER });
+    expect(versionAt(clause.id, 2)).toMatchObject({ state: 'proposed', proposedBy: DEFAULT_LIBRARY_PROPOSER, professionalReview: 'needs_professional_review' });
+    expect(clauseOf(clause.id)).toMatchObject({ latestVersion: 2, openProposal: 2, currentVersion: null, revision: 2 });
+    const again = await seedDefaultSubcontractLibrary(ADMIN);
+    expect(again.clausesUpdateProposed).toEqual([]);
+    expect(versionsOf(clause.id)).toHaveLength(2);
+  });
+
+  it('ενημέρωση πάνω σε εγκεκριμένη: νέα πρόταση του συστήματος, την εγκρίνει άνθρωπος (τα τέσσερα μάτια μένουν)', async () => {
+    await seedDefaultSubcontractLibrary(ADMIN);
+    const clause = seededClause(CHANGED_KEY);
+    await approveSubcontractClauseVersion(ADMIN, target(clause.id, 1, 1), { effectiveFrom: null, reason: null });
+    simulateNestorTextChange(clause.id);
+    expect((await seedDefaultSubcontractLibrary(ADMIN)).clausesUpdateProposed).toEqual([CHANGED_KEY]);
+    await approveSubcontractClauseVersion(ADMIN, target(clause.id, 2, 1), { effectiveFrom: null, reason: null });
+    expect(versionAt(clause.id, 1)).toMatchObject({ state: 'superseded', supersededBy: 2 });
+    expect(clauseOf(clause.id)).toMatchObject({ currentVersion: 2, openProposal: null });
+  });
+
+  it('ανοιχτή πρόταση ΑΝΘΡΩΠΟΥ: καμία εγγραφή, η ενημέρωση αναβάλλεται', async () => {
+    await seedDefaultSubcontractLibrary(ADMIN);
+    const clause = seededClause(CHANGED_KEY);
+    await approveSubcontractClauseVersion(ADMIN, target(clause.id, 1, 1), { effectiveFrom: null, reason: null });
+    const own = DEFAULT_CLAUSE_LIBRARY.find((entry) => entry.clauseKey === CHANGED_KEY)!;
+    await proposeSubcontractClauseVersion(ENGINEER, clause.id, { expectedRevision: 2, body: { ...own.body, heading: 'Δική μας' }, parameters: own.parameters, proposalReason: null });
+    simulateNestorTextChange(clause.id);
+    const report = await seedDefaultSubcontractLibrary(ADMIN);
+    expect(report.clausesUpdateDeferred).toEqual([CHANGED_KEY]);
+    expect(versionsOf(clause.id)).toHaveLength(2);
+    expect(versionAt(clause.id, 2)).toMatchObject({ state: 'proposed', proposedBy: ENGINEER.uid });
   });
 
   it('πρότυπο με ρήτρα χωρίς εγκεκριμένη έκδοση ⇒ 422 από τον γραφέα', async () => {

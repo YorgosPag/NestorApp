@@ -38,7 +38,25 @@ export function reviewQueueOf(
     .sort((a, b) => byHumanFirst(a) - byHumanFirst(b) || a.clause.clauseKey.localeCompare(b.clause.clauseKey));
 }
 
-export type SeedClauseState = 'approved' | 'pending' | 'rejected' | 'missing';
+/** Με τι συγκρίνεται η πρόταση: η έκδοση σε ισχύ, ή — αν δεν υπάρχει — η προηγούμενη πρόταση που δεν εγκρίθηκε. */
+export type ComparisonBase =
+  | { readonly kind: 'current'; readonly version: SubcontractClauseVersion }
+  | { readonly kind: 'previousProposal'; readonly version: SubcontractClauseVersion };
+
+/**
+ * Η βάση σύγκρισης ενός στοιχείου της ουράς (ADR-928 §5.20). Χωρίς έκδοση σε ισχύ, η διάδοχη μιας απορριφθείσας ή
+ * αντικατεστημένης πρότασης (π.χ. διόρθωση της βιβλιοθήκης του Νέστορα) συγκρίνεται με **εκείνη**: ο εγκρίνων βλέπει
+ * ακριβώς τι διορθώθηκε, αντί για «πρώτη έκδοση». `history` = το χρονολόγιο της ρήτρας (σειρά αδιάφορη).
+ */
+export function comparisonBaseOf(item: ReviewQueueItem, history: readonly SubcontractClauseVersion[]): ComparisonBase | null {
+  if (item.current) return { kind: 'current', version: item.current };
+  const previous = history
+    .filter((version) => version.version < item.proposal.version)
+    .reduce<SubcontractClauseVersion | null>((latest, version) => (latest === null || version.version > latest.version ? version : latest), null);
+  return previous ? { kind: 'previousProposal', version: previous } : null;
+}
+
+export type SeedClauseState ='approved' | 'pending' | 'rejected' | 'missing';
 
 export interface SeedProgress {
   readonly total: number;

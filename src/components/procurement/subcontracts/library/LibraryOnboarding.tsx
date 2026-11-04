@@ -76,6 +76,9 @@ export function SeedReportNotice({ report, onDismiss }: { readonly report: Defau
       <span className="flex flex-col gap-1">
         <h2 id="seed-report" className="m-0 text-sm font-semibold">{t('subcontracts.library.report.title')}</h2>
         <span>{t('subcontracts.library.report.clauses', { created: report.clausesCreated.length, existing: report.clausesExisting.length })}</span>
+        {(report.clausesUpdateProposed.length > 0 || report.clausesUpdateDeferred.length > 0) && (
+          <span>{t('subcontracts.library.report.updates', { proposed: report.clausesUpdateProposed.length, deferred: report.clausesUpdateDeferred.length })}</span>
+        )}
         <span>{t('subcontracts.library.report.templates', { created: report.templatesCreated.length, pending: report.templatesPending.length })}</span>
       </span>
       <Button type="button" size="sm" variant="ghost" onClick={onDismiss}>{t('subcontracts.library.report.dismiss')}</Button>

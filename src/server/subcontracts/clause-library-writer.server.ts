@@ -153,26 +153,45 @@ export interface ProposeVersionInput {
   readonly proposalReason: string | null;
 }
 
-/** Νέα έκδοση `proposed`. Κληρονομεί τις μεταφράσεις της εγκεκριμένης — μπαγιάτικες υποβιβάζονται σε πρόχειρο. */
+export interface ProposalAuthorship {
+  readonly proposedBy: string;
+  readonly proposalReason: string | null;
+}
+
+/**
+ * Ο **ένας** τρόπος να γεννηθεί έκδοση `latestVersion + 1` υπάρχουσας ρήτρας — κοινός για τον γραφέα και τη σπορά (§5.20).
+ * Χωρίς ανάγνωση: ο καλών έχει ήδη διαβάσει ρήτρα + έκδοση σε ισχύ και κρίνει ότι επιτρέπεται. Κληρονομεί τις μεταφράσεις
+ * της εγκεκριμένης· όσες μένουν πίσω από το νέο ελληνικό υποβιβάζονται σε πρόχειρο (`carriedTranslations`).
+ */
+export function stageProposedVersion(
+  scope: SubcontractTx,
+  clause: SubcontractClause,
+  current: SubcontractClauseVersion | null,
+  content: HashedContent,
+  authorship: ProposalAuthorship,
+): SubcontractClauseVersion {
+  const next = clause.latestVersion + 1;
+  const version = proposedVersion(scope, {
+    clauseId: clause.id, version: next, content, ...authorship,
+    translations: current ? carriedTranslations(current.translations, content.sourceHash) : {},
+  });
+  stageCreate(scope, 'clauseVersion', clauseVersionDocRef(scope.db, clause.id, version.id), version);
+  stageUpdate(scope, 'clause', clauseDocRef(scope.db, clause.id), clause, { latestVersion: next, openProposal: next });
+  return version;
+}
+
+/** Νέα έκδοση `proposed` από άνθρωπο. Κληρονομεί τις μεταφράσεις της εγκεκριμένης — μπαγιάτικες υποβιβάζονται σε πρόχειρο. */
 export async function proposeSubcontractClauseVersion(ctx: AuthContext, clauseId: string, input: ProposeVersionInput): Promise<SubcontractClauseVersion> {
   assertNoSubcontractIssues(validateClauseContent(input.body, input.parameters));
   const content = await hashedContent(input.body, input.parameters);
   return runSubcontractTransaction(ctx, async (scope) => {
-    const clauseRef = clauseDocRef(scope.db, clauseId);
-    const clause = await readOwned(scope, 'clause', clauseRef);
+    const clause = await readOwned(scope, 'clause', clauseDocRef(scope.db, clauseId));
     assertRevision(clause, input.expectedRevision);
     if (clause.isArchived) throw new SubcontractWriteError('invalidTransition');
     if (clause.openProposal !== null) throw new SubcontractWriteError('proposalPending', [], { openProposal: clause.openProposal });
     const current = clause.currentVersion === null
       ? null
       : await readOwnedOrNull(scope, 'clauseVersion', clauseVersionDocRef(scope.db, clauseId, generateDeterministicSubcontractClauseVersionId(clauseId, clause.currentVersion)));
-    const next = clause.latestVersion + 1;
-    const version = proposedVersion(scope, {
-      clauseId, version: next, content, proposedBy: ctx.uid, proposalReason: input.proposalReason,
-      translations: current ? carriedTranslations(current.translations, content.sourceHash) : {},
-    });
-    stageCreate(scope, 'clauseVersion', clauseVersionDocRef(scope.db, clauseId, version.id), version);
-    stageUpdate(scope, 'clause', clauseRef, clause, { latestVersion: next, openProposal: next });
-    return version;
+    return stageProposedVersion(scope, clause, current, content, { proposedBy: ctx.uid, proposalReason: input.proposalReason });
   });
 }

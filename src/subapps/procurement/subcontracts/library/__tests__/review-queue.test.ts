@@ -1,5 +1,5 @@
 import { DEFAULT_LIBRARY_PROPOSER, type SubcontractClause, type SubcontractClauseVersion } from '../../types/clause';
-import { reviewQueueOf, seedProgressOf } from '../review-queue';
+import { comparisonBaseOf, reviewQueueOf, seedProgressOf } from '../review-queue';
 
 const clause = (clauseKey: string, patch: Partial<SubcontractClause> = {}): SubcontractClause => ({
   id: `sccl_${clauseKey}`, companyId: 'comp_1', clauseKey, title: { el: clauseKey },
@@ -15,6 +15,25 @@ const version = (clauseId: string, patch: Partial<SubcontractClauseVersion> = {}
   decidedBy: null, decidedAt: null, decisionReason: null, reviewedBy: null, reviewedAt: null, revision: 1,
   createdAt: '2026-11-04T00:00:00.000Z', updatedAt: '2026-11-04T00:00:00.000Z', updatedBy: 'u',
   ...patch,
+});
+
+describe('comparisonBaseOf — με τι συγκρίνεται η πρόταση (ADR-928 §5.20)', () => {
+  const pending = clause('a', { latestVersion: 3, openProposal: 3 });
+  const proposal = version(pending.id, { version: 3 });
+
+  it('η έκδοση σε ισχύ κερδίζει πάντα', () => {
+    const current = version(pending.id, { version: 1, state: 'approved' });
+    expect(comparisonBaseOf({ clause: pending, proposal, current }, [])).toEqual({ kind: 'current', version: current });
+  });
+
+  it('χωρίς έκδοση σε ισχύ: η ΤΕΛΕΥΤΑΙΑ προηγούμενη πρόταση — όχι η ίδια, όχι μεταγενέστερη', () => {
+    const history = [version(pending.id, { version: 1, state: 'rejected' }), proposal, version(pending.id, { version: 2, state: 'rejected' })];
+    expect(comparisonBaseOf({ clause: pending, proposal, current: null }, history)).toEqual({ kind: 'previousProposal', version: history[2] });
+  });
+
+  it('πρώτη έκδοση ⇒ καμία βάση', () => {
+    expect(comparisonBaseOf({ clause: pending, proposal: version(pending.id), current: null }, [proposal])).toBeNull();
+  });
 });
 
 describe('review-queue — ουρά ελέγχου', () => {
