@@ -27,6 +27,7 @@ import {
   withdrawClauseVersion,
 } from '@/services/procurement/subcontracts/subcontract-library-api.client';
 import { subcontractFailureOf } from '@/services/procurement/subcontracts/subcontract-failure';
+import { seedReportHasChanges } from '@/subapps/procurement/subcontracts/library/default-library-update';
 import type { CalendarDay } from '@/constants/platform-operator';
 import type { ClauseBody, SubcontractClause, SubcontractClauseVersion } from '@/subapps/procurement/subcontracts/types/clause';
 import type { DefaultLibrarySeedReport } from '@/subapps/procurement/subcontracts/types/library-seed';
@@ -41,10 +42,10 @@ function useRunner() {
   const { success } = useNotifications();
   const notifyFailure = useSubcontractFailureNotice();
   return useCallback(
-    async <T>(request: () => Promise<T>, doneKey: string): Promise<T | null> => {
+    async <T>(request: () => Promise<T>, doneKey: string | ((result: T) => string)): Promise<T | null> => {
       try {
         const result = await request();
-        success(t(`subcontracts.library.done.${doneKey}`));
+        success(t(`subcontracts.library.done.${typeof doneKey === 'string' ? doneKey : doneKey(result)}`));
         return result;
       } catch (cause) {
         notifyFailure(subcontractFailureOf(cause));
@@ -74,7 +75,7 @@ export function useLibraryActions(): LibraryActions {
   return useMemo(() => {
     const done = async <T>(request: () => Promise<T>, key: string) => (await run(request, key)) !== null;
     return {
-      seed: () => run(() => seedSubcontractLibrary(), 'seed'),
+      seed: () => run(() => seedSubcontractLibrary(), (report) => (seedReportHasChanges(report) ? 'seed' : 'seedUpToDate')),
       approve: (version, effectiveFrom, reason) =>
         done(() => approveClauseVersion(ref(version), { expectedRevision: version.revision, effectiveFrom, reason }), 'approve'),
       reject: (version, reason) => done(() => rejectClauseVersion(ref(version), { expectedRevision: version.revision, reason }), 'reject'),

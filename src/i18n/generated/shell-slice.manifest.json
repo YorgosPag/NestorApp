@@ -67,7 +67,7 @@
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e694c874d3bf13e0bfd63e2e8d3c8e1dc5aa5ca4db51fed6136570844b6bd2eb",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "70ff86b387164f7aa34e10cc99658b265d8ab51103c23042c6a629c861641892",
-    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "e54ac253f8fed79bd6132c5e651409102f473ad6ccd78b19a8a4f84762761319",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "c0a9a8bc60616a84b13490508de3f1d3c99af0f5fa90579da67fe64a6342f261",
     "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "ed27faaf054aff06555fb73e987982799aae7ecef3366d7511d1c369f8483e31",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
@@ -200,7 +200,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "db3aab79d9a911c66a0ec11e2be4aee8238bc892b4ba3d9dabf33d6227ab75b9",
+  "inputsSha256": "547a02b63c6d3ad8885ebf380fc994f7ab939e0df7b2cd1bafff19fe716c914c",
   "languages": [
     "el"
   ],
@@ -23673,6 +23673,10 @@
             "subcontracts.library.templates.waitingBadge",
             "subcontracts.library.templates.write",
             "subcontracts.library.title",
+            "subcontracts.library.updates.check",
+            "subcontracts.library.updates.checking",
+            "subcontracts.library.updates.templatesPending",
+            "subcontracts.library.updates.upToDate",
             "subcontracts.library.version.label",
             "subcontracts.messages.pending"
           ],
@@ -37843,7 +37847,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1261624
+    "sliceBytes": 1262246
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

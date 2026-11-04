@@ -1197,6 +1197,12 @@
         "confirmDescription": "{clauses} clauses will be added as proposals to review. The {templates} templates are written once their clauses are approved. Nothing that exists changes.",
         "noPermission": "The library is loaded by a company administrator (clauses and templates permission)."
       },
+      "updates": {
+        "check": "Check for Nestor App updates",
+        "checking": "Checking…",
+        "upToDate": "The library is up to date with Nestor App",
+        "templatesPending": "{count, plural, one {# trade template is waiting for clause approvals.} other {# trade templates are waiting for clause approvals.}}"
+      },
       "report": {
         "title": "The proposed library was loaded",
         "clauses": "Clauses: {created} new proposals · {existing} already existed.",
@@ -1331,6 +1337,7 @@
       },
       "done": {
         "seed": "The proposed library was loaded.",
+        "seedUpToDate": "The library is up to date with Nestor App.",
         "approve": "The version was approved.",
         "reject": "The version was rejected.",
         "withdraw": "The proposal was withdrawn.",

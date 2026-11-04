@@ -13,7 +13,7 @@
  *    Component). Ό,τι κρίνει ή συγκρίνει (έλεγχος, λεπτομέρεια ρήτρας, μεταφράσεις) φτάνει με `import()`.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { BookOpen } from 'lucide-react';
 import { useCatalogSelection } from '@/components/catalog/shared/use-catalog-selection';
 import { Badge } from '@/components/ui/badge';
@@ -26,13 +26,13 @@ import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__subco
 import { registerRouteSlice } from '@/i18n/route-slice';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import type { LibraryActionContext } from '@/subapps/procurement/subcontracts/library/library-action-blocks';
-import type { DefaultLibrarySeedReport } from '@/subapps/procurement/subcontracts/types/library-seed';
 import { ClausesTab } from './ClausesTab';
-import { LibraryOnboarding, SeedReportNotice } from './LibraryOnboarding';
+import { LibraryOnboarding, LibraryUpdateCheck, SeedReportNotice } from './LibraryOnboarding';
 import { ReviewProgress } from './ReviewProgress';
 import { ReviewTab } from './ReviewTab';
 import { TemplatesTab } from './TemplatesTab';
 import { useLibraryActions, type LibraryActions } from './useLibraryActions';
+import { useLibrarySeed, type LibrarySeed } from './useLibrarySeed';
 import { useLibraryScreen, type LibraryScreen } from './useLibraryScreen';
 
 registerRouteSlice(routeSlice);
@@ -81,34 +81,49 @@ function LibraryTabs({ screen, authority, actions }: LibraryTabsProps) {
   );
 }
 
-function LibraryBody({ screen }: { readonly screen: LibraryScreen }) {
+interface LibraryBodyProps {
+  readonly screen: LibraryScreen;
+  readonly authority: SubcontractLibraryAuthorityView;
+  readonly actions: LibraryActions;
+  readonly seed: LibrarySeed;
+}
+
+function LibraryBody({ screen, authority, actions, seed }: LibraryBodyProps) {
   const { t } = useTranslation('procurement');
-  const authority = useSubcontractLibraryAuthority();
-  const actions = useLibraryActions();
-  const [report, setReport] = useState<DefaultLibrarySeedReport | null>(null);
   if (screen.state === 'loading') return <p className="m-0 px-2 text-muted-foreground" role="status">{t('subcontracts.library.loading')}</p>;
   if (screen.state === 'failed') return <p className="m-0 px-2 text-destructive" role="alert">{t('subcontracts.library.loadFailed')}</p>;
   if (screen.state === 'empty') {
-    return <LibraryOnboarding clauseCount={screen.defaultClauseCount} templateCount={screen.defaultTemplateCount} canSeed={authority.canSeed} seed={actions.seed} onSeeded={setReport} />;
+    return <LibraryOnboarding clauseCount={screen.defaultClauseCount} templateCount={screen.defaultTemplateCount} canSeed={authority.canSeed} seed={seed} />;
   }
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3 px-2" aria-label={t('subcontracts.library.title')}>
-      {report && <SeedReportNotice report={report} onDismiss={() => setReport(null)} />}
+      {seed.report && <SeedReportNotice report={seed.report} onDismiss={seed.dismiss} />}
       {screen.progress && screen.progress.counts.missing < screen.progress.total && <ReviewProgress progress={screen.progress} />}
       <LibraryTabs screen={screen} authority={authority} actions={actions} />
     </section>
   );
 }
 
+/** Κάθε δρόμος σποράς (κενή οθόνη · «Έλεγχος» · «Γράψε τα έτοιμα πρότυπα») περνά από τη **μία** πόρτα (`useLibrarySeed`). */
+function useLibrarySeedActions() {
+  const base = useLibraryActions();
+  const seed = useLibrarySeed(base.seed);
+  const actions = useMemo<LibraryActions>(() => ({ ...base, seed: seed.run }), [base, seed.run]);
+  return { actions, seed };
+}
+
 export function SubcontractLibraryContent() {
   const { t } = useTranslation('procurement');
   const screen = useLibraryScreen();
+  const authority = useSubcontractLibraryAuthority();
+  const { actions, seed } = useLibrarySeedActions();
   const title = t('subcontracts.library.title');
+  const headerActions = screen.state === 'ready' ? { customActions: [<LibraryUpdateCheck key="library-updates" canSeed={authority.canSeed} seed={seed} />] } : undefined;
   return (
     <PageContainer ariaLabel={title}>
       <div className="mt-2 px-2"><ProcurementSubNav className="mb-0" /></div>
-      <PageHeader variant="sticky-rounded" layout="compact" spacing="compact" title={{ icon: BookOpen, title, subtitle: t('subcontracts.library.lead') }} />
-      <LibraryBody screen={screen} />
+      <PageHeader variant="sticky-rounded" layout="compact" spacing="compact" title={{ icon: BookOpen, title, subtitle: t('subcontracts.library.lead') }} actions={headerActions} />
+      <LibraryBody screen={screen} authority={authority} actions={actions} seed={seed} />
     </PageContainer>
   );
 }

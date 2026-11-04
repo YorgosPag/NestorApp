@@ -18,6 +18,7 @@
  */
 
 import { DEFAULT_LIBRARY_PROPOSER, type SubcontractClause, type SubcontractClauseVersion } from '../types/clause';
+import type { DefaultLibrarySeedReport } from '../types/library-seed';
 
 export type DefaultLibraryUpdate =
   /** Τίποτα να προσφερθεί. */
@@ -57,4 +58,18 @@ export function defaultLibraryUpdateOf(
   const open = versions.find((version) => version.version === clause.openProposal);
   if (open?.state === 'proposed' && open.proposedBy === DEFAULT_LIBRARY_PROPOSER) return { kind: 'replace', stale: open };
   return { kind: 'deferred' };
+}
+
+/**
+ * **Έφερε η σπορά κάτι;** — η απάντηση του «Έλεγχος για ενημερώσεις» (ADR-928 §5.20). Αλλαγή = νέα ρήτρα, νέα έκδοση
+ * προς έγκριση, ενημέρωση που περιμένει να κλείσει πρόταση ανθρώπου (υπάρχει, απλώς δεν γράφτηκε ακόμη), ή πρότυπο που
+ * γράφτηκε. Τα «υπήρχαν ήδη» και τα πρότυπα που περιμένουν εγκρίσεις **δεν** είναι αλλαγή: είναι κατάσταση, όχι ενημέρωση.
+ */
+export function seedReportHasChanges(report: DefaultLibrarySeedReport): boolean {
+  return (
+    report.clausesCreated.length > 0 ||
+    report.clausesUpdateProposed.length > 0 ||
+    report.clausesUpdateDeferred.length > 0 ||
+    report.templatesCreated.length > 0
+  );
 }

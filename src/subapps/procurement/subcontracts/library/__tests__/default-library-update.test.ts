@@ -4,7 +4,8 @@
  */
 
 import { DEFAULT_LIBRARY_PROPOSER, type SubcontractClause, type SubcontractClauseVersion } from '../../types/clause';
-import { defaultLibraryUpdateOf, lastOfferedVersion } from '../default-library-update';
+import type { DefaultLibrarySeedReport } from '../../types/library-seed';
+import { defaultLibraryUpdateOf, lastOfferedVersion, seedReportHasChanges } from '../default-library-update';
 
 const SHIPPED = 'hash-shipped';
 const OLD = 'hash-old';
@@ -73,5 +74,26 @@ describe('default-library-update — ο κανόνας upstream', () => {
     const versions = [version(3, { contentHash: 'c3' }), version(1, { contentHash: 'c1' }), version(2, { proposedBy: HUMAN })];
     expect(lastOfferedVersion(versions)?.version).toBe(3);
     expect(lastOfferedVersion([version(1, { proposedBy: HUMAN })])).toBeNull();
+  });
+});
+
+describe('seedReportHasChanges — «η βιβλιοθήκη είναι ενημερωμένη»', () => {
+  const report = (patch: Partial<DefaultLibrarySeedReport> = {}): DefaultLibrarySeedReport => ({
+    clausesCreated: [], clausesExisting: ['a', 'b'], clausesUpdateProposed: [], clausesUpdateDeferred: [],
+    templatesCreated: [], templatesExisting: ['t'], templatesPending: [{ code: 'p', issues: [] }],
+    ...patch,
+  });
+
+  it('μόνο «υπήρχαν ήδη» και πρότυπα σε αναμονή ⇒ καμία αλλαγή (δεύτερος έλεγχος = ιδεμποτικός)', () => {
+    expect(seedReportHasChanges(report())).toBe(false);
+  });
+
+  it.each<[string, Partial<DefaultLibrarySeedReport>]>([
+    ['νέα ρήτρα', { clausesCreated: ['c'] }],
+    ['νέα έκδοση προς έγκριση', { clausesUpdateProposed: ['a'] }],
+    ['ενημέρωση που περιμένει πρόταση ανθρώπου', { clausesUpdateDeferred: ['a'] }],
+    ['πρότυπο που γράφτηκε', { templatesCreated: ['t2'] }],
+  ])('%s ⇒ αλλαγή', (_, patch) => {
+    expect(seedReportHasChanges(report(patch))).toBe(true);
   });
 });
