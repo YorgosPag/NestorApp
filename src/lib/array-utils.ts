@@ -49,6 +49,26 @@ export function indexWithin(target: number, total: number, policy: IndexEdgePoli
   return Math.min(Math.max(target, 0), total - 1);
 }
 
+const isIndexOf = (items: readonly unknown[], index: number): boolean =>
+  Number.isInteger(index) && index >= 0 && index < items.length;
+
+/**
+ * Immutable list edits — the ONE answer to «change row i of a form list» (ADR-928 Φ3γ-2: lines, stages, shares,
+ * crew, required documents). An index outside the list returns the SAME array, so a stale click is a no-op that
+ * React skips, never a silently appended `undefined`. Reordering is NOT here: it belongs to `SortableList` +
+ * `reorderByMove` (`components/ui/sortable`, ADR-923), which also gives keyboard and screen-reader moves.
+ */
+export function replaceAt<T>(items: readonly T[], index: number, next: T): readonly T[] {
+  if (!isIndexOf(items, index)) return items;
+  return items.map((item, at) => (at === index ? next : item));
+}
+
+/** Immutable removal of row `index` (out of range ⇒ the same array). */
+export function removeAt<T>(items: readonly T[], index: number): readonly T[] {
+  if (!isIndexOf(items, index)) return items;
+  return items.filter((_, at) => at !== index);
+}
+
 /**
  * Deterministic, locale-independent string comparator for `Array.prototype.sort`.
  *

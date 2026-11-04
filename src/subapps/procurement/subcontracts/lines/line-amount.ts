@@ -10,10 +10,8 @@
  */
 
 import { sumMinor, type MinorAmount } from '@/lib/money/money';
+import { MILLI_PER_UNIT } from '@/lib/uom/milli-quantity';
 import type { AgreementLine } from '../types/agreement-line';
-
-/** Χιλιοστά ανά μονάδα — η ποσότητα αποθηκεύεται ακέραια (`estimatedMilliQuantity`). */
-const MILLI_PER_UNIT = 1000;
 
 /** Η αξία μιας γραμμής, ή `null` όταν δεν προκύπτει (τιμή μονάδας/ημέρας χωρίς εκτίμηση ποσότητας). */
 export function estimatedLineAmount(line: AgreementLine): MinorAmount | null {

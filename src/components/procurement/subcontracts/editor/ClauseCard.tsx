@@ -4,8 +4,9 @@
  * Μία ρήτρα του πρόχειρου: οι παράμετροί της με ζώνη δίπλα σε κάθε πεδίο, ο λόγος όπου η τιμή θέλει έγκριση, και η
  * απόφαση που έχει ήδη πάρει η αποθηκευμένη απόκλιση (ADR-928 §5.2.1 · Φ2 απόφαση 6 · Φ3γ).
  *
- * 🔑 Δεσμευμένη παράμετρος (`source: term`) **δεν** έχει πεδίο εδώ: η τιμή ζει στους όρους (μία φορά, Φ1 απόφαση 2) και
- *    φαίνεται ως ανάγνωση «από τους όρους» — αλλάζει από την ενότητα των όρων, και ο ίδιος κριτής την κρίνει.
+ * 🔑 Δεσμευμένη παράμετρος (`source: term`) **δεν** έχει πεδίο εδώ: η τιμή ζει στους όρους (μία φορά, Φ1 απόφαση 2).
+ *    Αλλάζει από την ενότητα των όρων, όπου γράφεται και ο λόγος (Φ3γ-2 απόφαση 2). Εδώ φαίνονται τιμή, ζώνη, λόγος και
+ *    ευρήματα, με σύνδεσμο προς το πεδίο.
  * 🔑 Καρφωμένη έκδοση που δεν είναι πια σε ισχύ ⇒ ορατό και **μία** ενέργεια «Ενημέρωση» (Figma «update available»).
  */
 
@@ -19,6 +20,7 @@ import type { HumanLanguage } from '@/i18n/languages';
 import { resolveParameterValue, type ClauseInForce, type ClauseSelectionInput } from '@/subapps/procurement/subcontracts/agreements/judge-deviations';
 import { issuesAt, issuesUnder } from '@/subapps/procurement/subcontracts/agreements/issue-paths';
 import { joinPath, type SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
+import { COMMERCIAL_TERM_BINDINGS } from '@/subapps/procurement/subcontracts/clauses/commercial-term-bindings';
 import { toleranceVerdict } from '@/subapps/procurement/subcontracts/clauses/tolerance-verdict';
 import { sameParameterValue, validateParameterValue } from '@/subapps/procurement/subcontracts/clauses/validate-clause-parameter';
 import { documentLocaleOf } from '@/subapps/procurement/subcontracts/document/document-locale';
@@ -56,16 +58,31 @@ interface ParameterRowProps extends Omit<ClauseCardProps, 'title' | 'inForce' | 
   readonly edits: ClauseCardEdits;
 }
 
-function BoundParameter({ definition, terms, language }: Pick<ParameterRowProps, 'definition' | 'terms' | 'language'>) {
+/** Η ενότητα όπου ζει το πεδίο του όρου — εκεί οδηγεί ο σύνδεσμος «Αλλαγή στους όρους». */
+const sectionOfTerm = (definition: ClauseParameterDefinition): string =>
+  definition.source.kind === 'term' && COMMERCIAL_TERM_BINDINGS[definition.source.term].termPath.startsWith('paymentPlan.')
+    ? '#editor-plan'
+    : '#editor-terms';
+
+/**
+ * Δεσμευμένη παράμετρος: η τιμή από τους όρους, η ζώνη, ο λόγος (μόνο ανάγνωση, γράφεται στο πεδίο του όρου) και τα
+ * ευρήματα του κριτή στο **δικό της** μονοπάτι. Πριν τη Φ3γ-2 τα ευρήματα αυτά δεν φαίνονταν πουθενά (ADR-928 §5.21).
+ */
+function BoundParameter({ index, input, definition, terms, issues, language }: Pick<ParameterRowProps, 'index' | 'input' | 'definition' | 'terms' | 'issues' | 'language'>) {
   const { t } = useTranslation('procurement');
   const value = resolveParameterValue(definition, {}, terms);
+  const reason = input.deviationReasons[definition.key];
   return (
-    <p className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="font-medium">{localizedIn(definition.label, language)}</span>
-      <span>{value ? renderParameterValue(value, definition, documentLocaleOf(language)) : '—'}</span>
-      <span className="text-xs text-muted-foreground">{t('subcontracts.editor.clauses.fromTerms')}</span>
-      {value && <ParameterZoneBadge verdict={toleranceVerdict(definition, value)} />}
-    </p>
+    <li className="space-y-1">
+      <p className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-medium">{localizedIn(definition.label, language)}</span>
+        <span>{value ? renderParameterValue(value, definition, documentLocaleOf(language)) : '—'}</span>
+        {value && <ParameterZoneBadge verdict={toleranceVerdict(definition, value)} />}
+        <a href={sectionOfTerm(definition)} className="text-xs text-foreground underline underline-offset-2">{t('subcontracts.sections.bound.editInTerms')}</a>
+      </p>
+      {reason && <p className="text-xs text-muted-foreground">{t('subcontracts.sections.bound.reason', { reason })}</p>}
+      <FieldIssues issues={issuesAt(issues, joinPath('clauses', index, 'parameterValues', definition.key))} />
+    </li>
   );
 }
 
@@ -136,7 +153,7 @@ export function ClauseCard(props: ClauseCardProps) {
       {inForce && inForce.version === input.version && (
         <ul className="space-y-3">
           {inForce.parameters.map((definition) => (definition.source.kind === 'term'
-            ? <li key={definition.key}><BoundParameter definition={definition} terms={props.terms} language={language} /></li>
+            ? <BoundParameter key={definition.key} index={index} input={input} definition={definition} terms={props.terms} issues={issues} language={language} />
             : <ParameterRow key={definition.key} {...props} definition={definition} issues={issuesUnder(issues, joinPath('clauses', index))} />))}
         </ul>
       )}

@@ -1085,7 +1085,6 @@
       },
       "identity": {
         "title": "Τίτλος",
-        "titleSecondary": "Τίτλος (δεύτερη γλώσσα)",
         "mode": "Τρόπος έκδοσης",
         "modes": {
           "offer_becomes_agreement": "Α · η προσφορά γίνεται συμφωνητικό με την εγκατάσταση",
@@ -1115,7 +1114,6 @@
         "empty": "Δεν υπάρχουν ρήτρες.",
         "add": "Προσθήκη ρήτρας από τη βιβλιοθήκη",
         "remove": "Αφαίρεση ρήτρας {clause}",
-        "fromTerms": "από τους εμπορικούς όρους",
         "resetPreferred": "Προτιμώμενη τιμή",
         "reason": "Λόγος απόκλισης",
         "reasonPlaceholder": "Γιατί χρειάζεται αυτή η τιμή; Θα το δει αυτός που εγκρίνει.",
@@ -1412,6 +1410,211 @@
         "clauses": "Ρήτρες",
         "chooseTitle": "Διάλεξε πρότυπο",
         "chooseDescription": "Η επεξεργασία προτύπων έρχεται σύντομα· εδώ ανάγνωση και αρχειοθέτηση."
+      }
+    },
+    "sections": {
+      "issueCount": "{count, plural, one {# εύρημα} other {# ευρήματα}}",
+      "shares": {
+        "share": "Μερίδιο (%)",
+        "remainder": "Υπόλοιπο",
+        "remove": "Αφαίρεση μεριδίου {position}",
+        "whole": "Σύνολο {total} — ολόκληρο",
+        "partial": "Σύνολο {total} — πρέπει να γίνει 100%"
+      },
+      "lines": {
+        "title": "Γραμμές",
+        "empty": "Καμία γραμμή ακόμη.",
+        "add": "Προσθήκη γραμμής",
+        "position": "Γραμμή {position}",
+        "duplicate": "Διπλασιασμός γραμμής {position}",
+        "remove": "Αφαίρεση γραμμής {position}",
+        "removeReferencedTitle": "Αφαίρεση γραμμής {position};",
+        "removeReferenced": "Στους όρους υπάρχει ελάχιστη απόδοση για αυτή τη γραμμή. Ο όρος δεν θα σβηστεί: θα μείνει ως εύρημα μέχρι να τον διορθώσεις.",
+        "description": "Περιγραφή",
+        "kind": "Είδος",
+        "pricing": "Τιμολόγηση",
+        "unit": "Μονάδα",
+        "quantity": "Εκτίμηση ποσότητας",
+        "quantityOptional": "Προαιρετική",
+        "unitPrice": "Τιμή μονάδας (€)",
+        "lumpSum": "Ποσό κατ' αποκοπή (€)",
+        "amount": "Ποσό",
+        "details": "Λεπτομέρειες",
+        "clientPrice": "Τιμή για πελάτη (€)",
+        "clientPriceNone": "Καμία",
+        "printClientPrice": "Τυπώνεται στο συμφωνητικό",
+        "comment": "Σχόλιο",
+        "measurementRule": "Κανόνας επιμέτρησης",
+        "measurementHint": "Παράγραφοι με κενή γραμμή ανάμεσα. Λίστα: γραμμές που αρχίζουν με «- » ή «1. ».",
+        "measurementHasParameters": "Ο κανόνας έχει παραμέτρους και δεν επεξεργάζεται εδώ.",
+        "stages": "Στάδια",
+        "stageLabel": "Στάδιο",
+        "addStage": "Προσθήκη σταδίου",
+        "insuredCap": "Όριο ημερών ασφάλισης",
+        "insuredCapQuantity": "Μονάδες ανά ημέρα ασφάλισης",
+        "paymentOverride": "Πληρωμή αυτής της γραμμής",
+        "inheritPlan": "Όπως στο σχέδιο πληρωμών",
+        "total": "Εκτιμώμενη αξία: {amount}",
+        "totalLowerBound": "{count, plural, one {Εκτιμώμενη αξία τουλάχιστον {amount} — # γραμμή χωρίς εκτίμηση ποσότητας} other {Εκτιμώμενη αξία τουλάχιστον {amount} — # γραμμές χωρίς εκτίμηση ποσότητας}}",
+        "ownRetention": "Δική της κράτηση"
+      },
+      "plan": {
+        "basisLabel": "Τι πληρώνεται",
+        "basis": {
+          "measured_progress": "Επιμετρημένες ποσότητες",
+          "stage_completion": "Ολοκλήρωση σταδίων",
+          "milestone": "Ορόσημα",
+          "time_and_materials": "Απολογιστικά (ημέρες εργασίας)",
+          "labor_advance_capped": "Προκαταβολή μεροκαμάτων με όριο",
+          "lump_sum_on_completion": "Όλο με το πέρας",
+          "advance_payment": "Προκαταβολή με συμψηφισμό"
+        },
+        "capAtEarnedValue": "Όριο: το παραχθέν έργο",
+        "cap": {
+          "capped": "Ποτέ πάνω από το παραχθέν",
+          "uncapped": "Χωρίς όριο"
+        },
+        "title": "Σχέδιο πληρωμών",
+        "schedule": "Πότε πληρώνεται",
+        "schedules": {
+          "on_completion": "Με το πέρας των εργασιών",
+          "on_milestones": "Με κάθε ορόσημο",
+          "on_request": "Με την υποβολή λογαριασμού",
+          "recurring": "Περιοδικά"
+        },
+        "every": "Κάθε",
+        "unit": "Μονάδα χρόνου",
+        "units": {
+          "day": "ημέρες",
+          "week": "εβδομάδες",
+          "month": "μήνες"
+        },
+        "anchor": "Αφετηρία",
+        "anchors": {
+          "start_date": "Ημερομηνία έναρξης",
+          "weekday": "Ημέρα της εβδομάδας",
+          "month_days": "Ημέρες του μήνα"
+        },
+        "weekday": "Ημέρα",
+        "monthDays": "Ημέρες του μήνα (π.χ. 5, 20)",
+        "holidayShift": "Αν η ημέρα δεν είναι εργάσιμη",
+        "holiday": {
+          "previous_business_day": "Την προηγούμενη εργάσιμη",
+          "next_business_day": "Την επόμενη εργάσιμη",
+          "none": "Ίδια ημέρα"
+        },
+        "finalSettlement": "Εξόφληση",
+        "final": {
+          "final_acceptance": "Με την οριστική παραλαβή",
+          "milestone": "Με ορόσημο",
+          "days_after_completion": "Ημέρες μετά το πέρας"
+        },
+        "milestone": "Ορόσημο",
+        "days": "Ημέρες",
+        "regular": "Τρόπος πληρωμής",
+        "ownFinal": "Άλλος τρόπος για την εξόφληση",
+        "finalShares": "Τρόπος εξόφλησης",
+        "instrumentLabel": "Μέσο",
+        "instrument": {
+          "bank_transfer": "Τραπεζική μεταφορά",
+          "cheque": "Επιταγή",
+          "cash": "Μετρητά",
+          "set_off": "Συμψηφισμός"
+        },
+        "chequeDays": "Ημέρες λήξης επιταγής",
+        "addInstrument": "Προσθήκη μέσου",
+        "milestones": "Πληρωμές με ορόσημο",
+        "amountKind": "Είδος ποσού",
+        "amountKinds": {
+          "percent": "Ποσοστό",
+          "fixed": "Σταθερό ποσό"
+        },
+        "amount": "Ποσό",
+        "removeMilestone": "Αφαίρεση οροσήμου {position}",
+        "addMilestone": "Προσθήκη οροσήμου",
+        "advance": "Προκαταβολή",
+        "advanceAmount": "Ποσό προκαταβολής (€)",
+        "advanceRecovery": "Συμψηφισμός",
+        "recovery": {
+          "on_final": "Στην εκκαθάριση",
+          "per_payment": "Σε κάθε λογαριασμό"
+        },
+        "advanceRate": "Ποσοστό συμψηφισμού",
+        "retention": "Κράτηση καλής εκτέλεσης",
+        "retentionRate": "Ποσοστό κράτησης",
+        "releaseWhen": "Πότε αποδίδεται",
+        "releaseMonths": "Μήνες",
+        "release": {
+          "title": "Απόδοση σε δόσεις",
+          "add": "Προσθήκη δόσης",
+          "provisional_acceptance": "Στην προσωρινή παραλαβή",
+          "final_acceptance": "Στην οριστική παραλαβή",
+          "months_after_provisional": "Μήνες μετά την προσωρινή παραλαβή",
+          "months_after_final": "Μήνες μετά την οριστική παραλαβή"
+        },
+        "asPrinted": "Όπως θα τυπωθεί"
+      },
+      "bound": {
+        "governedBy": "Το δένει η ρήτρα «{clause}» ({parameter})",
+        "editInTerms": "Αλλαγή στους όρους",
+        "reason": "Λόγος: {reason}"
+      },
+      "nav": {
+        "label": "Ενότητες του συμφωνητικού",
+        "identity": "Ταυτότητα",
+        "parties": "Μέρη",
+        "lines": "Γραμμές",
+        "terms": "Όροι",
+        "plan": "Σχέδιο πληρωμών",
+        "clauses": "Ρήτρες"
+      },
+      "terms": {
+        "title": "Εμπορικοί όροι",
+        "vatTreatment": "ΦΠΑ στις τιμές",
+        "vat": {
+          "excluded": "Οι τιμές είναι χωρίς ΦΠΑ",
+          "included": "Οι τιμές περιλαμβάνουν ΦΠΑ"
+        },
+        "vatRate": "Συντελεστής ΦΠΑ",
+        "withholding": "Παρακράτηση φόρου",
+        "withholdingApplies": "Ισχύει παρακράτηση φόρου",
+        "cashLimit": "Όριο μετρητών ανά πληρωμή (€)",
+        "penalty": "Ποινική ρήτρα",
+        "penaltyPerDay": "Ποσό ανά ημέρα καθυστέρησης (€)",
+        "penaltyCap": "Ανώτατο ποσοστό της αξίας",
+        "crew": "Συνεργείο",
+        "crewHeadcount": "Ελάχιστο πλήθος ατόμων",
+        "crewRole": "Ρόλος",
+        "crewTrade": "Ειδικότητα",
+        "noTrade": "Χωρίς ειδικότητα",
+        "crewRatio": "Μερίδιο αναλογίας",
+        "crewWage": "Ημερομίσθιο (€)",
+        "noWage": "Χωρίς ημερομίσθιο",
+        "removeMember": "Αφαίρεση μέλους {position}",
+        "addMember": "Προσθήκη μέλους",
+        "costSharing": "Επιμερισμός κόστους",
+        "costDescription": "Τι επιμερίζεται",
+        "costShares": "Μερίδια",
+        "addParty": "Προσθήκη μέρους",
+        "party": "Μέρος",
+        "removeCost": "Αφαίρεση επιμερισμού {position}",
+        "addCost": "Προσθήκη επιμερισμού",
+        "requiredDocuments": "Απαιτούμενα έγγραφα",
+        "documentKind": "Έγγραφο",
+        "documentWhen": "Πότε",
+        "when": {
+          "before_each_payment": "Πριν από κάθε πληρωμή",
+          "days_before_start": "Ημέρες πριν την έναρξη"
+        },
+        "documentDays": "Ημέρες",
+        "removeDocument": "Αφαίρεση εγγράφου {position}",
+        "addDocument": "Προσθήκη εγγράφου",
+        "minimumOutputs": "Ελάχιστη απόδοση",
+        "removedLine": "Γραμμή που αφαιρέθηκε",
+        "outputLine": "Γραμμή",
+        "outputPerDay": "Μονάδες ανά ημέρα",
+        "removeOutput": "Αφαίρεση απόδοσης {position}",
+        "addOutput": "Προσθήκη απόδοσης"
       }
     }
   }

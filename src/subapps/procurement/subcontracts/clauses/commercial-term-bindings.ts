@@ -16,37 +16,50 @@ export interface CommercialTermBindingSpec {
   readonly kind: ClauseParameterKind;
   /** Μόνο για `enum`: τα κλειδιά επιλογών που οφείλει να ορίζει η παράμετρος (ακριβώς αυτά). */
   readonly optionKeys?: readonly string[];
+  /**
+   * **Ποιο πεδίο** των όρων διαβάζει το `read`, ως μονοπάτι σχετικό με το `CommercialTerms` (ίδια τμήματα με τον
+   * `joinPath` των επικυρωτών). Είναι η γέφυρα «όρος ↔ ρήτρα» της οθόνης (ADR-928 Φ3γ-2 απόφαση 2): το πεδίο της
+   * κράτησης δείχνει τη ζώνη της ρήτρας που το δένει. Η άγκυρα `term-paths.test` αποδεικνύει ότι λέει το ίδιο με το `read`.
+   */
+  readonly termPath: string;
   /** Η τιμή στα δεδομένα, ή `null` όταν ο όρος δεν ισχύει (π.χ. καμία ποινική ρήτρα). */
   readonly read: (terms: CommercialTerms) => ClauseParameterValue | null;
 }
 
 export const COMMERCIAL_TERM_BINDINGS: Readonly<Record<CommercialTermBindingKey, CommercialTermBindingSpec>> = {
   'retention.rate': {
+    termPath: 'paymentPlan.retention.rate',
     kind: 'percent',
     read: (terms) => (terms.paymentPlan.retention ? { kind: 'percent', value: terms.paymentPlan.retention.rate } : null),
   },
   'withholding.rate': {
+    termPath: 'withholding.rate',
     kind: 'percent',
     read: (terms) => (terms.withholding.applies ? { kind: 'percent', value: terms.withholding.rate } : null),
   },
   'penalty.perDay': {
+    termPath: 'penalty.perDay',
     kind: 'money',
     read: (terms) => (terms.penalty ? { kind: 'money', value: terms.penalty.perDay } : null),
   },
   'penalty.cap': {
+    termPath: 'penalty.capOfContractValue',
     kind: 'percent',
     read: (terms) => (terms.penalty ? { kind: 'percent', value: terms.penalty.capOfContractValue } : null),
   },
   'cash.limitPerPayment': {
+    termPath: 'cashLimitPerPayment',
     kind: 'money',
     read: (terms) => ({ kind: 'money', value: terms.cashLimitPerPayment }),
   },
   'vat.treatment': {
+    termPath: 'vat.treatment',
     kind: 'enum',
     optionKeys: ['excluded', 'included'],
     read: (terms) => ({ kind: 'enum', value: terms.vat.treatment }),
   },
   'payment.anchorWeekday': {
+    termPath: 'paymentPlan.schedule.anchor.weekday',
     kind: 'weekday',
     read: (terms) => {
       const schedule = terms.paymentPlan.schedule;

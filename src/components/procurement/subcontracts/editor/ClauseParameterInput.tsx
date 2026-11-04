@@ -4,20 +4,18 @@
  * Το πεδίο μιας παραμέτρου ρήτρας — ολικός διακλαδισμός στα 10 είδη (ADR-928 §5.2 · Φ3γ). Νέο είδος χωρίς πεδίο =
  * σφάλμα μεταγλώττισης (`never`).
  *
- * 🔑 **Ακέραιες μονάδες στο μοντέλο, ανθρώπινες στην οθόνη**: ποσοστό ↔ μονάδες βάσης μόνο μέσω
- *    `basisPointsFromPercent`/`percentFromBasisPoints`, ποσό ↔ λεπτά μόνο μέσω `minorFromMajor`/`majorFromMinor`.
+ * 🔑 **Ακέραιες μονάδες στο μοντέλο, ανθρώπινες στην οθόνη**: ποσοστό ↔ μονάδες βάσης και ποσό ↔ λεπτά μόνο μέσω
+ *    `PercentField` / `MoneyField` (`numeric-field/scaled-value.ts`, ο ΕΝΑΣ κανόνας μετατροπής).
  * 🔑 **Μία πηγή ετικετών**: οι επιλογές (ημέρα · μέρος · ορόσημο · μονάδα · επιλογή ορισμού) παίρνουν την ετικέτα από το
  *    `renderParameterValue` — η ίδια λέξη που θα τυπωθεί στο έγγραφο, στη γλώσσα της οθόνης.
  * 🔑 Άκυρη είσοδος δεν «διορθώνεται» σιωπηλά: περνά ως έχει και ο κριτής τη λέει (`parameterValueInvalid`).
  */
 
 import { Input } from '@/components/ui/input';
-import { NumericField } from '@/components/ui/numeric-field';
+import { MoneyField, NumericField, PercentField } from '@/components/ui/numeric-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { HumanLanguage } from '@/i18n/languages';
 import { ISO_WEEKDAYS } from '@/lib/calendar/weekly-hours';
-import { majorFromMinor, minorFromMajor } from '@/lib/money/money';
-import { basisPointsFromPercent, percentFromBasisPoints } from '@/lib/pricing/discount-rule';
 import { UOM_CODES } from '@/lib/uom/uom-registry';
 import { documentLocaleOf, MILESTONE_KEYS } from '@/subapps/procurement/subcontracts/document/document-locale';
 import { localizedIn, renderParameterValue } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
@@ -75,13 +73,10 @@ function ChoiceInput({ id, definition, value, onChange, language, describedBy, d
 
 /** Ποσοστό · ποσό · ημέρες: ο άνθρωπος γράφει %, €, ημέρες· το μοντέλο κρατά μονάδες βάσης, λεπτά, ακέραιο. */
 function NumericInput({ id, value, onChange, describedBy, disabled }: ClauseParameterInputProps) {
-  const shown = value.kind === 'percent' ? percentFromBasisPoints(value.value) : value.kind === 'money' ? majorFromMinor(value.value) : Number(value.value);
-  const commit = (next: number) => {
-    if (value.kind === 'percent') onChange({ kind: 'percent', value: basisPointsFromPercent(next) ?? Math.round(next * 100) });
-    else if (value.kind === 'money') onChange({ kind: 'money', value: minorFromMajor(next) ?? Math.round(next * 100) });
-    else if (value.kind === 'days') onChange({ kind: 'days', value: next });
-  };
-  return <NumericField id={id} value={shown} onValueChange={commit} aria-describedby={describedBy} disabled={disabled} />;
+  const field = { id, 'aria-describedby': describedBy, disabled };
+  if (value.kind === 'percent') return <PercentField {...field} value={value.value} onValueChange={(next) => onChange({ kind: 'percent', value: next })} />;
+  if (value.kind === 'money') return <MoneyField {...field} value={value.value} onValueChange={(next) => onChange({ kind: 'money', value: next })} />;
+  return <NumericField {...field} value={Number(value.value)} onValueChange={(next) => onChange({ kind: 'days', value: next })} />;
 }
 
 function RatioInput({ id, definition, value, onChange, language, disabled }: ClauseParameterInputProps) {

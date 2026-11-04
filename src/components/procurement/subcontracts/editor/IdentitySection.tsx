@@ -9,7 +9,7 @@
  */
 
 import { DatePickerField } from '@/components/ui/date-picker-field';
-import { Input } from '@/components/ui/input';
+import { EnumSelect } from '@/components/ui/enum-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
@@ -18,7 +18,8 @@ import { issuesAt } from '@/subapps/procurement/subcontracts/agreements/issue-pa
 import { DOCUMENT_LANGUAGES } from '@/subapps/procurement/subcontracts/document/document-locale';
 import { CLAUSE_AUTHORITATIVE_LANGUAGE } from '@/subapps/procurement/subcontracts/types/clause';
 import { AGREEMENT_DOCUMENT_MODES } from '@/subapps/procurement/subcontracts/types/trade-template';
-import { EditorField, issuesIdOf } from './EditorField';
+import { LocalizedTextFields } from '../sections/LocalizedTextFields';
+import { EditorField } from './EditorField';
 import type { AgreementEditor } from './useAgreementEditor';
 
 /** Η τιμή «χωρίς δεύτερη γλώσσα» στο Select — όχι κενό (CHECK 3.48: το Radix δεσμεύει το `''`). */
@@ -30,37 +31,22 @@ interface SectionProps {
 }
 
 function TitleFields({ editor }: SectionProps) {
-  const { t } = useTranslation('procurement');
+  const { t, i18n } = useTranslation('procurement');
   const { draft, update } = editor;
-  const secondary = draft.languages.secondary;
-  const setTitle = (language: string, text: string) => update({ ...draft, title: { ...draft.title, [language]: text } });
   return (
-    <>
-      <EditorField id="editor-title-el" label={t('subcontracts.editor.identity.title')} issues={issuesAt(editor.issues, 'title')}>
-        <Input id="editor-title-el" value={draft.title[CLAUSE_AUTHORITATIVE_LANGUAGE] ?? ''} onChange={(event) => setTitle(CLAUSE_AUTHORITATIVE_LANGUAGE, event.target.value)} aria-describedby={issuesIdOf('editor-title-el')} />
-      </EditorField>
-      {secondary && (
-        <EditorField id="editor-title-secondary" label={t('subcontracts.editor.identity.titleSecondary')}>
-          <Input id="editor-title-secondary" value={draft.title[secondary] ?? ''} onChange={(event) => setTitle(secondary, event.target.value)} />
-        </EditorField>
-      )}
-    </>
+    <LocalizedTextFields
+      id="editor-title-el" label={t('subcontracts.editor.identity.title')} value={draft.title} onChange={(title) => update({ ...draft, title })}
+      path="title" issues={editor.issues} language={resolveHumanLanguage(i18n.language)} secondaryLanguage={draft.languages.secondary}
+    />
   );
 }
 
 function ModeField({ editor }: SectionProps) {
   const { t } = useTranslation('procurement');
   const { draft, update } = editor;
-  const choose = (mode: string) => {
-    const next = AGREEMENT_DOCUMENT_MODES.find((candidate) => candidate === mode);
-    if (next) update({ ...draft, documentMode: next });
-  };
   return (
     <EditorField id="editor-mode" label={t('subcontracts.editor.identity.mode')} issues={issuesAt(editor.issues, 'documentMode')}>
-      <Select value={draft.documentMode} onValueChange={choose}>
-        <SelectTrigger id="editor-mode"><SelectValue /></SelectTrigger>
-        <SelectContent>{AGREEMENT_DOCUMENT_MODES.map((mode) => <SelectItem key={mode} value={mode}>{t(`subcontracts.editor.identity.modes.${mode}`)}</SelectItem>)}</SelectContent>
-      </Select>
+      <EnumSelect id="editor-mode" value={draft.documentMode} values={AGREEMENT_DOCUMENT_MODES} getLabel={(mode) => t(`subcontracts.editor.identity.modes.${mode}`)} onValueChange={(documentMode) => update({ ...draft, documentMode })} />
     </EditorField>
   );
 }

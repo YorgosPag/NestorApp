@@ -1085,7 +1085,6 @@
       },
       "identity": {
         "title": "Title",
-        "titleSecondary": "Title (second language)",
         "mode": "Issuing mode",
         "modes": {
           "offer_becomes_agreement": "A · the offer becomes the agreement at mobilisation",
@@ -1115,7 +1114,6 @@
         "empty": "No clauses.",
         "add": "Add a clause from the library",
         "remove": "Remove clause {clause}",
-        "fromTerms": "from the commercial terms",
         "resetPreferred": "Preferred value",
         "reason": "Reason for deviation",
         "reasonPlaceholder": "Why is this value needed? The approver will see it.",
@@ -1412,6 +1410,211 @@
         "clauses": "Clauses",
         "chooseTitle": "Choose a template",
         "chooseDescription": "Template editing is coming soon; here you read and archive."
+      }
+    },
+    "sections": {
+      "issueCount": "{count, plural, one {# issue} other {# issues}}",
+      "shares": {
+        "share": "Share (%)",
+        "remainder": "Remainder",
+        "remove": "Remove share {position}",
+        "whole": "Total {total} — complete",
+        "partial": "Total {total} — must be 100%"
+      },
+      "lines": {
+        "title": "Lines",
+        "empty": "No lines yet.",
+        "add": "Add line",
+        "position": "Line {position}",
+        "duplicate": "Duplicate line {position}",
+        "remove": "Remove line {position}",
+        "removeReferencedTitle": "Remove line {position}?",
+        "removeReferenced": "The terms set a minimum output for this line. That term will not be deleted: it stays as an issue until you fix it.",
+        "description": "Description",
+        "kind": "Kind",
+        "pricing": "Pricing",
+        "unit": "Unit",
+        "quantity": "Estimated quantity",
+        "quantityOptional": "Optional",
+        "unitPrice": "Unit price (€)",
+        "lumpSum": "Lump sum (€)",
+        "amount": "Amount",
+        "details": "Details",
+        "clientPrice": "Client price (€)",
+        "clientPriceNone": "None",
+        "printClientPrice": "Printed on the agreement",
+        "comment": "Comment",
+        "measurementRule": "Measurement rule",
+        "measurementHint": "Paragraphs separated by a blank line. List: lines starting with “- ” or “1. ”.",
+        "measurementHasParameters": "This rule has parameters and cannot be edited here.",
+        "stages": "Stages",
+        "stageLabel": "Stage",
+        "addStage": "Add stage",
+        "insuredCap": "Insured-days cap",
+        "insuredCapQuantity": "Units per insured day",
+        "paymentOverride": "Payment for this line",
+        "inheritPlan": "As in the payment plan",
+        "total": "Estimated value: {amount}",
+        "totalLowerBound": "{count, plural, one {Estimated value at least {amount} — # line without an estimated quantity} other {Estimated value at least {amount} — # lines without an estimated quantity}}",
+        "ownRetention": "Own retention"
+      },
+      "plan": {
+        "basisLabel": "What is paid",
+        "basis": {
+          "measured_progress": "Measured quantities",
+          "stage_completion": "Stage completion",
+          "milestone": "Milestones",
+          "time_and_materials": "Time and materials (work days)",
+          "labor_advance_capped": "Capped labour advance",
+          "lump_sum_on_completion": "All on completion",
+          "advance_payment": "Advance with set-off"
+        },
+        "capAtEarnedValue": "Cap: work produced",
+        "cap": {
+          "capped": "Never above work produced",
+          "uncapped": "No cap"
+        },
+        "title": "Payment plan",
+        "schedule": "When it is paid",
+        "schedules": {
+          "on_completion": "On completion of the works",
+          "on_milestones": "At each milestone",
+          "on_request": "When an invoice is submitted",
+          "recurring": "Periodically"
+        },
+        "every": "Every",
+        "unit": "Time unit",
+        "units": {
+          "day": "days",
+          "week": "weeks",
+          "month": "months"
+        },
+        "anchor": "Anchor",
+        "anchors": {
+          "start_date": "Start date",
+          "weekday": "Day of the week",
+          "month_days": "Days of the month"
+        },
+        "weekday": "Day",
+        "monthDays": "Days of the month (e.g. 5, 20)",
+        "holidayShift": "If the day is not a business day",
+        "holiday": {
+          "previous_business_day": "The previous business day",
+          "next_business_day": "The next business day",
+          "none": "Same day"
+        },
+        "finalSettlement": "Final settlement",
+        "final": {
+          "final_acceptance": "On final acceptance",
+          "milestone": "At a milestone",
+          "days_after_completion": "Days after completion"
+        },
+        "milestone": "Milestone",
+        "days": "Days",
+        "regular": "Payment method",
+        "ownFinal": "A different method for the final settlement",
+        "finalShares": "Final settlement method",
+        "instrumentLabel": "Instrument",
+        "instrument": {
+          "bank_transfer": "Bank transfer",
+          "cheque": "Cheque",
+          "cash": "Cash",
+          "set_off": "Set-off"
+        },
+        "chequeDays": "Cheque maturity days",
+        "addInstrument": "Add instrument",
+        "milestones": "Milestone payments",
+        "amountKind": "Amount type",
+        "amountKinds": {
+          "percent": "Percentage",
+          "fixed": "Fixed amount"
+        },
+        "amount": "Amount",
+        "removeMilestone": "Remove milestone {position}",
+        "addMilestone": "Add milestone",
+        "advance": "Advance payment",
+        "advanceAmount": "Advance amount (€)",
+        "advanceRecovery": "Set-off",
+        "recovery": {
+          "on_final": "At final settlement",
+          "per_payment": "On each invoice"
+        },
+        "advanceRate": "Set-off rate",
+        "retention": "Performance retention",
+        "retentionRate": "Retention rate",
+        "releaseWhen": "When it is released",
+        "releaseMonths": "Months",
+        "release": {
+          "title": "Release in instalments",
+          "add": "Add instalment",
+          "provisional_acceptance": "On provisional acceptance",
+          "final_acceptance": "On final acceptance",
+          "months_after_provisional": "Months after provisional acceptance",
+          "months_after_final": "Months after final acceptance"
+        },
+        "asPrinted": "As it will be printed"
+      },
+      "bound": {
+        "governedBy": "Governed by the clause “{clause}” ({parameter})",
+        "editInTerms": "Change in the terms",
+        "reason": "Reason: {reason}"
+      },
+      "nav": {
+        "label": "Agreement sections",
+        "identity": "Identity",
+        "parties": "Parties",
+        "lines": "Lines",
+        "terms": "Terms",
+        "plan": "Payment plan",
+        "clauses": "Clauses"
+      },
+      "terms": {
+        "title": "Commercial terms",
+        "vatTreatment": "VAT in prices",
+        "vat": {
+          "excluded": "Prices exclude VAT",
+          "included": "Prices include VAT"
+        },
+        "vatRate": "VAT rate",
+        "withholding": "Tax withholding",
+        "withholdingApplies": "Tax withholding applies",
+        "cashLimit": "Cash limit per payment (€)",
+        "penalty": "Penalty clause",
+        "penaltyPerDay": "Amount per day of delay (€)",
+        "penaltyCap": "Maximum share of the value",
+        "crew": "Crew",
+        "crewHeadcount": "Minimum headcount",
+        "crewRole": "Role",
+        "crewTrade": "Trade",
+        "noTrade": "No trade",
+        "crewRatio": "Ratio parts",
+        "crewWage": "Daily wage (€)",
+        "noWage": "No daily wage",
+        "removeMember": "Remove member {position}",
+        "addMember": "Add member",
+        "costSharing": "Cost sharing",
+        "costDescription": "What is shared",
+        "costShares": "Shares",
+        "addParty": "Add party",
+        "party": "Party",
+        "removeCost": "Remove cost sharing {position}",
+        "addCost": "Add cost sharing",
+        "requiredDocuments": "Required documents",
+        "documentKind": "Document",
+        "documentWhen": "When",
+        "when": {
+          "before_each_payment": "Before each payment",
+          "days_before_start": "Days before start"
+        },
+        "documentDays": "Days",
+        "removeDocument": "Remove document {position}",
+        "addDocument": "Add document",
+        "minimumOutputs": "Minimum output",
+        "removedLine": "Removed line",
+        "outputLine": "Line",
+        "outputPerDay": "Units per day",
+        "removeOutput": "Remove output {position}",
+        "addOutput": "Add output"
       }
     }
   }
