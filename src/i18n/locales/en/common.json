@@ -923,7 +923,8 @@
       "floorplan-symbol": "Floor plan symbol",
       "imported-mesh": "Imported 3D mesh",
       "generic-solid": "Solid",
-      "bim_dimension_3d": "3D dimension"
+      "bim_dimension_3d": "3D dimension",
+      "opportunity": "Opportunity"
     },
     "values": {
       "active": "Active",

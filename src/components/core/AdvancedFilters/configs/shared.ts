@@ -9,6 +9,7 @@ import {
 } from '@/constants/property-statuses-enterprise';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { TRIAGE_STATUSES } from '@/types/crm';
+import type { OpportunityStage } from '@/config/crm/opportunity-stages';
 
 export {
   PROPERTY_FILTER_LABELS,
@@ -78,7 +79,7 @@ export const CRM_STAGE_LABELS = {
   contract: 'filters.crmStages.contract',
   closed_won: 'filters.crmStages.closed_won',
   closed_lost: 'filters.crmStages.closed_lost',
-} as const;
+} as const satisfies Record<OpportunityStage, string>;
 
 export const CRM_STATUS_LABELS = {
   active: 'filters.crmStatus.active',

@@ -12,6 +12,11 @@ import { PageLoadingState, PageErrorState } from '@/core/states';
 import type { Opportunity } from '@/types/crm';
 
 import { useOpportunities } from '../hooks/useOpportunities';
+import { useRealtimeOpportunities } from '@/services/realtime/hooks/useRealtimeOpportunities';
+import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
+import { useOptimisticStages } from '../stage-move/useOptimisticStages';
+import { useStageTransitionCommand } from '../stage-move/useStageTransitionCommand';
+import { StageMoveDialogs } from '../stage-move/StageMoveDialogs';
 import { AddOpportunityDialog } from './dialogs/AddOpportunityDialog';
 import { EditOpportunityModal } from './EditOpportunityModal';
 import { OpportunityColumns } from './OpportunityColumns';
@@ -21,20 +26,26 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 
+/** ADR-929 — η άδεια αλλαγής σταδίου· ο server την επιβάλλει ξανά (`crm:opportunities:update`). Εδώ μόνο για να μη σέρνεται ό,τι θα απορριφθεί. */
+const STAGE_PERMISSION = 'crm:opportunities:update';
+
+/** ADR-929 — ζωντανός πίνακας: τα δεδομένα από τη συνδρομή, η αισιόδοξη εικόνα πάνω τους, η ΜΙΑ εντολή μετακίνησης. */
+function useLivePipeline() {
+  const { opportunities, loading, error, refetch } = useRealtimeOpportunities();
+  const { displayed, onOptimistic, onRevert } = useOptimisticStages(opportunities);
+  const command = useStageTransitionCommand({ onOptimistic, onRevert });
+  const { permissions, isBypass } = useEffectivePermissions();
+  return { opportunities: displayed, loading, error, refetch, command, canMove: isBypass || permissions.includes(STAGE_PERMISSION) };
+}
+
 export function PipelineTab() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('crm');
-  const {
-    opportunities,
-    loading,
-    error,
-    fetchOpportunities,
-    addOpportunity,
-    deleteOpportunity: removeOpportunity
-  } = useOpportunities();
-  
+  const { addOpportunity, deleteOpportunity: removeOpportunity } = useOpportunities();
+  const { opportunities, loading, error, refetch: fetchOpportunities, command, canMove } = useLivePipeline();
+
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
@@ -84,10 +95,13 @@ export function PipelineTab() {
               </div>
           ) : (
             viewMode === 'pipeline' ? (
-              <OpportunityColumns 
+              <OpportunityColumns
                 opportunities={opportunities}
                 onEdit={handleEdit}
                 onDelete={removeOpportunity}
+                onMove={command.requestMove}
+                canMove={canMove}
+                isMoving={command.isMoving}
               />
             ) : (
               <LeadsList refreshTrigger={refreshCounter} />
@@ -100,6 +114,8 @@ export function PipelineTab() {
           onOpenChange={setOpenAddDialog}
           onSubmit={addOpportunity}
         />
+
+        <StageMoveDialogs dialogs={command.dialogs} />
 
         {editingOpportunity && (
           <EditOpportunityModal

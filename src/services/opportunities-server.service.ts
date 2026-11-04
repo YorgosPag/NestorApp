@@ -12,6 +12,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { isOpportunityStage, OPPORTUNITY_STAGE_IDS } from '@/config/crm/opportunity-stages';
+import { recordEntityUpdate, type AuditActor } from '@/services/audit/record-entity-update';
+import { EntityAuditService } from '@/services/entity-audit.service';
 
 const logger = createModuleLogger('OpportunitiesServerService');
 
@@ -21,8 +24,6 @@ function getDb() {
   return db;
 }
 
-// Valid opportunity stages
-const VALID_STAGES = ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'] as const;
 
 export interface ServerOpportunityCreatePayload {
   name: string;
@@ -37,6 +38,10 @@ export interface ServerOpportunityCreatePayload {
 
 export interface ServerOpportunityUpdatePayload {
   name?: string;
+  /**
+   * ⛔ ΔΕΝ γράφεται εδώ (ADR-929): το στάδιο αλλάζει **μόνο** από `POST /api/opportunities/[id]/stage`
+   * (έλεγχος σύγκρουσης, υποχρεωτικά στοιχεία κλεισίματος, ιστορικό). Η παρουσία του ⇒ 400, όχι σιωπηλή αγνόηση.
+   */
   stage?: string;
   value?: number;
   probability?: number;
@@ -61,7 +66,7 @@ function validateSharedOpportunityFields(data: {
   readonly value?: number;
   readonly probability?: number;
 }): string | null {
-  if (data.stage && !VALID_STAGES.includes(data.stage as typeof VALID_STAGES[number])) {
+  if (data.stage && !isOpportunityStage(data.stage)) {
     return `Invalid stage: ${data.stage}`;
   }
   if (data.value !== undefined && data.value < 0) {
@@ -124,7 +129,8 @@ export class OpportunitiesServerService {
   static async create(
     data: ServerOpportunityCreatePayload,
     companyId: string,
-    createdBy: string
+    createdBy: string,
+    actorEmail: string | null = null,
   ): Promise<{ success: boolean; id?: string; error?: string }> {
     try {
       // Validation
@@ -145,7 +151,7 @@ export class OpportunitiesServerService {
         id,
         name: data.name.trim(),
         leadId: data.leadId ?? null,
-        stage: data.stage ?? 'lead',
+        stage: data.stage ?? OPPORTUNITY_STAGE_IDS[0],
         value: data.value ?? 0,
         probability: data.probability ?? 0,
         expectedCloseDate: data.expectedCloseDate ?? null,
@@ -158,6 +164,10 @@ export class OpportunitiesServerService {
       };
 
       await db.collection(COLLECTIONS.OPPORTUNITIES).doc(id).set(opportunity);
+      await recordEntityUpdate({
+        entityType: 'opportunity', entityId: id, before: {}, written: opportunity, action: 'created',
+        ctx: { uid: createdBy, email: actorEmail, companyId }, entityName: data.name.trim(),
+      });
 
       logger.info(`Created opportunity ${id} for company ${companyId}`);
 
@@ -173,16 +183,20 @@ export class OpportunitiesServerService {
     id: string,
     data: ServerOpportunityUpdatePayload,
     companyId: string,
-    updatedBy: string
+    updatedBy: string,
+    actorEmail: string | null = null,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const owned = await loadOwnedOpportunity(id, companyId);
       if ('error' in owned) return { success: false, error: owned.error };
-      const { docRef } = owned;
+      const { docRef, existing } = owned;
 
       // Validation
       if (data.name !== undefined && data.name.trim().length === 0) {
         return { success: false, error: 'Opportunity name cannot be empty' };
+      }
+      if (data.stage !== undefined) {
+        return { success: false, error: 'Stage changes go through POST /api/opportunities/[id]/stage' };
       }
       const invalid = validateSharedOpportunityFields(data);
       if (invalid) return { success: false, error: invalid };
@@ -193,7 +207,6 @@ export class OpportunitiesServerService {
       };
 
       if (data.name !== undefined) updates.name = data.name.trim();
-      if (data.stage !== undefined) updates.stage = data.stage;
       if (data.value !== undefined) updates.value = data.value;
       if (data.probability !== undefined) updates.probability = data.probability;
       if (data.expectedCloseDate !== undefined) updates.expectedCloseDate = data.expectedCloseDate;
@@ -202,6 +215,10 @@ export class OpportunitiesServerService {
       if (data.leadId !== undefined) updates.leadId = data.leadId ?? null;
 
       await docRef.update(updates);
+      await recordEntityUpdate({
+        entityType: 'opportunity', entityId: id, before: existing, written: updates,
+        ctx: { uid: updatedBy, email: actorEmail, companyId },
+      });
 
       logger.info(`Updated opportunity ${id}`);
 
@@ -215,13 +232,18 @@ export class OpportunitiesServerService {
 
   static async remove(
     id: string,
-    companyId: string
+    companyId: string,
+    actor: AuditActor,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const owned = await loadOwnedOpportunity(id, companyId);
       if ('error' in owned) return { success: false, error: owned.error };
 
       await owned.docRef.delete();
+      await EntityAuditService.recordChange({
+        entityType: 'opportunity', entityId: id, entityName: typeof owned.existing.title === 'string' ? owned.existing.title : null,
+        action: 'deleted', changes: [], performedBy: actor.uid, performedByName: actor.email ?? null, companyId,
+      });
 
       // ADR-029 Phase D: search_documents row cleaned up by Cloud Function onOpportunityWrite (delete branch).
 

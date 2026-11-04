@@ -1,7 +1,7 @@
-import type { Opportunity } from '@/types/crm';
+import type { OpportunityStage } from '@/config/crm/opportunity-stages';
 import { getStatusBadgeVariant, type StatusBadgeVariant } from '@/lib/design-system';
 
-const STAGE_STATUS: Record<Opportunity['stage'], string> = {
+const STAGE_STATUS: Record<OpportunityStage, string> = {
   initial_contact: 'pending',
   qualification: 'reserved',
   viewing: 'completed',
@@ -16,5 +16,5 @@ const STAGE_STATUS: Record<Opportunity['stage'], string> = {
  * Παραλλαγή `<Badge>` για το στάδιο ευκαιρίας — το `Badge` βάζει γέμισμα ΚΑΙ το μετρημένο μελάνι του.
  * Ως τις 2026-10-29 επέστρεφε `getStatusColor(x,'bg')` + `getStatusColor(x,'text')` ⇒ ίδιο token, αόρατη ετικέτα (ADR-770).
  */
-export const getStageBadgeVariant = (stage?: Opportunity['stage']): StatusBadgeVariant =>
+export const getStageBadgeVariant = (stage?: OpportunityStage): StatusBadgeVariant =>
   getStatusBadgeVariant(STAGE_STATUS[stage ?? 'initial_contact']);

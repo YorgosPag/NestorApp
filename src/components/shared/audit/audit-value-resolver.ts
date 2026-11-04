@@ -32,6 +32,7 @@ import i18next from 'i18next';
 import { getAuditValueCatalog, type AuditCatalogRef } from '@/config/audit-value-catalogs';
 import { calendarDateOfDateKey } from '@/lib/calendar/date-key';
 import { formatDate } from '@/lib/intl-utils';
+import { toCatalogKey } from '@/lib/string/catalog-key';
 
 /**
  * Minimal subset of the react-i18next `t` function signature used here.
@@ -55,9 +56,7 @@ export type AuditTranslator = (
  * The pre-commit CHECK 3.14 guarantees referenced catalogs only contain
  * camelCase keys, so this one-way conversion is always safe.
  */
-function toCamelCase(value: string): string {
-  return value.replace(/[_-]([a-z0-9])/g, (_, c: string) => c.toUpperCase());
-}
+const toCamelCase = toCatalogKey;
 
 /**
  * Attempt a single `t()` lookup. Returns the translation if the key exists

@@ -18,8 +18,8 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { OpportunitiesServerService } from '@/services/opportunities-server.service';
-import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { respondWithFailure, respondWithServiceResult } from './_service-response';
 
 const CreateOpportunitySchema = z.object({
   name: z.string().min(1).max(200),
@@ -46,23 +46,12 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         const result = await OpportunitiesServerService.create(
           body,
           ctx.companyId,
-          ctx.uid
+          ctx.uid,
+          ctx.email ?? null,
         );
-
-        if (!result.success) {
-          return NextResponse.json(
-            { success: false, error: result.error },
-            { status: 400 }
-          );
-        }
-
-        return NextResponse.json(
-          { success: true, data: { id: result.id } },
-          { status: 201 }
-        );
+        return respondWithServiceResult(result, () => NextResponse.json({ success: true, data: { id: result.id } }, { status: 201 }));
       } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create opportunity');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return respondWithFailure(error, 'Failed to create opportunity');
       }
     }
   );

@@ -11,6 +11,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';
+import { isOpportunityStage, type OpportunityStage } from '@/config/crm/opportunity-stages';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -29,7 +30,7 @@ interface ContactCardProps {
 
 // 🏢 ENTERPRISE: Stage-based styling
 const getLeadStageBadgeClass = (stage: string): string => {
-  const stageClasses: Record<string, string> = {
+  const stageClasses: Record<OpportunityStage, string> = {
     'initial_contact': 'bg-[hsl(var(--bg-info))]/20 text-primary',
     'qualification': 'bg-accent text-foreground',
     'viewing': 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
@@ -39,7 +40,7 @@ const getLeadStageBadgeClass = (stage: string): string => {
     'closed_won': 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
     'closed_lost': 'bg-destructive/10 text-destructive'
   };
-  return stageClasses[stage] || 'bg-muted text-muted-foreground';
+  return isOpportunityStage(stage) ? stageClasses[stage] : 'bg-muted text-muted-foreground';
 };
 
 const formatContactDate = (date: string | Date | { toDate(): Date }) =>

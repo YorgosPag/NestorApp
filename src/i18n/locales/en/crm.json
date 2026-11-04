@@ -157,6 +157,26 @@
     "messages": {
       "addSuccess": "Opportunity created successfully",
       "deleteSuccess": "Opportunity deleted successfully"
+    },
+    "auditStages": {
+      "initialContact": "Initial contact",
+      "qualification": "Qualification",
+      "viewing": "Viewing",
+      "proposal": "Proposal",
+      "negotiation": "Negotiation",
+      "contract": "Contract",
+      "closedWon": "Closed (won)",
+      "closedLost": "Closed (lost)"
+    },
+    "lostReasons": {
+      "price": "Price",
+      "financing": "Financing / mortgage",
+      "location": "Location",
+      "propertyMismatch": "Property did not fit",
+      "competitor": "Chose another property or agent",
+      "timing": "Timing",
+      "noResponse": "No response",
+      "other": "Other"
     }
   },
   "dashboard": {
@@ -353,6 +373,50 @@
     "empty": {
       "title": "No opportunities",
       "subtitle": "Add your first opportunity to get started!"
+    },
+    "board": {
+      "sortLabel": "Sort within columns",
+      "sort": {
+        "value": "Value (highest first)",
+        "closeDate": "Expected close (soonest first)",
+        "activity": "Last activity",
+        "stageAge": "Days in stage (most first)"
+      },
+      "totalsLabel": "Total {total}, weighted {weighted}",
+      "emptyColumn": "Drag a card here"
+    },
+    "card": {
+      "stageDays": "{count, plural, one {# day in stage} other {# days in stage}}",
+      "staleDays": "{count, plural, one {# day in stage — needs attention} other {# days in stage — needs attention}}",
+      "moveTo": "Move to…",
+      "moveToOf": "Move “{name}” to another stage"
+    },
+    "move": {
+      "moved": "Moved to “{stage}”.",
+      "undo": "Undo",
+      "conflict": "Someone else moved it meanwhile — it is now in “{stage}”.",
+      "unknownStage": "an unknown stage",
+      "refused": "You are not allowed to change this opportunity's stage.",
+      "failed": "The move was not saved. The card went back to its place."
+    },
+    "close": {
+      "wonTitle": "Close as won",
+      "lostTitle": "Close as lost",
+      "description": "Fill in the closing details for “{name}”.",
+      "finalValue": "Final amount (€)",
+      "closeDate": "Close date",
+      "lostReason": "Lost reason",
+      "lostReasonPlaceholder": "Choose a reason",
+      "lostNote": "Note (optional)",
+      "cancel": "Cancel",
+      "confirmWon": "Close as won",
+      "confirmLost": "Close as lost"
+    },
+    "reopen": {
+      "title": "Reopen opportunity?",
+      "description": "“{name}” will reopen in “{stage}”. Closing details will be cleared and the reopening will be recorded in the history.",
+      "cancel": "Cancel",
+      "confirm": "Reopen"
     }
   },
   "email": {

@@ -3845,6 +3845,11 @@
 
 ## Pending tasks (priority order)
 
+### 📈 Ευκαιρίες CRM: οι μη-σταδιακές εγγραφές γράφονται από τον browser χωρίς ίχνος + δύο σχήματα εγγράφου (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-04, ADR-929 · ADR-195 · N.0.2)
+- **Τι (1)**: δημιουργία / επεξεργασία (σημειώσεις, αξία, επαφή…) / διαγραφή ευκαιρίας περνούν από `src/services/opportunities.service.ts` (client SDK `setDoc`/`updateDoc`/`deleteDoc`) ⇒ **καμία γραμμή ιστορικού** (ADR-195). Το CHECK 3.17 δεν το πιάνει: το αρχείο ονομάζει τη συλλογή ως `OPPORTUNITIES_COLLECTION`, όχι `COLLECTIONS.OPPORTUNITIES` κοντά στην εγγραφή. Το **στάδιο** έχει ήδη έναν γραφέα με ίχνος (ADR-929, CHECK 3.114)· τα υπόλοιπα όχι.
+- **Τι (2)**: το `src/services/opportunities-server.service.ts` (Admin, `POST/PATCH /api/opportunities`) γράφει **άλλο σχήμα** από τον πελάτη: `name`/`value`/`leadId` αντί για `title`/`estimatedValue`/`contactId`. Ό,τι δημιουργεί ο server δεν φαίνεται σωστά στον πίνακα (κενός τίτλος, χωρίς αξία).
+- **Fix**: ΕΝΑ σχήμα (το του πελάτη, `types/crm.ts`) και όλες οι εγγραφές μέσω server routes με `recordEntityUpdate` (όπως το στάδιο)· οι κανόνες μετά κλείνουν το client write εντελώς (`allow update: if false`), όπως οι άλλες συλλογές «ενός γραφέα». Πριν: grep καταναλωτών του `opportunities-client.service.ts` και του `POST /api/opportunities` (AI pipeline;). Μετά: ενημέρωση του `.opportunity-stage-authority.json` (το `opportunities.service.ts` φεύγει από τους κατόχους).
+
 ### 📨 «Διάβασε JSON ή 400» γραμμένο ξεχωριστά σε 17 routes (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-30, ADR-225 Phase 2 Boy Scout · ADR-245 · N.0.2)
 - **Τι**: `try { raw = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }` σε 17 αρχεία του `src/app/api` (`grep -rn "Invalid JSON body" src/app/api`)· δύο τοπικά προοίμια το έχουν ήδη κλείσει στη γειτονιά τους (`admin/bim-diagnostics/[id]/_request-preamble.ts` · `telemetry/bim-performance/_session-request.ts`).
 - **Γιατί**: το `jscpd --diff` (CHECK 3.28) τα ονομάζει μόνο όταν δύο αδέλφια μπουν στο ίδιο commit — δηλαδή μπλοκάρει άσχετα commits.

@@ -9,6 +9,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { OpportunityFormDialog } from './dialogs/OpportunityFormDialog';
 import '@/lib/design-system';
 import { pickChangedOpportunityFields } from '../utils/opportunity-utils';
+import { useStageTransitionCommand } from '../stage-move/useStageTransitionCommand';
+import { StageMoveDialogs } from '../stage-move/StageMoveDialogs';
 
 const logger = createModuleLogger('EditOpportunityModal');
 
@@ -22,20 +24,14 @@ interface EditOpportunityModalProps {
 export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdated }: EditOpportunityModalProps) {
   const { t } = useTranslation('crm');
   const notifications = useNotifications();
+  const stageCommand = useStageTransitionCommand();
 
-  const handleSave = async (formData: Partial<Opportunity>) => {
-    if (!opportunity?.id) return;
-
-    const updates = pickChangedOpportunityFields(opportunity, formData);
+  /** Τα υπόλοιπα πεδία — όπως πριν. Το στάδιο ΔΕΝ γράφεται εδώ (ADR-929). */
+  const saveFields = async (id: string, updates: Partial<Opportunity>) => {
     if (Object.keys(updates).length === 0) return;
-
     try {
-      await updateOpportunityWithPolicy({
-        opportunityId: opportunity.id,
-        updates,
-      });
+      await updateOpportunityWithPolicy({ opportunityId: id, updates });
       notifications.success(t('opportunities.editModal.messages.success'));
-      onLeadUpdated();
     } catch (error) {
       notifications.error(t('opportunities.editModal.messages.error'));
       logger.error('Error updating opportunity', { error });
@@ -43,13 +39,26 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
     }
   };
 
+  const handleSave = async (formData: Partial<Opportunity>) => {
+    if (!opportunity?.id) return;
+    // ADR-929: το στάδιο περνά από την ΙΔΙΑ εντολή με το σύρσιμο (διάλογος κλεισίματος, έλεγχος σύγκρουσης,
+    // ιστορικό) — η φόρμα μένει ανοιχτή μέχρι να απαντήσει ο άνθρωπος στον διάλογο.
+    const { stage, ...updates } = pickChangedOpportunityFields(opportunity, formData);
+    await saveFields(opportunity.id, updates);
+    if (stage && stage !== opportunity.stage) await stageCommand.requestMove(opportunity, stage);
+    onLeadUpdated();
+  };
+
   return (
-    <OpportunityFormDialog
-      title={t('opportunities.editModal.title')}
-      open={isOpen}
-      onClose={onClose}
-      initialData={opportunity}
-      onSave={handleSave}
-    />
+    <>
+      <StageMoveDialogs dialogs={stageCommand.dialogs} />
+      <OpportunityFormDialog
+        title={t('opportunities.editModal.title')}
+        open={isOpen}
+        onClose={onClose}
+        initialData={opportunity}
+        onSave={handleSave}
+      />
+    </>
   );
 }

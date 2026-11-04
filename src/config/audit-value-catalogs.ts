@@ -140,6 +140,10 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // γεφυρώνει την αποθηκευμένη `under_review` → `underReview`.
   quoteStatus: { ns: 'quotes', path: 'quotes.auditStatuses' },
 
+  // ── ADR-929: η ροή πωλήσεων — στάδιο ευκαιρίας και λόγος απώλειας (camelCase· ο resolver γεφυρώνει `closed_won`).
+  opportunityStage: { ns: 'crm', path: 'opportunities.auditStages' },
+  opportunityLostReason: { ns: 'crm', path: 'opportunities.lostReasons' },
+
   // ── ADR-916 §5.2: ο κύκλος ζωής της **παράδοσης φακέλου** — δικό του λεξιλόγιο (`awaiting-completion` · `ready` ·
   // `cancelled`), άρα **όχι** στο κοινό `lifecycle` (που κρατά αγγελία και διάθεση). Δείχνει εδώ το
   // `PROPERTY_HANDOVER_TRACKED_FIELDS.lifecycle.enumCatalog` (μόνο camelCase — ο resolver κανονικοποιεί).

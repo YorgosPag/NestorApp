@@ -503,7 +503,8 @@
       "evidenceFileId": "Evidence document",
       "grant": "Active grant",
       "relation": "Relation to the brand",
-      "reviewNote": "Review note"
+      "reviewNote": "Review note",
+      "quoteIntake": "Quote request intake"
     }
   },
   "attributes": {
@@ -668,9 +669,7 @@
       "removeLevel": "Remove second level",
       "common": "Common (model)",
       "level": "Level {number}",
-      "dragOf": "Move “{name}”",
-      "levelOf": "Level of “{name}”",
-      "dragInstructions": "Press Space to pick up the attribute, move it with the arrow keys to another column and press Space to drop it. Alternatively, choose a level from the card's list."
+      "levelOf": "Level of “{name}”"
     },
     "table": {
       "lead": "The models × characteristics table of the printed catalogue: the columns are the variants, the rows are declared here.",

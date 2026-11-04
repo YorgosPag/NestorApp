@@ -3,6 +3,8 @@
 
 import type { TriageStatus } from '@/constants/triage-statuses';
 import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
+import type { OpportunityStage } from '@/config/crm/opportunity-stages';
+import type { OpportunityLostReason } from '@/config/crm/opportunity-lost-reasons';
 
 export type FirestoreishTimestamp = Date | string | { toDate(): Date };
 
@@ -31,7 +33,19 @@ export interface Opportunity {
     };
     locations?: string[];
   };
-  stage: 'initial_contact' | 'qualification' | 'viewing' | 'proposal' | 'negotiation' | 'contract' | 'closed_won' | 'closed_lost';
+  /** Η ΜΙΑ ρίζα: `@/config/crm/opportunity-stages` (ADR-929). Γράφεται ΜΟΝΟ από την πόρτα αλλαγής σταδίου. */
+  stage: OpportunityStage;
+  /** Πότε μπήκε στο τρέχον στάδιο — για «μέρες στο στάδιο» / παγωμένη ευκαιρία (ADR-929). */
+  stageChangedAt?: FirestoreishTimestamp;
+  /** Πότε έκλεισε (won/lost)· καθαρίζει στο επανάνοιγμα. */
+  closedAt?: FirestoreishTimestamp;
+  /** Λόγος απώλειας — κλειστός κατάλογος `OPPORTUNITY_LOST_REASONS`. */
+  lostReason?: OpportunityLostReason;
+  lostReasonNote?: string;
+  /** Πόσες φορές ξανάνοιξε από κλειστό στάδιο — ώστε οι αναφορές να μη διαστρεβλώνονται. */
+  reopenCount?: number;
+  /** Έκδοση εγγράφου για έλεγχο σύγκρουσης (`version-check.ts`). */
+  _v?: number;
   probability?: number;
   estimatedValue?: number;
   expectedCloseDate?: FirestoreishTimestamp;

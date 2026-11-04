@@ -419,6 +419,25 @@
           "reason": "Το ORIENTATION_LABELS είναι ΑΛΛΟ λεξιλόγιο, ο προσανατολισμός ακινήτου (OrientationType). Μοιράζεται τις 8 τιμές της πυξίδας αλλά όχι τα corner/internal, και έχει δική του ρίζα (Orientation) και δικά του κλειδιά (properties-enums:units.orientation). Αν τα συγχωνεύαμε, ένα διαμέρισμα θα μπορούσε να έχει προσανατολισμό «γωνιακό»."
         }
       ]
+    },
+    {
+      "id": "opportunity-stage",
+      "root": "src/config/crm/opportunity-stages.ts",
+      "rootSymbol": "OPPORTUNITY_STAGE_IDS",
+      "typeName": "OpportunityStage",
+      "values": [
+        "initial_contact",
+        "qualification",
+        "viewing",
+        "proposal",
+        "negotiation",
+        "contract",
+        "closed_won",
+        "closed_lost"
+      ],
+      "threshold": 4,
+      "reason": "Τα στάδια της ροής πωλήσεων CRM (ADR-929). Ζούσαν ΔΥΟ ασύμβατα λεξιλόγια: τύπος/οθόνη/δεδομένα με initial_contact…closed_won και ο server με lead/qualified/…/won/lost, οπότε ο server απέρριπτε κάθε πραγματικό στάδιο. Μία ρίζα με είδος (open/won/lost), προεπιλεγμένη πιθανότητα και όριο «παγωμένης» κάρτας.",
+      "exemptions": []
     }
   ]
 }

@@ -19,6 +19,7 @@ import {
   resetData,
 } from '../_harness/emulator';
 import { getContext } from '../_harness/auth-contexts';
+import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { seedOpportunity } from '../_harness/seed-helpers';
 import { describeCrmOwnerLeg } from '../_harness/crm-owner-contract';
@@ -89,3 +90,33 @@ describe('opportunities.rules — tenant_direct (crmDirectMatrix)', () => {
  * για το εύρημα που το γέννησε (ADR-841 §7 Α21.14.8).
  */
 describeCrmOwnerLeg({ collection: 'opportunities', assigneeIsOwner: false });
+
+/**
+ * ADR-929 — το στάδιο έχει ΕΝΑΝ γραφέα (Admin SDK). Ακόμη και ο προνομιούχος γραφέας, που ο πίνακας αφήνει να
+ * κάνει update, ΔΕΝ γράφει στάδιο ή παράγωγό του από τον browser — γράφει όμως κανονικά τα υπόλοιπα πεδία.
+ */
+describe('opportunities.rules — ADR-929 πεδία σταδίου: μόνο από την πόρτα του server', () => {
+  let env: RulesTestEnvironment;
+  const docId = 'opportunity-stage-owned';
+
+  beforeAll(async () => { env = await initEmulator(); });
+  afterAll(async () => { await teardownEmulator(env); });
+  afterEach(async () => { await resetData(env); });
+
+  const STAGE_OWNED: ReadonlyArray<readonly [string, unknown]> = [
+    ['stage', 'closed_won'], ['status', 'won'], ['wonDate', '2026-11-04'], ['closedAt', '2026-11-04'],
+    ['stageChangedAt', new Date()], ['lostReason', 'price'], ['lostReasonNote', 'x'], ['reopenCount', 3], ['_v', 99],
+  ];
+
+  it.each(STAGE_OWNED)('same_tenant_admin × update «%s» ⇒ deny', async (field, value) => {
+    await seedOpportunity(env, docId);
+    const db = getContext(env, 'same_tenant_admin').firestore();
+    await assertFails(db.collection('opportunities').doc(docId).update({ [field]: value }));
+  });
+
+  it('same_tenant_admin × update μη-σταδιακού πεδίου (σημειώσεις) ⇒ allow', async () => {
+    await seedOpportunity(env, docId);
+    const db = getContext(env, 'same_tenant_admin').firestore();
+    await assertSucceeds(db.collection('opportunities').doc(docId).update({ notes: 'νέα σημείωση', updatedAt: new Date() }));
+  });
+});

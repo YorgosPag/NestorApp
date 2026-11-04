@@ -192,6 +192,7 @@
     "defineRoute::/api/admin/iso19650/costs",
     "defineRoute::/api/asset-packs",
     "defineRoute::/api/asset-packs/[packId]/[version]/[fileName]",
+    "defineRoute::/api/opportunities/[id]/stage",
     "defineRoute::/api/procurement",
     "defineRoute::/api/procurement/[poId]",
     "defineRoute::/api/procurement/[poId]/email",

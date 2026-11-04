@@ -1620,6 +1620,22 @@ export const QUOTE_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
 };
 
 /**
+ * ADR-929 — η ευκαιρία πώλησης. Το `status` ΔΕΝ παρακολουθείται: παράγεται από το στάδιο, άρα θα ήταν διπλή
+ * γραμμή για το ίδιο γεγονός. Ούτε τα `stageChangedAt` / `lastActivity` / `wonDate` (χρονοσφραγίδες της ίδιας πράξης).
+ */
+export const OPPORTUNITY_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
+  stage: { kind: 'scalar', label: 'stage', enumCatalog: AUDIT_VALUE_CATALOGS.opportunityStage },
+  probability: { kind: 'scalar', label: 'probability' },
+  estimatedValue: { kind: 'scalar', label: 'estimatedValue' },
+  closedAt: { kind: 'scalar', label: 'closedAt' },
+  lostReason: { kind: 'scalar', label: 'lostReason', enumCatalog: AUDIT_VALUE_CATALOGS.opportunityLostReason },
+  lostReasonNote: { kind: 'scalar', label: 'lostReasonNote' },
+  reopenCount: { kind: 'scalar', label: 'reopenCount' },
+  assignedTo: { kind: 'scalar', label: 'assignedTo' },
+  expectedCloseDate: { kind: 'scalar', label: 'expectedCloseDate' },
+};
+
+/**
  * Return the tracked-fields registry for a given `AuditEntityType`, or `null`
  * if no registry exists.
  *
@@ -1639,6 +1655,8 @@ export function getTrackedFieldsForEntityAuditType(
       return PROPERTY_TRACKED_FIELDS;
     case 'quote':
       return QUOTE_TRACKED_FIELDS;
+    case 'opportunity':
+      return OPPORTUNITY_TRACKED_FIELDS;
     case 'project':
       return PROJECT_TRACKED_FIELDS;
     case 'contact':

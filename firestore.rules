@@ -3536,10 +3536,17 @@ service cloud.firestore {
 
       allow create: if crmCanCreate();
 
+      // 🔒 ADR-929 — το ΣΤΑΔΙΟ και ό,τι παράγεται από αυτό έχουν ΕΝΑΝ γραφέα: `POST /api/opportunities/[id]/stage`
+      //    (Admin SDK: έλεγχος σύγκρουσης, υποχρεωτικά στοιχεία κλεισίματος, ιστορικό). Ο πελάτης τα διαβάζει, ΔΕΝ τα γράφει.
+      //    Η λίστα = `STAGE_OWNED_FIELDS` (`services/crm/opportunity-stage-transition.ts`)· την ισοτιμία τη φυλά η πύλη
+      //    «ένας γραφέας σταδίου ευκαιρίας» (CHECK 3.114).
       allow update: if isAuthenticated()
                     && resource != null
                     && crmWriterIsPrivileged(resource.data)
-                    && crmCompanyIdUnchanged(resource.data);
+                    && crmCompanyIdUnchanged(resource.data)
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                         'stage', 'status', 'wonDate', 'closedAt', 'stageChangedAt', 'lostReason', 'lostReasonNote', 'reopenCount', '_v'
+                       ]);
 
       allow delete: if isAuthenticated()
                     && resource != null

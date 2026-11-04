@@ -695,7 +695,18 @@
       "expenseAllocation": {
         "netAmount": "Καθαρό ποσό κατανομής"
       },
-      "availabilityDeclaration": "Διαθέσιμο από"
+      "availabilityDeclaration": "Διαθέσιμο από",
+      "opportunity": {
+        "stage": "Στάδιο",
+        "probability": "Πιθανότητα",
+        "estimatedValue": "Αξία",
+        "closedAt": "Ημερομηνία κλεισίματος",
+        "lostReason": "Λόγος απώλειας",
+        "lostReasonNote": "Σχόλιο απώλειας",
+        "reopenCount": "Επανανοίγματα",
+        "assignedTo": "Υπεύθυνος",
+        "expectedCloseDate": "Αναμενόμενο κλείσιμο"
+      }
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

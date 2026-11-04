@@ -91,6 +91,9 @@ const TRACKED_COLLECTION_KEYS = new Set([
   // ADR-901 Φ1 — η υπόθεση μεταβίβασης (audit entityType: 'conveyance_case', βιβλίο 'company').
   // Κάθε γραφή περνά από το conveyance-case.service.ts.
   'CONVEYANCE_CASES',
+  // ADR-929 — η ευκαιρία πώλησης (audit entityType: 'opportunity', βιβλίο 'company').
+  // Η αλλαγή σταδίου περνά από το opportunity-stage-transition.server.ts (ίχνος μετά το commit).
+  'OPPORTUNITIES',
   // ADR-917 Φ3β — γραμμή προϋπολογισμού έργου (audit entityType: 'project', βιβλίο 'company').
   // Κάθε γραφή περνά από το project-budget-lines.server.ts (ίχνος μετά το commit).
   'PROJECT_BUDGET_LINES',

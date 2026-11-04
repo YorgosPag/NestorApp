@@ -30,7 +30,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';
 import '@/lib/design-system';
-import { STAGE_IDS } from '../../utils/opportunity-utils';
+import { OPPORTUNITY_STAGE_IDS } from '@/config/crm/opportunity-stages';
 import { OpportunityContactField, type OpportunityContactValue } from '../OpportunityContactField';
 import { OpportunityDealFields } from '../OpportunityDealFields';
 
@@ -149,7 +149,7 @@ export function OpportunityFormDialog({
                 <SelectValue placeholder={t('opportunities.editModal.labels.stagePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                {STAGE_IDS.map(stageId => (
+                {OPPORTUNITY_STAGE_IDS.map(stageId => (
                   <SelectItem key={stageId} value={stageId}>{t(`opportunities.stages.${stageId}`)}</SelectItem>
                 ))}
               </SelectContent>

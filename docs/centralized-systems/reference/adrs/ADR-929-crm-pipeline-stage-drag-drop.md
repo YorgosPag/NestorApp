@@ -1,0 +1,125 @@
+# ADR-929 — Ροή πωλήσεων CRM: αλλαγή σταδίου με σύρσιμο, ΕΝΑΣ γραφέας σταδίου
+
+| | |
+|---|---|
+| **Status** | ✅ IMPLEMENTED — Φ1 θεμέλιο server · Φ2 `KanbanBoard` · Φ3 οθόνη · Φ4 κλείδωμα + CHECK 3.114 (κλαδί `agent/crm-pipeline-dnd`, 2026-11-04) |
+| **Date** | 2026-11-04 |
+| **Category** | CRM / Sales Pipeline |
+| **Canonical Location** | `src/config/crm/opportunity-stages.ts` · `src/services/crm/opportunity-stage-transition*.ts` · `src/components/ui/sortable/KanbanBoard.tsx` · `src/components/crm/stage-move/` |
+| **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
+| **Σχετικά** | ADR-195 (ιστορικό οντοτήτων) · ADR-812 (λεξιλόγια τομέα, CHECK 3.73) · ADR-872 (ιδεμποτία) · ADR-923 §5.2 (`VariantLevelBoard`) · ADR-602 (`defineRoute`) · ADR-298 (κανόνες) |
+
+---
+
+## 1. Το πρόβλημα
+
+Ο πίνακας «Ενδιαφερόμενοι» / «Ροή Πωλήσεων» (ένα `PipelineTab → OpportunityColumns`, δύο σελίδες) έδειχνε στήλες σταδίων
+αλλά οι κάρτες **δεν σέρνονταν**. Σε κάθε μεγάλο CRM (Pipedrive, HubSpot, Salesforce Kanban, Zoho) το σύρσιμο ανάμεσα σε
+στήλες **είναι** ο τρόπος να αλλάξει στάδιο μια ευκαιρία. Η αναγνώριση βρήκε τρία θεμελιώδη προβλήματα πίσω από την οθόνη:
+
+1. **Δύο ασύμβατα λεξιλόγια σταδίων** — τύπος/οθόνη/δεδομένα: `initial_contact … closed_won/closed_lost`· server
+   (`opportunities-server.service.ts`): `lead/qualified/proposal/negotiation/won/lost`. Ο server **απέρριπτε κάθε
+   πραγματικό στάδιο**. Έξι ακόμη δηλώσεις του ίδιου λεξιλογίου ήταν διάσπαρτες χωρίς δεσμό.
+2. **Το στάδιο γραφόταν από τον browser απευθείας** (`updateDoc`, μέσω `crm-mutation-gateway` που δεν επέβαλλε τίποτα),
+   από το MCP (λίστα απευθείας εγγραφής) και από το `PATCH` του server — χωρίς CAS, χωρίς ιδεμποτία, χωρίς επικύρωση.
+3. **Μηδέν ιστορικό**: το `opportunity` δεν ήταν στο μητρώο ιστορικού (ADR-195).
+
+## 2. Η απόφαση (πρακτική μεγάλων — έρευνα HubSpot / Pipedrive / Salesforce)
+
+| Θέμα | Απόφαση | Πηγή πρακτικής |
+|---|---|---|
+| Σύρσιμο | Ανάμεσα σε στήλες = αλλαγή σταδίου. **Καμία** χειροκίνητη σειρά μέσα στη στήλη· ταξινόμηση με κανόνα ανά χρήστη | Pipedrive/HubSpot/Salesforce Kanban |
+| Κλείσιμο ως επιτυχία | Διάλογος: τελικό ποσό + ημερομηνία (προσυμπληρωμένα). Άκυρο ⇒ η κάρτα γυρίζει | HubSpot «closed won» properties |
+| Κλείσιμο ως απώλεια | Λόγος από **κλειστό κατάλογο** + προαιρετικό σχόλιο· και η απώλεια έχει ημερομηνία κλεισίματος | HubSpot/Pipedrive lost reason (dropdown, όχι κείμενο) |
+| Πιθανότητα | Η αλλαγή σταδίου τη θέτει στην προεπιλογή του σταδίου· ο άνθρωπος τη διορθώνει από τη φόρμα | Salesforce Stage → Probability |
+| Επανάνοιγμα | Επιτρέπεται με επιβεβαίωση· σβήνουν τα στοιχεία κλεισίματος· `reopenCount + 1` | Pipedrive (+ διόρθωση του παραπόνου ότι χαλά τις αναφορές) |
+| Παγωμένη κάρτα | «Χ μέρες στο στάδιο», με όριο ανά στάδιο· κείμενο + χρώμα | Pipedrive rotting |
+| Κεφαλίδα στήλης | Πλήθος · σύνολο · **σταθμισμένο** (αξία × πιθανότητα) | Salesforce expected revenue |
+| Δικαίωμα | Ο ένας κριτής `crm:opportunities:update` (server)· ο πίνακας απλώς δεν σέρνει ό,τι θα απορριφθεί | ADR-801 (CHECK 3.68) |
+
+**Πέρα από τους μεγάλους** (εκεί όπου εκείνοι κάνουν last-write-wins):
+
+- **Σύγκρουση κατά ΠΕΔΙΟ**: ο πελάτης στέλνει `expectedStage` (το στάδιο που **είδε**). Αν άλλος μετακίνησε την κάρτα στο
+  μεταξύ ⇒ 409 με το πραγματικό στάδιο, η κάρτα επιστρέφει και ο άνθρωπος μαθαίνει **πού** βρίσκεται. Μια άσχετη αλλαγή
+  (σημείωση) **δεν** ακυρώνει τη μετακίνηση — όπως θα έκανε έλεγχος έκδοσης όλου του εγγράφου.
+- **Αναίρεση με CAS** (Gmail): μετά από μετακίνηση ανοιχτό→ανοιχτό, «Αναίρεση» που στέλνει πίσω με `expectedStage = νέο`.
+  Κλείσιμο/επανάνοιγμα δεν έχουν αναίρεση: ήταν ήδη συνειδητή πράξη με διάλογο, και αναίρεση εκεί θα μετρούσε ψευδές
+  επανάνοιγμα.
+- **Ζωντανός πίνακας**: `useRealtimeOpportunities` + αισιόδοξη εικόνα που κλαδεύεται όταν την προλάβει η αλήθεια.
+- **Μία μετακίνηση ανά κάρτα τη φορά**: η κάρτα κλειδώνει όσο πετά το αίτημα, αλλιώς η δεύτερη θα έστελνε `expectedStage`
+  που ο server δεν έχει γράψει ακόμη (ψευδής σύγκρουση).
+
+## 3. Αρχιτεκτονική
+
+### 3.1 Μία ρίζα λεξιλογίου — `src/config/crm/opportunity-stages.ts`
+
+`OPPORTUNITY_STAGE_IDS` (tuple, ρίζα του CHECK 3.73) + `Record<OpportunityStage, traits>` (`kind: open|won|lost`,
+`defaultProbability`, `staleAfterDays`). Το `status` **παράγεται** (`STATUS_OF_STAGE_KIND`), ποτέ ανεξάρτητο. Δεμένες στη
+ρίζα: `types/crm.ts`, server service, `status-helpers` (`LeadStageValue`), `ContactCard`, `AdvancedFilters`, lead-detail,
+report-builder, executive report. Λόγοι απώλειας: `src/config/crm/opportunity-lost-reasons.ts`.
+
+### 3.2 Ένας κανόνας, δύο εκτελεστές
+
+- `services/crm/opportunity-stage-transition.ts` — **καθαρός** `planStageTransition(current, request, nowIso)` →
+  `unchanged | invalid | apply { set, clear, reopened }`. Δηλώνει και το `STAGE_OWNED_FIELDS` (τη ΜΙΑ λίστα πεδίων της πόρτας).
+- `services/crm/opportunity-stage-transition.server.ts` — ο ΕΝΑΣ γραφέας: Admin `runTransaction` (ανάγνωση → CAS στο
+  `expectedStage` → εγγραφή με `versionedWrite`/`_v` → `FieldValue.delete()` για τα μπαγιάτικα στοιχεία κλεισίματος) και
+  μετά το commit `recordEntityUpdate({ action: 'status_changed' })`.
+- `POST /api/opportunities/[id]/stage` — `defineRoute` · `crm:opportunities:update` · `requireOpportunityInTenant` ·
+  `rateLimit: 'sensitive'` · ιδεμποτία αυτόματα από το `withAuth`. Σχήμα: `opportunity-stage-schema.ts` (zod, δεμένο στους
+  καταλόγους· ο τύπος του **είναι** ο τύπος του πυρήνα).
+- Το γενικό `PATCH /api/opportunities/[id]` **αρνείται** το `stage` (400) αντί να το αγνοήσει.
+
+### 3.3 Κεντρικός πίνακας στηλών — `src/components/ui/sortable/KanbanBoard.tsx`
+
+Δίπλα στο `SortableList`/`SortableTree`, με τους **ίδιους** αισθητήρες (`useSortableSensors`, γενικεύτηκε να δέχεται
+πλοήγηση πληκτρολογίου) και την ίδια κίνηση (`useDragTransform`). Καθαρός πυρήνας `kanban-model.ts`. Ο πίνακας **αναφέρει**
+(`onMove(item, from, to)`), δεν αποφασίζει. Μη επιτρεπτές στήλες θολώνουν όσο σέρνεις· ←/→ πηγαίνουν στη γειτονική
+επιτρεπτή στήλη· ανακοινώσεις `common:kanban.*`· το κλικ που ακολουθεί τη ρίψη καταπίνεται (αλλιώς η κάρτα θα «άνοιγε»).
+Το `VariantLevelBoard` του καταλόγου (ADR-923 §5.2) μεταφέρθηκε πάνω του — ένας πίνακας στηλών αντί για δύο.
+
+### 3.4 Η εντολή — `src/components/crm/stage-move/`
+
+`useStageTransitionCommand` (ΜΙΑ εντολή για πίνακα, «Μετακίνηση σε…» και φόρμα επεξεργασίας) · `useStageDialogs`
+(διάλογοι ως υποσχέσεις) · `CloseOpportunityDialog` / `StageMoveDialogs` · `useOptimisticStages` · `stage-move-api`.
+Η `EditOpportunityModal` αφαιρεί το `stage` από τα πεδία της φόρμας και το περνά από την ίδια εντολή.
+
+### 3.5 Κλείδωμα — τέσσερις δρόμοι, μία πόρτα
+
+| Δρόμος | Φραγμός |
+|---|---|
+| Browser (client SDK) | `firestore.rules`: `affectedKeys().hasAny(STAGE_OWNED_FIELDS)` ⇒ deny· `crm-mutation-gateway` αρνείται τα ίδια πεδία |
+| Server (Admin SDK) | CHECK 3.114 Κ1: κάθε αρχείο που ονομάζει τη συλλογή δηλωμένο με λόγο (`.opportunity-stage-authority.json`) |
+| MCP | `opportunities` αφαιρέθηκε από το `WRITE_ALLOWED_COLLECTIONS` (προηγούμενο: `floors`, CHECK 3.102) — CHECK 3.114 Κ3 |
+| AI pipeline | Δεν είναι στο `ALLOWED_WRITE_COLLECTIONS` — CHECK 3.114 Κ4 το κρατά έτσι |
+
+### 3.6 Ιστορικό (ADR-195)
+
+`opportunity` στο `audit-entity-registry.ts` (`server-direct`, βιβλίο `company`) · `OPPORTUNITY_TRACKED_FIELDS` (χωρίς
+`status`: παράγωγο) · κατάλογοι `opportunityStage` / `opportunityLostReason` (camelCase, CHECK 3.14) · `OPPORTUNITIES` στο
+CHECK 3.17. Η δήλωση αποκάλυψε ότι οι create/update/delete του `opportunities-server.service.ts` **δεν άφηναν ίχνος** —
+διορθώθηκαν (το `recordEntityUpdate` δέχεται πλέον `AuditActor`, στενότερο από το `AuthContext`).
+
+## 4. Τι ΔΕΝ λύθηκε (καταγραμμένο στο `pending-ratchet-work.md`)
+
+- Οι **μη σταδιακές** εγγραφές του πελάτη (σημειώσεις, αξία, διαγραφή) γράφονται ακόμη από τον browser χωρίς ίχνος.
+- Το server service γράφει **άλλο σχήμα** (`name`/`value`/`leadId` αντί για `title`/`estimatedValue`/`contactId`).
+
+## 5. Σειρά ανάπτυξης
+
+Κώδικας **πριν** τους κανόνες: πρώτα φτάνει στην παραγωγή η πόρτα και η φόρμα που την καλεί, μετά γίνεται deploy των κανόνων
+(αλλιώς η παλιά φόρμα θα αποτύγχανε σιωπηλά). Το deploy κανόνων το αποφασίζει ο Giorgio (CHECK 3.86).
+
+## 6. Επαλήθευση
+
+- jest: πυρήνας 15 · εντολή 6 · `kanban-model` + `pipeline-board` + αισιόδοξη εικόνα 25 · πύλη 3.114 9.
+- Κανόνες (emulator): opportunities + leads + activities **118/118** (νέα ενότητα: 9 πεδία σταδίου ⇒ deny, σημειώσεις ⇒
+  allow). Το κοινό συμβόλαιο κατόχου CRM άλλαξε από `status` σε ουδέτερο πεδίο (`NEUTRAL_EDIT`): για τις ευκαιρίες οι
+  αρνητικές δοκιμές θα περνούσαν για **λάθος** λόγο.
+- Πύλες: 3.14 · 3.16 · 3.17 · 3.47 · 3.66 · 3.73 · 3.113 · 3.114 πράσινες.
+
+## Changelog
+
+| Ημερομηνία | Αλλαγή |
+|---|---|
+| 2026-11-04 | Δημιουργία. Φ1 ρίζα σταδίων + πόρτα + ιστορικό · Φ2 `KanbanBoard` (+ μεταφορά `VariantLevelBoard`) · Φ3 οθόνη (σύρσιμο, διάλογοι, αναίρεση, ζωντανός πίνακας, σύνολα, ταξινόμηση, «μέρες στο στάδιο», φόρμα μέσω πόρτας) · Φ4 κανόνες + CHECK 3.114 + MCP. Boy Scout: `toCatalogKey` (κοινό snake→camel), `mcp-write-allowlist` (κοινό 3.113/3.114), ετικέτα ιστορικού `quoteIntake` που έλειπε από το `main` (`c16a02f6`). |

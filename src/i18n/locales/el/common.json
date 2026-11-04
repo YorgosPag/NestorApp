@@ -923,7 +923,8 @@
       "floorplan-symbol": "Σύμβολο κάτοψης",
       "imported-mesh": "Εισαγόμενο πλέγμα 3Δ",
       "generic-solid": "Στερεό",
-      "bim_dimension_3d": "Διάσταση 3Δ"
+      "bim_dimension_3d": "Διάσταση 3Δ",
+      "opportunity": "Ευκαιρία"
     },
     "values": {
       "active": "Ενεργό",

@@ -222,6 +222,12 @@ export const AUDIT_ENTITIES = {
    * `conveyance-case.service.ts` και γράφει ίχνος. `renamePropagation: false` — δεν ονομάζει αρχεία.
    */
   conveyance_case: { collectionKey: 'CONVEYANCE_CASES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  /**
+   * 📈 ADR-929 — **η ευκαιρία πώλησης** (ροή πωλήσεων CRM). Βιβλίο `'company'`. Η αλλαγή σταδίου (σύρσιμο, φόρμα,
+   * αναίρεση) περνά από τον ΕΝΑ γραφέα `opportunity-stage-transition.server.ts` και γράφει `status_changed`.
+   * `renamePropagation: false` — δεν ονομάζει αρχεία.
+   */
+  opportunity: { collectionKey: 'OPPORTUNITIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   // ADR-862 Φ1 — συμμετοχή εξωτερικού σε υπόθεση, στο βιβλίο του **οικοδεσπότη** (ποιος μπήκε/βγήκε).
   // ⚠️ `collectionKey: null` + `'top-level'`: ζει στο `companies/{host}/projects/{p}/engagements` — ΟΧΙ το σχήμα
   //    `'subcollection'` (= `companies/{c}/<col>`, μόνο για client-post). Γράφει μόνο ο server, άρα ο route

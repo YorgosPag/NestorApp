@@ -18,6 +18,7 @@
 import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
 import { brandClasses } from '@/styles/design-tokens';
 import type { ProjectStatus } from '@/constants/project-statuses';
+import type { OpportunityStage } from '@/config/crm/opportunity-stages';
 import {
   getEnhancedStatusColor,
   getEnhancedStatusLabel,
@@ -37,9 +38,8 @@ type TFn = (key: string) => string;
 export type ObligationStatusValue =
   | 'draft' | 'completed' | 'approved' | 'in_progress' | 'pending';
 
-export type LeadStageValue =
-  | 'initial_contact' | 'qualification' | 'viewing' | 'proposal'
-  | 'negotiation' | 'contract' | 'closed_won' | 'closed_lost';
+/** Δεμένο στη ρίζα της ροής πωλήσεων (ADR-929 · CHECK 3.73). */
+export type LeadStageValue = OpportunityStage;
 
 export type CommunicationStatusValue =
   | 'sent' | 'delivered' | 'completed' | 'failed' | 'pending';

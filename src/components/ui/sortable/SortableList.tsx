@@ -28,6 +28,7 @@ import {
   useSensors,
   type Announcements,
   type DragEndEvent,
+  type KeyboardCoordinateGetter,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { GripVertical } from 'lucide-react';
@@ -70,11 +71,14 @@ function useSortableAnnouncements(ids: readonly string[], labelOf: (id: string) 
   }, [ids, labelOf, t]);
 }
 
-/** Αισθητήρες ποντικιού/αφής + πληκτρολογίου — κοινοί σε λίστα και δέντρο. */
-export function useSortableSensors() {
+/**
+ * Αισθητήρες ποντικιού/αφής + πληκτρολογίου — κοινοί σε λίστα, δέντρο και πίνακα στηλών (`KanbanBoard`).
+ * Ο πίνακας δίνει δική του πλοήγηση πληκτρολογίου (←/→ ανά στήλη)· η απόσταση ενεργοποίησης μένει ΜΙΑ.
+ */
+export function useSortableSensors(coordinateGetter: KeyboardCoordinateGetter = sortableKeyboardCoordinates) {
   return useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: POINTER_ACTIVATION_DISTANCE } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter }),
   );
 }
 

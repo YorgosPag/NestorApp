@@ -8,6 +8,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CommonBadge } from '@/core/badges';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity } from '@/types/crm';
+import type { OpportunityStage } from '@/config/crm/opportunity-stages';
+import { stageAgeOf } from '../utils/pipeline-board';
+import { MoveToMenu, StageAgeBadge } from './OpportunityCardParts';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { formatCurrency, formatDateTime } from '@/lib/intl-utils';
 import { normalizeToDate } from '@/lib/date-local';
@@ -39,7 +42,19 @@ const getCreatedAtLabel = (timestamp: Opportunity['createdAt'], unknownLabel: st
     return date ? formatDateTime(date) : unknownLabel;
 };
 
-export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity: Opportunity, onEdit: (opportunity: Opportunity) => void, onDelete: (opportunityId: string, opportunityName: string) => void }) {
+interface OpportunityCardProps {
+    readonly opportunity: Opportunity;
+    readonly onEdit: (opportunity: Opportunity) => void;
+    readonly onDelete: (opportunityId: string, opportunityName: string) => void;
+    /** ADR-929 — η λαβή συρσίματος/πληκτρολογίου του πίνακα (`KanbanBoard`). Απούσα ⇒ η κάρτα δεν σέρνεται. */
+    readonly handle?: React.ReactNode;
+    /** ADR-929 — «Μετακίνηση σε…»: ο δεύτερος δρόμος προς την ΙΔΙΑ εντολή με το σύρσιμο. */
+    readonly onMoveTo?: (stage: OpportunityStage) => void;
+    /** Η κάρτα μετακινείται τώρα (αίτημα σε πτήση) — καμία δεύτερη μετακίνηση. */
+    readonly moving?: boolean;
+}
+
+export function OpportunityCard({ opportunity, onEdit, onDelete, handle, onMoveTo, moving = false }: OpportunityCardProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('crm');
     const iconSizes = useIconSizes();
@@ -55,11 +70,13 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
     return (
         <div
             role="group"
-            className={`bg-card p-4 rounded-lg shadow-sm border border-transparent cursor-pointer relative group ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}
+            aria-busy={moving || undefined}
+            className={cn('bg-card p-4 rounded-lg shadow-sm border border-transparent cursor-pointer relative group', COMPLEX_HOVER_EFFECTS.FEATURE_CARD, moving && 'opacity-70')}
             onClick={handleCardClick}
         >
             <div className="flex items-start justify-between mb-2">
                 <h4 className="font-medium text-sm text-foreground flex items-center gap-2">
+                    {handle}
                     <Users className={iconSizes.sm} />
                     {opportunity.fullName || opportunity.title}
                 </h4>
@@ -98,6 +115,8 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                 </div>
             </div>
 
+            <StageAgeBadge age={stageAgeOf(opportunity)} />
+
             {opportunity.notes && (
                 <div className={cn("mt-2 pt-2 border-t text-xs", colors.text.muted)}>
                     <p className="flex items-start gap-2">
@@ -114,6 +133,9 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
             )}
 
             <div className={`absolute bottom-2 right-2 flex items-center gap-1 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
+                {onMoveTo && (
+                    <MoveToMenu current={opportunity.stage} name={opportunity.fullName || opportunity.title} disabled={moving} onMoveTo={onMoveTo} />
+                )}
                 <Tooltip>
                     <TooltipTrigger asChild>
                          <Button 

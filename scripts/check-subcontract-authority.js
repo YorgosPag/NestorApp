@@ -21,24 +21,15 @@
 
 const { defineSymbolOwnerGate } = require('./lib/write-authority/symbol-owner-gate');
 
-const REGISTRY_FILE = '.subcontract-authority.json';
-const MCP_ACCESS_CONTROL = 'mcp-server/src/security/access-control.ts';
+const { MCP_ACCESS_CONTROL, mcpAllowListFindings } = require('./lib/write-authority/mcp-write-allowlist');
 
-/** Το σώμα του `WRITE_ALLOWED_COLLECTIONS = new Set([...])` — ό,τι επιτρέπεται να γράψει το MCP απευθείας. */
-function mcpWriteAllowList(text) {
-  const match = /WRITE_ALLOWED_COLLECTIONS\s*=\s*new Set\(\[([\s\S]*?)\]\)/.exec(text);
-  return match ? match[1].replace(/\/\/.*$/gm, '') : null;
-}
+const REGISTRY_FILE = '.subcontract-authority.json';
 
 function mcpFindings(root, input, STATES) {
-  const text = input.exists(MCP_ACCESS_CONTROL) ? input.read(MCP_ACCESS_CONTROL) : null;
-  const list = text === null ? null : mcpWriteAllowList(text);
-  if (list === null) {
-    return [{ state: STATES.SOURCE_DRIFT, file: MCP_ACCESS_CONTROL, detail: 'δεν βρέθηκε το `WRITE_ALLOWED_COLLECTIONS` — η πύλη δεν κρίνει στα τυφλά' }];
-  }
-  return /['"`]subcontract_/.test(list)
-    ? [{ state: STATES.OUTSIDE, file: MCP_ACCESS_CONTROL, detail: 'συλλογή `subcontract_*` στη λίστα απευθείας εγγραφής του MCP — παρακάμπτει τον γραφέα' }]
-    : [];
+  return mcpAllowListFindings(input, STATES, {
+    forbidden: /['"`]subcontract_/,
+    detail: 'συλλογή `subcontract_*` στη λίστα απευθείας εγγραφής του MCP — παρακάμπτει τον γραφέα',
+  });
 }
 
 const { measure, report, main, loadRegistry, STATES, BLOCKING } = defineSymbolOwnerGate({

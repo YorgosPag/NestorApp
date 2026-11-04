@@ -695,7 +695,18 @@
       "expenseAllocation": {
         "netAmount": "Allocated net amount"
       },
-      "availabilityDeclaration": "Available from"
+      "availabilityDeclaration": "Available from",
+      "opportunity": {
+        "stage": "Stage",
+        "probability": "Probability",
+        "estimatedValue": "Value",
+        "closedAt": "Close date",
+        "lostReason": "Lost reason",
+        "lostReasonNote": "Lost reason note",
+        "reopenCount": "Reopened",
+        "assignedTo": "Owner",
+        "expectedCloseDate": "Expected close"
+      }
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

@@ -23,6 +23,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { OPPORTUNITY_STAGE_IDS } from '@/config/crm/opportunity-stages';
 import { PROPERTY_TYPES } from '@/constants/property-types';
 import type { DomainDefinition } from './report-builder-types';
 import { docAgeDays } from './report-computed-days';
@@ -30,11 +31,6 @@ import { docAgeDays } from './report-computed-days';
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data & crm.ts types)
 // ============================================================================
-
-const OPPORTUNITY_STAGES = [
-  'initial_contact', 'qualification', 'viewing', 'proposal',
-  'negotiation', 'contract', 'closed_won', 'closed_lost',
-] as const;
 
 const OPPORTUNITY_STATUSES = [
   'active', 'on_hold', 'lost', 'won',
@@ -163,7 +159,7 @@ export const OPPORTUNITIES_DEFINITION: DomainDefinition = {
   fields: [
     // Identity
     { key: 'title', labelKey: 'domains.opportunities.fields.title', type: 'text', filterable: true, sortable: true, defaultVisible: true },
-    { key: 'stage', labelKey: 'domains.opportunities.fields.stage', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: OPPORTUNITY_STAGES, enumLabelPrefix: 'domains.opportunities.enums.stage' },
+    { key: 'stage', labelKey: 'domains.opportunities.fields.stage', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: OPPORTUNITY_STAGE_IDS, enumLabelPrefix: 'domains.opportunities.enums.stage' },
     { key: 'status', labelKey: 'domains.opportunities.fields.status', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: OPPORTUNITY_STATUSES, enumLabelPrefix: 'domains.opportunities.enums.status' },
     // Financial
     { key: 'estimatedValue', labelKey: 'domains.opportunities.fields.estimatedValue', type: 'currency', filterable: true, sortable: true, defaultVisible: true, format: 'currency' },

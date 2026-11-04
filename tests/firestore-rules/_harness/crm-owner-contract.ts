@@ -79,6 +79,12 @@ export interface CrmOwnerContract {
 }
 
 /** Πεδία που κάνουν ένα έγγραφο αποδεκτό από κάθε μία από τις τρεις συλλογές. */
+/**
+ * Η ΜΙΑ ενημέρωση όλων των δοκιμών: ουδέτερο πεδίο, έγκυρο σε ΚΑΙ ΤΙΣ ΤΡΕΙΣ συλλογές. Ποτέ `status`: στις ευκαιρίες
+ * είναι παράγωγο του σταδίου που γράφει μόνο ο server (ADR-929) — μια αρνητική δοκιμή θα περνούσε για ΛΑΘΟΣ λόγο.
+ */
+const NEUTRAL_EDIT = { title: 'crm-owner-contract (edited)' } as const;
+
 function docShape(extra: Record<string, unknown>): Record<string, unknown> {
   return { title: 'crm-owner-contract', status: 'new', ...extra };
 }
@@ -144,7 +150,9 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
           .firestore()
           .collection(collection)
           .doc('crm-mine')
-          .update({ status: 'working' }),
+          // ⚠️ ΟΥΔΕΤΕΡΟ πεδίο, όχι `status`: στις ευκαιρίες το `status` είναι παράγωγο του σταδίου και το γράφει
+          // ΜΟΝΟ η πόρτα του server (ADR-929) ⇒ ο μάρτυρας θα κοκκίνιζε για άλλο λόγο από αυτόν που μετρά.
+          .update(NEUTRAL_EDIT),
       );
     });
 
@@ -168,7 +176,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
 
       const db = getContext(env, 'same_tenant_user').firestore();
       await assertSucceeds(db.collection(collection).doc('crm-theirs').get());
-      await assertFails(db.collection(collection).doc('crm-theirs').update({ status: 'working' }));
+      await assertFails(db.collection(collection).doc('crm-theirs').update(NEUTRAL_EDIT));
     });
 
     it(
@@ -185,7 +193,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
           .firestore()
           .collection(collection)
           .doc('crm-assigned')
-          .update({ status: 'working' });
+          .update(NEUTRAL_EDIT);
 
         await (assigneeIsOwner ? assertSucceeds(update) : assertFails(update));
       },
@@ -237,7 +245,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
 
       const db = getContext(env, 'same_tenant_user').firestore();
       await assertFails(db.collection(collection).doc('crm-cross').get());
-      await assertFails(db.collection(collection).doc('crm-cross').update({ status: 'working' }));
+      await assertFails(db.collection(collection).doc('crm-cross').update(NEUTRAL_EDIT));
     });
 
     it('🔴 ΤΟ ΚΕΝΟ ΠΟΥ ΕΚΛΕΙΣΕ: ο ΔΗΜΙΟΥΡΓΟΣ δεν γράφει έγγραφο ΞΕΝΟΥ tenant', async () => {
@@ -274,7 +282,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
       // ότι το γράψιμο ήταν απροσπέλαστο από νόμιμη οθόνη, άρα το κλείσιμό του
       // δεν μπορεί να κλειδώσει κανέναν πραγματικό χρήστη.
       await assertFails(ref.get());
-      await assertFails(ref.update({ status: 'working' }));
+      await assertFails(ref.update(NEUTRAL_EDIT));
       await assertFails(ref.delete());
     });
 

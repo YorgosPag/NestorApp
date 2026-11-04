@@ -1236,6 +1236,12 @@ if (!process.env.SKIP_PUBLIC_CATALOG_AUTHORITY)
 if (!process.env.SKIP_SUBCONTRACT_AUTHORITY)
   addThread('3.113', 'Subcontract authority', 'scripts/check-subcontract-authority.js', ['--index']);
 
+// CHECK 3.114 (ADR-929) — ο ένας γραφέας του σταδίου ευκαιρίας. «Αλλάζει κάποιος στάδιο ΕΞΩ από την πόρτα
+// `POST /api/opportunities/[id]/stage` — χωρίς CAS, στοιχεία κλεισίματος, ίχνος;» Κ1 κάτοχοι συλλογής (`symbol-owner-gate`)
+// · Κ2 κανόνες ⇄ `STAGE_OWNED_FIELDS` · Κ3 MCP · Κ4 AI. Λίστα: `.opportunity-stage-authority.json`. AST, ZERO-TOL.
+if (!process.env.SKIP_OPPORTUNITY_STAGE_AUTHORITY)
+  addThread('3.114', 'Opportunity stage authority', 'scripts/check-opportunity-stage-authority.js', ['--index']);
+
 // CHECK 3.106 (ADR-923 §5.9) — ο ένας γραφέας του σχήματος καταλόγου. «Γράφει κάποιος ιδιότητα · ομάδα · οικογένεια
 // μέτρησης · κατηγορία · οικογένεια ΕΞΩ από τη μηχανή `src/server/catalog/catalog-store.server.ts` — δηλαδή χωρίς
 // επικύρωση απέναντι στη βιβλιοθήκη, χωρίς CAS, χωρίς ίχνος;» Οι κανόνες κλείνουν τον πελάτη, όχι τον Admin SDK.

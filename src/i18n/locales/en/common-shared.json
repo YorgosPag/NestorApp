@@ -1026,5 +1026,13 @@
     "acceptedTitle": "{who} accepted the connection to your catalogue",
     "approvedTitle": "{who} approved your connection",
     "unnamed": "A workspace"
+  },
+  "kanban": {
+    "handle": "Move “{label}”",
+    "instructions": "Press Space to pick up the card. Use the left or right arrow to move to another column, press Space to drop it or Escape to cancel.",
+    "picked": "Picked up “{label}”.",
+    "over": "“{label}” is over the column “{column}”.",
+    "dropped": "“{label}” was dropped in the column “{column}”.",
+    "cancelled": "Moving “{label}” was cancelled."
   }
 }

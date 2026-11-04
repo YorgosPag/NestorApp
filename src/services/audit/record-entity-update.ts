@@ -31,6 +31,9 @@ import type { AuditAction, AuditEntityType, AuditFieldChange } from '@/types/aud
 
 const logger = createModuleLogger('RecordEntityUpdate');
 
+/** Ό,τι χρειάζεται η γραμμή από τον δράστη — στενότερο από το `AuthContext`, ώστε να το δίνουν και υπηρεσίες χωρίς αίτημα. */
+export type AuditActor = Pick<AuthContext, 'uid' | 'email' | 'companyId'>;
+
 export interface EntityUpdateAuditInput {
   readonly entityType: AuditEntityType;
   readonly entityId: string;
@@ -38,7 +41,7 @@ export interface EntityUpdateAuditInput {
   readonly before: Readonly<Record<string, unknown>>;
   /** Ό,τι **γράφτηκε** — μερικό: πεδία που λείπουν δεν κρίνονται. */
   readonly written: Readonly<Record<string, unknown>>;
-  readonly ctx: AuthContext;
+  readonly ctx: AuditActor;
   /** Πεδίο → όνομα προς εμφάνιση της τιμής του (ξένα κλειδιά). Η τιμή μένει η ταυτότητα. */
   readonly resolvers?: Readonly<Record<string, (value: unknown) => Promise<string | null>>>;
   /**

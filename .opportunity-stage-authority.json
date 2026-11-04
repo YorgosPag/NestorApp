@@ -1,0 +1,29 @@
+{
+  "$doc": "ADR-929 · CHECK 3.114 — Η ΜΙΑ ΠΗΓΗ για το «ποιος αγγίζει τη συλλογή ευκαιριών στον server». Το στάδιο (και ό,τι παράγεται από αυτό) έχει ΕΝΑΝ γραφέα, το `opportunity-stage-transition.server.ts`. Οι κανόνες κλείνουν τον πελάτη, όχι το Admin SDK: κάθε άλλο αρχείο που ονομάζει τη συλλογή δηλώνεται εδώ με λόγο, ώστε ένας δεύτερος γραφέας σταδίου να φανεί στο commit. Τη διαβάζουν η πύλη (`scripts/check-opportunity-stage-authority.js`, AST) και το self-test της — ποτέ δεύτερη λίστα.",
+  "guards": [
+    {
+      "kind": "call",
+      "name": "applyOpportunityStageTransition",
+      "owners": {
+        "src/app/api/opportunities/[id]/stage/route.ts": "Η ΜΙΑ πόρτα: το route με δικαίωμα `crm:opportunities:update`, φράχτη μισθωτή, ιδεμποτία και όριο ρυθμού καλεί τον γραφέα."
+      }
+    },
+    {
+      "kind": "member",
+      "name": "COLLECTIONS.OPPORTUNITIES",
+      "owners": {
+        "src/services/crm/opportunity-stage-transition.server.ts": "Ο ΕΝΑΣ γραφέας του σταδίου: συναλλαγή με CAS στο αναμενόμενο στάδιο, κανόνας μετάβασης, ίχνος μετά το commit.",
+        "src/services/opportunities-server.service.ts": "Δημιουργία/ενημέρωση/διαγραφή μέσω Admin SDK με ίχνος. Η δημιουργία γράφει το αρχικό στάδιο· η ενημέρωση ΑΡΝΕΙΤΑΙ το `stage` (400) και το παραπέμπει στην πόρτα.",
+        "src/services/opportunities.service.ts": "Ο πελάτης (client SDK): δημιουργία και επεξεργασία μη σταδιακών πεδίων. Τα πεδία σταδίου τα κλειδώνουν οι κανόνες και η `crm-mutation-gateway` — εδώ μόνο ονομάζεται η συλλογή.",
+        "src/services/report-engine/report-data-aggregator.ts": "ΜΟΝΟ ανάγνωση (Admin) για τις αναφορές της εταιρείας, φιλτραρισμένη κατά `companyId`. Καμία εγγραφή.",
+        "src/lib/auth/tenant-isolation.ts": "ΜΟΝΟ ανάγνωση: ο φράχτης μισθωτή (`requireOpportunityInTenant`) διαβάζει το έγγραφο για να κρίνει αν ανήκει στον καλούντα.",
+        "src/services/ai-pipeline/tools/executor-shared-types.ts": "Λίστα ΑΝΑΓΝΩΣΗΣ του AI και αντιστοίχιση για τον συγχρονισμό· η λίστα ΕΓΓΡΑΦΗΣ του AI δεν περιέχει τις ευκαιρίες (το φυλά η ίδια πύλη).",
+        "src/config/ai-role-access-matrix.ts": "Δήλωση πρόσβασης ρόλων του AI· η πραγματική εγγραφή περνά από τη λίστα εγγραφής του executor, που ΔΕΝ περιέχει τις ευκαιρίες.",
+        "src/config/contact-dependency-registry.ts": "ΜΟΝΟ ερώτημα εξάρτησης: «έχει η επαφή ευκαιρίες;» πριν από διαγραφή επαφής. Καμία εγγραφή σταδίου.",
+        "src/config/deletion-registry.ts": "Μητρώο διαγραφών/εξαρτήσεων: τι εμποδίζει ή συνοδεύει μια διαγραφή. Δεν γράφει ποτέ στάδιο.",
+        "src/config/report-builder/domain-defs-crm.ts": "Ορισμός τομέα του δημιουργού αναφορών — ΜΟΝΟ ανάγνωση και φίλτρα.",
+        "src/config/search-index-core.ts": "Ορισμός ευρετηρίου αναζήτησης: ποια πεδία διαβάζει το Cloud Function για το `search_documents`. Καμία εγγραφή στη συλλογή."
+      }
+    }
+  ]
+}

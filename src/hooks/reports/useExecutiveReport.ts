@@ -18,6 +18,7 @@ import type { ReportKPI } from '@/components/reports/core';
 import type { Project } from '@/types/project';
 import type { Property } from '@/types/property';
 import type { Opportunity } from '@/types/crm';
+import { OPPORTUNITY_STAGE_IDS } from '@/config/crm/opportunity-stages';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
@@ -222,11 +223,7 @@ function buildPipelineSummary(
   opportunities: Opportunity[],
   t: (key: string) => string,
 ): PipelineStageData[] {
-  const stages: Opportunity['stage'][] = [
-    'initial_contact', 'qualification', 'viewing',
-    'proposal', 'negotiation', 'contract',
-    'closed_won', 'closed_lost',
-  ];
+  const stages = OPPORTUNITY_STAGE_IDS;
 
   const byStage = tallyBy(opportunities, o => o.stage);
   const valueByStage = tallyByValue(

@@ -21,9 +21,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { OpportunitiesServerService } from '@/services/opportunities-server.service';
-import { getErrorMessage } from '@/lib/error-utils';
 import { requireOpportunityInTenant } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { respondWithFailure, respondWithServiceResult } from '../_service-response';
 
 const UpdateOpportunitySchema = z.object({
   stage: z.string().max(50).optional(),
@@ -66,20 +66,12 @@ async function handlePatch(
           id,
           updatePayload,
           ctx.companyId,
-          ctx.uid
+          ctx.uid,
+          ctx.email ?? null,
         );
-
-        if (!result.success) {
-          return NextResponse.json(
-            { success: false, error: result.error },
-            { status: 400 }
-          );
-        }
-
-        return NextResponse.json({ success: true });
+        return respondWithServiceResult(result, () => NextResponse.json({ success: true }));
       } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update opportunity');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return respondWithFailure(error, 'Failed to update opportunity');
       }
     }
   );
@@ -102,22 +94,10 @@ async function handleDelete(
         // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
         await requireOpportunityInTenant({ ctx, opportunityId: id, path: '/api/opportunities/[id]' });
 
-        const result = await OpportunitiesServerService.remove(
-          id,
-          ctx.companyId
-        );
-
-        if (!result.success) {
-          return NextResponse.json(
-            { success: false, error: result.error },
-            { status: 400 }
-          );
-        }
-
-        return NextResponse.json({ success: true });
+        const result = await OpportunitiesServerService.remove(id, ctx.companyId, ctx);
+        return respondWithServiceResult(result, () => NextResponse.json({ success: true }));
       } catch (error) {
-        const message = getErrorMessage(error, 'Failed to delete opportunity');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return respondWithFailure(error, 'Failed to delete opportunity');
       }
     }
   );

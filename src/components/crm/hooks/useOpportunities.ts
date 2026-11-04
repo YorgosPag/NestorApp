@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { Opportunity } from '@/types/crm';
+import { OPPORTUNITY_STAGE_IDS, STATUS_OF_STAGE_KIND, stageKind } from '@/config/crm/opportunity-stages';
 import {
     addOpportunity as apiAddOpportunity,
     getOpportunities as apiGetOpportunities,
@@ -48,14 +49,18 @@ export function useOpportunities() {
     const addOpportunity = async (data: Partial<Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>>) => {
         try {
           // 🏢 ENTERPRISE: Construct proper Opportunity object with all required fields
+          const stage = data.stage || OPPORTUNITY_STAGE_IDS[0];
+          const now = new Date();
           const opportunityData: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'> = {
               title: data.title || '',
               contactId: data.contactId || '',
               assignedTo: data.assignedTo || '', // κενό ⇒ ο δημιουργός, από το `addOpportunity`
-              status: data.status || 'active',
-              stage: data.stage || 'initial_contact',
-              lastActivity: data.lastActivity || new Date(),
+              lastActivity: data.lastActivity || now,
               ...data,
+              // ADR-929: το `status` ΠΑΡΑΓΕΤΑΙ από το στάδιο, και η είσοδος στο στάδιο είναι τώρα.
+              stage,
+              status: STATUS_OF_STAGE_KIND[stageKind(stage)],
+              stageChangedAt: now,
           };
           await apiAddOpportunity(opportunityData);
     
