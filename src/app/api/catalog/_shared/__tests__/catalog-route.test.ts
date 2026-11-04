@@ -5,7 +5,7 @@
 /**
  * Το σύνορο των routes καταλόγου (ADR-923 §5.14.1 Ζ23 · Ζ24), εκτελεσμένο πάνω στα αληθινά factories:
  * - κάθε επιτυχής απόκριση φεύγει με `private, no-store` (τιμές ενός κοινού δεν μένουν σε καμία μνήμη)·
- * - ο route που δηλώνει δική του πολιτική (αρχείο) κερδίζει·
+ * - ο route που **δηλώνει** δική του πολιτική (αρχείο, `policy.cache`) κερδίζει· κεφαλίδα του handler όχι (ADR-603 §Ασπίδα)·
  * - το σφάλμα του γραφέα/αναγνώστη δεν λέει «write» σε GET· η απρόβλεπτη βλάβη ανάγνωσης λέει «read».
  */
 
@@ -55,18 +55,29 @@ describe('catalogReadRoute', () => {
     expect(JSON.stringify(result.body)).not.toMatch(/write/i);
   });
 
-  // ⚠️ Μόνο βλάβη ΧΩΡΙΣ μήνυμα πέφτει στο fallback: με `Error` το `defineRoute` στέλνει το `message` αυτούσιο
-  // (ADR-602, «byte-identical» — εκκρεμότητα στο `.claude-rules/pending-ratchet-work.md`, όχι αντικείμενο αυτής της άγκυρας).
   it('απρόβλεπτη βλάβη χωρίς μήνυμα ⇒ 500 «Catalog read failed»', async () => {
     const route = catalogReadRoute(POLICY, async () => { throw { code: 'NO_MESSAGE' }; });
     await expect(call(route)).resolves.toMatchObject({ status: 500, body: { error: 'Catalog read failed' } });
+  });
+
+  // ADR-603 §Ασπίδα: και η βλάβη ΜΕ μήνυμα πέφτει στο fallback — το εσωτερικό κείμενο μόνο στο log.
+  it('απρόβλεπτη βλάβη με εσωτερικό μήνυμα ⇒ 500 «Catalog read failed», χωρίς το μήνυμα', async () => {
+    const route = catalogReadRoute(POLICY, async () => { throw new Error('collection catalog_prices/doc_9 denied'); });
+    const result = await call(route);
+    expect(result).toMatchObject({ status: 500, cache: PRIVATE_NO_STORE, body: { error: 'Catalog read failed', errorCode: 'INTERNAL_SERVER_ERROR' } });
+    expect(JSON.stringify(result.body)).not.toContain('catalog_prices');
   });
 });
 
 describe('catalogFileRoute', () => {
   it('ο route δηλώνει δική του πολιτική ⇒ μένει αυτή', async () => {
-    const route = catalogFileRoute(POLICY, async () => new NextResponse('pdf', { headers: { 'Cache-Control': 'private, max-age=60' } }));
+    const route = catalogFileRoute({ ...POLICY, cache: { kind: 'private', maxAgeSeconds: 60 } }, async () => new NextResponse('pdf'));
     await expect(call(route)).resolves.toMatchObject({ status: 200, cache: 'private, max-age=60' });
+  });
+
+  it('κεφαλίδα του handler ΧΩΡΙΣ δήλωση δεν παρακάμπτει την πολιτική (ADR-603 §Ασπίδα)', async () => {
+    const route = catalogFileRoute(POLICY, async () => new NextResponse('pdf', { headers: { 'Cache-Control': 'public, max-age=60' } }));
+    await expect(call(route)).resolves.toMatchObject({ status: 200, cache: PRIVATE_NO_STORE });
   });
 
   it('ο route δεν είπε τίποτα ⇒ ποτέ χωρίς κεφαλίδα', async () => {

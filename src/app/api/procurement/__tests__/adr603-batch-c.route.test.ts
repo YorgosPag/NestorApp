@@ -16,14 +16,10 @@
  * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
-jest.mock('next/server', () => {
-  class MockNextResponse {
-    static json(body: unknown, init?: { status?: number }) {
-      return { status: init?.status ?? 200, json: async () => body };
-    }
-  }
-  return { NextResponse: MockNextResponse, NextRequest: class {} };
-});
+jest.mock('next/server', () =>
+  jest.requireActual<typeof import('@/test-utils/next-response-json-mock')>('@/test-utils/next-response-json-mock')
+    .nextServerJsonMock(),
+);
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({
   withHighRateLimit: <T>(h: T) => h,

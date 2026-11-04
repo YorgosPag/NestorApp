@@ -120,7 +120,7 @@ export class ApiErrorHandler {
         errorId: errorId || undefined,
         timestamp: nowISO(),
         requestId,
-        details: this.shouldIncludeDetails(errorMapping) ? this.sanitizeErrorDetails(error) : undefined,
+        details: this.shouldIncludeDetails() ? this.sanitizeErrorDetails(error) : undefined,
         context: this.shouldIncludeContext() ? {
           path: context.path,
           method: context.method,
@@ -145,7 +145,7 @@ export class ApiErrorHandler {
         error: 'Internal server error',
         errorCode: 'HANDLER_FAILURE',
         timestamp: nowISO()
-      }, { status: 500 });
+      }, { status: 500, headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } });
     }
   }
 
@@ -274,8 +274,14 @@ export class ApiErrorHandler {
     );
   }
 
-  private shouldIncludeDetails(mapping: ErrorMappingRule): boolean {
-    return process.env.NODE_ENV === 'development' || mapping.category !== 'security';
+  /**
+   * The thrown error's name + message reach the client ONLY in development. Until 2026-11-04 this was
+   * `development || category !== 'security'` ⇒ in production every non-security failure (Firestore, SDK, code)
+   * shipped its internal message inside `details` — OWASP ASVS 4.0.3 V7.4.1 (ADR-603 §Ασπίδα). The client already
+   * gets the rule's `userMessage`, the `errorCode` and the `requestId`; the detail lives in the server log.
+   */
+  private shouldIncludeDetails(): boolean {
+    return process.env.NODE_ENV === 'development';
   }
 
   private shouldIncludeContext(): boolean {

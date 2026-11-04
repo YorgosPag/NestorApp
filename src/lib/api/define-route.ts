@@ -7,21 +7,25 @@
  * `src/app/api/**\/route.ts`. It composes the EXISTING primitives — it does NOT
  * re-implement them:
  *
- *   rate-limit wrapper  →  withAuth  →  try/catch  →  schema parse  →  envelope
- *   (@/lib/middleware)     (@/lib/auth)                (safeParseBody) (ApiError)
+ *   shield  →  rate-limit wrapper  →  withAuth  →  try/catch  →  schema parse  →  envelope
+ *   (cache policy +       (@/lib/middleware)  (@/lib/auth)             (safeJsonBody)  (ApiError)
+ *    safe 500, ADR-603 §Ασπίδα — route-response-shield)
  *
  * Big-player rationale (Stripe / Figma / GitHub):
  *  - The SSoT here is the COMPOSITION of cross-cutting concerns, NOT a change to
- *    the public wire contract. The factory emits the exact bare envelope
- *    (`{ success, data }` / `{ success, error }`) and status codes the migrated
- *    routes already emit — byte-identical. A unified richer envelope
- *    (requestId/timestamp) would be a SEPARATE, versioned rollout — see ADR-602.
+ *    the public wire contract. The factory emits the bare envelope
+ *    (`{ success, data }` / `{ success, error }`) the migrated routes emit. The
+ *    ONE deliberate exception (ADR-603 §Ασπίδα, 2026-11-04): an UNEXPECTED error
+ *    no longer echoes its internal message — the client gets the route's
+ *    `fallbackError` + `errorCode` + `requestId` (fields ADDED, none removed).
+ *  - Every response leaves through the shield: `Cache-Control` from the route's
+ *    DECLARED policy (default `private, no-store`); refusals/errors always no-store.
  *  - Divergences (schema, business logic, rate tier, auth requirements, status)
  *    are injected via config/handler — composition, NOT a God-wrapper with
  *    if-branching.
  *
  * @module lib/api/define-route
- * @see ADR-602 API Route-Handler Factory SSoT
+ * @see ADR-603 API Route-Handler Factory SSoT (the code said «ADR-602» — that number is the grip ADR)
  * @see ADR-245 API Routes Centralization (URL extraction helpers)
  */
 
@@ -40,12 +44,10 @@ import {
   withWebhookRateLimit,
   withTelegramRateLimit,
 } from '@/lib/middleware/with-rate-limit';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
-import { getErrorMessage } from '@/lib/error-utils';
+import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { ApiError, asApiError } from '@/lib/api/api-error-types';
-import { createModuleLogger } from '@/lib/telemetry/Logger';
-
-const logger = createModuleLogger('API_ROUTE');
+import { cacheControlOf, NO_STORE_POLICY, type ResponseCachePolicy } from '@/lib/http/cache-control';
+import { shieldResponse, unexpectedErrorResponse } from '@/lib/api/route-response-shield';
 
 // =============================================================================
 // RATE-LIMIT TIER → wrapper map (reuse existing 6 categories)
@@ -154,8 +156,16 @@ export interface DefineRouteConfig<TSchema extends z.ZodTypeAny, TParams> {
   schema?: TSchema;
   /** Optional withAuth options (permissions / roles / allowUnauthenticated). */
   auth?: WithAuthOptions;
-  /** Fallback message for the 500 envelope when a thrown error has no message. */
+  /**
+   * The client-facing message of the 500 envelope for an UNEXPECTED error (anything not an `ApiError`). The thrown
+   * error's own message goes ONLY to the server log, under the `requestId` the client also receives.
+   */
   fallbackError?: string;
+  /**
+   * What the person's browser may keep from a SUCCESSFUL response (default `{ kind: 'no-store' }` ⇒ `private, no-store`).
+   * Refusals and errors (≥400) are ALWAYS `private, no-store`, whatever is declared. Validated when the route loads.
+   */
+  cache?: ResponseCachePolicy;
   /** Business handler — receives the resolved context, returns an envelope. */
   handler: RouteHandler<z.infer<TSchema>, TParams>;
 }
@@ -195,6 +205,8 @@ export function defineRoute<
   config: DefineRouteConfig<TSchema, TParams>,
 ): (request: NextRequest, segmentData?: SegmentData<TParams>) => Promise<Response> {
   const { rateLimit, schema, auth, fallbackError, handler } = config;
+  const cachePolicy = config.cache ?? NO_STORE_POLICY;
+  cacheControlOf(cachePolicy); // fail fast: an invalid declaration breaks the route at load, never at first request
 
   const authed = withAuth(
     async (
@@ -210,7 +222,8 @@ export function defineRoute<
 
         let body = undefined as z.infer<TSchema>;
         if (schema) {
-          const parsed = safeParseBody(schema, await req.json());
+          // Malformed/empty JSON ⇒ 400 «Invalid or empty JSON body» (SSoT), never a 500 carrying the parser's text.
+          const parsed = await safeJsonBody(schema, req);
           if (parsed.error) return parsed.error;
           body = parsed.data;
         }
@@ -223,14 +236,31 @@ export function defineRoute<
     auth,
   );
 
-  const rateLimited = RATE_LIMIT_WRAPPERS[rateLimit](authed);
+  return shielded(RATE_LIMIT_WRAPPERS[rateLimit](authed), cachePolicy, fallbackError);
+}
 
-  return (request: NextRequest, segmentData?: SegmentData<TParams>) =>
-    Promise.resolve(rateLimited(request, segmentData));
+/**
+ * The outermost layer: EVERY response — handler, schema 400, `withAuth` 401/403, rate-limit 429 — leaves through the
+ * shield. A throw from the rate-limit store or the auth layer itself gets the same safe 500 (belt and braces).
+ */
+function shielded<TParams>(
+  inner: (request: NextRequest, segmentData?: SegmentData<TParams>) => Promise<Response> | Response,
+  cachePolicy: ResponseCachePolicy,
+  fallbackError: string | undefined,
+): (request: NextRequest, segmentData?: SegmentData<TParams>) => Promise<Response> {
+  return async (request, segmentData) => {
+    let response: Response;
+    try {
+      response = await inner(request, segmentData);
+    } catch (error) {
+      response = unexpectedErrorResponse(error, request, fallbackError);
+    }
+    return shieldResponse(response, cachePolicy);
+  };
 }
 
 // =============================================================================
-// ERROR → ENVELOPE (byte-identical: ApiError = expected, else 500 + log)
+// ERROR → ENVELOPE (ApiError = expected, keeps its message; else safe 500 + log)
 // =============================================================================
 
 function toErrorResponse(
@@ -256,12 +286,6 @@ function toErrorResponse(
     );
   }
 
-  // Unexpected errors → 500 + structured server log (server-only, N.11 exempt).
-  const message = getErrorMessage(error, fallbackError ?? 'Internal server error');
-  logger.error('Route handler error', {
-    method: req.method,
-    path: new URL(req.url).pathname,
-    error: message,
-  });
-  return NextResponse.json({ success: false, error: message }, { status: 500 });
+  // Unexpected errors → generic 500 + requestId; the detail lives only in the server log (ADR-603 §Ασπίδα).
+  return unexpectedErrorResponse(error, req, fallbackError);
 }

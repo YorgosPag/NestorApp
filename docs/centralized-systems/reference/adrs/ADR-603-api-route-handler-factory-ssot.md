@@ -54,7 +54,7 @@ export const POST = defineRoute({
 ```
 
 - **`defineRoute` = `withRateLimitTier( withAuth( async (req,ctx,cache,routeCtx) => { try { [await params] ; [schema→safeParseBody] ; return await handler(...) } catch (e) { → envelope } }, auth) )`.**
-- **Envelope helpers** emit the **bare** shape byte-identical to the migrated routes: `ok(data?)` (200, omits `data` key when absent), `created(data?)` (201). Errors are **thrown**: `badRequest`/`notFound`/`conflict`/`httpError` throw `ApiError`; the factory catch maps `ApiError` → `{ success:false, error, ...details }` at `error.statusCode` (**not logged** — expected business errors) and any other throw → `getErrorMessage` + `logger.error` + 500 (**logged** — unexpected). This reproduces the current per-route behavior exactly (404/409 were never logged; only 500 was).
+- **Envelope helpers** emit the **bare** shape byte-identical to the migrated routes: `ok(data?)` (200, omits `data` key when absent), `created(data?)` (201). Errors are **thrown**: `badRequest`/`notFound`/`conflict`/`httpError` throw `ApiError`; the factory catch maps `ApiError` → `{ success:false, error, ...details }` at `error.statusCode` (**not logged** — expected business errors) and any other throw → `getErrorMessage` + `logger.error` + 500 (**logged** — unexpected). ⚠️ **Αλλαγή 2026-11-04 (§Ασπίδα):** το απρόβλεπτο 500 **δεν** στέλνει πια το μήνυμα του σφάλματος — στέλνει `fallbackError` + `errorCode` + `requestId`. This reproduces the current per-route behavior exactly (404/409 were never logged; only 500 was).
 - **Reuse `ApiError`** (ADR-065) as the HTTP-error type — **no new `HttpError` class**. Extended additively with an optional `details?: Record<string, unknown>` (spread into the envelope, e.g. `{ existingCertificateId }`). Backward-compatible for its 64 existing importers.
 
 ### Big-player rationale
@@ -88,14 +88,109 @@ export const POST = defineRoute({
 - **`assets` POST uses manual field validation** (no zod) → preserved as `badRequest(<same messages>)`, not converted to a schema (which would change the 400 body).
 - **`bank/match` + `bank/reconcile` put a `BankMatchProblem` OBJECT in the `error` field** (`{ success:false, error: { code, message, status, …metadata } }` via `problemResponse`), not a string. The envelope helpers (`httpError`/`conflict`/…) only emit a **string** `error`, so every `problemResponse` return is kept **inline** inside the handler; only success (`ok(...)`) and — for `bank/reconcile` PATCH — the string-`error` admin-only 403 use helpers/inline `NextResponse.json`.
 - **`bank/reconcile` PATCH checks the admin role BEFORE parsing the body** — so it stays a **manual** `safeParseBody(AdminUnlockSchema)` inside the handler (NOT the factory `schema` option), preserving the invariant that a non-admin gets `403` even with an invalid body (the `schema` option would parse first and return `400`). Covered by a dedicated test.
-- **`invoices/[id]` DELETE uses `safeJsonBody`** (400 `Invalid or empty JSON body` on malformed JSON) and **`send-email` uses a bespoke `try { req.json() } catch` → 400 `Invalid JSON body`** — both kept as manual parse (NOT the `schema` option, whose malformed-JSON path yields a 500) to preserve the exact 400 body/message.
+- **`invoices/[id]` DELETE uses `safeJsonBody`** (400 `Invalid or empty JSON body` on malformed JSON) and **`send-email` uses a bespoke `try { req.json() } catch` → 400 `Invalid JSON body`** — both kept as manual parse (NOT the `schema` option, whose malformed-JSON path yielded a 500 — since 2026-11-04 a 400 via `safeJsonBody`, §Ασπίδα) to preserve the exact 400 body/message.
 - **`bank/match` + `bank/reconcile` had NO per-handler `try/catch`** pre-migration: their *unexpected*-error path fell through to `withAuth`→`apiErrorHandler.handleError` (rich envelope: `errorCode`/`timestamp`/`requestId`, rule-mapped HTTP status). After migration the factory's own `try/catch` intercepts first → `{ success:false, error }` at `500` (+ server log). **Accepted, minor divergence limited to the truly-unexpected-exception path** (all explicit `problemResponse`/success returns stay byte-identical); it also makes these two routes consistent with every other `defineRoute` migration. Flagged for Giorgio.
 - **`procurement` mutation routes map the error to an HTTP status by `error.name` + message, with a family-specific fallback** — create-route POSTs default to **500**, detail-route PATCH/DELETE default to **400** (and also map `not found`→404, `Forbidden`→403). The factory's `schema` option was NOT used for these; instead each keeps a manual `safeParseBody` inside its own `try/catch` so that a **bad-JSON `SyntaxError` maps through the SAME status function** (create→500, mutation→400) rather than the factory's fixed 500. The catch ends in `httpError(status, message)` (throws `ApiError` → `{ success:false, error: message }` at that status — byte-identical to the old inline `NextResponse.json`). The mapping itself is centralized in `_shared/error-status.ts` (was hand-duplicated as `errorStatus` in every detail route). GET handlers have no such mapping → migrated to the clean factory path (`fallbackError` + `notFound`).
 - **`procurement/route.ts` (PO create POST) is the exception to the create→500 rule:** its original `catch` mapped **every** failure to **400** (no `error.name` inspection, no `resolveProcurementErrorStatus`). Migrated with a manual `safeParseBody` + `try/catch` → `httpError(400, message)`, NOT the create-mode SSoT (which would give 500). The catalog `materials`/`agreements` POSTs (create-mode 500) and this PO POST (flat 400) are genuinely different contracts — do not "unify" them. `[poId]` PATCH/DELETE also flat-400 all failures (action-switch, message-shaped successes) → inner `try/catch` → `httpError(400, …)`; the de-dup win there is the `withAuth`/params/rate-limit composition, not the success bodies (kept inline byte-identical).
 - **`procurement` batch C2 mutations share ONE SSoT scaffold — `_shared/procurement-mutation.ts#runProcurementMutation`.** After the per-route `defineRoute` migration, the "optional-`safeParseBody` inside a `try` → service call → `resolveProcurementErrorStatus(mode:'mutation')` → `httpError`" block was a **token clone across (and within) 8 handlers** (jscpd flagged `lines` POST ↔ `bulk` POST ↔ `snapshot` POST, and `sourcing-events/rfqs` POST ↔ DELETE intra-file). Extracted to `runProcurementMutation({req, schema?, logger, logMessage, logContext, fallbackError, run})`: `schema` optional (omitted for the no-body `archive`/line-`DELETE`); `run(data)` returns the success envelope in whatever shape (`ok`/`created`, inline message-shaped, inline `{success,data,count}` @201) **or an early non-throwing response** (the `lines` POST null-guard `500 'Failed to create line'` returns from `run` so the catch never re-maps it to 400). This is the mutation twin of batch-B's inline-response pattern; the byte-identical guarantee is unchanged (bad-JSON still maps via the mutation function → 400). `resolveProcurementErrorStatus` gained **optional** `conflictName`/`validationName` (an `undefined` name makes `error.name === name` false → skipped) so these RFQ-line/sourcing routes — which never had a named conflict/validation error — reuse it purely on message, retiring 6 byte-identical local `errorStatus` helpers.
 - **`procurement/public/[token]` (GET) is a 3rd EXCLUDE — public, un-authenticated, un-rate-limited.** The route exports a bare `async function GET` with **no `withAuth` and no rate-limit wrapper** (a public share-link viewer: token-length 400 guard, `validatePOShare` → 404, `Server error` 500). `defineRoute` **requires** a `rateLimit` tier and **always** composes `withAuth` (even `allowUnauthenticated` still runs the auth middleware). Migrating would therefore ADD rate-limiting + auth-middleware execution to a currently-open endpoint — a runtime/contract change, not the byte-identical composition the campaign guarantees. Excluded; a deliberate future security pass could add a public-tier rate limit on its own terms.
 
+## Ασπίδα αποκρίσεων — cache και απρόβλεπτα σφάλματα (2026-11-04, ADR-923 §23.5 Β2)
+
+> ⚠️ Ο κώδικας έγραφε `@see ADR-602` — ο αριθμός 602 ανήκει στο ADR των λαβών (grip field-bag). Το ADR του `defineRoute`
+> είναι **αυτό** (603)· οι αναφορές στο `define-route.ts` / `trash-list-route.ts` διορθώθηκαν.
+
+**Δύο ελαττώματα, ένα σημείο.** Μετρημένα ζωντανά 2026-11-04 (routes καταλόγου) και στον κώδικα:
+
+1. **Cache.** Καμία απόκριση του factory δεν έφερε `Cache-Control` (το `next.config.js` δεν βάζει τίποτα στο `/api`). Ένα
+   404 είναι **ευρετικά αποθηκεύσιμο** (RFC 9110 §15.1 · RFC 9111 §4.2.2) ⇒ ο browser ή ενδιάμεσος μπορούσε να κρατήσει
+   «δεν βρέθηκε» και μετά τη διόρθωση· μια επιτυχία με δεδομένα ενός χώρου μπορούσε να μείνει στον δίσκο μετά την
+   αποσύνδεση (OWASP ASVS 4.0.3 V8.2.1).
+2. **Διαρροή.** `toErrorResponse` → `getErrorMessage(error, fallbackError)` ⇒ το `message` κάθε απρόβλεπτου `Error`
+   (Firestore: διαδρομές εγγράφων, ονόματα συλλογών· SDK· κώδικας) έφτανε **αυτούσιο** στον πελάτη, σε 500. Το
+   `fallbackError` ίσχυε μόνο για βλάβη **χωρίς** μήνυμα. Το test του factory το **επιβεβαίωνε** (`error: 'boom'`).
+   Ίδιο σχήμα στο `ApiErrorHandler` (ο δρόμος του `withAuth` για αδιάχειριστο throw): `details: { name, message }` σε
+   **κάθε** κατηγορία εκτός `security`, και στην παραγωγή. Και στο `trash-list-route`: `details: getErrorMessage(error)`.
+
+### Απόφαση
+
+**Το factory έχει πλέον εξωτερικό στρώμα, την ασπίδα** (`src/lib/api/route-response-shield.ts`). Η σύνθεση γίνεται
+`ασπίδα → rate-limit → withAuth → try/catch → schema → handler`. **Κάθε** απόκριση φεύγει από την ασπίδα: του handler, το
+400 του σχήματος, το 401/403 του `withAuth`, το 429 του ορίου ρυθμού, και ένα throw από το ίδιο το στρώμα ρυθμού ή αυθεντικοποίησης.
+
+| Θέμα | Κανόνας | Πού |
+|---|---|---|
+| Πολιτική cache | **Δηλωμένη** ανά route: `cache?: ResponseCachePolicy` στο `defineRoute`. Προεπιλογή `{ kind: 'no-store' }` ⇒ `private, no-store` | `lib/http/cache-control.ts` (`NO_STORE_POLICY`, `cacheControlOf`) |
+| Αρνήσεις / σφάλματα | Κατάσταση ≥400 ⇒ **πάντα** `private, no-store`, ό,τι κι αν δηλώθηκε | `cacheControlFor(status, policy)` |
+| Ποιος αποφασίζει | Η ασπίδα **γράφει πάνω** σε κεφαλίδα που έβαλε ο handler: η πολιτική ζει στη δήλωση, όχι κρυμμένη στο σώμα | `shieldResponse` |
+| Αμετάβλητες κεφαλίδες | `Response.redirect` / `fetch` passthrough ⇒ αντίγραφο με το ίδιο σώμα (χωρίς ανάγνωσή του), όχι σιωπηλή παράλειψη | `withHeaders` |
+| Άκυρη δήλωση | Αρνητική/κλασματική διάρκεια ⇒ `RangeError` **όταν ορίζεται** το route (φόρτωση module), όχι στο πρώτο αίτημα | `cacheControlOf` |
+| Απρόβλεπτο σφάλμα | 500 `{ success:false, error: <fallbackError ή 'Internal server error'>, errorCode: 'INTERNAL_SERVER_ERROR', requestId }` + κεφαλίδα `X-Request-ID` | `unexpectedErrorResponse` |
+| Λεπτομέρεια | Μήνυμα, όνομα, stack **μόνο** στο log του διακομιστή, κάτω από το ίδιο `requestId` | `logger.error('Route handler error', …)` |
+| Αναμενόμενο σφάλμα | `ApiError` (και `TenantIsolationError` μέσω `asApiError`) **κρατά** μήνυμα, `errorCode`, `details` — αμετάβλητο | `toErrorResponse` |
+| Κακό JSON με `schema` | 400 `Invalid or empty JSON body` (`safeJsonBody`, SSoT) αντί για 500 με το κείμενο του parser | `defineRoute` |
+| Σχήμα envelope | **Μόνο προσθήκες** (`errorCode`, `requestId` στο 500)· `ApiClientError` / `fetchJson` / `errorFieldsFrom` διαβάζουν `error` + `errorCode` όπως πριν | — |
+
+**`ApiErrorHandler`**: `details` (όνομα + μήνυμα του σφάλματος) **μόνο** σε `development`· το `HANDLER_FAILURE` 500 πήρε
+`Cache-Control`· ο κωδικός της προεπιλεγμένης βλάβης είναι η ίδια σταθερά `INTERNAL_ERROR_CODE` με το factory.
+
+**`trash-list-route`**: σβήστηκε το τοπικό `try/catch` που έστελνε `details: getErrorMessage(error)`· το 500 κρατά το ουσιαστικό
+της οντότητας ως `fallbackError` (`Failed to fetch deleted buildings`). Παράπλευρο κέρδος: ένα `TenantIsolationError` του
+`resolveTenantScopeFromUrl` απαντά πλέον 403/404 (μέσω `asApiError`) αντί για 500.
+
+**Μοναδικό route που χρειάστηκε αλλαγή**: `asset-packs/[packId]/[version]/[fileName]` έβαζε με το χέρι
+`private, max-age=31536000, immutable` — τώρα το **δηλώνει** (`cache: { kind: 'private', maxAgeSeconds: 31536000, immutable: true }`)
+και η ασπίδα το βάζει σε 200 **και** 304, ενώ οι αρνήσεις του (404/403) γίνονται `no-store`. Μετρημένο: από τα 73 αρχεία που
+εισάγουν το `define-route`, μόνο αυτό και το `catalog/publications/[id]/download` (ήδη `private, no-store`) έθεταν δική τους
+κεφαλίδα· το σύνορο του καταλόγου (`withPrivateNoStore`) δίνει την ίδια τιμή με την προεπιλογή.
+
+### Έρευνα — τι κάνουν οι μεγάλοι, πού πήγαμε πιο πέρα
+
+- **Stripe**: κάθε απόκριση φέρει `Request-Id`· τα `api_error` (5xx) έχουν γενικό μήνυμα. **GitHub** `X-GitHub-Request-Id` ·
+  **AWS** `x-amzn-RequestId` · **Google AIP-193**: σταθερός κωδικός (`INTERNAL`) + λεπτομέρεια που δεν εκθέτει υλοποίηση.
+- **OWASP ASVS 4.0.3 V7.4.1**: «γενικό μήνυμα σε απρόβλεπτο σφάλμα, ενδεχομένως με μοναδικό ID για την υποστήριξη».
+  **V8.2.1**: ευαίσθητα δεδομένα με anti-caching κεφαλίδες.
+- **RFC 9111 §5.2.2.5/§5.2.2.7** (`no-store` / `private`) · **RFC 8246** (`immutable`) · **RFC 9110 §15.1** (ποια status είναι
+  ευρετικά αποθηκεύσιμα: μέσα τους το 404, 405, 410, 414, 501).
+- **Πιο πέρα**:
+  1. **Καμία επιλογή `public` στον τύπο, επίτηδες.** Το RFC 9111 §3.5 απαγορεύει σε κοινόχρηστη cache να σερβίρει απόκριση
+     σε αίτημα με `Authorization` — αλλά **όχι** σε αίτημα με cookie συνεδρίας, που είναι αυτό που κάνει το `withAuth`.
+     `public` εδώ = «το CDN δίνει τα δεδομένα του ενός στον άλλο». Ο τύπος το κάνει αδύνατο.
+  2. **Η άρνηση δεν μπορεί να γίνει cacheable** ούτε με δήλωση (ο κανόνας ζει στο `cacheControlFor`, όχι στη μνήμη του γράφοντος).
+  3. **Το `requestId` το παράγει ο διακομιστής** — ποτέ από κεφαλίδα του πελάτη (log injection).
+  4. **Ζώνη και τιράντες**: throw από το Upstash ή το στρώμα αυθεντικοποίησης παίρνει την ίδια ασφαλή απάντηση.
+
+### Τι ΔΕΝ καλύπτει (ρητά — για την ανασκόπηση ασφαλείας)
+
+- **566 από τα 737 `route.ts`** δεν περνούν από το `defineRoute` (μετρημένο 2026-11-04: 171 το εισάγουν άμεσα ή μέσω
+  `catalog-route` / `subcontract-route` / `trash-list-route` / `list-summary-route` / `entity-scoped-summary-route`). Γι' αυτά
+  ισχύει μόνο η διόρθωση του `ApiErrorHandler` (αδιάχειριστο throw μέσα στο `withAuth`). Ευρετικό grep: **~103** αρχεία route
+  χτίζουν μόνα τους 500 με `getErrorMessage(…)` / `error.message` στο σώμα ⇒ εγγραφή στο `.claude-rules/pending-ratchet-work.md`.
+- **`ApiError` που χτίζεται από ωμό μήνυμα** (`httpError(400, getErrorMessage(error))` στο `procurement/[poId]`,
+  `resolveProcurementErrorOutcome` του `runProcurementMutation`) είναι «αναμενόμενο» για την ασπίδα ⇒ κρατά το μήνυμα. Είναι
+  επιλογή του route, όχι του factory.
+- **Σώμα 5xx που χτίζει ο ίδιος ο handler** (`NextResponse.json({ error: … }, { status: 500 })`) — η ασπίδα του βάζει `no-store`
+  αλλά δεν ξαναγράφει το σώμα του.
+- **`X-Request-ID` μόνο στο απρόβλεπτο 500**, όχι σε κάθε απόκριση (Stripe): το `enterpriseIdService` κρατά **κάθε** id που
+  παρήγαγε σε `Set` χωρίς όριο (`enterprise-id-class.ts` `generatedIds`) ⇒ ένα id ανά αίτημα = διαρκώς αυξανόμενη μνήμη
+  διακομιστή. Εγγραφή στο `pending-ratchet-work.md`· όταν λυθεί, η κεφαλίδα επεκτείνεται σε όλες τις αποκρίσεις.
+- **Πύλη (ratchet)**: **δεν** φτιάχτηκε νέα. Μέσα στο `defineRoute` η ασπίδα ισχύει **κατά κατασκευή** (δεν παρακάμπτεται
+  από handler — άγκυρα «a handler-set header cannot bypass the policy»), άρα πύλη εκεί θα μετρούσε κάτι που δεν μπορεί να
+  συμβεί. Το πραγματικό κενό είναι τα 566 routes εκτός factory — εκστρατεία μετάπτωσης, και μια πύλη για «σώμα 500 με
+  μήνυμα σφάλματος» θέλει AST (το regex πιάνει και πεδία `logger.*`). Προτεινόμενος σχεδιασμός στην εγγραφή του pending.
+
 ## Changelog
+- **2026-11-04** — **Ασπίδα αποκρίσεων** (ADR-923 §23.5 Β2 · κύμα 3 Λ5, απόφαση Giorgio): νέο `lib/api/route-response-shield.ts`·
+  `defineRoute` δέχεται `cache?: ResponseCachePolicy` (`lib/http/cache-control.ts`), κάθε απόκριση παίρνει `Cache-Control`
+  (≥400 πάντα `private, no-store`)· απρόβλεπτο σφάλμα ⇒ `fallbackError` + `errorCode: 'INTERNAL_SERVER_ERROR'` + `requestId`
+  (σώμα + `X-Request-ID`), λεπτομέρεια μόνο στο log· κακό JSON με `schema` ⇒ 400 (`safeJsonBody`)· `ApiErrorHandler.details`
+  μόνο σε development· `trash-list-route` χωρίς `details`· `asset-packs` δηλώνει `private immutable`. Οι αναφορές «ADR-602» του
+  κώδικα διορθώθηκαν σε 603. `catalogFileRoute` δέχεται `policy.cache` (η άγκυρα «ο route δηλώνει δική του πολιτική» περνά
+  πλέον από **δήλωση**, όχι από κεφαλίδα του handler). Tests: `define-route.test.ts` (η άγκυρα `error: 'boom'` που επιβεβαίωνε
+  τη διαρροή αντικαταστάθηκε· +13 άγκυρες ασπίδας), `cache-control.test.ts`, νέο `api-error-handler-disclosure.test.ts`,
+  `catalog-route.test.ts`. Το ψεύτικο `next/server` χωρίς κεφαλίδες ήταν **ίδιο μπλοκ σε 14 σουίτες** ⇒ ένα SSoT
+  `src/test-utils/next-response-json-mock.ts` (με αληθινά `Headers`)· **0** σουίτες υιοθετών βασίζονταν στη διαρροή, **13**
+  έσπασαν μόνο επειδή το ψεύτικο δεν είχε κεφαλίδες. Μεταλλάξεις 7/7 σκοτωμένες.
 - **2026-07-08** — ADR created. Φ0 landed: `@/lib/api/define-route.ts` (`defineRoute` + `ok`/`created`/`badRequest`/`notFound`/`conflict`/`httpError`), `ApiError` extended with `details`, pilot migration of `accounting/apy-certificates/route.ts`, 24 unit tests green, jscpd:diff on staged files = 0 clones.
 - **2026-07-08** — Φ1 accounting batch 1: migrated 8 routes onto `defineRoute` (byte-identical), extracted `_shared/fiscal-year-param.ts`, 18 new contract tests (42 total green), jscpd:diff on the 10 staged files = 0 clones. Documented `{error}`-envelope and `flatten()`-details per-route findings above.
 - **2026-07-08** — Φ1 accounting batch 2: migrated 14 routes onto `defineRoute` (byte-identical) — `categories` (+`[id]`), `documents` (+`[id]`), `journal` (+`[id]`), `setup` (+`presets`), `efka/summary`, `vat/summary`, `tax/estimate`, `reports/[type]`, `bank/transactions`, `invoices`. 422 (`validatePostingAllowed.reason` / credit-limit, `string|null`) and top-level extra-field responses (`action`, `entityType`) kept as inline `NextResponse.json` inside the handler (envelope helpers only cover the bare `{success,data}` shape). Boy-Scout SSoT extractions to break jscpd sibling clones: `_shared/entity-scoped-response.ts` (entity-type dispatch), `_shared/entity-scoped-summary-route.ts` (efka+tax/estimate route-factory twin), `_shared/journal-entry-fields.ts` (shared create/update zod field shape), `_shared/list-request-context.ts` (`readListContext` for GET-list openers), `_shared/fiscal-year-param.ts#resolveYearInRange` (range-validated year param), local `loadCategoryOr404`. 28 new contract tests (88 total green), jscpd:diff on the 19 staged files = 0 clones. **Excluded** `tax/dashboard` (see findings). Remaining accounting micro-batch: heavy `invoices/[id]` (+`send-email`), `bank/match`, `bank/reconcile`, `bank/import`.

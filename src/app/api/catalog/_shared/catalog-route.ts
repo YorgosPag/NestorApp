@@ -23,7 +23,7 @@ import type { z } from 'zod';
 
 import { badRequest, created, defineRoute, ok, type RateLimitTier } from '@/lib/api/define-route';
 import type { AuthContext } from '@/lib/auth';
-import { withPrivateNoStore } from '@/lib/http/cache-control';
+import { withPrivateNoStore, type ResponseCachePolicy } from '@/lib/http/cache-control';
 import type { RateLimitCategory } from '@/lib/middleware/rate-limit-config';
 import { CatalogWriteError, toCatalogApiError } from '@/server/catalog/catalog-write-error';
 import { CURSOR_PARAM, EXPECTED_REVISION_PARAM } from '@/subapps/catalog/catalog-routes';
@@ -37,6 +37,11 @@ export interface CatalogRoutePolicy {
   readonly category: CatalogRateCategory;
   /** Προεπιλογή `schema` (οι διαδρομές της Φάσης 1). */
   readonly authority?: CatalogAuthority;
+  /**
+   * Τι κρατά ο browser από μια **επιτυχή** απάντηση αρχείου (ADR-603 §Ασπίδα). Προεπιλογή `private, no-store`· η πολιτική
+   * **δηλώνεται εδώ** — κεφαλίδα που βάζει ο ίδιος ο handler την ξαναγράφει η ασπίδα του `defineRoute`.
+   */
+  readonly cache?: ResponseCachePolicy;
 }
 
 const TIER_OF: Readonly<Record<CatalogRateCategory, RateLimitTier>> = { HIGH: 'high', STANDARD: 'standard', SENSITIVE: 'sensitive' };
@@ -128,6 +133,7 @@ export function catalogFileRoute(
     rateLimit: TIER_OF[policy.category],
     auth: authOf(policy),
     fallbackError: READ_FALLBACK_ERROR,
+    ...(policy.cache ? { cache: policy.cache } : {}),
     handler: ({ req, auth, params }) => respond((response: NextResponse) => response, () => run(auth, params.id, new URL(req.url).searchParams)),
   });
 }

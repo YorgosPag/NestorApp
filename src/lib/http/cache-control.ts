@@ -32,3 +32,48 @@ export function withPrivateNoStore(response: NextResponse): NextResponse {
   if (!response.headers.has('Cache-Control')) response.headers.set('Cache-Control', PRIVATE_NO_STORE);
   return response;
 }
+
+// =============================================================================
+// ΔΗΛΩΜΕΝΗ ΠΟΛΙΤΙΚΗ ΑΝΑ ROUTE (ADR-603 §Ασπίδα · ADR-923 §23.5 Β2)
+// =============================================================================
+
+/**
+ * Τι επιτρέπεται να κρατήσει **ο browser του ίδιου ανθρώπου** από μια **επιτυχή** απόκριση.
+ *
+ * - `no-store` — η προεπιλογή: τίποτα, πουθενά.
+ * - `private` — μόνο ο browser, για `maxAgeSeconds`· `immutable` όταν το URL είναι εκδοχή (το περιεχόμενο δεν αλλάζει
+ *   ποτέ κάτω από το ίδιο URL — RFC 8246). `maxAgeSeconds: 0` ⇒ `no-cache`: κρατά, αλλά ρωτά κάθε φορά (ETag).
+ *
+ * 🔑 **Δεν υπάρχει `public`, επίτηδες.** Κάθε route του `defineRoute` απαντά σε **συνδεδεμένο** άνθρωπο με cookie
+ * συνεδρίας. Το RFC 9111 §3.5 προστατεύει από κοινόχρηστη αποθήκευση μόνο τα αιτήματα με κεφαλίδα `Authorization`·
+ * ένα αίτημα με cookie δεν προστατεύεται ⇒ `public` εδώ σημαίνει «το CDN δίνει τα δεδομένα του ενός στον άλλο».
+ */
+export type ResponseCachePolicy =
+  | { readonly kind: 'no-store' }
+  | { readonly kind: 'private'; readonly maxAgeSeconds: number; readonly immutable?: boolean };
+
+/** Η προεπιλογή κάθε απόκρισης που δεν δήλωσε τίποτα. */
+export const NO_STORE_POLICY: ResponseCachePolicy = { kind: 'no-store' };
+
+/**
+ * Η τιμή της κεφαλίδας για μια δηλωμένη πολιτική. Άκυρη διάρκεια (αρνητική, κλάσμα, NaN) ⇒ **σφάλμα στη δήλωση**,
+ * όχι σιωπηλή διόρθωση: το route φορτώνει μόνο αν η πολιτική του σημαίνει κάτι.
+ */
+export function cacheControlOf(policy: ResponseCachePolicy): string {
+  if (policy.kind === 'no-store') return PRIVATE_NO_STORE;
+  const { maxAgeSeconds, immutable } = policy;
+  if (!Number.isInteger(maxAgeSeconds) || maxAgeSeconds < 0) {
+    throw new RangeError(`Cache policy maxAgeSeconds must be a non-negative integer, got ${maxAgeSeconds}`);
+  }
+  if (maxAgeSeconds === 0) return 'private, no-cache';
+  return immutable ? `private, max-age=${maxAgeSeconds}, immutable` : `private, max-age=${maxAgeSeconds}`;
+}
+
+/**
+ * Η κεφαλίδα που **πρέπει** να φέρει μια απόκριση με αυτή την κατάσταση: άρνηση ή σφάλμα (≥400) ⇒ **πάντα**
+ * `private, no-store`, ό,τι κι αν δήλωσε το route. Ένα 404 είναι ευρετικά αποθηκεύσιμο (RFC 9110 §15.1 · RFC 9111
+ * §4.2.2) — χωρίς κεφαλίδα θα επέζησε της διόρθωσης που το έκανε 200.
+ */
+export function cacheControlFor(status: number, policy: ResponseCachePolicy): string {
+  return status >= 400 ? PRIVATE_NO_STORE : cacheControlOf(policy);
+}
