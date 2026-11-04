@@ -1,190 +1,94 @@
 /**
- * Το fan-out προσκλήσεων RFQ — ADR-742 Ομάδα 2, σημείο §3.1(β)
+ * @jest-environment node
+ *
+ * Το fan-out προσκλήσεων RFQ — ADR-742 Ομάδα 2, σημείο §3.1(β) · ADR-923 §5.13 Τ5
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΑΥΤΟ ΤΟ ΦΙΛΤΡΟ ΑΞΙΖΕΙ ΔΙΚΗ ΤΟΥ ΣΟΥΙΤΑ
  * ─────────────────────────────────────────────────────────────────────────────
- * Είναι **δευτερεύον δίχτυ σε παρενέργεια**, όχι ο κύριος φύλακας της
- * διαδρομής — και γι' αυτό ακριβώς κανείς δεν το κοίταζε. Η μετάλλαξη που
- * επαναφέρει το παλιό `data.companyId && data.companyId !== ctx.companyId`
- * άφηνε **282/282 πράσινα** (ίδιο σχήμα με το μάθημα #3 της Ομάδας 1: η
- * αφαίρεση του φύλακα σχέσης άφηνε 12/12).
+ * Είναι **δευτερεύον δίχτυ σε παρενέργεια**, όχι ο κύριος φύλακας της διαδρομής — και γι' αυτό ακριβώς κανείς δεν το
+ * κοίταζε. Η μετάλλαξη που επαναφέρει το παλιό `data.companyId && data.companyId !== ctx.companyId` άφηνε **282/282
+ * πράσινα** (ίδιο σχήμα με το μάθημα #3 της Ομάδας 1).
  *
- * Το διακύβευμα δεν είναι διαρροή ονόματος: το μήνυμα μεταφέρει **portal
- * token** που ανοίγει το RFQ σε όποιον το λάβει. Επαφή **χωρίς** `companyId`
- * περνούσε το παλιό φίλτρο (`data.companyId &&` → falsy → δεν έμπαινε καν στη
- * σύγκριση) και έπαιρνε το token.
+ * Το διακύβευμα δεν είναι διαρροή ονόματος: το μήνυμα μεταφέρει **portal token** που ανοίγει το RFQ σε όποιον το λάβει.
+ *
+ * ADR-923 §5.13 Τ5: η κρίση ζει πλέον στο `vendor-recipient` (μία για όλους τους δρόμους) και η αποστολή στο καθολικό
+ * παράδοσης. Η σουίτα τρέχει **ολόκληρη** τη διαδρομή `createRfq → after() → παράδοση` πάνω στο ψεύτικο Firestore, ώστε ο
+ * φύλακας να ελέγχεται εκεί που ζει και όχι σε αντίγραφο.
  */
 
-import type { AuthContext } from '@/lib/auth';
+jest.mock('server-only', () => ({}));
+jest.mock('next/server', () => ({ after: () => { throw new Error('outside request scope'); } }));
 
-const mockTimestamp = () => ({ seconds: 1700000000, nanoseconds: 0 });
-
-jest.mock('firebase-admin', () => ({
-  firestore: Object.assign(jest.fn(() => mockDb), {
-    Timestamp: {
-      now: jest.fn(() => mockTimestamp()),
-      fromDate: jest.fn(() => mockTimestamp()),
-      fromMillis: jest.fn(() => mockTimestamp()),
-    },
-    FieldPath: { documentId: jest.fn(() => '__name__') },
+const fake = new (jest.requireActual('@/test-utils/fake-firestore/fake-firestore').FakeFirestore)();
+jest.mock('@/lib/firebaseAdmin', () => ({
+  getAdminFirestore: () => fake,
+  isFirebaseAdminAvailable: () => true,
+  safeFirestoreOperation: async (op: (db: unknown) => Promise<unknown>) => op(fake),
+  FieldValue: jest.requireActual('firebase-admin/firestore').FieldValue,
+}));
+jest.mock('@/services/vendor-portal/vendor-invite-credential', () => ({
+  vendorLinkExpiryMs: (nowMs: number) => nowMs + 7 * 86_400_000,
+  mintVendorInviteCredential: async (input: { inviteId: string; rfqId: string; companyId: string }) => ({
+    credential: { id: `vic_${input.inviteId}`, inviteId: input.inviteId, rfqId: input.rfqId, companyId: input.companyId, nonceHash: 'h', expiresAt: '2027-01-01T00:00:00.000Z' },
+    token: `tok_${input.inviteId}`,
   }),
 }));
+jest.mock('../vendor-portal-links', () => ({ vendorPortalUrl: (t: string) => `https://app.test/q#${t}`, vendorDeclineUrl: (t: string) => `https://app.test/d#${t}` }));
+const mockSend = jest.fn(async () => ({ success: true, providerMessageId: null, errorReason: null, channel: 'email' }));
+jest.mock('../channels/email-channel', () => ({ emailVendorInviteChannel: { send: (...a: unknown[]) => mockSend(...(a as [])) } }));
+jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: async () => 'audit' } }));
 
-jest.mock('@/utils/firestore-sanitize', () => ({
-  sanitizeForFirestore: jest.fn((x: unknown) => x),
-}));
-
-jest.mock('@/services/enterprise-id.service', () => ({
-  generateRfqId: jest.fn(() => 'rfq_1'),
-  generateVendorInviteId: jest.fn(() => 'inv_1'),
-}));
-
-/**
- * ADR-876 §5 — ο **πραγματικός** κατασκευαστής (`vendor-invite-issue`) τρέχει· mock μόνο η
- * έκδοση του διαπιστευτηρίου (τυχαιότητα + μυστικό) και οι απόλυτοι σύνδεσμοι (origin).
- */
-jest.mock('@/services/vendor-portal/vendor-invite-credential', () => ({
-  vendorLinkExpiryMs: jest.fn((nowMs: number) => nowMs + 7 * 24 * 60 * 60 * 1000),
-  mintVendorInviteCredential: jest.fn(async (input: { inviteId: string; rfqId: string; companyId: string }) => ({
-    credential: { id: `vic_${input.inviteId}`, inviteId: input.inviteId, rfqId: input.rfqId, companyId: input.companyId, nonceHash: 'hash', expiresAt: '2026-12-31T00:00:00.000Z' },
-    token: `tok_${input.inviteId}`,
-  })),
-}));
-
-jest.mock('../vendor-portal-links', () => ({
-  vendorPortalUrl: jest.fn((token: string) => `https://app.test/vendor/quote#t=${token}`),
-  vendorDeclineUrl: jest.fn((token: string) => `https://app.test/vendor/quote#t=${token}&intent=decline`),
-}));
-
-jest.mock('@/lib/telemetry', () => ({
-  createModuleLogger: jest.fn(() => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  })),
-}));
-
-jest.mock('@/lib/date-local', () => ({
-  normalizeToDate: jest.fn(() => new Date('2026-09-01T00:00:00.000Z')),
-}));
-
-jest.mock('../rfq-line-service', () => ({
-  recordRfqLinesAdded: jest.fn(),
-  buildRfqLine: jest.fn(),
-  boqItemToLineDto: jest.fn(),
-  rfqLinesRef: jest.fn(() => ({ doc: jest.fn() })),
-}));
-
-// ADR-923 §5.13 Τ4 — η δημιουργία RFQ ζει πλέον στο σχέδιο + τη συναλλαγή (`rfq-create.test.ts`, πάνω στο ψεύτικο
-// Firestore). Εδώ οι εξαρτήσεις τους είναι κενά stubs, ώστε η σουίτα να φορτώνει χωρίς τον κατάλογο.
-jest.mock('@/server/supply-relationships/supply-quote-sku.server', () => ({ resolveQuoteSku: jest.fn() }));
-jest.mock('@/services/public-catalog/public-catalog.reader', () => ({ readPublicSupplier: jest.fn() }));
-jest.mock('@/server/catalog/public/public-model-snapshot.server', () => ({ supplierAcceptsQuotesInTx: jest.fn() }));
-jest.mock('@/services/contact/platform-company-contact-resolver', () => ({ resolvePlatformCompanyContact: jest.fn() }));
-jest.mock('@/services/contact/account-contact-resolver', () => ({ recordAccountContactBirth: jest.fn() }));
-jest.mock('@/server/lib/performer-stamp', () => ({ resolvePerformer: jest.fn() }));
-jest.mock('@/services/enterprise-id-convenience-catalog', () => ({ generateDeterministicPlatformCompanyContactId: jest.fn() }));
-
-jest.mock('../sourcing-event-service', () => ({
-  recomputeSourcingEventStatus: jest.fn(async () => 'partial'),
-}));
-
-const mockSend = jest.fn(async () => ({ success: true }));
-jest.mock('../channels/email-channel', () => ({
-  emailVendorInviteChannel: { send: (...a: unknown[]) => mockSend(...(a as [])) },
-}));
-
-jest.mock('@/services/contacts/contact-name-resolver-types', () => ({
-  getContactEmail: jest.fn((c: { email?: string }) => c.email ?? null),
-}));
-
-const mockContactSnap = { get: jest.fn() };
-const mockDocRef = {
-  set: jest.fn().mockResolvedValue(undefined),
-  get: jest.fn(() => mockContactSnap.get()),
-  update: jest.fn().mockResolvedValue(undefined),
-};
-const mockTx = { get: jest.fn(), set: jest.fn(), update: jest.fn() };
-const mockDb = {
-  runTransaction: jest.fn(async (body: (tx: typeof mockTx) => Promise<unknown>) => body(mockTx)),
-  collection: jest.fn(() => ({
-    doc: jest.fn(() => mockDocRef),
-    where: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    get: jest.fn().mockResolvedValue({ docs: [] }),
-  })),
-};
-
-jest.mock('@/lib/firebaseAdmin', () => ({
-  getAdminFirestore: () => mockDb,
-  safeFirestoreOperation: jest.fn(async (op: (db: typeof mockDb) => Promise<unknown>) =>
-    op(mockDb),
-  ),
-  FieldValue: { arrayUnion: jest.fn(), increment: jest.fn() },
-}));
+/* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθούν οι μονάδες */
+import { COLLECTIONS } from '@/config/firestore-collections';
+import type { AuthContext } from '@/lib/auth';
 
 import { createRfq } from '../rfq-service';
+/* eslint-enable import/first */
 
-const ctx: AuthContext = { uid: 'u1', companyId: 'co1' } as AuthContext;
+const ctx = { uid: 'u1', companyId: 'co1', email: 'pm@co1.gr', globalRole: 'company_admin' } as unknown as AuthContext;
 
-/** Δημιουργία RFQ με έναν προσκεκλημένο προμηθευτή — ενεργοποιεί το fan-out. */
-async function createWithVendor() {
-  await createRfq(ctx, {
-    projectId: 'proj1',
-    title: 'RFQ',
-    invitedVendorIds: ['vendor_1'],
-  });
+/** Δημιουργία RFQ με έναν προσκεκλημένο προμηθευτή — ενεργοποιεί το fan-out και περιμένει την παράδοση. */
+async function createWithVendor(): Promise<void> {
+  await createRfq(ctx, { projectId: 'proj1', title: 'RFQ', invitedVendorIds: ['vendor_1'] });
+  await new Promise((resolve) => setTimeout(resolve, 50));
 }
 
-const contact = (data: Record<string, unknown>) => ({
-  exists: true,
-  id: 'vendor_1',
-  data: () => data,
-});
-
 beforeEach(() => {
+  fake.reset();
   jest.clearAllMocks();
-  mockSend.mockResolvedValue({ success: true });
 });
 
 describe('fan-out προσκλήσεων — ποιος λαμβάνει το portal token', () => {
   it('επαφή του ίδιου πελάτη λαμβάνει', async () => {
-    mockContactSnap.get.mockResolvedValue(
-      contact({ companyId: 'co1', email: 'v@example.com', displayName: 'V' }),
-    );
+    fake.seed(COLLECTIONS.CONTACTS, 'vendor_1', { companyId: 'co1', email: 'v@example.com', displayName: 'V' });
     await createWithVendor();
     expect(mockSend).toHaveBeenCalledTimes(1);
-    expect(mockSend).toHaveBeenCalledWith(
-      expect.objectContaining({ recipient: 'v@example.com' }),
-    );
+    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ recipient: 'v@example.com', portalUrl: expect.stringContaining('tok_') }));
   });
 
   it('επαφή ΑΛΛΟΥ πελάτη δεν λαμβάνει', async () => {
-    mockContactSnap.get.mockResolvedValue(
-      contact({ companyId: 'co_other', email: 'x@example.com' }),
-    );
+    fake.seed(COLLECTIONS.CONTACTS, 'vendor_1', { companyId: 'co_other', email: 'x@example.com' });
     await createWithVendor();
     expect(mockSend).not.toHaveBeenCalled();
   });
 
   it('🔴 επαφή ΧΩΡΙΣ companyId δεν λαμβάνει — το token δεν φεύγει σε άγνωστο tenant', async () => {
-    mockContactSnap.get.mockResolvedValue(contact({ email: 'orphan@example.com' }));
+    fake.seed(COLLECTIONS.CONTACTS, 'vendor_1', { email: 'orphan@example.com' });
     await createWithVendor();
     expect(mockSend).not.toHaveBeenCalled();
   });
 
   it('🔴 επαφή με ΚΕΝΟ companyId δεν λαμβάνει — το κενό είναι απουσία tenant', async () => {
-    mockContactSnap.get.mockResolvedValue(
-      contact({ companyId: '', email: 'empty@example.com' }),
-    );
+    fake.seed(COLLECTIONS.CONTACTS, 'vendor_1', { companyId: '', email: 'empty@example.com' });
     await createWithVendor();
     expect(mockSend).not.toHaveBeenCalled();
   });
 
-  it('ανύπαρκτη επαφή δεν λαμβάνει', async () => {
-    mockContactSnap.get.mockResolvedValue({ exists: false, id: 'vendor_1', data: () => undefined });
+  it('ανύπαρκτη επαφή δεν λαμβάνει — και η πρόσκληση λέει γιατί (`no_recipient`), δεν σωπαίνει', async () => {
     await createWithVendor();
     expect(mockSend).not.toHaveBeenCalled();
+    const [invite] = Object.values(fake.getAllDocs(COLLECTIONS.VENDOR_INVITES)) as { delivery: { state: string; reason: string } }[];
+    expect(invite.delivery).toMatchObject({ state: 'undeliverable', reason: 'no_recipient' });
   });
 });

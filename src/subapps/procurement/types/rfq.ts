@@ -17,6 +17,12 @@ export const RFQ_STATUS_TRANSITIONS: Record<RfqStatus, RfqStatus[]> = {
   archived:  [],
 } as const;
 
+/**
+ * Οι καταστάσεις RFQ που **δέχονται** ακόμη προσφορές — η μία λίστα για κάθε αποστολή συνδέσμου πύλης (αυτοεξυπηρέτηση
+ * λήξης, ADR-876 §5 · παράδοση πρόσκλησης, ADR-923 §5.13 Τ5).
+ */
+export const RFQ_ACCEPTING_QUOTES: ReadonlySet<RfqStatus> = new Set<RfqStatus>(['draft', 'active']);
+
 // ADR-335 — Set of statuses that block line edits, invite sends, status mutations.
 export const RFQ_LIFECYCLE_LOCKED_STATUSES: ReadonlySet<RfqStatus> = new Set<RfqStatus>([
   'closed',

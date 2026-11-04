@@ -13,7 +13,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit, withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { createVendorInvite, listVendorInvitesByRfq } from '@/subapps/procurement/services/vendor-invite-service';
+import {
+  VendorInviteRefusal,
+  createVendorInvite,
+  listVendorInvitesByRfq,
+  type VendorInviteRefusalCode,
+} from '@/subapps/procurement/services/vendor-invite-service';
 import type { CreateVendorInviteDTO } from '@/subapps/procurement/types/vendor-invite';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -40,6 +45,13 @@ const CreateInviteSchema = z
     { message: 'manualName is required when manualEmail is provided' },
   );
 
+/** ADR-923 §5.13 Τ5 Λ1β Σ1 — άρνηση ⇒ τίποτα δεν αποθηκεύτηκε· ο κωδικός ταξιδεύει, το κείμενο το διαλέγει η οθόνη. */
+const REFUSAL_STATUS: Record<VendorInviteRefusalCode, number> = {
+  already_invited: 409,
+  quote_request_quota_exhausted: 429,
+  quota_unavailable: 503,
+};
+
 // ============================================================================
 // POST — create invite
 // ============================================================================
@@ -62,6 +74,9 @@ async function handlePost(
         const result = await createVendorInvite(ctx, dto, { locale });
         return NextResponse.json({ success: true, data: result });
       } catch (error) {
+        if (error instanceof VendorInviteRefusal) {
+          return NextResponse.json({ success: false, error: error.code }, { status: REFUSAL_STATUS[error.code] });
+        }
         return NextResponse.json(
           { success: false, error: getErrorMessage(error) },
           { status: 400 },

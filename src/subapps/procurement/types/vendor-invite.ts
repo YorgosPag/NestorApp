@@ -1,5 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 
+import type { VendorInviteDelivery } from './vendor-invite-delivery';
+
 // ============================================================================
 // DELIVERY CHANNEL — ADR-327 §17 Q7
 // ============================================================================
@@ -53,10 +55,15 @@ export interface VendorInvite {
   lastReminderAt: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  /** Snapshot of recipient email at creation (always set, both modes). */
+  /**
+   * Snapshot of recipient email at delivery. 🔒 **Always `null` for a platform supplier** (ADR-923 §5.13 Τ5): its
+   * quote-intake address is private and this document is readable by every member of the buyer's company.
+   */
   recipientEmail: string | null;
   /** Snapshot of recipient display name at creation (always set, both modes). */
   recipientName: string | null;
+  /** ADR-923 §5.13 Τ5 — the delivery outbox of an RFQ fan-out invite. Absent on manual and legacy invites. */
+  delivery?: VendorInviteDelivery;
 }
 
 // ============================================================================

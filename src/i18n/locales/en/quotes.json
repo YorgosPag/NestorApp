@@ -414,7 +414,8 @@
         "catalogSkuUnavailable": "This product is no longer available for a quote request.",
         "supplierNotAcceptingQuotes": "This supplier is not accepting quote requests right now.",
         "supplierContactUnavailable": "The supplier's contact in your contacts is archived. Check the contact and try again.",
-        "rfqTooLarge": "This request is too large to send at once. Split it into smaller requests."
+        "rfqTooLarge": "This request is too large to send at once. Split it into smaller requests.",
+        "quoteRequestQuotaExhausted": "You have sent many requests to this supplier today. Please try again tomorrow."
       },
       "catalogDraftFailed": "The catalog product could not be loaded. Please try again."
     },
@@ -1131,6 +1132,22 @@
       "declined": "Declined",
       "expired": "Expired",
       "revoked": "Withdrawn"
+    },
+    "delivery": {
+      "label": "Delivery",
+      "pending": "Waiting to send",
+      "delivered": "Sent",
+      "uncertain": "Outcome unknown",
+      "failed": "Failed",
+      "failedHint": "The email was not delivered. Copy the link and send it to the supplier.",
+      "failedHintPlatform": "The email was not delivered to the supplier. Please try again later.",
+      "uncertainHint": "We do not know whether the email arrived. Check with the supplier before resending, so they do not get it twice.",
+      "reasons": {
+        "no_recipient": "The supplier has no address for quote requests.",
+        "rfq_closed": "The request no longer accepts quotes.",
+        "invite_closed": "The invitation was closed or has expired.",
+        "recipient_quota": "The supplier has received the maximum number of requests today."
+      }
     },
     "copyLink": "Copy Link",
     "linkCopied": "Copied!",

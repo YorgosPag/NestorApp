@@ -861,6 +861,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-923 §5.13 Τ5 — η ποσόστωση ζεύγους (αγοραστής, προμηθευτής): ούτε ανάγνωση ούτε γραφή από τον πελάτη.
+    collection: 'quote_request_pair_quotas',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/quote-request-pair-quotas.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     collection: 'catalog_visibility_rules',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-visibility-rules.rules.test.ts',

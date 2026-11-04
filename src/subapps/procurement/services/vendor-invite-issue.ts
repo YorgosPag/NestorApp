@@ -32,6 +32,7 @@ import {
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 
 import type { DeliveryChannel, InviteStatus, VendorInvite } from '../types/vendor-invite';
+import type { VendorInviteDelivery } from '../types/vendor-invite-delivery';
 import type {
   VendorCredentialOrigin,
   VendorInviteCredential,
@@ -59,6 +60,8 @@ export interface PrepareVendorInviteInput {
   readonly issuedVia: VendorCredentialOrigin;
   readonly issuedBy: string;
   readonly expiresInDays?: number;
+  /** ADR-923 §5.13 Τ5 — το outbox της παράδοσης, γραμμένο στην ίδια πράξη με την πρόσκληση (μόνο fan-out του RFQ). */
+  readonly delivery?: VendorInviteDelivery;
 }
 
 export interface PreparedVendorInvite {
@@ -126,6 +129,7 @@ function newInviteDoc(
     updatedAt: now,
     recipientEmail: input.recipientEmail,
     recipientName: input.recipientName,
+    ...(input.delivery ? { delivery: input.delivery } : {}),
   };
 }
 

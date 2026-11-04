@@ -27,13 +27,13 @@ import { vendorLinkExpiryMs } from '@/services/vendor-portal/vendor-invite-crede
 
 import type { VendorInvite } from '../types/vendor-invite';
 import type { RFQ } from '../types/rfq';
+import { RFQ_ACCEPTING_QUOTES } from '../types/rfq';
 import { resolveChannel } from './channels';
 import { getRfq } from './rfq-service';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
 import { resolveInviteRecipient } from './vendor-invite-links-service';
-
-/** Οι καταστάσεις RFQ που **δέχονται** ακόμη προσφορές. */
-const RFQ_ACCEPTING: ReadonlySet<RFQ['status']> = new Set(['draft', 'active']);
+import { inviteEmailLanguage } from './vendor-recipient';
+import type { HumanLanguage } from '@/i18n/languages';
 
 const RENEW_QUOTA_SCOPE = 'vendor-link-renew';
 
@@ -42,7 +42,8 @@ export type VendorLinkRenewOutcome = 'sent' | 'rfq_closed' | 'no_recipient' | 'q
 export interface RenewVendorLinkInput {
   readonly invite: VendorInvite;
   readonly requesterIpHash: string;
-  readonly locale: 'el' | 'en';
+  /** Η γλώσσα της οθόνης του αιτούντα — **εφεδρεία** μόνο: κερδίζει η δηλωμένη γλώσσα του παραλήπτη (Λ1β Χ4). */
+  readonly locale: HumanLanguage;
   readonly nowMs?: number;
 }
 
@@ -58,7 +59,7 @@ export async function renewVendorLink(input: RenewVendorLinkInput): Promise<Vend
   const nowMs = input.nowMs ?? Date.now();
   const { invite } = input;
   const rfq = await getRfq(invite.companyId, invite.rfqId);
-  if (!rfq || !RFQ_ACCEPTING.has(rfq.status)) return 'rfq_closed';
+  if (!rfq || !RFQ_ACCEPTING_QUOTES.has(rfq.status)) return 'rfq_closed';
   const expiresAtMs = renewedLinkExpiryMs(rfq, nowMs);
   if (expiresAtMs === null) return 'rfq_closed';
 
@@ -84,7 +85,7 @@ export async function renewVendorLink(input: RenewVendorLinkInput): Promise<Vend
     projectName: null,
     portalUrl: link.portalUrl,
     expiresAt: link.expiresAtIso,
-    locale: input.locale,
+    locale: inviteEmailLanguage(recipient, input.locale),
     declineUrl: link.declineUrl,
   });
   return dispatch.success ? 'sent' : 'delivery_failed';

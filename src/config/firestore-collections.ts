@@ -1048,6 +1048,8 @@ export const COLLECTIONS = {
   QUOTES: process.env.NEXT_PUBLIC_QUOTES_COLLECTION || 'quotes',
   QUOTE_COUNTERS: process.env.NEXT_PUBLIC_QUOTE_COUNTERS_COLLECTION || 'quote_counters',
   VENDOR_INVITES: process.env.NEXT_PUBLIC_VENDOR_INVITES_COLLECTION || 'vendor_invites',
+  /** ADR-923 §5.13 Τ5 — ημερήσια ποσόστωση αιτημάτων προσφοράς ανά ζεύγος (αγοραστής, προμηθευτής). doc id = companyId του αγοραστή (όπως `QUOTE_COUNTERS`). Admin SDK μόνο — καμία πρόσβαση πελάτη. */
+  QUOTE_REQUEST_PAIR_QUOTAS: process.env.NEXT_PUBLIC_QUOTE_REQUEST_PAIR_QUOTAS_COLLECTION || 'quote_request_pair_quotas',
   VENDOR_INVITE_CREDENTIALS: process.env.NEXT_PUBLIC_VENDOR_INVITE_CREDENTIALS_COLLECTION || 'vendor_invite_credentials',
   TRADES: process.env.NEXT_PUBLIC_TRADES_COLLECTION || 'trades',
   // ADR-327 §17 Q28-Q31 Multi-Vendor extension (2026-04-29)

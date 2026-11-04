@@ -17,7 +17,7 @@ import 'server-only';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import { createModuleLogger } from '@/lib/telemetry';
-import { chainFailureReasons, sendThroughChain } from '@/server/comms/email-provider-chain';
+import { chainFailureReasons, chainOutcomeUncertain, sendThroughChain } from '@/server/comms/email-provider-chain';
 import { defaultEmailChain } from '@/server/comms/email-providers';
 import { resolveSenderHeader, resolveSenderIdentity } from '@/services/company/sender-identity';
 import { wrapInBrandedTemplate, escapeHtml, BRAND } from '@/services/email-templates/base-email-template';
@@ -96,7 +96,7 @@ class EmailVendorInviteChannel implements MessageChannel {
     }
     const reason = chainFailureReasons(outcome).join(' | ');
     logger.error('Vendor invite email not delivered', { inviteId: message.inviteId, reason });
-    return { success: false, providerMessageId: null, errorReason: reason, channel: 'email' };
+    return { success: false, providerMessageId: null, errorReason: reason, channel: 'email', uncertain: chainOutcomeUncertain(outcome) };
   }
 }
 

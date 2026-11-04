@@ -18,6 +18,7 @@ import admin from 'firebase-admin';
 import { SAFE_BATCH_WRITES } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { userPerformer } from '@/lib/audit/audit-performer';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { resolvePerformer, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 import { resolveQuoteSku, type QuoteSku } from '@/server/supply-relationships/supply-quote-sku.server';
 import { generateDeterministicPlatformCompanyContactId } from '@/services/enterprise-id-convenience-catalog';
@@ -26,10 +27,13 @@ import { readPublicSupplier } from '@/services/public-catalog/public-catalog.rea
 import type { CreateRfqDTO, RFQ } from '../types/rfq';
 import { RFQ_FROM_BOQ_MAX_ITEMS } from '../types/rfq';
 import { RfqCreateRefusal } from '../types/rfq-create-refusal';
+import { pendingInviteDelivery } from '../types/vendor-invite-delivery';
 import type { CatalogSkuAddress, CreateRfqCatalogLineDTO, RfqLineSource } from '../types/rfq-line';
 import { defaultResponseLock } from '../utils/rfq-response-lock';
 import { toAdminTimestampOrNull } from './procurement-timestamps';
+import { admitQuoteRequestPairs, readQuoteRequestPairCounts } from './quote-request-pair-quota';
 import { prepareVendorInvite, type PreparedVendorInvite } from './vendor-invite-issue';
+import { fetchVendorContact } from './vendor-recipient';
 
 /** Μια γραμμή καταλόγου με το SKU που έκρινε ο διακομιστής. */
 export interface PlannedCatalogLine {
@@ -52,6 +56,11 @@ export interface RfqCreatePlan {
   /** Οι προσκεκλημένοι του σώματος **και** οι επαφές των προμηθευτών, χωρίς διπλότυπα, με τη σειρά που ήρθαν. */
   readonly invitedVendorIds: readonly string[];
   readonly invites: readonly PreparedVendorInvite[];
+  /**
+   * ADR-923 §5.13 Τ5 — **κάθε** χώρος της πλατφόρμας που θα λάβει αυτό το RFQ: οι προμηθευτές των γραμμών καταλόγου **και**
+   * οι επαφές πλατφόρμας του `invitedVendorIds`. Η ποσόστωση ζεύγους μετρά όλους, μέσα στη συναλλαγή.
+   */
+  readonly quotaSupplierIds: readonly string[];
   /** Μόνο όταν θα γεννηθεί επαφή: το όνομα του δρώντα λύνεται έξω από τη συναλλαγή, ώστε η επανάληψή της να μη διαβάζει. */
   readonly performer: ResolvedPerformer | null;
 }
@@ -64,12 +73,14 @@ export interface RfqWriteCount {
   readonly invites: number;
   readonly suppliers: number;
   readonly sourcingEvent: boolean;
+  /** ADR-923 §5.13 Τ5 — το έγγραφο της ποσόστωσης ζεύγους (`quote_request_pair_quotas`), όταν μπορεί να γραφτεί. */
+  readonly pairQuota?: boolean;
 }
 
-/** RFQ + γραμμές + {πρόσκληση, διαπιστευτήριο} ανά παραλήπτη + επαφές + το πακέτο. */
+/** RFQ + γραμμές + {πρόσκληση, διαπιστευτήριο} ανά παραλήπτη + επαφές + το πακέτο + η ποσόστωση ζεύγους. */
 export function countRfqWrites(count: RfqWriteCount): number {
   const lines = count.boqItems + count.adHocLines + count.catalogLines;
-  return 1 + lines + 2 * count.invites + count.suppliers + (count.sourcingEvent ? 1 : 0);
+  return 1 + lines + 2 * count.invites + count.suppliers + (count.sourcingEvent ? 1 : 0) + (count.pairQuota ? 1 : 0);
 }
 
 /** Το ένα commit του έργου (`SAFE_BATCH_WRITES`): πάνω από αυτό το RFQ δεν γεννιέται μισό, αρνείται ολόκληρο. */
@@ -117,10 +128,32 @@ function prepareInvites(ctx: AuthContext, rfqId: string, vendorIds: readonly str
     recipientName: null,
     issuedVia: 'rfq_fanout',
     issuedBy: ctx.uid,
+    // ADR-923 §5.13 Τ5 — η πρόθεση «οφείλει να σταλεί» γράφεται ΜΑΖΙ με το RFQ (transactional outbox).
+    delivery: pendingInviteDelivery(Date.now()),
   })));
 }
 
 const uniqueInOrder = (ids: readonly string[]): string[] => [...new Set(ids)];
+
+/**
+ * Οι χώροι της πλατφόρμας πίσω από τους προσκεκλημένους του σώματος. Το `platformCompanyId` το γράφει μόνο ο διακομιστής
+ * (`firestore.rules`), άρα η ανάγνωση έξω από τη συναλλαγή δεν ανοίγει αγώνα.
+ */
+async function platformSuppliersOf(buyerCompanyId: string, contactIds: readonly string[]): Promise<string[]> {
+  const contacts = await Promise.all(contactIds.map((id) => fetchVendorContact(buyerCompanyId, id)));
+  return contacts.flatMap((contact) => (contact?.platformCompanyId ? [contact.platformCompanyId] : []));
+}
+
+/**
+ * Πρόωρη άρνηση (ADR-923 §5.13 Τ5), **πριν** από κάθε κρυπτογραφία και εγγραφή: ανάγνωση **χωρίς** κατανάλωση. Η κρίση που
+ * μετρά γίνεται ξανά μέσα στη συναλλαγή (`rfq-create-transaction.ts`), ατομικά με το RFQ.
+ */
+async function precheckQuoteRequestPairs(buyerCompanyId: string, supplierIds: readonly string[]): Promise<void> {
+  if (supplierIds.length === 0) return;
+  const counts = await readQuoteRequestPairCounts(null, getAdminFirestore(), buyerCompanyId, Date.now());
+  const admission = admitQuoteRequestPairs(counts, supplierIds);
+  if (admission.kind === 'exhausted') throw new RfqCreateRefusal('quoteRequestQuotaExhausted', admission.supplierCompanyId);
+}
 
 /**
  * Το σχέδιο μιας δημιουργίας. Σειρά: πρώτα οι φθηνές αρνήσεις (SKU, βιτρίνα, μέγεθος), μετά η έκδοση διαπιστευτηρίων, ώστε
@@ -138,10 +171,17 @@ export async function planRfqCreate(ctx: AuthContext, dto: CreateRfqDTO, rfqId: 
     invites: invitedVendorIds.length,
     suppliers: suppliers.length,
     sourcingEvent: !!dto.sourcingEventId,
+    // Άνω όριο: κάθε προσκεκλημένος μπορεί να είναι επαφή πλατφόρμας.
+    pairQuota: invitedVendorIds.length > 0,
   });
+  const quotaSupplierIds = uniqueInOrder([
+    ...supplierIds,
+    ...(await platformSuppliersOf(ctx.companyId, dto.invitedVendorIds ?? [])),
+  ]).filter((id) => id !== ctx.companyId);
+  await precheckQuoteRequestPairs(ctx.companyId, quotaSupplierIds);
   const invites = await prepareInvites(ctx, rfqId, invitedVendorIds);
   const performer = suppliers.length > 0 ? await resolvePerformer(userPerformer(ctx.uid, ctx.email)) : null;
-  return { rfqId, catalogLines, suppliers, invitedVendorIds, invites, performer };
+  return { rfqId, catalogLines, suppliers, invitedVendorIds, invites, quotaSupplierIds, performer };
 }
 
 /**

@@ -18,6 +18,7 @@ import { execFileSync } from 'node:child_process';
 
 import {
   PROVIDER_TIMEOUT_MS,
+  chainOutcomeUncertain,
   describeChain,
   sendThroughChain,
   type EmailProvider,
@@ -208,6 +209,16 @@ describe('Χ — ο κολλημένος πάροχος δεν κρατά όμη
       provider: 'σωτήρας',
       failedOver: true,
     });
+  });
+
+  it('Χ3 🔑 — ADR-923 Λ1β Μ1: λήξη χρόνου ⇒ η αποτυχία λέγεται ΑΒΕΒΑΙΗ· ρητή άρνηση όχι· η μετάπτωση δεν αλλάζει', async () => {
+    const promise = sendThroughChain([fake('κολλημένος', 'hangs')], MESSAGE);
+    await jest.advanceTimersByTimeAsync(PROVIDER_TIMEOUT_MS + 1);
+    const outcome = await promise;
+    expect(outcome).toMatchObject({ kind: 'all-failed', attempts: [expect.objectContaining({ uncertain: true })] });
+    expect(chainOutcomeUncertain(outcome)).toBe(true);
+    const rejected = await sendThroughChain([fake('αρνητής', { kind: 'rejected', error: '550' })], MESSAGE);
+    expect(chainOutcomeUncertain(rejected)).toBe(false);
   });
 
   it('Χ2 — το χρονόμετρο καθαρίζεται στη γρήγορη διαδρομή', async () => {

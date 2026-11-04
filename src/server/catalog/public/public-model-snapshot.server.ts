@@ -170,9 +170,25 @@ export function readPublicProfileSnapshot(companyId: string, nowMs: number): Pro
  */
 export async function supplierAcceptsQuotesInTx(tx: Transaction, db: Firestore, supplierCompanyId: string): Promise<boolean> {
   const scope: CatalogReadScope = { db, tx, ctx: { companyId: supplierCompanyId }, now: nowISO() };
-  const id = generateDeterministicCatalogSupplierProfileId(supplierCompanyId);
+  return (await readAcceptingQuoteIntake(scope)) !== null;
+}
+
+/** Η ρύθμιση `quoteIntake` **μόνο** όταν δέχεται· αλλιώς `null`. Μία κρίση για το «δέχεται;» και για τον παραλήπτη. */
+async function readAcceptingQuoteIntake(scope: CatalogReadScope): Promise<CatalogQuoteIntake | null> {
+  const id = generateDeterministicCatalogSupplierProfileId(scope.ctx.companyId);
   const stored = await readOwnedOrNull<CatalogSupplierProfileStored>(scope, 'supplierProfile', id);
-  return stored !== null && quoteIntakeAccepts(storedQuoteIntakeOf(stored.quoteIntake));
+  if (stored === null) return null;
+  const intake = storedQuoteIntakeOf(stored.quoteIntake);
+  return quoteIntakeAccepts(intake) ? intake : null;
+}
+
+/**
+ * **Πού παραδίδεται ένα αίτημα προσφοράς** (ADR-923 §5.13 Ε6δ, Τ5): η διεύθυνση του `quoteIntake`, λυμένη **τη στιγμή της
+ * αποστολής** και μόνο όσο ο προμηθευτής δέχεται. Κλειστό opt-in, χαλασμένη ρύθμιση ή απόν προφίλ ⇒ `null` ⇒ τίποτα δεν
+ * φεύγει. Ένας καλών: `resolveVendorRecipient`. 🔒 Η διεύθυνση δεν αντιγράφεται σε κανένα έγγραφο του αγοραστή.
+ */
+export function readQuoteIntakeRecipient(supplierCompanyId: string): Promise<string | null> {
+  return runForeignCatalogRead(supplierCompanyId, async (scope) => (await readAcceptingQuoteIntake(scope))?.recipientEmail ?? null);
 }
 
 /** Ό,τι χρειάζεται η τιμή της βιτρίνας ανά SKU (ADR-923 §5.13 Σ6): η θέση για την ορατότητα και ο συντελεστής ΦΠΑ για την τελική. */

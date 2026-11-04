@@ -39,6 +39,8 @@ jest.mock('../vendor-portal-links', () => ({ vendorPortalUrl: (t: string) => `ht
 const mockSend = jest.fn(async () => ({ success: true }));
 jest.mock('../channels/email-channel', () => ({ emailVendorInviteChannel: { send: (...a: unknown[]) => mockSend(...(a as [])) } }));
 const mockAudit = jest.fn(async () => 'audit');
+const mockQuota = jest.fn(async () => true);
+jest.mock('@/lib/middleware/subject-quota', () => ({ withinSubjectQuota: (...a: unknown[]) => mockQuota(...(a as [])) }));
 jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: (...a: unknown[]) => mockAudit(...(a as [])) } }));
 
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθούν οι μονάδες */
@@ -49,6 +51,8 @@ import { generateDeterministicPlatformCompanyContactId } from '@/services/enterp
 import type { CreateRfqDTO } from '../../types/rfq';
 import { SAFE_BATCH_WRITES } from '@/config/firestore-collections';
 import { countRfqWrites } from '../rfq-create-plan';
+import { QUOTE_REQUEST_PAIR_DAILY_QUOTA } from '@/lib/middleware/rate-limit-config';
+import { quoteRequestWindowOf } from '../quote-request-pair-quota';
 import { createRfq, createRfqWithOutcome } from '../rfq-service';
 /* eslint-enable import/first */
 
@@ -72,6 +76,13 @@ function seedIntake(enabled = true): void {
   });
 }
 
+function seedPairCount(supplier: string, count: number): void {
+  fake.seed(COLLECTIONS.QUOTE_REQUEST_PAIR_QUOTAS, BUYER, { companyId: BUYER, window: quoteRequestWindowOf(Date.now()), pairs: { [supplier]: count } });
+}
+
+const pairCount = (supplier: string): number =>
+  ((fake.getData(COLLECTIONS.QUOTE_REQUEST_PAIR_QUOTAS, BUYER) as { pairs?: Record<string, number> } | undefined)?.pairs ?? {})[supplier] ?? 0;
+
 function expectNothingWritten(): void {
   expect(docs(COLLECTIONS.RFQS)).toEqual([]);
   expect(docs(COLLECTIONS.VENDOR_INVITES)).toEqual([]);
@@ -82,6 +93,7 @@ beforeEach(() => {
   fake.reset();
   jest.clearAllMocks();
   mockResolveSku.mockResolvedValue(SKU);
+  mockQuota.mockResolvedValue(true);
   mockShowcase.mockResolvedValue({ companyId: SUPPLIER, legalName: 'ARIES ΑΕ', alias: null });
   seedIntake();
 });
@@ -97,6 +109,69 @@ describe('createRfq — γραμμές καταλόγου (ADR-923 §5.13 Τ4)',
     expect(fake.getData(COLLECTIONS.CONTACTS, CONTACT_ID)).toMatchObject({ companyId: BUYER, platformCompanyId: SUPPLIER, companyName: 'ARIES ΑΕ' });
     expect(docs(COLLECTIONS.VENDOR_INVITES)).toEqual([expect.objectContaining({ vendorContactId: CONTACT_ID, rfqId: rfq.id, companyId: BUYER })]);
     expect(docs(COLLECTIONS.VENDOR_INVITE_CREDENTIALS)).toHaveLength(1);
+  });
+
+  it('Τ5: η πρόθεση παράδοσης γράφεται ΜΑΖΙ με το RFQ (outbox `pending`, καμία απόπειρα ακόμη)', async () => {
+    await createRfq(ctx, catalogDto());
+    expect(docs(COLLECTIONS.VENDOR_INVITES)).toEqual([expect.objectContaining({
+      recipientEmail: null, delivery: expect.objectContaining({ state: 'pending', attempts: 0, recipientKind: null }),
+    })]);
+  });
+
+  it('Τ5: όριο ανά ζεύγος (αγοραστής, προμηθευτής) ⇒ `quoteRequestQuotaExhausted`, τίποτα δεν γράφεται, κανένα διαπιστευτήριο', async () => {
+    seedPairCount(SUPPLIER, QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit);
+    expect(await refusal(catalogDto())).toBe('quoteRequestQuotaExhausted');
+    expect(mockMint).not.toHaveBeenCalled();
+    expectNothingWritten();
+    expect(pairCount(SUPPLIER)).toBe(QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit);
+  });
+
+  it('Τ5 Ε2: η ποσόστωση ζεύγους μετρά στο Firestore, ΜΑΖΙ με το RFQ (όχι στο Redis, όχι πριν από το commit)', async () => {
+    await createRfq(ctx, catalogDto());
+    await createRfq(ctx, catalogDto());
+    expect(pairCount(SUPPLIER)).toBe(2);
+    expect(mockQuota).not.toHaveBeenCalledWith('rfq-quote-request:pair', expect.anything(), expect.anything());
+  });
+
+  it('Τ5 Ε2: άρνηση ΜΕΤΑ το σχέδιο (opt-in έκλεισε) ⇒ η ποσόστωση ΔΕΝ καταναλώνεται', async () => {
+    seedIntake(false);
+    expect(await refusal(catalogDto())).toBe('supplierNotAcceptingQuotes');
+    expect(pairCount(SUPPLIER)).toBe(0);
+  });
+
+  it('Τ5 Ε2: ανταγωνιστής παίρνει την τελευταία μονάδα ΜΕΤΑ τον πρόωρο έλεγχο ⇒ η συναλλαγή το βλέπει και αρνείται (ατομικό)', async () => {
+    seedPairCount(SUPPLIER, QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit - 1);
+    // Ο πρόωρος έλεγχος του σχεδίου βλέπει 9/10 και περνά· ο ανταγωνιστής χτυπά μέσα στη συναλλαγή (ανάμεσα σε ανάγνωση
+    // και commit) και γράφει 10/10 — ό,τι θα έκανε ένα ταυτόχρονο αίτημα. Read-then-write έξω από τη συναλλαγή θα περνούσε.
+    fake.interfere = () => seedPairCount(SUPPLIER, QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit);
+    expect(await refusal(catalogDto())).toBe('quoteRequestQuotaExhausted');
+    expect(docs(COLLECTIONS.RFQS)).toEqual([]);
+    expect(docs(COLLECTIONS.VENDOR_INVITES)).toEqual([]);
+    expect(pairCount(SUPPLIER)).toBe(QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit);
+  });
+
+  it('Τ5 Ε2: επαφή πλατφόρμας στο `invitedVendorIds` ΜΕΤΡΑ (δεν είναι παράκαμψη του ορίου)', async () => {
+    fake.seed(COLLECTIONS.CONTACTS, CONTACT_ID, { type: 'company', companyId: BUYER, platformCompanyId: SUPPLIER, companyName: 'ARIES ΑΕ', status: 'active' });
+    seedPairCount(SUPPLIER, QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit);
+    expect(await refusal({ projectId: 'p', title: 'T', invitedVendorIds: [CONTACT_ID] })).toBe('quoteRequestQuotaExhausted');
+    expect(docs(COLLECTIONS.RFQS)).toEqual([]);
+  });
+
+  it('Τ5 Ε2: γραμμή καταλόγου ΚΑΙ προσκεκλημένη επαφή του ίδιου προμηθευτή ⇒ μία μονάδα, όχι δύο', async () => {
+    fake.seed(COLLECTIONS.CONTACTS, CONTACT_ID, { type: 'company', companyId: BUYER, platformCompanyId: SUPPLIER, companyName: 'ARIES ΑΕ', status: 'active' });
+    await createRfq(ctx, catalogDto({ invitedVendorIds: [CONTACT_ID] }));
+    expect(pairCount(SUPPLIER)).toBe(1);
+  });
+
+  it('Τ5 Ε2: νέο παράθυρο ⇒ οι μετρητές μηδενίζονται', async () => {
+    fake.seed(COLLECTIONS.QUOTE_REQUEST_PAIR_QUOTAS, BUYER, { companyId: BUYER, window: quoteRequestWindowOf(Date.now()) - 1, pairs: { [SUPPLIER]: 99 } });
+    await createRfq(ctx, catalogDto());
+    expect(pairCount(SUPPLIER)).toBe(1);
+  });
+
+  it('Τ5: RFQ χωρίς προμηθευτή της πλατφόρμας δεν γράφει ποσόστωση ζεύγους', async () => {
+    await createRfq(ctx, { projectId: 'p', title: 'T', invitedVendorIds: ['v1'] });
+    expect(docs(COLLECTIONS.QUOTE_REQUEST_PAIR_QUOTAS)).toEqual([]);
   });
 
   it('το ίχνος της νέας επαφής γράφεται μετά το commit· υπάρχουσα επαφή δεν «γεννιέται» ξανά', async () => {

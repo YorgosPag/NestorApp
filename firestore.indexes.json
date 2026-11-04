@@ -3660,6 +3660,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "delivery.state",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "delivery.dueAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "vendor_invites",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "companyId",
           "order": "ASCENDING"
         },

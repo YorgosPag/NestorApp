@@ -5288,3 +5288,12 @@ working tree). Θεραπεία: `git rm` του αρχείου + αφαίρεσ
 - **RBAC μέσα στην εταιρεία (μέτριο):** `/api/procurement/[poId]` (+`share`, `email`) δεν δηλώνουν `permissions` στο `defineRoute` ⇒ κάθε μέλος με οποιονδήποτε ρόλο εγκρίνει/ακυρώνει/σβήνει/κοινοποιεί. Θέλει πίνακα ρόλων ανά πράξη (`src/lib/auth/roles.ts`).
 - **Δημόσιο `/api/procurement/public/[token]` (μέτριο):** εκτός ασπίδας — χωρίς `no-store`, χωρίς δηλωμένο όριο ρυθμού (`undeclared` στο 3.78), διαφορετικά μηνύματα expired/revoked/deleted μαρτυρούν διαγραφή. Μεταφορά σε `createPublicTokenRouteExport` με ενιαίο 404.
 - **Ξένα `projectId`/`supplierId` στο DTO (μικρό-μέτριο):** `procurement-service.ts` `createPO`/`updatePO` δεν ελέγχουν ότι έργο/προμηθευτής ανήκουν στην εταιρεία ⇒ PO μπορεί να δείχνει σε ξένο έργο.
+
+---
+### 📧 Email προσκλήσεων RFQ σε αυθαίρετη διεύθυνση χωρίς όριο ανά γραμματοκιβώτιο (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-05, ADR-923 §5.13 Τ5 Λ1β Μ4)
+- **Τι**: το `manualEmail` της χειρόγραφης πρόσκλησης (`vendor-invite-create.ts`) και οι επαφές του αγοραστή με όποιο email έγραψε ο ίδιος, μέσα στο `invitedVendorIds` του `createRfq` (fan-out, `rfq-invite-delivery.ts`), και η επαναποστολή σε αυτές (`vendor-invite-links-service.ts`), στέλνουν από το domain της πλατφόρμας χωρίς όριο ανά παραλήπτη. Το μόνο φρένο είναι το `SENSITIVE` ανά καλούντα, ανά λεπτό.
+- **Γιατί**: ένας λογαριασμός μπορεί να χρησιμοποιήσει την πλατφόρμα ως αναμεταδότη spam προς ξένα γραμματοκιβώτια, και να βλάψει τη φήμη αποστολής του domain. Υπάρχει από πριν το Τ5.
+- **Fix**: `withinRecipientQuota` (ήδη SSoT, ADR-841 Α21.18) σε όλους τους δρόμους, όπως στο `vendor-link-renew.ts` (`VENDOR_LINK_RENEW_RECIPIENT_QUOTA`). Νέα δήλωση `VENDOR_INVITE_RECIPIENT_QUOTA` στο `rate-limit-config.ts`, fail-closed με `subjectQuotaVerdict`, με το κλειδί του παραλήπτη σε πεζά.
+- **Μαζί, ανοιχτά του ίδιου δρόμου**: (α) το όριο 100/24ω ανά γραμματοκιβώτιο του προμηθευτή της πλατφόρμας είναι κοινό σε όλους τους αγοραστές: αρκετοί λογαριασμοί, ο καθένας μέσα στο όριο ζεύγους, μπορούν να το εξαντλήσουν για όλους (DoS στη διαθεσιμότητα). Λύση: όριο ανά νέο λογαριασμό ή reputation, απόφαση Giorgio. (β) Δεν υπάρχει κουμπί «Επαναποστολή» στο UI του αγοραστή (`VendorInviteSection`). Το route `POST …/invites/[inviteId]/resend` υπάρχει, με όρια και κωδικούς (`delivery_in_progress` · `resend_quota_exhausted` · `quota_unavailable`).
+- **Εκτίμηση**: ~1 ώρα, 3-4 αρχεία.
+

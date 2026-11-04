@@ -30,19 +30,31 @@ import {
 } from '@/services/vendor-portal/vendor-invite-credential-store';
 import { vendorLinkExpiryMs } from '@/services/vendor-portal/vendor-invite-credential';
 import { createModuleLogger } from '@/lib/telemetry';
+import { VENDOR_INVITE_RESEND_QUOTA } from '@/lib/middleware/rate-limit-config';
+import { subjectQuotaVerdict, type SubjectQuotaVerdict } from '@/lib/middleware/subject-quota';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import type { HumanLanguage } from '@/i18n/languages';
 
 import type { VendorInvite } from '../types/vendor-invite';
+import { RFQ_ACCEPTING_QUOTES, type RFQ } from '../types/rfq';
+import { OPEN_INVITE_DELIVERY_STATES } from '../types/vendor-invite-delivery';
 import type { VendorInviteCredentialSummary } from '../types/vendor-invite-credential';
 import { isLiveInviteStatus } from '../utils/vendor-invite-status';
 import { resolveChannel } from './channels';
 import { getRfq } from './rfq-service';
 import { recordVendorInviteAudit } from './vendor-invite-audit';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
+import { VendorInviteStateError, getVendorInviteOfRfq } from './vendor-invite-service';
+import { admitPlatformQuoteRequest } from './platform-quote-request';
+import { consumeQuoteRequestPair } from './quote-request-pair-quota';
+import { recordInviteRedelivered } from './rfq-invite-delivery';
 import {
-  VendorInviteStateError,
+  buyerVisibleErrorReason,
   fetchVendorContact,
-  getVendorInviteOfRfq,
-} from './vendor-invite-service';
+  inviteEmailLanguage,
+  resolveVendorRecipient,
+  type VendorRecipient,
+} from './vendor-recipient';
 
 const logger = createModuleLogger('VENDOR_INVITE_LINKS');
 
@@ -73,21 +85,55 @@ export async function issueVendorInviteCopyLink(
 }
 
 /**
- * Ο **καταχωρημένος** παραλήπτης της πρόσκλησης — στιγμιότυπο πρώτα, ζωντανή επαφή μόνο για
- * παλιά έγγραφα. `null` ⇒ δεν υπάρχει πού να σταλεί. Ο ΜΟΝΟΣ προορισμός κάθε νέου συνδέσμου
- * μέσω email — και της επαναποστολής του γραφείου και της αυτοεξυπηρέτησης λήξης.
+ * Ο **καταχωρημένος** παραλήπτης της πρόσκλησης — στιγμιότυπο πρώτα, ζωντανή κρίση (`resolveVendorRecipient`) μόνο όταν
+ * λείπει. `null` ⇒ δεν υπάρχει πού να σταλεί. Ο ΜΟΝΟΣ προορισμός κάθε νέου συνδέσμου μέσω email — και της επαναποστολής
+ * του γραφείου και της αυτοεξυπηρέτησης λήξης.
+ *
+ * 🔑 ADR-923 §5.13 Τ5: πρόσκληση προς χώρο της πλατφόρμας δεν έχει ποτέ στιγμιότυπο email (η διεύθυνση είναι ιδιωτική του
+ *    προμηθευτή), άρα λύνεται **πάντα** ζωντανά από το `quoteIntake` του — και μόνο όσο ο προμηθευτής δέχεται.
  */
 export async function resolveInviteRecipient(
   invite: Pick<VendorInvite, 'companyId' | 'vendorContactId' | 'recipientEmail' | 'recipientName'>,
-): Promise<{ email: string; name: string } | null> {
-  let email = invite.recipientEmail;
-  let name = invite.recipientName;
-  if ((!email || !name) && invite.vendorContactId) {
-    const vendor = await fetchVendorContact(invite.companyId, invite.vendorContactId);
-    email = email ?? vendor?.email ?? null;
-    name = name ?? vendor?.displayName ?? null;
+): Promise<VendorRecipient | null> {
+  if (invite.recipientEmail) {
+    const contact = invite.vendorContactId ? await fetchVendorContact(invite.companyId, invite.vendorContactId) : null;
+    return {
+      email: invite.recipientEmail, name: invite.recipientName ?? invite.recipientEmail,
+      kind: 'contact', platformCompanyId: null, language: contact?.language ?? null,
+    };
   }
-  return email ? { email, name: name ?? email } : null;
+  if (!invite.vendorContactId) return null;
+  const recipient = await resolveVendorRecipient(invite.companyId, invite.vendorContactId);
+  return recipient ? { ...recipient, name: invite.recipientName ?? recipient.name } : null;
+}
+
+/** Ο ΣΚΟΠΟΣ της επαναποστολής: ανά πρόσκληση, όχι ανά καλούντα — δύο μέλη του γραφείου μοιράζονται το ίδιο όριο. */
+export const VENDOR_INVITE_RESEND_QUOTA_SCOPE = 'vendor-invite-resend';
+
+/**
+ * Οι φρουροί της επαναποστολής (ADR-923 §5.13 Τ5), **πριν** από κάθε διαπιστευτήριο: το outbox δεν έχει τελειώσει ⇒ όχι
+ * δεύτερο email · το RFQ δεν δέχεται πια ⇒ όχι σύνδεσμος σε κλειστό RFQ · όριο ανά πρόσκληση · όριο γραμματοκιβωτίου του
+ * προμηθευτή της πλατφόρμας (ίδιο με κάθε άλλο δρόμο).
+ *
+ * 🔑 Λ1β: (Σ1β) η επαναποστολή σε χώρο της πλατφόρμας **μετρά και στο όριο ζεύγους** — αλλιώς Ν προσκλήσεις × 3 = 3Ν email.
+ *    (Μ2) Τα δύο όρια του Upstash είναι **fail-closed**: πεσμένο store ⇒ `quota_unavailable` (503), ποτέ αμέτρητο email.
+ */
+function refuseUnlessAllowed(verdict: SubjectQuotaVerdict): void {
+  if (verdict === 'unavailable') throw new VendorInviteStateError('quota_unavailable');
+  if (verdict === 'exhausted') throw new VendorInviteStateError('resend_quota_exhausted');
+}
+
+async function admitResend(invite: VendorInvite, rfqStatus: RFQ['status'], recipient: VendorRecipient): Promise<void> {
+  if (invite.delivery && OPEN_INVITE_DELIVERY_STATES.includes(invite.delivery.state)) {
+    throw new VendorInviteStateError('delivery_in_progress');
+  }
+  if (!RFQ_ACCEPTING_QUOTES.has(rfqStatus)) throw new VendorInviteStateError('not_live');
+  refuseUnlessAllowed(await subjectQuotaVerdict(VENDOR_INVITE_RESEND_QUOTA_SCOPE, invite.id, VENDOR_INVITE_RESEND_QUOTA));
+  if (recipient.platformCompanyId === null) return;
+  if (!(await consumeQuoteRequestPair(getAdminFirestore(), invite.companyId, recipient.platformCompanyId))) {
+    throw new VendorInviteStateError('resend_quota_exhausted');
+  }
+  refuseUnlessAllowed(await admitPlatformQuoteRequest(recipient.platformCompanyId));
 }
 
 /**
@@ -98,7 +144,7 @@ export async function resendVendorInvite(
   ctx: AuthContext,
   rfqId: string,
   inviteId: string,
-  options: { locale?: 'el' | 'en' } = {},
+  options: { locale?: HumanLanguage } = {},
 ): Promise<{ success: boolean; errorReason: string | null }> {
   const invite = await requireLiveInvite(ctx, rfqId, inviteId);
   const recipient = await resolveInviteRecipient(invite);
@@ -107,6 +153,7 @@ export async function resendVendorInvite(
   if (!rfq) throw new VendorInviteStateError('not_found');
   const emailChannel = resolveChannel('email');
   if (!emailChannel) throw new Error('Email channel not available');
+  await admitResend(invite, rfq.status, recipient);
 
   const link = await issueAdditionalVendorLink({
     invite,
@@ -122,14 +169,15 @@ export async function resendVendorInvite(
     projectName: null,
     portalUrl: link.portalUrl,
     expiresAt: link.expiresAtIso,
-    locale: options.locale ?? 'el',
+    locale: inviteEmailLanguage(recipient, options.locale),
     declineUrl: link.declineUrl,
   });
+  if (dispatch.success) await recordInviteRedelivered(inviteId, recipient.kind);
   recordVendorInviteAudit(ctx, inviteId, 'email_sent', [
     { field: 'portalLink', oldValue: null, newValue: link.credential.id, label: 'email_resend' },
   ]);
   logger.info('Vendor invite resent', { inviteId, credentialId: link.credential.id, success: dispatch.success });
-  return { success: dispatch.success, errorReason: dispatch.errorReason };
+  return { success: dispatch.success, errorReason: buyerVisibleErrorReason(recipient.kind, dispatch.errorReason) };
 }
 
 /** Οι σύνδεσμοι μιας πρόσκλησης — μόνο μεταδεδομένα. */

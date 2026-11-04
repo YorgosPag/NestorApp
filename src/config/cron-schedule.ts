@@ -685,6 +685,18 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
       'και συνδεθεί ο αναγνώστης της επιβεβαίωσης στο public-standing.server.ts. Πρόγραμμα κάθε 10 λεπτά, γιατί είναι δίχτυ.',
   },
   {
+    slug: 'rfq-invite-delivery',
+    path: '/api/cron/rfq-invite-delivery',
+    description: 'Παράδοση προσκλήσεων RFQ που δεν πρόλαβε ή δεν πέτυχε το αίτημα: επανάληψη με νέο σύνδεσμο (ADR-923 §5.13 Τ5)',
+    enabled: false,
+    disabledReason: 'never-scheduled',
+    reactivateWhen:
+      'Αφού αναπτυχθεί ο δείκτης vendor_invites (delivery.state, delivery.dueAt) — χωρίς αυτόν το ερώτημα απαντά ' +
+      'FAILED_PRECONDITION. Τότε: enabled true, schedule \'11-59/15 * * * *\' (:11 · :26 · :41 · :56, λεπτά που δεν ' +
+      'κατέχει κανένα επαναλαμβανόμενο job), maxRuntime 5′, lease 6′, σώμα το runRfqInviteDelivery. Ως τότε η πρώτη απόπειρα ' +
+      'τρέχει στο after() του αιτήματος· ό,τι αποτύχει μένει pending στο καθολικό και φαίνεται.',
+  },
+  {
     slug: 'ai-pipeline',
     path: '/api/cron/ai-pipeline',
     description: 'Επεξεργασία παρτίδας ουράς AI pipeline (ADR-080)',

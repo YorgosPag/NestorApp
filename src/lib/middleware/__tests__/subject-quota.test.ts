@@ -17,7 +17,7 @@ import { createHash } from 'crypto';
 
 jest.mock('server-only', () => ({}));
 
-const mockCheckQuota = jest.fn<Promise<{ allowed: boolean; current: number; limit: number; resetMs: number }>, [string, number, number]>();
+const mockCheckQuota = jest.fn<Promise<{ allowed: boolean; current: number; limit: number; resetMs: number; degraded?: boolean }>, [string, number, number]>();
 jest.mock('@/lib/middleware/rate-limiter', () => ({
   checkQuota: (key: string, limit: number, windowMs: number) => mockCheckQuota(key, limit, windowMs),
 }));
@@ -29,7 +29,7 @@ jest.mock('@/lib/telemetry', () => ({
 
 import { PROSPECT_INTEREST_DAILY_QUOTA } from '@/lib/middleware/rate-limit-config';
 import { withinRecipientQuota } from '@/lib/middleware/recipient-quota';
-import { subjectQuotaKey, withinSubjectQuota } from '@/lib/middleware/subject-quota';
+import { subjectQuotaKey, subjectQuotaVerdict, withinSubjectQuota } from '@/lib/middleware/subject-quota';
 import { readRepoCode } from '@/test-utils/read-source';
 
 const QUOTA = { limit: 3, windowMs: 60_000 } as const;
@@ -96,5 +96,23 @@ describe('Σ — οι καταναλωτές', () => {
     const enforced: string = PROSPECT_INTEREST_DAILY_QUOTA.enforcement;
     if (enforced !== 'enforce') return;
     expect(readRepoCode('src/hooks/demand/usePlaceInterest.ts')).toContain('DAILY_QUOTA_EXCEEDED');
+  });
+});
+
+describe('Σ7 — ADR-923 Λ1β Μ2: `subjectQuotaVerdict` ΚΛΕΙΝΕΙ όταν πέφτει το store', () => {
+  it('εξαίρεση ή `degraded` ⇒ `unavailable` (ποτέ `allowed`)· οι άλλοι καλούντες κρατούν «επιτρέπει»', async () => {
+    mockCheckQuota.mockRejectedValueOnce(new Error('upstash down'));
+    expect(await subjectQuotaVerdict('s', 'x', QUOTA)).toBe('unavailable');
+    mockCheckQuota.mockResolvedValueOnce({ allowed: true, current: 0, limit: 3, resetMs: 1, degraded: true });
+    expect(await subjectQuotaVerdict('s', 'x', QUOTA)).toBe('unavailable');
+    mockCheckQuota.mockRejectedValueOnce(new Error('upstash down'));
+    expect(await withinSubjectQuota('s', 'x', QUOTA)).toBe(true);
+  });
+
+  it('απάντηση ⇒ `allowed` / `exhausted`', async () => {
+    storeAnswers(true);
+    expect(await subjectQuotaVerdict('s', 'x', QUOTA)).toBe('allowed');
+    storeAnswers(false);
+    expect(await subjectQuotaVerdict('s', 'x', QUOTA)).toBe('exhausted');
   });
 });

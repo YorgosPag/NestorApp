@@ -1034,5 +1034,10 @@
     "over": "“{label}” is over the column “{column}”.",
     "dropped": "“{label}” was dropped in the column “{column}”.",
     "cancelled": "Moving “{label}” was cancelled."
+  },
+  "quoteRequest": {
+    "receivedTitle": "{who} requested a quote from you: {title}",
+    "receivedBody": "The response link was sent to the email address you set for quote requests.",
+    "unnamed": "A workspace"
   }
 }

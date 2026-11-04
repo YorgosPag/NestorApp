@@ -50,6 +50,14 @@ export type PlatformCompanyContactResolution =
 const INACTIVE_STATUSES: ReadonlySet<unknown> = new Set(['archived', 'deleted']);
 
 /**
+ * Ο άνθρωπος αρχειοθέτησε ή διέγραψε την καρτέλα. **Μία** κρίση για τη γέννηση (`judgeExisting`) **και** για την παράδοση
+ * (ADR-923 §5.13 Τ5 Λ1β Χ1): σε ανενεργή επαφή πλατφόρμας δεν ξαναφεύγει αίτημα.
+ */
+export function isInactiveContact(data: DocumentData | undefined): boolean {
+  return INACTIVE_STATUSES.has(data?.status);
+}
+
+/**
  * **Η μία κρίση «είναι επαφή πλατφόρμας;»** ⇒ ο χώρος του προμηθευτή, αλλιώς `null`. Ισχύει μόνο αν το id της
  * καρτέλας είναι το ντετερμινιστικό του ζεύγους (αγοραστής, `platformCompanyId`) και η καρτέλα ανήκει στον αγοραστή.
  */
@@ -94,7 +102,7 @@ export async function resolvePlatformCompanyContact(
 
 function judgeExisting(contactId: string, buyerCompanyId: string, data: DocumentData | undefined): PlatformCompanyContactResolution {
   if (platformCompanyOfContact(contactId, buyerCompanyId, data) === null) return { kind: 'refused', reason: 'foreign' };
-  if (INACTIVE_STATUSES.has(data?.status)) return { kind: 'refused', reason: 'inactive' };
+  if (isInactiveContact(data)) return { kind: 'refused', reason: 'inactive' };
   const displayName = typeof data?.displayName === 'string' ? data.displayName : '';
   return { kind: 'existing', contactId, displayName };
 }

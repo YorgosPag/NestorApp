@@ -20,6 +20,7 @@ import { quoteVendorLabel } from '../utils/quote-vendor-identity';
 import { StatusDrillNotice } from '@/components/projects/procurement/clients/StatusDrillNotice';
 import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 import { useVendorInvites } from '../hooks/useVendorInvites';
+import { VendorInviteDeliveryBadge } from './VendorInviteDeliveryBadge';
 import { VendorInviteDialog } from './VendorInviteDialog';
 import { VendorInviteLinksPanel } from './VendorInviteLinksPanel';
 import type { RFQ } from '../types/rfq';
@@ -121,7 +122,7 @@ function InviteRow({ invite, vendorName, actions, lockState }: InviteRowProps) {
   }, [actions, invite.id]);
 
   const handleRevoke = useCallback(async () => {
-    if (!confirm(t('invites.confirmRevoke'))) return;
+    if (!window.confirm(t('invites.confirmRevoke'))) return;
     setRevoking(true);
     try { await actions.revokeInvite(invite.id); } finally { setRevoking(false); }
   }, [actions, invite.id, t]);
@@ -134,7 +135,11 @@ function InviteRow({ invite, vendorName, actions, lockState }: InviteRowProps) {
           <ChannelIcon channel={invite.deliveryChannel} />
         </td>
         <td className="py-2 pr-4">
-          <StatusBadge status={vendorInviteDisplayStatus(invite, Date.now())} />
+          <span className="flex flex-col items-start gap-1">
+            <StatusBadge status={vendorInviteDisplayStatus(invite, Date.now())} />
+            {/* ADR-923 §5.13 Τ5 — η παράδοση του email (μόνο για προσκλήσεις με καθολικό: fan-out του RFQ). */}
+            <VendorInviteDeliveryBadge delivery={invite.delivery} />
+          </span>
         </td>
         <td className="py-2 pr-4 text-sm tabular-nums">
           {formatExpiry(invite.expiresAt)}

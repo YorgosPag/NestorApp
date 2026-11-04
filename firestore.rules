@@ -3346,7 +3346,11 @@ service cloud.firestore {
                          isSuperAdminOnly()
                          // OR user creates for their own company
                          || request.resource.data.companyId == getUserCompanyId()
-                       );
+                       )
+                    // 🔒 ADR-923 §5.13 Τ5 — το `platformCompanyId` (επαφή προμηθευτή της πλατφόρμας) το γράφει ΜΟΝΟ ο
+                    //    διακομιστής (`resolvePlatformCompanyContact`, από επιβεβαιωμένη βιτρίνα). Αλλιώς ο πελάτης θα
+                    //    έφτιαχνε καρτέλα με το ντετερμινιστικό id και θα έστελνε αιτήματα στο γραμματοκιβώτιο οποιουδήποτε.
+                    && !request.resource.data.keys().hasAny(['platformCompanyId']);
 
       // 📝 UPDATE: Creator or company admin of contact's company
       // 🔒 SECURITY: Prevents cross-tenant modification
@@ -3366,7 +3370,9 @@ service cloud.firestore {
                          || (!resource.data.keys().hasAny(['createdBy']) && belongsToCompany(resource.data.companyId))
                        )
                     // Prevent changing companyId (no re-tenanting)
-                    && request.resource.data.companyId == resource.data.companyId;
+                    && request.resource.data.companyId == resource.data.companyId
+                    // 🔒 ADR-923 §5.13 Τ5 — ούτε προσθήκη, ούτε αλλαγή, ούτε αφαίρεση του `platformCompanyId` από πελάτη.
+                    && request.resource.data.get('platformCompanyId', null) == resource.data.get('platformCompanyId', null);
 
       // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()
@@ -6267,6 +6273,12 @@ service cloud.firestore {
     match /quote_counters/{docId} {
       allow read: if false;
       allow write: if false;
+    }
+
+    // ADR-923 §5.13 Τ5 — ημερήσια ποσόστωση αιτημάτων προσφοράς ανά ζεύγος (doc id = companyId του αγοραστή). Αυξάνεται ΜΟΝΟ
+    // μέσα στη συναλλαγή του διακομιστή που γράφει το αίτημα· πελάτης που θα τη μηδένιζε θα παρέκαμπτε το όριο.
+    match /quote_request_pair_quotas/{companyId} {
+      allow read, write: if false;
     }
 
     match /vendor_invites/{inviteId} {

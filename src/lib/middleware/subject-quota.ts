@@ -79,3 +79,25 @@ export async function withinSubjectQuota(scope: string, subject: string, quota: 
     return true;
   }
 }
+
+/** `unavailable` ⇒ το store δεν απάντησε (εξαίρεση ή `degraded`): ο καλών αποφασίζει, όχι ο πυρήνας. */
+export type SubjectQuotaVerdict = 'allowed' | 'exhausted' | 'unavailable';
+
+/**
+ * **Η κρίση χωρίς πολιτική αποτυχίας** — για όρια που προστατεύουν **ξένο** γραμματοκιβώτιο και πρέπει να κλείνουν όταν
+ * πέφτει το store (ADR-923 §5.13 Τ5 Λ1β Μ2: γραμματοκιβώτιο του προμηθευτή, επαναποστολή πρόσκλησης).
+ *
+ * ⚠️ Το `withinSubjectQuota` **δεν** αλλάζει: οι υπόλοιποι καλούντες κρατούν «αποτυχία ⇒ επιτρέπει» (ADR-855 Α3). Εδώ η
+ *    σκιά δεν έχει νόημα — όποιος ζητά τρεις καταστάσεις ζητά επιβολή.
+ */
+export async function subjectQuotaVerdict(scope: string, subject: string, quota: SubjectQuota): Promise<SubjectQuotaVerdict> {
+  const key = subjectQuotaKey(scope, subject);
+  try {
+    const verdict = await checkQuota(key, quota.limit, quota.windowMs);
+    if (verdict.degraded) return 'unavailable';
+    return verdict.allowed ? 'allowed' : 'exhausted';
+  } catch (error: unknown) {
+    logger.warn('Ο έλεγχος ποσόστωσης απέτυχε — ο καλών κλείνει', { scope, error: getErrorMessage(error) });
+    return 'unavailable';
+  }
+}

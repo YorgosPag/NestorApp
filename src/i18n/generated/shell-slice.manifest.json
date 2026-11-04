@@ -66,14 +66,14 @@
     "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "5998b0309e74b4b352593365609f082619804601c73371e6c739f4111657808b",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e694c874d3bf13e0bfd63e2e8d3c8e1dc5aa5ca4db51fed6136570844b6bd2eb",
-    "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "70ff86b387164f7aa34e10cc99658b265d8ab51103c23042c6a629c861641892",
+    "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "3991371a1ae56de860f0debaa852c00fc9e7ebb3df45c30b8e579280cbd65f1f",
     "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "c0a9a8bc60616a84b13490508de3f1d3c99af0f5fa90579da67fe64a6342f261",
     "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "ed27faaf054aff06555fb73e987982799aae7ecef3366d7511d1c369f8483e31",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json": "b7c1e20776fb9ad6be26039d9bd0c71dfac687f97998a872687dc3e47c997c48",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json": "9cf0c913c9f586ae7850ab0f1a6bfcb1c47dc4862db39dc9fb8acc4fec81b907",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "ce840d5c88ac8b79c0d70b626922ac22960a13cb0764ac0a9a5f475e1b5e68ba",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "7bd13d8ab1adea9e76f30626dfdd397e391a0567d707799255d76315a7d865e0",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "0b154398cdfc7da08b112dc0a87df2c896c6f982cc85b1b1dd7628982f4d006b",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json": "4f2a1846793ff34d251298e4c65f2eaf4b7845232aafb77bddbdbf299d745db3",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
@@ -200,7 +200,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "5c5aea937157bb470605af21f12c313c2dce345a91e00c405592288f2a349249",
+  "inputsSha256": "a85aaca11779029b6fcf7c814cba09517b93537b544d0098389176a5fcac57e9",
   "languages": [
     "el"
   ],
@@ -23216,6 +23216,7 @@
             "rfqs.errors.catalogDraftFailed",
             "rfqs.errors.createFailed",
             "rfqs.errors.refusals.catalogSkuUnavailable",
+            "rfqs.errors.refusals.quoteRequestQuotaExhausted",
             "rfqs.errors.refusals.rfqTooLarge",
             "rfqs.errors.refusals.supplierContactUnavailable",
             "rfqs.errors.refusals.supplierNotAcceptingQuotes",
@@ -31783,6 +31784,10 @@
             "invites.button",
             "invites.confirmRevoke",
             "invites.copyLink",
+            "invites.delivery.failedHint",
+            "invites.delivery.failedHintPlatform",
+            "invites.delivery.label",
+            "invites.delivery.uncertainHint",
             "invites.empty",
             "invites.emptyFiltered",
             "invites.errors.copyFailed",
@@ -32275,6 +32280,8 @@
           "prefixes": [
             "comparison.flags",
             "comparison.reasons",
+            "invites.delivery",
+            "invites.delivery.reasons",
             "invites.links.origin",
             "invites.links.state",
             "invites.statuses",
@@ -37975,7 +37982,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1260408
+    "sliceBytes": 1261834
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -19,7 +19,7 @@
 import 'server-only';
 
 import admin from 'firebase-admin';
-import { safeFirestoreOperation, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
+import { safeFirestoreOperation, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
@@ -31,207 +31,24 @@ import {
 } from '@/services/vendor-portal/admin-client-timestamp';
 import { readLiveCredentialRefsTx } from '@/services/vendor-portal/vendor-invite-credential-store';
 import { nowISO } from '@/lib/date-local';
-import { resolveChannel } from './channels';
-import { pickContactDisplayName } from './vendor-name-resolver';
-import type {
-  VendorInvite,
-  CreateVendorInviteDTO,
-  DeliveryChannel,
-  InviteStatus,
-} from '../types/vendor-invite';
-import { getRfq } from './rfq-service';
-import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
+import type { VendorInvite, InviteStatus } from '../types/vendor-invite';
 import { isLiveInviteStatus, normalizeInviteStatus } from '../utils/vendor-invite-status';
-import { prepareVendorInvite, writePreparedVendorInvite } from './vendor-invite-issue';
 import { recordVendorInviteAudit } from './vendor-invite-audit';
 
 const logger = createModuleLogger('VENDOR_INVITE_SERVICE');
 
 
 // =============================================================================
-// CONTACT LOOKUP
+// CONTACT LOOKUP — η ΜΙΑ κρίση παραλήπτη ζει στο `vendor-recipient` (ADR-923 §5.13 Τ5)
 // =============================================================================
 
-export interface VendorContactSnapshot {
-  id: string;
-  displayName: string;
-  email: string | null;
-  preferredChannel: DeliveryChannel | null;
-}
-
-export async function fetchVendorContact(
-  companyId: string,
-  contactId: string,
-): Promise<VendorContactSnapshot | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-    if (!snap.exists) return null;
-    const data = snap.data() ?? {};
-    // Επαφή χωρίς `companyId` δεν ανήκει σε κανέναν (ADR-742 §4 · ADR-876 §5 Σ15) — ήταν `data.companyId && …`.
-    if (!isPayloadOwnedByCompany(data, companyId)) return null;
-    const supplierPersona = data.supplierPersona as { preferredChannel?: DeliveryChannel } | undefined;
-    return {
-      id: snap.id,
-      displayName: pickContactDisplayName(data) ?? contactId,
-      email: getContactEmail(data as Parameters<typeof getContactEmail>[0]),
-      preferredChannel: supplierPersona?.preferredChannel ?? null,
-    };
-  }, null);
-}
+export { fetchVendorContact, type VendorContactSnapshot } from './vendor-recipient';
 
 // =============================================================================
-// CREATE
+// CREATE — ζει στο `vendor-invite-create` (ADR-923 §5.13 Τ5 Λ1β Σ1: κράτηση σε ΜΙΑ συναλλαγή)
 // =============================================================================
 
-export interface CreateInviteResult {
-  invite: VendorInvite;
-  /** Ο σύνδεσμος — επιστρέφεται **μία φορά**, στη δημιουργία. Δεν αποθηκεύεται πουθενά. */
-  portalUrl: string;
-  delivery: {
-    success: boolean;
-    providerMessageId: string | null;
-    errorReason: string | null;
-  };
-}
-
-interface ResolvedRecipient {
-  vendorContactId: string;
-  displayName: string;
-  email: string | null;
-  preferredChannel: DeliveryChannel | null;
-}
-
-async function resolveRecipient(
-  ctx: AuthContext,
-  dto: CreateVendorInviteDTO,
-): Promise<ResolvedRecipient> {
-  if (dto.vendorContactId !== undefined) {
-    const vendor = await fetchVendorContact(ctx.companyId, dto.vendorContactId);
-    if (!vendor) throw new Error(`Vendor contact ${dto.vendorContactId} not found`);
-    return {
-      vendorContactId: vendor.id,
-      displayName: vendor.displayName,
-      email: vendor.email,
-      preferredChannel: vendor.preferredChannel,
-    };
-  }
-  const email = dto.manualEmail.trim();
-  const name = dto.manualName.trim();
-  if (!email) throw new Error('manualEmail is required');
-  if (!name) throw new Error('manualName is required');
-  return { vendorContactId: '', displayName: name, email, preferredChannel: null };
-}
-
-type PreparedInvite = Awaited<ReturnType<typeof prepareVendorInvite>>;
-type ChannelDriver = NonNullable<ReturnType<typeof resolveChannel>>;
-
-/** Η πρώτη αποστολή — email στον παραλήπτη, ή (copy_link) ο ίδιος ο σύνδεσμος ως «παραλήπτης». */
-async function dispatchNewInvite(
-  channelDriver: ChannelDriver,
-  prepared: PreparedInvite,
-  recipient: ResolvedRecipient,
-  rfqTitle: string,
-  locale: 'el' | 'en',
-) {
-  const isEmail = channelDriver.id === 'email';
-  if (isEmail && !recipient.email) {
-    return { success: false, providerMessageId: null, errorReason: 'Recipient has no email address' };
-  }
-  const { link } = prepared;
-  return channelDriver.send({
-    inviteId: prepared.invite.id,
-    vendorName: recipient.displayName,
-    recipient: isEmail && recipient.email ? recipient.email : link.portalUrl,
-    rfqTitle,
-    projectName: null,
-    portalUrl: link.portalUrl,
-    expiresAt: link.expiresAtIso,
-    locale,
-    declineUrl: link.declineUrl,
-  });
-}
-
-/** Πρόσκληση + διαπιστευτήριο + εγγραφή του προμηθευτή στο RFQ — **ένα** batch. */
-async function persistNewInvite(
-  invite: VendorInvite,
-  link: PreparedInvite['link'],
-  vendorContactId: string,
-  invitedVendorIds: readonly string[],
-): Promise<void> {
-  await safeFirestoreOperation<void>(async (db) => {
-    const batch = db.batch();
-    writePreparedVendorInvite(batch, db, { invite, link });
-    if (vendorContactId && !invitedVendorIds.includes(vendorContactId)) {
-      batch.update(db.collection(COLLECTIONS.RFQS).doc(invite.rfqId), {
-        invitedVendorIds: FieldValue.arrayUnion(vendorContactId),
-        updatedAt: invite.createdAt,
-      });
-    }
-    await batch.commit();
-  }, undefined);
-}
-
-/**
- * Create a new vendor invite for an RFQ. Persists invite + first credential, registers
- * the vendor on `RFQ.invitedVendorIds`, and dispatches the configured channel (default
- * `email`, falls back to `copy_link` if email is unavailable).
- */
-export async function createVendorInvite(
-  ctx: AuthContext,
-  dto: CreateVendorInviteDTO,
-  options: { locale?: 'el' | 'en' } = {},
-): Promise<CreateInviteResult> {
-  const rfq = await getRfq(ctx.companyId, dto.rfqId);
-  if (!rfq) throw new Error(`RFQ ${dto.rfqId} not found`);
-  if (rfq.status === 'archived') throw new Error('Cannot invite vendor on archived RFQ');
-
-  const recipient = await resolveRecipient(ctx, dto);
-  const channelDriver = resolveChannel(dto.deliveryChannel) ?? resolveChannel('copy_link');
-  if (!channelDriver) throw new Error('No delivery channel available');
-  const effectiveChannel: DeliveryChannel = channelDriver.id;
-
-  const prepared = await prepareVendorInvite({
-    companyId: ctx.companyId,
-    rfqId: dto.rfqId,
-    vendorContactId: recipient.vendorContactId,
-    deliveryChannel: effectiveChannel,
-    preferredChannel: recipient.preferredChannel,
-    status: 'pending',
-    recipientEmail: recipient.email,
-    recipientName: recipient.displayName,
-    issuedVia: effectiveChannel === 'email' ? 'invite_email' : 'copy_link',
-    issuedBy: ctx.uid,
-    expiresInDays: dto.expiresInDays,
-  });
-  const { link } = prepared;
-  const dispatch = await dispatchNewInvite(channelDriver, prepared, recipient, rfq.title, options.locale ?? 'el');
-
-  const status: InviteStatus = effectiveChannel === 'copy_link' || !dispatch.success ? 'pending' : 'sent';
-  const invite: VendorInvite = {
-    ...prepared.invite,
-    status,
-    deliveredAt: dispatch.success ? prepared.invite.createdAt : null,
-  };
-  await persistNewInvite(invite, link, recipient.vendorContactId, rfq.invitedVendorIds);
-
-  logger.info('Vendor invite created', {
-    inviteId: invite.id,
-    rfqId: dto.rfqId,
-    vendorContactId: recipient.vendorContactId || '<manual>',
-    channel: effectiveChannel,
-    delivered: dispatch.success,
-  });
-
-  return {
-    invite,
-    portalUrl: link.portalUrl,
-    delivery: {
-      success: dispatch.success,
-      providerMessageId: dispatch.providerMessageId,
-      errorReason: dispatch.errorReason,
-    },
-  };
-}
+export { createVendorInvite, VendorInviteRefusal, type CreateInviteResult, type VendorInviteRefusalCode } from './vendor-invite-create';
 
 // =============================================================================
 // READ
@@ -357,9 +174,26 @@ export async function markInviteDeclined(inviteId: string, reason: string | null
 // =============================================================================
 
 /** Γιατί δεν ανακλήθηκε — ονομασμένο, ώστε η διαδρομή να απαντήσει 404 ή 409 σωστά. */
+/**
+ * `not_found` 404 · `not_live` 409 · ADR-923 §5.13 Τ5: `delivery_in_progress` 409 (το outbox θα τη στείλει — δεύτερο email
+ * θα ήταν διπλό) · `resend_quota_exhausted` 429 (`VENDOR_INVITE_RESEND_QUOTA`).
+ */
+export type VendorInviteStateCode =
+  | 'not_found' | 'not_live' | 'delivery_in_progress' | 'resend_quota_exhausted'
+  /** Λ1β Μ2 — το store του ορίου δεν απάντησε: fail-closed, 503. */
+  | 'quota_unavailable';
+
+const STATE_ERROR_MESSAGES: Record<VendorInviteStateCode, string> = {
+  not_found: 'Vendor invite not found',
+  not_live: 'Vendor invite is no longer live',
+  delivery_in_progress: 'Vendor invite delivery is still in progress',
+  resend_quota_exhausted: 'Vendor invite resend quota exhausted',
+  quota_unavailable: 'Vendor invite quota store unavailable',
+};
+
 export class VendorInviteStateError extends Error {
-  constructor(readonly code: 'not_found' | 'not_live') {
-    super(code === 'not_found' ? 'Vendor invite not found' : 'Vendor invite is no longer live');
+  constructor(readonly code: VendorInviteStateCode) {
+    super(STATE_ERROR_MESSAGES[code]);
     this.name = 'VendorInviteStateError';
   }
 }

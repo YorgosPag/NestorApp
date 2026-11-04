@@ -315,6 +315,12 @@ export interface ProcurementNotificationSettings {
   aiLowConfidence: boolean;
   /** ADR-327 — Notify when a new vendor contact is auto-created from a quote scan */
   vendorCreated: boolean;
+  /**
+   * ADR-923 §5.12 · §5.13 Τ5 — αιτήματα από πελάτες και προμηθευτές: σύνδεση με τον κατάλογο και **αίτημα προσφοράς**.
+   * Ο διακόπτης υπήρχε στο μητρώο συμβάντων και στη γραμμή ρυθμίσεων αλλά όχι εδώ, άρα ο αναλυτής διαδρομών (`parseSettingPath`)
+   * τον απέρριπτε (κόκκινο Ρ1 στο `notification-preference-policy.test.ts`).
+   */
+  supplyConnection: boolean;
 }
 
 /**
@@ -543,6 +549,7 @@ export const DEFAULT_PROCUREMENT_SETTINGS: ProcurementNotificationSettings = {
   quoteEdited: false,
   aiLowConfidence: true,
   vendorCreated: true,
+  supplyConnection: true,
 };
 
 /** 💬 ADR-867 Β6 — ανοιχτά: είναι **συνομιλία** με πελάτη/γραφείο, όχι ενημερωτικό δελτίο. */

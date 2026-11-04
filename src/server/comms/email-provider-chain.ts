@@ -113,7 +113,15 @@ export function safeHeaderEntries(
 /** Τι απάντησε **ένας** πάροχος. Ονομασμένο, ποτέ boolean. */
 export type ProviderAttempt =
   | { readonly kind: 'delivered'; readonly messageId?: string }
-  | { readonly kind: 'rejected'; readonly error: string };
+  | {
+      readonly kind: 'rejected';
+      readonly error: string;
+      /**
+       * 🔑 ADR-923 §5.13 Τ5 Λ1β Μ1 — `true` ⇒ ο πάροχος **δεν απάντησε** (λήξη χρόνου): μπορεί να το δέχτηκε. Η αλυσίδα
+       * συνεχίζει όπως πάντα (καμία αλλαγή για τους υπάρχοντες καλούντες)· ένας καλών με «το πολύ μία φορά» το διαβάζει.
+       */
+      readonly uncertain?: boolean;
+    };
 
 /** Ένας κρίκος της αλυσίδας. */
 export interface EmailProvider {
@@ -131,6 +139,8 @@ export interface EmailProvider {
 export interface AttemptRecord {
   readonly provider: string;
   readonly error: string;
+  /** Λήξη χρόνου — βλ. `ProviderAttempt.uncertain`. */
+  readonly uncertain?: boolean;
 }
 
 /** Τι απέγινε **η αλυσίδα**. */
@@ -188,7 +198,7 @@ export async function sendThroughChain(
       };
     }
 
-    attempts.push({ provider: provider.name, error: result.error });
+    attempts.push({ provider: provider.name, error: result.error, ...(result.uncertain ? { uncertain: true } : {}) });
   }
 
   return { kind: 'all-failed', attempts };
@@ -224,9 +234,9 @@ async function attemptOne(
   try {
     return await Promise.race([
       provider.send(message),
-      new Promise<never>((_, reject) => {
+      new Promise<ProviderAttempt>((resolve) => {
         timer = setTimeout(
-          () => reject(new Error(`${provider.name}: timeout μετά από ${PROVIDER_TIMEOUT_MS}ms`)),
+          () => resolve({ kind: 'rejected', error: `${provider.name}: timeout μετά από ${PROVIDER_TIMEOUT_MS}ms`, uncertain: true }),
           PROVIDER_TIMEOUT_MS,
         );
       }),
@@ -267,6 +277,14 @@ export function describeChain(providers: readonly EmailProvider[]): {
  * Ήταν γραμμένο **δύο** φορές (`email.service` · `outbound-email-flush.job`) και θα γινόταν τρίτη
  * στο κανάλι πρόσκλησης προμηθευτή (ADR-876 §5.8 Σ22). `delivered` ⇒ κανένας λόγος.
  */
+/**
+ * **Ίσως έφυγε;** — `true` όταν η αλυσίδα απέτυχε αλλά κάποιος κρίκος **δεν απάντησε** (λήξη χρόνου) αντί να αρνηθεί.
+ * Για καλούντες «το πολύ μία φορά» (ADR-923 §5.13 Τ5 Λ1β Μ1): εκεί μια νέα απόπειρα μπορεί να γίνει δεύτερο email.
+ */
+export function chainOutcomeUncertain(outcome: ChainOutcome): boolean {
+  return outcome.kind === 'all-failed' && outcome.attempts.some((attempt) => attempt.uncertain === true);
+}
+
 export function chainFailureReasons(outcome: ChainOutcome): readonly string[] {
   if (outcome.kind === 'no-provider') return ['κανένας πάροχος ρυθμισμένος'];
   if (outcome.kind === 'all-failed') return outcome.attempts.map((attempt) => `${attempt.provider}: ${attempt.error}`);

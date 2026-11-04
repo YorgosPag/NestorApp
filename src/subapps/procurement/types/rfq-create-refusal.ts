@@ -16,16 +16,19 @@ export const RFQ_CREATE_REFUSALS = [
   'supplierNotAcceptingQuotes',
   'supplierContactUnavailable',
   'rfqTooLarge',
+  'quoteRequestQuotaExhausted',
 ] as const;
 
 export type RfqCreateRefusalCode = (typeof RFQ_CREATE_REFUSALS)[number];
 
-/** Ο κωδικός HTTP κάθε άρνησης: η κατάσταση του προμηθευτή είναι σύγκρουση, τα υπόλοιπα άκυρο αίτημα. */
+/** Ο κωδικός HTTP κάθε άρνησης: η κατάσταση του προμηθευτή είναι σύγκρουση, το όριο 429, τα υπόλοιπα άκυρο αίτημα. */
 const REFUSAL_STATUS: Readonly<Record<RfqCreateRefusalCode, number>> = {
   catalogSkuUnavailable: 422,
   supplierNotAcceptingQuotes: 409,
   supplierContactUnavailable: 409,
   rfqTooLarge: 422,
+  // ADR-923 §5.13 Τ5 — όριο αιτημάτων προς τον ίδιο προμηθευτή ανά 24ω (`QUOTE_REQUEST_PAIR_DAILY_QUOTA`).
+  quoteRequestQuotaExhausted: 429,
 };
 
 export class RfqCreateRefusal extends Error {

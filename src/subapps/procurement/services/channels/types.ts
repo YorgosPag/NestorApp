@@ -38,6 +38,8 @@ export interface ChannelDeliveryResult {
   errorReason: string | null;
   /** Channel that produced the result (for invite delivery audit). */
   channel: DeliveryChannel;
+  /** ADR-923 §5.13 Τ5 Λ1β Μ1 — the provider timed out: the message MAY have been accepted. Never retry automatically. */
+  uncertain?: boolean;
 }
 
 export interface MessageChannel {
