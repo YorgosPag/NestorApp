@@ -67,7 +67,7 @@ function PendingDetail({ pending, authority, actions }: { readonly pending: Pend
       {ready && (
         <span className="flex flex-col gap-0.5">
           <Button type="button" size="sm" disabled={!authority.canSeed} onClick={() => void actions.seed()}>{t('subcontracts.library.templates.write')}</Button>
-          {!authority.canSeed && <span className="text-xs text-muted-foreground">{t('subcontracts.library.reasons.notAuthorized')}</span>}
+          {!authority.canSeed && !authority.pending && <span className="text-xs text-muted-foreground">{t('subcontracts.library.reasons.notAuthorized')}</span>}
         </span>
       )}
     </article>
@@ -86,7 +86,7 @@ function TemplateDetail({ template, authority, actions }: { readonly template: S
         <Button type="button" size="sm" variant="outline" disabled={!authority.canManageTemplates} onClick={() => void actions.setTemplateArchived(template, archiving)}>
           <Icon className="mr-1 h-4 w-4" aria-hidden />{t(`subcontracts.library.clauses.${archiving ? 'archive' : 'restore'}`)}
         </Button>
-        {!authority.canManageTemplates && <span className="text-xs text-muted-foreground">{t('subcontracts.library.reasons.notAuthorized')}</span>}
+        {!authority.canManageTemplates && !authority.pending && <span className="text-xs text-muted-foreground">{t('subcontracts.library.reasons.notAuthorized')}</span>}
       </span>
     </article>
   );

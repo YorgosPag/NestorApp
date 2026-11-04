@@ -41,7 +41,7 @@ function BlockedButton({ label, block, onClick }: { readonly label: string; read
   return (
     <span className="flex flex-col gap-0.5">
       <Button type="button" size="sm" variant="outline" disabled={block !== null} onClick={onClick}>{label}</Button>
-      {block !== null && <span className="text-xs text-muted-foreground">{t(`subcontracts.library.reasons.${block.reason}`)}</span>}
+      {block?.kind === 'explained' && <span className="text-xs text-muted-foreground">{t(`subcontracts.library.reasons.${block.reason}`)}</span>}
     </span>
   );
 }

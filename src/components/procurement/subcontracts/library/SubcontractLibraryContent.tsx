@@ -58,8 +58,8 @@ function LibraryTabs({ screen, authority, actions }: LibraryTabsProps) {
   const template = useCatalogSelection('template');
   const active: LibraryTab = isTab(tab.selected) ? tab.selected : 'review';
   const context = useMemo<LibraryActionContext>(
-    () => ({ actorUid: authority.actorUid, canManage: authority.canManageClauses, canPropose: authority.canPropose }),
-    [authority.actorUid, authority.canManageClauses, authority.canPropose],
+    () => ({ actorUid: authority.actorUid, canManage: authority.canManageClauses, canPropose: authority.canPropose, pending: authority.pending }),
+    [authority.actorUid, authority.canManageClauses, authority.canPropose, authority.pending],
   );
   return (
     <Tabs value={active} onValueChange={(value) => tab.select(value)} className="flex min-h-0 flex-1 flex-col gap-2">
@@ -93,7 +93,7 @@ function LibraryBody({ screen, authority, actions, seed }: LibraryBodyProps) {
   if (screen.state === 'loading') return <p className="m-0 px-2 text-muted-foreground" role="status">{t('subcontracts.library.loading')}</p>;
   if (screen.state === 'failed') return <p className="m-0 px-2 text-destructive" role="alert">{t('subcontracts.library.loadFailed')}</p>;
   if (screen.state === 'empty') {
-    return <LibraryOnboarding clauseCount={screen.defaultClauseCount} templateCount={screen.defaultTemplateCount} canSeed={authority.canSeed} seed={seed} />;
+    return <LibraryOnboarding clauseCount={screen.defaultClauseCount} templateCount={screen.defaultTemplateCount} authority={authority} seed={seed} />;
   }
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3 px-2" aria-label={t('subcontracts.library.title')}>
@@ -118,7 +118,7 @@ export function SubcontractLibraryContent() {
   const authority = useSubcontractLibraryAuthority();
   const { actions, seed } = useLibrarySeedActions();
   const title = t('subcontracts.library.title');
-  const headerActions = screen.state === 'ready' ? { customActions: [<LibraryUpdateCheck key="library-updates" canSeed={authority.canSeed} seed={seed} />] } : undefined;
+  const headerActions = screen.state === 'ready' ? { customActions: [<LibraryUpdateCheck key="library-updates" authority={authority} seed={seed} />] } : undefined;
   return (
     <PageContainer ariaLabel={title}>
       <div className="mt-2 px-2"><ProcurementSubNav className="mb-0" /></div>

@@ -17,19 +17,24 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { seedReportHasChanges } from '@/subapps/procurement/subcontracts/library/default-library-update';
 import type { DefaultLibrarySeedReport } from '@/subapps/procurement/subcontracts/types/library-seed';
+import type { SubcontractLibraryAuthorityView } from '@/hooks/procurement/subcontracts/useSubcontractAuthority';
 import type { LibrarySeed } from './useLibrarySeed';
+
+/** Όσα χρειάζεται μια πόρτα σποράς από τα δικαιώματα: την κρίση **και** αν η κρίση ήρθε (ψευδές «όχι» στη φόρτωση). */
+type SeedAuthority = Pick<SubcontractLibraryAuthorityView, 'canSeed' | 'pending'>;
 
 interface LibraryOnboardingProps {
   readonly clauseCount: number | null;
   readonly templateCount: number | null;
-  readonly canSeed: boolean;
+  readonly authority: SeedAuthority;
   readonly seed: Pick<LibrarySeed, 'run' | 'seeding'>;
 }
 
-export function LibraryOnboarding({ clauseCount, templateCount, canSeed, seed }: LibraryOnboardingProps) {
+export function LibraryOnboarding({ clauseCount, templateCount, authority, seed }: LibraryOnboardingProps) {
   const { t } = useTranslation('procurement');
   const { confirm, dialogProps } = useConfirmDialog();
   const { seeding } = seed;
+  const { canSeed } = authority;
   const counts = { clauses: clauseCount ?? 0, templates: templateCount ?? 0 };
 
   const run = async () => {
@@ -51,8 +56,8 @@ export function LibraryOnboarding({ clauseCount, templateCount, canSeed, seed }:
         <li>{t('subcontracts.library.onboarding.approval')}</li>
         <li>{templateCount === null ? t('subcontracts.library.loading') : t('subcontracts.library.onboarding.templates', { count: counts.templates })}</li>
       </ul>
-      {canSeed ? (
-        <Button type="button" className="self-start" disabled={seeding || clauseCount === null} onClick={() => void run()}>
+      {canSeed || authority.pending ? (
+        <Button type="button" className="self-start" disabled={!canSeed || seeding || clauseCount === null} onClick={() => void run()}>
           {seeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
           {seeding ? t('subcontracts.library.onboarding.seeding') : t('subcontracts.library.onboarding.seed')}
         </Button>
@@ -69,16 +74,17 @@ export function LibraryOnboarding({ clauseCount, templateCount, canSeed, seed }:
  * Χωρίς αυτήν, η σπορά ξεκινούσε μόνο από πρότυπο **ήδη** έτοιμο — ενώ τα πρότυπα περίμεναν τις ρήτρες που φέρνει η σπορά:
  * αδιέξοδο. Χωρίς δικαίωμα: ανενεργό, με ορατή αιτία (ποτέ κρυφό, ποτέ αδιέξοδο).
  */
-export function LibraryUpdateCheck({ canSeed, seed }: { readonly canSeed: boolean; readonly seed: Pick<LibrarySeed, 'run' | 'seeding'> }) {
+export function LibraryUpdateCheck({ authority, seed }: { readonly authority: SeedAuthority; readonly seed: Pick<LibrarySeed, 'run' | 'seeding'> }) {
   const { t } = useTranslation('procurement');
   const { seeding } = seed;
+  const { canSeed } = authority;
   return (
     <span className="flex flex-col items-end gap-0.5">
       <Button type="button" size="sm" variant="outline" disabled={!canSeed || seeding} aria-busy={seeding} onClick={() => void seed.run()}>
         {seeding ? <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden /> : <RefreshCw className="mr-1 h-4 w-4" aria-hidden />}
         {seeding ? t('subcontracts.library.updates.checking') : t('subcontracts.library.updates.check')}
       </Button>
-      {!canSeed && <span className="text-xs text-muted-foreground">{t('subcontracts.library.reasons.notAuthorized')}</span>}
+      {!canSeed && !authority.pending && <span className="text-xs text-muted-foreground">{t('subcontracts.library.reasons.notAuthorized')}</span>}
     </span>
   );
 }

@@ -5,8 +5,26 @@ type Facts = Pick<SubcontractClauseVersion, 'state' | 'proposedBy' | 'profession
 
 const proposed = (proposedBy: string): Facts => ({ state: 'proposed', proposedBy, professionalReview: 'needs_professional_review', sourceHash: 'h1' });
 const approved: Facts = { state: 'approved', proposedBy: 'u-author', professionalReview: 'needs_professional_review', sourceHash: 'h1' };
-const admin = (actorUid: string): LibraryActionContext => ({ actorUid, canManage: true, canPropose: true });
-const viewer: LibraryActionContext = { actorUid: 'u-viewer', canManage: false, canPropose: false };
+const admin = (actorUid: string): LibraryActionContext => ({ actorUid, canManage: true, canPropose: true, pending: false });
+const viewer: LibraryActionContext = { actorUid: 'u-viewer', canManage: false, canPropose: false, pending: false };
+/** Η κρίση δεν ήρθε ακόμη — fail-closed, αλλά χωρίς ψευδή αιτία. */
+const loading: LibraryActionContext = { actorUid: '', canManage: false, canPropose: false, pending: true };
+
+describe('library-action-blocks — η κρίση που δεν ήρθε ακόμη (ADR-928 §5.20 απόφαση 9)', () => {
+  it('εκκρεμεί ⇒ `pending` (ανενεργό, χωρίς «δεν έχεις δικαίωμα»)', () => {
+    const version = proposed(DEFAULT_LIBRARY_PROPOSER);
+    expect(versionActionBlock('approve', version, loading)).toEqual({ kind: 'pending' });
+    expect(versionActionBlock('proposeTranslation', version, loading)).toEqual({ kind: 'pending' });
+  });
+
+  it('η πράξη που δεν αφορά κρύβεται ακόμη κι όταν εκκρεμεί η κρίση', () => {
+    expect(versionActionBlock('approve', approved, loading)).toEqual({ kind: 'hidden' });
+  });
+
+  it('κρίση που ήρθε αρνητική ⇒ η αιτία λέγεται', () => {
+    expect(versionActionBlock('approve', proposed(DEFAULT_LIBRARY_PROPOSER), viewer)).toEqual({ kind: 'explained', reason: 'notAuthorized' });
+  });
+});
 
 describe('library-action-blocks — οι φύλακες του γραφέα, ως αιτίες οθόνης', () => {
   it('πρόταση του συστήματος: ο διαχειριστής εγκρίνει και απορρίπτει', () => {

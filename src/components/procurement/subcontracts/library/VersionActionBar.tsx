@@ -50,12 +50,12 @@ function ActionButton({ action, block, onClick }: { readonly action: BarAction; 
   const disabled = block !== null;
   return (
     <span className="flex flex-col gap-0.5">
-      <Button type="button" size="sm" variant={action === 'reject' ? 'outline' : action === 'approve' ? 'default' : 'secondary'} disabled={disabled} onClick={onClick} aria-describedby={disabled ? reasonId : undefined}>
+      <Button type="button" size="sm" variant={action === 'reject' ? 'outline' : action === 'approve' ? 'default' : 'secondary'} disabled={disabled} onClick={onClick} aria-describedby={block?.kind === 'explained' ? reasonId : undefined}>
         <Icon className="mr-1 h-4 w-4" aria-hidden />
         {t(`subcontracts.library.actions.${action}`)}
         {(action === 'approve' || action === 'reject') && <kbd className="ml-2 rounded border px-1 font-mono text-[10px] opacity-70">{action === 'approve' ? 'A' : 'R'}</kbd>}
       </Button>
-      {disabled && <span id={reasonId} className="text-xs text-muted-foreground">{t(`subcontracts.library.reasons.${block.reason}`)}</span>}
+      {block?.kind === 'explained' && <span id={reasonId} className="text-xs text-muted-foreground">{t(`subcontracts.library.reasons.${block.reason}`)}</span>}
     </span>
   );
 }

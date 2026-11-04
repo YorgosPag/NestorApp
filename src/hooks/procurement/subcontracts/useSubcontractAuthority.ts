@@ -106,6 +106,11 @@ export interface SubcontractLibraryAuthorityView {
   readonly canManageTemplates: boolean;
   /** Σπορά της προτεινόμενης βιβλιοθήκης — θέλει **και** ρήτρες **και** πρότυπα. */
   readonly canSeed: boolean;
+  /**
+   * Η κρίση **δεν ήρθε ακόμη** (ταυτότητα ή κάποια πύλη σε αναμονή). Τα `can*` είναι ήδη `false` (fail-closed)· αυτό λέει
+   * στην οθόνη να **μη** γράψει «δεν έχεις δικαίωμα» — ήταν ψευδές για 1–5″ σε κάθε φόρτωση (ADR-928 §5.20 απόφαση 9).
+   */
+  readonly pending: boolean;
 }
 
 /**
@@ -122,6 +127,7 @@ export function useSubcontractLibraryAuthority(): SubcontractLibraryAuthorityVie
       canManageClauses: companyGrants(gates, 'manage'),
       canManageTemplates: companyGrants(gates, 'templates'),
       canSeed: companyGrants(gates, 'seed'),
+      pending: actorUid === '' || LIBRARY_PERMISSIONS.some((permission) => gates[permission]?.pending !== false),
     }),
     [actorUid, gates],
   );
