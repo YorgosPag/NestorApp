@@ -11,7 +11,35 @@ const AGREEMENTS = '/api/subcontracts/agreements';
 
 const agreement = (id: string) => `${AGREEMENTS}/${encodeURIComponent(id)}`;
 
+const CLAUSES = '/api/subcontracts/clauses';
+const TRADE_TEMPLATES = '/api/subcontracts/trade-templates';
+
+const clause = (clauseId: string) => `${CLAUSES}/${encodeURIComponent(clauseId)}`;
+const clauseVersion = (clauseId: string, version: number) => `${clause(clauseId)}/versions/${version}`;
+const tradeTemplate = (id: string) => `${TRADE_TEMPLATES}/${encodeURIComponent(id)}`;
+
+/** Πράξεις πάνω σε **μία** έκδοση ρήτρας (ADR-928 §5.13 · Φ3γ-0). */
+export const CLAUSE_VERSION_ACTIONS = ['approve', 'reject', 'withdraw', 'review'] as const;
+export type ClauseVersionAction = (typeof CLAUSE_VERSION_ACTIONS)[number];
+
 export const SUBCONTRACT_API = {
+  library: {
+    seed: '/api/subcontracts/library/seed',
+  },
+  clauses: {
+    collection: CLAUSES,
+    archive: (clauseId: string) => `${clause(clauseId)}/archive`,
+    versions: (clauseId: string) => `${clause(clauseId)}/versions`,
+    versionAction: (clauseId: string, version: number, action: ClauseVersionAction) => `${clauseVersion(clauseId, version)}/${action}`,
+    translations: (clauseId: string, version: number) => `${clauseVersion(clauseId, version)}/translations`,
+    approveTranslation: (clauseId: string, version: number, language: string) =>
+      `${clauseVersion(clauseId, version)}/translations/${encodeURIComponent(language)}/approve`,
+  },
+  tradeTemplates: {
+    collection: TRADE_TEMPLATES,
+    item: tradeTemplate,
+    archive: (id: string) => `${tradeTemplate(id)}/archive`,
+  },
   agreements: {
     collection: AGREEMENTS,
     item: agreement,

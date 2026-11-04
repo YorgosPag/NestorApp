@@ -22,20 +22,13 @@ import { generateDeterministicSubcontractTradeTemplateId } from '@/services/ente
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
 import { validateTemplateAgainstLibrary, validateTradeTemplateDefinition } from '@/subapps/procurement/subcontracts/templates/validate-trade-template';
 import { DEFAULT_LIBRARY_PROPOSER } from '@/subapps/procurement/subcontracts/types/clause';
+import type { DefaultLibrarySeedReport } from '@/subapps/procurement/subcontracts/types/library-seed';
 import { readApprovedLibrary } from './clause-library-reads.server';
 import { clauseIdOf, preparedClauseContent, stageNewClause } from './clause-library-writer.server';
 import { clauseDocRef, runSubcontractTransaction, stageCreate, tradeTemplateDocRef } from './subcontract-store.server';
 import { newTradeTemplateRecord } from './trade-template-writer.server';
 import { assertNoSubcontractIssues } from './subcontract-write-error';
 
-export interface DefaultLibrarySeedReport {
-  readonly clausesCreated: readonly string[];
-  readonly clausesExisting: readonly string[];
-  readonly templatesCreated: readonly string[];
-  readonly templatesExisting: readonly string[];
-  /** Πρότυπα που περιμένουν εγκρίσεις ρητρών — με τα ευρήματα, για να ξέρει ο άνθρωπος τι να εγκρίνει. */
-  readonly templatesPending: readonly { readonly code: string; readonly issues: readonly SubcontractIssue[] }[];
-}
 
 async function seedClauses(ctx: AuthContext): Promise<Pick<DefaultLibrarySeedReport, 'clausesCreated' | 'clausesExisting'>> {
   const prepared = await Promise.all(DEFAULT_CLAUSE_LIBRARY.map(async (draft) => ({ draft, content: await preparedClauseContent(draft) })));
