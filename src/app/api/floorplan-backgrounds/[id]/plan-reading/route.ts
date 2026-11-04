@@ -25,7 +25,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { readPlanForBackground } from '@/server/plan-recognition/plan-reading.service';
 import type { PlanReadingRouteResponse } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-contract';
-import { backgroundErrorResponse, backgroundNotFoundResponse, badRequest } from '../../../_background-error-response';
+import { backgroundErrorResponse, backgroundNotFoundResponse, badRequest } from '../../_background-error-response';
 import { readPlanReadingMultipart } from './_plan-reading-multipart';
 
 export const dynamic = 'force-dynamic';
