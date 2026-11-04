@@ -39,6 +39,8 @@ jest.mock('../vendor-portal-links', () => ({ vendorPortalUrl: (t: string) => `ht
 const mockSend = jest.fn(async () => ({ success: true }));
 jest.mock('../channels/email-channel', () => ({ emailVendorInviteChannel: { send: (...a: unknown[]) => mockSend(...(a as [])) } }));
 const mockAudit = jest.fn(async () => 'audit');
+const mockQuota = jest.fn(async () => true);
+jest.mock('@/lib/middleware/subject-quota', () => ({ withinSubjectQuota: (...a: unknown[]) => mockQuota(...(a as [])) }));
 jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: (...a: unknown[]) => mockAudit(...(a as [])) } }));
 
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθούν οι μονάδες */
@@ -82,6 +84,7 @@ beforeEach(() => {
   fake.reset();
   jest.clearAllMocks();
   mockResolveSku.mockResolvedValue(SKU);
+  mockQuota.mockResolvedValue(true);
   mockShowcase.mockResolvedValue({ companyId: SUPPLIER, legalName: 'ARIES ΑΕ', alias: null });
   seedIntake();
 });
@@ -97,6 +100,26 @@ describe('createRfq — γραμμές καταλόγου (ADR-923 §5.13 Τ4)',
     expect(fake.getData(COLLECTIONS.CONTACTS, CONTACT_ID)).toMatchObject({ companyId: BUYER, platformCompanyId: SUPPLIER, companyName: 'ARIES ΑΕ' });
     expect(docs(COLLECTIONS.VENDOR_INVITES)).toEqual([expect.objectContaining({ vendorContactId: CONTACT_ID, rfqId: rfq.id, companyId: BUYER })]);
     expect(docs(COLLECTIONS.VENDOR_INVITE_CREDENTIALS)).toHaveLength(1);
+  });
+
+  it('Τ5: η πρόθεση παράδοσης γράφεται ΜΑΖΙ με το RFQ (outbox `pending`, καμία απόπειρα ακόμη)', async () => {
+    await createRfq(ctx, catalogDto());
+    expect(docs(COLLECTIONS.VENDOR_INVITES)).toEqual([expect.objectContaining({
+      recipientEmail: null, delivery: expect.objectContaining({ state: 'pending', attempts: 0, recipientKind: null }),
+    })]);
+  });
+
+  it('Τ5: όριο ανά ζεύγος (αγοραστής, προμηθευτής) ⇒ `quoteRequestQuotaExhausted`, τίποτα δεν γράφεται, κανένα διαπιστευτήριο', async () => {
+    mockQuota.mockResolvedValueOnce(false);
+    expect(await refusal(catalogDto())).toBe('quoteRequestQuotaExhausted');
+    expect(mockQuota).toHaveBeenCalledWith('rfq-quote-request:pair', `${BUYER}:${SUPPLIER}`, expect.objectContaining({ limit: 10 }));
+    expect(mockMint).not.toHaveBeenCalled();
+    expectNothingWritten();
+  });
+
+  it('Τ5: RFQ χωρίς γραμμή καταλόγου δεν καταναλώνει την ποσόστωση ζεύγους', async () => {
+    await createRfq(ctx, { projectId: 'p', title: 'T', invitedVendorIds: ['v1'] });
+    expect(mockQuota).not.toHaveBeenCalled();
   });
 
   it('το ίχνος της νέας επαφής γράφεται μετά το commit· υπάρχουσα επαφή δεν «γεννιέται» ξανά', async () => {

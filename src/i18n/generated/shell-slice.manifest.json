@@ -66,7 +66,7 @@
     "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "5998b0309e74b4b352593365609f082619804601c73371e6c739f4111657808b",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e694c874d3bf13e0bfd63e2e8d3c8e1dc5aa5ca4db51fed6136570844b6bd2eb",
-    "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "70ff86b387164f7aa34e10cc99658b265d8ab51103c23042c6a629c861641892",
+    "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "3991371a1ae56de860f0debaa852c00fc9e7ebb3df45c30b8e579280cbd65f1f",
     "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "62b9a8955bda59b9bcaf00cadc555a27c859b95208ad0e836eaa184c26b14299",
     "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "ed27faaf054aff06555fb73e987982799aae7ecef3366d7511d1c369f8483e31",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
@@ -200,7 +200,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d2ed52a74a24a6e707675ee0709655e88dab2b7789b91ded50472709f763f664",
+  "inputsSha256": "a64b2f924c83511a4bc458d6ab3499d4f2d6cbf2553ecb94f70d42036887e247",
   "languages": [
     "el"
   ],
@@ -23205,6 +23205,7 @@
             "rfqs.errors.catalogDraftFailed",
             "rfqs.errors.createFailed",
             "rfqs.errors.refusals.catalogSkuUnavailable",
+            "rfqs.errors.refusals.quoteRequestQuotaExhausted",
             "rfqs.errors.refusals.rfqTooLarge",
             "rfqs.errors.refusals.supplierContactUnavailable",
             "rfqs.errors.refusals.supplierNotAcceptingQuotes",
@@ -37842,7 +37843,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1261386
+    "sliceBytes": 1261563
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

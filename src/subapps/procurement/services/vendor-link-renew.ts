@@ -27,13 +27,11 @@ import { vendorLinkExpiryMs } from '@/services/vendor-portal/vendor-invite-crede
 
 import type { VendorInvite } from '../types/vendor-invite';
 import type { RFQ } from '../types/rfq';
+import { RFQ_ACCEPTING_QUOTES } from '../types/rfq';
 import { resolveChannel } from './channels';
 import { getRfq } from './rfq-service';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
 import { resolveInviteRecipient } from './vendor-invite-links-service';
-
-/** Οι καταστάσεις RFQ που **δέχονται** ακόμη προσφορές. */
-const RFQ_ACCEPTING: ReadonlySet<RFQ['status']> = new Set(['draft', 'active']);
 
 const RENEW_QUOTA_SCOPE = 'vendor-link-renew';
 
@@ -58,7 +56,7 @@ export async function renewVendorLink(input: RenewVendorLinkInput): Promise<Vend
   const nowMs = input.nowMs ?? Date.now();
   const { invite } = input;
   const rfq = await getRfq(invite.companyId, invite.rfqId);
-  if (!rfq || !RFQ_ACCEPTING.has(rfq.status)) return 'rfq_closed';
+  if (!rfq || !RFQ_ACCEPTING_QUOTES.has(rfq.status)) return 'rfq_closed';
   const expiresAtMs = renewedLinkExpiryMs(rfq, nowMs);
   if (expiresAtMs === null) return 'rfq_closed';
 

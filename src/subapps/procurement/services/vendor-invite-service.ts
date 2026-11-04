@@ -32,7 +32,8 @@ import {
 import { readLiveCredentialRefsTx } from '@/services/vendor-portal/vendor-invite-credential-store';
 import { nowISO } from '@/lib/date-local';
 import { resolveChannel } from './channels';
-import { pickContactDisplayName } from './vendor-name-resolver';
+import { fetchVendorContact, recipientEmailSnapshot, recipientOfContact } from './vendor-recipient';
+import { admitPlatformQuoteRequest, announcePlatformQuoteRequest } from './platform-quote-request';
 import type {
   VendorInvite,
   CreateVendorInviteDTO,
@@ -40,7 +41,6 @@ import type {
   InviteStatus,
 } from '../types/vendor-invite';
 import { getRfq } from './rfq-service';
-import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
 import { isLiveInviteStatus, normalizeInviteStatus } from '../utils/vendor-invite-status';
 import { prepareVendorInvite, writePreparedVendorInvite } from './vendor-invite-issue';
 import { recordVendorInviteAudit } from './vendor-invite-audit';
@@ -49,35 +49,10 @@ const logger = createModuleLogger('VENDOR_INVITE_SERVICE');
 
 
 // =============================================================================
-// CONTACT LOOKUP
+// CONTACT LOOKUP — η ΜΙΑ κρίση παραλήπτη ζει στο `vendor-recipient` (ADR-923 §5.13 Τ5)
 // =============================================================================
 
-export interface VendorContactSnapshot {
-  id: string;
-  displayName: string;
-  email: string | null;
-  preferredChannel: DeliveryChannel | null;
-}
-
-export async function fetchVendorContact(
-  companyId: string,
-  contactId: string,
-): Promise<VendorContactSnapshot | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-    if (!snap.exists) return null;
-    const data = snap.data() ?? {};
-    // Επαφή χωρίς `companyId` δεν ανήκει σε κανέναν (ADR-742 §4 · ADR-876 §5 Σ15) — ήταν `data.companyId && …`.
-    if (!isPayloadOwnedByCompany(data, companyId)) return null;
-    const supplierPersona = data.supplierPersona as { preferredChannel?: DeliveryChannel } | undefined;
-    return {
-      id: snap.id,
-      displayName: pickContactDisplayName(data) ?? contactId,
-      email: getContactEmail(data as Parameters<typeof getContactEmail>[0]),
-      preferredChannel: supplierPersona?.preferredChannel ?? null,
-    };
-  }, null);
-}
+export { fetchVendorContact, type VendorContactSnapshot } from './vendor-recipient';
 
 // =============================================================================
 // CREATE
@@ -97,8 +72,13 @@ export interface CreateInviteResult {
 interface ResolvedRecipient {
   vendorContactId: string;
   displayName: string;
+  /** Πού στέλνεται το email (για επαφή πλατφόρμας: το `quoteIntake` του προμηθευτή). */
   email: string | null;
+  /** Τι μένει στο έγγραφο της πρόσκλησης — ποτέ η διεύθυνση ενός χώρου της πλατφόρμας. */
+  snapshotEmail: string | null;
   preferredChannel: DeliveryChannel | null;
+  /** Μόνο για επαφή πλατφόρμας: ποσόστωση και ειδοποίηση του χώρου του προμηθευτή. */
+  platformCompanyId: string | null;
 }
 
 async function resolveRecipient(
@@ -108,18 +88,21 @@ async function resolveRecipient(
   if (dto.vendorContactId !== undefined) {
     const vendor = await fetchVendorContact(ctx.companyId, dto.vendorContactId);
     if (!vendor) throw new Error(`Vendor contact ${dto.vendorContactId} not found`);
+    const recipient = await recipientOfContact(vendor, ctx.companyId);
     return {
       vendorContactId: vendor.id,
       displayName: vendor.displayName,
-      email: vendor.email,
+      email: recipient?.email ?? null,
+      snapshotEmail: recipient ? recipientEmailSnapshot(recipient) : null,
       preferredChannel: vendor.preferredChannel,
+      platformCompanyId: recipient?.platformCompanyId ?? null,
     };
   }
   const email = dto.manualEmail.trim();
   const name = dto.manualName.trim();
   if (!email) throw new Error('manualEmail is required');
   if (!name) throw new Error('manualName is required');
-  return { vendorContactId: '', displayName: name, email, preferredChannel: null };
+  return { vendorContactId: '', displayName: name, email, snapshotEmail: email, preferredChannel: null, platformCompanyId: null };
 }
 
 type PreparedInvite = Awaited<ReturnType<typeof prepareVendorInvite>>;
@@ -136,6 +119,10 @@ async function dispatchNewInvite(
   const isEmail = channelDriver.id === 'email';
   if (isEmail && !recipient.email) {
     return { success: false, providerMessageId: null, errorReason: 'Recipient has no email address' };
+  }
+  // ADR-923 §5.13 Τ5 — ίδια ποσόστωση ανά προμηθευτή με το fan-out: η χειρόγραφη πρόσκληση δεν είναι παράκαμψη.
+  if (isEmail && recipient.platformCompanyId && !(await admitPlatformQuoteRequest(recipient.platformCompanyId))) {
+    return { success: false, providerMessageId: null, errorReason: 'Supplier quote-request quota exhausted' };
   }
   const { link } = prepared;
   return channelDriver.send({
@@ -197,7 +184,7 @@ export async function createVendorInvite(
     deliveryChannel: effectiveChannel,
     preferredChannel: recipient.preferredChannel,
     status: 'pending',
-    recipientEmail: recipient.email,
+    recipientEmail: recipient.snapshotEmail,
     recipientName: recipient.displayName,
     issuedVia: effectiveChannel === 'email' ? 'invite_email' : 'copy_link',
     issuedBy: ctx.uid,
@@ -213,6 +200,9 @@ export async function createVendorInvite(
     deliveredAt: dispatch.success ? prepared.invite.createdAt : null,
   };
   await persistNewInvite(invite, link, recipient.vendorContactId, rfq.invitedVendorIds);
+  if (dispatch.success && effectiveChannel === 'email' && recipient.platformCompanyId) {
+    void announcePlatformQuoteRequest({ supplierCompanyId: recipient.platformCompanyId, buyerCompanyId: ctx.companyId, rfqTitle: rfq.title, inviteId: invite.id });
+  }
 
   logger.info('Vendor invite created', {
     inviteId: invite.id,

@@ -38,11 +38,8 @@ import { resolveChannel } from './channels';
 import { getRfq } from './rfq-service';
 import { recordVendorInviteAudit } from './vendor-invite-audit';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
-import {
-  VendorInviteStateError,
-  fetchVendorContact,
-  getVendorInviteOfRfq,
-} from './vendor-invite-service';
+import { VendorInviteStateError, getVendorInviteOfRfq } from './vendor-invite-service';
+import { resolveVendorRecipient } from './vendor-recipient';
 
 const logger = createModuleLogger('VENDOR_INVITE_LINKS');
 
@@ -73,21 +70,20 @@ export async function issueVendorInviteCopyLink(
 }
 
 /**
- * Ο **καταχωρημένος** παραλήπτης της πρόσκλησης — στιγμιότυπο πρώτα, ζωντανή επαφή μόνο για
- * παλιά έγγραφα. `null` ⇒ δεν υπάρχει πού να σταλεί. Ο ΜΟΝΟΣ προορισμός κάθε νέου συνδέσμου
- * μέσω email — και της επαναποστολής του γραφείου και της αυτοεξυπηρέτησης λήξης.
+ * Ο **καταχωρημένος** παραλήπτης της πρόσκλησης — στιγμιότυπο πρώτα, ζωντανή κρίση (`resolveVendorRecipient`) μόνο όταν
+ * λείπει. `null` ⇒ δεν υπάρχει πού να σταλεί. Ο ΜΟΝΟΣ προορισμός κάθε νέου συνδέσμου μέσω email — και της επαναποστολής
+ * του γραφείου και της αυτοεξυπηρέτησης λήξης.
+ *
+ * 🔑 ADR-923 §5.13 Τ5: πρόσκληση προς χώρο της πλατφόρμας δεν έχει ποτέ στιγμιότυπο email (η διεύθυνση είναι ιδιωτική του
+ *    προμηθευτή), άρα λύνεται **πάντα** ζωντανά από το `quoteIntake` του — και μόνο όσο ο προμηθευτής δέχεται.
  */
 export async function resolveInviteRecipient(
   invite: Pick<VendorInvite, 'companyId' | 'vendorContactId' | 'recipientEmail' | 'recipientName'>,
 ): Promise<{ email: string; name: string } | null> {
-  let email = invite.recipientEmail;
-  let name = invite.recipientName;
-  if ((!email || !name) && invite.vendorContactId) {
-    const vendor = await fetchVendorContact(invite.companyId, invite.vendorContactId);
-    email = email ?? vendor?.email ?? null;
-    name = name ?? vendor?.displayName ?? null;
-  }
-  return email ? { email, name: name ?? email } : null;
+  if (invite.recipientEmail) return { email: invite.recipientEmail, name: invite.recipientName ?? invite.recipientEmail };
+  if (!invite.vendorContactId) return null;
+  const recipient = await resolveVendorRecipient(invite.companyId, invite.vendorContactId);
+  return recipient ? { email: recipient.email, name: invite.recipientName ?? recipient.name } : null;
 }
 
 /**

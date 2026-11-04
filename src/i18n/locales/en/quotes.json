@@ -414,7 +414,8 @@
         "catalogSkuUnavailable": "This product is no longer available for a quote request.",
         "supplierNotAcceptingQuotes": "This supplier is not accepting quote requests right now.",
         "supplierContactUnavailable": "The supplier's contact in your contacts is archived. Check the contact and try again.",
-        "rfqTooLarge": "This request is too large to send at once. Split it into smaller requests."
+        "rfqTooLarge": "This request is too large to send at once. Split it into smaller requests.",
+        "quoteRequestQuotaExhausted": "You have sent many requests to this supplier today. Please try again tomorrow."
       },
       "catalogDraftFailed": "The catalog product could not be loaded. Please try again."
     },

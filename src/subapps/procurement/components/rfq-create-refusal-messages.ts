@@ -19,5 +19,6 @@ export function rfqCreateRefusalMessages(t: Translate): Readonly<Record<RfqCreat
     supplierNotAcceptingQuotes: t('quotes:rfqs.errors.refusals.supplierNotAcceptingQuotes'),
     supplierContactUnavailable: t('quotes:rfqs.errors.refusals.supplierContactUnavailable'),
     rfqTooLarge: t('quotes:rfqs.errors.refusals.rfqTooLarge'),
+    quoteRequestQuotaExhausted: t('quotes:rfqs.errors.refusals.quoteRequestQuotaExhausted'),
   };
 }

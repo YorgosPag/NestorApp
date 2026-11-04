@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getAdminFirestore, safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateRfqId } from '@/services/enterprise-id.service';
@@ -16,7 +16,6 @@ import {
 } from '../utils/rfq-response-lock';
 import { deriveSetupLockState } from '../utils/rfq-lock-state';
 import type { AuthContext } from '@/lib/auth';
-import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { readOwnedProcurementDoc } from './procurement-owned-doc';
 import { loadOwnedRfq, rfqRef, rfqSubject } from './rfq-ownership';
 import { getTradeCodeForAtoeCategory } from '../data/trades';
@@ -29,77 +28,8 @@ import { catalogSuppliersSent } from './rfq-catalog-draft';
 import type { RfqCatalogSupplierSent } from '../types/rfq-line';
 import { recordAccountContactBirth } from '@/services/contact/account-contact-resolver';
 import { recomputeSourcingEventStatus } from './sourcing-event-service';
-import { emailVendorInviteChannel } from './channels/email-channel';
-import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
+import { scheduleRfqInviteDeliveries } from './rfq-invite-delivery';
 const logger = createModuleLogger('RFQ_SERVICE');
-
-// ============================================================================
-// EMAIL DISPATCH HELPERS — post-create invite fan-out (ADR-327 §7 step h)
-// ============================================================================
-
-/**
- * Ό,τι χρειάζεται η αποστολή — **οι σύνδεσμοι έτοιμοι**, ποτέ το ωμό token (ADR-876 §5):
- * ζουν μόνο στη μνήμη αυτής της ροής και φεύγουν μόνο μέσα στο email.
- */
-interface InviteMeta {
-  inviteId: string;
-  vendorId: string;
-  portalUrl: string;
-  declineUrl: string;
-  expiresAt: string;
-}
-
-async function dispatchRfqInviteEmails(
-  ctx: AuthContext,
-  rfq: RFQ,
-  inviteMeta: InviteMeta[],
-): Promise<void> {
-  const db = getAdminFirestore();
-  const results = await Promise.allSettled(
-    inviteMeta.map(async (meta) => {
-      const snap = await db.collection(COLLECTIONS.CONTACTS).doc(meta.vendorId).get();
-      if (!snap.exists) return;
-      const data = snap.data() ?? {};
-      // ⚠️ Δευτερεύον δίχτυ ασφαλείας σε **παρενέργεια**, όχι ο κύριος φύλακας
-      // της διαδρομής: ρωτά για **επαφή** ενώ ο πρωτεύων πόρος είναι το RFQ.
-      // Μένει σιωπηλή παράλειψη παραλήπτη — δεν προάγεται σε άρνηση.
-      //
-      // 🔴 Έγραφε `data.companyId && data.companyId !== ctx.companyId`: επαφή
-      // **χωρίς** `companyId` περνούσε. Εδώ η ζημιά δεν είναι διαρροή ονόματος
-      // — το μήνυμα μεταφέρει **portal token** που ανοίγει το RFQ. Έγγραφο
-      // χωρίς tenant δεν ανήκει σε κανέναν (ADR-742 §4), άρα δεν λαμβάνει.
-      if (!isPayloadOwnedByCompany(data, ctx.companyId)) return;
-      const email = getContactEmail(data as Parameters<typeof getContactEmail>[0]);
-      if (!email) return;
-      const vendorName = String(data.displayName ?? data.companyName ?? data.fullName ?? meta.vendorId);
-      const result = await emailVendorInviteChannel.send({
-        inviteId: meta.inviteId,
-        vendorName,
-        recipient: email,
-        rfqTitle: rfq.title,
-        projectName: null,
-        portalUrl: meta.portalUrl,
-        expiresAt: meta.expiresAt,
-        locale: 'el',
-        declineUrl: meta.declineUrl,
-      });
-      if (result.success) {
-        // Στιγμιότυπο παραλήπτη (ADR-876 §5): η αυτοεξυπηρέτηση λήξης στέλνει ΜΟΝΟ εδώ.
-        await db.collection(COLLECTIONS.VENDOR_INVITES).doc(meta.inviteId).update({
-          deliveredAt: admin.firestore.Timestamp.now(),
-          updatedAt: admin.firestore.Timestamp.now(),
-          recipientEmail: email,
-          recipientName: vendorName,
-        });
-      }
-    }),
-  );
-  results.forEach((r, i) => {
-    if (r.status === 'rejected') {
-      logger.error('Invite email dispatch failed', { vendorId: inviteMeta[i].vendorId, error: String(r.reason) });
-    }
-  });
-}
 
 // ============================================================================
 // CREATE
@@ -123,14 +53,9 @@ function afterRfqCreated(ctx: AuthContext, rfq: RFQ, dto: CreateRfqDTO, plan: Rf
   recordSupplierContactBirths(ctx, committed);
   if (dto.adHocLines?.length) recordRfqLinesAdded(ctx, rfq.id, dto.adHocLines.length, 'bulk');
   if (plan.catalogLines.length > 0) recordRfqLinesAdded(ctx, rfq.id, plan.catalogLines.length, 'catalog');
-  const inviteMeta: InviteMeta[] = plan.invites.map((prepared) => ({
-    inviteId: prepared.invite.id,
-    vendorId: prepared.invite.vendorContactId,
-    portalUrl: prepared.link.portalUrl,
-    declineUrl: prepared.link.declineUrl,
-    expiresAt: prepared.link.expiresAtIso,
-  }));
-  if (inviteMeta.length > 0) void dispatchRfqInviteEmails(ctx, rfq, inviteMeta);
+  // ADR-923 §5.13 Τ5 — η πρόθεση γράφτηκε στη συναλλαγή (`delivery: pending`)· η πρώτη απόπειρα μετά την απάντηση, με τον
+  // σύνδεσμο που κρατά ακόμη η μνήμη. Ό,τι αποτύχει το ξαναπιάνει το cron `rfq-invite-delivery` με νέο σύνδεσμο.
+  scheduleRfqInviteDeliveries(plan.invites.map(({ invite, link }) => ({ inviteId: invite.id, link })));
 }
 
 /**

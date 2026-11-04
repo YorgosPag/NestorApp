@@ -235,6 +235,11 @@ export const NOTIFICATION_EVENT_TYPES = {
   // ADR-923 §5.12 — σχέση προμήθειας: αίτημα · αποδοχή · έγκριση. Απόρριψη και ανάκληση σιωπούν (Σ7).
   PROCUREMENT_SUPPLY_CONNECTION: 'procurement.supplyConnection',
   /**
+   * ADR-923 §5.13 Τ5 — **ένας αγοραστής ζήτησε προσφορά** από τον χώρο του προμηθευτή (πρόσκληση RFQ που παραδόθηκε στο
+   * `quoteIntake` του). Προς τους ενεργούς διαχειριστές του χώρου. Ίδιος διακόπτης με τις συνδέσεις (αιτήματα από πελάτες).
+   */
+  PROCUREMENT_QUOTE_REQUESTED: 'procurement.quoteRequested',
+  /**
    * ADR-867 Β6 — **νέο μήνυμα σε νήμα συνεργατών**. Ταυτότητα = **το διάστημα αδιάβαστων** του
    * παραλήπτη (`lastReadAt`), όχι το μήνυμα: δέκα μηνύματα πριν ανοίξει το νήμα = **μία** ειδοποίηση
    * (το ένα σήμα ανά συνομιλία του Slack/Teams). Δες `network-notification-plan.ts`.
@@ -597,6 +602,12 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   },
   // Procurement (ADR-267 Phase B)
   [NOTIFICATION_EVENT_TYPES.PROCUREMENT_SUPPLY_CONNECTION]: {
+    category: 'procurement',
+    settingKey: 'supplyConnection',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_REQUESTED]: {
     category: 'procurement',
     settingKey: 'supplyConnection',
     isMandatory: false,
