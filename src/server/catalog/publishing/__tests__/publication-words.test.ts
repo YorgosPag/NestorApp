@@ -13,7 +13,7 @@ import type { CatalogTx } from '../../catalog-store.server';
 jest.mock('../../catalog-library-reads.server', () => ({ readActiveByIds: jest.fn(), readMeasurementRegistry: jest.fn(async () => new Map()) }));
 jest.mock('../publication-prices.server', () => ({
   PublicationRunError: class extends Error {},
-  readPublicationPriceSheet: jest.fn(async () => ({ priceOf: null, audienceKey: 'none', refs: [], edition: null, changes: [] })),
+  readPublicationPriceSheet: jest.fn(async () => ({ priceOf: null, audienceKey: 'none', refs: [], edition: null, compareEdition: null, changes: [] })),
 }));
 
 describe('readPublicationSnapshot: η πραγματική διαδρομή ως τον έλεγχο εύρους', () => {
@@ -36,6 +36,15 @@ describe('publicationWords: το κείμενο του χρήστη στο έν�
   it('το κενό κείμενο δίνει την εφεδρεία του καλούντα', () => {
     expect(publicationWords('el').text(undefined, 'κωδικός')).toBe('κωδικός');
     expect(publicationWords('el').text({ el: '   ' }, 'κωδικός')).toBe('κωδικός');
+  });
+});
+
+describe('publicationWords: η σύγκριση του «Τι άλλαξε» ονομάζει τις δύο εκδόσεις', () => {
+  it.each([
+    ['el', 'Πριν: A · Τώρα: B'],
+    ['en', 'Before: A · Now: B'],
+  ] as const)('%s', (language, expected) => {
+    expect(publicationWords(language).comparison('A', 'B')).toBe(expected);
   });
 });
 

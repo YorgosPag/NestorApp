@@ -82,6 +82,7 @@ export function publicationWords(language: HumanLanguage) {
       open: (version, from) => t('publishing.document.pricesEdition', { version, date: from }),
       closed: (version, from, until) => t('publishing.document.pricesEditionClosed', { version, from, until }),
     } satisfies PriceEditionWords,
+    comparison: (before: string, after: string) => t('publishing.document.changes.comparison', { before, after }),
   };
 }
 
@@ -130,10 +131,17 @@ async function changedProducts(scope: CatalogTx, changes: readonly PublicationPr
   return productsInScope(dataSet, found.filter((product): product is StoredProduct => product !== null));
 }
 
-async function changesChapter(scope: CatalogTx, changes: readonly PublicationPriceChange[], dataSet: PublicationDataSet, words: ReturnType<typeof publicationWords>) {
+/** «Πριν: … · Τώρα: …» με τις δύο εκδόσεις γραμμένες όπως στο υποσέλιδο (ίδια συνάρτηση). Κενό όταν δεν υπάρχει σύγκριση. */
+function comparisonOf(sheet: PublicationPriceSheet, words: ReturnType<typeof publicationWords>, language: HumanLanguage): string {
+  if (!sheet.edition || !sheet.compareEdition) return '';
+  return words.comparison(priceEditionLine(sheet.compareEdition, language, words.priceEdition), priceEditionLine(sheet.edition, language, words.priceEdition));
+}
+
+async function changesChapter(scope: CatalogTx, sheet: PublicationPriceSheet, dataSet: PublicationDataSet, words: ReturnType<typeof publicationWords>) {
+  const { changes } = sheet;
   const products = await changedProducts(scope, changes, dataSet);
   const names = new Map(products.map((product) => [product.id, { code: product.derived.identifier, label: product.derived.label }]));
-  const entry = priceChangesEntry({ changes, names, words: changeWords(words.t, words.table.askForQuote), language: dataSet.language });
+  const entry = priceChangesEntry({ changes, names, words: changeWords(words.t, words.table.askForQuote), comparison: comparisonOf(sheet, words, dataSet.language), language: dataSet.language });
   const chapter: PublicationChapter | null = entry ? { id: entry.id, title: entry.title, entries: [entry] } : null;
   return { chapter, fencedCount: changes.filter((change) => change.fenced && names.has(change.variantId)).length };
 }
@@ -179,7 +187,7 @@ export async function readPublicationSnapshot(scope: CatalogTx, recipe: Publicat
   const selection = selectPublicationContent(dataSet);
   if (selection.chapters.length === 0) throw new PublicationRunError('emptyScope');
   const title = words.text(recipe.title, recipe.code);
-  const changes = await changesChapter(scope, sheet.changes, dataSet, words);
+  const changes = await changesChapter(scope, sheet, dataSet, words);
   const fonts = await readRecipeFonts(scope, recipe);
   const links = await options.links(linkableModelIds(selection.chapters));
   const document = composePublication({

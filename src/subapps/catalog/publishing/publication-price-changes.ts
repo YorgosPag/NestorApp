@@ -73,6 +73,8 @@ export interface PriceChangeInput {
   /** Κωδικός και όνομα μόνο όσων ανήκουν στο εύρος της έκδοσης: ό,τι λείπει δεν τυπώνεται. */
   readonly names: ReadonlyMap<string, { readonly code: string | null; readonly label: string | null }>;
   readonly words: PriceChangeWords;
+  /** Η γραμμή «Πριν: έκδοση Χ … · Τώρα: έκδοση Υ …» (`priceChangesComparisonLine`). */
+  readonly comparison: string;
   readonly language: HumanLanguage;
 }
 
@@ -105,5 +107,5 @@ function groupOf(kind: PublicationChangeKind, input: PriceChangeInput): PriceCha
 /** Η σελίδα της σύγκρισης, ή `null` όταν δεν άλλαξε τίποτα μέσα στο εύρος: κενή σελίδα δεν τυπώνεται. */
 export function priceChangesEntry(input: PriceChangeInput): PriceChangesEntry | null {
   const groups = PUBLICATION_CHANGE_KINDS.flatMap((kind) => groupOf(kind, input) ?? []);
-  return groups.length === 0 ? null : { kind: 'priceChanges', id: 'price-changes', title: input.words.title, groups };
+  return groups.length === 0 ? null : { kind: 'priceChanges', id: 'price-changes', title: input.words.title, comparison: input.comparison, groups };
 }

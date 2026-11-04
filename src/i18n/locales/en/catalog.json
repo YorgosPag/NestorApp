@@ -1046,6 +1046,7 @@
       "tablePart": "Part {part} of {parts}",
       "changes": {
         "title": "What changed",
+        "comparison": "Before: {before} · Now: {after}",
         "added": "New products",
         "removed": "Discontinued",
         "raised": "Price increases",

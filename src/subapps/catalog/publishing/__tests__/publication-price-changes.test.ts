@@ -23,7 +23,7 @@ const words: PriceChangeWords = {
   title: 'Τι άλλαξε', groups: { added: 'Νέα', removed: 'Καταργήσεις', raised: 'Αυξήσεις', lowered: 'Μειώσεις' }, before: 'Πριν', after: 'Τώρα', change: 'Μεταβολή', noPrice: 'Ζητήστε προσφορά',
 };
 const names = new Map([['a', { code: 'A-10', label: 'Άλφα' }], ['b', { code: 'A-9', label: 'Βήτα' }], ['c', { code: 'C', label: 'C' }]]);
-const entryOf = (changes: readonly PublicationPriceChange[], known = names) => priceChangesEntry({ changes, names: known, words, language: 'el' });
+const entryOf = (changes: readonly PublicationPriceChange[], known = names) => priceChangesEntry({ changes, names: known, words, comparison: 'Πριν: έκδοση 2 · Τώρα: έκδοση 3', language: 'el' });
 
 describe('publicationPriceChanges', () => {
   it('🔴 αύξηση, μείωση, νέο, κατάργηση', () => {
@@ -86,6 +86,13 @@ describe('🔑 στον συνθέτη', () => {
     expect(sections.map((section) => section.template)).toEqual(['family']);
     const tables = sections[0].blocks.flatMap((block) => (block.kind === 'table' ? [block.table as LayoutTable] : []));
     expect(tables.map((table) => [table.columnCount, table.rows[0].header])).toEqual([[2, true], [4, true]]);
+    expect(sections[0].blocks[2]).toEqual({ kind: 'paragraph', inlines: [{ text: 'Πριν: έκδοση 2 · Τώρα: έκδοση 3' }] });
+  });
+
+  it('🔴 χωρίς δηλωμένη σύγκριση δεν τυπώνεται κενή παράγραφος', () => {
+    const entry = priceChangesEntry({ changes: changesOf([line('a', 1000)], [line('a', 1100)]), names, words, comparison: '', language: 'el' });
+    if (!entry) throw new Error('entry');
+    expect(compose(entry).sections[0].blocks.some((block) => block.kind === 'paragraph')).toBe(false);
   });
 });
 

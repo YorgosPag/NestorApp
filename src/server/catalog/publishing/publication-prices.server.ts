@@ -52,11 +52,13 @@ export interface PublicationPriceSheet {
   readonly audienceKey: string;
   /** Για το υποσέλιδο: αριθμός έκδοσης + ισχύς από/έως. `null` = τεχνικός κατάλογος. */
   readonly edition: PublicationPriceEdition | null;
+  /** Η έκδοση της σύγκρισης («Πριν»), με το δικό της «έως»· `null` = χωρίς σύγκριση. */
+  readonly compareEdition: PublicationPriceEdition | null;
   /** Η σύγκριση με παλαιότερη έκδοση, για το κοινό της συνταγής· κενό ⇒ χωρίς σύγκριση. */
   readonly changes: readonly PublicationPriceChange[];
 }
 
-const NO_PRICES: PublicationPriceSheet = { priceOf: null, refs: [], audienceKey: 'none', edition: null, changes: [] };
+const NO_PRICES: PublicationPriceSheet = { priceOf: null, refs: [], audienceKey: 'none', edition: null, compareEdition: null, changes: [] };
 
 type PricedPricing = Extract<PublicationPricing, { kind: 'priced' }>;
 type StoredListRecord = StoredCatalogRecord<PriceListDefinition>;
@@ -143,6 +145,7 @@ export async function readPublicationPriceSheet(scope: CatalogTx, pricing: Publi
     changes: compare ? publicationPriceChanges(diffPriceVersions(compareLines, lines), quoterOf(quoter, compareLines, compare.validFrom), quote) : [],
     audienceKey: audienceIdentity(pricing.audience),
     edition: publicationPriceEdition(version, versions),
+    compareEdition: compare ? publicationPriceEdition(compare, versions) : null,
     refs: [
       { key: `priceList:${list.id}`, revision: list.revision },
       { key: `priceVersion:${version.id}:${version.seal.linesHash}`, revision: version.revision },

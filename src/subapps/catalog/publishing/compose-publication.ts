@@ -139,7 +139,8 @@ function changesSection(entry: PriceChangesEntry): LayoutSection {
     { kind: 'heading', level: 3, text: group.title, outlined: false },
     { kind: 'table', table: changeTable(group, entry.id, entry.title) },
   ]);
-  return { id: entry.id, template: 'family', blocks: [{ kind: 'anchor', anchor: anchorOf(entry.id) }, { kind: 'heading', level: 2, text: entry.title, outlined: true }, ...groups] };
+  const comparison: LayoutBlock[] = entry.comparison === '' ? [] : [{ kind: 'paragraph', inlines: [{ text: entry.comparison }] }];
+  return { id: entry.id, template: 'family', blocks: [{ kind: 'anchor', anchor: anchorOf(entry.id) }, { kind: 'heading', level: 2, text: entry.title, outlined: true }, ...comparison, ...groups] };
 }
 
 /** Ο **ένας** πίνακας «είδος καταχώρισης → πρότυπο». Νέο είδος χωρίς γραμμή = σφάλμα μεταγλώττισης. */

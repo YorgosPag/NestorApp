@@ -76,6 +76,8 @@ export interface PriceChangesEntry {
   readonly kind: 'priceChanges';
   readonly id: string;
   readonly title: string;
+  /** Ποια έκδοση συγκρίνεται με ποια («Πριν: … · Τώρα: …»), ώστε το «Πριν €» να μην μένει ανώνυμο· κενό = δεν δηλώθηκε. */
+  readonly comparison: string;
   readonly groups: readonly PriceChangeGroup[];
 }
 
