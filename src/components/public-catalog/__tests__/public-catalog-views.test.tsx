@@ -23,6 +23,8 @@ jest.mock('../public-catalog-text', () => ({
 jest.mock('@/lib/workspace/navigation', () => ({
   Link: ({ href, children }: { readonly href: string; readonly children: React.ReactNode }) => <a href={href}>{children}</a>,
 }));
+const mockUser: { current: { uid: string } | null } = { current: null };
+jest.mock('@/auth/hooks/useAuth', () => ({ useAuth: () => ({ user: mockUser.current }) }));
 
 const variant = (id: string, label: string) => ({ variantId: id, code: id, label, attributes: [], media: [] });
 
@@ -138,32 +140,63 @@ describe('SupplierCatalogView', () => {
 
 describe('PublicModelView', () => {
   it('πολλά SKU ⇒ λίστα παραλλαγών, καθεμία με «Κατόπιν προσφοράς»', () => {
-    render(<PublicModelView segment="aries" model={MODEL} />);
+    render(<PublicModelView segment="aries" model={MODEL} acceptsQuoteRequests={false} />);
     expect(screen.getByRole('heading', { level: 2, name: 'model.variants' })).toBeTruthy();
     expect(screen.getAllByText('model.priceOnRequest')).toHaveLength(3);
   });
 
   it('ένα SKU ⇒ χωρίς λίστα παραλλαγών, με τις ιδιότητές του στον πίνακα', () => {
     const attribute = { attributeId: 'p', labels: { el: 'Ισχύς' }, values: { el: { type: 'measurement' as const, value: '12', unitCode: 'kW' } } };
-    render(<PublicModelView segment="aries" model={{ ...MODEL, variants: [{ ...variant('v1', 'Ένα'), attributes: [attribute] }] }} />);
+    render(<PublicModelView segment="aries" model={{ ...MODEL, variants: [{ ...variant('v1', 'Ένα'), attributes: [attribute] }] }} acceptsQuoteRequests={false} />);
     expect(screen.queryByText('model.variants')).toBeNull();
     expect(screen.getByText('12 kW')).toBeTruthy();
   });
 
   it('ναι και όχι περνούν από το i18n', () => {
     const flag = { attributeId: 'f', labels: { el: 'Inverter' }, values: { el: { type: 'boolean' as const, value: true } } };
-    render(<PublicModelView segment="aries" model={{ ...MODEL, attributes: [flag] }} />);
+    render(<PublicModelView segment="aries" model={{ ...MODEL, attributes: [flag] }} acceptsQuoteRequests={false} />);
     expect(screen.getByText('model.yes')).toBeTruthy();
   });
 
   it('έγκυρο richText αποδίδεται ως μορφοποίηση', () => {
-    const { container } = render(<PublicModelView segment="aries" model={description('<p>Ήσυχο <strong>μοντέλο</strong></p>')} />);
+    const { container } = render(<PublicModelView segment="aries" model={description('<p>Ήσυχο <strong>μοντέλο</strong></p>')} acceptsQuoteRequests={false} />);
     expect(container.querySelector('strong')?.textContent).toBe('μοντέλο');
+  });
+
+  describe('«Ζητήστε προσφορά» (§5.13 Τ6)', () => {
+    const quoteLinks = () => screen.queryAllByRole('link', { name: 'model.requestQuote' });
+    const draftOf = (variantId: string) => `/procurement/rfqs/new?catalog=comp_a.cpmod_1.${variantId}`;
+    afterEach(() => { mockUser.current = null; });
+
+    it('id που δεν επιβιώνει το URL (π.χ. με «.») ⇒ κανένα κουμπί προς σίγουρη άρνηση', () => {
+      render(<PublicModelView segment="aries" model={{ ...MODEL, variants: [variant('v.1', 'Ένα'), variant('v2', 'Δύο')] }} acceptsQuoteRequests />);
+      expect(quoteLinks().map((link) => link.getAttribute('href'))).toEqual([`/login?${new URLSearchParams({ next: draftOf('v2') })}`]);
+    });
+
+    it('χωρίς opt-in του προμηθευτή ⇒ κανένα κουμπί', () => {
+      render(<PublicModelView segment="aries" model={MODEL} acceptsQuoteRequests={false} />);
+      expect(quoteLinks()).toHaveLength(0);
+    });
+
+    it('πολλά SKU, ανώνυμος ⇒ ένα κουμπί ανά παραλλαγή, προς σύνδεση ΜΕ επιστροφή στο ίδιο πρόχειρο', () => {
+      render(<PublicModelView segment="aries" model={MODEL} acceptsQuoteRequests />);
+      const hrefs = quoteLinks().map((link) => link.getAttribute('href'));
+      expect(hrefs).toEqual([
+        `/login?${new URLSearchParams({ next: draftOf('v1') })}`,
+        `/login?${new URLSearchParams({ next: draftOf('v2') })}`,
+      ]);
+    });
+
+    it('ένα SKU, συνδεδεμένος ⇒ ένα κουμπί στην κεφαλίδα, κατευθείαν στο πρόχειρο', () => {
+      mockUser.current = { uid: 'u1' };
+      render(<PublicModelView segment="aries" model={{ ...MODEL, variants: [variant('v1', 'Ένα')] }} acceptsQuoteRequests />);
+      expect(quoteLinks().map((link) => link.getAttribute('href'))).toEqual([draftOf('v1')]);
+    });
   });
 
   it('🔒 richText εκτός γραμματικής δεν γίνεται ποτέ DOM', () => {
     const payload = '<img src=x onerror=alert(1)><script>alert(2)</script>';
-    const { container } = render(<PublicModelView segment="aries" model={description(payload)} />);
+    const { container } = render(<PublicModelView segment="aries" model={description(payload)} acceptsQuoteRequests={false} />);
     expect(container.querySelector('script')).toBeNull();
     expect(container.querySelector('dd img')).toBeNull();
     expect(screen.getByText(payload)).toBeTruthy();

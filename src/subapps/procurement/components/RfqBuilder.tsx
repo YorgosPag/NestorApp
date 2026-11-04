@@ -19,7 +19,7 @@ import { Plus, Trash2, Save, X, ListFilter } from 'lucide-react';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { fetchJson, jsonRequest } from '@/lib/api/fetch-json';
-import { generateTempId } from '@/services/enterprise-id.service';
+import { explainProcurementError } from '@/components/procurement/explain-procurement-error';
 import { TradeSelector } from './TradeSelector';
 import { BoqLinePicker } from './BoqLinePicker';
 import { VendorPickerSection } from './VendorPickerSection';
@@ -28,29 +28,20 @@ import { LineItemsSection, type LineItemColumn } from './LineItemsSection';
 import { UomSelect } from '@/components/shared/UomSelect';
 import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
 import { POProjectSelector } from '@/components/procurement/POEntitySelectors';
-import { getAtoeCodesForTrade, getTradeCodeForAtoeCategory } from '@/subapps/procurement/data/trades';
-import type { RfqLine, RfqDraftLine, CreateRfqDTO, AwardMode, ReminderTemplate } from '@/subapps/procurement/types/rfq';
-import type { CreateRfqLineDTO } from '@/subapps/procurement/types/rfq-line';
+import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
+import type { RfqLine, RfqDraftLine, AwardMode, ReminderTemplate } from '@/subapps/procurement/types/rfq';
+import type { RfqCatalogDraft, RfqCatalogSupplierSent } from '@/subapps/procurement/types/rfq-line';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
-import type { BOQItem } from '@/types/boq/boq';
 import { useSourcingEvent } from '@/subapps/procurement/hooks/useSourcingEvent';
+import {
+  boqItemToLine, catalogDraftToLine, catalogLinesComplete, newAdHocLine, toCreateRfqDTO, toFormLine,
+  type BoqPick, type FormLine, type FormState,
+} from './rfq-builder-lines';
+import { rfqCreateRefusalMessages } from './rfq-create-refusal-messages';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-type FormLine = RfqLine & { source: 'boq' | 'ad_hoc'; boqItemId?: string | null };
-
-interface FormState {
-  projectId: string;
-  title: string;
-  description: string;
-  deadlineDate: string;
-  awardMode: AwardMode;
-  reminderTemplate: ReminderTemplate;
-  lines: FormLine[];
-  invitedVendorIds: string[];
-}
 
 export interface RfqBuilderInitialState {
   projectId?: string;
@@ -60,11 +51,23 @@ export interface RfqBuilderInitialState {
   awardMode?: AwardMode;
   reminderTemplate?: ReminderTemplate;
   lines?: RfqDraftLine[];
+  /** ADR-923 §5.13 Τ6 — τα SKU του `?catalog=`, κριμένα από τον διακομιστή (`/api/rfqs/from-catalog`). */
+  catalogDrafts?: readonly RfqCatalogDraft[];
   invitedVendorIds?: string[];
 }
 
+/**
+ * Η επιτυχία της δημιουργίας: το id **και** οι προμηθευτές καταλόγου που προσκλήθηκαν (ADR-923 §5.13 Τ6). Το επόμενο βήμα το
+ * αποφασίζει ό,τι στάλθηκε, όχι το πρόχειρο: ο χρήστης μπορεί να έσβησε τη γραμμή καταλόγου πριν στείλει.
+ */
+export type RfqBuilderSuccess = (id: string, catalogSuppliers: readonly RfqCatalogSupplierSent[]) => void;
+
+interface RfqCreatedResponse {
+  readonly data: { readonly id: string };
+  readonly catalogSuppliers?: readonly RfqCatalogSupplierSent[];
+}
+
 type SetField = <K extends keyof FormState>(key: K, val: FormState[K]) => void;
-type BoqPick = Pick<BOQItem, 'id' | 'title' | 'categoryCode' | 'estimatedQuantity' | 'unit' | 'description'>;
 
 // ============================================================================
 // LINE ROW
@@ -77,18 +80,16 @@ interface RfqLineRowProps {
   onRemove: (i: number) => void;
 }
 
-function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
+/** Περιγραφή, κλάδος και ΑΤΟΕ μιας επεξεργάσιμης γραμμής (επιμέτρηση ή χειρόγραφη). */
+function EditableLineCells({ line, index, onUpdate }: Omit<RfqLineRowProps, 'onRemove'>) {
   const { t } = useTranslation('quotes');
-
   const handleTradeChange = (code: TradeCode) => {
     onUpdate(index, 'trade', code);
     const codes = getAtoeCodesForTrade(code);
     if (codes.length > 0) onUpdate(index, 'categoryCode', codes[0]);
   };
-
-  // Κάθε κελί ονομάζεται με το κείμενο της κεφαλίδας του (WCAG 2.5.3, ADR-598 G11).
   return (
-    <tr className="border-b text-sm">
+    <>
       <td className="py-1 pr-2">
         <Input
           aria-label={t('rfqs.lineDescription')}
@@ -111,6 +112,37 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
           noneLabel={t('rfqs.noCategoryCode')}
         />
       </td>
+    </>
+  );
+}
+
+/**
+ * Γραμμή καταλόγου (ADR-923 §5.13 Τ6): η περιγραφή είναι του **κριμένου** SKU και δεν αλλάζει εδώ, γιατί ο διακομιστής γράφει
+ * τη δική του. Κλάδο και ΑΤΟΕ δεν δηλώνει ο αγοραστής για προϊόν άλλου.
+ */
+function CatalogLineCells({ line }: { line: FormLine }) {
+  const { t } = useTranslation('quotes');
+  return (
+    <>
+      <td className="py-1 pr-2">
+        <p className="m-0 text-sm">{line.description}</p>
+        <p className="m-0 text-xs text-muted-foreground">
+          {t('rfqs.catalogLine.supplier', { supplier: line.catalog?.supplierName ?? '' })}
+        </p>
+      </td>
+      <td colSpan={2} className="py-1 pr-2 text-xs text-muted-foreground">{t('rfqs.catalogLine.source')}</td>
+    </>
+  );
+}
+
+function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
+  const { t } = useTranslation('quotes');
+  const isCatalog = line.source === 'catalog';
+
+  // Κάθε κελί ονομάζεται με το κείμενο της κεφαλίδας του (WCAG 2.5.3, ADR-598 G11).
+  return (
+    <tr className="border-b text-sm">
+      {isCatalog ? <CatalogLineCells line={line} /> : <EditableLineCells line={line} index={index} onUpdate={onUpdate} />}
       <td className="py-1 pr-2 w-20">
         <Input
           aria-label={t('rfqs.lineQuantity')}
@@ -119,6 +151,7 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
           onChange={(e) => onUpdate(index, 'quantity', parseFloat(e.target.value) || null)}
           className="h-8 text-sm"
           min={0}
+          required={isCatalog}
           placeholder="—"
         />
       </td>
@@ -301,32 +334,8 @@ function RfqLines({ lines, canPickFromBoq, onOpenBoqPicker, onAdd, onUpdate, onR
 // STATE + SUBMISSION
 // ============================================================================
 
-/** Τα κλειδιά γραμμών εδώ είναι ΠΡΟΣΩΡΙΝΑ (κλειδιά React) — τις γραμμές τις γράφει ο server με `generateRfqLineId`. */
-function newAdHocLine(): FormLine {
-  const trade: TradeCode = 'concrete';
-  return {
-    id: generateTempId(), description: '', trade, categoryCode: getAtoeCodesForTrade(trade)[0] ?? null,
-    quantity: null, unit: null, notes: null, source: 'ad_hoc',
-  };
-}
-
-function boqItemToLine(item: BoqPick): FormLine {
-  return {
-    id: generateTempId(),
-    description: item.title,
-    trade: getTradeCodeForAtoeCategory(item.categoryCode) ?? 'materials_general',
-    categoryCode: item.categoryCode,
-    quantity: item.estimatedQuantity,
-    unit: item.unit as string,
-    notes: item.description ?? null,
-    source: 'boq',
-    boqItemId: item.id,
-  };
-}
-
-/** A pre-filled line stays a BOQ line when it came from one — else submit would send it ad-hoc (ADR-327 P5-BOQ). */
-function toFormLine(line: RfqDraftLine): FormLine {
-  return line.boqItemId ? { ...line, source: 'boq', boqItemId: line.boqItemId } : { ...line, source: 'ad_hoc' };
+function initialLines(initialState?: RfqBuilderInitialState): FormLine[] {
+  return [...(initialState?.lines ?? []).map(toFormLine), ...(initialState?.catalogDrafts ?? []).map(catalogDraftToLine)];
 }
 
 function useRfqFormState(initialState?: RfqBuilderInitialState) {
@@ -337,7 +346,7 @@ function useRfqFormState(initialState?: RfqBuilderInitialState) {
     deadlineDate: initialState?.deadlineDate ?? '',
     awardMode: initialState?.awardMode ?? 'whole_package',
     reminderTemplate: initialState?.reminderTemplate ?? 'standard',
-    lines: initialState?.lines?.map(toFormLine) ?? [],
+    lines: initialLines(initialState),
     invitedVendorIds: initialState?.invitedVendorIds ?? [],
   }));
 
@@ -352,49 +361,24 @@ function useRfqFormState(initialState?: RfqBuilderInitialState) {
   return { form, setField, addLine, addBoqLines, removeLine, updateLine };
 }
 
-function toCreateRfqDTO(form: FormState, sourcingEventId: string | undefined): CreateRfqDTO {
-  const boqItemIds = form.lines.filter((l) => l.source === 'boq' && l.boqItemId).map((l) => l.boqItemId as string);
-  const adHocLines: CreateRfqLineDTO[] = form.lines
-    .filter((l) => l.source === 'ad_hoc')
-    .map((l) => ({
-      source: 'ad_hoc' as const,
-      description: l.description,
-      trade: l.trade as TradeCode,
-      categoryCode: l.categoryCode ?? null,
-      quantity: l.quantity ?? null,
-      unit: l.unit ?? null,
-      notes: l.notes ?? null,
-    }));
-  return {
-    projectId: form.projectId,
-    title: form.title,
-    description: form.description || null,
-    deadlineDate: form.deadlineDate || null,
-    awardMode: form.awardMode,
-    reminderTemplate: form.reminderTemplate,
-    lines: [],
-    boqItemIds: boqItemIds.length > 0 ? boqItemIds : undefined,
-    adHocLines: adHocLines.length > 0 ? adHocLines : undefined,
-    ...(sourcingEventId ? { sourcingEventId } : {}),
-    invitedVendorIds: form.invitedVendorIds.length > 0 ? form.invitedVendorIds : undefined,
-  };
-}
-
-/** Πακέτο πολλών ειδικοτήτων (αν ζητήθηκε) → POST `/api/rfqs`, μέσω `fetchJson` + `useFormSubmission`. */
-function useRfqSubmission(form: FormState, packageTitle: string | null, onSuccess?: (id: string) => void) {
+/**
+ * Πακέτο πολλών ειδικοτήτων (αν ζητήθηκε) → POST `/api/rfqs`, μέσω `fetchJson` + `useFormSubmission`.
+ * Οι αρνήσεις της δημιουργίας (ADR-923 §5.13 Τ4) φτάνουν με τη δική τους πρόταση, μέσω του κοινού `explainProcurementError`.
+ */
+function useRfqSubmission(form: FormState, packageTitle: string | null, onSuccess?: RfqBuilderSuccess) {
   const { t } = useTranslation('quotes');
   const { create: createSourcingEvent } = useSourcingEvent();
-  const canSubmit = Boolean(form.projectId && form.title.trim());
+  const canSubmit = Boolean(form.projectId && form.title.trim()) && catalogLinesComplete(form.lines);
   const submission = useFormSubmission({
     canSubmit,
-    submit: async () => {
+    submit: () => explainProcurementError(async () => {
       const sourcingEventId = packageTitle
         ? (await createSourcingEvent({ projectId: form.projectId, title: packageTitle })).id
         : undefined;
-      const json = await fetchJson<{ data: { id: string } }>('/api/rfqs', jsonRequest('POST', toCreateRfqDTO(form, sourcingEventId)));
-      return json.data.id;
-    },
-    onSuccess,
+      const json = await fetchJson<RfqCreatedResponse>('/api/rfqs', jsonRequest('POST', toCreateRfqDTO(form, sourcingEventId)));
+      return { id: json.data.id, catalogSuppliers: json.catalogSuppliers ?? [] };
+    }, rfqCreateRefusalMessages(t)),
+    onSuccess: (created) => onSuccess?.(created.id, created.catalogSuppliers),
     errorFallback: t('rfqs.errors.createFailed'),
   });
   return { canSubmit, ...submission };
@@ -406,7 +390,7 @@ function useRfqSubmission(form: FormState, packageTitle: string | null, onSucces
 
 interface RfqBuilderProps {
   initialState?: RfqBuilderInitialState;
-  onSuccess?: (id: string) => void;
+  onSuccess?: RfqBuilderSuccess;
   onCancel?: () => void;
 }
 
@@ -442,6 +426,9 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
             onUpdate={updateLine}
             onRemove={removeLine}
           />
+          {!catalogLinesComplete(form.lines) && (
+            <p className="m-0 text-xs text-muted-foreground">{t('rfqs.catalogLine.demandHint')}</p>
+          )}
           <VendorPickerSection value={form.invitedVendorIds} onChange={(ids) => setField('invitedVendorIds', ids)} />
         </form>
         <BoqLinePicker open={boqPickerOpen} onOpenChange={setBoqPickerOpen} projectId={form.projectId} onSelect={addBoqLines} />

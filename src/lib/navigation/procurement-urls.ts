@@ -10,6 +10,7 @@
 
 import { typedHref, withQuery } from '@/lib/workspace/route-worlds';
 import { serializeFilterArray } from '@/lib/url-filters/multi-value';
+import type { CatalogSkuAddress } from '@/subapps/procurement/types/rfq-line';
 
 /** Οι όψεις της ενότητας προμηθειών ενός έργου (ADR-330 §5.1 S2 · `coverage` = Buyout, S3.2 · `subcontracts` = ADR-928 Φ3α-2). */
 export type ProjectProcurementSection = 'overview' | 'rfq' | 'quote' | 'po' | 'coverage' | 'subcontracts';
@@ -20,6 +21,45 @@ export function getNewRfqUrl(projectId: string, boqItemIds: readonly string[] = 
   const boqItems = serializeFilterArray(boqItemIds);
   if (boqItems !== undefined) query.set('boqItems', boqItems);
   return withQuery('/procurement/rfqs/new', query.toString());
+}
+
+/** Η παράμετρος του πρόχειρου «Ζητήστε προσφορά» (ADR-923 §5.13 Ε6ε): ΕΝΑ όνομα για γραφέα, σελίδα και `from-catalog`. */
+export const RFQ_CATALOG_PARAM = 'catalog';
+
+/** Χαρακτήρες ταυτότητας (enterprise id ή id του Firestore). Ό,τι άλλο, π.χ. `/` ή `.`, δεν είναι διεύθυνση SKU. */
+const SKU_ADDRESS_PART = /^[A-Za-z0-9_-]{1,128}$/;
+const SKU_ADDRESS_SEPARATOR = '.';
+
+/**
+ * **Το πρόχειρο «Ζητήστε προσφορά» για ένα SKU της βιτρίνας** (ADR-923 §5.13 Ε6ε): το απρόθετο
+ * `/procurement/rfqs/new?catalog=<προμηθευτής>.<μοντέλο>.<παραλλαγή>`.
+ * 🔑 Ο σύνδεσμος είναι ο φορέας: επιβιώνει σε ανανέωση, νέα καρτέλα, σύνδεση ή εγγραφή (`loginHref`) και εναλλαγή χώρου,
+ *    γιατί τον χώρο τον βάζει το δίχτυ `[...unprefixed]`.
+ */
+export function quoteDraftHref(address: CatalogSkuAddress) {
+  return withQuery('/procurement/rfqs/new', quoteDraftQuery(address));
+}
+
+/** Το ερώτημα `catalog=…` ως κείμενο: ΕΝΑ σημείο για τη σελίδα του πρόχειρου και για το `GET /api/rfqs/from-catalog`. */
+export function quoteDraftQuery(address: CatalogSkuAddress): string {
+  const value = [address.supplierCompanyId, address.modelId, address.variantId].join(SKU_ADDRESS_SEPARATOR);
+  return new URLSearchParams({ [RFQ_CATALOG_PARAM]: value }).toString();
+}
+
+/**
+ * Η διεύθυνση, **μόνο αν** επιβιώνει ταξίδι μέσω του URL (γραφέας → αναλυτής). Ένα id με `.` ή `/` θα έδινε πρόχειρο που ο
+ * αναλυτής απορρίπτει, δηλαδή κουμπί που οδηγεί σε άρνηση: τέτοιο κουμπί δεν αποδίδεται.
+ */
+export function quotableSkuAddress(address: CatalogSkuAddress): CatalogSkuAddress | null {
+  return parseQuoteDraftParam(new URLSearchParams(quoteDraftQuery(address)).get(RFQ_CATALOG_PARAM));
+}
+
+/** Η αντίστροφη του {@link quoteDraftHref}. Οτιδήποτε άλλο από τρία καθαρά τμήματα ⇒ `null`, ποτέ μισή διεύθυνση. */
+export function parseQuoteDraftParam(raw: string | null | undefined): CatalogSkuAddress | null {
+  const parts = (raw ?? '').split(SKU_ADDRESS_SEPARATOR);
+  if (parts.length !== 3 || !parts.every((part) => SKU_ADDRESS_PART.test(part))) return null;
+  const [supplierCompanyId, modelId, variantId] = parts;
+  return { supplierCompanyId, modelId, variantId };
 }
 
 /**

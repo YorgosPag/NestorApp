@@ -409,7 +409,14 @@
       "loadFailed": "Failed to load RFQs",
       "createFailed": "Failed to create RFQ",
       "addLineFailed": "Adding the line failed",
-      "deleteLineFailed": "Deleting the line failed"
+      "deleteLineFailed": "Deleting the line failed",
+      "refusals": {
+        "catalogSkuUnavailable": "This product is no longer available for a quote request.",
+        "supplierNotAcceptingQuotes": "This supplier is not accepting quote requests right now.",
+        "supplierContactUnavailable": "The supplier's contact in your contacts is archived. Check the contact and try again.",
+        "rfqTooLarge": "This request is too large to send at once. Split it into smaller requests."
+      },
+      "catalogDraftFailed": "The catalog product could not be loaded. Please try again."
     },
     "project": "Project",
     "quoteCount": "Quotes",
@@ -1015,7 +1022,19 @@
       "summaryAction": "View history"
     },
     "addingLine": "Adding…",
-    "deleteLine": "Delete line: {description}"
+    "deleteLine": "Delete line: {description}",
+    "catalogLine": {
+      "supplier": "Supplier: {supplier}",
+      "source": "From the catalog. The supplier is invited automatically.",
+      "demandHint": "Enter a quantity and a unit for every catalog product."
+    },
+    "catalogSent": {
+      "title": "Your quote request was sent",
+      "body": "{supplier} was invited to the request.",
+      "accessPrompt": "Want to see catalog prices? Ask {supplier} for access to their price lists.",
+      "requestAccess": "Request price list access",
+      "viewRfq": "View request"
+    }
   },
   "trades": {
     "title": "Trades",

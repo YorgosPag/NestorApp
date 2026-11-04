@@ -76,15 +76,45 @@ export interface CreateRfqLineDTO {
 }
 
 /**
- * Μια γραμμή «Ζητήστε προσφορά» από τον κατάλογο (ADR-923 §5.13 Ε6, Τ4): η **διεύθυνση** του SKU και η ζήτηση του αγοραστή.
- * 🔒 Καμία περιγραφή, τιμή ή SKU ref από τον πελάτη: ο διακομιστής κρίνει το SKU (`resolveQuoteSku`) και γράφει το κείμενό του.
+ * Η **διεύθυνση** ενός SKU της βιτρίνας (ADR-923 §5.13 Ε6α): (προμηθευτής, μοντέλο, παραλλαγή). Ίδια στο URL του πρόχειρου
+ * (`quoteDraftHref`), στην προσυμπλήρωση και στο σώμα της δημιουργίας.
  */
-export interface CreateRfqCatalogLineDTO {
+export interface CatalogSkuAddress {
   supplierCompanyId: string;
   modelId: string;
   variantId: string;
+}
+
+/**
+ * Μια γραμμή «Ζητήστε προσφορά» από τον κατάλογο (ADR-923 §5.13 Ε6, Τ4): η **διεύθυνση** του SKU και η ζήτηση του αγοραστή.
+ * 🔒 Καμία περιγραφή, τιμή ή SKU ref από τον πελάτη: ο διακομιστής κρίνει το SKU (`resolveQuoteSku`) και γράφει το κείμενό του.
+ */
+export interface CreateRfqCatalogLineDTO extends CatalogSkuAddress {
   quantity: number;
   unit: string;
+}
+
+/**
+ * Η προσυμπλήρωση από `?catalog=` (ADR-923 §5.13 Τ6), που επιστρέφει το `GET /api/rfqs/from-catalog`.
+ * 🔑 Το `description` είναι το κείμενο του **κριμένου** SKU, μόνο για ανάγνωση: ο διακομιστής το ξαναγράφει στη δημιουργία.
+ * 🔒 **Κανένας σύνδεσμος πρόσβασης εδώ** (Ε6δ): το token του `supply-request-link` δεν διανέμεται πριν από πράξη. Το δίνει
+ *    μόνο η απάντηση της δημιουργίας ({@link RfqCatalogSupplierSent}).
+ */
+export interface RfqCatalogDraft {
+  readonly address: CatalogSkuAddress;
+  readonly description: string;
+  readonly supplierName: string;
+}
+
+/**
+ * Ένας προμηθευτής του καταλόγου που **προσκλήθηκε** στη συναλλαγή της δημιουργίας (ADR-923 §5.13 Ε6δ, Τ6). Το επιστρέφει
+ * το `POST /api/rfqs` ως `catalogSuppliers`: η οθόνη αποφασίζει το επόμενο βήμα από ό,τι **στάλθηκε**, όχι από το πρόχειρο.
+ * 🔒 `priceListAccessHref` μόνο όταν κάποιο SKU του κρίθηκε από τη **βιτρίνα** και ο σύνδεσμός του ζει. Αλλιώς `null`.
+ */
+export interface RfqCatalogSupplierSent {
+  readonly supplierCompanyId: string;
+  readonly supplierName: string;
+  readonly priceListAccessHref: string | null;
 }
 
 export interface UpdateRfqLineDTO {

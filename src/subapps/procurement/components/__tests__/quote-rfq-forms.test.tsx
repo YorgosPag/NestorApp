@@ -138,9 +138,20 @@ describe('RfqBuilder', () => {
     type(field(/rfqs\.titleField/), 'Σκυρόδεμα Β΄ φάσης');
     pressEnterToSubmit(field(/rfqs\.titleField/));
 
-    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('rfq-1'));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('rfq-1', []));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe('/api/rfqs');
+  });
+
+  it('Φ1β (ADR-923 Τ6): οι προμηθευτές καταλόγου που ΣΤΑΛΘΗΚΑΝ φτάνουν στο onSuccess από την απάντηση', async () => {
+    const sent = [{ supplierCompanyId: 'comp_a', supplierName: 'A', priceListAccessHref: '/supply-request/t' }];
+    respond(201, { data: { id: 'rfq-2' }, catalogSuppliers: sent });
+    const onSuccess = jest.fn();
+    render(<RfqBuilder onSuccess={onSuccess} />);
+    type(field(/^rfqs\.project$/), 'proj-1');
+    type(field(/rfqs\.titleField/), 'Καλώδια');
+    pressEnterToSubmit(field(/rfqs\.titleField/));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('rfq-2', sent));
   });
 
   it('Φ2: «Προσθήκη γραμμής» ΔΕΝ υποβάλλει', () => {

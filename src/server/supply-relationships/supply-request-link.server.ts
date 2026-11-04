@@ -18,6 +18,7 @@ import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
+import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { decodeSignedToken, encodeSignedToken, requireTokenSecret } from '@/lib/tokens/signed-token';
@@ -28,6 +29,7 @@ import { SUPPLY_REQUEST_LINK_TRACKED_FIELDS } from '@/config/audit-tracked-field
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { generateDeterministicSupplyRequestLinkId } from '@/services/enterprise-id.service';
 import { revisionAfterWrite } from '@/subapps/catalog/aggregate/aggregate-members';
+import { supplyRequestHref } from '@/subapps/catalog/catalog-routes';
 import { judgeAccessRequest } from '@/subapps/catalog/pricing/supply-relationship-judge';
 import type { SupplyAccessPreview, SupplyBuyerRefusal, SupplyRequestLink } from '@/subapps/catalog/types/supply-invitation';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
@@ -65,6 +67,25 @@ export const supplyRequestLinkViewOf = (link: SupplyRequestLink | null): SupplyR
 
 export async function readSupplyRequestLinkInTx(tx: Transaction, db: Firestore, companyId: string): Promise<SupplyRequestLink | null> {
   return linkFromDocument((await tx.get(links(db).doc(generateDeterministicSupplyRequestLinkId(companyId)))).data());
+}
+
+/**
+ * Η σελίδα-πύλη του **ζωντανού** συνδέσμου αιτήματος πρόσβασης ενός προμηθευτή, ή `null` (ADR-923 §5.13 Ε6δ, Τ6).
+ * 🔑 Εκτός συναλλαγής: είναι πρόταση προς τον αγοραστή και δεν δεσμεύει τίποτα. Ο σύνδεσμος ξανακρίνεται όταν πατηθεί.
+ * 🔒 Το token είναι αυτό που ο προμηθευτής τυπώνει για να το μοιράσει, και δίνει μόνο το δικαίωμα να ζητήσεις.
+ * ⚠️ Βλάβη ανάγνωσης ή χωρίς μυστικό υπογραφής ⇒ καμία πρόταση, αλλά ούτε σφάλμα: η πράξη (το RFQ) έχει ήδη γίνει και δεν
+ *    εξαρτάται από αυτό το προαιρετικό βήμα.
+ * 🔒 Ο μόνος καλών είναι η απάντηση της δημιουργίας RFQ: το token δεν διανέμεται πριν από πράξη (§5.13 Ε6δ).
+ */
+export async function liveSupplyRequestHref(db: Firestore, supplierCompanyId: string): Promise<string | null> {
+  try {
+    const snapshot = await links(db).doc(generateDeterministicSupplyRequestLinkId(supplierCompanyId)).get();
+    const { token } = supplyRequestLinkViewOf(linkFromDocument(snapshot.data()));
+    return token === null ? null : supplyRequestHref(token);
+  } catch (error) {
+    logger.warn('Χωρίς πρόταση αιτήματος πρόσβασης: ο σύνδεσμος δεν διαβάστηκε ή δεν υπογράφεται', { error: getErrorMessage(error) });
+    return null;
+  }
 }
 
 type LinkAct = 'publish' | 'revoke';

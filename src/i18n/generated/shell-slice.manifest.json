@@ -66,7 +66,7 @@
     "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "5998b0309e74b4b352593365609f082619804601c73371e6c739f4111657808b",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e694c874d3bf13e0bfd63e2e8d3c8e1dc5aa5ca4db51fed6136570844b6bd2eb",
-    "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "a3070cfb8da8557345ec5f25dce26ffe81e00c0fdf80c7ebba5117498f3161dc",
+    "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "70ff86b387164f7aa34e10cc99658b265d8ab51103c23042c6a629c861641892",
     "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "62b9a8955bda59b9bcaf00cadc555a27c859b95208ad0e836eaa184c26b14299",
     "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "ed27faaf054aff06555fb73e987982799aae7ecef3366d7511d1c369f8483e31",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
@@ -103,7 +103,7 @@
     "src/i18n/generated/routes/stay.el.json": "3044270a27d1268903929dd44a0a20afa30e6ac91fa1d554ceeba748ba062886",
     "src/i18n/generated/routes/suppliers__alias.el.json": "cd89dc81264c9c5b8f78862171c971615b4ccb38fddbd229ad403b6a7d156dbe",
     "src/i18n/generated/routes/suppliers__alias__c__category.el.json": "cd89dc81264c9c5b8f78862171c971615b4ccb38fddbd229ad403b6a7d156dbe",
-    "src/i18n/generated/routes/suppliers__alias__p__model.el.json": "fc07b8ce3aff33fffd978210d44cec3dafdae2c5e619f5644c065d5c21eb3ca4",
+    "src/i18n/generated/routes/suppliers__alias__p__model.el.json": "7d8df0168b46b4917d1b6451238c2f95985880d24ba092d9efe70bb27e83d307",
     "src/i18n/generated/routes/supply-invite__token.el.json": "4de7e5a2e7be1e7a22c54c367ddf9b7a3d260b5c0326857fb0c69f936c70abd1",
     "src/i18n/generated/routes/supply-request__token.el.json": "4de7e5a2e7be1e7a22c54c367ddf9b7a3d260b5c0326857fb0c69f936c70abd1",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -200,7 +200,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ac10485f0ac3f3310a34c72fe47c02a0a66a2e19de559172018cc7d998ebf6ae",
+  "inputsSha256": "d2ed52a74a24a6e707675ee0709655e88dab2b7789b91ded50472709f763f664",
   "languages": [
     "el"
   ],
@@ -23195,11 +23195,19 @@
             "rfqs.boqPicker.search",
             "rfqs.boqPicker.title",
             "rfqs.cancel",
+            "rfqs.catalogLine.demandHint",
+            "rfqs.catalogLine.source",
+            "rfqs.catalogLine.supplier",
             "rfqs.categoryCodePlaceholder",
             "rfqs.create",
             "rfqs.deadline",
             "rfqs.description",
+            "rfqs.errors.catalogDraftFailed",
             "rfqs.errors.createFailed",
+            "rfqs.errors.refusals.catalogSkuUnavailable",
+            "rfqs.errors.refusals.rfqTooLarge",
+            "rfqs.errors.refusals.supplierContactUnavailable",
+            "rfqs.errors.refusals.supplierNotAcceptingQuotes",
             "rfqs.lineActions",
             "rfqs.lineCategoryCode",
             "rfqs.lineDescription",
@@ -36984,6 +36992,7 @@
             "model.code",
             "model.no",
             "model.priceOnRequest",
+            "model.requestQuote",
             "model.specifications",
             "model.variants",
             "model.yes"
@@ -37833,7 +37842,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1260139
+    "sliceBytes": 1261386
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

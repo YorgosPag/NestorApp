@@ -25,6 +25,8 @@ import { recordRfqLinesAdded } from './rfq-line-service';
 import { boqItemsByIdQuery, ownedBoqItems } from './rfq-boq-items';
 import { newRfqDocument, planRfqCreate, type RfqCreatePlan } from './rfq-create-plan';
 import { runRfqCreateTransaction, type RfqCreateCommit } from './rfq-create-transaction';
+import { catalogSuppliersSent } from './rfq-catalog-draft';
+import type { RfqCatalogSupplierSent } from '../types/rfq-line';
 import { recordAccountContactBirth } from '@/services/contact/account-contact-resolver';
 import { recomputeSourcingEventStatus } from './sourcing-event-service';
 import { emailVendorInviteChannel } from './channels/email-channel';
@@ -137,6 +139,17 @@ function afterRfqCreated(ctx: AuthContext, rfq: RFQ, dto: CreateRfqDTO, plan: Rf
  * κατάλογος — μία διαδρομή, ώστε καμία ροή να μη γεννά RFQ χωρίς γραμμές.
  */
 export async function createRfq(ctx: AuthContext, dto: CreateRfqDTO): Promise<RFQ> {
+  return (await createRfqWithOutcome(ctx, dto)).rfq;
+}
+
+/** Η έκβαση μιας δημιουργίας: το RFQ και οι προμηθευτές του καταλόγου που **προσκλήθηκαν** σε αυτήν (§5.13 Ε6δ, Τ6). */
+export interface RfqCreateOutcome {
+  readonly rfq: RFQ;
+  readonly catalogSuppliers: readonly RfqCatalogSupplierSent[];
+}
+
+/** Ίδια με το `createRfq`· μετά το commit λέει και ποιους προμηθευτές καταλόγου κάλεσε (για το επόμενο βήμα της οθόνης). */
+export async function createRfqWithOutcome(ctx: AuthContext, dto: CreateRfqDTO): Promise<RfqCreateOutcome> {
   const plan = await planRfqCreate(ctx, dto, generateRfqId());
   const now = admin.firestore.Timestamp.now();
   const rfq = newRfqDocument(ctx, dto, plan, now);
@@ -144,7 +157,7 @@ export async function createRfq(ctx: AuthContext, dto: CreateRfqDTO): Promise<RF
   if (!committed) throw new Error('Failed to create RFQ');
   logger.info('RFQ created', { id: rfq.id, companyId: ctx.companyId, linesStorage: rfq.linesStorage, lines: committed.lines.length });
   afterRfqCreated(ctx, rfq, dto, plan, committed);
-  return rfq;
+  return { rfq, catalogSuppliers: await catalogSuppliersSent(plan) };
 }
 
 // ============================================================================

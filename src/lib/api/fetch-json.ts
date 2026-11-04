@@ -19,18 +19,22 @@
  * @see ADR-584 — token-based clone ratchet (jscpd)
  */
 
+import { ApiClientError, errorFieldsFrom } from './api-client-types';
+
 /**
  * GET/POST/PATCH/DELETE one of our own /api routes and parse the JSON body.
  *
- * @throws Error carrying the server's `error` field, or `HTTP <status>` when the
- *         response carries no parsable envelope.
+ * @throws ApiClientError (an `Error`) carrying the server's `error` field as its message, or `HTTP <status>` when the
+ *         response carries no parsable envelope. ADR-923 §5.13 Τ6: it also carries the status and the stable `errorCode`,
+ *         so `explainProcurementError` can name a refusal. Before, a plain `Error` dropped the code on the floor.
  */
 export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(body.error || `HTTP ${response.status}`);
+    const body: unknown = await response.json().catch(() => ({ error: 'Unknown error' }));
+    const fields = errorFieldsFrom(body);
+    throw new ApiClientError(fields.message || `HTTP ${response.status}`, response.status, fields.errorCode, undefined, undefined, fields.details, body);
   }
 
   return response.json();

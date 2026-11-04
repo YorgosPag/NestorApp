@@ -15,7 +15,7 @@ import {
   withStandardRateLimit,
   withSensitiveRateLimit,
 } from '@/lib/middleware/with-rate-limit';
-import { createRfq, listRfqs } from '@/subapps/procurement/services/rfq-service';
+import { createRfqWithOutcome, listRfqs } from '@/subapps/procurement/services/rfq-service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -60,7 +60,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         const parsed = safeParseBody(CreateRfqSchema, await req.json());
         if (parsed.error) return parsed.error;
 
-        const result = await createRfq(ctx, {
+        const { rfq, catalogSuppliers } = await createRfqWithOutcome(ctx, {
           ...parsed.data,
           buildingId: parsed.data.buildingId ?? null,
           deadlineDate: parsed.data.deadlineDate ?? null,
@@ -68,7 +68,8 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           comparisonTemplateId: parsed.data.comparisonTemplateId ?? null,
         });
 
-        return NextResponse.json({ success: true, data: result }, { status: 201 });
+        // ADR-923 §5.13 Τ6: ό,τι ΣΤΑΛΘΗΚΕ αποφασίζει το επόμενο βήμα της οθόνης — ποτέ το πρόχειρο.
+        return NextResponse.json({ success: true, data: rfq, catalogSuppliers }, { status: 201 });
       } catch (error) {
         logger.error('RFQ create error', { error: getErrorMessage(error, 'Failed to create RFQ') });
         return rfqCreateErrorResponse(error);

@@ -15,7 +15,7 @@ import { PublicModelView } from '@/components/public-catalog/PublicModelView';
 import { JsonLdScript } from '@/components/seo/JsonLdScript';
 import { modelStructuredData } from '@/lib/catalog/public-structured-data';
 import { publicUrl } from '@/lib/http/public-origin';
-import { readPublicModel, readPublicProviderFacts } from '@/services/public-catalog/public-catalog.reader';
+import { readPublicModel, readPublicProviderFacts, readPublicSupplierProfile } from '@/services/public-catalog/public-catalog.reader';
 import { orSupplierCatalogUnavailable, requirePublicSupplier } from '@/services/public-catalog/public-supplier-route';
 import type { PublicCatalogModel } from '@/subapps/catalog/public/public-catalog-schema';
 import { publicIdOfSegment, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
@@ -57,13 +57,16 @@ export default async function SupplierModelPage({ params }: ModelPageProps) {
   if (decodeURIComponent(segment) !== canonicalSegment) permanentRedirect(route);
   const url = publicUrl(route);
   const supplierUrl = publicUrl(publicSupplierRoute(alias));
-  const facts = await orSupplierCatalogUnavailable(() => readPublicProviderFacts(supplier.companyId));
+  const [facts, profile] = await orSupplierCatalogUnavailable(() =>
+    Promise.all([readPublicProviderFacts(supplier.companyId), readPublicSupplierProfile(supplier.companyId)]),
+  );
   return (
     <>
       {url === null || supplierUrl === null ? null : (
         <JsonLdScript data={modelStructuredData(model, url, { legalName: supplier.legalName, url: supplierUrl, facts })} />
       )}
-      <PublicModelView segment={alias} model={model} />
+      {/* §5.13 Ε6β: το κουμπί μόνο με opt-in του προμηθευτή. Η σελίδα μένει ISR, η ταυτότητα κρίνεται στη νησίδα. */}
+      <PublicModelView segment={alias} model={model} acceptsQuoteRequests={profile?.acceptsQuoteRequests === true} />
     </>
   );
 }

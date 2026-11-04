@@ -44,12 +44,12 @@ jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { reco
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθούν οι μονάδες */
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
-import { generateDeterministicCatalogSupplierProfileId } from '@/services/enterprise-id.service';
+import { generateDeterministicCatalogSupplierProfileId, generateDeterministicSupplyRequestLinkId } from '@/services/enterprise-id.service';
 import { generateDeterministicPlatformCompanyContactId } from '@/services/enterprise-id-convenience-catalog';
 import type { CreateRfqDTO } from '../../types/rfq';
 import { SAFE_BATCH_WRITES } from '@/config/firestore-collections';
 import { countRfqWrites } from '../rfq-create-plan';
-import { createRfq } from '../rfq-service';
+import { createRfq, createRfqWithOutcome } from '../rfq-service';
 /* eslint-enable import/first */
 
 const BUYER = 'comp_buyer';
@@ -247,6 +247,38 @@ describe('createRfq — ένα commit: `rfqTooLarge` πριν από κάθε δ
     expect(mockMint).not.toHaveBeenCalled();
     expectNothingWritten();
     expect(await refusal({ projectId: 'p', title: 'T', invitedVendorIds: vendors(fits) })).toBe('created');
+  });
+});
+
+describe('createRfqWithOutcome — ό,τι ΣΤΑΛΘΗΚΕ αποφασίζει το επόμενο βήμα (ADR-923 §5.13 Ε6δ, Τ6)', () => {
+  const LINK_ID = generateDeterministicSupplyRequestLinkId(SUPPLIER);
+  const seedLink = (state: 'live' | 'revoked') => fake.seed(COLLECTIONS.SUPPLY_REQUEST_LINKS, LINK_ID, {
+    id: LINK_ID, companyId: SUPPLIER, generation: 1, state, revision: 1, createdAt: 'x', updatedAt: 'x', updatedBy: 'u',
+  });
+  const previousSecret = process.env.SUPPLY_REQUEST_LINK_SECRET;
+  beforeAll(() => { process.env.SUPPLY_REQUEST_LINK_SECRET = 'test-secret-for-supply-request-links-0123456789'; });
+  afterAll(() => { process.env.SUPPLY_REQUEST_LINK_SECRET = previousSecret; });
+
+  it('SKU της βιτρίνας + ζωντανός σύνδεσμος ⇒ ο προσκεκλημένος προμηθευτής με πρόταση πρόσβασης', async () => {
+    seedLink('live');
+    const { catalogSuppliers } = await createRfqWithOutcome(ctx, catalogDto());
+    expect(catalogSuppliers).toEqual([
+      { supplierCompanyId: SUPPLIER, supplierName: 'ARIES ΑΕ', priceListAccessHref: expect.stringMatching(/^\/supply-request\/.+/) },
+    ]);
+  });
+
+  it('ανακλημένος σύνδεσμος ή SKU μέσω σχέσης ⇒ προσκλήθηκε, χωρίς πρόταση', async () => {
+    seedLink('revoked');
+    expect((await createRfqWithOutcome(ctx, catalogDto())).catalogSuppliers).toEqual([expect.objectContaining({ priceListAccessHref: null })]);
+    seedLink('live');
+    mockResolveSku.mockResolvedValue({ ...SKU, path: 'relationship' });
+    expect((await createRfqWithOutcome(ctx, catalogDto())).catalogSuppliers).toEqual([expect.objectContaining({ priceListAccessHref: null })]);
+  });
+
+  it('χωρίς γραμμή καταλόγου ⇒ κανένας προμηθευτής καταλόγου, όσο κι αν το πρόχειρο είχε κάποτε SKU', async () => {
+    seedLink('live');
+    const adHocLines = [{ source: 'ad_hoc' as const, description: 'x', trade: 'concrete' as const }];
+    expect((await createRfqWithOutcome(ctx, { projectId: 'p', title: 'T', adHocLines })).catalogSuppliers).toEqual([]);
   });
 });
 

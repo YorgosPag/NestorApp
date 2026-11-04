@@ -26,6 +26,7 @@
     "priceOnRequest": "Price on request",
     "yes": "Yes",
     "no": "No",
-    "backToSupplier": "All products from this supplier"
+    "backToSupplier": "All products from this supplier",
+    "requestQuote": "Request a quote"
   }
 }

@@ -26,7 +26,7 @@ import { readPublicSupplier } from '@/services/public-catalog/public-catalog.rea
 import type { CreateRfqDTO, RFQ } from '../types/rfq';
 import { RFQ_FROM_BOQ_MAX_ITEMS } from '../types/rfq';
 import { RfqCreateRefusal } from '../types/rfq-create-refusal';
-import type { CreateRfqCatalogLineDTO, RfqLineSource } from '../types/rfq-line';
+import type { CatalogSkuAddress, CreateRfqCatalogLineDTO, RfqLineSource } from '../types/rfq-line';
 import { defaultResponseLock } from '../utils/rfq-response-lock';
 import { toAdminTimestampOrNull } from './procurement-timestamps';
 import { prepareVendorInvite, type PreparedVendorInvite } from './vendor-invite-issue';
@@ -78,18 +78,31 @@ export function assertRfqFitsOneCommit(count: RfqWriteCount): void {
   if (writes > SAFE_BATCH_WRITES) throw new RfqCreateRefusal('rfqTooLarge', `${writes} writes > ${SAFE_BATCH_WRITES}`);
 }
 
-async function planCatalogLine(ctx: AuthContext, line: CreateRfqCatalogLineDTO): Promise<PlannedCatalogLine> {
-  const sku = await resolveQuoteSku(ctx, line);
-  if (sku === null) throw new RfqCreateRefusal('catalogSkuUnavailable', `${line.supplierCompanyId}/${line.variantId}`);
-  return { line, sku };
+/** Το κριμένο SKU ή η άρνησή του: **μία** κρίση για τη δημιουργία και για την προσυμπλήρωση (`rfq-catalog-draft.ts`, Τ6). */
+export async function requireQuoteSku(ctx: AuthContext, address: CatalogSkuAddress): Promise<QuoteSku> {
+  const sku = await resolveQuoteSku(ctx, address);
+  if (sku === null) throw new RfqCreateRefusal('catalogSkuUnavailable', `${address.supplierCompanyId}/${address.variantId}`);
+  return sku;
 }
 
-/** Ο προμηθευτής χωρίς επιβεβαιωμένη βιτρίνα δεν έχει opt-in (§5.13 Ε6β), άρα δεν δέχεται αιτήματα σε καμία διαδρομή. */
-async function planSupplier(buyerCompanyId: string, supplierCompanyId: string): Promise<PlannedSupplier> {
+async function planCatalogLine(ctx: AuthContext, line: CreateRfqCatalogLineDTO): Promise<PlannedCatalogLine> {
+  return { line, sku: await requireQuoteSku(ctx, line) };
+}
+
+/**
+ * Η επωνυμία από τη βιτρίνα ή η άρνηση. Ο προμηθευτής χωρίς επιβεβαιωμένη βιτρίνα δεν έχει opt-in (§5.13 Ε6β), άρα δεν δέχεται
+ * αιτήματα σε καμία διαδρομή. Την ίδια κρίση κάνει και η προσυμπλήρωση.
+ */
+export async function requireQuoteSupplierName(supplierCompanyId: string): Promise<string> {
   const showcase = await readPublicSupplier(supplierCompanyId);
   if (showcase === null) throw new RfqCreateRefusal('supplierNotAcceptingQuotes', supplierCompanyId);
+  return showcase.legalName;
+}
+
+async function planSupplier(buyerCompanyId: string, supplierCompanyId: string): Promise<PlannedSupplier> {
+  const legalName = await requireQuoteSupplierName(supplierCompanyId);
   const contactId = generateDeterministicPlatformCompanyContactId(buyerCompanyId, supplierCompanyId);
-  return { supplierCompanyId, legalName: showcase.legalName, contactId };
+  return { supplierCompanyId, legalName, contactId };
 }
 
 function prepareInvites(ctx: AuthContext, rfqId: string, vendorIds: readonly string[]): Promise<PreparedVendorInvite[]> {

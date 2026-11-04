@@ -12,6 +12,7 @@
 import React from 'react';
 
 import { ShellSurface } from '@/core/containers/ShellSurface';
+import { quotableSkuAddress } from '@/lib/navigation/procurement-urls';
 import { Link } from '@/lib/workspace/navigation';
 import type { PublicCatalogAttribute, PublicCatalogMedia, PublicCatalogModel, PublicCatalogValue } from '@/subapps/catalog/public/public-catalog-schema';
 import { publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
@@ -20,6 +21,7 @@ import { publicValueIn, publicValueText } from '@/subapps/catalog/public/public-
 import { checkRichText } from '@/subapps/catalog/values/rich-text';
 
 import { usePublicCatalogText } from './public-catalog-text';
+import { RequestQuoteButton } from './RequestQuoteButton';
 
 // ADR-744 §18: το route slice φτάνει στον φυλλομετρητή μόνο από client component, όχι από το `page.tsx`.
 import routeSlice from '@/i18n/generated/routes/suppliers__alias__p__model.el.json';
@@ -62,7 +64,19 @@ function MediaRow({ media, fallbackAlt }: { readonly media: readonly PublicCatal
   );
 }
 
-function Variants({ model, title }: { readonly model: PublicCatalogModel; readonly title: string }): React.JSX.Element | null {
+/** ADR-923 §5.13 Τ6 — η διεύθυνση του SKU για το «Ζητήστε προσφορά»: (προμηθευτής, μοντέλο, παραλλαγή). */
+function QuoteFor({ model, variantId, accepts }: { readonly model: PublicCatalogModel; readonly variantId: string; readonly accepts: boolean }): React.JSX.Element | null {
+  const address = accepts ? quotableSkuAddress({ supplierCompanyId: model.companyId, modelId: model.modelId, variantId }) : null;
+  return address === null ? null : <RequestQuoteButton address={address} />;
+}
+
+interface VariantsProps {
+  readonly model: PublicCatalogModel;
+  readonly title: string;
+  readonly acceptsQuoteRequests: boolean;
+}
+
+function Variants({ model, title, acceptsQuoteRequests }: VariantsProps): React.JSX.Element | null {
   const { t } = usePublicCatalogText();
   if (model.variants.length < 2) return null;
   return (
@@ -75,6 +89,7 @@ function Variants({ model, title }: { readonly model: PublicCatalogModel; readon
             <AttributeRows attributes={variant.attributes} />
             <MediaRow media={variant.media} fallbackAlt={title} />
             <p className="m-0 text-sm text-foreground">{t('model.priceOnRequest')}</p>
+            <QuoteFor model={model} variantId={variant.variantId} accepts={acceptsQuoteRequests} />
           </li>
         ))}
       </ul>
@@ -82,7 +97,14 @@ function Variants({ model, title }: { readonly model: PublicCatalogModel; readon
   );
 }
 
-export function PublicModelView({ segment, model }: { readonly segment: string; readonly model: PublicCatalogModel }): React.JSX.Element {
+interface PublicModelViewProps {
+  readonly segment: string;
+  readonly model: PublicCatalogModel;
+  /** Το opt-in του προμηθευτή από το δημόσιο προφίλ (§5.13 Ε6β). Χωρίς αυτό δεν υπάρχει παραλήπτης, άρα ούτε κουμπί. */
+  readonly acceptsQuoteRequests: boolean;
+}
+
+export function PublicModelView({ segment, model, acceptsQuoteRequests }: PublicModelViewProps): React.JSX.Element {
   const { t, text } = usePublicCatalogText();
   const title = publicModelTitle(model);
   const [only, ...others] = model.variants;
@@ -95,13 +117,14 @@ export function PublicModelView({ segment, model }: { readonly segment: string; 
         <p className="m-0 text-sm text-muted-foreground">{text(model.familyLabels)}</p>
         <p className="m-0 text-sm text-muted-foreground">{t('model.code', { code: model.code })}</p>
         <p className="m-0 text-sm text-foreground">{t('model.priceOnRequest')}</p>
+        {single && <QuoteFor model={model} variantId={only.variantId} accepts={acceptsQuoteRequests} />}
       </header>
       <MediaRow media={single ? [...model.media, ...only.media] : model.media} fallbackAlt={title} />
       <section className="flex flex-col gap-3">
         <h2 className="m-0 text-lg font-semibold">{t('model.specifications')}</h2>
         <AttributeRows attributes={single ? [...model.attributes, ...only.attributes] : model.attributes} />
       </section>
-      <Variants model={model} title={title} />
+      <Variants model={model} title={title} acceptsQuoteRequests={acceptsQuoteRequests} />
     </ShellSurface>
   );
 }
