@@ -2,6 +2,7 @@ import 'server-only';
 
 import admin from 'firebase-admin';
 import { safeFirestoreOperation, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateSourcingEventId } from '@/services/enterprise-id.service';
@@ -140,7 +141,7 @@ export async function updateSourcingEvent(
     if (dto.status && dto.status !== current.status) {
       const allowed = SOURCING_EVENT_STATUS_TRANSITIONS[current.status];
       if (!allowed.includes(dto.status)) {
-        throw new Error(`Invalid transition: ${current.status} → ${dto.status}`);
+        throw new ProcurementRuleError(`Invalid transition: ${current.status} → ${dto.status}`);
       }
     }
 

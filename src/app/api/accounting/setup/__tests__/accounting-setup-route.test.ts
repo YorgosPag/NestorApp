@@ -15,15 +15,12 @@
  */
 
 jest.mock('next/server', () => {
-  class MockNextResponse {
-    static json(body: unknown, init?: { status?: number }) {
-      return { status: init?.status ?? 200, json: async () => body };
-    }
-  }
+  const base = jest
+    .requireActual<typeof import('@/test-utils/next-response-json-mock')>('@/test-utils/next-response-json-mock')
+    .nextServerJsonMock();
   // 🔑 Το `after` καταγράφεται και εκτελείται ρητά από τη δοκιμή: το ερώτημα είναι «ζητήθηκε;».
   return {
-    NextResponse: MockNextResponse,
-    NextRequest: class {},
+    ...base,
     after: (task: () => unknown) => {
       afterTasks.push(task);
     },

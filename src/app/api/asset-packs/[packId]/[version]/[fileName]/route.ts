@@ -29,6 +29,7 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { defineRoute, httpError } from '@/lib/api/define-route';
+import type { ResponseCachePolicy } from '@/lib/http/cache-control';
 import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { logAuditEvent } from '@/lib/auth/audit-core';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -42,8 +43,11 @@ import {
 
 const logger = createModuleLogger('api:asset-packs');
 
-/** Το περιεχόμενο είναι immutable ανά version ⇒ ο browser το ζητά ΜΙΑ φορά, ποτέ ξανά. */
-const IMMUTABLE_CACHE = 'private, max-age=31536000, immutable';
+/**
+ * Το περιεχόμενο είναι immutable ανά version ⇒ ο browser το ζητά ΜΙΑ φορά, ποτέ ξανά. **Δηλωμένο** στο `defineRoute`
+ * (ADR-603 §Ασπίδα): η ασπίδα το βάζει στο 200 **και** στο 304, και `private, no-store` σε κάθε άρνηση (404/403).
+ */
+const IMMUTABLE_ASSET_CACHE: ResponseCachePolicy = { kind: 'private', maxAgeSeconds: 31536000, immutable: true };
 
 interface AssetParams {
   readonly packId: string;
@@ -53,6 +57,7 @@ interface AssetParams {
 
 export const GET = defineRoute<never, AssetParams>({
   rateLimit: 'asset',
+  cache: IMMUTABLE_ASSET_CACHE,
   handler: async ({ auth, cache, req, params }) => {
     const pack = getAssetPack(params.packId);
     // Άγνωστο pack ή λάθος έκδοση → 404. Η έκδοση είναι μέρος της ταυτότητας: ένα παλιό URL
@@ -76,7 +81,7 @@ export const GET = defineRoute<never, AssetParams>({
     // Immutable + versioned ⇒ ένα σταθερό ETag αρκεί· μηδέν Storage I/O στο revalidation.
     const etag = `"${pack.id}-${pack.version}-${params.fileName}"`;
     if (req.headers.get('if-none-match') === etag) {
-      return new NextResponse(null, { status: 304, headers: { ETag: etag, 'Cache-Control': IMMUTABLE_CACHE } });
+      return new NextResponse(null, { status: 304, headers: { ETag: etag } });
     }
 
     const storagePath = assetPackStoragePath(pack, params.fileName);
@@ -94,7 +99,6 @@ export const GET = defineRoute<never, AssetParams>({
       status: 200,
       headers: {
         'Content-Type': 'image/webp',
-        'Cache-Control': IMMUTABLE_CACHE,
         ETag: etag,
       },
     });

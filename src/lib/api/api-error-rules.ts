@@ -7,7 +7,7 @@
  * EXEMPT from 500-line limit: config/data file.
  */
 
-import type { ErrorMappingRule } from './api-error-types';
+import { INTERNAL_ERROR_CODE, type ErrorMappingRule } from './api-error-types';
 
 // ============================================================================
 // ERROR MAPPING RULES - ENTERPRISE PATTERNS
@@ -152,7 +152,7 @@ export const ERROR_MAPPING_RULES: ErrorMappingRule[] = [
   {
     pattern: /.*/,
     httpStatus: 500,
-    errorCode: 'INTERNAL_SERVER_ERROR',
+    errorCode: INTERNAL_ERROR_CODE,
     severity: 'error',
     category: 'system',
     userMessage: 'An unexpected error occurred. Please try again.',

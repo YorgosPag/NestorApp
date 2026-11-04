@@ -19,14 +19,10 @@
  * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
-jest.mock('next/server', () => {
-  class MockNextResponse {
-    static json(body: unknown, init?: { status?: number }) {
-      return { status: init?.status ?? 200, json: async () => body };
-    }
-  }
-  return { NextResponse: MockNextResponse, NextRequest: class {} };
-});
+jest.mock('next/server', () =>
+  jest.requireActual<typeof import('@/test-utils/next-response-json-mock')>('@/test-utils/next-response-json-mock')
+    .nextServerJsonMock(),
+);
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({
   withHighRateLimit: <T>(h: T) => h,
@@ -88,6 +84,7 @@ jest.mock('@/subapps/procurement/services/framework-agreement-service', () => ({
 }));
 
 import type { NextRequest } from 'next/server';
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import {
   PROCUREMENT_RESOURCE,
   ProcurementCrossTenantError,
@@ -205,11 +202,13 @@ describe('materials — GET/POST', () => {
     expect(res.status).toBe(400);
   });
 
-  it('POST unknown error → 500 (create fallback)', async () => {
+  it('POST unknown error → 500 (create fallback) with the GENERIC message, never the raw one (ADR-603 §Ασπίδα)', async () => {
     materialSvc.createMaterial.mockRejectedValue(named('WeirdError', 'kaboom'));
     const res = (await matPost(req(validMaterial))) as Envelope;
     expect(res.status).toBe(500);
-    expect((await res.json()).error).toBe('kaboom');
+    const payload = await res.json();
+    expect(payload).toMatchObject({ error: 'Failed to create material', errorCode: 'INTERNAL_SERVER_ERROR' });
+    expect(JSON.stringify(payload)).not.toContain('kaboom');
   });
 });
 
@@ -239,6 +238,13 @@ describe('materials/[materialId] — GET/PATCH/DELETE', () => {
     const res = (await matIdPatch(req({ name: 'X' }), seg)) as Envelope;
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true, data: { id: 'm1', name: 'X' } });
+  });
+
+  it('PATCH rule error (deleted material) → 400 WITH its message — the user learns why (ADR-603 §Ασπίδα)', async () => {
+    materialSvc.updateMaterial.mockRejectedValue(new ProcurementRuleError('Cannot update a deleted material'));
+    const res = (await matIdPatch(req({ name: 'X' }), seg)) as Envelope;
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('Cannot update a deleted material');
   });
 
   it('PATCH not-found message → 404 (mutation)', async () => {

@@ -14,14 +14,10 @@
  * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
-jest.mock('next/server', () => {
-  class MockNextResponse {
-    static json(body: unknown, init?: { status?: number }) {
-      return { status: init?.status ?? 200, json: async () => body };
-    }
-  }
-  return { NextResponse: MockNextResponse, NextRequest: class {} };
-});
+jest.mock('next/server', () =>
+  jest.requireActual<typeof import('@/test-utils/next-response-json-mock')>('@/test-utils/next-response-json-mock')
+    .nextServerJsonMock(),
+);
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({
   withHighRateLimit: <T>(h: T) => h,
@@ -53,7 +49,7 @@ jest.mock('@/lib/telemetry/Logger', () => ({
 var poSvc = {
   listPOs: jest.fn(async () => []),
   createPO: jest.fn(),
-  getPO: jest.fn(),
+  getPurchaseOrder: jest.fn(),
   updatePO: jest.fn(async () => undefined),
   approvePO: jest.fn(async () => undefined),
   markOrdered: jest.fn(async () => undefined),
@@ -64,10 +60,16 @@ var poSvc = {
   duplicatePO: jest.fn(),
 };
 
+// ADR-923 Λ5 — GET runs the REAL tenant fence (service layer) over a mocked repository read.
+jest.mock('@/services/procurement/procurement-repository', () => ({
+  getPurchaseOrder: (...a: unknown[]) => poSvc.getPurchaseOrder(...a),
+}));
 jest.mock('@/services/procurement', () => ({
   listPOs: (...a: unknown[]) => poSvc.listPOs(...a),
   createPO: (...a: unknown[]) => poSvc.createPO(...a),
-  getPO: (...a: unknown[]) => poSvc.getPO(...a),
+  findOwnedPO: jest.requireActual<typeof import('@/services/procurement/po-tenant-scope')>(
+    '@/services/procurement/po-tenant-scope',
+  ).findOwnedPO,
   updatePO: (...a: unknown[]) => poSvc.updatePO(...a),
   approvePO: (...a: unknown[]) => poSvc.approvePO(...a),
   markOrdered: (...a: unknown[]) => poSvc.markOrdered(...a),
@@ -78,6 +80,7 @@ jest.mock('@/services/procurement', () => ({
   duplicatePO: (...a: unknown[]) => poSvc.duplicatePO(...a),
 }));
 
+import { ProcurementRuleError, PurchaseOrderNotFoundError } from '@/subapps/procurement/services/procurement-rule-error';
 import type { NextRequest } from 'next/server';
 import { GET as listGet, POST as listPost } from '../route';
 import { GET as poGet, PATCH as poPatch, DELETE as poDelete } from '../[poId]/route';
@@ -135,11 +138,20 @@ describe('procurement — GET/POST', () => {
     expect((await res.json()).error).toBe('Validation failed');
   });
 
-  it('POST service error → 400 (create fallback is 400, NOT 500)', async () => {
-    poSvc.createPO.mockRejectedValue(new Error('supplier missing'));
+  it('POST rule error → 400 with its message (create fallback is 400, NOT 500)', async () => {
+    poSvc.createPO.mockRejectedValue(new ProcurementRuleError('supplier missing'));
     const res = (await listPost(req(validPO))) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('supplier missing');
+  });
+
+  it('POST UNEXPECTED error → 500 generic, never the raw text (ADR-603 §Ασπίδα)', async () => {
+    poSvc.createPO.mockRejectedValue(new Error('Firestore: purchase_orders/x permission denied'));
+    const res = (await listPost(req(validPO))) as Envelope;
+    expect(res.status).toBe(500);
+    const payload = await res.json();
+    expect(payload).toMatchObject({ error: 'Failed to create purchase order', errorCode: 'INTERNAL_SERVER_ERROR' });
+    expect(JSON.stringify(payload)).not.toContain('purchase_orders/x');
   });
 });
 
@@ -149,17 +161,17 @@ describe('procurement — GET/POST', () => {
 
 describe('procurement/[poId] — GET', () => {
   it('GET found → 200 { success:true, data }', async () => {
-    poSvc.getPO.mockResolvedValue({ id: 'po_1' });
+    poSvc.getPurchaseOrder.mockResolvedValue({ id: 'po_1', companyId: 'comp_1' });
     const res = (await poGet(req(), seg)) as Envelope;
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true, data: { id: 'po_1' } });
+    expect(await res.json()).toEqual({ success: true, data: { id: 'po_1', companyId: 'comp_1' } });
   });
 
-  it('GET not found → 404 Purchase order not found', async () => {
-    poSvc.getPO.mockResolvedValue(null);
+  it('GET not found → 404 PO not found (same text as every other PO path)', async () => {
+    poSvc.getPurchaseOrder.mockResolvedValue(null);
     const res = (await poGet(req(), seg)) as Envelope;
     expect(res.status).toBe(404);
-    expect((await res.json()).error).toBe('Purchase order not found');
+    expect((await res.json()).error).toBe('PO not found');
   });
 });
 
@@ -231,11 +243,18 @@ describe('procurement/[poId] — PATCH action-switch', () => {
     expect(await res.json()).toEqual({ success: true, message: 'PO updated' });
   });
 
-  it('service error → 400', async () => {
-    poSvc.approvePO.mockRejectedValue(new Error('cannot approve'));
+  it('rule error → 400 with its message', async () => {
+    poSvc.approvePO.mockRejectedValue(new ProcurementRuleError('cannot approve'));
     const res = (await poPatch(patchReq('approve'), seg)) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('cannot approve');
+  });
+
+  it('unexpected error → 500 generic', async () => {
+    poSvc.approvePO.mockRejectedValue(new Error('internal detail'));
+    const res = (await poPatch(patchReq('approve'), seg)) as Envelope;
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('Failed to update purchase order');
   });
 });
 
@@ -250,10 +269,17 @@ describe('procurement/[poId] — DELETE', () => {
     expect(await res.json()).toEqual({ success: true, message: 'PO deleted' });
   });
 
-  it('DELETE service error → 400', async () => {
-    poSvc.deletePO.mockRejectedValue(new Error('locked'));
+  it('DELETE rule error → 400', async () => {
+    poSvc.deletePO.mockRejectedValue(new ProcurementRuleError('locked'));
     const res = (await poDelete(req(), seg)) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('locked');
+  });
+
+  it('DELETE missing PO → 404 «PO not found», without the id (same text as the ownership refusal)', async () => {
+    poSvc.deletePO.mockRejectedValue(new PurchaseOrderNotFoundError());
+    const res = (await poDelete(req(), seg)) as Envelope;
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('PO not found');
   });
 });

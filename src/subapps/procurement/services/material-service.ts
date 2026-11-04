@@ -9,6 +9,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { toAdminTimestampOrNull } from './procurement-timestamps';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { ProcurementRuleError } from './procurement-rule-error';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { resolveForeignSku } from '@/server/supply-relationships/supply-foreign-quote.server';
@@ -260,7 +261,7 @@ export async function updateMaterial(
       ctx.companyId,
       subjectOf(materialId),
     );
-    if (current.isDeleted) throw new Error('Cannot update a deleted material');
+    if (current.isDeleted) throw new ProcurementRuleError('Cannot update a deleted material');
 
     const updates: Partial<Material> = {
       updatedAt: admin.firestore.Timestamp.now(),

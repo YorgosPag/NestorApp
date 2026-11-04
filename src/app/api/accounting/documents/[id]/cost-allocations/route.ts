@@ -23,8 +23,8 @@ import 'server-only';
 import { badRequest, conflict, defineRoute, notFound, ok } from '@/lib/api/define-route';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { nowISO } from '@/lib/date-local';
-import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
-import { getPO } from '@/services/procurement/procurement-service';
+// ADR-923 Λ5β — ο ΕΝΑΣ φράχτης εταιρείας των PO (`compose`: η PO τροφοδοτεί έγγραφο της ΔΙΚΗΣ μας εταιρείας).
+import { findOwnedPO } from '@/services/procurement/po-tenant-scope';
 import {
   allocatedPurchaseOrderIdsOf,
   allocationCoverageOf,
@@ -44,8 +44,8 @@ type Params = { id: string };
 async function proposalFor(document: ReceivedExpenseDocument, purchaseOrderId: string | null, companyId: string) {
   const poId = purchaseOrderId ?? document.suggestedPOId;
   if (!poId) return null;
-  const po = await getPO(poId);
-  if (po === null || po.isDeleted || !isPayloadOwnedByCompany(po, companyId)) return null;
+  const po = await findOwnedPO({ caller: { companyId }, poId, action: 'cost-allocation-proposal', intent: 'compose' });
+  if (po === null || po.isDeleted) return null;
   return {
     purchaseOrder: { id: po.id, poNumber: po.poNumber, projectId: po.projectId, status: po.status },
     lines: proposeAllocationsFromPurchaseOrder(po, expenseNetAmountOf(document)),
@@ -55,8 +55,8 @@ async function proposalFor(document: ReceivedExpenseDocument, purchaseOrderId: s
 /** `poId → poNumber` for the POs the stored lines name — the screen never shows a raw id */
 async function purchaseOrderNumbersOf(lines: ReceivedExpenseDocument['costAllocations'], companyId: string) {
   const entries = await Promise.all(allocatedPurchaseOrderIdsOf(lines ?? []).map(async (poId) => {
-    const po = await getPO(poId);
-    return po !== null && isPayloadOwnedByCompany(po, companyId) ? [poId, po.poNumber] as const : null;
+    const po = await findOwnedPO({ caller: { companyId }, poId, action: 'cost-allocation-label', intent: 'compose' });
+    return po !== null ? [poId, po.poNumber] as const : null;
   }));
   return Object.fromEntries(entries.filter((entry): entry is readonly [string, string] => entry !== null));
 }

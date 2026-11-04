@@ -21,7 +21,8 @@ export type { ApiErrorContext, ApiErrorResponse, ApiSuccessResponse, ApiResponse
 export { ApiError } from './api-error-types';
 
 import type { ApiErrorContext, ApiErrorResponse, ApiSuccessResponse, ErrorMappingRule } from './api-error-types';
-import { ApiError, asApiError } from './api-error-types';
+import { ApiError, asApiError, REQUEST_ID_HEADER } from './api-error-types';
+import { PRIVATE_NO_STORE } from '@/lib/http/cache-control';
 import { ERROR_MAPPING_RULES } from './api-error-rules';
 import { nowISO } from '@/lib/date-local';
 
@@ -56,7 +57,9 @@ export class ApiErrorHandler {
       // classify identically — see api-error-types.
       const apiError = asApiError(error);
 
-      if (apiError) {
+      // ADR-603 §Ασπίδα (ΜΕ-1): μόνο η ΑΡΝΗΣΗ (<500) κρατά το μήνυμά της. Ένα `ApiError` ≥500 — συχνά
+      // `new ApiError(500, getErrorMessage(e))` — είναι βλάβη μας: περνά από τον γενικό κανόνα πιο κάτω.
+      if (apiError && apiError.statusCode < 500) {
         const requestId = this.generateRequestId();
         const errorResponse: ApiErrorResponse = {
           success: false,
@@ -71,15 +74,22 @@ export class ApiErrorHandler {
         return NextResponse.json(errorResponse, {
           status: apiError.statusCode,
           headers: {
-            'X-Request-ID': requestId,
+            [REQUEST_ID_HEADER]: requestId,
             'X-Error-Code': errorResponse.errorCode || '',
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
+            'Cache-Control': PRIVATE_NO_STORE
           }
         });
       }
 
       const errorMessage = this.extractErrorMessage(error);
-      const errorMapping = this.mapErrorToRule(errorMessage);
+      const errorMapping = apiError
+        ? {
+            ...ERROR_MAPPING_RULES[ERROR_MAPPING_RULES.length - 1],
+            httpStatus: apiError.statusCode,
+            // A declared code is a stable constant the client branches on (e.g. FLOOR_PLATE_FAILED) — safe to keep.
+            ...(apiError.errorCode ? { errorCode: apiError.errorCode } : {}),
+          }
+        : this.mapErrorToRule(errorMessage);
       const requestId = this.generateRequestId();
 
       const context = await this.buildErrorContext(request, additionalContext, {
@@ -120,7 +130,7 @@ export class ApiErrorHandler {
         errorId: errorId || undefined,
         timestamp: nowISO(),
         requestId,
-        details: this.shouldIncludeDetails(errorMapping) ? this.sanitizeErrorDetails(error) : undefined,
+        details: this.shouldIncludeDetails() ? this.sanitizeErrorDetails(error) : undefined,
         context: this.shouldIncludeContext() ? {
           path: context.path,
           method: context.method,
@@ -131,9 +141,9 @@ export class ApiErrorHandler {
       return NextResponse.json(errorResponse, {
         status: errorMapping.httpStatus,
         headers: {
-          'X-Request-ID': requestId,
+          [REQUEST_ID_HEADER]: requestId,
           'X-Error-Code': errorMapping.errorCode,
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
+          'Cache-Control': PRIVATE_NO_STORE
         }
       });
 
@@ -145,7 +155,7 @@ export class ApiErrorHandler {
         error: 'Internal server error',
         errorCode: 'HANDLER_FAILURE',
         timestamp: nowISO()
-      }, { status: 500 });
+      }, { status: 500, headers: { 'Cache-Control': PRIVATE_NO_STORE } });
     }
   }
 
@@ -170,8 +180,8 @@ export class ApiErrorHandler {
     return NextResponse.json(response, {
       status,
       headers: {
-        'X-Request-ID': requestId,
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+        [REQUEST_ID_HEADER]: requestId,
+        'Cache-Control': PRIVATE_NO_STORE
       }
     });
   }
@@ -274,8 +284,14 @@ export class ApiErrorHandler {
     );
   }
 
-  private shouldIncludeDetails(mapping: ErrorMappingRule): boolean {
-    return process.env.NODE_ENV === 'development' || mapping.category !== 'security';
+  /**
+   * The thrown error's name + message reach the client ONLY in development. Until 2026-11-04 this was
+   * `development || category !== 'security'` ⇒ in production every non-security failure (Firestore, SDK, code)
+   * shipped its internal message inside `details` — OWASP ASVS 4.0.3 V7.4.1 (ADR-603 §Ασπίδα). The client already
+   * gets the rule's `userMessage`, the `errorCode` and the `requestId`; the detail lives in the server log.
+   */
+  private shouldIncludeDetails(): boolean {
+    return process.env.NODE_ENV === 'development';
   }
 
   private shouldIncludeContext(): boolean {

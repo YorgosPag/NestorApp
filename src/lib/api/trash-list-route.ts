@@ -12,21 +12,22 @@
  * This factory closes that gap by composing what already exists rather than
  * re-implementing any of it:
  *
- *   defineRoute (ADR-602)      rate-limit tier + withAuth + params/body plumbing
+ *   defineRoute (ADR-603)      rate-limit tier + withAuth + shield + plumbing
  *   resolveTenantScope         who may list whose rows (security decision, SSoT)
  *   listTrashed (ADR-281)      the Firestore read + ordering
  *   SOFT_DELETE_CONFIG         the per-entity contract, as data
  *
  * **The wire contract is frozen, deliberately.** The success envelope keeps its
  * per-entity key (`{ success, buildings, count }`) because
- * `EntityTrashSpec.selectItems` on the client unwraps exactly that, and the 500
- * envelope keeps its `{ error, details }` pair with the entity's own noun. Both
- * are reproduced from config rather than normalised — a unified envelope would
- * be a separate, versioned rollout, not a side effect of de-duplication.
+ * `EntityTrashSpec.selectItems` on the client unwraps exactly that. The 500
+ * keeps the entity's own noun as its message (`fallbackError`) but no longer
+ * carries `details: <internal error message>` — that was an information leak
+ * (ADR-603 §Ασπίδα, OWASP ASVS V7.4.1); the detail lives in the server log under
+ * the `requestId` the client receives.
  *
  * @module lib/api/trash-list-route
  * @enterprise ADR-697 — Trash-List Route SSoT
- * @see ADR-281 SSOT Soft-Delete System · ADR-602 API Route-Handler Factory
+ * @see ADR-281 SSOT Soft-Delete System · ADR-603 API Route-Handler Factory
  */
 
 import 'server-only';
@@ -42,7 +43,6 @@ import {
 } from '@/lib/firestore/soft-delete-config';
 import { listArchived, listTrashed } from '@/lib/firestore/soft-delete-engine';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 import type { SoftDeletableEntityType } from '@/types/soft-deletable';
 
 /**
@@ -122,39 +122,26 @@ function createRetiredListRoute(
   return defineRoute({
     rateLimit: 'standard',
     auth: { permissions: viewPermission },
+    // An unexpected failure answers with the entity's own noun; the internal
+    // message goes only to the server log (defineRoute shield, ADR-603).
+    fallbackError: `Failed to fetch ${labelPluralEn}`,
     handler: async ({ req, auth }) => {
-      try {
-        const scope = resolveTenantScopeFromUrl(req.url, auth);
+      const scope = resolveTenantScopeFromUrl(req.url, auth);
 
-        logger.info(`Fetching ${labelPluralEn}`, {
-          companyId: scope.companyId,
-          userId: auth.uid,
-        });
+      logger.info(`Fetching ${labelPluralEn}`, {
+        companyId: scope.companyId,
+        userId: auth.uid,
+      });
 
-        const rows = await kind.list(getAdminFirestore(), entityType, scope.companyId);
+      const rows = await kind.list(getAdminFirestore(), entityType, scope.companyId);
 
-        logger.info(`Found ${labelPluralEn}`, { count: rows.length });
+      logger.info(`Found ${labelPluralEn}`, { count: rows.length });
 
-        return NextResponse.json({
-          success: true,
-          [responseKey]: rows,
-          count: rows.length,
-        });
-      } catch (error) {
-        // Caught here rather than left to defineRoute so the 500 envelope stays
-        // byte-identical to what these five endpoints have always returned.
-        logger.error(`Error fetching ${labelPluralEn}`, {
-          error: getErrorMessage(error),
-        });
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Failed to fetch ${labelPluralEn}`,
-            details: getErrorMessage(error),
-          },
-          { status: 500 },
-        );
-      }
+      return NextResponse.json({
+        success: true,
+        [responseKey]: rows,
+        count: rows.length,
+      });
     },
   });
 }

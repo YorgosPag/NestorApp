@@ -19,6 +19,7 @@ import {
 } from './procurement-owned-doc';
 import type { FrameworkAgreementDoc } from './framework-agreement-doc';
 import { assertAgreementScope } from './framework-agreement-scope-guard';
+import { ProcurementRuleError } from './procurement-rule-error';
 import type {
   CreateFrameworkAgreementDTO,
   UpdateFrameworkAgreementDTO,
@@ -333,7 +334,7 @@ export async function updateFrameworkAgreement(
 ): Promise<FrameworkAgreementDoc> {
   return safeFirestoreOperation(async (db) => {
     const { ref, current } = await loadOwnedAgreement(db, ctx, agreementId);
-    if (current.isDeleted) throw new Error('Cannot update a deleted framework agreement');
+    if (current.isDeleted) throw new ProcurementRuleError('Cannot update a deleted framework agreement');
 
     const updates: Partial<FrameworkAgreementDoc> = {
       updatedAt: admin.firestore.Timestamp.now(),

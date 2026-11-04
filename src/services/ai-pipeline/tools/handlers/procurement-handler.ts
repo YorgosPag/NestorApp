@@ -16,8 +16,7 @@ import type { AuthContext } from '@/lib/auth';
 import type { POVatRate, PurchaseOrderStatus, CreatePurchaseOrderDTO } from '@/types/procurement';
 import { GREEK_STANDARD_VAT_RATE, isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 import { toStoredUom } from '@/lib/uom/uom-registry';
-import { createPO, getPO, listPOs } from '@/services/procurement';
-import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { createPO, findOwnedPO, listPOs } from '@/services/procurement';
 import { findContactByName } from '../../shared/contact-lookup';
 import {
   type AgenticContext,
@@ -279,10 +278,10 @@ export class ProcurementHandler implements ToolHandler {
     companyId: string
   ): Promise<import('@/types/procurement').PurchaseOrder | null> {
     // Try direct ID first
-    const direct = await getPO(idOrNumber);
-    // ADR-742 §4 — ίδια θετική παγίδα: παραγγελία χωρίς μισθωτή επιστρεφόταν σε
-    // πράκτορα με κενό `companyId`. Ο έλεγχος `direct &&` μένει (null έγγραφο).
-    if (direct && isPayloadOwnedByCompany(direct, companyId) && !direct.isDeleted) {
+    // ADR-923 Λ5β — ο ΕΝΑΣ φράχτης εταιρείας των PO (`compose`: ο πράκτορας απαντά μέσα στη ΔΙΚΗ μας
+    // εταιρεία, χωρίς ρόλο). Κρατά και την παγίδα του κενού `companyId` (ADR-742 §4).
+    const direct = await findOwnedPO({ caller: { companyId }, poId: idOrNumber, action: 'ai-po-status', intent: 'compose' });
+    if (direct && !direct.isDeleted) {
       return direct;
     }
 

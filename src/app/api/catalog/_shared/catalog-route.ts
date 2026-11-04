@@ -23,7 +23,6 @@ import type { z } from 'zod';
 
 import { badRequest, created, defineRoute, ok, type RateLimitTier } from '@/lib/api/define-route';
 import type { AuthContext } from '@/lib/auth';
-import { withPrivateNoStore } from '@/lib/http/cache-control';
 import type { RateLimitCategory } from '@/lib/middleware/rate-limit-config';
 import { CatalogWriteError, toCatalogApiError } from '@/server/catalog/catalog-write-error';
 import { CURSOR_PARAM, EXPECTED_REVISION_PARAM } from '@/subapps/catalog/catalog-routes';
@@ -49,12 +48,12 @@ const READ_FALLBACK_ERROR = 'Catalog read failed';
 type IdParams = { id: string };
 
 /**
- * Κάθε επιτυχής απόκριση του καταλόγου ανήκει σε **έναν** χώρο και συχνά σε **ένα** κοινό τιμών ⇒ `private, no-store`
- * σε **ένα** σημείο για όλα τα factories (ADR-923 §5.14.1 Ζ23). Ο route που δηλώνει δική του πολιτική (αρχείο) κερδίζει.
+ * Κάθε απόκριση του καταλόγου ανήκει σε **έναν** χώρο και συχνά σε **ένα** κοινό τιμών ⇒ `private, no-store` (ADR-923
+ * §5.14.1 Ζ23). Την κεφαλίδα τη βάζει πλέον η ασπίδα του `defineRoute` (ADR-603 §Ασπίδα, προεπιλογή) — όχι εδώ.
  */
 async function respond<T>(envelope: (data: T) => NextResponse, run: () => Promise<T>): Promise<NextResponse> {
   try {
-    return withPrivateNoStore(envelope(await run()));
+    return envelope(await run());
   } catch (error) {
     if (error instanceof CatalogWriteError) throw toCatalogApiError(error);
     throw error;

@@ -10,8 +10,8 @@ import 'server-only';
 
 import { z } from 'zod';
 import { defineRoute, ok, badRequest, notFound, httpError } from '@/lib/api/define-route';
-import { getPO } from '@/services/procurement';
-import { ownedPO, poResource } from '../../_shared/po-ownership';
+import { findOwnedPO } from '@/services/procurement';
+import { PO_NOT_FOUND_MESSAGE } from '@/subapps/procurement/services/procurement-rule-error';
 import { sendPurchaseOrderEmail } from '@/services/procurement/po-email-service';
 import { resolvePODocumentParties } from '@/services/procurement/po-document-parties';
 import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
@@ -42,10 +42,9 @@ export const POST = defineRoute<z.ZodTypeAny, { poId: string }>({
 
     const { recipientEmail: bodyEmail, recipientName, language } = body!;
 
-    // ADR-742 §7undecies — ήταν **αόρατο** στον ανιχνευτή του anchor επειδή το
-    // `defineRoute` λέει τον καλούντα `auth` και όχι `ctx` (μάθημα #1).
-    const po = ownedPO({ po: await getPO(poId), caller: auth, poId, action: 'email' });
-    if (!po) notFound(poResource.notFoundMessage);
+    // ADR-742 §7undecies · ADR-923 Λ5 — ο φράχτης εταιρείας στην υπηρεσία: ξένο PO = ανύπαρκτο (404).
+    const po = await findOwnedPO({ caller: auth, poId, action: 'email', intent: 'write' });
+    if (!po) notFound(PO_NOT_FOUND_MESSAGE);
 
     // L2 org-structure resolver: supplier accounting dept takes priority (ADR-326 Phase 6.1)
     let recipientEmail = bodyEmail;
@@ -73,6 +72,8 @@ export const POST = defineRoute<z.ZodTypeAny, { poId: string }>({
       language,
     });
 
+    // A 5xx `ApiError` never reaches the wire with its message: `defineRoute` answers the generic 500 + requestId and
+    // logs `result.error` (Mailgun configuration / provider body) under the same id (ADR-603 §Ασπίδα, ΥΨ-1).
     if (!result.success) httpError(500, result.error);
 
     // Record audit trail

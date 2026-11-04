@@ -7,7 +7,11 @@
  *  - Auth context (companyId/uid), awaited dynamic params, and parsed schema body
  *    are delivered to the handler.
  *  - Schema validation failure → 400 via safeParseBody (unchanged shape).
- *  - ApiError (business) → mapped status, NOT logged; unexpected error → 500 + log.
+ *  - ApiError (business) → mapped status + its OWN message, NOT logged.
+ *  - Unexpected error → 500 with the route's GENERIC message + errorCode + requestId
+ *    (body AND `X-Request-ID`); the internal message ONLY in the server log (ADR-603 §Ασπίδα).
+ *  - Every response — success, refusal, withAuth denial, rate-limit failure — carries the
+ *    DECLARED cache policy; refusals/errors are ALWAYS `private, no-store`.
  *  - rateLimit tier maps to the matching pre-configured wrapper.
  *
  * Mocking pattern mirrors src/app/api/admin/migrate-accounting-profile.
@@ -15,16 +19,13 @@
  * @enterprise ADR-602 API Route-Handler Factory SSoT
  */
 
-jest.mock('next/server', () => {
-  class MockNextResponse {
-    static json(body: unknown, init?: { status?: number }) {
-      return { status: init?.status ?? 200, json: async () => body };
-    }
-  }
-  return { NextResponse: MockNextResponse, NextRequest: class {} };
-});
+jest.mock('next/server', () =>
+  jest.requireActual<typeof import('@/test-utils/next-response-json-mock')>('@/test-utils/next-response-json-mock')
+    .nextServerJsonMock(),
+);
 
 var rateSpies = {
+  asset: jest.fn(<T>(h: T) => h),
   high: jest.fn(<T>(h: T) => h),
   standard: jest.fn(<T>(h: T) => h),
   sensitive: jest.fn(<T>(h: T) => h),
@@ -34,6 +35,7 @@ var rateSpies = {
 };
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({
+  withAssetRateLimit: (h: unknown) => rateSpies.asset(h),
   withHighRateLimit: (h: unknown) => rateSpies.high(h),
   withStandardRateLimit: (h: unknown) => rateSpies.standard(h),
   withSensitiveRateLimit: (h: unknown) => rateSpies.sensitive(h),
@@ -52,14 +54,18 @@ var authCtx = {
 };
 
 var lastAuthOptions: unknown;
+/** When set, the mocked withAuth answers with this refusal instead of calling the handler. */
+var authRefusal: unknown;
 
 jest.mock('@/lib/auth', () => ({
   withAuth: (callback: (...args: unknown[]) => Promise<unknown>, options?: unknown) => {
     lastAuthOptions = options;
     return async (request: unknown, segmentData?: unknown) =>
-      callback(request, authCtx, { cache: true }, segmentData);
+      authRefusal ?? callback(request, authCtx, { cache: true }, segmentData);
   },
 }));
+
+jest.mock('@/services/enterprise-id.service', () => ({ generateRequestId: () => 'req_test_1' }));
 
 var errorLog = jest.fn();
 jest.mock('@/lib/telemetry/Logger', () => ({
@@ -79,6 +85,7 @@ import { ApiError } from '../api-error-types';
 
 interface Envelope {
   status: number;
+  headers: Headers;
   json: () => Promise<Record<string, unknown>>;
 }
 
@@ -96,6 +103,7 @@ function makeReq(
 
 beforeEach(() => {
   jest.clearAllMocks();
+  authRefusal = undefined;
 });
 
 describe('defineRoute — success envelopes', () => {
@@ -208,17 +216,68 @@ describe('defineRoute — error envelopes', () => {
     expect(await res.json()).toEqual({ success: false, error: 'Invalid fiscalYear parameter' });
   });
 
-  it('unexpected throw → 500 { success:false, error } + server log', async () => {
+  it('unexpected throw → 500 GENERIC message + errorCode + requestId; the internal message ONLY in the log', async () => {
     const GET = defineRoute({
       rateLimit: 'standard',
       handler: async () => {
-        throw new Error('boom');
+        throw new Error('Firestore: document projects/p_1/secrets/x missing');
       },
     });
     const res = (await GET(makeReq())) as Envelope;
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ success: false, error: 'boom' });
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'Internal server error',
+      errorCode: 'INTERNAL_SERVER_ERROR',
+      requestId: 'req_test_1',
+    });
+    expect(res.headers.get('X-Request-ID')).toBe('req_test_1');
     expect(errorLog).toHaveBeenCalledTimes(1);
+    expect(errorLog).toHaveBeenCalledWith(
+      'Route handler error',
+      expect.objectContaining({
+        requestId: 'req_test_1',
+        error: 'Firestore: document projects/p_1/secrets/x missing',
+        path: '/api/accounting/apy-certificates',
+      }),
+    );
+  });
+
+  it('ApiError ≥500 is OUR failure, not a refusal: generic message + requestId, the raw text only in the log', async () => {
+    const GET = defineRoute({
+      rateLimit: 'standard',
+      handler: async () => {
+        throw new ApiError(500, 'internal: Mailgun key-123 rejected');
+      },
+    });
+    const res = (await GET(makeReq())) as Envelope;
+    expect(res.status).toBe(500);
+    const payload = await res.json();
+    expect(JSON.stringify(payload)).not.toContain('internal');
+    expect(payload).toMatchObject({ error: 'Internal server error', errorCode: 'INTERNAL_SERVER_ERROR', requestId: 'req_test_1' });
+    expect(errorLog).toHaveBeenCalledWith('Route handler error', expect.objectContaining({ error: 'internal: Mailgun key-123 rejected' }));
+  });
+
+  it('ApiError 503 keeps its STATUS and its declared stable code, but not its message', async () => {
+    const GET = defineRoute({ rateLimit: 'standard', handler: async () => { throw new ApiError(503, 'upstream db-7 down', 'UPSTREAM_DOWN'); } });
+    const res = (await GET(makeReq())) as Envelope;
+    expect(res.status).toBe(503);
+    const payload = await res.json();
+    expect(payload.errorCode).toBe('UPSTREAM_DOWN');
+    expect(JSON.stringify(payload)).not.toContain('db-7');
+  });
+
+  it('unexpected Error WITH a message → the route fallbackError, never the internal text', async () => {
+    const GET = defineRoute({
+      rateLimit: 'standard',
+      fallbackError: 'Failed to list APY certificates',
+      handler: async () => {
+        throw new Error('internal detail');
+      },
+    });
+    const payload = await ((await GET(makeReq())) as Envelope).json();
+    expect(payload.error).toBe('Failed to list APY certificates');
+    expect(JSON.stringify(payload)).not.toContain('internal detail');
   });
 
   it('non-Error throw (no message) → fallbackError in envelope', async () => {
@@ -284,5 +343,122 @@ describe('defineRoute — rate-limit tier mapping', () => {
   ] as const)('tier "%s" → matching wrapper', (tier, spyGetter) => {
     defineRoute({ rateLimit: tier, handler: async () => ok() });
     expect(spyGetter()).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('defineRoute — response shield: cache policy (ADR-603 §Ασπίδα)', () => {
+  const failing = (fn: () => never) => defineRoute({ rateLimit: 'standard', handler: async () => fn() });
+  const schemaRoute = () =>
+    defineRoute({ rateLimit: 'sensitive', schema: z.object({ n: z.number() }), handler: async () => ok() });
+
+  it('success without a declaration → `private, no-store`', async () => {
+    const res = (await defineRoute({ rateLimit: 'standard', handler: async () => ok([1]) })(makeReq())) as Envelope;
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it.each([
+    ['400', () => badRequest('bad')],
+    ['404', () => notFound('gone')],
+    ['409', () => conflict('dup')],
+  ] as const)('refusal %s → `private, no-store`', async (_label, fn) => {
+    const res = (await failing(fn)(makeReq())) as Envelope;
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('unexpected 500 → `private, no-store`', async () => {
+    const res = (await failing(() => { throw new Error('x'); })(makeReq())) as Envelope;
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('schema 400 (produced before the handler) → `private, no-store`', async () => {
+    const res = (await schemaRoute()(makeReq({ n: 'x' }, 'POST'))) as Envelope;
+    expect(res.status).toBe(400);
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('malformed JSON body → 400 «Invalid or empty JSON body», never a 500 carrying the parser text', async () => {
+    const req = {
+      url: 'https://app.test/api/x',
+      method: 'POST',
+      json: async () => {
+        throw new SyntaxError('Unexpected token } in JSON at position 7');
+      },
+    } as unknown as NextRequest;
+    const res = (await schemaRoute()(req)) as Envelope;
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ success: false, error: 'Invalid or empty JSON body' });
+  });
+
+  it('withAuth denial (never reaches the handler) → `private, no-store`', async () => {
+    authRefusal = { status: 401, headers: new Headers(), json: async () => ({ error: 'Unauthorized' }) };
+    const res = (await defineRoute({ rateLimit: 'standard', handler: async () => ok() })(makeReq())) as Envelope;
+    expect(res.status).toBe(401);
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('a throw from the rate-limit layer itself → the same safe 500, shielded', async () => {
+    rateSpies.standard.mockImplementationOnce((() => () => {
+      throw new Error('Upstash: connection refused 10.0.0.7:6379');
+    }) as never);
+    const res = (await defineRoute({ rateLimit: 'standard', handler: async () => ok() })(makeReq())) as Envelope;
+    expect(res.status).toBe(500);
+    expect(JSON.stringify(await res.json())).not.toContain('Upstash');
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('a handler-set header cannot bypass the policy: the declaration wins', async () => {
+    const GET = defineRoute({
+      rateLimit: 'standard',
+      handler: async () => {
+        const res = ok();
+        res.headers.set('Cache-Control', 'public, max-age=86400');
+        return res;
+      },
+    });
+    const res = (await GET(makeReq())) as Envelope;
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('declared private immutable → on success; refusals of the SAME route stay no-store', async () => {
+    const cache = { kind: 'private', maxAgeSeconds: 31536000, immutable: true } as const;
+    const okRes = (await defineRoute({ rateLimit: 'asset', cache, handler: async () => ok() })(makeReq())) as Envelope;
+    expect(okRes.headers.get('Cache-Control')).toBe('private, max-age=31536000, immutable');
+    const deny = (await defineRoute({ rateLimit: 'asset', cache, handler: async () => notFound('x') })(makeReq())) as Envelope;
+    expect(deny.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('a response with IMMUTABLE headers (Response.redirect) is copied, not left unshielded', async () => {
+    const GET = defineRoute({
+      rateLimit: 'standard',
+      handler: async () => Response.redirect('https://app.test/elsewhere', 302) as unknown as ReturnType<typeof ok>,
+    });
+    const res = (await GET(makeReq())) as Envelope;
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toBe('https://app.test/elsewhere');
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('rival cache headers (CDN-Cache-Control / Surrogate-Control / Expires) set by a handler are removed', async () => {
+    const GET = defineRoute({
+      rateLimit: 'standard',
+      handler: async () => {
+        const res = ok();
+        res.headers.set('CDN-Cache-Control', 'max-age=3600');
+        res.headers.set('Surrogate-Control', 'max-age=3600');
+        res.headers.set('Expires', 'Thu, 01 Jan 2099 00:00:00 GMT');
+        return res;
+      },
+    });
+    const res = (await GET(makeReq())) as Envelope;
+    expect(res.headers.get('CDN-Cache-Control')).toBeNull();
+    expect(res.headers.get('Surrogate-Control')).toBeNull();
+    expect(res.headers.get('Expires')).toBeNull();
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('an invalid declaration fails when the route is DEFINED, not at the first request', () => {
+    expect(() =>
+      defineRoute({ rateLimit: 'standard', cache: { kind: 'private', maxAgeSeconds: -1 }, handler: async () => ok() }),
+    ).toThrow(RangeError);
   });
 });

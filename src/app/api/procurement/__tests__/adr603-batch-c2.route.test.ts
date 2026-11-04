@@ -24,14 +24,10 @@
  * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
-jest.mock('next/server', () => {
-  class MockNextResponse {
-    static json(body: unknown, init?: { status?: number }) {
-      return { status: init?.status ?? 200, json: async () => body };
-    }
-  }
-  return { NextResponse: MockNextResponse, NextRequest: class {} };
-});
+jest.mock('next/server', () =>
+  jest.requireActual<typeof import('@/test-utils/next-response-json-mock')>('@/test-utils/next-response-json-mock')
+    .nextServerJsonMock(),
+);
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({
   withHighRateLimit: <T>(h: T) => h,
@@ -103,16 +99,23 @@ jest.mock('@/subapps/procurement/services/sourcing-event-service', () => ({
 
 // ---- PO share --------------------------------------------------------------
 var shareSvc = {
-  getPO: jest.fn(async () => ({ companyId: 'comp_1', poNumber: 'PO-1' })),
+  getPurchaseOrder: jest.fn(async () => ({ companyId: 'comp_1', poNumber: 'PO-1' })),
   createPOShare: jest.fn(async () => ({
     shareId: 'sh1', token: 'tok123', expiresAt: '2026-08-01T00:00:00.000Z',
   })),
-  revokePOShare: jest.fn(async () => true),
+  revokePOShare: jest.fn(async (): Promise<string> => 'revoked'),
 };
+// ADR-923 Λ5 — the REAL tenant fence (service layer) over a mocked repository read.
+jest.mock('@/services/procurement/procurement-repository', () => ({
+  getPurchaseOrder: (...a: unknown[]) => shareSvc.getPurchaseOrder(...a),
+}));
 jest.mock('@/services/procurement', () => ({
-  getPO: (...a: unknown[]) => shareSvc.getPO(...a),
+  findOwnedPO: jest.requireActual<typeof import('@/services/procurement/po-tenant-scope')>(
+    '@/services/procurement/po-tenant-scope',
+  ).findOwnedPO,
 }));
 jest.mock('@/services/procurement/po-share-service', () => ({
+  PO_SHARE_NOT_FOUND_MESSAGE: 'Share link not found',
   createPOShare: (...a: unknown[]) => shareSvc.createPOShare(...a),
   revokePOShare: (...a: unknown[]) => shareSvc.revokePOShare(...a),
 }));
@@ -162,8 +165,8 @@ const validLine = { source: 'ad_hoc', description: 'Item', trade: 'concrete' };
 beforeEach(() => {
   jest.clearAllMocks();
   rfqLineSvc.addRfqLine.mockResolvedValue({ id: 'l1' });
-  shareSvc.getPO.mockResolvedValue({ companyId: 'comp_1', poNumber: 'PO-1' });
-  shareSvc.revokePOShare.mockResolvedValue(true);
+  shareSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'comp_1', poNumber: 'PO-1' });
+  shareSvc.revokePOShare.mockResolvedValue('revoked');
   seSvc.getSourcingEvent.mockResolvedValue({ id: 'ev1', title: 'Event' });
 });
 
@@ -232,11 +235,11 @@ describe('rfqs/[rfqId]/lines — GET / POST', () => {
     expect(foreign.status).toBe(404);
   });
 
-  it('POST service other error → 400 (mutation fallback)', async () => {
+  it('POST service other error → 400 (mutation fallback) with the route fallback, never the raw text', async () => {
     rfqLineSvc.addRfqLine.mockRejectedValue(new Error('boom'));
     const res = (await linesPost(req(`${BASE}/rfqs/r1/lines`, validLine), rfqSeg)) as Envelope;
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe('boom');
+    expect((await res.json()).error).toBe('Failed to add RFQ line');
   });
 });
 
@@ -418,23 +421,68 @@ describe('[poId]/share — POST / DELETE', () => {
   });
 
   it('POST PO not found → 404 PO not found', async () => {
-    shareSvc.getPO.mockResolvedValue(null as unknown as { companyId: string; poNumber: string });
+    shareSvc.getPurchaseOrder.mockResolvedValue(null as unknown as { companyId: string; poNumber: string });
     const res = (await sharePost(req(`${BASE}/po_1/share`, {}), poSeg)) as Envelope;
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe('PO not found');
   });
 
   it('POST wrong tenant → 404 PO not found', async () => {
-    shareSvc.getPO.mockResolvedValue({ companyId: 'other', poNumber: 'PO-1' });
+    shareSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'other', poNumber: 'PO-1' });
     const res = (await sharePost(req(`${BASE}/po_1/share`, {}), poSeg)) as Envelope;
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe('PO not found');
   });
 
-  it('DELETE → 200 { success:true }', async () => {
+  it('DELETE → 200 { success:true }, revoke scoped to this (fenced) PO', async () => {
     const res = (await shareDelete(req(`${BASE}/po_1/share`, { shareId: 's1' }, 'DELETE'), poSeg)) as Envelope;
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
+    expect(shareSvc.revokePOShare).toHaveBeenCalledWith({ shareId: 's1', poId: 'po_1' });
+  });
+
+  it('DELETE on a foreign PO → 404 PO not found, nothing revoked (ADR-923 Λ5)', async () => {
+    shareSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'other', poNumber: 'PO-1' });
+    const res = (await shareDelete(req(`${BASE}/po_1/share`, { shareId: 's1' }, 'DELETE'), poSeg)) as Envelope;
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('PO not found');
+    expect(shareSvc.revokePOShare).not.toHaveBeenCalled();
+  });
+
+  describe('super_admin + foreign PO — share is a side effect ⇒ write intent (Λ5β Μ1)', () => {
+    beforeEach(() => {
+      authCtx.globalRole = 'super_admin';
+      shareSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'other', poNumber: 'PO-1' });
+    });
+    afterEach(() => {
+      authCtx.globalRole = 'company_admin';
+    });
+
+    it('POST → 404, no share created', async () => {
+      const res = (await sharePost(req(`${BASE}/po_1/share`, {}), poSeg)) as Envelope;
+      expect(res.status).toBe(404);
+      expect(shareSvc.createPOShare).not.toHaveBeenCalled();
+    });
+
+    it('DELETE → 404, nothing revoked', async () => {
+      const res = (await shareDelete(req(`${BASE}/po_1/share`, { shareId: 's1' }, 'DELETE'), poSeg)) as Envelope;
+      expect(res.status).toBe(404);
+      expect(shareSvc.revokePOShare).not.toHaveBeenCalled();
+    });
+  });
+
+  it('soft-deleted own PO → POST 404, no share link for a deleted order (Λ5β Μ6)', async () => {
+    shareSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'comp_1', poNumber: 'PO-1', isDeleted: true });
+    const res = (await sharePost(req(`${BASE}/po_1/share`, {}), poSeg)) as Envelope;
+    expect(res.status).toBe(404);
+    expect(shareSvc.createPOShare).not.toHaveBeenCalled();
+  });
+
+  it('DELETE a share of another PO/company → 404 Share link not found', async () => {
+    shareSvc.revokePOShare.mockResolvedValue('not_found');
+    const res = (await shareDelete(req(`${BASE}/po_1/share`, { shareId: 's_foreign' }, 'DELETE'), poSeg)) as Envelope;
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('Share link not found');
   });
 
   it('DELETE bad body → 400 shareId is required', async () => {
@@ -443,10 +491,10 @@ describe('[poId]/share — POST / DELETE', () => {
     expect((await res.json()).error).toBe('shareId is required');
   });
 
-  it('DELETE revoke false → 500 Failed to revoke share', async () => {
-    shareSvc.revokePOShare.mockResolvedValue(false);
+  it('DELETE revoke false → 500 generic + requestId (ADR-603 §Ασπίδα: a 5xx message never reaches the wire)', async () => {
+    shareSvc.revokePOShare.mockResolvedValue('failed');
     const res = (await shareDelete(req(`${BASE}/po_1/share`, { shareId: 's1' }, 'DELETE'), poSeg)) as Envelope;
     expect(res.status).toBe(500);
-    expect((await res.json()).error).toBe('Failed to revoke share');
+    expect(await res.json()).toMatchObject({ error: 'Unknown error', errorCode: 'INTERNAL_SERVER_ERROR' });
   });
 });

@@ -18,9 +18,15 @@
 
 import '../setup';
 
+// ADR-923 Λ5β — the REAL company fence (`findOwnedPO`) over a mocked repository read.
+jest.mock('@/services/procurement/procurement-repository', () => ({
+  getPurchaseOrder: jest.fn(),
+}));
 jest.mock('@/services/procurement', () => ({
   createPO: jest.fn(),
-  getPO: jest.fn(),
+  findOwnedPO: jest.requireActual<typeof import('@/services/procurement/po-tenant-scope')>(
+    '@/services/procurement/po-tenant-scope',
+  ).findOwnedPO,
   listPOs: jest.fn(async () => []),
 }));
 
@@ -33,7 +39,7 @@ jest.mock('firebase-admin/firestore', () => ({
 }));
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { getPO } from '@/services/procurement';
+import { getPurchaseOrder } from '@/services/procurement/procurement-repository';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { createAdminContext } from '../test-utils/context-factory';
@@ -118,15 +124,15 @@ const SITES: readonly OwnershipCallSiteSpec[] = [
   },
   {
     /**
-     * Το `getPO` δεν φέρνει μισθωτή στην υπογραφή του, οπότε ο ψεύτης
-     * επιστρέφει **πάντα** την παραγγελία: ο φύλακας του `findPO` είναι η
-     * μοναδική άμυνα. Το `listPOs` fallback επιστρέφει κενό, ώστε η άρνηση να
+     * Το `getPurchaseOrder` δεν φέρνει μισθωτή στην υπογραφή του, οπότε ο ψεύτης
+     * επιστρέφει **πάντα** την παραγγελία: ο φράχτης `findOwnedPO` (ADR-923 Λ5β),
+     * που τρέχει αληθινός, είναι η μοναδική άμυνα. Το `listPOs` fallback επιστρέφει κενό, ώστε η άρνηση να
      * μη μεταμφιέζεται σε επιτυχία από άλλη διαδρομή.
      */
     file: 'services/ai-pipeline/tools/handlers/procurement-handler.ts',
     name: 'ProcurementHandler.get_purchase_order_status — findPO (παραγγελία χωρίς μισθωτή)',
     arrange: owner => {
-      (getPO as jest.Mock).mockResolvedValue(
+      (getPurchaseOrder as jest.Mock).mockResolvedValue(
         withOwner(
           { id: PO_ID, poNumber: 'PO-0042', status: 'draft', isDeleted: false, items: [] },
           owner,

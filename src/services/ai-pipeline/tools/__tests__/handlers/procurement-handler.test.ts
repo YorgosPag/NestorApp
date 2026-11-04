@@ -22,9 +22,15 @@ const mockCreatePO = jest.fn();
 const mockGetPO = jest.fn();
 const mockListPOs = jest.fn();
 
+// ADR-923 Λ5β — the REAL company fence (`findOwnedPO`) over a mocked repository read.
+jest.mock('@/services/procurement/procurement-repository', () => ({
+  getPurchaseOrder: (...args: unknown[]) => mockGetPO(...args),
+}));
 jest.mock('@/services/procurement', () => ({
   createPO: (...args: unknown[]) => mockCreatePO(...args),
-  getPO: (...args: unknown[]) => mockGetPO(...args),
+  findOwnedPO: jest.requireActual<typeof import('@/services/procurement/po-tenant-scope')>(
+    '@/services/procurement/po-tenant-scope',
+  ).findOwnedPO,
   listPOs: (...args: unknown[]) => mockListPOs(...args),
 }));
 
@@ -406,6 +412,15 @@ describe('ProcurementHandler', () => {
       expect(result.data.poNumber).toBe('PO-0001');
       expect(result.data.status).toBe('ordered');
       expect(result.data.items).toHaveLength(1);
+    });
+
+    it('foreign PO by ID → not found, never another company\'s data (ADR-923 Λ5β)', async () => {
+      mockGetPO.mockResolvedValue({ id: 'po_x', poNumber: 'PO-0099', companyId: 'other-company', status: 'ordered', isDeleted: false, items: [] });
+      mockListPOs.mockResolvedValue([]);
+
+      const result = await handler.execute('get_purchase_order_status', { poId: 'po_x' }, adminCtx);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('not found');
     });
 
     it('returns error when PO not found', async () => {

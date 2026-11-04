@@ -8,6 +8,8 @@
  *   (`link-invoice` retired — ADR-917 Φ4: the expense document's cost allocation links invoice ↔ PO)
  *
  * Auth: withAuth | Rate: standard (GET), sensitive (PATCH/DELETE)
+ * Tenant: every action loads the PO through `findOwnedPO` / `requireOwnedPO` (service layer) —
+ *   a foreign PO answers exactly like a missing one: 404 `PO not found` (ADR-923 κύμα 3 Λ5)
  * @see ADR-267 §Phase A
  * @see ADR-603 API Route-Handler Factory SSoT
  */
@@ -16,9 +18,9 @@ import 'server-only';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import { defineRoute, ok, created, notFound, badRequest, httpError } from '@/lib/api/define-route';
+import { defineRoute, ok, created, notFound, badRequest } from '@/lib/api/define-route';
 import {
-  getPO,
+  findOwnedPO,
   updatePO,
   approvePO,
   markOrdered,
@@ -28,13 +30,14 @@ import {
   deletePO,
   duplicatePO,
 } from '@/services/procurement';
-import { getErrorMessage } from '@/lib/error-utils';
+import { rethrowProcurementFailure } from '../_shared/procurement-error-outcome';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { POCancellationReason, POVatRate } from '@/types/procurement';
 import { UpdatePORequestSchema } from '../_shared/po-schema';
 import { ApiError } from '@/lib/api/api-error-types';
 import { CONFLICT_STATUS, PO_PRICING_CONFLICT_CODE } from '@/config/versioning-config';
 import { POPricingConflictError } from '@/lib/procurement/po-pricing-carry';
+import { PO_NOT_FOUND_MESSAGE } from '@/subapps/procurement/services/procurement-rule-error';
 
 type PoParams = { poId: string };
 
@@ -65,9 +68,11 @@ export const GET = defineRoute<z.ZodTypeAny, PoParams>({
   rateLimit: 'standard',
   // 1-arg getErrorMessage default in the original 500 path — preserved verbatim.
   fallbackError: 'Unknown error',
-  handler: async ({ params }) => {
-    const po = await getPO(params.poId);
-    if (!po) return notFound('Purchase order not found');
+  handler: async ({ auth, params }) => {
+    // ADR-923 Λ5 — ο φράχτης εταιρείας ζει στην υπηρεσία: ξένη παραγγελία = ανύπαρκτη, ίδιο 404 και
+    // ίδιο κείμενο με τις μεταβολές (`PurchaseOrderNotFoundError`) και τα pdf/email/share.
+    const po = await findOwnedPO({ caller: auth, poId: params.poId, action: 'view', intent: 'read' });
+    if (!po) return notFound(PO_NOT_FOUND_MESSAGE);
     return ok(po);
   },
 });
@@ -78,12 +83,14 @@ export const GET = defineRoute<z.ZodTypeAny, PoParams>({
 
 export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
   rateLimit: 'sensitive',
+  fallbackError: 'Failed to update purchase order',
   handler: async ({ req, auth, params }) => {
     const { poId } = params;
     try {
       const url = new URL(req.url);
       const action = url.searchParams.get('action') ?? 'update';
-      const body = await req.json();
+      // Malformed JSON ⇒ `null` ⇒ the per-action schema answers 400; actions without a body never read it.
+      const body: unknown = await req.json().catch(() => null);
 
       switch (action) {
         case 'approve': {
@@ -154,7 +161,8 @@ export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
           total: error.total,
         });
       }
-      httpError(400, getErrorMessage(error));
+      // Expected failures → 400 with their message; the unexpected → generic 500 (ADR-603 §Ασπίδα).
+      rethrowProcurementFailure(error, auth.globalRole, 'Failed to update purchase order');
     }
   },
 });
@@ -165,12 +173,13 @@ export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
 
 export const DELETE = defineRoute<z.ZodTypeAny, PoParams>({
   rateLimit: 'sensitive',
+  fallbackError: 'Failed to delete purchase order',
   handler: async ({ auth, params }) => {
     try {
       await deletePO(auth, params.poId);
       return NextResponse.json({ success: true, message: 'PO deleted' });
     } catch (error) {
-      httpError(400, getErrorMessage(error));
+      rethrowProcurementFailure(error, auth.globalRole, 'Failed to delete purchase order');
     }
   },
 });

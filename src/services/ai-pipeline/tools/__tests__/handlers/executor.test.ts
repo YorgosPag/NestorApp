@@ -12,7 +12,7 @@ import '../setup';
 // → must be mocked BEFORE importing the executor (which loads ProcurementHandler).
 jest.mock('@/services/procurement', () => ({
   createPO: jest.fn(),
-  getPO: jest.fn(),
+  findOwnedPO: jest.fn(),
   listPOs: jest.fn(),
 }));
 

@@ -10,8 +10,8 @@
     "undeclared": 54,
     "prefix-shadowed-by-declaration": 28,
     "declared-over-default": 109,
-    "declared-agrees": 290,
-    "declared-via-factory": 104
+    "declared-agrees": 289,
+    "declared-via-factory": 105
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
@@ -22,7 +22,7 @@
     "STANDARD→HIGH": 1
   },
   "violation_count": 82,
-  "declaration_count": 104,
+  "declaration_count": 105,
   "violations": [
     "prefix-shadowed-by-declaration::HEAVY→SENSITIVE::/api/admin/role-management/audit-log/export",
     "prefix-shadowed-by-declaration::STANDARD→HEAVY::/api/reports/builder",
@@ -195,6 +195,7 @@
     "defineRoute::/api/procurement",
     "defineRoute::/api/procurement/[poId]",
     "defineRoute::/api/procurement/[poId]/email",
+    "defineRoute::/api/procurement/[poId]/pdf",
     "defineRoute::/api/procurement/[poId]/share",
     "defineRoute::/api/procurement/agreements",
     "defineRoute::/api/procurement/agreements/[agreementId]",

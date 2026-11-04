@@ -20,14 +20,10 @@
  * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
-jest.mock('next/server', () => {
-  class MockNextResponse {
-    static json(body: unknown, init?: { status?: number }) {
-      return { status: init?.status ?? 200, json: async () => body };
-    }
-  }
-  return { NextResponse: MockNextResponse, NextRequest: class {} };
-});
+jest.mock('next/server', () =>
+  jest.requireActual<typeof import('@/test-utils/next-response-json-mock')>('@/test-utils/next-response-json-mock')
+    .nextServerJsonMock(),
+);
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({
   withHighRateLimit: <T>(h: T) => h,
@@ -370,12 +366,14 @@ describe('invoices/[id]/send-email — POST', () => {
     expect((await res.json()).error).toBe('Invoice not found');
   });
 
-  it('mailgun failure → 502', async () => {
+  it('mailgun failure → 502 with a GENERIC message; the provider text stays in the log (ADR-603 §Ασπίδα)', async () => {
     repo.getInvoice.mockResolvedValue(fullInvoice());
-    mailgun.result = { success: false, messageId: null, error: 'SMTP down' };
+    mailgun.result = { success: false, messageId: null, error: 'SMTP down: api key key-123 rejected' };
     const res = (await emailPost(req({ recipientEmail: 'c@x.com' }), seg())) as Envelope;
     expect(res.status).toBe(502);
-    expect((await res.json()).error).toBe('SMTP down');
+    const payload = await res.json();
+    expect(payload.error).toBe('Mailgun delivery failed');
+    expect(JSON.stringify(payload)).not.toContain('key-123');
   });
 
   it('success → 200 { data:{ mailgunMessageId, recipientEmail, subject } }', async () => {

@@ -8,6 +8,7 @@
  * @see ADR-267 §4.3 (Status State Machine)
  */
 
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import {
@@ -32,7 +33,6 @@ import { POPricingConflictError, type POCarryInput } from '@/lib/procurement/po-
 import { minorFromMajor } from '@/lib/money/money';
 import {
   createPurchaseOrder,
-  getPurchaseOrder,
   listPurchaseOrders,
   updatePurchaseOrder,
   updatePOStatus,
@@ -44,6 +44,7 @@ import {
   type PriceHistoryEntry,
 } from './procurement-repository';
 import { generatePOItemId } from '@/services/enterprise-id.service';
+import { requireOwnedPO } from './po-tenant-scope';
 import { nowISO, normalizeToMillisOrNull } from '@/lib/date-local';
 
 // ============================================================================
@@ -101,7 +102,7 @@ async function pricePOItems<TItem extends POPricingLine>(
   const pricing = await loadAndPricePurchaseOrder(ctx, input, carry);
   const [invalid] = pricing.invalidLineIndexes;
   if (invalid !== undefined) {
-    throw new Error(`Item ${invalid + 1}: quantity or unitPrice cannot be represented exactly`);
+    throw new ProcurementRuleError(`Item ${invalid + 1}: quantity or unitPrice cannot be represented exactly`);
   }
   return { record: pricedRecord(input.items, pricing), pricing };
 }
@@ -170,7 +171,7 @@ export async function createPO(
   dto: CreatePurchaseOrderDTO
 ): Promise<{ id: string; poNumber: string }> {
   const validationError = validateCreateDTO(dto);
-  if (validationError) throw new Error(validationError);
+  if (validationError) throw new ProcurementRuleError(validationError);
 
   // Phase 5.5 C.2 + ADR-923 «3γ» — συμβάσεις, εκπτώσεις και σύνολα υπολογίζονται εδώ, από τη βάση.
   const { record: priced } = await pricePOItems(ctx, {
@@ -209,9 +210,8 @@ export async function createPO(
 // READ
 // ============================================================================
 
-export async function getPO(poId: string): Promise<PurchaseOrder | null> {
-  return getPurchaseOrder(poId);
-}
+// ⛔ ADR-923 Λ5β — το ωμό `getPO(poId)` (ανάγνωση χωρίς εταιρεία) ΣΒΗΣΤΗΚΕ. Η μία πόρτα ανάγνωσης
+//    μίας PO είναι η `findOwnedPO` / `requireOwnedPO` (`./po-tenant-scope`): ξένη = ανύπαρκτη.
 
 export async function listPOs(
   filters: POListFilters
@@ -228,12 +228,12 @@ export async function updatePO(
   poId: string,
   dto: UpdatePurchaseOrderDTO
 ): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  // ADR-923 Λ5 — ξένη παραγγελία = ανύπαρκτη (404): ο φράχτης εταιρείας ζει στην υπηρεσία.
+  const po = await requireOwnedPO({ caller: ctx, poId, action: 'update', intent: 'write' });
 
   // Only draft/approved POs can be edited
   if (!['draft', 'approved'].includes(po.status)) {
-    throw new Error(`Cannot edit PO in status: ${po.status}`);
+    throw new ProcurementRuleError(`Cannot edit PO in status: ${po.status}`);
   }
 
   const updates: Partial<PurchaseOrder> = {};
@@ -331,11 +331,11 @@ export async function recordPODelivery(
   poId: string,
   dto: RecordDeliveryDTO
 ): Promise<{ newStatus: PurchaseOrderStatus }> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  // ADR-923 Λ5 — ξένη παραγγελία = ανύπαρκτη (404): ο φράχτης εταιρείας ζει στην υπηρεσία.
+  const po = await requireOwnedPO({ caller: ctx, poId, action: 'record-delivery', intent: 'write' });
 
   if (!['ordered', 'partially_delivered'].includes(po.status)) {
-    throw new Error(`Cannot record delivery for PO in status: ${po.status}`);
+    throw new ProcurementRuleError(`Cannot record delivery for PO in status: ${po.status}`);
   }
 
   const result = await recordDelivery(poId, dto);
@@ -373,8 +373,8 @@ export async function deletePO(
   ctx: AuthContext,
   poId: string
 ): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  // ADR-923 Λ5 — ξένη παραγγελία = ανύπαρκτη (404): ο φράχτης εταιρείας ζει στην υπηρεσία.
+  const po = await requireOwnedPO({ caller: ctx, poId, action: 'delete', intent: 'write' });
 
   await softDeletePurchaseOrder(poId);
 
@@ -402,8 +402,8 @@ export async function duplicatePO(
   ctx: AuthContext,
   sourcePoId: string
 ): Promise<{ id: string; poNumber: string }> {
-  const source = await getPurchaseOrder(sourcePoId);
-  if (!source) throw new Error(`Source PO not found: ${sourcePoId}`);
+  // ADR-923 Λ5 — αντιγραφή ξένης παραγγελίας θα διέρρεε γραμμές/τιμές της σε άλλη εταιρεία.
+  const source = await requireOwnedPO({ caller: ctx, poId: sourcePoId, action: 'duplicate', intent: 'write' });
 
   const dto: CreatePurchaseOrderDTO = {
     projectId: source.projectId,

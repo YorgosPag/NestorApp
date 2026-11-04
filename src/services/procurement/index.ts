@@ -6,7 +6,6 @@
 
 export {
   createPO,
-  getPO,
   listPOs,
   updatePO,
   recordPODelivery,
@@ -22,6 +21,8 @@ export {
   closePO,
   cancelPO,
 } from './po-status-service';
+
+export { findOwnedPO } from './po-tenant-scope';
 
 export {
   getNextPONumber,

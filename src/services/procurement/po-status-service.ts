@@ -16,6 +16,7 @@
 
 import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import type {
   PurchaseOrderStatus,
   POCancellationReason,
@@ -24,7 +25,8 @@ import type {
 import { PO_STATUS_TRANSITIONS } from '@/types/procurement';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { notifyPOApproved } from './po-notification-service';
-import { getPurchaseOrder, updatePOStatus } from './procurement-repository';
+import { updatePOStatus } from './procurement-repository';
+import { requireOwnedPO } from './po-tenant-scope';
 
 // ============================================================================
 // SHARED HELPERS (private to status transitions)
@@ -36,7 +38,7 @@ function assertTransition(
 ): void {
   const allowed = PO_STATUS_TRANSITIONS[from];
   if (!allowed.includes(to)) {
-    throw new Error(
+    throw new ProcurementRuleError(
       `Invalid status transition: ${from} → ${to}. Allowed: ${allowed.join(', ')}`,
     );
   }
@@ -61,8 +63,8 @@ export async function approvePO(
   ctx: AuthContext,
   poId: string,
 ): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  // ADR-923 Λ5 — ξένη παραγγελία = ανύπαρκτη (404), ο φράχτης στην υπηρεσία, όχι στο route.
+  const po = await requireOwnedPO({ caller: ctx, poId, action: 'approve', intent: 'write' });
 
   assertTransition(po.status, 'approved');
 
@@ -92,8 +94,8 @@ export async function markOrdered(
   ctx: AuthContext,
   poId: string,
 ): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  // ADR-923 Λ5 — ξένη παραγγελία = ανύπαρκτη (404), ο φράχτης στην υπηρεσία, όχι στο route.
+  const po = await requireOwnedPO({ caller: ctx, poId, action: 'order', intent: 'write' });
 
   assertTransition(po.status, 'ordered');
 
@@ -126,8 +128,8 @@ export async function closePO(
   ctx: AuthContext,
   poId: string,
 ): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  // ADR-923 Λ5 — ξένη παραγγελία = ανύπαρκτη (404), ο φράχτης στην υπηρεσία, όχι στο route.
+  const po = await requireOwnedPO({ caller: ctx, poId, action: 'close', intent: 'write' });
 
   assertTransition(po.status, 'closed');
 
@@ -161,8 +163,8 @@ export async function cancelPO(
   reason: POCancellationReason,
   comment?: string,
 ): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
+  // ADR-923 Λ5 — ξένη παραγγελία = ανύπαρκτη (404), ο φράχτης στην υπηρεσία, όχι στο route.
+  const po = await requireOwnedPO({ caller: ctx, poId, action: 'cancel', intent: 'write' });
 
   assertTransition(po.status, 'cancelled');
 

@@ -16,14 +16,10 @@
  * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
-jest.mock('next/server', () => {
-  class MockNextResponse {
-    static json(body: unknown, init?: { status?: number }) {
-      return { status: init?.status ?? 200, json: async () => body };
-    }
-  }
-  return { NextResponse: MockNextResponse, NextRequest: class {} };
-});
+jest.mock('next/server', () =>
+  jest.requireActual<typeof import('@/test-utils/next-response-json-mock')>('@/test-utils/next-response-json-mock')
+    .nextServerJsonMock(),
+);
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({
   withHighRateLimit: <T>(h: T) => h,
@@ -152,12 +148,18 @@ jest.mock('@/subapps/accounting/services/create-accounting-services', () => ({
 
 // ---- [poId]/email ----------------------------------------------------------
 var emailSvc = {
-  getPO: jest.fn(async () => ({ companyId: 'comp_1', supplierId: null, poNumber: 'PO-1' })),
+  getPurchaseOrder: jest.fn(async () => ({ companyId: 'comp_1', supplierId: null, poNumber: 'PO-1' })),
   sendPurchaseOrderEmail: jest.fn(async () => ({ success: true, messageId: 'msg_1' })),
   resolveContactDepartmentEmail: jest.fn(async () => null),
 };
+// ADR-923 Λ5 — the REAL tenant fence (service layer) over a mocked repository read.
+jest.mock('@/services/procurement/procurement-repository', () => ({
+  getPurchaseOrder: (...a: unknown[]) => emailSvc.getPurchaseOrder(...a),
+}));
 jest.mock('@/services/procurement', () => ({
-  getPO: (...a: unknown[]) => emailSvc.getPO(...a),
+  findOwnedPO: jest.requireActual<typeof import('@/services/procurement/po-tenant-scope')>(
+    '@/services/procurement/po-tenant-scope',
+  ).findOwnedPO,
 }));
 jest.mock('@/services/procurement/po-email-service', () => ({
   sendPurchaseOrderEmail: (...a: unknown[]) => emailSvc.sendPurchaseOrderEmail(...a),
@@ -207,7 +209,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   permSvc.canViewSpendAnalytics.mockReturnValue(true);
   fsDoc.get.mockResolvedValue({ exists: true, data: () => ({ extractedData: { x: 1 } }) });
-  emailSvc.getPO.mockResolvedValue({ companyId: 'comp_1', supplierId: null, poNumber: 'PO-1' });
+  emailSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'comp_1', supplierId: null, poNumber: 'PO-1' });
   emailSvc.sendPurchaseOrderEmail.mockResolvedValue({ success: true, messageId: 'msg_1' });
   emailSvc.resolveContactDepartmentEmail.mockResolvedValue(null);
   partiesSvc.resolvePODocumentParties.mockResolvedValue(PARTIES_OK);
@@ -351,10 +353,40 @@ describe('[poId]/email — POST', () => {
   });
 
   it('PO not found → 404 PO not found', async () => {
-    emailSvc.getPO.mockResolvedValue(null);
+    emailSvc.getPurchaseOrder.mockResolvedValue(null);
     const res = (await emailPost(req(`${BASE}/po_1/email`, validBody), seg)) as Envelope;
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe('PO not found');
+  });
+
+  it('super_admin + foreign PO → 404, nothing sent, no audit row (email is a side effect ⇒ write intent, Λ5β Μ1)', async () => {
+    const previousRole = authCtx.globalRole;
+    authCtx.globalRole = 'super_admin';
+    try {
+      emailSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'other_co', supplierId: null, poNumber: 'PO-1' });
+      const res = (await emailPost(req(`${BASE}/po_1/email`, validBody), seg)) as Envelope;
+      expect(res.status).toBe(404);
+      expect(emailSvc.sendPurchaseOrderEmail).not.toHaveBeenCalled();
+      const { EntityAuditService } = jest.requireMock<typeof import('@/services/entity-audit.service')>('@/services/entity-audit.service');
+      expect(EntityAuditService.recordChange).not.toHaveBeenCalled();
+    } finally {
+      authCtx.globalRole = previousRole;
+    }
+  });
+
+  it('soft-deleted own PO → 404, nothing sent (Λ5β Μ6: deleted = missing)', async () => {
+    emailSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'comp_1', supplierId: null, poNumber: 'PO-1', isDeleted: true });
+    const res = (await emailPost(req(`${BASE}/po_1/email`, validBody), seg)) as Envelope;
+    expect(res.status).toBe(404);
+    expect(emailSvc.sendPurchaseOrderEmail).not.toHaveBeenCalled();
+  });
+
+  it('foreign PO → 404 PO not found, nothing sent (ADR-923 Λ5: identical to a missing one)', async () => {
+    emailSvc.getPurchaseOrder.mockResolvedValue({ companyId: 'other_co', supplierId: null, poNumber: 'PO-1' });
+    const res = (await emailPost(req(`${BASE}/po_1/email`, validBody), seg)) as Envelope;
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('PO not found');
+    expect(emailSvc.sendPurchaseOrderEmail).not.toHaveBeenCalled();
   });
 
   it('supplier contact unresolvable → 422, nothing sent (no invented party)', async () => {
@@ -374,10 +406,10 @@ describe('[poId]/email — POST', () => {
     }));
   });
 
-  it('send failure → 500 with service error', async () => {
-    emailSvc.sendPurchaseOrderEmail.mockResolvedValue({ success: false, error: 'smtp down' });
+  it('send failure → 500 generic; the provider error stays in the log (ADR-603 §Ασπίδα)', async () => {
+    emailSvc.sendPurchaseOrderEmail.mockResolvedValue({ success: false, error: 'smtp down: MAILGUN_API_KEY missing' });
     const res = (await emailPost(req(`${BASE}/po_1/email`, validBody), seg)) as Envelope;
     expect(res.status).toBe(500);
-    expect((await res.json()).error).toBe('smtp down');
+    expect(JSON.stringify(await res.json())).not.toContain('MAILGUN');
   });
 });

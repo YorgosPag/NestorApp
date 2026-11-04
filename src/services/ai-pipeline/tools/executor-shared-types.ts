@@ -121,7 +121,10 @@ export const ALLOWED_WRITE_COLLECTIONS = new Set([
   COLLECTIONS.CONSTRUCTION_PHASES,
   COLLECTIONS.CONSTRUCTION_TASKS,
   COLLECTIONS.FILES,
-  COLLECTIONS.PURCHASE_ORDERS,
+  // ⛔ ADR-923 Λ5β Μ2 — ΟΧΙ `PURCHASE_ORDERS`. Η γενική εγγραφή παρέκαμπτε τον φράχτη εταιρείας
+  //    (`findOwnedPO`), τη μηχανή καταστάσεων, τα ίχνη και την τιμολόγηση, και ξανάγραφε το `companyId`
+  //    ξένης PO (`update` με documentId). Οι PO γράφονται ΜΟΝΟ από τις υπηρεσίες τους
+  //    (`create_purchase_order` → `createPO`) — ίδιο σχήμα με FINDING-006/007.
 ]);
 
 export const SENSITIVE_FIELDS = new Set([

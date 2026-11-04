@@ -116,6 +116,15 @@ export function asApiError(error: unknown): ApiError | null {
   return null;
 }
 
+/**
+ * Ο **σταθερός** κωδικός της απρόβλεπτης βλάβης (500) — ο πελάτης μπορεί να τον αναγνωρίσει (μετάφραση: δεν υπάρχει ακόμη)· το μήνυμα δεν λέει τίποτα
+ * εσωτερικό (OWASP ASVS 4.0.3 V7.4.1). Κοινός για `defineRoute` και `ApiErrorHandler` — ίδια βλάβη, ίδιος κωδικός.
+ */
+export const INTERNAL_ERROR_CODE = 'INTERNAL_SERVER_ERROR';
+
+/** Η κεφαλίδα του αναγνωριστικού αιτήματος — μία για `defineRoute` και `ApiErrorHandler` (ADR-603 §Ασπίδα). */
+export const REQUEST_ID_HEADER = 'X-Request-ID';
+
 // ============================================================================
 // ERROR MAPPING RULE TYPE
 // ============================================================================

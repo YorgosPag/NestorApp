@@ -9,11 +9,12 @@
 
 import 'server-only';
 
-import { defineRoute, ok, created, httpError } from '@/lib/api/define-route';
+import { defineRoute, ok, created } from '@/lib/api/define-route';
 import { createPO, listPOs } from '@/services/procurement';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { safeJsonBody } from '@/lib/validation/shared-schemas';
+import { rethrowProcurementFailure } from './_shared/procurement-error-outcome';
 import type { PurchaseOrderStatus, POVatRate } from '@/types/procurement';
 import { CreatePOSchema } from './_shared/po-schema';
 
@@ -52,7 +53,7 @@ export const POST = defineRoute({
   fallbackError: 'Failed to create purchase order',
   handler: async ({ req, auth }) => {
     try {
-      const parsed = safeParseBody(CreatePOSchema, await req.json());
+      const parsed = await safeJsonBody(CreatePOSchema, req);
       if (parsed.error) return parsed.error;
 
       const result = await createPO(auth, {
@@ -68,10 +69,9 @@ export const POST = defineRoute({
 
       return created(result);
     } catch (error) {
-      // Original contract: ALL create failures → 400 (not the create-mode 500).
-      const message = getErrorMessage(error, 'Failed to create purchase order');
-      logger.error('PO create error', { error: message });
-      httpError(400, message);
+      // Expected failures → 400 with their message; the unexpected → generic 500 + requestId (ADR-603 §Ασπίδα).
+      logger.error('PO create error', { error: getErrorMessage(error, 'Failed to create purchase order') });
+      rethrowProcurementFailure(error, auth.globalRole, 'Failed to create purchase order');
     }
   },
 });

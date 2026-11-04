@@ -154,21 +154,53 @@ export async function validatePOShare(
   }
 }
 
-export async function revokePOShare(shareId: string): Promise<boolean> {
+/** Η απάντηση όταν ο σύνδεσμος λείπει **ή** ανήκει σε άλλη παραγγελία — αδιάκριτα (ADR-742 §7.1). */
+export const PO_SHARE_NOT_FOUND_MESSAGE = 'Share link not found';
+
+interface RevokePOShareQuery {
+  readonly shareId: string;
+  /**
+   * Η παραγγελία της διαδρομής, **ήδη περασμένη από τον φράχτη** (`findOwnedPO`). Αυτή είναι η
+   * μόνη απόδειξη δικαιώματος που χρειάζεται: ο σύνδεσμος ανήκει σε όποιον ανήκει η PO του.
+   */
+  readonly poId: string;
+}
+
+type RevokePOShareOutcome = 'revoked' | 'not_found' | 'failed';
+
+/**
+ * Ανακαλεί σύνδεσμο **μόνο** αν δείχνει στη συγκεκριμένη (ήδη ελεγμένη) παραγγελία.
+ *
+ * ADR-923 κύμα 3 Λ5 — πριν, η ανάκληση έπαιρνε σκέτο `shareId` και έγραφε χωρίς να ρωτήσει τίποτα:
+ * οποιοσδήποτε συνδεδεμένος έσβηνε σύνδεσμο ξένης εταιρείας. Σύνδεσμος άλλης PO ή ανύπαρκτος ⇒ `'not_found'`.
+ *
+ * 🔑 Λ5β — η σύγκριση είναι με το `poId` του συνδέσμου, **όχι** με το `companyId` που γράφτηκε πάνω του.
+ * Ο κάτοχος ενός συνδέσμου είναι ο κάτοχος της PO (GitHub: τα deploy keys ενός repo τα ανακαλεί ο
+ * κάτοχος του repo, όποιος κι αν τα έφτιαξε). Το `companyId` του συνδέσμου ήταν η εταιρεία του
+ * **δημιουργού** — ένας παλιός σύνδεσμος που έφτιαξε ο υπερδιαχειριστής για ξένη PO έγραφε τη
+ * δική του εταιρεία, και ο πραγματικός κάτοχος δεν θα μπορούσε ποτέ να τον ανακαλέσει.
+ */
+export async function revokePOShare(query: RevokePOShareQuery): Promise<RevokePOShareOutcome> {
+  const { shareId, poId } = query;
   try {
     const db = getAdminFirestore();
-    await db
-      .collection(COLLECTIONS.PO_SHARES)
-      .doc(shareId)
-      .update({ isActive: false });
+    const ref = db.collection(COLLECTIONS.PO_SHARES).doc(shareId);
+    const snap = await ref.get();
+    const share = snap.exists ? (snap.data() as Partial<POShareRecord>) : null;
+    if (!share || poId === '' || share.poId !== poId) {
+      logger.warn('PO share revoke refused — missing share or share of another PO', { shareId, poId });
+      return 'not_found';
+    }
+
+    await ref.update({ isActive: false });
 
     logger.info('PO share revoked', { shareId });
-    return true;
+    return 'revoked';
   } catch (err) {
     logger.error('PO share revoke failed', {
       shareId,
       error: getErrorMessage(err),
     });
-    return false;
+    return 'failed';
   }
 }

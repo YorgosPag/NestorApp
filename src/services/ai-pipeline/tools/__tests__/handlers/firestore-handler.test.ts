@@ -387,6 +387,28 @@ describe('FirestoreHandler', () => {
     });
 
     /**
+     * ADR-923 Λ5β Μ2: firestore_write must BLOCK purchase orders — create AND update. The generic write
+     * bypassed the company fence, the status machine and the audit trail, and rewrote `companyId`.
+     */
+    test.each(['create', 'update'])('should block %s of purchase_orders — POs are written only by their services', async (mode) => {
+      const ctx = createAdminContext();
+      mockDb.seedCollection('purchase_orders', {
+        po_foreign: { companyId: 'other-company', status: 'draft', total: 100 },
+      });
+
+      const result = await handler.execute('firestore_write', {
+        collection: 'purchase_orders',
+        ...(mode === 'update' ? { documentId: 'po_foreign' } : {}),
+        mode,
+        data: { status: 'approved', total: 1 },
+      }, ctx);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('not allowed');
+      expect(mockDb.getData('purchase_orders', 'po_foreign')).toMatchObject({ companyId: 'other-company', status: 'draft', total: 100 });
+    });
+
+    /**
      * FINDING-006 REGRESSION: firestore_write must BLOCK writes to contact_links.
      * contact_links was removed from ALLOWED_WRITE_COLLECTIONS.
      * Relationships require a dedicated tool with validation.
