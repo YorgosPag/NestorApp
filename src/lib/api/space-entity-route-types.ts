@@ -16,6 +16,8 @@ import type { z } from 'zod';
 import type { AuthContext } from '@/lib/auth';
 import type { Logger } from '@/lib/telemetry';
 import type { SpaceDisplayField } from '@/lib/api/space-entity-fields';
+import type { SpaceEntityKind } from '@/lib/spaces/space-entity-kinds';
+import type { Firestore } from 'firebase-admin/firestore';
 
 /** Mutation envelope returned by PATCH/DELETE — `_v` is the post-write version. */
 export interface SpaceMutationResult {
@@ -56,11 +58,27 @@ export interface SpaceEntityMessages {
   auditDeleteReason: string;
 }
 
+/** Ό,τι παίρνει το `resolveAsyncFields`: η βάση, ο καλών, το σώμα και το αποθηκευμένο έγγραφο. */
+export interface SpaceAsyncFieldsScope<TBody> {
+  readonly adminDb: Firestore;
+  readonly ctx: AuthContext;
+  readonly body: TBody;
+  readonly existing: Readonly<Record<string, unknown>>;
+}
+
 export interface SpaceEntityRouteConfig<TBody extends Record<string, unknown>> {
   /** Firestore collection id, e.g. `COLLECTIONS.PARKING_SPACES`. */
   collection: string;
-  /** Soft-delete kind AND `linkEntity` key prefix — `'parking'` / `'storage'`. */
-  entityKind: 'parking' | 'storage';
+  /**
+   * Rate-limit tier, stated in the route file so review sees it (CHECK 3.78 / ADR-855).
+   * The type admits only the tier the factory enforces — a false declaration does not compile.
+   */
+  readonly category?: 'STANDARD';
+  /**
+   * Soft-delete kind AND `linkEntity` key prefix — `'parking'` / `'storage'` / `'common_space'`.
+   * Τι επιτρέπεται ανά είδος το λέει ο **ένας** πίνακας `SPACE_ENTITY_CAPABILITIES` (ADR-931).
+   */
+  entityKind: SpaceEntityKind;
   /** Route path used in tenant-isolation + linkEntity audit trails. */
   apiPath: string;
   /** Per-route module logger (keeps log source attribution intact). */
@@ -83,5 +101,10 @@ export interface SpaceEntityRouteConfig<TBody extends Record<string, unknown>> {
    * (parking: `locationZone` / `projectId`; storage: `floorId`).
    */
   mapExtraFields: (body: TBody) => Record<string, unknown>;
+  /**
+   * ADR-931 — πεδία που χρειάζονται **βάση** για να κριθούν (π.χ. ιδιοκτησίες αποκλειστικής χρήσης
+   * κοινόχρηστου στο ίδιο κτίριο). Τρέχει **πριν** τη γραφή· άρνηση = `ApiError`. Απόν ⇒ τίποτα.
+   */
+  resolveAsyncFields?: (scope: SpaceAsyncFieldsScope<TBody>) => Promise<Record<string, unknown>>;
   messages: SpaceEntityMessages;
 }

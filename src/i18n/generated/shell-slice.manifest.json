@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "40df29c6210064a40a701497085896e728da272b1f04f1994a295b767703a7e4",
+    "src/i18n/generated/lazy-route-namespaces.json": "93289fdc8f90aab9d3170cb51afc69659c1dc0f8504c26932778a23f0b6cda47",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -114,7 +114,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "76515967aa68c5292f9254bcce3af377005ecdce9f0f4cea1002e2e57feb2cfe",
+    "src/i18n/generated/shell-slice.el.json": "d6209ab044de965674ecbdb3848a7988182596e9e2e4c900fc8fcb7332c181ef",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -140,7 +140,7 @@
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
       "registries": "20e5beb1f624f9d3204adc728a5bbf02c22172531ca9f47d49f0c3e712dcbb33",
-      "supportedNamespaces": "fa89a7818c04598eb7b5fad08c27169ee7062ae2ebf727798f7dac54fa8fd65e"
+      "supportedNamespaces": "c71390b60b94884f8fb2f0b12566e44adecace1ad2819f6884a6cbe7a6a980df"
     },
     "namespaceBundles": {
       "AUDIT_TIMELINE_NAMESPACES": "18e38e5883fc36d385a27c7604dbf4144948e21b9761bdbee3c1dd700b95eb67",
@@ -200,7 +200,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d5c5f272b37c45e4df42b906ee81652d073b52aacb71512e59538dbe0340ec0e",
+  "inputsSha256": "5c5aea937157bb470605af21f12c313c2dce345a91e00c405592288f2a349249",
   "languages": [
     "el"
   ],
@@ -37975,7 +37975,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1263487
+    "sliceBytes": 1260408
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

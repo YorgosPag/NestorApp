@@ -107,6 +107,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'floors': return () => import('./locales/el/floors.json');
     case 'uom': return () => import('./locales/el/uom.json');
     case 'storage': return () => import('./locales/el/storage.json');
+    case 'common-spaces': return () => import('./locales/el/common-spaces.json');
     case 'parking': return () => import('./locales/el/parking.json');
     case 'admin': return () => import('./locales/el/admin.json');
     case 'tool-hints': return () => import('./locales/el/tool-hints.json');
@@ -249,6 +250,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'floors': return () => import('./locales/en/floors.json');
     case 'uom': return () => import('./locales/en/uom.json');
     case 'storage': return () => import('./locales/en/storage.json');
+    case 'common-spaces': return () => import('./locales/en/common-spaces.json');
     case 'parking': return () => import('./locales/en/parking.json');
     case 'admin': return () => import('./locales/en/admin.json');
     case 'tool-hints': return () => import('./locales/en/tool-hints.json');

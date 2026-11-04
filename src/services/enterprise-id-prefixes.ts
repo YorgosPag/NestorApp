@@ -17,6 +17,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   BUILDING: 'bldg',
   PROPERTY: 'prop',
   STORAGE: 'stor',
+  /** ADR-931 — κοινόχρηστος χώρος κτιρίου (`common_spaces`). */
+  COMMON_SPACE: 'cspc',
   PARKING: 'park',
   CONTACT: 'cont',
   WORKSPACE: 'ws',

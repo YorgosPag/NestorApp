@@ -24,6 +24,7 @@ import { GeneralTabContent } from '@/components/building-management/tabs/General
 import TimelineTabContent from '@/components/building-management/tabs/TimelineTabContent';
 import AnalyticsTabContent from '@/components/building-management/tabs/AnalyticsTabContent';
 import { StorageTab } from '@/components/building-management/StorageTab';
+import { CommonSpacesTab } from '@/components/building-management/CommonSpacesTab';
 import { BuildingCustomersTab } from '@/components/building-management/tabs/BuildingCustomersTab';
 import { BuildingContactsTab } from '@/components/building-management/tabs/BuildingContactsTab';
 import { BuildingLocationsTab } from '@/components/building-management/tabs/BuildingLocationsTab';
@@ -175,6 +176,12 @@ function PlaceholderTabAdapter(props: BuildingTabComponentProps) {
   return React.createElement(PlaceholderTab, componentProps);
 }
 
+/** ADR-931 — κοινόχρηστοι χώροι κτιρίου. */
+function CommonSpacesTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  return building ? React.createElement(CommonSpacesTab, { building }) : null;
+}
+
 function StorageTabAdapter(props: BuildingTabComponentProps) {
   const building = resolveNormalizedBuilding(props);
   if (!building) {
@@ -275,6 +282,7 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<BuildingTa
   PlaceholderTab: PlaceholderTabAdapter,
   FloorplanViewerTab: BuildingFloorplanTabAdapter,
   StorageTab: StorageTabAdapter,
+  CommonSpacesTab: CommonSpacesTabAdapter,
   BuildingCustomersTab: BuildingCustomersTabAdapter,
   BuildingContactsTab: BuildingContactsTabAdapter,
   BuildingLocationsTab: BuildingLocationsTabAdapter,

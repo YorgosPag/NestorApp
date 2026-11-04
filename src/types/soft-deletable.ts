@@ -43,7 +43,8 @@ export type SoftDeletableEntityType =
   | "building"
   | "project"
   | "parking"
-  | "storage";
+  | "storage"
+  | "common_space";
 
 /**
  * Ό,τι έκανε μια επαναφορά **πέρα** από την αλλαγή κατάστασης, με όνομα που καταλαβαίνει

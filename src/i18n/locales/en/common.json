@@ -543,73 +543,13 @@
       },
       "common": {
         "title": "Common Spaces",
-        "description": "Common areas, hallways, services",
-        "details": "Shared and service areas"
+        "description": "Stairwells, pilotis, technical spaces, amenities",
+        "details": "Each building's common parts"
       }
     },
     "info": {
       "title": "Physical Spaces",
       "description": "Here you see all physical spaces in the buildings. Sales information is not included - only the physical layout and location."
-    },
-    "commonSpaces": {
-      "title": "Common Spaces Overview",
-      "subtitle": "Shared areas - Building common areas",
-      "headerTitle": "Common Spaces",
-      "headerSubtitle": "Common areas - Shared physical spaces",
-      "stats": {
-        "commonSpaces": "Common Spaces",
-        "allCommonSpaces": "All common spaces",
-        "recreationSpaces": "Recreation Spaces",
-        "recreationDesc": "Common areas, kitchenettes",
-        "serviceSpaces": "Service Spaces",
-        "serviceDesc": "Technical, management",
-        "outdoorSpaces": "Outdoor Spaces",
-        "outdoorDesc": "Gardens, yards, terraces",
-        "stable": "Stable"
-      },
-      "cards": {
-        "lounges": {
-          "title": "Lounges & Kitchenettes",
-          "description": "Meeting and recreation spaces",
-          "details": "Common lounges, kitchenettes, sitting areas"
-        },
-        "gyms": {
-          "title": "Gyms & Spa",
-          "description": "Fitness and wellness spaces",
-          "details": "Gyms, saunas, spa"
-        },
-        "technical": {
-          "title": "Technical Spaces",
-          "description": "Mechanical equipment spaces",
-          "details": "Boiler rooms, mechanical"
-        },
-        "outdoor": {
-          "title": "Outdoor Spaces",
-          "description": "Gardens, yards, terraces",
-          "details": "Shared outdoor spaces"
-        }
-      },
-      "sections": {
-        "indoor": {
-          "title": "Indoor Common Areas",
-          "commonLounges": "Common lounges",
-          "businessCenters": "Business centers",
-          "gyms": "Gyms",
-          "commonRooms": "Common rooms"
-        },
-        "outdoorTechnical": {
-          "title": "Outdoor & Technical",
-          "sharedGardens": "Shared gardens",
-          "terraces": "Terraces - yards",
-          "boilerRooms": "Boiler rooms",
-          "mechanical": "Mechanical"
-        },
-        "spaces": "{count} spaces"
-      },
-      "info": {
-        "title": "Common Spaces",
-        "description": "Here you see all common spaces in the buildings. Includes lounges, technical spaces, gardens and other shared areas."
-      }
     }
   },
   "progress": {
@@ -924,7 +864,8 @@
       "imported-mesh": "Imported 3D mesh",
       "generic-solid": "Solid",
       "bim_dimension_3d": "3D dimension",
-      "opportunity": "Opportunity"
+      "opportunity": "Opportunity",
+      "common_space": "Common space"
     },
     "values": {
       "active": "Active",

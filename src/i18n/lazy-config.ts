@@ -93,6 +93,7 @@ export const SUPPORTED_NAMESPACES = [
   'telegram',  // Telegram bot templates - PR1 centralization
   'files',     // File storage display names (ADR-031)
   'storage',   // 🏢 Storage management module
+  'common-spaces', // 🏛️ Κοινόχρηστοι χώροι κτιρίου — σελίδα + καρτέλα κτιρίου + λεξιλόγιο (ADR-931)
   'parking',   // 🏢 Parking management module - added 2026-01-24
   'admin',     // 🏢 Admin tools (units, claims repair)
   'tool-hints', // 🏢 DXF Viewer: Step-by-step tool hints (ADR-082)
@@ -404,6 +405,7 @@ export const CRITICAL_NAMESPACES: readonly Namespace[] = [
   'properties-viewer',
   'storage',
   'parking',
+  'common-spaces',      // ⬅️ ADR-931: καρτέλα «Κοινόχρηστοι» του κτιρίου (χωρίς αλλαγή διαδρομής)
   'addresses',          // ⬅️ 2026-07-25: address cards/editor embedded in contacts, projects, buildings, POs
 
   // DXF viewer + BIM

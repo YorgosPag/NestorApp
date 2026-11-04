@@ -742,6 +742,8 @@ export const COLLECTIONS = {
   INVENTORY: process.env.NEXT_PUBLIC_INVENTORY_COLLECTION || 'inventory',
   ASSETS: process.env.NEXT_PUBLIC_ASSETS_COLLECTION || 'assets',
   STORAGE: process.env.NEXT_PUBLIC_STORAGE_COLLECTION || 'storage_units',
+  /** ADR-931 — κοινόχρηστοι χώροι κτιρίου (κλιμακοστάσιο, πυλωτή, λεβητοστάσιο…). Γραφή μόνο Admin SDK. */
+  COMMON_SPACES: process.env.NEXT_PUBLIC_COMMON_SPACES_COLLECTION || 'common_spaces',
 
   // 💰 FINANCIAL
   INVOICES: process.env.NEXT_PUBLIC_INVOICES_COLLECTION || 'invoices',

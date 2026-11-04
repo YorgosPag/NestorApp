@@ -21,9 +21,12 @@ import { mapCommonSpaceFields, type SpaceDisplayField } from '@/lib/api/space-en
 import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
 import { diffTrackedFields } from '@/lib/audit/audit-diff';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
+import { isTransferableSpaceKind, type SpaceEntityKind } from '@/lib/spaces/space-entity-kinds';
 
 /** Ό,τι χρειάζεται η σύνθεση από τη ρύθμιση της διαδρομής. */
 export interface SpaceWriteConfig<TBody> {
+  /** ADR-931 — μη μεταβιβάσιμο είδος (κοινόχρηστος) ⇒ **κανένα** εμπορικό πεδίο δεν γράφεται. */
+  readonly entityKind: SpaceEntityKind;
   readonly displayField: SpaceDisplayField;
   readonly mapExtraFields: (body: TBody) => Record<string, unknown>;
 }
@@ -39,7 +42,10 @@ export function planSpaceWrite<TBody extends Record<string, unknown>>(
   body: TBody,
   existing: Readonly<Record<string, unknown>>,
 ): SpaceWritePlan {
-  const commercial = mapSpaceCommercialFields(body, existing);
+  // ADR-931 — ζώνη και τιράντες: το zod του κοινόχρηστου ήδη αρνείται τα εμπορικά (400)· αν περάσουν, δεν γράφονται.
+  const commercial = isTransferableSpaceKind(cfg.entityKind)
+    ? mapSpaceCommercialFields(body, existing)
+    : ({ kind: 'none' } as const);
   if (commercial.kind === 'rejected') {
     return {
       kind: 'rejected',
@@ -67,13 +73,13 @@ export interface SpaceAuditEntry {
 }
 
 /**
- * Η διαφορά **πριν → μετά** από το μητρώο της οντότητας (`parking` · `storage`).
+ * Η διαφορά **πριν → μετά** από το μητρώο της οντότητας (`parking` · `storage` · `common_space`).
  *
  * ⚠️ Το `buildingId` **εξαιρείται**: το καταγράφει ήδη το `linkEntity` (ADR-239) — δύο γραμμές
  * για μία πράξη θα ήταν διπλομέτρηση. 🔑 Ιδεμπότητα: καμία αλλαγή ⇒ `null`, καμία γραμμή.
  */
 export function spaceAuditEntry(
-  entityKind: 'parking' | 'storage',
+  entityKind: SpaceEntityKind,
   existing: Readonly<Record<string, unknown>>,
   updateData: Readonly<Record<string, unknown>>,
 ): SpaceAuditEntry | null {

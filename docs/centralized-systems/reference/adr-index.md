@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 878 ADRs | Last Updated: 2026-11-04
+**📊 Stats**: 879 ADRs | Last Updated: 2026-11-04
 
 ---
 
@@ -913,6 +913,7 @@
 | **ADR-928** | Προσφορά / Ιδιωτικό Συμφωνητικό Υπεργολαβίας: δομημένοι όροι, αμετάβλητες εκδόσεις, έγγραφο έτοιμο για υπογραφή | ✅ 🚧 IN PROGRESS — Φ0 ✅ · Φ1 ✅ · Φ2 ✅ (στο `main`, 2026-11-03) · Φ3α-1 ρόλος έργου ✅ · Φ3α-2 λίστα ✅ (`main`) · Φ3β μοντέλο εγγράφου + προεπισκόπηση ✅ · Φ3γ-1 επεξεργαστής (Νέο, φόρμα | 2026-11-03 | Procurement / Subcontracting | [📄](./adrs/ADR-928-subcontract-offer-agreement.md) |
 | **ADR-929** | Αναγνώριση κάτοψης από εικόνα: σκίτσο, φωτογραφία, σάρωση ή PDF → προτάσεις τοίχων, ανοιγμάτων και χώρων με έγκριση ανθρώπου | ✅ 🚧 IN PROGRESS — **Φ0 (2026-11-04)**: τύποι, SSoT px ↔ σκηνή, πρόθεμα `plrd`, χρυσό σύνολο εκτός repo (§6.1) · **Φ1 (2026-11-04)**: ευθυγράμμιση σε Web Worker (κλίση, flat-field, δύο δυαδοποιήσεις, προοπτική 4 σημείων, πλαίσιο + πινακίδα), **δικός μας κώδικας** μετά από μέτρηση έναντι opencv.js (§6.2, κλείνει το §9.3) · **Φ2 (2026-11-04)**: ζώνες αξόνων + λοξό πέρασμα (επιλογή με μέτρηση έναντι LSD/Hough), `parallelPairStrategy` στο ADR-911 · **Φ2β (2026-11-04)**: άκρα πινελιάς (`strokeExtent` + μέση γραμμή της κάθετης), **24/24 ≤ 1 px** (μέγιστο 0,78 px), §6.3 #6 κλειστό · τμήματα στο **ίδιο** RPC του Worker (§6.3 #8) · **Φ3 (2026-11-04)**: θύρα `PlanReader`, προσαρμογέας OpenAI, `POST /api/floorplan-backgrounds/[id]/plan-reading` με μία-πτήση, κρυφή μνήμη, απόδειξη αποστολής και όριο κόστους (§6.4) · ⏳ μοντέλο προσωρινά `gpt-6.1-terra` (μένει η μέτρηση της σάρωσης άδειας), διακόπτης ανά εταιρεία ανοιχτός · επόμενο: Φ4 | 2026-11-04 | DXF Viewer / BIM / AI | [📄](./adrs/ADR-929-raster-plan-recognition.md) |
 | **ADR-930** | Ροή πωλήσεων CRM: αλλαγή σταδίου με σύρσιμο, ΕΝΑΣ γραφέας σταδίου | ✅ ✅ IMPLEMENTED — Φ1 θεμέλιο server · Φ2 `KanbanBoard` · Φ3 οθόνη · Φ4 κλείδωμα + CHECK 3.114 (κλαδί `agent/crm-pipeline-dnd`, 2026-11-04) | 2026-11-04 | CRM / Sales Pipeline | [📄](./adrs/ADR-930-crm-pipeline-stage-drag-drop.md) |
+| **ADR-931** | Κοινόχρηστοι χώροι κτιρίου — από mock σε πραγματική οντότητα | ✅ ✅ IMPLEMENTED — Στάδιο Α (2026-11-04) · ⏳ Στάδιο Β (σχεδιασμένο, §6) | 2026-11-04 | Entity Systems / Data & State | [📄](./adrs/ADR-931-common-spaces-entity.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

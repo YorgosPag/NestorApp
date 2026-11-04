@@ -26,6 +26,7 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
+import { useFirestoreCommonSpaces } from '@/hooks/useFirestoreCommonSpaces';
 import '@/lib/design-system';
 
 export function SpacesHubPageContent() {
@@ -37,13 +38,16 @@ export function SpacesHubPageContent() {
   const { properties, isLoading: propertiesLoading } = useSharedProperties();
   const { storages, loading: storagesLoading } = useFirestoreStorages();
   const { parkingSpots, loading: parkingLoading } = useFirestoreParkingSpots();
+  const { commonSpaces, loading: commonLoading } = useFirestoreCommonSpaces();
 
-  const isLoading = propertiesLoading || storagesLoading || parkingLoading;
+  const isLoading = propertiesLoading || storagesLoading || parkingLoading || commonLoading;
 
   const propertiesCount = properties.length;
   const storagesCount = storages.length;
   const parkingCount = parkingSpots.length;
-  const totalCount = propertiesCount + storagesCount + parkingCount;
+  // ADR-931 — η κάρτα «Κοινόχρηστοι» έγραφε σταθερό `0`· τώρα μετρά τη συλλογή `common_spaces`.
+  const commonCount = commonSpaces.length;
+  const totalCount = propertiesCount + storagesCount + parkingCount + commonCount;
 
   const fmt = (n: number) => isLoading ? '…' : n.toLocaleString('el-GR');
 
@@ -165,7 +169,7 @@ export function SpacesHubPageContent() {
                 <p className={`text-sm ${colors.text.muted} mb-2`}>
                   {t('spaces.cards.common.description')}
                 </p>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">{fmt(commonCount)}</div>
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.common.details')}
                 </p>

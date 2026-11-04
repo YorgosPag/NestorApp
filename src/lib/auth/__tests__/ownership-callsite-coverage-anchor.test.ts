@@ -193,6 +193,10 @@ const OUTSIDE_PHASE_C_PERIMETER: readonly string[] = [
   'app/api/storages/route.ts',
   'lib/auth/resource-ownership-guard.ts',
   'lib/auth/tenant-isolation.ts',
+  // ADR-931 — ο πυρήνας `requireDocInTenant` μετακόμισε εδώ από το `tenant-isolation.ts` (ίδιος έλεγχος, ίδια κάλυψη).
+  'lib/auth/tenant-isolation-core.ts',
+  // ADR-931 — ιδιοκτησίες αποκλειστικής χρήσης κοινόχρηστου: ζωντανές, του καλούντος, στο ΙΔΙΟ κτίριο.
+  'lib/common-spaces/common-space-legal.server.ts',
   'lib/firestore/entity-creation.service.ts',
   // Ήταν `lib/firestore/soft-delete-engine.ts`: η φόρτωση + ο έλεγχος μισθωτή βγήκαν στο
   // `lifecycle-target` όταν η μηχανή απέκτησε το αρχείο (ADR-329 §3.9). Ίδιος έλεγχος, ίδια

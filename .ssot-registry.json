@@ -5125,6 +5125,7 @@
         "src/lib/api/space-entity-handlers.ts",
         "src/lib/firestore/cascade-propagation.service.ts",
         "src/lib/auth/tenant-isolation.ts",
+        "src/lib/auth/tenant-isolation-spaces.ts",
         "src/app/api/parking/[id]/route.ts",
         "src/app/api/storages/[id]/route.ts"
       ]
@@ -5158,6 +5159,7 @@
       "allowlist": [
         "src/lib/auth/tenant-scope.ts",
         "src/lib/auth/tenant-isolation.ts",
+        "src/lib/auth/tenant-isolation-core.ts",
         "src/lib/auth/tenant-isolation-error.ts",
         "src/lib/api/tenant-scope-http.ts",
         "src/lib/firestore/tenant-scoped-query.ts",

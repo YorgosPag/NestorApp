@@ -231,6 +231,7 @@ export const DEPENDENCY_REMEDIATIONS = {
   floorBoqItems: 'Διαγράψτε ή αλλάξτε το εύρος των επιμετρήσεων BOQ που αναφέρονται σε αυτόν τον όροφο (καρτέλα Επιμετρήσεις).',
   floorParkingSpaces: 'Αποσυνδέστε ή διαγράψτε πρώτα τις θέσεις στάθμευσης που βρίσκονται σε αυτόν τον όροφο.',
   floorStorage: 'Αποσυνδέστε ή διαγράψτε πρώτα τις αποθήκες που βρίσκονται σε αυτόν τον όροφο.',
+  floorCommonSpaces: 'Αποσυνδέστε ή διαγράψτε πρώτα τους κοινόχρηστους χώρους που βρίσκονται σε αυτόν τον όροφο.',
 } as const;
 
 export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
@@ -418,6 +419,14 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         queryType: 'equals',
         remediation: DEPENDENCY_REMEDIATIONS.floorStorage,
       },
+      {
+        // ADR-931 — κοινόχρηστος που φιλοξενείται στον όροφο (ADR-903 §6)
+        collection: COLLECTIONS.COMMON_SPACES,
+        foreignKey: 'floorId',
+        label: 'Κοινόχρηστοι χώροι ορόφου',
+        queryType: 'equals',
+        remediation: DEPENDENCY_REMEDIATIONS.floorCommonSpaces,
+      },
     ],
   },
 
@@ -577,6 +586,13 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         collection: COLLECTIONS.STORAGE,
         foreignKey: 'buildingId',
         label: 'Αποθήκες',
+        queryType: 'equals',
+      },
+      {
+        // ADR-931
+        collection: COLLECTIONS.COMMON_SPACES,
+        foreignKey: 'buildingId',
+        label: 'Κοινόχρηστοι χώροι',
         queryType: 'equals',
       },
       {

@@ -218,7 +218,9 @@ describe('trash routes ↔ config (anchor)', () => {
       .filter(candidate => /^export\s+(const|async\s+function|function)\s+GET\b/m.test(candidate.source))
       .map(candidate => {
         const { source } = candidate;
-        const match = source.match(/createTrashListRoute\(\s*'([a-z]+)'\s*\)/);
+        // ADR-931 — `[a-z_]`: τύποι οντοτήτων με κάτω παύλα (`common_space`) είναι κανονικά ονόματα του μητρώου.
+        // Optional second argument = rate-limit tier declaration (CHECK 3.78), e.g. `{ category: 'STANDARD' }`.
+        const match = source.match(/createTrashListRoute\(\s*'([a-z_]+)'\s*(?:,\s*\{[^}]*\}\s*)?\)/);
         return { segment: candidate.segment, entityType: match ? match[1] : null };
       });
   }

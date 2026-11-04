@@ -2,251 +2,104 @@
 
 /**
  * @module spaces/common
- * @enterprise Common Spaces Dashboard
+ * @enterprise Common Spaces Dashboard — ΖΩΝΤΑΝΑ δεδομένα (ADR-931)
  * @lazy ADR-294 Batch 3 — Extracted for dynamic import
+ *
+ * Ως τις 2026-11-04 κάθε αριθμός εδώ ήταν γραμμένος με το χέρι ('42', 12, `count: 8`…) και
+ * δεν υπήρχε καν οντότητα στη βάση. Τώρα: `common_spaces` (onSnapshot) → `computeCommonSpaceStats`
+ * → οθόνη. Ομάδες από το λεξιλόγιο (ποτέ σκληρές κάρτες), κενή κατάσταση όταν δεν υπάρχει τίποτα.
  */
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import {
-  Users,
-  Wifi,
-  Coffee,
-  Dumbbell,
-  Trees,
-  Shield,
-  Building,
-} from 'lucide-react';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { Button } from '@/components/ui/button';
+import { Link } from '@/lib/workspace/navigation';
+import { Building2, KeyRound, Ruler, Users } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatNumber } from '@/lib/intl-formatting';
 import { cn } from '@/lib/utils';
+import type { CommonSpaceStats } from '@/lib/common-spaces/common-space-stats';
+import { CommonSpaceGroupCard } from '@/components/spaces/common/CommonSpaceGroupCard';
+import { CommonSpacesByBuilding } from '@/components/spaces/common/CommonSpacesByBuilding';
+import { useCommonSpacesOverview } from '@/components/spaces/common/useCommonSpacesOverview';
 import '@/lib/design-system';
+
+const BUILDINGS_HREF = '/buildings';
+
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+function buildHeadlineStats(stats: CommonSpaceStats, loading: boolean, t: Translate): DashboardStat[] {
+  const stable = { value: 0, label: t('stats.stable') };
+  const value = (n: number) => (loading ? '…' : formatNumber(n));
+  const areaDesc = stats.areaUnknownCount > 0
+    ? t('stats.areaUnknown', { count: stats.areaUnknownCount })
+    : t('stats.areaComplete');
+  return [
+    { title: t('stats.total'), value: value(stats.count), description: t('stats.totalDesc'), icon: Users, color: 'blue', trend: stable },
+    {
+      title: t('stats.area'),
+      value: loading ? '…' : t('stats.areaValue', { area: formatNumber(stats.areaM2, { maximumFractionDigits: 1 }) }),
+      description: areaDesc,
+      icon: Ruler,
+      color: 'green',
+      trend: stable,
+    },
+    { title: t('stats.exclusiveUse'), value: value(stats.exclusiveUseCount), description: t('stats.exclusiveUseDesc'), icon: KeyRound, color: 'purple', trend: stable },
+    { title: t('stats.buildings'), value: value(stats.buildings.length), description: t('stats.buildingsDesc'), icon: Building2, color: 'orange', trend: stable },
+  ];
+}
+
+function CommonSpacesBody({ overview }: { overview: ReturnType<typeof useCommonSpacesOverview> }) {
+  const { t } = useTranslation('common-spaces');
+  const { stats, buildingNames, loading, error } = overview;
+
+  if (error) return <EmptyState icon={Users} title={t('error.title')} description={error} variant="card" />;
+  if (!loading && stats.count === 0) {
+    return (
+      <EmptyState icon={Users} title={t('empty.title')} description={t('empty.description')} variant="card">
+        <Button asChild>
+          <Link href={BUILDINGS_HREF}>{t('empty.action')}</Link>
+        </Button>
+      </EmptyState>
+    );
+  }
+  return (
+    <>
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4" aria-label={t('overview')}>
+        {stats.groups.map((group) => <CommonSpaceGroupCard key={group.group} tally={group} />)}
+      </section>
+      {stats.buildings.length > 0 && <CommonSpacesByBuilding buildings={stats.buildings} buildingNames={buildingNames} />}
+    </>
+  );
+}
 
 export function SpacesCommonPageContent() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation(COMMON_NAMESPACES);
-
-  const commonStats: DashboardStat[] = [
-    {
-      title: t('spaces.commonSpaces.stats.commonSpaces'),
-      value: '42',
-      description: t('spaces.commonSpaces.stats.allCommonSpaces'),
-      icon: Users,
-      color: 'blue',
-      trend: { value: 0, label: t('spaces.commonSpaces.stats.stable') }
-    },
-    {
-      title: t('spaces.commonSpaces.stats.recreationSpaces'),
-      value: '18',
-      description: t('spaces.commonSpaces.stats.recreationDesc'),
-      icon: Coffee,
-      color: 'green',
-      trend: { value: 0, label: t('spaces.commonSpaces.stats.stable') }
-    },
-    {
-      title: t('spaces.commonSpaces.stats.serviceSpaces'),
-      value: '16',
-      description: t('spaces.commonSpaces.stats.serviceDesc'),
-      icon: Shield,
-      color: 'purple',
-      trend: { value: 0, label: t('spaces.commonSpaces.stats.stable') }
-    },
-    {
-      title: t('spaces.commonSpaces.stats.outdoorSpaces'),
-      value: '8',
-      description: t('spaces.commonSpaces.stats.outdoorDesc'),
-      icon: Trees,
-      color: 'orange',
-      trend: { value: 0, label: t('spaces.commonSpaces.stats.stable') }
-    }
-  ];
+  const { t } = useTranslation('common-spaces');
+  const overview = useCommonSpacesOverview();
 
   return (
-    <div className={`flex h-screen ${colors.bg.primary}`}>
-        <div className="flex-1 flex flex-col">
-          <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
-            <div className="flex h-14 items-center px-4">
-              <div className="flex items-center gap-2">
-                <Users className={`${iconSizes.md} ${colors.text.muted}`} />
-                <h1 className="text-lg font-semibold">{t('spaces.commonSpaces.headerTitle')}</h1>
-              </div>
-              <div className={`ml-auto text-sm ${colors.text.muted}`}>
-                {t('spaces.commonSpaces.headerSubtitle')}
-              </div>
-            </div>
-          </div>
+    <section className={cn('flex h-screen flex-col', colors.bg.primary)} aria-labelledby="common-spaces-title">
+      <header className={cn('border-b flex h-14 items-center px-4', colors.bg.primary)}>
+        <Users className={cn(iconSizes.md, colors.text.muted)} aria-hidden="true" />
+        <h1 id="common-spaces-title" className="ml-2 text-lg font-semibold">{t('headerTitle')}</h1>
+        <p className={cn('ml-auto text-sm', colors.text.muted)}>{t('headerSubtitle')}</p>
+      </header>
 
-          <div className="p-6 space-y-6">
-            <UnifiedDashboard
-              title={t('spaces.commonSpaces.title')}
-              stats={commonStats}
-              variant="modern"
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                    <Coffee className={`${iconSizes.md} ${colors.text.success}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('spaces.commonSpaces.cards.lounges.title')}</h3>
-                </div>
-                <p className={cn("text-sm mb-2", colors.text.muted)}>
-                  {t('spaces.commonSpaces.cards.lounges.description')}
-                </p>
-                <div className="text-2xl font-bold">12</div>
-                <p className={cn("text-xs mt-1", colors.text.muted)}>
-                  {t('spaces.commonSpaces.cards.lounges.details')}
-                </p>
-              </div>
-
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
-                    <Dumbbell className={`${iconSizes.md} ${colors.text.info}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('spaces.commonSpaces.cards.gyms.title')}</h3>
-                </div>
-                <p className={cn("text-sm mb-2", colors.text.muted)}>
-                  {t('spaces.commonSpaces.cards.gyms.description')}
-                </p>
-                <div className="text-2xl font-bold">6</div>
-                <p className={cn("text-xs mt-1", colors.text.muted)}>
-                  {t('spaces.commonSpaces.cards.gyms.details')}
-                </p>
-              </div>
-
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                    <Shield className={`${iconSizes.md} ${colors.text.warning}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('spaces.commonSpaces.cards.technical.title')}</h3>
-                </div>
-                <p className={cn("text-sm mb-2", colors.text.muted)}>
-                  {t('spaces.commonSpaces.cards.technical.description')}
-                </p>
-                <div className="text-2xl font-bold">16</div>
-                <p className={cn("text-xs mt-1", colors.text.muted)}>
-                  {t('spaces.commonSpaces.cards.technical.details')}
-                </p>
-              </div>
-
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                    <Trees className={`${iconSizes.md} ${colors.text.accent}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('spaces.commonSpaces.cards.outdoor.title')}</h3>
-                </div>
-                <p className={cn("text-sm mb-2", colors.text.muted)}>
-                  {t('spaces.commonSpaces.cards.outdoor.description')}
-                </p>
-                <div className="text-2xl font-bold">8</div>
-                <p className={cn("text-xs mt-1", colors.text.muted)}>
-                  {t('spaces.commonSpaces.cards.outdoor.details')}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <section className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Users className={iconSizes.md} />
-                  {t('spaces.commonSpaces.sections.indoor.title')}
-                </h2>
-
-                <div className={`p-6 bg-card ${quick.card}`}>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
-                        <Coffee className={iconSizes.sm} />
-                        {t('spaces.commonSpaces.sections.indoor.commonLounges')}
-                      </span>
-                      <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 8 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
-                        <Wifi className={iconSizes.sm} />
-                        {t('spaces.commonSpaces.sections.indoor.businessCenters')}
-                      </span>
-                      <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 4 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
-                        <Dumbbell className={iconSizes.sm} />
-                        {t('spaces.commonSpaces.sections.indoor.gyms')}
-                      </span>
-                      <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 6 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
-                        <Building className={iconSizes.sm} />
-                        {t('spaces.commonSpaces.sections.indoor.commonRooms')}
-                      </span>
-                      <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 16 })}</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Shield className={iconSizes.md} />
-                  {t('spaces.commonSpaces.sections.outdoorTechnical.title')}
-                </h2>
-
-                <div className={`p-6 bg-card ${quick.card}`}>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
-                        <Trees className={iconSizes.sm} />
-                        {t('spaces.commonSpaces.sections.outdoorTechnical.sharedGardens')}
-                      </span>
-                      <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 5 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
-                        <Coffee className={iconSizes.sm} />
-                        {t('spaces.commonSpaces.sections.outdoorTechnical.terraces')}
-                      </span>
-                      <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 3 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
-                        <Shield className={iconSizes.sm} />
-                        {t('spaces.commonSpaces.sections.outdoorTechnical.boilerRooms')}
-                      </span>
-                      <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 8 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
-                        <Wifi className={iconSizes.sm} />
-                        {t('spaces.commonSpaces.sections.outdoorTechnical.mechanical')}
-                      </span>
-                      <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 8 })}</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div className={`p-4 bg-muted/50 ${quick.card}`}>
-              <div className="flex items-center gap-2 text-sm">
-                <Users className={iconSizes.sm} />
-                <span className="font-medium">{t('spaces.commonSpaces.info.title')}</span>
-              </div>
-              <p className={cn("text-sm mt-1", colors.text.muted)}>
-                {t('spaces.commonSpaces.info.description')}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <section className="p-6 space-y-6 overflow-auto">
+        <UnifiedDashboard title={t('overview')} stats={buildHeadlineStats(overview.stats, overview.loading, t)} variant="modern" />
+        <CommonSpacesBody overview={overview} />
+        <aside className={cn('p-4 bg-muted/50', quick.card)}>
+          <p className="text-sm font-medium">{t('info.title')}</p>
+          <p className={cn('text-sm mt-1', colors.text.muted)}>{t('info.description')}</p>
+        </aside>
+      </section>
+    </section>
   );
 }
 

@@ -706,6 +706,21 @@
         "reopenCount": "Reopened",
         "assignedTo": "Owner",
         "expectedCloseDate": "Expected close"
+      },
+      "common_space": {
+        "name": "Common space name",
+        "category": "Category",
+        "legalNature": "Legal nature",
+        "exclusiveUsePropertyIds": "Exclusive-use properties",
+        "status": "Status",
+        "buildingId": "Building",
+        "floor": "Floor",
+        "floorKind": "Floor kind",
+        "area": "Area",
+        "code": "Code",
+        "projectId": "Project",
+        "description": "Description",
+        "notes": "Notes"
       }
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."

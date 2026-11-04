@@ -72,6 +72,17 @@ export const LINK_REGISTRY: Record<string, LinkRegistryEntry> = {
     lockedStatusField: 'status',
     skipAudit: false,
   },
+  // ADR-931 — ο κοινόχρηστος δεν πωλείται (ΑΚ 1117) ⇒ καμία «κλειδωμένη» κατάσταση.
+  'common_space:buildingId': {
+    collection: COLLECTIONS.COMMON_SPACES,
+    linkField: 'buildingId',
+    cascadeType: 'child-building',
+    auditEntityType: 'common_space',
+    auditTargetType: 'api',
+    lockedStatuses: [],
+    lockedStatusField: 'status',
+    skipAudit: false,
+  },
   'parking:buildingId': {
     collection: COLLECTIONS.PARKING_SPACES,
     linkField: 'buildingId',

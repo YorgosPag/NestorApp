@@ -21,7 +21,7 @@ import { planSpaceWrite, spaceAuditEntry } from '../space-entity-write';
 /** Όπως τα δηλώνουν οι διαδρομές: κοινά πεδία + `.passthrough()`. */
 const UpdateSchema = z.object({ number: z.string().optional(), ...SPACE_COMMON_UPDATE_FIELDS }).passthrough();
 const CreateSchema = z.object({ number: z.string(), ...SPACE_COMMON_CREATE_FIELDS });
-const parkingCfg = { displayField: 'number' as const, mapExtraFields: () => ({}) };
+const parkingCfg = { entityKind: 'parking' as const, displayField: 'number' as const, mapExtraFields: () => ({}) };
 
 describe('Α. ΤΟ `status` ΕΙΝΑΙ ΚΥΚΛΟΣ ΖΩΗΣ — ΔΕΝ ΓΡΑΦΕΤΑΙ ΑΠΟ ΣΩΜΑ', () => {
   it.each(['sold', 'available', 'deleted', 'active'])('🔴 Α1 — PATCH με `status: %s` ⇒ 400 (όχι σιωπηλή απόρριψη)', (status) => {

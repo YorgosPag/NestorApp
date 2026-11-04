@@ -24,6 +24,8 @@ export interface BuildingTabLabelsConfig {
   readonly analytics: string;
   readonly storage: string;
   readonly parking: string;
+  /** ADR-931 — κοινόχρηστοι χώροι κτιρίου */
+  readonly commonSpaces: string;
   readonly contracts: string;
   readonly protocols: string;
   readonly photos: string;
@@ -176,6 +178,7 @@ export const VOCAB_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
   analytics: "tabs.labels.analytics",
   storage: "tabs.labels.storage",
   parking: "tabs.labels.parking",
+  commonSpaces: "tabs.labels.commonSpaces",
   contracts: "tabs.labels.contracts",
   protocols: "tabs.labels.protocols",
   photos: "tabs.labels.photos",

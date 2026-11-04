@@ -156,4 +156,5 @@ structural clones **εντός ενός diff**, ανεξάρτητα ονόμα�
 
 | Date | Change |
 |---|---|
+| 2026-11-04 | **ADR-931 — τρίτο είδος: `common_space`.** Το `entityKind` έγινε `SpaceEntityKind` από τον ΕΝΑ πίνακα `SPACE_ENTITY_CAPABILITIES` (`lib/spaces/space-entity-kinds.ts`)· τα βήματα που αφορούν μόνο μεταβιβάσιμους χώρους (εμπορικά, allocation code, φρουρός παρακολουθήματος, κάτοψη αγγελιών) ρωτούν `isTransferableSpaceKind`, ποτέ το όνομα. Νέο προαιρετικό `resolveAsyncFields` (πεδία που κρίνονται απέναντι στη βάση πριν τη γραφή). `SpaceWriteConfig` απαιτεί πλέον `entityKind`. |
 | 2026-07-25 | Initial. 9 clone blocks → `createSpaceEntityRoutes` + καθαρό field module· 484 → 136 γρ. στα routes· 25 πρώτα tests· καταχώρηση στο `.ssot-registry.json`. |

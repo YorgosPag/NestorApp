@@ -60,7 +60,8 @@
       "listing": "Listing",
       "tour360": "360° tour",
       "handover": "Handover",
-      "budget": "Budget"
+      "budget": "Budget",
+      "commonSpaces": "Common spaces"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",

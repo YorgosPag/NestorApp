@@ -186,6 +186,8 @@ export const AUDIT_ENTITIES = {
   property: { collectionKey: 'PROPERTIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
   parking: { collectionKey: 'PARKING_SPACES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
   storage: { collectionKey: 'STORAGE', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  /** ADR-931 — κοινόχρηστος χώρος κτιρίου· γράφεται μόνο από `/api/common-spaces` (route SSoT ADR-696). */
+  common_space: { collectionKey: 'COMMON_SPACES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
 
   /**
    * 🎯 ADR-864 Φ1β — **η αγγελία ιδιοκτήτη**, η πρώτη οντότητα με βιβλίο `'custody'`.

@@ -182,6 +182,8 @@ export class EnterpriseIdService extends SubcontractIdGenerators {
   generateBuildingId(): string { return this.generateId(P.BUILDING).id; }
   generatePropertyId(): string { return this.generateId(P.PROPERTY).id; }
   generateStorageId(): string { return this.generateId(P.STORAGE).id; }
+  /** ADR-931 — κοινόχρηστος χώρος κτιρίου. */
+  generateCommonSpaceId(): string { return this.generateId(P.COMMON_SPACE).id; }
   generateParkingId(): string { return this.generateId(P.PARKING).id; }
   generateContactId(): string { return this.generateId(P.CONTACT).id; }
   generateFloorId(): string { return this.generateId(P.FLOOR).id; }

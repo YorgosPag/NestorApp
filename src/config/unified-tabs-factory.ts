@@ -494,6 +494,16 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             enabled: true,
             component: 'ParkingTabContent'
           },
+          {
+            // ADR-931 — κοινόχρηστοι χώροι (ΑΚ 1117): κλιμακοστάσιο, πυλωτή, λεβητοστάσιο, παροχές.
+            id: 'commonSpaces',
+            value: 'commonSpaces',
+            icon: 'users',
+            description: 'tabs.labels.commonSpaces',
+            order: 5.5,
+            enabled: true,
+            component: 'CommonSpacesTab'
+          },
           // ===============================================================
           // ΑΝΘΡΩΠΟΙ — Ποιος εμπλέκεται
           // ===============================================================

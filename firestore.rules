@@ -2420,6 +2420,24 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🏛️ COMMON_SPACES COLLECTION — ΚΟΙΝΟΧΡΗΣΤΟΙ ΧΩΡΟΙ ΚΤΙΡΙΟΥ (ADR-931)
+    // =========================================================================
+    // Γεννιούνται ΜΟΝΟ από το `POST /api/common-spaces` (createEntity ⇒ `companyId` ΠΑΝΤΑ παρόν),
+    // άρα δεν υπάρχει κληρονομιά χωρίς tenant: η ανάγνωση αποδεικνύεται από το `companyId`
+    // που φιλτράρει το ερώτημα του πελάτη (ADR-823). Κανένα legacy fallback, κανένα crossdoc.
+    match /common_spaces/{commonSpaceId} {
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      // 🚫 WRITE: Admin/server only (route SSoT ADR-696)
+      allow write: if false;
+    }
+
+    // =========================================================================
     // 🚗 PARKING_SPOTS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)

@@ -1028,6 +1028,14 @@ export const API_ROUTES = {
     TRASH: '/api/storages/trash',
   },
 
+  // ── Common spaces (ADR-931) ────────────────────────────────────────
+  COMMON_SPACES: {
+    LIST: '/api/common-spaces',
+    BY_ID: (id: string) => `/api/common-spaces/${id}` as const,
+    /** ADR-281 pattern — Soft-delete trash view */
+    TRASH: '/api/common-spaces/trash',
+  },
+
   // ── Spaces (cross-type) ────────────────────────────────────────────
   SPACES: {
     BATCH_RESOLVE: '/api/spaces/batch-resolve',

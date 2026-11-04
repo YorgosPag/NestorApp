@@ -1,0 +1,133 @@
+{
+  "headerTitle": "Common Spaces",
+  "headerSubtitle": "Each building's common parts — as defined by its condominium deed",
+  "overview": "Common Spaces Overview",
+  "stats": {
+    "total": "Common spaces",
+    "totalDesc": "Across all buildings",
+    "area": "Declared area",
+    "areaValue": "{area} m²",
+    "areaUnknown": "{count, plural, one {# space without area} other {# spaces without area}}",
+    "areaComplete": "Every space has an area",
+    "exclusiveUse": "Exclusive use",
+    "exclusiveUseDesc": "Common property with exclusive use by a unit",
+    "buildings": "Buildings",
+    "buildingsDesc": "With declared common spaces",
+    "stable": "Stable"
+  },
+  "groups": {
+    "circulation": {
+      "title": "Circulation",
+      "description": "Entrances, corridors, ramps"
+    },
+    "vertical": {
+      "title": "Vertical circulation",
+      "description": "Stairwells, elevators, shafts"
+    },
+    "technical": {
+      "title": "Technical spaces",
+      "description": "Boiler, electrical and pump rooms"
+    },
+    "outdoor": {
+      "title": "Outdoor spaces",
+      "description": "Pilotis, roof, garden, light wells"
+    },
+    "amenity": {
+      "title": "Amenities",
+      "description": "Gym, pool, lounges, concierge"
+    }
+  },
+  "categories": {
+    "entrance_lobby": "Entrance / Lobby",
+    "corridor": "Corridor",
+    "ramp": "Ramp",
+    "stairwell": "Stairwell",
+    "elevator": "Elevator",
+    "shaft": "Shaft / Duct",
+    "boiler_room": "Boiler room",
+    "electrical_room": "Electrical / Meter room",
+    "pump_room": "Pump room / Water tank",
+    "elevator_machine_room": "Elevator machine room",
+    "waste_room": "Waste room",
+    "pilotis": "Pilotis",
+    "roof_terrace": "Roof terrace",
+    "garden": "Garden / Open yard",
+    "light_well": "Light well",
+    "gym": "Gym",
+    "pool": "Pool",
+    "lounge": "Common lounge",
+    "playroom": "Playroom",
+    "bicycle_room": "Bicycle room",
+    "concierge": "Concierge",
+    "other": "Other common space"
+  },
+  "legalNature": {
+    "common_use": "Common use",
+    "exclusive_use": "Exclusive use"
+  },
+  "spacesCount": "{count, plural, one {# space} other {# spaces}}",
+  "noSpacesInGroup": "No spaces",
+  "byBuilding": {
+    "title": "By building",
+    "unknownBuilding": "Unknown building"
+  },
+  "empty": {
+    "title": "No common spaces have been registered",
+    "description": "Common spaces are declared per building, from the building's “Common spaces” tab. Once registered, they appear here automatically.",
+    "action": "Go to buildings"
+  },
+  "error": {
+    "title": "Common spaces could not be loaded"
+  },
+  "info": {
+    "title": "Data source",
+    "description": "Every number is computed live from the common spaces registered in the buildings. Area is summed only where it has been declared."
+  },
+  "tab": {
+    "add": "New common space",
+    "loading": "Loading common spaces…",
+    "loadError": "The building's common spaces could not be loaded.",
+    "empty": "No common spaces have been registered in this building.",
+    "emptyHint": "Register stairwells, pilotis, boiler room and every common part as defined by the condominium deed.",
+    "columns": {
+      "name": "Name",
+      "category": "Category",
+      "floor": "Floor",
+      "area": "Area (m²)",
+      "legalNature": "Legal nature"
+    },
+    "form": {
+      "createTitle": "New common space",
+      "editTitle": "Edit common space",
+      "name": "Name",
+      "namePlaceholder": "e.g. Stairwell A",
+      "category": "Category",
+      "floor": "Floor",
+      "floorHint": "Empty = spans the whole building (e.g. stairwell, elevator)",
+      "area": "Net area (m²)",
+      "code": "Code",
+      "notes": "Notes",
+      "legalNature": "Legal nature",
+      "exclusiveUseProperties": "Properties with exclusive use",
+      "exclusiveUseHint": "As defined by the condominium deed (e.g. roof terrace → penthouse).",
+      "noProperties": "The building has no properties yet.",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "nameRequired": "Name is required.",
+      "exclusiveRequired": "Select at least one property for exclusive use.",
+      "areaInvalid": "Area must be a positive number."
+    },
+    "delete": {
+      "title": "Move to trash",
+      "description": "The common space will be moved to the trash and can be restored within 30 days:",
+      "confirm": "Move to trash"
+    },
+    "notifications": {
+      "created": "Common space registered.",
+      "updated": "Common space updated.",
+      "deleted": "Common space moved to trash.",
+      "failed": "The action failed."
+    }
+  }
+}

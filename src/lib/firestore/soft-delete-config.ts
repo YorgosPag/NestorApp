@@ -177,6 +177,21 @@ export const SOFT_DELETE_CONFIG: Record<
       loggerName: "StoragesTrashRoute",
     },
   },
+  // ADR-931 — κοινόχρηστος χώρος κτιρίου: ίδιος κύκλος ζωής με τους χώρους (`active` · `deleted`).
+  common_space: {
+    collection: COLLECTIONS.COMMON_SPACES,
+    defaultRestoreStatus: ACTIVE_RECORD_STATUS,
+    permission: "units:units:delete",
+    labelEl: "Koinoxristos Xoros",
+    labelEn: "Common Space",
+    trashList: {
+      responseKey: "commonSpaces",
+      viewPermission: "units:units:view",
+      sortField: "name",
+      labelPluralEn: "common spaces",
+      loggerName: "CommonSpacesTrashRoute",
+    },
+  },
 };
 
 /**

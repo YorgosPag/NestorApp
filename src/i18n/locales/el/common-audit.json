@@ -706,6 +706,21 @@
         "reopenCount": "Επανανοίγματα",
         "assignedTo": "Υπεύθυνος",
         "expectedCloseDate": "Αναμενόμενο κλείσιμο"
+      },
+      "common_space": {
+        "name": "Όνομα κοινόχρηστου χώρου",
+        "category": "Κατηγορία",
+        "legalNature": "Νομική φύση",
+        "exclusiveUsePropertyIds": "Ιδιοκτησίες αποκλειστικής χρήσης",
+        "status": "Κατάσταση",
+        "buildingId": "Κτίριο",
+        "floor": "Όροφος",
+        "floorKind": "Είδος ορόφου",
+        "area": "Εμβαδόν",
+        "code": "Κωδικός",
+        "projectId": "Έργο",
+        "description": "Περιγραφή",
+        "notes": "Σημειώσεις"
       }
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."

@@ -15,6 +15,7 @@ export const generateProjectId = () => enterpriseIdService.generateProjectId();
 export const generateBuildingId = () => enterpriseIdService.generateBuildingId();
 export const generatePropertyId = () => enterpriseIdService.generatePropertyId();
 export const generateStorageId = () => enterpriseIdService.generateStorageId();
+export const generateCommonSpaceId = () => enterpriseIdService.generateCommonSpaceId();
 export const generateParkingId = () => enterpriseIdService.generateParkingId();
 export const generateContactId = () => enterpriseIdService.generateContactId();
 export const generateFloorId = () => enterpriseIdService.generateFloorId();

@@ -56,8 +56,15 @@ import type { SoftDeletableEntityType } from '@/types/soft-deletable';
  * @example
  * // src/app/api/buildings/trash/route.ts
  * export const GET = createTrashListRoute('building');
+ *
+ * `_declaration` states the rate-limit tier in the route file so review sees it
+ * (CHECK 3.78 / ADR-855). The type admits only the tier enforced below
+ * (`rateLimit: 'standard'`), so a false declaration does not compile.
  */
-export function createTrashListRoute(entityType: SoftDeletableEntityType) {
+export function createTrashListRoute(
+  entityType: SoftDeletableEntityType,
+  _declaration?: { readonly category: 'STANDARD' },
+) {
   const config = getTrashListConfig(entityType);
 
   if (!config) {

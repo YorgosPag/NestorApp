@@ -579,6 +579,32 @@ export async function seedStorageUnit(
 }
 
 /**
+ * Seed a `common_spaces` document (ADR-931). Always carries `companyId` — the rule has no
+ * crossdoc fallback, exactly like production documents born from `createEntity`.
+ */
+export async function seedCommonSpace(
+  env: RulesTestEnvironment,
+  commonSpaceId: string,
+  buildingId: string,
+  companyId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('common_spaces').doc(commonSpaceId).set({
+      name: `Test Common Space ${commonSpaceId}`,
+      category: 'stairwell',
+      legalNature: 'common_use',
+      buildingId,
+      companyId,
+      status: 'active',
+      createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
+      createdAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
  * Seed a `parking_spots` document.
  *
  * Identical crossdoc pattern to floors — reads via `buildingId`. All client

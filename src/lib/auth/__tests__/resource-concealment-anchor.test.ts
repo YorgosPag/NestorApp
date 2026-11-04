@@ -591,10 +591,20 @@ describe.each(CONCEALED_RESOURCES)(
 
 // ============================================================================
 describe('⚓ ο ΕΝΑΣ κοινός φύλακας δεν επιστρέφει ποτέ ξανά 403 για ιδιοκτησία εγγράφου', () => {
-  const guard = SRC_FILES.find((f) => f.path === 'src/lib/auth/tenant-isolation.ts');
+  // ADR-931 — ο φύλακας (`requireDocInTenant`) μετακόμισε στο `tenant-isolation-core.ts` και οι δηλώσεις
+  // χώρων στο `tenant-isolation-spaces.ts`. Ελέγχονται ΚΑΙ τα τρία: μια άγκυρα στραμμένη μόνο στο παλιό
+  // αρχείο θα έμενε πράσινη πάνω σε κώδικα που δεν περιέχει πια τον φύλακα.
+  const GUARD_FILES = [
+    'src/lib/auth/tenant-isolation-core.ts',
+    'src/lib/auth/tenant-isolation.ts',
+    'src/lib/auth/tenant-isolation-spaces.ts',
+  ] as const;
+  const guards = GUARD_FILES.map((path) => SRC_FILES.find((f) => f.path === path));
+  const guard = guards[0];
 
-  it('το αρχείο υπάρχει', () => {
-    expect(guard).toBeDefined();
+  it('τα αρχεία υπάρχουν — και ο πυρήνας ΟΡΙΖΕΙ τον φύλακα', () => {
+    expect(guards.every(Boolean)).toBe(true);
+    expect(guard!.source).toMatch(/export async function requireDocInTenant/);
   });
 
   it('🔴 `requireDocInTenant` δεν φτιάχνει `TenantIsolationError` με 403 (§7septies)', () => {
@@ -604,7 +614,7 @@ describe('⚓ ο ΕΝΑΣ κοινός φύλακας δεν επιστρέφε�
     // §7octies αυτή η γραμμή έκανε **δική της**, μερική αφαίρεση σχολίων:
     // έπιανε μόνο τις γραμμές `*` ενός block, όχι τα `//` ούτε τους
     // οριοθέτες. Η αφαίρεση είναι πλέον **μία** και καθολική.)
-    expect(/403/.test(guard!.source)).toBe(false);
+    for (const file of guards) expect(/403/.test(file!.source)).toBe(false);
   });
 });
 

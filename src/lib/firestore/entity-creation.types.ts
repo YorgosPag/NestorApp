@@ -30,6 +30,7 @@ export type ServerEntityType =
   | 'unit'
   | 'property'
   | 'storage'
+  | 'common_space'
   | 'parking'
   | 'dxfLevel'
   | 'dimStyle'
@@ -50,6 +51,7 @@ export type EntityIdGeneratorName =
   | 'generateFloorId'
   | 'generatePropertyId'
   | 'generateStorageId'
+  | 'generateCommonSpaceId'
   | 'generateParkingId'
   | 'generateLevelId'
   | 'generateDimStyleId'
@@ -154,6 +156,18 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     tenantCheck: true,
     auditTargetType: 'api',
     entityAuditType: 'storage',
+  },
+  // ADR-931 — κοινόχρηστος χώρος: παιδί κτιρίου, χωρίς αυτόματο κωδικό ADR-233 (ο Revit «Room Number» είναι ελεύθερος).
+  common_space: {
+    collection: COLLECTIONS.COMMON_SPACES,
+    hierarchy: 'building-child',
+    parentField: 'buildingId',
+    idGenerator: 'generateCommonSpaceId',
+    codeType: null,
+    codeField: null,
+    tenantCheck: true,
+    auditTargetType: 'api',
+    entityAuditType: 'common_space',
   },
   parking: {
     collection: COLLECTIONS.PARKING_SPACES,

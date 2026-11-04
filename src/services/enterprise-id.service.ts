@@ -33,7 +33,7 @@ export { enterpriseIdService } from './enterprise-id-singleton';
 
 export {
   generateCompanyId, generateProjectId, generateBuildingId, generatePropertyId,
-  generateStorageId, generateParkingId, generateContactId, generateFloorId,
+  generateStorageId, generateCommonSpaceId, generateParkingId, generateContactId, generateFloorId,
   generateNavigationId, generateRouteConfigId, generateDocumentId, generateUserId,
   generateAssetId, generateRelationshipId, generateMemberId, generateWorkspaceId,
   generateAddressId, generateOpportunityId, generateLandownerId, generatePropertyOfferId,

@@ -839,6 +839,31 @@ export const STORAGE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(STORAGE_TRACKED_FIELDS_RAW, {});
 
 // ============================================================================
+// COMMON SPACE TRACKED FIELDS (ADR-931) — χωρίς εμπορικά: ΑΚ 1117, δεν μεταβιβάζεται
+// ============================================================================
+
+const COMMON_SPACE_TRACKED_FIELDS_RAW: Record<string, string> = {
+  name: 'name',
+  category: 'category',
+  legalNature: 'legalNature',
+  exclusiveUsePropertyIds: 'exclusiveUsePropertyIds',
+  status: 'status',
+  ...SPACE_OPERATIONAL_TRACKED_FIELDS_RAW,
+  buildingId: 'buildingId',
+  floor: 'floor',
+  floorKind: 'floorKind',
+  area: 'area',
+  code: 'code',
+  projectId: 'projectId',
+  description: 'description',
+  notes: 'notes',
+};
+
+/** Common space audit registry — `field → TrackedFieldDef`. */
+export const COMMON_SPACE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(COMMON_SPACE_TRACKED_FIELDS_RAW, {});
+
+// ============================================================================
 // PARKING TRACKED FIELDS
 // ============================================================================
 
@@ -1663,6 +1688,8 @@ export function getTrackedFieldsForEntityAuditType(
       return CONTACT_TRACKED_FIELDS;
     case 'storage':
       return STORAGE_TRACKED_FIELDS;
+    case 'common_space':
+      return COMMON_SPACE_TRACKED_FIELDS;
     case 'parking':
       return PARKING_TRACKED_FIELDS;
     case 'wall':

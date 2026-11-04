@@ -1269,6 +1269,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     seedDependencies: ['projects', 'buildings'],
   },
   {
+    // ADR-931 — κοινόχρηστοι χώροι κτιρίου· ανάγνωση με `companyId` (κανένα crossdoc).
+    collection: 'common_spaces',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/common-spaces.rules.test.ts',
+    ...adminWriteOnlyMatrix(),
+    seedDependencies: ['projects', 'buildings'],
+  },
+  {
     collection: 'parking_spots',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/parking-spots.rules.test.ts',

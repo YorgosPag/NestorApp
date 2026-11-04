@@ -41,6 +41,7 @@ import { assertBuildingInSpaceProject } from '@/lib/api/space-building-project-g
 import { resolveHostedFloorPatch } from '@/lib/floor/host-floor.server';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { refreshFloorPlateNeighbours, SPACE_OVERLAY_LINK } from '@/services/listings/listing-media-refresh';
+import { isTransferableSpaceKind } from '@/lib/spaces/space-entity-kinds';
 import type {
   SpaceEntityRouteConfig,
   SpaceMutationResult,
@@ -57,6 +58,8 @@ function cascadeAllocationCode<TBody extends Record<string, unknown>>(
   body: TBody,
   existing: Record<string, unknown>,
 ): void {
+  // ADR-931 — μόνο μεταβιβάσιμοι χώροι μπαίνουν στα `linkedSpaces` μονάδας· ο κοινόχρηστος ποτέ.
+  if (!isTransferableSpaceKind(cfg.entityKind)) return;
   const newDisplayCode = resolveAllocationCodeChange(body, existing, cfg.displayField);
   if (!newDisplayCode) return;
 
@@ -216,7 +219,8 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
       const plan = planSpaceWrite(cfg, body, existing);
       if (plan.kind === 'rejected') throw new ApiError(plan.status, plan.message);
       // ADR-898 §20 — παρακολούθημα μονάδας δεν αποσυνδέεται από κτίριο (θα «επέστρεφε» σιωπηλά)· άρνηση ΠΡΙΝ τη γραφή.
-      await assertNotDetachingAttachedSpace(adminDb, id, body, existing);
+      // ADR-931 — ο κοινόχρηστος δεν γίνεται παρακολούθημα (ΑΚ 1117)· ο φρουρός αφορά μόνο μεταβιβάσιμους.
+      if (isTransferableSpaceKind(cfg.entityKind)) await assertNotDetachingAttachedSpace(adminDb, id, body, existing);
       // ADR-898 §21.6 Ε6 — χώρος έργου μετακινείται μόνο σε κτίριο του ΙΔΙΟΥ έργου· άρνηση ΠΡΙΝ τη γραφή.
       // 🔒 §21.6 Ε6-γ — και το κτίριο είναι **του καλούντος**: ξένο ≡ ανύπαρκτο ⇒ 404 (ο καταρράκτης θα έγραφε το `companyId` του).
       await assertBuildingInSpaceProject(adminDb, { ctx, path: cfg.apiPath }, id, body, existing);
@@ -225,6 +229,8 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
       const updateData = {
         ...plan.updateData,
         ...(await resolveHostedFloorPatch(adminDb, ctx, body, existing)),
+        // ADR-931 — πεδία που κρίνονται απέναντι στη βάση (άρνηση ΠΡΙΝ τη γραφή).
+        ...(cfg.resolveAsyncFields ? await cfg.resolveAsyncFields({ adminDb, ctx, body, existing }) : {}),
       };
 
       const versionResult = await withVersionCheck({
@@ -242,9 +248,12 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
 
       // ADR-907 §11.8 — ο χώρος φαίνεται (με την κατάστασή του) στην κάτοψη ορόφου κάθε γειτονικής αγγελίας.
       // Awaited, και δεν πετά ποτέ: είναι τι βλέπει ο κόσμος· το κριτήριο «άλλαξε κάτι;» ζει εκεί, όχι εδώ.
-      await refreshFloorPlateNeighbours(adminDb, [
-        { link: SPACE_OVERLAY_LINK[cfg.entityKind], unitId: id, companyId: ctx.companyId },
-      ]);
+      // ADR-931 — ο κοινόχρηστος δεν έχει εμπορική κατάσταση να δείξει στην κάτοψη αγγελίας.
+      if (isTransferableSpaceKind(cfg.entityKind)) {
+        await refreshFloorPlateNeighbours(adminDb, [
+          { link: SPACE_OVERLAY_LINK[cfg.entityKind], unitId: id, companyId: ctx.companyId },
+        ]);
+      }
 
       // ADR-029 Phase D: search_documents written by the entity's Cloud Function.
       cfg.logger.info(cfg.messages.logUpdated, { id, companyId: ctx.companyId });

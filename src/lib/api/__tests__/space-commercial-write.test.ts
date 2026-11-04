@@ -28,7 +28,7 @@ const soldSpot = {
   commercialStatus: 'sold',
   commercial: { askingPrice: 12000, finalPrice: 11500, owners: [{ contactId: 'c1' }] },
 };
-const parkingCfg = { displayField: 'number' as const, mapExtraFields: () => ({}) };
+const parkingCfg = { entityKind: 'parking' as const, displayField: 'number' as const, mapExtraFields: () => ({}) };
 
 // =============================================================================
 // Α — Η ΓΡΑΦΗ
