@@ -34,7 +34,7 @@ export const CATALOG_MEASUREMENT_FAMILY_TRACKED_FIELDS = defs(
   ['labels', 'units'],
 );
 
-export const CATALOG_CATEGORY_TRACKED_FIELDS = defs(['parentId', 'orderKey', 'isDeleted'], ['labels', 'mappings']);
+export const CATALOG_CATEGORY_TRACKED_FIELDS = defs(['parentId', 'orderKey', 'vatRate', 'isDeleted'], ['labels', 'mappings']);
 
 /** Το όνομα του πεδίου της προβολής ανά ιδιότητα — ένα όνομα για μηχανή και περιγραφέα. */
 export const CATALOG_VALUES_AUDIT_FIELD = 'values';

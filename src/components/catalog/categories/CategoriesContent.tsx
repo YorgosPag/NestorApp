@@ -68,7 +68,7 @@ function InlineRename({ category, onDone, ops }: {
     finished.current = true;
     const trimmed = value.trim();
     if (trimmed.length > 0 && trimmed !== text(category.labels)) {
-      updateCategory(ops, category, category.revision, { labels: { ...category.labels, [language]: trimmed }, mappings: category.mappings });
+      updateCategory(ops, category, category.revision, { labels: { ...category.labels, [language]: trimmed }, mappings: category.mappings, vatRate: category.vatRate ?? null });
     }
     onDone();
   };

@@ -166,8 +166,11 @@ export function basisVersion(basis: QuoteBasis): PriceVersionRef | null {
   return basis.selected.kind === 'list' ? versionAt(basis.versions, basis.atMs) : null;
 }
 
-/** Μία γραμμή, με ντετερμινιστικό id: η ανάγνωση της μεμονωμένης κρίσης. */
-async function readBasisLine(scope: CatalogReadScope, basis: QuoteBasis, subject: QuoteTerms['subject']): Promise<QuoteLine | null> {
+/**
+ * Μία γραμμή, με ντετερμινιστικό id: η ανάγνωση της μεμονωμένης κρίσης. Τη ζητά και η βιτρίνα (§5.13 Σ6), που κρίνει λίγα SKU
+ * ενός μοντέλου πάνω σε μία βάση και δεν χρειάζεται όλες τις γραμμές της έκδοσης.
+ */
+export async function readBasisLine(scope: CatalogReadScope, basis: QuoteBasis, subject: QuoteTerms['subject']): Promise<QuoteLine | null> {
   const version = basisVersion(basis);
   if (version === null) return null;
   const lineId = naturalKeyId(scope, 'priceListLine', priceListLineKey(version.id, priceLineSubjectKey(subject)));

@@ -11,7 +11,7 @@ import { updateCategoryBodySchema } from '@/subapps/catalog/schema/zod/library.s
 import { catalogDeleteRoute, catalogEntityRoute } from '../../_shared/catalog-route';
 
 export const PUT = catalogEntityRoute({ category: 'STANDARD' }, updateCategoryBodySchema, (auth, id, body) =>
-  updateCatalogCategory(auth, id, body.expectedRevision, { labels: body.labels, mappings: body.mappings }),
+  updateCatalogCategory(auth, id, body.expectedRevision, { labels: body.labels, mappings: body.mappings, vatRate: body.vatRate }),
 );
 
 export const DELETE = catalogDeleteRoute({ category: 'STANDARD' }, deleteCatalogCategory);

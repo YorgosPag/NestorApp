@@ -11,18 +11,17 @@
 
 import type { TreeMove } from '@/components/ui/sortable/sortable-model';
 import type { CatalogOptimistic, CatalogOutcome } from '@/hooks/catalog/useCatalogOptimistic';
-import type { LocalizedText } from '@/i18n/localized-text';
 import {
   createCatalogCategory,
   deleteCatalogCategory,
   moveCatalogCategory,
   updateCatalogCategory,
+  type CategoryPatch,
   type CategoryRecord,
   type CreateCategoryInput,
 } from '@/services/catalog/catalog-api.client';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import { ancestorsUnder, validateCategoryPlacement } from '@/subapps/catalog/schema/category-tree';
-import type { CatalogCategoryMappings } from '@/subapps/catalog/types/category';
 import { newEntityKey, optimisticWire } from '../shared/catalog-actions';
 import { orderKeyBetween } from '../shared/catalog-ordering';
 
@@ -70,7 +69,7 @@ export function updateCategory(
   category: CategoryRecord,
   /** Η αναθεώρηση πάνω στην οποία χτίστηκε η αλλαγή (CAS) — όχι η ζωντανή. */
   baseRevision: number,
-  patch: { readonly labels: LocalizedText; readonly mappings: CatalogCategoryMappings },
+  patch: CategoryPatch,
   onSettled?: Settled,
 ): void {
   ops.submit({

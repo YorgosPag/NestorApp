@@ -348,7 +348,8 @@
     "xchangeNothingToExport": "{cause, select, catalogEmpty {The catalogue has no products.} noVisibilityRules {There is no visibility rule, so every product is hidden.} hiddenForAudience {Every product is hidden from this audience.} noUsableIdentifier {No visible product has a code of up to {max} characters.} other {There is no product to export.}} The xChange standard does not accept a file without products.",
     "supplyNotRequested": "There is no pending request.",
     "contactAlreadyBound": "This contact is already linked to another workspace.",
-    "contactWithoutEmail": "This contact has no email."
+    "contactWithoutEmail": "This contact has no email.",
+    "vatRatePricingAuthority": "The VAT rate can only be changed with the pricing management permission."
   },
   "measurement": {
     "family": {
@@ -423,6 +424,7 @@
       "scopable": "Per-channel value",
       "unique": "Unique value",
       "orderKey": "Position",
+      "vatRate": "VAT rate",
       "isDeleted": "Deleted",
       "labels": "Label",
       "description": "Description",
@@ -615,7 +617,15 @@
     "atoeHint": "Optional: the matching category of the ATOE taxonomy.",
     "deleteLeafOnly": "Only a category without subcategories can be deleted. Move or delete its subcategories first.",
     "emptyTitle": "Choose a category",
-    "emptyDescription": "Rename with a double click or F2. Move by dragging, or with Alt and the arrow keys."
+    "emptyDescription": "Rename with a double click or F2. Move by dragging, or with Alt and the arrow keys.",
+    "vatRate": "VAT rate",
+    "vatRateHint": "Used for the final price incl. VAT in the public showcase. Subcategories inherit it unless they declare their own.",
+    "vatInherit": "Inherited from the parent",
+    "vatRateOption": "{rate}%",
+    "vatEffectiveOwn": "In effect: {rate}% (declared here)",
+    "vatEffectiveInherited": "In effect: {rate}%, from “{category}”",
+    "vatEffectiveNone": "No rate along the path: showcase visitors see “Price on request”.",
+    "vatRateNeedsPricing": "Only users who manage pricing can change the rate."
   },
   "families": {
     "new": "New family",

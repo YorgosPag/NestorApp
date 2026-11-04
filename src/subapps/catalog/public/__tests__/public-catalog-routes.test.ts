@@ -91,7 +91,7 @@ describe('κάρτα μοντέλου', () => {
   });
 
   it('🔒 η κάρτα δεν κουβαλά τιμές ιδιοτήτων', () => {
-    expect(Object.keys(publicModelCardOf(model())).sort()).toEqual(['code', 'familyLabels', 'image', 'listingKind', 'modelId', 'title', 'variantCount']);
+    expect(Object.keys(publicModelCardOf(model())).sort()).toEqual(['code', 'familyLabels', 'image', 'listingKind', 'modelId', 'title', 'variantCount', 'variantIds']);
   });
 });
 
@@ -117,6 +117,20 @@ describe('🔒 δομημένα δεδομένα', () => {
       expect(keys.filter((key) => /price|amount/i.test(key))).toEqual([]);
     }
     expect(keysOf(supplierStructuredData(SUPPLIER, [SERVICE]))).not.toContain('offers');
+  });
+
+  it('Σ6: `offers` μόνο από την ανώνυμη τελική τιμή, με ΦΠΑ και ποσότητα αναφοράς · «Κατόπιν προσφοράς» ⇒ κανένα', () => {
+    const product = model({ media: [IMAGE] });
+    const [variant] = product.variants;
+    const priced = { kind: 'priced', audience: 'anonymous', currency: 'EUR', unitCode: 'm', priceQuantity: 100, net: null, gross: 10416, vatRate: 24, unitNet: null, unitGross: 104 } as const;
+    const data = modelStructuredData(product, 'https://x/p', SUPPLIER, { [variant.variantId]: priced });
+    expect(data).toMatchObject({ offers: [{ '@type': 'Offer', price: '104.16', priceCurrency: 'EUR', priceSpecification: { valueAddedTaxIncluded: true, referenceQuantity: { value: 100, unitCode: 'MTR' } } }] });
+    expect(JSON.stringify(data)).not.toContain('84');
+    // Μ-6: κανένα επινοημένο πεδίο — ο κατάλογος δεν έχει διαθεσιμότητα ούτε λήξη τιμής (δηλωμένα κενά).
+    expect(JSON.stringify(data)).not.toMatch(/availability|priceValidUntil/);
+    const buyer = { ...priced, audience: 'buyer', net: 8400, unitNet: 84 } as const;
+    expect(keysOf(modelStructuredData(product, 'https://x/p', SUPPLIER, { [variant.variantId]: buyer }))).not.toContain('offers');
+    expect(keysOf(modelStructuredData(product, 'https://x/p', SUPPLIER, { [variant.variantId]: { kind: 'onRequest' } }))).not.toContain('offers');
   });
 
   it('τα πεδία του προϊόντος και το κενό `image`', () => {

@@ -14,6 +14,7 @@ import 'server-only';
 import type { AuthContext } from '@/lib/auth';
 import type { CatalogProductModelDefinition } from '@/subapps/catalog/types/product';
 import type { StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
+import { readAggregateVatAuthority, VAT_NEUTRAL_WRITE } from './aggregate-vat-authority.server';
 import { commitAggregate, committedRecord } from './catalog-aggregate.server';
 import { readOwned, runCatalogTransaction, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 
@@ -27,7 +28,7 @@ async function rootOfModel(scope: CatalogTx, id: string): Promise<string> {
 
 export async function createCatalogProductModel(ctx: AuthContext, definition: CatalogProductModelDefinition): Promise<StoredModel> {
   return runCatalogTransaction(ctx, async (scope) => {
-    const committed = await commitAggregate(scope, definition.parentId, [{ op: 'create', kind: 'productModel', definition }]);
+    const committed = await commitAggregate(scope, definition.parentId, [{ op: 'create', kind: 'productModel', definition }], VAT_NEUTRAL_WRITE);
     return committedRecord<StoredCatalogProductModelDefinition>(committed, committed.createdIds[0]);
   });
 }
@@ -38,9 +39,10 @@ export async function updateCatalogProductModel(
   expectedRevision: number,
   definition: CatalogProductModelDefinition,
 ): Promise<StoredModel> {
+  const vatAuthority = await readAggregateVatAuthority(ctx);
   return runCatalogTransaction(ctx, async (scope) => {
     const rootId = await rootOfModel(scope, id);
-    const committed = await commitAggregate(scope, rootId, [{ op: 'update', kind: 'productModel', id, expectedRevision, definition }]);
+    const committed = await commitAggregate(scope, rootId, [{ op: 'update', kind: 'productModel', id, expectedRevision, definition }], vatAuthority);
     return committedRecord<StoredCatalogProductModelDefinition>(committed, id);
   });
 }
@@ -48,7 +50,7 @@ export async function updateCatalogProductModel(
 export async function deleteCatalogProductModel(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredModel> {
   return runCatalogTransaction(ctx, async (scope) => {
     const rootId = await rootOfModel(scope, id);
-    const committed = await commitAggregate(scope, rootId, [{ op: 'delete', kind: 'productModel', id, expectedRevision }]);
+    const committed = await commitAggregate(scope, rootId, [{ op: 'delete', kind: 'productModel', id, expectedRevision }], VAT_NEUTRAL_WRITE);
     return committedRecord<StoredCatalogProductModelDefinition>(committed, id);
   });
 }

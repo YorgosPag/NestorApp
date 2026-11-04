@@ -2619,6 +2619,7 @@
     "Properties": ["common-audit", "iso19650", "listing-detail", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
     "PropertyDetail": ["common-audit", "iso19650", "listing-detail", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
     "PropertyDossierTab": ["common-audit", "iso19650", "listing-detail", "property-market"],
+    "PublicCatalogPrice": ["public-catalog"],
     "ReportsBuilder": ["report-builder", "report-builder-domains", "saved-reports"],
     "ReportsCashFlow": ["cash-flow"],
     "SalesAvailableParking": ["common-audit", "listing-detail"],
@@ -2631,9 +2632,9 @@
     "SpacesStorage": ["common-audit", "iso19650", "listing-detail"]
   },
   "lazyRouteMountSeal": {
-    "count": 77,
-    "at": "2026-10-31",
-    "why": "ADR-280 §11.8 Β4.3 (2026-10-31) — ΑΥΞΗΣΗ 57 → 77 ΜΕ ΡΗΤΟ «ΝΑΙ» του Giorgio. +20, 0 διαγραφές: οι 4 νέες εγγραφές PropertyDetail (8) · HarnessContactMutation (4) · PropertyDossierTab (4) · SalesReserveDialog (4). ΔΕΝ είναι νέα λήψη: τα ίδια namespaces τα ζητούσαν ήδη οι οθόνες στο mount, αλλά ΧΩΡΙΣ αναμονή (χρέος εισδοχής = καρέ με ωμά κλειδιά). Τώρα το chunk τα περιμένει πίσω από το skeleton — 0 bytes, ορθότητα πρώτου καρέ. Ταυτόχρονα lazyAdmissionSeal 400 → 321. Μοχλός μείωσης: όρια κώδικα στις καρτέλες του PropertyDetail (pending)."
+    "count": 78,
+    "at": "2026-11-04",
+    "why": "ADR-923 §5.13 Σ6 (2026-11-04) — ΑΥΞΗΣΗ 77 → 78, εγκρίθηκε από τον Giorgio 2026-11-04 («ΟΚ ΣΥΜΦΩΝΩ», μέσω της συντονίστριας του κύματος 3· το ζήτησε η λωρίδα Λ2). +1, 0 διαγραφές: η ΜΙΑ επιφάνεια τιμής της βιτρίνας `PublicCatalogPrice` → `public-catalog`. Οι τιμές είναι πίσω από κλειστό διακόπτη (`PUBLIC_SHOWCASE_PRICES`), άρα με κλειστό διακόπτη η επιφάνεια δεν μοντάρεται και η λήψη δεν γίνεται ποτέ. Εναλλακτικές που απορρίφθηκαν: (α) στατική εισαγωγή ⇒ νέα σφράγιση bytes και στα τρία route slices της βιτρίνας, βάρος σε ΚΑΘΕ φόρτωση ακόμη και με κλειστό διακόπτη· (β) τοπικό `next/dynamic` ⇒ +6 τριάδες χρέους εισδοχής χωρίς αναμονή (ωμά κλειδιά)· (γ) τρεις επιφάνειες ⇒ +3. Μία επιφάνεια με τρεις τρόπους (`ShowcasePriceSurface`) = +1. ADR-280 §11.8 Β4.3 (2026-10-31) — ΑΥΞΗΣΗ 57 → 77 ΜΕ ΡΗΤΟ «ΝΑΙ» του Giorgio. +20, 0 διαγραφές: οι 4 νέες εγγραφές PropertyDetail (8) · HarnessContactMutation (4) · PropertyDossierTab (4) · SalesReserveDialog (4). ΔΕΝ είναι νέα λήψη: τα ίδια namespaces τα ζητούσαν ήδη οι οθόνες στο mount, αλλά ΧΩΡΙΣ αναμονή (χρέος εισδοχής = καρέ με ωμά κλειδιά). Τώρα το chunk τα περιμένει πίσω από το skeleton — 0 bytes, ορθότητα πρώτου καρέ. Ταυτόχρονα lazyAdmissionSeal 400 → 321. Μοχλός μείωσης: όρια κώδικα στις καρτέλες του PropertyDetail (pending)."
   },
   "$lazyAdmissionDebt": "ADR-280 §11.8 Β4.2 · ADR-279 §9 — το ΧΡΕΟΣ ΕΙΣΔΟΧΗΣ: «<ρίζα> ⟵ <όριο|(στατική)>» → namespaces εκτός εκκίνησης που ονομάζονται σε κάτι που μοντάρεται ΧΩΡΙΣ αλλαγή διαδρομής (η σελίδα/layout/εγγραφή και κάθε import() που δεν είναι εγγραφή μητρώου) και που η ρίζα ΔΕΝ περιμένει ⇒ ωμό καρέ. Παράγεται από την ΙΔΙΑ μηχανή του χάρτη (surface-coverage.js)· κρίνεται στον γεννήτορα και στο CI (--full). ΤΑΥΤΟΤΗΤΑ, ΠΟΤΕ BYTES — μόνο συρρικνώνεται. Νέα τριάδα ⇒ πέρασε το όριο από μητρώο (defineLazyRoutes / defineLazySurfaces) ώστε το chunk να φέρνει τα κείμενά του. Τριάδα που έπαψε ⇒ σβήσ' την και ΚΑΤΕΒΑΣΕ τη σφράγιση.",
   "lazyAdmissionDebt": {

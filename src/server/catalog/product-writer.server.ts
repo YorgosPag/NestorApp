@@ -18,6 +18,7 @@ import type {
   StoredCatalogProductDefinition,
   StoredCatalogProductModelDefinition,
 } from '@/subapps/catalog/types/product-derived';
+import { readAggregateVatAuthority, VAT_NEUTRAL_WRITE } from './aggregate-vat-authority.server';
 import { commitAggregate, committedRecord, type HolderChange } from './catalog-aggregate.server';
 import {
   readOwned,
@@ -50,7 +51,7 @@ export async function createCatalogProduct(
 ): Promise<StoredProduct> {
   return runCatalogTransaction(ctx, async (scope) => {
     const rootId = await rootOfModelId(scope, definition.modelId);
-    const committed = await commitAggregate(scope, rootId, [{ op: 'create', kind: 'product', definition, requestedId }]);
+    const committed = await commitAggregate(scope, rootId, [{ op: 'create', kind: 'product', definition, requestedId }], VAT_NEUTRAL_WRITE);
     return committedRecord<StoredCatalogProductDefinition>(committed, committed.createdIds[0]);
   });
 }
@@ -61,9 +62,10 @@ export async function updateCatalogProduct(
   expectedRevision: number,
   definition: CatalogProductDefinition,
 ): Promise<StoredProduct> {
+  const vatAuthority = await readAggregateVatAuthority(ctx);
   return runCatalogTransaction(ctx, async (scope) => {
     const rootId = await rootOfProduct(scope, id);
-    const committed = await commitAggregate(scope, rootId, [{ op: 'update', kind: 'product', id, expectedRevision, definition }]);
+    const committed = await commitAggregate(scope, rootId, [{ op: 'update', kind: 'product', id, expectedRevision, definition }], vatAuthority);
     return committedRecord<StoredCatalogProductDefinition>(committed, id);
   });
 }
@@ -71,7 +73,7 @@ export async function updateCatalogProduct(
 export async function deleteCatalogProduct(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredProduct> {
   return runCatalogTransaction(ctx, async (scope) => {
     const rootId = await rootOfProduct(scope, id);
-    const committed = await commitAggregate(scope, rootId, [{ op: 'delete', kind: 'product', id, expectedRevision }]);
+    const committed = await commitAggregate(scope, rootId, [{ op: 'delete', kind: 'product', id, expectedRevision }], VAT_NEUTRAL_WRITE);
     return committedRecord<StoredCatalogProductDefinition>(committed, id);
   });
 }
@@ -104,10 +106,11 @@ function batchChanges(batch: VariantBatch): HolderChange[] {
 /** `PUT /api/catalog/product-models/[id]/variants` — μία συναλλαγή, CAS ανά παραλλαγή, κρίση όλου του συνόλου. */
 export async function saveCatalogVariants(ctx: AuthContext, modelId: string, batch: VariantBatch): Promise<VariantBatchResult> {
   assertBatchBelongs(modelId, batch);
+  const vatAuthority = await readAggregateVatAuthority(ctx);
   return runCatalogTransaction(ctx, async (scope) => {
     const model = await readOwned<StoredCatalogProductModelDefinition>(scope, 'productModel', modelId);
     const rootId = model.parentId ?? model.id;
-    const committed = await commitAggregate(scope, rootId, batchChanges(batch));
+    const committed = await commitAggregate(scope, rootId, batchChanges(batch), vatAuthority);
     let created = 0;
     const variants = batch.upserts.map((upsert) => {
       const id = upsert.expectedRevision === null ? committed.createdIds[created++] : upsert.id;

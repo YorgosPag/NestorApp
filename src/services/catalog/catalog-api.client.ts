@@ -51,6 +51,7 @@ import type {
 } from '@/subapps/catalog/types/pricing-views';
 import type { VisibilityRuleDefinition } from '@/subapps/catalog/types/visibility-rule';
 import type { LocalizedText } from '@/i18n/localized-text';
+import type { GreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 
 // ── Οι εγγραφές όπως τις δίνει ο γραφέας (σύρμα: χρονοσφραγίδες ISO) ─────────
 
@@ -153,6 +154,15 @@ export interface CreateCategoryInput {
   readonly parentId: string | null;
   readonly orderKey: string;
   readonly mappings: CatalogCategoryMappings;
+  /** ADR-923 §5.13 Ε3 — `null` = κληρονομείται. */
+  readonly vatRate: GreekVatRatePercent | null;
+}
+
+/** Η αλλαγή κατηγορίας από την οθόνη: ετικέτα, αντιστοιχίσεις, συντελεστής ΦΠΑ (`null` = κληρονομείται). */
+export interface CategoryPatch {
+  readonly labels: LocalizedText;
+  readonly mappings: CatalogCategoryMappings;
+  readonly vatRate: GreekVatRatePercent | null;
 }
 
 export function createCatalogCategory(input: CreateCategoryInput): Promise<CategoryRecord> {
@@ -163,7 +173,7 @@ export function createCatalogCategory(input: CreateCategoryInput): Promise<Categ
 export function updateCatalogCategory(
   id: string,
   expectedRevision: number,
-  patch: { readonly labels: LocalizedText; readonly mappings: CatalogCategoryMappings },
+  patch: CategoryPatch,
 ): Promise<CategoryRecord> {
   return apiClient.put<CategoryRecord>(CATALOG_API.categories.item(id), { expectedRevision, ...patch });
 }

@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "d50083736c55bf9e7c8b1d200c451841052d4bb517d03d876a629db993ba2d6b",
+    "src/i18n/generated/lazy-route-namespaces.json": "40df29c6210064a40a701497085896e728da272b1f04f1994a295b767703a7e4",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -42,7 +42,7 @@
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__catalog__assets.el.json": "cd23cd261342c023c96dce78136edcd0362ebb02ece1acca09d1b62ff186084e",
     "src/i18n/generated/routes/o__workspace__catalog__attributes.el.json": "51354342c54ce341bca5d524c343328301895b819c39f4b9d7e9572e91b0ed7b",
-    "src/i18n/generated/routes/o__workspace__catalog__categories.el.json": "12594024aaac64426467795d9508158bf08e6a0691da958206cf949254dccc8c",
+    "src/i18n/generated/routes/o__workspace__catalog__categories.el.json": "a41eadc7f6578887dc7604aad9eda9450b54378b1cf084c9eb72c1eae60efd43",
     "src/i18n/generated/routes/o__workspace__catalog__connections.el.json": "230701f207f64cb6a1c6251f1fec5aa09c65efe4c79c82a7f586a03f7e1cc479",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "ed53a8bf5790b1cbbb8248fe4bd32a7bc4d8ce1b44e3a5717054c1e3ea73e025",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "cde850bf42a7a7f3260f6a2bc54762bdf40b4de382519b836e60d55c2359634a",
@@ -127,7 +127,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "87d6b7e9278d96e830e3f5ade9b71e314a53f5d46c7d735cbb087eb4ae8dc167",
-      "lazyRouteRegistries": "9b5e7bd46f0b1a00e0e720c490feaaae1ff28c77b5f2238bc800a871cd2bdb04",
+      "lazyRouteRegistries": "b0bacc3cf337c275819dff6286bb518d8a5cab18c3c9d88d917b33d0adb7076f",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "b58ae01b916f847d1d66df5b292a591791654a168a344f7f4587bf3f7e215c45",
@@ -139,7 +139,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "0623fe953e85d3ee862fa5483f894a3b2c47f6555dbe1cbc5aec00980bb2b91a",
+      "registries": "20e5beb1f624f9d3204adc728a5bbf02c22172531ca9f47d49f0c3e712dcbb33",
       "supportedNamespaces": "fa89a7818c04598eb7b5fad08c27169ee7062ae2ebf727798f7dac54fa8fd65e"
     },
     "namespaceBundles": {
@@ -154,7 +154,7 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "90895c99706fec18bcf449f531ee9af11d37c25b1aa0106aa1fa2cf2f728c832",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "8ff7d457ed5c8db04b7103375007b764cec0e97c1accbd62afc4c4c90d46f628",
+      "scripts/lib/i18n-shell-slice/config.js": "abc4e208fbf26b6e082b57614a81ac623ce95a5d8c7456353ec87441c044e922",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
@@ -200,7 +200,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "7fbc96faece2aa445dee68c41111e3569e3d21a5ea0ee32a7516fbc21533b338",
+  "inputsSha256": "d5c5f272b37c45e4df42b906ee81652d073b52aacb71512e59538dbe0340ec0e",
   "languages": [
     "el"
   ],
@@ -6840,6 +6840,14 @@
             "categories.newRoot",
             "categories.none",
             "categories.renameOf",
+            "categories.vatEffectiveInherited",
+            "categories.vatEffectiveNone",
+            "categories.vatEffectiveOwn",
+            "categories.vatInherit",
+            "categories.vatRate",
+            "categories.vatRateHint",
+            "categories.vatRateNeedsPricing",
+            "categories.vatRateOption",
             "common.actions",
             "common.code",
             "common.codeHint",
@@ -37967,7 +37975,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1262598
+    "sliceBytes": 1263487
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

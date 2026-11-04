@@ -21,6 +21,8 @@ export const CATALOG_ISSUE_CODES = [
   'tooMany',
   'portfolioProjectImagesRequired',
   'unknownReference',
+  // ── ΦΠΑ κατηγορίας: φορολογική ρύθμιση, θέλει δικαίωμα τιμολόγησης (§5.13 Σ6, ανασκόπηση Χ4) ──
+  'vatRatePricingAuthority',
   // ── αιτήματα προσφοράς από τη βιτρίνα (§5.13 Ε6β) ──
   'quoteRecipientEmailRequired',
   'emailInvalid',

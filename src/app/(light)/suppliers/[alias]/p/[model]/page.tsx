@@ -2,7 +2,9 @@
  * `/suppliers/<ψευδώνυμο>/p/<slug>-<id>` — **η δημόσια σελίδα μοντέλου** (ADR-923 §5.13 Σ4).
  *
  * 🔑 ISR 5′, το ίδιο παράθυρο με τον αναγνώστη. Τα tags της `unstable_cache` ακολουθούν τη σελίδα, άρα η ανάκληση την ακυρώνει.
- * 🔒 Κρυφό, αποσυρμένο, ξένο και ανύπαρκτο δίνουν το ίδιο 404. Το JSON-LD δεν έχει `offers`.
+ * 🔒 Κρυφό, αποσυρμένο, ξένο και ανύπαρκτο δίνουν το ίδιο 404.
+ * 🔒 Σ6: μόνο η **ανώνυμη** τιμή μπαίνει εδώ (HTML, JSON-LD `offers`). Η σελίδα δεν διαβάζει ποτέ σύνδεση ή cookie, άρα η μνήμη ISR
+ *    είναι ίδια για όλους· η τιμή του αγοραστή έρχεται μόνο από τη νησίδα `no-store`. Κλειστός διακόπτης ⇒ `prices = null`.
  * ⛔ Το `permanentRedirect` πετά: μένει εκτός κάθε `try`.
  *
  * @module app/(light)/suppliers/[alias]/p/[model]/page
@@ -15,6 +17,7 @@ import { PublicModelView } from '@/components/public-catalog/PublicModelView';
 import { JsonLdScript } from '@/components/seo/JsonLdScript';
 import { modelStructuredData } from '@/lib/catalog/public-structured-data';
 import { publicUrl } from '@/lib/http/public-origin';
+import { readPublicModelPrices } from '@/services/public-catalog/public-catalog-prices';
 import { readPublicModel, readPublicProviderFacts, readPublicSupplierProfile } from '@/services/public-catalog/public-catalog.reader';
 import { orSupplierCatalogUnavailable, requirePublicSupplier } from '@/services/public-catalog/public-supplier-route';
 import type { PublicCatalogModel } from '@/subapps/catalog/public/public-catalog-schema';
@@ -57,16 +60,19 @@ export default async function SupplierModelPage({ params }: ModelPageProps) {
   if (decodeURIComponent(segment) !== canonicalSegment) permanentRedirect(route);
   const url = publicUrl(route);
   const supplierUrl = publicUrl(publicSupplierRoute(alias));
+  // Μ2: η τιμή είναι πρόσθετο· βλάβη ⇒ `null` και «Κατόπιν προσφοράς», ποτέ 5xx. Ξεκινά παράλληλα, δεν πετά ποτέ.
+  const pricesRead = readPublicModelPrices(model);
   const [facts, profile] = await orSupplierCatalogUnavailable(() =>
     Promise.all([readPublicProviderFacts(supplier.companyId), readPublicSupplierProfile(supplier.companyId)]),
   );
+  const prices = await pricesRead;
   return (
     <>
       {url === null || supplierUrl === null ? null : (
-        <JsonLdScript data={modelStructuredData(model, url, { legalName: supplier.legalName, url: supplierUrl, facts })} />
+        <JsonLdScript data={modelStructuredData(model, url, { legalName: supplier.legalName, url: supplierUrl, facts }, prices)} />
       )}
       {/* §5.13 Ε6β: το κουμπί μόνο με opt-in του προμηθευτή. Η σελίδα μένει ISR, η ταυτότητα κρίνεται στη νησίδα. */}
-      <PublicModelView segment={alias} model={model} acceptsQuoteRequests={profile?.acceptsQuoteRequests === true} />
+      <PublicModelView segment={alias} model={model} acceptsQuoteRequests={profile?.acceptsQuoteRequests === true} prices={prices} />
     </>
   );
 }

@@ -130,7 +130,14 @@ export const CATALOG_API = {
     const query = priceListId === null ? '' : `?${new URLSearchParams({ [XCHANGE_PRICE_LIST_PARAM]: priceListId }).toString()}`;
     return `${API_ROOT}/xchange-export/preview${query}`;
   },
+  /** Η τιμή του συνδεδεμένου αγοραστή για ένα δημόσιο μοντέλο (§5.13 Σ6, νησίδα `no-store`). */
+  showcasePrices: (supplierCompanyId: string, modelId: string) =>
+    `${API_ROOT}/showcase-prices?${new URLSearchParams({ [SHOWCASE_SUPPLIER_PARAM]: supplierCompanyId, [SHOWCASE_MODEL_PARAM]: modelId }).toString()}`,
 } as const;
+
+/** Ο προμηθευτής και η ρίζα της νησίδας τιμής (§5.13 Σ6) — ένα όνομα για πελάτη και route. */
+export const SHOWCASE_SUPPLIER_PARAM = 'supplier';
+export const SHOWCASE_MODEL_PARAM = 'model';
 
 /** Το έργο του βιβλίου τιμών κόστους (`GET …/cost-rates?projectId=…`). */
 export const COST_RATES_PROJECT_PARAM = 'projectId';

@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * **Η σελίδα μοντέλου** (ADR-923 §5.13 Σ4). Καμία τιμή: το έγγραφο δεν έχει, άρα όλα δείχνουν «Κατόπιν προσφοράς» ως το Σ6.
+ * **Η σελίδα μοντέλου** (ADR-923 §5.13 Σ4). Το δημόσιο έγγραφο δεν έχει τιμή (Ε4). Η ανώνυμη τιμή έρχεται από τον διακομιστή ως
+ * `prices` και η τιμή του αγοραστή από τη νησίδα `no-store` (Σ6). Με κλειστό διακόπτη όλα δείχνουν «Κατόπιν προσφοράς», όπως πριν.
  *
  * 🔒 Το `richText` μπαίνει ως HTML **μόνο** αν περάσει τη γραμματική `checkRichText`. Αλλιώς δείχνεται ως απλό κείμενο, όπως στον
  *    εκδότη: το έγγραφο το γράφει ο διακομιστής, αλλά η οθόνη είναι δημόσια και δεν στηρίζεται σε αυτό.
@@ -11,6 +12,7 @@
 
 import React from 'react';
 
+import { isAppFeatureEnabled } from '@/config/feature-flags';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { quotableSkuAddress } from '@/lib/navigation/procurement-urls';
 import { Link } from '@/lib/workspace/navigation';
@@ -18,10 +20,12 @@ import type { PublicCatalogAttribute, PublicCatalogMedia, PublicCatalogModel, Pu
 import { publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import { publicModelTitle } from '@/subapps/catalog/public/public-model-card';
 import { publicValueIn, publicValueText } from '@/subapps/catalog/public/public-value-text';
+import { showcasePriceIn, type ShowcaseConsumerModelPrices } from '@/subapps/catalog/public/showcase-price';
 import { checkRichText } from '@/subapps/catalog/values/rich-text';
 
 import { usePublicCatalogText } from './public-catalog-text';
 import { RequestQuoteButton } from './RequestQuoteButton';
+import { BuyerPriceIslandSlot, PublicPriceSlot } from './public-catalog-surfaces';
 
 // ADR-744 §18: το route slice φτάνει στον φυλλομετρητή μόνο από client component, όχι από το `page.tsx`.
 import routeSlice from '@/i18n/generated/routes/suppliers__alias__p__model.el.json';
@@ -70,13 +74,33 @@ function QuoteFor({ model, variantId, accepts }: { readonly model: PublicCatalog
   return address === null ? null : <RequestQuoteButton address={address} />;
 }
 
+/**
+ * ADR-923 §5.13 Σ6 — η ανώνυμη τιμή ενός SKU, ή «Κατόπιν προσφοράς». Με κλειστό διακόπτη `prices` είναι `null`, άρα η γραμμή
+ * είναι ακριβώς ό,τι ήταν πριν.
+ */
+function PriceLine({ prices, variantId }: { readonly prices: ShowcaseConsumerModelPrices | null; readonly variantId: string }): React.JSX.Element {
+  const { t } = usePublicCatalogText();
+  const price = showcasePriceIn(prices, variantId);
+  return price.kind === 'priced' ? <PublicPriceSlot price={price} /> : <p className="m-0 text-sm text-foreground">{t('model.priceOnRequest')}</p>;
+}
+
+/** Η επικεφαλίδα: ένα SKU ⇒ η τιμή του· πολλά ⇒ «Κατόπιν προσφοράς» μόνο αν κανένα δεν έχει τιμή (οι τιμές είναι ανά παραλλαγή). */
+function HeaderPrice({ model, prices }: { readonly model: PublicCatalogModel; readonly prices: ShowcaseConsumerModelPrices | null }): React.JSX.Element | null {
+  const { t } = usePublicCatalogText();
+  const [only, ...others] = model.variants;
+  if (others.length === 0) return <PriceLine prices={prices} variantId={only.variantId} />;
+  const anyPriced = model.variants.some((variant) => showcasePriceIn(prices, variant.variantId).kind === 'priced');
+  return anyPriced ? null : <p className="m-0 text-sm text-foreground">{t('model.priceOnRequest')}</p>;
+}
+
 interface VariantsProps {
   readonly model: PublicCatalogModel;
   readonly title: string;
   readonly acceptsQuoteRequests: boolean;
+  readonly prices: ShowcaseConsumerModelPrices | null;
 }
 
-function Variants({ model, title, acceptsQuoteRequests }: VariantsProps): React.JSX.Element | null {
+function Variants({ model, title, acceptsQuoteRequests, prices }: VariantsProps): React.JSX.Element | null {
   const { t } = usePublicCatalogText();
   if (model.variants.length < 2) return null;
   return (
@@ -88,7 +112,7 @@ function Variants({ model, title, acceptsQuoteRequests }: VariantsProps): React.
             <h3 className="m-0 text-base font-semibold">{variant.label ?? variant.code ?? title}</h3>
             <AttributeRows attributes={variant.attributes} />
             <MediaRow media={variant.media} fallbackAlt={title} />
-            <p className="m-0 text-sm text-foreground">{t('model.priceOnRequest')}</p>
+            <PriceLine prices={prices} variantId={variant.variantId} />
             <QuoteFor model={model} variantId={variant.variantId} accepts={acceptsQuoteRequests} />
           </li>
         ))}
@@ -102,9 +126,11 @@ interface PublicModelViewProps {
   readonly model: PublicCatalogModel;
   /** Το opt-in του προμηθευτή από το δημόσιο προφίλ (§5.13 Ε6β). Χωρίς αυτό δεν υπάρχει παραλήπτης, άρα ούτε κουμπί. */
   readonly acceptsQuoteRequests: boolean;
+  /** Οι ανώνυμες τιμές ανά SKU (§5.13 Σ6), από τον διακομιστή. `null` ⇒ κλειστός διακόπτης: η σελίδα όπως πριν το Σ6. */
+  readonly prices?: ShowcaseConsumerModelPrices | null;
 }
 
-export function PublicModelView({ segment, model, acceptsQuoteRequests }: PublicModelViewProps): React.JSX.Element {
+export function PublicModelView({ segment, model, acceptsQuoteRequests, prices = null }: PublicModelViewProps): React.JSX.Element {
   const { t, text } = usePublicCatalogText();
   const title = publicModelTitle(model);
   const [only, ...others] = model.variants;
@@ -116,7 +142,8 @@ export function PublicModelView({ segment, model, acceptsQuoteRequests }: Public
         <h1 className="m-0 text-2xl font-semibold">{title}</h1>
         <p className="m-0 text-sm text-muted-foreground">{text(model.familyLabels)}</p>
         <p className="m-0 text-sm text-muted-foreground">{t('model.code', { code: model.code })}</p>
-        <p className="m-0 text-sm text-foreground">{t('model.priceOnRequest')}</p>
+        <HeaderPrice model={model} prices={prices} />
+        {isAppFeatureEnabled('PUBLIC_SHOWCASE_PRICES') && <BuyerPriceIslandSlot model={model} />}
         {single && <QuoteFor model={model} variantId={only.variantId} accepts={acceptsQuoteRequests} />}
       </header>
       <MediaRow media={single ? [...model.media, ...only.media] : model.media} fallbackAlt={title} />
@@ -124,7 +151,7 @@ export function PublicModelView({ segment, model, acceptsQuoteRequests }: Public
         <h2 className="m-0 text-lg font-semibold">{t('model.specifications')}</h2>
         <AttributeRows attributes={single ? [...model.attributes, ...only.attributes] : model.attributes} />
       </section>
-      <Variants model={model} title={title} acceptsQuoteRequests={acceptsQuoteRequests} />
+      <Variants model={model} title={title} acceptsQuoteRequests={acceptsQuoteRequests} prices={prices} />
     </ShellSurface>
   );
 }

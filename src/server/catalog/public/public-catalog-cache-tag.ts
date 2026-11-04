@@ -11,3 +11,9 @@
 export const publicCatalogCompanyTag = (companyId: string): string => `public-catalog:company:${companyId}`;
 
 export const publicCatalogModelTag = (modelId: string): string => `public-catalog:model:${modelId}`;
+
+/**
+ * Οι τιμές της βιτρίνας ενός προμηθευτή (ADR-923 §5.13 Σ6). Χωριστό tag, γιατί η τιμολόγηση δεν περνά από το outbox: κάθε γραφή
+ * που αγγίζει όψη τιμών (λίστα, έκδοση, γραμμή, συνθήκη, ανάθεση) το χτυπά μετά το commit.
+ */
+export const publicCatalogPricesTag = (companyId: string): string => `public-catalog:prices:${companyId}`;

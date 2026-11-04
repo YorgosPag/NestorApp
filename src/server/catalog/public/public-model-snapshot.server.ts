@@ -23,7 +23,10 @@ import type { PublicProjectionInput } from '@/subapps/catalog/public/project-pub
 import { chainOf, type StoredModel, type StoredProduct } from '@/subapps/catalog/publishing/publication-chapters';
 import type { CatalogRenditions } from '@/subapps/catalog/renditions/catalog-renditions';
 import type { CatalogAssetDefinition } from '@/subapps/catalog/types/asset';
+import type { GreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 import type { CatalogCategoryDefinition } from '@/subapps/catalog/types/category';
+import type { VisibilityAncestry } from '@/subapps/catalog/types/visibility-rule';
+import { showcaseVatRateOf } from '@/subapps/catalog/public/showcase-price';
 import { generateDeterministicCatalogSupplierProfileId } from '@/services/enterprise-id.service';
 import { quoteIntakeAccepts } from '@/subapps/catalog/schema/validate-supplier-profile';
 import { storedQuoteIntakeOf } from '@/subapps/catalog/schema/zod/supplier-profile.schema';
@@ -111,11 +114,17 @@ export async function readPublicAssetFacts(scope: CatalogReadScope, assetIds: re
   return new Map(facts.map((fact) => [fact.assetId, fact]));
 }
 
-async function snapshotOfTree(scope: CatalogReadScope, rootId: string, tree: ModelTree, nowMs: number): Promise<PublicModelSnapshot> {
-  const schema = await readSchemaSnapshot(scope, tree.familyId, tree.variantSchemeCode);
+/** Η θέση κάθε SKU του δέντρου: η αλυσίδα του και οι κατηγορίες που αγγίζει. Κοινή για την προβολή και την τιμή (Σ6). */
+async function readTreePlacement(scope: CatalogReadScope, tree: ModelTree) {
   const chains = tree.products.map((product) => ({ product, chain: chainOf(product, tree.models) }));
   const categoryIds = [...tree.models.values(), ...tree.products].flatMap((holder) => holder.categoryIds);
   const categories = await readActiveByIds<CatalogCategoryDefinition>(scope, 'category', categoryIds);
+  return { chains, categories };
+}
+
+async function snapshotOfTree(scope: CatalogReadScope, rootId: string, tree: ModelTree, nowMs: number): Promise<PublicModelSnapshot> {
+  const schema = await readSchemaSnapshot(scope, tree.familyId, tree.variantSchemeCode);
+  const { chains, categories } = await readTreePlacement(scope, tree);
   const variants = chains.map(({ product, chain }) => ({
     id: product.id,
     code: product.derived.identifier,
@@ -164,6 +173,30 @@ export async function supplierAcceptsQuotesInTx(tx: Transaction, db: Firestore, 
   const id = generateDeterministicCatalogSupplierProfileId(supplierCompanyId);
   const stored = await readOwnedOrNull<CatalogSupplierProfileStored>(scope, 'supplierProfile', id);
   return stored !== null && quoteIntakeAccepts(storedQuoteIntakeOf(stored.quoteIntake));
+}
+
+/** Ό,τι χρειάζεται η τιμή της βιτρίνας ανά SKU (ADR-923 §5.13 Σ6): η θέση για την ορατότητα και ο συντελεστής ΦΠΑ για την τελική. */
+export interface PublicVariantPlacements {
+  readonly ancestries: ReadonlyMap<string, VisibilityAncestry>;
+  /** Ο συντελεστής ΦΠΑ ανά SKU, κριμένος ανά κλάδο (`showcaseVatRateOf`)· `null` = άγνωστος ή αντιφατικός. */
+  readonly vatRates: ReadonlyMap<string, GreekVatRatePercent | null>;
+}
+
+/**
+ * Η θέση των SKU μιας δημοσιεύσιμης ρίζας, μέσα στη σκοπιά του καλούντα (ADR-923 §5.13 Σ6). Η ίδια ανάγνωση δέντρου με την
+ * προβολή, ώστε η τιμή να κρίνει ορατότητα με την ίδια αλυσίδα. `null` ⇒ υπο-μοντέλο, SKU με γονέα ή ανύπαρκτο.
+ */
+export async function readPublicVariantPlacements(scope: CatalogReadScope, rootId: string): Promise<PublicVariantPlacements | null> {
+  const tree = await readTree(scope, rootId);
+  if (tree === null) return null;
+  const { chains, categories } = await readTreePlacement(scope, tree);
+  const missingAncestors = [...categories.values()].flatMap((category) => category.ancestorIds).filter((id) => !categories.has(id));
+  const ancestors = await readActiveByIds<CatalogCategoryDefinition>(scope, 'category', missingAncestors);
+  const byId = new Map([...categories, ...ancestors]);
+  const categoriesOf = (chain: (typeof chains)[number]['chain']) => chain.flatMap((link) => link.holder.categoryIds);
+  const vatRates = new Map(chains.map(({ product, chain }) => [product.id, showcaseVatRateOf(categoriesOf(chain), byId)]));
+  const ancestries = new Map(chains.map(({ product, chain }) => [product.id, ancestryOfChain(product.id, chain, categories)]));
+  return { ancestries, vatRates };
 }
 
 /** `null` ⇒ δεν υπάρχει (πια) δημοσιεύσιμη ρίζα με αυτό το id: ο αδειαστής σβήνει το έγγραφο. */

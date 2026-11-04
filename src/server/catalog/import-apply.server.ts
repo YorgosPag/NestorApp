@@ -20,6 +20,7 @@ import type { ImportBatchDefinition, ImportProposalDefinition, ImportProposalFie
 import type { PriceLineInput } from '@/subapps/catalog/types/price-list-requests';
 import type { StoredCatalogProductDefinition, StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
 import type { StoredPriceListLineDefinition, StoredPriceListVersionDefinition } from '@/subapps/catalog/types/price-list';
+import { readAggregateVatAuthority, type AggregateVatAuthority } from './aggregate-vat-authority.server';
 import { commitAggregate, type CommittedAggregate, type HolderChange } from './catalog-aggregate.server';
 import { assertRevision, naturalKeyId, readForUpsert, readOwned, runCatalogTransaction, stageReplace, type CatalogTx } from './catalog-store.server';
 import { assertNoIssues, CatalogWriteError } from './catalog-write-error';
@@ -78,7 +79,12 @@ function rowsWithHolders(rows: readonly ImportProposalRow[], committed: Committe
   });
 }
 
-async function applyAttributes(scope: CatalogTx, proposal: StoredImportProposal, categoryIds: readonly string[]): Promise<readonly ImportProposalRow[]> {
+async function applyAttributes(
+  scope: CatalogTx,
+  proposal: StoredImportProposal,
+  categoryIds: readonly string[],
+  vatAuthority: AggregateVatAuthority,
+): Promise<readonly ImportProposalRow[]> {
   const modelRow = proposal.rows.find((row) => row.holderKind === 'productModel');
   const rootId = rootIdOf(scope, proposal, modelRow);
   const changes: HolderChange[] = [];
@@ -92,7 +98,7 @@ async function applyAttributes(scope: CatalogTx, proposal: StoredImportProposal,
   }
   if (changes.length === 0) return proposal.rows;
   const created = changes.some((change) => change.op === 'create' && change.kind === 'productModel');
-  return rowsWithHolders(proposal.rows, await commitAggregate(scope, created ? null : rootId, changes));
+  return rowsWithHolders(proposal.rows, await commitAggregate(scope, created ? null : rootId, changes, vatAuthority));
 }
 
 function fieldValue<T extends ImportProposalField['incoming']>(row: ImportProposalRow, field: string): T | null {
@@ -152,7 +158,8 @@ export async function applyImportProposal(ctx: AuthContext, id: string, expected
   return applied;
 }
 
-function commitProposal(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredImportProposal> {
+async function commitProposal(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredImportProposal> {
+  const vatAuthority = await readAggregateVatAuthority(ctx);
   return runCatalogTransaction(ctx, async (scope) => {
     const proposal = await readOwned<ImportProposalDefinition>(scope, 'importProposal', id);
     if (proposal.status === 'applied') return proposal;
@@ -162,7 +169,7 @@ function commitProposal(ctx: AuthContext, id: string, expectedRevision: number):
     assertDecided(proposal);
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', proposal.batchId);
     const categoryIds = batch.target.purpose === 'attributes' ? batch.target.categoryIds : [];
-    const rows = proposal.purpose === 'attributes' ? await applyAttributes(scope, proposal, categoryIds) : await applyPrices(scope, proposal);
+    const rows = proposal.purpose === 'attributes' ? await applyAttributes(scope, proposal, categoryIds, vatAuthority) : await applyPrices(scope, proposal);
     return stageReplace(scope, 'importProposal', proposal, { ...proposalDefinitionOf(proposal), rows, status: 'applied', appliedAt: scope.now, appliedBy: ctx.uid });
   });
 }

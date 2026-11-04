@@ -39,6 +39,8 @@ jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: (): Firestore => fa
 jest.mock('@/services/entity-audit-tracked-write', () => ({
   recordTrackedEntityWrite: (input: { entityType: string; entityId: string; before: unknown; after: unknown }) => recordTrackedEntityWrite(input),
 }));
+let mockPricingAllowed = true;
+jest.mock('@/lib/auth', () => ({ ...jest.requireActual('@/lib/auth'), hasPermission: async () => mockPricingAllowed }));
 
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθούν οι γραφείς */
 import { createCatalogAttributeGroup } from '../attribute-group-writer.server';
@@ -119,6 +121,36 @@ describe('κριτήριο εξόδου — το MFP με 7 παραλλαγές
     const trace = recordTrackedEntityWrite.mock.calls.find(([input]) => input.entityId === variants[0].id)?.[0];
     expect(Array.isArray((trace?.after as { values: unknown }).values)).toBe(true);
     expect((trace?.after as { values: Array<{ attributeId: string }> }).values.length).toBe(Object.keys(variants[0].values).length);
+  });
+});
+
+describe('Μ-1 (Χ4): η ανάθεση κατηγοριών που αλλάζει τον ενεργό ΦΠΑ θέλει τιμολόγηση', () => {
+  const category = (code: string, orderKey: string, vatRate: 13 | null) =>
+    createCatalogCategory(ARIES, { code, labels: { el: code }, parentId: null, orderKey, mappings: { atoeCode: null }, vatRate });
+  const inCategories = (model: Model, categoryIds: readonly string[]) => {
+    const { derived: _derived, revision: _revision, ...definition } = model;
+    return { ...definition, categoryIds };
+  };
+
+  it('⛔ μοντέλο-φορέας σε κλάδο με άλλο συντελεστή ⇒ άρνηση ανά SKU · ✅ ίδιος ενεργός · ✅ με το δικαίωμα', async () => {
+    const { model, variants } = await seedMfpWithVariants();
+    const food = await category('food', 'a1', 13);
+    const bare = await category('bare', 'a2', null);
+    mockPricingAllowed = false;
+    try {
+      const refused = await rejectionOf(updateCatalogProductModel(ARIES, model.id, model.revision, inCategories(model, [food.id])));
+      expect(refused.issues.map((issue) => issue.code)).toEqual(variants.map(() => 'vatRatePricingAuthority'));
+      expect(refused.issues.every((issue) => issue.path.endsWith('.categoryIds'))).toBe(true);
+      expect((fake.getData('catalog_product_models', model.id) as Model).revision).toBe(model.revision);
+      // Αδήλωτος → αδήλωτος: καμία τελική τιμή δεν αλλάζει, άρα ούτε δικαίωμα.
+      const moved = (await updateCatalogProductModel(ARIES, model.id, model.revision, inCategories(model, [bare.id]))) as Model;
+      expect(moved.categoryIds).toEqual([bare.id]);
+    } finally {
+      mockPricingAllowed = true;
+    }
+    const current = fake.getData('catalog_product_models', model.id) as Model;
+    const priced = (await updateCatalogProductModel(ARIES, model.id, current.revision, inCategories(current, [food.id]))) as Model;
+    expect(priced.categoryIds).toEqual([food.id]);
   });
 });
 

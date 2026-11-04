@@ -87,6 +87,9 @@ const SUPPLY_ROOT = 'src/server/supply-relationships/';
 const FOREIGN_READER = `${SUPPLY_ROOT}supply-foreign-quote.server.ts`;
 /** Ο αδειαστής της βιτρίνας διαβάζει τον κατάλογο χωρίς δρώντα: ο αγοραστής δεν υπάρχει, η ορατότητα κρίνεται για ανώνυμο (§5.13). */
 const PUBLIC_SNAPSHOT_READER = 'src/server/catalog/public/public-model-snapshot.server.ts';
+/** Η τιμή της βιτρίνας (ADR-923 §5.13 Σ6): χτίζει τον θεατή ΜΕΣΑ στη συναλλαγή και αφήνει να φύγει ΜΟΝΟ το κλειστό `showcasePriceOf`. */
+const PUBLIC_PRICE_READER = 'src/server/catalog/public/public-price-reader.server.ts';
+const FOREIGN_READERS = new Set([FOREIGN_READER, PUBLIC_SNAPSHOT_READER, PUBLIC_PRICE_READER]);
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
   'catalog_attributes', 'catalog_attribute_groups', 'catalog_measurement_families', 'catalog_categories', 'catalog_families',
@@ -165,6 +168,7 @@ const WIRING = {
   // Η ξένη ανάγνωση ρωτά ΠΡΩΤΑ τη σχέση, μέσα στη συναλλαγή, και αφήνει να φύγει ΜΟΝΟ η προβολή (ADR-923 §5.12 Σ4 · Δ5).
   [FOREIGN_READER]: ['runForeignCatalogRead(', 'readActiveSupplyRelationshipInTx(', 'foreignOutcomeOf('],
   [PUBLIC_SNAPSHOT_READER]: ['runForeignCatalogRead('],
+  [PUBLIC_PRICE_READER]: ['runForeignCatalogRead(', 'readActiveSupplyRelationshipInTx(', 'showcasePriceOf('],
   // Οι υποδοχές (όπως οι κρατήσεις) δεν είναι είδη: ευρετήριο του γραφέα, χωρίς ιστορικό.
   [KINDS]: CATALOG_COLLECTIONS.filter(
     (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS', 'COLLECTIONS.CATALOG_PUBLIC_OUTBOX'].includes(key),
@@ -223,7 +227,7 @@ function findingsIn(sf, rel) {
     else if (!rel.startsWith(SUPPLY_ROOT) && isWriteTo(SUPPLY_COLLECTIONS, node, refsByKey)) findings.push(classify(sf, node, rel, STATES.SUPPLY_WRITE_OUTSIDE));
     else if (Object.entries(DOC_REF_FUNCTIONS).some(([fn, users]) => ast.isCallTo(node, fn) && !users.has(rel))) {
       findings.push(classify(sf, node, rel, STATES.DOC_REF_OUTSIDE));
-    } else if (ast.isCallTo(node, 'runForeignCatalogRead') && rel !== FOREIGN_READER && rel !== PUBLIC_SNAPSHOT_READER) {
+    } else if (ast.isCallTo(node, 'runForeignCatalogRead') && !FOREIGN_READERS.has(rel)) {
       findings.push(classify(sf, node, rel, STATES.FOREIGN_READ_OUTSIDE));
     } else if (ast.isCallTo(node, 'stageDerived') && !DERIVED_USERS.has(rel)) {
       findings.push(classify(sf, node, rel, STATES.DERIVED_OUTSIDE));

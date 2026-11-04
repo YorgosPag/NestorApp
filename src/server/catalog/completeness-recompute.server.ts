@@ -26,6 +26,7 @@ import { FieldPath, type Query } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { VAT_NEUTRAL_WRITE } from './aggregate-vat-authority.server';
 import { commitAggregate } from './catalog-aggregate.server';
 import type { RecomputeRequest, RecomputeResult } from '@/subapps/catalog/types/product-requests';
 
@@ -64,7 +65,7 @@ function pageQuery(ctx: AuthContext, request: RecomputeRequest, phase: Phase, af
 async function recomputeOne(ctx: AuthContext, phase: Phase, id: string): Promise<boolean> {
   try {
     await runCatalogTransaction(ctx, (scope) =>
-      commitAggregate(scope, phase === 'm' ? id : null, phase === 'm' ? [] : [{ op: 'touch', kind: 'product', id }]),
+      commitAggregate(scope, phase === 'm' ? id : null, phase === 'm' ? [] : [{ op: 'touch', kind: 'product', id }], VAT_NEUTRAL_WRITE),
     );
     return true;
   } catch (error) {

@@ -18,6 +18,11 @@ export interface PublicModelCard {
   readonly listingKind: CatalogListingKind;
   readonly image: PublicCatalogMedia | null;
   readonly variantCount: number;
+  /**
+   * Τα SKU του δημόσιου εγγράφου (ADR-923 §5.13 Σ6, ανασκόπηση Μ3): η τιμή «από» κρίνει **μόνο** αυτά, όχι όλο το δέντρο.
+   * Προαιρετικό: κάρτες στη μνήμη από παλαιότερη ανάπτυξη δεν το έχουν, και τότε η κάρτα μένει «Κατόπιν προσφοράς».
+   */
+  readonly variantIds?: readonly string[];
 }
 
 /** Το όνομα του μοντέλου: η ετικέτα του μοναδικού SKU, αλλιώς ο κωδικός. */
@@ -40,5 +45,6 @@ export function publicModelCardOf(model: PublicCatalogModel): PublicModelCard {
     listingKind: model.listingKind,
     image: publicModelImage(model),
     variantCount: model.variants.length,
+    variantIds: model.variants.map((variant) => variant.variantId),
   };
 }

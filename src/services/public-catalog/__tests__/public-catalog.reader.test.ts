@@ -16,7 +16,7 @@ import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { RegistryIdentityReport } from '@/types/company-registry';
 import { revalidatePublicCompany, revalidatePublicModel } from '@/server/catalog/public/public-model-revalidate.server';
 import { NO_PROVIDER_FACTS } from '@/subapps/catalog/public/public-provider-facts';
-import { PUBLIC_MODEL_PAGE_SIZE, readPublicCategoryIndex, readPublicModel, readPublicModelPage, readPublicModelTarget, readPublicProviderFacts, readPublicSitemapPaths, readPublicSupplier, readPublicSupplierBrands, readPublicSupplierProfile } from '../public-catalog.reader';
+import { CATEGORY_INDEX_PAGE, PUBLIC_MODEL_PAGE_SIZE, readPublicCategoryIndex, readPublicModel, readPublicModelPage, readPublicModelTarget, readPublicProviderFacts, readPublicSitemapPaths, readPublicSupplier, readPublicSupplierBrands, readPublicSupplierProfile } from '../public-catalog.reader';
 
 interface CacheEntry {
   readonly value: unknown;
@@ -343,6 +343,20 @@ describe('σελιδοποίηση', () => {
   it('η κατηγορία έχει δικό της κλειδί μνήμης', async () => {
     await page();
     expect((await page('cat_1')).cards).toHaveLength(1);
+  });
+});
+
+describe('Ν9(γ): το ευρετήριο κατηγοριών διαβάζει ΟΛΟ τον κατάλογο, σε σελίδες', () => {
+  it('κατηγορίες μοντέλων πέρα από την πρώτη σελίδα δεν χάνονται · το όριο σελίδας δεν κόβει', async () => {
+    fake.seed(SHOWCASES, COMPANY, publishedShowcase());
+    const total = CATEGORY_INDEX_PAGE * 2 + 1;
+    for (let index = 0; index < total; index += 1) {
+      const id = `cpmod_${String(index).padStart(5, '0')}`;
+      fake.seed(MODELS, id, modelDoc(id, COMPANY, index === total - 1 ? ['cat_last'] : index === CATEGORY_INDEX_PAGE ? ['cat_mid'] : ['cat_1']));
+    }
+    await expect(readPublicCategoryIndex(COMPANY)).resolves.toEqual({
+      cat_1: { el: 'Κατηγορία cat_1' }, cat_mid: { el: 'Κατηγορία cat_mid' }, cat_last: { el: 'Κατηγορία cat_last' },
+    });
   });
 });
 

@@ -39,7 +39,10 @@ import type { SupplierShowcaseRecord } from '@/subapps/catalog/types/supplier-ve
 /** Δίχτυ για χαμένη ακύρωση, όχι ο μηχανισμός: αυτός είναι το tag. Ίδιο με το `max-age` του δημόσιου ραφιού. */
 const REVALIDATE_SECONDS = 300;
 export const PUBLIC_MODEL_PAGE_SIZE = 48;
-const MAX_MODELS_FOR_CATEGORIES = 2000;
+/** Σελίδα του ευρετηρίου κατηγοριών (Ν9γ): μόνο το `categoryLabels`, άρα μικρή απάντηση ανά σελίδα. */
+export const CATEGORY_INDEX_PAGE = 500;
+/** Όριο προσοχής, όχι αποκοπής: πάνω από αυτό ένα συγκεντρωτικό έγγραφο του γραφέα θα ήταν φθηνότερο. */
+const CATEGORY_INDEX_WARN = 20_000;
 /** Το όριο του πρωτοκόλλου sitemaps ανά αρχείο. */
 export const MAX_SITEMAP_PATHS = 50_000;
 
@@ -59,7 +62,11 @@ export interface PublicModelPageRequest {
 
 const models = () => getAdminFirestore().collection(COLLECTIONS.PUBLIC_CATALOG_MODELS);
 
-function cached<T>(load: () => Promise<T>, key: readonly string[], tags: readonly string[]): Promise<T> {
+/**
+ * Η ΜΙΑ μνήμη της βιτρίνας: ίδιο πρόθεμα κλειδιού, ίδιο παράθυρο. Την ζητούν και οι ανώνυμες τιμές (Σ6), που προσθέτουν το
+ * δικό τους tag. 🔒 Μόνο για ό,τι **δεν** εξαρτάται από τον επισκέπτη: το κλειδί δεν έχει ταυτότητα.
+ */
+export function cached<T>(load: () => Promise<T>, key: readonly string[], tags: readonly string[]): Promise<T> {
   return unstable_cache(load, ['public-catalog', 'v1', ...key], { tags: [...tags], revalidate: REVALIDATE_SECONDS })();
 }
 
@@ -173,9 +180,24 @@ export async function readPublicModelPage(companyId: string, request: PublicMode
   return cached(() => loadModelPage(companyId, request), key, [publicCatalogCompanyTag(companyId)]);
 }
 
+/**
+ * Ν9(γ): **όλος** ο κατάλογος, σε σελίδες με δρομέα κατά id, μόνο το ένα πεδίο. Το παλιό όριο των 2.000 έκρυβε σιωπηλά τις
+ * κατηγορίες των υπολοίπων μοντέλων, και η σελίδα κατηγορίας τους απαντούσε 404. Η μνήμη (5′ + tags) κρατά το κόστος σε ένα
+ * πέρασμα ανά παράθυρο· πάνω από το όριο προσοχής γράφεται προειδοποίηση, χωρίς να κοπεί τίποτα.
+ */
 async function loadCategoryIndex(companyId: string): Promise<PublicCategoryIndex> {
-  const snap = await modelQuery(companyId, null).select('categoryLabels').limit(MAX_MODELS_FOR_CATEGORIES).get();
-  return Object.fromEntries(snap.docs.flatMap((doc) => Object.entries(publicCategoryLabelsFromField(doc.get('categoryLabels')))));
+  const index: Record<string, LocalizedText> = {};
+  const ordered = modelQuery(companyId, null).select('categoryLabels').orderBy(FieldPath.documentId()).limit(CATEGORY_INDEX_PAGE);
+  let read = 0;
+  for (let after: string | null = null; ; ) {
+    const snap = await (after === null ? ordered : ordered.startAfter(after)).get();
+    snap.docs.forEach((doc) => Object.assign(index, publicCategoryLabelsFromField(doc.get('categoryLabels'))));
+    read += snap.docs.length;
+    if (snap.docs.length < CATEGORY_INDEX_PAGE) break;
+    after = snap.docs[snap.docs.length - 1].id;
+  }
+  if (read > CATEGORY_INDEX_WARN) logger.warn('Μεγάλο ευρετήριο κατηγοριών βιτρίνας: σκέψου συγκεντρωτικό έγγραφο', { companyId, read });
+  return index;
 }
 
 /** Όλες οι κατηγορίες του προμηθευτή, ανεξάρτητα από τη σελίδα: μόνο το ένα πεδίο, όχι ολόκληρα έγγραφα. */

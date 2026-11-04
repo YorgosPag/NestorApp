@@ -16,6 +16,7 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   tooMany: 'issues.tooMany',
   portfolioProjectImagesRequired: 'issues.portfolioProjectImagesRequired',
   unknownReference: 'issues.unknownReference',
+  vatRatePricingAuthority: 'issues.vatRatePricingAuthority',
   quoteRecipientEmailRequired: 'issues.quoteRecipientEmailRequired',
   emailInvalid: 'issues.emailInvalid',
   codeImmutable: 'issues.codeImmutable',

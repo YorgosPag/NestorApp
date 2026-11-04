@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import type { CatalogAttributeGroupDefinition } from '../../types/attribute-group';
+import { isGreekVatRatePercent, type GreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 import type { CatalogCategoryMappings } from '../../types/category';
 import type {
   MeasurementUnitDefinition,
@@ -68,6 +69,9 @@ const categoryMappingsSchema: z.ZodType<CatalogCategoryMappings, z.ZodTypeDef, u
   atoeCode: z.string().max(40).nullable().default(null),
 });
 
+/** Συντελεστής ΦΠΑ (ADR-923 §5.13 Ε3): μόνο όσοι ισχύουν στον πίνακα της λογιστικής, ή `null` = αδήλωτος. */
+const categoryVatRateSchema = z.custom<GreekVatRatePercent>(isGreekVatRatePercent, { message: 'vatRateInvalid' }).nullable();
+
 /** Δημιουργία: ο `ancestorIds` **δεν** έρχεται από τον πελάτη — τον υπολογίζει ο γραφέας. */
 export const createCategoryBodySchema = z.object({
   code: catalogCodeSchema,
@@ -75,12 +79,15 @@ export const createCategoryBodySchema = z.object({
   parentId: entityIdSchema.nullable(),
   orderKey: orderKeySchema,
   mappings: categoryMappingsSchema.default({}),
+  vatRate: categoryVatRateSchema.default(null),
 });
 
+/** `vatRate` απών ⇒ **μένει** ό,τι ήταν: πελάτης που δεν τον ξέρει (παλιό bundle, φόρμα χωρίς πεδίο) δεν τον σβήνει. */
 export const updateCategoryBodySchema = z.object({
   expectedRevision: expectedRevisionSchema,
   labels: labelsSchema,
   mappings: categoryMappingsSchema,
+  vatRate: categoryVatRateSchema.optional(),
 });
 
 export const moveCategoryBodySchema = z.object({

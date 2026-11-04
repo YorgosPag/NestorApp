@@ -66,6 +66,8 @@ describe('Κ1 — η σχέση προμήθειας: έγγραφο δύο πλ
   it('⛔ ξένος κατάλογος ανοίγει ΜΟΝΟ από τον έναν αναγνώστη (Σ4)', () => {
     expect(findingsOf('await runForeignCatalogRead(id, work);')).toEqual([gate.STATES.FOREIGN_READ_OUTSIDE]);
     expect(findingsOf('await runForeignCatalogRead(id, work);', 'src/server/supply-relationships/supply-foreign-quote.server.ts')).toEqual([]);
+    expect(findingsOf('await runForeignCatalogRead(id, work);', 'src/server/catalog/public/public-price-reader.server.ts')).toEqual([]);
+    expect(findingsOf('await runForeignCatalogRead(id, work);', 'src/server/catalog/public/public-price-cache.server.ts')).toEqual([gate.STATES.FOREIGN_READ_OUTSIDE]);
   });
 
   it('⛔ η πόρτα του MCP μένει κλειστή και για τις τρεις', () => {

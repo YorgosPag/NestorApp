@@ -170,6 +170,8 @@ const DEFAULTS = Object.freeze({
     'src/utils/lazyHarnessRoutes.tsx',
     'src/components/sales/sales-surfaces.tsx',
     'src/components/property-dossier/dossier-surfaces.tsx',
+    // ADR-923 §5.13 Σ6 — οι τιμές της βιτρίνας: πίσω από διακόπτη, client-only, με τα κείμενά τους στο chunk.
+    'src/components/public-catalog/public-catalog-surfaces.tsx',
   ],
 
   /**

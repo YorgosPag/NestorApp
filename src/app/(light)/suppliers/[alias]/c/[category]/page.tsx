@@ -15,6 +15,7 @@ import { DEFAULT_LANGUAGE } from '@/i18n/languages';
 import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
 import { publicUrl } from '@/lib/http/public-origin';
 import { readPublicCategoryIndex, readPublicModelPage } from '@/services/public-catalog/public-catalog.reader';
+import { readShowcaseCardPrices } from '@/services/public-catalog/public-catalog-prices';
 import { orSupplierCatalogUnavailable, requirePublicSupplier } from '@/services/public-catalog/public-supplier-route';
 import { publicAfterOf, publicCategoryRoute, publicIdOfSegment, publicSegmentOf } from '@/subapps/catalog/public/public-catalog-routes';
 import type { SupplierShowcaseRecord } from '@/subapps/catalog/types/supplier-verification';
@@ -55,11 +56,14 @@ export default async function SupplierCategoryPage({ params, searchParams }: Cat
   const route = publicCategoryRoute(alias, canonicalSegment);
   if (decodeURIComponent(category) !== canonicalSegment) permanentRedirect(route);
   const page = await orSupplierCatalogUnavailable(() => readPublicModelPage(supplier.companyId, { categoryId, after }));
+  // §5.13 Σ6: ανώνυμη τιμή «από»· κλειστός διακόπτης ή βλάβη ⇒ `null`, ποτέ 5xx (Μ2).
+  const cardPrices = await readShowcaseCardPrices(supplier.companyId, page.cards);
   return (
     <SupplierCategoryView
       segment={alias}
       legalName={supplier.legalName}
       cards={page.cards}
+      cardPrices={cardPrices}
       categories={categories}
       activeCategoryId={categoryId}
       nextHref={page.nextAfter === null ? null : `${route}?after=${encodeURIComponent(page.nextAfter)}`}

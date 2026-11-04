@@ -28,5 +28,16 @@
     "no": "Όχι",
     "backToSupplier": "Όλα τα προϊόντα του προμηθευτή",
     "requestQuote": "Ζητήστε προσφορά"
+  },
+  "price": {
+    "amountPer": "{price} ανά {quantity} {unit}",
+    "amountPerUnit": "{price} ανά {unit}",
+    "vatIncluded": "Περιλαμβάνεται ΦΠΑ {rate}%",
+    "unitPrice": "Τιμή μονάδας: {price}",
+    "from": "από {price}",
+    "yours": "Η τιμή σας",
+    "yoursFor": "Η τιμή σας για {sku}",
+    "vatExcluded": "{price} χωρίς ΦΠΑ",
+    "withVat": "Με ΦΠΑ {rate}%: {price}"
   }
 }

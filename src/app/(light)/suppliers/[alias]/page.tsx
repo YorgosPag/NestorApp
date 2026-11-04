@@ -17,6 +17,7 @@ import { resolveLocalizedText } from '@/i18n/localized-text';
 import { publicUrl } from '@/lib/http/public-origin';
 import { supplierStructuredData, type SupplierServiceNode } from '@/lib/catalog/public-structured-data';
 import { readPublicCategoryIndex, readPublicModelPage, readPublicProviderFacts, readPublicSupplierBrands, readPublicSupplierProfile } from '@/services/public-catalog/public-catalog.reader';
+import { readShowcaseCardPrices } from '@/services/public-catalog/public-catalog-prices';
 import { orSupplierCatalogUnavailable, requirePublicSupplier } from '@/services/public-catalog/public-supplier-route';
 import { publicAfterOf, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import type { PublicModelCard } from '@/subapps/catalog/public/public-model-card';
@@ -50,6 +51,8 @@ export default async function SupplierPage({ params, searchParams }: SupplierPag
   const [page, categories, facts, profile, brands] = await orSupplierCatalogUnavailable(() =>
     Promise.all([readPublicModelPage(companyId, { categoryId: null, after }), readPublicCategoryIndex(companyId), readPublicProviderFacts(companyId), readPublicSupplierProfile(companyId), readPublicSupplierBrands(companyId)]),
   );
+  // §5.13 Σ6: ανώνυμη τιμή «από» για τις κάρτες αυτής της σελίδας. Κλειστός διακόπτης ⇒ `null`, χωρίς ανάγνωση· βλάβη ⇒ `null`, ποτέ 5xx (Μ2).
+  const cardPrices = await readShowcaseCardPrices(companyId, page.cards);
   const route = publicSupplierRoute(alias);
   const url = publicUrl(route);
   return (
@@ -62,6 +65,7 @@ export default async function SupplierPage({ params, searchParams }: SupplierPag
         profile={profile}
         brands={brands}
         cards={page.cards}
+        cardPrices={cardPrices}
         categories={categories}
         activeCategoryId={null}
         nextHref={page.nextAfter === null ? null : `${route}?after=${encodeURIComponent(page.nextAfter)}`}

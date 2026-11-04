@@ -15,11 +15,13 @@ import { listingImageSrcSet } from '@/lib/listings/listing-images';
 import { Link } from '@/lib/workspace/navigation';
 import { publicCategoryRoute, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import type { PublicModelCard } from '@/subapps/catalog/public/public-model-card';
+import type { ShowcaseCardPrices, ShowcaseConsumerPrice } from '@/subapps/catalog/public/showcase-price';
 import type { PublicProviderFacts, PublicServiceArea } from '@/subapps/catalog/public/public-provider-facts';
 import type { PublicSupplierProfile } from '@/subapps/catalog/public/public-supplier-profile';
 import type { PublicSupplierBrand, SupplierBrandRelation } from '@/subapps/catalog/types/supplier-brand-claim';
 
 import { usePublicCatalogText } from './public-catalog-text';
+import { PublicFromPriceSlot } from './public-catalog-surfaces';
 import { SupplierAbout, SupplierPortfolio } from './SupplierPortfolio';
 
 // ADR-744 §18: το route slice φτάνει στον φυλλομετρητή μόνο από client component, όχι από το `page.tsx`.
@@ -38,6 +40,8 @@ export interface SupplierCatalogViewProps {
   readonly nextHref: string | null;
   /** Λογότυπο, ιστοσελίδα, περιοχή (§22 Υ8). Μόνο στη σελίδα προμηθευτή: η κατηγορία μένει χωρίς δεύτερη ανάγνωση. */
   readonly provider?: PublicProviderFacts;
+  /** Η ανώνυμη τιμή «από» ανά κάρτα (§5.13 Σ6). Απούσα ή `null` ⇒ κλειστός διακόπτης: όλες «Κατόπιν προσφοράς», όπως πριν. */
+  readonly cardPrices?: ShowcaseCardPrices | null;
   /** Περιγραφή και portfolio (§22 Υ8). `null` ⇒ ο χώρος δεν έχει δημόσιο προφίλ. */
   readonly profile?: PublicSupplierProfile | null;
   /** Μάρκες σε ισχύ (§16). */
@@ -95,7 +99,13 @@ function SupplierBrands({ brands }: { readonly brands: readonly PublicSupplierBr
   );
 }
 
-function ModelCard({ segment, card }: { readonly segment: string; readonly card: PublicModelCard }): React.JSX.Element {
+interface ModelCardProps {
+  readonly segment: string;
+  readonly card: PublicModelCard;
+  readonly fromPrice: ShowcaseConsumerPrice | undefined;
+}
+
+function ModelCard({ segment, card, fromPrice }: ModelCardProps): React.JSX.Element {
   const { t, text } = usePublicCatalogText();
   return (
     <li className="rounded-md border">
@@ -106,7 +116,7 @@ function ModelCard({ segment, card }: { readonly segment: string; readonly card:
         </h3>
         <p className="m-0 text-sm text-muted-foreground">{text(card.familyLabels)}</p>
         <p className="m-0 text-sm text-muted-foreground">{t('model.variantCount', { count: card.variantCount })}</p>
-        <p className="m-0 text-sm text-foreground">{t('model.priceOnRequest')}</p>
+        {fromPrice === undefined ? <p className="m-0 text-sm text-foreground">{t('model.priceOnRequest')}</p> : <PublicFromPriceSlot price={fromPrice} />}
       </article>
     </li>
   );
@@ -133,7 +143,7 @@ function CategoryNav({ segment, categories, activeCategoryId }: Pick<SupplierCat
 }
 
 export function SupplierCatalogView(props: SupplierCatalogViewProps): React.JSX.Element {
-  const { segment, legalName, cards, nextHref, provider, profile, brands = [] } = props;
+  const { segment, legalName, cards, nextHref, provider, profile, brands = [], cardPrices = null } = props;
   const { t } = usePublicCatalogText();
   const logo = provider?.logo ?? null;
   return (
@@ -157,7 +167,7 @@ export function SupplierCatalogView(props: SupplierCatalogViewProps): React.JSX.
           <p className="m-0 text-sm text-muted-foreground">{t('supplier.empty')}</p>
         ) : (
           <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3 p-0">
-            {cards.map((card) => <ModelCard key={card.modelId} segment={segment} card={card} />)}
+            {cards.map((card) => <ModelCard key={card.modelId} segment={segment} card={card} fromPrice={cardPrices?.[card.modelId]} />)}
           </ul>
         )}
         {nextHref !== null && <footer><Link href={nextHref}>{t('supplier.next')}</Link></footer>}

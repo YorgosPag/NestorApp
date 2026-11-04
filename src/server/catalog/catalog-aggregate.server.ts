@@ -29,6 +29,7 @@ import { liveMembers, type AggregateMember, type CatalogAggregate } from '@/suba
 import { uniqueKeysOf } from '@/subapps/catalog/derived/holder-derived';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
+import { assertAggregateKeepsVat, type AggregateVatAuthority } from './aggregate-vat-authority.server';
 import { loadAggregate, type HolderChange, type LoadedAggregate, type StoredMember } from './catalog-aggregate-load.server';
 import { readAggregateReferences, readSchemaSnapshot } from './catalog-product-reads.server';
 import {
@@ -119,8 +120,14 @@ function stageMember(
 /**
  * Εφαρμόζει τις αλλαγές στο σύνολο της ρίζας `rootId` (ή σε απλό προϊόν, `null`). Ρίχνει `CatalogWriteError`
  * (422 με ευρήματα ανά κελί, 409 CAS, 404) — **τίποτα** δεν γράφεται αν κάτι απορριφθεί.
+ * `vatAuthority`: το δικαίωμα τιμολόγησης, κριμένο **πριν** από τη συναλλαγή (`readAggregateVatAuthority` / `VAT_NEUTRAL_WRITE`).
  */
-export async function commitAggregate(scope: CatalogTx, rootId: string | null, changes: readonly HolderChange[]): Promise<CommittedAggregate> {
+export async function commitAggregate(
+  scope: CatalogTx,
+  rootId: string | null,
+  changes: readonly HolderChange[],
+  vatAuthority: AggregateVatAuthority,
+): Promise<CommittedAggregate> {
   const loaded = await loadAggregate(scope, rootId, changes);
   const { aggregate } = loaded;
   const { familyId, schemeCode } = schemaKeyOf(aggregate);
@@ -128,6 +135,7 @@ export async function commitAggregate(scope: CatalogTx, rootId: string | null, c
   const refs = await readAggregateReferences(scope, aggregate);
   const verdict = judgeAggregate({ aggregate, schema, refs });
   assertNoIssues(verdict.issues);
+  await assertAggregateKeepsVat(scope, aggregate, vatAuthority);
   const deltas = uniqueDeltas(aggregate, schema);
   const plan = await planUniqueReservations(scope, deltas);
   assertNoIssues(plan.issues);

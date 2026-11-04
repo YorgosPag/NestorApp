@@ -15,7 +15,8 @@ import 'server-only';
 import { revalidateTag } from 'next/cache';
 
 import { createModuleLogger } from '@/lib/telemetry';
-import { publicCatalogCompanyTag, publicCatalogModelTag } from './public-catalog-cache-tag';
+import { isAppFeatureEnabled } from '@/config/feature-flags';
+import { publicCatalogCompanyTag, publicCatalogModelTag, publicCatalogPricesTag } from './public-catalog-cache-tag';
 
 const logger = createModuleLogger('PublicModelRevalidate');
 
@@ -34,4 +35,13 @@ export function revalidatePublicModel(companyId: string, modelId: string): void 
 /** Όλες οι σελίδες του προμηθευτή: ανάκληση επιβεβαίωσης, δημοσίευση, αλλαγή στοιχείων βιτρίνας (§4.5). */
 export function revalidatePublicCompany(companyId: string): void {
   revalidateTags([publicCatalogCompanyTag(companyId)], { companyId });
+}
+
+/**
+ * Οι τιμές της βιτρίνας ενός προμηθευτή (ADR-923 §5.13 Σ6), μετά από γραφή τιμολόγησης. Με κλειστό διακόπτη δεν κάνει τίποτα:
+ * καμία καταχώριση δεν φέρει το tag, και η βιτρίνα μένει όπως πριν.
+ */
+export function revalidatePublicPrices(companyId: string): void {
+  if (!isAppFeatureEnabled('PUBLIC_SHOWCASE_PRICES')) return;
+  revalidateTags([publicCatalogPricesTag(companyId)], { companyId });
 }

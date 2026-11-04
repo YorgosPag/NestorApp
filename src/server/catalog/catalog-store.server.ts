@@ -37,11 +37,13 @@ import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write'
 import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import type { CatalogRecord } from '@/subapps/catalog/types/catalog-record';
 import { distinctPricingViews, pricingViewsOfWrite, type PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
+import { showcasePricesTouched } from '@/subapps/catalog/public/showcase-price-writes';
 import { CATALOG_KIND_SPECS, type CatalogKind, type CatalogKindIdentity } from './catalog-kinds';
 import { CatalogWriteError } from './catalog-write-error';
 import { distinctPublicScopes, publicScopesOfWrite, type PublicScope } from '@/subapps/catalog/public/public-scopes-of-write';
 import { signalPricingViewsInTx } from './pricing-view-signal.server';
 import { schedulePublicDrain } from './public/public-drain-schedule.server';
+import { revalidatePublicPrices } from './public/public-model-revalidate.server';
 import { signalPublicScopesInTx } from './public/public-outbox.server';
 import { revisionAfterWrite } from '@/subapps/catalog/aggregate/aggregate-members';
 
@@ -101,15 +103,20 @@ export async function runCatalogTransaction<T>(ctx: AuthContext, work: (scope: C
   const db = getAdminFirestore();
   let staged: StagedChange[] = [];
   let touched: readonly PublicScope[] = [];
+  let pricesTouched = false;
   const result = await db.runTransaction(async (tx) => {
     const scope: CatalogTx = { db, tx, ctx, now: nowISO(), changes: [], pricingViews: [], publicScopes: [] };
     const value = await work(scope);
-    signalPricingViewsInTx(tx, db, ctx.companyId, distinctPricingViews(scope.pricingViews));
+    const pricingViews = distinctPricingViews(scope.pricingViews);
+    signalPricingViewsInTx(tx, db, ctx.companyId, pricingViews);
+    pricesTouched = showcasePricesTouched(pricingViews, scope.changes.map((change) => change.kind));
     touched = distinctPublicScopes(scope.publicScopes);
     signalPublicScopesInTx(tx, db, ctx.companyId, touched);
     staged = scope.changes;
     return value;
   });
+  // ADR-923 §5.13 Σ6 (Μ1): τιμολόγηση ΚΑΙ συντελεστής ΦΠΑ της κατηγορίας· οι τιμές της βιτρίνας ακυρώνονται εδώ, πριν από το ίχνος.
+  if (pricesTouched) revalidatePublicPrices(ctx.companyId);
   for (const change of staged) await recordChange(change, ctx.uid);
   schedulePublicDrain(ctx.companyId, touched);
   return result;

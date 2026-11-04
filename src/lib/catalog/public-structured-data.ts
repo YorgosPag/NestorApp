@@ -1,8 +1,9 @@
 /**
  * **Η δημόσια βιτρίνα όπως τη διαβάζει η μηχανή αναζήτησης** (ADR-923 §5.13 Σ4 · §22 Υ8).
  *
- * 🔒 Κανένα `offers`: το δημόσιο έγγραφο δεν έχει ποσό (Ε4), και τιμή `0` ή επινοημένη θα ήταν ψευδής δήλωση προς τη Google.
- *    Χωρίς `offers` η σελίδα δεν παίρνει product snippet. Αυτό είναι επιλογή του Σ4· οι τιμές έρχονται στο Σ6.
+ * 🔒 `offers` **μόνο** από την ανώνυμη τιμή του διακομιστή (Σ6, Ε3: «JSON-LD μόνο ό,τι βλέπει ο ανώνυμος»), ποτέ από το δημόσιο
+ *    έγγραφο, που δεν έχει ποσό (Ε4). Χωρίς ανώνυμη τιμή (κλειστός διακόπτης, «Κατόπιν προσφοράς») κανένα `offers`: τιμή `0` ή
+ *    επινοημένη θα ήταν ψευδής δήλωση προς τη Google. Η τιμή είναι η **τελική**, με `valueAddedTaxIncluded`.
  * 🔒 Τίποτα που δεν βλέπει ο ανώνυμος: όλα βγαίνουν από το δημόσιο έγγραφο και τα δημόσια στοιχεία του παρόχου.
  * ⚠️ Κανένα `manufacturer` ή `brand` στο προϊόν: ο προμηθευτής μπορεί να είναι διανομέας, και το έγγραφο δεν έχει πεδίο μάρκας. Ο
  *    οργανισμός παίρνει `brand` μόνο από κατοχή που εγκρίθηκε και ισχύει (§16).
@@ -18,7 +19,11 @@
 import { DEFAULT_LANGUAGE } from '@/i18n/languages';
 import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
 import type { JsonLdValue } from '@/lib/seo/json-ld';
+import { majorFromMinor } from '@/lib/money/money';
+import { uneceCodeOf } from '@/lib/uom/uom-registry';
+import { toFixedDecimal } from '@/subapps/catalog/measurement/conversion';
 import type { PublicCatalogModel } from '@/subapps/catalog/public/public-catalog-schema';
+import { showcasePriceIn, type ShowcaseModelPrices } from '@/subapps/catalog/public/showcase-price';
 import { publicModelTitle } from '@/subapps/catalog/public/public-model-card';
 import type { PublicProviderFacts, PublicServiceArea } from '@/subapps/catalog/public/public-provider-facts';
 import type { PublicSupplierBrand } from '@/subapps/catalog/types/supplier-brand-claim';
@@ -84,8 +89,46 @@ function imagesOf(model: PublicCatalogModel): readonly string[] | undefined {
   return images.length === 0 ? undefined : [...new Set(images)];
 }
 
-function productNode(model: PublicCatalogModel, url: string): JsonLdValue {
+/**
+ * Μία προσφορά ανά SKU με ανώνυμη τελική τιμή. Η ποσότητα αναφοράς λέει «ανά 100 m» όταν η τιμή αφορά περισσότερες μονάδες.
+ *
+ * ⚠️ **Δηλωμένα κενά (ανασκόπηση Μ-6), όχι παραλείψεις** — κανένα πεδίο δεν επινοείται:
+ * - `availability`: ο κατάλογος **δεν έχει** δεδομένα διαθεσιμότητας (απόθεμα, χρόνο παράδοσης, κατάργηση) ούτε στο SKU ούτε στο
+ *   δημόσιο έγγραφο. Ένα «InStock» εδώ θα ήταν ψευδής δήλωση προς τη Google (πολιτική Merchant: ασυμφωνία σελίδας/δεδομένων).
+ *   Μπαίνει όταν υπάρξει πεδίο διαθεσιμότητας στο δημόσιο έγγραφο.
+ * - `priceValidUntil`: η τιμή βγαίνει από **δημοσιευμένη έκδοση** λίστας, που δεν έχει αποθηκευμένο τέλος (το ορίζει η επόμενη
+ *   δημοσίευση, πρότυπο SAP). Καμία πραγματική ημερομηνία λήξης δεν υπάρχει για να δηλωθεί.
+ */
+function offersOf(model: PublicCatalogModel, url: string, prices: ShowcaseModelPrices | null): readonly JsonLdValue[] | undefined {
+  const offers = model.variants.flatMap((variant): JsonLdValue[] => {
+    const price = showcasePriceIn(prices, variant.variantId);
+    // Μόνο τιμή καταναλωτή (Ε3): JSON-LD = ό,τι βλέπει ο ανώνυμος, ποτέ τιμή αγοραστή.
+    if (price.kind !== 'priced' || price.audience !== 'anonymous') return [];
+    const amount = toFixedDecimal(majorFromMinor(price.gross), 2);
+    const unitCode = uneceCodeOf(price.unitCode) ?? undefined;
+    return [{
+      '@type': 'Offer',
+      sku: variant.code ?? undefined,
+      url,
+      price: amount,
+      priceCurrency: price.currency,
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        price: amount,
+        priceCurrency: price.currency,
+        valueAddedTaxIncluded: true,
+        referenceQuantity: { '@type': 'QuantitativeValue', value: price.priceQuantity, unitCode },
+      },
+    }];
+  });
+  return offers.length === 0 ? undefined : offers;
+}
+
+function productNode(model: PublicCatalogModel, url: string, prices: ShowcaseModelPrices | null): JsonLdValue {
+  const offers = offersOf(model, url, prices);
   return {
+    // Χωρίς ανώνυμη τιμή το κλειδί λείπει εντελώς: ούτε `offers: undefined` στη σάρωση.
+    ...(offers === undefined ? {} : { offers }),
     '@context': SCHEMA_ORG,
     '@type': 'Product',
     name: publicModelTitle(model),
@@ -107,6 +150,6 @@ function serviceDocument(model: PublicCatalogModel, url: string, supplier: Suppl
 }
 
 /** Το προϊόν με τοποθέτηση μένει `Product`: η υπηρεσία του είναι δικό της SKU (§22 Υ5). */
-export function modelStructuredData(model: PublicCatalogModel, url: string, supplier: SupplierNodeInput): JsonLdValue {
-  return model.listingKind === 'service' ? serviceDocument(model, url, supplier) : productNode(model, url);
+export function modelStructuredData(model: PublicCatalogModel, url: string, supplier: SupplierNodeInput, prices: ShowcaseModelPrices | null = null): JsonLdValue {
+  return model.listingKind === 'service' ? serviceDocument(model, url, supplier) : productNode(model, url, prices);
 }
