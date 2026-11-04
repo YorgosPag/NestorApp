@@ -21,8 +21,18 @@
 /** One content part of a Responses-API message. */
 export type ResponsesContent =
   | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string }
+  | { type: 'input_image'; image_url: string; detail?: ResponsesImageDetail }
   | { type: 'input_file'; filename: string; file_data: string };
+
+/**
+ * How much of an image the model sees (and bills). `original` keeps the full
+ * resolution on the patch-based families that support it; small print on a
+ * scanned drawing is unreadable at `high` (ADR-929 Φ3).
+ */
+export type ResponsesImageDetail = 'low' | 'high' | 'original' | 'auto';
+
+/** Reasoning budget of the reasoning-capable families; `none` disables it where supported. */
+export type ResponsesReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high';
 
 export interface ResponsesMessage {
   role: 'system' | 'user';
@@ -59,6 +69,7 @@ export interface ResponsesRequestBody {
   };
   tools?: ReadonlyArray<ResponsesTool>;
   tool_choice?: 'auto' | 'none' | 'required';
+  reasoning?: { effort: ResponsesReasoningEffort };
 }
 
 export interface ResponsesErrorPayload {

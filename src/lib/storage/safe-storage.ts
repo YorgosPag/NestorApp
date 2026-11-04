@@ -86,7 +86,7 @@ export const STORAGE_KEYS = {
   // ένα για όλη την κλάση, όπως το side peek της Notion. Σχήμα: `components/ui/resizable-column-store.ts`.
   DETAILS_PEEK_COLUMN: 'nestor:details-peek-column:v1',
 
-  // ADR-929 — η ταξινόμηση μέσα στις στήλες της ροής πωλήσεων, ανά **συσκευή/χρήστη** (`PipelineSort`). Δική του
+  // ADR-930 — η ταξινόμηση μέσα στις στήλες της ροής πωλήσεων, ανά **συσκευή/χρήστη** (`PipelineSort`). Δική του
   // προτίμηση του καθενός — ποτέ κοινή σειρά (η χειροκίνητη σειρά ενός θα χαλούσε των άλλων).
   PIPELINE_SORT: 'nestor:crm-pipeline-sort:v1',
 

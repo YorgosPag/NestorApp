@@ -36,6 +36,23 @@ describe('extendFillingWallToNeighbors', () => {
     expect(joined.geometry.length).toBeGreaterThan(fill.geometry.length);
   });
 
+  // ADR-929 Φ2 — λοξή ένωση: κατά μήκος της ακτίνας, παρειά → άξονας = μισό πάχος / sin θ.
+  it('extends a 45° endpoint on the face to the centreline (half / sin θ = 212 > half + slack = 200)', () => {
+    const s = Math.SQRT1_2;
+    // Άκρο πάνω στην πάνω παρειά (y = 150), άξονας υπό 45°: ως τον άξονα y = 0 είναι 150 / sin 45° = 212 κατά μήκος.
+    const fill = makeWall({ x: 0, y: 150 }, { x: 2000 * s, y: 150 + 2000 * s }, 100, 'OBL');
+    const joined = extendFillingWallToNeighbors(fill, [through], 'mm');
+    expect(joined.params.start.x).toBeCloseTo(-150, 3);
+    expect(joined.params.start.y).toBeCloseTo(0, 3);
+  });
+
+  it('a 45° endpoint beyond (half + slack) / sin θ is NOT joined', () => {
+    const s = Math.SQRT1_2;
+    // Άκρο στο y = 220 > (150 + 50): ούτε υπό γωνία δεν «κάθεται» στην παρειά.
+    const fill = makeWall({ x: 0, y: 220 }, { x: 2000 * s, y: 220 + 2000 * s }, 100, 'OBL2');
+    expect(extendFillingWallToNeighbors(fill, [through], 'mm').params.start.y).toBeCloseTo(220, 3);
+  });
+
   it('leaves the wall unchanged when there are no neighbours', () => {
     const fill = makeWall({ x: 0, y: 150 }, { x: 0, y: 2000 }, 100, 'FILL');
     expect(extendFillingWallToNeighbors(fill, [], 'mm')).toBe(fill);

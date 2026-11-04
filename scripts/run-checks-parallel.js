@@ -1236,7 +1236,7 @@ if (!process.env.SKIP_PUBLIC_CATALOG_AUTHORITY)
 if (!process.env.SKIP_SUBCONTRACT_AUTHORITY)
   addThread('3.113', 'Subcontract authority', 'scripts/check-subcontract-authority.js', ['--index']);
 
-// CHECK 3.114 (ADR-929) — ο ένας γραφέας του σταδίου ευκαιρίας. «Αλλάζει κάποιος στάδιο ΕΞΩ από την πόρτα
+// CHECK 3.114 (ADR-930) — ο ένας γραφέας του σταδίου ευκαιρίας. «Αλλάζει κάποιος στάδιο ΕΞΩ από την πόρτα
 // `POST /api/opportunities/[id]/stage` — χωρίς CAS, στοιχεία κλεισίματος, ίχνος;» Κ1 κάτοχοι συλλογής (`symbol-owner-gate`)
 // · Κ2 κανόνες ⇄ `STAGE_OWNED_FIELDS` · Κ3 MCP · Κ4 AI. Λίστα: `.opportunity-stage-authority.json`. AST, ZERO-TOL.
 if (!process.env.SKIP_OPPORTUNITY_STAGE_AUTHORITY)

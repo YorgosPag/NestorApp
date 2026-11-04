@@ -45,6 +45,7 @@
 import type { EnterpriseId } from './enterprise-id-types';
 import {
   aiUsageDocKey,
+  companyAiUsageDocKey,
   chatHistoryDocKey,
   ownershipRevisionKey,
   ownershipTableKey,
@@ -68,6 +69,10 @@ export abstract class CompositeKeyIdGenerators extends ProjectCostIdGenerators {
 
   generateAiUsageDocId(channel: string, userId: string, month: string): string {
     return aiUsageDocKey(channel, userId, month);
+  }
+
+  generateCompanyAiUsageDocId(channel: string, companyId: string, month: string): string {
+    return companyAiUsageDocKey(channel, companyId, month);
   }
 
   generateQueryStrategyDocId(collection: string, failedFilters: string[]): string {

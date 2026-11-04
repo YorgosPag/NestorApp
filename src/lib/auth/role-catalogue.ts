@@ -214,7 +214,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "search:global:execute",
       "crm:tasks:view",
       "crm:opportunities:view",
-      // ADR-929 — η ΜΙΑ πόρτα σταδίου (`POST /api/opportunities/[id]/stage`) ζητά αυτό το δικαίωμα· ως τις
+      // ADR-930 — η ΜΙΑ πόρτα σταδίου (`POST /api/opportunities/[id]/stage`) ζητά αυτό το δικαίωμα· ως τις
       // 2026-11-04 δεν το είχε ΚΑΝΕΝΑΣ ρόλος ⇒ το σύρσιμο απαντούσε 403 σε όλους εκτός super_admin (ADR-829 Κ2).
       "crm:opportunities:update",
       "crm:communications:view",

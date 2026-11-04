@@ -37,6 +37,20 @@ function near(p: Point2D, q: Point2D, tol: number): boolean {
   return Math.hypot(p.x - q.x, p.y - q.y) <= tol;
 }
 
+/** Το τμήμα κάθεται πάνω στην ευθεία a→b (και τα δύο άκρα εντός `tol`) και την επικαλύπτει κατά > `tol`. */
+function overlapsCollinear(s: RegionLineSeg, a: Point2D, b: Point2D, tol: number): boolean {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return false;
+  const across = (p: Point2D) => Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx) / len;
+  if (across(s.start) > tol || across(s.end) > tol) return false;
+  const along = (p: Point2D) => ((p.x - a.x) * dx + (p.y - a.y) * dy) / len;
+  const lo = Math.min(along(s.start), along(s.end));
+  const hi = Math.max(along(s.start), along(s.end));
+  return Math.min(hi, len) - Math.max(lo, 0) > tol;
+}
+
 /**
  * Τα τμήματα-πηγή μιας ακμής a→b — ΟΛΑ, όχι ένα.
  *
@@ -47,8 +61,11 @@ function near(p: Point2D, q: Point2D, tol: number): boolean {
  *   · δύο τοίχοι που ακουμπούν άκρο με άκρο έχουν ο καθένας ΤΗ ΔΙΚΗ ΤΟΥ γραμμή στο κοινό
  *     άκρο (6 ζεύγη συμπιπτουσών γραμμών) ⇒ «μία γραμμή ανά ακμή» άφηνε τη δίδυμη ορφανή.
  *
- * Fallback στο μέσο ΜΟΝΟ όταν καμία γραμμή δεν ενώνει τις δύο κορυφές (ακμή που είναι
- * κομμάτι μακρύτερης γραμμής — πηγές άλλες από το corner-graph).
+ * Όταν καμία γραμμή δεν ενώνει τις δύο κορυφές (πηγές άλλες από το corner-graph), η ακμή
+ * εξηγείται από **όλα** τα συγγραμμικά τμήματα που την επικαλύπτουν. Η παρειά ενός τοίχου
+ * από παράλληλο ζεύγος (ADR-929 Δ7) είναι συχνά **πολλά** κομμάτια, π.χ. η εσωτερική
+ * παρειά που διακόπτεται σε κόμβο Τ. Ένα μόνο τμήμα στο μέσο άφηνε τα υπόλοιπα «ανεξήγητα».
+ * Τελευταίο fallback, το πλησιέστερο τμήμα στο μέσο.
  */
 function edgeSourceSegments(
   a: Point2D,
@@ -60,6 +77,8 @@ function edgeSourceSegments(
     (s) => (near(s.start, a, tol) && near(s.end, b, tol)) || (near(s.start, b, tol) && near(s.end, a, tol)),
   );
   if (exact.length > 0) return exact;
+  const collinear = segments.filter((s) => overlapsCollinear(s, a, b, tol));
+  if (collinear.length > 0) return collinear;
   const nearest = pickSegmentAt(midpoint(a, b), segments, tol);
   return nearest ? [nearest] : [];
 }

@@ -9,9 +9,9 @@ import type {
   ProviderSource,
 } from './types';
 import { isTiff } from './image-compression';
-// 🔑 Ένας ορισμός των δύο μετασχηματισμών καμβά — ήταν γραμμένοι και στους δύο παρόχους
-// (CHECK 3.28, 243 tokens). Η άγκυρα του CAD τρόπου είναι το SSoT της περιοχής σχεδίασης.
-import { applyCadTransform, applyScreenTransform } from './provider-canvas-transforms';
+// 🔑 ΕΝΑΣ πίνακας px εικόνας → καμβάς, χτισμένος από το SSoT `rasterToSceneAffine` (ADR-929 Δ3):
+// ο ίδιος που ρωτά η αναγνώριση κάτοψης, ώστε προεπισκόπηση ≡ αποτέλεσμα.
+import { applyRasterCanvasTransform } from './provider-canvas-transforms';
 
 const SUPPORTED_MIME_TYPES = [
   'image/png',
@@ -61,13 +61,8 @@ export class ImageProvider implements IFloorplanBackgroundProvider {
     if (!this._canvas) return;
     ctx.save();
     ctx.globalAlpha = params.opacity;
-    if (params.cad) {
-      applyCadTransform(ctx, params);
-      ctx.drawImage(this._canvas, 0, -this._canvas.height);
-    } else {
-      applyScreenTransform(ctx, params);
-      ctx.drawImage(this._canvas, 0, 0);
-    }
+    applyRasterCanvasTransform(ctx, params, this._bounds);
+    ctx.drawImage(this._canvas, 0, 0);
     ctx.restore();
   }
 

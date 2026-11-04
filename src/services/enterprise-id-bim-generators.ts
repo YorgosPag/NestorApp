@@ -34,6 +34,9 @@ export abstract class BimEntityIdGenerators {
   /** Implemented by {@link EnterpriseIdService} — seeded, repeatable, no retry loop. */
   protected abstract generateDeterministicId(prefix: EnterpriseIdPrefix, seed: string): string;
 
+  /** Implemented by {@link EnterpriseIdService} — seeded v4 (passes `isValidEnterpriseId`, ADR-841 Α9.6). */
+  protected abstract mintDeterministicV4Id(prefix: EnterpriseIdPrefix, seed: string): string;
+
   // DXF BIM Drawing Mode (ADR-363)
   generateWallId(): string { return this.generateId(P.WALL).id; }
   generateOpeningId(): string { return this.generateId(P.OPENING).id; }
@@ -78,4 +81,15 @@ export abstract class BimEntityIdGenerators {
 
   // Opening Component Library — Frame Presets (ADR-676)
   generateOpeningFramePresetId(): string { return this.generateId(P.OPENING_FRAME_PRESET).id; }
+
+  /**
+   * ADR-929 Δ11 — η ανάγνωση κάτοψης από VLM, από (εταιρεία, κλειδί ανάγνωσης). Το κλειδί το συνθέτει
+   * **μόνο** το `planReadingKey` (`bim/plan-recognition/plan-reading-key.ts`): αρχείο · σελίδα · hash
+   * ευθυγράμμισης · μοντέλο · έκδοση σχήματος. Ίδιο κλειδί ⇒ ίδιο έγγραφο ⇒ η επανεκτέλεση διαβάζει την
+   * κρυφή μνήμη αντί να πληρώσει νέα κλήση. Η εταιρεία μπαίνει στον σπόρο ώστε η ταυτότητα να μη
+   * διασχίζει ποτέ χώρους. **Δεν έχει τυχαίο δίδυμο**, επίτηδες.
+   */
+  generateDeterministicPlanReadingId(companyId: string, readingKey: string): string {
+    return this.mintDeterministicV4Id(P.PLAN_READING, `plan-reading:${companyId}:${readingKey}`);
+  }
 }

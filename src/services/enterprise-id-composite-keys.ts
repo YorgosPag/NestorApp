@@ -31,6 +31,15 @@ export function aiUsageDocKey(channel: string, userId: string, month: string): s
   return `${P.AI_USAGE}_${channel}_${userId}_${month}`;
 }
 
+/**
+ * ADR-929 Δ16 — η μηνιαία δαπάνη AI **μιας εταιρείας** σε ένα κανάλι (όριο ασφαλείας ανά εταιρεία). Ίδια συλλογή και
+ * ίδιο σχήμα κλειδιού με τον χρήστη: το `companyId` φέρει το πρόθεμα `comp_`, ενώ ένα Firebase uid δεν έχει ποτέ `_`,
+ * άρα τα δύο κλειδιά δεν συμπίπτουν. Χωριστή συνάρτηση, ώστε να μη διαβάζεται «userId» εκεί που περνά εταιρεία.
+ */
+export function companyAiUsageDocKey(channel: string, companyId: string, month: string): string {
+  return `${P.AI_USAGE}_${channel}_${companyId}_${month}`;
+}
+
 /** Filters are sorted so that the same failing set maps to one key regardless of call order. */
 export function queryStrategyDocKey(collection: string, failedFilters: string[]): string {
   const filterKey = [...failedFilters].sort().join('_');

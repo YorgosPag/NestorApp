@@ -10,11 +10,14 @@
  *   κάτοψης 2048 px δεν παγώνει ποτέ την οθόνη. Ο κύριος νήμας (δίχτυ) χρησιμοποιεί τον ίδιο δρόμο, ή `<canvas>` αν λείπει.
  */
 
-/** Τα pixel μιας εικόνας όπως τα δίνει το `getImageData` (RGBA, γραμμή-προς-γραμμή). */
-export interface ImagePixels {
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
+
+/**
+ * Τα pixel μιας εικόνας όπως τα δίνει το `getImageData`: **το ίδιο** `PlanRaster` (ADR-929 §6.1 #5), στενεμένο στον
+ * `Uint8ClampedArray` που πράγματι επιστρέφει ο browser. Δεύτερος ανεξάρτητος τύπος για το ίδιο buffer δεν υπάρχει.
+ */
+export interface ImagePixels extends PlanRaster {
   readonly rgba: Uint8ClampedArray;
-  readonly width: number;
-  readonly height: number;
 }
 
 type Context2D = OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;

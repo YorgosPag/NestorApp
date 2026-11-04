@@ -33,9 +33,9 @@ export interface Opportunity {
     };
     locations?: string[];
   };
-  /** Η ΜΙΑ ρίζα: `@/config/crm/opportunity-stages` (ADR-929). Γράφεται ΜΟΝΟ από την πόρτα αλλαγής σταδίου. */
+  /** Η ΜΙΑ ρίζα: `@/config/crm/opportunity-stages` (ADR-930). Γράφεται ΜΟΝΟ από την πόρτα αλλαγής σταδίου. */
   stage: OpportunityStage;
-  /** Πότε μπήκε στο τρέχον στάδιο — για «μέρες στο στάδιο» / παγωμένη ευκαιρία (ADR-929). */
+  /** Πότε μπήκε στο τρέχον στάδιο — για «μέρες στο στάδιο» / παγωμένη ευκαιρία (ADR-930). */
   stageChangedAt?: FirestoreishTimestamp;
   /** Πότε έκλεισε (won/lost)· καθαρίζει στο επανάνοιγμα. */
   closedAt?: FirestoreishTimestamp;

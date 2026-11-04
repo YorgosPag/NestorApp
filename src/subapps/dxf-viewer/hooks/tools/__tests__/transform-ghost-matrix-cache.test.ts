@@ -10,23 +10,20 @@ import type { Point2D, ViewTransform, Viewport } from '../../../rendering/types/
 import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../../rendering/core/CoordinateTransforms';
 import {
   type Affine2x3,
-  type CaptureRect,
+  IDENTITY_AFFINE as IDENTITY,
+  applyAffine,
   composeAffine,
+} from '@/lib/geometry/affine-2x3';
+import { worldToScreenAffine } from '../../../rendering/core/world-to-screen-affine';
+import {
+  type CaptureRect,
   scaleAboutBaseWorldAffine,
-  worldToScreenAffine,
   offscreenToWorldAffine,
   captureRectFromBBox,
   buildCaptureTransform,
   MATRIX_GHOST_MARGIN_PX,
   MATRIX_GHOST_MAX_CSS,
 } from '../transform-ghost-matrix';
-
-const IDENTITY: Affine2x3 = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
-
-/** Apply a canvas-semantics affine to a point: x'=a·x+c·y+e ; y'=b·x+d·y+f. */
-function applyAffine(m: Affine2x3, p: Point2D): Point2D {
-  return { x: m.a * p.x + m.c * p.y + m.e, y: m.b * p.x + m.d * p.y + m.f };
-}
 
 /** The offscreen pixel a world point maps to at capture (mirrors `buildCaptureTransform`). */
 function worldToOffscreenPx(rect: CaptureRect, scale0: number, world: Point2D): Point2D {

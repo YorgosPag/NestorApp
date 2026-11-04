@@ -1,5 +1,5 @@
 /**
- * @fileoverview **Ο κανόνας μιας αλλαγής σταδίου ευκαιρίας — καθαρός, χωρίς I/O** (ADR-929).
+ * @fileoverview **Ο κανόνας μιας αλλαγής σταδίου ευκαιρίας — καθαρός, χωρίς I/O** (ADR-930).
  * @module services/crm/opportunity-stage-transition
  *
  * Ο server (`opportunity-stage-transition.server.ts`) τον εκτελεί μέσα σε συναλλαγή· τα tests τον εκτελούν σκέτο.
@@ -54,7 +54,7 @@ export const CLOSING_FIELDS = ['closedAt', 'wonDate', 'lostReason', 'lostReasonN
 
 /**
  * Τα πεδία που γράφει **μόνο** η πόρτα σταδίου — ο κανόνας τα παράγει μαζί με το στάδιο. Η ΜΙΑ λίστα: τη διαβάζουν
- * η πύλη του πελάτη (`crm-mutation-gateway`) και οι κανόνες Firestore/η πύλη «ένας γραφέας» (ADR-929 Φάση 4).
+ * η πύλη του πελάτη (`crm-mutation-gateway`) και οι κανόνες Firestore/η πύλη «ένας γραφέας» (ADR-930 Φάση 4).
  * ⚠️ Όχι το `probability`: ο άνθρωπος το διορθώνει και από τη φόρμα· η αλλαγή σταδίου απλώς το ξαναθέτει.
  */
 export const STAGE_OWNED_FIELDS = [

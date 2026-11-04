@@ -1,10 +1,10 @@
-# HANDOFF — ADR-929 Ροή πωλήσεων CRM: σύρσιμο καρτών / ΕΝΑΣ γραφέας σταδίου
+# HANDOFF — ADR-930 Ροή πωλήσεων CRM: σύρσιμο καρτών / ΕΝΑΣ γραφέας σταδίου
 
 - **Ημερομηνία**: 2026-11-04
 - **Worktree**: `C:\Nestor_Worktrees\crm-pipeline-dnd`
 - **Κλαδί**: `agent/crm-pipeline-dnd` (βάση: `main` @ `c16a02f6`)
 - **Commit δουλειάς**: `9c9920ce` — όλη η υλοποίηση (Φ1–Φ5). Το hook πέρασε ολόκληρο, χωρίς παράκαμψη.
-- **ADR**: `docs/centralized-systems/reference/adrs/ADR-929-crm-pipeline-stage-drag-drop.md` (η πλήρης περιγραφή — **διάβασέ το πρώτο**)
+- **ADR**: `docs/centralized-systems/reference/adrs/ADR-930-crm-pipeline-stage-drag-drop.md` (η πλήρης περιγραφή — **διάβασέ το πρώτο**)
 - **Σχέδιο (εγκεκριμένο)**: `C:\Users\user\.claude\plans\jolly-tumbling-phoenix.md`
 
 > ⛔ **Στο `main` ΔΕΝ γίνεται commit. Το `npm run wt:land -- crm-pipeline-dnd` και το push γίνονται ΜΟΝΟ με ρητή εντολή του Giorgio.**
@@ -20,7 +20,7 @@
 | Φ2 | `src/components/ui/sortable/KanbanBoard.tsx` + `kanban-model.ts` · `useSortableSensors(coordinateGetter)` · μεταφορά `VariantLevelBoard` | ✅ |
 | Φ3 | `src/components/crm/stage-move/` (εντολή, διάλογοι, αισιόδοξη εικόνα, api) · `OpportunityColumns` πάνω στο `KanbanBoard` · σύνολα/σταθμισμένο · ταξινόμηση ανά χρήστη · «μέρες στο στάδιο» · ζωντανός πίνακας · φόρμα επεξεργασίας μέσω πόρτας | ✅ |
 | Φ4 | `firestore.rules`: κλείδωμα `STAGE_OWNED_FIELDS` · MCP χωρίς `opportunities` στη λίστα εγγραφής · **CHECK 3.114** (`scripts/check-opportunity-stage-authority.js`, `.opportunity-stage-authority.json`, `docs/gates/3.114.md`) | ✅ |
-| Φ5 | jest (πυρήνας 15 · εντολή 6 · kanban/pipeline/overlay 25 · πύλη 9) · κανόνες emulator 118/118 · ADR-929 + changelog ADR-195/923 · i18n types/slice | ✅ |
+| Φ5 | jest (πυρήνας 15 · εντολή 6 · kanban/pipeline/overlay 25 · πύλη 9) · κανόνες emulator 118/118 · ADR-930 + changelog ADR-195/923 · i18n types/slice | ✅ |
 
 **Επαλήθευση που ΔΕΝ έγινε**: ζωντανή δοκιμή στον browser. Όλα είναι επαληθευμένα μόνο με tests και πύλες.
 
@@ -37,7 +37,7 @@
    - φόρμα επεξεργασίας με αλλαγή σταδίου σε «Κλειστό» ⇒ ανοίγει ο διάλογος κλεισίματος πάνω από τη φόρμα·
    - καρτέλα «Ιστορικό» της ευκαιρίας: γραμμή `status_changed` με παλιό/νέο στάδιο·
    - ο πίνακας του καταλόγου (`/catalog/families`, `VariantLevelBoard`) σέρνεται όπως πριν.
-   Ό,τι βρεθεί ⇒ διόρθωση + commit στο ίδιο κλαδί (ρητή λίστα αρχείων) + changelog στο ADR-929.
+   Ό,τι βρεθεί ⇒ διόρθωση + commit στο ίδιο κλαδί (ρητή λίστα αρχείων) + changelog στο ADR-930.
 2. **Αναφορά στον Giorgio** και αναμονή εντολής για `npm run wt:land -- crm-pipeline-dnd` → push → `npm run wt:remove -- crm-pipeline-dnd`.
 3. **Σειρά ανάπτυξης μετά το push**: πρώτα να φτάσει ο κώδικας στην παραγωγή (Netcup), **ΜΕΤΑ** deploy κανόνων Firestore
    (αλλιώς η παλιά φόρμα στην παραγωγή αποτυγχάνει σιωπηλά). Το deploy κανόνων το αποφασίζει ο Giorgio (CHECK 3.86).

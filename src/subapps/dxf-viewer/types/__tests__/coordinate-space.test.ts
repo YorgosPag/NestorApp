@@ -291,3 +291,28 @@ describe('ADR-795 — το brand του PointRect είναι ΑΟΡΑΤΟ σε �
     expect(JSON.parse(JSON.stringify(rect))).toEqual(rect);
   });
 });
+
+describe('ADR-929 Φ0 — ο έκτος χώρος: φυσικά px της εικόνας υποβάθρου', () => {
+  it('Χ1. Πλαίσιο ΕΙΚΟΝΑΣ δεν περνά ως κουτί ΚΑΤΟΨΗΣ — και το ανάποδο', () => {
+    const errs = typeErrors(`
+import type { Bbox, RasterRectPx } from './space';
+declare const source: RasterRectPx;
+export const wrong: Bbox = source;
+declare function wantsSource(b: RasterRectPx): void;
+declare const plan: Bbox;
+wantsSource(plan);
+`);
+    // Το πλαίσιο προέλευσης (Δ9) είναι σε px της πηγής, η σκηνή σε mm, και ο λόγος τους αλλάζει
+    // με τη βαθμονόμηση ΚΑΘΕ υποβάθρου: καμία σιωπηλή διέλευση, σε καμία κατεύθυνση.
+    expect(errs.map((e) => e.line).sort((x, y) => x - y)).toEqual([4, 7]);
+  });
+
+  it('Χ2 (ΠΑΡΟΝΟΜΑΣΤΗΣ). Ίδιος χώρος ⇒ περνά — το probe ΟΝΤΩΣ μεταγλωττίζεται', () => {
+    const errs = typeErrors(`
+import type { RasterRectPx } from './space';
+declare const a: RasterRectPx;
+export const b: RasterRectPx = a;
+`);
+    expect(errs).toEqual([]);
+  });
+});

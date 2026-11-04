@@ -176,12 +176,17 @@ export async function executeAgenticLoop(
 //   dailyCounts: { '2026-03-23': 5, '2026-03-24': 12 },  // messages per day
 //   dailyTokens: { '2026-03-23': { prompt: 3000, completion: 800 } },
 //   totalTokens: { prompt: 45000, completion: 12000 },
-//   estimatedCostUsd: 0.0135,
+//   estimatedCostUsd: 0.0135,          // από τον τιμοκατάλογο του μοντέλου ΚΑΘΕ κλήσης (tokenCostUsd)
+//   unpricedCalls: 0,                  // κλήσεις μοντέλου χωρίς τιμή: tokens μετρημένα, κόστος όχι (καμία μαντεψιά)
 //   updatedAt: Timestamp,
 // }
+//
+// ⚠️ Εγγραφή με set(…, { merge: true }) και ΕΜΦΩΛΕΥΜΕΝΟΥΣ χάρτες. Ποτέ κλειδί με τελεία: στο set
+// το 'dailyCounts.2026-03-23' είναι κυριολεκτικό όνομα πεδίου, όχι διαδρομή (βλ. changelog 2026-11-04).
 
 // Functions:
-// - recordUsage(userId, channel, tokens) → increment daily counters
+// - recordUsage(userId, channel, model, tokens) → increment daily counters + κόστος του model
+// - usageFromSdk / usageFromSdkSteps (ai-usage-sdk.ts) → η ΜΙΑ αντιστοίχιση Vercel AI SDK usage → OpenAIUsage
 // - checkDailyCap(userId, channel) → { allowed: boolean, used: number, limit: number }
 // - getMonthlyUsage(userId, channel) → usage summary
 ```
@@ -272,3 +277,4 @@ AI_USAGE: 'ai_usage',  // ADR-259A: Per-user AI cost tracking
 |------|--------|
 | 2026-03-23 | SPEC created — pending implementation |
 | 2026-03-23 | ✅ IMPLEMENTED — 7 files modified/created: ai-analysis-config.ts (pricing constants + AiModelId type), agentic-loop.ts (OpenAIUsage interface, capture data.usage, aggregate across iterations, role-aware maxIterations 8/15), firestore-collections.ts (AI_USAGE collection), enterprise-id.service.ts (AI_USAGE prefix + generateAiUsageDocId deterministic key), ai-usage.service.ts (NEW — recordUsage atomic FieldValue.increment, checkDailyCap fail-open, calculateCost, getMonthlyUsage), pipeline-orchestrator.ts (daily cap check before loop, record usage after loop), index.ts (barrel exports) |
+| 2026-11-04 | 🔴→✅ **Το ημερήσιο όριο πελάτη δεν επιβαλλόταν ποτέ — διορθώθηκε.** (1) Το `recordUsage` έγραφε με `set(…, { merge: true })` κλειδιά με τελεία (`` `dailyCounts.${today}` ``)· στο `set` η τελεία **δεν** είναι διαδρομή, άρα αποθηκευόταν πεδίο με κυριολεκτικό όνομα `"dailyCounts.2026-11-04"` και το `checkDailyCap` διάβαζε `dailyCounts[ημέρα]` = `undefined` ⇒ `used` πάντα 0. Τώρα εμφωλευμένοι χάρτες (ίδιο σχήμα με το `companyAiSpendWrite`, ADR-929 Δ16). (2) Το `calculateCost` χρέωνε **κάθε** κλήση με τιμή `gpt-4o-mini`· **διαγράφηκε**. Το `recordUsage(userId, channel, model, usage)` παίρνει πλέον **υποχρεωτικά** το μοντέλο και τιμολογεί με το `tokenCostUsd` (SSoT τιμοκαταλόγου). Μοντέλο χωρίς τιμή ⇒ κόστος 0 + `unpricedCalls` +1 + `logger.warn`: ορατό, όχι κρυμμένο ως φθηνό. Το `AgenticResult.model` (vercel-ai-engine) μεταφέρει το μοντέλο που ζητήθηκε. (3) **Τέσσερα** αντίγραφα της αντιστοίχισης SDK usage → `OpenAIUsage` (vercel-ai-engine `aggregateTokenUsage`, revision-changelog, title-block-generator, title-block-compliance — το τελευταίο με **διαφορετικό** `total_tokens` όταν λείπει) ⇒ **ένα**: `src/services/ai-pipeline/ai-usage-sdk.ts` (`usageFromSdk`, `usageFromSdkSteps`, καθαρό module). Τεστ: **round trip** με προσομοίωση της σημασιολογίας `set+merge` (εγγραφή → `checkDailyCap` μετρά 2), απαγόρευση κλειδιού με τελεία, τιμολόγηση ανά μοντέλο, μη τιμολογημένο μοντέλο. **Μετάλλαξη**: επαναφορά του κλειδιού με τελεία ⇒ 2 κόκκινα. ⚠️ Τα έγγραφα του Νοεμβρίου 2026 έχουν και τα παλιά επίπεδα πεδία· αγνοούνται (ο μετρητής ξεκινά από 0 — ο παλιός δεν μετρούσε ποτέ). ⚠️ Μένει: το όριο είναι «έλεγχος → κλήση → καταγραφή» (fire-and-forget), άρα ταυτόχρονα μηνύματα μπορούν να το ξεπεράσουν λίγο — αποδεκτό για **ήπιο** όριο μηνυμάτων, όχι για όριο κόστους (εκεί ισχύει το Δ16 του ADR-929). |

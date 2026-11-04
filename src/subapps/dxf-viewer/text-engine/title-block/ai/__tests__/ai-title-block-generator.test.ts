@@ -51,7 +51,9 @@ describe('generateTitleBlockFromText', () => {
     const result = await generateTitleBlockFromText({ userId: 'u1', prompt: 'A2 permit', locale: 'el' });
 
     expect(result).toEqual(SAMPLE);
-    expect(mockedRecordUsage).toHaveBeenCalledWith('u1', AI_TITLE_BLOCK_USAGE_CHANNEL, {
+    // Τιμολογείται με το μοντέλο που **στάλθηκε** στον πάροχο, όχι με ένα σταθερό (ADR-259A).
+    const sentModel = (mockedGenerate.mock.calls[0][0] as unknown as { model: { model: string } }).model.model;
+    expect(mockedRecordUsage).toHaveBeenCalledWith('u1', AI_TITLE_BLOCK_USAGE_CHANNEL, sentModel, {
       prompt_tokens: 120,
       completion_tokens: 45,
       total_tokens: 165,

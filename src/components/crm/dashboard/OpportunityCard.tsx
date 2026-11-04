@@ -46,9 +46,9 @@ interface OpportunityCardProps {
     readonly opportunity: Opportunity;
     readonly onEdit: (opportunity: Opportunity) => void;
     readonly onDelete: (opportunityId: string, opportunityName: string) => void;
-    /** ADR-929 — η λαβή συρσίματος/πληκτρολογίου του πίνακα (`KanbanBoard`). Απούσα ⇒ η κάρτα δεν σέρνεται. */
+    /** ADR-930 — η λαβή συρσίματος/πληκτρολογίου του πίνακα (`KanbanBoard`). Απούσα ⇒ η κάρτα δεν σέρνεται. */
     readonly handle?: React.ReactNode;
-    /** ADR-929 — «Μετακίνηση σε…»: ο δεύτερος δρόμος προς την ΙΔΙΑ εντολή με το σύρσιμο. */
+    /** ADR-930 — «Μετακίνηση σε…»: ο δεύτερος δρόμος προς την ΙΔΙΑ εντολή με το σύρσιμο. */
     readonly onMoveTo?: (stage: OpportunityStage) => void;
     /** Η κάρτα μετακινείται τώρα (αίτημα σε πτήση) — καμία δεύτερη μετακίνηση. */
     readonly moving?: boolean;

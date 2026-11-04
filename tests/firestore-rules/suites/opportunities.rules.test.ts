@@ -92,10 +92,10 @@ describe('opportunities.rules — tenant_direct (crmDirectMatrix)', () => {
 describeCrmOwnerLeg({ collection: 'opportunities', assigneeIsOwner: false });
 
 /**
- * ADR-929 — το στάδιο έχει ΕΝΑΝ γραφέα (Admin SDK). Ακόμη και ο προνομιούχος γραφέας, που ο πίνακας αφήνει να
+ * ADR-930 — το στάδιο έχει ΕΝΑΝ γραφέα (Admin SDK). Ακόμη και ο προνομιούχος γραφέας, που ο πίνακας αφήνει να
  * κάνει update, ΔΕΝ γράφει στάδιο ή παράγωγό του από τον browser — γράφει όμως κανονικά τα υπόλοιπα πεδία.
  */
-describe('opportunities.rules — ADR-929 πεδία σταδίου: μόνο από την πόρτα του server', () => {
+describe('opportunities.rules — ADR-930 πεδία σταδίου: μόνο από την πόρτα του server', () => {
   let env: RulesTestEnvironment;
   const docId = 'opportunity-stage-owned';
 

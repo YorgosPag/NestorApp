@@ -45,7 +45,7 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   // the application (`POST /api/floors`). Gate: CHECK 3.102.
   'tasks',
   'leads',
-  // 🔒 `opportunities` is deliberately NOT writable here (ADR-929). The stage and everything derived from it
+  // 🔒 `opportunities` is deliberately NOT writable here (ADR-930). The stage and everything derived from it
   // (status, closing data, reopen count) have ONE writer: `POST /api/opportunities/[id]/stage` — conflict check,
   // required closing data, audit row. A direct write would move a deal with none of those. Gate: CHECK 3.114.
   'activities',

@@ -14,7 +14,7 @@ import { createSpaceDetector } from '../space-detect-client';
 import { createSpaceDetectHost, type SpaceDetectReply } from '../space-detect-host';
 import { detectPlanSpace, rasterMetresPerPixel, type PlanDetectRequest, type PlanDetectResult } from '../space-detect-plan';
 import { prepareSpaceRaster } from '../space-detect';
-import type { PlanRaster } from '../space-detect-types';
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
 import { FIXTURE_MPP, LEFT_ROOM_AREA_M2, twoRoomPlan } from './plan-fixture';
 
 type Found = Extract<PlanDetectResult, { ok: true }>;

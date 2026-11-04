@@ -57,7 +57,7 @@ export function useOpportunities() {
               assignedTo: data.assignedTo || '', // κενό ⇒ ο δημιουργός, από το `addOpportunity`
               lastActivity: data.lastActivity || now,
               ...data,
-              // ADR-929: το `status` ΠΑΡΑΓΕΤΑΙ από το στάδιο, και η είσοδος στο στάδιο είναι τώρα.
+              // ADR-930: το `status` ΠΑΡΑΓΕΤΑΙ από το στάδιο, και η είσοδος στο στάδιο είναι τώρα.
               stage,
               status: STATUS_OF_STAGE_KIND[stageKind(stage)],
               stageChangedAt: now,

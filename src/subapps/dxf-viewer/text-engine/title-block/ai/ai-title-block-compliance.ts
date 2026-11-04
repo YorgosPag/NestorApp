@@ -20,6 +20,7 @@ import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getOpenAIProvider } from '@/services/ai/openai-provider';
 import { recordUsage } from '@/services/ai-pipeline/ai-usage.service';
+import { usageFromSdk } from '@/services/ai-pipeline/ai-usage-sdk';
 import type { PlaceholderScope } from '../../templates/resolver/scope.types';
 import type { TextTemplate } from '../../templates/template.types';
 import { resolveTitleBlockContent } from '../title-block-rows';
@@ -86,18 +87,15 @@ Has stamp cell: ${input.withStampBox ? 'yes' : 'no'}${input.withStampBox && !inp
 Rule-based findings already reported: ${describeRuleBased(ruleBased)}`;
 
   try {
+    const model = AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL;
     const result = await generateObject({
-      model: getOpenAIProvider()(AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL),
+      model: getOpenAIProvider()(model),
       schema: aiComplianceSchema,
       system,
       prompt,
       maxRetries: 1,
     });
-    await recordUsage(input.userId, AI_TITLE_BLOCK_USAGE_CHANNEL, {
-      prompt_tokens: result.usage?.inputTokens ?? 0,
-      completion_tokens: result.usage?.outputTokens ?? 0,
-      total_tokens: result.usage?.totalTokens ?? 0,
-    });
+    await recordUsage(input.userId, AI_TITLE_BLOCK_USAGE_CHANNEL, model, usageFromSdk(result.usage));
     return result.object.warnings;
   } catch (err) {
     logger.warn('AI title-block compliance failed', { userId: input.userId, err });

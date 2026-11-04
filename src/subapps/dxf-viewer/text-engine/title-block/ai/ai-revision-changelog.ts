@@ -27,6 +27,7 @@ import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getOpenAIProvider } from '@/services/ai/openai-provider';
 import { recordUsage } from '@/services/ai-pipeline/ai-usage.service';
+import { usageFromSdk } from '@/services/ai-pipeline/ai-usage-sdk';
 import type { RevisionDiff, RevisionSheetChange } from '../revisions/revision.types';
 import { AI_TITLE_BLOCK_USAGE_CHANNEL } from './ai-title-block-generator';
 import { aiRevisionChangelogSchema, type AiRevisionChangelog } from './ai-revision-changelog-schema';
@@ -90,23 +91,6 @@ Write in ${lang}, in the professional register of a Greek engineer's revision ta
 Set "confidence" honestly. The engineer reviews and edits this text before it is recorded.`;
 }
 
-interface UsageLike {
-  readonly inputTokens?: number;
-  readonly outputTokens?: number;
-  readonly totalTokens?: number;
-}
-
-/** Usage tracking στον υπάρχοντα SSoT (ADR-259A) — αποτυχία δεν σπάει τη ροή. */
-async function trackUsage(userId: string, usage: UsageLike | undefined): Promise<void> {
-  const prompt = usage?.inputTokens ?? 0;
-  const completion = usage?.outputTokens ?? 0;
-  await recordUsage(userId, AI_TITLE_BLOCK_USAGE_CHANNEL, {
-    prompt_tokens: prompt,
-    completion_tokens: completion,
-    total_tokens: usage?.totalTokens ?? prompt + completion,
-  });
-}
-
 /**
  * Diff → **πρόταση** περιγραφής αναθεώρησης. Ποτέ δεν γράφει στη βάση: επιστρέφει κείμενο που
  * ο χρήστης εγκρίνει/διορθώνει στον διάλογο.
@@ -117,16 +101,16 @@ export async function suggestRevisionChangelog(args: {
   readonly locale: RevisionChangelogLocale;
 }): Promise<AiRevisionChangelog | null> {
   try {
-    const provider = getOpenAIProvider();
+    const model = AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL;
     const result = await generateObject({
-      model: provider(AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL),
+      model: getOpenAIProvider()(model),
       schema: aiRevisionChangelogSchema,
       system: buildSystemPrompt(args.locale),
       prompt: `Diff between the previous issued revision and the current drawings:\n\n${formatDiffForPrompt(args.diff)}`,
       maxRetries: 2,
     });
 
-    await trackUsage(args.userId, result.usage);
+    await recordUsage(args.userId, AI_TITLE_BLOCK_USAGE_CHANNEL, model, usageFromSdk(result.usage));
     return result.object;
   } catch (err) {
     logger.warn('AI revision changelog failed — falling back to manual description', {

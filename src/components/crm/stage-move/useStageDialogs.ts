@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Οι διάλογοι μιας μετακίνησης, ως υποσχέσεις** (ADR-929).
+ * @fileoverview **Οι διάλογοι μιας μετακίνησης, ως υποσχέσεις** (ADR-930).
  * @module components/crm/stage-move/useStageDialogs
  *
  * Η μετακίνηση ρωτά «τι λέει ο άνθρωπος;» και **περιμένει** — `askClose` επιστρέφει το αίτημα κλεισίματος ή `null`

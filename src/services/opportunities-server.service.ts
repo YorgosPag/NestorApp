@@ -39,7 +39,7 @@ export interface ServerOpportunityCreatePayload {
 export interface ServerOpportunityUpdatePayload {
   name?: string;
   /**
-   * ⛔ ΔΕΝ γράφεται εδώ (ADR-929): το στάδιο αλλάζει **μόνο** από `POST /api/opportunities/[id]/stage`
+   * ⛔ ΔΕΝ γράφεται εδώ (ADR-930): το στάδιο αλλάζει **μόνο** από `POST /api/opportunities/[id]/stage`
    * (έλεγχος σύγκρουσης, υποχρεωτικά στοιχεία κλεισίματος, ιστορικό). Η παρουσία του ⇒ 400, όχι σιωπηλή αγνόηση.
    */
   stage?: string;

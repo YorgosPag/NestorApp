@@ -223,7 +223,7 @@ export const AUDIT_ENTITIES = {
    */
   conveyance_case: { collectionKey: 'CONVEYANCE_CASES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   /**
-   * 📈 ADR-929 — **η ευκαιρία πώλησης** (ροή πωλήσεων CRM). Βιβλίο `'company'`. Η αλλαγή σταδίου (σύρσιμο, φόρμα,
+   * 📈 ADR-930 — **η ευκαιρία πώλησης** (ροή πωλήσεων CRM). Βιβλίο `'company'`. Η αλλαγή σταδίου (σύρσιμο, φόρμα,
    * αναίρεση) περνά από τον ΕΝΑ γραφέα `opportunity-stage-transition.server.ts` και γράφει `status_changed`.
    * `renamePropagation: false` — δεν ονομάζει αρχεία.
    */

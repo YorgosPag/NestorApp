@@ -40,6 +40,26 @@ export function rayHitsSegment(
   return { dist, within: s >= -SEGMENT_PARAM_SLACK && s <= 1 + SEGMENT_PARAM_SLACK };
 }
 
+/**
+ * Κάτω όριο του |sin θ| για το {@link alongRayReach}: κάτω από 15° η ακτίνα τρέχει σχεδόν πάνω στο τμήμα, και η
+ * «κάθετη απόσταση» παύει να σημαίνει κάτι (το όριο θα μεγάλωνε χωρίς τέλος).
+ */
+const MIN_REACH_SIN = Math.sin(Math.PI / 12);
+
+/**
+ * Μια **κάθετη** απόσταση από το τμήμα `[a,b]`, μετρημένη **κατά μήκος** της μοναδιαίας ακτίνας `û`: `d / |sin θ|`,
+ * θ = γωνία ακτίνας–τμήματος (με κάτω όριο sin 15°). Ένα άκρο τοίχου που προσκρούει υπό 45° σε παρειά απέχει από
+ * τον άξονα του γείτονα `μισό πάχος / sin 45°`, όχι `μισό πάχος` (ADR-929 Φ2: χωρίς αυτό κάθε λοξή ένωση έμενε ανοιχτή).
+ */
+export function alongRayReach(
+  ux: number, uy: number, ax: number, ay: number, bx: number, by: number, perpendicular: number,
+): number {
+  const sx = bx - ax, sy = by - ay;
+  const len = Math.hypot(sx, sy);
+  if (len < PARALLEL_DET_EPS) return perpendicular;
+  return perpendicular / Math.max(MIN_REACH_SIN, Math.abs(ux * sy - uy * sx) / len);
+}
+
 export interface RayRingHit {
   readonly dist: number;
   /** Θέση του δακτυλίου στον πίνακα που δόθηκε. */

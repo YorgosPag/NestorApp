@@ -28,17 +28,7 @@ jest.mock('@/config/firestore-collections', () => ({
   COLLECTIONS: { AI_USAGE: 'ai_usage' },
 }));
 
-jest.mock('@/config/ai-analysis-config', () => ({
-  AI_COST_CONFIG: {
-    PRICING: {
-      'gpt-4o-mini': { inputPer1MTokens: 0.15, outputPer1MTokens: 0.60 },
-      'gpt-4o': { inputPer1MTokens: 2.50, outputPer1MTokens: 10.00 },
-    },
-    LIMITS: {
-      CUSTOMER_DAILY_MESSAGE_CAP: 50,
-    },
-  },
-}));
+// Το `@/config/ai-analysis-config` ΔΕΝ γίνεται mock: ο πραγματικός τιμοκατάλογος (`tokenCostUsd`) είναι μέρος αυτού που ελέγχεται.
 
 const mockSet = jest.fn<Promise<void>, [unknown, unknown]>();
 const mockGet = jest.fn<Promise<{ exists: boolean; data: () => unknown }>, []>();
@@ -67,7 +57,46 @@ jest.mock('firebase-admin/firestore', () => ({
 }));
 
 // ── Imports ──
-import { calculateCost, recordUsage, checkDailyCap, getMonthlyUsage } from '../ai-usage.service';
+import { recordUsage, checkDailyCap, getMonthlyUsage } from '../ai-usage.service';
+import { usageFromSdk, usageFromSdkSteps } from '../ai-usage-sdk';
+
+// ============================================================================
+// FIRESTORE set(…, { merge: true }) — η σημασιολογία που έκρυψε το σφάλμα
+// ============================================================================
+
+type Stored = Record<string, unknown>;
+
+function isIncrement(v: unknown): v is { _increment: number } {
+  return typeof v === 'object' && v !== null && '_increment' in v;
+}
+
+function isMap(v: unknown): v is Stored {
+  return typeof v === 'object' && v !== null && !isIncrement(v) && !('_serverTimestamp' in v);
+}
+
+/**
+ * Όπως η Firestore: κάθε κλειδί του `set` είναι **κυριολεκτικό** όνομα πεδίου (η τελεία ΔΕΝ είναι διαδρομή), οι
+ * εμφωλευμένοι χάρτες συγχωνεύονται σε βάθος, και το `increment` προσθέτει στην τρέχουσα τιμή (ή στο 0).
+ */
+function applySetMerge(target: Stored, data: Stored): Stored {
+  const out: Stored = { ...target };
+  for (const [key, value] of Object.entries(data)) {
+    if (isIncrement(value)) {
+      out[key] = (typeof out[key] === 'number' ? (out[key] as number) : 0) + value._increment;
+    } else if (isMap(value)) {
+      out[key] = applySetMerge(isMap(out[key]) ? (out[key] as Stored) : {}, value);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+const TOKENS = { prompt_tokens: 500, completion_tokens: 200, total_tokens: 700 } as const;
+
+function writtenData(call = 0): Stored {
+  return mockSet.mock.calls[call][0] as Stored;
+}
 
 // ============================================================================
 // TESTS
@@ -79,69 +108,88 @@ describe('AI Usage Service', () => {
     mockSet.mockResolvedValue(undefined);
   });
 
-  describe('calculateCost', () => {
-    it('calculates correct cost for gpt-4o-mini', () => {
-      const cost = calculateCost({
-        prompt_tokens: 1000,
-        completion_tokens: 500,
-        total_tokens: 1500,
-      });
-
-      // (1000/1M) * 0.15 + (500/1M) * 0.60 = 0.00015 + 0.0003 = 0.00045
-      expect(cost).toBeCloseTo(0.00045, 6);
-    });
-
-    it('returns 0 for zero tokens', () => {
-      const cost = calculateCost({
-        prompt_tokens: 0,
-        completion_tokens: 0,
-        total_tokens: 0,
-      });
-      expect(cost).toBe(0);
-    });
-
-    it('handles large token counts', () => {
-      const cost = calculateCost({
-        prompt_tokens: 1_000_000,
-        completion_tokens: 500_000,
-        total_tokens: 1_500_000,
-      });
-
-      // (1M/1M) * 0.15 + (500K/1M) * 0.60 = 0.15 + 0.30 = 0.45
-      expect(cost).toBeCloseTo(0.45, 4);
-    });
-  });
-
   describe('recordUsage', () => {
-    it('writes usage document with atomic increments', async () => {
-      await recordUsage('user_123', 'telegram', {
-        prompt_tokens: 500,
-        completion_tokens: 200,
-        total_tokens: 700,
-      });
+    it('writes the monthly document of the channel and user, with merge', async () => {
+      await recordUsage('user_123', 'telegram', 'gpt-4o-mini', TOKENS);
 
       expect(mockCollection).toHaveBeenCalledWith('ai_usage');
       expect(mockDoc).toHaveBeenCalledWith('aiu_telegram_user_123_' + new Date().toISOString().slice(0, 7));
       expect(mockSet).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 'user_123',
-          channel: 'telegram',
-        }),
-        { merge: true }
+        expect.objectContaining({ userId: 'user_123', channel: 'telegram' }),
+        { merge: true },
       );
+    });
+
+    it('never writes a dotted key — in set() a dot is a literal field name, not a path', async () => {
+      await recordUsage('user_123', 'telegram', 'gpt-4o-mini', TOKENS);
+
+      const keys: string[] = [];
+      const walk = (o: Stored): void => {
+        for (const [k, v] of Object.entries(o)) {
+          keys.push(k);
+          if (isMap(v)) walk(v);
+        }
+      };
+      walk(writtenData());
+      expect(keys.filter((k) => k.includes('.'))).toEqual([]);
+    });
+
+    it('round trip: what recordUsage writes is what checkDailyCap counts', async () => {
+      let stored: Stored = {};
+      mockSet.mockImplementation(async (data) => { stored = applySetMerge(stored, data as Stored); });
+      mockGet.mockImplementation(async () => ({ exists: true, data: () => stored }));
+
+      await recordUsage('user_123', 'telegram', 'gpt-4o-mini', TOKENS);
+      await recordUsage('user_123', 'telegram', 'gpt-4o-mini', TOKENS);
+
+      const today = new Date().toISOString().slice(0, 10);
+      expect((await checkDailyCap('user_123', 'telegram')).used).toBe(2);
+      expect(stored.dailyTokens).toEqual({ [today]: { prompt: 1000, completion: 400 } });
+      expect(stored.totalTokens).toEqual({ prompt: 1000, completion: 400 });
+    });
+
+    it('prices each call with the model that ran, not a fixed one', async () => {
+      await recordUsage('u', 'telegram', 'gpt-4o-mini', TOKENS);
+      await recordUsage('u', 'telegram', 'gpt-4o', TOKENS);
+
+      // gpt-4o-mini: 500·0,15/1M + 200·0,60/1M = 0,000195 · gpt-4o: 500·2,50/1M + 200·10/1M = 0,00325
+      expect((writtenData(0).estimatedCostUsd as { _increment: number })._increment).toBeCloseTo(0.000195, 9);
+      expect((writtenData(1).estimatedCostUsd as { _increment: number })._increment).toBeCloseTo(0.00325, 9);
+      expect(writtenData(0).unpricedCalls).toEqual({ _increment: 0 });
+    });
+
+    it('an unpriced model is counted, not guessed: tokens yes, cost 0, unpricedCalls +1', async () => {
+      await recordUsage('u', 'telegram', 'model-without-price', TOKENS);
+
+      expect(writtenData().estimatedCostUsd).toEqual({ _increment: 0 });
+      expect(writtenData().unpricedCalls).toEqual({ _increment: 1 });
+      expect(writtenData().totalTokens).toEqual({ prompt: { _increment: 500 }, completion: { _increment: 200 } });
     });
 
     it('does not throw on Firestore failure (non-fatal)', async () => {
       mockSet.mockRejectedValue(new Error('Firestore down'));
 
-      // Should not throw
-      await expect(
-        recordUsage('user_123', 'telegram', {
-          prompt_tokens: 100,
-          completion_tokens: 50,
-          total_tokens: 150,
-        })
-      ).resolves.toBeUndefined();
+      await expect(recordUsage('user_123', 'telegram', 'gpt-4o-mini', TOKENS)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('usageFromSdk', () => {
+    it('maps SDK fields to snake_case and keeps the provider total', () => {
+      expect(usageFromSdk({ inputTokens: 120, outputTokens: 45, totalTokens: 170 }))
+        .toEqual({ prompt_tokens: 120, completion_tokens: 45, total_tokens: 170 });
+    });
+
+    it('without a provider total, total = input + output; missing usage = zero', () => {
+      expect(usageFromSdk({ inputTokens: 120, outputTokens: 45 }).total_tokens).toBe(165);
+      expect(usageFromSdk(undefined)).toEqual({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 });
+    });
+
+    it('sums the steps of a tool-using generation', () => {
+      expect(usageFromSdkSteps([
+        { usage: { inputTokens: 100, outputTokens: 30 } },
+        {},
+        { usage: { inputTokens: 200, outputTokens: 100 } },
+      ])).toEqual({ prompt_tokens: 300, completion_tokens: 130, total_tokens: 430 });
     });
   });
 

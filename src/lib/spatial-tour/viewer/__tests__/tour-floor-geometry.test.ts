@@ -4,7 +4,7 @@
  */
 
 import { degToRad } from '@/lib/geometry/angle';
-import { applyHomography, unitSquareToQuad, type PlanePoint } from '@/lib/geometry/css-homography';
+import { applyHomography, unitSquareToQuad, type PlanePoint } from '@/lib/geometry/homography';
 
 import { yawPitchToDirection } from '../tour-cube-faces';
 import {

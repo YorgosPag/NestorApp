@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Τα κομμάτια της κάρτας ευκαιρίας που αφορούν τη ροή** (ADR-929): «μέρες στο στάδιο» και
+ * @fileoverview **Τα κομμάτια της κάρτας ευκαιρίας που αφορούν τη ροή** (ADR-930): «μέρες στο στάδιο» και
  *   «Μετακίνηση σε…».
  * @module components/crm/dashboard/OpportunityCardParts
  *

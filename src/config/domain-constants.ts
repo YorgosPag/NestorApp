@@ -1074,7 +1074,7 @@ export const API_ROUTES = {
       `/api/trash/${entityType}/${entityId}/unarchive` as const,
   },
 
-  /** ADR-929 — ευκαιρίες πώλησης (CRM pipeline). `STAGE` = ο ΕΝΑΣ γραφέας του σταδίου (σύρσιμο, φόρμα, αναίρεση). */
+  /** ADR-930 — ευκαιρίες πώλησης (CRM pipeline). `STAGE` = ο ΕΝΑΣ γραφέας του σταδίου (σύρσιμο, φόρμα, αναίρεση). */
   OPPORTUNITIES: {
     LIST: '/api/opportunities',
     BY_ID: (id: string) => `/api/opportunities/${encodeURIComponent(id)}` as const,

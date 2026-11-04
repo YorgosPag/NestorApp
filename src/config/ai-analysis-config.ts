@@ -43,6 +43,36 @@ export const AI_COST_CONFIG = {
   PRICING: {
     'gpt-4o-mini': { inputPer1MTokens: 0.15, outputPer1MTokens: 0.60 },
     'gpt-4o': { inputPer1MTokens: 2.50, outputPer1MTokens: 10.00 },
+    // ADR-929 Φ3: οι υποψήφιοι της ανάγνωσης κάτοψης, από τον επίσημο τιμοκατάλογο
+    // (developers.openai.com/api/docs/pricing, standard, ≤272K, επαληθευμένο 2026-11-04).
+    'gpt-4.1': { inputPer1MTokens: 2.00, outputPer1MTokens: 8.00 },
+    'gpt-5.4': { inputPer1MTokens: 2.50, outputPer1MTokens: 15.00 },
+    'gpt-5.4-mini': { inputPer1MTokens: 0.75, outputPer1MTokens: 4.50 },
+    'gpt-5.6-terra': { inputPer1MTokens: 2.00, outputPer1MTokens: 12.00 },
+    'gpt-5.6-luna': { inputPer1MTokens: 0.20, outputPer1MTokens: 1.20 },
+    'gpt-6.1-sol': { inputPer1MTokens: 2.00, outputPer1MTokens: 10.00 },
+    'gpt-6.1-terra': { inputPer1MTokens: 1.00, outputPer1MTokens: 5.00 },
+    'gpt-6-luna': { inputPer1MTokens: 0.10, outputPer1MTokens: 0.50 },
+  },
+  /**
+   * ADR-929 Φ3 — πόσα tokens εισόδου κοστίζει μια εικόνα, ανά οικογένεια (developers.openai.com/api/docs/guides/images-vision,
+   * επαληθευμένο 2026-11-04). Χρειάζεται **πριν** την κλήση: το όριο ανά σελίδα (Δ16 #2) κρίνεται από την εκτίμηση.
+   * Μοντέλο χωρίς γραμμή ⇒ καμία εκτίμηση ⇒ η ανάγνωση αρνείται (κανένα κόστος δεν μαντεύεται).
+   * `patch`: `ceil(w/32)·ceil(h/32)·πολλαπλασιαστής`, με `detail: 'original'` η εικόνα μένει αυτούσια. `tile`: προσαρμογή
+   * στο 2048², μικρή πλευρά 768, `βάση + πλακίδια·512²`, με `detail: 'high'`.
+   */
+  IMAGE_INPUT: {
+    'gpt-4o': { kind: 'tile', baseTokens: 85, tileTokens: 170 },
+    'gpt-4.1': { kind: 'tile', baseTokens: 85, tileTokens: 170 },
+    'gpt-5.4': { kind: 'patch', multiplier: 1.2, maxPatches: 10_000 },
+    'gpt-5.4-mini': { kind: 'patch', multiplier: 1.2, maxPatches: 10_000 },
+    'gpt-5.6-terra': { kind: 'patch', multiplier: 1.2, maxPatches: 30_000 },
+    'gpt-5.6-luna': { kind: 'patch', multiplier: 1.2, maxPatches: 30_000 },
+    // gpt-6.x: ο πίνακας του παρόχου δείχνει μόνο το `gpt-6-astra` (patch ×1,2, `original` αυτούσια). Για τα 6.1-sol/terra
+    // και 6-luna ο κανόνας **μετρήθηκε** από την αναφερόμενη χρήση (ADR-929 §6.4), όχι υποτέθηκε.
+    'gpt-6.1-sol': { kind: 'patch', multiplier: 1.2, maxPatches: 30_000 },
+    'gpt-6.1-terra': { kind: 'patch', multiplier: 1.2, maxPatches: 30_000 },
+    'gpt-6-luna': { kind: 'patch', multiplier: 1.2, maxPatches: 30_000 },
   },
   LIMITS: {
     /** Max agentic loop iterations for customer (buyer) messages */
@@ -62,8 +92,50 @@ export const AI_COST_CONFIG = {
      * Canonical SSoT mirrored at `@/config/iso19650-constants.ISO19650_BUDGET_CAP_USD`.
      */
     ISO19650_BUDGET_CAP_USD: 0.01,
+    /**
+     * ADR-929 Δ16 #2 — μέγιστο **εκτιμώμενο** κόστος μίας ανάγνωσης κάτοψης (USD). Η εκτίμηση γίνεται πριν την κλήση από
+     * το μέγεθος της εικόνας που θα σταλεί· πάνω από αυτό η κλήση δεν γίνεται και η αναγνώριση συνεχίζει μόνο με γεωμετρία.
+     */
+    PLAN_READING_PAGE_CAP_USD: 0.25,
+    /** ADR-929 Δ16 #2 — όριο ασφαλείας ανά εταιρεία και ημερολογιακό μήνα (USD) για την ανάγνωση κατόψεων. */
+    PLAN_READING_COMPANY_MONTHLY_CAP_USD: 25,
   },
 } as const;
+
+type ImageInputRule = (typeof AI_COST_CONFIG.IMAGE_INPUT)[keyof typeof AI_COST_CONFIG.IMAGE_INPUT];
+
+const PATCH_PX = 32;
+const TILE_PX = 512;
+const TILE_FIT_PX = 2048;
+const TILE_SHORT_SIDE_PX = 768;
+
+function tileImageTokens(rule: Extract<ImageInputRule, { kind: 'tile' }>, width: number, height: number): number {
+  const fit = Math.min(1, TILE_FIT_PX / Math.max(width, height));
+  const short = Math.min(width, height) * fit;
+  const shrink = short > TILE_SHORT_SIDE_PX ? TILE_SHORT_SIDE_PX / short : 1;
+  const w = width * fit * shrink;
+  const h = height * fit * shrink;
+  return rule.baseTokens + rule.tileTokens * Math.ceil(w / TILE_PX) * Math.ceil(h / TILE_PX);
+}
+
+/** Η λεπτομέρεια εικόνας που ζητά κάθε οικογένεια: `original` για τα patch (μικρά γράμματα), `high` για τα tile. */
+export function imageDetailFor(model: string): 'original' | 'high' | null {
+  const rule = (AI_COST_CONFIG.IMAGE_INPUT as Readonly<Record<string, ImageInputRule | undefined>>)[model];
+  if (!rule) return null;
+  return rule.kind === 'patch' ? 'original' : 'high';
+}
+
+/**
+ * Tokens εισόδου μιας εικόνας **πριν** την κλήση (ADR-929 Δ16 #2). `null` ⇒ άγνωστη οικογένεια **ή** εικόνα που ο πάροχος
+ * θα απέρριπτε (πάνω από το όριο patches): και στις δύο περιπτώσεις η κλήση δεν γίνεται.
+ */
+export function imageInputTokens(model: string, width: number, height: number): number | null {
+  const rule = (AI_COST_CONFIG.IMAGE_INPUT as Readonly<Record<string, ImageInputRule | undefined>>)[model];
+  if (!rule || width <= 0 || height <= 0) return null;
+  if (rule.kind === 'tile') return tileImageTokens(rule, width, height);
+  const patches = Math.ceil(width / PATCH_PX) * Math.ceil(height / PATCH_PX);
+  return patches > rule.maxPatches ? null : Math.ceil(patches * rule.multiplier);
+}
 
 type ModelRates = (typeof AI_COST_CONFIG.PRICING)[keyof typeof AI_COST_CONFIG.PRICING];
 

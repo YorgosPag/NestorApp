@@ -27,6 +27,8 @@ export type {
   ResponsesTool,
   ResponsesRequestBody,
   ResponsesErrorPayload,
+  ResponsesImageDetail,
+  ResponsesReasoningEffort,
 } from './wire-types';
 
 export { extractOutputText } from './extract-output-text';

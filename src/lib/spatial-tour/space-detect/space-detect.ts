@@ -18,12 +18,12 @@ import { dominantAxis, DEFAULT_ORTHOGONAL_SNAP, snapRingOrthogonal } from '@/lib
 import { polygonArea } from '@/lib/geometry/planar-polygon';
 import { traceOuterContour } from '@/lib/geometry/raster/moore-contour';
 import type { PixelPoint } from '@/lib/geometry/scale-calibration';
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
 
 import { absorbDoorSymbols } from './door-symbol-absorb';
 import { suggestSeparation } from './separation-suggest';
 import {
   DEFAULT_SPACE_DETECT,
-  type PlanRaster,
   type PreparedPlanRaster,
   type SeparationSuggestion,
   type SpaceDetectInput,

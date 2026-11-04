@@ -23,7 +23,7 @@ import type { BimPoint } from '../types/bim-base';
 import type { WallEntity, WallParams } from '../types/wall-types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { rayHitsSegment } from '../geometry/shared/ray-segment';
+import { alongRayReach, rayHitsSegment } from '../geometry/shared/ray-segment';
 
 /**
  * Slack (mm) for "the endpoint sits on the neighbour's boundary line": how far PAST the
@@ -63,8 +63,12 @@ function resolveExtension(
     const nHalf = (n.params.thickness / 2) * mmToSceneUnits(n.params.sceneUnits ?? 'mm');
     const hit = rayHitsSegment(ex, ey, ux, uy, n.params.start.x, n.params.start.y, n.params.end.x, n.params.end.y);
     if (!hit || !hit.within) continue;
-    // The endpoint must be on/near the neighbour's face: 0 ≤ dist ≤ half + slack.
-    if (hit.dist < -slack || hit.dist > nHalf + slack) continue;
+    // The endpoint must be on/near the neighbour's face: 0 ≤ dist ≤ (half + slack) / sin θ. Measured ALONG THE RAY,
+    // face→centreline is half / sin θ (θ = angle between the two axes). ADR-929 Φ2: a 45° wall meeting a 250 mm wall
+    // needs 177 mm, and the perpendicular-only bound (175) silently left every oblique joint open.
+    const [sx, sy, nx, ny] = [n.params.start.x, n.params.start.y, n.params.end.x, n.params.end.y];
+    if (hit.dist < -alongRayReach(ux, uy, sx, sy, nx, ny, slack)) continue;
+    if (hit.dist > alongRayReach(ux, uy, sx, sy, nx, ny, nHalf + slack)) continue;
     if (hit.dist <= AUTOJOIN_ON_CENTRELINE_EPS_MM * scale) continue; // already at (or past) the centreline → no move
     if (!best || hit.dist < best.dist) {
       best = { dist: hit.dist, x: ex + ux * hit.dist, y: ey + uy * hit.dist };

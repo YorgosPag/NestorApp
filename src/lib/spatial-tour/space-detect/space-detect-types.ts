@@ -8,18 +8,12 @@
  */
 
 import type { PixelPoint } from '@/lib/geometry/scale-calibration';
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
 
 /** Νοητή διαχωριστική γραμμή (Revit «Room Separation Line», Δ8.2) — ο ανιχνευτής τη βλέπει ως τοίχο. */
 export interface SeparationSegment {
   readonly a: PixelPoint;
   readonly b: PixelPoint;
-}
-
-/** Η εικόνα όπως τη δίνει το `getImageData` (RGBA, γραμμή-προς-γραμμή). */
-export interface PlanRaster {
-  readonly rgba: Uint8ClampedArray | Uint8Array;
-  readonly width: number;
-  readonly height: number;
 }
 
 export interface SpaceDetectOptions {

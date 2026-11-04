@@ -26,10 +26,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 
-/** ADR-929 — η άδεια αλλαγής σταδίου· ο server την επιβάλλει ξανά (`crm:opportunities:update`). Εδώ μόνο για να μη σέρνεται ό,τι θα απορριφθεί. */
+/** ADR-930 — η άδεια αλλαγής σταδίου· ο server την επιβάλλει ξανά (`crm:opportunities:update`). Εδώ μόνο για να μη σέρνεται ό,τι θα απορριφθεί. */
 const STAGE_PERMISSION = 'crm:opportunities:update';
 
-/** ADR-929 — ζωντανός πίνακας: τα δεδομένα από τη συνδρομή, η αισιόδοξη εικόνα πάνω τους, η ΜΙΑ εντολή μετακίνησης. */
+/** ADR-930 — ζωντανός πίνακας: τα δεδομένα από τη συνδρομή, η αισιόδοξη εικόνα πάνω τους, η ΜΙΑ εντολή μετακίνησης. */
 function useLivePipeline() {
   const { opportunities, loading, error, refetch } = useRealtimeOpportunities();
   const { displayed, onOptimistic, onRevert } = useOptimisticStages(opportunities);

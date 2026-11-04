@@ -221,6 +221,7 @@ export async function executeAgenticPath(
       recordUsage(
         channelSenderId,
         ctx.intake.channel,
+        agenticResult.model,
         agenticResult.totalUsage,
       ).catch(() => { /* non-fatal */ });
     }

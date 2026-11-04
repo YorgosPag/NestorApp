@@ -1,7 +1,7 @@
 /**
  * POST /api/opportunities/[id]/stage  { expectedStage, request } → { outcome, stage, previousStage?, reopened? }
  *
- * The ONE door for an opportunity's stage (ADR-929): kanban drag, keyboard "Move to…", edit form, undo.
+ * The ONE door for an opportunity's stage (ADR-930): kanban drag, keyboard "Move to…", edit form, undo.
  *
  * - `expectedStage` ≠ stored stage ⇒ 409 `{ currentStage, updatedBy }` — someone else moved it meanwhile.
  *   Field-level CAS: an unrelated edit (note, phone) does NOT cancel the move.
@@ -11,7 +11,7 @@
  *
  * Auth: withAuth + `crm:opportunities:update` + opportunity tenant fence (foreign ⇒ 404) · Rate: sensitive (CRM data)
  *
- * @see ADR-929 · ADR-602 API Route-Handler Factory SSoT
+ * @see ADR-930 · ADR-602 API Route-Handler Factory SSoT
  */
 
 import 'server-only';

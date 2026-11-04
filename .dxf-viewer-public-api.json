@@ -843,6 +843,13 @@
       "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή."
     },
     {
+      "file": "src/subapps/dxf-viewer/floorplan-background/geometry/raster-scene-mapping.ts",
+      "symbols": [
+        "backgroundPlacementAffine"
+      ],
+      "reason": "ADR-929 Φ0 — ΕΝΑΣ ορισμός του T·R·S του υποβάθρου κάτοψης (θέση · περιστροφή · κλίμακα του `BackgroundTransform`). Ήταν γραμμένος ΤΡΙΣ: χειρόγραφος (μαζί με τον αντίστροφο) στο `services/floorplan-background/calibration-remap.service.ts`, ως σειρά `ctx.translate/rotate/scale` στον ζωγράφο, και τώρα θα τον χρειαζόταν και η αναγνώριση κάτοψης. Αν ο διακομιστής κρατούσε δική του γραφή, η επαναπροβολή των επικαλύψεων μετά τη βαθμονόμηση θα μπορούσε να αποκλίνει από ό,τι ζωγραφίζει η οθόνη. Ο τύπος ανήκει στο `floorplan-background` (εκεί ζει το `BackgroundTransform`, ήδη δημόσιο εδώ), όχι στο `lib/`: το `lib/` δεν εισάγει από subapp. 🔑 ΕΝΑΣ καταναλωτής απ' έξω, ονομαστικά: `src/services/floorplan-background/calibration-remap.service.ts`. Ο γενικός αφινικός πυρήνας (σύνθεση · εφαρμογή · αντιστροφή) ζει στο `src/lib/geometry/affine-2x3.ts` ακριβώς για να ΜΗΝ χρειαστεί δεύτερη γραμμή εδώ."
+    },
+    {
       "file": "src/subapps/dxf-viewer/floorplan-background/index.ts",
       "symbols": [
         "FloorplanBackground",
@@ -1473,6 +1480,67 @@
         "PublicFloorplanPixelGateHarness"
       ],
       "reason": "ADR-909 §6.7 / CHECK 3.101 — το όργανο της πύλης pixels της δημόσιας κάτοψης. Η σελίδα δοκιμής `/test-harness/public-floorplan-pixels` (404 σε παραγωγή) ζητά ΜΟΝΟ αυτό το σύμβολο: το σχέδιο-δείγμα, η λήψη και ο καταγραφέας γραμμών μένουν ιδιωτικά μέσα στο subapp, αντί να ανοίξουν δέκα εσωτερικά σύμβολα προς το src/app."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reader-port.ts",
+      "symbols": [
+        "PlanReader",
+        "PlanReaderFailure",
+        "PlanReaderImage",
+        "PlanReaderImageMime",
+        "PlanReaderInput",
+        "PlanReaderOutcome",
+        "PlanReaderUsage"
+      ],
+      "reason": "Η θύρα `PlanReader` (Δ5): την υλοποιεί ο μοναδικός προσαρμογέας OpenAI στον διακομιστή. ADR-929 Φ3 — ο αναγνώστης κάτοψης ζει στον διακομιστή (`src/server/plan-recognition/`, κλειδί OpenAI, Admin SDK) και η διαδρομή του στο `src/app/api/floorplan-backgrounds/[id]/plan-reading/`· ο πελάτης (Φ5) στέλνει και διαβάζει το ίδιο συμβόλαιο. Ένα συμβόλαιο, δύο πλευρές: αντίγραφο στον διακομιστή θα απέκλινε σιωπηλά από τον πελάτη."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-contract.ts",
+      "symbols": [
+        "PLAN_READING_IMAGE_FIELD",
+        "PLAN_READING_IMAGE_MIMES",
+        "PLAN_READING_MAX_IMAGE_BYTES",
+        "PLAN_READING_REQUEST_FIELD",
+        "PlanReadingRequest",
+        "PlanReadingRouteResponse",
+        "PlanReadingRouteResult",
+        "planReadingRequestSchema"
+      ],
+      "reason": "Το συμβόλαιο multipart της διαδρομής ανάγνωσης (Δ11). ADR-929 Φ3 — ο αναγνώστης κάτοψης ζει στον διακομιστή (`src/server/plan-recognition/`, κλειδί OpenAI, Admin SDK) και η διαδρομή του στο `src/app/api/floorplan-backgrounds/[id]/plan-reading/`· ο πελάτης (Φ5) στέλνει και διαβάζει το ίδιο συμβόλαιο. Ένα συμβόλαιο, δύο πλευρές: αντίγραφο στον διακομιστή θα απέκλινε σιωπηλά από τον πελάτη."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-prompt.ts",
+      "symbols": [
+        "PLAN_READING_SYSTEM_PROMPT",
+        "planReadingUserText"
+      ],
+      "reason": "Οι οδηγίες προς το μοντέλο: τις στέλνει ο προσαρμογέας του διακομιστή και τις μετρά το σενάριο μέτρησης (Δ13), ώστε να μετριέται ό,τι πράγματι στέλνεται. ADR-929 Φ3 — ο αναγνώστης κάτοψης ζει στον διακομιστή (`src/server/plan-recognition/`, κλειδί OpenAI, Admin SDK) και η διαδρομή του στο `src/app/api/floorplan-backgrounds/[id]/plan-reading/`· ο πελάτης (Φ5) στέλνει και διαβάζει το ίδιο συμβόλαιο. Ένα συμβόλαιο, δύο πλευρές: αντίγραφο στον διακομιστή θα απέκλινε σιωπηλά από τον πελάτη."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-wire.ts",
+      "symbols": [
+        "PLAN_READING_SCHEMA_NAME",
+        "PLAN_READING_SCHEMA_VERSION",
+        "PlanReadingDropped",
+        "PlanViewReading",
+        "parsePlanViewReading",
+        "planReadingJsonSchema"
+      ],
+      "reason": "Ένα σχήμα zod ⇒ strict JSON schema της OpenAI ΚΑΙ έλεγχος της απάντησης στον διακομιστή. ADR-929 Φ3 — ο αναγνώστης κάτοψης ζει στον διακομιστή (`src/server/plan-recognition/`, κλειδί OpenAI, Admin SDK) και η διαδρομή του στο `src/app/api/floorplan-backgrounds/[id]/plan-reading/`· ο πελάτης (Φ5) στέλνει και διαβάζει το ίδιο συμβόλαιο. Ένα συμβόλαιο, δύο πλευρές: αντίγραφο στον διακομιστή θα απέκλινε σιωπηλά από τον πελάτη."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/plan-recognition/plan-recognition-types.ts",
+      "symbols": [
+        "PlanReadingUnavailableReason"
+      ],
+      "reason": "Οι λόγοι που δεν υπάρχει ανάγνωση (Δ15 #1, Δ16 #4): τους αποφασίζει το όριο κόστους του διακομιστή και τους δείχνει ο πελάτης. ADR-929 Φ3 — ο αναγνώστης κάτοψης ζει στον διακομιστή (`src/server/plan-recognition/`, κλειδί OpenAI, Admin SDK) και η διαδρομή του στο `src/app/api/floorplan-backgrounds/[id]/plan-reading/`· ο πελάτης (Φ5) στέλνει και διαβάζει το ίδιο συμβόλαιο. Ένα συμβόλαιο, δύο πλευρές: αντίγραφο στον διακομιστή θα απέκλινε σιωπηλά από τον πελάτη."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/plan-recognition/plan-reading-key.ts",
+      "symbols": [
+        "planReadingKey"
+      ],
+      "reason": "ADR-929 Δ11 — το κλειδί της ανάγνωσης συντίθεται σε ΕΝΑ σημείο: ο διακομιστής (`src/server/plan-recognition/plan-reading.service.ts`) το χρησιμοποιεί ως σπόρο του `plrd_*`. Δεύτερη σύνθεση θα πλήρωνε κάθε ανάγνωση δύο φορές χωρίς να το δει κανείς."
     }
   ]
 }

@@ -113,6 +113,18 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-11-04 — Υπόβαθρο κάτοψης: ΕΝΑΣ πίνακας ανά καρέ· ο αφινικός πυρήνας στο `lib/geometry` (ADR-929 Φ0)
+
+- Οι πάροχοι του υποβάθρου (`ImageProvider`, `PdfPageProvider`) ζωγραφίζουν πλέον με **ένα** `ctx.transform`
+  (`κόσμος→οθόνη ∘ px→σκηνή`, `provider-canvas-transforms.applyRasterCanvasTransform`) αντί για αλυσίδα
+  `translate/scale/rotate/scale(1,−1)`. Ο πίνακας px→σκηνή είναι το SSoT `rasterToSceneAffine`, το ίδιο που ρωτά η
+  αναγνώριση κάτοψης. Κόστος ανά καρέ: δύο συνθέσεις 2×3 + ένα `sin/cos`, ίδιο με πριν. **Καμία** νέα συνδρομή, ο
+  ζωγράφος διαβάζει ακόμη `getImmediateTransform()` στο draw time (XXII.B). Ισοδυναμία με την παλιά αλυσίδα κλειδωμένη
+  με test (50 τοποθετήσεις × CAD/οθόνη).
+- Ο αφινικός πυρήνας του matrix ghost (`Affine2x3`, `composeAffine`) μετακόμισε από το `hooks/tools/transform-ghost-matrix.ts`
+  στο `src/lib/geometry/affine-2x3.ts` (+ `applyAffine`, `invertAffine`, `transformContext`). Το `worldToScreenAffine`
+  πήγε στο `rendering/core/world-to-screen-affine.ts`. Το `blit` του `TransformGhostMatrixCache` δεν άλλαξε συμπεριφορά.
+
 ### 2026-10-31 — `CanvasSection`: ένα όνομα στο `useTranslation` (CHECK 3.108, CHECK 6B)
 
 - Η οικογένεια namespaces `dxf-viewer*` δεν γράφεται πια με το χέρι: το `useTranslation('dxf-viewer')` τη φορτώνει από το μητρώο.
@@ -1112,7 +1124,8 @@ render το ghost της επιλογής **ΜΙΑ φορά** σε offscreen ras
 από το **live** `getImmediateTransform()` (ίδιο SSoT με τον κύριο καμβά) → world-locked σε wheel-zoom/pan mid-drag,
 μηδέν React-prop lag. **Συμμόρφωση ADR-040:** **κανένα δεύτερο rAF loop** (reuse του ghost-overlay harness ADR-398/625),
 καμία νέα `useSyncExternalStore` σε orchestrator, ο offscreen δεν αγγίζει το bitmap cache / micro-leaf path. **NEW**
-`hooks/tools/transform-ghost-matrix.ts` (pure affine SSoT· 11 jest) + `transform-ghost-matrix-cache.ts`
+`hooks/tools/transform-ghost-matrix.ts` (pure affine SSoT· 11 jest· ⚠️ 2026-11-04: ο γενικός πυρήνας μετακόμισε στο
+`src/lib/geometry/affine-2x3.ts` και ο `worldToScreenAffine` στο `rendering/core/world-to-screen-affine.ts`, ADR-929 Φ0) + `transform-ghost-matrix-cache.ts`
 (`TransformGhostMatrixCache` — arm/capture/blit mirror του `DxfBackdropCache`). **MOD** `use-transform-ghost-preview.ts`
 (opt-in `matrixGhost`) + `useScalePreview.ts`. Φ.5 LOD = fallback για oversize raster. Commit αμετάβλητο. Πλήρες
 detail: **ADR-646 #8 + §Changelog**· transform-ghost SSoT: **ADR-625**. 52 jest πράσινα· jscpd:diff καθαρό. ΟΧΙ tsc

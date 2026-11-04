@@ -3,7 +3,7 @@
  * @module app/api/opportunities/_service-response
  *
  * Το `OpportunitiesServerService` επιστρέφει `{ success, error? }` αντί να πετά για επιχειρησιακές αρνήσεις. Η μετάφραση
- * σε HTTP ήταν γραμμένη τρεις φορές αυτολεξεί (CHECK 3.28, ADR-929)· τώρα ζει εδώ.
+ * σε HTTP ήταν γραμμένη τρεις φορές αυτολεξεί (CHECK 3.28, ADR-930)· τώρα ζει εδώ.
  */
 
 import 'server-only';

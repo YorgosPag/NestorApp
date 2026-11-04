@@ -22,6 +22,7 @@ import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getOpenAIProvider } from '@/services/ai/openai-provider';
 import { recordUsage } from '@/services/ai-pipeline/ai-usage.service';
+import { usageFromSdk } from '@/services/ai-pipeline/ai-usage-sdk';
 import {
   ALL_PLACEHOLDER_PATHS,
   PLACEHOLDER_REGISTRY,
@@ -34,23 +35,6 @@ const logger = createModuleLogger('AiTitleBlockGenerator');
 export const AI_TITLE_BLOCK_USAGE_CHANNEL = 'dxf-title-block-ai';
 
 export type AiTitleBlockLocale = AiTitleBlock['locale'];
-
-interface UsageLike {
-  readonly inputTokens?: number;
-  readonly outputTokens?: number;
-  readonly totalTokens?: number;
-}
-
-/** Κατέγραψε το usage (fire-and-forget· η αποτυχία δεν σπάει τη δημιουργία). */
-async function trackUsage(userId: string, usage: UsageLike | undefined): Promise<void> {
-  const prompt = usage?.inputTokens ?? 0;
-  const completion = usage?.outputTokens ?? 0;
-  await recordUsage(userId, AI_TITLE_BLOCK_USAGE_CHANNEL, {
-    prompt_tokens: prompt,
-    completion_tokens: completion,
-    total_tokens: usage?.totalTokens ?? prompt + completion,
-  });
-}
 
 /** Οδηγός γνωστών placeholder paths — ο πυρήνας του «map σε ζωντανό δεδομένο, όχι ελεύθερα». */
 function knownPathsGuide(): string {
@@ -144,7 +128,7 @@ export async function runTitleBlockAi<T>(args: {
             maxRetries: 2,
           });
 
-    await trackUsage(userId, result.usage);
+    await recordUsage(userId, AI_TITLE_BLOCK_USAGE_CHANNEL, model, usageFromSdk(result.usage));
     return result.object;
   } catch (err) {
     logger.warn('AI title-block generation failed', { userId, err });

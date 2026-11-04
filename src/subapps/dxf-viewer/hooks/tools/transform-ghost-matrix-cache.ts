@@ -32,11 +32,11 @@ import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-pr
 // ADR-646 Φ.5 SSoT — the selection's UNSCALED union bbox (reused, not re-implemented) drives the rect.
 import { computeUnionBBox } from '../../systems/scale/scale-preview-lod';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
+// ADR-929 Φ0 — ο αφινικός πυρήνας ζει στο lib/geometry (κοινός με το υπόβαθρο κάτοψης και τον διακομιστή).
+import { type Affine2x3, composeAffine, transformContext } from '@/lib/geometry/affine-2x3';
+import { worldToScreenAffine } from '../../rendering/core/world-to-screen-affine';
 import {
-  type Affine2x3,
   type CaptureRect,
-  composeAffine,
-  worldToScreenAffine,
   offscreenToWorldAffine,
   captureRectFromBBox,
   buildCaptureTransform,
@@ -46,11 +46,8 @@ import {
 
 // Re-export the pure math so consumers have a single entry point.
 export {
-  type Affine2x3,
   type CaptureRect,
-  composeAffine,
   scaleAboutBaseWorldAffine,
-  worldToScreenAffine,
   offscreenToWorldAffine,
   captureRectFromBBox,
   buildCaptureTransform,
@@ -126,7 +123,7 @@ export class TransformGhostMatrixCache {
     // The preview ctx is already DPR-scaled (`clearCanvasDpr` → setTransform(dpr,dpr)); `transform`
     // multiplies onto it, so the CSS-px matrix `m` composes with the DPR scale — never overwrites it.
     ctx.save();
-    ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+    transformContext(ctx, m);
     ctx.drawImage(this.canvas, 0, 0, this.rect.wCss, this.rect.hCss);
     ctx.restore();
   }

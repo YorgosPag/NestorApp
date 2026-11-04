@@ -33,6 +33,23 @@ export function grayHistogram(gray: Uint8Array): Uint32Array {
 }
 
 /**
+ * **Εκατοστημόριο ιστογράμματος 256 θέσεων** (SSoT, ADR-929 Φ1): η μικρότερη τιμή `v ≥ from` όπου το αθροιστικό πλήθος
+ * των τιμών στο `[from, v]` φτάνει το `fraction` του πλήθους στο `[from, 255]`. `offset` = αρχή του ιστογράμματος μέσα σε
+ * μεγαλύτερο πίνακα (π.χ. ένα ιστόγραμμα ανά πλακίδιο και κανάλι στον ίδιο buffer). Άδειο ⇒ `null`: ο καλών αποφασίζει.
+ */
+export function histogramPercentile(histogram: ArrayLike<number>, fraction: number, from = 0, offset = 0): number | null {
+  let total = 0;
+  for (let v = from; v < 256; v++) total += histogram[offset + v];
+  if (total === 0) return null;
+  let acc = 0;
+  for (let v = from; v < 256; v++) {
+    acc += histogram[offset + v];
+    if (acc >= total * fraction) return v;
+  }
+  return 255;
+}
+
+/**
  * Κατώφλι Otsu: η τιμή `t` όπου η κλάση «σκούρο» είναι `≤ t`. Μονόχρωμη εικόνα (μία μόνο κλάση) ⇒ `-1`, ώστε ο
  * καλών να μην ονομάσει «τοίχο» ολόκληρο το χαρτί.
  */

@@ -1,5 +1,5 @@
 /**
- * ADR-929 — ο κανόνας της αλλαγής σταδίου, εκτελεσμένος σκέτος (ο server τον τρέχει μέσα σε συναλλαγή).
+ * ADR-930 — ο κανόνας της αλλαγής σταδίου, εκτελεσμένος σκέτος (ο server τον τρέχει μέσα σε συναλλαγή).
  */
 
 import { OPPORTUNITY_STAGE_IDS, OPPORTUNITY_STAGES, stageSpec } from '@/config/crm/opportunity-stages';

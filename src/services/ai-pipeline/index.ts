@@ -75,7 +75,7 @@ export { executeAgenticLoop } from './vercel-ai-engine';
 export type { AgenticResult, ChatMessage, AgenticLoopConfig, OpenAIUsage } from './vercel-ai-engine';
 
 // ADR-259A: AI Usage Tracking + Cost Protection
-export { recordUsage, checkDailyCap, getMonthlyUsage, calculateCost } from './ai-usage.service';
+export { recordUsage, checkDailyCap, getMonthlyUsage } from './ai-usage.service';
 export type { AiUsageDocument, DailyCapCheck } from './ai-usage.service';
 
 // ADR-171: Chat History Service

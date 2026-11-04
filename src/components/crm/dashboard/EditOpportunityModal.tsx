@@ -26,7 +26,7 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
   const notifications = useNotifications();
   const stageCommand = useStageTransitionCommand();
 
-  /** Τα υπόλοιπα πεδία — όπως πριν. Το στάδιο ΔΕΝ γράφεται εδώ (ADR-929). */
+  /** Τα υπόλοιπα πεδία — όπως πριν. Το στάδιο ΔΕΝ γράφεται εδώ (ADR-930). */
   const saveFields = async (id: string, updates: Partial<Opportunity>) => {
     if (Object.keys(updates).length === 0) return;
     try {
@@ -41,7 +41,7 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
 
   const handleSave = async (formData: Partial<Opportunity>) => {
     if (!opportunity?.id) return;
-    // ADR-929: το στάδιο περνά από την ΙΔΙΑ εντολή με το σύρσιμο (διάλογος κλεισίματος, έλεγχος σύγκρουσης,
+    // ADR-930: το στάδιο περνά από την ΙΔΙΑ εντολή με το σύρσιμο (διάλογος κλεισίματος, έλεγχος σύγκρουσης,
     // ιστορικό) — η φόρμα μένει ανοιχτή μέχρι να απαντήσει ο άνθρωπος στον διάλογο.
     const { stage, ...updates } = pickChangedOpportunityFields(opportunity, formData);
     await saveFields(opportunity.id, updates);

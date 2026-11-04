@@ -40,7 +40,8 @@ export interface WorkerLike {
 
 /** Η ελάχιστη μορφή του καθολικού πεδίου ενός Worker (`self`) που χρειάζεται ο οικοδεσπότης. */
 export interface WorkerRpcScope {
-  postMessage(message: unknown): void;
+  /** `transfer` = buffers της απάντησης που **μετακομίζουν** στον κύριο νήμα (zero-copy), π.χ. μια επεξεργασμένη εικόνα. */
+  postMessage(message: unknown, transfer?: Transferable[]): void;
   addEventListener(type: 'message', listener: (event: MessageEvent) => void): void;
 }
 

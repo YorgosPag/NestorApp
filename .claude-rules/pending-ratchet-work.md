@@ -3845,8 +3845,8 @@
 
 ## Pending tasks (priority order)
 
-### 📈 Ευκαιρίες CRM: οι μη-σταδιακές εγγραφές γράφονται από τον browser χωρίς ίχνος + δύο σχήματα εγγράφου (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-04, ADR-929 · ADR-195 · N.0.2)
-- **Τι (1)**: δημιουργία / επεξεργασία (σημειώσεις, αξία, επαφή…) / διαγραφή ευκαιρίας περνούν από `src/services/opportunities.service.ts` (client SDK `setDoc`/`updateDoc`/`deleteDoc`) ⇒ **καμία γραμμή ιστορικού** (ADR-195). Το CHECK 3.17 δεν το πιάνει: το αρχείο ονομάζει τη συλλογή ως `OPPORTUNITIES_COLLECTION`, όχι `COLLECTIONS.OPPORTUNITIES` κοντά στην εγγραφή. Το **στάδιο** έχει ήδη έναν γραφέα με ίχνος (ADR-929, CHECK 3.114)· τα υπόλοιπα όχι.
+### 📈 Ευκαιρίες CRM: οι μη-σταδιακές εγγραφές γράφονται από τον browser χωρίς ίχνος + δύο σχήματα εγγράφου (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-04, ADR-930 · ADR-195 · N.0.2)
+- **Τι (1)**: δημιουργία / επεξεργασία (σημειώσεις, αξία, επαφή…) / διαγραφή ευκαιρίας περνούν από `src/services/opportunities.service.ts` (client SDK `setDoc`/`updateDoc`/`deleteDoc`) ⇒ **καμία γραμμή ιστορικού** (ADR-195). Το CHECK 3.17 δεν το πιάνει: το αρχείο ονομάζει τη συλλογή ως `OPPORTUNITIES_COLLECTION`, όχι `COLLECTIONS.OPPORTUNITIES` κοντά στην εγγραφή. Το **στάδιο** έχει ήδη έναν γραφέα με ίχνος (ADR-930, CHECK 3.114)· τα υπόλοιπα όχι.
 - **Τι (2)**: το `src/services/opportunities-server.service.ts` (Admin, `POST/PATCH /api/opportunities`) γράφει **άλλο σχήμα** από τον πελάτη: `name`/`value`/`leadId` αντί για `title`/`estimatedValue`/`contactId`. Ό,τι δημιουργεί ο server δεν φαίνεται σωστά στον πίνακα (κενός τίτλος, χωρίς αξία).
 - **Fix**: ΕΝΑ σχήμα (το του πελάτη, `types/crm.ts`) και όλες οι εγγραφές μέσω server routes με `recordEntityUpdate` (όπως το στάδιο)· οι κανόνες μετά κλείνουν το client write εντελώς (`allow update: if false`), όπως οι άλλες συλλογές «ενός γραφέα». Πριν: grep καταναλωτών του `opportunities-client.service.ts` και του `POST /api/opportunities` (AI pipeline;). Μετά: ενημέρωση του `.opportunity-stage-authority.json` (το `opportunities.service.ts` φεύγει από τους κατόχους).
 
@@ -5265,5 +5265,12 @@ working tree). Θεραπεία: `git rm` του αρχείου + αφαίρεσ
 - **Πού**: η οθόνη δεν περνά από το `/api/opportunities`: το `EditOpportunityModal` και το `addOpportunity` γράφουν απευθείας με `updateDoc` / `setDoc` (`crm-mutation-gateway` → `opportunities.service.ts`), άρα η επικύρωση του ADR-252 δεν ισχύει για αυτή τη διαδρομή. Το `addOpportunity` δεν βάζει ρητά `companyId`· ⏳ να μετρηθεί αν η κανονική ροή «Νέο Lead» δουλεύει.
 - **Fix**: ένα λεξιλόγιο σταδίων από τον τύπο και οι εγγραφές μέσω του API.
 - **Μένει και**: το ακίνητο στο παράθυρο είναι μόνο για ανάγνωση, γιατί το μοντέλο είναι πίνακας `propertyIds` και ο επιλογέας μονός.
+
+---
+
+### 📏 Έξι τοπικά `MM_PER_M = 1000` — N.0.2 · βρέθηκε 2026-11-04 (ADR-929 Φ2β)
+- **Τι**: η μετατροπή μέτρα ↔ χιλιοστά γράφεται ως τοπική σταθερά σε 6 αρχεία, ενώ το SSoT υπάρχει: `mmToSceneUnits('m')` (`src/subapps/dxf-viewer/utils/scene-units.ts`). Και το `useCalibration.ts` έχει δικό του `UNIT_TO_MM`.
+- **Πού**: `bim/services/envelope-boq-sync.ts` · `bim/structural/organism/practical-span-checks.ts` · `bim/structural/sizing/member-sizing.ts` · `bim/walls/wall-dimension-edit.ts` · `bim/walls/wall-length-edit.ts` · `export/core/imported-mesh-faces.ts` (όλα κάτω από `src/subapps/dxf-viewer/`).
+- **Fix**: εξαγωγή `MM_PER_METRE` (ή χρήση του `mmToSceneUnits`) από το `utils/scene-units.ts`, και εισαγωγή του στα 6 αρχεία. Μετά, μοτίβο στο `.ssot-registry.json` ώστε να μη ξαναγραφτεί.
 
 ---

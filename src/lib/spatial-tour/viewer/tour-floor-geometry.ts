@@ -15,7 +15,8 @@
 
 import { clamp } from '@/lib/geometry/scalar';
 import { degToRad, normalizeAngleDiff } from '@/lib/geometry/angle';
-import { quadToMatrix3d, type PlanePoint, type Quad } from '@/lib/geometry/css-homography';
+import { quadToMatrix3d } from '@/lib/geometry/css-homography';
+import type { PlanePoint, Quad } from '@/lib/geometry/homography';
 
 import { horizontalFov } from './tour-viewer-bearing';
 import type { TourView } from './tour-viewer-view';

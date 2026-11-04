@@ -32,6 +32,7 @@
 
 import 'server-only';
 import { generateText, stepCountIs, type ModelMessage, type ToolSet } from 'ai';
+import { usageFromSdkSteps } from './ai-usage-sdk';
 import { AI_ANALYSIS_DEFAULTS, AI_COST_CONFIG } from '@/config/ai-analysis-config';
 import { getOpenAIProvider } from '@/services/ai/openai-provider';
 import { buildAgenticSystemPrompt } from './agentic-system-prompt';
@@ -82,6 +83,8 @@ export interface AgenticResult {
   totalDurationMs: number;
   /** ADR-259A: Aggregated token usage across all iterations */
   totalUsage: OpenAIUsage;
+  /** ADR-259A: το μοντέλο που **ζητήθηκε** — από αυτό τιμολογείται το `totalUsage` (`recordUsage`) */
+  model: string;
 }
 
 // ============================================================================
@@ -187,9 +190,9 @@ export async function executeAgenticLoop(
   // Set up timeout via AbortController
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), cfg.totalTimeoutMs);
+  const model = AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL;
 
   try {
-    const model = AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL;
 
     const result = await generateText({
       model: getOpenAIProvider()(model),
@@ -204,7 +207,7 @@ export async function executeAgenticLoop(
     clearTimeout(timeout);
 
     // Aggregate token usage across all steps (ADR-259A)
-    const totalUsage = aggregateTokenUsage(result.steps);
+    const totalUsage = usageFromSdkSteps(result.steps);
     const iterations = result.steps.length;
 
     // Get final text
@@ -242,6 +245,7 @@ export async function executeAgenticLoop(
       iterations,
       totalDurationMs: Date.now() - startTime,
       totalUsage,
+      model,
     };
 
   } catch (error: unknown) {
@@ -264,6 +268,7 @@ export async function executeAgenticLoop(
         iterations: 0,
         totalDurationMs: Date.now() - startTime,
         totalUsage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+        model,
       };
     }
 
@@ -316,26 +321,6 @@ function convertChatHistory(chatHistory: ChatMessage[]): {
   }
 
   return { messages, conversationTexts, toolContextParts };
-}
-
-/**
- * Aggregate token usage from Vercel AI SDK step results.
- * Maps to OpenAIUsage format (snake_case) for backward compatibility.
- */
-function aggregateTokenUsage(steps: ReadonlyArray<{ usage?: { inputTokens?: number; outputTokens?: number } }>): OpenAIUsage {
-  const usage: OpenAIUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-
-  for (const step of steps) {
-    if (step.usage) {
-      const input = step.usage.inputTokens ?? 0;
-      const output = step.usage.outputTokens ?? 0;
-      usage.prompt_tokens += input;
-      usage.completion_tokens += output;
-      usage.total_tokens += input + output;
-    }
-  }
-
-  return usage;
 }
 
 /**
@@ -449,7 +434,7 @@ async function retryWithCorrection(
 
     clearTimeout(retryTimeout);
 
-    const retryUsage = aggregateTokenUsage(retryResult.steps);
+    const retryUsage = usageFromSdkSteps(retryResult.steps);
     const retryText = cleanAITextReply(retryResult.text || fallbackAnswer);
     const { cleanAnswer } = extractSuggestions(retryText);
 

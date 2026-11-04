@@ -13,7 +13,9 @@
 
 import { prepareSpaceRaster } from './space-detect';
 import { detectPlanSpace, type PlanDetectRequest, type PlanDetectResult } from './space-detect-plan';
-import type { PlanRaster, PreparedPlanRaster } from './space-detect-types';
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
+
+import type { PreparedPlanRaster } from './space-detect-types';
 
 /** Τα αιτήματα του επεξεργαστή: προθέρμανση μιας κάτοψης, ή ανίχνευση πάνω της. */
 export type SpaceDetectMessage =

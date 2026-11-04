@@ -38,7 +38,7 @@ type TFn = (key: string) => string;
 export type ObligationStatusValue =
   | 'draft' | 'completed' | 'approved' | 'in_progress' | 'pending';
 
-/** Δεμένο στη ρίζα της ροής πωλήσεων (ADR-929 · CHECK 3.73). */
+/** Δεμένο στη ρίζα της ροής πωλήσεων (ADR-930 · CHECK 3.73). */
 export type LeadStageValue = OpportunityStage;
 
 export type CommunicationStatusValue =

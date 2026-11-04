@@ -1,5 +1,5 @@
 /**
- * @fileoverview **Το σχήμα του αιτήματος αλλαγής σταδίου** — κοινό για route και πελάτη (ADR-929).
+ * @fileoverview **Το σχήμα του αιτήματος αλλαγής σταδίου** — κοινό για route και πελάτη (ADR-930).
  * @module services/crm/opportunity-stage-schema
  *
  * `POST /api/opportunities/[id]/stage` — `{ expectedStage, request }`. Το `expectedStage` είναι το στάδιο που

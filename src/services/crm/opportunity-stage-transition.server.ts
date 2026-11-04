@@ -1,5 +1,5 @@
 /**
- * @fileoverview **Ο ΕΝΑΣ γραφέας του σταδίου ευκαιρίας** (ADR-929).
+ * @fileoverview **Ο ΕΝΑΣ γραφέας του σταδίου ευκαιρίας** (ADR-930).
  * @module services/crm/opportunity-stage-transition.server
  *
  * 🔑 **Σύγκρουση κατά ΠΕΔΙΟ, όχι κατά έγγραφο**: ο καλών λέει «τη μετακινώ ΑΠΟ το στάδιο Χ» (`expectedStage`). Αν

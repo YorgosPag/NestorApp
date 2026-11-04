@@ -21,12 +21,10 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import { getDrawingAreaRect } from '../../rendering/core/drawing-area';
 // ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «mirror of getEntityBBox shape — structural, no import coupling»: το διπλότυπο ήταν ΣΚΟΠΙΜΟ, για να αποφευχθεί ένα import.
 import type { Bbox } from '../../types/coordinate-space';
-
-/** 2×3 affine with canvas `transform(a,b,c,d,e,f)` semantics: `x'=a·x+c·y+e ; y'=b·x+d·y+f`. */
-export interface Affine2x3 {
-  readonly a: number; readonly b: number; readonly c: number;
-  readonly d: number; readonly e: number; readonly f: number;
-}
+// ADR-929 Φ0 — ο αφινικός πυρήνας μετακόμισε στο `lib/geometry/affine-2x3` και ο world→screen πίνακας στο
+// `rendering/core/world-to-screen-affine`: ήταν εδώ, σε αρχείο ΕΝΟΣ εργαλείου, ενώ τους χρειάζονται πλέον το
+// υπόβαθρο κάτοψης, η αναγνώριση κάτοψης και ο διακομιστής (calibration remap).
+import type { Affine2x3 } from '@/lib/geometry/affine-2x3';
 
 /** The offscreen capture footprint: world top-left anchor + CSS-px extent + pixel margin. */
 export interface CaptureRect {
@@ -47,33 +45,9 @@ export const MATRIX_GHOST_MARGIN_PX = 12;
  */
 export const MATRIX_GHOST_MAX_CSS = 4096;
 
-/** Compose two affines: `compose(m2, m1)` applies `m1` first, then `m2` (i.e. `x → m2(m1(x))`). */
-export function composeAffine(m2: Affine2x3, m1: Affine2x3): Affine2x3 {
-  return {
-    a: m2.a * m1.a + m2.c * m1.b,
-    b: m2.b * m1.a + m2.d * m1.b,
-    c: m2.a * m1.c + m2.c * m1.d,
-    d: m2.b * m1.c + m2.d * m1.d,
-    e: m2.a * m1.e + m2.c * m1.f + m2.e,
-    f: m2.b * m1.e + m2.d * m1.f + m2.f,
-  };
-}
-
 /** World→world scale about a fixed base by (sx, sy). Move/mirror are the same family (sign/factor). */
 export function scaleAboutBaseWorldAffine(base: Point2D, sx: number, sy: number): Affine2x3 {
   return { a: sx, b: 0, c: 0, d: sy, e: base.x * (1 - sx), f: base.y * (1 - sy) };
-}
-
-/** World→screen affine — the exact `CoordinateTransforms.worldToScreen` ready-state formula, as a matrix. */
-export function worldToScreenAffine(transform: ViewTransform, viewport: Viewport): Affine2x3 {
-  // 🔑 Ίδια άγκυρα με το `CoordinateTransforms.worldToScreen`: κάτω-αριστερή γωνία της
-  // περιοχής σχεδίασης. Αν αποκλίνει, το ghost χορεύει σε σχέση με την committed οντότητα.
-  const area = getDrawingAreaRect(viewport);
-  return {
-    a: transform.scale, b: 0, c: 0, d: -transform.scale,
-    e: area.x + transform.offsetX,
-    f: area.bottom - transform.offsetY,
-  };
 }
 
 /** Offscreen-pixel→world affine (inverse of the capture render) for a rect captured at `scale0`. */

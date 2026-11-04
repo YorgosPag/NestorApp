@@ -33,7 +33,7 @@ export async function updateOpportunityWithPolicy({
   opportunityId,
   updates,
 }: GuardedOpportunityUpdateInput): Promise<{ success: boolean }> {
-  // ADR-929: το στάδιο (και ό,τι παράγεται από αυτό) έχει ΕΝΑΝ γραφέα — `POST /api/opportunities/[id]/stage`.
+  // ADR-930: το στάδιο (και ό,τι παράγεται από αυτό) έχει ΕΝΑΝ γραφέα — `POST /api/opportunities/[id]/stage`.
   // Εδώ αρνείται ρητά αντί να το αγνοήσει σιωπηλά: ένας καλών που το στέλνει έχει σφάλμα που πρέπει να φανεί.
   const owned = STAGE_OWNED_FIELDS.filter((field) => field in updates);
   if (owned.length > 0) throw new Error(`Stage-owned fields go through the stage door: ${owned.join(', ')}`);

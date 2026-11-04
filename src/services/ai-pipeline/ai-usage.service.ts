@@ -18,7 +18,7 @@ import 'server-only';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
+import { AI_COST_CONFIG, tokenCostUsd } from '@/config/ai-analysis-config';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import type { OpenAIUsage } from './agentic-loop';
@@ -42,8 +42,10 @@ export interface AiUsageDocument {
   dailyTokens: Record<string, { prompt: number; completion: number }>;
   /** Aggregated monthly totals */
   totalTokens: { prompt: number; completion: number };
-  /** Estimated cost in USD based on AI_COST_CONFIG.PRICING */
+  /** Estimated cost in USD — από τον τιμοκατάλογο του μοντέλου κάθε κλήσης (`tokenCostUsd`) */
   estimatedCostUsd: number;
+  /** Κλήσεις μοντέλου χωρίς γραμμή στο `AI_COST_CONFIG.PRICING`: τα tokens τους μετρήθηκαν, το κόστος όχι */
+  unpricedCalls?: number;
   /** Last update timestamp */
   updatedAt: FirebaseFirestore.Timestamp;
 }
@@ -68,15 +70,38 @@ function getCurrentMonth(): string {
 }
 
 /**
- * Calculate cost in USD for given token usage.
- * Uses the currently configured model from AI_ANALYSIS_DEFAULTS.
+ * Τα πεδία εγγραφής μίας κλήσης για `set(…, { merge: true })`.
+ *
+ * ⚠️ **Εμφωλευμένοι χάρτες, ποτέ κλειδιά με τελεία.** Στο `set` ένα κλειδί `'dailyCounts.2026-11-04'` είναι **κυριολεκτικό**
+ * όνομα πεδίου, όχι διαδρομή (μόνο το `update` ερμηνεύει τελείες)· μέχρι τις 2026-11-04 αυτό έκανε το `checkDailyCap` να
+ * διαβάζει πάντα 0, δηλαδή το ημερήσιο όριο **δεν επιβαλλόταν ποτέ**. Ο εμφωλευμένος χάρτης με `merge` συγχωνεύεται σε βάθος.
+ *
+ * Κόστος από τον τιμοκατάλογο του **πραγματικού** μοντέλου (`tokenCostUsd`). Μοντέλο χωρίς τιμή ⇒ καμία τιμή δεν μαντεύεται:
+ * τα tokens μετριούνται, το κόστος όχι, και το `unpricedCalls` το κάνει ορατό αντί να το κρύβει ως φθηνό.
  */
-export function calculateCost(usage: OpenAIUsage): number {
-  // Default to gpt-4o-mini pricing (most common model)
-  const pricing = AI_COST_CONFIG.PRICING['gpt-4o-mini'];
-  const inputCost = (usage.prompt_tokens / 1_000_000) * pricing.inputPer1MTokens;
-  const outputCost = (usage.completion_tokens / 1_000_000) * pricing.outputPer1MTokens;
-  return inputCost + outputCost;
+function usageWriteData(
+  userId: string,
+  channel: string,
+  model: string,
+  usage: OpenAIUsage,
+): { readonly data: FirebaseFirestore.DocumentData; readonly costUsd: number | null } {
+  const today = getTodayKey();
+  const costUsd = tokenCostUsd(model, usage.prompt_tokens, usage.completion_tokens);
+  const tokens = { prompt: FieldValue.increment(usage.prompt_tokens), completion: FieldValue.increment(usage.completion_tokens) };
+  return {
+    costUsd,
+    data: {
+      userId,
+      channel,
+      month: getCurrentMonth(),
+      dailyCounts: { [today]: FieldValue.increment(1) },
+      dailyTokens: { [today]: tokens },
+      totalTokens: tokens,
+      estimatedCostUsd: FieldValue.increment(costUsd ?? 0),
+      unpricedCalls: FieldValue.increment(costUsd === null ? 1 : 0),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+  };
 }
 
 // ============================================================================
@@ -84,44 +109,31 @@ export function calculateCost(usage: OpenAIUsage): number {
 // ============================================================================
 
 /**
- * Record token usage after an agentic loop execution.
- * Uses atomic FieldValue.increment() for concurrent safety.
- * Creates the document if it doesn't exist (merge: true).
+ * Καταγράφει μία κλήση μοντέλου: μετρητή ημέρας (για το `checkDailyCap`), tokens και κόστος.
+ * Ατομικά `FieldValue.increment()`· δημιουργεί το έγγραφο αν λείπει (`merge: true`). Αποτυχία δεν σπάει τη ροή.
+ *
+ * @param model το μοντέλο που **ζητήθηκε** (όνομα του τιμοκαταλόγου) — όχι το χρονολογημένο snapshot της απάντησης.
  */
 export async function recordUsage(
   userId: string,
   channel: string,
+  model: string,
   usage: OpenAIUsage,
 ): Promise<void> {
   try {
-    const db = getAdminFirestore();
-    const month = getCurrentMonth();
-    const today = getTodayKey();
-    const idService = enterpriseIdService;
-    const docId = idService.generateAiUsageDocId(channel, userId, month);
-    const cost = calculateCost(usage);
+    const docId = enterpriseIdService.generateAiUsageDocId(channel, userId, getCurrentMonth());
+    const { data, costUsd } = usageWriteData(userId, channel, model, usage);
 
-    const docRef = db.collection(COLLECTIONS.AI_USAGE).doc(docId);
+    await getAdminFirestore().collection(COLLECTIONS.AI_USAGE).doc(docId).set(data, { merge: true });
 
-    await docRef.set({
-      userId,
-      channel,
-      month,
-      [`dailyCounts.${today}`]: FieldValue.increment(1),
-      [`dailyTokens.${today}.prompt`]: FieldValue.increment(usage.prompt_tokens),
-      [`dailyTokens.${today}.completion`]: FieldValue.increment(usage.completion_tokens),
-      ['totalTokens.prompt']: FieldValue.increment(usage.prompt_tokens),
-      ['totalTokens.completion']: FieldValue.increment(usage.completion_tokens),
-      estimatedCostUsd: FieldValue.increment(cost),
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-
+    if (costUsd === null) logger.warn('Usage recorded without price — model missing from AI_COST_CONFIG.PRICING', { channel, model });
     logger.info('Usage recorded', {
       userId,
       channel,
+      model,
       promptTokens: usage.prompt_tokens,
       completionTokens: usage.completion_tokens,
-      costUsd: cost.toFixed(6),
+      costUsd: costUsd?.toFixed(6) ?? 'unpriced',
     });
   } catch (error) {
     // Non-fatal: usage tracking failure must never break the pipeline
@@ -191,4 +203,75 @@ export async function getMonthlyUsage(
     logger.error('Failed to get monthly usage', { userId, channel, error });
     return null;
   }
+}
+
+// ============================================================================
+// COMPANY SPEND — ADR-929 Δ16: όριο ασφαλείας ανά εταιρεία και μήνα
+// ============================================================================
+
+/** Μία χρεωμένη (ή από κρυφή μνήμη, κόστος 0) κλήση, όπως την καταγράφει η εταιρεία. */
+export interface CompanyAiSpend {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  /** Το κόστος από τον τιμοκατάλογο του μοντέλου (`tokenCostUsd`). */
+  readonly costUsd: number;
+  /** Επανεκτέλεση από την κρυφή μνήμη: μετριέται, ώστε να φαίνεται η εξοικονόμηση (Δ16 #1). */
+  readonly cacheHit: boolean;
+}
+
+/** Η μηνιαία εγγραφή δαπάνης μιας εταιρείας σε ένα κανάλι. */
+export interface CompanyAiUsageDocument {
+  companyId: string;
+  channel: string;
+  month: string;
+  dailyCalls: Record<string, number>;
+  totalTokens: { prompt: number; completion: number };
+  estimatedCostUsd: number;
+  cacheHits: number;
+  updatedAt: FirebaseFirestore.Timestamp;
+}
+
+function companyUsageRef(companyId: string, channel: string, month: string): FirebaseFirestore.DocumentReference {
+  return getAdminFirestore()
+    .collection(COLLECTIONS.AI_USAGE)
+    .doc(enterpriseIdService.generateCompanyAiUsageDocId(channel, companyId, month));
+}
+
+/**
+ * Η εγγραφή μίας δαπάνης ως **ζεύγος (αναφορά, δεδομένα)** για `set(…, { merge: true })`: ο καλών τη βάζει στην **ίδια**
+ * δέσμη με την εγγραφή που τη γέννησε, ώστε η ανάγνωση και το κόστος της να γράφονται μαζί ή καθόλου.
+ *
+ * ⚠️ **Εμφωλευμένοι χάρτες, ποτέ κλειδιά με τελεία.** Στο `set` ένα κλειδί `'totalTokens.prompt'` είναι **κυριολεκτικό**
+ * όνομα πεδίου, όχι διαδρομή (μόνο το `update` ερμηνεύει τελείες). Ο εμφωλευμένος χάρτης με `merge` συγχωνεύεται σε βάθος.
+ */
+export function companyAiSpendWrite(
+  companyId: string,
+  channel: string,
+  spend: CompanyAiSpend,
+): { readonly ref: FirebaseFirestore.DocumentReference; readonly data: FirebaseFirestore.DocumentData } {
+  const month = getCurrentMonth();
+  return {
+    ref: companyUsageRef(companyId, channel, month),
+    data: {
+      companyId,
+      channel,
+      month,
+      dailyCalls: { [getTodayKey()]: FieldValue.increment(1) },
+      totalTokens: { prompt: FieldValue.increment(spend.inputTokens), completion: FieldValue.increment(spend.outputTokens) },
+      estimatedCostUsd: FieldValue.increment(spend.costUsd),
+      cacheHits: FieldValue.increment(spend.cacheHit ? 1 : 0),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+  };
+}
+
+/**
+ * Η δαπάνη της εταιρείας τον τρέχοντα μήνα σε USD. **Ρίχνει** σε αποτυχία ανάγνωσης, σε αντίθεση με το `checkDailyCap`:
+ * ένα όριο κόστους που «επιτρέπει όταν δεν ξέρει» δεν είναι όριο. Ο καλών αποφασίζει (Δ16 #4: μόνο γεωμετρία).
+ */
+export async function getCompanyMonthlySpendUsd(companyId: string, channel: string): Promise<number> {
+  const snap = await companyUsageRef(companyId, channel, getCurrentMonth()).get();
+  if (!snap.exists) return 0;
+  const cost = (snap.data() as Partial<CompanyAiUsageDocument>).estimatedCostUsd;
+  return typeof cost === 'number' && Number.isFinite(cost) ? cost : 0;
 }

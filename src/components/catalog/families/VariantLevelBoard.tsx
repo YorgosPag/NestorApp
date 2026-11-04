@@ -5,7 +5,7 @@
  *   ανάμεσά τους (Akeneo family variant · Revit type vs instance) (ADR-923 §5.2 · Φάση 1γ).
  * @module components/catalog/families/VariantLevelBoard
  *
- * 🔑 Πάνω στον ΕΝΑ πίνακα στηλών `@/components/ui/sortable/KanbanBoard` (ADR-929) — ίδιοι αισθητήρες, πλοήγηση
+ * 🔑 Πάνω στον ΕΝΑ πίνακα στηλών `@/components/ui/sortable/KanbanBoard` (ADR-930) — ίδιοι αισθητήρες, πλοήγηση
  *    πληκτρολογίου (←/→ ανά στήλη) και ανακοινώσεις με τη ροή πωλήσεων.
  * 🔑 **Δύο δρόμοι, ένα αποτέλεσμα**: σύρσιμο κάρτας σε στήλη (ποντίκι/αφή) **ή** ο επιλογέας επιπέδου πάνω στην κάρτα
  *    (πληκτρολόγιο, αναγνώστης οθόνης). Και οι δύο καλούν το **ίδιο** `placeAttribute`.

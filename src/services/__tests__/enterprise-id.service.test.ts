@@ -318,6 +318,9 @@ describe('EnterpriseIdService', () => {
       // ADR-916 Φ-Γ1 — ΜΙΑ γραμμή καθολικού ανά (παράδοση, αρχείο-πηγή): τυχαίο id = δύο αποδείξεις για ένα αρχείο
       // όταν η εκτέλεση συνεχίζει μετά από διακοπή. Δηλώνεται εδώ στη Σ4 — έλειπε από τη Φ-Γ1 και το test κοκκίνιζε.
       'generateDeterministicPropertyHandoverDeliveryId',
+      // ADR-929 Δ11 — ΜΙΑ ανάγνωση κάτοψης ανά (εταιρεία, αρχείο, σελίδα, ευθυγράμμιση, μοντέλο, σχήμα): η ανάγνωση
+      // ΕΙΝΑΙ η κρυφή μνήμη της. Τυχαίο id = δεύτερη πληρωμένη κλήση VLM για την ίδια εικόνα.
+      'generateDeterministicPlanReadingId',
       // ADR-ACC-010 §2.1.1 Φ4 — ΜΙΑ απόσβεση ανά (μισθωτής, πάγιο, χρήση): η ταυτότητα ΕΙΝΑΙ η ιδεμποτία της
       // εκτέλεσης αποσβέσεων. Ο τυχαίος `generateDepreciationId` ΚΑΤΑΡΓΗΘΗΚΕ — τυχαίο id = διπλή απόσβεση.
       'generateDeterministicDepreciationRecordId',
@@ -557,6 +560,9 @@ describe('EnterpriseIdService', () => {
       generateDeterministicSubcontractClauseVersionId: 'sccv_2f5c2aea-3d1a-4a94-84cb-4e187ab2bf2d',
       generateDeterministicSubcontractTradeTemplateId: 'sctt_f9154670-cba9-44e4-8e08-db20e0a6efe0',
       generateDeterministicSubcontractRevisionId: 'scrv_968ca1e7-e8f8-46a9-8aa6-9ed001efdc55',
+      // ADR-929 Δ11 — σπόρος `plan-reading:anchor-seed:undefined` (δύο παράμετροι, ένα όρισμα). Καταγεγραμμένο
+      //    από τον ίδιο τον γεννήτορα, 2026-11-04.
+      generateDeterministicPlanReadingId: 'plrd_c93cf899-99c5-4fc8-83aa-a5f9ec415e06',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

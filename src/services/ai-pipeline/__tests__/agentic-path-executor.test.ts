@@ -150,6 +150,7 @@ function createAgenticResult(overrides?: Record<string, unknown>) {
     iterations: 2,
     totalDurationMs: 1500,
     totalUsage: { prompt_tokens: 500, completion_tokens: 200, total_tokens: 700 },
+    model: 'gpt-4o-mini',
     ...overrides,
   };
 }
@@ -397,6 +398,7 @@ describe('executeAgenticPath', () => {
       expect(recordUsage).toHaveBeenCalledWith(
         'telegram_5618410820',
         'telegram',
+        'gpt-4o-mini',
         { prompt_tokens: 500, completion_tokens: 200, total_tokens: 700 }
       );
     });

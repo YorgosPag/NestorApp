@@ -20,11 +20,25 @@ export async function answerWorkerRpc<Q, R>(request: WorkerRpcRequest<Q>, handle
   }
 }
 
-/** **Σύνδεσε τον χειριστή** στο καθολικό πεδίο του Worker (`self`). */
-export function serveWorkerRpc<Q, R>(scope: WorkerRpcScope, handle: (body: Q) => Promise<R> | R): void {
+/**
+ * **Σύνδεσε τον χειριστή** στο καθολικό πεδίο του Worker (`self`).
+ *
+ * `transferOf` (προαιρετικό, συμμετρικό με το `transferOf` του πελάτη): τα buffers της **επιτυχούς** απάντησης που
+ * μετακομίζουν αντί να αντιγραφούν. Μια ευθυγραμμισμένη κάτοψη 12 MP είναι 48 MB RGBA — η αντιγραφή της με structured
+ * clone θα κόστιζε όσο ένα μέρος της ίδιας της επεξεργασίας (ADR-929 Φ1). Ο χειριστής **δεν** πρέπει να κρατά αναφορά
+ * σε ό,τι μεταφέρεται (μένει άδειο σε αυτή την πλευρά).
+ */
+export function serveWorkerRpc<Q, R>(
+  scope: WorkerRpcScope,
+  handle: (body: Q) => Promise<R> | R,
+  transferOf?: (value: R) => Transferable[],
+): void {
   let queue: Promise<void> = Promise.resolve();
   scope.addEventListener('message', (event) => {
     const request = event.data as WorkerRpcRequest<Q>;
-    queue = queue.then(async () => { scope.postMessage(await answerWorkerRpc(request, handle)); });
+    queue = queue.then(async () => {
+      const reply = await answerWorkerRpc(request, handle);
+      scope.postMessage(reply, reply.ok && transferOf !== undefined ? transferOf(reply.value) : []);
+    });
   });
 }

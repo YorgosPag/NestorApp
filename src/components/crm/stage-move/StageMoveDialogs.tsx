@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Οι διάλογοι της μετακίνησης σταδίου, σε ένα σημείο** (ADR-929).
+ * @fileoverview **Οι διάλογοι της μετακίνησης σταδίου, σε ένα σημείο** (ADR-930).
  * @module components/crm/stage-move/StageMoveDialogs
  *
  * Κλείσιμο ⇒ `CloseOpportunityDialog`. Επανάνοιγμα από κλειστό ⇒ επιβεβαίωση (πρακτική Pipedrive: επιτρέπεται, αλλά

@@ -713,6 +713,9 @@ export const COLLECTIONS = {
   FLOORPLAN_BACKGROUNDS: process.env.NEXT_PUBLIC_FLOORPLAN_BACKGROUNDS_COLLECTION || 'floorplan_backgrounds',
   /** ADR-340: Floorplan polygon overlays (FK → floorplan_backgrounds, tenant-scoped). */
   FLOORPLAN_OVERLAYS: process.env.NEXT_PUBLIC_FLOORPLAN_OVERLAYS_COLLECTION || 'floorplan_overlays',
+  // ADR-929 Δ11 — μία ανάγνωση κάτοψης ανά κλειδί (`plrd_*`, ντετερμινιστικό): η κρυφή μνήμη ΚΑΙ η απόδειξη αποστολής.
+  // Μόνο Admin SDK· κανένας κανόνας πελάτη (default-deny).
+  PLAN_READINGS: process.env.NEXT_PUBLIC_PLAN_READINGS_COLLECTION || 'plan_readings',
 
   // 🅿️ PARKING & SPACES
   // 📍 Collection name: parking_spots (με underscore - όπως στη Firestore)

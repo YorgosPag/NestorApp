@@ -4,7 +4,7 @@
 
 import type { PixelPoint } from '@/lib/geometry/scale-calibration';
 
-import type { PlanRaster } from '../space-detect-types';
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
 
 /** 2 cm ανά pixel — τάξη μεγέθους της πραγματικής κάτοψης (0,0156). */
 export const FIXTURE_MPP = 0.02;

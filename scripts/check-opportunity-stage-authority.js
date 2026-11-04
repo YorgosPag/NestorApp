@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CHECK 3.114 — **Η ΠΥΛΗ ΤΟΥ ΕΝΟΣ ΓΡΑΦΕΑ ΤΟΥ ΣΤΑΔΙΟΥ ΕΥΚΑΙΡΙΑΣ** (ADR-929).
+ * CHECK 3.114 — **Η ΠΥΛΗ ΤΟΥ ΕΝΟΣ ΓΡΑΦΕΑ ΤΟΥ ΣΤΑΔΙΟΥ ΕΥΚΑΙΡΙΑΣ** (ADR-930).
  *
  * Η ΕΡΩΤΗΣΗ: «μπορεί κάποιος να αλλάξει το στάδιο μιας ευκαιρίας ΕΞΩ από την πόρτα `POST /api/opportunities/[id]/stage` —
  * δηλαδή χωρίς έλεγχο σύγκρουσης, χωρίς στοιχεία κλεισίματος, χωρίς ίχνος;»
@@ -82,7 +82,7 @@ const { measure, report, main, loadRegistry, STATES, BLOCKING } = defineSymbolOw
   outsideState: 'opportunity-touched-outside-owner',
   extraFindings,
   report: {
-    title: '📈 CHECK 3.114 — Πύλη του ενός γραφέα του σταδίου ευκαιρίας (ADR-929)',
+    title: '📈 CHECK 3.114 — Πύλη του ενός γραφέα του σταδίου ευκαιρίας (ADR-930)',
     width: 36,
     remedy: [
       'ΘΕΡΑΠΕΙΑ: το στάδιο αλλάζει ΜΟΝΟ με `POST /api/opportunities/[id]/stage` (γραφέας: `opportunity-stage-transition.server.ts`).',

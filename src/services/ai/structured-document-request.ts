@@ -13,6 +13,7 @@ import {
   extractOutputText,
   extractResponsesUsage,
   type ResponsesContent,
+  type ResponsesReasoningEffort,
   type ResponsesRequestConfig,
   type ResponsesUsage,
 } from '@/services/ai/openai-responses';
@@ -29,6 +30,8 @@ export interface StructuredDocumentRequest {
   readonly system: string;
   readonly content: ResponsesContent[];
   readonly schema: StructuredSchema;
+  /** Μόνο για τις οικογένειες με συλλογισμό· απουσία ⇒ η προεπιλογή του μοντέλου (ADR-929 Φ3: επιλέγεται με μέτρηση). */
+  readonly reasoningEffort?: ResponsesReasoningEffort;
 }
 
 /** Κάθε έκβαση κουβαλά τη χρήση, γιατί και η σπασμένη απάντηση πληρώνεται, και το ακατέργαστο κείμενο, γιατί μόνο αυτό εξηγεί μια αστοχία. */
@@ -61,6 +64,7 @@ export async function requestStructuredDocument(
       { role: 'user', content: request.content },
     ],
     text: { format: { type: 'json_schema', ...request.schema } },
+    ...(request.reasoningEffort ? { reasoning: { effort: request.reasoningEffort } } : {}),
   });
   const usage = extractResponsesUsage(payload);
   const text = extractOutputText(payload);

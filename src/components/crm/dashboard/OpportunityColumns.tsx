@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Ο πίνακας της ροής πωλήσεων** — στήλες σταδίων πάνω στον ΕΝΑ `KanbanBoard` (ADR-929).
+ * @fileoverview **Ο πίνακας της ροής πωλήσεων** — στήλες σταδίων πάνω στον ΕΝΑ `KanbanBoard` (ADR-930).
  * @module components/crm/dashboard/OpportunityColumns
  *
  * 🔑 Σύρσιμο κάρτας σε στήλη = αλλαγή σταδίου (Pipedrive/HubSpot/Salesforce Kanban). Ο πίνακας **δεν** αλλάζει

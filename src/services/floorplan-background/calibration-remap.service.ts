@@ -37,6 +37,10 @@ import type {
   Point2D,
 } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
 import type { OverlayGeometry } from '@/types/floorplan-overlays';
+// ADR-929 Φ0 — ΕΝΑΣ ορισμός του T·R·S του υποβάθρου: ο ίδιος που ζωγραφίζει την εικόνα και που ρωτά η αναγνώριση
+// κάτοψης. Ως τώρα ήταν γραμμένος εδώ με το χέρι (μαζί με τον αντίστροφο) και, ξεχωριστά, ως `ctx.rotate/scale`.
+import { applyAffine, invertAffine } from '@/lib/geometry/affine-2x3';
+import { backgroundPlacementAffine } from '@/subapps/dxf-viewer/floorplan-background/geometry/raster-scene-mapping';
 
 const logger = createModuleLogger('CalibrationRemapService');
 
@@ -70,40 +74,25 @@ export interface RemapResult {
 }
 
 // ============================================================================
-// AFFINE MATH (T·R·S, Y-UP CAD)
+// AFFINE MATH (T·R·S, Y-UP CAD) — SSoT: floorplan-background/geometry/raster-scene-mapping
 // ============================================================================
 
-const DEG_TO_RAD = Math.PI / 180;
 const ATOMIC_LIMIT = 499; // Firestore batch hard cap = 500 ops; reserve 1 for background update.
 
+/** Τοπικές συντεταγμένες υποβάθρου → κόσμος: το `T·R·S` του SSoT. */
 function applyTransform(p: Point2D, t: BackgroundTransform): Point2D {
-  // scale
-  const sx = p.x * t.scaleX;
-  const sy = p.y * t.scaleY;
-  // rotate (CCW positive)
-  const a = t.rotation * DEG_TO_RAD;
-  const cos = Math.cos(a);
-  const sin = Math.sin(a);
-  const rx = sx * cos - sy * sin;
-  const ry = sx * sin + sy * cos;
-  // translate
-  return { x: rx + t.translateX, y: ry + t.translateY };
+  return applyAffine(backgroundPlacementAffine(t), p);
 }
 
+/**
+ * Κόσμος → τοπικές συντεταγμένες υποβάθρου. Εκφυλισμένος στόχος (κλίμακα 0) ⇒ **σφάλμα**, όχι σιωπηλό μηδέν: ο
+ * παλιός χειρόγραφος αντίστροφος έστελνε κάθε κορυφή στο 0, δηλαδή θα έγραφε σκουπίδια σε κάθε επικάλυψη του
+ * ορόφου μέσα στην ίδια συναλλαγή με τη βαθμονόμηση.
+ */
 function applyInverseTransform(p: Point2D, t: BackgroundTransform): Point2D {
-  // un-translate
-  const ux = p.x - t.translateX;
-  const uy = p.y - t.translateY;
-  // un-rotate (apply -theta)
-  const a = -t.rotation * DEG_TO_RAD;
-  const cos = Math.cos(a);
-  const sin = Math.sin(a);
-  const rx = ux * cos - uy * sin;
-  const ry = ux * sin + uy * cos;
-  // un-scale (guard against zero)
-  const sx = t.scaleX !== 0 ? rx / t.scaleX : 0;
-  const sy = t.scaleY !== 0 ? ry / t.scaleY : 0;
-  return { x: sx, y: sy };
+  const inverse = invertAffine(backgroundPlacementAffine(t));
+  if (!inverse) throw new Error('Calibration remap: degenerate background transform (zero scale)');
+  return applyAffine(inverse, p);
 }
 
 function remapVertex(

@@ -7,9 +7,9 @@ import type {
   ProviderRenderParams,
   ProviderSource,
 } from './types';
-// 🔑 Ένας ορισμός των δύο μετασχηματισμών καμβά — ήταν γραμμένοι και στους δύο παρόχους
-// (CHECK 3.28, 243 tokens). Η άγκυρα του CAD τρόπου είναι το SSoT της περιοχής σχεδίασης.
-import { applyCadTransform, applyScreenTransform } from './provider-canvas-transforms';
+// 🔑 ΕΝΑΣ πίνακας px εικόνας → καμβάς, χτισμένος από το SSoT `rasterToSceneAffine` (ADR-929 Δ3):
+// ο ίδιος που ρωτά η αναγνώριση κάτοψης, ώστε προεπισκόπηση ≡ αποτέλεσμα.
+import { applyRasterCanvasTransform } from './provider-canvas-transforms';
 
 const SUPPORTED_MIME_TYPES = ['application/pdf'] as const;
 const RENDER_SCALE = 2;
@@ -53,10 +53,10 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
       }
 
       this._image = await this._decodeImage(renderResult.imageUrl);
-      this._bounds = {
-        width: renderResult.dimensions.width,
-        height: renderResult.dimensions.height,
-      };
+      // ADR-929 Δ3 — τα όρια είναι το ΠΛΕΓΜΑ PIXEL που ζωγραφίζεται, όχι οι διαστάσεις του viewport του
+      // pdf.js: εκείνες είναι δεκαδικές (π.χ. 1683,78) ενώ ο καμβάς τις κόβει (1683). Με τα δεκαδικά, η
+      // απεικόνιση px → σκηνή και η εικόνα στην οθόνη θα διέφεραν κατά το κλάσμα σε κάθε υπόβαθρο PDF.
+      this._bounds = { width: this._image.naturalWidth, height: this._image.naturalHeight };
 
       return {
         success: true,
@@ -73,13 +73,8 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
     if (!img) return;
     ctx.save();
     ctx.globalAlpha = params.opacity;
-    if (params.cad) {
-      applyCadTransform(ctx, params);
-      ctx.drawImage(img, 0, -img.height);
-    } else {
-      applyScreenTransform(ctx, params);
-      ctx.drawImage(img, 0, 0);
-    }
+    applyRasterCanvasTransform(ctx, params, this._bounds);
+    ctx.drawImage(img, 0, 0);
     ctx.restore();
   }
 

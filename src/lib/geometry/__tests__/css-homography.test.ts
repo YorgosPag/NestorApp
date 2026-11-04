@@ -3,7 +3,8 @@
  * το βελάκι του πατώματος «γλιστρά» έξω από το σημείο όπου η κάμερα το βλέπει.
  */
 
-import { applyHomography, quadToMatrix3d, unitSquareToQuad, type Quad } from '../css-homography';
+import { quadToMatrix3d } from '../css-homography';
+import { applyHomography, unitSquareToQuad, type Quad } from '../homography';
 
 const UNIT_CORNERS = [[0, 0], [1, 0], [1, 1], [0, 1]] as const;
 

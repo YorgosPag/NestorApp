@@ -107,9 +107,15 @@ export interface DrawingAreaRect {
  * `width`/`height` **περιορίζονται σε 0** αντί να γίνουν αρνητικά: ένα αρνητικό `rect()` είναι
  * σιωπηλά έγκυρο στο Canvas 2D και θα έδινε αντεστραμμένο clip — δηλαδή θα ζωγράφιζε ακριβώς
  * εκεί που δεν έπρεπε.
+ *
+ * Το `chrome` δίνεται μόνο από όποιον το **ενίει** (το υπόβαθρο κάτοψης, ADR-929 Δ3: ο ζωγράφος του
+ * περνά από το `worldToScreenAffine`)· κάθε άλλος καλών παίρνει το SSoT {@link DRAWING_AREA_CHROME}.
  */
-export function getDrawingAreaRect(viewport: Viewport): DrawingAreaRect {
-  const { leftRulerWidth, bottomRulerHeight } = DRAWING_AREA_CHROME;
+export function getDrawingAreaRect(
+  viewport: Viewport,
+  chrome: DrawingAreaChrome = DRAWING_AREA_CHROME,
+): DrawingAreaRect {
+  const { leftRulerWidth, bottomRulerHeight } = chrome;
   const x = leftRulerWidth;
   const y = 0;
   const width = Math.max(0, viewport.width - leftRulerWidth);

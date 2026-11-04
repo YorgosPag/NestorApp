@@ -13,7 +13,9 @@ import { open } from '@/lib/geometry/raster/morphology';
 import { grayHistogram, otsuThreshold, rgbaToGray } from '@/lib/geometry/raster/otsu-threshold';
 import { rasterizeSegment } from '@/lib/geometry/raster/raster-segment';
 
-import type { PlanRaster, SeparationSegment } from './space-detect-types';
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
+
+import type { SeparationSegment } from './space-detect-types';
 
 /** Νοητή γραμμή: μισό πλάτος σε pixel (λεπτή, αλλά στεγανή στην 4-γειτονιά). */
 const SEPARATION_HALF_WIDTH_PX = 1;

@@ -104,4 +104,8 @@ export const DXF_BIM_ID_PREFIXES = {
 
   // DXF 3D BIM Viewer — Custom HDRI Environments (ADR-366 Group B)
   BIM_ENVIRONMENT: 'env_bim',     // bim_environments storage path — user-uploaded HDRI environment maps
+
+  // Αναγνώριση κάτοψης από εικόνα (ADR-929 Δ11) — ΜΟΝΟ ντετερμινιστικό: η ανάγνωση ΕΙΝΑΙ η κρυφή μνήμη
+  // της, ίδιο κλειδί (αρχείο, σελίδα, ευθυγράμμιση, μοντέλο, σχήμα) ⇒ ίδιο έγγραφο ⇒ καμία δεύτερη κλήση.
+  PLAN_READING: 'plrd',
 } as const;

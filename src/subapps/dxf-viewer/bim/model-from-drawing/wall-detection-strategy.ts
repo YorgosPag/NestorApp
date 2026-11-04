@@ -2,16 +2,22 @@
  * ADR-911 Δ5 — η ραφή του ανιχνευτή τοίχων: γραμμές ρόλου «τοίχος» → υποψήφια ορθογώνια.
  *
  * Ο βοηθός δεν ξέρει ΠΩΣ βρέθηκε ένα ορθογώνιο· ξέρει μόνο ότι παίρνει `DetectedRectangle[]`.
- * Σήμερα υπάρχει ΜΙΑ στρατηγική (κλειστά ορθογώνια 4 γραμμών — εξηγεί 160/160 γραμμές του
- * σχεδίου δοκιμής). Σχέδια με μακριές παράλληλες παρειές (χωρίς κλειστά ορθογώνια) θέλουν
- * δεύτερη — ανίχνευση παράλληλων ζευγών, το πρότυπο του Chief Architect «CAD to Walls» —
- * που ΔΕΝ γράφεται χωρίς δεύτερο σχέδιο για βαθμονόμηση. Όταν γραφτεί, μπαίνει ΕΔΩ και ο
- * υπόλοιπος αγωγός (χτίσιμο, κάλυψη, προεπισκόπηση) δεν αλλάζει.
+ * Δύο στρατηγικές:
+ *   · `closedRectangleStrategy`: κλειστά ορθογώνια 4 γραμμών (εξηγεί 160/160 γραμμές του σχεδίου δοκιμής).
+ *   · `createParallelPairStrategy`: δύο παράλληλες παρειές σε απόσταση πάχους, χωρίς να χρειάζεται κλείσιμο. Είναι
+ *     το πρότυπο του Chief Architect «CAD to Walls» (ADR-929 Δ7). Γράφτηκε με βαθμονόμηση στα συνθετικά σχέδια της
+ *     Φ2 (γνωστή αλήθεια σε mm) και ωφελεί και τα DXF με μακριές παρειές.
+ * Ο υπόλοιπος αγωγός (χτίσιμο, auto-join, κάλυψη, προεπισκόπηση) δεν αλλάζει.
  *
  * @see ../walls/wall-in-region.ts (findRectanglesFromSegments — corner-graph SSoT)
+ * @see ../walls/parallel-pair-walls.ts (findWallsFromParallelPairs)
  * @see docs/centralized-systems/reference/adrs/ADR-911-model-from-drawing-assistant.md
  */
 
+import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
+import { mmToSceneUnits } from '../../utils/scene-units';
+import type { SceneUnits } from '../../hooks/drawing/wall-completion';
+import { findWallsFromParallelPairs } from '../walls/parallel-pair-walls';
 import {
   findRectanglesFromSegments,
   type DetectedRectangle,
@@ -26,3 +32,34 @@ export type WallDetectionStrategy = (
 
 /** Κάθε τοίχος είναι κλειστό ορθογώνιο 4 γραμμών (ADR-363 Φάση 1K, corner-graph). */
 export const closedRectangleStrategy: WallDetectionStrategy = findRectanglesFromSegments;
+
+export interface ParallelPairStrategyOptions {
+  readonly sceneUnits: SceneUnits;
+  /**
+   * Επιπλέον ανοχή «ίδια ευθεία», σε μονάδες σκηνής, πάνω από την ανοχή κόμβων. Το διανυσματικό σχέδιο δεν τη
+   * χρειάζεται (0). Οι γραμμές από εικόνα τη χρειάζονται: ένα pixel της σάρωσης είναι δεκάδες mm (ADR-929 Φ2).
+   */
+  readonly lineTolerance?: number;
+  /**
+   * Εμβέλεια έλξης άκρων σε παρειές, σε μονάδες σκηνής: η αβεβαιότητα θέσης ενός άκρου στην πηγή. Απούσα ⇒ 2 × η
+   * ανοχή «ίδια ευθεία» (διανυσματικό σχέδιο: 10 mm). Οι γραμμές από εικόνα δίνουν τη δική τους (ADR-929 Φ2).
+   */
+  readonly endSnapReach?: number;
+}
+
+/**
+ * Δύο παράλληλες παρειές σε απόσταση πάχους ⇒ τοίχος. Τα όρια πάχους ζουν **μόνο** στο `MODEL_FROM_DRAWING_LIMITS`
+ * (σε mm) και μετατρέπονται εδώ στις μονάδες της σκηνής.
+ */
+export function createParallelPairStrategy(options: ParallelPairStrategyOptions): WallDetectionStrategy {
+  const scale = mmToSceneUnits(options.sceneUnits);
+  return (segments, nodeMergeTol) => {
+    const offsetTol = Math.max(nodeMergeTol, options.lineTolerance ?? 0);
+    return findWallsFromParallelPairs(segments, {
+      minThickness: MODEL_FROM_DRAWING_LIMITS.WALL_PAIR_MIN_THICKNESS_MM * scale,
+      maxThickness: MODEL_FROM_DRAWING_LIMITS.WALL_PAIR_MAX_THICKNESS_MM * scale,
+      offsetTol,
+      endSnapReach: options.endSnapReach ?? 2 * offsetTol,
+    });
+  };
+}

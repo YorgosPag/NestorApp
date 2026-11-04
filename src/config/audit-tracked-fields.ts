@@ -1620,7 +1620,7 @@ export const QUOTE_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
 };
 
 /**
- * ADR-929 — η ευκαιρία πώλησης. Το `status` ΔΕΝ παρακολουθείται: παράγεται από το στάδιο, άρα θα ήταν διπλή
+ * ADR-930 — η ευκαιρία πώλησης. Το `status` ΔΕΝ παρακολουθείται: παράγεται από το στάδιο, άρα θα ήταν διπλή
  * γραμμή για το ίδιο γεγονός. Ούτε τα `stageChangedAt` / `lastActivity` / `wonDate` (χρονοσφραγίδες της ίδιας πράξης).
  */
 export const OPPORTUNITY_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {

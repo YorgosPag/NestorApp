@@ -1,5 +1,5 @@
 /**
- * ADR-929 — ο καθαρός πυρήνας του `KanbanBoard`: ομαδοποίηση, απόφαση ρίψης, πλοήγηση πληκτρολογίου.
+ * ADR-930 — ο καθαρός πυρήνας του `KanbanBoard`: ομαδοποίηση, απόφαση ρίψης, πλοήγηση πληκτρολογίου.
  */
 
 import { groupByColumn, neighbourColumn, resolveKanbanDrop, type KanbanRect } from '../kanban-model';

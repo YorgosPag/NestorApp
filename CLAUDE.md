@@ -308,7 +308,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:ffba86fef3606e12ea582b5ee790a00a46953a83941feadb8426bdc375745a56 -->
+     fingerprint: sha256:feef170c454488ebcfb7cf9568fb8e55ff03b7cf59c53f1bf3391dfd7ccd4d5a -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -406,7 +406,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.111** | **Πύλη των πράξεων έργου** (ADR-926) — «έχει κάθε πράξη έργου **σημείο επιβολής** και γραμμή στον πίνακα — βγαίνει το έργο **μόνο από τον πόρο** — και μένει η οριστική διαγραφή στον…» · `npm run test:project-scoped-actions` · `SKIP_PROJECT_SCOPED_ACTIONS=1` · 📘 `docs/gates/3.111.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
 | **3.112** | **Πύλη του ενός γραφέα της δημόσιας βιτρίνας** (ADR-923) — «αγγίζει κάποιος το δημόσιο έγγραφο καταλόγου, το outbox του ή το ράφι του **έξω από τους δηλωμένους κατόχους**; (οι κανόνες κλείνουν τον πελάτη…» · `npm run test:public-catalog-authority` · `SKIP_PUBLIC_CATALOG_AUTHORITY=1` · 📘 `docs/gates/3.112.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3) | — |
 | **3.113** | **Πύλη του ενός γραφέα της υπεργολαβίας** (ADR-928) — «γράφει κάποιος ρήτρα, έκδοση ρήτρας, πρότυπο, συμφωνητικό, αναθεώρηση ή μετρητή αριθμών **έξω από τους γραφείς του `src/server/subcontracts/`** — δηλ…» · `npm run test:subcontract-authority` · `SKIP_SUBCONTRACT_AUTHORITY=1` · 📘 `docs/gates/3.113.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
-| **3.114** | **Πύλη του ενός γραφέα του σταδίου ευκαιρίας** (ADR-929) — «αλλάζει κάποιος το στάδιο μιας ευκαιρίας **έξω από την πόρτα** `POST /api/opportunities/[id]/stage` — χωρίς έλεγχο σύγκρουσης, χωρίς στοιχεία κλεισίμ…» · `npm run test:opportunity-stage-authority` · `SKIP_OPPORTUNITY_STAGE_AUTHORITY=1` · 📘 `docs/gates/3.114.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
+| **3.114** | **Πύλη του ενός γραφέα του σταδίου ευκαιρίας** (ADR-930) — «αλλάζει κάποιος το στάδιο μιας ευκαιρίας **έξω από την πόρτα** `POST /api/opportunities/[id]/stage` — χωρίς έλεγχο σύγκρουσης, χωρίς στοιχεία κλεισίμ…» · `npm run test:opportunity-stage-authority` · `SKIP_OPPORTUNITY_STAGE_AUTHORITY=1` · 📘 `docs/gates/3.114.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.

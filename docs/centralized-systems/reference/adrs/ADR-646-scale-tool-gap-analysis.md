@@ -203,6 +203,7 @@ single composed affine (O(1)/frame) στο shared `use-transform-ghost-preview.t
 
 ## Changelog
 
+- **2026-11-04** — Ο αφινικός πυρήνας της Φάσης 6 (`Affine2x3`, `composeAffine`) μετακόμισε από το `hooks/tools/transform-ghost-matrix.ts` στο `src/lib/geometry/affine-2x3.ts` (μαζί με `applyAffine`, `invertAffine`, `transformContext`), και ο `worldToScreenAffine` στο `rendering/core/world-to-screen-affine.ts` (ADR-929 Φ0). Λόγος: τον χρειάζονται πλέον ο ζωγράφος του υποβάθρου κάτοψης, η αναγνώριση κάτοψης και ο διακομιστής (calibration remap), και δεν επιτρέπεται να εισάγουν από αρχείο εργαλείου. Η συμπεριφορά του matrix ghost **δεν άλλαξε**· τα tests του μεταφέρθηκαν και περνούν, και η τοπική `applyAffine` του test έγινε η κοινή.
 - **2026-07-13** — **Φάση 6 IMPLEMENTED (#8 perf — ΟΡΙΣΤΙΚΟ fix για freeze σε scale χιλιάδων οντοτήτων).**
   Το Φ.5 LOD ανακούφισε αλλά ΠΑΛΙ κολλούσε σε ακραία κλίμακα (Giorgio). Definitive big-player fix
   (**Figma/Illustrator/AutoCAD/Revit/C4D**): render το ghost της επιλογής **ΜΙΑ φορά** σε offscreen raster
