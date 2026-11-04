@@ -241,6 +241,8 @@ export const POST = defineRoute({
       recipientEmail: recipientEmail.trim(),
       success: mailgunResult.success,
       messageId: mailgunResult.messageId,
+      // The provider's text (configuration, upstream body) stays HERE — never on the wire (ADR-603 §Ασπίδα).
+      ...(mailgunResult.success ? {} : { error: mailgunResult.error ?? null }),
     });
 
     // ── 8. Return result ──────────────────────────────────────────────
@@ -248,7 +250,7 @@ export const POST = defineRoute({
       return NextResponse.json(
         {
           success: false,
-          error: mailgunResult.error ?? 'Mailgun delivery failed',
+          error: 'Mailgun delivery failed',
         },
         { status: 502 }
       );

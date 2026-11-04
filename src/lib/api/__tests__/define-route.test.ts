@@ -243,6 +243,30 @@ describe('defineRoute — error envelopes', () => {
     );
   });
 
+  it('ApiError ≥500 is OUR failure, not a refusal: generic message + requestId, the raw text only in the log', async () => {
+    const GET = defineRoute({
+      rateLimit: 'standard',
+      handler: async () => {
+        throw new ApiError(500, 'internal: Mailgun key-123 rejected');
+      },
+    });
+    const res = (await GET(makeReq())) as Envelope;
+    expect(res.status).toBe(500);
+    const payload = await res.json();
+    expect(JSON.stringify(payload)).not.toContain('internal');
+    expect(payload).toMatchObject({ error: 'Internal server error', errorCode: 'INTERNAL_SERVER_ERROR', requestId: 'req_test_1' });
+    expect(errorLog).toHaveBeenCalledWith('Route handler error', expect.objectContaining({ error: 'internal: Mailgun key-123 rejected' }));
+  });
+
+  it('ApiError 503 keeps its STATUS and its declared stable code, but not its message', async () => {
+    const GET = defineRoute({ rateLimit: 'standard', handler: async () => { throw new ApiError(503, 'upstream db-7 down', 'UPSTREAM_DOWN'); } });
+    const res = (await GET(makeReq())) as Envelope;
+    expect(res.status).toBe(503);
+    const payload = await res.json();
+    expect(payload.errorCode).toBe('UPSTREAM_DOWN');
+    expect(JSON.stringify(payload)).not.toContain('db-7');
+  });
+
   it('unexpected Error WITH a message → the route fallbackError, never the internal text', async () => {
     const GET = defineRoute({
       rateLimit: 'standard',
@@ -411,6 +435,24 @@ describe('defineRoute — response shield: cache policy (ADR-603 §Ασπίδα)
     const res = (await GET(makeReq())) as Envelope;
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('https://app.test/elsewhere');
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('rival cache headers (CDN-Cache-Control / Surrogate-Control / Expires) set by a handler are removed', async () => {
+    const GET = defineRoute({
+      rateLimit: 'standard',
+      handler: async () => {
+        const res = ok();
+        res.headers.set('CDN-Cache-Control', 'max-age=3600');
+        res.headers.set('Surrogate-Control', 'max-age=3600');
+        res.headers.set('Expires', 'Thu, 01 Jan 2099 00:00:00 GMT');
+        return res;
+      },
+    });
+    const res = (await GET(makeReq())) as Envelope;
+    expect(res.headers.get('CDN-Cache-Control')).toBeNull();
+    expect(res.headers.get('Surrogate-Control')).toBeNull();
+    expect(res.headers.get('Expires')).toBeNull();
     expect(res.headers.get('Cache-Control')).toBe('private, no-store');
   });
 

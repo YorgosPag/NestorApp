@@ -228,11 +228,11 @@ describe('rfqs/[rfqId]/lines — GET / POST', () => {
     expect(foreign.status).toBe(404);
   });
 
-  it('POST service other error → 400 (mutation fallback)', async () => {
+  it('POST service other error → 400 (mutation fallback) with the route fallback, never the raw text', async () => {
     rfqLineSvc.addRfqLine.mockRejectedValue(new Error('boom'));
     const res = (await linesPost(req(`${BASE}/rfqs/r1/lines`, validLine), rfqSeg)) as Envelope;
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe('boom');
+    expect((await res.json()).error).toBe('Failed to add RFQ line');
   });
 });
 
@@ -439,10 +439,10 @@ describe('[poId]/share — POST / DELETE', () => {
     expect((await res.json()).error).toBe('shareId is required');
   });
 
-  it('DELETE revoke false → 500 Failed to revoke share', async () => {
+  it('DELETE revoke false → 500 generic + requestId (ADR-603 §Ασπίδα: a 5xx message never reaches the wire)', async () => {
     shareSvc.revokePOShare.mockResolvedValue(false);
     const res = (await shareDelete(req(`${BASE}/po_1/share`, { shareId: 's1' }, 'DELETE'), poSeg)) as Envelope;
     expect(res.status).toBe(500);
-    expect((await res.json()).error).toBe('Failed to revoke share');
+    expect(await res.json()).toMatchObject({ error: 'Unknown error', errorCode: 'INTERNAL_SERVER_ERROR' });
   });
 });

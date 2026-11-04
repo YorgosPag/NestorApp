@@ -16,6 +16,7 @@
 
 import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import type {
   PurchaseOrderStatus,
   POCancellationReason,
@@ -36,7 +37,7 @@ function assertTransition(
 ): void {
   const allowed = PO_STATUS_TRANSITIONS[from];
   if (!allowed.includes(to)) {
-    throw new Error(
+    throw new ProcurementRuleError(
       `Invalid status transition: ${from} → ${to}. Allowed: ${allowed.join(', ')}`,
     );
   }

@@ -8,6 +8,7 @@
  * @see ADR-267 §4.3 (Status State Machine)
  */
 
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import {
@@ -101,7 +102,7 @@ async function pricePOItems<TItem extends POPricingLine>(
   const pricing = await loadAndPricePurchaseOrder(ctx, input, carry);
   const [invalid] = pricing.invalidLineIndexes;
   if (invalid !== undefined) {
-    throw new Error(`Item ${invalid + 1}: quantity or unitPrice cannot be represented exactly`);
+    throw new ProcurementRuleError(`Item ${invalid + 1}: quantity or unitPrice cannot be represented exactly`);
   }
   return { record: pricedRecord(input.items, pricing), pricing };
 }
@@ -170,7 +171,7 @@ export async function createPO(
   dto: CreatePurchaseOrderDTO
 ): Promise<{ id: string; poNumber: string }> {
   const validationError = validateCreateDTO(dto);
-  if (validationError) throw new Error(validationError);
+  if (validationError) throw new ProcurementRuleError(validationError);
 
   // Phase 5.5 C.2 + ADR-923 «3γ» — συμβάσεις, εκπτώσεις και σύνολα υπολογίζονται εδώ, από τη βάση.
   const { record: priced } = await pricePOItems(ctx, {
@@ -233,7 +234,7 @@ export async function updatePO(
 
   // Only draft/approved POs can be edited
   if (!['draft', 'approved'].includes(po.status)) {
-    throw new Error(`Cannot edit PO in status: ${po.status}`);
+    throw new ProcurementRuleError(`Cannot edit PO in status: ${po.status}`);
   }
 
   const updates: Partial<PurchaseOrder> = {};
@@ -335,7 +336,7 @@ export async function recordPODelivery(
   if (!po) throw new Error(`PO not found: ${poId}`);
 
   if (!['ordered', 'partially_delivered'].includes(po.status)) {
-    throw new Error(`Cannot record delivery for PO in status: ${po.status}`);
+    throw new ProcurementRuleError(`Cannot record delivery for PO in status: ${po.status}`);
   }
 
   const result = await recordDelivery(poId, dto);

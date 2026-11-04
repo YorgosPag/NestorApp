@@ -74,6 +74,7 @@ jest.mock('@/services/procurement', () => ({
   duplicatePO: (...a: unknown[]) => poSvc.duplicatePO(...a),
 }));
 
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import type { NextRequest } from 'next/server';
 import { GET as listGet, POST as listPost } from '../route';
 import { GET as poGet, PATCH as poPatch, DELETE as poDelete } from '../[poId]/route';
@@ -131,11 +132,20 @@ describe('procurement — GET/POST', () => {
     expect((await res.json()).error).toBe('Validation failed');
   });
 
-  it('POST service error → 400 (create fallback is 400, NOT 500)', async () => {
-    poSvc.createPO.mockRejectedValue(new Error('supplier missing'));
+  it('POST rule error → 400 with its message (create fallback is 400, NOT 500)', async () => {
+    poSvc.createPO.mockRejectedValue(new ProcurementRuleError('supplier missing'));
     const res = (await listPost(req(validPO))) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('supplier missing');
+  });
+
+  it('POST UNEXPECTED error → 500 generic, never the raw text (ADR-603 §Ασπίδα)', async () => {
+    poSvc.createPO.mockRejectedValue(new Error('Firestore: purchase_orders/x permission denied'));
+    const res = (await listPost(req(validPO))) as Envelope;
+    expect(res.status).toBe(500);
+    const payload = await res.json();
+    expect(payload).toMatchObject({ error: 'Failed to create purchase order', errorCode: 'INTERNAL_SERVER_ERROR' });
+    expect(JSON.stringify(payload)).not.toContain('purchase_orders/x');
   });
 });
 
@@ -227,11 +237,18 @@ describe('procurement/[poId] — PATCH action-switch', () => {
     expect(await res.json()).toEqual({ success: true, message: 'PO updated' });
   });
 
-  it('service error → 400', async () => {
-    poSvc.approvePO.mockRejectedValue(new Error('cannot approve'));
+  it('rule error → 400 with its message', async () => {
+    poSvc.approvePO.mockRejectedValue(new ProcurementRuleError('cannot approve'));
     const res = (await poPatch(patchReq('approve'), seg)) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('cannot approve');
+  });
+
+  it('unexpected error → 500 generic', async () => {
+    poSvc.approvePO.mockRejectedValue(new Error('internal detail'));
+    const res = (await poPatch(patchReq('approve'), seg)) as Envelope;
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('Failed to update purchase order');
   });
 });
 
@@ -246,8 +263,8 @@ describe('procurement/[poId] — DELETE', () => {
     expect(await res.json()).toEqual({ success: true, message: 'PO deleted' });
   });
 
-  it('DELETE service error → 400', async () => {
-    poSvc.deletePO.mockRejectedValue(new Error('locked'));
+  it('DELETE rule error → 400', async () => {
+    poSvc.deletePO.mockRejectedValue(new ProcurementRuleError('locked'));
     const res = (await poDelete(req(), seg)) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('locked');

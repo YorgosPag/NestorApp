@@ -201,11 +201,13 @@ describe('materials — GET/POST', () => {
     expect(res.status).toBe(400);
   });
 
-  it('POST unknown error → 500 (create fallback)', async () => {
+  it('POST unknown error → 500 (create fallback) with the GENERIC message, never the raw one (ADR-603 §Ασπίδα)', async () => {
     materialSvc.createMaterial.mockRejectedValue(named('WeirdError', 'kaboom'));
     const res = (await matPost(req(validMaterial))) as Envelope;
     expect(res.status).toBe(500);
-    expect((await res.json()).error).toBe('kaboom');
+    const payload = await res.json();
+    expect(payload).toMatchObject({ error: 'Failed to create material', errorCode: 'INTERNAL_SERVER_ERROR' });
+    expect(JSON.stringify(payload)).not.toContain('kaboom');
   });
 });
 

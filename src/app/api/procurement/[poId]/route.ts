@@ -16,7 +16,7 @@ import 'server-only';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import { defineRoute, ok, created, notFound, badRequest, httpError } from '@/lib/api/define-route';
+import { defineRoute, ok, created, notFound, badRequest } from '@/lib/api/define-route';
 import {
   getPO,
   updatePO,
@@ -28,7 +28,7 @@ import {
   deletePO,
   duplicatePO,
 } from '@/services/procurement';
-import { getErrorMessage } from '@/lib/error-utils';
+import { rethrowProcurementFailure } from '../_shared/procurement-error-outcome';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { POCancellationReason, POVatRate } from '@/types/procurement';
 import { UpdatePORequestSchema } from '../_shared/po-schema';
@@ -78,12 +78,14 @@ export const GET = defineRoute<z.ZodTypeAny, PoParams>({
 
 export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
   rateLimit: 'sensitive',
+  fallbackError: 'Failed to update purchase order',
   handler: async ({ req, auth, params }) => {
     const { poId } = params;
     try {
       const url = new URL(req.url);
       const action = url.searchParams.get('action') ?? 'update';
-      const body = await req.json();
+      // Malformed JSON ⇒ `null` ⇒ the per-action schema answers 400; actions without a body never read it.
+      const body: unknown = await req.json().catch(() => null);
 
       switch (action) {
         case 'approve': {
@@ -154,7 +156,8 @@ export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
           total: error.total,
         });
       }
-      httpError(400, getErrorMessage(error));
+      // Expected failures → 400 with their message; the unexpected → generic 500 (ADR-603 §Ασπίδα).
+      rethrowProcurementFailure(error, auth.globalRole, 'Failed to update purchase order');
     }
   },
 });
@@ -165,12 +168,13 @@ export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
 
 export const DELETE = defineRoute<z.ZodTypeAny, PoParams>({
   rateLimit: 'sensitive',
+  fallbackError: 'Failed to delete purchase order',
   handler: async ({ auth, params }) => {
     try {
       await deletePO(auth, params.poId);
       return NextResponse.json({ success: true, message: 'PO deleted' });
     } catch (error) {
-      httpError(400, getErrorMessage(error));
+      rethrowProcurementFailure(error, auth.globalRole, 'Failed to delete purchase order');
     }
   },
 });

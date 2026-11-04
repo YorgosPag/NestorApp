@@ -73,6 +73,8 @@ export const POST = defineRoute<z.ZodTypeAny, { poId: string }>({
       language,
     });
 
+    // A 5xx `ApiError` never reaches the wire with its message: `defineRoute` answers the generic 500 + requestId and
+    // logs `result.error` (Mailgun configuration / provider body) under the same id (ADR-603 §Ασπίδα, ΥΨ-1).
     if (!result.success) httpError(500, result.error);
 
     // Record audit trail

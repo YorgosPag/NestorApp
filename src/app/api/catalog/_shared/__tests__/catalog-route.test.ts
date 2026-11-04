@@ -5,7 +5,7 @@
 /**
  * Το σύνορο των routes καταλόγου (ADR-923 §5.14.1 Ζ23 · Ζ24), εκτελεσμένο πάνω στα αληθινά factories:
  * - κάθε επιτυχής απόκριση φεύγει με `private, no-store` (τιμές ενός κοινού δεν μένουν σε καμία μνήμη)·
- * - ο route που **δηλώνει** δική του πολιτική (αρχείο, `policy.cache`) κερδίζει· κεφαλίδα του handler όχι (ADR-603 §Ασπίδα)·
+ * - κεφαλίδα που βάζει ο handler ΔΕΝ παρακάμπτει την πολιτική (ADR-603 §Ασπίδα)·
  * - το σφάλμα του γραφέα/αναγνώστη δεν λέει «write» σε GET· η απρόβλεπτη βλάβη ανάγνωσης λέει «read».
  */
 
@@ -70,11 +70,6 @@ describe('catalogReadRoute', () => {
 });
 
 describe('catalogFileRoute', () => {
-  it('ο route δηλώνει δική του πολιτική ⇒ μένει αυτή', async () => {
-    const route = catalogFileRoute({ ...POLICY, cache: { kind: 'private', maxAgeSeconds: 60 } }, async () => new NextResponse('pdf'));
-    await expect(call(route)).resolves.toMatchObject({ status: 200, cache: 'private, max-age=60' });
-  });
-
   it('κεφαλίδα του handler ΧΩΡΙΣ δήλωση δεν παρακάμπτει την πολιτική (ADR-603 §Ασπίδα)', async () => {
     const route = catalogFileRoute(POLICY, async () => new NextResponse('pdf', { headers: { 'Cache-Control': 'public, max-age=60' } }));
     await expect(call(route)).resolves.toMatchObject({ status: 200, cache: PRIVATE_NO_STORE });

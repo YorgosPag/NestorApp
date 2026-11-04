@@ -11,7 +11,7 @@
  *    **γράφει πάνω** σε ό,τι έβαλε ο handler: η πολιτική ζει στη δήλωση, όχι σε κεφαλίδα κρυμμένη στο σώμα.
  *
  * 2. **Τι επιτρέπεται να μάθει ο πελάτης για μια απρόβλεπτη βλάβη;** Τίποτα εσωτερικό: γενικό μήνυμα (το
- *    `fallbackError` του route, γραμμένο από άνθρωπο) + σταθερός κωδικός `INTERNAL_SERVER_ERROR` (μεταφράσιμος) +
+ *    `fallbackError` του route, γραμμένο από άνθρωπο) + σταθερός κωδικός `INTERNAL_SERVER_ERROR` (αναγνωρίσιμος· μετάφραση στον client: εκκρεμεί) +
  *    **αναγνωριστικό αιτήματος** στο σώμα και στην κεφαλίδα `X-Request-ID` (Stripe `Request-Id` · GitHub
  *    `X-GitHub-Request-Id` · AWS `x-amzn-RequestId`). Η λεπτομέρεια (μήνυμα, όνομα, stack) **μόνο** στο log του
  *    διακομιστή, κάτω από το ίδιο αναγνωριστικό — OWASP ASVS 4.0.3 V7.4.1.
@@ -27,14 +27,11 @@ import 'server-only';
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { cacheControlFor, type ResponseCachePolicy } from '@/lib/http/cache-control';
-import { INTERNAL_ERROR_CODE } from '@/lib/api/api-error-types';
+import { INTERNAL_ERROR_CODE, REQUEST_ID_HEADER } from '@/lib/api/api-error-types';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('API_ROUTE');
-
-/** Η κεφαλίδα του αναγνωριστικού αιτήματος — ίδιο όνομα με το `ApiErrorHandler`. */
-export const REQUEST_ID_HEADER = 'X-Request-ID';
 
 /** Το γενικό μήνυμα όταν το route δεν δήλωσε δικό του `fallbackError`. */
 export const GENERIC_INTERNAL_ERROR = 'Internal server error';
@@ -44,15 +41,26 @@ export const GENERIC_INTERNAL_ERROR = 'Internal server error';
  * κεφαλίδες (φρουρός «immutable» του Fetch Standard) ⇒ τότε χτίζεται αντίγραφο με το ίδιο σώμα, χωρίς ανάγνωσή του.
  */
 function withHeaders(response: Response, entries: Readonly<Record<string, string>>): Response {
+  const apply = (headers: Headers) => {
+    for (const name of RIVAL_CACHE_HEADERS) headers.delete(name);
+    for (const [name, value] of Object.entries(entries)) headers.set(name, value);
+  };
   try {
-    for (const [name, value] of Object.entries(entries)) response.headers.set(name, value);
+    apply(response.headers);
     return response;
   } catch {
     const headers = new Headers(response.headers);
-    for (const [name, value] of Object.entries(entries)) headers.set(name, value);
+    apply(headers);
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
   }
 }
+
+/**
+ * Κεφαλίδες που **ανταγωνίζονται** το `Cache-Control`: το `CDN-Cache-Control` (RFC 9213) και το `Surrogate-Control`
+ * τα διαβάζουν CDN **πριν** από το `Cache-Control`, και το `Expires` ισχύει όπου λείπει `max-age`. Αν τις άφηνε ένας
+ * handler, θα παρέκαμπταν τη δηλωμένη πολιτική στον ενδιάμεσο — η ασπίδα τις σβήνει.
+ */
+const RIVAL_CACHE_HEADERS = ['CDN-Cache-Control', 'Surrogate-Control', 'Expires'] as const;
 
 /** Η πολιτική cache της απόκρισης, κατά την κατάστασή της (άρνηση/σφάλμα ⇒ πάντα `no-store`). */
 export function shieldResponse(response: Response, policy: ResponseCachePolicy): Response {
@@ -66,10 +74,16 @@ function diagnosticOf(error: unknown): Record<string, unknown> {
 }
 
 /**
- * Απρόβλεπτη βλάβη ⇒ 500 με γενικό μήνυμα + κωδικό + αναγνωριστικό. Το σχήμα `{ success:false, error }` μένει όπως
+ * Απρόβλεπτη βλάβη (ή `ApiError` ≥500, που κρατά τον κωδικό HTTP και τον δηλωμένο σταθερό `errorCode` του — ποτέ το μήνυμα) ⇒ γενικό μήνυμα + κωδικό + αναγνωριστικό. Το σχήμα `{ success:false, error }` μένει όπως
  * το περιμένουν `ApiClientError` / `fetchJson` — μόνο **προστίθενται** `errorCode` και `requestId`.
  */
-export function unexpectedErrorResponse(error: unknown, req: NextRequest, fallbackError?: string): NextResponse {
+export function unexpectedErrorResponse(
+  error: unknown,
+  req: NextRequest,
+  fallbackError?: string,
+  status = 500,
+  errorCode: string = INTERNAL_ERROR_CODE,
+): NextResponse {
   const requestId = generateRequestId();
   logger.error('Route handler error', {
     requestId,
@@ -81,9 +95,9 @@ export function unexpectedErrorResponse(error: unknown, req: NextRequest, fallba
     {
       success: false,
       error: fallbackError ?? GENERIC_INTERNAL_ERROR,
-      errorCode: INTERNAL_ERROR_CODE,
+      errorCode,
       requestId,
     },
-    { status: 500, headers: { [REQUEST_ID_HEADER]: requestId } },
+    { status, headers: { [REQUEST_ID_HEADER]: requestId } },
   );
 }

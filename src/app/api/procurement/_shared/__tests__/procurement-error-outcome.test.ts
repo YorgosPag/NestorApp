@@ -11,6 +11,7 @@
  * κρατούσε επίσης — και το μαντείο θα ήταν ορθάνοιχτο.
  */
 
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import { resolveProcurementErrorOutcome } from '../procurement-error-outcome';
 import {
   PROCUREMENT_RESOURCE,
@@ -200,10 +201,16 @@ describe('οι κληρονομημένοι κλάδοι', () => {
     expect(outcomeFor(invalid, NORMAL_ROLE).status).toBe(400);
   });
 
-  it('άγνωστο σφάλμα → 400 σε mutation, με το μήνυμά του', () => {
-    expect(wire(outcomeFor(new Error('boom'), NORMAL_ROLE))).toEqual({
+  it('άγνωστο σφάλμα → 400 σε mutation, με το fallbackError — ΟΧΙ το ωμό μήνυμα (ADR-603 §Ασπίδα)', () => {
+    const outcome = outcomeFor(new Error('boom'), NORMAL_ROLE);
+    expect(wire(outcome)).toEqual({ status: 400, message: 'Failed to update material' });
+    expect(outcome.logMessage).toBe('boom');
+  });
+
+  it('`ProcurementRuleError` → 400 σε mutation, με το μήνυμά του (γραμμένο για τον πελάτη)', () => {
+    expect(wire(outcomeFor(new ProcurementRuleError('Cannot edit PO in status: ordered'), NORMAL_ROLE))).toEqual({
       status: 400,
-      message: 'boom',
+      message: 'Cannot edit PO in status: ordered',
     });
   });
 

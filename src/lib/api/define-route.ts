@@ -274,7 +274,9 @@ function toErrorResponse(
   // `errorCode` (ADR-284 policy codes) reaches the client exactly as with ApiErrorHandler — without it a client
   // cannot translate the refusal (N.11) and shows the raw server text. Absent code ⇒ envelope byte-identical.
   const apiError = asApiError(error);
-  if (apiError) {
+  // ADR-603 §Ασπίδα (ΥΨ-1): ένα `ApiError` ≥500 είναι βλάβη ΜΑΣ, όχι άρνηση — όποιο μήνυμα κι αν του έδωσε ο
+  // κώδικας (συχνά `getErrorMessage(e)`), ο πελάτης παίρνει το γενικό 500 + requestId· το μήνυμα μόνο στο log.
+  if (apiError && apiError.statusCode < 500) {
     return NextResponse.json(
       {
         success: false,
@@ -286,6 +288,6 @@ function toErrorResponse(
     );
   }
 
-  // Unexpected errors → generic 500 + requestId; the detail lives only in the server log (ADR-603 §Ασπίδα).
-  return unexpectedErrorResponse(error, req, fallbackError);
+  // Unexpected errors (and ApiError ≥500) → generic 500 + requestId; detail only in the server log (ADR-603 §Ασπίδα).
+  return unexpectedErrorResponse(error, req, fallbackError, apiError?.statusCode, apiError?.errorCode);
 }

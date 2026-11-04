@@ -46,6 +46,8 @@ import {
   procurementNotFound,
 } from '@/subapps/procurement/services/procurement-ownership';
 import { getErrorMessage } from '@/lib/error-utils';
+import { ApiError } from '@/lib/api/api-error-types';
+import { ProcurementRuleError } from '@/subapps/procurement/services/procurement-rule-error';
 import { resolveProcurementErrorStatus, type ProcurementErrorStatusOptions } from './error-status';
 
 /**
@@ -136,12 +138,41 @@ export function resolveProcurementErrorOutcome(
     return { status: 404, message: error.message, logMessage: error.message };
   }
 
-  const message = getErrorMessage(error, fallbackError);
+  const raw = getErrorMessage(error, fallbackError);
   const errorCode = declaredErrorCode(error);
   return {
     status: resolveProcurementErrorStatus(error, statusOptions),
-    message,
-    logMessage: message,
+    // ADR-603 §Ασπίδα (ΥΨ-1): μόνο σφάλμα που ο κώδικας ΤΥΠΟΠΟΙΗΣΕ για τον πελάτη κρατά το μήνυμά του·
+    // ένα ωμό `Error` (Firestore/SDK/κώδικας) παίρνει το `fallbackError` — η αλήθεια μένει στο log.
+    message: isClientFacing(error, statusOptions, errorCode) ? raw : fallbackError,
+    logMessage: raw,
     ...(errorCode && { errorCode }),
   };
+}
+
+/**
+ * Είναι το μήνυμα **γραμμένο για τον πελάτη**; Ναι μόνο για `ProcurementRuleError`, για ονομασμένο σφάλμα πεδίου
+ * (`conflictName` / `validationName`), για σφάλμα που δηλώνει σταθερό `errorCode`, και για το κληρονομημένο «not found».
+ */
+function isClientFacing(error: unknown, options: ProcurementErrorStatusOptions, errorCode: string | undefined): boolean {
+  if (errorCode || error instanceof ProcurementRuleError) return true;
+  if (!(error instanceof Error)) return false;
+  if (error.name === options.conflictName || error.name === options.validationName) return true;
+  return options.mode === 'mutation' && error.message.includes('not found');
+}
+
+/**
+ * Τα routes με **ενιαίο 400** (`procurement` POST · `[poId]` PATCH/DELETE · `sourcing-events` POST — ADR-603 Φ1):
+ * το **αναμενόμενο** σφάλμα φεύγει 400 με το μήνυμά του (κανόνας πεδίου, κληρονομημένο «not found»), η ιδιοκτησία
+ * περνά από τον ίδιο κανόνα αποκάλυψης με τα υπόλοιπα routes (μεταμφιεσμένο 404), και **το απρόβλεπτο ξαναρίχνεται**:
+ * το `defineRoute` απαντά γενικό 500 + `requestId`, με το μήνυμα μόνο στο log (ADR-603 §Ασπίδα, ΥΨ-1).
+ */
+export function rethrowProcurementFailure(error: unknown, callerGlobalRole: string, fallbackError: string): never {
+  if (error instanceof ProcurementCrossTenantError || error instanceof ProcurementNotFoundError) {
+    const outcome = resolveProcurementErrorOutcome(error, { callerGlobalRole, fallbackError, mode: 'mutation' });
+    throw new ApiError(outcome.status, outcome.message);
+  }
+  if (error instanceof ProcurementRuleError) throw new ApiError(400, error.message);
+  if (error instanceof Error && error.message.includes('not found')) throw new ApiError(400, error.message);
+  throw error;
 }

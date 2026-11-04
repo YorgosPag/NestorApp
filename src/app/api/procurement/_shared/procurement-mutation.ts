@@ -43,7 +43,7 @@ import type { z } from 'zod';
 import { ApiError } from '@/lib/api/api-error-types';
 import type { AuthContext } from '@/lib/auth';
 import { resolveProcurementErrorOutcome } from './procurement-error-outcome';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { safeJsonBody } from '@/lib/validation/shared-schemas';
 
 /** Minimal structural view of the module logger (`error(message, ...args)`). */
 interface MutationLogger {
@@ -83,7 +83,8 @@ export async function runProcurementMutation<TSchema extends z.ZodTypeAny>(
   try {
     let data = undefined as z.infer<TSchema>;
     if (schema) {
-      const parsed = safeParseBody(schema, await req.json());
+      // Malformed/empty JSON ⇒ 400 «Invalid or empty JSON body» (SSoT) — not a service error mapped by name (ADR-603 §Ασπίδα).
+      const parsed = await safeJsonBody(schema, req);
       if (parsed.error) return parsed.error;
       data = parsed.data;
     }

@@ -370,10 +370,10 @@ describe('[poId]/email — POST', () => {
     }));
   });
 
-  it('send failure → 500 with service error', async () => {
-    emailSvc.sendPurchaseOrderEmail.mockResolvedValue({ success: false, error: 'smtp down' });
+  it('send failure → 500 generic; the provider error stays in the log (ADR-603 §Ασπίδα)', async () => {
+    emailSvc.sendPurchaseOrderEmail.mockResolvedValue({ success: false, error: 'smtp down: MAILGUN_API_KEY missing' });
     const res = (await emailPost(req(`${BASE}/po_1/email`, validBody), seg)) as Envelope;
     expect(res.status).toBe(500);
-    expect((await res.json()).error).toBe('smtp down');
+    expect(JSON.stringify(await res.json())).not.toContain('MAILGUN');
   });
 });

@@ -127,7 +127,9 @@ export const POST = defineRoute({
 | Άκυρη δήλωση | Αρνητική/κλασματική διάρκεια ⇒ `RangeError` **όταν ορίζεται** το route (φόρτωση module), όχι στο πρώτο αίτημα | `cacheControlOf` |
 | Απρόβλεπτο σφάλμα | 500 `{ success:false, error: <fallbackError ή 'Internal server error'>, errorCode: 'INTERNAL_SERVER_ERROR', requestId }` + κεφαλίδα `X-Request-ID` | `unexpectedErrorResponse` |
 | Λεπτομέρεια | Μήνυμα, όνομα, stack **μόνο** στο log του διακομιστή, κάτω από το ίδιο `requestId` | `logger.error('Route handler error', …)` |
-| Αναμενόμενο σφάλμα | `ApiError` (και `TenantIsolationError` μέσω `asApiError`) **κρατά** μήνυμα, `errorCode`, `details` — αμετάβλητο | `toErrorResponse` |
+| Αναμενόμενο σφάλμα | `ApiError` **<500** (και `TenantIsolationError` μέσω `asApiError`) **κρατά** μήνυμα, `errorCode`, `details` — αμετάβλητο | `toErrorResponse` |
+| `ApiError` ≥500 | Βλάβη **μας**, όχι άρνηση: κρατά **μόνο** τον κωδικό HTTP (500/502/503) και τον δηλωμένο σταθερό `errorCode` (π.χ. `FLOOR_PLATE_FAILED`, στον οποίο διακλαδώνεται ο client)· σώμα = το γενικό 500 + `requestId`, το μήνυμα στο log (διόρθωση ανασκόπησης ΥΨ-1) | `toErrorResponse` → `unexpectedErrorResponse(…, status)` |
+| Ανταγωνιστικές κεφαλίδες | `CDN-Cache-Control` (RFC 9213), `Surrogate-Control`, `Expires` **σβήνονται** — τις διαβάζουν CDN πριν από το `Cache-Control` | `withHeaders` |
 | Κακό JSON με `schema` | 400 `Invalid or empty JSON body` (`safeJsonBody`, SSoT) αντί για 500 με το κείμενο του parser | `defineRoute` |
 | Σχήμα envelope | **Μόνο προσθήκες** (`errorCode`, `requestId` στο 500)· `ApiClientError` / `fetchJson` / `errorFieldsFrom` διαβάζουν `error` + `errorCode` όπως πριν | — |
 
@@ -166,9 +168,9 @@ export const POST = defineRoute({
   `catalog-route` / `subcontract-route` / `trash-list-route` / `list-summary-route` / `entity-scoped-summary-route`). Γι' αυτά
   ισχύει μόνο η διόρθωση του `ApiErrorHandler` (αδιάχειριστο throw μέσα στο `withAuth`). Ευρετικό grep: **~103** αρχεία route
   χτίζουν μόνα τους 500 με `getErrorMessage(…)` / `error.message` στο σώμα ⇒ εγγραφή στο `.claude-rules/pending-ratchet-work.md`.
-- **`ApiError` που χτίζεται από ωμό μήνυμα** (`httpError(400, getErrorMessage(error))` στο `procurement/[poId]`,
-  `resolveProcurementErrorOutcome` του `runProcurementMutation`) είναι «αναμενόμενο» για την ασπίδα ⇒ κρατά το μήνυμα. Είναι
-  επιλογή του route, όχι του factory.
+- **Σφάλματα <500 με ωμό μήνυμα υπηρεσίας**: μένει μόνο ο κληρονομημένος κλάδος «… not found» των σκέτων `Error` των
+  υπηρεσιών PO (κρατά μήνυμα ως 400/404). Τα `ApiError` ≥500 και τα μη τυποποιημένα σφάλματα προμηθειών **δεν** διαρρέουν
+  πια (βλ. «Διορθώσεις ανασκόπησης»).
 - **Σώμα 5xx που χτίζει ο ίδιος ο handler** (`NextResponse.json({ error: … }, { status: 500 })`) — η ασπίδα του βάζει `no-store`
   αλλά δεν ξαναγράφει το σώμα του.
 - **`X-Request-ID` μόνο στο απρόβλεπτο 500**, όχι σε κάθε απόκριση (Stripe): το `enterpriseIdService` κρατά **κάθε** id που
@@ -179,7 +181,34 @@ export const POST = defineRoute({
   συμβεί. Το πραγματικό κενό είναι τα 566 routes εκτός factory — εκστρατεία μετάπτωσης, και μια πύλη για «σώμα 500 με
   μήνυμα σφάλματος» θέλει AST (το regex πιάνει και πεδία `logger.*`). Προτεινόμενος σχεδιασμός στην εγγραφή του pending.
 
+### Διορθώσεις ανεξάρτητης ανασκόπησης ασφαλείας (2026-11-04)
+
+- **ΥΨ-1 · `ApiError` ≥500** ⇒ γενικό σώμα + `requestId` (factory **και** `ApiErrorHandler`, ΜΕ-1 — εκεί μέσω του
+  προεπιλεγμένου κανόνα με τον κωδικό HTTP του σφάλματος). Η άγκυρα `batch-a` που κλείδωνε `error === 'kaboom'` σε 500
+  απαιτεί πλέον το γενικό μήνυμα.
+- **Προμήθειες — το «αναμενόμενο» έγινε τύπος**: νέο `ProcurementRuleError` (`subapps/procurement/services/procurement-rule-error.ts`)
+  για τις παραβιάσεις κανόνα («Cannot edit PO in status…», «Invalid transition…», επικύρωση δημιουργίας, μη ακριβής
+  ποσότητα). `resolveProcurementErrorOutcome`: μη τυποποιημένο σφάλμα ⇒ `fallbackError` (ωμό μόνο στο `logMessage`).
+  `rethrowProcurementFailure` για τα routes «ενιαίου 400» (`procurement` POST · `[poId]` PATCH/DELETE · `sourcing-events`
+  POST): κανόνας ⇒ 400 με μήνυμα · ιδιοκτησία ⇒ ίδιος κανόνας αποκάλυψης (μεταμφιεσμένο 404) · κληρονομημένο «not found»
+  ⇒ 400 · **απρόβλεπτο ⇒ ξαναρίχνεται** ⇒ γενικό 500. ⚠️ Αλλαγή συμβολαίου: απρόβλεπτη βλάβη σε αυτά τα routes ήταν 400
+  με το μήνυμά της, τώρα 500 γενικό.
+- **Email**: `invoices/[id]/send-email` 502 με σταθερό `Mailgun delivery failed` (το κείμενο του παρόχου στο log)·
+  `[poId]/email` `httpError(500, result.error)` καλύπτεται από το ΥΨ-1.
+- **ΧΑ-1 · κακό JSON**: `runProcurementMutation`, `procurement` POST, `sourcing-events` POST ⇒ `safeJsonBody` (400)·
+  `[poId]` PATCH ⇒ `req.json().catch(() => null)` και επικύρωση ανά ενέργεια. Τα υπόλοιπα 8 στο pending.
+- **ΧΑ-3 · SSoT**: `ApiErrorHandler` με `REQUEST_ID_HEADER` (μετακόμισε στο `api-error-types`, φύλλο χωρίς `server-only`)
+  και `PRIVATE_NO_STORE` — η τιμή του άλλαξε από `no-cache, no-store, must-revalidate` σε `private, no-store`. Σβήστηκε το
+  περιττό `withPrivateNoStore` του `catalog-route` και το αχρησιμοποίητο `CatalogRoutePolicy.cache`.
+- **ΧΑ-4 · μετάφραση**: **δεν** υπάρχει γενικός μηχανισμός μετάφρασης `errorCode` στον client (μόνο ανά τομέα, π.χ.
+  `policy-error-translator`). Το `INTERNAL_SERVER_ERROR` είναι **αναγνωρίσιμο**, όχι ακόμη μεταφρασμένο ⇒ pending.
+
 ## Changelog
+- **2026-11-04** — **Διορθώσεις ανασκόπησης ασφαλείας** της ασπίδας (κύμα 3 Λ5): `ApiError` ≥500 χωρίς μήνυμα στο σύρμα
+  (factory + `ApiErrorHandler`)· `ProcurementRuleError` + `rethrowProcurementFailure`· `resolveProcurementErrorOutcome`
+  κρύβει ό,τι δεν είναι τυποποιημένο· σταθερό 502 στο `send-email`· σβήσιμο `CDN-Cache-Control`/`Surrogate-Control`/`Expires`·
+  `safeJsonBody` σε 3 handlers + `[poId]` PATCH· SSoT κεφαλίδων στο `ApiErrorHandler`· αφαίρεση `CatalogRoutePolicy.cache`.
+  Μεταλλάξεις 7/7 νέες σκοτωμένες (M8–M14).
 - **2026-11-04** — **Ασπίδα αποκρίσεων** (ADR-923 §23.5 Β2 · κύμα 3 Λ5, απόφαση Giorgio): νέο `lib/api/route-response-shield.ts`·
   `defineRoute` δέχεται `cache?: ResponseCachePolicy` (`lib/http/cache-control.ts`), κάθε απόκριση παίρνει `Cache-Control`
   (≥400 πάντα `private, no-store`)· απρόβλεπτο σφάλμα ⇒ `fallbackError` + `errorCode: 'INTERNAL_SERVER_ERROR'` + `requestId`

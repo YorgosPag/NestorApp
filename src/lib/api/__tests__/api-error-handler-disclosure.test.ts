@@ -33,6 +33,14 @@ describe('ApiErrorHandler — τι μαθαίνει ο πελάτης για μ�
     expect(response.headers.get('Cache-Control')).toContain('no-store');
   });
 
+  it('`ApiError` ≥500 (π.χ. `new ApiError(500, getErrorMessage(e))`) ⇒ γενικό μήνυμα, κρατά μόνο τον κωδικό HTTP', async () => {
+    const { response, body } = await handle(new ApiError(503, INTERNAL));
+    expect(response.status).toBe(503);
+    expect(JSON.stringify(body)).not.toContain('secrets');
+    expect(body).toMatchObject({ errorCode: 'INTERNAL_SERVER_ERROR', requestId: 'req_handler_1' });
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
   it('αναμενόμενο `ApiError` ⇒ κρατά το μήνυμά του (το διάλεξε ο κώδικας για τον πελάτη)', async () => {
     const { response, body } = await handle(new ApiError(409, 'Already exists', 'DUPLICATE'));
     expect(response.status).toBe(409);

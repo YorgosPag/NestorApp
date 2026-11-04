@@ -12,14 +12,15 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { defineRoute, ok, created, httpError } from '@/lib/api/define-route';
+import { defineRoute, ok, created } from '@/lib/api/define-route';
 import {
   listSourcingEvents,
   createSourcingEvent,
 } from '@/subapps/procurement/services/sourcing-event-service';
 import type { SourcingEventStatus } from '@/subapps/procurement/types/sourcing-event';
 import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { safeJsonBody } from '@/lib/validation/shared-schemas';
+import { rethrowProcurementFailure } from '../_shared/procurement-error-outcome';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('SOURCING_EVENTS_API');
@@ -65,16 +66,16 @@ export const GET = defineRoute({
 
 export const POST = defineRoute({
   rateLimit: 'sensitive',
+  fallbackError: 'Failed to create sourcing event',
   handler: async ({ req, auth }) => {
     try {
-      const parsed = safeParseBody(CreateSourcingEventSchema, await req.json());
+      const parsed = await safeJsonBody(CreateSourcingEventSchema, req);
       if (parsed.error) return parsed.error;
       const event = await createSourcingEvent(auth, parsed.data);
       return created(event);
     } catch (error) {
-      const message = getErrorMessage(error, 'Failed to create sourcing event');
-      logger.error('Sourcing event create error', { error: message });
-      httpError(400, message);
+      logger.error('Sourcing event create error', { error: getErrorMessage(error, 'Failed to create sourcing event') });
+      rethrowProcurementFailure(error, auth.globalRole, 'Failed to create sourcing event');
     }
   },
 });
