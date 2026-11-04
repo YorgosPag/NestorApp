@@ -58,22 +58,24 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "87ff5272771d101295822b9323ec29087d0779985dcfc4f4b79df603ff2f52d8",
-    "src/i18n/generated/routes/o__workspace__procurement__analytics.el.json": "a712d0cda7fd747e8a244e07ec385c4e087c0027c883077af6f53d723dc4f037",
-    "src/i18n/generated/routes/o__workspace__procurement__materials.el.json": "1a0b3aa16a7ec9d2f8525887c11289a4e8af4217ecaa1909796c7efe1eb93eaf",
-    "src/i18n/generated/routes/o__workspace__procurement__purchase-orders.el.json": "1863bf316836bd8696ba4b7d8450e57f13c3886dde655264a3663010dc1ed78f",
-    "src/i18n/generated/routes/o__workspace__procurement__quotes.el.json": "068110a0002f5a176a872e4770f22bb71452adc8f96287703bebbfef1f601611",
+    "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "8366cd22574fcca468cb25ece53b09cd691790bc599fed16ab680040c468dda6",
+    "src/i18n/generated/routes/o__workspace__procurement__analytics.el.json": "27a6956c28cb5b509af80ca2455df344daab1487dfbedb5ef810c473fa36e67a",
+    "src/i18n/generated/routes/o__workspace__procurement__materials.el.json": "650720e6b101dfc65643f137928cead7e64abe9ab1fe4628dc1f0c5f5dfbabcf",
+    "src/i18n/generated/routes/o__workspace__procurement__purchase-orders.el.json": "4e666a7eef53e096115851b2e3d5e3ef9d28db715a2262c1635086b2049a7bcc",
+    "src/i18n/generated/routes/o__workspace__procurement__quotes.el.json": "89493ef708e0f53ac31460db7e50cd25554faa5c8c7c3d4ef00f630f0e2e04ff",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "5998b0309e74b4b352593365609f082619804601c73371e6c739f4111657808b",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
-    "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "4360b67033c31b8a077b7c378ead5f7397a871761909dc7bd31653646a2dc772",
+    "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e694c874d3bf13e0bfd63e2e8d3c8e1dc5aa5ca4db51fed6136570844b6bd2eb",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "a3070cfb8da8557345ec5f25dce26ffe81e00c0fdf80c7ebba5117498f3161dc",
-    "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "24e8aacf568e57c234b1fa49bfb9c37663d607cc65e574fdd37bc2d6b9ec2274",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "62b9a8955bda59b9bcaf00cadc555a27c859b95208ad0e836eaa184c26b14299",
+    "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "ed27faaf054aff06555fb73e987982799aae7ecef3366d7511d1c369f8483e31",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json": "b7c1e20776fb9ad6be26039d9bd0c71dfac687f97998a872687dc3e47c997c48",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json": "9cf0c913c9f586ae7850ab0f1a6bfcb1c47dc4862db39dc9fb8acc4fec81b907",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "ce840d5c88ac8b79c0d70b626922ac22960a13cb0764ac0a9a5f475e1b5e68ba",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "afd271fe04907656674fb526d61e3445da8f3fba1dff33168f558b2420e00a84",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "0b154398cdfc7da08b112dc0a87df2c896c6f982cc85b1b1dd7628982f4d006b",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json": "4f2a1846793ff34d251298e4c65f2eaf4b7845232aafb77bddbdbf299d745db3",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "833f1f75349ec3140684597ec67c5f6690725809f226b26eb378bb77f9358190",
@@ -128,7 +130,7 @@
       "lazyRouteRegistries": "9b5e7bd46f0b1a00e0e720c490feaaae1ff28c77b5f2238bc800a871cd2bdb04",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "b449238091668debe8bb06435f34fa61b78d51cd838036af4e936cf92eaa174e",
+      "routeSlices": "b58ae01b916f847d1d66df5b292a591791654a168a344f7f4587bf3f7e215c45",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -138,7 +140,7 @@
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
       "registries": "0623fe953e85d3ee862fa5483f894a3b2c47f6555dbe1cbc5aec00980bb2b91a",
-      "supportedNamespaces": "8a1567ecabc7d4c5b5855c535f4f16750a71191cb862b4b9c954ca0d964a78b8"
+      "supportedNamespaces": "fa89a7818c04598eb7b5fad08c27169ee7062ae2ebf727798f7dac54fa8fd65e"
     },
     "namespaceBundles": {
       "AUDIT_TIMELINE_NAMESPACES": "18e38e5883fc36d385a27c7604dbf4144948e21b9761bdbee3c1dd700b95eb67",
@@ -198,7 +200,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "411c9bed75999c9bccb4d130bd8ba33bef7430b94aa7c1d0655d29cb729d51af",
+  "inputsSha256": "ac10485f0ac3f3310a34c72fe47c02a0a66a2e19de559172018cc7d998ebf6ae",
   "languages": [
     "el"
   ],
@@ -15544,6 +15546,7 @@
             "nav.purchaseOrders",
             "nav.quotes",
             "nav.rfqs",
+            "nav.subcontractLibrary",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -15872,6 +15875,7 @@
             "nav.purchaseOrders",
             "nav.quotes",
             "nav.rfqs",
+            "nav.subcontractLibrary",
             "nav.vendors"
           ],
           "prefixes": [
@@ -17610,6 +17614,7 @@
             "nav.purchaseOrders",
             "nav.quotes",
             "nav.rfqs",
+            "nav.subcontractLibrary",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -19502,6 +19507,7 @@
             "nav.purchaseOrders",
             "nav.quotes",
             "nav.rfqs",
+            "nav.subcontractLibrary",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -21645,6 +21651,7 @@
             "nav.purchaseOrders",
             "nav.quotes",
             "nav.rfqs",
+            "nav.subcontractLibrary",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -23052,6 +23059,7 @@
             "nav.purchaseOrders",
             "nav.quotes",
             "nav.rfqs",
+            "nav.subcontractLibrary",
             "nav.vendors",
             "overview.drill.activeFilter",
             "overview.drill.clear"
@@ -23225,6 +23233,470 @@
           "prefixes": [
             "trades",
             "trades.groups"
+          ],
+          "whole": false
+        },
+        "uom": {
+          "keys": [],
+          "prefixes": [
+            "name",
+            "symbol"
+          ],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__procurement__subcontracts__library": {
+      "page": "src/app/(app)/o/[workspace]/procurement/subcontracts/library/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "a11y.calendarNavigation",
+            "a11y.chooseDate",
+            "a11y.nextMonth",
+            "a11y.previousMonth",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "actions.close",
+            "actions.next",
+            "actions.previous",
+            "actions.resizeDetails",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "emptyState.selectItem.description",
+            "emptyState.selectItem.title",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "filters": {
+          "keys": [
+            "clearFilters",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "procurement": {
+          "keys": [
+            "nav.agreements",
+            "nav.analytics",
+            "nav.ariaLabel",
+            "nav.hub",
+            "nav.materials",
+            "nav.purchaseOrders",
+            "nav.quotes",
+            "nav.rfqs",
+            "nav.subcontractLibrary",
+            "nav.vendors",
+            "subcontracts.editor.deviations.dialog.cancel",
+            "subcontracts.editor.deviations.dialog.reason",
+            "subcontracts.editor.deviations.dialog.reasonRequired",
+            "subcontracts.library.actions.effectiveFrom",
+            "subcontracts.library.actions.effectiveNow",
+            "subcontracts.library.actions.markReviewed",
+            "subcontracts.library.actions.title",
+            "subcontracts.library.clauses.archived",
+            "subcontracts.library.clauses.chooseDescription",
+            "subcontracts.library.clauses.chooseTitle",
+            "subcontracts.library.clauses.inReview",
+            "subcontracts.library.clauses.noCurrent",
+            "subcontracts.library.clauses.showArchived",
+            "subcontracts.library.dialog.markReviewed.description",
+            "subcontracts.library.dialog.markReviewed.title",
+            "subcontracts.library.lead",
+            "subcontracts.library.loadFailed",
+            "subcontracts.library.loading",
+            "subcontracts.library.onboarding.approval",
+            "subcontracts.library.onboarding.clauses",
+            "subcontracts.library.onboarding.confirmDescription",
+            "subcontracts.library.onboarding.confirmTitle",
+            "subcontracts.library.onboarding.lead",
+            "subcontracts.library.onboarding.legal",
+            "subcontracts.library.onboarding.noPermission",
+            "subcontracts.library.onboarding.seed",
+            "subcontracts.library.onboarding.seeding",
+            "subcontracts.library.onboarding.templates",
+            "subcontracts.library.onboarding.title",
+            "subcontracts.library.progress.approved",
+            "subcontracts.library.progress.complete",
+            "subcontracts.library.progress.legal",
+            "subcontracts.library.progress.missing",
+            "subcontracts.library.progress.pending",
+            "subcontracts.library.progress.rejected",
+            "subcontracts.library.progress.summary",
+            "subcontracts.library.reasons.notAuthorized",
+            "subcontracts.library.report.clauses",
+            "subcontracts.library.report.dismiss",
+            "subcontracts.library.report.templates",
+            "subcontracts.library.report.title",
+            "subcontracts.library.review.arriving",
+            "subcontracts.library.review.chooseDescription",
+            "subcontracts.library.review.chooseTitle",
+            "subcontracts.library.review.emptyDescription",
+            "subcontracts.library.review.emptyTitle",
+            "subcontracts.library.review.keyboard",
+            "subcontracts.library.review.newClause",
+            "subcontracts.library.tabs.clauses",
+            "subcontracts.library.tabs.review",
+            "subcontracts.library.tabs.templates",
+            "subcontracts.library.templates.chooseDescription",
+            "subcontracts.library.templates.chooseTitle",
+            "subcontracts.library.templates.clauses",
+            "subcontracts.library.templates.code",
+            "subcontracts.library.templates.lines",
+            "subcontracts.library.templates.pendingTitle",
+            "subcontracts.library.templates.ready",
+            "subcontracts.library.templates.readyBadge",
+            "subcontracts.library.templates.trade",
+            "subcontracts.library.templates.waiting",
+            "subcontracts.library.templates.waitingBadge",
+            "subcontracts.library.templates.write",
+            "subcontracts.library.title",
+            "subcontracts.library.version.label",
+            "subcontracts.messages.pending"
+          ],
+          "prefixes": [
+            "subcontracts.library.actions",
+            "subcontracts.library.clauses",
+            "subcontracts.library.dialog",
+            "subcontracts.library.done",
+            "subcontracts.library.reasons"
+          ],
+          "whole": false
+        },
+        "quotes": {
+          "keys": [
+            "subcontracts.library.clauses.archived",
+            "subcontracts.library.reasons.notAuthorized",
+            "subcontracts.library.tabs.templates",
+            "subcontracts.library.templates.chooseDescription",
+            "subcontracts.library.templates.chooseTitle",
+            "subcontracts.library.templates.clauses",
+            "subcontracts.library.templates.code",
+            "subcontracts.library.templates.lines",
+            "subcontracts.library.templates.pendingTitle",
+            "subcontracts.library.templates.ready",
+            "subcontracts.library.templates.readyBadge",
+            "subcontracts.library.templates.trade",
+            "subcontracts.library.templates.waiting",
+            "subcontracts.library.templates.waitingBadge",
+            "subcontracts.library.templates.write"
+          ],
+          "prefixes": [
+            "subcontracts.library.clauses",
+            "trades"
           ],
           "whole": false
         },
@@ -24810,6 +25282,7 @@
             "nav.purchaseOrders",
             "nav.quotes",
             "nav.rfqs",
+            "nav.subcontractLibrary",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -31836,6 +32309,9 @@
           "keys": [
             "subcontracts.actions.checking",
             "subcontracts.actions.menu",
+            "subcontracts.actions.preview",
+            "subcontracts.editor.new.action",
+            "subcontracts.editor.saveFirst",
             "subcontracts.list.ariaLabel",
             "subcontracts.list.columns.actions",
             "subcontracts.list.columns.document",
@@ -31895,6 +32371,35 @@
             "subcontracts.list.value.atLeast",
             "subcontracts.list.value.unitRatesOnly",
             "subcontracts.list.value.unpricedLines"
+          ],
+          "prefixes": [
+            "subcontracts.list.role",
+            "trades"
+          ],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__projects__id__procurement__subcontracts__agreementId": {
+      "page": "src/app/(app)/o/[workspace]/projects/[id]/procurement/subcontracts/[agreementId]/page.tsx",
+      "wants": {
+        "procurement": {
+          "keys": [
+            "subcontracts.editor.breadcrumb",
+            "subcontracts.editor.notFound",
+            "subcontracts.list.title"
+          ],
+          "prefixes": [
+            "subcontracts.list.role",
+            "subcontracts.status"
+          ],
+          "whole": false
+        },
+        "quotes": {
+          "keys": [
+            "subcontracts.editor.breadcrumb",
+            "subcontracts.editor.notFound",
+            "subcontracts.list.title"
           ],
           "prefixes": [
             "subcontracts.list.role",
@@ -37328,7 +37833,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1241588
+    "sliceBytes": 1260139
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
