@@ -21,13 +21,14 @@ import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
 import { usePersonaContacts } from '@/hooks/procurement/usePersonaContacts';
+import { useSubcontractLibraryAuthority } from '@/hooks/procurement/subcontracts/useSubcontractAuthority';
 import { useSubcontractClauseLibrary, useSubcontractTradeTemplates } from '@/hooks/procurement/subcontracts/useSubcontractLibrary';
 import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
-import { getSubcontractAgreementUrl } from '@/lib/navigation/procurement-urls';
+import { getSubcontractAgreementUrl, getSubcontractLibraryUrl } from '@/lib/navigation/procurement-urls';
 import { settledLeave } from '@/lib/unsaved-edits/leave-guard';
-import { useRouter } from '@/lib/workspace/navigation';
+import { Link, useRouter } from '@/lib/workspace/navigation';
 import { createSubcontractAgreement } from '@/services/procurement/subcontracts/subcontract-agreements-api.client';
 import { subcontractFailureOf } from '@/services/procurement/subcontracts/subcontract-failure';
 import { draftFromTemplate } from '@/subapps/procurement/subcontracts/agreements/draft-from-template';
@@ -86,8 +87,22 @@ function TemplateField({ form }: { readonly form: ReturnType<typeof useNewAgreem
           ))}
         </SelectContent>
       </Select>
-      {form.templates.length === 0 && <p className="text-xs text-muted-foreground">{t('subcontracts.editor.new.noTemplates')}</p>}
+      {form.templates.length === 0 && <NoTemplatesHint />}
     </div>
+  );
+}
+
+/** Ποτέ αδιέξοδο (ADR-928 Φ3γ-0): χωρίς πρότυπα ⇒ ο δρόμος προς τη βιβλιοθήκη, ή **ποιος** μπορεί να τον ανοίξει. */
+function NoTemplatesHint() {
+  const { t } = useTranslation('procurement');
+  const { canSeed, canManageClauses } = useSubcontractLibraryAuthority();
+  return (
+    <p className="text-xs text-muted-foreground">
+      {t('subcontracts.editor.new.noTemplates')}{' '}
+      {canSeed || canManageClauses
+        ? <Link href={getSubcontractLibraryUrl()} className="font-medium text-foreground underline underline-offset-2">{t('subcontracts.editor.new.openLibrary')}</Link>
+        : t('subcontracts.editor.new.askAdmin')}
+    </p>
   );
 }
 

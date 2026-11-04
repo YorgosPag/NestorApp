@@ -329,7 +329,8 @@
     "materials": "Materials",
     "agreements": "Agreements",
     "analytics": "Analytics",
-    "ariaLabel": "Procurement sections"
+    "ariaLabel": "Procurement sections",
+    "subcontractLibrary": "Subcontract library"
   },
   "header": {
     "title": "Procurement",
@@ -1165,7 +1166,242 @@
         "scopeProject": "For this project",
         "scopeMaster": "Master agreement (for several projects, with work orders)",
         "unresolved": "Template clauses {clauses} have no approved version in force and will be left out.",
-        "create": "Create"
+        "create": "Create",
+        "openLibrary": "Open the library",
+        "askAdmin": "Ask a company administrator to load the subcontract library."
+      }
+    },
+    "library": {
+      "title": "Subcontract library",
+      "lead": "Versioned clauses, review and approval, translations and trade templates — the mould of every agreement.",
+      "loading": "Loading…",
+      "loadFailed": "The library did not load. Refresh the page; if it persists, the connection or read permission is missing.",
+      "tabs": {
+        "review": "To review",
+        "clauses": "Clauses",
+        "templates": "Trade templates"
+      },
+      "person": {
+        "system": "Proposed library"
+      },
+      "onboarding": {
+        "title": "The library is empty",
+        "lead": "Without approved clauses there are no templates, and without templates no agreement can be created. Start from the proposed library and review it clause by clause.",
+        "clauses": "{count, plural, one {# clause} other {# clauses}} from the company’s 2005–2009 agreements, rewritten for the 2026 framework.",
+        "legal": "All arrive as “needs legal review”: the app does not encode law and does not pretend to know it.",
+        "approval": "They arrive as proposals. No clause enters an agreement before a person approves it.",
+        "templates": "{count, plural, one {# trade template is written} other {# trade templates are written}} only once their clauses are approved.",
+        "seed": "Load the proposed library",
+        "seeding": "Loading…",
+        "confirmTitle": "Load the proposed library?",
+        "confirmDescription": "{clauses} clauses will be added as proposals to review. The {templates} templates are written once their clauses are approved. Nothing that exists changes.",
+        "noPermission": "The library is loaded by a company administrator (clauses and templates permission)."
+      },
+      "report": {
+        "title": "The proposed library was loaded",
+        "clauses": "Clauses: {created} new proposals · {existing} already existed.",
+        "templates": "Templates: {created} written · {pending} waiting for clause approvals.",
+        "dismiss": "Close"
+      },
+      "progress": {
+        "summary": "{decided} of {total} reviewed",
+        "complete": "Review of the proposed library is complete",
+        "approved": "{count} approved",
+        "pending": "{count} waiting",
+        "rejected": "{count} rejected",
+        "missing": "{count} not loaded",
+        "legal": "{count, plural, one {# awaits legal review} other {# await legal review}}"
+      },
+      "review": {
+        "keyboard": "J/K next/previous · A approve · R reject · Enter open",
+        "arriving": "More proposals are arriving…",
+        "newClause": "New clause",
+        "replaces": "Replaces version {version}",
+        "proposedBy": "Proposed by: {name}",
+        "text": "Text as it will print",
+        "emptyTitle": "Nothing to review",
+        "emptyDescription": "There is no open proposal. Clauses in force are under “Clauses”.",
+        "chooseTitle": "Choose a proposal",
+        "chooseDescription": "Or press J for the first in the queue."
+      },
+      "version": {
+        "label": "Version {version}",
+        "effectiveFrom": "in force from {date}",
+        "state": {
+          "proposed": "Proposed",
+          "approved": "Approved",
+          "rejected": "Rejected",
+          "superseded": "Superseded"
+        }
+      },
+      "legal": {
+        "needs_professional_review": "Needs legal review",
+        "reviewed": "Legally reviewed"
+      },
+      "parameters": {
+        "title": "Parameters and zones",
+        "none": "This clause has no parameters.",
+        "parameter": "Parameter",
+        "preferred": "Preferred",
+        "zones": "Zones",
+        "source": "Value from",
+        "ownValue": "the clause"
+      },
+      "terms": {
+        "retentionRate": "term: performance retention",
+        "withholdingRate": "term: tax withholding",
+        "penaltyPerDay": "term: penalty per day",
+        "penaltyCap": "term: penalty cap",
+        "cashLimit": "term: cash limit per payment",
+        "vatTreatment": "term: VAT treatment",
+        "paymentWeekday": "term: payment weekday"
+      },
+      "tolerance": {
+        "none": "Any valid value",
+        "fixed": "Only the preferred value passes freely",
+        "acceptable": "Free: {range}",
+        "walkAway": "never outside: {range}",
+        "forbidden": "forbidden: {options}"
+      },
+      "diff": {
+        "title": "Comparison",
+        "titleAgainst": "Comparison with the version in force ({version})",
+        "firstVersion": "First version — there is no previous one to compare with.",
+        "text": "Text",
+        "parameters": "Parameters",
+        "noTextChange": "The text did not change.",
+        "noParameterChange": "The parameters did not change.",
+        "added": "added",
+        "removed": "removed",
+        "preferredChange": "Preferred: {before} → {after}",
+        "previousPreferred": "The preferred value so far ({value}) under the new rules:",
+        "aspects": {
+          "kind": "kind",
+          "label": "label",
+          "source": "value source",
+          "preferred": "preferred",
+          "tolerance": "zones",
+          "choices": "choices"
+        }
+      },
+      "usage": {
+        "title": "Impact",
+        "templates": "{count, plural, =0 {No template contains it.} one {# template contains it — it will take this version in every new agreement:} other {# templates contain it — they will take this version in every new agreement:}}",
+        "drafts": "{count, plural, =0 {No draft agreement uses it.} one {# draft agreement uses it:} other {# draft agreements use it:}}",
+        "loadingDrafts": "Loading draft agreements…",
+        "pinned": "version {version}",
+        "behind": "on an older version ({version}) — will see “new version available”",
+        "issuedNote": "Issued agreements never change."
+      },
+      "actions": {
+        "title": "Version actions",
+        "approve": "Approve",
+        "reject": "Reject",
+        "withdraw": "Withdraw",
+        "markReviewed": "Legally reviewed",
+        "effectiveFrom": "In force from (optional)",
+        "effectiveNow": "From approval"
+      },
+      "dialog": {
+        "approve": {
+          "title": "Approve version {version}",
+          "description": "It becomes the version in force for every new agreement. The previous one is superseded; existing agreements keep their own."
+        },
+        "reject": {
+          "title": "Reject version {version}",
+          "description": "Write what must change — the proposer will see it."
+        },
+        "withdraw": {
+          "title": "Withdraw version {version}",
+          "description": "Your proposal closes without a decision."
+        },
+        "markReviewed": {
+          "title": "Legal review of version {version}",
+          "description": "You state that a lawyer or accountant has seen the text. The statement is recorded with your name."
+        }
+      },
+      "reasons": {
+        "notAuthorized": "You do not have permission for this action.",
+        "ownProposal": "You proposed it — someone else approves.",
+        "ownTranslation": "You proposed this translation — someone else approves.",
+        "translationStale": "The Greek text changed after the translation."
+      },
+      "done": {
+        "seed": "The proposed library was loaded.",
+        "approve": "The version was approved.",
+        "reject": "The version was rejected.",
+        "withdraw": "The proposal was withdrawn.",
+        "markReviewed": "The legal review was recorded.",
+        "proposeTranslation": "The translation was proposed.",
+        "approveTranslation": "The translation was approved.",
+        "archive": "Archived.",
+        "restore": "Restored."
+      },
+      "clauses": {
+        "showArchived": "Include archived",
+        "archived": "Archived",
+        "noCurrent": "No version in force",
+        "inForce": "In force: version {version}",
+        "inReview": "In review",
+        "openReview": "Open the proposal (version {version}) in review",
+        "currentText": "The version in force as it prints",
+        "chooseTitle": "Choose a clause",
+        "chooseDescription": "Text, zones, version history and translations.",
+        "archive": "Archive",
+        "restore": "Restore",
+        "archiveTitle": "Archive?",
+        "archiveDescription": "It will not enter new agreements. Those that already have it keep their version.",
+        "restoreTitle": "Restore?",
+        "restoreDescription": "It will be available again for new agreements."
+      },
+      "history": {
+        "title": "Version history",
+        "none": "No version yet.",
+        "proposed": "Proposed by {name}, {date}",
+        "decided": "decided by {name}, {date}",
+        "reviewed": "legal review: {name}",
+        "compare": "Compare versions",
+        "compareFrom": "From",
+        "compareTo": "To"
+      },
+      "translations": {
+        "title": "Translations",
+        "state": {
+          "approved": "approved",
+          "draft": "draft",
+          "stale": "out of date",
+          "missing": "missing"
+        },
+        "origin": {
+          "human": "by a person",
+          "machine_draft": "machine draft"
+        },
+        "by": "proposed by {name}",
+        "staleSince": "The Greek text changed since version {version}. The changes:",
+        "staleUnknown": "The Greek text changed after the translation.",
+        "propose": "Propose translation",
+        "edit": "New translation proposal",
+        "approve": "Approve translation",
+        "editorTitle": "Translation ({language}) — version {version}",
+        "editorDescription": "You write text only; parameters stay locked in place. The Greek is above each field.",
+        "heading": "Title",
+        "segment": "Text segment",
+        "locked": "Locked parameter:",
+        "send": "Propose translation"
+      },
+      "templates": {
+        "pendingTitle": "Proposed, waiting",
+        "readyBadge": "Ready",
+        "waitingBadge": "{count, plural, one {Waiting for # clause} other {Waiting for # clauses}}",
+        "ready": "All its clauses have a version in force — it can be written.",
+        "waiting": "Waiting for approval of the clauses:",
+        "write": "Write the ready templates",
+        "trade": "Trade",
+        "code": "Code",
+        "lines": "Lines",
+        "clauses": "Clauses",
+        "chooseTitle": "Choose a template",
+        "chooseDescription": "Template editing is coming soon; here you read and archive."
       }
     }
   }

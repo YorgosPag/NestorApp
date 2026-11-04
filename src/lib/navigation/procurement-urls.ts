@@ -87,6 +87,11 @@ export function getSubcontractAgreementUrl(projectId: string, agreementId: strin
   return typedHref(`/projects/${projectId}/procurement/subcontracts/${agreementId}`);
 }
 
+/** Η βιβλιοθήκη ρητρών και προτύπων υπεργολαβίας — **της εταιρείας**, όχι έργου (ADR-928 Φ3γ-0). */
+export function getSubcontractLibraryUrl() {
+  return typedHref('/procurement/subcontracts/library');
+}
+
 export function getRfqDetailUrl(projectId: string, rfqId: string) {
   return typedHref(`/projects/${projectId}/procurement/rfq/${rfqId}`);
 }

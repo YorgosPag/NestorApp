@@ -2438,6 +2438,19 @@
       ],
       "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
     },
+    "src/app/(app)/o/[workspace]/procurement/subcontracts/library/page.tsx": {
+      "sealed": 11837,
+      "sealedAt": "2026-11-04",
+      "history": [
+        {
+          "from": 0,
+          "to": 11837,
+          "at": "2026-11-04",
+          "why": "ADR-928 §5.19 Φ3γ-0 (2026-11-04) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 11837 bytes · 6,7% κελύφους · 4 ns [filters, procurement, quotes, uom]. Χωρίς `ActivityTab` (θα πρόσθετε 2 τριάδες στο χρέος εισδοχής, ADR-744 §27)."
+        }
+      ],
+      "reason": "ADR-928 §5.19 Φ3γ-0 — Η ΒΙΒΛΙΟΘΗΚΗ ΡΗΤΡΩΝ ΚΑΙ ΠΡΟΤΥΠΩΝ ΥΠΕΡΓΟΛΑΒΙΑΣ (`/o/[workspace]/procurement/subcontracts/library`). Η κεφαλίδα, οι καρτέλες, η ουρά, η λίστα ρητρών/προτύπων, η πρόοδος και η κενή κατάσταση σποράς ζωγραφίζουν στο πρώτο καρέ κλειδιά `procurement:subcontracts.library.*` που το κέλυφος δεν έχει. Καταχωρείται από το client module της σελίδας (`SubcontractLibraryContent` — το `page.tsx` είναι Server Component). ⚠️ Ο έλεγχος πρότασης, η λεπτομέρεια ρήτρας, οι μεταφράσεις, η σύγκριση και τα μηνύματα ευρημάτων ΔΕΝ μπαίνουν εδώ: ζουν πίσω από `import()` (`ClauseReviewPanel` · `ClauseDetail` · `TranslationEditorDialog` · `subcontract-message-keys.ts`, ADR-744 §34)."
+    },
     "src/app/(app)/o/[workspace]/procurement/vendors/page.tsx": {
       "sealed": 9799,
       "sealedAt": "2026-11-01",

@@ -53,10 +53,19 @@ function blockText(block: DocumentBlock): string {
   return block.items.map((item, index) => `${block.ordered ? `${index + 1}.` : '•'} ${inlineText(item)}`).join('\n');
 }
 
+/** Οι προτιμώμενες τιμές μιας έκδοσης — ό,τι θα έγραφε ένα νέο συμφωνητικό χωρίς αλλαγή. */
+export function preferredValuesOf(parameters: readonly ClauseParameterDefinition[]): Record<string, ClauseParameterValue> {
+  return Object.fromEntries(parameters.map((parameter) => [parameter.key, parameter.preferred]));
+}
+
+/** Τα μπλοκ της ρήτρας όπως τυπώνονται, με τις προτιμώμενες τιμές — ο **ίδιος** `renderClauseBlocks` με το έγγραφο. */
+export function clausePrintedBlocks(clause: ComparableClause, locale: DocumentLocale): DocumentBlock[] {
+  return renderClauseBlocks(clause.body.blocks, { parameters: clause.parameters, values: preferredValuesOf(clause.parameters) }, locale);
+}
+
 /** Το κείμενο της ρήτρας όπως τυπώνεται, με τις προτιμώμενες τιμές — επικεφαλίδα και μπλοκ σε χωριστές παραγράφους. */
 export function clausePrintedText(clause: ComparableClause, locale: DocumentLocale): string {
-  const values: Record<string, ClauseParameterValue> = Object.fromEntries(clause.parameters.map((parameter) => [parameter.key, parameter.preferred]));
-  const blocks = renderClauseBlocks(clause.body.blocks, { parameters: clause.parameters, values }, locale);
+  const blocks = clausePrintedBlocks(clause, locale);
   return [clause.body.heading, ...blocks.map(blockText)].filter((part) => part.length > 0).join('\n\n');
 }
 

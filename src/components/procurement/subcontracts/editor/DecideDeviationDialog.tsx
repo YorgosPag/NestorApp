@@ -6,19 +6,16 @@
  * 🔑 CAS με ό,τι βλέπει ο άνθρωπος (`expectedRevision` = η αναθεώρηση του εγγράφου που κοιτάζει). Αν άλλαξε στο μεταξύ,
  *    ο γραφέας απαντά 409 και η ζωντανή ανάγνωση έχει ήδη τη νέα εκδοχή — προειδοποίηση, ποτέ απόφαση στα τυφλά.
  * 🔑 Η απόρριψη θέλει αιτιολογία (Ironclad: «add an explanation»): ο αιτών πρέπει να μάθει **τι** να αλλάξει.
+ * 🔑 Ο διάλογος είναι ο κοινός `ReasonDialog` (ADR-928 Φ3γ-0)· εδώ ζει μόνο η πράξη.
  */
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { decideSubcontractAgreementDeviation } from '@/services/procurement/subcontracts/subcontract-agreements-api.client';
 import { subcontractFailureOf } from '@/services/procurement/subcontracts/subcontract-failure';
 import type { DeviationRow } from '@/subapps/procurement/subcontracts/agreements/deviation-decisions';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
+import { ReasonDialog } from '../ReasonDialog';
 import { useSubcontractFailureNotice } from '../subcontract-messages';
 
 export type DeviationDecision = 'approved' | 'rejected';
@@ -36,41 +33,29 @@ export function DecideDeviationDialog({ agreement, row, decision, summary, onClo
   const { t } = useTranslation('procurement');
   const { success } = useNotifications();
   const notifyFailure = useSubcontractFailureNotice();
-  const [reason, setReason] = useState('');
-  const [sending, setSending] = useState(false);
-  const needsReason = decision === 'rejected' && reason.trim().length === 0;
 
-  const send = async () => {
-    setSending(true);
+  const send = async (reason: string | null): Promise<boolean> => {
     try {
       await decideSubcontractAgreementDeviation(agreement.id, {
-        expectedRevision: agreement.revision, clauseKey: row.clauseKey, parameterKey: row.parameterKey, decision, reason: reason.trim() || null,
+        expectedRevision: agreement.revision, clauseKey: row.clauseKey, parameterKey: row.parameterKey, decision, reason,
       });
       success(t(`subcontracts.editor.deviations.done.${decision}`));
-      onClose();
+      return true;
     } catch (cause) {
       notifyFailure(subcontractFailureOf(cause));
-      setSending(false);
+      return false;
     }
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !sending && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t(`subcontracts.editor.deviations.dialog.${decision}`)}</DialogTitle>
-          <DialogDescription>{summary}</DialogDescription>
-        </DialogHeader>
-        <Label htmlFor="deviation-decision-reason">{t('subcontracts.editor.deviations.dialog.reason')}</Label>
-        <Textarea id="deviation-decision-reason" value={reason} onChange={(event) => setReason(event.target.value)} rows={3} />
-        {needsReason && <p className="text-xs text-muted-foreground">{t('subcontracts.editor.deviations.dialog.reasonRequired')}</p>}
-        <DialogFooter>
-          <Button type="button" variant="outline" disabled={sending} onClick={onClose}>{t('subcontracts.editor.deviations.dialog.cancel')}</Button>
-          <Button type="button" variant={decision === 'rejected' ? 'destructive' : 'default'} disabled={sending || needsReason} onClick={() => void send()}>
-            {t(`subcontracts.editor.deviations.${decision === 'approved' ? 'approve' : 'reject'}`)}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ReasonDialog
+      title={t(`subcontracts.editor.deviations.dialog.${decision}`)}
+      description={summary}
+      confirmLabel={t(`subcontracts.editor.deviations.${decision === 'approved' ? 'approve' : 'reject'}`)}
+      destructive={decision === 'rejected'}
+      reasonRequired={decision === 'rejected'}
+      onSend={send}
+      onClose={onClose}
+    />
   );
 }

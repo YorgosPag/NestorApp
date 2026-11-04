@@ -17,6 +17,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useCapabilities, type CapabilityGate } from '@/auth/hooks/useCapability';
+import { useAuth } from '@/hooks/useAuth';
 import { useProjectCapabilities } from '@/hooks/useProjectCapabilities';
 import { isGranted } from '@/types/capability-authority';
 import type { PermissionId } from '@/lib/auth/types';
@@ -26,10 +27,18 @@ import {
 } from '@/subapps/procurement/subcontracts/vocabulary/subcontract-authorities';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
 
-/** Οι δικαιοδοσίες που κρίνει αυτή η οθόνη, στη σειρά του πίνακα. */
+/** Οι δικαιοδοσίες που κρίνει η οθόνη συμφωνητικών, στη σειρά του πίνακα. */
 const SCREEN_AUTHORITIES = ['agreements', 'assign', 'approveDeviation'] as const satisfies readonly SubcontractAuthority[];
 
-const COMPANY_PERMISSIONS: readonly PermissionId[] = SCREEN_AUTHORITIES.flatMap((authority) => SUBCONTRACT_AUTHORITY_PERMISSIONS[authority]);
+/** Οι δικαιοδοσίες της βιβλιοθήκης — **εταιρικές**, όχι έργου (§5.13 απόφαση 8). */
+const LIBRARY_AUTHORITIES = ['propose', 'manage', 'templates', 'seed'] as const satisfies readonly SubcontractAuthority[];
+
+const permissionsOf = (authorities: readonly SubcontractAuthority[]): readonly PermissionId[] => [
+  ...new Set(authorities.flatMap((authority) => SUBCONTRACT_AUTHORITY_PERMISSIONS[authority])),
+];
+
+const COMPANY_PERMISSIONS = permissionsOf(SCREEN_AUTHORITIES);
+const LIBRARY_PERMISSIONS = permissionsOf(LIBRARY_AUTHORITIES);
 
 type Gates = Readonly<Record<PermissionId, CapabilityGate>>;
 
@@ -83,5 +92,37 @@ export function useSubcontractAuthority(projectId: string): SubcontractAuthority
       canApproveDeviation: company.approveDeviation,
     }),
     [canManage, projectManage, projectAssign, company],
+  );
+}
+
+export interface SubcontractLibraryAuthorityView {
+  /** Ο θεατής — για τη διάκριση καθηκόντων (`library-action-blocks`). `''` όσο δεν έχει φορτώσει. */
+  readonly actorUid: string;
+  /** Νέα ρήτρα/έκδοση · μετάφραση · απόσυρση **δικής μου** πρότασης. */
+  readonly canPropose: boolean;
+  /** Έγκριση · απόρριψη · νομικός έλεγχος · αρχειοθέτηση ρήτρας. */
+  readonly canManageClauses: boolean;
+  /** Πρότυπα ειδικότητας. */
+  readonly canManageTemplates: boolean;
+  /** Σπορά της προτεινόμενης βιβλιοθήκης — θέλει **και** ρήτρες **και** πρότυπα. */
+  readonly canSeed: boolean;
+}
+
+/**
+ * Τι επιτρέπεται στον θεατή πάνω στη **βιβλιοθήκη** της εταιρείας (ADR-928 Φ3γ-0). Ίδιος κριτής (`companyGrants` πάνω στον
+ * ΕΝΑ πίνακα), ίδιο fail-closed: χωρίς ταυτότητα ⇒ `false` παντού.
+ */
+export function useSubcontractLibraryAuthority(): SubcontractLibraryAuthorityView {
+  const gates = useCapabilities(LIBRARY_PERMISSIONS);
+  const actorUid = useAuth().user?.uid ?? '';
+  return useMemo(
+    () => ({
+      actorUid,
+      canPropose: companyGrants(gates, 'propose'),
+      canManageClauses: companyGrants(gates, 'manage'),
+      canManageTemplates: companyGrants(gates, 'templates'),
+      canSeed: companyGrants(gates, 'seed'),
+    }),
+    [actorUid, gates],
   );
 }

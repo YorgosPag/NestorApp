@@ -34,6 +34,29 @@ const agreementsByProject: ProcurementCatalogListConfig<SubcontractAgreement> = 
   liveness: null,
 };
 
+const companyDrafts: ProcurementCatalogListConfig<SubcontractAgreement> = {
+  ...agreementsByProject,
+  cache: createStaleCache<SubcontractAgreement[]>('subcontract-agreements-company-drafts'),
+  label: 'Subcontract draft agreements (company)',
+};
+
+/**
+ * Ο **ένας** στόχος των πρόχειρων της εταιρείας: `companyId ==` (υπηρεσία) + `status == 'draft'` + `updatedAt ↓` — ο
+ * **υπάρχων** δείκτης `companyId + status + updatedAt` (`firestore.indexes.json`), κανένας νέος.
+ */
+const COMPANY_DRAFTS_SCOPE: ProcurementCatalogListScope = {
+  cacheKey: 'company-drafts',
+  constraints: [where('status', '==', 'draft'), orderBy('updatedAt', 'desc')],
+};
+
+/**
+ * Τα **πρόχειρα** συμφωνητικά όλης της εταιρείας (ADR-928 Φ3γ-0) — η επίπτωση μιας απόφασης βιβλιοθήκης («ποια
+ * πρόχειρα δένουν αυτή τη ρήτρα, σε ποια έκδοση»). Τα εκδοθέντα **δεν** αλλάζουν ποτέ (§5.6), άρα δεν διαβάζονται.
+ */
+export function useCompanyDraftSubcontractAgreements(): ProcurementCatalogList<SubcontractAgreement> {
+  return useProcurementCatalogList(companyDrafts, COMPANY_DRAFTS_SCOPE);
+}
+
 export function useProjectSubcontractAgreements(projectId: string): ProcurementCatalogList<SubcontractAgreement> {
   const scope = useMemo<ProcurementCatalogListScope>(
     () => ({

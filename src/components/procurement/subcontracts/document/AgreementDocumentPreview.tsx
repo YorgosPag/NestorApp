@@ -23,7 +23,8 @@ function Inlines({ inlines }: { inlines: readonly DocumentInline[] }) {
   );
 }
 
-function Blocks({ blocks }: { blocks: readonly DocumentBlock[] }) {
+/** Τα μπλοκ ενός κειμένου εγγράφου — κοινά με την ανάγνωση ρήτρας στη βιβλιοθήκη (ADR-928 Φ3γ-0): ίδια λέξη, ίδια μορφή. */
+export function DocumentBlocks({ blocks }: { blocks: readonly DocumentBlock[] }) {
   return (
     <>
       {blocks.map((block, index) => {
@@ -47,7 +48,7 @@ function LineRow({ line, byMeasurement }: { line: DocumentLineRow; byMeasurement
         <p>{line.description}</p>
         {line.comment && <p className="text-xs text-muted-foreground">{line.comment}</p>}
         {line.amountInWords && <p className="text-xs italic text-muted-foreground">{line.amountInWords}</p>}
-        {line.measurementRule.length > 0 && <section className="mt-1 text-xs text-muted-foreground"><Blocks blocks={line.measurementRule} /></section>}
+        {line.measurementRule.length > 0 && <section className="mt-1 text-xs text-muted-foreground"><DocumentBlocks blocks={line.measurementRule} /></section>}
       </td>
       <td className="py-2 pr-2">{line.unit}</td>
       <td className="py-2 pr-2 text-right tabular-nums">{line.quantity ?? byMeasurement}</td>
@@ -144,7 +145,7 @@ export function AgreementDocumentPreview({ document }: { document: AgreementDocu
               <li key={clause.clauseKey} className="space-y-1">
                 <h4 className="font-semibold">{clause.number}. {clause.heading}</h4>
                 {clause.untranslatedNote && <p role="note" className="text-xs text-destructive">{clause.untranslatedNote}</p>}
-                <Blocks blocks={clause.blocks} />
+                <DocumentBlocks blocks={clause.blocks} />
               </li>
             ))}
           </ol>
