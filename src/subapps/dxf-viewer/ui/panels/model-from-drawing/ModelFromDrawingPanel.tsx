@@ -49,6 +49,7 @@ import {
   RejectedSection,
   StatusLegend,
 } from './ModelFromDrawingSections';
+import { ImageSourceStart, ImageSourceSummary, type ImageSourceView } from './PlanRecognitionSections';
 
 export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
   readonly onClose: () => void;
@@ -57,11 +58,15 @@ export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
   readonly onConfirmGroup: (thicknessMm: number, category: WallCategory) => void;
   readonly onSetUndecided: (key: string, isWall: boolean) => void;
   readonly onApprove: () => void;
+  /** ADR-929 Φ5 — αναγνώριση από την εικόνα του υποβάθρου του ενεργού ορόφου. */
+  readonly onRecognizeImage: () => void;
 }
 
 export interface ModelFromDrawingPanelProps {
   readonly state: ModelFromDrawingState;
   readonly actions: ModelFromDrawingPanelActions;
+  /** ADR-929 Φ5 — η πηγή «εικόνα υποβάθρου», όπως την υπολογίζει ο host. */
+  readonly imageSource: ImageSourceView;
 }
 
 /** Κάθε ειδοποίηση με ΡΗΤΟ κλειδί (όχι συναρμολογημένο): το CHECK 3.8 βλέπει ότι υπάρχουν όλα. */
@@ -73,6 +78,7 @@ function noticeText(notice: ModelFromDrawingNotice, role: ModelFromDrawingSample
     case 'no-color': return t('modelFromDrawing.notice.no-color');
     case 'stale': return t('modelFromDrawing.notice.stale');
     case 'unconfirmed': return t('modelFromDrawing.notice.unconfirmed');
+    case 'uncalibrated': return t('modelFromDrawing.notice.uncalibrated');
     case 'written': return t('modelFromDrawing.notice.written', { count: notice.count });
     case 'no-walls': return t('modelFromDrawing.notice.no-walls');
     case 'openings-written': return t('modelFromDrawing.notice.openings-written', { count: notice.count });
@@ -119,19 +125,35 @@ function ReviewBody(props: ModelFromDrawingPanelProps & { readonly t: Translate 
   );
 }
 
-function WallsStep({ state, actions, t }: ModelFromDrawingPanelProps & { readonly t: Translate }): React.ReactElement | null {
-  const { proposal, wallColorHex } = state;
+/** Η πηγή «σχέδιο»: το χρώμα-ρόλος που έδειξε ο άνθρωπος, και «άλλο δείγμα». */
+function SceneSampleLine({ colorHex, onResample, t }: {
+  readonly colorHex: string | null;
+  readonly onResample: () => void;
+  readonly t: Translate;
+}): React.ReactElement {
+  return (
+    <p className="m-0 flex items-center gap-1.5 text-xs text-foreground">
+      {colorHex ? <ColorChip hex={colorHex} /> : null}
+      <span className="flex-1">{t('modelFromDrawing.sample.label')}</span>
+      <Button type="button" variant="ghost" size="xs" onClick={onResample}>
+        {t('modelFromDrawing.sample.change')}
+      </Button>
+    </p>
+  );
+}
+
+function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProps & { readonly t: Translate }): React.ReactElement | null {
+  const { proposal } = state;
   if (!proposal) return null;
-  const locked = proposal.walls.length === 0 || groupsAwaitingConfirmation(proposal).length > 0;
+  const fromImage = state.lineSource.kind === 'raster';
+  const locked = proposal.walls.length === 0
+    || groupsAwaitingConfirmation(proposal).length > 0
+    || (fromImage && !imageSource.calibrated);
   return (
     <>
-      <p className="m-0 flex items-center gap-1.5 text-xs text-foreground">
-        {wallColorHex ? <ColorChip hex={wallColorHex} /> : null}
-        <span className="flex-1">{t('modelFromDrawing.sample.label')}</span>
-        <Button type="button" variant="ghost" size="xs" onClick={actions.onResample}>
-          {t('modelFromDrawing.sample.change')}
-        </Button>
-      </p>
+      {fromImage
+        ? <ImageSourceSummary view={imageSource} onResample={actions.onResample} t={t} />
+        : <SceneSampleLine colorHex={state.wallColorHex} onResample={actions.onResample} t={t} />}
       <StatusLegend proposal={proposal} t={t} />
       <GroupsSection groups={proposal.groups} onConfirm={actions.onConfirmGroup} t={t} />
       <DecisionsSection
@@ -150,7 +172,7 @@ function WallsStep({ state, actions, t }: ModelFromDrawingPanelProps & { readonl
   );
 }
 
-export function ModelFromDrawingPanel({ state, actions }: ModelFromDrawingPanelProps): React.ReactElement | null {
+export function ModelFromDrawingPanel({ state, actions, imageSource }: ModelFromDrawingPanelProps): React.ReactElement | null {
   const { t } = useTranslation('dxf-viewer-shell');
   if (state.phase === 'closed') return null;
   return (
@@ -170,10 +192,13 @@ export function ModelFromDrawingPanel({ state, actions }: ModelFromDrawingPanelP
                 : t('modelFromDrawing.pick.instruction')}
             </p>
             <Notice state={state} t={t} />
+            {state.sampleRole === 'wall'
+              ? <ImageSourceStart view={imageSource} onRecognize={actions.onRecognizeImage} t={t} />
+              : null}
             {state.sampleRole === 'wall' ? <OpeningsStart onStart={actions.onStartOpenings} t={t} /> : null}
           </>
         ) : (
-          <ReviewBody state={state} actions={actions} t={t} />
+          <ReviewBody state={state} actions={actions} imageSource={imageSource} t={t} />
         )}
       </section>
     </TopoReviewPanel>

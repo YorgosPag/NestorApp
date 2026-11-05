@@ -48,6 +48,8 @@ import {
   useModelFromDrawingState,
 } from '../systems/model-from-drawing/model-from-drawing-store';
 import type { Point2D } from '../rendering/types/Types';
+import { planRecognitionSession } from '../systems/plan-recognition/plan-recognition-session';
+import { usePlanRecognitionWiring } from './usePlanRecognitionWiring';
 import {
   ModelFromDrawingPanel,
   type ModelFromDrawingPanelActions,
@@ -116,6 +118,8 @@ function useAssistantWiring(levelManager: LevelsHookReturn, undoName: string): A
 
   const start = React.useCallback((): void => {
     typingRef.current = beginTypingRef.current();
+    // ADR-929 Φ5 — νέα συνεδρία ⇒ καμία παλιά αναγνώριση πάνω στον καμβά.
+    planRecognitionSession.close();
     modelFromDrawingSession.open();
   }, []);
 
@@ -150,6 +154,35 @@ function useSamplePickMode(picking: boolean, hint: string): void {
   );
 }
 
+/**
+ * Ο βοηθός ακολουθεί τον κόσμο: δείγμα που άφησε ο καμβάς · αλλαγή ενεργού επιπέδου · αποσύνδεση του host.
+ */
+function useSceneSync(
+  pendingSample: Point2D | null,
+  levelId: string | null,
+  getDeps: () => ModelFromDrawingDeps,
+  getOpeningDeps: () => OpeningSessionDeps,
+): void {
+  // Το κλικ του καμβά άφησε δείγμα → το υιοθετεί ο ελεγκτής του ρόλου του (one-shot· ο καθένας
+  // αγνοεί το δείγμα του άλλου).
+  React.useEffect(() => {
+    if (!pendingSample) return;
+    modelFromDrawingSession.adoptSample(getDeps());
+    modelFromDrawingOpeningsSession.adoptSample(getOpeningDeps());
+    // ADR-929 Φ5 — δείγμα γραμμής σχεδίου ⇒ η πηγή είναι πια το σχέδιο: η επικάλυψη της εικόνας φεύγει.
+    if (modelFromDrawingStore.get().lineSource.kind === 'scene') planRecognitionSession.close();
+  }, [pendingSample, getDeps, getOpeningDeps]);
+
+  // Αλλαγή ενεργού επιπέδου με πρόταση ανοιχτή → η πρόταση αφορά άλλη σκηνή: ξαναϋπολόγισε.
+  React.useEffect(() => {
+    modelFromDrawingSession.refresh(getDeps());
+    modelFromDrawingOpeningsSession.refresh(getOpeningDeps());
+  }, [levelId, getDeps, getOpeningDeps]);
+
+  // Δίχτυ: αν ο host φύγει ενώ ο βοηθός είναι ανοιχτός, μη μείνει οπλισμένος ο καμβάς.
+  React.useEffect(() => () => modelFromDrawingSession.close(), []);
+}
+
 export function ModelFromDrawingHost({ levelManager }: ModelFromDrawingHostProps): React.ReactElement | null {
   const { t } = useTranslation('dxf-viewer-shell');
   const state = useModelFromDrawingState();
@@ -166,29 +199,13 @@ export function ModelFromDrawingHost({ levelManager }: ModelFromDrawingHostProps
     : t('modelFromDrawing.pickHint'));
 
   React.useEffect(() => EventBus.on('dxf:model-from-drawing-requested', start), [start]);
+  useSceneSync(state.pendingSample, levelManager.currentLevelId, getDeps, getOpeningDeps);
 
-  // Το κλικ του καμβά άφησε δείγμα → το υιοθετεί ο ελεγκτής του ρόλου του (one-shot· ο καθένας
-  // αγνοεί το δείγμα του άλλου).
-  React.useEffect(() => {
-    if (!state.pendingSample) return;
-    modelFromDrawingSession.adoptSample(getDeps());
-    modelFromDrawingOpeningsSession.adoptSample(getOpeningDeps());
-  }, [state.pendingSample, getDeps, getOpeningDeps]);
-
-  // Αλλαγή ενεργού επιπέδου με πρόταση ανοιχτή → η πρόταση αφορά άλλη σκηνή: ξαναϋπολόγισε.
-  const levelId = levelManager.currentLevelId;
-  React.useEffect(() => {
-    modelFromDrawingSession.refresh(getDeps());
-    modelFromDrawingOpeningsSession.refresh(getOpeningDeps());
-  }, [levelId, getDeps, getOpeningDeps]);
-
-  // Δίχτυ: αν ο host φύγει ενώ ο βοηθός είναι ανοιχτός, μη μείνει οπλισμένος ο καμβάς.
-  React.useEffect(() => () => modelFromDrawingSession.close(), []);
-
-  const actions = usePanelActions(start, getDeps, getOpeningDeps);
+  const { imageSource, recognizeImage } = usePlanRecognitionWiring(state, getDeps);
+  const actions = usePanelActions(start, getDeps, getOpeningDeps, recognizeImage);
 
   if (state.phase === 'closed') return null;
-  return <ModelFromDrawingPanel state={state} actions={actions} />;
+  return <ModelFromDrawingPanel state={state} actions={actions} imageSource={imageSource} />;
 }
 
 /**
@@ -200,6 +217,7 @@ function usePanelActions(
   start: () => void,
   getDeps: () => ModelFromDrawingDeps,
   getOpeningDeps: () => OpeningSessionDeps,
+  recognizeImage: () => void,
 ): ModelFromDrawingPanelActions {
   return React.useMemo((): ModelFromDrawingPanelActions => ({
     onClose: () => modelFromDrawingSession.close(),
@@ -215,5 +233,6 @@ function usePanelActions(
     onApproveOpenings: () => {
       if (modelFromDrawingOpeningsSession.approve(getOpeningDeps())) modelFromDrawingSession.refresh(getDeps(), true);
     },
-  }), [start, getDeps, getOpeningDeps]);
+    onRecognizeImage: recognizeImage,
+  }), [start, getDeps, getOpeningDeps, recognizeImage]);
 }

@@ -34,8 +34,13 @@ import {
   wallProposalSignature,
   type AssistantPreview,
 } from '../../bim/model-from-drawing/assistant-preview';
-import { resolveEntityColorHex } from '../selection/select-similar-by-color';
 import { isSampleFailure, readLiveScene, sampleColorAt } from './model-from-drawing-live';
+import {
+  isRasterPlacementCalibrated,
+  resolveProposalLines,
+  SCENE_LINE_SOURCE,
+  type ProposalLineSource,
+} from './proposal-line-source';
 import { modelFromDrawingStore, type ModelFromDrawingState } from './model-from-drawing-store';
 
 /** Ό,τι χρειάζεται ο ελεγκτής από τον κόσμο — διαβάζεται ΤΗ ΣΤΙΓΜΗ της πράξης, ποτέ νωρίτερα. */
@@ -51,34 +56,38 @@ export interface ModelFromDrawingDeps {
 }
 
 /** Ό,τι αποφασίζει ο άνθρωπος και καθορίζει την πρόταση. */
-type ProposalInputs = Pick<ModelFromDrawingState, 'wallColorHex' | 'acceptedKeys' | 'categoryByThicknessMm'>;
+type ProposalInputs = Pick<ModelFromDrawingState, 'lineSource' | 'wallColorHex' | 'acceptedKeys' | 'categoryByThicknessMm'>;
 
 interface Computed {
   readonly proposal: WallProposal;
   readonly preview: AssistantPreview;
 }
 
-/** Πρόταση + προεπισκόπηση από τη ΖΩΝΤΑΝΗ σκηνή. `null` χωρίς σκηνή ή χωρίς δείγμα. */
+/**
+ * Πρόταση + προεπισκόπηση από τη ΖΩΝΤΑΝΗ σκηνή. `null` χωρίς σκηνή, χωρίς δείγμα, ή (πηγή εικόνα) χωρίς υπόβαθρο.
+ * Η πηγή γραμμών (ADR-929 Φ5) αλλάζει μόνο την είσοδο· η μηχανή είναι η ίδια.
+ */
 function compute(inputs: ProposalInputs, deps: ModelFromDrawingDeps): Computed | null {
   const live = readLiveScene(deps.accessor);
-  if (!live || !inputs.wallColorHex) return null;
+  if (!live) return null;
+  const lines = resolveProposalLines(inputs.lineSource, live, inputs.wallColorHex, deps.layersById);
+  if (!lines) return null;
   const proposal = computeWallProposal({
-    entities: live.entities,
-    wallColorHex: inputs.wallColorHex,
-    colorOf: (e) => resolveEntityColorHex(e, deps.layersById),
+    ...lines,
     sceneUnits: live.sceneUnits,
     levelId: live.levelId,
     acceptedKeys: inputs.acceptedKeys,
     categoryByThicknessMm: inputs.categoryByThicknessMm,
     typeWall: deps.typing.typeWall,
   });
-  return { proposal, preview: buildAssistantPreview(proposal, live.entities) };
+  return { proposal, preview: buildAssistantPreview(proposal, lines.entities) };
 }
 
 /** Ξαναϋπολογίζει με (ενδεχομένως) νέες αποφάσεις και γράφει το αποτέλεσμα στο store. */
 function recompute(inputs: Partial<ProposalInputs>, deps: ModelFromDrawingDeps): void {
   const state = modelFromDrawingStore.get();
   const merged: ProposalInputs = {
+    lineSource: inputs.lineSource ?? state.lineSource,
     wallColorHex: inputs.wallColorHex ?? state.wallColorHex,
     acceptedKeys: inputs.acceptedKeys ?? state.acceptedKeys,
     categoryByThicknessMm: inputs.categoryByThicknessMm ?? state.categoryByThicknessMm,
@@ -110,7 +119,28 @@ export const modelFromDrawingSession = {
       modelFromDrawingStore.patch({ notice: { kind: sampled } });
       return;
     }
-    recompute({ wallColorHex: sampled, acceptedKeys: new Set(), categoryByThicknessMm: new Map() }, deps);
+    recompute(
+      { lineSource: SCENE_LINE_SOURCE, wallColorHex: sampled, acceptedKeys: new Set(), categoryByThicknessMm: new Map() },
+      deps,
+    );
+  },
+
+  /**
+   * ADR-929 Φ5 — η πηγή γίνεται τα τμήματα της εικόνας (ή μια νέα αναγνώριση τα αντικαθιστά). Οι αποφάσεις για
+   * αμφίσημα ορθογώνια ανήκουν στα παλιά τμήματα και σβήνουν· οι επιβεβαιωμένες ομάδες πάχους (Δ3) αφορούν πάχη,
+   * όχι τμήματα, και μένουν όταν η πηγή ήταν ήδη εικόνα του ίδιου ορόφου.
+   */
+  adoptRasterSegments(source: Extract<ProposalLineSource, { kind: 'raster' }>, deps: ModelFromDrawingDeps): void {
+    const state = modelFromDrawingStore.get();
+    const sameFloor = state.lineSource.kind === 'raster' && state.lineSource.floorId === source.floorId;
+    recompute(
+      {
+        lineSource: source,
+        acceptedKeys: new Set(),
+        categoryByThicknessMm: sameFloor ? state.categoryByThicknessMm : new Map(),
+      },
+      deps,
+    );
   },
 
   /** Δ3 — ο άνθρωπος επιβεβαιώνει τη λειτουργία ΜΙΑΣ ομάδας πάχους. */
@@ -154,6 +184,10 @@ export const modelFromDrawingSession = {
     if (state.phase !== 'review' || !shown) return false;
     if (groupsAwaitingConfirmation(shown).length > 0) {
       modelFromDrawingStore.patch({ notice: { kind: 'unconfirmed' } });
+      return false;
+    }
+    if (!isRasterPlacementCalibrated(state.lineSource)) {
+      modelFromDrawingStore.patch({ notice: { kind: 'uncalibrated' } });
       return false;
     }
     const fresh = compute(state, deps);

@@ -35,6 +35,7 @@ import type { OpeningProposal } from '../../bim/model-from-drawing/opening-propo
 import type { OpeningPreview } from '../../bim/model-from-drawing/opening-preview';
 import type { OpeningReviewChoices } from '../../bim/model-from-drawing/opening-review';
 import type { AddOpeningsRefusal } from '../../bim/model-from-drawing/add-openings-to-scene';
+import { SCENE_LINE_SOURCE, type ProposalLineSource } from './proposal-line-source';
 
 /**
  * `closed`  — ο βοηθός δεν τρέχει.
@@ -55,6 +56,8 @@ export type ModelFromDrawingNotice =
   | { readonly kind: 'stale' }
   /** Υπάρχει ομάδα πάχους χωρίς επιβεβαίωση. */
   | { readonly kind: 'unconfirmed' }
+  /** ADR-929 Φ5 — πηγή η εικόνα, αλλά η θέση της δεν είναι βαθμονομημένη: τα mm θα ήταν λάθος. */
+  | { readonly kind: 'uncalibrated' }
   | { readonly kind: 'refused'; readonly refusal: AddWallsRefusal; readonly blocked: number }
   | { readonly kind: 'written'; readonly count: number; readonly retrimmed: number }
   /** Φ4-3β — δεν υπάρχει τοίχος στο σχέδιο να φιλοξενήσει κούφωμα. */
@@ -68,6 +71,8 @@ export interface ModelFromDrawingState {
   readonly sampleRole: ModelFromDrawingSampleRole;
   /** Το σημείο κόσμου του κλικ-δείγματος που περιμένει υιοθέτηση από τον host. */
   readonly pendingSample: Point2D | null;
+  /** ADR-929 Φ5 — από πού έρχονται οι γραμμές της πρότασης: το σχέδιο, ή τα τμήματα της εικόνας του υποβάθρου. */
+  readonly lineSource: ProposalLineSource;
   /** Το αποδιδόμενο χρώμα (hex) που ο άνθρωπος έδειξε ως «τοίχος». */
   readonly wallColorHex: string | null;
   /** Κλειδιά αμφίσημων ορθογωνίων που ο άνθρωπος είπε ότι ΕΙΝΑΙ τοίχοι (Δ7). */
@@ -91,6 +96,7 @@ const CLOSED: ModelFromDrawingState = {
   phase: 'closed',
   sampleRole: 'wall',
   pendingSample: null,
+  lineSource: SCENE_LINE_SOURCE,
   wallColorHex: null,
   acceptedKeys: new Set(),
   categoryByThicknessMm: new Map(),

@@ -198,6 +198,31 @@ function readCorrespondenceMarks(source, primitives) {
 }
 
 /**
+ * Τα επίπεδα βεβαιότητας των τμημάτων αναγνώρισης κάτοψης (`PLAN_CONFIDENCE_MARKS`, ADR-929 Φ5).
+ * Το `variant` είναι το `dash` — ακριβώς το πεδίο που γίνεται `strokeDasharray` στην επικάλυψη.
+ */
+function readPlanConfidenceMarks(source, primitives) {
+  const spec = propsOf(findConstObject(source, 'PLAN_CONFIDENCE_MARKS'));
+  if (spec.size === 0) {
+    throw new Error(`PLAN_CONFIDENCE_MARKS δεν βρέθηκε στο ${COLOR_CONFIG_PATH}`);
+  }
+  const marks = [];
+  for (const [id, node] of propsOf(spec.get('tiers') ?? null)) {
+    const tier = propsOf(node);
+    marks.push({
+      id,
+      carrier: 'plan-segment',
+      variant: resolveValue(tier.get('dash') ?? null, primitives),
+      hex: resolveValue(tier.get('hex') ?? null, primitives),
+    });
+  }
+  if (marks.length === 0) {
+    throw new Error(`PLAN_CONFIDENCE_MARKS.tiers είναι κενό στο ${COLOR_CONFIG_PATH}`);
+  }
+  return marks;
+}
+
+/**
  * **Όλες** οι οικογένειες καταστάσεων, ρητά ονομασμένες.
  *
  * 🔑 **Οικογένεια, όχι ένας σωρός.** Η κρίση τρέχει **ανά οικογένεια** γιατί και οι δύο κανόνες
@@ -217,6 +242,7 @@ function readStateMarkFamilies(repoRoot = process.cwd(), input = undefined) {
   return [
     { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot, input, parsed) },
     { id: 'basemap-correspondence', marks: readCorrespondenceMarks(source, primitives) },
+    { id: 'plan-confidence', marks: readPlanConfidenceMarks(source, primitives) },
   ];
 }
 

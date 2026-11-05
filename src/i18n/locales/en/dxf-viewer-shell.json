@@ -453,6 +453,26 @@
       "leftOut": "{count} undecided will not be written."
     },
     "approve": "Create walls ({count})",
+    "image": {
+      "or": "Or, without a sample:",
+      "start": "Recognise from the background image",
+      "running": "Recognising…",
+      "unavailable": "This floor has no background image. Load a floor plan (image or PDF) first.",
+      "source": "Source: the background image",
+      "needsCalibration": "The image is not calibrated. The preview matches the image, but writing walls needs the background to be calibrated.",
+      "failure": {
+        "no-background": "This floor has no background image.",
+        "no-pixels": "The background image has not loaded yet. Try again in a moment.",
+        "aligner-failed": "Aligning the image failed. Try again.",
+        "no-segments": "No wall lines were found in the image."
+      },
+      "confidence": {
+        "title": "Lines found, by confidence",
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low confidence: check the image"
+      }
+    },
     "notice": {
       "no-line-opening": "No line found at that point. Click on a door or window line or arc.",
       "no-walls": "There is no wall in the drawing to host an opening. Create the walls first.",
@@ -462,6 +482,7 @@
       "no-color": "The line has no colour that can become a role.",
       "stale": "The drawing changed since the proposal was lit. Nothing was written — check the new preview and approve again.",
       "unconfirmed": "Confirm the function of every thickness group first.",
+      "uncalibrated": "The background image is not calibrated, so lengths and thicknesses would be wrong. Calibrate the background first.",
       "written": "{count} walls created. Ctrl+Z to undo.",
       "refused": {
         "overlap": "Nothing was written: {blocked} walls sit on an existing structural element.",

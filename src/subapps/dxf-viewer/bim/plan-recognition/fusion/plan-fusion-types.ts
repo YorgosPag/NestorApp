@@ -32,7 +32,11 @@ export interface PlanFusionInput {
   readonly kind: PlanInputKind;
   readonly alignment: Pick<PlanAlignment, 'image' | 'originalToAligned' | 'alignedToOriginal' | 'sheet'>;
   readonly segments: readonly RasterSegment[];
-  readonly reading: PlanReadingOutcome;
+  /**
+   * `null` = **δεν ζητήθηκε ακόμα** (Φ5: ο άνθρωπος βλέπει πρώτα τη γεωμετρία και αποφασίζει αν θα στείλει, Δ15 #4).
+   * Διαφέρει από το `unavailable`, που λέει γιατί μια ζητημένη ανάγνωση δεν έγινε.
+   */
+  readonly reading: PlanReadingOutcome | null;
   /** Η υπάρχουσα κλίμακα του υποβάθρου (`resolveRasterPixelScale`): όταν υπάρχει, **κερδίζει** (Δ4). */
   readonly knownScale: RasterPixelScale | null;
   /** DPI της αρχικής εικόνας (απόδοση PDF ή μεταδεδομένα σάρωσης), για τη γραμμένη κλίμακα «1:100». */

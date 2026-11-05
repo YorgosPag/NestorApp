@@ -21,6 +21,7 @@ import { BasePointPickMarkerOverlay } from './BasePointPickMarkerOverlay';
 import { TopoBreaklineOverlay } from './TopoBreaklineOverlay';
 import { TopoAutoBreaklinePreviewOverlay } from './TopoAutoBreaklinePreviewOverlay';
 import { ModelFromDrawingPreviewOverlay } from './ModelFromDrawingPreviewOverlay';
+import { PlanRecognitionOverlay } from './PlanRecognitionOverlay';
 import type { Viewport } from '../../rendering/types/Types';
 
 // ADR-040 Phase XXII.B — το transform ΔΕΝ διαπερνά πια το group: κάθε SVG child
@@ -55,6 +56,10 @@ export function CanvasLayerStack2DOverlays({ viewport }: CanvasLayerStack2DOverl
           πράσινο = τσεκαρισμένη, γκρι διακεκομμένο = απορριφθείσα. Self-subscribes στο
           LOW-freq auto-breakline store· read-only, pointer-events-none. STAGE ADR-650. */}
       <TopoAutoBreaklinePreviewOverlay viewport={viewport} />
+      {/* ADR-929 Φ5 — τα τμήματα που βρήκε η αναγνώριση στην εικόνα του υποβάθρου, με επίπεδο
+          βεβαιότητας (χρώμα + μοτίβο). ΚΑΤΩ από τους προτεινόμενους τοίχους. Self-subscribes στο
+          LOW-freq store αναγνώρισης· read-only, pointer-events-none. STAGE ADR-040 + ADR-929. */}
+      <PlanRecognitionOverlay viewport={viewport} />
       {/* ADR-911 Φ3β — προτεινόμενοι τοίχοι του βοηθού «Μοντέλο από το σχέδιο» υπό έγκριση:
           τέσσερις καταστάσεις, τέσσερα μοτίβα γραμμής. Self-subscribes στο LOW-freq store της
           συνεδρίας· read-only, pointer-events-none. STAGE ADR-040 + ADR-911. */}

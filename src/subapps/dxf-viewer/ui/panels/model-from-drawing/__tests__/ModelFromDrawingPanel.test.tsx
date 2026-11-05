@@ -22,6 +22,8 @@ import type {
   ModelFromDrawingState,
 } from '../../../../systems/model-from-drawing/model-from-drawing-store';
 import { ModelFromDrawingPanel, type ModelFromDrawingPanelActions } from '../ModelFromDrawingPanel';
+import type { ImageSourceView } from '../PlanRecognitionSections';
+import { SCENE_LINE_SOURCE } from '../../../../systems/model-from-drawing/proposal-line-source';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -67,6 +69,7 @@ function stateOf(patch: Partial<ModelFromDrawingState> = {}): ModelFromDrawingSt
     phase: 'review',
     sampleRole: 'wall',
     pendingSample: null,
+    lineSource: SCENE_LINE_SOURCE,
     wallColorHex: '#003fff',
     acceptedKeys: new Set(),
     categoryByThicknessMm: new Map(),
@@ -87,12 +90,18 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
     onClose: jest.fn(), onResample: jest.fn(), onConfirmGroup: jest.fn(),
     onSetUndecided: jest.fn(), onFocus: jest.fn(), onApprove: jest.fn(),
     onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onApproveOpenings: jest.fn(),
+    onRecognizeImage: jest.fn(),
   };
 }
 
-function renderPanel(patch: Partial<ModelFromDrawingState> = {}) {
+/** Η πηγή «εικόνα» όπως τη δίνει ο host — προεπιλογή: όροφος χωρίς υπόβαθρο, πηγή το σχέδιο. */
+const NO_IMAGE: ImageSourceView = {
+  available: false, phase: 'idle', failure: null, active: false, countsByTier: null, calibrated: false,
+};
+
+function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {
   const actions = actionsMock();
-  const view = render(<ModelFromDrawingPanel state={stateOf(patch)} actions={actions} />);
+  const view = render(<ModelFromDrawingPanel state={stateOf(patch)} actions={actions} imageSource={imageSource} />);
   const q = (testId: string) => view.container.querySelector(`[data-testid="${testId}"]`);
   const all = (testId: string) => [...view.container.querySelectorAll(`[data-testid="${testId}"]`)];
   return { ...view, actions, q, all };
@@ -237,5 +246,55 @@ describe('ModelFromDrawingPanel — υπόμνημα, κάλυψη, ειδοπο
     const node = renderPanel({ notice }).q('mfd-notice');
     expect(node?.textContent).toBe(expected);
     expect(node?.getAttribute('data-kind')).toBe(notice.kind);
+  });
+});
+
+describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου» (ADR-929 Φ5)', () => {
+  const RASTER = { kind: 'raster', recognitionId: 'rec1.1', floorId: 'flr_1', segments: [] } as const;
+  const COUNTS = { high: 12, medium: 3, low: 1 } as const;
+  const IMAGE_READY: ImageSourceView = {
+    available: true, phase: 'ready', failure: null, active: true, countsByTier: COUNTS, calibrated: true,
+  };
+
+  it('οπλισμένος: το κουμπί υπάρχει, κλειδωμένο όσο ο όροφος δεν έχει υπόβαθρο, και το λέει', () => {
+    const { q } = renderPanel({ phase: 'picking', proposal: null });
+    expect((q('mfd-image-recognize') as HTMLButtonElement).disabled).toBe(true);
+    expect(q('mfd-image-source')?.textContent).toContain('modelFromDrawing.image.unavailable');
+  });
+
+  it('με υπόβαθρο: το κλικ ζητά αναγνώριση· όσο τρέχει, κλειδώνει', () => {
+    const idle = renderPanel({ phase: 'picking', proposal: null }, { ...NO_IMAGE, available: true });
+    fireEvent.click(idle.q('mfd-image-recognize') as HTMLElement);
+    expect(idle.actions.onRecognizeImage).toHaveBeenCalledTimes(1);
+    idle.unmount();
+    const running = renderPanel({ phase: 'picking', proposal: null }, { ...NO_IMAGE, available: true, phase: 'running' });
+    expect((running.q('mfd-image-recognize') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('αποτυχία με όνομα, όχι σιωπή', () => {
+    const { q } = renderPanel({ phase: 'picking', proposal: null }, { ...NO_IMAGE, available: true, failure: 'no-segments' });
+    expect(q('mfd-image-source')?.textContent).toContain('modelFromDrawing.image.failure.no-segments');
+  });
+
+  it('έλεγχος από εικόνα: η σύνοψη αντικαθιστά το χρώμα-δείγμα, με πλήθη ανά βεβαιότητα', () => {
+    const { q, all } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    expect(q('mfd-image-summary')).not.toBeNull();
+    const rows = all('mfd-image-legend').flatMap((ul) => [...ul.querySelectorAll('li')]);
+    expect(rows.map((r) => [r.getAttribute('data-tier'), r.querySelector('span:last-child')?.textContent]))
+      .toEqual([['high', '12'], ['medium', '3'], ['low', '1']]);
+  });
+
+  it('χωρίς βαθμονόμηση: η έγκριση κλειδώνει και ο λόγος φαίνεται· με βαθμονόμηση ξεκλειδώνει', () => {
+    const blocked = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, { ...IMAGE_READY, calibrated: false });
+    expect((blocked.q('mfd-approve') as HTMLButtonElement).disabled).toBe(true);
+    expect(blocked.q('mfd-image-uncalibrated')).not.toBeNull();
+    blocked.unmount();
+    const open = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    expect((open.q('mfd-approve') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('η ειδοποίηση «αβαθμονόμητη» έχει το δικό της κείμενο', () => {
+    expect(renderPanel({ notice: { kind: 'uncalibrated' } }).q('mfd-notice')?.textContent)
+      .toBe('modelFromDrawing.notice.uncalibrated');
   });
 });

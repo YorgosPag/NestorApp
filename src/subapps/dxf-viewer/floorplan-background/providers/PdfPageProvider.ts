@@ -10,6 +10,8 @@ import type {
 // 🔑 ΕΝΑΣ πίνακας px εικόνας → καμβάς, χτισμένος από το SSoT `rasterToSceneAffine` (ADR-929 Δ3):
 // ο ίδιος που ρωτά η αναγνώριση κάτοψης, ώστε προεπισκόπηση ≡ αποτέλεσμα.
 import { applyRasterCanvasTransform } from './provider-canvas-transforms';
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
+import { readPlanRaster } from './provider-plan-raster';
 
 const SUPPORTED_MIME_TYPES = ['application/pdf'] as const;
 const RENDER_SCALE = 2;
@@ -80,6 +82,10 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
 
   getNaturalBounds(): NaturalBounds {
     return this._bounds;
+  }
+
+  getPlanRaster(): PlanRaster | null {
+    return readPlanRaster(this._image, this._bounds);
   }
 
   dispose(): void {

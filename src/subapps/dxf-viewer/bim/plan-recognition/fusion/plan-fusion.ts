@@ -104,7 +104,7 @@ function suggestion(stage: ScaleStage, network: NetworkOutcome | null, frame: Fu
 export function fusePlan(input: PlanFusionInput): PlanFusionResult {
   const o: PlanFusionOptions = { ...DEFAULT_PLAN_FUSION, ...input.options };
   const frame = buildFusionFrame(input.segments, input.alignment, o);
-  const reading = input.reading.status === 'read' ? input.reading.reading : null;
+  const reading = input.reading?.status === 'read' ? input.reading.reading : null;
   const targets = reading === null ? [] : dimensionTargets(reading, frame, input.alignment.originalToAligned, input.kind, o);
   const stage = resolveScale(input, reading, frame, targets, o);
   const { bindings, bound } = bindAll(targets, stage.chosen, o);

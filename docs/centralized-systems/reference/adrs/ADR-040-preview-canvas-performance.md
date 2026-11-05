@@ -113,6 +113,12 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-11-05 — Νέο φύλλο: επικάλυψη αναγνώρισης κάτοψης (ADR-929 Φ5.1)
+
+- `components/dxf-layout/PlanRecognitionOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` **κάτω** από το `ModelFromDrawingPreviewOverlay`. Ακολουθεί το ίδιο σχήμα: standalone leaf με **ένα** υψίσυχνο hook (`useTransformValue`) και δύο χαμηλόσυχνα (store αναγνώρισης, το υπόβαθρο του ορόφου για την τοποθέτηση).
+- Η γεωμετρία σκηνής υπολογίζεται μία φορά ανά αποτέλεσμα ή τοποθέτηση (`useMemo`). Ανά transform γίνεται μόνο η προβολή, με ένα `<path>` ανά επίπεδο βεβαιότητας. Χωρίς αποτέλεσμα επιστρέφει `null` πριν από κάθε προβολή.
+- Το κέλυφος (`CanvasLayerStack`) δεν άλλαξε. Νέο event-time getter `getFloorBackground` για ελεγκτές χωρίς React (getter, όχι στιγμιότυπο).
+
 ### 2026-11-04 — Υπόβαθρο κάτοψης: ΕΝΑΣ πίνακας ανά καρέ· ο αφινικός πυρήνας στο `lib/geometry` (ADR-929 Φ0)
 
 - Οι πάροχοι του υποβάθρου (`ImageProvider`, `PdfPageProvider`) ζωγραφίζουν πλέον με **ένα** `ctx.transform`

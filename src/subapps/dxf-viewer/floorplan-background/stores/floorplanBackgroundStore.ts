@@ -367,6 +367,19 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
   )
 );
 
+/**
+ * Event-time ανάγνωση (ADR-040: getter, όχι στιγμιότυπο) του υποβάθρου ενός ορόφου — για ελεγκτές χωρίς React
+ * (ADR-929 Φ5: η τοποθέτηση διαβάζεται ΤΗ ΣΤΙΓΜΗ της πράξης, ώστε μια βαθμονόμηση στο μεταξύ να μετρά).
+ */
+export function getFloorBackground(floorId: string): FloorplanBackground | null {
+  return useFloorplanBackgroundStore.getState().floors[floorId]?.background ?? null;
+}
+
+/** Event-time: ο ενεργός όροφος υποβάθρου (το κλειδί του `useFloorplanBackgroundForLevel`). */
+export function getActiveBackgroundFloorId(): string | null {
+  return useFloorplanBackgroundStore.getState().activeFloorId;
+}
+
 // ── Selectors ─────────────────────────────────────────────────────────────────
 
 export const selectFloorSlot = (floorId: string) =>
