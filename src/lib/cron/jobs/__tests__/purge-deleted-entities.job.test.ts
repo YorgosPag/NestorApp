@@ -107,3 +107,23 @@ describe('purgeDeletedEntities — μπλοκαρισμένη εγγραφή', (
     expect(report.results.property).toMatchObject({ purged: 1, archived: 0 });
   });
 });
+
+describe('δείκτης της σάρωσης — κάθε συλλογή του κάδου τον έχει', () => {
+  // Η σάρωση ρωτά `status == 'deleted' ∧ deletedAt <= cutoff` σε ΟΠΟΙΑ συλλογή δηλώνει το SOFT_DELETE_CONFIG.
+  // Η συλλογή είναι μεταβλητή (`config.collection`), άρα η πύλη δεικτών Admin SDK (CHECK 3.91) δεν τη βλέπει
+  // στατικά. Περιστατικό 2026-11-05: το `common_spaces` (ADR-931) μπήκε στον κάδο χωρίς δείκτη ⇒
+  // FAILED_PRECONDITION στην παραγωγή στις 05:00. Αυτή η άγκυρα κάνει τη μέρα μετά αδύνατη.
+  const { indexes } = jest.requireActual('../../../../../firestore.indexes.json') as {
+    indexes: ReadonlyArray<{ collectionGroup: string; queryScope: string; fields: ReadonlyArray<{ fieldPath: string }> }>;
+  };
+  const hasPurgeIndex = (collection: string): boolean => indexes.some((index) =>
+    index.collectionGroup === collection && index.queryScope === 'COLLECTION'
+    && index.fields.map((field) => field.fieldPath).join(',') === 'status,deletedAt');
+
+  it.each(Object.entries(SOFT_DELETE_CONFIG).map(([kind, config]) => [kind, config.collection] as const))(
+    '%s (%s) έχει δείκτη status + deletedAt',
+    (_kind, collection) => {
+      expect(hasPurgeIndex(collection)).toBe(true);
+    },
+  );
+});

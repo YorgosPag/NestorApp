@@ -8862,6 +8862,14 @@
       ]
     },
     {
+      "collectionGroup": "common_spaces",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "sourcing_events",
       "queryScope": "COLLECTION",
       "fields": [
