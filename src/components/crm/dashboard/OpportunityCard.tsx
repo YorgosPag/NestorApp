@@ -10,7 +10,8 @@ import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_
 import type { Opportunity } from '@/types/crm';
 import type { OpportunityStage } from '@/config/crm/opportunity-stages';
 import { stageAgeOf } from '../utils/pipeline-board';
-import { MoveToMenu, StageAgeBadge } from './OpportunityCardParts';
+import { CardAction, LockNotice, MoveToMenu, StageAgeBadge } from './OpportunityCardParts';
+import type { OpportunityLocks } from '../stage-move/useOpportunityAccess';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { formatCurrency, formatDateTime } from '@/lib/intl-utils';
 import { normalizeToDate } from '@/lib/date-local';
@@ -52,9 +53,13 @@ interface OpportunityCardProps {
     readonly onMoveTo?: (stage: OpportunityStage) => void;
     /** Η κάρτα μετακινείται τώρα (αίτημα σε πτήση) — καμία δεύτερη μετακίνηση. */
     readonly moving?: boolean;
+    /** ADR-930 «Εξουσία κατόχου» — γιατί δεν επιτρέπεται επεξεργασία/μετακίνηση ή διαγραφή (`null` ⇒ επιτρέπεται). */
+    readonly locks?: OpportunityLocks;
 }
 
-export function OpportunityCard({ opportunity, onEdit, onDelete, handle, onMoveTo, moving = false }: OpportunityCardProps) {
+const UNLOCKED: OpportunityLocks = { edit: null, delete: null };
+
+export function OpportunityCard({ opportunity, onEdit, onDelete, handle, onMoveTo, moving = false, locks = UNLOCKED }: OpportunityCardProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('crm');
     const iconSizes = useIconSizes();
@@ -76,7 +81,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete, handle, onMoveT
         >
             <div className="flex items-start justify-between mb-2">
                 <h4 className="font-medium text-sm text-foreground flex items-center gap-2">
-                    {handle}
+                    {locks.edit ? <LockNotice reason={locks.edit} /> : handle}
                     <Users className={iconSizes.sm} />
                     {opportunity.fullName || opportunity.title}
                 </h4>
@@ -136,26 +141,13 @@ export function OpportunityCard({ opportunity, onEdit, onDelete, handle, onMoveT
                 {onMoveTo && (
                     <MoveToMenu current={opportunity.stage} name={opportunity.fullName || opportunity.title} disabled={moving} onMoveTo={onMoveTo} />
                 )}
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                         <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className={`${iconSizes.xl} p-0`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(opportunity);
-                            }}
-                            aria-label={t('opportunities.actions.edit')}
-                        >
-                            <Edit className={iconSizes.xs} />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>{t('opportunities.actions.edit')}</p>
-                    </TooltipContent>
-                </Tooltip>
-                
+                <CardAction label={t('opportunities.actions.edit')} icon={<Edit className={iconSizes.xs} />}
+                    className={iconSizes.xl} lockedReason={locks.edit} onClick={() => onEdit(opportunity)} />
+
+                {locks.delete ? (
+                    <CardAction label={t('opportunities.actions.delete')} icon={<Trash2 className={iconSizes.xs} />}
+                        className={iconSizes.xl} lockedReason={locks.delete} />
+                ) : (
                 <AlertDialog>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -194,6 +186,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete, handle, onMoveT
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+                )}
             </div>
         </div>
     );

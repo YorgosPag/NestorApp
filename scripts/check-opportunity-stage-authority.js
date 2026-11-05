@@ -12,6 +12,9 @@
  *        του κώδικα. Δύο λίστες που αποκλίνουν = πεδίο που ο πελάτης γράφει ενώ ο κώδικας νομίζει ότι δεν μπορεί.
  *   Κ3 — MCP: οι ευκαιρίες ΔΕΝ είναι στη λίστα απευθείας εγγραφής (`mcp-server/src/security/access-control.ts`).
  *   Κ4 — AI: οι ευκαιρίες ΔΕΝ είναι στο `ALLOWED_WRITE_COLLECTIONS` του executor.
+ *   Κ5/Κ6 — εξουσία κατόχου: server ⇔ κανόνες λένε το ίδιο για το «ποιος αγγίζει αυτή την ευκαιρία»
+ *        (`lib/write-authority/opportunity-owner-parity`). Και το `requireOpportunityInTenant` έχει ΕΝΑΝ καλούντα (Κ1,
+ *        μητρώο): το σημείο επιβολής του κριτή — καμία διαδρομή δεν φτάνει στο έγγραφο χωρίς να ρωτήσει «κάτοχος;».
  *
  * @see docs/gates/3.114.md
  */
@@ -20,6 +23,7 @@
 
 const { defineSymbolOwnerGate } = require('./lib/write-authority/symbol-owner-gate');
 const { mcpAllowListFindings } = require('./lib/write-authority/mcp-write-allowlist');
+const { ownerParityFindings, opportunitiesRulesBlock, ROLE_CATALOGUE, ACCESS_JUDGE } = require('./lib/write-authority/opportunity-owner-parity');
 
 const REGISTRY_FILE = '.opportunity-stage-authority.json';
 const RULES_FILE = 'firestore.rules';
@@ -31,8 +35,8 @@ const quotedNames = (body) => [...body.matchAll(/'([^']+)'/g)].map((m) => m[1]).
 
 /** Η λίστα κλειδώματος μέσα στο `match /opportunities/{…}` — ή `null`. */
 function rulesStageFields(text) {
-  const block = /match \/opportunities\/\{[^}]+\}\s*\{([\s\S]*?)\n    \}/.exec(text);
-  const list = block && /affectedKeys\(\)\.hasAny\(\[([\s\S]*?)\]\)/.exec(block[1].replace(/\/\/.*$/gm, ''));
+  const block = opportunitiesRulesBlock(text);
+  const list = block && /affectedKeys\(\)\.hasAny\(\[([\s\S]*?)\]\)/.exec(block);
   return list ? quotedNames(list[1]) : null;
 }
 
@@ -71,6 +75,7 @@ function extraFindings(root, input, STATES) {
       detail: 'οι ευκαιρίες στη λίστα απευθείας εγγραφής του MCP — παρακάμπτει την πόρτα σταδίου',
     }),
     ...aiWriteFindings(input, STATES),
+    ...ownerParityFindings(input, STATES),
   ];
 }
 
@@ -87,10 +92,11 @@ const { measure, report, main, loadRegistry, STATES, BLOCKING } = defineSymbolOw
     remedy: [
       'ΘΕΡΑΠΕΙΑ: το στάδιο αλλάζει ΜΟΝΟ με `POST /api/opportunities/[id]/stage` (γραφέας: `opportunity-stage-transition.server.ts`).',
       `Νέο αρχείο που αγγίζει τη συλλογή = γραμμή στο ${REGISTRY_FILE}, με λόγο. Κανόνες ⇄ STAGE_OWNED_FIELDS: ίδια λίστα.`,
+      'Εξουσία κατόχου: ανατεθειμένος ΜΟΝΟ στο `update` · ρόλοι της ικανότητας του κριτή == ρόλος του `isCompanyAdminOfCompany`.',
     ],
   },
 });
 
 if (require.main === module) process.exit(main());
 
-module.exports = { measure, report, main, loadRegistry, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, STAGE_FIELDS_SOURCE, AI_EXECUTOR };
+module.exports = { measure, report, main, loadRegistry, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, STAGE_FIELDS_SOURCE, AI_EXECUTOR, ROLE_CATALOGUE, ACCESS_JUDGE };

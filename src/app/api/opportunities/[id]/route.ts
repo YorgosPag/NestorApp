@@ -3,27 +3,29 @@
  * PATCH + DELETE /api/opportunities/[id] — Update & Delete Opportunity
  * =============================================================================
  *
- * PATCH:  Update opportunity fields (with server-side validation)
- * DELETE: Hard-delete opportunity (with tenant isolation)
+ * PATCH:  Update opportunity fields (server-side validation). The stage is NOT here — `…/[id]/stage` (ADR-930).
+ * DELETE: Hard-delete opportunity.
  *
- * Auth: withAuth (authenticated users)
- * Rate: withSensitiveRateLimit (financial/CRM data)
+ * Auth: withAuth + tenant fence (foreign ⇒ 404) + **owner authority** (`requireOpportunityAccess`, ADR-930):
+ *   PATCH = intent `edit` (manager capability · creator · assignee) · DELETE = intent `delete` (manager · creator —
+ *   NOT the assignee). Same table as `firestore.rules` `match /opportunities`.
+ *   ⚠️ Until 2026-11-04 both handlers checked ONLY the tenant ⇒ any member of the company could edit or delete ANY
+ *   opportunity over HTTP, past the rules (Admin SDK). And every refusal of the fence answered 500 instead of 404.
+ * Rate: sensitive (financial/CRM data)
  *
  * @module api/opportunities/[id]
- * @enterprise ADR-252 Security Fix: Server-side validation
+ * @enterprise ADR-252 Security Fix: Server-side validation · ADR-930 owner authority · ADR-603 defineRoute
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { NextResponse } from 'next/server';
+import { defineRoute } from '@/lib/api/define-route';
+import { API_ROUTES } from '@/config/domain-constants';
 import { OpportunitiesServerService } from '@/services/opportunities-server.service';
-import { requireOpportunityInTenant } from '@/lib/auth/tenant-isolation';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
-import { respondWithFailure, respondWithServiceResult } from '../_service-response';
+import { requireOpportunityAccess } from '@/services/crm/opportunity-access.server';
+import { respondWithServiceResult } from '../_service-response';
 
 const UpdateOpportunitySchema = z.object({
   stage: z.string().max(50).optional(),
@@ -35,74 +37,33 @@ const UpdateOpportunitySchema = z.object({
   lostReason: z.string().max(500).optional(),
 }).passthrough();
 
-type RouteContext = { params: Promise<{ id: string }> };
+type Params = { id: string };
 
-// =============================================================================
-// PATCH — Update Opportunity
-// =============================================================================
+const success = () => NextResponse.json({ success: true });
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: RouteContext
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const PATCH = defineRoute<typeof UpdateOpportunitySchema, Params>({
+  rateLimit: 'sensitive',
+  schema: UpdateOpportunitySchema,
+  fallbackError: 'Failed to update opportunity',
+  handler: async ({ auth, body, params }) => {
+    await requireOpportunityAccess({ ctx: auth, opportunityId: params.id, path: API_ROUTES.OPPORTUNITIES.BY_ID(params.id), intent: 'edit' });
+    const result = await OpportunitiesServerService.update(
+      params.id,
+      { ...body, expectedCloseDate: body.expectedCloseDate ?? undefined },
+      auth.companyId,
+      auth.uid,
+      auth.email ?? null,
+    );
+    return respondWithServiceResult(result, success);
+  },
+});
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
-        await requireOpportunityInTenant({ ctx, opportunityId: id, path: '/api/opportunities/[id]' });
-
-        const parsed = safeParseBody(UpdateOpportunitySchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
-
-        const updatePayload = {
-          ...body,
-          expectedCloseDate: body.expectedCloseDate ?? undefined,
-        };
-
-        const result = await OpportunitiesServerService.update(
-          id,
-          updatePayload,
-          ctx.companyId,
-          ctx.uid,
-          ctx.email ?? null,
-        );
-        return respondWithServiceResult(result, () => NextResponse.json({ success: true }));
-      } catch (error) {
-        return respondWithFailure(error, 'Failed to update opportunity');
-      }
-    }
-  );
-  return handler(request);
-}
-
-// =============================================================================
-// DELETE — Delete Opportunity
-// =============================================================================
-
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: RouteContext
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
-        await requireOpportunityInTenant({ ctx, opportunityId: id, path: '/api/opportunities/[id]' });
-
-        const result = await OpportunitiesServerService.remove(id, ctx.companyId, ctx);
-        return respondWithServiceResult(result, () => NextResponse.json({ success: true }));
-      } catch (error) {
-        return respondWithFailure(error, 'Failed to delete opportunity');
-      }
-    }
-  );
-  return handler(request);
-}
-
-export const PATCH = withSensitiveRateLimit(handlePatch);
-export const DELETE = withSensitiveRateLimit(handleDelete);
+export const DELETE = defineRoute<z.ZodTypeAny, Params>({
+  rateLimit: 'sensitive',
+  fallbackError: 'Failed to delete opportunity',
+  handler: async ({ auth, params }) => {
+    await requireOpportunityAccess({ ctx: auth, opportunityId: params.id, path: API_ROUTES.OPPORTUNITIES.BY_ID(params.id), intent: 'delete' });
+    const result = await OpportunitiesServerService.remove(params.id, auth.companyId, auth);
+    return respondWithServiceResult(result, success);
+  },
+});

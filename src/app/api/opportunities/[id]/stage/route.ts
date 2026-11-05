@@ -9,7 +9,11 @@
  * - Same stage again ⇒ `unchanged`: no write, no history row. Retries also go through the
  *   `Idempotency-Key` boundary of `withAuth` (ADR-872).
  *
- * Auth: withAuth + `crm:opportunities:update` + opportunity tenant fence (foreign ⇒ 404) · Rate: sensitive (CRM data)
+ * Auth: withAuth + tenant fence (foreign ⇒ 404) + **owner authority** (`requireOpportunityAccess`, intent `edit`):
+ *   manager capability `crm:opportunities:update` ⇒ every opportunity of the company · creator / assignee ⇒ their own.
+ *   Refused ⇒ 403 `{ reason, ownerUid }` — the screen names who CAN move it. ⚠️ No `permissions` on `withAuth`:
+ *   the assignee does not hold the capability and must reach the judge (ADR-930 §«Εξουσία κατόχου»).
+ * Rate: sensitive (CRM data)
  *
  * @see ADR-930 · ADR-602 API Route-Handler Factory SSoT
  */
@@ -18,9 +22,9 @@ import 'server-only';
 
 import { badRequest, conflict, defineRoute, ok } from '@/lib/api/define-route';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { requireOpportunityInTenant } from '@/lib/auth/tenant-isolation';
 import { API_ROUTES } from '@/config/domain-constants';
 import { nowISO } from '@/lib/date-local';
+import { requireOpportunityAccess } from '@/services/crm/opportunity-access.server';
 import { opportunityStageBody, type OpportunityStageResponse } from '@/services/crm/opportunity-stage-schema';
 import { applyOpportunityStageTransition } from '@/services/crm/opportunity-stage-transition.server';
 
@@ -31,10 +35,9 @@ type Params = { id: string };
 export const POST = defineRoute<typeof opportunityStageBody, Params>({
   rateLimit: 'sensitive',
   schema: opportunityStageBody,
-  auth: { permissions: 'crm:opportunities:update' },
   fallbackError: 'Failed to change opportunity stage',
   handler: async ({ auth, body, params }) => {
-    await requireOpportunityInTenant({ ctx: auth, opportunityId: params.id, path: API_ROUTES.OPPORTUNITIES.STAGE(params.id) });
+    await requireOpportunityAccess({ ctx: auth, opportunityId: params.id, path: API_ROUTES.OPPORTUNITIES.STAGE(params.id), intent: 'edit' });
     const outcome = await applyOpportunityStageTransition(getAdminFirestore(), {
       opportunityId: params.id,
       expectedStage: body.expectedStage,

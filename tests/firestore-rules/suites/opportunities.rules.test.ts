@@ -18,7 +18,7 @@ import {
   teardownEmulator,
   resetData,
 } from '../_harness/emulator';
-import { getContext } from '../_harness/auth-contexts';
+import { getContext, withSeedContext } from '../_harness/auth-contexts';
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { seedOpportunity } from '../_harness/seed-helpers';
@@ -88,8 +88,11 @@ describe('opportunities.rules — tenant_direct (crmDirectMatrix)', () => {
  * ΕΓΓΡΑΦΟ, όχι τον καλούντα. Το ίδιο συμβόλαιο τρέχει και στις τρεις CRM
  * συλλογές — μία σημαία τις ξεχωρίζει. Δες `_harness/crm-owner-contract.ts`
  * για το εύρημα που το γέννησε (ADR-841 §7 Α21.14.8).
+ *
+ * ✅ ADR-930 «Εξουσία κατόχου» (απόφαση Giorgio 2026-11-04): `true` — ο ανατεθειμένος κινεί/επεξεργάζεται τη δική
+ *    του, όπως στα `leads`. Ίδιος πίνακας στον server: `services/crm/opportunity-access.ts`.
  */
-describeCrmOwnerLeg({ collection: 'opportunities', assigneeIsOwner: false });
+describeCrmOwnerLeg({ collection: 'opportunities', assigneeIsOwner: true });
 
 /**
  * ADR-930 — το στάδιο έχει ΕΝΑΝ γραφέα (Admin SDK). Ακόμη και ο προνομιούχος γραφέας, που ο πίνακας αφήνει να
@@ -112,6 +115,28 @@ describe('opportunities.rules — ADR-930 πεδία σταδίου: μόνο α
     await seedOpportunity(env, docId);
     const db = getContext(env, 'same_tenant_admin').firestore();
     await assertFails(db.collection('opportunities').doc(docId).update({ [field]: value }));
+  });
+
+  /** Ευκαιρία που δημιούργησε τρίτος και ανατέθηκε στον `same_tenant_user` — ο κάτοχος που δεν είναι ούτε δημιουργός ούτε admin. */
+  async function seedAssignedToUser(): Promise<void> {
+    await withSeedContext(env, async (ctx) => {
+      await ctx.firestore().collection('opportunities').doc(docId).set({
+        title: 'assigned', stage: 'initial_contact', companyId: SAME_TENANT_COMPANY_ID,
+        createdBy: 'persona-crm-author', assignedTo: PERSONA_CLAIMS.same_tenant_user.uid,
+      });
+    });
+  }
+
+  it('ανατεθειμένος × update «stage» ⇒ deny (κάτοχος ≠ γραφέας σταδίου: κινεί ΜΟΝΟ μέσω της πόρτας)', async () => {
+    await seedAssignedToUser();
+    const db = getContext(env, 'same_tenant_user').firestore();
+    await assertFails(db.collection('opportunities').doc(docId).update({ stage: 'closed_won' }));
+  });
+
+  it('ανατεθειμένος × delete ⇒ deny (η ανάθεση δίνει δουλειά, όχι εξαφάνιση — `intent: delete` του server)', async () => {
+    await seedAssignedToUser();
+    const db = getContext(env, 'same_tenant_user').firestore();
+    await assertFails(db.collection('opportunities').doc(docId).delete());
   });
 
   it('same_tenant_admin × update μη-σταδιακού πεδίου (σημειώσεις) ⇒ allow', async () => {

@@ -49,7 +49,9 @@ export interface Opportunity {
   probability?: number;
   estimatedValue?: number;
   expectedCloseDate?: FirestoreishTimestamp;
-  assignedTo: string; // User ID
+  assignedTo: string; // User ID — ο ΚΑΤΟΧΟΣ: κινεί/επεξεργάζεται τη δική του (ADR-930 «Εξουσία κατόχου»)
+  /** Ποιος τη δημιούργησε (γράφεται από τον server στη δημιουργία). Κρίνει επεξεργασία **και** διαγραφή (ADR-930). */
+  createdBy?: string;
   team?: string[]; // Array of User IDs
   lastActivity?: FirestoreishTimestamp;
   nextAction?: string;

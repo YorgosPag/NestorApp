@@ -15,16 +15,25 @@ import type { OpportunityStageBody, OpportunityStageResponse } from '@/services/
 export type StageMoveResult =
   | { readonly kind: 'ok'; readonly response: OpportunityStageResponse }
   | { readonly kind: 'conflict'; readonly currentStage: OpportunityStage | null }
-  | { readonly kind: 'refused' }
+  /** 403 — `ownerUid` = ποιος ΜΠΟΡΕΙ (ADR-930 «Εξουσία κατόχου»), ώστε το μήνυμα να τον ονομάσει. */
+  | { readonly kind: 'refused'; readonly ownerUid: string | null }
   | { readonly kind: 'failed' };
 
 const HTTP_FORBIDDEN = 403;
 const HTTP_CONFLICT = 409;
 
+function fieldOf(body: unknown, field: 'currentStage' | 'ownerUid'): unknown {
+  return body !== null && typeof body === 'object' ? (body as Record<string, unknown>)[field] : undefined;
+}
+
 function conflictStageOf(body: unknown): OpportunityStage | null {
-  if (body === null || typeof body !== 'object') return null;
-  const stage = (body as { currentStage?: unknown }).currentStage;
+  const stage = fieldOf(body, 'currentStage');
   return isOpportunityStage(stage) ? stage : null;
+}
+
+function ownerUidOf(body: unknown): string | null {
+  const uid = fieldOf(body, 'ownerUid');
+  return typeof uid === 'string' && uid !== '' ? uid : null;
 }
 
 export async function postStageTransition(opportunityId: string, body: OpportunityStageBody): Promise<StageMoveResult> {
@@ -35,7 +44,9 @@ export async function postStageTransition(opportunityId: string, body: Opportuni
     if (error instanceof ApiClientError && error.statusCode === HTTP_CONFLICT) {
       return { kind: 'conflict', currentStage: conflictStageOf(error.errorBody) };
     }
-    if (error instanceof ApiClientError && error.statusCode === HTTP_FORBIDDEN) return { kind: 'refused' };
+    if (error instanceof ApiClientError && error.statusCode === HTTP_FORBIDDEN) {
+      return { kind: 'refused', ownerUid: ownerUidOf(error.errorBody) };
+    }
     return { kind: 'failed' };
   }
 }

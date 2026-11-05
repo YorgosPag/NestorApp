@@ -15,6 +15,9 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 const notifications = { notify: jest.fn(), success: jest.fn(), warning: jest.fn(), error: jest.fn() };
 jest.mock('@/providers/NotificationProvider', () => ({ useNotifications: () => notifications }));
 
+const mockResolveName = jest.fn<Promise<string>, [string]>();
+jest.mock('@/hooks/useUserDisplayNames', () => ({ resolveUserDisplayName: (uid: string) => mockResolveName(uid) }));
+
 const mockPost = jest.fn<Promise<StageMoveResult>, [string, unknown]>();
 jest.mock('../stage-move-api', () => ({ postStageTransition: (id: string, body: unknown) => mockPost(id, body) }));
 
@@ -54,6 +57,24 @@ it('σύγκρουση: η εικόνα επιστρέφει και λέμε π�
   expect(moved).toBe(false);
   expect(onRevert).toHaveBeenCalledWith('o1');
   expect(notifications.warning).toHaveBeenCalledWith('pipeline.move.conflict');
+});
+
+it('ADR-930 «Εξουσία κατόχου» — 403: επαναφορά, και το μήνυμα ΟΝΟΜΑΖΕΙ ποιος μπορεί να την κινήσει', async () => {
+  mockPost.mockResolvedValue({ kind: 'refused', ownerUid: 'u-seller' });
+  mockResolveName.mockResolvedValue('Μαρία Π.');
+  const { result, onRevert } = setup();
+  await act(async () => { await result.current.requestMove(opp('viewing'), 'proposal'); });
+  expect(onRevert).toHaveBeenCalledWith('o1');
+  expect(mockResolveName).toHaveBeenCalledWith('u-seller');
+  expect(notifications.error).toHaveBeenCalledWith('pipeline.move.refusedBy');
+});
+
+it('403 χωρίς γνωστό κάτοχο ⇒ το γενικό μήνυμα, ποτέ ωμό uid', async () => {
+  mockPost.mockResolvedValue({ kind: 'refused', ownerUid: null });
+  mockResolveName.mockResolvedValue('');
+  const { result } = setup();
+  await act(async () => { await result.current.requestMove(opp('viewing'), 'proposal'); });
+  expect(notifications.error).toHaveBeenCalledWith('pipeline.move.refused');
 });
 
 it('κλείσιμο: τίποτα δεν φεύγει πριν απαντήσει ο διάλογος· Άκυρο ⇒ καμία κλήση', async () => {

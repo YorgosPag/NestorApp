@@ -16,6 +16,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { isClosedStage, stageKind, type OpportunityStage } from '@/config/crm/opportunity-stages';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { resolveUserDisplayName } from '@/hooks/useUserDisplayNames';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { targetOf, type StageTransitionRequest } from '@/services/crm/opportunity-stage-transition';
 import type { Opportunity } from '@/types/crm';
@@ -65,7 +66,13 @@ export function useStageTransitionCommand(callbacks: StageMoveCallbacks = {}): S
     if (result.kind === 'conflict') {
       const where = result.currentStage ? stageLabel(result.currentStage) : t('pipeline.move.unknownStage');
       notifications.warning(t('pipeline.move.conflict', { stage: where }));
-    } else notifications.error(t(result.kind === 'refused' ? 'pipeline.move.refused' : 'pipeline.move.failed'));
+    } else if (result.kind === 'refused') {
+      // ADR-930 §2.4 — λέμε ΠΟΙΟΣ μπορεί. Δίχτυ ασφαλείας: η οθόνη κλειδώνει ήδη τις ξένες κάρτες, άρα εδώ φτάνει
+      // μόνο μπαγιάτικη εικόνα (π.χ. η ανάθεση άλλαξε στο μεταξύ).
+      void resolveUserDisplayName(result.ownerUid ?? '').then((owner) => {
+        notifications.error(owner ? t('pipeline.move.refusedBy', { owner }) : t('pipeline.move.refused'));
+      });
+    } else notifications.error(t('pipeline.move.failed'));
   }, [notifications, onRevert, stageLabel, t]);
 
   const commit = useCallback(async (opportunity: Opportunity, from: OpportunityStage, request: StageTransitionRequest, undoable: boolean): Promise<boolean> => {

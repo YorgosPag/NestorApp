@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — Φ1 θεμέλιο server · Φ2 `KanbanBoard` · Φ3 οθόνη · Φ4 κλείδωμα + CHECK 3.114 (κλαδί `agent/crm-pipeline-dnd`, 2026-11-04) |
+| **Status** | ✅ IMPLEMENTED — Φ1 θεμέλιο server · Φ2 `KanbanBoard` · Φ3 οθόνη · Φ4 κλείδωμα + CHECK 3.114 · §3.7 εξουσία κατόχου (κλαδί `agent/crm-pipeline-dnd`, 2026-11-04) |
 | **Date** | 2026-11-04 |
 | **Category** | CRM / Sales Pipeline |
 | **Canonical Location** | `src/config/crm/opportunity-stages.ts` · `src/services/crm/opportunity-stage-transition*.ts` · `src/components/ui/sortable/KanbanBoard.tsx` · `src/components/crm/stage-move/` |
@@ -35,7 +35,7 @@
 | Επανάνοιγμα | Επιτρέπεται με επιβεβαίωση· σβήνουν τα στοιχεία κλεισίματος· `reopenCount + 1` | Pipedrive (+ διόρθωση του παραπόνου ότι χαλά τις αναφορές) |
 | Παγωμένη κάρτα | «Χ μέρες στο στάδιο», με όριο ανά στάδιο· κείμενο + χρώμα | Pipedrive rotting |
 | Κεφαλίδα στήλης | Πλήθος · σύνολο · **σταθμισμένο** (αξία × πιθανότητα) | Salesforce expected revenue |
-| Δικαίωμα | Ο ένας κριτής `crm:opportunities:update` (server)· ο πίνακας απλώς δεν σέρνει ό,τι θα απορριφθεί | ADR-801 (CHECK 3.68) |
+| Δικαίωμα | **Κάτοχος** (§3.7): ο διαχειριστής (ικανότητα `crm:opportunities:update`) όλες· ο ανατεθειμένος και ο δημιουργός τις δικές τους. Ο πίνακας δεν σέρνει ό,τι θα απορριφθεί — κλειδαριά με το όνομα του κατόχου | Salesforce Record Owner · HubSpot «Owned only» · Pipedrive deal owner · ADR-801 |
 
 **Πέρα από τους μεγάλους** (εκεί όπου εκείνοι κάνουν last-write-wins):
 
@@ -65,7 +65,7 @@ report-builder, executive report. Λόγοι απώλειας: `src/config/crm/o
 - `services/crm/opportunity-stage-transition.server.ts` — ο ΕΝΑΣ γραφέας: Admin `runTransaction` (ανάγνωση → CAS στο
   `expectedStage` → εγγραφή με `versionedWrite`/`_v` → `FieldValue.delete()` για τα μπαγιάτικα στοιχεία κλεισίματος) και
   μετά το commit `recordEntityUpdate({ action: 'status_changed' })`.
-- `POST /api/opportunities/[id]/stage` — `defineRoute` · `crm:opportunities:update` · `requireOpportunityInTenant` ·
+- `POST /api/opportunities/[id]/stage` — `defineRoute` · `requireOpportunityAccess` (φράχτης + κάτοχος, §3.7) ·
   `rateLimit: 'sensitive'` · ιδεμποτία αυτόματα από το `withAuth`. Σχήμα: `opportunity-stage-schema.ts` (zod, δεμένο στους
   καταλόγους· ο τύπος του **είναι** ο τύπος του πυρήνα).
 - Το γενικό `PATCH /api/opportunities/[id]` **αρνείται** το `stage` (400) αντί να το αγνοήσει.
@@ -100,7 +100,44 @@ report-builder, executive report. Λόγοι απώλειας: `src/config/crm/o
 CHECK 3.17. Η δήλωση αποκάλυψε ότι οι create/update/delete του `opportunities-server.service.ts` **δεν άφηναν ίχνος** —
 διορθώθηκαν (το `recordEntityUpdate` δέχεται πλέον `AuditActor`, στενότερο από το `AuthContext`).
 
+### 3.7 Εξουσία κατόχου — ποιος κινεί / επεξεργάζεται / σβήνει (απόφαση Giorgio 2026-11-04)
+
+| Πρόθεση | Επιτρέπεται σε | `firestore.rules` `match /opportunities` |
+|---|---|---|
+| `edit` (στάδιο + πεδία) | bypass · ικανότητα `crm:opportunities:update` (εντός μισθωτή) · δημιουργός · **ανατεθειμένος** | `crmWriterIsPrivileged ∨ (crmIsAssignee ∧ crmNotForeignTenant)` |
+| `delete` | bypass · ικανότητα · δημιουργός — **όχι** ο ανατεθειμένος | `crmWriterIsPrivileged` |
+
+- **Ένας κριτής, ισομορφικός**: `src/services/crm/opportunity-access.ts` — `decideOpportunityAccess({ subject, opportunity, intent })`
+  (καθαρός, χωρίς I/O, πρότυπο AuthZEN του `lib/auth/container-access.ts`) + `canEditOpportunity`. Ετυμηγορίες
+  `granted-capability | granted-creator | granted-assignee | denied-foreign-tenant | denied-not-owner`, μαζί με `ownerUid`
+  (ανατεθειμένος, αλλιώς δημιουργός). Η ικανότητα κρίνεται **μόνο** από τον `decideCapability` — κανένα όνομα ρόλου (CHECK 3.68).
+  Ικανότητα εταιρείας **δεν** πιάνει legacy έγγραφο χωρίς `companyId` (όπως το `crmIsCompanyAdmin`).
+- **Ένα σημείο επιβολής στον server**: `opportunity-access.server.ts` → `requireOpportunityAccess` = φράχτης μισθωτή (404) και
+  μετά ο κριτής ⇒ 403 `{ errorCode: 'OPPORTUNITY_NOT_OWNER', reason, ownerUid }`. Το καλούν η πόρτα σταδίου (`edit`), το
+  `PATCH` (`edit`) και το `DELETE` (`delete`). Η πόρτα **δεν** ζητά πλέον `permissions` στο `withAuth`: ο ανατεθειμένος δεν
+  έχει την ικανότητα και πρέπει να φτάσει στον κριτή.
+- 🔴 **Εύρημα της αναγνώρισης**: τα `PATCH`/`DELETE /api/opportunities/[id]` έκαναν **μόνο** φράχτη μισθωτή ⇒ **κάθε** μέλος
+  της εταιρείας επεξεργαζόταν/έσβηνε **κάθε** ευκαιρία μέσω HTTP, πάνω από τους κανόνες (Admin SDK). Και κάθε άρνηση του
+  φράχτη έβγαινε **500** αντί για 404 (`respondWithFailure`). Πέρασαν στο `defineRoute` και στον κριτή.
+- **Κανόνες**: ο ανατεθειμένος στο `update` και στην ανάγνωση legacy εγγράφου (αλλιώς θα **έγραφε** έγγραφο που δεν
+  διαβάζει)· όχι στο `delete`. Σουίτα: `describeCrmOwnerLeg({ assigneeIsOwner: true })` + ανατεθειμένος × στάδιο ⇒ deny,
+  × διαγραφή ⇒ deny.
+- **Οθόνη**: `stage-move/useOpportunityAccess.ts` δίνει στον **ίδιο** κριτή την ταυτότητα του browser (`pending` ≠ άρνηση).
+  Κάρτα που δεν κινείται ⇒ **δεν σέρνεται**, κλειδαριά στη θέση της λαβής με Radix tooltip «Μόνο ο/η {κάτοχος} ή
+  διαχειριστής…»· «Επεξεργασία»/«Διαγραφή» απενεργά με τον λόγο (όχι κρυμμένα). Ονόματα κατόχων με **ένα**
+  `useUserDisplayNames` για όλο τον πίνακα. Φεύγει το χειρόγραφο `isBypass || permissions.includes(...)` του `PipelineTab`.
+- **Πέρα από τους μεγάλους**: το 403 λέει **ποιος** μπορεί — η εντολή γράφει «Δεν αποθηκεύτηκε: την κινεί μόνο ο/η …» (δίχτυ
+  για μπαγιάτικη εικόνα, π.χ. η ανάθεση άλλαξε στο μεταξύ). Το όνομα το βρίσκει ο πελάτης· ο server δεν διαβάζει προφίλ
+  τρίτων για να συνθέσει μήνυμα.
+- **CHECK 3.114**: Κ5 (ανατεθειμένος **μόνο** στο `update` των κανόνων) · Κ6 (ρόλοι του `role-catalogue.ts` με την ικανότητα
+  του κριτή == ρόλος του `isCompanyAdminOfCompany`) · Κ1: το `requireOpportunityInTenant` έχει **έναν** καλούντα.
+  Υπόλειμμα (στο `docs/gates/3.114.md`): ικανότητα ως ρητό claim — οι κανόνες δεν τη βλέπουν (στενότερο, όχι διαρροή).
+
 ## 4. Τι ΔΕΝ λύθηκε (καταγραμμένο στο `pending-ratchet-work.md`)
+
+- `activities`: ίδιο ερώτημα ανατεθειμένου — ξεχωριστή απόφαση.
+- Η λίστα «Ενδιαφερόμενοι» (`LeadsList` / `useLeadsList`) διαγράφει χωρίς να ρωτά τον κριτή στην οθόνη (οι κανόνες
+  αρνούνται, το κουμπί όμως φαίνεται).
 
 - Οι **μη σταδιακές** εγγραφές του πελάτη (σημειώσεις, αξία, διαγραφή) γράφονται ακόμη από τον browser χωρίς ίχνος.
 - Το server service γράφει **άλλο σχήμα** (`name`/`value`/`leadId` αντί για `title`/`estimatedValue`/`contactId`).
@@ -120,11 +157,15 @@ ADR-865 §11) κάνει το **αντίθετο, επίτηδες**: η «Κυ�
   allow). Το κοινό συμβόλαιο κατόχου CRM άλλαξε από `status` σε ουδέτερο πεδίο (`NEUTRAL_EDIT`): για τις ευκαιρίες οι
   αρνητικές δοκιμές θα περνούσαν για **λάθος** λόγο.
 - Πύλες: 3.14 · 3.16 · 3.17 · 3.47 · 3.66 · 3.73 · 3.113 · 3.114 πράσινες.
+- **§3.7 (2026-11-04)**: κριτής 14 · εντολή 8 (+403 με όνομα) · πύλη 3.114 16 (+Κ1 φράχτης, Κ5×2, Κ6×3) ·
+  `surface-authority-reachability` + `tenant-isolation` 104 · κανόνες opportunities + leads + activities **120/120**.
+  Ζωντανά στο nestorconstruct.gr: εκκρεμεί (μετά από land + push + έγκριση `firebase-production`).
 
 ## Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-04 | **§3.7 Εξουσία κατόχου** (απόφαση Giorgio). Ένας ισομορφικός κριτής `decideOpportunityAccess` (`services/crm/opportunity-access.ts`) + ένα σημείο επιβολής `requireOpportunityAccess` (πόρτα σταδίου · `PATCH` · `DELETE`)· κανόνες: ανατεθειμένος στο `update` και στην ανάγνωση legacy, όχι στο `delete`· οθόνη: κλειδωμένη κάρτα με όνομα κατόχου, απενεργά κουμπιά με λόγο· 403 με `ownerUid`. 🔴 Έκλεισε κενό: `PATCH`/`DELETE` έκαναν μόνο φράχτη μισθωτή (κάθε μέλος σε κάθε ευκαιρία) και απαντούσαν 500 αντί για 404 — μεταφορά στο `defineRoute`. CHECK 3.114 +Κ5/Κ6 (`scripts/lib/write-authority/opportunity-owner-parity.js`) + φρουρός του `requireOpportunityInTenant`. `Opportunity.createdBy` στον τύπο. Κλείνει το «ανοιχτό για απόφαση» της διόρθωσης `b0ba9ba1`. |
 | 2026-11-04 | **Αναρίθμηση ADR-929 → ADR-930 (σύγκρουση αριθμού, CHECK 3.49).** Δύο κλαδιά πήραν ταυτόχρονα το 929: αυτό και το `ADR-929-raster-plan-recognition`. Κατά τον κανόνα (ADR-779) άλλαξε αριθμό το έγγραφο με τις **λιγότερες** αναφορές (55 αρχεία έναντι 137), με απόφαση Giorgio. Μετονομάστηκαν το έγγραφο και το handoff (`HANDOFFS/2026-11-04_ADR-930_crm-pipeline-dnd_handoff.md`), και άλλαξαν 68 αναφορές σε κώδικα, κανόνες, πύλη 3.114 και `pending-ratchet-work.md`. Το `adr-index.md` και ο πίνακας πυλών του `CLAUDE.md` ξαναπαράχθηκαν. Παλιά αναφορά «ADR-929» σε μηνύματα commit πριν από αυτή την ημερομηνία που αφορά το CRM σημαίνει **αυτό** το έγγραφο. |
 | 2026-11-04 | **🔴 Διόρθωση μετά το deploy (`6db1147d`): η πόρτα σταδίου ήταν απρόσιτη.** Το `POST /api/opportunities/[id]/stage` ζητά `crm:opportunities:update`, που **κανένας** ρόλος του `role-catalogue.ts` δεν είχε ⇒ 403 σε όλους εκτός `super_admin` (bypass). Το έπιασε στο CI το `surface-authority-reachability.test.ts` (ADR-829 Κ2), που **δεν** τρέχει στο pre-commit. Δόθηκε στον `company_admin` (ήδη είχε `:view`). Ο server διαβάζει τον κατάλογο ζωντανά (`permissions.ts`), άρα δεν χρειάζεται ανανέωση claims. Ανοιχτό για απόφαση: ο **δημιουργός** μιας ευκαιρίας που δεν είναι διαχειριστής την επεξεργάζεται κατά τους κανόνες (`crmWriterIsPrivileged`) αλλά δεν αλλάζει το στάδιό της. Διορθώθηκε και η §5: η γραμμή παραγωγής ανεβάζει **πρώτα** τους κανόνες. |
 | 2026-11-04 | Δημιουργία. Φ1 ρίζα σταδίων + πόρτα + ιστορικό · Φ2 `KanbanBoard` (+ μεταφορά `VariantLevelBoard`) · Φ3 οθόνη (σύρσιμο, διάλογοι, αναίρεση, ζωντανός πίνακας, σύνολα, ταξινόμηση, «μέρες στο στάδιο», φόρμα μέσω πόρτας) · Φ4 κανόνες + CHECK 3.114 + MCP. Boy Scout: `toCatalogKey` (κοινό snake→camel), `mcp-write-allowlist` (κοινό 3.113/3.114), ετικέτα ιστορικού `quoteIntake` που έλειπε από το `main` (`c16a02f6`). |

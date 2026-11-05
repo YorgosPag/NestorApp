@@ -5,7 +5,14 @@
       "kind": "call",
       "name": "applyOpportunityStageTransition",
       "owners": {
-        "src/app/api/opportunities/[id]/stage/route.ts": "Η ΜΙΑ πόρτα: το route με δικαίωμα `crm:opportunities:update`, φράχτη μισθωτή, ιδεμποτία και όριο ρυθμού καλεί τον γραφέα."
+        "src/app/api/opportunities/[id]/stage/route.ts": "Η ΜΙΑ πόρτα: το route με φράχτη μισθωτή + εξουσία κατόχου (`requireOpportunityAccess`), ιδεμποτία και όριο ρυθμού καλεί τον γραφέα."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "requireOpportunityInTenant",
+      "owners": {
+        "src/services/crm/opportunity-access.server.ts": "Το ΕΝΑ σημείο επιβολής της εξουσίας κατόχου (ADR-930): φράχτης μισθωτή και ΜΕΤΑ ο κριτής `decideOpportunityAccess`. Route που καλεί τον φράχτη μόνο του θα άφηνε κάθε μέλος της εταιρείας σε κάθε ευκαιρία."
       }
     },
     {

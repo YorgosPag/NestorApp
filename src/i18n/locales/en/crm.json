@@ -397,7 +397,15 @@
       "conflict": "Someone else moved it meanwhile — it is now in “{stage}”.",
       "unknownStage": "an unknown stage",
       "refused": "You are not allowed to change this opportunity's stage.",
+      "refusedBy": "Not saved: only {owner} or a manager can move it.",
       "failed": "The move was not saved. The card went back to its place."
+    },
+    "access": {
+      "lockedBy": "Only {owner} or a manager can change it.",
+      "locked": "Only the owner or a manager can change it.",
+      "foreign": "It belongs to another company.",
+      "deleteLocked": "Only its creator or a manager can delete it.",
+      "lockedCard": "Locked card"
     },
     "close": {
       "wonTitle": "Close as won",

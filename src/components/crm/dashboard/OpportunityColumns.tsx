@@ -28,6 +28,7 @@ import {
   type ColumnTotals,
   type PipelineSort,
 } from '../utils/pipeline-board';
+import { useOpportunityLocks, type OpportunityAccessGate } from '../stage-move/useOpportunityAccess';
 import { OpportunityCard } from './OpportunityCard';
 
 interface OpportunityColumnsProps {
@@ -35,8 +36,8 @@ interface OpportunityColumnsProps {
   readonly onEdit: (opportunity: Opportunity) => void;
   readonly onDelete: (opportunityId: string, opportunityName: string) => void;
   readonly onMove: (opportunity: Opportunity, to: OpportunityStage) => void;
-  /** Έχει ο χρήστης το δικαίωμα αλλαγής σταδίου (`crm:opportunities:update`); */
-  readonly canMove: boolean;
+  /** Ο κριτής κατόχου (ADR-930): ανά κάρτα, ο ίδιος με τον server — διαχειριστής όλες, ο κάτοχος τις δικές του. */
+  readonly access: OpportunityAccessGate;
   readonly isMoving: (opportunityId: string) => boolean;
 }
 
@@ -77,9 +78,10 @@ function SortPicker({ sort, onSort }: { readonly sort: PipelineSort; readonly on
   );
 }
 
-export function OpportunityColumns({ opportunities, onEdit, onDelete, onMove, canMove, isMoving }: OpportunityColumnsProps) {
+export function OpportunityColumns({ opportunities, onEdit, onDelete, onMove, access, isMoving }: OpportunityColumnsProps) {
   const { t } = useTranslation('crm');
   const [sort, setSort] = usePipelineSort();
+  const locksOf = useOpportunityLocks(opportunities, access);
   const sorted = useMemo(() => sortOpportunities(opportunities, sort), [opportunities, sort]);
   const columns = useMemo<KanbanColumnDef[]>(() => OPPORTUNITY_STAGE_IDS.map((stage) => ({
     id: stage,
@@ -101,7 +103,7 @@ export function OpportunityColumns({ opportunities, onEdit, onDelete, onMove, ca
         getId={(o) => o.id ?? ''}
         getLabel={(o) => o.fullName || o.title}
         getColumnId={(o) => o.stage}
-        canDrag={(o) => canMove && !!o.id && !isMoving(o.id)}
+        canDrag={(o) => !!o.id && !isMoving(o.id) && access.allows(o, 'edit')}
         onMove={(o, _from, to) => moveTo(o.id ?? '', to)}
         activation="card"
         ariaLabel={t('pipeline.title')}
@@ -110,7 +112,7 @@ export function OpportunityColumns({ opportunities, onEdit, onDelete, onMove, ca
         columnClassName="min-w-[280px] flex-1 bg-muted/30"
         renderCard={(o, handle) => (
           <OpportunityCard opportunity={o} onEdit={onEdit} onDelete={onDelete} handle={handle} moving={!!o.id && isMoving(o.id)}
-            onMoveTo={canMove ? (stage) => moveTo(o.id ?? '', stage) : undefined} />
+            locks={locksOf(o)} onMoveTo={access.allows(o, 'edit') ? (stage) => moveTo(o.id ?? '', stage) : undefined} />
         )}
       />
     </section>

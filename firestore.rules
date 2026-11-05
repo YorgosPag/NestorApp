@@ -3512,15 +3512,13 @@ service cloud.firestore {
     //    στους βοηθούς `crm*()` (βλ. «CRM MODULE — OWNER-AWARE …» παρακάτω στο
     //    αρχείο)· εδώ μένει ΜΟΝΟ η πολιτική της κάθε συλλογής, ορατή με μια ματιά.
     //
-    // ⚠️ Η ΑΣΥΜΜΕΤΡΙΑ ΕΙΝΑΙ ΣΚΟΠΙΜΗ, ΜΕΤΡΗΜΕΝΗ ΚΑΙ ΚΑΡΦΩΜΕΝΗ: ΜΟΝΟ το `leads`
-    //    δίνει πρόσβαση στον ανατεθειμένο. Έτσι ήταν και ΠΡΙΝ την ένωση — η ένωση
-    //    ΔΕΝ αλλάζει πρόσβαση παραγωγής, σε κανένα από τα 9 μετρημένα σενάρια.
-    //    🔓 ΑΝΟΙΧΤΟ ΕΡΩΤΗΜΑ (ADR-841 §7 Α21.14.8): κατά Salesforce/HubSpot/Zoho το
-    //    ίδιο θα έπρεπε να ισχύει και για `opportunities` / `activities` — και το
-    //    `Opportunity.assignedTo` είναι ΥΠΟΧΡΕΩΤΙΚΟ πεδίο (`src/types/crm.ts:37`),
-    //    δηλαδή ο ανατεθειμένος πωλητής ΔΕΝ μπορεί να ενημερώσει τη δική του
-    //    ευκαιρία. Είναι ΔΙΕΥΡΥΝΣΗ πρόσβασης παραγωγής, άρα ΞΕΧΩΡΙΣΤΗ απόφαση —
-    //    όχι λαθραία μέσα σε refactor. Καρφωμένο ως γεγονός στις τρεις σουίτες.
+    // ⚠️ Η ΑΣΥΜΜΕΤΡΙΑ ΕΙΝΑΙ ΣΚΟΠΙΜΗ, ΜΕΤΡΗΜΕΝΗ ΚΑΙ ΚΑΡΦΩΜΕΝΗ: `leads` και
+    //    `opportunities` δίνουν `update` στον ανατεθειμένο· τα `activities` ΟΧΙ.
+    //    ✅ Για τις `opportunities` το ερώτημα του ADR-841 §7 Α21.14.8 ΑΠΑΝΤΗΘΗΚΕ
+    //    ρητά (ADR-930 «Εξουσία κατόχου», απόφαση Giorgio 2026-11-04): ο
+    //    ανατεθειμένος πωλητής κινεί και επεξεργάζεται τη δική του — ΔΕΝ τη σβήνει.
+    //    🔓 ΑΝΟΙΧΤΟ ΕΡΩΤΗΜΑ: τα `activities` — ίδια διεύρυνση, ΞΕΧΩΡΙΣΤΗ απόφαση.
+    //    Καρφωμένο ως γεγονός στις τρεις σουίτες.
 
     match /leads/{leadId} {
       // 📖 READ: tenant-scoped· legacy fallback για δημιουργό Ή ανατεθειμένο.
@@ -3550,12 +3548,14 @@ service cloud.firestore {
     }
 
     match /opportunities/{opportunityId} {
-      // 📖 READ: tenant-scoped· legacy fallback ΜΟΝΟ για δημιουργό (βλ. ⚠️ πιο πάνω).
+      // 📖 READ: tenant-scoped· legacy fallback για δημιουργό Ή ανατεθειμένο (όπως `leads`, ADR-930) —
+      //    αλλιώς ο ανατεθειμένος θα ΕΓΡΑΦΕ legacy έγγραφο που ΔΕΝ μπορεί να διαβάσει.
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
                        || crmInTenant(resource.data)
-                       || (crmIsLegacy(resource.data) && crmIsCreator(resource.data))
+                       || (crmIsLegacy(resource.data)
+                           && (crmIsCreator(resource.data) || crmIsAssignee(resource.data)))
                      );
 
       allow create: if crmCanCreate();
@@ -3564,14 +3564,20 @@ service cloud.firestore {
       //    (Admin SDK: έλεγχος σύγκρουσης, υποχρεωτικά στοιχεία κλεισίματος, ιστορικό). Ο πελάτης τα διαβάζει, ΔΕΝ τα γράφει.
       //    Η λίστα = `STAGE_OWNED_FIELDS` (`services/crm/opportunity-stage-transition.ts`)· την ισοτιμία τη φυλά η πύλη
       //    «ένας γραφέας σταδίου ευκαιρίας» (CHECK 3.114).
+      // 👤 ADR-930 «Εξουσία κατόχου» (απόφαση Giorgio 2026-11-04): + Ο ΑΝΑΤΕΘΕΙΜΕΝΟΣ — δουλεύει τη δική του ευκαιρία,
+      //    όπως στα `leads` (Salesforce Record Owner · HubSpot «Owned only» · Pipedrive deal owner). Ο ίδιος πίνακας
+      //    ζει στον server ως `decideOpportunityAccess` (`services/crm/opportunity-access.ts`)· την ισοτιμία τη φυλά η
+      //    CHECK 3.114 (Κ5: ανατεθειμένος ΜΟΝΟ στο `update` · Κ6: ρόλοι της ικανότητας ⇔ ρόλος των κανόνων).
       allow update: if isAuthenticated()
                     && resource != null
-                    && crmWriterIsPrivileged(resource.data)
+                    && (crmWriterIsPrivileged(resource.data)
+                        || (crmIsAssignee(resource.data) && crmNotForeignTenant(resource.data)))
                     && crmCompanyIdUnchanged(resource.data)
                     && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
                          'stage', 'status', 'wonDate', 'closedAt', 'stageChangedAt', 'lostReason', 'lostReasonNote', 'reopenCount', '_v'
                        ]);
 
+      // 🗑️ DELETE: ΟΧΙ ο ανατεθειμένος — ίδια απόφαση με τα `leads` (και `intent: 'delete'` του server).
       allow delete: if isAuthenticated()
                     && resource != null
                     && crmWriterIsPrivileged(resource.data);

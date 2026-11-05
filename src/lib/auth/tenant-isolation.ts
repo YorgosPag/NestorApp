@@ -218,6 +218,9 @@ export interface TenantOpportunity {
   companyId: string;
   name?: string;
   stage?: string;
+  /** ADR-930 — τα γεγονότα του κριτή κατόχου (`services/crm/opportunity-access`): ίδια ανάγνωση, καμία δεύτερη. */
+  createdBy?: string;
+  assignedTo?: string;
 }
 
 /**
