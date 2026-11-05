@@ -3320,8 +3320,12 @@ service cloud.firestore {
       // ✍️ CREATE: Authenticated users with companyId from claims
       // 🔐 SECURITY: companyId MUST match user's company claim (no cross-tenant creation)
       // 🏢 EXCEPTION: Super Admin can create contacts for any company (same as projects)
+      // 🔒 ADR-923 §5.13 Τ5 (ανασκόπηση Ε3): το `platformCompanyId` δένει την καρτέλα με τον χώρο ενός προμηθευτή της
+      //    πλατφόρμας και ανοίγει κανάλι email προς το `quoteIntake` του. Το γράφει ΜΟΝΟ ο διακομιστής (Admin SDK, στη
+      //    συναλλαγή του `createRfq`)· ο client δεν το γεννά ούτε το αλλάζει. Δεύτερη ζώνη: η κρίση `platformCompanyOfContact`.
       allow create: if isAuthenticated()
                     && isValidContactData(request.resource.data)
+                    && !request.resource.data.keys().hasAny(['platformCompanyId'])
                     && resource == null
                     && (
                          // Super Admin can create for any company
@@ -3348,7 +3352,9 @@ service cloud.firestore {
                          || (!resource.data.keys().hasAny(['createdBy']) && belongsToCompany(resource.data.companyId))
                        )
                     // Prevent changing companyId (no re-tenanting)
-                    && request.resource.data.companyId == resource.data.companyId;
+                    && request.resource.data.companyId == resource.data.companyId
+                    // ADR-923 §5.13 Τ5 (Ε3): ο δεσμός με χώρο της πλατφόρμας μένει όπως τον έγραψε ο διακομιστής
+                    && request.resource.data.get('platformCompanyId', null) == resource.data.get('platformCompanyId', null);
 
       // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()

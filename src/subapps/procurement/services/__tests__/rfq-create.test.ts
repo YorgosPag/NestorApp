@@ -109,17 +109,17 @@ describe('createRfq — γραμμές καταλόγου (ADR-923 §5.13 Τ4)',
     })]);
   });
 
-  it('Τ5: όριο ανά ζεύγος (αγοραστής, προμηθευτής) ⇒ `quoteRequestQuotaExhausted`, τίποτα δεν γράφεται, κανένα διαπιστευτήριο', async () => {
-    mockQuota.mockResolvedValueOnce(false);
-    expect(await refusal(catalogDto())).toBe('quoteRequestQuotaExhausted');
-    expect(mockQuota).toHaveBeenCalledWith('rfq-quote-request:pair', `${BUYER}:${SUPPLIER}`, expect.objectContaining({ limit: 10 }));
-    expect(mockMint).not.toHaveBeenCalled();
-    expectNothingWritten();
-  });
-
-  it('Τ5: RFQ χωρίς γραμμή καταλόγου δεν καταναλώνει την ποσόστωση ζεύγους', async () => {
+  it('Τ5 (ανασκόπηση Ε2): η ΔΗΜΙΟΥΡΓΙΑ δεν καταναλώνει ποσόστωση — κρίνεται μόνο στην αποστολή, ανά πρόσκληση', async () => {
+    await createRfq(ctx, catalogDto());
     await createRfq(ctx, { projectId: 'p', title: 'T', invitedVendorIds: ['v1'] });
     expect(mockQuota).not.toHaveBeenCalled();
+  });
+
+  it('Τ5 (Ε2): RFQ που τελικά αρνείται δεν έχει καταναλώσει τίποτα', async () => {
+    seedIntake(false);
+    expect(await refusal(catalogDto())).toBe('supplierNotAcceptingQuotes');
+    expect(mockQuota).not.toHaveBeenCalled();
+    expectNothingWritten();
   });
 
   it('το ίχνος της νέας επαφής γράφεται μετά το commit· υπάρχουσα επαφή δεν «γεννιέται» ξανά', async () => {

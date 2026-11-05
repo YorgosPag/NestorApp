@@ -55,7 +55,10 @@ function afterRfqCreated(ctx: AuthContext, rfq: RFQ, dto: CreateRfqDTO, plan: Rf
   if (plan.catalogLines.length > 0) recordRfqLinesAdded(ctx, rfq.id, plan.catalogLines.length, 'catalog');
   // ADR-923 §5.13 Τ5 — η πρόθεση γράφτηκε στη συναλλαγή (`delivery: pending`)· η πρώτη απόπειρα μετά την απάντηση, με τον
   // σύνδεσμο που κρατά ακόμη η μνήμη. Ό,τι αποτύχει το ξαναπιάνει το cron `rfq-invite-delivery` με νέο σύνδεσμο.
-  scheduleRfqInviteDeliveries(plan.invites.map(({ invite, link }) => ({ inviteId: invite.id, link })));
+  scheduleRfqInviteDeliveries(plan.invites.map(({ invite, link }) => ({
+    inviteId: invite.id,
+    link: { portalUrl: link.portalUrl, declineUrl: link.declineUrl, expiresAtIso: link.expiresAtIso, credentialId: link.credential.id },
+  })));
 }
 
 /**

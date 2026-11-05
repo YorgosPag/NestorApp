@@ -161,3 +161,24 @@ describe('Ε5 — το κανάλι πρόσκλησης δεν διαβάζει
     expect(result).toEqual({ success: true, providerMessageId: 'mg_1', errorReason: null, channel: 'email' });
   });
 });
+
+describe('Ε6 — ADR-923 §5.13 Τ5 (Ε5): «ίσως παραδόθηκε» δεν είναι «απέτυχε»', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('και οι δύο πάροχοι σωπαίνουν ⇒ `outcomeUnknown`: ο καλών ΔΕΝ ξαναστέλνει', async () => {
+    mockResendSend.mockReturnValue(new Promise(() => { /* ποτέ */ }));
+    global.fetch = jest.fn(() => new Promise<Response>(() => { /* ποτέ */ }));
+    const pending = channel().emailVendorInviteChannel.send(invite);
+    await jest.advanceTimersByTimeAsync(2 * chain().PROVIDER_TIMEOUT_MS + 2);
+    expect(await pending).toMatchObject({ success: false, outcomeUnknown: true });
+  });
+
+  it('ρητή άρνηση και των δύο ⇒ χωρίς `outcomeUnknown` (ασφαλής επανάληψη)', async () => {
+    mockResendSend.mockResolvedValue({ data: null, error: { message: 'domain not verified' } });
+    global.fetch = jest.fn(async () => new Response('bad', { status: 400 }));
+    const result = await channel().emailVendorInviteChannel.send(invite);
+    expect(result.success).toBe(false);
+    expect(result.outcomeUnknown).toBeUndefined();
+  });
+});

@@ -38,6 +38,8 @@ const mockDispatch = jest.fn(async () => ({ success: true, dedupeKey: 'k', skipp
 jest.mock('@/server/notifications/notification-orchestrator', () => ({ dispatchNotification: (...a: unknown[]) => mockDispatch(...(a as [])) }));
 jest.mock('@/lib/workspace/workspace-administrators', () => ({ activeWorkspaceAdministrators: async () => ['u_admin_1', 'u_admin_2'] }));
 jest.mock('@/lib/workspace/workspace-catalog', () => ({ readWorkspaceName: async () => 'Γραφείο Αγοραστή' }));
+const mockShowcase = jest.fn();
+jest.mock('@/services/public-catalog/public-catalog.reader', () => ({ readPublicSupplier: (...a: unknown[]) => mockShowcase(...a) }));
 
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθούν οι μονάδες */
 import { Timestamp } from 'firebase-admin/firestore';
@@ -62,7 +64,8 @@ const BUYER = 'comp_buyer';
 const SUPPLIER = 'comp_aries';
 const PLATFORM_CONTACT = generateDeterministicPlatformCompanyContactId(BUYER, SUPPLIER);
 const NOW = Date.parse('2026-11-04T10:00:00.000Z');
-const LINK = { portalUrl: 'https://app.test/q#mem', declineUrl: 'https://app.test/d#mem', expiresAtIso: '2026-11-11T10:00:00.000Z' };
+const LINK = { portalUrl: 'https://app.test/q#mem', declineUrl: 'https://app.test/d#mem', expiresAtIso: '2026-11-11T10:00:00.000Z', credentialId: 'vic_mem' };
+const credential = (id: string) => fake.getData(COLLECTIONS.VENDOR_INVITE_CREDENTIALS, id) as { revokedAt: string | null; revokedBy: string | null };
 
 const invite = (id: string) => fake.getData(COLLECTIONS.VENDOR_INVITES, id) as Record<string, unknown> & { delivery: VendorInviteDelivery };
 const sentTo = () => mockSend.mock.calls.map(([message]) => (message as { recipient: string }).recipient);
@@ -72,6 +75,10 @@ function seedInvite(id: string, contactId: string, over: Record<string, unknown>
     id, rfqId: 'rfq_1', companyId: BUYER, vendorContactId: contactId, status: 'sent', deliveryChannel: 'email',
     expiresAt: Timestamp.fromMillis(NOW + 7 * 86_400_000), deliveredAt: null, recipientEmail: null, recipientName: null,
     delivery: pendingInviteDelivery(NOW), ...over,
+  });
+  // Το διαπιστευτήριο του συνδέσμου της μνήμης (fan-out), όπως το γράφει η συναλλαγή του RFQ.
+  fake.seed(COLLECTIONS.VENDOR_INVITE_CREDENTIALS, 'vic_mem', {
+    id: 'vic_mem', inviteId: id, rfqId: 'rfq_1', companyId: BUYER, issuedVia: 'rfq_fanout', revokedAt: null, revokedBy: null,
   });
 }
 
@@ -91,6 +98,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSend.mockResolvedValue({ success: true, providerMessageId: 'm1', errorReason: null, channel: 'email' });
   mockQuota.mockResolvedValue(true);
+  mockShowcase.mockResolvedValue({ companyId: SUPPLIER, legalName: 'ARIES ΑΕ', alias: null });
   fake.seed(COLLECTIONS.RFQS, 'rfq_1', { id: 'rfq_1', companyId: BUYER, title: 'Καλώδια Β΄ φάσης', status: 'draft' });
   seedIntake();
 });
@@ -158,15 +166,13 @@ describe('παραλήπτης — ποιος παίρνει τον σύνδεσ
     expect(mockSend).not.toHaveBeenCalled();
   });
 
-  it('εξαντλημένη ποσόστωση του προμηθευτή ⇒ `recipient_quota`, κανένα email, καμία ειδοποίηση', async () => {
-    mockQuota.mockResolvedValue(false);
+  it('🔒 Ε3β: βιτρίνα όχι επιβεβαιωμένη ⇒ κανένας παραλήπτης, ακόμη κι αν το ιδιωτικό opt-in λέει «ναι»', async () => {
+    mockShowcase.mockResolvedValue(null);
     seedPlatformContact();
     seedInvite('inv_1', PLATFORM_CONTACT);
     expect(await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW)).toBe('undeliverable');
-    expect(mockQuota).toHaveBeenCalledWith('rfq-quote-request:supplier', SUPPLIER, expect.objectContaining({ limit: 100 }));
-    expect(invite('inv_1').delivery.reason).toBe('recipient_quota');
+    expect(invite('inv_1').delivery.reason).toBe('no_recipient');
     expect(mockSend).not.toHaveBeenCalled();
-    expect(mockDispatch).not.toHaveBeenCalled();
   });
 
   it('RFQ που δεν δέχεται πια προσφορές ⇒ `rfq_closed`', async () => {
@@ -229,9 +235,10 @@ describe('επανάληψη — μόνο όταν ο πάροχος αρνήθ�
   beforeEach(() => { seedPlatformContact(); seedInvite('inv_1', PLATFORM_CONTACT); });
 
   it('άρνηση ⇒ `pending` με αναμονή· η σάρωση ξαναστέλνει με ΝΕΟ σύνδεσμο (`email_resend`)', async () => {
-    mockSend.mockResolvedValueOnce({ success: false, providerMessageId: null, errorReason: 'resend: 500', channel: 'email' });
+    mockSend.mockResolvedValueOnce({ success: false, providerMessageId: null, errorReason: 'invalid `to`: quotes@aries.gr', channel: 'email' });
     expect(await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW)).toBe('pending');
-    expect(invite('inv_1').delivery).toMatchObject({ state: 'pending', attempts: 1, lastError: 'resend: 500', dueAt: new Date(NOW + 60_000).toISOString() });
+    expect(invite('inv_1').delivery).toMatchObject({ state: 'pending', attempts: 1, lastError: 'provider_rejected', dueAt: new Date(NOW + 60_000).toISOString() });
+    expect(JSON.stringify(invite('inv_1'))).not.toContain('quotes@aries.gr');
     expect((await runRfqInviteDeliverySweep(fake, NOW + 30_000)).scanned).toBe(0);
     const report = await runRfqInviteDeliverySweep(fake, NOW + 60_000);
     expect(report).toMatchObject({ scanned: 1, delivered: 1 });
@@ -243,7 +250,7 @@ describe('επανάληψη — μόνο όταν ο πάροχος αρνήθ�
   it('βλάβη πριν από την αποστολή (π.χ. ανάγνωση) ⇒ ασφαλής επανάληψη, όχι χαμένη πρόσκληση', async () => {
     mockQuota.mockRejectedValueOnce(new Error('upstash down'));
     expect(await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW)).toBe('pending');
-    expect(invite('inv_1').delivery.lastError).toBe('upstash down');
+    expect(invite('inv_1').delivery.lastError).toBe('transient_error');
   });
 
   it('μετά από `maxAttempts` αρνήσεις ⇒ `failed`, η σάρωση σταματά', () => {
@@ -270,7 +277,7 @@ describe('resolveInviteRecipient — επαναποστολή και αυτοε�
 
   it('πρόσκληση πλατφόρμας (χωρίς στιγμιότυπο) ⇒ λύνεται ζωντανά στο `quoteIntake`', async () => {
     seedPlatformContact();
-    expect(await resolveInviteRecipient(platformInvite)).toEqual({ email: 'quotes@aries.gr', name: 'ARIES ΑΕ' });
+    expect(await resolveInviteRecipient(platformInvite)).toEqual({ email: 'quotes@aries.gr', name: 'ARIES ΑΕ', kind: 'platform', platformCompanyId: SUPPLIER });
   });
 
   it('ο προμηθευτής έκλεισε το opt-in ⇒ καμία επαναποστολή', async () => {
@@ -280,6 +287,64 @@ describe('resolveInviteRecipient — επαναποστολή και αυτοε�
   });
 
   it('στιγμιότυπο επαφής του αγοραστή ⇒ κερδίζει, όπως πριν (ADR-876 §5)', async () => {
-    expect(await resolveInviteRecipient({ ...platformInvite, recipientEmail: 'snap@v.gr' })).toEqual({ email: 'snap@v.gr', name: 'ARIES ΑΕ' });
+    expect(await resolveInviteRecipient({ ...platformInvite, recipientEmail: 'snap@v.gr' })).toEqual({ email: 'snap@v.gr', name: 'ARIES ΑΕ', kind: 'contact', platformCompanyId: null });
+  });
+});
+
+describe('ο ένας φρουρός στο fan-out — ποσόστωση (ανασκόπηση Ε2)', () => {
+  beforeEach(() => { seedPlatformContact(); seedInvite('inv_1', PLATFORM_CONTACT); });
+
+  it('πρώτα το ζεύγος (αγοραστής, προμηθευτής), μετά ο προμηθευτής', async () => {
+    await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW);
+    expect(mockQuota.mock.calls.map(([scope, subject]) => [scope, subject])).toEqual([
+      ['rfq-quote-request:pair', `${BUYER}:${SUPPLIER}`], ['rfq-quote-request:supplier', SUPPLIER],
+    ]);
+  });
+
+  it('γεμάτο όριο ⇒ ΑΝΑΒΟΛΗ ως αύριο (όχι οριστικό), χωρίς χρέωση απόπειρας, χωρίς email, με ανάκληση του αχρησιμοποίητου συνδέσμου', async () => {
+    mockQuota.mockResolvedValueOnce(false);
+    expect(await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW)).toBe('pending');
+    expect(invite('inv_1').delivery).toMatchObject({
+      state: 'pending', attempts: 0, reason: 'recipient_quota', dueAt: new Date(NOW + INVITE_DELIVERY_POLICY.quotaDeferMs).toISOString(),
+    });
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalled();
+    expect(credential('vic_mem').revokedAt).not.toBeNull();
+    const report = await runRfqInviteDeliverySweep(fake, NOW + INVITE_DELIVERY_POLICY.quotaDeferMs);
+    expect(report.delivered).toBe(1);
+    expect(invite('inv_1').delivery).toMatchObject({ state: 'delivered', reason: null });
+  });
+
+  it('η ποσόστωση χρεώνεται ΜΙΑ φορά ανά πρόσκληση, όχι σε κάθε επανάληψη', async () => {
+    mockSend.mockResolvedValueOnce({ success: false, providerMessageId: null, errorReason: 'x', channel: 'email' });
+    await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW);
+    expect(invite('inv_1').delivery.quotaAdmitted).toBe(true);
+    await runRfqInviteDeliverySweep(fake, NOW + 60_000);
+    expect(invite('inv_1').delivery.state).toBe('delivered');
+    expect(mockQuota).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('ανάκληση και αμφίσημη έκβαση (ανασκόπηση Ε5/Ε6)', () => {
+  beforeEach(() => { seedPlatformContact(); seedInvite('inv_1', PLATFORM_CONTACT); });
+
+  it('ρητή άρνηση παρόχου ⇒ το διαπιστευτήριο της απόπειρας ανακαλείται από τη μηχανή', async () => {
+    mockSend.mockResolvedValueOnce({ success: false, providerMessageId: null, errorReason: 'x', channel: 'email' });
+    await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW);
+    expect(credential('vic_mem')).toMatchObject({ revokedBy: 'system:rfq-invite-delivery' });
+  });
+
+  it('παράδοση ⇒ το διαπιστευτήριο μένει ζωντανό', async () => {
+    await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW);
+    expect(credential('vic_mem').revokedAt).toBeNull();
+  });
+
+  it('λήξη χρόνου παρόχου (ίσως παραδόθηκε) ⇒ `unknown`, ΚΑΜΙΑ επανάληψη, ο σύνδεσμος μένει ζωντανός', async () => {
+    mockSend.mockResolvedValueOnce({ success: false, providerMessageId: null, errorReason: 'resend: timeout', channel: 'email', outcomeUnknown: true });
+    expect(await deliverRfqInvite({ inviteId: 'inv_1', link: LINK }, NOW)).toBe('unknown');
+    expect(invite('inv_1').delivery).toMatchObject({ state: 'unknown', lastError: 'outcome_unknown' });
+    expect((await runRfqInviteDeliverySweep(fake, NOW + 86_400_000)).scanned).toBe(0);
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(credential('vic_mem').revokedAt).toBeNull();
   });
 });
