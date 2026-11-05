@@ -3,7 +3,7 @@
  * @see ADR-706
  */
 export { NumericField, type NumericFieldProps } from './NumericField';
-export { MilliQuantityField, MoneyField, PercentField, type ScaledFieldProps } from './ScaledNumericField';
+export { CountField, MilliQuantityField, MoneyField, PercentField, type ScaledFieldProps } from './ScaledNumericField';
 export { MILLI_QUANTITY_SCALE, modelOfDisplay, MONEY_SCALE, PERCENT_SCALE, type ValueScale } from './scaled-value';
 export { useNumericField, type UseNumericFieldOptions, type UseNumericFieldResult } from './use-numeric-field';
 export { evaluateNumericExpression, isNumericExpression } from './numeric-expression';

@@ -132,6 +132,26 @@ export function getSubcontractLibraryUrl() {
   return typedHref('/procurement/subcontracts/library');
 }
 
+/** Μια ρήτρα στην ουρά ελέγχου της βιβλιοθήκης — εκεί καταλήγει κάθε νέα πρόταση (ADR-928 §5.22). */
+export function getSubcontractLibraryReviewUrl(clauseId: string) {
+  return withQuery('/procurement/subcontracts/library', new URLSearchParams({ tab: 'review', clause: clauseId }).toString());
+}
+
+/** Μια ρήτρα στην καρτέλα «Ρήτρες» — ο δρόμος επιστροφής από τη συγγραφή χωρίς υποβολή. */
+export function getSubcontractLibraryClauseUrl(clauseId: string) {
+  return withQuery('/procurement/subcontracts/library', new URLSearchParams({ tab: 'clauses', clause: clauseId }).toString());
+}
+
+/** Συγγραφή νέας ρήτρας (ADR-928 §5.22 · Φ3γ-0b-1). */
+export function getSubcontractClauseNewUrl() {
+  return typedHref('/procurement/subcontracts/library/clauses/new');
+}
+
+/** Πρόταση νέας έκδοσης υπάρχουσας ρήτρας (ADR-928 §5.22 · Φ3γ-0b-1). */
+export function getSubcontractClauseProposeUrl(clauseId: string) {
+  return typedHref(`/procurement/subcontracts/library/clauses/${encodeURIComponent(clauseId)}/propose`);
+}
+
 export function getRfqDetailUrl(projectId: string, rfqId: string) {
   return typedHref(`/projects/${projectId}/procurement/rfq/${rfqId}`);
 }

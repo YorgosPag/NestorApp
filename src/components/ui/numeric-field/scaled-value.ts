@@ -31,6 +31,9 @@ export const MONEY_SCALE: ValueScale = { toDisplay: majorFromMinor, exact: minor
 export const PERCENT_SCALE: ValueScale = { toDisplay: percentFromBasisPoints, exact: basisPointsFromPercent, factor: 100 };
 export const MILLI_QUANTITY_SCALE: ValueScale = { toDisplay: quantityFromMilli, exact: milliFromQuantity, factor: MILLI_PER_UNIT };
 
+/** Ακέραιο πλήθος (π.χ. ημέρες): ίδιο στην οθόνη και στο μοντέλο· μη ακέραιο ⇒ ο μετατροπέας αρνείται, ο κριτής το λέει. */
+export const COUNT_SCALE: ValueScale = { toDisplay: (model) => model, exact: (display) => (Number.isSafeInteger(display) ? display : null), factor: 1 };
+
 /** Η τιμή του μοντέλου για ό,τι έγραψε ο άνθρωπος: ο μετατροπέας, αλλιώς η ακριβής κλιμακωμένη (άκυρη) τιμή. */
 export function modelOfDisplay(display: number, scale: ValueScale): number {
   return scale.exact(display) ?? stripFloatNoise(display * scale.factor);

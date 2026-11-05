@@ -12,7 +12,7 @@
  */
 
 import { NumericField, type NumericFieldProps } from './NumericField';
-import { MILLI_QUANTITY_SCALE, modelOfDisplay, MONEY_SCALE, PERCENT_SCALE, type ValueScale } from './scaled-value';
+import { COUNT_SCALE, MILLI_QUANTITY_SCALE, modelOfDisplay, MONEY_SCALE, PERCENT_SCALE, type ValueScale } from './scaled-value';
 
 type PassthroughProps = Omit<NumericFieldProps, 'value' | 'onValueChange' | 'blankValue' | 'emptyValue' | 'min' | 'max'>;
 
@@ -72,4 +72,9 @@ export function PercentField(props: ScaledFieldProps) {
 /** Ποσότητα στην οθόνη, **χιλιοστά της μονάδας** στο μοντέλο. */
 export function MilliQuantityField(props: ScaledFieldProps) {
   return <ScaledNumericField {...props} scale={MILLI_QUANTITY_SCALE} />;
+}
+
+/** Ακέραιο πλήθος (π.χ. ημέρες) — όπου χρειάζεται το `nullable` («χωρίς όριο»), που το γυμνό `NumericField` δεν έχει. */
+export function CountField(props: ScaledFieldProps) {
+  return <ScaledNumericField {...props} scale={COUNT_SCALE} />;
 }

@@ -6,6 +6,7 @@
 
 import type { SelectableListBadge } from '@/components/shared/lists/SelectableList';
 import type { TranslationState } from '@/subapps/procurement/subcontracts/library/translation-status';
+import type { CommercialTermBindingKey } from '@/subapps/procurement/subcontracts/types/clause-parameter';
 import { DEFAULT_LIBRARY_PROPOSER, type ClauseProfessionalReviewStatus, type ClauseVersionState } from '@/subapps/procurement/subcontracts/types/clause';
 
 type Variant = SelectableListBadge['variant'];
@@ -36,3 +37,14 @@ export const isSystemProposer = (uid: string): boolean => uid === DEFAULT_LIBRAR
 export function humanUidsOf(uids: readonly (string | null)[]): string[] {
   return [...new Set(uids.filter((uid): uid is string => uid !== null && uid.length > 0 && !isSystemProposer(uid)))];
 }
+
+/** Ο ολικός πίνακας «όρος → λέξη»: νέος δεσμευμένος όρος χωρίς ετικέτα = σφάλμα μεταγλώττισης. */
+export const TERM_LABEL: Readonly<Record<CommercialTermBindingKey, string>> = {
+  'retention.rate': 'retentionRate',
+  'withholding.rate': 'withholdingRate',
+  'penalty.perDay': 'penaltyPerDay',
+  'penalty.cap': 'penaltyCap',
+  'cash.limitPerPayment': 'cashLimit',
+  'vat.treatment': 'vatTreatment',
+  'payment.anchorWeekday': 'paymentWeekday',
+};

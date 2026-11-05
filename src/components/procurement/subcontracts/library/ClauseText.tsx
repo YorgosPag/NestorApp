@@ -18,21 +18,11 @@ import { localizedIn, renderParameterValue } from '@/subapps/procurement/subcont
 import { clausePrintedBlocks, type ComparableClause } from '@/subapps/procurement/subcontracts/library/clause-version-diff';
 import { toleranceTextOf, type ToleranceText } from '@/subapps/procurement/subcontracts/library/tolerance-text';
 import { CLAUSE_AUTHORITATIVE_LANGUAGE } from '@/subapps/procurement/subcontracts/types/clause';
-import type { ClauseParameterDefinition, CommercialTermBindingKey } from '@/subapps/procurement/subcontracts/types/clause-parameter';
+import type { ClauseParameterDefinition } from '@/subapps/procurement/subcontracts/types/clause-parameter';
 import { DocumentBlocks } from '../document/AgreementDocumentPreview';
+import { TERM_LABEL } from './library-labels';
 
 const AUTHORITATIVE = documentLocaleOf(CLAUSE_AUTHORITATIVE_LANGUAGE);
-
-/** Ο ολικός πίνακας «όρος → λέξη»: νέος δεσμευμένος όρος χωρίς ετικέτα = σφάλμα μεταγλώττισης. */
-const TERM_LABEL: Readonly<Record<CommercialTermBindingKey, string>> = {
-  'retention.rate': 'retentionRate',
-  'withholding.rate': 'withholdingRate',
-  'penalty.perDay': 'penaltyPerDay',
-  'penalty.cap': 'penaltyCap',
-  'cash.limitPerPayment': 'cashLimit',
-  'vat.treatment': 'vatTreatment',
-  'payment.anchorWeekday': 'paymentWeekday',
-};
 
 export function ClausePrintedText({ clause }: { readonly clause: ComparableClause }) {
   return (
@@ -43,7 +33,7 @@ export function ClausePrintedText({ clause }: { readonly clause: ComparableClaus
   );
 }
 
-function useToleranceWords(): (text: ToleranceText) => string {
+export function useToleranceWords(): (text: ToleranceText) => string {
   const { t } = useTranslation('procurement');
   return (text) => {
     if (text.kind === 'none') return t('subcontracts.library.tolerance.none');

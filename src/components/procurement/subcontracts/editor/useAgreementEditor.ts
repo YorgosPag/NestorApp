@@ -37,6 +37,9 @@ export type EditorSaveBlock =
   | { readonly kind: 'saving' }
   | { readonly kind: 'checking' }
   | { readonly kind: 'conflict' }
+  /** Συγγραφή βιβλιοθήκης (ADR-928 §5.22): λείπει το δικαίωμα, ή η ρήτρα έχει ήδη ανοιχτή πρόταση (μία ανά ρήτρα). */
+  | { readonly kind: 'notAuthorized' }
+  | { readonly kind: 'proposalPending'; readonly version: number }
   | { readonly kind: 'issues'; readonly count: number };
 
 export interface AgreementEditor {

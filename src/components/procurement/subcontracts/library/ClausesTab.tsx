@@ -4,19 +4,22 @@
  * **Οι ρήτρες της βιβλιοθήκης** (ADR-928 Φ3γ-0): λίστα | η ρήτρα. Οι αρχειοθετημένες κρύβονται εξ ορισμού και
  * φαίνονται με διακόπτη (για επαναφορά) — ποτέ δεν χάνονται.
  * 🔑 Η επιλογή ζει στη διεύθυνση (`?clause=`), κοινή με την ουρά ελέγχου.
+ * 🔑 «Νέα ρήτρα» (ADR-928 §5.22): πόρτα στη συγγραφή, με τον φύλακα του γραφέα (`authoringActionBlock`).
  */
 
 import { lazy, Suspense, useId, useMemo, useState } from 'react';
-import { BookOpen, ScrollText } from 'lucide-react';
+import { BookOpen, FilePlus2, ScrollText } from 'lucide-react';
 import { CatalogSplit } from '@/components/catalog/shared/CatalogSplit';
 import { SelectableListItem, SelectableListSection, type SelectableListBadge } from '@/components/shared/lists/SelectableList';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
+import { getSubcontractClauseNewUrl } from '@/lib/navigation/procurement-urls';
 import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
-import type { LibraryActionContext } from '@/subapps/procurement/subcontracts/library/library-action-blocks';
+import { authoringActionBlock, type LibraryActionContext } from '@/subapps/procurement/subcontracts/library/library-action-blocks';
 import type { SubcontractClause } from '@/subapps/procurement/subcontracts/types/clause';
+import { AuthoringDoor } from './AuthoringDoor';
 import type { LibraryActions } from './useLibraryActions';
 import type { LibraryScreen } from './useLibraryScreen';
 
@@ -62,7 +65,10 @@ export function ClausesTab({ screen, context, actions, selected, select, onOpenR
   const clause = screen.library.clauses.find((candidate) => candidate.id === selected) ?? null;
   const list = (
     <SelectableListSection title={t('subcontracts.library.tabs.clauses')} count={clauses.length}>
-      <ArchivedToggle value={showArchived} onChange={setShowArchived} />
+      <span className="flex flex-wrap items-center justify-between gap-2 px-2 py-1">
+        <AuthoringDoor href={getSubcontractClauseNewUrl()} label={t('subcontracts.library.authoring.doors.newClause')} icon={FilePlus2} block={authoringActionBlock('createClause', null, context)} />
+        <ArchivedToggle value={showArchived} onChange={setShowArchived} />
+      </span>
       {clauses.map((item) => (
         <SelectableListItem key={item.id} primary={localizedIn(item.title, language)} secondary={item.clauseKey} icon={ScrollText} badges={badgesOf(item)} selected={item.id === selected} onSelect={() => select(item.id)} />
       ))}

@@ -17,10 +17,13 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
   approveClauseVersionBodySchema,
   archiveBodySchema,
+  createClauseBodySchema,
   decideClauseVersionBodySchema,
+  proposeClauseVersionBodySchema,
   proposeTranslationBodySchema,
   revisionOnlyBodySchema,
 } from '@/subapps/procurement/subcontracts/schema/clause.schema';
+import type { createTradeTemplateBodySchema, updateTradeTemplateBodySchema } from '@/subapps/procurement/subcontracts/schema/trade-template.schema';
 import { SUBCONTRACT_API } from '@/subapps/procurement/subcontracts/subcontract-routes';
 import type { SubcontractClause, SubcontractClauseVersion } from '@/subapps/procurement/subcontracts/types/clause';
 import type { DefaultLibrarySeedReport } from '@/subapps/procurement/subcontracts/types/library-seed';
@@ -29,6 +32,10 @@ import type { SubcontractTradeTemplate } from '@/subapps/procurement/subcontract
 export type ApproveClauseVersionInput = z.infer<typeof approveClauseVersionBodySchema>;
 export type DecideClauseVersionInput = z.infer<typeof decideClauseVersionBodySchema>;
 export type ProposeTranslationInput = z.infer<typeof proposeTranslationBodySchema>;
+export type CreateClauseInput = z.infer<typeof createClauseBodySchema>;
+export type ProposeClauseVersionInput = z.infer<typeof proposeClauseVersionBodySchema>;
+export type CreateTradeTemplateInput = z.infer<typeof createTradeTemplateBodySchema>;
+export type UpdateTradeTemplateInput = z.infer<typeof updateTradeTemplateBodySchema>;
 type RevisionOnlyInput = z.infer<typeof revisionOnlyBodySchema>;
 type ArchiveInput = z.infer<typeof archiveBodySchema>;
 
@@ -79,4 +86,25 @@ export function setClauseArchived(clauseId: string, input: ArchiveInput): Promis
 
 export function setTradeTemplateArchived(templateId: string, input: ArchiveInput): Promise<SubcontractTradeTemplate> {
   return apiClient.put<SubcontractTradeTemplate>(SUBCONTRACT_API.tradeTemplates.archive(templateId), input);
+}
+
+// ── Συγγραφή (ADR-928 §5.22 · Φ3γ-0b) ──────────────────────────────────────────
+
+/** Νέα ρήτρα: γεννιέται με την έκδοση 1 ως **πρόταση** — ισχύει μόνο αφού την εγκρίνει άλλος (409 `duplicate` αν το κλειδί υπάρχει). */
+export function createClause(input: CreateClauseInput): Promise<SubcontractClause> {
+  return apiClient.post<SubcontractClause>(clauses.collection, input);
+}
+
+/** Νέα έκδοση υπάρχουσας ρήτρας ως πρόταση (CAS στη ρήτρα· 409 `proposalPending` αν υπάρχει ήδη ανοιχτή). */
+export function proposeClauseVersion(clauseId: string, input: ProposeClauseVersionInput): Promise<SubcontractClauseVersion> {
+  return apiClient.post<SubcontractClauseVersion>(clauses.versions(clauseId), input);
+}
+
+export function createTradeTemplate(input: CreateTradeTemplateInput): Promise<SubcontractTradeTemplate> {
+  return apiClient.post<SubcontractTradeTemplate>(SUBCONTRACT_API.tradeTemplates.collection, input);
+}
+
+/** Ολική αντικατάσταση του ορισμού με CAS· ο κωδικός μένει αμετάβλητος (ο γραφέας τον κρατά). */
+export function updateTradeTemplate(templateId: string, input: UpdateTradeTemplateInput): Promise<SubcontractTradeTemplate> {
+  return apiClient.put<SubcontractTradeTemplate>(SUBCONTRACT_API.tradeTemplates.item(templateId), input);
 }

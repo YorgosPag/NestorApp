@@ -67,7 +67,9 @@
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e694c874d3bf13e0bfd63e2e8d3c8e1dc5aa5ca4db51fed6136570844b6bd2eb",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "3991371a1ae56de860f0debaa852c00fc9e7ebb3df45c30b8e579280cbd65f1f",
-    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "c0a9a8bc60616a84b13490508de3f1d3c99af0f5fa90579da67fe64a6342f261",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "cf1d846b5b2cef5105507714785398e41c1ddf7f2266bd64bf70f7c38fbfaa7c",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__clauses__clauseId__propose.el.json": "4a411092cc65382a6270972ce305fb318bedd00aca31209bcdadbd0ee485d93c",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__clauses__new.el.json": "4a411092cc65382a6270972ce305fb318bedd00aca31209bcdadbd0ee485d93c",
     "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "ed27faaf054aff06555fb73e987982799aae7ecef3366d7511d1c369f8483e31",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
@@ -130,7 +132,7 @@
       "lazyRouteRegistries": "b0bacc3cf337c275819dff6286bb518d8a5cab18c3c9d88d917b33d0adb7076f",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "b58ae01b916f847d1d66df5b292a591791654a168a344f7f4587bf3f7e215c45",
+      "routeSlices": "de9515e6b6ad27a489f14075bb3840e76a024ca12cfa3ffef02235f90a19c451",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -200,7 +202,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a85aaca11779029b6fcf7c814cba09517b93537b544d0098389176a5fcac57e9",
+  "inputsSha256": "3ac48865690a65babcd5600476c0c5ca1ae65502d76b3c284971d5c95f434017",
   "languages": [
     "el"
   ],
@@ -23627,6 +23629,7 @@
             "subcontracts.library.actions.effectiveNow",
             "subcontracts.library.actions.markReviewed",
             "subcontracts.library.actions.title",
+            "subcontracts.library.authoring.doors.newClause",
             "subcontracts.library.clauses.archived",
             "subcontracts.library.clauses.chooseDescription",
             "subcontracts.library.clauses.chooseTitle",
@@ -23723,6 +23726,604 @@
             "subcontracts.library.clauses",
             "trades"
           ],
+          "whole": false
+        },
+        "uom": {
+          "keys": [],
+          "prefixes": [
+            "name",
+            "symbol"
+          ],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__procurement__subcontracts__library__clauses__clauseId__propose": {
+      "page": "src/app/(app)/o/[workspace]/procurement/subcontracts/library/clauses/[clauseId]/propose/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "actions.next",
+            "actions.previous",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "filters": {
+          "keys": [
+            "clearFilters",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "procurement": {
+          "keys": [
+            "nav.agreements",
+            "nav.analytics",
+            "nav.ariaLabel",
+            "nav.hub",
+            "nav.materials",
+            "nav.purchaseOrders",
+            "nav.quotes",
+            "nav.rfqs",
+            "nav.subcontractLibrary",
+            "nav.vendors",
+            "subcontracts.library.authoring.breadcrumb",
+            "subcontracts.library.authoring.lead",
+            "subcontracts.library.authoring.newTitle",
+            "subcontracts.library.authoring.notFound",
+            "subcontracts.library.authoring.proposeTitle",
+            "subcontracts.library.authoring.proposeTitleBare",
+            "subcontracts.library.title"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "uom": {
+          "keys": [],
+          "prefixes": [
+            "name",
+            "symbol"
+          ],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__procurement__subcontracts__library__clauses__new": {
+      "page": "src/app/(app)/o/[workspace]/procurement/subcontracts/library/clauses/new/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "actions.next",
+            "actions.previous",
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "headerActions.hideDashboard",
+            "headerActions.showDashboard",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [
+            "viewMode.mobile"
+          ],
+          "whole": false
+        },
+        "filters": {
+          "keys": [
+            "clearFilters",
+            "placeholders.search",
+            "placeholders.searchBuildings",
+            "placeholders.searchContacts",
+            "placeholders.searchProjects",
+            "viewMode.byStatus",
+            "viewMode.byType",
+            "viewMode.floorplan",
+            "viewMode.grid",
+            "viewMode.list",
+            "viewMode.mobile.byStatus",
+            "viewMode.mobile.byType",
+            "viewMode.mobile.floorplan",
+            "viewMode.mobile.grid",
+            "viewMode.mobile.list"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "procurement": {
+          "keys": [
+            "nav.agreements",
+            "nav.analytics",
+            "nav.ariaLabel",
+            "nav.hub",
+            "nav.materials",
+            "nav.purchaseOrders",
+            "nav.quotes",
+            "nav.rfqs",
+            "nav.subcontractLibrary",
+            "nav.vendors",
+            "subcontracts.library.authoring.breadcrumb",
+            "subcontracts.library.authoring.lead",
+            "subcontracts.library.authoring.newTitle",
+            "subcontracts.library.authoring.notFound",
+            "subcontracts.library.authoring.proposeTitle",
+            "subcontracts.library.authoring.proposeTitleBare",
+            "subcontracts.library.title"
+          ],
+          "prefixes": [],
           "whole": false
         },
         "uom": {
@@ -37982,7 +38583,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1261834
+    "sliceBytes": 1267436
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

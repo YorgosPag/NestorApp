@@ -31,6 +31,7 @@ export const SUBCONTRACT_ISSUE_KEYS = {
   bindingKindMismatch: 'subcontracts.issues.bindingKindMismatch',
   bindingTermMissing: 'subcontracts.issues.bindingTermMissing',
   clauseKeyInvalid: 'subcontracts.issues.clauseKeyInvalid',
+  clauseKeyTaken: 'subcontracts.issues.clauseKeyTaken',
   clauseTitleRequired: 'subcontracts.issues.clauseTitleRequired',
   headingRequired: 'subcontracts.issues.headingRequired',
   bodyEmpty: 'subcontracts.issues.bodyEmpty',

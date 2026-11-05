@@ -18,15 +18,21 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import {
   approveClauseTranslation,
   approveClauseVersion,
+  createClause,
   markClauseVersionReviewed,
   proposeClauseTranslation,
+  proposeClauseVersion,
   rejectClauseVersion,
   seedSubcontractLibrary,
   setClauseArchived,
   setTradeTemplateArchived,
   withdrawClauseVersion,
+  type CreateClauseInput,
+  type ProposeClauseVersionInput,
 } from '@/services/procurement/subcontracts/subcontract-library-api.client';
-import { subcontractFailureOf } from '@/services/procurement/subcontracts/subcontract-failure';
+import type { DraftOutcome } from '@/hooks/drafts/useRevisionedDraft';
+import { subcontractFailureOf, type SubcontractFailureKind } from '@/services/procurement/subcontracts/subcontract-failure';
+import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
 import { seedReportHasChanges } from '@/subapps/procurement/subcontracts/library/default-library-update';
 import type { CalendarDay } from '@/constants/platform-operator';
 import type { ClauseBody, SubcontractClause, SubcontractClauseVersion } from '@/subapps/procurement/subcontracts/types/clause';
@@ -36,23 +42,41 @@ import { useSubcontractFailureNotice } from '../subcontract-messages';
 
 type VersionRef = Pick<SubcontractClauseVersion, 'clauseId' | 'version' | 'revision'>;
 
-/** Μία πράξη: αίτημα → επιτυχία (λέξη) ή αποτυχία (η μία ειδοποίηση). */
-function useRunner() {
+/**
+ * Μία πράξη: αίτημα → επιτυχία (λέξη) ή αποτυχία (η μία ειδοποίηση), με το αποτέλεσμα ως `DraftOutcome`.
+ * 🔑 Οι πράξεις **συγγραφής** (ADR-928 §5.22) δίνουν το αποτέλεσμα στο πρόχειρο: τα ευρήματα του γραφέα φαίνονται δίπλα
+ *    στα πεδία, και το 409 γίνεται λωρίδα σύγκρουσης — ποτέ χαμένη δουλειά. Γι' αυτό η σύγκρουση εκεί δεν γίνεται
+ *    ειδοποίηση (`quiet`): τη λέει η λωρίδα.
+ */
+function useAttempt() {
   const { t } = useTranslation('procurement');
   const { success } = useNotifications();
   const notifyFailure = useSubcontractFailureNotice();
   return useCallback(
-    async <T>(request: () => Promise<T>, doneKey: string | ((result: T) => string)): Promise<T | null> => {
+    async <T>(request: () => Promise<T>, doneKey: string | ((result: T) => string), quiet: SubcontractFailureKind | null = null): Promise<DraftOutcome<T, SubcontractIssue>> => {
       try {
-        const result = await request();
-        success(t(`subcontracts.library.done.${typeof doneKey === 'string' ? doneKey : doneKey(result)}`));
-        return result;
+        const record = await request();
+        success(t(`subcontracts.library.done.${typeof doneKey === 'string' ? doneKey : doneKey(record)}`));
+        return { ok: true, record };
       } catch (cause) {
-        notifyFailure(subcontractFailureOf(cause));
-        return null;
+        const failure = subcontractFailureOf(cause);
+        if (failure.kind !== quiet) notifyFailure(failure);
+        return { ok: false, failure };
       }
     },
     [notifyFailure, success, t],
+  );
+}
+
+/** Πράξη διακυβέρνησης: μόνο «έγινε;» — η ζωντανή ανάγνωση φέρνει το αποτέλεσμα. */
+function useRunner() {
+  const attempt = useAttempt();
+  return useCallback(
+    async <T>(request: () => Promise<T>, doneKey: string | ((result: T) => string)): Promise<T | null> => {
+      const outcome = await attempt(request, doneKey);
+      return outcome.ok ? outcome.record : null;
+    },
+    [attempt],
   );
 }
 
@@ -68,10 +92,13 @@ export interface LibraryActions {
   readonly approveTranslation: (version: VersionRef, language: string) => Promise<boolean>;
   readonly setClauseArchived: (clause: Pick<SubcontractClause, 'id' | 'revision'>, archived: boolean) => Promise<boolean>;
   readonly setTemplateArchived: (template: Pick<SubcontractTradeTemplate, 'id' | 'revision'>, archived: boolean) => Promise<boolean>;
+  readonly createClause: (input: CreateClauseInput) => Promise<DraftOutcome<SubcontractClause, SubcontractIssue>>;
+  readonly proposeClauseVersion: (clauseId: string, input: ProposeClauseVersionInput) => Promise<DraftOutcome<SubcontractClauseVersion, SubcontractIssue>>;
 }
 
 export function useLibraryActions(): LibraryActions {
   const run = useRunner();
+  const attempt = useAttempt();
   return useMemo(() => {
     const done = async <T>(request: () => Promise<T>, key: string) => (await run(request, key)) !== null;
     return {
@@ -89,6 +116,8 @@ export function useLibraryActions(): LibraryActions {
         done(() => setClauseArchived(clause.id, { expectedRevision: clause.revision, archived }), archived ? 'archive' : 'restore'),
       setTemplateArchived: (template, archived) =>
         done(() => setTradeTemplateArchived(template.id, { expectedRevision: template.revision, archived }), archived ? 'archive' : 'restore'),
+      createClause: (input) => attempt(() => createClause(input), 'clauseCreated', 'revisionMismatch'),
+      proposeClauseVersion: (clauseId, input) => attempt(() => proposeClauseVersion(clauseId, input), 'clauseProposed', 'revisionMismatch'),
     };
-  }, [run]);
+  }, [run, attempt]);
 }

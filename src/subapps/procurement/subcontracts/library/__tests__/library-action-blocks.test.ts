@@ -1,5 +1,5 @@
 import { DEFAULT_LIBRARY_PROPOSER, type SubcontractClauseVersion } from '../../types/clause';
-import { translationApprovalBlock, versionActionBlock, type LibraryActionContext } from '../library-action-blocks';
+import { authoringActionBlock, translationApprovalBlock, versionActionBlock, type LibraryActionContext } from '../library-action-blocks';
 
 type Facts = Pick<SubcontractClauseVersion, 'state' | 'proposedBy' | 'professionalReview' | 'sourceHash'>;
 
@@ -62,5 +62,22 @@ describe('library-action-blocks — οι φύλακες του γραφέα, ω�
     expect(translationApprovalBlock(approved, { ...draft, sourceHash: 'h0' }, admin('u-1'))).toEqual({ kind: 'explained', reason: 'translationStale' });
     expect(translationApprovalBlock(approved, draft, admin('u-translator'))).toEqual({ kind: 'explained', reason: 'ownTranslation' });
     expect(translationApprovalBlock(approved, { ...draft, status: 'approved' }, admin('u-1'))).toEqual({ kind: 'hidden' });
+  });
+});
+
+describe('library-action-blocks — πόρτες συγγραφής (ADR-928 §5.22)', () => {
+  const open = { openProposal: null, isArchived: false };
+
+  it('νέα ρήτρα: με δικαίωμα πρότασης ανοίγει· χωρίς λέγεται· σε αναμονή χωρίς ψευδή αιτία', () => {
+    expect(authoringActionBlock('createClause', null, admin('u-1'))).toBeNull();
+    expect(authoringActionBlock('createClause', null, viewer)).toEqual({ kind: 'explained', reason: 'notAuthorized' });
+    expect(authoringActionBlock('createClause', null, loading)).toEqual({ kind: 'pending' });
+  });
+
+  it('πρόταση αλλαγής: μία ανοιχτή ανά ρήτρα (ο γραφέας λέει 409 `proposalPending`) · αρχειοθετημένη ⇒ δεν αφορά', () => {
+    expect(authoringActionBlock('proposeChange', open, admin('u-1'))).toBeNull();
+    expect(authoringActionBlock('proposeChange', { ...open, openProposal: 3 }, admin('u-1'))).toEqual({ kind: 'explained', reason: 'proposalPending' });
+    expect(authoringActionBlock('proposeChange', { ...open, isArchived: true }, admin('u-1'))).toEqual({ kind: 'hidden' });
+    expect(authoringActionBlock('proposeChange', { ...open, openProposal: 3 }, viewer)).toEqual({ kind: 'explained', reason: 'notAuthorized' });
   });
 });

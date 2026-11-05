@@ -2438,15 +2438,47 @@
       ],
       "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
     },
+    "src/app/(app)/o/[workspace]/procurement/subcontracts/library/clauses/new/page.tsx": {
+      "sealed": 1921,
+      "sealedAt": "2026-11-05",
+      "history": [
+        {
+          "from": 0,
+          "to": 1921,
+          "at": "2026-11-05",
+          "why": "ADR-928 §5.22 Φ3γ-0b-1 (2026-11-05) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 1921 bytes · 1,1% κελύφους · 3 ns [filters, procurement, uom]. Κεφαλίδα, πλοήγηση πίσω, «δεν βρέθηκε». Ο επεξεργαστής (TipTap, κριτές, μοντέλο εγγράφου) είναι πίσω από `import()`."
+        }
+      ],
+      "reason": "ADR-928 §5.22 Φ3γ-0b-1 — ΣΥΓΓΡΑΦΗ ΝΕΑΣ ΡΗΤΡΑΣ (`/o/[workspace]/procurement/subcontracts/library/clauses/new`). Η κεφαλίδα και η πλοήγηση πίσω ζωγραφίζουν στο πρώτο καρέ κλειδιά `procurement:subcontracts.library.*` που το κέλυφος δεν έχει. Καταχωρείται από τη λεπτή είσοδο `NewClauseClient` (το `page.tsx` είναι Server Component). ⚠️ Ο επεξεργαστής, οι κριτές και τα μηνύματα ευρημάτων ΔΕΝ μπαίνουν εδώ: ζουν πίσω από `import()` (`ClauseAuthoringEditor` · `subcontract-message-keys.ts`, ADR-744 §34)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/subcontracts/library/clauses/[clauseId]/propose/page.tsx": {
+      "sealed": 1921,
+      "sealedAt": "2026-11-05",
+      "history": [
+        {
+          "from": 0,
+          "to": 1921,
+          "at": "2026-11-05",
+          "why": "ADR-928 §5.22 Φ3γ-0b-1 (2026-11-05) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 1921 bytes · 1,1% κελύφους · 3 ns [filters, procurement, uom]. Ίδιο κέλυφος με τη «Νέα ρήτρα» (κοινό `ClauseAuthoringPage`)."
+        }
+      ],
+      "reason": "ADR-928 §5.22 Φ3γ-0b-1 — ΠΡΟΤΑΣΗ ΝΕΑΣ ΕΚΔΟΣΗΣ ΡΗΤΡΑΣ (`/o/[workspace]/procurement/subcontracts/library/clauses/[clauseId]/propose`). Η κεφαλίδα (τίτλος της ρήτρας) και η πλοήγηση πίσω ζωγραφίζουν στο πρώτο καρέ κλειδιά `procurement:subcontracts.library.*` που το κέλυφος δεν έχει. Καταχωρείται από τη λεπτή είσοδο `ProposeClauseClient` (το `page.tsx` είναι Server Component). ⚠️ Ο επεξεργαστής, οι κριτές και τα μηνύματα ευρημάτων ΔΕΝ μπαίνουν εδώ: ζουν πίσω από `import()` (ADR-744 §34)."
+    },
     "src/app/(app)/o/[workspace]/procurement/subcontracts/library/page.tsx": {
-      "sealed": 11837,
-      "sealedAt": "2026-11-04",
+      "sealed": 12968,
+      "sealedAt": "2026-11-05",
       "history": [
         {
           "from": 0,
           "to": 11837,
           "at": "2026-11-04",
           "why": "ADR-928 §5.19 Φ3γ-0 (2026-11-04) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 11837 bytes · 6,7% κελύφους · 4 ns [filters, procurement, quotes, uom]. Χωρίς `ActivityTab` (θα πρόσθετε 2 τριάδες στο χρέος εισδοχής, ADR-744 §27)."
+        },
+        {
+          "from": 11837,
+          "to": 12968,
+          "at": "2026-11-05",
+          "why": "ADR-928 §5.22 Φ3γ-0b-1 (2026-11-05) — +1131 bytes, ΜΕΤΡΗΜΕΝΟ με `--measure`: η πόρτα «Νέα ρήτρα» της καρτέλας «Ρήτρες» (`subcontracts.library.authoring.doors.newClause`) και η οικογένεια αιτιών `subcontracts.library.reasons.*` που λέει το κουμπί όταν δεν προσφέρεται (`AuthoringDoor`, στατικό στην καρτέλα). Ο επεξεργαστής είναι άλλη διαδρομή."
         }
       ],
       "reason": "ADR-928 §5.19 Φ3γ-0 — Η ΒΙΒΛΙΟΘΗΚΗ ΡΗΤΡΩΝ ΚΑΙ ΠΡΟΤΥΠΩΝ ΥΠΕΡΓΟΛΑΒΙΑΣ (`/o/[workspace]/procurement/subcontracts/library`). Η κεφαλίδα, οι καρτέλες, η ουρά, η λίστα ρητρών/προτύπων, η πρόοδος και η κενή κατάσταση σποράς ζωγραφίζουν στο πρώτο καρέ κλειδιά `procurement:subcontracts.library.*` που το κέλυφος δεν έχει. Καταχωρείται από το client module της σελίδας (`SubcontractLibraryContent` — το `page.tsx` είναι Server Component). ⚠️ Ο έλεγχος πρότασης, η λεπτομέρεια ρήτρας, οι μεταφράσεις, η σύγκριση και τα μηνύματα ευρημάτων ΔΕΝ μπαίνουν εδώ: ζουν πίσω από `import()` (`ClauseReviewPanel` · `ClauseDetail` · `TranslationEditorDialog` · `subcontract-message-keys.ts`, ADR-744 §34)."

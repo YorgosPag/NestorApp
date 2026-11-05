@@ -18,12 +18,12 @@ import {
   refuseTranslationProposal,
   refuseWithdrawal,
 } from '../clauses/clause-governance';
-import type { ClauseTranslation, SubcontractClauseVersion } from '../types/clause';
+import type { ClauseTranslation, SubcontractClause, SubcontractClauseVersion } from '../types/clause';
 
 export type LibraryAction = 'approve' | 'reject' | 'withdraw' | 'markReviewed' | 'proposeTranslation' | 'approveTranslation';
 
 /** Αιτία που **λέγεται** δίπλα στο ανενεργό κουμπί. */
-export type LibraryActionReason = 'notAuthorized' | 'ownProposal' | 'ownTranslation' | 'translationStale';
+export type LibraryActionReason = 'notAuthorized' | 'ownProposal' | 'ownTranslation' | 'translationStale' | 'proposalPending';
 
 export type LibraryActionBlock =
   | { readonly kind: 'hidden' }
@@ -91,4 +91,21 @@ export function translationApprovalBlock(
   context: LibraryActionContext,
 ): LibraryActionBlock | null {
   return gated(fromRefusal(refuseTranslationApproval(version, translation, context.actorUid), 'ownTranslation'), 'canManage', context);
+}
+
+/** Οι πόρτες της συγγραφής (ADR-928 §5.22): «Νέα ρήτρα» και «Πρότεινε αλλαγή». */
+export type LibraryAuthoringAction = 'createClause' | 'proposeChange';
+
+/**
+ * Ο **ίδιος** φύλακας με τον γραφέα: `subcontracts:clauses:propose` + **μία** ανοιχτή πρόταση ανά ρήτρα (409
+ * `proposalPending`, Φ1 απόφαση 3). Η αρχειοθετημένη ρήτρα δεν δέχεται πρόταση από την οθόνη: πρώτα επαναφορά.
+ */
+export function authoringActionBlock(
+  action: LibraryAuthoringAction,
+  clause: Pick<SubcontractClause, 'openProposal' | 'isArchived'> | null,
+  context: LibraryActionContext,
+): LibraryActionBlock | null {
+  if (action === 'proposeChange' && (clause === null || clause.isArchived)) return HIDDEN;
+  const state = action === 'proposeChange' && clause?.openProposal !== null ? explained('proposalPending') : null;
+  return gated(state, 'canPropose', context);
 }

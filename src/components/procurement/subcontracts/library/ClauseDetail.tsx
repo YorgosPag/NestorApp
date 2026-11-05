@@ -9,12 +9,13 @@
  *    εκδόσεων είναι ήδη το ιστορικό της διακυβέρνησης· το ίχνος `subcontract_clause` γράφεται κανονικά στον διακομιστή.
  *
  * 🔑 Ανοιχτή πρόταση ⇒ σύνδεσμος στον **έλεγχο** (μία θέση απόφασης, όχι δύο).
+ * 🔑 «Πρότεινε αλλαγή» (ADR-928 §5.22): πόρτα στη συγγραφή νέας έκδοσης· ανενεργή με αιτία όταν υπάρχει ανοιχτή πρόταση.
  * 🔑 Η αρχειοθέτηση βγάζει τη ρήτρα από κάθε **νέο** συμφωνητικό (`approvedLibraryFrom` την αφήνει έξω)· τα υπάρχοντα
  *    κρατούν την καρφωμένη έκδοση. Θέλει ρητή επιβεβαίωση και `subcontracts:clauses:manage`.
  * Φορτώνεται με `import()` (ADR-744 §34).
  */
 
-import { Archive, ArchiveRestore, FileClock } from 'lucide-react';
+import { Archive, ArchiveRestore, FileClock, FilePen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -22,9 +23,11 @@ import { useClauseVersions } from '@/hooks/procurement/subcontracts/useSubcontra
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
+import { getSubcontractClauseProposeUrl } from '@/lib/navigation/procurement-urls';
 import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
-import type { LibraryActionContext } from '@/subapps/procurement/subcontracts/library/library-action-blocks';
+import { authoringActionBlock, type LibraryActionContext } from '@/subapps/procurement/subcontracts/library/library-action-blocks';
 import type { SubcontractClause, SubcontractClauseVersion } from '@/subapps/procurement/subcontracts/types/clause';
+import { AuthoringDoor } from './AuthoringDoor';
 import { ClauseTranslationsPanel } from './ClauseTranslationsPanel';
 import { ClauseParametersTable, ClausePrintedText } from './ClauseText';
 import { LibrarySection } from './LibrarySection';
@@ -66,7 +69,7 @@ function ArchiveButton({ clause, context, actions }: Pick<ClauseDetailProps, 'cl
   );
 }
 
-function DetailHeader({ clause, current, onOpenReview }: Pick<ClauseDetailProps, 'clause' | 'current' | 'onOpenReview'>) {
+function DetailHeader({ clause, current, context, onOpenReview }: Pick<ClauseDetailProps, 'clause' | 'current' | 'context' | 'onOpenReview'>) {
   const { t } = useTranslation('procurement');
   return (
     <header className="space-y-2">
@@ -78,6 +81,7 @@ function DetailHeader({ clause, current, onOpenReview }: Pick<ClauseDetailProps,
           : <Badge variant="outline">{t('subcontracts.library.clauses.noCurrent')}</Badge>}
         {current && <Badge variant={LEGAL_REVIEW_VARIANT[current.professionalReview]}>{t(`subcontracts.library.legal.${current.professionalReview}`)}</Badge>}
       </p>
+      <AuthoringDoor href={getSubcontractClauseProposeUrl(clause.id)} label={t('subcontracts.library.authoring.doors.proposeChange')} icon={FilePen} block={authoringActionBlock('proposeChange', clause, context)} />
       {clause.openProposal !== null && (
         <Button type="button" size="sm" variant="secondary" onClick={onOpenReview}>
           <FileClock className="mr-1 h-4 w-4" aria-hidden />{t('subcontracts.library.clauses.openReview', { version: clause.openProposal })}
@@ -93,7 +97,7 @@ export default function ClauseDetail({ clause, current, context, actions, onOpen
   const title = localizedIn(clause.title, resolveHumanLanguage(i18n.language));
   return (
     <article className="space-y-5 p-4">
-      <DetailHeader clause={clause} current={current} onOpenReview={onOpenReview} />
+      <DetailHeader clause={clause} current={current} context={context} onOpenReview={onOpenReview} />
       {current && (
         <>
           <LibrarySection id="clause-current" title={t('subcontracts.library.clauses.currentText')}><ClausePrintedText clause={current} /></LibrarySection>

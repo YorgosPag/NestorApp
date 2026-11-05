@@ -28,6 +28,7 @@ export const SUBCONTRACT_ISSUE_CODES = [
   'bindingTermMissing',
   // ── Σώμα ρήτρας ────────────────────────────────────────────────────────────
   'clauseKeyInvalid',
+  'clauseKeyTaken',
   'clauseTitleRequired',
   'headingRequired',
   'bodyEmpty',

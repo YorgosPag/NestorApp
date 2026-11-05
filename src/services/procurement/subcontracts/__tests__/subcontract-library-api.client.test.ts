@@ -9,12 +9,16 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import {
   approveClauseTranslation,
   approveClauseVersion,
+  createClause,
+  createTradeTemplate,
   markClauseVersionReviewed,
   proposeClauseTranslation,
+  proposeClauseVersion,
   rejectClauseVersion,
   seedSubcontractLibrary,
   setClauseArchived,
   setTradeTemplateArchived,
+  updateTradeTemplate,
   withdrawClauseVersion,
 } from '../subcontract-library-api.client';
 
@@ -35,6 +39,18 @@ function routeFileOf(url: string): string {
 
 describe('subcontract-library-api.client — διαδρομές και σώματα', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it('συγγραφή (ADR-928 §5.22): νέα ρήτρα · πρόταση έκδοσης · νέο/ενημέρωση προτύπου — διαδρομές υπαρκτές', async () => {
+    const content = { body: { heading: 'H', blocks: [] }, parameters: [], proposalReason: null };
+    await createClause({ clauseKey: 'site.rules', title: { el: 'Κανόνες' }, ...content });
+    await proposeClauseVersion('sccl_1', { expectedRevision: 3, ...content });
+    const definition = {} as never;
+    await createTradeTemplate({ definition });
+    await updateTradeTemplate('sctt_1', { expectedRevision: 2, definition });
+    const urls = [...post.mock.calls, ...put.mock.calls].map(([url]) => url as string);
+    expect(urls).toEqual(['/api/subcontracts/clauses', '/api/subcontracts/clauses/sccl_1/versions', '/api/subcontracts/trade-templates', '/api/subcontracts/trade-templates/sctt_1']);
+    for (const url of urls) expect(existsSync(routeFileOf(url))).toBe(true);
+  });
 
   it('κάθε πράξη στέλνει στη σωστή διαδρομή, και η διαδρομή υπάρχει', async () => {
     await seedSubcontractLibrary();

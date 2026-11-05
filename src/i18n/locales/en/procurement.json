@@ -974,6 +974,7 @@
       "bindingKindMismatch": "The bound term has a different type from the parameter",
       "bindingTermMissing": "The bound commercial term is missing",
       "clauseKeyInvalid": "Invalid clause key",
+      "clauseKeyTaken": "A clause with this key already exists",
       "clauseTitleRequired": "The clause needs a title",
       "headingRequired": "A heading is required",
       "bodyEmpty": "The clause text is empty",
@@ -1331,7 +1332,8 @@
         "notAuthorized": "You do not have permission for this action.",
         "ownProposal": "You proposed it — someone else approves.",
         "ownTranslation": "You proposed this translation — someone else approves.",
-        "translationStale": "The Greek text changed after the translation."
+        "translationStale": "The Greek text changed after the translation.",
+        "proposalPending": "There is already an open proposal — decide on that one first."
       },
       "done": {
         "seed": "The proposed library was loaded.",
@@ -1343,7 +1345,9 @@
         "proposeTranslation": "The translation was proposed.",
         "approveTranslation": "The translation was approved.",
         "archive": "Archived.",
-        "restore": "Restored."
+        "restore": "Restored.",
+        "clauseCreated": "The new clause was submitted for approval.",
+        "clauseProposed": "The change proposal was submitted for approval."
       },
       "clauses": {
         "showArchived": "Include archived",
@@ -1410,6 +1414,118 @@
         "clauses": "Clauses",
         "chooseTitle": "Choose a template",
         "chooseDescription": "Template editing is coming soon; here you read and archive."
+      },
+      "authoring": {
+        "breadcrumb": "Library navigation",
+        "newTitle": "New clause",
+        "proposeTitle": "Propose a change: {title}",
+        "proposeTitleBare": "Propose a clause change",
+        "lead": "Write the clause as the subcontractor will read it. It applies only after someone else approves it.",
+        "notFound": "Clause not found.",
+        "doors": {
+          "newClause": "New clause",
+          "proposeChange": "Propose a change"
+        },
+        "formLabel": "Clause authoring",
+        "identity": "Identity",
+        "title": "Title",
+        "clauseKey": "Clause key",
+        "clauseKeyHint": "Latin characters, derived from the title. It cannot change after creation.",
+        "basedOn": "Starting point: version {version}",
+        "noBase": "The clause has no version yet.",
+        "parametersTitle": "{count, plural, one {Parameters (#)} other {Parameters (#)}}",
+        "noParameters": "No parameters. Select text and press “Make it a parameter”, or type '{'.",
+        "removeUnreferenced": "{count, plural, one {Remove # unused} other {Remove # unused}}",
+        "blockedProposalPending": "There is already an open proposal (version {version})",
+        "translationsBehind": "The Greek text changed. The translations ({languages}) will carry over to the new version as drafts and need approval again before they print.",
+        "submit": "Submit proposal",
+        "conflict": "Someone else changed this clause while you were writing. Choose whether to load the new version or keep your changes on top of it.",
+        "status": {
+          "clean": "No changes yet",
+          "dirty": "Changes not submitted",
+          "saving": "Submitting…",
+          "saved": "Submitted"
+        },
+        "submitDialog": {
+          "createTitle": "Submit new clause",
+          "proposeTitle": "Submit change proposal",
+          "description": "The proposal goes for approval. It applies only after someone else approves it. A reason helps the approver."
+        },
+        "preview": {
+          "printed": "As printed",
+          "changes": "Changes",
+          "usage": "Impact"
+        },
+        "body": {
+          "title": "Text",
+          "heading": "Heading",
+          "text": "Clause text",
+          "hint": "Parameters print their own unit (e.g. “30 days”) — do not write the unit next to them.",
+          "toolbar": "Text format",
+          "bulletList": "List",
+          "orderedList": "Numbering",
+          "insertParameter": "Parameter",
+          "existingParameters": "Clause parameters",
+          "newParameter": "New parameter…",
+          "makeParameter": "Make it a parameter",
+          "makeParameterHint": "Select text within one paragraph"
+        },
+        "newParameter": {
+          "title": "New parameter",
+          "fromTextTitle": "Make it a parameter",
+          "description": "Give it a name and a kind. Zones and binding are set afterwards, on its card.",
+          "fromTextDescription": "“{text}” will become a parameter with this preferred value.",
+          "create": "Create"
+        },
+        "parameter": {
+          "label": "Parameter name",
+          "kind": "Kind",
+          "key": "Key",
+          "lockedReason": "It exists in an earlier version: key and kind cannot change, because agreements and translations refer to them. For another kind, create a new parameter.",
+          "boundHint": "The agreement value comes from the commercial terms; here you set the preferred value and the zones that judge it.",
+          "options": "Options",
+          "members": "Ratio members",
+          "addItem": "Add",
+          "removeItem": "Remove item {position}",
+          "untitled": "Unnamed parameter",
+          "unreferenced": "Not printed",
+          "remove": "Remove"
+        },
+        "kinds": {
+          "percent": "Percentage",
+          "money": "Amount",
+          "days": "Days",
+          "ratio": "Ratio",
+          "weekday": "Weekday",
+          "milestone": "Project milestone",
+          "unit": "Unit of measure",
+          "enum": "Choice from a list",
+          "party": "Contract party",
+          "text": "Short text"
+        },
+        "tolerance": {
+          "title": "Tolerance zones",
+          "mode": "What passes without approval",
+          "modes": {
+            "none": "Any valid value",
+            "fixed": "Only the preferred value",
+            "numeric": "A range of values",
+            "options": "Per option"
+          },
+          "bounds": {
+            "walkMin": "Lowest allowed",
+            "freeMin": "Free from",
+            "freeMax": "Free up to",
+            "walkMax": "Highest allowed"
+          },
+          "noLimit": "No limit",
+          "ruler": "Zone ruler",
+          "zones": {
+            "forbidden": "Forbidden",
+            "approval": "Needs approval",
+            "free": "Free"
+          }
+        }
       }
     },
     "sections": {
