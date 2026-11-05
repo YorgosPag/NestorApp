@@ -13,6 +13,7 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { OrgStructure } from '@/types/org/org-structure';
 import type { OrganizationCapabilities } from '@/types/organization-capability';
+import type { CompanyAiProcessingSettings } from '@/types/company-ai-processing';
 
 // =============================================================================
 // COMPANY DOCUMENT
@@ -44,6 +45,8 @@ export interface CompanySettings {
   readonly features: Record<string, boolean>;
   /** Org structure: departments, members, routing rules (ADR-326) */
   readonly orgStructure?: OrgStructure;
+  /** Επεξεργασία από πάροχο AI ανά σκοπό, απόφαση του διαχειριστή (ADR-929 Δ15 #1). Γραφέας: `server/company/company-ai-processing.server.ts`. */
+  readonly aiProcessing?: CompanyAiProcessingSettings;
 }
 
 /**

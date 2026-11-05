@@ -165,7 +165,10 @@ export interface PlanReading {
  * λείπει και γιατί, και η γεωμετρία μόνη της δίνει ήδη προτάσεις.
  */
 export type PlanReadingUnavailableReason =
+  /** Ο διαχειριστής της εταιρείας έκλεισε την ανάγνωση σχεδίων με AI (Δ15 #1). */
   | 'ai-disabled-for-company'
+  /** Η πολιτική απορρήτου σε ισχύ δεν γνωστοποιεί ακόμη την ανάγνωση σχεδίων (Δ15 #3): καμία αποστολή ως τότε. */
+  | 'ai-legal-disclosure-pending'
   | 'allowance-exhausted'
   /** Η δαπάνη του μήνα δεν διαβάστηκε: fail-closed, όχι «επιτρέπεται όταν δεν ξέρω». */
   | 'allowance-unverifiable'

@@ -1362,6 +1362,9 @@ export const API_ROUTES = {
   // ── Org Structure (ADR-326) ───────────────────────────────────────────
   ORG_STRUCTURE: '/api/org-structure',
 
+  // ── Επεξεργασία AI ανά εταιρεία (ADR-929 Δ15 #1) ─────────────────────
+  AI_PROCESSING_SETTINGS: '/api/settings/ai-processing',
+
   // ── Misc ──────────────────────────────────────────────────────────────
   UPLOAD: { PHOTO: '/api/upload/photo' },
   SEARCH: '/api/search',

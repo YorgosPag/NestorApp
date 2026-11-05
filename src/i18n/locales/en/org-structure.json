@@ -21,7 +21,32 @@
       "tax": "Tax Settings",
       "orgChart": "Organisation Structure",
       "routing": "Notification Routing",
-      "boqCategories": "Work Categories"
+      "boqCategories": "Work Categories",
+      "ai": "Artificial intelligence"
+    },
+    "aiProcessing": {
+      "title": "Artificial intelligence",
+      "intro": "Which company data an AI provider may process. Only the administrator makes this choice, and it applies to every member.",
+      "loadFailed": "The settings could not be read. Please try again.",
+      "saveFailed": "The change was not saved. The previous value has been restored.",
+      "readOnly": "Only the company administrator can change this setting.",
+      "source": {
+        "platformDefault": "Platform default",
+        "company": "Changed by an administrator on {date}"
+      },
+      "legalPending": "Pending: the privacy policy in force does not yet describe this use. Until it does, nothing is sent, whatever the choice.",
+      "effective": {
+        "on": "Active",
+        "off": "Inactive"
+      },
+      "purpose": {
+        "plan-reading": {
+          "label": "AI plan reading",
+          "description": "When recognising a floor plan from an image or PDF, AI reads dimensions, room names and opening labels. When off, recognition continues with geometry only.",
+          "whatIsSent": "Only the drawing area you confirmed is sent. The title block with personal details is removed before sending.",
+          "provider": "Provider: OpenAI, via API. Data is not used to train models."
+        }
+      }
     },
     "dept": {
       "addDept": "Add department",

@@ -14,7 +14,9 @@ import { BackgroundNotFoundError } from '@/services/floorplan-background/backgro
 import type { PlanReader, PlanReaderOutcome } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reader-port';
 import type { PlanReadingRequest } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-contract';
 import type { PlanViewReading } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-wire';
-import { resolvePlanReadingAllowance } from '../plan-reading-allowance.server';
+import { DEFAULT_PLAN_READING_ALLOWANCE_DEPS, resolvePlanReadingAllowance, type PlanReadingAllowanceDeps } from '../plan-reading-allowance.server';
+import { readAiPurposeStatus } from '@/server/company/company-ai-processing.server';
+import type { AiPurposeStatus } from '@/types/company-ai-processing';
 import { readPlanForBackground, type PlanReadingDeps } from '../plan-reading.service';
 import { claimPlanReading, recordPlanReadingCacheHit, settlePlanReading, PLAN_READING_LEASE_MS } from '../plan-reading-store.server';
 
@@ -28,6 +30,15 @@ const REQUEST: PlanReadingRequest = {
   segments: [{ id: 'ps0', x0: 0, y0: 0, x1: 1000, y1: 0, style: 'stroke' }],
 };
 const IMAGE = { bytes: new Uint8Array([1, 2, 3]), mimeType: 'image/png' as const, widthPx: 10, heightPx: 10 };
+
+/** Η παραγωγή, με **μόνη** αλλαγή μια πολιτική απορρήτου που γνωστοποιεί την ανάγνωση σχεδίων (η v1 δεν το κάνει ακόμη). */
+const DISCLOSED_DEPS: PlanReadingAllowanceDeps = {
+  ...DEFAULT_PLAN_READING_ALLOWANCE_DEPS,
+  companyPurpose: (companyId) => readAiPurposeStatus(companyId, 'plan-reading', () => ['aiPlanReading']),
+};
+const OPEN: AiPurposeStatus = {
+  purpose: 'plan-reading', state: 'enabled', source: 'platform-default', decision: null, legal: 'disclosed', effective: true,
+};
 
 interface FakeReader extends PlanReader {
   calls: number;
@@ -55,7 +66,7 @@ function deps(reader: PlanReader | null, overrides: Partial<PlanReadingDeps> = {
   return {
     background: async (id, companyId) => (id === 'rbg_1' && companyId === COMPANY ? { fileId: 'file_1', pageNumber: 1 } : null),
     reader: () => reader,
-    allowance: (companyId, estimate) => resolvePlanReadingAllowance(companyId, estimate),
+    allowance: (companyId, estimate) => resolvePlanReadingAllowance(companyId, estimate, DISCLOSED_DEPS),
     claim: claimPlanReading,
     settle: settlePlanReading,
     cacheHit: recordPlanReadingCacheHit,
@@ -171,17 +182,54 @@ describe('readPlanForBackground', () => {
 
 describe('resolvePlanReadingAllowance', () => {
   const limits = { pageCapUsd: 0.25, monthlyCapUsd: 1 };
+  const open = async (): Promise<AiPurposeStatus> => OPEN;
 
   it('allows within both caps and reports what remains', async () => {
-    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, monthlySpendUsd: async () => 0.5 })).toEqual({ allowed: true, remainingUsd: 0.5 });
+    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, companyPurpose: open, monthlySpendUsd: async () => 0.5 })).toEqual({ allowed: true, remainingUsd: 0.5 });
   });
 
   it('refuses when the month cannot cover the estimate', async () => {
-    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, monthlySpendUsd: async () => 0.95 })).toEqual({ allowed: false, reason: 'allowance-exhausted' });
+    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, companyPurpose: open, monthlySpendUsd: async () => 0.95 })).toEqual({ allowed: false, reason: 'allowance-exhausted' });
   });
 
   it('fails closed when the spend cannot be read', async () => {
-    const r = await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, monthlySpendUsd: async () => { throw new Error('down'); } });
+    const r = await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, companyPurpose: open, monthlySpendUsd: async () => { throw new Error('down'); } });
     expect(r).toEqual({ allowed: false, reason: 'allowance-unverifiable' });
+  });
+
+  it('the company decides first: a closed switch refuses without even reading the spend', async () => {
+    const spend = jest.fn(async () => 0);
+    const closed = async (): Promise<AiPurposeStatus> => ({ ...OPEN, state: 'disabled', source: 'company', effective: false });
+    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, companyPurpose: closed, monthlySpendUsd: spend })).toEqual({ allowed: false, reason: 'ai-disabled-for-company' });
+    expect(spend).not.toHaveBeenCalled();
+  });
+
+  it('an open switch without the privacy-policy disclosure in force still sends nothing', async () => {
+    const pending = async (): Promise<AiPurposeStatus> => ({ ...OPEN, legal: 'pending', effective: false });
+    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, companyPurpose: pending, monthlySpendUsd: async () => 0 })).toEqual({ allowed: false, reason: 'ai-legal-disclosure-pending' });
+  });
+
+  it('fails closed when the company setting cannot be read', async () => {
+    const down = async (): Promise<AiPurposeStatus> => { throw new Error('down'); };
+    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, companyPurpose: down, monthlySpendUsd: async () => 0 })).toEqual({ allowed: false, reason: 'allowance-unverifiable' });
+  });
+
+  it('production company reader + the real privacy policy in force on 2026-11-04 (v1, no clause) ⇒ no call', async () => {
+    const asOfV1 = (companyId: string) => readAiPurposeStatus(companyId, 'plan-reading', undefined, new Date('2026-11-04T12:00:00Z'));
+    const r = await resolvePlanReadingAllowance(COMPANY, 0.1, { ...DEFAULT_PLAN_READING_ALLOWANCE_DEPS, companyPurpose: asOfV1 });
+    expect(r).toEqual({ allowed: false, reason: 'ai-legal-disclosure-pending' });
+  });
+});
+
+describe('readPlanForBackground × company switch (real reader of companies/{id})', () => {
+  it('an administrator who closed the switch: the provider is never called', async () => {
+    fake.seed(COLLECTIONS.COMPANIES, COMPANY, {
+      settings: { aiProcessing: { 'plan-reading': { state: 'disabled', decidedBy: 'admin', decidedAt: '2026-11-04T10:00:00.000Z' } } },
+    });
+    const reader = fakeReader();
+    const result = await readPlanForBackground(command(), deps(reader));
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'ai-disabled-for-company' });
+    expect(reader.calls).toBe(0);
+    fake.seedCollection(COLLECTIONS.COMPANIES, {});
   });
 });

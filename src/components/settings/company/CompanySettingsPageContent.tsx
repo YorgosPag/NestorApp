@@ -15,6 +15,7 @@ import { TaxSettingsTab } from './TaxSettingsTab';
 import { OrgStructureTab } from './OrgStructureTab';
 import { RoutingEventsTab } from './RoutingEventsTab';
 import { BOQCategoriesTab } from './BOQCategoriesTab';
+import { AiProcessingTab } from './AiProcessingTab';
 import type { OrgStructure } from '@/types/org/org-structure';
 
 interface OrgStructureState {
@@ -97,6 +98,7 @@ export function CompanySettingsPageContent() {
           <TabsTrigger value="org">{t('orgStructure.tabs.orgChart')}</TabsTrigger>
           <TabsTrigger value="routing">{t('orgStructure.tabs.routing')}</TabsTrigger>
           <TabsTrigger value="boqCats">{t('orgStructure.tabs.boqCategories')}</TabsTrigger>
+          <TabsTrigger value="ai">{t('orgStructure.tabs.ai')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info">
@@ -125,6 +127,10 @@ export function CompanySettingsPageContent() {
 
         <TabsContent value="boqCats">
           <BOQCategoriesTab />
+        </TabsContent>
+
+        <TabsContent value="ai">
+          <AiProcessingTab />
         </TabsContent>
       </Tabs>
     </div>
