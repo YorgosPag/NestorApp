@@ -6,7 +6,7 @@
  *
  * | Πεδίο | Ποιος το γράφει | Τι σημαίνει |
  * |---|---|---|
- * | `calibration` + `transform.scaleX/Y` | `CalibrationDialog` του DXF viewer (`useCalibration`) | Η βαθμονόμηση 2 σημείων **πολλαπλασιάζει** την κλίμακα του υποβάθρου ώστε η γνωστή απόσταση να μετρά τόσα **χιλιοστά** σκηνής (`UNIT_TO_MM`) |
+ * | `calibration` + `transform.scaleX/Y` | `CalibrationDialog` του DXF viewer (`calibration-solve`) | Η βαθμονόμηση **θέτει** την κλίμακα του υποβάθρου ώστε οι γνωστές αποστάσεις να μετρούν σωστά στις **μονάδες της σκηνής** (`calibration.sceneUnits`) |
  * | `scale.unitsPerMeter` (`sourceUnit: 'pixel'`) | `CalibrateScaleDialog` της συλλογής (ADR-340 Φ9) | **Pixel της εικόνας ανά μέτρο**, μετρημένα σε φυσικά pixel (`lib/geometry/scale-calibration`) |
  *
  * Η αναγνώριση κάτοψης χρειάζεται **μία** απάντηση, με την **πηγή** της (ADR-929 Δ4: η υπάρχουσα
@@ -28,10 +28,17 @@
  */
 
 import { rasterToSceneAffine } from './raster-scene-mapping';
-import type { FloorplanBackground } from '../providers/types';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
+import type { CalibrationData, FloorplanBackground } from '../providers/types';
 
-/** Η βαθμονόμηση 2 σημείων του viewer εκφράζει την κλίμακα σε χιλιοστά σκηνής (`useCalibration`). */
-const METRES_PER_CALIBRATED_SCENE_UNIT = 0.001;
+/**
+ * Μέτρα ανά μονάδα σκηνής για μια βαθμονόμηση. ADR-929 Φ5.2 (§6.1 #1): εδώ ήταν σταθερά `0.001` — η
+ * υπόθεση «σκηνή σε mm» — και σε σκηνή σε μέτρα η κλίμακα έβγαινε 1000× λάθος. Οι εγγραφές από τη Φ5.2
+ * κρατούν τις μονάδες τους· οι παλιότερες υπολογίστηκαν με την υπόθεση mm, άρα απουσία = `'mm'`.
+ */
+function metresPerCalibratedSceneUnit(calibration: CalibrationData): number {
+  return sceneUnitsToMeters(calibration.sceneUnits ?? 'mm');
+}
 
 /** Από πού ήρθε η κλίμακα: χρειάζεται για τη βεβαιότητα και για τον έλεγχο συνέπειας (Δ4). */
 export type RasterPixelScaleSource = 'viewer-two-point-calibration' | 'gallery-scale';
@@ -58,8 +65,9 @@ const isPositiveFinite = (n: number): boolean => Number.isFinite(n) && n > 0;
 function fromViewerCalibration(bg: RasterScaleInput): RasterPixelScale | null {
   if (!bg.calibration) return null;
   const m = rasterToSceneAffine(bg);
-  const x = Math.hypot(m.a, m.b) * METRES_PER_CALIBRATED_SCENE_UNIT;
-  const y = Math.hypot(m.c, m.d) * METRES_PER_CALIBRATED_SCENE_UNIT;
+  const metresPerUnit = metresPerCalibratedSceneUnit(bg.calibration);
+  const x = Math.hypot(m.a, m.b) * metresPerUnit;
+  const y = Math.hypot(m.c, m.d) * metresPerUnit;
   if (!isPositiveFinite(x) || !isPositiveFinite(y)) return null;
   return { metresPerPixelX: x, metresPerPixelY: y, source: 'viewer-two-point-calibration' };
 }

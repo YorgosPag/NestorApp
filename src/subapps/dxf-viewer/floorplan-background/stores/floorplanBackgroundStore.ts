@@ -33,14 +33,34 @@ export interface PendingReplaceRequest {
   providerId: ProviderId;
 }
 
-// ── Calibration session: active while user is picking 2 canvas points ──────────
+// ── Calibration session: active while the user picks reference points ────────────
 
+/** Πόσα σημεία ζητά το τρέχον βήμα: 2 = μία αναφορά (A, B), 4 = και δεύτερη (C, D). */
+export type CalibrationPointTarget = 2 | 4;
+
+/**
+ * ADR-929 Φ5.2 — τα σημεία είναι σε συντεταγμένες **σκηνής**, ήδη με OSNAP από τον κεντρικό αγωγό
+ * κλικ (`canvas-click-calibration.ts`). Πριν ήταν pixel οθόνης: ένα pan/zoom ανάμεσα στο A και στο B
+ * άλλαζε σιωπηλά τη μέτρηση.
+ */
 export interface CalibrationSession {
   floorId: string;
-  pointA: Point2D | null;
-  pointB: Point2D | null;
-  /** worldToCanvas.scale captured at first point click (fixed for the session). */
-  worldToCanvasScale: number;
+  points: Point2D[];
+  target: CalibrationPointTarget;
+}
+
+/** Οι ετικέτες των σημείων με τη σειρά των κλικ — σύμβολα του καμβά, όχι λέξεις (ίδια σε κάθε γλώσσα). */
+export const CALIBRATION_POINT_LABELS = ['A', 'B', 'C', 'D'] as const;
+
+/** Η ετικέτα του σημείου που ζητείται τώρα, ή `null` όταν το βήμα είναι πλήρες. */
+export function nextCalibrationPointLabel(session: CalibrationSession | null): string | null {
+  if (!session || session.points.length >= session.target) return null;
+  return CALIBRATION_POINT_LABELS[session.points.length] ?? null;
+}
+
+/** Συμπληρώθηκαν τα σημεία του τρέχοντος βήματος; (τότε ανοίγει ο διάλογος). */
+export function isCalibrationPickComplete(session: CalibrationSession | null): boolean {
+  return session !== null && session.points.length >= session.target;
 }
 
 // ── Store types ───────────────────────────────────────────────────────────────
@@ -63,9 +83,15 @@ interface StoreActions {
   confirmReplace(): Promise<void>;
   cancelReplace(): void;
   startCalibration(floorId: string): void;
-  setCalibrationPoint(pt: Point2D, scale: number): void;
+  /** Προσθέτει ένα σημείο σκηνής στο τρέχον βήμα (αγνοείται όταν το βήμα είναι πλήρες). */
+  addCalibrationPoint(world: Point2D): void;
+  /** Από τον διάλογο: «προσθήκη δεύτερου μήκους» ⇒ ξαναοπλίζει την επιλογή για C, D. */
+  requestSecondCalibrationReference(): void;
+  /** Esc: στη δεύτερη αναφορά γυρίζει στον διάλογο με την πρώτη· αλλιώς ακυρώνει. */
+  stepBackCalibration(): void;
   cancelCalibration(): void;
-  applyCalibration(floorId: string, partial: Partial<BackgroundTransform>, calibrationData: CalibrationData): void;
+  /** Εφαρμόζει τη λυμένη τοποθέτηση + την εγγραφή βαθμονόμησης και κλείνει τη συνεδρία. */
+  applyCalibration(floorId: string, transform: BackgroundTransform, calibrationData: CalibrationData): void;
   /** Internal: load without replace-check. Use addBackground from outside. */
   _loadBackground(floorId: string, source: ProviderSource, providerId: ProviderId): Promise<void>;
   /**
@@ -247,18 +273,33 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
 
         startCalibration: (floorId) => {
           set((draft) => {
-            draft.calibrationSession = { floorId, pointA: null, pointB: null, worldToCanvasScale: 1 };
+            draft.calibrationSession = { floorId, points: [], target: 2 };
           });
         },
 
-        setCalibrationPoint: (pt, scale) => {
+        addCalibrationPoint: (world) => {
           set((draft) => {
-            if (!draft.calibrationSession) return;
-            if (!draft.calibrationSession.pointA) {
-              draft.calibrationSession.pointA = pt;
-              draft.calibrationSession.worldToCanvasScale = scale;
-            } else if (!draft.calibrationSession.pointB) {
-              draft.calibrationSession.pointB = pt;
+            const session = draft.calibrationSession;
+            if (!session || session.points.length >= session.target) return;
+            session.points.push({ x: world.x, y: world.y });
+          });
+        },
+
+        requestSecondCalibrationReference: () => {
+          set((draft) => {
+            const session = draft.calibrationSession;
+            if (session && session.points.length === 2) session.target = 4;
+          });
+        },
+
+        stepBackCalibration: () => {
+          set((draft) => {
+            const session = draft.calibrationSession;
+            if (session && session.target === 4) {
+              session.points = session.points.slice(0, 2);
+              session.target = 2;
+            } else {
+              draft.calibrationSession = null;
             }
           });
         },
@@ -267,11 +308,11 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
           set((draft) => { draft.calibrationSession = null; });
         },
 
-        applyCalibration: (floorId, partial, calibrationData) => {
+        applyCalibration: (floorId, transform, calibrationData) => {
           set((draft) => {
             const slot = draft.floors[floorId];
             if (!slot?.background) return;
-            Object.assign(slot.background.transform, partial);
+            slot.background.transform = { ...transform };
             slot.background.calibration = calibrationData;
             slot.background.updatedAt = Date.now();
             draft.calibrationSession = null;
@@ -373,6 +414,15 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
  */
 export function getFloorBackground(floorId: string): FloorplanBackground | null {
   return useFloorplanBackgroundStore.getState().floors[floorId]?.background ?? null;
+}
+
+/**
+ * Event-time (ADR-040 κανόνας #2): ζητά ο καμβάς σημείο βαθμονόμησης ΤΩΡΑ; Τη ρωτά ο κεντρικός
+ * αγωγός κλικ (`useCanvasClickHandler`) — ποτέ στιγμιότυπο από render.
+ */
+export function isCalibrationPicking(): boolean {
+  const session = useFloorplanBackgroundStore.getState().calibrationSession;
+  return session !== null && !isCalibrationPickComplete(session);
 }
 
 /** Event-time: ο ενεργός όροφος υποβάθρου (το κλειδί του `useFloorplanBackgroundForLevel`). */

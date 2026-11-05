@@ -134,8 +134,10 @@ jest.mock('../../hooks/useFloorplanBackgroundForLevel', () => ({
 }));
 
 const mockUseCalibration = jest.fn();
+const mockUsePreview = jest.fn(() => ({ status: 'incomplete' }));
 jest.mock('../../hooks/useCalibration', () => ({
   useCalibration: () => mockUseCalibration(),
+  useCalibrationPreview: () => mockUsePreview(),
 }));
 
 import { FloorplanBackgroundPanel } from '../FloorplanBackgroundPanel';
@@ -145,16 +147,15 @@ import { FloorplanBackgroundPanel } from '../FloorplanBackgroundPanel';
 function calibrationIdle() {
   return {
     isActive: false,
-    hasPointA: false,
-    pixelDist: 0,
+    pickedCount: 0,
+    target: 2,
     startCalibration: jest.fn(),
     cancelCalibration: jest.fn(),
-    applyCalibration: jest.fn(),
   };
 }
 
-function calibrationActive(hasPointA = false) {
-  return { ...calibrationIdle(), isActive: true, hasPointA };
+function calibrationActive(pickedCount = 0) {
+  return { ...calibrationIdle(), isActive: true, pickedCount };
 }
 
 function levelResultEmpty() {
@@ -229,15 +230,15 @@ describe('FloorplanBackgroundPanel — a11y', () => {
     expect(lockedBtn).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('calibrating state has no axe violations and shows instruction A', async () => {
+  it('calibrating state has no axe violations and asks for point A', async () => {
     mockUseLevel.mockReturnValue(levelResultLoaded());
-    mockUseCalibration.mockReturnValue(calibrationActive(false));
+    mockUseCalibration.mockReturnValue(calibrationActive(0));
 
     const { container } = render(<FloorplanBackgroundPanel isOpen onClose={() => {}} />);
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
-    expect(screen.getByText('panels.floorplanBackground.calibration.instructionA')).toBeInTheDocument();
+    expect(screen.getByText('panels.floorplanBackground.calibration.instructionPoint')).toBeInTheDocument();
   });
 
   it('renders nothing when isOpen=false', () => {
@@ -305,8 +306,15 @@ const mockUseStore = jest.fn();
 const mockUseCalForDialog = jest.fn();
 
 jest.mock('../../stores/floorplanBackgroundStore', () => ({
-  useFloorplanBackgroundStore: (selector: (s: unknown) => unknown) => mockUseStore(selector),
+  ...jest.requireActual('../../stores/floorplanBackgroundStore'),
+  useFloorplanBackgroundStore: Object.assign(
+    (selector: (s: unknown) => unknown) => mockUseStore(selector),
+    { getState: () => ({ cancelCalibration: jest.fn(), applyCalibration: jest.fn() }) },
+  ),
 }));
+
+/** ADR-929 Φ5.2 — ο διάλογος διαβάζει τις μονάδες της σκηνής· εδώ δεν υπάρχει σκηνή ⇒ 'mm'. */
+const NO_LEVEL = { currentLevelId: null, getLevelScene: () => null };
 
 // Re-mock useCalibration in this scope (jest hoists mocks per file, but we
 // reuse the same mock fn — assertions read from it inside dialog tests).
@@ -317,8 +325,8 @@ describe('CalibrationDialog — a11y', () => {
     const sessionStore = {
       calibrationSession: {
         floorId: 'floor-1',
-        pointA: { x: 10, y: 10 },
-        pointB: { x: 100, y: 10 },
+        points: [{ x: 10, y: 10 }, { x: 100, y: 10 }],
+        target: 2,
       },
       floors: { 'floor-1': { background: { transform: { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotation: 0 } } } },
     };
@@ -328,16 +336,12 @@ describe('CalibrationDialog — a11y', () => {
   beforeEach(() => {
     mockUseStore.mockReset();
     mockUseCalForDialog.mockReset();
-    mockUseCalibration.mockReturnValue({
-      pixelDist: 90,
-      applyCalibration: jest.fn(),
-      cancelCalibration: jest.fn(),
-    });
+    mockUseCalibration.mockReturnValue(calibrationIdle());
   });
 
   it('open dialog has accessible title + description, no axe violations', async () => {
     configureOpen();
-    const { container } = render(<CalibrationDialog />);
+    const { container } = render(<CalibrationDialog levelManager={NO_LEVEL} />);
 
     // Radix AlertDialog renders into a portal — query by role.
     const dialog = await screen.findByRole('alertdialog');
@@ -354,7 +358,7 @@ describe('CalibrationDialog — a11y', () => {
     mockUseStore.mockImplementation((selector: (s: unknown) => unknown) =>
       selector({ calibrationSession: null, floors: {} }),
     );
-    render(<CalibrationDialog />);
+    render(<CalibrationDialog levelManager={NO_LEVEL} />);
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });

@@ -218,7 +218,7 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
         <TableFunctionArgumentsDialog levelManager={levelManager} />
       </React.Suspense>
       <React.Suspense fallback={hiddenFallback}>
-        <CalibrationDialog />
+        <CalibrationDialog levelManager={levelManager} />
       </React.Suspense>
       {/* ADR-345 Fase 6: Import dialogs — SSOT owner (migrated from EnhancedDXFToolbar).
           🚀 PERF (2026-06-28): gate-at-mount (same pattern as CreditsDialog/FindReplace above) —

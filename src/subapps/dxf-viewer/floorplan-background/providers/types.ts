@@ -91,6 +91,28 @@ export const DEFAULT_BACKGROUND_TRANSFORM: Readonly<BackgroundTransform> = {
 
 export type CalibrationUnit = 'm' | 'cm' | 'mm' | 'ft' | 'in';
 
+/** Οι μονάδες που δέχεται ο διάλογος βαθμονόμησης — ΜΙΑ λίστα για UI και server validator. */
+export const CALIBRATION_UNITS: readonly CalibrationUnit[] = ['m', 'cm', 'mm', 'ft', 'in'];
+
+export function isCalibrationUnit(value: unknown): value is CalibrationUnit {
+  return typeof value === 'string' && (CALIBRATION_UNITS as readonly string[]).includes(value);
+}
+
+/** Μία γνωστή απόσταση της βαθμονόμησης, όπως αποθηκεύεται (ADR-929 Φ5.2). */
+export interface CalibrationReferenceRecord {
+  /** Άκρα σε φυσικά pixel της εικόνας — έχουν νόημα για πάντα, ανεξάρτητα από pan/zoom. */
+  pointA: Point2D;
+  pointB: Point2D;
+  realDistance: number;
+  unit: CalibrationUnit;
+}
+
+/**
+ * Η βαθμονόμηση ενός υποβάθρου. Τα `pointA/pointB/realDistance/unit` είναι η **πρώτη** αναφορά.
+ *
+ * ⚠️ Συμβατότητα (ADR-929 Φ5.2): εγγραφές πριν τη Φ5.2 δεν έχουν `sceneUnits` — υπολογίστηκαν με την
+ * υπόθεση «σκηνή σε mm» και τα σημεία τους είναι pixel **οθόνης**. Η απουσία σημαίνει `'mm'`.
+ */
 export interface CalibrationData {
   method: 'two-point';
   pointA: Point2D;
@@ -100,6 +122,12 @@ export interface CalibrationData {
   rotationDerived: boolean;
   calibratedAt: number;
   calibratedBy: string;
+  /** Οι μονάδες της σκηνής τη στιγμή της βαθμονόμησης· απουσία = παλιά εγγραφή (mm). */
+  sceneUnits?: CalibrationUnit;
+  /** Όλες οι αναφορές (1 ή 2), σε pixel εικόνας. */
+  references?: CalibrationReferenceRecord[];
+  /** Ενιαία κλίμακα ή χωριστή X/Y (διόρθωση τεντώματος σαρωτή). */
+  scaleMode?: 'uniform' | 'per-axis';
 }
 
 // ─── Provider metadata ────────────────────────────────────────────────────────

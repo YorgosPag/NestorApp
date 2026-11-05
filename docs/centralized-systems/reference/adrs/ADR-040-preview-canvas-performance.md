@@ -113,6 +113,12 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-11-05 — Νέο φύλλο: σημεία βαθμονόμησης υποβάθρου (ADR-929 Φ5.2α)
+
+- `components/dxf-layout/CalibrationPickOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` μετά το `BasePointPickMarkerOverlay`. Gate-at-mount στη (σπάνια) συνεδρία βαθμονόμησης· το transform ζει στο inner, ο 60fps δρομέας (`subscribeRealtimeWorldCursor`) μόνο στο `RubberBand`, που mount-άρεται μόνο όσο ζητείται σημείο.
+- Νέος κλάδος 0.42 στο `useCanvasClickHandler` με event-time getter `isCalibrationPicking()` (κανόνας #2, όχι στιγμιότυπο). Το κέλυφος (`CanvasSection` / `CanvasLayerStack`) δεν άλλαξε.
+- `UnderlayDispatchCanvas`: αφαιρέθηκαν το νεκρό `onClick` και το inline `style={{ pointerEvents }}`.
+
 ### 2026-11-05 — Νέο φύλλο: επικάλυψη αναγνώρισης κάτοψης (ADR-929 Φ5.1)
 
 - `components/dxf-layout/PlanRecognitionOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` **κάτω** από το `ModelFromDrawingPreviewOverlay`. Ακολουθεί το ίδιο σχήμα: standalone leaf με **ένα** υψίσυχνο hook (`useTransformValue`) και δύο χαμηλόσυχνα (store αναγνώρισης, το υπόβαθρο του ορόφου για την τοποθέτηση).

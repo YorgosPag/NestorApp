@@ -14,6 +14,7 @@ import { PANEL_ANCHORING } from '../../config/panel-tokens';
 import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 import { useFloorplanBackgroundForLevel } from '../hooks/useFloorplanBackgroundForLevel';
 import { useCalibration } from '../hooks/useCalibration';
+import { CALIBRATION_POINT_LABELS } from '../stores/floorplanBackgroundStore';
 import type { ProviderId } from '../providers/types';
 
 const DEFAULT_POSITION = { x: 20, y: 100 };
@@ -110,7 +111,8 @@ export function FloorplanBackgroundPanel({ isOpen, onClose, className }: Floorpl
             isLoading={result.isLoading}
             error={result.error}
             isCalibrating={calibration.isActive}
-            hasPointA={calibration.hasPointA}
+            pickedCount={calibration.pickedCount}
+            pickTarget={calibration.target}
             onScaleChange={handleScaleChange}
             onRotationChange={handleRotationChange}
             onOpacityChange={handleOpacityChange}
@@ -188,7 +190,8 @@ interface LoadedStateProps {
   isLoading: boolean;
   error: string | null;
   isCalibrating: boolean;
-  hasPointA: boolean;
+  pickedCount: number;
+  pickTarget: number;
   onScaleChange: (v: number[]) => void;
   onRotationChange: (v: number[]) => void;
   onOpacityChange: (v: number[]) => void;
@@ -205,7 +208,7 @@ interface LoadedStateProps {
 }
 
 function PanelLoadedState(props: LoadedStateProps) {
-  const { background, providerLabel, error, isCalibrating, hasPointA, t, colors } = props;
+  const { background, providerLabel, error, isCalibrating, t, colors } = props;
   if (!background) return null;
   return (
     <section className="space-y-4">
@@ -232,7 +235,7 @@ function PanelLoadedState(props: LoadedStateProps) {
 
       {/* Calibration mode instructions */}
       {isCalibrating && (
-        <CalibrationInstructions hasPointA={hasPointA} onCancel={props.onCancelCalibration} t={t} colors={colors} />
+        <CalibrationInstructions picked={props.pickedCount} target={props.pickTarget} onCancel={props.onCancelCalibration} t={t} colors={colors} />
       )}
 
       {/* Transform controls — hidden while calibrating to reduce visual noise */}
@@ -270,21 +273,23 @@ function PanelLoadedState(props: LoadedStateProps) {
 }
 
 interface CalibrationInstructionsProps {
-  hasPointA: boolean;
+  picked: number;
+  target: number;
   onCancel: () => void;
   t: (key: string, opts?: Record<string, unknown>) => string;
   colors: ColorsLike;
 }
 
-function CalibrationInstructions({ hasPointA, onCancel, t, colors }: CalibrationInstructionsProps) {
-  const key = hasPointA
-    ? 'panels.floorplanBackground.calibration.instructionB'
-    : 'panels.floorplanBackground.calibration.instructionA';
+function CalibrationInstructions({ picked, target, onCancel, t, colors }: CalibrationInstructionsProps) {
+  // ADR-929 Φ5.2 — A, B και (με δεύτερο μήκος) C, D· όταν το βήμα γεμίσει, μιλά ο διάλογος.
+  const label = picked < target ? CALIBRATION_POINT_LABELS[picked] : null;
   return (
     <article className="border border-ring/30 rounded p-3 space-y-2 bg-[hsl(var(--bg-info))]/5">
-      <p className={`text-xs font-medium text-primary`}>
-        {t(key)}
-      </p>
+      {label && (
+        <p className={`text-xs font-medium text-primary`}>
+          {t('panels.floorplanBackground.calibration.instructionPoint', { label, index: picked + 1, total: target })}
+        </p>
+      )}
       <Button
         variant="ghost"
         size="sm"

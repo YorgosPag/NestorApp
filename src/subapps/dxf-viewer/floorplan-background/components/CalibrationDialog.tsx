@@ -1,6 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+/**
+ * ADR-340 / ADR-929 Φ5.2 — ο διάλογος βαθμονόμησης κλίμακας του υποβάθρου.
+ *
+ * Ροή (Revit «Resize graphically» / ArchiCAD «Define graphically», και πέρα από αυτούς):
+ * 1. «Βαθμονόμηση» στο πάνελ ⇒ ο καμβάς ζητά τα άκρα A, B μιας γνωστής διάστασης (με OSNAP).
+ * 2. Ο διάλογος ανοίγει μόνος του: πληκτρολογείς το μήκος («10,30 m») και βλέπεις ζωντανά τη λύση.
+ * 3. Προαιρετικά «Προσθήκη δεύτερου μήκους» ⇒ ο καμβάς ζητά C, D. Κάθετο στο πρώτο ⇒ χωριστή κλίμακα
+ *    X/Y (τέντωμα σαρωτή)· παράλληλο ⇒ έλεγχος με απόκλιση %.
+ * 4. «Εφαρμογή» γράφει **αυτό που δείχνει η προεπισκόπηση** — ίδια συνάρτηση, καμία δεύτερη πράξη.
+ *
+ * Self-contained: διαβάζει τη συνεδρία από το store· ανοίγει όταν συμπληρωθούν τα σημεία του βήματος.
+ */
+
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,153 +24,103 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
-import { useCalibration } from '../hooks/useCalibration';
-import type { CalibrationUnit } from '../providers/types';
+import { formatNumber } from '@/lib/intl-formatting';
+import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
+import { isCalibrationPickComplete, useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
+import { useCalibrationPreview, type CalibrationPreview } from '../hooks/useCalibration';
+import { buildCalibrationData, type CalibrationLengthDraft } from '../geometry/calibration-draft';
+import { CalibrationAlignToggle, CalibrationReferenceField, CalibrationSecondReference, CalibrationSummary } from './CalibrationDialogParts';
 
-const UNITS: CalibrationUnit[] = ['m', 'cm', 'mm', 'ft', 'in'];
+const KEY = 'panels.floorplanBackground.calibration';
+const EMPTY_LENGTH: CalibrationLengthDraft = { text: '', unit: 'm' };
 
-// ── Component ─────────────────────────────────────────────────────────────────
+export interface CalibrationDialogProps {
+  /** Για τις μονάδες της σκηνής του ενεργού επιπέδου (ADR-929 §6.1 #1). */
+  readonly levelManager: LevelSceneReader;
+}
 
-/**
- * Self-contained dialog — reads calibration session from store.
- * Opens automatically when both canvas points are picked.
- * Mount once in DxfViewerContent alongside ReplaceConfirmDialog.
- */
-export function CalibrationDialog() {
-  const { t } = useTranslation(['dxf-viewer-panels']);
-  const [realDist, setRealDist] = useState('');
-  const [unit, setUnit] = useState<CalibrationUnit>('m');
-  const [deriveRotation, setDeriveRotation] = useState(false);
+function useSceneUnits(levelManager: LevelSceneReader): SceneUnits {
+  const levelId = levelManager.currentLevelId;
+  return levelId ? resolveSceneUnits(levelManager.getLevelScene(levelId)) : 'mm';
+}
 
+/** Μήκη ⇄ συνεδρία: το δεύτερο μήκος μετρά μόνο όταν έχουν δοθεί και τα C, D. */
+function activeLengths(first: CalibrationLengthDraft, second: CalibrationLengthDraft, pointCount: number) {
+  return pointCount >= 4 ? [first, second] : [first];
+}
+
+/** Το μήκος της πρώτης αναφοράς στην εικόνα, σε pixel (πληροφορία για τον άνθρωπο). */
+function firstReferencePixels(preview: CalibrationPreview): number | null {
+  if (preview.status !== 'solved') return null;
+  const { pointA, pointB } = preview.references[0].record;
+  return Math.hypot(pointB.x - pointA.x, pointB.y - pointA.y);
+}
+
+/** Η φόρμα του διαλόγου· νέα συνεδρία = καθαρή φόρμα (το state ζει όσο ζει ο always-mounted host). */
+function useCalibrationForm(idle: boolean) {
+  const [first, setFirst] = useState<CalibrationLengthDraft>(EMPTY_LENGTH);
+  const [second, setSecond] = useState<CalibrationLengthDraft>(EMPTY_LENGTH);
+  const [alignToAxis, setAlignToAxis] = useState(false);
+  useEffect(() => {
+    if (!idle) return;
+    setFirst(EMPTY_LENGTH);
+    setSecond(EMPTY_LENGTH);
+    setAlignToAxis(false);
+  }, [idle]);
+  return { first, setFirst, second, setSecond, alignToAxis, setAlignToAxis };
+}
+
+/** Ο «εγκέφαλος» του διαλόγου: συνεδρία + φόρμα + ζωντανή λύση + η πράξη εφαρμογής. */
+function useCalibrationDialogModel(levelManager: LevelSceneReader) {
   const session = useFloorplanBackgroundStore((s) => s.calibrationSession);
-  const floorId = session?.floorId ?? '';
-  const background = useFloorplanBackgroundStore(
-    (s) => (floorId ? (s.floors[floorId]?.background ?? null) : null),
-  );
-  const calibration = useCalibration(floorId);
-  const open = !!(session?.pointA && session?.pointB);
-
-  const reset = () => {
-    setRealDist('');
-    setDeriveRotation(false);
+  const form = useCalibrationForm(session === null);
+  const sceneUnits = useSceneUnits(levelManager);
+  const pointCount = session?.points.length ?? 0;
+  const { first, second, alignToAxis } = form;
+  const lengths = useMemo(() => activeLengths(first, second, pointCount), [first, second, pointCount]);
+  const preview = useCalibrationPreview(lengths, alignToAxis, sceneUnits);
+  const apply = () => {
+    if (!session || preview.status !== 'solved') return;
+    const data = buildCalibrationData(preview.references, preview.solution, sceneUnits, alignToAxis, Date.now());
+    useFloorplanBackgroundStore.getState().applyCalibration(session.floorId, preview.solution.transform, data);
   };
+  return { session, form, preview, apply };
+}
 
-  const handleApply = () => {
-    const dist = parseFloat(realDist);
-    if (isNaN(dist) || dist <= 0 || !background) return;
-    calibration.applyCalibration(dist, unit, deriveRotation, background.transform);
-    reset();
-  };
-
-  const handleCancel = () => {
-    calibration.cancelCalibration();
-    reset();
-  };
-
-  const isApplyDisabled = !realDist || parseFloat(realDist) <= 0;
-
+export function CalibrationDialog({ levelManager }: CalibrationDialogProps) {
+  const { t } = useTranslation(['dxf-viewer-panels']);
+  const { session, form, preview, apply } = useCalibrationDialogModel(levelManager);
+  const store = useFloorplanBackgroundStore.getState;
+  const pixels = firstReferencePixels(preview);
   return (
-    <AlertDialog open={open}>
+    <AlertDialog open={isCalibrationPickComplete(session)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t('panels.floorplanBackground.calibration.title')}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{t(`${KEY}.title`)}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('panels.floorplanBackground.calibration.pixelDist', {
-              dist: calibration.pixelDist.toFixed(1),
-            })}
+            {pixels !== null && t(`${KEY}.pixelDist`, { dist: formatNumber(pixels, { maximumFractionDigits: 1 }) })}
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        <CalibrationForm
-          realDist={realDist}
-          unit={unit}
-          deriveRotation={deriveRotation}
-          onRealDistChange={setRealDist}
-          onUnitChange={setUnit}
-          onDeriveRotationChange={setDeriveRotation}
-          t={t}
-        />
-
+        <section className="space-y-4 py-2">
+          <CalibrationReferenceField id="cal-length-1" label={t(`${KEY}.referenceFirst`)} draft={form.first} onChange={form.setFirst} t={t} />
+          <CalibrationSecondReference
+            active={session?.target === 4}
+            draft={form.second}
+            onChange={form.setSecond}
+            onAdd={() => store().requestSecondCalibrationReference()}
+            onRemove={() => store().stepBackCalibration()}
+            t={t}
+          />
+          <CalibrationAlignToggle checked={form.alignToAxis} onChange={form.setAlignToAxis} t={t} />
+          <CalibrationSummary preview={preview} t={t} />
+        </section>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={handleCancel}>
-            {t('panels.floorplanBackground.calibration.cancel')}
-          </AlertDialogCancel>
-          <AlertDialogAction onClick={handleApply} disabled={isApplyDisabled}>
-            {t('panels.floorplanBackground.calibration.apply')}
-          </AlertDialogAction>
+          <AlertDialogCancel onClick={() => store().cancelCalibration()}>{t(`${KEY}.cancel`)}</AlertDialogCancel>
+          <AlertDialogAction onClick={apply} disabled={preview.status !== 'solved'}>{t(`${KEY}.apply`)}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  );
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-interface CalibrationFormProps {
-  realDist: string;
-  unit: CalibrationUnit;
-  deriveRotation: boolean;
-  onRealDistChange: (v: string) => void;
-  onUnitChange: (v: CalibrationUnit) => void;
-  onDeriveRotationChange: (v: boolean) => void;
-  t: (key: string, opts?: Record<string, unknown>) => string;
-}
-
-function CalibrationForm({
-  realDist, unit, deriveRotation,
-  onRealDistChange, onUnitChange, onDeriveRotationChange, t,
-}: CalibrationFormProps) {
-  return (
-    <section className="space-y-4 py-2">
-      <fieldset className="flex items-center gap-3">
-        <Label htmlFor="cal-real-dist" className="shrink-0 text-sm">
-          {t('panels.floorplanBackground.calibration.realDist')}
-        </Label>
-        <Input
-          id="cal-real-dist"
-          type="number"
-          min="0.001"
-          step="0.001"
-          value={realDist}
-          onChange={(e) => onRealDistChange(e.target.value)}
-          className="flex-1"
-          placeholder="e.g. 5"
-        />
-        <Select value={unit} onValueChange={(v) => onUnitChange(v as CalibrationUnit)}>
-          <SelectTrigger className="w-20">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {UNITS.map((u) => (
-              <SelectItem key={u} value={u}>{u}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </fieldset>
-      <fieldset className="flex items-center gap-2">
-        <Checkbox
-          id="cal-derive-rotation"
-          checked={deriveRotation}
-          onCheckedChange={(c) => onDeriveRotationChange(c === true)}
-        />
-        <Label htmlFor="cal-derive-rotation" className="text-sm cursor-pointer">
-          {t('panels.floorplanBackground.calibration.deriveRotation')}
-        </Label>
-      </fieldset>
-    </section>
   );
 }

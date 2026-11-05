@@ -36,6 +36,19 @@ describe('resolveRasterPixelScale', () => {
     expect(r?.metresPerPixelY).toBeCloseTo(0.0125, 12);
   });
 
+  it.each([
+    ['m', 0.025, 25],
+    ['cm', 2.5, 25],
+    ['mm', 25, 25],
+  ] as const)('ADR-929 §6.1 #1: σκηνή σε %s — η κλίμακα διαβάζεται στις μονάδες της βαθμονόμησης', (units, scale, mm) => {
+    const r = resolveRasterPixelScale({
+      ...base,
+      calibration: { ...CALIBRATION, sceneUnits: units },
+      transform: { ...base.transform, scaleX: scale, scaleY: scale },
+    });
+    expect(r?.metresPerPixelX).toBeCloseTo(mm / 1000, 12);
+  });
+
   it('η περιστροφή και η αναστροφή Y δεν αλλάζουν το μέγεθος του pixel', () => {
     const r = resolveRasterPixelScale({
       ...base,

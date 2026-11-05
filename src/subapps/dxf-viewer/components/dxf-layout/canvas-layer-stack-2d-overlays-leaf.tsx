@@ -18,6 +18,7 @@ import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { RegionGapMarkersOverlay } from './RegionGapMarkersOverlay';
 import { BasePointPickMarkerOverlay } from './BasePointPickMarkerOverlay';
+import { CalibrationPickOverlay } from './CalibrationPickOverlay';
 import { TopoBreaklineOverlay } from './TopoBreaklineOverlay';
 import { TopoAutoBreaklinePreviewOverlay } from './TopoAutoBreaklinePreviewOverlay';
 import { ModelFromDrawingPreviewOverlay } from './ModelFromDrawingPreviewOverlay';
@@ -48,6 +49,10 @@ export function CanvasLayerStack2DOverlays({ viewport }: CanvasLayerStack2DOverl
           flag· ο high-freq realtime-cursor subscriber ζει μόνο όσο armed. Read-only,
           pointer-events-none. STAGE ADR-040 + ADR-652. */}
       <BasePointPickMarkerOverlay viewport={viewport} />
+      {/* ADR-929 Φ5.2 — σημεία βαθμονόμησης του υποβάθρου (A, B, C, D) + λαστιχένια γραμμή προς τον
+          δρομέα. Gate-at-mount στη συνεδρία· ο high-freq δρομέας ζει μόνο όσο ζητείται σημείο.
+          Read-only, pointer-events-none — το κλικ το παίρνει ο κεντρικός αγωγός. STAGE ADR-040 + ADR-929. */}
+      <CalibrationPickOverlay viewport={viewport} />
       {/* ADR-920 Β4.8 Β1 — οι ΔΕΣΜΕΥΜΕΝΕΣ γραμμές ασυνέχειας (κίτρινες, μοτίβο = πηγή υψομέτρου),
           πάντα ορατές όσο υπάρχουν. ΚΑΤΩ από τις υποψήφιες υπό έγκριση. Self-subscribes στο
           LOW-freq TopoPointStore· read-only, pointer-events-none. STAGE ADR-040 + ADR-650. */}

@@ -497,18 +497,36 @@
         "calibratePending": "Available in next phase"
       },
       "calibration": {
-        "title": "2-Point Calibration",
-        "pixelDist": "Canvas distance: {dist} px",
+        "title": "Scale calibration",
+        "pixelDist": "Length on the image: {dist} px",
         "realDist": "Real distance",
-        "deriveRotation": "Set as horizontal",
+        "deriveRotation": "Align to the nearest axis",
         "cancel": "Cancel",
         "apply": "Apply",
         "remapTitle": "Update polygons",
         "remapDesc": "{count} polygons will be remapped to the new scale.",
         "remapConfirm": "Calibrate and update",
-        "instructionA": "Click the first point on the background",
-        "instructionB": "Click the second point on the background",
-        "instructionCancel": "Cancel calibration"
+        "instructionCancel": "Cancel calibration",
+        "realDistPlaceholder": "e.g. 10.30",
+        "unit": "Unit",
+        "referenceFirst": "Known length A–B",
+        "referenceSecond": "Second known length C–D",
+        "addSecond": "Add a second length",
+        "addSecondHint": "A second length checks the first. If it is perpendicular to the first, it also corrects scanner stretch (separate X/Y scale).",
+        "removeSecond": "Remove second length",
+        "preview": "1 pixel = {mm} mm",
+        "previewPerAxis": "1 pixel = {x} mm (X) · {y} mm (Y)",
+        "anisotropy": "X–Y scale difference: {pct}%",
+        "residual": "Length {label} deviation: {pct}%",
+        "reviewOk": "The lengths agree",
+        "reviewWarning": "The deviation is large — check the points and values before applying",
+        "pickHint": "Calibration — click point {label} of a known dimension ({index} of {total}). Esc: back",
+        "failure": {
+          "degenerate-placement": "The image placement is invalid (zero scale). Use “Reset transform” and try again.",
+          "degenerate-reference": "The two points are almost at the same spot on the image. Pick a longer dimension.",
+          "inconsistent-references": "The two lengths are not consistent with each other. Check the values and the points."
+        },
+        "instructionPoint": "Click point {label} on the background ({index} of {total})"
       },
       "replace": {
         "title": "Replace background",

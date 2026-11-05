@@ -1,123 +1,84 @@
 'use client';
 
+/**
+ * ADR-340 / ADR-929 Φ5.2 — η βαθμονόμηση του υποβάθρου από την πλευρά του React.
+ *
+ * Λεπτό στρώμα: τα μαθηματικά ζουν στο καθαρό `geometry/calibration-solve.ts`, η μετατροπή «ό,τι
+ * έδωσε ο άνθρωπος → αναφορές» στο `geometry/calibration-draft.ts`. Εδώ μένει μόνο ποια συνεδρία, ποιο
+ * υπόβαθρο και η απομνημόνευση.
+ *
+ * 🔴 Πριν τη Φ5.2 εδώ ζούσε `scaleFactor = realDistMm / dWorld` με κρυφή υπόθεση «σκηνή σε mm» και
+ * σημεία σε pixel οθόνης (ADR-929 §6.1 #1) — σε σκηνή σε μέτρα η εικόνα έβγαινε 1000× μεγάλη.
+ */
+
 import { useMemo } from 'react';
-import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
-import type { CalibrationData, CalibrationUnit, BackgroundTransform } from '../providers/types';
-import type { Point2D } from '../providers/types';
-import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
+import { useFloorplanBackgroundStore, type CalibrationPointTarget } from '../stores/floorplanBackgroundStore';
+import type { SceneUnits } from '../../utils/scene-units';
+import { solveCalibration, type CalibrationSolution, type CalibrationSolveFailure } from '../geometry/calibration-solve';
+import {
+  toCalibrationReferences,
+  toSolverReferences,
+  type CalibrationDraftReference,
+  type CalibrationLengthDraft,
+} from '../geometry/calibration-draft';
 
-// ── Unit conversion ───────────────────────────────────────────────────────────
-
-const UNIT_TO_MM: Record<CalibrationUnit, number> = {
-  mm: 1,
-  cm: 10,
-  m: 1000,
-  ft: 304.8,
-  in: 25.4,
-};
-
-// ── Return type ───────────────────────────────────────────────────────────────
+// ── Panel-side: start / cancel / progress ─────────────────────────────────────
 
 export interface UseCalibrationResult {
   isActive: boolean;
-  hasPointA: boolean;
-  hasPointB: boolean;
-  /** Euclidean canvas-pixel distance between A and B (0 if incomplete). */
-  pixelDist: number;
+  /** Πόσα σημεία έχουν δοθεί στο τρέχον βήμα (0..target). */
+  pickedCount: number;
+  target: CalibrationPointTarget;
   startCalibration: () => void;
   cancelCalibration: () => void;
-  /**
-   * Computes new scale (and optional rotation) from the two picked canvas points.
-   * Assumes 1 DXF world unit = 1 mm (construction-DXF convention).
-   * Phase 7 will parameterise this from the DXF file's INSUNITS header.
-   */
-  applyCalibration: (
-    realDist: number,
-    unit: CalibrationUnit,
-    deriveRotation: boolean,
-    currentTransform: BackgroundTransform,
-  ) => void;
 }
-
-// ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useCalibration(floorId: string): UseCalibrationResult {
   const session = useFloorplanBackgroundStore((s) => s.calibrationSession);
   const isActive = session?.floorId === floorId && floorId !== '';
-  const pointA = isActive ? (session?.pointA ?? null) : null;
-  const pointB = isActive ? (session?.pointB ?? null) : null;
-  const worldToCanvasScale = isActive ? (session?.worldToCanvasScale ?? 1) : 1;
-
-  const pixelDist = useMemo(() => {
-    if (!pointA || !pointB) return 0;
-    return Math.hypot(pointB.x - pointA.x, pointB.y - pointA.y);
-  }, [pointA, pointB]);
-
-  const startCalibration = () =>
-    useFloorplanBackgroundStore.getState().startCalibration(floorId);
-
-  const cancelCalibration = () =>
-    useFloorplanBackgroundStore.getState().cancelCalibration();
-
-  const applyCalibration = (
-    realDist: number,
-    unit: CalibrationUnit,
-    deriveRotation: boolean,
-    currentTransform: BackgroundTransform,
-  ) => {
-    if (!pointA || !pointB || pixelDist < 1) return;
-    const partial = _computeTransformPartial(
-      pointA, pointB, realDist, unit, deriveRotation, worldToCanvasScale, currentTransform,
-    );
-    const calibrationData = _buildCalibrationData(pointA, pointB, realDist, unit, deriveRotation);
-    useFloorplanBackgroundStore.getState().applyCalibration(floorId, partial, calibrationData);
-  };
-
-  return { isActive, hasPointA: pointA !== null, hasPointB: pointB !== null, pixelDist, startCalibration, cancelCalibration, applyCalibration };
-}
-
-// ── Private math helpers ──────────────────────────────────────────────────────
-
-function _computeTransformPartial(
-  a: Point2D,
-  b: Point2D,
-  realDist: number,
-  unit: CalibrationUnit,
-  deriveRotation: boolean,
-  worldToCanvasScale: number,
-  current: BackgroundTransform,
-): Partial<BackgroundTransform> {
-  const dCanvas = Math.hypot(b.x - a.x, b.y - a.y);
-  const dWorld = dCanvas / worldToCanvasScale;
-  const realDistMm = realDist * UNIT_TO_MM[unit];
-  const scaleFactor = realDistMm / dWorld;
-  const partial: Partial<BackgroundTransform> = {
-    scaleX: current.scaleX * scaleFactor,
-    scaleY: current.scaleY * scaleFactor,
-  };
-  if (deriveRotation) {
-    // canvas Y-down: positive angle = clockwise. Subtract to make segment horizontal.
-    const angleDeg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
-    partial.rotation = normalizeAngleDeg(current.rotation - angleDeg);
-  }
-  return partial;
-}
-
-function _buildCalibrationData(
-  a: Point2D,
-  b: Point2D,
-  realDist: number,
-  unit: CalibrationUnit,
-  deriveRotation: boolean,
-): CalibrationData {
   return {
-    method: 'two-point',
-    pointA: a,
-    pointB: b,
-    realDistance: realDist,
-    unit,
-    rotationDerived: deriveRotation,
-    calibratedAt: Date.now(),
-    calibratedBy: '', // Phase 7: populate from auth context
+    isActive,
+    pickedCount: isActive ? (session?.points.length ?? 0) : 0,
+    target: isActive ? (session?.target ?? 2) : 2,
+    startCalibration: () => useFloorplanBackgroundStore.getState().startCalibration(floorId),
+    cancelCalibration: () => useFloorplanBackgroundStore.getState().cancelCalibration(),
   };
+}
+
+// ── Dialog-side: live preview of the solution ─────────────────────────────────
+
+export type CalibrationPreview =
+  | { readonly status: 'incomplete' }
+  | { readonly status: 'failed'; readonly reason: CalibrationSolveFailure }
+  | {
+      readonly status: 'solved';
+      readonly solution: CalibrationSolution;
+      readonly references: readonly CalibrationDraftReference[];
+    };
+
+const INCOMPLETE: CalibrationPreview = { status: 'incomplete' };
+
+/**
+ * Η λύση για ό,τι έχει δοθεί **τώρα** — η ίδια που θα γραφτεί με «Εφαρμογή» (καμία δεύτερη πράξη).
+ * `incomplete` όσο λείπει μήκος ή σημείο.
+ */
+export function useCalibrationPreview(
+  lengths: readonly CalibrationLengthDraft[],
+  alignToAxis: boolean,
+  sceneUnits: SceneUnits,
+): CalibrationPreview {
+  const session = useFloorplanBackgroundStore((s) => s.calibrationSession);
+  const background = useFloorplanBackgroundStore(
+    (s) => (session ? (s.floors[session.floorId]?.background ?? null) : null),
+  );
+  return useMemo<CalibrationPreview>(() => {
+    if (!session || !background) return INCOMPLETE;
+    const refs = toCalibrationReferences(session.points, lengths, background);
+    const solverRefs = refs ? toSolverReferences(refs) : null;
+    if (!refs || !solverRefs) return INCOMPLETE;
+    const result = solveCalibration({ placement: background, references: solverRefs, sceneUnits, alignToAxis });
+    return result.ok
+      ? { status: 'solved', solution: result.solution, references: refs }
+      : { status: 'failed', reason: result.reason };
+  }, [session, background, lengths, alignToAxis, sceneUnits]);
 }

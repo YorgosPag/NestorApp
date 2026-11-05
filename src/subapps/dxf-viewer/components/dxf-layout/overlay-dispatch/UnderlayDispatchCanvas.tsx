@@ -19,8 +19,9 @@
  *   DOM-μετά) στο z-συμβόλαιο. Έγινε mount-on-demand αντί για merge.
  * - `LayerCanvas` (z0): imperative renderer — δική του απόφαση (ADR-732 §6 παγίδα 4).
  *
- * Διάδραση: η ζώνη Α είναι pointer-events-none ΕΚΤΟΣ από τη διάρκεια calibration session
- * της κάτοψης (point picking) — ίδια συμπεριφορά με τον πρώην FloorplanBackgroundCanvas.
+ * Διάδραση: η ζώνη Α είναι **πάντα** pointer-events-none. ADR-929 Φ5.2: το κλικ βαθμονόμησης που
+ * ζούσε εδώ δεν έφτανε ποτέ (ο `dxf-canvas` z-10 κάθεται από πάνω)· περνά πια από τον κεντρικό αγωγό
+ * κλικ (`hooks/canvas/canvas-click-calibration.ts`).
  * ADR-040: ZERO useSyncExternalStore εδώ πέρα από όσα κουβαλούν τα painter hooks (low-freq)·
  * transform ΜΟΝΟ μέσω `getImmediateTransform()` σε scheduler frame (XXII.B).
  */
@@ -67,8 +68,8 @@ export function UnderlayDispatchCanvas({
   // σειρά θα έκρυβε τον κάναβο κάτω από αεροφωτογραφία τη μέρα που θα προστεθεί πάροχος με
   // `kind: 'aerial'` — δηλαδή η βλάβη θα γεννιόταν από αλλαγή που δεν αγγίζει αυτό το αρχείο.
   const painters = useMemo(
-    () => [basemap, grid, floorplan.painter],
-    [basemap, grid, floorplan.painter],
+    () => [basemap, grid, floorplan],
+    [basemap, grid, floorplan],
   );
 
   // Κοινός zone μηχανισμός (SSoT — use-overlay-zone-dispatch): ΕΝΑ scheduler frame
@@ -79,13 +80,7 @@ export function UnderlayDispatchCanvas({
     <canvas
       ref={canvasRef}
       data-dxf-overlay="underlay-dispatch"
-      onClick={floorplan.isCalibrating ? floorplan.onCalibrationClick : undefined}
-      style={floorplan.isCalibrating ? { pointerEvents: 'auto' } : undefined}
-      className={cn(
-        'pointer-events-none',
-        floorplan.isCalibrating && 'cursor-crosshair',
-        className,
-      )}
+      className={cn('pointer-events-none', className)}
       aria-hidden="true"
     />
   );

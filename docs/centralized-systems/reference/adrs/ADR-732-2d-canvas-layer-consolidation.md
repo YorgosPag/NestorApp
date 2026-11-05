@@ -263,6 +263,7 @@ z11 · preview z15) — ακριβώς η αναμονή του §3· μόνο �
 
 ## Changelog
 
+- **2026-11-05 — Το κλικ βαθμονόμησης της ζώνης Α ήταν νεκρό (ADR-929 Φ5.2α).** Το «Calibration click ΔΕΝ ελέγχθηκε οπτικά» του Batch 2 επιβεβαιώθηκε ως σφάλμα στην παραγωγή: ο `dxf-canvas` (z-10) κάθεται πάνω από τον `UnderlayDispatchCanvas` (z=0) και παίρνει κάθε κλικ (`elementsFromPoint`). Το κλικ περνά πλέον από τον κεντρικό αγωγό (`useCanvasClickHandler` κλάδος 0.42)· η ζώνη Α είναι **πάντα** `pointer-events-none`, χωρίς inline style, και ο `useFloorplanBackgroundPainter` επιστρέφει μόνο painter. Τα σημάδια μετακόμισαν σε SVG leaf (`CalibrationPickOverlay`).
 - **2026-07-30 (στ) — Batch 5 ΕΓΙΝΕ: LayerCanvas unmount-when-empty (5 → 4 στρώματα στο
   τυπικό σχέδιο).** Η αναβολή του §3 ήρθη με την ανάγνωση που ζητούσε: το
   `showSnapIndicators` αποδείχθηκε **νεκρή είσοδος** (ADR-137 — SVG overlay· μόνο

@@ -497,18 +497,36 @@
         "calibratePending": "Διαθέσιμο σε επόμενη φάση"
       },
       "calibration": {
-        "title": "Βαθμονόμηση 2 σημείων",
-        "pixelDist": "Απόσταση σε pixel: {dist} px",
+        "title": "Βαθμονόμηση κλίμακας",
+        "pixelDist": "Μήκος στην εικόνα: {dist} px",
         "realDist": "Πραγματική απόσταση",
-        "deriveRotation": "Ορισμός ως οριζόντιο",
+        "deriveRotation": "Ευθυγράμμιση με τον πλησιέστερο άξονα",
         "cancel": "Ακύρωση",
         "apply": "Εφαρμογή",
         "remapTitle": "Ενημέρωση polygons",
         "remapDesc": "{count} polygons θα αναπροσαρμοστούν στη νέα κλίμακα.",
         "remapConfirm": "Βαθμονόμηση και ενημέρωση",
-        "instructionA": "Κάνε κλικ στο 1ο σημείο στο φόντο",
-        "instructionB": "Κάνε κλικ στο 2ο σημείο στο φόντο",
-        "instructionCancel": "Ακύρωση βαθμονόμησης"
+        "instructionCancel": "Ακύρωση βαθμονόμησης",
+        "realDistPlaceholder": "π.χ. 10,30",
+        "unit": "Μονάδα",
+        "referenceFirst": "Γνωστό μήκος A–B",
+        "referenceSecond": "Δεύτερο γνωστό μήκος C–D",
+        "addSecond": "Προσθήκη δεύτερου μήκους",
+        "addSecondHint": "Ένα δεύτερο μήκος ελέγχει το πρώτο. Αν είναι κάθετο στο πρώτο, διορθώνει και το τέντωμα του σαρωτή (χωριστή κλίμακα X/Y).",
+        "removeSecond": "Αφαίρεση δεύτερου μήκους",
+        "preview": "1 pixel = {mm} mm",
+        "previewPerAxis": "1 pixel = {x} mm (X) · {y} mm (Y)",
+        "anisotropy": "Διαφορά κλίμακας X–Y: {pct}%",
+        "residual": "Απόκλιση μήκους {label}: {pct}%",
+        "reviewOk": "Τα μήκη συμφωνούν",
+        "reviewWarning": "Η απόκλιση είναι μεγάλη — έλεγξε τα σημεία και τις τιμές πριν την εφαρμογή",
+        "pickHint": "Βαθμονόμηση — κλικ στο σημείο {label} μιας γνωστής διάστασης ({index} από {total}). Esc: πίσω",
+        "failure": {
+          "degenerate-placement": "Η τοποθέτηση της εικόνας είναι άκυρη (μηδενική κλίμακα). Κάνε «Επαναφορά μετασχηματισμού» και ξαναδοκίμασε.",
+          "degenerate-reference": "Τα δύο σημεία είναι σχεδόν στο ίδιο σημείο της εικόνας. Διάλεξε μια μεγαλύτερη διάσταση.",
+          "inconsistent-references": "Τα δύο μήκη δεν συμβιβάζονται μεταξύ τους. Έλεγξε τις τιμές και τα σημεία."
+        },
+        "instructionPoint": "Κάνε κλικ στο σημείο {label} στο φόντο ({index} από {total})"
       },
       "replace": {
         "title": "Αντικατάσταση φόντου",
