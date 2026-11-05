@@ -917,12 +917,57 @@ Push `ae17567b` (run `42035220505`, *live ae17567 (54″)*) ⇒ πίνακας: 
 στο νέο container — με έρευνα για τη σύνταξη (Traefik v3), το `dialTimeout` και αν ένα κρεμασμένο dial επαναλαμβάνεται.
 Μάρτυρας: μέτρηση 3, στόχος **0** αποτυχίες.
 
+#### 11.12.4 Το χαμένο αίτημα — γρήγορο dial + retry στον Traefik *(2026-11-05)*
+
+**Έρευνα στον κώδικα του Traefik (v3.0–v3.7), όχι στα docs:**
+
+- **`retry` middleware** (`pkg/middlewares/retry/retry.go`): επαναλαμβάνει **μόνο** αν το αίτημα έφτασε στον proxy
+  **χωρίς να γραφτεί** στον backend (`proxyReached && !wroteRequest`). Άρα είναι ασφαλές και για POST, αφού ο backend
+  δεν το είδε ποτέ. Κάθε προσπάθεια ξανακαλεί την ισοκατανομή. Ο WRR (EDF, `wrr.go::nextServer`) εναλλάσσει ⇒ η
+  επανάληψη πάει στον **άλλο** server, δηλαδή στο νέο container. Η σημασιολογία είναι ίδια σε όλες τις v3.x.
+- **Το `dialTimeout` εξ ορισμού είναι 30″** (`ForwardingTimeouts.SetDefaults`). Χωρίς αλλαγή, ο retry θα ξεκινούσε
+  μετά από 30″. Ο πελάτης έχει ήδη φύγει.
+- **Ο `serversTransport` ΔΕΝ δηλώνεται με labels** (`ServersTransports … label:"-"`). Ζει στον file provider του
+  proxy του Coolify (`--providers.file.directory=/traefik/dynamic/`, `watch=true`). Τα labels του service απλώς τον
+  ονομάζουν: `…loadbalancer.serverstransport=<όνομα>@file`.
+- ❌ **Απορρίφθηκε ο παθητικός έλεγχος υγείας** (`passiveHealthCheck`, μόνο v3.6+). Ο κώδικας (`healthcheck.go::WrapHandler`)
+  μετρά ως αποτυχία και κάθε **5xx της εφαρμογής**. Με **ένα** container σε μόνιμη λειτουργία, ένα `500` θα έβγαζε
+  ολόκληρο τον ιστότοπο εκτός (`503 no available server`) για όλο το `failureWindow`. Ένα σφάλμα σελίδας θα γινόταν
+  διακοπή.
+- ❌ **Απορρίφθηκε η καθυστέρηση του SIGTERM.** Ο Traefik μαθαίνει μόνο από το γεγονός `die`. Αν ο παλιός ζει
+  περισσότερο, το παράθυρο του νεκρού backend απλώς **μετατίθεται**, δεν κλείνει. Η αλλαγή της υγείας σε «ανθυγιές»
+  θα χρειαζόταν `retries × interval` = 60″.
+
+**Ο μηχανισμός** (SSoT `scripts/docker/traefik-resilience.js`, μηδέν εξαρτήσεις):
+
+| Κομμάτι | Τιμή | Πού |
+|---|---|---|
+| `serversTransport` `nestor-fast-dial` | `dialTimeout: 1000ms` (≥ αρχικό RTO του TCP· το υγιές dial στο bridge κρατά κλάσμα του ms) | Servers → Proxy → Dynamic Configurations → `nestor-fast-dial.yaml` |
+| `retry` middleware `nestor-retry` | `attempts=3` (η 1η μετρά) | Labels της εφαρμογής |
+| Σε **κάθε** router | ο `nestor-retry` **τελευταίος**: ό,τι προηγείται (gzip) τρέχει μία φορά | Labels |
+| Σε **κάθε** service | `serverstransport=nestor-fast-dial@file` | Labels |
+
+`applyResilience(labels)` παράγει τα Labels από αυτά που υπάρχουν ήδη στον πίνακα. Είναι ιδεμπότητο και δεν αγγίζει
+καμία άλλη γραμμή. Το `findGaps` καταγγέλλει ό,τι λείπει. CLI: `node scripts/docker/traefik-resilience.js <labels.txt>`.
+Προϋπολογισμός: `attempts × dialTimeout` = 3″ < 5″ (το όριο του βρόχου μέτρησης) ≤ 10″ (`TIMING.requestTimeoutMs` του §11.11).
+
+**Άγκυρες** (`scripts/__tests__/traefik-resilience.test.js`, 17 tests): προϋπολογισμός · δομή YAML · κάθε router/service ·
+θέση «τελευταίος» · ιδεμπότητα · διόρθωση λάθους transport/attempts χωρίς διπλασιασμό · ρητό σφάλμα σε λάθος επικόλληση.
+**12/12 μεταλλάξεις** σκοτώθηκαν.
+
+**Σειρά (αλλιώς σπάει η δρομολόγηση):** πρώτα το αρχείο του proxy, **μετά** τα Labels. Ένα label που ονομάζει
+`nestor-fast-dial@file` πριν υπάρξει το αρχείο κάνει τον router να αποτύχει. Αν το Coolify έχει «Readonly labels»
+ενεργό, οι αλλαγές σβήνονται στο Save.
+
+⏳ **Μάρτυρας:** μέτρηση 3 (ίδιος βρόχος 420×1″ κατά Redeploy), στόχος **0** αποτυχίες.
+
 ---
 
 ## §9. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-05 | 🔶 **§11.12.4 — ΓΡΗΓΟΡΟ DIAL + RETRY ΣΤΟΝ TRAEFIK (μηχανισμός, μέτρηση 3 εκκρεμεί)**. Έρευνα στον κώδικα του Traefik v3.0–v3.7: ο `retry` επαναλαμβάνει μόνο αίτημα που **δεν γράφτηκε** στον backend (ασφαλές για POST) και ο WRR δίνει τον άλλο server. Όμως το `dialTimeout` εξ ορισμού είναι 30″ και ο `serversTransport` δεν δηλώνεται με labels (`label:"-"`) ⇒ αρχείο στον file provider του proxy του Coolify + αναφορά `@file`. Απορρίφθηκαν ο παθητικός έλεγχος υγείας (μετρά τα 5xx της εφαρμογής ⇒ με ένα container ένα 500 = όλος ο ιστότοπος εκτός) και η καθυστέρηση του SIGTERM (μεταθέτει το παράθυρο, δεν το κλείνει). SSoT `scripts/docker/traefik-resilience.js` (`dialTimeout` 1″, `attempts` 3, `applyResilience`/`findGaps`). 17 άγκυρες, **12/12 μεταλλάξεις**. |
 | 2026-11-05 | 🔶 **§11.12.3 — ΜΕΤΡΗΣΗ 2: ΑΠΟ ~17″ ΣΕ ΕΝΑ ΑΙΤΗΜΑ**. Healthcheck πίνακα **CMD `node /app/healthcheck.js`** (5/5/12/5) ⇒ το log δείχνει πλέον `Waiting for healthcheck` → 3× `starting` → **`New container is healthy`** → **μετά** `Removing old containers`. Βρόχος 420×1″: **419 OK / 1 timeout, κανένα 503** (ήταν 11× 503 + timeout). Το υπόλοιπο: ένα αίτημα ≈1,9″ μετά τη διαγραφή του παλιού container κρέμασε — υπόθεση: καθυστέρηση του Traefik να ξεχάσει το νεκρό backend. Το drain του Coolify (#8627) λείπει στη v4.0.0. ⏳ Εγκρίθηκε: retry middleware Traefik + μέτρηση 3. |
 | 2026-11-05 | 🔶 **§11.12.1–2 — ΜΕΤΡΗΣΗ 1: ΤΟ ΚΕΝΟ ΜΕΙΝΕ (~17″), Η ΡΙΖΑ ΗΤΑΝ ΑΛΛΟΥ**. Port Mappings κενό ⇒ το log λέει πλέον `Rolling update started` ✅, αλλά το Coolify σβήνει το παλιό container **0,65″** μετά την εκκίνηση του νέου: για τύπο Docker Image **δεν** διαβάζει το HEALTHCHECK της εικόνας (`custom_healthcheck_found` μόνο από Dockerfile) ⇒ καμία αναμονή. Βρόχος 420×1″: timeout + **11× `503 no available server`**. Διόρθωση: healthcheck σε **αρχείο** `scripts/docker/healthcheck.js` (SSoT, `PANEL_COMMAND = node /app/healthcheck.js`), γιατί ο validator CMD του πίνακα αρνείται `node -e "…"` και σιωπηλά πέφτει σε wget ⇒ 403. Dockerfile + πίνακας τρέχουν την **ίδια** εντολή. Άγκυρες + **10/10 μεταλλάξεις**. ⏳ push ⇒ μετά Healthcheck CMD στον πίνακα ⇒ μέτρηση 2. |
 | 2026-11-05 | ✅ **§11.12 — ΤΟ ΚΕΝΟ ΤΟΥ DEPLOY: ρίζα + HEALTHCHECK**. Ρίζα: η ρύθμιση **Port Mappings `3000:3000`** του Coolify κάνει stop-before-start, και έλειπε `HEALTHCHECK`. Η θύρα του host δεν χρησιμεύει: απ' έξω `ECONNREFUSED`, ο Traefik πηγαίνει μέσω του δικτύου Docker, ο χρονοπρογραμματιστής καλεί μέσα στο container. Τι άλλαξε: `HEALTHCHECK` με `node` + UA `nestor-healthcheck/1`, όχι curl/wget, που θα έτρωγαν 403 από το middleware ⇒ «ανθυγιές» για πάντα. Άγκυρες + **4/4 μεταλλάξεις**. ⏳ Μένει η κίνηση στο Coolify (Port Mappings κενό) και ο μάρτυρας: deploy χωρίς timeout στο log του §11.11. |
