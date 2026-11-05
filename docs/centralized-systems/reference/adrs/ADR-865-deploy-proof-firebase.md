@@ -893,12 +893,37 @@ HTTP check (curl/wget ⇒ 403 από `BLOCKED_BOT_PATTERNS` ⇒ «ανθυγιέ
 βλίπ 1–2″ (ο Traefik προσθέτει το νέο container λίγο μετά το `healthy`), το επόμενο βήμα είναι η αναμονή «drain» του Coolify
 (`wait_for_proxy_to_route_new_container`, #8627) — να ελεγχθεί αν υπάρχει στην εγκατεστημένη έκδοση.
 
+#### 11.12.3 Μέτρηση 2 — Healthcheck CMD ενεργός: από ~17″ σε ΕΝΑ αίτημα *(2026-11-05 15:20 UTC)*
+
+Push `ae17567b` (run `42035220505`, *live ae17567 (54″)*) ⇒ πίνακας: Healthcheck **Enabled · CMD · `node /app/healthcheck.js` ·
+5/5/12/5** ⇒ Redeploy, με τον ίδιο βρόχο (420×1″).
+
+| Ώρα (UTC) | Coolify log |
+|---|---|
+| 15:20:03.74 | `New container started.` → `Waiting for healthcheck to pass on the new container.` → `Healthcheck command (inside the container): node /app/healthcheck.js` |
+| 15:20:08–19 | Attempt 1–3: `"starting"` (ExitCode 1 όσο ξεκινά ο server) |
+| 15:20:24.69 | Attempt 4: `"healthy"` (ExitCode 0, 227 ms) → **`New container is healthy.`** |
+| 15:20:25.31 | **μετά** `Removing old containers.` (`docker stop` επέστρεψε σε 0,16″) |
+
+**Βρόχος: 419 OK / 1 αποτυχία, κανένα `503`.** Η μόνη αποτυχία: αίτημα στις 15:20:27.16 (≈1,9″ μετά τη διαγραφή του παλιού)
+**κρέμασε** >5″· 26.15 και 32.18 = 200. Η αναμονή υγείας του Coolify (§11.12.1) **αποδείχθηκε ζωντανά**.
+
+**Το υπόλοιπο, υπόθεση ΜΗ επαληθευμένη:** ο Traefik (docker provider) μαθαίνει τον θάνατο του παλιού container με καθυστέρηση
+(throttle γεγονότων)· ως τότε στέλνει αιτήματα στη διεύθυνσή του, που **δεν υπάρχει πια** (`rm -f` αμέσως) ⇒ η σύνδεση
+κρέμεται αντί να αρνηθεί. Το drain του Coolify (#8627) **δεν** υπάρχει στη v4.0.0 (καμία γραμμή `Waiting … for the proxy`)
+και θα κάλυπτε μόνο την **είσοδο** του νέου, όχι την **έξοδο** του παλιού.
+
+⏳ **Επόμενο (εγκρίθηκε, επιλογή Β):** retry middleware του Traefik μέσω Labels του Coolify — αποτυχία δικτύου ⇒ επανάληψη
+στο νέο container — με έρευνα για τη σύνταξη (Traefik v3), το `dialTimeout` και αν ένα κρεμασμένο dial επαναλαμβάνεται.
+Μάρτυρας: μέτρηση 3, στόχος **0** αποτυχίες.
+
 ---
 
 ## §9. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-05 | 🔶 **§11.12.3 — ΜΕΤΡΗΣΗ 2: ΑΠΟ ~17″ ΣΕ ΕΝΑ ΑΙΤΗΜΑ**. Healthcheck πίνακα **CMD `node /app/healthcheck.js`** (5/5/12/5) ⇒ το log δείχνει πλέον `Waiting for healthcheck` → 3× `starting` → **`New container is healthy`** → **μετά** `Removing old containers`. Βρόχος 420×1″: **419 OK / 1 timeout, κανένα 503** (ήταν 11× 503 + timeout). Το υπόλοιπο: ένα αίτημα ≈1,9″ μετά τη διαγραφή του παλιού container κρέμασε — υπόθεση: καθυστέρηση του Traefik να ξεχάσει το νεκρό backend. Το drain του Coolify (#8627) λείπει στη v4.0.0. ⏳ Εγκρίθηκε: retry middleware Traefik + μέτρηση 3. |
 | 2026-11-05 | 🔶 **§11.12.1–2 — ΜΕΤΡΗΣΗ 1: ΤΟ ΚΕΝΟ ΜΕΙΝΕ (~17″), Η ΡΙΖΑ ΗΤΑΝ ΑΛΛΟΥ**. Port Mappings κενό ⇒ το log λέει πλέον `Rolling update started` ✅, αλλά το Coolify σβήνει το παλιό container **0,65″** μετά την εκκίνηση του νέου: για τύπο Docker Image **δεν** διαβάζει το HEALTHCHECK της εικόνας (`custom_healthcheck_found` μόνο από Dockerfile) ⇒ καμία αναμονή. Βρόχος 420×1″: timeout + **11× `503 no available server`**. Διόρθωση: healthcheck σε **αρχείο** `scripts/docker/healthcheck.js` (SSoT, `PANEL_COMMAND = node /app/healthcheck.js`), γιατί ο validator CMD του πίνακα αρνείται `node -e "…"` και σιωπηλά πέφτει σε wget ⇒ 403. Dockerfile + πίνακας τρέχουν την **ίδια** εντολή. Άγκυρες + **10/10 μεταλλάξεις**. ⏳ push ⇒ μετά Healthcheck CMD στον πίνακα ⇒ μέτρηση 2. |
 | 2026-11-05 | ✅ **§11.12 — ΤΟ ΚΕΝΟ ΤΟΥ DEPLOY: ρίζα + HEALTHCHECK**. Ρίζα: η ρύθμιση **Port Mappings `3000:3000`** του Coolify κάνει stop-before-start, και έλειπε `HEALTHCHECK`. Η θύρα του host δεν χρησιμεύει: απ' έξω `ECONNREFUSED`, ο Traefik πηγαίνει μέσω του δικτύου Docker, ο χρονοπρογραμματιστής καλεί μέσα στο container. Τι άλλαξε: `HEALTHCHECK` με `node` + UA `nestor-healthcheck/1`, όχι curl/wget, που θα έτρωγαν 403 από το middleware ⇒ «ανθυγιές» για πάντα. Άγκυρες + **4/4 μεταλλάξεις**. ⏳ Μένει η κίνηση στο Coolify (Port Mappings κενό) και ο μάρτυρας: deploy χωρίς timeout στο log του §11.11. |
 | 2026-11-05 | ✅ **§11.11 — ΖΩΝΤΑΝΗ ΑΠΟΔΕΙΞΗ (run `42005118492`, push `1ef2e712`)**. Coolify deployment `h92qi5dqy2p19slc7e1deqhn`. Παρατηρήσεις του runner: 1″/11″/22″ *σερβίρεται ce35e9b · Coolify in_progress* → 42″ *build-info: timeout* → 53″ *σερβίρεται 1ef2e71 · Coolify finished* ⇒ Telegram *«Deploy completato · live 1ef2e71 (53″)»*. **Κλείνουν τα όρια 1 και 2**: ο runner παίρνει 200 με το ρητό UA (κανένα 403), και το `GET /deployments/{uuid}` της δικής μας εγκατάστασης δίνει `status` με το αναμενόμενο σχήμα. 🔴 **Νέο εύρημα, ανοιχτό**: στο 42″ το build-info **δεν απάντησε** μέσα σε 10″, πιθανότατα κατά την εναλλαγή container. Αυτό υποδηλώνει **σύντομη διακοπή υπηρεσίας σε κάθε deploy** (healthcheck / rolling update του Coolify άγνωστα). Ο ελεγκτής το άντεξε, όπως σχεδιάστηκε. |
