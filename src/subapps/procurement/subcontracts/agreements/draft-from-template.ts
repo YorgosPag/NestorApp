@@ -33,7 +33,8 @@ function clauseOwnedOverrides(ref: TemplateClauseRef, inForce: ClauseInForce): R
   return Object.fromEntries(Object.entries(ref.parameterOverrides).filter(([key]) => owned.has(key)));
 }
 
-function clauseInputsOf(refs: readonly TemplateClauseRef[], library: ApprovedLibrary): { inputs: ClauseSelectionInput[]; unresolved: ClauseKey[] } {
+/** Οι ρήτρες ενός προτύπου ως επιλογές, στην έκδοση σε ισχύ — ο **ένας** δρόμος για το «Νέο» και το δείγμα εγγράφου (§5.22). */
+export function templateClauseInputsOf(refs: readonly TemplateClauseRef[], library: ApprovedLibrary): { inputs: ClauseSelectionInput[]; unresolved: ClauseKey[] } {
   const inputs: ClauseSelectionInput[] = [];
   const unresolved: ClauseKey[] = [];
   for (const ref of refs) {
@@ -50,7 +51,7 @@ export function draftFromTemplate(
   library: ApprovedLibrary,
   choice: DraftFromTemplateChoice,
 ): DraftFromTemplate {
-  const { inputs, unresolved } = clauseInputsOf(template.clauses, library);
+  const { inputs, unresolved } = templateClauseInputsOf(template.clauses, library);
   return {
     draft: {
       documentMode: template.defaultDocumentMode,

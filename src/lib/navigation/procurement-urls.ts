@@ -142,6 +142,22 @@ export function getSubcontractLibraryClauseUrl(clauseId: string) {
   return withQuery('/procurement/subcontracts/library', new URLSearchParams({ tab: 'clauses', clause: clauseId }).toString());
 }
 
+/** Ένα πρότυπο στην καρτέλα «Πρότυπα» της βιβλιοθήκης. */
+export function getSubcontractLibraryTemplateUrl(templateId: string) {
+  return withQuery('/procurement/subcontracts/library', new URLSearchParams({ tab: 'templates', template: templateId }).toString());
+}
+
+/** Νέο πρότυπο ειδικότητας, αντίγραφο του `fromTemplateId` (ADR-928 §5.22 · Φ3γ-0b-2). */
+export function getSubcontractTemplateNewUrl(fromTemplateId: string | null) {
+  const base = '/procurement/subcontracts/library/templates/new' as const;
+  return fromTemplateId ? withQuery(base, new URLSearchParams({ from: fromTemplateId }).toString()) : typedHref(base);
+}
+
+/** Επεξεργασία προτύπου ειδικότητας (ADR-928 §5.22 · Φ3γ-0b-2). */
+export function getSubcontractTemplateEditUrl(templateId: string) {
+  return typedHref(`/procurement/subcontracts/library/templates/${encodeURIComponent(templateId)}`);
+}
+
 /** Συγγραφή νέας ρήτρας (ADR-928 §5.22 · Φ3γ-0b-1). */
 export function getSubcontractClauseNewUrl() {
   return typedHref('/procurement/subcontracts/library/clauses/new');

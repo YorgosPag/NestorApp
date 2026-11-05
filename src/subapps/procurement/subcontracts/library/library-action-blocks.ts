@@ -93,6 +93,19 @@ export function translationApprovalBlock(
   return gated(fromRefusal(refuseTranslationApproval(version, translation, context.actorUid), 'ownTranslation'), 'canManage', context);
 }
 
+/**
+ * Οι πόρτες του επεξεργαστή προτύπου (ADR-928 §5.22): «Νέο πρότυπο» και «Επεξεργασία» — ο φύλακας του γραφέα είναι
+ * `subcontracts:templates:manage`. Αρχειοθετημένο πρότυπο ⇒ καμία «Επεξεργασία» (πρώτα επαναφορά).
+ */
+export function templateAuthoringBlock(
+  template: { readonly isArchived: boolean } | null,
+  authority: { readonly canManageTemplates: boolean; readonly pending: boolean },
+): LibraryActionBlock | null {
+  if (template?.isArchived) return HIDDEN;
+  if (authority.canManageTemplates) return null;
+  return authority.pending ? PENDING : explained('notAuthorized');
+}
+
 /** Οι πόρτες της συγγραφής (ADR-928 §5.22): «Νέα ρήτρα» και «Πρότεινε αλλαγή». */
 export type LibraryAuthoringAction = 'createClause' | 'proposeChange';
 

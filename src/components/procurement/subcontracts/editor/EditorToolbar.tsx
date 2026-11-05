@@ -15,7 +15,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DraftStatus } from '@/hooks/drafts/useRevisionedDraft';
-import type { EditorSaveBlock } from './useAgreementEditor';
+import type { EditorSaveBlock } from './save-block';
 
 /**
  * Ό,τι χρειάζεται η γραμμή εργαλείων από **οποιονδήποτε** επεξεργαστή πρόχειρου (συμφωνητικό · ρήτρα · πρότυπο,

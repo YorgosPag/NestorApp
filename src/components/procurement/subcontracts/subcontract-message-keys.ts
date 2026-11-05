@@ -46,6 +46,7 @@ export const SUBCONTRACT_ISSUE_KEYS = {
   sharesNotWhole: 'subcontracts.issues.sharesNotWhole',
   shareKeyDuplicate: 'subcontracts.issues.shareKeyDuplicate',
   templateCodeInvalid: 'subcontracts.issues.templateCodeInvalid',
+  templateCodeTaken: 'subcontracts.issues.templateCodeTaken',
   tradeUnknown: 'subcontracts.issues.tradeUnknown',
   lineIdDuplicate: 'subcontracts.issues.lineIdDuplicate',
   lineDescriptionRequired: 'subcontracts.issues.lineDescriptionRequired',

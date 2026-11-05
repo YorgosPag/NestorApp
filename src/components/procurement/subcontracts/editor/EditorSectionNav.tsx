@@ -10,15 +10,15 @@
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
-import { EDITOR_SECTIONS, issueCountsBySection } from './editor-sections';
+import { AGREEMENT_SECTION_MAP, issueCountsBySection, type EditorSectionMap } from './editor-sections';
 
-export function EditorSectionNav({ issues }: { readonly issues: readonly SubcontractIssue[] }) {
+export function EditorSectionNav({ issues, map = AGREEMENT_SECTION_MAP }: { readonly issues: readonly SubcontractIssue[]; readonly map?: EditorSectionMap }) {
   const { t } = useTranslation('procurement');
-  const counts = issueCountsBySection(issues);
+  const counts = issueCountsBySection(issues, map);
   return (
     <nav aria-label={t('subcontracts.sections.nav.label')}>
       <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-        {EDITOR_SECTIONS.map((section) => (
+        {map.sections.map((section) => (
           <li key={section}>
             <a href={`#editor-${section}`} className="underline-offset-2 hover:underline">
               {t(`subcontracts.sections.nav.${section}`)}

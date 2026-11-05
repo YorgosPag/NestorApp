@@ -1,5 +1,5 @@
 import { DEFAULT_LIBRARY_PROPOSER, type SubcontractClauseVersion } from '../../types/clause';
-import { authoringActionBlock, translationApprovalBlock, versionActionBlock, type LibraryActionContext } from '../library-action-blocks';
+import { authoringActionBlock, templateAuthoringBlock, translationApprovalBlock, versionActionBlock, type LibraryActionContext } from '../library-action-blocks';
 
 type Facts = Pick<SubcontractClauseVersion, 'state' | 'proposedBy' | 'professionalReview' | 'sourceHash'>;
 
@@ -79,5 +79,12 @@ describe('library-action-blocks — πόρτες συγγραφής (ADR-928 §5
     expect(authoringActionBlock('proposeChange', { ...open, openProposal: 3 }, admin('u-1'))).toEqual({ kind: 'explained', reason: 'proposalPending' });
     expect(authoringActionBlock('proposeChange', { ...open, isArchived: true }, admin('u-1'))).toEqual({ kind: 'hidden' });
     expect(authoringActionBlock('proposeChange', { ...open, openProposal: 3 }, viewer)).toEqual({ kind: 'explained', reason: 'notAuthorized' });
+  });
+
+  it('πρότυπο: `templates:manage` · σε αναμονή χωρίς ψευδή αιτία · αρχειοθετημένο ⇒ καμία «Επεξεργασία»', () => {
+    expect(templateAuthoringBlock(null, { canManageTemplates: true, pending: false })).toBeNull();
+    expect(templateAuthoringBlock(null, { canManageTemplates: false, pending: false })).toEqual({ kind: 'explained', reason: 'notAuthorized' });
+    expect(templateAuthoringBlock(null, { canManageTemplates: false, pending: true })).toEqual({ kind: 'pending' });
+    expect(templateAuthoringBlock({ isArchived: true }, { canManageTemplates: true, pending: false })).toEqual({ kind: 'hidden' });
   });
 });

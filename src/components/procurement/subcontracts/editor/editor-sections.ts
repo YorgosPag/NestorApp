@@ -1,10 +1,13 @@
 /**
- * @fileoverview **Οι ενότητες του επεξεργαστή και πόσα ευρήματα έχει η καθεμία** (ADR-928 Φ3γ-2 απόφαση 9).
+ * @fileoverview **Οι ενότητες του επεξεργαστή και πόσα ευρήματα έχει η καθεμία** (ADR-928 Φ3γ-2 απόφαση 9 · §5.22).
  * @module components/procurement/subcontracts/editor/editor-sections
  *
  * Η φόρμα είναι μακριά. Το «3 ευρήματα» της εργαλειοθήκης πρέπει να οδηγεί **κάπου**: κάθε εύρημα ανήκει σε μία ενότητα
  * κατά το πρώτο τμήμα του `path` του (ίδια μονοπάτια με τον κριτή), και η πλοήγηση λέει πόσα έχει η καθεμία.
  * Ολική αντιστοίχιση: ό,τι δεν είναι μέρος, γραμμή, όρος ή ρήτρα ανήκει στην ταυτότητα. Κανένα εύρημα δεν χάνεται.
+ *
+ * 🔑 Ο χάρτης είναι **παράμετρος** (§5.22): το συμφωνητικό κρατά τους όρους στο `terms`, το πρότυπο στο `defaultTerms`
+ *    και δεν έχει μέρη. Ίδια λογική, άλλα προθέματα — όχι δεύτερο αντίγραφο.
  */
 
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
@@ -12,19 +15,39 @@ import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clause
 export const EDITOR_SECTIONS = ['identity', 'parties', 'lines', 'terms', 'plan', 'clauses'] as const;
 export type EditorSection = (typeof EDITOR_SECTIONS)[number];
 
-const PARTY_FIELDS: ReadonlySet<string> = new Set(['subcontractorContactId', 'scope', 'projectOwners', 'issuerSignatory']);
-const PLAN_PREFIX = 'terms.paymentPlan';
+export interface EditorSectionMap {
+  /** Οι ενότητες που έχει ο επεξεργαστής, με τη σειρά της φόρμας. */
+  readonly sections: readonly EditorSection[];
+  /** Το πρόθεμα των εμπορικών όρων (`terms` · `defaultTerms`). */
+  readonly termsPrefix: string;
+  readonly partyFields: ReadonlySet<string>;
+}
 
-export function sectionOfPath(path: string): EditorSection {
+export const AGREEMENT_SECTION_MAP: EditorSectionMap = {
+  sections: EDITOR_SECTIONS,
+  termsPrefix: 'terms',
+  partyFields: new Set(['subcontractorContactId', 'scope', 'projectOwners', 'issuerSignatory']),
+};
+
+export const TEMPLATE_SECTION_MAP: EditorSectionMap = {
+  sections: ['identity', 'lines', 'terms', 'plan', 'clauses'],
+  termsPrefix: 'defaultTerms',
+  partyFields: new Set(),
+};
+
+export function sectionOfPath(path: string, map: EditorSectionMap = AGREEMENT_SECTION_MAP): EditorSection {
   const head = path.split('.')[0];
   if (head === 'lines') return 'lines';
   if (head === 'clauses') return 'clauses';
-  if (head === 'terms') return path === PLAN_PREFIX || path.startsWith(`${PLAN_PREFIX}.`) ? 'plan' : 'terms';
-  return PARTY_FIELDS.has(head) ? 'parties' : 'identity';
+  if (head === map.termsPrefix) {
+    const plan = `${map.termsPrefix}.paymentPlan`;
+    return path === plan || path.startsWith(`${plan}.`) ? 'plan' : 'terms';
+  }
+  return map.partyFields.has(head) ? 'parties' : 'identity';
 }
 
-export function issueCountsBySection(issues: readonly SubcontractIssue[]): Readonly<Record<EditorSection, number>> {
+export function issueCountsBySection(issues: readonly SubcontractIssue[], map: EditorSectionMap = AGREEMENT_SECTION_MAP): Readonly<Record<EditorSection, number>> {
   const counts: Record<EditorSection, number> = { identity: 0, parties: 0, lines: 0, terms: 0, plan: 0, clauses: 0 };
-  for (const issue of issues) counts[sectionOfPath(issue.path)] += 1;
+  for (const issue of issues) counts[sectionOfPath(issue.path, map)] += 1;
   return counts;
 }

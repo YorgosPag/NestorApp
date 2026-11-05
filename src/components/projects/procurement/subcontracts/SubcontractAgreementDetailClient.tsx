@@ -12,12 +12,12 @@
 import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useLocalizedTextReader } from '@/components/catalog/shared/catalog-neutral-hooks';
 import { SubcontractAgreementStatusBadge } from '@/components/procurement/subcontracts/SubcontractAgreementStatusBadge';
 import { useSubcontractAgreement } from '@/hooks/procurement/subcontracts/useSubcontractAgreement';
 import { getProjectProcurementUrl } from '@/lib/navigation/procurement-urls';
 import { Link } from '@/lib/workspace/navigation';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
+import { CLAUSE_AUTHORITATIVE_LANGUAGE } from '@/subapps/procurement/subcontracts/types/clause';
 import { KpiChartSkeleton } from '../overview/skeleton/KpiSkeleton';
 import routeSlice from '@/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
@@ -36,14 +36,14 @@ interface Props {
 }
 
 function DetailHeader({ agreement }: { readonly agreement: SubcontractAgreement }) {
-  const { t, i18n } = useTranslation(['procurement', 'quotes']);
-  const { text } = useLocalizedTextReader(i18n.language);
+  const { t } = useTranslation(['procurement', 'quotes']);
+  // ADR-928 §5.20 #1: ο τίτλος στη γλώσσα του ΕΓΓΡΑΦΟΥ (το ελληνικό που επεξεργάζεται το πεδίο «Τίτλος»), όχι της οθόνης.
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <hgroup className="space-y-1">
         <h2 className="flex flex-wrap items-center gap-3 text-lg font-semibold">
           <span className="font-mono">{agreement.documentNumber}</span>
-          <span>{text(agreement.title, agreement.documentNumber)}</span>
+          <span>{agreement.title[CLAUSE_AUTHORITATIVE_LANGUAGE] || agreement.documentNumber}</span>
           <SubcontractAgreementStatusBadge status={agreement.status} />
         </h2>
         <p className="text-sm text-muted-foreground">

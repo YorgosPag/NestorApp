@@ -45,6 +45,7 @@ export const SUBCONTRACT_ISSUE_CODES = [
   'shareKeyDuplicate',
   // ── Πρότυπο ειδικότητας ────────────────────────────────────────────────────
   'templateCodeInvalid',
+  'templateCodeTaken',
   'tradeUnknown',
   'lineIdDuplicate',
   'lineDescriptionRequired',

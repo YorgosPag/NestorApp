@@ -10,7 +10,10 @@ import { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { useSubcontractClauseLibrary } from '@/hooks/procurement/subcontracts/useSubcontractLibrary';
-import { boundTermsAt, boundTermsOf, type BoundTerm } from '@/subapps/procurement/subcontracts/agreements/bound-terms';
+import { boundTermsAt, boundTermsOf, templateBoundTermsOf, type BoundTerm } from '@/subapps/procurement/subcontracts/agreements/bound-terms';
+import type { ApprovedLibrary } from '@/subapps/procurement/subcontracts/agreements/judge-deviations';
+import type { LocalizedText } from '@/subapps/procurement/subcontracts/types/clause-parameter';
+import type { SubcontractTradeTemplateDefinition } from '@/subapps/procurement/subcontracts/types/trade-template';
 import { setClauseDeviationReason } from '@/subapps/procurement/subcontracts/agreements/draft-clause-edits';
 import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
 import type { BoundTermsView } from '../sections/section-types';
@@ -32,4 +35,27 @@ export function useBoundTermsViews(editor: AgreementEditor): { readonly terms: B
     };
     return { terms: { ...shared, at: boundTermsAt(bound, '') }, plan: { ...shared, at: boundTermsAt(bound, 'paymentPlan') } };
   }, [bound, clauses, language, draft, update]);
+}
+
+/**
+ * Η **ίδια** γέφυρα για τον επεξεργαστή προτύπου (ADR-928 §5.22): `templateBoundTermsOf` (ευρήματα στο
+ * `clauses.N.bound.<key>`, όπως ο κριτής του προτύπου) · `setReason: null` — το πρότυπο δεν δέχεται αποκλίσεις, θέλει
+ * ελεύθερη ζώνη.
+ */
+export function useTemplateBoundTermsViews(
+  draft: Pick<SubcontractTradeTemplateDefinition, 'clauses' | 'defaultTerms'>,
+  library: ApprovedLibrary,
+  titles: ReadonlyMap<string, LocalizedText>,
+): { readonly terms: BoundTermsView; readonly plan: BoundTermsView } {
+  const { i18n } = useTranslation('procurement');
+  const language = resolveHumanLanguage(i18n.language);
+  const bound = useMemo(() => templateBoundTermsOf(draft.clauses, library, draft.defaultTerms), [draft.clauses, library, draft.defaultTerms]);
+  return useMemo(() => {
+    const titleOf = (clauseKey: string) => {
+      const title = titles.get(clauseKey);
+      return title ? localizedIn(title, language) : clauseKey;
+    };
+    const shared = { setReason: null, titleOf };
+    return { terms: { ...shared, at: boundTermsAt(bound, '') }, plan: { ...shared, at: boundTermsAt(bound, 'paymentPlan') } };
+  }, [bound, titles, language]);
 }

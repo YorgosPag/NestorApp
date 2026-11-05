@@ -68,10 +68,20 @@ const sectionOfTerm = (definition: ClauseParameterDefinition): string =>
  * Δεσμευμένη παράμετρος: η τιμή από τους όρους, η ζώνη, ο λόγος (μόνο ανάγνωση, γράφεται στο πεδίο του όρου) και τα
  * ευρήματα του κριτή στο **δικό της** μονοπάτι. Πριν τη Φ3γ-2 τα ευρήματα αυτά δεν φαίνονταν πουθενά (ADR-928 §5.21).
  */
-function BoundParameter({ index, input, definition, terms, issues, language }: Pick<ParameterRowProps, 'index' | 'input' | 'definition' | 'terms' | 'issues' | 'language'>) {
+export interface BoundParameterProps {
+  readonly definition: ClauseParameterDefinition;
+  readonly terms: CommercialTerms;
+  /** Ο λόγος απόκλισης (μόνο ανάγνωση)· το πρότυπο δεν έχει. */
+  readonly reason: string | undefined;
+  /** Πού γράφει ο κριτής: `clauses.N.parameterValues.<key>` (συμφωνητικό) · `clauses.N.bound.<key>` (πρότυπο, §5.22). */
+  readonly issuesPath: string;
+  readonly issues: readonly SubcontractIssue[];
+  readonly language: HumanLanguage;
+}
+
+export function BoundParameter({ definition, terms, reason, issuesPath, issues, language }: BoundParameterProps) {
   const { t } = useTranslation('procurement');
   const value = resolveParameterValue(definition, {}, terms);
-  const reason = input.deviationReasons[definition.key];
   return (
     <li className="space-y-1">
       <p className="flex flex-wrap items-center gap-2 text-sm">
@@ -81,7 +91,7 @@ function BoundParameter({ index, input, definition, terms, issues, language }: P
         <a href={sectionOfTerm(definition)} className="text-xs text-foreground underline underline-offset-2">{t('subcontracts.sections.bound.editInTerms')}</a>
       </p>
       {reason && <p className="text-xs text-muted-foreground">{t('subcontracts.sections.bound.reason', { reason })}</p>}
-      <FieldIssues issues={issuesAt(issues, joinPath('clauses', index, 'parameterValues', definition.key))} />
+      <FieldIssues issues={issuesAt(issues, issuesPath)} />
     </li>
   );
 }
@@ -153,7 +163,7 @@ export function ClauseCard(props: ClauseCardProps) {
       {inForce && inForce.version === input.version && (
         <ul className="space-y-3">
           {inForce.parameters.map((definition) => (definition.source.kind === 'term'
-            ? <BoundParameter key={definition.key} index={index} input={input} definition={definition} terms={props.terms} issues={issues} language={language} />
+            ? <BoundParameter key={definition.key} definition={definition} terms={props.terms} reason={input.deviationReasons[definition.key]} issuesPath={joinPath('clauses', index, 'parameterValues', definition.key)} issues={issues} language={language} />
             : <ParameterRow key={definition.key} {...props} definition={definition} issues={issuesUnder(issues, joinPath('clauses', index))} />))}
         </ul>
       )}

@@ -30,17 +30,7 @@ import { projectDraftAgreement, type ProjectedDraftAgreement } from '@/subapps/p
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
 import { useSubcontractFailureNotice } from '../subcontract-messages';
-
-/** Γιατί η «Αποθήκευση» δεν προσφέρεται τώρα. */
-export type EditorSaveBlock =
-  | { readonly kind: 'clean' }
-  | { readonly kind: 'saving' }
-  | { readonly kind: 'checking' }
-  | { readonly kind: 'conflict' }
-  /** Συγγραφή βιβλιοθήκης (ADR-928 §5.22): λείπει το δικαίωμα, ή η ρήτρα έχει ήδη ανοιχτή πρόταση (μία ανά ρήτρα). */
-  | { readonly kind: 'notAuthorized' }
-  | { readonly kind: 'proposalPending'; readonly version: number }
-  | { readonly kind: 'issues'; readonly count: number };
+import { saveBlockOf, type EditorSaveBlock } from './save-block';
 
 export interface AgreementEditor {
   readonly saved: SubcontractAgreement;
@@ -78,14 +68,6 @@ function useJudgedDraft({ saved, draft, actorUid }: JudgeInputs) {
   return { judgement, projected, libraryLoading: loading };
 }
 
-function saveBlockOf(state: { dirty: boolean; status: DraftStatus; libraryLoading: boolean; behind: boolean; issueCount: number }): EditorSaveBlock | null {
-  if (state.status === 'saving') return { kind: 'saving' };
-  if (!state.dirty) return { kind: 'clean' };
-  if (state.libraryLoading) return { kind: 'checking' };
-  if (state.behind) return { kind: 'conflict' };
-  return state.issueCount > 0 ? { kind: 'issues', count: state.issueCount } : null;
-}
-
 export function useAgreementEditor(saved: SubcontractAgreement): AgreementEditor {
   const actorUid = useAuth().user?.uid ?? '';
   const base = useMemo(() => draftInputOf(saved), [saved]);
@@ -93,7 +75,7 @@ export function useAgreementEditor(saved: SubcontractAgreement): AgreementEditor
   const { judgement, projected, libraryLoading } = useJudgedDraft({ saved, draft: editor.draft, actorUid });
   const issues = useShownDraftIssues(editor, judgement.issues);
   const notifyFailure = useSubcontractFailureNotice();
-  const saveBlock = saveBlockOf({ dirty: editor.dirty, status: editor.status, libraryLoading, behind: editor.behind, issueCount: judgement.issues.length });
+  const saveBlock = saveBlockOf({ dirty: editor.dirty, status: editor.status, checking: libraryLoading, allowed: true, openProposal: null, behind: editor.behind, issueCount: judgement.issues.length });
 
   const { beginSave, draft, baseRevision } = editor;
   const save = useCallback(async (): Promise<boolean> => {

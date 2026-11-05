@@ -13,11 +13,12 @@
  */
 
 import { joinPath } from '../clauses/clause-issues';
-import { COMMERCIAL_TERM_BINDINGS } from '../clauses/commercial-term-bindings';
+import { COMMERCIAL_TERM_BINDINGS, readBoundTermValue } from '../clauses/commercial-term-bindings';
 import { toleranceVerdict } from '../clauses/tolerance-verdict';
 import type { ClauseKey } from '../types/clause';
 import type { ClauseParameterDefinition, ClauseParameterValue, ToleranceVerdict } from '../types/clause-parameter';
 import type { CommercialTerms } from '../types/commercial-terms';
+import type { TemplateClauseRef } from '../types/trade-template';
 import { resolveParameterValue, type ApprovedLibrary, type ClauseSelectionInput } from './judge-deviations';
 
 export interface BoundTerm {
@@ -40,26 +41,65 @@ export type BoundTermsAt = (relativePath: string) => readonly BoundTerm[];
 
 export const NO_BOUND_TERMS: BoundTermsAt = () => [];
 
-function boundOfClause(input: ClauseSelectionInput, index: number, library: ApprovedLibrary, terms: CommercialTerms): [string, BoundTerm][] {
-  const inForce = library.get(input.clauseKey);
-  if (!inForce || inForce.version !== input.version) return [];
-  return inForce.parameters.flatMap((definition): [string, BoundTerm][] => {
+interface BoundSource {
+  readonly index: number;
+  readonly clauseKey: ClauseKey;
+  readonly parameters: readonly ClauseParameterDefinition[];
+  /** Η τιμή της δεσμευμένης παραμέτρου από τους όρους (`null` = ο όρος δεν ισχύει). */
+  readonly valueOf: (definition: ClauseParameterDefinition) => ClauseParameterValue | null;
+  /** Πού γράφει ο κριτής τα ευρήματα αυτής της παραμέτρου. */
+  readonly clausePathOf: (key: string) => string;
+  readonly reasons: Readonly<Record<string, string>>;
+}
+
+/** Ο ένας πυρήνας: κάθε δεσμευμένη παράμετρος → (`termPath`, ζώνη, λόγος, μονοπάτι του κριτή). */
+function boundOfSource(source: BoundSource): [string, BoundTerm][] {
+  return source.parameters.flatMap((definition): [string, BoundTerm][] => {
     if (definition.source.kind !== 'term') return [];
-    const value = resolveParameterValue(definition, input.parameterValues, terms);
+    const value = source.valueOf(definition);
     if (value === null) return [];
-    const clausePath = joinPath('clauses', index, 'parameterValues', definition.key);
-    const reason = input.deviationReasons[definition.key] ?? '';
-    const bound: BoundTerm = { clauseIndex: index, clauseKey: input.clauseKey, definition, value, verdict: toleranceVerdict(definition, value), reason, clausePath };
+    const bound: BoundTerm = {
+      clauseIndex: source.index, clauseKey: source.clauseKey, definition, value, verdict: toleranceVerdict(definition, value),
+      reason: source.reasons[definition.key] ?? '', clausePath: source.clausePathOf(definition.key),
+    };
     return [[COMMERCIAL_TERM_BINDINGS[definition.source.term].termPath, bound]];
   });
 }
 
-export function boundTermsOf(clauses: readonly ClauseSelectionInput[], library: ApprovedLibrary, terms: CommercialTerms): BoundTerms {
+function collect(entries: readonly [string, BoundTerm][]): BoundTerms {
   const byPath = new Map<string, BoundTerm[]>();
-  clauses.forEach((input, index) => {
-    for (const [termPath, bound] of boundOfClause(input, index, library, terms)) byPath.set(termPath, [...(byPath.get(termPath) ?? []), bound]);
-  });
+  for (const [termPath, bound] of entries) byPath.set(termPath, [...(byPath.get(termPath) ?? []), bound]);
   return byPath;
+}
+
+/** Συμφωνητικό: ρήτρα καρφωμένη στην έκδοση σε ισχύ · ευρήματα στο `clauses.N.parameterValues.<key>`. */
+export function boundTermsOf(clauses: readonly ClauseSelectionInput[], library: ApprovedLibrary, terms: CommercialTerms): BoundTerms {
+  return collect(clauses.flatMap((input, index) => {
+    const inForce = library.get(input.clauseKey);
+    if (!inForce || inForce.version !== input.version) return [];
+    return boundOfSource({
+      index, clauseKey: input.clauseKey, parameters: inForce.parameters, reasons: input.deviationReasons,
+      valueOf: (definition) => resolveParameterValue(definition, input.parameterValues, terms),
+      clausePathOf: (key) => joinPath('clauses', index, 'parameterValues', key),
+    });
+  }));
+}
+
+/**
+ * Πρότυπο (ADR-928 §5.22): κάθε ρήτρα κρίνεται στην έκδοση σε ισχύ (το πρότυπο δεν καρφώνει έκδοση) · ευρήματα στο
+ * `clauses.N.bound.<key>` — **ακριβώς** όπως ο `validateTemplateAgainstLibrary` · κανένας λόγος (το πρότυπο δεν δέχεται
+ * αποκλίσεις).
+ */
+export function templateBoundTermsOf(refs: readonly TemplateClauseRef[], library: ApprovedLibrary, terms: CommercialTerms): BoundTerms {
+  return collect(refs.flatMap((ref, index) => {
+    const inForce = library.get(ref.clauseKey);
+    if (!inForce) return [];
+    return boundOfSource({
+      index, clauseKey: ref.clauseKey, parameters: inForce.parameters, reasons: {},
+      valueOf: (definition) => (definition.source.kind === 'term' ? readBoundTermValue(definition.source.term, terms) : null),
+      clausePathOf: (key) => joinPath('clauses', index, 'bound', key),
+    });
+  }));
 }
 
 /** Η ερώτηση μιας ενότητας που κρατά το τμήμα `prefix` των όρων (π.χ. `paymentPlan`). */

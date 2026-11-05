@@ -19,6 +19,7 @@ import {
   approveClauseTranslation,
   approveClauseVersion,
   createClause,
+  createTradeTemplate,
   markClauseVersionReviewed,
   proposeClauseTranslation,
   proposeClauseVersion,
@@ -26,9 +27,12 @@ import {
   seedSubcontractLibrary,
   setClauseArchived,
   setTradeTemplateArchived,
+  updateTradeTemplate,
   withdrawClauseVersion,
   type CreateClauseInput,
+  type CreateTradeTemplateInput,
   type ProposeClauseVersionInput,
+  type UpdateTradeTemplateInput,
 } from '@/services/procurement/subcontracts/subcontract-library-api.client';
 import type { DraftOutcome } from '@/hooks/drafts/useRevisionedDraft';
 import { subcontractFailureOf, type SubcontractFailureKind } from '@/services/procurement/subcontracts/subcontract-failure';
@@ -94,6 +98,8 @@ export interface LibraryActions {
   readonly setTemplateArchived: (template: Pick<SubcontractTradeTemplate, 'id' | 'revision'>, archived: boolean) => Promise<boolean>;
   readonly createClause: (input: CreateClauseInput) => Promise<DraftOutcome<SubcontractClause, SubcontractIssue>>;
   readonly proposeClauseVersion: (clauseId: string, input: ProposeClauseVersionInput) => Promise<DraftOutcome<SubcontractClauseVersion, SubcontractIssue>>;
+  readonly createTemplate: (input: CreateTradeTemplateInput) => Promise<DraftOutcome<SubcontractTradeTemplate, SubcontractIssue>>;
+  readonly updateTemplate: (templateId: string, input: UpdateTradeTemplateInput) => Promise<DraftOutcome<SubcontractTradeTemplate, SubcontractIssue>>;
 }
 
 export function useLibraryActions(): LibraryActions {
@@ -118,6 +124,8 @@ export function useLibraryActions(): LibraryActions {
         done(() => setTradeTemplateArchived(template.id, { expectedRevision: template.revision, archived }), archived ? 'archive' : 'restore'),
       createClause: (input) => attempt(() => createClause(input), 'clauseCreated', 'revisionMismatch'),
       proposeClauseVersion: (clauseId, input) => attempt(() => proposeClauseVersion(clauseId, input), 'clauseProposed', 'revisionMismatch'),
+      createTemplate: (input) => attempt(() => createTradeTemplate(input), 'templateCreated', 'revisionMismatch'),
+      updateTemplate: (templateId, input) => attempt(() => updateTradeTemplate(templateId, input), 'templateSaved', 'revisionMismatch'),
     };
   }, [run, attempt]);
 }

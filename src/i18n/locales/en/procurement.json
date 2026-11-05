@@ -989,6 +989,7 @@
       "sharesNotWhole": "Shares must add up to 100%",
       "shareKeyDuplicate": "Duplicate share",
       "templateCodeInvalid": "Invalid template code",
+      "templateCodeTaken": "A template with this code already exists",
       "tradeUnknown": "Unknown trade",
       "lineIdDuplicate": "Duplicate line",
       "lineDescriptionRequired": "The line needs a description",
@@ -1347,7 +1348,9 @@
         "archive": "Archived.",
         "restore": "Restored.",
         "clauseCreated": "The new clause was submitted for approval.",
-        "clauseProposed": "The change proposal was submitted for approval."
+        "clauseProposed": "The change proposal was submitted for approval.",
+        "templateCreated": "The template was created.",
+        "templateSaved": "The template was saved."
       },
       "clauses": {
         "showArchived": "Include archived",
@@ -1525,6 +1528,28 @@
             "approval": "Needs approval",
             "free": "Free"
           }
+        }
+      },
+      "templateEditor": {
+        "newTitle": "New trade template",
+        "editTitle": "Template: {title}",
+        "editTitleBare": "Trade template",
+        "lead": "Every new agreement of this trade starts from what you set here. Existing drafts do not change.",
+        "notFound": "Template not found.",
+        "formLabel": "Template editor",
+        "title": "Template title",
+        "conflict": "Someone else changed this template while you were editing. Choose whether to load the new version or keep your changes on top of it.",
+        "specimen": "Specimen document",
+        "existingDraftsUnchanged": "This is how every new agreement from this template will start. Drafts already created keep their own terms.",
+        "clausesTitle": "Template clauses",
+        "clausesHint": "Approved clauses only. A template value must be in the free zone; anything that needs approval is decided per agreement.",
+        "asLibrary": "As in the library",
+        "addClause": "Add clause",
+        "chooseClause": "Choose a clause",
+        "noMoreClauses": "All approved clauses are already in the template.",
+        "doors": {
+          "newTemplate": "New template",
+          "edit": "Edit"
         }
       }
     },

@@ -30,7 +30,7 @@ import {
 } from '@/subapps/procurement/subcontracts/clauses/clause-draft';
 import type { SubcontractClause, SubcontractClauseVersion } from '@/subapps/procurement/subcontracts/types/clause';
 import type { DraftEditorChrome } from '../../editor/EditorToolbar';
-import type { EditorSaveBlock } from '../../editor/useAgreementEditor';
+import { saveBlockOf } from '../../editor/save-block';
 import type { LibraryActions } from '../useLibraryActions';
 
 export interface ClauseAuthoringInputs {
@@ -58,25 +58,6 @@ export interface ClauseAuthoring extends DraftEditorChrome {
 }
 
 const NEW_DRAFT = emptyClauseDraft();
-
-interface BlockFacts {
-  readonly dirty: boolean;
-  readonly status: string;
-  readonly behind: boolean;
-  readonly issueCount: number;
-  readonly authority: SubcontractLibraryAuthorityView;
-  readonly openProposal: number | null;
-}
-
-function saveBlockOf(facts: BlockFacts): EditorSaveBlock | null {
-  if (facts.status === 'saving') return { kind: 'saving' };
-  if (!facts.dirty) return { kind: 'clean' };
-  if (facts.authority.pending) return { kind: 'checking' };
-  if (!facts.authority.canPropose) return { kind: 'notAuthorized' };
-  if (facts.openProposal !== null) return { kind: 'proposalPending', version: facts.openProposal };
-  if (facts.behind) return { kind: 'conflict' };
-  return facts.issueCount > 0 ? { kind: 'issues', count: facts.issueCount } : null;
-}
 
 type Sent = SubcontractClause | SubcontractClauseVersion;
 const clauseIdOf = (record: Sent): string => ('clauseId' in record ? record.clauseId : record.id);
@@ -117,7 +98,10 @@ export function useClauseAuthoring(inputs: ClauseAuthoringInputs): ClauseAuthori
   const issues = useShownDraftIssues(editor, judged);
   const locked = useMemo(() => (mode === 'propose' ? lockedParameterKeys(baseVersion) : new Set<string>()), [mode, baseVersion]);
   const [submitting, setSubmitting] = useState(false);
-  const saveBlock = saveBlockOf({ dirty: editor.dirty, status: editor.status, behind: editor.behind, issueCount: judged.length, authority, openProposal: clause?.openProposal ?? null });
+  const saveBlock = saveBlockOf({
+    dirty: editor.dirty, status: editor.status, checking: authority.pending, allowed: authority.canPropose,
+    openProposal: clause?.openProposal ?? null, behind: editor.behind, issueCount: judged.length,
+  });
   const sentTo = useSentNavigation(editor.unsaved);
   const submit = useSubmit(inputs, editor, sentTo.mark);
   const save = useCallback(async () => {
