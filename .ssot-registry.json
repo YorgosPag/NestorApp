@@ -7,6 +7,23 @@
   },
   "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/|^functions/|^tests/firestore-rules/|^src/test-utils/fake-firestore/contract/)",
   "modules": {
+    "linear-algebra": {
+      "ssotFile": "src/lib/linear-algebra/weighted-least-squares.ts",
+      "description": "ADR-929 Φ4 / ADR-481 — ΜΙΑ γραμμική άλγεβρα του έργου, στο ουδέτερο src/lib/linear-algebra/: πυκνά μητρώα (dense-matrix), LDLᵀ με ανίχνευση μηδενικού pivot (ldlt-solve: solveSymmetric · factorSymmetric · solveFactored, πρώην bim/structural/analytical/solver/cholesky-solve), σταθμισμένα ελάχιστα τετράγωνα με στατιστική αξιοπιστίας (weighted-least-squares: Q_xx, αριθμοί πλεονασμού, τυποποιημένα υπόλοιπα Baarda, ελάχιστο ανιχνεύσιμο σφάλμα, χ²) και data snooping (robust-adjustment). Δεύτερος λύτης ή δεύτερη συνόρθωση θα έδινε δεύτερη απάντηση στο «ποια μέτρηση φταίει». Χρησιμοποίησε τα exports· μη γράφεις νέα συνάρτηση με τα ίδια ονόματα.",
+      "forbiddenPatterns": [
+        "function solveSymmetric\\(",
+        "function factorSymmetric\\(",
+        "function solveWeightedLeastSquares\\(",
+        "function adjustWithDataSnooping\\(",
+        "function minimalDetectableBias\\("
+      ],
+      "allowlist": [
+        "src/lib/linear-algebra/ldlt-solve.ts",
+        "src/lib/linear-algebra/weighted-least-squares.ts",
+        "src/lib/linear-algebra/robust-adjustment.ts"
+      ],
+      "tier": 3
+    },
     "firestore-collections": {
       "ssotFile": "src/config/firestore-collections.ts",
       "description": "All Firestore collection/doc names must use COLLECTIONS constant",

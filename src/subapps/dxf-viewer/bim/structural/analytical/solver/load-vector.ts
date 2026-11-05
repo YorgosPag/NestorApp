@@ -19,7 +19,7 @@
  * @see ./global-assembly.ts — AssembledElement (γεωμετρία/μετασχηματισμός reuse)
  */
 
-import { matVec, transpose, zeroVector, scatterAddVector, type Vector, type MutableVector } from './dense-matrix';
+import { matVec, transpose, zeroVector, scatterAddVector, type Vector, type MutableVector } from '@/lib/linear-algebra/dense-matrix';
 import { restrainVector } from './dof-map';
 import type { AssembledElement } from './global-assembly';
 import type { LoadCombination } from '../load-cases';

@@ -18,7 +18,7 @@
  * @see ../analytical-model-types.ts — RigidDiaphragm
  */
 
-import { maxAbsDiagonal, type MutableMatrix } from './dense-matrix';
+import { maxAbsDiagonal, type MutableMatrix } from '@/lib/linear-algebra/dense-matrix';
 import { globalDof, type DofMap } from './dof-map';
 import type { AnalyticalNode, RigidDiaphragm } from '../analytical-model-types';
 

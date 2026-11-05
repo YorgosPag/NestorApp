@@ -15,7 +15,7 @@
  * @see ./global-assembly.ts — ο καταναλωτής
  */
 
-import { matMul, transpose, zeroMatrix, type Matrix, type MutableMatrix } from './dense-matrix';
+import { matMul, transpose, zeroMatrix, type Matrix, type MutableMatrix } from '@/lib/linear-algebra/dense-matrix';
 import type { AnalyticalPoint3D } from '../analytical-model-types';
 import type { MemberSectionProperties } from './member-section-properties';
 

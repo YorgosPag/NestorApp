@@ -89,6 +89,20 @@ import { COLLECTIONS } from '@/config/firestore-collections';`,
   // `smart-navigation-factory` + `config/navigation`: δεύτερη συνάρτηση που χτίζει τα μενού θα
   // ήταν δεύτερη αλήθεια για το «τι βλέπει ο χρήστης». Οι παγίδες του `shouldSkip` είναι οι
   // ΝΟΜΙΜΕΣ χρήσεις: κλήση, εισαγωγή, επανεξαγωγή, μη-εξαγόμενη τοπική βοηθητική.
+  // ADR-929 Φ4 — ΜΙΑ γραμμική άλγεβρα (LDLᵀ + ελάχιστα τετράγωνα + data snooping). Οι παγίδες του `shouldSkip`
+  // είναι οι ΝΟΜΙΜΕΣ χρήσεις: εισαγωγή, κλήση, επανεξαγωγή, συνάρτηση με παρόμοιο όνομα.
+  'linear-algebra': {
+    shouldMatch: `export function solveSymmetric(k: Matrix, f: Vector): SolveResult { return lu(k, f); }
+function factorSymmetric(k: Matrix): Factorization { return fac(k); }
+export function solveWeightedLeastSquares(obs, n) { return normal(obs, n); }
+function adjustWithDataSnooping(obs, n, o) { return snoop(obs); }
+const mdb = function minimalDetectableBias(sigma, r) { return sigma / Math.sqrt(r); };`,
+    shouldSkip: `import { solveSymmetric, factorSymmetric } from '@/lib/linear-algebra/ldlt-solve';
+const r = solveWeightedLeastSquares(obs, unknowns);
+const a = adjustWithDataSnooping(obs, n, { critical: 3.29, minRedundancy: 1e-3 });
+export { minimalDetectableBias } from '@/lib/linear-algebra/weighted-least-squares';
+function solveSymmetricBand(k) { return k; }`,
+  },
   'office-navigation': {
     shouldMatch: `export function getMainMenuItems(permissions: string[]) { return build(permissions); }
 export function getSettingsMenuItems(p: string[]): MenuEntry[] { return []; }

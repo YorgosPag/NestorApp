@@ -14,7 +14,7 @@
  * @see ./frame-solver.ts — ο orchestrator
  */
 
-import { scatterAdd, zeroMatrix, maxAbsDiagonal, type Matrix } from './dense-matrix';
+import { scatterAdd, zeroMatrix, maxAbsDiagonal, type Matrix } from '@/lib/linear-algebra/dense-matrix';
 import { buildElementStiffness, type ElementStiffness } from './frame-element-stiffness';
 import { applyDiaphragmPenalty } from './diaphragm-constraints';
 import { buildDofMap, elementDofs, restrainMatrix, restrainedDofs, type DofMap } from './dof-map';

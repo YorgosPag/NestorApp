@@ -10,7 +10,7 @@
  * Μονάδες-agnostic: ο caller κρατά συνεπές σύστημα (kN, m, rad — βλ. solver-units).
  * Pure — zero React/DOM/Firestore.
  *
- * @see ./cholesky-solve.ts — η LDLᵀ επίλυση K·u=F
+ * @see ./ldlt-solve.ts — η LDLᵀ επίλυση K·u=F (κοινό SSoT από ADR-929 Φ4· γεννήθηκε στο ADR-481)
  * @see docs/centralized-systems/reference/adrs/ADR-481-static-fem-solver.md
  */
 

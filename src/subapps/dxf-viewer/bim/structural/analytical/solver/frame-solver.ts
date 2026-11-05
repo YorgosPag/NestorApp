@@ -12,7 +12,7 @@
  *
  * Pure (injected providers → jest-clean, μηδέν entity store/firebase imports).
  *
- * @see ./global-assembly.ts · ./load-vector.ts · ./cholesky-solve.ts
+ * @see ./global-assembly.ts · ./load-vector.ts · @/lib/linear-algebra/ldlt-solve.ts
  * @see ./member-end-forces.ts · ./member-diagrams.ts
  * @see docs/centralized-systems/reference/adrs/ADR-481-static-fem-solver.md
  */
@@ -20,11 +20,11 @@
 import { DOF_PER_NODE } from './frame-element-stiffness';
 import { assembleGlobalStiffness, type SectionPropertyProvider, type AssembledStiffness, type AssembledElement } from './global-assembly';
 import { buildLoadVector, elementLocalLoad, type MemberLoadProvider } from './load-vector';
-import { solveSymmetric } from './cholesky-solve';
+import { solveSymmetric } from '@/lib/linear-algebra/ldlt-solve';
 import { computeMemberEndForces } from './member-end-forces';
 import { sampleMemberDiagram, diagramExtrema, DEFAULT_DIAGRAM_STATIONS } from './member-diagrams';
 import type { DofMap } from './dof-map';
-import type { Vector } from './dense-matrix';
+import type { Vector } from '@/lib/linear-algebra/dense-matrix';
 import type { AnalyticalModel } from '../analytical-model-types';
 import type { LoadCombination } from '../load-cases';
 import {

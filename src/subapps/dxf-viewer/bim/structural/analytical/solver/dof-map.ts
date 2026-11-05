@@ -14,7 +14,7 @@
  * @see ./global-assembly.ts — ο καταναλωτής
  */
 
-import type { MutableMatrix, MutableVector } from './dense-matrix';
+import type { MutableMatrix, MutableVector } from '@/lib/linear-algebra/dense-matrix';
 import { DOF_PER_NODE } from './frame-element-stiffness';
 import type { AnalyticalMember, AnalyticalNode, RestraintDof } from '../analytical-model-types';
 

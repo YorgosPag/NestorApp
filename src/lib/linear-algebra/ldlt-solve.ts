@@ -10,8 +10,13 @@
  *
  * Pure — zero deps πέραν των primitives.
  *
+ * 🔑 **Κοινό SSoT (ADR-929 Φ4, 2026-11-05).** Μετακόμισε εδώ από το `bim/structural/analytical/solver/cholesky-solve.ts`
+ * όταν απέκτησε **δεύτερο** καταναλωτή: τη συνόρθωση διαστάσεων της αναγνώρισης κάτοψης, που λύνει τις κανονικές εξισώσεις
+ * `AᵀPA·x = AᵀP·l` (συμμετρικές). Η συνόρθωση χρειάζεται και στήλες του `N⁻¹` (τεστ Baarda) ⇒ {@link factorSymmetric} +
+ * {@link solveFactored}: **μία** παραγοντοποίηση, πολλές λύσεις. Το `solveSymmetric` μένει απαράλλακτο για τον FEM.
+ *
  * @see ./dense-matrix.ts
- * @see ./analysis-diagnostics.ts — μετατρέπει το `singular` σε StructuralDiagnostic
+ * @see subapps/dxf-viewer/bim/structural/analytical/solver/analysis-diagnostics.ts — `singular` ⇒ StructuralDiagnostic
  */
 
 import { maxAbsDiagonal, zeroVector, type Matrix, type Vector, type MutableVector } from './dense-matrix';
@@ -28,7 +33,7 @@ export interface SolveResult {
 }
 
 /** LDLᵀ παραγοντοποίηση: επιστρέφει L (unit-lower) + D (διαγώνιο) ή singular. */
-interface Factorization {
+export interface Factorization {
   readonly lower: number[][];
   readonly diagonal: number[];
   readonly singular: boolean;
@@ -95,11 +100,24 @@ function backwardSolve(lower: number[][], z: Vector): MutableVector {
 export function solveSymmetric(k: Matrix, f: Vector, stiffnessScale?: number): SolveResult {
   const n = k.length;
   if (n === 0) return { solution: [], singular: false };
-  const scale = stiffnessScale !== undefined ? stiffnessScale : maxAbsDiagonal(k);
-  const tol = Math.max(scale * PIVOT_REL_TOL, Number.MIN_VALUE);
-  const fac = factorize(k, tol);
+  const fac = factorSymmetric(k, stiffnessScale);
   if (fac.singular) return { solution: zeroVector(n), singular: true };
+  return { solution: solveFactored(fac, f), singular: false };
+}
+
+/**
+ * Η παραγοντοποίηση μόνη της, για όποιον λύνει **πολλά** δεξιά μέλη με το ίδιο μητρώο (π.χ. στήλες του `N⁻¹`).
+ * Ίδιο κατώφλι μηδενικού pivot με το {@link solveSymmetric}.
+ */
+export function factorSymmetric(k: Matrix, referenceScale?: number): Factorization {
+  const scale = referenceScale !== undefined ? referenceScale : maxAbsDiagonal(k);
+  const tol = Math.max(scale * PIVOT_REL_TOL, Number.MIN_VALUE);
+  return factorize(k, tol);
+}
+
+/** Λύση `L·D·Lᵀ·x = f` με έτοιμη, **μη ιδιάζουσα** παραγοντοποίηση (ο καλών ελέγχει το `singular`). */
+export function solveFactored(fac: Factorization, f: Vector): MutableVector {
   const y = forwardSolve(fac.lower, f);
-  for (let i = 0; i < n; i++) y[i] /= fac.diagonal[i];
-  return { solution: backwardSolve(fac.lower, y), singular: false };
+  for (let i = 0; i < y.length; i++) y[i] /= fac.diagonal[i];
+  return backwardSolve(fac.lower, y);
 }

@@ -17,7 +17,7 @@
  * @see ./solver-types.ts — DiagramStation / MemberForceExtrema
  */
 
-import type { Vector } from './dense-matrix';
+import type { Vector } from '@/lib/linear-algebra/dense-matrix';
 import type { AssembledElement } from './global-assembly';
 import type { DiagramStation, MemberForceExtrema } from './solver-types';
 

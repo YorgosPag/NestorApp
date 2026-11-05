@@ -11,7 +11,7 @@
  */
 
 import { solveStaticFrame } from '../frame-solver';
-import { solveSymmetric } from '../cholesky-solve';
+import { solveSymmetric } from '@/lib/linear-algebra/ldlt-solve';
 import { buildStandardCombinations } from '../../load-cases';
 import { ZERO_MEMBER_LOAD, type MemberLoad } from '../../../loads/structural-loads-types';
 import {

@@ -14,7 +14,7 @@
  * @see ./member-diagrams.ts — δειγματοληψία κατά μήκος από αυτά τα άκρα
  */
 
-import { gatherVector, matVec, type Vector, type MutableVector } from './dense-matrix';
+import { gatherVector, matVec, type Vector, type MutableVector } from '@/lib/linear-algebra/dense-matrix';
 import type { AssembledElement } from './global-assembly';
 
 /**

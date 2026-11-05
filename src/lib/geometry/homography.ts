@@ -74,6 +74,24 @@ function normalized(m: readonly number[]): Homography | null {
 const full = (m: Homography): readonly number[] => [m.a, m.b, m.c, m.d, m.e, m.f, m.g, m.h, 1];
 
 /**
+ * Η **τοπική** γραμμική κλίμακα της ομογραφίας στο `(u, v)`: `√|det J|`, όπου `J` η Ιακωβιανή. Μια ομογραφία δεν έχει
+ * **μία** κλίμακα (η προοπτική τη μεταβάλλει από σημείο σε σημείο), άρα ο καλών ορίζει **πού** τη μετρά (ADR-929 Φ4:
+ * στο κέντρο της περιοχής σχεδίου, για να μεταφέρει «mm ανά pixel» ανάμεσα σε ευθυγραμμισμένα και αρχικά pixel).
+ * `null` όταν το σημείο πέφτει στην ευθεία του απείρου ή η Ιακωβιανή εκφυλίζεται.
+ */
+export function homographyLocalScale(m: Homography, u: number, v: number): number | null {
+  const w = m.g * u + m.h * v + 1;
+  if (!Number.isFinite(w) || Math.abs(w) <= DEGENERATE) return null;
+  const p = applyHomography(m, u, v);
+  const j00 = (m.a - p.x * m.g) / w;
+  const j01 = (m.b - p.x * m.h) / w;
+  const j10 = (m.d - p.y * m.g) / w;
+  const j11 = (m.e - p.y * m.h) / w;
+  const det = Math.abs(j00 * j11 - j01 * j10);
+  return Number.isFinite(det) && det > DEGENERATE ? Math.sqrt(det) : null;
+}
+
+/**
  * Αντίστροφη ομογραφία (προσαρτημένος πίνακας ÷ ορίζουσα), ή `null` όταν ο πίνακας είναι εκφυλισμένος ή ο αντίστροφος
  * στέλνει την αρχή στο άπειρο (η κανονικοποίηση με κάτω-δεξιά 1 δεν ορίζεται).
  */
