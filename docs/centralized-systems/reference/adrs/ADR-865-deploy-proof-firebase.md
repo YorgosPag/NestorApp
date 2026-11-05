@@ -845,12 +845,61 @@ Sync/Health). (2) Φράγμα 20 Deployments: release παλαιότερο απ
 2. Το «μηδενικό» δεν είναι εγγύηση. Τα docs: *«Rolling updates do not guarantee zero downtime»*. Ο παλιός server πρέπει
    να κλείνει καθαρά μέσα στο Stop Grace Period (30″), και οι δύο εκδόσεις συνυπάρχουν για λίγο.
 
+#### 11.12.1 Μέτρηση 1 — Port Mappings κενό ⇒ rolling update, αλλά ΧΩΡΙΣ αναμονή υγείας *(2026-11-05 12:46 UTC)*
+
+**Το όριο 1 έκλεισε — αρνητικά.** Port Mappings κενό → Save → Redeploy, με βρόχο `fetch` ανά 1″ στο
+`/api/build-info` (UA `nestor-deploy-verifier/1.0`, όριο 5″), 420 δείγματα:
+
+| Ώρα (UTC) | Coolify log | Βρόχος |
+|---|---|---|
+| 12:46:03.44 | `Rolling update started.` ✅ (όχι πια stop-before-start) | 200 `d504d5b` |
+| 12:46:05.20 | `New container started.` | 200 |
+| 12:46:05.85 | `docker stop … -111152854452` (το **παλιό**, 0,65″ μετά) | 200 (12:46:06.71, τελευταίο) |
+| 12:46:07–12 | — | `TimeoutError` (5″) |
+| 12:46:12–22 | — | **11×** `503 no available server` (Traefik) |
+| 12:46:23.85 | — | 200 `d504d5b` (νέο container) |
+
+**Κενό ≈ 17″ (408 OK / 12 αποτυχίες).** Η ρίζα, από τον κώδικα του Coolify (`ApplicationDeploymentJob::rolling_update()` →
+`health_check()`): η αναμονή υγείας **παρακάμπτεται** όταν `isHealthcheckDisabled() && custom_healthcheck_found === false`.
+Το `custom_healthcheck_found` τίθεται **μόνο** όταν το Coolify διαβάζει Dockerfile που χτίζει το ίδιο — για τύπο
+**Docker Image** μένει `false`. Στο log **δεν** εμφανίστηκε ούτε `Waiting for healthcheck`. Ο Traefik, αντίθετα, **σέβεται**
+το `HEALTHCHECK` της εικόνας (container `starting` ⇒ εκτός δρομολόγησης) ⇒ `503` μέχρι το νέο να γίνει `healthy`.
+Δηλαδή το HEALTHCHECK της εικόνας **λειτουργεί** (ο πίνακας δείχνει `Running (healthy)`), αλλά κανείς δεν το **περιμένει**.
+
+**Η διόρθωση (§11.12.2):** Healthcheck του **πίνακα**, τύπου **CMD**. Τότε το Coolify κοιμάται `start_period`, ρωτά
+`docker inspect … State.Health.Status` ανά `interval` και σβήνει το παλιό **μόνο** μετά το `healthy`.
+
+#### 11.12.2 Ο ΕΝΑΣ healthcheck — αρχείο, γιατί ο validator του πίνακα αρνείται `node -e`
+
+Ο πίνακας δέχεται εντολή CMD μόνο αν ταιριάζει `^[a-zA-Z0-9 \-_.\/:=@,+]+$` (≤1000). Αλλιώς **σιωπηλή** εφεδρεία σε
+HTTP check (curl/wget ⇒ 403 από `BLOCKED_BOT_PATTERNS` ⇒ «ανθυγιές» για πάντα). Η εντολή του §11.12 (`node -e "fetch(…)"`)
+**δεν** περνά (εισαγωγικά, παρενθέσεις). Άρα:
+
+- **SSoT:** `scripts/docker/healthcheck.js` (μηδέν εξαρτήσεις) — `HEALTHCHECK` (url · UA · `timeoutMs` 4000 < `--timeout` 5″ ·
+  `imagePath`), `PANEL_COMMAND = node /app/healthcheck.js`, `isCoolifyCommandAccepted()`, `probe()` (0 μόνο σε 2xx, ποτέ throw).
+- **Dockerfile:** `COPY scripts/docker/healthcheck.js ./healthcheck.js` + `HEALTHCHECK … CMD ["node", "/app/healthcheck.js"]`.
+  Ο **ίδιος** κώδικας κρίνει για τον Docker/Traefik **και** για τον πίνακα.
+- **Άγκυρες** (`netcup-release.test.js`): η εντολή του Dockerfile **=** `PANEL_COMMAND` · το αρχείο αντιγράφεται στη διαδρομή
+  που καλείται · η εντολή **περνά** τον validator (αρνητικός μάρτυρας: η παλιά `node -e`) · route που υπάρχει + `EXPOSE` ·
+  UA εκτός μαύρης λίστας · `timeoutMs` < `--timeout` · `probe()` 200⇒0, 403/500/503/ECONNREFUSED/timeout⇒1.
+  **10/10 μεταλλάξεις** σκοτώθηκαν.
+
+**Σειρά (αλλιώς σπάει το deploy):** πρώτα push ⇒ η εικόνα **έχει** το `/app/healthcheck.js` ⇒ **μετά** Healthcheck στον
+πίνακα: Enabled · Type **CMD** · Command `node /app/healthcheck.js` · Interval 5 · Timeout 5 · Retries 12 · Start Period 5.
+(Το Coolify κοιμάται **ολόκληρο** το start period πριν ρωτήσει — μικρό· η ανοχή εκκίνησης είναι `retries × interval` = 60″,
+το μετρημένο boot ≈ 18″.) Ενεργοποίηση **πριν** το push ⇒ το παλιό image δεν έχει το αρχείο ⇒ `unhealthy` ⇒ αποτυχία deploy.
+
+⏳ **Μάρτυρας που μένει:** μέτρηση 2 — ίδιος βρόχος κατά Redeploy με τον πίνακα ενεργό: στόχος **0** αποτυχίες. Αν μείνει
+βλίπ 1–2″ (ο Traefik προσθέτει το νέο container λίγο μετά το `healthy`), το επόμενο βήμα είναι η αναμονή «drain» του Coolify
+(`wait_for_proxy_to_route_new_container`, #8627) — να ελεγχθεί αν υπάρχει στην εγκατεστημένη έκδοση.
+
 ---
 
 ## §9. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-05 | 🔶 **§11.12.1–2 — ΜΕΤΡΗΣΗ 1: ΤΟ ΚΕΝΟ ΜΕΙΝΕ (~17″), Η ΡΙΖΑ ΗΤΑΝ ΑΛΛΟΥ**. Port Mappings κενό ⇒ το log λέει πλέον `Rolling update started` ✅, αλλά το Coolify σβήνει το παλιό container **0,65″** μετά την εκκίνηση του νέου: για τύπο Docker Image **δεν** διαβάζει το HEALTHCHECK της εικόνας (`custom_healthcheck_found` μόνο από Dockerfile) ⇒ καμία αναμονή. Βρόχος 420×1″: timeout + **11× `503 no available server`**. Διόρθωση: healthcheck σε **αρχείο** `scripts/docker/healthcheck.js` (SSoT, `PANEL_COMMAND = node /app/healthcheck.js`), γιατί ο validator CMD του πίνακα αρνείται `node -e "…"` και σιωπηλά πέφτει σε wget ⇒ 403. Dockerfile + πίνακας τρέχουν την **ίδια** εντολή. Άγκυρες + **10/10 μεταλλάξεις**. ⏳ push ⇒ μετά Healthcheck CMD στον πίνακα ⇒ μέτρηση 2. |
 | 2026-11-05 | ✅ **§11.12 — ΤΟ ΚΕΝΟ ΤΟΥ DEPLOY: ρίζα + HEALTHCHECK**. Ρίζα: η ρύθμιση **Port Mappings `3000:3000`** του Coolify κάνει stop-before-start, και έλειπε `HEALTHCHECK`. Η θύρα του host δεν χρησιμεύει: απ' έξω `ECONNREFUSED`, ο Traefik πηγαίνει μέσω του δικτύου Docker, ο χρονοπρογραμματιστής καλεί μέσα στο container. Τι άλλαξε: `HEALTHCHECK` με `node` + UA `nestor-healthcheck/1`, όχι curl/wget, που θα έτρωγαν 403 από το middleware ⇒ «ανθυγιές» για πάντα. Άγκυρες + **4/4 μεταλλάξεις**. ⏳ Μένει η κίνηση στο Coolify (Port Mappings κενό) και ο μάρτυρας: deploy χωρίς timeout στο log του §11.11. |
 | 2026-11-05 | ✅ **§11.11 — ΖΩΝΤΑΝΗ ΑΠΟΔΕΙΞΗ (run `42005118492`, push `1ef2e712`)**. Coolify deployment `h92qi5dqy2p19slc7e1deqhn`. Παρατηρήσεις του runner: 1″/11″/22″ *σερβίρεται ce35e9b · Coolify in_progress* → 42″ *build-info: timeout* → 53″ *σερβίρεται 1ef2e71 · Coolify finished* ⇒ Telegram *«Deploy completato · live 1ef2e71 (53″)»*. **Κλείνουν τα όρια 1 και 2**: ο runner παίρνει 200 με το ρητό UA (κανένα 403), και το `GET /deployments/{uuid}` της δικής μας εγκατάστασης δίνει `status` με το αναμενόμενο σχήμα. 🔴 **Νέο εύρημα, ανοιχτό**: στο 42″ το build-info **δεν απάντησε** μέσα σε 10″, πιθανότατα κατά την εναλλαγή container. Αυτό υποδηλώνει **σύντομη διακοπή υπηρεσίας σε κάθε deploy** (healthcheck / rolling update του Coolify άγνωστα). Ο ελεγκτής το άντεξε, όπως σχεδιάστηκε. |
 | 2026-11-05 | ✅ **§11.11 — «DEPLOY COMPLETATO» = Η ΝΕΑ ΕΚΔΟΣΗ ΣΕΡΒΙΡΕΙ** *(εντολή Giorgio: «ΝΑΙ ΦΤΙΑΞΤΟ»)*. **Αφορμή, μετρημένη:** ✅ στις 09:12:14 UTC, ενώ το `/api/build-info` έδειχνε το παλιό sha 30″ μετά (νέο σε ≤4′). Το παλιό `curl -s` θα έκρυβε ακόμη και 401. **Τι άλλαξε:** το ωμό bash αντικαταστάθηκε από `scripts/lib/ci/netcup-release.js` (ενεργοποίηση → κατάσταση Coolify deployment → κριτής το sha του build-info) + CLI. Το `release` έχει `timeout-minutes: 20` και εξόδους `verdict`/`summary`. Ο τίτλος του `notify` λέει «completato» **μόνο** με επιτυχές release, αλλιώς «Η έκδοση δεν ανέβηκε» με ό,τι είδαμε. Το `workflow-meta.readWorkflowJobs` διαβάζει πλέον και `timeoutMinutes`. 🔴 **Το 403 του curl** είναι το δικό μας `middleware.ts` (`curl/`), όχι WAF. Μετρημένο: curl 403 · Node/ρητό UA/Chrome 200. Λύθηκε με ρητό UA `nestor-deploy-verifier`, **χωρίς** χαλάρωση φράχτη, με άγκυρα στη λίστα. **6/6 μεταλλάξεις** σκοτώθηκαν. ⏳ Η ζωντανή απόδειξη έρχεται στο πρώτο run μετά το push. |

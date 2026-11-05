@@ -15,6 +15,7 @@ const path = require('node:path');
 const { NETCUP, TIMING, VERDICT, COOLIFY_STATUS, formatDuration, judge, releaseToNetcup } = require('../lib/ci/netcup-release');
 const { main } = require('../ci/netcup-release');
 const { readWorkflowRunSteps } = require('../lib/ci/workflow-meta');
+const { HEALTHCHECK, PANEL_COMMAND, isCoolifyCommandAccepted, probe } = require('../docker/healthcheck');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const NEW = 'ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12';
@@ -201,18 +202,69 @@ describe('netcup-release — άγκυρες προς τις άλλες πηγέ�
   describe('§11.12 HEALTHCHECK της εικόνας', () => {
     const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8').replace(/\\\r?\n\s*/g, ' ');
     const healthcheck = (/^HEALTHCHECK .*$/m.exec(dockerfile) || [''])[0];
+    const exec = (/CMD (\[.*\])\s*$/.exec(healthcheck) || [null, '[]'])[1];
 
-    it('υπάρχει, τρέχει με node (όχι curl/wget) και χτυπά route που ΥΠΑΡΧΕΙ', () => {
-      expect(healthcheck).toMatch(/CMD \["node", "-e"/);
+    it('το HEALTHCHECK τρέχει ΑΚΡΙΒΩΣ την εντολή του πίνακα, με node (όχι curl/wget)', () => {
+      expect(JSON.parse(exec).join(' ')).toBe(PANEL_COMMAND);
       expect(healthcheck).not.toMatch(/\b(curl|wget)\b/);
-      const route = /http:\/\/127\.0\.0\.1:3000(\/[^'"]+)/.exec(healthcheck)[1];
-      expect(fs.existsSync(path.join(ROOT, 'src/app', route, 'route.ts'))).toBe(true);
+    });
+
+    it('το αρχείο της εντολής ΑΝΤΙΓΡΑΦΕΤΑΙ στην εικόνα, στη διαδρομή που καλείται', () => {
+      const copy = new RegExp(`^COPY (?:--\\S+ )*scripts/docker/healthcheck\\.js \\./${path.basename(HEALTHCHECK.imagePath)}$`, 'm');
+      expect(dockerfile).toMatch(copy);
+      expect(dockerfile).toMatch(/^WORKDIR \/app$/m);
+      expect(HEALTHCHECK.imagePath).toBe(`/app/${path.basename(HEALTHCHECK.imagePath)}`);
+    });
+
+    it('η εντολή ΠΕΡΝΑ τον validator του Coolify (αλλιώς σιωπηλή εφεδρεία σε HTTP ⇒ wget ⇒ 403)', () => {
+      expect(isCoolifyCommandAccepted(PANEL_COMMAND)).toBe(true);
+      // αρνητικός μάρτυρας: η παλιά μορφή `node -e "fetch(…)"` απορρίπτεται
+      expect(isCoolifyCommandAccepted(`node -e "fetch('${HEALTHCHECK.url}')"`)).toBe(false);
+      expect(isCoolifyCommandAccepted('node ' + 'a'.repeat(1000))).toBe(false);
+    });
+
+    it('χτυπά route που ΥΠΑΡΧΕΙ, στη θύρα που εκθέτει η εικόνα', () => {
+      const { port, pathname } = new URL(HEALTHCHECK.url);
+      expect(dockerfile).toMatch(new RegExp(`^EXPOSE ${port}$`, 'm'));
+      expect(fs.existsSync(path.join(ROOT, 'src/app', pathname, 'route.ts'))).toBe(true);
     });
 
     it('το UA του ΔΕΝ ταιριάζει σε κανένα BLOCKED_BOT_PATTERNS', () => {
-      const ua = /'user-agent':'([^']+)'/.exec(healthcheck)[1];
-      expect(blockedFor(ua)).toEqual([]);
+      expect(blockedFor(HEALTHCHECK.userAgent)).toEqual([]);
       expect(blockedFor('Wget')).toEqual(['wget']); // αρνητικός μάρτυρας: ο έλεγχος δαγκώνει
+    });
+
+    it('το όριο του probe είναι ΜΙΚΡΟΤΕΡΟ από το --timeout του Docker (κρίνουμε εμείς, όχι SIGKILL)', () => {
+      const dockerTimeoutS = Number(/--timeout=(\d+)s/.exec(healthcheck)[1]);
+      expect(HEALTHCHECK.timeoutMs).toBeLessThan(dockerTimeoutS * 1000);
+    });
+
+    describe('probe(): 0 μόνο όταν ο server απαντά 2xx', () => {
+      const seen = [];
+      const fakeFetch = (outcome) => async (url, init) => {
+        seen.push({ url, ua: init.headers['user-agent'], signal: init.signal });
+        if (outcome instanceof Error) throw outcome;
+        return { ok: outcome >= 200 && outcome < 300, status: outcome };
+      };
+      beforeEach(() => { seen.length = 0; });
+
+      it('200 ⇒ 0, με το ρητό UA, στο URL της υγείας, με όριο χρόνου', async () => {
+        await expect(probe({ fetchImpl: fakeFetch(200) })).resolves.toBe(0);
+        expect(seen).toHaveLength(1);
+        expect(seen[0].url).toBe(HEALTHCHECK.url);
+        expect(seen[0].ua).toBe(HEALTHCHECK.userAgent);
+        expect(seen[0].signal).toBeInstanceOf(AbortSignal);
+      });
+
+      it.each([403, 500, 503])('%i ⇒ 1', async (status) => {
+        await expect(probe({ fetchImpl: fakeFetch(status) })).resolves.toBe(1);
+      });
+
+      it('ECONNREFUSED / timeout ⇒ 1, ποτέ throw', async () => {
+        await expect(probe({ fetchImpl: fakeFetch(new Error('ECONNREFUSED')) })).resolves.toBe(1);
+        const hang = (_url, init) => new Promise((_res, rej) => init.signal.addEventListener('abort', () => rej(init.signal.reason)));
+        await expect(probe({ fetchImpl: hang, timeoutMs: 20 })).resolves.toBe(1);
+      });
     });
   });
 

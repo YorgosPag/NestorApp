@@ -53,7 +53,10 @@ ENV HOSTNAME="0.0.0.0"
 # έτοιμο κάθε container που μόλις ξεκίνησε. ⚠️ `node`, ΟΧΙ curl/wget: η εικόνα δεν έχει curl, και και τα δύο
 # είναι στη BLOCKED_BOT_PATTERNS του middleware ⇒ 403 ⇒ «ανθυγιές» για πάντα ⇒ κανένα deploy δεν ανεβαίνει.
 # Ρητό UA (πρότυπο ADR-740 §9 `nestor-scheduler/1`)· άγκυρα: scripts/__tests__/netcup-release.test.js.
+# ΑΡΧΕΙΟ, όχι `node -e`: την ΙΔΙΑ εντολή γράφει και ο Healthcheck (CMD) του πίνακα του Coolify, που δέχεται
+# μόνο [a-zA-Z0-9 -_./:=@,+] — και μόνο αυτός κάνει το rolling update να περιμένει το νέο container.
+COPY --chown=nextjs:nodejs scripts/docker/healthcheck.js ./healthcheck.js
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --start-interval=2s --retries=3 \
-  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health',{headers:{'user-agent':'nestor-healthcheck/1'},signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+  CMD ["node", "/app/healthcheck.js"]
 
 CMD ["node", "server.js"]
