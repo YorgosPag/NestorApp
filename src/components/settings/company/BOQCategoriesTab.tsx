@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -199,7 +198,6 @@ function SubCatDialog({ form, open, saving, onClose, onSave, onFormChange, t }: 
 
 export function BOQCategoriesTab() {
   const { t } = useTranslation('org-structure');
-  const { user } = useAuth();
 
   const [items, setItems] = useState<SubCategoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -208,9 +206,12 @@ export function BOQCategoriesTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
 
+  // ⚠️ Χωρίς `if (!user) return;` — ίδια παγίδα με τη μητρική σελίδα (βλ. σχόλιο στο
+  //    `CompanySettingsPageContent`): `loading: true` που δεν κλείνει ποτέ. Η αναμονή
+  //    ταυτότητας ανήκει στον `apiClient`.
   const fetchItems = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await apiClient.get<{ items: SubCategoryRecord[] }>(BOQ_SUBCATEGORIES_ROUTE);
       setItems(data.items);
@@ -219,7 +220,7 @@ export function BOQCategoriesTab() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => { void fetchItems(); }, [fetchItems]);
 

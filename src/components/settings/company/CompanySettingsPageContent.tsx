@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useAuth } from '@/hooks/useAuth';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { API_ROUTES } from '@/config/domain-constants';
 // 🔑 ADR-787 §5.3 ζ (όριο 1) — ΕΝΑΣ δρόμος προς το API, άρα ΕΝΑΣ συγγραφέας της δήλωσης
@@ -27,7 +26,6 @@ interface OrgStructureState {
 
 export function CompanySettingsPageContent() {
   const { t } = useTranslation('org-structure');
-  const { user } = useAuth();
 
   const [state, setState] = useState<OrgStructureState>({
     orgStructure: null,
@@ -36,8 +34,11 @@ export function CompanySettingsPageContent() {
     error: null,
   });
 
+  // ⚠️ ΚΑΝΕΝΑΣ έλεγχος `if (!user) return;` εδώ (ADR-929 §1 εύρημα, 2026-11-05): η αρχική
+  //    κατάσταση είναι `loading: true`, οπότε η πρόωρη επιστροφή **δεν** την έκλεινε ποτέ —
+  //    με `user === null` η σελίδα έμενε για πάντα στη φόρτωση. Την αναμονή ταυτότητας την
+  //    κατέχει ο `apiClient` (`waitForAuthReady`)· ο αποσυνδεδεμένος παίρνει γρήγορο 401 → σφάλμα.
   const fetchOrgStructure = useCallback(async () => {
-    if (!user) return;
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const data = await apiClient.get<{ orgStructure: OrgStructure | null }>(
@@ -48,14 +49,13 @@ export function CompanySettingsPageContent() {
       const msg = err instanceof Error ? err.message : 'error';
       setState((s) => ({ ...s, error: msg, loading: false }));
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     void fetchOrgStructure();
   }, [fetchOrgStructure]);
 
   const handleSave = useCallback(async (updated: OrgStructure) => {
-    if (!user) return;
     setState((s) => ({ ...s, saving: true, error: null }));
     try {
       // 🔴 Ο ΠΑΛΙΟΣ ΚΩΔΙΚΑΣ ΔΙΑΒΑΖΕ ΤΟ ΣΩΜΑ **ΔΥΟ ΦΟΡΕΣ** (`res.json()` στον κλάδο
@@ -71,7 +71,7 @@ export function CompanySettingsPageContent() {
       const msg = err instanceof Error ? err.message : 'error';
       setState((s) => ({ ...s, error: msg, saving: false }));
     }
-  }, [user]);
+  }, []);
 
   if (state.loading) {
     return (
