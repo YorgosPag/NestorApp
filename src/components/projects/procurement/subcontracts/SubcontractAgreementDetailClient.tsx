@@ -35,22 +35,24 @@ interface Props {
   readonly agreementId: string;
 }
 
-function DetailHeader({ agreement }: { readonly agreement: SubcontractAgreement }) {
+/**
+ * Ο τίτλος του εγγράφου. Μπαίνει **μέσα** στη γραμμή κεφαλίδας του σώματος (§5.23 — δεξιά οι ενέργειες), άρα εδώ μόνο
+ * `hgroup`: τη `header` την κατέχει το σώμα.
+ */
+function DetailTitle({ agreement }: { readonly agreement: SubcontractAgreement }) {
   const { t } = useTranslation(['procurement', 'quotes']);
   // ADR-928 §5.20 #1: ο τίτλος στη γλώσσα του ΕΓΓΡΑΦΟΥ (το ελληνικό που επεξεργάζεται το πεδίο «Τίτλος»), όχι της οθόνης.
   return (
-    <header className="flex flex-wrap items-start justify-between gap-3">
-      <hgroup className="space-y-1">
-        <h2 className="flex flex-wrap items-center gap-3 text-lg font-semibold">
-          <span className="font-mono">{agreement.documentNumber}</span>
-          <span>{agreement.title[CLAUSE_AUTHORITATIVE_LANGUAGE] || agreement.documentNumber}</span>
-          <SubcontractAgreementStatusBadge status={agreement.status} />
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {t(`quotes:trades.${agreement.trade}`)} · {agreement.parties.subcontractor.name} · {t(`subcontracts.list.role.${agreement.role}`)}
-        </p>
-      </hgroup>
-    </header>
+    <hgroup className="space-y-1">
+      <h2 className="flex flex-wrap items-center gap-3 text-lg font-semibold">
+        <span className="font-mono">{agreement.documentNumber}</span>
+        <span>{agreement.title[CLAUSE_AUTHORITATIVE_LANGUAGE] || agreement.documentNumber}</span>
+        <SubcontractAgreementStatusBadge status={agreement.status} />
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        {t(`quotes:trades.${agreement.trade}`)} · {agreement.parties.subcontractor.name} · {t(`subcontracts.list.role.${agreement.role}`)}
+      </p>
+    </hgroup>
   );
 }
 
@@ -71,10 +73,7 @@ export function SubcontractAgreementDetailClient({ projectId, agreementId }: Pro
         </p>
       )}
       {read.state === 'ready' && (
-        <>
-          <DetailHeader agreement={read.agreement} />
-          <AgreementDetailBody agreement={read.agreement} projectId={projectId} />
-        </>
+        <AgreementDetailBody agreement={read.agreement} projectId={projectId} title={<DetailTitle agreement={read.agreement} />} />
       )}
     </section>
   );

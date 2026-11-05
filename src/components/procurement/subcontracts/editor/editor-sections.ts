@@ -35,6 +35,20 @@ export const TEMPLATE_SECTION_MAP: EditorSectionMap = {
   partyFields: new Set(),
 };
 
+const SECTION_HASH_PREFIX = '#editor-';
+
+/** Το hash μιας ενότητας (`#editor-lines`) — ίδιο με το `id` της επικεφαλίδας της, άρα και βαθύς σύνδεσμος. */
+export function sectionHash(section: EditorSection): string {
+  return `${SECTION_HASH_PREFIX}${section}`;
+}
+
+/** `#editor-plan` ⇒ `plan` — μόνο αν ο επεξεργαστής **έχει** αυτή την ενότητα· αλλιώς `null` (ποτέ μαντεψιά). */
+export function sectionOfHash(hash: string, map: EditorSectionMap = AGREEMENT_SECTION_MAP): EditorSection | null {
+  if (!hash.startsWith(SECTION_HASH_PREFIX)) return null;
+  const candidate = hash.slice(SECTION_HASH_PREFIX.length);
+  return map.sections.find((section) => section === candidate) ?? null;
+}
+
 export function sectionOfPath(path: string, map: EditorSectionMap = AGREEMENT_SECTION_MAP): EditorSection {
   const head = path.split('.')[0];
   if (head === 'lines') return 'lines';

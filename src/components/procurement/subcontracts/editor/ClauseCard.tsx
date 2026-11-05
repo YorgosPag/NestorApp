@@ -151,7 +151,7 @@ export function ClauseCard(props: ClauseCardProps) {
   const heading = title ? localizedIn(title, language) : input.clauseKey;
   const own = issuesAt(issues, joinPath('clauses', index)).concat(issuesAt(issues, joinPath('clauses', index, 'clauseKey')));
   return (
-    <article aria-label={heading} className="space-y-3 rounded-lg border p-3">
+    <article aria-label={heading} data-editor-clause={input.clauseKey} tabIndex={-1} className="scroll-mt-14 space-y-3 rounded-lg border p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <header className="flex items-start justify-between gap-2">
         <h4 className="text-sm font-semibold">{heading}<span className="ml-2 text-xs font-normal text-muted-foreground">{input.clauseKey} · v{input.version}</span></h4>
         <Button type="button" variant="ghost" size="icon" aria-label={t('subcontracts.editor.clauses.remove', { clause: heading })} onClick={edits.remove}>

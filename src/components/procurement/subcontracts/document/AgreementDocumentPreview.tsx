@@ -1,16 +1,24 @@
+'use client';
+
 /**
  * Η προεπισκόπηση HTML του εγγράφου υπεργολαβίας (ADR-928 §5.17). **Μόνο τοποθετεί**: κάθε κείμενο έρχεται ήδη
  * αποδοσμένο από το `AgreementDocument` — καμία μορφοποίηση εδώ, άρα τίποτα που να διαφωνεί με το PDF (Φ4).
+ *
+ * §5.23: σελίδα πλάτους Α4 (`fit`), δείκτες ενοτήτων `data-doc-section` / `data-doc-clause` για τον συγχρονισμό με τις
+ * καρτέλες του επεξεργαστή, και μολύβι «Επεξεργασία» μόνο όταν δοθεί `onEdit`.
  */
 
 import { Table } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import type { EditorSection } from '../editor/editor-sections';
 import type {
   AgreementDocument,
   DocumentBlock,
   DocumentInline,
   DocumentLineRow,
 } from '@/subapps/procurement/subcontracts/document/document-types';
+import { EditInFormButton, type DocumentEditHandler } from './EditInFormButton';
+import { usePaperFit } from './paper-fit';
 
 function Inlines({ inlines }: { inlines: readonly DocumentInline[] }) {
   return (
@@ -84,19 +92,30 @@ function LinesTable({ document }: { document: AgreementDocument }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+interface SectionProps {
+  readonly title: string;
+  readonly section: EditorSection;
+  readonly onEdit?: DocumentEditHandler;
+  readonly children: React.ReactNode;
+}
+
+/** `data-doc-section`: ο δείκτης που βρίσκει ο συγχρονισμός καρτέλας → προεπισκόπησης (`EditorSplitLayout`). */
+function Section({ title, section, onEdit, children }: SectionProps) {
   return (
-    <section className="space-y-2">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+    <section data-doc-section={section} className="group/doc-section scroll-mt-14 space-y-2">
+      <h3 className="flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+        {onEdit && <EditInFormButton target={{ section }} label={title} onEdit={onEdit} />}
+      </h3>
       {children}
     </section>
   );
 }
 
-function PartiesAndProject({ document }: { document: AgreementDocument }) {
+function PartiesAndProject({ document, onEdit }: { document: AgreementDocument; onEdit?: DocumentEditHandler }) {
   return (
     <>
-      <Section title={document.labels.parties}>
+      <Section title={document.labels.parties} section="parties" onEdit={onEdit}>
         <dl className="grid gap-3 sm:grid-cols-2">
           {document.parties.map((party, index) => (
             <div key={index}>
@@ -109,7 +128,7 @@ function PartiesAndProject({ document }: { document: AgreementDocument }) {
         {document.signatory && <p className="text-xs text-muted-foreground">{document.signatory}</p>}
       </Section>
       {document.project.length > 0 && (
-        <Section title={document.labels.project}>
+        <Section title={document.labels.project} section="parties" onEdit={onEdit}>
           <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
             {document.project.map((field, index) => (
               <div key={index} className="contents"><dt className="text-muted-foreground">{field.label}</dt><dd>{field.value}</dd></div>
@@ -121,37 +140,77 @@ function PartiesAndProject({ document }: { document: AgreementDocument }) {
   );
 }
 
-export function AgreementDocumentPreview({ document }: { document: AgreementDocument }) {
+function ClauseList({ document, onEdit }: { document: AgreementDocument; onEdit?: DocumentEditHandler }) {
   return (
-    <article lang={document.language} className="space-y-5 rounded-lg border bg-card p-5 text-sm leading-relaxed">
-      <header className="space-y-1 border-b pb-3">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{document.kindLabel}</p>
-        <h2 className="text-lg font-semibold">{document.title}</h2>
-        <p className="text-xs text-muted-foreground">{document.documentNumber}{document.validUntil && ` · ${document.validUntil}`}</p>
-        {document.prevailingNotice && <p role="note" className="text-xs font-medium">{document.prevailingNotice}</p>}
-      </header>
-      <PartiesAndProject document={document} />
-      <Section title={document.labels.lines}>
+    <ol className="space-y-3">
+      {document.clauses.map((clause) => (
+        <li key={clause.clauseKey} data-doc-clause={clause.clauseKey} className="space-y-1">
+          <h4 className="flex items-center gap-1 font-semibold">
+            {clause.number}. {clause.heading}
+            {onEdit && <EditInFormButton target={{ section: 'clauses', clauseKey: clause.clauseKey }} label={clause.heading} onEdit={onEdit} />}
+          </h4>
+          {clause.untranslatedNote && <p role="note" className="text-xs text-destructive">{clause.untranslatedNote}</p>}
+          <DocumentBlocks blocks={clause.blocks} />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function DocumentHeader({ document, onEdit }: { document: AgreementDocument; onEdit?: DocumentEditHandler }) {
+  return (
+    <header data-doc-section="identity" className="group/doc-section scroll-mt-14 space-y-1 border-b pb-3">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{document.kindLabel}</p>
+      <h2 className="flex items-center gap-1 text-lg font-semibold">
+        {document.title}
+        {onEdit && <EditInFormButton target={{ section: 'identity' }} label={document.title} onEdit={onEdit} />}
+      </h2>
+      <p className="text-xs text-muted-foreground">{document.documentNumber}{document.validUntil && ` · ${document.validUntil}`}</p>
+      {document.prevailingNotice && <p role="note" className="text-xs font-medium">{document.prevailingNotice}</p>}
+    </header>
+  );
+}
+
+export interface AgreementDocumentPreviewProps {
+  readonly document: AgreementDocument;
+  /**
+   * `page` (προεπιλογή): σελίδα πλάτους Α4 στο κέντρο — ανάγνωση, παράθυρο προεπισκόπησης.
+   * `width`: προσαρμογή στο πλάτος της στήλης με ζουμ — η ζωντανή προεπισκόπηση των επεξεργαστών (`paper-fit`).
+   */
+  readonly fit?: 'page' | 'width';
+  /** Μολύβι «Επεξεργασία» δίπλα σε κάθε ενότητα και ρήτρα — μόνο μέσα σε επεξεργαστή. */
+  readonly onEdit?: DocumentEditHandler;
+}
+
+export function AgreementDocumentPreview({ document, fit = 'page', onEdit }: AgreementDocumentPreviewProps) {
+  const { frameRef, pageRef } = usePaperFit(fit === 'width');
+  return (
+    <div ref={frameRef} className="min-w-0">
+      <article ref={pageRef} lang={document.language} className={cn('space-y-5 rounded-lg border bg-card p-5 text-sm leading-relaxed', fit === 'page' && 'mx-auto max-w-[210mm]')}>
+        <DocumentHeader document={document} onEdit={onEdit} />
+        <DocumentBody document={document} onEdit={onEdit} />
+      </article>
+    </div>
+  );
+}
+
+function DocumentBody({ document, onEdit }: { document: AgreementDocument; onEdit?: DocumentEditHandler }) {
+  return (
+    <>
+      <PartiesAndProject document={document} onEdit={onEdit} />
+      <Section title={document.labels.lines} section="lines" onEdit={onEdit}>
         <LinesTable document={document} />
         {document.totals.unpricedNote && <p className="text-xs text-muted-foreground">{document.totals.unpricedNote}</p>}
         {document.totals.valueInWords && <p className="text-xs italic text-muted-foreground">{document.totals.valueInWords}</p>}
         <p className="text-xs text-muted-foreground">{document.totals.vatNote}</p>
       </Section>
-      <Section title={document.labels.terms}>{document.terms.map((term) => <p key={term}>{term}</p>)}</Section>
-      <Section title={document.labels.paymentPlan}>{document.paymentPlan.map((sentence) => <p key={sentence}>{sentence}</p>)}</Section>
+      <Section title={document.labels.terms} section="terms" onEdit={onEdit}>{document.terms.map((term) => <p key={term}>{term}</p>)}</Section>
+      <Section title={document.labels.paymentPlan} section="plan" onEdit={onEdit}>{document.paymentPlan.map((sentence) => <p key={sentence}>{sentence}</p>)}</Section>
       {document.clauses.length > 0 && (
-        <Section title={document.labels.clauses}>
-          <ol className="space-y-3">
-            {document.clauses.map((clause) => (
-              <li key={clause.clauseKey} className="space-y-1">
-                <h4 className="font-semibold">{clause.number}. {clause.heading}</h4>
-                {clause.untranslatedNote && <p role="note" className="text-xs text-destructive">{clause.untranslatedNote}</p>}
-                <DocumentBlocks blocks={clause.blocks} />
-              </li>
-            ))}
-          </ol>
+        <Section title={document.labels.clauses} section="clauses" onEdit={onEdit}>
+          <ClauseList document={document} onEdit={onEdit} />
         </Section>
       )}
-    </article>
+    </>
   );
 }

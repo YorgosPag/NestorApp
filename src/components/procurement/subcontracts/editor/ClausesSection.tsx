@@ -23,6 +23,18 @@ import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-
 import type { AgreementEditor } from './useAgreementEditor';
 import { ClauseCard, type ClauseCardEdits } from './ClauseCard';
 
+/**
+ * Μολύβι σε ρήτρα του εγγράφου (§5.23) ⇒ η κάρτα της φαίνεται και παίρνει την εστίαση. Ένα καρέ μετά: η καρτέλα «Ρήτρες»
+ * μόλις ενεργοποιήθηκε και η κάρτα πρέπει πρώτα να γίνει ορατή. Ο δείκτης `data-editor-clause` ζει στο `ClauseCard`.
+ */
+export function revealClauseCard(clauseKey: string) {
+  requestAnimationFrame(() => {
+    const card = Array.from(document.querySelectorAll<HTMLElement>('[data-editor-clause]')).find((element) => element.dataset.editorClause === clauseKey);
+    card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card?.focus({ preventScroll: true });
+  });
+}
+
 interface ClausesSectionProps {
   readonly editor: AgreementEditor;
 }

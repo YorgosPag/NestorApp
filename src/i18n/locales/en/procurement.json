@@ -1130,7 +1130,8 @@
           "subcontractor": "The new subcontractor will appear in the document after saving.",
           "projectOwners": "The plot owners will appear by name after saving.",
           "scope": "The project change will appear after saving."
-        }
+        },
+        "editInForm": "Edit: {section}"
       },
       "deviations": {
         "title": "Deviations",
@@ -1153,7 +1154,9 @@
           "reason": "Explanation",
           "reasonRequired": "A rejection needs an explanation, so the requester knows what to change.",
           "cancel": "Cancel"
-        }
+        },
+        "count": "{count, plural, one {# deviation} other {# deviations}}",
+        "pendingCount": "{count, plural, one {# awaiting approval} other {# awaiting approval}}"
       },
       "new": {
         "action": "New agreement",
@@ -1169,6 +1172,12 @@
         "create": "Create",
         "openLibrary": "Open the library",
         "askAdmin": "Ask a company administrator to load the subcontract library."
+      },
+      "toolbarLabel": "Draft and save",
+      "layout": {
+        "documentOnly": "Document only",
+        "showForm": "Form and document",
+        "resize": "Resize form and document"
       }
     },
     "library": {

@@ -24,7 +24,7 @@ import { projectPaymentSchedule } from '@/subapps/procurement/subcontracts/docum
 import { previewSnapshotOf } from '@/subapps/procurement/subcontracts/document/preview-snapshot';
 import { estimatedAgreementValue } from '@/subapps/procurement/subcontracts/lines/line-amount';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
-import { AgreementDocumentPreview } from './AgreementDocumentPreview';
+import { AgreementDocumentPreview, type AgreementDocumentPreviewProps } from './AgreementDocumentPreview';
 import { PaymentCalendarPreview } from './PaymentCalendarPreview';
 
 const DEFAULT_SPAN_MONTHS = 3;
@@ -69,8 +69,10 @@ export function AgreementPaymentCalendar({ agreement }: AgreementProps) {
   );
 }
 
+type DocumentColumnsProps = AgreementProps & Pick<AgreementDocumentPreviewProps, 'fit' | 'onEdit'>;
+
 /** Το έγγραφο ανά γλώσσα, με ορατές τις αιτίες που δεν θα εκδοθεί όπως φαίνεται. */
-export function AgreementDocumentColumns({ agreement }: AgreementProps) {
+export function AgreementDocumentColumns({ agreement, fit, onEdit }: DocumentColumnsProps) {
   const { t } = useTranslation('procurement');
   const { clauses, versions, loading } = useSubcontractClauseLibrary();
   const preview = useMemo(() => previewSnapshotOf(agreement, clauses, versions), [agreement, clauses, versions]);
@@ -84,7 +86,7 @@ export function AgreementDocumentColumns({ agreement }: AgreementProps) {
       {preview.unavailable.length > 0 && <p role="alert" className="text-sm text-destructive">{t('subcontracts.preview.unavailable', { clauses: preview.unavailable.join(', ') })}</p>}
       {translationMissing && <p role="alert" className="text-sm text-destructive">{t('subcontracts.preview.translationMissing')}</p>}
       <section className={documents.length > 1 ? 'grid gap-4 lg:grid-cols-2' : undefined}>
-        {documents.map((document) => <AgreementDocumentPreview key={document.language} document={document} />)}
+        {documents.map((document) => <AgreementDocumentPreview key={document.language} document={document} fit={fit} onEdit={onEdit} />)}
       </section>
     </>
   );

@@ -191,6 +191,24 @@ export function clearUrlFragment(): void {
 }
 
 /**
+ * Γράφει το **fragment** (`#…`) χωρίς πλοήγηση και χωρίς νέα καταχώριση ιστορικού, κρατώντας `pathname` + query —
+ * και το `history.state` αυτούσιο (App Router). Ο αδελφός του {@link clearUrlFragment}.
+ *
+ * Για κατάσταση θέασης που ζει στο hash επειδή **είναι** ήδη άγκυρα της σελίδας (ADR-928 §5.23: η ανοιχτή καρτέλα του
+ * επεξεργαστή `#editor-lines` = το `id` της επικεφαλίδας της ενότητας, άρα και βαθύς σύνδεσμος). Δεν πυροδοτεί
+ * `hashchange` — ο καταναλωτής ξέρει ήδη τι έγραψε.
+ *
+ * @param fragment - Με ή χωρίς `#`. Κενό ⇒ ίδιο με {@link clearUrlFragment}.
+ */
+export function replaceUrlFragment(fragment: string): void {
+  if (typeof window === 'undefined') return;
+
+  const normalized = fragment.startsWith('#') ? fragment.slice(1) : fragment;
+  const { pathname, search } = window.location;
+  window.history.replaceState(window.history.state, '', normalized ? `${pathname}${search}#${normalized}` : `${pathname}${search}`);
+}
+
+/**
  * Προσθέτει καταχώριση στην ουρά ιστορικού **χωρίς να αλλάξει η διεύθυνση**, με ένα
  * κλειδί-σημάδι απλωμένο **πάνω** στο υπάρχον `history.state`.
  *

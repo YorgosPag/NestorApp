@@ -10,9 +10,10 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table } from '@/components/ui/table';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserDisplayNames } from '@/hooks/useUserDisplayNames';
@@ -101,6 +102,30 @@ function DeviationsHead() {
   );
 }
 
+/**
+ * §5.23 — η λωρίδα-περίληψη: «Αποκλίσεις · 2 · 2 περιμένουν έγκριση ▾». Ο πίνακας έπιανε ~110 px πάνω από τον
+ * επεξεργαστή σε **κάθε** άνοιγμα· τώρα μία γραμμή, και ανοίγει μόνος του **μόνο** όταν ο θεατής έχει κάτι να αποφασίσει
+ * (Procore: τα «Pending approval» φαίνονται σε όποιον εγκρίνει, οι άλλοι βλέπουν μόνο τον μετρητή).
+ */
+function DeviationsSummary({ rows, open }: { readonly rows: readonly DeviationRow[]; readonly open: boolean }) {
+  const { t } = useTranslation('procurement');
+  const pending = rows.filter((row) => row.deviation.decision === 'pending').length;
+  const Chevron = open ? ChevronUp : ChevronDown;
+  // Επικεφαλίδα που **περιέχει** το κουμπί (μοτίβο accordion του WAI-ARIA) — όχι επικεφαλίδα μέσα σε κουμπί.
+  return (
+    <h3 id="agreement-deviations" className="text-base font-semibold">
+      <CollapsibleTrigger asChild>
+        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-2 px-3 py-2 text-left text-base font-semibold">
+          {t('subcontracts.editor.deviations.title')}
+          <span className="text-sm font-normal text-muted-foreground">· {t('subcontracts.editor.deviations.count', { count: rows.length })}</span>
+          {pending > 0 && <Badge variant="warning">{t('subcontracts.editor.deviations.pendingCount', { count: pending })}</Badge>}
+          <Chevron className="ml-auto h-4 w-4" aria-hidden />
+        </Button>
+      </CollapsibleTrigger>
+    </h3>
+  );
+}
+
 export function DeviationsPanel({ agreement, canApprove, unsaved }: DeviationsPanelProps) {
   const { t } = useTranslation('procurement');
   const actorUid = useAuth().user?.uid ?? '';
@@ -108,35 +133,41 @@ export function DeviationsPanel({ agreement, canApprove, unsaved }: DeviationsPa
   const names = useUserDisplayNames(useMemo(() => [...new Set(rows.map((row) => row.deviation.requestedBy))], [rows]));
   const describe = useDescribeRow();
   const [deciding, setDeciding] = useState<{ row: DeviationRow; decision: DeviationDecision } | null>(null);
+  const blockOf = (row: DeviationRow) => deviationDecisionBlock(agreement, row, { actorUid, canApprove, unsaved });
+  const [open, setOpen] = useState(() => rows.some((row) => blockOf(row) === null));
   if (rows.length === 0) return null;
 
   return (
-    <section aria-labelledby="agreement-deviations" className="space-y-2">
-      <h3 id="agreement-deviations" className="text-base font-semibold">{t('subcontracts.editor.deviations.title')}</h3>
-      <Table>
-        <DeviationsHead />
-        <tbody>
-          {rows.map((row) => (
-            <DeviationRowView
-              key={`${row.clauseKey}:${row.parameterKey}`}
-              row={row}
-              text={describe(row)}
-              requester={names.get(row.deviation.requestedBy) ?? t('subcontracts.editor.deviations.unknownUser')}
-              block={deviationDecisionBlock(agreement, row, { actorUid, canApprove, unsaved })}
-              onDecide={(decision) => setDeciding({ row, decision })}
-            />
-          ))}
-        </tbody>
-      </Table>
-      {deciding && (
-        <DecideDeviationDialog
-          agreement={agreement}
-          row={deciding.row}
-          decision={deciding.decision}
-          summary={(({ clause, parameter, value }) => `${clause} · ${parameter} · ${value}`)(describe(deciding.row))}
-          onClose={() => setDeciding(null)}
-        />
-      )}
-    </section>
+    <Collapsible open={open} onOpenChange={setOpen} asChild>
+      <section aria-labelledby="agreement-deviations" className="rounded-lg border">
+        <DeviationsSummary rows={rows} open={open} />
+        <CollapsibleContent className="border-t px-3 pb-2">
+          <Table>
+            <DeviationsHead />
+            <tbody>
+              {rows.map((row) => (
+                <DeviationRowView
+                  key={`${row.clauseKey}:${row.parameterKey}`}
+                  row={row}
+                  text={describe(row)}
+                  requester={names.get(row.deviation.requestedBy) ?? t('subcontracts.editor.deviations.unknownUser')}
+                  block={blockOf(row)}
+                  onDecide={(decision) => setDeciding({ row, decision })}
+                />
+              ))}
+            </tbody>
+          </Table>
+        </CollapsibleContent>
+        {deciding && (
+          <DecideDeviationDialog
+            agreement={agreement}
+            row={deciding.row}
+            decision={deciding.decision}
+            summary={(({ clause, parameter, value }) => `${clause} · ${parameter} · ${value}`)(describe(deciding.row))}
+            onClose={() => setDeciding(null)}
+          />
+        )}
+      </section>
+    </Collapsible>
   );
 }

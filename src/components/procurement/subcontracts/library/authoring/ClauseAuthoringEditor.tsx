@@ -66,6 +66,7 @@ function SubmitDialog({ authoring }: { readonly authoring: ClauseAuthoring }) {
 }
 
 export default function ClauseAuthoringEditor({ clause, versions, clauses, templates, authority }: ClauseAuthoringEditorProps) {
+  const { t } = useTranslation('procurement');
   const actions = useLibraryActions();
   const base = useMemo(() => (clause ? proposalBaseOf(clause, versions) : null), [clause, versions]);
   const takenKeys = useMemo(() => new Set(clauses.map((candidate) => candidate.clauseKey)), [clauses]);
@@ -78,6 +79,7 @@ export default function ClauseAuthoringEditor({ clause, versions, clauses, templ
       <EditorSplitLayout
         form={<ClauseAuthoringForm authoring={authoring} takenKeys={takenKeys} />}
         preview={<ClauseAuthoringPreview authoring={authoring} clause={clause} templates={templates} />}
+        previewTitle={t('subcontracts.editor.tabs.preview')}
       />
       <SubmitDialog authoring={authoring} />
     </section>

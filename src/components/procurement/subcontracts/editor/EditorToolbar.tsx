@@ -87,7 +87,9 @@ export function EditorToolbar({ editor, copy }: EditorToolbarProps) {
     if (ok) editor.discard();
   };
   return (
-    <header className="flex flex-wrap items-center gap-3">
+    // `section`, όχι `header`: στο συμφωνητικό η εργαλειοθήκη ζει **μέσα** στην κεφαλίδα της σελίδας (§5.23), και η HTML
+    // δεν επιτρέπει `header` μέσα σε `header`.
+    <section aria-label={t('subcontracts.editor.toolbarLabel')} className="flex flex-wrap items-center gap-3">
       <p role="status" aria-live="polite" className="flex-1 text-sm text-muted-foreground">{copy?.status?.[editor.status] ?? t(`subcontracts.editor.status.${editor.status}`)}</p>
       {reason && <p className="text-sm text-muted-foreground">{reason}</p>}
       <Button type="button" variant="outline" disabled={!editor.unsaved} onClick={discard}>
@@ -98,6 +100,6 @@ export function EditorToolbar({ editor, copy }: EditorToolbarProps) {
         {copy?.saveAction ?? t('subcontracts.editor.save.action')}
       </Button>
       <ConfirmDialog {...dialogProps} />
-    </header>
+    </section>
   );
 }

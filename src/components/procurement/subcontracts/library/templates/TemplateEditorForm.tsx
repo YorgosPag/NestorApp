@@ -8,6 +8,8 @@
  * 🔑 Η ζώνη της ρήτρας φαίνεται **στο πεδίο του όρου** (`templateBoundTermsOf`), χωρίς πεδίο λόγου: το πρότυπο δεν
  *    δέχεται αποκλίσεις (`setReason: null`) — θέλει **ελεύθερη** ζώνη.
  * 🔑 Κωδικός: γεννιέται από τον τίτλο στο νέο πρότυπο, **αμετάβλητος** μετά (ο γραφέας τον κρατά· το id είναι από αυτόν).
+ * 🔑 §5.23: οι ενότητες σε **καρτέλες** (`EditorSectionTabs`), όπως στο συμφωνητικό· η ανοιχτή καρτέλα έρχεται από τον
+ *    `TemplateEditor`, που τη μοιράζεται με τον συγχρονισμό του δείγματος.
  */
 
 import { useMemo, useState, type FormEvent } from 'react';
@@ -23,8 +25,9 @@ import type { LocalizedText } from '@/subapps/procurement/subcontracts/types/cla
 import { AGREEMENT_DOCUMENT_MODES } from '@/subapps/procurement/subcontracts/types/trade-template';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
 import { EditorField, issuesIdOf } from '../../editor/EditorField';
-import { EditorSectionNav } from '../../editor/EditorSectionNav';
+import { EditorSectionTabs } from '../../editor/EditorSectionTabs';
 import { TEMPLATE_SECTION_MAP } from '../../editor/editor-sections';
+import type { EditorSectionState } from '../../editor/useEditorSection';
 import { useTemplateBoundTermsViews } from '../../editor/useBoundTermsViews';
 import { LinesSection } from '../../sections/lines/LinesSection';
 import { LocalizedTextFields } from '../../sections/LocalizedTextFields';
@@ -81,9 +84,9 @@ function IdentitySection(props: TemplateEditorFormProps) {
   );
 }
 
-export function TemplateEditorForm(props: TemplateEditorFormProps) {
+export function TemplateEditorForm(props: TemplateEditorFormProps & { readonly sections: EditorSectionState }) {
   const { t, i18n } = useTranslation('procurement');
-  const { editor, library, titles } = props;
+  const { editor, library, titles, sections } = props;
   const { draft, update, issues } = editor;
   const context = { issues, language: resolveHumanLanguage(i18n.language), secondaryLanguage: null };
   const bound = useTemplateBoundTermsViews(draft, library, titles);
@@ -93,13 +96,14 @@ export function TemplateEditorForm(props: TemplateEditorFormProps) {
     void editor.save();
   };
   return (
-    <form aria-label={t('subcontracts.library.templateEditor.formLabel')} noValidate onSubmit={submit} className="space-y-6 p-4">
-      <EditorSectionNav issues={issues} map={TEMPLATE_SECTION_MAP} />
-      <IdentitySection {...props} />
-      <LinesSection {...context} value={draft.lines} onChange={(lines) => update({ ...draft, lines })} path="lines" referencedLineIds={referencedLineIds} />
-      <TermsSection {...context} value={draft.defaultTerms} onChange={(defaultTerms) => update({ ...draft, defaultTerms })} path="defaultTerms" bound={bound.terms} lines={draft.lines} />
-      <PaymentPlanSection {...context} value={draft.defaultTerms.paymentPlan} onChange={(paymentPlan) => update({ ...draft, defaultTerms: { ...draft.defaultTerms, paymentPlan } })} path="defaultTerms.paymentPlan" bound={bound.plan} />
-      <TemplateClausesSection value={draft} onChange={update} library={library} titles={titles} issues={issues} language={context.language} />
+    <form aria-label={t('subcontracts.library.templateEditor.formLabel')} noValidate onSubmit={submit} className="p-4 pt-0">
+      <EditorSectionTabs map={TEMPLATE_SECTION_MAP} issues={issues} state={sections} panels={{
+        identity: <IdentitySection {...props} />,
+        lines: <LinesSection {...context} value={draft.lines} onChange={(lines) => update({ ...draft, lines })} path="lines" referencedLineIds={referencedLineIds} />,
+        terms: <TermsSection {...context} value={draft.defaultTerms} onChange={(defaultTerms) => update({ ...draft, defaultTerms })} path="defaultTerms" bound={bound.terms} lines={draft.lines} />,
+        plan: <PaymentPlanSection {...context} value={draft.defaultTerms.paymentPlan} onChange={(paymentPlan) => update({ ...draft, defaultTerms: { ...draft.defaultTerms, paymentPlan } })} path="defaultTerms.paymentPlan" bound={bound.plan} />,
+        clauses: <TemplateClausesSection value={draft} onChange={update} library={library} titles={titles} issues={issues} language={context.language} />,
+      }} />
     </form>
   );
 }

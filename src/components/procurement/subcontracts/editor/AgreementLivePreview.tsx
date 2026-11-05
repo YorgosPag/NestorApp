@@ -14,14 +14,21 @@ import { useDeferredValue } from 'react';
 import { Info } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AgreementDocumentColumns, AgreementPaymentCalendar } from '../document/AgreementDocumentColumns';
+import type { DocumentEditHandler } from '../document/EditInFormButton';
 import type { AgreementEditor } from './useAgreementEditor';
 
-export function AgreementLivePreview({ editor }: { readonly editor: AgreementEditor }) {
+interface AgreementLivePreviewProps {
+  readonly editor: AgreementEditor;
+  /** Το μολύβι «Επεξεργασία» κάθε ενότητας/ρήτρας (§5.23). */
+  readonly onEdit: DocumentEditHandler;
+}
+
+/** Ο τίτλος «Προεπισκόπηση εγγράφου» ζει στην κεφαλίδα της στήλης (`EditorSplitLayout`), μαζί με το «Μόνο έγγραφο». */
+export function AgreementLivePreview({ editor, onEdit }: AgreementLivePreviewProps) {
   const { t } = useTranslation('procurement');
   const projected = useDeferredValue(editor.projected);
   return (
-    <section aria-labelledby="editor-preview" className="space-y-4">
-      <h3 id="editor-preview" className="text-base font-semibold">{t('subcontracts.editor.preview.title')}</h3>
+    <section aria-label={t('subcontracts.editor.preview.title')} className="space-y-4">
       {projected.stale.length > 0 && (
         <ul className="space-y-1 rounded-lg border bg-muted/40 p-3 text-sm">
           {projected.stale.map((part) => (
@@ -32,7 +39,7 @@ export function AgreementLivePreview({ editor }: { readonly editor: AgreementEdi
           ))}
         </ul>
       )}
-      <AgreementDocumentColumns agreement={projected.agreement} />
+      <AgreementDocumentColumns agreement={projected.agreement} fit="width" onEdit={onEdit} />
       <AgreementPaymentCalendar agreement={projected.agreement} />
     </section>
   );

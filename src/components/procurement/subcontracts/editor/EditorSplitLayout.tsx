@@ -2,36 +2,100 @@
 
 /**
  * **Φόρμα | ζωντανή προεπισκόπηση** — η μία διάταξη των επεξεργαστών της υπεργολαβίας (συμφωνητικό · ρήτρα · πρότυπο,
- * ADR-928 Φ3γ · §5.22), όπως Figma/Procore.
+ * ADR-928 Φ3γ · §5.22 · §5.23), όπως Figma/Procore/Ironclad.
  *
- * 🔑 Οθόνη υπολογιστή ⇒ `ResizablePanelGroup` (δύο στήλες, ρυθμιζόμενες)· κινητό ⇒ καρτέλες «Φόρμα / Προεπισκόπηση»
- *    (δύο στήλες σε 390 px δεν διαβάζονται).
- * 🔑 Εξήχθη από το `AgreementEditor` (Φ3γ-0b): ο επεξεργαστής ρήτρας και προτύπου χρειάζονται **την ίδια** διάταξη, και
- *    δεύτερο αντίγραφο θα απέκλινε στο πρώτο νέο breakpoint.
+ * 🔑 Οθόνη υπολογιστή ⇒ δύο στήλες με συρόμενη διαχωριστική· κινητό ⇒ καρτέλες «Φόρμα / Προεπισκόπηση» (δύο στήλες σε
+ *    390 px δεν διαβάζονται).
+ * 🔑 §5.23 — **η φόρμα κρατά τα pixel της, το έγγραφο παίρνει τον υπόλοιπο χώρο** (`preserve-pixel-size`, όπως η πλαϊνή
+ *    στήλη του VS Code/Revit): μεγαλώνει το παράθυρο ⇒ μεγαλώνει η σελίδα της προεπισκόπησης (ζουμ «προσαρμογή στο
+ *    πλάτος», `paper-fit`). Το πλάτος θυμάται ανά συσκευή — η **κοινή** μηχανική `useCollapsibleColumn` (ADR-724/884),
+ *    όχι δεύτερη.
+ * 🔑 «Μόνο έγγραφο»: η φόρμα συμπτύσσεται και το έγγραφο γεμίζει όλο το πλάτος — ίδια κατάσταση με το σύρσιμο κάτω από
+ *    το ελάχιστο (ένας κάτοχος, το panel). Ξανά «Φόρμα και έγγραφο» ⇒ επιστροφή στο αποθηκευμένο πλάτος.
+ * 🔑 Το ύψος **μετριέται** (`useFillViewportHeight`): ό,τι μένει από το παράθυρο κάτω από την κορυφή του split — όχι το
+ *    μαντεμένο `100dvh-16rem` που άφηνε τη σελίδα να κυλά **και** τις στήλες να κυλούν.
+ * 🔑 Συγχρονισμός: αλλαγή καρτέλας στη φόρμα (`previewRequest`) ⇒ η προεπισκόπηση κυλά στην ίδια ενότητα του εγγράφου
+ *    (`data-doc-section`).
  */
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useCollapsibleColumn } from '@/components/ui/collapsible-column';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { createColumnLayoutStore } from '@/components/ui/resizable-column-store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useFillViewportHeight } from '@/hooks/useFillViewportHeight';
 import { useIsMobile } from '@/hooks/useMobile';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { STORAGE_KEYS } from '@/lib/storage';
+import type { PreviewScrollRequest } from './useEditorSection';
+
+/** Όρια της φόρμας σε px — η φόρμα θέλει ~720 px για δύο πεδία ανά σειρά· το έγγραφο παίρνει τα υπόλοιπα. */
+export const EDITOR_FORM_COLUMN = { widthMin: 420, widthDefault: 720, widthMax: 1400 } as const;
+/** Η προεπισκόπηση δεν στενεύει κάτω από αυτό (px) — υπερισχύει του `widthMax` της φόρμας. */
+const PREVIEW_MIN_WIDTH = 360;
+const FORM_PANEL_ID = 'subcontract-editor-form';
+const PREVIEW_PANEL_ID = 'subcontract-editor-preview';
+const FILL = { minPx: 480, bottomGapPx: 16 } as const;
+
+const formColumnStore = createColumnLayoutStore(STORAGE_KEYS.SUBCONTRACT_EDITOR_FORM_COLUMN, EDITOR_FORM_COLUMN);
 
 interface EditorSplitLayoutProps {
   readonly form: ReactNode;
   readonly preview: ReactNode;
+  /** Ο τίτλος της στήλης της προεπισκόπησης (π.χ. «Προεπισκόπηση εγγράφου», «Έγγραφο-δείγμα»), ήδη μεταφρασμένος. */
+  readonly previewTitle: string;
+  /** Αίτημα κύλισης της προεπισκόπησης σε ενότητα (`useEditorSection`). Παραλείπεται χωρίς καρτέλες. */
+  readonly previewRequest?: PreviewScrollRequest | null;
 }
 
-function DesktopSplit({ form, preview }: EditorSplitLayoutProps) {
+/** Κάθε νέο αίτημα ⇒ κύλιση στο `data-doc-section` (της πρώτης γλώσσας, σε δίγλωσσο). */
+function usePreviewSectionSync(request: PreviewScrollRequest | null | undefined) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!request) return;
+    const target = scrollerRef.current?.querySelector<HTMLElement>(`[data-doc-section="${request.section}"]`);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [request]);
+  return scrollerRef;
+}
+
+function PreviewHeader({ title, collapsed, onToggle }: { readonly title: string; readonly collapsed: boolean; readonly onToggle: () => void }) {
+  const { t } = useTranslation('procurement');
+  const label = t(collapsed ? 'subcontracts.editor.layout.showForm' : 'subcontracts.editor.layout.documentOnly');
+  const Icon = collapsed ? Minimize2 : Maximize2;
   return (
-    <ResizablePanelGroup orientation="horizontal" className="h-[calc(100dvh-16rem)] min-h-[32rem] rounded-lg border">
-      <ResizablePanel defaultSize="55%" minSize="35%" className="overflow-y-auto">
-        {form}
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize="45%" minSize="30%" className="overflow-y-auto bg-muted/20 p-4">
-        {preview}
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-card px-4 py-2">
+      <h3 className="text-base font-semibold">{title}</h3>
+      <Button type="button" size="sm" variant="ghost" onClick={onToggle} aria-controls={FORM_PANEL_ID} aria-expanded={!collapsed}>
+        <Icon className="mr-2 h-4 w-4" aria-hidden />{label}
+      </Button>
+    </header>
+  );
+}
+
+function DesktopSplit({ form, preview, previewTitle, previewRequest }: EditorSplitLayoutProps) {
+  const { t } = useTranslation('procurement');
+  const { initial, collapsed, panel, persistence, onResize, toggle } = useCollapsibleColumn(formColumnStore);
+  const frameRef = useFillViewportHeight<HTMLElement>(true, FILL);
+  const previewRef = usePreviewSectionSync(previewRequest);
+  return (
+    <section ref={frameRef} aria-label={previewTitle} className="h-[32rem] overflow-hidden rounded-lg border">
+      <ResizablePanelGroup orientation="horizontal" onLayoutChanged={persistence.onLayoutChanged}>
+        <ResizablePanel id={FORM_PANEL_ID} panelRef={panel} elementRef={persistence.elementRef}
+          defaultSize={initial.collapsed ? 0 : initial.width} minSize={EDITOR_FORM_COLUMN.widthMin} maxSize={EDITOR_FORM_COLUMN.widthMax}
+          collapsible collapsedSize={0} groupResizeBehavior="preserve-pixel-size" onResize={onResize}
+          className="min-w-0 overflow-y-auto">
+          {form}
+        </ResizablePanel>
+        <ResizableHandle withHandle aria-label={t('subcontracts.editor.layout.resize')} {...persistence.separatorProps} />
+        <ResizablePanel id={PREVIEW_PANEL_ID} minSize={PREVIEW_MIN_WIDTH} elementRef={previewRef} className="min-w-0 overflow-y-auto bg-muted/20">
+          <PreviewHeader title={previewTitle} collapsed={collapsed} onToggle={toggle} />
+          <section className="p-4">{preview}</section>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </section>
   );
 }
 
