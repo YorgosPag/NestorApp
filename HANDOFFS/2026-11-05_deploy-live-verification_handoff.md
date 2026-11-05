@@ -15,7 +15,11 @@
 
 Αρχείο (όχι στο `main`, επίτηδες): το κλαδί `agent/adr-923-w3-l1-wip-archive` (`52dd2bb8`), ο γύρος της Λ1 που αντικαταστάθηκε. Αποκλίνει από τον ζωντανό σχεδιασμό.
 
-## ΕΠΟΜΕΝΟ ΒΗΜΑ (εγκρίθηκε: «ΝΑΙ ΦΤΙΑΞΤΟ»): το «Deploy completato» να σημαίνει «τρέχει»
+## ✅ ΥΛΟΠΟΙΗΘΗΚΕ στο κλαδί `agent/xchange-report-typography` (ADR-865 §11.11) — εκκρεμεί `wt:land` + push με εντολή Giorgio
+- Ζωντανή απόδειξη = το log του βήματος «🚀 Coolify → μέχρι να σερβίρει το νέο commit» στο πρώτο run μετά το push, και το Telegram με γραμμή `live <sha7> (<χρόνος>)`.
+- Το 403 ΔΕΝ είναι WAF: είναι το `src/middleware.ts` (`curl/` στη λίστα bots). Ρητό UA ⇒ 200.
+
+## (ιστορικό) Η εργασία όπως ζητήθηκε: το «Deploy completato» να σημαίνει «τρέχει»
 
 ### Το εύρημα (μετρημένο σήμερα)
 - `.github/workflows/docker-build.yml`, job «📦 Κυκλοφορία στο Netcup», βήμα «Trigger Coolify redeploy»: `curl GET …/api/v1/applications/f661kuiq901llma0o8unhvpi/start` ⇒ `{"message":"Deployment request queued.","deployment_uuid":"…"}`.

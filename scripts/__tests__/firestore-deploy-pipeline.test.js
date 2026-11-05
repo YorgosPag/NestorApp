@@ -29,6 +29,7 @@ const {
 } = require('../lib/ci/workflow-meta');
 const { tier1Alert } = require('../lib/ci/health-state');
 const { composeMessage, sendTelegram } = require('../lib/ci/telegram');
+const { NETCUP, TIMING: NETCUP_TIMING } = require('../lib/ci/netcup-release');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const WORKFLOW = path.join(ROOT, M.PIPELINE.workflow);
@@ -173,9 +174,28 @@ describe('ADR-865 §11 — η γραμμή παραγωγής', () => {
     });
 
     it('🔴 ΜΟΝΟ η κυκλοφορία ενεργοποιεί το Netcup (Coolify) — κανένα άλλο job δεν το παρακάμπτει', () => {
-      const coolify = readWorkflowRunSteps(WORKFLOW).filter((s) => /applications\/[^/]+\/start/.test(s.run));
+      const steps = readWorkflowRunSteps(WORKFLOW);
+      const coolify = steps.filter((s) => /scripts\/ci\/netcup-release\.js/.test(s.run));
       expect(coolify.length).toBeGreaterThan(0);
       expect(new Set(coolify.map((s) => s.job))).toEqual(new Set([release]));
+      // §11.11 — κανένα ωμό αίτημα στο Coolify (το παλιό `curl -s` ήταν σιωπηλό ακόμη και σε 401).
+      const raw = steps.filter((s) => s.run.includes(NETCUP.coolifyApi.replace(/\/api\/v1$/, '')) || /applications\/[^/\s]+\/start/.test(s.run));
+      expect(raw).toEqual([]);
+    });
+
+    // §11.11 — «Deploy completato» = η νέα έκδοση ΣΕΡΒΙΡΕΙ. Η λογική και οι μεταλλάξεις της ζουν στη
+    // σουίτα `netcup-release.test.js`· εδώ ρωτιέται αν η ΓΡΑΜΜΗ τη φοράει.
+    it('✅ το «completato» δένεται με την επιτυχία της κυκλοφορίας — που ΑΠΑΙΤΕΙ ίσο sha στο build-info', () => {
+      const tg = readWorkflowRunSteps(WORKFLOW).find((s) => s.job === M.PIPELINE.jobs.notify && /telegram-notify\.js/.test(s.run));
+      const title = tg.env.TITLE.replace(/\s+/g, ' ');
+      expect(title).toMatch(/needs\.release\.result == 'success' && 'NestorApp — Deploy completato'/);
+      expect(title).toContain("needs.release.outputs.verdict == 'not-live'");
+      expect(tg.env.LIVE).toContain('needs.release.outputs.summary');
+      expect(tg.run).toContain('"$LIVE"');
+    });
+
+    it('⏱ το job της κυκλοφορίας ζει περισσότερο από την παρακολούθηση (αλλιώς κόβεται χωρίς «τι είδαμε»)', () => {
+      expect(jobs[release].timeoutMinutes * 60_000).toBeGreaterThan(NETCUP_TIMING.deadlineMs + 2 * 60_000);
     });
 
     it('ο καθημερινός έλεγχος υπάρχει, είναι Tier 1 και ξυπνά μόνος του (schedule)', () => {

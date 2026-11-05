@@ -409,6 +409,9 @@ function readWorkflowPermissions(filePath, read = readDisk) {
   return mapOf(childLines(lines, index).map((l) => l.body));
 }
 
+/** `timeout-minutes: 20` ⇒ `20` · απόν ή έκφραση `${{ }}` ⇒ `null`. */
+const timeoutOf = (value) => (value === null || !/^\d+$/.test(String(value)) ? null : Number(value));
+
 /**
  * ADR-865 §11 — **η ΔΟΜΗ** ενός workflow: ποιο job περιμένει ποιο (`needs`), ποιο ζει πίσω από
  * **environment** (ανθρώπινη έγκριση), και με ποια συνθήκη (`if`). Χωρίς αυτό, καμία άγκυρα δεν
@@ -416,9 +419,11 @@ function readWorkflowPermissions(filePath, read = readDisk) {
  * αφαίρεση του `needs` θα άνοιγε ξανά την τρύπα **σιωπηλά**.
  * §11.9: και το **όνομα** (αυτό επιστρέφει το API `…/jobs` — η διαδοχή βρίσκει εκεί το δικό της
  * apply), τα **δικαιώματα** και το **concurrency** (ουρά · `cancel-in-progress`).
+ * §11.11: και το **`timeout-minutes`** — ένα job που κόβεται από το GitHub δεν γράφει εξόδους.
  * @param {string} filePath
  * @returns {Record<string, {name:string|null, needs:string[], environment:string|null, if:string|null,
- *   permissions:Record<string,string>|null, concurrency:Record<string,string>|null}>}
+ *   permissions:Record<string,string>|null, concurrency:Record<string,string>|null,
+ *   timeoutMinutes:number|null}>}
  */
 function readWorkflowJobs(filePath, read = readDisk) {
   const lines = linesOf(filePath, read);
@@ -438,6 +443,7 @@ function readWorkflowJobs(filePath, read = readDisk) {
       if: jobValue(body, 'if'),
       permissions: mapOf(jobValue(body, 'permissions')),
       concurrency: mapOf(jobValue(body, 'concurrency')),
+      timeoutMinutes: timeoutOf(jobValue(body, 'timeout-minutes')),
     };
   }
   return jobs;

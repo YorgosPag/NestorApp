@@ -4,7 +4,7 @@ name: T1 🚀 Build & Deploy Docker Image
 # ADR-865 §11 — Η ΓΡΑΜΜΗ ΠΑΡΑΓΩΓΗΣ: ο κώδικας ΔΕΝ κυκλοφορεί πριν τους κανόνες/δείκτες του.
 #
 #   build-and-push ───────────────────────────────────────────────────┐
-#   firebase-plan (ρωτά τον ΠΑΡΟΧΟ, μόνο ανάγνωση) ─► firebase-succession ├─► release (:latest → Coolify)
+#   firebase-plan (ρωτά τον ΠΑΡΟΧΟ, μόνο ανάγνωση) ─► firebase-succession ├─► release (:latest → Coolify → build-info = sha)
 #        └─ apply ─► firebase-apply (⏸ ΕΓΚΡΙΣΗ) ◄── firebase-queue-watch ┘        └─► notify (Telegram)
 #
 # ADR-865 §11.9 — ΔΙΑΔΟΧΗ: ισχύει ΜΟΝΟ η κορυφή του main (GitOps). Ένα παλαιότερο τρέξιμο που
@@ -380,7 +380,12 @@ jobs:
       && needs.firebase-succession.result == 'success'
       && (needs.firebase-apply.result == 'success' || needs.firebase-apply.result == 'skipped')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # §11.11 — πάνω από το όριο παρακολούθησης του netcup-release.js (12′, άγκυρα στο test):
+    # ένα job που κόβεται από το GitHub δεν γράφει έξοδο ⇒ το μήνυμα δεν θα έλεγε «τι είδαμε».
+    timeout-minutes: 20
+    outputs:
+      verdict: ${{ steps.netcup.outputs.verdict }}
+      summary: ${{ steps.netcup.outputs.summary }}
     # §11.9 — μία κυκλοφορία τη φορά: ο φρουρός παρακάτω κρίνει ΜΕΤΑ από κάθε προηγούμενη
     # προώθηση του :latest. Εκκρεμής παλαιότερη αντικαθίσταται από νεότερη (queue: single).
     # ⛔ ΠΟΤΕ cancel-in-progress: true — θα έκοβε προώθηση/Coolify στη μέση.
@@ -416,15 +421,15 @@ jobs:
           IMAGE: ${{ needs.build-and-push.outputs.image }}
         run: docker buildx imagetools create --tag "${REGISTRY}/${IMAGE_NAME}:latest" "$IMAGE"
 
-      - name: Trigger Coolify redeploy
+      # §11.11 — «κυκλοφόρησε» = η νέα έκδοση ΣΕΡΒΙΡΕΙ, όχι «το Coolify έβαλε στην ουρά».
+      # Ενεργοποίηση → κατάσταση του Coolify deployment → κριτής το /api/build-info (= github.sha).
+      # Όχι ίσο sha μέσα στο όριο ⇒ έξοδος 1 ⇒ το Telegram λέει ❌ με ό,τι είδαμε. Λογική + tests:
+      # scripts/lib/ci/netcup-release.js (ποτέ bash εδώ — το παλιό `curl -s` έκανε σιωπηλό και το 401).
+      - name: 🚀 Coolify → μέχρι να σερβίρει το νέο commit
+        id: netcup
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-        run: |
-          echo "Triggering Coolify redeploy..."
-          RESPONSE=$(curl -s -X GET \
-            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
-            "http://159.195.44.221:8000/api/v1/applications/f661kuiq901llma0o8unhvpi/start")
-          echo "Coolify response: ${RESPONSE}"
+        run: node scripts/ci/netcup-release.js
 
   notify:
     name: 📣 Ειδοποίηση
@@ -456,10 +461,12 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           STATUS: ${{ needs.release.result == 'success' && 'success' || 'failure' }}
-          TITLE: ${{ needs.release.result == 'success' && 'NestorApp — Deploy completato' || 'NestorApp — Deploy FALLITO' }}
+          # §11.11 — «completato» ΜΟΝΟ όταν το release είδε το ίδιο sha στο /api/build-info.
+          TITLE: ${{ needs.release.result == 'success' && 'NestorApp — Deploy completato' || needs.release.outputs.verdict == 'not-live' && 'NestorApp — Η έκδοση δεν ανέβηκε' || 'NestorApp — Deploy FALLITO' }}
+          LIVE: ${{ needs.release.outputs.summary }}
           STAGES: >-
             build ${{ needs.build-and-push.result }} · firebase-plan ${{ needs.firebase-plan.result }}
             (${{ needs.firebase-plan.outputs.action || '—' }}) · διαδοχή ${{ needs.firebase-succession.result }}
             · firebase-apply ${{ needs.firebase-apply.result }}
             · release ${{ needs.release.result }}
-        run: node scripts/ci/telegram-notify.js --status "$STATUS" --title "$TITLE" --line "$STAGES"
+        run: node scripts/ci/telegram-notify.js --status "$STATUS" --title "$TITLE" --line "$STAGES" --line "$LIVE"
