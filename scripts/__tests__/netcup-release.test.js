@@ -183,13 +183,37 @@ describe('netcup-release — CLI (έξοδοι για το Telegram)', () => {
 });
 
 describe('netcup-release — άγκυρες προς τις άλλες πηγές αλήθειας', () => {
-  it('το UA ΔΕΝ ταιριάζει σε κανένα BLOCKED_BOT_PATTERNS του middleware (αλλιώς 403, όπως το curl)', () => {
+  const blockedPatterns = () => {
     const middleware = fs.readFileSync(path.join(ROOT, 'src/middleware.ts'), 'utf8');
     const block = /const BLOCKED_BOT_PATTERNS[^=]*=\s*\[([\s\S]*?)\];/.exec(middleware);
     const patterns = [...block[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
-    expect(patterns).toEqual(expect.arrayContaining(['curl/', 'node-fetch'])); // θετικός μάρτυρας: διαβάστηκε η λίστα
-    const ua = NETCUP.userAgent.toLowerCase();
-    expect(patterns.filter((p) => ua.includes(p.toLowerCase()))).toEqual([]);
+    expect(patterns).toEqual(expect.arrayContaining(['curl/', 'wget', 'node-fetch'])); // θετικός μάρτυρας: διαβάστηκε η λίστα
+    return patterns;
+  };
+  const blockedFor = (ua) => blockedPatterns().filter((p) => ua.toLowerCase().includes(p.toLowerCase()));
+
+  it('το UA του ελεγκτή ΔΕΝ ταιριάζει σε κανένα BLOCKED_BOT_PATTERNS του middleware (αλλιώς 403, όπως το curl)', () => {
+    expect(blockedFor(NETCUP.userAgent)).toEqual([]);
+  });
+
+  // §11.12 — το HEALTHCHECK της εικόνας: αν έτρωγε 403, το container θα ήταν «ανθυγιές» για πάντα και το
+  // rolling update του Coolify δεν θα ανέβαζε ΚΑΝΕΝΑ deploy. Με curl/wget αυτό θα συνέβαινε.
+  describe('§11.12 HEALTHCHECK της εικόνας', () => {
+    const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8').replace(/\\\r?\n\s*/g, ' ');
+    const healthcheck = (/^HEALTHCHECK .*$/m.exec(dockerfile) || [''])[0];
+
+    it('υπάρχει, τρέχει με node (όχι curl/wget) και χτυπά route που ΥΠΑΡΧΕΙ', () => {
+      expect(healthcheck).toMatch(/CMD \["node", "-e"/);
+      expect(healthcheck).not.toMatch(/\b(curl|wget)\b/);
+      const route = /http:\/\/127\.0\.0\.1:3000(\/[^'"]+)/.exec(healthcheck)[1];
+      expect(fs.existsSync(path.join(ROOT, 'src/app', route, 'route.ts'))).toBe(true);
+    });
+
+    it('το UA του ΔΕΝ ταιριάζει σε κανένα BLOCKED_BOT_PATTERNS', () => {
+      const ua = /'user-agent':'([^']+)'/.exec(healthcheck)[1];
+      expect(blockedFor(ua)).toEqual([]);
+      expect(blockedFor('Wget')).toEqual(['wget']); // αρνητικός μάρτυρας: ο έλεγχος δαγκώνει
+    });
   });
 
   it('η διαδρομή είναι το BUILD_INFO_PATH του συμβολαίου (ADR-860 §Ε0)', () => {
