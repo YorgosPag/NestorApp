@@ -16,7 +16,8 @@ export async function runRfqInviteDelivery(): Promise<CronJobResult> {
   const report = await runRfqInviteDeliverySweep(getAdminFirestore());
   return {
     summary: `rfq invites: scanned ${report.scanned}, delivered ${report.delivered}, retry later ${report.retryLater}, `
-      + `failed ${report.failed}, undeliverable ${report.undeliverable}, unknown ${report.unknown}, skipped ${report.skipped}`,
+      + `failed ${report.failed}, undeliverable ${report.undeliverable}, unknown ${report.unknown}, skipped ${report.skipped}, `
+      + `deferred ${report.deferred}`,
     metrics: { ...report },
   };
 }

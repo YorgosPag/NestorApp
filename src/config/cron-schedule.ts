@@ -68,6 +68,7 @@ import { runOverdueAlerts } from '@/lib/cron/jobs/overdue-alerts.job';
 import { runPropertyHandoverDelivery } from '@/lib/cron/jobs/property-handover-delivery.job';
 import { runPropertyHandoverReconcile } from '@/lib/cron/jobs/property-handover-reconcile.job';
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
+import { runRfqInviteDelivery } from '@/lib/cron/jobs/rfq-invite-delivery.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
 import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
 import { runStorageBucketDrift } from '@/lib/cron/jobs/storage-bucket-drift.job';
@@ -656,6 +657,26 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     leaseMinutes: 6,
     run: runPropertyHandoverDelivery,
   },
+  {
+    slug: 'rfq-invite-delivery',
+    path: '/api/cron/rfq-invite-delivery',
+    description: 'Παράδοση προσκλήσεων RFQ που δεν πρόλαβε ή δεν πέτυχε το αίτημα: επανάληψη με νέο σύνδεσμο (ADR-923 §5.13 Τ5)',
+    enabled: true,
+    // 🔑 **Κάθε 15′, γιατί ΕΙΝΑΙ μηχανισμός** (όχι δίχτυ): η πρώτη απόπειρα τρέχει στο `after()` του αιτήματος· οι
+    // απόπειρες 2–5 (αναμονή 1′ · 5′ · 30′ · 2ω) και η λήξη κράτησης ⇒ `unknown` ζουν **μόνο** εδώ. Άδεια ουρά ⇒ ένα
+    // ερώτημα στον δείκτη `vendor_invites (delivery.state, delivery.dueAt)`, αναπτυγμένο με το `a8f96e3f`.
+    //
+    // ⚠️ **:11 · :26 · :41 · :56**: τα μόνα υπόλοιπα mod 15 (3 · 6 · 11 · 13) που δεν κατέχει καμία επαναλαμβανόμενη
+    // εργασία (*/5 από :02 · */10 · */10 από :04 · */15 από :01 · */15 από :08 · :19/:49 · :15 · :35). Κάθε υπόλοιπο
+    // πέφτει σε κάποια ημερήσια· το :41 μόνο στη `listing-media-reconcile` (04:41), μία φορά τη μέρα, παράλληλα
+    // (`allSettled`), χωρίς κοινό πόρο. Η σάρωση σταματά να ξεκινά απόπειρες στα 240s (`sweepDeadlineMs`) ⇒ χωρά στο 5′.
+    schedule: '11-59/15 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 10,
+    maxRuntimeMinutes: 5,
+    leaseMinutes: 6,
+    run: runRfqInviteDelivery,
+  },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────
   // Εμφανίζονται εδώ **σκόπιμα**. Ένα job εκτός λίστας είναι αόρατο· ένα job στη
@@ -683,18 +704,6 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     reactivateWhen:
       'Αφού αναπτυχθούν οι δύο δείκτες του catalog_public_outbox (χωρίς αυτούς τα ερωτήματα απαντούν FAILED_PRECONDITION) ' +
       'και συνδεθεί ο αναγνώστης της επιβεβαίωσης στο public-standing.server.ts. Πρόγραμμα κάθε 10 λεπτά, γιατί είναι δίχτυ.',
-  },
-  {
-    slug: 'rfq-invite-delivery',
-    path: '/api/cron/rfq-invite-delivery',
-    description: 'Παράδοση προσκλήσεων RFQ που δεν πρόλαβε ή δεν πέτυχε το αίτημα: επανάληψη με νέο σύνδεσμο (ADR-923 §5.13 Τ5)',
-    enabled: false,
-    disabledReason: 'never-scheduled',
-    reactivateWhen:
-      'Αφού αναπτυχθεί ο δείκτης vendor_invites (delivery.state, delivery.dueAt) — χωρίς αυτόν το ερώτημα απαντά ' +
-      'FAILED_PRECONDITION. Τότε: enabled true, schedule \'11-59/15 * * * *\' (:11 · :26 · :41 · :56, λεπτά που δεν ' +
-      'κατέχει κανένα επαναλαμβανόμενο job), maxRuntime 5′, lease 6′, σώμα το runRfqInviteDelivery. Ως τότε η πρώτη απόπειρα ' +
-      'τρέχει στο after() του αιτήματος· ό,τι αποτύχει μένει pending στο καθολικό και φαίνεται.',
   },
   {
     slug: 'ai-pipeline',

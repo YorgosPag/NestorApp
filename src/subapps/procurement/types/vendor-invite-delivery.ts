@@ -69,6 +69,14 @@ export const INVITE_DELIVERY_POLICY = {
   backoffMs: [60 * 1000, 5 * 60 * 1000, 30 * 60 * 1000, 2 * 60 * 60 * 1000] as readonly number[],
   /** Προσκλήσεις ανά εκτέλεση της σάρωσης. */
   sweepLimit: 50,
+  /**
+   * Μετά από αυτή την προθεσμία (ρολόι τοίχου από την αρχή της εκτέλεσης) η σάρωση **δεν ξεκινά** νέα πρόσκληση· τις
+   * υπόλοιπες τις παίρνει το επόμενο tick. **240s** από τα 300 του `maxDuration` της διαδρομής και μέσα στο `maxRuntime` 5′
+   * του προγράμματος: μία απόπειρα κοστίζει το πολύ ~40s (δύο πάροχοι × `PROVIDER_TIMEOUT_MS` 20s). Χωρίς αυτήν, 50
+   * σειριακές απόπειρες σε πτώση παρόχων = ~33′ — πέρα από το lease 6′ του cron. Ίδιο σχήμα με το
+   * `HANDOVER_DELIVERY_CRON_DEADLINE_MS` (ADR-916).
+   */
+  sweepDeadlineMs: 240_000,
 } as const;
 
 const iso = (ms: number): string => new Date(ms).toISOString();

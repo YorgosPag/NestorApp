@@ -33,6 +33,8 @@ export interface RfqInviteDeliverySweepReport {
   undeliverable: number;
   unknown: number;
   skipped: number;
+  /** Ώριμες προσκλήσεις που δεν ξεκίνησαν επειδή έληξε η προθεσμία της εκτέλεσης — τις παίρνει το επόμενο tick. */
+  deferred: number;
 }
 
 /** Οι ώριμες ανοιχτές προσκλήσεις, οι παλαιότερες πρώτα. */
@@ -66,11 +68,28 @@ function tally(report: RfqInviteDeliverySweepReport, outcome: InviteDeliveryOutc
   else report.skipped += 1;
 }
 
-/** Μία εκτέλεση της σάρωσης. Σειριακά, για να μη χτυπά τον πάροχο σε ριπή. */
-export async function runRfqInviteDeliverySweep(db: Db, nowMs: number = Date.now()): Promise<RfqInviteDeliverySweepReport> {
-  const report: RfqInviteDeliverySweepReport = { scanned: 0, delivered: 0, retryLater: 0, failed: 0, undeliverable: 0, unknown: 0, skipped: 0 };
+/**
+ * Μία εκτέλεση της σάρωσης. Σειριακά, για να μη χτυπά τον πάροχο σε ριπή.
+ *
+ * ⏱️ `nowMs` είναι ο **λογικός** χρόνος (ωρίμανση, λήξη κράτησης)· η προθεσμία μετριέται με το **ρολόι τοίχου**
+ * (`wallClock`), γιατί αυτό κόβει τη διαδρομή. Ό,τι μένει μετά την προθεσμία μετριέται `deferred` και το παίρνει το
+ * επόμενο tick — μένει `pending`, άρα δεν χάνεται.
+ */
+export async function runRfqInviteDeliverySweep(
+  db: Db,
+  nowMs: number = Date.now(),
+  wallClock: () => number = Date.now,
+): Promise<RfqInviteDeliverySweepReport> {
+  const report: RfqInviteDeliverySweepReport = {
+    scanned: 0, delivered: 0, retryLater: 0, failed: 0, undeliverable: 0, unknown: 0, skipped: 0, deferred: 0,
+  };
+  const deadlineAt = wallClock() + INVITE_DELIVERY_POLICY.sweepDeadlineMs;
   const snap = await dueInvitesQuery(db, nowMs, INVITE_DELIVERY_POLICY.sweepLimit).get();
   for (const doc of snap.docs) {
+    if (wallClock() >= deadlineAt) {
+      report.deferred = snap.size - report.scanned;
+      break;
+    }
     report.scanned += 1;
     const state = (doc.data() as VendorInvite).delivery?.state;
     if (state === 'sending') tally(report, (await expireLease(db, doc.id, nowMs)) ? 'unknown' : 'skipped');

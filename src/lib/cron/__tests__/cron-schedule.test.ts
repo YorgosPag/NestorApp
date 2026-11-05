@@ -140,3 +140,23 @@ describe('heartbeat', () => {
     }
   });
 });
+
+describe('επαναλαμβανόμενες εργασίες — καμία δεν μοιράζεται λεπτό', () => {
+  it('σε μια εργάσιμη ώρα χωρίς ημερήσιες (Δευτέρα 10:00–10:59 Αθήνα) κάθε λεπτό έχει το πολύ μία εργασία', () => {
+    // Ο κανόνας ζούσε μόνο σε σχόλια («λεπτά που δεν κατέχει κανείς») και τον ξαναυπολόγιζε με το χέρι κάθε νέα
+    // εργασία (ADR-740 §12). Οι ημερήσιες τρέχουν 03:00–09:59 και μένουν εκτός παραθύρου: τη σύμπτωσή τους με
+    // επαναλαμβανόμενη (π.χ. 04:41) τη δέχεται το πρόγραμμα ρητά, γιατί ο dispatcher τρέχει `allSettled`.
+    const start = new Date('2026-11-02T08:00:00.000Z');
+    const end = start.getTime() + 60 * 60_000;
+    const owners = new Map<number, string[]>();
+    for (const job of enabled) {
+      const runs = new Cron(job.schedule, { timezone: job.timezone }).nextRuns(60, new Date(start.getTime() - 1));
+      for (const run of runs.filter((r) => r.getTime() < end)) {
+        const minute = run.getUTCMinutes();
+        owners.set(minute, [...(owners.get(minute) ?? []), job.slug]);
+      }
+    }
+    const shared = [...owners.entries()].filter(([, slugs]) => slugs.length > 1);
+    expect(shared).toEqual([]);
+  });
+});

@@ -239,6 +239,21 @@ describe('ιδεμποτία — το πολύ ένα email ανά πρόσκλ�
     expect(mockSend).not.toHaveBeenCalled();
   });
 
+  it('⏱️ προθεσμία εκτέλεσης: μετά τα `sweepDeadlineMs` καμία νέα απόπειρα· οι υπόλοιπες `deferred`, μένουν `pending`', async () => {
+    seedPlatformContact();
+    seedInvite('inv_1', PLATFORM_CONTACT);
+    seedInvite('inv_2', PLATFORM_CONTACT);
+    seedInvite('inv_3', PLATFORM_CONTACT);
+    // Ρολόι τοίχου: έναρξη 0 · πριν την 1η απόπειρα 0 · πριν τη 2η η προθεσμία έχει ήδη περάσει.
+    const ticks = [0, 0, INVITE_DELIVERY_POLICY.sweepDeadlineMs];
+    const wallClock = () => ticks.shift() ?? INVITE_DELIVERY_POLICY.sweepDeadlineMs;
+    const report = await runRfqInviteDeliverySweep(fake, NOW + 1000, wallClock);
+    expect(report).toMatchObject({ scanned: 1, delivered: 1, deferred: 2 });
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const states = ['inv_1', 'inv_2', 'inv_3'].map((id) => invite(id).delivery.state).sort();
+    expect(states).toEqual(['delivered', 'pending', 'pending']);
+  });
+
   it('κράτηση που ΔΕΝ έληξε δεν πειράζεται', async () => {
     fake.seed(COLLECTIONS.VENDOR_INVITES, 'inv_1', { ...invite('inv_1'), delivery: claimedInviteDelivery(pendingInviteDelivery(NOW), NOW) });
     expect((await runRfqInviteDeliverySweep(fake, NOW + 1000)).scanned).toBe(0);
