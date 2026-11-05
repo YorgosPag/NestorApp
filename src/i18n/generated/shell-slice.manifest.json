@@ -58,28 +58,30 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "8366cd22574fcca468cb25ece53b09cd691790bc599fed16ab680040c468dda6",
-    "src/i18n/generated/routes/o__workspace__procurement__analytics.el.json": "27a6956c28cb5b509af80ca2455df344daab1487dfbedb5ef810c473fa36e67a",
-    "src/i18n/generated/routes/o__workspace__procurement__materials.el.json": "650720e6b101dfc65643f137928cead7e64abe9ab1fe4628dc1f0c5f5dfbabcf",
-    "src/i18n/generated/routes/o__workspace__procurement__purchase-orders.el.json": "4e666a7eef53e096115851b2e3d5e3ef9d28db715a2262c1635086b2049a7bcc",
-    "src/i18n/generated/routes/o__workspace__procurement__quotes.el.json": "89493ef708e0f53ac31460db7e50cd25554faa5c8c7c3d4ef00f630f0e2e04ff",
+    "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "bc3adbeeffa071c310dbb8c0540fefc8fbdf68dfe904d241a72b64b751edcd82",
+    "src/i18n/generated/routes/o__workspace__procurement__analytics.el.json": "610521ed0d672a2342d215d808f428dce8a2efb525c2407e24dc1308884abacb",
+    "src/i18n/generated/routes/o__workspace__procurement__materials.el.json": "390ac5bf7a0cdf8b0e0a18a2a1ee3d9c5fa0fc4f8a05c92d4c237b88403b7531",
+    "src/i18n/generated/routes/o__workspace__procurement__purchase-orders.el.json": "e4f2e29cbaf606d8b8259e064af476f6020757132618830b35c6b0217af7246d",
+    "src/i18n/generated/routes/o__workspace__procurement__quotes.el.json": "23d296d35a7c08c8059dd856b3773b89e7b576be7e9127710ee4f86b54e0e4aa",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "5998b0309e74b4b352593365609f082619804601c73371e6c739f4111657808b",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
-    "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e694c874d3bf13e0bfd63e2e8d3c8e1dc5aa5ca4db51fed6136570844b6bd2eb",
+    "src/i18n/generated/routes/o__workspace__procurement__rfqs.el.json": "e54b05a0eae5ac5c7c0e59954fe8144b3acb8bd938301c440a11c36408509c34",
     "src/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json": "3991371a1ae56de860f0debaa852c00fc9e7ebb3df45c30b8e579280cbd65f1f",
-    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "226ed0ef2a884a3da6047c97ff06eb18d3cc01b83b7bf1c59e1da2bc2d0ccf9a",
-    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__clauses__clauseId__propose.el.json": "4a411092cc65382a6270972ce305fb318bedd00aca31209bcdadbd0ee485d93c",
-    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__clauses__new.el.json": "4a411092cc65382a6270972ce305fb318bedd00aca31209bcdadbd0ee485d93c",
-    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__templates__new.el.json": "62027bc808f81b7c946c5953ade59498e506451d1b412f15539a6f904fb2ce4b",
-    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__templates__templateId.el.json": "62027bc808f81b7c946c5953ade59498e506451d1b412f15539a6f904fb2ce4b",
-    "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "ed27faaf054aff06555fb73e987982799aae7ecef3366d7511d1c369f8483e31",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts.el.json": "0aae4780e3665ec2154302e2b92cc4fb797c32d5832679cb521afe1d188cc36b",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__agreementId.el.json": "9e6e28dce807af1b9362fbe47e1eafa1a191843e3a6c68c9d92644adb3ba4d73",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json": "36b7758a1dbbb9debcaa969a85d886948b1ef8ae7eb14ef08905338cdd9813d9",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__clauses__clauseId__propose.el.json": "9a642ef4df2858a4b8d08e7667edcbc9b19a0b297f612b76648ccc2acba16960",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__clauses__new.el.json": "9a642ef4df2858a4b8d08e7667edcbc9b19a0b297f612b76648ccc2acba16960",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__templates__new.el.json": "cf6487c5788b39300f37eaca3e1e3f769d5029aee72b37161a2efb616caab03b",
+    "src/i18n/generated/routes/o__workspace__procurement__subcontracts__library__templates__templateId.el.json": "cf6487c5788b39300f37eaca3e1e3f769d5029aee72b37161a2efb616caab03b",
+    "src/i18n/generated/routes/o__workspace__procurement__vendors.el.json": "0c8e1ef1080b1b5c9adfee84b514a53a3c4e1b1636181801a673e1292d192235",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__coverage.el.json": "a47326079a7657ef34d01be9b50104081a8ba57c148118f53af77548fce53543",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json": "b7c1e20776fb9ad6be26039d9bd0c71dfac687f97998a872687dc3e47c997c48",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json": "9cf0c913c9f586ae7850ab0f1a6bfcb1c47dc4862db39dc9fb8acc4fec81b907",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "7bd13d8ab1adea9e76f30626dfdd397e391a0567d707799255d76315a7d865e0",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "0b154398cdfc7da08b112dc0a87df2c896c6f982cc85b1b1dd7628982f4d006b",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json": "4f2a1846793ff34d251298e4c65f2eaf4b7845232aafb77bddbdbf299d745db3",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "270b52d8380c5fca9debb4ed806557fa3959b61f16bff955d18ca862fcc35d0b",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json": "9e6e28dce807af1b9362fbe47e1eafa1a191843e3a6c68c9d92644adb3ba4d73",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "833f1f75349ec3140684597ec67c5f6690725809f226b26eb378bb77f9358190",
@@ -134,7 +136,7 @@
       "lazyRouteRegistries": "b0bacc3cf337c275819dff6286bb518d8a5cab18c3c9d88d917b33d0adb7076f",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "fbf6b507de7772572fdaa15da3bbc5c78920b0cc5dc3abe70c46b8e9d57f3271",
+      "routeSlices": "8bf53b3a0bf496ea77961d0ea6d7c7d848431ba18ec6a6a874be17bf64b43d86",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -204,7 +206,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b48dd30ac16afac671f011c5c72cbad459919b911261535d15b91169860507d0",
+  "inputsSha256": "7141648ebad51ec94a6658e4e2135ea6603488aa23f369613b314b5b6df2aba5",
   "languages": [
     "el"
   ],
@@ -15562,6 +15564,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -15891,6 +15894,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors"
           ],
           "prefixes": [
@@ -17630,6 +17634,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -19523,6 +19528,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -21667,6 +21673,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -23075,6 +23082,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "overview.drill.activeFilter",
             "overview.drill.clear"
@@ -23265,6 +23273,251 @@
           "prefixes": [
             "name",
             "symbol"
+          ],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__procurement__subcontracts": {
+      "page": "src/app/(app)/o/[workspace]/procurement/subcontracts/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
+            "labels.clearSearch",
+            "placeholders.search"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "procurement": {
+          "keys": [
+            "nav.subcontractLibrary",
+            "subcontracts.actions.checking",
+            "subcontracts.actions.menu",
+            "subcontracts.actions.preview",
+            "subcontracts.editor.new.action",
+            "subcontracts.editor.saveFirst",
+            "subcontracts.list.ariaLabel",
+            "subcontracts.list.columns.actions",
+            "subcontracts.list.columns.document",
+            "subcontracts.list.columns.scope",
+            "subcontracts.list.columns.status",
+            "subcontracts.list.columns.subcontractor",
+            "subcontracts.list.columns.updated",
+            "subcontracts.list.columns.value",
+            "subcontracts.list.columns.work",
+            "subcontracts.list.deviationsOpen",
+            "subcontracts.list.emptyFiltered",
+            "subcontracts.list.error",
+            "subcontracts.list.scope.master",
+            "subcontracts.list.scope.single",
+            "subcontracts.list.scope.workOrder",
+            "subcontracts.list.scope.workOrderFrom",
+            "subcontracts.list.search",
+            "subcontracts.list.value.atLeast",
+            "subcontracts.list.value.unitRatesOnly",
+            "subcontracts.list.value.unpricedLines",
+            "subcontracts.masters.empty",
+            "subcontracts.masters.new",
+            "subcontracts.masters.related",
+            "subcontracts.masters.subtitle",
+            "subcontracts.masters.title",
+            "subcontracts.masters.workOrdersSummary",
+            "subcontracts.messages.pending",
+            "subcontracts.summary.ariaLabel",
+            "subcontracts.summary.committed",
+            "subcontracts.summary.documents",
+            "subcontracts.summary.filterLabel",
+            "subcontracts.summary.pending",
+            "subcontracts.summary.statusFigure",
+            "subcontracts.workOrders.action"
+          ],
+          "prefixes": [
+            "subcontracts.actions.confirm",
+            "subcontracts.actions.done",
+            "subcontracts.actions.transition",
+            "subcontracts.list.role",
+            "subcontracts.status"
+          ],
+          "whole": false
+        },
+        "quotes": {
+          "keys": [
+            "subcontracts.list.ariaLabel",
+            "subcontracts.list.columns.actions",
+            "subcontracts.list.columns.document",
+            "subcontracts.list.columns.scope",
+            "subcontracts.list.columns.status",
+            "subcontracts.list.columns.subcontractor",
+            "subcontracts.list.columns.updated",
+            "subcontracts.list.columns.value",
+            "subcontracts.list.columns.work",
+            "subcontracts.list.deviationsOpen",
+            "subcontracts.list.scope.master",
+            "subcontracts.list.scope.single",
+            "subcontracts.list.scope.workOrder",
+            "subcontracts.list.scope.workOrderFrom",
+            "subcontracts.list.value.atLeast",
+            "subcontracts.list.value.unitRatesOnly",
+            "subcontracts.list.value.unpricedLines",
+            "subcontracts.masters.workOrdersSummary"
+          ],
+          "prefixes": [
+            "subcontracts.list.role",
+            "trades"
+          ],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__procurement__subcontracts__agreementId": {
+      "page": "src/app/(app)/o/[workspace]/procurement/subcontracts/[agreementId]/page.tsx",
+      "wants": {
+        "procurement": {
+          "keys": [
+            "subcontracts.editor.breadcrumb",
+            "subcontracts.editor.notFound",
+            "subcontracts.list.title",
+            "subcontracts.masters.title"
+          ],
+          "prefixes": [
+            "subcontracts.list.role",
+            "subcontracts.status"
+          ],
+          "whole": false
+        },
+        "quotes": {
+          "keys": [
+            "subcontracts.editor.breadcrumb",
+            "subcontracts.editor.notFound",
+            "subcontracts.list.title",
+            "subcontracts.masters.title"
+          ],
+          "prefixes": [
+            "subcontracts.list.role",
+            "trades"
           ],
           "whole": false
         }
@@ -23623,6 +23876,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "subcontracts.editor.deviations.dialog.cancel",
             "subcontracts.editor.deviations.dialog.reason",
@@ -24021,6 +24275,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "subcontracts.library.authoring.breadcrumb",
             "subcontracts.library.authoring.lead",
@@ -24320,6 +24575,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "subcontracts.library.authoring.breadcrumb",
             "subcontracts.library.authoring.lead",
@@ -24619,6 +24875,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "subcontracts.library.authoring.breadcrumb",
             "subcontracts.library.templateEditor.editTitle",
@@ -24918,6 +25175,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "subcontracts.library.authoring.breadcrumb",
             "subcontracts.library.templateEditor.editTitle",
@@ -26513,6 +26771,7 @@
             "nav.quotes",
             "nav.rfqs",
             "nav.subcontractLibrary",
+            "nav.subcontractMasters",
             "nav.vendors",
             "navigation.entities.area.label",
             "navigation.entities.building.label",
@@ -33688,13 +33947,16 @@
             "subcontracts.list.value.atLeast",
             "subcontracts.list.value.unitRatesOnly",
             "subcontracts.list.value.unpricedLines",
+            "subcontracts.masters.new",
+            "subcontracts.masters.workOrdersSummary",
             "subcontracts.messages.pending",
             "subcontracts.summary.ariaLabel",
             "subcontracts.summary.committed",
             "subcontracts.summary.documents",
             "subcontracts.summary.filterLabel",
             "subcontracts.summary.pending",
-            "subcontracts.summary.statusFigure"
+            "subcontracts.summary.statusFigure",
+            "subcontracts.workOrders.action"
           ],
           "prefixes": [
             "subcontracts.actions.confirm",
@@ -33723,7 +33985,8 @@
             "subcontracts.list.scope.workOrderFrom",
             "subcontracts.list.value.atLeast",
             "subcontracts.list.value.unitRatesOnly",
-            "subcontracts.list.value.unpricedLines"
+            "subcontracts.list.value.unpricedLines",
+            "subcontracts.masters.workOrdersSummary"
           ],
           "prefixes": [
             "subcontracts.list.role",
@@ -33740,7 +34003,8 @@
           "keys": [
             "subcontracts.editor.breadcrumb",
             "subcontracts.editor.notFound",
-            "subcontracts.list.title"
+            "subcontracts.list.title",
+            "subcontracts.masters.title"
           ],
           "prefixes": [
             "subcontracts.list.role",
@@ -33752,7 +34016,8 @@
           "keys": [
             "subcontracts.editor.breadcrumb",
             "subcontracts.editor.notFound",
-            "subcontracts.list.title"
+            "subcontracts.list.title",
+            "subcontracts.masters.title"
           ],
           "prefixes": [
             "subcontracts.list.role",
@@ -39187,7 +39452,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1273059
+    "sliceBytes": 1286145
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

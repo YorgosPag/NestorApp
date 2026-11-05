@@ -12,6 +12,7 @@
   "sections": {
     "parties": "Parties",
     "project": "Project",
+    "workOrders": "Work orders",
     "lines": "Scope and prices",
     "terms": "Commercial terms",
     "paymentPlan": "Payment plan",
@@ -34,8 +35,15 @@
     "issuingAuthority": "Issuing authority",
     "block": "Urban block",
     "plot": "Plot number",
-    "multi": "For the projects the employer assigns, with a work order per project.",
-    "assignment": "Work order"
+    "multi": "Master agreement: work is assigned per project by work order, for the projects the employer assigns. Each work order is governed by the terms of this agreement.",
+    "buildings": "Buildings"
+  },
+  "workOrders": {
+    "heading": "Work order no. {number}",
+    "start": "Start of work",
+    "duration": "Duration",
+    "days": "{days, plural, one {# day} other {# days}}",
+    "note": "Note"
   },
   "lines": {
     "columns": {

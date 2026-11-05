@@ -2413,14 +2413,20 @@
       "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
     },
     "src/app/(app)/o/[workspace]/procurement/rfqs/page.tsx": {
-      "sealed": 963,
-      "sealedAt": "2026-11-01",
+      "sealed": 1209,
+      "sealedAt": "2026-11-05",
       "history": [
         {
           "from": 0,
           "to": 963,
           "at": "2026-11-01",
           "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 963 bytes, namespaces [procurement, quotes]."
+        },
+        {
+          "from": 963,
+          "to": 1209,
+          "at": "2026-11-05",
+          "why": "ADR-928 §5.24 (2026-11-05) — ΝΕΑ ΣΦΡΑΓΙΣΗ, ΟΧΙ ΑΥΞΗΣΗ ΑΠΟ ΤΗ Φ3γ-3. ΜΕΤΡΗΜΕΝΟ με `--measure`: 1209 bytes ήδη ΠΡΙΝ από κάθε αλλαγή της Φ3γ-3 (ίδια μέτρηση πριν και μετά τα νέα κλειδιά `nav`/`subcontracts.*`) — η κλειστότητα μεγάλωσε με τις καρτέλες της υποπλοήγησης προμηθειών (ADR-928 §5.19 πρόσθεσε `nav.subcontractLibrary`) και το φίλτρο κατάστασης (ADR-330 §5.1 S3.4). Η ετυμηγορία Κ2 εμπόδιζε τον γεννήτορα να γράψει τα slices των νέων σελίδων κύριων συμβάσεων. Εντολή Giorgio: η θεραπεία της πύλης (σφράγιση με γραμμένο why)."
         }
       ],
       "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
@@ -2437,6 +2443,32 @@
         }
       ],
       "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/subcontracts/page.tsx": {
+      "sealed": 6650,
+      "sealedAt": "2026-11-05",
+      "history": [
+        {
+          "from": 0,
+          "to": 6650,
+          "at": "2026-11-05",
+          "why": "ADR-928 §5.24 Φ3γ-3 (2026-11-05) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 6650 bytes · 3,8% κελύφους · 2 ns [procurement, quotes]. Η ίδια λίστα με την καρτέλα έργου (`SubcontractAgreementsList`) + κεφαλίδα κύριων συμβάσεων."
+        }
+      ],
+      "reason": "ADR-928 §5.24 Φ3γ-3 — ΟΙ ΚΥΡΙΕΣ ΣΥΜΒΑΣΕΙΣ ΥΠΕΡΓΟΛΑΒΙΑΣ ΤΗΣ ΕΤΑΙΡΕΙΑΣ (`/o/[workspace]/procurement/subcontracts`). Κεφαλίδα, σύνολα ανά φάση, φίλτρο, αναζήτηση, πίνακας (στήλη εμβέλειας: εντολές · έργα), μεταβάσεις και «Νέα κύρια σύμβαση» ζωγραφίζουν στο πρώτο καρέ κλειδιά `procurement:subcontracts.*` που το κέλυφος δεν έχει. Καταχωρείται από το client module της σελίδας (`MasterAgreementsClient` — το `page.tsx` είναι Server Component). ⚠️ Οι διάλογοι «Νέο συμφωνητικό» και «Νέα εντολή εργασίας», η προεπισκόπηση και τα μηνύματα ευρημάτων ΔΕΝ μπαίνουν εδώ: ζουν πίσω από `import()` (ADR-744 §34)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/subcontracts/[agreementId]/page.tsx": {
+      "sealed": 2843,
+      "sealedAt": "2026-11-05",
+      "history": [
+        {
+          "from": 0,
+          "to": 2843,
+          "at": "2026-11-05",
+          "why": "ADR-928 §5.24 Φ3γ-3 (2026-11-05) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 2843 bytes · 1,6% κελύφους · 2 ns [procurement, quotes]. Ίδια με τη σελίδα του πλαισίου έργου (κοινό `SubcontractAgreementDetail`)."
+        }
+      ],
+      "reason": "ADR-928 §5.24 Φ3γ-3 — ΜΙΑ ΚΥΡΙΑ ΣΥΜΒΑΣΗ ΣΤΟ ΠΛΑΙΣΙΟ ΤΗΣ ΕΤΑΙΡΕΙΑΣ (`/o/[workspace]/procurement/subcontracts/[agreementId]`). Ίδια κοινή σελίδα με το πλαίσιο έργου (`SubcontractAgreementDetail`): κεφαλίδα, πλοήγηση πίσω στις κύριες συμβάσεις, «δεν βρέθηκε». Καταχωρείται από το `MasterAgreementDetailClient`. ⚠️ Ο επεξεργαστής, το πάνελ εντολών εργασίας και ό,τι κρίνει/αποδίδει είναι πίσω από `import()` (`AgreementDetailBody`)."
     },
     "src/app/(app)/o/[workspace]/procurement/subcontracts/library/clauses/new/page.tsx": {
       "sealed": 1921,

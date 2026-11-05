@@ -39,22 +39,32 @@ export interface SubcontractListRow {
   readonly value: EstimatedValue;
   /** Εκκρεμής ή απορριφθείσα απόκλιση — μπλοκάρει την έκδοση (§5.14 απόφαση 6). */
   readonly deviationsOpen: boolean;
-  /** Μόνο σε κύρια σύμβαση: η ανάθεση σε αυτό το έργο. */
+  /** Μόνο σε κύρια σύμβαση: η ανάθεση σε αυτό το έργο (στη λίστα έργου). */
   readonly assignment: ProjectAssignmentView | null;
+  /** Μόνο σε κύρια σύμβαση: πόσες εντολές εργασίας, σε πόσα διαφορετικά έργα (στη λίστα της εταιρείας, §5.24). */
+  readonly workOrders: { readonly count: number; readonly projects: number } | null;
 }
 
-function assignmentOf(agreement: SubcontractAgreement, projectId: string): ProjectAssignmentView | null {
-  if (agreement.scope.kind !== 'multi_project') return null;
+function assignmentOf(agreement: SubcontractAgreement, projectId: string | null): ProjectAssignmentView | null {
+  if (agreement.scope.kind !== 'multi_project' || projectId === null) return null;
   const own = agreement.scope.assignments.find((assignment) => assignment.project.projectId === projectId);
   return own ? { startDate: own.startDate, durationDays: own.durationDays } : null;
 }
 
-export function toListRows(agreements: readonly SubcontractAgreement[], projectId: string): SubcontractListRow[] {
+function workOrdersOf(agreement: SubcontractAgreement): SubcontractListRow['workOrders'] {
+  if (agreement.scope.kind !== 'multi_project') return null;
+  const { assignments } = agreement.scope;
+  return { count: assignments.length, projects: new Set(assignments.map((assignment) => assignment.project.projectId)).size };
+}
+
+/** `projectId`: το έργο της λίστας· `null` στη λίστα κύριων συμβάσεων της εταιρείας. */
+export function toListRows(agreements: readonly SubcontractAgreement[], projectId: string | null): SubcontractListRow[] {
   return agreements.map((agreement) => ({
     agreement,
     value: estimatedAgreementValue(agreement.lines),
     deviationsOpen: hasUnapprovedDeviations(agreement.clauses),
     assignment: assignmentOf(agreement, projectId),
+    workOrders: workOrdersOf(agreement),
   }));
 }
 

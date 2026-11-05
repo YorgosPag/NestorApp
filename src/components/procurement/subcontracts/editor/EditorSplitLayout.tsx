@@ -16,6 +16,10 @@
  *    μαντεμένο `100dvh-16rem` που άφηνε τη σελίδα να κυλά **και** τις στήλες να κυλούν.
  * 🔑 Συγχρονισμός: αλλαγή καρτέλας στη φόρμα (`previewRequest`) ⇒ η προεπισκόπηση κυλά στην ίδια ενότητα του εγγράφου
  *    (`data-doc-section`).
+ * 🔑 Κάθε στήλη είναι `relative`: το κρυφό εγγενές `<select>` της Radix Select είναι `position:absolute`· χωρίς
+ *    τοποθετημένο πρόγονο μέσα στο `<main>` τοποθετείται ως προς το **κέλυφος** (εκτός της κύλισης του `<main>`), το
+ *    φουσκώνει (μετρημένα 3095 px σε παράθυρο 1121) και κάθε `scrollIntoView` (μολύβι εγγράφου → κάρτα ρήτρας) κυλά
+ *    το κέλυφος 356 px — η κεφαλίδα της σελίδας χάνεται, μένει κενό κάτω (ζωντανός έλεγχος §5.23).
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -29,6 +33,7 @@ import { useFillViewportHeight } from '@/hooks/useFillViewportHeight';
 import { useIsMobile } from '@/hooks/useMobile';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { STORAGE_KEYS } from '@/lib/storage';
+import { revealSectionWhenPresent } from './preview-section-sync';
 import type { PreviewScrollRequest } from './useEditorSection';
 
 /** Όρια της φόρμας σε px — η φόρμα θέλει ~720 px για δύο πεδία ανά σειρά· το έγγραφο παίρνει τα υπόλοιπα. */
@@ -37,7 +42,7 @@ export const EDITOR_FORM_COLUMN = { widthMin: 420, widthDefault: 720, widthMax: 
 const PREVIEW_MIN_WIDTH = 360;
 const FORM_PANEL_ID = 'subcontract-editor-form';
 const PREVIEW_PANEL_ID = 'subcontract-editor-preview';
-const FILL = { minPx: 480, bottomGapPx: 16 } as const;
+const FILL = { minPx: 480, bottomGapPx: 0 } as const;
 
 const formColumnStore = createColumnLayoutStore(STORAGE_KEYS.SUBCONTRACT_EDITOR_FORM_COLUMN, EDITOR_FORM_COLUMN);
 
@@ -50,13 +55,16 @@ interface EditorSplitLayoutProps {
   readonly previewRequest?: PreviewScrollRequest | null;
 }
 
-/** Κάθε νέο αίτημα ⇒ κύλιση στο `data-doc-section` (της πρώτης γλώσσας, σε δίγλωσσο). */
+/**
+ * Κάθε νέο αίτημα ⇒ κύλιση στο `data-doc-section` (της πρώτης γλώσσας, σε δίγλωσσο)· αν το έγγραφο δεν έχει αποδοθεί
+ * ακόμη, το αίτημα το **περιμένει** (`revealSectionWhenPresent`), δεν χάνεται.
+ */
 function usePreviewSectionSync(request: PreviewScrollRequest | null | undefined) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!request) return;
-    const target = scrollerRef.current?.querySelector<HTMLElement>(`[data-doc-section="${request.section}"]`);
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const scroller = scrollerRef.current;
+    if (!request || !scroller) return;
+    return revealSectionWhenPresent(scroller, request.section);
   }, [request]);
   return scrollerRef;
 }
@@ -86,11 +94,11 @@ function DesktopSplit({ form, preview, previewTitle, previewRequest }: EditorSpl
         <ResizablePanel id={FORM_PANEL_ID} panelRef={panel} elementRef={persistence.elementRef}
           defaultSize={initial.collapsed ? 0 : initial.width} minSize={EDITOR_FORM_COLUMN.widthMin} maxSize={EDITOR_FORM_COLUMN.widthMax}
           collapsible collapsedSize={0} groupResizeBehavior="preserve-pixel-size" onResize={onResize}
-          className="min-w-0 overflow-y-auto">
+          className="relative min-w-0 overflow-y-auto">
           {form}
         </ResizablePanel>
         <ResizableHandle withHandle aria-label={t('subcontracts.editor.layout.resize')} {...persistence.separatorProps} />
-        <ResizablePanel id={PREVIEW_PANEL_ID} minSize={PREVIEW_MIN_WIDTH} elementRef={previewRef} className="min-w-0 overflow-y-auto bg-muted/20">
+        <ResizablePanel id={PREVIEW_PANEL_ID} minSize={PREVIEW_MIN_WIDTH} elementRef={previewRef} className="relative min-w-0 overflow-y-auto bg-muted/20">
           <PreviewHeader title={previewTitle} collapsed={collapsed} onToggle={toggle} />
           <section className="p-4">{preview}</section>
         </ResizablePanel>
@@ -102,7 +110,7 @@ function DesktopSplit({ form, preview, previewTitle, previewRequest }: EditorSpl
 function MobileTabs({ form, preview }: EditorSplitLayoutProps) {
   const { t } = useTranslation('procurement');
   return (
-    <Tabs defaultValue="form">
+    <Tabs defaultValue="form" className="relative">
       <TabsList>
         <TabsTrigger value="form">{t('subcontracts.editor.tabs.form')}</TabsTrigger>
         <TabsTrigger value="preview">{t('subcontracts.editor.tabs.preview')}</TabsTrigger>

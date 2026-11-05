@@ -39,6 +39,15 @@ describe('subcontract-list-view', () => {
     expect(toListRows([sampleAgreement()], 'proj_1')[0].assignment).toBeNull();
   });
 
+  it('§5.24 λίστα της εταιρείας (`projectId: null`): καμία «εντολή αυτού του έργου», μετρά εντολές και ΔΙΑΦΟΡΕΤΙΚΑ έργα', () => {
+    const [row] = toListRows([master], null);
+    expect(row.assignment).toBeNull();
+    expect(row.workOrders).toEqual({ count: 2, projects: 2 });
+    const again = { ...master, scope: { kind: 'multi_project' as const, assignments: [...(master.scope.kind === 'multi_project' ? master.scope.assignments : []), { id: 'scas_3', project: sampleProjectIdentity('proj_1'), startDate: null, durationDays: null, note: null, assignedBy: 'u', assignedAt: '' }] } };
+    expect(toListRows([again], null)[0].workOrders).toEqual({ count: 3, projects: 2 });
+    expect(toListRows([sampleAgreement()], null)[0].workOrders).toBeNull();
+  });
+
   it('αναζήτηση σε αριθμό, υπεργολάβο, ΑΦΜ και τίτλο σε ΚΑΘΕ γλώσσα· φίλτρο κατάστασης', () => {
     const rows = toListRows([sampleAgreement(), master], 'proj_1');
     expect(filterListRows(rows, [], 'συμ-2026').map((row) => row.agreement.id)).toEqual(['sca_master']);

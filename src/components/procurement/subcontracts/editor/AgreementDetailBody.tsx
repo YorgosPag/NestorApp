@@ -23,10 +23,12 @@ import { AgreementLifecycleActions } from './AgreementLifecycleActions';
 import { DeviationsPanel } from './DeviationsPanel';
 import { EditorToolbar } from './EditorToolbar';
 import { useAgreementEditor } from './useAgreementEditor';
+import { WorkOrdersPanel } from '../work-orders/WorkOrdersPanel';
 
 export interface AgreementDetailBodyProps {
   readonly agreement: SubcontractAgreement;
-  readonly projectId: string;
+  /** Το έργο του πλαισίου· `null` στη σελίδα της εταιρείας (κύρια σύμβαση, ADR-928 §5.24). */
+  readonly projectId: string | null;
   /** Ο τίτλος του εγγράφου (αριθμός · τίτλος · κατάσταση), από τη σελίδα — μπαίνει αριστερά στη γραμμή κεφαλίδας. */
   readonly title: ReactNode;
 }
@@ -52,6 +54,7 @@ function EditableBody({ agreement, projectId, title, canApprove }: BodyProps) {
         <AgreementLifecycleActions agreement={agreement} projectId={projectId} unsaved={editor.unsaved} />
       </HeaderRow>
       <DeviationsPanel agreement={agreement} canApprove={canApprove} unsaved={editor.unsaved} />
+      <WorkOrdersPanel agreement={agreement} />
       <AgreementEditor editor={editor} />
     </>
   );
@@ -64,6 +67,7 @@ function ReadOnlyBody({ agreement, projectId, title, canApprove }: BodyProps) {
         <AgreementLifecycleActions agreement={agreement} projectId={projectId} unsaved={false} />
       </HeaderRow>
       <DeviationsPanel agreement={agreement} canApprove={canApprove} unsaved={false} />
+      <WorkOrdersPanel agreement={agreement} />
       <section className="space-y-4 rounded-lg border bg-muted/20 p-4">
         <AgreementDocumentColumns agreement={agreement} />
         <AgreementPaymentCalendar agreement={agreement} />

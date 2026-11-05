@@ -83,8 +83,8 @@ beforeEach(async () => {
   fake.seed('projects', 'proj_1', { companyId: 'comp-aries', name: 'Οικοδομή Κηφισιάς', address: 'Λεβίδου 12, Κηφισιά', licenseNumber: '123/2026', buildingBlock: 'Ο.Τ. 45' });
   fake.seed('projects', 'proj_2', { companyId: 'comp-aries', name: 'Οικοδομή Μαρουσιού', address: 'Κηφισίας 100' });
   fake.seed('projects', 'proj_rival', { companyId: 'comp-rival', name: 'Ξένο', address: '—' });
-  fake.seed('buildings', 'bld_1', { companyId: 'comp-aries', projectId: 'proj_1' });
-  fake.seed('buildings', 'bld_other', { companyId: 'comp-aries', projectId: 'proj_2' });
+  fake.seed('buildings', 'bld_1', { companyId: 'comp-aries', projectId: 'proj_1', name: '  ', code: 'Κτήριο Α' });
+  fake.seed('buildings', 'bld_other', { companyId: 'comp-aries', projectId: 'proj_2', name: 'Πολυκατοικία Β' });
   fake.seed('contacts', 'ct_sub', { companyId: 'comp-aries', type: 'individual', firstName: 'Νίκος', lastName: 'Σοβατζής', fatherName: 'Γεώργιος' });
   await approvedLibrary();
 });
@@ -97,6 +97,8 @@ describe('δημιουργία', () => {
     expect(first.parties.issuer.name).toBe('Άρης Κατασκευαστική ΑΕ');
     expect(first.parties.subcontractor).toMatchObject({ name: 'Νίκος Σοβατζής', fatherName: 'Γεώργιος', contactId: 'ct_sub' });
     expect(first.scope).toMatchObject({ kind: 'single_project', project: { name: 'Οικοδομή Κηφισιάς', licenseNumber: '123/2026', buildingIds: ['bld_1'] } });
+    // §5.24: ο γραφέας στιγμιοτυπεί και την ετικέτα — κενό όνομα ⇒ ο κλειδωμένος κωδικός (`buildingLabelOf`).
+    expect(first.scope.kind === 'single_project' && first.scope.project.buildings).toEqual([{ id: 'bld_1', label: 'Κτήριο Α' }]);
     expect((await createSubcontractAgreement(ENGINEER, draft())).documentNumber).toMatch(/-002$/);
     expect(audited.filter((entry) => entry.entityType === 'subcontract_agreement')).toHaveLength(2);
   });
@@ -170,10 +172,10 @@ describe('κύκλος ζωής', () => {
     expect(offer.projectIds).toEqual([]);
     const accepted = await transition(ENGINEER, (await transition(ENGINEER, offer, 'issue')).agreement, 'accept');
     const assigned = await addSubcontractAgreementAssignment(ENGINEER, offer.id, {
-      expectedRevision: accepted.agreement.revision, projectId: 'proj_2', buildingIds: [], startDate: '2026-12-01', durationDays: 30, note: null,
+      expectedRevision: accepted.agreement.revision, projectId: 'proj_2', buildingIds: ['bld_other'], startDate: '2026-12-01', durationDays: 30, note: null,
     });
     expect(assigned.projectIds).toEqual(['proj_2']);
-    expect(assigned.scope).toMatchObject({ kind: 'multi_project', assignments: [{ project: { name: 'Οικοδομή Μαρουσιού' }, assignedBy: ENGINEER.uid }] });
+    expect(assigned.scope).toMatchObject({ kind: 'multi_project', assignments: [{ project: { name: 'Οικοδομή Μαρουσιού', buildings: [{ id: 'bld_other', label: 'Πολυκατοικία Β' }] }, assignedBy: ENGINEER.uid }] });
   });
 
   it('ξένος χώρος ≡ ανύπαρκτο', async () => {

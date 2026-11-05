@@ -67,6 +67,17 @@ export interface ProjectIdentitySnapshot {
   readonly buildingBlock: string | null;
   readonly plotNumber: string | null;
   readonly buildingIds: readonly string[];
+  /**
+   * Τα κτίρια με την ετικέτα τους τη στιγμή της εγγραφής (ADR-928 §5.24), για να τα τυπώνει το έγγραφο. Προαιρετικό:
+   * έγγραφα πριν από την §5.24 δεν το έχουν ⇒ το έγγραφο **δεν** τυπώνει κτίρια (ποτέ ταυτότητα στη θέση ονόματος).
+   */
+  readonly buildings?: readonly ProjectBuildingSnapshot[];
+}
+
+/** Κτίριο του έργου όπως τυπώνεται — στιγμιότυπο, όχι ζωντανή αναφορά. */
+export interface ProjectBuildingSnapshot {
+  readonly id: string;
+  readonly label: string;
 }
 
 /** Ανάθεση εργοταξίου σε συμφωνητικό πολλών έργων — **χωρίς** νέο έγγραφο (Δ2). */

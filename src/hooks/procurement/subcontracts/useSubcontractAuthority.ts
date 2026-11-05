@@ -26,6 +26,7 @@ import {
   type SubcontractAuthority,
 } from '@/subapps/procurement/subcontracts/vocabulary/subcontract-authorities';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
+import type { WorkOrderTargetVerdict } from '@/subapps/procurement/subcontracts/agreements/work-orders';
 
 /** Οι δικαιοδοσίες που κρίνει η οθόνη συμφωνητικών, στη σειρά του πίνακα. */
 const SCREEN_AUTHORITIES = ['agreements', 'assign', 'approveDeviation'] as const satisfies readonly SubcontractAuthority[];
@@ -63,7 +64,11 @@ export interface SubcontractAuthorityView {
   readonly canApproveDeviation: boolean;
 }
 
-export function useSubcontractAuthority(projectId: string): SubcontractAuthorityView {
+/**
+ * `projectId`: το έργο του πλαισίου πλοήγησης· `null` στις σελίδες της **εταιρείας** (κύριες συμβάσεις, §5.24) ⇒ κάθε
+ * κρίση πέφτει στην εταιρεία, κανένα δικαίωμα έργου δεν «δανείζεται».
+ */
+export function useSubcontractAuthority(projectId: string | null): SubcontractAuthorityView {
   const gates = useCapabilities(COMPANY_PERMISSIONS);
   const projectCapabilities = useProjectCapabilities(projectId);
 
@@ -93,6 +98,17 @@ export function useSubcontractAuthority(projectId: string): SubcontractAuthority
     }),
     [canManage, projectManage, projectAssign, company],
   );
+}
+
+/**
+ * Εντολή εργασίας προς το έργο-**στόχο** (ADR-928 §5.15 · §5.24) — **όχι** το έργο της σελίδας: ο υπεύθυνος του έργου Α
+ * δεν δίνει εντολή στο Β. Ίδια πηγή με τον διακομιστή (`useProjectCapabilities`, ADR-926 Κ7): ο πόρος της διαδρομής
+ * είναι το `projectId` του σώματος (`projectOfAssignmentTarget`). Χωρίς στόχο ή χωρίς απάντηση ⇒ `pending` (fail-closed).
+ */
+export function useWorkOrderTargetAuthority(targetProjectId: string | null): WorkOrderTargetVerdict {
+  const capabilities = useProjectCapabilities(targetProjectId);
+  if (!targetProjectId || capabilities === null) return 'pending';
+  return capabilities['subcontracts:agreements:assign'] === true ? 'granted' : 'denied';
 }
 
 export interface SubcontractLibraryAuthorityView {

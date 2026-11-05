@@ -13,7 +13,7 @@ import { issuesAt, issuesUnder } from '../issue-paths';
 import { judgeAgreementDraft } from '../judge-agreement-draft';
 import { judgeClauseSelections, selectionInputsOf, type ApprovedLibrary } from '../judge-deviations';
 import { projectDraftAgreement } from '../project-draft-agreement';
-import { LIBRARY, sampleAgreement } from './agreement-fixtures';
+import { LIBRARY, sampleAgreement, sampleProjectIdentity } from './agreement-fixtures';
 
 const TODAY = '2026-11-03';
 const ACTOR = 'u_author';
@@ -124,18 +124,26 @@ describe('projectDraftAgreement — η προεπισκόπηση δείχνει
     expect(agreement).toEqual(saved);
   });
 
-  it('τιμή ρήτρας, τίτλος, κτίρια του ίδιου έργου ⇒ φαίνονται αμέσως', () => {
+  it('τιμή ρήτρας, τίτλος, αφαίρεση κτιρίου ⇒ φαίνονται αμέσως', () => {
     const draft = draftInputOf(saved);
     const { agreement, stale } = project({
       title: { el: 'Νέος τίτλος' },
-      scope: { kind: 'single_project', projectId: 'proj_1', buildingIds: ['bld_1', 'bld_2'] },
+      scope: { kind: 'single_project', projectId: 'proj_1', buildingIds: [] },
       clauses: [draft.clauses[0], { ...draft.clauses[1], parameterValues: { instrument: { kind: 'enum', value: 'cheque' } }, deviationReasons: { instrument: 'λόγος' } }],
     });
     expect(stale).toEqual([]);
     expect(agreement.title).toEqual({ el: 'Νέος τίτλος' });
-    expect(agreement.scope.kind === 'single_project' && agreement.scope.project.buildingIds).toEqual(['bld_1', 'bld_2']);
+    expect(agreement.scope.kind === 'single_project' && agreement.scope.project.buildingIds).toEqual([]);
     expect(agreement.clauses[1].parameterValues.instrument).toEqual({ kind: 'enum', value: 'cheque' });
     expect(agreement.clauses[1].deviations.instrument.decision).toBe('pending');
+  });
+
+  it('§5.24: νέο κτίριο ⇒ η ετικέτα του ΔΕΝ μαντεύεται (stale)· όσα έμειναν κρατούν τη δική τους', () => {
+    const labelled = sampleAgreement({ scope: { kind: 'single_project', project: { ...sampleProjectIdentity(), buildings: [{ id: 'bld_1', label: 'Κτήριο Α' }] } } });
+    const draft = { ...draftInputOf(labelled), scope: { kind: 'single_project' as const, projectId: 'proj_1', buildingIds: ['bld_1', 'bld_2'] } };
+    const { agreement, stale } = projectDraftAgreement(labelled, draft, judgeAgreementDraft(draft, { ...context(), previous: labelled.clauses }).selections);
+    expect(stale).toEqual(['scope']);
+    expect(agreement.scope.kind === 'single_project' && agreement.scope.project.buildings).toEqual([{ id: 'bld_1', label: 'Κτήριο Α' }]);
   });
 
   it('άλλος υπεργολάβος / ονομαστικοί οικοπεδούχοι / άλλο έργο ⇒ ΔΕΝ μαντεύεται, αναφέρεται', () => {

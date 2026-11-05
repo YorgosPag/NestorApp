@@ -9,7 +9,7 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import { createStaleCache } from '@/lib/stale-cache';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useMaterials } from '../useMaterials';
-import { useProjectSubcontractAgreements } from '../subcontracts/useProjectSubcontractAgreements';
+import { useCompanyMasterSubcontractAgreements, useProjectSubcontractAgreements } from '../subcontracts/useProjectSubcontractAgreements';
 import { useProcurementCatalogList, type ProcurementCatalogListConfig } from '../useProcurementCatalogList';
 
 jest.mock('firebase/firestore', () => ({
@@ -56,6 +56,17 @@ describe('useProcurementCatalogList — πεδίο ζωντάνιας', () => {
     expect(constraintsOf(lastCall())).toEqual([{ type: 'where', field: 'isArchived', op: '==', value: false }]);
     deliver([{ id: 'b', isArchived: false, rank: 2 }, { id: 'x', isArchived: true, rank: 0 }, { id: 'a', isArchived: false, rank: 1 }]);
     expect(result.current.items.map((doc) => doc.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('useCompanyMasterSubcontractAgreements — οι κύριες συμβάσεις της εταιρείας (ADR-928 §5.24)', () => {
+  it('ερώτημα = `scope.kind == multi_project` + `updatedAt ↓` (δείκτης `companyId + scope.kind + updatedAt`) — όχι `projectIds`, που είναι κενό ως την πρώτη εντολή', () => {
+    renderHook(() => useCompanyMasterSubcontractAgreements());
+    expect(lastCall()[0]).toBe('SUBCONTRACT_AGREEMENTS');
+    expect(constraintsOf(lastCall())).toEqual([
+      { type: 'where', field: 'scope.kind', op: '==', value: 'multi_project' },
+      { type: 'orderBy', field: 'updatedAt', direction: 'desc' },
+    ]);
   });
 });
 

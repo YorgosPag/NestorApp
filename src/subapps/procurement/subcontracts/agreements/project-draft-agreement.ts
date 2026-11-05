@@ -27,13 +27,21 @@ export interface ProjectedDraftAgreement {
 
 type Projected<T> = { readonly value: T; readonly stale: boolean };
 
+const sameIds = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((id, index) => id === b[index]);
+
+/**
+ * Κτίρια του ίδιου έργου: οι ετικέτες είναι στιγμιότυπο του γραφέα (§5.24). Όσα έμειναν επιλεγμένα κρατούν την ετικέτα
+ * τους· νέο κτίριο **δεν** έχει ακόμη ετικέτα ⇒ `stale` (ενημερώνεται στην αποθήκευση), ποτέ ταυτότητα στο χαρτί.
+ */
 function scopeOf(saved: AgreementScope, input: AgreementScopeInput): Projected<AgreementScope> {
   if (saved.kind === 'multi_project') return { value: saved, stale: input.kind !== 'multi_project' };
   if (input.kind !== 'single_project' || input.projectId !== saved.project.projectId) return { value: saved, stale: true };
-  return { value: { kind: 'single_project', project: { ...saved.project, buildingIds: input.buildingIds } }, stale: false };
+  if (sameIds(saved.project.buildingIds, input.buildingIds)) return { value: saved, stale: false };
+  const known = new Map((saved.project.buildings ?? []).map((building) => [building.id, building]));
+  const buildings = input.buildingIds.flatMap((id) => known.get(id) ?? []);
+  const project = { ...saved.project, buildingIds: input.buildingIds, buildings };
+  return { value: { kind: 'single_project', project }, stale: buildings.length !== input.buildingIds.length };
 }
-
-const sameIds = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((id, index) => id === b[index]);
 
 function ownersOf(saved: ProjectOwnersPresentation, input: ProjectOwnersInput): Projected<ProjectOwnersPresentation> {
   if (input.kind !== 'named') return { value: input, stale: false };

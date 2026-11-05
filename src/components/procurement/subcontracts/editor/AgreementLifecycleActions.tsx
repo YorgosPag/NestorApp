@@ -20,7 +20,7 @@ import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/ty
 
 interface AgreementLifecycleActionsProps {
   readonly agreement: SubcontractAgreement;
-  readonly projectId: string;
+  readonly projectId: string | null;
   readonly unsaved: boolean;
 }
 

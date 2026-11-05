@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SubcontractAgreementStatusBadge } from '@/components/procurement/subcontracts/SubcontractAgreementStatusBadge';
 import { formatCalendarDate, formatDate } from '@/lib/intl-utils';
 import { formatMinor } from '@/lib/money/money';
-import { getSubcontractAgreementUrl } from '@/lib/navigation/procurement-urls';
+import { getAgreementUrlIn } from '@/lib/navigation/procurement-urls';
 import { Link } from '@/lib/workspace/navigation';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
 import type { SubcontractListRow } from './subcontract-list-view';
@@ -24,8 +24,11 @@ import type { RowAction } from './subcontract-row-actions';
 import { SubcontractRowActions } from './SubcontractRowActions';
 
 interface SubcontractAgreementsTableProps {
-  /** Το έργο του πλαισίου: η σελίδα λεπτομέρειας ανοίγει μέσα σε αυτό (και για κύρια σύμβαση με εντολή εργασίας εδώ). */
-  readonly projectId: string;
+  /**
+   * Το έργο του πλαισίου: η σελίδα λεπτομέρειας ανοίγει μέσα σε αυτό (και για κύρια σύμβαση με εντολή εργασίας εδώ).
+   * `null` ⇒ η λίστα κύριων συμβάσεων της εταιρείας (ADR-928 §5.24).
+   */
+  readonly projectId: string | null;
   readonly rows: readonly SubcontractListRow[];
   readonly actionsOf: (agreement: SubcontractAgreement) => readonly RowAction[];
   readonly pendingIds: ReadonlySet<string>;
@@ -47,7 +50,8 @@ function ValueCell({ row }: { row: SubcontractListRow }) {
   );
 }
 
-function ScopeCell({ row }: { row: SubcontractListRow }) {
+/** `projectId === null`: λίστα της εταιρείας ⇒ μετρά τις εντολές· αλλιώς η εντολή **αυτού** του έργου. */
+function ScopeCell({ row, projectId }: { row: SubcontractListRow; projectId: string | null }) {
   const { t } = useTranslation('procurement');
   if (row.agreement.scope.kind === 'single_project') return <span>{t('subcontracts.list.scope.single')}</span>;
   const start = row.assignment?.startDate;
@@ -55,7 +59,9 @@ function ScopeCell({ row }: { row: SubcontractListRow }) {
     <span className="flex flex-col">
       <span>{t('subcontracts.list.scope.master')}</span>
       <span className="text-xs text-muted-foreground">
-        {start ? t('subcontracts.list.scope.workOrderFrom', { date: formatCalendarDate(start) }) : t('subcontracts.list.scope.workOrder')}
+        {projectId === null
+          ? t('subcontracts.masters.workOrdersSummary', { count: row.workOrders?.count ?? 0, projects: row.workOrders?.projects ?? 0 })
+          : start ? t('subcontracts.list.scope.workOrderFrom', { date: formatCalendarDate(start) }) : t('subcontracts.list.scope.workOrder')}
       </span>
     </span>
   );
@@ -94,13 +100,13 @@ function AgreementRow({ projectId, row, actions, pending, onRun, onPreview }: Ro
     <TableRow aria-busy={pending || undefined}>
       <TableCell className="whitespace-nowrap">
         <span className="flex flex-col">
-          <Link href={getSubcontractAgreementUrl(projectId, agreement.id)} className="font-mono text-sm underline-offset-4 hover:underline">{agreement.documentNumber}</Link>
+          <Link href={getAgreementUrlIn(projectId, agreement.id)} className="font-mono text-sm underline-offset-4 hover:underline">{agreement.documentNumber}</Link>
           <span className="text-xs text-muted-foreground">{t(`subcontracts.list.role.${agreement.role}`)}</span>
         </span>
       </TableCell>
       <TableCell><WorkCell agreement={agreement} /></TableCell>
       <TableCell>{agreement.parties.subcontractor.name}</TableCell>
-      <TableCell className="text-sm"><ScopeCell row={row} /></TableCell>
+      <TableCell className="text-sm"><ScopeCell row={row} projectId={projectId} /></TableCell>
       <TableCell className="text-right tabular-nums whitespace-nowrap"><ValueCell row={row} /></TableCell>
       <TableCell><StatusCell row={row} /></TableCell>
       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(agreement.updatedAt)}</TableCell>

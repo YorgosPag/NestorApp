@@ -81,6 +81,10 @@
           "unpricedLines": "{count, plural, one {# γραμμή χωρίς ποσότητα} other {# γραμμές χωρίς ποσότητα}}"
         }
       },
+      "masters": {
+        "new": "Νέα κύρια σύμβαση",
+        "workOrdersSummary": "{count, plural, =0 {Χωρίς εντολή εργασίας ακόμη} one {# εντολή εργασίας · {projects, plural, one {# έργο} other {# έργα}}} other {# εντολές εργασίας · {projects, plural, one {# έργο} other {# έργα}}}}"
+      },
       "messages": {
         "pending": "Χρειάζεται διόρθωση"
       },
@@ -102,6 +106,9 @@
         "filterLabel": "Φίλτρο κατάστασης",
         "pending": "Σε εκκρεμότητα",
         "statusFigure": "{count} · {amount}"
+      },
+      "workOrders": {
+        "action": "Νέα εντολή εργασίας"
       }
     }
   },

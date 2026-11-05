@@ -65,9 +65,17 @@ export interface DocumentClause {
   readonly untranslatedNote: string | null;
 }
 
+/** Εντολή εργασίας κύριας σύμβασης (ADR-928 §5.24): «Εντολή εργασίας αρ. 2» + ταυτότητα έργου, κτίρια, χρόνοι. */
+export interface DocumentWorkOrder {
+  readonly number: number;
+  readonly heading: string;
+  readonly fields: readonly DocumentField[];
+}
+
 export interface DocumentSectionLabels {
   readonly parties: string;
   readonly project: string;
+  readonly workOrders: string;
   readonly lines: string;
   readonly terms: string;
   readonly paymentPlan: string;
@@ -89,6 +97,8 @@ export interface AgreementDocument {
   readonly parties: readonly DocumentParty[];
   readonly signatory: string | null;
   readonly project: readonly DocumentField[];
+  /** Μόνο σε κύρια σύμβαση: οι εντολές εργασίας με τη σειρά έκδοσης (§5.24). */
+  readonly workOrders: readonly DocumentWorkOrder[];
   readonly lines: readonly DocumentLineRow[];
   readonly totals: DocumentTotals;
   readonly terms: readonly string[];

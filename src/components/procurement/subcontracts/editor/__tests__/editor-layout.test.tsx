@@ -7,7 +7,8 @@ import React from 'react';
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
-import { fillHeightOf } from '@/hooks/useFillViewportHeight';
+import { fillHeightOf, measureFillHeight } from '@/hooks/useFillViewportHeight';
+import { revealSectionWhenPresent } from '../preview-section-sync';
 import { PAPER_A4_WIDTH_PX, PAPER_MAX_ZOOM, paperFitOf } from '../../document/paper-fit';
 import { AGREEMENT_SECTION_MAP, TEMPLATE_SECTION_MAP, sectionHash, sectionOfHash } from '../editor-sections';
 import { EditorSectionTabs } from '../EditorSectionTabs';
@@ -70,6 +71,13 @@ describe('useEditorSection — ένας κάτοχος για καρτέλες �
     act(() => result.current.select('clauses', 'document'));
     expect(result.current.section).toBe('clauses');
     expect(result.current.previewRequest).toBeNull();
+  });
+
+  it('καρτέλα από τη διεύθυνση (ανανέωση) ⇒ και η προεπισκόπηση ζητείται εκεί· η πρώτη ενότητα ⇒ κανένα αίτημα', () => {
+    window.history.replaceState(null, '', '/agreement#editor-clauses');
+    expect(renderHook(() => useEditorSection(AGREEMENT_SECTION_MAP)).result.current.previewRequest).toEqual({ section: 'clauses', seq: 1 });
+    window.history.replaceState(null, '', '/agreement#editor-identity');
+    expect(renderHook(() => useEditorSection(AGREEMENT_SECTION_MAP)).result.current.previewRequest).toBeNull();
   });
 
   it('σύνδεσμος μέσα στη φόρμα (`#editor-plan`) ⇒ αλλάζει καρτέλα', () => {
@@ -140,5 +148,88 @@ describe('fillHeightOf — ό,τι μένει από το παράθυρο', () 
 
   it('χαμηλό παράθυρο ⇒ το ελάχιστο (κυλά η σελίδα, δεν γίνεται λωρίδα)', () => {
     expect(fillHeightOf(700, 400, { minPx: 480, bottomGapPx: 16 })).toBe(480);
+  });
+});
+
+const rect = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
+
+/**
+ * Όριο (κόβει, padding βάσης 24, κυλισμένο κατά `scrolled`) ⊃ περιτύλιγμα ⊃ [στοιχείο, αδελφό 40 px από κάτω].
+ * Το jsdom δεν έχει διάταξη ούτε `overflow-y` στο inline style: τα rect και η υπολογισμένη μορφή του ορίου δίνονται.
+ */
+function boundaryFixture(scrolled = 0) {
+  const boundary = document.createElement('section');
+  boundary.style.paddingBottom = '24px';
+  Object.defineProperty(boundary, 'clientHeight', { value: 1000 });
+  Object.defineProperty(boundary, 'scrollTop', { value: scrolled });
+  const wrapper = document.createElement('section');
+  const element = document.createElement('section');
+  wrapper.append(element, document.createElement('footer'));
+  boundary.append(wrapper);
+  document.body.append(boundary);
+  const realStyle = window.getComputedStyle.bind(window);
+  // Ό,τι θα έδινε ο browser: `visible` αντί για το `''` του jsdom, και `hidden` στο όριο.
+  const styled = (style: CSSStyleDeclaration, overrides: Readonly<Record<string, string>>) =>
+    new Proxy(style, { get: (target, prop) => (typeof prop === 'string' && prop in overrides ? overrides[prop] : Reflect.get(target, prop, target)) });
+  jest.spyOn(window, 'getComputedStyle').mockImplementation((node: Element) => {
+    const style = realStyle(node);
+    return node === boundary ? styled(style, { overflowY: 'hidden' }) : styled(style, { overflowY: style.overflowY || 'visible' });
+  });
+  jest.spyOn(boundary, 'getBoundingClientRect').mockReturnValue(rect(0, 1000));
+  jest.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(rect(100 - scrolled, 340 - scrolled));
+  jest.spyOn(element, 'getBoundingClientRect').mockReturnValue(rect(100 - scrolled, 300 - scrolled));
+  return { element };
+}
+
+describe('measureFillHeight — το όριο και ό,τι ακολουθεί, μετρημένα (ζωντανός έλεγχος §5.23)', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('όριο = ο πρόγονος που κόβει (όχι το παράθυρο)· αφαιρούνται αδέλφια + padding βάσης, όχι σταθερό κενό', () => {
+    const { element } = boundaryFixture();
+    // 1000 (κάτω άκρο ορίου) − 100 (κορυφή) − 40 (αδελφό) − 24 (padding) = 836 — η πρώτη εκδοχή έδινε innerHeight − 100 − 16.
+    expect(measureFillHeight(element, { minPx: 480, bottomGapPx: 0 })).toBe(836);
+  });
+
+  it('η κύλιση του ορίου δεν αλλάζει το αποτέλεσμα (κορυφή και όριο μετρώνται στην ίδια θέση κύλισης 0)', () => {
+    const { element } = boundaryFixture(356);
+    expect(measureFillHeight(element, { minPx: 480, bottomGapPx: 0 })).toBe(836);
+  });
+});
+
+describe('revealSectionWhenPresent — το αίτημα κύλισης δεν χάνεται', () => {
+  const scrollIntoView = jest.fn();
+  beforeAll(() => { Element.prototype.scrollIntoView = scrollIntoView; });
+  beforeEach(() => scrollIntoView.mockClear());
+
+  it('ο στόχος υπάρχει ⇒ κύλιση αμέσως', () => {
+    const scroller = document.createElement('div');
+    const node = document.createElement('section');
+    node.dataset.docSection = 'clauses';
+    scroller.append(node);
+    revealSectionWhenPresent(scroller, 'clauses');
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  it('ο στόχος αποδίδεται αργότερα ⇒ η κύλιση γίνεται τότε· μετά την ακύρωση ⇒ καμία', async () => {
+    const scroller = document.createElement('div');
+    revealSectionWhenPresent(scroller, 'clauses');
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    const late = document.createElement('section');
+    late.dataset.docSection = 'clauses';
+    scroller.append(late);
+    await Promise.resolve();
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+
+    const other = document.createElement('div');
+    const cancel = revealSectionWhenPresent(other, 'plan');
+    cancel();
+    const plan = document.createElement('section');
+    plan.dataset.docSection = 'plan';
+    other.append(plan);
+    await Promise.resolve();
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
   });
 });

@@ -17,6 +17,7 @@ import 'server-only';
 import type { DocumentData } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { buildingLabelOf } from '@/lib/buildings/building-label';
 import { ownedOrNull } from '@/lib/auth/tenant-ownership';
 import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocsInTransaction } from '@/server/lib/owned-contact-docs';
@@ -27,6 +28,7 @@ import { extractContactParty, type ContactParty } from '@/subapps/accounting/uti
 import type { ProjectOwnersInput } from '@/subapps/procurement/subcontracts/agreements/agreement-draft';
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
 import type {
+  ProjectBuildingSnapshot,
   ProjectIdentitySnapshot,
   ProjectOwnerSnapshot,
   ProjectOwnersPresentation,
@@ -94,6 +96,14 @@ function projectAddressOf(project: Project): string {
 
 const nonBlank = (value: string | undefined): string | null => (value && value.trim() ? value.trim() : null);
 
+/** Ό,τι χρειάζεται από το έγγραφο κτιρίου: ιδιοκτησία, έργο, ετικέτα (ADR-928 §5.24). */
+interface BuildingFacts {
+  readonly companyId: string;
+  readonly projectId?: string;
+  readonly name?: unknown;
+  readonly code?: unknown;
+}
+
 /**
  * Η ταυτότητα του έργου, με κτίρια που ανήκουν **σε αυτό** το έργο. `path`: πού δείχνει το εύρημα (εμβέλεια ή ανάθεση).
  */
@@ -109,9 +119,12 @@ export async function readProjectIdentity(
     : [];
   const project = ownedOrNull(projectSnap.data() as Project | undefined, scope.ctx.companyId, { resource: 'project', resourceId: projectId });
   if (!project) return fail('projectUnknown', `${path}.projectId`);
-  const issues: SubcontractIssue[] = buildingSnaps.flatMap((snap, index) => {
-    const building = ownedOrNull(snap.data() as { companyId: string; projectId?: string } | undefined, scope.ctx.companyId, { resource: 'building', resourceId: snap.id });
-    return building && building.projectId === projectId ? [] : [{ code: 'buildingNotInProject' as const, path: `${path}.buildingIds.${index}` }];
+  const buildings: ProjectBuildingSnapshot[] = [];
+  const issues: SubcontractIssue[] = [];
+  buildingSnaps.forEach((snap, index) => {
+    const building = ownedOrNull(snap.data() as BuildingFacts | undefined, scope.ctx.companyId, { resource: 'building', resourceId: snap.id });
+    if (building && building.projectId === projectId) buildings.push({ id: snap.id, label: buildingLabelOf({ ...building, id: snap.id }) });
+    else issues.push({ code: 'buildingNotInProject', path: `${path}.buildingIds.${index}` });
   });
   if (issues.length > 0) return { ok: false, issues };
   return {
@@ -125,6 +138,7 @@ export async function readProjectIdentity(
       buildingBlock: nonBlank(project.buildingBlock),
       plotNumber: nonBlank(project.plotNumber),
       buildingIds: [...buildingIds],
+      buildings,
     },
   };
 }

@@ -19,7 +19,7 @@ import { useSubcontractFailureMessage, useSubcontractIssueMessage } from '@/comp
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
 import { rowActionsOf, type RowAction, type RowActionBlock } from './subcontract-row-actions';
 
-export function useSubcontractRowActions(projectId: string): (agreement: SubcontractAgreement) => readonly RowAction[] {
+export function useSubcontractRowActions(projectId: string | null): (agreement: SubcontractAgreement) => readonly RowAction[] {
   const { user } = useAuth();
   const authority = useSubcontractAuthority(projectId);
   const { library, loading } = useSubcontractClauseLibrary();

@@ -330,6 +330,7 @@
     "agreements": "Agreements",
     "analytics": "Analytics",
     "ariaLabel": "Procurement sections",
+    "subcontractMasters": "Master agreements",
     "subcontractLibrary": "Subcontract library"
   },
   "header": {
@@ -892,6 +893,53 @@
         "atLeast": "≥ {amount}",
         "unpricedLines": "{count, plural, one {# line without quantity} other {# lines without quantity}}",
         "unitRatesOnly": "Unit rates only"
+      }
+    },
+    "masters": {
+      "title": "Master subcontract agreements",
+      "subtitle": "Terms and prices are signed once; each project gets its own work order.",
+      "related": "Related",
+      "new": "New master agreement",
+      "empty": "There is no master agreement yet.",
+      "workOrdersSummary": "{count, plural, =0 {No work order yet} one {# work order · {projects, plural, one {# project} other {# projects}}} other {# work orders · {projects, plural, one {# project} other {# projects}}}}"
+    },
+    "workOrders": {
+      "title": "Work orders",
+      "count": "{count, plural, =0 {No work order yet} one {# work order} other {# work orders}}",
+      "action": "New work order",
+      "number": "WO-{number}",
+      "days": "{count, plural, one {# day} other {# days}}",
+      "columns": {
+        "number": "No.",
+        "project": "Project",
+        "buildings": "Buildings",
+        "start": "Start",
+        "duration": "Duration",
+        "note": "Note",
+        "assigned": "Issued"
+      },
+      "blocked": {
+        "notAssignable": "A work order can be issued once the master agreement is accepted, and while it is in execution.",
+        "chooseProject": "Choose a project.",
+        "denied": "You do not have the right to issue a work order on this project.",
+        "incomplete": "Fill in the master agreement and the project."
+      },
+      "dialog": {
+        "title": "New work order",
+        "description": "Site assignment under a master agreement: prices and terms come from the agreement; here you set the project, the buildings and the timing.",
+        "master": "Master agreement",
+        "chooseMaster": "Choose a master agreement",
+        "noMasters": "No master agreement accepts a work order now (it must have been accepted).",
+        "project": "Project",
+        "chooseProject": "Choose a project",
+        "noProjects": "No projects found.",
+        "previous": "This project already has work order WO-{number} under this agreement (start {date}). A new work order is added; it does not replace it.",
+        "start": "Start of work",
+        "noStart": "No date",
+        "duration": "Duration (days)",
+        "note": "Note",
+        "submit": "Issue work order",
+        "created": "The work order was issued."
       }
     },
     "summary": {

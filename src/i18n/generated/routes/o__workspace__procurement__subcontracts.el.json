@@ -1,0 +1,170 @@
+{
+  "procurement": {
+    "nav": {
+      "subcontractLibrary": "Βιβλιοθήκη υπεργολαβίας"
+    },
+    "subcontracts": {
+      "actions": {
+        "checking": "Ελέγχεται η βιβλιοθήκη ρητρών…",
+        "confirm": {
+          "discard": {
+            "description": "Το πρόχειρο δεν θα εκδοθεί. Μένει στη λίστα ως «Απορρίφθηκε» και ο αριθμός του δεν ξαναδίνεται.",
+            "title": "Απόρριψη του πρόχειρου {number};"
+          },
+          "terminate": {
+            "description": "Η εκτέλεση σταματά και το συμφωνητικό κλείνει ως «Καταγγέλθηκε». Η ενέργεια δεν αναιρείται.",
+            "title": "Καταγγελία του {number};"
+          },
+          "withdraw": {
+            "description": "Το έγγραφο αποσύρεται από τον υπεργολάβο. Η ενέργεια δεν αναιρείται.",
+            "title": "Απόσυρση του {number};"
+          }
+        },
+        "done": {
+          "accept": "Το {number} έγινε αποδεκτό",
+          "complete": "Το {number} ολοκληρώθηκε",
+          "discard": "Το πρόχειρο {number} απορρίφθηκε",
+          "expire": "Το {number} σημειώθηκε ως ληγμένο",
+          "issue": "Το {number} εκδόθηκε",
+          "mobilize": "Το {number} πέρασε σε εκτέλεση",
+          "terminate": "Το {number} καταγγέλθηκε",
+          "withdraw": "Το {number} αποσύρθηκε"
+        },
+        "menu": "Ενέργειες για {number}",
+        "preview": "Προεπισκόπηση εγγράφου",
+        "transition": {
+          "accept": "Αποδοχή",
+          "complete": "Ολοκλήρωση",
+          "discard": "Απόρριψη πρόχειρου",
+          "expire": "Λήξη προσφοράς",
+          "issue": "Έκδοση",
+          "mobilize": "Εγκατάσταση στο εργοτάξιο",
+          "terminate": "Καταγγελία",
+          "withdraw": "Απόσυρση"
+        }
+      },
+      "editor": {
+        "new": {
+          "action": "Νέο συμφωνητικό"
+        },
+        "saveFirst": "Αποθήκευσε πρώτα τις αλλαγές σου"
+      },
+      "list": {
+        "ariaLabel": "Συμφωνητικά υπεργολαβίας του έργου",
+        "columns": {
+          "actions": "Ενέργειες",
+          "document": "Έγγραφο",
+          "scope": "Εμβέλεια",
+          "status": "Κατάσταση",
+          "subcontractor": "Υπεργολάβος",
+          "updated": "Ενημέρωση",
+          "value": "Αξία (χωρίς ΦΠΑ)",
+          "work": "Εργασία"
+        },
+        "deviationsOpen": "Απόκλιση σε εκκρεμότητα",
+        "emptyFiltered": "Κανένα συμφωνητικό δεν ταιριάζει στα φίλτρα.",
+        "error": "Δεν ήταν δυνατή η φόρτωση των συμφωνητικών.",
+        "role": {
+          "agreement": "Συμφωνητικό",
+          "offer": "Προσφορά"
+        },
+        "scope": {
+          "master": "Κύρια σύμβαση",
+          "single": "Αυτό το έργο",
+          "workOrder": "Εντολή εργασίας",
+          "workOrderFrom": "Εντολή εργασίας από {date}"
+        },
+        "search": "Αναζήτηση με αριθμό, υπεργολάβο, ΑΦΜ ή τίτλο…",
+        "value": {
+          "atLeast": "≥ {amount}",
+          "unitRatesOnly": "Μόνο τιμές μονάδας",
+          "unpricedLines": "{count, plural, one {# γραμμή χωρίς ποσότητα} other {# γραμμές χωρίς ποσότητα}}"
+        }
+      },
+      "masters": {
+        "empty": "Δεν υπάρχει κύρια σύμβαση ακόμη.",
+        "new": "Νέα κύρια σύμβαση",
+        "related": "Σχετικά",
+        "subtitle": "Οι όροι και οι τιμές υπογράφονται μία φορά· κάθε έργο παίρνει τη δική του εντολή εργασίας.",
+        "title": "Κύριες συμβάσεις υπεργολαβίας",
+        "workOrdersSummary": "{count, plural, =0 {Χωρίς εντολή εργασίας ακόμη} one {# εντολή εργασίας · {projects, plural, one {# έργο} other {# έργα}}} other {# εντολές εργασίας · {projects, plural, one {# έργο} other {# έργα}}}}"
+      },
+      "messages": {
+        "pending": "Χρειάζεται διόρθωση"
+      },
+      "status": {
+        "accepted": "Αποδεκτό",
+        "completed": "Ολοκληρώθηκε",
+        "discarded": "Απορρίφθηκε",
+        "draft": "Πρόχειρο",
+        "expired": "Έληξε",
+        "in_execution": "Σε εκτέλεση",
+        "issued": "Εκδόθηκε",
+        "terminated": "Καταγγέλθηκε",
+        "withdrawn": "Αποσύρθηκε"
+      },
+      "summary": {
+        "ariaLabel": "Σύνοψη συμφωνητικών",
+        "committed": "Δεσμευμένο",
+        "documents": "{count, plural, one {# έγγραφο} other {# έγγραφα}}",
+        "filterLabel": "Φίλτρο κατάστασης",
+        "pending": "Σε εκκρεμότητα",
+        "statusFigure": "{count} · {amount}"
+      },
+      "workOrders": {
+        "action": "Νέα εντολή εργασίας"
+      }
+    }
+  },
+  "quotes": {
+    "trades": {
+      "allGroups": "Όλες",
+      "aluminum_frames": "Αλουμίνια / Κουφώματα Εξωτερικά",
+      "concrete": "Μπετόν / Μπετατζής",
+      "data_telecoms": "Δίκτυα Δεδομένων",
+      "demolition": "Κατεδάφιση / Εκσκαφή",
+      "electrical": "Ηλεκτρολογικά",
+      "elevator": "Ανελκυστήρας",
+      "equipment_rental": "Ενοικίαση Εξοπλισμού",
+      "facade": "Πρόσοψη / ETICS",
+      "fire_protection": "Πυρόσβεση / Πυρανίχνευση",
+      "flooring_wood": "Ξύλινα Δάπεδα / Parquet",
+      "formwork": "Ξυλότυπος",
+      "gas": "Φυσικό Αέριο",
+      "glazing": "Τζαμαδόρος / Υαλοπίνακες",
+      "groups": {
+        "claddings": "Επενδύσεις",
+        "external": "Εξωτερικά",
+        "finishing": "Φινίρισμα",
+        "frames": "Κουφώματα",
+        "networks": "Δίκτυα (Η/Μ)",
+        "services": "Υπηρεσίες / Logistics",
+        "special": "Ειδικές Εγκαταστάσεις",
+        "structure": "Σκελετός"
+      },
+      "gypsum": "Γυψοκαρτές / Οροφές",
+      "hvac": "Μηχανολογικά / HVAC",
+      "insulation": "Μονώσεις",
+      "interior_frames": "Εσωτερικά Κουφώματα / Πόρτες",
+      "landscaping": "Διαμόρφωση Εξωτερικών",
+      "marble": "Μάρμαρα / Φυσικός Λίθος",
+      "masonry": "Τοιχοποιία / Κτίστης",
+      "materials_general": "Υλικά (Γενικά)",
+      "noResults": "Δεν βρέθηκαν ειδικότητες",
+      "painting": "Ελαιοχρωματισμοί",
+      "plastering": "Σοβατίσματα",
+      "plumbing": "Υδραυλικά",
+      "pool": "Πισίνα",
+      "prefab": "Προκατασκευή / Μεταλλικές Κατ.",
+      "reinforcement": "Σιδεράς / Σιδηροπλέγματα",
+      "rolling_shutters": "Ρολά / Σήτες",
+      "roofing": "Στέγη / Κεραμοσκεπή",
+      "search": "Αναζήτηση ειδικότητας...",
+      "select": "Επιλέξτε ειδικότητα",
+      "tiling": "Πλακάκια / Κεραμικά",
+      "title": "Ειδικότητες",
+      "waterproofing": "Στεγανοποίηση / Ασφαλτικά",
+      "woodwork": "Ξυλουργικά / Έπιπλα"
+    }
+  }
+}

@@ -127,6 +127,24 @@ export function getSubcontractAgreementUrl(projectId: string, agreementId: strin
   return typedHref(`/projects/${projectId}/procurement/subcontracts/${agreementId}`);
 }
 
+/**
+ * Οι **κύριες συμβάσεις** υπεργολαβίας — της εταιρείας, όχι έργου (ADR-928 §5.24 · AIA A421, ConsensusDocs 755): εκεί
+ * ζει μια κύρια σύμβαση από τη γέννηση ως την πρώτη εντολή εργασίας, και μετά.
+ */
+export function getMasterAgreementsUrl() {
+  return typedHref('/procurement/subcontracts');
+}
+
+/** Μια κύρια σύμβαση στο πλαίσιο της εταιρείας (ADR-928 §5.24). */
+export function getMasterAgreementUrl(agreementId: string) {
+  return typedHref(`/procurement/subcontracts/${agreementId}`);
+}
+
+/** Η σελίδα ενός συμφωνητικού στο πλαίσιο πλοήγησης: έργο, ή η εταιρεία (`null`) για κύρια σύμβαση. */
+export function getAgreementUrlIn(projectId: string | null, agreementId: string) {
+  return projectId === null ? getMasterAgreementUrl(agreementId) : getSubcontractAgreementUrl(projectId, agreementId);
+}
+
 /** Η βιβλιοθήκη ρητρών και προτύπων υπεργολαβίας — **της εταιρείας**, όχι έργου (ADR-928 Φ3γ-0). */
 export function getSubcontractLibraryUrl() {
   return typedHref('/procurement/subcontracts/library');

@@ -13,17 +13,15 @@
 import { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { supplierContactsToOptions, supplierNamesById } from '@/hooks/procurement/usePOSupplierContacts';
 import { usePersonaContacts } from '@/hooks/procurement/usePersonaContacts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { issuesAt, issuesUnder } from '@/subapps/procurement/subcontracts/agreements/issue-paths';
 import type { ProjectOwnersInput } from '@/subapps/procurement/subcontracts/agreements/agreement-draft';
 import type { PersonaType } from '@/types/contacts/personas';
+import { ProjectBuildingsChecklist } from '../ProjectBuildingsChecklist';
 import { EditorField } from './EditorField';
 import type { AgreementEditor } from './useAgreementEditor';
 
@@ -96,28 +94,15 @@ function OwnersField({ editor }: SectionProps) {
 }
 
 function BuildingsField({ editor }: SectionProps) {
-  const { t } = useTranslation('procurement');
-  const { buildings } = useFirestoreBuildings();
   const scope = editor.draft.scope;
   if (scope.kind !== 'single_project') return null;
-  const ofProject = buildings.filter((building) => building.projectId === scope.projectId);
-  const toggle = (id: string, on: boolean) => {
-    const buildingIds = on ? [...scope.buildingIds, id] : scope.buildingIds.filter((candidate) => candidate !== id);
-    editor.update({ ...editor.draft, scope: { ...scope, buildingIds } });
-  };
   return (
-    <fieldset className="space-y-1.5">
-      <legend className="text-sm font-medium">{t('subcontracts.editor.parties.buildings')}</legend>
-      {ofProject.length === 0 && <p className="text-sm text-muted-foreground">{t('subcontracts.editor.parties.noBuildings')}</p>}
-      <ul className="flex flex-wrap gap-3">
-        {ofProject.map((building) => (
-          <li key={building.id} className="flex items-center gap-2">
-            <Checkbox id={`editor-building-${building.id}`} checked={scope.buildingIds.includes(building.id)} onCheckedChange={(checked) => toggle(building.id, checked === true)} />
-            <Label htmlFor={`editor-building-${building.id}`}>{building.name || building.code || building.id}</Label>
-          </li>
-        ))}
-      </ul>
-    </fieldset>
+    <ProjectBuildingsChecklist
+      idPrefix="editor-building"
+      projectId={scope.projectId}
+      value={scope.buildingIds}
+      onChange={(buildingIds) => editor.update({ ...editor.draft, scope: { ...scope, buildingIds } })}
+    />
   );
 }
 

@@ -57,6 +57,26 @@ export function useCompanyDraftSubcontractAgreements(): ProcurementCatalogList<S
   return useProcurementCatalogList(companyDrafts, COMPANY_DRAFTS_SCOPE);
 }
 
+const companyMasters: ProcurementCatalogListConfig<SubcontractAgreement> = {
+  ...agreementsByProject,
+  cache: createStaleCache<SubcontractAgreement[]>('subcontract-agreements-company-masters'),
+  label: 'Subcontract master agreements (company)',
+};
+
+/**
+ * Οι **κύριες συμβάσεις** της εταιρείας (ADR-928 §5.24): `companyId ==` (υπηρεσία) + `scope.kind == 'multi_project'` +
+ * `updatedAt ↓` — ο δείκτης `companyId + scope.kind + updatedAt` (`firestore.indexes.json`). Χωρίς αυτό, κύρια σύμβαση
+ * χωρίς εντολή εργασίας (`projectIds = []`) δεν φαινόταν σε **καμία** λίστα από τη δημιουργία ως την αποδοχή.
+ */
+const COMPANY_MASTERS_SCOPE: ProcurementCatalogListScope = {
+  cacheKey: 'company-masters',
+  constraints: [where('scope.kind', '==', 'multi_project'), orderBy('updatedAt', 'desc')],
+};
+
+export function useCompanyMasterSubcontractAgreements(): ProcurementCatalogList<SubcontractAgreement> {
+  return useProcurementCatalogList(companyMasters, COMPANY_MASTERS_SCOPE);
+}
+
 export function useProjectSubcontractAgreements(projectId: string): ProcurementCatalogList<SubcontractAgreement> {
   const scope = useMemo<ProcurementCatalogListScope>(
     () => ({

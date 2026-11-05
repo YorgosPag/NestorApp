@@ -11,7 +11,7 @@
  * @see ADR-328 §RouteTabs API
  */
 
-import { LayoutGrid, Users2, Layers, ScrollText, BarChart3, ClipboardList, FileText, Package, BookOpen } from 'lucide-react';
+import { LayoutGrid, Users2, Layers, ScrollText, BarChart3, ClipboardList, FileText, Package, BookOpen, FileSignature } from 'lucide-react';
 import { RouteTabs } from '@/components/ui/navigation/route-tabs';
 import type { TabsNavTab } from '@/components/ui/navigation/tabs-types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -58,6 +58,14 @@ const PROCUREMENT_TABS: readonly TabsNavTab[] = [
     href: '/procurement/agreements',
     labelKey: 'nav.agreements',
     icon: ScrollText,
+    iconColor: 'text-foreground',
+  },
+  {
+    // ADR-928 §5.24 — κύριες συμβάσεις υπεργολαβίας (της εταιρείας)· η βιβλιοθήκη κάτω από το ίδιο πρόθεμα είναι δική της καρτέλα.
+    href: '/procurement/subcontracts',
+    labelKey: 'nav.subcontractMasters',
+    excludeStartsWith: ['/procurement/subcontracts/library'],
+    icon: FileSignature,
     iconColor: 'text-foreground',
   },
   {

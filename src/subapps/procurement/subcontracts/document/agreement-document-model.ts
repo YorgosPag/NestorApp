@@ -14,11 +14,12 @@ import { bilingualIssues } from '../agreements/agreement-snapshot';
 import { estimatedAgreementValue, estimatedLineAmount } from '../lines/line-amount';
 import { CLAUSE_AUTHORITATIVE_LANGUAGE } from '../types/clause';
 import type { AgreementLine } from '../types/agreement-line';
-import type { AgreementParties, AgreementScope, FrozenClause, ProjectIdentitySnapshot, SubcontractAgreementSnapshot } from '../types/agreement';
+import type { AgreementParties, FrozenClause, SubcontractAgreementSnapshot } from '../types/agreement';
 import type { CommercialTerms } from '../types/commercial-terms';
 import { describePaymentPlan } from './describe-payment-plan';
 import { documentLocaleOf, type DocumentLocale } from './document-locale';
-import type { AgreementDocument, DocumentClause, DocumentField, DocumentLineRow, DocumentParty, DocumentTotals } from './document-types';
+import type { AgreementDocument, DocumentClause, DocumentLineRow, DocumentParty, DocumentTotals } from './document-types';
+import { scopeFields, workOrderSections } from './document-work-orders';
 import { renderClauseBlocks } from './render-clause-body';
 import { localizedIn } from './render-parameter-value';
 
@@ -69,27 +70,6 @@ function partiesOf(parties: AgreementParties, locale: DocumentLocale): DocumentP
     { role: locale.phrase('parties.issuer'), name: issuer.name, details: partyDetails({ ...issuer, address: [issuer.address, issuer.postalCode, issuer.city] }, locale) },
     { role: locale.phrase('parties.subcontractor'), name: subcontractorName, details: partyDetails({ ...subcontractor, address: [subcontractor.street, subcontractor.postalCode, subcontractor.city] }, locale) },
     ...ownersParty(parties, locale),
-  ];
-}
-
-function projectFields(project: ProjectIdentitySnapshot, locale: DocumentLocale): DocumentField[] {
-  const rows: [string, string | null][] = [
-    ['project.name', project.name],
-    ['project.address', project.address],
-    ['project.license', project.licenseNumber],
-    ['project.issuingAuthority', project.issuingAuthority],
-    ['project.block', project.buildingBlock],
-    ['project.plot', project.plotNumber],
-  ];
-  return rows.filter((row): row is [string, string] => Boolean(row[1]?.trim())).map(([key, value]) => ({ label: locale.phrase(key), value }));
-}
-
-function scopeFields(scope: AgreementScope, locale: DocumentLocale): DocumentField[] {
-  if (scope.kind === 'single_project') return projectFields(scope.project, locale);
-  const label = locale.phrase('project.assignment');
-  return [
-    { label: locale.phrase('project.name'), value: locale.phrase('project.multi') },
-    ...scope.assignments.map((assignment) => ({ label, value: present([assignment.project.name, assignment.project.address]).join(', ') })),
   ];
 }
 
@@ -198,6 +178,7 @@ export function buildAgreementDocument(snapshot: SubcontractAgreementSnapshot, l
     parties: partiesOf(snapshot.parties, locale),
     signatory: signatoryOf(snapshot.parties, locale),
     project: scopeFields(snapshot.scope, locale),
+    workOrders: workOrderSections(snapshot.scope, locale),
     lines: snapshot.lines.map((line, index) => lineRow(line, index, locale)),
     totals: totalsOf(snapshot.lines, snapshot.terms, locale),
     terms: termSentences(snapshot.terms, locale),
@@ -212,6 +193,7 @@ function sectionLabels(locale: DocumentLocale): AgreementDocument['labels'] {
   return {
     parties: locale.phrase('sections.parties'),
     project: locale.phrase('sections.project'),
+    workOrders: locale.phrase('sections.workOrders'),
     lines: locale.phrase('sections.lines'),
     terms: locale.phrase('sections.terms'),
     paymentPlan: locale.phrase('sections.paymentPlan'),

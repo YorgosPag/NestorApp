@@ -18,7 +18,7 @@ import { defineDeferredMessageTable } from '@/i18n/deferred-message-table';
 import { useDeferredMessage } from '@/i18n/hooks/useDeferredMessageTable';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
-import type { SubcontractFailure, SubcontractFailureKind } from '@/services/procurement/subcontracts/subcontract-failure';
+import { subcontractFailureOf, type SubcontractFailure, type SubcontractFailureKind } from '@/services/procurement/subcontracts/subcontract-failure';
 import type { SubcontractIssue, SubcontractIssueCode } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
 
 const NAMESPACES = ['procurement'] as const;
@@ -51,6 +51,23 @@ export function useSubcontractIssueMessage(needed = false): (issue: SubcontractI
 /** Η λέξη ενός είδους άρνησης — και για το «γιατί είναι ανενεργό» ενός κουμπιού (ίδιος πίνακας με τον γραφέα). */
 export function useSubcontractFailureMessage(needed = false): (kind: SubcontractFailureKind) => string {
   return useDeferredMessage(FAILURE_TABLE, { ...useMessageContext(), needed });
+}
+
+/**
+ * Η άρνηση του γραφέα ως `Error` με τη λέξη του — το πρώτο εύρημα, αλλιώς το είδος — για τους διαλόγους που τη δείχνουν
+ * δίπλα στο κουμπί (`useFormSubmission` → `FormActions.error`). Ένα σημείο για «Νέο συμφωνητικό» και «Νέα εντολή εργασίας».
+ */
+export function useSubcontractFailureExplainer(): (cause: unknown) => Error {
+  const issueMessage = useSubcontractIssueMessage(true);
+  const failureMessage = useSubcontractFailureMessage(true);
+  return useCallback(
+    (cause: unknown) => {
+      const failure = subcontractFailureOf(cause);
+      const [first] = failure.issues;
+      return new Error(first ? issueMessage(first) : failureMessage(failure.kind));
+    },
+    [issueMessage, failureMessage],
+  );
 }
 
 /**

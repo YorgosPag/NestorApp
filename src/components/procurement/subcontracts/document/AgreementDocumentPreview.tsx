@@ -129,14 +129,41 @@ function PartiesAndProject({ document, onEdit }: { document: AgreementDocument; 
       </Section>
       {document.project.length > 0 && (
         <Section title={document.labels.project} section="parties" onEdit={onEdit}>
-          <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
-            {document.project.map((field, index) => (
-              <div key={index} className="contents"><dt className="text-muted-foreground">{field.label}</dt><dd>{field.value}</dd></div>
-            ))}
-          </dl>
+          <FieldList fields={document.project} />
         </Section>
       )}
     </>
+  );
+}
+
+function FieldList({ fields }: { fields: AgreementDocument['project'] }) {
+  return (
+    <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+      {fields.map((field, index) => (
+        <div key={index} className="contents"><dt className="text-muted-foreground">{field.label}</dt><dd>{field.value}</dd></div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * Οι εντολές εργασίας κύριας σύμβασης (ADR-928 §5.24) — παράρτημα στο τέλος, όπως η A422 συνοδεύει την A421. Χωρίς
+ * μολύβι: δεν γράφονται από τη φόρμα του πρόχειρου, τις δίνει ο γραφέας εντολών μετά την αποδοχή.
+ */
+function WorkOrdersSection({ document }: { document: AgreementDocument }) {
+  if (document.workOrders.length === 0) return null;
+  return (
+    <section data-doc-section="workOrders" className="scroll-mt-14 space-y-3">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{document.labels.workOrders}</h3>
+      <ol className="space-y-3">
+        {document.workOrders.map((order) => (
+          <li key={order.number} className="space-y-1">
+            <h4 className="font-semibold">{order.heading}</h4>
+            <FieldList fields={order.fields} />
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -186,7 +213,9 @@ export function AgreementDocumentPreview({ document, fit = 'page', onEdit }: Agr
   const { frameRef, pageRef } = usePaperFit(fit === 'width');
   return (
     <div ref={frameRef} className="min-w-0">
-      <article ref={pageRef} lang={document.language} className={cn('space-y-5 rounded-lg border bg-card p-5 text-sm leading-relaxed', fit === 'page' && 'mx-auto max-w-[210mm]')}>
+      {/* `mx-auto` και στο `width`: όταν το ζουμ φτάσει το ταβάνι ×2 η σελίδα **κεντράρεται** όπως σε προβολέα PDF —
+          όχι κολλημένη αριστερά με κενό δεξιά (ζωντανός έλεγχος §5.23: 457 px σε «Μόνο έγγραφο»). Ρευστό πλάτος ⇒ καμία επίδραση. */}
+      <article ref={pageRef} lang={document.language} className={cn('mx-auto space-y-5 rounded-lg border bg-card p-5 text-sm leading-relaxed', fit === 'page' && 'max-w-[210mm]')}>
         <DocumentHeader document={document} onEdit={onEdit} />
         <DocumentBody document={document} onEdit={onEdit} />
       </article>
@@ -211,6 +240,7 @@ function DocumentBody({ document, onEdit }: { document: AgreementDocument; onEdi
           <ClauseList document={document} onEdit={onEdit} />
         </Section>
       )}
+      <WorkOrdersSection document={document} />
     </>
   );
 }

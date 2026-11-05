@@ -26,48 +26,40 @@ import { useSubcontractClauseLibrary, useSubcontractTradeTemplates } from '@/hoo
 import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
-import { getSubcontractAgreementUrl, getSubcontractLibraryUrl } from '@/lib/navigation/procurement-urls';
+import { getAgreementUrlIn, getSubcontractLibraryUrl } from '@/lib/navigation/procurement-urls';
 import { settledLeave } from '@/lib/unsaved-edits/leave-guard';
 import { Link, useRouter } from '@/lib/workspace/navigation';
 import { createSubcontractAgreement } from '@/services/procurement/subcontracts/subcontract-agreements-api.client';
-import { subcontractFailureOf } from '@/services/procurement/subcontracts/subcontract-failure';
 import { draftFromTemplate } from '@/subapps/procurement/subcontracts/agreements/draft-from-template';
 import type { AgreementScopeInput } from '@/subapps/procurement/subcontracts/agreements/agreement-draft';
 import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
 import type { PersonaType } from '@/types/contacts/personas';
-import { useSubcontractFailureMessage, useSubcontractIssueMessage } from '../subcontract-messages';
+import { useSubcontractFailureExplainer } from '../subcontract-messages';
 
 const SUBCONTRACTOR_PERSONAS: readonly PersonaType[] = ['supplier'];
 type ScopeKind = AgreementScopeInput['kind'];
 
 export interface NewAgreementDialogProps {
-  readonly projectId: string;
+  /** Το έργο του πλαισίου· `null` στη σελίδα κύριων συμβάσεων της εταιρείας (§5.24) — εκεί μόνο κύρια σύμβαση. */
+  readonly projectId: string | null;
   readonly canCreateForProject: boolean;
   readonly canCreateMaster: boolean;
   readonly onClose: () => void;
 }
 
-/** Η άρνηση του γραφέα με τη λέξη του — το πρώτο εύρημα, αλλιώς το είδος. */
-function useExplainFailure(): (cause: unknown) => Error {
-  const issueMessage = useSubcontractIssueMessage(true);
-  const failureMessage = useSubcontractFailureMessage(true);
-  return (cause) => {
-    const failure = subcontractFailureOf(cause);
-    const [first] = failure.issues;
-    return new Error(first ? issueMessage(first) : failureMessage(failure.kind));
-  };
-}
-
 function useNewAgreementForm(props: NewAgreementDialogProps) {
   const [templateId, setTemplateId] = useState('');
-  const [scopeKind, setScopeKind] = useState<ScopeKind>(props.canCreateForProject ? 'single_project' : 'multi_project');
+  const forProject = props.canCreateForProject && props.projectId !== null;
+  const [scopeKind, setScopeKind] = useState<ScopeKind>(forProject ? 'single_project' : 'multi_project');
   const [subcontractorContactId, setSubcontractor] = useState('');
   const { items: templates } = useSubcontractTradeTemplates();
   const { library, loading: libraryLoading } = useSubcontractClauseLibrary();
   const template = templates.find((candidate) => candidate.id === templateId) ?? null;
   const prepared = useMemo(() => {
     if (!template || libraryLoading) return null;
-    const scope: AgreementScopeInput = scopeKind === 'single_project' ? { kind: 'single_project', projectId: props.projectId, buildingIds: [] } : { kind: 'multi_project' };
+    const scope: AgreementScopeInput = scopeKind === 'single_project' && props.projectId !== null
+      ? { kind: 'single_project', projectId: props.projectId, buildingIds: [] }
+      : { kind: 'multi_project' };
     return draftFromTemplate(template, library, { scope, subcontractorContactId });
   }, [template, libraryLoading, library, scopeKind, props.projectId, subcontractorContactId]);
   return { templates, templateId, setTemplateId, scopeKind, setScopeKind, subcontractorContactId, setSubcontractor, prepared };
@@ -113,7 +105,7 @@ function ScopeField({ form, props }: { readonly form: ReturnType<typeof useNewAg
     <fieldset className="space-y-1.5">
       <legend className="text-sm font-medium">{t('subcontracts.editor.new.scope')}</legend>
       <RadioGroup value={form.scopeKind} onValueChange={choose}>
-        {props.canCreateForProject && <Label className="flex items-center gap-2 font-normal"><RadioGroupItem value="single_project" />{t('subcontracts.editor.new.scopeProject')}</Label>}
+        {props.canCreateForProject && props.projectId !== null && <Label className="flex items-center gap-2 font-normal"><RadioGroupItem value="single_project" />{t('subcontracts.editor.new.scopeProject')}</Label>}
         {props.canCreateMaster && <Label className="flex items-center gap-2 font-normal"><RadioGroupItem value="multi_project" />{t('subcontracts.editor.new.scopeMaster')}</Label>}
       </RadioGroup>
     </fieldset>
@@ -136,7 +128,7 @@ export default function NewAgreementDialog(props: NewAgreementDialogProps) {
   const { t } = useTranslation('procurement');
   const formId = useId();
   const router = useRouter();
-  const explain = useExplainFailure();
+  const explain = useSubcontractFailureExplainer();
   const form = useNewAgreementForm(props);
   const { prepared } = form;
   const submission = useFormSubmission({
@@ -145,7 +137,8 @@ export default function NewAgreementDialog(props: NewAgreementDialogProps) {
       try { return await createSubcontractAgreement(prepared.draft); } catch (cause) { throw explain(cause); }
     },
     canSubmit: prepared !== null && form.subcontractorContactId.length > 0,
-    onSuccess: (created) => settledLeave(() => router.push(getSubcontractAgreementUrl(props.projectId, created.id))),
+    // Κύρια σύμβαση ⇒ η σελίδα της **εταιρείας** (§5.24): δεν ανήκει σε έργο ως την πρώτη εντολή, και ποτέ μόνο σε ένα.
+    onSuccess: (created) => settledLeave(() => router.push(getAgreementUrlIn(created.scope.kind === 'multi_project' ? null : props.projectId, created.id))),
     keepLockedOnSuccess: true,
     errorFallback: t('subcontracts.failure.unknown'),
   });

@@ -37,9 +37,18 @@ function currentHash(): string {
   return typeof window === 'undefined' ? '' : window.location.hash;
 }
 
+/**
+ * Το αρχικό αίτημα: καρτέλα που ήρθε από τη **διεύθυνση** (ανανέωση, σύνδεσμος) ⇒ και το έγγραφο ανοίγει εκεί.
+ * 🔴 Ζωντανός έλεγχος §5.23: μετά την ανανέωση στο `#editor-clauses` η καρτέλα επανερχόταν, η προεπισκόπηση όμως έμενε
+ *    στην κορυφή — φόρμα και έγγραφο έδειχναν διαφορετικές ενότητες.
+ */
+function initialRequestOf(section: EditorSection, map: EditorSectionMap): PreviewScrollRequest | null {
+  return section === map.sections[0] ? null : { section, seq: 1 };
+}
+
 export function useEditorSection(map: EditorSectionMap): EditorSectionState {
   const [section, setSection] = useState<EditorSection>(() => sectionOfHash(currentHash(), map) ?? map.sections[0]);
-  const [previewRequest, setPreviewRequest] = useState<PreviewScrollRequest | null>(null);
+  const [previewRequest, setPreviewRequest] = useState<PreviewScrollRequest | null>(() => initialRequestOf(section, map));
 
   const open = useCallback((next: EditorSection, origin: SectionOrigin) => {
     setSection(next);

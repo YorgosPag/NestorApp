@@ -19,6 +19,15 @@
       ]
     },
     {
+      "collectionGroup": "subcontract_agreements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "scope.kind", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "supplier_verifications",
       "queryScope": "COLLECTION",
       "fields": [
