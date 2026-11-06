@@ -87,6 +87,18 @@ export const DEFAULT_BACKGROUND_TRANSFORM: Readonly<BackgroundTransform> = {
   rotation: 0,
 } as const;
 
+/**
+ * Ίδια τοποθέτηση; Ακριβής σύγκριση: οι τιμές ταξιδεύουν ως JSON double (χωρίς απώλεια), και ο έλεγχος
+ * σύγκρουσης της βαθμονόμησης (ADR-929 Φ5.2γ) θέλει «ό,τι διάβασα είναι ό,τι υπάρχει», όχι «περίπου».
+ */
+export function transformsEqual(a: BackgroundTransform, b: BackgroundTransform): boolean {
+  return a.translateX === b.translateX
+    && a.translateY === b.translateY
+    && a.scaleX === b.scaleX
+    && a.scaleY === b.scaleY
+    && a.rotation === b.rotation;
+}
+
 // ─── Calibration ─────────────────────────────────────────────────────────────
 
 export type CalibrationUnit = 'm' | 'cm' | 'mm' | 'ft' | 'in';
@@ -97,6 +109,12 @@ export const CALIBRATION_UNITS: readonly CalibrationUnit[] = ['m', 'cm', 'mm', '
 export function isCalibrationUnit(value: unknown): value is CalibrationUnit {
   return typeof value === 'string' && (CALIBRATION_UNITS as readonly string[]).includes(value);
 }
+
+/**
+ * ADR-929 Φ5.2γ — ο κωδικός της άρνησης `409` όταν η βαθμονόμηση στηρίχτηκε σε θέση που ο server
+ * δεν έχει πια (άλλη καρτέλα / άλλος χρήστης). Συμβόλαιο client ⇄ server, μία δήλωση.
+ */
+export const CALIBRATION_STALE_ERROR_CODE = 'CALIBRATION_STALE';
 
 /** Μία γνωστή απόσταση της βαθμονόμησης, όπως αποθηκεύεται (ADR-929 Φ5.2). */
 export interface CalibrationReferenceRecord {

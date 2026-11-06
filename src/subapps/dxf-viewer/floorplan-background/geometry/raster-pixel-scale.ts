@@ -84,3 +84,21 @@ function fromGalleryScale(bg: RasterScaleInput): RasterPixelScale | null {
 export function resolveRasterPixelScale(bg: RasterScaleInput): RasterPixelScale | null {
   return fromViewerCalibration(bg) ?? fromGalleryScale(bg);
 }
+
+/**
+ * ADR-929 Φ5.2γ — η κλίμακα της **συλλογής** (`scale`, pixel εικόνας ανά μέτρο) που αντιστοιχεί σε μια
+ * βαθμονόμηση του viewer, ώστε viewer και συλλογή να λένε το ίδιο (ADR-929 Δ4). Τη γράφει ο server στο ίδιο
+ * batch με τη βαθμονόμηση. Χωριστή κλίμακα X/Y ⇒ γεωμετρικός μέσος (η συλλογή έχει μία τιμή).
+ *
+ * ⚠️ Μόνο για **εικόνες** — ίδιο δηλωμένο όριο [Α] με το `fromGalleryScale`: για PDF ο χώρος pixel της
+ * συλλογής δεν έχει επαληθευτεί ότι είναι το πλέγμα του `PdfPageProvider`.
+ */
+export function galleryScaleForCalibration(
+  bg: Omit<RasterScaleInput, 'scale'>,
+): { unitsPerMeter: number; sourceUnit: 'pixel' } | null {
+  if (bg.providerId !== 'image') return null;
+  const viewer = fromViewerCalibration(bg);
+  if (!viewer) return null;
+  const metresPerPixel = Math.sqrt(viewer.metresPerPixelX * viewer.metresPerPixelY);
+  return isPositiveFinite(metresPerPixel) ? { unitsPerMeter: 1 / metresPerPixel, sourceUnit: 'pixel' } : null;
+}

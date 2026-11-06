@@ -36,10 +36,13 @@ import {
   backgroundNotFoundResponse,
   badRequest,
 } from '../_background-error-response';
-import type {
-  BackgroundTransform,
-  CalibrationData,
+import {
+  isCalibrationUnit,
+  type BackgroundTransform,
+  type CalibrationData,
+  type CalibrationReferenceRecord,
 } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
+import { logAuditEvent } from '@/lib/auth/audit';
 import { isFiniteNumber } from '@/lib/type-guards';
 
 const logger = createModuleLogger('FloorplanBackgroundIdRoute');
@@ -66,15 +69,34 @@ function isTransform(v: unknown): v is BackgroundTransform {
   );
 }
 
+function isPoint(p: unknown): boolean {
+  if (!p || typeof p !== 'object') return false;
+  const q = p as { x?: unknown; y?: unknown };
+  return isFiniteNumber(q.x) && isFiniteNumber(q.y);
+}
+
+/** Μία αναφορά: δύο σημεία, θετικό μήκος, γνωστή μονάδα (κοινό για την πρώτη και τις `references`). */
+function isReference(v: unknown): v is CalibrationReferenceRecord {
+  if (!v || typeof v !== 'object') return false;
+  const r = v as CalibrationReferenceRecord;
+  return isPoint(r.pointA) && isPoint(r.pointB)
+    && isFiniteNumber(r.realDistance) && r.realDistance > 0 && isCalibrationUnit(r.unit);
+}
+
+/** ADR-929 Φ5.2 — τα προαιρετικά πεδία: απόντα (παλιός πελάτης) ή έγκυρα, ποτέ κάτι ενδιάμεσο. */
+function hasValidExtensions(c: CalibrationData): boolean {
+  if (c.sceneUnits !== undefined && !isCalibrationUnit(c.sceneUnits)) return false;
+  if (c.scaleMode !== undefined && c.scaleMode !== 'uniform' && c.scaleMode !== 'per-axis') return false;
+  if (c.references === undefined) return true;
+  return Array.isArray(c.references) && c.references.length >= 1 && c.references.length <= 2
+    && c.references.every(isReference);
+}
+
 function isCalibrationData(v: unknown): v is CalibrationData {
   if (!v || typeof v !== 'object') return false;
   const c = v as CalibrationData;
   if (c.method !== 'two-point') return false;
-  if (!isFiniteNumber(c.realDistance) || c.realDistance <= 0) return false;
-  if (!['m', 'cm', 'mm', 'ft', 'in'].includes(c.unit)) return false;
-  if (!c.pointA || !isFiniteNumber(c.pointA.x) || !isFiniteNumber(c.pointA.y)) return false;
-  if (!c.pointB || !isFiniteNumber(c.pointB.x) || !isFiniteNumber(c.pointB.y)) return false;
-  return true;
+  return isReference(c) && hasValidExtensions(c);
 }
 
 /**
@@ -167,6 +189,12 @@ const handlePatch = withBackgroundTarget(async (request, ctx, id) => {
         newTransform,
         calibration,
         updatedBy: ctx.uid,
+      });
+      await logAuditEvent(ctx, 'data_updated', id, 'api', {
+        metadata: {
+          path: `/api/floorplan-backgrounds/${id} (PATCH calibration)`,
+          reason: 'Background calibration + overlay remap (ADR-929 Φ5.2γ)',
+        },
       });
       const updated = await FloorplanBackgroundService.getById(id, ctx.companyId);
       return NextResponse.json({ background: updated, remap });

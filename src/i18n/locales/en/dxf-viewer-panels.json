@@ -526,7 +526,13 @@
           "degenerate-reference": "The two points are almost at the same spot on the image. Pick a longer dimension.",
           "inconsistent-references": "The two lengths are not consistent with each other. Check the values and the points."
         },
-        "instructionPoint": "Click point {label} on the background ({index} of {total})"
+        "instructionPoint": "Click point {label} on the background ({index} of {total})",
+        "commit": {
+          "saved": "Calibration saved",
+          "overlaysSkipped": "{count, plural, one {# outline was not moved (malformed geometry)} other {# outlines were not moved (malformed geometry)}}",
+          "conflict": "The background was changed in another tab or by another user — the current placement was loaded. Please calibrate again.",
+          "failed": "Calibration was not saved — the previous placement was restored. Please try again."
+        }
       },
       "replace": {
         "title": "Replace background",

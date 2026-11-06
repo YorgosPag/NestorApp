@@ -14,9 +14,11 @@
  *      / visible / locked deltas in the store and PATCH them after a 500 ms
  *      quiescence window. Pending changes coalesce into one request.
  *
- * Calibration writes go through a different endpoint (`PATCH kind:'calibration'`)
- * and are NOT auto-committed by this hook — they are user-initiated atomic
- * operations triggered from the calibration dialog.
+ * ADR-929 Φ5.2γ — «τι έχει ο server» και η σειρά των εγγραφών ζουν στο κοινό
+ * `services/background-write-ledger.ts` (πριν: `useRef` εδώ, αόρατο στη βαθμονόμηση).
+ * Το autosave μπαίνει στην **ίδια** ουρά με τη βαθμονόμηση (`commit-calibration.ts`),
+ * διαβάζει το στιγμιότυπο **τη στιγμή της εκτέλεσης**, και όσο εκκρεμεί βαθμονόμηση
+ * στέλνει τη δεσμευμένη θέση — τη νέα τη γράφει η βαθμονόμηση μαζί με τα overlays.
  *
  * @module subapps/dxf-viewer/floorplan-background/hooks/useFloorplanBackgroundPersistence
  * @enterprise ADR-340 Phase 7 — D1 (kind: 'url'), D2 (optimistic + 500ms debounce)
@@ -24,45 +26,55 @@
 
 import { useEffect, useRef } from 'react';
 import { DXF_TIMING } from '../../config/dxf-timing';
-import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
+import { getFloorBackground, useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import { FloorplanBackgroundApiClient } from '../services/floorplan-background-api-client';
-import type { BackgroundTransform, FloorplanBackground } from '../providers/types';
+import {
+  enqueueBackgroundWrite,
+  getCommittedBackground,
+  setCommittedBackground,
+  snapshotOf,
+  snapshotsEqual,
+  transformForAutosave,
+} from '../services/background-write-ledger';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFloorplanBackgroundPersistence');
 
 const DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
 
-interface PersistableSnapshot {
-  id: string;
-  transform: BackgroundTransform;
-  opacity: number;
-  visible: boolean;
-  locked: boolean;
+/** Μία εγγραφή autosave, μέσα στην ουρά του ορόφου: ό,τι ισχύει ΤΗ ΣΤΙΓΜΗ που έρχεται η σειρά της. */
+async function autosaveFloor(floorId: string): Promise<void> {
+  const bg = getFloorBackground(floorId);
+  if (!bg) return;
+  const latest = { ...snapshotOf(bg), transform: transformForAutosave(floorId, bg.transform) };
+  const last = getCommittedBackground(floorId);
+  if (last && snapshotsEqual(last, latest)) return;
+  await FloorplanBackgroundApiClient.patchTransform(latest.id, {
+    transform: latest.transform,
+    opacity: latest.opacity,
+    visible: latest.visible,
+    locked: latest.locked,
+  });
+  setCommittedBackground(floorId, latest);
 }
 
-function snapshot(bg: FloorplanBackground): PersistableSnapshot {
-  return {
-    id: bg.id,
-    transform: { ...bg.transform },
-    opacity: bg.opacity,
-    visible: bg.visible,
-    locked: bg.locked,
-  };
-}
-
-function snapshotsEqual(a: PersistableSnapshot, b: PersistableSnapshot): boolean {
-  return (
-    a.id === b.id &&
-    a.opacity === b.opacity &&
-    a.visible === b.visible &&
-    a.locked === b.locked &&
-    a.transform.translateX === b.transform.translateX &&
-    a.transform.translateY === b.transform.translateY &&
-    a.transform.scaleX === b.transform.scaleX &&
-    a.transform.scaleY === b.transform.scaleY &&
-    a.transform.rotation === b.transform.rotation
-  );
+async function hydrateFloor(floorId: string, isCancelled: () => boolean): Promise<void> {
+  const { background, fileRecord } = await FloorplanBackgroundApiClient.getByFloor(floorId);
+  if (isCancelled()) return;
+  if (!background) {
+    // No persisted background — nothing to hydrate; allow user to upload.
+    setCommittedBackground(floorId, null);
+    return;
+  }
+  const downloadUrl = fileRecord?.downloadUrl ?? null;
+  if (!downloadUrl) {
+    logger.warn('Persistence hydrate: missing downloadUrl', { backgroundId: background.id, fileId: background.fileId });
+    return;
+  }
+  await useFloorplanBackgroundStore
+    .getState()
+    ._hydratePersistedBackground(floorId, background, { kind: 'url', url: downloadUrl });
+  setCommittedBackground(floorId, snapshotOf(background));
 }
 
 /**
@@ -70,53 +82,16 @@ function snapshotsEqual(a: PersistableSnapshot, b: PersistableSnapshot): boolean
  * level selected). Re-runs hydration on floorId change.
  */
 export function useFloorplanBackgroundPersistence(floorId: string | null): void {
-  const lastCommittedRef = useRef<PersistableSnapshot | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Hydration on floorId change ─────────────────────────────────────────
   useEffect(() => {
-    if (!floorId) {
-      lastCommittedRef.current = null;
-      return;
-    }
-    const ac = new AbortController();
+    if (!floorId) return;
     let cancelled = false;
-
-    void (async () => {
-      try {
-        const { background, fileRecord } = await FloorplanBackgroundApiClient.getByFloor(floorId);
-        if (cancelled || ac.signal.aborted) return;
-
-        if (!background) {
-          // No persisted background — nothing to hydrate; allow user to upload.
-          lastCommittedRef.current = null;
-          return;
-        }
-
-        const downloadUrl = fileRecord?.downloadUrl ?? null;
-        if (!downloadUrl) {
-          logger.warn('Persistence hydrate: missing downloadUrl', {
-            backgroundId: background.id,
-            fileId: background.fileId,
-          });
-          return;
-        }
-
-        await useFloorplanBackgroundStore
-          .getState()
-          ._hydratePersistedBackground(floorId, background, { kind: 'url', url: downloadUrl });
-
-        lastCommittedRef.current = snapshot(background);
-      } catch (err) {
-        if (ac.signal.aborted) return;
-        logger.error('Persistence hydrate failed', { floorId, err });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      ac.abort();
-    };
+    hydrateFloor(floorId, () => cancelled).catch((err: unknown) => {
+      if (!cancelled) logger.error('Persistence hydrate failed', { floorId, err });
+    });
+    return () => { cancelled = true; };
   }, [floorId]);
 
   // ── Debounced commit on store change ────────────────────────────────────
@@ -124,28 +99,16 @@ export function useFloorplanBackgroundPersistence(floorId: string | null): void 
     if (!floorId) return;
 
     const unsub = useFloorplanBackgroundStore.subscribe((state, prev) => {
-      const slot = state.floors[floorId];
-      const bg = slot?.background;
-      if (!bg) return;
-      if (prev.floors[floorId]?.background === bg) return;
-
-      const next = snapshot(bg);
-      const last = lastCommittedRef.current;
-      if (last && snapshotsEqual(last, next)) return;
+      const bg = state.floors[floorId]?.background;
+      if (!bg || prev.floors[floorId]?.background === bg) return;
+      const last = getCommittedBackground(floorId);
+      if (last && snapshotsEqual(last, snapshotOf(bg))) return;
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(async () => {
-        try {
-          await FloorplanBackgroundApiClient.patchTransform(next.id, {
-            transform: next.transform,
-            opacity: next.opacity,
-            visible: next.visible,
-            locked: next.locked,
-          });
-          lastCommittedRef.current = next;
-        } catch (err) {
-          logger.error('Persistence commit failed', { backgroundId: next.id, err });
-        }
+      debounceRef.current = setTimeout(() => {
+        enqueueBackgroundWrite(floorId, () => autosaveFloor(floorId)).catch((err: unknown) => {
+          logger.error('Persistence commit failed', { floorId, err });
+        });
       }, DEBOUNCE_MS);
     });
 

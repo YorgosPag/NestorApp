@@ -117,6 +117,11 @@ export interface WallProposalInput {
    * ό,τι φωτιστεί να είναι ακριβώς ό,τι θα γραφτεί (Α-3). Απών ⇒ τοίχοι χωρίς τύπο.
    */
   readonly typeWall?: (wall: WallEntity) => WallEntity;
+  /**
+   * ADR-929 Φ5.2δ — ανοχή ομαδοποίησης πάχους σε mm (πηγή-εικόνα: θόρυβος pixel). Απούσα ή 0 ⇒ ακριβής
+   * ομαδοποίηση σε ακέραια mm, όπως πάντα (πηγή DXF). Αλλάζει μόνο τις **ομάδες**· η γεωμετρία μένει.
+   */
+  readonly thicknessToleranceMm?: number;
 }
 
 type ItemOutcome = Pick<WallProposalItem, 'status' | 'wall' | 'reason'>;
@@ -155,6 +160,45 @@ function detectRects(
     rects: detected.map((r) => resolved.get(r) ?? r),
     fromContext: new Set(resolved.values()),
   };
+}
+
+/** Διάμεσος ταξινομημένων τιμών. */
+function medianOf(sorted: readonly number[]): number {
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/**
+ * ADR-929 Φ5.2δ — το πάχος-κλειδί κάθε ορθογωνίου. Χωρίς ανοχή: ακέραια mm (DXF). Με ανοχή: συσταδοποίηση
+ * 1D — νέα ομάδα όταν το κενό από την προηγούμενη τιμή **ή** το εύρος της ομάδας ξεπερνά την ανοχή (×2),
+ * ώστε μια συνεχής σειρά θορυβωδών τιμών να μην ενώσει 100 mm με 250 mm. Ετικέτα = διάμεσος, στρογγυλεμένος.
+ */
+function thicknessKeysMm(
+  rects: readonly DetectedRectangle[],
+  scale: number,
+  toleranceMm: number,
+): Map<DetectedRectangle, number> {
+  const raw = rects.map((r) => [r, detectedRectAxis(r).thickness / scale] as const);
+  if (!(toleranceMm > 0)) return new Map(raw.map(([r, t]) => [r, Math.round(t)] as const));
+  const step = MODEL_FROM_DRAWING_LIMITS.RASTER_THICKNESS_ROUND_MM;
+  const sorted = [...raw].sort((a, b) => a[1] - b[1]);
+  const keys = new Map<DetectedRectangle, number>();
+  const flush = (cluster: (readonly [DetectedRectangle, number])[]) => {
+    const label = Math.max(step, Math.round(medianOf(cluster.map(([, t]) => t)) / step) * step);
+    for (const [r] of cluster) keys.set(r, label);
+  };
+  let cluster: (readonly [DetectedRectangle, number])[] = [];
+  for (const entry of sorted) {
+    const first = cluster[0]?.[1];
+    const last = cluster[cluster.length - 1]?.[1];
+    if (first !== undefined && last !== undefined && (entry[1] - last > toleranceMm || entry[1] - first > 2 * toleranceMm)) {
+      flush(cluster);
+      cluster = [];
+    }
+    cluster.push(entry);
+  }
+  if (cluster.length > 0) flush(cluster);
+  return keys;
 }
 
 /** Δ3 — ομάδες πάχους με την τοπολογική πρόταση και την κατηγορία που τελικά ισχύει. */
@@ -237,7 +281,7 @@ export function computeWallProposal(input: WallProposalInput): WallProposal {
   const { rects, fromContext } = detectRects(roleSegments, input, tol);
 
   const keyOf = new Map(rects.map((r) => [r, wallProposalKey(r, sceneUnits)] as const));
-  const thicknessOf = new Map(rects.map((r) => [r, Math.round(detectedRectAxis(r).thickness / scale)] as const));
+  const thicknessOf = thicknessKeysMm(rects, scale, input.thicknessToleranceMm ?? 0);
   const columns = collectColumnFootprints(entities as readonly AnySceneEntity[]);
   const suggestions = suggestWallFunctions(rects, columns, scale);
   const groups = buildGroups(rects, thicknessOf, keyOf, suggestions, input.categoryByThicknessMm);

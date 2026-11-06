@@ -23,7 +23,9 @@ import type { WallDetectionStrategy } from '../../bim/model-from-drawing/wall-de
 import type { EntityColorResolver } from '../../bim/walls/same-color-rects';
 import { rasterParallelPairStrategy, withRasterSegments } from '../../bim/plan-recognition/segments/raster-segments-to-scene';
 import { getFloorBackground } from '../../floorplan-background/stores/floorplanBackgroundStore';
-import type { RasterPlacement } from '../../floorplan-background/geometry/raster-scene-mapping';
+import { rasterToSceneAffine, type RasterPlacement } from '../../floorplan-background/geometry/raster-scene-mapping';
+import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { resolveEntityColorHex } from '../selection/select-similar-by-color';
 import type { LiveScene } from './model-from-drawing-live';
 
@@ -46,6 +48,8 @@ export interface ResolvedProposalLines {
   readonly colorOf: EntityColorResolver;
   readonly wallColorHex: string;
   readonly strategy?: WallDetectionStrategy;
+  /** ADR-929 Φ5.2δ — πηγή-εικόνα: ανοχή ομαδοποίησης πάχους (mm) από το μέγεθος του pixel. */
+  readonly thicknessToleranceMm?: number;
 }
 
 /** Η τρέχουσα τοποθέτηση της εικόνας ενός ορόφου, ή `null` αν ο όροφος δεν έχει (πια) υπόβαθρο. */
@@ -62,6 +66,16 @@ export function currentRasterPlacement(floorId: string): RasterPlacement | null 
 export function isRasterPlacementCalibrated(source: ProposalLineSource): boolean {
   if (source.kind === 'scene') return true;
   return (getFloorBackground(source.floorId)?.calibration ?? null) !== null;
+}
+
+/**
+ * ADR-929 Φ5.2δ — πόσα mm είναι ±1,5 pixel της εικόνας με την τρέχουσα τοποθέτηση (ο μεγαλύτερος άξονας).
+ * Δύο πάχη πιο κοντά από αυτό είναι ο ίδιος τοίχος με θόρυβο ψηφιοποίησης, όχι δύο αποφάσεις.
+ */
+function rasterThicknessToleranceMm(placement: RasterPlacement, sceneUnits: SceneUnits): number {
+  const m = rasterToSceneAffine(placement);
+  const pixelScene = Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d));
+  return (MODEL_FROM_DRAWING_LIMITS.RASTER_THICKNESS_TOLERANCE_PX * pixelScene) / mmToSceneUnits(sceneUnits);
 }
 
 /**
@@ -83,5 +97,6 @@ export function resolveProposalLines(
   return {
     ...withRasterSegments(live.entities, sceneColorOf, source.segments, placement),
     strategy: rasterParallelPairStrategy(placement, live.sceneUnits),
+    thicknessToleranceMm: rasterThicknessToleranceMm(placement, live.sceneUnits),
   };
 }

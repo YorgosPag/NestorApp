@@ -21,6 +21,7 @@
  */
 
 import { CrossTenantAccessError, assertOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { CALIBRATION_STALE_ERROR_CODE } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
 
 /** Ανθρώπινο όνομα του πόρου — μπαίνει στα δομημένα πεδία του σφάλματος. */
 const RESOURCE = 'Floorplan background';
@@ -61,6 +62,22 @@ export class BackgroundLockedError extends Error {
   constructor(backgroundId: string) {
     super('Background is locked');
     this.name = 'BackgroundLockedError';
+    this.backgroundId = backgroundId;
+  }
+}
+
+/**
+ * ADR-929 Φ5.2γ — «η βαθμονόμηση στηρίχτηκε σε θέση που ο server δεν έχει πια». Ο πελάτης στέλνει
+ * `oldTransform` = ό,τι ξέρει ότι έχει ο server· με αυτό μετακινούνται τα overlays. Αν στο μεταξύ άλλη
+ * καρτέλα ή άλλος χρήστης άλλαξε τη θέση, η αναπροσαρμογή θα ήταν λάθος ⇒ άρνηση, όχι σιωπηλή ζημιά.
+ */
+export class CalibrationStaleError extends Error {
+  readonly code = CALIBRATION_STALE_ERROR_CODE;
+  readonly backgroundId: string;
+
+  constructor(backgroundId: string) {
+    super('Background placement changed since it was read');
+    this.name = 'CalibrationStaleError';
     this.backgroundId = backgroundId;
   }
 }

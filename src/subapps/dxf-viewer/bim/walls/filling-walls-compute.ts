@@ -46,8 +46,15 @@ const VALIDATOR_REASON_KEY: Readonly<Record<string, string>> = {
   'wall.validation.hardErrors.dnaThicknessMismatch': 'regionPerimeter.rejected.thicknessInvalid',
 };
 
-/** ADR-567 — το rect πέφτει πάνω σε υπάρχουσα δομική οντότητα (κατειλημμένο). */
+/** ADR-567 — το rect πέφτει πάνω σε υπάρχουσα δομική οντότητα **της σκηνής** (κατειλημμένο). */
 export const REGION_REJECT_OCCUPIED_KEY = 'regionPerimeter.rejected.occupied';
+
+/**
+ * ADR-929 Φ5.2δ — το rect επικαλύπτει **άλλον υποψήφιο της ίδιας παρτίδας**, που κέρδισε την κρίση
+ * (`byJudgingPriority`). Δεν είναι «υπάρχει ήδη»: σε κενό όροφο η πρόταση από εικόνα έγραφε
+ * «Υπάρχουν ήδη: 85» (μετρημένο στην παραγωγή), ενώ η σκηνή δεν είχε τίποτα.
+ */
+export const REGION_REJECT_OVERLAPS_CANDIDATE_KEY = 'regionPerimeter.rejected.overlapsCandidate';
 
 /** Fallback όταν ο validator key δεν χαρτογραφείται (δεν πρέπει να συμβεί σε κανονική ροή). */
 const FALLBACK_REASON_KEY = 'regionPerimeter.rejected.invalid';
@@ -157,25 +164,54 @@ function byJudgingPriority(a: FillingCandidate, b: FillingCandidate): number {
  * Αν το γ κόψει κάποιον, το β ξανατρέχει ΑΠΟ ΤΑ ΩΜΑ με όσους έμειναν: κανείς δεν μένει
  * επεκταμένος προς τοίχο που δεν θα χτιστεί. Το σύνολο μόνο μικραίνει ⇒ τερματίζει.
  */
+interface JudgeOutcome {
+  readonly accepted: Map<number, WallEntity>;
+  /** Θέση ορθογωνίου → λόγος: κατειλημμένο από τη **σκηνή** ή από **υποψήφιο** της παρτίδας. */
+  readonly dropped: Map<number, string>;
+}
+
+/**
+ * Ένας γύρος κρίσης. Πρώτα έναντι της σκηνής, μετά έναντι των ήδη δεκτών — το «δεκτός ή όχι» είναι
+ * ταυτόσημο με τον ενιαίο έλεγχο `[...σκηνή, ...δεκτοί]`· αλλάζει μόνο ο **λόγος** (ADR-929 Φ5.2δ).
+ */
+function judgeRound(
+  alive: readonly FillingCandidate[],
+  sceneEntities: readonly Entity[],
+  neighbours: readonly WallEntity[],
+  sceneUnits: SceneUnits,
+): JudgeOutcome {
+  const accepted = new Map<number, WallEntity>();
+  const dropped = new Map<number, string>();
+  const acceptedEntities: Entity[] = [];
+  for (const candidate of alive) {
+    const entity = extendFillingWallToNeighbors(candidate.wall, neighbours, sceneUnits);
+    const asEntity = entity as unknown as Entity;
+    if (findStructuralOverlapForEntity(asEntity, sceneEntities)) {
+      dropped.set(candidate.index, REGION_REJECT_OCCUPIED_KEY);
+    } else if (findStructuralOverlapForEntity(asEntity, acceptedEntities)) {
+      dropped.set(candidate.index, REGION_REJECT_OVERLAPS_CANDIDATE_KEY);
+    } else {
+      accepted.set(candidate.index, entity);
+      acceptedEntities.push(asEntity);
+    }
+  }
+  return { accepted, dropped };
+}
+
 function joinAndJudge(
   candidates: readonly FillingCandidate[],
   sceneEntities: readonly Entity[],
   sceneUnits: SceneUnits,
-): Map<number, WallEntity> {
+): JudgeOutcome {
   const sceneWalls = sceneEntities.filter(isWallEntity);
+  const dropped = new Map<number, string>();
   let alive = [...candidates].sort(byJudgingPriority);
   for (;;) {
     const neighbours = [...sceneWalls, ...alive.map((c) => c.wall)];
-    const existing: Entity[] = [...sceneEntities];
-    const accepted = new Map<number, WallEntity>();
-    for (const candidate of alive) {
-      const entity = extendFillingWallToNeighbors(candidate.wall, neighbours, sceneUnits);
-      if (findStructuralOverlapForEntity(entity as unknown as Entity, existing)) continue;
-      accepted.set(candidate.index, entity);
-      existing.push(entity as unknown as Entity);
-    }
-    if (accepted.size === alive.length) return accepted;
-    alive = alive.filter((c) => accepted.has(c.index));
+    const round = judgeRound(alive, sceneEntities, neighbours, sceneUnits);
+    round.dropped.forEach((reason, index) => dropped.set(index, reason));
+    if (round.accepted.size === alive.length) return { accepted: round.accepted, dropped };
+    alive = alive.filter((c) => round.accepted.has(c.index));
   }
 }
 
@@ -197,15 +233,15 @@ export function computeFillingWalls(
   options: FillingWallsOptions = {},
 ): FillingWallsResult {
   const { candidates, invalid } = buildFillingCandidates(rects, overrides, sceneUnits, levelId, options);
-  const joined = joinAndJudge(candidates, sceneEntities, sceneUnits);
+  const { accepted, dropped } = joinAndJudge(candidates, sceneEntities, sceneUnits);
   const walls: WallEntity[] = [];
   const rejected: FillingWallReject[] = [];
   rects.forEach((rect, index) => {
     const invalidReason = invalid.get(index);
-    const wall = joined.get(index);
+    const wall = accepted.get(index);
     if (invalidReason) rejected.push({ rect, reason: invalidReason });
     else if (wall) walls.push(wall);
-    else rejected.push({ rect, reason: REGION_REJECT_OCCUPIED_KEY });
+    else rejected.push({ rect, reason: dropped.get(index) ?? REGION_REJECT_OCCUPIED_KEY });
   });
   return { walls, rejected };
 }

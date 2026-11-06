@@ -209,7 +209,8 @@ describe('ADR-911 Φ3α-3 — ενώσεις ανεξάρτητες από τη 
       expect(walls).toHaveLength(1);
       expect(Math.hypot(walls[0].params.end.x - walls[0].params.start.x, walls[0].params.end.y - walls[0].params.start.y))
         .toBeCloseTo(4000, 6);
-      expect(rejected).toEqual([{ rect: short, reason: 'regionPerimeter.rejected.occupied' }]);
+      // ADR-929 Φ5.2δ — ο χαμένος της ΙΔΙΑΣ παρτίδας δεν «υπάρχει ήδη»: δικός του λόγος.
+      expect(rejected).toEqual([{ rect: short, reason: 'regionPerimeter.rejected.overlapsCandidate' }]);
     }
   });
 

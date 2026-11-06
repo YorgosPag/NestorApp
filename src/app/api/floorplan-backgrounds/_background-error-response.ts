@@ -24,6 +24,7 @@ import type { AuthContext } from '@/lib/auth';
 import { CrossTenantAccessError, concealCrossTenant } from '@/lib/auth/tenant-ownership';
 import {
   BackgroundLockedError,
+  CalibrationStaleError,
   BackgroundNotFoundError,
 } from '@/services/floorplan-background/background-ownership';
 
@@ -94,6 +95,12 @@ export function backgroundErrorResponse(spec: BackgroundErrorSpec): NextResponse
     // αντίθετο — μαρτυρά ότι ο πόρος υπάρχει **και σου ανήκει**, πράγμα που ο
     // χρήστης δικαιούται να ξέρει.
     return NextResponse.json({ error: err.message, code: err.code }, { status: 409 });
+  }
+
+  if (err instanceof CalibrationStaleError) {
+    // ADR-929 Φ5.2γ — η θέση άλλαξε αλλού· ο πελάτης ξαναδιαβάζει και υιοθετεί τη θέση του server.
+    // `errorCode` είναι το πεδίο που διαβάζει ο `apiClient` (`errorFieldsFrom`).
+    return NextResponse.json({ error: err.message, code: err.code, errorCode: err.code }, { status: 409 });
   }
 
   return null;

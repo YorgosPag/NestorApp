@@ -360,6 +360,11 @@
 
 ## 12. Changelog
 
+### 2026-11-05 — **Λόγος «επικαλύπτει άλλη πρόταση» + ομάδες πάχους με ανοχή** *(ADR-929 Φ5.2δ)*
+
+- `filling-walls-compute.ts`: ο `joinAndJudge` κρίνει σε γύρους (`judgeRound`) πρώτα έναντι της σκηνής και μετά έναντι των δεκτών. Νέο `REGION_REJECT_OVERLAPS_CANDIDATE_KEY` για τον χαμένο της ίδιας παρτίδας· το `REGION_REJECT_OCCUPIED_KEY` μένει μόνο για τη σκηνή ⇒ το `existing` της πρότασης σημαίνει πια «υπάρχει στη σκηνή». Ίδιο «δεκτός ή όχι» με πριν. Μετρημένο στην παραγωγή: «Υπάρχουν ήδη: 85» σε κενό όροφο.
+- `wall-proposal.ts`: προαιρετικό `thicknessToleranceMm` ⇒ συσταδοποίηση 1D των παχών (κενό ή εύρος > ανοχή ⇒ νέα ομάδα· ετικέτα = διάμεσος σε βήμα 5 mm). Το δίνει μόνο η πηγή-εικόνα (`proposal-line-source.ts`, ±1,5 px). Σταθερές `RASTER_THICKNESS_TOLERANCE_PX` / `RASTER_THICKNESS_ROUND_MM` στο `MODEL_FROM_DRAWING_LIMITS`.
+
 ### 2026-11-05 — **Πηγή γραμμών: σχέδιο ή εικόνα υποβάθρου** *(ADR-929 Φ5.1, κλαδί `agent/raster-plan-recognition`)*
 
 - Νέο `systems/model-from-drawing/proposal-line-source.ts`: `ProposalLineSource = scene | raster`. Το `compute()` της συνεδρίας παίρνει τις γραμμές από εκεί: για την εικόνα, `withRasterSegments` + `rasterParallelPairStrategy` (ADR-929 Φ2). Η μηχανή (`computeWallProposal`), η προεπισκόπηση, οι ομάδες πάχους και η έγκριση (έλεγχος μπαγιάτικου, όλα ή τίποτα, ένα undo) **δεν άλλαξαν**.

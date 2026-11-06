@@ -324,3 +324,21 @@ describe('ADR-911 Α-3 — ο τύπος μπαίνει μέσα στην πρό
     expect(typed.items.map((i) => [i.key, i.status])).toEqual(plain.items.map((i) => [i.key, i.status]));
   });
 });
+
+describe('ADR-929 Φ5.2δ — ομάδες πάχους με ανοχή (πηγή-εικόνα)', () => {
+  const walls = (thicknesses: readonly number[]): Entity[] =>
+    thicknesses.flatMap((t, i) => frame(`w${i}`, WALL_HEX, 0, i * 2000, 3000, t));
+  const groupsOf = (p: WallProposal) => p.groups.map((g) => g.thicknessMm);
+
+  it('θόρυβος pixel (238/241/244 και 100/102) ⇒ δύο αποφάσεις, όχι πέντε', () => {
+    const entities = walls([238, 241, 244, 100, 102]);
+    expect(groupsOf(propose({ entities }))).toEqual([100, 102, 238, 241, 244]);
+    expect(groupsOf(propose({ entities, thicknessToleranceMm: 37 }))).toEqual([100, 240]);
+  });
+
+  it('μια συνεχής σειρά θορυβωδών τιμών ΔΕΝ ενώνει 100 mm με 250 mm (όριο εύρους ομάδας)', () => {
+    // Κενά 30 mm < ανοχή 37, αλλά το εύρος της ομάδας κόβεται στα 2×37 ⇒ [100,130,160] · [190,220,250].
+    const p = propose({ entities: walls([100, 130, 160, 190, 220, 250]), thicknessToleranceMm: 37 });
+    expect(groupsOf(p)).toEqual([130, 220]);
+  });
+});

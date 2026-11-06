@@ -134,6 +134,14 @@ jest.mock('../../hooks/useFloorplanBackgroundForLevel', () => ({
 }));
 
 const mockUseCalibration = jest.fn();
+// ADR-929 Φ5.2γ — ο διάλογος γράφει μέσω της μίας πράξης και ανακοινώνει το αποτέλεσμα.
+jest.mock('../../services/commit-calibration', () => ({
+  commitCalibration: jest.fn(async () => ({ status: 'saved', overlaysSkipped: 0 })),
+}));
+jest.mock('@/providers/NotificationProvider', () => ({
+  useNotifications: () => ({ success: jest.fn(), warning: jest.fn(), error: jest.fn() }),
+}));
+
 const mockUsePreview = jest.fn(() => ({ status: 'incomplete' }));
 jest.mock('../../hooks/useCalibration', () => ({
   useCalibration: () => mockUseCalibration(),

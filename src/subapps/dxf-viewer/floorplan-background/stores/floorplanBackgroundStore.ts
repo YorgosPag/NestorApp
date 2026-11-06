@@ -100,7 +100,16 @@ interface StoreActions {
    * server-provided id/companyId/fileId/createdBy/transform/calibration/etc.
    */
   _hydratePersistedBackground(floorId: string, persisted: FloorplanBackground, source: ProviderSource): Promise<void>;
+  /**
+   * ADR-929 Φ5.2γ — υιοθετεί θέση + βαθμονόμηση (+ ό,τι άλλο έστειλε ο server) χωρίς να ξαναφορτώσει
+   * τον provider. Το καλεί μόνο η πράξη βαθμονόμησης: επιτυχία (απάντηση server) ή επαναφορά.
+   */
+  _adoptPlacement(floorId: string, placement: AdoptedPlacement): void;
 }
+
+/** Ό,τι αλλάζει μια βαθμονόμηση στο υπόβαθρο. */
+export type AdoptedPlacement = Pick<FloorplanBackground, 'transform' | 'calibration'>
+  & Partial<Pick<FloorplanBackground, 'scale' | 'updatedAt' | 'updatedBy'>>;
 
 type FloorplanBackgroundStoreType = StoreState & StoreActions;
 
@@ -320,6 +329,18 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
         },
 
         // ── Internal ─────────────────────────────────────────────────────────
+
+        _adoptPlacement: (floorId, placement) => {
+          set((draft) => {
+            const bg = draft.floors[floorId]?.background;
+            if (!bg) return;
+            bg.transform = { ...placement.transform };
+            bg.calibration = placement.calibration;
+            if (placement.scale !== undefined) bg.scale = placement.scale;
+            if (placement.updatedAt !== undefined) bg.updatedAt = placement.updatedAt;
+            if (placement.updatedBy !== undefined) bg.updatedBy = placement.updatedBy;
+          });
+        },
 
         _hydratePersistedBackground: async (floorId, persisted, source) => {
           // Idempotent short-circuit: same persisted background already loaded.

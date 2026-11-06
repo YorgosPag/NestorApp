@@ -500,7 +500,8 @@
       "thicknessInvalid": "Invalid wall thickness",
       "heightInvalid": "Invalid wall height",
       "occupied": "A structural member already exists here",
-      "invalid": "Cannot become a wall"
+      "invalid": "Cannot become a wall",
+      "overlapsCandidate": "Overlaps another proposed wall — the longer one is kept"
     },
     "gapClose": {
       "title": "Close the loop",
