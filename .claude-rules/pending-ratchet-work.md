@@ -545,6 +545,18 @@
   επιλογή και βγαίνει toast επιτυχίας. Διόρθωση: να μετρά ως «δεν στάλθηκε» και να δείχνει το `errorReason`, χωρίς νέα
   πρόσκληση στην επανάληψη (η πρόσκληση υπάρχει ήδη ⇒ επαναποστολή, όχι δημιουργία).
 
+- 🔴 **06/11 — ΔΥΟ ΔΡΟΜΟΙ ΚΟΙΝΟΠΟΙΗΣΗΣ ΑΚΙΝΗΤΟΥ ΜΕ EMAIL· Ο ΠΑΛΙΟΣ ΣΤΕΛΝΕΙ ΩΜΟ HTML ΚΑΙ ΨΕΥΤΙΚΑ ΣΤΟΙΧΕΙΑ** *(ADR-327 §7.5 · ADR-857 Φ9 · N.11)*
+
+  Ο διάλογος κοινοποίησης (`UserAuthPermissionPanel.handleEmailShare`) στέλνει από το νέο `showcase/email` όταν υπάρχει
+  `showcaseContext`, αλλιώς από το παλιό `POST /api/communications/email/property-share` → `email.service.ts` →
+  `email-templates.service.ts` (3 πρότυπα: residential/commercial/premium). Τα 3 πρότυπα: (α) `personalMessage` **ωμό** στο
+  HTML (το `sanitizeString` είναι μαύρη λίστα) — και τα υπόλοιπα πεδία (`propertyTitle`, `photoUrl`…)· (β) **κατασκευασμένα**
+  στοιχεία: τηλέφωνο `+30 210 123 4567`, `commercial@`/`premium@nestorconstruct.gr`, «20+ χρόνια εμπειρίας»· (γ) υποσέλιδο εκτός
+  `resolveSenderIdentity`· (δ) 17 ωμά ελληνικά εκτός baseline ⇒ κάθε άγγιγμα μπλοκάρει. Ο `TemplateSelector` (browser) φορτώνει
+  το ίδιο αρχείο. **Κατεύθυνση (Giorgio: «όπως οι μεγάλοι»)**: ΕΝΑΣ δρόμος — μέτρησε ποιοι καλούντες ανοίγουν τον διάλογο
+  χωρίς `showcaseContext` και αν το showcase τους καλύπτει· μετά απόσυρση του παλιού δρόμου ή μετάβασή του στο branded σύστημα
+  (`wrapInBrandedTemplate` · `personal-note-block` · `plainTextToHtml`). Plan Mode.
+
 - 🟡 **22/09 — `ConfirmDialog`: ΤΟ RADIX ΚΛΕΙΝΕΙ ΤΟΝ ΔΙΑΛΟΓΟ ΠΡΙΝ ΤΕΛΕΙΩΣΕΙ Η ΕΝΕΡΓΕΙΑ** *(ADR-003 · ADR-598 «(θ)» · 40 καταναλωτές)*
 
   Το `AlertDialogAction` κλείνει με το κλικ ⇒ ένα async `onConfirm` που αποτυγχάνει δεν έχει πού να δείξει σφάλμα, και το

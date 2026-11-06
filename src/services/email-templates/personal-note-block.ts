@@ -6,11 +6,13 @@
  * Ποτέ HTML από τον χρήστη, ποτέ αυτόματοι σύνδεσμοι: το σημείωμα φεύγει από το domain της πλατφόρμας
  * (anti-phishing, ADR-327 §11) και η επικεφαλίδα λέει ρητά ότι **δεν** είναι λόγια του συστήματος.
  *
- * ⚠️ Μέχρι σήμερα το ίδιο μπλοκ ζει τοπικά σε τέσσερα σημεία (`email-templates.service.ts` ×3 — **χωρίς**
- * escape — · `photo-share.ts`). Η μεταφορά τους εδώ είναι **ξεχωριστή** εργασία, μόνο με εντολή.
+ * Το escape + αλλαγές γραμμής είναι το ΕΝΑ `plainTextToHtml` (`lib/html/plain-text-html`), κοινό με το photo-share
+ * και το intro του showcase, που κρατούν το δικό τους σχέδιο πλαισίου.
  */
 
 import 'server-only';
+
+import { plainTextToHtml } from '@/lib/html/plain-text-html';
 
 import { BRAND, escapeHtml } from './base-email-template';
 
@@ -24,7 +26,7 @@ export function normalizePersonalNote(note: string | null | undefined): string |
 export function personalNoteBlockHtml(heading: string, note: string | null | undefined): string {
   const body = normalizePersonalNote(note);
   if (body === null) return '';
-  const paragraphs = escapeHtml(body).replace(/\r?\n/g, '<br />');
+  const paragraphs = plainTextToHtml(body);
   return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
   <tr>
