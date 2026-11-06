@@ -48,6 +48,9 @@ import {
   useModelFromDrawingState,
 } from '../systems/model-from-drawing/model-from-drawing-store';
 import type { Point2D } from '../rendering/types/Types';
+import { createAssistantSceneSync } from '../systems/model-from-drawing/model-from-drawing-scene-sync';
+import { subscribeScene } from '../systems/scene/SceneStore';
+import { getGlobalCommandHistory } from '../core/commands/CommandHistory';
 import { planRecognitionSession } from '../systems/plan-recognition/plan-recognition-session';
 import { usePlanRecognitionWiring } from './usePlanRecognitionWiring';
 import {
@@ -155,7 +158,7 @@ function useSamplePickMode(picking: boolean, hint: string): void {
 }
 
 /**
- * Ο βοηθός ακολουθεί τον κόσμο: δείγμα που άφησε ο καμβάς · αλλαγή ενεργού επιπέδου · αποσύνδεση του host.
+ * Ο βοηθός ακολουθεί τον κόσμο: δείγμα που άφησε ο καμβάς · αλλαγή σκηνής ή ενεργού επιπέδου · αποσύνδεση του host.
  */
 function useSceneSync(
   pendingSample: Point2D | null,
@@ -173,11 +176,16 @@ function useSceneSync(
     if (modelFromDrawingStore.get().lineSource.kind === 'scene') planRecognitionSession.close();
   }, [pendingSample, getDeps, getOpeningDeps]);
 
-  // Αλλαγή ενεργού επιπέδου με πρόταση ανοιχτή → η πρόταση αφορά άλλη σκηνή: ξαναϋπολόγισε.
-  React.useEffect(() => {
-    modelFromDrawingSession.refresh(getDeps());
-    modelFromDrawingOpeningsSession.refresh(getOpeningDeps());
-  }, [levelId, getDeps, getOpeningDeps]);
+  // Ο βοηθός ακολουθεί τη ΖΩΝΤΑΝΗ σκηνή (αναίρεση · επανάληψη · επεξεργασία · όροφος), όχι μόνο τον όροφο.
+  // Συνδρομή χωρίς React state: καμία αλλαγή σκηνής δεν ξαναζωγραφίζει τον host — μόνο το store της συνεδρίας,
+  // όταν και εφόσον η πρόταση όντως άλλαξε (early cutoff στη `SceneBasis`).
+  const sync = React.useMemo(
+    () => createAssistantSceneSync(() => ({ walls: getDeps(), openings: getOpeningDeps() })),
+    [getDeps, getOpeningDeps],
+  );
+  React.useEffect(() => subscribeScene(sync.sceneChanged), [sync]);
+  React.useEffect(() => getGlobalCommandHistory().subscribe(sync.historyMoved), [sync]);
+  React.useEffect(() => sync.sceneChanged(), [levelId, sync]);
 
   // Δίχτυ: αν ο host φύγει ενώ ο βοηθός είναι ανοιχτός, μη μείνει οπλισμένος ο καμβάς.
   React.useEffect(() => () => modelFromDrawingSession.close(), []);

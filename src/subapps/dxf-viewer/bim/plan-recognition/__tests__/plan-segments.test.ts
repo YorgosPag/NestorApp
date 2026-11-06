@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from '@jest/globals';
 import type { Point2D } from '../../../rendering/types/Types';
-import { computeWallProposal } from '../../model-from-drawing/wall-proposal';
+import { proposeConfirmed } from '../../model-from-drawing/__tests__/confirmed-proposal';
 import { alignPlan } from '../alignment/align-plan';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import { DEFAULT_PLAN_SEGMENTS, extractPlanSegments, minFillPxFor } from '../segments/plan-segments';
@@ -48,7 +48,8 @@ function measure(spec: SyntheticPlanSpec): Measured {
   const { segments } = extractPlanSegments(aligned, { ...DEFAULT_PLAN_SEGMENTS, minFillPx });
   const lines = withRasterSegments([], () => null, segments, plan.placement);
   const strategy = rasterParallelPairStrategy(plan.placement, 'mm');
-  const walls = computeWallProposal({ ...lines, sceneUnits: 'mm', levelId: 'lvl', strategy }).walls;
+  // Οι τοίχοι μετά την επιβεβαίωση των ομάδων πάχους (ADR-929 Φ5.2ε): εδώ κρίνεται η γεωμετρία που χτίζεται.
+  const walls = proposeConfirmed({ ...lines, sceneUnits: 'mm', levelId: 'lvl', strategy }).walls;
   let maxAxis = 0;
   let maxThickness = 0;
   let matched = 0;

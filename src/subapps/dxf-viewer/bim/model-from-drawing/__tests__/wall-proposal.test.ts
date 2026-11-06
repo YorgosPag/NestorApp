@@ -26,6 +26,7 @@ import { buildAutoWallType } from '../../family-types/auto-wall-type';
 import { getBuiltInWallTypes } from '../../family-types/built-in-types';
 import { createWallTyper } from '../../family-types/wall-typer';
 import fixture from './fixtures/floor-plan-lines.json';
+import { proposeConfirmed } from './confirmed-proposal';
 
 const WALL_HEX = '#003fff';
 const LEVEL = 'lvl_test';
@@ -50,16 +51,18 @@ function frame(prefix: string, color: string, x: number, y: number, w: number, h
   ];
 }
 
+const inputOf = (overrides: Partial<WallProposalInput>): WallProposalInput => ({
+  entities: ENTITIES,
+  wallColorHex: WALL_HEX,
+  colorOf,
+  sceneUnits: 'mm',
+  levelId: LEVEL,
+  ...overrides,
+});
+
 /** Η πρόταση όπως βγαίνει, πριν επιβεβαιώσει ο άνθρωπος οποιαδήποτε ομάδα πάχους. */
 function proposeUnconfirmed(overrides: Partial<WallProposalInput> = {}): WallProposal {
-  return computeWallProposal({
-    entities: ENTITIES,
-    wallColorHex: WALL_HEX,
-    colorOf,
-    sceneUnits: 'mm',
-    levelId: LEVEL,
-    ...overrides,
-  });
+  return computeWallProposal(inputOf(overrides));
 }
 
 /**
@@ -67,10 +70,7 @@ function proposeUnconfirmed(overrides: Partial<WallProposalInput> = {}): WallPro
  * κανένας τοίχος δεν είναι `ready` (ADR-929 Φ5.2ε: μερική έγκριση) — τα tests εδώ κρίνουν τι θα χτιστεί.
  */
 function propose(overrides: Partial<WallProposalInput> = {}): WallProposal {
-  const raw = proposeUnconfirmed(overrides);
-  const chosen = new Map(raw.groups.map((g) => [g.thicknessMm, g.suggestedCategory] as const));
-  for (const [t, c] of overrides.categoryByThicknessMm ?? []) chosen.set(t, c);
-  return proposeUnconfirmed({ ...overrides, categoryByThicknessMm: chosen });
+  return proposeConfirmed(inputOf(overrides));
 }
 
 function countByStatus(p: WallProposal): Record<string, number> {

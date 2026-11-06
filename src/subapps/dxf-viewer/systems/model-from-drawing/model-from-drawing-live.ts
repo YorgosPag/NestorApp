@@ -11,6 +11,7 @@
  */
 
 import type { Entity, SceneLayer } from '../../types/entities';
+import type { SceneModel } from '../../types/scene';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallSceneAccessor } from '../../bim/walls/add-wall-to-scene';
 import { extractLineSegments, pickSegmentAt } from '../../bim/walls/wall-in-region';
@@ -21,6 +22,28 @@ export interface LiveScene {
   readonly levelId: string;
   readonly entities: readonly Entity[];
   readonly sceneUnits: SceneUnits;
+}
+
+/**
+ * Η σκηνή πάνω στην οποία υπολογίστηκε μια πρόταση — **ταυτότητα**, όχι περιεχόμενο. Το `SceneStore` αλλάζει
+ * αναφορά ΜΟΝΟ σε μετάλλαξη (ADR-547), άρα «ίδια αναφορά» ⇔ «η πρόταση είναι ακόμα αληθινή» (early cutoff).
+ */
+export interface SceneBasis {
+  readonly levelId: string | null;
+  readonly scene: SceneModel | null;
+}
+
+/** Η βάση που θα είχε μια πρόταση υπολογισμένη ΤΩΡΑ. */
+export function readSceneBasis(accessor: WallSceneAccessor): SceneBasis {
+  const levelId = accessor.currentLevelId;
+  return { levelId, scene: levelId ? accessor.getLevelScene(levelId) : null };
+}
+
+/** Είναι η πρόταση με αυτή τη βάση υπολογισμένη από τη ζωντανή σκηνή; (`null` = δεν υπολογίστηκε ποτέ.) */
+export function isSceneBasisCurrent(basis: SceneBasis | null, accessor: WallSceneAccessor): boolean {
+  if (!basis) return false;
+  const now = readSceneBasis(accessor);
+  return basis.levelId === now.levelId && basis.scene === now.scene;
 }
 
 /** Ό,τι χρειάζεται ένα δείγμα χρώματος από τον κόσμο. */

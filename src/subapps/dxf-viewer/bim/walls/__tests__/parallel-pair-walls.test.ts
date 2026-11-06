@@ -14,7 +14,7 @@ import { describe, expect, it } from '@jest/globals';
 import type { Entity } from '../../../types/entities';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../../config/tolerance-config';
 import { closedRectangleStrategy, createParallelPairStrategy } from '../../model-from-drawing/wall-detection-strategy';
-import { computeWallProposal } from '../../model-from-drawing/wall-proposal';
+import { proposeConfirmed } from '../../model-from-drawing/__tests__/confirmed-proposal';
 import { pointInPolygon } from '@/lib/geometry/planar-polygon';
 import { detectedRectAxis, extractLineSegments, type DetectedRectangle, type RegionLineSeg } from '../wall-in-region';
 import fixture from '../../model-from-drawing/__tests__/fixtures/floor-plan-lines.json';
@@ -93,7 +93,7 @@ describe('Π-6 μέσα από το αμετάβλητο computeWallProposal', (
   const entities = HOUSE.map((s) => ({ id: s.id, type: 'line', color: '#000000', start: s.start, end: s.end }) as unknown as Entity);
 
   it('5 τοίχοι έτοιμοι, άξονας από κόμβο σε κόμβο, όλες οι γραμμές εξηγημένες', () => {
-    const p = computeWallProposal({
+    const p = proposeConfirmed({
       entities, wallColorHex: '#000000', colorOf: () => '#000000', sceneUnits: 'mm', levelId: 'lvl', strategy,
     });
     expect(p.items.map((i) => i.status)).toEqual(['ready', 'ready', 'ready', 'ready', 'ready']);

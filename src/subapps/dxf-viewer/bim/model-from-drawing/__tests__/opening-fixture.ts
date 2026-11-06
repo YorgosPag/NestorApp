@@ -9,7 +9,7 @@ import type { WallEntity } from '../../types/wall-types';
 import { buildWallEntity } from '../../../hooks/drawing/wall-completion';
 import { applyTrimPatches, computeWallTrims } from '../../walls/wall-trims';
 import type { WallSceneAccessor } from '../../walls/add-wall-to-scene';
-import { computeWallProposal } from '../wall-proposal';
+import { proposeConfirmed } from './confirmed-proposal';
 import { computeOpeningProposal, type OpeningDecision, type OpeningProposal } from '../opening-proposal';
 import fixture from './fixtures/floor-plan-lines.json';
 
@@ -19,12 +19,12 @@ export const colorOf = (e: Entity): string | null => (e as { color?: string }).c
 export const WALL = '#003fff';
 export const OPENING = '#00cccc';
 
-/** Οι τοίχοι όπως τους γράφει η Φ3. `acceptAll` = εγκρίθηκαν και τα 2 «προς απόφαση». */
+/** Οι τοίχοι όπως τους γράφει η Φ3 (όλες οι ομάδες επιβεβαιωμένες). `acceptAll` = εγκρίθηκαν και τα 2 «προς απόφαση». */
 export function writtenWalls(acceptAll: boolean): WallEntity[] {
   const input = { entities: ENTITIES, wallColorHex: WALL, colorOf, sceneUnits: 'mm' as const, levelId: LEVEL };
-  const base = computeWallProposal(input);
+  const base = proposeConfirmed(input);
   const undecided = new Set(base.items.filter((i) => i.status === 'needs-decision').map((i) => i.key));
-  const walls = acceptAll ? computeWallProposal({ ...input, acceptedKeys: undecided }).walls : base.walls;
+  const walls = acceptAll ? proposeConfirmed({ ...input, acceptedKeys: undecided }).walls : base.walls;
   const trimmed = applyTrimPatches(walls as readonly AnySceneEntity[], computeWallTrims(walls, []));
   return trimmed as unknown as WallEntity[];
 }

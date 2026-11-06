@@ -27,7 +27,8 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { DxfEntityUnion, DxfWall } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import { applyWallColumnCutback2D } from '../../../hooks/canvas/dxf-scene-wall-cutback';
 import { applyWallWallCrossCutback2D } from '../../../hooks/canvas/dxf-scene-wall-wall-cutback';
-import { computeWallProposal, type WallProposal } from '../../model-from-drawing/wall-proposal';
+import type { WallProposal } from '../../model-from-drawing/wall-proposal';
+import { proposeConfirmed } from '../../model-from-drawing/__tests__/confirmed-proposal';
 import fixture from '../../model-from-drawing/__tests__/fixtures/floor-plan-lines.json';
 import { computeFillingWallFootprints } from '../filling-walls-compute';
 import { resolveCornerClusters } from '../wall-trims-corner-resolve';
@@ -47,7 +48,8 @@ const ENTITIES = fixture.entities as unknown as readonly Entity[];
 const colorOf = (e: Entity): string | null => (e as { color?: string }).color?.toLowerCase() ?? null;
 
 function propose(entities: readonly Entity[] = ENTITIES): WallProposal {
-  return computeWallProposal({ entities, wallColorHex: '#003fff', colorOf, sceneUnits: 'mm', levelId: LEVEL });
+  // Οι τοίχοι όπως είναι μετά την επιβεβαίωση των ομάδων πάχους (ADR-929 Φ5.2ε) — εδώ κρίνεται τι ΓΡΑΦΕΤΑΙ.
+  return proposeConfirmed({ entities, wallColorHex: '#003fff', colorOf, sceneUnits: 'mm', levelId: LEVEL });
 }
 
 interface Harness {

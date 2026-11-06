@@ -151,6 +151,26 @@ describe('ModelFromDrawingHost', () => {
     expect(modelFromDrawingStore.get().notice).toMatchObject({ kind: 'written', count: 38 });
   });
 
+  it('Ctrl+Z μετά την έγκριση: το πάνελ ακολουθεί τη σκηνή — κανένας «υπάρχει ήδη», καμία ψεύτικη ειδοποίηση', async () => {
+    // Ζωντανή επαλήθευση ADR-929 Φ5.2ε: μετά την αναίρεση το πάνελ έμενε στο «Υπάρχουν ήδη 47».
+    const h = levelManagerOver(ENTITIES);
+    render(<ModelFromDrawingHost levelManager={h.levelManager} />);
+    requestAssistant();
+    clickCanvas(ON_WALL_LINE);
+    for (const g of modelFromDrawingStore.get().proposal!.groups) {
+      act(() => panel!.actions.onConfirmGroup(g.thicknessMm, g.suggestedCategory));
+    }
+    act(() => panel!.actions.onApprove());
+    expect(panel!.state.proposal!.items.filter((i) => i.status === 'existing')).toHaveLength(38);
+
+    await act(async () => { getGlobalCommandHistory().undo(); });
+
+    expect(h.walls()).toHaveLength(0);
+    expect(panel!.state.proposal!.items.filter((i) => i.status === 'existing')).toHaveLength(0);
+    expect(panel!.state.proposal!.walls).toHaveLength(38);
+    expect(panel!.state.notice).toBeNull();
+  });
+
   it('«άλλο δείγμα» ξαναοπλίζει· το κλείσιμο και η αποχώρηση του host αφήνουν τον καμβά ελεύθερο', () => {
     const view = render(<ModelFromDrawingHost levelManager={levelManagerOver(ENTITIES).levelManager} />);
     requestAssistant();

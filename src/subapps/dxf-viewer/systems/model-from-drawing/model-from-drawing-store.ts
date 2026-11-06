@@ -36,6 +36,7 @@ import type { OpeningPreview } from '../../bim/model-from-drawing/opening-previe
 import type { OpeningReviewChoices } from '../../bim/model-from-drawing/opening-review';
 import type { AddOpeningsRefusal } from '../../bim/model-from-drawing/add-openings-to-scene';
 import { SCENE_LINE_SOURCE, type ProposalLineSource } from './proposal-line-source';
+import type { SceneBasis } from './model-from-drawing-live';
 
 /**
  * `closed`  — ο βοηθός δεν τρέχει.
@@ -79,6 +80,10 @@ export interface ModelFromDrawingState {
   readonly categoryByThicknessMm: ReadonlyMap<number, WallCategory>;
   readonly proposal: WallProposal | null;
   readonly preview: AssistantPreview | null;
+  /** Η σκηνή πάνω στην οποία υπολογίστηκε η πρόταση τοίχων (ο συγχρονιστής σκηνής ξέρει έτσι αν είναι μπαγιάτικη). */
+  readonly wallBasis: SceneBasis | null;
+  /** Το ίδιο για την πρόταση ανοιγμάτων — δική της, γιατί οι δύο ελεγκτές ξαναϋπολογίζουν χωριστά. */
+  readonly openingBasis: SceneBasis | null;
   /** Φ4-3β — το αποδιδόμενο χρώμα (hex) που ο άνθρωπος έδειξε ως «σύμβολο κουφώματος». */
   readonly openingColorHex: string | null;
   /** Φ4-3β — ό,τι απάντησε ο άνθρωπος ανά στοιχείο «προς απόφαση» (πόρτα · παράθυρο · τίποτα). */
@@ -100,6 +105,8 @@ const CLOSED: ModelFromDrawingState = {
   categoryByThicknessMm: new Map(),
   proposal: null,
   preview: null,
+  wallBasis: null,
+  openingBasis: null,
   openingColorHex: null,
   openingChoices: new Map(),
   openingProposal: null,

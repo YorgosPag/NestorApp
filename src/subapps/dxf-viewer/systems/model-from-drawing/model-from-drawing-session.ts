@@ -35,7 +35,7 @@ import {
   wallProposalSignature,
   type AssistantPreview,
 } from '../../bim/model-from-drawing/assistant-preview';
-import { isSampleFailure, readLiveScene, sampleColorAt } from './model-from-drawing-live';
+import { isSampleFailure, readLiveScene, readSceneBasis, sampleColorAt, type SceneBasis } from './model-from-drawing-live';
 import {
   isRasterPlacementCalibrated,
   resolveProposalLines,
@@ -62,6 +62,8 @@ type ProposalInputs = Pick<ModelFromDrawingState, 'lineSource' | 'wallColorHex' 
 interface Computed {
   readonly proposal: WallProposal;
   readonly preview: AssistantPreview;
+  /** Η σκηνή της πρότασης — ταξιδεύει ΜΑΖΙ της, ώστε κάθε δρόμος που γράφει πρόταση να γράφει και τη βάση της. */
+  readonly wallBasis: SceneBasis;
 }
 
 /**
@@ -81,7 +83,7 @@ function compute(inputs: ProposalInputs, deps: ModelFromDrawingDeps): Computed |
     categoryByThicknessMm: inputs.categoryByThicknessMm,
     typeWall: deps.typing.typeWall,
   });
-  return { proposal, preview: buildAssistantPreview(proposal, lines.entities) };
+  return { proposal, preview: buildAssistantPreview(proposal, lines.entities), wallBasis: readSceneBasis(deps.accessor) };
 }
 
 /** Ξαναϋπολογίζει με (ενδεχομένως) νέες αποφάσεις και γράφει το αποτέλεσμα στο store. */

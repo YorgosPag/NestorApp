@@ -37,7 +37,14 @@ import {
   type OpeningReviewChoice,
 } from '../../bim/model-from-drawing/opening-review';
 import { resolveEntityColorHex } from '../selection/select-similar-by-color';
-import { isSampleFailure, readLiveScene, sampleColorAt, type SampleDeps } from './model-from-drawing-live';
+import {
+  isSampleFailure,
+  readLiveScene,
+  readSceneBasis,
+  sampleColorAt,
+  type SampleDeps,
+  type SceneBasis,
+} from './model-from-drawing-live';
 import { modelFromDrawingStore, type ModelFromDrawingState } from './model-from-drawing-store';
 
 /** Ό,τι χρειάζεται ο ελεγκτής ανοιγμάτων από τον κόσμο — διαβάζεται ΤΗ ΣΤΙΓΜΗ της πράξης. */
@@ -52,6 +59,8 @@ type OpeningInputs = Pick<ModelFromDrawingState, 'openingColorHex' | 'openingCho
 interface Computed {
   readonly openingProposal: OpeningProposal;
   readonly openingPreview: OpeningPreview;
+  /** Η σκηνή της πρότασης — ταξιδεύει ΜΑΖΙ της (βλ. `SceneBasis`). */
+  readonly openingBasis: SceneBasis;
 }
 
 /** Πρόταση + προεπισκόπηση από τη ΖΩΝΤΑΝΗ σκηνή. `null` χωρίς σκηνή ή χωρίς δείγμα. */
@@ -72,7 +81,7 @@ function compute(inputs: OpeningInputs, deps: OpeningSessionDeps): Computed | nu
     sceneUnits: live.sceneUnits,
     choices: inputs.openingChoices,
   });
-  return { openingProposal, openingPreview };
+  return { openingProposal, openingPreview, openingBasis: readSceneBasis(deps.accessor) };
 }
 
 /** Ξαναϋπολογίζει με (ενδεχομένως) νέες απαντήσεις και γράφει το αποτέλεσμα στο store. */
