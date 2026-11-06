@@ -23,6 +23,8 @@ import { TermsSection } from '../sections/terms/TermsSection';
 import { AGREEMENT_SECTION_MAP } from './editor-sections';
 import { EditorSectionTabs } from './EditorSectionTabs';
 import { EditorSplitLayout } from './EditorSplitLayout';
+import { DocumentZoomBar } from '../document/DocumentZoomBar';
+import { DocumentZoomProvider } from '../document/DocumentZoomContext';
 import { useBoundTermsViews } from './useBoundTermsViews';
 import { useEditorSection, type EditorSectionState } from './useEditorSection';
 import { AgreementLivePreview } from './AgreementLivePreview';
@@ -78,12 +80,15 @@ export default function AgreementEditor({ editor }: AgreementEditorProps) {
   return (
     <section className="space-y-3">
       <ConflictBanner editor={editor} />
-      <EditorSplitLayout
-        form={<EditorForm editor={editor} sections={sections} />}
-        preview={<AgreementLivePreview editor={editor} onEdit={editFromDocument} />}
-        previewTitle={t('subcontracts.editor.preview.title')}
-        previewRequest={sections.previewRequest}
-      />
+      <DocumentZoomProvider>
+        <EditorSplitLayout
+          form={<EditorForm editor={editor} sections={sections} />}
+          preview={<AgreementLivePreview editor={editor} onEdit={editFromDocument} />}
+          previewTitle={t('subcontracts.editor.preview.title')}
+          previewTools={<DocumentZoomBar />}
+          previewRequest={sections.previewRequest}
+        />
+      </DocumentZoomProvider>
     </section>
   );
 }

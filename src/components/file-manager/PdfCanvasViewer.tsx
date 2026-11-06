@@ -21,12 +21,11 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
-  ZoomIn,
-  ZoomOut,
   RotateCw,
   Maximize,
-  Minimize2,
 } from 'lucide-react';
+import { DocumentZoomControl } from '@/components/shared/media/viewer/DocumentZoomControl';
+import { clampZoom, ladderZoom, type ZoomLimits } from '@/lib/geometry/zoom-pan-math';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -53,6 +52,9 @@ import { PdfHighlights, useControlledPdfPage } from './PdfHighlights';
 // ============================================================================
 
 const logger = createModuleLogger('PdfCanvasViewer');
+
+/** Τα όρια του ζουμ του θεατή, στη μορφή της κοινής μαθηματικής του ζουμ (`zoom-pan-math`). */
+const PDF_ZOOM_LIMITS: ZoomLimits = { min: MIN_SCALE, max: MAX_SCALE };
 
 export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, page, highlights }: PdfCanvasViewerProps) {
   const { t } = useTranslation('files');
@@ -86,6 +88,9 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
     loading: true,
     error: null,
   });
+
+  /** «Προσαρμογή στο πλάτος» ενεργή — ως την πρώτη χειροκίνητη αλλαγή ζουμ (δείχνεται πατημένο στην μπάρα). */
+  const [fitted, setFitted] = useState(true);
 
   useControlledPdfPage(page, state.numPages, setState);
 
@@ -227,6 +232,7 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
       const fitScale = Math.min(containerWidth / viewport.width, 2);
       const rounded = Math.round(fitScale * 100) / 100;
       fitScaleRef.current = rounded;
+      setFitted(true);
       setState((s) => ({ ...s, scale: rounded }));
     }
 
@@ -240,6 +246,7 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
 
     function handleWheel(e: WheelEvent) {
       e.preventDefault();
+      setFitted(false);
       const direction = e.deltaY < 0 ? 1 : -1;
       setState((s) => {
         const factor = direction > 0 ? WHEEL_ZOOM_FACTOR : 1 / WHEEL_ZOOM_FACTOR;
@@ -308,23 +315,24 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
     }));
   }, []);
 
-  const zoomIn = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      scale: Math.round(Math.min(MAX_SCALE, s.scale * WHEEL_ZOOM_FACTOR) * 100) / 100,
-    }));
+  // ADR-928 §5.25 — τα κουμπιά πατούν **σκαλί** της κοινής σκάλας (`ladderZoom`, Chrome PDF: 90 → 100 → 110 %), όχι ×1,1·
+  // ο τροχός μένει συνεχής. Κάθε χειροκίνητο ζουμ βγάζει την «Προσαρμογή στο πλάτος».
+  const zoomStep = useCallback((direction: 1 | -1) => {
+    setFitted(false);
+    setState((s) => ({ ...s, scale: ladderZoom(s.scale, PDF_ZOOM_LIMITS, direction) }));
   }, []);
+  const zoomIn = useCallback(() => zoomStep(1), [zoomStep]);
+  const zoomOut = useCallback(() => zoomStep(-1), [zoomStep]);
 
-  const zoomOut = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      scale: Math.round(Math.max(MIN_SCALE, s.scale / WHEEL_ZOOM_FACTOR) * 100) / 100,
-    }));
+  const zoomTo = useCallback((scale: number) => {
+    setFitted(false);
+    setState((s) => ({ ...s, scale: clampZoom(scale, PDF_ZOOM_LIMITS) }));
   }, []);
 
   const fitToWidth = useCallback(() => {
     panRef.current = { x: 0, y: 0 };
     applyPanTransform();
+    setFitted(true);
     setState((s) => ({ ...s, scale: fitScaleRef.current }));
   }, [applyPanTransform]);
 
@@ -404,49 +412,15 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
 
         {/* Zoom + tools */}
         <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={zoomOut}
-                disabled={state.scale <= MIN_SCALE}
-                className="h-7 w-7 p-0"
-              >
-                <ZoomOut className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('preview.zoomOut')}</TooltipContent>
-          </Tooltip>
-
-          <span className={cn("text-xs w-10 text-center tabular-nums", colors.text.muted)}>
-            {Math.round(state.scale * 100)}%
-          </span>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={zoomIn}
-                disabled={state.scale >= MAX_SCALE}
-                className="h-7 w-7 p-0"
-              >
-                <ZoomIn className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('preview.zoomIn')}</TooltipContent>
-          </Tooltip>
-
-          {/* Fit to width */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={fitToWidth} className="h-7 w-7 p-0">
-                <Minimize2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('preview.fitToWidth')}</TooltipContent>
-          </Tooltip>
+          {/* ADR-928 §5.25 — η ΚΟΙΝΗ μπάρα ζουμ σελίδας (μενού ποσοστού, σκάλα, «Προσαρμογή στο πλάτος» πατημένο). */}
+          <DocumentZoomControl
+            zoom={state.scale}
+            fitted={fitted}
+            limits={PDF_ZOOM_LIMITS}
+            onStep={zoomStep}
+            onZoomTo={zoomTo}
+            onFit={fitToWidth}
+          />
 
           <Tooltip>
             <TooltipTrigger asChild>

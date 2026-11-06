@@ -91,6 +91,11 @@ export const STORAGE_KEYS = {
   // Figma. Σχήμα: `components/ui/resizable-column-store.ts`.
   SUBCONTRACT_EDITOR_FORM_COLUMN: 'nestor:subcontract-editor-form-column:v1',
 
+  // ADR-928 §5.25 — το ζουμ της σελίδας εγγράφου (prefix — append uid): ο **τρόπος** («Προσαρμογή στο πλάτος» ή
+  // χειροκίνητο %), όχι μόνο ένα ποσοστό. Ανά **χρήστη και συσκευή**, όπως το Word (τελευταίο ζουμ) και το Acrobat
+  // (προτιμήσεις εγκατάστασης): το σωστό ζουμ είναι ιδιότητα της **οθόνης**. Σχήμα: `document/document-zoom-preference.ts`.
+  DOCUMENT_ZOOM_PREFIX: 'nestor:document-zoom:v1:',
+
   // ADR-930 — η ταξινόμηση μέσα στις στήλες της ροής πωλήσεων, ανά **συσκευή/χρήστη** (`PipelineSort`). Δική του
   // προτίμηση του καθενός — ποτέ κοινή σειρά (η χειροκίνητη σειρά ενός θα χαλούσε των άλλων).
   PIPELINE_SORT: 'nestor:crm-pipeline-sort:v1',

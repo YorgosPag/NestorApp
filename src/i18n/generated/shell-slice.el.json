@@ -1864,6 +1864,13 @@
       "returned": "Επιστράφηκε",
       "superseded": "Αντικαταστάθηκε"
     },
+    "documentZoom": {
+      "fitWidth": "Προσαρμογή στο πλάτος",
+      "label": "Ζουμ σελίδας",
+      "level": "Ζουμ {percent} — επιλογή ζουμ",
+      "zoomIn": "Μεγέθυνση",
+      "zoomOut": "Σμίκρυνση"
+    },
     "doyPicker": {
       "addNew": "Προσθήκη νέας Δ.Ο.Υ.",
       "addNewTitle": "Προσθήκη νέας Δ.Ο.Υ.",

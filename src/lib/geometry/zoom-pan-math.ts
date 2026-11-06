@@ -60,6 +60,35 @@ export function unitToZoom(unit: number, limits: ZoomLimits): number {
   return limits.min * Math.pow(limits.max / limits.min, clamp01(unit));
 }
 
+/**
+ * **Η σκάλα του ζουμ εγγράφου** — τα επίπεδα του Chrome/Chrome PDF (25 → 500 %): ανθρώπινα ποσοστά, πυκνά γύρω από το
+ * 100 % όπου διαβάζεις, αραιά ψηλά. Τα κουμπιά −/+ πατούν **σκαλί**, ποτέ ×1,1 (που δίνει 110 → 121 → 133 %).
+ */
+export const ZOOM_LADDER: readonly number[] = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
+
+/** Οι έτοιμες τιμές του μενού ποσοστού (Google Docs · Word): λίγες, στρογγυλές — η σκάλα είναι για τα βήματα. */
+export const ZOOM_MENU_PRESETS: readonly number[] = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 5];
+
+/** Ανοχή σύγκρισης: ένα ζουμ «προσαρμογής» 1,0000001 είναι το σκαλί 1, όχι κάτω από αυτό. */
+const LADDER_EPSILON = 0.005;
+
+/**
+ * Το **επόμενο σκαλί** προς την κατεύθυνση `direction` από οποιοδήποτε ζουμ (και ενδιάμεσο, π.χ. «προσαρμογή» 1,37 ⇒
+ * +: 1,5 · −: 1,25), μέσα στα όρια. Πέρα από το τελευταίο σκαλί εντός ορίων ⇒ το ίδιο το όριο.
+ */
+export function ladderZoom(zoom: number, limits: ZoomLimits, direction: 1 | -1): number {
+  const rungs = ZOOM_LADDER.filter((rung) => rung >= limits.min && rung <= limits.max);
+  const next = direction > 0
+    ? rungs.find((rung) => rung > zoom + LADDER_EPSILON)
+    : [...rungs].reverse().find((rung) => rung < zoom - LADDER_EPSILON);
+  return next ?? (direction > 0 ? limits.max : limits.min);
+}
+
+/** Οι έτοιμες τιμές του μενού που χωρούν στα όρια ενός θεατή. */
+export function zoomPresetsWithin(limits: ZoomLimits): number[] {
+  return ZOOM_MENU_PRESETS.filter((preset) => preset >= limits.min && preset <= limits.max);
+}
+
 /** Ευκλείδεια απόσταση δύο σημείων (pinch). */
 export function pointDistance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);

@@ -168,6 +168,13 @@
     "preview": "Προεπισκόπηση",
     "download": "Κατέβασμα PDF"
   },
+  "documentZoom": {
+    "label": "Ζουμ σελίδας",
+    "zoomIn": "Μεγέθυνση",
+    "zoomOut": "Σμίκρυνση",
+    "fitWidth": "Προσαρμογή στο πλάτος",
+    "level": "Ζουμ {percent} — επιλογή ζουμ"
+  },
   "tooltips": {
     "newBuildingShortcut": "Νέο Κτίριο (Ctrl+N)",
     "newProjectShortcut": "Νέο Έργο (Ctrl+N)",

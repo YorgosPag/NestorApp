@@ -168,6 +168,13 @@
     "preview": "Preview",
     "download": "Download PDF"
   },
+  "documentZoom": {
+    "label": "Page zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitWidth": "Fit to width",
+    "level": "Zoom {percent} — choose zoom"
+  },
   "tooltips": {
     "newBuildingShortcut": "New Building (Ctrl+N)",
     "newProjectShortcut": "New Project (Ctrl+N)",

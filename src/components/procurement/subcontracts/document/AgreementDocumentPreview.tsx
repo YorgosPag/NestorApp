@@ -4,7 +4,7 @@
  * Η προεπισκόπηση HTML του εγγράφου υπεργολαβίας (ADR-928 §5.17). **Μόνο τοποθετεί**: κάθε κείμενο έρχεται ήδη
  * αποδοσμένο από το `AgreementDocument` — καμία μορφοποίηση εδώ, άρα τίποτα που να διαφωνεί με το PDF (Φ4).
  *
- * §5.23: σελίδα πλάτους Α4 (`fit`), δείκτες ενοτήτων `data-doc-section` / `data-doc-clause` για τον συγχρονισμό με τις
+ * §5.23: σελίδα πλάτους Α4 (ζουμ: §5.25, `DocumentZoomContext`), δείκτες ενοτήτων `data-doc-section` / `data-doc-clause` για τον συγχρονισμό με τις
  * καρτέλες του επεξεργαστή, και μολύβι «Επεξεργασία» μόνο όταν δοθεί `onEdit`.
  */
 
@@ -18,7 +18,7 @@ import type {
   DocumentLineRow,
 } from '@/subapps/procurement/subcontracts/document/document-types';
 import { EditInFormButton, type DocumentEditHandler } from './EditInFormButton';
-import { usePaperFit } from './paper-fit';
+import { useDocumentZoomColumn } from './DocumentZoomContext';
 
 function Inlines({ inlines }: { inlines: readonly DocumentInline[] }) {
   return (
@@ -200,22 +200,22 @@ function DocumentHeader({ document, onEdit }: { document: AgreementDocument; onE
 
 export interface AgreementDocumentPreviewProps {
   readonly document: AgreementDocument;
-  /**
-   * `page` (προεπιλογή): σελίδα πλάτους Α4 στο κέντρο — ανάγνωση, παράθυρο προεπισκόπησης.
-   * `width`: προσαρμογή στο πλάτος της στήλης με ζουμ — η ζωντανή προεπισκόπηση των επεξεργαστών (`paper-fit`).
-   */
-  readonly fit?: 'page' | 'width';
   /** Μολύβι «Επεξεργασία» δίπλα σε κάθε ενότητα και ρήτρα — μόνο μέσα σε επεξεργαστή. */
   readonly onEdit?: DocumentEditHandler;
 }
 
-export function AgreementDocumentPreview({ document, fit = 'page', onEdit }: AgreementDocumentPreviewProps) {
-  const { frameRef, pageRef } = usePaperFit(fit === 'width');
+/**
+ * Μέσα σε `DocumentZoomProvider` (λεπτομέρεια · επεξεργαστές) η σελίδα ανήκει στη **μηχανή ζουμ** (§5.25): πλάτος Α4 +
+ * ζουμ από εκεί, ένα για όλες τις γλωσσικές στήλες. Χωρίς πάροχο (παράθυρο προεπισκόπησης) ⇒ σελίδα Α4 στο κέντρο.
+ */
+export function AgreementDocumentPreview({ document, onEdit }: AgreementDocumentPreviewProps) {
+  const { zoomable, frameRef, pageRef } = useDocumentZoomColumn();
   return (
-    <div ref={frameRef} className="min-w-0">
-      {/* `mx-auto` και στο `width`: όταν το ζουμ φτάσει το ταβάνι ×2 η σελίδα **κεντράρεται** όπως σε προβολέα PDF —
-          όχι κολλημένη αριστερά με κενό δεξιά (ζωντανός έλεγχος §5.23: 457 px σε «Μόνο έγγραφο»). Ρευστό πλάτος ⇒ καμία επίδραση. */}
-      <article ref={pageRef} lang={document.language} className={cn('mx-auto space-y-5 rounded-lg border bg-card p-5 text-sm leading-relaxed', fit === 'page' && 'max-w-[210mm]')}>
+    // `overflow-x-auto`: χειροκίνητο ζουμ φαρδύτερο από τη στήλη ⇒ οριζόντια κύλιση της στήλης, όπως σε προβολέα PDF.
+    <div ref={frameRef} className={cn('min-w-0', zoomable && 'overflow-x-auto')}>
+      {/* `mx-auto`: όταν η σελίδα είναι στενότερη από τη στήλη (ταβάνι ×2, μικρό χειροκίνητο ζουμ) **κεντράρεται** όπως σε
+          προβολέα PDF — όχι κολλημένη αριστερά με κενό δεξιά (ζωντανός έλεγχος §5.23). Ρευστό πλάτος ⇒ καμία επίδραση. */}
+      <article ref={pageRef} lang={document.language} className={cn('mx-auto space-y-5 rounded-lg border bg-card p-5 text-sm leading-relaxed', !zoomable && 'max-w-[210mm]')}>
         <DocumentHeader document={document} onEdit={onEdit} />
         <DocumentBody document={document} onEdit={onEdit} />
       </article>

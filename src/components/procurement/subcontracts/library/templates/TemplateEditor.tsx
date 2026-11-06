@@ -22,6 +22,8 @@ import { AgreementDocumentColumns, AgreementPaymentCalendar } from '../../docume
 import type { DocumentEditHandler, DocumentEditTarget } from '../../document/EditInFormButton';
 import { TEMPLATE_SECTION_MAP } from '../../editor/editor-sections';
 import { EditorSplitLayout } from '../../editor/EditorSplitLayout';
+import { DocumentZoomBar } from '../../document/DocumentZoomBar';
+import { DocumentZoomProvider } from '../../document/DocumentZoomContext';
 import { useEditorSection, type EditorSectionState } from '../../editor/useEditorSection';
 import { ConflictBanner, EditorToolbar } from '../../editor/EditorToolbar';
 import { useLibraryActions } from '../useLibraryActions';
@@ -50,7 +52,7 @@ function SpecimenPreview({ draft, library, onEdit }: SpecimenPreviewProps) {
   return (
     <section aria-label={t('subcontracts.library.templateEditor.specimen')} className="space-y-4">
       <p className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-sm"><Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{t('subcontracts.library.templateEditor.existingDraftsUnchanged')}</p>
-      <AgreementDocumentColumns agreement={specimen} fit="width" onEdit={onEdit} />
+      <AgreementDocumentColumns agreement={specimen} onEdit={onEdit} />
       <AgreementPaymentCalendar agreement={specimen} />
     </section>
   );
@@ -77,12 +79,15 @@ export function TemplateEditor({ target, templates, clauses, library, authority 
     <section className="space-y-3">
       <EditorToolbar editor={editor} copy={copy} />
       <ConflictBanner editor={editor} copy={copy} />
-      <EditorSplitLayout
-        form={<TemplateEditorForm editor={editor} library={library} titles={titles} takenCodes={takenCodes} sections={sections} />}
-        preview={<SpecimenPreview draft={editor.draft} library={library} onEdit={onEdit} />}
-        previewTitle={t('subcontracts.library.templateEditor.specimen')}
-        previewRequest={sections.previewRequest}
-      />
+      <DocumentZoomProvider>
+        <EditorSplitLayout
+          form={<TemplateEditorForm editor={editor} library={library} titles={titles} takenCodes={takenCodes} sections={sections} />}
+          preview={<SpecimenPreview draft={editor.draft} library={library} onEdit={onEdit} />}
+          previewTitle={t('subcontracts.library.templateEditor.specimen')}
+          previewTools={<DocumentZoomBar />}
+          previewRequest={sections.previewRequest}
+        />
+      </DocumentZoomProvider>
     </section>
   );
 }

@@ -18,6 +18,8 @@ import { Separator } from '@/components/ui/separator';
 import { useSubcontractAuthority } from '@/hooks/procurement/subcontracts/useSubcontractAuthority';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
 import { AgreementDocumentColumns, AgreementPaymentCalendar } from '../document/AgreementDocumentColumns';
+import { DocumentZoomBar } from '../document/DocumentZoomBar';
+import { DocumentZoomProvider } from '../document/DocumentZoomContext';
 import AgreementEditor from './AgreementEditor';
 import { AgreementLifecycleActions } from './AgreementLifecycleActions';
 import { DeviationsPanel } from './DeviationsPanel';
@@ -68,10 +70,17 @@ function ReadOnlyBody({ agreement, projectId, title, canApprove }: BodyProps) {
       </HeaderRow>
       <DeviationsPanel agreement={agreement} canApprove={canApprove} unsaved={false} />
       <WorkOrdersPanel agreement={agreement} />
-      <section className="space-y-4 rounded-lg border bg-muted/20 p-4">
-        <AgreementDocumentColumns agreement={agreement} />
-        <AgreementPaymentCalendar agreement={agreement} />
-      </section>
+      {/* §5.25 — το έγγραφο ως σελίδα με ζουμ (προσαρμογή στο πλάτος + χειροκίνητο), όπως στους επεξεργαστές. Η μπάρα
+          είναι κολλημένη: ορατή σε όποιο σημείο ενός μακριού συμφωνητικού κι αν βρίσκεσαι (γραμμή κατάστασης του Word). */}
+      <DocumentZoomProvider>
+        <section className="space-y-4 rounded-lg border bg-muted/20 p-4 pt-0">
+          <header className="sticky top-0 z-10 -mx-4 flex justify-end rounded-t-lg border-b bg-card px-4 py-1.5">
+            <DocumentZoomBar />
+          </header>
+          <AgreementDocumentColumns agreement={agreement} />
+          <AgreementPaymentCalendar agreement={agreement} />
+        </section>
+      </DocumentZoomProvider>
     </>
   );
 }

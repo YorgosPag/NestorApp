@@ -8,7 +8,7 @@
  *    390 px δεν διαβάζονται).
  * 🔑 §5.23 — **η φόρμα κρατά τα pixel της, το έγγραφο παίρνει τον υπόλοιπο χώρο** (`preserve-pixel-size`, όπως η πλαϊνή
  *    στήλη του VS Code/Revit): μεγαλώνει το παράθυρο ⇒ μεγαλώνει η σελίδα της προεπισκόπησης (ζουμ «προσαρμογή στο
- *    πλάτος», `paper-fit`). Το πλάτος θυμάται ανά συσκευή — η **κοινή** μηχανική `useCollapsibleColumn` (ADR-724/884),
+ *    πλάτος», `paper-fit`· μπάρα ζουμ στο `previewTools`, §5.25). Το πλάτος θυμάται ανά συσκευή — η **κοινή** μηχανική `useCollapsibleColumn` (ADR-724/884),
  *    όχι δεύτερη.
  * 🔑 «Μόνο έγγραφο»: η φόρμα συμπτύσσεται και το έγγραφο γεμίζει όλο το πλάτος — ίδια κατάσταση με το σύρσιμο κάτω από
  *    το ελάχιστο (ένας κάτοχος, το panel). Ξανά «Φόρμα και έγγραφο» ⇒ επιστροφή στο αποθηκευμένο πλάτος.
@@ -51,6 +51,11 @@ interface EditorSplitLayoutProps {
   readonly preview: ReactNode;
   /** Ο τίτλος της στήλης της προεπισκόπησης (π.χ. «Προεπισκόπηση εγγράφου», «Έγγραφο-δείγμα»), ήδη μεταφρασμένος. */
   readonly previewTitle: string;
+  /**
+   * Εργαλεία της στήλης του εγγράφου (§5.25 — η μπάρα ζουμ), στην κολλημένη κεφαλίδα δίπλα στο «Μόνο έγγραφο»: ορατά σε
+   * όποιο σημείο του εγγράφου κι αν βρίσκεσαι, όπως η γραμμή κατάστασης του Word. Στο κινητό, πάνω από το έγγραφο.
+   */
+  readonly previewTools?: ReactNode;
   /** Αίτημα κύλισης της προεπισκόπησης σε ενότητα (`useEditorSection`). Παραλείπεται χωρίς καρτέλες. */
   readonly previewRequest?: PreviewScrollRequest | null;
 }
@@ -69,21 +74,31 @@ function usePreviewSectionSync(request: PreviewScrollRequest | null | undefined)
   return scrollerRef;
 }
 
-function PreviewHeader({ title, collapsed, onToggle }: { readonly title: string; readonly collapsed: boolean; readonly onToggle: () => void }) {
+interface PreviewHeaderProps {
+  readonly title: string;
+  readonly tools?: ReactNode;
+  readonly collapsed: boolean;
+  readonly onToggle: () => void;
+}
+
+function PreviewHeader({ title, tools, collapsed, onToggle }: PreviewHeaderProps) {
   const { t } = useTranslation('procurement');
   const label = t(collapsed ? 'subcontracts.editor.layout.showForm' : 'subcontracts.editor.layout.documentOnly');
   const Icon = collapsed ? Minimize2 : Maximize2;
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-card px-4 py-2">
+    <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b bg-card px-4 py-2">
       <h3 className="text-base font-semibold">{title}</h3>
-      <Button type="button" size="sm" variant="ghost" onClick={onToggle} aria-controls={FORM_PANEL_ID} aria-expanded={!collapsed}>
-        <Icon className="mr-2 h-4 w-4" aria-hidden />{label}
-      </Button>
+      <section className="flex items-center gap-2">
+        {tools}
+        <Button type="button" size="sm" variant="ghost" onClick={onToggle} aria-controls={FORM_PANEL_ID} aria-expanded={!collapsed}>
+          <Icon className="mr-2 h-4 w-4" aria-hidden />{label}
+        </Button>
+      </section>
     </header>
   );
 }
 
-function DesktopSplit({ form, preview, previewTitle, previewRequest }: EditorSplitLayoutProps) {
+function DesktopSplit({ form, preview, previewTitle, previewTools, previewRequest }: EditorSplitLayoutProps) {
   const { t } = useTranslation('procurement');
   const { initial, collapsed, panel, persistence, onResize, toggle } = useCollapsibleColumn(formColumnStore);
   const frameRef = useFillViewportHeight<HTMLElement>(true, FILL);
@@ -99,7 +114,7 @@ function DesktopSplit({ form, preview, previewTitle, previewRequest }: EditorSpl
         </ResizablePanel>
         <ResizableHandle withHandle aria-label={t('subcontracts.editor.layout.resize')} {...persistence.separatorProps} />
         <ResizablePanel id={PREVIEW_PANEL_ID} minSize={PREVIEW_MIN_WIDTH} elementRef={previewRef} className="relative min-w-0 overflow-y-auto bg-muted/20">
-          <PreviewHeader title={previewTitle} collapsed={collapsed} onToggle={toggle} />
+          <PreviewHeader title={previewTitle} tools={previewTools} collapsed={collapsed} onToggle={toggle} />
           <section className="p-4">{preview}</section>
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -107,7 +122,7 @@ function DesktopSplit({ form, preview, previewTitle, previewRequest }: EditorSpl
   );
 }
 
-function MobileTabs({ form, preview }: EditorSplitLayoutProps) {
+function MobileTabs({ form, preview, previewTools }: EditorSplitLayoutProps) {
   const { t } = useTranslation('procurement');
   return (
     <Tabs defaultValue="form" className="relative">
@@ -116,7 +131,10 @@ function MobileTabs({ form, preview }: EditorSplitLayoutProps) {
         <TabsTrigger value="preview">{t('subcontracts.editor.tabs.preview')}</TabsTrigger>
       </TabsList>
       <TabsContent value="form">{form}</TabsContent>
-      <TabsContent value="preview">{preview}</TabsContent>
+      <TabsContent value="preview" className="space-y-2">
+        {previewTools && <header className="flex justify-end">{previewTools}</header>}
+        {preview}
+      </TabsContent>
     </Tabs>
   );
 }

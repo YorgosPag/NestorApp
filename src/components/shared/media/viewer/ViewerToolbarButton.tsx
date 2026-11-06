@@ -31,9 +31,14 @@ export interface ViewerToolbarButtonProps {
   readonly onClick: () => void;
   /** Ανενεργό που μένει εστιάσιμο (`aria-disabled` + φρουρός). */
   readonly disabled?: boolean;
+  /**
+   * Κουμπί-διακόπτης (ADR-928 §5.25 — «Προσαρμογή στο πλάτος» ενεργή): `aria-pressed` + ορατή κατάσταση. Παραλείπεται
+   * ⇒ απλό κουμπί ενέργειας, χωρίς `aria-pressed`.
+   */
+  readonly pressed?: boolean;
 }
 
-export function ViewerToolbarButton({ label, icon: Icon, onClick, disabled = false }: ViewerToolbarButtonProps) {
+export function ViewerToolbarButton({ label, icon: Icon, onClick, disabled = false, pressed }: ViewerToolbarButtonProps) {
   const iconSizes = useIconSizes();
   return (
     <Tooltip>
@@ -43,8 +48,9 @@ export function ViewerToolbarButton({ label, icon: Icon, onClick, disabled = fal
           size="sm"
           onClick={disabled ? undefined : onClick}
           aria-label={label}
-          className={`${iconSizes.xl} p-0`}
+          className={`${iconSizes.xl} p-0${pressed ? ' bg-accent text-accent-foreground' : ''}`}
           aria-disabled={disabled || undefined}
+          aria-pressed={pressed}
         >
           <Icon className={iconSizes.sm} aria-hidden="true" />
         </Button>

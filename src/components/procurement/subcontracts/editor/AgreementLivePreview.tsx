@@ -39,7 +39,7 @@ export function AgreementLivePreview({ editor, onEdit }: AgreementLivePreviewPro
           ))}
         </ul>
       )}
-      <AgreementDocumentColumns agreement={projected.agreement} fit="width" onEdit={onEdit} />
+      <AgreementDocumentColumns agreement={projected.agreement} onEdit={onEdit} />
       <AgreementPaymentCalendar agreement={projected.agreement} />
     </section>
   );
