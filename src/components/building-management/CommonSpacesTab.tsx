@@ -69,8 +69,8 @@ interface CommonSpacesTabProps {
 export function CommonSpacesTab({ building }: CommonSpacesTabProps) {
   const s = useCommonSpacesTabState(building.id);
   const columns = useCommonSpaceColumns(s.t, { adoptingId: s.adoptingId, onAdopt: s.adoptDrawnArea });
-  // ADR-931 §6.2 — όσοι λείπουν, από τη στοίβα ορόφων· ο άνθρωπος αποδέχεται (διάλογος) ή απορρίπτει (μόνιμα).
-  const suggestions = useCommonSpaceSuggestions(building, s.commonSpaces, s.openPrefilled, s.t);
+  // ADR-931 §6.2 — όσοι λείπουν, από τη στοίβα ορόφων· ο άνθρωπος αποδέχεται (διάλογος), απορρίπτει (μόνιμα) ή επαναφέρει.
+  const suggestions = useCommonSpaceSuggestions(building, s.commonSpaces, s.openPrefilled);
   const colors = useSemanticColors();
   const items = [...s.commonSpaces];
 

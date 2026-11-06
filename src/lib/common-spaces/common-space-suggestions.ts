@@ -3,7 +3,7 @@
  * **λείπουν**, με βάση ό,τι το κτίριο ήδη δηλώνει για τον εαυτό του. Καθαρό (πελάτης + server).
  * @related `utils/floor-naming.ts` (λεξιλόγιο στάθμης · `isAboveGround`/`isBuildingStorey`) ·
  *   `lib/objective-value/building-objective-value-facts.ts` (ο ανελκυστήρας) ·
- *   `app/api/buildings/building-common-space-suggestion-dismiss.ts` (ο γραφέας της απόρριψης)
+ *   `common-space-suggestion-dismissals.ts` (οι απορρίψεις: σχήμα · ανάγνωση · απόρριψη/επαναφορά)
  * @module lib/common-spaces/common-space-suggestions
  *
  * 🔑 **Πρόταση, ποτέ σιωπηλή δημιουργία** (Revit «Place Rooms Automatically» → ο άνθρωπος εγκρίνει): η αποδοχή ανοίγει
@@ -58,21 +58,13 @@ export interface CommonSpaceSuggestionInput {
   /** `objectiveValueFacts.hasElevator` — `null` = δεν δηλώθηκε. */
   readonly hasElevator: boolean | null;
   readonly existing: readonly ExistingCommonSpace[];
+  /** Κλειδιά απορριφθεισών (`dismissedCommonSpaceSuggestionKeys`). */
   readonly dismissed: readonly string[];
 }
 
 /** Το σκέλος κλειδιού για πρόταση όλου του κτιρίου. */
 const BUILDING_SCOPE = 'building';
 const KEY_SEPARATOR = '@';
-
-/** Ανώτατο πλήθος απορρίψεων ανά κτίριο — φράγμα στο μέγεθος του εγγράφου, ποτέ λίστα χωρίς όριο. */
-export const MAX_DISMISSED_COMMON_SPACE_SUGGESTIONS = 200;
-
-/** Το πεδίο του κτιρίου — η ΜΙΑ δήλωση του ονόματος (γραφέας · τύπος · ιστορικό · πελάτης). */
-export const DISMISSED_COMMON_SPACE_SUGGESTIONS_FIELD = 'dismissedCommonSpaceSuggestions';
-
-/** Το κλειδί σώματος του `PATCH /api/buildings` για μία απόρριψη (ο κλάδος του server ρωτά «υπάρχει;»). */
-export const DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY = 'dismissCommonSpaceSuggestion';
 
 export function commonSpaceSuggestionKey(category: CommonSpaceCategory, floorId: string | null): string {
   return `${category}${KEY_SEPARATOR}${floorId ?? BUILDING_SCOPE}`;
@@ -84,17 +76,6 @@ export function isCommonSpaceSuggestionKey(value: unknown): value is string {
   const [category, scope, ...rest] = value.split(KEY_SEPARATOR);
   if (rest.length > 0 || scope === undefined || scope === '' || scope.includes('/')) return false;
   return (COMMON_SPACE_CATEGORIES as readonly string[]).includes(category);
-}
-
-/** Ό,τι είναι αποθηκευμένο (ή λείπει) → τα έγκυρα κλειδιά, χωρίς διπλότυπα. Άκυρο ⇒ αγνοείται, ποτέ ρίψη. */
-export function readDismissedCommonSpaceSuggestions(raw: unknown): readonly string[] {
-  if (!Array.isArray(raw)) return [];
-  return [...new Set(raw.filter(isCommonSpaceSuggestionKey))];
-}
-
-/** Η απόρριψη πάνω στη φρέσκια λίστα — ιδεμποτική (δεύτερη απόρριψη = ίδια λίστα). */
-export function withDismissedCommonSpaceSuggestion(current: readonly string[], key: string): readonly string[] {
-  return current.includes(key) ? current : [...current, key];
 }
 
 const kindOf = (floor: SuggestionFloor): FloorKind => floor.kind ?? inferKindFromNumber(floor.number);

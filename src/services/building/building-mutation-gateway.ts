@@ -14,8 +14,11 @@ import { suggestNextBuildingCode } from '@/config/entity-code-config';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import {
   DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY,
-  withDismissedCommonSpaceSuggestion,
-} from '@/lib/common-spaces/common-space-suggestions';
+  DISMISSED_COMMON_SPACE_SUGGESTIONS_FIELD,
+  readDismissedCommonSpaceSuggestions,
+  RESTORE_COMMON_SPACE_SUGGESTIONS_BODY_KEY,
+  type CommonSpaceSuggestionRestore,
+} from '@/lib/common-spaces/common-space-suggestion-dismissals';
 import {
   applyBuildingObjectiveValuePatch,
   BUILDING_OBJECTIVE_VALUE_BODY_KEY,
@@ -104,25 +107,33 @@ export async function updateBuildingObjectiveValueFactsWithPolicy({
 }
 
 /**
- * **Μόνιμη απόρριψη μιας πρότασης κοινόχρηστου** (ADR-931 §6.2) — ο server προσθέτει το κλειδί σε συναλλαγή πάνω στο
- * φρέσκο έγγραφο (`building-common-space-suggestion-dismiss.ts`), με ιστορικό. Το σώμα στέλνεται **μόνο του**.
+ * Μία πράξη πάνω στις απορρίψεις κοινοχρήστων (ADR-931 §6.2) — ο server την εφαρμόζει σε συναλλαγή πάνω στο φρέσκο
+ * έγγραφο (`building-common-space-suggestion-dismissals.ts`), με ιστορικό, και επιστρέφει την **τελική** λίστα.
  *
- * 🔑 Το `BUILDING_UPDATED` φέρει την **ολόκληρη** λίστα, υπολογισμένη με την **ίδια** ιδεμποτική συνάρτηση με τον server.
- * ⚠️ Πετά σε αποτυχία: ο καλών έχει ήδη κρύψει την πρόταση αισιόδοξα και πρέπει να την επαναφέρει.
+ * 🔑 Το `BUILDING_UPDATED` φέρει **αυτή** τη λίστα — με το ποιος/πότε του server, όχι πελατειακή εκδοχή της ώρας.
+ * ⚠️ Πετά σε αποτυχία: ο καλών έχει ήδη αλλάξει την οθόνη αισιόδοξα και πρέπει να την επαναφέρει.
  */
-export async function dismissCommonSpaceSuggestionWithPolicy({
-  buildingId,
-  current,
-  key,
-}: {
-  readonly buildingId: string;
-  readonly current: readonly string[];
-  readonly key: string;
-}): Promise<void> {
-  await apiClient.patch(API_ROUTES.BUILDINGS.LIST, { buildingId, [DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY]: key });
+async function patchCommonSpaceSuggestionDismissals(buildingId: string, body: Record<string, unknown>): Promise<void> {
+  const result = await apiClient.patch<Record<string, unknown>>(API_ROUTES.BUILDINGS.LIST, { buildingId, ...body });
   RealtimeService.dispatch('BUILDING_UPDATED', {
     buildingId,
-    updates: { dismissedCommonSpaceSuggestions: withDismissedCommonSpaceSuggestion(current, key) },
+    updates: { dismissedCommonSpaceSuggestions: readDismissedCommonSpaceSuggestions(result?.[DISMISSED_COMMON_SPACE_SUGGESTIONS_FIELD]) },
     timestamp: Date.now(),
   });
+}
+
+/** **Μόνιμη απόρριψη μιας πρότασης κοινόχρηστου** — ποιος/πότε τα γράφει ο server. */
+export function dismissCommonSpaceSuggestionWithPolicy({ buildingId, key }: {
+  readonly buildingId: string;
+  readonly key: string;
+}): Promise<void> {
+  return patchCommonSpaceSuggestionDismissals(buildingId, { [DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY]: key });
+}
+
+/** **Επαναφορά** απορριφθεισών προτάσεων κοινοχρήστων — συγκεκριμένα κλειδιά, ή `'all'`. */
+export function restoreCommonSpaceSuggestionsWithPolicy({ buildingId, restore }: {
+  readonly buildingId: string;
+  readonly restore: CommonSpaceSuggestionRestore;
+}): Promise<void> {
+  return patchCommonSpaceSuggestionDismissals(buildingId, { [RESTORE_COMMON_SPACE_SUGGESTIONS_BODY_KEY]: restore });
 }

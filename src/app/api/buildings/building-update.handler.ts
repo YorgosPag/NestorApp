@@ -25,7 +25,7 @@ import { requireProjectInBuildingTenant } from './_shared/building-ownership';
 import { assertBuildingFieldsWritable } from './_shared/building-write-fields';
 import { recordEntityUpdate } from '@/services/audit/record-entity-update';
 import { BUILDING_OBJECTIVE_VALUE_BODY_KEY, patchBuildingObjectiveValue } from './building-objective-value-patch';
-import { DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY, dismissBuildingCommonSpaceSuggestion } from './building-common-space-suggestion-dismiss';
+import { applyBuildingCommonSpaceSuggestionDismissals, isCommonSpaceSuggestionDismissalsBody } from './building-common-space-suggestion-dismissals';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
@@ -245,9 +245,9 @@ export const PATCH = withStandardRateLimit(
       if (BUILDING_OBJECTIVE_VALUE_BODY_KEY in body) {
         return await patchBuildingObjectiveValue({ adminDb, buildingId, body, ctx });
       }
-      // ADR-931 §6.2 — μόνιμη απόρριψη πρότασης κοινόχρηστου: προσθήκη σε συναλλαγή, ΟΧΙ λίστα από τον πελάτη.
-      if (DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY in body) {
-        return await dismissBuildingCommonSpaceSuggestion({ adminDb, buildingId, body, ctx });
+      // ADR-931 §6.2 — απόρριψη/επαναφορά πρότασης κοινόχρηστου: πράξη σε συναλλαγή, ΟΧΙ λίστα από τον πελάτη.
+      if (isCommonSpaceSuggestionDismissalsBody(body)) {
+        return await applyBuildingCommonSpaceSuggestionDismissals({ adminDb, buildingId, body, ctx });
       }
 
       // 🔒 ADR-829 §7.1 — λευκή λίστα αντί για σκέτο cast, και ο στόχος του δεσμού πριν από κάθε γραφή.

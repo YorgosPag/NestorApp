@@ -2,6 +2,7 @@
 import type { BuildingFeatureKey } from './features';
 // ADR-898 Φ4 — τα γεγονότα της αντικειμενικής αξίας του κτιρίου
 import type { BuildingObjectiveValueFacts } from '@/lib/objective-value/building-objective-value-facts';
+import type { DismissedCommonSpaceSuggestion } from '@/lib/common-spaces/common-space-suggestion-dismissals';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { BuildingAddressReference, ProjectAddress } from '../project/addresses';
 import type { PropertyType } from '@/types/property';
@@ -152,11 +153,12 @@ export type {
      */
     objectiveValueFacts?: BuildingObjectiveValueFacts;
     /**
-     * ADR-931 §6.2 — κλειδιά προτάσεων κοινοχρήστων που ο άνθρωπος απέρριψε **μόνιμα** (`<κατηγορία>@<όροφος|building>`).
-     * Γράφεται **μόνο** από τον κλάδο `building-common-space-suggestion-dismiss.ts` (προσθήκη σε συναλλαγή, με ιστορικό)
-     * — διαβάζεται **μόνο** μέσω `readDismissedCommonSpaceSuggestions`.
+     * ADR-931 §6.2 — προτάσεις κοινοχρήστων που ο άνθρωπος απέρριψε **μόνιμα**, με ποιος/πότε
+     * (`{ key: '<κατηγορία>@<όροφος|building>', dismissedBy, dismissedAt }`). Γράφεται **μόνο** από τον κλάδο
+     * `building-common-space-suggestion-dismissals.ts` (απόρριψη/επαναφορά σε συναλλαγή, με ιστορικό) — διαβάζεται
+     * **μόνο** μέσω `readDismissedCommonSpaceSuggestions`.
      */
-    dismissedCommonSpaceSuggestions?: readonly string[];
+    dismissedCommonSpaceSuggestions?: readonly DismissedCommonSpaceSuggestion[];
 
     // 🏢 ENTERPRISE: Boolean amenity flags for filtering
     /** Has parking facilities */

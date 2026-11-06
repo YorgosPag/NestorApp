@@ -1,14 +1,12 @@
 /**
  * ADR-931 §6.2 (Β2) — οι προτάσεις κοινοχρήστων από τη στοίβα ορόφων: κάθε κανόνας, «υπάρχει ήδη» ⇒ καμία πρόταση,
- * μόνιμη απόρριψη, σταθερά κλειδιά, ιδεμποτική προσθήκη απόρριψης.
+ * μόνιμη απόρριψη, σταθερά κλειδιά (οι εγγραφές απόρριψης: `common-space-suggestion-dismissals.test.ts`).
  */
 
 import {
   commonSpaceSuggestionKey,
   isCommonSpaceSuggestionKey,
-  readDismissedCommonSpaceSuggestions,
   suggestMissingCommonSpaces,
-  withDismissedCommonSpaceSuggestion,
   type CommonSpaceSuggestionInput,
   type SuggestionFloor,
 } from '../common-space-suggestions';
@@ -88,7 +86,7 @@ describe('suggestMissingCommonSpaces — «υπάρχει ήδη» και από
   });
 });
 
-describe('κλειδιά και λίστα απορρίψεων', () => {
+describe('κλειδιά προτάσεων', () => {
   it('σταθερό κλειδί · έγκυρη μορφή', () => {
     expect(commonSpaceSuggestionKey('elevator', null)).toBe('elevator@building');
     expect(commonSpaceSuggestionKey('pilotis', 'flr_p')).toBe('pilotis@flr_p');
@@ -99,15 +97,4 @@ describe('κλειδιά και λίστα απορρίψεων', () => {
     'άκυρο κλειδί %p ⇒ απορρίπτεται',
     (raw) => { expect(isCommonSpaceSuggestionKey(raw)).toBe(false); },
   );
-
-  it('ανάγνωση: μη πίνακας ⇒ κενό· άκυρα και διπλά φεύγουν', () => {
-    expect(readDismissedCommonSpaceSuggestions(undefined)).toEqual([]);
-    expect(readDismissedCommonSpaceSuggestions(['pilotis@a', 'bad', 'pilotis@a', 7])).toEqual(['pilotis@a']);
-  });
-
-  it('η προσθήκη απόρριψης είναι ιδεμποτική', () => {
-    const once = withDismissedCommonSpaceSuggestion([], 'pilotis@a');
-    expect(withDismissedCommonSpaceSuggestion(once, 'pilotis@a')).toBe(once);
-    expect(withDismissedCommonSpaceSuggestion(once, 'elevator@building')).toEqual(['pilotis@a', 'elevator@building']);
-  });
 });
