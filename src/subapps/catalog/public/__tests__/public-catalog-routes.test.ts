@@ -174,43 +174,62 @@ describe('🔒 δομημένα δεδομένα', () => {
     expect(supplierStructuredData({ ...SUPPLIER, description: {} })).toMatchObject({ description: undefined });
   });
 
-  it('όλη η χώρα ⇒ `Country` · ακτίνα και πολύγωνο ⇒ σιωπή, χωρίς κέντρο ή γεωμετρία', () => {
+  it('όλη η χώρα ⇒ `Country` · ακτίνα και πολύγωνο χωρίς αποδεδειγμένη περιοχή ⇒ σιωπή, χωρίς κέντρο ή γεωμετρία', () => {
     const areaOf = (area: PublicProviderFacts['area']) => supplierStructuredData({ ...SUPPLIER, facts: { ...FACTS, area } });
     expect(areaOf({ kind: 'nationwide' })).toMatchObject({ areaServed: { '@type': 'Country', name: 'GR' } });
-    for (const area of [{ kind: 'radius', radiusKm: 30 }, { kind: 'outline', km2: 120 }] as const) {
+    for (const area of [{ kind: 'radius', radiusKm: 30, names: [] }, { kind: 'outline', km2: 120, names: [] }] as const) {
       expect(keysOf(areaOf(area))).not.toEqual(expect.arrayContaining(['geoRadius']));
       expect(areaOf(area)).toMatchObject({ areaServed: undefined });
+    }
+  });
+
+  it('Ν11 ε: ακτίνα και πολύγωνο ⇒ οι περιοχές που εξυπηρετούν ως `AdministrativeArea` · ποτέ `GeoCircle`/`GeoShape`', () => {
+    const areaOf = (area: PublicProviderFacts['area']) => supplierStructuredData({ ...SUPPLIER, facts: { ...FACTS, area } });
+    const names = ['Δήμος Θέρμης', 'Δήμος Πυλαίας-Χορτιάτη'];
+    for (const area of [{ kind: 'radius', radiusKm: 30, names }, { kind: 'outline', km2: 120, names }] as const) {
+      const node = areaOf(area);
+      expect(node).toMatchObject({ areaServed: names.map((name) => ({ '@type': 'AdministrativeArea', name })) });
+      expect(JSON.stringify(node)).not.toMatch(/GeoCircle|GeoShape|geoRadius|geoMidpoint/);
     }
   });
 });
 
 describe('publicProviderFactsOf', () => {
   const NAMES: Readonly<Record<string, string>> = { 'municipality:1': 'ΔΗΜΟΣ ΘΕΡΜΗΣ' };
-  const nameOf = (id: string) => NAMES[id];
+  const AREAS = { nameOf: (id: string) => NAMES[id], servedNames: [] };
   const showcase = (over: Partial<Pick<PublicShowcase, 'mark' | 'website' | 'coverage'>> = {}) => ({ mark: null, website: null, coverage: null, ...over });
 
   it('δεν δήλωσε ⇒ τίποτα', () => {
-    expect(publicProviderFactsOf(showcase(), nameOf)).toEqual(NO_PROVIDER_FACTS);
+    expect(publicProviderFactsOf(showcase(), AREAS)).toEqual(NO_PROVIDER_FACTS);
   });
 
   it('🔒 το πορτρέτο δεν φτάνει στη σελίδα που βλέπουν οι μηχανές · το λογότυπο φτάνει', () => {
-    expect(publicProviderFactsOf(showcase({ mark: { kind: 'portrait', image: LOGO } }), nameOf).logo).toBeNull();
-    expect(publicProviderFactsOf(showcase({ mark: { kind: 'logo', image: LOGO } }), nameOf).logo).toEqual(LOGO);
+    expect(publicProviderFactsOf(showcase({ mark: { kind: 'portrait', image: LOGO } }), AREAS).logo).toBeNull();
+    expect(publicProviderFactsOf(showcase({ mark: { kind: 'logo', image: LOGO } }), AREAS).logo).toEqual(LOGO);
   });
 
   it('ονόματα από την ιεραρχία · άγνωστη ταυτότητα πέφτει · καμία γνωστή ⇒ `null`, όχι κενή λίστα', () => {
-    expect(publicProviderFactsOf(showcase({ coverage: { adminIds: ['municipality:1', 'municipality:9'] } }), nameOf).area).toEqual({ kind: 'areas', names: ['ΔΗΜΟΣ ΘΕΡΜΗΣ'] });
-    expect(publicProviderFactsOf(showcase({ coverage: { adminIds: ['municipality:9'] } }), nameOf).area).toBeNull();
+    expect(publicProviderFactsOf(showcase({ coverage: { adminIds: ['municipality:1', 'municipality:9'] } }), AREAS).area).toEqual({ kind: 'areas', names: ['ΔΗΜΟΣ ΘΕΡΜΗΣ'] });
+    expect(publicProviderFactsOf(showcase({ coverage: { adminIds: ['municipality:9'] } }), AREAS).area).toBeNull();
   });
 
   it('🔒 από την ακτίνα μένει μόνο ο αριθμός: το κέντρο δεν φεύγει', () => {
     const coverage = { circle: { center: { lat: 40.5, lng: 22.9 }, radiusKm: 30 as const } };
-    const facts = publicProviderFactsOf(showcase({ coverage }), nameOf);
-    expect(facts.area).toEqual({ kind: 'radius', radiusKm: 30 });
+    const facts = publicProviderFactsOf(showcase({ coverage }), AREAS);
+    expect(facts.area).toEqual({ kind: 'radius', radiusKm: 30, names: [] });
     expect(JSON.stringify(facts)).not.toContain('40.5');
   });
 
+  it('Ν11 ε: ακτίνα και περίγραμμα φέρνουν τις περιοχές που εξυπηρετούν · η λίστα ταυτοτήτων δεν τις αγγίζει', () => {
+    const sources = { nameOf: AREAS.nameOf, servedNames: ['Δήμος Θέρμης'] };
+    const circle = { circle: { center: { lat: 40.5, lng: 22.9 }, radiusKm: 30 as const } };
+    const outline = { outline: [{ lat: 40.5, lng: 22.9 }, { lat: 40.6, lng: 22.9 }, { lat: 40.6, lng: 23.0 }] };
+    expect(publicProviderFactsOf(showcase({ coverage: circle }), sources).area).toEqual({ kind: 'radius', radiusKm: 30, names: ['Δήμος Θέρμης'] });
+    expect(publicProviderFactsOf(showcase({ coverage: outline }), sources).area).toMatchObject({ kind: 'outline', names: ['Δήμος Θέρμης'] });
+    expect(publicProviderFactsOf(showcase({ coverage: { adminIds: ['municipality:1'] } }), sources).area).toEqual({ kind: 'areas', names: ['ΔΗΜΟΣ ΘΕΡΜΗΣ'] });
+  });
+
   it('όλη η χώρα · η ιστοσελίδα περνά αυτούσια', () => {
-    expect(publicProviderFactsOf(showcase({ coverage: { nationwide: true }, website: 'https://a.gr' }), nameOf)).toEqual({ logo: null, website: 'https://a.gr', area: { kind: 'nationwide' } });
+    expect(publicProviderFactsOf(showcase({ coverage: { nationwide: true }, website: 'https://a.gr' }), AREAS)).toEqual({ logo: null, website: 'https://a.gr', area: { kind: 'nationwide' } });
   });
 });

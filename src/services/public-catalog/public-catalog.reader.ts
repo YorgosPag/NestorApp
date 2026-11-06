@@ -19,12 +19,15 @@ import { unstable_cache } from 'next/cache';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { DEFAULT_LANGUAGE } from '@/i18n/languages';
 import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
+import { coverageOutline } from '@/lib/agency/coverage-geometry';
+import { servedAdminAreas } from '@/lib/agency/coverage-served-areas';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readCanonicalAlias } from '@/lib/workspace/workspace-segment';
 import { publicCatalogCompanyTag, publicCatalogModelTag } from '@/server/catalog/public/public-catalog-cache-tag';
 import { readActiveSupplierBrands } from '@/server/catalog/supplier-brand-claim.server';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
+import { readAdminAreaDeclarationSources } from '@/services/places/admin-boundaries.reader';
 import { readAdminIdentitySources } from '@/services/places/administrative-hierarchy.reader';
 import { publicCatalogModelFromDocument, publicCategoryLabelsFromField, publicModelAddressFromDocument } from '@/subapps/catalog/public/public-catalog-from-document';
 import { publicCategoryRoute, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
@@ -35,6 +38,7 @@ import { publicSupplierProfileFromDocument, type PublicSupplierProfile } from '@
 import { supplierShowcaseFromDocument } from '@/subapps/catalog/public/supplier-showcase-from-document';
 import type { PublicSupplierBrand } from '@/subapps/catalog/types/supplier-brand-claim';
 import type { SupplierShowcaseRecord } from '@/subapps/catalog/types/supplier-verification';
+import type { DeclaredCoverage } from '@/types/agency-coverage';
 
 /** Δίχτυ για χαμένη ακύρωση, όχι ο μηχανισμός: αυτός είναι το tag. Ίδιο με το `max-age` του δημόσιου ραφιού. */
 const REVALIDATE_SECONDS = 300;
@@ -86,12 +90,25 @@ export function readPublicSupplier(companyId: string): Promise<PublicSupplier | 
   return cached(() => loadSupplier(companyId), ['supplier', companyId], [publicCatalogCompanyTag(companyId)]);
 }
 
+/**
+ * Οι περιοχές που εξυπηρετεί μια ακτίνα ή ένα περίγραμμα (Ν11 ε). Κενό για κάθε άλλη δήλωση. Ευρετήριο που δεν διαβάστηκε
+ * ρίχνει, όπως και η ιεραρχία: «δεν μπόρεσα να ρωτήσω» δεν γίνεται ποτέ «δεν εξυπηρετεί τίποτα».
+ */
+async function servedAreaNamesOf(coverage: DeclaredCoverage | null): Promise<readonly string[]> {
+  const outline = coverage === null ? null : coverageOutline(coverage);
+  if (outline === null) return [];
+  const sources = await readAdminAreaDeclarationSources();
+  if (sources === null) throw new Error('provider-facts-unavailable');
+  return (await servedAdminAreas(outline, sources)).map((area) => area.name);
+}
+
 async function loadProviderFacts(companyId: string): Promise<PublicProviderFacts> {
   const lookup = await lookupAgencyProfile(getAdminFirestore(), companyId);
   if (lookup.outcome === 'not-published') return NO_PROVIDER_FACTS;
   const sources = lookup.outcome === 'found' ? await readAdminIdentitySources() : null;
   if (lookup.outcome !== 'found' || sources === null) throw new Error('provider-facts-unavailable');
-  return publicProviderFactsOf(lookup.showcase, (adminId) => sources.placeOf(adminId)?.name);
+  const servedNames = await servedAreaNamesOf(lookup.showcase.coverage);
+  return publicProviderFactsOf(lookup.showcase, { nameOf: (adminId) => sources.placeOf(adminId)?.name, servedNames });
 }
 
 /**

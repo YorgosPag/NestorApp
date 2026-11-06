@@ -8,8 +8,9 @@
  * ⚠️ Κανένα `manufacturer` ή `brand` στο προϊόν: ο προμηθευτής μπορεί να είναι διανομέας, και το έγγραφο δεν έχει πεδίο μάρκας. Ο
  *    οργανισμός παίρνει `brand` μόνο από κατοχή που εγκρίθηκε και ισχύει (§16).
  *
- * 🔑 **`areaServed` μόνο από ονομασμένες περιοχές.** Η ακτίνα και το χαραγμένο πολύγωνο μένουν έξω: το Google Business Profile
- *    δέχεται μόνο ονομασμένες περιοχές, και η ακτίνα θα έδινε το σημείο του κέντρου, που μπορεί να είναι κατοικία.
+ * 🔑 **`areaServed` μόνο από ονομασμένες περιοχές.** Ποτέ `GeoCircle` ή `GeoShape`: το Google Business Profile δέχεται μόνο
+ *    ονομασμένες περιοχές, και η ακτίνα θα έδινε το σημείο του κέντρου, που μπορεί να είναι κατοικία. Η ακτίνα και το
+ *    περίγραμμα δηλώνονται με τις περιοχές που **εξυπηρετούν** (Ν11 ε, `coverage-served-areas`), τις ίδιες που δείχνει η σελίδα.
  * 🔑 **`OfferCatalog` χωρίς `Offer`.** Το schema.org δέχεται `Thing` στο `itemListElement`, άρα η υπηρεσία μπαίνει ως `Service`
  *    και κανένας κόμβος δεν υπόσχεται προσφορά. Η Google δεν έχει rich result για `Service`: η αξία είναι η ανάγνωση, όχι η εμφάνιση.
  *
@@ -50,9 +51,9 @@ export interface SupplierServiceNode {
 const organisationIdOf = (supplierUrl: string): string => `${supplierUrl}#organization`;
 
 function areaServedOf(area: PublicServiceArea | null): JsonLdValue | undefined {
-  if (area?.kind === 'nationwide') return { '@type': 'Country', name: 'GR' };
-  if (area?.kind === 'areas') return area.names.map((name) => ({ '@type': 'AdministrativeArea', name }));
-  return undefined;
+  if (area === null) return undefined;
+  if (area.kind === 'nationwide') return { '@type': 'Country', name: 'GR' };
+  return area.names.length === 0 ? undefined : area.names.map((name) => ({ '@type': 'AdministrativeArea', name }));
 }
 
 function serviceNode(service: SupplierServiceNode, area: PublicServiceArea | null): Readonly<Record<string, JsonLdValue | undefined>> {

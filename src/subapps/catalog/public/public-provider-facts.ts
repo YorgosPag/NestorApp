@@ -7,6 +7,9 @@
  * 🔒 **Μόνο λογότυπο.** Το `/pro` είναι κλειστό στις μηχανές, ενώ το `/suppliers` είναι ανοιχτό (Ε2). Το πορτρέτο είναι πρόσωπο, και
  *    η δημοσίευσή του στο `/pro` δεν είναι συναίνεση για ευρετήριο. Για τον ίδιο λόγο δεν φτάνουν εδώ οδοί και έδρα.
  * 🔒 **Το κέντρο της ακτίνας δεν φεύγει.** Μπορεί να είναι η κατοικία. Από την ακτίνα μένει μόνο ο αριθμός χιλιομέτρων.
+ * 🔑 **Ακτίνα και περίγραμμα φέρνουν και ονόματα** (Ν11 ε): τις περιοχές που εξυπηρετούν, υπολογισμένες από τον αναγνώστη
+ *    (`lib/agency/coverage-served-areas`). Η σελίδα τις δείχνει και το JSON-LD τις δηλώνει: ό,τι λέει η μηχανή, το βλέπει και
+ *    ο άνθρωπος.
  *
  * **Layering**: καθαρή, καμία ανάγνωση.
  * @module subapps/catalog/public/public-provider-facts
@@ -20,8 +23,8 @@ import type { ListingImage } from '@/types/public-listing';
 export type PublicServiceArea =
   | { readonly kind: 'nationwide' }
   | { readonly kind: 'areas'; readonly names: readonly string[] }
-  | { readonly kind: 'radius'; readonly radiusKm: number }
-  | { readonly kind: 'outline'; readonly km2: number };
+  | { readonly kind: 'radius'; readonly radiusKm: number; readonly names: readonly string[] }
+  | { readonly kind: 'outline'; readonly km2: number; readonly names: readonly string[] };
 
 export interface PublicProviderFacts {
   readonly logo: ListingImage | null;
@@ -34,18 +37,27 @@ export const NO_PROVIDER_FACTS: PublicProviderFacts = { logo: null, website: nul
 /** Το όνομα μιας διοικητικής ταυτότητας, από την ιεραρχία. Τα ονόματα δεν αποθηκεύονται δίπλα στα ids (ADR-846). */
 export type AdminNameOf = (adminId: string) => string | undefined;
 
-function declaredAreaOf(coverage: DeclaredCoverage, nameOf: AdminNameOf): PublicServiceArea | null {
+/**
+ * Ό,τι χρειάζεται η μετάφραση από τον έξω κόσμο: το όνομα κάθε δηλωμένης ταυτότητας, και οι περιοχές που εξυπηρετεί μια
+ * ακτίνα ή ένα περίγραμμα (κενό όταν η δήλωση είναι άλλου είδους ή δεν αποδείχθηκε καμία).
+ */
+export interface ProviderAreaSources {
+  readonly nameOf: AdminNameOf;
+  readonly servedNames: readonly string[];
+}
+
+function declaredAreaOf(coverage: DeclaredCoverage, { nameOf, servedNames }: ProviderAreaSources): PublicServiceArea | null {
   if (isNationwide(coverage)) return { kind: 'nationwide' };
-  if (isRadiusCoverage(coverage)) return { kind: 'radius', radiusKm: coverage.circle.radiusKm };
-  if (isOutlineCoverage(coverage)) return { kind: 'outline', km2: coverageOutlineAreaKm2(coverage.outline) };
+  if (isRadiusCoverage(coverage)) return { kind: 'radius', radiusKm: coverage.circle.radiusKm, names: servedNames };
+  if (isOutlineCoverage(coverage)) return { kind: 'outline', km2: coverageOutlineAreaKm2(coverage.outline), names: servedNames };
   const names = coverage.adminIds.flatMap((adminId) => nameOf(adminId) ?? []);
   return names.length === 0 ? null : { kind: 'areas', names };
 }
 
-export function publicProviderFactsOf(showcase: Pick<PublicShowcase, 'mark' | 'website' | 'coverage'>, nameOf: AdminNameOf): PublicProviderFacts {
+export function publicProviderFactsOf(showcase: Pick<PublicShowcase, 'mark' | 'website' | 'coverage'>, sources: ProviderAreaSources): PublicProviderFacts {
   return {
     logo: showcase.mark?.kind === 'logo' ? showcase.mark.image : null,
     website: showcase.website,
-    area: showcase.coverage === null ? null : declaredAreaOf(showcase.coverage, nameOf),
+    area: showcase.coverage === null ? null : declaredAreaOf(showcase.coverage, sources),
   };
 }

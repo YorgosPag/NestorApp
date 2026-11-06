@@ -61,17 +61,25 @@ export function mergeMultiPolygons(parts: readonly GeoJSON.MultiPolygon[]): GeoJ
   return { type: 'MultiPolygon', coordinates: parts.flatMap((part) => part.coordinates) };
 }
 
+/**
+ * **Η γεωμετρική δήλωση ως ΕΝΑ περίγραμμα**: ο κύκλος γίνεται το εγγεγραμμένο πολύγωνο, το χαραγμένο περίγραμμα μένει
+ * ως έχει. `null` για «όλη η Ελλάδα» και για τη λίστα περιοχών, που δεν είναι γεωμετρία.
+ *
+ * 🔑 Ένας ορισμός για τον χάρτη ({@link coverageShape}) και για τις περιοχές που εξυπηρετούνται (ADR-923 Ν11 ε). Οι κορυφές
+ *    του κύκλου είναι **πάνω** στην περιφέρεια, άρα το πολύγωνο δεν ξεχειλίζει ποτέ από τη δήλωση.
+ */
+export function coverageOutline(coverage: DeclaredCoverage): GeoOutline | null {
+  if (isRadiusCoverage(coverage)) return geoCircleOutline(coverage.circle.center, coverage.circle.radiusKm * METRES_PER_KM);
+  return isOutlineCoverage(coverage) ? coverage.outline : null;
+}
+
 /** **Η ΔΗΛΩΣΗ → ΣΧΗΜΑ.** Δες τον πίνακα στην επικεφαλίδα. */
 export function coverageShape(coverage: DeclaredCoverage | null): CoverageShape {
   if (coverage === null) return { kind: 'none' };
   if (isNationwide(coverage)) return { kind: 'nationwide' };
-  if (isRadiusCoverage(coverage)) {
-    const { center, radiusKm } = coverage.circle;
-    const outline = geoCircleOutline(center, radiusKm * METRES_PER_KM);
+  if (isRadiusCoverage(coverage) || isOutlineCoverage(coverage)) {
+    const outline = coverageOutline(coverage);
     return outline === null ? { kind: 'none' } : { kind: 'drawn', geometry: outlinesToMultiPolygon([outline]) };
-  }
-  if (isOutlineCoverage(coverage)) {
-    return { kind: 'drawn', geometry: outlinesToMultiPolygon([coverage.outline]) };
   }
   return coverage.adminIds.length === 0 ? { kind: 'none' } : { kind: 'admin', adminIds: coverage.adminIds };
 }

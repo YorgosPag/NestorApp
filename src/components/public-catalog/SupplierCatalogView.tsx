@@ -48,18 +48,14 @@ export interface SupplierCatalogViewProps {
   readonly brands?: readonly PublicSupplierBrand[];
 }
 
+/** Ακτίνα και περίγραμμα: το μέγεθος, και μετά οι περιοχές που εξυπηρετούν — οι ίδιες που δηλώνει το JSON-LD (Ν11 ε). */
 function ServiceAreaText({ area }: { readonly area: PublicServiceArea }): React.JSX.Element {
   const { t } = usePublicCatalogText();
-  switch (area.kind) {
-    case 'nationwide':
-      return <>{t('supplier.areaNationwide')}</>;
-    case 'areas':
-      return <>{area.names.join(' · ')}</>;
-    case 'radius':
-      return <>{t('supplier.areaRadius', { km: area.radiusKm })}</>;
-    case 'outline':
-      return <>{t('supplier.areaOutline', { km2: area.km2 })}</>;
-  }
+  if (area.kind === 'nationwide') return <>{t('supplier.areaNationwide')}</>;
+  const extent = area.kind === 'radius'
+    ? t('supplier.areaRadius', { km: area.radiusKm })
+    : area.kind === 'outline' ? t('supplier.areaOutline', { km2: area.km2 }) : null;
+  return <>{[extent, ...area.names].filter((part) => part !== null).join(' · ')}</>;
 }
 
 function ProviderFacts({ provider }: { readonly provider: PublicProviderFacts }): React.JSX.Element | null {
