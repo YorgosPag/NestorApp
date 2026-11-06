@@ -111,6 +111,7 @@
 
 | ημερομηνία | αλλαγή |
 |---|---|
+| 2026-11-06 | §14: ο pre-commit έτρεξε git στο πραγματικό repo (`core.bare=true`, 14 commits «base»). Αιτίες: μη αγκυρωμένα μοτίβα jest που ταίριαξαν στο όνομα του worktree, και `GIT_DIR`/`GIT_INDEX_FILE` του hook κληρονομημένα από tests που καλούν `git`. Διόρθωση: `scripts/lib/git-hook-env.js` (SSoT), `jest.global-setup.js`, μοτίβο μόνο σχετικής διαδρομής στο pre-commit. |
 | 2026-11-05 | §13: μαθήματα από την ένταξη `raster-plan-recognition` + `check-3-51-oracle`, που ήταν ήδη στο `main`. Πριν από ένταξη ή σβήσιμο, η σύγκριση με το `main` γίνεται με περιεχόμενο (`merge-tree`), όχι με ονόματα commits. Τα worktrees του harness (`.claude/worktrees/`) δεν τα πιάνει το `wt:remove`. Το `git worktree remove` έδωσε «Invalid argument» σε φάκελο με πλήρες `node_modules`. |
 | 2026-10-31 | `wt:list`: καταχώρηση με σβησμένο φάκελο («prunable») έριχνε όλη την απογραφή με `spawnSync git ENOENT`, γιατί το `cwd` έλειπε. Τώρα εμφανίζεται ως κατάσταση `missing`, με οδηγία για `wt:remove`. |
 | 2026-10-31 | `wt:remove` ιδεμπότητα (§12): σύγκλιση αντί σειράς βημάτων. Το κλαδί δεν εξαρτάται πια από το σβήσιμο του φακέλου, το υπόλειμμα αναφέρεται ως τιμή και το ξανατρέξιμο ολοκληρώνει. Διορθώνει τη διάγνωση του handoff: το git τερματίζει με 255 και έχει ήδη σβήσει την καταχώρηση, ενώ το `maxRetries` του `rmSync` δεν ξαναδοκιμάζει σε κράτημα από cwd. |
@@ -150,7 +151,7 @@
 - 🔴 **`--ignore-scripts` άφηνε το `react-compose-refs` χωρίς το patch του React 19** (982 αντί 1.265 bytes). Ένα worktree θα έτρεχε άλλον κώδικα από το κύριο, σιωπηλά. Το `wt:new` τρέχει πλέον ρητά το `patch-radix-react19.js`.
 - 🔴 **Το patch έγραφε επί τόπου σε hard link**, δηλαδή στο κοινό store. Τώρα σβήνει πριν γράψει.
 - **`git commit --amend` δεν ξανακρίνει τίποτα**: το index ταυτίζεται με το HEAD και το hook βλέπει κενό σύνολο. Γι' αυτό το `wt:land` κάνει `reset --soft` στη βάση, ώστε όλη η αλλαγή να περάσει από τις πύλες.
-- **Το git εξάγει `GIT_DIR`/`GIT_INDEX_FILE` μέσα σε hook.** Αν κληρονομηθούν, κλήση git στο `cwd` χτυπά άλλο repo· το `scripts/lib/agent-worktree/git.js` τα αφαιρεί.
+- **Το git εξάγει `GIT_DIR`/`GIT_INDEX_FILE` μέσα σε hook.** Αν κληρονομηθούν, κλήση git στο `cwd` χτυπά άλλο repo· το `scripts/lib/agent-worktree/git.js` τα αφαιρεί (ορισμός στο `scripts/lib/git-hook-env.js`, §14).
 
 - 🔴 **Το `core.autocrlf=true` έδινε CRLF στο worktree, ενώ το git κρατά LF** ⇒ η CHECK 3.84 έκρινε «μπαγιάτικο» χωρίς αλλαγή περιεχομένου. Το `wt:new` παίρνει τα αρχεία αυτούσια (`-c core.autocrlf=false`), οπότε ο δίσκος ταυτίζεται με το git και οι πύλες αποτυπώματος δεν χρειάζονται αλλαγή.
 - 🔴 **Το `main` ήταν ελλιπές σε καθαρό αντίγραφο**: η CHECK 3.108 (`3e9671f8`) ζητούσε `scripts/lib/i18n-namespace-family/{baseline,request}.js` και `.i18n-namespace-family-baseline.json`, που δεν έγιναν ποτέ commit. Το κοινό δέντρο το έκρυβε, γιατί τα αρχεία υπήρχαν στον δίσκο. Μπήκαν σε αυτό το κλαδί.
@@ -290,3 +291,33 @@
 
 - Οι φάκελοι που έμειναν σβήνονται με `Remove-Item -Recurse -Force` σε νέο τερματικό, αφού κλείσει η συνεδρία που τους κρατά.
 - Το `wt:remove` θα μπορούσε να δέχεται και τα worktrees του harness ή να τυπώνει την εντολή για αυτά. Δεν υλοποιήθηκε· απόφαση Giorgio.
+
+## 14. Ο hook έτρεξε git στο πραγματικό repo (2026-11-06)
+
+### 14.1 Το περιστατικό
+
+Commit στο worktree `accounting-competitive-parity`. Μετά το pre-commit, το `C:\Nestor_Pagonis\.git\config` είχε `core.bare=true` (το κύριο αντίγραφο απαντούσε «must be run in a work tree»), το κλαδί του πράκτορα είχε 14 commits «base» με δοκιμαστικά αρχεία (`src/a.ts`, `src/b.ts`, `src/app/r/Section.tsx`, `src/shell/Nav.tsx` …) και το index είχε αντικατασταθεί. Το `main` έμεινε άθικτο. Επισκευή: `git config core.bare false` και `git reset --mixed <βάση>` στο worktree.
+
+### 14.2 Αιτία: δύο ελαττώματα μαζί
+
+| | Ελάττωμα | Απόδειξη |
+|---|---|---|
+| 1 | Τα μοτίβα του `register_area` (pre-commit, ενιαίο τρέξιμο jest) δεν ήταν αγκυρωμένα, και το jest 30 (`@jest/pattern` `isMatch`) δοκιμάζει κάθε μοτίβο **και** στη σχετική **και** στην απόλυτη διαδρομή. Το `accounting` ταίριαξε στο όνομα του φακέλου ⇒ έτρεξε όλη η σουίτα μέσα στον hook | Μετρημένο με το πραγματικό `@jest/pattern`: με το παλιό μοτίβο ταιριάζει και αρχείο άσχετο με κάθε περιοχή |
+| 2 | Το git εξάγει `GIT_DIR`/`GIT_INDEX_FILE` στον hook (§10.4). Κανένα από τα ~50 αρχεία test που καλούν `git` δεν τα καθάριζε. Με `GIT_DIR` χωρίς `GIT_WORK_TREE`, το `git -C <tmp> init` ξαναρχικοποιεί το πραγματικό repo ως bare, και τα `git commit -m base` πάνε στο κλαδί του hook | Τα αρχεία των 14 commits είναι τα fixtures των `gate-input`, `git-changed-lines`, `i18n-lazy-route-namespaces`, `commit-source-shell` |
+
+### 14.3 Απόφαση
+
+- **`scripts/lib/git-hook-env.js`**: ο ένας ορισμός των μεταβλητών που διαρρέουν (`LEAKED_GIT_ENV`, `cleanGitEnv`, `scrubGitEnv`). Το `agent-worktree/git.js` τον εισάγει αντί για δικό του αντίγραφο.
+- **`jest.global-setup.js`** (`globalSetup` στο `jest.config.js`): σβήνει τις μεταβλητές από την κύρια διεργασία του jest. Το `globalSetup` τρέχει πριν από το `scheduleTests` (@jest/core 30), άρα οι workers γεννιούνται καθαροί και με `--runInBand` τα tests τρέχουν σε ήδη καθαρή διεργασία. Καλύπτει κάθε είσοδο στη σουίτα, όχι μόνο τον hook, χωρίς αλλαγή στα αρχεία test.
+- **pre-commit**: το συνδυασμένο μοτίβο γίνεται `^(?![A-Za-z]:|/).*(<μοτίβα>)`. Αρνείται απόλυτη αρχή, άρα ταιριάζει μόνο η σχετική διαδρομή· κάθε μοτίβο ταιριάζει ακόμη οπουδήποτε μέσα στο repo. Μία αλλαγή στο σημείο ένωσης, όχι 24, ώστε να καλύπτεται και κάθε μελλοντική περιοχή.
+
+### 14.4 Απορριφθείσες εναλλακτικές
+
+- **Καθάρισμα στο `jest.setup.js`**: το `process.env` του sandbox είναι αντίγραφο, ενώ το `child_process` διαβάζει το πραγματικό ⇒ δεν θα είχε αποτέλεσμα.
+- **Καθαρό `env` σε κάθε αρχείο test**: ~50 αρχεία, και το επόμενο νέο test θα το ξεχνούσε.
+- **Αγκύρωση κάθε μοτίβου χωριστά**: 24 αλλαγές, και η επόμενη περιοχή θα έμπαινε ξανά χωρίς άγκυρα.
+
+### 14.5 Όρια
+
+- Το `globalSetup` καλύπτει το `jest.config.js`. Τα αδελφά configs (`jest.config.<κάτι>.js`) δεν το φορτώνουν· σήμερα κανένα από τα tests τους δεν καλεί `git`.
+- Δεν υπάρχει πύλη που να απαγορεύει σε νέο test να καλέσει `git` με ρητό `env` που ξαναβάζει τις μεταβλητές.

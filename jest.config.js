@@ -60,6 +60,8 @@ const config = {
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/cssModuleStub.js',
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileStub.js'
   },
+  // Κανένα test δεν κληρονομεί `GIT_DIR`/`GIT_INDEX_FILE` από hook (περιστατικό 2026-11-06).
+  globalSetup: '<rootDir>/jest.global-setup.js',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',

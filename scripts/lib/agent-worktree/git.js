@@ -7,18 +7,9 @@
 
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
-
-/**
- * Μέσα σε hook το git εξάγει `GIT_DIR` / `GIT_INDEX_FILE`. Αν κληρονομηθούν, κάθε
- * κλήση εδώ θα χτυπούσε το repo του hook αντί για εκείνο του `cwd`.
- */
-const LEAKED_GIT_ENV = ['GIT_DIR', 'GIT_INDEX_FILE', 'GIT_WORK_TREE', 'GIT_PREFIX', 'GIT_OBJECT_DIRECTORY'];
-
-function cleanEnv() {
-  const env = { ...process.env };
-  LEAKED_GIT_ENV.forEach((key) => delete env[key]);
-  return env;
-}
+// Μέσα σε hook το git εξάγει `GIT_DIR` / `GIT_INDEX_FILE`· χωρίς καθάρισμα κάθε κλήση εδώ θα
+// χτυπούσε το repo του hook αντί για εκείνο του `cwd`. Ο ορισμός ζει στο SSoT.
+const { cleanGitEnv } = require('../git-hook-env');
 
 /**
  * Τα αποτυπώματα των πυλών κρίνουν ωμά bytes. Με το `core.autocrlf=true` του repo ένα νέο
@@ -29,7 +20,7 @@ const EXACT_BYTES = ['-c', 'core.autocrlf=false'];
 
 function git(cwd, args, { inherit = false } = {}) {
   const stdio = inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'];
-  const options = { cwd, env: cleanEnv(), encoding: 'utf8', stdio, maxBuffer: 1 << 28 };
+  const options = { cwd, env: cleanGitEnv(), encoding: 'utf8', stdio, maxBuffer: 1 << 28 };
   const out = execFileSync('git', [...EXACT_BYTES, ...args], options);
   return (out || '').trim();
 }

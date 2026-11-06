@@ -878,6 +878,15 @@ if [[ ${#TEST_AREA_NAMES[@]} -gt 0 ]]; then
         COMBINED_PATTERN="${COMBINED_PATTERN}|${TEST_AREA_PATTERNS[$i]}"
     done
 
+    # 🔴 Τα μοτίβα κρίνουν ΜΟΝΟ τη διαδρομή μέσα στο repo. Το jest 30 (`@jest/pattern` isMatch)
+    # δοκιμάζει κάθε μοτίβο ΚΑΙ στη σχετική ΚΑΙ στην ΑΠΟΛΥΤΗ διαδρομή ⇒ μη αγκυρωμένο
+    # μοτίβο ταιριάζει και στο όνομα του φακέλου του checkout. Περιστατικό 2026-11-06: το
+    # `accounting` ταίριαξε στο worktree `C:/Nestor_Worktrees/accounting-competitive-parity/`
+    # ⇒ έτρεξε ΟΛΗ η σουίτα μέσα στον hook. Η άρνηση απόλυτης αρχής (δίσκος `X:`, ή `/`, που
+    # στα Windows το jest το κάνει `\`) αφήνει να ταιριάξει μόνο η σχετική διαδρομή — η
+    # σημασιολογία κάθε μοτίβου («οπουδήποτε μέσα στο repo») μένει ίδια.
+    COMBINED_PATTERN="^(?![A-Za-z]:|/).*(${COMBINED_PATTERN})"
+
     AREA_LIST=$(IFS=', '; echo "${TEST_AREA_NAMES[*]}")
     echo -e "${YELLOW}🧪 ${#TEST_AREA_NAMES[@]} test area(s) triggered: ${AREA_LIST}${NC}"
     echo -e "${YELLOW}   Single jest invocation (shared cold-start, jest worker pool runs in parallel)...${NC}"
