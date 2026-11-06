@@ -27,6 +27,7 @@ import type { AuthContext } from '@/lib/auth';
 import { FieldValue, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 
+import { judgeInviteExpiryDay } from '../config/vendor-invite-policy';
 import type { RFQ } from '../types/rfq';
 import type { CreateVendorInviteDTO, DeliveryChannel, VendorInvite } from '../types/vendor-invite';
 import type { InviteRecipientKind } from '../types/vendor-invite-delivery';
@@ -41,6 +42,7 @@ import {
 } from './quote-request-pair-quota';
 import { getRfq } from './rfq-service';
 import { prepareVendorInvite, writePreparedVendorInvite, type PreparedVendorInvite } from './vendor-invite-issue';
+import { buildVendorInviteMessage, greetingName } from './vendor-invite-message';
 import { buyerVisibleErrorReason, fetchVendorContact, inviteEmailLanguage, recipientEmailSnapshot, recipientOfContact } from './vendor-recipient';
 
 const logger = createModuleLogger('VENDOR_INVITE_CREATE');
@@ -48,8 +50,11 @@ const logger = createModuleLogger('VENDOR_INVITE_CREATE');
 type Db = admin.firestore.Firestore;
 type Tx = admin.firestore.Transaction;
 
-/** `already_invited` 409 · `quote_request_quota_exhausted` 429 · `quota_unavailable` 503 — τίποτα δεν αποθηκεύτηκε. */
-export type VendorInviteRefusalCode = 'already_invited' | 'quote_request_quota_exhausted' | 'quota_unavailable';
+/**
+ * `already_invited` 409 · `quote_request_quota_exhausted` 429 · `quota_unavailable` 503 · `invalid_expiry` 400
+ * (ADR-327 §7.5: η ημέρα λήξης εκτός ορίων) — τίποτα δεν αποθηκεύτηκε.
+ */
+export type VendorInviteRefusalCode = 'already_invited' | 'quote_request_quota_exhausted' | 'quota_unavailable' | 'invalid_expiry';
 
 export class VendorInviteRefusal extends Error {
   constructor(readonly code: VendorInviteRefusalCode) {
@@ -67,7 +72,8 @@ export interface CreateInviteResult {
 
 interface ResolvedRecipient {
   vendorContactId: string;
-  displayName: string;
+  /** `null` ⇒ χειροκίνητη πρόσκληση χωρίς όνομα (Ε3) — ο χαιρετισμός είναι ουδέτερος. */
+  displayName: string | null;
   /** Πού στέλνεται το email (για επαφή πλατφόρμας: το `quoteIntake` του προμηθευτή). */
   email: string | null;
   /** Τι μένει στο έγγραφο της πρόσκλησης — ποτέ η διεύθυνση ενός χώρου της πλατφόρμας. */
@@ -91,9 +97,9 @@ async function resolveRecipient(ctx: AuthContext, dto: CreateVendorInviteDTO): P
     };
   }
   const email = dto.manualEmail.trim();
-  const name = dto.manualName.trim();
   if (!email) throw new Error('manualEmail is required');
-  if (!name) throw new Error('manualName is required');
+  // Ε3 — το όνομα είναι προαιρετικό· όνομα που περιέχει `@` είναι διεύθυνση, όχι όνομα ⇒ δεν κρατιέται.
+  const name = greetingName(dto.manualName);
   return { vendorContactId: '', displayName: name, email, snapshotEmail: email, preferredChannel: null, platformCompanyId: null, kind: 'contact', language: null };
 }
 
@@ -154,15 +160,22 @@ async function admitSupplierMailbox(supplierCompanyId: string | null): Promise<v
 
 type ChannelDriver = NonNullable<ReturnType<typeof resolveChannel>>;
 
-function dispatchNewInvite(driver: ChannelDriver, prepared: PreparedVendorInvite, recipient: ResolvedRecipient, rfqTitle: string, locale: HumanLanguage | undefined) {
+async function dispatchNewInvite(db: Db, driver: ChannelDriver, prepared: PreparedVendorInvite, recipient: ResolvedRecipient, rfq: RFQ, locale: HumanLanguage | undefined) {
   const isEmail = driver.id === 'email';
-  if (isEmail && !recipient.email) return Promise.resolve({ success: false, providerMessageId: null, errorReason: 'Recipient has no email address' });
-  const { link } = prepared;
-  return driver.send({
-    inviteId: prepared.invite.id, vendorName: recipient.displayName, recipient: isEmail && recipient.email ? recipient.email : link.portalUrl,
-    rfqTitle, projectName: null, portalUrl: link.portalUrl, expiresAt: link.expiresAtIso,
-    locale: inviteEmailLanguage(recipient, locale), declineUrl: link.declineUrl,
-  });
+  if (isEmail && !recipient.email) return { success: false, providerMessageId: null, errorReason: 'Recipient has no email address' };
+  const { invite, link } = prepared;
+  return driver.send(await buildVendorInviteMessage({
+    db, companyId: invite.companyId, inviteId: invite.id, rfq, to: isEmail && recipient.email ? recipient.email : link.portalUrl,
+    recipientName: recipient.displayName, link, buyerNote: invite.buyerNote, locale: inviteEmailLanguage(recipient, locale),
+  }));
+}
+
+/** Ε1β — η ρητή ημέρα λήξης, αν δόθηκε: εκτός ορίων ⇒ άρνηση πριν από οτιδήποτε άλλο (τίποτα δεν γράφεται). */
+function explicitExpiryMs(dto: CreateVendorInviteDTO, nowMs: number): number | undefined {
+  if (dto.expiresOn === undefined) return undefined;
+  const verdict = judgeInviteExpiryDay(dto.expiresOn, new Date(nowMs));
+  if (verdict.kind !== 'ok') throw new VendorInviteRefusal('invalid_expiry');
+  return verdict.expiresAtMs;
 }
 
 /** Μετά από επιτυχή αποστολή: `sent` (email) και `deliveredAt`. Η κράτηση έγραψε `pending`. */
@@ -172,11 +185,12 @@ async function markDispatched(db: Db, invite: VendorInvite, channel: DeliveryCha
   return { ...invite, ...patch };
 }
 
-async function prepareFor(ctx: AuthContext, dto: CreateVendorInviteDTO, recipient: ResolvedRecipient, channel: DeliveryChannel): Promise<PreparedVendorInvite> {
+async function prepareFor(ctx: AuthContext, dto: CreateVendorInviteDTO, recipient: ResolvedRecipient, channel: DeliveryChannel, expiresAtMs: number | undefined): Promise<PreparedVendorInvite> {
   return prepareVendorInvite({
     companyId: ctx.companyId, rfqId: dto.rfqId, vendorContactId: recipient.vendorContactId, deliveryChannel: channel,
     preferredChannel: recipient.preferredChannel, status: 'pending', recipientEmail: recipient.snapshotEmail, recipientName: recipient.displayName,
-    issuedVia: channel === 'email' ? 'invite_email' : 'copy_link', issuedBy: ctx.uid, expiresInDays: dto.expiresInDays,
+    issuedVia: channel === 'email' ? 'invite_email' : 'copy_link', issuedBy: ctx.uid, expiresInDays: dto.expiresInDays, expiresAtMs,
+    buyerNote: dto.buyerNote ?? null,
   });
 }
 
@@ -188,17 +202,19 @@ export async function createVendorInvite(ctx: AuthContext, dto: CreateVendorInvi
   const rfq = await getRfq(ctx.companyId, dto.rfqId);
   if (!rfq) throw new Error(`RFQ ${dto.rfqId} not found`);
   if (rfq.status === 'archived') throw new Error('Cannot invite vendor on archived RFQ');
+  const nowMs = Date.now();
+  const expiresAtMs = explicitExpiryMs(dto, nowMs);
   const recipient = await resolveRecipient(ctx, dto);
   const driver = resolveChannel(dto.deliveryChannel) ?? resolveChannel('copy_link');
   if (!driver) throw new Error('No delivery channel available');
   const emailsSupplier = driver.id === 'email' && recipient.email !== null ? recipient.platformCompanyId : null;
   const db = getAdminFirestore();
-  const reservation: Reservation = { ctx, rfqId: dto.rfqId, vendorContactId: recipient.vendorContactId, pairSupplierId: emailsSupplier, nowMs: Date.now() };
+  const reservation: Reservation = { ctx, rfqId: dto.rfqId, vendorContactId: recipient.vendorContactId, pairSupplierId: emailsSupplier, nowMs };
   await judgeReservation(null, db, reservation);
   await admitSupplierMailbox(emailsSupplier);
-  const prepared = await prepareFor(ctx, dto, recipient, driver.id);
+  const prepared = await prepareFor(ctx, dto, recipient, driver.id, expiresAtMs);
   await reserveInvite(db, reservation, prepared);
-  const dispatch = await dispatchNewInvite(driver, prepared, recipient, rfq.title, options.locale);
+  const dispatch = await dispatchNewInvite(db, driver, prepared, recipient, rfq, options.locale);
   const invite = dispatch.success ? await markDispatched(db, prepared.invite, driver.id) : prepared.invite;
   if (dispatch.success && emailsSupplier !== null) {
     void announcePlatformQuoteRequest({ supplierCompanyId: emailsSupplier, buyerCompanyId: ctx.companyId, rfqTitle: rfq.title, inviteId: invite.id });

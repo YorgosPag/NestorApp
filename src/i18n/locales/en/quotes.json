@@ -956,24 +956,32 @@
       "addAdhocButton": "+ Add",
       "adhocPlaceholder": "contact@newvendor.gr",
       "createContact": "Create new contact with this email",
+      "adhocNameLabel": "Recipient name (optional)",
+      "adhocNamePlaceholder": "Name (optional)",
       "deadline": {
-        "label": "Reply deadline",
+        "label": "Link valid until",
         "preset": {
           "3d": "3 days",
           "5d": "5 days",
           "7d": "7 days",
           "14d": "14 days",
-          "custom": "Custom..."
-        }
+          "custom": "Specific date…"
+        },
+        "pickDate": "Pick a date",
+        "until": "The link will be valid through {date}",
+        "rfqDeadline": "Request deadline: {date}"
+      },
+      "preview": {
+        "title": "Email preview",
+        "as": "Preview as",
+        "subject": "Subject",
+        "frameTitle": "Preview of the invitation email",
+        "loading": "Preparing the preview…",
+        "failed": "The preview could not be loaded. Sending is not affected.",
+        "empty": "Pick a recipient to see the email exactly as they will receive it."
       },
       "sendButton": "Send to {count} vendors",
       "cancel": "Cancel",
-      "subject": {
-        "label": "Subject"
-      },
-      "body": {
-        "label": "Message"
-      },
       "ccSelf": "Send cc to myself",
       "errors": {
         "invalidEmail": "Invalid email",

@@ -60,6 +60,10 @@ export interface PrepareVendorInviteInput {
   readonly issuedVia: VendorCredentialOrigin;
   readonly issuedBy: string;
   readonly expiresInDays?: number;
+  /** ADR-327 §7.5 — ρητή λήξη (τέλος της ημέρας που διάλεξε ο αγοραστής)· κερδίζει το `expiresInDays`. */
+  readonly expiresAtMs?: number;
+  /** ADR-327 §7.5 — το προσωπικό σημείωμα του αγοραστή (απλό κείμενο, ήδη επικυρωμένο)· `null` ⇒ κανένα. */
+  readonly buyerNote?: string | null;
   /** ADR-923 §5.13 Τ5 — το outbox της παράδοσης, γραμμένο στην ίδια πράξη με την πρόσκληση (μόνο fan-out του RFQ). */
   readonly delivery?: VendorInviteDelivery;
 }
@@ -86,7 +90,7 @@ function toIssuedLink(credential: VendorInviteCredential, token: string): Issued
 export async function prepareVendorInvite(input: PrepareVendorInviteInput): Promise<PreparedVendorInvite> {
   const nowMs = Date.now();
   const inviteId = generateVendorInviteId();
-  const expiresAtMs = vendorLinkExpiryMs(nowMs, input.expiresInDays);
+  const expiresAtMs = input.expiresAtMs ?? vendorLinkExpiryMs(nowMs, input.expiresInDays);
   const { credential, token } = await mintVendorInviteCredential({
     inviteId,
     rfqId: input.rfqId,
@@ -129,6 +133,7 @@ function newInviteDoc(
     updatedAt: now,
     recipientEmail: input.recipientEmail,
     recipientName: input.recipientName,
+    buyerNote: input.buyerNote ?? null,
     ...(input.delivery ? { delivery: input.delivery } : {}),
   };
 }

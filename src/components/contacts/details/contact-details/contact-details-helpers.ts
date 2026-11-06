@@ -1,5 +1,20 @@
 import type { Contact, IndividualContact } from '@/types/contacts';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PersonaType } from '@/types/contacts/personas';
+
+/**
+ * **Η ΜΙΑ εικόνα της φόρμας επαφής** (ADR-323 · ADR-121 Ε4). Σε επεξεργασία το `editedData` κρατά **μόνο** τη διαφορά,
+ * άρα ό,τι δείχνεται (πεδία, κεφαλίδα, διακόπτες ρόλων) διαβάζει τη διαφορά **πάνω** στα αποθηκευμένα.
+ * 🔴 Ήταν γραμμένο δύο φορές (`ContactDetails` · `usePersonaToggle`) και η κεφαλίδα διάβαζε το **τρίτο**, μη
+ * συγχωνευμένο `enhancedFormData.activePersonas` ⇒ ο διακόπτης ρόλου άλλαζε (και αποθηκευόταν) αλλά δεν φαινόταν.
+ */
+export function resolveEditingFormData(
+  enhancedFormData: ContactFormData,
+  editedData: Partial<ContactFormData>,
+  isEditing: boolean,
+): ContactFormData {
+  return isEditing ? ({ ...enhancedFormData, ...editedData } as ContactFormData) : enhancedFormData;
+}
 
 // ADR-317: Tabs that own subcollections with their own CRUD lifecycle.
 // On these tabs the global contact Save button is hidden — instead the adaptive

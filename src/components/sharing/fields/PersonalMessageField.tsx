@@ -19,14 +19,14 @@ import { MessageSquare } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { MAX_PERSONAL_MESSAGE_LENGTH } from '@/config/personal-message-policy';
 
 /**
- * Shared upper bound for the personal message. Mirrors the legacy
- * `EmailShareForm.MAX_MESSAGE_LENGTH` to preserve backward compatibility and
- * aligns with the server-side Zod `z.string().max(500)` on the showcase email
- * endpoint.
+ * Shared upper bound for the personal message — lives in `@/config/personal-message-policy` so that
+ * server-side zod schemas read the SAME number (a value exported from a `'use client'` module is not
+ * readable on the server). Re-exported here for the existing consumers.
  */
-export const MAX_PERSONAL_MESSAGE_LENGTH = 500;
+export { MAX_PERSONAL_MESSAGE_LENGTH };
 
 export interface PersonalMessageFieldProps {
   value: string;

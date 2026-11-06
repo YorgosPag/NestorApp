@@ -131,6 +131,19 @@ Implement the **SAP Business Partner "Role/Persona" pattern**:
 
 ## Changelog
 
+### 2026-11-06 — Ε4: ο διακόπτης ρόλου φαίνεται και σε επεξεργασία
+
+**Το σφάλμα (ζωντανή δοκιμή Τ5, ADR-923 §5.13)**: σε επεξεργασία, το `usePersonaToggle` γράφει τον νέο ρόλο στο
+`editedData` (μόνο η διαφορά, ADR-323) — σωστά, και αποθηκεύεται. Η κεφαλίδα όμως διάβαζε το **μη συγχωνευμένο**
+`enhancedFormData.activePersonas`, άρα ο διακόπτης δεν άλλαζε όψη ως την αποθήκευση. Ο κανόνας συγχώνευσης ήταν γραμμένος
+**δύο** φορές (`ContactDetails` · `usePersonaToggle`) και η κεφαλίδα δεν ρωτούσε κανέναν από τους δύο.
+
+**Λύση**: μία καθαρή `resolveEditingFormData(enhanced, edited, isEditing)` στο `contact-details/contact-details-helpers.ts`·
+από αυτή διαβάζουν τα πεδία, η κεφαλίδα (`activePersonas`) και ο διακόπτης. Άγκυρα: `contact-details-helpers.test.ts`
+(μετάλλαξη «χωρίς συγχώνευση» ⇒ κόκκινο).
+
+**Μόνο αναφορά (όχι τώρα)**: η φόρμα δημιουργίας φυσικού προσώπου δεν έχει επιλογέα ρόλων.
+
 ### 2026-03-19 — Client Persona Guard + Tab Redesign
 
 **Removal guards**: Added `ClientService.hasActiveUnits()` guard that prevents removing the "Client" persona badge when the contact has active purchased units, parking spots, or storage units. Same fail-open pattern as `BrokerageService.hasActiveRecords()`.

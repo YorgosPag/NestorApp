@@ -13,50 +13,62 @@
 import { resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 
 export interface VendorInviteEmailTexts {
-  readonly subject: (rfqTitle: string, projectLine: string) => string;
-  readonly greeting: (vendorName: string) => string;
-  /** Το `rfqTitleMarkup` είναι ΗΔΗ escaped + τυλιγμένο από τον καλώντα — τα λόγια δεν κρατούν σήμανση. */
-  readonly introHtml: (rfqTitleMarkup: string) => string;
+  /** `projectName` = όνομα **έργου** (ή `null`) — ποτέ ο τίτλος του RFQ στη θέση του (ADR-327 §7.5, Ε2). */
+  readonly subject: (rfqTitle: string, projectName: string | null) => string;
+  /** `null` ⇒ ουδέτερος επίσημος χαιρετισμός — ποτέ email, ποτέ «Unknown» (Ε3). */
+  readonly greeting: (vendorName: string | null) => string;
+  /** Τα `*Markup` είναι ΗΔΗ escaped + τυλιγμένα από τον καλώντα — τα λόγια δεν κρατούν σήμανση. */
+  readonly introHtml: (rfqTitleMarkup: string, projectMarkup: string | null) => string;
+  /** Η ίδια πρόταση σε απλό κείμενο (text/plain) — ίδια διατύπωση με το HTML. */
+  readonly introText: (rfqTitle: string, projectName: string | null) => string;
   readonly cta: string;
+  /** Προθεσμία υποβολής προσφορών του RFQ — μόνο όταν υπάρχει. */
+  readonly dueLabel: string;
   readonly expiresLabel: string;
+  /** Επικεφαλίδα του προσωπικού σημειώματος του αγοραστή (Ε1). */
+  readonly noteHeading: string;
   readonly warning: string;
   /** ADR-876 §5 — ο σύνδεσμος που λήγει δεν είναι αδιέξοδο: ανοίγει και ζητά νέο. */
   readonly renewHint: string;
   readonly declineQuestion: string;
   readonly declineCta: string;
-  readonly textRequest: string;
   readonly textLink: string;
-  readonly textExpires: string;
 }
 
 const VENDOR_INVITE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, VendorInviteEmailTexts>> = {
   el: {
-    subject: (rfqTitle, projectLine) => `Πρόσκληση Προσφοράς: ${rfqTitle}${projectLine}`,
-    greeting: (vendorName) => `Γεια σας ${vendorName},`,
-    introHtml: (rfqTitleMarkup) => `Σας έχει σταλεί αίτημα προσφοράς για το έργο ${rfqTitleMarkup}.`,
+    subject: (rfqTitle, projectName) => `Αίτημα προσφοράς: ${rfqTitle}${projectName ? ` — ${projectName}` : ''}`,
+    greeting: (vendorName) => (vendorName ? `Γεια σας ${vendorName},` : 'Αξιότιμοι κύριοι/κυρίες,'),
+    introHtml: (rfqTitleMarkup, projectMarkup) =>
+      `Σας έχει σταλεί αίτημα προσφοράς «${rfqTitleMarkup}»${projectMarkup ? ` για το έργο ${projectMarkup}` : ''}.`,
+    introText: (rfqTitle, projectName) =>
+      `Σας έχει σταλεί αίτημα προσφοράς «${rfqTitle}»${projectName ? ` για το έργο ${projectName}` : ''}.`,
     cta: 'Υποβολή Προσφοράς',
+    dueLabel: 'Προθεσμία υποβολής προσφορών',
     expiresLabel: 'Ο σύνδεσμος λήγει στις',
+    noteHeading: 'Μήνυμα από τον αποστολέα',
     warning: '⚠️ Αυτός ο σύνδεσμος είναι προσωπικός. Μην τον προωθήσετε σε τρίτους.',
     renewHint: 'Αν ο σύνδεσμος λήξει ενώ η πρόσκληση είναι ακόμη ανοιχτή, ανοίξτε τον και ζητήστε νέο — θα έρθει σε αυτή τη διεύθυνση.',
     declineQuestion: 'Δεν μπορείτε να συμμετάσχετε;',
     declineCta: 'Δηλώστε άρνηση εδώ',
-    textRequest: 'Αίτημα προσφοράς:',
-    textLink: 'Σύνδεσμος:',
-    textExpires: 'Λήγει:',
+    textLink: 'Σύνδεσμος',
   },
   en: {
-    subject: (rfqTitle, projectLine) => `Quote Request: ${rfqTitle}${projectLine}`,
-    greeting: (vendorName) => `Hello ${vendorName},`,
-    introHtml: (rfqTitleMarkup) => `You have been invited to submit a quote for project ${rfqTitleMarkup}.`,
+    subject: (rfqTitle, projectName) => `Quote request: ${rfqTitle}${projectName ? ` — ${projectName}` : ''}`,
+    greeting: (vendorName) => (vendorName ? `Hello ${vendorName},` : 'Dear Sir or Madam,'),
+    introHtml: (rfqTitleMarkup, projectMarkup) =>
+      `You have been sent the quote request “${rfqTitleMarkup}”${projectMarkup ? ` for the project ${projectMarkup}` : ''}.`,
+    introText: (rfqTitle, projectName) =>
+      `You have been sent the quote request “${rfqTitle}”${projectName ? ` for the project ${projectName}` : ''}.`,
     cta: 'Submit Quote',
+    dueLabel: 'Quotes due by',
     expiresLabel: 'Link expires on',
+    noteHeading: 'Message from the sender',
     warning: '⚠️ This link is personal. Do not forward it to anyone else.',
     renewHint: 'If the link expires while the invitation is still open, open it and request a new one — it will be sent to this address.',
     declineQuestion: 'Cannot participate?',
     declineCta: 'Decline here',
-    textRequest: 'Quote request:',
-    textLink: 'Link:',
-    textExpires: 'Expires:',
+    textLink: 'Link',
   },
 };
 

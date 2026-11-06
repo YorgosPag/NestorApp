@@ -44,6 +44,7 @@ import { resolveChannel } from './channels';
 import { getRfq } from './rfq-service';
 import { recordVendorInviteAudit } from './vendor-invite-audit';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
+import { buildVendorInviteMessage } from './vendor-invite-message';
 import { VendorInviteStateError, getVendorInviteOfRfq } from './vendor-invite-service';
 import { admitPlatformQuoteRequest } from './platform-quote-request';
 import { consumeQuoteRequestPair } from './quote-request-pair-quota';
@@ -98,7 +99,8 @@ export async function resolveInviteRecipient(
   if (invite.recipientEmail) {
     const contact = invite.vendorContactId ? await fetchVendorContact(invite.companyId, invite.vendorContactId) : null;
     return {
-      email: invite.recipientEmail, name: invite.recipientName ?? invite.recipientEmail,
+      // Ε3 — χωρίς όνομα ⇒ `''` και ουδέτερος χαιρετισμός (`greetingName`)· ΠΟΤΕ το email ως όνομα.
+      email: invite.recipientEmail, name: invite.recipientName ?? '',
       kind: 'contact', platformCompanyId: null, language: contact?.language ?? null,
     };
   }
@@ -161,17 +163,10 @@ export async function resendVendorInvite(
     issuedBy: ctx.uid,
     expiresAtMs: vendorLinkExpiryMs(Date.now()),
   });
-  const dispatch = await emailChannel.send({
-    inviteId,
-    vendorName: recipient.name,
-    recipient: recipient.email,
-    rfqTitle: rfq.title,
-    projectName: null,
-    portalUrl: link.portalUrl,
-    expiresAt: link.expiresAtIso,
-    locale: inviteEmailLanguage(recipient, options.locale),
-    declineUrl: link.declineUrl,
-  });
+  const dispatch = await emailChannel.send(await buildVendorInviteMessage({
+    companyId: invite.companyId, inviteId, rfq, to: recipient.email, recipientName: recipient.name,
+    link, buyerNote: invite.buyerNote, locale: inviteEmailLanguage(recipient, options.locale),
+  }));
   if (dispatch.success) await recordInviteRedelivered(inviteId, recipient.kind);
   recordVendorInviteAudit(ctx, inviteId, 'email_sent', [
     { field: 'portalLink', oldValue: null, newValue: link.credential.id, label: 'email_resend' },

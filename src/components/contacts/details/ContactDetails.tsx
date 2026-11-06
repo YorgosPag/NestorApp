@@ -3,7 +3,6 @@
 import '@/lib/design-system';
 import { Users } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PersonaType } from '@/types/contacts/personas';
 import { DetailsContainer } from '@/core/containers';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
@@ -11,6 +10,7 @@ import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { ContactNameReviewNotice } from './ContactNameReviewNotice';
 import { useContactDetailsController } from './contact-details/useContactDetailsController';
 import { ContactEditFocusProvider } from './contact-details/ContactEditFocusContext';
+import { resolveEditingFormData } from './contact-details/contact-details-helpers';
 import type { ContactDetailsProps } from './contact-details/contact-details-types';
 
 export function ContactDetails({
@@ -56,9 +56,8 @@ export function ContactDetails({
   // ADR-323: editedData holds only the dirty diff (Google-level diff-based
   // updates). In edit mode, merge it on top of enhancedFormData so inputs still
   // display the existing values, while the save path writes only the diff.
-  const resolvedFormData = (
-    isEditing ? { ...enhancedFormData, ...editedData } : enhancedFormData
-  ) as ContactFormData;
+  // ADR-121 Ε4 — ΙΔΙΑ εικόνα για πεδία ΚΑΙ κεφαλίδα (διακόπτες ρόλων).
+  const resolvedFormData = resolveEditingFormData(enhancedFormData, editedData, isEditing);
 
   return (
     <ContactEditFocusProvider>
@@ -78,7 +77,7 @@ export function ContactDetails({
             onCancelEdit={handleCancelEdit}
             isSaving={isSaving}
             hideEditControls={readOnly || isSubcollectionTab}
-            activePersonas={enhancedFormData.activePersonas as PersonaType[]}
+            activePersonas={resolvedFormData.activePersonas as PersonaType[]}
             onPersonaToggle={readOnly ? undefined : handlePersonaToggle}
           />
         }

@@ -51,6 +51,7 @@ import { admitPlatformQuoteRequest, announcePlatformQuoteRequest } from './platf
 import { readOwnedProcurementDoc } from './procurement-owned-doc';
 import { rfqRef, rfqSubject } from './rfq-ownership';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
+import { buildVendorInviteMessage } from './vendor-invite-message';
 import { inviteEmailLanguage, recipientEmailSnapshot, resolveVendorRecipient, type VendorRecipient } from './vendor-recipient';
 
 const logger = createModuleLogger('RFQ_INVITE_DELIVERY');
@@ -183,10 +184,10 @@ async function attemptDelivery(db: Db, job: InviteDeliveryJob, claim: Claim, pro
   progress.recipientKind = recipient.kind;
   if (!(await admitRecipient(recipient, progress))) return { kind: 'undeliverable', reason: 'recipient_quota' };
   const link = await linkFor(job, claim, progress, nowMs);
-  const result = await emailVendorInviteChannel.send({
-    inviteId: invite.id, vendorName: recipient.name, recipient: recipient.email, rfqTitle: rfq.title, projectName: null,
-    portalUrl: link.portalUrl, expiresAt: link.expiresAtIso, locale: inviteEmailLanguage(recipient), declineUrl: link.declineUrl,
-  });
+  const result = await emailVendorInviteChannel.send(await buildVendorInviteMessage({
+    db, companyId: invite.companyId, inviteId: invite.id, rfq, to: recipient.email, recipientName: recipient.name,
+    link, buyerNote: invite.buyerNote, locale: inviteEmailLanguage(recipient),
+  }));
   if (result.success) return { kind: 'sent', recipient, rfqTitle: rfq.title };
   const uncertain = result.uncertain === true;
   logger.warn('Ο πάροχος δεν παρέδωσε την πρόσκληση', { inviteId: invite.id, attempt: claim.delivery.attempts, uncertain, error: result.errorReason });
