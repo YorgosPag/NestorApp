@@ -11,6 +11,7 @@
  *    μέγιστο + 1) — όχι ρολόι, όχι τύχη: δεν είναι έγγραφα Firestore (N.6), είναι κλειδιά στοιχείων ενός πίνακα.
  */
 
+import { hasAnyLocalizedText } from '@/i18n/localized-text';
 import { validateFamily } from '@/subapps/catalog/schema/validate-family';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
@@ -21,6 +22,7 @@ import {
   type CatalogFamilyDefinition,
   type ConsistencyRule,
   type FamilyTableRow,
+  type VariantScheme,
 } from '@/subapps/catalog/types/family';
 import {
   isAxisAttributeType,
@@ -83,6 +85,31 @@ export function tabOfIssue(issue: CatalogIssue): FamilyTab {
   if (issue.path.startsWith('tableSpec')) return 'table';
   if (issue.path.startsWith('consistencyRules')) return 'rules';
   return 'general';
+}
+
+/** Το άδειο σχήμα του «Νέο σχήμα παραλλαγών» — ΕΝΑ πρότυπο, και για την προσθήκη και για την ερώτηση «ανέγγιχτο;». */
+export function emptyVariantScheme(): VariantScheme {
+  return { code: '', labels: {}, levels: [{ axisAttributeIds: [], attributeIds: [] }] };
+}
+
+/** Ανέγγιχτο = ακόμη ίδιο με το {@link emptyVariantScheme}: ο άνθρωπος το πρόσθεσε αλλά δεν έγραψε τίποτα σε αυτό. */
+export function isPristineScheme(scheme: VariantScheme): boolean {
+  const [only, ...rest] = scheme.levels;
+  return scheme.code === '' && !hasAnyLocalizedText(scheme.labels) && rest.length === 0
+    && only !== undefined && only.axisAttributeIds.length === 0 && only.attributeIds.length === 0;
+}
+
+const belongsTo = (path: string, prefix: string) => path === prefix || path.startsWith(`${prefix}.`);
+
+/**
+ * Τα ευρήματα που **φαίνονται**: όσα ανήκουν σε ανέγγιχτο σχήμα αναβάλλονται ώς το πρώτο άγγιγμα (ADR-923 §23.2 K1).
+ * Ένα στοιχείο που μόλις προστέθηκε είναι **ημιτελές, όχι λάθος** (Material · Figma · Linear: επικύρωση μετά την
+ * αλληλεπίδραση). ⚠️ Μόνο η **προβολή** αλλάζει: ο φραγμός αποθήκευσης μετρά πάντα όλα τα ευρήματα.
+ */
+export function shownFamilyIssues(draft: CatalogFamilyDefinition, issues: readonly CatalogIssue[]): readonly CatalogIssue[] {
+  const deferred = draft.variantSchemes.flatMap((scheme, index) => (isPristineScheme(scheme) ? [`variantSchemes[${index}]`] : []));
+  if (deferred.length === 0) return issues;
+  return issues.filter((issue) => !deferred.some((prefix) => belongsTo(issue.path, prefix)));
 }
 
 export function issueCountByTab(issues: readonly CatalogIssue[]): Readonly<Record<FamilyTab, number>> {

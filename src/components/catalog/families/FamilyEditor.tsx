@@ -33,7 +33,7 @@ import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-dra
 import type { FamilyTabProps } from './AttributePicker';
 import { FamilyAttributesTab } from './FamilyAttributesTab';
 import { FamilyDuplicateDialog } from './FamilyDuplicateDialog';
-import { emptyFamilyDraft, FAMILY_TABS, familyAttributes, familyDraftOf, issueCountByTab, storedFamilyOf, validateFamilyDraft, type FamilyTab } from './family-draft';
+import { emptyFamilyDraft, FAMILY_TABS, familyAttributes, familyDraftOf, issueCountByTab, shownFamilyIssues, storedFamilyOf, validateFamilyDraft, type FamilyTab } from './family-draft';
 import { FamilyGeneralTab } from './FamilyGeneralTab';
 import { FamilyRulesTab } from './FamilyRulesTab';
 import { FamilyTableTab } from './FamilyTableTab';
@@ -81,15 +81,17 @@ function useFamilyEditor({ record, families, library, reportDirty }: FamilyEdito
     ],
     [editor.draft, library.attributeById, library.registry, record, families, editor.created],
   );
-  const issues = useShownIssues(editor, clientIssues);
+  // Ανέγγιχτο σχήμα παραλλαγών: ημιτελές, όχι λάθος — η προβολή το αναβάλλει, ο φραγμός αποθήκευσης όχι (§23.2 K1).
+  const visibleIssues = useMemo(() => shownFamilyIssues(editor.draft, clientIssues), [editor.draft, clientIssues]);
+  const issues = useShownIssues(editor, visibleIssues);
   const inFamily = useMemo(() => familyAttributes(editor.draft, library.attributeById), [editor.draft, library.attributeById]);
-  return { editor, clientIssues, issues, inFamily, counts: issueCountByTab(issues) };
+  return { editor, clientIssues, visibleIssues, issues, inFamily, counts: issueCountByTab(issues) };
 }
 
 export function FamilyEditor(props: FamilyEditorProps) {
   const { record, families, library, ops, canManage, onCreated, onDeleted } = props;
   const { t } = useCatalogText();
-  const { editor, clientIssues, issues, inFamily, counts } = useFamilyEditor(props);
+  const { editor, clientIssues, visibleIssues, issues, inFamily, counts } = useFamilyEditor(props);
   const [tab, setTab] = useState<FamilyTab>('general');
   const [duplicating, setDuplicating] = useState(false);
   const recompute = useCatalogRecompute();
@@ -122,7 +124,7 @@ export function FamilyEditor(props: FamilyEditorProps) {
         <TabsContent value="variants"><FamilyVariantsTab {...tabProps} /></TabsContent>
         <TabsContent value="table"><FamilyTableTab {...tabProps} /></TabsContent>
         <TabsContent value="rules"><FamilyRulesTab {...tabProps} /></TabsContent>
-        <IssueSummary issues={editor.dirty ? clientIssues : []} title={t('editor.issuesTitle')} />
+        <IssueSummary issues={editor.dirty ? visibleIssues : []} title={t('editor.issuesTitle')} />
         <SearchIndexRecompute recompute={recompute} familyId={record?.id ?? null} />
       </Tabs>
       <EditorFooter

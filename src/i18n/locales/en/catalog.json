@@ -673,6 +673,7 @@
       "scheme": "Variant scheme",
       "addScheme": "New variant scheme",
       "removeScheme": "Remove scheme",
+      "pristineHint": "New scheme: enter a label (the code is suggested for you) and pick at least one axis.",
       "axesOf": "Level {number} axes",
       "axesHint": "Choice, yes/no or measurement — up to {max}.",
       "addLevel": "Second level",

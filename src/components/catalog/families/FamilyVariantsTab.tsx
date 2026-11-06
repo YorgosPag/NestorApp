@@ -23,7 +23,7 @@ import { CatalogCodeField, CatalogField } from '../shared/CatalogFormFields';
 import { FieldIssues } from '../shared/CatalogIssues';
 import { LocalizedTextField } from '../shared/LocalizedTextField';
 import type { FamilyTabProps } from './AttributePicker';
-import { axisCandidates } from './family-draft';
+import { axisCandidates, emptyVariantScheme, isPristineScheme } from './family-draft';
 import { VariantLevelBoard } from './VariantLevelBoard';
 
 function withScheme(draft: CatalogFamilyDefinition, index: number, next: VariantScheme): CatalogFamilyDefinition {
@@ -71,6 +71,7 @@ function SchemeCard({ scheme, index, props }: { readonly scheme: VariantScheme; 
           <Trash2 className="h-4 w-4" aria-hidden />
         </Button>
       </header>
+      {isPristineScheme(scheme) ? <p className="m-0 text-sm text-muted-foreground">{t('families.variants.pristineHint')}</p> : null}
       <div className="grid gap-3 md:grid-cols-2">
         <LocalizedTextField label={t('common.labels')} value={scheme.labels} disabled={disabled} issues={issues} path={`${path}.labels`} onChange={(labels) => set({ ...scheme, labels })} />
         <CatalogCodeField value={scheme.code} locked={false} disabled={disabled} suggestFrom={text(scheme.labels)} issues={issues} path={`${path}.code`} onChange={(code) => set({ ...scheme, code })} />
@@ -108,9 +109,8 @@ function SchemeCard({ scheme, index, props }: { readonly scheme: VariantScheme; 
 export function FamilyVariantsTab(props: FamilyTabProps) {
   const { t } = useCatalogText();
   const { draft, update, disabled, issues } = props;
-  // Κενός κωδικός: τον προτείνει η ετικέτα μόλις γραφτεί (`CatalogCodeField`).
-  const addScheme = () =>
-    update({ ...draft, variantSchemes: [...draft.variantSchemes, { code: '', labels: {}, levels: [{ axisAttributeIds: [], attributeIds: [] }] }] });
+  // Κενός κωδικός: τον προτείνει η ετικέτα μόλις γραφτεί (`CatalogCodeField`). Ανέγγιχτο ⇒ οδηγία, όχι κόκκινα (§23.2 K1).
+  const addScheme = () => update({ ...draft, variantSchemes: [...draft.variantSchemes, emptyVariantScheme()] });
   return (
     <section className="flex flex-col gap-3">
       <p className="m-0 text-sm text-muted-foreground">{t('families.variants.lead')}</p>

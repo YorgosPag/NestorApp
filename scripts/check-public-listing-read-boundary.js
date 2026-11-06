@@ -339,14 +339,9 @@ const BOUNDARIES = [
     module: 'stay-calendar-from-document',
     remedy: '«stayChannelsFromDocument(raw, propertyId)»',
   },
-  {
-    // ADR-923 §5.13 Σ2: το διαβάζει ανώνυμος με `read: if true`, ίδιο διακύβευμα με τη βλάβη της 31/08.
-    adr: 'ADR-923 §5.13',
-    typeName: 'PublicCatalogModel',
-    custodian: 'src/subapps/catalog/public/public-catalog-from-document.ts',
-    module: 'public-catalog-from-document',
-    remedy: '«publicCatalogModelFromDocument(raw, id)»',
-  },
+  // ⚠️ Το `PublicCatalogModel` δηλώνεται ΜΙΑ φορά, παραπάνω (ADR-923 §5.13 Σ4, που περιέχει και το διακύβευμα του Σ2).
+  //    Μια δεύτερη, ταυτόσημη γραμμή (`bd214d3c`) έκανε την πύλη να μετρά το ίδιο σύνορο δύο φορές και κοκκίνιζε
+  //    την άγκυρα Ν0 «χωρίς διπλότυπα» (ADR-923 §23.2 K5).
 ];
 
 /**
