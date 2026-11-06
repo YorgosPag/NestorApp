@@ -985,6 +985,18 @@
         "terminate": "{number} was terminated"
       },
       "confirm": {
+        "issue": {
+          "title": "Issue {number}?",
+          "description": "The content and clause texts are frozen as a revision and the draft is locked. This cannot be undone — to change it, the document must be withdrawn. The subcontractor is not notified."
+        },
+        "accept": {
+          "title": "Accept {number}?",
+          "description": "{number} is recorded as accepted and its content stays frozen. This cannot be undone."
+        },
+        "acceptOffer": {
+          "title": "Accept offer {number}?",
+          "description": "The offer is recorded as accepted and a new draft agreement is created with its own number. This cannot be undone."
+        },
         "discard": {
           "title": "Discard draft {number}?",
           "description": "The draft will not be issued. It stays in the list as “Discarded” and its number is not reused."

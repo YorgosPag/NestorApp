@@ -6,7 +6,8 @@
  * 🔑 **CAS με ό,τι βλέπει ο άνθρωπος**: `expectedRevision` = η αναθεώρηση της γραμμής. Αν άλλος άλλαξε το έγγραφο στο
  *    μεταξύ, ο γραφέας απαντά 409 και η ζωντανή λίστα έχει ήδη τη νέα εκδοχή — προειδοποίηση, ποτέ σιωπηλή εφαρμογή
  *    πάνω σε κάτι που δεν είδε.
- * 🔑 Καταστρεπτικές μεταβάσεις (απόρριψη · απόσυρση · καταγγελία) θέλουν ρητή επιβεβαίωση με τον αριθμό του εγγράφου.
+ * 🔑 Όσες μεταβάσεις δεν αναιρούνται (`CONFIRMED_TRANSITIONS`: οι καταστρεπτικές **και** έκδοση · αποδοχή) θέλουν ρητή
+ *    επιβεβαίωση με τον αριθμό του εγγράφου και τις **συνέπειές** τους (ADR-928 §5.24.5)· κόκκινη μόνο η καταστρεπτική.
  * 🔑 Ένα αίτημα ανά έγγραφο τη φορά (`pendingIds`)· το `Idempotency-Key` του `apiClient` καλύπτει την επανάληψη δικτύου.
  * 🔑 Καμία αισιόδοξη αλλαγή κατάστασης: η κατάσταση είναι απόφαση του γραφέα (φύλακες, πάγωμα αναθεώρησης)· η γραμμή
  *    δείχνει «σε εξέλιξη» και η ζωντανή ανάγνωση φέρνει το αποτέλεσμα σε ένα στιγμιότυπο.
@@ -19,8 +20,14 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useSubcontractFailureNotice } from '@/components/procurement/subcontracts/subcontract-messages';
 import { transitionSubcontractAgreement } from '@/services/procurement/subcontracts/subcontract-agreements-api.client';
 import { subcontractFailureOf } from '@/services/procurement/subcontracts/subcontract-failure';
+import { spawnsAgreementOnAccept } from '@/subapps/procurement/subcontracts/agreements/agreement-lifecycle';
 import type { SubcontractAgreement } from '@/subapps/procurement/subcontracts/types/agreement';
 import type { RowAction } from './subcontract-row-actions';
+
+/** Το κλειδί του κειμένου επιβεβαίωσης: η αποδοχή προσφοράς Τρόπου Β **γεννά** συμφωνητικό — και το λέει. */
+function confirmKeyOf(agreement: SubcontractAgreement, action: RowAction): string {
+  return action.transition === 'accept' && spawnsAgreementOnAccept(agreement) ? 'acceptOffer' : action.transition;
+}
 
 function usePendingIds() {
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -44,13 +51,14 @@ export function useAgreementTransition() {
 
   const confirmed = useCallback(
     (agreement: SubcontractAgreement, action: RowAction): Promise<boolean> => {
-      if (!action.destructive) return Promise.resolve(true);
+      if (!action.confirm) return Promise.resolve(true);
       const values = { number: agreement.documentNumber };
+      const key = confirmKeyOf(agreement, action);
       return confirm({
-        title: t(`subcontracts.actions.confirm.${action.transition}.title`, values),
-        description: t(`subcontracts.actions.confirm.${action.transition}.description`, values),
+        title: t(`subcontracts.actions.confirm.${key}.title`, values),
+        description: t(`subcontracts.actions.confirm.${key}.description`, values),
         confirmText: t(`subcontracts.actions.transition.${action.transition}`),
-        variant: 'destructive',
+        variant: action.destructive ? 'destructive' : 'default',
       });
     },
     [confirm, t],

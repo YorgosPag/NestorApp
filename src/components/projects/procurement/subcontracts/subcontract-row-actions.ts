@@ -28,8 +28,15 @@ import {
   type SubcontractAgreementTransition,
 } from '@/subapps/procurement/subcontracts/types/agreement';
 
-/** Μεταβάσεις που κλείνουν τον δρόμο του εγγράφου — θέλουν ρητή επιβεβαίωση. */
+/** Μεταβάσεις που κλείνουν τον δρόμο του εγγράφου — κόκκινες, με ρητή επιβεβαίωση. */
 export const DESTRUCTIVE_TRANSITIONS: ReadonlySet<SubcontractAgreementTransition> = new Set(['discard', 'withdraw', 'terminate']);
+
+/**
+ * Μεταβάσεις που **δεν αναιρούνται** — θέλουν επιβεβαίωση **με τις συνέπειές τους** (ADR-928 §5.24.5): οι καταστρεπτικές,
+ * και η κανονική ροή που παγώνει το έγγραφο (`issue`: αναθεώρηση + κείμενα ρητρών · `accept`: δέσμευση, και στον Τρόπο Β
+ * νέο συμφωνητικό). Οι `issue`/`accept` **δεν** γίνονται κόκκινες: είναι ο δρόμος, όχι κίνδυνος (NN/g · Material).
+ */
+export const CONFIRMED_TRANSITIONS: ReadonlySet<SubcontractAgreementTransition> = new Set([...DESTRUCTIVE_TRANSITIONS, 'issue', 'accept']);
 
 /** Γιατί μια μετάβαση δεν προσφέρεται τώρα. */
 export type RowActionBlock =
@@ -49,6 +56,8 @@ export function blockedWhileUnsaved(actions: readonly RowAction[], unsaved: bool
 export interface RowAction {
   readonly transition: SubcontractAgreementTransition;
   readonly destructive: boolean;
+  /** Ζητά επιβεβαίωση πριν σταλεί (`CONFIRMED_TRANSITIONS`). */
+  readonly confirm: boolean;
   readonly block: RowActionBlock | null;
 }
 
@@ -86,6 +95,7 @@ export function rowActionsOf(agreement: SubcontractAgreement, context: RowAction
   ).map((transition) => ({
     transition,
     destructive: DESTRUCTIVE_TRANSITIONS.has(transition),
+    confirm: CONFIRMED_TRANSITIONS.has(transition),
     block: blockOf(agreement, transition, context),
   }));
 }

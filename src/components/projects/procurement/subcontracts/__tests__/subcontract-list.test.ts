@@ -12,7 +12,7 @@ import {
   statusTotals,
   toListRows,
 } from '../subcontract-list-view';
-import { rowActionsOf, type RowActionContext } from '../subcontract-row-actions';
+import { CONFIRMED_TRANSITIONS, DESTRUCTIVE_TRANSITIONS, rowActionsOf, type RowActionContext } from '../subcontract-row-actions';
 
 const TODAY = '2026-11-03';
 const context = (patch: Partial<RowActionContext> = {}): RowActionContext => ({ today: TODAY, library: LIBRARY, actorUid: 'u_author', ...patch });
@@ -84,12 +84,17 @@ function deviated(decision: 'pending' | 'approved' | 'rejected'): ClauseSelectio
 }
 
 describe('subcontract-row-actions — οι κριτές του γραφέα στην οθόνη', () => {
-  it('πρόχειρο: «Έκδοση» ενεργή όταν η βιβλιοθήκη το δέχεται· «Απόρριψη» καταστρεπτική', () => {
+  it('πρόχειρο: «Έκδοση» ενεργή όταν η βιβλιοθήκη το δέχεται· «Απόρριψη» καταστρεπτική· και οι δύο ζητούν επιβεβαίωση', () => {
     const actions = rowActionsOf(sampleAgreement(), context());
-    expect(actions.map((action) => [action.transition, action.destructive, action.block])).toEqual([
-      ['issue', false, null],
-      ['discard', true, null],
+    expect(actions.map((action) => [action.transition, action.destructive, action.confirm, action.block])).toEqual([
+      ['issue', false, true, null],
+      ['discard', true, true, null],
     ]);
+  });
+
+  it('ADR-928 §5.24.5: επιβεβαίωση = ό,τι δεν αναιρείται — οι καταστρεπτικές ΚΑΙ έκδοση/αποδοχή, όχι οι υπόλοιπες', () => {
+    expect([...CONFIRMED_TRANSITIONS].sort()).toEqual(['accept', 'discard', 'issue', 'terminate', 'withdraw']);
+    for (const transition of DESTRUCTIVE_TRANSITIONS) expect(CONFIRMED_TRANSITIONS.has(transition)).toBe(true);
   });
 
   it('απόκλιση σε εκκρεμότητα ⇒ «Έκδοση» ανενεργή με την ΙΔΙΑ άρνηση που θα έδινε ο γραφέας', () => {
