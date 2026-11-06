@@ -139,6 +139,23 @@
       "deleted": "Common space moved to trash.",
       "failed": "The action failed.",
       "adopted": "The area now follows the floor plan."
+    },
+    "suggestions": {
+      "title": "Suggested common spaces",
+      "hint": "Derived from the building's floors and facts. \"Add\" opens the form so you can review before saving; \"Dismiss\" is permanent for this building.",
+      "accept": "Add…",
+      "acceptLabel": "Add: {name}",
+      "dismiss": "Dismiss",
+      "dismissLabel": "Dismiss suggestion: {name}",
+      "wholeBuilding": "Whole building",
+      "reasons": {
+        "pilotisFloor": "Level \"{floor}\" is a pilotis.",
+        "roofFloor": "The building has a roof level (\"{floor}\").",
+        "stairPenthouse": "The building has a stair penthouse (\"{floor}\").",
+        "storeysAboveGround": "{count, plural, one {# storey} other {# storeys}} above ground.",
+        "elevatorDeclared": "An elevator is declared in the building's objective-value facts.",
+        "elevatorWithPenthouse": "Elevator declared and a stair penthouse (\"{floor}\"). Check whether the elevator has a machine room."
+      }
     }
   }
 }

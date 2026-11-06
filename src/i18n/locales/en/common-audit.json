@@ -403,7 +403,8 @@
         "progress": "Building Progress (%)",
         "addresses": "Address",
         "placeRef": "Place link (plot/building)",
-        "completionDeclaration": "Public delivery promise"
+        "completionDeclaration": "Public delivery promise",
+        "dismissedCommonSpaceSuggestions": "Dismissed common space suggestions"
       },
       "floor": {
         "buildingId": "Building",

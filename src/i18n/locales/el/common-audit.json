@@ -403,7 +403,8 @@
         "progress": "Πρόοδος Κτιρίου (%)",
         "addresses": "Διεύθυνση",
         "placeRef": "Δεσμός με τόπο (οικόπεδο/κτίσμα)",
-        "completionDeclaration": "Δημόσια υπόσχεση παράδοσης"
+        "completionDeclaration": "Δημόσια υπόσχεση παράδοσης",
+        "dismissedCommonSpaceSuggestions": "Απορριφθείσες προτάσεις κοινόχρηστων χώρων"
       },
       "floor": {
         "buildingId": "Κτίριο",

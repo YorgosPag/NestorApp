@@ -22,6 +22,8 @@ import { BuildingSpaceTabHeader } from './shared/BuildingSpaceTabHeader';
 import { CommonSpaceFormDialog } from './CommonSpacesTab/CommonSpaceFormDialog';
 import { useCommonSpaceColumns } from './CommonSpacesTab/useCommonSpaceColumns';
 import { useCommonSpacesTabState } from './CommonSpacesTab/useCommonSpacesTabState';
+import { CommonSpaceSuggestionsStrip } from './CommonSpacesTab/CommonSpaceSuggestionsStrip';
+import { useCommonSpaceSuggestions } from './CommonSpacesTab/useCommonSpaceSuggestions';
 
 const KEY = 'tab';
 
@@ -67,6 +69,8 @@ interface CommonSpacesTabProps {
 export function CommonSpacesTab({ building }: CommonSpacesTabProps) {
   const s = useCommonSpacesTabState(building.id);
   const columns = useCommonSpaceColumns(s.t, { adoptingId: s.adoptingId, onAdopt: s.adoptDrawnArea });
+  // ADR-931 §6.2 — όσοι λείπουν, από τη στοίβα ορόφων· ο άνθρωπος αποδέχεται (διάλογος) ή απορρίπτει (μόνιμα).
+  const suggestions = useCommonSpaceSuggestions(building, s.commonSpaces, s.openPrefilled, s.t);
   const colors = useSemanticColors();
   const items = [...s.commonSpaces];
 
@@ -88,6 +92,8 @@ export function CommonSpacesTab({ building }: CommonSpacesTabProps) {
           {s.t(`${KEY}.add`)}
         </Button>
       </BuildingSpaceTabHeader>
+
+      <CommonSpaceSuggestionsStrip handle={suggestions} />
 
       {items.length === 0 ? (
         <BuildingSpaceWarningBanner title={s.t(`${KEY}.empty`)} hint={s.t(`${KEY}.emptyHint`)} addLabel={s.t(`${KEY}.add`)} onAdd={s.openCreate} />

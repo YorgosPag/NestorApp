@@ -13,6 +13,10 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { suggestNextBuildingCode } from '@/config/entity-code-config';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import {
+  DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY,
+  withDismissedCommonSpaceSuggestion,
+} from '@/lib/common-spaces/common-space-suggestions';
+import {
   applyBuildingObjectiveValuePatch,
   BUILDING_OBJECTIVE_VALUE_BODY_KEY,
   type BuildingObjectiveValueFacts,
@@ -97,4 +101,28 @@ export async function updateBuildingObjectiveValueFactsWithPolicy({
     timestamp: Date.now(),
   });
   return { kind: 'saved' };
+}
+
+/**
+ * **Μόνιμη απόρριψη μιας πρότασης κοινόχρηστου** (ADR-931 §6.2) — ο server προσθέτει το κλειδί σε συναλλαγή πάνω στο
+ * φρέσκο έγγραφο (`building-common-space-suggestion-dismiss.ts`), με ιστορικό. Το σώμα στέλνεται **μόνο του**.
+ *
+ * 🔑 Το `BUILDING_UPDATED` φέρει την **ολόκληρη** λίστα, υπολογισμένη με την **ίδια** ιδεμποτική συνάρτηση με τον server.
+ * ⚠️ Πετά σε αποτυχία: ο καλών έχει ήδη κρύψει την πρόταση αισιόδοξα και πρέπει να την επαναφέρει.
+ */
+export async function dismissCommonSpaceSuggestionWithPolicy({
+  buildingId,
+  current,
+  key,
+}: {
+  readonly buildingId: string;
+  readonly current: readonly string[];
+  readonly key: string;
+}): Promise<void> {
+  await apiClient.patch(API_ROUTES.BUILDINGS.LIST, { buildingId, [DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY]: key });
+  RealtimeService.dispatch('BUILDING_UPDATED', {
+    buildingId,
+    updates: { dismissedCommonSpaceSuggestions: withDismissedCommonSpaceSuggestion(current, key) },
+    timestamp: Date.now(),
+  });
 }

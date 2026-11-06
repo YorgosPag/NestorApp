@@ -60,6 +60,8 @@ function useCommonSpaceForm(buildingId: string, { t, success, reportFailure }: F
   const [saving, setSaving] = useState(false);
 
   const openCreate = useCallback(() => setForm({ editing: null, draft: EMPTY_COMMON_SPACE_DRAFT, error: null }), []);
+  /** ADR-931 §6.2 — δημιουργία από πρόταση: ο άνθρωπος βλέπει το προσυμπληρωμένο πρόχειρο πριν σώσει. */
+  const openPrefilled = useCallback((draft: CommonSpaceDraft) => setForm({ editing: null, draft, error: null }), []);
   const openEdit = useCallback((space: CommonSpace) => setForm({ editing: space, draft: draftFromCommonSpace(space, resolveDecimalSeparator(getCurrentLocale())), error: null }), []);
   const closeForm = useCallback(() => setForm(null), []);
   const changeDraft = useCallback((patch: Partial<CommonSpaceDraft>) =>
@@ -83,7 +85,7 @@ function useCommonSpaceForm(buildingId: string, { t, success, reportFailure }: F
     }
   }, [form, saving, buildingId, success, t, reportFailure]);
 
-  return { form, saving, openCreate, openEdit, closeForm, changeDraft, submit };
+  return { form, saving, openCreate, openPrefilled, openEdit, closeForm, changeDraft, submit };
 }
 
 /** Μεταφορά στον κάδο (ADR-281) με επιβεβαίωση. */

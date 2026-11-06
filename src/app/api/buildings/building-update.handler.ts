@@ -25,6 +25,7 @@ import { requireProjectInBuildingTenant } from './_shared/building-ownership';
 import { assertBuildingFieldsWritable } from './_shared/building-write-fields';
 import { recordEntityUpdate } from '@/services/audit/record-entity-update';
 import { BUILDING_OBJECTIVE_VALUE_BODY_KEY, patchBuildingObjectiveValue } from './building-objective-value-patch';
+import { DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY, dismissBuildingCommonSpaceSuggestion } from './building-common-space-suggestion-dismiss';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
@@ -243,6 +244,10 @@ export const PATCH = withStandardRateLimit(
       // ADR-898 Φ4 — τα γεγονότα της αντικειμενικής: μερική διόρθωση σε συναλλαγή, ΟΧΙ `update(body)` (σβήνει αδέλφια).
       if (BUILDING_OBJECTIVE_VALUE_BODY_KEY in body) {
         return await patchBuildingObjectiveValue({ adminDb, buildingId, body, ctx });
+      }
+      // ADR-931 §6.2 — μόνιμη απόρριψη πρότασης κοινόχρηστου: προσθήκη σε συναλλαγή, ΟΧΙ λίστα από τον πελάτη.
+      if (DISMISS_COMMON_SPACE_SUGGESTION_BODY_KEY in body) {
+        return await dismissBuildingCommonSpaceSuggestion({ adminDb, buildingId, body, ctx });
       }
 
       // 🔒 ADR-829 §7.1 — λευκή λίστα αντί για σκέτο cast, και ο στόχος του δεσμού πριν από κάθε γραφή.

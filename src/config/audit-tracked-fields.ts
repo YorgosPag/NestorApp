@@ -69,6 +69,10 @@ import {
   SUBCONTRACT_AGREEMENT_REVISION_TRACKED_FIELDS,
 } from '@/config/audit-tracked-fields-subcontracts';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
+import {
+  DISMISSED_COMMON_SPACE_SUGGESTIONS_FIELD,
+  readDismissedCommonSpaceSuggestions,
+} from '@/lib/common-spaces/common-space-suggestions';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 import { UNDECLARED_COMMON_CHARGES } from '@/lib/common-charges/common-charges';
 import { UNDECLARED_ENERGY_CERTIFICATE, type EnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
@@ -753,6 +757,12 @@ const BUILDING_COLLECTION_DEFS: Record<string, TrackedFieldDef> = {
   placeRef: { kind: 'scalar', label: 'placeRef', value: formatAuditPlaceRef },
   // ADR-919 §11 — η δημόσια υπόσχεση παράδοσης: δημόσια δέσμευση, άρα ποιος/πότε την άλλαξε μένει πάντα.
   completionDeclaration: { kind: 'scalar', label: 'completionDeclaration', value: formatAuditAvailabilityDeclaration },
+  // ADR-931 §6.2 — ποιος απέρριψε μόνιμα ποια πρόταση κοινόχρηστου (κλειδιά `<κατηγορία>@<όροφος|building>`).
+  [DISMISSED_COMMON_SPACE_SUGGESTIONS_FIELD]: {
+    kind: 'scalar',
+    label: DISMISSED_COMMON_SPACE_SUGGESTIONS_FIELD,
+    value: (value) => readDismissedCommonSpaceSuggestions(value).join(', ') || null,
+  },
 };
 
 /** Building audit registry — `field → TrackedFieldDef`. */

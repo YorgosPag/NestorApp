@@ -151,6 +151,12 @@ export type {
      * συναλλαγή) — διαβάζεται **μόνο** μέσω `readBuildingObjectiveValueFacts`.
      */
     objectiveValueFacts?: BuildingObjectiveValueFacts;
+    /**
+     * ADR-931 §6.2 — κλειδιά προτάσεων κοινοχρήστων που ο άνθρωπος απέρριψε **μόνιμα** (`<κατηγορία>@<όροφος|building>`).
+     * Γράφεται **μόνο** από τον κλάδο `building-common-space-suggestion-dismiss.ts` (προσθήκη σε συναλλαγή, με ιστορικό)
+     * — διαβάζεται **μόνο** μέσω `readDismissedCommonSpaceSuggestions`.
+     */
+    dismissedCommonSpaceSuggestions?: readonly string[];
 
     // 🏢 ENTERPRISE: Boolean amenity flags for filtering
     /** Has parking facilities */
