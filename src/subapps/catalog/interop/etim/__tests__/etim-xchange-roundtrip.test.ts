@@ -11,7 +11,7 @@ import { validateFamily } from '../../../schema/validate-family';
 import type { CatalogAttributeDefinition } from '../../../types/attribute';
 import { ANY_SLOT, type AttributeValue, type NoValueReason, type ValueSlots } from '../../../types/product';
 import { buildXChangeDocument, type XChangeExportInput, type XChangeProductSource } from '../catalog-to-xchange';
-import { readXChangeProducts } from '../xchange-document';
+import { readXChangeDocument } from '../xchange-document';
 import { extractGroupsFromXChange, type XChangeAttribute, type XChangeImportSchema } from '../xchange-to-groups';
 import sample11 from './fixtures/xchange-1.1.sample.json';
 import sample20 from './fixtures/xchange-2.0.sample.json';
@@ -83,7 +83,7 @@ const importSchema = (overrides: Partial<XChangeImportSchema> = {}): XChangeImpo
 });
 
 const cellsOf = (document: unknown, schema = importSchema()) => {
-  const products = readXChangeProducts(JSON.stringify(document));
+  const products = readXChangeDocument(JSON.stringify(document))?.products ?? null;
   if (products === null) throw new Error('not an xChange document');
   const { groups, report } = extractGroupsFromXChange(products, schema);
   const cells = groups.flatMap((group) => group.rows.flatMap((row) => row.cells));
@@ -99,15 +99,15 @@ describe('ο μάρτυρας: ο validator δουλεύει πάνω στα ε�
 
 describe('ανάγνωση', () => {
   it('διαβάζει τα επίσημα δείγματα 2.0 και 1.1', () => {
-    expect(readXChangeProducts(JSON.stringify(sample20))?.length).toBeGreaterThan(0);
-    expect(readXChangeProducts(JSON.stringify(sample11))?.length).toBeGreaterThan(0);
+    expect(readXChangeDocument(JSON.stringify(sample20))?.products.length).toBeGreaterThan(0);
+    expect(readXChangeDocument(JSON.stringify(sample11))?.products.length).toBeGreaterThan(0);
   });
   it('απορρίπτει ό,τι δεν είναι xChange, άγνωστη έκδοση και σπασμένο JSON', () => {
-    expect(readXChangeProducts('{"a":1}')).toBeNull();
-    expect(readXChangeProducts(JSON.stringify({ ...sample20, SchemaVersion: '9.9' }))).toBeNull();
-    expect(readXChangeProducts('{')).toBeNull();
+    expect(readXChangeDocument('{"a":1}')).toBeNull();
+    expect(readXChangeDocument(JSON.stringify({ ...sample20, SchemaVersion: '9.9' }))).toBeNull();
+    expect(readXChangeDocument('{')).toBeNull();
   });
-  it('αντέχει BOM', () => expect(readXChangeProducts(`﻿${JSON.stringify(sample20)}`)).not.toBeNull());
+  it('αντέχει BOM', () => expect(readXChangeDocument(`﻿${JSON.stringify(sample20)}`)).not.toBeNull());
 });
 
 describe('εξαγωγή', () => {

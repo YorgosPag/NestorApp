@@ -93,6 +93,9 @@ export function byModelCode(rows: readonly TableRow[]): ExtractedGroup[] {
   return [...grouped, ...standalone];
 }
 
+/** Η ομαδοποίηση της ροής «μόνο τιμές», κοινή για αρχείο και ETIM xChange: τμήματα σταθερού μεγέθους, χωρίς μοντέλο. */
+export const priceGroupsOf = (rows: readonly ExtractedRow[]): ExtractedGroup[] => chunksOf('prices', null, rows, IMPORT_PRICE_LINES_PER_PROPOSAL);
+
 /**
  * Ο αριθμός γραμμής της **πρώτης** γραμμής δεδομένων, όπως τον βλέπει ο άνθρωπος στο αρχείο: οι παραλειπόμενες + η
  * επικεφαλίδα (ένδειξη, όχι εγγύηση: οι κενές/σχόλια γραμμές δεν μετρούν στον αναγνώστη).
@@ -102,8 +105,5 @@ const firstDataRowNumber = (table: RawTable, skipRows: number): number => skipRo
 export function extractGroupsFromTable(table: RawTable, profile: ImportProfileDefinition): ExtractedGroup[] {
   const resolved = resolveColumns(profile, table.headers);
   const rows = tableRows(table, resolved, firstDataRowNumber(table, profile.skipRows)).filter(({ row }) => hasContent(row));
-  if (profile.purpose === 'priceLines') {
-    return chunksOf('prices', null, rows.map(({ row }) => row), IMPORT_PRICE_LINES_PER_PROPOSAL);
-  }
-  return byModelCode(rows);
+  return profile.purpose === 'priceLines' ? priceGroupsOf(rows.map(({ row }) => row)) : byModelCode(rows);
 }

@@ -4,7 +4,7 @@
  *
  * 🔑 **Το xChange γράφει τον αριθμό χωρίς μονάδα**: τη μονάδα την ορίζει η κλάση ETIM. Τη δηλώνει η ιδιότητα
  * (`mappings.etimUnitCode`). Αδήλωτη ⇒ `unitCode: null`, άρα απόφαση ανθρώπου και ποτέ η προεπιλογή της ιδιότητας (σφάλμα ×1000).
- * 🔑 **Τίποτα δεν χάνεται σιωπηλά**: ό,τι δεν μπαίνει μετριέται στην {@link XChangeImportReport}.
+ * 🔑 **Τίποτα δεν χάνεται σιωπηλά**: ό,τι δεν μπαίνει μετριέται στην {@link XChangeAttributeImportReport}.
  * 🔑 **Το `NA`/`UN` είναι δήλωση, όχι κενό** (§23.2 K4): γίνεται κελί `noValueReason` και περνά από την ίδια κρίση και έγκριση.
  * @module subapps/catalog/interop/etim/xchange-to-groups
  */
@@ -17,7 +17,7 @@ import { ANY_SLOT } from '../../types/product';
 import { localeSlotFor } from '../../values/value-shape';
 import { ETIM_LANGUAGE_TAG, ETIM_NO_VALUE_REASON_OF, isEtimImperialFeature } from '../../vocabulary/etim';
 import type { XChangeFeature, XChangeProduct } from './xchange-document';
-import type { XChangeImportReport } from './xchange-report';
+import type { XChangeAttributeImportReport } from './xchange-report';
 
 export type XChangeAttribute = CatalogAttributeDefinition & { readonly id: string };
 
@@ -65,7 +65,7 @@ function descriptionOf(product: XChangeProduct, language: HumanLanguage): string
 }
 
 /** Ο κωδικός του SKU: του προμηθευτή όπου υπάρχει, αλλιώς του κατασκευαστή. */
-const identifierOf = (product: XChangeProduct): string =>
+export const identifierOf = (product: XChangeProduct): string =>
   product.TradeItem[0]?.ItemIdentification.SupplierItemNumber ?? product.ProductIdentification.ManufacturerProductNumber;
 
 const seriesOf = (product: XChangeProduct): string | null => product.ProductIdentification.BrandDetails[0]?.BrandSeries[0]?.BrandSeries ?? null;
@@ -90,8 +90,9 @@ class ReportBuilder {
     }
   }
 
-  build(products: number): XChangeImportReport {
+  build(products: number): XChangeAttributeImportReport {
     return {
+      purpose: 'attributes',
       products,
       imported: this.imported,
       otherClasses: [...this.otherClasses].sort(),
@@ -154,7 +155,7 @@ function tableRowOf(product: XChangeProduct, index: number, schema: XChangeImpor
   return { modelCode: schema.hasVariants ? seriesOf(product) : null, row };
 }
 
-export function extractGroupsFromXChange(products: readonly XChangeProduct[], schema: XChangeImportSchema): { readonly groups: readonly ExtractedGroup[]; readonly report: XChangeImportReport } {
+export function extractGroupsFromXChange(products: readonly XChangeProduct[], schema: XChangeImportSchema): { readonly groups: readonly ExtractedGroup[]; readonly report: XChangeAttributeImportReport } {
   const byFeature = new Map(schema.attributes.flatMap((attribute) => (attribute.mappings.etimFeature ? [[attribute.mappings.etimFeature, attribute] as const] : [])));
   const report = new ReportBuilder();
   const rows = products.flatMap((product, index) => tableRowOf(product, index, schema, byFeature, report) ?? []);

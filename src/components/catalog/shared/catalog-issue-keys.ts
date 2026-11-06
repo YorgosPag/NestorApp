@@ -115,6 +115,7 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   fileNotReady: 'issues.fileNotReady',
   fileKindMismatch: 'issues.fileKindMismatch',
   fileTypeConflict: 'issues.fileTypeConflict',
+  currencyConflict: 'issues.currencyConflict',
   fileTooLarge: 'issues.fileTooLarge',
   renditionsNotReady: 'issues.renditionsNotReady',
   renditionsFailed: 'issues.renditionsFailed',

@@ -135,6 +135,8 @@ export const CATALOG_ISSUE_CODES = [
   'fileNotReady',
   'fileKindMismatch',
   'fileTypeConflict',
+  /** Αρχείο τιμών σε άλλο νόμισμα από της πλατφόρμας (ETIM xChange `CurrencyCode`, ADR-923 §23.2 K4γ). */
+  'currencyConflict',
   'fileTooLarge',
   'renditionsNotReady',
   'renditionsFailed',

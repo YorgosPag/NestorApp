@@ -310,4 +310,17 @@ describe('«μόνο τιμές»', () => {
     const [row] = buildPriceRows(group([sku('A'), priceCell('discountGroup', 'άγνωστη'), priceCell('priceQuantity', '7')]), context);
     expect(row.fields.map((field) => field.issues[0]?.code)).toEqual(['unknownReference', 'priceQuantityInvalid']);
   });
+
+  it('η μονάδα γράφεται με τον κωδικό του μητρώου, όχι ωμή· άγνωστη ⇒ εύρημα (§23.2 K4γ)', () => {
+    const units = ['τεμ', 'H87', 'pcs'].map((text) => buildPriceRows(group([sku('A'), priceCell('unitCode', text)]), context)[0].fields[0].incoming);
+    expect(units).toEqual([{ type: 'unit', unitCode: 'pcs' }, { type: 'unit', unitCode: 'pcs' }, { type: 'unit', unitCode: 'pcs' }]);
+    const [unknown] = buildPriceRows(group([sku('A'), priceCell('unitCode', 'βαρέλι')]), context);
+    expect(unknown.fields[0]).toMatchObject({ incoming: null, issues: [{ code: 'priceUnitUnknown', path: 'unitCode' }] });
+  });
+
+  it('🔴 ποσό με δεκαδικά πέρα από το λεπτό ⇒ εύρημα, ποτέ σιωπηλή στρογγύλευση', () => {
+    const [row] = buildPriceRows(group([sku('A'), priceCell('netPrice', '0,0125')]), context);
+    expect(row.fields[0]).toMatchObject({ incoming: null, issues: [{ code: 'priceAmountPrecision', path: 'netPrice' }] });
+    expect(buildPriceRows(group([sku('A'), priceCell('netPrice', '12,500')]), context)[0].fields[0].incoming).toEqual({ type: 'money', minor: 1250 });
+  });
 });

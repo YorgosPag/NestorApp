@@ -15,6 +15,17 @@ export const IMPORT_PURPOSES = ['attributes', 'priceLines'] as const;
 export type ImportPurpose = (typeof IMPORT_PURPOSES)[number];
 
 /**
+ * Ποιοι σκοποί διαβάζονται από κάθε πηγή. Το PDF δίνει μόνο ιδιότητες (η ανάγνωση σελίδας ζητά οικογένεια). Το xChange φέρνει
+ * και τιμές (`TradeItem.Pricing`, §23.2 K4γ).
+ */
+export const IMPORT_SOURCE_PURPOSES: Readonly<Record<ImportSourceKind, readonly ImportPurpose[]>> = {
+  delimited: IMPORT_PURPOSES,
+  spreadsheet: IMPORT_PURPOSES,
+  pdf: ['attributes'],
+  etimXchange: IMPORT_PURPOSES,
+};
+
+/**
  * Ο κύκλος ζωής της παρτίδας: `reviewing` όσο υπάρχουν προτάσεις σε εκκρεμότητα · `closed` μόλις κριθούν όλες και δεν μένει
  * αποτυχημένη σελίδα (`settleImportBatch`) · `discarded` με ρητή πράξη, από οποιοδήποτε σημείο.
  */
@@ -49,6 +60,10 @@ export const IMPORT_ISSUE_CODES = [
   'modelCodeMissing',
   'skuUnknown',
   'priceIncomplete',
+  /** Ποσό με περισσότερα δεκαδικά απ' όσα κρατά το νόμισμα: η στρογγύλευση θα άλλαζε την τιμή (§23.2 K4γ). */
+  'priceAmountPrecision',
+  /** Η μονάδα της γραμμής τιμής δεν είναι στο μητρώο μονάδων: ωμό κείμενο στη γραμμή θα ήταν τιμή ανά άγνωστη μονάδα. */
+  'priceUnitUnknown',
   /** Μέγεθος με μετρούμενη ιδιότητα χωρίς διαβασμένη μονάδα: η προεπιλογή της ιδιότητας θα ήταν μαντεψιά (σφάλμα ×1000). */
   'measurementUnitMissing',
   /** Η μονάδα που δήλωσε το μοντέλο δεν επιβεβαιώνεται από το κείμενο της σελίδας. */

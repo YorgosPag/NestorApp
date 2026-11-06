@@ -8,7 +8,8 @@
  * @module subapps/catalog/import/build-price-proposal
  */
 
-import { minorFromMajor } from '@/lib/money/money';
+import { minorFromMajor, MONEY_MINOR_DECIMALS } from '@/lib/money/money';
+import { resolveUom } from '@/lib/uom/uom-registry';
 import type {
   ExtractedCell,
   ExtractedGroup,
@@ -21,7 +22,7 @@ import type {
 import type { PriceListLineDefinition } from '../types/price-list';
 import { isPriceQuantity } from '../vocabulary/pricing';
 import type { ImportPriceField } from '../vocabulary/catalog-import';
-import { parseEnteredAmount } from '../values/decimal-amount';
+import { parseEnteredAmount, significantDecimals } from '../values/decimal-amount';
 import { proposalFieldOf } from './field-diff';
 import { plainValueEquality } from './proposal-values';
 
@@ -41,10 +42,21 @@ type Parsed = { readonly value: ImportPriceValue | null; readonly issues: readon
 
 const failed = (code: ImportIssue['code'], path: ImportPriceField): Parsed => ({ value: null, issues: [{ code, path } as ImportIssue] });
 
+/**
+ * 🔴 **Ποτέ σιωπηλή στρογγύλευση** (§23.2 K4γ): 0,0125 €/μ. θα γινόταν 0,01, σφάλμα τιμής −20 %. Ποσό με περισσότερα δεκαδικά απ' όσα
+ * κρατά το νόμισμα είναι εύρημα· η λύση είναι μεγαλύτερη μονάδα τιμής (1,25 € ανά 100), απόφαση ανθρώπου ή της πηγής.
+ */
 function parseMoney(text: string): Parsed {
   const amount = parseEnteredAmount(text.replace(/\s*€\s*/g, ''));
+  if (amount && significantDecimals(amount.amount) > MONEY_MINOR_DECIMALS) return failed('priceAmountPrecision', 'netPrice');
   const minor = amount ? minorFromMajor(amount.value) : null;
   return minor === null ? failed('priceAmountInvalid', 'netPrice') : { value: { type: 'money', minor }, issues: [] };
+}
+
+/** Η μονάδα γράφεται με τον κωδικό του μητρώου («τεμ», `H87`, `pcs` ⇒ `pcs`). Άγνωστη γραφή ⇒ εύρημα, ποτέ ωμό κείμενο στη γραμμή. */
+function parseUnit(text: string): Parsed {
+  const unitCode = resolveUom(text);
+  return unitCode === null ? failed('priceUnitUnknown', 'unitCode') : { value: { type: 'unit', unitCode }, issues: [] };
 }
 
 function parseQuantity(text: string): Parsed {
@@ -64,7 +76,7 @@ function parsePrice(field: ImportPriceField, text: string, context: PriceProposa
     case 'priceQuantity':
       return parseQuantity(text);
     case 'unitCode':
-      return { value: { type: 'unit', unitCode: text.trim() }, issues: [] };
+      return parseUnit(text);
     case 'discountGroup':
       return parseDiscountGroup(text, context);
   }

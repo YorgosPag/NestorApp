@@ -15,6 +15,8 @@ export const IMPORT_ISSUE_KEYS: Readonly<Record<ImportIssueCode, string>> = {
   modelCodeMissing: 'issues.modelCodeMissing',
   skuUnknown: 'issues.skuUnknown',
   priceIncomplete: 'issues.priceIncomplete',
+  priceAmountPrecision: 'issues.priceAmountPrecision',
+  priceUnitUnknown: 'issues.priceUnitUnknown',
   measurementUnitMissing: 'issues.measurementUnitMissing',
   unitUnconfirmed: 'issues.unitUnconfirmed',
   attributeRepeated: 'issues.attributeRepeated',

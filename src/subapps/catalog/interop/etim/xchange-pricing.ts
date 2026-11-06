@@ -43,6 +43,15 @@ export function xchangeUnitOf(uomCode: string): EtimXChangeUnit | null {
   return isXChangeUnit(unece) ? unece : ETIM_UNECE_EQUIVALENTS[unece] ?? null;
 }
 
+/** Το αντίστροφο του {@link ETIM_UNECE_EQUIVALENTS}, **παραγόμενο** από το ίδιο αντικείμενο: μία δήλωση, δύο κατευθύνσεις. */
+const UNECE_OF_XCHANGE: ReadonlyMap<string, string> = new Map(Object.entries(ETIM_UNECE_EQUIVALENTS).map(([unece, xchange]) => [xchange, unece]));
+
+/**
+ * Ο κωδικός UNECE του **μητρώου μας** για μονάδα γραμμένη στη διάλεκτο του xChange (`C62` ⇒ `H87`). Όσοι κωδικοί δεν διαφέρουν
+ * περνούν αυτούσιοι· αν τους ξέρει το μητρώο το κρίνει ο parser της γραμμής τιμής (`priceUnitUnknown`), όχι εδώ.
+ */
+export const uneceOfXChangeUnit = (code: string): string => UNECE_OF_XCHANGE.get(code) ?? code;
+
 const decimalOf = (minor: MinorAmount): string => toFixedDecimal(majorFromMinor(minor), 2);
 
 type Priced = Extract<PriceQuoteResult, { kind: 'priced' }>;

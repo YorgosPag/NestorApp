@@ -82,6 +82,20 @@ export function significantDecimals(amount: string): number {
   return amountIdentityKey(amount).split('.')[1]?.length ?? 0;
 }
 
+/**
+ * Κανονικό ποσό ×10^`places`, **ακριβώς**: η υποδιαστολή μετακινείται στη συμβολοσειρά, χωρίς double («0.0125», 2 ⇒ «1.25»).
+ * Για τη μονάδα τιμής (ADR-923 §23.2 K4γ): 0,0125 €/τεμ. και 1,25 €/100 τεμ. είναι **η ίδια** τιμή. `null` για μη κανονικό ποσό.
+ */
+export function shiftCanonicalAmount(amount: string, places: number): string | null {
+  if (!isCanonicalAmount(amount) || !Number.isInteger(places) || places < 0) return null;
+  const negative = amount.startsWith('-');
+  const [whole, fraction = ''] = amount.replace(/^-/, '').split('.');
+  const digits = fraction.padEnd(places, '0');
+  const rest = digits.slice(places);
+  const machine = `${whole}${digits.slice(0, places)}${rest === '' ? '' : `.${rest}`}`;
+  return canonicalize(negative ? `-${machine}` : machine);
+}
+
 export function amountIdentityKey(amount: string): string {
   if (!amount.includes('.')) return amount;
   const trimmed = amount.replace(/0+$/, '').replace(/\.$/, '');

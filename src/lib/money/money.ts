@@ -29,8 +29,11 @@ export type MinorAmount = number;
 /** Το νόμισμα του μοντέλου — ένα, σήμερα. */
 export const MONEY_CURRENCY = 'EUR';
 
+/** Δεκαδικά ψηφία του νομίσματος: όσα κρατά ακριβώς ένα `MinorAmount`. Ποσό με περισσότερα **δεν** χωρά χωρίς στρογγύλευση. */
+export const MONEY_MINOR_DECIMALS = 2;
+
 /** Λεπτά ανά ευρώ. */
-const MINOR_PER_MAJOR = 100;
+const MINOR_PER_MAJOR = 10 ** MONEY_MINOR_DECIMALS;
 
 /** `true` αν η τιμή είναι έγκυρο ποσό σε λεπτά (ακέραιο, πεπερασμένο, μη αρνητικό). */
 export function isMinorAmount(value: unknown): value is MinorAmount {

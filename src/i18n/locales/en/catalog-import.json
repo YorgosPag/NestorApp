@@ -47,6 +47,14 @@
     "unmapped": "{count} features have no attribute: {codes}.",
     "ranges": "Value ranges not imported, as no attribute holds a range: {codes}.",
     "noValue": "{count} “not applicable” or “unknown” declarations were added to the proposal for review.",
+    "pricesImported": "Prices for {imported} of {products} products went to review.",
+    "onRequest": "{count} products state price on request and gave no line.",
+    "amountMissing": "{count} products do not give the amount the price list type needs and were left out.",
+    "entryIncomplete": "{count} prices do not state a price unit or quantity and were left out.",
+    "validityUncovered": "No price is valid from the version start date for: {codes}.",
+    "validityAmbiguous": "There are prices with different validity for: {codes}. Set a start date on the version and start a new import.",
+    "currencyAssumed": "The file states no currency. Prices were read in {currency}.",
+    "allowanceSurcharges": "{count} products have tiers or surcharges, which a price line does not hold.",
     "tradeItems": "{count} products have several trade items: the first was kept."
   },
   "batch": {
@@ -116,6 +124,8 @@
     "modelCodeMissing": "The source gives no model code. Fill it in to apply this proposal.",
     "skuUnknown": "No live item has the code “{code}”.",
     "priceIncomplete": "A new price line needs a price and a unit.",
+    "priceAmountPrecision": "This price has more decimals than the currency holds. Enter it per 10, 100 or 1000 units so it is not rounded.",
+    "priceUnitUnknown": "This unit is not known. Enter a catalog unit, for example pcs, m or kg.",
     "measurementUnitMissing": "No unit was read for this value. Enter it with the unit as in the PDF, for example “1000 W”.",
     "unitUnconfirmed": "The unit “{unit}” is not confirmed by the page text. Check it in the PDF.",
     "attributeRepeated": "The source also gives another value for this attribute: {others}. Choose the correct one.",

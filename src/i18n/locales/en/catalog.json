@@ -291,6 +291,7 @@
     "fileNotReady": "The file upload has not finished.",
     "fileKindMismatch": "This kind of asset does not accept this file.",
     "fileTypeConflict": "The file extension and its type do not match — check the file.",
+    "currencyConflict": "The file prices are in a different currency from the platform ({currency}). Ask for a file in {expected}.",
     "fileTooLarge": "The file exceeds the {maxMb} MB limit for this kind of asset.",
     "renditionsNotReady": "The web and print renditions are not ready yet.",
     "renditionsFailed": "Renditions could not be created from this image — the file cannot be read or is too large.",

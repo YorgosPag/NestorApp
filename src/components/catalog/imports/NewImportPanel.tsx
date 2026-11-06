@@ -10,7 +10,7 @@ import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { isTableImportSource } from '@/subapps/catalog/vocabulary/catalog-import';
+import { IMPORT_SOURCE_PURPOSES, isTableImportSource } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
 import { ColumnMappingTable } from './ColumnMappingTable';
 import { useImportText } from './import-text';
@@ -44,12 +44,13 @@ function SourceOptions({ flow, target }: { readonly flow: Flow; readonly target:
   if (!source) return null;
   const isPdf = source.kind === 'pdf';
   const isTable = isTableImportSource(source.kind);
+  const readsPrices = IMPORT_SOURCE_PURPOSES[source.kind].includes('priceLines');
   const patch = (next: Parameters<Flow['patchForm']>[0]) => void flow.patchForm(next);
   const purposes = [{ value: 'attributes', label: t('new.purposeAttributes') }, { value: 'priceLines', label: t('new.purposePrices') }];
   return (
     <>
-      {isTable ? <ChoiceField id="import-purpose" label={t('new.purpose')} value={target.purpose} choices={purposes} onChange={(value) => target.setPurpose(value === 'priceLines' ? 'priceLines' : 'attributes')} /> : null}
-      <TargetField flow={flow} target={target} familyOnly={!isTable} />
+      {readsPrices ? <ChoiceField id="import-purpose" label={t('new.purpose')} value={target.purpose} choices={purposes} onChange={(value) => target.setPurpose(value === 'priceLines' ? 'priceLines' : 'attributes')} /> : null}
+      <TargetField flow={flow} target={target} familyOnly={!readsPrices} />
       {isPdf ? <PageRangeFields form={form} onChange={patch} /> : null}
       {isTable ? <SheetFields form={form} onChange={patch} spreadsheet={source.kind === 'spreadsheet'} /> : null}
       {table && form.target ? <ColumnMappingTable table={table} purpose={form.target.purpose} attributes={target.familyAttributes} columns={form.columns} onChange={(columns) => patch({ columns })} /> : null}
