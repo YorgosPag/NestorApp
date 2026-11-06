@@ -15,12 +15,13 @@ import {
   Store,
   Users,
 } from 'lucide-react';
+import { DXF_VIEWER_ROUTE } from '@/lib/dxf-viewer/dxf-viewer-routes';
 import { AGENCY_SHOWCASE_ROUTE } from '@/lib/mandate/mandate-routes';
 import { APP_ROUTES } from '@/lib/routes/appRoutes';
 import { ADMIN_ONLY, type CatalogEntry } from './catalog-types';
 
 export const SETTINGS_CATALOG = [
-  { kind: 'link', navLabelKey: 'tools.dxf', icon: Construction, href: '/dxf/viewer' },
+  { kind: 'link', navLabelKey: 'tools.dxf', icon: Construction, href: DXF_VIEWER_ROUTE },
   {
     kind: 'group',
     id: 'settings',

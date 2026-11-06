@@ -63,8 +63,9 @@ import {
   Users2,
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { AUTH_ROUTES } from '@/lib/routes';
+import { AUTH_ROUTES, ENTITY_ROUTES } from '@/lib/routes';
 import { APP_ROUTES } from '@/lib/routes/appRoutes';
+import { MANDATE_CATALOG_ROUTE } from '@/lib/mandate/mandate-routes';
 import { PROPERTIES_SCREEN_PATH } from '@/lib/properties/legacy-spaces-address';
 import { CATALOG_PAGES } from '@/subapps/catalog/catalog-routes';
 import { ADMIN_ONLY, type CatalogEntry, type NavPolicy } from './catalog-types';
@@ -90,14 +91,14 @@ export const MAIN_CATALOG = [
   // προειδοποιητική κουκκίδα του sidebar (`app-sidebar.tsx`) — δύο γραμμένα literal θα απέκλιναν σιωπηλά.
   { kind: 'link', navLabelKey: 'pages.properties', icon: Library, href: PROPERTIES_SCREEN_PATH },
   { kind: 'link', navLabelKey: 'pages.contacts', icon: Users, href: '/contacts' },
-  { kind: 'link', navLabelKey: 'sidebar.mandates', icon: FileSignature, href: '/listings/mandates' },
+  { kind: 'link', navLabelKey: 'sidebar.mandates', icon: FileSignature, href: MANDATE_CATALOG_ROUTE },
   { kind: 'link', navLabelKey: 'pages.projects', icon: Briefcase, href: '/projects' },
   { kind: 'link', navLabelKey: 'pages.buildings', icon: Building, href: '/buildings' },
   {
     kind: 'link',
     navLabelKey: 'pages.construction_portfolio',
     icon: BarChart3,
-    href: '/construction/portfolio',
+    href: APP_ROUTES.constructionPortfolio,
   },
   {
     kind: 'group',
@@ -108,8 +109,8 @@ export const MAIN_CATALOG = [
       { kind: 'link', navLabelKey: OVERVIEW, icon: Layout, href: '/spaces' },
       // ⛔ ADR-840 Σ3 — ΟΧΙ «Ακίνητα» εδώ: το `/spaces/properties` έγινε ανακατεύθυνση στην ΙΔΙΑ οθόνη με το κορυφαίο
       //    «Ευρετήριο Ακινήτων». Δεύτερη καταχώριση = δύο είσοδοι, αμφίσημη ενεργή κατάσταση.
-      { kind: 'link', navLabelKey: 'sidebar.storage', icon: NAVIGATION_ENTITIES.storage.icon, href: '/spaces/storage' },
-      { kind: 'link', navLabelKey: 'sidebar.parking', icon: NAVIGATION_ENTITIES.parking.icon, href: '/spaces/parking' },
+      { kind: 'link', navLabelKey: 'sidebar.storage', icon: NAVIGATION_ENTITIES.storage.icon, href: ENTITY_ROUTES.spaces.storageList },
+      { kind: 'link', navLabelKey: 'sidebar.parking', icon: NAVIGATION_ENTITIES.parking.icon, href: ENTITY_ROUTES.spaces.parkingList },
       { kind: 'link', navLabelKey: 'sidebar.commonAreas', icon: Users, href: '/spaces/common' },
     ],
   },

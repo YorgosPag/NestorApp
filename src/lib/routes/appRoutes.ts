@@ -26,6 +26,11 @@ export const APP_ROUTES = {
    * τελευταίος διαχειριστής» της αποχώρησης (ADR-892 §13) — ορίστε πρώτα άλλον, μετά φεύγετε.
    */
   roleManagement: '/admin/role-management',
+  /**
+   * **Η κύρια οθόνη της κατασκευής** — το χαρτοφυλάκιο έργων. Τη ζητούν το πλαϊνό μενού και η ρίζα
+   * `/construction`, όπου προσγειώνει ο επιλογέας εταιρείας (ADR-923 §23.2 K3).
+   */
+  constructionPortfolio: '/construction/portfolio',
 } as const;
 
 export type AppRouteKey = keyof typeof APP_ROUTES;

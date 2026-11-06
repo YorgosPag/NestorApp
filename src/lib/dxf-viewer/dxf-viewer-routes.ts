@@ -18,7 +18,13 @@ import { withQuery } from '@/lib/workspace/route-worlds';
 /** Το κλειδί του query string που ονομάζει το ενεργό επίπεδο του viewer. Κοντό, ώστε οι σύνδεσμοι να μένουν συμπαγείς. */
 export const DXF_VIEWER_LEVEL_PARAM = 'lvl';
 
+/**
+ * Η διεύθυνση του viewer — **η ΜΙΑ δήλωση**. Τη ζητούν το μενού «Εργαλεία», η ρίζα `/dxf` (όπου
+ * προσγειώνει ο επιλογέας εταιρείας, ADR-923 §23.2 K3) και ο σύνδεσμος επιπέδου παρακάτω.
+ */
+export const DXF_VIEWER_ROUTE = '/dxf/viewer' as const;
+
 /** Η διεύθυνση του viewer **ανοιγμένου σε ένα επίπεδο** — χωρίς πρόθεμα χώρου (το βάζει το σύνορο). */
 export function dxfViewerLevelHref(levelId: string) {
-  return withQuery('/dxf/viewer', `${DXF_VIEWER_LEVEL_PARAM}=${encodeURIComponent(levelId)}`);
+  return withQuery(DXF_VIEWER_ROUTE,`${DXF_VIEWER_LEVEL_PARAM}=${encodeURIComponent(levelId)}`);
 }

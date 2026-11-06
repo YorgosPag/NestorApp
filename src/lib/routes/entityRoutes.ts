@@ -11,6 +11,9 @@
 
 import { typedHref, withQuery } from '@/lib/workspace/route-worlds';
 
+const SPACES_PARKING_PATH = '/spaces/parking' as const;
+const SPACES_STORAGE_PATH = '/spaces/storage' as const;
+
 export const ENTITY_ROUTES = {
   crm: {
     leads: '/crm/leads',
@@ -72,9 +75,16 @@ export const ENTITY_ROUTES = {
   buildings: {
     withId: (id: string) => withQuery('/buildings', `buildingId=${encodeURIComponent(id)}`),
   },
+  /**
+   * Οι οθόνες θέσεων στάθμευσης και αποθηκών — **η ΜΙΑ δήλωση** της διεύθυνσής τους. Τη ζητούν το πλαϊνό
+   * μενού, οι ρίζες `/parking` και `/storage` (ADR-923 §23.2 K3: ο επιλογέας εταιρείας κρατά μόνο τον
+   * τομέα ⇒ χωρίς ρίζα, 404) και οι σύνδεσμοι με επιλογή.
+   */
   spaces: {
-    parking: (id: string) => withQuery('/spaces/parking', `parkingId=${id}`),
-    storage: (id: string) => withQuery('/spaces/storage', `storageId=${id}`),
+    parkingList: SPACES_PARKING_PATH,
+    storageList: SPACES_STORAGE_PATH,
+    parking: (id: string) => withQuery(SPACES_PARKING_PATH, `parkingId=${id}`),
+    storage: (id: string) => withQuery(SPACES_STORAGE_PATH, `storageId=${id}`),
   },
   obligations: {
     list: '/obligations',
