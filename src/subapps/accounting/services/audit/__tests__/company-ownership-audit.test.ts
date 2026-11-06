@@ -21,7 +21,7 @@ const base = {
   address: 'Οδ 1', city: 'Αθ', postalCode: '10000', phone: null, mobile: null, email: null, website: null,
   mainKad: { code: '71112000', description: 'Αρχ', type: 'primary' as const, activeFrom: '2024-01-01' },
   secondaryKads: [], bookCategory: 'double_entry' as const, vatRegime: 'normal' as const,
-  fiscalYearEnd: 12, currency: 'EUR' as const, invoiceSeries: [],
+  fiscalYearEnd: 12, currency: 'EUR' as const, businessStart: null, invoiceSeries: [],
 };
 
 function shareholder(over: Partial<Shareholder> = {}): Shareholder {
@@ -29,7 +29,7 @@ function shareholder(over: Partial<Shareholder> = {}): Shareholder {
     shareholderId: 'shr_1', fullName: 'Γ', vatNumber: '345678912', taxOffice: 'Α',
     sharesCount: 1000, shareNominalValue: 1, capitalContribution: 1000, dividendSharePercent: 100,
     isBoardMember: false, boardRole: null, monthlyCompensation: null, efkaMode: 'none', efkaConfig: null,
-    isFirstFiveYears: false, joinDate: '2024-01-01', exitDate: null, isActive: true, ...over,
+    joinDate: '2024-01-01', exitDate: null, isActive: true, ...over,
   };
 }
 
@@ -37,7 +37,7 @@ function partner(over: Partial<Partner> = {}): Partner {
   return {
     partnerId: 'prt_1', fullName: 'Α', vatNumber: '123456789', taxOffice: 'Α', profitSharePercent: 100,
     efkaConfig: { selectedMainPensionCode: 'main_1', selectedSupplementaryCode: 'supplementary_1', selectedLumpSumCode: 'lump_sum_1', efkaRegistrationNumber: '', activityStartDate: '', notes: null },
-    isFirstFiveYears: false, joinDate: '2024-01-01', exitDate: null, isActive: true, ...over,
+    joinDate: '2024-01-01', exitDate: null, isActive: true, ...over,
   };
 }
 

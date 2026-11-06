@@ -30,14 +30,43 @@ import type { CompanyProfile, CompanySetupInput } from '../../types/company';
 import { LEGACY_DEFAULT_ENTITY_TYPE } from '../../types/entity';
 import type { TenantContext } from '../../types/common';
 import type { CompanySetupSaveOptions, CompanySetupSaveResult } from '../../types/interfaces';
+import { storedBusinessStart } from '../setup/business-start';
 import { changedProfileFields, mergeProfileFields } from '../setup/company-profile-field-mask';
 
 import { appendAuditEntryInTransaction } from './accounting-repo-audit';
 import { isoNow, sanitizeForFirestore } from './firestore-helpers';
 
-/** Έγγραφο χωρίς `entityType` ⇒ ατομική (ο ΕΝΑΣ κανόνας, ADR-841 Α23) — για **κάθε** ανάγνωση. */
+/** Πίνακες προσώπων του προφίλ που κουβαλούσαν το αποσυρμένο `isFirstFiveYears`. */
+const PERSON_ARRAY_KEYS = ['partners', 'members', 'shareholders'] as const;
+
+/**
+ * Το αποσυρμένο `isFirstFiveYears` (checkbox ανά πρόσωπο, ADR-ACC-023 §2) πέφτει στην ανάγνωση: η μείωση
+ * προκαταβολής υπολογίζεται πλέον από το `businessStart` της επιχείρησης — και ό,τι διαβάζεται, ξαναγράφεται.
+ */
+function withoutRetiredPersonFields(raw: Record<string, unknown>): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = { ...raw };
+  for (const key of PERSON_ARRAY_KEYS) {
+    const people = raw[key];
+    if (!Array.isArray(people)) continue;
+    cleaned[key] = people.map((person: unknown) => {
+      if (typeof person !== 'object' || person === null) return person;
+      const { isFirstFiveYears: _retired, ...rest } = person as Record<string, unknown>;
+      return rest;
+    });
+  }
+  return cleaned;
+}
+
+/**
+ * Ο ΕΝΑΣ κανονικοποιητής για **κάθε** ανάγνωση: έγγραφο χωρίς `entityType` ⇒ ατομική (ADR-841 Α23)·
+ * χωρίς/άκυρο `businessStart` ⇒ `null`· αποσυρμένα πεδία προσώπων ⇒ εκτός.
+ */
 function companyProfileOf(raw: Record<string, unknown>): CompanyProfile {
-  const profile = raw.entityType ? raw : { ...raw, entityType: LEGACY_DEFAULT_ENTITY_TYPE };
+  const profile = {
+    ...withoutRetiredPersonFields(raw),
+    entityType: raw.entityType || LEGACY_DEFAULT_ENTITY_TYPE,
+    businessStart: storedBusinessStart(raw.businessStart),
+  };
   return profile as unknown as CompanyProfile;
 }
 

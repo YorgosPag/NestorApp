@@ -121,3 +121,10 @@
 - `CorporateTaxResult` reused by both EPE and AE
 - `CorporateTaxBreakdown` UI component shared
 - Βλ. ADR-ACC-015/016/017 για ΑΕ-specific implementation (shareholders, board, EFKA dual-mode)
+
+## Ενημέρωση 2026-11-06
+
+- Προκαταβολή ΕΠΕ: 80%, **40% τα 3 πρώτα έτη από την έναρξη** (ν.4172/2013 άρθρο 71 §3), όχι για εταιρεία από μετατροπή/συγχώνευση — υπολογίζεται από `businessStart` (`resolvePrepayment`). Ως τώρα δεν εφαρμοζόταν καμία μείωση.
+- Αφαιρέθηκε το `Member.isFirstFiveYears` (checkbox ανά μέλος)· η μείωση ανήκει στην επιχείρηση.
+- `calculateCorporateTax(input: EntityTaxInput, members: EntityHolder[])` — ο υπολογισμός ζει στο κοινό `computeEntityTax` (ΟΕ/ΕΠΕ/ΑΕ). Ο πίνακας «sole=55%, oe=55%» παραπάνω είναι ιστορικός: η ΟΕ έχει πλέον 80%. Το `getDividendTaxRate()` αντικαταστάθηκε από `getDistributionWithholdingRate(entityType, bookCategory)`.
+- Βλ. ADR-ACC-009 «Ενημέρωση 2026-11-06».

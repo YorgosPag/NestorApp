@@ -49,7 +49,6 @@ function createEmptyPartner(index: number): Partner {
       activityStartDate: '',
       notes: null,
     },
-    isFirstFiveYears: false,
     joinDate: nowISO().split('T')[0],
     exitDate: null,
     isActive: true,

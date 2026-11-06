@@ -39,6 +39,8 @@ function fakeDeps(
     getEFKAPayments: jest.fn(async (year: number) => efka.filter((p) => p.paidDate?.startsWith(String(year)))),
     getMembers: jest.fn(async () => []),
     getMemberEFKAPayments: jest.fn(async () => []),
+    getPartners: jest.fn(async () => []),
+    getPartnerEFKAPayments: jest.fn(async () => []),
   };
   return { deps: { repository, asOf } as unknown as ReportGeneratorDeps, collectJournalEntries };
 }
@@ -80,6 +82,16 @@ describe('IAS 34 — φόρος περιόδου = κέρδος περιόδου
     const { deps } = fakeDeps(book, [], '2026-10-14', 'epe');
     const load = createPeriodTaxBasisLoader(deps);
 
+    expect((await load({ from: '2025-01-01', to: '2025-03-31' })).estimatedIncomeTax).toBe(11_000);
+    expect((await load({ from: '2025-07-01', to: '2025-09-30' })).estimatedIncomeTax).toBe(-880);
+  });
+
+  it('Φ-3β ΟΕ: φόρος ΟΝΤΟΤΗΤΑΣ 22% (ADR-ACC-024 §6) — όχι η κλίμακα φυσικών ανά εταίρο', async () => {
+    const book = [entry('income', 50_000, '2025-01-15'), entry('expense', 4_000, '2025-08-01')];
+    const { deps } = fakeDeps(book, [], '2026-10-14', 'oe');
+    const load = createPeriodTaxBasisLoader(deps);
+
+    // Ίδια βιβλία με το Φ-3: ο συντελεστής της ΟΕ είναι πλέον ο ίδιος με της ΕΠΕ (πριν: κλίμακα φυσικών προσώπων)
     expect((await load({ from: '2025-01-01', to: '2025-03-31' })).estimatedIncomeTax).toBe(11_000);
     expect((await load({ from: '2025-07-01', to: '2025-09-30' })).estimatedIncomeTax).toBe(-880);
   });

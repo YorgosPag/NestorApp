@@ -62,7 +62,8 @@ export interface PartnerEFKAConfig {
 /**
  * Εταίρος Ομόρρυθμης Εταιρείας
  *
- * Κάθε εταίρος ΟΕ φορολογείται ξεχωριστά (pass-through).
+ * Η ΟΕ φορολογείται ως οντότητα (22%)· ο εταίρος λαμβάνει μερίδιο από τη διανομή (ADR-ACC-024 §6).
+ * Η μειωμένη προκαταβολή ανήκει στην επιχείρηση (`CompanyProfileBase.businessStart`), όχι στο πρόσωπο.
  * Firestore path: `accounting_settings/partners`
  */
 // ============================================================================
@@ -122,8 +123,6 @@ export interface Member {
   isManager: boolean;
   /** Ρυθμίσεις ΕΦΚΑ (null αν passive member) */
   efkaConfig: MemberEFKAConfig | null;
-  /** Πρώτα 5 χρόνια δραστηριότητας; (μειωμένη προκαταβολή) */
-  isFirstFiveYears: boolean;
   /** Ημερομηνία εισόδου (ISO 8601) */
   joinDate: string;
   /** Ημερομηνία εξόδου (ISO 8601, null αν ενεργός) */
@@ -216,8 +215,6 @@ export interface Shareholder {
   efkaMode: ShareholderEFKAMode;
   /** Ρυθμίσεις ΕΦΚΑ (μόνο self-employed mode) */
   efkaConfig: ShareholderEFKAConfig | null;
-  /** Πρώτα 5 χρόνια δραστηριότητας; (μειωμένη προκαταβολή) */
-  isFirstFiveYears: boolean;
   /** Ημερομηνία εισόδου (ISO 8601) */
   joinDate: string;
   /** Ημερομηνία εξόδου (ISO 8601, null αν ενεργός) */
@@ -243,8 +240,6 @@ export interface Partner {
   profitSharePercent: number;
   /** Ρυθμίσεις ΕΦΚΑ εταίρου */
   efkaConfig: PartnerEFKAConfig;
-  /** Πρώτα 5 χρόνια δραστηριότητας; (μειωμένη προκαταβολή) */
-  isFirstFiveYears: boolean;
   /** Ημερομηνία εισόδου (ISO 8601) */
   joinDate: string;
   /** Ημερομηνία εξόδου (ISO 8601, null αν ενεργός) */

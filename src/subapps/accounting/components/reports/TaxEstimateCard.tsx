@@ -81,7 +81,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
       const result: TaxEstimateApiResponse = await response.json();
 
       if (result.entityType === 'oe') {
-        // OE partnership — the card shows a fallback; detailed view is in PartnerTaxBreakdown
+        // OE partnership — the card shows a fallback; detailed view is in CorporateTaxBreakdown (entity tax, ADR-ACC-024 §6)
         setIsPartnership(true);
         setEstimate(null);
       } else {

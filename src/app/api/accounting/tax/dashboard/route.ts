@@ -106,7 +106,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
             professionalTax,
             totalWithholdings: 0,
             previousYearPrepayment: 0,
-            isFirstFiveYears: false,
+            businessStart: profile?.businessStart ?? null,
           });
         }
 

@@ -21,6 +21,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { TaxResult, TaxInstallment } from '@/subapps/accounting/types';
 import { TaxBracketsVisual } from './TaxBracketsVisual';
 import { InstallmentsCard } from './InstallmentsCard';
+import { PrepaymentBasisNote } from '../tax/PrepaymentBasisNote';
 import { formatAccountingCurrency } from '../../utils/format';
 
 import { cn } from '@/lib/utils';
@@ -153,6 +154,15 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
                 </p>
               </article>
             </div>
+
+            {/* Προκαταβολή: συντελεστής + γιατί (ADR-ACC-023 §1) */}
+            <section className="space-y-1">
+              <p className="text-sm">
+                {t('setup.corporateTax.prepaymentAt', { rate: data.taxResult.prepaymentRate })}:{' '}
+                <span className="font-medium">{formatAccountingCurrency(data.taxResult.prepaymentAmount)}</span>
+              </p>
+              <PrepaymentBasisNote basis={data.taxResult.prepaymentBasis} />
+            </section>
 
             <Separator />
 

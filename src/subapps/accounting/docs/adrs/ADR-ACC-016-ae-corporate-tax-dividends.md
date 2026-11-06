@@ -65,3 +65,10 @@ Backward compatible: existing EPE calls δεν χρειάζονται αλλαγ
 - Ν.4172/2013, αρ.58 — Εταιρικός φόρος 22%
 - Ν.4172/2013, αρ.64 — Φόρος μερισμάτων 5%
 - Ν.4172/2013, αρ.71 — Προκαταβολή φόρου 80%
+
+## Ενημέρωση 2026-11-06
+
+- Προκαταβολή ΑΕ: 80%, **40% τα 3 πρώτα έτη από την έναρξη** (ν.4172/2013 άρθρο 71 §3), όχι για εταιρεία από μετατροπή/συγχώνευση — υπολογίζεται από `businessStart` (`resolvePrepayment`).
+- Αφαιρέθηκε το `Shareholder.isFirstFiveYears`.
+- `calculateAETax(input: EntityTaxInput, shareholders: EntityHolder[])` — δεν περνά πια από το `calculateCorporateTax`· και οι δύο είναι προσαρμογείς του κοινού `computeEntityTax`.
+- Βλ. ADR-ACC-009 «Ενημέρωση 2026-11-06».

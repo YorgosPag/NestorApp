@@ -21,6 +21,8 @@ jest.mock('next/server', () => ({
 import { TaxEngine } from '../tax-engine';
 import type { IAccountingRepository } from '../../../types/interfaces';
 import type {
+  EntityHolder,
+  EntityTaxInput,
   TaxCalculationParams,
 } from '../../../types/tax';
 import type { JournalEntry } from '../../../types/journal';
@@ -166,7 +168,7 @@ function makeDefaultParams(overrides?: Partial<TaxCalculationParams>): TaxCalcul
     professionalTax: 650,
     totalWithholdings: 0,
     previousYearPrepayment: 0,
-    isFirstFiveYears: false,
+    businessStart: null,
     ...overrides,
   };
 }
@@ -320,34 +322,45 @@ describe('TaxEngine', () => {
       expect(result.solidarityContribution).toBe(0);
     });
 
-    // ── Prepayment: isFirstFiveYears = false → 55% ──────────────────────
+    // ── Prepayment: ν.4172/2013 άρθρο 69 §1 — μισή ΜΟΝΟ το έτος της πρώτης έναρξης ──
 
-    it('should apply 55% prepayment rate for established businesses', () => {
+    it('should apply the full 55% prepayment when no business start is declared', () => {
       const result = engine.calculateAnnualTax(
-        makeDefaultParams({
-          totalIncome: 20_000,
-          professionalTax: 0,
-          isFirstFiveYears: false,
-        })
+        makeDefaultParams({ totalIncome: 20_000, professionalTax: 0 })
       );
 
       expect(result.prepaymentRate).toBe(55);
+      expect(result.prepaymentBasis.reason).toBe('missing_start');
       expect(result.prepaymentAmount).toBe(roundToTwo(result.incomeTax * 0.55));
     });
 
-    // ── Prepayment: isFirstFiveYears = true → 27.5% ────────────────────
-
-    it('should cap prepayment rate at 27.5% for first five years', () => {
+    it('should halve the prepayment (27.5%) in the year business income is first earned', () => {
       const result = engine.calculateAnnualTax(
         makeDefaultParams({
           totalIncome: 20_000,
           professionalTax: 0,
-          isFirstFiveYears: true,
+          businessStart: { date: '2025-03-01', origin: 'new' },
         })
       );
 
       expect(result.prepaymentRate).toBe(27.5);
+      expect(result.prepaymentBasis).toEqual(
+        expect.objectContaining({ reason: 'reduced', rule: 'natural_person_first_year', yearSinceStart: 1 })
+      );
       expect(result.prepaymentAmount).toBe(roundToTwo(result.incomeTax * 0.275));
+    });
+
+    it('should apply the full 55% from the second year — the reduction is NOT for five years', () => {
+      const result = engine.calculateAnnualTax(
+        makeDefaultParams({
+          totalIncome: 20_000,
+          professionalTax: 0,
+          businessStart: { date: '2024-03-01', origin: 'new' },
+        })
+      );
+
+      expect(result.prepaymentRate).toBe(55);
+      expect(result.prepaymentBasis.reason).toBe('outside_window');
     });
 
     // ── Professional tax passthrough ────────────────────────────────────
@@ -466,7 +479,6 @@ describe('TaxEngine', () => {
 
       expect(scale.year).toBe(2025);
       expect(scale.brackets).toHaveLength(5);
-      expect(scale.prepaymentRate).toBe(55);
       expect(scale.professionalTax).toBe(0); // καταργήθηκε για φυσικά πρόσωπα (ADR-ACC-022 §8.1)
       expect(scale.solidarityRate).toBe(0);
     });
@@ -499,7 +511,6 @@ describe('TaxEngine', () => {
       // Fallback returns the latest config with the requested year set
       expect(scale.year).toBe(2030);
       expect(scale.brackets).toHaveLength(6);
-      expect(scale.prepaymentRate).toBe(55);
     });
 
     it('should return correct bracket boundaries', () => {
@@ -515,128 +526,111 @@ describe('TaxEngine', () => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // C. calculatePartnershipTax — OE (Pass-through)
+  // C. calculatePartnershipTax — ΟΕ ως ΟΝΤΟΤΗΤΑ (ADR-ACC-024 §6)
   // ══════════════════════════════════════════════════════════════════════════
 
+  /** Είσοδος φόρου οντότητας — προεπιλογή: χωρίς έναρξη, απλογραφικά. */
+  function entityInput(overrides?: Partial<EntityTaxInput>): EntityTaxInput {
+    return {
+      fiscalYear: 2025,
+      totalIncome: 100_000,
+      totalExpenses: 20_000,
+      deductibleEfka: 0,
+      businessStart: null,
+      bookCategory: 'simplified',
+      ...overrides,
+    };
+  }
+
   describe('calculatePartnershipTax', () => {
-    it('should split profit 50/50 between two partners', () => {
-      const efkaMap = new Map<string, number>([
-        ['p1', 3000],
-        ['p2', 3000],
-      ]);
+    const twoPartners: EntityHolder[] = [
+      { id: 'p1', name: 'Partner A', sharePercent: 50 },
+      { id: 'p2', name: 'Partner B', sharePercent: 50 },
+    ];
 
-      const result = engine.calculatePartnershipTax(2025, 100_000, 20_000, efkaMap, [
-        {
-          partnerId: 'p1',
-          partnerName: 'Partner A',
-          profitSharePercent: 50,
-          withholdings: 0,
-          previousPrepayment: 0,
-          isFirstFiveYears: false,
-        },
-        {
-          partnerId: 'p2',
-          partnerName: 'Partner B',
-          profitSharePercent: 50,
-          withholdings: 0,
-          previousPrepayment: 0,
-          isFirstFiveYears: false,
-        },
-      ]);
+    it('should tax the partnership as an entity at 22% — not each partner on the personal scale', () => {
+      const result = engine.calculatePartnershipTax(entityInput({ deductibleEfka: 6_000 }), twoPartners);
 
-      expect(result.fiscalYear).toBe(2025);
-      expect(result.totalEntityIncome).toBe(100_000);
-      expect(result.totalEntityExpenses).toBe(20_000);
-      expect(result.totalEntityProfit).toBe(80_000);
-      expect(result.entityProfessionalTax).toBe(1000); // OE = 1000€
-      expect(result.partnerResults).toHaveLength(2);
-
-      const p1 = result.partnerResults[0];
-      const p2 = result.partnerResults[1];
-      expect(p1.profitShare).toBe(40_000);
-      expect(p2.profitShare).toBe(40_000);
-      // Each partner taxed individually on 40000 - 3000 EFKA = 37000
-      expect(p1.taxResult.taxableIncome).toBe(37_000);
-      expect(p2.taxResult.taxableIncome).toBe(37_000);
+      // 100.000 − 20.000 − 6.000 ΕΦΚΑ όλων των εταίρων = 74.000 · 22% = 16.280
+      expect(result.corporateTax.taxableIncome).toBe(74_000);
+      expect(result.corporateTax.corporateTaxRate).toBe(22);
+      expect(result.corporateTax.corporateTaxAmount).toBe(16_280);
+      expect(result.corporateTax.professionalTax).toBe(1000);
     });
 
-    it('should split profit 70/30 between two partners', () => {
-      const efkaMap = new Map<string, number>([
-        ['p1', 4000],
-        ['p2', 2000],
+    it('should apply the 80% prepayment of legal entities (art. 71 §1), not the 55% of natural persons', () => {
+      const result = engine.calculatePartnershipTax(entityInput({ deductibleEfka: 6_000 }), twoPartners);
+
+      expect(result.corporateTax.prepaymentRate).toBe(80);
+      expect(result.corporateTax.prepaymentAmount).toBe(13_024);
+      expect(result.corporateTax.prepaymentBasis.reason).toBe('missing_start');
+    });
+
+    it.each([
+      [2023, 40, 'reduced'],
+      [2024, 40, 'reduced'],
+      [2025, 40, 'reduced'],
+      [2026, 80, 'outside_window'],
+    ] as const)('έναρξη 2023, έτος %i ⇒ προκαταβολή %i%% (%s) — μισή τα 3 πρώτα έτη (art. 71 §3)', (fiscalYear, rate, reason) => {
+      const result = engine.calculatePartnershipTax(
+        entityInput({ fiscalYear, businessStart: { date: '2023-05-10', origin: 'new' } }),
+        twoPartners
+      );
+
+      expect(result.corporateTax.prepaymentRate).toBe(rate);
+      expect(result.corporateTax.prepaymentBasis.reason).toBe(reason);
+    });
+
+    it('should NOT halve the prepayment for a partnership from conversion or merger', () => {
+      const result = engine.calculatePartnershipTax(
+        entityInput({ businessStart: { date: '2025-02-01', origin: 'continuation' } }),
+        twoPartners
+      );
+
+      expect(result.corporateTax.prepaymentRate).toBe(80);
+      expect(result.corporateTax.prepaymentBasis.reason).toBe('continuation');
+    });
+
+    it('should distribute profit after tax by share, with NO withholding under single-entry books', () => {
+      const result = engine.calculatePartnershipTax(entityInput({ deductibleEfka: 6_000 }), twoPartners);
+
+      // 74.000 − 16.280 = 57.720 → 28.860 ανά εταίρο
+      expect(result.profitAfterTax).toBe(57_720);
+      expect(result.distributedProfits).toBe(57_720);
+      expect(result.retainedEarnings).toBe(0);
+      expect(result.partnerDistributions.map((d) => [d.partnerId, d.grossDistribution])).toEqual([
+        ['p1', 28_860],
+        ['p2', 28_860],
       ]);
+      for (const d of result.partnerDistributions) {
+        expect(d.withholdingRate).toBe(0);
+        expect(d.withholdingAmount).toBe(0);
+        expect(d.netDistribution).toBe(d.grossDistribution);
+      }
+      expect(result.totalDistributionWithholding).toBe(0);
+    });
 
-      const result = engine.calculatePartnershipTax(2025, 100_000, 30_000, efkaMap, [
-        {
-          partnerId: 'p1',
-          partnerName: 'Partner A',
-          profitSharePercent: 70,
-          withholdings: 1000,
-          previousPrepayment: 500,
-          isFirstFiveYears: false,
-        },
-        {
-          partnerId: 'p2',
-          partnerName: 'Partner B',
-          profitSharePercent: 30,
-          withholdings: 500,
-          previousPrepayment: 0,
-          isFirstFiveYears: true,
-        },
-      ]);
+    it('should withhold 5% on the distribution under double-entry books', () => {
+      const result = engine.calculatePartnershipTax(
+        entityInput({ deductibleEfka: 6_000, bookCategory: 'double_entry' }),
+        twoPartners
+      );
 
-      expect(result.totalEntityProfit).toBe(70_000);
-      const p1 = result.partnerResults[0];
-      const p2 = result.partnerResults[1];
-
-      expect(p1.profitShare).toBe(49_000);
-      expect(p2.profitShare).toBe(21_000);
-
-      // P1: 49000 - 4000 EFKA = 45000 taxable
-      expect(p1.taxResult.taxableIncome).toBe(45_000);
-      expect(p1.taxResult.totalWithholdings).toBe(1000);
-      expect(p1.taxResult.previousYearPrepayment).toBe(500);
-
-      // P2: 21000 - 2000 EFKA = 19000 taxable, first five years
-      expect(p2.taxResult.taxableIncome).toBe(19_000);
-      expect(p2.taxResult.prepaymentRate).toBe(27.5);
+      expect(result.partnerDistributions[0]!.withholdingRate).toBe(5);
+      expect(result.partnerDistributions[0]!.withholdingAmount).toBe(1_443);
+      expect(result.partnerDistributions[0]!.netDistribution).toBe(27_417);
+      expect(result.totalDistributionWithholding).toBe(2_886);
     });
 
     it('should handle zero profit (expenses >= income)', () => {
-      const efkaMap = new Map<string, number>();
+      const result = engine.calculatePartnershipTax(
+        entityInput({ totalIncome: 10_000, totalExpenses: 15_000 }),
+        [{ id: 'p1', name: 'Partner A', sharePercent: 100 }]
+      );
 
-      const result = engine.calculatePartnershipTax(2025, 10_000, 15_000, efkaMap, [
-        {
-          partnerId: 'p1',
-          partnerName: 'Partner A',
-          profitSharePercent: 100,
-          withholdings: 0,
-          previousPrepayment: 0,
-          isFirstFiveYears: false,
-        },
-      ]);
-
-      expect(result.totalEntityProfit).toBe(0);
-      expect(result.partnerResults[0].profitShare).toBe(0);
-      expect(result.partnerResults[0].taxResult.incomeTax).toBe(0);
-    });
-
-    it('should set professionalTax to 0 at partner level (entity level only)', () => {
-      const efkaMap = new Map<string, number>();
-
-      const result = engine.calculatePartnershipTax(2025, 50_000, 10_000, efkaMap, [
-        {
-          partnerId: 'p1',
-          partnerName: 'Partner A',
-          profitSharePercent: 100,
-          withholdings: 0,
-          previousPrepayment: 0,
-          isFirstFiveYears: false,
-        },
-      ]);
-
-      expect(result.partnerResults[0].taxResult.professionalTax).toBe(0);
-      expect(result.entityProfessionalTax).toBe(1000);
+      expect(result.corporateTax.taxableIncome).toBe(0);
+      expect(result.corporateTax.corporateTaxAmount).toBe(0);
+      expect(result.partnerDistributions[0]!.grossDistribution).toBe(0);
     });
   });
 
@@ -644,14 +638,24 @@ describe('TaxEngine', () => {
   // D. calculateCorporateTax — EPE (22% flat)
   // ══════════════════════════════════════════════════════════════════════════
 
+  /** Είσοδος ΕΠΕ/ΑΕ: διπλογραφικά (υποχρεωτικά). */
+  function corporateInput(
+    totalIncome: number,
+    totalExpenses: number,
+    deductibleEfka: number,
+    overrides?: Partial<EntityTaxInput>
+  ): EntityTaxInput {
+    return entityInput({ totalIncome, totalExpenses, deductibleEfka, bookCategory: 'double_entry', ...overrides });
+  }
+
   describe('calculateCorporateTax', () => {
-    const twoMembers = [
-      { memberId: 'm1', memberName: 'Member A', dividendSharePercent: 60 },
-      { memberId: 'm2', memberName: 'Member B', dividendSharePercent: 40 },
+    const twoMembers: EntityHolder[] = [
+      { id: 'm1', name: 'Member A', sharePercent: 60 },
+      { id: 'm2', name: 'Member B', sharePercent: 40 },
     ];
 
     it('should apply 22% flat corporate tax rate', () => {
-      const result = engine.calculateCorporateTax(2025, 200_000, 50_000, 10_000, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(200_000, 50_000, 10_000), twoMembers);
 
       // taxableIncome = max(0, 200000 - 50000 - 10000) = 140000
       expect(result.corporateTax.taxableIncome).toBe(140_000);
@@ -660,7 +664,7 @@ describe('TaxEngine', () => {
     });
 
     it('should apply 80% prepayment rate for EPE', () => {
-      const result = engine.calculateCorporateTax(2025, 200_000, 50_000, 10_000, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(200_000, 50_000, 10_000), twoMembers);
 
       expect(result.corporateTax.prepaymentRate).toBe(80);
       expect(result.corporateTax.prepaymentAmount).toBe(
@@ -668,14 +672,26 @@ describe('TaxEngine', () => {
       );
     });
 
+    it('should halve the EPE prepayment to 40% in the first three years from the start (art. 71 §3)', () => {
+      const result = engine.calculateCorporateTax(
+        corporateInput(200_000, 50_000, 10_000, { businessStart: { date: '2024-01-15', origin: 'new' } }),
+        twoMembers
+      );
+
+      expect(result.corporateTax.prepaymentRate).toBe(40);
+      expect(result.corporateTax.prepaymentBasis).toEqual(
+        expect.objectContaining({ rule: 'legal_entity_first_three_years', yearSinceStart: 2, windowYears: 3 })
+      );
+    });
+
     it('should set 1000€ professional tax for EPE', () => {
-      const result = engine.calculateCorporateTax(2025, 200_000, 50_000, 0, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(200_000, 50_000, 0), twoMembers);
 
       expect(result.corporateTax.professionalTax).toBe(1000);
     });
 
     it('should calculate totalObligation as tax + profTax + prepayment', () => {
-      const result = engine.calculateCorporateTax(2025, 100_000, 20_000, 0, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(100_000, 20_000, 0), twoMembers);
 
       const ct = result.corporateTax;
       const expected = roundToTwo(ct.corporateTaxAmount + ct.professionalTax + ct.prepaymentAmount);
@@ -683,7 +699,7 @@ describe('TaxEngine', () => {
     });
 
     it('should calculate profitAfterTax correctly', () => {
-      const result = engine.calculateCorporateTax(2025, 100_000, 20_000, 0, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(100_000, 20_000, 0), twoMembers);
 
       expect(result.profitAfterTax).toBe(
         roundToTwo(result.corporateTax.taxableIncome - result.corporateTax.corporateTaxAmount)
@@ -691,14 +707,17 @@ describe('TaxEngine', () => {
     });
 
     it('should distribute 100% dividends by default', () => {
-      const result = engine.calculateCorporateTax(2025, 100_000, 20_000, 0, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(100_000, 20_000, 0), twoMembers);
 
       expect(result.distributedDividends).toBe(result.profitAfterTax);
       expect(result.retainedEarnings).toBe(0);
     });
 
     it('should respect custom distribution percent', () => {
-      const result = engine.calculateCorporateTax(2025, 100_000, 20_000, 0, twoMembers, 50);
+      const result = engine.calculateCorporateTax(
+        corporateInput(100_000, 20_000, 0, { distributionPercent: 50 }),
+        twoMembers
+      );
 
       expect(result.distributedDividends).toBe(roundToTwo(result.profitAfterTax * 0.5));
       expect(result.retainedEarnings).toBe(
@@ -707,7 +726,7 @@ describe('TaxEngine', () => {
     });
 
     it('should apply 5% dividend tax per member', () => {
-      const result = engine.calculateCorporateTax(2025, 100_000, 20_000, 0, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(100_000, 20_000, 0), twoMembers);
 
       for (const md of result.memberDividends) {
         expect(md.dividendTaxRate).toBe(5);
@@ -717,13 +736,14 @@ describe('TaxEngine', () => {
     });
 
     it('should split dividends by member share percent (60/40)', () => {
-      const result = engine.calculateCorporateTax(2025, 100_000, 20_000, 0, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(100_000, 20_000, 0), twoMembers);
 
       const m1 = result.memberDividends.find((m) => m.memberId === 'm1');
       const m2 = result.memberDividends.find((m) => m.memberId === 'm2');
 
       expect(m1).toBeDefined();
       expect(m2).toBeDefined();
+      expect(m1!.memberName).toBe('Member A');
       expect(m1!.dividendSharePercent).toBe(60);
       expect(m2!.dividendSharePercent).toBe(40);
       expect(m1!.grossDividend).toBe(roundToTwo(result.distributedDividends * 0.6));
@@ -731,14 +751,14 @@ describe('TaxEngine', () => {
     });
 
     it('should calculate totalDividendTax as sum of all member dividend taxes', () => {
-      const result = engine.calculateCorporateTax(2025, 100_000, 20_000, 0, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(100_000, 20_000, 0), twoMembers);
 
       const sumDivTax = result.memberDividends.reduce((s, m) => s + m.dividendTaxAmount, 0);
       expect(result.totalDividendTax).toBe(roundToTwo(sumDivTax));
     });
 
     it('should handle zero taxable income', () => {
-      const result = engine.calculateCorporateTax(2025, 10_000, 15_000, 0, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(10_000, 15_000, 0), twoMembers);
 
       expect(result.corporateTax.taxableIncome).toBe(0);
       expect(result.corporateTax.corporateTaxAmount).toBe(0);
@@ -747,7 +767,7 @@ describe('TaxEngine', () => {
     });
 
     it('should deduct EFKA manager contributions', () => {
-      const result = engine.calculateCorporateTax(2025, 100_000, 20_000, 5_000, twoMembers);
+      const result = engine.calculateCorporateTax(corporateInput(100_000, 20_000, 5_000), twoMembers);
 
       expect(result.corporateTax.taxableIncome).toBe(75_000);
       expect(result.corporateTax.efkaContributions).toBe(5_000);
@@ -759,21 +779,30 @@ describe('TaxEngine', () => {
   // ══════════════════════════════════════════════════════════════════════════
 
   describe('calculateAETax', () => {
-    const twoShareholders = [
-      { shareholderId: 's1', shareholderName: 'Shareholder A', dividendSharePercent: 70 },
-      { shareholderId: 's2', shareholderName: 'Shareholder B', dividendSharePercent: 30 },
+    const twoShareholders: EntityHolder[] = [
+      { id: 's1', name: 'Shareholder A', sharePercent: 70 },
+      { id: 's2', name: 'Shareholder B', sharePercent: 30 },
     ];
 
     it('should calculate same corporate tax rates as EPE', () => {
-      const result = engine.calculateAETax(2025, 200_000, 50_000, 10_000, twoShareholders);
+      const result = engine.calculateAETax(corporateInput(200_000, 50_000, 10_000), twoShareholders);
 
       expect(result.corporateTax.corporateTaxRate).toBe(22);
       expect(result.corporateTax.prepaymentRate).toBe(80);
       expect(result.corporateTax.taxableIncome).toBe(140_000);
     });
 
+    it('should halve the AE prepayment to 40% in the start year (art. 71 §3)', () => {
+      const result = engine.calculateAETax(
+        corporateInput(200_000, 50_000, 10_000, { businessStart: { date: '2025-09-01', origin: 'new' } }),
+        twoShareholders
+      );
+
+      expect(result.corporateTax.prepaymentRate).toBe(40);
+    });
+
     it('should map shareholders to dividends correctly', () => {
-      const result = engine.calculateAETax(2025, 100_000, 20_000, 0, twoShareholders);
+      const result = engine.calculateAETax(corporateInput(100_000, 20_000, 0), twoShareholders);
 
       expect(result.shareholderDividends).toHaveLength(2);
       const s1 = result.shareholderDividends.find((s) => s.shareholderId === 's1');
@@ -787,7 +816,7 @@ describe('TaxEngine', () => {
     });
 
     it('should apply 5% dividend tax to shareholders', () => {
-      const result = engine.calculateAETax(2025, 100_000, 20_000, 0, twoShareholders);
+      const result = engine.calculateAETax(corporateInput(100_000, 20_000, 0), twoShareholders);
 
       for (const sd of result.shareholderDividends) {
         expect(sd.dividendTaxRate).toBe(5);
@@ -797,7 +826,10 @@ describe('TaxEngine', () => {
     });
 
     it('should respect custom distribution percent', () => {
-      const result = engine.calculateAETax(2025, 100_000, 20_000, 0, twoShareholders, 40);
+      const result = engine.calculateAETax(
+        corporateInput(100_000, 20_000, 0, { distributionPercent: 40 }),
+        twoShareholders
+      );
 
       expect(result.distributedDividends).toBe(roundToTwo(result.profitAfterTax * 0.4));
       expect(result.retainedEarnings).toBe(
@@ -806,19 +838,9 @@ describe('TaxEngine', () => {
     });
 
     it('should produce identical corporateTax numbers as calculateCorporateTax', () => {
-      const aeResult = engine.calculateAETax(2025, 150_000, 30_000, 5_000, twoShareholders);
-      const epeResult = engine.calculateCorporateTax(
-        2025,
-        150_000,
-        30_000,
-        5_000,
-        [
-          { memberId: 's1', memberName: 'Shareholder A', dividendSharePercent: 70 },
-          { memberId: 's2', memberName: 'Shareholder B', dividendSharePercent: 30 },
-        ],
-        100,
-        'ae'
-      );
+      const input = corporateInput(150_000, 30_000, 5_000);
+      const aeResult = engine.calculateAETax(input, twoShareholders);
+      const epeResult = engine.calculateCorporateTax(input, twoShareholders);
 
       expect(aeResult.corporateTax).toEqual(epeResult.corporateTax);
       expect(aeResult.profitAfterTax).toBe(epeResult.profitAfterTax);

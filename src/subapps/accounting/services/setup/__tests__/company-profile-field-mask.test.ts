@@ -34,6 +34,7 @@ const COMMON = {
   bookCategory: 'simplified',
   vatRegime: 'normal',
   fiscalYearEnd: 12,
+  businessStart: null,
   currency: 'EUR',
   invoiceSeries: [],
 } as const;

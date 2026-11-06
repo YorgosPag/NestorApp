@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview Company Setup — Fiscal Info Section
- * @description Φορολογικές ρυθμίσεις: Βιβλία, ΦΠΑ, ΕΦΚΑ
+ * @description Φορολογικές ρυθμίσεις: Βιβλία, ΦΠΑ, ΕΦΚΑ, Έναρξη εργασιών
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
  * @version 1.0.0
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { CompanySetupInput } from '../../types';
+import { BusinessStartFields } from './BusinessStartFields';
 
 // ============================================================================
 // TYPES
@@ -144,6 +145,13 @@ export function FiscalInfoSection({ data, onChange }: FiscalInfoSectionProps) {
               </div>
             )}
           </div>
+
+          {/* Row 3: Έναρξη εργασιών — ρίζα της μειωμένης προκαταβολής (ADR-ACC-023 §1 · ADR-ACC-024 §6.1 α) */}
+          <BusinessStartFields
+            entityType={data.entityType}
+            value={data.businessStart}
+            onChange={(businessStart) => onChange({ businessStart })}
+          />
         </fieldset>
       </CardContent>
     </Card>

@@ -50,7 +50,6 @@ function createEmptyMember(index: number): Member {
     dividendSharePercent: 0,
     isManager: false,
     efkaConfig: null,
-    isFirstFiveYears: false,
     joinDate: nowISO().split('T')[0],
     exitDate: null,
     isActive: true,

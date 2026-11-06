@@ -146,6 +146,36 @@ describe('Γ — ο αριθμός ΓΕΜΗ στο προφίλ', () => {
   });
 });
 
+describe('Ε — έναρξη εργασιών: η ρίζα της μειωμένης προκαταβολής (ADR-ACC-023 §1 · ADR-ACC-024 §6.1 α)', () => {
+  it.each([
+    ['ανύπαρκτη ημέρα', { date: '2025-02-30', origin: 'new' }],
+    ['άγνωστη προέλευση', { date: '2025-02-01', origin: 'merger' }],
+  ])('🔴 Ε1 — %s ⇒ 400, και ΤΙΠΟΤΑ δεν γράφεται', async (_label, businessStart) => {
+    const answer = await put({ ...VALID, businessStart });
+
+    expect(answer.status).toBe(400);
+    expect(repo.saveCompanySetup).not.toHaveBeenCalled();
+  });
+
+  it('🔑 Ε2 — έγκυρη έναρξη ⇒ γράφεται όπως δηλώθηκε', async () => {
+    await put({ ...VALID, businessStart: { date: '2024-03-01', origin: 'continuation' } });
+
+    expect(repo.saveCompanySetup).toHaveBeenCalledWith(
+      expect.objectContaining({ businessStart: { date: '2024-03-01', origin: 'continuation' } }),
+      expect.anything(),
+    );
+  });
+
+  it('🔑 Ε3 — απούσα έναρξη ⇒ `null` (⇒ πλήρης προκαταβολή), ποτέ `undefined`', async () => {
+    await put({ ...VALID });
+
+    expect(repo.saveCompanySetup).toHaveBeenCalledWith(
+      expect.objectContaining({ businessStart: null }),
+      expect.anything(),
+    );
+  });
+});
+
 describe('Φ — μάσκα πεδίων (ADR-841 Α23 Γ3 · AIP-134 / AIP-161)', () => {
   it('🔴 Φ1 — άγνωστο πεδίο στη μάσκα ⇒ 400 με τα απορριφθέντα, και ΤΙΠΟΤΑ δεν γράφεται', async () => {
     const answer = await put({ ...VALID, fields: ['phone', 'companyId'] });

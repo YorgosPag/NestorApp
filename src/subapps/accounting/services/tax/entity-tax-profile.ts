@@ -15,8 +15,9 @@
 import type { IAccountingRepository, ITaxEngine } from '../../types/interfaces';
 import type { EFKAPayment } from '../../types/efka';
 import type { Member, Partner, Shareholder } from '../../types/entity';
+import type { BookCategory, BusinessStart, CompanyProfile } from '../../types/company';
 import type { PeriodRange } from '../../types/common';
-import type { PartnerTaxInput } from '../../types/tax';
+import type { EntityHolder, EntityTaxInput } from '../../types/tax';
 import { roundToTwo } from '../../utils/math';
 
 // ============================================================================
@@ -42,6 +43,24 @@ export function sumPaidEfka(payments: readonly EFKAPayment[], period?: PeriodRan
 }
 
 // ============================================================================
+// ΦΟΡΟΛΟΓΙΚΗ ΘΕΣΗ ΤΗΣ ΕΠΙΧΕΙΡΗΣΗΣ — έναρξη + βιβλία
+// ============================================================================
+
+/**
+ * Ό,τι χρειάζεται ο φόρος από το προφίλ πέρα από τα πρόσωπα: η **έναρξη εργασιών** (μειωμένη προκαταβολή,
+ * `prepayment-policy`) και η **κατηγορία βιβλίων** (παρακράτηση στη διανομή της ΟΕ).
+ */
+export interface TaxStanding {
+  readonly businessStart: BusinessStart | null;
+  readonly bookCategory: BookCategory;
+}
+
+/** Η φορολογική θέση από το προφίλ — χωρίς προφίλ: χωρίς έναρξη, απλογραφικά (προεπιλογή setup). */
+export function taxStandingOf(setup: CompanyProfile | null): TaxStanding {
+  return { businessStart: setup?.businessStart ?? null, bookCategory: setup?.bookCategory ?? 'simplified' };
+}
+
+// ============================================================================
 // ΠΡΟΦΙΛ ΑΝΑ ΝΟΜΙΚΗ ΜΟΡΦΗ
 // ============================================================================
 
@@ -51,35 +70,51 @@ export interface PartnerTaxProfile {
 }
 
 export type EntityTaxProfile =
-  | { readonly kind: 'sole_proprietor'; readonly efka: readonly EFKAPayment[] }
-  | { readonly kind: 'oe'; readonly partners: readonly PartnerTaxProfile[] }
-  | { readonly kind: 'epe'; readonly members: readonly Member[]; readonly managerEfka: readonly EFKAPayment[] }
-  | { readonly kind: 'ae'; readonly shareholders: readonly Shareholder[]; readonly boardEfka: readonly EFKAPayment[] };
+  | { readonly kind: 'sole_proprietor'; readonly standing: TaxStanding; readonly efka: readonly EFKAPayment[] }
+  | { readonly kind: 'oe'; readonly standing: TaxStanding; readonly partners: readonly PartnerTaxProfile[] }
+  | {
+      readonly kind: 'epe'; readonly standing: TaxStanding;
+      readonly members: readonly Member[]; readonly managerEfka: readonly EFKAPayment[];
+    }
+  | {
+      readonly kind: 'ae'; readonly standing: TaxStanding;
+      readonly shareholders: readonly Shareholder[]; readonly boardEfka: readonly EFKAPayment[];
+    };
 
-export async function loadSoleProprietorProfile(repo: IAccountingRepository, fiscalYear: number): Promise<EntityTaxProfile> {
-  return { kind: 'sole_proprietor', efka: await repo.getEFKAPayments(fiscalYear) };
+/** Προφίλ οντότητας (ΟΕ/ΕΠΕ/ΑΕ) — φορολογείται με τον φόρο οντότητας. */
+export type LegalEntityTaxProfile = Exclude<EntityTaxProfile, { kind: 'sole_proprietor' }>;
+
+export async function loadSoleProprietorProfile(
+  repo: IAccountingRepository,
+  fiscalYear: number,
+  standing: TaxStanding
+): Promise<EntityTaxProfile> {
+  return { kind: 'sole_proprietor', standing, efka: await repo.getEFKAPayments(fiscalYear) };
 }
 
+/** ΟΕ: εκπίπτουν οι εισφορές **όλων** των εταίρων, από τα έσοδα της εταιρείας (ΠΟΛ.1113/2015 — ADR-ACC-024 §6.1 β). */
 export async function loadPartnershipProfile(
   repo: IAccountingRepository,
-  fiscalYear: number
+  fiscalYear: number,
+  standing: TaxStanding
 ): Promise<Extract<EntityTaxProfile, { kind: 'oe' }>> {
   const partners = await repo.getPartners();
   const withEfka = await Promise.all(
     partners.map(async (partner) => ({ partner, efka: await repo.getPartnerEFKAPayments(partner.partnerId, fiscalYear) }))
   );
-  return { kind: 'oe', partners: withEfka };
+  return { kind: 'oe', standing, partners: withEfka };
 }
 
 /** ΕΠΕ: εκπίπτουν μόνο οι εισφορές των ενεργών διαχειριστών. */
 export async function loadEpeProfile(
   repo: IAccountingRepository,
-  fiscalYear: number
+  fiscalYear: number,
+  standing: TaxStanding
 ): Promise<Extract<EntityTaxProfile, { kind: 'epe' }>> {
   const members = await repo.getMembers();
   const managers = members.filter((m) => m.isManager && m.isActive);
   const efka = await Promise.all(managers.map((m) => repo.getMemberEFKAPayments(m.memberId, fiscalYear)));
-  return { kind: 'epe', members: members.filter((m) => m.isActive), managerEfka: efka.flat() };
+  return { kind: 'epe', standing, members: members.filter((m) => m.isActive), managerEfka: efka.flat() };
 }
 
 /**
@@ -88,7 +123,8 @@ export async function loadEpeProfile(
  */
 export async function loadAeProfile(
   repo: IAccountingRepository,
-  fiscalYear: number
+  fiscalYear: number,
+  standing: TaxStanding
 ): Promise<Extract<EntityTaxProfile, { kind: 'ae' }>> {
   const shareholders = await repo.getShareholders();
   const board = shareholders.filter(
@@ -96,17 +132,18 @@ export async function loadAeProfile(
       s.efkaMode === 'self_employed'
   );
   const efka = await Promise.all(board.map((s) => repo.getShareholderEFKAPayments(s.shareholderId, fiscalYear)));
-  return { kind: 'ae', shareholders: shareholders.filter((s) => s.isActive), boardEfka: efka.flat() };
+  return { kind: 'ae', standing, shareholders: shareholders.filter((s) => s.isActive), boardEfka: efka.flat() };
 }
 
 /** Το προφίλ της εταιρείας του μισθωτή, κατά τη νομική μορφή της (προεπιλογή: ατομική, όπως ο TaxEngine). */
 export async function loadEntityTaxProfile(repo: IAccountingRepository, fiscalYear: number): Promise<EntityTaxProfile> {
   const setup = await repo.getCompanySetup();
+  const standing = taxStandingOf(setup);
   switch (setup?.entityType ?? 'sole_proprietor') {
-    case 'oe': return loadPartnershipProfile(repo, fiscalYear);
-    case 'epe': return loadEpeProfile(repo, fiscalYear);
-    case 'ae': return loadAeProfile(repo, fiscalYear);
-    default: return loadSoleProprietorProfile(repo, fiscalYear);
+    case 'oe': return loadPartnershipProfile(repo, fiscalYear, standing);
+    case 'epe': return loadEpeProfile(repo, fiscalYear, standing);
+    case 'ae': return loadAeProfile(repo, fiscalYear, standing);
+    default: return loadSoleProprietorProfile(repo, fiscalYear, standing);
   }
 }
 
@@ -120,26 +157,8 @@ export function deductibleEfka(profile: EntityTaxProfile, period?: PeriodRange):
   }
 }
 
-/** Είσοδοι του `TaxEngine.calculatePartnershipTax` από το προφίλ ΟΕ (εισφορές × `efkaScale`). */
-export function partnershipTaxInputs(
-  profile: Extract<EntityTaxProfile, { kind: 'oe' }>,
-  efkaScale = 1
-): { efkaByPartner: Map<string, number>; partners: PartnerTaxInput[] } {
-  return {
-    efkaByPartner: new Map(profile.partners.map((p) => [p.partner.partnerId, roundToTwo(sumPaidEfka(p.efka) * efkaScale)])),
-    partners: profile.partners.map(({ partner }) => ({
-      partnerId: partner.partnerId,
-      partnerName: partner.fullName,
-      profitSharePercent: partner.profitSharePercent,
-      withholdings: 0,
-      previousPrepayment: 0,
-      isFirstFiveYears: partner.isFirstFiveYears,
-    })),
-  };
-}
-
 // ============================================================================
-// ΦΟΡΟΣ ΕΙΣΟΔΗΜΑΤΟΣ ΑΠΟ ΣΥΝΟΛΑ
+// ΕΙΣΟΔΟΙ ΤΟΥ ΦΟΡΟΥ ΟΝΤΟΤΗΤΑΣ — ΕΝΑ σημείο για service και αναφορές
 // ============================================================================
 
 export interface IncomeTaxTotals {
@@ -149,11 +168,56 @@ export interface IncomeTaxTotals {
   readonly efkaScale?: number;
 }
 
+/** Η είσοδος του `computeEntityTax` από προφίλ οντότητας + σύνολα. */
+export function entityTaxInputOf(
+  profile: LegalEntityTaxProfile,
+  fiscalYear: number,
+  totals: IncomeTaxTotals
+): EntityTaxInput {
+  return {
+    fiscalYear,
+    totalIncome: totals.totalIncome,
+    totalExpenses: totals.totalExpenses,
+    deductibleEfka: roundToTwo(deductibleEfka(profile) * (totals.efkaScale ?? 1)),
+    businessStart: profile.standing.businessStart,
+    bookCategory: profile.standing.bookCategory,
+  };
+}
+
+/** Οι δικαιούχοι διανομής του προφίλ (εταίροι / μέλη / μέτοχοι) στο ουδέτερο σχήμα της μηχανής. */
+export function entityHoldersOf(profile: LegalEntityTaxProfile): EntityHolder[] {
+  switch (profile.kind) {
+    case 'oe':
+      return profile.partners.map(({ partner }) => ({
+        id: partner.partnerId, name: partner.fullName, sharePercent: partner.profitSharePercent,
+      }));
+    case 'epe':
+      return profile.members.map((m) => ({ id: m.memberId, name: m.fullName, sharePercent: m.dividendSharePercent }));
+    case 'ae':
+      return profile.shareholders.map((s) => ({
+        id: s.shareholderId, name: s.fullName, sharePercent: s.dividendSharePercent,
+      }));
+  }
+}
+
+// ============================================================================
+// ΦΟΡΟΣ ΕΙΣΟΔΗΜΑΤΟΣ ΑΠΟ ΣΥΝΟΛΑ
+// ============================================================================
+
 export interface IncomeTaxOutcome {
   /** Κέρδος μετά τις εκπιπτόμενες εισφορές, πριν από τον φόρο εισοδήματος. */
   readonly profitBeforeTax: number;
-  /** Φόρος εισοδήματος (ατομική / εταίροι: κλίμακα + αλληλεγγύη· ΕΠΕ / ΑΕ: εταιρικός συντελεστής). */
+  /** Φόρος εισοδήματος (ατομική: κλίμακα + αλληλεγγύη· ΟΕ / ΕΠΕ / ΑΕ: συντελεστής οντότητας). */
   readonly incomeTax: number;
+}
+
+/** Ο φόρος οντότητας για το προφίλ — η μέθοδος του `TaxEngine` που αντιστοιχεί στη μορφή. */
+function legalEntityCorporateTax(engine: ITaxEngine, profile: LegalEntityTaxProfile, input: EntityTaxInput): number {
+  switch (profile.kind) {
+    case 'oe': return engine.calculatePartnershipTax(input, []).corporateTax.corporateTaxAmount;
+    case 'epe': return engine.calculateCorporateTax(input, []).corporateTax.corporateTaxAmount;
+    case 'ae': return engine.calculateAETax(input, []).corporateTax.corporateTaxAmount;
+  }
 }
 
 /** Ο ετήσιος φόρος εισοδήματος της οντότητας για αυτά τα σύνολα — μέσω του `TaxEngine`, ποτέ δεύτερη κλίμακα. */
@@ -163,29 +227,18 @@ export function incomeTaxOf(
   fiscalYear: number,
   totals: IncomeTaxTotals
 ): IncomeTaxOutcome {
-  const scale = totals.efkaScale ?? 1;
   const { totalIncome, totalExpenses } = totals;
-  const efka = roundToTwo(deductibleEfka(profile) * scale);
+  const efka = roundToTwo(deductibleEfka(profile) * (totals.efkaScale ?? 1));
+  const profitBeforeTax = totalIncome - totalExpenses - efka;
 
-  switch (profile.kind) {
-    case 'sole_proprietor': {
-      const result = engine.calculateAnnualTax({
-        fiscalYear, totalIncome, totalDeductibleExpenses: totalExpenses, totalEfkaContributions: efka,
-        professionalTax: 0, totalWithholdings: 0, previousYearPrepayment: 0, isFirstFiveYears: false,
-      });
-      return { profitBeforeTax: totalIncome - totalExpenses - efka, incomeTax: roundToTwo(result.incomeTax + result.solidarityContribution) };
-    }
-    case 'oe': {
-      const { efkaByPartner, partners } = partnershipTaxInputs(profile, scale);
-      const result = engine.calculatePartnershipTax(fiscalYear, totalIncome, totalExpenses, efkaByPartner, partners);
-      const incomeTax = result.partnerResults.reduce(
-        (sum, p) => sum + p.taxResult.incomeTax + p.taxResult.solidarityContribution, 0);
-      return { profitBeforeTax: totalIncome - totalExpenses - efka, incomeTax: roundToTwo(incomeTax) };
-    }
-    case 'epe':
-    case 'ae': {
-      const result = engine.calculateCorporateTax(fiscalYear, totalIncome, totalExpenses, efka, [], 100, profile.kind);
-      return { profitBeforeTax: totalIncome - totalExpenses - efka, incomeTax: result.corporateTax.corporateTaxAmount };
-    }
+  if (profile.kind === 'sole_proprietor') {
+    const result = engine.calculateAnnualTax({
+      fiscalYear, totalIncome, totalDeductibleExpenses: totalExpenses, totalEfkaContributions: efka,
+      professionalTax: 0, totalWithholdings: 0, previousYearPrepayment: 0,
+      businessStart: profile.standing.businessStart,
+    });
+    return { profitBeforeTax, incomeTax: roundToTwo(result.incomeTax + result.solidarityContribution) };
   }
+  const input = entityTaxInputOf(profile, fiscalYear, totals);
+  return { profitBeforeTax, incomeTax: legalEntityCorporateTax(engine, profile, input) };
 }

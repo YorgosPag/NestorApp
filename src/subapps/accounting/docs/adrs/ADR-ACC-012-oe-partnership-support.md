@@ -9,6 +9,8 @@
 | **Parent** | [ADR-ACC-000](./ADR-ACC-000-founding-decision.md) |
 | **Module** | M-001: Company Setup / M-010: Reports |
 
+> ⚠️ **2026-11-06 — η φορολόγηση της ΟΕ ΑΛΛΑΞΕ.** Η «διαφανής» (pass-through) φορολόγηση αυτού του ADR (κάθε εταίρος με την κλίμακα φυσικών προσώπων, προκαταβολή 55%, `PartnerTaxBreakdown`) ήταν **λάθος**: η ΟΕ φορολογείται ως **οντότητα με 22%** (ν.4172/2013 άρθρα 45 §1, 47, 58), προκαταβολή **80%** (άρθρο 71 §1, 40% τα 3 πρώτα έτη) και διανομή στους εταίρους με παρακράτηση 0% (απλογραφικά) ή 5% (διπλογραφικά). Υλοποίηση: ADR-ACC-009 «Ενημέρωση 2026-11-06» · ADR-ACC-024 §6. Οι §§ για `calculatePartnershipTax`/`PartnerTaxBreakdown` παρακάτω είναι **ιστορικές**.
+
 ---
 
 ## 1. Context
@@ -733,6 +735,7 @@ if (body.entityType === 'oe') {
 | 2026-02-10 | Hooks: entity-aware returns (useTaxEstimate, useEFKASummary) | Claude Code |
 | 2026-02-10 | EFKA route: discriminated response by entityType | Claude Code |
 | 2026-02-10 | BUG FIX: useEFKASummary response parsing (data.summary → result.data) | Claude Code |
+| 2026-11-06 | **Η ΟΕ φορολογείται ως οντότητα** (22%, προκαταβολή 80%/40%, διανομή 0%/5% κατά βιβλία) μέσω του κοινού `computeEntityTax`· διαγράφηκε το `PartnerTaxBreakdown.tsx` (η ΟΕ δείχνεται στο `CorporateTaxBreakdown`)· αφαιρέθηκε το `Partner.isFirstFiveYears` (η μείωση προκαταβολής υπολογίζεται από `businessStart` της επιχείρησης). ADR-ACC-022 αποκλίσεις #2-3 | Claude Code |
 
 ---
 

@@ -338,16 +338,6 @@ export function ShareholderRow({ shareholder, index, totalShares, onChange, onRe
               onChange={(e) => onChange(index, { joinDate: e.target.value })}
             />
           </fieldset>
-
-          <fieldset className="space-y-2">
-            <label className="flex items-center gap-2 text-sm">
-              <Switch
-                checked={shareholder.isFirstFiveYears}
-                onCheckedChange={(checked) => onChange(index, { isFirstFiveYears: checked })}
-              />
-              {t('setup.shareholders.isFirstFiveYears')}
-            </label>
-          </fieldset>
         </div>
       )}
 

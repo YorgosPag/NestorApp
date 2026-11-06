@@ -43,6 +43,7 @@ import {
 import { registryRetentionCompanion } from '@/services/company-registry/company-registry-retention.service';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { createAuditedRepository } from '@/subapps/accounting/services/audited-repository-wrapper';
+import { parseBusinessStart } from '@/subapps/accounting/services/setup/business-start';
 import {
   changedProfileFields,
   parseProfileFieldMask,
@@ -178,6 +179,12 @@ export const PUT = defineRoute({
       badRequest('fields contains unknown profile fields', { rejected: mask.rejected });
     }
 
+    // ADR-ACC-023 §1 · ADR-ACC-024 §6.1 α: άκυρη έναρξη ⇒ 400, ποτέ σιωπηλή αποκοπή σε «δεν δηλώθηκε».
+    const businessStart = parseBusinessStart((body as Record<string, unknown>).businessStart);
+    if (businessStart.kind === 'invalid') {
+      badRequest('businessStart must be { date: YYYY-MM-DD, origin: new | continuation } or null');
+    }
+
     // Common fields (Firestore compliance: nullable)
     const entityType = (body as Record<string, unknown>).entityType as string ?? 'sole_proprietor';
     const commonFields = {
@@ -198,6 +205,7 @@ export const PUT = defineRoute({
       vatRegime: body.vatRegime ?? 'normal',
       fiscalYearEnd: body.fiscalYearEnd ?? 12,
       currency: 'EUR' as const,
+      businessStart: businessStart.kind === 'value' ? businessStart.value : null,
       invoiceSeries: body.invoiceSeries ?? [],
     };
 

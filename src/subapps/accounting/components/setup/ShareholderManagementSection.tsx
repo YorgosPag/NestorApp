@@ -63,7 +63,6 @@ function createEmptyShareholder(index: number): Shareholder {
     monthlyCompensation: null,
     efkaMode: 'none',
     efkaConfig: null,
-    isFirstFiveYears: false,
     joinDate: nowISO().split('T')[0],
     exitDate: null,
     isActive: true,

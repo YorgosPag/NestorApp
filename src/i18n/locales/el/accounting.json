@@ -539,19 +539,7 @@
   },
   "tax": {
     "partnerBreakdown": {
-      "entitySummary": "Στοιχεία Εταιρείας (ΟΕ)",
-      "totalIncome": "Σύνολο Εσόδων",
-      "totalExpenses": "Σύνολο Εξόδων",
-      "totalProfit": "Κέρδος",
-      "professionalTax": "Τέλος Επιτηδεύματος",
-      "profitShare": "Μερίδιο Κέρδους",
-      "taxableIncome": "Φορολογητέο",
-      "incomeTax": "Φόρος",
-      "finalAmount": "Τελικό Ποσό",
-      "bracketDetails": "Ανάλυση κλιμάκων",
-      "bracket": "Κλίμακα",
-      "taxableAmount": "Φορολογητέο",
-      "taxAmount": "Φόρος"
+      "entitySummary": "Στοιχεία Εταιρείας (ΟΕ)"
     },
     "totalIncome": "Συνολικό εισόδημα",
     "totalExpenses": "Συνολικά έξοδα",

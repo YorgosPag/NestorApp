@@ -116,7 +116,6 @@ export type {
   TaxInsightPriority,
   TaxPlanningInsight,
   WithholdingReconciliation,
-  PartnerTaxResult,
   PartnershipTaxResult,
   CorporateTaxResult,
   MemberDividendResult,

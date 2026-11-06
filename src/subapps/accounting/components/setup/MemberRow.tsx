@@ -233,17 +233,6 @@ export function MemberRow({ member, index, onChange, onRemove }: MemberRowProps)
           />
         </fieldset>
       </div>
-
-      {/* First five years toggle (managers only) */}
-      {member.isManager && (
-        <label className="flex items-center gap-2 text-sm">
-          <Switch
-            checked={member.isFirstFiveYears}
-            onCheckedChange={(checked) => onChange(index, { isFirstFiveYears: checked })}
-          />
-          {t('setup.members.isFirstFiveYears')}
-        </label>
-      )}
     </article>
   );
 }

@@ -154,15 +154,6 @@ export function PartnerRow({ partner, index, onChange, onRemove }: PartnerRowPro
           />
         </div>
       </div>
-
-      {/* First five years toggle */}
-      <label className="flex items-center gap-2 text-sm">
-        <Switch
-          checked={partner.isFirstFiveYears}
-          onCheckedChange={(checked) => onChange(index, { isFirstFiveYears: checked })}
-        />
-        {t('setup.partners.isFirstFiveYears')}
-      </label>
     </article>
   );
 }

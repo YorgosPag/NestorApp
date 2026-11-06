@@ -9,6 +9,8 @@
  */
 
 import type { FiscalQuarter, PeriodRange, IncomeCategory, ExpenseCategory } from './common';
+import type { BookCategory, BusinessStart } from './company';
+import type { EntityType } from './entity';
 
 // ============================================================================
 // TAX BRACKET — Φορολογική Κλίμακα
@@ -47,8 +49,6 @@ export interface TaxScaleConfig {
   year: number;
   /** Κλίμακα φόρου εισοδήματος */
   brackets: TaxBracket[];
-  /** Συντελεστής προκαταβολής φόρου (55% για ελ. επαγγελματίες, 80% 1ο έτος) */
-  prepaymentRate: number;
   /** Τέλος επιτηδεύματος σε EUR (0 για φυσικά πρόσωπα από 2024· νομικά πρόσωπα βλ. tax-config) */
   professionalTax: number;
   /** Ειδική εισφορά αλληλεγγύης (0% από 2023 αλλά μπορεί να επανέλθει) */
@@ -75,8 +75,48 @@ export interface TaxCalculationParams {
   totalWithholdings: number;
   /** Προκαταβολή φόρου προηγούμενου έτους */
   previousYearPrepayment: number;
-  /** Πρώτα 5 έτη δραστηριότητας; (μειωμένη προκαταβολή) */
-  isFirstFiveYears: boolean;
+  /** Έναρξη εργασιών — από εδώ **υπολογίζεται** η μειωμένη προκαταβολή (`null` ⇒ πλήρης) */
+  businessStart: BusinessStart | null;
+}
+
+// ============================================================================
+// PREPAYMENT BASIS — Εξηγήσιμη προκαταβολή (ADR-ACC-009 · ADR-ACC-023 §1 · ADR-ACC-024 §6.1 α)
+// ============================================================================
+
+/**
+ * Κανόνας μείωσης κατά νομική φύση:
+ * - `natural_person_first_year` — ν.4172/2013 άρθρο 69 §1: μισή, **μόνο** το έτος της πρώτης απόκτησης
+ *   επιχειρηματικού εισοδήματος.
+ * - `legal_entity_first_three_years` — άρθρο 71 §3: μισή τα **τρία πρώτα** έτη από την έναρξη, όχι για
+ *   εταιρείες από μετατροπή/συγχώνευση.
+ */
+export type PrepaymentReductionRule = 'natural_person_first_year' | 'legal_entity_first_three_years';
+
+/**
+ * Γιατί ο συντελεστής βγήκε όπως βγήκε:
+ * - `reduced` — εντός παραθύρου, νέα δραστηριότητα ⇒ μισός συντελεστής.
+ * - `outside_window` — εκτός παραθύρου (ή έτος πριν την έναρξη) ⇒ πλήρης.
+ * - `continuation` — μετατροπή/συγχώνευση ή προηγούμενη δραστηριότητα ⇒ πλήρης.
+ * - `missing_start` — δεν έχει δηλωθεί έναρξη ⇒ πλήρης (ποτέ μικρότερη υποχρέωση από την πραγματική).
+ */
+export type PrepaymentReason = 'reduced' | 'outside_window' | 'continuation' | 'missing_start';
+
+/** Η βάση της προκαταβολής — κάθε αποτέλεσμα φόρου τη φέρει, ώστε η οθόνη να εξηγεί τον αριθμό. */
+export interface PrepaymentBasis {
+  /** Εφαρμοζόμενος συντελεστής (%) */
+  rate: number;
+  /** Βασικός συντελεστής της νομικής μορφής πριν από κάθε μείωση (%) */
+  baseRate: number;
+  /** Κανόνας μείωσης που εξετάστηκε */
+  rule: PrepaymentReductionRule;
+  /** Αιτία του αποτελέσματος */
+  reason: PrepaymentReason;
+  /** Μήκος παραθύρου μείωσης σε φορολογικά έτη (1 ή 3) */
+  windowYears: number;
+  /** Έτος έναρξης (`null` αν δεν δηλώθηκε) */
+  startYear: number | null;
+  /** Ποιο έτος από την έναρξη είναι το φορολογικό (1 = έτος έναρξης· `null` αν δεν δηλώθηκε ή πριν την έναρξη) */
+  yearSinceStart: number | null;
 }
 
 // ============================================================================
@@ -124,10 +164,12 @@ export interface TaxResult {
   solidarityContribution: number;
 
   // — Προκαταβολή —
-  /** Συντελεστής προκαταβολής (%) */
+  /** Συντελεστής προκαταβολής (%) — ίσος με `prepaymentBasis.rate` */
   prepaymentRate: number;
   /** Ποσό προκαταβολής */
   prepaymentAmount: number;
+  /** Γιατί ο συντελεστής βγήκε έτσι */
+  prepaymentBasis: PrepaymentBasis;
 
   // — Τέλος Επιτηδεύματος —
   /** Τέλος επιτηδεύματος */
@@ -251,13 +293,46 @@ export interface TaxPlanningInsight {
 }
 
 // ============================================================================
+// ENTITY TAX INPUT — Είσοδος φόρου οντότητας (ΟΕ/ΕΠΕ/ΑΕ)
+// ============================================================================
+
+/** Νομικά πρόσωπα/οντότητες — ό,τι φορολογείται ως οντότητα (όλες οι μορφές πλην ατομικής). */
+export type LegalEntityType = Exclude<EntityType, 'sole_proprietor'>;
+
+/** Κοινή είσοδος του φόρου οντότητας — ΕΝΑ σχήμα για ΟΕ, ΕΠΕ και ΑΕ. */
+export interface EntityTaxInput {
+  /** Φορολογικό έτος */
+  fiscalYear: number;
+  /** Σύνολο εσόδων */
+  totalIncome: number;
+  /** Σύνολο εκπιπτόμενων εξόδων */
+  totalExpenses: number;
+  /** Εκπιπτόμενες εισφορές ΕΦΚΑ (κανόνας ανά μορφή: `entity-tax-profile`) */
+  deductibleEfka: number;
+  /** Έναρξη εργασιών — από εδώ η μειωμένη προκαταβολή */
+  businessStart: BusinessStart | null;
+  /** Κατηγορία βιβλίων — καθορίζει την παρακράτηση στη διανομή της ΟΕ */
+  bookCategory: BookCategory;
+  /** Ποσοστό διανομής των κερδών μετά φόρου (0-100, προεπιλογή 100) */
+  distributionPercent?: number;
+}
+
+/** Δικαιούχος διανομής (εταίρος / μέλος / μέτοχος) — ουδέτερο σχήμα για τη μηχανή. */
+export interface EntityHolder {
+  id: string;
+  name: string;
+  /** Ποσοστό στη διανομή (0-100) */
+  sharePercent: number;
+}
+
+// ============================================================================
 // CORPORATE TAX RESULT — Αποτέλεσμα Εταιρικού Φόρου ΕΠΕ
 // ============================================================================
 
 /**
- * Αποτέλεσμα εταιρικού φόρου (22% flat rate)
+ * Αποτέλεσμα φόρου νομικού προσώπου/οντότητας (22% flat rate)
  *
- * ΕΠΕ φορολογείται ως νομικό πρόσωπο: 22% flat (ΟΧΙ κλιμακωτά).
+ * ΟΕ/ΕΠΕ/ΑΕ φορολογούνται ως οντότητα: 22% flat (ΟΧΙ κλιμακωτά) — ν.4172/2013 άρθρα 45, 47, 58.
  */
 export interface CorporateTaxResult {
   /** Φορολογικό έτος */
@@ -266,7 +341,7 @@ export interface CorporateTaxResult {
   grossIncome: number;
   /** Εκπεστέα έξοδα */
   deductibleExpenses: number;
-  /** ΕΦΚΑ εκπεστέο (μόνο διαχειριστών) */
+  /** ΕΦΚΑ εκπεστέο (ΟΕ: όλων των εταίρων · ΕΠΕ: διαχειριστών · ΑΕ: μελών ΔΣ αυτοαπασχολούμενων) */
   efkaContributions: number;
   /** Φορολογητέο εισόδημα */
   taxableIncome: number;
@@ -276,10 +351,12 @@ export interface CorporateTaxResult {
   corporateTaxAmount: number;
   /** Τέλος επιτηδεύματος (1.000€) */
   professionalTax: number;
-  /** Συντελεστής προκαταβολής (80%) */
+  /** Συντελεστής προκαταβολής (80%, 40% τα 3 πρώτα έτη) — ίσος με `prepaymentBasis.rate` */
   prepaymentRate: number;
   /** Ποσό προκαταβολής */
   prepaymentAmount: number;
+  /** Γιατί ο συντελεστής βγήκε έτσι */
+  prepaymentBasis: PrepaymentBasis;
   /** Συνολική φορολογική υποχρέωση */
   totalObligation: number;
 }
@@ -378,33 +455,47 @@ export interface AETaxResult {
 // PARTNERSHIP TAX RESULT — Αποτέλεσμα Φόρου ΟΕ
 // ============================================================================
 
-/** Είσοδος φόρου ανά εταίρο (pass-through ΟΕ) — ΕΝΑΣ τύπος για interface + υλοποίηση */
-export interface PartnerTaxInput {
+/**
+ * Διανομή κερδών ανά εταίρο ΟΕ.
+ *
+ * Η ΟΕ φορολογείται ως **οντότητα** (22%)· ο εταίρος λαμβάνει το μερίδιό του από τα κέρδη μετά φόρου.
+ * Παρακράτηση: 0% με απλογραφικά (τα κέρδη φορολογούνται μόνο στο όνομα της εταιρείας — ΠΟΛ.1042/2015),
+ * 5% με διπλογραφικά (ν.4172/2013 άρθρο 36 §1, άρθρο 64 §1α). @see ADR-ACC-024 §6.1 γ
+ */
+export interface PartnerDistributionResult {
+  /** ID εταίρου */
   partnerId: string;
+  /** Ονοματεπώνυμο */
   partnerName: string;
+  /** Ποσοστό συμμετοχής στα κέρδη */
   profitSharePercent: number;
-  withholdings: number;
-  previousPrepayment: number;
-  isFirstFiveYears: boolean;
+  /** Μερίδιο διανεμόμενων κερδών (πριν από την παρακράτηση) */
+  grossDistribution: number;
+  /** Συντελεστής παρακράτησης (%) */
+  withholdingRate: number;
+  /** Ποσό παρακράτησης */
+  withholdingAmount: number;
+  /** Καθαρό ποσό στον εταίρο */
+  netDistribution: number;
 }
 
-/** Αποτέλεσμα φόρου ανά εταίρο */
-export interface PartnerTaxResult {
-  partnerId: string;
-  partnerName: string;
-  profitSharePercent: number;
-  profitShare: number;
-  taxResult: TaxResult;
-}
-
-/** Συνολικό αποτέλεσμα φόρου ΟΕ */
+/**
+ * Πλήρες αποτέλεσμα φόρου ΟΕ — ίδιος υπολογισμός με ΕΠΕ/ΑΕ (`TaxEngine.calculateCorporateTax`),
+ * εταίροι αντί μελών. @see ADR-ACC-024 §6 · ADR-ACC-012
+ */
 export interface PartnershipTaxResult {
-  fiscalYear: number;
-  totalEntityIncome: number;
-  totalEntityExpenses: number;
-  totalEntityProfit: number;
-  entityProfessionalTax: number;
-  partnerResults: PartnerTaxResult[];
+  /** Φόρος της οντότητας */
+  corporateTax: CorporateTaxResult;
+  /** Κέρδη μετά φόρου */
+  profitAfterTax: number;
+  /** Ποσό διανεμόμενων κερδών */
+  distributedProfits: number;
+  /** Αδιανέμητα κέρδη */
+  retainedEarnings: number;
+  /** Διανομή ανά εταίρο */
+  partnerDistributions: PartnerDistributionResult[];
+  /** Συνολική παρακράτηση στη διανομή */
+  totalDistributionWithholding: number;
 }
 
 // ============================================================================

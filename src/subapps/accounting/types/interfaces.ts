@@ -51,11 +51,11 @@ import type {
   TaxEstimate,
   TaxInstallment,
   PartnershipTaxResult,
-  PartnerTaxInput,
   EPETaxResult,
   AETaxResult,
+  EntityTaxInput,
+  EntityHolder,
 } from './tax';
-import type { EntityType } from './entity';
 import type {
   EFKAPayment,
   EFKAUserConfig,
@@ -331,43 +331,14 @@ export interface ITaxEngine {
   /** Υπολογισμός δόσεων φόρου */
   calculateInstallments(totalAmount: number, fiscalYear: number): TaxInstallment[];
 
-  /** Υπολογισμός φόρου ΟΕ (pass-through ανά εταίρο) */
-  calculatePartnershipTax(
-    fiscalYear: number,
-    totalIncome: number,
-    totalExpenses: number,
-    totalEfkaByPartner: Map<string, number>,
-    partners: readonly PartnerTaxInput[]
-  ): PartnershipTaxResult;
+  /** Υπολογισμός φόρου ΟΕ — ως οντότητα (22%) + διανομή σε εταίρους (ADR-ACC-024 §6) */
+  calculatePartnershipTax(input: EntityTaxInput, partners: readonly EntityHolder[]): PartnershipTaxResult;
 
   /** Υπολογισμός εταιρικού φόρου ΕΠΕ (22% flat + μερίσματα 5%) */
-  calculateCorporateTax(
-    fiscalYear: number,
-    totalIncome: number,
-    totalExpenses: number,
-    efkaManagerTotal: number,
-    members: Array<{
-      memberId: string;
-      memberName: string;
-      dividendSharePercent: number;
-    }>,
-    distributionPercent?: number,
-    entityType?: EntityType
-  ): EPETaxResult;
+  calculateCorporateTax(input: EntityTaxInput, members: readonly EntityHolder[]): EPETaxResult;
 
   /** Υπολογισμός εταιρικού φόρου ΑΕ (22% flat + μερίσματα 5%) */
-  calculateAETax(
-    fiscalYear: number,
-    totalIncome: number,
-    totalExpenses: number,
-    efkaBoardTotal: number,
-    shareholders: Array<{
-      shareholderId: string;
-      shareholderName: string;
-      dividendSharePercent: number;
-    }>,
-    distributionPercent?: number
-  ): AETaxResult;
+  calculateAETax(input: EntityTaxInput, shareholders: readonly EntityHolder[]): AETaxResult;
 }
 
 // ============================================================================

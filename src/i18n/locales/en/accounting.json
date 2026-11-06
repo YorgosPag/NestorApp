@@ -539,19 +539,7 @@
   },
   "tax": {
     "partnerBreakdown": {
-      "entitySummary": "Entity Summary (OE)",
-      "totalIncome": "Total Income",
-      "totalExpenses": "Total Expenses",
-      "totalProfit": "Profit",
-      "professionalTax": "Professional Tax",
-      "profitShare": "Profit Share",
-      "taxableIncome": "Taxable Income",
-      "incomeTax": "Income Tax",
-      "finalAmount": "Final Amount",
-      "bracketDetails": "Bracket details",
-      "bracket": "Bracket",
-      "taxableAmount": "Taxable Amount",
-      "taxAmount": "Tax Amount"
+      "entitySummary": "Entity Summary (OE)"
     },
     "totalIncome": "Total income",
     "totalExpenses": "Total expenses",

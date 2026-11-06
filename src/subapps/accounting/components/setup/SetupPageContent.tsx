@@ -73,6 +73,7 @@ function createDefaultData(): CompanySetupInput {
     vatRegime: 'normal',
     fiscalYearEnd: 12,
     currency: 'EUR',
+    businessStart: null,
     efkaCategory: 1,
     gemiNumber: null,
     invoiceSeries: [],

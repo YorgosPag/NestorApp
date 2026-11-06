@@ -30,7 +30,6 @@ import { useTaxEstimate } from '../../hooks/useTaxEstimate';
 import { VATReportCard } from './VATReportCard';
 import { TaxEstimateCard } from './TaxEstimateCard';
 import { TaxDashboard } from './TaxDashboard';
-import { PartnerTaxBreakdown } from '../tax/PartnerTaxBreakdown';
 import { CorporateTaxBreakdown } from '../tax/CorporateTaxBreakdown';
 import { FinancialReportsDashboard } from './FinancialReportsDashboard';
 
@@ -48,65 +47,36 @@ export function ReportsPageContent() {
 
   // Dashboard stats — entity-aware (useMemo MUST be above early return — React hooks rule)
   const dashboardStats: DashboardStat[] = useMemo(() => {
-    if ((entityType === 'epe' || entityType === 'ae') && corporateResult) {
+    // ΟΕ / ΕΠΕ / ΑΕ: ο ίδιος φόρος οντότητας (ADR-ACC-024 §6) — ίδια στατιστικά
+    const entityTax = entityType === 'oe'
+      ? partnershipResult?.corporateTax
+      : (entityType === 'epe' || entityType === 'ae') ? corporateResult?.corporateTax : undefined;
+    if (entityTax) {
       return [
         {
           title: t('reports.totalIncome'),
-          value: formatAccountingCurrency(corporateResult.corporateTax.grossIncome),
+          value: formatAccountingCurrency(entityTax.grossIncome),
           icon: TrendingUp,
           color: 'green' as const,
           loading,
         },
         {
           title: t('reports.totalExpenses'),
-          value: formatAccountingCurrency(corporateResult.corporateTax.deductibleExpenses),
+          value: formatAccountingCurrency(entityTax.deductibleExpenses),
           icon: TrendingDown,
           color: 'red' as const,
           loading,
         },
         {
           title: t('reports.taxableIncome'),
-          value: formatAccountingCurrency(corporateResult.corporateTax.taxableIncome),
+          value: formatAccountingCurrency(entityTax.taxableIncome),
           icon: Calculator,
           color: 'blue' as const,
           loading,
         },
         {
           title: t('setup.corporateTax.totalObligation'),
-          value: formatAccountingCurrency(corporateResult.corporateTax.totalObligation),
-          icon: DollarSign,
-          color: 'orange' as const,
-          loading,
-        },
-      ];
-    }
-
-    if (entityType === 'oe' && partnershipResult) {
-      return [
-        {
-          title: t('reports.totalIncome'),
-          value: formatAccountingCurrency(partnershipResult.totalEntityIncome),
-          icon: TrendingUp,
-          color: 'green' as const,
-          loading,
-        },
-        {
-          title: t('reports.totalExpenses'),
-          value: formatAccountingCurrency(partnershipResult.totalEntityExpenses),
-          icon: TrendingDown,
-          color: 'red' as const,
-          loading,
-        },
-        {
-          title: t('reports.taxableIncome'),
-          value: formatAccountingCurrency(partnershipResult.totalEntityProfit),
-          icon: Calculator,
-          color: 'blue' as const,
-          loading,
-        },
-        {
-          title: t('tax.partnerBreakdown.professionalTax'),
-          value: formatAccountingCurrency(partnershipResult.entityProfessionalTax),
+          value: formatAccountingCurrency(entityTax.totalObligation),
           icon: DollarSign,
           color: 'orange' as const,
           loading,
@@ -189,9 +159,11 @@ export function ReportsPageContent() {
         <TabsContent value="tax">
           <section className="py-6 space-y-6">
             {entityType === 'oe' && partnershipResult ? (
-              <PartnerTaxBreakdown result={partnershipResult} />
-            ) : (entityType === 'epe' || entityType === 'ae') && corporateResult ? (
-              <CorporateTaxBreakdown result={corporateResult} entityType={entityType} />
+              <CorporateTaxBreakdown entityType="oe" result={partnershipResult} />
+            ) : entityType === 'epe' && corporateResult && 'memberDividends' in corporateResult ? (
+              <CorporateTaxBreakdown entityType="epe" result={corporateResult} />
+            ) : entityType === 'ae' && corporateResult && 'shareholderDividends' in corporateResult ? (
+              <CorporateTaxBreakdown entityType="ae" result={corporateResult} />
             ) : (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

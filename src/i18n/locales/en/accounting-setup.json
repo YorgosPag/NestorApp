@@ -89,7 +89,6 @@
       "profitShare": "Profit Share (%)",
       "efkaMainCategory": "EFKA Category (Main)",
       "joinDate": "Join Date",
-      "isFirstFiveYears": "First 5 years (reduced prepayment)",
       "active": "Active",
       "remove": "Remove Partner",
       "addPartner": "Add Partner",
@@ -111,7 +110,6 @@
       "isManager": "Manager (EFKA)",
       "efkaMainCategory": "EFKA Category (Main)",
       "joinDate": "Join Date",
-      "isFirstFiveYears": "First 5 years (reduced prepayment)",
       "active": "Active",
       "remove": "Remove Member",
       "addMember": "Add Member",
@@ -126,7 +124,6 @@
     "corporateTax": {
       "title": "EPE Corporate Tax",
       "flatRate": "Corporate Tax 22%",
-      "prepayment": "Prepayment 80%",
       "professionalTax": "Professional Tax",
       "totalObligation": "Total Tax Obligation",
       "profitAfterTax": "Profit After Tax",
@@ -138,7 +135,15 @@
       "titleAE": "AE Corporate Tax",
       "grossDividend": "Gross Dividend",
       "netDividend": "Net Dividend",
-      "totalDividendTax": "Total Dividend Tax"
+      "totalDividendTax": "Total Dividend Tax",
+      "titleOE": "General Partnership Tax (as an entity)",
+      "prepaymentAt": "Prepayment {rate}%",
+      "profitDistribution": "Profit distribution",
+      "partnerDistributions": "Distribution per partner",
+      "distributionWithholding": "Distribution withholding",
+      "grossDistribution": "Share",
+      "netDistribution": "Net share",
+      "noWithholdingSimplified": "With single-entry books the distribution is not subject to withholding: the profits were taxed only in the name of the company (POL.1042/2015)."
     },
     "shareholders": {
       "title": "Shareholders & Board of Directors (AE)",
@@ -168,7 +173,6 @@
       },
       "efkaMainCategory": "EFKA Category (Main)",
       "joinDate": "Join Date",
-      "isFirstFiveYears": "First 5 years (reduced prepayment)",
       "active": "Active",
       "remove": "Remove Shareholder",
       "addShareholder": "Add Shareholder",
@@ -253,7 +257,29 @@
         "updateFailed": "Failed to update category"
       }
     },
-    "seriesPrefixPlaceholder": "INV-A"
+    "seriesPrefixPlaceholder": "INV-A",
+    "businessStart": {
+      "title": "Business start",
+      "date": "Business start date",
+      "origin": "Origin",
+      "origins": {
+        "new": "New activity",
+        "continuationNaturalPerson": "I have had business income before",
+        "continuationLegalEntity": "From conversion or merger"
+      },
+      "helpNaturalPerson": "As registered in TAXISnet. The tax prepayment is halved only in the year business income is earned for the first time (Law 4172/2013 art. 69 §1).",
+      "helpLegalEntity": "As registered in TAXISnet. The tax prepayment is halved for the first three tax years from the start, unless the company resulted from a conversion or merger (Law 4172/2013 art. 71 §3)."
+    },
+    "prepaymentBasis": {
+      "reducedNaturalPerson": "Halved ({rate}% instead of {baseRate}%): year the activity started ({startYear}) — Law 4172/2013 art. 69 §1.",
+      "reducedLegalEntity": "Halved ({rate}% instead of {baseRate}%): year {yearSinceStart} of the first {windowYears} from the start ({startYear}) — Law 4172/2013 art. 71 §3.",
+      "outsideWindowNaturalPerson": "Full ({rate}%): the halving applies only in the start year ({startYear}) — Law 4172/2013 art. 69 §1.",
+      "outsideWindowLegalEntity": "Full ({rate}%): the halving applies for the first {windowYears} years from the start ({startYear}) — Law 4172/2013 art. 71 §3.",
+      "continuationNaturalPerson": "Full ({rate}%): there was business income before this start, so the first-year reduction does not apply — Law 4172/2013 art. 69 §1.",
+      "continuationLegalEntity": "Full ({rate}%): the company resulted from a conversion or merger, so the first-years reduction does not apply — Law 4172/2013 art. 71 §3.",
+      "missingStart": "Full ({rate}%): no business start date has been declared. A new business may be entitled to a reduced prepayment.",
+      "goToSetup": "Add business start date"
+    }
   },
   "reconciliation": {
     "title": "Bank Reconciliation",

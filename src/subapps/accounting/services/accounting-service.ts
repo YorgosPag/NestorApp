@@ -29,12 +29,14 @@ import {
 } from './accounting-efka-operations';
 import { loadLedger } from './journal/journal-ledger';
 import {
-  deductibleEfka,
+  entityHoldersOf,
+  entityTaxInputOf,
   loadAeProfile,
   loadEpeProfile,
   loadPartnershipProfile,
-  partnershipTaxInputs,
+  taxStandingOf,
 } from './tax/entity-tax-profile';
+import type { TaxStanding } from './tax/entity-tax-profile';
 
 // ============================================================================
 // ACCOUNTING SERVICE — ORCHESTRATOR
@@ -140,8 +142,7 @@ export class AccountingService {
     fiscalYear: number,
     efkaTotal: number,
     withholdings: number,
-    previousPrepayment: number,
-    isFirstFiveYears: boolean
+    previousPrepayment: number
   ): Promise<TaxResult> {
     const scale = this.taxEngine.getTaxScale(fiscalYear);
 
@@ -155,7 +156,7 @@ export class AccountingService {
       professionalTax: scale.professionalTax,
       totalWithholdings: withholdings,
       previousYearPrepayment: previousPrepayment,
-      isFirstFiveYears,
+      businessStart: (await this.loadTaxStanding()).businessStart,
     });
   }
 
@@ -179,44 +180,36 @@ export class AccountingService {
     return this.depreciationEngine.reverseDepreciations(fiscalYear);
   }
 
-  // ── Partnership Tax (ADR-ACC-012) ──────────────────────────────────────
+  // ── Entity Tax (ADR-ACC-012 / 014 / 016 · ADR-ACC-024 §6) ─────────────────
 
-  /**
-   * Υπολογισμός φόρου ΟΕ (pass-through ανά εταίρο)
-   */
-  async calculatePartnershipTax(fiscalYear: number): Promise<PartnershipTaxResult> {
-    const [profile, { totalIncome, totalExpenses }] = await Promise.all([
-      loadPartnershipProfile(this.repository, fiscalYear),
-      this.loadYearTotals(fiscalYear),
-    ]);
-    const { efkaByPartner, partners } = partnershipTaxInputs(profile);
-
-    return this.taxEngine.calculatePartnershipTax(fiscalYear, totalIncome, totalExpenses, efkaByPartner, partners);
+  /** Έναρξη εργασιών + βιβλία του προφίλ — η φορολογική θέση της επιχείρησης. */
+  private async loadTaxStanding(): Promise<TaxStanding> {
+    return taxStandingOf(await this.repository.getCompanySetup());
   }
 
-  // ── EPE Corporate Tax (ADR-ACC-014) ──────────────────────────────────
+  /**
+   * Υπολογισμός φόρου ΟΕ — ως οντότητα (22%) + διανομή στους εταίρους (ADR-ACC-024 §6)
+   */
+  async calculatePartnershipTax(fiscalYear: number): Promise<PartnershipTaxResult> {
+    const standing = await this.loadTaxStanding();
+    const [profile, totals] = await Promise.all([
+      loadPartnershipProfile(this.repository, fiscalYear, standing),
+      this.loadYearTotals(fiscalYear),
+    ]);
+    return this.taxEngine.calculatePartnershipTax(entityTaxInputOf(profile, fiscalYear, totals), entityHoldersOf(profile));
+  }
 
   /**
    * Υπολογισμός εταιρικού φόρου ΕΠΕ (22% flat + μερίσματα 5%)
    */
   async calculateEPETax(fiscalYear: number): Promise<EPETaxResult> {
     // EFKA only for active managers — SSoT `entity-tax-profile`
-    const [profile, { totalIncome, totalExpenses }] = await Promise.all([
-      loadEpeProfile(this.repository, fiscalYear),
+    const standing = await this.loadTaxStanding();
+    const [profile, totals] = await Promise.all([
+      loadEpeProfile(this.repository, fiscalYear, standing),
       this.loadYearTotals(fiscalYear),
     ]);
-
-    return this.taxEngine.calculateCorporateTax(
-      fiscalYear,
-      totalIncome,
-      totalExpenses,
-      deductibleEfka(profile),
-      profile.members.map((m) => ({
-        memberId: m.memberId,
-        memberName: m.fullName,
-        dividendSharePercent: m.dividendSharePercent,
-      }))
-    );
+    return this.taxEngine.calculateCorporateTax(entityTaxInputOf(profile, fiscalYear, totals), entityHoldersOf(profile));
   }
 
   /**
@@ -233,22 +226,12 @@ export class AccountingService {
    */
   async calculateAETax(fiscalYear: number): Promise<AETaxResult> {
     // EFKA only for self-employed board members with compensation — SSoT `entity-tax-profile` (ADR-ACC-017)
-    const [profile, { totalIncome, totalExpenses }] = await Promise.all([
-      loadAeProfile(this.repository, fiscalYear),
+    const standing = await this.loadTaxStanding();
+    const [profile, totals] = await Promise.all([
+      loadAeProfile(this.repository, fiscalYear, standing),
       this.loadYearTotals(fiscalYear),
     ]);
-
-    return this.taxEngine.calculateAETax(
-      fiscalYear,
-      totalIncome,
-      totalExpenses,
-      deductibleEfka(profile),
-      profile.shareholders.map((s) => ({
-        shareholderId: s.shareholderId,
-        shareholderName: s.fullName,
-        dividendSharePercent: s.dividendSharePercent,
-      }))
-    );
+    return this.taxEngine.calculateAETax(entityTaxInputOf(profile, fiscalYear, totals), entityHoldersOf(profile));
   }
 
   /**

@@ -40,6 +40,7 @@ const base = {
   bookCategory: 'double_entry' as const,
   vatRegime: 'normal' as const,
   fiscalYearEnd: 12,
+  businessStart: null,
   currency: 'EUR' as const,
   invoiceSeries: [],
 };
@@ -47,7 +48,7 @@ const base = {
 function partner(over: Partial<Partner> = {}): Partner {
   return {
     partnerId: 'prt_1', fullName: 'Α', vatNumber: '123456789', taxOffice: 'Α',
-    profitSharePercent: 100, isFirstFiveYears: false, joinDate: '2024-01-01',
+    profitSharePercent: 100, joinDate: '2024-01-01',
     exitDate: null, isActive: true,
     efkaConfig: {
       selectedMainPensionCode: 'main_1', selectedSupplementaryCode: 'supplementary_1',
@@ -62,7 +63,7 @@ function member(over: Partial<Member> = {}): Member {
     memberId: 'mbr_1', fullName: 'Β', vatNumber: '234567891', taxOffice: 'Α',
     sharesCount: 100, shareNominalValue: 30, capitalContribution: 3000,
     dividendSharePercent: 100, isManager: true, efkaConfig: null,
-    isFirstFiveYears: false, joinDate: '2024-01-01', exitDate: null, isActive: true,
+    joinDate: '2024-01-01', exitDate: null, isActive: true,
     ...over,
   };
 }
@@ -73,7 +74,7 @@ function shareholder(over: Partial<Shareholder> = {}): Shareholder {
     sharesCount: 1000, shareNominalValue: 1, capitalContribution: 1000,
     dividendSharePercent: 100, isBoardMember: false, boardRole: null,
     monthlyCompensation: null, efkaMode: 'none', efkaConfig: null,
-    isFirstFiveYears: false, joinDate: '2024-01-01', exitDate: null, isActive: true,
+    joinDate: '2024-01-01', exitDate: null, isActive: true,
     ...over,
   };
 }

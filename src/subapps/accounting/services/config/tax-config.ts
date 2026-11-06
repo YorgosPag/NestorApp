@@ -10,6 +10,7 @@
 
 import type { TaxScaleConfig, TaxBracket } from '../../types/tax';
 import type { EntityType } from '../../types/entity';
+import type { BookCategory } from '../../types/company';
 
 // ============================================================================
 // GREEK TAX BRACKETS (Ν.4172/2013, αρ.15 — Κλίμακα Φόρου Εισοδήματος)
@@ -56,7 +57,8 @@ const BRACKETS_2026_ONWARDS: readonly TaxBracket[] = [
 /**
  * Ρυθμίσεις φορολογικής κλίμακας ανά έτος
  *
- * Περιλαμβάνει: brackets, προκαταβολή, τέλος επιτηδεύματος, αλληλεγγύη
+ * Περιλαμβάνει: brackets, τέλος επιτηδεύματος, αλληλεγγύη.
+ * Η προκαταβολή ΔΕΝ ζει εδώ: εξαρτάται από τη νομική μορφή → `PREPAYMENT_RATE_BY_ENTITY` (ένα σημείο).
  */
 export const GREEK_TAX_SCALES: ReadonlyMap<number, TaxScaleConfig> = new Map<number, TaxScaleConfig>([
   [
@@ -64,7 +66,6 @@ export const GREEK_TAX_SCALES: ReadonlyMap<number, TaxScaleConfig> = new Map<num
     {
       year: 2024,
       brackets: [...BRACKETS_2024_ONWARDS],
-      prepaymentRate: 55,
       professionalTax: 0, // καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024 (ADR-ACC-022 §8.1)
       solidarityRate: 0,
     },
@@ -74,7 +75,6 @@ export const GREEK_TAX_SCALES: ReadonlyMap<number, TaxScaleConfig> = new Map<num
     {
       year: 2025,
       brackets: [...BRACKETS_2024_ONWARDS],
-      prepaymentRate: 55,
       professionalTax: 0, // καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024 (ADR-ACC-022 §8.1)
       solidarityRate: 0,
     },
@@ -84,7 +84,6 @@ export const GREEK_TAX_SCALES: ReadonlyMap<number, TaxScaleConfig> = new Map<num
     {
       year: 2026,
       brackets: [...BRACKETS_2026_ONWARDS],
-      prepaymentRate: 55,
       professionalTax: 0, // καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024 (ADR-ACC-022 §8.1)
       solidarityRate: 0,
     },
@@ -155,31 +154,46 @@ const CORPORATE_TAX_RATE = 22;
 /** Φόρος μερισμάτων 5% (Ν.4172/2013, αρ.64) */
 const DIVIDEND_TAX_RATE = 5;
 
-/** Προκαταβολή φόρου ανά νομική μορφή */
+/**
+ * Βασικός συντελεστής προκαταβολής ανά νομική μορφή — η ΜΟΝΑΔΙΚΗ πηγή (πριν από κάθε μείωση).
+ *
+ * - Ατομική (φυσικό πρόσωπο): 55% — ν.4172/2013 άρθρο 69 §1.
+ * - ΟΕ/ΕΠΕ/ΑΕ (νομικά πρόσωπα/οντότητες): 80% — άρθρο 71 §1. Η ΟΕ είναι νομική οντότητα (άρθρο 45 §1)·
+ *   ως τις 2026-11-06 ο κώδικας της έδινε 55% (ADR-ACC-024 §6.1 α).
+ *
+ * Η μειωμένη προκαταβολή (μισό) υπολογίζεται από την έναρξη εργασιών: `services/tax/prepayment-policy.ts`.
+ */
 const PREPAYMENT_RATE_BY_ENTITY: Record<EntityType, number> = {
   sole_proprietor: 55,
-  oe: 55,
+  oe: 80,
   epe: 80,
   ae: 80,
 };
 
 /**
- * Λήψη συντελεστή εταιρικού φόρου (22% for ΕΠΕ/ΑΕ)
+ * Λήψη συντελεστή φόρου οντότητας (22% για ΟΕ/ΕΠΕ/ΑΕ — ν.4172/2013 άρθρο 58)
  */
 export function getCorporateTaxRate(): number {
   return CORPORATE_TAX_RATE;
 }
 
 /**
- * Λήψη συντελεστή φόρου μερισμάτων (5%)
- */
-export function getDividendTaxRate(): number {
-  return DIVIDEND_TAX_RATE;
-}
-
-/**
- * Λήψη συντελεστή προκαταβολής ανά νομική μορφή
+ * Λήψη βασικού συντελεστή προκαταβολής ανά νομική μορφή (χωρίς μείωση — αυτή: `resolvePrepayment`)
  */
 export function getPrepaymentRateForEntity(entityType: EntityType): number {
   return PREPAYMENT_RATE_BY_ENTITY[entityType];
+}
+
+/**
+ * Συντελεστής παρακράτησης στη διανομή κερδών οντότητας.
+ *
+ * - ΟΕ με **απλογραφικά**: 0% — τα κέρδη φορολογούνται μόνο στο όνομα της εταιρείας (ΠΟΛ.1042/2015 σημείο 3·
+ *   ερωταπαντήσεις ΑΑΔΕ, εγκύκλιος 6η/31-7-2025). Συνεπές με το άρθρο 64 §10: η αλλαγή από διπλογραφικά σε
+ *   απλογραφικά φορολογεί τα αδιανέμητα.
+ * - Κάθε άλλη περίπτωση (ΟΕ με διπλογραφικά, ΕΠΕ, ΑΕ): 5% — άρθρο 36 §1, άρθρο 64 §1α.
+ *
+ * @see ADR-ACC-024 §6.1 γ
+ */
+export function getDistributionWithholdingRate(entityType: EntityType, bookCategory: BookCategory): number {
+  return entityType === 'oe' && bookCategory === 'simplified' ? 0 : DIVIDEND_TAX_RATE;
 }

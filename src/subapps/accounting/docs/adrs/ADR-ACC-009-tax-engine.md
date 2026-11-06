@@ -664,6 +664,21 @@ accounting/shared/
 
 ---
 
+## Ενημέρωση 2026-11-06 — Προκαταβολή κατά την έναρξη · ΟΕ ως οντότητα (ADR-ACC-022 αποκλίσεις #1-3)
+
+**Ο κώδικας είναι η πηγή αλήθειας· η ενότητα αυτή υπερισχύει των παλαιότερων παραδειγμάτων του ADR** (π.χ. `prepaymentRate: 1.00`, «55% ή 100%», `TaxScaleConfig.prepaymentRate`).
+
+| Θέμα | Τώρα | SSoT |
+|---|---|---|
+| Βασικός συντελεστής προκαταβολής | Ατομική 55% (ν.4172/2013 άρθρο 69 §1) · ΟΕ/ΕΠΕ/ΑΕ 80% (άρθρο 71 §1) — **η ΟΕ είχε 55%** | `PREPAYMENT_RATE_BY_ENTITY` (`services/config/tax-config.ts`)· το διπλότυπο `TaxScaleConfig.prepaymentRate` αφαιρέθηκε |
+| Μειωμένη προκαταβολή (μισή) | **Υπολογίζεται** από την έναρξη εργασιών της επιχείρησης: φυσικό πρόσωπο μόνο το έτος έναρξης · νομικό πρόσωπο τα 3 πρώτα έτη, όχι από μετατροπή/συγχώνευση. Χωρίς έναρξη ⇒ πλήρης. **Αφαιρέθηκε** το checkbox `isFirstFiveYears` ανά εταίρο/μέλος/μέτοχο (27,5% για 5 έτη, και καμία μείωση σε ΕΠΕ/ΑΕ) | `resolvePrepayment()` (`services/tax/prepayment-policy.ts`) · `CompanyProfileBase.businessStart` |
+| Εξηγήσιμη προκαταβολή | Κάθε `TaxResult` / `CorporateTaxResult` φέρει `prepaymentBasis` (συντελεστής, βασικός, κανόνας, αιτία, έτος από έναρξη)· η οθόνη γράφει το «γιατί» με τη διάταξη | `PrepaymentBasisNote.tsx` |
+| Φόρος ΟΕ | **Οντότητα με 22%** (άρθρα 45 §1, 47, 58) — όχι διαφανής κλίμακα φυσικών ανά εταίρο. Διανομή στους εταίρους: παρακράτηση 0% με απλογραφικά (ΠΟΛ.1042/2015), 5% με διπλογραφικά (άρθρο 64 §1α) | `computeEntityTax()` (`services/engines/helpers/entity-tax.ts`) · `getDistributionWithholdingRate()` |
+| Ένας υπολογισμός οντότητας | `calculatePartnershipTax` / `calculateCorporateTax` / `calculateAETax` = προσαρμογείς ονομάτων πάνω στο **ίδιο** `computeEntityTax`· είσοδος-αντικείμενο `EntityTaxInput` + `EntityHolder[]` αντί για 7 θεσιακές παραμέτρους. ΕΠΕ/ΑΕ μοιράζονται επίσης το σχήμα μερισμάτων μέσω `dividendResultShellOf()` + `dividendFieldsOf()` (ίδιο αρχείο) — προσθέτουν μόνο id/όνομα μέλους ή μετόχου (CHECK 3.28) | `types/tax.ts` · `entityTaxInputOf()` / `entityHoldersOf()` (`services/tax/entity-tax-profile.ts`) |
+| Έναρξη εργασιών | Πεδίο προφίλ `businessStart` (ημερομηνία + προέλευση `new`/`continuation`, ή `null`)· ένας κριτής εισόδου/ανάγνωσης (`parseBusinessStart` → 400 σε άκυρο)· η ανάγνωση αφαιρεί το αποσυρμένο `isFirstFiveYears` από τα πρόσωπα | `services/setup/business-start.ts` · `companyProfileOf()` |
+
+Εκτός εύρους (◐, αναμένουν ισχύον κείμενο): ΕΦΚΑ όλων των εταίρων ΕΠΕ (ACC-027 §1), μέλος ΔΣ ΑΕ με αμοιβή (ACC-028 §1).
+
 ## 14. Decision Log
 
 | Date | Decision | Author |
@@ -687,6 +702,7 @@ accounting/shared/
 | 2026-02-12 | **Title updated**: "Income Tax + Prepayment" → "Income Tax + Corporate Tax" to reflect all entity types | Claude Code |
 | 2026-10-14 | **Κλίμακα 2026 = ν.5246/2025** (9/20/26/34/39/44, νέο κλιμάκιο 40–60K)· το config είχε την κλίμακα 2024. **Πλάτος κλιμακίου** από το άνω όριο του προηγούμενου (το 1ο κάλυπτε 10.001 €). **`yearToDateProgress`** (SSoT αναγωγής σε έτος): ο `estimateTax` δεν αναγάγει πια κλεισμένη χρήση με την ημέρα-του-έτους της σημερινής ημερομηνίας· `getDayOfYear` ανεξάρτητο ζώνης ώρας. **`services/tax/entity-tax-profile.ts`**: SSoT φόρου εισοδήματος ανά νομική μορφή + `sumPaidEfka` (ήταν 9 αντίγραφα σε 4 αρχεία)· τα `calculatePartnershipTax / EPETax / AETax` του accounting-service φορτώνουν ΕΦΚΑ από εκεί. Οι αναφορές P&L / Σύνοψη Φόρων υπολογίζουν φόρο κατά **IAS 34** μέσω αυτού — βλ. ADR-ACC-010 §2.1.1 | Giorgio + Claude Code |
 | 2026-11-06 | **Τέλος επιτηδεύματος ατομικής = 0 €** (καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024) — `PROFESSIONAL_TAX_BY_ENTITY` και `GREEK_TAX_SCALES` 2024–2026· νομικά πρόσωπα 1.000 € (το 800 €/μικρός οικισμός και +600 €/υποκατάστημα δεν μοντελοποιούνται). ⚠️ Ο `calculatePartnershipTax` (διαφανής φορολόγηση ΟΕ) **δεν άλλαξε ακόμη** — ADR-ACC-024 §6. Βλ. ADR-ACC-022 §8.1 | Giorgio + Claude Code |
+| 2026-11-06 | **Αποκλίσεις ADR-ACC-022 #1-3 διορθώθηκαν** — (1) προκαταβολή: μείωση στο μισό **υπολογίζεται** από `businessStart` (φυσικό 1ο έτος / νομικό 3 πρώτα, όχι συνέχεια), αφαιρέθηκε το `isFirstFiveYears`· νέο `prepayment-policy.ts` + `prepaymentBasis` σε κάθε αποτέλεσμα· (2) ΟΕ ως οντότητα 22% μέσω του κοινού `computeEntityTax` (ΕΠΕ/ΑΕ/ΟΕ), διανομή με παρακράτηση 0%/5% κατά βιβλία· (3) ΟΕ προκαταβολή 80%. `ITaxEngine`: είσοδος `EntityTaxInput` + `EntityHolder[]`. Αφαιρέθηκαν `TaxScaleConfig.prepaymentRate`, `getDividendTaxRate`, `PartnerTaxInput`, `PartnerTaxResult` | Claude Code |
 
 ---
 

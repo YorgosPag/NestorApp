@@ -20,28 +20,20 @@ import type {
   TaxEstimate,
   TaxInstallment,
   PartnershipTaxResult,
-  PartnerTaxResult,
-  PartnerTaxInput,
   EPETaxResult,
-  CorporateTaxResult,
-  MemberDividendResult,
   AETaxResult,
-  ShareholderDividendResult,
+  EntityTaxInput,
+  EntityHolder,
 } from '../../types/tax';
-import type { EntityType } from '../../types/entity';
 import type { ExpenseCategory, IncomeCategory } from '../../types/common';
-import {
-  getTaxScaleForYear,
-  getProfessionalTaxForEntity,
-  getCorporateTaxRate,
-  getDividendTaxRate,
-  getPrepaymentRateForEntity,
-} from '../config/tax-config';
+import { getTaxScaleForYear, getProfessionalTaxForEntity } from '../config/tax-config';
 import { getQuarterFromDate } from '../repository/firestore-helpers';
 import { loadLedger } from '../journal/journal-ledger';
+import { resolvePrepayment } from '../tax/prepayment-policy';
 import { nowISO } from '@/lib/date-local';
 import { roundToTwo } from '../../utils/math';
 import { calculateBracketTax } from './helpers/tax-brackets';
+import { computeEntityTax, dividendFieldsOf, dividendResultShellOf } from './helpers/entity-tax';
 import { calculateInstallments as calculateInstallmentsPure } from './helpers/tax-installments';
 import { yearToDateProgress } from './helpers/tax-date-utils';
 
@@ -79,9 +71,9 @@ export class TaxEngine implements ITaxEngine {
 
     const solidarityContribution = roundToTwo(taxableIncome * (scale.solidarityRate / 100));
 
-    const prepaymentRate = params.isFirstFiveYears
-      ? Math.min(scale.prepaymentRate, 27.5) // 50% μείωση τα πρώτα 5 χρόνια
-      : scale.prepaymentRate;
+    // Φυσικό πρόσωπο: 55%, μισή ΜΟΝΟ το έτος πρώτης απόκτησης (ν.4172/2013 άρθρο 69 §1) — βλ. prepayment-policy
+    const prepaymentBasis = resolvePrepayment('sole_proprietor', params.fiscalYear, params.businessStart);
+    const prepaymentRate = prepaymentBasis.rate;
     const prepaymentAmount = roundToTwo(incomeTax * (prepaymentRate / 100));
 
     const professionalTax = params.professionalTax;
@@ -105,6 +97,7 @@ export class TaxEngine implements ITaxEngine {
       solidarityContribution,
       prepaymentRate,
       prepaymentAmount,
+      prepaymentBasis,
       professionalTax,
       totalWithholdings: params.totalWithholdings,
       previousYearPrepayment: params.previousYearPrepayment,
@@ -145,7 +138,7 @@ export class TaxEngine implements ITaxEngine {
       professionalTax,
       totalWithholdings: 0,
       previousYearPrepayment: 0,
-      isFirstFiveYears: false,
+      businessStart: profile?.businessStart ?? null,
     });
 
     const incomeCatMap = new Map<string, number>();
@@ -193,180 +186,60 @@ export class TaxEngine implements ITaxEngine {
   }
 
   /**
-   * Υπολογισμός φόρου ΟΕ (pass-through ανά εταίρο).
-   * Κάθε εταίρος φορολογείται ξεχωριστά στο μερίδιό του (ίδια κλίμακα 9%-44%).
-   */
-  calculatePartnershipTax(
-    fiscalYear: number,
-    totalIncome: number,
-    totalExpenses: number,
-    totalEfkaByPartner: Map<string, number>,
-    partners: readonly PartnerTaxInput[]
-  ): PartnershipTaxResult {
-    const totalProfit = Math.max(0, totalIncome - totalExpenses);
-    const entityProfessionalTax = getProfessionalTaxForEntity('oe');
-
-    const partnerResults: PartnerTaxResult[] = partners.map((p) => {
-      const profitShare = roundToTwo(totalProfit * (p.profitSharePercent / 100));
-      const partnerEfka = totalEfkaByPartner.get(p.partnerId) ?? 0;
-
-      const taxResult = this.calculateAnnualTax({
-        fiscalYear,
-        totalIncome: profitShare,
-        totalDeductibleExpenses: 0,
-        totalEfkaContributions: partnerEfka,
-        professionalTax: 0, // Professional tax is at entity level
-        totalWithholdings: p.withholdings,
-        previousYearPrepayment: p.previousPrepayment,
-        isFirstFiveYears: p.isFirstFiveYears,
-      });
-
-      return {
-        partnerId: p.partnerId,
-        partnerName: p.partnerName,
-        profitSharePercent: p.profitSharePercent,
-        profitShare,
-        taxResult,
-      };
-    });
-
-    return {
-      fiscalYear,
-      totalEntityIncome: totalIncome,
-      totalEntityExpenses: totalExpenses,
-      totalEntityProfit: totalProfit,
-      entityProfessionalTax,
-      partnerResults,
-    };
-  }
-
-  /**
-   * Υπολογισμός εταιρικού φόρου ΕΠΕ/ΑΕ (22% flat rate).
+   * Υπολογισμός φόρου ΟΕ — ως **οντότητα** (22%, προκαταβολή 80% / 40% τα 3 πρώτα έτη) και διανομή στους
+   * εταίρους (παρακράτηση 0% με απλογραφικά, 5% με διπλογραφικά).
    *
-   * - Φορολόγηση: 22% flat (ΟΧΙ progressive brackets)
-   * - Προκαταβολή: 80%
-   * - Μερίσματα: 5% φόρος μερισμάτων ανά μέλος/μέτοχο
+   * Ως τις 2026-11-06: διαφανής φορολόγηση (κάθε εταίρος με την κλίμακα φυσικών, 55%) — λάθος, ADR-ACC-024 §6.
    */
-  calculateCorporateTax(
-    fiscalYear: number,
-    totalIncome: number,
-    totalExpenses: number,
-    efkaManagerTotal: number,
-    members: Array<{
-      memberId: string;
-      memberName: string;
-      dividendSharePercent: number;
-    }>,
-    distributionPercent: number = 100,
-    entityType: EntityType = 'epe'
-  ): EPETaxResult {
-    const corporateTaxRate = getCorporateTaxRate();
-    const dividendTaxRate = getDividendTaxRate();
-    const prepaymentRate = getPrepaymentRateForEntity(entityType);
-    const professionalTax = getProfessionalTaxForEntity(entityType);
-
-    const taxableIncome = Math.max(0, totalIncome - totalExpenses - efkaManagerTotal);
-    const corporateTaxAmount = roundToTwo(taxableIncome * (corporateTaxRate / 100));
-    const prepaymentAmount = roundToTwo(corporateTaxAmount * (prepaymentRate / 100));
-    const totalObligation = roundToTwo(corporateTaxAmount + professionalTax + prepaymentAmount);
-
-    const corporateTax: CorporateTaxResult = {
-      fiscalYear,
-      grossIncome: totalIncome,
-      deductibleExpenses: totalExpenses,
-      efkaContributions: efkaManagerTotal,
-      taxableIncome,
-      corporateTaxRate,
-      corporateTaxAmount,
-      professionalTax,
-      prepaymentRate,
-      prepaymentAmount,
-      totalObligation,
-    };
-
-    const profitAfterTax = roundToTwo(taxableIncome - corporateTaxAmount);
-    const distributedDividends = roundToTwo(profitAfterTax * (distributionPercent / 100));
-    const retainedEarnings = roundToTwo(profitAfterTax - distributedDividends);
-
-    const memberDividends: MemberDividendResult[] = members.map((m) => {
-      const grossDividend = roundToTwo(distributedDividends * (m.dividendSharePercent / 100));
-      const dividendTaxAmount = roundToTwo(grossDividend * (dividendTaxRate / 100));
-      const netDividend = roundToTwo(grossDividend - dividendTaxAmount);
-
-      return {
-        memberId: m.memberId,
-        memberName: m.memberName,
-        dividendSharePercent: m.dividendSharePercent,
-        grossDividend,
-        dividendTaxRate,
-        dividendTaxAmount,
-        netDividend,
-      };
-    });
-
-    const totalDividendTax = roundToTwo(
-      memberDividends.reduce((sum, d) => sum + d.dividendTaxAmount, 0)
-    );
-
+  calculatePartnershipTax(input: EntityTaxInput, partners: readonly EntityHolder[]): PartnershipTaxResult {
+    const result = computeEntityTax('oe', input, partners);
     return {
-      corporateTax,
-      profitAfterTax,
-      distributedDividends,
-      retainedEarnings,
-      memberDividends,
-      totalDividendTax,
+      corporateTax: result.corporateTax,
+      profitAfterTax: result.profitAfterTax,
+      distributedProfits: result.distributed,
+      retainedEarnings: result.retained,
+      partnerDistributions: result.distributions.map((d) => ({
+        partnerId: d.holder.id,
+        partnerName: d.holder.name,
+        profitSharePercent: d.holder.sharePercent,
+        grossDistribution: d.gross,
+        withholdingRate: d.withholdingRate,
+        withholdingAmount: d.withholdingAmount,
+        netDistribution: d.net,
+      })),
+      totalDistributionWithholding: result.totalWithholding,
     };
   }
 
   /**
-   * Υπολογισμός εταιρικού φόρου ΑΕ (22% flat + μερίσματα 5% + 80% προκαταβολή).
-   * Ίδια φορολόγηση με ΕΠΕ, αλλά shareholders αντί members.
+   * Υπολογισμός εταιρικού φόρου ΕΠΕ (22% flat · προκαταβολή 80% / 40% τα 3 πρώτα έτη · μερίσματα 5%).
+   */
+  calculateCorporateTax(input: EntityTaxInput, members: readonly EntityHolder[]): EPETaxResult {
+    const result = computeEntityTax('epe', input, members);
+    return {
+      ...dividendResultShellOf(result),
+      memberDividends: result.distributions.map((d) => ({
+        memberId: d.holder.id,
+        memberName: d.holder.name,
+        ...dividendFieldsOf(d),
+      })),
+    };
+  }
+
+  /**
+   * Υπολογισμός εταιρικού φόρου ΑΕ — ίδια φορολόγηση με ΕΠΕ, μέτοχοι αντί μελών.
    *
    * @see ADR-ACC-016 AE Corporate Tax & Dividends
    */
-  calculateAETax(
-    fiscalYear: number,
-    totalIncome: number,
-    totalExpenses: number,
-    efkaBoardTotal: number,
-    shareholders: Array<{
-      shareholderId: string;
-      shareholderName: string;
-      dividendSharePercent: number;
-    }>,
-    distributionPercent: number = 100
-  ): AETaxResult {
-    const epeResult = this.calculateCorporateTax(
-      fiscalYear,
-      totalIncome,
-      totalExpenses,
-      efkaBoardTotal,
-      shareholders.map((s) => ({
-        memberId: s.shareholderId,
-        memberName: s.shareholderName,
-        dividendSharePercent: s.dividendSharePercent,
-      })),
-      distributionPercent,
-      'ae'
-    );
-
-    const shareholderDividends: ShareholderDividendResult[] = epeResult.memberDividends.map((md) => ({
-      shareholderId: md.memberId,
-      shareholderName: md.memberName,
-      dividendSharePercent: md.dividendSharePercent,
-      grossDividend: md.grossDividend,
-      dividendTaxRate: md.dividendTaxRate,
-      dividendTaxAmount: md.dividendTaxAmount,
-      netDividend: md.netDividend,
-    }));
-
+  calculateAETax(input: EntityTaxInput, shareholders: readonly EntityHolder[]): AETaxResult {
+    const result = computeEntityTax('ae', input, shareholders);
     return {
-      corporateTax: epeResult.corporateTax,
-      profitAfterTax: epeResult.profitAfterTax,
-      distributedDividends: epeResult.distributedDividends,
-      retainedEarnings: epeResult.retainedEarnings,
-      shareholderDividends,
-      totalDividendTax: epeResult.totalDividendTax,
+      ...dividendResultShellOf(result),
+      shareholderDividends: result.distributions.map((d) => ({
+        shareholderId: d.holder.id,
+        shareholderName: d.holder.name,
+        ...dividendFieldsOf(d),
+      })),
     };
   }
 

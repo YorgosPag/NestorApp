@@ -71,6 +71,7 @@ const FIELD_SCOPE: { readonly [K in CompanyProfileField]: FieldScope } = {
   vatRegime: 'common',
   fiscalYearEnd: 'common',
   currency: 'common',
+  businessStart: 'common',
   invoiceSeries: 'common',
   efkaCategory: ['sole_proprietor'],
   partners: ['oe'],
