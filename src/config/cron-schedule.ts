@@ -75,6 +75,7 @@ import { runStorageBucketDrift } from '@/lib/cron/jobs/storage-bucket-drift.job'
 import { runSupplierBrandExpiryNotices } from '@/lib/cron/jobs/supplier-brand-expiry-notices.job';
 import { runTourTilesetBake } from '@/lib/cron/jobs/tour-tileset-bake.job';
 import { runPublicationRunSweep } from '@/lib/cron/jobs/publication-run-sweep.job';
+import { runPublicCatalogSweep } from '@/lib/cron/jobs/public-catalog-sweep.job';
 import type { CronJobDefinition } from '@/types/cron-schedule';
 
 /**
@@ -717,11 +718,17 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     slug: 'public-catalog-sweep',
     path: '/api/cron/public-catalog-sweep',
     description: 'Δίχτυ δημόσιας βιτρίνας καταλόγου: άδειασμα outbox · κρίση χώρων · ημερήσιο πλήρες πέρασμα (ADR-923 §5.13 Δ3)',
-    enabled: false,
-    disabledReason: 'never-scheduled',
-    reactivateWhen:
-      'Αφού αναπτυχθούν οι δύο δείκτες του catalog_public_outbox (χωρίς αυτούς τα ερωτήματα απαντούν FAILED_PRECONDITION) ' +
-      'και συνδεθεί ο αναγνώστης της επιβεβαίωσης στο public-standing.server.ts. Πρόγραμμα κάθε 10 λεπτά, γιατί είναι δίχτυ.',
+    enabled: true,
+    // 🔑 **Περίπου κάθε 10′, γιατί είναι ΔΙΧΤΥ**: έγκριση ή ανάκληση αλλάζει τη συνθήκη χωρίς καμία γραφή καταλόγου, άρα
+    //    μόνο η σάρωση τη βλέπει. ⚠️ Κανένα `d-59/10` δεν είναι ελεύθερο (μετρημένο 2026-11-07)· αυτά τα λεπτά δεν τα κατέχει
+    //    καμία επαναλαμβανόμενη εργασία (το :33 είναι της `33 9-18 * * 1-5`) και συμπίπτουν μόνο με ημερήσιες (03:25 · 03:45 · 09:13).
+    //    Κενά 8–12′. Ο προϋπολογισμός της σάρωσης είναι 45 s, άρα τα 2′ είναι αληθινό όριο.
+    schedule: '3,13,25,36,45,55 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 10,
+    maxRuntimeMinutes: 2,
+    leaseMinutes: 5,
+    run: runPublicCatalogSweep,
   },
   {
     slug: 'ai-pipeline',
