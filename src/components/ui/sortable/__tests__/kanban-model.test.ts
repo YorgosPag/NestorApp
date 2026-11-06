@@ -2,7 +2,17 @@
  * ADR-930 — ο καθαρός πυρήνας του `KanbanBoard`: ομαδοποίηση, απόφαση ρίψης, πλοήγηση πληκτρολογίου.
  */
 
-import { groupByColumn, neighbourColumn, resolveKanbanDrop, type KanbanRect } from '../kanban-model';
+import {
+  columnOfDropTarget,
+  dockTargetId,
+  groupByColumn,
+  isDockTarget,
+  neighbourColumn,
+  parseCollapseChoices,
+  resolveCollapsedColumns,
+  resolveKanbanDrop,
+  type KanbanRect,
+} from '../kanban-model';
 
 const COLUMNS = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
 
@@ -52,4 +62,37 @@ describe('neighbourColumn', () => {
     expect(neighbourColumn(rects, null, -1)?.id).toBe('c');
   });
   it('καμία στήλη ⇒ null', () => expect(neighbourColumn([], 'a', 1)).toBeNull());
+});
+
+describe('ζώνη ρίψης (ADR-930 §3.11)', () => {
+  it('ο στόχος της ζώνης σημαίνει τη στήλη του — και η στήλη σημαίνει τον εαυτό της', () => {
+    expect(columnOfDropTarget(dockTargetId('closed_won'))).toBe('closed_won');
+    expect(columnOfDropTarget('closed_won')).toBe('closed_won');
+  });
+  it('ο στόχος της ζώνης ΔΕΝ συγκρούεται με το id της στήλης', () => {
+    expect(dockTargetId('a')).not.toBe('a');
+    expect(isDockTarget(dockTargetId('a'))).toBe(true);
+    expect(isDockTarget('a')).toBe(false);
+  });
+  it('ρίψη στη ζώνη = ρίψη στη στήλη (ίδια απόφαση, ίδια άρνηση)', () => {
+    const to = columnOfDropTarget(dockTargetId('c'));
+    expect(resolveKanbanDrop('a', to, () => true)).toEqual({ kind: 'move', from: 'a', to: 'c' });
+    expect(resolveKanbanDrop('c', to, () => true)).toEqual({ kind: 'none' });
+    expect(resolveKanbanDrop('a', to, () => false)).toEqual({ kind: 'refused', to: 'c' });
+  });
+});
+
+describe('σύμπτυξη στηλών (ADR-930 §3.11)', () => {
+  const IDS = ['a', 'b', 'c'];
+  it('κρατά μόνο γνωστές στήλες με τιμή boolean', () => {
+    expect(parseCollapseChoices({ a: true, b: 'yes', z: true, c: false }, IDS)).toEqual({ a: true, c: false });
+  });
+  it('οτιδήποτε άλλο από αντικείμενο ⇒ καμία επιλογή', () => {
+    for (const bad of [null, undefined, 'a', 3, ['a'], true]) expect(parseCollapseChoices(bad, IDS)).toEqual({});
+  });
+  it('η ρητή επιλογή κερδίζει την προεπιλογή — και προς τις δύο κατευθύνσεις', () => {
+    const byDefault = (id: string) => id === 'c';
+    expect([...resolveCollapsedColumns(IDS, {}, byDefault)]).toEqual(['c']);
+    expect([...resolveCollapsedColumns(IDS, { c: false, a: true }, byDefault)]).toEqual(['a']);
+  });
 });

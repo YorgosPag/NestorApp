@@ -398,7 +398,8 @@
         "stageAge": "Μέρες στο στάδιο (περισσότερες πρώτα)"
       },
       "totalsLabel": "Σύνολο {total}, σταθμισμένο {weighted}",
-      "emptyColumn": "Σύρετε μια κάρτα εδώ"
+      "emptyColumn": "Σύρετε μια κάρτα εδώ",
+      "dockLabel": "Κλείσιμο ευκαιρίας"
     },
     "card": {
       "stageDays": "{count, plural, one {# μέρα στο στάδιο} other {# μέρες στο στάδιο}}",

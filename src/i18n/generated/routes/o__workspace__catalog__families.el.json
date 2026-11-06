@@ -371,7 +371,10 @@
   "common-shared": {
     "kanban": {
       "cancelled": "Η μετακίνηση του «{label}» ακυρώθηκε.",
+      "collapse": "Σύμπτυξη στήλης «{column}»",
+      "count": "{count, plural, one {# κάρτα} other {# κάρτες}}",
       "dropped": "Το «{label}» αφέθηκε στη στήλη «{column}».",
+      "expand": "Ανάπτυξη στήλης «{column}»",
       "handle": "Μετακίνηση «{label}»",
       "instructions": "Πατήστε Space για να σηκώσετε την κάρτα. Με το αριστερό ή δεξί βέλος πηγαίνετε σε άλλη στήλη, πατήστε Space για να την αφήσετε ή Escape για ακύρωση.",
       "over": "Το «{label}» βρίσκεται πάνω από τη στήλη «{column}».",

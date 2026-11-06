@@ -398,7 +398,8 @@
         "stageAge": "Days in stage (most first)"
       },
       "totalsLabel": "Total {total}, weighted {weighted}",
-      "emptyColumn": "Drag a card here"
+      "emptyColumn": "Drag a card here",
+      "dockLabel": "Close opportunity"
     },
     "card": {
       "stageDays": "{count, plural, one {# day in stage} other {# days in stage}}",

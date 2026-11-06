@@ -1038,7 +1038,10 @@
     "picked": "Picked up “{label}”.",
     "over": "“{label}” is over the column “{column}”.",
     "dropped": "“{label}” was dropped in the column “{column}”.",
-    "cancelled": "Moving “{label}” was cancelled."
+    "cancelled": "Moving “{label}” was cancelled.",
+    "collapse": "Collapse column “{column}”",
+    "expand": "Expand column “{column}”",
+    "count": "{count, plural, one {# card} other {# cards}}"
   },
   "quoteRequest": {
     "receivedTitle": "{who} requested a quote from you: {title}",

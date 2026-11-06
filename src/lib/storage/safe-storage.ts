@@ -95,6 +95,10 @@ export const STORAGE_KEYS = {
   // προτίμηση του καθενός — ποτέ κοινή σειρά (η χειροκίνητη σειρά ενός θα χαλούσε των άλλων).
   PIPELINE_SORT: 'nestor:crm-pipeline-sort:v1',
 
+  // ADR-930 §3.11 — ποιες στήλες της ροής πωλήσεων είναι συμπτυγμένες, ανά **συσκευή** (HubSpot: προσωπικό, δεν αλλάζει
+  // τον πίνακα κανενός άλλου). Μόνο οι ΡΗΤΕΣ επιλογές `{ [στάδιο]: boolean }` — σχήμα: `ui/sortable/use-kanban-collapse.ts`.
+  PIPELINE_COLUMNS: 'nestor:crm-pipeline-columns:v1',
+
   // ADR-894 — η εγγραφή συνεδρίας **αυτού του browser** (prefix — append uid). localStorage και όχι
   // sessionStorage, επίτηδες: μία εγγραφή ανά **συσκευή** (Google «Your devices»), όχι μία ανά καρτέλα —
   // το sessionStorage γεννούσε νέα συνεδρία (και αίτημα τοποθεσίας) σε κάθε καρτέλα.

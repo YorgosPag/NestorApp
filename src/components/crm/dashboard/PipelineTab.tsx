@@ -62,8 +62,9 @@ export function PipelineTab() {
   const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
 
   return (
-    <div className={colors.bg.primary}>
-        <nav className="flex items-center justify-end gap-2 px-2 py-1" aria-label={t('pipeline.title')}>
+    // ADR-930 §3.11: στήλη flex σε όλο το ύψος της καρτέλας, ώστε ο πίνακας (`layout="fill"`) να πάρει ό,τι περισσεύει.
+    <div className={`${colors.bg.primary} flex h-full flex-col`}>
+        <nav className="flex shrink-0 items-center justify-end gap-2 px-2 py-1" aria-label={t('pipeline.title')}>
           <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'pipeline' ? 'list' : 'pipeline')}>
             {viewMode === 'pipeline' ? t('pipeline.viewList') : t('pipeline.viewPipeline')}
           </Button>
@@ -77,7 +78,7 @@ export function PipelineTab() {
           </Button>
         </nav>
 
-        <div className="flex-1">
+        <div className="flex min-h-0 flex-1 flex-col">
           {loading ? (
               <PageLoadingState icon={GitBranch} message={t('pipeline.loading')} layout="contained" />
           ) : error ? (

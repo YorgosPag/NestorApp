@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
+import type { ScrollEdges } from "@/hooks/useScrollEdges"
 import { cn } from "@/lib/utils"
 import '@/lib/design-system';
 
@@ -16,12 +17,24 @@ import '@/lib/design-system';
 interface ScrollAreaProps extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
   /** Radix scroll type: "auto" | "always" | "hover" | "scroll" */
   type?: "auto" | "always" | "hover" | "scroll";
+  /**
+   * Ποιες μπάρες ζωγραφίζονται (προεπιλογή `vertical` — η συμπεριφορά όλων των υπαρχόντων καταναλωτών).
+   * ⚠️ Οι μπάρες του Radix είναι **δικά του στοιχεία DOM**, άρα φαίνονται παρά τον καθολικό κανόνα του `globals.css`
+   * που κρύβει κάθε εγγενή μπάρα (`* { scrollbar-width: none }`) — γι' αυτό εδώ και όχι πέμπτη εξαίρεση CSS (ADR-930 §3.11).
+   */
+  orientation?: "vertical" | "horizontal" | "both";
+  /** Το στοιχείο που ΚΥΛΑ (π.χ. για `useScrollEdges`). */
+  viewportRef?: React.Ref<HTMLDivElement>;
+  /** Κλάσεις του στοιχείου που κυλά (π.χ. το σβήσιμο άκρης `scroll-edge-fade`). */
+  viewportClassName?: string;
+  /** `data-scroll-edges` του στοιχείου που κυλά — το ζευγάρι του `useScrollEdges` (ADR-777 §8.79). */
+  viewportEdges?: ScrollEdges;
 }
 
 const ScrollArea = React.forwardRef<
   React.ComponentRef<typeof ScrollAreaPrimitive.Root>,
   ScrollAreaProps
->(({ className, children, type = "auto", ...props }, ref) => (
+>(({ className, children, type = "auto", orientation = "vertical", viewportRef, viewportClassName, viewportEdges, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
     type={type}
@@ -32,10 +45,15 @@ const ScrollArea = React.forwardRef<
         Ως πίνακας, το περιτύλιγμα φαρδαίνει όσο το πιο φαρδύ ΑΣΠΑΣΤΟ περιεχόμενο (ένας μακρύς τίτλος με `truncate`),
         και επειδή δεν υπάρχει οριζόντια μπάρα, ό,τι περισσεύει απλώς ΚΟΒΕΤΑΙ: στα 390px οι κάρτες της λίστας κτιρίων
         έβγαιναν 375px σε θυρίδα 348px (μετρημένο 2026-10-11). Ως block το πλάτος το ορίζει η θυρίδα. */}
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit] [&>div]:!block">
+    <ScrollAreaPrimitive.Viewport
+      ref={viewportRef}
+      data-scroll-edges={viewportEdges}
+      className={cn("h-full w-full rounded-[inherit] [&>div]:!block", viewportClassName)}
+    >
       {children}
     </ScrollAreaPrimitive.Viewport>
-    <ScrollBar />
+    {orientation !== "horizontal" && <ScrollBar />}
+    {orientation !== "vertical" && <ScrollBar orientation="horizontal" />}
     <ScrollAreaPrimitive.Corner />
   </ScrollAreaPrimitive.Root>
 ))

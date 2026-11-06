@@ -1038,7 +1038,10 @@
     "picked": "Σηκώθηκε το «{label}».",
     "over": "Το «{label}» βρίσκεται πάνω από τη στήλη «{column}».",
     "dropped": "Το «{label}» αφέθηκε στη στήλη «{column}».",
-    "cancelled": "Η μετακίνηση του «{label}» ακυρώθηκε."
+    "cancelled": "Η μετακίνηση του «{label}» ακυρώθηκε.",
+    "collapse": "Σύμπτυξη στήλης «{column}»",
+    "expand": "Ανάπτυξη στήλης «{column}»",
+    "count": "{count, plural, one {# κάρτα} other {# κάρτες}}"
   },
   "quoteRequest": {
     "receivedTitle": "{who} σας ζήτησε προσφορά: {title}",
