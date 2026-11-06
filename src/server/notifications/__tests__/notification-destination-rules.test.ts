@@ -26,6 +26,7 @@ import {
   expectedDestinationOf,
   RULED_EVENT_TYPES,
 } from '@/server/notifications/notification-destination-rules';
+import { brandExpiryDestination } from '@/server/catalog/supplier-brand-expiry-notices.server';
 import { handoverInvitationAnsweredDestination } from '@/server/property-handover-invitations/handover-invitation-answer-notifier';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -56,6 +57,8 @@ function world(): AdminFirestore {
   fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_brokered', ownerListing('u_agent', 'comp_agency'));
   fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: 'comp_9c7c', name: 'Διαμέρισμα' });
   fake.seed(COLLECTIONS.PROPERTIES, 'prop_orphan', { name: 'Χωρίς εταιρεία' });
+  fake.seed(COLLECTIONS.SUPPLIER_BRAND_CLAIMS, 'sbc_1', { companyId: 'comp_supplier' });
+  fake.seed(COLLECTIONS.SUPPLIER_BRAND_CLAIMS, 'sbc_orphan', { brand: 'Χωρίς εταιρεία' });
   return fake as unknown as AdminFirestore;
 }
 
@@ -122,6 +125,21 @@ describe('Ε — εντολές', () => {
     });
   });
 
+  it('🔴 Ε5 — λήξη μάρκας (ADR-923 §16) ⇒ οι ρυθμίσεις καταλόγου, στον χώρο που ΚΑΤΕΧΕΙ το αίτημα (ο ΙΔΙΟΣ προορισμός με τον παραγωγό)', async () => {
+    expect(await expectedDestinationOf(world(), notification('procurement.brandGrantExpiring', 'sbc_1'))).toEqual({
+      kind: 'expected',
+      destination: brandExpiryDestination('comp_supplier'),
+    });
+    expect(brandExpiryDestination('comp_supplier').workspace).toEqual({ kind: 'org', companyId: 'comp_supplier' });
+  });
+
+  it.each([['sbc_orphan'], ['sbc_gone']])('Ε6 — αίτημα μάρκας %s χωρίς χώρο ⇒ entity-absent, ΠΟΤΕ μαντεψιά', async (entityId) => {
+    expect(await expectedDestinationOf(world(), notification('procurement.brandGrantExpiring', entityId))).toEqual({
+      kind: 'unresolvable',
+      reason: 'entity-absent',
+    });
+  });
+
   it('Ε3 — απόφαση για αγγελία που δεν υπάρχει πια ⇒ entity-absent', async () => {
     expect(await expectedDestinationOf(world(), notification('properties.mandateDecided', 'ownp_gone'))).toEqual({
       kind: 'unresolvable',
@@ -155,6 +173,8 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       // ADR-867 Β7 · §8 #9 — νέο μήνυμα (η πλευρά από το θέμα) · είσοδος στην ομάδα (η εντολή, στο νήμα).
       'network.teamJoined',
       'network.threadMessage',
+      // ADR-923 §16 (Ν11(δ)) — λήξη μάρκας: οι ρυθμίσεις καταλόγου του χώρου που κατέχει το αίτημα.
+      'procurement.brandGrantExpiring',
       // ADR-923 §5.12 — η καρτέλα της πλευράς του παραλήπτη, από το έγγραφο της σχέσης.
       'procurement.supplyConnection',
       'properties.cardEmailReturned',
