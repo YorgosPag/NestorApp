@@ -63,19 +63,23 @@ export interface CrmOwnerContract {
    * Επιτρέπει ο κανόνας στον **ανατεθειμένο** (που ΔΕΝ είναι ο δημιουργός) να
    * ενημερώσει και να διαβάσει;
    *
-   * 🔴 **Σήμερα: ΜΟΝΟ το `leads`.** Δεν είναι σχεδιαστική επιλογή που πάρθηκε —
-   * είναι η κατάσταση που κληρονομήθηκε από το PR-1B και **μετρήθηκε** κατά την
-   * ένωση. Κατά Salesforce / HubSpot / Zoho ο «owner» **είναι** ο ανατεθειμένος,
-   * και το `Opportunity.assignedTo` είναι **υποχρεωτικό** πεδίο του μοντέλου
-   * (`src/types/crm.ts:37`) ⇒ ο ανατεθειμένος πωλητής **δεν μπορεί** σήμερα να
-   * ενημερώσει τη δική του ευκαιρία.
+   * 🔴 **Σήμερα: ΜΟΝΟ το `leads`** (από τις δύο συλλογές που ο browser γράφει
+   * ακόμη). Κληρονομήθηκε από το PR-1B και **μετρήθηκε** κατά την ένωση.
    *
-   * ⚠️ Η επέκτασή του στις άλλες δύο είναι **διεύρυνση πρόσβασης παραγωγής**,
-   * δηλαδή **ξεχωριστή απόφαση** — όχι παρενέργεια refactor. Μέχρι να παρθεί, η
-   * ασυμμετρία καρφώνεται **και προς τις δύο κατευθύνσεις**: αν φύγει από το
-   * `leads` κοκκινίζει, αν μπει κρυφά στις άλλες κοκκινίζει.
+   * ⚠️ Οι `opportunities` **ΔΕΝ** χρησιμοποιούν πια αυτό το σκέλος: από το ADR-930
+   * §3.10 Βήμα Β (2026-11-06) ο browser δεν τις γράφει **καθόλου** — ο κριτής
+   * κατόχου ζει μόνο στον server. Τρέχουν **μόνο** το `describeCrmReadLeg`.
+   * Η επέκταση στα `activities` είναι **ξεχωριστή απόφαση** (ADR-930 §4): αν
+   * φύγει από το `leads` κοκκινίζει, αν μπει κρυφά στα `activities` κοκκινίζει.
    */
   readonly assigneeIsOwner: boolean;
+}
+
+/** Το σκέλος ΑΝΑΓΝΩΣΗΣ — ισχύει και για συλλογή που ο browser δεν γράφει καθόλου. */
+export interface CrmReadContract {
+  readonly collection: string;
+  /** Διαβάζει ο ανατεθειμένος (όχι δημιουργός) **legacy** έγγραφο χωρίς `companyId`; */
+  readonly assigneeReads: boolean;
 }
 
 /** Πεδία που κάνουν ένα έγγραφο αποδεκτό από κάθε μία από τις τρεις συλλογές. */
@@ -90,14 +94,11 @@ function docShape(extra: Record<string, unknown>): Record<string, unknown> {
 }
 
 /**
- * Οι δοκιμές που ο πίνακας δεν μπορεί να εκφράσει, για μία CRM συλλογή.
- *
- * Καλείται μία φορά ανά σουίτα, **έξω** από τον βρόχο της `COVERAGE.matrix`.
+ * Ένα `describe` με τον κύκλο ζωής του emulator (init · reset ανά δοκιμή · teardown). Το `env` είναι **getter**: η
+ * τιμή υπάρχει μόνο μετά το `beforeAll`. Κοινό για τα δύο σκέλη — ένα σημείο, όχι δύο αντίγραφα (N.18).
  */
-export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
-  const { collection, assigneeIsOwner } = contract;
-
-  describe(`${collection}.rules — το σκέλος του ΚΑΤΟΧΟΥ (ADR-841 §7 Α21.14.8)`, () => {
+function describeOnEmulator(title: string, body: (env: () => RulesTestEnvironment) => void): void {
+  describe(title, () => {
     let env: RulesTestEnvironment;
 
     beforeAll(async () => {
@@ -110,9 +111,86 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
       await resetData(env);
     });
 
+    body(() => env);
+  });
+}
+
+/**
+ * Το σκέλος ΑΝΑΓΝΩΣΗΣ: ό,τι ο πίνακας δεν εκφράζει για το «ποιος ΔΙΑΒΑΖΕΙ αυτό το έγγραφο». Μέρος του
+ * `describeCrmOwnerLeg`· μόνο του για συλλογή που ο browser δεν γράφει (`opportunities`, ADR-930 §3.10 Βήμα Β).
+ */
+export function describeCrmReadLeg(contract: CrmReadContract): void {
+  const { collection, assigneeReads } = contract;
+
+  describeOnEmulator(`${collection}.rules — το σκέλος ΑΝΑΓΝΩΣΗΣ του κατόχου (ADR-841 §7 Α21.14.8)`, (env) => {
+
+    it(
+      assigneeReads
+        ? '🏆 LEGACY (χωρίς companyId): ο ανατεθειμένος ΔΙΑΒΑΖΕΙ'
+        : '🔓 LEGACY (χωρίς companyId): ο ανατεθειμένος ΔΕΝ διαβάζει',
+      async () => {
+        // Το legacy fallback είναι ο ΜΟΝΟΣ δρόμος χωρίς έλεγχο tenant. Καρφώνεται
+        // ρητά ώστε να μη διευρυνθεί κατά λάθος — και η επόμενη δοκιμή δείχνει
+        // ότι δεν είναι τρύπα διαρροής.
+        await withSeedContext(env(), async (ctx) => {
+          await ctx
+            .firestore()
+            .collection(collection)
+            .doc('crm-legacy')
+            .set(docShape({ createdBy: AUTHOR_UID, assignedTo: ASSIGNEE_UID }));
+        });
+
+        const read = getContext(env(), 'same_tenant_user')
+          .firestore()
+          .collection(collection)
+          .doc('crm-legacy')
+          .get();
+
+        await (assigneeReads ? assertSucceeds(read) : assertFails(read));
+      },
+    );
+
+    it('🔒 ΚΑΜΙΑ ΔΙΑΡΡΟΗ: ανάθεση σε έγγραφο ΞΕΝΟΥ tenant δεν δίνει πρόσβαση', async () => {
+      // Η ανάθεση είναι δικαίωμα ΜΕΣΑ στον χώρο σου. Ένα `assignedTo` που δείχνει
+      // σ' εσένα από άλλη εταιρεία δεν σε κάνει κάτοχο — αλλιώς ο έλεγχος tenant
+      // θα παρακάμπτονταν με ένα πεδίο.
+      await withSeedContext(env(), async (ctx) => {
+        await ctx
+          .firestore()
+          .collection(collection)
+          .doc('crm-cross')
+          .set(
+            docShape({
+              companyId: CROSS_TENANT_COMPANY_ID,
+              createdBy: AUTHOR_UID,
+              assignedTo: ASSIGNEE_UID,
+            }),
+          );
+      });
+
+      const db = getContext(env(), 'same_tenant_user').firestore();
+      await assertFails(db.collection(collection).doc('crm-cross').get());
+      await assertFails(db.collection(collection).doc('crm-cross').update(NEUTRAL_EDIT));
+    });
+  });
+}
+
+/**
+ * Οι δοκιμές που ο πίνακας δεν μπορεί να εκφράσει, για μία CRM συλλογή που ο browser ΓΡΑΦΕΙ (`leads`, `activities`):
+ * το σκέλος ανάγνωσης + το σκέλος εγγραφής.
+ *
+ * Καλείται μία φορά ανά σουίτα, **έξω** από τον βρόχο της `COVERAGE.matrix`.
+ */
+export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
+  const { collection, assigneeIsOwner } = contract;
+
+  describeCrmReadLeg({ collection, assigneeReads: assigneeIsOwner });
+
+  describeOnEmulator(`${collection}.rules — το σκέλος του ΚΑΤΟΧΟΥ (ADR-841 §7 Α21.14.8)`, (env) => {
+
     /** Σύγχρονο έγγραφο: έχει `companyId`, το έγραψε ο ένας, το δουλεύει ο άλλος. */
     async function seedAssignedToMe(docId: string): Promise<void> {
-      await withSeedContext(env, async (ctx) => {
+      await withSeedContext(env(), async (ctx) => {
         await ctx
           .firestore()
           .collection(collection)
@@ -131,7 +209,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
       // Χωρίς αυτόν, ένας κανόνας «άρνηση σε όλα» θα έκανε ΚΑΘΕ αρνητική δοκιμή
       // παρακάτω πράσινη για λάθος λόγο. Είναι η γραμμή που αποδεικνύει ότι οι
       // υπόλοιπες μετρούν κάτι.
-      await withSeedContext(env, async (ctx) => {
+      await withSeedContext(env(), async (ctx) => {
         await ctx
           .firestore()
           .collection(collection)
@@ -146,7 +224,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
       });
 
       await assertSucceeds(
-        getContext(env, 'same_tenant_user')
+        getContext(env(), 'same_tenant_user')
           .firestore()
           .collection(collection)
           .doc('crm-mine')
@@ -160,7 +238,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
       // Ο συνάδελφος ΔΙΑΒΑΖΕΙ το έγγραφο (tenant-wide) αλλά δεν το γράφει.
       // Χωρίς αυτή τη γραμμή, το «ο ανατεθειμένος μπορεί» θα ήταν συμβατό με το
       // «όλοι μπορούν» — δηλαδή δεν θα απεδείκνυε τίποτα.
-      await withSeedContext(env, async (ctx) => {
+      await withSeedContext(env(), async (ctx) => {
         await ctx
           .firestore()
           .collection(collection)
@@ -174,7 +252,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
           );
       });
 
-      const db = getContext(env, 'same_tenant_user').firestore();
+      const db = getContext(env(), 'same_tenant_user').firestore();
       await assertSucceeds(db.collection(collection).doc('crm-theirs').get());
       await assertFails(db.collection(collection).doc('crm-theirs').update(NEUTRAL_EDIT));
     });
@@ -189,7 +267,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
         //    `opportunities`/`activities` ⇒ κοκκινίζει η δική τους.
         await seedAssignedToMe('crm-assigned');
 
-        const update = getContext(env, 'same_tenant_user')
+        const update = getContext(env(), 'same_tenant_user')
           .firestore()
           .collection(collection)
           .doc('crm-assigned')
@@ -198,55 +276,6 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
         await (assigneeIsOwner ? assertSucceeds(update) : assertFails(update));
       },
     );
-
-    it(
-      assigneeIsOwner
-        ? '🏆 LEGACY (χωρίς companyId): ο ανατεθειμένος ΔΙΑΒΑΖΕΙ'
-        : '🔓 LEGACY (χωρίς companyId): ο ανατεθειμένος ΔΕΝ διαβάζει',
-      async () => {
-        // Το legacy fallback είναι ο ΜΟΝΟΣ δρόμος χωρίς έλεγχο tenant. Καρφώνεται
-        // ρητά ώστε να μη διευρυνθεί κατά λάθος — και η επόμενη δοκιμή δείχνει
-        // ότι δεν είναι τρύπα διαρροής.
-        await withSeedContext(env, async (ctx) => {
-          await ctx
-            .firestore()
-            .collection(collection)
-            .doc('crm-legacy')
-            .set(docShape({ createdBy: AUTHOR_UID, assignedTo: ASSIGNEE_UID }));
-        });
-
-        const read = getContext(env, 'same_tenant_user')
-          .firestore()
-          .collection(collection)
-          .doc('crm-legacy')
-          .get();
-
-        await (assigneeIsOwner ? assertSucceeds(read) : assertFails(read));
-      },
-    );
-
-    it('🔒 ΚΑΜΙΑ ΔΙΑΡΡΟΗ: ανάθεση σε έγγραφο ΞΕΝΟΥ tenant δεν δίνει πρόσβαση', async () => {
-      // Η ανάθεση είναι δικαίωμα ΜΕΣΑ στον χώρο σου. Ένα `assignedTo` που δείχνει
-      // σ' εσένα από άλλη εταιρεία δεν σε κάνει κάτοχο — αλλιώς ο έλεγχος tenant
-      // θα παρακάμπτονταν με ένα πεδίο.
-      await withSeedContext(env, async (ctx) => {
-        await ctx
-          .firestore()
-          .collection(collection)
-          .doc('crm-cross')
-          .set(
-            docShape({
-              companyId: CROSS_TENANT_COMPANY_ID,
-              createdBy: AUTHOR_UID,
-              assignedTo: ASSIGNEE_UID,
-            }),
-          );
-      });
-
-      const db = getContext(env, 'same_tenant_user').firestore();
-      await assertFails(db.collection(collection).doc('crm-cross').get());
-      await assertFails(db.collection(collection).doc('crm-cross').update(NEUTRAL_EDIT));
-    });
 
     it('🔴 ΤΟ ΚΕΝΟ ΠΟΥ ΕΚΛΕΙΣΕ: ο ΔΗΜΙΟΥΡΓΟΣ δεν γράφει έγγραφο ΞΕΝΟΥ tenant', async () => {
       // 🔴 ΜΕΤΡΗΜΕΝΟ ΠΑΝΩ ΣΤΟ ΤΟΤΕ `main` (2026-09-08) — ΚΑΙ ΣΤΙΣ ΤΡΕΙΣ ΣΥΛΛΟΓΕΣ:
@@ -262,7 +291,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
       //
       // 🔴 Η ΜΕΤΑΛΛΑΞΗ: βγάλε το `crmNotForeignTenant(doc)` από το
       //    `crmWriterIsPrivileged()` ⇒ κοκκινίζουν και οι τρεις σουίτες.
-      await withSeedContext(env, async (ctx) => {
+      await withSeedContext(env(), async (ctx) => {
         await ctx
           .firestore()
           .collection(collection)
@@ -276,7 +305,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
           );
       });
 
-      const db = getContext(env, 'same_tenant_user').firestore();
+      const db = getContext(env(), 'same_tenant_user').firestore();
       const ref = db.collection(collection).doc('crm-foreign-mine');
       // Και οι τρεις μαζί: η ανάγνωση ΗΤΑΝ ήδη κλειστή — αυτό ακριβώς αποδεικνύει
       // ότι το γράψιμο ήταν απροσπέλαστο από νόμιμη οθόνη, άρα το κλείσιμό του
@@ -288,7 +317,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
 
     it('🔒 το `companyId` δεν μετακινείται με ενημέρωση πελάτη', async () => {
       // `crmCompanyIdUnchanged()` — όρος χωρίς μάρτυρα μέχρι σήμερα.
-      await withSeedContext(env, async (ctx) => {
+      await withSeedContext(env(), async (ctx) => {
         await ctx
           .firestore()
           .collection(collection)
@@ -302,7 +331,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
       });
 
       await assertFails(
-        getContext(env, 'same_tenant_user')
+        getContext(env(), 'same_tenant_user')
           .firestore()
           .collection(collection)
           .doc('crm-immutable')
@@ -325,7 +354,7 @@ export function describeCrmOwnerLeg(contract: CrmOwnerContract): void {
       //    **0/756**, δηλαδή δεν είναι παρατηρήσιμοι από πελάτη. Δοκιμή γι'
       //    αυτούς θα ήταν πράσινη ό,τι κι αν γίνει — δηλαδή σχόλιο, όχι άγκυρα.
       await assertFails(
-        getContext(env, 'super_admin')
+        getContext(env(), 'super_admin')
           .firestore()
           .collection(collection)
           .doc('crm-does-not-exist')

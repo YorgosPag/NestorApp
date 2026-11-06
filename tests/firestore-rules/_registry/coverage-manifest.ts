@@ -1186,7 +1186,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'opportunities',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/opportunities.rules.test.ts',
-    ...crmDirectMatrix(),
+    // ADR-930 §3.10 Βήμα Β (2026-11-06): η ανάγνωση μένει `crmDirectMatrix`, ΚΑΘΕ εγγραφή από τον browser = deny
+    // (`allow create, update, delete: if false` — γραφέας ΜΟΝΟ ο server). Ο ξένος διαχειριστής περνά από
+    // «αμέτρητος» σε μετρημένη άρνηση στο create/delete: ο κανόνας δεν εξαρτάται πια από tenant.
+    ...overrideDefinition(crmDirectMatrix(), [
+      ...(['super_admin', 'same_tenant_admin', 'same_tenant_user'] as const).flatMap((persona) =>
+        (['create', 'update', 'delete'] as const).map((op) => cell(persona, op, 'deny', 'server_only'))),
+      cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+      cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
+    ]),
   },
   {
     collection: 'activities',

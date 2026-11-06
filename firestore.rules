@@ -3512,13 +3512,14 @@ service cloud.firestore {
     //    στους βοηθούς `crm*()` (βλ. «CRM MODULE — OWNER-AWARE …» παρακάτω στο
     //    αρχείο)· εδώ μένει ΜΟΝΟ η πολιτική της κάθε συλλογής, ορατή με μια ματιά.
     //
-    // ⚠️ Η ΑΣΥΜΜΕΤΡΙΑ ΕΙΝΑΙ ΣΚΟΠΙΜΗ, ΜΕΤΡΗΜΕΝΗ ΚΑΙ ΚΑΡΦΩΜΕΝΗ: `leads` και
-    //    `opportunities` δίνουν `update` στον ανατεθειμένο· τα `activities` ΟΧΙ.
-    //    ✅ Για τις `opportunities` το ερώτημα του ADR-841 §7 Α21.14.8 ΑΠΑΝΤΗΘΗΚΕ
-    //    ρητά (ADR-930 «Εξουσία κατόχου», απόφαση Giorgio 2026-11-04): ο
-    //    ανατεθειμένος πωλητής κινεί και επεξεργάζεται τη δική του — ΔΕΝ τη σβήνει.
-    //    🔓 ΑΝΟΙΧΤΟ ΕΡΩΤΗΜΑ: τα `activities` — ίδια διεύρυνση, ΞΕΧΩΡΙΣΤΗ απόφαση.
-    //    Καρφωμένο ως γεγονός στις τρεις σουίτες.
+    // ⚠️ Η ΑΣΥΜΜΕΤΡΙΑ ΕΙΝΑΙ ΣΚΟΠΙΜΗ, ΜΕΤΡΗΜΕΝΗ ΚΑΙ ΚΑΡΦΩΜΕΝΗ: τα `leads` δίνουν
+    //    `update` στον ανατεθειμένο· τα `activities` ΟΧΙ· οι `opportunities` ΔΕΝ
+    //    γράφονται ΚΑΘΟΛΟΥ από τον browser (ADR-930 §3.10 Βήμα Β, 2026-11-06).
+    //    ✅ Η εξουσία κατόχου των `opportunities` (ADR-930, απόφαση Giorgio
+    //    2026-11-04: ο ανατεθειμένος κινεί και επεξεργάζεται τη δική του — ΔΕΝ τη
+    //    σβήνει) ζει πλέον ΜΟΝΟ στον server (`decideOpportunityAccess`).
+    //    🔓 Τα `activities`: η πολιτική αποφασίστηκε (ADR-930 §4), η υλοποίηση
+    //    έρχεται με την πρώτη πραγματική οθόνη. Καρφωμένο ως γεγονός στις τρεις σουίτες.
 
     match /leads/{leadId} {
       // 📖 READ: tenant-scoped· legacy fallback για δημιουργό Ή ανατεθειμένο.
@@ -3558,35 +3559,14 @@ service cloud.firestore {
                            && (crmIsCreator(resource.data) || crmIsAssignee(resource.data)))
                      );
 
-      allow create: if crmCanCreate();
-
-      // 🔒 ADR-930 — το ΣΤΑΔΙΟ και ό,τι παράγεται από αυτό έχουν ΕΝΑΝ γραφέα: `POST /api/opportunities/[id]/stage`
-      //    (Admin SDK: έλεγχος σύγκρουσης, υποχρεωτικά στοιχεία κλεισίματος, ιστορικό). Ο πελάτης τα διαβάζει, ΔΕΝ τα γράφει.
-      //    Η λίστα = `STAGE_OWNED_FIELDS` (`services/crm/opportunity-stage-transition.ts`)· την ισοτιμία τη φυλά η πύλη
-      //    «ένας γραφέας σταδίου ευκαιρίας» (CHECK 3.114).
-      // 👤 ADR-930 «Εξουσία κατόχου» (απόφαση Giorgio 2026-11-04): + Ο ΑΝΑΤΕΘΕΙΜΕΝΟΣ — δουλεύει τη δική του ευκαιρία,
-      //    όπως στα `leads` (Salesforce Record Owner · HubSpot «Owned only» · Pipedrive deal owner). Ο ίδιος πίνακας
-      //    ζει στον server ως `decideOpportunityAccess` (`services/crm/opportunity-access.ts`)· την ισοτιμία τη φυλά η
-      //    CHECK 3.114 (Κ5: ανατεθειμένος ΜΟΝΟ στο `update` · Κ6: ρόλοι της ικανότητας ⇔ ρόλος των κανόνων).
-      // 🔁 ADR-930 §3.8 — ο ΚΑΤΟΧΟΣ έχει κι αυτός ΕΝΑΝ γραφέα: `POST /api/opportunities/[id]/owner` (CAS, ενεργό μέλος
-      //    του χώρου, ιστορικό, ειδοποίηση). Ο πελάτης ΔΕΝ γράφει `assignedTo` / `ownerHandoffNote`, και ΚΑΝΕΙΣ δεν
-      //    ξαναγράφει το `createdBy` (Salesforce `CreatedById` = system field). Ως 2026-11-05 ο ανατεθειμένος έγραφε από
-      //    τον browser `createdBy` = το δικό του uid ⇒ γινόταν «δημιουργός» ⇒ αποκτούσε ΔΙΑΓΡΑΦΗ. Λίστα =
-      //    `STAGE_OWNED_FIELDS` ∪ `OWNER_OWNED_FIELDS` (`services/crm/opportunity-owner-transfer.ts`) — CHECK 3.114 Κ2/Κ7.
-      allow update: if isAuthenticated()
-                    && resource != null
-                    && (crmWriterIsPrivileged(resource.data)
-                        || (crmIsAssignee(resource.data) && crmNotForeignTenant(resource.data)))
-                    && crmCompanyIdUnchanged(resource.data)
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                         'stage', 'status', 'wonDate', 'closedAt', 'stageChangedAt', 'lostReason', 'lostReasonNote', 'reopenCount', '_v',
-                         'assignedTo', 'createdBy', 'ownerHandoffNote'
-                       ]);
-
-      // 🗑️ DELETE: ΟΧΙ ο ανατεθειμένος — ίδια απόφαση με τα `leads` (και `intent: 'delete'` του server).
-      allow delete: if isAuthenticated()
-                    && resource != null
-                    && crmWriterIsPrivileged(resource.data);
+      // 🔒 ADR-930 §3.10 Βήμα Β (2026-11-06) — Ο BROWSER ΔΕΝ ΓΡΑΦΕΙ ΚΑΘΟΛΟΥ. Κάθε εγγραφή περνά από τον server
+      //    (Admin SDK), με κριτή κατόχου (`decideOpportunityAccess`), έλεγχο σύγκρουσης και ιστορικό:
+      //      · δημιουργία / επεξεργασία / διαγραφή → `POST /api/opportunities` · `PATCH|DELETE /api/opportunities/[id]`
+      //        (`services/opportunities-server.service.ts`, ΕΝΑ σχήμα: `services/crm/opportunity-fields-schema.ts`)
+      //      · στάδιο → `POST /api/opportunities/[id]/stage` · κάτοχος → `POST /api/opportunities/[id]/owner`
+      //    Ως σήμερα το `update` είχε λίστα κλειδώματος (στάδιο + κάτοχος) και ΟΛΑ τα άλλα πεδία γράφονταν από τον
+      //    browser χωρίς σχήμα και χωρίς ιστορικό. Την κλειστότητα τη φυλά η CHECK 3.114 Κ2.
+      allow create, update, delete: if false;
     }
 
     match /activities/{activityId} {

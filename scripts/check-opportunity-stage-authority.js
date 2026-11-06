@@ -5,19 +5,18 @@
  * Η ΕΡΩΤΗΣΗ: «μπορεί κάποιος να αλλάξει το στάδιο μιας ευκαιρίας ΕΞΩ από την πόρτα `POST /api/opportunities/[id]/stage` —
  * δηλαδή χωρίς έλεγχο σύγκρουσης, χωρίς στοιχεία κλεισίματος, χωρίς ίχνος;»
  *
- * Τέσσερα σύνορα, ένα για κάθε δρόμο προς τη βάση:
- *   Κ1 — `src/` (Admin SDK): κάθε αρχείο που ονομάζει τη συλλογή ή καλεί τον γραφέα είναι δηλωμένο, με λόγο
- *        (`lib/write-authority/symbol-owner-gate`, ίδια κρίση με 3.112/3.113).
- *   Κ2 — πελάτης: η λίστα του `firestore.rules` που κλειδώνει τα πεδία σταδίου είναι ΑΚΡΙΒΩΣ το `STAGE_OWNED_FIELDS`
- *        του κώδικα. Δύο λίστες που αποκλίνουν = πεδίο που ο πελάτης γράφει ενώ ο κώδικας νομίζει ότι δεν μπορεί.
+ * Ένα σύνορο για κάθε δρόμο προς τη βάση:
+ *   Κ1 — `src/` (Admin SDK): κάθε αρχείο που ονομάζει τη συλλογή ή καλεί έναν γραφέα είναι δηλωμένο, με λόγο
+ *        (`lib/write-authority/symbol-owner-gate`, ίδια κρίση με 3.112/3.113). Εκεί ζουν και: ο ΕΝΑΣ καλών του
+ *        φράχτη `requireOpportunityInTenant` (ο κριτής κατόχου) και ο ΕΝΑΣ καλών του `applyOpportunityOwnerTransfer`
+ *        (η πόρτα `…/owner`, ADR-930 §3.8 — πρώην Κ7).
+ *   Κ2 — πελάτης (ADR-930 §3.10 Βήμα Β, 2026-11-06): το `match /opportunities` του `firestore.rules` ΔΕΝ αφήνει ΚΑΜΙΑ
+ *        εγγραφή — `create`, `update`, `delete` δηλωμένα `if false`, και κανένα άλλο `allow` που γράφει.
+ *        Ως σήμερα η Κ2 σύγκρινε τη λίστα κλειδώματος του `update` με `STAGE_OWNED_FIELDS ∪ OWNER_OWNED_FIELDS`, και οι
+ *        Κ5/Κ6 καθρέφτιζαν τον κριτή κατόχου στους κανόνες. Με κλειστούς κανόνες ο κριτής ζει σε ΕΝΑ σημείο
+ *        (`decideOpportunityAccess`, server) — δεύτερη έκφραση να συγκριθεί δεν υπάρχει πια.
  *   Κ3 — MCP: οι ευκαιρίες ΔΕΝ είναι στη λίστα απευθείας εγγραφής (`mcp-server/src/security/access-control.ts`).
  *   Κ4 — AI: οι ευκαιρίες ΔΕΝ είναι στο `ALLOWED_WRITE_COLLECTIONS` του executor.
- *   Κ5/Κ6 — εξουσία κατόχου: server ⇔ κανόνες λένε το ίδιο για το «ποιος αγγίζει αυτή την ευκαιρία»
- *        (`lib/write-authority/opportunity-owner-parity`). Και το `requireOpportunityInTenant` έχει ΕΝΑΝ καλούντα (Κ1,
- *        μητρώο): το σημείο επιβολής του κριτή — καμία διαδρομή δεν φτάνει στο έγγραφο χωρίς να ρωτήσει «κάτοχος;».
- *   Κ7 — ο ΚΑΤΟΧΟΣ (ADR-930 §3.8): η λίστα κλειδώματος των κανόνων περιέχει ΚΑΙ το `OWNER_OWNED_FIELDS`
- *        (`opportunity-owner-transfer.ts`) — ο πελάτης δεν γράφει `assignedTo`, κανείς δεν ξαναγράφει `createdBy` — και
- *        ο γραφέας `applyOpportunityOwnerTransfer` έχει ΕΝΑΝ δηλωμένο καλούντα, την πόρτα `…/owner` (Κ1, μητρώο).
  *
  * @see docs/gates/3.114.md
  */
@@ -26,46 +25,61 @@
 
 const { defineSymbolOwnerGate } = require('./lib/write-authority/symbol-owner-gate');
 const { mcpAllowListFindings } = require('./lib/write-authority/mcp-write-allowlist');
-const { ownerParityFindings, opportunitiesRulesBlock, ROLE_CATALOGUE, ACCESS_JUDGE } = require('./lib/write-authority/opportunity-owner-parity');
 
 const REGISTRY_FILE = '.opportunity-stage-authority.json';
 const RULES_FILE = 'firestore.rules';
-const STAGE_FIELDS_SOURCE = 'src/services/crm/opportunity-stage-transition.ts';
-const OWNER_FIELDS_SOURCE = 'src/services/crm/opportunity-owner-transfer.ts';
 const AI_EXECUTOR = 'src/services/ai-pipeline/tools/executor-shared-types.ts';
 
-/** Οι συμβολοσειρές μιας λίστας `'a', 'b'` (με ή χωρίς αλλαγές γραμμής). */
-const quotedNames = (body) => [...body.matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+/** Οι πράξεις εγγραφής που ΠΡΕΠΕΙ να δηλωθούν κλειστές (το `write` τις καλύπτει και τις τρεις). */
+const WRITE_OPS = ['create', 'update', 'delete'];
 
-/** Η λίστα κλειδώματος μέσα στο `match /opportunities/{…}` — ή `null`. */
-function rulesStageFields(text) {
-  const block = opportunitiesRulesBlock(text);
-  const list = block && /affectedKeys\(\)\.hasAny\(\[([\s\S]*?)\]\)/.exec(block);
-  return list ? quotedNames(list[1]) : null;
+const stripComments = (text) => text.replace(/\/\/.*$/gm, '');
+
+/** Το σώμα του `match /opportunities/{…}` χωρίς σχόλια — ή `null`. */
+function opportunitiesRulesBlock(text) {
+  const block = /match \/opportunities\/\{[^}]+\}\s*\{([\s\S]*?)\n    \}/.exec(text);
+  return block ? stripComments(block[1]) : null;
 }
 
-/** Η λίστα `export const <name> = [ … ] as const;` ενός αρχείου πηγής — ή `null`. */
-function codeFieldList(input, file, name) {
-  if (!input.exists(file)) return null;
-  const match = new RegExp(String.raw`export const ${name} = \[([\s\S]*?)\] as const;`).exec(input.read(file));
-  return match ? quotedNames(match[1]) : null;
+/** Οι δηλώσεις `allow <πράξεις>: <έκφραση>;` του μπλοκ. */
+function allowStatements(block) {
+  return [...block.matchAll(/\ballow\s+([a-z,\s]+?)\s*:\s*([\s\S]*?);/g)].map((m) => ({
+    ops: m[1].split(',').map((op) => op.trim()).filter(Boolean),
+    closed: /^if\s+false$/.test(m[2].trim()),
+    expression: m[2].trim().replace(/\s+/g, ' '),
+  }));
 }
 
-/** Κ2 + Κ7: οι κανόνες κλειδώνουν ΑΚΡΙΒΩΣ `STAGE_OWNED_FIELDS ∪ OWNER_OWNED_FIELDS`. */
-function rulesParityFindings(input, STATES) {
-  const rules = input.exists(RULES_FILE) ? rulesStageFields(input.read(RULES_FILE)) : null;
-  const stage = codeFieldList(input, STAGE_FIELDS_SOURCE, 'STAGE_OWNED_FIELDS');
-  const owner = codeFieldList(input, OWNER_FIELDS_SOURCE, 'OWNER_OWNED_FIELDS');
-  const missing = !rules ? RULES_FILE : !stage ? STAGE_FIELDS_SOURCE : !owner ? OWNER_FIELDS_SOURCE : null;
-  if (missing) {
-    return [{ state: STATES.SOURCE_DRIFT, file: missing, detail: 'δεν βρέθηκε λίστα κλειδωμένων πεδίων (στάδιο/κάτοχος) — η πύλη δεν κρίνει στα τυφλά' }];
+/** Κ2: ο πελάτης δεν γράφει καθόλου — κάθε πράξη εγγραφής δηλωμένη `if false`, καμία ανοιχτή. */
+function rulesClosedFindings(input, STATES) {
+  const block = input.exists(RULES_FILE) ? opportunitiesRulesBlock(input.read(RULES_FILE)) : null;
+  if (!block) {
+    return [{ state: STATES.SOURCE_DRIFT, file: RULES_FILE, detail: 'δεν βρέθηκε το `match /opportunities/{…}` — η πύλη δεν κρίνει στα τυφλά' }];
   }
-  const code = [...new Set([...stage, ...owner])].sort();
-  return rules.join() === code.join() ? [] : [{
-    state: STATES.OUTSIDE,
-    file: RULES_FILE,
-    detail: `οι κανόνες κλειδώνουν [${rules.join(', ')}] αλλά ο κώδικας δηλώνει [${code.join(', ')}]`,
-  }];
+  const findings = [];
+  const declaredClosed = new Set();
+  for (const statement of allowStatements(block)) {
+    const writes = statement.ops.flatMap((op) => (op === 'write' ? WRITE_OPS : WRITE_OPS.filter((w) => w === op)));
+    if (writes.length === 0) continue;
+    if (statement.closed) {
+      writes.forEach((op) => declaredClosed.add(op));
+    } else {
+      findings.push({
+        state: STATES.OUTSIDE,
+        file: RULES_FILE,
+        detail: `\`allow ${statement.ops.join(', ')}: ${statement.expression}\` — ο browser γράφει ευκαιρία χωρίς κριτή, σχήμα και ιστορικό (μόνο ο server γράφει)`,
+      });
+    }
+  }
+  const undeclared = WRITE_OPS.filter((op) => !declaredClosed.has(op));
+  if (undeclared.length > 0) {
+    findings.push({
+      state: STATES.SOURCE_DRIFT,
+      file: RULES_FILE,
+      detail: `δεν δηλώνεται ρητά κλειστό: ${undeclared.join(', ')} — γράψε \`allow create, update, delete: if false;\``,
+    });
+  }
+  return findings;
 }
 
 function aiWriteFindings(input, STATES) {
@@ -79,20 +93,19 @@ function aiWriteFindings(input, STATES) {
 
 function extraFindings(root, input, STATES) {
   return [
-    ...rulesParityFindings(input, STATES),
+    ...rulesClosedFindings(input, STATES),
     ...mcpAllowListFindings(input, STATES, {
       forbidden: /['"`]opportunities['"`]/,
       detail: 'οι ευκαιρίες στη λίστα απευθείας εγγραφής του MCP — παρακάμπτει την πόρτα σταδίου',
     }),
     ...aiWriteFindings(input, STATES),
-    ...ownerParityFindings(input, STATES),
   ];
 }
 
 const { measure, report, main, loadRegistry, STATES, BLOCKING } = defineSymbolOwnerGate({
   check: '3.114',
   skipEnv: 'SKIP_OPPORTUNITY_STAGE_AUTHORITY',
-  ok: 'το στάδιο ευκαιρίας έχει ΕΝΑΝ γραφέα — κάθε μετακίνηση περνά από την πόρτα με έλεγχο σύγκρουσης και ίχνος',
+  ok: 'η ευκαιρία γράφεται ΜΟΝΟ από τον server — στάδιο, κάτοχος και πεδία περνούν από τις πόρτες τους με κριτή, σύγκρουση και ίχνος',
   registryFile: REGISTRY_FILE,
   outsideState: 'opportunity-touched-outside-owner',
   extraFindings,
@@ -101,13 +114,13 @@ const { measure, report, main, loadRegistry, STATES, BLOCKING } = defineSymbolOw
     width: 36,
     remedy: [
       'ΘΕΡΑΠΕΙΑ: το στάδιο αλλάζει ΜΟΝΟ με `POST /api/opportunities/[id]/stage` (γραφέας: `opportunity-stage-transition.server.ts`).',
-      `Νέο αρχείο που αγγίζει τη συλλογή = γραμμή στο ${REGISTRY_FILE}, με λόγο. Κανόνες ⇄ STAGE_OWNED_FIELDS ∪ OWNER_OWNED_FIELDS: ίδια λίστα.`,
       'Ο κάτοχος αλλάζει ΜΟΝΟ με `POST /api/opportunities/[id]/owner` (γραφέας: `opportunity-owner-transfer.server.ts`).',
-      'Εξουσία κατόχου: ανατεθειμένος ΜΟΝΟ στο `update` · ρόλοι της ικανότητας του κριτή == ρόλος του `isCompanyAdminOfCompany`.',
+      'Τα πεδία: `POST /api/opportunities` · `PATCH|DELETE /api/opportunities/[id]` (γραφέας: `opportunities-server.service.ts`).',
+      `Νέο αρχείο που αγγίζει τη συλλογή = γραμμή στο ${REGISTRY_FILE}, με λόγο. Κανόνες: \`allow create, update, delete: if false;\`.`,
     ],
   },
 });
 
 if (require.main === module) process.exit(main());
 
-module.exports = { measure, report, main, loadRegistry, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, STAGE_FIELDS_SOURCE, OWNER_FIELDS_SOURCE, AI_EXECUTOR, ROLE_CATALOGUE, ACCESS_JUDGE };
+module.exports = { measure, report, main, loadRegistry, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, AI_EXECUTOR };

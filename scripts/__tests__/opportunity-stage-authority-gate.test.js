@@ -2,7 +2,7 @@
  * CHECK 3.114 — η πύλη του ενός γραφέα του σταδίου ευκαιρίας (ADR-930).
  *
  * Μ0 = πράσινη στο ΠΡΑΓΜΑΤΙΚΟ δέντρο, ΜΕ παρονομαστή. Οι υπόλοιπες = κάθε κρίση κοκκινίζει σε δικό της fixture, δίπλα σε
- * δίδυμα που ΔΕΝ πρέπει να κοκκινίσουν (σχόλιο · άλλη συλλογή).
+ * δίδυμα που ΔΕΝ πρέπει να κοκκινίσουν (σχόλιο · άλλη συλλογή · read μόνο).
  */
 
 'use strict';
@@ -11,46 +11,31 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const {
-  measure, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, STAGE_FIELDS_SOURCE, OWNER_FIELDS_SOURCE, AI_EXECUTOR, ROLE_CATALOGUE, ACCESS_JUDGE,
-} = require('../check-opportunity-stage-authority');
+const { measure, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, AI_EXECUTOR } = require('../check-opportunity-stage-authority');
 const { MCP_ACCESS_CONTROL } = require('../lib/write-authority/mcp-write-allowlist');
 
 const WRITER = 'src/services/crm/opportunity-stage-transition.server.ts';
 const ROUTE = 'src/app/api/opportunities/[id]/stage/route.ts';
 const ENFORCER = 'src/services/crm/opportunity-access.server.ts';
 const REASON = 'Ο ένας γραφέας: CAS στο αναμενόμενο στάδιο, κανόνας μετάβασης, ίχνος μετά το commit.';
-const FIELDS = `'stage', 'status', 'closedAt'`;
-const OWNER_FIELDS = `'assignedTo', 'createdBy'`;
-const LOCKED = `${FIELDS},
-                         ${OWNER_FIELDS}`;
 const OWNER_WRITER = 'src/services/crm/opportunity-owner-transfer.server.ts';
 const OWNER_ROUTE = 'src/app/api/opportunities/[id]/owner/route.ts';
-const PRIVILEGED_OR_ASSIGNEE = '(crmWriterIsPrivileged(resource.data) || (crmIsAssignee(resource.data) && crmNotForeignTenant(resource.data)))';
-const PRIVILEGED = 'crmWriterIsPrivileged(resource.data)';
 
-const rulesWith = (fields, { update = PRIVILEGED_OR_ASSIGNEE, remove = PRIVILEGED, admin = 'company_admin' } = {}) => `service cloud.firestore {
+const READ = `allow read: if isAuthenticated()
+                  && (isSuperAdminOnly() || crmInTenant(resource.data));`;
+const CLOSED = 'allow create, update, delete: if false;';
+
+/** Το `match /opportunities` με τις δοσμένες δηλώσεις — και ένα σχόλιο που ΜΟΙΑΖΕΙ με ανοιχτή εγγραφή. */
+const rulesWith = (...statements) => `service cloud.firestore {
     match /opportunities/{opportunityId} {
-      // crmIsAssignee(resource.data) σε σχόλιο δεν μετρά
-      allow update: if ${update}
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                         ${fields}
-                       ]);
-      allow delete: if ${remove};
+      // allow update: if crmWriterIsPrivileged(resource.data);  ← σχόλιο, δεν μετρά
+      ${statements.join('\n      ')}
     }
 
-    function isCompanyAdminOfCompany(companyId) {
-      return isSuperAdminOnly() ||
-             (getGlobalRole() == '${admin}' && belongsToCompany(companyId));
+    match /leads/{leadId} {
+      allow update: if crmWriterIsPrivileged(resource.data);
     }
 }`;
-
-const catalogueGranting = (managers) => `export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
-  super_admin: { permissions: [], isBypass: true },
-${managers.map((role) => `  ${role}: { permissions: ['crm:contacts:view', 'crm:opportunities:update'] },`).join('\n')}
-  // 'crm:opportunities:update' σε σχόλιο δεν μετρά
-  viewer: { permissions: ['crm:opportunities:view'] },
-};`;
 
 const registry = {
   guards: [
@@ -67,12 +52,8 @@ const HEALTHY = {
   [ENFORCER]: `export const requireOpportunityAccess = (p) => requireOpportunityInTenant(p);`,
   [OWNER_WRITER]: `export async function applyOpportunityOwnerTransfer(db) { return db.collection(COLLECTIONS.OPPORTUNITIES).doc('x'); }`,
   [OWNER_ROUTE]: `export const POST = (db) => applyOpportunityOwnerTransfer(db);`,
-  [ACCESS_JUDGE]: `export const OPPORTUNITY_MANAGE_PERMISSION: PermissionId = 'crm:opportunities:update';`,
-  [ROLE_CATALOGUE]: catalogueGranting(['company_admin']),
   'src/other.ts': `// COLLECTIONS.OPPORTUNITIES — σχόλιο, όχι χρήση\nexport const o = (db) => db.collection(COLLECTIONS.LEADS);`,
-  [STAGE_FIELDS_SOURCE]: `export const STAGE_OWNED_FIELDS = [\n  ${FIELDS},\n] as const;`,
-  [OWNER_FIELDS_SOURCE]: `export const OWNER_OWNED_FIELDS = [${OWNER_FIELDS}] as const;`,
-  [RULES_FILE]: rulesWith(LOCKED),
+  [RULES_FILE]: rulesWith(READ, CLOSED),
   [MCP_ACCESS_CONTROL]: `const WRITE_ALLOWED_COLLECTIONS = new Set([\n  'leads', // 'opportunities' σε σχόλιο δεν μετρά\n]);`,
   [AI_EXECUTOR]: `export const ALLOWED_WRITE_COLLECTIONS = new Set([\n  COLLECTIONS.LEADS,\n]);`,
 };
@@ -94,6 +75,7 @@ function worldWith(files, reg = registry) {
 
 const blockers = (result) => result.findings.filter((finding) => BLOCKING.includes(finding.state));
 const measured = (files, reg) => measure(worldWith(files, reg));
+const rulesBlockers = (...statements) => blockers(measured({ [RULES_FILE]: rulesWith(...statements) }));
 
 describe('CHECK 3.114', () => {
   it('Μ0: πράσινη στο πραγματικό δέντρο — και ο σαρωτής ΕΙΔΕ τους κατόχους', () => {
@@ -102,7 +84,7 @@ describe('CHECK 3.114', () => {
     expect(result.tally[STATES.OWNER]).toBeGreaterThanOrEqual(13);
   });
 
-  it('υγιής κόσμος: σχόλιο και άλλη συλλογή δεν είναι χρήση', () => {
+  it('υγιής κόσμος: σχόλιο, άλλη συλλογή και ανοιχτό `update` ΑΛΛΗΣ συλλογής δεν μετρούν', () => {
     const result = measured({});
     expect(blockers(result)).toEqual([]);
     expect(result.tally[STATES.OWNER]).toBe(5);
@@ -113,48 +95,53 @@ describe('CHECK 3.114', () => {
     expect(blockers(measured(rogue))).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: 'src/app/api/opportunities/[id]/notes/route.ts' })]);
   });
 
-  it('Κ5: οι κανόνες ΔΕΝ αφήνουν τον ανατεθειμένο στο update — ο server τον αφήνει', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(LOCKED, { update: PRIVILEGED }) });
-    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('ανατεθειμένο') })]);
-  });
-
-  it('Κ5: οι κανόνες αφήνουν τον ανατεθειμένο να ΣΒΗΣΕΙ — ο server όχι', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(LOCKED, { remove: PRIVILEGED_OR_ASSIGNEE }) });
-    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('`delete`') })]);
-  });
-
-  it('Κ6: η ικανότητα «όλες οι ευκαιρίες» δόθηκε σε ρόλο που οι κανόνες δεν ξέρουν', () => {
-    const result = measured({ [ROLE_CATALOGUE]: catalogueGranting(['company_admin', 'sales_agent']) });
-    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: ROLE_CATALOGUE, detail: expect.stringContaining('sales_agent') })]);
-  });
-
-  it('Κ6: οι κανόνες ονομάζουν άλλον «διαχειριστή» από τον κατάλογο', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(LOCKED, { admin: 'project_manager' }) });
-    expect(blockers(result).map((finding) => finding.file)).toEqual([ROLE_CATALOGUE]);
-  });
-
-  it('Κ6: χωρίς την ικανότητα του κριτή η πύλη ΑΡΝΕΙΤΑΙ (δεν κρίνει στα τυφλά)', () => {
-    const result = measured({ [ACCESS_JUDGE]: 'export const x = 1;' });
-    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.SOURCE_DRIFT, file: ACCESS_JUDGE })]);
-  });
-
   it('Κ1: δεύτερος γραφέας στον server (αδήλωτο αρχείο που ονομάζει τη συλλογή)', () => {
     const rogue = { 'src/server/rogue.ts': `export const r = (db) => db.collection(COLLECTIONS.OPPORTUNITIES).doc('x').update({ stage: 'closed_won' });` };
     expect(blockers(measured(rogue))).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: 'src/server/rogue.ts', line: 1 })]);
   });
 
-  it('Κ1: δεύτερη πόρτα που καλεί τον γραφέα χωρίς δήλωση', () => {
+  it('Κ1: δεύτερη πόρτα που καλεί τον γραφέα σταδίου χωρίς δήλωση', () => {
     const rogue = { 'src/app/api/other/route.ts': `export const POST = (db) => applyOpportunityStageTransition(db);` };
     expect(blockers(measured(rogue)).map((finding) => finding.state)).toEqual([STATES.OUTSIDE]);
   });
 
-  it('Κ2: οι κανόνες κλειδώνουν ΛΙΓΟΤΕΡΑ πεδία από όσα δηλώνει ο κώδικας', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(`'stage', 'status'`) });
-    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE })]);
+  it('Κ1 (πρώην Κ7): δεύτερη πόρτα μεταβίβασης που καλεί τον γραφέα κατόχου χωρίς δήλωση', () => {
+    const rogue = { 'src/app/api/opportunities/[id]/assign/route.ts': `export const POST = (db) => applyOpportunityOwnerTransfer(db);` };
+    expect(blockers(measured(rogue))).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: 'src/app/api/opportunities/[id]/assign/route.ts' })]);
   });
 
-  it('Κ2: χωρίς λίστα κλειδώματος στους κανόνες η πύλη ΑΡΝΕΙΤΑΙ', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(LOCKED).replace(/\n\s*&& !request[\s\S]*?\]\);/, ';') });
+  it('Κ2: ο κανόνας του Βήματος Α (update με λίστα κλειδώματος) ⇒ ΚΟΚΚΙΝΟ — ο browser γράφει τα υπόλοιπα πεδία', () => {
+    const update = `allow update: if crmWriterIsPrivileged(resource.data)
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['stage', 'assignedTo']);`;
+    expect(rulesBlockers(READ, 'allow create, delete: if false;', update)).toEqual([
+      expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('allow update') }),
+    ]);
+  });
+
+  it('Κ2: `allow write: if true` ⇒ ΚΟΚΚΙΝΟ, ακόμη κι αν υπάρχει και η κλειστή δήλωση (οι κανόνες ΕΝΩΝΟΝΤΑΙ)', () => {
+    expect(rulesBlockers(READ, CLOSED, 'allow write: if true;')).toEqual([
+      expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('allow write') }),
+    ]);
+  });
+
+  it('Κ2: εγγραφή κρυμμένη μαζί με την ανάγνωση (`allow read, create`) ⇒ ΚΟΚΚΙΝΟ', () => {
+    expect(rulesBlockers('allow read, create: if isAuthenticated();', CLOSED)).toEqual([
+      expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('read, create') }),
+    ]);
+  });
+
+  it('Κ2: το `delete` δεν δηλώνεται κλειστό ⇒ η πύλη ΑΡΝΕΙΤΑΙ (η σιωπή δεν είναι δήλωση)', () => {
+    expect(rulesBlockers(READ, 'allow create, update: if false;')).toEqual([
+      expect.objectContaining({ state: STATES.SOURCE_DRIFT, file: RULES_FILE, detail: expect.stringContaining('delete') }),
+    ]);
+  });
+
+  it('Κ2: `allow write: if false` καλύπτει και τις τρεις πράξεις ⇒ πράσινο', () => {
+    expect(rulesBlockers(READ, 'allow write: if false;')).toEqual([]);
+  });
+
+  it('Κ2: χωρίς το μπλοκ `match /opportunities` η πύλη ΑΡΝΕΙΤΑΙ (δεν κρίνει στα τυφλά)', () => {
+    const result = measured({ [RULES_FILE]: 'service cloud.firestore {\n}' });
     expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.SOURCE_DRIFT, file: RULES_FILE })]);
   });
 
@@ -167,21 +154,6 @@ describe('CHECK 3.114', () => {
     const result = measured({ [AI_EXECUTOR]: `export const ALLOWED_WRITE_COLLECTIONS = new Set([\n  COLLECTIONS.OPPORTUNITIES,\n]);` });
     // Δύο ευρήματα, και τα δύο σωστά: η Κ1 (αδήλωτη χρήση της συλλογής) και η Κ4 (λίστα εγγραφής). Ελέγχεται το ΔΙΚΟ της.
     expect(blockers(result)).toContainEqual(expect.objectContaining({ state: STATES.OUTSIDE, file: AI_EXECUTOR, detail: expect.stringContaining('λίστα εγγραφής του AI') }));
-  });
-
-  it('Κ7: οι κανόνες ΔΕΝ κλειδώνουν τον κάτοχο — ο πελάτης θα μεταβίβαζε χωρίς CAS ή έλεγχο μέλους', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(`${FIELDS}, 'createdBy'`) });
-    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('assignedTo') })]);
-  });
-
-  it('Κ7: χωρίς τη λίστα πεδίων ιδιοκτησίας η πύλη ΑΡΝΕΙΤΑΙ (δεν κρίνει στα τυφλά)', () => {
-    const result = measured({ [OWNER_FIELDS_SOURCE]: 'export const x = 1;' });
-    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.SOURCE_DRIFT, file: OWNER_FIELDS_SOURCE })]);
-  });
-
-  it('Κ7: δεύτερη πόρτα μεταβίβασης που καλεί τον γραφέα κατόχου χωρίς δήλωση', () => {
-    const rogue = { 'src/app/api/opportunities/[id]/assign/route.ts': `export const POST = (db) => applyOpportunityOwnerTransfer(db);` };
-    expect(blockers(measured(rogue))).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: 'src/app/api/opportunities/[id]/assign/route.ts' })]);
   });
 
   it('δήλωση χωρίς λόγο', () => {
