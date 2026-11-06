@@ -3,11 +3,12 @@
  *
  * Ο πίνακας είναι ο ΙΔΙΟΣ με το `match /opportunities` του `firestore.rules` (σουίτα `opportunities.rules.test.ts` +
  * `_harness/crm-owner-contract.ts`). Εδώ: κάθε σχέση (διαχειριστής · δημιουργός · ανατεθειμένος · τρίτος · ξένος ·
- * legacy · bypass) × κάθε πρόθεση (`edit` · `delete`).
+ * legacy · bypass) × κάθε πρόθεση (`edit` · `delete` · `transfer`).
  */
 
 import {
   canEditOpportunity,
+  canTransferOpportunity,
   decideOpportunityAccess,
   isOpportunityAccessGranted,
   opportunityOwnerOf,
@@ -89,5 +90,33 @@ describe('decideOpportunityAccess — ακραίες ταυτότητες', () =
     expect(canEditOpportunity(seller, owned)).toBe(true);
     expect(canEditOpportunity(bystander, owned)).toBe(false);
     expect(isOpportunityAccessGranted('denied-foreign-tenant')).toBe(false);
+  });
+});
+
+describe('decideOpportunityAccess — μεταβίβαση (`transfer`, ADR-930 §3.8)', () => {
+  const unassigned: OpportunityAccessFacts = { companyId: COMPANY, createdBy: author.uid, assignedTo: '' };
+  const CASES: ReadonlyArray<readonly [string, OpportunityAccessSubject, OpportunityAccessFacts, OpportunityAccessVerdict]> = [
+    ['διαχειριστής εταιρείας',                         admin,         owned,           'granted-capability'],
+    ['ρητό claim ικανότητας',                          explicitClaim, owned,           'granted-capability'],
+    ['υπερδιαχειριστής (bypass)',                      superAdmin,    owned,           'granted-capability'],
+    ['ο κάτοχος (ανατεθειμένος)',                      seller,        owned,           'granted-owner'],
+    // Salesforce: `CreatedById` ≠ `OwnerId` — ο δημιουργός που την έδωσε δεν την ξαναπαίρνει μόνος του.
+    ['δημιουργός που ΔΕΝ είναι πια κάτοχος',            author,        owned,           'denied-not-owner'],
+    ['δημιουργός χωρίς ανατεθειμένο = κάτοχος',        author,        unassigned,      'granted-owner'],
+    ['τρίτος της εταιρείας',                           bystander,     owned,           'denied-not-owner'],
+    ['διαχειριστής ΞΕΝΗΣ εταιρείας',                   foreignAdmin,  owned,           'denied-foreign-tenant'],
+    ['κάτοχος σε έγγραφο ξένου tenant',                seller,        foreignAssigned, 'denied-foreign-tenant'],
+    ['legacy: διαχειριστής (χωρίς εταιρεία)',          admin,         legacy,          'denied-not-owner'],
+  ];
+
+  it.each(CASES)('%s', (_label, subject, opportunity, expected) => {
+    expect(verdict(subject, opportunity, 'transfer')).toBe(expected);
+  });
+
+  it('`canTransferOpportunity` = η πρόθεση `transfer`· η άρνηση ονομάζει τον κάτοχο', () => {
+    expect(canTransferOpportunity(seller, owned)).toBe(true);
+    expect(canTransferOpportunity(author, owned)).toBe(false);
+    expect(decideOpportunityAccess({ subject: bystander, opportunity: owned, intent: 'transfer' }))
+      .toEqual({ verdict: 'denied-not-owner', intent: 'transfer', ownerUid: seller.uid });
   });
 });

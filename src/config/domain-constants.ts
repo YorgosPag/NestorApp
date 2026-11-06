@@ -1087,6 +1087,8 @@ export const API_ROUTES = {
     LIST: '/api/opportunities',
     BY_ID: (id: string) => `/api/opportunities/${encodeURIComponent(id)}` as const,
     STAGE: (id: string) => `/api/opportunities/${encodeURIComponent(id)}/stage` as const,
+    /** ADR-930 §3.8 — ο ΕΝΑΣ γραφέας του κατόχου: GET υποψήφιοι · POST μεταβίβαση με CAS. */
+    OWNER: (id: string) => `/api/opportunities/${encodeURIComponent(id)}/owner` as const,
   },
 
   // ── Contracts ─────────────────────────────────────────────────────────

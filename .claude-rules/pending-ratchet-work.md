@@ -3870,12 +3870,9 @@
 
 ## Pending tasks (priority order)
 
-### 📈 Ευκαιρίες CRM: οι μη-σταδιακές εγγραφές γράφονται από τον browser χωρίς ίχνος + δύο σχήματα εγγράφου (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-04, ADR-930 · ADR-195 · N.0.2)
-- **Τι (1)**: δημιουργία / επεξεργασία (σημειώσεις, αξία, επαφή…) / διαγραφή ευκαιρίας περνούν από `src/services/opportunities.service.ts` (client SDK `setDoc`/`updateDoc`/`deleteDoc`) ⇒ **καμία γραμμή ιστορικού** (ADR-195). Το CHECK 3.17 δεν το πιάνει: το αρχείο ονομάζει τη συλλογή ως `OPPORTUNITIES_COLLECTION`, όχι `COLLECTIONS.OPPORTUNITIES` κοντά στην εγγραφή. Το **στάδιο** έχει ήδη έναν γραφέα με ίχνος (ADR-930, CHECK 3.114)· τα υπόλοιπα όχι.
-- **Τι (2)**: το `src/services/opportunities-server.service.ts` (Admin, `POST/PATCH /api/opportunities`) γράφει **άλλο σχήμα** από τον πελάτη: `name`/`value`/`leadId` αντί για `title`/`estimatedValue`/`contactId`. Ό,τι δημιουργεί ο server δεν φαίνεται σωστά στον πίνακα (κενός τίτλος, χωρίς αξία).
-- **Τι (3)**: η λίστα «Ενδιαφερόμενοι» (`src/components/leads/LeadsList` · `hooks/useLeadsList.ts` → `deleteOpportunityWithPolicy`) δείχνει «Διαγραφή» σε όλους· οι κανόνες αρνούνται (ADR-930 §3.7), αλλά η οθόνη δεν ρωτά τον κριτή `useOpportunityAccess` όπως ο πίνακας. **Fix**: ίδιο `useOpportunityLocks` + `CardAction` με λόγο.
-- **Τι (4)**: `activities` — ο ανατεθειμένος δεν ενημερώνει (το ίδιο ερώτημα που απαντήθηκε για τις ευκαιρίες, ADR-930 §3.7)· ξεχωριστή απόφαση Giorgio.
-- **Fix**: ΕΝΑ σχήμα (το του πελάτη, `types/crm.ts`) και όλες οι εγγραφές μέσω server routes με `recordEntityUpdate` (όπως το στάδιο)· οι κανόνες μετά κλείνουν το client write εντελώς (`allow update: if false`), όπως οι άλλες συλλογές «ενός γραφέα». Πριν: grep καταναλωτών του `opportunities-client.service.ts` και του `POST /api/opportunities` (AI pipeline;). Μετά: ενημέρωση του `.opportunity-stage-authority.json` (το `opportunities.service.ts` φεύγει από τους κατόχους).
+### 📈 Ευκαιρίες CRM: οι κανόνες επιτρέπουν ακόμη εγγραφή από τον browser + `activities` (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-04, ADR-930 · ADR-195 · N.0.2)
+- **Τι (Βήμα Β της ADR-930 §3.10)**: όλες οι εγγραφές ευκαιρίας περνούν πλέον από τον server με ιστορικό, αλλά το `firestore.rules` `match /opportunities` επιτρέπει ακόμη `create`/`update`/`delete` από τον πελάτη (κανείς στον κώδικα δεν τα καλεί). **Fix**: `allow create, update, delete: if false` (μένει μόνο το read) + σουίτα κανόνων opportunities (CHECK 3.16) + CHECK 3.114 «ο πελάτης δεν γράφει καθόλου» (σήμερα ελέγχει μόνο τη λίστα κλειδώματος του `update`). **Πότε**: χωριστό commit, **μετά** το ζωντανό Βήμα Α — οι κανόνες ανεβαίνουν πρώτοι (ADR-930 §5).
+- **Τι (4)**: `activities` — η πολιτική αποφασίστηκε (ADR-930 §4: ο ανατεθειμένος αλλάζει, δεν διαγράφει). Μένει η **υλοποίηση** (κανόνες + CHECK 3.114 + test κανόνων), **μαζί** με την πρώτη πραγματική οθόνη δραστηριοτήτων, πάνω στο πρότυπο του γραφέα πεδίων (`opportunities-server.service.ts`) — όχι νωρίτερα (σήμερα 0 έγγραφα, καμία οθόνη, μόνος γραφέας το AI pipeline).
 
 ### 🧮 ΦΠΑ με κινητή υποδιαστολή σε ~8 σημεία, ενώ υπάρχει ακέραιος δρόμος (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-04, ADR-923 §5.13 Σ6 ανασκόπηση Χ7 · ADR-928 · N.0.2)
 **Τι:** ο ΦΠΑ υπολογίζεται σε κύρια μονάδα με `net * (vatRate / 100)` και στρογγύλευση μετά, σε ~8 σημεία: `accounting/services/engines/vat-engine.ts:55,79` · `procurement/services/comparison-service.ts:55` · `procurement/types/quote.ts:422` · `services/sales-accounting/*` · `accounting/components/invoices/forms/invoice-line-defaults.ts` · `app/(auth)/vendor/quote/vendor-quote-draft.ts` κ.ά. (`grep -rn "vatRate / 100\|vatRate) / 100"`). Κινητή υποδιαστολή = λάθος λεπτού σε οριακά ποσά (0,29 × 100 = 28,999…).
@@ -5296,11 +5293,8 @@ working tree). Θεραπεία: `git rm` του αρχείου + αφαίρεσ
 
 ---
 
-### 🔀 CRM ευκαιρίες: δύο λεξιλόγια σταδίων και εγγραφή χωρίς έλεγχο server (προτεραιότητα ΜΕΣΑΙΑ, 2026-11-03, ADR-252)
-- **Τι**: ο server (`opportunities-server.service.ts`, `VALID_STAGES`) δέχεται `lead · qualified · proposal · negotiation · won · lost`, ενώ ο τύπος `Opportunity` και η οθόνη χρησιμοποιούν `initial_contact · qualification · viewing · proposal · negotiation · contract · closed_won · closed_lost`. Ο server γράφει και άλλα πεδία (`name`, `value`) από όσα διαβάζει η οθόνη (`title`, `estimatedValue`).
-- **Πού**: η οθόνη δεν περνά από το `/api/opportunities`: το `EditOpportunityModal` και το `addOpportunity` γράφουν απευθείας με `updateDoc` / `setDoc` (`crm-mutation-gateway` → `opportunities.service.ts`), άρα η επικύρωση του ADR-252 δεν ισχύει για αυτή τη διαδρομή. Το `addOpportunity` δεν βάζει ρητά `companyId`· ⏳ να μετρηθεί αν η κανονική ροή «Νέο Lead» δουλεύει.
-- **Fix**: ένα λεξιλόγιο σταδίων από τον τύπο και οι εγγραφές μέσω του API.
-- **Μένει και**: το ακίνητο στο παράθυρο είναι μόνο για ανάγνωση, γιατί το μοντέλο είναι πίνακας `propertyIds` και ο επιλογέας μονός.
+### 🔀 CRM ευκαιρίες: το ακίνητο στη φόρμα είναι μόνο για ανάγνωση (προτεραιότητα ΧΑΜΗΛΗ, 2026-11-03, ADR-252 · ADR-930 §3.10)
+- **Τι**: το ακίνητο στο παράθυρο ευκαιρίας είναι μόνο για ανάγνωση, γιατί το μοντέλο είναι πίνακας (`interestedIn.propertyIds`) και ο επιλογέας μονός. Το `interestedIn` δεν είναι ακόμη στο σχήμα της πόρτας πεδίων (`opportunity-fields-schema.ts`) — μπαίνει μαζί με την πρώτη οθόνη που το γράφει, με κατάλογο-ρίζα για το `propertyType`.
 
 ---
 

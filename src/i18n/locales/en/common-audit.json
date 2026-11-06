@@ -705,7 +705,19 @@
         "lostReasonNote": "Lost reason note",
         "reopenCount": "Reopened",
         "assignedTo": "Owner",
-        "expectedCloseDate": "Expected close"
+        "ownerHandoffNote": "Hand-off note",
+        "expectedCloseDate": "Expected close",
+        "title": "Title",
+        "contactId": "Contact",
+        "fullName": "Customer name",
+        "email": "Email",
+        "phone": "Phone",
+        "notes": "Notes",
+        "nextAction": "Next action",
+        "nextActionDate": "Next action date",
+        "source": "Source",
+        "campaign": "Campaign",
+        "referredBy": "Referred by"
       },
       "common_space": {
         "name": "Common space name",

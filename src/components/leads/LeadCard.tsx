@@ -3,6 +3,8 @@ import { User, Mail, Phone, Calendar, ExternalLink, Send, Edit3, Trash2 } from "
 import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { LockableAction } from '@/components/crm/dashboard/OpportunityCardParts';
+import type { OpportunityLocks } from '@/components/crm/stage-move/useOpportunityAccess';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Date normalization for Firestore Timestamps
@@ -21,8 +23,11 @@ export function LeadCard({
   onDelete,
   formatDate,
   getStatusColor,
+  locks,
 }: {
   lead: Opportunity;
+  /** ADR-930 «Εξουσία κατόχου» — ο ΙΔΙΟΣ κριτής με την κάρτα του πίνακα: γιατί όχι επεξεργασία/διαγραφή (`null` ⇒ επιτρέπεται). */
+  locks: OpportunityLocks;
   onEmail: (lead: Opportunity) => void;
   onEdit: (lead: Opportunity) => void;
   onView: (id: string) => void;
@@ -97,13 +102,18 @@ export function LeadCard({
               <TooltipContent>{lead.email ? t('leadCard.sendEmail') : t('leadCard.noEmail')}</TooltipContent>
             </Tooltip>
 
-            <button
-              onClick={() => onEdit(lead)}
-              className={`flex items-center gap-1 px-3 py-1.5 ${colors.text.info} rounded text-sm ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
-            >
-              <Edit3 className={iconSizes.sm} />
-              {t('leadCard.edit')}
-            </button>
+            <LockableAction label={t('leadCard.edit')} lockedReason={locks.edit}>
+              <button
+                onClick={() => onEdit(lead)}
+                disabled={locks.edit !== null}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${
+                  locks.edit === null ? `${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}` : `${colors.text.muted} cursor-not-allowed`
+                }`}
+              >
+                <Edit3 className={iconSizes.sm} />
+                {t('leadCard.edit')}
+              </button>
+            </LockableAction>
           </section>
 
           <section className="flex gap-2" aria-label={t('leadCard.secondaryActions')}>
@@ -115,13 +125,18 @@ export function LeadCard({
               {t('leadCard.profile')}
             </button>
 
-            <button
-              onClick={() => onDelete(lead.id!, lead.fullName!)}
-              className={`flex items-center gap-1 px-3 py-1.5 ${colors.text.error} rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
-            >
-              <Trash2 className={iconSizes.sm} />
-              {t('leadCard.delete')}
-            </button>
+            <LockableAction label={t('leadCard.delete')} lockedReason={locks.delete}>
+              <button
+                onClick={() => onDelete(lead.id!, lead.fullName!)}
+                disabled={locks.delete !== null}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${
+                  locks.delete === null ? `${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}` : `${colors.text.muted} cursor-not-allowed`
+                }`}
+              >
+                <Trash2 className={iconSizes.sm} />
+                {t('leadCard.delete')}
+              </button>
+            </LockableAction>
           </section>
         </nav>
       </header>

@@ -15,6 +15,9 @@
  *   Κ5/Κ6 — εξουσία κατόχου: server ⇔ κανόνες λένε το ίδιο για το «ποιος αγγίζει αυτή την ευκαιρία»
  *        (`lib/write-authority/opportunity-owner-parity`). Και το `requireOpportunityInTenant` έχει ΕΝΑΝ καλούντα (Κ1,
  *        μητρώο): το σημείο επιβολής του κριτή — καμία διαδρομή δεν φτάνει στο έγγραφο χωρίς να ρωτήσει «κάτοχος;».
+ *   Κ7 — ο ΚΑΤΟΧΟΣ (ADR-930 §3.8): η λίστα κλειδώματος των κανόνων περιέχει ΚΑΙ το `OWNER_OWNED_FIELDS`
+ *        (`opportunity-owner-transfer.ts`) — ο πελάτης δεν γράφει `assignedTo`, κανείς δεν ξαναγράφει `createdBy` — και
+ *        ο γραφέας `applyOpportunityOwnerTransfer` έχει ΕΝΑΝ δηλωμένο καλούντα, την πόρτα `…/owner` (Κ1, μητρώο).
  *
  * @see docs/gates/3.114.md
  */
@@ -28,6 +31,7 @@ const { ownerParityFindings, opportunitiesRulesBlock, ROLE_CATALOGUE, ACCESS_JUD
 const REGISTRY_FILE = '.opportunity-stage-authority.json';
 const RULES_FILE = 'firestore.rules';
 const STAGE_FIELDS_SOURCE = 'src/services/crm/opportunity-stage-transition.ts';
+const OWNER_FIELDS_SOURCE = 'src/services/crm/opportunity-owner-transfer.ts';
 const AI_EXECUTOR = 'src/services/ai-pipeline/tools/executor-shared-types.ts';
 
 /** Οι συμβολοσειρές μιας λίστας `'a', 'b'` (με ή χωρίς αλλαγές γραμμής). */
@@ -40,17 +44,23 @@ function rulesStageFields(text) {
   return list ? quotedNames(list[1]) : null;
 }
 
-function codeStageFields(text) {
-  const match = /export const STAGE_OWNED_FIELDS = \[([\s\S]*?)\] as const;/.exec(text);
+/** Η λίστα `export const <name> = [ … ] as const;` ενός αρχείου πηγής — ή `null`. */
+function codeFieldList(input, file, name) {
+  if (!input.exists(file)) return null;
+  const match = new RegExp(String.raw`export const ${name} = \[([\s\S]*?)\] as const;`).exec(input.read(file));
   return match ? quotedNames(match[1]) : null;
 }
 
+/** Κ2 + Κ7: οι κανόνες κλειδώνουν ΑΚΡΙΒΩΣ `STAGE_OWNED_FIELDS ∪ OWNER_OWNED_FIELDS`. */
 function rulesParityFindings(input, STATES) {
   const rules = input.exists(RULES_FILE) ? rulesStageFields(input.read(RULES_FILE)) : null;
-  const code = input.exists(STAGE_FIELDS_SOURCE) ? codeStageFields(input.read(STAGE_FIELDS_SOURCE)) : null;
-  if (!rules || !code) {
-    return [{ state: STATES.SOURCE_DRIFT, file: rules ? STAGE_FIELDS_SOURCE : RULES_FILE, detail: 'δεν βρέθηκε η λίστα πεδίων σταδίου — η πύλη δεν κρίνει στα τυφλά' }];
+  const stage = codeFieldList(input, STAGE_FIELDS_SOURCE, 'STAGE_OWNED_FIELDS');
+  const owner = codeFieldList(input, OWNER_FIELDS_SOURCE, 'OWNER_OWNED_FIELDS');
+  const missing = !rules ? RULES_FILE : !stage ? STAGE_FIELDS_SOURCE : !owner ? OWNER_FIELDS_SOURCE : null;
+  if (missing) {
+    return [{ state: STATES.SOURCE_DRIFT, file: missing, detail: 'δεν βρέθηκε λίστα κλειδωμένων πεδίων (στάδιο/κάτοχος) — η πύλη δεν κρίνει στα τυφλά' }];
   }
+  const code = [...new Set([...stage, ...owner])].sort();
   return rules.join() === code.join() ? [] : [{
     state: STATES.OUTSIDE,
     file: RULES_FILE,
@@ -91,7 +101,8 @@ const { measure, report, main, loadRegistry, STATES, BLOCKING } = defineSymbolOw
     width: 36,
     remedy: [
       'ΘΕΡΑΠΕΙΑ: το στάδιο αλλάζει ΜΟΝΟ με `POST /api/opportunities/[id]/stage` (γραφέας: `opportunity-stage-transition.server.ts`).',
-      `Νέο αρχείο που αγγίζει τη συλλογή = γραμμή στο ${REGISTRY_FILE}, με λόγο. Κανόνες ⇄ STAGE_OWNED_FIELDS: ίδια λίστα.`,
+      `Νέο αρχείο που αγγίζει τη συλλογή = γραμμή στο ${REGISTRY_FILE}, με λόγο. Κανόνες ⇄ STAGE_OWNED_FIELDS ∪ OWNER_OWNED_FIELDS: ίδια λίστα.`,
+      'Ο κάτοχος αλλάζει ΜΟΝΟ με `POST /api/opportunities/[id]/owner` (γραφέας: `opportunity-owner-transfer.server.ts`).',
       'Εξουσία κατόχου: ανατεθειμένος ΜΟΝΟ στο `update` · ρόλοι της ικανότητας του κριτή == ρόλος του `isCompanyAdminOfCompany`.',
     ],
   },
@@ -99,4 +110,4 @@ const { measure, report, main, loadRegistry, STATES, BLOCKING } = defineSymbolOw
 
 if (require.main === module) process.exit(main());
 
-module.exports = { measure, report, main, loadRegistry, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, STAGE_FIELDS_SOURCE, AI_EXECUTOR, ROLE_CATALOGUE, ACCESS_JUDGE };
+module.exports = { measure, report, main, loadRegistry, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, STAGE_FIELDS_SOURCE, OWNER_FIELDS_SOURCE, AI_EXECUTOR, ROLE_CATALOGUE, ACCESS_JUDGE };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, User } from 'lucide-react';
@@ -19,6 +19,7 @@ import CommunicationsHistory from '@/components/CommunicationsHistory';
 import SendEmailModal from '@/components/email/SendEmailModal';
 import CreateTaskModal from '@/components/crm/dashboard/dialogs/CreateTaskModal';
 import { EditOpportunityModal } from '@/components/crm/dashboard/EditOpportunityModal';
+import { useOpportunityAccess, useOpportunityLocks } from '@/components/crm/stage-move/useOpportunityAccess';
 
 import { ContactCard } from './lead-detail/ContactCard';
 import { OpportunityDetailsCard } from './lead-detail/OpportunityDetailsCard';
@@ -46,6 +47,10 @@ export function LeadDetailPageContent() {
   const { lead, loading: loadingLead, error: leadError, refetch: refetchLead } = useLead(id);
   const { tasks, loading: loadingTasks, refetch: refetchTasks } = useLeadTasks(id);
   const contact = useLeadContact(lead?.contactId);
+  // ADR-930 «Εξουσία κατόχου» — ο ΙΔΙΟΣ κριτής με τον πίνακα και τη λίστα.
+  const access = useOpportunityAccess();
+  const lockSubjects = useMemo(() => (lead ? [lead] : []), [lead]);
+  const locksOf = useOpportunityLocks(lockSubjects, access);
 
   const [showContactPreview, setShowContactPreview] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -128,6 +133,7 @@ export function LeadDetailPageContent() {
               <QuickActions
                 lead={person}
                 onEdit={() => setShowEditModal(true)}
+                editLockedReason={locksOf(lead).edit}
                 onNewTask={() => setShowTaskModal(true)}
                 onSendEmail={() => setShowEmailModal(true)}
               />

@@ -705,7 +705,19 @@
         "lostReasonNote": "Σχόλιο απώλειας",
         "reopenCount": "Επανανοίγματα",
         "assignedTo": "Υπεύθυνος",
-        "expectedCloseDate": "Αναμενόμενο κλείσιμο"
+        "ownerHandoffNote": "Σημείωμα παράδοσης",
+        "expectedCloseDate": "Αναμενόμενο κλείσιμο",
+        "title": "Τίτλος",
+        "contactId": "Επαφή",
+        "fullName": "Όνομα πελάτη",
+        "email": "Email",
+        "phone": "Τηλέφωνο",
+        "notes": "Σημειώσεις",
+        "nextAction": "Επόμενη ενέργεια",
+        "nextActionDate": "Ημερομηνία επόμενης ενέργειας",
+        "source": "Πηγή",
+        "campaign": "Καμπάνια",
+        "referredBy": "Σύσταση από"
       },
       "common_space": {
         "name": "Όνομα κοινόχρηστου χώρου",

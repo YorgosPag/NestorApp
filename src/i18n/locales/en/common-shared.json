@@ -964,6 +964,11 @@
       "buyer_lawyer": "The buyer's lawyer is requesting documents that are pending from you in the conveyance case. Open the case to see which."
     }
   },
+  "opportunityAssigned": {
+    "title": "Opportunity \"{subject}\" is now yours",
+    "body": "{actor} handed it over to you.",
+    "bodyWithNote": "{actor} handed it over to you: \"{note}\""
+  },
   "ownershipDecision": {
     "verifiedTitle": "Your ownership of “{title}” was verified",
     "verifiedBody": "You now see the exact number of people interested in your property.",

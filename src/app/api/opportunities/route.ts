@@ -1,61 +1,35 @@
 /**
- * =============================================================================
- * POST /api/opportunities — Create Opportunity
- * =============================================================================
+ * POST /api/opportunities  { title, …fields, stage?, assignedTo? } → 201 { id }
  *
- * Auth: withAuth (authenticated users)
- * Rate: withSensitiveRateLimit (financial/CRM data)
+ * The ONE door that creates an opportunity (ADR-930 §3.10) — in the client's schema (`types/crm.ts`), with a history row.
  *
- * @module api/opportunities
- * @enterprise ADR-252 Security Fix: Server-side validation
+ * - Body = `opportunityCreateBody` (strict): unknown, stage-owned or system fields ⇒ 400. Only an OPEN stage —
+ *   closing needs closing data and goes through `…/[id]/stage`.
+ * - `assignedTo` other than the caller ⇒ must be an ACTIVE member of the workspace, else 400 `{ reason: 'owner_not_member' }`.
+ * - Retries go through the `Idempotency-Key` boundary of `withAuth` (ADR-872) — a double click is ONE opportunity.
+ *
+ * Auth: withAuth — any member of the company (same as `crmCanCreate` in `firestore.rules`); the company comes from the
+ *   auth context, never from the body. Rate: sensitive (CRM data).
+ *
+ * @see ADR-930 · ADR-602 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { badRequest, created, defineRoute } from '@/lib/api/define-route';
 import { OpportunitiesServerService } from '@/services/opportunities-server.service';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
-import { respondWithFailure, respondWithServiceResult } from './_service-response';
+import { opportunityCreateBody, type OpportunityCreateResponse } from '@/services/crm/opportunity-fields-schema';
 
-const CreateOpportunitySchema = z.object({
-  name: z.string().min(1).max(200),
-  contactId: z.string().max(128).optional(),
-  contactName: z.string().max(200).optional(),
-  projectId: z.string().max(128).optional(),
-  propertyId: z.string().max(128).optional(),
-  stage: z.string().max(50).optional(),
-  value: z.number().min(0).max(999_999_999).optional(),
-  probability: z.number().min(0).max(100).optional(),
-  source: z.string().max(100).optional(),
-  notes: z.string().max(5000).optional(),
-  expectedCloseDate: z.string().max(30).optional(),
-}).passthrough();
+export const dynamic = 'force-dynamic';
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const parsed = safeParseBody(CreateOpportunitySchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
-
-        const result = await OpportunitiesServerService.create(
-          body,
-          ctx.companyId,
-          ctx.uid,
-          ctx.email ?? null,
-        );
-        return respondWithServiceResult(result, () => NextResponse.json({ success: true, data: { id: result.id } }, { status: 201 }));
-      } catch (error) {
-        return respondWithFailure(error, 'Failed to create opportunity');
-      }
-    }
-  );
-  return handler(request);
-}
-
-export const POST = withSensitiveRateLimit(handlePost);
+export const POST = defineRoute<typeof opportunityCreateBody>({
+  rateLimit: 'sensitive',
+  schema: opportunityCreateBody,
+  fallbackError: 'Failed to create opportunity',
+  handler: async ({ auth, body }) => {
+    const outcome = await OpportunitiesServerService.create(body, auth);
+    if (outcome.kind === 'invalid') badRequest('The owner is not an active member of this workspace', { reason: outcome.reason });
+    const response: OpportunityCreateResponse = { id: outcome.id };
+    return created(response);
+  },
+});

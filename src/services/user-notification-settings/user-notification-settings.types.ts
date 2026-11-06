@@ -101,6 +101,8 @@ export interface CrmNotificationSettings {
   leadStatusChange: boolean;
   /** Notify when task is assigned */
   taskAssigned: boolean;
+  /** Notify when an opportunity is transferred to me (ADR-930 §3.8) */
+  opportunityAssigned: boolean;
   /** Notify when communication is received */
   newCommunication: boolean;
   /** Notify when a contact is moved to trash */
@@ -488,6 +490,7 @@ export const DEFAULT_CRM_SETTINGS: CrmNotificationSettings = {
   newLead: true,
   leadStatusChange: true,
   taskAssigned: true,
+  opportunityAssigned: true,
   newCommunication: false,
   contactTrashed: true,
   contactPermanentlyDeleted: true,

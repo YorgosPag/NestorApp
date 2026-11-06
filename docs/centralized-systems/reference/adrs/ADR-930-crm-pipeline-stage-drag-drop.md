@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — Φ1 θεμέλιο server · Φ2 `KanbanBoard` · Φ3 οθόνη · Φ4 κλείδωμα + CHECK 3.114 · §3.7 εξουσία κατόχου (κλαδί `agent/crm-pipeline-dnd`, 2026-11-04) |
+| **Status** | ✅ IMPLEMENTED — Φ1 θεμέλιο server · Φ2 `KanbanBoard` · Φ3 οθόνη · Φ4 κλείδωμα + CHECK 3.114 · §3.7 εξουσία κατόχου (κλαδί `agent/crm-pipeline-dnd`, 2026-11-04) · §3.8 κάτοχος · §3.9 κριτής παντού · §3.10 ένας γραφέας πεδίων, Βήμα Α (2026-11-06) |
 | **Date** | 2026-11-04 |
 | **Category** | CRM / Sales Pipeline |
 | **Canonical Location** | `src/config/crm/opportunity-stages.ts` · `src/services/crm/opportunity-stage-transition*.ts` · `src/components/ui/sortable/KanbanBoard.tsx` · `src/components/crm/stage-move/` |
@@ -133,14 +133,110 @@ CHECK 3.17. Η δήλωση αποκάλυψε ότι οι create/update/delete 
   του κριτή == ρόλος του `isCompanyAdminOfCompany`) · Κ1: το `requireOpportunityInTenant` έχει **έναν** καλούντα.
   Υπόλειμμα (στο `docs/gates/3.114.md`): ικανότητα ως ρητό claim — οι κανόνες δεν τη βλέπουν (στενότερο, όχι διαρροή).
 
+### 3.8 Μεταβίβαση κατόχου — μία πόρτα ιδιοκτησίας (2026-11-05, Τι 6 + Τι 5)
+
+**Έρευνα** (Salesforce «Change Owner» / API `OwnerId` · Pipedrive permission sets + changelog «changing the owner of an
+entity» · HubSpot «assign access to records» / «set a record owner»):
+
+| | Salesforce | Pipedrive | HubSpot | **Nestor** |
+|---|---|---|---|---|
+| Ποιος μεταβιβάζει | κάτοχος ∨ «Transfer Record» / Modify All | κάτοχος πάντα· ξένες μόνο με «Change a deal's owner» | όποιος επεξεργάζεται | **κάτοχος ∨ ικανότητα `crm:opportunities:update`** |
+| Νέος κάτοχος | πρέπει να έχει πρόσβαση | χρήστης λογαριασμού | χρήστης λογαριασμού | **ΕΝΕΡΓΟ μέλος του χώρου, επαληθευμένο μέσα στη συναλλαγή** |
+| Ειδοποίηση | «Send Notification Email» | — | «assigned to you» | **in-app, ρυθμίσιμη (`crm.opportunityAssigned`) + σημείωμα παράδοσης** |
+| `CreatedBy` | system field | — | read-only | **αμετάβλητο στους κανόνες** |
+| Ταυτόχρονες αλλαγές | last-write-wins | last-write-wins | last-write-wins | **CAS στον αναμενόμενο κάτοχο ⇒ 409** |
+
+- **Κριτής**: νέα πρόθεση `transfer` στο `decideOpportunityAccess` → `granted-capability` ή `granted-owner` (ο **τρέχων**
+  κάτοχος = `opportunityOwnerOf`: ανατεθειμένος, αλλιώς δημιουργός). Ο δημιουργός που **δεν** είναι πια κάτοχος δεν
+  μεταβιβάζει (`CreatedById` ≠ `OwnerId`). `canTransferOpportunity`.
+- **Καθαρός πυρήνας** `services/crm/opportunity-owner-transfer.ts`: `planOwnerTransfer` (άκυρο → σύγκρουση → ιδεμπότητα →
+  εφαρμογή· η σύγκρουση κρίνεται **πριν** την ιδεμπότητα, ώστε παλιά εικόνα να μη λέγεται «έγινε») · `OWNER_OWNED_FIELDS =
+  ['assignedTo', 'createdBy', 'ownerHandoffNote']` (η ΜΙΑ λίστα).
+- **Πόρτα** `GET|POST /api/opportunities/[id]/owner` (`API_ROUTES.OPPORTUNITIES.OWNER`): `requireOpportunityAccess(intent:
+  'transfer')` και στα δύο. GET = υποψήφιοι = **η ίδια λίστα** που επικυρώνει το POST (`listActiveWorkspaceMembers` +
+  `readNetworkPeople`)· μόνο όποιος μπορεί να μεταβιβάσει παίρνει τη λίστα μελών (ελαχιστοποίηση). POST `{ expectedOwnerUid,
+  newOwnerUid, note? }` ⇒ 200 `applied|unchanged` · 409 `{ currentOwnerUid }` · 400 `{ reason: owner_not_member | no_tenant |
+  note_too_long }`.
+- **Γραφέας** `opportunity-owner-transfer.server.ts` → `applyOpportunityOwnerTransfer`: συναλλαγή (έγγραφο + βιβλίο μελών
+  `normalizeMembership`), `versionedWrite`, ιστορικό `recordEntityUpdate` με **ονόματα** (επιλυτής πάνω στο
+  `readNetworkPeople`) + `ownerHandoffNote` ως παρακολουθούμενο πεδίο, ειδοποίηση (`opportunity-owner-notifier.ts`,
+  `eventId` = ευκαιρία + νέος κάτοχος + έκδοση· όχι σε αυτο-ανάθεση· δεν πετά).
+- **Κλείσιμο των παλιών δρόμων**: κανόνες — η λίστα κλειδώματος του `allow update` = `STAGE_OWNED_FIELDS ∪
+  OWNER_OWNED_FIELDS` · `crm-mutation-gateway` αρνείται ρητά τα πεδία ιδιοκτησίας · `OpportunitiesServerService.update`
+  αρνείται `assignedTo` (400, όπως το `stage`). 🔴 Το δεύτερο κενό που βρέθηκε στην αναγνώριση: ο ανατεθειμένος έγραφε από
+  τον browser `createdBy` = το δικό του uid ⇒ «δημιουργός» ⇒ **διαγραφή**.
+- **Οθόνη**: `components/crm/owner/` — `OpportunityOwnerField` (Radix Select, avatar, «τρέχων», κλειδωμένο με λόγο μέσω
+  `accessDenialKey` → `transferLocked[By]`, σημείωμα παράδοσης μόλις αλλάξει) · `useOpportunityOwnerCandidates` ·
+  `useOwnerTransferCommand` (πρόχειρο, `expectedOwnerUid` = ό,τι είδε ο άνθρωπος) · `owner-transfer-api`. Μπαίνει στο
+  `OpportunityFormDialog` μέσω `extraFields`. Σειρά αποθήκευσης: πεδία → στάδιο → **κάτοχος τελευταίος** (όποιος τη δίνει
+  χάνει μετά την επεξεργασία).
+- **CHECK 3.114 Κ7**: κανόνες ⇄ `STAGE_OWNED_FIELDS ∪ OWNER_OWNED_FIELDS` · ο γραφέας κατόχου έχει **έναν** δηλωμένο καλούντα.
+
+### 3.9 Ο ίδιος κριτής σε κάθε οθόνη ευκαιρίας (2026-11-06, Τι 3)
+
+Κάθε επιφάνεια που δείχνει «Επεξεργασία» / «Διαγραφή» ευκαιρίας ρωτά τον **ΙΔΙΟ** κριτή (`useOpportunityAccess` +
+`useOpportunityLocks`, μία επίλυση ονομάτων κατόχων ανά οθόνη):
+- **Πίνακας** (`PipelineTab` → `OpportunityColumns` → `OpportunityCard`) — ήδη από §3.7.
+- **Λίστα «Ενδιαφερόμενοι»** (`LeadsList` → `LeadCard`) — επεξεργασία **και** διαγραφή.
+- **Σελίδα ευκαιρίας** (`LeadDetailPageContent` → `QuickActions`) — επεξεργασία (κουμπί διαγραφής δεν υπάρχει εκεί).
+
+**Μορφή «ορατό, απενεργό, με λόγο»**: ΕΝΑ σημείο, `LockableAction` (`OpportunityCardParts.tsx`) — το κουμπί μπαίνει σε
+εστιάσιμο `span` ώστε το tooltip του λόγου να ανοίγει και από πληκτρολόγιο· το `CardAction` (εικονίδιο κάρτας) είναι πλέον
+λεπτή χρήση του. **Γιατί απενεργό και όχι κρυμμένο** (έρευνα 2026-11-06): οι μεγάλοι διαφέρουν — το Salesforce Classic
+έκρυβε το Delete χωρίς δικαίωμα, το Lightning το δείχνει και απαντά «insufficient privileges» μετά το κλικ, το HubSpot
+γκριζάρει τη μαζική διαγραφή χωρίς εξήγηση στην οθόνη, το Pipedrive απλώς δεν δίνει την επιλογή. Κανείς δεν λέει **γιατί**·
+εδώ ο άνθρωπος βλέπει **ποιος** μπορεί (κάτοχος ή ρόλος), συνεπές με την κάρτα του πίνακα. Ο server ρωτά ξανά, πάντα.
+
+### 3.10 Ένας γραφέας πεδίων — ένα σχήμα (2026-11-06, Τι 1 + Τι 2)
+
+**Πριν**: δημιουργία / επεξεργασία πεδίων / διαγραφή γράφονταν από τον browser (`opportunities.service.ts`, client SDK)
+⇒ **καμία** γραμμή ιστορικού. Παράλληλα το `POST/PATCH /api/opportunities` έγραφε **άλλο σχήμα** (`name`/`value`/`leadId`)
+που δεν διάβαζε κανείς — πίνακας, αναφορές, ευρετήριο και ιστορικό μιλούν `title`/`estimatedValue`/`contactId`. Το `POST`
+είχε **0** καλούντες. Μέτρηση (2026-11-06, μόνο ανάγνωση): 9 έγγραφα, **όλα** με `title`· κανένα μόνο στο σχήμα του server
+⇒ **καμία μετανάστευση**. Τα 8 έγγραφα του demo seed έχουν **και** `name`/`value` ως κατοπτρικά (δεν τα διαβάζει κανείς).
+
+**Τώρα** — οι τρεις γραφείς της ευκαιρίας είναι όλοι στον server: στάδιο (§3.5) · κάτοχος (§3.8) · **όλα τα άλλα**:
+- **ΕΝΑ σχήμα** — `services/crm/opportunity-fields-schema.ts` (κοινό route + πελάτης): `OPPORTUNITY_EDITABLE_FIELDS`, δεμένα
+  με `satisfies` σε πεδία του `Opportunity`. **`strict`**: στάδιο, κάτοχος, συστήματος ⇒ 400 από το σχήμα. Η δημιουργία
+  δέχεται μόνο **ανοιχτό** στάδιο (το κλείσιμο θέλει στοιχεία και έχει την πόρτα του). Κατάλογος-ρίζα πηγών:
+  `config/crm/opportunity-sources.ts` (ο τύπος τον διαβάζει).
+- **ΕΝΑΣ γραφέας** — `services/opportunities-server.service.ts` (`POST /api/opportunities` · `PATCH|DELETE …/[id]`, `defineRoute`,
+  ιδεμποτία ADR-872): **create** παράγει κατάσταση από το στάδιο, στιγμές, δημιουργό, κάτοχο (άλλος από τον δημιουργό ⇒ ενεργό
+  μέλος, ο ίδιος έλεγχος με την πόρτα κατόχου — `lib/workspace/active-member-in-transaction.ts`)· **update** σε συναλλαγή,
+  `_v`↑· **delete** με τις τελευταίες τιμές στη γραμμή ιστορικού (η διαγραμμένη ευκαιρία ανασυντίθεται).
+- 🏆 **Σύγκρουση κατά ΠΕΔΙΟ** (πάνω από τους τρεις μεγάλους): Salesforce / HubSpot / Pipedrive κάνουν last-write-wins — η
+  δεύτερη αποθήκευση σβήνει σιωπηλά την πρώτη. Εδώ το `PATCH` φέρνει `expected` = ό,τι **είδε** ο άνθρωπος για τα πεδία που
+  αλλάζει· 409 `{ fields, updatedBy }` **μόνο** αν άλλαξε στο μεταξύ ένα από **αυτά** και σε **άλλη** τιμή από αυτήν που ζητείται.
+  Άσχετη αλλαγή (σύρσιμο σταδίου, κάτοχος, άλλο πεδίο) δεν ακυρώνει — όπως η πόρτα σταδίου. Ένας έλεγχος `_v` όλου του εγγράφου θα
+  ακύρωνε την επεξεργασία σε κάθε σύρσιμο. Η σύγκριση γίνεται με τον **έναν** συγκριτή του ιστορικού (`serializeScalar`).
+- **Ιστορικό χωρίς όριο πεδίων** (Salesforce Field History: 20): κάθε επεξεργάσιμο πεδίο στο `OPPORTUNITY_TRACKED_FIELDS`·
+  ξένα κλειδιά (`contactId`, `referredBy`, `assignedTo`) με **όνομα** από το `opportunity-audit-resolvers.server.ts` (ΕΝΑ σύνολο
+  επιλυτών για πόρτα κατόχου + γραφέα πεδίων)· η πηγή με τον κατάλογο ετικετών του δημιουργού αναφορών (`opportunitySource`).
+- **Πελάτης** — το `opportunities.service.ts` μόνο διαβάζει. `crm-mutation-gateway` → `components/crm/opportunity-write/
+  opportunity-write-api.ts` (πρότυπο `stage-move-api`), επικύρωση με το ίδιο σχήμα πριν το σύρμα, `OpportunityWriteError`.
+  Σύγκρουση στη φόρμα ⇒ μήνυμα, φρεσκάρισμα, η φόρμα μένει ανοιχτή.
+- **Κανόνες**: σε αυτό το βήμα **αμετάβλητοι** — ο νέος κώδικας δουλεύει πριν και μετά. Το κλείσιμο του client write
+  (`allow create, update, delete: if false`) είναι **Βήμα Β**, χωριστό commit, **μετά** το ζωντανό Βήμα Α (§5: οι κανόνες
+  ανεβαίνουν πρώτοι).
+
 ## 4. Τι ΔΕΝ λύθηκε (καταγραμμένο στο `pending-ratchet-work.md`)
 
-- `activities`: ίδιο ερώτημα ανατεθειμένου — ξεχωριστή απόφαση.
-- Η λίστα «Ενδιαφερόμενοι» (`LeadsList` / `useLeadsList`) διαγράφει χωρίς να ρωτά τον κριτή στην οθόνη (οι κανόνες
-  αρνούνται, το κουμπί όμως φαίνεται).
+- `activities` — **η πολιτική ΑΠΟΦΑΣΙΣΤΗΚΕ (Giorgio 2026-11-06), η υλοποίηση ΑΝΑΒΑΛΛΕΤΑΙ**:
+  - **Πολιτική**: ο ανατεθειμένος (`assignedTo`) **αλλάζει** τη δραστηριότητά του, **δεν τη διαγράφει**· η διαγραφή μένει σε
+    δημιουργό / διαχειριστή εταιρείας / super_admin — ίδια με τις ευκαιρίες (§3.7). Πρακτική Salesforce: την αλλάζει ο
+    «Assigned To» και όσοι είναι πάνω του στην ιεραρχία ρόλων.
+  - **Γιατί όχι τώρα** (μετρημένο 2026-11-06): η συλλογή έχει **0 έγγραφα** στην παραγωγή, **καμία** οθόνη δεν τη γράφει ή
+    διαβάζει (το `RecentActivities` του dashboard δείχνει σταθερά δοκιμαστικά δεδομένα) και μόνος γραφέας είναι το AI
+    pipeline (`ALLOWED_WRITE_COLLECTIONS`, Admin SDK — εκτός κανόνων). Κανόνας χωρίς καταναλωτή δεν δοκιμάζεται στην πράξη
+    και θα ξαναγραφόταν με τον γραφέα του server.
+  - **Πότε**: μαζί με την **πρώτη πραγματική οθόνη δραστηριοτήτων**, πάνω στον γραφέα server με ιστορικό (Τι 1). Ως τότε οι
+    κανόνες μένουν αυστηροί (αλλαγή/διαγραφή μόνο `crmWriterIsPrivileged`) — η ασφαλής κατεύθυνση.
 
-- Οι **μη σταδιακές** εγγραφές του πελάτη (σημειώσεις, αξία, διαγραφή) γράφονται ακόμη από τον browser χωρίς ίχνος.
-- Το server service γράφει **άλλο σχήμα** (`name`/`value`/`leadId` αντί για `title`/`estimatedValue`/`contactId`).
+- **Βήμα Β της §3.10**: οι κανόνες επιτρέπουν ακόμη `create/update/delete` από τον browser (κανείς δεν τα καλεί πια).
+  Κλείσιμο σε χωριστό commit μετά το ζωντανό Βήμα Α, μαζί με σουίτα κανόνων (CHECK 3.16) και CHECK 3.114 («ο πελάτης δεν γράφει
+  καθόλου»).
+- Μαζική μεταβίβαση (Salesforce «Mass Transfer», HubSpot «Assign» στον πίνακα) και αυτόματη μεταβίβαση όταν φεύγει μέλος
+  (υπάρχει ήδη πρότυπο στο `act-team-departure.ts`) — δεν ζητήθηκαν.
 
 ## 5. Σειρά ανάπτυξης
 
@@ -159,12 +255,32 @@ ADR-865 §11) κάνει το **αντίθετο, επίτηδες**: η «Κυ�
 - Πύλες: 3.14 · 3.16 · 3.17 · 3.47 · 3.66 · 3.73 · 3.113 · 3.114 πράσινες.
 - **§3.7 (2026-11-04)**: κριτής 14 · εντολή 8 (+403 με όνομα) · πύλη 3.114 16 (+Κ1 φράχτης, Κ5×2, Κ6×3) ·
   `surface-authority-reachability` + `tenant-isolation` 104 · κανόνες opportunities + leads + activities **120/120**.
-  Ζωντανά στο nestorconstruct.gr: εκκρεμεί (μετά από land + push + έγκριση `firebase-production`).
+  Ζωντανά στο nestorconstruct.gr: ✅ **2026-11-05** (βλ. παρακάτω).
+- **Ζωντανή απόδειξη §3.7 (2026-11-05, nestorconstruct.gr, έκδοση `d504d5b5` ⊇ `e5b192c2`, κανόνες ανεβασμένοι στο run
+  `41942519930`)** με `internal_user` (χωρίς `crm:opportunities:update`), ανατεθειμένο σε 1 από 9 ευκαιρίες:
+  οθόνη — η δική του κάρτα σέρνεται, «Επεξεργασία» ενεργή, «Διαγραφή» απενεργή· οι 8 ξένες: Lock, tooltip με **όνομα**
+  κατόχου, όχι `cursor-grab`, κουμπιά απενεργά. API — ξένη: `POST …/stage` **403** `OPPORTUNITY_NOT_OWNER`
+  (`denied-not-owner`, `ownerUid`) · `PATCH` **403** ίδιο· δική του: δύο κινήσεις σταδίου **200** (`applied`, και
+  επιστροφή) · `PATCH` **200**. Το `DELETE` **δεν** δοκιμάστηκε ζωντανά: είναι οριστική διαγραφή (`docRef.delete()`)·
+  καλύπτεται από jest (εντολή) και το κουμπί είναι απενεργό.
+- **§3.8 (2026-11-05)**: κριτής (+πίνακας `transfer` 10 + 1) · πυρήνας μεταβίβασης 9 · πύλη 3.114 (+Κ7 ×3, Μ0 πράσινη στο
+  πραγματικό δέντρο) · εντολή σταδίου 8 · ειδοποιήσεις (replay · inbox) πράσινα · κανόνες opportunities + leads + activities
+  **128/128** (+8: ανατεθειμένος και admin × `assignedTo`/`createdBy`/`ownerHandoffNote` ⇒ deny, η πλήρης επίθεση
+  «γίνομαι δημιουργός ⇒ σβήνω» ⇒ deny, σημειώσεις ⇒ allow). Γεννήτορες: τύποι i18n · shell slice (77/77 — η πρώτη εκδοχή
+  έφερνε το namespace `network-messaging` στις σελίδες CRM μέσω `initialsOf` ⇒ αντικαταστάθηκε από το `getInitials`) ·
+  baseline ορίων ρυθμού · πίνακας πυλών. Προϋπάρχοντα κόκκινα, **όχι** από εδώ (κανένα αρχείο ευκαιρίας): `procurement.supplyConnection`
+  σε `email-type-preferences` / `notification-preference-policy` και 19 αταξινόμητα σημεία του `ownership-callsite-coverage-anchor`.
+  Ζωντανά: εκκρεμεί (μετά από land + push).
 
 ## Changelog
 
 | Ημερομηνία | Αλλαγή |
+| 2026-11-06 | **§3.10 Ένας γραφέας πεδίων — ένα σχήμα (Τι 1 + Τι 2), Βήμα Α.** Δημιουργία/επεξεργασία/διαγραφή μόνο από τον server (`opportunities-server.service.ts`) στο σχήμα του πελάτη (`opportunity-fields-schema.ts`, strict), με ιστορικό σε κάθε πράξη και **σύγκρουση κατά πεδίο** (409 μόνο για τα ίδια πεδία σε άλλη τιμή). Το `opportunities.service.ts` μόνο διαβάζει· `crm-mutation-gateway` → `opportunity-write-api`. Ιστορικό: +11 πεδία (όλα τα επεξεργάσιμα), επιλυτές ονομάτων σε ΕΝΑ αρχείο, κατάλογος `opportunitySource`. Κοινά: `isActiveWorkspaceMemberInTx` (εξήχθη από την πόρτα κατόχου), `OPPORTUNITY_SOURCES` (ρίζα του τύπου). Διαγράφηκαν `_service-response.ts` και το test της δημιουργίας από τον πελάτη (`opportunities-add-tenant.test.ts`)· το `ownership-empty-pair-services` προσαρμόστηκε στη νέα υπογραφή. Κανόνες αμετάβλητοι (Βήμα Β, §4). Μέτρηση: 9 έγγραφα, καμία μετανάστευση. |
+| 2026-11-06 | **§4 `activities` — απόφαση Giorgio (Τι 4).** Πολιτική: ο ανατεθειμένος αλλάζει, δεν διαγράφει (όπως §3.7). Η υλοποίηση αναβάλλεται μέχρι την πρώτη πραγματική οθόνη δραστηριοτήτων + γραφέα server (Τι 1): η συλλογή μετρήθηκε άδεια (0 έγγραφα), χωρίς οθόνη, μόνος γραφέας το AI pipeline. Καμία αλλαγή κανόνων/κώδικα. |
+| 2026-11-06 | **§3.9 Ο ίδιος κριτής σε κάθε οθόνη (Τι 3).** Η λίστα «Ενδιαφερόμενοι» (`LeadCard`: επεξεργασία + διαγραφή) και η σελίδα ευκαιρίας (`QuickActions`: επεξεργασία) ρωτούν `useOpportunityAccess` / `useOpportunityLocks` όπως ο πίνακας — ορατό, απενεργό, με λόγο. Εξαγωγή `LockableAction` (ΜΙΑ μορφή «απενεργό με λόγο»)· το `CardAction` τη χρησιμοποιεί. Κανένα νέο κλειδί i18n (`pipeline.access.*`). |
+| 2026-11-05 | **§3.8 Μεταβίβαση κατόχου (Τι 6 + Τι 5).** Μία πόρτα ιδιοκτησίας `GET|POST /api/opportunities/[id]/owner` (CAS, ενεργό μέλος, ιστορικό με ονόματα, ειδοποίηση `crm.opportunityAssigned` + σημείωμα παράδοσης) · πρόθεση `transfer` στον κριτή · `OWNER_OWNED_FIELDS` κλειδωμένα στους κανόνες και στη `crm-mutation-gateway` · το `PATCH` αρνείται `assignedTo`. 🔴 Έκλεισαν δύο κενά: ανεξέλεγκτο `assignedTo` (browser + `PATCH`, και σε uid άλλης εταιρείας) και εγγράψιμο `createdBy` (ο ανατεθειμένος γινόταν «δημιουργός» ⇒ διαγραφή). Πεδίο «Κάτοχος» στη φόρμα επεξεργασίας. CHECK 3.114 +Κ7. Boy Scout: `errorBodyText` κοινό στο `stage-move-api`. |
 |---|---|
+| 2026-11-05 | **Ζωντανή απόδειξη §3.7** με `internal_user` στο nestorconstruct.gr (§6): κλειδαριά + όνομα κατόχου, 403 `OPPORTUNITY_NOT_OWNER` σε στάδιο/`PATCH` ξένης, 200 στη δική του. Δύο νέα ανοιχτά στο §4: κανένα πεδίο «Κάτοχος» στη φόρμα · ανεξέλεγκτο `assignedTo` στο `PATCH`. |
 | 2026-11-04 | **§3.7 Εξουσία κατόχου** (απόφαση Giorgio). Ένας ισομορφικός κριτής `decideOpportunityAccess` (`services/crm/opportunity-access.ts`) + ένα σημείο επιβολής `requireOpportunityAccess` (πόρτα σταδίου · `PATCH` · `DELETE`)· κανόνες: ανατεθειμένος στο `update` και στην ανάγνωση legacy, όχι στο `delete`· οθόνη: κλειδωμένη κάρτα με όνομα κατόχου, απενεργά κουμπιά με λόγο· 403 με `ownerUid`. 🔴 Έκλεισε κενό: `PATCH`/`DELETE` έκαναν μόνο φράχτη μισθωτή (κάθε μέλος σε κάθε ευκαιρία) και απαντούσαν 500 αντί για 404 — μεταφορά στο `defineRoute`. CHECK 3.114 +Κ5/Κ6 (`scripts/lib/write-authority/opportunity-owner-parity.js`) + φρουρός του `requireOpportunityInTenant`. `Opportunity.createdBy` στον τύπο. Κλείνει το «ανοιχτό για απόφαση» της διόρθωσης `b0ba9ba1`. |
 | 2026-11-04 | **Αναρίθμηση ADR-929 → ADR-930 (σύγκρουση αριθμού, CHECK 3.49).** Δύο κλαδιά πήραν ταυτόχρονα το 929: αυτό και το `ADR-929-raster-plan-recognition`. Κατά τον κανόνα (ADR-779) άλλαξε αριθμό το έγγραφο με τις **λιγότερες** αναφορές (55 αρχεία έναντι 137), με απόφαση Giorgio. Μετονομάστηκαν το έγγραφο και το handoff (`HANDOFFS/2026-11-04_ADR-930_crm-pipeline-dnd_handoff.md`), και άλλαξαν 68 αναφορές σε κώδικα, κανόνες, πύλη 3.114 και `pending-ratchet-work.md`. Το `adr-index.md` και ο πίνακας πυλών του `CLAUDE.md` ξαναπαράχθηκαν. Παλιά αναφορά «ADR-929» σε μηνύματα commit πριν από αυτή την ημερομηνία που αφορά το CRM σημαίνει **αυτό** το έγγραφο. |
 | 2026-11-04 | **🔴 Διόρθωση μετά το deploy (`6db1147d`): η πόρτα σταδίου ήταν απρόσιτη.** Το `POST /api/opportunities/[id]/stage` ζητά `crm:opportunities:update`, που **κανένας** ρόλος του `role-catalogue.ts` δεν είχε ⇒ 403 σε όλους εκτός `super_admin` (bypass). Το έπιασε στο CI το `surface-authority-reachability.test.ts` (ADR-829 Κ2), που **δεν** τρέχει στο pre-commit. Δόθηκε στον `company_admin` (ήδη είχε `:view`). Ο server διαβάζει τον κατάλογο ζωντανά (`permissions.ts`), άρα δεν χρειάζεται ανανέωση claims. Ανοιχτό για απόφαση: ο **δημιουργός** μιας ευκαιρίας που δεν είναι διαχειριστής την επεξεργάζεται κατά τους κανόνες (`crmWriterIsPrivileged`) αλλά δεν αλλάζει το στάδιό της. Διορθώθηκε και η §5: η γραμμή παραγωγής ανεβάζει **πρώτα** τους κανόνες. |

@@ -117,6 +117,14 @@
         "phone": "Phone",
         "stage": "Stage",
         "stagePlaceholder": "Select stage...",
+        "owner": "Owner",
+        "ownerPlaceholder": "Select owner...",
+        "ownerCurrent": "current",
+        "ownerUnnamed": "Office member",
+        "ownerLoading": "Loading members...",
+        "ownerNote": "Hand-off note",
+        "ownerNotePlaceholder": "What should the new owner know? (optional)",
+        "ownerNoteHint": "The new owner sees it in the notification; it stays in the history.",
         "notes": "Notes"
       },
       "buttons": {
@@ -126,6 +134,13 @@
       },
       "messages": {
         "success": "Opportunity updated successfully!",
+        "ownerTransferred": "The opportunity now belongs to {owner}.",
+        "ownerConflict": "Its owner changed meanwhile. The form shows the current owner.",
+        "ownerNotMember": "The selected person is no longer an active member of the office.",
+        "ownerRefused": "You can no longer hand it over.",
+        "conflict": "Someone else changed the same fields meanwhile. The opportunity was reloaded — check the values and save again.",
+        "ownerFailed": "The owner was not changed.",
+        "ownerCandidatesFailed": "Could not load the office members.",
         "error": "Could not update opportunity."
       }
     },
@@ -405,6 +420,8 @@
       "locked": "Only the owner or a manager can change it.",
       "foreign": "It belongs to another company.",
       "deleteLocked": "Only its creator or a manager can delete it.",
+      "transferLocked": "Only its owner or a manager can hand it over.",
+      "transferLockedBy": "Only {owner} or a manager can hand it over.",
       "lockedCard": "Locked card"
     },
     "close": {

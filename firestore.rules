@@ -3568,13 +3568,19 @@ service cloud.firestore {
       //    όπως στα `leads` (Salesforce Record Owner · HubSpot «Owned only» · Pipedrive deal owner). Ο ίδιος πίνακας
       //    ζει στον server ως `decideOpportunityAccess` (`services/crm/opportunity-access.ts`)· την ισοτιμία τη φυλά η
       //    CHECK 3.114 (Κ5: ανατεθειμένος ΜΟΝΟ στο `update` · Κ6: ρόλοι της ικανότητας ⇔ ρόλος των κανόνων).
+      // 🔁 ADR-930 §3.8 — ο ΚΑΤΟΧΟΣ έχει κι αυτός ΕΝΑΝ γραφέα: `POST /api/opportunities/[id]/owner` (CAS, ενεργό μέλος
+      //    του χώρου, ιστορικό, ειδοποίηση). Ο πελάτης ΔΕΝ γράφει `assignedTo` / `ownerHandoffNote`, και ΚΑΝΕΙΣ δεν
+      //    ξαναγράφει το `createdBy` (Salesforce `CreatedById` = system field). Ως 2026-11-05 ο ανατεθειμένος έγραφε από
+      //    τον browser `createdBy` = το δικό του uid ⇒ γινόταν «δημιουργός» ⇒ αποκτούσε ΔΙΑΓΡΑΦΗ. Λίστα =
+      //    `STAGE_OWNED_FIELDS` ∪ `OWNER_OWNED_FIELDS` (`services/crm/opportunity-owner-transfer.ts`) — CHECK 3.114 Κ2/Κ7.
       allow update: if isAuthenticated()
                     && resource != null
                     && (crmWriterIsPrivileged(resource.data)
                         || (crmIsAssignee(resource.data) && crmNotForeignTenant(resource.data)))
                     && crmCompanyIdUnchanged(resource.data)
                     && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                         'stage', 'status', 'wonDate', 'closedAt', 'stageChangedAt', 'lostReason', 'lostReasonNote', 'reopenCount', '_v'
+                         'stage', 'status', 'wonDate', 'closedAt', 'stageChangedAt', 'lostReason', 'lostReasonNote', 'reopenCount', '_v',
+                         'assignedTo', 'createdBy', 'ownerHandoffNote'
                        ]);
 
       // 🗑️ DELETE: ΟΧΙ ο ανατεθειμένος — ίδια απόφαση με τα `leads` (και `intent: 'delete'` του server).

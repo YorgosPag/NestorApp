@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,6 +47,11 @@ interface OpportunityFormDialogProps {
   initialData: Partial<Opportunity> | null;
   /** Αποθηκεύει και ειδοποιεί. Απόρριψη σημαίνει ότι το dialog μένει ανοιχτό. */
   onSave: (data: Partial<Opportunity>) => Promise<void>;
+  /**
+   * Πεδία που ανήκουν σε **άλλη πόρτα** από την εγγραφή της φόρμας (π.χ. «Κάτοχος», ADR-930 §3.8): ο καταναλωτής κατέχει
+   * την κατάστασή τους και τα εκτελεί μέσα στο δικό του `onSave`. Μπαίνουν μετά το στάδιο.
+   */
+  extraFields?: (disabled: boolean) => ReactNode;
 }
 
 export function OpportunityFormDialog({
@@ -55,6 +60,7 @@ export function OpportunityFormDialog({
   onClose,
   initialData,
   onSave,
+  extraFields,
 }: OpportunityFormDialogProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('crm');
@@ -155,6 +161,7 @@ export function OpportunityFormDialog({
               </SelectContent>
             </Select>
           </div>
+          {extraFields?.(loading)}
           <div className="space-y-2">
             <Label htmlFor="notes">{t('opportunities.editModal.labels.notes')}</Label>
             <Textarea id="notes" name="notes" value={formData.notes || ''} onChange={handleChange} disabled={loading} />

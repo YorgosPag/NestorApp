@@ -11,6 +11,7 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { EditOpportunityModal } from "@/components/crm/dashboard/EditOpportunityModal";
 import SendEmailModal from "@/components/email/SendEmailModal";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useOpportunityAccess, useOpportunityLocks } from '@/components/crm/stage-move/useOpportunityAccess';
 import { useLeadsList } from "./hooks/useLeadsList";
 import { LeadCard } from "./LeadCard";
 import { getStatusColor } from '@/lib/status-helpers';
@@ -37,6 +38,9 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
     closeEditModal, closeEmailModal,
     confirmDialogProps,
   } = useLeadsList(refreshTrigger);
+  // ADR-930 «Εξουσία κατόχου» — ο ΙΔΙΟΣ κριτής με τον πίνακα· μία επίλυση ονομάτων κατόχων για όλη τη λίστα.
+  const access = useOpportunityAccess();
+  const locksOf = useOpportunityLocks(leads, access);
 
   if (loading) {
     return (
@@ -89,6 +93,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
               onDelete={handleDelete}
               formatDate={formatDate}
               getStatusColor={wrappedGetStatusColor}
+              locks={locksOf(lead)}
             />
           ))}
         </div>

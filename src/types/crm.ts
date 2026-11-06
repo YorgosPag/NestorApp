@@ -5,6 +5,7 @@ import type { TriageStatus } from '@/constants/triage-statuses';
 import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
 import type { OpportunityStage } from '@/config/crm/opportunity-stages';
 import type { OpportunityLostReason } from '@/config/crm/opportunity-lost-reasons';
+import type { OpportunitySource } from '@/config/crm/opportunity-sources';
 
 export type FirestoreishTimestamp = Date | string | { toDate(): Date };
 
@@ -56,7 +57,8 @@ export interface Opportunity {
   lastActivity?: FirestoreishTimestamp;
   nextAction?: string;
   nextActionDate?: FirestoreishTimestamp;
-  source?: 'website' | 'referral' | 'agent' | 'social' | 'phone' | 'walkin';
+  /** Κλειστός κατάλογος `OPPORTUNITY_SOURCES` (ADR-930 §3.10). */
+  source?: OpportunitySource;
   campaign?: string;
   referredBy?: string; // Contact ID
   status: 'active' | 'on_hold' | 'lost' | 'won';

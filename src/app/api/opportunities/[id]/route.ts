@@ -1,60 +1,52 @@
 /**
- * =============================================================================
- * PATCH + DELETE /api/opportunities/[id] — Update & Delete Opportunity
- * =============================================================================
+ * PATCH  /api/opportunities/[id]  { changes, expected } → { outcome: 'applied' | 'unchanged' }
+ * DELETE /api/opportunities/[id]                        → { success }
  *
- * PATCH:  Update opportunity fields (server-side validation). The stage is NOT here — `…/[id]/stage` (ADR-930).
- * DELETE: Hard-delete opportunity.
+ * The ONE door for an opportunity's fields and its deletion (ADR-930 §3.10). Stage → `…/stage`, owner → `…/owner`.
+ *
+ * - PATCH body = `opportunityUpdateBody` (strict): stage-owned, owner or system fields ⇒ 400.
+ * - Field-level CAS: `expected` = what the human SAW for the fields they change. One of THOSE changed meanwhile to a
+ *   different value ⇒ 409 `{ fields, updatedBy }`. An unrelated change (stage, owner, other field) does NOT cancel.
+ * - Nothing actually different ⇒ `unchanged`: no write, no history row.
+ * - DELETE keeps the last values in the history row (ADR-195) — the deleted opportunity can be reconstructed.
  *
  * Auth: withAuth + tenant fence (foreign ⇒ 404) + **owner authority** (`requireOpportunityAccess`, ADR-930):
  *   PATCH = intent `edit` (manager capability · creator · assignee) · DELETE = intent `delete` (manager · creator —
  *   NOT the assignee). Same table as `firestore.rules` `match /opportunities`.
- *   ⚠️ Until 2026-11-04 both handlers checked ONLY the tenant ⇒ any member of the company could edit or delete ANY
- *   opportunity over HTTP, past the rules (Admin SDK). And every refusal of the fence answered 500 instead of 404.
- * Rate: sensitive (financial/CRM data)
+ * Rate: sensitive (CRM data)
  *
- * @module api/opportunities/[id]
- * @enterprise ADR-252 Security Fix: Server-side validation · ADR-930 owner authority · ADR-603 defineRoute
+ * @see ADR-930 · ADR-252 · ADR-602 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { z } from 'zod';
-import { NextResponse } from 'next/server';
-import { defineRoute } from '@/lib/api/define-route';
+import type { z } from 'zod';
+
+import { conflict, defineRoute, notFound, ok } from '@/lib/api/define-route';
 import { API_ROUTES } from '@/config/domain-constants';
 import { OpportunitiesServerService } from '@/services/opportunities-server.service';
 import { requireOpportunityAccess } from '@/services/crm/opportunity-access.server';
-import { respondWithServiceResult } from '../_service-response';
+import { opportunityUpdateBody, type OpportunityUpdateResponse } from '@/services/crm/opportunity-fields-schema';
 
-const UpdateOpportunitySchema = z.object({
-  stage: z.string().max(50).optional(),
-  value: z.number().min(0).max(999_999_999).optional(),
-  probability: z.number().min(0).max(100).optional(),
-  notes: z.string().max(5000).optional(),
-  source: z.string().max(100).optional(),
-  expectedCloseDate: z.string().max(30).nullable().optional(),
-  lostReason: z.string().max(500).optional(),
-}).passthrough();
+export const dynamic = 'force-dynamic';
 
 type Params = { id: string };
 
-const success = () => NextResponse.json({ success: true });
+const NOT_FOUND = 'Opportunity not found';
 
-export const PATCH = defineRoute<typeof UpdateOpportunitySchema, Params>({
+export const PATCH = defineRoute<typeof opportunityUpdateBody, Params>({
   rateLimit: 'sensitive',
-  schema: UpdateOpportunitySchema,
+  schema: opportunityUpdateBody,
   fallbackError: 'Failed to update opportunity',
   handler: async ({ auth, body, params }) => {
     await requireOpportunityAccess({ ctx: auth, opportunityId: params.id, path: API_ROUTES.OPPORTUNITIES.BY_ID(params.id), intent: 'edit' });
-    const result = await OpportunitiesServerService.update(
-      params.id,
-      { ...body, expectedCloseDate: body.expectedCloseDate ?? undefined },
-      auth.companyId,
-      auth.uid,
-      auth.email ?? null,
-    );
-    return respondWithServiceResult(result, success);
+    const outcome = await OpportunitiesServerService.update(params.id, body, auth);
+    if (outcome.kind === 'refused') notFound(NOT_FOUND);
+    if (outcome.kind === 'conflict') {
+      conflict('Opportunity fields changed meanwhile', { fields: outcome.fields, updatedBy: outcome.updatedBy });
+    }
+    const response: OpportunityUpdateResponse = { outcome: outcome.kind };
+    return ok(response);
   },
 });
 
@@ -63,7 +55,8 @@ export const DELETE = defineRoute<z.ZodTypeAny, Params>({
   fallbackError: 'Failed to delete opportunity',
   handler: async ({ auth, params }) => {
     await requireOpportunityAccess({ ctx: auth, opportunityId: params.id, path: API_ROUTES.OPPORTUNITIES.BY_ID(params.id), intent: 'delete' });
-    const result = await OpportunitiesServerService.remove(params.id, auth.companyId, auth);
-    return respondWithServiceResult(result, success);
+    const outcome = await OpportunitiesServerService.remove(params.id, auth);
+    if (outcome.kind === 'refused') notFound(NOT_FOUND);
+    return ok();
   },
 });

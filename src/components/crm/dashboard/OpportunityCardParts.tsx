@@ -68,24 +68,43 @@ interface CardActionProps {
   readonly onClick?: () => void;
 }
 
+interface LockableActionProps {
+  /** Το tooltip όταν η ενέργεια επιτρέπεται. */
+  readonly label: string;
+  /** Γιατί δεν επιτρέπεται — `null` ⇒ ενεργό. Το κουμπί (`children`) το απενεργοποιεί ο καλών με το ΙΔΙΟ `lockedReason`. */
+  readonly lockedReason: string | null;
+  readonly children: React.ReactElement;
+  /** Διάταξη του εστιάσιμου περιτυλίγματος όταν κλειδώνει (π.χ. `flex w-full` για κουμπί πλήρους πλάτους). */
+  readonly className?: string;
+}
+
 /**
- * Κουμπί ενέργειας κάρτας με tooltip. Κλειδωμένο ⇒ απενεργό **μέσα σε εστιάσιμο span** (ένα `disabled` κουμπί δεν
- * δέχεται δείκτη ⇒ το tooltip του λόγου δεν θα άνοιγε ποτέ).
+ * **Η ΜΙΑ μορφή «ορατό, απενεργό, με λόγο»** (ADR-930 «Εξουσία κατόχου») — για εικονίδιο κάρτας και για κουμπί με
+ * κείμενο. Κλειδωμένο ⇒ το κουμπί μπαίνει **μέσα σε εστιάσιμο span** (ένα `disabled` κουμπί δεν δέχεται δείκτη ⇒ το
+ * tooltip του λόγου δεν θα άνοιγε ποτέ, ούτε από πληκτρολόγιο).
  */
-export function CardAction({ label, icon, className, lockedReason, onClick }: CardActionProps) {
-  const button = (
-    <Button variant="ghost" size="sm" className={cn('h-8 w-8 p-0', className)} disabled={lockedReason !== null}
-      aria-label={label} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {icon}
-    </Button>
-  );
+export function LockableAction({ label, lockedReason, children, className = 'inline-flex' }: LockableActionProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {lockedReason === null ? button : <span tabIndex={0} className="inline-flex" onClick={(e) => e.stopPropagation()}>{button}</span>}
+        {lockedReason === null ? children : (
+          <span tabIndex={0} className={className} onClick={(e) => e.stopPropagation()}>{children}</span>
+        )}
       </TooltipTrigger>
       <TooltipContent><p>{lockedReason ?? label}</p></TooltipContent>
     </Tooltip>
+  );
+}
+
+/** Κουμπί-εικονίδιο ενέργειας κάρτας με tooltip — κλειδωμένο μέσω `LockableAction`. */
+export function CardAction({ label, icon, className, lockedReason, onClick }: CardActionProps) {
+  return (
+    <LockableAction label={label} lockedReason={lockedReason}>
+      <Button variant="ghost" size="sm" className={cn('h-8 w-8 p-0', className)} disabled={lockedReason !== null}
+        aria-label={label} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+        {icon}
+      </Button>
+    </LockableAction>
   );
 }
 

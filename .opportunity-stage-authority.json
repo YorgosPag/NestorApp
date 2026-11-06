@@ -1,11 +1,18 @@
 {
-  "$doc": "ADR-930 · CHECK 3.114 — Η ΜΙΑ ΠΗΓΗ για το «ποιος αγγίζει τη συλλογή ευκαιριών στον server». Το στάδιο (και ό,τι παράγεται από αυτό) έχει ΕΝΑΝ γραφέα, το `opportunity-stage-transition.server.ts`. Οι κανόνες κλείνουν τον πελάτη, όχι το Admin SDK: κάθε άλλο αρχείο που ονομάζει τη συλλογή δηλώνεται εδώ με λόγο, ώστε ένας δεύτερος γραφέας σταδίου να φανεί στο commit. Τη διαβάζουν η πύλη (`scripts/check-opportunity-stage-authority.js`, AST) και το self-test της — ποτέ δεύτερη λίστα.",
+  "$doc": "ADR-930 · CHECK 3.114 — Η ΜΙΑ ΠΗΓΗ για το «ποιος αγγίζει τη συλλογή ευκαιριών στον server». Το στάδιο (και ό,τι παράγεται από αυτό) έχει ΕΝΑΝ γραφέα, το `opportunity-stage-transition.server.ts` · ο κάτοχος ΕΝΑΝ, το `opportunity-owner-transfer.server.ts` (ADR-930 §3.8). Οι κανόνες κλείνουν τον πελάτη, όχι το Admin SDK: κάθε άλλο αρχείο που ονομάζει τη συλλογή δηλώνεται εδώ με λόγο, ώστε ένας δεύτερος γραφέας σταδίου να φανεί στο commit. Τη διαβάζουν η πύλη (`scripts/check-opportunity-stage-authority.js`, AST) και το self-test της — ποτέ δεύτερη λίστα.",
   "guards": [
     {
       "kind": "call",
       "name": "applyOpportunityStageTransition",
       "owners": {
         "src/app/api/opportunities/[id]/stage/route.ts": "Η ΜΙΑ πόρτα: το route με φράχτη μισθωτή + εξουσία κατόχου (`requireOpportunityAccess`), ιδεμποτία και όριο ρυθμού καλεί τον γραφέα."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "applyOpportunityOwnerTransfer",
+      "owners": {
+        "src/app/api/opportunities/[id]/owner/route.ts": "Η ΜΙΑ πόρτα του κατόχου (ADR-930 §3.8): route με φράχτη μισθωτή + εξουσία `transfer` (`requireOpportunityAccess`) και όριο ρυθμού καλεί τον γραφέα. Δεύτερος καλών = δεύτερος δρόμος μεταβίβασης χωρίς CAS ή έλεγχο μέλους."
       }
     },
     {
@@ -20,8 +27,8 @@
       "name": "COLLECTIONS.OPPORTUNITIES",
       "owners": {
         "src/services/crm/opportunity-stage-transition.server.ts": "Ο ΕΝΑΣ γραφέας του σταδίου: συναλλαγή με CAS στο αναμενόμενο στάδιο, κανόνας μετάβασης, ίχνος μετά το commit.",
-        "src/services/opportunities-server.service.ts": "Δημιουργία/ενημέρωση/διαγραφή μέσω Admin SDK με ίχνος. Η δημιουργία γράφει το αρχικό στάδιο· η ενημέρωση ΑΡΝΕΙΤΑΙ το `stage` (400) και το παραπέμπει στην πόρτα.",
-        "src/services/opportunities.service.ts": "Ο πελάτης (client SDK): δημιουργία και επεξεργασία μη σταδιακών πεδίων. Τα πεδία σταδίου τα κλειδώνουν οι κανόνες και η `crm-mutation-gateway` — εδώ μόνο ονομάζεται η συλλογή.",
+        "src/services/crm/opportunity-owner-transfer.server.ts": "Ο ΕΝΑΣ γραφέας του κατόχου (ADR-930 §3.8): συναλλαγή με CAS στον αναμενόμενο κάτοχο, έλεγχο ενεργού μέλους του χώρου, ιστορικό και ειδοποίηση μετά το commit.",
+        "src/services/opportunities-server.service.ts": "Ο ΕΝΑΣ γραφέας πεδίων, δημιουργίας και διαγραφής (ADR-930 §3.10): ΕΝΑ σχήμα (`opportunity-fields-schema.ts`, strict — στάδιο/κάτοχος/συστήματος ΔΕΝ υπάρχουν εκεί), συναλλαγή με σύγκρουση κατά πεδίο, ιστορικό μετά το commit. Η δημιουργία γράφει το αρχικό ΑΝΟΙΧΤΟ στάδιο και τον αρχικό κάτοχο (ενεργό μέλος)· κάθε μεταγενέστερη αλλαγή τους περνά από τις πόρτες τους.",
         "src/services/report-engine/report-data-aggregator.ts": "ΜΟΝΟ ανάγνωση (Admin) για τις αναφορές της εταιρείας, φιλτραρισμένη κατά `companyId`. Καμία εγγραφή.",
         "src/lib/auth/tenant-isolation.ts": "ΜΟΝΟ ανάγνωση: ο φράχτης μισθωτή (`requireOpportunityInTenant`) διαβάζει το έγγραφο για να κρίνει αν ανήκει στον καλούντα.",
         "src/services/ai-pipeline/tools/executor-shared-types.ts": "Λίστα ΑΝΑΓΝΩΣΗΣ του AI και αντιστοίχιση για τον συγχρονισμό· η λίστα ΕΓΓΡΑΦΗΣ του AI δεν περιέχει τις ευκαιρίες (το φυλά η ίδια πύλη).",

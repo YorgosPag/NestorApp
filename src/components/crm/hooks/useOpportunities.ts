@@ -2,12 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { Opportunity } from '@/types/crm';
-import { OPPORTUNITY_STAGE_IDS, STATUS_OF_STAGE_KIND, stageKind } from '@/config/crm/opportunity-stages';
-import {
-    addOpportunity as apiAddOpportunity,
-    getOpportunities as apiGetOpportunities,
-    deleteOpportunity as apiDeleteOpportunity
-} from '@/services/opportunities.service';
+import { getOpportunities as apiGetOpportunities } from '@/services/opportunities.service';
+import { createOpportunityWithPolicy, deleteOpportunityWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -48,22 +44,10 @@ export function useOpportunities() {
     
     const addOpportunity = async (data: Partial<Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>>) => {
         try {
-          // 🏢 ENTERPRISE: Construct proper Opportunity object with all required fields
-          const stage = data.stage || OPPORTUNITY_STAGE_IDS[0];
-          const now = new Date();
-          const opportunityData: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'> = {
-              title: data.title || '',
-              contactId: data.contactId || '',
-              assignedTo: data.assignedTo || '', // κενό ⇒ ο δημιουργός, από το `addOpportunity`
-              lastActivity: data.lastActivity || now,
-              ...data,
-              // ADR-930: το `status` ΠΑΡΑΓΕΤΑΙ από το στάδιο, και η είσοδος στο στάδιο είναι τώρα.
-              stage,
-              status: STATUS_OF_STAGE_KIND[stageKind(stage)],
-              stageChangedAt: now,
-          };
-          await apiAddOpportunity(opportunityData);
-    
+          // ADR-930 §3.10: η ΜΙΑ πόρτα δημιουργίας — ο server παράγει κατάσταση (από το στάδιο), στιγμές, δημιουργό,
+          // κάτοχο (κενό ⇒ ο δημιουργός) και τη γραμμή ιστορικού.
+          await createOpportunityWithPolicy({ data });
+
           notifications.success(t("opportunities.messages.addSuccess"));
 
           fetchOpportunities();
@@ -76,7 +60,7 @@ export function useOpportunities() {
 
     const deleteOpportunity = async (id: string, name: string) => {
         try {
-            await apiDeleteOpportunity(id);
+            await deleteOpportunityWithPolicy({ opportunityId: id });
             notifications.success(t("opportunities.messages.deleteSuccess"));
             fetchOpportunities();
         } catch (error) {

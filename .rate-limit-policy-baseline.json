@@ -5,24 +5,23 @@
     "src/lib/middleware/rate-limit-config.ts"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά (α) διαδρομές που δεν δηλώνουν βαθμίδα ορίου και (β) διαδρομές που δηλώνουν άλλη από όση επιβάλλεται. Η θεραπεία είναι ΔΗΛΩΣΗ στη διαδρομή ή διόρθωση του πίνακα προθεμάτων — ποτέ μικρότερος αριθμός.",
-  "population": 585,
+  "population": 740,
   "tally": {
     "undeclared": 54,
-    "prefix-shadowed-by-declaration": 28,
-    "declared-over-default": 109,
-    "declared-agrees": 289,
-    "declared-via-factory": 105
+    "prefix-shadowed-by-declaration": 27,
+    "declared-over-default": 149,
+    "declared-agrees": 387,
+    "declared-via-factory": 123
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
     "HEAVY→SENSITIVE": 1,
     "TELEGRAM→SENSITIVE": 1,
     "TELEGRAM→WEBHOOK": 1,
-    "STANDARD→HEAVY": 13,
-    "STANDARD→HIGH": 1
+    "STANDARD→HEAVY": 13
   },
-  "violation_count": 82,
-  "declaration_count": 105,
+  "violation_count": 81,
+  "declaration_count": 123,
   "violations": [
     "prefix-shadowed-by-declaration::HEAVY→SENSITIVE::/api/admin/role-management/audit-log/export",
     "prefix-shadowed-by-declaration::STANDARD→HEAVY::/api/reports/builder",
@@ -143,13 +142,13 @@
     "createScanCronRoute::/api/cron/onboarding-reminder",
     "createScanCronRoute::/api/cron/outbound-email-flush",
     "createScanCronRoute::/api/cron/overdue-alerts",
+    "createScanCronRoute::/api/cron/public-catalog-sweep",
+    "createScanCronRoute::/api/cron/publication-run-sweep",
     "createScanCronRoute::/api/cron/purge-deleted-contacts",
     "createScanCronRoute::/api/cron/purge-deleted-entities",
     "createScanCronRoute::/api/cron/stay-channel-import",
     "createScanCronRoute::/api/cron/stay-hold-expiry",
     "createScanCronRoute::/api/cron/storage-bucket-drift",
-    "createScanCronRoute::/api/cron/public-catalog-sweep",
-    "createScanCronRoute::/api/cron/publication-run-sweep",
     "createScanCronRoute::/api/cron/tour-tileset-bake",
     "createShowcaseEmailRoute::/api/buildings/[buildingId]/showcase/email",
     "createShowcaseEmailRoute::/api/parking/[id]/showcase/email",
@@ -192,7 +191,9 @@
     "defineRoute::/api/admin/iso19650/costs",
     "defineRoute::/api/asset-packs",
     "defineRoute::/api/asset-packs/[packId]/[version]/[fileName]",
+    "defineRoute::/api/opportunities",
     "defineRoute::/api/opportunities/[id]",
+    "defineRoute::/api/opportunities/[id]/owner",
     "defineRoute::/api/opportunities/[id]/stage",
     "defineRoute::/api/procurement",
     "defineRoute::/api/procurement/[poId]",

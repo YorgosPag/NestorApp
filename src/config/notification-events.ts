@@ -60,6 +60,8 @@ export const NOTIFICATION_EVENT_TYPES = {
   CRM_NEW_LEAD: 'crm.newLead',
   CRM_LEAD_STATUS_CHANGE: 'crm.leadStatusChange',
   CRM_TASK_ASSIGNED: 'crm.taskAssigned',
+  /** ADR-930 §3.8 — η ευκαιρία μεταβιβάστηκε σε αυτόν (HubSpot «assigned to you»). */
+  CRM_OPPORTUNITY_ASSIGNED: 'crm.opportunityAssigned',
   CRM_NEW_COMMUNICATION: 'crm.newCommunication',
   CRM_CONTACT_TRASHED: 'crm.contactTrashed',
   CRM_CONTACT_PERMANENTLY_DELETED: 'crm.contactPermanentlyDeleted',
@@ -299,6 +301,12 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.CRM_TASK_ASSIGNED]: {
     category: 'crm',
     settingKey: 'taskAssigned',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.CRM_OPPORTUNITY_ASSIGNED]: {
+    category: 'crm',
+    settingKey: 'opportunityAssigned',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
@@ -682,6 +690,8 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
  */
 export const NOTIFICATION_ENTITY_TYPES = {
   LEAD: 'lead',
+  /** ADR-930 — η ευκαιρία πώλησης (`opportunities/{id}`). */
+  OPPORTUNITY: 'opportunity',
   CONTACT: 'contact',
   PROPERTY: 'property',
   TASK: 'task',

@@ -4,6 +4,7 @@ import React from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Send, PhoneCall, Plus, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LockableAction } from '@/components/crm/dashboard/OpportunityCardParts';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { LeadPerson } from './lead-person';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -16,11 +17,13 @@ import { cn } from '@/lib/design-system';
 interface QuickActionsProps {
   lead: LeadPerson;
   onEdit: () => void;
+  /** ADR-930 «Εξουσία κατόχου» — γιατί δεν επιτρέπεται επεξεργασία (`null` ⇒ επιτρέπεται). */
+  editLockedReason: string | null;
   onNewTask: () => void;
   onSendEmail?: () => void;
 }
 
-export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActionsProps) {
+export function QuickActions({ lead, onEdit, editLockedReason, onNewTask, onSendEmail }: QuickActionsProps) {
   const iconSizes = useIconSizes();
   const { error: notifyError } = useNotifications();
   const colors = useSemanticColors();
@@ -97,21 +100,24 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
           <Plus className={iconSizes.md} />
           {t('tasks.newTask')}
         </Button>
-        <Button
-          onClick={onEdit}
-          className={cn(
-            'w-full flex items-center justify-start',
-            spacing.gap.md,
-            spacing.padding.x.md,
-            spacing.padding.y.sm,
-            colors.bg.secondary,
-            colors.text.muted,
-            INTERACTIVE_PATTERNS.SUBTLE_HOVER
-          )}
-        >
-          <Edit3 className={iconSizes.md} />
-          {t('leadCard.edit')}
-        </Button>
+        <LockableAction label={t('leadCard.edit')} lockedReason={editLockedReason} className="flex w-full">
+          <Button
+            onClick={onEdit}
+            disabled={editLockedReason !== null}
+            className={cn(
+              'w-full flex items-center justify-start',
+              spacing.gap.md,
+              spacing.padding.x.md,
+              spacing.padding.y.sm,
+              colors.bg.secondary,
+              colors.text.muted,
+              INTERACTIVE_PATTERNS.SUBTLE_HOVER
+            )}
+          >
+            <Edit3 className={iconSizes.md} />
+            {t('leadCard.edit')}
+          </Button>
+        </LockableAction>
       </div>
     </div>
   );

@@ -134,6 +134,7 @@
           "newLead": "Νέο lead",
           "leadStatusChange": "Αλλαγή κατάστασης lead",
           "taskAssigned": "Ανάθεση εργασίας",
+          "opportunityAssigned": "Ανάθεση ευκαιρίας σε μένα",
           "newCommunication": "Νέα επικοινωνία",
           "contactTrashed": "Επαφή μεταφέρθηκε στον κάδο",
           "contactPermanentlyDeleted": "Επαφή διαγράφηκε οριστικά"

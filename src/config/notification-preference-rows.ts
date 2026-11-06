@@ -48,6 +48,7 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'newLead', labelKey: 'common-account:account.notificationSettings.categories.crm.newLead' },
       { key: 'leadStatusChange', labelKey: 'common-account:account.notificationSettings.categories.crm.leadStatusChange' },
       { key: 'taskAssigned', labelKey: 'common-account:account.notificationSettings.categories.crm.taskAssigned' },
+      { key: 'opportunityAssigned', labelKey: 'common-account:account.notificationSettings.categories.crm.opportunityAssigned' },
       { key: 'newCommunication', labelKey: 'common-account:account.notificationSettings.categories.crm.newCommunication' },
       { key: 'contactTrashed', labelKey: 'common-account:account.notificationSettings.categories.crm.contactTrashed' },
       { key: 'contactPermanentlyDeleted', labelKey: 'common-account:account.notificationSettings.categories.crm.contactPermanentlyDeleted' },

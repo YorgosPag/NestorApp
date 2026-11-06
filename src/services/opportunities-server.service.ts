@@ -1,257 +1,203 @@
 /**
- * Opportunities Server Service — Admin SDK operations
- * ADR-252 Security Fix: Server-side validation for opportunity writes
+ * @fileoverview **Ο ΕΝΑΣ γραφέας πεδίων ευκαιρίας** — δημιουργία · επεξεργασία · διαγραφή, με ιστορικό (ADR-930 §3.10).
+ * @module services/opportunities-server.service
+ *
+ * Οι τρεις γραφείς της ευκαιρίας: **στάδιο** → `opportunity-stage-transition.server.ts` · **κάτοχος** →
+ * `opportunity-owner-transfer.server.ts` · **όλα τα άλλα** → εδώ. Ο browser δεν γράφει πια τη συλλογή.
+ *
+ * 🔑 **ΕΝΑ σχήμα**: τα πεδία του `Opportunity` (`opportunity-fields-schema.ts`). Ως 2026-11-06 εδώ γραφόταν
+ *    `name`/`value`/`leadId` — σχήμα που δεν διάβαζε κανείς.
+ * 🔑 **Σύγκρουση κατά ΠΕΔΙΟ** (πάνω από Salesforce/HubSpot/Pipedrive, που κάνουν last-write-wins): 409 μόνο αν άλλαξε
+ *    στο μεταξύ ένα από τα πεδία **που αλλάζει αυτός** — και όχι αν ο άλλος έγραψε ήδη την ίδια τιμή. Ένας έλεγχος
+ *    `_v` όλου του εγγράφου θα ακύρωνε την επεξεργασία κάθε φορά που κάποιος σέρνει την κάρτα.
+ * 🔑 Ανάγνωση + έλεγχος + εγγραφή σε **μία** συναλλαγή· `_v`↑ (`versionedWrite`) · ιστορικό **μετά** το commit
+ *    (`recordEntityUpdate`, δηλωμένος γραφέας του CHECK 3.17)· καμία διαφορά ⇒ καμία γραφή, καμία γραμμή.
+ * 🔑 Η διαγραφή κρατά στη γραμμή ιστορικού **τις τελευταίες τιμές** — η ευκαιρία ανασυντίθεται από το ιστορικό.
+ * ⚠️ Φράχτης μισθωτή **και** εξουσία κατόχου (`requireOpportunityAccess`) είναι ευθύνη του route, **πριν**. Ο έλεγχος
+ *    μισθωτή εδώ μέσα είναι η δεύτερη ζώνη (ADR-742 §4) — δεν τον αντικαθιστά.
  */
 
 import 'server-only';
 
+import type { Firestore } from 'firebase-admin/firestore';
+
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { OPPORTUNITY_STAGE_IDS, STATUS_OF_STAGE_KIND, stageSpec } from '@/config/crm/opportunity-stages';
+import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
 import { generateOpportunityId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
-import { getErrorMessage } from '@/lib/error-utils';
-import { nowISO } from '@/lib/date-local';
-import { isOpportunityStage, OPPORTUNITY_STAGE_IDS } from '@/config/crm/opportunity-stages';
+import { nowISO, withIsoDateFields } from '@/lib/date-local';
+import { serializeScalar } from '@/lib/audit/audit-diff';
+import { versionedWrite } from '@/lib/firestore/version-check';
+import { isActiveWorkspaceMemberInTx } from '@/lib/workspace/active-member-in-transaction';
 import { recordEntityUpdate, type AuditActor } from '@/services/audit/record-entity-update';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { opportunityAuditResolvers } from '@/services/crm/opportunity-audit-resolvers.server';
+import {
+  OPPORTUNITY_DATE_FIELDS,
+  type OpportunityCreateBody,
+  type OpportunityEditableField,
+  type OpportunityUpdateBody,
+} from '@/services/crm/opportunity-fields-schema';
 
 const logger = createModuleLogger('OpportunitiesServerService');
 
-function getDb() {
+export type OpportunityCreateOutcome =
+  | { readonly kind: 'created'; readonly id: string }
+  | { readonly kind: 'invalid'; readonly reason: 'owner_not_member' };
+
+export type OpportunityUpdateOutcome =
+  | { readonly kind: 'applied' }
+  | { readonly kind: 'unchanged' }
+  | { readonly kind: 'conflict'; readonly fields: readonly OpportunityEditableField[]; readonly updatedBy: string | null }
+  /** Ανύπαρκτη ή άλλου μισθωτή — η δεύτερη ζώνη (το route έχει ήδη απαντήσει 404). */
+  | { readonly kind: 'refused' };
+
+export type OpportunityRemoveOutcome = { readonly kind: 'deleted' } | { readonly kind: 'refused' };
+
+interface UpdateCommit {
+  readonly outcome: OpportunityUpdateOutcome;
+  readonly before?: Readonly<Record<string, unknown>>;
+  readonly written?: Readonly<Record<string, unknown>>;
+}
+
+const REFUSED = { kind: 'refused' } as const;
+
+function getDb(): Firestore {
   const db = getAdminFirestore();
   if (!db) throw new Error('Admin Firestore unavailable');
   return db;
 }
 
+const textOrNull = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 
-export interface ServerOpportunityCreatePayload {
-  name: string;
-  leadId?: string | null;
-  stage?: string;
-  value?: number;
-  probability?: number;
-  expectedCloseDate?: string;
-  assignedTo?: string;
-  notes?: string;
+/** «Ίδια τιμή;» με τον ΕΝΑΝ συγκριτή του ιστορικού: κενό = `null` = `''` = λείπει· αντικείμενα ανεξαρτήτως σειράς κλειδιών. */
+const sameValue = (a: unknown, b: unknown): boolean => serializeScalar(a ?? null) === serializeScalar(b ?? null);
+
+/** Το νέο έγγραφο: τα πεδία του αιτήματος + ό,τι παράγεται (κατάσταση από στάδιο, κάτοχος, στιγμές). */
+function buildNewOpportunity(id: string, body: OpportunityCreateBody, actor: AuditActor, nowIso: string): Record<string, unknown> {
+  const { stage: requestedStage, assignedTo, ...fields } = body;
+  const stage = requestedStage ?? OPPORTUNITY_STAGE_IDS[0];
+  const spec = stageSpec(stage);
+  return {
+    ...fields,
+    id,
+    companyId: actor.companyId,
+    createdBy: actor.uid,
+    assignedTo: assignedTo ?? actor.uid,
+    stage,
+    status: STATUS_OF_STAGE_KIND[spec.kind],
+    probability: fields.probability ?? spec.defaultProbability,
+    stageChangedAt: nowIso,
+    lastActivity: nowIso,
+    createdAt: nowIso,
+  };
 }
 
-export interface ServerOpportunityUpdatePayload {
-  name?: string;
-  /**
-   * ⛔ ΔΕΝ γράφεται εδώ (ADR-930): το στάδιο αλλάζει **μόνο** από `POST /api/opportunities/[id]/stage`
-   * (έλεγχος σύγκρουσης, υποχρεωτικά στοιχεία κλεισίματος, ιστορικό). Η παρουσία του ⇒ 400, όχι σιωπηλή αγνόηση.
-   */
-  stage?: string;
-  value?: number;
-  probability?: number;
-  expectedCloseDate?: string;
-  assignedTo?: string;
-  notes?: string;
-  leadId?: string | null;
+/** Τα πεδία που αλλάζει το αίτημα — ή `conflicts` όσα άλλαξαν στο μεταξύ σε **άλλη** τιμή από αυτήν που ζητείται. */
+function planFieldUpdate(
+  before: Readonly<Record<string, unknown>>,
+  body: OpportunityUpdateBody,
+): { readonly conflicts: readonly OpportunityEditableField[]; readonly written: Record<string, unknown> } {
+  const stored = withIsoDateFields(before, OPPORTUNITY_DATE_FIELDS);
+  const fields = Object.keys(body.changes) as OpportunityEditableField[];
+  const conflicts = fields.filter(
+    (field) => !sameValue(stored[field], body.expected[field]) && !sameValue(stored[field], body.changes[field]),
+  );
+  const effective = fields.filter((field) => !sameValue(stored[field], body.changes[field]));
+  return { conflicts, written: Object.fromEntries(effective.map((field) => [field, body.changes[field] ?? null])) };
 }
 
-/**
- * Οι **κοινοί** κανόνες πεδίων του `create` και του `update`, μία φορά.
- *
- * Boy Scout (N.0.2 · N.18): η τριάδα `stage` / `value` / `probability` ήταν
- * γραμμένη **δύο φορές, αυτολεξεί** — προϋπάρχουσα διπλοτυπία που την
- * αποκάλυψε το `jscpd` μόλις άλλαξε το αρχείο. Ο κανόνας του `name` **δεν**
- * μπαίνει εδώ: στο `create` είναι **υποχρεωτικό**, στο `update` **προαιρετικό
- * αλλά όχι κενό** — δύο διαφορετικοί κανόνες που θα κρύβονταν πίσω από μία
- * σημαία. Επιστρέφει το μήνυμα ή `null`.
- */
-function validateSharedOpportunityFields(data: {
-  readonly stage?: string;
-  readonly value?: number;
-  readonly probability?: number;
-}): string | null {
-  if (data.stage && !isOpportunityStage(data.stage)) {
-    return `Invalid stage: ${data.stage}`;
-  }
-  if (data.value !== undefined && data.value < 0) {
-    return 'Value cannot be negative';
-  }
-  if (data.probability !== undefined && (data.probability < 0 || data.probability > 100)) {
-    return 'Probability must be between 0 and 100';
-  }
-  return null;
+async function commitUpdate(db: Firestore, id: string, body: OpportunityUpdateBody, actor: AuditActor): Promise<UpdateCommit> {
+  const ref = db.collection(COLLECTIONS.OPPORTUNITIES).doc(id);
+  return db.runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const before: Readonly<Record<string, unknown>> | undefined = snapshot.data();
+    // 🔴 ADR-742 §4 — «χωρίς μισθωτή» ΔΕΝ σημαίνει «ελεύθερο»: το `isPayloadOwnedByCompany` αρνείται το κενό.
+    if (!snapshot.exists || !before || !isPayloadOwnedByCompany(before, actor.companyId)) return { outcome: REFUSED };
+
+    const { conflicts, written } = planFieldUpdate(before, body);
+    if (conflicts.length > 0) {
+      return { outcome: { kind: 'conflict', fields: conflicts, updatedBy: textOrNull(before.updatedBy) } };
+    }
+    if (Object.keys(written).length === 0) return { outcome: { kind: 'unchanged' } };
+
+    tx.update(ref, versionedWrite(before, written, actor.uid).data);
+    return { outcome: { kind: 'applied' }, before, written };
+  });
 }
 
-/**
- * 🔴 **Φόρτωσε → υπάρχει; → δικό μου;** — μία φορά για τις δύο διαδρομές γραφής
- * (N.18 · CHECK 3.28)
- *
- * Το `update` και το `remove` έγραφαν την ίδια τετράδα. Μόλις η σύγκριση
- * ενοποιήθηκε στον SSoT (ADR-742 §4), τα δύο προοίμια έγιναν **ταυτόσημα** και
- * το `jscpd` τα μέτρησε ως κλώνο **μέσα στο ίδιο diff** — *η κεντρικοποίηση
- * γεννάει τον κλώνο* (μάθημα #2). Απάντηση: **πραγματική μείωση**, όχι
- * χαλάρωση του gate.
- *
- * ⚠️ **Γιατί ΟΧΙ ο κοινός `loadOwnedDocOrRefusal`** (ADR-742 §7undecies.3):
- * εκείνος καλεί το `refusal()` με **μηδέν ορίσματα** και στους **δύο** κλάδους
- * — αυτό είναι το νόημά του, ώστε «δεν βρέθηκε» και «δεν είναι δικό σου» να
- * μην μπορούν να αποκλίνουν. Εδώ οι δύο κλάδοι **αποκλίνουν σήμερα**
- * (`'Opportunity not found'` vs `'Access denied'`). Η ένωσή τους θα ήταν
- * **αλλαγή δόγματος αποκάλυψης**, δηλαδή απόφαση (N.8) — όχι παρενέργεια ενός
- * de-duplication. Καταγράφεται ως **παρατήρηση χωρίς αλλαγή** (§7novies.6).
- */
-async function loadOwnedOpportunity(
-  id: string,
-  companyId: string,
-): Promise<
-  | { readonly docRef: FirebaseFirestore.DocumentReference; readonly existing: Record<string, unknown> }
-  | { readonly error: string }
-> {
-  const docRef = getDb().collection(COLLECTIONS.OPPORTUNITIES).doc(id);
-  const snap = await docRef.get();
-
-  if (!snap.exists) {
-    return { error: 'Opportunity not found' };
-  }
-
-  const existing = snap.data() as Record<string, unknown>;
-
-  // 🔴🔴 ADR-742 §4 — **η παγίδα του κενού στη ρητή της μορφή**. Μέχρι τις
-  // 2026-08-01 ο έλεγχος ήταν `existing.companyId && existing.companyId !== …`:
-  // το `&&` σημαίνει «αν δεν έχει μισθωτή, **μην ρωτήσεις**» ⇒ ευκαιρία
-  // αποθηκευμένη χωρίς μισθωτή ήταν **επεξεργάσιμη και διαγράψιμη** από
-  // οποιονδήποτε συνδεδεμένο χρήστη **οποιασδήποτε** εταιρείας. Πέμπτη εμφάνιση
-  // του ίδιου σφάλματος (§7quinquies, §7octies, §7novies, §7decies.4).
-  if (!isPayloadOwnedByCompany(existing, companyId)) {
-    return { error: 'Access denied' };
-  }
-
-  return { docRef, existing };
+/** Κάθε παρακολουθούμενο πεδίο → `null`: η γραμμή διαγραφής κρατά ό,τι χάθηκε (παλιά τιμή → —). */
+function clearedTrackedFields(): Record<string, null> {
+  return Object.fromEntries(Object.keys(getTrackedFieldsForEntityAuditType('opportunity') ?? {}).map((field) => [field, null]));
 }
 
 export class OpportunitiesServerService {
-  static async create(
-    data: ServerOpportunityCreatePayload,
-    companyId: string,
-    createdBy: string,
-    actorEmail: string | null = null,
-  ): Promise<{ success: boolean; id?: string; error?: string }> {
-    try {
-      // Validation
-      if (!data.name || data.name.trim().length === 0) {
-        return { success: false, error: 'Opportunity name is required' };
-      }
-      if (data.name.trim().length > 200) {
-        return { success: false, error: 'Opportunity name cannot exceed 200 characters' };
-      }
-      const invalid = validateSharedOpportunityFields(data);
-      if (invalid) return { success: false, error: invalid };
+  /** Νέα ευκαιρία — ο αρχικός κάτοχος, αν δεν είναι ο δημιουργός, πρέπει να είναι ενεργό μέλος του χώρου. */
+  static async create(body: OpportunityCreateBody, actor: AuditActor): Promise<OpportunityCreateOutcome> {
+    const db = getDb();
+    const id = generateOpportunityId();
+    const document = buildNewOpportunity(id, body, actor, nowISO());
+    const ownerUid = String(document.assignedTo);
+    const created = await db.runTransaction(async (tx) => {
+      if (ownerUid !== actor.uid && !(await isActiveWorkspaceMemberInTx(tx, db, actor.companyId, ownerUid))) return false;
+      tx.create(db.collection(COLLECTIONS.OPPORTUNITIES).doc(id), versionedWrite({}, document, actor.uid).data);
+      return true;
+    });
+    if (!created) return { kind: 'invalid', reason: 'owner_not_member' };
 
-      const db = getDb();
-      const id = generateOpportunityId();
-      const now = nowISO();
-
-      const opportunity: Record<string, unknown> = {
-        id,
-        name: data.name.trim(),
-        leadId: data.leadId ?? null,
-        stage: data.stage ?? OPPORTUNITY_STAGE_IDS[0],
-        value: data.value ?? 0,
-        probability: data.probability ?? 0,
-        expectedCloseDate: data.expectedCloseDate ?? null,
-        assignedTo: data.assignedTo ?? null,
-        notes: data.notes ?? null,
-        companyId,
-        createdBy,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      await db.collection(COLLECTIONS.OPPORTUNITIES).doc(id).set(opportunity);
-      await recordEntityUpdate({
-        entityType: 'opportunity', entityId: id, before: {}, written: opportunity, action: 'created',
-        ctx: { uid: createdBy, email: actorEmail, companyId }, entityName: data.name.trim(),
-      });
-
-      logger.info(`Created opportunity ${id} for company ${companyId}`);
-
-      // ADR-029 Phase D: search_documents written by Cloud Function onOpportunityWrite.
-      return { success: true, id };
-    } catch (error) {
-      logger.error('Failed to create opportunity:', error);
-      return { success: false, error: getErrorMessage(error) };
-    }
+    await recordEntityUpdate({
+      entityType: 'opportunity', entityId: id, before: {}, written: document, action: 'created', ctx: actor,
+      entityName: body.title, resolvers: opportunityAuditResolvers(db, actor.companyId),
+    });
+    logger.info('Created opportunity', { id, companyId: actor.companyId });
+    // ADR-029 Phase D: search_documents written by Cloud Function onOpportunityWrite.
+    return { kind: 'created', id };
   }
 
-  static async update(
-    id: string,
-    data: ServerOpportunityUpdatePayload,
-    companyId: string,
-    updatedBy: string,
-    actorEmail: string | null = null,
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const owned = await loadOwnedOpportunity(id, companyId);
-      if ('error' in owned) return { success: false, error: owned.error };
-      const { docRef, existing } = owned;
-
-      // Validation
-      if (data.name !== undefined && data.name.trim().length === 0) {
-        return { success: false, error: 'Opportunity name cannot be empty' };
-      }
-      if (data.stage !== undefined) {
-        return { success: false, error: 'Stage changes go through POST /api/opportunities/[id]/stage' };
-      }
-      const invalid = validateSharedOpportunityFields(data);
-      if (invalid) return { success: false, error: invalid };
-
-      const updates: Record<string, unknown> = {
-        updatedAt: nowISO(),
-        updatedBy,
-      };
-
-      if (data.name !== undefined) updates.name = data.name.trim();
-      if (data.value !== undefined) updates.value = data.value;
-      if (data.probability !== undefined) updates.probability = data.probability;
-      if (data.expectedCloseDate !== undefined) updates.expectedCloseDate = data.expectedCloseDate;
-      if (data.assignedTo !== undefined) updates.assignedTo = data.assignedTo;
-      if (data.notes !== undefined) updates.notes = data.notes;
-      if (data.leadId !== undefined) updates.leadId = data.leadId ?? null;
-
-      await docRef.update(updates);
+  /** Αλλαγή πεδίων — ποτέ στάδιο ή κάτοχος (το σχήμα δεν τα γνωρίζει· έχουν τις δικές τους πόρτες). */
+  static async update(id: string, body: OpportunityUpdateBody, actor: AuditActor): Promise<OpportunityUpdateOutcome> {
+    const db = getDb();
+    const committed = await commitUpdate(db, id, body, actor);
+    if (committed.outcome.kind === 'applied' && committed.before && committed.written) {
       await recordEntityUpdate({
-        entityType: 'opportunity', entityId: id, before: existing, written: updates,
-        ctx: { uid: updatedBy, email: actorEmail, companyId },
+        entityType: 'opportunity', entityId: id, before: committed.before, written: committed.written, ctx: actor,
+        entityName: textOrNull(committed.written.title) ?? textOrNull(committed.before.title),
+        resolvers: opportunityAuditResolvers(db, actor.companyId),
       });
-
-      logger.info(`Updated opportunity ${id}`);
-
-      // ADR-029 Phase D: search_documents written by Cloud Function onOpportunityWrite.
-      return { success: true };
-    } catch (error) {
-      logger.error('Failed to update opportunity:', error);
-      return { success: false, error: getErrorMessage(error) };
     }
+    return committed.outcome;
   }
 
-  static async remove(
-    id: string,
-    companyId: string,
-    actor: AuditActor,
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const owned = await loadOwnedOpportunity(id, companyId);
-      if ('error' in owned) return { success: false, error: owned.error };
+  /** Οριστική διαγραφή — η γραμμή ιστορικού κρατά τις τελευταίες τιμές. */
+  static async remove(id: string, actor: AuditActor): Promise<OpportunityRemoveOutcome> {
+    const db = getDb();
+    const ref = db.collection(COLLECTIONS.OPPORTUNITIES).doc(id);
+    const before = await db.runTransaction(async (tx) => {
+      const snapshot = await tx.get(ref);
+      const data = snapshot.data();
+      if (!snapshot.exists || !data || !isPayloadOwnedByCompany(data, actor.companyId)) return null;
+      tx.delete(ref);
+      return data;
+    });
+    if (!before) return REFUSED;
 
-      await owned.docRef.delete();
+    const entityName = textOrNull(before.title);
+    const recorded = await recordEntityUpdate({
+      entityType: 'opportunity', entityId: id, before, written: clearedTrackedFields(), action: 'deleted', ctx: actor,
+      entityName, resolvers: opportunityAuditResolvers(db, actor.companyId),
+    });
+    // Δίχτυ: έγγραφο χωρίς καμία παρακολουθούμενη τιμή ⇒ καμία διαφορά — η διαγραφή γράφεται ΠΑΝΤΑ.
+    if (recorded.auditId === null) {
       await EntityAuditService.recordChange({
-        entityType: 'opportunity', entityId: id, entityName: typeof owned.existing.title === 'string' ? owned.existing.title : null,
-        action: 'deleted', changes: [], performedBy: actor.uid, performedByName: actor.email ?? null, companyId,
+        entityType: 'opportunity', entityId: id, entityName, action: 'deleted', changes: [],
+        performedBy: actor.uid, performedByName: actor.email ?? null, companyId: textOrNull(before.companyId) ?? actor.companyId,
       });
-
-      // ADR-029 Phase D: search_documents row cleaned up by Cloud Function onOpportunityWrite (delete branch).
-
-      logger.info(`Deleted opportunity ${id}`);
-      return { success: true };
-    } catch (error) {
-      logger.error('Failed to delete opportunity:', error);
-      return { success: false, error: getErrorMessage(error) };
     }
+    logger.info('Deleted opportunity', { id });
+    // ADR-029 Phase D: search_documents row cleaned up by Cloud Function onOpportunityWrite (delete branch).
+    return { kind: 'deleted' };
   }
 }

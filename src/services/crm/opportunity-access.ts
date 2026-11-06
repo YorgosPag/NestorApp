@@ -6,11 +6,15 @@
  *
  * 🔑 **Πρακτική μεγάλων**: Salesforce = Record Owner + admin · HubSpot = Edit «Owned only / Everything» ·
  *    Pipedrive = deal owner. Κοινό: κρίνει ο **κάτοχος (ανατεθειμένος)** — όχι μόνο ο δημιουργός.
+ * 🔁 **Μεταβίβαση** (ADR-930 §3.8): Salesforce «Change Owner» = ο κάτοχος ∨ «Transfer Record» · Pipedrive = ο κάτοχος
+ *    πάντα, τις ξένες μόνο με «Change a deal's owner». Ο **δημιουργός που δεν είναι πια κάτοχος** δεν μεταβιβάζει —
+ *    η δημιουργία είναι ιστορικό, όχι ιδιοκτησία (`CreatedById` ≠ `OwnerId`).
  *
  * | Πρόθεση  | Επιτρέπεται σε                                                              | Κανόνας Firestore (`match /opportunities`) |
  * |----------|-----------------------------------------------------------------------------|---------------------------------------------|
  * | `edit`   | ικανότητα `crm:opportunities:update` ∨ δημιουργός ∨ **ανατεθειμένος**        | `crmWriterIsPrivileged ∨ (crmIsAssignee ∧ crmNotForeignTenant)` |
  * | `delete` | ικανότητα ∨ δημιουργός — **ΟΧΙ** ο ανατεθειμένος (η ανάθεση δεν δίνει εξαφάνιση) | `crmWriterIsPrivileged` |
+| `transfer` | ικανότητα ∨ **ο τρέχων κάτοχος** (`opportunityOwnerOf`: ανατεθειμένος, αλλιώς δημιουργός) | — ο πελάτης **ΔΕΝ** γράφει `assignedTo` (μόνο η πόρτα `…/owner`) |
  *
  * 🔑 **Καθαρός · σύγχρονος · κανένα `server-only`** (πρότυπο `lib/auth/container-access.ts`): ο server τον καλεί μέσα
  *    από `requireOpportunityAccess`, η οθόνη μέσα από `useOpportunityAccess` — **ίδια** απάντηση, ώστε κάρτα που
@@ -26,7 +30,7 @@ import { isGranted, type CapabilitySubject } from '@/types/capability-authority'
 /** Η ικανότητα που δίνει πρόσβαση σε **όλες** τις ευκαιρίες της εταιρείας. */
 export const OPPORTUNITY_MANAGE_PERMISSION: PermissionId = 'crm:opportunities:update';
 
-export type OpportunityAccessIntent = 'edit' | 'delete';
+export type OpportunityAccessIntent = 'edit' | 'delete' | 'transfer';
 
 /** Ταυτότητα ήδη επαληθευμένη. Την ικανοποιούν **και** το `AuthContext` (server) **και** ο `FirebaseAuthUser` (πελάτης). */
 export interface OpportunityAccessSubject extends CapabilitySubject {
@@ -44,6 +48,7 @@ export type OpportunityAccessVerdict =
   | 'granted-capability'
   | 'granted-creator'
   | 'granted-assignee'
+  | 'granted-owner'
   | 'denied-foreign-tenant'
   | 'denied-not-owner';
 
@@ -59,6 +64,7 @@ const GRANTS: Readonly<Record<OpportunityAccessVerdict, boolean>> = {
   'granted-capability': true,
   'granted-creator': true,
   'granted-assignee': true,
+  'granted-owner': true,
   'denied-foreign-tenant': false,
   'denied-not-owner': false,
 };
@@ -76,7 +82,8 @@ export function opportunityOwnerOf(facts: OpportunityAccessFacts): string | null
 
 /**
  * Ο ίδιος ο κριτής. Σειρά = ίδια με τους κανόνες: ο υπερδιαχειριστής (bypass) περνά πάντα · ξένο έγγραφο ⇒ άρνηση ·
- * ικανότητα · δημιουργός · ανατεθειμένος (μόνο για `edit`). Έγγραφο χωρίς `companyId` (legacy) δεν είναι ξένο.
+ * ικανότητα · (μεταβίβαση: μόνο ο κάτοχος) · δημιουργός · ανατεθειμένος (μόνο για `edit`). Έγγραφο χωρίς `companyId`
+ * (legacy) δεν είναι ξένο.
  */
 export function decideOpportunityAccess(query: {
   readonly subject: OpportunityAccessSubject;
@@ -96,6 +103,9 @@ export function decideOpportunityAccess(query: {
   // Η ικανότητα είναι εμβέλειας εταιρείας: σε legacy έγγραφο (χωρίς εταιρεία) δεν σημαίνει τίποτα — όπως το
   // `crmIsCompanyAdmin` των κανόνων, που ζητά `companyId`.
   if (docCompany !== null && isGranted(capability.verdict)) return decide('granted-capability');
+  if (intent === 'transfer') {
+    return subject.uid && opportunityOwnerOf(opportunity) === subject.uid ? decide('granted-owner') : decide('denied-not-owner');
+  }
   if (subject.uid && textOrNull(opportunity.createdBy) === subject.uid) return decide('granted-creator');
   if (intent === 'edit' && subject.uid && textOrNull(opportunity.assignedTo) === subject.uid) return decide('granted-assignee');
   return decide('denied-not-owner');
@@ -104,4 +114,9 @@ export function decideOpportunityAccess(query: {
 /** Το όνομα του handoff: *«μπορεί να μετακινήσει/επεξεργαστεί;»*. */
 export function canEditOpportunity(subject: OpportunityAccessSubject, opportunity: OpportunityAccessFacts): boolean {
   return isOpportunityAccessGranted(decideOpportunityAccess({ subject, opportunity, intent: 'edit' }).verdict);
+}
+
+/** *«Μπορεί να τη δώσει σε άλλον;»* — η πρόθεση `transfer` (ADR-930 §3.8). */
+export function canTransferOpportunity(subject: OpportunityAccessSubject, opportunity: OpportunityAccessFacts): boolean {
+  return isOpportunityAccessGranted(decideOpportunityAccess({ subject, opportunity, intent: 'transfer' }).verdict);
 }

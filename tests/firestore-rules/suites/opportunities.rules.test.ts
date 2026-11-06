@@ -145,3 +145,56 @@ describe('opportunities.rules — ADR-930 πεδία σταδίου: μόνο α
     await assertSucceeds(db.collection('opportunities').doc(docId).update({ notes: 'νέα σημείωση', updatedAt: new Date() }));
   });
 });
+
+/**
+ * ADR-930 §3.8 — ο ΚΑΤΟΧΟΣ έχει ΕΝΑΝ γραφέα (`POST /api/opportunities/[id]/owner`, Admin SDK). Κανείς δεν γράφει από
+ * τον browser `assignedTo` / `ownerHandoffNote`, και ΚΑΝΕΙΣ δεν ξαναγράφει το `createdBy`. Το κενό που κλείνει
+ * (μετρημένο στους κανόνες ως 2026-11-05): ο ανατεθειμένος έγραφε `createdBy` = το δικό του uid ⇒ «δημιουργός» ⇒ διαγραφή.
+ */
+describe('opportunities.rules — ADR-930 §3.8 πεδία ιδιοκτησίας: μόνο από την πόρτα κατόχου', () => {
+  let env: RulesTestEnvironment;
+  const docId = 'opportunity-owner-owned';
+  const ASSIGNEE = PERSONA_CLAIMS.same_tenant_user.uid;
+
+  beforeAll(async () => { env = await initEmulator(); });
+  afterAll(async () => { await teardownEmulator(env); });
+  afterEach(async () => { await resetData(env); });
+
+  async function seedAssignedToUser(): Promise<void> {
+    await withSeedContext(env, async (ctx) => {
+      await ctx.firestore().collection('opportunities').doc(docId).set({
+        title: 'assigned', stage: 'initial_contact', companyId: SAME_TENANT_COMPANY_ID,
+        createdBy: 'persona-crm-author', assignedTo: ASSIGNEE,
+      });
+    });
+  }
+
+  const OWNER_OWNED: ReadonlyArray<readonly [string, unknown]> = [
+    ['assignedTo', 'uid-of-another-company'], ['createdBy', ASSIGNEE], ['ownerHandoffNote', 'x'],
+  ];
+
+  it.each(OWNER_OWNED)('ανατεθειμένος × update «%s» ⇒ deny', async (field, value) => {
+    await seedAssignedToUser();
+    const db = getContext(env, 'same_tenant_user').firestore();
+    await assertFails(db.collection('opportunities').doc(docId).update({ [field]: value }));
+  });
+
+  it.each(OWNER_OWNED)('same_tenant_admin × update «%s» ⇒ deny (ακόμη και ο manager: μόνο η πόρτα)', async (field, value) => {
+    await seedAssignedToUser();
+    const db = getContext(env, 'same_tenant_admin').firestore();
+    await assertFails(db.collection('opportunities').doc(docId).update({ [field]: value }));
+  });
+
+  it('η πλήρης επίθεση: ο ανατεθειμένος δεν γίνεται «δημιουργός» — άρα δεν αποκτά διαγραφή', async () => {
+    await seedAssignedToUser();
+    const ref = getContext(env, 'same_tenant_user').firestore().collection('opportunities').doc(docId);
+    await assertFails(ref.update({ createdBy: ASSIGNEE }));
+    await assertFails(ref.delete());
+  });
+
+  it('ανατεθειμένος × update μη-ιδιοκτησιακού πεδίου (σημειώσεις) ⇒ allow (η δουλειά του μένει ανοιχτή)', async () => {
+    await seedAssignedToUser();
+    const db = getContext(env, 'same_tenant_user').firestore();
+    await assertSucceeds(db.collection('opportunities').doc(docId).update({ notes: 'κάλεσα', updatedAt: new Date() }));
+  });
+});

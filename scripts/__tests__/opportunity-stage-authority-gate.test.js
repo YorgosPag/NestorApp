@@ -12,7 +12,7 @@ const os = require('os');
 const path = require('path');
 
 const {
-  measure, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, STAGE_FIELDS_SOURCE, AI_EXECUTOR, ROLE_CATALOGUE, ACCESS_JUDGE,
+  measure, STATES, BLOCKING, REGISTRY_FILE, RULES_FILE, STAGE_FIELDS_SOURCE, OWNER_FIELDS_SOURCE, AI_EXECUTOR, ROLE_CATALOGUE, ACCESS_JUDGE,
 } = require('../check-opportunity-stage-authority');
 const { MCP_ACCESS_CONTROL } = require('../lib/write-authority/mcp-write-allowlist');
 
@@ -21,6 +21,11 @@ const ROUTE = 'src/app/api/opportunities/[id]/stage/route.ts';
 const ENFORCER = 'src/services/crm/opportunity-access.server.ts';
 const REASON = 'Ο ένας γραφέας: CAS στο αναμενόμενο στάδιο, κανόνας μετάβασης, ίχνος μετά το commit.';
 const FIELDS = `'stage', 'status', 'closedAt'`;
+const OWNER_FIELDS = `'assignedTo', 'createdBy'`;
+const LOCKED = `${FIELDS},
+                         ${OWNER_FIELDS}`;
+const OWNER_WRITER = 'src/services/crm/opportunity-owner-transfer.server.ts';
+const OWNER_ROUTE = 'src/app/api/opportunities/[id]/owner/route.ts';
 const PRIVILEGED_OR_ASSIGNEE = '(crmWriterIsPrivileged(resource.data) || (crmIsAssignee(resource.data) && crmNotForeignTenant(resource.data)))';
 const PRIVILEGED = 'crmWriterIsPrivileged(resource.data)';
 
@@ -51,7 +56,8 @@ const registry = {
   guards: [
     { kind: 'call', name: 'applyOpportunityStageTransition', owners: { [ROUTE]: REASON } },
     { kind: 'call', name: 'requireOpportunityInTenant', owners: { [ENFORCER]: REASON } },
-    { kind: 'member', name: 'COLLECTIONS.OPPORTUNITIES', owners: { [WRITER]: REASON } },
+    { kind: 'call', name: 'applyOpportunityOwnerTransfer', owners: { [OWNER_ROUTE]: REASON } },
+    { kind: 'member', name: 'COLLECTIONS.OPPORTUNITIES', owners: { [WRITER]: REASON, [OWNER_WRITER]: REASON } },
   ],
 };
 
@@ -59,11 +65,14 @@ const HEALTHY = {
   [WRITER]: `export async function applyOpportunityStageTransition(db) { return db.collection(COLLECTIONS.OPPORTUNITIES).doc('x'); }`,
   [ROUTE]: `export const POST = (db) => applyOpportunityStageTransition(db);`,
   [ENFORCER]: `export const requireOpportunityAccess = (p) => requireOpportunityInTenant(p);`,
+  [OWNER_WRITER]: `export async function applyOpportunityOwnerTransfer(db) { return db.collection(COLLECTIONS.OPPORTUNITIES).doc('x'); }`,
+  [OWNER_ROUTE]: `export const POST = (db) => applyOpportunityOwnerTransfer(db);`,
   [ACCESS_JUDGE]: `export const OPPORTUNITY_MANAGE_PERMISSION: PermissionId = 'crm:opportunities:update';`,
   [ROLE_CATALOGUE]: catalogueGranting(['company_admin']),
   'src/other.ts': `// COLLECTIONS.OPPORTUNITIES — σχόλιο, όχι χρήση\nexport const o = (db) => db.collection(COLLECTIONS.LEADS);`,
   [STAGE_FIELDS_SOURCE]: `export const STAGE_OWNED_FIELDS = [\n  ${FIELDS},\n] as const;`,
-  [RULES_FILE]: rulesWith(FIELDS),
+  [OWNER_FIELDS_SOURCE]: `export const OWNER_OWNED_FIELDS = [${OWNER_FIELDS}] as const;`,
+  [RULES_FILE]: rulesWith(LOCKED),
   [MCP_ACCESS_CONTROL]: `const WRITE_ALLOWED_COLLECTIONS = new Set([\n  'leads', // 'opportunities' σε σχόλιο δεν μετρά\n]);`,
   [AI_EXECUTOR]: `export const ALLOWED_WRITE_COLLECTIONS = new Set([\n  COLLECTIONS.LEADS,\n]);`,
 };
@@ -96,7 +105,7 @@ describe('CHECK 3.114', () => {
   it('υγιής κόσμος: σχόλιο και άλλη συλλογή δεν είναι χρήση', () => {
     const result = measured({});
     expect(blockers(result)).toEqual([]);
-    expect(result.tally[STATES.OWNER]).toBe(3);
+    expect(result.tally[STATES.OWNER]).toBe(5);
   });
 
   it('Κ1: route που καλεί τον φράχτη ΜΟΝΟ του — παρακάμπτει τον κριτή κατόχου', () => {
@@ -105,12 +114,12 @@ describe('CHECK 3.114', () => {
   });
 
   it('Κ5: οι κανόνες ΔΕΝ αφήνουν τον ανατεθειμένο στο update — ο server τον αφήνει', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(FIELDS, { update: PRIVILEGED }) });
+    const result = measured({ [RULES_FILE]: rulesWith(LOCKED, { update: PRIVILEGED }) });
     expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('ανατεθειμένο') })]);
   });
 
   it('Κ5: οι κανόνες αφήνουν τον ανατεθειμένο να ΣΒΗΣΕΙ — ο server όχι', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(FIELDS, { remove: PRIVILEGED_OR_ASSIGNEE }) });
+    const result = measured({ [RULES_FILE]: rulesWith(LOCKED, { remove: PRIVILEGED_OR_ASSIGNEE }) });
     expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('`delete`') })]);
   });
 
@@ -120,7 +129,7 @@ describe('CHECK 3.114', () => {
   });
 
   it('Κ6: οι κανόνες ονομάζουν άλλον «διαχειριστή» από τον κατάλογο', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(FIELDS, { admin: 'project_manager' }) });
+    const result = measured({ [RULES_FILE]: rulesWith(LOCKED, { admin: 'project_manager' }) });
     expect(blockers(result).map((finding) => finding.file)).toEqual([ROLE_CATALOGUE]);
   });
 
@@ -145,7 +154,7 @@ describe('CHECK 3.114', () => {
   });
 
   it('Κ2: χωρίς λίστα κλειδώματος στους κανόνες η πύλη ΑΡΝΕΙΤΑΙ', () => {
-    const result = measured({ [RULES_FILE]: rulesWith(FIELDS).replace(/\n\s*&& !request[\s\S]*?\]\);/, ';') });
+    const result = measured({ [RULES_FILE]: rulesWith(LOCKED).replace(/\n\s*&& !request[\s\S]*?\]\);/, ';') });
     expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.SOURCE_DRIFT, file: RULES_FILE })]);
   });
 
@@ -158,6 +167,21 @@ describe('CHECK 3.114', () => {
     const result = measured({ [AI_EXECUTOR]: `export const ALLOWED_WRITE_COLLECTIONS = new Set([\n  COLLECTIONS.OPPORTUNITIES,\n]);` });
     // Δύο ευρήματα, και τα δύο σωστά: η Κ1 (αδήλωτη χρήση της συλλογής) και η Κ4 (λίστα εγγραφής). Ελέγχεται το ΔΙΚΟ της.
     expect(blockers(result)).toContainEqual(expect.objectContaining({ state: STATES.OUTSIDE, file: AI_EXECUTOR, detail: expect.stringContaining('λίστα εγγραφής του AI') }));
+  });
+
+  it('Κ7: οι κανόνες ΔΕΝ κλειδώνουν τον κάτοχο — ο πελάτης θα μεταβίβαζε χωρίς CAS ή έλεγχο μέλους', () => {
+    const result = measured({ [RULES_FILE]: rulesWith(`${FIELDS}, 'createdBy'`) });
+    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: RULES_FILE, detail: expect.stringContaining('assignedTo') })]);
+  });
+
+  it('Κ7: χωρίς τη λίστα πεδίων ιδιοκτησίας η πύλη ΑΡΝΕΙΤΑΙ (δεν κρίνει στα τυφλά)', () => {
+    const result = measured({ [OWNER_FIELDS_SOURCE]: 'export const x = 1;' });
+    expect(blockers(result)).toEqual([expect.objectContaining({ state: STATES.SOURCE_DRIFT, file: OWNER_FIELDS_SOURCE })]);
+  });
+
+  it('Κ7: δεύτερη πόρτα μεταβίβασης που καλεί τον γραφέα κατόχου χωρίς δήλωση', () => {
+    const rogue = { 'src/app/api/opportunities/[id]/assign/route.ts': `export const POST = (db) => applyOpportunityOwnerTransfer(db);` };
+    expect(blockers(measured(rogue))).toEqual([expect.objectContaining({ state: STATES.OUTSIDE, file: 'src/app/api/opportunities/[id]/assign/route.ts' })]);
   });
 
   it('δήλωση χωρίς λόγο', () => {

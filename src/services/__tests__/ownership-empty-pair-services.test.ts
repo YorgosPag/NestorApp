@@ -121,16 +121,16 @@ const SITES: readonly OwnershipCallSiteSpec[] = [
   },
   {
     file: 'services/opportunities-server.service.ts',
-    name: 'OpportunitiesServerService.update — κοινός loadOwnedOpportunity',
-    arrange: owner => seedOne(COLLECTIONS.OPPORTUNITIES, owner, { name: 'Ευκαιρία' }),
+    // ADR-930 §3.10: ο φρουρός ζει πλέον μέσα στη συναλλαγή του γραφέα πεδίων — ίδιο ερώτημα, άλλο λεξιλόγιο άρνησης.
+    name: 'OpportunitiesServerService.update — δεύτερη ζώνη μέσα στη συναλλαγή',
+    arrange: owner => seedOne(COLLECTIONS.OPPORTUNITIES, owner, { title: 'Ευκαιρία' }),
     act: callerCompanyId =>
       OpportunitiesServerService.update(
         DOC_ID,
-        { name: 'Μετονομασμένη' },
-        callerCompanyId,
-        'user_A',
+        { changes: { title: 'Μετονομασμένη' }, expected: { title: 'Ευκαιρία' } },
+        { uid: 'user_A', email: null, companyId: callerCompanyId },
       ),
-    refused: refusedBySuccessFlag,
+    refused: result => (result as { kind?: string } | null)?.kind === 'refused',
   },
   {
     file: 'services/brokerage-server.service.ts',

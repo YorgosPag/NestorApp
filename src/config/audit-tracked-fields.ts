@@ -1656,8 +1656,24 @@ export const OPPORTUNITY_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
   lostReason: { kind: 'scalar', label: 'lostReason', enumCatalog: AUDIT_VALUE_CATALOGS.opportunityLostReason },
   lostReasonNote: { kind: 'scalar', label: 'lostReasonNote' },
   reopenCount: { kind: 'scalar', label: 'reopenCount' },
+  // ADR-930 §3.8 — ο κάτοχος: ο γραφέας (`opportunity-owner-transfer.server.ts`) δίνει το ΟΝΟΜΑ με επιλυτή ⇒ uid στην
+  // τιμή + στιγμιότυπο ονόματος στην ετικέτα. Το σημείωμα παράδοσης γράφεται μαζί του.
   assignedTo: { kind: 'scalar', label: 'assignedTo' },
+  ownerHandoffNote: { kind: 'scalar', label: 'ownerHandoffNote' },
   expectedCloseDate: { kind: 'scalar', label: 'expectedCloseDate' },
+  // ADR-930 §3.10 — ΚΑΘΕ πεδίο της πόρτας πεδίων (`OPPORTUNITY_EDITABLE_FIELDS`) αφήνει ίχνος· χωρίς όριο πεδίων
+  // (Salesforce Field History: 20). Η επαφή είναι ξένο κλειδί: ο γραφέας δίνει το ΟΝΟΜΑ με `ownedContactNameResolver`.
+  title: { kind: 'scalar', label: 'title' },
+  contactId: { kind: 'scalar', label: 'contactId' },
+  fullName: { kind: 'scalar', label: 'fullName' },
+  email: { kind: 'scalar', label: 'email' },
+  phone: { kind: 'scalar', label: 'phone' },
+  notes: { kind: 'scalar', label: 'notes' },
+  nextAction: { kind: 'scalar', label: 'nextAction' },
+  nextActionDate: { kind: 'scalar', label: 'nextActionDate' },
+  source: { kind: 'scalar', label: 'source', enumCatalog: AUDIT_VALUE_CATALOGS.opportunitySource },
+  campaign: { kind: 'scalar', label: 'campaign' },
+  referredBy: { kind: 'scalar', label: 'referredBy' },
 };
 
 /**

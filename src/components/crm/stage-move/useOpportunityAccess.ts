@@ -48,13 +48,16 @@ export function useOpportunityAccess(): OpportunityAccessGate {
 
 /**
  * Το κλειδί i18n του «γιατί όχι» — ΕΝΑ σημείο για κλειδαριά κάρτας, κουμπί επεξεργασίας και διαγραφής.
- * `null` ⇒ επιτρέπεται. Ξένη εταιρεία δεν ονομάζει πρόσωπο· η διαγραφή ονομάζει ρόλο, όχι τον ανατεθειμένο.
+ * `null` ⇒ επιτρέπεται. Ξένη εταιρεία δεν ονομάζει πρόσωπο· η διαγραφή ονομάζει ρόλο, όχι τον ανατεθειμένο· η μεταβίβαση
+ * ονομάζει τον κάτοχο («τη δίνει ο/η …») — μόνο εκείνος ή ένας manager (ADR-930 §3.8).
  */
 export function accessDenialKey(decision: OpportunityAccessDecision | null, hasOwnerName: boolean):
-  | 'pipeline.access.lockedBy' | 'pipeline.access.locked' | 'pipeline.access.foreign' | 'pipeline.access.deleteLocked' | null {
+  | 'pipeline.access.lockedBy' | 'pipeline.access.locked' | 'pipeline.access.foreign' | 'pipeline.access.deleteLocked'
+  | 'pipeline.access.transferLocked' | 'pipeline.access.transferLockedBy' | null {
   if (!decision || isOpportunityAccessGranted(decision.verdict)) return null;
   if (decision.verdict === 'denied-foreign-tenant') return 'pipeline.access.foreign';
   if (decision.intent === 'delete') return 'pipeline.access.deleteLocked';
+  if (decision.intent === 'transfer') return hasOwnerName ? 'pipeline.access.transferLockedBy' : 'pipeline.access.transferLocked';
   return hasOwnerName ? 'pipeline.access.lockedBy' : 'pipeline.access.locked';
 }
 

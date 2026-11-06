@@ -22,8 +22,14 @@ export type StageMoveResult =
 const HTTP_FORBIDDEN = 403;
 const HTTP_CONFLICT = 409;
 
-function fieldOf(body: unknown, field: 'currentStage' | 'ownerUid'): unknown {
+function fieldOf(body: unknown, field: string): unknown {
   return body !== null && typeof body === 'object' ? (body as Record<string, unknown>)[field] : undefined;
+}
+
+/** Ένα μη κενό κείμενο του σώματος μιας άρνησης — ή `null`. Κοινό με την πόρτα κατόχου (`owner-transfer-api`). */
+export function errorBodyText(body: unknown, field: string): string | null {
+  const value = fieldOf(body, field);
+  return typeof value === 'string' && value !== '' ? value : null;
 }
 
 function conflictStageOf(body: unknown): OpportunityStage | null {
@@ -31,10 +37,6 @@ function conflictStageOf(body: unknown): OpportunityStage | null {
   return isOpportunityStage(stage) ? stage : null;
 }
 
-function ownerUidOf(body: unknown): string | null {
-  const uid = fieldOf(body, 'ownerUid');
-  return typeof uid === 'string' && uid !== '' ? uid : null;
-}
 
 export async function postStageTransition(opportunityId: string, body: OpportunityStageBody): Promise<StageMoveResult> {
   try {
@@ -45,7 +47,7 @@ export async function postStageTransition(opportunityId: string, body: Opportuni
       return { kind: 'conflict', currentStage: conflictStageOf(error.errorBody) };
     }
     if (error instanceof ApiClientError && error.statusCode === HTTP_FORBIDDEN) {
-      return { kind: 'refused', ownerUid: ownerUidOf(error.errorBody) };
+      return { kind: 'refused', ownerUid: errorBodyText(error.errorBody, 'ownerUid') };
     }
     return { kind: 'failed' };
   }

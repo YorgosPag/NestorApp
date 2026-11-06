@@ -143,6 +143,8 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // ── ADR-930: η ροή πωλήσεων — στάδιο ευκαιρίας και λόγος απώλειας (camelCase· ο resolver γεφυρώνει `closed_won`).
   opportunityStage: { ns: 'crm', path: 'opportunities.auditStages' },
   opportunityLostReason: { ns: 'crm', path: 'opportunities.lostReasons' },
+  // ── ADR-930 §3.10: η πηγή ευκαιρίας (`OPPORTUNITY_SOURCES`) — ο ΙΔΙΟΣ κατάλογος ετικετών με τον δημιουργό αναφορών.
+  opportunitySource: { ns: 'report-builder-domains', path: 'domains.opportunities.enums.source' },
 
   // ── ADR-916 §5.2: ο κύκλος ζωής της **παράδοσης φακέλου** — δικό του λεξιλόγιο (`awaiting-completion` · `ready` ·
   // `cancelled`), άρα **όχι** στο κοινό `lifecycle` (που κρατά αγγελία και διάθεση). Δείχνει εδώ το

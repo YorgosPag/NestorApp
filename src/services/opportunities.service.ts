@@ -1,40 +1,18 @@
 /**
- * ENTERPRISE: Firestore operations for Opportunities
+ * ENTERPRISE: Firestore READS for Opportunities (Client SDK)
  *
- * ADR-214 Phase 4: READ methods delegated to firestoreQueryService.
- * SECURITY FIX: tenant filtering auto-injected (was previously MISSING).
+ * ADR-214 Phase 4: READ methods delegated to firestoreQueryService (tenant filtering auto-injected).
  *
- * NOTE: This file uses Firebase Client SDK (firebase/firestore), NOT firebase-admin.
+ * ✍️ ADR-930 §3.10: this file does NOT write. Every write goes through ONE server door with a history row —
+ *    fields/create/delete → `/api/opportunities` (`crm-mutation-gateway`), stage → `…/stage`, owner → `…/owner`.
+ *    Until 2026-11-06 the browser wrote here with `setDoc`/`updateDoc`/`deleteDoc` — and left no history.
  */
 
-import { db } from '@/lib/firebase';
-import {
-  setDoc,
-  doc,
-  updateDoc,
-  deleteDoc,
-  orderBy,
-  where,
-  serverTimestamp,
-  type DocumentData,
-} from 'firebase/firestore';
-import { generateOpportunityId } from '@/services/enterprise-id.service';
-import { firestoreQueryService, resolveEffectiveCompanyId } from '@/services/firestore';
+import { orderBy, where, type DocumentData } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore';
 import type { Opportunity } from '@/types/crm';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { withIsoDateFields } from '@/lib/date-local';
-
-const OPPORTUNITIES_COLLECTION = COLLECTIONS.OPPORTUNITIES;
-
-/** Τα μόνα πεδία στιγμής του `Opportunity` (ADR-218). */
-const OPPORTUNITY_DATE_FIELDS = [
-  'expectedCloseDate',
-  'lastActivity',
-  'nextActionDate',
-  'wonDate',
-  'createdAt',
-  'updatedAt',
-] as const satisfies readonly (keyof Opportunity)[];
+import { OPPORTUNITY_DATE_FIELDS } from '@/services/crm/opportunity-fields-schema';
 
 /** Transform raw DocumentData (from firestoreQueryService) to Opportunity */
 export const toOpportunity = (raw: DocumentData & { id: string }): Opportunity =>
@@ -73,65 +51,3 @@ export async function getOpportunityById(id: string): Promise<Opportunity | null
     throw new Error('Failed to fetch opportunity');
   }
 }
-
-// --- WRITE methods: unchanged ---
-
-/**
- * Προσθήκη νέας ευκαιρίας.
- *
- * Η εταιρεία βγαίνει από τον ενεργό χώρο, όχι από τον καλούντα: ο κανόνας `crmCanCreate`
- * απορρίπτει έγγραφο χωρίς `companyId`, και χωρίς αυτό το πεδίο καμία ευκαιρία δεν
- * περνούσε από εδώ.
- */
-export async function addOpportunity(opportunityData: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ id: string; success: boolean }> {
-  try {
-    const ctx = await firestoreQueryService.requireAuthContext();
-    const companyId = resolveEffectiveCompanyId(ctx) ?? ctx.companyId;
-    if (!companyId) {
-      throw new Error('VALIDATION_ERROR: companyId is required to create an opportunity');
-    }
-
-    // ADR-210: Enterprise ID generation — setDoc with pre-generated ID
-    const id = generateOpportunityId();
-    await setDoc(doc(db, OPPORTUNITIES_COLLECTION, id), {
-      ...opportunityData,
-      assignedTo: opportunityData.assignedTo || ctx.uid,
-      id,
-      companyId,
-      createdBy: ctx.uid,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    return { id, success: true };
-  } catch (error) {
-    throw error;
-  }
-}
-
-/** Ενημέρωση ευκαιρίας */
-export async function updateOpportunity(opportunityId: string, updates: Partial<Opportunity>): Promise<{ success: boolean }> {
-  try {
-    const opportunityRef = doc(db, OPPORTUNITIES_COLLECTION, opportunityId);
-    await updateDoc(opportunityRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
-    return { success: true };
-  } catch (error) {
-    throw error;
-  }
-}
-
-/** Διαγραφή ευκαιρίας — TODO: Add cascade cleanup for related records */
-export async function deleteOpportunity(opportunityId: string): Promise<{ success: boolean }> {
-  try {
-    // TODO: ADR-AUDIT — Before deleting, clean up related records:
-    // - communications referencing this opportunity
-    // - contact_links with targetEntityId === opportunityId
-    await deleteDoc(doc(db, OPPORTUNITIES_COLLECTION, opportunityId));
-    return { success: true };
-  } catch (error) {
-    throw error;
-  }
-}
-

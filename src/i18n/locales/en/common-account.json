@@ -134,6 +134,7 @@
           "newLead": "New lead",
           "leadStatusChange": "Lead status change",
           "taskAssigned": "Task assigned",
+          "opportunityAssigned": "Opportunity assigned to me",
           "newCommunication": "New communication",
           "contactTrashed": "Contact moved to trash",
           "contactPermanentlyDeleted": "Contact permanently deleted"
