@@ -324,7 +324,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:7b54fca237d20e28b4f652f9541d9b4dcf468248a93cd5798b0fc2515fcb5bb5 -->
+     fingerprint: sha256:d723a78a3d7e12bf086cad13fb348fe717ff7d2f952dc841297f48f343983dc0 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -423,6 +423,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.112** | **Πύλη του ενός γραφέα της δημόσιας βιτρίνας** (ADR-923) — «αγγίζει κάποιος το δημόσιο έγγραφο καταλόγου, το outbox του ή το ράφι του **έξω από τους δηλωμένους κατόχους**; (οι κανόνες κλείνουν τον πελάτη…» · `npm run test:public-catalog-authority` · `SKIP_PUBLIC_CATALOG_AUTHORITY=1` · 📘 `docs/gates/3.112.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3) | — |
 | **3.113** | **Πύλη του ενός γραφέα της υπεργολαβίας** (ADR-928) — «γράφει κάποιος ρήτρα, έκδοση ρήτρας, πρότυπο, συμφωνητικό, αναθεώρηση ή μετρητή αριθμών **έξω από τους γραφείς του `src/server/subcontracts/`** — δηλ…» · `npm run test:subcontract-authority` · `SKIP_SUBCONTRACT_AUTHORITY=1` · 📘 `docs/gates/3.113.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 | **3.114** | **Πύλη του ενός γραφέα του σταδίου ευκαιρίας** (ADR-930) — «αλλάζει κάποιος το στάδιο ή τον κάτοχο μιας ευκαιρίας **έξω από την πόρτα του** (`…/stage` · `…/owner`) — χωρίς έλεγχο σύγκρουσης, χωρίς στοιχεία κλε…» · `npm run test:opportunity-stage-authority` · `SKIP_OPPORTUNITY_STAGE_AUTHORITY=1` · 📘 `docs/gates/3.114.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5+Κ6+Κ7) | — |
+| **3.115** | **Πύλη του πληθυντικού** (ADR-932) — «λέει αυτό το μήνυμα **«1 παραγγελίες»**; — μετρά το `{count}` χωρίς πληθυντικό ICU, ή λείπει από τον πληθυντικό του κατηγορία που η γλώσσα του…» · `npm run test:i18n-plural` · `SKIP_I18N_PLURAL=1` · 📘 `docs/gates/3.115.md` | 🔴 RATCHET κατά ταυτότητα (σκέτο · λείπει κατηγορία · δεν ανα… | `.i18n-plural-baseline.json` |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -436,8 +437,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **104** (εκτελεστής 96 + hook 21) ·
-γραμμές εδώ: **96** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **105** (εκτελεστής 97 + hook 21) ·
+γραμμές εδώ: **97** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

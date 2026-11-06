@@ -1,0 +1,16 @@
+{
+  "$doc": "CHECK 3.115 / ADR-932 — μηνύματα με {count} που ΣΩΣΤΑ δεν έχουν πληθυντικό ICU: η λέξη δίπλα στον αριθμό δεν κλίνεται στη γλώσσα του αρχείου, ή δεν υπάρχει λέξη. Κάθε εγγραφή χρειάζεται λόγο. Η πύλη μπλοκάρει δήλωση χωρίς λόγο και δήλωση που δεν ισχύει πια (το μήνυμα δεν είναι πια σκέτο). Ταυτότητα: <γλώσσα>/<namespace>:<κλειδί>.",
+  "invariants": {
+    "el/procurement:hub.quotes.pendingCount": "«σε αναμονή» είναι εμπρόθετος προσδιορισμός· δεν κλίνεται κατ' αριθμό («1 σε αναμονή», «4 σε αναμονή»).",
+    "en/procurement:hub.quotes.pendingCount": "English adjective «pending» has no number inflection («1 pending», «4 pending»).",
+    "en/procurement:hub.rfq.activeCount": "English adjective «active» has no number inflection; the Greek file inflects (ενεργό/ενεργά).",
+    "en/procurement:hub.frameworkAgreements.activeCount": "English adjective «active» has no number inflection; the Greek file inflects (ενεργή/ενεργές).",
+    "en/procurement:buyout.actions.selected": "English participle «selected» has no number inflection; the Greek file inflects (επιλεγμένη/επιλεγμένες).",
+    "en/procurement:subcontracts.library.progress.approved": "English past participle «approved» has no number inflection; the Greek verb does (εγκρίθηκε/εγκρίθηκαν).",
+    "en/procurement:subcontracts.library.progress.pending": "«waiting» is invariant in English; the Greek verb inflects (περιμένει/περιμένουν).",
+    "en/procurement:subcontracts.library.progress.rejected": "English past participle «rejected» has no number inflection; the Greek verb does (απορρίφθηκε/απορρίφθηκαν).",
+    "en/procurement:subcontracts.library.progress.missing": "«not loaded» is invariant in English; the Greek verb inflects (δεν φορτώθηκε/δεν φορτώθηκαν).",
+    "el/procurement:subcontracts.summary.statusFigure": "Σκέτος αριθμός δίπλα σε ποσό («3 · 12.000 €») — δεν υπάρχει λέξη να κλιθεί.",
+    "en/procurement:subcontracts.summary.statusFigure": "A bare figure next to an amount («3 · €12,000») — there is no word to inflect."
+  }
+}

@@ -318,6 +318,7 @@ const MIGRATED_FULL = [
   ['3.48', '../check-empty-select-item', (gate, input) => gate.measure(gate.collectAllFiles('src', input).slice(0, 400), input)],
   ['3.56', '../check-listing-custody', (gate, input) => gate.measure(input)],
   ['3.71', '../check-locale-duplicate-keys', (gate, input) => gate.measure(['--all'], input)],
+  ['3.115', '../check-i18n-plural', (gate, input) => gate.measure([], input)],
   ['3.72', '../check-shell-utilities', (gate, input) => gate.analyse(input.root, { input })],
   ['3.76', '../lib/listing-model-custody/gate', (gate, input) => gate.sweep(input.root, input)],
   ['3.96', '../lib/rules-liveness/gate', (gate, input) => gate.sweep(input.root, input.readRequired)],

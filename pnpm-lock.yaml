@@ -481,6 +481,9 @@ importers:
       '@firebase/rules-unit-testing':
         specifier: 5.0.0
         version: 5.0.0(firebase@12.7.0)
+      '@formatjs/icu-messageformat-parser':
+        specifier: 2.11.4
+        version: 2.11.4
       '@next/bundle-analyzer':
         specifier: 16.1.0
         version: 16.1.0

@@ -42,6 +42,8 @@ on:
       - 'scripts/generate-i18n-keys-baseline.js'
       - 'scripts/lib/i18n-missing-keys-ratchet.js'
       - 'scripts/lib/i18n-namespace-extract.js'
+      - 'scripts/lib/i18n-plural/**'
+      - 'scripts/__tests__/check-i18n-plural.test.js'
       - 'scripts/generate-i18n-types.js'
       - 'scripts/check-audit-value-catalogs.js'
       - 'scripts/validate-translations.js'
@@ -60,6 +62,8 @@ on:
       - 'scripts/generate-i18n-keys-baseline.js'
       - 'scripts/lib/i18n-missing-keys-ratchet.js'
       - 'scripts/lib/i18n-namespace-extract.js'
+      - 'scripts/lib/i18n-plural/**'
+      - 'scripts/__tests__/check-i18n-plural.test.js'
       - 'scripts/generate-i18n-types.js'
       - 'scripts/check-audit-value-catalogs.js'
       - 'scripts/validate-translations.js'
@@ -216,4 +220,49 @@ jobs:
             echo "  σιωπηλά τα διπλότυπα **και** αναμορφώνεις 25 αρχεία που δεν έχουν αυτή τη μορφή."
             echo ""
             echo "Αναφορά: \`npm run locale-dup-keys:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # CHECK 3.115 — ΠΥΛΗ ΤΟΥ ΠΛΗΘΥΝΤΙΚΟΥ (ADR-932). «Λέει αυτό το μήνυμα "1 παραγγελίες";»
+  # Άνευ όρων (~0,8s, 264 αρχεία): η δήλωση αμετάβλητου ζει σε ΑΛΛΟ αρχείο από το μήνυμα.
+  # ⚠️ Η ΜΟΝΗ ΕΞΑΙΡΕΣΗ στο «χωρίς εγκατάσταση» αυτού του workflow, ΚΑΙ ΕΙΝΑΙ ΕΠΙΤΗΔΕΣ: η πύλη αναλύει
+  # με τον parser του ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ (`@formatjs/icu-messageformat-parser`, ίδια έκδοση με αυτόν
+  # του `i18next-icu`). Ένας χειρόγραφος tokenizer, για να γλιτώσει την εγκατάσταση, θα ήταν δεύτερη
+  # μηχανή που διαφωνεί με την πρώτη (ADR-749).
+  i18n-plural:
+    name: 🔢 CHECK 3.115 — πληθυντικός ICU
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🔢 CHECK 3.115 — πλήρης σάρωση locale
+        run: node scripts/check-i18n-plural.js
+
+      # Η πύλη που δεν δοκιμάζεται είναι πύλη που κανείς δεν εμπιστεύεται (ADR-587 §6.1).
+      - name: 🧪 Αγκυρες — CHECK 3.115
+        run: pnpm exec jest scripts/__tests__/check-i18n-plural.test.js --ci
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.115 — ADR-932 (πληθυντικός ICU)"
+            echo ""
+            echo "- Θεραπεία: \`{count, plural, one {# παραγγελία} other {# παραγγελίες}}\`."
+            echo "- Αν η λέξη **δεν κλίνεται** στη γλώσσα του αρχείου: δήλωση με λόγο στο \`.i18n-plural-declarations.json\`."
+            echo "- ⚠️ **ΜΗΝ** προσθέσεις ταυτότητα στη baseline: μόνο μικραίνει."
+            echo ""
+            echo "Αναφορά: \`npm run i18n-plural:report\`"
           } >> "$GITHUB_STEP_SUMMARY"

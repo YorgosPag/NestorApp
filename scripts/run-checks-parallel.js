@@ -36,6 +36,7 @@
  *   SKIP_ADDRESS_VOCABULARY        '1' = bypass CHECK 3.44 (address vocabulary coverage)
  *   SKIP_ADR_IDENTITY              '1' = bypass CHECK 3.49 (ADR number identity)
  *   SKIP_I18N_RAW_FALLBACK         '1' = bypass CHECK 3.97 (raw i18n defaultValue fallback)
+ *   SKIP_I18N_PLURAL               '1' = bypass CHECK 3.115 (count without ICU plural)
  *   SKIP_CAPTURE_API_CONTRACT      '1' = bypass CHECK 3.98 (mobile capture API contract freshness)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 120000)
  *   CHECK_CONCURRENCY              max checks in flight (default: CPU cores)
@@ -834,6 +835,18 @@ if (!process.env.SKIP_UNBOUND_IDENTIFIERS)
 // αρχείο που κάποιος έγραψε — δεν υπάρχει το μονοπάτι «σπάει αρχείο που κανείς δεν έστειλε».
 if (!process.env.SKIP_LOCALE_DUPLICATE_KEYS)
   addThread('3.71', 'Locale duplicate keys', 'scripts/check-locale-duplicate-keys.js', ['--index']);
+
+// CHECK 3.115 — ΠΥΛΗ ΤΟΥ ΠΛΗΘΥΝΤΙΚΟΥ (ADR-932). «Λέει αυτό το μήνυμα "1 παραγγελίες";»
+// 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-11-06): η αρχική των προμηθειών έγραφε «1 παραγγελίες» / «1 orders»· μετρημένα
+// 961 μηνύματα με `{count}` έξω από `plural`, που ΚΑΜΙΑ πύλη δεν ρωτούσε (3.9 = σύνταξη `{x}`, 3.8 = ύπαρξη).
+// 🔑 Ο parser του ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ (`@formatjs/icu-messageformat-parser`, `ignoreTag` όπως το i18next-icu)
+// και κατηγορίες από το CLDR (`Intl.PluralRules`) — καμία λίστα γραμμένη με το χέρι.
+// 🔴 RATCHET κατά ταυτότητα (`.i18n-plural-baseline.json`) + ⛔ (νεκρό σκέλος · δήλωση χωρίς λόγο/μπαγιάτικη).
+// Σκανδάλη: locale ή αρχείο της πύλης· πάντα πλήρης σάρωση (~0,8s) — η δήλωση ζει σε ΑΛΛΟ αρχείο από το μήνυμα.
+const pluralGateFiles = ['scripts/check-i18n-plural.js', 'scripts/lib/i18n-plural/judge.js',
+  '.i18n-plural-declarations.json', '.i18n-plural-baseline.json'];
+if (!process.env.SKIP_I18N_PLURAL && (localeFiles.length > 0 || allFiles.some((f) => pluralGateFiles.includes(f))))
+  addThread('3.115', 'i18n plural', 'scripts/check-i18n-plural.js', ['--index']);
 
 // CHECK 3.73 — ΠΥΛΗ ΛΕΞΙΛΟΓΙΟΥ ΤΟΜΕΑ (ADR-812). «Είναι κάθε δήλωση που απαριθμεί το
 // λεξιλόγιο ΔΕΜΕΝΗ στη ρίζα του;»
