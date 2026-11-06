@@ -38,12 +38,20 @@ const ZERO_TOLERANCE = [STATES.MISSING_CATEGORY, STATES.FOREIGN_CATEGORY, STATES
 
 const categoryCache = new Map();
 
+/** Γνωρίζει το Intl τη γλώσσα; Μη έγκυρο tag ⇒ το `supportedLocalesOf` πετά ανώνυμο `RangeError` ⇒ «όχι». */
+function supportedLocale(lang) {
+  try {
+    return Intl.PluralRules.supportedLocalesOf([lang]).length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Οι κατηγορίες CLDR της γλώσσας — `cardinal` (`plural`) ή `ordinal` (`selectordinal`). */
 function pluralCategories(lang, type) {
   const key = `${lang}|${type}`;
   if (!categoryCache.has(key)) {
-    const supported = Intl.PluralRules.supportedLocalesOf([lang]);
-    if (!supported.length) throw new Error(`CHECK 3.115 — το Intl δεν γνωρίζει τη γλώσσα «${lang}»`);
+    if (!supportedLocale(lang)) throw new Error(`CHECK 3.115 — το Intl δεν γνωρίζει τη γλώσσα «${lang}»`);
     categoryCache.set(key, new Set(new Intl.PluralRules(lang, { type }).resolvedOptions().pluralCategories));
   }
   return categoryCache.get(key);
@@ -92,7 +100,9 @@ function judgeMessage(text, lang) {
   }
   const findings = [];
   walk(ast, lang, false, findings);
-  if (findings.length) return findings;
+  // Ένα ελάττωμα = ένα εύρημα: `{count}` σε ΚΑΘΕ σκέλος άλλου πληθυντικού δεν είναι N ελαττώματα.
+  const unique = [...new Map(findings.map((f) => [`${f.state}|${f.detail}`, f])).values()];
+  if (unique.length) return unique;
   return /\{\s*\w+\s*,\s*(plural|selectordinal)\s*,/.test(text) ? [{ state: STATES.PLURAL, detail: '' }] : [];
 }
 
