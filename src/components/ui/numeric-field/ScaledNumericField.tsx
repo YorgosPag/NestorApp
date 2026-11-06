@@ -12,7 +12,7 @@
  */
 
 import { NumericField, type NumericFieldProps } from './NumericField';
-import { COUNT_SCALE, MILLI_QUANTITY_SCALE, modelOfDisplay, MONEY_SCALE, PERCENT_SCALE, type ValueScale } from './scaled-value';
+import { COUNT_SCALE, DECIMAL_SCALE, MILLI_QUANTITY_SCALE, modelOfDisplay, MONEY_SCALE, PERCENT_SCALE, type ValueScale } from './scaled-value';
 
 type PassthroughProps = Omit<NumericFieldProps, 'value' | 'onValueChange' | 'blankValue' | 'emptyValue' | 'min' | 'max'>;
 
@@ -77,4 +77,12 @@ export function MilliQuantityField(props: ScaledFieldProps) {
 /** Ακέραιο πλήθος (π.χ. ημέρες) — όπου χρειάζεται το `nullable` («χωρίς όριο»), που το γυμνό `NumericField` δεν έχει. */
 export function CountField(props: ScaledFieldProps) {
   return <ScaledNumericField {...props} scale={COUNT_SCALE} />;
+}
+
+/**
+ * Μη αρνητική δεκαδική ποσότητα χωρίς κλίμακα (ADR-923 §23.2 K2) — όπου χρειάζεται το `nullable` («κενό = δεν
+ * δηλώθηκε, ποτέ 0»). Πρόχειρο κείμενο όσο γράφει ο άνθρωπος: το «12,» μένει «12,», δεν γίνεται «12».
+ */
+export function DecimalField(props: ScaledFieldProps) {
+  return <ScaledNumericField {...props} scale={DECIMAL_SCALE} />;
 }

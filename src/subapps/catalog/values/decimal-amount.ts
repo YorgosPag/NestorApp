@@ -8,22 +8,19 @@
  *
  * 🔑 **Η διάκριση υποδιαστολής/χιλιάδων ΔΕΝ ξαναγράφεται εδώ**: τη λέει ο ένας κανόνας της
  * πλατφόρμας, το `normalizeDecimalString` (`lib/number/locale-number.ts` — ένα διαχωριστικό =
- * υποδιαστολή· και τα δύο = το τελευταίο είναι υποδιαστολή). Εδώ ζει μόνο η **άρνηση**.
+ * υποδιαστολή· και τα δύο = το τελευταίο είναι υποδιαστολή). Ούτε η **γραμματική**: ζει δίπλα του,
+ * `strictDecimalString` (ADR-923 §23.2 K2 — ήταν δίδυμη εδώ, `ENTERED_AMOUNT`). Εδώ ζει μόνο η κανονική μορφή.
  *
  * 🔴 **Γιατί ΟΧΙ το `parseLocaleNumber`**: εκείνο **αφαιρεί πρώτα τον θόρυβο** (το πεδίο του είναι
  * το νόμισμα: «€ 12,50» → 12,5). Σε τιμή καταλόγου το ίδιο συμβόλαιο θα ήταν σφάλμα τιμής:
- * «2,5x» θα γινόταν 2,5 και «2,5 kW» θα έχανε σιωπηλά τη μονάδα του. Ούτε το
- * `parseStrictDecimal` (επιβιώνει το `Number("0x10") = 16` και το `"1e3"`). Εδώ η γραμματική
- * είναι **ρητή**: πρόσημο · ψηφία (με ή χωρίς ομαδοποίηση ανά 3) · προαιρετικό δεκαδικό μέρος.
+ * «2,5x» θα γινόταν 2,5 και «2,5 kW» θα έχανε σιωπηλά τη μονάδα του. Η γραμματική είναι **ρητή**:
+ * πρόσημο · ψηφία (με ή χωρίς ομαδοποίηση ανά 3) · προαιρετικό δεκαδικό μέρος.
  *
  * @module subapps/catalog/values/decimal-amount
  */
 
-import { normalizeDecimalString } from '@/lib/number/locale-number';
+import { strictDecimalString } from '@/lib/number/locale-number';
 import { CATALOG_LIMITS } from '../vocabulary/catalog-limits';
-
-/** Ό,τι δέχεται ο άνθρωπος: πρόσημο (και U+2212), ψηφία με προαιρετική ομαδοποίηση, δεκαδικό μέρος. */
-const ENTERED_AMOUNT = /^[-−+]?(?:\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,]\d+)?$/;
 
 /** Η κανονική μορφή: χωρίς περιττά αρχικά μηδενικά, τελεία ως υποδιαστολή, ποτέ «-0». */
 const CANONICAL_AMOUNT = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
@@ -60,13 +57,8 @@ function canonicalize(machine: string): string {
  *   "2,50" → 2.50 · "1.200,50" → 1200.50 · "−3,5" → -3.5 · "007" → 7 · "-0,0" → 0.0
  */
 export function parseEnteredAmount(input: string): ParsedAmount | null {
-  const text = input.trim();
-  if (!ENTERED_AMOUNT.test(text)) return null;
-  const signless = text.replace(/^[-−+]/, '');
-  const negative = /^[-−]/.test(text);
-  const machine = normalizeDecimalString(`${negative ? '-' : ''}${signless}`);
-  const amount = canonicalize(machine);
-  return amountFromCanonical(amount);
+  const machine = strictDecimalString(input);
+  return machine === null ? null : amountFromCanonical(canonicalize(machine));
 }
 
 /** Είναι η συμβολοσειρά **ήδη** κανονικό ποσό (όπως το αποθηκεύει ο γραφέας); */

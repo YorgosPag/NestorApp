@@ -34,6 +34,9 @@ export const MILLI_QUANTITY_SCALE: ValueScale = { toDisplay: quantityFromMilli, 
 /** Ακέραιο πλήθος (π.χ. ημέρες): ίδιο στην οθόνη και στο μοντέλο· μη ακέραιο ⇒ ο μετατροπέας αρνείται, ο κριτής το λέει. */
 export const COUNT_SCALE: ValueScale = { toDisplay: (model) => model, exact: (display) => (Number.isSafeInteger(display) ? display : null), factor: 1 };
 
+/** Μη αρνητική δεκαδική ποσότητα χωρίς κλίμακα (εμβαδά, πρόσωπα, συντελεστές): ίδια στην οθόνη και στο μοντέλο. */
+export const DECIMAL_SCALE: ValueScale = { toDisplay: (model) => model, exact: (display) => (Number.isFinite(display) ? display : null), factor: 1 };
+
 /** Η τιμή του μοντέλου για ό,τι έγραψε ο άνθρωπος: ο μετατροπέας, αλλιώς η ακριβής κλιμακωμένη (άκυρη) τιμή. */
 export function modelOfDisplay(display: number, scale: ValueScale): number {
   return scale.exact(display) ?? stripFloatNoise(display * scale.factor);

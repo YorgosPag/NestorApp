@@ -1,4 +1,4 @@
-import { normalizeDecimalString, parseLocaleNumber } from '../locale-number';
+import { normalizeDecimalString, parseLocaleNumber, parseStrictDecimal, strictDecimalString } from '../locale-number';
 import { parseGreekDecimal } from '../greek-decimal';
 
 describe('normalizeDecimalString — auto-detect', () => {
@@ -111,5 +111,36 @@ describe('parseGreekDecimal — thin wrapper regression', () => {
     expect(parseGreekDecimal('12.50')).toBe(12.5);
     expect(parseGreekDecimal('1200')).toBe(1200);
     expect(parseGreekDecimal('')).toBeNull();
+  });
+});
+
+describe('parseStrictDecimal — ΜΟΝΟ αν το κείμενο είναι ολόκληρο αριθμός (ADR-759 §2β.5 · ADR-923 §23.2 K2)', () => {
+  it.each([
+    ['1.364,05', 1364.05],
+    ['12,5', 12.5],
+    ['12.5', 12.5],
+    ['1.200.000', 1200000],
+    ['  39 ', 39],
+    ['+4', 4],
+    ['−3,5', -3.5],
+  ])('%p → %p', (input, expected) => {
+    expect(parseStrictDecimal(input)).toBe(expected);
+  });
+
+  it.each(['', ' ', 'κατά ΝΟΚ', '11 μ.', '0x10', '1e3', ',5', '2,', 'Infinity', '12 345', '--2', '1,2,3'])(
+    '🔴 %p ⇒ null — ποτέ αριθμός που κανείς δεν έγραψε',
+    (input) => {
+      expect(parseStrictDecimal(input)).toBeNull();
+    },
+  );
+
+  it('null / undefined ⇒ null, ποτέ 0', () => {
+    expect(parseStrictDecimal(null)).toBeNull();
+    expect(parseStrictDecimal(undefined)).toBeNull();
+  });
+
+  it('η μηχανική μορφή κρατά τα τελικά μηδενικά (ακρίβεια του προμηθευτή)', () => {
+    expect(strictDecimalString('2,50')).toBe('2.50');
+    expect(strictDecimalString('−1.200,50')).toBe('-1200.50');
   });
 });

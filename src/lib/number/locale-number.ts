@@ -121,16 +121,39 @@ export function parseLocaleNumber(raw: string, opts: LocaleNumberOptions = {}): 
  * (τοπογραφικό, πεδία σύνδεσης, σώμα εγγράφου, ΠΕΑ, συμφιλίωση) — μετακόμισε εδώ,
  * στο σπίτι του αναλυτή αριθμών (ADR-923 §23.2 K2).
  *
- *   "1.364,05" → 1364.05 · "12,5" → 12.5 · "11 μ." → null · "" → null
+ * 🔴 **Η άρνηση είναι ΓΡΑΜΜΑΤΙΚΗ** ({@link strictDecimalString}), όχι το `Number()`: ως
+ * 2026-11-06 το `Number("0x10")` έδινε 16 και το `"1e3"` 1000 — αριθμοί που κανείς δεν έγραψε.
+ *
+ *   "1.364,05" → 1364.05 · "12,5" → 12.5 · "−3,5" → -3.5 · "11 μ." → null · "1e3" → null · "" → null
  */
 export function parseStrictDecimal(text: string | null | undefined): number | null {
   if (text === null || text === undefined) return null;
-
-  const normalized = normalizeDecimalString(text);
-  if (normalized === '') return null;
-
-  const parsed = Number(normalized);
+  const machine = strictDecimalString(text);
+  if (machine === null) return null;
+  const parsed = Number(machine);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * **Η ΜΙΑ γραμματική** αριθμού γραμμένου από άνθρωπο ή έγγραφο: πρόσημο (`-`, `+` ή το
+ * τυπογραφικό U+2212) · ψηφία, με ή χωρίς ομαδοποίηση ανά τρία · προαιρετικό δεκαδικό μέρος.
+ * Ό,τι άλλο (`0x10`, `1e3`, `,5`, `2,`, `Infinity`, `12 345`, μονάδα) δεν είναι αριθμός.
+ */
+const STRICT_DECIMAL = /^[-−+]?(?:\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,]\d+)?$/;
+
+/**
+ * Κείμενο → **μηχανική** δεκαδική συμβολοσειρά (`"-1200.50"`), ή `null` αν δεν ταιριάζει
+ * στη γραμματική. Τα τελικά μηδενικά **μένουν** (ο κατάλογος κρατά την ακρίβεια του
+ * προμηθευτή). Τη διάκριση υποδιαστολής/χιλιάδων τη λέει ο ένας κανόνας,
+ * {@link normalizeDecimalString}. Καταναλωτές: {@link parseStrictDecimal} και τα ποσά του
+ * καταλόγου (`subapps/catalog/values/decimal-amount.ts`).
+ */
+export function strictDecimalString(text: string): string | null {
+  const trimmed = text.trim();
+  if (!STRICT_DECIMAL.test(trimmed)) return null;
+  const negative = /^[-−]/.test(trimmed);
+  const signless = trimmed.replace(/^[-−+]/, '');
+  return normalizeDecimalString(`${negative ? '-' : ''}${signless}`);
 }
 
 /** How a number should be written back out — the mirror of what {@link parseLocaleNumber} reads. */

@@ -13,6 +13,7 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
+import { DecimalField } from '@/components/ui/numeric-field';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FieldAccessor } from '@/config/survey-card-config';
 import { surveyAffirmationLabel } from '@/config/survey-record-labels';
 import { formatNumber } from '@/lib/intl-formatting';
-import { parseStrictDecimal } from '@/lib/number/locale-number';
 import { userSourced, type Sourced, type SurveyRecord } from '@/types/project-survey-record';
 
 interface SourcedFieldRowProps {
@@ -63,9 +63,6 @@ function parseList(raw: string): readonly string[] {
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 }
-
-/** Number inputs accept the Greek decimal comma; `''` means "no value", not zero. */
-const parseNumber = parseStrictDecimal;
 
 export function SourcedFieldRow({
   record,
@@ -128,9 +125,10 @@ export function SourcedFieldRow({
              άλλο από την παλέτα για την ίδια τιμή»* — δηλαδή ονόμαζε την αναλλοίωτη, αλλά
              μετρούσε **μόνο τη μία** από τις δύο πλευρές της. Η άλλη απέκλινε, και το
              φάνηκε μόνο η οθόνη (ADR-759 §4.12 «Επαλήθευση στην οθόνη»).
-             ⚠️ ΜΟΝΟ η ανάγνωση μορφοποιείται. Το `<Input>` παρακάτω μένει `String(...)`:
-             μορφοποιημένη τιμή μέσα σε πεδίο επεξεργασίας θα ξαναπερνούσε από
-             `parseStrictDecimal` σε κάθε πληκτρολόγηση.
+             ⚠️ Η επεξεργασία περνά από το SSoT αριθμητικών πεδίων (ADR-706, `DecimalField`):
+             πρόχειρο κείμενο όσο γράφει ο άνθρωπος, ανάλυση στην ολοκλήρωση. Ως 2026-11-06 ήταν
+             `<Input>` ελεγχόμενο από τον **αριθμό**, και το «12,» γινόταν «12» στο επόμενο
+             render — η υποδιαστολή δεν πληκτρολογούνταν ποτέ (ADR-923 §23.2 K2).
              ⚠️ Και τα εννέα `kind: 'number'` πεδία του `survey-card-config` είναι
              **ποσότητες** (εμβαδά, πρόσωπα, συντελεστές, όροφοι) — κανένα δεν είναι αύξων
              αριθμός. Ο Τόμος/α.α./αριθμός πράξης είναι κείμενο, γι' αυτό ο διαχωριστής
@@ -143,13 +141,11 @@ export function SourcedFieldRow({
           );
         }
         return (
-          <Input
+          <DecimalField
             id={inputId}
-            inputMode="decimal"
-            value={current.value === null ? '' : String(current.value)}
-            onChange={(e) =>
-              onChange(field.write(record, userSourced<number>(parseNumber(e.target.value))))
-            }
+            nullable
+            value={current.value}
+            onValueChange={(value) => onChange(field.write(record, userSourced<number>(value)))}
           />
         );
       }
