@@ -46,7 +46,7 @@
     "otherClass": "{count} products were left out because they belong to another class: {classes}.",
     "unmapped": "{count} features have no attribute: {codes}.",
     "ranges": "Value ranges not imported, as no attribute holds a range: {codes}.",
-    "noValue": "{count} “not applicable” or “unknown” declarations were not written.",
+    "noValue": "{count} “not applicable” or “unknown” declarations were added to the proposal for review.",
     "tradeItems": "{count} products have several trade items: the first was kept."
   },
   "batch": {
@@ -119,6 +119,9 @@
     "measurementUnitMissing": "No unit was read for this value. Enter it with the unit as in the PDF, for example “1000 W”.",
     "unitUnconfirmed": "The unit “{unit}” is not confirmed by the page text. Check it in the PDF.",
     "attributeRepeated": "The source also gives another value for this attribute: {others}. Choose the correct one.",
-    "tableStructureDisputed": "The PDF tags and the table lines point to different cells. Check this value in the PDF."
+    "tableStructureDisputed": "The PDF tags and the table lines point to different cells. Check this value in the PDF.",
+    "noValueReplacesValue": "The source says “not applicable”, but the attribute has a value in the catalog. Approving will remove it; you decide.",
+    "unknownKeepsValue": "The source says “unknown”, but the catalog knows the value. The value stays.",
+    "noValueReasonUnreadable": "This text is not a reason for a missing value. Write notApplicable or unknown."
   }
 }

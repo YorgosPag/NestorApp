@@ -25,6 +25,15 @@ export type AttributeCell = ExtractedCell & { readonly target: AttributeTarget; 
 
 export const isAttributeCell = (cell: ExtractedCell): cell is AttributeCell => cell.target.kind === 'attribute' && cell.text !== null;
 
+export type NoValueReasonTarget = Extract<ImportTarget, { kind: 'noValueReason' }>;
+/** Δήλωση ρητής απουσίας (§23.2 K4): ανήκει σε ιδιότητα, άρα ακολουθεί το ίδιο επίπεδο-ιδιοκτήτη με τις τιμές της. */
+export type NoValueReasonCell = ExtractedCell & { readonly target: NoValueReasonTarget; readonly text: string };
+
+export const isNoValueReasonCell = (cell: ExtractedCell): cell is NoValueReasonCell => cell.target.kind === 'noValueReason' && cell.text !== null;
+
+/** Κελί που γράφει σε φορέα τιμών: τιμή ιδιότητας ή λόγος απουσίας της. */
+export type HolderCell = AttributeCell | NoValueReasonCell;
+
 interface RepeatContext {
   readonly schema: CatalogSchemaSnapshot;
   readonly text: ValueTextContext;

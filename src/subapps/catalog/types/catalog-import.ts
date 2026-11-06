@@ -22,7 +22,7 @@
 import type { MinorAmount } from '@/lib/money/money';
 import type { XChangeImportReport } from '../interop/etim/xchange-report';
 import type { CatalogIssue } from '../schema/catalog-issues';
-import type { AttributeValue, ChannelSlot, LocaleSlot } from './product';
+import type { AttributeValue, ChannelSlot, LocaleSlot, NoValueReason } from './product';
 import type { ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { PriceQuantity } from '../vocabulary/pricing';
 import type {
@@ -51,6 +51,11 @@ export interface ImportTargetByKind {
   /** Ο κωδικός SKU στη ροή «μόνο τιμές»: το κλειδί αντιστοίχισης με την παραλλαγή. */
   readonly skuIdentifier: Record<never, never>;
   readonly price: { readonly field: ImportPriceField };
+  /**
+   * **Ρητή απουσία τιμής** (Δ5 · ETIM `ReasonNoValue` NA/UN, §23.2 K4): «δεν εφαρμόζεται» / «άγνωστο». Ανά **ιδιότητα**, όχι ανά
+   * θέση κανάλι × γλώσσα — όπως το `noValueReasons` του φορέα. Το κείμενο του κελιού είναι ο κωδικός `NoValueReason`.
+   */
+  readonly noValueReason: { readonly attributeId: string };
 }
 
 export type ImportTarget = {
@@ -120,7 +125,13 @@ export type ImportPriceValue =
   | { readonly type: 'unit'; readonly unitCode: string }
   | { readonly type: 'discountGroup'; readonly discountGroupId: string | null };
 
-export type ImportFieldValue = AttributeValue | ImportPriceValue;
+/** Δήλωση ρητής απουσίας για μια ιδιότητα (στόχος `noValueReason`). */
+export interface ImportNoValueReasonValue {
+  readonly type: 'noValueReason';
+  readonly reason: NoValueReason;
+}
+
+export type ImportFieldValue = AttributeValue | ImportPriceValue | ImportNoValueReasonValue;
 
 export interface ImportProposalField {
   readonly target: ImportTarget;

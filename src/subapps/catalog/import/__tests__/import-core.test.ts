@@ -250,7 +250,7 @@ describe('πρόταση ιδιοτήτων — κριτής ΠΡΙΝ από τ�
   });
 
   it('ίδια ισχύς σε άλλη μονάδα είναι αμετάβλητο, όχι αλλαγή', () => {
-    const live = { id: 'cpr_1', revision: 3, values: mfpVariant(0).values };
+    const live = { id: 'cpr_1', revision: 3, values: mfpVariant(0).values, noValueReasons: {} };
     const row: ExtractedRow = { rowKey: 'r0', cells: [cell('cooling_h', '1,8', 'kW')] };
     const [variant] = buildAttributeRows(groupOf([row]), { ...noLive, matches: new Map([['r0', live]]) }).filter((r) => r.holderKind === 'product');
     expect(variant).toMatchObject({ action: 'update', holderId: 'cpr_1', expectedRevision: 3 });

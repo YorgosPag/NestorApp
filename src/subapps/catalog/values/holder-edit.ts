@@ -17,6 +17,9 @@ import { channelSlotFor, localeSlotFor } from './value-shape';
 
 type SlotFlags = Pick<CatalogAttributeDefinition, 'scopable' | 'localizable'>;
 
+/** Ό,τι διαβάζει και γράφει ο λόγος απουσίας — και ο επεξεργαστής και η εισαγωγή (§23.2 K4) περνούν από εδώ. */
+type HolderContent = Pick<CatalogValueHolder, 'values' | 'noValueReasons'>;
+
 function withoutKey<T extends object>(record: T, key: string): T {
   if (!(key in record)) return record;
   return Object.fromEntries(Object.entries(record).filter(([entry]) => entry !== key)) as T;
@@ -47,7 +50,7 @@ export function writeHolderValue<H extends CatalogValueHolder>(
  * Η **άρση** επαναφέρει τις τιμές του `saved` (ο αποθηκευμένος φορέας): ο διακόπτης **αντιστρέφεται** — ζωντανά
  * (ADR-923 §5.10.5) «Άγνωστο» → ξανά «Άγνωστο» άφηνε κενό το 4500 W, και η αποθήκευση θα το έσβηνε οριστικά.
  */
-export function writeNoValueReason<H extends CatalogValueHolder>(holder: H, attributeId: string, reason: NoValueReason | null, saved: CatalogValueHolder | null): H {
+export function writeNoValueReason<H extends HolderContent>(holder: H, attributeId: string, reason: NoValueReason | null, saved: HolderContent | null): H {
   if (reason !== null) {
     return { ...holder, values: withoutKey(holder.values, attributeId), noValueReasons: { ...holder.noValueReasons, [attributeId]: reason } };
   }

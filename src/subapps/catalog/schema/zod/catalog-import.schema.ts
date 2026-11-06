@@ -33,6 +33,7 @@ const importTargetSchema: z.ZodType<ImportTarget> = z.discriminatedUnion('kind',
     locale: z.enum([ANY_SLOT, ...HUMAN_LANGUAGES]),
   }),
   z.object({ kind: z.literal('price'), field: z.enum(IMPORT_PRICE_FIELDS) }),
+  z.object({ kind: z.literal('noValueReason'), attributeId: entityIdSchema }),
 ]);
 
 const columnRuleSchema = z.object({

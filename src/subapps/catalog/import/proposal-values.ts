@@ -9,8 +9,10 @@ import { canonicalJson } from '@/lib/legal/canonical-json';
 import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
-import type { ImportFieldValue, ImportIssue, ImportProposalField, ImportTarget } from '../types/catalog-import';
-import type { AttributeValue, ProductValues } from '../types/product';
+import type { ImportFieldValue, ImportIssue, ImportNoValueReasonValue, ImportProposalField, ImportTarget } from '../types/catalog-import';
+import { NO_VALUE_REASONS, type AttributeValue, type CatalogValueHolder, type NoValueReason, type ProductValues } from '../types/product';
+import { writeNoValueReason } from '../values/holder-edit';
+import { listSlots } from '../values/value-shape';
 import { normalizeUniqueText } from '../values/normalize-unique';
 import { standardAmountOf } from '../values/standard-amount';
 import { isBareAmountText, optionCodeOf, parseAttributeText, type ValueTextContext } from '../values/value-text-codec';
@@ -23,6 +25,8 @@ export function importTargetKey(target: ImportTarget): string {
       return `a:${target.attributeId}:${target.channel}:${target.locale}`;
     case 'price':
       return `p:${target.field}`;
+    case 'noValueReason':
+      return `r:${target.attributeId}`;
     default:
       return target.kind;
   }
@@ -90,10 +94,16 @@ export function liveSlotValue(values: ProductValues, target: Extract<ImportTarge
 }
 
 const isAttributeValue = (value: ImportFieldValue): value is AttributeValue =>
-  !['money', 'priceQuantity', 'unit', 'discountGroup'].includes(value.type);
+  !['money', 'priceQuantity', 'unit', 'discountGroup', 'noValueReason'].includes(value.type);
+
+/** Κείμενο κελιού `noValueReason` ⇒ λόγος. Ο κωδικός του λεξιλογίου (`notApplicable` · `unknown`), αυτούσιος — όχι λέξη. */
+export function parseNoValueReasonText(text: string): ImportNoValueReasonValue | null {
+  const code = text.trim();
+  return (NO_VALUE_REASONS as readonly string[]).includes(code) ? { type: 'noValueReason', reason: code as NoValueReason } : null;
+}
 
 /** Οι ζωντανές τιμές με τα εισερχόμενα των πεδίων που επιλέγει ο καλών. Τίποτα δεν σβήνεται: η εισαγωγή μόνο θέτει. */
-export function mergeFieldsIntoValues(
+function mergeFieldsIntoValues(
   values: ProductValues,
   fields: readonly ImportProposalField[],
   include: (field: ImportProposalField) => boolean,
@@ -106,4 +116,39 @@ export function mergeFieldsIntoValues(
     merged[target.attributeId] = { ...slots, [target.channel]: { ...slots[target.channel], [target.locale]: incoming } };
   }
   return merged;
+}
+
+/** Τα δύο μέρη ενός φορέα που αγγίζει η εισαγωγή. */
+export type ImportHolderContent = Pick<CatalogValueHolder, 'values' | 'noValueReasons'>;
+
+export const EMPTY_IMPORT_HOLDER: ImportHolderContent = { values: {}, noValueReasons: {} };
+
+/**
+ * Τα εισερχόμενα των επιλεγμένων πεδίων πάνω στον φορέα — **ο ΕΝΑΣ δρόμος** για τον κριτή της πρότασης και την έγκριση (§23.2 K4).
+ *
+ * 🔑 Η σημασιολογία του επεξεργαστή (`holder-edit`): τιμή και λόγος απουσίας **δεν συνυπάρχουν**. Ο λόγος σβήνει τις τιμές της
+ *    ιδιότητας· η τιμή σβήνει τον λόγο. Ως τώρα η εισαγωγή έγραφε μόνο `values` ⇒ τιμή πάνω σε «δεν εφαρμόζεται» έδινε
+ *    `noValueConflict` (422) στο κουμπί της έγκρισης.
+ * 🔑 **Πρώτα οι λόγοι, μετά οι τιμές**: αν η ίδια πηγή φέρει και τα δύο για την ίδια ιδιότητα, κερδίζει η τιμή — η πληροφορία, όχι
+ *    η απουσία της. Ντετερμινιστικό, ανεξάρτητο από τη σειρά των πεδίων.
+ */
+export function mergeFieldsIntoHolder<H extends ImportHolderContent>(
+  holder: H,
+  fields: readonly ImportProposalField[],
+  include: (field: ImportProposalField) => boolean,
+): H {
+  const chosen = fields.filter((field) => field.incoming !== null && include(field));
+  const declared = chosen.reduce<H>((acc, field) => {
+    if (field.target.kind !== 'noValueReason' || field.incoming?.type !== 'noValueReason') return acc;
+    return writeNoValueReason(acc, field.target.attributeId, field.incoming.reason, null);
+  }, holder);
+  const valued = new Set(chosen.flatMap((field) => (field.target.kind === 'attribute' && field.incoming !== null && isAttributeValue(field.incoming) ? [field.target.attributeId] : [])));
+  const noValueReasons = Object.fromEntries(Object.entries(declared.noValueReasons).filter(([attributeId]) => !valued.has(attributeId)));
+  return { ...declared, values: mergeFieldsIntoValues(declared.values, chosen, () => true), noValueReasons };
+}
+
+/** Έχει η ιδιότητα έστω μία ζωντανή τιμή σε κάποια θέση; Το ίδιο κριτήριο με τον επικυρωτή (`noValueConflict`). */
+export function holdsValue(values: ProductValues, attributeId: string): boolean {
+  const slots = values[attributeId];
+  return slots !== undefined && listSlots(slots).length > 0;
 }

@@ -142,6 +142,24 @@ describe('εξαγωγή', () => {
     expect(errorsOf(document)).toEqual([]);
     expect(JSON.stringify(document)).toContain('"EtimFeatureCode":"EF000003","ReasonNoValue":"NA"');
   });
+  it('§23.2 K4 🔴 η ρητή απουσία ΓΥΡΙΖΕΙ ως κελί λόγου, όχι μόνο ως μέτρηση', () => {
+    const reasons = new Map<string, NoValueReason>([['dimmable', 'notApplicable'], ['color', 'unknown']]);
+    const { document } = buildXChangeDocument(exportInput({ products: [source({ noValueReasons: reasons })] }));
+    const { groups, report } = cellsOf(document);
+    const reasonCells = groups.flatMap((group) => group.rows.flatMap((row) => row.cells)).filter((cell) => cell.target.kind === 'noValueReason');
+    expect(reasonCells.map((cell) => [cell.target.kind === 'noValueReason' ? cell.target.attributeId : '', cell.text]).sort()).toEqual([
+      ['color', 'unknown'],
+      ['dimmable', 'notApplicable'],
+    ]);
+    expect(report.declaredNoValue).toBe(2);
+  });
+  it('§23.2 K4: το MV δεν είναι λόγος απουσίας του προϊόντος (κωδικολόγιο 5.20) — μένει κενό', () => {
+    const { document } = buildXChangeDocument(exportInput());
+    const text = JSON.stringify(document).replace('"EtimFeatureCode":"EF000003","EtimValueLogical":true', '"EtimFeatureCode":"EF000003","ReasonNoValue":"MV"');
+    expect(text).toContain('"ReasonNoValue":"MV"');
+    const { groups } = cellsOf(JSON.parse(text));
+    expect(groups.flatMap((group) => group.rows.flatMap((row) => row.cells)).some((cell) => cell.target.kind === 'noValueReason')).toBe(false);
+  });
 });
 
 describe('τιμές στο εμπορεύσιμο είδος', () => {

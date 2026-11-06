@@ -72,7 +72,7 @@ const attributeOf = (cell: ExtractedCell): string | null => (cell.target.kind ==
 const cellsOf = (group: ExtractedGroup, attribute: string): readonly ExtractedCell[] => group.rows.flatMap((row) => row.cells).filter((cell) => attributeOf(cell) === attribute);
 
 function liveOf(code: string, index: number): LiveHolder {
-  return { id: `cpr_${index}`, revision: 1, values: { model_code: { '*': { '*': { type: 'text', text: code } } }, size: { '*': { '*': { type: 'select', optionCode: 'mfp_34' } } } } };
+  return { id: `cpr_${index}`, revision: 1, values: { model_code: { '*': { '*': { type: 'text', text: code } } }, size: { '*': { '*': { type: 'select', optionCode: 'mfp_34' } } } }, noValueReasons: {} };
 }
 
 /** Ό,τι κάνει ο `matchRows` στον διακομιστή: ο κωδικός της γραμμής που κρατά ζωντανό SKU. */

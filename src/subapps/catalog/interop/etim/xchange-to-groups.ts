@@ -5,6 +5,7 @@
  * 🔑 **Το xChange γράφει τον αριθμό χωρίς μονάδα**: τη μονάδα την ορίζει η κλάση ETIM. Τη δηλώνει η ιδιότητα
  * (`mappings.etimUnitCode`). Αδήλωτη ⇒ `unitCode: null`, άρα απόφαση ανθρώπου και ποτέ η προεπιλογή της ιδιότητας (σφάλμα ×1000).
  * 🔑 **Τίποτα δεν χάνεται σιωπηλά**: ό,τι δεν μπαίνει μετριέται στην {@link XChangeImportReport}.
+ * 🔑 **Το `NA`/`UN` είναι δήλωση, όχι κενό** (§23.2 K4): γίνεται κελί `noValueReason` και περνά από την ίδια κρίση και έγκριση.
  * @module subapps/catalog/interop/etim/xchange-to-groups
  */
 
@@ -112,12 +113,24 @@ function classificationOf(product: XChangeProduct, schema: XChangeImportSchema, 
   return null;
 }
 
+/**
+ * Ρητή απουσία (§23.2 K4): `NA` / `UN` ⇒ κελί λόγου, με κείμενο τον κωδικό του λεξιλογίου μας. Το `MV` («η ιδιότητα αφορά το
+ * προϊόν, αλλά η έκδοση ETIM δεν έχει σωστή τιμή», κωδικολόγιο 5.20) **δεν** είναι λόγος απουσίας του προϊόντος — μένει κενό.
+ */
+function reasonCellOf(feature: XChangeFeature, attribute: XChangeAttribute): ExtractedCell | null {
+  const reason = feature.ReasonNoValue === undefined ? undefined : ETIM_NO_VALUE_REASON_OF[feature.ReasonNoValue];
+  if (!reason) return null;
+  return { target: { kind: 'noValueReason', attributeId: attribute.id }, text: reason, confidence: 1, anchor: null, unitCode: null, flags: [] };
+}
+
 function featureCells(features: readonly XChangeFeature[], schema: XChangeImportSchema, byFeature: ReadonlyMap<string, XChangeAttribute>, report: ReportBuilder): ExtractedCell[] {
   return features.flatMap((feature) => {
     const attribute = byFeature.get(feature.EtimFeatureCode);
     report.noteFeature(feature, attribute);
-    const text = attribute ? featureText(feature, attribute) : null;
-    return attribute && text !== null ? [cellOf(attribute, schema.language, text, unitOf(attribute))] : [];
+    if (!attribute) return [];
+    const text = featureText(feature, attribute);
+    if (text !== null) return [cellOf(attribute, schema.language, text, unitOf(attribute))];
+    return isOpenRange(feature) ? [] : reasonCellOf(feature, attribute) ?? [];
   });
 }
 

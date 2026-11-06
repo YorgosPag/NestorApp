@@ -34,6 +34,7 @@ import type {
   TableRowMergeMode,
   FamilyTableRow,
 } from '@/subapps/catalog/types/family';
+import type { NoValueReason } from '@/subapps/catalog/types/product';
 import type { AssetKind, AttributeType, ReferenceRelation } from '@/subapps/catalog/vocabulary/attribute-types';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 import type { CatalogListingKind } from '@/subapps/catalog/vocabulary/listing-kinds';
@@ -70,6 +71,12 @@ export const ATTRIBUTE_TYPE_ICONS: Readonly<Record<AttributeType, LucideIcon>> =
   asset: FileImage,
   reference: Link2,
   table: Table2,
+};
+
+/** «Δεν εφαρμόζεται» / «Άγνωστο» (Δ5) — μία δήλωση για τον επεξεργαστή τιμών **και** την πρόταση εισαγωγής (§23.2 K4). */
+export const NO_VALUE_REASON_KEYS: Readonly<Record<NoValueReason, string>> = {
+  notApplicable: 'values.noValue.notApplicable',
+  unknown: 'values.noValue.unknown',
 };
 
 export const CHANNEL_KEYS: Readonly<Record<CatalogChannel, string>> = {

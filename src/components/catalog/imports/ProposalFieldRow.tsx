@@ -12,29 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
-import { formatMinor } from '@/lib/money/money';
-import type { ImportFieldValue, ImportProposalField } from '@/subapps/catalog/types/catalog-import';
+import type { ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import { FIELD_STATUS_KEYS, PRICE_FIELD_KEYS, useImportIssueMessage, useImportText } from './import-text';
-
-/** Η εμφάνιση μιας τιμής: η εισαγωγή δεν ξαναμορφοποιεί, δείχνει ό,τι είδε (`sourceText`) και ό,τι βγήκε. */
-function valueText(value: ImportFieldValue | null): string {
-  if (value === null) return '';
-  switch (value.type) {
-    case 'text': return value.text;
-    case 'richText': return value.html;
-    case 'number': return value.amount;
-    case 'measurement': return `${value.amount} ${value.unitCode}`;
-    case 'boolean': return String(value.value);
-    case 'select': return value.optionCode;
-    case 'multiSelect': return value.optionCodes.join(', ');
-    case 'date': return value.date;
-    case 'money': return formatMinor(value.minor);
-    case 'priceQuantity': return String(value.quantity);
-    case 'unit': return value.unitCode;
-    case 'discountGroup': return value.discountGroupId ?? '';
-    default: return '';
-  }
-}
+import { useImportValueText } from './import-value-text';
 
 const STATUS_VARIANT = { new: 'default', changed: 'secondary', unchanged: 'outline', conflict: 'destructive' } as const;
 
@@ -61,11 +41,12 @@ interface ProposalFieldRowProps {
 /** Η εισερχόμενη τιμή: κλικ ⇒ διόρθωση της **πηγής**, και ο διακομιστής ξανακρίνει. */
 function IncomingCell({ field, label, readOnly, onEdit }: Pick<ProposalFieldRowProps, 'field' | 'readOnly' | 'onEdit'> & { readonly label: string }) {
   const message = useImportIssueMessage(field.issues.length > 0);
+  const describe = useImportValueText();
   const [draft, setDraft] = useState<string | null>(null);
   return (
     <td className="p-2">
       {draft === null ? (
-        <button type="button" className="text-left" disabled={readOnly} onClick={() => setDraft(field.sourceText)}>{valueText(field.incoming) || field.sourceText}</button>
+        <button type="button" className="text-left" disabled={readOnly} onClick={() => setDraft(field.sourceText)}>{describe(field.incoming) || field.sourceText}</button>
       ) : (
         <Input
           aria-label={label}
@@ -99,6 +80,7 @@ function DecisionCell({ field, readOnly, onDecide }: Pick<ProposalFieldRowProps,
 export function ProposalFieldRow({ field, active, readOnly, onFocus, onDecide, onEdit }: ProposalFieldRowProps) {
   const { t } = useImportText();
   const label = useTargetLabel(field);
+  const describe = useImportValueText();
   const percent = Math.round(field.confidence * 100);
   const unverified = field.anchor?.kind === 'page' && field.anchor.verified !== true;
   return (
@@ -106,7 +88,7 @@ export function ProposalFieldRow({ field, active, readOnly, onFocus, onDecide, o
       <th scope="row" className="p-2 text-left font-normal">
         <button type="button" className="text-left underline-offset-2 hover:underline" onClick={onFocus}>{label}</button>
       </th>
-      <td className="p-2 text-muted-foreground">{valueText(field.live)}</td>
+      <td className="p-2 text-muted-foreground">{describe(field.live)}</td>
       <IncomingCell field={field} label={label} readOnly={readOnly} onEdit={onEdit} />
       <td className="p-2"><Badge variant={STATUS_VARIANT[field.status]}>{t(FIELD_STATUS_KEYS[field.status])}</Badge></td>
       <td className="p-2 text-xs text-muted-foreground">

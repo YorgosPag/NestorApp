@@ -17,18 +17,36 @@ import type {
   ImportProposalField,
   ImportProposalRow,
 } from '../types/catalog-import';
-import type { CatalogValueHolderKind, ProductValues } from '../types/product';
+import type { CatalogValueHolderKind, NoValueReasons, ProductValues } from '../types/product';
 import { attributeOwnerDepth, leafDepth } from '../values/attribute-levels';
 import type { ValueTextContext } from '../values/value-text-codec';
-import { isAttributeCell, settleRepeatedCells, suggestModelCode, type AttributeCell } from './cell-identity';
-import { proposalFieldOf } from './field-diff';
-import { attributeValueEquality, importCellText, importTargetKey, liveSlotValue, parseImportCell } from './proposal-values';
+import {
+  isAttributeCell,
+  isNoValueReasonCell,
+  settleRepeatedCells,
+  suggestModelCode,
+  type AttributeCell,
+  type HolderCell,
+  type NoValueReasonCell,
+} from './cell-identity';
+import { defaultDecisionOf, proposalFieldOf } from './field-diff';
+import {
+  attributeValueEquality,
+  holdsValue,
+  importCellText,
+  importTargetKey,
+  liveSlotValue,
+  parseImportCell,
+  parseNoValueReasonText,
+  plainValueEquality,
+} from './proposal-values';
 
 /** Ένας ζωντανός φορέας τιμών όπως τον χρειάζεται η διαφορά. */
 export interface LiveHolder {
   readonly id: string;
   readonly revision: number;
   readonly values: ProductValues;
+  readonly noValueReasons: NoValueReasons;
 }
 
 /** `κάτοχος → κλειδί στόχου → τιμή`: ό,τι έφερε η τελευταία εφαρμοσμένη εισαγωγή. */
@@ -60,10 +78,36 @@ function fieldOf(cell: AttributeCell, holder: LiveHolder | null, context: Attrib
   return proposalFieldOf({ cell: { ...cell, text: importCellText(cell) }, incoming: value, issues, live, base, same });
 }
 
+/**
+ * Το πεδίο «λόγος απουσίας» (§23.2 K4 · ETIM xChange Guideline V2.0, κωδικολόγιο 5.20). Η κανονική σύγκριση τριών σημείων, με
+ * δύο εξαιρέσεις όταν η ιδιότητα έχει **ζωντανή τιμή** — γιατί η έγκριση εκεί θα την έσβηνε:
+ *   - `notApplicable` (NA: «δεν αφορά αυτό το προϊόν») ⇒ `conflict` + `noValueReplacesValue`: απόφαση ανθρώπου, ποτέ σιωπηλά.
+ *   - `unknown` (UN: «ο προμηθευτής δεν μπορεί να τη δώσει τώρα») ⇒ `unchanged` + `unknownKeepsValue`: η άγνοια της πηγής δεν
+ *     ακυρώνει τη γνώση του καταλόγου — όπως το κενό κελί δεν σβήνει τίποτα. Φαίνεται, απορριμμένο.
+ */
+function reasonFieldOf(cell: NoValueReasonCell, holder: LiveHolder | null, context: AttributeProposalContext): ImportProposalField {
+  const path = cell.target.attributeId;
+  const incoming = parseNoValueReasonText(cell.text);
+  const issues: ImportIssue[] = incoming ? [] : [{ code: 'noValueReasonUnreadable', path }];
+  const liveReason = holder?.noValueReasons[path];
+  const live = liveReason ? { type: 'noValueReason' as const, reason: liveReason } : null;
+  const base = (holder && context.base.get(holder.id)?.get(importTargetKey(cell.target))) ?? null;
+  const field = proposalFieldOf({ cell, incoming, issues, live, base, same: plainValueEquality });
+  if (!incoming || live || !holder || !holdsValue(holder.values, path)) return field;
+  if (incoming.reason === 'unknown') {
+    return { ...field, status: 'unchanged', decision: 'reject', issues: [...field.issues, { code: 'unknownKeepsValue', path }] };
+  }
+  const flagged = { ...field, status: 'conflict' as const, issues: [...field.issues, { code: 'noValueReplacesValue' as const, path }] };
+  return { ...flagged, decision: defaultDecisionOf(flagged) };
+}
+
+const holderFieldOf = (cell: HolderCell, holder: LiveHolder | null, context: AttributeProposalContext): ImportProposalField =>
+  isNoValueReasonCell(cell) ? reasonFieldOf(cell, holder, context) : fieldOf(cell, holder, context);
+
 /** Το βάθος-ιδιοκτήτης σε σχέση με το σύνολο: κοινό · τελικό SKU · ενδιάμεσο (υπο-μοντέλο, δηλωμένο όριο της Φάσης 4). */
 type CellLevel = 'shared' | 'leaf' | 'unsupported';
 
-function levelOf(cell: AttributeCell, schema: CatalogSchemaSnapshot): CellLevel {
+function levelOf(cell: HolderCell, schema: CatalogSchemaSnapshot): CellLevel {
   const { scheme } = schema;
   if (!scheme) return 'leaf';
   const depth = attributeOwnerDepth(scheme, cell.target.attributeId);
@@ -72,13 +116,14 @@ function levelOf(cell: AttributeCell, schema: CatalogSchemaSnapshot): CellLevel 
 }
 
 const attributeCellsOf = (cells: readonly ExtractedCell[]): AttributeCell[] => cells.filter(isAttributeCell);
+const holderCellsOf = (cells: readonly ExtractedCell[]): HolderCell[] => cells.filter((cell): cell is HolderCell => isAttributeCell(cell) || isNoValueReasonCell(cell));
 
 /** Τα κοινά κελιά, μία φορά ανά στόχο: από τα κοινά της πηγής και από όσα επαναλαμβάνουν οι γραμμές. */
-function sharedCellsOf(group: ExtractedGroup, schema: CatalogSchemaSnapshot): { readonly cells: AttributeCell[]; readonly disagreeing: ReadonlySet<string> } {
-  const fromRows = group.rows.flatMap((row) => attributeCellsOf(row.cells)).filter((cell) => levelOf(cell, schema) === 'shared');
-  const cells = new Map<string, AttributeCell>();
+function sharedCellsOf(group: ExtractedGroup, schema: CatalogSchemaSnapshot): { readonly cells: HolderCell[]; readonly disagreeing: ReadonlySet<string> } {
+  const fromRows = group.rows.flatMap((row) => holderCellsOf(row.cells)).filter((cell) => levelOf(cell, schema) === 'shared');
+  const cells = new Map<string, HolderCell>();
   const disagreeing = new Set<string>();
-  for (const cell of [...attributeCellsOf(group.sharedCells), ...fromRows]) {
+  for (const cell of [...holderCellsOf(group.sharedCells), ...fromRows]) {
     const key = importTargetKey(cell.target);
     const first = cells.get(key);
     if (!first) cells.set(key, cell);
@@ -91,7 +136,7 @@ function modelRowOf(group: ExtractedGroup, context: AttributeProposalContext): I
   if (!context.schema.scheme) return null;
   const { cells, disagreeing } = sharedCellsOf(group, context.schema);
   const fields = cells.map((cell): ImportProposalField => {
-    const field = fieldOf(cell, context.model, context);
+    const field = holderFieldOf(cell, context.model, context);
     if (!disagreeing.has(importTargetKey(cell.target))) return field;
     return { ...field, decision: 'pending', issues: [...field.issues, { code: 'sharedDisagrees', path: cell.target.attributeId }] };
   });
@@ -123,12 +168,13 @@ function rowLabel(rowKey: string, cells: readonly AttributeCell[], schema: Catal
 
 function variantRowOf(row: ExtractedRow, context: AttributeProposalContext): ImportProposalRow {
   const holder = context.matches.get(row.rowKey) ?? null;
-  const cells = settleRepeatedCells(attributeCellsOf(row.cells), holder?.values ?? null, context);
+  const valueCells = settleRepeatedCells(attributeCellsOf(row.cells), holder?.values ?? null, context);
+  const cells: HolderCell[] = [...valueCells, ...row.cells.filter(isNoValueReasonCell)];
   const leaf = cells.filter((cell) => levelOf(cell, context.schema) === 'leaf');
   const unsupported = cells.filter((cell) => levelOf(cell, context.schema) === 'unsupported');
   const issues = unsupported.map((cell): ImportIssue => ({ code: 'levelUnsupported', path: cell.target.attributeId }));
-  const fields = leaf.map((cell) => fieldOf(cell, holder, context));
-  return holderRow(row.rowKey, 'product', holder, rowLabel(row.rowKey, cells, context.schema), fields, issues);
+  const fields = leaf.map((cell) => holderFieldOf(cell, holder, context));
+  return holderRow(row.rowKey, 'product', holder, rowLabel(row.rowKey, valueCells, context.schema), fields, issues);
 }
 
 /** Οι γραμμές της πρότασης: το μοντέλο (αν υπάρχει σχήμα παραλλαγών) και τα SKU του. */

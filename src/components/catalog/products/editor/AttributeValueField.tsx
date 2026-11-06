@@ -19,14 +19,14 @@ import { Label } from '@/components/ui/label';
 import { ToggleButton } from '@/components/ui/toggle-button';
 import type { AttributeRecord } from '@/services/catalog/catalog-api.client';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import { NO_VALUE_REASONS, type CatalogValueHolder, type NoValueReason } from '@/subapps/catalog/types/product';
+import { NO_VALUE_REASONS, type CatalogValueHolder } from '@/subapps/catalog/types/product';
 import { writeHolderValue, writeNoValueReason } from '@/subapps/catalog/values/holder-edit';
 import type { ResolvedValues } from '@/subapps/catalog/values/resolve-inherited';
 import { readSlot } from '@/subapps/catalog/values/value-shape';
 import { formatAttributeValue } from '@/subapps/catalog/values/value-text-codec';
 
 import { issuesUnder, useIssueMessage } from '../../shared/CatalogIssues';
-import { CHANNEL_KEYS } from '../../shared/catalog-labels';
+import { CHANNEL_KEYS, NO_VALUE_REASON_KEYS } from '../../shared/catalog-labels';
 import { useCatalogText } from '../../shared/catalog-ui-hooks';
 import { AttributeValueEditor } from '../../values/AttributeValueEditor';
 import type { ValueEditorEnv } from '../../values/value-editor-types';
@@ -50,8 +50,6 @@ export interface AttributeValueFieldProps {
   readonly onHolder: (holder: CatalogValueHolder) => void;
   readonly onOpen: (id: string) => void;
 }
-
-const REASON_KEYS: Readonly<Record<NoValueReason, string>> = { notApplicable: 'values.noValue.notApplicable', unknown: 'values.noValue.unknown' };
 
 function FieldHeader({ props, id }: { readonly props: AttributeValueFieldProps; readonly id: string }) {
   const { t, text } = useCatalogText();
@@ -91,7 +89,7 @@ function NoValueToggle({ props }: { readonly props: AttributeValueFieldProps }) 
       {NO_VALUE_REASONS.map((reason) => (
         <ToggleButton key={reason} size="sm" variant="ghost" pressed={current === reason} disabled={props.disabled}
           onClick={() => props.onHolder(writeNoValueReason(props.holder, props.attributeId, current === reason ? null : reason, props.saved))}>
-          {t(REASON_KEYS[reason])}
+          {t(NO_VALUE_REASON_KEYS[reason])}
         </ToggleButton>
       ))}
     </span>

@@ -57,6 +57,18 @@ export const IMPORT_ISSUE_CODES = [
   'attributeRepeated',
   /** Οι ετικέτες δομής του PDF και η γεωμετρία του πίνακα λένε άλλα κελιά. */
   'tableStructureDisputed',
+  /**
+   * «Δεν εφαρμόζεται» πάνω σε ιδιότητα με ζωντανή τιμή (§23.2 K4): η έγκριση θα **έσβηνε** την τιμή (τιμή και λόγος απουσίας
+   * δεν συνυπάρχουν). Ποτέ σιωπηλά — απόφαση ανθρώπου.
+   */
+  'noValueReplacesValue',
+  /**
+   * «Άγνωστο» πάνω σε ιδιότητα με ζωντανή τιμή: ο προμηθευτής δεν μπορεί να τη δώσει **τώρα** (ETIM UN), ο κατάλογος την ξέρει.
+   * Η τιμή μένει· το πεδίο φαίνεται, απορριμμένο.
+   */
+  'unknownKeepsValue',
+  /** Το κείμενο του κελιού δεν είναι λόγος απουσίας (`notApplicable` · `unknown`). */
+  'noValueReasonUnreadable',
 ] as const;
 export type ImportIssueCode = (typeof IMPORT_ISSUE_CODES)[number];
 

@@ -83,7 +83,7 @@ function rowAxisKey(row: ExtractedRow, schema: CatalogSchemaSnapshot): string | 
   return axisCombinationKey(values, axes, schema.attributes, schema.registry);
 }
 
-const asLive = (record: StoredModel | StoredProduct): LiveHolder => ({ id: record.id, revision: record.revision, values: record.values });
+const asLive = (record: StoredModel | StoredProduct): LiveHolder => ({ id: record.id, revision: record.revision, values: record.values, noValueReasons: record.noValueReasons });
 
 async function readRootProducts(scope: CatalogTx, root: StoredModel | null): Promise<ReadonlyMap<string, StoredProduct>> {
   if (!root) return new Map();

@@ -19,4 +19,7 @@ export const IMPORT_ISSUE_KEYS: Readonly<Record<ImportIssueCode, string>> = {
   unitUnconfirmed: 'issues.unitUnconfirmed',
   attributeRepeated: 'issues.attributeRepeated',
   tableStructureDisputed: 'issues.tableStructureDisputed',
+  noValueReplacesValue: 'issues.noValueReplacesValue',
+  unknownKeepsValue: 'issues.unknownKeepsValue',
+  noValueReasonUnreadable: 'issues.noValueReasonUnreadable',
 };

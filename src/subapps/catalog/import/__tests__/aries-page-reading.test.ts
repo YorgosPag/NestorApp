@@ -154,7 +154,7 @@ describe('Δ3: δύο σειρές «ΚΩΔΙΚΟΣ»', () => {
   const codes = (id: string) => [raw('model_code', 'MFP-34ΤΜ', [idOf(page85, 'MFP-34ΤΜ')]), raw('model_code', id, [idOf(page85, id)])];
 
   it('ο κωδικός που κρατά το ζωντανό SKU κερδίζει, και το άλλο κελί δεν είναι εύρημα', () => {
-    const live = { id: 'cpr_1', revision: 1, values: { model_code: { '*': { '*': { type: 'text' as const, text: '099-01-001' } } } } };
+    const live = { id: 'cpr_1', revision: 1, values: { model_code: { '*': { '*': { type: 'text' as const, text: '099-01-001' } } } }, noValueReasons: {} };
     const group = groupOf(85, codes('099-01-001'));
     const matches = new Map([[group.rows[0].rowKey, live]]);
     const row = buildAttributeRows({ ...group, modelCode: 'mfp' }, { ...noLive, matches }).find((candidate) => candidate.holderKind === 'product');

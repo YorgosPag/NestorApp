@@ -13,7 +13,7 @@ import { evaluateConsistency, type ConsistencyViolation } from '../rules/evaluat
 import type { CatalogIssue } from '../schema/catalog-issues';
 import type { ImportIssue, ImportProposalField, ImportProposalRow } from '../types/catalog-import';
 import { defaultDecisionOf } from './field-diff';
-import { mergeFieldsIntoValues } from './proposal-values';
+import { EMPTY_IMPORT_HOLDER, mergeFieldsIntoHolder } from './proposal-values';
 
 export interface ProposalHoldings {
   readonly rootModel: StoredModelShape | null;
@@ -48,18 +48,18 @@ function rootMember(input: ProposalAggregateInput, row: ImportProposalRow | unde
   const { rootModel } = holdings;
   const fields = row?.fields ?? [];
   if (rootModel) {
-    return row ? updatedModelMember(rootModel, { ...rootModel, values: mergeFieldsIntoValues(rootModel.values, fields, proposed) }) : unchangedMember({ kind: 'productModel', record: rootModel });
+    return row ? updatedModelMember(rootModel, mergeFieldsIntoHolder(rootModel, fields, proposed)) : unchangedMember({ kind: 'productModel', record: rootModel });
   }
   if (!schema.scheme) return null;
-  const definition = { code: modelCode ?? '', familyId, variantSchemeCode: schema.scheme.code, parentId: null, categoryIds, noValueReasons: {}, values: mergeFieldsIntoValues({}, fields, proposed) };
+  const definition = { code: modelCode ?? '', familyId, variantSchemeCode: schema.scheme.code, parentId: null, categoryIds, ...mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, fields, proposed) };
   return createdModelMember(NEW_ROOT_ID, definition);
 }
 
 function productMember(row: ImportProposalRow, rootId: string | null, input: ProposalAggregateInput): AggregateMember {
   const stored = row.holderId === null ? undefined : input.holdings.products.get(row.holderId);
-  if (stored) return updatedProductMember(stored, { ...stored, values: mergeFieldsIntoValues(stored.values, row.fields, proposed) });
-  const values = mergeFieldsIntoValues({}, row.fields, proposed);
-  return createdProductMember(row.rowKey, { modelId: rootId, familyId: input.familyId, categoryIds: input.categoryIds, noValueReasons: {}, values });
+  if (stored) return updatedProductMember(stored, mergeFieldsIntoHolder(stored, row.fields, proposed));
+  const content = mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, proposed);
+  return createdProductMember(row.rowKey, { modelId: rootId, familyId: input.familyId, categoryIds: input.categoryIds, ...content });
 }
 
 /** Το υποθετικό σύνολο «αν εγκριθούν όλα». Το ίδιο κρίνεται και από το ίδιο διαβάζονται οι αναφορές του (`readAggregateReferences`). */
@@ -100,12 +100,23 @@ function ruleIssues(violations: readonly ConsistencyViolation[]): CatalogIssue[]
   );
 }
 
+/**
+ * Η διαδρομή του κριτή που ανήκει στο κελί: `values.<ιδιότητα>` για τιμή, `noValueReasons.<ιδιότητα>` για λόγο απουσίας
+ * (§23.2 K4: `noValueOnAxis` · `noValueConflict`). `null` = το πεδίο δεν είναι φορέα τιμών (τιμή τιμοκαταλόγου, κωδικός).
+ */
+function cellPathOf(field: ImportProposalField, memberId: string): { readonly path: string; readonly attributeId: string } | null {
+  const { target } = field;
+  if (target.kind === 'attribute') return { path: `${memberPath(memberId)}.values.${target.attributeId}`, attributeId: target.attributeId };
+  if (target.kind === 'noValueReason') return { path: `${memberPath(memberId)}.noValueReasons.${target.attributeId}`, attributeId: target.attributeId };
+  return null;
+}
+
 function withJudgement(field: ImportProposalField, memberId: string, cells: ReadonlyMap<string, readonly CatalogIssue[]>): ImportProposalField {
-  if (field.target.kind !== 'attribute') return field;
-  const prefix = `${memberPath(memberId)}.values.${field.target.attributeId}`;
-  const found = [...cells].filter(([path]) => path === prefix || path.startsWith(`${prefix}.`)).flatMap(([, issues]) => issues);
+  const cell = cellPathOf(field, memberId);
+  if (cell === null) return field;
+  const found = [...cells].filter(([path]) => path === cell.path || path.startsWith(`${cell.path}.`)).flatMap(([, issues]) => issues);
   if (found.length === 0) return field;
-  const issues: ImportIssue[] = [...field.issues, ...found.map((issue) => ({ ...issue, path: field.target.kind === 'attribute' ? field.target.attributeId : issue.path }))];
+  const issues: ImportIssue[] = [...field.issues, ...found.map((issue) => ({ ...issue, path: cell.attributeId }))];
   return { ...field, issues, decision: defaultDecisionOf({ ...field, issues }) };
 }
 
@@ -115,7 +126,7 @@ function rowIssuesOf(row: ImportProposalRow, memberId: string, issues: readonly 
   const prefix = `${path}.`;
   // Εύρημα ολόκληρου του μέλους έχει διαδρομή χωρίς τελεία (`axisComboDuplicate`): χωρίς το πρώτο σκέλος χανόταν, και ο άνθρωπος έβλεπε 422.
   const owned = issues.filter((issue) => issue.path === path || issue.path.startsWith(prefix));
-  const cellPaths = row.fields.flatMap((field) => (field.target.kind === 'attribute' ? [`${prefix}values.${field.target.attributeId}`] : []));
+  const cellPaths = row.fields.flatMap((field) => cellPathOf(field, memberId)?.path ?? []);
   return owned.filter((issue) => !cellPaths.some((path) => issue.path === path || issue.path.startsWith(`${path}.`))).map((issue) => ({ ...issue, path: issue.path.slice(prefix.length) }));
 }
 

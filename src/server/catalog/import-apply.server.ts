@@ -13,7 +13,7 @@ import 'server-only';
 
 import type { AuthContext } from '@/lib/auth';
 import { modelDefinitionOf, productDefinitionOf } from '@/subapps/catalog/aggregate/edit-aggregate';
-import { mergeFieldsIntoValues } from '@/subapps/catalog/import/proposal-values';
+import { EMPTY_IMPORT_HOLDER, mergeFieldsIntoHolder } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { ImportBatchDefinition, ImportProposalDefinition, ImportProposalField, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
@@ -45,23 +45,30 @@ async function modelChange(scope: CatalogTx, proposal: ImportProposalDefinition,
     return {
       op: 'create',
       kind: 'productModel',
-      definition: { code: proposal.modelCode ?? '', familyId: proposal.familyId ?? '', variantSchemeCode: proposal.variantSchemeCode ?? '', parentId: null, categoryIds, noValueReasons: {}, values: mergeFieldsIntoValues({}, row.fields, accepted) },
+      definition: {
+        code: proposal.modelCode ?? '',
+        familyId: proposal.familyId ?? '',
+        variantSchemeCode: proposal.variantSchemeCode ?? '',
+        parentId: null,
+        categoryIds,
+        ...mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, accepted),
+      },
     };
   }
   if (!hasAccepted(row)) return null;
   const current = await readOwned<StoredCatalogProductModelDefinition>(scope, 'productModel', row.holderId);
-  const definition = { ...modelDefinitionOf(current), values: mergeFieldsIntoValues(current.values, row.fields, accepted) };
+  const definition = mergeFieldsIntoHolder(modelDefinitionOf(current), row.fields, accepted);
   return { op: 'update', kind: 'productModel', id: row.holderId, expectedRevision: row.expectedRevision ?? current.revision, definition };
 }
 
 async function productChange(scope: CatalogTx, proposal: ImportProposalDefinition, row: ImportProposalRow, rootId: string | null, categoryIds: readonly string[]): Promise<HolderChange | null> {
   if (!hasAccepted(row)) return null;
   if (row.holderId === null) {
-    const values = mergeFieldsIntoValues({}, row.fields, accepted);
-    return { op: 'create', kind: 'product', requestedId: null, definition: { modelId: rootId, familyId: proposal.familyId ?? '', categoryIds, noValueReasons: {}, values } };
+    const content = mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, accepted);
+    return { op: 'create', kind: 'product', requestedId: null, definition: { modelId: rootId, familyId: proposal.familyId ?? '', categoryIds, ...content } };
   }
   const current = await readOwned<StoredCatalogProductDefinition>(scope, 'product', row.holderId);
-  const definition = { ...productDefinitionOf(current), values: mergeFieldsIntoValues(current.values, row.fields, accepted) };
+  const definition = mergeFieldsIntoHolder(productDefinitionOf(current), row.fields, accepted);
   return { op: 'update', kind: 'product', id: row.holderId, expectedRevision: row.expectedRevision ?? current.revision, definition };
 }
 
