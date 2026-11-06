@@ -24,6 +24,8 @@ export const PLAN_READING_IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/webp'
 export const PLAN_READING_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 /** Μια πυκνή σάρωση άδειας έδωσε ~2.900 τμήματα (§6.4)· πάνω από αυτό ο πίνακας κοστίζει περισσότερο από την εικόνα. */
 export const PLAN_READING_MAX_SEGMENTS = 8_000;
+/** Περιοχές απόκρυψης ανά όψη: ένα όριο για το σχήμα **και** για τον επεξεργαστή του πελάτη (Φ5.3β). */
+export const PLAN_READING_MAX_REDACTIONS = 64;
 
 const alignedRect = z.strictObject({ minX: z.number(), minY: z.number(), maxX: z.number(), maxY: z.number() });
 
@@ -38,7 +40,7 @@ const viewSegment = z.strictObject({
 
 export const planReadingRequestSchema = z.strictObject({
   /** Η όψη που **επιβεβαίωσε ο άνθρωπος** (Δ15 #4): καταγράφεται ως απόδειξη του τι κόπηκε. */
-  view: z.strictObject({ crop: alignedRect, redacted: z.array(alignedRect).max(64) }),
+  view: z.strictObject({ crop: alignedRect, redacted: z.array(alignedRect).max(PLAN_READING_MAX_REDACTIONS) }),
   segments: z.array(viewSegment).max(PLAN_READING_MAX_SEGMENTS),
 });
 
@@ -60,6 +62,11 @@ export type PlanReadingRouteRead = {
   readonly dropped: PlanReadingDropped;
   /** Ίδιο κλειδί ⇒ ίδια απάντηση χωρίς νέα κλήση και κόστος (Δ11). */
   readonly cacheHit: boolean;
+  /**
+   * ADR-929 Φ5.3β — **απόδειξη παραλαβής**: το sha256 των bytes που έλαβε ο διακομιστής. Ο πελάτης το συγκρίνει με το δικό
+   * του («ό,τι βλέπεις, αυτό φεύγει»)· ασυμφωνία ⇒ η ανάγνωση δεν μπαίνει στη σύντηξη.
+   */
+  readonly imageSha256: string;
 };
 
 export type PlanReadingRouteResult = PlanReadingRouteRead | PlanReadingRouteUnavailable;

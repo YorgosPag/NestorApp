@@ -7,9 +7,9 @@
  */
 
 import { serveWorkerRpc } from '@/lib/workers/worker-rpc-host';
-import { handlePlanAlign, planAlignReplyTransfer } from './plan-align-host';
+import { handlePlanWorker, planWorkerReplyTransfer } from './plan-align-host';
 
-serveWorkerRpc(self, handlePlanAlign, planAlignReplyTransfer);
+serveWorkerRpc(self, handlePlanWorker, planWorkerReplyTransfer);
 
 // Κενή εξαγωγή: το αρχείο μένει module υπό `isolatedModules`.
 export {};

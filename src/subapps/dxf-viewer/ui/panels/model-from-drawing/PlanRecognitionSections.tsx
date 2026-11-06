@@ -13,6 +13,7 @@ import * as React from 'react';
 import { ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type {
+  PlanReadingReview,
   PlanRecognitionFailure,
   PlanRecognitionPhase,
 } from '../../../systems/plan-recognition/plan-recognition-store';
@@ -36,6 +37,10 @@ export interface ImageSourceView {
   readonly excludedFromWalls: number;
   /** Η θέση της εικόνας είναι βαθμονομημένη (χωρίς αυτήν καμία εγγραφή τοίχων). */
   readonly calibrated: boolean;
+  /** ADR-929 Φ5.3β — υπάρχει αποτέλεσμα γεωμετρίας, άρα και όψη που μπορεί να διαβαστεί. */
+  readonly readingAvailable: boolean;
+  /** ADR-929 Φ5.3β — η όψη υπό έλεγχο πριν την ανάγνωση (`null` = κλειστή). */
+  readonly review: PlanReadingReview | null;
 }
 
 /** Κάθε αποτυχία με ΡΗΤΟ κλειδί (CHECK 3.8). */

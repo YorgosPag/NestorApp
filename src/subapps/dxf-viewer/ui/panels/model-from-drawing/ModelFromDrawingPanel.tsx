@@ -52,6 +52,7 @@ import {
   StatusLegend,
 } from './ModelFromDrawingSections';
 import { ImageSourceStart, ImageSourceSummary, type ImageSourceView } from './PlanRecognitionSections';
+import { PlanReadingSection, type PlanReadingActions } from './PlanReadingSections';
 
 export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
   readonly onClose: () => void;
@@ -62,6 +63,8 @@ export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
   readonly onApprove: () => void;
   /** ADR-929 Φ5 — αναγνώριση από την εικόνα του υποβάθρου του ενεργού ορόφου. */
   readonly onRecognizeImage: () => void;
+  /** ADR-929 Φ5.3β — η ανάγνωση κειμένων με AI, με έλεγχο της όψης πριν την αποστολή. */
+  readonly reading: PlanReadingActions;
 }
 
 export interface ModelFromDrawingPanelProps {
@@ -153,6 +156,9 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
       {fromImage
         ? <ImageSourceSummary view={imageSource} onResample={actions.onResample} t={t} />
         : <SceneSampleLine colorHex={state.wallColorHex} onResample={actions.onResample} t={t} />}
+      {fromImage
+        ? <PlanReadingSection available={imageSource.readingAvailable} review={imageSource.review} actions={actions.reading} t={t} />
+        : null}
       <StatusLegend proposal={proposal} t={t} />
       <GroupsSection groups={proposal.groups} onConfirm={actions.onConfirmGroup} t={t} />
       <DecisionsSection

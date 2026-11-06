@@ -25,8 +25,11 @@ import { resolveRasterPixelScale } from '../../floorplan-background/geometry/ras
 import type { FloorplanBackground } from '../../floorplan-background/providers/types';
 import type { ProposalLineSource } from '../model-from-drawing/proposal-line-source';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
+import { sha256Hex } from '@/lib/hash/sha256';
 import { planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
 import { meetsConfidenceTier } from './plan-confidence';
+import { createPlanReadingReview, type PlanReadingReviewDeps } from './plan-reading-review';
+import { planReadingApi } from './plan-reading-api-client';
 
 export type RasterLineSource = Extract<ProposalLineSource, { kind: 'raster' }>;
 
@@ -72,12 +75,38 @@ function lineSourceOf(run: PlanRecognitionRun, fusion: PlanFusionResult, version
   return { kind: 'raster', recognitionId: `${run.id}.${version}`, floorId: run.floorId, segments };
 }
 
+let fusionVersion = 0;
+
+/**
+ * ADR-929 Φ5.3β — η ανάγνωση μπαίνει στη σύντηξη: ξανατρέχει **μόνο** η `fusePlan` (καθαρή, χωρίς Worker), με νέα έκδοση
+ * πηγής γραμμών. Ο σειριακός έλεγχος (`run` ίδιο με εκείνο της αποστολής) γίνεται στον ελεγκτή της όψης.
+ */
+function adoptReading(outcome: PlanReadingOutcome): RasterLineSource | null {
+  const { run } = planRecognitionStore.get();
+  if (!run) return null;
+  const fusion = fuse(run, outcome);
+  planRecognitionStore.patch({ reading: outcome, fusion });
+  return lineSourceOf(run, fusion, ++fusionVersion);
+}
+
+const DEFAULT_REVIEW_DEPS: PlanReadingReviewDeps<RasterLineSource> = {
+  renderer: () => alignerInstance(),
+  raster: (floorId) => getFloorProvider(floorId)?.getPlanRaster() ?? null,
+  api: planReadingApi,
+  hash: (bytes) => sha256Hex(bytes),
+  objectUrl: { create: (blob) => URL.createObjectURL(blob), revoke: (url) => URL.revokeObjectURL(url) },
+  adoptReading,
+};
+let reviewDeps = DEFAULT_REVIEW_DEPS;
+
+/** Ο έλεγχος της όψης πριν την αποστολή — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
+const readingReview = createPlanReadingReview<RasterLineSource>(() => reviewDeps);
+
 function fail(failure: PlanRecognitionFailure): null {
+  readingReview.end();
   planRecognitionStore.patch({ phase: 'idle', run: null, fusion: null, reading: null, failure });
   return null;
 }
-
-let fusionVersion = 0;
 
 export const planRecognitionSession = {
   /**
@@ -86,6 +115,7 @@ export const planRecognitionSession = {
    */
   async run(floorId: string): Promise<RasterLineSource | null> {
     const sequence = ++runSequence;
+    readingReview.end(); // νέα αναγνώριση ⇒ η όψη της παλιάς δεν σημαίνει τίποτα
     const background = getFloorBackground(floorId);
     const provider = getFloorProvider(floorId);
     if (!background || !provider) return fail('no-background');
@@ -118,14 +148,26 @@ export const planRecognitionSession = {
     return run && fusion ? lineSourceOf(run, fusion, fusionVersion) : null;
   },
 
+  /**
+   * ADR-929 Φ5.3β — η όψη που ελέγχει ο άνθρωπος πριν την ανάγνωση: `begin` · `edit` · `reset` · `setTool` · `prepare`
+   * («Έλεγχος πριν την αποστολή») · `send` (μόνο το πακέτο) · `end`.
+   */
+  review: readingReview,
+
   /** Κλείσιμο: σβήνει το αποτέλεσμα, ακυρώνει ό,τι τρέχει, τερματίζει τον Worker. */
   close(): void {
     runSequence += 1;
+    readingReview.end();
     planRecognitionStore.reset();
     aligner?.dispose();
     aligner = null;
   },
 };
+
+/** Μόνο για tests: ψεύτικες εξαρτήσεις του ελέγχου όψης (δίκτυο, pixel, Worker, URL). `null` ⇒ οι πραγματικές. */
+export function __setPlanReadingReviewDepsForTests(next: Partial<PlanReadingReviewDeps<RasterLineSource>> | null): void {
+  reviewDeps = next ? { ...DEFAULT_REVIEW_DEPS, ...next } : DEFAULT_REVIEW_DEPS;
+}
 
 /** Μόνο για tests: ψεύτικος ευθυγραμμιστής (Worker-less). */
 export function __setPlanAlignerForTests(next: PlanAligner | null): void {

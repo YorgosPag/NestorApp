@@ -91,12 +91,17 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
     onSetUndecided: jest.fn(), onFocus: jest.fn(), onApprove: jest.fn(),
     onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onApproveOpenings: jest.fn(),
     onRecognizeImage: jest.fn(),
+    reading: {
+      onBegin: jest.fn(), onEnd: jest.fn(), onToggleAddRegion: jest.fn(),
+      onReset: jest.fn(), onPrepare: jest.fn(), onSend: jest.fn(),
+    },
   };
 }
 
 /** Η πηγή «εικόνα» όπως τη δίνει ο host — προεπιλογή: όροφος χωρίς υπόβαθρο, πηγή το σχέδιο. */
 const NO_IMAGE: ImageSourceView = {
   available: false, phase: 'idle', failure: null, active: false, countsByTier: null, excludedFromWalls: 0, calibrated: false,
+  readingAvailable: false, review: null,
 };
 
 function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {
@@ -266,6 +271,7 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
   const COUNTS = { high: 12, medium: 3, low: 1 } as const;
   const IMAGE_READY: ImageSourceView = {
     available: true, phase: 'ready', failure: null, active: true, countsByTier: COUNTS, excludedFromWalls: 1, calibrated: true,
+    readingAvailable: true, review: null,
   };
 
   it('Φ5.2ε — οι γραμμές χαμηλής βεβαιότητας λέγονται ρητά «όχι τοίχοι», και η γραμμή φεύγει όταν δεν υπάρχουν', () => {

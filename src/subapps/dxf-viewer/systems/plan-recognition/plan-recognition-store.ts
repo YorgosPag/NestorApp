@@ -8,7 +8,8 @@
  * Φ4. Τίποτα εδώ δεν είναι η σκηνή: οι τοίχοι γράφονται μόνο από τον ελεγκτή του ADR-911 μετά από ρητή έγκριση.
  * Γράφεται σε διακριτές πράξεις (έναρξη · τέλος ευθυγράμμισης · απάντηση · ανάγνωση) — ποτέ ανά καρέ.
  *
- * ⚠️ ΕΝΑΣ γραφέας: `plan-recognition-session.ts`.
+ * ⚠️ ΕΝΑΣ γραφέας: `plan-recognition-session.ts` (μαζί με το υπο-module του `plan-reading-review.ts`, που εκθέτει ως
+ *   `planRecognitionSession.review` — ADR-929 Φ5.3β).
  *
  * @see ./plan-recognition-session.ts
  * @see ../../components/dxf-layout/PlanRecognitionOverlay.tsx (καταναλωτής καμβά)
@@ -21,8 +22,11 @@ import type { PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fu
 import type {
   PlanInputKind,
   PlanReadingOutcome,
+  PlanReadingUnavailableReason,
   RasterSegment,
 } from '../../bim/plan-recognition/plan-recognition-types';
+import type { PlanReadingView, PlanViewSegment } from '../../bim/plan-recognition/reading/plan-reading-view';
+import type { PlanReadingPreflightResult } from '../../bim/plan-recognition/reading/plan-reading-contract';
 import type { RasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
 
 /** `idle` — καμία αναγνώριση · `running` — ευθυγράμμιση/τμήματα σε εξέλιξη · `ready` — υπάρχει αποτέλεσμα. */
@@ -43,6 +47,65 @@ export interface PlanRecognitionRun {
   readonly knownScale: RasterPixelScale | null;
 }
 
+// ─── ADR-929 Φ5.3β: η όψη που ελέγχει ο άνθρωπος πριν φύγει ───────────────────────────────────────────────────────
+
+/**
+ * **Το πακέτο αποστολής**: ό,τι ετοιμάστηκε στο «Έλεγχος πριν την αποστολή». Η αποστολή χρησιμοποιεί **ΜΟΝΟ** αυτό
+ * (όψη, τμήματα, bytes), ποτέ την τρέχουσα όψη: «ό,τι βλέπεις, αυτό φεύγει» είναι δομή, όχι πειθαρχία. Κάθε επεξεργασία
+ * της όψης το σβήνει.
+ */
+export interface PlanReadingPacket {
+  readonly view: PlanReadingView;
+  readonly segments: readonly PlanViewSegment[];
+  /** Τα bytes που θα φύγουν (PNG). */
+  readonly blob: Blob;
+  /** `URL.createObjectURL(blob)` του **ίδιου** Blob: η μικρογραφία είναι τα bytes που φεύγουν. Ανακαλείται από τον ελεγκτή. */
+  readonly previewUrl: string;
+  readonly sha256: string;
+  readonly widthPx: number;
+  readonly heightPx: number;
+}
+
+export type PlanReadingPreflightState =
+  | { readonly status: 'idle' }
+  | { readonly status: 'checking' }
+  | { readonly status: 'done'; readonly result: PlanReadingPreflightResult }
+  /** Δίκτυο / διακομιστής: δεν ξέρουμε ⇒ καμία αποστολή (fail-closed). */
+  | { readonly status: 'failed' };
+
+/** Τι διαβάστηκε — μόνο για εμφάνιση· η ίδια η ανάγνωση ζει στο `reading`. */
+export interface PlanReadingCounts {
+  readonly texts: number;
+  readonly dimensions: number;
+  readonly rooms: number;
+  readonly openings: number;
+}
+
+export type PlanReadingSendState =
+  | { readonly status: 'idle' }
+  | { readonly status: 'preparing' }
+  | { readonly status: 'prepare-failed' }
+  | { readonly status: 'sending' }
+  /** Διαβάστηκε **και** ο διακομιστής επιβεβαίωσε ότι έλαβε ακριβώς τα bytes του πακέτου. */
+  | { readonly status: 'read'; readonly counts: PlanReadingCounts; readonly cacheHit: boolean }
+  /** Ο διακομιστής έλαβε άλλα bytes από όσα είδε ο άνθρωπος: η ανάγνωση **δεν** μπήκε στη σύντηξη. */
+  | { readonly status: 'receipt-mismatch' }
+  | { readonly status: 'unavailable'; readonly reason: PlanReadingUnavailableReason }
+  | { readonly status: 'failed' };
+
+/** `select`: σύρσιμο/αλλαγή μεγέθους· `add-redaction`: το επόμενο σύρσιμο στον καμβά σχεδιάζει νέα περιοχή. */
+export type PlanReadingTool = 'select' | 'add-redaction';
+
+export interface PlanReadingReview {
+  /** Η πρόταση της ευθυγράμμισης (για «Επαναφορά πρότασης»). */
+  readonly proposed: PlanReadingView;
+  readonly view: PlanReadingView;
+  readonly tool: PlanReadingTool;
+  readonly packet: PlanReadingPacket | null;
+  readonly preflight: PlanReadingPreflightState;
+  readonly send: PlanReadingSendState;
+}
+
 export interface PlanRecognitionState {
   readonly phase: PlanRecognitionPhase;
   readonly run: PlanRecognitionRun | null;
@@ -50,9 +113,11 @@ export interface PlanRecognitionState {
   readonly reading: PlanReadingOutcome | null;
   readonly fusion: PlanFusionResult | null;
   readonly failure: PlanRecognitionFailure | null;
+  /** ADR-929 Φ5.3β — `null` = καμία όψη υπό έλεγχο. */
+  readonly review: PlanReadingReview | null;
 }
 
-const IDLE: PlanRecognitionState = { phase: 'idle', run: null, reading: null, fusion: null, failure: null };
+const IDLE: PlanRecognitionState = { phase: 'idle', run: null, reading: null, fusion: null, failure: null, review: null };
 
 const store = createExternalStore<PlanRecognitionState>(IDLE, { equals: Object.is });
 

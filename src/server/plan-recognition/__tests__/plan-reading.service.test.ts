@@ -9,6 +9,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
+import { sha256Hex } from '@/lib/hash/sha256';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { BackgroundNotFoundError } from '@/services/floorplan-background/background-ownership';
 import type { PlanReader, PlanReaderOutcome } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reader-port';
@@ -122,6 +123,17 @@ describe('readPlanForBackground', () => {
     expect(second).toMatchObject({ status: 'read', cacheHit: true });
     expect(second.status === 'read' && first.status === 'read' && second.readingId === first.readingId).toBe(true);
     expect(spendDoc()).toMatchObject({ estimatedCostUsd: 0.04, cacheHits: 1 });
+  });
+
+  it('Φ5.3β: answers with the sha256 of the bytes it RECEIVED — fresh read and cache hit alike', async () => {
+    const reader = fakeReader();
+    const received = await sha256Hex(IMAGE.bytes);
+    const first = await readPlanForBackground(command(), deps(reader));
+    const second = await readPlanForBackground(command(), deps(reader));
+    expect(first).toMatchObject({ status: 'read', cacheHit: false, imageSha256: received });
+    expect(second).toMatchObject({ status: 'read', cacheHit: true, imageSha256: received });
+    const stored = fake.all<Record<string, unknown>>(COLLECTIONS.PLAN_READINGS)[0];
+    expect((stored.sent as { imageSha256: string }).imageSha256).toBe(received);
   });
 
   it('the same image with different segments is a different question (new reading, new id)', async () => {

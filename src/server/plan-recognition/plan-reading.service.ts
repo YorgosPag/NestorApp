@@ -102,22 +102,23 @@ async function sentProofOf(cmd: PlanReadingCommand): Promise<PlanReadingSentProo
 }
 
 /** `status: 'read'` χωρίς ανάγνωση θα ήταν χαλασμένο έγγραφο: ποτέ σιωπηλά «κενή ανάγνωση», πάντα ρητή αποτυχία. */
-function cachedResult(s: StoredPlanReading): PlanReadingRouteResult {
+function cachedResult(s: StoredPlanReading, receivedSha256: string): PlanReadingRouteResult {
   if (!s.reading || !s.dropped) return { status: 'unavailable', reason: 'reader-failed', readingId: s.readingId };
-  return { status: 'read', readingId: s.readingId, model: s.model, schemaVersion: s.schemaVersion, reading: s.reading, dropped: s.dropped, cacheHit: true };
+  return { status: 'read', readingId: s.readingId, model: s.model, schemaVersion: s.schemaVersion, reading: s.reading, dropped: s.dropped, cacheHit: true, imageSha256: receivedSha256 };
 }
 
-async function fromClaim(claim: PlanReadingClaim, identity: PlanReadingIdentity, deps: PlanReadingDeps): Promise<PlanReadingRouteResult | null> {
+async function fromClaim(claim: PlanReadingClaim, identity: PlanReadingIdentity, sent: PlanReadingSentProof, deps: PlanReadingDeps): Promise<PlanReadingRouteResult | null> {
   if (claim.kind === 'in-flight') return { status: 'unavailable', reason: 'reading-in-progress', readingId: identity.readingId };
   if (claim.kind === 'cached') {
     // Η καταγραφή της εξοικονόμησης δεν αλλάζει την απάντηση: η ανάγνωση υπάρχει ήδη.
     await deps.cacheHit(identity.companyId).catch(() => undefined);
-    return cachedResult(claim.stored);
+    // Ίδιο κλειδί ⇒ ίδιο `inputHash` ⇒ ίδια bytes: η απόδειξη παραλαβής είναι ό,τι έλαβε ΑΥΤΟ το αίτημα.
+    return cachedResult(claim.stored, sent.imageSha256);
   }
   return null;
 }
 
-async function readAndSettle(reader: PlanReader, input: PlanReaderInput, identity: PlanReadingIdentity, deps: PlanReadingDeps): Promise<PlanReadingRouteResult> {
+async function readAndSettle(reader: PlanReader, input: PlanReaderInput, identity: PlanReadingIdentity, sent: PlanReadingSentProof, deps: PlanReadingDeps): Promise<PlanReadingRouteResult> {
   const outcome = await reader.read(input);
   const read = outcome.kind === 'read';
   await deps.settle(identity, {
@@ -129,7 +130,7 @@ async function readAndSettle(reader: PlanReader, input: PlanReaderInput, identit
     latencyMs: outcome.latencyMs,
   }, deps.now());
   if (!read) return { status: 'unavailable', reason: 'reader-failed', readingId: identity.readingId };
-  return { status: 'read', readingId: identity.readingId, model: outcome.model, schemaVersion: PLAN_READING_SCHEMA_VERSION, reading: outcome.reading, dropped: outcome.dropped, cacheHit: false };
+  return { status: 'read', readingId: identity.readingId, model: outcome.model, schemaVersion: PLAN_READING_SCHEMA_VERSION, reading: outcome.reading, dropped: outcome.dropped, cacheHit: false, imageSha256: sent.imageSha256 };
 }
 
 /** @throws {BackgroundNotFoundError} για ξένο ή ανύπαρκτο υπόβαθρο (η διαδρομή το μεταμφιέζει, ADR-742). */
@@ -156,12 +157,12 @@ export async function readPlanForBackground(cmd: PlanReadingCommand, deps: PlanR
   };
   const input: PlanReaderInput = { image: cmd.image, segments: cmd.request.segments };
   // Ήδη πληρωμένη; Η μία-πτήση το ξαναρωτά μέσα στη συναλλαγή, αλλά εδώ κρίνεται πριν από το όριο (βήμα 4).
-  const early = await fromClaim(await deps.claim(identity, sent, cmd.uid, deps.now(), { probeOnly: true }), identity, deps);
+  const early = await fromClaim(await deps.claim(identity, sent, cmd.uid, deps.now(), { probeOnly: true }), identity, sent, deps);
   if (early) return early;
   const allowance = await deps.costAllowance(cmd.companyId, reader.estimateCostUsd(input));
   if (!allowance.allowed) return { status: 'unavailable', reason: allowance.reason, readingId: null };
-  const claimed = await fromClaim(await deps.claim(identity, sent, cmd.uid, deps.now()), identity, deps);
-  return claimed ?? readAndSettle(reader, input, identity, deps);
+  const claimed = await fromClaim(await deps.claim(identity, sent, cmd.uid, deps.now()), identity, sent, deps);
+  return claimed ?? readAndSettle(reader, input, identity, sent, deps);
 }
 
 export interface PlanReadingPreflightCommand {

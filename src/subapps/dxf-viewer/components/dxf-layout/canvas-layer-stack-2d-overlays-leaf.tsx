@@ -23,6 +23,7 @@ import { TopoBreaklineOverlay } from './TopoBreaklineOverlay';
 import { TopoAutoBreaklinePreviewOverlay } from './TopoAutoBreaklinePreviewOverlay';
 import { ModelFromDrawingPreviewOverlay } from './ModelFromDrawingPreviewOverlay';
 import { PlanRecognitionOverlay } from './PlanRecognitionOverlay';
+import { PlanReadingViewOverlay } from './PlanReadingViewOverlay';
 import type { Viewport } from '../../rendering/types/Types';
 
 // ADR-040 Phase XXII.B — το transform ΔΕΝ διαπερνά πια το group: κάθε SVG child
@@ -69,6 +70,10 @@ export function CanvasLayerStack2DOverlays({ viewport }: CanvasLayerStack2DOverl
           τέσσερις καταστάσεις, τέσσερα μοτίβα γραμμής. Self-subscribes στο LOW-freq store της
           συνεδρίας· read-only, pointer-events-none. STAGE ADR-040 + ADR-911. */}
       <ModelFromDrawingPreviewOverlay viewport={viewport} />
+      {/* ADR-929 Φ5.3β — η όψη που θα διαβαστεί (crop + περιοχές απόκρυψης), επεξεργάσιμη, ΠΑΝΩ από τις
+          προτάσεις. Gate-at-mount στη (low-freq) όψη υπό έλεγχο· pointer-events ΜΟΝΟ στις λαβές, στο
+          περίγραμμα του crop και στις περιοχές. Μία εγγραφή στο άφημα. STAGE ADR-040 + ADR-929. */}
+      <PlanReadingViewOverlay viewport={viewport} />
       {/* ADR-732 Batch 1 — ο analytical dispatch canvas (ADR-552) ΔΕΝ ζει πια εδώ:
           οι 7 analytical painters είναι το πρώτο pass του κοινού καμβά της ζώνης Β
           (`Overlay2DDispatchCanvas`, mounted στον shell). Ίδια σειρά z-order. */}

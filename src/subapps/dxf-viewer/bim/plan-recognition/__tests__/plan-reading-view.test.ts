@@ -16,7 +16,7 @@ import {
   viewToAligned,
   type PlanReadingView,
 } from '../reading/plan-reading-view';
-import { renderReadingViewRaster } from '../reading/plan-reading-view-raster';
+import { readingViewSize, renderReadingViewRaster } from '../reading/plan-reading-view-raster';
 import type { PlanViewReading } from '../reading/plan-reading-wire';
 
 const VIEW: PlanReadingView = { crop: { minX: 100, minY: 50, maxX: 300, maxY: 150 }, redacted: [{ minX: 250, minY: 100, maxX: 300, maxY: 150 }] };
@@ -128,6 +128,20 @@ describe('renderReadingViewRaster', () => {
     expect([enlarged.raster.width, enlarged.raster.height]).toEqual([400, 200]);
     expect(enlarged.scale).toBe(2);
     expect(renderReadingViewRaster(original, align, VIEW, NATIVE).scale).toBe(1);
+  });
+
+  it('Φ5.3β: `readingViewSize` (ό,τι δηλώνει ο προέλεγχος) === οι διαστάσεις των pixel που αποδίδονται', () => {
+    const original = ramp(400, 300);
+    const cases = [
+      { align: { alignedToOriginal: DOUBLE, workingScale: 2 }, budget: NATIVE },
+      { align: { alignedToOriginal: DOUBLE, workingScale: 2 }, budget: { maxPixels: 20_000, minPixels: 0 } },
+      { align: { alignedToOriginal: IDENTITY_HOMOGRAPHY, workingScale: 1 }, budget: { maxPixels: 1_000_000, minPixels: 80_000 } },
+    ];
+    for (const { align, budget } of cases) {
+      const size = readingViewSize(align, VIEW, budget);
+      const { raster } = renderReadingViewRaster(original, align, VIEW, budget);
+      expect([size.width, size.height]).toEqual([raster.width, raster.height]);
+    }
   });
 });
 

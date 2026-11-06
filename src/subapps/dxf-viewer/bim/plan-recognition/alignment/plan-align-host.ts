@@ -13,6 +13,7 @@
  */
 
 import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
+import { encodePlanRasterPng } from '@/lib/geometry/raster/plan-raster-png';
 import type { RasterPixelScale } from '../../../floorplan-background/geometry/raster-pixel-scale';
 import {
   DEFAULT_PLAN_SEGMENTS,
@@ -21,6 +22,8 @@ import {
   type PlanSegmentExtraction,
   type PlanSegmentOptions,
 } from '../segments/plan-segments';
+import { renderReadingViewRaster } from '../reading/plan-reading-view-raster';
+import type { PlanReadingView } from '../reading/plan-reading-view';
 import { alignPlan } from './align-plan';
 import type { PlanAlignment, PlanAlignOptions } from './plan-alignment-types';
 
@@ -58,9 +61,50 @@ export function handlePlanAlign(message: PlanAlignMessage): PlanAlignReply {
   return { alignment, segments };
 }
 
+// ─── ADR-929 Φ5.3β: τα pixel της όψης, στον ΙΔΙΟ Worker ─────────────────────────────────────────────────────────────
+//
+// Μια σάρωση άδειας ξαναδειγματίζεται σε έως 24 Mpx και κωδικοποιείται σε PNG: δευτερόλεπτα CPU που δεν ανήκουν στον
+// κύριο νήμα. Ένας Worker, μία σειριακή ουρά (`serveWorkerRpc`): η απόδοση της όψης δεν τρέχει ποτέ παράλληλα με μια
+// ευθυγράμμιση πάνω στο ίδιο υλικό.
+
+export interface PlanViewRenderMessage {
+  readonly kind: 'render-view';
+  /** Η **αρχική** εικόνα του υποβάθρου, νέο buffer (μετακομίζει στον Worker). */
+  readonly raster: PlanRaster;
+  readonly alignment: Pick<PlanAlignment, 'alignedToOriginal' | 'workingScale'>;
+  readonly view: PlanReadingView;
+}
+
+export interface PlanViewRenderReply {
+  /** Τα bytes που θα φύγουν, **ακριβώς** (PNG). Η μικρογραφία και το sha256 βγαίνουν από αυτό το ίδιο Blob. */
+  readonly blob: Blob;
+  readonly widthPx: number;
+  readonly heightPx: number;
+}
+
+export type PlanWorkerMessage = PlanAlignMessage | PlanViewRenderMessage;
+export type PlanWorkerReply = PlanAlignReply | PlanViewRenderReply;
+
+export const isPlanViewRenderReply = (reply: PlanWorkerReply): reply is PlanViewRenderReply => 'blob' in reply;
+
+export async function handlePlanViewRender(message: PlanViewRenderMessage): Promise<PlanViewRenderReply> {
+  const { raster } = renderReadingViewRaster(message.raster, message.alignment, message.view);
+  return { blob: await encodePlanRasterPng(raster), widthPx: raster.width, heightPx: raster.height };
+}
+
+/** Ο χειριστής του Worker: ένα RPC, δύο ερωτήσεις. */
+export async function handlePlanWorker(message: PlanWorkerMessage): Promise<PlanWorkerReply> {
+  return message.kind === 'render-view' ? handlePlanViewRender(message) : handlePlanAlign(message);
+}
+
 /** Τα buffers του αιτήματος που μετακομίζουν στον Worker: η εικόνα (ο καλών δίνει **νέο** buffer ανά κλήση). */
-export function planAlignRequestTransfer(message: PlanAlignMessage): Transferable[] {
+export function planAlignRequestTransfer(message: PlanWorkerMessage): Transferable[] {
   return [message.raster.rgba.buffer];
+}
+
+/** Τα buffers της απάντησης: της ευθυγράμμισης μετακομίζουν· το Blob της όψης αντιγράφεται φθηνά (αναφορά, όχι bytes). */
+export function planWorkerReplyTransfer(reply: PlanWorkerReply): Transferable[] {
+  return isPlanViewRenderReply(reply) ? [] : planAlignReplyTransfer(reply);
 }
 
 /**

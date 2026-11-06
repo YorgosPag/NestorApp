@@ -17,11 +17,16 @@ import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
 import { createWorkerRpcClient, latestOnly } from '@/lib/workers/worker-rpc-client';
 import type { WorkerLike, WorkerRpcResult } from '@/lib/workers/worker-rpc-protocol';
 import {
-  handlePlanAlign,
+  handlePlanWorker,
+  isPlanViewRenderReply,
   planAlignRequestTransfer,
   type PlanAlignMessage,
   type PlanAlignReply,
   type PlanSegmentRequest,
+  type PlanViewRenderMessage,
+  type PlanViewRenderReply,
+  type PlanWorkerMessage,
+  type PlanWorkerReply,
 } from './plan-align-host';
 import type { PlanAlignOptions } from './plan-alignment-types';
 import { spawnPlanAlignWorker } from './plan-align-worker-spawn';
@@ -32,26 +37,47 @@ export interface PlanAlignRequest {
   readonly segments?: PlanSegmentRequest;
 }
 
+/** ADR-929 Φ5.3β — ό,τι χρειάζεται η απόδοση της όψης (χωρίς `kind`: το βάζει ο πελάτης). */
+export type PlanViewRenderRequest = Omit<PlanViewRenderMessage, 'kind'>;
+
 export interface PlanAligner {
   readonly align: (raster: PlanRaster, request?: PlanAlignRequest) => Promise<WorkerRpcResult<PlanAlignReply>>;
+  /**
+   * ADR-929 Φ5.3β — τα bytes της όψης (PNG) στον **ίδιο** Worker. Δικό του `latestOnly`: ένα δεύτερο «Έλεγχος» πριν
+   * τελειώσει το πρώτο αντικαθιστά το αναμένον, χωρίς να ακυρώσει μια ευθυγράμμιση.
+   */
+  readonly renderView: (request: PlanViewRenderRequest) => Promise<WorkerRpcResult<PlanViewRenderReply>>;
   readonly dispose: () => void;
 }
 
 export interface PlanAlignerDeps {
   readonly spawn?: () => WorkerLike | null;
-  readonly fallback?: (message: PlanAlignMessage) => Promise<PlanAlignReply>;
+  readonly fallback?: (message: PlanWorkerMessage) => Promise<PlanWorkerReply>;
 }
+
+/** Στενεύει μια απάντηση του ενός RPC στο είδος που ζητήθηκε· άλλο είδος = σφάλμα πρωτοκόλλου, ποτέ σιωπή. */
+function narrowReply<R extends PlanWorkerReply>(
+  result: WorkerRpcResult<PlanWorkerReply>,
+  is: (reply: PlanWorkerReply) => reply is R,
+): WorkerRpcResult<R> {
+  if (result.kind !== 'ok') return result;
+  return is(result.value) ? { kind: 'ok', value: result.value } : { kind: 'failed', error: 'plan-worker-reply-mismatch' };
+}
+
+const isAlignReply = (reply: PlanWorkerReply): reply is PlanAlignReply => !isPlanViewRenderReply(reply);
 
 /** **Ένας ευθυγραμμιστής ανά επεξεργαστή** — ο Worker γεννιέται στην πρώτη κλήση και τερματίζεται στο `dispose`. */
 export function createPlanAligner(deps: PlanAlignerDeps = {}): PlanAligner {
-  const client = createWorkerRpcClient<PlanAlignMessage, PlanAlignReply>({
+  const client = createWorkerRpcClient<PlanWorkerMessage, PlanWorkerReply>({
     spawn: deps.spawn ?? spawnPlanAlignWorker,
-    fallback: deps.fallback ?? (async (message) => handlePlanAlign(message)),
+    fallback: deps.fallback ?? handlePlanWorker,
     transferOf: planAlignRequestTransfer,
   });
   const alignLatest = latestOnly((message: PlanAlignMessage) => client.call(message));
+  const renderLatest = latestOnly((message: PlanViewRenderMessage) => client.call(message));
   return {
-    align: (raster, request = {}) => alignLatest({ kind: 'align', raster, ...request }),
+    align: async (raster, request = {}) => narrowReply(await alignLatest({ kind: 'align', raster, ...request }), isAlignReply),
+    renderView: async (request) => narrowReply(await renderLatest({ kind: 'render-view', ...request }), isPlanViewRenderReply),
     dispose: client.dispose,
   };
 }

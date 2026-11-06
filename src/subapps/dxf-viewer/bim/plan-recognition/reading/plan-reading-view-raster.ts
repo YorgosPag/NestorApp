@@ -76,6 +76,35 @@ function redact(out: PlanRaster & { readonly rgba: Uint8ClampedArray }, view: Pl
   }
 }
 
+export interface ReadingViewSize {
+  readonly width: number;
+  readonly height: number;
+  /** Pixel εξόδου ανά pixel της **αρχικής** εικόνας (πριν το `floor` των πλευρών). */
+  readonly scale: number;
+  /** Το crop σε pixel της **αρχικής** εικόνας. */
+  readonly nativeW: number;
+  readonly nativeH: number;
+}
+
+/**
+ * ADR-929 Φ5.3β — **οι διαστάσεις** της εικόνας της όψης, χωρίς να αγγίξει pixel. Ο **ένας** τύπος: τον καλεί το
+ * {@link renderReadingViewRaster}, και ο προέλεγχος δηλώνει ακριβώς τις διαστάσεις που θα έχουν τα bytes.
+ */
+export function readingViewSize(
+  alignment: Pick<PlanAlignment, 'workingScale'>,
+  view: PlanReadingView,
+  budget: ReadingViewBudget = DEFAULT_READING_VIEW_BUDGET,
+): ReadingViewSize {
+  assertReadingView(view);
+  const nativeW = (view.crop.maxX - view.crop.minX) * alignment.workingScale;
+  const nativeH = (view.crop.maxY - view.crop.minY) * alignment.workingScale;
+  const area = nativeW * nativeH;
+  const scale = Math.min(Math.sqrt(budget.maxPixels / area), Math.max(1, Math.sqrt(budget.minPixels / area)));
+  const width = Math.max(1, Math.floor(nativeW * scale));
+  const height = Math.max(1, Math.floor(nativeH * scale));
+  return { width, height, scale, nativeW, nativeH };
+}
+
 /**
  * Η εικόνα της όψης, έτοιμη για κωδικοποίηση. `original` = η **αρχική** εικόνα του υποβάθρου, η ίδια που πήρε η Φ1.
  */
@@ -85,13 +114,7 @@ export function renderReadingViewRaster(
   view: PlanReadingView,
   budget: ReadingViewBudget = DEFAULT_READING_VIEW_BUDGET,
 ): ReadingViewRaster {
-  assertReadingView(view);
-  const nativeW = (view.crop.maxX - view.crop.minX) * alignment.workingScale;
-  const nativeH = (view.crop.maxY - view.crop.minY) * alignment.workingScale;
-  const area = nativeW * nativeH;
-  const scale = Math.min(Math.sqrt(budget.maxPixels / area), Math.max(1, Math.sqrt(budget.minPixels / area)));
-  const width = Math.max(1, Math.floor(nativeW * scale));
-  const height = Math.max(1, Math.floor(nativeH * scale));
+  const { width, height, scale, nativeW } = readingViewSize(alignment, view, budget);
   const factor = Math.max(1, Math.floor(1 / scale));
   const source = factor > 1 ? downscaleArea(original, factor) : original;
   const toOriginal = composeHomography(alignment.alignedToOriginal, outputToAligned(view.crop, width, height));

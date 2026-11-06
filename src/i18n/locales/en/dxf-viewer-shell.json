@@ -475,7 +475,45 @@
         "medium": "Medium confidence",
         "low": "Low confidence: check the image"
       },
-      "lowExcluded": "{count, plural, one {# low-confidence line is not proposed as a wall — check the image.} other {# low-confidence lines are not proposed as walls — check the image.}}"
+      "lowExcluded": "{count, plural, one {# low-confidence line is not proposed as a wall — check the image.} other {# low-confidence lines are not proposed as walls — check the image.}}",
+      "reading": {
+        "title": "Read texts with AI",
+        "intro": "Dimensions, room names and openings are read from the image. Before anything leaves, you see and correct exactly what is sent.",
+        "begin": "Read texts with AI",
+        "instructions": "The frame is what gets sent: drag it or its handles. Hatched white regions are blanked before sending (title block, stamp, signatures): drag, resize, or delete them with the ×.",
+        "toolsLabel": "Marking tools",
+        "addRegion": "Add redaction region",
+        "reset": "Reset to proposal",
+        "regionCount": "{count, plural, =0 {No redaction regions} one {# redaction region} other {# redaction regions}}",
+        "deleteRegion": "Delete redaction region",
+        "prepare": "Check before sending",
+        "checking": "Checking…",
+        "preflightFailed": "The check did not complete (network or server). Sending stays closed; try again.",
+        "estimate": "Estimated cost: {estimate} · {remaining} of {cap} left this month.",
+        "previewAlt": "The image that will be sent for reading",
+        "packetSize": "{width} × {height} px · {size}",
+        "fingerprint": "Fingerprint (sha256):",
+        "send": "Send for reading",
+        "close": "Close reading",
+        "receiptOk": "The server received exactly this image (same fingerprint).",
+        "readCounts": "Read: {dimensions, plural, one {# dimension} other {# dimensions}} · {rooms, plural, one {# room} other {# rooms}} · {openings, plural, one {# opening} other {# openings}} · {texts, plural, one {# text} other {# texts}}. The wall proposal was updated.",
+        "cacheHit": "This exact image had already been read: no new charge.",
+        "receiptMismatch": "The server received a different image from the one you saw. The reading was not used; run “Check before sending” again.",
+        "sendFailed": "Sending failed (network or server). Nothing unread was charged; try again.",
+        "prepareFailed": "The view image could not be prepared. Try again.",
+        "geometryOnly": "Recognition continues with the image geometry only.",
+        "reason": {
+          "ai-disabled-for-company": "AI plan reading is turned off for your company (administrator setting).",
+          "ai-legal-disclosure-pending": "AI plan reading is not enabled yet: it is waiting for the privacy policy update.",
+          "allowance-exhausted": "The company's monthly AI cost limit has been used up.",
+          "allowance-unverifiable": "The remaining monthly allowance could not be confirmed; to be safe, nothing is sent.",
+          "page-cost-exceeds-cap": "The estimated cost of this page exceeds the per-page limit. Make the frame smaller and try again.",
+          "cost-unknown": "The cost cannot be estimated, so nothing is sent.",
+          "reader-unconfigured": "AI reading is not available on this server.",
+          "reading-in-progress": "The same reading is already running. Try again shortly.",
+          "reader-failed": "The AI provider failed to read the image."
+        }
+      }
     },
     "notice": {
       "no-line-opening": "No line found at that point. Click on a door or window line or arc.",

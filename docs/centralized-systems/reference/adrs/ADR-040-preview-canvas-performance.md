@@ -113,6 +113,13 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-11-06 — Νέο φύλλο: η επεξεργάσιμη όψη ανάγνωσης κάτοψης (ADR-929 Φ5.3β)
+
+- `components/dxf-layout/PlanReadingViewOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` **πάνω** από το `ModelFromDrawingPreviewOverlay`. Gate-at-mount: ο εξωτερικός ακούει μόνο το (χαμηλόσυχνο) store αναγνώρισης και το υπόβαθρο του ορόφου, και επιστρέφει `null` χωρίς όψη υπό έλεγχο· ο εσωτερικός κάνει το **ένα** υψίσυχνο hook (`useTransformValue`).
+- Πρώτο φύλλο της αναγνώρισης με **χειρονομίες** (πρότυπο `DimRowHandleOverlay`): `pointer-events` μόνο στις λαβές, στη λωρίδα του περιγράμματος του crop και στις περιοχές απόκρυψης, ώστε το pan/zoom κάτω από την όψη να μένει άθικτο. Σε «Προσθήκη περιοχής» μια διαφανής επιφάνεια ανήκει στη χειρονομία (πρότυπο `BasemapPlacementLeaf`).
+- Η χειρονομία ζει σε `ref` + τοπικό state (φάντασμα)· `pointermove`/`pointerup` στο `window`· **μία** εγγραφή στο store στο άφημα (`planRecognitionSession.review.edit`), ποτέ ανά καρέ. `pointercancel` = καμία εγγραφή. Καθαρή λογική στο `systems/plan-recognition/plan-reading-view-gesture.ts`, hook στο `use-plan-reading-view-gesture.ts`.
+- Esc από το κεντρικό escape bus (`ESC_PRIORITY.CROP_TOOL`, inert όταν δεν υπάρχει προσθήκη ή επιλογή). Το κέλυφος (`CanvasSection` / `CanvasLayerStack`) δεν άλλαξε· καμία νέα `useSyncExternalStore` σε orchestrator.
+
 ### 2026-11-05 — Νέο φύλλο: σημεία βαθμονόμησης υποβάθρου (ADR-929 Φ5.2α)
 
 - `components/dxf-layout/CalibrationPickOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` μετά το `BasePointPickMarkerOverlay`. Gate-at-mount στη (σπάνια) συνεδρία βαθμονόμησης· το transform ζει στο inner, ο 60fps δρομέας (`subscribeRealtimeWorldCursor`) μόνο στο `RubberBand`, που mount-άρεται μόνο όσο ζητείται σημείο.

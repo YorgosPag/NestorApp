@@ -23,10 +23,13 @@ import {
 import type { ModelFromDrawingState } from '../systems/model-from-drawing/model-from-drawing-store';
 import { getActiveBackgroundFloorId, useFloorplanBackgroundStore } from '../floorplan-background/stores/floorplanBackgroundStore';
 import type { ImageSourceView } from '../ui/panels/model-from-drawing/PlanRecognitionSections';
+import type { PlanReadingActions } from '../ui/panels/model-from-drawing/PlanReadingSections';
 
 export interface PlanRecognitionWiring {
   readonly imageSource: ImageSourceView;
   readonly recognizeImage: () => void;
+  /** ADR-929 Φ5.3β — η ανάγνωση κειμένων: η όψη, ο έλεγχος, η αποστολή. */
+  readonly reading: PlanReadingActions;
 }
 
 /** Η όψη του πάνελ για την πηγή εικόνα. */
@@ -53,7 +56,32 @@ function useImageSourceView(state: ModelFromDrawingState): ImageSourceView {
     countsByTier: counts,
     excludedFromWalls,
     calibrated: sourceCalibrated,
+    readingAvailable: recognition.phase === 'ready' && recognition.run !== null,
+    review: recognition.review,
   };
+}
+
+/**
+ * ADR-929 Φ5.3β — οι πράξεις της ανάγνωσης → ο ελεγκτής. Μετά από ανάγνωση που μπήκε στη σύντηξη, ο βοηθός υιοθετεί τη
+ * νέα πηγή γραμμών (η ΙΔΙΑ μηχανή). ⚠️ Τα αμφίσημα ορθογώνια που αποφασίστηκαν ξαναρωτιούνται: η σύντηξη με ανάγνωση
+ * αλλάζει τη γεωμετρία και τα κλειδιά τους. Οι επιβεβαιωμένες ομάδες πάχους μένουν (ίδιος όροφος).
+ */
+function usePlanReadingActions(getDeps: () => ModelFromDrawingDeps): PlanReadingActions {
+  return React.useMemo((): PlanReadingActions => {
+    const review = planRecognitionSession.review;
+    return {
+      onBegin: () => review.begin(),
+      onEnd: () => review.end(),
+      onToggleAddRegion: () => review.toggleAddRegion(),
+      onReset: () => review.reset(),
+      onPrepare: () => { void review.prepare(); },
+      onSend: () => {
+        void review.send().then((source) => {
+          if (source) modelFromDrawingSession.adoptRasterSegments(source, getDeps());
+        });
+      },
+    };
+  }, [getDeps]);
 }
 
 export function usePlanRecognitionWiring(
@@ -78,5 +106,6 @@ export function usePlanRecognitionWiring(
   }, [closed]);
   React.useEffect(() => () => planRecognitionSession.close(), []);
 
-  return { imageSource, recognizeImage };
+  const reading = usePlanReadingActions(getDeps);
+  return { imageSource, recognizeImage, reading };
 }
