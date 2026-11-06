@@ -298,7 +298,7 @@ export function WhatIfTab({
 
           <InfoDt label={t('costCalculator.whatIf.resultLoss')} tooltip={t('costCalculator.whatIf.resultLossTooltip')} className="text-destructive" />
           <dd className="text-right font-semibold text-destructive">
-            -{formatCurrency(whatIfResult.timeCost)} ({formatPercent(whatIfResult.timeCostPercentage)})
+            {formatCurrency(-whatIfResult.timeCost)} ({formatPercent(whatIfResult.timeCostPercentage)})
           </dd>
 
           <InfoDt label={t('costCalculator.whatIf.resultRecommended')} tooltip={t('costCalculator.whatIf.resultRecommendedTooltip')} />

@@ -279,6 +279,17 @@
       "continuationLegalEntity": "Full ({rate}%): the company resulted from a conversion or merger, so the first-years reduction does not apply — Law 4172/2013 art. 71 §3.",
       "missingStart": "Full ({rate}%): no business start date has been declared. A new business may be entitled to a reduced prepayment.",
       "goToSetup": "Add business start date"
+    },
+    "distributionCoverage": {
+      "noneOE": "No partners have been declared: the distribution withholding cannot be calculated, because it depends on the recipient (individual or legal entity, resident or not — Law 4172/2013 arts. 48, 64).",
+      "noneEPE": "No members have been declared: the dividend tax cannot be calculated, because it depends on the recipient (individual or legal entity, resident or not — Law 4172/2013 arts. 48, 64).",
+      "noneAE": "No shareholders have been declared: the dividend tax cannot be calculated, because it depends on the recipient (individual or legal entity, resident or not — Law 4172/2013 arts. 48, 64).",
+      "partial": "The declared shares add up to {declared}% instead of 100%: the per-recipient amounts cover only that part of the distribution.",
+      "addPartners": "Add partners",
+      "addMembers": "Add members",
+      "addShareholders": "Add shareholders",
+      "fixShares": "Correct the shares",
+      "notComputed": "Not calculated"
     }
   },
   "reconciliation": {

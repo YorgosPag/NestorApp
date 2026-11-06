@@ -362,6 +362,25 @@ export interface CorporateTaxResult {
 }
 
 /**
+ * Πόσο από τη διανομή καλύπτουν οι δηλωμένοι δικαιούχοι (εταίροι / μέλη / μέτοχοι).
+ *
+ * Η παρακράτηση στη διανομή **δεν** είναι ιδιότητα της εταιρείας αλλά του δικαιούχου (φυσικό ή νομικό
+ * πρόσωπο, κάτοικος ή μη — ν.4172/2013 άρθρα 48, 64). Χωρίς δικαιούχους δεν υπάρχει ποσό να υπολογιστεί·
+ * το «0 €» θα ήταν ψέμα. Το αποτέλεσμα το **λέει**, όπως η `PrepaymentBasis` λέει γιατί αυτή η προκαταβολή.
+ *
+ * - `complete` — τα ποσοστά αθροίζουν σε 100% (`isCompleteShareSum`)
+ * - `partial` — αθροίζουν σε λιγότερο/περισσότερο: τα ποσά αφορούν μόνο το `declaredPercent`
+ * - `none` — κανένας δικαιούχος: η παρακράτηση δεν υπολογίζεται
+ */
+export type DistributionCoverageStatus = 'complete' | 'partial' | 'none';
+
+export interface DistributionCoverage {
+  readonly status: DistributionCoverageStatus;
+  /** Άθροισμα των δηλωμένων ποσοστών (0 όταν `none`). */
+  readonly declaredPercent: number;
+}
+
+/**
  * Αποτέλεσμα μερισμάτων ανά μέλος
  */
 export interface MemberDividendResult {
@@ -399,6 +418,8 @@ export interface EPETaxResult {
   memberDividends: MemberDividendResult[];
   /** Συνολικός φόρος μερισμάτων (5% επί διανεμόμενων) */
   totalDividendTax: number;
+  /** Πόσο από τη διανομή καλύπτουν τα δηλωμένα μέλη */
+  distributionCoverage: DistributionCoverage;
 }
 
 // ============================================================================
@@ -449,6 +470,8 @@ export interface AETaxResult {
   shareholderDividends: ShareholderDividendResult[];
   /** Συνολικός φόρος μερισμάτων */
   totalDividendTax: number;
+  /** Πόσο από τη διανομή καλύπτουν οι δηλωμένοι μέτοχοι */
+  distributionCoverage: DistributionCoverage;
 }
 
 // ============================================================================
@@ -496,6 +519,8 @@ export interface PartnershipTaxResult {
   partnerDistributions: PartnerDistributionResult[];
   /** Συνολική παρακράτηση στη διανομή */
   totalDistributionWithholding: number;
+  /** Πόσο από τη διανομή καλύπτουν οι δηλωμένοι εταίροι */
+  distributionCoverage: DistributionCoverage;
 }
 
 // ============================================================================

@@ -103,7 +103,7 @@ export function PricingTab({ result, salePrice, t }: PricingTabProps) {
           tooltip={t('costCalculator.pricing.timeCostTooltip')}
         />
         <dd className="text-right font-medium text-destructive">
-          -{formatCurrency(result.timeCost)}
+          {formatCurrency(-result.timeCost)}
         </dd>
 
         <InfoDt

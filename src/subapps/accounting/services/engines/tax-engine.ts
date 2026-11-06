@@ -208,6 +208,7 @@ export class TaxEngine implements ITaxEngine {
         netDistribution: d.net,
       })),
       totalDistributionWithholding: result.totalWithholding,
+      distributionCoverage: result.coverage,
     };
   }
 

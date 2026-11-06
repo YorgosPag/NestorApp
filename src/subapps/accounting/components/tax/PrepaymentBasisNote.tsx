@@ -10,10 +10,10 @@
  */
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Link } from '@/lib/workspace/navigation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { PrepaymentBasis, PrepaymentReason, PrepaymentReductionRule } from '../../types/tax';
+import { SetupLink } from './SetupLink';
 
 interface PrepaymentBasisNoteProps {
   basis: PrepaymentBasis;
@@ -53,14 +53,7 @@ export function PrepaymentBasisNote({ basis }: PrepaymentBasisNoteProps) {
   return (
     <p className={cn('text-xs', colors.text.muted)}>
       {t(EXPLANATION_KEYS[basis.reason][basis.rule], values)}
-      {basis.reason === 'missing_start' && (
-        <>
-          {' '}
-          <Link href="/accounting/setup" className="underline underline-offset-2">
-            {t('setup.prepaymentBasis.goToSetup')}
-          </Link>
-        </>
-      )}
+      {basis.reason === 'missing_start' && <SetupLink>{t('setup.prepaymentBasis.goToSetup')}</SetupLink>}
     </p>
   );
 }

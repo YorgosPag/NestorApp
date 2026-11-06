@@ -308,8 +308,19 @@ export const formatCurrencyIn = (
     trailingZeroDisplay: 'stripIfInteger',
   };
 
-  return new Intl.NumberFormat(locale, currencyOptionsOf(defaultOptions, options)).format(amount);
+  const merged = currencyOptionsOf(defaultOptions, options);
+  return new Intl.NumberFormat(locale, merged).format(withoutNegativeZero(amount, merged.maximumFractionDigits ?? 2));
 };
+
+/**
+ * «-0 €» δεν είναι ποσό. Το `Intl` γράφει πρόσημο στο αρνητικό μηδέν **και** σε κάθε αρνητικό που
+ * στρογγυλεύεται σε μηδέν (`-0.004` → «-0,00 €»). Ό,τι θα εμφανιζόταν ως μηδέν γράφεται «0 €» — όπως το
+ * Excel, το Xero και το QuickBooks. Δεν χρησιμοποιείται `signDisplay: 'negative'`: είναι νεότερο του
+ * στόχου των browsers και σε παλιό browser πετά `RangeError` αντί να υποβαθμιστεί.
+ */
+function withoutNegativeZero(amount: number, fractionDigits: number): number {
+  return Math.abs(amount) < 0.5 * 10 ** -fractionDigits ? 0 : amount;
+}
 
 /**
  * Συγχώνευση με τις επιλογές του καλούντος χωρίς `RangeError`: όποιος ζητά λιγότερα δεκαδικά

@@ -26,9 +26,7 @@
 
 import type { CompanySetupInput } from '../../types/company';
 import type { Partner, Member, Shareholder, ShareholderEFKAMode } from '../../types/entity';
-
-/** ±0.01 ανοχή στρογγυλοποίησης για το άθροισμα ποσοστών. */
-const SHARE_SUM_TOLERANCE = 0.01;
+import { isCompleteShareSum } from '../../utils/share-sum';
 const VAT_PATTERN = /^\d{9}$/;
 
 function validatePartners(partners: Partner[]): string | null {
@@ -43,7 +41,7 @@ function validatePartners(partners: Partner[]): string | null {
   if (partners.length === 0) return null;
 
   const shareSum = partners.filter((p) => p.isActive).reduce((sum, p) => sum + p.profitSharePercent, 0);
-  if (Math.abs(shareSum - 100) > SHARE_SUM_TOLERANCE) {
+  if (!isCompleteShareSum(shareSum)) {
     return `active partners profitSharePercent sum must equal 100% (currently ${shareSum}%)`;
   }
   return null;
@@ -64,7 +62,7 @@ function validateMembers(members: Member[]): string | null {
   if (members.length === 0) return null;
 
   const shareSum = members.filter((m) => m.isActive).reduce((sum, m) => sum + m.dividendSharePercent, 0);
-  if (Math.abs(shareSum - 100) > SHARE_SUM_TOLERANCE) {
+  if (!isCompleteShareSum(shareSum)) {
     return `active members dividendSharePercent sum must equal 100% (currently ${shareSum}%)`;
   }
   return null;
@@ -88,7 +86,7 @@ function validateShareholders(shareholders: Shareholder[]): string | null {
   if (shareholders.length === 0) return null;
 
   const shareSum = shareholders.filter((s) => s.isActive).reduce((sum, s) => sum + s.dividendSharePercent, 0);
-  if (Math.abs(shareSum - 100) > SHARE_SUM_TOLERANCE) {
+  if (!isCompleteShareSum(shareSum)) {
     return `active shareholders dividendSharePercent sum must equal 100% (currently ${shareSum}%)`;
   }
   return null;

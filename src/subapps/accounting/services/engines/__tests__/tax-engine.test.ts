@@ -849,6 +849,45 @@ describe('TaxEngine', () => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════
+  // E2. distributionCoverage — «καλύπτουν οι δικαιούχοι τη διανομή;»
+  //     Το 0 € χωρίς δικαιούχους ήταν ψέμα (ζωντανά στην παραγωγή, 2026-11-06): το αποτέλεσμα το ΛΕΕΙ.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('distributionCoverage', () => {
+    const input = corporateInput(145_161.29, 0, 0);
+
+    it.each([
+      ['oe', (h: EntityHolder[]) => engine.calculatePartnershipTax(input, h).distributionCoverage],
+      ['epe', (h: EntityHolder[]) => engine.calculateCorporateTax(input, h).distributionCoverage],
+      ['ae', (h: EntityHolder[]) => engine.calculateAETax(input, h).distributionCoverage],
+    ] as const)('%s: no holders ⇒ none (not a computed zero)', (_entity, coverageOf) => {
+      expect(coverageOf([])).toEqual({ status: 'none', declaredPercent: 0 });
+    });
+
+    it('holders summing to 100% (within rounding tolerance) ⇒ complete', () => {
+      const thirds: EntityHolder[] = [
+        { id: 'a', name: 'A', sharePercent: 33.33 },
+        { id: 'b', name: 'B', sharePercent: 33.33 },
+        { id: 'c', name: 'C', sharePercent: 33.34 },
+      ];
+      expect(engine.calculateAETax(input, thirds).distributionCoverage).toEqual({
+        status: 'complete',
+        declaredPercent: 100,
+      });
+    });
+
+    it('holders summing to less than 100% ⇒ partial, with the declared percent', () => {
+      const partial: EntityHolder[] = [{ id: 'a', name: 'A', sharePercent: 60 }];
+      const result = engine.calculateCorporateTax(input, partial);
+
+      expect(result.distributionCoverage).toEqual({ status: 'partial', declaredPercent: 60 });
+      // Τα ποσά αφορούν μόνο το δηλωμένο 60% — γι' αυτό η οθόνη το εξηγεί.
+      expect(result.memberDividends[0]!.grossDividend).toBe(roundToTwo(result.distributedDividends * 0.6));
+      expect(result.totalDividendTax).toBe(result.memberDividends[0]!.dividendTaxAmount);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
   // F. calculateInstallments
   // ══════════════════════════════════════════════════════════════════════════
 

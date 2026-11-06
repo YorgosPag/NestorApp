@@ -73,3 +73,4 @@ grep -rn 'function formatEuro\b' src/ --include="*.ts" | grep -v intl-utils | gr
 | Date | Change |
 |------|--------|
 | 2026-03-12 | Initial implementation — 29 patterns centralized across 23 files |
+| 2026-11-06 | **Χωρίς «-0 €»**: ο `formatCurrencyIn` μηδενίζει ό,τι θα εμφανιζόταν ως μηδέν (αρνητικό μηδέν, ή αρνητικό που στρογγυλεύεται σε μηδέν στα `maximumFractionDigits`) — όπως Excel/Xero/QuickBooks. Όχι `signDisplay: 'negative'` (νεότερο του στόχου browsers, `RangeError` σε παλιούς). Σύμβαση: **αφαίρεση = `formatCurrency(-x)`**, ποτέ «-» κολλημένο μπροστά (έβγαζε «-0 €» και «--5 €»)· διορθώθηκαν `CorporateTaxBreakdown`, `interest-cost-helpers`, `interest-cost-pricing-settings`. Άγκυρα: `src/lib/__tests__/intl-currency-negative-zero.test.ts` |

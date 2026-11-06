@@ -14,6 +14,7 @@
 
 import type {
   CorporateTaxResult,
+  DistributionCoverage,
   EntityHolder,
   EntityTaxInput,
   EPETaxResult,
@@ -21,6 +22,7 @@ import type {
   MemberDividendResult,
 } from '../../../types/tax';
 import { roundToTwo } from '../../../utils/math';
+import { isCompleteShareSum } from '../../../utils/share-sum';
 import {
   getCorporateTaxRate,
   getDistributionWithholdingRate,
@@ -45,6 +47,7 @@ export interface EntityTaxComputation {
   readonly retained: number;
   readonly distributions: readonly HolderDistribution[];
   readonly totalWithholding: number;
+  readonly coverage: DistributionCoverage;
 }
 
 /** Ο φόρος της οντότητας: 22% · προκαταβολή κατά την έναρξη · τέλος επιτηδεύματος. */
@@ -86,6 +89,13 @@ function distributionsOf(
   });
 }
 
+/** Πόσο από τη διανομή καλύπτουν οι δηλωμένοι δικαιούχοι — βλ. `DistributionCoverage`. */
+function distributionCoverageOf(holders: readonly EntityHolder[]): DistributionCoverage {
+  if (holders.length === 0) return { status: 'none', declaredPercent: 0 };
+  const declaredPercent = roundToTwo(holders.reduce((sum, h) => sum + h.sharePercent, 0));
+  return { status: isCompleteShareSum(declaredPercent) ? 'complete' : 'partial', declaredPercent };
+}
+
 /** Ο ΕΝΑΣ υπολογισμός φόρου οντότητας — ΟΕ, ΕΠΕ, ΑΕ. */
 export function computeEntityTax(
   entityType: LegalEntityType,
@@ -105,6 +115,7 @@ export function computeEntityTax(
     retained: roundToTwo(profitAfterTax - distributed),
     distributions,
     totalWithholding: roundToTwo(distributions.reduce((sum, d) => sum + d.withholdingAmount, 0)),
+    coverage: distributionCoverageOf(holders),
   };
 }
 
@@ -137,5 +148,6 @@ export function dividendResultShellOf(result: EntityTaxComputation): DividendRes
     distributedDividends: result.distributed,
     retainedEarnings: result.retained,
     totalDividendTax: result.totalWithholding,
+    distributionCoverage: result.coverage,
   };
 }

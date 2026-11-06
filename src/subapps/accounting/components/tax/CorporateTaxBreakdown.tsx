@@ -14,8 +14,15 @@
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/intl-utils';
-import type { EPETaxResult, AETaxResult, PartnershipTaxResult, LegalEntityType } from '../../types/tax';
+import type {
+  EPETaxResult,
+  AETaxResult,
+  PartnershipTaxResult,
+  LegalEntityType,
+  DistributionCoverage,
+} from '../../types/tax';
 import { PrepaymentBasisNote } from './PrepaymentBasisNote';
+import { DistributionCoverageNote } from './DistributionCoverageNote';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -47,6 +54,7 @@ interface DistributionSummary {
   totalWithholding: number;
   retainedEarnings: number;
   items: DistributionItem[];
+  coverage: DistributionCoverage;
 }
 
 /** Ετικέτες ανά νομική μορφή — η ΟΕ διανέμει «κέρδη», όχι «μερίσματα». */
@@ -80,6 +88,12 @@ const LABEL_KEYS: Readonly<Record<LegalEntityType, EntityLabels>> = {
   ae: { ...DIVIDEND_LABELS, tax: 'setup.corporateTax.titleAE', distributions: 'setup.corporateTax.shareholderDividends' },
 };
 
+/**
+ * Σήμα «δεν υπολογίζεται» — η λογιστική σύμβαση για ποσό που δεν προκύπτει (όχι «0 €», που θα σήμαινε
+ * «υπολογίστηκε και είναι μηδέν»). Ο αναγνώστης οθόνης ακούει το μεταφρασμένο κείμενο, όχι την παύλα.
+ */
+const NOT_COMPUTED_MARK = '—';
+
 function distributionSummaryOf(props: CorporateTaxBreakdownProps): DistributionSummary {
   switch (props.entityType) {
     case 'oe': {
@@ -87,6 +101,7 @@ function distributionSummaryOf(props: CorporateTaxBreakdownProps): DistributionS
       return {
         profitAfterTax: r.profitAfterTax, distributed: r.distributedProfits,
         totalWithholding: r.totalDistributionWithholding, retainedEarnings: r.retainedEarnings,
+        coverage: r.distributionCoverage,
         items: r.partnerDistributions.map((d) => ({
           id: d.partnerId, name: d.partnerName, sharePercent: d.profitSharePercent,
           gross: d.grossDistribution, withholding: d.withholdingAmount, net: d.netDistribution,
@@ -98,6 +113,7 @@ function distributionSummaryOf(props: CorporateTaxBreakdownProps): DistributionS
       return {
         profitAfterTax: r.profitAfterTax, distributed: r.distributedDividends,
         totalWithholding: r.totalDividendTax, retainedEarnings: r.retainedEarnings,
+        coverage: r.distributionCoverage,
         items: r.memberDividends.map((d) => ({
           id: d.memberId, name: d.memberName, sharePercent: d.dividendSharePercent,
           gross: d.grossDividend, withholding: d.dividendTaxAmount, net: d.netDividend,
@@ -109,6 +125,7 @@ function distributionSummaryOf(props: CorporateTaxBreakdownProps): DistributionS
       return {
         profitAfterTax: r.profitAfterTax, distributed: r.distributedDividends,
         totalWithholding: r.totalDividendTax, retainedEarnings: r.retainedEarnings,
+        coverage: r.distributionCoverage,
         items: r.shareholderDividends.map((d) => ({
           id: d.shareholderId, name: d.shareholderName, sharePercent: d.dividendSharePercent,
           gross: d.grossDividend, withholding: d.dividendTaxAmount, net: d.netDividend,
@@ -120,7 +137,9 @@ function distributionSummaryOf(props: CorporateTaxBreakdownProps): DistributionS
 
 /** ΟΕ με απλογραφικά: παρακράτηση 0% — τα κέρδη φορολογήθηκαν μόνο στο όνομα της εταιρείας (ADR-ACC-024 §6.1 γ). */
 function isUnwithheldPartnership(props: CorporateTaxBreakdownProps): boolean {
-  return props.entityType === 'oe' && props.result.partnerDistributions.every((d) => d.withholdingRate === 0);
+  // Χωρίς εταίρους το `every` είναι κενά αληθές — η εξήγηση θα έλεγε «απλογραφικά» και σε διπλογραφική ΟΕ.
+  if (props.entityType !== 'oe' || props.result.distributionCoverage.status === 'none') return false;
+  return props.result.partnerDistributions.every((d) => d.withholdingRate === 0);
 }
 
 // ============================================================================
@@ -149,11 +168,11 @@ export function CorporateTaxBreakdown(props: CorporateTaxBreakdownProps) {
             </div>
             <div className="flex justify-between">
               <dt className={colors.text.muted}>{t('tax.totalExpenses')}</dt>
-              <dd className="font-medium">-{formatCurrency(corporateTax.deductibleExpenses)}</dd>
+              <dd className="font-medium">{formatCurrency(-corporateTax.deductibleExpenses)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className={colors.text.muted}>{t('setup.efkaLabel')}</dt>
-              <dd className="font-medium">-{formatCurrency(corporateTax.efkaContributions)}</dd>
+              <dd className="font-medium">{formatCurrency(-corporateTax.efkaContributions)}</dd>
             </div>
             <hr />
             <div className="flex justify-between">
@@ -203,13 +222,21 @@ export function CorporateTaxBreakdown(props: CorporateTaxBreakdownProps) {
             </div>
             <div className="flex justify-between">
               <dt className={colors.text.muted}>{t(labels.withholding)}</dt>
-              <dd className="font-medium text-destructive">{formatCurrency(summary.totalWithholding)}</dd>
+              {summary.coverage.status === 'none' ? (
+                <dd className={cn('font-medium', colors.text.muted)}>
+                  <span aria-hidden="true">{NOT_COMPUTED_MARK}</span>
+                  <span className="sr-only">{t('setup.distributionCoverage.notComputed')}</span>
+                </dd>
+              ) : (
+                <dd className="font-medium text-destructive">{formatCurrency(summary.totalWithholding)}</dd>
+              )}
             </div>
             <div className="flex justify-between">
               <dt className={colors.text.muted}>{t('setup.corporateTax.retainedEarnings')}</dt>
               <dd className="font-medium">{formatCurrency(summary.retainedEarnings)}</dd>
             </div>
           </dl>
+          <DistributionCoverageNote entityType={props.entityType} coverage={summary.coverage} />
           {isUnwithheldPartnership(props) && (
             <p className={cn('mt-2 text-xs', colors.text.muted)}>{t('setup.corporateTax.noWithholdingSimplified')}</p>
           )}

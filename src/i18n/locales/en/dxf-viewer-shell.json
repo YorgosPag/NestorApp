@@ -455,7 +455,7 @@
       "leftOut": "{count} undecided will not be written."
     },
     "approve": "Create walls ({count})",
-    "leftOut": "{count} walls will not be written: their thickness group is not confirmed.",
+    "leftOut": "{count, plural, one {# wall will not be written: its thickness group is not confirmed.} other {# walls will not be written: their thickness group is not confirmed.}}",
     "image": {
       "or": "Or, without a sample:",
       "start": "Recognise from the background image",
@@ -475,7 +475,7 @@
         "medium": "Medium confidence",
         "low": "Low confidence: check the image"
       },
-      "lowExcluded": "{count} low-confidence lines are not proposed as walls — check the image."
+      "lowExcluded": "{count, plural, one {# low-confidence line is not proposed as a wall — check the image.} other {# low-confidence lines are not proposed as walls — check the image.}}"
     },
     "notice": {
       "no-line-opening": "No line found at that point. Click on a door or window line or arc.",

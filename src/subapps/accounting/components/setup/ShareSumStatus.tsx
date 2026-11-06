@@ -13,13 +13,7 @@
  */
 
 import { AlertTriangle } from 'lucide-react';
-
-/** Ανοχή στρογγυλοποίησης: ποσοστά με δύο δεκαδικά αθροίζουν συχνά σε 99.999… */
-const SHARE_SUM_TOLERANCE = 0.01;
-
-function isCompleteShareSum(sum: number): boolean {
-  return Math.abs(sum - 100) <= SHARE_SUM_TOLERANCE;
-}
+import { isCompleteShareSum } from '../../utils/share-sum';
 
 interface ShareSumStatusProps {
   readonly sum: number;
