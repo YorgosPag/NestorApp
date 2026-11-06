@@ -29,6 +29,15 @@ export interface PlanReaderInput {
   readonly segments: readonly PlanViewSegment[];
 }
 
+/**
+ * Ό,τι χρειάζεται η **εκτίμηση** κόστους (Δ16 #2): μέγεθος εικόνας και τμήματα, όχι τα bytes. Έτσι ο προέλεγχος της
+ * Φ5.3α εκτιμά με την **ίδια** συνάρτηση πριν υπάρξει εικόνα, και το {@link PlanReaderInput} περνά αυτούσιο.
+ */
+export interface PlanReaderEstimateInput {
+  readonly image: Pick<PlanReaderImage, 'widthPx' | 'heightPx'>;
+  readonly segments: readonly PlanViewSegment[];
+}
+
 /** Μετρημένη χρήση μίας κλήσης. `costUsd: null` ⇒ μοντέλο χωρίς γραμμή τιμής: «δεν ξέρω», ποτέ «δωρεάν». */
 export interface PlanReaderUsage {
   readonly inputTokens: number;
@@ -60,6 +69,6 @@ export type PlanReaderOutcome =
 export interface PlanReader {
   readonly model: string;
   /** Το εκτιμώμενο κόστος **πριν** την κλήση (Δ16 #2). `null` ⇒ άγνωστο ⇒ η κλήση δεν επιτρέπεται. */
-  readonly estimateCostUsd: (input: PlanReaderInput) => number | null;
+  readonly estimateCostUsd: (input: PlanReaderEstimateInput) => number | null;
   readonly read: (input: PlanReaderInput) => Promise<PlanReaderOutcome>;
 }

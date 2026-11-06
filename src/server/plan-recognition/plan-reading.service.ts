@@ -6,11 +6,14 @@ import 'server-only';
  *
  * Σειρά, και γιατί έτσι:
  * 1. **Ιδιοκτησία** του υποβάθρου στην εταιρεία (Δ11): η εικόνα δεν φεύγει ποτέ για ξένο ή ανύπαρκτο υπόβαθρο.
- * 2. **Κλειδί** από ό,τι **έλαβε** ο διακομιστής (bytes + τμήματα), το αρχείο και τη σελίδα του υποβάθρου, το μοντέλο και
+ * 2. **Εταιρεία** (Δ15 #1): διακόπτης του διαχειριστή + νομική πύλη, **πριν** από την κρυφή μνήμη (Φ5.3α, πρακτική
+ *    Figma: κλειστό AI = καμία λειτουργία AI, ούτε επιστροφή ήδη πληρωμένης ανάγνωσης).
+ * 3. **Κλειδί** από ό,τι **έλαβε** ο διακομιστής (bytes + τμήματα), το αρχείο και τη σελίδα του υποβάθρου, το μοντέλο και
  *    το σχήμα. Τίποτα από αυτά δεν το δηλώνει ο πελάτης.
- * 3. **Κρυφή μνήμη πριν από το όριο**: μια ήδη πληρωμένη ανάγνωση επιστρέφεται ακόμη κι αν το όριο του μήνα τελείωσε.
- * 4. **Όριο** από την εκτίμηση (Δ16), **πριν** από κάθε μίσθωση.
- * 5. **Μία-πτήση** και κλήση· τελικό έγγραφο + δαπάνη σε μία δέσμη.
+ * 4. **Κρυφή μνήμη πριν από το κόστος**: μια ήδη πληρωμένη ανάγνωση επιστρέφεται ακόμη κι αν το όριο του μήνα τελείωσε.
+ * 5. **Όριο κόστους** από την εκτίμηση (Δ16), **πριν** από κάθε μίσθωση.
+ * 6. **Μία-πτήση** και κλήση· τελικό έγγραφο + δαπάνη σε μία δέσμη.
+ * Ο **προέλεγχος** (`previewPlanReadingForBackground`) κάνει τα 1, 2, 5 χωρίς καμία εγγραφή.
  * 🔒 Καμία εγγραφή στη σκηνή: η ανάγνωση είναι **πρόταση** (αρχή 1). Η εγγραφή είναι η Φ5.
  *
  * @module server/plan-recognition/plan-reading.service
@@ -22,10 +25,21 @@ import { BackgroundNotFoundError } from '@/services/floorplan-background/backgro
 import { FloorplanBackgroundService } from '@/services/floorplan-background/floorplan-background.service';
 import { planReadingKey } from '@/subapps/dxf-viewer/bim/plan-recognition/plan-reading-key';
 import type { PlanReader, PlanReaderImage, PlanReaderInput } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reader-port';
-import type { PlanReadingRequest, PlanReadingRouteResult } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-contract';
+import type {
+  PlanReadingPreflightRequest,
+  PlanReadingPreflightResult,
+  PlanReadingRequest,
+  PlanReadingRouteResult,
+} from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-contract';
+import type { PlanReadingUnavailableReason } from '@/subapps/dxf-viewer/bim/plan-recognition/plan-recognition-types';
 import { PLAN_READING_SCHEMA_VERSION } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-wire';
 import { createPlanReader } from './openai-plan-reader.server';
-import { resolvePlanReadingAllowance, type PlanReadingAllowance } from './plan-reading-allowance.server';
+import {
+  resolvePlanReadingAllowance,
+  resolvePlanReadingCompanyRefusal,
+  resolvePlanReadingCostAllowance,
+  type PlanReadingAllowance,
+} from './plan-reading-allowance.server';
 import {
   claimPlanReading,
   recordPlanReadingCacheHit,
@@ -48,7 +62,10 @@ export interface PlanReadingCommand {
 export interface PlanReadingDeps {
   readonly background: (id: string, companyId: string) => Promise<{ readonly fileId: string; readonly pageNumber: number } | null>;
   readonly reader: () => PlanReader | null;
-  readonly allowance: (companyId: string, estimateUsd: number | null) => Promise<PlanReadingAllowance>;
+  /** Βήμα εταιρείας (διακόπτης + νομική πύλη): `null` = επιτρέπει. Ρωτιέται **πριν** από την κρυφή μνήμη (Φ5.3α). */
+  readonly companyRefusal: (companyId: string) => Promise<PlanReadingUnavailableReason | null>;
+  /** Βήμα κόστους (όριο σελίδας + μήνα): **μετά** την κρυφή μνήμη, γιατί η αποθηκευμένη ανάγνωση είναι ήδη πληρωμένη. */
+  readonly costAllowance: (companyId: string, estimateUsd: number | null) => Promise<PlanReadingAllowance>;
   readonly claim: typeof claimPlanReading;
   readonly settle: typeof settlePlanReading;
   readonly cacheHit: (companyId: string) => Promise<void>;
@@ -61,7 +78,8 @@ const DEFAULT_DEPS: PlanReadingDeps = {
     return bg && { fileId: bg.fileId, pageNumber: bg.providerMetadata.pdfPageNumber ?? 1 };
   },
   reader: () => createPlanReader(),
-  allowance: (companyId, estimateUsd) => resolvePlanReadingAllowance(companyId, estimateUsd),
+  companyRefusal: (companyId) => resolvePlanReadingCompanyRefusal(companyId),
+  costAllowance: (companyId, estimateUsd) => resolvePlanReadingCostAllowance(companyId, estimateUsd),
   claim: claimPlanReading,
   settle: settlePlanReading,
   cacheHit: recordPlanReadingCacheHit,
@@ -120,6 +138,9 @@ export async function readPlanForBackground(cmd: PlanReadingCommand, deps: PlanR
   if (!background) throw new BackgroundNotFoundError(cmd.backgroundId);
   const reader = deps.reader();
   if (!reader) return { status: 'unavailable', reason: 'reader-unconfigured', readingId: null };
+  // Βήμα 2: η εταιρεία, ΠΡΙΝ από την κρυφή μνήμη (Figma: κλειστό AI = καμία λειτουργία AI, ούτε πληρωμένη ανάγνωση).
+  const refusal = await deps.companyRefusal(cmd.companyId);
+  if (refusal !== null) return { status: 'unavailable', reason: refusal, readingId: null };
   const sent = await sentProofOf(cmd);
   const inputHash = await sha256HexOfText(`${sent.imageSha256}:${sent.segmentsSha256}`);
   const readingKey = planReadingKey({ ...background, inputHash, model: reader.model, schemaVersion: PLAN_READING_SCHEMA_VERSION });
@@ -134,11 +155,49 @@ export async function readPlanForBackground(cmd: PlanReadingCommand, deps: PlanR
     schemaVersion: PLAN_READING_SCHEMA_VERSION,
   };
   const input: PlanReaderInput = { image: cmd.image, segments: cmd.request.segments };
-  // Ήδη πληρωμένη; Η μία-πτήση το ξαναρωτά μέσα στη συναλλαγή, αλλά εδώ κρίνεται πριν από το όριο (βήμα 3).
+  // Ήδη πληρωμένη; Η μία-πτήση το ξαναρωτά μέσα στη συναλλαγή, αλλά εδώ κρίνεται πριν από το όριο (βήμα 4).
   const early = await fromClaim(await deps.claim(identity, sent, cmd.uid, deps.now(), { probeOnly: true }), identity, deps);
   if (early) return early;
-  const allowance = await deps.allowance(cmd.companyId, reader.estimateCostUsd(input));
+  const allowance = await deps.costAllowance(cmd.companyId, reader.estimateCostUsd(input));
   if (!allowance.allowed) return { status: 'unavailable', reason: allowance.reason, readingId: null };
   const claimed = await fromClaim(await deps.claim(identity, sent, cmd.uid, deps.now()), identity, deps);
   return claimed ?? readAndSettle(reader, input, identity, deps);
+}
+
+export interface PlanReadingPreflightCommand {
+  readonly companyId: string;
+  readonly backgroundId: string;
+  readonly request: PlanReadingPreflightRequest;
+}
+
+/** Ό,τι χρειάζεται ο προέλεγχος από τις εξαρτήσεις της ροής: οι **ίδιες** συναρτήσεις, κανένας δεύτερος κανόνας. */
+export type PlanReadingPreflightDeps = Pick<PlanReadingDeps, 'background' | 'reader'> & {
+  readonly allowance: (companyId: string, estimateUsd: number | null) => Promise<PlanReadingAllowance>;
+};
+
+const DEFAULT_PREFLIGHT_DEPS: PlanReadingPreflightDeps = {
+  background: DEFAULT_DEPS.background,
+  reader: DEFAULT_DEPS.reader,
+  allowance: (companyId, estimateUsd) => resolvePlanReadingAllowance(companyId, estimateUsd),
+};
+
+/**
+ * **Προέλεγχος** (ADR-929 Φ5.3α): «επιτρέπεται, πόσο θα κοστίσει, τι μένει;» **πριν** από την αποστολή, με την ίδια
+ * εκτίμηση και τον ίδιο κανόνα με την ανάγνωση. 🔒 **Μηδέν εγγραφές**: ούτε μίσθωση, ούτε δαπάνη, ούτε έγγραφο.
+ * @throws {BackgroundNotFoundError} για ξένο ή ανύπαρκτο υπόβαθρο, όπως η ανάγνωση (ADR-742).
+ */
+export async function previewPlanReadingForBackground(
+  cmd: PlanReadingPreflightCommand,
+  deps: PlanReadingPreflightDeps = DEFAULT_PREFLIGHT_DEPS,
+): Promise<PlanReadingPreflightResult> {
+  const background = await deps.background(cmd.backgroundId, cmd.companyId);
+  if (!background) throw new BackgroundNotFoundError(cmd.backgroundId);
+  const reader = deps.reader();
+  if (!reader) return { status: 'unavailable', reason: 'reader-unconfigured' };
+  const estimateUsd = reader.estimateCostUsd(cmd.request);
+  const allowance = await deps.allowance(cmd.companyId, estimateUsd);
+  if (!allowance.allowed) return { status: 'unavailable', reason: allowance.reason };
+  // `allowed` ⇒ η εκτίμηση υπήρχε (`null` δίνει `cost-unknown`)· ο έλεγχος κρατά τον τύπο τίμιο χωρίς `!`.
+  if (estimateUsd === null) return { status: 'unavailable', reason: 'cost-unknown' };
+  return { status: 'allowed', model: reader.model, estimateUsd, remainingUsd: allowance.remainingUsd, monthlyCapUsd: allowance.monthlyCapUsd };
 }

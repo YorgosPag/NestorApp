@@ -14,6 +14,7 @@
 import { z } from 'zod/v4';
 import type { PlanReadingUnavailableReason } from '../plan-recognition-types';
 import type { PlanReaderImageMime } from './plan-reader-port';
+import { PLAN_READING_MAX_VIEW_PIXELS } from './plan-reading-view-raster';
 import type { PlanReadingDropped, PlanViewReading } from './plan-reading-wire';
 
 export const PLAN_READING_IMAGE_FIELD = 'image';
@@ -66,4 +67,40 @@ export type PlanReadingRouteResult = PlanReadingRouteRead | PlanReadingRouteUnav
 export interface PlanReadingRouteResponse {
   readonly success: true;
   readonly result: PlanReadingRouteResult;
+}
+
+// ─── Προέλεγχος (ADR-929 Φ5.3α) ──────────────────────────────────────────────
+//
+// `POST /api/floorplan-backgrounds/[id]/plan-reading/preflight`: «επιτρέπεται, πόσο θα κοστίσει, τι μένει;» **πριν**
+// πατήσει ο άνθρωπος «Αποστολή» (πρακτική Autodesk Generative Design / Adobe Firefly). Ο πελάτης στέλνει μόνο το
+// **μέγεθος** της όψης και τα τμήματα, όχι εικόνα.
+// 🔑 Πληροφορία, όχι δέσμευση: η αποστολή ξαναεκτιμά από τα **πραγματικά** bytes και ξαναρωτά το όριο. Ο διακομιστής
+// δεν χρεώνει ποτέ με βάση ό,τι δήλωσε ο πελάτης εδώ.
+
+const pixelSide = z.number().int().positive().max(PLAN_READING_MAX_VIEW_PIXELS);
+
+export const planReadingPreflightRequestSchema = z.strictObject({
+  image: z
+    .strictObject({ widthPx: pixelSide, heightPx: pixelSide })
+    .refine((i) => i.widthPx * i.heightPx <= PLAN_READING_MAX_VIEW_PIXELS, { message: 'view exceeds the pixel budget' }),
+  segments: z.array(viewSegment).max(PLAN_READING_MAX_SEGMENTS),
+});
+
+export type PlanReadingPreflightRequest = z.infer<typeof planReadingPreflightRequestSchema>;
+
+export type PlanReadingPreflightResult =
+  | {
+      readonly status: 'allowed';
+      readonly model: string;
+      /** Η εκτίμηση της σελίδας, με την **ίδια** συνάρτηση που κρίνει την αποστολή (Δ16 #2). */
+      readonly estimateUsd: number;
+      /** Ό,τι μένει από το όριο του μήνα της εταιρείας **πριν** από αυτή την ανάγνωση. */
+      readonly remainingUsd: number;
+      readonly monthlyCapUsd: number;
+    }
+  | { readonly status: 'unavailable'; readonly reason: PlanReadingUnavailableReason };
+
+export interface PlanReadingPreflightResponse {
+  readonly success: true;
+  readonly result: PlanReadingPreflightResult;
 }

@@ -19,6 +19,7 @@ import type { ResponsesReasoningEffort, ResponsesRequestConfig, ResponsesUsage }
 import { readDocumentAnalyzerTransport, requestStructuredDocument } from '@/services/ai/structured-document-request';
 import type {
   PlanReader,
+  PlanReaderEstimateInput,
   PlanReaderInput,
   PlanReaderOutcome,
   PlanReaderUsage,
@@ -53,7 +54,7 @@ class OpenAIPlanReader implements PlanReader {
     private readonly reasoningEffort: ResponsesReasoningEffort | undefined,
   ) {}
 
-  estimateCostUsd(input: PlanReaderInput): number | null {
+  estimateCostUsd(input: PlanReaderEstimateInput): number | null {
     const imageTokens = imageInputTokens(this.model, input.image.widthPx, input.image.heightPx);
     if (imageTokens === null) return null;
     const textChars = PLAN_READING_SYSTEM_PROMPT.length + planReadingUserText(input.segments).length;

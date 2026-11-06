@@ -27,7 +27,7 @@ import type { PlanReadingUnavailableReason } from '@/subapps/dxf-viewer/bim/plan
 export const PLAN_READING_USAGE_CHANNEL = 'plan-reading';
 
 export type PlanReadingAllowance =
-  | { readonly allowed: true; readonly remainingUsd: number }
+  | { readonly allowed: true; readonly remainingUsd: number; readonly monthlyCapUsd: number }
   | { readonly allowed: false; readonly reason: PlanReadingUnavailableReason };
 
 export interface PlanReadingAllowanceDeps {
@@ -47,8 +47,14 @@ export const DEFAULT_PLAN_READING_ALLOWANCE_DEPS: PlanReadingAllowanceDeps = {
   },
 };
 
-/** Ο έλεγχος της εταιρείας: `null` = επιτρέπει, αλλιώς ο λόγος της άρνησης. */
-async function companyRefusal(companyId: string, deps: PlanReadingAllowanceDeps): Promise<PlanReadingUnavailableReason | null> {
+/**
+ * **Βήμα 1 — η εταιρεία** (Δ15 #1): `null` = επιτρέπει, αλλιώς ο λόγος της άρνησης. Εξάγεται γιατί η ροή το ρωτά
+ * **πριν** από την κρυφή μνήμη (Φ5.3α, πρακτική Figma: κλειστό AI = καμία λειτουργία AI, ούτε ήδη πληρωμένη ανάγνωση).
+ */
+export async function resolvePlanReadingCompanyRefusal(
+  companyId: string,
+  deps: PlanReadingAllowanceDeps = DEFAULT_PLAN_READING_ALLOWANCE_DEPS,
+): Promise<PlanReadingUnavailableReason | null> {
   let status: AiPurposeStatus;
   try {
     status = await deps.companyPurpose(companyId);
@@ -60,14 +66,15 @@ async function companyRefusal(companyId: string, deps: PlanReadingAllowanceDeps)
   return status.effective ? null : 'ai-disabled-for-company';
 }
 
-/** `estimateUsd: null` ⇒ το κόστος δεν εκτιμάται ⇒ η κλήση δεν γίνεται (κανένα κόστος δεν μαντεύεται). */
-export async function resolvePlanReadingAllowance(
+/**
+ * **Βήμα 2 — το κόστος** (Δ16): όριο σελίδας και μήνα. Μόνο του **δεν** αρκεί: ο καλών έχει ήδη ρωτήσει την εταιρεία
+ * ({@link resolvePlanReadingCompanyRefusal}). `estimateUsd: null` ⇒ το κόστος δεν εκτιμάται ⇒ η κλήση δεν γίνεται.
+ */
+export async function resolvePlanReadingCostAllowance(
   companyId: string,
   estimateUsd: number | null,
   deps: PlanReadingAllowanceDeps = DEFAULT_PLAN_READING_ALLOWANCE_DEPS,
 ): Promise<PlanReadingAllowance> {
-  const refusal = await companyRefusal(companyId, deps);
-  if (refusal !== null) return { allowed: false, reason: refusal };
   if (estimateUsd === null) return { allowed: false, reason: 'cost-unknown' };
   if (estimateUsd > deps.limits.pageCapUsd) return { allowed: false, reason: 'page-cost-exceeds-cap' };
   let spent: number;
@@ -76,6 +83,18 @@ export async function resolvePlanReadingAllowance(
   } catch {
     return { allowed: false, reason: 'allowance-unverifiable' };
   }
-  const remainingUsd = deps.limits.monthlyCapUsd - spent;
-  return remainingUsd >= estimateUsd ? { allowed: true, remainingUsd } : { allowed: false, reason: 'allowance-exhausted' };
+  const { monthlyCapUsd } = deps.limits;
+  const remainingUsd = monthlyCapUsd - spent;
+  return remainingUsd >= estimateUsd ? { allowed: true, remainingUsd, monthlyCapUsd } : { allowed: false, reason: 'allowance-exhausted' };
+}
+
+/** Η πλήρης απάντηση (εταιρεία, μετά κόστος): ο **ένας** κανόνας, σύνθεση των δύο βημάτων. */
+export async function resolvePlanReadingAllowance(
+  companyId: string,
+  estimateUsd: number | null,
+  deps: PlanReadingAllowanceDeps = DEFAULT_PLAN_READING_ALLOWANCE_DEPS,
+): Promise<PlanReadingAllowance> {
+  const refusal = await resolvePlanReadingCompanyRefusal(companyId, deps);
+  if (refusal !== null) return { allowed: false, reason: refusal };
+  return resolvePlanReadingCostAllowance(companyId, estimateUsd, deps);
 }

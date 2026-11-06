@@ -944,6 +944,10 @@ export const API_ROUTES = {
   // ── Floorplan Backgrounds (ADR-340) ───────────────────────────────────
   FLOORPLAN_BACKGROUNDS: {
     CALIBRATE: (id: string) => `/api/floorplan-backgrounds/${id}/calibrate` as const,
+    /** ADR-929 Φ3 — ανάγνωση κάτοψης (multipart: όψη + τμήματα). */
+    PLAN_READING: (id: string) => `/api/floorplan-backgrounds/${id}/plan-reading` as const,
+    /** ADR-929 Φ5.3α — προέλεγχος: εκτίμηση + υπόλοιπο πριν την αποστολή, χωρίς εικόνα. */
+    PLAN_READING_PREFLIGHT: (id: string) => `/api/floorplan-backgrounds/${id}/plan-reading/preflight` as const,
   },
 
   // ── Properties ────────────────────────────────────────────────────────

@@ -1497,6 +1497,7 @@
       "file": "src/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reader-port.ts",
       "symbols": [
         "PlanReader",
+        "PlanReaderEstimateInput",
         "PlanReaderFailure",
         "PlanReaderImage",
         "PlanReaderImageMime",
@@ -1513,12 +1514,16 @@
         "PLAN_READING_IMAGE_MIMES",
         "PLAN_READING_MAX_IMAGE_BYTES",
         "PLAN_READING_REQUEST_FIELD",
+        "PlanReadingPreflightRequest",
+        "PlanReadingPreflightResponse",
+        "PlanReadingPreflightResult",
         "PlanReadingRequest",
         "PlanReadingRouteResponse",
         "PlanReadingRouteResult",
+        "planReadingPreflightRequestSchema",
         "planReadingRequestSchema"
       ],
-      "reason": "Το συμβόλαιο multipart της διαδρομής ανάγνωσης (Δ11). ADR-929 Φ3 — ο αναγνώστης κάτοψης ζει στον διακομιστή (`src/server/plan-recognition/`, κλειδί OpenAI, Admin SDK) και η διαδρομή του στο `src/app/api/floorplan-backgrounds/[id]/plan-reading/`· ο πελάτης (Φ5) στέλνει και διαβάζει το ίδιο συμβόλαιο. Ένα συμβόλαιο, δύο πλευρές: αντίγραφο στον διακομιστή θα απέκλινε σιωπηλά από τον πελάτη."
+      "reason": "Το συμβόλαιο multipart της διαδρομής ανάγνωσης (Δ11) και του προελέγχου της (Φ5.3α: εκτίμηση + υπόλοιπο πριν την αποστολή, ίδιο `viewSegment`). ADR-929 Φ3 — ο αναγνώστης κάτοψης ζει στον διακομιστή (`src/server/plan-recognition/`, κλειδί OpenAI, Admin SDK) και η διαδρομή του στο `src/app/api/floorplan-backgrounds/[id]/plan-reading/`· ο πελάτης (Φ5) στέλνει και διαβάζει το ίδιο συμβόλαιο. Ένα συμβόλαιο, δύο πλευρές: αντίγραφο στον διακομιστή θα απέκλινε σιωπηλά από τον πελάτη."
     },
     {
       "file": "src/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-prompt.ts",

@@ -14,10 +14,21 @@ import { BackgroundNotFoundError } from '@/services/floorplan-background/backgro
 import type { PlanReader, PlanReaderOutcome } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reader-port';
 import type { PlanReadingRequest } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-contract';
 import type { PlanViewReading } from '@/subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-wire';
-import { DEFAULT_PLAN_READING_ALLOWANCE_DEPS, resolvePlanReadingAllowance, type PlanReadingAllowanceDeps } from '../plan-reading-allowance.server';
+import {
+  DEFAULT_PLAN_READING_ALLOWANCE_DEPS,
+  resolvePlanReadingAllowance,
+  resolvePlanReadingCompanyRefusal,
+  resolvePlanReadingCostAllowance,
+  type PlanReadingAllowanceDeps,
+} from '../plan-reading-allowance.server';
 import { readAiPurposeStatus } from '@/server/company/company-ai-processing.server';
 import type { AiPurposeStatus } from '@/types/company-ai-processing';
-import { readPlanForBackground, type PlanReadingDeps } from '../plan-reading.service';
+import {
+  previewPlanReadingForBackground,
+  readPlanForBackground,
+  type PlanReadingDeps,
+  type PlanReadingPreflightDeps,
+} from '../plan-reading.service';
 import { claimPlanReading, recordPlanReadingCacheHit, settlePlanReading, PLAN_READING_LEASE_MS } from '../plan-reading-store.server';
 
 const fake = new FakeFirestore();
@@ -66,7 +77,8 @@ function deps(reader: PlanReader | null, overrides: Partial<PlanReadingDeps> = {
   return {
     background: async (id, companyId) => (id === 'rbg_1' && companyId === COMPANY ? { fileId: 'file_1', pageNumber: 1 } : null),
     reader: () => reader,
-    allowance: (companyId, estimate) => resolvePlanReadingAllowance(companyId, estimate, DISCLOSED_DEPS),
+    companyRefusal: (companyId) => resolvePlanReadingCompanyRefusal(companyId, DISCLOSED_DEPS),
+    costAllowance: (companyId, estimate) => resolvePlanReadingCostAllowance(companyId, estimate, DISCLOSED_DEPS),
     claim: claimPlanReading,
     settle: settlePlanReading,
     cacheHit: recordPlanReadingCacheHit,
@@ -124,8 +136,23 @@ describe('readPlanForBackground', () => {
   it('a cached reading is returned even when the monthly allowance is exhausted (already paid)', async () => {
     const reader = fakeReader();
     await readPlanForBackground(command(), deps(reader));
-    const exhausted = deps(reader, { allowance: async () => ({ allowed: false, reason: 'allowance-exhausted' }) });
+    const exhausted = deps(reader, { costAllowance: async () => ({ allowed: false, reason: 'allowance-exhausted' }) });
     expect(await readPlanForBackground(command(), exhausted)).toMatchObject({ status: 'read', cacheHit: true });
+  });
+
+  // Φ5.3α — πρακτική Figma: κλειστό AI = καμία λειτουργία AI, ούτε η ήδη πληρωμένη ανάγνωση από την κρυφή μνήμη.
+  it.each([
+    ['ai-disabled-for-company'],
+    ['ai-legal-disclosure-pending'],
+    ['allowance-unverifiable'],
+  ] as const)('a company refusal wins over a cached reading: %s', async (reason) => {
+    const reader = fakeReader();
+    await readPlanForBackground(command(), deps(reader));
+    const refused = deps(reader, { companyRefusal: async () => reason });
+    expect(await readPlanForBackground(command(), refused)).toEqual({ status: 'unavailable', reason, readingId: null });
+    expect(reader.calls).toBe(1);
+    // Καμία καταγραφή «εξοικονόμησης»: δεν δόθηκε τίποτα.
+    expect(spendDoc()).toMatchObject({ cacheHits: 0 });
   });
 
   /** Αναγνώστης που «κολλάει» στην κλήση· το `started` λύνεται όταν η μίσθωση έχει ήδη γραφτεί. */
@@ -185,7 +212,7 @@ describe('resolvePlanReadingAllowance', () => {
   const open = async (): Promise<AiPurposeStatus> => OPEN;
 
   it('allows within both caps and reports what remains', async () => {
-    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, companyPurpose: open, monthlySpendUsd: async () => 0.5 })).toEqual({ allowed: true, remainingUsd: 0.5 });
+    expect(await resolvePlanReadingAllowance(COMPANY, 0.1, { limits, companyPurpose: open, monthlySpendUsd: async () => 0.5 })).toEqual({ allowed: true, remainingUsd: 0.5, monthlyCapUsd: 1 });
   });
 
   it('refuses when the month cannot cover the estimate', async () => {
@@ -218,6 +245,67 @@ describe('resolvePlanReadingAllowance', () => {
     const asOfV1 = (companyId: string) => readAiPurposeStatus(companyId, 'plan-reading', undefined, new Date('2026-11-04T12:00:00Z'));
     const r = await resolvePlanReadingAllowance(COMPANY, 0.1, { ...DEFAULT_PLAN_READING_ALLOWANCE_DEPS, companyPurpose: asOfV1 });
     expect(r).toEqual({ allowed: false, reason: 'ai-legal-disclosure-pending' });
+  });
+});
+
+describe('previewPlanReadingForBackground (Φ5.3α)', () => {
+  const PREFLIGHT = { image: { widthPx: 10, heightPx: 10 }, segments: REQUEST.segments };
+  const preflight = (backgroundId = 'rbg_1') => ({ companyId: COMPANY, backgroundId, request: PREFLIGHT });
+  const limits = { pageCapUsd: 0.25, monthlyCapUsd: 1 };
+
+  function preflightDeps(reader: PlanReader | null, purpose: AiPurposeStatus = OPEN, spent = 0.4): PlanReadingPreflightDeps {
+    const base = deps(reader);
+    return {
+      background: base.background,
+      reader: base.reader,
+      allowance: (companyId, estimate) =>
+        resolvePlanReadingAllowance(companyId, estimate, { limits, companyPurpose: async () => purpose, monthlySpendUsd: async () => spent }),
+    };
+  }
+
+  const nothingWritten = (): void => {
+    expect(fake.all(COLLECTIONS.PLAN_READINGS)).toHaveLength(0);
+    expect(fake.all(COLLECTIONS.AI_USAGE)).toHaveLength(0);
+  };
+
+  it('allowed: the same estimate as the read, what remains, and the cap — with zero writes and no call', async () => {
+    const reader = fakeReader({}, 0.05);
+    expect(await previewPlanReadingForBackground(preflight(), preflightDeps(reader))).toEqual({
+      status: 'allowed', model: 'gpt-test', estimateUsd: 0.05, remainingUsd: 0.6, monthlyCapUsd: 1,
+    });
+    expect(reader.calls).toBe(0);
+    nothingWritten();
+  });
+
+  it('estimates with the size it is given, not with bytes (the port takes no image)', async () => {
+    const seen: Array<{ w: number; h: number; n: number }> = [];
+    const reader: PlanReader = {
+      model: 'gpt-test',
+      estimateCostUsd: (input) => { seen.push({ w: input.image.widthPx, h: input.image.heightPx, n: input.segments.length }); return 0.01; },
+      read: async () => { throw new Error('must not read'); },
+    };
+    await previewPlanReadingForBackground(preflight(), preflightDeps(reader));
+    expect(seen).toEqual([{ w: 10, h: 10, n: 1 }]);
+  });
+
+  it('a foreign background is the same 404 as the read', async () => {
+    await expect(previewPlanReadingForBackground(preflight('rbg_other'), preflightDeps(fakeReader()))).rejects.toBeInstanceOf(BackgroundNotFoundError);
+  });
+
+  it('without a provider key it says so', async () => {
+    expect(await previewPlanReadingForBackground(preflight(), preflightDeps(null))).toEqual({ status: 'unavailable', reason: 'reader-unconfigured' });
+  });
+
+  it.each([
+    ['ai-disabled-for-company', { ...OPEN, state: 'disabled', source: 'company', effective: false }, 0.05, 0],
+    ['ai-legal-disclosure-pending', { ...OPEN, legal: 'pending', effective: false }, 0.05, 0],
+    ['cost-unknown', OPEN, null, 0],
+    ['page-cost-exceeds-cap', OPEN, 10, 0],
+    ['allowance-exhausted', OPEN, 0.05, 0.99],
+  ] as const)('refuses with the named reason, before any write: %s', async (reason, purpose, estimate, spent) => {
+    const r = await previewPlanReadingForBackground(preflight(), preflightDeps(fakeReader({}, estimate), purpose as AiPurposeStatus, spent));
+    expect(r).toEqual({ status: 'unavailable', reason });
+    nothingWritten();
   });
 });
 
