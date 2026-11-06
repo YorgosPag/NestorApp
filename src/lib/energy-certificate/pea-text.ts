@@ -24,7 +24,7 @@ import {
   type CertificateEnergySource,
 } from '@/constants/certificate-energy-sources';
 import { normalizeCalendarDay } from '@/lib/date-local';
-import { parseStrictDecimal } from '@/lib/survey-record/survey-number';
+import { parseStrictDecimal } from '@/lib/number/locale-number';
 
 import { readFinalEnergy, type FinalEnergyLine } from './certificate-final-energy';
 

@@ -13,7 +13,7 @@
  * @module lib/document-body/document-body-values
  */
 
-import { parseStrictDecimal } from '@/lib/survey-record/survey-number';
+import { parseStrictDecimal } from '@/lib/number/locale-number';
 import {
   matchesWordSequenceAt,
   normalizeGreekHomoglyphs,

@@ -66,7 +66,7 @@ import {
   type TextListFieldAccessor,
 } from '@/config/survey-card-config';
 import { parseSurveyDate } from '@/lib/survey-record/survey-date';
-import { parseStrictDecimal } from '@/lib/survey-record/survey-number';
+import { parseStrictDecimal } from '@/lib/number/locale-number';
 import {
   parseSurveyAffirmation,
   parseSurveyText,

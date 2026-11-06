@@ -21,7 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FieldAccessor } from '@/config/survey-card-config';
 import { surveyAffirmationLabel } from '@/config/survey-record-labels';
 import { formatNumber } from '@/lib/intl-formatting';
-import { parseStrictDecimal } from '@/lib/survey-record/survey-number';
+import { parseStrictDecimal } from '@/lib/number/locale-number';
 import { userSourced, type Sourced, type SurveyRecord } from '@/types/project-survey-record';
 
 interface SourcedFieldRowProps {

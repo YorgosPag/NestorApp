@@ -102,6 +102,37 @@ export function parseLocaleNumber(raw: string, opts: LocaleNumberOptions = {}): 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * Διάβασε αριθμό **μόνο** αν το κείμενο είναι εξ ολοκλήρου αριθμός (ADR-759 §2β.5).
+ *
+ * Δέχεται ελληνική υποδιαστολή και ομαδοποίηση χιλιάδων. Επιστρέφει `null` για κενό,
+ * για πρόζα (`«κατά ΝΟΚ»`) και για αριθμό με μονάδα (`«11 μ.»`) — το κενό **δεν**
+ * γίνεται ποτέ `0`.
+ *
+ * 🔑 **Γιατί ΟΧΙ το {@link parseLocaleNumber}**: εκείνο **αφαιρεί πρώτα τον θόρυβο**
+ * (το πεδίο του είναι το νόμισμα: `«€ 12,50»` → `12.5`). Σε δεδομένα τοπογραφικού,
+ * πιστοποιητικού ή σώματος εγγράφου το ίδιο συμβόλαιο θα ήταν **σφάλμα τιμής**: το
+ * `«11 μ.»` θα γινόταν `11` και το `«κατά ΝΟΚ»` θα έμοιαζε συγκρίσιμο. Ένας εύλογος
+ * αριθμός σε λάθος θέση είναι χειρότερος από κανέναν. Άρα καταναλώνεται μόνο το
+ * {@link normalizeDecimalString} (η διάκριση υποδιαστολής/χιλιάδων) και η **άρνηση**
+ * μένει ρητή.
+ *
+ * ⚠️ Ζούσε στο `lib/survey-record/survey-number.ts`, ενώ το καταναλώνουν πέντε τομείς
+ * (τοπογραφικό, πεδία σύνδεσης, σώμα εγγράφου, ΠΕΑ, συμφιλίωση) — μετακόμισε εδώ,
+ * στο σπίτι του αναλυτή αριθμών (ADR-923 §23.2 K2).
+ *
+ *   "1.364,05" → 1364.05 · "12,5" → 12.5 · "11 μ." → null · "" → null
+ */
+export function parseStrictDecimal(text: string | null | undefined): number | null {
+  if (text === null || text === undefined) return null;
+
+  const normalized = normalizeDecimalString(text);
+  if (normalized === '') return null;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /** How a number should be written back out — the mirror of what {@link parseLocaleNumber} reads. */
 export interface LocaleNumberFormat {
   readonly decimalSeparator: DecimalSeparator;

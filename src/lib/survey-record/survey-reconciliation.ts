@@ -12,7 +12,7 @@
  * that cries wolf trains people to stop reading it (ADR-759 §5.8).
  */
 import type { ProjectBuildingCodePhase2 } from '@/types/project-building-code';
-import { parseStrictDecimal } from '@/lib/survey-record/survey-number';
+import { parseStrictDecimal } from '@/lib/number/locale-number';
 import {
   isReconciliationCurrent,
   type FieldReconciliation,
