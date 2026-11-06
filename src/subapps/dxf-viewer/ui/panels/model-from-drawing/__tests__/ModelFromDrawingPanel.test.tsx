@@ -96,7 +96,7 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
 
 /** Η πηγή «εικόνα» όπως τη δίνει ο host — προεπιλογή: όροφος χωρίς υπόβαθρο, πηγή το σχέδιο. */
 const NO_IMAGE: ImageSourceView = {
-  available: false, phase: 'idle', failure: null, active: false, countsByTier: null, calibrated: false,
+  available: false, phase: 'idle', failure: null, active: false, countsByTier: null, excludedFromWalls: 0, calibrated: false,
 };
 
 function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {
@@ -121,19 +121,32 @@ describe('ModelFromDrawingPanel — όψεις', () => {
 });
 
 describe('ModelFromDrawingPanel — η ΜΙΑ έγκριση', () => {
-  it('κλειδωμένη όσο εκκρεμεί ομάδα πάχους· γράφει τον αριθμό των τοίχων', () => {
+  it('καμία επιβεβαίωση ⇒ κανένας τοίχος να γραφτεί: κλειδωμένη, και λέει πόσοι μένουν έξω', () => {
     const { q, actions } = renderPanel();
     const approve = q('mfd-approve') as HTMLButtonElement;
     expect(approve.disabled).toBe(true);
-    expect(approve.textContent).toBe('modelFromDrawing.approve{"count":38}');
+    expect(approve.textContent).toBe('modelFromDrawing.approve{"count":0}');
+    expect(q('mfd-left-out')?.textContent).toBe('modelFromDrawing.leftOut{"count":38}');
     fireEvent.click(approve);
     expect(actions.onApprove).not.toHaveBeenCalled();
   });
 
-  it('ξεκλειδώνει όταν επιβεβαιωθούν ΟΛΕΣ οι ομάδες, και καλεί την έγκριση', () => {
+  it('ADR-929 Φ5.2ε — μία επιβεβαιωμένη ομάδα ⇒ ξεκλειδώνει, γράφει ΜΟΝΟ αυτή, οι υπόλοιποι ρητά έξω', () => {
+    const [first] = UNCONFIRMED.groups;
+    const partial = propose(new Map([[first.thicknessMm, first.suggestedCategory]]));
+    const { q } = renderPanel({ proposal: partial });
+    expect((q('mfd-approve') as HTMLButtonElement).disabled).toBe(partial.walls.length === 0);
+    expect(q('mfd-approve')?.textContent).toBe(`modelFromDrawing.approve{"count":${partial.walls.length}}`);
+    const left = partial.items.filter((i) => i.status === 'unconfirmed').length;
+    expect(left).toBeGreaterThan(0);
+    expect(q('mfd-left-out')?.textContent).toBe(`modelFromDrawing.leftOut{"count":${left}}`);
+  });
+
+  it('ξεκλειδώνει όταν επιβεβαιωθούν ΟΛΕΣ οι ομάδες, και καλεί την έγκριση — χωρίς γραμμή «έξω»', () => {
     const { q, actions } = renderPanel({ proposal: ALL_CONFIRMED });
     const approve = q('mfd-approve') as HTMLButtonElement;
     expect(approve.disabled).toBe(false);
+    expect(q('mfd-left-out')).toBeNull();
     fireEvent.click(approve);
     expect(actions.onApprove).toHaveBeenCalledTimes(1);
   });
@@ -218,7 +231,7 @@ describe('ModelFromDrawingPanel — υπόμνημα, κάλυψη, ειδοπο
       expect(line?.getAttribute('stroke')).toBe(style.stroke);
       expect(line?.getAttribute('stroke-dasharray')).toBe(style.dash);
     });
-    expect(rows.map((r) => r.querySelector('span:last-child')?.textContent)).toEqual(['38', '2', '0', '0']);
+    expect(rows.map((r) => r.querySelector('span:last-child')?.textContent)).toEqual(['0', '38', '2', '0', '0']);
   });
 
   it('η αναφορά κάλυψης γράφει τους τρεις αριθμούς· προειδοποιεί ΜΟΝΟ όταν μένουν ανεξήγητες γραμμές', () => {
@@ -235,7 +248,6 @@ describe('ModelFromDrawingPanel — υπόμνημα, κάλυψη, ειδοπο
     [{ kind: 'no-scene' }, 'modelFromDrawing.notice.no-scene'],
     [{ kind: 'no-color' }, 'modelFromDrawing.notice.no-color'],
     [{ kind: 'stale' }, 'modelFromDrawing.notice.stale'],
-    [{ kind: 'unconfirmed' }, 'modelFromDrawing.notice.unconfirmed'],
     [{ kind: 'written', count: 38, retrimmed: 0 }, 'modelFromDrawing.notice.written{"count":38}'],
     [{ kind: 'refused', refusal: 'overlap', blocked: 3 }, 'modelFromDrawing.notice.refused.overlap{"blocked":3}'],
     [{ kind: 'refused', refusal: 'nothing-to-write', blocked: 0 }, 'modelFromDrawing.notice.refused.nothing-to-write'],
@@ -253,8 +265,16 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
   const RASTER = { kind: 'raster', recognitionId: 'rec1.1', floorId: 'flr_1', segments: [] } as const;
   const COUNTS = { high: 12, medium: 3, low: 1 } as const;
   const IMAGE_READY: ImageSourceView = {
-    available: true, phase: 'ready', failure: null, active: true, countsByTier: COUNTS, calibrated: true,
+    available: true, phase: 'ready', failure: null, active: true, countsByTier: COUNTS, excludedFromWalls: 1, calibrated: true,
   };
+
+  it('Φ5.2ε — οι γραμμές χαμηλής βεβαιότητας λέγονται ρητά «όχι τοίχοι», και η γραμμή φεύγει όταν δεν υπάρχουν', () => {
+    const shown = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    expect(shown.q('mfd-image-excluded')?.textContent).toBe('modelFromDrawing.image.lowExcluded{"count":1}');
+    shown.unmount();
+    const none = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, { ...IMAGE_READY, excludedFromWalls: 0 });
+    expect(none.q('mfd-image-excluded')).toBeNull();
+  });
 
   it('οπλισμένος: το κουμπί υπάρχει, κλειδωμένο όσο ο όροφος δεν έχει υπόβαθρο, και το λέει', () => {
     const { q } = renderPanel({ phase: 'picking', proposal: null });

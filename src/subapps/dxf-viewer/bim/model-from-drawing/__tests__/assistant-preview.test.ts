@@ -5,7 +5,7 @@
  * `systems/model-from-drawing/__tests__/model-from-drawing-session.test.ts`, πάνω στη γραμμένη
  * σκηνή. Εδώ μένουν όσα ΔΕΝ φαίνονται από εκεί:
  *   · το αποτύπωμα της πρότασης (τι θεωρείται «το ίδιο που ενέκρινα»)·
- *   · ποιες ομάδες πάχους κλειδώνουν την έγκριση·
+ *   · τι φωτίζεται για τους τοίχους ανεπιβεβαίωτων ομάδων (ADR-929 Φ5.2ε)·
  *   · οι ανεξήγητες γραμμές.
  */
 
@@ -15,7 +15,6 @@ import { computeWallProposal, type WallProposal, type WallProposalInput } from '
 import {
   buildAssistantPreview,
   countProposalByStatus,
-  groupsAwaitingConfirmation,
   wallProposalSignature,
 } from '../assistant-preview';
 import fixture from './fixtures/floor-plan-lines.json';
@@ -23,10 +22,18 @@ import fixture from './fixtures/floor-plan-lines.json';
 const ENTITIES = fixture.entities as unknown as readonly Entity[];
 const colorOf = (e: Entity): string | null => (e as { color?: string }).color?.toLowerCase() ?? null;
 
-function propose(overrides: Partial<WallProposalInput> = {}): WallProposal {
+function proposeUnconfirmed(overrides: Partial<WallProposalInput> = {}): WallProposal {
   return computeWallProposal({
     entities: ENTITIES, wallColorHex: '#003fff', colorOf, sceneUnits: 'mm', levelId: 'lvl', ...overrides,
   });
+}
+
+/** Κάθε ομάδα επιβεβαιωμένη με την πρόταση της τοπολογίας· οι ρητές επιλογές του test νικούν. */
+function propose(overrides: Partial<WallProposalInput> = {}): WallProposal {
+  const raw = proposeUnconfirmed(overrides);
+  const chosen = new Map(raw.groups.map((g) => [g.thicknessMm, g.suggestedCategory] as const));
+  for (const [t, c] of overrides.categoryByThicknessMm ?? []) chosen.set(t, c);
+  return proposeUnconfirmed({ ...overrides, categoryByThicknessMm: chosen });
 }
 
 const confirmAll = (p: WallProposal, pick: (suggested: WallCategory) => WallCategory = (s) => s) =>
@@ -82,32 +89,19 @@ describe('wallProposalSignature — «το ίδιο που ενέκρινα»', 
   });
 });
 
-describe('groupsAwaitingConfirmation — τι κλειδώνει την έγκριση (Δ3)', () => {
-  it('κάθε ομάδα που θα γράψει τοίχο και δεν έχει επιβεβαιωθεί', () => {
-    const base = propose();
-    expect(groupsAwaitingConfirmation(base).map((g) => g.thicknessMm)).toEqual(base.groups.map((g) => g.thicknessMm));
+describe('ADR-929 Φ5.2ε — τοίχοι ανεπιβεβαίωτης ομάδας στην προεπισκόπηση', () => {
+  it('φωτίζεται το ανιχνευμένο ορθογώνιο (όχι σώμα τοίχου): δεν θα γραφτεί, άρα δεν έχει σώμα να κοπεί', () => {
+    const p = proposeUnconfirmed();
+    const zones = buildAssistantPreview(p, ENTITIES).zones.filter((z) => z.status === 'unconfirmed');
+    expect(zones).toHaveLength(countProposalByStatus(p).unconfirmed);
+    const byKey = new Map(p.items.map((i) => [i.key, i] as const));
+    for (const zone of zones) {
+      expect(zone.pieces).toEqual([byKey.get(zone.key)?.rect.polygon.map((q) => ({ x: q.x, y: q.y }))]);
+    }
   });
 
-  it('η επιβεβαίωση μίας ομάδας αφαιρεί ΜΟΝΟ αυτήν', () => {
-    const base = propose();
-    const [first, ...rest] = base.groups;
-    const one = propose({ categoryByThicknessMm: new Map([[first.thicknessMm, first.suggestedCategory]]) });
-    expect(groupsAwaitingConfirmation(one).map((g) => g.thicknessMm)).toEqual(rest.map((g) => g.thicknessMm));
-    expect(groupsAwaitingConfirmation(propose({ categoryByThicknessMm: confirmAll(base) }))).toEqual([]);
-  });
-
-  it('ομάδα που ΔΕΝ γράφει κανέναν τοίχο δεν ζητά απόφαση', () => {
-    const base = propose();
-    const group = base.groups[0];
-    const keys = new Set(group.keys);
-    // Τα ορθογώνια της ομάδας υπάρχουν ήδη στη σκηνή ⇒ καμία λειτουργία δεν θα εφαρμοστεί πουθενά.
-    const allExisting: WallProposal = {
-      ...base,
-      items: base.items.map((i) => (keys.has(i.key) ? { ...i, status: 'existing', wall: undefined } : i)),
-    };
-    const waiting = groupsAwaitingConfirmation(allExisting).map((g) => g.thicknessMm);
-    expect(waiting).not.toContain(group.thicknessMm);
-    expect(waiting).toHaveLength(base.groups.length - 1);
+  it('η επιβεβαίωση αλλάζει το αποτύπωμα: ο άνθρωπος εγκρίνει ό,τι είδε', () => {
+    expect(wallProposalSignature(propose())).not.toBe(wallProposalSignature(proposeUnconfirmed()));
   });
 });
 
@@ -127,7 +121,7 @@ describe('buildAssistantPreview — ανεξήγητες γραμμές και �
   it('τα πλήθη ανά κατάσταση αθροίζουν σε όλα τα ορθογώνια, με παρούσες και τις μηδενικές', () => {
     const p = propose();
     const counts = countProposalByStatus(p);
-    expect(counts).toEqual({ ready: 38, 'needs-decision': 2, existing: 0, rejected: 0 });
+    expect(counts).toEqual({ ready: 38, unconfirmed: 0, 'needs-decision': 2, existing: 0, rejected: 0 });
     expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(p.items.length);
   });
 });

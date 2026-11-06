@@ -32,6 +32,8 @@ export interface ImageSourceView {
   /** Η πηγή της τρέχουσας πρότασης είναι η εικόνα. */
   readonly active: boolean;
   readonly countsByTier: Readonly<Record<PlanConfidenceTier, number>> | null;
+  /** ADR-929 Φ5.2ε — τμήματα κάτω από το όριο βεβαιότητας: φαίνονται στην εικόνα, δεν γίνονται τοίχοι. */
+  readonly excludedFromWalls: number;
   /** Η θέση της εικόνας είναι βαθμονομημένη (χωρίς αυτήν καμία εγγραφή τοίχων). */
   readonly calibrated: boolean;
 }
@@ -117,6 +119,11 @@ export function ImageSourceSummary({ view, onResample, t }: {
           </li>
         ))}
       </ul>
+      {view.excludedFromWalls > 0
+        ? <p className={MUTED} data-testid="mfd-image-excluded">
+            {t('modelFromDrawing.image.lowExcluded', { count: view.excludedFromWalls })}
+          </p>
+        : null}
       {view.calibrated
         ? null
         : <p className="m-0 text-[11px] text-foreground" role="status" data-testid="mfd-image-uncalibrated">

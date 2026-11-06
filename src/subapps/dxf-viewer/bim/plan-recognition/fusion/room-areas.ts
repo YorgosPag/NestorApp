@@ -17,6 +17,7 @@ import type { Homography, PlanePoint } from '@/lib/geometry/homography';
 import { originalRectToAligned } from '../alignment/alignment-region';
 import type { PlanReading } from '../plan-recognition-types';
 import type { RasterRectPx } from '../../../types/coordinate-space';
+import { median } from '../../../utils/statistics';
 import type { FusedRoom, PlanFusionOptions, PlanScaleEvidence, RoomAreaProbe } from './plan-fusion-types';
 
 /** Υπόθεση εκκίνησης όταν τίποτα άλλο δεν δίνει κλίμακα: η μικρή πλευρά του σχεδίου ≈ 12 m (κατοικία). */
@@ -50,11 +51,6 @@ function roomSeeds(reading: PlanReading, toAligned: Homography): RoomSeed[] {
     return { name: room.name, writtenAreaM2: room.writtenAreaM2, seed: { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 }, rect: text.rect };
   });
 }
-
-const median = (values: readonly number[]): number => {
-  const s = [...values].sort((a, b) => a - b);
-  return s.length % 2 === 1 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
-};
 
 export interface RoomMeasurement {
   readonly seeds: readonly RoomSeed[];

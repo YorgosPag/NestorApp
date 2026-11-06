@@ -8,6 +8,7 @@ import { rasterPixelToScene } from '../../../floorplan-background/geometry/raste
 import type { RasterSegment } from '../../../bim/plan-recognition/plan-recognition-types';
 import {
   countByConfidenceTier,
+  meetsConfidenceTier,
   PLAN_CONFIDENCE_ORDER,
   planConfidenceMark,
   planConfidenceTier,
@@ -34,6 +35,12 @@ describe('ADR-929 Φ5 — επίπεδα βεβαιότητας', () => {
 
   it('πλήθη ανά επίπεδο', () => {
     expect(countByConfidenceTier([0.9, 0.85, 0.7, 0.1, null])).toEqual({ high: 2, medium: 1, low: 2 });
+  });
+
+  it('Φ5.2ε — «φτάνει το επίπεδο»: ίδια κατώφλια με την κατάταξη, χωρίς βαθμό ⇒ ποτέ', () => {
+    expect([0.9, 0.6, 0.59, null].map((s) => meetsConfidenceTier(s, 'medium'))).toEqual([true, true, false, false]);
+    expect([0.9, 0.79].map((s) => meetsConfidenceTier(s, 'high'))).toEqual([true, false]);
+    expect([0, null].map((s) => meetsConfidenceTier(s, 'low'))).toEqual([true, true]);
   });
 });
 

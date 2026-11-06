@@ -24,7 +24,9 @@ import { getFloorBackground, getFloorProvider } from '../../floorplan-background
 import { resolveRasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
 import type { FloorplanBackground } from '../../floorplan-background/providers/types';
 import type { ProposalLineSource } from '../model-from-drawing/proposal-line-source';
+import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
+import { meetsConfidenceTier } from './plan-confidence';
 
 export type RasterLineSource = Extract<ProposalLineSource, { kind: 'raster' }>;
 
@@ -52,9 +54,22 @@ function fuse(run: PlanRecognitionRun, reading: PlanReadingOutcome | null): Plan
   });
 }
 
-/** Η πηγή γραμμών για τον βοηθό: τα **συνορθωμένα** τμήματα (η πρόταση της Φ4), με ταυτότητα έκδοσης. */
+/** ADR-929 Φ5.2ε — γίνεται αυτό το τμήμα είσοδος τοίχων; Ο ΕΝΑΣ τόπος της πολιτικής (πηγή + πάνελ ρωτούν εδώ). */
+export function isWallEvidence(fusion: PlanFusionResult, segmentId: string): boolean {
+  return meetsConfidenceTier(
+    fusion.segmentConfidence.get(segmentId)?.score,
+    MODEL_FROM_DRAWING_LIMITS.RASTER_WALL_EVIDENCE_MIN_TIER,
+  );
+}
+
+/**
+ * Η πηγή γραμμών για τον βοηθό: τα **συνορθωμένα** τμήματα (η πρόταση της Φ4) με βεβαιότητα ≥ του ορίου, με ταυτότητα
+ * έκδοσης. Τα χαμηλά μένουν στην επικάλυψη («κοίτα την εικόνα»), όχι στους τοίχους: στη ζωντανή επαλήθευση ήταν
+ * αυτοκίνητα, διαστάσεις και κείμενα.
+ */
 function lineSourceOf(run: PlanRecognitionRun, fusion: PlanFusionResult, version: number): RasterLineSource {
-  return { kind: 'raster', recognitionId: `${run.id}.${version}`, floorId: run.floorId, segments: fusion.adjustedSegments };
+  const segments = fusion.adjustedSegments.filter((s) => isWallEvidence(fusion, s.id));
+  return { kind: 'raster', recognitionId: `${run.id}.${version}`, floorId: run.floorId, segments };
 }
 
 function fail(failure: PlanRecognitionFailure): null {

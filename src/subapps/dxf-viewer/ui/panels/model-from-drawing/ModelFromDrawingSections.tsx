@@ -33,6 +33,7 @@ const CATEGORY_VALUES: readonly WallCategory[] = ['exterior', 'interior', 'parti
 
 const STATUS_LABEL_KEY: Readonly<Record<WallProposalStatus, string>> = {
   ready: 'modelFromDrawing.status.ready',
+  unconfirmed: 'modelFromDrawing.status.unconfirmed',
   'needs-decision': 'modelFromDrawing.status.needs-decision',
   existing: 'modelFromDrawing.status.existing',
   rejected: 'modelFromDrawing.status.rejected',
@@ -63,6 +64,19 @@ export function ColorChip({ hex }: { readonly hex: string }): React.ReactElement
       <rect x="1" y="1" width="12" height="12" rx="2" fill={hex} stroke="currentColor" strokeWidth="1" />
     </svg>
   );
+}
+
+/**
+ * ADR-929 Φ5.2ε — η ΜΙΑ γραμμή «N δεν θα γραφτούν» της μερικής έγκρισης (τοίχοι ανεπιβεβαίωτων ομάδων ·
+ * αναποφάσιστα κουφώματα): ό,τι μένει έξω το λέει ρητά, ποτέ σιωπηλά. Μηδέν ⇒ τίποτα.
+ */
+export function LeftOutNote({ count, text, testId }: {
+  readonly count: number;
+  readonly text: (count: number) => string;
+  readonly testId: string;
+}): React.ReactElement | null {
+  if (count <= 0) return null;
+  return <p className={MUTED} data-testid={testId}>{text(count)}</p>;
 }
 
 /** Υπόμνημα + πλήθη: κάθε κατάσταση με το μοτίβο γραμμής της. */

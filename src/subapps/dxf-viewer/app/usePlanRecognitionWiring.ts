@@ -14,7 +14,7 @@
 
 import * as React from 'react';
 import { usePlanRecognitionState } from '../systems/plan-recognition/plan-recognition-store';
-import { planRecognitionSession } from '../systems/plan-recognition/plan-recognition-session';
+import { isWallEvidence, planRecognitionSession } from '../systems/plan-recognition/plan-recognition-session';
 import { countByConfidenceTier } from '../systems/plan-recognition/plan-confidence';
 import {
   modelFromDrawingSession,
@@ -37,9 +37,13 @@ function useImageSourceView(state: ModelFromDrawingState): ImageSourceView {
   const sourceFloorId = state.lineSource.kind === 'raster' ? state.lineSource.floorId : null;
   const sourceCalibrated = useFloorplanBackgroundStore((s) =>
     (sourceFloorId ? (s.floors[sourceFloorId]?.background?.calibration ?? null) !== null : false));
-  const counts = React.useMemo(() => {
+  const { counts, excludedFromWalls } = React.useMemo(() => {
     const { run, fusion } = recognition;
-    return run && fusion ? countByConfidenceTier(run.segments.map((s) => fusion.segmentConfidence.get(s.id)?.score ?? null)) : null;
+    if (!run || !fusion) return { counts: null, excludedFromWalls: 0 };
+    return {
+      counts: countByConfidenceTier(run.segments.map((s) => fusion.segmentConfidence.get(s.id)?.score ?? null)),
+      excludedFromWalls: run.segments.filter((s) => !isWallEvidence(fusion, s.id)).length,
+    };
   }, [recognition]);
   return {
     available: activeBackground !== null,
@@ -47,6 +51,7 @@ function useImageSourceView(state: ModelFromDrawingState): ImageSourceView {
     failure: recognition.failure,
     active: state.lineSource.kind === 'raster',
     countsByTier: counts,
+    excludedFromWalls,
     calibrated: sourceCalibrated,
   };
 }

@@ -16,7 +16,12 @@
 
 import type { Entity } from '../../../types/entities';
 import type { WallDetectionStrategy } from '../wall-detection-strategy';
-import { computeWallProposal, type WallProposal, type WallProposalInput } from '../wall-proposal';
+import {
+  computeWallProposal,
+  WALL_PROPOSAL_RARE_THICKNESS_KEY,
+  type WallProposal,
+  type WallProposalInput,
+} from '../wall-proposal';
 import { buildAutoWallType } from '../../family-types/auto-wall-type';
 import { getBuiltInWallTypes } from '../../family-types/built-in-types';
 import { createWallTyper } from '../../family-types/wall-typer';
@@ -45,7 +50,8 @@ function frame(prefix: string, color: string, x: number, y: number, w: number, h
   ];
 }
 
-function propose(overrides: Partial<WallProposalInput> = {}): WallProposal {
+/** Η πρόταση όπως βγαίνει, πριν επιβεβαιώσει ο άνθρωπος οποιαδήποτε ομάδα πάχους. */
+function proposeUnconfirmed(overrides: Partial<WallProposalInput> = {}): WallProposal {
   return computeWallProposal({
     entities: ENTITIES,
     wallColorHex: WALL_HEX,
@@ -54,6 +60,17 @@ function propose(overrides: Partial<WallProposalInput> = {}): WallProposal {
     levelId: LEVEL,
     ...overrides,
   });
+}
+
+/**
+ * Ο άνθρωπος επιβεβαιώνει κάθε ομάδα με την πρόταση της τοπολογίας (ρητές επιλογές του test νικούν). Χωρίς αυτό
+ * κανένας τοίχος δεν είναι `ready` (ADR-929 Φ5.2ε: μερική έγκριση) — τα tests εδώ κρίνουν τι θα χτιστεί.
+ */
+function propose(overrides: Partial<WallProposalInput> = {}): WallProposal {
+  const raw = proposeUnconfirmed(overrides);
+  const chosen = new Map(raw.groups.map((g) => [g.thicknessMm, g.suggestedCategory] as const));
+  for (const [t, c] of overrides.categoryByThicknessMm ?? []) chosen.set(t, c);
+  return proposeUnconfirmed({ ...overrides, categoryByThicknessMm: chosen });
 }
 
 function countByStatus(p: WallProposal): Record<string, number> {
@@ -263,7 +280,7 @@ describe('ADR-911 Δ3 — ομάδες πάχους και τοπολογική 
   ];
 
   it('οι τοίχοι του κελύφους βγαίνουν εξωτερικοί· το χώρισμα εσωτερικό — και η πόρτα δεν «μπάζει»', () => {
-    const p = propose({ entities: box });
+    const p = proposeUnconfirmed({ entities: box });
     expect(p.groups.map((g) => [g.thicknessMm, g.exteriorCount, g.interiorCount, g.suggestedCategory]))
       .toEqual([[100, 0, 1, 'interior'], [200, 5, 0, 'exterior']]);
     expect(p.groups.every((g) => !g.confirmed)).toBe(true);
@@ -276,7 +293,7 @@ describe('ADR-911 Δ3 — ομάδες πάχους και τοπολογική 
   });
 
   it('η επιλογή του ανθρώπου νικά την πρόταση και σημειώνεται ως επιβεβαιωμένη', () => {
-    const p = propose({ entities: box, categoryByThicknessMm: new Map([[100, 'partition']]) });
+    const p = proposeUnconfirmed({ entities: box, categoryByThicknessMm: new Map([[100, 'partition']]) });
     const thin = p.groups.find((g) => g.thicknessMm === 100);
     expect(thin).toMatchObject({ suggestedCategory: 'interior', category: 'partition', confirmed: true });
     expect(p.groups.find((g) => g.thicknessMm === 200)?.confirmed).toBe(false);
@@ -325,20 +342,77 @@ describe('ADR-911 Α-3 — ο τύπος μπαίνει μέσα στην πρό
   });
 });
 
-describe('ADR-929 Φ5.2δ — ομάδες πάχους με ανοχή (πηγή-εικόνα)', () => {
-  const walls = (thicknesses: readonly number[]): Entity[] =>
-    thicknesses.flatMap((t, i) => frame(`w${i}`, WALL_HEX, 0, i * 2000, 3000, t));
-  const groupsOf = (p: WallProposal) => p.groups.map((g) => g.thicknessMm);
+describe('ADR-929 Φ5.2ε — μερική έγκριση: γράφεται ό,τι επιβεβαιώθηκε', () => {
+  const C = '#003FFF';
+  const partition = frame('part', C, 2950, 500, 100, 3000);
+  const box: Entity[] = [
+    ...frame('bl', C, 0, 0, 2500, 200),
+    ...frame('br', C, 3500, 0, 2500, 200),
+    ...frame('top', C, 0, 3800, 6000, 200),
+    ...frame('left', C, 0, 500, 200, 3000),
+    ...frame('right', C, 5800, 500, 200, 3000),
+    ...partition,
+  ];
+  const interior100 = new Map([[100, 'interior' as const]]);
 
-  it('θόρυβος pixel (238/241/244 και 100/102) ⇒ δύο αποφάσεις, όχι πέντε', () => {
-    const entities = walls([238, 241, 244, 100, 102]);
-    expect(groupsOf(propose({ entities }))).toEqual([100, 102, 238, 241, 244]);
-    expect(groupsOf(propose({ entities, thicknessToleranceMm: 37 }))).toEqual([100, 240]);
+  it('χωρίς καμία επιβεβαίωση: τίποτα δεν γράφεται, όλα τα έτοιμα «περιμένουν επιβεβαίωση»', () => {
+    const p = proposeUnconfirmed();
+    expect(countByStatus(p)).toEqual({ unconfirmed: 38, 'needs-decision': 2 });
+    expect(p.walls).toEqual([]);
+    expect(p.items.every((i) => i.wall === undefined)).toBe(true);
   });
 
-  it('μια συνεχής σειρά θορυβωδών τιμών ΔΕΝ ενώνει 100 mm με 250 mm (όριο εύρους ομάδας)', () => {
-    // Κενά 30 mm < ανοχή 37, αλλά το εύρος της ομάδας κόβεται στα 2×37 ⇒ [100,130,160] · [190,220,250].
-    const p = propose({ entities: walls([100, 130, 160, 190, 220, 250]), thicknessToleranceMm: 37 });
-    expect(groupsOf(p)).toEqual([130, 220]);
+  it('μία επιβεβαιωμένη ομάδα ⇒ γράφονται ΜΟΝΟ οι τοίχοι της· οι άλλες δεν κλειδώνουν τίποτα', () => {
+    const p = proposeUnconfirmed({ categoryByThicknessMm: interior100 });
+    const ready = p.items.filter((i) => i.status === 'ready');
+    expect(ready.length).toBeGreaterThan(0);
+    expect(ready.every((i) => i.thicknessMm === 100)).toBe(true);
+    expect(p.walls).toHaveLength(ready.length);
+    const others = p.items.filter((i) => i.thicknessMm !== 100 && i.status !== 'needs-decision');
+    expect(others.every((i) => i.status === 'unconfirmed')).toBe(true);
+  });
+
+  it('οι ενώσεις κρίνονται ΜΟΝΟ ανάμεσα σε όσους θα γραφτούν (walls ≡ ό,τι γράφεται)', () => {
+    // Το χώρισμα 100 mm όσο το κέλυφος 200 mm περιμένει = το χώρισμα χωρίς κέλυφος ως γείτονα.
+    const alone = propose({ entities: partition, categoryByThicknessMm: interior100 });
+    const partial = proposeUnconfirmed({ entities: box, categoryByThicknessMm: interior100 });
+    expect(partial.walls.map((w) => w.params)).toEqual(alone.walls.map((w) => w.params));
+  });
+
+  it('ιδεμποτία πριν την επιβεβαίωση: ό,τι υπάρχει ήδη φαίνεται «υπάρχει», όχι «περιμένει»', () => {
+    const first = propose();
+    const scene = [...ENTITIES, ...(first.walls as unknown as Entity[])];
+    expect(countByStatus(proposeUnconfirmed({ entities: scene }))).toEqual({ existing: 38, 'needs-decision': 2 });
+  });
+});
+
+describe('ADR-929 Φ5.2ε — ομάδες πάχους από εικόνα: κορυφές με βάρος μήκους', () => {
+  const walls = (thicknesses: readonly number[]): Entity[] =>
+    thicknesses.flatMap((t, i) => frame(`w${t}-${i}`, WALL_HEX, 0, i * 2000, 3000, t));
+  const groupsOf = (p: WallProposal) => p.groups.map((g) => g.thicknessMm);
+  const noisy = [238, 241, 244, 99, 100, 102];
+
+  it('χωρίς ανοχή (DXF): κάθε σχεδιασμένο πάχος είναι δική του ομάδα, όπως πάντα', () => {
+    expect(groupsOf(propose({ entities: walls(noisy) }))).toEqual([99, 100, 102, 238, 241, 244]);
+  });
+
+  it('θόρυβος pixel ⇒ μία απόφαση ανά πραγματικό πάχος, όχι έξι', () => {
+    expect(groupsOf(propose({ entities: walls(noisy), thicknessToleranceMm: 13 }))).toEqual([100, 240]);
+  });
+
+  it('κοντό σπάνιο πάχος ⇒ «δεν θα δημιουργηθεί» με λόγο, εκτός ομάδων, χωρίς τοίχο', () => {
+    const entities = [...walls([100, 101, 250, 251]), ...frame('odd', WALL_HEX, 0, 20000, 300, 60)];
+    const p = proposeUnconfirmed({ entities, thicknessToleranceMm: 13 });
+    expect(groupsOf(p)).toEqual([100, 250]);
+    const odd = p.items.find((i) => i.thicknessMm === 60);
+    expect(odd).toMatchObject({ status: 'rejected', reason: WALL_PROPOSAL_RARE_THICKNESS_KEY });
+    expect(odd?.wall).toBeUndefined();
+    expect(p.groups.flatMap((g) => g.keys)).not.toContain(odd?.key);
+  });
+
+  it('η γεωμετρία μένει η μετρημένη — αλλάζουν μόνο οι ομάδες', () => {
+    const entities = walls([238, 241, 244]);
+    const thick = (p: WallProposal) => p.walls.map((w) => Math.round(w.params.thickness)).sort();
+    expect(thick(propose({ entities, thicknessToleranceMm: 13 }))).toEqual(thick(propose({ entities })));
   });
 });

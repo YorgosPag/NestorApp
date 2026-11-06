@@ -7,7 +7,7 @@
  * ακριβώς το σφάλμα που έκλεισε εκείνη η φάση: πράσινο που δεν είναι ό,τι θα ζωγραφιστεί.
  *
  *   · `ready`           — τα ΚΟΜΜΑΤΙΑ του σώματος όπως θα ζωγραφιστούν (κολώνα στη μέση ⇒ δύο).
- *   · οι άλλες τρεις    — το ανιχνευμένο ορθογώνιο όπως είναι: δεν θα γίνει τοίχος, άρα δεν έχει
+ *   · οι άλλες τέσσερις — το ανιχνευμένο ορθογώνιο όπως είναι: δεν θα γίνει τοίχος, άρα δεν έχει
  *                         σώμα να κοπεί.
  *   · ανεξήγητες γραμμές — ό,τι έχει τον ρόλο «τοίχος» αλλά δεν ανήκει σε κανένα ορθογώνιο:
  *                         ο τοίχος που ΔΕΝ θα χτιστεί (αναφορά κάλυψης).
@@ -24,7 +24,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { computeFillingWallFootprints } from '../walls/filling-walls-compute';
 import { extractLineSegments } from '../walls/wall-in-region';
 import type { WallBodyPieces } from '../walls/wall-painted-body';
-import type { WallProposal, WallProposalStatus, WallThicknessGroup } from './wall-proposal';
+import type { WallProposal, WallProposalStatus } from './wall-proposal';
 
 /** Ένα ανιχνευμένο ορθογώνιο, όπως φωτίζεται. */
 export interface AssistantPreviewZone {
@@ -95,19 +95,9 @@ export function wallProposalSignature(proposal: WallProposal): string {
     .join('\n');
 }
 
-/**
- * Δ3 — οι ομάδες πάχους που ΚΛΕΙΔΩΝΟΥΝ την έγκριση: όσες θα γράψουν τουλάχιστον έναν τοίχο και
- * δεν έχουν επιβεβαιωθεί από άνθρωπο. Ομάδα που δεν γράφει τίποτα (όλα υπάρχοντα / απορριφθέντα
- * / προς απόφαση) δεν ζητά απόφαση για λειτουργία που δεν θα εφαρμοστεί πουθενά.
- */
-export function groupsAwaitingConfirmation(proposal: WallProposal): readonly WallThicknessGroup[] {
-  const readyKeys = new Set(proposal.items.filter((i) => i.status === 'ready').map((i) => i.key));
-  return proposal.groups.filter((g) => !g.confirmed && g.keys.some((k) => readyKeys.has(k)));
-}
-
 /** Πόσα στοιχεία της πρότασης έχει κάθε κατάσταση (όλες παρούσες, και οι μηδενικές). */
 export function countProposalByStatus(proposal: WallProposal): Readonly<Record<WallProposalStatus, number>> {
-  const counts: Record<WallProposalStatus, number> = { ready: 0, 'needs-decision': 0, existing: 0, rejected: 0 };
+  const counts: Record<WallProposalStatus, number> = { ready: 0, unconfirmed: 0, 'needs-decision': 0, existing: 0, rejected: 0 };
   for (const item of proposal.items) counts[item.status] += 1;
   return counts;
 }

@@ -112,6 +112,8 @@ function confirmAllGroups(h: Harness): void {
 
 const state = () => modelFromDrawingStore.get();
 const counts = () => countProposalByStatus(state().proposal!);
+/** Το fixture αμέσως μετά το δείγμα: 38 έτοιμα ορθογώνια σε ανεπιβεβαίωτες ομάδες + 2 αμφίσημα. */
+const BEFORE_CONFIRMATION = { ready: 0, unconfirmed: 38, 'needs-decision': 2, existing: 0, rejected: 0 } as const;
 const readyPieces = (): Point2D[][][] =>
   (state().preview?.zones ?? []).filter((z) => z.status === 'ready').map((z) => z.pieces);
 
@@ -148,7 +150,8 @@ describe('ADR-911 Δ1 — το δείγμα', () => {
     expect(state().phase).toBe('review');
     expect(state().wallColorHex).toBe(WALL_HEX);
     expect(state().proposal?.items).toHaveLength(40);
-    expect(counts()).toEqual({ ready: 38, 'needs-decision': 2, existing: 0, rejected: 0 });
+    // ADR-929 Φ5.2ε: πριν από κάθε επιβεβαίωση ομάδας κανένας τοίχος δεν είναι «έτοιμος» (= θα γραφτεί).
+    expect(counts()).toEqual(BEFORE_CONFIRMATION);
     expect(state().pendingSample).toBeNull();
     expect(state().notice).toBeNull();
   });
@@ -172,7 +175,7 @@ describe('ADR-911 Δ1 — το δείγμα', () => {
     sample(h);
     expect(state().wallColorHex).toBe(WALL_HEX);
     expect(state().proposal?.items).toHaveLength(40);
-    expect(counts()).toEqual({ ready: 38, 'needs-decision': 2, existing: 0, rejected: 0 });
+    expect(counts()).toEqual(BEFORE_CONFIRMATION);
     expect(state().proposal?.coverage.ignoredCount).toBe(362);
   });
 
@@ -212,18 +215,32 @@ describe('ADR-911 Δ1 — το δείγμα', () => {
 });
 
 describe('ADR-911 Δ3 / Δ7 — οι αποφάσεις του ανθρώπου', () => {
-  it('η έγκριση είναι κλειδωμένη όσο υπάρχει ανεπιβεβαίωτη ομάδα πάχους', () => {
+  it('μερική έγκριση: γράφονται ΜΟΝΟ οι τοίχοι των επιβεβαιωμένων ομάδων (ADR-929 Φ5.2ε)', () => {
     const h = harness();
     sample(h);
-    const groups = state().proposal!.groups;
-    groups.slice(1).forEach((g) => modelFromDrawingSession.confirmGroup(g.thicknessMm, g.suggestedCategory, h.deps));
+    const [left, ...rest] = state().proposal!.groups;
+    rest.forEach((g) => modelFromDrawingSession.confirmGroup(g.thicknessMm, g.suggestedCategory, h.deps));
+    const shown = state().proposal!;
+    const leftKeys = new Set(left.keys);
+    expect(shown.walls.length).toBeGreaterThan(0);
+    expect(shown.items.filter((i) => leftKeys.has(i.key)).some((i) => i.status === 'ready')).toBe(false);
+
+    expect(modelFromDrawingSession.approve(h.deps)).toBe(true);
+
+    expect(h.walls()).toHaveLength(shown.walls.length);
+    expect(h.walls().every((w) => Math.round(w.params.thickness) !== left.thicknessMm)).toBe(true);
+    expect(state().notice).toMatchObject({ kind: 'written', count: shown.walls.length });
+  });
+
+  it('χωρίς καμία επιβεβαίωση: τίποτα δεν γράφεται, και το λέει', () => {
+    const h = harness();
+    sample(h);
+    expect(state().proposal!.walls).toHaveLength(0);
 
     expect(modelFromDrawingSession.approve(h.deps)).toBe(false);
 
-    expect(state().notice).toEqual({ kind: 'unconfirmed' });
     expect(h.walls()).toHaveLength(0);
-    expect(addWallsToScene).not.toHaveBeenCalled();
-    expect(h.commit).not.toHaveBeenCalled();
+    expect(state().notice).toMatchObject({ kind: 'refused', refusal: 'nothing-to-write' });
   });
 
   it('η επιλογή του ανθρώπου φτάνει στους τοίχους της ομάδας', () => {
@@ -247,7 +264,7 @@ describe('ADR-911 Δ3 / Δ7 — οι αποφάσεις του ανθρώπου'
     expect(counts()['needs-decision']).toBe(1);
     expect(state().proposal!.items.find((i) => i.key === undecided.key)?.status).not.toBe('needs-decision');
     modelFromDrawingSession.setUndecided(undecided.key, false, h.deps);
-    expect(counts()).toEqual({ ready: 38, 'needs-decision': 2, existing: 0, rejected: 0 });
+    expect(counts()).toEqual(BEFORE_CONFIRMATION);
   });
 
   it('η εστίαση δεν αγγίζει πρόταση ούτε αποφάσεις', () => {
@@ -279,6 +296,7 @@ describe('ADR-911 Α-10 — προεπισκόπηση βοηθού ≡ απόδ
   it('με κολώνες: άκρο μέσα σε κολώνα και κολώνα στη μέση φωτίζονται όπως ζωγραφίζονται', () => {
     const probe = harness();
     sample(probe);
+    confirmAllGroups(probe);
     const baseWalls = state().proposal!.walls;
     const longest = [...baseWalls].sort((a, b) => axisLength(b) - axisLength(a))[0];
     const mid = { x: (longest.params.start.x + longest.params.end.x) / 2, y: (longest.params.start.y + longest.params.end.y) / 2 };
@@ -334,7 +352,7 @@ describe('ADR-911 Φ3β — η ΜΙΑ έγκριση', () => {
     confirmAllGroups(h);
     modelFromDrawingSession.approve(h.deps);
 
-    expect(counts()).toEqual({ ready: 0, 'needs-decision': 2, existing: 38, rejected: 0 });
+    expect(counts()).toEqual({ ready: 0, unconfirmed: 0, 'needs-decision': 2, existing: 38, rejected: 0 });
     expect(state().proposal!.walls).toHaveLength(0);
 
     expect(modelFromDrawingSession.approve(h.deps)).toBe(false);

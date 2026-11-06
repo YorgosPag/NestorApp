@@ -6,7 +6,9 @@
  * αποφάσεις ανθρώπου (`confirmGroup`, `setUndecided`) → `approve`.
  *
  * Τρεις εγγυήσεις της έγκρισης, με αυτή τη σειρά:
- *   1. **Καμία ανεπιβεβαίωτη ομάδα πάχους** (Δ3) — ο βοηθός δεν γράφει ποτέ σιωπηλή λειτουργία.
+ *   1. **Μόνο επιβεβαιωμένες ομάδες πάχους** (Δ3) — ο βοηθός δεν γράφει ποτέ σιωπηλή λειτουργία. Εκ κατασκευής:
+ *      η πρόταση δεν περιέχει τοίχο ανεπιβεβαίωτης ομάδας (`unconfirmed`, ADR-929 Φ5.2ε)· η έγκριση γράφει ό,τι
+ *      αποφασίστηκε και αφήνει έξω τα υπόλοιπα, όπως τα αναποφάσιστα κουφώματα.
  *   2. **Ό,τι γράφεται είναι ό,τι φωτίστηκε.** Η πρόταση ξαναϋπολογίζεται από τη ΖΩΝΤΑΝΗ σκηνή·
  *      αν το αποτύπωμά της διαφέρει από εκείνο που είδε ο άνθρωπος (η σκηνή άλλαξε στο
  *      μεταξύ: το πάνελ είναι modeless, δεν κλειδώνει τα εργαλεία όπως το sketch mode του Revit),
@@ -30,7 +32,6 @@ import { addWallsToScene, type WallSceneAccessor } from '../../bim/walls/add-wal
 import { computeWallProposal, type WallProposal } from '../../bim/model-from-drawing/wall-proposal';
 import {
   buildAssistantPreview,
-  groupsAwaitingConfirmation,
   wallProposalSignature,
   type AssistantPreview,
 } from '../../bim/model-from-drawing/assistant-preview';
@@ -175,17 +176,13 @@ export const modelFromDrawingSession = {
   },
 
   /**
-   * Η ΜΙΑ έγκριση. Γράφει ΜΟΝΟ αν: καμία ομάδα δεν εκκρεμεί, και η πρόταση από τη ζωντανή
+   * Η ΜΙΑ έγκριση. Γράφει τους τοίχους των επιβεβαιωμένων ομάδων, ΜΟΝΟ αν η πρόταση από τη ζωντανή
    * σκηνή έχει το ίδιο αποτύπωμα με αυτή που φωτίστηκε. Επιστρέφει `true` ⇔ γράφτηκαν τοίχοι.
    */
   approve(deps: ModelFromDrawingDeps): boolean {
     const state = modelFromDrawingStore.get();
     const shown = state.proposal;
     if (state.phase !== 'review' || !shown) return false;
-    if (groupsAwaitingConfirmation(shown).length > 0) {
-      modelFromDrawingStore.patch({ notice: { kind: 'unconfirmed' } });
-      return false;
-    }
     if (!isRasterPlacementCalibrated(state.lineSource)) {
       modelFromDrawingStore.patch({ notice: { kind: 'uncalibrated' } });
       return false;

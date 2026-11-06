@@ -26,6 +26,11 @@ export function planConfidenceTier(score: number | null | undefined): PlanConfid
   return PLAN_CONFIDENCE_ORDER.find((tier) => score >= PLAN_CONFIDENCE_MARKS.tiers[tier].minScore) ?? 'low';
 }
 
+/** Φτάνει ο βαθμός το επίπεδο `minTier` ή υψηλότερο; (ADR-929 Φ5.2ε — ποια τμήματα γίνονται είσοδος τοίχων.) */
+export function meetsConfidenceTier(score: number | null | undefined, minTier: PlanConfidenceTier): boolean {
+  return PLAN_CONFIDENCE_ORDER.indexOf(planConfidenceTier(score)) <= PLAN_CONFIDENCE_ORDER.indexOf(minTier);
+}
+
 export function planConfidenceMark(tier: PlanConfidenceTier): PlanConfidenceMark {
   const spec = PLAN_CONFIDENCE_MARKS.tiers[tier];
   return { stroke: spec.hex, dash: PLAN_CONFIDENCE_MARKS.dashPx[spec.dash], strokeWidth: PLAN_CONFIDENCE_MARKS.strokeWidthPx };

@@ -12,9 +12,10 @@
  *                 Βήμα ΚΟΥΦΩΜΑΤΑ (Φ4-3β): δική του ουρά «προς απόφαση» και δική του έγκριση —
  *                 δύο εγκρίσεις, δύο undo (απόφαση εμβέλειας της Φ4).
  *
- * Η έγκριση είναι κλειδωμένη όσο εκκρεμεί ομάδα πάχους ή δεν υπάρχει τοίχος να γραφτεί. Ο
- * ελεγκτής ξαναελέγχει και τα δύο (`modelFromDrawingSession.approve`) — το κουμπί είναι η ευγένεια,
- * όχι η εγγύηση.
+ * Μερική έγκριση (ADR-929 Φ5.2ε): γράφονται οι τοίχοι των επιβεβαιωμένων ομάδων πάχους· οι υπόλοιποι
+ * μένουν έξω και το λέει ρητά η γραμμή «δεν θα γραφτούν». Η έγκριση κλειδώνει μόνο όταν δεν υπάρχει
+ * τοίχος να γραφτεί ή (πηγή εικόνα) λείπει η βαθμονόμηση. Ο ελεγκτής ξαναελέγχει
+ * (`modelFromDrawingSession.approve`) — το κουμπί είναι η ευγένεια, όχι η εγγύηση.
  *
  * Καθαρή παρουσίαση: κατάσταση ως prop, αποφάσεις ως callbacks. Χαμηλόσυχνο (ADR-040).
  *
@@ -27,7 +28,7 @@ import { Wand2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import type { WallCategory } from '../../../bim/types/wall-types';
-import { groupsAwaitingConfirmation } from '../../../bim/model-from-drawing/assistant-preview';
+import { countProposalByStatus } from '../../../bim/model-from-drawing/assistant-preview';
 import type {
   ModelFromDrawingNotice,
   ModelFromDrawingSampleRole,
@@ -46,6 +47,7 @@ import {
   CoverageSection,
   DecisionsSection,
   GroupsSection,
+  LeftOutNote,
   RejectedSection,
   StatusLegend,
 } from './ModelFromDrawingSections';
@@ -77,7 +79,6 @@ function noticeText(notice: ModelFromDrawingNotice, role: ModelFromDrawingSample
       return role === 'opening' ? t('modelFromDrawing.notice.no-line-opening') : t('modelFromDrawing.notice.no-line');
     case 'no-color': return t('modelFromDrawing.notice.no-color');
     case 'stale': return t('modelFromDrawing.notice.stale');
-    case 'unconfirmed': return t('modelFromDrawing.notice.unconfirmed');
     case 'uncalibrated': return t('modelFromDrawing.notice.uncalibrated');
     case 'written': return t('modelFromDrawing.notice.written', { count: notice.count });
     case 'no-walls': return t('modelFromDrawing.notice.no-walls');
@@ -146,9 +147,7 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
   const { proposal } = state;
   if (!proposal) return null;
   const fromImage = state.lineSource.kind === 'raster';
-  const locked = proposal.walls.length === 0
-    || groupsAwaitingConfirmation(proposal).length > 0
-    || (fromImage && !imageSource.calibrated);
+  const locked = proposal.walls.length === 0 || (fromImage && !imageSource.calibrated);
   return (
     <>
       {fromImage
@@ -162,6 +161,10 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
       />
       <RejectedSection proposal={proposal} focusedKey={state.focusedKey} onFocus={actions.onFocus} t={t} />
       <CoverageSection proposal={proposal} t={t} />
+      <LeftOutNote
+        count={countProposalByStatus(proposal).unconfirmed}
+        text={(count) => t('modelFromDrawing.leftOut', { count })} testId="mfd-left-out"
+      />
       <Button
         type="button" size="sm" disabled={locked} onClick={actions.onApprove}
         data-testid="mfd-approve"

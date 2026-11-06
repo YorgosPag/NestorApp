@@ -20,7 +20,8 @@ import { renderSyntheticPlan, SAMPLE_HOUSE_WALLS, type SyntheticWall } from '../
 import type { CalibrationData, FloorplanBackground } from '../../../floorplan-background/providers/types';
 import { modelFromDrawingSession, type ModelFromDrawingDeps } from '../../model-from-drawing/model-from-drawing-session';
 import { modelFromDrawingStore } from '../../model-from-drawing/model-from-drawing-store';
-import { __setPlanAlignerForTests, planRecognitionSession } from '../plan-recognition-session';
+import { __setPlanAlignerForTests, isWallEvidence, planRecognitionSession } from '../plan-recognition-session';
+import { meetsConfidenceTier } from '../plan-confidence';
 import { planRecognitionStore } from '../plan-recognition-store';
 
 const mockBackgrounds = new Map<string, FloorplanBackground>();
@@ -103,8 +104,9 @@ describe('ADR-929 Φ5 — εικόνα υποβάθρου → τοίχοι μέ�
     const recognition = planRecognitionStore.get();
     expect(recognition).toMatchObject({ phase: 'ready', failure: null });
     expect(recognition.fusion?.segmentConfidence.size).toBe(recognition.run?.segments.length);
+    expect(modelFromDrawingStore.get()).toMatchObject({ phase: 'review', lineSource: { kind: 'raster', floorId: FLOOR } });
+    confirmAllGroups(h);
     const state = modelFromDrawingStore.get();
-    expect(state).toMatchObject({ phase: 'review', lineSource: { kind: 'raster', floorId: FLOOR } });
     const walls = state.proposal?.walls ?? [];
     expect(walls).toHaveLength(SAMPLE_HOUSE_WALLS.length);
     for (const truth of SAMPLE_HOUSE_WALLS) {
@@ -131,6 +133,16 @@ describe('ADR-929 Φ5 — εικόνα υποβάθρου → τοίχοι μέ�
     expect(modelFromDrawingSession.approve(h.deps)).toBe(false);
     expect(modelFromDrawingStore.get().notice).toEqual({ kind: 'uncalibrated' });
     expect(h.walls()).toHaveLength(0);
+  });
+
+  it('Φ5.2ε — είσοδος τοίχων = μόνο τμήματα βεβαιότητας ≥ μέτριας· η επικάλυψη κρατά όλα', async () => {
+    installBackground(CALIBRATED);
+    const source = await planRecognitionSession.run(FLOOR);
+    const { run, fusion } = planRecognitionStore.get();
+    expect(source && run && fusion).toBeTruthy();
+    const evidence = run!.segments.filter((s) => isWallEvidence(fusion!, s.id)).map((s) => s.id);
+    expect(source!.segments.map((s) => s.id)).toEqual(evidence);
+    expect(source!.segments.every((s) => meetsConfidenceTier(fusion!.segmentConfidence.get(s.id)?.score, 'medium'))).toBe(true);
   });
 
   it('όροφος χωρίς υπόβαθρο: αποτυχία με όνομα, καμία πρόταση', async () => {

@@ -54,8 +54,6 @@ export type ModelFromDrawingNotice =
   | { readonly kind: 'no-color' }
   /** Η σκηνή άλλαξε από τότε που φωτίστηκε η πρόταση· δεν γράφτηκε τίποτα, ξαναδές. */
   | { readonly kind: 'stale' }
-  /** Υπάρχει ομάδα πάχους χωρίς επιβεβαίωση. */
-  | { readonly kind: 'unconfirmed' }
   /** ADR-929 Φ5 — πηγή η εικόνα, αλλά η θέση της δεν είναι βαθμονομημένη: τα mm θα ήταν λάθος. */
   | { readonly kind: 'uncalibrated' }
   | { readonly kind: 'refused'; readonly refusal: AddWallsRefusal; readonly blocked: number }

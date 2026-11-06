@@ -16,8 +16,10 @@
  *                                        προεπισκόπηση ≡ αποτέλεσμα)
  *   · `computeDrawingCoverage`         — drawing-coverage.ts
  *
- * Τέσσερις καταστάσεις, όχι δύο:
+ * Πέντε καταστάσεις, όχι δύο:
  *   · `ready`           — θα χτιστεί ακριβώς αυτός ο τοίχος.
+ *   · `unconfirmed`     — θα χτιζόταν, αλλά η ομάδα πάχους του δεν επιβεβαιώθηκε (Δ3)· **δεν** γράφεται
+ *                         (ADR-929 Φ5.2ε: μερική έγκριση, όπως τα αναποφάσιστα κουφώματα).
  *   · `needs-decision`  — το ορθογώνιο δεν έχει προφανή άξονα (Δ7)· ούτε πράσινο ούτε κόκκινο.
  *   · `existing`        — εκεί υπάρχει ήδη δομική οντότητα (ADR-567). Αυτό δίνει την
  *                         ιδεμποτία: δεύτερη εκτέλεση προτείνει μηδέν νέους τοίχους (Α-6).
@@ -46,8 +48,12 @@ import { closedRectangleStrategy, type WallDetectionStrategy } from './wall-dete
 import { computeDrawingCoverage, type DrawingCoverage } from './drawing-coverage';
 import { resolveAxesFromContext } from './context-axis';
 import { suggestWallFunctions, type WallFunctionSuggestion } from './wall-function-proposal';
+import { assignThicknessModes } from './thickness-modes';
 
-export type WallProposalStatus = 'ready' | 'needs-decision' | 'existing' | 'rejected';
+export type WallProposalStatus = 'ready' | 'unconfirmed' | 'needs-decision' | 'existing' | 'rejected';
+
+/** ADR-929 Φ5.2ε — ο λόγος του ορθογωνίου με πάχος χωρίς στήριξη στην εικόνα (δεν γίνεται απόφαση, ούτε τοίχος). */
+export const WALL_PROPOSAL_RARE_THICKNESS_KEY = 'modelFromDrawing.rejected.rareThickness';
 
 /** Ένα ανιχνευμένο ορθογώνιο και τι θα του συμβεί. */
 export interface WallProposalItem {
@@ -64,7 +70,7 @@ export interface WallProposalItem {
    * πάνω από ένα id = συμπίπτουσες γραμμές (κοινό άκρο με γειτονικό τοίχο).
    */
   readonly sourceIds: readonly (readonly string[])[];
-  /** Πάχος (μικρή διάσταση) σε ακέραια mm — το κλειδί της ομάδας του (Δ3). */
+  /** Πάχος (μικρή διάσταση) σε ακέραια mm — το κλειδί της ομάδας του (Δ3)· σπάνιο πάχος ⇒ το μετρημένο. */
   readonly thicknessMm: number;
   /** Μήκος κατά τον άξονα σε ακέραια mm — ό,τι διαβάζει ο άνθρωπος στη λίστα (Φ3β). */
   readonly lengthMm: number;
@@ -118,8 +124,9 @@ export interface WallProposalInput {
    */
   readonly typeWall?: (wall: WallEntity) => WallEntity;
   /**
-   * ADR-929 Φ5.2δ — ανοχή ομαδοποίησης πάχους σε mm (πηγή-εικόνα: θόρυβος pixel). Απούσα ή 0 ⇒ ακριβής
-   * ομαδοποίηση σε ακέραια mm, όπως πάντα (πηγή DXF). Αλλάζει μόνο τις **ομάδες**· η γεωμετρία μένει.
+   * ADR-929 Φ5.2δ/ε — ανοχή πάχους σε mm (πηγή-εικόνα: θόρυβος pixel), το εύρος του πυρήνα των κορυφών
+   * (`thickness-modes.ts`). Απούσα ή 0 ⇒ ακριβής ομαδοποίηση σε ακέραια mm, όπως πάντα (πηγή DXF). Αλλάζει μόνο τις
+   * **ομάδες** (και κόβει τα σπάνια πάχη)· η γεωμετρία των τοίχων μένει η μετρημένη.
    */
   readonly thicknessToleranceMm?: number;
 }
@@ -162,57 +169,49 @@ function detectRects(
   };
 }
 
-/** Διάμεσος ταξινομημένων τιμών. */
-function medianOf(sorted: readonly number[]): number {
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
 /**
- * ADR-929 Φ5.2δ — το πάχος-κλειδί κάθε ορθογωνίου. Χωρίς ανοχή: ακέραια mm (DXF). Με ανοχή: συσταδοποίηση
- * 1D — νέα ομάδα όταν το κενό από την προηγούμενη τιμή **ή** το εύρος της ομάδας ξεπερνά την ανοχή (×2),
- * ώστε μια συνεχής σειρά θορυβωδών τιμών να μην ενώσει 100 mm με 250 mm. Ετικέτα = διάμεσος, στρογγυλεμένος.
+ * ADR-929 Φ5.2δ/ε — το πάχος-κλειδί κάθε ορθογωνίου, ή `null` = **σπάνιο πάχος** (μόνο πηγή-εικόνα). Χωρίς ανοχή:
+ * ακέραια mm (DXF — κάθε σχεδιασμένο πάχος είναι πραγματικό). Με ανοχή: κορυφές πυκνότητας με βάρος το μήκος και
+ * ελάχιστη στήριξη (`assignThicknessModes`) — λίγοι, διακριτοί «τύποι», όπως στο Revit.
  */
 function thicknessKeysMm(
   rects: readonly DetectedRectangle[],
   scale: number,
   toleranceMm: number,
-): Map<DetectedRectangle, number> {
-  const raw = rects.map((r) => [r, detectedRectAxis(r).thickness / scale] as const);
-  if (!(toleranceMm > 0)) return new Map(raw.map(([r, t]) => [r, Math.round(t)] as const));
-  const step = MODEL_FROM_DRAWING_LIMITS.RASTER_THICKNESS_ROUND_MM;
-  const sorted = [...raw].sort((a, b) => a[1] - b[1]);
-  const keys = new Map<DetectedRectangle, number>();
-  const flush = (cluster: (readonly [DetectedRectangle, number])[]) => {
-    const label = Math.max(step, Math.round(medianOf(cluster.map(([, t]) => t)) / step) * step);
-    for (const [r] of cluster) keys.set(r, label);
-  };
-  let cluster: (readonly [DetectedRectangle, number])[] = [];
-  for (const entry of sorted) {
-    const first = cluster[0]?.[1];
-    const last = cluster[cluster.length - 1]?.[1];
-    if (first !== undefined && last !== undefined && (entry[1] - last > toleranceMm || entry[1] - first > 2 * toleranceMm)) {
-      flush(cluster);
-      cluster = [];
-    }
-    cluster.push(entry);
-  }
-  if (cluster.length > 0) flush(cluster);
-  return keys;
+): Map<DetectedRectangle, number | null> {
+  const raw = rects.map((r) => {
+    const axis = detectedRectAxis(r);
+    return { rect: r, thicknessMm: axis.thickness / scale, weightMm: axis.length / scale };
+  });
+  if (!(toleranceMm > 0)) return new Map(raw.map((x) => [x.rect, Math.round(x.thicknessMm)] as const));
+  const L = MODEL_FROM_DRAWING_LIMITS;
+  const modes = assignThicknessModes(raw, {
+    bandwidthMm: toleranceMm,
+    minShare: L.RASTER_THICKNESS_MODE_MIN_SHARE,
+    captureBandwidths: L.RASTER_THICKNESS_CAPTURE_BANDWIDTHS,
+    roundMm: L.RASTER_THICKNESS_ROUND_MM,
+  });
+  return new Map(raw.map((x, i) => {
+    const mode = modes[i];
+    return [x.rect, mode.kind === 'mode' ? mode.labelMm : null] as const;
+  }));
 }
 
-/** Δ3 — ομάδες πάχους με την τοπολογική πρόταση και την κατηγορία που τελικά ισχύει. */
+/** Δ3 — ομάδες πάχους με την τοπολογική πρόταση και την κατηγορία που τελικά ισχύει. Τα σπάνια δεν ανήκουν σε ομάδα. */
 function buildGroups(
   rects: readonly DetectedRectangle[],
-  thicknessOf: ReadonlyMap<DetectedRectangle, number>,
+  thicknessOf: ReadonlyMap<DetectedRectangle, number | null>,
   keyOf: ReadonlyMap<DetectedRectangle, string>,
   suggestions: ReadonlyMap<DetectedRectangle, WallFunctionSuggestion>,
   chosen: ReadonlyMap<number, WallCategory> | undefined,
 ): WallThicknessGroup[] {
   const byThickness = new Map<number, DetectedRectangle[]>();
   for (const rect of rects) {
-    const t = thicknessOf.get(rect) ?? 0;
-    byThickness.set(t, [...(byThickness.get(t) ?? []), rect]);
+    const t = thicknessOf.get(rect);
+    if (t === null || t === undefined) continue;
+    const members = byThickness.get(t);
+    if (members) members.push(rect);
+    else byThickness.set(t, [rect]);
   }
   return [...byThickness.entries()]
     .sort(([a], [b]) => a - b)
@@ -234,17 +233,17 @@ function buildGroups(
 }
 
 /**
- * Χτίζει τα μη-αμφίσημα ορθογώνια μέσω του SSoT και αντιστοιχίζει κάθε ένα στην κατάληξή του.
+ * Χτίζει ορθογώνια μέσω του SSoT και αντιστοιχίζει κάθε ένα στην κατάληξή του.
  * Ο `computeFillingWalls` επιστρέφει τους τοίχους στη σειρά των ορθογωνίων, παραλείποντας τα
  * απορριφθέντα ⇒ η αντιστοίχιση γίνεται με ταυτότητα ορθογωνίου, όχι με δείκτη.
  */
-function resolveBuildable(
-  buildable: readonly DetectedRectangle[],
+function judgeRects(
+  rects: readonly DetectedRectangle[],
   input: WallProposalInput,
   categoryOf: (rect: DetectedRectangle) => WallCategory,
-): ReadonlyMap<DetectedRectangle, ItemOutcome> {
+): Map<DetectedRectangle, ItemOutcome> {
   const { walls, rejected } = computeFillingWalls(
-    buildable,
+    rects,
     input.overrides ?? {},
     input.sceneUnits,
     input.levelId,
@@ -261,12 +260,67 @@ function resolveBuildable(
     );
   }
   let next = 0;
-  for (const rect of buildable) {
+  for (const rect of rects) {
     if (outcome.has(rect)) continue;
     outcome.set(rect, { status: 'ready', wall: walls[next] });
     next += 1;
   }
   return outcome;
+}
+
+/**
+ * ADR-929 Φ5.2ε — μερική έγκριση σε δύο περάσματα του ΙΔΙΟΥ κριτή:
+ *   1. όλα τα ορθογώνια ⇒ `existing` / `rejected` όπως πάντα (η ιδεμποτία φαίνεται και πριν την επιβεβαίωση)·
+ *   2. **μόνο** τα έτοιμα των επιβεβαιωμένων ομάδων ⇒ οι ενώσεις κρίνονται ανάμεσα σε όσους **θα γραφτούν**, άρα
+ *      το `walls` μένει ≡ ό,τι γράφεται (Α-3). Τα υπόλοιπα έτοιμα γίνονται `unconfirmed`.
+ * Όταν δεν υπάρχει ανεπιβεβαίωτο έτοιμο, το (2) παραλείπεται και το αποτέλεσμα είναι ταυτόσημο με το (1).
+ */
+function resolveBuildable(
+  buildable: readonly DetectedRectangle[],
+  input: WallProposalInput,
+  categoryOf: (rect: DetectedRectangle) => WallCategory,
+  isConfirmed: (rect: DetectedRectangle) => boolean,
+): ReadonlyMap<DetectedRectangle, ItemOutcome> {
+  const first = judgeRects(buildable, input, categoryOf);
+  const ready = buildable.filter((r) => first.get(r)?.status === 'ready');
+  const writable = ready.filter(isConfirmed);
+  if (writable.length === ready.length) return first;
+  const outcome = new Map(first);
+  for (const rect of ready) outcome.set(rect, { status: 'unconfirmed' });
+  if (writable.length > 0) for (const [rect, o] of judgeRects(writable, input, categoryOf)) outcome.set(rect, o);
+  return outcome;
+}
+
+interface OutcomeContext {
+  readonly keyOf: ReadonlyMap<DetectedRectangle, string>;
+  readonly thicknessOf: ReadonlyMap<DetectedRectangle, number | null>;
+  readonly groups: readonly WallThicknessGroup[];
+}
+
+/**
+ * Η κατάληξη κάθε ορθογωνίου: σπάνιο πάχος ⇒ `rejected` με λόγο · αμφίσημο χωρίς απόφαση ⇒ `needs-decision` ·
+ * τα υπόλοιπα κρίνονται (`resolveBuildable`), με την κατηγορία και την επιβεβαίωση της ομάδας τους.
+ */
+function decideOutcomes(
+  rects: readonly DetectedRectangle[],
+  input: WallProposalInput,
+  { keyOf, thicknessOf, groups }: OutcomeContext,
+): (rect: DetectedRectangle) => ItemOutcome {
+  const groupOf = new Map(groups.map((g) => [g.thicknessMm, g] as const));
+  const groupOfRect = (rect: DetectedRectangle) => groupOf.get(thicknessOf.get(rect) ?? -1);
+  const rare = new Set(rects.filter((r) => thicknessOf.get(r) === null));
+  const undecided = new Set(
+    rects.filter((r) => isAmbiguous(r) && !input.acceptedKeys?.has(keyOf.get(r) ?? '')),
+  );
+  const outcome = resolveBuildable(
+    rects.filter((r) => !undecided.has(r) && !rare.has(r)),
+    input,
+    (rect) => groupOfRect(rect)?.category ?? 'exterior',
+    (rect) => groupOfRect(rect)?.confirmed === true,
+  );
+  return (rect) =>
+    outcome.get(rect)
+    ?? (rare.has(rect) ? { status: 'rejected', reason: WALL_PROPOSAL_RARE_THICKNESS_KEY } : { status: 'needs-decision' });
 }
 
 /**
@@ -285,27 +339,21 @@ export function computeWallProposal(input: WallProposalInput): WallProposal {
   const columns = collectColumnFootprints(entities as readonly AnySceneEntity[]);
   const suggestions = suggestWallFunctions(rects, columns, scale);
   const groups = buildGroups(rects, thicknessOf, keyOf, suggestions, input.categoryByThicknessMm);
-  const categoryOfThickness = new Map(groups.map((g) => [g.thicknessMm, g.category] as const));
+  const outcomeOf = decideOutcomes(rects, input, { keyOf, thicknessOf, groups });
 
-  const undecided = new Set(
-    rects.filter((r) => isAmbiguous(r) && !input.acceptedKeys?.has(keyOf.get(r) ?? '')),
-  );
-  const outcome = resolveBuildable(
-    rects.filter((r) => !undecided.has(r)),
-    input,
-    (rect) => categoryOfThickness.get(thicknessOf.get(rect) ?? 0) ?? 'exterior',
-  );
-
-  const items: WallProposalItem[] = rects.map((rect) => ({
-    key: keyOf.get(rect) ?? '',
-    rect,
-    sourceIds: rectEdgeSourceIds(rect, roleSegments, tol),
-    thicknessMm: thicknessOf.get(rect) ?? 0,
-    lengthMm: Math.round(detectedRectAxis(rect).length / scale),
-    suggestedFunction: suggestions.get(rect) ?? 'interior',
-    axisFromContext: fromContext.has(rect),
-    ...(outcome.get(rect) ?? { status: 'needs-decision' as const }),
-  }));
+  const items: WallProposalItem[] = rects.map((rect) => {
+    const axis = detectedRectAxis(rect);
+    return {
+      key: keyOf.get(rect) ?? '',
+      rect,
+      sourceIds: rectEdgeSourceIds(rect, roleSegments, tol),
+      thicknessMm: thicknessOf.get(rect) ?? Math.round(axis.thickness / scale),
+      lengthMm: Math.round(axis.length / scale),
+      suggestedFunction: suggestions.get(rect) ?? 'interior',
+      axisFromContext: fromContext.has(rect),
+      ...outcomeOf(rect),
+    };
+  });
   const walls = items.flatMap((i) => (i.wall ? [i.wall] : []));
   return { items, walls, groups, coverage: computeDrawingCoverage(entities, roleSegments, rects, tol) };
 }

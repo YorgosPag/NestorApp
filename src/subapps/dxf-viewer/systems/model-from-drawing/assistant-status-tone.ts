@@ -13,8 +13,14 @@ import type { OpeningProposalStatus } from '../../bim/model-from-drawing/opening
 import type { OpeningPreviewZone } from '../../bim/model-from-drawing/opening-preview';
 import type { PreviewZoneTone } from '../region-preview/preview-zone-style';
 
+/**
+ * `unconfirmed` (ADR-929 Φ5.2ε) μοιράζεται τον τόνο «θέλει εσένα» με το `needs-decision`: και τα δύο δεν γράφονται
+ * μέχρι να αποφασίσει ο άνθρωπος. Τα ξεχωρίζει η ετικέτα του υπομνήματος και ο τόπος της απόφασης (ομάδα πάχους ·
+ * λίστα αμφίσημων) — κανένα νέο χρώμα.
+ */
 export const ASSISTANT_STATUS_TONE: Readonly<Record<WallProposalStatus, PreviewZoneTone>> = {
   ready: 'accept',
+  unconfirmed: 'decide',
   'needs-decision': 'decide',
   rejected: 'reject',
   existing: 'existing',
@@ -23,6 +29,7 @@ export const ASSISTANT_STATUS_TONE: Readonly<Record<WallProposalStatus, PreviewZ
 /** Οι καταστάσεις με τη σειρά που τις διαβάζει ο άνθρωπος στο πάνελ. */
 export const ASSISTANT_STATUS_ORDER: readonly WallProposalStatus[] = [
   'ready',
+  'unconfirmed',
   'needs-decision',
   'rejected',
   'existing',

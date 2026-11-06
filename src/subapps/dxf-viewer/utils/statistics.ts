@@ -17,6 +17,28 @@ export function median(values: readonly number[]): number {
 }
 
 /**
+ * Σταθμισμένος διάμεσος: η τιμή όπου το σωρευτικό βάρος (σε αύξουσα σειρά) φτάνει το μισό του συνόλου. Σε
+ * ακριβή ισοβαρία δύο μέσων τιμών ⇒ ο μέσος όρος τους (ταυτίζεται με τον {@link median} όταν όλα τα βάρη είναι ίσα).
+ * Μη θετικά βάρη αγνοούνται. Κενό (ή μηδενικό βάρος) → 0.
+ */
+export function weightedMedian(values: readonly number[], weights: readonly number[]): number {
+  const pairs = values
+    .map((v, i) => [v, weights[i] ?? 0] as const)
+    .filter(([, w]) => w > 0)
+    .sort((a, b) => a[0] - b[0]);
+  const total = pairs.reduce((s, [, w]) => s + w, 0);
+  if (total <= 0) return 0;
+  const half = total / 2;
+  let acc = 0;
+  for (let i = 0; i < pairs.length; i++) {
+    acc += pairs[i][1];
+    if (acc > half) return pairs[i][0];
+    if (acc === half) return (pairs[i][0] + pairs[i + 1][0]) / 2;
+  }
+  return pairs[pairs.length - 1][0];
+}
+
+/**
  * Median absolute deviation (Tukey 1977) — `median(|vᵢ − med|)`. The outlier-RESISTANT
  * measure of spread: unlike a standard deviation, a handful of gross blunders cannot inflate
  * it and thereby hide inside their own variance. This is why every robust gate in the app

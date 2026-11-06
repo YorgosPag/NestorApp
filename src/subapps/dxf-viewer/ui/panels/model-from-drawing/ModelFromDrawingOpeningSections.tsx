@@ -53,7 +53,7 @@ import {
   OPENING_REFUSAL_LABEL_KEY,
   OPENING_STATUS_LABEL_KEY,
 } from '../../../systems/model-from-drawing/opening-label-keys';
-import { ColorChip, MUTED, SECTION_TITLE, ToneSwatch, type Translate } from './ModelFromDrawingSections';
+import { ColorChip, LeftOutNote, MUTED, SECTION_TITLE, ToneSwatch, type Translate } from './ModelFromDrawingSections';
 
 export interface OpeningReviewActions {
   /** Οπλίζει το δείγμα «κούφωμα» (πρώτη φορά ή «άλλο δείγμα»). */
@@ -277,11 +277,10 @@ function OpeningApproval(props: Pick<OpeningsSectionProps, 'proposal' | 'preview
           {t(OPENING_REFUSAL_LABEL_KEY[refusal])}
         </p>
       ) : null}
-      {counts.undecided > 0 ? (
-        <p className={MUTED} data-testid="mfd-openings-left-out">
-          {t('modelFromDrawing.openings.leftOut', { count: counts.undecided })}
-        </p>
-      ) : null}
+      <LeftOutNote
+        count={counts.undecided}
+        text={(count) => t('modelFromDrawing.openings.leftOut', { count })} testId="mfd-openings-left-out"
+      />
       <Button
         type="button" size="sm" disabled={counts.writable === 0 || refusal !== undefined}
         onClick={actions.onApproveOpenings} data-testid="mfd-openings-approve"

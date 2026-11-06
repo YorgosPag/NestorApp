@@ -21,9 +21,13 @@ import type { Entity, SceneLayer } from '../../types/entities';
 import type { RasterSegment } from '../../bim/plan-recognition/plan-recognition-types';
 import type { WallDetectionStrategy } from '../../bim/model-from-drawing/wall-detection-strategy';
 import type { EntityColorResolver } from '../../bim/walls/same-color-rects';
-import { rasterParallelPairStrategy, withRasterSegments } from '../../bim/plan-recognition/segments/raster-segments-to-scene';
+import {
+  rasterLineTolerance,
+  rasterParallelPairStrategy,
+  withRasterSegments,
+} from '../../bim/plan-recognition/segments/raster-segments-to-scene';
 import { getFloorBackground } from '../../floorplan-background/stores/floorplanBackgroundStore';
-import { rasterToSceneAffine, type RasterPlacement } from '../../floorplan-background/geometry/raster-scene-mapping';
+import type { RasterPlacement } from '../../floorplan-background/geometry/raster-scene-mapping';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { resolveEntityColorHex } from '../selection/select-similar-by-color';
@@ -69,13 +73,13 @@ export function isRasterPlacementCalibrated(source: ProposalLineSource): boolean
 }
 
 /**
- * ADR-929 Φ5.2δ — πόσα mm είναι ±1,5 pixel της εικόνας με την τρέχουσα τοποθέτηση (ο μεγαλύτερος άξονας).
- * Δύο πάχη πιο κοντά από αυτό είναι ο ίδιος τοίχος με θόρυβο ψηφιοποίησης, όχι δύο αποφάσεις.
+ * ADR-929 Φ5.2δ — πόσα mm είναι ±1,5 pixel της εικόνας με την τρέχουσα τοποθέτηση (ο μεγαλύτερος άξονας): ο θόρυβος
+ * ψηφιοποίησης του πάχους, δηλαδή το εύρος του πυρήνα των ομάδων (Φ5.2ε). Το μέγεθος του pixel έρχεται από το ΕΝΑ
+ * `sceneUnitsPerPixel` (μέσω `rasterLineTolerance`) — όχι από δεύτερο υπολογισμό πάνω στον affine πίνακα.
  */
 function rasterThicknessToleranceMm(placement: RasterPlacement, sceneUnits: SceneUnits): number {
-  const m = rasterToSceneAffine(placement);
-  const pixelScene = Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d));
-  return (MODEL_FROM_DRAWING_LIMITS.RASTER_THICKNESS_TOLERANCE_PX * pixelScene) / mmToSceneUnits(sceneUnits);
+  const tolerance = rasterLineTolerance(placement, MODEL_FROM_DRAWING_LIMITS.RASTER_THICKNESS_TOLERANCE_PX);
+  return tolerance / mmToSceneUnits(sceneUnits);
 }
 
 /**

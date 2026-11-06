@@ -369,6 +369,7 @@
     },
     "status": {
       "ready": "Will be created",
+      "unconfirmed": "Awaiting thickness confirmation",
       "needs-decision": "Need a decision",
       "existing": "Already exist",
       "rejected": "Will not be created"
@@ -389,7 +390,8 @@
       "focus": "Focus in the drawing"
     },
     "rejected": {
-      "title": "Why they will not be created"
+      "title": "Why they will not be created",
+      "rareThickness": "Rare thickness in the image: not a wall type of this drawing — check the image"
     },
     "coverage": {
       "summary": "Wall lines: {explained} explained, {unexplained} unexplained · {ignored} of another colour",
@@ -453,6 +455,7 @@
       "leftOut": "{count} undecided will not be written."
     },
     "approve": "Create walls ({count})",
+    "leftOut": "{count} walls will not be written: their thickness group is not confirmed.",
     "image": {
       "or": "Or, without a sample:",
       "start": "Recognise from the background image",
@@ -471,7 +474,8 @@
         "high": "High confidence",
         "medium": "Medium confidence",
         "low": "Low confidence: check the image"
-      }
+      },
+      "lowExcluded": "{count} low-confidence lines are not proposed as walls — check the image."
     },
     "notice": {
       "no-line-opening": "No line found at that point. Click on a door or window line or arc.",
@@ -481,7 +485,6 @@
       "no-line": "No line found at that point. Click on a wall line.",
       "no-color": "The line has no colour that can become a role.",
       "stale": "The drawing changed since the proposal was lit. Nothing was written — check the new preview and approve again.",
-      "unconfirmed": "Confirm the function of every thickness group first.",
       "uncalibrated": "The background image is not calibrated, so lengths and thicknesses would be wrong. Calibrate the background first.",
       "written": "{count} walls created. Ctrl+Z to undo.",
       "refused": {
