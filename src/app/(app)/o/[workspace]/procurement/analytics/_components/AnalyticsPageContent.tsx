@@ -33,7 +33,7 @@ export function AnalyticsPageContent() {
   const isEmpty = !isLoading && !error && data?.current.kpis.totalPOs === 0;
 
   return (
-    <main className="flex flex-col gap-6 px-4 pb-10 pt-4 sm:px-6">
+    <section className="flex flex-col gap-6 px-4 pb-10 pt-4 sm:px-6">
       <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t('analytics.title')}</h1>
@@ -105,6 +105,6 @@ export function AnalyticsPageContent() {
       )}
 
       {isEmpty && <AnalyticsEmptyState />}
-    </main>
+    </section>
   );
 }

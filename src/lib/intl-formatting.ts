@@ -154,12 +154,16 @@ export const formatCalendarMonth = (
   monthKey: string,
   locale: string = getCurrentLocale(),
   // `'short'` = άξονας γραφήματος («Σεπ 2026», ADR-890 §13): ίδια αγκύρωση UTC, πιο στενό κείμενο.
-  style: 'long' | 'short' = 'long',
+  // `'month'` = **μόνο ο μήνας** («Σεπ» / "Sep") για άξονα συνεχόμενων μηνών όπου το έτος είναι προφανές από το
+  //   πλαίσιο (ADR-928 §5.24.2: η τάση εξαμήνου του hub)· το έτος ζει στην προσβάσιμη ετικέτα (`'long'`), όχι στον άξονα.
+  style: 'long' | 'short' | 'month' = 'long',
 ): string => {
   const [year, month] = monthKey.split('-').map(Number);
   const noon = Date.UTC(year, month - 1, 1, 12);
   if (!Number.isFinite(noon)) return monthKey;
-  return new Intl.DateTimeFormat(locale, { month: style, year: 'numeric', timeZone: 'UTC' }).format(new Date(noon));
+  const fields: Intl.DateTimeFormatOptions =
+    style === 'month' ? { month: 'short' } : { month: style, year: 'numeric' };
+  return new Intl.DateTimeFormat(locale, { ...fields, timeZone: 'UTC' }).format(new Date(noon));
 };
 
 /**

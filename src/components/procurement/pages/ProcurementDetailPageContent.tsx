@@ -115,29 +115,29 @@ export function ProcurementDetailPageContent() {
 
   if (editMode) {
     return (
-      <main className="mx-auto max-w-4xl p-4 md:p-6">
+      <section className="mx-auto max-w-4xl p-4 md:p-6">
         <PurchaseOrderForm
           existingPO={isNew ? undefined : po}
           initialProjectId={initialProjectId}
           onSuccess={handleSuccess}
           onCancel={handleCancel}
         />
-      </main>
+      </section>
     );
   }
 
   if (!po) {
     return (
-      <main className="mx-auto max-w-4xl p-4 md:p-6 text-center">
+      <section className="mx-auto max-w-4xl p-4 md:p-6 text-center">
         <p className={cn(typography.body, 'text-muted-foreground')}>
-          {t('detail.notFound', 'PO not found')}
+          {t('detail.notFound')}
         </p>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-4 md:p-6">
+    <section className="mx-auto max-w-4xl p-4 md:p-6">
       <PurchaseOrderDetail
         po={po}
         onApprove={() => handleAction('approve')}
@@ -148,7 +148,7 @@ export function ProcurementDetailPageContent() {
         onEdit={() => setEditMode(true)}
         onDuplicate={handleDuplicate}
       />
-    </main>
+    </section>
   );
 }
 

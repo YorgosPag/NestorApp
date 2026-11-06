@@ -140,7 +140,7 @@ export function QuoteReviewClient({ id }: QuoteReviewClientProps) {
   // σάρωσης των Ariba/Rossum. Με `container max-w-7xl` σε 2400px το πάνελ ελέγχου έμενε ~613px (μετρημένο 2026-10-28).
   // Το οριζόντιο κενό το δίνει το κέλυφος (ADR-797, CHECK 3.63) — όχι εδώ.
   return (
-    <main className="w-full space-y-4 py-6">
+    <section className="w-full space-y-4 py-6">
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="mr-1 h-4 w-4" />
@@ -232,6 +232,6 @@ export function QuoteReviewClient({ id }: QuoteReviewClientProps) {
           </div>
         </>
       )}
-    </main>
+    </section>
   );
 }

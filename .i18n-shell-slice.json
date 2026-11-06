@@ -959,6 +959,19 @@
       ],
       "reason": "ADR-327 §8.5.4 — Η ΣΑΡΩΣΗ ΠΡΟΣΦΟΡΑΣ (`/o/[workspace]/procurement/quotes/scan`). 🔴 ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-28 (Chrome, dev, ψυχρή φόρτωση από το κουμπί «Σάρωση Προσφοράς (AI)» του RFQ): hydration mismatch — ο server έβαφε «Έργο», ο client το ωμό `quotes.project` (το `quotes` ΔΕΝ είναι στο κέλυφος) ⇒ το React ξαναχτίζει το δέντρο, και το αρχείο που είχε ήδη επιλεγεί ΧΑΝΕΤΑΙ. Ίδια κλάση με τη σελίδα του RFQ (ίδια ημέρα), επόμενο βήμα της ΙΔΙΑΣ ροής. Καταχωρείται από το ίδιο το `page.tsx` (είναι `'use client'`)."
     },
+    "src/app/(app)/o/[workspace]/procurement/page.tsx": {
+      "sealed": 493,
+      "sealedAt": "2026-11-06",
+      "history": [
+        {
+          "from": 0,
+          "to": 493,
+          "at": "2026-11-06",
+          "why": "ADR-928 §5.24.2 (2026-11-06) — ΓΕΝΝΗΣΗ ΤΟΥ SLICE. Μετρημένο με `--measure`: 493 bytes · 0,3% κελύφους · 1 ns [procurement] — οι ετικέτες της υποπλοήγησης + το `hub.pageLabel` (όνομα της περιοχής)· ο κορμός μένει πίσω από το όριο `next/dynamic`."
+        }
+      ],
+      "reason": "ADR-928 §5.24.2 — Η ΑΡΧΙΚΗ ΤΩΝ ΠΡΟΜΗΘΕΙΩΝ (`/o/[workspace]/procurement`). Μετρημένο ζωντανά (2026-11-06): η ΜΟΝΗ σελίδα της ενότητας χωρίς υποπλοήγηση στο HTML του server, γιατί το κέλυφος ζούσε μέσα στον κορμό `ssr:false` (ADR-294). Το κέλυφος μετακόμισε στο `page.tsx`, ΕΞΩ από το όριο, άρα αποδίδεται στον server· το `procurement` ΔΕΝ είναι στο κέλυφος ⇒ χωρίς slice, ωμά κλειδιά στο HTML (ADR-781). Καταχωρείται από το ίδιο το `page.tsx` (είναι `'use client'`)."
+    },
     "src/app/(app)/o/[workspace]/procurement/new/page.tsx": {
       "sealed": 446,
       "sealedAt": "2026-11-06",
@@ -2710,10 +2723,6 @@
     "src/components/space-management/shared/tabs/EntityMediaFilesTab.tsx": {
       "namespaces": ["parking", "storage"],
       "reason": "`binding.i18nNamespace` από 3 εργοστάσια: parking, storage (CRITICAL) και property-market — το τελευταίο μόνο από το PropertyDossierTabs, που το δηλώνει το ίδιο με `useTranslation([NS])`."
-    },
-    "src/components/ui/navigation/route-tabs.tsx": {
-      "namespaces": ["projects", "procurement"],
-      "reason": "Υποχρεωτικό prop, 2 καλούντες: ProjectProcurementTabs → `projects`, ProcurementSubNav → `procurement`. Και τα δύο CRITICAL."
     }
   },
   "$lazyRouteMountNamespaces": "ADR-744 §27 — η ΚΛΕΙΣΤΗ ΑΠΟΓΡΑΦΗ των ζευγών (τεμπέλικη διαδρομή → namespace που φορτώνει ΜΟΝΟ στο mount, δηλαδή ούτε ολόκληρο στο κέλυφος ούτε CRITICAL). Κάθε ζεύγος είναι λήψη που το chunk ΠΕΡΙΜΕΝΕΙ πριν ζωγραφίσει. ΤΑΥΤΟΤΗΤΑ, ΠΟΤΕ BYTES. Νέο ζεύγος ⇒ κόψε την εισαγωγή (τεμπέλικη καρτέλα μέσω του ίδιου εργοστασίου) ή δήλωσέ το ΚΑΙ σφράγισε ξανά με γραμμένο why. Ζεύγος που έπαψε ⇒ σβήσε το και ΚΑΤΕΒΑΣΕ τη σφράγιση. Οι μετρήσεις: npm run generate:i18n-shell-slice -- --measure",

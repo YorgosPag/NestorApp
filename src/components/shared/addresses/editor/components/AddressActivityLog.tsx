@@ -5,6 +5,7 @@ import { Check, ChevronDown, ChevronUp, Copy, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { formatDateTime } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ActivityLevel, ActivityVerbosity, GeocodingActivityEvent } from '../types';
 
@@ -26,7 +27,8 @@ const VERBOSITY_OPTIONS: ActivityVerbosity[] = ['basic', 'detailed', 'debug'];
 const COPY_RESET_MS = 2000;
 
 function formatTime(timestamp: number): string {
-  return new Intl.DateTimeFormat(undefined, { timeStyle: 'medium' }).format(new Date(timestamp));
+  // Γλώσσα της εφαρμογής, όχι του λειτουργικού (ADR-928 §5.24.2 — ίδια κλάση με την τάση του hub).
+  return formatDateTime(timestamp, { timeStyle: 'medium' });
 }
 
 export interface AddressActivityLogProps {

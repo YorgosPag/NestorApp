@@ -1119,10 +1119,7 @@
     "filters",
     "navigation",
     "navigation-entities",
-    "procurement",
-    "projects",
-    "projects-data",
-    "projects-ika"
+    "procurement"
   ],
   "ProcurementDetail": [
     "addresses",

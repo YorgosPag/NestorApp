@@ -39,6 +39,8 @@ const PROCUREMENT_TABS: readonly TabsNavTab[] = [
   {
     href: '/procurement/purchase-orders',
     labelKey: 'nav.purchaseOrders',
+    // ADR-928 §5.24.2 — η φόρμα νέας παραγγελίας ζει στο `/procurement/new` (ADR-330 S6), αλλά ανήκει εδώ.
+    alsoActiveOn: ['/procurement/new'],
     icon: Package,
     iconColor: 'text-primary',
   },

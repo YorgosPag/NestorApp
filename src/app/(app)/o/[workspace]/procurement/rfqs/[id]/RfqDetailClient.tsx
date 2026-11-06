@@ -265,7 +265,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
 
   return (
     <DirtyFormProvider>
-    <main className="container mx-auto max-w-5xl space-y-4 py-6">
+    <section className="container mx-auto max-w-5xl space-y-4 py-6">
       <PageHeader
         variant="sticky-rounded"
         breadcrumb={<ModuleBreadcrumb />}
@@ -484,7 +484,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         onCancelConfirm={lifecycle.handleConfirmCancel}
         onCancelDialogClose={lifecycle.closeCancelDialog}
       />
-    </main>
+    </section>
     </DirtyFormProvider>
   );
 }

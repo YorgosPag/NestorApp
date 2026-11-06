@@ -29,9 +29,16 @@ export interface RouteTabsProps {
   className?: string;
 }
 
+/** Πρόθεμα **ανά τμήμα**: το `/procurement/new` πιάνει το `/procurement/new/x`, όχι το `/procurement/newsletter`. */
+function isUnderSegment(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
 export function isTabActive(pathname: string, tab: TabsNavTab): boolean {
   if (tab.exactMatch) return pathname === tab.href;
-  if (!pathname.startsWith(tab.href)) return false;
+  const owned =
+    pathname.startsWith(tab.href) || (tab.alsoActiveOn?.some((p) => isUnderSegment(pathname, p)) ?? false);
+  if (!owned) return false;
   return !tab.excludeStartsWith?.some((p) => pathname.startsWith(p));
 }
 

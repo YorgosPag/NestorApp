@@ -37,6 +37,12 @@ export interface TabsNavTab {
   labelKey: string;
   exactMatch?: boolean;
   excludeStartsWith?: readonly string[];
+  /**
+   * Διαδρομές (προθέματα) που **ανήκουν** στην καρτέλα αν και ζουν έξω από το `href` της — π.χ. η φόρμα
+   * `/procurement/new` ανήκει στις «Παραγγελίες» (ADR-928 §5.24.2). Το `excludeStartsWith` υπερισχύει και εδώ.
+   * Χωρίς αυτό, μια σελίδα της ενότητας δεν έχει ενεργή καρτέλα και ο άνθρωπος χάνει το «πού είμαι».
+   */
+  alsoActiveOn?: readonly string[];
   icon?: LucideIcon | React.ComponentType<{ className?: string }>;
   iconColor?: string;
 }

@@ -12,7 +12,7 @@ import type { LucideIcon } from 'lucide-react';
 import { BarChart3, ChevronRight, ShoppingCart, TrendingUp, Truck, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-formatting';
+import { formatCalendarMonth, formatCurrency } from '@/lib/intl-formatting';
 import { useProcurementDashboard } from '@/hooks/procurement/useProcurementDashboard';
 import type { CategorySpend, MonthlyPoint } from '@/hooks/procurement/useProcurementDashboard';
 import { getProcurementHubUrl } from '@/lib/navigation/procurement-urls';
@@ -142,15 +142,16 @@ function MonthlyTrend({ trend, loading }: MonthlyTrendProps) {
         {!loading && hasData && (
           <figure className="flex h-24 items-end justify-between gap-1" aria-label={t('hub.dashboard.monthlyTrend')}>
             {trend.map(({ month, total }) => {
-              const label = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(
-                new Date(`${month}-01`)
-              );
+              // ADR-928 §5.24.2 — γλώσσα της ΕΦΑΡΜΟΓΗΣ (όχι του λειτουργικού) και αγκύρωση UTC (ο μήνας δεν γλιστρά
+              // στον προηγούμενο δυτικά του Greenwich)· το έτος στην προσβάσιμη ετικέτα.
+              const label = formatCalendarMonth(month, undefined, 'month');
+              const fullLabel = formatCalendarMonth(month);
               return (
                 <div key={month} className="flex flex-1 flex-col items-center gap-1">
                   <div
                     className="w-full rounded-t-sm bg-primary/70"
                     style={{ height: `${(total / max) * 100}%`, minHeight: total > 0 ? '4px' : '0' }}
-                    aria-label={`${label}: ${formatCurrency(total, 'EUR')}`}
+                    aria-label={`${fullLabel}: ${formatCurrency(total, 'EUR')}`}
                   />
                   <span className="text-xs text-muted-foreground">{label}</span>
                 </div>

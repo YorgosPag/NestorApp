@@ -79,6 +79,28 @@ describe('isTabActive', () => {
   it('returns false when pathname does not start with href', () => {
     expect(isTabActive('/other', FIXTURE_TABS[1])).toBe(false);
   });
+
+  // ADR-928 §5.24.2 — μια σελίδα που ζει έξω από το href της καρτέλας της.
+  const OWNING_TAB: TabsNavTab = {
+    href: '/procurement/purchase-orders',
+    labelKey: 'nav.purchaseOrders',
+    alsoActiveOn: ['/procurement/new'],
+    excludeStartsWith: ['/procurement/new/draft'],
+  };
+
+  it('honors alsoActiveOn on the path and below it', () => {
+    expect(isTabActive('/procurement/new', OWNING_TAB)).toBe(true);
+    expect(isTabActive('/procurement/new/step', OWNING_TAB)).toBe(true);
+    expect(isTabActive('/procurement/purchase-orders', OWNING_TAB)).toBe(true);
+  });
+
+  it('matches alsoActiveOn per segment, never as a raw prefix', () => {
+    expect(isTabActive('/procurement/newsletter', OWNING_TAB)).toBe(false);
+  });
+
+  it('lets excludeStartsWith override alsoActiveOn', () => {
+    expect(isTabActive('/procurement/new/draft', OWNING_TAB)).toBe(false);
+  });
 });
 
 describe('findActiveHref', () => {

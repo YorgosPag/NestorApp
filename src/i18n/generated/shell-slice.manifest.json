@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "93289fdc8f90aab9d3170cb51afc69659c1dc0f8504c26932778a23f0b6cda47",
+    "src/i18n/generated/lazy-route-namespaces.json": "2b174fef75f68624a76d6f9349cd841871d1e55da961d8d550be40399c5b85f1",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -58,6 +58,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
+    "src/i18n/generated/routes/o__workspace__procurement.el.json": "d5d58fa34feb73a2fdfc6e96648fbdedcaa3359341aa24c30ebbed729f489ef3",
     "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "bc3adbeeffa071c310dbb8c0540fefc8fbdf68dfe904d241a72b64b751edcd82",
     "src/i18n/generated/routes/o__workspace__procurement__analytics.el.json": "610521ed0d672a2342d215d808f428dce8a2efb525c2407e24dc1308884abacb",
     "src/i18n/generated/routes/o__workspace__procurement__materials.el.json": "390ac5bf7a0cdf8b0e0a18a2a1ee3d9c5fa0fc4f8a05c92d4c237b88403b7531",
@@ -133,11 +134,11 @@
       "guaranteedNamespaces": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d",
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
-      "lazyRouteOpaqueNamespaces": "87d6b7e9278d96e830e3f5ade9b71e314a53f5d46c7d735cbb087eb4ae8dc167",
+      "lazyRouteOpaqueNamespaces": "ea809d3dd5036454f9723797b38acf84a96410a2cf8d926571c41a507acb0063",
       "lazyRouteRegistries": "b0bacc3cf337c275819dff6286bb518d8a5cab18c3c9d88d917b33d0adb7076f",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "68b3ef76ae3d2e21c61167f5f5066f0d8f2960840b7b28ffebb5c049315bb8d8",
+      "routeSlices": "dffe99dc1595e7fe80e83fe872d818818576f45834581b91434a0d1afbb1aec6",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -207,7 +208,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ead173620481a914080010aec3ab75b6187e29bfe83817f64f82968ac4d49429",
+  "inputsSha256": "6bc8f11a523c462a42a355cff0a2db596b6a94d19e16856d59965733681ab981",
   "languages": [
     "el"
   ],
@@ -13772,6 +13773,37 @@
             "mandate.office.agreementOptions.exclusive-right-to-lease",
             "mandate.office.agreementOptions.exclusive-right-to-sell",
             "mandate.office.agreementOptions.open"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__procurement": {
+      "page": "src/app/(app)/o/[workspace]/procurement/page.tsx",
+      "wants": {
+        "common-actions": {
+          "keys": [
+            "actions.next",
+            "actions.previous"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "procurement": {
+          "keys": [
+            "hub.pageLabel",
+            "nav.agreements",
+            "nav.analytics",
+            "nav.ariaLabel",
+            "nav.hub",
+            "nav.materials",
+            "nav.purchaseOrders",
+            "nav.quotes",
+            "nav.rfqs",
+            "nav.subcontractLibrary",
+            "nav.subcontractMasters",
+            "nav.vendors"
           ],
           "prefixes": [],
           "whole": false
@@ -39857,7 +39889,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1289329
+    "sliceBytes": 1289949
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

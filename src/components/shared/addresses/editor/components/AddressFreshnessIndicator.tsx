@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { formatDateTime } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AddressFieldTooltip } from './AddressFieldTooltip';
 import type { AddressFreshness, AddressFreshnessLevel } from '../types';
@@ -44,10 +45,8 @@ function buildTooltipKey(freshness: AddressFreshness): string {
 
 function formatTimestamp(ms: number | null): string {
   if (ms === null) return '';
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(ms));
+  // Γλώσσα της εφαρμογής, όχι του λειτουργικού (ADR-928 §5.24.2).
+  return formatDateTime(ms, { dateStyle: 'short', timeStyle: 'short' });
 }
 
 export function AddressFreshnessIndicator({ freshness, className }: AddressFreshnessIndicatorProps) {
