@@ -57,13 +57,13 @@ function rulesClosedFindings(input, STATES) {
     return [{ state: STATES.SOURCE_DRIFT, file: RULES_FILE, detail: 'δεν βρέθηκε το `match /opportunities/{…}` — η πύλη δεν κρίνει στα τυφλά' }];
   }
   const findings = [];
-  const declaredClosed = new Set();
+  // Μία αιτία ⇒ ένα εύρημα: πράξη που ήδη αναφέρθηκε ΑΝΟΙΧΤΗ δεν ξαναγράφεται ως «αδήλωτη».
+  const declared = new Set();
   for (const statement of allowStatements(block)) {
     const writes = statement.ops.flatMap((op) => (op === 'write' ? WRITE_OPS : WRITE_OPS.filter((w) => w === op)));
     if (writes.length === 0) continue;
-    if (statement.closed) {
-      writes.forEach((op) => declaredClosed.add(op));
-    } else {
+    writes.forEach((op) => declared.add(op));
+    if (!statement.closed) {
       findings.push({
         state: STATES.OUTSIDE,
         file: RULES_FILE,
@@ -71,7 +71,7 @@ function rulesClosedFindings(input, STATES) {
       });
     }
   }
-  const undeclared = WRITE_OPS.filter((op) => !declaredClosed.has(op));
+  const undeclared = WRITE_OPS.filter((op) => !declared.has(op));
   if (undeclared.length > 0) {
     findings.push({
       state: STATES.SOURCE_DRIFT,
