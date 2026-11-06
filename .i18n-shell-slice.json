@@ -959,6 +959,19 @@
       ],
       "reason": "ADR-327 §8.5.4 — Η ΣΑΡΩΣΗ ΠΡΟΣΦΟΡΑΣ (`/o/[workspace]/procurement/quotes/scan`). 🔴 ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-28 (Chrome, dev, ψυχρή φόρτωση από το κουμπί «Σάρωση Προσφοράς (AI)» του RFQ): hydration mismatch — ο server έβαφε «Έργο», ο client το ωμό `quotes.project` (το `quotes` ΔΕΝ είναι στο κέλυφος) ⇒ το React ξαναχτίζει το δέντρο, και το αρχείο που είχε ήδη επιλεγεί ΧΑΝΕΤΑΙ. Ίδια κλάση με τη σελίδα του RFQ (ίδια ημέρα), επόμενο βήμα της ΙΔΙΑΣ ροής. Καταχωρείται από το ίδιο το `page.tsx` (είναι `'use client'`)."
     },
+    "src/app/(app)/o/[workspace]/procurement/new/page.tsx": {
+      "sealed": 446,
+      "sealedAt": "2026-11-06",
+      "history": [
+        {
+          "from": 0,
+          "to": 446,
+          "at": "2026-11-06",
+          "why": "ADR-928 §5.24.1 (2026-11-06) — ΓΕΝΝΗΣΗ ΤΟΥ SLICE. Μετρημένο με `--measure`: 446 bytes · 0,3% κελύφους · 1 ns [procurement] — μόνο οι ετικέτες της υποπλοήγησης· ο κορμός μένει πίσω από το όριο `next/dynamic`."
+        }
+      ],
+      "reason": "ADR-928 §5.24.1 — Η ΝΕΑ ΠΑΡΑΓΓΕΛΙΑ (`/o/[workspace]/procurement/new`). Ο κορμός (`ProcurementDetailPageContent`) ζει πίσω από `next/dynamic` (ADR-294), αλλά το κέλυφος της ενότητας (`ProcurementSectionShell` → υποπλοήγηση `procurement:nav.*`) αποδίδεται ΕΞΩ από το όριο, άρα στον server· το `procurement` ΔΕΝ είναι στο κέλυφος ⇒ χωρίς slice, ωμά κλειδιά στο HTML (ADR-781). Καταχωρείται από το ίδιο το `page.tsx` (είναι `'use client'`)."
+    },
     "src/app/(app)/o/[workspace]/procurement/quotes/[id]/review/page.tsx": {
       "sealed": 23812,
       "sealedAt": "2026-11-03",
@@ -2432,14 +2445,20 @@
       "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."
     },
     "src/app/(app)/o/[workspace]/procurement/rfqs/new/page.tsx": {
-      "sealed": 5391,
-      "sealedAt": "2026-11-01",
+      "sealed": 7053,
+      "sealedAt": "2026-11-06",
       "history": [
         {
           "from": 0,
           "to": 5391,
           "at": "2026-11-01",
           "why": "ΝΕΑ ΔΗΛΩΣΗ (ADR-781 §19): ΜΕΤΡΗΜΕΝΟ με `--measure` (2026-11-02): 5391 bytes, namespaces [procurement, quotes, uom]."
+        },
+        {
+          "from": 5391,
+          "to": 7053,
+          "at": "2026-11-06",
+          "why": "ADR-928 §5.24.1 (απόφαση Giorgio 2026-11-06: υποπλοήγηση ΠΑΝΤΟΥ στην ενότητα, και στις φόρμες): η φόρμα μπαίνει στο `ProcurementSectionShell`, άρα η κλειστότητα αποκτά σκόπιμα το `ProcurementSubNav` (ετικέτες `procurement:nav.*`). Η υποπλοήγηση αποδίδεται στην πρώτη ζωγραφιά, άρα ΔΕΝ μπαίνει πίσω από `next/dynamic`. ΜΕΤΡΗΜΕΝΟ με `--measure`: 7053 bytes, namespaces [procurement, quotes, uom]."
         }
       ],
       "reason": "ADR-781 §19 — ΣΕΛΙΔΑ ΠΡΟΜΗΘΕΙΩΝ: ο χρησμός (run 41349947612, μετρημένο) βρήκε ωμά κλειδιά στο HTML του server, γιατί τα `procurement`/`quotes` ΔΕΝ είναι στο κέλυφος και φορτώνονται μόνο στον client. Καταχωρείται από το ίδιο το `page.tsx` (`use client`)."

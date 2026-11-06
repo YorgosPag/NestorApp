@@ -18,6 +18,7 @@ import {
   POProjectSelector,
   POSupplierSelector,
 } from '@/components/procurement/POEntitySelectors';
+import { ProcurementSectionShell } from '@/subapps/procurement/components/ProcurementSectionShell';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 // 🔴 ADR-744 §15 · ADR-327 §8.5.4 — το `quotes` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ψυχρή φόρτωση ⇒ hydration
@@ -204,6 +205,7 @@ function useMissingFieldLabels(form: FormState, t: Translate): string[] {
 
 export default function ScanQuotePage() {
   const { t } = useTranslation('quotes');
+  const { t: tNav } = useTranslation('procurement');
   const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const formId = `${idBase}-form`;
   const router = useRouter();
@@ -211,43 +213,46 @@ export default function ScanQuotePage() {
   const f = useScanQuoteForm(t);
   const missingFields = useMissingFieldLabels(f.form, t);
 
+  // ADR-928 §5.24.1 — το ΕΝΑ κέλυφος της ενότητας (υποπλοήγηση)· `<section>`, όχι δεύτερο `<main>`.
   return (
-    <main className={`container mx-auto max-w-3xl space-y-6 py-6 ${spacing.padding.x.sm}`}>
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          {f.form.rfqId ? t('quotes.scan.backToRfq') : t('rfqs.title')}
-        </Button>
-      </div>
+    <ProcurementSectionShell ariaLabel={tNav('nav.quotes')} scroll="shell">
+      <section className={`container mx-auto max-w-3xl space-y-6 py-6 ${spacing.padding.x.sm}`}>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            {f.form.rfqId ? t('quotes.scan.backToRfq') : t('rfqs.title')}
+          </Button>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('quotes.scan.title')}</CardTitle>
-          <p className="text-sm text-muted-foreground">{t('quotes.scan.description')}</p>
-        </CardHeader>
-        <CardContent>
-          <form id={formId} onSubmit={f.handleSubmit} className="space-y-5">
-            <ScanFilePicker file={f.form.file} onFileSelect={f.handleFile} disabled={f.submitting} t={t} />
-            <ScanQuoteFields idBase={idBase} form={f.form} setForm={f.setForm} t={t} />
-            {missingFields.length > 0 && (
-              <p className="rounded-md bg-[hsl(var(--bg-warning))]/40 px-3 py-2 text-sm text-[hsl(var(--text-warning))]">
-                {t('quotes.scan.requiredHint')} <strong>{missingFields.join(', ')}</strong>
-              </p>
-            )}
-            {f.fileError && <p className="text-sm text-destructive" role="alert">{f.fileError}</p>}
-            <FormActions
-              formId={formId}
-              submitLabel={t('quotes.scan.uploadAndScan')}
-              pendingLabel={t('quotes.scan.uploading')}
-              cancelLabel={t('quotes.cancel')}
-              submitting={f.submitting}
-              submitDisabled={!f.isValid}
-              error={f.error}
-              submitIcon={Upload}
-            />
-          </form>
-        </CardContent>
-      </Card>
-    </main>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('quotes.scan.title')}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t('quotes.scan.description')}</p>
+          </CardHeader>
+          <CardContent>
+            <form id={formId} onSubmit={f.handleSubmit} className="space-y-5">
+              <ScanFilePicker file={f.form.file} onFileSelect={f.handleFile} disabled={f.submitting} t={t} />
+              <ScanQuoteFields idBase={idBase} form={f.form} setForm={f.setForm} t={t} />
+              {missingFields.length > 0 && (
+                <p className="rounded-md bg-[hsl(var(--bg-warning))]/40 px-3 py-2 text-sm text-[hsl(var(--text-warning))]">
+                  {t('quotes.scan.requiredHint')} <strong>{missingFields.join(', ')}</strong>
+                </p>
+              )}
+              {f.fileError && <p className="text-sm text-destructive" role="alert">{f.fileError}</p>}
+              <FormActions
+                formId={formId}
+                submitLabel={t('quotes.scan.uploadAndScan')}
+                pendingLabel={t('quotes.scan.uploading')}
+                cancelLabel={t('quotes.cancel')}
+                submitting={f.submitting}
+                submitDisabled={!f.isValid}
+                error={f.error}
+                submitIcon={Upload}
+              />
+            </form>
+          </CardContent>
+        </Card>
+      </section>
+    </ProcurementSectionShell>
   );
 }

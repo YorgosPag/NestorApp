@@ -1,0 +1,17 @@
+{
+  "procurement": {
+    "nav": {
+      "agreements": "Συμβάσεις",
+      "analytics": "Αναλυτικά",
+      "ariaLabel": "Ενότητες προμηθειών",
+      "hub": "Hub Προμηθειών",
+      "materials": "Υλικά",
+      "purchaseOrders": "Παραγγελίες",
+      "quotes": "Προσφορές",
+      "rfqs": "RFQ",
+      "subcontractLibrary": "Βιβλιοθήκη υπεργολαβίας",
+      "subcontractMasters": "Κύριες συμβάσεις",
+      "vendors": "Προμηθευτές"
+    }
+  }
+}

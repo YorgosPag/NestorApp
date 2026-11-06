@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -12,6 +12,8 @@ import type { RfqCatalogSupplierSent } from '@/subapps/procurement/types/rfq-lin
 import { suppliersToOfferAccess, type SupplierWithAccess } from '@/subapps/procurement/components/rfq-builder-lines';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ProcurementSectionShell } from '@/subapps/procurement/components/ProcurementSectionShell';
 import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__rfqs__new.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
@@ -34,6 +36,16 @@ function withCatalogDraft(state: RfqBuilderInitialState | undefined, catalog: Rf
   if (catalog.status !== 'ready') return state;
   const base = state ?? {};
   return { ...base, title: base.title || catalog.draft.description.slice(0, RFQ_TITLE_MAX), catalogDrafts: [catalog.draft] };
+}
+
+/** ADR-928 §5.24.1 — η φόρμα ζει μέσα στο ΕΝΑ κέλυφος της ενότητας (υποπλοήγηση)· `<section>`, όχι δεύτερο `<main>`. */
+function NewRfqFrame({ className, children }: { readonly className: string; readonly children: ReactNode }) {
+  const { t } = useTranslation('procurement');
+  return (
+    <ProcurementSectionShell ariaLabel={t('nav.rfqs')} scroll="shell">
+      <section className={className}>{children}</section>
+    </ProcurementSectionShell>
+  );
 }
 
 function urlInitialState(projectId: string | null, vendorContactId: string | null): RfqBuilderInitialState | undefined {
@@ -92,22 +104,22 @@ export default function NewRfqPage() {
 
   if (loading || catalog.status === 'loading') {
     return (
-      <main className="container mx-auto max-w-3xl py-6 flex justify-center">
+      <NewRfqFrame className="container mx-auto max-w-3xl py-6 flex justify-center">
         <Spinner size="large" />
-      </main>
+      </NewRfqFrame>
     );
   }
 
   if (sent !== null) {
     return (
-      <main className="container mx-auto max-w-3xl py-6">
+      <NewRfqFrame className="container mx-auto max-w-3xl py-6">
         <RfqCatalogSentStep suppliers={sent.suppliers} onViewRfq={() => viewRfq(sent.rfqId)} />
-      </main>
+      </NewRfqFrame>
     );
   }
 
   return (
-    <main className="container mx-auto max-w-3xl py-6 space-y-4">
+    <NewRfqFrame className="container mx-auto max-w-3xl py-6 space-y-4">
       {catalog.status === 'refused' && (
         <Alert variant="destructive" withIcon>
           <AlertDescription>{catalog.message}</AlertDescription>
@@ -118,6 +130,6 @@ export default function NewRfqPage() {
         onSuccess={handleSuccess}
         onCancel={() => router.push('/procurement')}
       />
-    </main>
+    </NewRfqFrame>
   );
 }
