@@ -88,10 +88,12 @@ function OpenColumn({ column, count, refusing, emptyLabel, className, headerClas
       aria-disabled={refusing || undefined}
       className={cn('flex min-w-0 flex-col gap-2 rounded-lg border border-transparent p-3 transition-colors', className, dropClass)}
     >
-      <header className={cn('flex items-center justify-between gap-2', sticky && 'sticky top-0 z-10 -mx-3 -mt-3 rounded-t-lg px-3 pb-1 pt-3', headerClassName)}>
+      {/* Δύο γραμμές (Pipedrive/HubSpot): όνομα + ↔ πάνω, ό,τι δίνει ο καταναλωτής από κάτω σε όλο το πλάτος — αλλιώς στα
+          280 px τα σύνολα έτρωγαν το όνομα («Διαπρα…»). Χωρίς `column.header` (κατάλογος) η κεφαλίδα μένει μία γραμμή. */}
+      <header className={cn('flex flex-wrap items-center justify-between gap-x-2', sticky && 'sticky top-0 z-10 -mx-3 -mt-3 rounded-t-lg px-3 pb-1 pt-3', headerClassName)}>
         <h3 className="m-0 min-w-0 flex-1 truncate text-sm font-medium text-foreground">{column.label}</h3>
-        {column.header}
         {onCollapsedChange ? <CollapseToggle label={column.label} collapsed={false} onToggle={() => onCollapsedChange(true)} /> : null}
+        {column.header ? <div className="basis-full">{column.header}</div> : null}
       </header>
       <ul className="m-0 flex min-h-16 flex-1 flex-col gap-2 p-0">{children}</ul>
       {count === 0 && emptyLabel ? <p className="m-0 text-center text-xs text-muted-foreground">{emptyLabel}</p> : null}

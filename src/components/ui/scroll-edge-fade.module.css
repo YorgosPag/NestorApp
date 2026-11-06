@@ -9,22 +9,29 @@
 
 .fade {
   --scroll-edge-fade: 2.5rem;
+  /*
+   * ⚖️ Το σβήσιμο ΔΕΝ ξεπερνά όσα κρύβει (ADR-930 §3.11): με 14 px κρυμμένα, μια μάσκα 40 px έσβηνε 26 px ΟΡΑΤΟΥ
+   * περιεχομένου — τη λωρίδα της συμπτυγμένης στήλης και το κουμπί της. Το `useScrollEdges` γράφει τις αποστάσεις
+   * (`--scroll-edge-before/after`, px) πάνω στο ίδιο στοιχείο· χωρίς αυτές (πρώτο καρέ) μένει το πλήρες πλάτος.
+   */
+  --scroll-edge-fade-start: min(var(--scroll-edge-fade), var(--scroll-edge-before, var(--scroll-edge-fade)));
+  --scroll-edge-fade-end: min(var(--scroll-edge-fade), var(--scroll-edge-after, var(--scroll-edge-fade)));
 }
 
 .fade[data-scroll-edges='end'] {
-  mask-image: linear-gradient(to right, black calc(100% - var(--scroll-edge-fade)), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - var(--scroll-edge-fade-end)), transparent);
 }
 
 .fade[data-scroll-edges='start'] {
-  mask-image: linear-gradient(to left, black calc(100% - var(--scroll-edge-fade)), transparent);
+  mask-image: linear-gradient(to left, black calc(100% - var(--scroll-edge-fade-start)), transparent);
 }
 
 .fade[data-scroll-edges='both'] {
   mask-image: linear-gradient(
     to right,
     transparent,
-    black var(--scroll-edge-fade),
-    black calc(100% - var(--scroll-edge-fade)),
+    black var(--scroll-edge-fade-start),
+    black calc(100% - var(--scroll-edge-fade-end)),
     transparent
   );
 }

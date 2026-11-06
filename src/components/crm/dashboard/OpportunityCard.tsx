@@ -131,13 +131,16 @@ export function OpportunityCard({ opportunity, onEdit, onDelete, handle, onMoveT
                 </div>
             )}
 
-            {opportunity.estimatedValue !== undefined && (
-                <p className={`text-right text-sm font-bold ${colors.text.success} mt-2`} aria-live="polite">
+            {/* ADR-930 §3.11: ποσό και ενέργειες σε ΜΙΑ γραμμή ροής (Pipedrive/HubSpot) — όχι `absolute` πάνω στο ποσό,
+                που στο hover κάλυπτε το «195.000 €». Οι ενέργειες κρατούν τη θέση τους και όταν είναι αόρατες. */}
+            <footer className="mt-2 flex items-center justify-between gap-2">
+            {opportunity.estimatedValue !== undefined ? (
+                <p className={`m-0 text-sm font-bold ${colors.text.success}`} aria-live="polite">
                     {formatCurrency(opportunity.estimatedValue, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </p>
-            )}
+            ) : null}
 
-            <div className={`absolute bottom-2 right-2 flex items-center gap-1 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
+            <div className={`ml-auto flex shrink-0 items-center gap-1 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
                 {onMoveTo && (
                     <MoveToMenu current={opportunity.stage} name={opportunity.fullName || opportunity.title} disabled={moving} onMoveTo={onMoveTo} />
                 )}
@@ -188,6 +191,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete, handle, onMoveT
                 </AlertDialog>
                 )}
             </div>
+            </footer>
         </div>
     );
 }

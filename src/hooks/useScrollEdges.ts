@@ -37,6 +37,22 @@ export function scrollEdgesOf(scrollLeft: number, clientWidth: number, scrollWid
   return 'none';
 }
 
+/** Πόσα px κρύβονται πριν και μετά τη θυρίδα — το όριο του σβησίματος (ADR-930 §3.11). Καθαρή, για τα tests. */
+export function scrollHiddenOf(scrollLeft: number, clientWidth: number, scrollWidth: number): { readonly before: number; readonly after: number } {
+  const before = Math.abs(scrollLeft);
+  return { before, after: Math.max(0, scrollWidth - clientWidth - before) };
+}
+
+/**
+ * Γράφει τις κρυμμένες αποστάσεις ως μεταβλητές CSS πάνω στο ίδιο στοιχείο — **όχι** state: αλλάζουν σε κάθε καρέ
+ * κύλισης και κανένα React δεν χρειάζεται να ξαναζωγραφίσει γι' αυτό. Τις διαβάζει το `scroll-edge-fade.module.css`.
+ */
+function writeHiddenDistances(node: HTMLElement): void {
+  const { before, after } = scrollHiddenOf(node.scrollLeft, node.clientWidth, node.scrollWidth);
+  node.style.setProperty('--scroll-edge-before', `${before}px`);
+  node.style.setProperty('--scroll-edge-after', `${after}px`);
+}
+
 /**
  * @returns `ref` για το στοιχείο που κυλά, και `edges` για το `data-scroll-edges` του.
  */
@@ -52,9 +68,10 @@ export function useScrollEdges<T extends HTMLElement>(): {
     if (node === null) return undefined;
     const measure = () => {
       cancelAnimationFrame(frame.current);
-      frame.current = requestAnimationFrame(() =>
-        setEdges(scrollEdgesOf(node.scrollLeft, node.clientWidth, node.scrollWidth)),
-      );
+      frame.current = requestAnimationFrame(() => {
+        writeHiddenDistances(node);
+        setEdges(scrollEdgesOf(node.scrollLeft, node.clientWidth, node.scrollWidth));
+      });
     };
     measure();
     node.addEventListener('scroll', measure, { passive: true });

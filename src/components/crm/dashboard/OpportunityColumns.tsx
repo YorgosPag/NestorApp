@@ -88,7 +88,7 @@ function usePipelineSort(): [PipelineSort, (sort: PipelineSort) => void] {
 function ColumnHeader({ totals }: { readonly totals: ColumnTotals }) {
   const { t } = useTranslation('crm');
   return (
-    <p className="m-0 flex flex-col items-end text-xs text-muted-foreground">
+    <p className="m-0 flex items-baseline gap-2 text-xs tabular-nums text-muted-foreground">
       <span>{totals.count}</span>
       {totals.total > 0 && (
         <span aria-label={t('pipeline.board.totalsLabel', { total: money(totals.total), weighted: money(totals.weighted) })}>

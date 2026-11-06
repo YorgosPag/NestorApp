@@ -62,8 +62,9 @@ export function PipelineTab() {
   const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
 
   return (
-    // ADR-930 §3.11: στήλη flex σε όλο το ύψος της καρτέλας, ώστε ο πίνακας (`layout="fill"`) να πάρει ό,τι περισσεύει.
-    <div className={`${colors.bg.primary} flex h-full flex-col`}>
+    // ADR-930 §3.11: στήλη flex που παίρνει ό,τι ΠΕΡΙΣΣΕΥΕΙ στο `PageContainer` (όχι `h-full`: δίπλα στην κεφαλίδα σελίδας
+    // το 100% ξεχείλιζε και το `min-height:auto` — που μεγαλώνει όταν φανεί η οριζόντια μπάρα — συμπίεζε την κεφαλίδα 56→40px).
+    <div className={`${colors.bg.primary} flex min-h-0 flex-1 flex-col`}>
         <nav className="flex shrink-0 items-center justify-end gap-2 px-2 py-1" aria-label={t('pipeline.title')}>
           <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'pipeline' ? 'list' : 'pipeline')}>
             {viewMode === 'pipeline' ? t('pipeline.viewList') : t('pipeline.viewPipeline')}
