@@ -34,4 +34,17 @@ export interface EgressEmail {
 
 export type EgressResult =
   | { readonly ok: true; readonly messageId?: string }
-  | { readonly ok: false; readonly error: string };
+  | {
+      readonly ok: false;
+      readonly error: string;
+      /**
+       * 🔑 ADR-923 §5.13 Τ5 Χ-Α — `true` ⇒ το αίτημα **ίσως έφτασε** στον πάροχο: βλάβη δικτύου (ECONNRESET, άκυρη
+       * σύνδεση, λήξη χρόνου) ή 5xx. Ο πάροχος μπορεί να το δέχτηκε, άρα δεν είναι βέβαιη άρνηση. Ρητό 4xx ⇒ απουσία.
+       */
+      readonly uncertain?: true;
+    };
+
+/** HTTP status που **δεν** αποδεικνύει άρνηση: ο διακομιστής ίσως επεξεργάστηκε το αίτημα πριν πέσει. */
+export function statusLeavesOutcomeUncertain(status: number): boolean {
+  return status >= 500;
+}

@@ -90,7 +90,7 @@ class EmailVendorInviteChannel implements MessageChannel {
       text,
       html,
       from: resolveSenderHeader(),
-    });
+    }, { stopOnUncertain: true }); // ADR-923 Τ5 Χ-Α: η πρόσκληση φεύγει το πολύ μία φορά — ποτέ μετάπτωση μετά από «ίσως έφυγε»
     if (outcome.kind === 'delivered') {
       return { success: true, providerMessageId: outcome.messageId ?? null, errorReason: null, channel: 'email' };
     }

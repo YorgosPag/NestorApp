@@ -1140,7 +1140,7 @@
       "uncertain": "Outcome unknown",
       "failed": "Failed",
       "failedHint": "The email was not delivered. Copy the link and send it to the supplier.",
-      "failedHintPlatform": "The email was not delivered to the supplier. Please try again later.",
+      "failedHintPlatform": "The email was not delivered to the supplier. Revoke the invitation and invite them again.",
       "uncertainHint": "We do not know whether the email arrived. Check with the supplier before resending, so they do not get it twice.",
       "reasons": {
         "no_recipient": "The supplier has no address for quote requests.",

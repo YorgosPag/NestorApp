@@ -156,6 +156,17 @@ export type ChainOutcome =
   /** **Κανείς δεν δοκιμάστηκε** — λείπει ρύθμιση, όχι αποτυχία παράδοσης. */
   | { readonly kind: 'no-provider' };
 
+/** Πολιτική του καλούντα για **μία** αποστολή. */
+export interface ChainOptions {
+  /**
+   * 🔑 ADR-923 §5.13 Τ5 Χ-Α — **«το πολύ μία φορά»**: όταν ένας κρίκος δεν ξέρει αν παρέδωσε (λήξη χρόνου, ECONNRESET,
+   * 5xx), **μην** δοκιμάσεις τον επόμενο. Αλλιώς ο πρώτος πάροχος που δέχτηκε το μήνυμα και ο δεύτερος που το ξαναστέλνει
+   * βγάζουν **δύο** email. Το αποτέλεσμα μένει `all-failed` με `uncertain`, και ο καλών το γράφει ως `unknown`.
+   * Προεπιλογή `false`: οι ειδοποιήσεις του συστήματος προτιμούν διπλό email από χαμένο.
+   */
+  readonly stopOnUncertain?: boolean;
+}
+
 /**
  * **Στείλε από τον πρώτο που μπορεί· αν πέσει, από τον επόμενο.**
  *
@@ -170,6 +181,7 @@ export type ChainOutcome =
 export async function sendThroughChain(
   providers: readonly EmailProvider[],
   message: OutboundEmail,
+  options: ChainOptions = {},
 ): Promise<ChainOutcome> {
   const usable = providers.filter((provider) => provider.configured);
   if (usable.length === 0) return { kind: 'no-provider' };
@@ -177,6 +189,8 @@ export async function sendThroughChain(
   const attempts: AttemptRecord[] = [];
 
   for (const provider of usable) {
+    // 🔑 Χ-Α: ο προηγούμενος ίσως το έστειλε ⇒ ο επόμενος θα έστελνε ΔΕΥΤΕΡΟ email. Για «το πολύ μία φορά» σταματάμε.
+    if (options.stopOnUncertain && attempts.some((attempt) => attempt.uncertain === true)) break;
     const result = await attemptOne(provider, message);
 
     if (result.kind === 'delivered') {
@@ -272,19 +286,20 @@ export function describeChain(providers: readonly EmailProvider[]): {
 }
 
 /**
- * **Γιατί δεν έφυγε** — οι λόγοι ονομαστικά ανά πάροχο, ΕΝΑ λεξιλόγιο.
- *
- * Ήταν γραμμένο **δύο** φορές (`email.service` · `outbound-email-flush.job`) και θα γινόταν τρίτη
- * στο κανάλι πρόσκλησης προμηθευτή (ADR-876 §5.8 Σ22). `delivered` ⇒ κανένας λόγος.
- */
-/**
- * **Ίσως έφυγε;** — `true` όταν η αλυσίδα απέτυχε αλλά κάποιος κρίκος **δεν απάντησε** (λήξη χρόνου) αντί να αρνηθεί.
- * Για καλούντες «το πολύ μία φορά» (ADR-923 §5.13 Τ5 Λ1β Μ1): εκεί μια νέα απόπειρα μπορεί να γίνει δεύτερο email.
+ * **Ίσως έφυγε;** — `true` όταν η αλυσίδα απέτυχε αλλά κάποιος κρίκος **δεν ξέρει** αν παρέδωσε (λήξη χρόνου, βλάβη
+ * δικτύου, 5xx) αντί να αρνηθεί. Για καλούντες «το πολύ μία φορά» (ADR-923 §5.13 Τ5 Λ1β Μ1 · Χ-Α): εκεί μια νέα απόπειρα
+ * μπορεί να γίνει δεύτερο email.
  */
 export function chainOutcomeUncertain(outcome: ChainOutcome): boolean {
   return outcome.kind === 'all-failed' && outcome.attempts.some((attempt) => attempt.uncertain === true);
 }
 
+/**
+ * **Γιατί δεν έφυγε** — οι λόγοι ονομαστικά ανά πάροχο, ΕΝΑ λεξιλόγιο.
+ *
+ * Ήταν γραμμένο **δύο** φορές (`email.service` · `outbound-email-flush.job`) και θα γινόταν τρίτη
+ * στο κανάλι πρόσκλησης προμηθευτή (ADR-876 §5.8 Σ22). `delivered` ⇒ κανένας λόγος.
+ */
 export function chainFailureReasons(outcome: ChainOutcome): readonly string[] {
   if (outcome.kind === 'no-provider') return ['κανένας πάροχος ρυθμισμένος'];
   if (outcome.kind === 'all-failed') return outcome.attempts.map((attempt) => `${attempt.provider}: ${attempt.error}`);

@@ -221,6 +221,35 @@ describe('Χ — ο κολλημένος πάροχος δεν κρατά όμη
     expect(chainOutcomeUncertain(rejected)).toBe(false);
   });
 
+  it('Χ4 🔑 — ADR-923 Χ-Α: `stopOnUncertain` ⇒ λήξη χρόνου του πρώτου ΔΕΝ περνά στον δεύτερο (όχι δεύτερο email)', async () => {
+    const hanging = fake('κολλημένος', 'hangs');
+    const second = fake('δεύτερος', OK);
+    const promise = sendThroughChain([hanging, second], MESSAGE, { stopOnUncertain: true });
+    await jest.advanceTimersByTimeAsync(PROVIDER_TIMEOUT_MS + 1);
+    const outcome = await promise;
+    expect(second.calls).toBe(0);
+    expect(chainOutcomeUncertain(outcome)).toBe(true);
+  });
+
+  it('Χ5 🔑 — ADR-923 Χ-Α: `stopOnUncertain` + αβέβαιη απάντηση (ECONNRESET/5xx) ⇒ σταματά· ρητή άρνηση ⇒ μετάπτωση κανονικά', async () => {
+    const reset = fake('reset', { kind: 'rejected', error: 'ECONNRESET', uncertain: true });
+    const afterReset = fake('μετά', OK);
+    const stopped = await sendThroughChain([reset, afterReset], MESSAGE, { stopOnUncertain: true });
+    expect(afterReset.calls).toBe(0);
+    expect(stopped).toMatchObject({ kind: 'all-failed', attempts: [expect.objectContaining({ provider: 'reset', uncertain: true })] });
+
+    const refused = fake('αρνητής', NO);
+    const rescue = fake('σωτήρας', OK);
+    const rescued = await sendThroughChain([refused, rescue], MESSAGE, { stopOnUncertain: true });
+    expect(rescued).toMatchObject({ kind: 'delivered', provider: 'σωτήρας', failedOver: true });
+  });
+
+  it('Χ6 — χωρίς `stopOnUncertain` (προεπιλογή) η αβέβαιη απάντηση περνά στον επόμενο, όπως πάντα', async () => {
+    const reset = fake('reset', { kind: 'rejected', error: 'ECONNRESET', uncertain: true });
+    const rescue = fake('σωτήρας', OK);
+    expect(await sendThroughChain([reset, rescue], MESSAGE)).toMatchObject({ kind: 'delivered', provider: 'σωτήρας' });
+  });
+
   it('Χ2 — το χρονόμετρο καθαρίζεται στη γρήγορη διαδρομή', async () => {
     // Ζωντανό χρονόμετρο κρατά τη διεργασία Node ανοιχτή — σε cron σημαίνει
     // εργασία που δεν κλείνει ποτέ.

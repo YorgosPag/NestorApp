@@ -165,10 +165,21 @@ function dispatchNewInvite(driver: ChannelDriver, prepared: PreparedVendorInvite
   });
 }
 
-/** Μετά από επιτυχή αποστολή: `sent` (email) και `deliveredAt`. Η κράτηση έγραψε `pending`. */
+/**
+ * Μετά από επιτυχή αποστολή: `sent` (email) και `deliveredAt`. Η κράτηση έγραψε `pending`.
+ *
+ * 🔑 ADR-923 §5.13 Τ5 Χ-Ε — **η αποστολή έγινε ήδη, και δεν ξεγίνεται.** Μια βλάβη στη σήμανση δεν επιτρέπεται να γίνει
+ * σφάλμα προς τον καλούντα: θα έδειχνε «απέτυχε» για email που έφτασε, και θα έσπρωχνε σε νέα πρόσκληση. Καταγράφεται, και
+ * επιστρέφεται η πρόσκληση **όπως είναι αποθηκευμένη** (`pending`) — καμία κατάσταση που δεν γράφτηκε.
+ */
 async function markDispatched(db: Db, invite: VendorInvite, channel: DeliveryChannel): Promise<VendorInvite> {
   const patch = { status: channel === 'email' ? 'sent' as const : invite.status, deliveredAt: invite.createdAt };
-  await db.collection(COLLECTIONS.VENDOR_INVITES).doc(invite.id).update({ ...patch, updatedAt: admin.firestore.Timestamp.now() });
+  try {
+    await db.collection(COLLECTIONS.VENDOR_INVITES).doc(invite.id).update({ ...patch, updatedAt: admin.firestore.Timestamp.now() });
+  } catch (error) {
+    logger.error('Vendor invite dispatched but not marked', { inviteId: invite.id, channel, error: error instanceof Error ? error.message : String(error) });
+    return invite;
+  }
   return { ...invite, ...patch };
 }
 

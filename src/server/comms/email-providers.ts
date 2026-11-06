@@ -35,7 +35,8 @@ import { resendAvailable, resendSendMessage } from '@/server/comms/egress/resend
 import type { EgressResult } from '@/server/comms/egress/egress-email';
 
 function asAttempt(result: EgressResult): ProviderAttempt {
-  return result.ok ? { kind: 'delivered', messageId: result.messageId } : { kind: 'rejected', error: result.error };
+  if (result.ok) return { kind: 'delivered', messageId: result.messageId };
+  return result.uncertain ? { kind: 'rejected', error: result.error, uncertain: true } : { kind: 'rejected', error: result.error };
 }
 
 /**
@@ -63,9 +64,10 @@ export function mailgunProvider(): EmailProvider {
         attempts: 1,
         maxAttempts: 1,
       });
-      return result.success
-        ? { kind: 'delivered', messageId: result.messageId }
-        : { kind: 'rejected', error: result.error ?? 'mailgun: άγνωστο σφάλμα' };
+      if (result.success) return { kind: 'delivered', messageId: result.messageId };
+      const error = result.error ?? 'mailgun: άγνωστο σφάλμα';
+      // ADR-923 Τ5 Χ-Α — η αβεβαιότητα της πόρτας περνά αυτούσια· αλλιώς ένα ECONNRESET θα γινόταν «βέβαιη άρνηση».
+      return result.uncertain ? { kind: 'rejected', error, uncertain: true } : { kind: 'rejected', error };
     },
   };
 }

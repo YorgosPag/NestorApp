@@ -161,3 +161,39 @@ describe('Ε5 — το κανάλι πρόσκλησης δεν διαβάζει
     expect(result).toEqual({ success: true, providerMessageId: 'mg_1', errorReason: null, channel: 'email' });
   });
 });
+
+describe('Ε6 — ADR-923 Τ5 Χ-Α: «ίσως έφυγε» ΔΕΝ γίνεται δεύτερο email από άλλον πάροχο', () => {
+  it.each([
+    ['βλάβη δικτύου (statusCode null)', { name: 'application_error', statusCode: null, message: 'Unable to fetch data.' }],
+    ['5xx του Resend', { name: 'internal_server_error', statusCode: 500, message: 'boom' }],
+    ['ίδιο κλειδί ιδεμποτίας σε εξέλιξη', { name: 'concurrent_idempotent_requests', statusCode: 409, message: 'in flight' }],
+  ])('Resend %s ⇒ η πρόσκληση ΔΕΝ περνά στον Mailgun, αποτυχία ΑΒΕΒΑΙΗ', async (_label, error) => {
+    mockResendSend.mockResolvedValue({ data: null, error });
+    const result = await channel().emailVendorInviteChannel.send(invite);
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: false, uncertain: true });
+  });
+
+  it('Resend ρητό 4xx ⇒ βέβαιη άρνηση ⇒ μετάπτωση στον Mailgun (όπως πριν)', async () => {
+    mockResendSend.mockResolvedValue({ data: null, error: { name: 'validation_error', statusCode: 422, message: 'bad' } });
+    expect(await channel().emailVendorInviteChannel.send(invite)).toMatchObject({ success: true, providerMessageId: 'mg_1' });
+  });
+
+  it('Mailgun ECONNRESET ⇒ αβέβαιο· Mailgun 5xx ⇒ αβέβαιο· Mailgun 400 ⇒ βέβαιη άρνηση', async () => {
+    const reset = Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' });
+    (global.fetch as jest.Mock).mockRejectedValueOnce(reset);
+    expect(await mailgun().mailgunSendMessage({ to: 'x@example.gr', subject: 's', text: 't' })).toMatchObject({ ok: false, uncertain: true });
+    (global.fetch as jest.Mock).mockResolvedValueOnce(new Response('upstream', { status: 503 }));
+    expect(await mailgun().mailgunSendMessage({ to: 'x@example.gr', subject: 's', text: 't' })).toMatchObject({ ok: false, uncertain: true });
+    (global.fetch as jest.Mock).mockResolvedValueOnce(new Response('bad address', { status: 400 }));
+    const refused = await mailgun().mailgunSendMessage({ to: 'x@example.gr', subject: 's', text: 't' });
+    expect(refused).toMatchObject({ ok: false });
+    expect(refused).not.toHaveProperty('uncertain');
+  });
+
+  it('η αβεβαιότητα του Mailgun φτάνει ως `uncertain` στον κρίκο της αλυσίδας (μέσω του EmailAdapter)', async () => {
+    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('socket hang up'));
+    const attempt = await providers().mailgunProvider().send({ to: 'x@example.gr', subject: 's', text: 't' });
+    expect(attempt).toMatchObject({ kind: 'rejected', uncertain: true });
+  });
+});

@@ -96,7 +96,14 @@ export async function resolveInviteRecipient(
   invite: Pick<VendorInvite, 'companyId' | 'vendorContactId' | 'recipientEmail' | 'recipientName'>,
 ): Promise<VendorRecipient | null> {
   if (invite.recipientEmail) {
-    const contact = invite.vendorContactId ? await fetchVendorContact(invite.companyId, invite.vendorContactId) : null;
+    // 🔑 ADR-923 Τ5 Χ-ΣΤ: εδώ η επαφή δίνει ΜΟΝΟ τη γλώσσα — η διεύθυνση είναι ήδη στο στιγμιότυπο. Μια βλάβη ανάγνωσης
+    //    (το `fetchVendorContact` πετά από το Λ1β Χ2) δεν επιτρέπεται να μπλοκάρει την επαναποστολή: χωρίς γλώσσα ⇒ προεπιλογή.
+    const contact = invite.vendorContactId
+      ? await fetchVendorContact(invite.companyId, invite.vendorContactId).catch((error: unknown) => {
+        logger.warn('Vendor contact unreadable, invite language falls back', { vendorContactId: invite.vendorContactId, error: error instanceof Error ? error.message : String(error) });
+        return null;
+      })
+      : null;
     return {
       email: invite.recipientEmail, name: invite.recipientName ?? invite.recipientEmail,
       kind: 'contact', platformCompanyId: null, language: contact?.language ?? null,

@@ -55,8 +55,7 @@ import { generateDeterministicPlatformCompanyContactId } from '@/services/enterp
 import { pendingInviteDelivery, type VendorInviteDelivery } from '../../types/vendor-invite-delivery';
 import { quoteRequestWindowOf } from '../quote-request-pair-quota';
 import { VENDOR_INVITE_RESEND_QUOTA_SCOPE, resendVendorInvite } from '../vendor-invite-links-service';
-import { VendorInviteRefusal, VendorInviteStateError, createVendorInvite } from '../vendor-invite-service';
-/* eslint-enable import/first */
+import { VendorInviteRefusal, VendorInviteStateError, createVendorInvite } from '../vendor-invite-service';/* eslint-enable import/first */
 
 const BUYER = 'comp_buyer';
 const SUPPLIER = 'comp_aries';
@@ -196,6 +195,50 @@ describe('Σ1γ — μία ζωντανή πρόσκληση ανά (RFQ, επα
     expect(await refusalOf(manualInvite())).toBe('already_invited');
     expect(inviteDocs().map((doc) => (doc as { id: string }).id)).toEqual(['inv_racer']);
     expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it('Χ-Β 🔑 — ανταγωνιστής ΓΕΜΙΖΕΙ το όριο ζεύγους μέσα στη συναλλαγή ⇒ η κράτηση ξαναδιαβάζει τον μετρητή και αρνείται', async () => {
+    // Ο ανταγωνιστής αγγίζει ΜΟΝΟ τον μετρητή ζεύγους (όχι το RFQ). Άρα η σύγκρουση πιάνεται μόνο αν ο μετρητής διαβάστηκε
+    // ΜΕΣΑ στη συναλλαγή. Μετάλλαξη «ανάγνωση εκτός συναλλαγής» ⇒ η κράτηση γράφει μπαγιάτικο limit−1+1 και περνά ⇒ κόκκινο.
+    seedPair(QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit - 1);
+    mockQuota.mockImplementation(async (scope: unknown) => {
+      if (scope === 'rfq-quote-request:supplier') fake.interfere = () => seedPair(QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit);
+      return true;
+    });
+    expect(await refusalOf(manualInvite())).toBe('quote_request_quota_exhausted');
+    expect(inviteDocs()).toEqual([]);
+    expect(credentialDocs()).toEqual([]);
+    expect(pairCount()).toBe(QUOTE_REQUEST_PAIR_DAILY_QUOTA.limit);
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+});
+
+describe('Χ-Ε — το email έφυγε· βλάβη στη σήμανση ΔΕΝ γίνεται ψευδές σφάλμα', () => {
+  it('η σήμανση `sent` αποτυγχάνει ⇒ επιτυχία προς τον καλούντα, πρόσκληση όπως είναι αποθηκευμένη (`pending`)', async () => {
+    mockSend.mockImplementationOnce(async (message: { inviteId: string }) => {
+      await fake.collection(COLLECTIONS.VENDOR_INVITES).doc(message.inviteId).delete(); // ⇒ το `update` πετά NOT_FOUND
+      return { success: true, providerMessageId: 'm1', errorReason: null, channel: 'email' };
+    });
+    const result = await manualInvite();
+    expect(result.delivery).toMatchObject({ success: true, providerMessageId: 'm1' });
+    expect(result.invite.status).toBe('pending');
+  });
+});
+
+describe('Χ-ΣΤ — η επαφή δίνει μόνο τη γλώσσα· βλάβη ανάγνωσής της ΔΕΝ μπλοκάρει την επαναποστολή', () => {
+  it('στιγμιότυπο email + αδιάβαστη επαφή ⇒ η επαναποστολή φεύγει στο στιγμιότυπο, με προεπιλεγμένη γλώσσα', async () => {
+    seedInvite('inv_m', { vendorContactId: 'ct_plain', recipientEmail: 'v@vendor.gr', recipientName: 'Προμηθευτής' });
+    // Η βάση δεν απαντά ΜΟΝΟ για τις επαφές· κάθε άλλη ανάγνωση (πρόσκληση, RFQ) περνά κανονικά.
+    const realCollection = fake.collection.bind(fake);
+    const spy = jest.spyOn(fake, 'collection').mockImplementation((name: string) => (name === COLLECTIONS.CONTACTS
+      ? ({ doc: () => ({ get: async () => { throw new Error('UNAVAILABLE'); } }) } as unknown as ReturnType<typeof realCollection>)
+      : realCollection(name)));
+    try {
+      expect(await resendVendorInvite(ctx, 'rfq_1', 'inv_m')).toEqual({ success: true, errorReason: null });
+      expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ recipient: 'v@vendor.gr' }));
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

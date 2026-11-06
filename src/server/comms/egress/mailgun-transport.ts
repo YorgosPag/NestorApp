@@ -23,7 +23,7 @@ import { PROVIDER_TIMEOUT_MS } from '@/server/comms/email-provider-chain';
 import { resolveSenderHeader } from '@/services/company/sender-identity';
 import { EMAIL_DELIVERY_VARIABLES, type EmailDeliveryCorrelation } from '@/types/email-delivery';
 
-import type { EgressEmail, EgressResult } from './egress-email';
+import { statusLeavesOutcomeUncertain, type EgressEmail, type EgressResult } from './egress-email';
 import { emailDeliveryMode } from './email-delivery-mode';
 import { captureEmail } from './email-outbox';
 
@@ -88,20 +88,24 @@ export async function mailgunSendMessage(email: EgressEmail): Promise<EgressResu
   if (emailDeliveryMode() === 'capture') return captureEmail(email);
   const credentials = mailgunCredentials();
   if (!credentials) return { ok: false, error: 'Mailgun not configured: missing MAILGUN_API_KEY or MAILGUN_DOMAIN' };
+  // Το σώμα χτίζεται ΠΡΙΝ το δίκτυο: ένα σφάλμα εδώ είναι βέβαιη άρνηση (τίποτα δεν έφυγε), όχι αβέβαιη έκβαση.
+  const body = messageForm(email);
   try {
-    const response = await mailgunRequest(credentials, '/messages', { method: 'POST', body: messageForm(email) });
+    const response = await mailgunRequest(credentials, '/messages', { method: 'POST', body });
     if (!response.ok) {
       const errorText = await response.text();
       logger.error('Mailgun API error', { status: response.status, body: errorText.slice(0, 500), to: email.to });
-      return { ok: false, error: `Mailgun API ${response.status}: ${errorText.slice(0, 200)}` };
+      const error = `Mailgun API ${response.status}: ${errorText.slice(0, 200)}`;
+      return statusLeavesOutcomeUncertain(response.status) ? { ok: false, error, uncertain: true } : { ok: false, error };
     }
     const result = (await response.json()) as { id?: string };
     logger.info('Email sent via Mailgun', { messageId: result.id, to: email.to, subject: email.subject.slice(0, 100) });
     return { ok: true, messageId: result.id ?? undefined };
   } catch (error) {
+    // 🔑 ADR-923 Τ5 Χ-Α: ECONNRESET / λήξη χρόνου / σπασμένη απάντηση ⇒ το αίτημα ίσως έφτασε. Ποτέ «βέβαιη άρνηση».
     const reason = getErrorMessage(error);
     logger.error('Mailgun send failed', { error: reason, to: email.to });
-    return { ok: false, error: reason };
+    return { ok: false, error: reason, uncertain: true };
   }
 }
 

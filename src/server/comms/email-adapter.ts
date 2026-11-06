@@ -35,6 +35,8 @@ interface SendResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  /** ADR-923 Τ5 Χ-Α — το αίτημα ίσως έφτασε στον Mailgun (`EgressResult.uncertain`). */
+  uncertain?: true;
 }
 
 export class EmailAdapter {
@@ -73,7 +75,8 @@ export class EmailAdapter {
       html: job.html,
       headers: job.headers,
     });
-    return result.ok ? { success: true, messageId: result.messageId } : { success: false, error: result.error };
+    if (result.ok) return { success: true, messageId: result.messageId };
+    return result.uncertain ? { success: false, error: result.error, uncertain: true } : { success: false, error: result.error };
   }
 
   /**

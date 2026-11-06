@@ -81,7 +81,7 @@
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json": "b7c1e20776fb9ad6be26039d9bd0c71dfac687f97998a872687dc3e47c997c48",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json": "9cf0c913c9f586ae7850ab0f1a6bfcb1c47dc4862db39dc9fb8acc4fec81b907",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "7bd13d8ab1adea9e76f30626dfdd397e391a0567d707799255d76315a7d865e0",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "a8df140d5d645a186e63711f85fe6bf80de6694a1f15f79ce4279c07e864937f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "270b52d8380c5fca9debb4ed806557fa3959b61f16bff955d18ca862fcc35d0b",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json": "9e6e28dce807af1b9362fbe47e1eafa1a191843e3a6c68c9d92644adb3ba4d73",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
@@ -208,7 +208,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6fd773160d0a193a0c8e5c1cc42c03bbe0009b2c76b5258e7ef1a618d9a4fbeb",
+  "inputsSha256": "5bd9c583e6d4683fce6647246b0d64d4fabd5a46204772c0dccd36cb6c1f555b",
   "languages": [
     "el"
   ],
@@ -40049,7 +40049,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1290320
+    "sliceBytes": 1290368
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

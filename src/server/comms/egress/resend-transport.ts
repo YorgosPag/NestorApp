@@ -22,14 +22,28 @@ import 'server-only';
 import { getErrorMessage } from '@/lib/error-utils';
 import { resolveSenderHeader } from '@/services/company/sender-identity';
 
-import type { EgressAttachment, EgressEmail, EgressResult } from './egress-email';
+import { statusLeavesOutcomeUncertain, type EgressAttachment, type EgressEmail, type EgressResult } from './egress-email';
 import { emailDeliveryMode } from './email-delivery-mode';
 import { captureEmail } from './email-outbox';
 
+type ResendSendError = { message?: string; statusCode?: number | null; name?: string };
+
 type ResendSendResult = {
   data?: { id?: string } | null;
-  error?: { message?: string } | null;
+  error?: ResendSendError | null;
 };
+
+/**
+ * 🔑 ADR-923 §5.13 Τ5 Χ-Α — **ίσως το δέχτηκε;** Το SDK δεν πετά: βλάβη δικτύου (ECONNRESET, λήξη) γίνεται
+ * `{ statusCode: null }`, και το 5xx `internal_server_error` / `application_error`. Ένα αίτημα που τρέχει ήδη με το ίδιο
+ * κλειδί ιδεμποτίας (`concurrent_idempotent_requests`) ίσως επίσης παραδοθεί. Μόνο ρητό 4xx είναι βέβαιη άρνηση.
+ */
+function resendErrorUncertain(error: ResendSendError): boolean {
+  // Το SDK βάζει `null` ΜΟΝΟ όταν το `fetch` απέτυχε (`fetchRequest` catch): δεν ξέρουμε αν το αίτημα έφτασε.
+  if (error.statusCode === null) return true;
+  if (error.name === 'concurrent_idempotent_requests') return true;
+  return typeof error.statusCode === 'number' && statusLeavesOutcomeUncertain(error.statusCode);
+}
 
 function resendApiKey(): string | null {
   return process.env.RESEND_API_KEY?.trim() || null;
@@ -65,7 +79,10 @@ export async function resendSendMessage(email: EgressEmail): Promise<EgressResul
       ...(headers.length > 0 ? { headers: Object.fromEntries(headers) } : {}),
       ...(attachments.length > 0 ? { attachments } : {}),
     })) as ResendSendResult;
-    if (result.error) return { ok: false, error: result.error.message ?? 'resend: άγνωστο σφάλμα' };
+    if (result.error) {
+      const error = result.error.message ?? 'resend: άγνωστο σφάλμα';
+      return resendErrorUncertain(result.error) ? { ok: false, error, uncertain: true } : { ok: false, error };
+    }
     return { ok: true, messageId: result.data?.id ?? undefined };
   } catch (error) {
     return { ok: false, error: getErrorMessage(error, 'resend: άγνωστο σφάλμα') };
