@@ -7,6 +7,12 @@
  */
 
 import { z } from 'zod';
+import {
+  OVERLAY_LINK_KEYS,
+  OVERLAY_ROLES,
+  type OverlayLinked,
+  type OverlayRole,
+} from '@/types/floorplan-overlays';
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -83,21 +89,14 @@ export type OverlayGeometryInput = z.infer<typeof OverlayGeometrySchema>;
 
 // ─── Role + linked + style + scale ────────────────────────────────────────────
 
-export const OverlayRoleSchema = z.enum([
-  'property',
-  'parking',
-  'storage',
-  'footprint',
-  'annotation',
-  'auxiliary',
-]);
+// 🔑 Από το SSoT (`OVERLAY_ROLES` · `OVERLAY_LINK_KEYS`) — όχι χειρόγραφη λίστα: νέος ρόλος ή κλειδί
+// σύνδεσης μπαίνει **μία** φορά στο `src/types/floorplan-overlays.ts` (ADR-931 Β1).
+export const OverlayRoleSchema = z.enum(OVERLAY_ROLES as [OverlayRole, ...OverlayRole[]]);
+
+const LinkedIdSchema = z.string().min(1).max(128).optional();
 
 const OverlayLinkedSchema = z
-  .object({
-    propertyId: z.string().min(1).max(128).optional(),
-    parkingId: z.string().min(1).max(128).optional(),
-    storageId: z.string().min(1).max(128).optional(),
-  })
+  .object(Object.fromEntries(OVERLAY_LINK_KEYS.map((key) => [key, LinkedIdSchema])) as Record<keyof OverlayLinked, typeof LinkedIdSchema>)
   .strict();
 
 const OverlayStyleSchema = z

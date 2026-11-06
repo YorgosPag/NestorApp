@@ -22,7 +22,7 @@ import { Separator } from '../../../components/ui/separator';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { CommonBadge } from '../../../core/badges';
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '../../../config/domain-constants';
-import { STATUS_COLORS, STATUS_LABELS, type Overlay, type UpdateOverlayData, type OverlayKind } from '../overlays/types';
+import { KIND_LABELS, STATUS_COLORS, STATUS_LABELS, type Overlay, type UpdateOverlayData, type OverlayKind } from '../overlays/types';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { calculatePolygonArea, calculatePolygonPerimeter } from '../rendering/entities/shared/geometry-utils';
 import { overlayVertexToPoint2D } from '../utils/entity-conversion';
@@ -32,6 +32,7 @@ import { useFloorEntitiesForLinking } from '../hooks/useFloorEntitiesForLinking'
 import { useLevels } from '../systems/levels/useLevels';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { commercialToPropertyStatus, getStatusColors } from '../config/color-mapping';
+import { linkedEntityIdOf, linkedPayloadFor } from '@/types/floorplan-overlays';
 
 // ============================================================================
 // TYPES
@@ -53,22 +54,13 @@ interface PendingTransfer {
 // HELPERS
 // ============================================================================
 
+// ADR-931 Β1 — η σύνδεση ρόλου ↔ οντότητας βγαίνει από το SSoT (`ROLE_REQUIRES_LINK`), όχι από switch ανά είδος.
 function getLinkedEntityId(ov: Overlay): string | undefined {
-  switch (ov.kind) {
-    case 'property': return ov.linked?.propertyId;
-    case 'parking': return ov.linked?.parkingId;
-    case 'storage': return ov.linked?.storageId;
-    case 'footprint': return undefined;
-  }
+  return linkedEntityIdOf(ov.kind, ov.linked);
 }
 
 function buildLinkedPayload(kind: OverlayKind, entityId: string): Overlay['linked'] {
-  switch (kind) {
-    case 'property': return { propertyId: entityId };
-    case 'parking': return { parkingId: entityId };
-    case 'storage': return { storageId: entityId };
-    case 'footprint': return undefined;
-  }
+  return linkedPayloadFor(kind, entityId);
 }
 
 // ============================================================================
@@ -240,6 +232,11 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                       {resolvedStatus && (
                         <span className={`${colors.text.muted} text-xs`}>
                           ({t(STATUS_LABELS[resolvedStatus])})
+                        </span>
+                      )}
+                      {entity.kind === 'common_space' && (
+                        <span className={`${colors.text.muted} text-xs`}>
+                          ({t(KIND_LABELS.common_space)})
                         </span>
                       )}
                       {isLinkedElsewhere && (

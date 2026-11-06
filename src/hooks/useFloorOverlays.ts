@@ -23,7 +23,8 @@
  *     fallback to keep legacy enum bound — but those overlays are filtered out
  *     before reaching status-resolver consumers).
  *
- * Footprints (`role: 'footprint'`) are filtered out — not shown on public page.
+ * Footprints (`role: 'footprint'`) and common spaces (`role: 'common_space'`, ADR-931) are filtered out —
+ * neither is a unit for sale, so neither has a commercial status to colour by.
  *
  * @module hooks/useFloorOverlays
  * @enterprise ADR-340 §3.6 / Phase 9 STEP F
@@ -83,6 +84,7 @@ function roleToKind(role: OverlayRole): OverlayKind {
     case 'property':
     case 'parking':
     case 'storage':
+    case 'common_space':
     case 'footprint':
       return role;
     default:
@@ -174,7 +176,9 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
         for (const raw of result.documents) {
           const normalized = normalizeOverlay(raw);
           if (!normalized) continue;
-          if (normalized.role === 'footprint') continue;
+          // Ο θεατής χρωματίζει **κατά εμπορική κατάσταση**: ίχνος κτιρίου και κοινόχρηστος (ΑΚ 1117 — δεν
+          // διατίθεται, άρα δεν έχει κατάσταση) δεν είναι μονάδες προς διάθεση ⇒ δεν μπαίνουν (ADR-931 Β1).
+          if (normalized.role === 'footprint' || normalized.role === 'common_space') continue;
           items.push(normalized);
         }
         // ADR-040 Phase XVIII: defensive equality guard — ADR-361 service-level

@@ -294,6 +294,16 @@ export const UI_COLORS_BASE = {
   LAYER_DRAFT_STROKE: '#ec4899',                    // Pink-500 — vivid, status-neutral
   LAYER_DRAFT_FILL:   'rgba(236, 72, 153, 0.3)',    // Pink-500 @ 30% — translucent fill
 
+  // 🏛️ ADR-931 Β1 — Common-space colour fill scheme, one hue per vocabulary GROUP (Revit Color Fill
+  // Scheme «by parameter» · ArchiCAD Zone Category). Picked OUTSIDE the commercial-status palette above
+  // (green/blue/teal/orange/red/purple/gray) and the draft pink, so a common space never reads as
+  // «for sale» or «unlinked». Rendered at a lower fill opacity than units (see color-mapping.ts).
+  COMMON_SPACE_CIRCULATION: '#475569',  // Slate-600 — corridors, entrances, lobbies
+  COMMON_SPACE_VERTICAL:    '#4338ca',  // Indigo-700 — stairs, lifts, shafts
+  COMMON_SPACE_TECHNICAL:   '#a16207',  // Yellow-700 (ochre) — plant, meters, boiler rooms
+  COMMON_SPACE_OUTDOOR:     '#4d7c0f',  // Lime-700 — gardens, roof terraces, pilotis
+  COMMON_SPACE_AMENITY:     '#0e7490',  // Cyan-700 — pool, gym, lounge
+
   // Constraint system colors (για compatibility με constraints/config.ts)
   YELLOW: '#FFFF00',         // Polar constraints
   ORANGE: '#ffaa00',         // Distance constraints

@@ -3591,7 +3591,7 @@
     },
     "floorplan-overlay-gateway": {
       "ssotFile": "src/services/floorplan-overlay-mutation-gateway.ts",
-      "description": "Sole client write path for `floorplan_overlays` (multi-kind overlays — ADR-340 Phase 9). Blocks ad-hoc Firestore access to the collection from outside the gateway, the canonical API route+handlers, and the server-side services that legitimately need direct admin-SDK access (calibration-remap world-coord rewrites, cascade-delete on background/floor wipe, and the READ-ONLY tenant-scoped floor-plate reader of the public listing projection — ADR-907 §11.7). Pattern 1 forbids `COLLECTIONS.FLOORPLAN_OVERLAYS` references; pattern 2 forbids the raw `'floorplan_overlays'` literal in `.collection()`/`.doc()` calls (belt-and-suspenders with the firestore-collections module).",
+      "description": "Sole client write path for `floorplan_overlays` (multi-kind overlays — ADR-340 Phase 9). Blocks ad-hoc Firestore access to the collection from outside the gateway, the canonical API route+handlers, and the server-side services that legitimately need direct admin-SDK access (calibration-remap world-coord rewrites, cascade-delete on background/floor wipe, the READ-ONLY tenant-scoped floor-plate reader of the public listing projection — ADR-907 §11.7, and the READ-ONLY common-space drawn-area writer that sums the space's linked outlines inside a transaction — ADR-931 §6.1). Pattern 1 forbids `COLLECTIONS.FLOORPLAN_OVERLAYS` references; pattern 2 forbids the raw `'floorplan_overlays'` literal in `.collection()`/`.doc()` calls (belt-and-suspenders with the firestore-collections module).",
       "forbiddenPatterns": [
         "\\bCOLLECTIONS\\.FLOORPLAN_OVERLAYS\\b",
         "\\b(doc|collection)\\(\\s*['\"]floorplan_overlays['\"]"
@@ -3604,6 +3604,7 @@
         "src/services/floorplan-background/calibration-remap.service.ts",
         "src/services/floorplan-background/floorplan-cascade-delete.service.ts",
         "src/services/listings/floor-plate.reader.ts",
+        "src/lib/common-spaces/common-space-drawn-area.server.ts",
         "src/config/firestore-collections.ts"
       ],
       "addedDate": "2026-05-08",

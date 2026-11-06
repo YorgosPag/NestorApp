@@ -1,5 +1,6 @@
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { UI_COLORS, withOpacity } from './color-config';
+import type { CommonSpaceGroup } from '../../../constants/common-space-categories';
 
 // 🔺 ΕΝΙΑΊΟΣ STATUS_COLORS MAPPER - κεντρική αλήθεια για όλα τα overlay colors
 // Μετατρέπει τα κεντρικά CSS variables σε concrete hex colors για canvas rendering
@@ -18,6 +19,33 @@ export const STATUS_COLORS_MAPPING: Record<PropertyStatus, { stroke: string; fil
   'unavailable': { stroke: UI_COLORS.DARK_GRAY, fill: withOpacity(UI_COLORS.DARK_GRAY, 0.375) }, // ⚫ Dark Gray - unavailable
   'deleted': { stroke: UI_COLORS.LIGHT_GRAY, fill: withOpacity(UI_COLORS.LIGHT_GRAY, 0.25) }, // ADR-281: Soft-deleted
 };
+
+/**
+ * 🏛️ ADR-931 Β1 — χρώμα κοινόχρηστου χώρου στον καμβά, **ανά ομάδα του λεξιλογίου** (Revit Color Fill Scheme ·
+ * ArchiCAD Zone Category). Ολικό στη ρίζα `COMMON_SPACE_GROUPS`: νέα ομάδα χωρίς χρώμα δεν μεταγλωττίζεται.
+ * Γέμισμα **0,25** (οι μονάδες 0,5): ο κοινόχρηστος είναι το «υπόβαθρο» της πλάκας, όχι το εμπόρευμα.
+ */
+const COMMON_SPACE_FILL_OPACITY = 0.25;
+
+function commonSpaceSwatch(color: string): { stroke: string; fill: string } {
+  return { stroke: color, fill: withOpacity(color, COMMON_SPACE_FILL_OPACITY) };
+}
+
+export const COMMON_SPACE_GROUP_COLORS: Readonly<Record<CommonSpaceGroup, { stroke: string; fill: string }>> = {
+  circulation: commonSpaceSwatch(UI_COLORS.COMMON_SPACE_CIRCULATION),
+  vertical: commonSpaceSwatch(UI_COLORS.COMMON_SPACE_VERTICAL),
+  technical: commonSpaceSwatch(UI_COLORS.COMMON_SPACE_TECHNICAL),
+  outdoor: commonSpaceSwatch(UI_COLORS.COMMON_SPACE_OUTDOOR),
+  amenity: commonSpaceSwatch(UI_COLORS.COMMON_SPACE_AMENITY),
+};
+
+/** Ο χώρος δεν έχει (ακόμη) φορτωθεί ή διαγράφηκε: ουδέτερο της κυκλοφορίας — ποτέ χρώμα κατάστασης. */
+export const COMMON_SPACE_UNRESOLVED_COLORS = COMMON_SPACE_GROUP_COLORS.circulation;
+
+/** Το χρώμα ενός περιγράμματος κοινόχρηστου, από την ομάδα της κατηγορίας του (`undefined` ⇒ ουδέτερο). */
+export function getCommonSpaceColors(group: CommonSpaceGroup | undefined): { stroke: string; fill: string } {
+  return group === undefined ? COMMON_SPACE_UNRESOLVED_COLORS : COMMON_SPACE_GROUP_COLORS[group];
+}
 
 // Helper function για backward compatibility
 export const BUTTON_STATUS_COLORS: Record<PropertyStatus, string> = Object.fromEntries(

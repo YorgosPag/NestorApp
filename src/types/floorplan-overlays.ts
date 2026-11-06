@@ -75,6 +75,7 @@ export type OverlayRole =
   | 'property'
   | 'parking'
   | 'storage'
+  | 'common_space'
   | 'footprint'
   | 'annotation'
   | 'auxiliary';
@@ -83,6 +84,7 @@ export const OVERLAY_ROLES: ReadonlyArray<OverlayRole> = [
   'property',
   'parking',
   'storage',
+  'common_space',
   'footprint',
   'annotation',
   'auxiliary',
@@ -96,6 +98,8 @@ export const ROLE_ALLOWED_GEOMETRY: Record<OverlayRole, ReadonlyArray<OverlayGeo
   property:   ['polygon'],
   parking:    ['polygon'],
   storage:    ['polygon'],
+  // ADR-931 Β1 — κοινόχρηστος χώρος (Revit Area · ArchiCAD Zone): πάντα κλειστό πολύγωνο, γιατί έχει εμβαδόν.
+  common_space: ['polygon'],
   footprint:  ['polygon'],
   annotation: ['line', 'circle', 'arc', 'dimension', 'measurement', 'text'],
   auxiliary:  ['polygon', 'line', 'circle', 'arc', 'dimension', 'measurement', 'text'],
@@ -103,11 +107,16 @@ export const ROLE_ALLOWED_GEOMETRY: Record<OverlayRole, ReadonlyArray<OverlayGeo
 
 /**
  * Roles that require a corresponding `linked.<entity>Id` to be set.
+ *
+ * 🔑 **Η ΜΙΑ αυθεντία** «ρόλος → κλειδί σύνδεσης». Από αυτόν τον πίνακα βγαίνουν τα `linkedEntityIdOf` /
+ * `linkedPayloadFor` / `linkedEntityIdsOf` παρακάτω — κανένας καταναλωτής δεν ξαναγράφει switch ανά ρόλο
+ * (ADR-931 Β1: ήταν τρία χειρόγραφα switch + ένας χειρόγραφος χάρτης, και ο νέος ρόλος έπρεπε να μπει σε όλα).
  */
 export const ROLE_REQUIRES_LINK: Partial<Record<OverlayRole, keyof OverlayLinked>> = {
   property: 'propertyId',
   parking:  'parkingId',
   storage:  'storageId',
+  common_space: 'commonSpaceId',
 };
 
 // ─── Linked entity reference ──────────────────────────────────────────────────
@@ -116,6 +125,45 @@ export interface OverlayLinked {
   propertyId?: string;
   parkingId?: string;
   storageId?: string;
+  /** ADR-931 Β1 — ο κοινόχρηστος χώρος (`common_spaces`) που οριοθετεί το πολύγωνο. */
+  commonSpaceId?: string;
+}
+
+/** Όλα τα κλειδιά σύνδεσης — παράγονται από τον πίνακα, όχι γραμμένα με το χέρι. */
+export const OVERLAY_LINK_KEYS: ReadonlyArray<keyof OverlayLinked> = Object.freeze(
+  [...new Set(Object.values(ROLE_REQUIRES_LINK))].filter((key): key is keyof OverlayLinked => key !== undefined),
+);
+
+/** Ο ρόλος που δένει με αυτό το κλειδί — αντίστροφος του `ROLE_REQUIRES_LINK` (1:1 εκ κατασκευής). */
+export function roleForLinkKey(key: keyof OverlayLinked): OverlayRole | null {
+  for (const role of OVERLAY_ROLES) {
+    if (ROLE_REQUIRES_LINK[role] === key) return role;
+  }
+  return null;
+}
+
+/** Η ταυτότητα της οντότητας με την οποία δένει το περίγραμμα **κατά τον ρόλο του** — `undefined` ⇒ άδετο / ρόλος χωρίς σύνδεση. */
+export function linkedEntityIdOf(
+  role: OverlayRole,
+  linked: Readonly<OverlayLinked> | null | undefined,
+): string | undefined {
+  const key = ROLE_REQUIRES_LINK[role];
+  const id = key === undefined ? undefined : linked?.[key];
+  return typeof id === 'string' && id !== '' ? id : undefined;
+}
+
+/** Το `linked` που δένει ρόλο ↔ οντότητα — `undefined` για ρόλο χωρίς σύνδεση (π.χ. `footprint`). */
+export function linkedPayloadFor(role: OverlayRole, entityId: string): OverlayLinked | undefined {
+  const key = ROLE_REQUIRES_LINK[role];
+  return key === undefined ? undefined : { [key]: entityId };
+}
+
+/** Κάθε ταυτότητα που αναφέρει το `linked`, ανεξαρτήτως ρόλου — για εύρεση «ποιο περίγραμμα έχει ήδη αυτή την οντότητα». */
+export function linkedEntityIdsOf(linked: Readonly<OverlayLinked> | null | undefined): string[] {
+  if (!linked) return [];
+  return OVERLAY_LINK_KEYS
+    .map((key) => linked[key])
+    .filter((id): id is string => typeof id === 'string' && id !== '');
 }
 
 // ─── Style override ───────────────────────────────────────────────────────────

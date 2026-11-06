@@ -10,10 +10,17 @@ import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { CommonSpace } from '@/types/common-space';
 import { buildAreaColumn, buildFloorColumn, type SpaceColumn } from '../shared';
+import { CommonSpaceDrawnAreaCell } from './CommonSpaceDrawnAreaCell';
 
-type Translate = (key: string) => string;
+type Translate = (key: string, options?: Record<string, string | number>) => string;
 
-export function useCommonSpaceColumns(t: Translate): SpaceColumn<CommonSpace>[] {
+/** ADR-931 Β1 — η ενέργεια «υιοθέτηση σχεδίου» της στήλης «Από την κάτοψη». */
+export interface DrawnAreaActions {
+  readonly adoptingId: string | null;
+  readonly onAdopt: (space: CommonSpace) => void;
+}
+
+export function useCommonSpaceColumns(t: Translate, drawn: DrawnAreaActions): SpaceColumn<CommonSpace>[] {
   const floorLabel = useFloorLabel();
   const colors = useSemanticColors();
 
@@ -35,11 +42,28 @@ export function useCommonSpaceColumns(t: Translate): SpaceColumn<CommonSpace>[] 
     buildFloorColumn<CommonSpace>(t('tab.columns.floor'), colors.text.muted, floorLabel),
     buildAreaColumn<CommonSpace>(t('tab.columns.area'), (space) => space.area ?? null),
     {
+      key: 'drawnArea',
+      label: t('tab.columns.drawnArea'),
+      sortValue: (space) => space.drawnArea ?? null,
+      render: (space) => (
+        <CommonSpaceDrawnAreaCell
+          space={space}
+          t={t}
+          mutedClass={colors.text.muted}
+          adopting={drawn.adoptingId === space.id}
+          onAdopt={drawn.onAdopt}
+        />
+      ),
+      exportCell: (space) => space.drawnArea ?? null,
+      exportFormat: 'number',
+      exportTotal: 'sum',
+    },
+    {
       key: 'legalNature',
       label: t('tab.columns.legalNature'),
       sortValue: (space) => space.legalNature,
       render: (space) => <span className={colors.text.muted}>{t(`legalNature.${space.legalNature}`)}</span>,
       exportCell: (space) => t(`legalNature.${space.legalNature}`),
     },
-  ], [t, colors.text.muted, floorLabel]);
+  ], [t, colors.text.muted, floorLabel, drawn.adoptingId, drawn.onAdopt]);
 }

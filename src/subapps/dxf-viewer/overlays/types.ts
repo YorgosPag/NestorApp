@@ -2,7 +2,7 @@
 // Layering store view types — POLYGON-ONLY projection of the multi-kind SSoT
 // (`FloorplanOverlay` in src/types/floorplan-overlays.ts). The layering tool
 // in the DXF Viewer subapp only ever creates closed polygons with a kind in
-// {property, parking, storage, footprint}; this file describes the shape the
+// {property, parking, storage, common_space, footprint}; this file describes the shape the
 // `useOverlayStore()` provider exposes to its 33 callers. Multi-kind drawing
 // entities (line/circle/arc/measurement/text) bypass this store entirely
 // and persist via `completeEntity({ persistToOverlays })`.
@@ -12,9 +12,11 @@ import { PropertyStatus, ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHAN
 import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
 import { EventBus } from '../systems/events';
+import type { OverlayLinked } from '@/types/floorplan-overlays';
 
 export type Scope = 'project' | 'building' | 'floor' | 'property' | 'parking' | 'storage';
-export type OverlayKind = 'property' | 'parking' | 'storage' | 'footprint';
+// ADR-931 Β1 — `common_space`: περίγραμμα κοινόχρηστου χώρου (Revit Area · ArchiCAD Zone).
+export type OverlayKind = 'property' | 'parking' | 'storage' | 'common_space' | 'footprint';
 
 // Use centralized PropertyStatus instead of local Status
 export type Status = PropertyStatus;
@@ -35,16 +37,13 @@ export interface OverlayStyle {
 export interface Overlay {
   id: string;
   levelId: string;            // τρέχον Level ως «plan holder» (προς το παρόν)
-  kind: OverlayKind;          // property/parking/storage/footprint
+  kind: OverlayKind;          // property/parking/storage/common_space/footprint
   polygon: Array<[number, number]>; // world coords, κλειστό polyline
   /** @deprecated ADR-258: Χρωματισμός γίνεται δυναμικά βάσει linked entity → commercialStatus */
   status?: Status;
   label?: string;             // A-12, P-034 κτλ
-  linked?: {
-    propertyId?: string;
-    parkingId?: string;
-    storageId?: string;
-  };
+  /** Το ΙΔΙΟ σχήμα με το SSoT (`OverlayLinked`) — όχι αντίγραφο που ξεχνά νέο κλειδί (ADR-931 Β1). */
+  linked?: OverlayLinked;
   style?: OverlayStyle;       // ToolStyle colors and properties
   createdAt: number; 
   updatedAt: number; 
@@ -103,6 +102,7 @@ export const KIND_LABELS: Record<OverlayKind, string> = {
   property:  'dxf-viewer:overlayProperties.kindLabels.property',
   parking:   'dxf-viewer:overlayProperties.kindLabels.parking',
   storage:   'dxf-viewer:overlayProperties.kindLabels.storage',
+  common_space: 'dxf-viewer:overlayProperties.kindLabels.common_space',
   footprint: 'dxf-viewer:overlayProperties.kindLabels.footprint',
 };
 

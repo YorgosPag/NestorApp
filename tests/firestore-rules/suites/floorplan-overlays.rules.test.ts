@@ -179,6 +179,44 @@ describe('floorplan_overlays.rules — role↔geometry matrix (Phase 9)', () => 
     );
   });
 
+  // ── ADR-931 Β1 — κοινόχρηστος χώρος ───────────────────────────────────────
+
+  it('allows role:common_space + polygon + linked.commonSpaceId', async () => {
+    await assertSucceeds(
+      tryCreate(
+        'common_space',
+        { type: 'polygon', vertices: SAMPLE_POLYGON_VERTICES },
+        { commonSpaceId: 'cspc_123' },
+      ),
+    );
+  });
+
+  it('rejects role:common_space without linked.commonSpaceId', async () => {
+    await assertFails(
+      tryCreate('common_space', { type: 'polygon', vertices: SAMPLE_POLYGON_VERTICES }),
+    );
+  });
+
+  it('rejects role:common_space linked to another kind (linked.propertyId)', async () => {
+    await assertFails(
+      tryCreate(
+        'common_space',
+        { type: 'polygon', vertices: SAMPLE_POLYGON_VERTICES },
+        { propertyId: 'prop_123' },
+      ),
+    );
+  });
+
+  it('rejects role:common_space + line (polygon-only role)', async () => {
+    await assertFails(
+      tryCreate(
+        'common_space',
+        { type: 'line', start: { x: 0, y: 0 }, end: { x: 5, y: 5 } },
+        { commonSpaceId: 'cspc_123' },
+      ),
+    );
+  });
+
   it('rejects unknown geometry.type', async () => {
     await assertFails(
       tryCreate('annotation', { type: 'spline', vertices: SAMPLE_POLYGON_VERTICES }),

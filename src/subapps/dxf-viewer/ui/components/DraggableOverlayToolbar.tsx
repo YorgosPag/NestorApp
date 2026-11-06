@@ -26,7 +26,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Activity, Pen, Edit, Copy, RotateCcw, RotateCw, Square, Circle, Triangle, Grid, X, Save, XCircle } from 'lucide-react';
+import { Activity, Pen, Edit, Copy, RotateCcw, RotateCw, Square, Circle, Triangle, Grid, Users, X, Save, XCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -180,6 +180,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
     property: { icon: Square, color: OVERLAY_TOOLBAR_COLORS.property },
     parking: { icon: Circle, color: OVERLAY_TOOLBAR_COLORS.parking },
     storage: { icon: Triangle, color: OVERLAY_TOOLBAR_COLORS.storage },
+    common_space: { icon: Users, color: OVERLAY_TOOLBAR_COLORS.common_space },
     footprint: { icon: Grid, color: OVERLAY_TOOLBAR_COLORS.footprint },
   };
 

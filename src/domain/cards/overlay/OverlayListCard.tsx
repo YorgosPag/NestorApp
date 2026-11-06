@@ -37,6 +37,7 @@ import type { StatItem, ListCardAction } from "@/design-system";
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatNumber } from "@/lib/intl-utils";
+import { linkedEntityIdsOf } from "@/types/floorplan-overlays";
 
 // 🏢 DOMAIN TYPES - Overlay from DXF Viewer
 import type {
@@ -111,6 +112,7 @@ const KIND_TO_ENTITY: Record<OverlayKind, NavigationEntityType> = {
   property: "property",
   parking: "parking",
   storage: "storage",
+  common_space: "building", // ADR-931 Β1 — ο κοινόχρηστος ανήκει στο κτίριο
   footprint: "building", // Use building icon for footprint
 };
 
@@ -239,11 +241,8 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
       }
 
       // Linked entity indicator
-      const hasLink =
-        overlay.linked &&
-        (overlay.linked.propertyId ||
-          overlay.linked.parkingId ||
-          overlay.linked.storageId);
+      // SSoT: κάθε κλειδί σύνδεσης από το `OVERLAY_LINK_KEYS` (ADR-931 Β1) — όχι χειρόγραφη λίστα.
+      const hasLink = linkedEntityIdsOf(overlay.linked).length > 0;
 
       if (hasLink) {
         items.push({

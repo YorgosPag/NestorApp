@@ -21,7 +21,7 @@ import {
   mapCommonSpaceExtraFields,
   type UpdateCommonSpaceBody,
 } from '@/lib/common-spaces/common-space-fields';
-import { resolveLegalNatureForPatch } from '@/lib/common-spaces/common-space-legal.server';
+import { resolveCommonSpacePatchFields } from '@/lib/common-spaces/common-space-patch.server';
 
 const logger = createModuleLogger('CommonSpacesIdRoute');
 
@@ -37,7 +37,8 @@ export const { PATCH, DELETE, GET } = createSpaceEntityRoutes<UpdateCommonSpaceB
   requireInTenant: ({ ctx, id, path }) => requireCommonSpaceInTenant({ ctx, commonSpaceId: id, path }),
   updateSchema: UpdateCommonSpaceSchema,
   mapExtraFields: mapCommonSpaceExtraFields,
-  resolveAsyncFields: ({ adminDb, ctx, body, existing }) => resolveLegalNatureForPatch(adminDb, ctx, body, existing),
+  // ADR-931 — νομική φύση (ΑΚ 1117) + πηγή εμβαδού (Β1: «υιοθέτησε το σχεδιασμένο»), κρινόμενα στο αποθηκευμένο.
+  resolveAsyncFields: resolveCommonSpacePatchFields,
 
   messages: {
     idRequired: 'Common space ID is required',

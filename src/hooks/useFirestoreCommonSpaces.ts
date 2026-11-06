@@ -25,6 +25,8 @@ const logger = createModuleLogger('useFirestoreCommonSpaces');
 interface UseFirestoreCommonSpacesOptions {
   /** Μόνο οι χώροι αυτού του κτιρίου. */
   readonly buildingId?: string;
+  /** `false` ⇒ καμία συνδρομή (π.χ. καμβάς χωρίς περίγραμμα κοινόχρηστου). Προεπιλογή `true`. */
+  readonly enabled?: boolean;
 }
 
 export interface UseFirestoreCommonSpacesReturn {
@@ -42,13 +44,13 @@ function toCommonSpaces(result: QueryResult<DocumentData>): CommonSpace[] {
 export function useFirestoreCommonSpaces(
   options: UseFirestoreCommonSpacesOptions = {},
 ): UseFirestoreCommonSpacesReturn {
-  const { buildingId } = options;
+  const { buildingId, enabled: requested = true } = options;
   const { user, loading: authLoading } = useAuth();
   const [commonSpaces, setCommonSpaces] = useState<readonly CommonSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const enabled = !authLoading && !!user;
+  const enabled = requested && !authLoading && !!user;
   const constraints = useMemo(
     () => (buildingId ? [where('buildingId', '==', buildingId)] : []),
     [buildingId],
@@ -56,7 +58,7 @@ export function useFirestoreCommonSpaces(
 
   useEffect(() => {
     if (!enabled) {
-      setLoading(authLoading);
+      setLoading(requested && authLoading);
       return;
     }
     setLoading(true);
@@ -74,7 +76,7 @@ export function useFirestoreCommonSpaces(
       },
       { constraints },
     );
-  }, [enabled, authLoading, constraints, buildingId]);
+  }, [enabled, requested, authLoading, constraints, buildingId]);
 
   return { commonSpaces, loading, error };
 }

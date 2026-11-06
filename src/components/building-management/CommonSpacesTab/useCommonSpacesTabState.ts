@@ -17,7 +17,7 @@ import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import { isRetired } from '@/lib/firestore/trashed-status';
 import { getCurrentLocale } from '@/lib/intl-utils';
 import { resolveDecimalSeparator } from '@/components/ui/numeric-field';
-import { createCommonSpace, deleteCommonSpace, updateCommonSpace } from '@/services/common-space-mutation-gateway';
+import { adoptDrawnCommonSpaceArea, createCommonSpace, deleteCommonSpace, updateCommonSpace } from '@/services/common-space-mutation-gateway';
 import type { CommonSpace } from '@/types/common-space';
 import {
   EMPTY_COMMON_SPACE_DRAFT,
@@ -108,6 +108,26 @@ function useCommonSpaceDeletion({ t, success, reportFailure }: Feedback) {
   return { confirmDelete, setConfirmDelete, deleting, confirmDeletion };
 }
 
+/** ADR-931 Β1 — «υιοθέτησε το σχεδιασμένο» (με `_v`: χώρος που άλλαξε στο μεταξύ ⇒ 409, όχι σιωπηλή γραφή). */
+function useAdoptDrawnArea({ t, success, reportFailure }: Feedback) {
+  const [adoptingId, setAdoptingId] = useState<string | null>(null);
+
+  const adoptDrawnArea = useCallback(async (space: CommonSpace) => {
+    if (adoptingId) return;
+    setAdoptingId(space.id);
+    try {
+      await adoptDrawnCommonSpaceArea(space.id, space._v);
+      success(t(`${KEY}.notifications.adopted`));
+    } catch (err) {
+      reportFailure(err, 'update', t(`${KEY}.notifications.failed`));
+    } finally {
+      setAdoptingId(null);
+    }
+  }, [adoptingId, success, t, reportFailure]);
+
+  return { adoptingId, adoptDrawnArea };
+}
+
 export function useCommonSpacesTabState(buildingId: string) {
   const { t } = useTranslation('common-spaces');
   const { success } = useNotifications();
@@ -120,5 +140,6 @@ export function useCommonSpacesTabState(buildingId: string) {
     t, commonSpaces, loading, error, propertyOptions,
     ...useCommonSpaceForm(buildingId, feedback),
     ...useCommonSpaceDeletion(feedback),
+    ...useAdoptDrawnArea(feedback),
   };
 }

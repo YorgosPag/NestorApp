@@ -32,9 +32,17 @@ import {
   type OverlayRole,
 } from '@/types/floorplan-overlays';
 import {
+  affectedCommonSpaces,
+  assertCommonSpaceLinkable,
+  linkedCommonSpaceOf,
+  syncCommonSpaceDrawnAreas,
+  type OverlayLinkState,
+} from '@/lib/common-spaces/common-space-drawn-area.server';
+import {
   CreateFloorplanOverlaySchema,
   UpdateFloorplanOverlaySchema,
   UpsertFloorplanOverlaySchema,
+  type CreateFloorplanOverlayInput,
 } from './floorplan-overlays.schemas';
 import type {
   FloorplanOverlayCreateResponse,
@@ -92,6 +100,44 @@ function ensureSameCompany(
   }
 }
 
+/** Τα προαιρετικά πεδία του σώματος POST/PUT — μόνο όσα στάλθηκαν (ΕΝΑ σημείο για δημιουργία και επαναφορά). */
+function optionalOverlayFields(
+  body: Pick<CreateFloorplanOverlayInput, 'linked' | 'label' | 'style' | 'layer'>,
+): Record<string, unknown> {
+  return {
+    ...(body.linked !== undefined ? { linked: body.linked } : {}),
+    ...(body.label !== undefined ? { label: body.label } : {}),
+    ...(body.style !== undefined ? { style: body.style } : {}),
+    ...(body.layer !== undefined ? { layer: body.layer } : {}),
+  };
+}
+
+// ─── ADR-931 Β1 — κοινόχρηστος χώρος: φρουρός σύνδεσης + παράγωγο εμβαδόν ──────
+
+function linkStateOf(raw: Readonly<Record<string, unknown>> | undefined): OverlayLinkState | null {
+  if (!raw) return null;
+  return { role: raw.role as OverlayRole | undefined, linked: raw.linked as OverlayLinked | undefined };
+}
+
+/** Νέα ή αλλαγμένη σύνδεση με κοινόχρηστο ⇒ ίδιος πελάτης, ίδιο κτίριο/όροφος (άρνηση ΠΡΙΝ τη γραφή). */
+async function guardCommonSpaceLink(
+  ctx: AuthContext,
+  before: OverlayLinkState | null,
+  after: OverlayLinkState,
+  floorId: string,
+  path: string,
+): Promise<void> {
+  const next = linkedCommonSpaceOf(after);
+  if (next === undefined || next === linkedCommonSpaceOf(before)) return;
+  await assertCommonSpaceLinkable(getAdminFirestore(), ctx, next, floorId, path);
+}
+
+/** Μετά τη γραφή: ξαναμέτρησε κάθε χώρο που έδενε πριν ή δένει μετά (awaited, δεν πετά ποτέ). */
+async function syncDrawnAreas(ctx: AuthContext, before: OverlayLinkState | null, after: OverlayLinkState | null): Promise<void> {
+  const ids = affectedCommonSpaces(before, after);
+  if (ids.length > 0) await syncCommonSpaceDrawnAreas(getAdminFirestore(), ctx, ids);
+}
+
 // ─── POST — create ────────────────────────────────────────────────────────────
 
 export async function handleCreateFloorplanOverlay(
@@ -104,6 +150,8 @@ export async function handleCreateFloorplanOverlay(
     const body = parsed.data;
 
     validateRoleGeometryConsistency(body.role, body.geometry, body.linked);
+    const created: OverlayLinkState = { role: body.role, linked: body.linked };
+    await guardCommonSpaceLink(ctx, null, created, body.floorId, '/api/floorplan-overlays (POST)');
 
     const overlayId = generateOverlayId();
     const docRef = overlayDocRef(overlayId);
@@ -118,13 +166,11 @@ export async function handleCreateFloorplanOverlay(
       createdBy: ctx.uid,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-      ...(body.linked !== undefined ? { linked: body.linked } : {}),
-      ...(body.label !== undefined ? { label: body.label } : {}),
-      ...(body.style !== undefined ? { style: body.style } : {}),
-      ...(body.layer !== undefined ? { layer: body.layer } : {}),
+      ...optionalOverlayFields(body),
     };
 
     await docRef.set(doc);
+    await syncDrawnAreas(ctx, null, created);
 
     await logAuditEvent(ctx, 'data_created', overlayId, 'api', {
       metadata: {
@@ -167,6 +213,8 @@ export async function handleUpsertFloorplanOverlay(
     const docRef = overlayDocRef(body.overlayId);
     const snapshot = await docRef.get();
     let created: boolean;
+    const before = linkStateOf(snapshot.data());
+    const after: OverlayLinkState = { role: body.role, linked: body.linked };
 
     if (snapshot.exists) {
       const existing = snapshot.data() as Record<string, unknown> | undefined;
@@ -180,6 +228,7 @@ export async function handleUpsertFloorplanOverlay(
     } else {
       created = true;
     }
+    await guardCommonSpaceLink(ctx, before, after, body.floorId, '/api/floorplan-overlays (PUT upsert)');
 
     const createdAt =
       body.createdAtMs !== undefined
@@ -197,13 +246,11 @@ export async function handleUpsertFloorplanOverlay(
       createdAt,
       updatedAt: FieldValue.serverTimestamp(),
       restoredAt: FieldValue.serverTimestamp(),
-      ...(body.linked !== undefined ? { linked: body.linked } : {}),
-      ...(body.label !== undefined ? { label: body.label } : {}),
-      ...(body.style !== undefined ? { style: body.style } : {}),
-      ...(body.layer !== undefined ? { layer: body.layer } : {}),
+      ...optionalOverlayFields(body),
     };
 
     await docRef.set(doc);
+    await syncDrawnAreas(ctx, before, after);
 
     await logAuditEvent(
       ctx,
@@ -263,6 +310,9 @@ export async function handleUpdateFloorplanOverlay(
       return (existing.linked as OverlayLinked | undefined) ?? undefined;
     })();
     validateRoleGeometryConsistency(effectiveRole, effectiveGeometry, effectiveLinked);
+    const before = linkStateOf(existing);
+    const after: OverlayLinkState = { role: effectiveRole, linked: effectiveLinked };
+    await guardCommonSpaceLink(ctx, before, after, existing.floorId as string, '/api/floorplan-overlays (PATCH)');
 
     const updates: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
     if (body.geometry !== undefined) updates.geometry = body.geometry;
@@ -277,6 +327,7 @@ export async function handleUpdateFloorplanOverlay(
     }
 
     await docRef.update(updates);
+    await syncDrawnAreas(ctx, before, after);
 
     logger.info('[FloorplanOverlays/Update]', {
       overlayId: body.overlayId,
@@ -330,6 +381,7 @@ export async function handleDeleteFloorplanOverlay(
     }
 
     await docRef.delete();
+    await syncDrawnAreas(ctx, linkStateOf(existing), null);
 
     await logAuditEvent(ctx, 'data_deleted', overlayId, 'api', {
       metadata: {

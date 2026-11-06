@@ -56,6 +56,14 @@ export function updateCommonSpace(
   return apiClient.patch<CommonSpaceUpdateResult>(API_ROUTES.COMMON_SPACES.BY_ID(id), { ...draft, _v: expectedVersion });
 }
 
+/**
+ * ADR-931 Β1 — «υιοθέτησε το σχεδιασμένο»: το `area` δένεται με το εμβαδόν της κάτοψης. Ο πελάτης **δεν** στέλνει
+ * αριθμό — ο server διαβάζει το `drawnArea` από τη βάση (ο πελάτης δεν γράφει ποτέ παράγωγο).
+ */
+export function adoptDrawnCommonSpaceArea(id: string, expectedVersion?: number): Promise<CommonSpaceUpdateResult> {
+  return apiClient.patch<CommonSpaceUpdateResult>(API_ROUTES.COMMON_SPACES.BY_ID(id), { areaSource: 'drawn', _v: expectedVersion });
+}
+
 export function deleteCommonSpace(id: string): Promise<unknown> {
   return apiClient.delete<unknown>(API_ROUTES.COMMON_SPACES.BY_ID(id));
 }

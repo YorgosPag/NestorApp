@@ -94,7 +94,17 @@
       "category": "Category",
       "floor": "Floor",
       "area": "Area (m²)",
-      "legalNature": "Legal nature"
+      "legalNature": "Legal nature",
+      "drawnArea": "From floor plan (m²)"
+    },
+    "area": {
+      "notDrawn": "Not drawn on any floor plan",
+      "boundToDrawing": "Follows the floor plan",
+      "boundToDrawingHint": "The area updates automatically when the outline changes on the floor plan.",
+      "diverges": "{percent}% off",
+      "divergesHint": "The drawn area ({drawn} m²) differs from the declared one ({declared} m²).",
+      "adopt": "Adopt drawing",
+      "adopting": "Adopting…"
     },
     "form": {
       "createTitle": "New common space",
@@ -127,7 +137,8 @@
       "created": "Common space registered.",
       "updated": "Common space updated.",
       "deleted": "Common space moved to trash.",
-      "failed": "The action failed."
+      "failed": "The action failed.",
+      "adopted": "The area now follows the floor plan."
     }
   }
 }

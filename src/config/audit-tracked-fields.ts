@@ -853,6 +853,9 @@ const COMMON_SPACE_TRACKED_FIELDS_RAW: Record<string, string> = {
   floor: 'floor',
   floorKind: 'floorKind',
   area: 'area',
+  // ADR-931 Β1 — εμβαδόν από την κάτοψη (server) + η πηγή της ενεργής τιμής (άνθρωπος).
+  drawnArea: 'drawnArea',
+  areaSource: 'areaSource',
   code: 'code',
   projectId: 'projectId',
   description: 'description',

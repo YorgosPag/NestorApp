@@ -24,17 +24,31 @@ import type { ColorLayer } from '../../canvas-v2';
 import type { Overlay } from '../../overlays/types';
 import type { RegionStatus } from '../../types/overlay';
 import type { Point2D } from '../../rendering/types/Types';
-import { getStatusColors } from '../../config/color-mapping';
+import { getCommonSpaceColors, getStatusColors } from '../../config/color-mapping';
+import { linkedEntityIdOf } from '@/types/floorplan-overlays';
+import { useCommonSpaceOverlayGroups } from './useCommonSpaceOverlayGroups';
 import { UI_COLORS } from '../../config/color-config';
 import { useEntityStatusResolver } from '@/hooks/useEntityStatusResolver';
 
+/** SSoT `linkedEntityIdOf` — κανένα switch ανά ρόλο (ADR-931 Β1). */
 function getLinkedEntityId(overlay: Overlay): string | undefined {
-  switch (overlay.kind) {
-    case 'property': return overlay.linked?.propertyId;
-    case 'parking': return overlay.linked?.parkingId;
-    case 'storage': return overlay.linked?.storageId;
-    default: return undefined;
+  return linkedEntityIdOf(overlay.kind, overlay.linked);
+}
+
+/**
+ * Τα χρώματα ενός **δεμένου** περιγράμματος: ο κοινόχρηστος από την ομάδα του (σχήμα χρωμάτων, ADR-931 Β1)· κάθε
+ * άλλο είδος από τη ζωντανή εμπορική κατάσταση (ADR-258). `null` ⇒ καμία γνώμη (εφεδρεία στο στυλ / στο πρόχειρο).
+ */
+function linkedSwatchOf(
+  overlay: Overlay,
+  liveStatus: string | undefined,
+  commonSpaceGroups: ReturnType<typeof useCommonSpaceOverlayGroups>,
+): { stroke: string; fill: string } | null {
+  if (overlay.kind === 'common_space') {
+    const spaceId = getLinkedEntityId(overlay);
+    return getCommonSpaceColors(spaceId === undefined ? undefined : commonSpaceGroups.get(spaceId));
   }
+  return liveStatus ? getStatusColors(liveStatus) : null;
 }
 
 // ============================================================================
@@ -164,6 +178,8 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
   // ============================================================================
 
   const resolvedStatusMap = useEntityStatusResolver(overlays);
+  // ADR-931 Β1 — ο κοινόχρηστος δεν έχει κατάσταση· χρωματίζεται από την ομάδα του λεξιλογίου.
+  const commonSpaceGroups = useCommonSpaceOverlayGroups(overlays);
 
   // ============================================================================
   // COLOR LAYERS CONVERSION
@@ -183,7 +199,9 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
         const isLinked = !!getLinkedEntityId(overlay);
         const liveStatus = resolvedStatusMap.get(overlay.id);
         const effectiveStatus = isLinked ? liveStatus : overlay.status;
-        const statusColors = effectiveStatus ? getStatusColors(effectiveStatus) : null;
+        const statusColors = isLinked
+          ? linkedSwatchOf(overlay, liveStatus, commonSpaceGroups)
+          : (overlay.status ? getStatusColors(overlay.status) : null);
         // 🏢 ADR-258: status colors win over style overrides when entity is linked,
         // so the canvas always reflects the live commercial status.
         // Unlinked layers use the status-neutral DRAFT pink so they never clash
@@ -267,6 +285,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     hoveredOverlayId,
     hiddenOverlayIds,
     resolvedStatusMap,
+    commonSpaceGroups,
   ]);
 
   // ============================================================================

@@ -27,6 +27,7 @@ import {
   type CommonSpaceLegalNature,
 } from '@/constants/common-space-categories';
 import { SPACE_COMMON_CREATE_FIELDS, SPACE_COMMON_UPDATE_FIELDS } from '@/lib/api/space-entity-fields';
+import { COMMON_SPACE_AREA_SOURCES } from '@/lib/common-spaces/common-space-area';
 
 /** Ανώτατο πλήθος ιδιοκτησιών αποκλειστικής χρήσης — όριο Firestore `getAll` με περιθώριο. */
 export const MAX_EXCLUSIVE_USE_PROPERTIES = 20;
@@ -38,6 +39,8 @@ const NOT_ACCEPTED = {
   type: z.undefined(),
   commercialStatus: z.undefined(),
   commercial: z.undefined(),
+  /** ADR-931 Β1 — το εμβαδόν της κάτοψης το γράφει **μόνο ο server**, από τη γεωμετρία. */
+  drawnArea: z.undefined(),
 } as const;
 
 export const CreateCommonSpaceSchema = z.object({
@@ -61,6 +64,8 @@ export const UpdateCommonSpaceSchema = z.object({
   category: z.enum(COMMON_SPACE_CATEGORIES).optional(),
   legalNature: z.enum(COMMON_SPACE_LEGAL_NATURES).optional(),
   exclusiveUsePropertyIds: exclusiveUseIds.optional(),
+  /** ADR-931 Β1 — `drawn` = «υιοθέτησε το σχεδιασμένο» (το `area` το γράφει ο server από το `drawnArea`). */
+  areaSource: z.enum(COMMON_SPACE_AREA_SOURCES).optional(),
 }).passthrough();
 
 export type UpdateCommonSpaceBody = z.infer<typeof UpdateCommonSpaceSchema>;

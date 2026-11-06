@@ -33,6 +33,7 @@ import { commercialToPropertyStatus } from '@/subapps/dxf-viewer/config/color-ma
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { OverlayKind } from '@/subapps/dxf-viewer/overlays/types';
+import { linkedEntityIdOf, type OverlayLinked } from '@/types/floorplan-overlays';
 import type { CommercialStatus } from '@/types/property';
 import { normalizeCommercialStatus } from '@/constants/commercial-statuses';
 
@@ -47,11 +48,8 @@ export interface ResolvableOverlay {
   readonly id: string;
   readonly kind: OverlayKind;
   readonly status?: PropertyStatus;
-  readonly linked?: {
-    readonly propertyId?: string;
-    readonly parkingId?: string;
-    readonly storageId?: string;
-  };
+  /** Το σχήμα του SSoT — νέο κλειδί σύνδεσης φτάνει εδώ χωρίς αντίγραφο (ADR-931 Β1). */
+  readonly linked?: Readonly<OverlayLinked>;
 }
 
 /** Internal cache: entityId → raw commercial status from Firestore */
@@ -68,16 +66,22 @@ interface CollectionSubscription {
 // ============================================================================
 
 /**
- * Extract the linked entity ID for an overlay based on its kind.
- * Returns undefined for footprint or unlinked overlays.
+ * Σε ποια συλλογή ζει η **εμπορική κατάσταση** κάθε είδους. Μόνο τα μεταβιβάσιμα είδη έχουν γραμμή:
+ * ο κοινόχρηστος (ΑΚ 1117) και το ίχνος δεν διατίθενται, άρα δεν έχουν κατάσταση να επιλυθεί (ADR-931 Β1).
+ */
+const STATUS_COLLECTION: Readonly<Partial<Record<OverlayKind, CollectionKey>>> = {
+  property: 'PROPERTIES',
+  parking: 'PARKING_SPACES',
+  storage: 'STORAGE',
+};
+
+/**
+ * Η ταυτότητα της οντότητας **με εμπορική κατάσταση** που δένει το περίγραμμα — μέσω του SSoT
+ * `linkedEntityIdOf` (κανένα switch ανά ρόλο). `undefined` ⇒ άδετο ή είδος χωρίς κατάσταση.
  */
 function getLinkedEntityId(overlay: ResolvableOverlay): string | undefined {
-  switch (overlay.kind) {
-    case 'property': return overlay.linked?.propertyId;
-    case 'parking': return overlay.linked?.parkingId;
-    case 'storage': return overlay.linked?.storageId;
-    default: return undefined;
-  }
+  if (STATUS_COLLECTION[overlay.kind] === undefined) return undefined;
+  return linkedEntityIdOf(overlay.kind, overlay.linked);
 }
 
 // ============================================================================
@@ -105,26 +109,22 @@ export function useEntityStatusResolver(
 
   // ── Step A: Extract + deduplicate entity IDs per collection ────────────
   const entityGroups = useMemo(() => {
-    const propertyIds = new Set<string>();
-    const parkingIds = new Set<string>();
-    const storageIds = new Set<string>();
+    const idsByCollection = new Map<CollectionKey, Set<string>>();
 
     for (const overlay of overlays) {
-      if (overlay.kind === 'property' && overlay.linked?.propertyId) {
-        propertyIds.add(overlay.linked.propertyId);
-      }
-      if (overlay.kind === 'parking' && overlay.linked?.parkingId) {
-        parkingIds.add(overlay.linked.parkingId);
-      }
-      if (overlay.kind === 'storage' && overlay.linked?.storageId) {
-        storageIds.add(overlay.linked.storageId);
-      }
+      const collectionKey = STATUS_COLLECTION[overlay.kind];
+      const entityId = getLinkedEntityId(overlay);
+      if (collectionKey === undefined || entityId === undefined) continue;
+      const ids = idsByCollection.get(collectionKey) ?? new Set<string>();
+      ids.add(entityId);
+      idsByCollection.set(collectionKey, ids);
     }
 
+    const sortedIds = (key: CollectionKey): string[] => Array.from(idsByCollection.get(key) ?? []).sort();
     return {
-      units: Array.from(propertyIds).sort(),
-      parking: Array.from(parkingIds).sort(),
-      storage: Array.from(storageIds).sort(),
+      units: sortedIds('PROPERTIES'),
+      parking: sortedIds('PARKING_SPACES'),
+      storage: sortedIds('STORAGE'),
     };
   }, [overlays]);
 

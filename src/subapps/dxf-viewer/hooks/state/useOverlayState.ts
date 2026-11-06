@@ -36,7 +36,7 @@ const DEFAULT_OVERLAY_STATE: OverlayState = {
 // ✅ ENTERPRISE: State validation schema
 const VALID_MODES: OverlayEditorMode[] = ['select', 'draw', 'edit'];
 const VALID_STATUSES: Status[] = ['for-sale', 'for-rent', 'reserved', 'sold', 'landowner'];
-const VALID_KINDS: OverlayKind[] = ['property', 'parking', 'storage', 'footprint'];
+const VALID_KINDS: OverlayKind[] = ['property', 'parking', 'storage', 'common_space', 'footprint'];
 
 // ✅ ENTERPRISE: Runtime validator
 function validateOverlayState(state: Partial<OverlayState>): OverlayState {

@@ -29,11 +29,14 @@ import { FLOOR_PLATE_SELF_STATE, floorPlateNeighbourState } from './floor-plate-
  * απαντηθεί «είναι μονάδα που δείχνουμε, ή σχέδιο εργασίας που δεν βγαίνει ποτέ;».
  *
  * ⛔ Το `footprint` (ίχνος κτιρίου) και οι σημειώσεις **δεν βγαίνουν ποτέ** — δεν είναι μονάδες προς διάθεση.
+ * ⛔ Ούτε ο κοινόχρηστος χώρος (ADR-931 Β1): κατά ΑΚ 1117 δεν μεταβιβάζεται αυτοτελώς, άρα δεν έχει κατάσταση
+ *    διάθεσης να δείξει η πλάκα — οι παροχές του κτιρίου φτάνουν στο κοινό από άλλο δρόμο (ADR-931 §6 Β4).
  */
 const ROLE_FOR_PUBLIC: Readonly<Record<OverlayRole, 'unit' | 'never'>> = {
   property: 'unit',
   parking: 'unit',
   storage: 'unit',
+  common_space: 'never',
   footprint: 'never',
   annotation: 'never',
   auxiliary: 'never',
@@ -88,6 +91,14 @@ function refusal(why: FloorPlateCurationRefusal, overlayId: string | null): Floo
 
 function isOverlayRole(role: string): role is OverlayRole {
   return Object.hasOwn(ROLE_FOR_PUBLIC, role);
+}
+
+/**
+ * Δείχνει ποτέ το κοινό αυτόν τον ρόλο ως μονάδα; — η ΙΔΙΑ κρίση με την επιμέλεια, για όποιον διαβάζει τεκμήρια
+ * (ο reader δεν φέρνει καν στοιχεία μονάδας για ρόλο που δεν βγαίνει ποτέ). Άγνωστος ρόλος ⇒ `false`.
+ */
+export function isPublicUnitRole(role: unknown): boolean {
+  return typeof role === 'string' && isOverlayRole(role) && ROLE_FOR_PUBLIC[role] === 'unit';
 }
 
 /** Η μονάδα όπως τη βλέπει το κοινό: «αυτό το ακίνητο», ή γείτονας με κατάσταση και (αν είναι ήδη δημόσιος) σύνδεσμο. */

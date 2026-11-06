@@ -3,13 +3,17 @@
 /**
  * 🏢 ADR-258B: Floor-level entity fetching for overlay linking dropdown
  *
- * Fetches ALL entity types (properties + parking + storages) from current floor
+ * Fetches ALL entity types (properties + parking + storages + common spaces) from current floor
  * and returns a unified sorted list for the overlay property selector.
+ *
+ * ADR-931 Β1 — common spaces: those hosted on the current floor **and** those without a floor (they span the
+ * whole building — stairwell, lift — Revit Area per level, the space drawn on every plan it crosses).
  *
  * Reuses existing centralized hooks:
  * - useFirestoreProperties (supports floorId via API)
  * - useFirestoreParkingSpots (building-level, filtered client-side by floorId)
  * - useFirestoreStorages (building-level, filtered client-side by floorId)
+ * - useFirestoreCommonSpaces (building-level, live — filtered client-side: floorId or building-wide)
  *
  * @see SPEC-258B-properties-panel-entity-linking.md
  */
@@ -18,6 +22,9 @@ import { useMemo } from 'react';
 import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
+import { useFirestoreCommonSpaces } from '@/hooks/useFirestoreCommonSpaces';
+import { linkedEntityIdsOf } from '@/types/floorplan-overlays';
+import { isCommonSpaceOnPlan } from '@/lib/common-spaces/common-space-plan';
 import type { CommercialStatus } from '@/types/property';
 import type { Overlay } from '../overlays/types';
 import { compareByLocale } from '@/lib/intl-formatting';
@@ -32,12 +39,12 @@ export interface LinkableEntity {
   id: string;
   /** Human-readable name for dropdown display */
   displayName: string;
-  /** Commercial status for color dot */
+  /** Commercial status for color dot — always `undefined` for a common space (ΑΚ 1117: not for sale). */
   commercialStatus: CommercialStatus | undefined;
   /** Overlay ID this entity is linked to, or null if free */
   linkedToOverlayId: string | null;
   /** Entity kind — auto-set on overlay when this entity is selected */
-  kind: 'property' | 'parking' | 'storage';
+  kind: 'property' | 'parking' | 'storage' | 'common_space';
 }
 
 interface UseFloorEntitiesForLinkingParams {
@@ -52,7 +59,7 @@ interface UseFloorEntitiesForLinkingParams {
 }
 
 interface UseFloorEntitiesForLinkingReturn {
-  /** All floor entities (properties + parking + storages) sorted by displayName */
+  /** All floor entities (properties + parking + storages + common spaces) sorted by displayName */
   entities: LinkableEntity[];
   /** True while any hook is loading */
   loading: boolean;
@@ -90,13 +97,17 @@ export function useFloorEntitiesForLinking({
     autoFetch: enabled && !!buildingId,
   });
 
+  const { commonSpaces, loading: commonSpacesLoading } = useFirestoreCommonSpaces({
+    buildingId,
+    enabled: enabled && !!buildingId,
+  });
+
   // Build entityId → overlayId map from ALL overlays (for duplicate detection)
   const linkedEntityIds = useMemo(() => {
     const map = new Map<string, string>();
+    // SSoT: κάθε κλειδί σύνδεσης (`OVERLAY_LINK_KEYS`) — νέο είδος δεν χρειάζεται γραμμή εδώ (ADR-931 Β1).
     for (const ov of Object.values(overlays)) {
-      if (ov.linked?.propertyId) map.set(ov.linked.propertyId, ov.id);
-      if (ov.linked?.parkingId) map.set(ov.linked.parkingId, ov.id);
-      if (ov.linked?.storageId) map.set(ov.linked.storageId, ov.id);
+      for (const entityId of linkedEntityIdsOf(ov.linked)) map.set(entityId, ov.id);
     }
     return map;
   }, [overlays]);
@@ -135,11 +146,21 @@ export function useFloorEntitiesForLinking({
       kind: 'storage' as const,
     }));
 
-    return [...unitEntities, ...parkingEntities, ...storageEntities]
-      .sort((a, b) => compareByLocale(a.displayName, b.displayName));
-  }, [units, parkingSpots, storages, floorId, linkedEntityIds]);
+    const commonSpaceEntities: LinkableEntity[] = commonSpaces
+      .filter((space) => isCommonSpaceOnPlan(space, floorId))
+      .map((space) => ({
+        id: space.id,
+        displayName: space.code ? `${space.code} · ${space.name}` : space.name,
+        commercialStatus: undefined,
+        linkedToOverlayId: linkedEntityIds.get(space.id) ?? null,
+        kind: 'common_space' as const,
+      }));
 
-  const loading = unitsLoading || parkingLoading || storagesLoading;
+    return [...unitEntities, ...parkingEntities, ...storageEntities, ...commonSpaceEntities]
+      .sort((a, b) => compareByLocale(a.displayName, b.displayName));
+  }, [units, parkingSpots, storages, commonSpaces, floorId, linkedEntityIds]);
+
+  const loading = unitsLoading || parkingLoading || storagesLoading || commonSpacesLoading;
 
   return { entities, loading };
 }

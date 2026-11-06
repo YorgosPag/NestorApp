@@ -27,6 +27,7 @@ import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { compareInstantsAsc } from '@/lib/date-local';
 import {
   curateFloorPlate,
+  isPublicUnitRole,
   type FloorPlateOutlineCandidate,
   type FloorPlateUnitFacts,
 } from '@/lib/listings/floor-plate/floor-plate-curation';
@@ -82,6 +83,8 @@ function linkKeyOf(role: unknown): keyof OverlayLinked | null {
 }
 
 function linkedUnitOf(raw: Readonly<Record<string, unknown>>): { readonly key: keyof OverlayLinked; readonly unitId: string } | null {
+  // ADR-931 Β1 — ρόλος που δεν βγαίνει ποτέ στο κοινό (κοινόχρηστος, ίχνος) δεν φέρνει στοιχεία μονάδας.
+  if (!isPublicUnitRole(raw.role)) return null;
   const key = linkKeyOf(raw.role);
   const linked = raw.linked as OverlayLinked | undefined;
   const unitId = key === null ? undefined : linked?.[key];
@@ -134,6 +137,9 @@ const UNIT_COLLECTION: Readonly<Record<keyof OverlayLinked, string>> = {
   propertyId: COLLECTIONS.PROPERTIES,
   parkingId: COLLECTIONS.PARKING_SPACES,
   storageId: COLLECTIONS.STORAGE,
+  // ADR-931 Β1 — εξαντλητικότητα του πίνακα: ο ρόλος `common_space` είναι `never` (βλ. `isPublicUnitRole`),
+  // άρα αυτή η γραμμή δεν διαβάζεται ποτέ από την πλάκα· υπάρχει ώστε νέο κλειδί να μη μεταγλωττίζεται σιωπηλά.
+  commonSpaceId: COLLECTIONS.COMMON_SPACES,
 };
 
 /**

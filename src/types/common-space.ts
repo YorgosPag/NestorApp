@@ -13,6 +13,7 @@ import type { CommonSpaceCategory, CommonSpaceLegalNature } from '@/constants/co
 import type { RecordLifecycleStatus } from '@/lib/firestore/trashed-status';
 import type { OperationalStatus } from '@/constants/operational-statuses';
 import type { HostedOnFloor } from '@/lib/floor/hosted-floor';
+import type { CommonSpaceAreaSource } from '@/lib/common-spaces/common-space-area';
 
 export interface CommonSpace {
   id: string;
@@ -36,8 +37,15 @@ export interface CommonSpace {
   floorId?: HostedOnFloor['floorId'];
   floor?: HostedOnFloor['floor'];
   floorKind?: HostedOnFloor['floorKind'];
-  /** Καθαρό εμβαδόν σε m²· απόν = αδήλωτο (ποτέ 0 ως «άγνωστο»). */
+  /** Καθαρό εμβαδόν σε m² — η **ενεργή** τιμή· απόν = αδήλωτο (ποτέ 0 ως «άγνωστο»). */
   area?: number;
+  /**
+   * ADR-931 Β1 — Σ εμβαδών (m²) των περιγραμμάτων κάτοψης που δένουν τον χώρο. Το γράφει **μόνο ο server**·
+   * απόν = δεν σχεδιάστηκε σε καμία κάτοψη.
+   */
+  drawnArea?: number;
+  /** ADR-931 Β1 — `drawn` ⇒ το `area` ακολουθεί το σχέδιο· απόν/`declared` ⇒ το `area` το δήλωσε άνθρωπος. */
+  areaSource?: CommonSpaceAreaSource;
   description?: string;
   notes?: string;
   createdAt?: string;

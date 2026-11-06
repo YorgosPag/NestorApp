@@ -691,6 +691,7 @@
       "property": "Property",
       "parking": "Parking",
       "storage": "Storage",
+      "common_space": "Common Space",
       "footprint": "Footprint"
     }
   },

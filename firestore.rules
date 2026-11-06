@@ -2792,7 +2792,8 @@ service cloud.firestore {
     // 🖼️ FLOORPLAN OVERLAYS — ADR-340 Phase 9 (multi-kind discriminated union)
     // =========================================================================
     // geometry: discriminated union {polygon|line|circle|arc|dimension|measurement|text}
-    // role: semantic {property|parking|storage|footprint|annotation|auxiliary}
+    // role: semantic {property|parking|storage|common_space|footprint|annotation|auxiliary}
+    // ADR-931 Β1 — common_space: κλειστό πολύγωνο, linked.commonSpaceId (κοινόχρηστος χώρος κτιρίου).
     // Immutables (D6): id, companyId, backgroundId, floorId.
     // role↔geometry consistency + linked entity required for role business types.
     match /floorplan_overlays/{ovrlId} {
@@ -2813,13 +2814,14 @@ service cloud.firestore {
         return r == 'property'
             || r == 'parking'
             || r == 'storage'
+            || r == 'common_space'
             || r == 'footprint'
             || r == 'annotation'
             || r == 'auxiliary';
       }
 
       function _polygonOnlyRole(r) {
-        return r == 'property' || r == 'parking' || r == 'storage' || r == 'footprint';
+        return r == 'property' || r == 'parking' || r == 'storage' || r == 'common_space' || r == 'footprint';
       }
 
       function _annotationGeometry(t) {
@@ -2846,6 +2848,7 @@ service cloud.firestore {
         return (r == 'property'  && hasLinked && linkedKeys.hasAny(['propertyId']) && linked.propertyId is string)
             || (r == 'parking'   && hasLinked && linkedKeys.hasAny(['parkingId'])  && linked.parkingId  is string)
             || (r == 'storage'   && hasLinked && linkedKeys.hasAny(['storageId']) && linked.storageId is string)
+            || (r == 'common_space' && hasLinked && linkedKeys.hasAny(['commonSpaceId']) && linked.commonSpaceId is string)
             || r == 'footprint' || r == 'annotation' || r == 'auxiliary';
       }
 

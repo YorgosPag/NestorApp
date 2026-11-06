@@ -18,6 +18,7 @@ import { ACTIVE_RECORD_STATUS, TRASHED_STATUS } from '@/lib/firestore/trashed-st
 import { normalizeToISO } from '@/lib/date-local';
 import { isFloorKind } from '@/utils/floor-naming';
 import type { CommonSpace } from '@/types/common-space';
+import { isCommonSpaceAreaSource } from '@/lib/common-spaces/common-space-area';
 
 function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value : undefined;
@@ -50,6 +51,8 @@ export function mapCommonSpaceDoc(id: string, data: Readonly<Record<string, unkn
     floor: typeof data.floor === 'number' ? data.floor : undefined,
     floorKind: isFloorKind(data.floorKind) ? data.floorKind : undefined,
     area: positiveNumber(data.area),
+    drawnArea: positiveNumber(data.drawnArea),
+    areaSource: isCommonSpaceAreaSource(data.areaSource) ? data.areaSource : undefined,
     description: text(data.description),
     notes: text(data.notes),
     createdAt: normalizeToISO(data.createdAt) ?? undefined,

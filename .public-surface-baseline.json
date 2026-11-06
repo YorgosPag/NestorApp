@@ -425,6 +425,7 @@
     "src/subapps/dxf-viewer/utils/import-unit-decision.ts#UNIT_EVIDENCE_KEYS",
     "src/subapps/dxf-viewer/utils/import-unit-decision.ts#UnitConfidence",
     "src/subapps/dxf-viewer/utils/import-unit-decision.ts#UnitDecision",
-    "src/subapps/dxf-viewer/utils/scene-units.ts#SceneUnits"
+    "src/subapps/dxf-viewer/utils/scene-units.ts#SceneUnits",
+    "src/subapps/dxf-viewer/utils/scene-units.ts#areaMm2ToM2"
   ]
 }

@@ -32,12 +32,13 @@ import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import type { Overlay, OverlayKind, OverlayStyle, Status, UpdateOverlayData } from './types';
 import { normalizeToMillisOrNull } from '@/lib/date-local';
 
-// ─── Internal: only the 4 layering roles map back to OverlayKind ──────────────
+// ─── Internal: only the 5 layering roles map back to OverlayKind ──────────────
 
 const KIND_TO_ROLE: Record<OverlayKind, OverlayRole> = {
   property:  'property',
   parking:   'parking',
   storage:   'storage',
+  common_space: 'common_space',
   footprint: 'footprint',
 };
 
@@ -45,6 +46,7 @@ const ROLE_TO_KIND: Partial<Record<OverlayRole, OverlayKind>> = {
   property:  'property',
   parking:   'parking',
   storage:   'storage',
+  common_space: 'common_space',
   footprint: 'footprint',
 };
 

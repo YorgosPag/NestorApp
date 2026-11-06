@@ -66,7 +66,7 @@ interface CommonSpacesTabProps {
 
 export function CommonSpacesTab({ building }: CommonSpacesTabProps) {
   const s = useCommonSpacesTabState(building.id);
-  const columns = useCommonSpaceColumns(s.t);
+  const columns = useCommonSpaceColumns(s.t, { adoptingId: s.adoptingId, onAdopt: s.adoptDrawnArea });
   const colors = useSemanticColors();
   const items = [...s.commonSpaces];
 

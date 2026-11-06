@@ -148,6 +148,7 @@ export const OVERLAY_TOOLBAR_COLORS = {
   property: HOVER_TEXT_EFFECTS.BLUE,     // Property overlays
   parking: HOVER_TEXT_EFFECTS.AMBER,    // Parking overlays
   storage: HOVER_TEXT_EFFECTS.TEAL,     // Storage overlays
+  common_space: HOVER_TEXT_EFFECTS.PURPLE, // ADR-931 Β1 — common space overlays
   footprint: HOVER_TEXT_EFFECTS.SLATE,  // Footprint overlays
 } as const;
 
