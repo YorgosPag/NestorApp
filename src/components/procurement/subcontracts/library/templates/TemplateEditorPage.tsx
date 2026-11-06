@@ -14,7 +14,6 @@
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, ArrowLeft, LayoutTemplate } from 'lucide-react';
-import { PageContainer } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
 import { StaticPageLoading } from '@/core/states';
 import { useSubcontractLibraryAuthority } from '@/hooks/procurement/subcontracts/useSubcontractAuthority';
@@ -23,7 +22,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { getSubcontractLibraryTemplateUrl, getSubcontractLibraryUrl } from '@/lib/navigation/procurement-urls';
 import { Link } from '@/lib/workspace/navigation';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
+import { ProcurementSectionShell } from '@/subapps/procurement/components/ProcurementSectionShell';
 import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
 import type { SubcontractTradeTemplate } from '@/subapps/procurement/subcontracts/types/trade-template';
 
@@ -50,8 +49,7 @@ export function TemplateEditorPage({ templateId }: TemplateEditorPageProps) {
   const loading = library.loading || templates.loading;
   const title = useHeading(template, templateId === null);
   return (
-    <PageContainer ariaLabel={title}>
-      <div className="mt-2 px-2"><ProcurementSubNav className="mb-0" /></div>
+    <ProcurementSectionShell ariaLabel={title}>
       <PageHeader variant="sticky-rounded" layout="compact" spacing="compact" title={{ icon: LayoutTemplate, title, subtitle: t('subcontracts.library.templateEditor.lead') }} />
       <nav aria-label={t('subcontracts.library.authoring.breadcrumb')} className="px-2">
         <Link href={templateId ? getSubcontractLibraryTemplateUrl(templateId) : getSubcontractLibraryUrl()} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
@@ -69,6 +67,6 @@ export function TemplateEditorPage({ templateId }: TemplateEditorPageProps) {
           <TemplateEditor template={template} sourceId={from} templates={templates.items} clauses={library.clauses} library={library.library} authority={authority} />
         )}
       </section>
-    </PageContainer>
+    </ProcurementSectionShell>
   );
 }

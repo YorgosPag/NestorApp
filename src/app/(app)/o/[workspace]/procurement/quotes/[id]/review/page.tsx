@@ -1,5 +1,5 @@
 import { redirect } from '@/lib/workspace/server-navigation';
-import { QuoteReviewClient } from './QuoteReviewClient';
+import { CompanyQuoteReviewClient } from './CompanyQuoteReviewClient';
 
 interface ReviewPageProps {
   params: Promise<{ workspace: string; id: string }>;
@@ -10,5 +10,5 @@ export default async function QuoteReviewPage({ params }: ReviewPageProps) {
   if (!id || id.startsWith('[')) {
     redirect('/procurement/quotes', workspace);
   }
-  return <QuoteReviewClient id={id} />;
+  return <CompanyQuoteReviewClient id={id} />;
 }

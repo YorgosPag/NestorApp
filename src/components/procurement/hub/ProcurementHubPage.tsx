@@ -4,8 +4,8 @@
  * Η **ΜΙΑ** σελίδα-hub του procurement: χρώμιο + master-detail σώμα.
  *
  * Πέντε σελίδες (`agreements` · `materials` · `purchase-orders` · `quotes` ·
- * `vendors`) έγραφαν **ταυτόσημο** σκελετό: `PageContainer` με `ariaLabel` τον
- * τίτλο, `ProcurementSubNav` στο ίδιο wrapper, `PageHeader` με γράμμα προς γράμμα
+ * `vendors`) έγραφαν **ταυτόσημο** σκελετό: κέλυφος ενότητας με `ariaLabel` τον
+ * τίτλο (σήμερα `ProcurementSectionShell`, ADR-928 §5.24), `PageHeader` με γράμμα προς γράμμα
  * ίδιο `variant`/`layout`/`spacing`/`actions`, προαιρετικό dashboard, και ένα
  * `ListContainer` με **desktop split** + **mobile λίστα** + **mobile slide-in**.
  * Διέφεραν μόνο σε εικονίδιο, κλειδιά i18n, στήλες και τα ίδια τα components
@@ -42,7 +42,7 @@
 
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
+import { ListContainer, DetailsContainer } from '@/core/containers';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import {
   PageHeader,
@@ -50,7 +50,7 @@ import {
   type ListGridViewMode,
   type ListPageHeaderProps,
 } from '@/core/headers';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
+import { ProcurementSectionShell } from '@/subapps/procurement/components/ProcurementSectionShell';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 
 type DashboardStats = React.ComponentProps<typeof UnifiedDashboard>['stats'];
@@ -122,11 +122,7 @@ export function ProcurementHubPage({
   const { viewMode, setViewMode, showDashboard, setShowDashboard } = chrome;
 
   return (
-    <PageContainer ariaLabel={title}>
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
-
+    <ProcurementSectionShell ariaLabel={title}>
       <PageHeader
         variant="sticky-rounded"
         layout="compact"
@@ -185,6 +181,6 @@ export function ProcurementHubPage({
       </ListContainer>
 
       {children}
-    </PageContainer>
+    </ProcurementSectionShell>
   );
 }

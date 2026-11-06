@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { redirect } from '@/lib/workspace/server-navigation';
-import { RfqDetailClient } from './RfqDetailClient';
+import { CompanyRfqDetailClient } from './CompanyRfqDetailClient';
 
 interface RfqDetailPageProps {
   params: Promise<{ workspace: string; id: string }>;
@@ -14,7 +14,7 @@ export default async function RfqDetailPage({ params }: RfqDetailPageProps) {
   }
   return (
     <Suspense>
-      <RfqDetailClient id={id} />
+      <CompanyRfqDetailClient id={id} />
     </Suspense>
   );
 }

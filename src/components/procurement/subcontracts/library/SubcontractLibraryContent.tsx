@@ -5,7 +5,7 @@
  * ρήτρες · πρότυπα. Χωρίς αυτή την οθόνη κανείς δεν φτιάχνει συμφωνητικό — κανένα πρότυπο δεν γράφεται πριν εγκρίνει
  * άνθρωπος τις ρήτρες του.
  *
- * 🔑 Κέλυφος προμηθειών (`PageContainer` + `ProcurementSubNav` + `PageHeader`), όπως οι αδελφές σελίδες.
+ * 🔑 Κέλυφος προμηθειών (`ProcurementSectionShell` + `PageHeader`), όπως οι αδελφές σελίδες.
  * 🔑 Η κατάσταση ζει στη διεύθυνση: `?tab=review|clauses|templates` · `?clause=<id>` (κοινή σε ουρά και ρήτρες) ·
  *    `?template=<id>`. Σύνδεσμος που μοιράζεται, ανανέωση που κρατά τη θέση.
  * 🔑 Ανάγνωση για κάθε εσωτερικό μέλος (οι κανόνες το επιτρέπουν)· κάθε πράξη με δικαίωμα και ορατή αιτία όταν λείπει.
@@ -18,13 +18,13 @@ import { BookOpen } from 'lucide-react';
 import { useCatalogSelection } from '@/components/catalog/shared/use-catalog-selection';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ListContainer, PageContainer } from '@/core/containers';
+import { ListContainer } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
 import { useSubcontractLibraryAuthority, type SubcontractLibraryAuthorityView } from '@/hooks/procurement/subcontracts/useSubcontractAuthority';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__subcontracts__library.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
+import { ProcurementSectionShell } from '@/subapps/procurement/components/ProcurementSectionShell';
 import type { LibraryActionContext } from '@/subapps/procurement/subcontracts/library/library-action-blocks';
 import { ClausesTab } from './ClausesTab';
 import { LibraryOnboarding, LibraryUpdateCheck, SeedReportNotice } from './LibraryOnboarding';
@@ -120,10 +120,9 @@ export function SubcontractLibraryContent() {
   const title = t('subcontracts.library.title');
   const headerActions = screen.state === 'ready' ? { customActions: [<LibraryUpdateCheck key="library-updates" authority={authority} seed={seed} />] } : undefined;
   return (
-    <PageContainer ariaLabel={title}>
-      <div className="mt-2 px-2"><ProcurementSubNav className="mb-0" /></div>
+    <ProcurementSectionShell ariaLabel={title}>
       <PageHeader variant="sticky-rounded" layout="compact" spacing="compact" title={{ icon: BookOpen, title, subtitle: t('subcontracts.library.lead') }} actions={headerActions} />
       <LibraryBody screen={screen} authority={authority} actions={actions} seed={seed} />
-    </PageContainer>
+    </ProcurementSectionShell>
   );
 }

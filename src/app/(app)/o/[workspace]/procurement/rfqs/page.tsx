@@ -1,14 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
+import { ProcurementSectionShell } from '@/subapps/procurement/components/ProcurementSectionShell';
 import { RfqList } from '@/subapps/procurement/components/RfqList';
 import { useRfqs } from '@/subapps/procurement/hooks/useRfqs';
 import { RFQ_STATUS_TRANSITIONS } from '@/subapps/procurement/types/rfq';
 import { useStatusDrillParam } from '@/components/projects/procurement/clients/useStatusDrillParam';
 import { applyStatusDrill } from '@/components/projects/procurement/clients/status-filter-card';
 import { StatusDrillNotice } from '@/components/projects/procurement/clients/StatusDrillNotice';
-import { PageContainer } from '@/core/containers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__rfqs.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
@@ -24,10 +23,7 @@ export default function RfqsPage() {
   const visibleRfqs = useMemo(() => applyStatusDrill(rfqs, drill.statuses, (r) => r.status), [rfqs, drill.statuses]);
 
   return (
-    <PageContainer ariaLabel={t('nav.rfqs')}>
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
+    <ProcurementSectionShell ariaLabel={t('nav.rfqs')}>
       <div className="p-4">
         <StatusDrillNotice
           labels={drill.statuses.map((s) => tQ(`rfqs.statuses.${s}`))}
@@ -35,6 +31,6 @@ export default function RfqsPage() {
         />
         <RfqList rfqs={visibleRfqs} loading={loading} />
       </div>
-    </PageContainer>
+    </ProcurementSectionShell>
   );
 }

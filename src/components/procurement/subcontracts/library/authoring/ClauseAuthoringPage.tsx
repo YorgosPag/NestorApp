@@ -3,7 +3,7 @@
 /**
  * **Η σελίδα συγγραφής ρήτρας** — κοινή για «Νέα ρήτρα» και «Πρόταση αλλαγής» (ADR-928 §5.22 · Φ3γ-0b-1).
  *
- * 🔑 Κέλυφος προμηθειών (`PageContainer` + `ProcurementSubNav` + `PageHeader`), όπως η βιβλιοθήκη· δρόμος πίσω στη
+ * 🔑 Κέλυφος προμηθειών (`ProcurementSectionShell` + `PageHeader`), όπως η βιβλιοθήκη· δρόμος πίσω στη
  *    βιβλιοθήκη (στη ρήτρα, όταν υπάρχει).
  * 🔑 Fail-closed: όσο φορτώνουν ρήτρες/εκδόσεις, «φόρτωση» — ποτέ κενό πρόχειρο που θα πρότεινε «νέα» έκδοση από το
  *    μηδέν. Άγνωστη ή ξένη ρήτρα ⇒ «δεν βρέθηκε».
@@ -13,7 +13,6 @@
 
 import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft, FilePen } from 'lucide-react';
-import { PageContainer } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
 import { StaticPageLoading } from '@/core/states';
 import { useSubcontractLibraryAuthority } from '@/hooks/procurement/subcontracts/useSubcontractAuthority';
@@ -22,7 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { getSubcontractLibraryClauseUrl, getSubcontractLibraryUrl } from '@/lib/navigation/procurement-urls';
 import { Link } from '@/lib/workspace/navigation';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
+import { ProcurementSectionShell } from '@/subapps/procurement/components/ProcurementSectionShell';
 import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
 import type { SubcontractClause } from '@/subapps/procurement/subcontracts/types/clause';
 
@@ -60,8 +59,7 @@ export function ClauseAuthoringPage({ clauseId }: ClauseAuthoringPageProps) {
   const loading = library.loading || templates.loading || history.loading;
   const title = useHeading(clause, clauseId === null);
   return (
-    <PageContainer ariaLabel={title}>
-      <div className="mt-2 px-2"><ProcurementSubNav className="mb-0" /></div>
+    <ProcurementSectionShell ariaLabel={title}>
       <PageHeader variant="sticky-rounded" layout="compact" spacing="compact" title={{ icon: FilePen, title, subtitle: t('subcontracts.library.authoring.lead') }} />
       <BackLink clauseId={clauseId} />
       <section className="px-2">
@@ -75,6 +73,6 @@ export function ClauseAuthoringPage({ clauseId }: ClauseAuthoringPageProps) {
           <ClauseAuthoringEditor clause={clause} versions={history.versions} clauses={library.clauses} templates={templates.items} authority={authority} />
         )}
       </section>
-    </PageContainer>
+    </ProcurementSectionShell>
   );
 }

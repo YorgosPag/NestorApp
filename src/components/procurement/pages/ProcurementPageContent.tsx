@@ -11,9 +11,8 @@
 
 import { Package } from 'lucide-react';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-import { PageContainer } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
+import { ProcurementSectionShell } from '@/subapps/procurement/components/ProcurementSectionShell';
 import { HubLanding } from '@/components/procurement/hub/HubLanding';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -21,18 +20,14 @@ export function ProcurementPageContent() {
   const { t } = useTranslation('procurement');
 
   return (
-    <PageContainer ariaLabel={t('hub.pageLabel')}>
+    <ProcurementSectionShell ariaLabel={t('hub.pageLabel')}>
       <PageHeader
         title={{ icon: Package, title: t('hub.pageLabel') }}
         breadcrumb={<ModuleBreadcrumb />}
       />
 
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
-
       <HubLanding />
-    </PageContainer>
+    </ProcurementSectionShell>
   );
 }
 
