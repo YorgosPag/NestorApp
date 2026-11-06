@@ -40,6 +40,7 @@ import { SearchableComboboxListbox, optionDomId } from './searchable-combobox-li
 import { applyRovingArrowKey } from '@/lib/a11y/roving-highlight';
 import { useRevealHighlightedOption } from '@/lib/a11y/use-reveal-highlighted-option';
 import { findMissingAccessibleName } from '@/lib/a11y/accessible-name';
+import { keepKeyboardOnNonActivatingSurface } from '@/lib/a11y/non-activating-surface';
 export type { ComboboxOption, SearchableComboboxProps, FieldAccessibleName } from './searchable-combobox-types';
 
 // ============================================================================
@@ -74,6 +75,7 @@ export function SearchableCombobox({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -343,6 +345,25 @@ export function SearchableCombobox({
     e.preventDefault();
   }, []);
 
+  // 🔴 ADR-928 §5.24.5 #9 — «ανοίγει ΜΟΝΟ με πληκτρολόγηση». Το άνοιγμα ζούσε μόνο στο `focus`: όταν το πεδίο είναι
+  //    ΗΔΗ εστιασμένο (πρώτο πεδίο ⇒ το εστιάζει ο Radix Dialog, πριν φορτώσουν οι επιλογές), το κλικ δεν γεννά `focus`.
+  //    Κλικ στο πεδίο ανοίγει πάντα (WAI-ARIA APG Combobox · MUI Autocomplete).
+  const handleClick = useCallback(() => {
+    if (!disabled) setOpen(true);
+  }, [disabled]);
+
+  // Το πεδίο και τα κουμπιά του είναι το **anchor**, όχι το content: για τον Radix ένα κλικ εκεί είναι «έξω» και κλείνει
+  // στο pointerdown — πριν το `click` ⇒ το βέλος ξανάνοιγε ό,τι μόλις έκλεισε. Ο κάτοχος της κατάστασης είναι ο ΕΝΑΣ.
+  const handleInteractOutside = useCallback((e: Event) => {
+    if (e.target instanceof Node && anchorRef.current?.contains(e.target)) e.preventDefault();
+  }, []);
+
+  const handleToggle = useCallback(() => {
+    if (disabled) return;
+    inputRef.current?.focus();
+    setOpen(!open);
+  }, [disabled, open]);
+
   // ========================================================================
   // RENDER
   // ========================================================================
@@ -354,7 +375,7 @@ export function SearchableCombobox({
           handleFocus, producing the "first click flashes & closes, second click
           opens" bug reported 2026-04-25. */}
       <PopoverAnchor asChild>
-        <div className={cn('relative w-full', className)}>
+        <div ref={anchorRef} className={cn('relative w-full', className)}>
           <Input
             ref={inputRef}
             id={id}
@@ -365,6 +386,7 @@ export function SearchableCombobox({
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             onMouseUp={handleMouseUp}
+            onClick={handleClick}
             onBlur={handleBlur}
             placeholder={placeholder}
             disabled={disabled}
@@ -392,6 +414,7 @@ export function SearchableCombobox({
           {!isLoading && inputValue && !disabled && (
             <button
               type="button"
+              onMouseDown={keepKeyboardOnNonActivatingSurface}
               onClick={handleClear}
               className="absolute right-8 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
               aria-label={t('dropdown.clearSelection')}
@@ -404,7 +427,10 @@ export function SearchableCombobox({
           <button
             type="button"
             tabIndex={-1}
-            onClick={() => { if (!disabled) setOpen(!open); }}
+            // Τα κουμπιά μέσα στο πεδίο δεν κλέβουν το πληκτρολόγιο από όποιον γράφει (APG: `tabindex=-1`, η εστίαση
+            // μένει στο combobox) — αλλιώς `blur` ⇒ κλείσιμο σε 200ms. ΕΝΑΣ κανόνας: ADR-739 §70.
+            onMouseDown={keepKeyboardOnNonActivatingSurface}
+            onClick={handleToggle}
             className="absolute right-0 top-0 h-full px-2 flex items-center cursor-pointer"
             aria-label={t('dropdown.toggleOptions')}
           >
@@ -423,6 +449,7 @@ export function SearchableCombobox({
         align="start"
         sideOffset={dropdown.content.sideOffset}
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onInteractOutside={handleInteractOutside}
         // 🔴 Το popup του combobox είναι το **listbox** (`aria-haspopup="listbox"`), όχι διάλογος.
         //    Το Radix δίνει σε κάθε `Popover.Content` `role="dialog"`, εδώ **ανώνυμο** (axe
         //    `aria-dialog-name`) και ψευδές: η εστίαση δεν μπαίνει ποτέ μέσα. Ουδέτερο δοχείο,

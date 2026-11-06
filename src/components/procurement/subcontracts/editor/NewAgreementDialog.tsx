@@ -100,13 +100,26 @@ function NoTemplatesHint() {
 
 function ScopeField({ form, props }: { readonly form: ReturnType<typeof useNewAgreementForm>; readonly props: NewAgreementDialogProps }) {
   const { t } = useTranslation('procurement');
+  const ids = useId();
   const choose = (value: string) => { if (value === 'single_project' || value === 'multi_project') form.setScopeKind(value); };
+  // ♿ ADR-928 §5.24.5 #8: ρητή σύνδεση `id` ↔ `htmlFor` (σχήμα Radix/APG), και η ομάδα ονομάζεται από το legend —
+  //    το `role="radiogroup"` είναι ΑΛΛΟ στοιχείο από το `<fieldset>`, δεν κληρονομεί το όνομά του.
   return (
     <fieldset className="space-y-1.5">
-      <legend className="text-sm font-medium">{t('subcontracts.editor.new.scope')}</legend>
-      <RadioGroup value={form.scopeKind} onValueChange={choose}>
-        {props.canCreateForProject && props.projectId !== null && <Label className="flex items-center gap-2 font-normal"><RadioGroupItem value="single_project" />{t('subcontracts.editor.new.scopeProject')}</Label>}
-        {props.canCreateMaster && <Label className="flex items-center gap-2 font-normal"><RadioGroupItem value="multi_project" />{t('subcontracts.editor.new.scopeMaster')}</Label>}
+      <legend id={`${ids}-legend`} className="text-sm font-medium">{t('subcontracts.editor.new.scope')}</legend>
+      <RadioGroup value={form.scopeKind} onValueChange={choose} aria-labelledby={`${ids}-legend`}>
+        {props.canCreateForProject && props.projectId !== null && (
+          <section className="flex items-center gap-2">
+            <RadioGroupItem id={`${ids}-project`} value="single_project" />
+            <Label htmlFor={`${ids}-project`} className="font-normal">{t('subcontracts.editor.new.scopeProject')}</Label>
+          </section>
+        )}
+        {props.canCreateMaster && (
+          <section className="flex items-center gap-2">
+            <RadioGroupItem id={`${ids}-master`} value="multi_project" />
+            <Label htmlFor={`${ids}-master`} className="font-normal">{t('subcontracts.editor.new.scopeMaster')}</Label>
+          </section>
+        )}
       </RadioGroup>
     </fieldset>
   );
