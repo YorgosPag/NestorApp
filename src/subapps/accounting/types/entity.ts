@@ -17,8 +17,8 @@
  *
  * - `sole_proprietor`: Ατομική Επιχείρηση
  * - `oe`: Ομόρρυθμη Εταιρεία (General Partnership)
- * - `epe`: Εταιρεία Περιορισμένης Ευθύνης (Ltd) — μελλοντικό
- * - `ae`: Ανώνυμη Εταιρεία (SA) — μελλοντικό
+ * - `epe`: Εταιρεία Περιορισμένης Ευθύνης (Ltd) — ADR-ACC-014
+ * - `ae`: Ανώνυμη Εταιρεία (SA) — ADR-ACC-015/016/017
  */
 export const COMPANY_ENTITY_TYPES = ['sole_proprietor', 'oe', 'epe', 'ae'] as const;
 

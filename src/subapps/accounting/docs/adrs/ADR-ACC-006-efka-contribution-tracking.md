@@ -602,6 +602,7 @@ function deriveEfkaMode(shareholder, totalShares): ShareholderEFKAMode {
 | 2026-02-12 | **EPE manager ΕΦΚΑ** — `ManagerEFKASummary`, `EPEEFKASummary`, `getEPEEfkaSummary(year)` — managers-only (ADR-ACC-014) | Claude Code |
 | 2026-02-12 | **AE dual-mode ΕΦΚΑ** — `EmployeeBoardMemberEFKA`, `AEEFKASummary`, `getAEEfkaSummary(year)` — employee (<3%) vs self-employed (≥3%) (ADR-ACC-017) | Claude Code |
 | 2026-02-12 | **Section 11A added** — Entity-type ΕΦΚΑ overview: ατομική, ΟΕ, ΕΠΕ, ΑΕ | Claude Code |
+| 2026-11-06 | **Ποσά 2026 = Δ.15/Δ'/1865/23-01-2026 (ΦΕΚ Β' 318/2026)** + εγκ. e-ΕΦΚΑ 5/2026: κύρια 185,09–597,06 · επικουρική 46,57/56,13/66,88 · εφάπαξ 31,05/37,02/44,18 (το config είχε μη τεκμηριωμένες στρογγυλές τιμές). Υγεία **ανά κατηγορία** (`healthContributionByMainCategory`, 1η 65,68 · 2η–6η 78,81) αντί για σταθερό 55 €. Τα ποσά 2025 δεν επαληθεύτηκαν. Βλ. ADR-ACC-022 §8.2 | Giorgio + Claude Code |
 
 ---
 

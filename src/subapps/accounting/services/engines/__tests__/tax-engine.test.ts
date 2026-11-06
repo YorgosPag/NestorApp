@@ -467,7 +467,7 @@ describe('TaxEngine', () => {
       expect(scale.year).toBe(2025);
       expect(scale.brackets).toHaveLength(5);
       expect(scale.prepaymentRate).toBe(55);
-      expect(scale.professionalTax).toBe(650);
+      expect(scale.professionalTax).toBe(0); // καταργήθηκε για φυσικά πρόσωπα (ADR-ACC-022 §8.1)
       expect(scale.solidarityRate).toBe(0);
     });
 

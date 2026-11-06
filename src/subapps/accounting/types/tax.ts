@@ -49,7 +49,7 @@ export interface TaxScaleConfig {
   brackets: TaxBracket[];
   /** Συντελεστής προκαταβολής φόρου (55% για ελ. επαγγελματίες, 80% 1ο έτος) */
   prepaymentRate: number;
-  /** Τέλος επιτηδεύματος σε EUR (650 ή 0 αν στα 5 πρώτα χρόνια) */
+  /** Τέλος επιτηδεύματος σε EUR (0 για φυσικά πρόσωπα από 2024· νομικά πρόσωπα βλ. tax-config) */
   professionalTax: number;
   /** Ειδική εισφορά αλληλεγγύης (0% από 2023 αλλά μπορεί να επανέλθει) */
   solidarityRate: number;

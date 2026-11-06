@@ -9,27 +9,40 @@
  */
 
 import type { EFKACategoryRate, EFKAYearConfig, EFKAMonthlyBreakdown } from '../../types/efka';
+import { roundToTwo } from '../../utils/math';
 
 // ============================================================================
 // DATA CONSTANTS — Must be defined BEFORE EFKA_YEAR_CONFIGS (TDZ prevention)
 // ============================================================================
 
-/** Ποσά κύριας σύνταξης ανά κατηγορία (2025/2026) */
+/*
+ * 2026: Δ.15/Δ'/1865/23-01-2026 (ΦΕΚ Β' 318/29-01-2026) — αύξηση 2,5%· επικουρική/εφάπαξ: εγκύκλιος e-ΕΦΚΑ 5/2026.
+ * 2025: τιμές ως είχαν — ⚠️ ΔΕΝ έχουν επαληθευτεί έναντι ΦΕΚ (ADR-ACC-022 §8.2).
+ */
+
+/** Ποσά κύριας σύνταξης ανά κατηγορία */
 const MAIN_PENSION_AMOUNTS: Record<number, readonly number[]> = {
   2025: [210, 274, 342, 410, 479, 548],
-  2026: [220, 287, 358, 430, 502, 574],
+  2026: [185.09, 222.12, 281.82, 354.66, 440.64, 597.06],
+};
+
+/** Εισφορά υγείας (σε χρήμα + σε είδος) ανά κατηγορία κύριας σύνταξης */
+const HEALTH_AMOUNTS: Record<number, readonly number[]> = {
+  2025: [55, 55, 55, 55, 55, 55],
+  // 1η: 5,97 + 59,71 · 2η-6η: 7,16 + 71,65
+  2026: [65.68, 78.81, 78.81, 78.81, 78.81, 78.81],
 };
 
 /** Ποσά επικουρικής ανά κατηγορία */
 const SUPPLEMENTARY_AMOUNTS: Record<number, readonly number[]> = {
   2025: [42, 51, 62],
-  2026: [44, 53, 65],
+  2026: [46.57, 56.13, 66.88],
 };
 
 /** Ποσά εφάπαξ ανά κατηγορία */
 const LUMP_SUM_AMOUNTS: Record<number, readonly number[]> = {
   2025: [26, 31, 37],
-  2026: [27, 32, 39],
+  2026: [31.05, 37.02, 44.18],
 };
 
 // ============================================================================
@@ -100,7 +113,7 @@ export const EFKA_YEAR_CONFIGS: ReadonlyMap<number, EFKAYearConfig> = new Map<nu
       mainPensionCategories: buildMainPensionCategories(2025),
       supplementaryCategories: buildSupplementaryCategories(2025),
       lumpSumCategories: buildLumpSumCategories(2025),
-      healthContributionMonthly: 55,
+      healthContributionByMainCategory: HEALTH_AMOUNTS[2025] ?? [],
       legalReference: 'ΦΕΚ Β\' 2025 — Εισφορές ελ. επαγγελματιών',
     },
   ],
@@ -111,8 +124,8 @@ export const EFKA_YEAR_CONFIGS: ReadonlyMap<number, EFKAYearConfig> = new Map<nu
       mainPensionCategories: buildMainPensionCategories(2026),
       supplementaryCategories: buildSupplementaryCategories(2026),
       lumpSumCategories: buildLumpSumCategories(2026),
-      healthContributionMonthly: 55,
-      legalReference: 'ΦΕΚ Β\' 2026 — Εισφορές ελ. επαγγελματιών',
+      healthContributionByMainCategory: HEALTH_AMOUNTS[2026] ?? [],
+      legalReference: 'Δ.15/Δ\'/1865/23-01-2026 (ΦΕΚ Β\' 318/29-01-2026) · Εγκ. e-ΕΦΚΑ 5/2026',
     },
   ],
 ]);
@@ -172,13 +185,17 @@ export function calculateMonthlyBreakdown(
     );
   }
 
+  const mainIndex = config.mainPensionCategories.indexOf(mainCat);
+  const healthAmount = config.healthContributionByMainCategory[mainIndex];
+  if (healthAmount === undefined) {
+    throw new Error(`[EFKAConfig] No health contribution for ${mainCode} in ${config.year}`);
+  }
+
   const months: EFKAMonthlyBreakdown[] = [];
   for (let month = 1; month <= 12; month++) {
-    const totalMonthly =
-      mainCat.monthlyAmount +
-      suppCat.monthlyAmount +
-      lumpCat.monthlyAmount +
-      config.healthContributionMonthly;
+    const totalMonthly = roundToTwo(
+      mainCat.monthlyAmount + suppCat.monthlyAmount + lumpCat.monthlyAmount + healthAmount
+    );
 
     months.push({
       month,
@@ -186,7 +203,7 @@ export function calculateMonthlyBreakdown(
       mainPensionAmount: mainCat.monthlyAmount,
       supplementaryAmount: suppCat.monthlyAmount,
       lumpSumAmount: lumpCat.monthlyAmount,
-      healthAmount: config.healthContributionMonthly,
+      healthAmount,
       totalMonthly,
     });
   }

@@ -49,8 +49,11 @@ export interface EFKAYearConfig {
   supplementaryCategories: EFKACategoryRate[];
   /** Κατηγορίες εφάπαξ (3 κατηγορίες) */
   lumpSumCategories: EFKACategoryRate[];
-  /** Εισφορά υγείας (σταθερή, ίδια για όλους) */
-  healthContributionMonthly: number;
+  /**
+   * Εισφορά υγείας (σε χρήμα + σε είδος) ανά κατηγορία κύριας σύνταξης — index i ⇒ κατηγορία i+1.
+   * Δεν είναι ίδια για όλους: π.χ. 2026 η 1η κατηγορία πληρώνει λιγότερη (Δ.15/Δ'/1865/2026).
+   */
+  healthContributionByMainCategory: readonly number[];
   /** ΦΕΚ αναφοράς */
   legalReference: string;
 }

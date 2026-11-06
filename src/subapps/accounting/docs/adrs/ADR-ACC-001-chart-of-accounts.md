@@ -899,6 +899,7 @@ Layer 3 (Διπλογραφικό): Λογαριασμοί ΕΓΛΣ → Γενι
 | 2026-02-09 | **Phase 1 implemented** — types/common.ts, types/journal.ts, types/invoice.ts, types/index.ts, config/account-categories.ts (24 categories registry), firestore-collections.ts updated | Claude Code |
 | 2026-02-09 | **Phase 2 implemented** — types/vat.ts (VATDeductibilityRule uses ExpenseCategory), types/interfaces.ts (IVATEngine.getDeductibilityRule per category) | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — services/repository/firestore-accounting-repository.ts: `FirestoreAccountingRepository` with 5 journal CRUD methods (create, get, update, list, delete) + `listJournalEntries` with pagination (`PaginatedResult<JournalEntry>`). services/accounting-service.ts: `createJournalEntryFromInvoice()` auto-creates income journal entry from invoice | Claude Code |
+| 2026-11-06 | **Επαλήθευση κατάστασης έναντι κώδικα**: υλοποιημένο είναι μόνο το απλογραφικό (κατηγορίες, `config/account-categories.ts`). Το Layer 3 (§10.2: λογαριασμοί ΕΓΛΣ, γενικό καθολικό, ισολογισμός) **δεν υπάρχει** — το `services/reports/trial-balance.ts` ομαδοποιεί κατηγορίες, όχι λογαριασμούς. Το README διορθώθηκε από «IMPLEMENTED» σε «PARTIAL». Συνέχεια: [ADR-ACC-022](./ADR-ACC-022-competitive-parity-umbrella.md) Α3 | Claude Code |
 
 ---
 

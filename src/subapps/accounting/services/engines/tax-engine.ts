@@ -63,12 +63,9 @@ export class TaxEngine implements ITaxEngine {
   /**
    * Υπολογισμός ετήσιου φόρου εισοδήματος
    *
-   * Κλιμακωτή εφαρμογή φορολογικών συντελεστών:
-   * - Πρώτα 10.000€ → 9%
-   * - 10.001–20.000€ → 22%
-   * - 20.001–30.000€ → 28%
-   * - 30.001–40.000€ → 36%
-   * - 40.001€+ → 44%
+   * Κλιμακωτή εφαρμογή φορολογικών συντελεστών ανά φορολογικό έτος.
+   * Η κλίμακα ΔΕΝ ζει εδώ: SSoT = `GREEK_TAX_SCALES` στο `services/config/tax-config.ts`
+   * (2024–2025: 9/22/28/36/44% · 2026+: 9/20/26/34/39/44%, ν.5246/2025).
    */
   calculateAnnualTax(params: TaxCalculationParams): TaxResult {
     const scale = this.getTaxScale(params.fiscalYear);

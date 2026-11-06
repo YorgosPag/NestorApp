@@ -11,7 +11,7 @@
 | ADR | Title | Status | Types | Date |
 |-----|-------|--------|-------|------|
 | [ACC-000](./ADR-ACC-000-founding-decision.md) | Founding Decision — Enterprise Accounting Subapp | ACTIVE | — | 2026-02-09 |
-| [ACC-001](./ADR-ACC-001-chart-of-accounts.md) | Chart of Accounts (ΕΛΠ Λογιστικό Σχέδιο) | IMPLEMENTED | Phase 1+2 | 2026-02-09 |
+| [ACC-001](./ADR-ACC-001-chart-of-accounts.md) | Chart of Accounts (ΕΛΠ Λογιστικό Σχέδιο) | PARTIAL — κατηγορίες απλογραφικού (Layer 1-2) ✅ · λογαριασμοί ΕΓΛΣ/διπλογραφικό (Layer 3, §10.2) ❌ → ACC-022 Α3 | Phase 1+2 | 2026-02-09 |
 | [ACC-002](./ADR-ACC-002-invoicing-system.md) | Invoicing System (Τιμολόγηση) | IMPLEMENTED | Phase 1+2 | 2026-02-09 |
 | [ACC-003](./ADR-ACC-003-mydata-aade-integration.md) | myDATA/ΑΑΔΕ Integration | STUB | Phase 1+2 | 2026-02-09 |
 | [ACC-004](./ADR-ACC-004-vat-engine.md) | VAT Engine (ΦΠΑ) | IMPLEMENTED | Phase 2 | 2026-02-09 |
@@ -32,6 +32,14 @@
 | [ACC-019](./ADR-ACC-019-invoice-email-sending.md) | Invoice Email Sending (Αποστολή Τιμολογίων μέσω Email) | IMPLEMENTED | Email/Delivery | 2026-03-17 |
 | [ACC-020](./ADR-ACC-020-withholding-tax-certificate.md) | Βεβαίωση Παρακράτησης Φόρου (Withholding Tax Certificate) | APPROVED | Tax Compliance | 2026-03-17 |
 | [ACC-021](./ADR-ACC-021-custom-categories.md) | Custom Expense/Income Categories | ACCEPTED | Categories | 2026-03-17 |
+| [ACC-022](./ADR-ACC-022-competitive-parity-umbrella.md) | Ισοτιμία με τους μεγάλους παίκτες — ομπρέλα (πυρήνας + κατασκευαστικό πλεονέκτημα) | PROPOSED | Strategy | 2026-11-06 |
+| [ACC-023](./ADR-ACC-023-sole-proprietor-benchmark.md) | Ατομική — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types | 2026-11-06 |
+| [ACC-024](./ADR-ACC-024-oe-benchmark.md) | ΟΕ — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types | 2026-11-06 |
+| [ACC-025](./ADR-ACC-025-ee-benchmark.md) | ΕΕ — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types | 2026-11-06 |
+| [ACC-026](./ADR-ACC-026-ike-benchmark.md) | ΙΚΕ — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types | 2026-11-06 |
+| [ACC-027](./ADR-ACC-027-epe-benchmark.md) | ΕΠΕ — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types | 2026-11-06 |
+| [ACC-028](./ADR-ACC-028-ae-benchmark.md) | ΑΕ — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types | 2026-11-06 |
+| [ACC-029](./ADR-ACC-029-joint-venture-benchmark.md) | Κοινοπραξία — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types / Construction | 2026-11-06 |
 
 ---
 

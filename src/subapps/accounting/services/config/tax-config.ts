@@ -65,7 +65,7 @@ export const GREEK_TAX_SCALES: ReadonlyMap<number, TaxScaleConfig> = new Map<num
       year: 2024,
       brackets: [...BRACKETS_2024_ONWARDS],
       prepaymentRate: 55,
-      professionalTax: 650,
+      professionalTax: 0, // καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024 (ADR-ACC-022 §8.1)
       solidarityRate: 0,
     },
   ],
@@ -75,7 +75,7 @@ export const GREEK_TAX_SCALES: ReadonlyMap<number, TaxScaleConfig> = new Map<num
       year: 2025,
       brackets: [...BRACKETS_2024_ONWARDS],
       prepaymentRate: 55,
-      professionalTax: 650,
+      professionalTax: 0, // καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024 (ADR-ACC-022 §8.1)
       solidarityRate: 0,
     },
   ],
@@ -85,7 +85,7 @@ export const GREEK_TAX_SCALES: ReadonlyMap<number, TaxScaleConfig> = new Map<num
       year: 2026,
       brackets: [...BRACKETS_2026_ONWARDS],
       prepaymentRate: 55,
-      professionalTax: 650,
+      professionalTax: 0, // καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024 (ADR-ACC-022 §8.1)
       solidarityRate: 0,
     },
   ],
@@ -125,13 +125,14 @@ export function getTaxScaleForYear(year: number): TaxScaleConfig {
 // ============================================================================
 
 /**
- * Τέλος επιτηδεύματος ανά νομική μορφή (Ν.4172/2013 αρ.31)
+ * Τέλος επιτηδεύματος ανά νομική μορφή (ν.3986/2011 αρ.31)
  *
- * - Ατομική: 650€
+ * - Ατομική: 0€ — καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024 (ADR-ACC-022 §8.1)
  * - ΟΕ/ΕΠΕ/ΑΕ: 1.000€ (νομικό πρόσωπο)
+ *   ⚠️ Δεν μοντελοποιείται το μειωμένο 800€ (έδρα σε μικρό οικισμό) ούτε τα +600€/υποκατάστημα.
  */
 const PROFESSIONAL_TAX_BY_ENTITY: Record<EntityType, number> = {
-  sole_proprietor: 650,
+  sole_proprietor: 0,
   oe: 1000,
   epe: 1000,
   ae: 1000,
