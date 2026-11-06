@@ -14,7 +14,7 @@ export function PurchaseOrdersCard() {
   return (
     <HubSectionCard
       icon={Package}
-      iconClassName="text-primary"
+      iconClassName="text-foreground"
       title={t('hub.purchaseOrders.title')}
       description={t('hub.purchaseOrders.description')}
       href={getProcurementHubUrl('purchase-orders')}
