@@ -59,7 +59,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__procurement.el.json": "d5d58fa34feb73a2fdfc6e96648fbdedcaa3359341aa24c30ebbed729f489ef3",
-    "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "bc3adbeeffa071c310dbb8c0540fefc8fbdf68dfe904d241a72b64b751edcd82",
+    "src/i18n/generated/routes/o__workspace__procurement__agreements.el.json": "edd68e1c668301e81b81bf1ac29d0d515a449564fab292a6e69951802253869d",
     "src/i18n/generated/routes/o__workspace__procurement__analytics.el.json": "610521ed0d672a2342d215d808f428dce8a2efb525c2407e24dc1308884abacb",
     "src/i18n/generated/routes/o__workspace__procurement__materials.el.json": "390ac5bf7a0cdf8b0e0a18a2a1ee3d9c5fa0fc4f8a05c92d4c237b88403b7531",
     "src/i18n/generated/routes/o__workspace__procurement__new.el.json": "551d64e8df270dd9203fe0ed115a316f07c67411f2e446af60b052b06afcaf2b",
@@ -208,7 +208,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "32b8cecca12b8f723e091ce4d3f39e6c171de3b9977476011d3570573de6b16e",
+  "inputsSha256": "e677c4a4587250cbb51f44be20406bf5442640eabfc8b087aa80d13d61ab2b06",
   "languages": [
     "el"
   ],
@@ -40046,7 +40046,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1290035
+    "sliceBytes": 1290117
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

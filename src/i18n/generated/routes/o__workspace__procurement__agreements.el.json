@@ -223,7 +223,7 @@
         "detail": {
           "breakpointsHeader": "Κλιμάκιο (€)",
           "commitment": "Συνολική Δέσμευση",
-          "daysRemaining": "{count} ημέρες",
+          "daysRemaining": "{count, plural, one {# ημέρα} other {# ημέρες}}",
           "discountTerms": "Όροι Έκπτωσης",
           "emptyDescription": "Επιλέξτε μια σύμβαση από τη λίστα για να δείτε τις λεπτομέρειες",
           "emptyTitle": "Επιλέξτε σύμβαση",
@@ -239,7 +239,7 @@
         },
         "discount": {
           "label": "Έκπτωση",
-          "tiers": "{count} κλιμάκια",
+          "tiers": "{count, plural, one {# κλιμάκιο} other {# κλιμάκια}}",
           "type": {
             "flat": "Σταθερή",
             "volume_breakpoints": "Κλιμακωτή"

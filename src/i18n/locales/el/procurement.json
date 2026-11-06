@@ -533,7 +533,7 @@
     "vendorMaster": {
       "title": "Μητρώο Προμηθευτών",
       "description": "Κατάλογος προμηθευτών με δείκτες απόδοσης και κατηγοριοποίηση",
-      "supplierCount": "{count} προμηθευτές",
+      "supplierCount": "{count, plural, one {# προμηθευτής} other {# προμηθευτές}}",
       "searchPlaceholder": "Αναζήτηση προμηθευτή...",
       "totalOrders": "Παραγγελίες",
       "totalSpend": "Σύνολο δαπανών",
@@ -574,8 +574,8 @@
       "searchPlaceholder": "Αναζήτηση υλικού (κωδικός ή όνομα)...",
       "filterByCategory": "Φιλτράρισμα ανά Κατηγορία",
       "allCategories": "Όλες οι κατηγορίες",
-      "materialCount": "{count} υλικά",
-      "supplierCount": "{count} προμηθευτές",
+      "materialCount": "{count, plural, one {# υλικό} other {# υλικά}}",
+      "supplierCount": "{count, plural, one {# προμηθευτής} other {# προμηθευτές}}",
       "noMaterialsYet": "Δεν υπάρχουν εγγεγραμμένα υλικά",
       "addMaterialHint": "Πατήστε «Νέο Υλικό» για να προσθέσετε το πρώτο",
       "emptySearch": "Δεν βρέθηκαν υλικά",
@@ -626,7 +626,7 @@
     "rfq": {
       "title": "Αιτήματα Προσφορών",
       "description": "Αιτήματα προσφορών προς προμηθευτές — παρακολούθηση και διαχείριση ανά έργο",
-      "activeCount": "{count} ενεργά",
+      "activeCount": "{count, plural, one {# ενεργό} other {# ενεργά}}",
       "noActive": "Χωρίς ενεργά αιτήματα"
     },
     "quotes": {
@@ -638,7 +638,7 @@
     "purchaseOrders": {
       "title": "Παραγγελίες Αγοράς",
       "description": "Παραγγελίες αγοράς σε όλα τα έργα — επισκόπηση και παρακολούθηση",
-      "count": "{count} παραγγελίες",
+      "count": "{count, plural, one {# παραγγελία} other {# παραγγελίες}}",
       "noOrders": "Χωρίς παραγγελίες ακόμα"
     },
     "frameworkAgreements": {
@@ -647,7 +647,7 @@
       "create": "Νέα Σύμβαση",
       "edit": "Επεξεργασία",
       "delete": "Διαγραφή",
-      "activeCount": "{count} ενεργές",
+      "activeCount": "{count, plural, one {# ενεργή} other {# ενεργές}}",
       "noActive": "Χωρίς ενεργές συμβάσεις",
       "validFrom": "Ισχύει από",
       "validUntil": "Ισχύει έως",
@@ -667,7 +667,7 @@
         "discountTerms": "Όροι Έκπτωσης",
         "flatDiscount": "Σταθερή Έκπτωση",
         "breakpointsHeader": "Κλιμάκιο (€)",
-        "daysRemaining": "{count} ημέρες",
+        "daysRemaining": "{count, plural, one {# ημέρα} other {# ημέρες}}",
         "expired": "Έληξε",
         "vendor": "Προμηθευτής",
         "scope": "Εφαρμόζεται σε",
@@ -684,7 +684,7 @@
       },
       "discount": {
         "label": "Έκπτωση",
-        "tiers": "{count} κλιμάκια",
+        "tiers": "{count, plural, one {# κλιμάκιο} other {# κλιμάκια}}",
         "type": {
           "flat": "Σταθερή",
           "volume_breakpoints": "Κλιμακωτή"
