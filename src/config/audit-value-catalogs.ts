@@ -158,6 +158,36 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
 
   // ── Property: ADR-915 §35 — απόφαση μόνιμης υποχρέωσης (ένα πεδίο ανά είδος). Οι ΙΔΙΟΙ κατάλογοι με την ενότητα
   //    «Μόνιμες υποχρεώσεις» (μόνο camelCase· ο resolver κανονικοποιεί `not-required` → `notRequired`).
+  // ── ADR-923 §23.5 Β1: ο κατάλογος προϊόντων. Ως 2026-11-06 καμία τιμή του δεν είχε λέξη στο ιστορικό («none»,
+  //    «disposal: null…»). Τα κλειδιά ΔΕΝ είναι ονόματα πεδίων: τα δείχνει το `enumCatalog` / `nestedKeyCatalog` /
+  //    `itemCatalogs` του `audit-tracked-fields-catalog.ts`, και ζουν εδώ για να τα ελέγχει η πύλη 3.14. Όπου υπάρχει
+  //    λεξιλόγιο της οθόνης, είναι ΑΥΤΟ (μία λέξη ανά τιμή)· το `audit.values.*` μόνο όπου η οθόνη δεν είχε.
+  catalogAttributeType: { ns: 'catalog', path: 'attributeTypes' },
+  catalogListingKind: { ns: 'catalog', path: 'listingKinds' },
+  catalogAssetRole: { ns: 'catalog', path: 'assets.roles' },
+  catalogAssetKind: { ns: 'catalog', path: 'assetKinds' },
+  catalogPriceListKind: { ns: 'catalog', path: 'pricing.kinds' },
+  catalogPriceType: { ns: 'catalog', path: 'pricing.priceTypes' },
+  catalogPriceVersionStatus: { ns: 'catalog', path: 'pricing.versionStatus' },
+  catalogPriceAudience: { ns: 'catalog', path: 'pricing.audience' },
+  catalogVisibility: { ns: 'catalog', path: 'pricing.visibility.values' },
+  catalogLanguage: { ns: 'catalog', path: 'language' },
+  catalogPaper: { ns: 'catalog', path: 'audit.values.paper' },
+  catalogPublicationStatus: { ns: 'catalog', path: 'publishing.status' },
+  catalogPublicationFailure: { ns: 'catalog', path: 'publishing.failure' },
+  catalogRetentionParts: { ns: 'catalog', path: 'audit.values.retentionParts' },
+  catalogDisposalCause: { ns: 'catalog', path: 'audit.values.disposalCause' },
+  catalogSupplyLinkState: { ns: 'catalog', path: 'audit.values.linkState' },
+  catalogSupplyState: { ns: 'catalog', path: 'supply.states' },
+  catalogSupplySide: { ns: 'catalog', path: 'audit.values.side' },
+  catalogImportPurpose: { ns: 'catalog', path: 'audit.values.importPurpose' },
+  catalogImportSourceKind: { ns: 'catalog', path: 'audit.values.importSourceKind' },
+  catalogImportBatchStatus: { ns: 'catalog-import', path: 'batchStatus' },
+  catalogImportProposalStatus: { ns: 'catalog-import', path: 'proposalStatus' },
+  catalogBrandRelation: { ns: 'catalog', path: 'audit.values.brandRelation' },
+  catalogReviewStatus: { ns: 'catalog', path: 'audit.values.reviewStatus' },
+  catalogUnit: { ns: 'uom', path: 'name' },
+
   electricalInstallationStandingObligation: { ns: 'document-registry', path: 'upkeep.decision' },
   electricalInstallationStandingObligationExemption: { ns: 'document-registry', path: 'upkeep.exemption' },
   electricalInstallationStandingObligationProposal: { ns: 'document-registry', path: 'upkeep.verdict' },

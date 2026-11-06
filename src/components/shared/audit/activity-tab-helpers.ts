@@ -19,6 +19,7 @@ import type { AuditAction, EntityAuditEntry } from "@/types/audit-trail";
 import type { QuantitySpec } from "@/constants/quantity-specs";
 import type { AuditCatalogRef } from "@/config/audit-value-catalogs";
 import { AUDIT_AREA_FIELDS, type AuditValueWord } from "@/config/audit-value-vocabularies";
+import { formatAuditIsoDate } from "./audit-iso-date";
 import { formatQuantityValue } from "./audit-quantity-format";
 import { storageObjectFromUrl } from "@/lib/storage/storage-object-url";
 
@@ -284,12 +285,34 @@ function formatJsonValue(value: string, format: AuditValueFormat): string | unde
   const parsed = safeJsonParse<unknown>(value, undefined);
   if (parsed === undefined) return undefined;
   if (Array.isArray(parsed)) return formatParsedArray(parsed, format);
-  if (typeof parsed === "object" && parsed !== null) {
-    return Object.entries(parsed)
-      .map(([k, v]) => `${nestedKeyWord(format, k)}: ${v}`)
-      .join(", ");
-  }
+  if (typeof parsed === "object" && parsed !== null) return formatNestedObject(parsed as Record<string, unknown>, format);
   return undefined;
+}
+
+/** Αντικείμενο → «κλειδί: τιμή, …», με τα ονόματα κλειδιών από το `nestedKeyCatalog` του πεδίου. */
+function formatNestedObject(object: Record<string, unknown>, format: AuditValueFormat): string {
+  return Object.entries(object)
+    .map(([key, value]) => `${nestedKeyWord(format, key)}: ${formatNestedValue(key, value, format)}`)
+    .join(", ");
+}
+
+/**
+ * Μία τιμή **μέσα** σε αντικείμενο (ADR-923 §23.5 Β1). Ως 2026-11-06 γραφόταν `${v}`: ο άνθρωπος διάβαζε «disposal: null»,
+ * «true» και «[object Object]». Τώρα οι ίδιοι κανόνες με την τιμή πρώτου επιπέδου: κενό ⇒ «—», ναι/όχι ⇒ λέξη, απαρίθμηση
+ * ⇒ η λέξη του λεξιλογίου που δηλώνει το πεδίο για το **κλειδί** (`itemCatalogs`), ημερομηνία ⇒ στη γλώσσα του θεατή,
+ * φωλιασμένο αντικείμενο ⇒ σε παρένθεση.
+ */
+function formatNestedValue(key: string, value: unknown, format: AuditValueFormat): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return format.word(value ? "yes" : "no");
+  if (typeof value === "string") {
+    return format.catalogWord(format.itemCatalogs?.[key], value) ?? formatAuditIsoDate(value) ?? value;
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0 ? "—" : value.map((item) => formatNestedValue(key, item, format)).join(", ");
+  }
+  if (typeof value === "object") return `(${formatNestedObject(value as Record<string, unknown>, format)})`;
+  return String(value);
 }
 
 /**

@@ -18,23 +18,41 @@
  */
 
 import type { TrackedFieldDef } from '@/lib/audit/audit-diff';
-import { structuredAuditValue as structured, trackedFieldDefsIn } from './audit-tracked-field-builders';
+import { AUDIT_VALUE_CATALOGS as V } from './audit-value-catalogs';
+import { structuredAuditValue as structured, trackedFieldDefsIn, type AuditFieldVocabulary } from './audit-tracked-field-builders';
 
 const defs = trackedFieldDefsIn('catalog:audit.fields');
+
+/*
+ * 🔑 ΟΙ ΛΕΞΕΙΣ ΤΩΝ ΤΙΜΩΝ (ADR-923 §23.5 Β1). Ως 2026-11-06 οι ετικέτες μεταφράζονταν αλλά οι τιμές έβγαιναν ωμές:
+ * «none», «disposal: null, downloadCount: 0, …». Κάθε απαρίθμηση δείχνει πλέον στο λεξιλόγιο της οθόνης (μία λέξη ανά
+ * τιμή), και κάθε πολύγλωσσο κείμενο ονομάζει τις γλώσσες του. Όνομα πεδίου ≠ λεξιλόγιο: το `status` μιας έκδοσης δεν
+ * είναι το `status` ενός έργου, γι' αυτό η δήλωση είναι ανά οντότητα και όχι ανά όνομα.
+ */
+const enumOf = (catalog: AuditFieldVocabulary['enumCatalog']): AuditFieldVocabulary => ({ enumCatalog: catalog });
+const MULTILINGUAL: AuditFieldVocabulary = { nestedKeyCatalog: V.catalogLanguage };
+const multilingual = (...fields: readonly string[]): Record<string, AuditFieldVocabulary> =>
+  Object.fromEntries(fields.map((field) => [field, MULTILINGUAL]));
 
 export const CATALOG_ATTRIBUTE_TRACKED_FIELDS = defs(
   ['type', 'groupId', 'localizable', 'scopable', 'unique', 'searchable', 'orderKey', 'isDeleted'],
   ['labels', 'description', 'config', 'mappings'],
+  { type: enumOf(V.catalogAttributeType), ...multilingual('labels', 'description') },
 );
 
-export const CATALOG_ATTRIBUTE_GROUP_TRACKED_FIELDS = defs(['orderKey', 'isDeleted'], ['labels']);
+export const CATALOG_ATTRIBUTE_GROUP_TRACKED_FIELDS = defs(['orderKey', 'isDeleted'], ['labels'], multilingual('labels'));
 
 export const CATALOG_MEASUREMENT_FAMILY_TRACKED_FIELDS = defs(
   ['standardUnitCode', 'singleUnit', 'isDeleted'],
   ['labels', 'units'],
+  multilingual('labels'),
 );
 
-export const CATALOG_CATEGORY_TRACKED_FIELDS = defs(['parentId', 'orderKey', 'vatRate', 'isDeleted'], ['labels', 'mappings']);
+export const CATALOG_CATEGORY_TRACKED_FIELDS = defs(
+  ['parentId', 'orderKey', 'vatRate', 'isDeleted'],
+  ['labels', 'mappings'],
+  multilingual('labels'),
+);
 
 /** Το όνομα του πεδίου της προβολής ανά ιδιότητα — ένα όνομα για μηχανή και περιγραφέα. */
 export const CATALOG_VALUES_AUDIT_FIELD = 'values';
@@ -66,6 +84,7 @@ const valuesByAttribute: TrackedFieldDef = {
 export const CATALOG_FAMILY_TRACKED_FIELDS = defs(
   ['labelAttributeId', 'imageAttributeId', 'listingKind', 'installationAttributeId', 'isDeleted'],
   ['labels', 'description', 'attributes', 'variantSchemes', 'tableSpec', 'consistencyRules'],
+  { listingKind: enumOf(V.catalogListingKind), ...multilingual('labels', 'description') },
 );
 
 // ── Φάση 2 (ADR-923 §5.10) — δεδομένα. Τα παράγωγα (`derived`) ΔΕΝ παρακολουθούνται: τα γράφει ο γραφέας,
@@ -81,7 +100,11 @@ export const CATALOG_PRODUCT_TRACKED_FIELDS = {
   [CATALOG_VALUES_AUDIT_FIELD]: valuesByAttribute,
 };
 
-export const CATALOG_ASSET_TRACKED_FIELDS = defs(['role', 'kind', 'fileId', 'isDeleted'], ['labels', 'description', 'rights']);
+export const CATALOG_ASSET_TRACKED_FIELDS = defs(
+  ['role', 'kind', 'fileId', 'isDeleted'],
+  ['labels', 'description', 'rights'],
+  { role: enumOf(V.catalogAssetRole), kind: enumOf(V.catalogAssetKind), ...multilingual('labels', 'description') },
+);
 
 export const CATALOG_SETTINGS_TRACKED_FIELDS = defs([], ['channelLocales']);
 
@@ -90,35 +113,62 @@ export const CATALOG_SUPPLIER_PROFILE_TRACKED_FIELDS = defs([], ['description', 
 // ── Φάση 3β (ADR-923 §5.11) — τιμοκατάλογοι. Τα παράγωγα (`derived`: `linesRevision`, σπορά, κλειδιά δεικτών) ΔΕΝ
 //    παρακολουθούνται. Η σφραγίδα (`seal`) ναι: είναι η **πράξη** της δημοσίευσης, με ποιον φράχτη και τι επιβεβαιώθηκε.
 
-export const CATALOG_PRICE_LIST_TRACKED_FIELDS = defs(['kind', 'priceType', 'changeFenceBp', 'isDeleted'], ['labels', 'audience']);
+export const CATALOG_PRICE_LIST_TRACKED_FIELDS = defs(
+  ['kind', 'priceType', 'changeFenceBp', 'isDeleted'],
+  ['labels', 'audience'],
+  {
+    kind: enumOf(V.catalogPriceListKind),
+    priceType: enumOf(V.catalogPriceType),
+    audience: { itemCatalogs: { kind: V.catalogPriceAudience } },
+    ...multilingual('labels'),
+  },
+);
 
 export const CATALOG_PRICE_LIST_VERSION_TRACKED_FIELDS = defs(
   ['number', 'status', 'validFrom', 'basedOnVersionId', 'isDeleted'],
   ['seal'],
+  { status: enumOf(V.catalogPriceVersionStatus) },
 );
 
 export const CATALOG_PRICE_LIST_LINE_TRACKED_FIELDS = defs(
   ['netPrice', 'priceQuantity', 'unitCode', 'discountGroupId', 'isDeleted'],
   ['subject', 'breakdown'],
+  { unitCode: enumOf(V.catalogUnit) },
 );
 
-export const CATALOG_DISCOUNT_GROUP_TRACKED_FIELDS = defs(['isDeleted'], ['labels']);
+export const CATALOG_DISCOUNT_GROUP_TRACKED_FIELDS = defs(['isDeleted'], ['labels'], multilingual('labels'));
 
-export const CATALOG_CUSTOMER_GROUP_TRACKED_FIELDS = defs(['isDeleted'], ['labels']);
+export const CATALOG_CUSTOMER_GROUP_TRACKED_FIELDS = defs(['isDeleted'], ['labels'], multilingual('labels'));
 
 export const CATALOG_CUSTOMER_ASSIGNMENT_TRACKED_FIELDS = defs(['customerGroupId', 'isDeleted'], ['party']);
 
 export const CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS = defs(
   ['language', 'paper', 'isDeleted'],
   ['labels', 'title', 'scope', 'pricing', 'theme', 'templates', 'profiles', 'footerNote'],
+  { language: enumOf(V.catalogLanguage), paper: enumOf(V.catalogPaper), ...multilingual('labels', 'title', 'footerNote') },
 );
 
-export const CATALOG_PUBLICATION_RUN_TRACKED_FIELDS = defs(['recipeId', 'status', 'failure', 'audienceKey', 'inputHash'], ['retention']);
-export const CATALOG_VISIBILITY_RULE_TRACKED_FIELDS = defs(['visibility', 'isDeleted'], ['subject', 'audience']);
-export const SUPPLY_REQUEST_LINK_TRACKED_FIELDS = defs(['state', 'generation'], []);
+export const CATALOG_PUBLICATION_RUN_TRACKED_FIELDS = defs(
+  ['recipeId', 'status', 'failure', 'audienceKey', 'inputHash'],
+  ['retention'],
+  {
+    status: enumOf(V.catalogPublicationStatus),
+    failure: enumOf(V.catalogPublicationFailure),
+    // `none` · `anonymous` · `customerGroup:<id>` — το είδος από τον κατάλογο, η ταυτότητα ως έχει (resolver).
+    audienceKey: enumOf(V.catalogPriceAudience),
+    retention: { nestedKeyCatalog: V.catalogRetentionParts, itemCatalogs: { cause: V.catalogDisposalCause } },
+  },
+);
+export const CATALOG_VISIBILITY_RULE_TRACKED_FIELDS = defs(
+  ['visibility', 'isDeleted'],
+  ['subject', 'audience'],
+  { visibility: enumOf(V.catalogVisibility), audience: { itemCatalogs: { kind: V.catalogPriceAudience } } },
+);
+export const SUPPLY_REQUEST_LINK_TRACKED_FIELDS = defs(['state', 'generation'], [], { state: enumOf(V.catalogSupplyLinkState) });
 export const SUPPLY_RELATIONSHIP_TRACKED_FIELDS = defs(
   ['state', 'supplierContactId', 'customerRef', 'acceptedByUid', 'approvedByUid', 'endedBySide'],
   [],
+  { state: enumOf(V.catalogSupplyState), endedBySide: enumOf(V.catalogSupplySide) },
 );
 
 export const CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS = defs(
@@ -129,14 +179,34 @@ export const CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS = defs(
 // ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή. Της πρότασης παρακολουθείται η ΠΡΑΞΗ, όχι το περιεχόμενο: οι τιμές γράφουν ιστορικό
 //    στην ίδια την οντότητα όταν εφαρμοστούν. Τα πεδία του ελέγχου αλλάζουν συνεχώς και δεν είναι δεδομένα του καταλόγου.
 
-export const CATALOG_IMPORT_PROFILE_TRACKED_FIELDS = defs(['label', 'purpose', 'supplierContactId', 'familyId', 'skipRows', 'sheetIndex', 'isDeleted'], ['columns']);
+export const CATALOG_IMPORT_PROFILE_TRACKED_FIELDS = defs(
+  ['label', 'purpose', 'supplierContactId', 'familyId', 'skipRows', 'sheetIndex', 'isDeleted'],
+  ['columns'],
+  { purpose: enumOf(V.catalogImportPurpose) },
+);
 
-export const CATALOG_IMPORT_BATCH_TRACKED_FIELDS = defs(['status', 'fileName', 'contentSha256', 'sourceKind', 'fileId', 'profileId', 'profileRevision', 'run', 'isDeleted'], ['target']);
+export const CATALOG_IMPORT_BATCH_TRACKED_FIELDS = defs(
+  ['status', 'fileName', 'contentSha256', 'sourceKind', 'fileId', 'profileId', 'profileRevision', 'run', 'isDeleted'],
+  ['target'],
+  { status: enumOf(V.catalogImportBatchStatus), sourceKind: enumOf(V.catalogImportSourceKind) },
+);
 
-export const CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS = defs(['status', 'groupKey', 'appliedAt', 'appliedBy', 'isDeleted'], []);
+export const CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS = defs(
+  ['status', 'groupKey', 'appliedAt', 'appliedBy', 'isDeleted'],
+  [],
+  { status: enumOf(V.catalogImportProposalStatus) },
+);
 
 // ── Φάση 6β (ADR-923 §5.13 Ε1α) — έλεγχος προμηθευτή. Παρακολουθείται η πράξη· το αποτύπωμα ΑΦΜ δεν μπαίνει ποτέ στο ιστορικό.
 
-export const SUPPLIER_BRAND_CLAIM_TRACKED_FIELDS = defs(['status', 'relation', 'evidenceFileId', 'decidedBy', 'reviewNote'], ['grant']);
+export const SUPPLIER_BRAND_CLAIM_TRACKED_FIELDS = defs(
+  ['status', 'relation', 'evidenceFileId', 'decidedBy', 'reviewNote'],
+  ['grant'],
+  { status: enumOf(V.catalogReviewStatus), relation: enumOf(V.catalogBrandRelation) },
+);
 
-export const SUPPLIER_VERIFICATION_TRACKED_FIELDS = defs(['status', 'evidenceFileId', 'decidedBy', 'reviewNote'], []);
+export const SUPPLIER_VERIFICATION_TRACKED_FIELDS = defs(
+  ['status', 'evidenceFileId', 'decidedBy', 'reviewNote'],
+  [],
+  { status: enumOf(V.catalogReviewStatus) },
+);

@@ -389,3 +389,38 @@ describe('Λ8 — αποσυρμένα πεδία: λέξεις για τις π
     expect(vocabularyNamespacesOf({ x: { kind: 'scalar', label: 'x', labelKey: 'audit.fields.x' } })).toEqual([]);
   });
 });
+
+describe('Λ9 — ο κατάλογος μιλά με λέξεις (ADR-923 §23.5 Β1): ποτέ «none», ποτέ «disposal: null»', () => {
+  const run = getTrackedFieldsForEntityAuditType('catalog_publication_run');
+  const word = (lang: Lang, ns: string, key: string) => mockNode(lang, ns, key) as string;
+
+  it.each(LANGS)('κατάσταση · κοινό · αποτυχία της έκδοσης (%s) — από το λεξιλόγιο της οθόνης', (lang) => inLang(lang, () => {
+    expect(resolveAuditValue('status', 'ready', t, run?.status?.enumCatalog)).toBe(word(lang, 'catalog', 'publishing.status.ready'));
+    expect(resolveAuditValue('audienceKey', 'none', t, run?.audienceKey?.enumCatalog)).toBe(word(lang, 'catalog', 'pricing.audience.none'));
+    expect(resolveAuditValue('failure', 'engineTimeout', t, run?.failure?.enumCatalog))
+      .toBe(word(lang, 'catalog', 'publishing.failure.engineTimeout'));
+  }));
+
+  it.each(LANGS)('ταυτότητα με είδος (%s): το είδος γίνεται λέξη, η ταυτότητα μένει', (lang) => inLang(lang, () => {
+    expect(resolveAuditValue('audienceKey', 'customerGroup:cg_1', t, run?.audienceKey?.enumCatalog))
+      .toBe(`${word(lang, 'catalog', 'pricing.audience.customerGroup')} · cg_1`);
+    // Χωρίς δηλωμένο κατάλογο, ένα «x:y» δεν μαντεύεται.
+    expect(resolveAuditValue('unknownField', 'customerGroup:cg_1', t)).toBeUndefined();
+  }));
+
+  it.each(LANGS)('διατήρηση (%s): κλειδιά με λέξεις, κενό = «—», φωλιασμένο σε παρένθεση, αιτία από λεξιλόγιο', (lang) => inLang(lang, () => {
+    const retention = JSON.stringify({ disposal: { cause: 'manual', ruleId: 'r1' }, downloadCount: 0, legalHold: null });
+    const text = formatFieldAwareValue('retention', retention, formatFor('catalog_publication_run', 'retention'));
+    const part = (key: string) => word(lang, 'catalog', `audit.values.retentionParts.${key}`);
+    expect(text).toBe(
+      `${part('disposal')}: (${part('cause')}: ${word(lang, 'catalog', 'audit.values.disposalCause.manual')}, ${part('ruleId')}: r1), ` +
+      `${part('downloadCount')}: 0, ${part('legalHold')}: —`,
+    );
+    expect(text).not.toContain('null');
+  }));
+
+  it.each(LANGS)('πολύγλωσσο κείμενο (%s): ονομάζει τις γλώσσες του', (lang) => inLang(lang, () => {
+    const text = formatFieldAwareValue('labels', '{"el":"Ψύξη","en":"Cooling"}', formatFor('catalog_family', 'labels'));
+    expect(text).toBe(`${word(lang, 'catalog', 'language.el')}: Ψύξη, ${word(lang, 'catalog', 'language.en')}: Cooling`);
+  }));
+});

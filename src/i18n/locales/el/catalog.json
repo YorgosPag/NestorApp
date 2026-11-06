@@ -507,6 +507,57 @@
       "relation": "Σχέση με τη μάρκα",
       "reviewNote": "Σημείωση ελέγχου",
       "quoteIntake": "Λήψη αιτημάτων προσφοράς"
+    },
+    "values": {
+      "linkState": {
+        "live": "Ενεργός σύνδεσμος",
+        "revoked": "Ανακλήθηκε"
+      },
+      "side": {
+        "supplier": "Προμηθευτής",
+        "buyer": "Αγοραστής"
+      },
+      "importPurpose": {
+        "attributes": "Ιδιότητες προϊόντων",
+        "priceLines": "Γραμμές τιμοκαταλόγου"
+      },
+      "importSourceKind": {
+        "delimited": "Αρχείο κειμένου (CSV)",
+        "spreadsheet": "Λογιστικό φύλλο",
+        "pdf": "PDF",
+        "etimXchange": "ETIM xChange"
+      },
+      "brandRelation": {
+        "manufacturer": "Κατασκευαστής",
+        "authorizedRepresentative": "Επίσημος αντιπρόσωπος"
+      },
+      "reviewStatus": {
+        "pendingReview": "Σε έλεγχο",
+        "approved": "Εγκρίθηκε",
+        "rejected": "Απορρίφθηκε",
+        "revoked": "Ανακλήθηκε"
+      },
+      "paper": {
+        "a4": "A4"
+      },
+      "disposalCause": {
+        "schedule": "Κατά τον κανόνα διατήρησης",
+        "manual": "Χειροκίνητα"
+      },
+      "retentionParts": {
+        "downloadCount": "Λήψεις",
+        "firstDownloadedAt": "Πρώτη λήψη",
+        "supersededAt": "Αντικαταστάθηκε",
+        "legalHold": "Δικαστική δέσμευση",
+        "disposal": "Διαγραφή αρχείου",
+        "disposedAt": "Ημερομηνία",
+        "disposedBy": "Από",
+        "cause": "Αιτία",
+        "ruleId": "Κανόνας",
+        "placedBy": "Από",
+        "placedAt": "Ημερομηνία",
+        "reason": "Λόγος"
+      }
     }
   },
   "attributes": {

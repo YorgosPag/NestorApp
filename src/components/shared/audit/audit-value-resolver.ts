@@ -20,8 +20,9 @@
  *      the same strategy (catalog then audit.values).
  *   4. **Generic fallback** — `common:audit.values.{value}`. Covers fields
  *      without a catalog (status, gender when not registered, etc.).
- *   5. **ISO-8601 date** — localised date string.
- *   6. **undefined** — caller must render the raw value.
+ *   5. **Qualified identity** (`kind:id`) — the kind from the declared catalog, the id as is.
+ *   6. **ISO-8601 date** — localised date string.
+ *   7. **undefined** — caller must render the raw value.
  *
  * @module components/shared/audit/audit-value-resolver
  * @enterprise ADR-195 — Entity Audit Trail | ADR-279 — Google-Grade i18n Governance
@@ -30,9 +31,9 @@
 import i18next from 'i18next';
 
 import { getAuditValueCatalog, type AuditCatalogRef } from '@/config/audit-value-catalogs';
-import { calendarDateOfDateKey } from '@/lib/calendar/date-key';
-import { formatDate } from '@/lib/intl-utils';
 import { toCatalogKey } from '@/lib/string/catalog-key';
+
+import { formatAuditIsoDate } from './audit-iso-date';
 
 /**
  * Minimal subset of the react-i18next `t` function signature used here.
@@ -121,18 +122,6 @@ function lookupInAuditValues(value: string, t: AuditTranslator): string | undefi
 }
 
 /**
- * ISO-8601 date → η ημερομηνία στη γλώσσα **του θεατή** (ADR-195 (ζ): ήταν καρφωμένο `el-GR`, άρα ο Άγγλος έβλεπε
- * ελληνική μορφή). Σκέτη ημέρα `YYYY-MM-DD` ⇒ η **ίδια** τοπική ημέρα (`calendarDateOfDateKey`): το `new Date(key)`
- * είναι μεσάνυχτα UTC, δηλαδή η **προηγούμενη** ημέρα για θεατή δυτικά του Greenwich.
- */
-function formatIsoDate(value: string): string | undefined {
-  if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return undefined;
-  const date = calendarDateOfDateKey(value) ?? new Date(value);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return formatDate(date);
-}
-
-/**
  * Resolve an audit value to a human-readable label.
  *
  * @param field - The tracked field name (e.g. `category`, `gender`).
@@ -175,6 +164,25 @@ export function translateCatalogValue(
   return lookupInCatalog(catalog, value, t);
 }
 
+/** Ταυτότητα με είδος: `customerGroup:cg_1` · `partner:…` — γράμμα πρώτα, ώστε ημερομηνίες και ώρες να μην ταιριάζουν. */
+const QUALIFIED_IDENTITY = /^([A-Za-z][A-Za-z0-9_-]*):(.+)$/;
+
+/**
+ * **Ταυτότητα με είδος** (ADR-923 §23.5 Β1): το `audienceKey` μιας έκδοσης καταλόγου είναι `customerGroup:<id>` — το
+ * **είδος** είναι λέξη του δηλωμένου καταλόγου, η ουρά είναι ταυτότητα και μένει όπως είναι («Ομάδα πελατών · cg_1»).
+ * Μόνο με **δηλωμένο** κατάλογο: χωρίς αυτόν, ένα τυχαίο «x:y» δεν μαντεύεται.
+ */
+function lookupQualifiedIdentity(
+  catalog: AuditCatalogRef | undefined,
+  value: string,
+  t: AuditTranslator,
+): string | undefined {
+  const match = catalog ? QUALIFIED_IDENTITY.exec(value) : null;
+  if (!match) return undefined;
+  const kind = lookupInCatalog(catalog, match[1], t);
+  return kind ? `${kind} · ${match[2]}` : undefined;
+}
+
 /** Η σειρά επίλυσης της κεφαλίδας του αρχείου, για ήδη επιλεγμένο κατάλογο. */
 function resolveWithCatalog(
   catalog: AuditCatalogRef | undefined,
@@ -191,8 +199,11 @@ function resolveWithCatalog(
     if (translatedHead) return `${translatedHead} — ${rest.join(' — ')}`;
   }
 
+  const qualified = lookupQualifiedIdentity(catalog, value, t);
+  if (qualified) return qualified;
+
   const legacy = lookupInAuditValues(value, t);
   if (legacy) return legacy;
 
-  return formatIsoDate(value);
+  return formatAuditIsoDate(value);
 }

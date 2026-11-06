@@ -507,6 +507,57 @@
       "relation": "Relation to the brand",
       "reviewNote": "Review note",
       "quoteIntake": "Quote request intake"
+    },
+    "values": {
+      "linkState": {
+        "live": "Active link",
+        "revoked": "Revoked"
+      },
+      "side": {
+        "supplier": "Supplier",
+        "buyer": "Buyer"
+      },
+      "importPurpose": {
+        "attributes": "Product attributes",
+        "priceLines": "Price list lines"
+      },
+      "importSourceKind": {
+        "delimited": "Text file (CSV)",
+        "spreadsheet": "Spreadsheet",
+        "pdf": "PDF",
+        "etimXchange": "ETIM xChange"
+      },
+      "brandRelation": {
+        "manufacturer": "Manufacturer",
+        "authorizedRepresentative": "Authorised representative"
+      },
+      "reviewStatus": {
+        "pendingReview": "Under review",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "revoked": "Revoked"
+      },
+      "paper": {
+        "a4": "A4"
+      },
+      "disposalCause": {
+        "schedule": "By the retention rule",
+        "manual": "Manually"
+      },
+      "retentionParts": {
+        "downloadCount": "Downloads",
+        "firstDownloadedAt": "First download",
+        "supersededAt": "Superseded",
+        "legalHold": "Legal hold",
+        "disposal": "File deletion",
+        "disposedAt": "Date",
+        "disposedBy": "By",
+        "cause": "Cause",
+        "ruleId": "Rule",
+        "placedBy": "By",
+        "placedAt": "Date",
+        "reason": "Reason"
+      }
     }
   },
   "attributes": {
