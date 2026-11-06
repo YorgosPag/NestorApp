@@ -33,7 +33,7 @@ const document: LayoutDocument = {
       { kind: 'bullets', ordered: false, items: [[{ text: 'ένα' }]] },
       { kind: 'table', table },
     ] },
-    { id: 'g', template: 'grid', blocks: [{ kind: 'grid', columns: 2, cards: [{ id: 'c', title: 'Κάρτα', code: 'X', image: { assetId: 'img', alt: '', widthMm: 45 }, lines: ['a'], price: '10,00' }, { id: 'd', title: 'Δ', code: null, image: null, lines: [], price: null }, { id: 'e', title: 'Ε', code: null, image: null, lines: [], price: null }] }] },
+    { id: 'g', template: 'grid', blocks: [{ kind: 'grid', columns: 2, cards: [{ id: 'c', title: 'Κάρτα', code: 'X', image: { assetId: 'img', alt: '', widthMm: 45 }, lines: ['a'], price: '10,00' }, { id: 'd', title: 'Δ', code: null, image: null, lines: [], price: null, qr: { url: 'HTTPS://NESTORCONSTRUCT.GR/Q/PCARD', caption: 'Λεζάντα κάρτας', modules: 21, quietModules: 4, moduleMm: 0.5, runs: [[0, 0, 7]], ink: colour } }, { id: 'e', title: 'Ε', code: null, image: null, lines: [], price: null }] }] },
     { id: 'i', template: 'codeIndex', blocks: [{ kind: 'codeIndex', columns: 3, entries: [{ code: '9', label: 'Εννέα', anchor: 'a' }] }] },
   ],
 } as unknown as LayoutDocument;
@@ -100,6 +100,17 @@ describe('το κείμενο', () => {
     expect(symbol.querySelectorAll('GeometryPathType')).toHaveLength(1);
     expect(anchors(symbol)[0]).toBe(`${at(4 * module)} ${at(4 * module)}`);
     expect(anchors(symbol)[2]).toBe(`${at(11 * module)} ${at(5 * module)}`);
+  });
+
+  it('🔑 Ν10 α: η κάρτα με QR παίρνει το ΙΔΙΟ διάνυσμα μέσα στο κελί της, χωρίς λεζάντα και χωρίς διεύθυνση σε κείμενο', () => {
+    const cells = [...story().querySelectorAll('Cell')].filter((cell) => cell.textContent?.includes('Δ') || cell.textContent?.includes('Ε') || cell.textContent?.includes('Κάρτα'));
+    const withGroup = cells.filter((cell) => cell.querySelector('Group'));
+    expect(withGroup.map((cell) => cell.textContent)).toEqual(['Δ']);
+    const symbol = withGroup[0].querySelector('Group > Polygon');
+    expect(symbol?.getAttribute('FillColor')).toBe(`Color/${IDML_QR_SWATCH}`);
+    const text = story().documentElement.textContent ?? '';
+    expect(text).not.toContain('Λεζάντα κάρτας');
+    expect(text).not.toContain('PCARD');
   });
 
   it('🔴 το μελάνι του QR είναι ΕΝΑ δείγμα, από το ίδιο PUBLICATION_QR_INK με το PDF', () => {

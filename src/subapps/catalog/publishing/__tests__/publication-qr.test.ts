@@ -1,7 +1,7 @@
 /**
  * ADR-923 §5.13 Σ7 — το τυπωμένο QR: ποια βάση επιτρέπεται (απόφαση Giorgio 4), πού δείχνει, πόσο μεγάλο βγαίνει.
  */
-import { linkableModelIds, PUBLICATION_QR_INK, PUBLICATION_QR_MODULE_MM, printedLinkBase, printedModelUrl, publicationQrCode } from '../publication-qr';
+import { linkableQrIds, PUBLICATION_QR_INK, PUBLICATION_QR_MODULE_MM, printedLinkBase, printedModelUrl, publicationQrCode } from '../publication-qr';
 import { countLayoutQrCodes, type LayoutBlock, type LayoutSection } from '../layout-model';
 
 const MODEL_ID = 'catpm_8f3c2a10-5b7e-4c1d-9a2f-0e6b1d4c7a99';
@@ -38,9 +38,40 @@ describe('printedLinkBase — απόφαση 4: η τελική έκδοση τ�
   });
 });
 
+/** Πραγματικό SKU: πρόθεμα `cprod`, άρα συμπαγής διεύθυνση (Ν10 α). */
+const PRODUCT_ID = 'cprod_3f2a9c1e-7b4d-4e8a-9c21-5d6e7f809a1b';
+
 describe('printedModelUrl — ο ένας builder της σύντομης διεύθυνσης', () => {
-  it('απόλυτη διεύθυνση `/q/<id>`, ποτέ slug', () => {
+  it('απόλυτη διεύθυνση `/q/<id>`, ποτέ slug, για id χωρίς συμπαγή μορφή', () => {
     expect(printedModelUrl('https://nestorconstruct.gr', MODEL_ID)).toBe(`https://nestorconstruct.gr/q/${MODEL_ID}`);
+  });
+
+  it('🔑 Ν10 α: SKU ⇒ ολόκληρη η διεύθυνση σε κεφαλαία, βάση και διαδρομή', () => {
+    expect(printedModelUrl('https://nestorconstruct.gr', PRODUCT_ID)).toBe('HTTPS://NESTORCONSTRUCT.GR/Q/P1Z5AE1WYTD9T59R8AXDSZR16GV');
+  });
+
+  it('🔑 η βάση της προεπισκόπησης (με θύρα) γράφεται κι αυτή κεφαλαία, χωρίς να χαλάσει', () => {
+    expect(printedModelUrl('http://localhost:3000', PRODUCT_ID)).toBe('HTTP://LOCALHOST:3000/Q/P1Z5AE1WYTD9T59R8AXDSZR16GV');
+  });
+});
+
+describe('Ν10 α — μικρότερη έκδοση, όχι μικρότερη μονάδα', () => {
+  const side = (url: string) => {
+    const code = publicationQrCode(url, 'Σαρώστε');
+    return { modules: code.modules, sideMm: (code.modules + 2 * code.quietModules) * code.moduleMm };
+  };
+
+  it('🔴 SKU: έκδοση 4 (33 μονάδες) = 20,5 mm με τη ζώνη, στη μονάδα 0,5 mm (≥ στόχος GS1 0,495)', () => {
+    expect(side(printedModelUrl('https://nestorconstruct.gr', PRODUCT_ID))).toEqual({ modules: 33, sideMm: 20.5 });
+    expect(PUBLICATION_QR_MODULE_MM).toBeGreaterThanOrEqual(0.495);
+  });
+
+  it('🧪 μάρτυρας: η ίδια διεύθυνση σε πεζά θα ήταν έκδοση 6 (41 μονάδες) = 24,5 mm', () => {
+    expect(side(`https://nestorconstruct.gr/q/${PRODUCT_ID}`)).toEqual({ modules: 41, sideMm: 24.5 });
+  });
+
+  it('🔴 χωρά στην κάρτα της στενότερης συνταγής (5 στήλες: (180 − 4·4) / 5 − 2·2 = 28,8 mm)', () => {
+    expect(side(printedModelUrl('https://nestorconstruct.gr', PRODUCT_ID)).sideMm).toBeLessThanOrEqual(28.8);
   });
 });
 
@@ -67,13 +98,17 @@ describe('publicationQrCode — το σύμβολο στο μοντέλο διά
   });
 });
 
-describe('linkableModelIds', () => {
-  it('μόνο σελίδες οικογένειας, μία φορά η καθεμία, ταξινομημένες', () => {
+describe('linkableQrIds', () => {
+  it('σελίδες οικογένειας και κάρτες πλέγματος (Ν10 α), μία φορά η καθεμία, ταξινομημένες· ποτέ η σύγκριση ή το ίδιο το πλέγμα', () => {
     const chapters = [
-      { entries: [{ kind: 'variantModel', id: 'b' }, { kind: 'productGrid', id: 'family' }] },
-      { entries: [{ kind: 'variantModel', id: 'a' }, { kind: 'priceChanges', id: 'changes' }, { kind: 'variantModel', id: 'b' }] },
+      { entries: [{ kind: 'variantModel', id: 'b' }, { kind: 'productGrid', id: 'family', cards: [{ id: 'p2' }, { id: 'p1' }] }] },
+      { entries: [{ kind: 'variantModel', id: 'a' }, { kind: 'priceChanges', id: 'changes' }, { kind: 'variantModel', id: 'b' }, { kind: 'productGrid', id: 'other', cards: [{ id: 'p1' }] }] },
     ];
-    expect(linkableModelIds(chapters)).toEqual(['a', 'b']);
+    expect(linkableQrIds(chapters)).toEqual(['a', 'b', 'p1', 'p2']);
+  });
+
+  it('πλέγμα χωρίς κάρτες ⇒ τίποτα', () => {
+    expect(linkableQrIds([{ entries: [{ kind: 'productGrid', id: 'family', cards: [] }] }])).toEqual([]);
   });
 });
 
@@ -84,6 +119,12 @@ describe('countLayoutQrCodes — η αναφορά μετρά ό,τι τυπώθ
 
   it('μετρά μόνο επικεφαλίδες που φέρουν σύμβολο, σε όλες τις ενότητες', () => {
     expect(countLayoutQrCodes({ sections: [section([heading(true), heading(false)]), section([heading(true)])] })).toBe(2);
+  });
+
+  it('🔑 Ν10 α: μετρά και κάθε κάρτα πλέγματος με σύμβολο, όχι τις κάρτες χωρίς', () => {
+    const card = (id: string, withQr: boolean) => ({ id, title: id, code: null, image: null, lines: [], price: null, ...(withQr ? { qr } : {}) });
+    const grid: LayoutBlock = { kind: 'grid', columns: 4, cards: [card('a', true), card('b', false), card('c', true)] };
+    expect(countLayoutQrCodes({ sections: [section([heading(true), grid])] })).toBe(3);
   });
 
   it('έγγραφο χωρίς QR ⇒ 0, όχι «άγνωστο»', () => {

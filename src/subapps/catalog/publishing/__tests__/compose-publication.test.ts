@@ -135,6 +135,35 @@ describe('composePublication — QR της σελίδας οικογένειας
   });
 });
 
+describe('composePublication — QR της κάρτας πλέγματος (Ν10 α)', () => {
+  const qr = publicationQrCode('HTTPS://NESTORCONSTRUCT.GR/Q/P1Z5AE1WYTD9T59R8AXDSZR16GV', 'Σαρώστε');
+  const card = (id: string) => ({ id, title: `Εξάρτημα ${id}`, code: id.toUpperCase(), imageAssetId: null, lines: [], price: null });
+  const gridInput = (qrCodes: PublicationCompositionInput['qrCodes']): PublicationCompositionInput => ({
+    ...composeInput(entryOf(null)),
+    chapters: [{ id: 'parts', title: 'Εξαρτήματα', entries: [{ kind: 'productGrid', id: 'grid', title: 'Εξαρτήματα', listingKind: 'product', cards: [card('a'), card('b')] }] }],
+    qrCodes,
+  });
+  const cardsOf = (document: ReturnType<typeof composePublication>) =>
+    document.sections.flatMap((section) => section.blocks).flatMap((block) => (block.kind === 'grid' ? block.cards : []));
+
+  it('το QR του προϊόντος μπαίνει στη δική του κάρτα, κατά id, και μόνο εκεί', () => {
+    const [first, second] = cardsOf(composePublication(gridInput(new Map([['a', qr]]))));
+    expect(first.qr).toBe(qr);
+    expect(second).not.toHaveProperty('qr');
+  });
+
+  it('🔑 χωρίς QR η κάρτα μένει ακριβώς η παλιά, χωρίς κλειδί `qr`', () => {
+    for (const qrCodes of [undefined, new Map([['other', qr]])]) {
+      for (const each of cardsOf(composePublication(gridInput(qrCodes)))) expect(each).not.toHaveProperty('qr');
+    }
+  });
+
+  it('🔒 το QR μιας κάρτας δεν ανεβαίνει ποτέ στην επικεφαλίδα του πλέγματος', () => {
+    const headings = composePublication(gridInput(new Map([['a', qr], ['grid', qr]]))).sections.flatMap((section) => section.blocks).filter((block) => block.kind === 'heading');
+    expect(headings.some((block) => block.kind === 'heading' && block.qr)).toBe(false);
+  });
+});
+
 describe('previewRecipeOf', () => {
   it('η πρώτη κατά κωδικό, ανεξάρτητα από τη σειρά ανάγνωσης · καμία ⇒ null', () => {
     expect(previewRecipeOf([{ code: 'b' }, { code: 'a' }])?.code).toBe('a');

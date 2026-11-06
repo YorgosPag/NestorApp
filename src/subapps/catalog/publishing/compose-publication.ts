@@ -14,7 +14,7 @@
 
 import type { HumanLanguage } from '@/i18n/languages';
 import type { PublicationRecipeDefinition, PublicationTheme } from '../types/publication';
-import type { LayoutBlock, LayoutCell, LayoutCodeIndexEntry, LayoutDocument, LayoutImageRef, LayoutPage, LayoutQrCode, LayoutSection, LayoutTable, LayoutTheme } from './layout-model';
+import type { LayoutBlock, LayoutCell, LayoutCodeIndexEntry, LayoutDocument, LayoutGridCard, LayoutImageRef, LayoutPage, LayoutQrCode, LayoutSection, LayoutTable, LayoutTheme } from './layout-model';
 import { fitValueColumns, layoutTables, tableUsesRail } from './layout-table';
 import { richTextBlocks, withBreakHints } from './layout-text';
 import type { PriceChangeGroup, PriceChangesEntry, ProductGridEntry, PublicationChapter, PublicationEntry, SimpleProductCard, VariantModelEntry } from './publication-entries';
@@ -39,8 +39,8 @@ export interface PublicationCompositionInput {
   readonly chapters: readonly PublicationChapter[];
   readonly words: PublicationComposeWords;
   /**
-   * Το QR κάθε σελίδας οικογένειας, κατά id μοντέλου (§5.13 Σ7). Λείπει ⇒ χωρίς QR: μόνο μοντέλο που βλέπει ο ανώνυμος έχει
-   * δημόσια σελίδα, και το αποφασίζει ο διακομιστής, όχι ο συνθέτης.
+   * Το QR κάθε σελίδας οικογένειας (κατά id μοντέλου, §5.13 Σ7) και κάθε κάρτας πλέγματος (κατά id προϊόντος, Ν10 α).
+   * Λείπει ⇒ χωρίς QR: μόνο ό,τι βλέπει ο ανώνυμος έχει δημόσια σελίδα, και το αποφασίζει ο διακομιστής, όχι ο συνθέτης.
    */
   readonly qrCodes?: ReadonlyMap<string, LayoutQrCode>;
 }
@@ -99,8 +99,9 @@ function variantSection(entry: VariantModelEntry, input: PublicationCompositionI
   return { id: entry.id, template: 'family', blocks };
 }
 
-function gridCard(card: SimpleProductCard) {
-  return {
+/** Χωρίς QR η κάρτα μένει ακριβώς η παλιά, χωρίς κλειδί `qr`: ίδια bytes με τις εκδόσεις πριν από το Ν10 α. */
+function gridCard(card: SimpleProductCard, qr: LayoutQrCode | undefined): LayoutGridCard {
+  const base: LayoutGridCard = {
     id: card.id,
     title: card.title,
     code: card.code,
@@ -108,6 +109,7 @@ function gridCard(card: SimpleProductCard) {
     lines: card.lines.map(withBreakHints),
     price: card.price,
   };
+  return qr ? { ...base, qr } : base;
 }
 
 function gridSection(entry: ProductGridEntry, input: PublicationCompositionInput): LayoutSection {
@@ -117,7 +119,7 @@ function gridSection(entry: ProductGridEntry, input: PublicationCompositionInput
     blocks: [
       { kind: 'anchor', anchor: anchorOf(entry.id) },
       { kind: 'heading', level: 2, text: entry.title, outlined: true },
-      { kind: 'grid', columns: input.recipe.templates.gridColumns, cards: entry.cards.map(gridCard) },
+      { kind: 'grid', columns: input.recipe.templates.gridColumns, cards: entry.cards.map((card) => gridCard(card, input.qrCodes?.get(card.id))) },
     ],
   };
 }

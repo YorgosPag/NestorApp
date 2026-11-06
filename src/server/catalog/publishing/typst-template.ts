@@ -197,6 +197,23 @@ export const PUBLICATION_TYPST_TEMPLATE = String.raw`
   table(columns: widths, stroke: 0.4pt + ink-rule, inset: (x: cell-inset-x, y: 1.2mm), ..table-rows(t.rows, cell-room(t, fixed, value-columns)))
 }
 
+// Το QR ως ΕΝΑ σχήμα: κάθε σειρά σκούρων μονάδων είναι ένα ορθογώνιο υπο-μονοπάτι του ίδιου γεμίσματος. Ένα γέμισμα δεν
+// αφήνει αραιές ραφές ανάμεσα στις μονάδες στην οθόνη, και το μελάνι περνά από το ink(): K 100 στο print, ποτέ RGB.
+#let qr-symbol(code) = {
+  let x = code.moduleMm * 1mm
+  let q = code.quietModules
+  let side = (code.modules + 2 * q) * x
+  let square(run) = {
+    let (row, column, count) = run
+    let (x0, y0) = ((q + column) * x, (q + row) * x)
+    let x1 = x0 + count * x
+    (curve.move((x0, y0)), curve.line((x1, y0)), curve.line((x1, y0 + x)), curve.line((x0, y0 + x)), curve.close(mode: "straight"))
+  }
+  box(width: side, height: side, fill: paper-blank, place(top + left, curve(fill: ink(code.ink), stroke: none, ..code.runs.map(square).flatten())))
+}
+
+// Η κάρτα του πλέγματος. Το QR (Ν10 α) κάθεται ΚΑΤΩ από το κείμενο, στη ροή της, δεξιά: κανένα place() πάνω σε κείμενο, άρα
+// ο κριτής διάταξης βλέπει ό,τι τυπώνεται. Χωρίς λεζάντα: δεν χωρά στην κάρτα, και η κάρτα χωρίς QR μένει ίδια με πριν.
 #let card-of(card) = {
   set par(justify: false)
   if card.image != none { align(center, image-of(card.image)) }
@@ -204,6 +221,8 @@ export const PUBLICATION_TYPST_TEMPLATE = String.raw`
   if card.code != none { linebreak(); text(size: 7.5pt, fill: ink-accent)[#card.code] }
   for line in card.lines { linebreak(); text(size: 7.5pt)[#line] }
   if card.price != none { linebreak(); text(weight: "bold", fill: ink-primary)[#card.price] }
+  let qr = card.at("qr", default: none)
+  if qr != none { block(above: 2mm, below: 0mm, width: 100%, align(right, qr-symbol(qr))) }
 }
 
 #let cards-of(b) = grid(
@@ -225,21 +244,6 @@ export const PUBLICATION_TYPST_TEMPLATE = String.raw`
       text(size: 7.5pt, str(pages.at(entry.anchor, default: 0))),
     )
   })
-}
-
-// Το QR ως ΕΝΑ σχήμα: κάθε σειρά σκούρων μονάδων είναι ένα ορθογώνιο υπο-μονοπάτι του ίδιου γεμίσματος. Ένα γέμισμα δεν
-// αφήνει αραιές ραφές ανάμεσα στις μονάδες στην οθόνη, και το μελάνι περνά από το ink(): K 100 στο print, ποτέ RGB.
-#let qr-symbol(code) = {
-  let x = code.moduleMm * 1mm
-  let q = code.quietModules
-  let side = (code.modules + 2 * q) * x
-  let square(run) = {
-    let (row, column, count) = run
-    let (x0, y0) = ((q + column) * x, (q + row) * x)
-    let x1 = x0 + count * x
-    (curve.move((x0, y0)), curve.line((x1, y0)), curve.line((x1, y0 + x)), curve.line((x0, y0 + x)), curve.close(mode: "straight"))
-  }
-  box(width: side, height: side, fill: paper-blank, place(top + left, curve(fill: ink(code.ink), stroke: none, ..code.runs.map(square).flatten())))
 }
 
 #let qr-figure(code) = {

@@ -21,7 +21,7 @@ import { publicationFontRefusal } from '@/subapps/catalog/publishing/publication
 import { publicationInputHash, type DataVersionRef } from '@/subapps/catalog/publishing/publication-input-hash';
 import { priceEditionLine, type PriceEditionWords } from '@/subapps/catalog/publishing/publication-price-edition';
 import { priceChangesEntry, type PriceChangeWords, type PublicationPriceChange } from '@/subapps/catalog/publishing/publication-price-changes';
-import { linkableModelIds, publicationQrCode } from '@/subapps/catalog/publishing/publication-qr';
+import { linkableQrIds, publicationQrCode } from '@/subapps/catalog/publishing/publication-qr';
 import { PUBLICATION_RENDER_SCHEMA_VERSION } from '@/subapps/catalog/publishing/publication-vocabulary';
 import type { PublicationChapter } from '@/subapps/catalog/publishing/publication-entries';
 import type { TableAttribute } from '@/subapps/catalog/table/catalog-table';
@@ -103,9 +103,9 @@ async function readRecipeFonts(scope: CatalogTx, recipe: PublicationRecipeDefini
   return fonts;
 }
 
-/** Τα σύμβολα των QR: ένα ανά μοντέλο που έχει δημόσια διεύθυνση. */
+/** Τα σύμβολα των QR: ένα ανά μοντέλο ή απλό προϊόν που έχει δημόσια διεύθυνση (Ν10 α). */
 function qrCodesOf(links: PublicationLinks, caption: string): ReadonlyMap<string, LayoutQrCode> {
-  return new Map([...links.urls].map(([modelId, url]) => [modelId, publicationQrCode(url, caption)]));
+  return new Map([...links.urls].map(([id, url]) => [id, publicationQrCode(url, caption)]));
 }
 
 /** Ό,τι μπαίνει στο κλειδί: οι διευθύνσεις, ή τα μοντέλα της άρνησης, ώστε η αρνημένη έκδοση να μη μοιάζει με έκδοση χωρίς QR. */
@@ -173,7 +173,7 @@ function dataSetOf(
 }
 
 export interface PublicationSnapshotOptions {
-  /** Ποια μοντέλα παίρνουν QR και πού δείχνουν (§5.13 Σ7). Υποχρεωτικό: η έκδοση χωρίς QR είναι ρητή επιλογή του καλούντα. */
+  /** Ποια μοντέλα και απλά προϊόντα παίρνουν QR και πού δείχνουν (§5.13 Σ7 · Ν10 α). Υποχρεωτικό: η έκδοση χωρίς QR είναι ρητή επιλογή του καλούντα. */
   readonly links: PublicationLinkReader;
   readonly ignoreCompleteness?: boolean;
 }
@@ -189,7 +189,7 @@ export async function readPublicationSnapshot(scope: CatalogTx, recipe: Publicat
   const title = words.text(recipe.title, recipe.code);
   const changes = await changesChapter(scope, sheet, dataSet, words);
   const fonts = await readRecipeFonts(scope, recipe);
-  const links = await options.links(linkableModelIds(selection.chapters));
+  const links = await options.links(linkableQrIds(selection.chapters));
   const document = composePublication({
     recipe, title, footer: footerOf(recipe, sheet, words), supplierFontFamily: fonts[0]?.font?.family, chapters: changes.chapter ? [changes.chapter, ...selection.chapters] : selection.chapters, words: words.compose, qrCodes: qrCodesOf(links, words.qrCaption),
   });

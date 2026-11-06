@@ -110,10 +110,12 @@ function tableXml(table: LayoutTable, ctx: StoryContext): string {
   return paragraph('Body', run(tableShell(ctx, { header: headerRows, body: table.rows.length - headerRows, widths: columnWidths(table, ctx.areaPt), cells })));
 }
 
+/** Η κάρτα, και κάτω της το QR (Ν10 α) ως το ίδιο διάνυσμα με τη σελίδα οικογένειας, χωρίς λεζάντα, όπως στο PDF. */
 function cardParagraphs(card: LayoutGridCard, ctx: StoryContext): string {
   const image = card.image ? paragraph('Cell', run(imageFrame(card.image, ctx))) : '';
   const lines = [card.code, ...card.lines, card.price].filter((line): line is string => Boolean(line));
-  return `${image}${paragraph('CellHead', textRun(card.title))}${lines.map((line) => paragraph('Cell', textRun(line))).join('')}`;
+  const qr = card.qr ? paragraph('Cell', run(qrGroupXml(card.qr, ctx))) : '';
+  return `${image}${paragraph('CellHead', textRun(card.title))}${lines.map((line) => paragraph('Cell', textRun(line))).join('')}${qr}`;
 }
 
 function gridXml(block: Extract<LayoutBlock, { kind: 'grid' }>, ctx: StoryContext): string {

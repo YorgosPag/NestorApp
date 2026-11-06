@@ -6,6 +6,8 @@
  * 🔒 Κρυφό, αποσυρμένο, ανακλημένο και ανύπαρκτο πάνε στο ίδιο 404. Το QR δεν είναι μαντείο.
  * 🔑 Σχετικό `Location` μέσω του `redirectTo`: ο διακομιστής δεν δηλώνει ποιος νομίζει ότι είναι.
  * 🔑 Βλάβη ανάγνωσης είναι 503, όχι 404: το προϊόν ίσως υπάρχει.
+ * 🔑 **Δύο γραφές, ένας χειριστής** (ADR-923 Ν10 α): η συμπαγής `/Q/<είδος><base32>` (τη φέρνει εδώ η `rewrite` του
+ *    `next.config.js`) και το σκέτο id των εκδόσεων πριν από αυτήν. Το χαρτί δεν ανακαλείται, άρα η παλιά γραφή δεν σβήνει.
  *
  * @module app/(light)/q/[id]/route
  */
@@ -15,7 +17,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { redirectTo } from '@/lib/http/request-origin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readPublicModelTarget } from '@/services/public-catalog/public-catalog.reader';
-import { PUBLIC_UNAVAILABLE_ROUTE, publicIdOfSegment } from '@/subapps/catalog/public/public-catalog-routes';
+import { PUBLIC_UNAVAILABLE_ROUTE, publicIdOfShortSegment } from '@/subapps/catalog/public/public-catalog-routes';
 
 const logger = createModuleLogger('public-short-link');
 
@@ -28,8 +30,8 @@ function temporaryRedirect(location: string): NextResponse {
 }
 
 export async function GET(_request: NextRequest, { params }: { readonly params: Promise<{ readonly id: string }> }): Promise<NextResponse> {
-  const { id } = await params;
-  if (publicIdOfSegment(id) !== id) return temporaryRedirect(PUBLIC_UNAVAILABLE_ROUTE);
+  const id = publicIdOfShortSegment((await params).id);
+  if (id === null) return temporaryRedirect(PUBLIC_UNAVAILABLE_ROUTE);
   try {
     return temporaryRedirect((await readPublicModelTarget(id)) ?? PUBLIC_UNAVAILABLE_ROUTE);
   } catch (error) {

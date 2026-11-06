@@ -103,7 +103,16 @@ async function renderRaw(source: string): Promise<Uint8Array> {
 
 /** Η διεύθυνση του QR στα δείγματα: πραγματικό μήκος id, άρα πραγματική έκδοση συμβόλου. */
 const QR_URL = printedModelUrl('https://nestorconstruct.gr', 'catpm_8f3c2a10-5b7e-4c1d-9a2f-0e6b1d4c7a99');
-const QR_CODES = new Map([['m1', publicationQrCode(QR_URL, 'Σαρώστε για τα τρέχοντα στοιχεία')]]);
+/**
+ * Η κάρτα πλέγματος (Ν10 α): **πραγματικό** πρόθεμα SKU, άρα η συμπαγής διεύθυνση σε κεφαλαία. Μπαίνει στην κάρτα `g0` του
+ * δείγματος των **5 στηλών**, της στενότερης κάρτας που επιτρέπει η συνταγή, ώστε κάθε κρίση διάταξης του δείγματος να
+ * κρίνει και το QR της κάρτας.
+ */
+const CARD_QR_URL = printedModelUrl('https://nestorconstruct.gr', 'cprod_3f2a9c1e-7b4d-4e8a-9c21-5d6e7f809a1b');
+const QR_CODES = new Map([
+  ['m1', publicationQrCode(QR_URL, 'Σαρώστε για τα τρέχοντα στοιχεία')],
+  ['g0', publicationQrCode(CARD_QR_URL, 'Σαρώστε για τα τρέχοντα στοιχεία')],
+]);
 
 const hostile = '<p>#import "x.typ": * και #read("/etc/passwd") και $x^2$ και *έντονο* και @ref</p>';
 
@@ -135,6 +144,16 @@ function qrDocument() {
   return composePublication({
     recipe: { ...recipe, templates: { ...recipe.templates, enabled: [] } }, title: 'QR', footer: 'Υποσέλιδο',
     chapters: [{ id: 'a', title: 'Fan coil', entries: [entry(1)] }], qrCodes: QR_CODES,
+    words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
+  });
+}
+
+/** Το δείγμα του QR κάρτας: μόνο ένα πλέγμα 5 στηλών, ώστε το μόνο σύμβολο της πρώτης σελίδας να είναι της κάρτας `g0`. */
+function cardQrDocument() {
+  const cards = Array.from({ length: 5 }, (_, index) => ({ id: `g${index}`, title: `Εξάρτημα ${index}`, code: `ACC-${index}`, imageAssetId: null, lines: ['1058x596x250'], price: '10,50 €' }));
+  return composePublication({
+    recipe: { ...recipe, templates: { ...recipe.templates, enabled: [], gridColumns: 5 } }, title: 'QR κάρτας', footer: 'Υποσέλιδο',
+    chapters: [{ id: 'a', title: 'Εξαρτήματα', entries: [{ kind: 'productGrid', id: 'grid', title: 'Εξαρτήματα', listingKind: 'product', cards }] }], qrCodes: QR_CODES,
     words: { contents: 'Περιεχόμενα', codeIndex: 'Ευρετήριο κωδικών', tablePart: (part, parts) => `Μέρος ${part} από ${parts}` },
   });
 }
@@ -391,6 +410,18 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
   it.each(['print', 'screen'] as const)('🔴 QR %s: ανεξάρτητος αποκωδικοποιητής διαβάζει την ΑΠΟΛΥΤΗ διεύθυνση από τη σελίδα της μηχανής', async (profile) => {
     const png = await renderPublicationPreview({ ...input, document: qrDocument(), run: scanRunner(profile) });
     await expect(decodePagePng(png)).resolves.toBe(QR_URL);
+  }, 60_000);
+
+  it.each(['print', 'screen'] as const)('🔴 QR κάρτας %s (Ν10 α): η συμπαγής διεύθυνση σε κεφαλαία διαβάζεται από κάρτα 5 στηλών', async (profile) => {
+    const png = await renderPublicationPreview({ ...input, document: cardQrDocument(), run: scanRunner(profile) });
+    await expect(decodePagePng(png)).resolves.toBe(CARD_QR_URL);
+    expect(CARD_QR_URL.startsWith('HTTPS://NESTORCONSTRUCT.GR/Q/P')).toBe(true);
+  }, 60_000);
+
+  it('🔴 QR κάρτας εκτύπωση: κανένα κείμενο πάνω σε κείμενο, κομμένο ή μικροσκοπικό στο στενότερο πλέγμα', async () => {
+    const { bytes } = await renderPublicationPdf({ ...input, document: cardQrDocument() }, 'print');
+    const verdict = judgePublicationLayout(readLayoutInChildProcess(bytes), cardQrDocument().page.bleedMm * (72 / 25.4));
+    expect(verdict).toMatchObject({ overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 });
   }, 60_000);
 
   it('🧪 μάρτυρας: χωρίς QR στο έγγραφο ο αποκωδικοποιητής δεν βρίσκει τίποτα', async () => {

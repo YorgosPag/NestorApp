@@ -96,6 +96,11 @@ export interface LayoutGridCard {
   readonly image: LayoutImageRef | null;
   readonly lines: readonly string[];
   readonly price: string | null;
+  /**
+   * Το QR της κάρτας (ADR-923 Ν10 α), μόνο όταν το προϊόν το βλέπει ο ανώνυμος. Η κάρτα **δεν** τυπώνει λεζάντα ούτε
+   * διεύθυνση: δεν χωρούν στα ~29–38 mm της, και το σύμβολο εξηγείται από το QR της σελίδας οικογένειας.
+   */
+  readonly qr?: LayoutQrCode;
 }
 
 export interface LayoutCodeIndexEntry {
@@ -161,19 +166,22 @@ export function renditionUseOf(profile: PublicationPdfProfile): 'print' | 'web' 
   return profile === 'print' ? 'print' : 'web';
 }
 
-/** Όλες οι εικόνες του εγγράφου, μία φορά η καθεμία — ό,τι πρέπει να φτάσει στον φάκελο εργασίας. */
+/** Πόσα QR φέρει ένα μπλοκ: η επικεφαλίδα σελίδας οικογένειας, ή κάθε κάρτα του πλέγματος (Ν10 α). */
+function blockQrCount(block: LayoutBlock): number {
+  if (block.kind === 'heading') return block.qr ? 1 : 0;
+  if (block.kind === 'grid') return block.cards.filter((card) => card.qr).length;
+  return 0;
+}
+
 /**
  * Πόσα QR τυπώνει **το ίδιο το έγγραφο** (ADR-923 §5.13 Σ7 κενό γ): μετριέται από τη διάταξη που πάει στη μηχανή, όχι
  * από τις διευθύνσεις που ζητήθηκαν, ώστε ο αριθμός της αναφοράς να είναι ό,τι βρίσκεται στο χαρτί.
  */
 export function countLayoutQrCodes(document: Pick<LayoutDocument, 'sections'>): number {
-  let count = 0;
-  for (const section of document.sections) {
-    for (const block of section.blocks) if (block.kind === 'heading' && block.qr) count += 1;
-  }
-  return count;
+  return document.sections.reduce((sum, section) => sum + section.blocks.reduce((inner, block) => inner + blockQrCount(block), 0), 0);
 }
 
+/** Όλες οι εικόνες του εγγράφου, μία φορά η καθεμία — ό,τι πρέπει να φτάσει στον φάκελο εργασίας. */
 export function collectLayoutAssetIds(document: Pick<LayoutDocument, 'sections'>): string[] {
   const ids = new Set<string>();
   for (const section of document.sections) {
