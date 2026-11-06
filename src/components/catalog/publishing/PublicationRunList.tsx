@@ -37,6 +37,7 @@ const REPORT_LINES: readonly { readonly field: PublicationReportCount; readonly 
   { field: 'nonCmykImageCount', key: 'publishing.report.nonCmyk' },
   { field: 'untransposedTableCount', key: 'publishing.report.untransposed' },
   { field: 'fencedPriceChangeCount', key: 'publishing.report.fencedChange' },
+  { field: 'printedQrCount', key: 'publishing.report.printedQr' },
   { field: 'overlappingTextCount', key: 'publishing.report.overlappingText' },
   { field: 'clippedTextCount', key: 'publishing.report.clippedText' },
   { field: 'undersizedTextCount', key: 'publishing.report.undersizedText' },

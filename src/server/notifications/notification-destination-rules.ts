@@ -83,6 +83,7 @@ import {
   tourAccessReceivedDestination,
 } from '@/server/spatial-tour/tour-access-notifier';
 import { supplyConnectionDestination, supplyNoticeSide } from '@/server/supply-relationships/supply-relationship-notifier.server';
+import { brandExpiryDestination } from '@/server/catalog/supplier-brand-expiry-notices.server';
 import { readThreadTopic } from '@/services/network-messaging/thread-reader';
 import { supplyRelationshipFromDocument } from '@/subapps/catalog/schema/zod/supply-relationship.schema';
 import type { NetworkActTeam } from '@/types/network-thread';
@@ -182,6 +183,13 @@ const supplyConnectionRule: DestinationRule = async (db, notification, entityId)
   return expected(supplyConnectionDestination(relationship, supplyNoticeSide(relationship, notification.userId)));
 };
 
+/** ADR-923 §16 — η λήξη μάρκας ανοίγει τις ρυθμίσεις καταλόγου του χώρου που **κατέχει** το αίτημα (από το έγγραφο). */
+const brandGrantExpiringRule: DestinationRule = async (db, _notification, entityId) => {
+  const companyId: unknown = (await db.collection(COLLECTIONS.SUPPLIER_BRAND_CLAIMS).doc(entityId).get()).data()?.companyId;
+  if (typeof companyId !== 'string' || companyId === '') return unresolvable('entity-absent');
+  return expected(brandExpiryDestination(companyId));
+};
+
 /** ADR-916 Φ-Δ.2 — «ο αγοραστής απάντησε»: η καρτέλα «Παράδοση» του ακινήτου. */
 const handoverInvitationAnsweredRule = propertyHostRule(handoverInvitationAnsweredDestination);
 
@@ -259,6 +267,8 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_HANDOVER_INVITATION_ANSWERED]: handoverInvitationAnsweredRule,
   // ADR-923 §5.12 — η καρτέλα της πλευράς του παραλήπτη, όπως την ξαναβρίσκει το ίδιο το έγγραφο.
   [NOTIFICATION_EVENT_TYPES.PROCUREMENT_SUPPLY_CONNECTION]: supplyConnectionRule,
+  // ADR-923 §16 — οι ρυθμίσεις καταλόγου του χώρου της μάρκας (ο ΙΔΙΟΣ `brandExpiryDestination` με τον παραγωγό).
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_BRAND_GRANT_EXPIRING]: brandGrantExpiringRule,
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

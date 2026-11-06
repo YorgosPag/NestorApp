@@ -2,6 +2,7 @@
  * ADR-923 §5.13 Σ7 — το τυπωμένο QR: ποια βάση επιτρέπεται (απόφαση Giorgio 4), πού δείχνει, πόσο μεγάλο βγαίνει.
  */
 import { linkableModelIds, PUBLICATION_QR_INK, PUBLICATION_QR_MODULE_MM, printedLinkBase, printedModelUrl, publicationQrCode } from '../publication-qr';
+import { countLayoutQrCodes, type LayoutBlock, type LayoutSection } from '../layout-model';
 
 const MODEL_ID = 'catpm_8f3c2a10-5b7e-4c1d-9a2f-0e6b1d4c7a99';
 
@@ -73,5 +74,19 @@ describe('linkableModelIds', () => {
       { entries: [{ kind: 'variantModel', id: 'a' }, { kind: 'priceChanges', id: 'changes' }, { kind: 'variantModel', id: 'b' }] },
     ];
     expect(linkableModelIds(chapters)).toEqual(['a', 'b']);
+  });
+});
+
+describe('countLayoutQrCodes — η αναφορά μετρά ό,τι τυπώθηκε (§5.13 Σ7 κενό γ)', () => {
+  const qr = publicationQrCode(printedModelUrl('https://nestorconstruct.gr', MODEL_ID), 'Σάρωσε');
+  const heading = (withQr: boolean): LayoutBlock => ({ kind: 'heading', level: 2, text: 'Οικογένεια', outlined: true, ...(withQr ? { qr } : {}) });
+  const section = (blocks: readonly LayoutBlock[]): LayoutSection => ({ id: 's', template: 'family', blocks });
+
+  it('μετρά μόνο επικεφαλίδες που φέρουν σύμβολο, σε όλες τις ενότητες', () => {
+    expect(countLayoutQrCodes({ sections: [section([heading(true), heading(false)]), section([heading(true)])] })).toBe(2);
+  });
+
+  it('έγγραφο χωρίς QR ⇒ 0, όχι «άγνωστο»', () => {
+    expect(countLayoutQrCodes({ sections: [section([heading(false), { kind: 'toc', title: 'Περιεχόμενα' }])] })).toBe(0);
   });
 });

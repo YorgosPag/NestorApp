@@ -72,6 +72,7 @@ import { runRfqInviteDelivery } from '@/lib/cron/jobs/rfq-invite-delivery.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
 import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
 import { runStorageBucketDrift } from '@/lib/cron/jobs/storage-bucket-drift.job';
+import { runSupplierBrandExpiryNotices } from '@/lib/cron/jobs/supplier-brand-expiry-notices.job';
 import { runTourTilesetBake } from '@/lib/cron/jobs/tour-tileset-bake.job';
 import { runPublicationRunSweep } from '@/lib/cron/jobs/publication-run-sweep.job';
 import type { CronJobDefinition } from '@/types/cron-schedule';
@@ -522,6 +523,23 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runDocumentExpiryAlerts,
+  },
+  {
+    slug: 'supplier-brand-expiry-notices',
+    path: '/api/cron/supplier-brand-expiry-notices',
+    description: 'Κατοχή μάρκας: ειδοποίηση των διαχειριστών του χώρου στις 30 · 7 ημέρες · ημέρα λήξης και μετά τη λήξη (ADR-923 §16)',
+    enabled: true,
+    // 🔑 **Ημερήσια, γιατί η μονάδα της λήξης είναι η ΗΜΕΡΑ** (`validUntilOfDate`), όπως οι άλλες λήξεις. Η επανάληψη
+    // είναι ακίνδυνη: το `grant.expiryNotice` κρατά τι ειπώθηκε, και το `eventId` φέρει λήξη και σκαλί.
+    //
+    // ⚠️ Λεπτό **28** της 08:00: ελεύθερο από `*/10` · `2-59/5` · `4-59/10` · `8-59/15` · `1-59/15` · `11-59/15` ·
+    // `15` · `35` · `19,49` και από τις πρωινές `19 8` · `21 8`.
+    schedule: '28 8 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runSupplierBrandExpiryNotices,
   },
   {
     slug: 'issuance-invitation-reminder',

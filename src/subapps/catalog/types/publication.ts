@@ -156,6 +156,11 @@ export interface PublicationReport {
   readonly untransposedTableCount: number;
   /** Αλλαγές τιμών πάνω από τον φράχτη της δημοσίευσης (§18), μέσα στο εύρος: θέλουν μια ματιά πριν φύγει το αρχείο. */
   readonly fencedPriceChangeCount: number;
+  /**
+   * QR που τυπώθηκαν προς τη δημόσια σελίδα (§5.13 Σ7 κενό γ): ένα σάρωμα από το χαρτί πριν από το τυπογραφείο.
+   * Μετριέται από τη διάταξη (`countLayoutQrCodes`). Εκδόσεις πριν από το πεδίο δεν το έχουν ⇒ η οθόνη το διαβάζει ως 0.
+   */
+  readonly printedQrCount: number;
   /** `false` ⇒ ο έλεγχος διάταξης **δεν έγινε**, άρα τα τρία μηδενικά παρακάτω δεν σημαίνουν «καθαρό». */
   readonly layoutChecked: boolean;
   /** Κομμάτια κειμένου που πατούν άλλο κείμενο στο τελικό PDF. */
@@ -241,6 +246,7 @@ export const EMPTY_PUBLICATION_REPORT: PublicationReport = {
   nonCmykImageCount: 0,
   untransposedTableCount: 0,
   fencedPriceChangeCount: 0,
+  printedQrCount: 0,
   ...UNCHECKED_PUBLICATION_LAYOUT,
 };
 

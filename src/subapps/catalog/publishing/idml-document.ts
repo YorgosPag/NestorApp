@@ -9,7 +9,8 @@
  */
 
 import type { LayoutColour, LayoutDocument } from './layout-model';
-import { bodyStoryXml, escapeXml, footerStoryXml, IDML_STYLES, MM_TO_PT, type IdmlImage, type IdmlStyle, type StoryContext } from './idml-story';
+import { bodyStoryXml, escapeXml, footerStoryXml, IDML_QR_SWATCH, IDML_STYLES, MM_TO_PT, type IdmlImage, type IdmlStyle, type StoryContext } from './idml-story';
+import { PUBLICATION_QR_INK } from './publication-qr';
 
 export const IDML_MIMETYPE = 'application/vnd.adobe.indesign-idml-package';
 const DOM_VERSION = '20.0';
@@ -80,7 +81,7 @@ function graphicPart(document: LayoutDocument): IdmlPart {
   const fixed = '<Color Self="Color/Black" Model="Process" Space="CMYK" ColorValue="0 0 0 100" ColorOverride="Specialblack" Name="Black" ColorEditable="false" ColorRemovable="false" Visible="true"/>'
     + '<Color Self="Color/Paper" Model="Process" Space="CMYK" ColorValue="0 0 0 0" ColorOverride="Specialpaper" Name="Paper" ColorEditable="true" ColorRemovable="false" Visible="true"/>'
     + '<Swatch Self="Swatch/None" Name="None" ColorEditable="false" ColorRemovable="false" Visible="true"/>';
-  return { path: 'Resources/Graphic.xml', content: part('Graphic', `${fixed}${colourXml('Primary', theme.primary)}${colourXml('Accent', theme.accent)}${colourXml('Tint', theme.tint)}${colourXml('Text', theme.text)}`) };
+  return { path: 'Resources/Graphic.xml', content: part('Graphic', `${fixed}${colourXml('Primary', theme.primary)}${colourXml('Accent', theme.accent)}${colourXml('Tint', theme.tint)}${colourXml('Text', theme.text)}${colourXml(IDML_QR_SWATCH, PUBLICATION_QR_INK)}`) };
 }
 
 function fontsPart(document: LayoutDocument): IdmlPart {

@@ -17,7 +17,7 @@
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
-    "src/i18n/generated/routes/email__preferences__token.el.json": "97da34811e6805fda08a53d0cb73f09b2e6fb0f969db1e9cf874b428e5cab498",
+    "src/i18n/generated/routes/email__preferences__token.el.json": "10af573ed743aedc7634b9afb999c7f281c4cf3f7db6dfc6e34f90a2b3559a4b",
     "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
@@ -50,7 +50,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "75c179fc0d473ebff5e7b759acde4b7d4e3236f3bbff4b2c647ee29e2ccf8a4d",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "b0321d9dae3dfae38270e12fb129ec6b3bd175ef4063005258896a44cf2f225f",
-    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "b3fe50928805e2bb7e1465bee0abfeb81ac7c78540bccd2efbbb74e954078702",
+    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "a2818a372500627f19a83a3359126fe3e7865675478b73e0238613567032eded",
     "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "64338e6f77964cbe955770503ed51b4624cb89b5f3e9f181f212e4535c79b757",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
@@ -208,7 +208,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a96f18658432c90fa952078140ff95ffd333fd10f13ad60870ea9a78179cfd84",
+  "inputsSha256": "55acd2d002301a48d9cbfdd36493734e4cbca11a6e6c914bcb46d2fe5d4bc74b",
   "languages": [
     "el"
   ],
@@ -2673,6 +2673,7 @@
             "account.notificationSettings.categories.network.title",
             "account.notificationSettings.categories.procurement.aiLowConfidence",
             "account.notificationSettings.categories.procurement.approvalNeeded",
+            "account.notificationSettings.categories.procurement.brandGrantExpiring",
             "account.notificationSettings.categories.procurement.poApproved",
             "account.notificationSettings.categories.procurement.poOverdue",
             "account.notificationSettings.categories.procurement.quoteDeadlineApproaching",
@@ -11698,6 +11699,7 @@
             "publishing.report.missingSelection",
             "publishing.report.nonCmyk",
             "publishing.report.overlappingText",
+            "publishing.report.printedQr",
             "publishing.report.title",
             "publishing.report.undersizedText",
             "publishing.report.unpriced",
@@ -40061,7 +40063,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1292010
+    "sliceBytes": 1292467
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

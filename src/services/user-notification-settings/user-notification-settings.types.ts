@@ -323,6 +323,8 @@ export interface ProcurementNotificationSettings {
    * τον απέρριπτε (κόκκινο Ρ1 στο `notification-preference-policy.test.ts`).
    */
   supplyConnection: boolean;
+  /** ADR-923 §16 — η εγκεκριμένη μάρκα του χώρου λήγει (30 · 7 ημέρες · σήμερα) ή έληξε. */
+  brandGrantExpiring: boolean;
 }
 
 /**
@@ -553,6 +555,7 @@ export const DEFAULT_PROCUREMENT_SETTINGS: ProcurementNotificationSettings = {
   aiLowConfidence: true,
   vendorCreated: true,
   supplyConnection: true,
+  brandGrantExpiring: true,
 };
 
 /** 💬 ADR-867 Β6 — ανοιχτά: είναι **συνομιλία** με πελάτη/γραφείο, όχι ενημερωτικό δελτίο. */

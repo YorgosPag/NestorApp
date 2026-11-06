@@ -1026,6 +1026,13 @@
       "none": "The buyer answered. The handover needs no further action."
     }
   },
+  "brandExpiry": {
+    "soonTitle": "Your brand \"{brand}\" expires in {days, plural, one {# day} other {# days}}",
+    "d0Title": "Your brand \"{brand}\" expires today",
+    "expiredTitle": "Your brand \"{brand}\" has expired",
+    "renewBody": "Upload new evidence from the catalog settings so the brand stays on your public page.",
+    "expiredBody": "The brand no longer shows on your public page. Upload new evidence from the catalog settings."
+  },
   "supplyConnection": {
     "requestedTitle": "{who} requests a connection to your catalogue",
     "acceptedTitle": "{who} accepted the connection to your catalogue",

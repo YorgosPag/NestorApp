@@ -162,6 +162,18 @@ export function renditionUseOf(profile: PublicationPdfProfile): 'print' | 'web' 
 }
 
 /** Όλες οι εικόνες του εγγράφου, μία φορά η καθεμία — ό,τι πρέπει να φτάσει στον φάκελο εργασίας. */
+/**
+ * Πόσα QR τυπώνει **το ίδιο το έγγραφο** (ADR-923 §5.13 Σ7 κενό γ): μετριέται από τη διάταξη που πάει στη μηχανή, όχι
+ * από τις διευθύνσεις που ζητήθηκαν, ώστε ο αριθμός της αναφοράς να είναι ό,τι βρίσκεται στο χαρτί.
+ */
+export function countLayoutQrCodes(document: Pick<LayoutDocument, 'sections'>): number {
+  let count = 0;
+  for (const section of document.sections) {
+    for (const block of section.blocks) if (block.kind === 'heading' && block.qr) count += 1;
+  }
+  return count;
+}
+
 export function collectLayoutAssetIds(document: Pick<LayoutDocument, 'sections'>): string[] {
   const ids = new Set<string>();
   for (const section of document.sections) {

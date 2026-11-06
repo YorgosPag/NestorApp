@@ -67,7 +67,12 @@ export function isExpiryAlertStage(value: unknown): value is ExpiryAlertStage {
   return typeof value === 'string' && (EXPIRY_ALERT_STAGES as readonly string[]).includes(value);
 }
 
-function documentStageOf(expiresOn: string, asOf: string, leadDays: number | null): ExpiryAlertStage | null {
+/**
+ * Η **μία** κρίση «πόσο απέχει αυτή η ημέρα λήξης από σήμερα, σε σκαλιά» (`YYYY-MM-DD`, η τελευταία ημέρα μέσα).
+ * Τη ρωτά και το μητρώο λήξεων και κάθε άλλη λήξη με ημερομηνία (π.χ. η κατοχή μάρκας, ADR-923 §16), ώστε τα σκαλιά να
+ * ζουν σε ένα σημείο. `leadDays` > 30 προσθέτει το `lead`· `null` = μόνο τα σταθερά σκαλιά.
+ */
+export function expiryStageOfDate(expiresOn: string, asOf: string, leadDays: number | null): Exclude<ExpiryAlertStage, 'missing'> | null {
   if (expiresOn < asOf) return 'expired';
   for (const [stage, days] of DAY_STEPS) {
     const until = addDaysToDateKey(asOf, days);
@@ -82,7 +87,7 @@ function documentStageOf(expiresOn: string, asOf: string, leadDays: number | nul
 export function expiryAlertStageOf(row: RegistryRow, asOf: string): ExpiryAlertStage | null {
   if (row.kind === 'gap') return 'missing';
   if (row.state === 'superseded' || row.expiry.expiresOn === null) return null;
-  return documentStageOf(row.expiry.expiresOn, asOf, documentKindSpec(row.document.kind).renewalLeadDays);
+  return expiryStageOfDate(row.expiry.expiresOn, asOf, documentKindSpec(row.document.kind).renewalLeadDays);
 }
 
 /** Όλες οι γραμμές σε στάδιο, σε **σταθερή** σειρά ταυτότητας (για σταθερό αποτύπωμα). */
@@ -97,10 +102,15 @@ export function currentExpiryAlerts(rows: readonly RegistryRow[], asOf: string):
     .sort((a, b) => a.rowId.localeCompare(b.rowId));
 }
 
+/** Το `stage` είναι **πιο επείγον** από το ήδη ειπωμένο; Τίποτα ειπωμένο ⇒ ναι. Η σειρά του `EXPIRY_ALERT_STAGES` είναι η κατάταξη. */
+export function isMoreUrgentExpiryStage(stage: ExpiryAlertStage, said: ExpiryAlertStage | null): boolean {
+  return said === null || (STAGE_RANK.get(stage) ?? 0) > (STAGE_RANK.get(said) ?? 0);
+}
+
 /** Πέρασε σε νέο στάδιο; Νέα γραμμή · άλλη λήξη (ανανέωση) · ή στάδιο **πιο επείγον** από το ειπωμένο. */
 function advanced(alert: ExpiryAlert, said: AlertLedgerEntry | undefined): boolean {
   if (said === undefined || said.expiresOn !== alert.expiresOn) return true;
-  return (STAGE_RANK.get(alert.stage) ?? 0) > (STAGE_RANK.get(said.stage) ?? 0);
+  return isMoreUrgentExpiryStage(alert.stage, said.stage);
 }
 
 /** Οι **ακμές**: οι γραμμές που έχουν κάτι νέο να πουν. Κενό ⇒ σιωπή. */

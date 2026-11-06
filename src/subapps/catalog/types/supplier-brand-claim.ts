@@ -16,11 +16,20 @@ export type SupplierBrandClaimStatus = (typeof SUPPLIER_BRAND_CLAIM_STATUSES)[nu
 
 export const MAX_BRAND_NAME_LENGTH = 120;
 
+/** Τα σκαλιά της ειδοποίησης πριν από τη λήξη (§16): το ίδιο λεξιλόγιο με το μητρώο λήξεων, χωρίς `lead` και `missing`. */
+export const BRAND_EXPIRY_NOTICE_STAGES = ['d30', 'd7', 'd0', 'expired'] as const;
+export type BrandExpiryNoticeStage = (typeof BRAND_EXPIRY_NOTICE_STAGES)[number];
+
 export interface SupplierBrandGrant {
   readonly relation: SupplierBrandRelation;
   readonly validUntil: string;
   readonly grantedAt: string;
   readonly grantedBy: string;
+  /**
+   * Το πιο επείγον σκαλί που έχει ήδη ειπωθεί για **αυτό** το δικαίωμα. Ζει μέσα στο `grant`, άρα η ανανέωση (νέο `grant`)
+   * ξαναρχίζει μόνη της και η ανάκληση το σβήνει μαζί του. Απόν ⇒ τίποτα δεν ειπώθηκε.
+   */
+  readonly expiryNotice?: BrandExpiryNoticeStage;
 }
 
 /** `supplier_brand_claims/{id}`: ένα έγγραφο ανά (χώρος, μάρκα). Νέα αίτηση για την ίδια μάρκα το ξαναγράφει. */

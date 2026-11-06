@@ -133,6 +133,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'aiLowConfidence', labelKey: 'common-account:account.notificationSettings.categories.procurement.aiLowConfidence' },
       // ADR-923 §5.12 — αιτήματα και αποδοχές σύνδεσης με πελάτες και προμηθευτές.
       { key: 'supplyConnection', labelKey: 'common-account:account.notificationSettings.categories.procurement.supplyConnection' },
+      // ADR-923 §16 — η εγκεκριμένη μάρκα λήγει ή έληξε.
+      { key: 'brandGrantExpiring', labelKey: 'common-account:account.notificationSettings.categories.procurement.brandGrantExpiring' },
       { key: 'vendorCreated', labelKey: 'common-account:account.notificationSettings.categories.procurement.vendorCreated' },
     ],
   },

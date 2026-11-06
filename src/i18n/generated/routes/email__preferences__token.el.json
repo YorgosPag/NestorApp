@@ -56,6 +56,7 @@
           "procurement": {
             "aiLowConfidence": "Σάρωση προσφοράς θέλει έλεγχο",
             "approvalNeeded": "Παραγγελία προς έγκριση",
+            "brandGrantExpiring": "Η εγκεκριμένη μάρκα σας λήγει ή έληξε",
             "poApproved": "Παραγγελία εγκρίθηκε",
             "poOverdue": "Καθυστερημένη παραγγελία",
             "quoteDeadlineApproaching": "Πλησιάζει η προθεσμία προσφορών",

@@ -242,6 +242,11 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROCUREMENT_QUOTE_REQUESTED: 'procurement.quoteRequested',
   /**
+   * ADR-923 §16 — **η μάρκα σας λήγει** (30 · 7 ημέρες · σήμερα) ή **έληξε**: μετά τη λήξη η μάρκα φεύγει από τη δημόσια
+   * σελίδα. Προς τους ενεργούς διαχειριστές του χώρου, ένα μήνυμα ανά σκαλί (`supplier-brand-expiry.ts`).
+   */
+  PROCUREMENT_BRAND_GRANT_EXPIRING: 'procurement.brandGrantExpiring',
+  /**
    * ADR-867 Β6 — **νέο μήνυμα σε νήμα συνεργατών**. Ταυτότητα = **το διάστημα αδιάβαστων** του
    * παραλήπτη (`lastReadAt`), όχι το μήνυμα: δέκα μηνύματα πριν ανοίξει το νήμα = **μία** ειδοποίηση
    * (το ένα σήμα ανά συνομιλία του Slack/Teams). Δες `network-notification-plan.ts`.
@@ -621,6 +626,12 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_BRAND_GRANT_EXPIRING]: {
+    category: 'procurement',
+    settingKey: 'brandGrantExpiring',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
   [NOTIFICATION_EVENT_TYPES.PROCUREMENT_APPROVAL_NEEDED]: {
     category: 'procurement',
     settingKey: 'approvalNeeded',
@@ -709,6 +720,8 @@ export const NOTIFICATION_ENTITY_TYPES = {
   ENGAGEMENT: 'engagement',
   /** ADR-923 §5.12 — η σχέση προμήθειας (`supply_relationships/{id}`). */
   SUPPLY_RELATIONSHIP: 'supply_relationship',
+  /** ADR-923 §16 — η κατοχή μάρκας (`supplier_brand_claims/{id}`). */
+  SUPPLIER_BRAND_CLAIM: 'supplier_brand_claim',
 } as const;
 
 export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof typeof NOTIFICATION_ENTITY_TYPES];

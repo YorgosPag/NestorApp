@@ -7,7 +7,7 @@
  * @module subapps/catalog/publishing/idml-story
  */
 
-import type { LayoutBlock, LayoutCell, LayoutDocument, LayoutGridCard, LayoutImageRef, LayoutInline, LayoutTable } from './layout-model';
+import type { LayoutBlock, LayoutCell, LayoutDocument, LayoutGridCard, LayoutImageRef, LayoutInline, LayoutQrCode, LayoutTable } from './layout-model';
 
 export const MM_TO_PT = 72 / 25.4;
 export const IDML_STYLES = ['Body', 'Heading1', 'Heading2', 'Heading3', 'Bullet', 'Cell', 'CellHead', 'Footer'] as const;
@@ -140,18 +140,48 @@ function tocXml(block: Extract<LayoutBlock, { kind: 'toc' }>, document: LayoutDo
 
 const HEADING_STYLE: Readonly<Record<1 | 2 | 3, IdmlStyle>> = { 1: 'Heading1', 2: 'Heading2', 3: 'Heading3' };
 
+/** Το δείγμα του μελανιού του QR στο `Graphic.xml`: ένα, από το `PUBLICATION_QR_INK`, όχι το [Black] που τυπώνει πάνω από ό,τι βρει. */
+export const IDML_QR_SWATCH = 'QrInk';
+
+const pt = (value: number): number => Math.round(value * 1000) / 1000;
+
+function closedPath(x0: number, y0: number, x1: number, y1: number): string {
+  const point = (x: number, y: number) => `<PathPointType Anchor="${pt(x)} ${pt(y)}" LeftDirection="${pt(x)} ${pt(y)}" RightDirection="${pt(x)} ${pt(y)}"/>`;
+  return `<GeometryPathType PathOpen="false"><PathPointArray>${point(x0, y0)}${point(x0, y1)}${point(x1, y1)}${point(x1, y0)}</PathPointArray></GeometryPathType>`;
+}
+
 /**
- * Η επικεφαλίδα, και κάτω της η διεύθυνση του QR ως κείμενο (§5.13 Σ7). Το IDML δεν έχει στοιχείο QR: ο σχεδιαστής το
- * γεννά από αυτό το κείμενο με το «Generate QR Code» του InDesign, και η διεύθυνση μένει η ίδια με του PDF.
+ * Το QR ως **διάνυσμα του InDesign** (§5.13 Σ7 κενό δ): ίδιες σειρές μονάδων με το Typst (`qr-symbol`), ίδιο μέγεθος.
+ * Ομάδα δύο σχημάτων, στη ροή του κειμένου όπως η εικόνα: (1) ορθογώνιο χαρτιού στο μέγεθος του συμβόλου **με** τη ζώνη
+ * ησυχίας, ώστε η ζώνη να μένει λευκή όπου κι αν το μετακινήσει ο σχεδιαστής· (2) ένα σύνθετο σχήμα, μία κλειστή διαδρομή
+ * ανά σειρά σκούρων μονάδων. Οι σειρές δεν επικαλύπτονται, άρα ο κανόνας γεμίσματος δεν αλλάζει τίποτα.
  */
-function headingXml(block: Extract<LayoutBlock, { kind: 'heading' }>): string {
+function qrGroupXml(qr: LayoutQrCode, ctx: StoryContext): string {
+  const module = qr.moduleMm * MM_TO_PT;
+  const quiet = qr.quietModules * module;
+  const side = (qr.modules + 2 * qr.quietModules) * module;
+  const runs = qr.runs.map(([row, column, length]) => closedPath(quiet + column * module, quiet + row * module, quiet + (column + length) * module, quiet + (row + 1) * module)).join('');
+  const shape = (tag: string, fill: string, paths: string) =>
+    `<${tag} Self="${ctx.nextId()}" ContentType="Unassigned" FillColor="${fill}" StrokeColor="Swatch/None" StrokeWeight="0" AppliedObjectStyle="ObjectStyle/$ID/[None]" ItemTransform="1 0 0 1 0 0"><Properties><PathGeometry>${paths}</PathGeometry></Properties></${tag}>`;
+  return `<Group Self="${ctx.nextId()}" AppliedObjectStyle="ObjectStyle/$ID/[None]" ItemTransform="1 0 0 1 0 0">`
+    + shape('Rectangle', 'Color/Paper', closedPath(0, 0, side, side))
+    + shape('Polygon', `Color/${IDML_QR_SWATCH}`, runs)
+    + '</Group>';
+}
+
+/**
+ * Η επικεφαλίδα, το σύμβολο QR ως διάνυσμα, και κάτω του η διεύθυνση ως κείμενο (§5.13 Σ7): ο άνθρωπος τη διαβάζει
+ * και ο σχεδιαστής την ελέγχει, και είναι η ίδια με του PDF.
+ */
+function headingXml(block: Extract<LayoutBlock, { kind: 'heading' }>, ctx: StoryContext): string {
   const title = paragraph(HEADING_STYLE[block.level], textRun(block.text));
-  return block.qr ? title + paragraph('Body', textRun(`${block.qr.caption}: ${block.qr.url}`)) : title;
+  if (!block.qr) return title;
+  return title + paragraph('Body', run(qrGroupXml(block.qr, ctx))) + paragraph('Body', textRun(`${block.qr.caption}: ${block.qr.url}`));
 }
 
 function blockXml(block: LayoutBlock, ctx: StoryContext, document: LayoutDocument): string {
   switch (block.kind) {
-    case 'heading': return headingXml(block);
+    case 'heading': return headingXml(block, ctx);
     case 'paragraph': return paragraph('Body', block.inlines.map(inlineRun).join(''));
     case 'bullets': return block.items.map((item) => paragraph('Bullet', item.map(inlineRun).join(''))).join('');
     case 'image': return paragraph('Body', run(imageFrame(block.image, ctx)));

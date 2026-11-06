@@ -10,7 +10,7 @@ import 'server-only';
  * 🔑 Κάθε αλλαγή δικαιώματος ακυρώνει τη μνήμη αμέσως μετά το commit και πριν από το ίχνος. Η λήξη φτάνει τη σελίδα το πολύ σε ένα παράθυρο.
  */
 
-import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore, QueryDocumentSnapshot, Transaction } from 'firebase-admin/firestore';
 
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -26,7 +26,9 @@ import {
   type SupplierBrandRefusal,
   type SupplierBrandTransition,
 } from '@/subapps/catalog/public/supplier-brand-claim-rules';
+import { brandExpiryNoticeDue, withBrandExpiryNotice } from '@/subapps/catalog/public/supplier-brand-expiry';
 import type {
+  BrandExpiryNoticeStage,
   PublicSupplierBrand,
   SupplierBrandClaimRecord,
   SupplierBrandClaimStatus,
@@ -155,6 +157,47 @@ export async function listSupplierBrandClaims(db: AdminFirestore, status: Suppli
   // tenant-scope-exempt: η ουρά είναι της πλατφόρμας, μόνο `super_admin`.
   const snap = await claims(db).where('status', '==', status).limit(200).get();
   return snap.docs.map((doc) => doc.data() as SupplierBrandClaimRecord).sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+}
+
+/**
+ * Σημειώνει ότι το σκαλί λήξης `stage` **ειπώθηκε** (§16). CAS: ξανακρίνει το φρέσκο έγγραφο με την ίδια `asOf` και γράφει
+ * μόνο αν το σκαλί οφείλεται ακόμη, άρα ανανέωση, ανάκληση ή δεύτερη σάρωση στο μεταξύ ⇒ καμία εγγραφή. Γράφεται μόνο το
+ * `grant.expiryNotice`: λογιστική της ειδοποίησης, όχι αλλαγή της κατοχής, γι' αυτό χωρίς γραμμή ιστορικού και χωρίς
+ * ακύρωση της δημόσιας μνήμης (η ειδοποίηση είναι η καταγραφή της).
+ */
+export async function recordBrandExpiryNotice(db: AdminFirestore, claimId: string, stage: BrandExpiryNoticeStage, asOf: string): Promise<boolean> {
+  const ref = claims(db).doc(claimId);
+  return db.runTransaction(async (tx) => {
+    const current = ((await tx.get(ref)).data() as SupplierBrandClaimRecord | undefined) ?? null;
+    if (current === null || current.grant === null || brandExpiryNoticeDue(current.grant, asOf) !== stage) return false;
+    tx.update(ref, { grant: withBrandExpiryNotice(current.grant, stage) });
+    return true;
+  });
+}
+
+export interface BrandGrantPage {
+  readonly records: readonly SupplierBrandClaimRecord[];
+  /** Ο δρομέας της επόμενης σελίδας· `null` ⇒ τέλος. */
+  readonly next: QueryDocumentSnapshot | null;
+}
+
+/**
+ * Μία σελίδα των δικαιωμάτων που **μπορεί** να έχουν κάτι να πουν σήμερα: λήξη από `from` έως `until` (`validUntil`, ISO).
+ * Κρίση πλατφόρμας, πάνω από τους χώρους. Ένα πεδίο εύρους, ταξινόμηση στο ίδιο πεδίο: ο αυτόματος δείκτης ενός πεδίου
+ * αρκεί. Δρομέας στο έγγραφο (όχι στην τιμή), γιατί πολλά δικαιώματα λήγουν στο ίδιο `…T23:59:59.000Z`.
+ */
+export async function readBrandGrantsExpiringPage(
+  db: AdminFirestore,
+  window: { readonly from: string; readonly until: string },
+  pageSize: number,
+  after: QueryDocumentSnapshot | null,
+): Promise<BrandGrantPage> {
+  let query = claims(db).where('grant.validUntil', '>=', window.from).where('grant.validUntil', '<=', window.until).orderBy('grant.validUntil').limit(pageSize);
+  if (after !== null) query = query.startAfter(after);
+  // tenant-scope-exempt: η σάρωση λήξεων είναι της πλατφόρμας (cron), πάνω από όλους τους χώρους.
+  const snap = await query.get();
+  const next = snap.size === pageSize ? snap.docs[snap.size - 1] : null;
+  return { records: snap.docs.map((doc) => doc.data() as SupplierBrandClaimRecord), next };
 }
 
 export async function readBrandClaim(db: AdminFirestore, claimId: string): Promise<SupplierBrandClaimRecord | null> {

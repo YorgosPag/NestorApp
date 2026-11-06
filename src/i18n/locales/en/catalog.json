@@ -1258,6 +1258,7 @@
       "lowResolution": "{count, plural, one {# image below 300 dpi} other {# images below 300 dpi}}",
       "nonCmyk": "{count, plural, one {# image not in CMYK} other {# images not in CMYK}}",
       "fencedChange": "{count, plural, one {# price change above the limit} other {# price changes above the limit}}",
+      "printedQr": "{count, plural, one {# QR code printed to the public page: scan one from paper before sending to print} other {# QR codes printed to the public page: scan one from paper before sending to print}}",
       "untransposed": "{count, plural, one {# table did not fit transposed} other {# tables did not fit transposed}}",
       "overlappingText": "{count, plural, one {# place where text overlaps other text} other {# places where text overlaps other text}}",
       "clippedText": "{count, plural, one {# text runs off the paper} other {# texts run off the paper}}",

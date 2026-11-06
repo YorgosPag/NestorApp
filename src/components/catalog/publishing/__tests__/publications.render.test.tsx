@@ -120,6 +120,18 @@ describe('Εκδότης καταλόγου — εκδόσεις', () => {
     ]);
   });
 
+  it('τα τυπωμένα QR λέγονται με τον αριθμό τους, ώστε να σαρωθεί ένα πριν το τυπογραφείο (§5.13 Σ7 κενό γ)', () => {
+    render(<PublicationRunList runs={[{ ...baseRun, report: { ...baseRun.report, printedQrCount: 7 } }]} revalidate={jest.fn()} />);
+    const report = screen.getByRole('region', { name: 'publishing.report.title' });
+    const line = within(report).getAllByRole('listitem').find((item) => item.textContent?.startsWith('publishing.report.printedQr'));
+    expect(line?.textContent).toContain('7');
+  });
+
+  it('έκδοση πριν από το πεδίο (χωρίς `printedQrCount`) δεν βγάζει γραμμή QR', () => {
+    render(<PublicationRunList runs={[baseRun]} revalidate={jest.fn()} />);
+    expect(screen.queryByText(/publishing\.report\.printedQr/)).not.toBeInTheDocument();
+  });
+
   it('🔴 έλεγχος διάταξης που δεν έγινε λέγεται, ακόμη κι όταν όλοι οι μετρητές είναι μηδέν', () => {
     const counts = { incompleteSkuCount: 0, unpricedSkuCount: 0, lowResolutionImageCount: 0, nonCmykImageCount: 0, overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 };
     render(<PublicationRunList runs={[{ ...baseRun, report: { ...counts, layoutChecked: false } }]} revalidate={jest.fn()} />);

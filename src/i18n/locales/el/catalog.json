@@ -1258,6 +1258,7 @@
       "lowResolution": "{count, plural, one {# εικόνα κάτω από 300 dpi} other {# εικόνες κάτω από 300 dpi}}",
       "nonCmyk": "{count, plural, one {# εικόνα όχι σε CMYK} other {# εικόνες όχι σε CMYK}}",
       "fencedChange": "{count, plural, one {# αλλαγή τιμής πάνω από το όριο} other {# αλλαγές τιμών πάνω από το όριο}}",
+      "printedQr": "{count, plural, one {# QR τυπώθηκε προς τη δημόσια σελίδα: σαρώστε ένα από το χαρτί πριν το τυπογραφείο} other {# QR τυπώθηκαν προς τη δημόσια σελίδα: σαρώστε ένα από το χαρτί πριν το τυπογραφείο}}",
       "untransposed": "{count, plural, one {# πίνακας χωρίς αναστροφή} other {# πίνακες χωρίς αναστροφή}}",
       "overlappingText": "{count, plural, one {# σημείο όπου κείμενο πατά άλλο κείμενο} other {# σημεία όπου κείμενο πατά άλλο κείμενο}}",
       "clippedText": "{count, plural, one {# κείμενο βγαίνει έξω από το χαρτί} other {# κείμενα βγαίνουν έξω από το χαρτί}}",

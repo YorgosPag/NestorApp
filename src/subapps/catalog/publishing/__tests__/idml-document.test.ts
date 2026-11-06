@@ -5,7 +5,8 @@
  */
 import { buildZip } from '@/lib/zip/zip-builder';
 import { idmlParts, IDML_MIMETYPE } from '../idml-document';
-import { placeTableCells } from '../idml-story';
+import { IDML_QR_SWATCH, placeTableCells } from '../idml-story';
+import { PUBLICATION_QR_INK } from '../publication-qr';
 import type { LayoutCell, LayoutDocument, LayoutTable } from '../layout-model';
 
 const colour = { rgb: '#003366', cmyk: [100, 70, 0, 40] as const };
@@ -84,6 +85,26 @@ describe('το κείμενο', () => {
     expect(text).toContain('Με QR');
     expect(text).toContain('Σαρώστε: https://nestorconstruct.gr/q/cpm_a&b');
     expect(text.indexOf('Σαρώστε')).toBeGreaterThan(text.indexOf('Με QR'));
+  });
+
+  it('§5.13 Σ7 κενό δ: το QR φτάνει ως ΔΙΑΝΥΣΜΑ, μία κλειστή διαδρομή ανά σειρά μονάδων, πάνω σε χαρτί με τη ζώνη ησυχίας', () => {
+    const group = story().querySelector('Group');
+    if (!group) throw new Error('group');
+    const [paper, symbol] = [...group.children];
+    expect([paper.tagName, paper.getAttribute('FillColor'), symbol.tagName, symbol.getAttribute('FillColor')]).toEqual(['Rectangle', 'Color/Paper', 'Polygon', `Color/${IDML_QR_SWATCH}`]);
+    const anchors = (node: Element) => [...node.querySelectorAll('PathPointType')].map((point) => point.getAttribute('Anchor'));
+    const side = Math.round((21 + 2 * 4) * 0.5 * (72 / 25.4) * 1000) / 1000;
+    expect(anchors(paper)).toEqual(['0 0', `0 ${side}`, `${side} ${side}`, `${side} 0`]);
+    const module = 0.5 * (72 / 25.4);
+    const at = (value: number) => String(Math.round(value * 1000) / 1000);
+    expect(symbol.querySelectorAll('GeometryPathType')).toHaveLength(1);
+    expect(anchors(symbol)[0]).toBe(`${at(4 * module)} ${at(4 * module)}`);
+    expect(anchors(symbol)[2]).toBe(`${at(11 * module)} ${at(5 * module)}`);
+  });
+
+  it('🔴 το μελάνι του QR είναι ΕΝΑ δείγμα, από το ίδιο PUBLICATION_QR_INK με το PDF', () => {
+    const swatch = parse(contentOf('Resources/Graphic.xml')).querySelector(`Color[Self="Color/${IDML_QR_SWATCH}"]`);
+    expect(swatch?.getAttribute('ColorValue')).toBe(PUBLICATION_QR_INK.cmyk.join(' '));
   });
 
   it('🔴 ο πίνακας μένει πραγματικός: επαναλαμβανόμενη κεφαλίδα, πλήθη που συμφωνούν, στήλες στο ωφέλιμο πλάτος', () => {

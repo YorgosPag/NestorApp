@@ -15,7 +15,7 @@ import enCatalog from '@/i18n/locales/en/catalog.json';
 import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
 import { CATALOG_RENDITION_RECIPE_VERSION } from '@/subapps/catalog/renditions/catalog-renditions';
 import { composePublication, type PublicationComposeWords } from '@/subapps/catalog/publishing/compose-publication';
-import { collectLayoutAssetIds, type LayoutDocument, type LayoutQrCode } from '@/subapps/catalog/publishing/layout-model';
+import { collectLayoutAssetIds, countLayoutQrCodes, type LayoutDocument, type LayoutQrCode } from '@/subapps/catalog/publishing/layout-model';
 import { productsInScope, selectPublicationContent, type PublicationDataSet, type StoredProduct } from '@/subapps/catalog/publishing/publication-chapters';
 import { publicationFontRefusal } from '@/subapps/catalog/publishing/publication-font-rights';
 import { publicationInputHash, type DataVersionRef } from '@/subapps/catalog/publishing/publication-input-hash';
@@ -48,7 +48,7 @@ export interface PublicationSnapshot {
   readonly audienceKey: string;
   readonly priced: boolean;
   readonly dataAsOfEpoch: number;
-  readonly report: Pick<PublicationReport, 'incompleteSkuCount' | 'unpricedSkuCount' | 'fencedPriceChangeCount'>;
+  readonly report: Pick<PublicationReport, 'incompleteSkuCount' | 'unpricedSkuCount' | 'fencedPriceChangeCount' | 'printedQrCount'>;
   readonly assets: ReadonlyMap<string, StoredCatalogRecord<CatalogAssetDefinition>>;
   /** Οι όψεις της γραμματοσειράς προμηθευτή· κενό ⇒ της πλατφόρμας. */
   readonly fonts: readonly StoredCatalogRecord<CatalogAssetDefinition>[];
@@ -206,5 +206,5 @@ export async function readPublicationSnapshot(scope: CatalogTx, recipe: Publicat
   });
   const dataAsOfEpoch = latestEpoch([...data.products, ...data.models, ...data.families] as readonly { readonly updatedAt?: string }[]);
   const refusal = links.refusedModelIds.length > 0 ? 'qrOriginNotPublic' : null;
-  return { document, inputHash, audienceKey: sheet.audienceKey, priced: sheet.priceOf !== null, dataAsOfEpoch, report: { ...selection.report, fencedPriceChangeCount: changes.fencedCount }, assets, fonts, refusal };
+  return { document, inputHash, audienceKey: sheet.audienceKey, priced: sheet.priceOf !== null, dataAsOfEpoch, report: { ...selection.report, fencedPriceChangeCount: changes.fencedCount, printedQrCount: countLayoutQrCodes(document) }, assets, fonts, refusal };
 }
