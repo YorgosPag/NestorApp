@@ -52,8 +52,28 @@ describe('ADR-931 — toCommonSpacePayload', () => {
       name: 'Δώμα', buildingId: 'b1', category: 'roof_terrace', legalNature: 'exclusive_use',
       exclusiveUsePropertyIds: ['p7'], floorId: 'f9', area: 80, code: 'Δ-1',
     });
-    expect(toCommonSpacePayload(draftFromCommonSpace(stored))).toMatchObject({
+    expect(toCommonSpacePayload(draftFromCommonSpace(stored, ','))).toMatchObject({
       category: 'roof_terrace', legalNature: 'exclusive_use', exclusiveUsePropertyIds: ['p7'], floorId: 'f9', area: 80, code: 'Δ-1',
     });
+  });
+});
+
+describe('ADR-931 — draftFromCommonSpace: εμβαδόν στο δεκαδικό της γλώσσας', () => {
+  const stored = mapCommonSpaceDoc('c2', { name: 'Πυλωτή', buildingId: 'b1', category: 'pilotis', legalNature: 'common_use', area: 12.5 });
+
+  it.each([
+    [',', '12,5'],
+    ['.', '12.5'],
+  ])('διαχωριστικό «%s» ⇒ «%s»', (separator, expected) => {
+    expect(draftFromCommonSpace(stored, separator).area).toBe(expected);
+  });
+
+  it('round-trip el: «12,5» στη φόρμα ⇒ 12.5 στο payload', () => {
+    expect(toCommonSpacePayload(draftFromCommonSpace(stored, ',')).area).toBe(12.5);
+  });
+
+  it('χωρίς εμβαδόν ⇒ κενό πεδίο', () => {
+    const bare = mapCommonSpaceDoc('c3', { name: 'Κλιμακοστάσιο', buildingId: 'b1', category: 'stairwell', legalNature: 'common_use' });
+    expect(draftFromCommonSpace(bare, ',').area).toBe('');
   });
 });

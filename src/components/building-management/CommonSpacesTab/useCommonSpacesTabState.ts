@@ -15,6 +15,8 @@ import { useMutationFailureFeedback } from '@/hooks/useMutationFailureFeedback';
 import { useFirestoreCommonSpaces } from '@/hooks/useFirestoreCommonSpaces';
 import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import { isRetired } from '@/lib/firestore/trashed-status';
+import { getCurrentLocale } from '@/lib/intl-utils';
+import { resolveDecimalSeparator } from '@/components/ui/numeric-field';
 import { createCommonSpace, deleteCommonSpace, updateCommonSpace } from '@/services/common-space-mutation-gateway';
 import type { CommonSpace } from '@/types/common-space';
 import {
@@ -58,7 +60,7 @@ function useCommonSpaceForm(buildingId: string, { t, success, reportFailure }: F
   const [saving, setSaving] = useState(false);
 
   const openCreate = useCallback(() => setForm({ editing: null, draft: EMPTY_COMMON_SPACE_DRAFT, error: null }), []);
-  const openEdit = useCallback((space: CommonSpace) => setForm({ editing: space, draft: draftFromCommonSpace(space), error: null }), []);
+  const openEdit = useCallback((space: CommonSpace) => setForm({ editing: space, draft: draftFromCommonSpace(space, resolveDecimalSeparator(getCurrentLocale())), error: null }), []);
   const closeForm = useCallback(() => setForm(null), []);
   const changeDraft = useCallback((patch: Partial<CommonSpaceDraft>) =>
     setForm((current) => (current ? { ...current, draft: { ...current.draft, ...patch }, error: null } : current)), []);

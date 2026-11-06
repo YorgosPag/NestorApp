@@ -11,6 +11,7 @@ import {
   type CommonSpaceLegalNature,
 } from '@/constants/common-space-categories';
 import { normalizeDecimalString } from '@/lib/number/locale-number';
+import { formatForEditing } from '@/components/ui/numeric-field';
 import type { CommonSpace } from '@/types/common-space';
 import type { CommonSpaceDraftPayload } from '@/services/common-space-mutation-gateway';
 
@@ -40,14 +41,19 @@ export const EMPTY_COMMON_SPACE_DRAFT: CommonSpaceDraft = {
   notes: '',
 };
 
-export function draftFromCommonSpace(space: CommonSpace): CommonSpaceDraft {
+/**
+ * Χώρος → πρόχειρο. Το εμβαδόν γράφεται με το δεκαδικό της γλώσσας (`12,5` στα ελληνικά) μέσω του SSoT
+ * `formatForEditing` (ADR-706/576: χωρίς ομαδοποίηση χιλιάδων ⇒ ό,τι διαχωριστικό πληκτρολογηθεί είναι το δεκαδικό).
+ * Το διαχωριστικό είναι **παράμετρος** ώστε η συνάρτηση να μένει καθαρή· ο καλών το λύνει από την τρέχουσα γλώσσα.
+ */
+export function draftFromCommonSpace(space: CommonSpace, decimalSeparator: string): CommonSpaceDraft {
   return {
     name: space.name,
     category: space.category,
     legalNature: space.legalNature,
     exclusiveUsePropertyIds: space.exclusiveUsePropertyIds ?? [],
     floorId: space.floorId ?? '',
-    area: space.area !== undefined ? String(space.area) : '',
+    area: space.area !== undefined ? formatForEditing(space.area, decimalSeparator) : '',
     code: space.code ?? '',
     notes: space.notes ?? '',
   };
