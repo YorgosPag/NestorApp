@@ -13,7 +13,8 @@
 
 import { z } from 'zod';
 
-import { hasAnyLocalizedText } from '@/i18n/localized-text';
+import { DEFAULT_LANGUAGE } from '@/i18n/languages';
+import { hasAnyLocalizedText, resolveLocalizedText } from '@/i18n/localized-text';
 
 import { quoteIntakeAccepts } from '../schema/validate-supplier-profile';
 import type { CatalogPortfolioProject, CatalogQuoteIntake, CatalogSupplierProfileDefinition } from '../types/supplier-profile';
@@ -51,6 +52,19 @@ const storedPublicProfileSchema = z.union([publicSupplierProfileSchema, publicSu
 
 export type PublicSupplierProfile = z.infer<typeof publicSupplierProfileSchema>;
 export type PublicPortfolioProject = z.infer<typeof publicProjectSchema>;
+
+/**
+ * Ο τίτλος του έργου στη γλώσσα της διεύθυνσης (Ν11 στ). Ο ΕΝΑΣ ορισμός για slug, σελίδα και sitemap, όπως το
+ * `publicModelTitle`: δύο γραφές θα έδιναν δύο κανονικές διευθύνσεις και έναν βρόχο 308.
+ */
+export function publicProjectTitle(project: PublicPortfolioProject): string {
+  return resolveLocalizedText(project.title, DEFAULT_LANGUAGE);
+}
+
+/** Το έργο με αυτό το id, ή `null`: έργο που έφυγε από το προφίλ απαντά όπως το ανύπαρκτο. */
+export function publicProjectOf(profile: PublicSupplierProfile | null, projectId: string): PublicPortfolioProject | null {
+  return profile?.projects.find((project) => project.projectId === projectId) ?? null;
+}
 
 export function publicSupplierProfileFromDocument(raw: unknown, companyId: string): PublicSupplierProfile | null {
   const parsed = storedPublicProfileSchema.safeParse(raw);

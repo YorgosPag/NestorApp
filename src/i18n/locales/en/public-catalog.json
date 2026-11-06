@@ -29,6 +29,12 @@
     "backToSupplier": "All products from this supplier",
     "requestQuote": "Request a quote"
   },
+  "project": {
+    "backToPortfolio": "All projects from this supplier",
+    "by": "By {name}",
+    "year": "Year {year}",
+    "photos": "Photos"
+  },
   "price": {
     "amountPer": "{price} per {quantity} {unit}",
     "amountPerUnit": "{price} per {unit}",

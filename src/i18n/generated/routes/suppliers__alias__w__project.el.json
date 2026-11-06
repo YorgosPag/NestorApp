@@ -1,0 +1,14 @@
+{
+  "public-catalog": {
+    "project": {
+      "backToPortfolio": "Όλα τα έργα του προμηθευτή",
+      "by": "Από {name}",
+      "photos": "Φωτογραφίες",
+      "year": "Έτος {year}"
+    },
+    "supplier": {
+      "about": "Σχετικά",
+      "portfolio": "Έργα"
+    }
+  }
+}

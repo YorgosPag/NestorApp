@@ -11,21 +11,28 @@
 
 import React from 'react';
 
+import { Link } from '@/lib/workspace/navigation';
 import type { PublicCatalogMedia } from '@/subapps/catalog/public/public-catalog-schema';
-import type { PublicPortfolioProject, PublicSupplierProfile } from '@/subapps/catalog/public/public-supplier-profile';
+import { publicProjectRoute, publicSegmentOf } from '@/subapps/catalog/public/public-catalog-routes';
+import { publicProjectTitle, type PublicPortfolioProject, type PublicSupplierProfile } from '@/subapps/catalog/public/public-supplier-profile';
 
 import { usePublicCatalogText } from './public-catalog-text';
 
-function ProjectImage({ image, title, className }: { readonly image: PublicCatalogMedia; readonly title: string; readonly className: string }): React.JSX.Element {
+/** Το `id` της ενότητας «Έργα»: εκεί γυρνά ο σύνδεσμος επιστροφής της σελίδας έργου (Ν11 στ). */
+export const SUPPLIER_PORTFOLIO_ANCHOR = 'portfolio';
+
+/** Μία εικόνα έργου, κοινή για την κάρτα και τη σελίδα έργου. */
+export function ProjectImage({ image, title, className }: { readonly image: PublicCatalogMedia; readonly title: string; readonly className: string }): React.JSX.Element {
   const { text } = usePublicCatalogText();
   return <img src={image.url} alt={text(image.labels) || title} loading="lazy" className={className} />;
 }
 
-function ProjectCard({ project }: { readonly project: PublicPortfolioProject }): React.JSX.Element {
+function ProjectCard({ segment, project }: { readonly segment: string; readonly project: PublicPortfolioProject }): React.JSX.Element {
   const { text } = usePublicCatalogText();
   const title = text(project.title);
   const description = text(project.description);
   const [cover, ...rest] = project.images;
+  const href = publicProjectRoute(segment, publicSegmentOf(publicProjectTitle(project), project.projectId));
   return (
     <li className="rounded-md border">
       <article className="flex flex-col gap-2 p-3">
@@ -35,7 +42,7 @@ function ProjectCard({ project }: { readonly project: PublicPortfolioProject }):
             {rest.map((image) => <li key={image.assetId}><ProjectImage image={image} title={title} className="aspect-square w-full rounded-sm object-cover" /></li>)}
           </ul>
         )}
-        <h3 className="m-0 text-base font-semibold">{title}</h3>
+        <h3 className="m-0 text-base font-semibold"><Link href={href}>{title}</Link></h3>
         {project.year !== null && <p className="m-0 text-sm text-muted-foreground">{project.year}</p>}
         {description !== '' && <p className="m-0 whitespace-pre-line text-sm">{description}</p>}
       </article>
@@ -55,14 +62,14 @@ export function SupplierAbout({ profile }: { readonly profile: PublicSupplierPro
   );
 }
 
-export function SupplierPortfolio({ profile }: { readonly profile: PublicSupplierProfile }): React.JSX.Element | null {
+export function SupplierPortfolio({ segment, profile }: { readonly segment: string; readonly profile: PublicSupplierProfile }): React.JSX.Element | null {
   const { t } = usePublicCatalogText();
   if (profile.projects.length === 0) return null;
   return (
-    <section className="flex flex-col gap-3">
+    <section id={SUPPLIER_PORTFOLIO_ANCHOR} className="flex scroll-mt-20 flex-col gap-3">
       <h2 className="m-0 text-lg font-semibold">{t('supplier.portfolio')}</h2>
       <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3 p-0">
-        {profile.projects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
+        {profile.projects.map((project) => <ProjectCard key={project.projectId} segment={segment} project={project} />)}
       </ul>
     </section>
   );

@@ -58,3 +58,10 @@ export const publicCategoryRoute = (supplierSegment: string, categorySegment: st
 
 export const publicModelRoute = (supplierSegment: string, modelSegment: string): string =>
   `${publicSupplierRoute(supplierSegment)}/p/${encodeURIComponent(modelSegment)}`;
+
+/**
+ * Ένα έργο του portfolio (ADR-923 Ν11 στ). `w` από το *work* (`CreativeWork`), γιατί το `p` το έχει το προϊόν. Ίδια μορφή
+ * `<slug>-<id>` με το μοντέλο: το id (`cprjt_…`) είναι η ταυτότητα, ο τίτλος διακόσμηση.
+ */
+export const publicProjectRoute = (supplierSegment: string, projectSegment: string): string =>
+  `${publicSupplierRoute(supplierSegment)}/w/${encodeURIComponent(projectSegment)}`;

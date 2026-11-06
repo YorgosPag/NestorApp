@@ -112,6 +112,7 @@
     "src/i18n/generated/routes/suppliers__alias.el.json": "cd89dc81264c9c5b8f78862171c971615b4ccb38fddbd229ad403b6a7d156dbe",
     "src/i18n/generated/routes/suppliers__alias__c__category.el.json": "cd89dc81264c9c5b8f78862171c971615b4ccb38fddbd229ad403b6a7d156dbe",
     "src/i18n/generated/routes/suppliers__alias__p__model.el.json": "7d8df0168b46b4917d1b6451238c2f95985880d24ba092d9efe70bb27e83d307",
+    "src/i18n/generated/routes/suppliers__alias__w__project.el.json": "173cc0cebc8298b9e133043e67df548db03d8819f7f11bb497750ca475899852",
     "src/i18n/generated/routes/supply-invite__token.el.json": "4de7e5a2e7be1e7a22c54c367ddf9b7a3d260b5c0326857fb0c69f936c70abd1",
     "src/i18n/generated/routes/supply-request__token.el.json": "4de7e5a2e7be1e7a22c54c367ddf9b7a3d260b5c0326857fb0c69f936c70abd1",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -138,7 +139,7 @@
       "lazyRouteRegistries": "b0bacc3cf337c275819dff6286bb518d8a5cab18c3c9d88d917b33d0adb7076f",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "dffe99dc1595e7fe80e83fe872d818818576f45834581b91434a0d1afbb1aec6",
+      "routeSlices": "e8e26c068462d0017151a7d22a02caf6aa4d3b98ad5eca573aa3101ffd2fc8cd",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -208,7 +209,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "55acd2d002301a48d9cbfdd36493734e4cbca11a6e6c914bcb46d2fe5d4bc74b",
+  "inputsSha256": "93ca16346c3d774a9f1956d000a70d40080ee5777ed48dbc79135c0c93adb9eb",
   "languages": [
     "el"
   ],
@@ -39223,6 +39224,23 @@
         }
       }
     },
+    "suppliers__alias__w__project": {
+      "page": "src/app/(light)/suppliers/[alias]/w/[project]/page.tsx",
+      "wants": {
+        "public-catalog": {
+          "keys": [
+            "project.backToPortfolio",
+            "project.by",
+            "project.photos",
+            "project.year",
+            "supplier.about",
+            "supplier.portfolio"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
     "supply-invite__token": {
       "page": "src/app/(auth)/supply-invite/[token]/page.tsx",
       "wants": {
@@ -40063,7 +40081,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1292467
+    "sliceBytes": 1292788
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

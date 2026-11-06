@@ -2,8 +2,9 @@
  * Οι δημόσιες διευθύνσεις και ό,τι βγαίνει από το έγγραφο προς την οθόνη (ADR-923 §5.13 Σ4).
  */
 
-import { modelStructuredData, supplierStructuredData } from '@/lib/catalog/public-structured-data';
-import { publicAfterOf, publicCategoryRoute, publicIdOfSegment, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '../public-catalog-routes';
+import { modelStructuredData, projectStructuredData, supplierStructuredData } from '@/lib/catalog/public-structured-data';
+import { publicAfterOf, publicCategoryRoute, publicIdOfSegment, publicModelRoute, publicProjectRoute, publicSegmentOf, publicSupplierRoute } from '../public-catalog-routes';
+import { publicProjectOf, publicProjectTitle, type PublicPortfolioProject } from '../public-supplier-profile';
 import { PUBLIC_CATALOG_SCHEMA_VERSION, type PublicCatalogModel, type PublicCatalogVariant } from '../public-catalog-schema';
 import { publicModelCardOf, publicModelImage, publicModelTitle } from '../public-model-card';
 import { NO_PROVIDER_FACTS, publicProviderFactsOf, type PublicProviderFacts } from '../public-provider-facts';
@@ -74,6 +75,57 @@ describe('τμήματα διεύθυνσης', () => {
     expect(publicSupplierRoute('aries')).toBe('/suppliers/aries');
     expect(publicCategoryRoute('aries', 'x_1')).toBe('/suppliers/aries/c/x_1');
     expect(publicModelRoute('aries', 'x_1')).toBe('/suppliers/aries/p/x_1');
+    expect(publicProjectRoute('aries', 'x_1')).toBe('/suppliers/aries/w/x_1');
+  });
+});
+
+describe('Ν11 στ: σελίδα έργου portfolio', () => {
+  const PROJECT_ID = 'cprjt_0f3a2b1c-1234-4abc-8def-001122334455';
+  const project = (over: Partial<PublicPortfolioProject> = {}): PublicPortfolioProject => ({
+    projectId: PROJECT_ID,
+    title: { el: 'Ανακαίνιση Γραφείων Θέρμης', en: 'Thermi Office Renovation' },
+    description: { el: 'Πλήρης ηλεκτρομηχανολογική εγκατάσταση.' },
+    year: 2024,
+    images: [IMAGE, { ...IMAGE, assetId: 'a2', url: 'https://cdn/b.webp' }],
+    ...over,
+  });
+  const profile = { schemaVersion: 2 as const, companyId: 'comp_a', description: {}, projects: [project()], acceptsQuoteRequests: false };
+
+  it('🔑 η διεύθυνση από τον ελληνικό τίτλο, και το id βγαίνει ατόφιο από αυτήν', () => {
+    const segment = publicSegmentOf(publicProjectTitle(project()), PROJECT_ID);
+    expect(segment).toBe(`anakainisi-grafeion-thermis-${PROJECT_ID}`);
+    expect(publicIdOfSegment(segment)).toBe(PROJECT_ID);
+  });
+
+  it('έργο που δεν είναι στο προφίλ, ή προφίλ που λείπει ⇒ `null` (το ίδιο 404)', () => {
+    expect(publicProjectOf(profile, PROJECT_ID)).toEqual(project());
+    expect(publicProjectOf(profile, 'cprjt_other')).toBeNull();
+    expect(publicProjectOf(null, PROJECT_ID)).toBeNull();
+  });
+
+  it('`CreativeWork` με `creator` το `@id` του οργανισμού · έτος ISO · μόνο ό,τι δείχνει η σελίδα', () => {
+    const node = projectStructuredData(project(), 'https://x/w/1', { legalName: 'ΑΛΦΑ ΑΕ', url: 'https://x' });
+    expect(node).toEqual({
+      '@context': 'https://schema.org',
+      '@type': 'CreativeWork',
+      name: 'Ανακαίνιση Γραφείων Θέρμης',
+      description: 'Πλήρης ηλεκτρομηχανολογική εγκατάσταση.',
+      url: 'https://x/w/1',
+      image: ['https://cdn/a.webp', 'https://cdn/b.webp'],
+      dateCreated: '2024',
+      creator: { '@type': 'Organization', '@id': 'https://x#organization', name: 'ΑΛΦΑ ΑΕ' },
+    });
+  });
+
+  it('χωρίς περιγραφή ή έτος ⇒ κανένα κενό πεδίο', () => {
+    const node = projectStructuredData(project({ description: {}, year: null }), 'https://x/w/1', { legalName: 'ΑΛΦΑ ΑΕ', url: 'https://x' });
+    expect(node).toMatchObject({ description: undefined, dateCreated: undefined });
+  });
+
+  it('ο πάροχος του `Service` και ο δημιουργός του έργου είναι ο ΙΔΙΟΣ κόμβος', () => {
+    const service = modelStructuredData(model({ listingKind: 'service' }), 'https://x/p', SUPPLIER);
+    const work = projectStructuredData(project(), 'https://x/w/1', SUPPLIER);
+    expect((work as { creator: unknown }).creator).toEqual((service as { provider: unknown }).provider);
   });
 });
 

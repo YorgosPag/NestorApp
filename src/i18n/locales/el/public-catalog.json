@@ -29,6 +29,12 @@
     "backToSupplier": "Όλα τα προϊόντα του προμηθευτή",
     "requestQuote": "Ζητήστε προσφορά"
   },
+  "project": {
+    "backToPortfolio": "Όλα τα έργα του προμηθευτή",
+    "by": "Από {name}",
+    "year": "Έτος {year}",
+    "photos": "Φωτογραφίες"
+  },
   "price": {
     "amountPer": "{price} ανά {quantity} {unit}",
     "amountPerUnit": "{price} ανά {unit}",

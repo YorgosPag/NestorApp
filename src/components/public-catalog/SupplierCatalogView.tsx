@@ -168,7 +168,7 @@ export function SupplierCatalogView(props: SupplierCatalogViewProps): React.JSX.
         )}
         {nextHref !== null && <footer><Link href={nextHref}>{t('supplier.next')}</Link></footer>}
       </section>
-      {profile && <SupplierPortfolio profile={profile} />}
+      {profile && <SupplierPortfolio segment={segment} profile={profile} />}
     </ShellSurface>
   );
 }

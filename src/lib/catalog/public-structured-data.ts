@@ -27,6 +27,7 @@ import type { PublicCatalogModel } from '@/subapps/catalog/public/public-catalog
 import { showcasePriceIn, type ShowcaseModelPrices } from '@/subapps/catalog/public/showcase-price';
 import { publicModelTitle } from '@/subapps/catalog/public/public-model-card';
 import type { PublicProviderFacts, PublicServiceArea } from '@/subapps/catalog/public/public-provider-facts';
+import { publicProjectTitle, type PublicPortfolioProject } from '@/subapps/catalog/public/public-supplier-profile';
 import type { PublicSupplierBrand } from '@/subapps/catalog/types/supplier-brand-claim';
 
 const SCHEMA_ORG = 'https://schema.org';
@@ -49,6 +50,11 @@ export interface SupplierServiceNode {
 }
 
 const organisationIdOf = (supplierUrl: string): string => `${supplierUrl}#organization`;
+
+/** Ο οργανισμός ως αναφορά από άλλη σελίδα: το `@id` του κόμβου της σελίδας προμηθευτή και το όνομα. */
+function organisationRefOf(supplier: Pick<SupplierNodeInput, 'legalName' | 'url'>): JsonLdValue {
+  return { '@type': 'Organization', '@id': organisationIdOf(supplier.url), name: supplier.legalName };
+}
 
 function areaServedOf(area: PublicServiceArea | null): JsonLdValue | undefined {
   if (area === null) return undefined;
@@ -146,7 +152,25 @@ function serviceDocument(model: PublicCatalogModel, url: string, supplier: Suppl
     '@context': SCHEMA_ORG,
     ...node,
     image: imagesOf(model),
-    provider: { '@type': 'Organization', '@id': organisationIdOf(supplier.url), name: supplier.legalName },
+    provider: organisationRefOf(supplier),
+  };
+}
+
+/**
+ * **Ένα έργο του portfolio** (Ν11 στ): `CreativeWork` με `creator` τον οργανισμό, ώστε η μηχανή να δέσει το έργο με τη σελίδα
+ * του προμηθευτή. Μόνο ό,τι δείχνει η σελίδα: τίτλος, περιγραφή, έτος, εικόνες. Το έτος είναι ημερομηνία ISO 8601 ακρίβειας έτους.
+ */
+export function projectStructuredData(project: PublicPortfolioProject, url: string, supplier: Pick<SupplierNodeInput, 'legalName' | 'url'>): JsonLdValue {
+  const description = resolveLocalizedText(project.description, DEFAULT_LANGUAGE);
+  return {
+    '@context': SCHEMA_ORG,
+    '@type': 'CreativeWork',
+    name: publicProjectTitle(project),
+    description: description === '' ? undefined : description,
+    url,
+    image: [...new Set(project.images.map((image) => image.url))],
+    dateCreated: project.year === null ? undefined : String(project.year),
+    creator: organisationRefOf(supplier),
   };
 }
 

@@ -30,11 +30,11 @@ import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import { readAdminAreaDeclarationSources } from '@/services/places/admin-boundaries.reader';
 import { readAdminIdentitySources } from '@/services/places/administrative-hierarchy.reader';
 import { publicCatalogModelFromDocument, publicCategoryLabelsFromField, publicModelAddressFromDocument } from '@/subapps/catalog/public/public-catalog-from-document';
-import { publicCategoryRoute, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
+import { publicCategoryRoute, publicModelRoute, publicProjectRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import type { PublicCatalogModel } from '@/subapps/catalog/public/public-catalog-schema';
 import { publicModelCardOf, publicModelTitle, type PublicModelCard } from '@/subapps/catalog/public/public-model-card';
 import { NO_PROVIDER_FACTS, publicProviderFactsOf, type PublicProviderFacts } from '@/subapps/catalog/public/public-provider-facts';
-import { publicSupplierProfileFromDocument, type PublicSupplierProfile } from '@/subapps/catalog/public/public-supplier-profile';
+import { publicProjectTitle, publicSupplierProfileFromDocument, type PublicSupplierProfile } from '@/subapps/catalog/public/public-supplier-profile';
 import { supplierShowcaseFromDocument } from '@/subapps/catalog/public/supplier-showcase-from-document';
 import type { PublicSupplierBrand } from '@/subapps/catalog/types/supplier-brand-claim';
 import type { SupplierShowcaseRecord } from '@/subapps/catalog/types/supplier-verification';
@@ -232,7 +232,10 @@ async function pathsOfSupplier(companyId: string, room: number): Promise<readonl
   });
   const categories = Object.entries(await loadCategoryIndex(companyId));
   const categoryPaths = categories.map(([id, labels]) => publicCategoryRoute(supplierSegment, publicSegmentOf(resolveLocalizedText(labels, DEFAULT_LANGUAGE), id)));
-  return [publicSupplierRoute(supplierSegment), ...categoryPaths, ...modelPaths];
+  // Ν11 στ: τα έργα του portfolio, από το ίδιο προφίλ που διαβάζει η σελίδα τους.
+  const projects = (await loadSupplierProfile(companyId))?.projects ?? [];
+  const projectPaths = projects.map((project) => publicProjectRoute(supplierSegment, publicSegmentOf(publicProjectTitle(project), project.projectId)));
+  return [publicSupplierRoute(supplierSegment), ...categoryPaths, ...modelPaths, ...projectPaths];
 }
 
 async function loadSitemapPaths(): Promise<readonly string[]> {
