@@ -8,7 +8,7 @@
  * @module subapps/dxf-viewer/bim/plan-recognition/classify/segment-roles
  */
 
-import type { PlanSegmentRole, PlanSegmentRoleVerdict } from '../plan-recognition-types';
+import type { PlanExtensionAnchor, PlanSegmentRole, PlanSegmentRoleVerdict } from '../plan-recognition-types';
 
 const WALL_CANDIDATE_ROLE_LIST = ['wall-face', 'unknown'] as const satisfies readonly PlanSegmentRole[];
 const WALL_CANDIDATE_ROLES: ReadonlySet<PlanSegmentRole> = new Set<PlanSegmentRole>(WALL_CANDIDATE_ROLE_LIST);
@@ -26,4 +26,9 @@ export const isNonWallRole = (role: PlanSegmentRole | undefined): role is NonWal
 /** Ο χάρτης «τμήμα → ρόλος» από τις κρίσεις του ταξινομητή. */
 export function segmentRoleMap(verdicts: readonly PlanSegmentRoleVerdict[]): ReadonlyMap<string, PlanSegmentRole> {
   return new Map(verdicts.map((v) => [v.segmentId, v.role]));
+}
+
+/** ADR-929 Φ5.5 — ο χάρτης «γραμμή διάστασης → οι γραμμές επέκτασής της», από τις ίδιες κρίσεις (ένα σημείο μετατροπής). */
+export function extensionAnchorMap(verdicts: readonly PlanSegmentRoleVerdict[]): ReadonlyMap<string, readonly PlanExtensionAnchor[]> {
+  return new Map(verdicts.flatMap((v) => (v.extensionAnchors !== undefined && v.extensionAnchors.length > 0 ? [[v.segmentId, v.extensionAnchors] as const] : [])));
 }

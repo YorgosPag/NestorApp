@@ -21,7 +21,10 @@ export interface ScaleConsensus {
   readonly support: number;
 }
 
-/** Λιγότερες από τόσες διαστάσεις δεν αποδεικνύουν κλίμακα, εκτός αν η μόνη δέση τη στηρίζει **και** η ανάγνωση. */
+/**
+ * Λιγότερες από τόσες διαστάσεις δεν αποδεικνύουν κλίμακα, εκτός αν τη μόνη δέση τη στηρίζει **και** η ανάγνωση ή (ADR-929
+ * Φ5.5) οι **γραμμές επέκτασης**: τότε το «ποιο ζεύγος» δεν είναι εικασία, μένει μόνο η τιμή.
+ */
 const MIN_SUPPORT = 2;
 const REFINE_PASSES = 2;
 
@@ -75,7 +78,7 @@ function agreeAround(targets: readonly DimensionTarget[], logK: number): Agreeme
     sum += w * logScale(best.gapPx, t.dimension.valueMm);
     weight += w;
     support += 1;
-    readingBacked ||= best.readingHits === 2;
+    readingBacked ||= best.readingHits === 2 || best.extensionHits === 2;
   }
   return { logK: weight > 0 ? sum / weight : logK, support, readingBacked };
 }

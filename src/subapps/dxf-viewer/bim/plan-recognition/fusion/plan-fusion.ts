@@ -13,9 +13,10 @@
  */
 
 import { isWallCandidateRole } from '../classify/segment-roles';
-import type { PlanReading, PlanSegmentRole } from '../plan-recognition-types';
+import type { PlanExtensionAnchor, PlanReading, PlanSegmentRole } from '../plan-recognition-types';
 import { adjustNetwork, type BoundDimension, type NetworkOutcome } from './adjustment-network';
 import { dimensionTargets, selectBinding, type DimensionTarget } from './dimension-binding';
+import { dimensionSpans } from './dimension-spans';
 import { buildFusionFrame, type FusionFrame } from './fusion-frame';
 import { planQuestions } from './fusion-questions';
 import { adjustedOffsets, adjustedSegments, fuseDimensions, segmentConfidence } from './fusion-results';
@@ -26,6 +27,7 @@ import {
   DEFAULT_PLAN_FUSION,
   type AdjustmentSummary,
   type DimensionBinding,
+  type DimensionSpan,
   type PlanFusionInput,
   type PlanFusionOptions,
   type PlanFusionResult,
@@ -101,6 +103,12 @@ function suggestion(stage: ScaleStage, network: NetworkOutcome | null, frame: Fu
   };
 }
 
+/** Φ5.5: ποιες παρειές μετρά κάθε διάσταση, από τις γραμμές επέκτασης — και χωρίς ανάγνωση. */
+function spansOf(input: PlanFusionInput, roles: ReadonlyMap<string, PlanSegmentRole>, frame: FusionFrame, o: PlanFusionOptions): DimensionSpan[] {
+  const anchors = input.extensionAnchors ?? new Map<string, readonly PlanExtensionAnchor[]>();
+  return dimensionSpans({ segments: input.segments, roles, anchors, frame, originalToAligned: input.alignment.originalToAligned }, o);
+}
+
 /** Η σύντηξη μιας αναγνώρισης. Ντετερμινιστική: ίδια είσοδος ⇒ ίδιο αποτέλεσμα. */
 export function fusePlan(input: PlanFusionInput): PlanFusionResult {
   const o: PlanFusionOptions = { ...DEFAULT_PLAN_FUSION, ...input.options };
@@ -108,8 +116,9 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
   // Φ5.4: μόνο οι υποψήφιες παρειές γίνονται ευθείες — καμία διάσταση δεν δένεται σε γραμμή διάστασης.
   const faceSegments = input.segments.filter((s) => isWallCandidateRole(roles.get(s.id)));
   const frame = buildFusionFrame(faceSegments, input.alignment, o);
+  const spans = spansOf(input, roles, frame, o);
   const reading = input.reading?.status === 'read' ? input.reading.reading : null;
-  const targets = reading === null ? [] : dimensionTargets(reading, frame, input.alignment.originalToAligned, input.kind, o);
+  const targets = reading === null ? [] : dimensionTargets(reading, frame, input.alignment.originalToAligned, input.kind, o, spans);
   const stage = resolveScale(input, reading, frame, targets, o);
   const { bindings, bound } = bindAll(targets, stage.chosen, o);
   const network = stage.chosen === null ? null
@@ -131,6 +140,7 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
     questions: planQuestions({ frame, network, segments: input.segments, dimensions, rooms, scaleQuestions, pxPerMm }, o),
     segmentConfidence: segmentConfidence(input.segments, frame, network, dimensions, o),
     segmentRoles: roles,
+    dimensionSpans: spans,
     adjustment: summary(network),
   };
 }

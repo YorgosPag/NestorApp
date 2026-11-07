@@ -29,7 +29,7 @@ import { sha256Hex } from '@/lib/hash/sha256';
 import { planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
 import { meetsConfidenceTier } from './plan-confidence';
 import { emptyRoleMarkCounts, planRoleMarkKind, type PlanRoleMarkKind } from './plan-role-marks';
-import { isWallCandidateRole, segmentRoleMap } from '../../bim/plan-recognition/classify/segment-roles';
+import { extensionAnchorMap, isWallCandidateRole, segmentRoleMap } from '../../bim/plan-recognition/classify/segment-roles';
 import { createPlanReadingReview, type PlanReadingReviewDeps } from './plan-reading-review';
 import { planReadingApi } from './plan-reading-api-client';
 import { createPlanScaleController, type PlanScaleControllerDeps } from './plan-scale-controller';
@@ -59,6 +59,7 @@ function fuse(run: PlanRecognitionRun, reading: PlanReadingOutcome | null): Plan
     knownScale: run.knownScale,
     sourceDpi: null,
     segmentRoles: segmentRoleMap(run.segmentRoles ?? []),
+    extensionAnchors: extensionAnchorMap(run.segmentRoles ?? []),
   });
 }
 

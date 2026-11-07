@@ -21,6 +21,7 @@ import type { Homography } from '@/lib/geometry/homography';
 import type { InkMask } from '@/lib/geometry/raster/ink-probe';
 import { glyphCandidates, medianGlyphSize, type Glyph } from '@/lib/geometry/raster/text-graphics';
 import type {
+  PlanExtensionAnchor,
   PlanRoleFactor,
   PlanSegmentRole,
   PlanSegmentRoleVerdict,
@@ -190,8 +191,14 @@ function verdictsOf(ev: Evidence, factors: ReadonlyMap<string, Partial<Record<Pl
       : base === 'dimension-line' ? base
         : isTerminatorFragment(s, ends, ev.reachPx) ? 'dimension-line'
           : extensions.has(s.id) ? 'extension-line' : base;
-    return { segmentId: s.id, role, dimensionScore: score, factors: f, terminators: ev.terminators.get(s.id) ?? ['none', 'none'] };
+    const verdict: PlanSegmentRoleVerdict = { segmentId: s.id, role, dimensionScore: score, factors: f, terminators: ev.terminators.get(s.id) ?? ['none', 'none'] };
+    return dims.has(s.id) && role === 'dimension-line' ? { ...verdict, extensionAnchors: anchorsOf(ev, s.id, dims) } : verdict;
   });
+}
+
+/** ADR-929 Φ5.5 — οι άγκυρες μιας βέβαιης διάστασης: οι επεκτάσεις της που **δεν** είναι οι ίδιες διάσταση. */
+function anchorsOf(ev: Evidence, id: string, dims: ReadonlySet<string>): readonly PlanExtensionAnchor[] {
+  return (ev.extension.get(id)?.anchors ?? []).filter((a) => !dims.has(a.extensionId));
 }
 
 /** Entry point: ο ρόλος κάθε τμήματος μιας αναγνώρισης. Ντετερμινιστικό: ίδια είσοδος ⇒ ίδιες κρίσεις. */

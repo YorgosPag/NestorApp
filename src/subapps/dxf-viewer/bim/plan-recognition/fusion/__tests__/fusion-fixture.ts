@@ -21,7 +21,8 @@ export const Y_FACES_MM = [-125, 125, 3875, 4125] as const;
 
 const confidence = (score: number) => ({ score, factors: { geometry: score } });
 
-function segment(id: string, x0: number, y0: number, x1: number, y1: number): RasterSegment {
+/** Τμήμα-πινελιά 2 px από (x0, y0) σε (x1, y1), σε mm του δείγματος. */
+export function segment(id: string, x0: number, y0: number, x1: number, y1: number): RasterSegment {
   return { id, start: { x: px(x0), y: px(y0) }, end: { x: px(x1), y: px(y1) }, style: 'stroke', strokeWidthPx: 2, confidence: confidence(0.9) };
 }
 

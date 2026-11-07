@@ -20,6 +20,7 @@ import type { RasterPixelScale } from '../../../floorplan-background/geometry/ra
 import type { PlanAlignment } from '../alignment/plan-alignment-types';
 import type {
   PlanConfidence,
+  PlanExtensionAnchor,
   PlanInputKind,
   PlanReadingOutcome,
   PlanSegmentRole,
@@ -53,6 +54,11 @@ export interface PlanFusionInput {
    * ένα τμήμα) ⇒ το τμήμα είναι υποψήφιο: ποτέ σιωπηλή απόρριψη.
    */
   readonly segmentRoles?: ReadonlyMap<string, PlanSegmentRole>;
+  /**
+   * ADR-929 Φ5.5 — οι γραμμές επέκτασης κάθε γραμμής διάστασης (`extensionAnchorMap`): από αυτές η σύντηξη ξέρει **ποιες
+   * παρειές** μετρά κάθε διάσταση, και χωρίς ανάγνωση. Χωρίς χάρτη ⇒ κανένα άνοιγμα, το δέσιμο μένει όπως στη Φ4.
+   */
+  readonly extensionAnchors?: ReadonlyMap<string, readonly PlanExtensionAnchor[]>;
   readonly roomAreaProbe?: RoomAreaProbe;
   readonly options?: Partial<PlanFusionOptions>;
 }
@@ -107,6 +113,15 @@ export interface PlanFusionOptions {
   readonly scaleConflictRel: number;
   /** Σχετική διαφωνία γραμμένου/μετρημένου εμβαδού που γίνεται ερώτηση (καθαρό/μικτό εμβαδόν, στρογγυλοποίηση). */
   readonly areaConflictRel: number;
+  /**
+   * ADR-929 Φ5.5 — άνοιγμα ανάμεσα σε δύο διαδοχικές επεκτάσεις υπάρχει όταν το μελάνι της γραμμής διάστασης καλύπτει
+   * τουλάχιστον τόσο κλάσμα του: το κενό του κειμένου που τη διακόπτει δεν το σπάει· το κενό ανάμεσα σε δύο άσχετες γραμμές ναι.
+   */
+  readonly spanCoverageMin: number;
+  /** Το πόδι μιας επέκτασης «καταλήγει» σε παρειά όταν απέχει από την έκτασή της έως τόσο × το μήκος της επέκτασης. */
+  readonly anchorReachRel: number;
+  /** Το κείμενο ανήκει σε άνοιγμα όταν απέχει κάθετα από τη γραμμή του έως τόσα ύψη κειμένου (η μικρή πλευρά του πλαισίου). */
+  readonly spanTextReachHeights: number;
 }
 
 export const DEFAULT_PLAN_FUSION: PlanFusionOptions = {
@@ -130,6 +145,9 @@ export const DEFAULT_PLAN_FUSION: PlanFusionOptions = {
   uncheckableMdbRel: 0.05,
   scaleConflictRel: 0.02,
   areaConflictRel: 0.06,
+  spanCoverageMin: 0.5,
+  anchorReachRel: 0.5,
+  spanTextReachHeights: 2.5,
 };
 
 // ─── Πλαίσιο: οικογένειες διευθύνσεων και ευθείες παρειών ───────────────────
@@ -157,8 +175,40 @@ export interface FaceLine {
 
 // ─── Δέση διαστάσεων ─────────────────────────────────────────────────────────
 
-/** Ποιος πρότεινε τη δέση: η γεωμετρία μόνη, ή συμφώνησε και η ανάγνωση (Δ1: το VLM είναι ένδειξη). */
-export type DimensionBindingSource = 'geometry' | 'geometry+reading';
+/**
+ * Ποιος πρότεινε τη δέση: η γεωμετρία μόνη, ή συμφώνησε και η ανάγνωση (Δ1: το VLM είναι ένδειξη). ADR-929 Φ5.5:
+ * `extension` ⇒ τις δύο παρειές τις **έδειξαν οι γραμμές επέκτασης** του ίδιου του σχεδίου (η ισχυρότερη πηγή).
+ */
+export type DimensionBindingSource = 'geometry' | 'geometry+reading' | 'extension' | 'extension+reading';
+
+/** ADR-929 Φ5.5 — το ένα άκρο ενός ανοίγματος: η επέκταση και η παρειά όπου καταλήγει το πόδι της. */
+export interface DimensionSpanEnd {
+  readonly extensionId: string;
+  /** `null` ⇒ το πόδι δεν καταλήγει σε καμία παρειά (άξονας, επέκταση που ακουμπά τον τοίχο, παρειά που δεν βρέθηκε). */
+  readonly lineId: string | null;
+  /** Η μετατόπιση της επέκτασης κατά την κάθετο της μετρούμενης οικογένειας (ευθυγραμμισμένα px). */
+  readonly offsetPx: number;
+}
+
+/**
+ * ADR-929 Φ5.5 — ένα **άνοιγμα διάστασης**: το κομμάτι μιας γραμμής διάστασης ανάμεσα σε δύο διαδοχικές επεκτάσεις, δηλαδή
+ * **ποιες δύο παρειές μετρά** μια διάσταση — από το ίδιο το σχέδιο, χωρίς ανάγνωση. Η τιμή του έρχεται από το κείμενο.
+ * Αλυσίδα = πολλά ανοίγματα στην ίδια γραμμή· στοιβαγμένες = ανοίγματα άλλων γραμμών που μοιράζονται παρειές.
+ */
+export interface DimensionSpan {
+  readonly id: string;
+  /** Τα τμήματα της γραμμής διάστασης (όλης της συνευθειακής γραμμής, όχι μόνο του ανοίγματος). */
+  readonly segmentIds: readonly string[];
+  /** Η οικογένεια της γραμμής διάστασης και η μετατόπισή της κατά την κάθετό της. */
+  readonly runFamilyId: number;
+  readonly runOffsetPx: number;
+  /** Η οικογένεια των **μετρούμενων** παρειών (κάθετη στη γραμμή, ίδια με των επεκτάσεων). */
+  readonly familyId: number;
+  /** `ends[0].offsetPx < ends[1].offsetPx`. */
+  readonly ends: readonly [DimensionSpanEnd, DimensionSpanEnd];
+  /** Η μετρούμενη απόσταση: των παρειών όταν βρέθηκαν και οι δύο, αλλιώς των επεκτάσεων. */
+  readonly gapPx: number;
+}
 
 export interface DimensionBinding {
   /** Η ευθεία με τη μικρότερη μετατόπιση (`lineA.offset < lineB.offset`). */
@@ -266,5 +316,7 @@ export interface PlanFusionResult {
   readonly segmentConfidence: ReadonlyMap<string, PlanConfidence>;
   /** ADR-929 Φ5.4 — ο ρόλος κάθε τμήματος, όπως μπήκε (κενός χάρτης ⇒ όλα υποψήφιες παρειές). */
   readonly segmentRoles: ReadonlyMap<string, PlanSegmentRole>;
+  /** ADR-929 Φ5.5 — ποιες δύο παρειές μετρά κάθε διάσταση, από τις γραμμές επέκτασης (υπάρχει και χωρίς ανάγνωση). */
+  readonly dimensionSpans: readonly DimensionSpan[];
   readonly adjustment: AdjustmentSummary | null;
 }

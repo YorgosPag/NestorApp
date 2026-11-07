@@ -8,6 +8,11 @@
  * 3. η ανάγνωση **ενισχύει** ένα υποψήφιο, δεν το επιλέγει. Η τελική επιλογή γίνεται από τη **συναίνεση κλίμακας**
  *    (`scale-consensus.ts`): το ζεύγος του οποίου η απόσταση συμφωνεί με την κλίμακα που στηρίζουν οι **υπόλοιπες** διαστάσεις.
  *
+ * 🔑 **ADR-929 Φ5.5 — οι γραμμές επέκτασης δείχνουν, δεν μαντεύουν.** Όταν το κείμενο κάθεται σε **άνοιγμα** διάστασης
+ * (`dimension-spans.ts`) του οποίου και τα δύο πόδια καταλήγουν σε παρειές, αυτό το ζεύγος είναι **η** δέση: δεν το
+ * αντικαθιστά ποτέ άλλο ζεύγος που «ταιριάζει στην τιμή κατά σύμπτωση». Αν η τιμή διαφωνεί, η δέση μένει εκτός ανοχής και ο
+ * λύτης τη βγάζει **σύγκρουση** (ερώτηση) — ποτέ σιωπηλή «διόρθωση» με άλλους τοίχους.
+ *
  * @module subapps/dxf-viewer/bim/plan-recognition/fusion/dimension-binding
  */
 
@@ -15,8 +20,8 @@ import type { Homography, PlanePoint } from '@/lib/geometry/homography';
 import { originalRectToAligned } from '../alignment/alignment-region';
 import type { PlanDimension, PlanInputKind, PlanReading, PlanText } from '../plan-recognition-types';
 import { dimensionSigmaMm, writtenPrecisionMm } from './dimension-precision';
-import { familyDirection, familyNormal, type FusionFrame } from './fusion-frame';
-import type { DimensionBinding, FaceLine, PlanFusionOptions } from './plan-fusion-types';
+import { familyDirection, familyNormal, lineReachGap, type FusionFrame } from './fusion-frame';
+import type { DimensionBinding, DimensionSpan, FaceLine, PlanFusionOptions } from './plan-fusion-types';
 
 export interface BindingCandidate {
   readonly lineA: FaceLine;
@@ -27,6 +32,8 @@ export interface BindingCandidate {
   readonly centring: number;
   /** Πόσες από τις δύο ευθείες περιέχουν τμήμα που έδειξε και η ανάγνωση. */
   readonly readingHits: 0 | 1 | 2;
+  /** ADR-929 Φ5.5 — πόσες από τις δύο ευθείες έδειξαν τα πόδια των γραμμών επέκτασης του ανοίγματος όπου κάθεται το κείμενο. */
+  readonly extensionHits: 0 | 1 | 2;
 }
 
 /** Μια διάσταση έτοιμη για τη σύντηξη: το κείμενό της, η ακρίβειά της, οι υποψήφιες δέσεις. */
@@ -41,6 +48,11 @@ export interface DimensionTarget {
 }
 
 const READING_BONUS = [1, 1.5, 3] as const;
+/**
+ * ADR-929 Φ5.5 — η ένδειξη των επεκτάσεων ζυγίζει **περισσότερο** από της ανάγνωσης: είναι δήλωση του σχεδιαστή, όχι εκτίμηση
+ * μοντέλου. (Το πλήρες ζεύγος δεν κρίνεται καν με βαθμό: είναι η δέση, βλ. `selectBinding`.) Μη βαθμονομημένο (Βήμα 3).
+ */
+const EXTENSION_BONUS = [1, 2, 10] as const;
 /** Πλαίσιο πλατύτερο από ψηλό κατά τόσο ⇒ σαφής προσανατολισμός. */
 const ORIENTATION_RATIO = 1.25;
 const FAMILY_HORIZONTAL = 0;
@@ -56,8 +68,8 @@ function measuredFamilies(box: { w: number; h: number }, hintLines: readonly Fac
   return [...new Set([...byShape, ...hintLines.map((l) => l.familyId)])];
 }
 
-/** Πόσο απέχει η ευθεία από το ύψος του κειμένου κατά μήκος της διεύθυνσής της (0 όταν το καλύπτει). */
-const reachGap = (line: FaceLine, q: number): number => Math.max(0, line.extentMinPx - q, q - line.extentMaxPx);
+const readingHitsOf = (a: FaceLine, b: FaceLine, hint: ReadonlySet<string>): 0 | 1 | 2 =>
+  ((hint.has(a.id) ? 1 : 0) + (hint.has(b.id) ? 1 : 0)) as 0 | 1 | 2;
 
 function pairsInFamily(
   frame: FusionFrame,
@@ -70,18 +82,18 @@ function pairsInFamily(
   const p = dot(familyNormal(family), centre);
   const q = dot(familyDirection(family), centre);
   const reach = o.bindingReachFraction * frame.drawingSpanPx;
-  const near = frame.lines.filter((l) => l.familyId === familyId && reachGap(l, q) <= reach);
+  const near = frame.lines.filter((l) => l.familyId === familyId && lineReachGap(l, q) <= reach);
   const left = near.filter((l) => l.offsetPx < p).sort((a, b) => b.offsetPx - a.offsetPx).slice(0, o.bindingNeighbours);
   const right = near.filter((l) => l.offsetPx > p).sort((a, b) => a.offsetPx - b.offsetPx).slice(0, o.bindingNeighbours);
-  const proximity = (l: FaceLine): number => Math.exp(-reachGap(l, q) / (0.25 * reach));
+  const proximity = (l: FaceLine): number => Math.exp(-lineReachGap(l, q) / (0.25 * reach));
   const out: BindingCandidate[] = [];
   for (const a of left) {
     for (const b of right) {
       const gapPx = b.offsetPx - a.offsetPx;
-      const readingHits = ((hint.has(a.id) ? 1 : 0) + (hint.has(b.id) ? 1 : 0)) as 0 | 1 | 2;
-      const centred = centring(p, a, b, o);
+      const readingHits = readingHitsOf(a, b, hint);
+      const centred = centring(p, a.offsetPx, b.offsetPx, o);
       const score = proximity(a) * proximity(b) * centred * READING_BONUS[readingHits];
-      out.push({ lineA: a, lineB: b, gapPx, score, centring: centred, readingHits });
+      out.push({ lineA: a, lineB: b, gapPx, score, centring: centred, readingHits, extensionHits: 0 });
     }
   }
   return out;
@@ -92,10 +104,69 @@ function pairsInFamily(
  * το χέρι). Η απόσταση του κέντρου του κειμένου από το μέσο του ζεύγους, σε κλάσμα της απόστασης, είναι το **ισχυρότερο**
  * γεωμετρικό τεκμήριο για το ποιο ζεύγος μετρά — και δεν εξαρτάται από την τιμή, άρα δένει σωστά και μια **λάθος** τιμή.
  */
-function centring(p: number, a: FaceLine, b: FaceLine, o: PlanFusionOptions): number {
-  const gap = b.offsetPx - a.offsetPx;
-  const off = (p - (a.offsetPx + b.offsetPx) / 2) / (o.centringRel * gap);
+function centring(p: number, offsetA: number, offsetB: number, o: PlanFusionOptions): number {
+  const gap = offsetB - offsetA;
+  const off = (p - (offsetA + offsetB) / 2) / (o.centringRel * gap);
   return Math.exp(-0.5 * off * off);
+}
+
+// ─── ADR-929 Φ5.5: το άνοιγμα όπου κάθεται το κείμενο ───────────────────────
+
+interface SpanMatch {
+  readonly span: DimensionSpan;
+  /** Κεντράρισμα στο άνοιγμα × εγγύτητα στη γραμμή του, στο (0, 1]. */
+  readonly fit: number;
+}
+
+/**
+ * Το κείμενο μιας διάστασης κάθεται **πάνω** (ή μέσα) στη γραμμή της και **στη μέση** του ανοίγματός της. Άρα: προβολή του
+ * κέντρου μέσα στο άνοιγμα, κεντράρισμα, και κάθετη απόσταση από τη γραμμή σε ύψη κειμένου (στοιβαγμένες γραμμές απέχουν
+ * λίγα ύψη: η εγγύτητα διαλέγει τη δική του).
+ */
+function spanMatches(spans: readonly DimensionSpan[], frame: FusionFrame, centre: PlanePoint, heightPx: number, o: PlanFusionOptions): SpanMatch[] {
+  const height = Math.max(1, heightPx);
+  return spans.flatMap((span) => {
+    const distance = Math.abs(dot(familyNormal(frame.families[span.runFamilyId]), centre) - span.runOffsetPx) / height;
+    if (distance > o.spanTextReachHeights) return [];
+    const p = dot(familyNormal(frame.families[span.familyId]), centre);
+    const [a, b] = span.ends;
+    if (p <= a.offsetPx || p >= b.offsetPx) return [];
+    return [{ span, fit: centring(p, a.offsetPx, b.offsetPx, o) * Math.exp(-0.5 * distance * distance) }];
+  });
+}
+
+const samePair = (c: BindingCandidate, a: FaceLine, b: FaceLine): boolean => c.lineA.id === a.id && c.lineB.id === b.id;
+
+/** Το άνοιγμα με **και τα δύο** πόδια σε παρειές ⇒ υποψήφιο με `extensionHits: 2` (η δέση, βλ. `selectBinding`). */
+function anchoredCandidate(m: SpanMatch, frame: FusionFrame, hint: ReadonlySet<string>): BindingCandidate | null {
+  const [ea, eb] = m.span.ends;
+  const a = ea.lineId === null ? undefined : frame.lineById.get(ea.lineId);
+  const b = eb.lineId === null ? undefined : frame.lineById.get(eb.lineId);
+  if (a === undefined || b === undefined) return null;
+  const readingHits = readingHitsOf(a, b, hint);
+  const score = m.fit * READING_BONUS[readingHits] * EXTENSION_BONUS[2];
+  return { lineA: a, lineB: b, gapPx: b.offsetPx - a.offsetPx, score, centring: m.fit, readingHits, extensionHits: 2 };
+}
+
+/** Μισό άνοιγμα (ένα πόδι σε παρειά): ενισχύει όσα υποψήφια περιέχουν αυτή την παρειά, δεν αποφασίζει. */
+function withHalfAnchor(candidates: readonly BindingCandidate[], m: SpanMatch | undefined): BindingCandidate[] {
+  const ids = new Set((m?.span.ends ?? []).flatMap((e) => (e.lineId === null ? [] : [e.lineId])));
+  if (ids.size !== 1) return [...candidates];
+  return candidates.map((c): BindingCandidate => (ids.has(c.lineA.id) || ids.has(c.lineB.id)
+    ? { ...c, score: c.score * EXTENSION_BONUS[1], extensionHits: 1 }
+    : c));
+}
+
+/** Τα υποψήφια της Φ4 μαζί με όσα δείχνουν τα ανοίγματα: το ζεύγος ενός πλήρους ανοίγματος **αντικαθιστά** το ίδιο ζεύγος. */
+function withSpanEvidence(
+  candidates: readonly BindingCandidate[], spans: readonly DimensionSpan[], frame: FusionFrame,
+  centre: PlanePoint, heightPx: number, hint: ReadonlySet<string>, o: PlanFusionOptions,
+): BindingCandidate[] {
+  const matches = spanMatches(spans, frame, centre, heightPx, o).sort((x, y) => y.fit - x.fit);
+  const anchored = matches.flatMap((m) => anchoredCandidate(m, frame, hint) ?? []);
+  if (anchored.length === 0) return withHalfAnchor(candidates, matches[0]);
+  const rest = candidates.filter((c) => !anchored.some((x) => samePair(c, x.lineA, x.lineB)));
+  return [...anchored, ...rest];
 }
 
 function dimensionTarget(
@@ -105,31 +176,38 @@ function dimensionTarget(
   toAligned: Homography,
   kind: PlanInputKind,
   o: PlanFusionOptions,
+  spans: readonly DimensionSpan[],
 ): DimensionTarget {
   const box = originalRectToAligned(text.rect, toAligned);
   const centre = { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
+  const size = { w: box.maxX - box.minX, h: box.maxY - box.minY };
   const hintIds = new Set(dimension.segmentIds.flatMap((id) => frame.lineOfSegment.get(id) ?? []));
   const hintLines = [...hintIds].flatMap((id) => frame.lineById.get(id) ?? []);
-  const families = measuredFamilies({ w: box.maxX - box.minX, h: box.maxY - box.minY }, hintLines);
-  const candidates = families.flatMap((f) => pairsInFamily(frame, f, centre, hintIds, o));
+  const families = measuredFamilies(size, hintLines);
+  const geometric = families.flatMap((f) => pairsInFamily(frame, f, centre, hintIds, o));
+  const candidates = withSpanEvidence(geometric, spans, frame, centre, Math.min(size.w, size.h), hintIds, o);
   const precisionMm = writtenPrecisionMm(text.raw, dimension.valueMm);
   const sigmaMm = dimensionSigmaMm(precisionMm, o.dimensionDraftSigmaMm);
   const toleranceMm = 3 * Math.hypot(Math.SQRT2 * o.cvSigmaMm[kind], sigmaMm);
   return { dimension, text, precisionMm, sigmaMm, toleranceRel: Math.max(o.bindingToleranceRel, toleranceMm / dimension.valueMm), candidates };
 }
 
-/** Κάθε διάσταση της ανάγνωσης με το κείμενό της ⇒ στόχος με υποψήφιες δέσεις. Διάσταση χωρίς κείμενο δεν δένεται. */
+/**
+ * Κάθε διάσταση της ανάγνωσης με το κείμενό της ⇒ στόχος με υποψήφιες δέσεις. Διάσταση χωρίς κείμενο δεν δένεται.
+ * `spans` (Φ5.5): τα ανοίγματα των γραμμών επέκτασης· κενό ⇒ το δέσιμο της Φ4 αυτούσιο.
+ */
 export function dimensionTargets(
   reading: PlanReading,
   frame: FusionFrame,
   toAligned: Homography,
   kind: PlanInputKind,
   o: PlanFusionOptions,
+  spans: readonly DimensionSpan[] = [],
 ): DimensionTarget[] {
   const texts = new Map(reading.texts.map((t) => [t.id, t]));
   return reading.dimensions.flatMap((d) => {
     const text = texts.get(d.textId);
-    return text ? [dimensionTarget(d, text, frame, toAligned, kind, o)] : [];
+    return text ? [dimensionTarget(d, text, frame, toAligned, kind, o, spans)] : [];
   });
 }
 
@@ -142,6 +220,10 @@ export const relativeMismatch = (c: BindingCandidate, valueMm: number, pxPerMm: 
  * «η γραμμένη τιμή διαφωνεί με το σχέδιο» ισχύει όποιο κι αν είναι το σωστό ζεύγος (εσωτερική παρειά ή άξονας τοίχου):
  * διφορούμενη δέση εκεί θα έκρυβε μια πραγματική σύγκρουση πίσω από ένα «δεν ξέρω πού δένει».
  */
+const sourceOf = (c: BindingCandidate): DimensionBinding['source'] => (c.extensionHits === 2
+  ? (c.readingHits === 2 ? 'extension+reading' : 'extension')
+  : (c.readingHits === 2 ? 'geometry+reading' : 'geometry'));
+
 function toBinding(best: BindingCandidate, pool: readonly BindingCandidate[], withinTolerance: boolean, o: PlanFusionOptions): DimensionBinding {
   const rival = pool.find((c) => c.lineA.id !== best.lineA.id || c.lineB.id !== best.lineB.id);
   return {
@@ -149,7 +231,7 @@ function toBinding(best: BindingCandidate, pool: readonly BindingCandidate[], wi
     lineB: best.lineB.id,
     gapPx: best.gapPx,
     score: best.score,
-    source: best.readingHits === 2 ? 'geometry+reading' : 'geometry',
+    source: sourceOf(best),
     ambiguous: withinTolerance && rival !== undefined && rival.score >= o.ambiguityRatio * best.score,
     withinTolerance,
   };
@@ -161,10 +243,16 @@ function toBinding(best: BindingCandidate, pool: readonly BindingCandidate[], wi
  * 2. αλλιώς το **γεωμετρικά** καλύτερο (κεντράρισμα, εγγύτητα, ανάγνωση), αν η τιμή απέχει έως `maxBlunderRel`: πιθανή
  *    λάθος γραμμένη τιμή, που ο λύτης θα κρίνει (Δ8: «γράφει 3,50, η γεωμετρία δίνει 3,20»).
  * Διφορούμενη όταν ένα **άλλο** ζεύγος της ίδιας βαθμίδας έχει σχεδόν τον ίδιο βαθμό. `null` ⇒ κανένα ζεύγος.
+ *
+ * ADR-929 Φ5.5 — **βαθμίδα 0, πριν από όλες:** υποψήφιο από πλήρες άνοιγμα επεκτάσεων (`extensionHits === 2`) **είναι** η
+ * δέση, μέσα ή έξω από την ανοχή. Καμία από τις βαθμίδες 1–2 δεν το αντικαθιστά: εκείνες επιλέγουν με την τιμή, και μια
+ * λάθος τιμή θα έβρισκε «κατά σύμπτωση» άλλους τοίχους. Η ασυμφωνία πάει στον λύτη ⇒ σύγκρουση ⇒ ερώτηση.
  */
 export function selectBinding(target: DimensionTarget, pxPerMm: number, o: PlanFusionOptions): DimensionBinding | null {
   const valueMm = target.dimension.valueMm;
   const byScore = [...target.candidates].sort((a, b) => b.score - a.score);
+  const anchored = byScore.filter((c) => c.extensionHits === 2);
+  if (anchored.length > 0) return toBinding(anchored[0], anchored, relativeMismatch(anchored[0], valueMm, pxPerMm) <= target.toleranceRel, o);
   const bestCentring = Math.max(0, ...byScore.map((c) => c.centring));
   // Βαθμίδα 1 με φράχτη κεντραρίσματος: ένα ζεύγος που ταιριάζει στην τιμή **κατά σύμπτωση** (τοίχοι 25 εκ. ⇒ πολλές
   // σχεδόν ίσες αποστάσεις) αλλά δεν έχει το κείμενο στη μέση του δεν κερδίζει το ζεύγος που το έχει.

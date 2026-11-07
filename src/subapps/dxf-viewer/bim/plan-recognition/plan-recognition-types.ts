@@ -107,6 +107,15 @@ export type PlanTerminatorKind = 'arrow' | 'tick' | 'dot' | 'cross' | 'none';
  */
 export type PlanRoleFactor = 'text' | 'terminators' | 'extension' | 'thinness';
 
+/**
+ * ADR-929 Φ5.5 — μια γραμμή επέκτασης πάνω σε γραμμή διάστασης: **ποια**, και ποιο άκρο της είναι το **πόδι** (το ελεύθερο,
+ * προς το μετρούμενο αντικείμενο). Μόνο ids: η γεωμετρία ζει στο `RasterSegment`, ποτέ δεύτερη φορά εδώ.
+ */
+export interface PlanExtensionAnchor {
+  readonly extensionId: string;
+  readonly foot: 'start' | 'end';
+}
+
 /** Η κρίση για ΕΝΑ τμήμα. Ζει **δίπλα** στο `RasterSegment`, όχι μέσα του: η γεωμετρία (και το κλειδί ανάγνωσης) δεν αλλάζει. */
 export interface PlanSegmentRoleVerdict {
   readonly segmentId: string;
@@ -116,6 +125,11 @@ export interface PlanSegmentRoleVerdict {
   readonly factors: Readonly<Partial<Record<PlanRoleFactor, number>>>;
   /** Οι απολήξεις στο `start` και στο `end`. */
   readonly terminators: readonly [PlanTerminatorKind, PlanTerminatorKind];
+  /**
+   * ADR-929 Φ5.5 — μόνο για `dimension-line`: οι γραμμές επέκτασης που την τερματίζουν **ή την τέμνουν** (τα ενδιάμεσα
+   * σημεία μιας αλυσίδας). Προαιρετικό: παλιότερες αποθηκευμένες εκτελέσεις δεν το έχουν.
+   */
+  readonly extensionAnchors?: readonly PlanExtensionAnchor[];
 }
 
 // ─── Φ3: ανάγνωση από VLM (θύρα `PlanReader`, Δ5) ────────────────────────────

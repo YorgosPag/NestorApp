@@ -36,6 +36,8 @@ export interface FusionFrame {
   readonly centreAligned: PlanePoint;
   /** Η μικρή πλευρά της περιοχής σχεδίου (ευθυγραμμισμένα px). */
   readonly drawingSpanPx: number;
+  /** ADR-929 Φ5.5 — η ανοχή συνευθειακότητας με την οποία χτίστηκαν οι ευθείες (μία ανοχή, για όποιον ρωτά «ίδια ευθεία;»). */
+  readonly collinearTolPx: number;
 }
 
 const HALF_TURN = Math.PI;
@@ -119,10 +121,11 @@ const MAX_SPAN_TOLERANCES = 2;
  * Οι μετατοπίσεις μιας φθαρμένης πινελιάς είναι **συνεχώς** κατανεμημένες (μετρημένο: −303,5 … −300,5 για μία παρειά), άρα
  * μια ομάδα «από το πρώτο της» θα την έκοβε αυθαίρετα· το κενό ανάμεσα σε δύο παρειές είναι το φυσικό σύνορο.
  * ⚠️ Φρένο στην αλυσίδα (γραμμοσκίαση ανά 1,5 px): ομάδα με εύρος > `MAX_SPAN_TOLERANCES × tol` κόβεται αναδρομικά.
+ * ADR-929 Φ5.5: γενική, ώστε και οι γραμμές διάστασης να ομαδοποιούνται με τον **ίδιο** κανόνα (όχι δεύτερη ομαδοποίηση).
  */
-function clusterFamily(segments: readonly AlignedSegment[], tol: number): AlignedSegment[][] {
+export function clusterByOffset<T extends { readonly offsetPx: number }>(segments: readonly T[], tol: number): T[][] {
   const sorted = [...segments].sort((p, q) => p.offsetPx - q.offsetPx);
-  const groups: AlignedSegment[][] = [];
+  const groups: T[][] = [];
   for (const s of sorted) {
     const last = groups[groups.length - 1];
     if (last && s.offsetPx - last[last.length - 1].offsetPx <= tol) last.push(s);
@@ -131,7 +134,7 @@ function clusterFamily(segments: readonly AlignedSegment[], tol: number): Aligne
   return groups.flatMap((g) => splitWide(g, MAX_SPAN_TOLERANCES * tol));
 }
 
-function splitWide(group: readonly AlignedSegment[], maxSpan: number): AlignedSegment[][] {
+function splitWide<T extends { readonly offsetPx: number }>(group: readonly T[], maxSpan: number): T[][] {
   if (group.length < 2 || group[group.length - 1].offsetPx - group[0].offsetPx <= maxSpan) return [[...group]];
   let cut = 1;
   for (let i = 2; i < group.length; i++) {
@@ -165,7 +168,7 @@ export function buildFusionFrame(segments: readonly RasterSegment[], alignment: 
   const tol = collinearTolerance(segments, originalPerAlignedPx, o);
   const lines: FaceLine[] = [];
   for (const family of families) {
-    for (const group of clusterFamily(aligned.filter((s) => s.familyId === family.id), tol)) {
+    for (const group of clusterByOffset(aligned.filter((s) => s.familyId === family.id), tol)) {
       lines.push(toFaceLine(group, `fl${lines.length}`));
     }
   }
@@ -179,5 +182,16 @@ export function buildFusionFrame(segments: readonly RasterSegment[], alignment: 
     originalPerAlignedPx,
     centreAligned: box.centre,
     drawingSpanPx: box.span,
+    collinearTolPx: tol,
   };
+}
+
+/** Πόσο απέχει η ευθεία από τη θέση `q` κατά μήκος της διεύθυνσής της (0 όταν την καλύπτει). */
+export const lineReachGap = (line: FaceLine, q: number): number => Math.max(0, line.extentMinPx - q, q - line.extentMaxPx);
+
+/** ADR-929 Φ5.5 — η οικογένεια του πλαισίου στην οποία ανήκει μια διεύθυνση (modulo π), ή `null` αν καμία δεν είναι εντός ανοχής. */
+export function familyOfAngle(frame: Pick<FusionFrame, 'families'>, angleRad: number, o: PlanFusionOptions): PlanDirectionFamily | null {
+  const tol = (o.familyToleranceDeg * Math.PI) / 180;
+  const wrapped = ((angleRad % HALF_TURN) + HALF_TURN) % HALF_TURN;
+  return frame.families.find((f) => angleGap(f.angleRad, wrapped) <= tol) ?? null;
 }
