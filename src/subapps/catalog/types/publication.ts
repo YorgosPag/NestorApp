@@ -204,6 +204,11 @@ export interface PublicationRetention {
   readonly supersededAt: string | null;
   readonly legalHold: PublicationLegalHold | null;
   readonly disposal: PublicationDisposal | null;
+  /**
+   * Πόσες **δημοσιευμένες εκδόσεις καταλόγου** δείχνουν σε αυτό το PDF (ADR-923 §5.15 Η2). Όσο είναι > 0 δεν τρέχει ρολόι και
+   * δεν σβήνεται με το χέρι: το κοινό το διαβάζει. Γράφεται **μόνο** από τον γραφέα των εκδόσεων, στην ίδια συναλλαγή.
+   */
+  readonly publishedEditions: number;
 }
 
 export const EMPTY_PUBLICATION_RETENTION: PublicationRetention = {
@@ -212,6 +217,7 @@ export const EMPTY_PUBLICATION_RETENTION: PublicationRetention = {
   supersededAt: null,
   legalHold: null,
   disposal: null,
+  publishedEditions: 0,
 };
 
 export interface PublicationRunDefinition {

@@ -50,6 +50,13 @@ describe('publicationDispositionDueAt: πότε τρέχει το ρολόι', (
     expect(publicationDispositionDueAt(run({}, false, 'failed'))).toBeNull();
   });
 
+  it('§5.15 Η2: δημοσιευμένη σε κοινό ⇒ κανένα ρολόι, και η απόσυρση το ξαναρχίζει', () => {
+    expect(publicationDispositionDueAt(run({ publishedEditions: 1 }))).toBeNull();
+    expect(publicationDispositionDueAt(run({ publishedEditions: 2, ...downloaded }, true))).toBeNull();
+    const withdrawn = retentionPatch(run({ publishedEditions: 1 }), { publishedEditions: 0 });
+    expect(withdrawn.dispositionDueAt).toBe('2026-06-08T10:00:00.000Z');
+  });
+
   it('το retentionPatch γράφει διατήρηση και προθεσμία μαζί', () => {
     const patched = retentionPatch(run({ supersededAt: null }), { supersededAt: SUPERSEDED });
     expect(patched.dispositionDueAt).toBe('2026-06-08T10:00:00.000Z');
@@ -111,6 +118,7 @@ describe('χειροκίνητες πράξεις', () => {
     expect(canDeletePublicationByHand(run({ legalHold: HOLD }))).toBe(false);
     expect(canDeletePublicationByHand(run({ disposal: DISPOSAL }))).toBe(false);
     expect(canDeletePublicationByHand(run({}, false, 'failed'))).toBe(false);
+    expect(canDeletePublicationByHand(run({ supersededAt: null, publishedEditions: 1 }))).toBe(false);
   });
 
   it('δέσμευση μόνο σε έκδοση που έχει ακόμη αρχείο', () => {

@@ -9,6 +9,7 @@
  * | Κατέβηκε, χωρίς τιμές | 24 μήνες αφού αντικατασταθεί |
  * | Κατέβηκε, με τιμές | Τέλος του έτους που έπαψε να ισχύει η έκδοση τιμών + 5 έτη (ο κανόνας του ADR-864 §20) |
  * | Δικαστική δέσμευση | Ποτέ, ώσπου να αρθεί («holds always win») |
+ * | Δημοσιευμένη σε κοινό (§5.15 Η2) | Ποτέ, ώσπου να αποσυρθεί η τελευταία δημοσίευση· μετά ισχύει ξανά ο κανόνας της γραμμής του |
  *
  * 🔑 **Το ρολόι ξεκινά από το γεγονός, όχι από τη γέννηση** (Purview «event-based retention»): όσο η έκδοση είναι η τελευταία της
  *    συνταγής δεν τρέχει ρολόι. Η λήψη είναι η μόνη πόρτα του αρχείου, άρα «δεν κατέβηκε» σημαίνει «δεν το είδε κανείς».
@@ -42,12 +43,15 @@ const plusMonths = (iso: string, months: number): string => addMonthsClampedUtc(
 const plusDays = (iso: string, days: number): string => new Date(Date.parse(iso) + days * DAY_MS).toISOString();
 const laterOf = (a: string, b: string): string => (Date.parse(a) >= Date.parse(b) ? a : b);
 
+/** Το διαβάζει κοινό μέσω δημοσιευμένης έκδοσης καταλόγου (§5.15 Η2). */
+export const isPublished = (run: RetentionFacts): boolean => run.retention.publishedEditions > 0;
+
 const isPricedEvidence = (run: RetentionFacts): boolean => run.priced && run.retention.downloadCount > 0;
 
 /** Η νωρίτερη στιγμή που μπορεί να σβηστεί το PDF· `null` = δεν τρέχει ρολόι. */
 export function publicationDispositionDueAt(run: RetentionFacts): string | null {
   const { disposal, legalHold, supersededAt, downloadCount } = run.retention;
-  if (run.status !== 'ready' || disposal !== null || legalHold !== null || supersededAt === null) return null;
+  if (run.status !== 'ready' || disposal !== null || legalHold !== null || supersededAt === null || isPublished(run)) return null;
   if (downloadCount === 0) return plusDays(supersededAt, PUBLICATION_RETENTION_RULE.undownloadedDays);
   return run.priced ? retainUntilOf(supersededAt) : plusMonths(supersededAt, PUBLICATION_RETENTION_RULE.unpricedMonths);
 }
@@ -98,7 +102,7 @@ export function isPublicationRunReusable(run: Pick<PublicationRunDefinition, 'st
 /** Με το χέρι σβήνεται μόνο ό,τι δεν έφτασε σε κανέναν: χωρίς λήψη το PDF δεν είναι τεκμήριο και ξαναβγαίνει ίδιο. */
 export function canDeletePublicationByHand(run: RetentionFacts): boolean {
   const { disposal, legalHold, downloadCount } = run.retention;
-  return run.status === 'ready' && disposal === null && legalHold === null && downloadCount === 0;
+  return run.status === 'ready' && disposal === null && legalHold === null && downloadCount === 0 && !isPublished(run);
 }
 
 /** Μπαίνει δικαστική δέσμευση: μόνο σε έτοιμη έκδοση που έχει ακόμη αρχείο. */

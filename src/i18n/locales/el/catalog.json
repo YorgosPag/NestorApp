@@ -547,6 +547,7 @@
       },
       "retentionParts": {
         "downloadCount": "Λήψεις",
+        "publishedEditions": "Δημοσιευμένες εκδόσεις",
         "firstDownloadedAt": "Πρώτη λήψη",
         "supersededAt": "Αντικαταστάθηκε",
         "legalHold": "Δικαστική δέσμευση",

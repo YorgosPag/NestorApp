@@ -547,6 +547,7 @@
       },
       "retentionParts": {
         "downloadCount": "Downloads",
+        "publishedEditions": "Published editions",
         "firstDownloadedAt": "First download",
         "supersededAt": "Superseded",
         "legalHold": "Legal hold",
