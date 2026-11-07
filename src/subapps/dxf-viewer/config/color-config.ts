@@ -1838,6 +1838,27 @@ export const PLAN_CONFIDENCE_MARKS = {
   dashPx: { solid: '', dashed: '6 4', dotted: '1.5 3' },
 } as const;
 
+/**
+ * ADR-929 Φ5.4β — τα σημάδια **ρόλου** των τμημάτων που η πολιτική ρόλων βγάζει εκτός τοίχων (διαστάσεις, γραμμές
+ * επέκτασης, πινελιές μέσα σε κείμενο). Ζωγραφίζονται στην **ίδια** επικάλυψη με τα επίπεδα βεβαιότητας, άρα το
+ * CHECK 3.41 τα κρίνει **στην ίδια οικογένεια** (`plan-segment`): κάθε `dash` μοναδικό σε όλα μαζί (Κ1), κάθε χρώμα
+ * ΔE ≥ 8 σε protan/deutan απέναντι και στα τρία επίπεδα (Κ2). Πάχος πένας: το `PLAN_CONFIDENCE_MARKS.strokeWidthPx`.
+ *
+ * Μετρημένο (2026-11-07, `worstCvdDeltaE`): κυανό ↔ υψηλή/μέτρια/χαμηλή 19,8 / 19,7 / 22,4 · γκρι 10,3 / 18,8 / 11,1 ·
+ * κυανό ↔ γκρι 14,4. ⚠️ Το μωβ (`#9467BD`) **απορρίφθηκε**: 1,7 απέναντι στο μπλε της «υψηλής».
+ *
+ * @see src/subapps/dxf-viewer/systems/plan-recognition/plan-role-marks.ts (ο ένας αναγνώστης)
+ * @see docs/centralized-systems/reference/adrs/ADR-929-raster-plan-recognition.md §6.7
+ */
+export const PLAN_SEGMENT_ROLE_MARKS = {
+  roles: {
+    dimension: { hex: '#17BECF', dash: 'dash-dot' },
+    annotation: { hex: '#7F7F7F', dash: 'long-dash' },
+  },
+  /** Το μοτίβο κάθε `dash`, σε px οθόνης (`strokeDasharray`)· κανένα δεν συμπίπτει με τα επίπεδα βεβαιότητας. */
+  dashPx: { 'dash-dot': '8 3 1.5 3', 'long-dash': '12 5' },
+} as const;
+
 // ============================================================================
 // 🏢 ADR-366 §A.3 — SECTION CUT SURFACE COLOR (2026-05-20)
 // ============================================================================

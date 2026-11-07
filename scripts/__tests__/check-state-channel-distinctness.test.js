@@ -339,3 +339,53 @@ describe('Μ6..Μ9 — basemap-correspondence', () => {
     expect(() => runBasemap(mutated)).toThrow(/states/);
   });
 });
+
+/**
+ * ADR-929 Φ5.4β. Τα σημάδια ρόλου (διαστάσεις, κείμενο) ζωγραφίζονται στην **ίδια** επικάλυψη με τα επίπεδα
+ * βεβαιότητας, άρα κρίνονται στην **ίδια** οικογένεια: ρόλος με το μοτίβο ενός επιπέδου, ή με χρώμα που η CVD
+ * ενώνει με επίπεδο, είναι σύγχυση πάνω στο ίδιο σχέδιο.
+ */
+describe('Μ11..Μ13 — plan-segment (επίπεδα βεβαιότητας + σημάδια ρόλου)', () => {
+  const runPlan = (configSource) => {
+    const family = readStateMarkFamilies(miniRepo(configSource)).find((f) => f.id === 'plan-segment');
+    return {
+      marks: family.marks,
+      failures: [...checkIdentity(family.marks), ...checkColourPromise(family.marks, false)],
+    };
+  };
+
+  it('Μ0γ: το ζωντανό δέντρο — τρία επίπεδα ΚΑΙ δύο ρόλοι στην ίδια οικογένεια, καθαρά', () => {
+    const { marks, failures } = runPlan(liveConfigSource());
+    expect(marks.map((m) => m.id)).toEqual(['high', 'medium', 'low', 'role:dimension', 'role:annotation']);
+    expect(new Set(marks.map((m) => m.variant)).size).toBe(marks.length);
+    expect(failures).toEqual([]);
+  });
+
+  it('Μ11: η διάσταση παίρνει το μοτίβο της «μέτριας» ⇒ Κ1 μπλοκ', () => {
+    const mutated = liveConfigSource().replace(
+      "dimension: { hex: '#17BECF', dash: 'dash-dot' }",
+      "dimension: { hex: '#17BECF', dash: 'dashed' }",
+    );
+    expect(mutated).not.toBe(liveConfigSource());
+    const { failures } = runPlan(mutated);
+    expect(rulesOf(failures)).toContain('Κ1');
+    expect(failures.map((f) => f.detail).join(' ')).toMatch(/role:dimension/);
+  });
+
+  it('Μ12: η διάσταση γίνεται μωβ ⇒ Κ2 μπλοκ (στη δευτερανωπία πέφτει πάνω στο μπλε της «υψηλής»)', () => {
+    const mutated = liveConfigSource().replace("hex: '#17BECF'", "hex: '#9467BD'");
+    expect(mutated).not.toBe(liveConfigSource());
+    const { failures } = runPlan(mutated);
+    expect(rulesOf(failures)).toContain('Κ2');
+    expect(failures.map((f) => f.detail).join(' ')).toMatch(/role:dimension/);
+  });
+
+  it('Μ13: απουσία PLAN_SEGMENT_ROLE_MARKS ⇒ σφάλμα, ΠΟΤΕ σιωπηλό πράσινο', () => {
+    const mutated = liveConfigSource().replace(
+      'export const PLAN_SEGMENT_ROLE_MARKS = {',
+      'const PLAN_SEGMENT_ROLE_MARKS_DISABLED = {',
+    );
+    expect(mutated).not.toBe(liveConfigSource());
+    expect(() => runPlan(mutated)).toThrow(/PLAN_SEGMENT_ROLE_MARKS/);
+  });
+});

@@ -476,6 +476,10 @@
         "low": "Low confidence: check the image"
       },
       "lowExcluded": "{count, plural, one {# low-confidence line is not proposed as a wall — check the image.} other {# low-confidence lines are not proposed as walls — check the image.}}",
+      "role": {
+        "dimension": "{count, plural, one {# dimension line — not a wall} other {# dimension lines — not walls}}",
+        "annotation": "{count, plural, one {# line inside text — not a wall} other {# lines inside text — not walls}}"
+      },
       "reading": {
         "title": "Read texts with AI",
         "intro": "Dimensions, room names and openings are read from the image. Before anything leaves, you see and correct exactly what is sent.",

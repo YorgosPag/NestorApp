@@ -99,9 +99,12 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
   };
 }
 
+/** ADR-929 Φ5.4β — τίποτα εκτός τοίχων. */
+const NO_EXCLUSIONS: ImageSourceView['excludedFromWalls'] = { byRole: { dimension: 0, annotation: 0 }, lowConfidence: 0 };
+
 /** Η πηγή «εικόνα» όπως τη δίνει ο host — προεπιλογή: όροφος χωρίς υπόβαθρο, πηγή το σχέδιο. */
 const NO_IMAGE: ImageSourceView = {
-  available: false, phase: 'idle', failure: null, active: false, countsByTier: null, excludedFromWalls: 0, calibrated: false,
+  available: false, phase: 'idle', failure: null, active: false, countsByTier: null, excludedFromWalls: NO_EXCLUSIONS, calibrated: false,
   readingAvailable: false, review: null, scale: { card: null, applying: false, stale: false },
 };
 
@@ -271,7 +274,7 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
   const RASTER = { kind: 'raster', recognitionId: 'rec1.1', floorId: 'flr_1', segments: [] } as const;
   const COUNTS = { high: 12, medium: 3, low: 1 } as const;
   const IMAGE_READY: ImageSourceView = {
-    available: true, phase: 'ready', failure: null, active: true, countsByTier: COUNTS, excludedFromWalls: 1, calibrated: true,
+    available: true, phase: 'ready', failure: null, active: true, countsByTier: COUNTS, excludedFromWalls: { byRole: { dimension: 0, annotation: 0 }, lowConfidence: 1 }, calibrated: true,
     readingAvailable: true, review: null, scale: NO_IMAGE.scale,
   };
 
@@ -279,8 +282,26 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
     const shown = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
     expect(shown.q('mfd-image-excluded')?.textContent).toBe('modelFromDrawing.image.lowExcluded{"count":1}');
     shown.unmount();
-    const none = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, { ...IMAGE_READY, excludedFromWalls: 0 });
+    const none = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, { ...IMAGE_READY, excludedFromWalls: NO_EXCLUSIONS });
     expect(none.q('mfd-image-excluded')).toBeNull();
+  });
+
+  it('Φ5.4β — τα τμήματα εκτός τοίχων λόγω ρόλου: γραμμή ανά σημάδι με πλήθος· όχι μέσα στο «χαμηλής βεβαιότητας»', () => {
+    const view: ImageSourceView = {
+      ...IMAGE_READY, excludedFromWalls: { byRole: { dimension: 97, annotation: 0 }, lowConfidence: 715 },
+    };
+    const { q, container } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, view);
+    const rows = [...(q('mfd-image-role-legend')?.querySelectorAll('li') ?? [])];
+    expect(rows.map((li) => li.getAttribute('data-role'))).toEqual(['dimension']);
+    expect(rows[0].textContent).toBe('modelFromDrawing.image.role.dimension{"count":97}');
+    expect(rows[0].querySelector('svg line')).not.toBeNull();
+    expect(q('mfd-image-excluded')?.textContent).toBe('modelFromDrawing.image.lowExcluded{"count":715}');
+    expect(container.querySelector('[data-role="annotation"]')).toBeNull();
+  });
+
+  it('Φ5.4β — χωρίς τμήματα εκτός τοίχων λόγω ρόλου: κανένα υπόμνημα ρόλων', () => {
+    const { q } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    expect(q('mfd-image-role-legend')).toBeNull();
   });
 
   it('οπλισμένος: το κουμπί υπάρχει, κλειδωμένο όσο ο όροφος δεν έχει υπόβαθρο, και το λέει', () => {

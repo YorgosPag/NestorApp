@@ -20,8 +20,15 @@ import type {
 import {
   PLAN_CONFIDENCE_ORDER,
   planConfidenceMark,
+  type PlanConfidenceMark,
   type PlanConfidenceTier,
 } from '../../../systems/plan-recognition/plan-confidence';
+import {
+  PLAN_ROLE_MARK_ORDER,
+  planRoleMark,
+  type PlanRoleMarkKind,
+} from '../../../systems/plan-recognition/plan-role-marks';
+import type { WallEvidenceExclusions } from '../../../systems/plan-recognition/plan-recognition-session';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 import type { PlanScaleView } from './PlanScaleCard';
 
@@ -34,8 +41,11 @@ export interface ImageSourceView {
   /** Η πηγή της τρέχουσας πρότασης είναι η εικόνα. */
   readonly active: boolean;
   readonly countsByTier: Readonly<Record<PlanConfidenceTier, number>> | null;
-  /** ADR-929 Φ5.2ε — τμήματα κάτω από το όριο βεβαιότητας: φαίνονται στην εικόνα, δεν γίνονται τοίχοι. */
-  readonly excludedFromWalls: number;
+  /**
+   * ADR-929 Φ5.2ε + Φ5.4β — γιατί δεν γίνονται τοίχοι: ανά σημάδι ρόλου (διαστάσεις, κείμενο), ή υποψήφιες παρειές
+   * κάτω από το όριο βεβαιότητας. Φαίνονται στην εικόνα, δεν γίνονται τοίχοι.
+   */
+  readonly excludedFromWalls: WallEvidenceExclusions;
   /** Η θέση της εικόνας είναι βαθμονομημένη (χωρίς αυτήν καμία εγγραφή τοίχων). */
   readonly calibrated: boolean;
   /** ADR-929 Φ5.3β — υπάρχει αποτέλεσμα γεωμετρίας, άρα και όψη που μπορεί να διαβαστεί. */
@@ -60,9 +70,14 @@ const TIER_LABEL_KEY: Readonly<Record<PlanConfidenceTier, string>> = {
   low: 'modelFromDrawing.image.confidence.low',
 };
 
-/** Δείγμα γραμμής ενός επιπέδου — το ΙΔΙΟ χρώμα και μοτίβο με την επικάλυψη. */
-function TierSwatch({ tier }: { readonly tier: PlanConfidenceTier }): React.ReactElement {
-  const mark = planConfidenceMark(tier);
+/** ADR-929 Φ5.4β — κάθε σημάδι ρόλου με ΡΗΤΟ κλειδί (CHECK 3.8), πληθυντικός ICU (CHECK 3.115). */
+const ROLE_LABEL_KEY: Readonly<Record<PlanRoleMarkKind, string>> = {
+  dimension: 'modelFromDrawing.image.role.dimension',
+  annotation: 'modelFromDrawing.image.role.annotation',
+};
+
+/** Δείγμα γραμμής ενός σημαδιού — το ΙΔΙΟ χρώμα και μοτίβο με την επικάλυψη. */
+function MarkSwatch({ mark }: { readonly mark: PlanConfidenceMark }): React.ReactElement {
   return (
     <svg width="30" height="10" viewBox="0 0 30 10" className="shrink-0" aria-hidden="true">
       <line
@@ -70,6 +85,25 @@ function TierSwatch({ tier }: { readonly tier: PlanConfidenceTier }): React.Reac
         strokeDasharray={mark.dash || undefined} strokeLinecap="round"
       />
     </svg>
+  );
+}
+
+/** ADR-929 Φ5.4β — τα τμήματα που ο ρόλος τους βγάζει εκτός τοίχων, με το σημάδι τους· τίποτα αν δεν υπάρχουν. */
+function RoleExclusions({ byRole, t }: {
+  readonly byRole: Readonly<Record<PlanRoleMarkKind, number>>;
+  readonly t: Translate;
+}): React.ReactElement | null {
+  const shown = PLAN_ROLE_MARK_ORDER.filter((role) => byRole[role] > 0);
+  if (shown.length === 0) return null;
+  return (
+    <ul className="m-0 flex list-none flex-col gap-1 p-0" data-testid="mfd-image-role-legend">
+      {shown.map((role) => (
+        <li key={role} className="flex items-center gap-2 text-xs text-foreground" data-role={role}>
+          <MarkSwatch mark={planRoleMark(role)} />
+          <span className="flex-1">{t(ROLE_LABEL_KEY[role], { count: byRole[role] })}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -121,15 +155,16 @@ export function ImageSourceSummary({ view, onResample, t }: {
       <ul className="m-0 flex list-none flex-col gap-1 p-0" data-testid="mfd-image-legend">
         {PLAN_CONFIDENCE_ORDER.map((tier) => (
           <li key={tier} className="flex items-center gap-2 text-xs text-foreground" data-tier={tier}>
-            <TierSwatch tier={tier} />
+            <MarkSwatch mark={planConfidenceMark(tier)} />
             <span className="flex-1">{t(TIER_LABEL_KEY[tier])}</span>
             <span className="font-mono">{counts[tier]}</span>
           </li>
         ))}
       </ul>
-      {view.excludedFromWalls > 0
+      <RoleExclusions byRole={view.excludedFromWalls.byRole} t={t} />
+      {view.excludedFromWalls.lowConfidence > 0
         ? <p className={MUTED} data-testid="mfd-image-excluded">
-            {t('modelFromDrawing.image.lowExcluded', { count: view.excludedFromWalls })}
+            {t('modelFromDrawing.image.lowExcluded', { count: view.excludedFromWalls.lowConfidence })}
           </p>
         : null}
       {view.calibrated

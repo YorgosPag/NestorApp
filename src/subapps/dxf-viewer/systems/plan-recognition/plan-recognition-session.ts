@@ -19,7 +19,7 @@ import { createPlanAligner, type PlanAligner } from '../../bim/plan-recognition/
 import type { PlanAlignment } from '../../bim/plan-recognition/alignment/plan-alignment-types';
 import { fusePlan } from '../../bim/plan-recognition/fusion/plan-fusion';
 import type { PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
-import type { PlanInputKind, PlanReadingOutcome } from '../../bim/plan-recognition/plan-recognition-types';
+import type { PlanInputKind, PlanReadingOutcome, RasterSegment } from '../../bim/plan-recognition/plan-recognition-types';
 import { getFloorBackground, getFloorProvider } from '../../floorplan-background/stores/floorplanBackgroundStore';
 import { resolveRasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
 import type { FloorplanBackground } from '../../floorplan-background/providers/types';
@@ -28,6 +28,7 @@ import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { sha256Hex } from '@/lib/hash/sha256';
 import { planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
 import { meetsConfidenceTier } from './plan-confidence';
+import { emptyRoleMarkCounts, planRoleMarkKind, type PlanRoleMarkKind } from './plan-role-marks';
 import { isWallCandidateRole, segmentRoleMap } from '../../bim/plan-recognition/classify/segment-roles';
 import { createPlanReadingReview, type PlanReadingReviewDeps } from './plan-reading-review';
 import { planReadingApi } from './plan-reading-api-client';
@@ -61,15 +62,50 @@ function fuse(run: PlanRecognitionRun, reading: PlanReadingOutcome | null): Plan
   });
 }
 
+/** Ό,τι διαβάζει η πολιτική «είσοδος τοίχων» από τη σύντηξη — τίποτα άλλο. */
+type WallEvidenceInput = Pick<PlanFusionResult, 'segmentRoles' | 'segmentConfidence'>;
+
 /**
  * ADR-929 Φ5.2ε + Φ5.4 — γίνεται αυτό το τμήμα είσοδος τοίχων; Ο ΕΝΑΣ τόπος της πολιτικής (πηγή + πάνελ ρωτούν εδώ):
  * ρόλος υποψήφιας παρειάς (ποτέ διάσταση, επέκταση ή σημείωση) **και** βεβαιότητα ≥ του ορίου.
  */
-export function isWallEvidence(fusion: PlanFusionResult, segmentId: string): boolean {
-  return isWallCandidateRole(fusion.segmentRoles.get(segmentId)) && meetsConfidenceTier(
+export function isWallEvidence(fusion: WallEvidenceInput, segmentId: string): boolean {
+  return isWallCandidateRole(fusion.segmentRoles.get(segmentId)) && meetsWallEvidenceTier(fusion, segmentId);
+}
+
+function meetsWallEvidenceTier(fusion: WallEvidenceInput, segmentId: string): boolean {
+  return meetsConfidenceTier(
     fusion.segmentConfidence.get(segmentId)?.score,
     MODEL_FROM_DRAWING_LIMITS.RASTER_WALL_EVIDENCE_MIN_TIER,
   );
+}
+
+/** ADR-929 Φ5.4β — γιατί δεν έγιναν τοίχοι τα τμήματα: ανά σημάδι ρόλου, ή (υποψήφια παρειά) από χαμηλή βεβαιότητα. */
+export interface WallEvidenceExclusions {
+  readonly byRole: Readonly<Record<PlanRoleMarkKind, number>>;
+  readonly lowConfidence: number;
+}
+
+/** Χωρίς αποτέλεσμα: τίποτα εκτός τοίχων. */
+export const NO_WALL_EVIDENCE_EXCLUSIONS: WallEvidenceExclusions = { byRole: emptyRoleMarkCounts(), lowConfidence: 0 };
+
+/**
+ * Η ανάλυση του «εκτός τοίχων» με την ΙΔΙΑ πολιτική με το `isWallEvidence`: ο ρόλος κρίνει πρώτος (ένα τμήμα διάστασης
+ * μετρά ως διάσταση, όποια κι αν είναι η βεβαιότητά του), και μόνο οι υποψήφιες παρειές μετρούν ως «χαμηλή βεβαιότητα».
+ * Άθροισμα = πλήθος τμημάτων που δεν περνούν το `isWallEvidence`.
+ */
+export function wallEvidenceExclusions(
+  fusion: WallEvidenceInput,
+  segments: readonly Pick<RasterSegment, 'id'>[],
+): WallEvidenceExclusions {
+  const byRole = emptyRoleMarkCounts();
+  let lowConfidence = 0;
+  for (const { id } of segments) {
+    const roleMark = planRoleMarkKind(fusion.segmentRoles.get(id));
+    if (roleMark) byRole[roleMark] += 1;
+    else if (!meetsWallEvidenceTier(fusion, id)) lowConfidence += 1;
+  }
+  return { byRole, lowConfidence };
 }
 
 /**

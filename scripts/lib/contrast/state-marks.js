@@ -223,6 +223,32 @@ function readPlanConfidenceMarks(source, primitives) {
 }
 
 /**
+ * Τα σημάδια **ρόλου** των τμημάτων εκτός τοίχων (`PLAN_SEGMENT_ROLE_MARKS`, ADR-929 Φ5.4β). Ζωγραφίζονται στην
+ * **ίδια** επικάλυψη με τα επίπεδα βεβαιότητας, με τον ίδιο φορέα (`plan-segment`), άρα κρίνονται **στην ίδια
+ * οικογένεια**: ένα `dash` ρόλου ίσο με `dash` επιπέδου θα ήταν σύγχυση που το Κ1 πρέπει να δει.
+ */
+function readPlanRoleMarks(source, primitives) {
+  const spec = propsOf(findConstObject(source, 'PLAN_SEGMENT_ROLE_MARKS'));
+  if (spec.size === 0) {
+    throw new Error(`PLAN_SEGMENT_ROLE_MARKS δεν βρέθηκε στο ${COLOR_CONFIG_PATH}`);
+  }
+  const marks = [];
+  for (const [id, node] of propsOf(spec.get('roles') ?? null)) {
+    const role = propsOf(node);
+    marks.push({
+      id: `role:${id}`,
+      carrier: 'plan-segment',
+      variant: resolveValue(role.get('dash') ?? null, primitives),
+      hex: resolveValue(role.get('hex') ?? null, primitives),
+    });
+  }
+  if (marks.length === 0) {
+    throw new Error(`PLAN_SEGMENT_ROLE_MARKS.roles είναι κενό στο ${COLOR_CONFIG_PATH}`);
+  }
+  return marks;
+}
+
+/**
  * **Όλες** οι οικογένειες καταστάσεων, ρητά ονομασμένες.
  *
  * 🔑 **Οικογένεια, όχι ένας σωρός.** Η κρίση τρέχει **ανά οικογένεια** γιατί και οι δύο κανόνες
@@ -242,7 +268,11 @@ function readStateMarkFamilies(repoRoot = process.cwd(), input = undefined) {
   return [
     { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot, input, parsed) },
     { id: 'basemap-correspondence', marks: readCorrespondenceMarks(source, primitives) },
-    { id: 'plan-confidence', marks: readPlanConfidenceMarks(source, primitives) },
+    // ADR-929 Φ5.4β — επίπεδα βεβαιότητας + σημάδια ρόλου: ΜΙΑ επιφάνεια, ΜΙΑ οικογένεια.
+    {
+      id: 'plan-segment',
+      marks: [...readPlanConfidenceMarks(source, primitives), ...readPlanRoleMarks(source, primitives)],
+    },
   ];
 }
 

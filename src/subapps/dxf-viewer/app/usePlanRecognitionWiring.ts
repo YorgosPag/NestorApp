@@ -14,8 +14,13 @@
 
 import * as React from 'react';
 import { usePlanRecognitionState } from '../systems/plan-recognition/plan-recognition-store';
-import { isWallEvidence, planRecognitionSession } from '../systems/plan-recognition/plan-recognition-session';
+import {
+  NO_WALL_EVIDENCE_EXCLUSIONS,
+  planRecognitionSession,
+  wallEvidenceExclusions,
+} from '../systems/plan-recognition/plan-recognition-session';
 import { countByConfidenceTier } from '../systems/plan-recognition/plan-confidence';
+import { planRoleMarkKind } from '../systems/plan-recognition/plan-role-marks';
 import {
   modelFromDrawingSession,
   type ModelFromDrawingDeps,
@@ -46,10 +51,12 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
     (sourceFloorId ? (s.floors[sourceFloorId]?.background?.calibration ?? null) !== null : false));
   const { counts, excludedFromWalls } = React.useMemo(() => {
     const { run, fusion } = recognition;
-    if (!run || !fusion) return { counts: null, excludedFromWalls: 0 };
+    if (!run || !fusion) return { counts: null, excludedFromWalls: NO_WALL_EVIDENCE_EXCLUSIONS };
+    // Φ5.4β — τα επίπεδα μετρούν ό,τι ζωγραφίζουν: τα τμήματα με σημάδι ρόλου μετρά το υπόμνημα ρόλων.
+    const tiered = run.segments.filter((s) => planRoleMarkKind(fusion.segmentRoles.get(s.id)) === null);
     return {
-      counts: countByConfidenceTier(run.segments.map((s) => fusion.segmentConfidence.get(s.id)?.score ?? null)),
-      excludedFromWalls: run.segments.filter((s) => !isWallEvidence(fusion, s.id)).length,
+      counts: countByConfidenceTier(tiered.map((s) => fusion.segmentConfidence.get(s.id)?.score ?? null)),
+      excludedFromWalls: wallEvidenceExclusions(fusion, run.segments),
     };
   }, [recognition]);
   return {
