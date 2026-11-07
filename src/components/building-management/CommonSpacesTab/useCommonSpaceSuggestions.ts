@@ -28,7 +28,6 @@ import {
 } from '@/lib/common-spaces/common-space-suggestion-dismissals';
 import type { CommonSpaceSuggestion } from '@/lib/common-spaces/common-space-suggestions';
 import { readBuildingObjectiveValueFacts } from '@/lib/objective-value/building-objective-value-facts';
-import { useNotifications } from '@/providers/NotificationProvider';
 import {
   dismissCommonSpaceSuggestionWithPolicy,
   restoreCommonSpaceSuggestionsWithPolicy,
@@ -38,6 +37,7 @@ import type { CommonSpace } from '@/types/common-space';
 
 import { EMPTY_COMMON_SPACE_DRAFT, type CommonSpaceDraft } from './common-space-draft';
 import { useOptimisticSuggestionDismissals, type OptimisticSuggestionDismissals } from './useOptimisticSuggestionDismissals';
+import { useSuggestionUndoToasts } from './useSuggestionUndoToasts';
 
 export interface CommonSpaceSuggestionsHandle {
   readonly suggestions: readonly CommonSpaceSuggestion[];
@@ -77,14 +77,15 @@ function useRestore(buildingId: string, optimistic: OptimisticSuggestionDismissa
   return { restore, restoreAll };
 }
 
-/** Απόρριψη: αισιόδοξα (με τον τρέχοντα άνθρωπο ως «ποιος») → πόρτα → toast με «Αναίρεση». */
+/** Απόρριψη: αισιόδοξα (με τον τρέχοντα άνθρωπο ως «ποιος») → πόρτα → toast με «Αναίρεση» (`useSuggestionUndoToasts`). */
 function useDismiss(buildingId: string, optimistic: OptimisticSuggestionDismissals, restore: (key: string) => Promise<void>) {
   const { t } = useTranslation('common-spaces');
   const { user } = useAuth();
-  const notifications = useNotifications();
   const reportFailure = useMutationFailureFeedback('CommonSpaceSuggestions');
-  const { markDismissed, forget } = optimistic;
+  const { dismissals, markDismissed, forget } = optimistic;
   const uid = user?.uid ?? '';
+  const dismissedKeys = useMemo(() => new Set(dismissals.map((record) => record.key)), [dismissals]);
+  const showUndo = useSuggestionUndoToasts(buildingId, dismissedKeys);
 
   return useCallback(async (suggestion: CommonSpaceSuggestion) => {
     const { key } = suggestion;
@@ -96,11 +97,13 @@ function useDismiss(buildingId: string, optimistic: OptimisticSuggestionDismissa
       reportFailure(err, 'update', t('tab.notifications.failed'));
       return;
     }
-    notifications.notify(t('tab.suggestions.dismissedToast', { name: t(`categories.${suggestion.category}`) }), {
-      type: 'info',
-      actions: [{ label: t('tab.suggestions.undo'), onClick: () => { void restore(key); } }],
+    showUndo({
+      key,
+      message: t('tab.suggestions.dismissedToast', { name: t(`categories.${suggestion.category}`) }),
+      undoLabel: t('tab.suggestions.undo'),
+      onUndo: () => { void restore(key); },
     });
-  }, [buildingId, uid, markDismissed, forget, reportFailure, notifications, restore, t]);
+  }, [buildingId, uid, markDismissed, forget, reportFailure, showUndo, restore, t]);
 }
 
 export function useCommonSpaceSuggestions(
