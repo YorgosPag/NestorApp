@@ -28,6 +28,7 @@ import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { sha256Hex } from '@/lib/hash/sha256';
 import { planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
 import { meetsConfidenceTier } from './plan-confidence';
+import { isWallCandidateRole, segmentRoleMap } from '../../bim/plan-recognition/classify/segment-roles';
 import { createPlanReadingReview, type PlanReadingReviewDeps } from './plan-reading-review';
 import { planReadingApi } from './plan-reading-api-client';
 import { createPlanScaleController, type PlanScaleControllerDeps } from './plan-scale-controller';
@@ -56,12 +57,16 @@ function fuse(run: PlanRecognitionRun, reading: PlanReadingOutcome | null): Plan
     reading,
     knownScale: run.knownScale,
     sourceDpi: null,
+    segmentRoles: segmentRoleMap(run.segmentRoles ?? []),
   });
 }
 
-/** ADR-929 Φ5.2ε — γίνεται αυτό το τμήμα είσοδος τοίχων; Ο ΕΝΑΣ τόπος της πολιτικής (πηγή + πάνελ ρωτούν εδώ). */
+/**
+ * ADR-929 Φ5.2ε + Φ5.4 — γίνεται αυτό το τμήμα είσοδος τοίχων; Ο ΕΝΑΣ τόπος της πολιτικής (πηγή + πάνελ ρωτούν εδώ):
+ * ρόλος υποψήφιας παρειάς (ποτέ διάσταση, επέκταση ή σημείωση) **και** βεβαιότητα ≥ του ορίου.
+ */
 export function isWallEvidence(fusion: PlanFusionResult, segmentId: string): boolean {
-  return meetsConfidenceTier(
+  return isWallCandidateRole(fusion.segmentRoles.get(segmentId)) && meetsConfidenceTier(
     fusion.segmentConfidence.get(segmentId)?.score,
     MODEL_FROM_DRAWING_LIMITS.RASTER_WALL_EVIDENCE_MIN_TIER,
   );
@@ -148,6 +153,7 @@ export const planRecognitionSession = {
     if (reply.kind === 'failed') return fail('aligner-failed');
     const segments = reply.value.segments?.segments ?? [];
     if (segments.length === 0) return fail('no-segments');
+    const segmentRoles = reply.value.segments?.classification.verdicts ?? [];
     const run: PlanRecognitionRun = {
       id: `rec${sequence}`,
       floorId,
@@ -155,6 +161,7 @@ export const planRecognitionSession = {
       kind: inputKindOf(background, reply.value.alignment),
       alignment: reply.value.alignment,
       segments,
+      segmentRoles,
       knownScale,
     };
     const fusion = fuse(run, null);

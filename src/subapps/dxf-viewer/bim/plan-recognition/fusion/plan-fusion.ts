@@ -12,7 +12,8 @@
  * @module subapps/dxf-viewer/bim/plan-recognition/fusion/plan-fusion
  */
 
-import type { PlanReading } from '../plan-recognition-types';
+import { isWallCandidateRole } from '../classify/segment-roles';
+import type { PlanReading, PlanSegmentRole } from '../plan-recognition-types';
 import { adjustNetwork, type BoundDimension, type NetworkOutcome } from './adjustment-network';
 import { dimensionTargets, selectBinding, type DimensionTarget } from './dimension-binding';
 import { buildFusionFrame, type FusionFrame } from './fusion-frame';
@@ -103,7 +104,10 @@ function suggestion(stage: ScaleStage, network: NetworkOutcome | null, frame: Fu
 /** Η σύντηξη μιας αναγνώρισης. Ντετερμινιστική: ίδια είσοδος ⇒ ίδιο αποτέλεσμα. */
 export function fusePlan(input: PlanFusionInput): PlanFusionResult {
   const o: PlanFusionOptions = { ...DEFAULT_PLAN_FUSION, ...input.options };
-  const frame = buildFusionFrame(input.segments, input.alignment, o);
+  const roles = input.segmentRoles ?? new Map<string, PlanSegmentRole>();
+  // Φ5.4: μόνο οι υποψήφιες παρειές γίνονται ευθείες — καμία διάσταση δεν δένεται σε γραμμή διάστασης.
+  const faceSegments = input.segments.filter((s) => isWallCandidateRole(roles.get(s.id)));
+  const frame = buildFusionFrame(faceSegments, input.alignment, o);
   const reading = input.reading?.status === 'read' ? input.reading.reading : null;
   const targets = reading === null ? [] : dimensionTargets(reading, frame, input.alignment.originalToAligned, input.kind, o);
   const stage = resolveScale(input, reading, frame, targets, o);
@@ -126,6 +130,7 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
     rooms,
     questions: planQuestions({ frame, network, segments: input.segments, dimensions, rooms, scaleQuestions, pxPerMm }, o),
     segmentConfidence: segmentConfidence(input.segments, frame, network, dimensions, o),
+    segmentRoles: roles,
     adjustment: summary(network),
   };
 }

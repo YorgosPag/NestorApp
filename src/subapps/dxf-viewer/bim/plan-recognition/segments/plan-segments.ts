@@ -37,6 +37,7 @@ import { MODEL_FROM_DRAWING_LIMITS } from '../../../config/tolerance-config';
 import type { RasterPixelScale } from '../../../floorplan-background/geometry/raster-pixel-scale';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import type { AlignedRectPx, PlanAlignment } from '../alignment/plan-alignment-types';
+import { classifySegmentRoles, type PlanSegmentClassification } from '../classify/segment-role-classifier';
 import type { PlanConfidence, RasterSegment } from '../plan-recognition-types';
 import {
   bandFaces,
@@ -94,7 +95,14 @@ export interface PlanSegmentExtraction {
   readonly minLengthPx: number;
   /** Οι λοξές διευθύνσεις που βρέθηκαν και έδωσαν γραμμές, σε μοίρες (raster-px). */
   readonly obliqueAnglesDeg: readonly number[];
+  /**
+   * ADR-929 Φ5.4 — ο **ρόλος** κάθε τμήματος (τοίχος · διάσταση · επέκταση · σημείωση · αβέβαιο). Βγαίνει εδώ, στον ίδιο
+   * Worker, γιατί χρειάζεται το **ίδιο** μελάνι που έδωσε τα τμήματα. Η γεωμετρία δεν αλλάζει.
+   */
+  readonly classification: PlanSegmentClassification;
 }
+
+const EMPTY_CLASSIFICATION: PlanSegmentClassification = { verdicts: [], textHeightPx: null, glyphCount: 0 };
 
 /** Παρειά μαζί με την ομογραφία από το πλαίσιό της ως τα αρχικά px. */
 interface FramedFace {
@@ -227,7 +235,9 @@ export function extractPlanSegments(
   ];
   const lines = bands.filter(isBandLine);
   const stroke = weightedThicknessPercentile(lines, options.strokePercentile);
-  if (stroke === null) return { segments: [], strokeWidthPx: null, minLengthPx: minLength, obliqueAnglesDeg: [] };
+  if (stroke === null) {
+    return { segments: [], strokeWidthPx: null, minLengthPx: minLength, obliqueAnglesDeg: [], classification: EMPTY_CLASSIFICATION };
+  }
   const ctx: PassContext = {
     stroke, cols, rows, bandOptions, fillAbove: fillThreshold(stroke, options), options, alignedToOriginal: alignment.alignedToOriginal,
   };
@@ -239,5 +249,8 @@ export function extractPlanSegments(
   const oblique = obliquePass(residual, ink, ctx);
   const segments: RasterSegment[] = [...axisFaces, ...oblique.faces].map(toOriginalSegment).sort(byPosition)
     .map((s, i) => ({ id: `ps${i}`, ...s }));
-  return { segments, strokeWidthPx: stroke, minLengthPx: minLength, obliqueAnglesDeg: oblique.angles };
+  const classification = classifySegmentRoles({
+    segments, originalToAligned: alignment.originalToAligned, ink: { mask: ink, cols, rows }, strokePx: stroke, minLengthPx: minLength,
+  });
+  return { segments, strokeWidthPx: stroke, minLengthPx: minLength, obliqueAnglesDeg: oblique.angles, classification };
 }

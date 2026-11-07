@@ -89,6 +89,35 @@ export interface RasterSegment {
   readonly confidence: PlanConfidence;
 }
 
+// ─── Φ5.4: ρόλος τμήματος — τι ΕΙΝΑΙ η γραμμή (ADR-929 §6.7) ─────────────────
+
+/**
+ * Τι είναι ένα τμήμα στο σχέδιο. Η γεωμετρία (Φ2) δίνει **πού** είναι η γραμμή· ο ρόλος λέει **τι** είναι, ώστε μια γραμμή
+ * διάστασης να μη γίνει ποτέ παρειά τοίχου. `unknown` = τα τεκμήρια δεν αποφασίζουν: μένει υποψήφια παρειά (ποτέ σιωπηλή
+ * απόρριψη πραγματικού τοίχου), αλλά φαίνεται ως αβέβαιη. Επεκτάσιμο (π.χ. `symbol`) χωρίς αλλαγή σχήματος.
+ */
+export type PlanSegmentRole = 'wall-face' | 'dimension-line' | 'extension-line' | 'annotation' | 'unknown';
+
+/** Η απόληξη στο άκρο μιας γραμμής: βέλος · πλάγια παύλα · κουκκίδα · κάθετη γραμμή που τη διασχίζει · καμία. */
+export type PlanTerminatorKind = 'arrow' | 'tick' | 'dot' | 'cross' | 'none';
+
+/**
+ * Τα τεκμήρια του ρόλου, με όνομα (Δ9: ο άνθρωπος βλέπει **γιατί**): κείμενο που διακόπτει ή συνοδεύει τη γραμμή ·
+ * απολήξεις · γραμμές επέκτασης · λεπτή πινελιά. (Η δεύτερη γνώμη του VLM προστίθεται όταν υλοποιηθεί, όχι πριν.)
+ */
+export type PlanRoleFactor = 'text' | 'terminators' | 'extension' | 'thinness';
+
+/** Η κρίση για ΕΝΑ τμήμα. Ζει **δίπλα** στο `RasterSegment`, όχι μέσα του: η γεωμετρία (και το κλειδί ανάγνωσης) δεν αλλάζει. */
+export interface PlanSegmentRoleVerdict {
+  readonly segmentId: string;
+  readonly role: PlanSegmentRole;
+  /** Πιθανότητα «γραμμή διάστασης» στο [0, 1], από τη λογιστική άθροιση των παραγόντων. */
+  readonly dimensionScore: number;
+  readonly factors: Readonly<Partial<Record<PlanRoleFactor, number>>>;
+  /** Οι απολήξεις στο `start` και στο `end`. */
+  readonly terminators: readonly [PlanTerminatorKind, PlanTerminatorKind];
+}
+
 // ─── Φ3: ανάγνωση από VLM (θύρα `PlanReader`, Δ5) ────────────────────────────
 
 /**

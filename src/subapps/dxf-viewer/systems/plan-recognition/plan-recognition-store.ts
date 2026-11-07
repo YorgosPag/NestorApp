@@ -23,6 +23,7 @@ import type {
   PlanInputKind,
   PlanReadingOutcome,
   PlanReadingUnavailableReason,
+  PlanSegmentRoleVerdict,
   RasterSegment,
 } from '../../bim/plan-recognition/plan-recognition-types';
 import type { PlanReadingView, PlanViewSegment } from '../../bim/plan-recognition/reading/plan-reading-view';
@@ -43,6 +44,11 @@ export interface PlanRecognitionRun {
   readonly kind: PlanInputKind;
   readonly alignment: PlanAlignment;
   readonly segments: readonly RasterSegment[];
+  /**
+   * ADR-929 Φ5.4 — οι κρίσεις ρόλου της Φ2 (διάσταση · επέκταση · τοίχος …), ανά τμήμα. Λείπει ⇒ η αναγνώριση δεν
+   * ταξινομήθηκε, και κάθε τμήμα μένει υποψήφια παρειά (`isWallCandidateRole`).
+   */
+  readonly segmentRoles?: readonly PlanSegmentRoleVerdict[];
   /** Η κλίμακα του υποβάθρου τη στιγμή της αναγνώρισης (`resolveRasterPixelScale`, Δ4). */
   readonly knownScale: RasterPixelScale | null;
 }

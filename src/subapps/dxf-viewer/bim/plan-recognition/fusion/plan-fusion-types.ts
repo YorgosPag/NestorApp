@@ -18,7 +18,13 @@ import type { PlanePoint } from '@/lib/geometry/homography';
 import type { RasterRectPx } from '../../../types/coordinate-space';
 import type { RasterPixelScale } from '../../../floorplan-background/geometry/raster-pixel-scale';
 import type { PlanAlignment } from '../alignment/plan-alignment-types';
-import type { PlanConfidence, PlanInputKind, PlanReadingOutcome, RasterSegment } from '../plan-recognition-types';
+import type {
+  PlanConfidence,
+  PlanInputKind,
+  PlanReadingOutcome,
+  PlanSegmentRole,
+  RasterSegment,
+} from '../plan-recognition-types';
 
 // ─── Είσοδος ────────────────────────────────────────────────────────────────
 
@@ -41,6 +47,12 @@ export interface PlanFusionInput {
   readonly knownScale: RasterPixelScale | null;
   /** DPI της αρχικής εικόνας (απόδοση PDF ή μεταδεδομένα σάρωσης), για τη γραμμένη κλίμακα «1:100». */
   readonly sourceDpi: number | null;
+  /**
+   * ADR-929 Φ5.4 — ο ρόλος κάθε τμήματος (`classifySegmentRoles`). Μόνο οι υποψήφιες παρειές (`isWallCandidateRole`)
+   * γίνονται ευθείες του πλαισίου, ώστε καμία διάσταση να μη δεθεί σε γραμμή διάστασης. Χωρίς χάρτη (ή χωρίς εγγραφή για
+   * ένα τμήμα) ⇒ το τμήμα είναι υποψήφιο: ποτέ σιωπηλή απόρριψη.
+   */
+  readonly segmentRoles?: ReadonlyMap<string, PlanSegmentRole>;
   readonly roomAreaProbe?: RoomAreaProbe;
   readonly options?: Partial<PlanFusionOptions>;
 }
@@ -252,5 +264,7 @@ export interface PlanFusionResult {
   readonly rooms: readonly FusedRoom[];
   readonly questions: readonly PlanQuestion[];
   readonly segmentConfidence: ReadonlyMap<string, PlanConfidence>;
+  /** ADR-929 Φ5.4 — ο ρόλος κάθε τμήματος, όπως μπήκε (κενός χάρτης ⇒ όλα υποψήφιες παρειές). */
+  readonly segmentRoles: ReadonlyMap<string, PlanSegmentRole>;
   readonly adjustment: AdjustmentSummary | null;
 }
