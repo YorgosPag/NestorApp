@@ -58,7 +58,7 @@ var service = {
 var repository = {
   getJournalEntry: jest.fn(),
   updateJournalEntry: jest.fn(async () => undefined),
-  deleteJournalEntry: jest.fn(async () => undefined),
+  reverseJournalEntry: jest.fn(),
   createJournalEntry: jest.fn(async () => ({ id: 'je_1' })),
 };
 
@@ -74,7 +74,9 @@ import { DepreciationPeriodClosedError } from '@/subapps/accounting/services/rep
 import { GET as previewGet, POST as runPost } from '../assets/depreciation-run/route';
 import { POST as reversalPost } from '../assets/depreciation-run/reversal/route';
 import { POST as journalPost } from '../journal/route';
-import { DELETE as journalDelete, PATCH as journalPatch } from '../journal/[id]/route';
+import * as journalIdRoute from '../journal/[id]/route';
+
+const journalPatch = journalIdRoute.PATCH;
 
 interface Envelope {
   status: number;
@@ -159,16 +161,19 @@ describe('Ρ4 — Βιβλίο Ε-Ε: εγγραφές υποσυστήματο�
     source: { kind: 'depreciation', depreciationRecordId: 'depr_1', assetId: 'ast_1', fiscalYear: 2025, revision: 1 },
   };
 
-  it('PATCH / DELETE εγγραφής απόσβεσης ⇒ 403 `JOURNAL_ENTRY_SUBSYSTEM_OWNED`, τίποτα δεν αλλάζει', async () => {
+  it('PATCH εγγραφής απόσβεσης ⇒ 403 `JOURNAL_ENTRY_SUBSYSTEM_OWNED`, τίποτα δεν αλλάζει', async () => {
     repository.getJournalEntry.mockResolvedValue(depreciationEntry);
 
     const patched = (await journalPatch(req({ notes: 'x' }), seg('je_depr'))) as Envelope;
-    const deleted = (await journalDelete(req(), seg('je_depr'))) as Envelope;
 
-    expect([patched.status, deleted.status]).toEqual([403, 403]);
-    expect((await deleted.json()).errorCode).toBe('JOURNAL_ENTRY_SUBSYSTEM_OWNED');
+    expect(patched.status).toBe(403);
+    expect((await patched.json()).errorCode).toBe('JOURNAL_ENTRY_SUBSYSTEM_OWNED');
     expect(repository.updateJournalEntry).not.toHaveBeenCalled();
-    expect(repository.deleteJournalEntry).not.toHaveBeenCalled();
+  });
+
+  // ADR-ACC-010 §2.1.1 Φ8 — καμία εγγραφή δεν σβήνεται από τη γενική διαδρομή (ούτε απόσβεσης): ο handler δεν υπάρχει.
+  it('DELETE εγγραφής Ε-Ε δεν υπάρχει ως διαδρομή', () => {
+    expect('DELETE' in journalIdRoute).toBe(false);
   });
 
   it.each([

@@ -13,11 +13,19 @@ import {
   isManualPostingAllowed,
   isSubsystemOwnedEntry,
 } from '@/subapps/accounting/services/journal/journal-subsystem-ownership';
+import { carriesLineageFields } from '@/subapps/accounting/services/journal/journal-reversal-policy';
 
 /** Εγγραφή υποσυστήματος (π.χ. απόσβεση) ⇒ 403: αλλάζει / σβήνεται ΜΟΝΟ από το υποσύστημά της. */
 export function assertNotSubsystemOwned(entry: Pick<JournalEntry, 'source' | 'category'>): void {
   if (isSubsystemOwnedEntry(entry)) {
     throw new ApiError(403, 'Journal entry is owned by a subsystem and cannot be changed here', 'JOURNAL_ENTRY_SUBSYSTEM_OWNED');
+  }
+}
+
+/** Σώμα δημιουργίας με πεδίο γενεαλογίας αντιλογισμού (`isReversal`, `status`, …) ⇒ 422 (ADR-ACC-010 §2.1.1 Φ8). */
+export function assertNoLineageFields(body: object): void {
+  if (carriesLineageFields(body)) {
+    throw new ApiError(422, 'Reversal lineage fields are written only by the reversal writer', 'JOURNAL_LINEAGE_FIELDS_FORBIDDEN');
   }
 }
 

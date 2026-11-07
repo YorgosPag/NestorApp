@@ -33,9 +33,11 @@ import { useListSummary } from '../../hooks/useListSummary';
 import type { JournalListSummary } from '../../services/list-summaries/journal-list-summary';
 import { summaryStatValue } from '../shared/summary-stat-value';
 import { API_ROUTES } from '@/config/domain-constants';
-import type { EntryType, FiscalQuarter } from '@/subapps/accounting/types';
+import type { EntryType, FiscalQuarter, JournalEntry } from '@/subapps/accounting/types';
 import { JournalEntriesTable } from './JournalEntriesTable';
 import { JournalEntryForm } from './JournalEntryForm';
+import { ReverseJournalEntryDialog, type JournalReversalDone } from './ReverseJournalEntryDialog';
+import { ReversalOutcomeNotice } from './ReversalOutcomeNotice';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -128,6 +130,10 @@ export function JournalPageContent() {
   const [showForm, setShowForm] = useState(false);
   const [filters, setFilters] = useState<JournalFilterState>({ ...DEFAULT_FILTERS });
   const [showDashboard, setShowDashboard] = useState(true);
+  // ADR-ACC-010 §2.1.1 Φ8 — αντιλογισμός: ποια εγγραφή, τι έγινε, και (προαιρετικά) ποια διορθώνεται τώρα
+  const [reversalTarget, setReversalTarget] = useState<JournalEntry | null>(null);
+  const [lastReversal, setLastReversal] = useState<JournalReversalDone | null>(null);
+  const [correctionOf, setCorrectionOf] = useState<JournalEntry | undefined>(undefined);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
@@ -146,14 +152,30 @@ export function JournalPageContent() {
   const { data: summary, loading: summaryLoading, refetch: refetchSummary } =
     useListSummary<JournalListSummary>(API_ROUTES.ACCOUNTING.JOURNAL_SUMMARY, listFilters);
 
-  const handleFormSuccess = useCallback(() => {
-    setShowForm(false);
+  const refreshAll = useCallback(() => {
     void Promise.all([refetchList(), refetchSummary()]);
   }, [refetchList, refetchSummary]);
 
+  const handleFormSuccess = useCallback(() => {
+    setShowForm(false);
+    setCorrectionOf(undefined);
+    refreshAll();
+  }, [refreshAll]);
+
   const handleFormCancel = useCallback(() => {
     setShowForm(false);
+    setCorrectionOf(undefined);
   }, []);
+
+  const handleReversed = useCallback((done: JournalReversalDone) => {
+    setReversalTarget(null);
+    setLastReversal(done);
+    refreshAll();
+    if (done.correct) {
+      setCorrectionOf(done.entry);
+      setShowForm(true);
+    }
+  }, [refreshAll]);
 
   const dashboardStats: DashboardStat[] = useMemo(() => {
     const netResult = summary?.netResult ?? 0;
@@ -225,8 +247,16 @@ export function JournalPageContent() {
 
       {/* Content Area */}
       <section className="p-6">
+        {lastReversal !== null && (
+          <ReversalOutcomeNotice done={lastReversal} onDismiss={() => setLastReversal(null)} />
+        )}
         {showForm ? (
-          <JournalEntryForm onSuccess={handleFormSuccess} onCancel={handleFormCancel} />
+          <JournalEntryForm
+            key={correctionOf?.entryId ?? 'new'}
+            correctionOf={correctionOf}
+            onSuccess={handleFormSuccess}
+            onCancel={handleFormCancel}
+          />
         ) : (
           <PagedListSection
             list={journalList}
@@ -244,10 +274,16 @@ export function JournalPageContent() {
               </div>
             }
           >
-            {(items) => <JournalEntriesTable entries={items} />}
+            {(items) => <JournalEntriesTable entries={items} onReverse={setReversalTarget} />}
           </PagedListSection>
         )}
       </section>
+
+      <ReverseJournalEntryDialog
+        entry={reversalTarget}
+        onClose={() => setReversalTarget(null)}
+        onReversed={handleReversed}
+      />
     </main>
   );
 }

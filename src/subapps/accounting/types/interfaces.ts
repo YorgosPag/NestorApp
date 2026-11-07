@@ -25,6 +25,7 @@ import type {
   JournalEntryFilters,
   JournalLedgerQuery,
 } from './journal';
+import type { JournalReversalOutcome, JournalReversalRequest } from './journal-reversal';
 import type {
   Invoice,
   CreateInvoiceInput,
@@ -150,7 +151,8 @@ export interface IAccountingRepository {
   createJournalEntry(data: CreateJournalEntryInput): Promise<{ id: string }>;
   getJournalEntry(entryId: string): Promise<JournalEntry | null>;
   updateJournalEntry(entryId: string, updates: UpdateJournalEntryInput): Promise<void>;
-  deleteJournalEntry(entryId: string): Promise<void>;
+  /** Ο ΕΝΑΣ αντιλογισμός (storno) — ατομικός, ιδεμπότητος. ΔΙΑΓΡΑΦΗ εγγραφής δεν υπάρχει (ADR-ACC-010 §2.1.1 Φ8). */
+  reverseJournalEntry(request: JournalReversalRequest): Promise<JournalReversalOutcome>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς — βλ. `collectJournalEntries`. */
   listJournalEntries(filters: JournalEntryFilters, page?: PageRequest): Promise<PaginatedResult<JournalEntry>>;
   /** ΟΛΗ η εμβέλεια των φίλτρων της λίστας — για τα σύνολα της οθόνης (κάρτες σύνοψης), όχι η σελίδα. */

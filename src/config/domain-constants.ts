@@ -1197,6 +1197,8 @@ export const API_ROUTES = {
     JOURNAL: '/api/accounting/journal',
     // ADR-ACC-010 §2.1.1 — κάρτες σύνοψης πάνω σε ΟΛΗ την εμβέλεια των φίλτρων της λίστας (ίδιες παράμετροι)
     JOURNAL_SUMMARY: '/api/accounting/journal/summary',
+    // ADR-ACC-010 §2.1.1 Φ8 — ο ΕΝΑΣ αντιλογισμός (storno) εγγραφής· διαγραφή εγγραφής δεν υπάρχει
+    JOURNAL_REVERSAL: (id: string) => `/api/accounting/journal/${id}/reversal` as const,
     VAT: { SUMMARY: '/api/accounting/vat/summary' },
     TAX: {
       ESTIMATE: '/api/accounting/tax/estimate',

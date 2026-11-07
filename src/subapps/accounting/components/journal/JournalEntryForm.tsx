@@ -38,6 +38,7 @@ import type {
   PaymentMethod,
   FiscalQuarter,
   CreateJournalEntryInput,
+  JournalEntry,
 } from '@/subapps/accounting/types';
 import { getCategoryByCode } from '../../config/account-categories';
 import { formatAccountingCurrency } from '../../utils/format';
@@ -52,6 +53,11 @@ import { nowISO } from '@/lib/date-local';
 interface JournalEntryFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  /**
+   * «Αντιλογισμός και διόρθωση» (ADR-ACC-010 §2.1.1 Φ8): η φόρμα ανοίγει με τα στοιχεία της εγγραφής που μόλις
+   * αντιλογίστηκε, για να περαστεί αμέσως η ΣΩΣΤΗ. Νέα εγγραφή — ποτέ αλλαγή της παλιάς.
+   */
+  correctionOf?: JournalEntry;
 }
 
 interface JournalEntryFormState {
@@ -82,7 +88,35 @@ function getQuarterFromDate(dateStr: string): FiscalQuarter {
 // COMPONENT
 // ============================================================================
 
-export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps) {
+/** Κενή φόρμα — ή τα στοιχεία της εγγραφής που διορθώνεται (ίδια ημερομηνία· ο χρήστης αλλάζει ό,τι ήταν λάθος). */
+function initialFormState(correctionOf: JournalEntry | undefined): JournalEntryFormState {
+  if (correctionOf === undefined) {
+    return {
+      date: nowISO().split('T')[0],
+      type: 'income',
+      category: 'service_income',
+      description: '',
+      netAmount: '',
+      vatRate: 24,
+      paymentMethod: 'bank_transfer',
+      contactName: '',
+      notes: '',
+    };
+  }
+  return {
+    date: correctionOf.date,
+    type: correctionOf.type,
+    category: correctionOf.category,
+    description: correctionOf.description,
+    netAmount: String(correctionOf.netAmount),
+    vatRate: correctionOf.vatRate,
+    paymentMethod: correctionOf.paymentMethod,
+    contactName: correctionOf.contactName ?? '',
+    notes: correctionOf.notes ?? '',
+  };
+}
+
+export function JournalEntryForm({ onSuccess, onCancel, correctionOf }: JournalEntryFormProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const formId = useId();
   const colors = useSemanticColors();
@@ -91,17 +125,7 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState<JournalEntryFormState>({
-    date: nowISO().split('T')[0],
-    type: 'income',
-    category: 'service_income',
-    description: '',
-    netAmount: '',
-    vatRate: 24,
-    paymentMethod: 'bank_transfer',
-    contactName: '',
-    notes: '',
-  });
+  const [form, setForm] = useState<JournalEntryFormState>(() => initialFormState(correctionOf));
 
   const updateField = useCallback(<K extends keyof JournalEntryFormState>(
     key: K,
@@ -200,7 +224,7 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
       {/* Type, Date & Category */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('journal.newEntry')}</CardTitle>
+          <CardTitle>{t(correctionOf ? 'journal.reversal.correctionTitle' : 'journal.newEntry')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

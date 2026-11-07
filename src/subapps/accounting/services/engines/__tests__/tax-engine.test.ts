@@ -48,7 +48,7 @@ function createMockRepository(): MockRepository {
     createJournalEntry: jest.fn(),
     getJournalEntry: jest.fn(),
     updateJournalEntry: jest.fn(),
-    deleteJournalEntry: jest.fn(),
+    reverseJournalEntry: jest.fn(),
     listJournalEntries: jest.fn(),
     hasJournalEntriesInCategory: jest.fn(),
     // One ledger scan consumes the historic "income page, then expense page" fixture pair.

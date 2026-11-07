@@ -5,13 +5,13 @@
     "src/lib/middleware/rate-limit-config.ts"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά (α) διαδρομές που δεν δηλώνουν βαθμίδα ορίου και (β) διαδρομές που δηλώνουν άλλη από όση επιβάλλεται. Η θεραπεία είναι ΔΗΛΩΣΗ στη διαδρομή ή διόρθωση του πίνακα προθεμάτων — ποτέ μικρότερος αριθμός.",
-  "population": 740,
+  "population": 741,
   "tally": {
     "undeclared": 54,
     "prefix-shadowed-by-declaration": 27,
     "declared-over-default": 149,
     "declared-agrees": 387,
-    "declared-via-factory": 123
+    "declared-via-factory": 124
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
@@ -21,7 +21,7 @@
     "STANDARD→HEAVY": 13
   },
   "violation_count": 81,
-  "declaration_count": 123,
+  "declaration_count": 124,
   "violations": [
     "prefix-shadowed-by-declaration::HEAVY→SENSITIVE::/api/admin/role-management/audit-log/export",
     "prefix-shadowed-by-declaration::STANDARD→HEAVY::/api/reports/builder",
@@ -183,6 +183,7 @@
     "defineRoute::/api/accounting/invoices/series",
     "defineRoute::/api/accounting/journal",
     "defineRoute::/api/accounting/journal/[id]",
+    "defineRoute::/api/accounting/journal/[id]/reversal",
     "defineRoute::/api/accounting/reports/[type]",
     "defineRoute::/api/accounting/setup",
     "defineRoute::/api/accounting/setup/presets",

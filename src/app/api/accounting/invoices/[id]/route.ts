@@ -25,6 +25,10 @@ import {
   createCreditNoteForInvoice,
 } from '@/subapps/accounting/services/reversal-service';
 import { refreshCustomerBalance } from '@/subapps/accounting/services';
+import { validatePostingAllowed } from '@/subapps/accounting/services/fiscal-period-service';
+import { accountingToday } from '@/subapps/accounting/utils/accounting-day';
+import { assertPostingAllowed } from '../../_shared/fiscal-period-errors';
+import { withJournalReversalErrors } from '../../_shared/journal-reversal-errors';
 import type { MyDataDocumentStatus, UpdateInvoiceInput, CancellationReasonCode } from '@/subapps/accounting/types';
 import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import {
@@ -137,6 +141,12 @@ export const DELETE = defineRoute({
     const currentStatus = existing.mydata?.status ?? 'draft';
     const reasonNotes = notes.trim() || null;
 
+    // ADR-ACC-010 §2.1.1 Φ8: ο αντιλογισμός της εγγραφής Ε-Ε έχει ΣΗΜΕΡΙΝΗ ημερομηνία — η περίοδός της ελέγχεται
+    // ΠΡΙΝ αλλάξει οτιδήποτε στο τιμολόγιο (αλλιώς: ακυρωμένο τιμολόγιο, εγγραφή χωρίς storno).
+    if (await repository.getJournalEntryByInvoiceId(id)) {
+      assertPostingAllowed(await validatePostingAllowed(repository, accountingToday()));
+    }
+
     // ── Path A: Draft/Rejected → VOID ─────────────────────────────
     if (VOIDABLE_STATUSES.has(currentStatus)) {
       await repository.updateInvoice(id, {
@@ -145,9 +155,9 @@ export const DELETE = defineRoute({
         cancellationNotes: reasonNotes ?? undefined,
       });
 
-      const reversal = await reverseJournalEntryForCancelledInvoice(
-        repository, id, auth.uid, reasonCode as CancellationReasonCode, reasonNotes
-      );
+      const reversal = await withJournalReversalErrors(() => reverseJournalEntryForCancelledInvoice(
+        repository, id, reasonCode as CancellationReasonCode, reasonNotes
+      ));
 
       // ── Hook 2: Update balance after void (Q4 — synchronous) ────────
       const voidContactId = existing.customer?.contactId;
@@ -167,9 +177,9 @@ export const DELETE = defineRoute({
 
     // ── Path B: Sent/Accepted → CREDIT NOTE ──────────────────────
     if (CREDIT_NOTE_STATUSES.has(currentStatus)) {
-      const result = await createCreditNoteForInvoice(
-        repository, existing, auth.uid, reasonCode as CancellationReasonCode, reasonNotes
-      );
+      const result = await withJournalReversalErrors(() => createCreditNoteForInvoice(
+        repository, existing, reasonCode as CancellationReasonCode, reasonNotes
+      ));
 
       // ── Hook 2: Update balance after credit note (Q4 — synchronous) ─
       const cnContactId = existing.customer?.contactId;

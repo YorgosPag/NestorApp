@@ -17,6 +17,7 @@ import type { PageRequest } from '@/lib/pagination';
 
 import type { CompanySetupSaveOptions, IAccountingRepository } from '../../types/interfaces';
 import type { CompanySetupInput } from '../../types/company';
+import type { JournalReversalRequest } from '../../types/journal-reversal';
 import type { TenantContext } from '../../types/common';
 import type {
   CreateJournalEntryInput,
@@ -67,6 +68,7 @@ import {
 // Domain modules — standalone functions
 import * as financial from './accounting-repo-financial';
 import * as journalLedger from './accounting-repo-journal-ledger';
+import * as journalReversal from './accounting-repo-journal-reversal';
 import * as bankLedger from './accounting-repo-bank-ledger';
 import * as invoiceLedger from './accounting-repo-invoice-ledger';
 import * as fixedAssetLedger from './accounting-repo-fixed-asset-ledger';
@@ -109,8 +111,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     financial.getJournalEntry(this.tenant, entryId);
   updateJournalEntry = (entryId: string, updates: UpdateJournalEntryInput) =>
     financial.updateJournalEntry(this.tenant, entryId, updates);
-  deleteJournalEntry = (entryId: string) =>
-    financial.deleteJournalEntry(this.tenant, entryId);
+  reverseJournalEntry = (request: JournalReversalRequest) =>
+    journalReversal.reverseJournalEntry(this.tenant, request);
   listJournalEntries = (filters: JournalEntryFilters, page?: PageRequest) =>
     financial.listJournalEntries(this.tenant, filters, page);
   collectJournalEntryList = (filters: JournalEntryFilters) =>

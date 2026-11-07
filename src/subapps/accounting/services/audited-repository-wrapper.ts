@@ -115,7 +115,10 @@ export function createAuditedRepository(
     deleteCustomCategory: repo.deleteCustomCategory.bind(repo),
     updateFixedAsset: repo.updateFixedAsset.bind(repo),
     updateExpenseDocument: repo.updateExpenseDocument.bind(repo),
-    deleteJournalEntry: repo.deleteJournalEntry.bind(repo),
+    // ADR-ACC-010 §2.1.1 Φ8: το ίχνος του αντιλογισμού το γράφει Ο ΓΡΑΦΕΑΣ, μέσα στη συναλλαγή — ποτέ ο wrapper.
+    reverseJournalEntry: repo.reverseJournalEntry.bind(repo),
+    // Μόνο κείμενο (περιγραφή / σημειώσεις) — το ίχνος το γράφει η διαδρομή (`logAuditEvent`).
+    updateJournalEntry: repo.updateJournalEntry.bind(repo),
 
     // ── Audited mutations ─────────────────────────────────────────────────
 
@@ -152,17 +155,6 @@ export function createAuditedRepository(
         `Εγγραφή ημερολογίου: ${data.description}`,
         { type: data.type, netAmount: data.netAmount });
       return result;
-    },
-
-    async updateJournalEntry(entryId, updates) {
-      await repo.updateJournalEntry(entryId, updates);
-      // Journal updates are rare (usually reversal) — log as JOURNAL_REVERSED if reversed
-      const eventType: AccountingAuditEventType = updates.reversedAt
-        ? 'JOURNAL_REVERSED' : 'JOURNAL_CREATED';
-      if (updates.reversedAt) {
-        await logAudit(repo, userId, eventType, 'journal', entryId,
-          'Αντιλογιστική εγγραφή');
-      }
     },
 
     async updateBankTransaction(transactionId, updates) {

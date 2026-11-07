@@ -29,6 +29,8 @@ import { formatAccountingCurrency } from '../../utils/format';
 
 interface JournalEntriesTableProps {
   entries: JournalEntry[];
+  /** Άνοιγμα του διαλόγου αντιλογισμού (ADR-ACC-010 §2.1.1 Φ8) */
+  onReverse: (entry: JournalEntry) => void;
 }
 
 // ============================================================================
@@ -39,7 +41,7 @@ interface JournalEntriesTableProps {
 // COMPONENT
 // ============================================================================
 
-export function JournalEntriesTable({ entries }: JournalEntriesTableProps) {
+export function JournalEntriesTable({ entries, onReverse }: JournalEntriesTableProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
@@ -67,11 +69,12 @@ export function JournalEntriesTable({ entries }: JournalEntriesTableProps) {
               <TableHead className="w-24 text-right">{t('journal.vatAmount')}</TableHead>
               <TableHead className="w-28 text-right">{t('journal.grossAmount')}</TableHead>
               <TableHead className="w-32">{t('journal.paymentMethod')}</TableHead>
+              <TableHead className="w-32 text-right">{t('journal.reversal.actionsColumn')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {entries.map((entry) => (
-              <JournalEntryRow key={entry.entryId} entry={entry} />
+              <JournalEntryRow key={entry.entryId} entry={entry} onReverse={onReverse} />
             ))}
           </TableBody>
         </Table>

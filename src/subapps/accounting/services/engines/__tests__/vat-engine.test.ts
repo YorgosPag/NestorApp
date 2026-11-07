@@ -97,7 +97,7 @@ function createMockRepository(): jest.Mocked<IAccountingRepository> {
     createJournalEntry: noop,
     getJournalEntry: noop,
     updateJournalEntry: noop,
-    deleteJournalEntry: noop,
+    reverseJournalEntry: noop,
     getJournalEntryByInvoiceId: noop,
     createInvoice: noop,
     getInvoice: noop,

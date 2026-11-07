@@ -10,11 +10,11 @@
  */
 
 import { ENTERPRISE_ID_PREFIXES } from './enterprise-id-prefixes';
-import { DocumentRegistryIdGenerators } from './enterprise-id-document-registry-generators';
+import { AccountingIdGenerators } from './enterprise-id-accounting-generators';
 
 const P = ENTERPRISE_ID_PREFIXES;
 
-export abstract class ProjectCostIdGenerators extends DocumentRegistryIdGenerators {
+export abstract class ProjectCostIdGenerators extends AccountingIdGenerators {
   /**
    * ADR-917 Ζ3 · Ζ8 — **ΜΙΑ** γραμμή προϋπολογισμού ανά (έργο, κωδικό κόστους): ορισμός = `set` στο **ίδιο**
    * έγγραφο, ιδεμποτές από κατασκευή — δύο ταυτόχρονα «πρόσθεσε γραμμή» δεν γεννούν ποτέ δύο γραμμές.

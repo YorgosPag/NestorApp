@@ -97,7 +97,60 @@
     "expense": "Expense",
     "totalIncome": "Total Income",
     "totalExpenses": "Total Expenses",
-    "netResult": "Net Result"
+    "netResult": "Net Result",
+    "reversal": {
+      "title": "Reverse entry",
+      "description": "The entry is not deleted: a new entry with opposite amounts (storno) is posted, so the book shows both the error and its correction.",
+      "summaryTitle": "Entry being reversed",
+      "effectTitle": "What will change",
+      "effect": {
+        "income": "Income decreases by {amount}.",
+        "expense": "Expenses decrease by {amount}.",
+        "efka": "EFKA contributions decrease by {amount}."
+      },
+      "dateRule": "Reversal date: {date} if its period is open; otherwise today.",
+      "originalStays": "The original entry stays in the book, marked as “Reversed”.",
+      "reason": "Reversal reason",
+      "reasonPlaceholder": "Select a reason",
+      "reasons": {
+        "ENTRY_ERROR": "Posting error",
+        "DUPLICATE": "Duplicate posting",
+        "WRONG_AMOUNT": "Wrong amount",
+        "WRONG_CATEGORY": "Wrong category",
+        "WRONG_DATE": "Wrong date",
+        "OTHER": "Other reason"
+      },
+      "notes": "Notes (optional)",
+      "notesRequired": "Notes (required for “Other reason”)",
+      "notesPlaceholder": "What was wrong?",
+      "cancel": "Cancel",
+      "confirm": "Reverse",
+      "confirmAndCorrect": "Reverse and correct",
+      "correctionTitle": "Corrected entry",
+      "action": "Reverse",
+      "actionsColumn": "Actions",
+      "errorGeneric": "The reversal did not complete. Please try again.",
+      "refusals": {
+        "IS_REVERSAL": "This entry is already a reversal. To correct it, post a new correct entry.",
+        "SUBSYSTEM_OWNED": "This entry belongs to depreciation and can only be reversed from the depreciation screen.",
+        "INVOICE_LINKED": "This entry comes from an invoice and can only be cancelled by cancelling the invoice (credit note).",
+        "DOCUMENT_LINKED": "This entry comes from a confirmed expense document and can only be cancelled from that document."
+      },
+      "origin": {
+        "INVOICE_LINKED": "From invoice",
+        "SUBSYSTEM_OWNED": "From depreciation"
+      },
+      "badges": {
+        "reversed": "Reversed",
+        "reversal": "Reversal"
+      },
+      "outcome": {
+        "reversed": "Entry “{description}” was reversed with date {date}.",
+        "alreadyReversed": "Entry “{description}” had already been reversed.",
+        "crossPeriod": "The original entry’s period was closed, so the reversal was posted in an open period.",
+        "dismiss": "Dismiss"
+      }
+    }
   },
   "vat": {
     "title": "VAT Management",

@@ -96,6 +96,8 @@ var repo = {
   // invoices/[id]
   getInvoice: jest.fn(),
   updateInvoice: jest.fn(async () => undefined),
+  // ADR-ACC-010 §2.1.1 Φ8: η ακύρωση ρωτά πρώτα αν υπάρχει εγγραφή Ε-Ε (για τον έλεγχο της σημερινής περιόδου).
+  getJournalEntryByInvoiceId: jest.fn(async () => null),
   getCompanySetup: jest.fn(async () => null),
   // bank
   getBankTransaction: jest.fn(),

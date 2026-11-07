@@ -72,7 +72,6 @@ var repo = {
   getJournalEntry: jest.fn(),
   createJournalEntry: jest.fn(),
   updateJournalEntry: jest.fn(async () => undefined),
-  deleteJournalEntry: jest.fn(async () => undefined),
   // setup
   getCompanySetup: jest.fn(async () => null),
   saveCompanySetup: jest.fn(async () => undefined),
@@ -169,7 +168,9 @@ import { DELETE as catDelete } from '../categories/[id]/route';
 import { PATCH as docPatch } from '../documents/[id]/route';
 import { GET as docGet } from '../documents/route';
 import { POST as journalPost } from '../journal/route';
-import { PATCH as journalPatch, DELETE as journalDelete } from '../journal/[id]/route';
+import * as journalIdRoute from '../journal/[id]/route';
+
+const journalPatch = journalIdRoute.PATCH;
 import { PUT as setupPut } from '../setup/route';
 import { PUT as presetsPut } from '../setup/presets/route';
 import { GET as efkaGet } from '../efka/summary/route';
@@ -332,19 +333,38 @@ describe('journal/[id] — 403 immutability guards', () => {
     expect((await res.json()).error).toBe('Cannot edit a reversal journal entry. Reversal entries are immutable.');
   });
 
-  it('DELETE reversal → 403', async () => {
-    repo.getJournalEntry.mockResolvedValue({ isReversal: true });
-    const res = (await journalDelete(req(), seg)) as Envelope;
-    expect(res.status).toBe(403);
-    expect((await res.json()).error).toBe('Cannot delete reversed or reversal journal entries. They form an immutable audit trail.');
+  // ADR-ACC-010 §2.1.1 Φ8 — καταχωρημένη εγγραφή ΔΕΝ σβήνεται (DATEV / GoBD · SAP: storno, όχι διαγραφή).
+  it('DELETE does not exist — the route exports no handler for it (405 by the framework)', () => {
+    expect('DELETE' in journalIdRoute).toBe(false);
   });
 
-  it('DELETE ok → 200 { data:{ entryId, deleted:true } }', async () => {
-    repo.getJournalEntry.mockResolvedValue({ type: 'income', category: 'c' });
-    const res = (await journalDelete(req(), seg)) as Envelope;
+  // SAP FB02: σε καταχωρημένη εγγραφή αλλάζει ΜΟΝΟ κείμενο — ποσό/ημερομηνία/κατηγορία ⇒ 400, καμία εγγραφή.
+  it.each([{ netAmount: 5 }, { date: '2026-02-01' }, { category: 'other' }, { vatAmount: 1 }])(
+    'PATCH %o → 400 (only text is editable), nothing written', async (body) => {
+      repo.getJournalEntry.mockResolvedValue({ status: 'ACTIVE', category: 'c' });
+      const res = (await journalPatch(req(body), seg)) as Envelope;
+      expect(res.status).toBe(400);
+      expect(repo.updateJournalEntry).not.toHaveBeenCalled();
+    });
+
+  it('PATCH notes on an active entry → 200 and only the text is written', async () => {
+    repo.getJournalEntry.mockResolvedValue({ status: 'ACTIVE', category: 'c' });
+    const res = (await journalPatch(req({ notes: 'σημείωση' }), seg)) as Envelope;
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true, data: { entryId: 'je_1', deleted: true } });
+    expect(repo.updateJournalEntry).toHaveBeenCalledWith('je_1', { notes: 'σημείωση' });
   });
+});
+
+describe('journal POST — reversal lineage is written ONLY by the reversal writer (Φ8)', () => {
+  it.each([{ isReversal: true }, { originalEntryId: 'je_x' }, { status: 'REVERSED' }])(
+    '%o ⇒ 422 JOURNAL_LINEAGE_FIELDS_FORBIDDEN, no entry', async (lineage) => {
+      const res = (await journalPost(req({
+        date: '2026-01-01', type: 'income', category: 'c', description: 'd', netAmount: 100, ...lineage,
+      }))) as Envelope;
+      expect(res.status).toBe(422);
+      expect(await res.json()).toMatchObject({ success: false, errorCode: 'JOURNAL_LINEAGE_FIELDS_FORBIDDEN' });
+      expect(repo.createJournalEntry).not.toHaveBeenCalled();
+    });
 });
 
 describe('setup + presets — manual validation', () => {

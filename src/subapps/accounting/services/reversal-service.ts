@@ -6,6 +6,9 @@
  * - Draft invoices → void + journal reversal
  * - Issued invoices → credit note + journal reversal
  *
+ * Ο αντιλογισμός της εγγραφής Ε-Ε ΔΕΝ γράφεται εδώ: περνά από τον ΕΝΑ γραφέα `repository.reverseJournalEntry`
+ * (ατομικός, ιδεμπότητος — ADR-ACC-010 §2.1.1 Φ8), τον ίδιο που χρησιμοποιεί το βιβλίο.
+ *
  * Pattern: Same as accounting-efka-operations.ts (standalone functions, repository as param)
  *
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
@@ -15,10 +18,10 @@
  */
 
 import type { IAccountingRepository } from '../types/interfaces';
-import type { CreateJournalEntryInput } from '../types/journal';
 import type { Invoice, CancellationReasonCode } from '../types/invoice';
-import { isoNow, getQuarterFromDate, getFiscalYearFromDate } from './repository/firestore-helpers';
-import { validatePostingAllowed, getPeriodForDate, getCurrentOpenPeriod } from './fiscal-period-service';
+import { accountingToday } from '../utils/accounting-day';
+import { isoNow, getFiscalYearFromDate } from './repository/firestore-helpers';
+import { InvoiceJournalReversalRefusedError } from './journal/journal-reversal-errors';
 
 // ============================================================================
 // TYPES
@@ -26,7 +29,7 @@ import { validatePostingAllowed, getPeriodForDate, getCurrentOpenPeriod } from '
 
 interface ReversalResult {
   originalEntryId: string;
-  reversalEntryId: string;
+  reversalEntryId: string | null;
 }
 
 interface CreditNoteResult {
@@ -40,99 +43,42 @@ interface CreditNoteResult {
 // ============================================================================
 
 /**
- * Αντιλογιστική εγγραφή για ακυρωμένο τιμολόγιο
+ * Αντιλογιστική εγγραφή για ακυρωμένο τιμολόγιο — με σημερινή ημερομηνία (το πιστωτικό / void είναι γεγονός ΣΗΜΕΡΑ).
  *
- * 1. Βρίσκει τη journal entry που συνδέεται με το invoiceId
- * 2. Δημιουργεί νέα εγγραφή με αρνητικά ποσά (ίδιος type → netAmount σύνολο = 0)
- * 3. Ενημερώνει την αρχική ως REVERSED (immutable μετά)
+ * Η αναζήτηση με `invoiceId` μπορεί να βρει και τον ίδιο τον αντιλογισμό (κουβαλά το ίδιο `invoiceId`): τότε ο στόχος
+ * είναι η αρχική του, και ο γραφέας απαντά «ήδη αντιλογισμένη» — η επανάληψη μετά από μισή ακύρωση είναι ασφαλής.
  *
  * @returns null αν δεν βρεθεί journal entry (π.χ. draft χωρίς εγγραφή)
- * @throws Error αν η εγγραφή είναι ήδη REVERSED (prevent double reversal)
+ * @throws JournalReversalPeriodError αν η σημερινή περίοδος δεν δέχεται εγγραφή · InvoiceJournalReversalRefusedError
  */
 export async function reverseJournalEntryForCancelledInvoice(
   repository: IAccountingRepository,
   invoiceId: string,
-  userId: string,
   reasonCode: CancellationReasonCode,
   reasonNotes: string | null
 ): Promise<ReversalResult | null> {
-  const original = await repository.getJournalEntryByInvoiceId(invoiceId);
-  if (!original) return null;
+  const found = await repository.getJournalEntryByInvoiceId(invoiceId);
+  if (!found) return null;
+  const entryId = found.isReversal && found.originalEntryId ? found.originalEntryId : found.entryId;
 
-  if (original.status === 'REVERSED') {
-    throw new Error(`Journal entry ${original.entryId} is already reversed`);
-  }
-
-  const now = isoNow();
-  const reversalDate = now.split('T')[0];
-
-  // Cross-period logic (Phase 1b — Q7):
-  // Αν η αρχική περίοδος είναι CLOSED/LOCKED → reversal στην τρέχουσα ανοιχτή
-  const originalPeriodResult = await validatePostingAllowed(repository, original.date);
-  let crossPeriodReversal = false;
-  let originalPeriodNum: number | undefined;
-  let reversalPeriodNum: number | undefined;
-
-  if (!originalPeriodResult.allowed) {
-    // Original period closed/locked → get current open period
-    const currentYear = getFiscalYearFromDate(now);
-    const openPeriod = await getCurrentOpenPeriod(repository, currentYear);
-
-    if (openPeriod) {
-      reversalPeriodNum = openPeriod.periodNumber;
-    }
-
-    const origPeriod = await getPeriodForDate(repository, original.date);
-    if (origPeriod) {
-      originalPeriodNum = origPeriod.periodNumber;
-    }
-
-    crossPeriodReversal = true;
-  }
-
-  // Reversal entry: ίδια πεδία, αντίθετα ποσά
-  const reversalInput: CreateJournalEntryInput = {
-    date: reversalDate,
-    type: original.type,
-    category: original.category,
-    description: `ΑΝΤΙΛΟΓΙΣΜΟΣ — ${original.description}`,
-    netAmount: -original.netAmount,
-    vatRate: original.vatRate,
-    vatAmount: -original.vatAmount,
-    grossAmount: -original.grossAmount,
-    vatDeductible: original.vatDeductible,
-    paymentMethod: original.paymentMethod,
-    contactId: original.contactId,
-    contactName: original.contactName,
-    invoiceId: original.invoiceId,
-    mydataCode: original.mydataCode,
-    e3Code: original.e3Code,
-    fiscalYear: getFiscalYearFromDate(now),
-    quarter: getQuarterFromDate(now),
-    notes: buildReversalNotes(reasonCode, reasonNotes),
-    isReversal: true,
-    originalEntryId: original.entryId,
-    cancellationReasonCode: reasonCode,
-    cancellationNotes: reasonNotes ?? undefined,
-    // Cross-period flags (Phase 1b — Q7)
-    ...(crossPeriodReversal ? {
-      crossPeriodReversal: true,
-      originalPeriod: originalPeriodNum,
-      reversalPeriod: reversalPeriodNum,
-    } : {}),
-  };
-
-  const { id: reversalEntryId } = await repository.createJournalEntry(reversalInput);
-
-  // Ενημέρωση original → REVERSED (immutable μετά)
-  await repository.updateJournalEntry(original.entryId, {
-    status: 'REVERSED',
-    reversalEntryId,
-    reversedAt: now,
-    reversedBy: userId,
+  const outcome = await repository.reverseJournalEntry({
+    entryId,
+    trigger: 'invoice_cancellation',
+    datePolicy: 'today',
+    reasonCode,
+    reasonNotes,
+    today: accountingToday(),
   });
 
-  return { originalEntryId: original.entryId, reversalEntryId };
+  switch (outcome.kind) {
+    case 'reversed':
+    case 'already_reversed':
+      return { originalEntryId: outcome.originalEntryId, reversalEntryId: outcome.reversalEntryId };
+    case 'not_found':
+      return null;
+    case 'refused':
+      throw new InvoiceJournalReversalRefusedError(invoiceId, outcome.reason);
+  }
 }
 
 // ============================================================================
@@ -151,7 +97,6 @@ export async function reverseJournalEntryForCancelledInvoice(
 export async function createCreditNoteForInvoice(
   repository: IAccountingRepository,
   originalInvoice: Invoice,
-  userId: string,
   reasonCode: CancellationReasonCode,
   reasonNotes: string | null
 ): Promise<CreditNoteResult> {
@@ -198,7 +143,6 @@ export async function createCreditNoteForInvoice(
   const reversalResult = await reverseJournalEntryForCancelledInvoice(
     repository,
     originalInvoice.invoiceId,
-    userId,
     reasonCode,
     reasonNotes
   );

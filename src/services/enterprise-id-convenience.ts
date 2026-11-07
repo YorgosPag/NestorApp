@@ -160,6 +160,8 @@ export const generateDeterministicProjectBudgetLineId = (seed: string) =>
   enterpriseIdService.generateDeterministicProjectBudgetLineId(seed);
 export const generateDeterministicExpenseJournalEntryId = (seed: string) =>
   enterpriseIdService.generateDeterministicExpenseJournalEntryId(seed);
+export const generateDeterministicJournalReversalEntryId = (originalEntryId: string) =>
+  enterpriseIdService.generateDeterministicJournalReversalEntryId(originalEntryId);
 export const generateDocumentIssuanceInvitationId = () => enterpriseIdService.generateDocumentIssuanceInvitationId();
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();

@@ -99,6 +99,10 @@ export async function getJournalEntry(
   }, null);
 }
 
+/**
+ * Αλλαγή ΚΕΙΜΕΝΟΥ καταχωρημένης εγγραφής (`JOURNAL_EDITABLE_FIELDS` — ο τύπος δεν δέχεται ποσά). Διαγραφή δεν
+ * υπάρχει: διόρθωση = αντιλογισμός (`accounting-repo-journal-reversal.ts`, ADR-ACC-010 §2.1.1 Φ8).
+ */
 export async function updateJournalEntry(
   tenant: TenantContext,
   entryId: string,
@@ -108,12 +112,6 @@ export async function updateJournalEntry(
     await db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES).doc(entryId).update(
       sanitizeForFirestore({ ...updates, updatedAt: isoNow() } as Record<string, unknown>)
     );
-  }, undefined);
-}
-
-export async function deleteJournalEntry(tenant: TenantContext, entryId: string): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES).doc(entryId).delete();
   }, undefined);
 }
 

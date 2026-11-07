@@ -19,6 +19,7 @@ import type {
   PaymentMethod,
   PeriodRange,
 } from './common';
+import type { JOURNAL_EDITABLE_FIELDS, JournalReversalTrigger } from './journal-reversal';
 
 // ============================================================================
 // CATEGORY DEFINITION (ADR-ACC-001 §4.2)
@@ -167,9 +168,11 @@ export interface JournalEntry {
   reversedAt?: string;
   /** Ποιος αντιλόγισε (user ID) */
   reversedBy?: string;
-  /** Κωδικός λόγου ακύρωσης (flows from invoice cancellation) */
+  /** Ποιος ζήτησε τον αντιλογισμό (στον αντιλογισμό) — βιβλίο ή ακύρωση τιμολογίου (ADR-ACC-010 §2.1.1 Φ8) */
+  reversalTrigger?: JournalReversalTrigger;
+  /** Κωδικός λόγου αντιλογισμού — `JournalReversalReasonCode` (βιβλίο) ή `CancellationReasonCode` (τιμολόγιο) */
   cancellationReasonCode?: string;
-  /** Σημειώσεις ακύρωσης */
+  /** Σημειώσεις λόγου αντιλογισμού */
   cancellationNotes?: string;
 
   // — Cross-Period Reversal (Phase 1b — Q7) —
@@ -270,12 +273,10 @@ export type CreateJournalEntryInput = Omit<
 >;
 
 /**
- * Input για ενημέρωση εγγραφής Ε-Ε
- * Όλα τα πεδία προαιρετικά εκτός του entryId
+ * Input για ενημέρωση καταχωρημένης εγγραφής Ε-Ε — ΜΟΝΟ κείμενο (`JOURNAL_EDITABLE_FIELDS`, SAP FB02). Ποσό,
+ * ημερομηνία, κατηγορία, ΦΠΑ διορθώνονται με αντιλογισμό + νέα εγγραφή (ADR-ACC-010 §2.1.1 Φ8) — ο ΤΥΠΟΣ το κλείνει.
  */
-export type UpdateJournalEntryInput = Partial<
-  Omit<JournalEntry, 'entryId' | 'createdAt' | 'updatedAt'>
->;
+export type UpdateJournalEntryInput = Partial<Pick<JournalEntry, (typeof JOURNAL_EDITABLE_FIELDS)[number]>>;
 
 // Re-export used types for convenience
 export type { IncomeCategory, ExpenseCategory };

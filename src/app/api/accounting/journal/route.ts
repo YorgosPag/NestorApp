@@ -25,7 +25,7 @@ import type { CreateJournalEntryInput } from '@/subapps/accounting/types';
 import { readListContext, readPageRequest, respondWithPage } from '../_shared/list-request-context';
 import { journalEntryFiltersOf } from '../_shared/list-filters';
 import { journalEntryOptionalFields } from '../_shared/journal-entry-fields';
-import { assertManualPostingAllowed } from '../_shared/journal-subsystem-guard';
+import { assertManualPostingAllowed, assertNoLineageFields } from '../_shared/journal-subsystem-guard';
 
 const CreateJournalEntrySchema = z.object({
   date: z.string().min(10).max(30),
@@ -65,6 +65,8 @@ export const POST = defineRoute({
 
     // ADR-ACC-010 §2.1.1 Φ5: subsystem categories (depreciation) are posted ONLY by their subsystem.
     assertManualPostingAllowed(body);
+    // ADR-ACC-010 §2.1.1 Φ8: η γενεαλογία αντιλογισμού (`isReversal`, `status`, …) γράφεται ΜΟΝΟ από τον γραφέα της.
+    assertNoLineageFields(body);
 
     // ── Hook 4: Validate posting allowed (Q4 — fiscal period check) ───
     assertPostingAllowed(await validatePostingAllowed(repository, body.date));

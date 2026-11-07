@@ -377,6 +377,8 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicPlatformCompanyContactId',
       // ADR-917 — ΜΙΑ εγγραφή ημερολογίου ανά (εταιρεία, παραστατικό): διπλό «Επιβεβαίωση» = ίδιο έγγραφο, όχι διπλό έξοδο.
       'generateDeterministicExpenseJournalEntryId',
+      // ADR-ACC-010 §2.1.1 Φ8 — ΕΝΑΣ αντιλογισμός ανά αρχική εγγραφή: τυχαίο id = δεύτερο storno στο διπλό κλικ.
+      'generateDeterministicJournalReversalEntryId',
       // ADR-928 §5.1 — ρήτρα από (χώρος, clauseKey), έκδοση από (ρήτρα, αριθμό), πρότυπο από (χώρος, κωδικό), αναθεώρηση
       // από (συμφωνητικό, αριθμό). Τυχαίο id = δεύτερη «αναθεώρηση 2» όταν δύο «Έκδοση» φτάσουν μαζί. (Το ίδιο το
       // συμφωνητικό και η ανάθεση εργοταξίου είναι τυχαία ΑΠΟ ΣΧΕΔΙΑΣΜΟ και δεν έχουν ντετερμινιστικό αδελφό.)
@@ -554,6 +556,8 @@ describe('EnterpriseIdService', () => {
       // ADR-923 §5.13 Ε6γ — καταγεγραμμένο από τον ίδιο τον γεννήτορα, 2026-11-03 (σπόρος με κενό δεύτερο άκρο).
       generateDeterministicPlatformCompanyContactId: 'cont_e045a89d-3ccc-4357-8ead-661b5abd4866',
       generateDeterministicExpenseJournalEntryId: 'je_ad2bbfb9-4463-4ba7-81bf-a021f9cc8d4b',
+      // ADR-ACC-010 §2.1.1 Φ8 — σπόρος `journal-reversal:anchor-seed`. Καταγεγραμμένο 2026-11-07.
+      generateDeterministicJournalReversalEntryId: 'je_7db81e23-0ecb-4b8a-83f1-4663814b8d4e',
       // ADR-928 §5.1 — σπόρος `subcontract:<είδος>:anchor-seed:` (δύο παράμετροι, ένα όρισμα ⇒ το `undefined` γίνεται
       //    κενό από το `join`). Καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-11-03.
       generateDeterministicSubcontractClauseId: 'sccl_aba0b598-6176-44f8-8635-7029dd94980f',
