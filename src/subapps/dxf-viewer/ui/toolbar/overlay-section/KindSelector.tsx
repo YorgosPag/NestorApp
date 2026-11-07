@@ -1,58 +1,73 @@
 /**
  * ui/toolbar/overlay-section/KindSelector.tsx
- * Kind selector icons (Unit/Parking/Storage/Footprint) for overlay toolbar
+ * Επιλογέας είδους περιοχής (Ακίνητο · Θέση · Αποθήκη · Κοινόχρηστος · Αποτύπωμα).
  *
- * 🏢 ADR-050: UNIFIED TOOLBAR INTEGRATION (2027-01-27)
- * 4 kind selection icons με centralized OVERLAY_TOOLBAR_COLORS
+ * 🏢 ADR-050: UNIFIED TOOLBAR INTEGRATION — εικονίδια με κεντρικά OVERLAY_TOOLBAR_COLORS.
+ * ADR-933: ξαναχρησιμοποιείται στην contextual καρτέλα «Περιοχή» της κορδέλας.
+ *   - Ο κατάλογος ειδών έρχεται από το `OVERLAY_KINDS` (ένα σημείο δήλωσης)· ο χάρτης εικονιδίων
+ *     είναι `Record<OverlayKind, …>`, άρα νέο είδος χωρίς εικονίδιο = σφάλμα τύπου, όχι σιωπηλό κενό
+ *     (έτσι είχε ξεχαστεί το `common_space` του ADR-931 Β1).
+ *   - Ετικέτες από το `KIND_LABELS` (i18n) — όχι σκληροκωδικοποιημένα αγγλικά.
  */
 
 'use client';
 
 import React from 'react';
-import { Home, Car, Package, Footprints } from 'lucide-react';
+import { Home, Car, Package, Users, Footprints, type LucideIcon } from 'lucide-react';
 import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { OVERLAY_TOOLBAR_COLORS } from '../../../config/toolbar-colors';
-import type { OverlayKind } from '../../../overlays/types';
+import { KIND_LABELS, OVERLAY_KINDS, type OverlayKind } from '../../../overlays/types';
 
 interface KindSelectorProps {
   currentKind: OverlayKind;
   onKindChange: (kind: OverlayKind) => void;
+  /** Προσβάσιμο όνομα της ομάδας (π.χ. «Είδος περιοχής»). */
+  groupLabel?: string;
 }
 
-const kindIcons = {
-  property: { icon: Home, color: OVERLAY_TOOLBAR_COLORS.property, label: 'Property' },
-  parking: { icon: Car, color: OVERLAY_TOOLBAR_COLORS.parking, label: 'Parking' },
-  storage: { icon: Package, color: OVERLAY_TOOLBAR_COLORS.storage, label: 'Storage' },
-  footprint: { icon: Footprints, color: OVERLAY_TOOLBAR_COLORS.footprint, label: 'Footprint' }
-} as const;
+const KIND_ICONS: Readonly<Record<OverlayKind, LucideIcon>> = {
+  property: Home,
+  parking: Car,
+  storage: Package,
+  common_space: Users,
+  footprint: Footprints,
+};
 
 export const KindSelector: React.FC<KindSelectorProps> = ({
   currentKind,
-  onKindChange
+  onKindChange,
+  groupLabel,
 }) => {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('dxf-viewer');
 
   return (
-    <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
-      {Object.entries(kindIcons).map(([kind, { icon: Icon, color, label }]) => (
-        <Tooltip key={kind}>
-          <TooltipTrigger asChild>
-            <ToggleButton
-              pressed={currentKind === kind}
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onKindChange(kind as OverlayKind)}
-              aria-label={label}
-            >
-              <Icon className={`${iconSizes.sm} ${currentKind !== kind ? color : ''}`} />
-            </ToggleButton>
-          </TooltipTrigger>
-          <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
-      ))}
-    </div>
+    <fieldset className={`flex ${PANEL_LAYOUT.GAP.XS}`} aria-label={groupLabel}>
+      {OVERLAY_KINDS.map((kind) => {
+        const Icon = KIND_ICONS[kind];
+        const label = t(KIND_LABELS[kind]);
+        const isActive = currentKind === kind;
+        return (
+          <Tooltip key={kind}>
+            <TooltipTrigger asChild>
+              <ToggleButton
+                pressed={isActive}
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onKindChange(kind)}
+                aria-label={label}
+              >
+                <Icon className={`${iconSizes.sm} ${isActive ? '' : OVERLAY_TOOLBAR_COLORS[kind]}`} />
+              </ToggleButton>
+            </TooltipTrigger>
+            <TooltipContent>{label}</TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </fieldset>
   );
 };

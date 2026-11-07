@@ -67,6 +67,7 @@ import { CONTEXTUAL_FLOOR_FINISH_TAB } from './contextual-floor-finish-tab';
 import { CONTEXTUAL_WALL_COVERING_TAB } from './contextual-wall-covering-tab';
 import { CONTEXTUAL_HATCH_TAB } from './contextual-hatch-tab';
 import { CONTEXTUAL_THERMAL_SPACE_TAB } from './contextual-thermal-space-tab';
+import { CONTEXTUAL_OVERLAY_REGION_TAB } from './contextual-overlay-region-tab';
 import { ANIMATION_CONTEXTUAL_TAB } from './contextual-animation-tab';
 import { CONTEXTUAL_GUIDES_TAB } from './contextual-guides-tab';
 import { CONTEXTUAL_DIMENSIONS_TAB } from './contextual-dimensions-tab';
@@ -132,6 +133,8 @@ export const RAW_RIBBON_CONTEXTUAL_TABS: readonly RibbonTab[] = [
   CONTEXTUAL_WALL_COVERING_TAB,
   CONTEXTUAL_HATCH_TAB,
   CONTEXTUAL_THERMAL_SPACE_TAB,
+  // ADR-933 — εργαλείο «Σχεδίαση Επιπέδων» ενεργό → «Περιοχή» (είδος + μέθοδος γεωμετρίας).
+  CONTEXTUAL_OVERLAY_REGION_TAB,
   ANIMATION_CONTEXTUAL_TAB,
   CONTEXTUAL_GUIDES_TAB,
   CONTEXTUAL_DIMENSIONS_TAB,

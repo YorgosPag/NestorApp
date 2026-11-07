@@ -2121,7 +2121,8 @@
       "importedMeshProperties": "Imported Mesh",
       "genericSolidProperties": "Solid Properties",
       "tableProperties": "Table Properties",
-      "tableFormat": "Format"
+      "tableFormat": "Format",
+      "overlayRegion": "Region"
     },
     "panels": {
       "select": "Select",
@@ -2453,7 +2454,9 @@
       "tableAlign": "Alignment",
       "tableNumber": "Number",
       "tableData": "Data",
-      "tableFile": "File"
+      "tableFile": "File",
+      "overlayRegionKind": "Type",
+      "overlayRegionMethod": "Method"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -5918,7 +5921,23 @@
         }
       },
       "publishModel": "Publish 3D",
-      "publishFloorplan": "Publish floor plan"
+      "publishFloorplan": "Publish floor plan",
+      "overlayRegion": {
+        "kind": {
+          "section": "Region type"
+        },
+        "method": {
+          "section": "Geometry method",
+          "polygon": {
+            "label": "Polygonal",
+            "tooltip": "Click each vertex; close by clicking the first vertex or pressing Enter"
+          },
+          "rectangle": {
+            "label": "Rectangular",
+            "tooltip": "Two clicks at opposite corners"
+          }
+        }
+      }
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
@@ -8129,5 +8148,8 @@
       "FLOORPLAN_SHELF_FULL": "The listing already holds the maximum number of floor plans — remove one from the property’s “Floor plan” tab",
       "FLOORPLAN_UPLOAD_FAILED": "Saving the image failed on the server — try again"
     }
+  },
+  "overlayRegion": {
+    "alreadyExists": "This region already exists on the level — the existing one was selected instead of creating a duplicate."
   }
 }

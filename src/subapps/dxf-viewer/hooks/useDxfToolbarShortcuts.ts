@@ -30,6 +30,9 @@ const BIM_CHORDS: readonly ChordDefinition[] = [
   { firstKey: 'C', secondKey: 'L', action: 'tool:column' },      // C+L → column    (ADR-363)
   { firstKey: 'C', secondKey: 'O', action: 'tool:copy' },    // C+O → COPY  (ADR-466: frees Ctrl+C for clipboard; ADR-577: unified all-entity copy)
   { firstKey: 'B', secondKey: 'M', action: 'tool:beam' },        // B+M → beam      (ADR-363)
+  // ADR-933 — R+M → «Περιοχή» (overlay draw) — Revit's «RM» Room alias. Ένα πλήκτρο, μία σημασία:
+  // το N μένει «Πολύγωνο» (πριν ήταν δηλωμένο ΚΑΙ ως overlay:draw-mode, χωρίς χειριστή).
+  { firstKey: 'R', secondKey: 'M', action: 'tool:layering' },
   // ADR-363 Phase 7B — wall variant chords: W+n activates wall tool + sets kind
   { firstKey: 'W', secondKey: '1', action: 'tool:wall:straight' }, // W+1 → wall straight
   { firstKey: 'W', secondKey: '2', action: 'tool:wall:curved' },   // W+2 → wall curved (= circular arc, ADR-565)
@@ -47,6 +50,7 @@ const BIM_FALLBACKS: readonly FallbackDefinition[] = [
   { firstKey: 'O', action: 'tool:layering' }, // O alone → layering
   { firstKey: 'C', action: 'tool:circle' },   // C alone → circle
   { firstKey: 'W', action: 'tool:wall' },     // W alone → wall (Phase 7B: W moved to BIM chord table)
+  { firstKey: 'R', action: 'tool:rectangle' }, // R alone → rectangle (ADR-933: R became the RM leader)
   // B has no fallback (no existing single-B shortcut)
 ];
 
@@ -131,8 +135,10 @@ export function useDxfToolbarShortcuts(
       }
 
       // ADR-363 Phase 7: BIM multi-char dispatcher — only intercepts unmodified keys.
-      // Handles: S→select/stair/slab, O→layering/opening, C→circle/column, B→beam.
-      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Handles: S→select/stair/slab, O→layering/opening, C→circle/column, B→beam, R→rectangle/RM region.
+      // ADR-933 — `!e.shiftKey` makes the code match the comment («unmodified keys»): with R now
+      // a leader, Shift+R (rotate) would otherwise open the R chord and fire the rectangle fallback.
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
         const bimResult = bimDispatcherRef.current!.feed(e.key.toUpperCase());
 
         if (bimResult.kind === 'chord-started') {

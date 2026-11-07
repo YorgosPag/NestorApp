@@ -181,7 +181,8 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   'overlay:save-polygon': void; // Signal to save the current draft polygon
   'overlay:cancel-polygon': void; // Signal to cancel the current draft polygon
   // 🏢 ADR-258B: Auto-select new overlay after polygon save → opens Properties Panel
-  'overlay:polygon-saved': { overlayId: string };
+  // ADR-933 — `reused: true` ⇒ η περιοχή υπήρχε ήδη (ιδεμποτία): επιλέχθηκε, δεν γράφτηκε δεύτερη.
+  'overlay:polygon-saved': { overlayId: string; reused?: boolean };
   // 🏢 ENTERPRISE: Polygon save error → centralized notification (replaces browser alert).
   // ADR-921 — η αιτία είναι η ΙΔΙΑ με της πύλης ενεργοποίησης· `persist-failed` = σφάλμα εγγραφής.
   'overlay:save-error': { reason: OverlayDrawingBlockReason | 'persist-failed' };

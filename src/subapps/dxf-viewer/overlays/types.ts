@@ -106,6 +106,13 @@ export const KIND_LABELS: Record<OverlayKind, string> = {
   footprint: 'dxf-viewer:overlayProperties.kindLabels.footprint',
 };
 
+/** ADR-933 — ο κατάλογος ειδών, παράγωγος του `KIND_LABELS` (ένα σημείο δήλωσης, ποτέ δεύτερη λίστα). */
+export const OVERLAY_KINDS = Object.keys(KIND_LABELS) as readonly OverlayKind[];
+
+export function isOverlayKind(value: unknown): value is OverlayKind {
+  return typeof value === 'string' && (OVERLAY_KINDS as readonly string[]).includes(value);
+}
+
 /**
  * Rendering constants
  * 🏢 ADR-044: Using centralized RENDER_LINE_WIDTHS (backward compatibility)

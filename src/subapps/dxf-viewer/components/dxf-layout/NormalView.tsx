@@ -36,7 +36,6 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
           {...props}
           overlayMode={overlayMode}
           currentStatus="for-sale"
-          currentKind="property"
         />
       </div>
       <CadStatusBar />

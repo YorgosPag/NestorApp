@@ -13,11 +13,12 @@
 'use client';
 
 import { useState, useRef, useEffect, type Dispatch, type SetStateAction, type MutableRefObject } from 'react';
-import { dwarn, derr } from '../../debug';
-import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
+import type { OverlayEditorMode, Status } from '../../overlays/types';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { useOverlayStore } from '../../overlays/overlay-store';
-import { OverlayPersistBlockedError } from '../../overlays/overlay-drawing-readiness';
+// ADR-933 — η ΜΙΑ πόρτα αποθήκευσης περιοχής (είδος από το SSoT, ιδεμποτία, γεγονότα).
+import { commitOverlayPolygon } from '../../overlays/commit-overlay-polygon';
+import { overlayDrawSettingsStore } from '../../stores/overlay-draw-settings-store';
 import type { useEventBus } from '../../systems/events';
 
 // ============================================================================
@@ -33,8 +34,6 @@ export interface UsePolygonCompletionParams {
   eventBus: ReturnType<typeof useEventBus>;
   /** Current overlay status for new polygons */
   currentStatus: Status;
-  /** Current overlay kind for new polygons */
-  currentKind: OverlayKind;
   /** Active tool name */
   activeTool: string;
   /** Current overlay editor mode */
@@ -67,7 +66,6 @@ export function usePolygonCompletion({
   overlayStore,
   eventBus,
   currentStatus,
-  currentKind,
   activeTool,
   overlayMode,
 }: UsePolygonCompletionParams): UsePolygonCompletionReturn {
@@ -106,44 +104,29 @@ export function usePolygonCompletion({
     }
   }, [activeTool, draftPolygon.length, overlayMode]);
 
-  // 🔧 FIX (2026-01-24): New function that accepts polygon as parameter to avoid stale closure
-  const finishDrawingWithPolygon = async (polygon: Array<[number, number]>) => {
-    // 🔧 FIX: Better error handling - notify user if level is not selected
-    if (polygon.length < 3) {
-      dwarn('usePolygonCompletion', '⚠️ Cannot save polygon - need at least 3 points');
-      return false;
-    }
+  // ADR-933 — αλλαγή μεθόδου γεωμετρίας στη μέση της σχεδίασης ⇒ άδειασε το πρόχειρο (ένα μισό
+  // πολύγωνο δεν έχει νόημα ως 1η γωνία ορθογωνίου). Συνδρομή χωρίς re-render: setState ΜΟΝΟ στην
+  // (σπάνια) αλλαγή μεθόδου — ο orchestrator δεν γίνεται high-freq subscriber (ADR-040).
+  useEffect(() => {
+    let lastMethod = overlayDrawSettingsStore.get().method;
+    return overlayDrawSettingsStore.subscribe(() => {
+      const { method } = overlayDrawSettingsStore.get();
+      if (method === lastMethod) return;
+      lastMethod = method;
+      setDraftPolygon([]);
+    });
+  }, []);
 
-    if (!levelManager.currentLevelId) {
-      derr('usePolygonCompletion', '❌ Cannot save polygon - no level selected!');
-      // 🏢 ENTERPRISE: Use EventBus → centralized notification system (NOT browser alert)
-      eventBus.emit('overlay:save-error', { reason: 'no-level' });
-      return false;
-    }
-
-    try {
-      // ADR-258: status δεν αποθηκεύεται πλέον — χρωματισμός βάσει entity.commercialStatus
-      const overlayId = await overlayStore.add({
-        levelId: levelManager.currentLevelId,
-        kind: currentKind,
-        polygon: polygon, // 🔧 FIX: Use passed polygon, not stale draftPolygon
-        label: `Overlay ${Date.now()}`, // Temporary label
-      });
-
-      // 🏢 ADR-258B: Auto-select new overlay → opens Properties Panel for entity linking
-      eventBus.emit('overlay:polygon-saved', { overlayId });
-
-      return true;
-    } catch (error) {
-      derr('usePolygonCompletion', 'Failed to create overlay:', error);
-      // ADR-921 — η ΠΡΑΓΜΑΤΙΚΗ αιτία: μπλοκάρισμα του SSoT ή σφάλμα εγγραφής (δίκτυο/API).
-      // Πριν, κάθε σφάλμα έβγαινε «Δεν βρέθηκε αρχείο αναφοράς» — λάθος αιτία, λάθος διόρθωση.
-      eventBus.emit('overlay:save-error', {
-        reason: error instanceof OverlayPersistBlockedError ? error.reason : 'persist-failed',
-      });
-      return false;
-    }
-    // Note: setDraftPolygon([]) is done in the calling setDraftPolygon callback
+  // 🔧 FIX (2026-01-24): accepts polygon as parameter to avoid stale closure.
+  // ADR-933 — delegates to the ONE region-commit door (kind read at save time from the SSoT).
+  const finishDrawingWithPolygon = async (polygon: Array<[number, number]>): Promise<boolean> => {
+    const result = await commitOverlayPolygon(polygon, {
+      levelId: levelManager.currentLevelId,
+      createOverlay: overlayStore.add,
+      getLevelOverlays: overlayStore.getByLevel,
+      emit: eventBus.emit,
+    });
+    return result.ok;
   };
   // 🏢 ENTERPRISE (2026-02-15): Keep ref in sync for action handlers declared earlier
   finishDrawingWithPolygonRef.current = finishDrawingWithPolygon;

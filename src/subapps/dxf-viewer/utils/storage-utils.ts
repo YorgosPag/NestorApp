@@ -49,6 +49,8 @@ export const STORAGE_KEYS = {
   // Overlay State (per-level dynamic key prefix)
   OVERLAY_STATE: 'dxf-viewer:overlay-state:v1',
   OVERLAY_STATE_PREFIX: 'dxf-overlay-',
+  // ADR-933 — εντολή «Περιοχή»: είδος + μέθοδος γεωμετρίας της επόμενης περιοχής.
+  OVERLAY_DRAW_SETTINGS: 'dxf-viewer:overlay-draw-settings:v1',
 
   // Colors
   RECENT_COLORS: 'dxf-viewer:recent-colors',

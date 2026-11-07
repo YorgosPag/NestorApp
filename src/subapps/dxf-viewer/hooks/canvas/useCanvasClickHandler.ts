@@ -31,7 +31,8 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
-import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick, handleAnnotationSymbolClick, handleAreaLabelClick, handleTopoBreaklineClick } from './canvas-click-tool-handlers';
+import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleAnnotationSymbolClick, handleAreaLabelClick, handleTopoBreaklineClick } from './canvas-click-tool-handlers';
+import { handleOverlayDrawClick } from './canvas-click-overlay-draw';
 import { handleTopoBoundaryClick } from './canvas-click-topo-boundary'; // ADR-650 M6 (Γ)
 import { handleGeoRefAnchorClick } from './canvas-click-geo-ref'; // ADR-650 M10
 import { handlePickBasePointClick } from './canvas-click-pick-base-point'; // ADR-652 M6

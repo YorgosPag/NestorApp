@@ -63,4 +63,14 @@ export function useToolAvailabilityNotifications(
     }),
     [notifications, notifyBlocked, t],
   );
+
+  // ADR-933 — «γιατί δεν γράφτηκε νέα περιοχή;»: η ίδια περιοχή υπήρχε ήδη (ιδεμποτία της
+  // `commitOverlayPolygon`). Επιλέγεται η υπάρχουσα — ο άνθρωπος πρέπει να το μάθει, όχι να
+  // νομίσει ότι το κλικ χάθηκε.
+  React.useEffect(
+    () => EventBus.on('overlay:polygon-saved', ({ reused }) => {
+      if (reused) notifications.info(t('overlayRegion.alreadyExists'), { id: 'overlay-region-exists' });
+    }),
+    [notifications, t],
+  );
 }

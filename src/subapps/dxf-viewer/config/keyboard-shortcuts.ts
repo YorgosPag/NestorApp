@@ -856,12 +856,17 @@ export const DXF_NAVIGATION_SHORTCUTS: Record<string, ShortcutDefinition> = {
 
 export const DXF_OVERLAY_SHORTCUTS: Record<string, ShortcutDefinition> = {
   // Mode Shortcuts
+  // ADR-933 — «Περιοχή» = RM (Revit Room alias), resolved by the MultiCharKeySequence dispatcher
+  // (`useDxfToolbarShortcuts`, R+M → tool:layering). Was `N` / `overlay:draw-mode`: N is ALSO
+  // `polygon`, and no handler ever consumed `overlay:draw-mode` — so N silently opened the plain
+  // DXF polygon instead of a region (root of the blocked ADR-931 Β1 live check).
   overlayDraw: {
-    key: 'N',
+    key: 'RM',
     modifier: 'none',
     descriptionKey: 'shortcuts.overlay.draw',
-    action: 'overlay:draw-mode',
+    action: 'tool:layering',
     category: 'tool',
+    toolType: 'layering',
   },
   overlayEdit: {
     key: 'E',

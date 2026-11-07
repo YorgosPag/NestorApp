@@ -46,6 +46,8 @@ export { FLOOR_FINISH_CONTEXTUAL_TRIGGER } from './contextual-floor-finish-tab';
 export { WALL_COVERING_CONTEXTUAL_TRIGGER } from './contextual-wall-covering-tab';
 export { HATCH_CONTEXTUAL_TRIGGER } from './contextual-hatch-tab';
 export { THERMAL_SPACE_CONTEXTUAL_TRIGGER } from './contextual-thermal-space-tab';
+// ADR-933 — εντολή «Περιοχή» (layering tool active).
+export { OVERLAY_REGION_CONTEXTUAL_TRIGGER } from './contextual-overlay-region-tab';
 export { MEP_SEGMENT_CONTEXTUAL_TRIGGER } from './contextual-mep-segment-tab';
 export { ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER } from './contextual-electrical-panel-tab';
 export { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from './contextual-annotation-symbol-tab';

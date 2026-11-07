@@ -50,6 +50,7 @@ import {
   WALL_COVERING_CONTEXTUAL_TRIGGER,
   HATCH_CONTEXTUAL_TRIGGER,
   THERMAL_SPACE_CONTEXTUAL_TRIGGER,
+  OVERLAY_REGION_CONTEXTUAL_TRIGGER,
   FURNITURE_CONTEXTUAL_TRIGGER,
   GENERIC_SOLID_CONTEXTUAL_TRIGGER,
   BLOCK_LIBRARY_CONTEXTUAL_TRIGGER,
@@ -116,6 +117,8 @@ export const TOOL_ACTIVE_TRIGGER: ReadonlyMap<string, string> = new Map<string, 
   // ADR-507 S2 / ADR-422 — hatch + thermal-space (defaults for next drawn entity).
   ['hatch', HATCH_CONTEXTUAL_TRIGGER],
   ['thermal-space', THERMAL_SPACE_CONTEXTUAL_TRIGGER],
+  // ADR-933 — «Σχεδίαση Επιπέδων» (overlay draw) → «Περιοχή»: είδος + μέθοδος της επόμενης περιοχής.
+  ['layering', OVERLAY_REGION_CONTEXTUAL_TRIGGER],
   // ADR-411 — MEP fixture tool active → light-fixture library picker (ΟΧΙ ο editor
   // επιλεγμένου· εκείνος έρχεται από το selection-side resolver, νωρίτερα στο hook).
   ['mep-fixture', MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER],

@@ -45,6 +45,7 @@ import { GUIDES_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-guide
 import { DIMENSIONS_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-dimensions-tab';
 import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-annotation-symbol-tab';
 import { SCALE_BAR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-scale-bar-tab';
+import { OVERLAY_REGION_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-overlay-region-tab';
 
 describe('resolveToolActiveTrigger — static Map', () => {
   it('every map entry resolves to its registered trigger', () => {
@@ -70,6 +71,9 @@ describe('resolveToolActiveTrigger — static Map', () => {
     expect(resolveToolActiveTrigger('north-arrow', null)).toBe(ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER);
     // ADR-583 Φ3e — graphic scale-bar tool active → «Γραφική Κλίμακα» placement-defaults tab.
     expect(resolveToolActiveTrigger('scale-bar', null)).toBe(SCALE_BAR_CONTEXTUAL_TRIGGER);
+    // ADR-933 — «Σχεδίαση Επιπέδων» (overlay draw) → «Περιοχή»: χωρίς αυτό, το είδος της
+    // περιοχής δεν επιλέγεται από πουθενά (ρίζα του μπλοκαρισμένου ζωντανού ελέγχου ADR-931 Β1).
+    expect(resolveToolActiveTrigger('layering', null)).toBe(OVERLAY_REGION_CONTEXTUAL_TRIGGER);
     // ADR-583 Φ1b/Φ1c — every annotation-symbol kind opens the SAME shared contextual tab.
     for (const t of ['section-mark', 'grid-bubble', 'elevation-mark',
       'detail-callout', 'revision-tag']) {

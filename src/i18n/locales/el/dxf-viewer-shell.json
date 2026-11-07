@@ -2121,7 +2121,8 @@
       "importedMeshProperties": "Εισαγόμενο Πλέγμα",
       "genericSolidProperties": "Ιδιότητες Στερεού",
       "tableProperties": "Ιδιότητες Πίνακα",
-      "tableFormat": "Μορφοποίηση"
+      "tableFormat": "Μορφοποίηση",
+      "overlayRegion": "Περιοχή"
     },
     "panels": {
       "select": "Επιλογή",
@@ -2453,7 +2454,9 @@
       "tableAlign": "Στοίχιση",
       "tableNumber": "Αριθμός",
       "tableData": "Δεδομένα",
-      "tableFile": "Αρχείο"
+      "tableFile": "Αρχείο",
+      "overlayRegionKind": "Είδος",
+      "overlayRegionMethod": "Μέθοδος"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -5918,7 +5921,23 @@
         }
       },
       "publishModel": "Δημοσίευση 3D",
-      "publishFloorplan": "Δημοσίευση κάτοψης"
+      "publishFloorplan": "Δημοσίευση κάτοψης",
+      "overlayRegion": {
+        "kind": {
+          "section": "Είδος περιοχής"
+        },
+        "method": {
+          "section": "Μέθοδος γεωμετρίας",
+          "polygon": {
+            "label": "Πολυγωνική",
+            "tooltip": "Κλικ σε κάθε κορυφή· κλείνει με κλικ στην πρώτη κορυφή ή με Enter"
+          },
+          "rectangle": {
+            "label": "Ορθογώνια",
+            "tooltip": "Δύο κλικ σε αντίθετες γωνίες"
+          }
+        }
+      }
     },
     "tooltips": {
       "bimSchedule": "Άνοιγμα Πίνακα BIM — εξαγωγή δομικών στοιχείων",
@@ -8129,5 +8148,8 @@
       "FLOORPLAN_SHELF_FULL": "Η αγγελία έχει ήδη τον μέγιστο αριθμό κατόψεων — αφαίρεσε μία από την καρτέλα «Κάτοψη» του ακινήτου",
       "FLOORPLAN_UPLOAD_FAILED": "Η αποθήκευση της εικόνας απέτυχε στον διακομιστή — δοκίμασε ξανά"
     }
+  },
+  "overlayRegion": {
+    "alreadyExists": "Η περιοχή υπάρχει ήδη στο επίπεδο — επιλέχθηκε η υπάρχουσα αντί να γραφτεί δεύτερη."
   }
 }

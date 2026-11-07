@@ -17,9 +17,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-565-curved-circular-structural-bim-elements.md §12
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { cn } from '@/lib/utils';
+// ADR-933 — η σειρά κουμπιών-εικονιδίων εξήχθη σε κοινό component (δεύτερος καταναλωτής: «Περιοχή»).
+import { RibbonGlyphModeGroup, RIBBON_GLYPH_PROPS } from './RibbonGlyphModeGroup';
 import { wallToolBridgeStore } from '../hooks/bridge/wall-tool-bridge-store';
 import {
   WALL_DRAW_MODES,
@@ -27,22 +28,10 @@ import {
   type WallDrawMode,
 } from '../hooks/bridge/wall-draw-mode';
 
-/** Common SVG presentation attrs για όλα τα glyphs (μηδέν inline CSS — SVG attributes only). */
-const GLYPH_PROPS = {
-  width: 18,
-  height: 18,
-  viewBox: '0 0 20 20',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.6,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-} as const;
-
 /** Ανά-mode glyph (recognizable Draw-gallery icon). Keyed by `WallDrawMode.id`. */
 function DrawModeGlyph({ id }: { readonly id: string }): React.JSX.Element {
   return (
-    <svg {...GLYPH_PROPS} aria-hidden="true">
+    <svg {...RIBBON_GLYPH_PROPS} aria-hidden="true">
       {id === 'straight' && <line x1="3" y1="16" x2="17" y2="4" />}
       {id === 'arc-3-point' && (
         <>
@@ -89,34 +78,22 @@ export function RibbonWallDrawModeWidget(): React.JSX.Element | null {
     else h.setKind(mode.kind);
   }, []);
 
+  const modes = useMemo(
+    () => WALL_DRAW_MODES.map((mode) => ({ ...mode, ariaLabel: `${t(mode.labelKey)} — ${t(mode.tooltipKey)}` })),
+    [t],
+  );
+
   // Revit-parity: η Draw gallery εμφανίζεται ΜΟΝΟ κατά τη σχεδίαση (tool active), όχι όταν
   // απλώς επιλέγεται υπάρχων τοίχος. `handle` null (unmounted) ή idle → τίποτα.
   if (!handle || !handle.isActive) return null;
 
-  const activeId = activeWallDrawModeId(handle.kind, handle.arcVariant);
-
   return (
-    <nav className="flex items-center gap-0.5" aria-label={t('ribbon.commands.wallEditor.drawMode.section')}>
-      {WALL_DRAW_MODES.map((mode) => {
-        const isActive = mode.id === activeId;
-        return (
-          <button
-            key={mode.id}
-            type="button"
-            aria-pressed={isActive}
-            aria-label={`${t(mode.labelKey)} — ${t(mode.tooltipKey)}`}
-            onClick={() => onPick(mode)}
-            className={cn(
-              'flex h-7 w-7 items-center justify-center rounded border transition-colors',
-              isActive
-                ? 'border-primary/40 bg-primary/10 text-primary'
-                : 'border-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-            )}
-          >
-            <DrawModeGlyph id={mode.id} />
-          </button>
-        );
-      })}
-    </nav>
+    <RibbonGlyphModeGroup
+      label={t('ribbon.commands.wallEditor.drawMode.section')}
+      modes={modes}
+      activeId={activeWallDrawModeId(handle.kind, handle.arcVariant)}
+      onPick={onPick}
+      renderGlyph={(mode) => <DrawModeGlyph id={mode.id} />}
+    />
   );
 }

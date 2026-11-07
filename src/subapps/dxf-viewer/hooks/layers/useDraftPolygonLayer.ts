@@ -24,6 +24,9 @@ import { UI_COLORS } from '../../config/color-config';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
+// ADR-933 — μέθοδος «Ορθογώνια»: το rubber band είναι ΤΟ ΙΔΙΟ ορθογώνιο που θα αποθηκευτεί.
+import { overlayDrawSettingsStore } from '../../stores/overlay-draw-settings-store';
+import { regionRectangleRing } from '../../overlays/region-rectangle';
 
 export interface UseDraftPolygonLayerProps {
   colorLayers: ColorLayer[];
@@ -36,6 +39,23 @@ export interface UseDraftPolygonLayerProps {
 export interface UseDraftPolygonLayerReturn {
   colorLayersWithDraft: ColorLayer[];
   draftColorLayer: ColorLayer | null;
+}
+
+/**
+ * Κορυφές της προεπισκόπησης. Πολυγωνική: πρόχειρο + κέρσορας. Ορθογώνια (ADR-933): το
+ * ορθογώνιο «1η γωνία → κέρσορας» — η μέθοδος διαβάζεται εδώ με `get()` γιατί το leaf
+ * ξαναζωγραφίζει ούτως ή άλλως σε κάθε κίνηση του κέρσορα (καμία νέα συνδρομή).
+ */
+function buildPreviewVertices(
+  draftPolygon: Array<[number, number]>,
+  mouseWorld: { x: number; y: number } | null,
+  overlayMode: 'select' | 'draw' | 'edit',
+): Array<[number, number]> {
+  if (!mouseWorld || overlayMode !== 'draw') return draftPolygon;
+  if (overlayDrawSettingsStore.get().method === 'rectangle' && draftPolygon.length === 1) {
+    return regionRectangleRing(draftPolygon[0], mouseWorld) ?? draftPolygon;
+  }
+  return [...draftPolygon, [mouseWorld.x, mouseWorld.y]];
 }
 
 export function useDraftPolygonLayer(
@@ -57,9 +77,7 @@ export function useDraftPolygonLayer(
     const fillColor = UI_COLORS.LAYER_DRAFT_FILL;
     const strokeColor = UI_COLORS.LAYER_DRAFT_STROKE;
 
-    const previewVertices: Array<[number, number]> = (mouseWorld && overlayMode === 'draw')
-      ? [...draftPolygon, [mouseWorld.x, mouseWorld.y]]
-      : draftPolygon;
+    const previewVertices = buildPreviewVertices(draftPolygon, mouseWorld, overlayMode);
 
     return {
       id: 'draft-polygon-preview',

@@ -14,6 +14,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { OverlayEditorMode, OverlayKind, Status } from '../../overlays/types';
+// ADR-933 — το είδος ζει στο SSoT της εντολής «Περιοχή» (προσβάσιμο και από την κορδέλα).
+import { overlayDrawSettingsStore, useOverlayDrawKind } from '../../stores/overlay-draw-settings-store';
 // 🏢 ADR-092: Centralized localStorage Service
 import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils';
 // 🏢 ADR-098: Centralized Timing Constants
@@ -23,20 +25,17 @@ import { STORAGE_TIMING } from '../../config/timing-config';
 interface OverlayState {
   mode: OverlayEditorMode;
   status: Status;
-  kind: OverlayKind;
 }
 
 // ✅ ENTERPRISE: Default state with fallback
 const DEFAULT_OVERLAY_STATE: OverlayState = {
   mode: 'select',
   status: 'for-sale',
-  kind: 'property',
 };
 
 // ✅ ENTERPRISE: State validation schema
 const VALID_MODES: OverlayEditorMode[] = ['select', 'draw', 'edit'];
 const VALID_STATUSES: Status[] = ['for-sale', 'for-rent', 'reserved', 'sold', 'landowner'];
-const VALID_KINDS: OverlayKind[] = ['property', 'parking', 'storage', 'common_space', 'footprint'];
 
 // ✅ ENTERPRISE: Runtime validator
 function validateOverlayState(state: Partial<OverlayState>): OverlayState {
@@ -52,12 +51,6 @@ function validateOverlayState(state: Partial<OverlayState>): OverlayState {
     validated.status = state.status;
   } else if (state.status) {
     console.warn(`[useOverlayState] Invalid status "${state.status}", using default "${DEFAULT_OVERLAY_STATE.status}"`);
-  }
-
-  if (state.kind && VALID_KINDS.includes(state.kind)) {
-    validated.kind = state.kind;
-  } else if (state.kind) {
-    console.warn(`[useOverlayState] Invalid kind "${state.kind}", using default "${DEFAULT_OVERLAY_STATE.kind}"`);
   }
 
   return validated;
@@ -138,14 +131,11 @@ export function useOverlayState() {
     setState(prev => ({ ...prev, status }));
   }, []);
 
+  // ADR-933 — ένα SSoT: η εγγραφή πάει στο store της εντολής «Περιοχή» (που επικυρώνει).
   const setKind = useCallback((kind: OverlayKind) => {
-    if (!VALID_KINDS.includes(kind)) {
-      console.error(`[useOverlayState] Invalid kind: "${kind}"`);
-      return;
-    }
-
-    setState(prev => ({ ...prev, kind }));
+    overlayDrawSettingsStore.update({ kind });
   }, []);
+  const kind = useOverlayDrawKind();
 
   // ✅ ENTERPRISE: Reset to defaults
   const reset = useCallback(() => {
@@ -157,7 +147,7 @@ export function useOverlayState() {
     // State
     overlayMode: state.mode,
     overlayStatus: state.status,
-    overlayKind: state.kind,
+    overlayKind: kind,
 
     // Setters
     setOverlayMode: setMode,

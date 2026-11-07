@@ -113,6 +113,12 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-11-07 — Εντολή «Περιοχή»: το είδος φεύγει από τα props του κελύφους (ADR-933)
+
+- `CanvasSection`: αφαιρέθηκε το prop `currentKind` (το `NormalView`/`FullscreenView` περνούσαν καρφωμένο `"property"`). Το είδος της νέας περιοχής διαβάζεται **τη στιγμή της αποθήκευσης** από το `overlayDrawSettingsStore.get()` μέσα στο `commitOverlayPolygon` (κανόνας #2) — καμία νέα συνδρομή στο κέλυφος.
+- `usePolygonCompletion` (καλείται από το `CanvasSection`): συνδρομή στο store **μέσα σε `useEffect`** που κάνει `setDraftPolygon([])` **μόνο** όταν αλλάζει η μέθοδος γεωμετρίας (σπάνιο γεγονός) — όχι `useSyncExternalStore`, άρα ο orchestrator δεν ξαναζωγραφίζεται σε υψηλή συχνότητα (κανόνας #1).
+- `useDraftPolygonLayer` (μέσα στο leaf `DraftLayerCanvasLeaf`): η μέθοδος «Ορθογώνια» διαβάζεται με `get()` στον υπολογισμό των κορυφών προεπισκόπησης — το leaf ξαναζωγραφίζει ήδη σε κάθε κίνηση του κέρσορα, άρα καμία πρόσθετη συνδρομή (κανόνας #4 αμετάβλητος).
+
 ### 2026-11-07 — Νέο φύλλο: η οπτική απόδειξη της κάρτας κλίμακας (ADR-929 Φ5.3γ)
 
 - `components/dxf-layout/PlanScaleReferencesOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` αμέσως **μετά** το `PlanRecognitionOverlay` (κάτω από τους προτεινόμενους τοίχους). Δείχνει τις διαστάσεις που ορίζουν την κλίμακα ως γραμμές μέτρησης με απολήξεις, και όσες έμειναν έξω ως διακεκομμένα πλαίσια. Τονίζεται όποια δείχνει ο άνθρωπος στην κάρτα (`scaleHoverTextId` στο χαμηλόσυχνο store αναγνώρισης, μία εγγραφή ανά αλλαγή, ποτέ ανά καρέ).

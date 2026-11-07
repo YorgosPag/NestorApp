@@ -66,6 +66,7 @@ import { RibbonWallFamilyTypeWidget } from './RibbonWallFamilyTypeWidget';
 import { RibbonWallTypePropertiesWidget } from './RibbonWallTypePropertiesWidget';
 import { RibbonWallJoinWidget } from './RibbonWallJoinWidget';
 import { RibbonWallDrawModeWidget } from './RibbonWallDrawModeWidget';
+import { RibbonOverlayKindWidget, RibbonOverlayMethodWidget } from './RibbonOverlayRegionWidgets';
 import { RibbonSlabFamilyTypeWidget } from './RibbonSlabFamilyTypeWidget';
 import { RibbonRoofFamilyTypeWidget } from './RibbonRoofFamilyTypeWidget';
 import { RibbonRoofTypePropertiesWidget } from './RibbonRoofTypePropertiesWidget';
@@ -212,6 +213,9 @@ const BIM_WIDGETS: Readonly<Record<string, WidgetFactory>> = {
   'wall-type-properties': () => <RibbonWallTypePropertiesWidget key="wall-type-properties-widget" />,
   'wall-joins': () => <RibbonWallJoinWidget key="wall-joins-widget" />,
   'wall-draw-mode': () => <RibbonWallDrawModeWidget key="wall-draw-mode-widget" />,
+  // ADR-933 — εντολή «Περιοχή»: είδος + μέθοδος γεωμετρίας της επόμενης περιοχής κάτοψης.
+  'overlay-kind': () => <RibbonOverlayKindWidget key="overlay-kind-widget" />,
+  'overlay-draw-method': () => <RibbonOverlayMethodWidget key="overlay-draw-method-widget" />,
   'slab-family-type': () => <RibbonSlabFamilyTypeWidget key="slab-family-type-widget" />,
   'roof-family-type': () => <RibbonRoofFamilyTypeWidget key="roof-family-type-widget" />,
   'roof-type-properties': () => <RibbonRoofTypePropertiesWidget key="roof-type-properties-widget" />,

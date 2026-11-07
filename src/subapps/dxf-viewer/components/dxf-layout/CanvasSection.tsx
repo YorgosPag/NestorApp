@@ -24,7 +24,7 @@ import { useLevels } from '../../systems/levels';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
 import { useCursorSettings, useCursorActions } from '../../systems/cursor';
 import type { DXFViewerLayoutProps } from '../../integration/types';
-import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
+import type { OverlayEditorMode, Status } from '../../overlays/types';
 import { MOVEMENT_DETECTION } from '../../config/tolerance-config'; import { useGripStyles } from '../../settings-provider';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { useZoom } from '../../systems/zoom'; import { dwarn, derr } from '../../debug';
@@ -72,12 +72,12 @@ import { GripRegistryPublisher } from './GripRegistryPublisher';
  * ADR-189: Guide workflows — useGuideToolWorkflows (hooks/guides/).
  * ADR-189 B5: Container handlers — useCanvasContainerHandlers (hooks/canvas/).
  */
-export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status, currentKind: OverlayKind }> = (props) => {
+export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status }> = (props) => {
   const _perfRenderStart = perfStart();
   const {
     activeTool, showGrid, showLayers,
     overlayMode = 'select', setOverlayMode,
-    currentStatus = 'for-sale', currentKind = 'property',
+    currentStatus = 'for-sale',
     ...restProps
   } = props;
   useEffect(() => {
@@ -196,7 +196,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   useGripContextMenuController({ hoveredGrip: unified.hoveredGrip, activeGrip: unified.activeGrip, phase: unified.phase, activeTool, levelManager, handleEscape: unified.handleEscape });
   // === Polygon drawing ===
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
-    levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
+    levelManager, overlayStore, eventBus, currentStatus, activeTool, overlayMode,
   });
   const specialTools = useSpecialTools({ activeTool, levelManager });
   const { circleTTT, lineParallel, angleEntityMeasurement, stairTool, stairRegionTool, wallTool, slabTool, roofTool, floorFinishTool, wallCoveringTool, columnTool, foundationTool, mepFixtureTool, furnitureTool, genericSolidTool, blockLibraryTool, titleBlockTool, furniturePlanTool, peoplePlanTool, vehiclesPlanTool, plantsPlanTool, attachImageTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, bathroomAutoArrangeTool, spaceSeparatorTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, beamBetweenMembersTool, slabOpeningTool, openingTool, selfOpeningTool } = specialTools;
