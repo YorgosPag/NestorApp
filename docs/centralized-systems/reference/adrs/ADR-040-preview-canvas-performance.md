@@ -113,6 +113,13 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-11-07 — Νέο φύλλο: η οπτική απόδειξη της κάρτας κλίμακας (ADR-929 Φ5.3γ)
+
+- `components/dxf-layout/PlanScaleReferencesOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` αμέσως **μετά** το `PlanRecognitionOverlay` (κάτω από τους προτεινόμενους τοίχους). Δείχνει τις διαστάσεις που ορίζουν την κλίμακα ως γραμμές μέτρησης με απολήξεις, και όσες έμειναν έξω ως διακεκομμένα πλαίσια. Τονίζεται όποια δείχνει ο άνθρωπος στην κάρτα (`scaleHoverTextId` στο χαμηλόσυχνο store αναγνώρισης, μία εγγραφή ανά αλλαγή, ποτέ ανά καρέ).
+- Ίδιο σχήμα με το `PlanRecognitionOverlay`: **ένα** υψίσυχνο hook (`useTransformValue`) + δύο χαμηλόσυχνα (store αναγνώρισης · υπόβαθρο). Η γεωμετρία σκηνής υπολογίζεται μία φορά ανά (σύντηξη, τοποθέτηση) με `useMemo`, και ανά transform γίνεται μόνο η προβολή. Χωρίς κάρτα επιστρέφει `null`. Read-only, `pointer-events-none`.
+- Οι διαστάσεις έρχονται από το `planRecognitionSession.scale.references()`, που παίρνει την **ίδια** απόφαση με την κάρτα του πάνελ (`planScaleSubject`): ο καμβάς και η λίστα δείχνουν τις ίδιες διαστάσεις. Σημάδια από τα υπάρχοντα `PLAN_CONFIDENCE_MARKS` (CHECK 3.41), με διάκριση και στο σχήμα (γραμμή ή πλαίσιο).
+- Το κέλυφος (`CanvasSection` / `CanvasLayerStack`) δεν άλλαξε· δεν μπήκε κανένα νέο `useSyncExternalStore` σε orchestrator.
+
 ### 2026-11-06 — Νέο φύλλο: η επεξεργάσιμη όψη ανάγνωσης κάτοψης (ADR-929 Φ5.3β)
 
 - `components/dxf-layout/PlanReadingViewOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` **πάνω** από το `ModelFromDrawingPreviewOverlay`. Gate-at-mount: ο εξωτερικός ακούει μόνο το (χαμηλόσυχνο) store αναγνώρισης και το υπόβαθρο του ορόφου, και επιστρέφει `null` χωρίς όψη υπό έλεγχο· ο εσωτερικός κάνει το **ένα** υψίσυχνο hook (`useTransformValue`).

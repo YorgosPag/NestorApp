@@ -8,8 +8,8 @@
  * Φ4. Τίποτα εδώ δεν είναι η σκηνή: οι τοίχοι γράφονται μόνο από τον ελεγκτή του ADR-911 μετά από ρητή έγκριση.
  * Γράφεται σε διακριτές πράξεις (έναρξη · τέλος ευθυγράμμισης · απάντηση · ανάγνωση) — ποτέ ανά καρέ.
  *
- * ⚠️ ΕΝΑΣ γραφέας: `plan-recognition-session.ts` (μαζί με το υπο-module του `plan-reading-review.ts`, που εκθέτει ως
- *   `planRecognitionSession.review` — ADR-929 Φ5.3β).
+ * ⚠️ ΕΝΑΣ γραφέας: `plan-recognition-session.ts` (μαζί με τα υπο-modules του: `plan-reading-review.ts` ως
+ *   `planRecognitionSession.review` — ADR-929 Φ5.3β · `plan-scale-controller.ts` ως `planRecognitionSession.scale` — Φ5.3γ).
  *
  * @see ./plan-recognition-session.ts
  * @see ../../components/dxf-layout/PlanRecognitionOverlay.tsx (καταναλωτής καμβά)
@@ -115,9 +115,13 @@ export interface PlanRecognitionState {
   readonly failure: PlanRecognitionFailure | null;
   /** ADR-929 Φ5.3β — `null` = καμία όψη υπό έλεγχο. */
   readonly review: PlanReadingReview | null;
+  /** ADR-929 Φ5.3γ — η διάσταση που δείχνει ο άνθρωπος στην κάρτα κλίμακας (επισήμανση στον καμβά). */
+  readonly scaleHoverTextId: string | null;
 }
 
-const IDLE: PlanRecognitionState = { phase: 'idle', run: null, reading: null, fusion: null, failure: null, review: null };
+const IDLE: PlanRecognitionState = {
+  phase: 'idle', run: null, reading: null, fusion: null, failure: null, review: null, scaleHoverTextId: null,
+};
 
 const store = createExternalStore<PlanRecognitionState>(IDLE, { equals: Object.is });
 

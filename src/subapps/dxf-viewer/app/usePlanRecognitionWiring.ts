@@ -24,16 +24,20 @@ import type { ModelFromDrawingState } from '../systems/model-from-drawing/model-
 import { getActiveBackgroundFloorId, useFloorplanBackgroundStore } from '../floorplan-background/stores/floorplanBackgroundStore';
 import type { ImageSourceView } from '../ui/panels/model-from-drawing/PlanRecognitionSections';
 import type { PlanReadingActions } from '../ui/panels/model-from-drawing/PlanReadingSections';
+import type { PlanScaleActions, PlanScaleView } from '../ui/panels/model-from-drawing/PlanScaleCard';
+import { usePlanScaleWiring } from './usePlanScaleWiring';
 
 export interface PlanRecognitionWiring {
   readonly imageSource: ImageSourceView;
   readonly recognizeImage: () => void;
   /** ADR-929 Φ5.3β — η ανάγνωση κειμένων: η όψη, ο έλεγχος, η αποστολή. */
   readonly reading: PlanReadingActions;
+  /** ADR-929 Φ5.3γ — η κάρτα κλίμακας από τις διαβασμένες διαστάσεις. */
+  readonly scale: PlanScaleActions;
 }
 
 /** Η όψη του πάνελ για την πηγή εικόνα. */
-function useImageSourceView(state: ModelFromDrawingState): ImageSourceView {
+function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView): ImageSourceView {
   const recognition = usePlanRecognitionState();
   const activeBackground = useFloorplanBackgroundStore((s) =>
     (s.activeFloorId ? s.floors[s.activeFloorId]?.background ?? null : null));
@@ -58,6 +62,7 @@ function useImageSourceView(state: ModelFromDrawingState): ImageSourceView {
     calibrated: sourceCalibrated,
     readingAvailable: recognition.phase === 'ready' && recognition.run !== null,
     review: recognition.review,
+    scale,
   };
 }
 
@@ -88,7 +93,8 @@ export function usePlanRecognitionWiring(
   state: ModelFromDrawingState,
   getDeps: () => ModelFromDrawingDeps,
 ): PlanRecognitionWiring {
-  const imageSource = useImageSourceView(state);
+  const scale = usePlanScaleWiring(getDeps);
+  const imageSource = useImageSourceView(state, scale.view);
 
   const recognizeImage = React.useCallback((): void => {
     const floorId = getActiveBackgroundFloorId();
@@ -107,5 +113,5 @@ export function usePlanRecognitionWiring(
   React.useEffect(() => () => planRecognitionSession.close(), []);
 
   const reading = usePlanReadingActions(getDeps);
-  return { imageSource, recognizeImage, reading };
+  return { imageSource, recognizeImage, reading, scale: scale.actions };
 }

@@ -36,12 +36,9 @@ import {
   backgroundNotFoundResponse,
   badRequest,
 } from '../_background-error-response';
-import {
-  isCalibrationUnit,
-  type BackgroundTransform,
-  type CalibrationData,
-  type CalibrationReferenceRecord,
-} from '@/subapps/dxf-viewer/floorplan-background/providers/types';
+import type { BackgroundTransform, CalibrationData } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
+// ADR-929 Φ5.3γ — ο έλεγχος της εγγραφής βαθμονόμησης ζει σε ΕΝΑ καθαρό module (N αναφορές, προέλευση), με tests.
+import { isCalibrationData } from '@/subapps/dxf-viewer/floorplan-background/geometry/calibration-record-guard';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { isFiniteNumber } from '@/lib/type-guards';
 
@@ -69,35 +66,6 @@ function isTransform(v: unknown): v is BackgroundTransform {
   );
 }
 
-function isPoint(p: unknown): boolean {
-  if (!p || typeof p !== 'object') return false;
-  const q = p as { x?: unknown; y?: unknown };
-  return isFiniteNumber(q.x) && isFiniteNumber(q.y);
-}
-
-/** Μία αναφορά: δύο σημεία, θετικό μήκος, γνωστή μονάδα (κοινό για την πρώτη και τις `references`). */
-function isReference(v: unknown): v is CalibrationReferenceRecord {
-  if (!v || typeof v !== 'object') return false;
-  const r = v as CalibrationReferenceRecord;
-  return isPoint(r.pointA) && isPoint(r.pointB)
-    && isFiniteNumber(r.realDistance) && r.realDistance > 0 && isCalibrationUnit(r.unit);
-}
-
-/** ADR-929 Φ5.2 — τα προαιρετικά πεδία: απόντα (παλιός πελάτης) ή έγκυρα, ποτέ κάτι ενδιάμεσο. */
-function hasValidExtensions(c: CalibrationData): boolean {
-  if (c.sceneUnits !== undefined && !isCalibrationUnit(c.sceneUnits)) return false;
-  if (c.scaleMode !== undefined && c.scaleMode !== 'uniform' && c.scaleMode !== 'per-axis') return false;
-  if (c.references === undefined) return true;
-  return Array.isArray(c.references) && c.references.length >= 1 && c.references.length <= 2
-    && c.references.every(isReference);
-}
-
-function isCalibrationData(v: unknown): v is CalibrationData {
-  if (!v || typeof v !== 'object') return false;
-  const c = v as CalibrationData;
-  if (c.method !== 'two-point') return false;
-  return isReference(c) && hasValidExtensions(c);
-}
 
 /**
  * Ό,τι πρέπει να ισχύει **πριν** αγγίξουμε υπόβαθρο: ταυτοποιημένος tenant και

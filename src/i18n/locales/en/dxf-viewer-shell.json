@@ -513,6 +513,41 @@
           "reading-in-progress": "The same reading is already running. Try again shortly.",
           "reader-failed": "The AI provider failed to read the image."
         }
+      },
+      "scale": {
+        "title": "Scale from dimensions",
+        "intro": "The scale is proposed from the drawing's written dimensions; it is applied only when you say so.",
+        "uniform": "1 image px = {mm} mm · from {count, plural, one {# dimension} other {# dimensions}}",
+        "perAxis": "Horizontal 1 px = {x} mm · vertical 1 px = {y} mm (image stretch {stretch}) · from {count, plural, one {# dimension} other {# dimensions}}",
+        "sigma": "Scale uncertainty (adjustment): ±{sigma}",
+        "replaces": "The current calibration says 1 px = {current} mm; the dimensions say {proposed} mm (difference {difference}).",
+        "needsReview": "A dimension deviates from the solution by more than {residual}, or the image is stretched by more than {stretch}. Check the list before applying.",
+        "usedTitle": "{count, plural, one {# dimension sets the scale} other {# dimensions set the scale}}",
+        "usedItem": "{value} mm · deviation from the solution {residual}",
+        "rejectedTitle": "{count, plural, one {# dimension left out} other {# dimensions left out}}",
+        "rejectedItem": "{value} mm · {reason}",
+        "rejection": {
+          "conflict": "does not agree with the others",
+          "conflictW": "does not agree with the others (standardised residual w = {w})",
+          "ambiguous": "ambiguous: fits more than one pair of walls",
+          "unbound": "the walls it measures were not found",
+          "uncheckable": "not checked by the others, so it does not set the scale"
+        },
+        "listLabel": "Dimensions of the scale",
+        "apply": "Apply scale",
+        "replace": "Replace calibration",
+        "replaceConfirm": "The size of the image in the scene will change to match the dimensions. Continue?",
+        "replaceYes": "Yes, replace",
+        "cancel": "Cancel",
+        "applying": "Applying…",
+        "manual": "Calibrate manually",
+        "confirmed": "The calibration agrees with {count, plural, one {# dimension} other {# dimensions}} (largest deviation {deviation}).",
+        "stale": "The scale was not applied: the recognition or the image position changed in the meantime. Look at the card again.",
+        "failed": {
+          "degenerate-placement": "The image's placement in the scene does not allow a solution. Calibrate manually.",
+          "degenerate-reference": "The dimensions are too small in the image to measure a scale. Calibrate manually.",
+          "inconsistent-references": "The dimensions do not fit a single scale. Calibrate manually."
+        }
       }
     },
     "notice": {

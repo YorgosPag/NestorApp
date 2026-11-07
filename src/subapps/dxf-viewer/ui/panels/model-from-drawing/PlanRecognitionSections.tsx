@@ -23,6 +23,7 @@ import {
   type PlanConfidenceTier,
 } from '../../../systems/plan-recognition/plan-confidence';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
+import type { PlanScaleView } from './PlanScaleCard';
 
 /** Ό,τι χρειάζεται το πάνελ για την πηγή εικόνα — υπολογισμένο από τον host. */
 export interface ImageSourceView {
@@ -41,6 +42,8 @@ export interface ImageSourceView {
   readonly readingAvailable: boolean;
   /** ADR-929 Φ5.3β — η όψη υπό έλεγχο πριν την ανάγνωση (`null` = κλειστή). */
   readonly review: PlanReadingReview | null;
+  /** ADR-929 Φ5.3γ — η κάρτα κλίμακας από τις διαβασμένες διαστάσεις. */
+  readonly scale: PlanScaleView;
 }
 
 /** Κάθε αποτυχία με ΡΗΤΟ κλειδί (CHECK 3.8). */

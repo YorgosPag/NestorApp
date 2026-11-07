@@ -15,7 +15,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { parseLocaleNumber } from '@/lib/number/locale-number';
 import { realDistanceToModelMm, type SceneUnits } from '../../utils/scene-units';
-import type { CalibrationData, CalibrationReferenceRecord, CalibrationUnit } from '../providers/types';
+import type { CalibrationData, CalibrationOrigin, CalibrationReferenceRecord, CalibrationUnit } from '../providers/types';
 import { sceneToRasterPixel, type RasterPlacement } from './raster-scene-mapping';
 import type { CalibrationReferences, CalibrationSolution } from './calibration-solve';
 
@@ -71,6 +71,7 @@ export function toSolverReferences(refs: readonly CalibrationDraftReference[]): 
 /**
  * Η εγγραφή βαθμονόμησης. Το `calibratedBy` το συμπληρώνει ο **server** από την ταυτότητα του αιτήματος
  * (ADR-929 Φ5.2) — εδώ μένει κενό, και ο server δεν εμπιστεύεται ό,τι στείλει ο πελάτης.
+ * ADR-929 Φ5.3γ: η προέλευση γράφεται **πάντα** ρητά (`manual` από τον διάλογο, `plan-dimensions` από την κάρτα).
  */
 export function buildCalibrationData(
   refs: readonly CalibrationDraftReference[],
@@ -78,6 +79,7 @@ export function buildCalibrationData(
   sceneUnits: SceneUnits,
   alignToAxis: boolean,
   now: number,
+  origin: CalibrationOrigin,
 ): CalibrationData {
   const first = refs[0].record;
   return {
@@ -92,5 +94,6 @@ export function buildCalibrationData(
     sceneUnits,
     references: refs.map((r) => r.record),
     scaleMode: solution.mode,
+    origin,
   };
 }

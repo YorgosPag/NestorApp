@@ -53,6 +53,7 @@ import {
 } from './ModelFromDrawingSections';
 import { ImageSourceStart, ImageSourceSummary, type ImageSourceView } from './PlanRecognitionSections';
 import { PlanReadingSection, type PlanReadingActions } from './PlanReadingSections';
+import { PlanScaleCardSection, type PlanScaleActions } from './PlanScaleCard';
 
 export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
   readonly onClose: () => void;
@@ -65,6 +66,8 @@ export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
   readonly onRecognizeImage: () => void;
   /** ADR-929 Φ5.3β — η ανάγνωση κειμένων με AI, με έλεγχο της όψης πριν την αποστολή. */
   readonly reading: PlanReadingActions;
+  /** ADR-929 Φ5.3γ — η κάρτα κλίμακας από τις διαβασμένες διαστάσεις. */
+  readonly scale: PlanScaleActions;
 }
 
 export interface ModelFromDrawingPanelProps {
@@ -159,6 +162,7 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
       {fromImage
         ? <PlanReadingSection available={imageSource.readingAvailable} review={imageSource.review} actions={actions.reading} t={t} />
         : null}
+      {fromImage ? <PlanScaleCardSection view={imageSource.scale} actions={actions.scale} t={t} /> : null}
       <StatusLegend proposal={proposal} t={t} />
       <GroupsSection groups={proposal.groups} onConfirm={actions.onConfirmGroup} t={t} />
       <DecisionsSection

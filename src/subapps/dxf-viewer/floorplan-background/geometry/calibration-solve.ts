@@ -16,6 +16,9 @@
  *   και το ArchiCAD **δεν** διορθώνουν (ενιαία κλίμακα μόνο).
  * - **Δύο αναφορές, ίδιος άξονας**: ενιαία κλίμακα ελαχίστων τετραγώνων + υπόλοιπο ανά αναφορά — ο
  *   έλεγχος «μέτρα μια δεύτερη διάσταση» του Bluebeam, αλλά αυτόματος.
+ * - **N αναφορές** (ADR-929 Φ5.3γ, κάρτα κλίμακας από τις διαβασμένες διαστάσεις): ελάχιστα τετράγωνα σε όλες,
+ *   ενιαία ή χωριστή X/Y (αν κάποιο ζεύγος χωρίζει τους άξονες), με υπόλοιπο ανά αναφορά. Για 1–2 αναφορές η λύση
+ *   είναι ακριβώς η παραπάνω.
  * - **Άγκυρα**: το πρώτο σημείο της πρώτης αναφοράς μένει στη θέση του (Revit: κλιμάκωση γύρω από το
  *   πρώτο κλικ).
  * - **Ευθυγράμμιση** (προαιρετική): περιστροφή ώστε η πρώτη αναφορά να γίνει οριζόντια **ή** κατακόρυφη —
@@ -49,6 +52,11 @@ export const CALIBRATION_LIMITS = {
   anisotropyWarnRel: 0.03,
   /** Υπόλοιπο αναφοράς πάνω από αυτό ⇒ προειδοποίηση (Bluebeam: < 1%). */
   residualWarnRel: 0.01,
+  /**
+   * ADR-929 Φ5.3γ — το πολύ τόσες αναφορές σε **μία** εγγραφή βαθμονόμησης. Όριο της **εγγραφής** (μέγεθος εγγράφου,
+   * έλεγχος του διακομιστή), όχι των μαθηματικών. Η κάρτα κλίμακας κρατά τις πιο βέβαιες διαστάσεις.
+   */
+  maxReferences: 32,
 } as const;
 
 /** Μία γνωστή απόσταση πάνω στην εικόνα. */
@@ -60,9 +68,11 @@ export interface CalibrationReferenceInput {
   readonly lengthMm: number;
 }
 
-export type CalibrationReferences =
-  | readonly [CalibrationReferenceInput]
-  | readonly [CalibrationReferenceInput, CalibrationReferenceInput];
+/**
+ * Μία ή περισσότερες αναφορές. ADR-929 Φ5.3γ: N αναφορές (οι διαβασμένες διαστάσεις της κάρτας κλίμακας), λυμένες με
+ * ελάχιστα τετράγωνα. Ο διάλογος δύο σημείων δίνει 1 ή 2, και για αυτές η λύση είναι **ακριβώς** η προηγούμενη.
+ */
+export type CalibrationReferences = readonly [CalibrationReferenceInput, ...CalibrationReferenceInput[]];
 
 export interface CalibrationSolveInput {
   /** Η τρέχουσα τοποθέτηση — από εκεί παίρνει η άγκυρα τη θέση της στη σκηνή. */
@@ -131,29 +141,49 @@ function uniformScale(deltas: readonly ReferenceDelta[]): AxisScales {
   return { sx: s, sy: s, mode: 'uniform' };
 }
 
-/** Πόσο χωρίζουν οι δύο αναφορές τους άξονες της εικόνας — κανονικοποιημένη ορίζουσα στο [0, 1]. */
+/** Πόσο χωρίζουν δύο αναφορές τους άξονες της εικόνας — κανονικοποιημένη ορίζουσα στο [0, 1]. */
 function axisConditioning(p: ReferenceDelta, q: ReferenceDelta): number {
   const [px2, py2, qx2, qy2] = [p.dx * p.dx, p.dy * p.dy, q.dx * q.dx, q.dy * q.dy];
   const norm = (px2 + py2) * (qx2 + qy2);
   return norm > 0 ? Math.abs(px2 * qy2 - py2 * qx2) / norm : 0;
 }
 
-/** Χωριστή κλίμακα: `Lᵢ² = sx²·dxᵢ² + sy²·dyᵢ²` — γραμμικό σύστημα 2×2 ως προς `sx²`, `sy²`. */
-function perAxisScale(p: ReferenceDelta, q: ReferenceDelta): AxisScales | null {
-  const [px2, py2, qx2, qy2] = [p.dx * p.dx, p.dy * p.dy, q.dx * q.dx, q.dy * q.dy];
-  const det = px2 * qy2 - py2 * qx2;
-  const lp = p.length * p.length;
-  const lq = q.length * q.length;
-  const sx2 = (lp * qy2 - py2 * lq) / det;
-  const sy2 = (px2 * lq - lp * qx2) / det;
+/**
+ * Χωρίζουν οι αναφορές τους άξονες; Αρκεί **ένα** ζεύγος που να τους χωρίζει (μία καθαρά οριζόντια και μία καθαρά
+ * κατακόρυφη). Με δύο αναφορές είναι ακριβώς η ορίζουσα του ζεύγους. N ≤ `maxReferences` ⇒ το πολύ 496 ζεύγη.
+ */
+function bestAxisConditioning(deltas: readonly ReferenceDelta[]): number {
+  let best = 0;
+  for (let i = 0; i < deltas.length; i++) {
+    for (let j = i + 1; j < deltas.length; j++) best = Math.max(best, axisConditioning(deltas[i], deltas[j]));
+  }
+  return best;
+}
+
+/**
+ * Χωριστή κλίμακα: `Lᵢ² = sx²·dxᵢ² + sy²·dyᵢ²`, γραμμικό ως προς `sx²`, `sy²`. Ελάχιστα τετράγωνα με **σχετικά** βάρη
+ * (κάθε εξίσωση διαιρεμένη με `Lᵢ²`): μια μεγάλη διάσταση δεν «πνίγει» τις μικρές. Με δύο αναφορές το σύστημα είναι
+ * τετραγωνικό και η λύση είναι η ακριβής, όπως πριν.
+ */
+function perAxisScale(deltas: readonly ReferenceDelta[]): AxisScales | null {
+  let [a11, a12, a22, b1, b2] = [0, 0, 0, 0, 0];
+  for (const d of deltas) {
+    const l2 = d.length * d.length;
+    const [x, y] = [(d.dx * d.dx) / l2, (d.dy * d.dy) / l2];
+    a11 += x * x; a12 += x * y; a22 += y * y;
+    b1 += x; b2 += y;
+  }
+  const det = a11 * a22 - a12 * a12;
+  if (!(Math.abs(det) > 0)) return null;
+  const sx2 = (b1 * a22 - a12 * b2) / det;
+  const sy2 = (a11 * b2 - a12 * b1) / det;
   if (!(sx2 > 0) || !(sy2 > 0)) return null;
   return { sx: Math.sqrt(sx2), sy: Math.sqrt(sy2), mode: 'per-axis' };
 }
 
 function solveScales(deltas: readonly ReferenceDelta[]): AxisScales | null {
-  if (deltas.length === 2) {
-    const [p, q] = deltas;
-    if (axisConditioning(p, q) >= CALIBRATION_LIMITS.perAxisMinConditioning) return perAxisScale(p, q);
+  if (deltas.length >= 2 && bestAxisConditioning(deltas) >= CALIBRATION_LIMITS.perAxisMinConditioning) {
+    return perAxisScale(deltas);
   }
   return uniformScale(deltas);
 }

@@ -123,6 +123,22 @@ export interface CalibrationReferenceRecord {
   pointB: Point2D;
   realDistance: number;
   unit: CalibrationUnit;
+  /**
+   * ADR-929 Φ5.3γ — η διαβασμένη διάσταση από την οποία προήλθε η αναφορά (`PlanText.id`). Υπάρχει μόνο όταν
+   * `origin === 'plan-dimensions'`: ίχνος ελέγχου «ποιο γραμμένο νούμερο ορίζει την κλίμακα».
+   */
+  sourceTextId?: string;
+}
+
+/**
+ * ADR-929 Φ5.3γ — από πού ήρθε η βαθμονόμηση: σημεία που έδειξε ο άνθρωπος, ή οι γραμμένες διαστάσεις του σχεδίου
+ * (πρόταση της αναγνώρισης που ο άνθρωπος εφάρμοσε με ρητή πράξη). Μία δήλωση, τη διαβάζει και ο διακομιστής.
+ */
+export const CALIBRATION_ORIGINS = ['manual', 'plan-dimensions'] as const;
+export type CalibrationOrigin = (typeof CALIBRATION_ORIGINS)[number];
+
+export function isCalibrationOrigin(value: unknown): value is CalibrationOrigin {
+  return typeof value === 'string' && (CALIBRATION_ORIGINS as readonly string[]).includes(value);
 }
 
 /**
@@ -142,10 +158,15 @@ export interface CalibrationData {
   calibratedBy: string;
   /** Οι μονάδες της σκηνής τη στιγμή της βαθμονόμησης· απουσία = παλιά εγγραφή (mm). */
   sceneUnits?: CalibrationUnit;
-  /** Όλες οι αναφορές (1 ή 2), σε pixel εικόνας. */
+  /**
+   * Όλες οι αναφορές, σε pixel εικόνας: 1–2 από τον διάλογο, έως `CALIBRATION_LIMITS.maxReferences` από τις
+   * διαστάσεις (ADR-929 Φ5.3γ).
+   */
   references?: CalibrationReferenceRecord[];
   /** Ενιαία κλίμακα ή χωριστή X/Y (διόρθωση τεντώματος σαρωτή). */
   scaleMode?: 'uniform' | 'per-axis';
+  /** ADR-929 Φ5.3γ — η προέλευση· απουσία = `'manual'` (κάθε εγγραφή πριν τη Φ5.3γ). */
+  origin?: CalibrationOrigin;
 }
 
 // ─── Provider metadata ────────────────────────────────────────────────────────

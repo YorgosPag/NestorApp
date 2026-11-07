@@ -95,13 +95,14 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
       onBegin: jest.fn(), onEnd: jest.fn(), onToggleAddRegion: jest.fn(),
       onReset: jest.fn(), onPrepare: jest.fn(), onSend: jest.fn(),
     },
+    scale: { onApply: jest.fn(), onManual: jest.fn(), onHover: jest.fn() },
   };
 }
 
 /** Η πηγή «εικόνα» όπως τη δίνει ο host — προεπιλογή: όροφος χωρίς υπόβαθρο, πηγή το σχέδιο. */
 const NO_IMAGE: ImageSourceView = {
   available: false, phase: 'idle', failure: null, active: false, countsByTier: null, excludedFromWalls: 0, calibrated: false,
-  readingAvailable: false, review: null,
+  readingAvailable: false, review: null, scale: { card: null, applying: false, stale: false },
 };
 
 function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {

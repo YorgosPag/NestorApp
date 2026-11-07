@@ -843,6 +843,13 @@
       "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή."
     },
     {
+      "file": "src/subapps/dxf-viewer/floorplan-background/geometry/calibration-record-guard.ts",
+      "symbols": [
+        "isCalibrationData"
+      ],
+      "reason": "ADR-929 Φ5.3γ (2026-11-07) — ο ΕΝΑΣ έλεγχος «είναι αυτό έγκυρη εγγραφή βαθμονόμησης;». Ζούσε μέσα στο `src/app/api/floorplan-backgrounds/[id]/route.ts`, όπου κανένα test δεν μπορούσε να τον κρίνει, και η Φ5.3γ τον αλλάζει (N αναφορές από τις διαβασμένες διαστάσεις, προέλευση `origin`, `sourceTextId` ανά αναφορά). Ζει δίπλα στο `CALIBRATION_LIMITS.maxReferences`, που διαβάζει και η κάρτα κλίμακας του πελάτη: ΕΝΑ όριο για πελάτη και διακομιστή, όχι δύο αριθμοί που αποκλίνουν σιωπηλά. 🔑 ΕΝΑΣ καταναλωτής απ' έξω, ονομαστικά: `src/app/api/floorplan-backgrounds/[id]/route.ts`."
+    },
+    {
       "file": "src/subapps/dxf-viewer/floorplan-background/geometry/raster-pixel-scale.ts",
       "symbols": [
         "galleryScaleForCalibration"
@@ -891,11 +898,9 @@
         "ProviderId",
         "ProviderMetadata",
         "CALIBRATION_STALE_ERROR_CODE",
-        "CalibrationReferenceRecord",
-        "isCalibrationUnit",
         "transformsEqual"
       ],
-      "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή. · ADR-929 Φ5.2γ (2026-11-05): +4 σύμβολα ΣΥΜΒΟΛΑΙΟΥ client ⇄ server για τη μόνιμη βαθμονόμηση — «CALIBRATION_STALE_ERROR_CODE» (ο κωδικός του 409 που διαβάζει ο client: μία δήλωση, όχι δύο συμβολοσειρές), «transformsEqual» (ο έλεγχος σύγκρουσης της συναλλαγής συγκρίνει ΑΚΡΙΒΩΣ όπως το καθολικό εγγραφών του client), «isCalibrationUnit» + «CalibrationReferenceRecord» (ο validator του route και ο διάλογος δέχονται την ΙΔΙΑ λίστα μονάδων και την ΙΔΙΑ μορφή αναφοράς). Ζουν δίπλα στους τύπους που ήδη μοιράζονται, γιατί είναι το ίδιο συμβόλαιο."
+      "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή. · ADR-929 Φ5.2γ (2026-11-05): +4 σύμβολα ΣΥΜΒΟΛΑΙΟΥ client ⇄ server για τη μόνιμη βαθμονόμηση — «CALIBRATION_STALE_ERROR_CODE» (ο κωδικός του 409 που διαβάζει ο client: μία δήλωση, όχι δύο συμβολοσειρές), «transformsEqual» (ο έλεγχος σύγκρουσης της συναλλαγής συγκρίνει ΑΚΡΙΒΩΣ όπως το καθολικό εγγραφών του client), «isCalibrationUnit» + «CalibrationReferenceRecord» (ο validator του route και ο διάλογος δέχονται την ΙΔΙΑ λίστα μονάδων και την ΙΔΙΑ μορφή αναφοράς). Ζουν δίπλα στους τύπους που ήδη μοιράζονται, γιατί είναι το ίδιο συμβόλαιο. · ADR-929 Φ5.3γ (2026-11-07): −2 σύμβολα («isCalibrationUnit», «CalibrationReferenceRecord»): ο validator του route έγινε ΕΝΑ καθαρό module μέσα στο subapp (`geometry/calibration-record-guard.ts`), άρα κανείς απ' έξω δεν τα ζητά πια."
     },
     {
       "file": "src/subapps/dxf-viewer/floorplan-background/services/floorplan-background-api-client.ts",

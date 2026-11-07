@@ -30,6 +30,8 @@ import { planRecognitionStore, type PlanRecognitionFailure, type PlanRecognition
 import { meetsConfidenceTier } from './plan-confidence';
 import { createPlanReadingReview, type PlanReadingReviewDeps } from './plan-reading-review';
 import { planReadingApi } from './plan-reading-api-client';
+import { createPlanScaleController, type PlanScaleControllerDeps } from './plan-scale-controller';
+import { commitCalibration } from '../../floorplan-background/services/commit-calibration';
 
 export type RasterLineSource = Extract<ProposalLineSource, { kind: 'raster' }>;
 
@@ -102,9 +104,27 @@ let reviewDeps = DEFAULT_REVIEW_DEPS;
 /** Ο έλεγχος της όψης πριν την αποστολή — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
 const readingReview = createPlanReadingReview<RasterLineSource>(() => reviewDeps);
 
+/** ADR-929 Φ5.3γ — νέα σύντηξη για το ίδιο αποτέλεσμα γεωμετρίας (π.χ. νέα κλίμακα): store + νέα έκδοση πηγής γραμμών. */
+function adoptFusion(run: PlanRecognitionRun, fusion: PlanFusionResult): RasterLineSource {
+  planRecognitionStore.patch({ run, fusion });
+  return lineSourceOf(run, fusion, ++fusionVersion);
+}
+
+const DEFAULT_SCALE_DEPS: PlanScaleControllerDeps<RasterLineSource> = {
+  fuse,
+  adoptFusion,
+  background: (floorId) => getFloorBackground(floorId) ?? null,
+  commit: commitCalibration,
+  now: () => Date.now(),
+};
+let scaleDeps = DEFAULT_SCALE_DEPS;
+
+/** Η κάρτα κλίμακας — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
+const scaleController = createPlanScaleController<RasterLineSource>(() => scaleDeps);
+
 function fail(failure: PlanRecognitionFailure): null {
   readingReview.end();
-  planRecognitionStore.patch({ phase: 'idle', run: null, fusion: null, reading: null, failure });
+  planRecognitionStore.patch({ phase: 'idle', run: null, fusion: null, reading: null, failure, scaleHoverTextId: null });
   return null;
 }
 
@@ -138,7 +158,7 @@ export const planRecognitionSession = {
       knownScale,
     };
     const fusion = fuse(run, null);
-    planRecognitionStore.patch({ phase: 'ready', run, reading: null, fusion, failure: null });
+    planRecognitionStore.patch({ phase: 'ready', run, reading: null, fusion, failure: null, scaleHoverTextId: null });
     return lineSourceOf(run, fusion, ++fusionVersion);
   },
 
@@ -154,6 +174,12 @@ export const planRecognitionSession = {
    */
   review: readingReview,
 
+  /**
+   * ADR-929 Φ5.3γ — η κάρτα κλίμακας από τις διαβασμένες διαστάσεις: `card` · `apply` (μόνο με ρητή πράξη, από τη μία
+   * πόρτα `commitCalibration`) · `syncKnownScale` (μετά από κάθε βαθμονόμηση) · `hover`.
+   */
+  scale: scaleController,
+
   /** Κλείσιμο: σβήνει το αποτέλεσμα, ακυρώνει ό,τι τρέχει, τερματίζει τον Worker. */
   close(): void {
     runSequence += 1;
@@ -167,6 +193,11 @@ export const planRecognitionSession = {
 /** Μόνο για tests: ψεύτικες εξαρτήσεις του ελέγχου όψης (δίκτυο, pixel, Worker, URL). `null` ⇒ οι πραγματικές. */
 export function __setPlanReadingReviewDepsForTests(next: Partial<PlanReadingReviewDeps<RasterLineSource>> | null): void {
   reviewDeps = next ? { ...DEFAULT_REVIEW_DEPS, ...next } : DEFAULT_REVIEW_DEPS;
+}
+
+/** Μόνο για tests: ψεύτικες εξαρτήσεις της κάρτας κλίμακας (εγγραφή, υπόβαθρο, ρολόι). `null` ⇒ οι πραγματικές. */
+export function __setPlanScaleDepsForTests(next: Partial<PlanScaleControllerDeps<RasterLineSource>> | null): void {
+  scaleDeps = next ? { ...DEFAULT_SCALE_DEPS, ...next } : DEFAULT_SCALE_DEPS;
 }
 
 /** Μόνο για tests: ψεύτικος ευθυγραμμιστής (Worker-less). */

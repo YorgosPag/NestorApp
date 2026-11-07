@@ -128,3 +128,45 @@ describe('solveCalibration — ρητές αποτυχίες, ποτέ NaN', () 
       .toEqual({ ok: false, reason: 'inconsistent-references' });
   });
 });
+
+describe('solveCalibration — N αναφορές (ADR-929 Φ5.3γ, κάρτα κλίμακας)', () => {
+  const MM_X = 20;
+  const MM_Y = 20 * 1.01; // τέντωμα 1% στο Y
+  const h = (y: number, x0: number, x1: number) => ({ a: { x: x0, y }, b: { x: x1, y }, lengthMm: (x1 - x0) * MM_X });
+  const v = (x: number, y0: number, y1: number) => ({ a: { x, y: y0 }, b: { x, y: y1 }, lengthMm: (y1 - y0) * MM_Y });
+
+  it('πολλές οριζόντιες + κατακόρυφες ⇒ χωριστή κλίμακα X/Y, ακριβής, υπόλοιπο ανά αναφορά ≈ 0', () => {
+    const refs = [h(50, 10, 410), v(600, 20, 320), h(500, 100, 300), v(700, 50, 650), h(750, 0, 900)] as const;
+    const solution = solved({ placement: PLACEMENT, references: refs, sceneUnits: 'mm', alignToAxis: false });
+    expect(solution.mode).toBe('per-axis');
+    expect(solution.mmPerPixelX).toBeCloseTo(MM_X, 9);
+    expect(solution.mmPerPixelY).toBeCloseTo(MM_Y, 9);
+    expect(solution.residualsRel).toHaveLength(refs.length);
+    solution.residualsRel.forEach((r) => expect(Math.abs(r)).toBeLessThan(1e-9));
+  });
+
+  it('μία λάθος γραμμένη διάσταση ανάμεσα σε πολλές ⇒ φαίνεται στο ΔΙΚΟ της υπόλοιπο', () => {
+    const wrong = { ...h(300, 0, 500), lengthMm: 500 * MM_X * 1.05 };
+    const refs = [h(50, 10, 410), v(600, 20, 320), h(500, 100, 300), v(700, 50, 650), wrong] as const;
+    const solution = solved({ placement: PLACEMENT, references: refs, sceneUnits: 'mm', alignToAxis: false });
+    const magnitudes = solution.residualsRel.map(Math.abs);
+    expect(magnitudes.indexOf(Math.max(...magnitudes))).toBe(refs.length - 1);
+    expect(calibrationNeedsReview(solution)).toBe(true);
+  });
+
+  it('όλες στον ίδιο άξονα ⇒ ενιαία κλίμακα ελαχίστων τετραγώνων', () => {
+    const refs = [h(50, 10, 410), h(500, 100, 300), h(750, 0, 900)] as const;
+    const solution = solved({ placement: PLACEMENT, references: refs, sceneUnits: 'mm', alignToAxis: false });
+    expect(solution.mode).toBe('uniform');
+    expect(solution.mmPerPixelX).toBeCloseTo(MM_X, 9);
+  });
+
+  it('η άγκυρα είναι το πρώτο σημείο της πρώτης αναφοράς, όποιο κι αν είναι το N', () => {
+    const refs = [v(600, 20, 320), h(50, 10, 410), h(500, 100, 300)] as const;
+    const solution = solved({ placement: PLACEMENT, references: refs, sceneUnits: 'm', alignToAxis: false });
+    const before = rasterPixelToScene(refs[0].a, PLACEMENT);
+    const after = rasterPixelToScene(refs[0].a, { ...PLACEMENT, transform: solution.transform });
+    expect(after.x).toBeCloseTo(before.x, 9);
+    expect(after.y).toBeCloseTo(before.y, 9);
+  });
+});

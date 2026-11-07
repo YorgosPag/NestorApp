@@ -31,8 +31,8 @@ import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor
 import { isCalibrationPickComplete, useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import { useCalibrationPreview, type CalibrationPreview } from '../hooks/useCalibration';
 import { buildCalibrationData, type CalibrationLengthDraft } from '../geometry/calibration-draft';
-import { commitCalibration, type CalibrationCommitResult } from '../services/commit-calibration';
-import { useNotifications } from '@/providers/NotificationProvider';
+import { commitCalibration } from '../services/commit-calibration';
+import { useAnnounceCalibration } from '../hooks/useAnnounceCalibration';
 import { CalibrationAlignToggle, CalibrationReferenceField, CalibrationSecondReference, CalibrationSummary } from './CalibrationDialogParts';
 
 const KEY = 'panels.floorplanBackground.calibration';
@@ -74,22 +74,6 @@ function useCalibrationForm(idle: boolean) {
   return { first, setFirst, second, setSecond, alignToAxis, setAlignToAxis };
 }
 
-/** Το αποτέλεσμα της μόνιμης εγγραφής, σε μήνυμα για τον άνθρωπο. */
-function useAnnounceCalibration(): (result: CalibrationCommitResult) => void {
-  const { t } = useTranslation(['dxf-viewer-panels']);
-  const notifications = useNotifications();
-  return (result) => {
-    if (result.status === 'saved') {
-      notifications.success(t(`${KEY}.commit.saved`));
-      if (result.overlaysSkipped > 0) notifications.warning(t(`${KEY}.commit.overlaysSkipped`, { count: result.overlaysSkipped }));
-    } else if (result.status === 'conflict') {
-      notifications.warning(t(`${KEY}.commit.conflict`));
-    } else {
-      notifications.error(t(`${KEY}.commit.failed`));
-    }
-  };
-}
-
 /** Ο «εγκέφαλος» του διαλόγου: συνεδρία + φόρμα + ζωντανή λύση + η πράξη εφαρμογής. */
 function useCalibrationDialogModel(levelManager: LevelSceneReader) {
   const session = useFloorplanBackgroundStore((s) => s.calibrationSession);
@@ -102,7 +86,7 @@ function useCalibrationDialogModel(levelManager: LevelSceneReader) {
   const announce = useAnnounceCalibration();
   const apply = () => {
     if (!session || preview.status !== 'solved') return;
-    const data = buildCalibrationData(preview.references, preview.solution, sceneUnits, alignToAxis, Date.now());
+    const data = buildCalibrationData(preview.references, preview.solution, sceneUnits, alignToAxis, Date.now(), 'manual');
     // Αισιόδοξα: εφαρμόζεται και κλείνει αμέσως· το μήνυμα λέει αν έμεινε (ADR-929 Φ5.2γ).
     void commitCalibration(session.floorId, preview.solution.transform, data).then(announce);
   };

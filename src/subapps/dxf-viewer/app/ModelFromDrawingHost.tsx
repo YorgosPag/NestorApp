@@ -57,7 +57,6 @@ import {
   ModelFromDrawingPanel,
   type ModelFromDrawingPanelActions,
 } from '../ui/panels/model-from-drawing/ModelFromDrawingPanel';
-import type { PlanReadingActions } from '../ui/panels/model-from-drawing/PlanReadingSections';
 
 /** Περιθώριο (mm) γύρω από το ορθογώνιο όταν ο άνθρωπος ζητά «δείξε μου αυτό». */
 const FOCUS_PAD_MM = 1500;
@@ -210,8 +209,8 @@ export function ModelFromDrawingHost({ levelManager }: ModelFromDrawingHostProps
   React.useEffect(() => EventBus.on('dxf:model-from-drawing-requested', start), [start]);
   useSceneSync(state.pendingSample, levelManager.currentLevelId, getDeps, getOpeningDeps);
 
-  const { imageSource, recognizeImage, reading } = usePlanRecognitionWiring(state, getDeps);
-  const actions = usePanelActions(start, getDeps, getOpeningDeps, recognizeImage, reading);
+  const { imageSource, recognizeImage, reading, scale } = usePlanRecognitionWiring(state, getDeps);
+  const actions = usePanelActions(start, getDeps, getOpeningDeps, recognizeImage, { reading, scale });
 
   if (state.phase === 'closed') return null;
   return <ModelFromDrawingPanel state={state} actions={actions} imageSource={imageSource} />;
@@ -227,8 +226,9 @@ function usePanelActions(
   getDeps: () => ModelFromDrawingDeps,
   getOpeningDeps: () => OpeningSessionDeps,
   recognizeImage: () => void,
-  reading: PlanReadingActions,
+  image: Pick<ModelFromDrawingPanelActions, 'reading' | 'scale'>,
 ): ModelFromDrawingPanelActions {
+  const { reading, scale } = image;
   return React.useMemo((): ModelFromDrawingPanelActions => ({
     onClose: () => modelFromDrawingSession.close(),
     onResample: start,
@@ -245,5 +245,6 @@ function usePanelActions(
     },
     onRecognizeImage: recognizeImage,
     reading,
-  }), [start, getDeps, getOpeningDeps, recognizeImage, reading]);
+    scale,
+  }), [start, getDeps, getOpeningDeps, recognizeImage, reading, scale]);
 }
