@@ -1,0 +1,52 @@
+# HANDOFF — ADR-931 · Β2.1 ζωντανά ✅ · toast διορθώθηκε → ΕΠΟΜΕΝΟ: ιστορικό με ανθρώπινες ετικέτες, μετά B3 (BOQ) (2026-11-07)
+
+## Πού δουλεύεις
+- **Worktree:** `C:/Nestor_Worktrees/common-spaces-stage-b` (ΜΟΝΟ εδώ) · **Κλαδί:** `agent/common-spaces-stage-b`
+- **ADR:** `docs/centralized-systems/reference/adrs/ADR-931-common-spaces-entity.md` (§6.2 · §7 changelog — γραμμή 2026-11-07)
+- **Σχέδιο (εγκεκριμένο):** `C:/Users/user/.claude/plans/groovy-fluttering-lagoon.md` — B1 ✅ → B2 ✅ (+B2.1 ✅) → **B3** → B4 → B5
+- Προηγούμενο handoff (SSoT audit του B3 — ΔΙΑΒΑΣΕ ΤΟ): `HANDOFFS/2026-11-07_ADR-931_stage-B_live-verify-B1-B2.1_then-B3-boq_handoff.md`
+- Κανόνες: N.(-2) — κανένα test/gate/γεννήτορας χωρίς έγκριση · όχι tsc · commit μόνο στο κλαδί με ρητή λίστα ·
+  `wt:land`/push ΜΟΝΟ με εντολή · καμία εγγραφή στην παραγωγή / deploy κανόνων χωρίς έγκριση.
+- Ο Giorgio: «κάνε το όπως οι μεγάλοι (Revit/ArchiCAD/Figma/Salesforce/Procore), full enterprise + SSoT, χωρίς
+  εκπτώσεις, έρευνα αν δεν είσαι σίγουρος» ⇒ **αποφάσισε τεκμηριωμένα και προχώρα**.
+
+## Τι έγινε σε αυτή τη συνεδρία
+- Ζωντανή επαλήθευση Β2/Β2.1 στο `839a9b4` ✅ (λεπτομέρειες: ADR-931 §7, 2026-11-07). Tests Β1+Β2.1 66/66 πράσινα.
+- Commit στο κλαδί: διόρθωση toast «Αναίρεση» — `useSuggestionUndoToasts.ts` (ένα toast ανά πρόταση, σταθερό id,
+  απόσυρση όταν το κλειδί πάψει να είναι απορριφθέν· η μονιμότητα ADR-866 Β2 ΔΕΝ άλλαξε) + test 5/5 + ADR.
+  Επαλήθευσε: `git log --oneline -3`.
+- Το κτίριο επανήλθε. Μένει ο δοκιμαστικός χώρος «ΔΟΚΙΜΗ B1 — Κλιμακοστάσιο» (ζωντανός, χωρίς όροφο) στο
+  `bldg_349b7d29-9ada-42b3-9e3d-1ea75ec6bc15` — για το B1 και για τον επιλογέα του B3.
+
+## ΕΚΚΡΕΜΕΙ από Giorgio
+- **B1 ζωντανά**: ο Giorgio θα ανεβάσει κάτοψη στον 1ο όροφο του δοκιμαστικού. Μετά: περίγραμμα ρόλου
+  «κοινόχρηστος» → Color Fill → `drawnArea` στη στήλη «Από την κάτοψη» → «Υιοθέτηση σχεδίου» → καθαρισμός (περίγραμμα +
+  δοκιμαστικός χώρος στον κάδο). ⚠️ Μη γράψεις στο «Κτήριο Α» `bldg_3e91a5c7` (πραγματικό DXF) — έγκριση μόνο για το δοκιμαστικό.
+  ⚠️ Μην ανεβάσεις αρχείο μέσω των 6 κρυφών `input[type=file]` — δεν ξέρεις ποιο είναι του ορόφου.
+
+## ΒΗΜΑ 1 (Plan Mode, εγκεκριμένο) — Ιστορικό απορρίψεων με ανθρώπινες ετικέτες
+Σήμερα: `audit-tracked-fields.ts:762` — `kind: 'scalar'`, `value: keys.join(', ')` ⇒ «stairwell@building,
+elevator_machine_room@flr_… → …» (όλη η λίστα πριν→μετά, ωμά κλειδιά).
+Απόφαση (πρακτική Salesforce Field History / Procore Activity / GitHub audit — ετικέτα **τη στιγμή του γεγονότος**):
+- `kind: 'collection'` με `keyBy: 'key'` ⇒ γραμμές «προστέθηκε / αφαιρέθηκε» ανά πρόταση (υπάρχει ήδη στη μηχανή:
+  `src/lib/audit/tracked-field-def.ts`, `collection-item-identity.ts` — `labelFields`/`labelSeparator`).
+- Ετικέτα = κατηγορία (μεταφράζεται στην ανάγνωση από τον κατάλογο — `audit-value-resolver.ts` κάνει ήδη
+  «key — label» → μετάφραση της κεφαλής) + **στιγμιότυπο ονόματος ορόφου** (δεδομένο χρήστη, όχι i18n) γραμμένο από
+  τον server (`building-common-space-suggestion-dismissals.ts`) στην εγγραφή απόρριψης· «όλο το κτίριο» ⇒ i18n στην ανάγνωση.
+- ΠΡΙΝ τον κώδικα επαλήθευσε: πώς αποδίδονται οι γραμμές `collection` (αποθηκεύεται ετικέτα ή κλειδί; περνά από
+  `resolveAuditValue` με `enumCatalog`;) · ότι ο ορισμός μένει «φορητός για τον CDC» · CHECK 3.14 (κατάλογοι τιμών) ·
+  CHECK 3.17. Δήλωσε κατάλογο `common-spaces` `categories` ως `enumCatalog`.
+- Οι παλιές γραμμές (scalar) μένουν όπως είναι — καμία μετάπτωση ιστορικού.
+- Ολοκλήρωση: ADR-931 §6.2 + changelog (+ ADR-195 changelog για τη χρήση collection) · test · commit στο κλαδί.
+
+## ΒΗΜΑ 2 (Plan Mode) — B3: BOQ πού γίνεται η εργασία + ποιος πληρώνει
+Όλα όπως στο προηγούμενο handoff (ενότητα «ΒΗΜΑ 2 — B3» + SSoT audit + «Ακόμη να ελεγχθούν»).
+
+## Παράπλευρα (ΔΕΝ αγγίχτηκαν — απόφαση Giorgio)
+- Όλα του προηγούμενου handoff. + Το «Δεσμός με τόπο: land_…» στο ιστορικό κτιρίου δείχνει ωμό id (ίδια κλάση με το
+  εύρημα 2 — πρόταση για αργότερα, όχι τώρα).
+
+## ΜΗΝ
+- Commit στο `main` · `wt:land`/push χωρίς εντολή · test/gate/γεννήτορας χωρίς έγκριση · tsc · deploy κανόνων.
+- Αναδρομικό `grep -r` στο `src/` — `git grep`. Αλλαγή locales ⇒ θα ζητηθεί `generate:i18n-types` (CHECK 3.33) — ρώτα.
+- Commit: `run_in_background` + διάβασε τον log για `❌`.
