@@ -123,7 +123,12 @@ export function PropertyDossierDetailContent({ dossierId }: { readonly dossierId
   const lookup = useMyPropertyDossier(dossierId, user?.uid ?? null);
   const iconSizes = useIconSizes();
   return (
-    <main className="flex w-full flex-col gap-6">
+    // 🗂️ `data-shell-span="full"` — ο φάκελος είναι **χώρος εργασίας**, όχι πρόζα: κάτοψη · έγγραφα · φωτογραφίες ·
+    // βίντεο ζουν στον διαχειριστή αρχείων, που είναι φτιαγμένος για το πλάτος του `(app)`. Το ταβάνι των 80ch
+    // (≈720px) τον έστελνε σε ~40% μιας οθόνης 1920px. Drive · Dropbox · ACC: η λίστα αρχείων είναι **ρευστή**.
+    // Ζητιέται **με όνομα**, όπως στο `NetworkThreadScreen` / `MyOwnerPropertiesContent`· ο διάδρομος (κενό στις
+    // άκρες) **μένει** — δεν είναι καμβάς, άρα **όχι** `bleed`.
+    <main data-shell-span="full" className="flex w-full flex-col gap-6">
       <nav>
         <Link href={MY_DOSSIERS_ROUTE} className={BACK_LINK_CLASS}>
           <ArrowLeft className={iconSizes.sm} aria-hidden="true" />

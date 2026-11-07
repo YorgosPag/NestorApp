@@ -66,7 +66,9 @@ function DossierList({ dossiers, lifecycle, onRename }: DossierListProps) {
   const controls = usePropertyDossierLifecycle();
   if (dossiers.length === 0) return <EmptyDossiers lifecycle={lifecycle} />;
   return (
-    <ul className="m-0 flex list-none flex-col gap-3 p-0">
+    // Πλέγμα καρτών που κλιμακώνεται με το **διαθέσιμο** πλάτος (Drive «Folders»): μία στήλη στο κινητό, όσες
+    // χωρούν από 20rem και πάνω σε φαρδιά οθόνη. `min(…,100%)` ⇒ καμία οριζόντια κύλιση κάτω από 20rem.
+    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(20rem,100%),1fr))] gap-3 p-0">
       {dossiers.map((dossier) => (
         <li key={dossier.id}>
           <PropertyDossierCard dossier={dossier} lifecycle={controls} onRename={onRename} />
@@ -119,7 +121,9 @@ export function MyPropertyDossiersContent(): React.ReactElement {
   const router = useRouter();
   const [dialog, setDialog] = React.useState<PropertyDossierDialogMode | null>(null);
   return (
-    <main className="flex w-full flex-col gap-6">
+    // 🗂️ `data-shell-span="full"` — λίστα φακέλων, **όχι πρόζα** (ίδιος λόγος με τη σελίδα του φακέλου): το πλάτος
+    // ζητιέται από το κέλυφος με όνομα, ο διάδρομος μένει.
+    <main data-shell-span="full" className="flex w-full flex-col gap-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <hgroup className="flex flex-col gap-2">
           <h1 className="m-0 text-2xl font-semibold text-foreground">{t(`${K}.title`)}</h1>

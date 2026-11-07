@@ -79,7 +79,7 @@ export function PropertyDossierCard(props: PropertyDossierCardProps): React.Reac
   const { t } = useTranslation([NS]);
   const typeLabel = usePropertyDossierTypeLabel(dossier.type);
   return (
-    <Card asChild className="flex items-start justify-between gap-3 p-4">
+    <Card asChild className="flex h-full items-start justify-between gap-3 p-4">
       <article>
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="m-0 truncate text-base font-semibold">
