@@ -44,13 +44,24 @@ const fileRef = z
 
 const sourceRef = fileRef.extend({ page: z.number().int().min(1) }).strict();
 
+/**
+ * Πώς προέκυψε η εικόνα από το διανυσματικό (ADR-929 §6.9). Οι μετρικές αναφέρονται **χωριστά** ανά σχέση: μια εξαγωγή
+ * από το CAD αναμένεται σχεδόν τέλεια στην καταγραφή, ενώ μια σάρωση φέρει κάμψη και τάνυση χαρτιού. `unverified` ⇒
+ * δεν το ξέρει κανείς ακόμη· το κρίνει η μέτρηση καταγραφής, όχι η μαντεψιά.
+ */
+export const GOLDEN_PAIR_RELATIONS = ['printed-from', 'scanned-from', 'unverified'] as const;
+
 /** Βαθμίδα Α: αλήθεια από το διανυσματικό ζεύγος. Βαθμίδα Β: αποτύπωση στη Nestor, εκκρεμεί (Δ13.1). */
 const truth = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('vector'),
     format: z.enum(['dxf', 'tek']),
     file: fileRef,
-    /** Προαιρετικό ήδη ευθυγραμμισμένο ζεύγος (π.χ. το `_Image.dxf` του Παλαιολόγου Γ). */
+    relation: z.enum(GOLDEN_PAIR_RELATIONS),
+    /**
+     * Προαιρετικό διανυσματικό που είναι **ήδη** στο σύστημα της εικόνας. ⚠️ Μετρήθηκε (2026-11-07, §6.9): το
+     * `_Image.dxf` του Παλαιολόγου Γ **δεν** είναι τέτοιο ζεύγος· είναι αυτόματη διανυσματοποίηση της σάρωσης.
+     */
     alignment: fileRef.optional(),
   }).strict(),
   z.object({ kind: z.literal('manual-pending') }).strict(),

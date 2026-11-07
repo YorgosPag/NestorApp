@@ -26,7 +26,7 @@ function validManifest(): Record<string, unknown> {
         kind: 'scan',
         tier: 'A',
         source: { root: 'scans', path: 'x/plan.pdf', sha256: SHA_A, page: 1 },
-        truth: { kind: 'vector', format: 'dxf', file: { root: 'scans', path: 'x/plan.dxf', sha256: SHA_B } },
+        truth: { kind: 'vector', format: 'dxf', relation: 'printed-from', file: { root: 'scans', path: 'x/plan.dxf', sha256: SHA_B } },
       },
       {
         id: 'case-b',
@@ -58,6 +58,8 @@ describe('parseGoldenManifest', () => {
     ['βαθμίδα Α χωρίς διανυσματική αλήθεια', withFirstCase((c) => ({ ...c, truth: { kind: 'manual-pending' } }))],
     ['κακό sha256', withFirstCase((c) => ({ ...c, source: { ...(c.source as Case), sha256: 'ABC' } }))],
     ['σελίδα 0', withFirstCase((c) => ({ ...c, source: { ...(c.source as Case), page: 0 } }))],
+    ['διανυσματική αλήθεια χωρίς σχέση ζεύγους', withFirstCase((c) => ({ ...c, truth: { kind: 'vector', format: 'dxf', file: { root: 'scans', path: 'x/plan.dxf', sha256: SHA_B } } }))],
+    ['άγνωστη σχέση ζεύγους', withFirstCase((c) => ({ ...c, truth: { ...(c.truth as Case), relation: 'guessed' } }))],
     ['αδήλωτη ρίζα', withFirstCase((c) => ({ ...c, source: { ...(c.source as Case), root: 'erga' } }))],
     ['διπλό id', { ...validManifest(), cases: [(validManifest().cases as Case[])[0], (validManifest().cases as Case[])[0]] }],
   ])('απορρίπτει: %s', (_name, raw) => {
