@@ -10,28 +10,29 @@
  * 🔑 Κάθε επιστροφή σε προηγούμενο βήμα **λέει γιατί** (`PublishNotice`): «άλλαξε ο φράχτης», «άλλαξε από άλλον».
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CheckCircle2, Info } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DatePickerField } from '@/components/ui/date-picker-field';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { formatPercentage } from '@/lib/intl-formatting';
 import { BP_PER_WHOLE } from '@/lib/pricing/discount-rule';
+import { publishableStart, type PublishableStart } from '@/subapps/catalog/pricing/version-timeline';
 import type { DiscountGroupWire, PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
 import { FAILURE_KEYS } from '../shared/catalog-labels';
-import { CatalogField } from '../shared/CatalogFormFields';
 import { useIssueMessage } from '../shared/CatalogIssues';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { PublishDiffList } from './PublishDiffList';
 import { canPublish, isChangedMeanwhile, needsConfirmation, type PublishFlow, type PublishNotice } from './publish-flow';
 import { usePublishFlow } from './use-publish-flow';
+import { ValidFromField } from './ValidFromField';
 
 export interface PublishVersionDialogProps {
   readonly version: PriceListVersionWire;
   readonly versions: readonly PriceListVersionWire[];
+  readonly nowMs: number;
   readonly discountGroups: readonly DiscountGroupWire[];
   readonly onChanged: () => void;
   readonly onClose: () => void;
@@ -50,16 +51,20 @@ function NoticeLine({ notice }: { readonly notice: PublishNotice | null }) {
   return <p className="m-0 flex items-center gap-2 rounded-md border p-2 text-sm" role="status"><Info className="h-4 w-4" aria-hidden />{t(NOTICE_KEYS[notice])}</p>;
 }
 
-function ScheduleStep({ driver, flow }: { readonly driver: Driver; readonly flow: Extract<PublishFlow, { step: 'schedule' }> }) {
+interface ScheduleStepProps {
+  readonly driver: Driver;
+  readonly flow: Extract<PublishFlow, { step: 'schedule' }>;
+  readonly start: PublishableStart;
+  readonly nowMs: number;
+}
+
+function ScheduleStep({ driver, flow, start, nowMs }: ScheduleStepProps) {
   const { t } = useCatalogText();
   const message = useIssueMessage(Boolean(driver.issue));
-  const value = driver.validFrom ? new Date(driver.validFrom) : undefined;
   return (
     <section className="flex flex-col gap-3">
       <NoticeLine notice={flow.notice} />
-      <CatalogField label={t('pricing.versions.validFrom')} hint={t('pricing.publish.validFromHint')}>
-        {({ id }) => <DatePickerField id={id} value={value} placeholder={t('pricing.versions.validFromNone')} onSelect={(date) => driver.setValidFrom(date ? date.toISOString() : null)} />}
-      </CatalogField>
+      <ValidFromField value={driver.validFrom} onChange={driver.setValidFrom} start={start} nowMs={nowMs} allowNone={false} lead={t('pricing.publish.validFromHint')} />
       {driver.issue ? <p className="m-0 text-sm text-destructive" role="alert">{message({ code: driver.issue, path: 'validFrom' })}</p> : null}
     </section>
   );
@@ -89,11 +94,18 @@ function ReviewStep({ driver, flow, discountGroups }: ReviewStepProps) {
   );
 }
 
-function StepBody({ driver, discountGroups }: { readonly driver: Driver; readonly discountGroups: readonly DiscountGroupWire[] }) {
+interface StepBodyProps {
+  readonly driver: Driver;
+  readonly discountGroups: readonly DiscountGroupWire[];
+  readonly start: PublishableStart;
+  readonly nowMs: number;
+}
+
+function StepBody({ driver, discountGroups, start, nowMs }: StepBodyProps) {
   const { t } = useCatalogText();
   const { flow } = driver;
   switch (flow.step) {
-    case 'schedule': return <ScheduleStep driver={driver} flow={flow} />;
+    case 'schedule': return <ScheduleStep driver={driver} flow={flow} start={start} nowMs={nowMs} />;
     case 'review': return <ReviewStep driver={driver} flow={flow} discountGroups={discountGroups} />;
     case 'published': return <p className="m-0 flex items-center gap-2 text-sm" role="status"><CheckCircle2 className="h-4 w-4" aria-hidden />{t('pricing.publish.done')}</p>;
     case 'failed': return <p className="m-0 text-sm text-destructive" role="alert">{t(FAILURE_KEYS[flow.failure.kind])}</p>;
@@ -118,9 +130,10 @@ function StepActions({ driver, onClose }: { readonly driver: Driver; readonly on
   );
 }
 
-export function PublishVersionDialog({ version, versions, discountGroups, onChanged, onClose }: PublishVersionDialogProps) {
+export function PublishVersionDialog({ version, versions, nowMs, discountGroups, onChanged, onClose }: PublishVersionDialogProps) {
   const { t } = useCatalogText();
-  const driver = usePublishFlow({ version, versions, onChanged });
+  const start = useMemo(() => publishableStart(versions, nowMs), [versions, nowMs]);
+  const driver = usePublishFlow({ version, versions, suggestedValidFrom: start.suggested, onChanged });
   const busy = driver.flow.step === 'publishing' || driver.flow.step === 'saving';
   return (
     <Dialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
@@ -129,7 +142,7 @@ export function PublishVersionDialog({ version, versions, discountGroups, onChan
           <DialogTitle>{t('pricing.publish.title', { number: version.number })}</DialogTitle>
           <DialogDescription>{t('pricing.publish.lead')}</DialogDescription>
         </DialogHeader>
-        <StepBody driver={driver} discountGroups={discountGroups} />
+        <StepBody driver={driver} discountGroups={discountGroups} start={start} nowMs={nowMs} />
         <DialogFooter><StepActions driver={driver} onClose={onClose} /></DialogFooter>
       </DialogContent>
     </Dialog>

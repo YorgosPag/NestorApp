@@ -14,7 +14,7 @@
  *    στρογγύλευση της μηχανής, όχι μια δεύτερη αριθμητική στην οθόνη που θα διαφωνούσε κατά ένα λεπτό.
  */
 
-import { addDaysToDateKey, calendarDateOfDateKey, dateKeyOfPicker } from '@/lib/calendar/date-key';
+import { addDaysToDateKey, calendarDateOfDateKey, dateKeyOfPicker, dayAfterInstant, instantOfDateKey } from '@/lib/calendar/date-key';
 import { localDateOf } from '@/lib/date-local';
 import { majorFromMinor, minorFromMajor, type MinorAmount } from '@/lib/money/money';
 import {
@@ -60,18 +60,15 @@ export function conditionDefinitionOf(record: DiscountConditionWire): DiscountCo
 
 // ── Ισχύς σε ημέρες ──────────────────────────────────────────────────────────
 
-/** Η αρχή (τοπικά μεσάνυχτα) μιας ημέρας `YYYY-MM-DD`, ως στιγμή ISO. */
-const instantOfDay = (key: string | null): string | null => (key === null ? null : calendarDateOfDateKey(key)?.toISOString() ?? null);
-
 /** «Ισχύει από» (επιλογέας) → αρχή της ημέρας. Κενό ⇒ `null` = από πάντα. */
-export const validFromOfPicker = (date: Date | undefined): string | null => instantOfDay(dateKeyOfPicker(date));
+export const validFromOfPicker = (date: Date | undefined): string | null => instantOfDateKey(dateKeyOfPicker(date));
 
 export const pickerOfValidFrom = (validFrom: string | null): Date | undefined => (validFrom === null ? undefined : new Date(validFrom));
 
 /** «Τελευταία ημέρα» (συμπεριληπτικά) → «έως» = αρχή της **επόμενης** ημέρας. Κενό ⇒ `null` = χωρίς λήξη. */
 export function validUntilOfLastDay(date: Date | undefined): string | null {
   const key = dateKeyOfPicker(date);
-  return key === null ? null : instantOfDay(addDaysToDateKey(key, 1));
+  return key === null ? null : instantOfDateKey(addDaysToDateKey(key, 1));
 }
 
 /** «Έως» (ημιανοιχτό) → η τελευταία ημέρα που **ισχύει**: η ημέρα της τελευταίας στιγμής πριν από το όριο. */
@@ -172,12 +169,11 @@ export function conditionDraftIssues(draft: DiscountConditionDefinition, context
  * τελευταία **οριοθετείται** με την αποθήκευση (`planConditionSupersession`). Ποτέ «από πάντα» (το εύρημα του Σ7).
  */
 export function nextPeriodStart(periods: readonly Pick<DiscountConditionDefinition, 'validFrom' | 'validUntil'>[], nowMs: number): string | null {
-  const dayAfter = (ms: number) => instantOfDay(addDaysToDateKey(localDateOf(new Date(ms)), 1));
   const bounds = periods.flatMap(({ validFrom, validUntil }) => [
     validUntil,
-    validFrom === null ? null : dayAfter(Date.parse(validFrom)),
+    validFrom === null ? null : dayAfterInstant(Date.parse(validFrom)),
   ]);
-  let start = dayAfter(nowMs);
+  let start = dayAfterInstant(nowMs);
   for (const bound of bounds) {
     if (start !== null && bound !== null && Date.parse(bound) > Date.parse(start)) start = bound;
   }

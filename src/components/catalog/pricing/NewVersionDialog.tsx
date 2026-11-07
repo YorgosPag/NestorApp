@@ -8,39 +8,43 @@
  * 🔑 «Από την τρέχουσα» χωρίς δημοσιευμένη έκδοση δεν προσφέρεται καν (θα ήταν κενή με άλλο όνομα — SAP: «copy from»
  *    ζητά πηγή)· η προεπιλογή είναι «από την τρέχουσα» όταν υπάρχει, γιατί η συνήθης αλλαγή τιμών είναι διόρθωση, όχι λευκή
  *    σελίδα. Ο γραφέας αντιγράφει την **τελευταία δημοσιευμένη** (και μελλοντική), άρα το κριτήριο είναι «υπάρχει δημοσιευμένη».
- * 🔑 Το «ισχύει από» εδώ είναι **πρόθεση**: ελέγχεται πραγματικά στη δημοσίευση (`judgeVersionPublication`).
+ * 🔑 Το «ισχύει από» εδώ είναι **πρόθεση**: ελέγχεται πραγματικά στη δημοσίευση (`judgeVersionPublication`) — γι' αυτό
+ *    έρχεται **συμπληρωμένο** με ημέρα που περνά τον ίδιο κανόνα (`publishableStart`), ποτέ κενό να το ψάχνει ο άνθρωπος.
  */
 
 import React, { useState } from 'react';
 
-import { DatePickerField } from '@/components/ui/date-picker-field';
 import { FormDialog } from '@/components/ui/form/FormDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFormSubmission } from '@/hooks/useFormSubmission';
 import type { CreatePriceVersionRequest } from '@/subapps/catalog/types/price-list-requests';
+import type { PublishableStart } from '@/subapps/catalog/pricing/version-timeline';
 import type { PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
 import { PRICE_VERSION_BASES, type PriceVersionBasis } from '@/subapps/catalog/vocabulary/pricing';
 import { CatalogField } from '../shared/CatalogFormFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { VERSION_BASIS_KEYS } from './pricing-labels';
+import { ValidFromField } from './ValidFromField';
 
 export interface NewVersionDialogProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
-  /** Υπάρχει δημοσιευμένη έκδοση (ο γραφέας αντιγράφει την τελευταία δημοσιευμένη) — αλλιώς μόνο κενή. */
-  readonly hasPublished: boolean;
+  /** Πότε μπορεί να ξεκινά η νέα έκδοση· `after !== null` ⇔ υπάρχει δημοσιευμένη (ο γραφέας αντιγράφει την τελευταία). */
+  readonly start: PublishableStart;
+  readonly nowMs: number;
   readonly onCreate: (request: CreatePriceVersionRequest) => Promise<PriceListVersionWire | null>;
 }
 
 const isBasis = (value: string): value is PriceVersionBasis => (PRICE_VERSION_BASES as readonly string[]).includes(value);
 
 /** Η φόρμα ξεκινά από την αρχή σε κάθε άνοιγμα (ο γονέας τη ξαναστήνει με `key`). */
-function NewVersionForm({ onOpenChange, hasPublished, onCreate, open }: NewVersionDialogProps) {
+function NewVersionForm({ onOpenChange, start, nowMs, onCreate, open }: NewVersionDialogProps) {
   const { t } = useCatalogText();
+  const hasPublished = start.after !== null;
   const [basis, setBasis] = useState<PriceVersionBasis>(hasPublished ? 'latestPublished' : 'empty');
-  const [validFrom, setValidFrom] = useState<Date | undefined>(undefined);
+  const [validFrom, setValidFrom] = useState<string | null>(start.suggested);
   const submission = useFormSubmission({
-    submit: () => onCreate({ basedOn: basis, validFrom: validFrom ? validFrom.toISOString() : null }),
+    submit: () => onCreate({ basedOn: basis, validFrom }),
     canSubmit: true,
     onSuccess: (created) => { if (created) onOpenChange(false); },
     errorFallback: t('pricing.versions.createFailed'),
@@ -59,9 +63,7 @@ function NewVersionForm({ onOpenChange, hasPublished, onCreate, open }: NewVersi
           </Select>
         )}
       </CatalogField>
-      <CatalogField label={t('pricing.versions.validFrom')} hint={t('pricing.versions.validFromHint')}>
-        {({ id }) => <DatePickerField id={id} value={validFrom} onSelect={setValidFrom} placeholder={t('pricing.versions.validFromNone')} />}
-      </CatalogField>
+      <ValidFromField value={validFrom} onChange={setValidFrom} start={start} nowMs={nowMs} allowNone />
     </FormDialog>
   );
 }

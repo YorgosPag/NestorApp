@@ -16,14 +16,16 @@ import { Loader2, Rows3, Send, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DatePickerField } from '@/components/ui/date-picker-field';
+import type { PublishableStart } from '@/subapps/catalog/pricing/version-timeline';
 import type { PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
-import { CatalogField } from '../shared/CatalogFormFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { VERSION_STATUS_ICONS, VERSION_STATUS_KEYS } from './pricing-labels';
+import { ValidFromField } from './ValidFromField';
 
 export interface DraftVersionRowProps {
   readonly version: PriceListVersionWire;
+  readonly start: PublishableStart;
+  readonly nowMs: number;
   /** Γραμμές που αντιγράφηκαν σε αυτή τη συνεδρία (νεότερο από την όψη όσο τρέχει η σπορά). */
   readonly seededCopied: number | undefined;
   readonly busy: boolean;
@@ -70,7 +72,6 @@ export function DraftVersionRow(props: DraftVersionRowProps) {
   const { t } = useCatalogText();
   const { version } = props;
   const StatusIcon = VERSION_STATUS_ICONS[version.status];
-  const validFrom = version.validFrom ? new Date(version.validFrom) : undefined;
   return (
     <li className="flex flex-col gap-2 rounded-md border p-3">
       <header className="flex flex-wrap items-center gap-2">
@@ -78,12 +79,8 @@ export function DraftVersionRow(props: DraftVersionRowProps) {
         <Badge variant="secondary" className="gap-1"><StatusIcon className="h-3 w-3" aria-hidden />{t(VERSION_STATUS_KEYS[version.status])}</Badge>
       </header>
       <section className="sm:max-w-xs">
-        <CatalogField label={t('pricing.versions.validFrom')} hint={t('pricing.versions.validFromHint')}>
-          {({ id }) => (
-            <DatePickerField id={id} value={validFrom} disabled={!props.canManage || props.busy} placeholder={t('pricing.versions.validFromNone')}
-              onSelect={(date) => props.onValidFrom(date ? date.toISOString() : null)} />
-          )}
-        </CatalogField>
+        <ValidFromField value={version.validFrom} onChange={props.onValidFrom} start={props.start} nowMs={props.nowMs} allowNone
+          disabled={!props.canManage || props.busy} />
       </section>
       <SeedProgress {...props} />
       <DraftActions {...props} />

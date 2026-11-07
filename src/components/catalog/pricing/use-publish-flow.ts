@@ -25,6 +25,8 @@ export interface PublishFlowInput {
   readonly version: PriceListVersionWire;
   /** Όλες οι εκδόσεις της λίστας (η κρίση της ημερομηνίας θέλει τη χρονογραμμή). */
   readonly versions: readonly PriceListVersionWire[];
+  /** Πρόχειρη χωρίς ημερομηνία ⇒ το πεδίο ξεκινά από αυτή την πρόταση (`publishableStart`), όχι κενό. */
+  readonly suggestedValidFrom: string | null;
   /** Η όψη άλλαξε από αυτή την οθόνη (ημερομηνία · δημοσίευση) — ανανέωση στο παρασκήνιο. */
   readonly onChanged: () => void;
 }
@@ -58,9 +60,9 @@ function useFlowDriver(flow: PublishFlow, dispatch: (event: PublishEvent) => voi
   }, [flow, versionId, validFrom, dispatch, mounted, onChanged]);
 }
 
-export function usePublishFlow({ version, versions, onChanged }: PublishFlowInput) {
+export function usePublishFlow({ version, versions, suggestedValidFrom, onChanged }: PublishFlowInput) {
   const [flow, dispatch] = useReducer(publishFlowReducer, version.revision, startPublishFlow);
-  const [validFrom, setValidFrom] = useState<string | null>(version.validFrom);
+  const [validFrom, setValidFrom] = useState<string | null>(version.validFrom ?? suggestedValidFrom);
   useFlowDriver(flow, dispatch, version.id, validFrom, onChanged);
 
   /** Η ημερομηνία κρίνεται **στον πελάτη** με την ΙΔΙΑ κρίση με τον γραφέα — γνωστή άρνηση δεν στέλνεται. */
@@ -77,9 +79,9 @@ export function usePublishFlow({ version, versions, onChanged }: PublishFlowInpu
 
   /** Νέα αρχή πάνω στη **ζωντανή** έκδοση (η όψη έχει ήδη ανανεωθεί από το σήμα). */
   const restart = useCallback((notice: 'changedMeanwhile' | null) => {
-    setValidFrom(version.validFrom);
+    setValidFrom(version.validFrom ?? suggestedValidFrom);
     dispatch({ type: 'restart', revision: version.revision, notice });
-  }, [version]);
+  }, [version, suggestedValidFrom]);
 
   return { flow, dispatch, validFrom, setValidFrom, issue, schedule, restart };
 }

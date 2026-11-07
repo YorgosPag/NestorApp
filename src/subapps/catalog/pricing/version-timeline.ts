@@ -15,6 +15,7 @@
  * @module subapps/catalog/pricing/version-timeline
  */
 
+import { dayAfterInstant } from '@/lib/calendar/date-key';
 import { normalizeToMillisOrNull } from '@/lib/date-local';
 import type { ValidityWindow } from '@/lib/pricing/validity';
 import type { CatalogIssueCode } from '../schema/catalog-issues';
@@ -68,4 +69,31 @@ export function judgeVersionPublication(
   const latest = timeline[timeline.length - 1];
   if (latest?.window.fromMs != null && fromMs <= latest.window.fromMs) return 'versionValidFromNotAfterPrevious';
   return null;
+}
+
+/** Πότε μπορεί να ξεκινά μια νέα έκδοση — ό,τι χρειάζεται το UI για να **προτείνει** και να **φράξει** την ημερομηνία. */
+export interface PublishableStart {
+  /** Η νωρίτερη ημέρα που περνά τη δημοσίευση (αρχή ημέρας, ISO) — `null` όταν δεν υπάρχει δημοσιευμένη (κάθε ημέρα περνά). */
+  readonly earliest: string | null;
+  /** Η προτεινόμενη ημέρα: **αύριο**, ή η νωρίτερη επιτρεπτή αν είναι αργότερα. */
+  readonly suggested: string | null;
+  /** Ο αριθμός της τελευταίας δημοσιευμένης — η έκδοση «μετά την οποία» πρέπει να ξεκινά η νέα. */
+  readonly after: number | null;
+}
+
+/**
+ * **Η πρόταση «ισχύει από»** — ο ΙΔΙΟΣ κανόνας με τον {@link judgeVersionPublication} (αυστηρά μετά την έναρξη της
+ * τελευταίας δημοσιευμένης), ώστε ό,τι προτείνεται να **περνά πάντα** τη δημοσίευση. Η βάση είναι **αύριο**, όπως η νέα
+ * περίοδος έκπτωσης (`nextPeriodStart`, Σ7): ποτέ αναδρομικά — ό,τι τιμολογήθηκε σήμερα μένει.
+ *
+ * ⚠️ Ημέρες σε **τοπική** ώρα (ο επιλογέας του ανθρώπου) — συνάρτηση του πελάτη· ο διακομιστής κρίνει μόνο με τον κριτή.
+ */
+export function publishableStart(versions: readonly PriceVersionRef[], nowMs: number): PublishableStart {
+  const timeline = publishedTimeline(versions);
+  const latest = timeline[timeline.length - 1];
+  const latestFromMs = latest?.window.fromMs ?? null;
+  const earliest = latestFromMs === null ? null : dayAfterInstant(latestFromMs);
+  const tomorrow = dayAfterInstant(nowMs);
+  const suggested = earliest !== null && (tomorrow === null || Date.parse(earliest) > Date.parse(tomorrow)) ? earliest : tomorrow;
+  return { earliest, suggested, after: latest?.version.number ?? null };
 }

@@ -81,3 +81,14 @@ export const pickerDateOfKey = (key: string | null): Date | undefined =>
   key === null ? undefined : calendarDateOfDateKey(key) ?? undefined;
 
 export const dateKeyOfPicker = (date: Date | undefined): string | null => (date ? localDateOf(date) : null);
+
+/**
+ * **Η αρχή (τοπικά μεσάνυχτα) μιας ημέρας, ως στιγμή ISO** — η μορφή που αποθηκεύουν τα «ισχύει από» των τιμών.
+ * `null` για άκυρο/απόν κλειδί. Ήταν ιδιωτικό στο `discount-condition-draft` (ADR-923 §5.11)· εδώ ώστε η πρόταση
+ * ημερομηνίας των εκδόσεων τιμών να μη γράψει δίδυμο.
+ */
+export const instantOfDateKey = (key: string | null): string | null =>
+  key === null ? null : calendarDateOfDateKey(key)?.toISOString() ?? null;
+
+/** Η αρχή της **επόμενης** τοπικής ημέρας μετά τη στιγμή `ms` — πάντα αυστηρά μετά το `ms`. */
+export const dayAfterInstant = (ms: number): string | null => instantOfDateKey(addDaysToDateKey(localDateOf(new Date(ms)), 1));

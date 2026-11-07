@@ -48,7 +48,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "beb4d7d88a17fac46b11a3ccf432f9836c60534f372e8eae2d3e210ef96c3bee",
     "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "49bb8ef93bf74b5ad305377259e6b228c0ec9ad01adf0cdc0decbec71e019f73",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
-    "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "75c179fc0d473ebff5e7b759acde4b7d4e3236f3bbff4b2c647ee29e2ccf8a4d",
+    "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "1ada521e13e9e01ac4577ab75a6a5f85538a10f6130c3b3dec5e9582ff50d0ca",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "b0321d9dae3dfae38270e12fb129ec6b3bd175ef4063005258896a44cf2f225f",
     "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "a2818a372500627f19a83a3359126fe3e7865675478b73e0238613567032eded",
     "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "0f5974343b7bbe05ccd34ad4730893c2e33cc6bdb232a058b82e82b66c8060f9",
@@ -209,7 +209,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "41a737788fa1df6e65b0a79f036d83d84af9450ca6140e62d35b9d457e31ad68",
+  "inputsSha256": "6ea36f1f554b3d32e3c24b7ddc8852a6d0e04d9ff5d8aec877b5de840d1237f1",
   "languages": [
     "el"
   ],
@@ -10127,12 +10127,17 @@
             "pricing.versions.phase.future",
             "pricing.versions.phase.past",
             "pricing.versions.publishedTitle",
+            "pricing.versions.quickLabel",
+            "pricing.versions.quickNextMonth",
+            "pricing.versions.quickToday",
+            "pricing.versions.quickTomorrow",
             "pricing.versions.range",
             "pricing.versions.seeding",
             "pricing.versions.tab",
             "pricing.versions.today",
             "pricing.versions.validFrom",
-            "pricing.versions.validFromHint",
+            "pricing.versions.validFromEarliest",
+            "pricing.versions.validFromFirst",
             "pricing.versions.validFromNone"
           ],
           "prefixes": [],
@@ -10149,7 +10154,6 @@
             "buttons.confirm",
             "buttons.delete",
             "buttons.moveToTrash",
-            "common.actions",
             "common.cancel",
             "common.delete",
             "common.discard",
@@ -10186,7 +10190,6 @@
             "pricing.publish.loading",
             "pricing.publish.notice.changedMeanwhile",
             "pricing.publish.notice.fenceChanged",
-            "pricing.publish.open",
             "pricing.publish.preview",
             "pricing.publish.publishing",
             "pricing.publish.retry",
@@ -10197,13 +10200,6 @@
             "pricing.versionStatus.draft",
             "pricing.versionStatus.published",
             "pricing.versionStatus.superseded",
-            "pricing.versions.basis.empty",
-            "pricing.versions.basis.latestPublished",
-            "pricing.versions.basisHint",
-            "pricing.versions.basisLabel",
-            "pricing.versions.continueSeed",
-            "pricing.versions.create",
-            "pricing.versions.createFailed",
             "pricing.versions.discard",
             "pricing.versions.discardDescription",
             "pricing.versions.discardTitle",
@@ -10212,22 +10208,23 @@
             "pricing.versions.lead",
             "pricing.versions.lineCount",
             "pricing.versions.new",
-            "pricing.versions.newLead",
-            "pricing.versions.newTitle",
             "pricing.versions.nonePublished",
             "pricing.versions.number",
             "pricing.versions.openEnded",
-            "pricing.versions.openLines",
             "pricing.versions.phase.current",
             "pricing.versions.phase.future",
             "pricing.versions.phase.past",
             "pricing.versions.publishedTitle",
+            "pricing.versions.quickLabel",
+            "pricing.versions.quickNextMonth",
+            "pricing.versions.quickToday",
+            "pricing.versions.quickTomorrow",
             "pricing.versions.range",
-            "pricing.versions.seeding",
             "pricing.versions.tab",
             "pricing.versions.today",
             "pricing.versions.validFrom",
-            "pricing.versions.validFromHint",
+            "pricing.versions.validFromEarliest",
+            "pricing.versions.validFromFirst",
             "pricing.versions.validFromNone"
           ],
           "prefixes": [],
@@ -10303,9 +10300,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -10382,9 +10377,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -10459,9 +10452,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -10536,9 +10527,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -10613,9 +10602,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -10690,9 +10677,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -10767,9 +10752,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -10844,9 +10827,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -10921,9 +10902,7 @@
             "pricing.versions.publishedTitle",
             "pricing.versions.range",
             "pricing.versions.tab",
-            "pricing.versions.today",
-            "pricing.versions.validFrom",
-            "pricing.versions.validFromNone"
+            "pricing.versions.today"
           ],
           "prefixes": [],
           "whole": false
@@ -40092,7 +40071,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1295084
+    "sliceBytes": 1295363
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/intl-formatting';
+import { publishableStart } from '@/subapps/catalog/pricing/version-timeline';
 import type { PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { DraftVersionRow } from './DraftVersionRow';
@@ -98,6 +99,8 @@ export function VersionTimeline(props: VersionTimelineProps) {
   const { t } = useCatalogText();
   const { actions, canManage } = props;
   const summary = summarizePriceList(props.priceListId, props.versions, props.nowMs);
+  // Μόνο οι εκδόσεις ΑΥΤΗΣ της λίστας — η όψη κρατά όλες (ίδιο φίλτρο με το `summarizePriceList` και τον γονέα, `own`).
+  const start = publishableStart(props.versions.filter((version) => version.priceListId === props.priceListId), props.nowMs);
   const [creating, setCreating] = useState(false);
   const [discarding, setDiscarding] = useState<PriceListVersionWire | null>(null);
   return (
@@ -114,7 +117,7 @@ export function VersionTimeline(props: VersionTimelineProps) {
           {props.canPublish ? null : <p className="m-0 text-xs text-muted-foreground">{t('common.readOnlyPricingPublish')}</p>}
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {summary.drafts.map((version) => (
-              <DraftVersionRow key={version.id} version={version} seededCopied={actions.seeded.get(version.id)} busy={actions.busy.has(version.id)}
+              <DraftVersionRow key={version.id} version={version} start={start} nowMs={props.nowMs} seededCopied={actions.seeded.get(version.id)} busy={actions.busy.has(version.id)}
                 canManage={canManage} canPublish={props.canPublish}
                 onValidFrom={(validFrom) => void actions.setValidFrom(version, validFrom)} onOpenLines={() => props.onOpenLines(version.id)}
                 onPublish={() => props.onPublish(version)} onDiscard={() => setDiscarding(version)} onContinueSeed={() => void actions.seed(version)} />
@@ -124,7 +127,7 @@ export function VersionTimeline(props: VersionTimelineProps) {
       ) : null}
       <PublishedList bands={summary.bands} nowMs={props.nowMs} />
       <DiscardedList versions={summary.discarded} />
-      <NewVersionDialog open={creating} onOpenChange={setCreating} hasPublished={summary.bands.length > 0} onCreate={actions.create} />
+      <NewVersionDialog open={creating} onOpenChange={setCreating} start={start} nowMs={props.nowMs} onCreate={actions.create} />
       <ConfirmDialog open={discarding !== null} onOpenChange={(open) => { if (!open) setDiscarding(null); }} variant="warning"
         title={t('pricing.versions.discardTitle', { number: discarding?.number ?? 0 })} description={t('pricing.versions.discardDescription')}
         confirmText={t('pricing.versions.discard')} cancelText={t('common.cancel')}
