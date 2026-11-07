@@ -7,6 +7,8 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, max 500 lines
  */
 
+import type { Firestore, Query } from 'firebase-admin/firestore';
+
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
@@ -286,17 +288,29 @@ export async function saveServicePresets(tenant: TenantContext, presets: Service
 }
 
 // ============================================================================
-// TAX INSTALLMENTS
+// TAX INSTALLMENTS — ΠΑΝΤΑ μέσα στον μισθωτή (ADR-ACC-009 · 2026-11-07)
 // ============================================================================
+//
+// 🔴 Η ανάγνωση φίλτραρε ΜΟΝΟ με `fiscalYear` ⇒ ζητούσε δείκτη που δεν υπάρχει (FAILED_PRECONDITION
+// στην παραγωγή) και, αν τον έφτιαχνε κάποιος από τον σύνδεσμο του σφάλματος, θα επέστρεφε τις δόσεις
+// ΟΛΩΝ των εταιρειών. Η ενημέρωση έγραφε στο σκέτο `${fiscalYear}_${installmentNumber}` ⇒ ένα έγγραφο
+// για όλους τους μισθωτές. Τώρα και οι δύο ρωτούν `companyId` πρώτο — ο δείκτης `companyId + fiscalYear
+// + installmentNumber` υπήρχε ήδη (`firestore.indexes.json`).
+
+/** Το ερώτημα των δόσεων μιας χρήσης του μισθωτή — ΕΝΑ σημείο για ανάγνωση και ενημέρωση. */
+function tenantInstallmentsQuery(db: Firestore, tenant: TenantContext, fiscalYear: number): Query {
+  return db
+    .collection(COLLECTIONS.ACCOUNTING_TAX_INSTALLMENTS)
+    .where('companyId', '==', tenant.companyId)
+    .where('fiscalYear', '==', fiscalYear);
+}
 
 export async function getTaxInstallments(
   tenant: TenantContext,
   fiscalYear: number
 ): Promise<TaxInstallment[]> {
   return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_TAX_INSTALLMENTS)
-      .where('fiscalYear', '==', fiscalYear)
+    const snap = await tenantInstallmentsQuery(db, tenant, fiscalYear)
       .orderBy('installmentNumber', 'asc')
       .get();
 
@@ -304,16 +318,22 @@ export async function getTaxInstallments(
   }, []);
 }
 
+/**
+ * Ενημερώνει τη δόση `installmentNumber` της χρήσης ΜΟΝΟ αν ανήκει στον μισθωτή. Ανάγνωση + εγγραφή στην
+ * ΙΔΙΑ συναλλαγή· η ταυτότητα της δόσης (`installmentNumber`) δεν αλλάζει ποτέ από το `updates`.
+ */
 export async function updateTaxInstallment(
   tenant: TenantContext,
   installmentNumber: number,
   fiscalYear: number,
   updates: Partial<TaxInstallment>
 ): Promise<void> {
-  const docId = `${fiscalYear}_${installmentNumber}`;
-  await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_TAX_INSTALLMENTS).doc(docId).update(
-      sanitizeForFirestore(updates as Record<string, unknown>)
+  const { installmentNumber: _identity, ...fields } = updates;
+  await safeFirestoreOperation((db) => db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(
+      tenantInstallmentsQuery(db, tenant, fiscalYear).where('installmentNumber', '==', installmentNumber).limit(1)
     );
-  }, undefined);
+    if (snap.empty) throw new Error(`Tax installment not found: ${fiscalYear}/${installmentNumber}`);
+    transaction.update(snap.docs[0].ref, sanitizeForFirestore(fields as Record<string, unknown>));
+  }), undefined);
 }
