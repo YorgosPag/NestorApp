@@ -35,7 +35,13 @@ export interface PublicOutboxRecord {
   readonly dirty?: boolean;
   /** Μόνο στο scope `catalog`: η τελευταία **γνώση** της σάρωσης για τη συνθήκη. Το `unknown` δεν γράφεται ποτέ. */
   readonly seenCondition?: KnownPublicationCondition;
+  /** Μόνο στο scope `catalog`: πότε **ζήτησε** η σάρωση το ημερήσιο πλήρες πέρασμα. Ρολόι του προγραμματισμού, όχι ένδειξη. */
   readonly fullPassAtMs?: number;
+  /**
+   * Μόνο στο scope `catalog`: πότε **έκλεισε** το τελευταίο πέρασμα, όποιος κι αν το ζήτησε (ημερήσιο, αλλαγή κανόνα,
+   * δημοσίευση). Αυτό δείχνει η οθόνη ως «Τελευταίος πλήρης έλεγχος» (§5.13 Σ9).
+   */
+  readonly passClosedAtMs?: number;
   readonly pass?: PublicCatalogPass;
 }
 

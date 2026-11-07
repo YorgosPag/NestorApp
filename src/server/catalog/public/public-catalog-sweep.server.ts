@@ -108,8 +108,9 @@ function countDrain(outcome: PublicModelDrain, tally: Tally): boolean {
 
 /** Τμηματικά ως το όριο χρόνου. Ό,τι μείνει ξαναπαίρνει τη σειρά του από τον δρομέα του. */
 async function expandUntil(db: Firestore, companyId: string, deadlineMs: number): Promise<boolean> {
-  let more = await expandPublicCatalogPage(db, companyId);
-  while (more && Date.now() < deadlineMs) more = await expandPublicCatalogPage(db, companyId);
+  // Ρολόι ανά σελίδα, όχι η αρχή της σάρωσης: η σελίδα που κλείνει το πέρασμα γράφει πότε **πραγματικά** έκλεισε.
+  let more = await expandPublicCatalogPage(db, companyId, Date.now());
+  while (more && Date.now() < deadlineMs) more = await expandPublicCatalogPage(db, companyId, Date.now());
   return !more;
 }
 

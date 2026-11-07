@@ -21,6 +21,7 @@ jest.mock('next/cache', () => ({ revalidateTag: (tag: string) => revalidateTag(t
 const COMPANY = 'comp-a';
 const COMPANY_TAG = 'public-catalog:company:comp-a';
 const SHOWCASES = 'public_supplier_showcases';
+const OUTBOX = 'catalog_public_outbox';
 const T0 = '2026-11-01T10:00:00.000Z';
 const TAX_ID = '123456783';
 
@@ -130,6 +131,26 @@ describe('publishSupplierShowcase', () => {
     await approve();
     await publish();
     expect(Object.keys(stored() ?? {}).sort()).toEqual(['basis', 'companyId', 'legalName', 'publishedAt', 'updatedAt']);
+  });
+
+  it('🔑 η δημοσίευση ζητά πλήρες πέρασμα: outbox `catalog` του χώρου, βρώμικο (ζωντανό περιστατικό 2026-11-07)', async () => {
+    await approve();
+    await publish();
+    const outbox = Object.values(fake.getAllDocs(OUTBOX)) as Array<{ companyId: string; scope: string; revision: number; dirty: boolean }>;
+    expect(outbox).toEqual([expect.objectContaining({ companyId: COMPANY, scope: 'catalog', revision: 1, dirty: true })]);
+  });
+
+  it('ξαναδημοσίευση ⇒ το ίδιο έγγραφο outbox, μία αναθεώρηση ακόμη', async () => {
+    await approve();
+    await publish();
+    await publish();
+    const outbox = Object.values(fake.getAllDocs(OUTBOX)) as Array<{ revision: number }>;
+    expect(outbox.map((entry) => entry.revision)).toEqual([2]);
+  });
+
+  it('ανεπιβεβαίωτος ⇒ καμία σημείωση outbox', async () => {
+    await publish();
+    expect(fake.getAllDocs(OUTBOX)).toEqual({});
   });
 
   it('ανεπιβεβαίωτος ⇒ άρνηση', async () => {

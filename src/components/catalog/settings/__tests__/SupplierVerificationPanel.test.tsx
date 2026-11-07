@@ -29,15 +29,19 @@ const REVIEW: OwnSupplierReview = {
   canRequest: true,
   identityIncomplete: false,
   reviewNote: null,
+  verified: false,
   canPublish: false,
   published: false,
 };
 const PDF = new File(['%PDF'], 'bebaiosi.pdf', { type: 'application/pdf' });
 
+const REACH = { published: 2, total: 2, lastPassAtMs: null, reasons: [] };
+
+/** Ανά URL: δημοσιευμένη βιτρίνα ⇒ το πάνελ διαβάζει και την εμβέλεια (§5.13 Σ9) από το `supplier-showcase`. */
 const shown = async (review: OwnSupplierReview) => {
-  get.mockResolvedValue({ review });
+  get.mockImplementation(async (url: string) => (url === '/api/catalog/supplier-showcase' ? { reach: REACH } : { review }));
   render(<SupplierVerificationPanel />);
-  await screen.findByRole('heading');
+  await screen.findByRole('heading', { name: 'supplierVerification.title' });
 };
 
 beforeEach(() => {
@@ -79,6 +83,22 @@ describe('SupplierVerificationPanel', () => {
     await shown({ ...REVIEW, status: 'approved', canRequest: false });
     expect(screen.queryByLabelText('supplierVerification.document')).toBeNull();
     expect(screen.getByText('supplierVerification.status.approved')).toBeTruthy();
+  });
+
+  it('🔑 εγκεκριμένος μέσω ελέγχου ⇒ καμία γραμμή «χρειάζεται έλεγχο» (ζωντανό εύρημα 2026-11-07)', async () => {
+    await shown({ ...REVIEW, status: 'approved', routeKind: 'manual-review', canRequest: false, verified: true, published: true });
+    expect(screen.getByText('supplierVerification.status.approved')).toBeTruthy();
+    expect(screen.queryByText(/supplierVerification\.route\./)).toBeNull();
+  });
+
+  it('επιβεβαιωμένος από το μητρώο ⇒ το λέει', async () => {
+    await shown({ ...REVIEW, routeKind: 'verified', canRequest: false, verified: true });
+    expect(screen.getByText('supplierVerification.route.verified')).toBeTruthy();
+  });
+
+  it('🔒 εγκεκριμένος που δεν καλύπτεται πια ⇒ ο δρόμος ξαναφαίνεται', async () => {
+    await shown({ ...REVIEW, status: 'approved', routeKind: 'manual-review', canRequest: true, verified: false });
+    expect(screen.getByText('supplierVerification.route.manual-review')).toBeTruthy();
   });
 
   it('απόρριψη ⇒ δείχνει τη σημείωση', async () => {

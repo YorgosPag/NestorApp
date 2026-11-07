@@ -373,15 +373,16 @@ describe('readOwnSupplierReview', () => {
       canRequest: true,
       identityIncomplete: false,
       reviewNote: null,
+      verified: false,
       canPublish: false,
       published: false,
     });
   });
 
-  it('ισχύουσα έγκριση ⇒ δεν ξαναζητά, μπορεί να δημοσιεύσει', async () => {
+  it('ισχύουσα έγκριση ⇒ επιβεβαιωμένος, δεν ξαναζητά, μπορεί να δημοσιεύσει', async () => {
     await request();
     await decide('approve');
-    await expect(own()).resolves.toMatchObject({ status: 'approved', canRequest: false, canPublish: true, published: false });
+    await expect(own()).resolves.toMatchObject({ status: 'approved', verified: true, canRequest: false, canPublish: true, published: false });
   });
 
   it('υπάρχουσα βιτρίνα ⇒ δεν ξαναδημοσιεύει', async () => {
@@ -391,10 +392,10 @@ describe('readOwnSupplierReview', () => {
     await expect(own()).resolves.toMatchObject({ canPublish: false, published: true });
   });
 
-  it('έγκριση που δεν καλύπτει πια τα στοιχεία ⇒ ξαναζητά', async () => {
+  it('🔑 έγκριση που δεν καλύπτει πια τα στοιχεία ⇒ όχι επιβεβαιωμένος, ξαναζητά', async () => {
     await request();
     await decide('approve');
-    await expect(own(depsWith({ fingerprint: () => 'fp-b' }))).resolves.toMatchObject({ status: 'approved', canRequest: true });
+    await expect(own(depsWith({ fingerprint: () => 'fp-b' }))).resolves.toMatchObject({ status: 'approved', verified: false, canRequest: true });
   });
 
   it('απόρριψη ⇒ δείχνει τη σημείωση και ξαναζητά', async () => {

@@ -52,8 +52,11 @@ function nextPass(pass: PublicCatalogPass, page: readonly string[]): PublicCatal
   return pass.phase === 'models' ? { ...pass, phase: 'products', afterId: null } : null;
 }
 
-/** Μία σελίδα. Επιστρέφει `true` όσο μένουν κι άλλες. Δεύτερος ταυτόχρονος δρομέας δεν γράφει τίποτα. */
-export async function expandPublicCatalogPage(db: Firestore, companyId: string): Promise<boolean> {
+/**
+ * Μία σελίδα. Επιστρέφει `true` όσο μένουν κι άλλες. Δεύτερος ταυτόχρονος δρομέας δεν γράφει τίποτα.
+ * Η τελευταία σελίδα γράφει `passClosedAtMs = nowMs` στην ίδια συναλλαγή με το κλείσιμο.
+ */
+export async function expandPublicCatalogPage(db: Firestore, companyId: string, nowMs: number): Promise<boolean> {
   const ref = publicOutboxRef(db, companyId, PUBLIC_CATALOG_SCOPE);
   const record = (await ref.get()).data() as PublicOutboxRecord | undefined;
   if (record === undefined) return false;
@@ -67,7 +70,7 @@ export async function expandPublicCatalogPage(db: Firestore, companyId: string):
     const current = (await tx.get(ref)).data() as PublicOutboxRecord | undefined;
     if (current === undefined || !isDeepStrictEqual(current.pass, record.pass)) return;
     signalPublicScopesInTx(tx, db, companyId, scopes);
-    const closing = { pass: FieldValue.delete(), drainedRevision: pass.revision, dirty: current.revision !== pass.revision };
+    const closing = { pass: FieldValue.delete(), drainedRevision: pass.revision, dirty: current.revision !== pass.revision, passClosedAtMs: nowMs };
     tx.set(ref, next === null ? closing : { pass: next }, { merge: true });
   });
   return next !== null;

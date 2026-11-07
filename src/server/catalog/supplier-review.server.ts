@@ -322,6 +322,11 @@ export interface OwnSupplierReview {
   /** Ο δρόμος ανοίγει αίτηση, αλλά λείπει επωνυμία ή έγκυρο ΑΦΜ. Ρητό: το `!canRequest` δεν λέει ποτέ γιατί. */
   readonly identityIncomplete: boolean;
   readonly reviewNote: string | null;
+  /**
+   * Επιβεβαιωμένος **τώρα** (μητρώο ή έγκριση που καλύπτει ακόμη τα στοιχεία). Ο δρόμος (`routeKind`) λέει πώς **φτάνει** κανείς
+   * στην επιβεβαίωση και μένει ίδιος μετά από αυτήν: χωρίς αυτό το πεδίο η οθόνη έγραφε «εγκρίθηκε» μαζί με «χρειάζεται έλεγχο».
+   */
+  readonly verified: boolean;
   /** Επιβεβαιωμένος χωρίς βιτρίνα: η δημοσίευση είναι ρητή πράξη του ίδιου. */
   readonly canPublish: boolean;
   readonly published: boolean;
@@ -347,6 +352,7 @@ export async function readOwnSupplierReview(
     canRequest: identityComplete && routeOpensReview(route) && !(record?.status === 'approved' && stillCovered),
     identityIncomplete: !identityComplete && routeOpensReview(route),
     reviewNote: record?.reviewNote ?? null,
+    verified,
     canPublish: verified && !showcase.exists,
     published: showcase.exists,
   };

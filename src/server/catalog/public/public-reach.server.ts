@@ -32,14 +32,18 @@ async function countRoots(db: Firestore, companyId: string): Promise<number> {
 
 interface PassState {
   readonly syncing: boolean;
-  readonly fullPassAtMs: number | null;
+  readonly lastPassAtMs: number | null;
 }
 
+/**
+ * ⚠️ Η ώρα είναι το `passClosedAtMs` (κλείσιμο **κάθε** περάσματος), **όχι** το `fullPassAtMs`: εκείνο γράφεται μόνο όταν η σάρωση
+ * ζητά το ημερήσιο, και μετρήθηκε ζωντανά (2026-11-07) να μένει 11:55 μετά από δύο περάσματα αλλαγής κανόνα. Χωρίς τιμή ⇒ `null`.
+ */
 async function readPassState(db: Firestore, companyId: string): Promise<PassState> {
   const record = (await publicOutboxRef(db, companyId, PUBLIC_CATALOG_SCOPE).get()).data() as PublicOutboxRecord | undefined;
-  if (record === undefined) return { syncing: false, fullPassAtMs: null };
+  if (record === undefined) return { syncing: false, lastPassAtMs: null };
   const syncing = record.pass !== undefined || record.revision > (record.drainedRevision ?? 0);
-  return { syncing, fullPassAtMs: record.fullPassAtMs ?? null };
+  return { syncing, lastPassAtMs: record.passClosedAtMs ?? null };
 }
 
 /** Η εμβέλεια του καταλόγου του χώρου του καλούντος. Βλάβη οποιασδήποτε ανάγνωσης ρίχνει: ο καλών απαντά 503, ποτέ «0 από Y». */
@@ -54,5 +58,5 @@ export async function readPublicCatalogReach(ctx: AuthContext): Promise<PublicCa
     readPassState(db, companyId),
   ]);
   const reasons = explainPublicReach({ published, total, condition, rules, syncing: pass.syncing, atMs: Date.now() });
-  return { published, total, fullPassAtMs: pass.fullPassAtMs, reasons };
+  return { published, total, lastPassAtMs: pass.lastPassAtMs, reasons };
 }

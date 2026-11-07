@@ -46,10 +46,13 @@ const ROUTE_KEYS: Readonly<Record<RouteText, string>> = {
 };
 
 /**
+ * Ο δρόμος λέει πώς φτάνει κανείς στην επιβεβαίωση, οπότε σε επιβεβαιωμένο χώρο σιωπά. Εξαίρεση είναι το `verified` του
+ * μητρώου, που είναι το μόνο θετικό μήνυμα όταν δεν υπήρξε αίτηση (`null` ⇒ καμία γραμμή).
  * Πρώτα το ελλιπές προφίλ: χωρίς αυτό, χώρος χωρίς ΑΦΜ θα έβλεπε «κλειστή εταιρεία» ή «υποβάλετε» χωρίς πεδίο αρχείου.
  * Μετά η μη εγκρίσιμη διαλογή ελέγχου, που είναι η κλεισμένη εταιρεία.
  */
-function routeTextOf(review: OwnSupplierReview): RouteText {
+function routeTextOf(review: OwnSupplierReview): RouteText | null {
+  if (review.verified) return review.routeKind === 'verified' ? 'verified' : null;
   if (review.identityIncomplete) return 'identity-incomplete';
   if (review.routeKind === 'manual-review' && !review.canRequest && review.status !== 'approved') return 'closed';
   return review.routeKind;
@@ -92,13 +95,14 @@ export function SupplierVerificationPanel(): React.ReactElement | null {
   const publication = usePublish(reload);
   const inputId = React.useId();
   if (review === null) return null;
+  const routeText = routeTextOf(review);
 
   return (
     <section className="flex flex-col gap-2 rounded-md border p-4">
       <h2 className="m-0 text-base font-semibold">{t('supplierVerification.title')}</h2>
       <p className="m-0 text-sm text-muted-foreground">{t(STATUS_KEYS[review.status ?? 'none'])}</p>
       {review.status === 'rejected' && review.reviewNote !== null && <p className="m-0 text-sm text-foreground">{review.reviewNote}</p>}
-      <p className="m-0 text-sm text-muted-foreground">{t(ROUTE_KEYS[routeTextOf(review)])}</p>
+      {routeText !== null && <p className="m-0 text-sm text-muted-foreground">{t(ROUTE_KEYS[routeText])}</p>}
       {failed && <Alert variant="destructive" withIcon><AlertDescription>{t('supplierVerification.failed')}</AlertDescription></Alert>}
       {review.canRequest && (
         <p className="m-0 flex flex-col gap-1 text-sm">

@@ -89,8 +89,8 @@ function ReachSummary({ reach }: { readonly reach: PublicCatalogReach }) {
           {reach.reasons.map((reason) => <ReasonItem key={reason.kind} reason={reason} />)}
         </ul>
       )}
-      {reach.fullPassAtMs !== null && (
-        <p className="m-0 text-xs text-muted-foreground">{t('supplierVerification.reach.lastPass', { date: formatDateTime(new Date(reach.fullPassAtMs)) })}</p>
+      {reach.lastPassAtMs !== null && (
+        <p className="m-0 text-xs text-muted-foreground">{t('supplierVerification.reach.lastPass', { date: formatDateTime(new Date(reach.lastPassAtMs)) })}</p>
       )}
     </>
   );

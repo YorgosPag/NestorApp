@@ -149,7 +149,7 @@ describe('πέρασμα ολόκληρου του καταλόγου', () => {
     await db.collection(MODELS).doc('cpmod_sub').set({ id: 'cpmod_sub', companyId: COMPANY, isDeleted: false, parentId: 'cpmod_0000' });
     await db.collection(MODELS).doc('cpmod_x').set({ id: 'cpmod_x', companyId: 'comp-b', isDeleted: false, parentId: null });
     await seedCatalog({ revision: 2, dirty: true });
-    while (await expandPublicCatalogPage(db, COMPANY));
+    while (await expandPublicCatalogPage(db, COMPANY, NOW));
     expect(outboxScopes().sort()).toEqual(['catalog', 'model:cpmod_0000', 'model:cpmod_0001', 'model:cprod_0000', 'profile'].sort());
     expect(await catalog()).toMatchObject({ drainedRevision: 2, dirty: false });
     expect((await catalog()).pass).toBeUndefined();
@@ -158,7 +158,7 @@ describe('πέρασμα ολόκληρου του καταλόγου', () => {
   it('🔑 το προφίλ σημειώνεται μία φορά ανά πέρασμα, όσες σελίδες κι αν έχει', async () => {
     await seedRoots(450, 0);
     await seedCatalog({ revision: 2, dirty: true });
-    while (await expandPublicCatalogPage(db, COMPANY));
+    while (await expandPublicCatalogPage(db, COMPANY, NOW));
     const profile = (await publicOutboxRef(db, COMPANY, PUBLIC_PROFILE_SCOPE).get()).data();
     expect(profile).toMatchObject({ revision: 1, dirty: true });
   });
@@ -166,18 +166,34 @@ describe('πέρασμα ολόκληρου του καταλόγου', () => {
   it('μεγάλος κατάλογος: τμηματικά, με δρομέα, χωρίς να χαθεί ρίζα', async () => {
     await seedRoots(450);
     await seedCatalog({ revision: 2, dirty: true });
-    await expect(expandPublicCatalogPage(db, COMPANY)).resolves.toBe(true);
+    await expect(expandPublicCatalogPage(db, COMPANY, NOW)).resolves.toBe(true);
     expect((await catalog()).pass).toMatchObject({ revision: 2, phase: 'models', afterId: 'cpmod_0199' });
-    while (await expandPublicCatalogPage(db, COMPANY));
+    while (await expandPublicCatalogPage(db, COMPANY, NOW));
     expect(outboxScopes()).toHaveLength(452);
+  });
+
+  it('🔑 η ώρα κλεισίματος γράφεται ΜΟΝΟ από τη σελίδα που κλείνει, όποιος κι αν ζήτησε το πέρασμα (§5.13 Σ9)', async () => {
+    await seedRoots(450);
+    await seedCatalog({ revision: 2, dirty: true, fullPassAtMs: NOW - DAY });
+    await expandPublicCatalogPage(db, COMPANY, NOW);
+    expect((await catalog()).passClosedAtMs).toBeUndefined();
+    while (await expandPublicCatalogPage(db, COMPANY, NOW + 1));
+    expect(await catalog()).toMatchObject({ passClosedAtMs: NOW + 1, fullPassAtMs: NOW - DAY });
+  });
+
+  it('🔑 πέρασμα από αλλαγή κανόνα (όχι το ημερήσιο) ενημερώνει την ώρα — το ζωντανό εύρημα της 2026-11-07', async () => {
+    await seedRoots(1);
+    await seedCatalog({ seenCondition: 'open', fullPassAtMs: NOW, passClosedAtMs: NOW, revision: 3, drainedRevision: 2, dirty: true });
+    while (await expandPublicCatalogPage(db, COMPANY, NOW + 5));
+    expect(await catalog()).toMatchObject({ passClosedAtMs: NOW + 5, fullPassAtMs: NOW });
   });
 
   it('αλλαγή στη διάρκεια: το πέρασμα κλείνει στη δική του αναθεώρηση και το scope μένει βρώμικο', async () => {
     await seedRoots(1);
     await seedCatalog({ revision: 2, dirty: true });
-    await expandPublicCatalogPage(db, COMPANY);
+    await expandPublicCatalogPage(db, COMPANY, NOW);
     await catalogRef().set({ revision: 3 }, { merge: true });
-    while (await expandPublicCatalogPage(db, COMPANY));
+    while (await expandPublicCatalogPage(db, COMPANY, NOW));
     expect(await catalog()).toMatchObject({ drainedRevision: 2, revision: 3, dirty: true });
   });
 });

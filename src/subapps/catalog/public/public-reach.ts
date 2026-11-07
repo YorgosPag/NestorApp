@@ -44,7 +44,8 @@ export interface PublicReachFacts {
 export interface PublicCatalogReach {
   readonly published: number;
   readonly total: number;
-  readonly fullPassAtMs: number | null;
+  /** Πότε έκλεισε το τελευταίο πέρασμα όλου του καταλόγου. `null` ⇒ δεν έχει κλείσει ακόμη κανένα (από τότε που καταγράφεται). */
+  readonly lastPassAtMs: number | null;
   readonly reasons: readonly PublicReachReason[];
 }
 
