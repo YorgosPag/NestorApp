@@ -86,8 +86,29 @@ export type FitResult =
       readonly perObservation: readonly (number | null)[];
     };
 
+/**
+ * **Κριτήριο αποδοχής** (ADR-929 §6.9 #7). Δύο ερωτήσεις, και οι δύο αναγκαίες: «είναι σύμπτωση;» (NFA a-contrario) και
+ * «ταιριάζει το σχέδιο ή μόνο ένα κομμάτι του;» (κάλυψη). ⚠️ Όχι απόλυτο κατώφλι υπολοίπων: τα υπόλοιπα του ICP είναι
+ * **κομμένα** από την τελευταία ακτίνα, άρα περνούν και σε τυχαίο μελάνι (μετρήθηκε, §6.9 #6).
+ */
+export interface AcceptanceOptions {
+  /** Αναμενόμενες ψευδείς αποδοχές υπό H0 (Desolneux–Moisan–Morel: ε = 1). */
+  readonly epsilon: number;
+  /** Ελάχιστο ποσοστό ανεξάρτητων δειγμάτων που βρίσκουν μελάνι. ⚠️ Δηλωμένο, όχι βαθμονομημένο. */
+  readonly minCoverage: number;
+  /** Ακτίνα μέτρησης των υπολοίπων **μετά** τη σύγκλιση (px) — πολύ μεγαλύτερη από την τελευταία του ICP. */
+  readonly evaluationRadiusPx: number;
+}
+
+export const DEFAULT_ACCEPTANCE: AcceptanceOptions = {
+  epsilon: 1,
+  minCoverage: 0.5,
+  evaluationRadiusPx: 24,
+};
+
 export interface RegisterOptions {
   readonly fit: FitOptions;
+  readonly acceptance: AcceptanceOptions;
   /** Ακτίνες αναζήτησης ανά γύρο ICP (px), από χονδρή σε λεπτή. Ο τελευταίος γύρος κάνει data snooping. */
   readonly searchRadiiPx: readonly number[];
   /** Απόσταση δειγμάτων κατά μήκος κάθε τμήματος, **στην εικόνα** (px). */
@@ -102,6 +123,7 @@ export interface RegisterOptions {
 
 export const DEFAULT_REGISTER: RegisterOptions = {
   fit: DEFAULT_FIT,
+  acceptance: DEFAULT_ACCEPTANCE,
   searchRadiiPx: [24, 12, 6, 3],
   sampleStepPx: 6,
   maxSamples: 3000,
@@ -110,14 +132,58 @@ export const DEFAULT_REGISTER: RegisterOptions = {
 };
 
 /** Γιατί σταμάτησε η καταγραφή χωρίς αποτέλεσμα — ποτέ σιωπηλά. */
-export type RegistrationFailure = 'too-few-correspondences' | 'singular' | 'degenerate-transform';
+export type RegistrationFailure = 'too-few-correspondences' | 'singular' | 'degenerate-transform' | 'no-candidates';
 
-export type RegistrationResult =
-  | { readonly kind: 'not-converged'; readonly reason: RegistrationFailure; readonly round: number }
-  | {
-      readonly kind: 'registered';
-      readonly fit: Extract<FitResult, { kind: 'fitted' }>;
-      /** Ποσοστό των δειγμάτων που βρήκαν μελάνι στον τελευταίο γύρο ∈ [0, 1]. */
-      readonly coverage: number;
-      readonly samples: number;
-    };
+type NotConverged = { readonly kind: 'not-converged'; readonly reason: RegistrationFailure; readonly round: number };
+
+type Registered = {
+  readonly kind: 'registered';
+  readonly fit: Extract<FitResult, { kind: 'fitted' }>;
+  /** Ποσοστό των δειγμάτων που βρήκαν μελάνι στον τελευταίο γύρο ∈ [0, 1]. ⚠️ Πυκνά δείγματα, όχι ανεξάρτητα. */
+  readonly coverage: number;
+  readonly samples: number;
+};
+
+/** ⚠️ **Μη αξιολογημένο**: «συνέκλινε» ≠ «είναι σωστό». Η ετυμηγορία είναι στο {@link AssessedRegistrationResult}. */
+export type RegistrationResult = NotConverged | Registered;
+
+/** Γιατί απορρίφθηκε μια καταγραφή που **συνέκλινε**. */
+export type RejectionReason = 'not-meaningful' | 'low-coverage';
+
+export type RegistrationVerdict = { readonly kind: 'accepted' } | { readonly kind: 'rejected'; readonly reason: RejectionReason };
+
+/** Υπόλοιπα μετρημένα **μετά** τη σύγκλιση, με ακτίνα ≫ της τελευταίας του ICP, ώστε να μην είναι κομμένα. */
+export interface EvaluationResiduals {
+  readonly radiusPx: number;
+  readonly samples: number;
+  /** Δείγματα που βρήκαν κέντρο πινελιάς μέσα στην ακτίνα. */
+  readonly found: number;
+  readonly residuals: ResidualStats;
+  /** Ποσοστό των υπολοίπων > 0,8·ακτίνα. ≫ 0 ⇒ η ακτίνα κόβει ακόμη, και το p95 **δεν** λέει αλήθεια. */
+  readonly nearRadiusShare: number;
+}
+
+/** Αξιολόγηση a-contrario (ADR-929 §6.9 #7). */
+export interface RegistrationAssessment {
+  readonly verdict: RegistrationVerdict;
+  /** log₁₀ NFA = log₁₀ hypotheses + log₁₀ χώρου αναζήτησης + log₁₀ P[X ≥ k]· αποδοχή ⇔ ≤ log₁₀ ε. */
+  readonly log10Nfa: number;
+  /** Πόσες αρχικές υποθέσεις δοκιμάστηκαν — δηλωμένο από τον καλούντα. */
+  readonly hypotheses: number;
+  /** log₁₀ των διακρίσιμων μετασχηματισμών που φτάνει το ICP από μία αρχή: (2R₀/r)^βε. N_tests = hypotheses · 10^αυτό. */
+  readonly log10SearchSpace: number;
+  /** Ακτίνα απόφασης «βρήκε μελάνι» (px) = η τελευταία του ICP. */
+  readonly decisionRadiusPx: number;
+  /** Ανεξάρτητα δείγματα (βήμα ≥ 2·ακτίνα, ώστε τα παράθυρα να μην επικαλύπτονται). */
+  readonly independentSamples: number;
+  readonly hits: number;
+  /** p υπό H0: ποσοστό των pixel της εικόνας κοντά σε μελάνι — άνω φράγμα, άρα συντηρητικό. */
+  readonly inkProbability: number;
+  /** `hits / independentSamples`. */
+  readonly coverage: number;
+  readonly evaluation: EvaluationResiduals;
+}
+
+export type AssessedRegistrationResult =
+  | NotConverged
+  | (Registered & { readonly assessment: RegistrationAssessment; readonly initial: Affine2x3 });

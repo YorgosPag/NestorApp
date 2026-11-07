@@ -91,6 +91,8 @@ interface PdfjsTextItem { str?: string; hasEOL?: boolean; transform?: readonly n
 interface PdfjsPage extends Pick<StructurePage, 'getOperatorList' | 'getStructTree'> {
   getTextContent(options?: { readonly includeMarkedContent: true }): Promise<{ items: ReadonlyArray<PdfjsTextItem> }>;
   getViewport(opts: { scale: number }): PdfjsViewport;
+  /** PDF 1.6 `UserUnit`: 1 μονάδα χώρου χρήστη = `userUnit`/72 ίντσες. ⚠️ Το `getViewport` του pdfjs 4.5 **δεν** το λαμβάνει υπόψη. */
+  readonly userUnit?: number;
   render(opts: { canvasContext: CanvasContextLike; viewport: PdfjsViewport }): { promise: Promise<void> };
   cleanup(): void;
 }
@@ -170,18 +172,37 @@ function makeCanvasFactory(createCanvas: (w: number, h: number) => CanvasLike): 
   };
 }
 
-/** Ζωγραφίζει ΜΙΑ σελίδα σε PNG, με λευκό υπόβαθρο και ταβάνι πλάτους. */
-async function renderPageToPng(
+/**
+ * Μία ζωγραφισμένη σελίδα **μαζί με την κλίμακά της** (ADR-929 §6.9 #7). Το `dpi` είναι αυτό που **πράγματι** χρησιμοποιήθηκε,
+ * όχι αυτό που ζητήθηκε: το ταβάνι πλάτους μικραίνει την κλίμακα σιωπηλά, και το `UserUnit` αλλάζει το μέγεθος της ίντσας.
+ * Ένα DPI μαντεμένο από regex στο `/MediaBox` βγήκε 10/60/86 και έριξε τη μέτρηση καταγραφής (§6.9 #6).
+ */
+export interface RasterizedPdfPage {
+  readonly png: Buffer;
+  readonly widthPx: number;
+  readonly heightPx: number;
+  /** Pixel ανά **φυσική** ίντσα της σελίδας = κλίμακα·72/userUnit. */
+  readonly dpi: number;
+  /** Φυσικό μέγεθος της (περιστραμμένης) σελίδας. */
+  readonly pageWidthMm: number;
+  readonly pageHeightMm: number;
+}
+
+const MM_PER_INCH = 25.4;
+
+/** Ζωγραφίζει ΜΙΑ σελίδα σε PNG, με λευκό υπόβαθρο και ταβάνι πλάτους, και λέει σε ποια κλίμακα. */
+async function renderPage(
   page: PdfjsPage,
   createCanvas: (w: number, h: number) => CanvasLike,
   limits: { dpi: number; maxWidthPx: number },
-): Promise<Buffer> {
+): Promise<RasterizedPdfPage> {
   const baseScale = limits.dpi / 72;
   const baseViewport = page.getViewport({ scale: baseScale });
   const widthCap = baseViewport.width > limits.maxWidthPx
     ? limits.maxWidthPx / baseViewport.width
     : 1;
-  const viewport = page.getViewport({ scale: baseScale * widthCap });
+  const scale = baseScale * widthCap;
+  const viewport = page.getViewport({ scale });
 
   const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
   const ctx = canvas.getContext('2d');
@@ -189,13 +210,31 @@ async function renderPageToPng(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   await page.render({ canvasContext: ctx, viewport }).promise;
-  return canvas.toBuffer('image/png');
+  const userUnit = page.userUnit && page.userUnit > 0 ? page.userUnit : 1;
+  const inchesPerUnit = userUnit / 72;
+  return {
+    png: canvas.toBuffer('image/png'),
+    widthPx: canvas.width,
+    heightPx: canvas.height,
+    dpi: scale / inchesPerUnit,
+    pageWidthMm: (viewport.width / scale) * inchesPerUnit * MM_PER_INCH,
+    pageHeightMm: (viewport.height / scale) * inchesPerUnit * MM_PER_INCH,
+  };
 }
 
+/** Οι σελίδες ως PNG — για όποιον δεν χρειάζεται την κλίμακα (οπτική ανάγνωση AI). */
 export async function rasterizePdfPages(
   pdfBuffer: Buffer,
   options: RasterizeOptions = {},
 ): Promise<Buffer[]> {
+  return (await rasterizePdfPageImages(pdfBuffer, options)).map((page) => page.png);
+}
+
+/** Οι σελίδες ως PNG **με την κλίμακα που πράγματι χρησιμοποιήθηκε** — για ό,τι μετρά σε pixel (ADR-929 §6.9 #7). */
+export async function rasterizePdfPageImages(
+  pdfBuffer: Buffer,
+  options: RasterizeOptions = {},
+): Promise<RasterizedPdfPage[]> {
   const dpi = options.dpi ?? DEFAULT_DPI;
   const maxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
   const maxWidthPx = options.maxWidthPx ?? DEFAULT_MAX_WIDTH_PX;
@@ -213,14 +252,14 @@ export async function rasterizePdfPages(
   });
   const doc = await loadingTask.promise;
 
-  const pages: Buffer[] = [];
+  const pages: RasterizedPdfPage[] = [];
   const pageCount = Math.min(doc.numPages, maxPages);
 
   try {
     for (let pageNum = 1; pageNum <= pageCount; pageNum += 1) {
       const page = await doc.getPage(pageNum);
       try {
-        pages.push(await renderPageToPng(page, createCanvas, { dpi, maxWidthPx }));
+        pages.push(await renderPage(page, createCanvas, { dpi, maxWidthPx }));
       } finally {
         page.cleanup();
       }
@@ -282,7 +321,7 @@ export async function readPdfPage(
       const limits = { dpi: options.dpi ?? DEFAULT_DPI, maxWidthPx: options.maxWidthPx ?? DEFAULT_MAX_WIDTH_PX };
       const viewport = page.getViewport({ scale: 1 });
       const { items } = await page.getTextContent();
-      const png = await renderPageToPng(page, createCanvas, limits);
+      const { png } = await renderPage(page, createCanvas, limits);
       const structure = await readPageStructure(page, viewport, pdfjs.OPS);
       return { png, items: items.flatMap((item) => textItemOf(item, viewport) ?? []), pageCount: doc.numPages, ...structure };
     } finally {

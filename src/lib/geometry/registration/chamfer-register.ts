@@ -81,7 +81,8 @@ export function probeStrokeCentre(ink: InkMask, q: AffinePoint, n: AffinePoint, 
   return best;
 }
 
-function unitNormal(t: Affine2x3, seg: RegistrationSegment): AffinePoint | null {
+/** Μοναδιαίο κάθετο του τμήματος **στην εικόνα** του `t` (px)· `null` για εκφυλισμένο τμήμα. */
+export function unitNormal(t: Affine2x3, seg: RegistrationSegment): AffinePoint | null {
   const qa = applyAffine(t, seg.a);
   const qb = applyAffine(t, seg.b);
   const len = Math.hypot(qb.x - qa.x, qb.y - qa.y);
@@ -122,14 +123,17 @@ export function chamferScore(field: Float64Array, ink: InkMask, samples: readonl
   return sum / samples.length;
 }
 
-/** Ο υποψήφιος αρχικός μετασχηματισμός με τη μικρότερη απόσταση chamfer (ισοβαθμία ⇒ ο πρώτος, δηλωμένη σειρά). */
+/**
+ * Ο υποψήφιος αρχικός μετασχηματισμός με τη μικρότερη απόσταση chamfer (ισοβαθμία ⇒ ο πρώτος, δηλωμένη σειρά).
+ * `field`: το πεδίο απόστασης, όταν ο καλών το έχει ήδη (το ξαναχρησιμοποιεί η αξιολόγηση a-contrario).
+ */
 export function pickByChamfer(
   segments: readonly RegistrationSegment[],
   ink: InkMask,
   candidates: readonly Affine2x3[],
   o: RegisterOptions,
+  field: Float64Array = chamferField(ink),
 ): { readonly transform: Affine2x3; readonly score: number } | null {
-  const field = chamferField(ink);
   const trunc = o.searchRadiiPx[0] ?? 1;
   let best: { transform: Affine2x3; score: number } | null = null;
   for (const t of candidates) {
@@ -143,7 +147,11 @@ function roundFit(o: RegisterOptions, last: boolean): FitOptions {
   return { ...o.fit, snoop: last && o.fit.snoop };
 }
 
-/** **Κατέγραψε** το σχέδιο πάνω στο μελάνι, ξεκινώντας από το `initial` (σχέδιο → px). */
+/**
+ * **Κατέγραψε** το σχέδιο πάνω στο μελάνι, ξεκινώντας από το `initial` (σχέδιο → px).
+ * ⚠️ **Μη αξιολογημένο**: τα υπόλοιπα εδώ είναι κομμένα από την τελευταία ακτίνα. Για ετυμηγορία ⇒ `registerAndAssess`
+ * (`registration-acceptance.ts`).
+ */
 export function registerToInk(
   segments: readonly RegistrationSegment[],
   ink: InkMask,
