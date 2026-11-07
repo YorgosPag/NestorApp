@@ -345,7 +345,7 @@
       },
       "errors": {
         "FISCAL_YEAR_NOT_ENDED": "The fiscal year has not ended yet — posting is possible after 31/12.",
-        "PERIOD_NOT_FOUND": "The December accounting period of this year does not exist. Create the fiscal year first.",
+        "PERIOD_NOT_FOUND": "The December accounting period of this year does not exist. Open the fiscal year from “Business Setup → Fiscal years”.",
         "PERIOD_CLOSED": "The December period of this year is closed. Reopen it to continue.",
         "PERIOD_LOCKED": "The December period of this year is permanently locked.",
         "INVALID_DEPRECIATION_TERMS": "An asset's data does not allow a depreciation calculation. Check its dates.",
@@ -1103,9 +1103,56 @@
   "fiscalPeriods": {
     "adjustmentPeriod": "Closing period {year}",
     "postingDenials": {
-      "PERIOD_NOT_FOUND": "There is no accounting period for {date}. Create the fiscal year first.",
+      "PERIOD_NOT_FOUND": "There is no accounting period for {date}. Open the fiscal year from “Business Setup → Fiscal years”.",
       "PERIOD_CLOSED": "The period {period} is closed. Reopen it or post to the current period.",
       "PERIOD_LOCKED": "The period {period} is permanently locked. Post to the current open period."
+    },
+    "manage": {
+      "title": "Fiscal years",
+      "description": "The periods of each fiscal year and their status. The current and the next year open automatically; here you open earlier years and close or lock periods.",
+      "yearLabel": "Fiscal year",
+      "notOpen": "Fiscal year {year} has not been opened yet — it does not accept postings.",
+      "openYear": "Open fiscal year {year}",
+      "columns": {
+        "period": "Period",
+        "range": "Date range",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "statuses": {
+        "OPEN": "Open",
+        "CLOSED": "Closed",
+        "LOCKED": "Locked"
+      },
+      "actions": {
+        "close": "Close",
+        "lock": "Lock",
+        "reopen": "Reopen"
+      },
+      "dialog": {
+        "close": {
+          "title": "Close period {period}",
+          "body": "The period will not accept new postings. You can reopen it later with a reason."
+        },
+        "lock": {
+          "title": "Lock period {period}",
+          "body": "Locking is PERMANENT (after the tax return): the period can never be reopened."
+        },
+        "reopen": {
+          "title": "Reopen period {period}",
+          "body": "The period will accept postings again. The reason is recorded in the audit trail."
+        },
+        "reason": "Reason (required)",
+        "reasonPlaceholder": "e.g. Correcting a document after the VAT return",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "FISCAL_YEAR_EXISTS": "This fiscal year is already open.",
+        "FISCAL_YEAR_INCOMPLETE": "This fiscal year has missing periods. It is not completed automatically — please contact support.",
+        "FISCAL_PERIOD_NOT_FOUND": "The period was not found.",
+        "FISCAL_PERIOD_INVALID_TRANSITION": "The period status changed in the meantime. The list has been refreshed — please try again.",
+        "UNKNOWN": "The action failed. Please try again."
+      }
     }
   }
 }

@@ -56,6 +56,14 @@ function auditFieldsOf(request: FiscalPeriodTransitionRequest, now: string): Par
   }
 }
 
+/**
+ * Ποιες ενέργειες δέχεται μια κατάσταση — από τον ΙΔΙΟ πίνακα, ώστε η οθόνη να μη δείχνει ποτέ κουμπί που ο γραφέας θα
+ * αρνηθεί (ADR-ACC-010 §2.1.1 Φ9-Β). Η κρίση παραμένει στη συναλλαγή· αυτό είναι μόνο η ΠΡΟΣΦΟΡΑ.
+ */
+export function fiscalPeriodActionsFrom(status: FiscalPeriodStatus): readonly FiscalPeriodAction[] {
+  return (Object.keys(TRANSITIONS) as FiscalPeriodAction[]).filter((action) => TRANSITIONS[action].from === status);
+}
+
 /** Επιτρέπεται η μετάβαση από την ΤΡΕΧΟΥΣΑ κατάσταση; Αν ναι, τι γράφεται και ποιο γεγονός ίχνους. */
 export function decideFiscalPeriodTransition(
   period: FiscalPeriod,

@@ -40,6 +40,7 @@ import { MemberManagementSection } from './MemberManagementSection';
 import { ShareholderManagementSection } from './ShareholderManagementSection';
 import { SoleProprietorRegistrySection } from './SoleProprietorRegistrySection';
 import { CustomCategoriesSection } from './CustomCategoriesSection';
+import { FiscalPeriodsSection } from './FiscalPeriodsSection';
 import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
@@ -367,6 +368,8 @@ export function SetupPageContent() {
             <InvoiceSeriesSection data={formData} onChange={handleChange} />
             <ServicePresetsSection />
             <CustomCategoriesSection />
+            {/* Λογιστικές χρήσεις — ADR-ACC-010 §2.1.1 Φ9-Β */}
+            <FiscalPeriodsSection />
 
             {/* Footer Save Button */}
             <footer className="flex justify-end pt-4">

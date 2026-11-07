@@ -1241,6 +1241,11 @@ export const API_ROUTES = {
     DEPRECIATION_RUN: '/api/accounting/assets/depreciation-run',
     DEPRECIATION_REVERSAL: '/api/accounting/assets/depreciation-run/reversal',
     EFKA: { SUMMARY: '/api/accounting/efka/summary' },
+    // ADR-ACC-010 §2.1.1 Φ9-Β — λογιστικές χρήσεις: GET λίστα · POST άνοιγμα χρήσης · PATCH κλείσιμο/κλείδωμα/επαναφορά
+    FISCAL_PERIODS: {
+      LIST: '/api/accounting/fiscal-periods',
+      BY_ID: (periodId: string) => `/api/accounting/fiscal-periods/${encodeURIComponent(periodId)}` as const,
+    },
   },
 
   // ── Messages & Conversations ──────────────────────────────────────────
