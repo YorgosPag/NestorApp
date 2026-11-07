@@ -144,7 +144,12 @@
       "download": "Λήψη"
     },
     "pdf": {
+      "download": "Λήψη PDF",
+      "downloadFailed": "Η λήψη απέτυχε. Δοκιμάστε ξανά.",
+      "downloading": "Λήψη σε εξέλιξη…",
+      "externalLink": "Εξωτερικός σύνδεσμος: {target}",
       "fullscreen": "Πλήρης οθόνη",
+      "linkToPage": "Μετάβαση στη σελίδα {page}",
       "loadFailed": "Το PDF δεν μπόρεσε να ανοίξει. Δοκιμάστε ξανά ή κατεβάστε το αρχείο.",
       "loading": "Φόρτωση PDF...",
       "nextPage": "Επόμενη σελίδα",

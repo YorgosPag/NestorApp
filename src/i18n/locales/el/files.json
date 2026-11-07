@@ -86,7 +86,12 @@
     "nextPage": "Επόμενη σελίδα",
     "loading": "Φόρτωση PDF...",
     "loadFailed": "Το PDF δεν μπόρεσε να ανοίξει. Δοκιμάστε ξανά ή κατεβάστε το αρχείο.",
-    "fullscreen": "Πλήρης οθόνη"
+    "fullscreen": "Πλήρης οθόνη",
+    "download": "Λήψη PDF",
+    "downloading": "Λήψη σε εξέλιξη…",
+    "downloadFailed": "Η λήψη απέτυχε. Δοκιμάστε ξανά.",
+    "linkToPage": "Μετάβαση στη σελίδα {page}",
+    "externalLink": "Εξωτερικός σύνδεσμος: {target}"
   },
   "validation": {
     "onlyPdfAllowed": "Μόνο αρχεία PDF επιτρέπονται",

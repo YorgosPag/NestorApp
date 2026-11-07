@@ -1,0 +1,57 @@
+/*
+ * ADR-923 §5.15.2 (Θ.2α-2) — η στρώση κειμένου του `PdfCanvasViewer`, πάνω στο `TextLayer` του pdfjs-dist 4.5.136.
+ *
+ * Μόνο οι ΔΟΜΙΚΟΙ κανόνες του `web/pdf_viewer.css` που χρειάζεται το `TextLayer` (θέση, μετασχηματισμός, διάφανο
+ * κείμενο), όχι ολόκληρο το stylesheet του viewer του pdf.js (2.500+ γραμμές, δικό του θέμα).
+ * Το μέγεθος του στοιχείου και κάθε span το γράφει το ίδιο το pdf.js με `var(--scale-factor)`· το `--scale-factor`
+ * το ορίζει προστακτικά ο `PdfTextLayer` — εδώ ΔΕΝ διαβάζεται (CHECK 3.43 Κ1).
+ *
+ * Χρώματα: μόνο `transparent` και το system color `Highlight` — η επιλογή πάνω σε ΧΑΡΤΙ (πάντα λευκό, όπως ο Chrome
+ * PDF viewer) ακολουθεί το λειτουργικό, όχι το θέμα της εφαρμογής. Κανένα σταθερό χρώμα (CHECK 3.43 Κ2).
+ */
+
+.layer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  user-select: text;
+}
+
+.layer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.layer span:global(.markedContent) {
+  top: 0;
+  height: 0;
+}
+
+.layer ::selection {
+  background: color-mix(in srgb, Highlight 35%, transparent);
+}
+
+.layer br::selection {
+  background: transparent;
+}
+
+/* Η στροφή της σελίδας: το pdf.js βάζει `data-main-rotation` και στρέφει τη στρώση γύρω από την πάνω-αριστερή γωνία. */
+.layer[data-main-rotation='90'] {
+  transform: rotate(90deg) translateY(-100%);
+}
+
+.layer[data-main-rotation='180'] {
+  transform: rotate(180deg) translate(-100%, -100%);
+}
+
+.layer[data-main-rotation='270'] {
+  transform: rotate(270deg) translateX(-100%);
+}

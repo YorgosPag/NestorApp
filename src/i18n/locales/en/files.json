@@ -86,7 +86,12 @@
     "nextPage": "Next page",
     "loading": "Loading PDF...",
     "loadFailed": "The PDF could not be opened. Try again or download the file.",
-    "fullscreen": "Full screen"
+    "fullscreen": "Full screen",
+    "download": "Download PDF",
+    "downloading": "Downloading…",
+    "downloadFailed": "The download failed. Please try again.",
+    "linkToPage": "Go to page {page}",
+    "externalLink": "External link: {target}"
   },
   "validation": {
     "onlyPdfAllowed": "Only PDF files are allowed",

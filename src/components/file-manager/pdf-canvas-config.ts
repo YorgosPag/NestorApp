@@ -10,13 +10,32 @@
  * @enterprise ADR-031 - Canonical File Storage System
  */
 
+import type { PDFDataRangeTransport, PageViewport, TextLayer } from 'pdfjs-dist';
+import type { RefProxy, TextContent } from 'pdfjs-dist/types/src/display/api';
+
 import type { PreviewUrlDelivery } from './pdf-fetch-target';
+import type { IssuePdfLicense } from './pdf-range-transport';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface PdfCanvasViewerProps {
+/**
+ * ADR-923 §5.15.2 — **Έντυπο με άδεια**: τα bytes έρχονται κομμάτι-κομμάτι με βραχύβια άδεια που ο θεατής ανανεώνει μόνος του
+ * (`pdf-range-transport`). Ο καλών **δηλώνει** τον εκδότη της άδειας — ο viewer δεν μαντεύει (ίδια αρχή με το `urlDelivery`).
+ */
+export interface PdfLicensedSource {
+  /** Σταθερή ταυτότητα του αμετάβλητου αρχείου (π.χ. `editionId`): αλλάζει ⇒ νέο έγγραφο. Η άδεια αλλάζει, το κλειδί όχι. */
+  readonly key: string;
+  readonly issue: IssuePdfLicense;
+}
+
+/** Οι δύο τρόποι να φτάσει το έγγραφο — **αμοιβαία αποκλειόμενοι** στον τύπο. */
+export type PdfDocumentSource =
+  | { readonly kind: 'file'; readonly url: string; readonly fileId?: string; readonly urlDelivery?: PreviewUrlDelivery }
+  | { readonly kind: 'licensed'; readonly license: PdfLicensedSource };
+
+interface PdfFileSourceProps {
   /** PDF download URL (Firebase Storage) */
   url: string;
   /**
@@ -36,6 +55,33 @@ export interface PdfCanvasViewerProps {
    * που ο διακομιστής έδωσε αφού έκρινε (ADR-901 §14.9). Απών ⇒ `'proxied'`.
    */
   urlDelivery?: PreviewUrlDelivery;
+  license?: never;
+}
+
+interface PdfLicensedSourceProps {
+  /** Έντυπο με ανανεώσιμη άδεια (ADR-923 §5.15.2) — αντί για `url`/`fileId`/`urlDelivery`. */
+  license: PdfLicensedSource;
+  url?: never;
+  fileId?: never;
+  urlDelivery?: never;
+}
+
+/**
+ * ADR-923 §5.15.2 (Θ.2α-2) — οι **στρώσεις αναγνώστη εντύπου**, ρητά ανά καλούντα. Απούσες ⇒ η σημερινή συμπεριφορά
+ * (file manager · εισαγωγή καταλόγου αμετάβλητα): ο viewer δεν αποφασίζει μόνος του ότι ένα αρχείο είναι «έντυπο».
+ */
+export interface PdfViewerFeatures {
+  /** Στρώση κειμένου πάνω από το canvas: επιλογή, αντιγραφή, αναγνώστης οθόνης. */
+  readonly textSelection?: boolean;
+  /** Ενεργοί σύνδεσμοι της σελίδας (εσωτερικοί ⇒ σελίδα · εξωτερικοί μόνο http/https/mailto). */
+  readonly links?: boolean;
+  /** Η σελίδα ζει στη διεύθυνση ως `#page=N` (Adobe open parameters): βαθύς σύνδεσμος, ανανέωση, QR. */
+  readonly pageInUrl?: boolean;
+  /** Λήψη των bytes του **ίδιου** εγγράφου — ο καλών ονομάζει το αρχείο, ο viewer δεν μαντεύει. */
+  readonly download?: { readonly fileName: string };
+}
+
+interface PdfViewerCommonProps {
   /** Accessible title */
   title: string;
   /** Optional className */
@@ -44,6 +90,16 @@ export interface PdfCanvasViewerProps {
   page?: number;
   /** Περιοχές επισήμανσης σε κλάσματα σελίδας (0..1), αρχή πάνω-αριστερά: ακολουθούν ζουμ και ανάλυση. */
   highlights?: readonly PdfHighlightRegion[];
+  /** Στρώσεις αναγνώστη εντύπου (ADR-923 §5.15.2) — απούσες ⇒ σημερινή συμπεριφορά. */
+  features?: PdfViewerFeatures;
+}
+
+export type PdfCanvasViewerProps = PdfViewerCommonProps & (PdfFileSourceProps | PdfLicensedSourceProps);
+
+/** Τα props του καλούντα → η πηγή του εγγράφου (ένα σημείο, ώστε ο viewer να μη διαβάζει ποτέ `url` μιας πηγής με άδεια). */
+export function pdfDocumentSourceOf(props: PdfFileSourceProps | PdfLicensedSourceProps): PdfDocumentSource {
+  if (props.license) return { kind: 'licensed', license: props.license };
+  return { kind: 'file', url: props.url, fileId: props.fileId, urlDelivery: props.urlDelivery };
 }
 
 export interface PdfHighlightRegion {
@@ -62,22 +118,39 @@ export interface PdfState {
   error: string | null;
 }
 
-// PDF.js types (minimal interface to avoid import issues)
+// PDF.js types (minimal interface — μόνο ό,τι χρησιμοποιεί ο θεατής· οι σύνθετοι τύποι από τη βιβλιοθήκη)
+
+/** Ρητός προορισμός PDF (`[ref | δείκτης σελίδας, /XYZ, …]`) — ο πρώτος όρος δείχνει τη σελίδα. */
+export type PdfExplicitDest = readonly unknown[];
+
 export interface PdfDocProxy {
   numPages: number;
   getPage(num: number): Promise<PdfPageProxy>;
   destroy(): Promise<void>;
+  /** Τα bytes ολόκληρου του εγγράφου — σε έντυπο με άδεια ζητά τα κομμάτια που λείπουν από το **ίδιο** transport. */
+  getData(): Promise<Uint8Array<ArrayBuffer>>;
+  getDestination(id: string): Promise<PdfExplicitDest | null>;
+  getPageIndex(ref: RefProxy): Promise<number>;
+}
+
+/** Ό,τι διαβάζει ο θεατής από μια σημείωση του `getAnnotations()` (ADR-923 §5.15.2 — μόνο σύνδεσμοι). */
+export interface PdfAnnotationData {
+  readonly subtype?: string;
+  /** `[x1, y1, x2, y2]` σε μονάδες PDF (αρχή κάτω-αριστερά). */
+  readonly rect?: readonly number[];
+  /** Ήδη απολυμασμένο από το pdf.js (`createValidAbsoluteUrl`) — ξαναελέγχεται εδώ. */
+  readonly url?: string;
+  readonly dest?: string | PdfExplicitDest | null;
 }
 
 export interface PdfPageProxy {
-  getViewport(opts: { scale: number; rotation?: number }): {
-    width: number;
-    height: number;
-  };
+  getViewport(opts: { scale: number; rotation?: number }): PageViewport;
   render(params: {
     canvasContext: CanvasRenderingContext2D;
-    viewport: { width: number; height: number };
+    viewport: PageViewport;
   }): { promise: Promise<void>; cancel(): void };
+  streamTextContent(params?: { includeMarkedContent?: boolean }): ReadableStream<TextContent>;
+  getAnnotations(params?: { intent?: 'display' }): Promise<PdfAnnotationData[]>;
 }
 
 // ============================================================================
@@ -88,15 +161,38 @@ export const MIN_SCALE = 0.25;
 export const MAX_SCALE = 5;
 export const WORKER_URL = '/pdf.worker.min.mjs';
 
+/**
+ * Πόσο «ηρεμεί» ένα ζουμ πριν ξαναζωγραφιστεί ό,τι δεν κλιμακώνεται με CSS (pdf.js): το bitmap του canvas και η
+ * μέτρηση πλάτους της στρώσης κειμένου. Ως τότε τεντώνεται το παλιό. ΜΙΑ τιμή για όλες τις στρώσεις — αλλιώς στη
+ * διάρκεια του ζουμ το κείμενο θα «γλιστρούσε» ως προς το bitmap.
+ */
+export const PDF_RENDER_SETTLE_MS = 120;
+
 // ============================================================================
 // PDF.JS LOADER (lazy, avoids SSR issues)
 // ============================================================================
 
-type PdfjsLib = {
-  getDocument(params: { url?: string; data?: Uint8Array; cMapUrl?: string; cMapPacked?: boolean }): {
+export interface PdfGetDocumentParams {
+  url?: string;
+  data?: Uint8Array;
+  /** Δικό μας transport κομματιών (ADR-923 §5.15.2) — πρέπει να είναι υποκλάση του `PDFDataRangeTransport` ΑΥΤΗΣ της βιβλιοθήκης. */
+  range?: PDFDataRangeTransport;
+  rangeChunkSize?: number;
+  disableAutoFetch?: boolean;
+  disableStream?: boolean;
+  cMapUrl?: string;
+  cMapPacked?: boolean;
+}
+
+export type PdfjsLib = {
+  getDocument(params: PdfGetDocumentParams): {
     promise: Promise<PdfDocProxy>;
+    destroy(): Promise<void>;
   };
   GlobalWorkerOptions: { workerSrc: string };
+  PDFDataRangeTransport: typeof PDFDataRangeTransport;
+  /** Η στρώση κειμένου της **ίδιας** βιβλιοθήκης (ADR-923 §5.15.2 Θ.2α-2). */
+  TextLayer: typeof TextLayer;
 };
 
 let pdfjsLib: PdfjsLib | null = null;

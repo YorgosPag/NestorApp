@@ -99,6 +99,16 @@ export function useTouchPinchZoom(containerRef: RefObject<HTMLElement>, sink: Zo
   }, [containerRef, sink]);
 }
 
+/**
+ * ADR-923 §5.15.2 (Θ.2α-2) — στόχοι που **ανήκουν σε άλλη χειρονομία**: σύρσιμο πάνω σε κείμενο = επιλογή, κλικ σε σύνδεσμο
+ * = σύνδεσμος (Acrobat · Chrome PDF: στο κενό της σελίδας «χέρι»). Αλλιώς το `setPointerCapture` θα έκλεβε και τα δύο.
+ */
+const PAN_EXEMPT_TARGETS = '[data-pdf-text-layer] span, [data-pdf-link]';
+
+function isPanExempt(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(PAN_EXEMPT_TARGETS) !== null;
+}
+
 /** Σύρσιμο με το αριστερό του ποντικιού ⇒ κύλιση («χέρι» του Acrobat)· αφή και γραφίδα μένουν στον browser. */
 export function useMouseDragPan(containerRef: RefObject<HTMLElement>): void {
   useEffect(() => {
@@ -106,7 +116,7 @@ export function useMouseDragPan(containerRef: RefObject<HTMLElement>): void {
     if (!container) return;
     let drag: { x: number; y: number; left: number; top: number } | null = null;
     const onDown = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse' || event.button !== 0) return;
+      if (event.pointerType !== 'mouse' || event.button !== 0 || isPanExempt(event.target)) return;
       drag = { x: event.clientX, y: event.clientY, left: container.scrollLeft, top: container.scrollTop };
       container.setPointerCapture(event.pointerId);
       container.style.cursor = 'grabbing';
