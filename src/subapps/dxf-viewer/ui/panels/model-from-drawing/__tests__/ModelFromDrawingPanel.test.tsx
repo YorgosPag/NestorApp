@@ -272,7 +272,7 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
   const COUNTS = { high: 12, medium: 3, low: 1 } as const;
   const IMAGE_READY: ImageSourceView = {
     available: true, phase: 'ready', failure: null, active: true, countsByTier: COUNTS, excludedFromWalls: 1, calibrated: true,
-    readingAvailable: true, review: null,
+    readingAvailable: true, review: null, scale: NO_IMAGE.scale,
   };
 
   it('Φ5.2ε — οι γραμμές χαμηλής βεβαιότητας λέγονται ρητά «όχι τοίχοι», και η γραμμή φεύγει όταν δεν υπάρχουν', () => {
