@@ -44,6 +44,22 @@ function rebaseOntoMain(dir) {
   throw new Error(`Σύγκρουση με το ${MAIN_BRANCH}. Το κλαδί έμεινε ως είχε· λύσ' την μέσα στο worktree.\n${rebased.out}`);
 }
 
+const HANDOFF_SUBJECT = /^docs\(handoff\)/;
+
+/**
+ * Μήνυμα του ενιαίου commit. `messages` = νεότερο πρώτο.
+ * Τίτλος: το νεότερο που ΔΕΝ είναι `docs(handoff)` — αλλιώς το νεότερο. Το παλαιότερο
+ * commit ενός κλαδιού είναι συχνά το handoff της προηγούμενης συνεδρίας, και έδινε
+ * στο `main` τίτλο άσχετο με την αλλαγή (21474786). Το σώμα κρατά ΟΛΑ τα μηνύματα.
+ */
+function composeLandMessage(messages) {
+  const clean = messages.map((text) => text.trim()).filter(Boolean);
+  if (clean.length === 0) throw new Error('Κανένα μήνυμα commit για ένωση.');
+  const lead = clean.findIndex((text) => !HANDOFF_SUBJECT.test(text));
+  const chosen = lead === -1 ? 0 : lead;
+  return [clean[chosen], ...clean.filter((_, index) => index !== chosen)].join('\n\n');
+}
+
 function writeMessage(text) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-land-'));
   const file = path.join(dir, 'message.txt');
@@ -57,8 +73,8 @@ function writeMessage(text) {
  */
 function recommitThroughGates(dir, base) {
   const tip = revision(dir, 'HEAD');
-  const message = git(dir, ['log', '--reverse', '--format=%B', `${base}..HEAD`]);
-  const draft = writeMessage(message);
+  const log = git(dir, ['log', '--format=%B%x00', `${base}..HEAD`]);
+  const draft = writeMessage(composeLandMessage(log.split('\0')));
   git(dir, ['reset', '--soft', base]);
   try {
     git(dir, ['commit', '-F', draft.file], { inherit: true });
@@ -97,4 +113,4 @@ function land(task, { cwd = process.cwd(), env = process.env } = {}) {
   });
 }
 
-module.exports = { land };
+module.exports = { composeLandMessage, land };

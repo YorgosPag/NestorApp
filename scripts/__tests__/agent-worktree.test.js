@@ -11,7 +11,7 @@ const path = require('node:path');
 const { assertDiskRoom, assertTask, locate } = require('../lib/agent-worktree/config');
 const { git } = require('../lib/agent-worktree/git');
 const { clearResidue, createWorkspace, listWorkspaces, removeWorkspace } = require('../lib/agent-worktree/lifecycle');
-const { land } = require('../lib/agent-worktree/land');
+const { composeLandMessage, land } = require('../lib/agent-worktree/land');
 
 jest.setTimeout(60000);
 
@@ -317,9 +317,19 @@ describe('ένταξη', () => {
     commitIn(dir, 'b.txt', 'b\n', 'δεύτερο');
     commitIn(primary, 'other.txt', 'o\n');
     expect(land('task-one', options()).reverified).toBe(true);
-    expect(git(primary, ['log', '-1', '--format=%B'])).toMatch(/πρώτο[\s\S]*δεύτερο/);
+    expect(git(primary, ['log', '-1', '--format=%B'])).toMatch(/δεύτερο[\s\S]*πρώτο/);
     expect(git(primary, ['rev-list', '--count', 'HEAD'])).toBe('3');
     ['a.txt', 'b.txt', 'other.txt'].forEach((name) => expect(fs.existsSync(path.join(primary, name))).toBe(true));
+  });
+
+  it('🔴 ο τίτλος του ενιαίου commit ΔΕΝ είναι το παλαιό handoff του κλαδιού', () => {
+    const { dir } = open('task-one');
+    commitIn(dir, 'h.txt', 'h\n', 'docs(handoff): προηγούμενη συνεδρία');
+    commitIn(dir, 'a.txt', 'a\n', 'feat: η πραγματική αλλαγή');
+    commitIn(primary, 'other.txt', 'o\n');
+    land('task-one', options());
+    expect(git(primary, ['log', '-1', '--format=%s'])).toBe('feat: η πραγματική αλλαγή');
+    expect(git(primary, ['log', '-1', '--format=%B'])).toContain('docs(handoff): προηγούμενη συνεδρία');
   });
 
   it('🔴 οι πύλες κρίνουν ΟΛΗ την αλλαγή μετά το rebase, και η απόρριψη αφήνει το κλαδί ως είχε', () => {
@@ -376,6 +386,23 @@ describe('ένταξη', () => {
     commitIn(dir, 'work.txt', 'x\n');
     write(dir, 'wip.txt', 'x\n');
     expect(() => land('task-one', options())).toThrow('αδέσμευτη');
+  });
+});
+
+describe('μήνυμα ένταξης (καθαρή συνάρτηση)', () => {
+  it('τίτλος = το νεότερο που δεν είναι handoff· το σώμα κρατά όλα τα άλλα, νεότερο πρώτο', () => {
+    const message = composeLandMessage(['docs(handoff): νέο', 'feat: Β\n\nσώμα Β', 'feat: Α', 'docs(handoff): παλιό']);
+    expect(message.split('\n')[0]).toBe('feat: Β');
+    expect(message).toBe('feat: Β\n\nσώμα Β\n\ndocs(handoff): νέο\n\nfeat: Α\n\ndocs(handoff): παλιό');
+  });
+
+  it('όλα handoff: εφεδρεία το νεότερο', () => {
+    expect(composeLandMessage(['docs(handoff): νέο', 'docs(handoff): παλιό']).split('\n')[0]).toBe('docs(handoff): νέο');
+  });
+
+  it('αγνοεί κενά τμήματα (ο διαχωριστής NUL του git log) και αρνείται τελείως κενό', () => {
+    expect(composeLandMessage(['  feat: Α \n', '', '\n'])).toBe('feat: Α');
+    expect(() => composeLandMessage(['', ' '])).toThrow('Κανένα μήνυμα');
   });
 });
 
