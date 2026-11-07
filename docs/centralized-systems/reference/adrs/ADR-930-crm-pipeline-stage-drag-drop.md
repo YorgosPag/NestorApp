@@ -372,7 +372,8 @@ ADR-865 §11) κάνει το **αντίθετο, επίτηδες**: η «Κυ�
      ολόκληροι**· το σβήσιμο άκρων ακολουθεί τα κρυμμένα (`scrollHiddenOf` ⇒ `--scroll-edge-before/after`): **10 px
      κρυμμένα ⇒ μάσκα 10 px** (πριν: σταθερά 40 px πάνω σε υπερχείλιση 14 px).
   3. **(ζ)** ✅ ποσό + ενέργειες σε `<footer>` flex ⇒ **καμία επικάλυψη** στο hover.
-  Τα jest της διόρθωσης (`useScrollEdges` Κ1–Κ4 για `scrollHiddenOf`, `kanban-model`, `pipeline-board`) **δεν έχουν τρέξει**.
+  Jest της διόρθωσης (2026-11-07, έγκριση Giorgio): `useScrollEdges` (Κ1–Κ4 για `scrollHiddenOf`) · `kanban-model` ·
+  `pipeline-board` ⇒ **3/3 σουίτες, 36/36 tests** πράσινα.
 
 ## Changelog
 
