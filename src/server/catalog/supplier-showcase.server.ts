@@ -24,6 +24,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { supplierShowcaseFromDocument } from '@/subapps/catalog/public/supplier-showcase-from-document';
 import type { SupplierShowcaseRecord } from '@/subapps/catalog/types/supplier-verification';
 import { revalidatePublicCompany } from './public/public-model-revalidate.server';
+import { PUBLIC_CATALOG_SCOPE, signalPublicScopesInTx } from './public/public-outbox.server';
 import { LIVE_DEPS, readSupplierStandingOutcome, type SupplierReviewDeps } from './supplier-review.server';
 
 const logger = createModuleLogger('server/catalog/supplier-showcase');
@@ -72,6 +73,10 @@ export async function publishSupplierShowcase(
     const publishedAt = supplierShowcaseFromDocument(snap.data(), companyId)?.publishedAt ?? nowIso;
     const record: SupplierShowcaseRecord = { companyId, legalName, basis, publishedAt, updatedAt: nowIso };
     tx.set(ref, record);
+    // 🔑 Η δημοσίευση είναι η στιγμή που ανοίγει η βιτρίνα: εδώ ο χώρος μπαίνει στη σάρωση και ζητά πλήρες πέρασμα καταλόγου.
+    //    Χωρίς αυτό, κατάλογος γραμμένος πριν από το outbox δεν προβαλλόταν ποτέ (μετρημένο ζωντανά 2026-11-07: outbox άδειο,
+    //    σάρωση πράσινη χωρίς δουλειά). Το id είναι ντετερμινιστικό και η γραφή merge: ξαναδημοσίευση = ένα ακόμη πέρασμα.
+    signalPublicScopesInTx(tx, db, companyId, [PUBLIC_CATALOG_SCOPE]);
   });
   revalidatePublicCompany(companyId);
   await recordShowcaseChange(companyId, legalName, actorUid, true);
