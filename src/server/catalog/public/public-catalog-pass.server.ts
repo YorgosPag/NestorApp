@@ -12,7 +12,7 @@ import 'server-only';
  * @module server/catalog/public/public-catalog-pass.server
  */
 
-import { FieldPath, FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, type Firestore, type Query } from 'firebase-admin/firestore';
 import { isDeepStrictEqual } from 'node:util';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -21,18 +21,27 @@ import { PUBLIC_CATALOG_SCOPE, publicOutboxRef, signalPublicScopesInTx, type Pub
 
 const ROOT_PAGE = 200;
 
+/**
+ * Οι ρίζες του καταλόγου: μοντέλα χωρίς γονέα και προϊόντα χωρίς μοντέλο. Είναι **ο ορισμός** του «προϊόντος» για τη δημόσια
+ * προβολή, κοινός για το πέρασμα και για τη μέτρηση της εμβέλειας (§5.13 Σ9), ώστε να μη διαφωνήσουν ποτέ.
+ */
+export function publicCatalogRootQueries(db: Firestore, companyId: string): Readonly<Record<PublicCatalogPass['phase'], Query>> {
+  return {
+    models: db
+      .collection(COLLECTIONS.CATALOG_PRODUCT_MODELS)
+      .where('companyId', '==', companyId)
+      .where('isDeleted', '==', false)
+      .where('parentId', '==', null),
+    products: db
+      .collection(COLLECTIONS.CATALOG_PRODUCTS)
+      .where('companyId', '==', companyId)
+      .where('isDeleted', '==', false)
+      .where('modelId', '==', null),
+  };
+}
+
 async function rootPage(db: Firestore, companyId: string, pass: PublicCatalogPass): Promise<readonly string[]> {
-  const models = db
-    .collection(COLLECTIONS.CATALOG_PRODUCT_MODELS)
-    .where('companyId', '==', companyId)
-    .where('isDeleted', '==', false)
-    .where('parentId', '==', null);
-  const products = db
-    .collection(COLLECTIONS.CATALOG_PRODUCTS)
-    .where('companyId', '==', companyId)
-    .where('isDeleted', '==', false)
-    .where('modelId', '==', null);
-  const ordered = (pass.phase === 'models' ? models : products).orderBy(FieldPath.documentId()).limit(ROOT_PAGE);
+  const ordered = publicCatalogRootQueries(db, companyId)[pass.phase].orderBy(FieldPath.documentId()).limit(ROOT_PAGE);
   const snap = await (pass.afterId === null ? ordered : ordered.startAfter(pass.afterId)).get();
   return snap.docs.map((doc) => doc.id);
 }

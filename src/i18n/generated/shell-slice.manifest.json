@@ -51,7 +51,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "75c179fc0d473ebff5e7b759acde4b7d4e3236f3bbff4b2c647ee29e2ccf8a4d",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "b0321d9dae3dfae38270e12fb129ec6b3bd175ef4063005258896a44cf2f225f",
     "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "a2818a372500627f19a83a3359126fe3e7865675478b73e0238613567032eded",
-    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "64338e6f77964cbe955770503ed51b4624cb89b5f3e9f181f212e4535c79b757",
+    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "0f5974343b7bbe05ccd34ad4730893c2e33cc6bdb232a058b82e82b66c8060f9",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
@@ -209,7 +209,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b5b70a8f10d2870d8875649fc138bb74a7edf4942df89eda62a775f8ab5870b8",
+  "inputsSha256": "41a737788fa1df6e65b0a79f036d83d84af9450ca6140e62d35b9d457e31ad68",
   "languages": [
     "el"
   ],
@@ -12469,6 +12469,21 @@
             "supplierVerification.publish",
             "supplierVerification.publishFailed",
             "supplierVerification.published",
+            "supplierVerification.reach.failed",
+            "supplierVerification.reach.fix.products",
+            "supplierVerification.reach.fix.visibility",
+            "supplierVerification.reach.lastPass",
+            "supplierVerification.reach.loading",
+            "supplierVerification.reach.reason.catalogEmpty",
+            "supplierVerification.reach.reason.catalogRuleHides",
+            "supplierVerification.reach.reason.conditionClosed",
+            "supplierVerification.reach.reason.conditionUnknown",
+            "supplierVerification.reach.reason.noRuleForPublic",
+            "supplierVerification.reach.reason.noVisibleVariant",
+            "supplierVerification.reach.reason.specificRulesHide",
+            "supplierVerification.reach.reason.syncing",
+            "supplierVerification.reach.summary",
+            "supplierVerification.reach.title",
             "supplierVerification.route.adopt-legal-name",
             "supplierVerification.route.ask-registry",
             "supplierVerification.route.closed",
@@ -40077,7 +40092,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1292757
+    "sliceBytes": 1295084
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

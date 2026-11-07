@@ -150,6 +150,16 @@ export async function readPublicModel(companyId: string, modelId: string): Promi
   return cached(() => loadModel(companyId, modelId), ['model', companyId, modelId], tags);
 }
 
+/**
+ * Πόσα δημόσια έγγραφα μοντέλου έχει ο χώρος **αυτή τη στιγμή** (§5.13 Σ9): το αποτέλεσμα της μίας κρίσης, όχι δεύτερη.
+ * 🔒 Μόνο για τον ίδιο τον χώρο, στο πάνελ του: χωρίς μνήμη και χωρίς πύλη βιτρίνας, γιατί ο κάτοχος θέλει φρέσκια τιμή και
+ *    η ερώτηση «πόσα έγραψε ο γραφέας» δεν αφορά επισκέπτη. Aggregate: κανένα έγγραφο δεν διαβάζεται.
+ */
+export async function countPublishedModels(companyId: string): Promise<number> {
+  const snap = await models().where('companyId', '==', companyId).count().get();
+  return snap.data().count;
+}
+
 interface ModelAddressFacts {
   readonly companyId: string;
   readonly title: string;

@@ -1796,6 +1796,27 @@
       "manual-review": "An administrator needs to review this.",
       "closed": "The registry shows this company as closed, so it cannot be approved.",
       "identity-incomplete": "Add the legal name and a valid tax id to the company profile to request a review."
+    },
+    "reach": {
+      "title": "What the public sees",
+      "loading": "Counting public products…",
+      "failed": "We could not count the public products. Please try again later.",
+      "summary": "Publicly visible: {published} of {total, plural, one {# product} other {# products}}",
+      "lastPass": "Last full check: {date}",
+      "reason": {
+        "catalogEmpty": "The catalog has no products yet.",
+        "conditionClosed": "The company is not verified, so no product is published.",
+        "conditionUnknown": "The company verification could not be checked. Public products stay as they are.",
+        "syncing": "The public showcase is updating. Changes appear within a few minutes.",
+        "noRuleForPublic": "There is no visibility rule for anonymous visitors, so products stay hidden by default.",
+        "catalogRuleHides": "The visibility rule for the whole catalog hides products from anonymous visitors.",
+        "specificRulesHide": "{count, plural, one {# more specific rule hides products from anonymous visitors.} other {# more specific rules hide products from anonymous visitors.}}",
+        "noVisibleVariant": "{count, plural, one {# product has no active variant visible to the public.} other {# products have no active variant visible to the public.}}"
+      },
+      "fix": {
+        "visibility": "Visibility rules",
+        "products": "Products"
+      }
     }
   },
   "xchangeExport": {

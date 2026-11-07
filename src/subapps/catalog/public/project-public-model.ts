@@ -31,7 +31,8 @@ import {
 } from './public-catalog-schema';
 
 const PUBLIC_CHANNEL = 'storefront';
-const ANONYMOUS = { kind: 'anonymous' } as const;
+/** **Ο θεατής της δημόσιας προβολής.** Ένας, κοινός με την εξήγηση της εμβέλειας (§5.13 Σ9): ίδια κρίση, ίδιος θεατής. */
+export const PUBLIC_VIEWER = { kind: 'anonymous' } as const;
 
 export interface PublicProjectionVariant {
   readonly id: string;
@@ -143,7 +144,7 @@ function mediaRows(input: PublicProjectionInput, resolved: ResolvedValues, inclu
 }
 
 function isShown(input: PublicProjectionInput, variant: PublicProjectionVariant): boolean {
-  return showsProduct(judgeVisibility(input.rules, variant.ancestry, ANONYMOUS, input.atMs).visibility);
+  return showsProduct(judgeVisibility(input.rules, variant.ancestry, PUBLIC_VIEWER, input.atMs).visibility);
 }
 
 const inVariant: IncludeOwner = (depth) => depth > 0;

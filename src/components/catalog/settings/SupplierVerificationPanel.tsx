@@ -17,6 +17,7 @@ import type { OwnSupplierReview } from '@/server/catalog/supplier-review.server'
 import type { SupplierReviewStatus } from '@/subapps/catalog/types/supplier-verification';
 
 import { useCatalogText } from '../shared/catalog-ui-hooks';
+import { SupplierPublicReach } from './SupplierPublicReach';
 import { useSupplierEvidenceUpload } from './use-supplier-evidence-upload';
 
 const REVIEW_URL = '/api/catalog/supplier-verification';
@@ -107,6 +108,7 @@ export function SupplierVerificationPanel(): React.ReactElement | null {
       )}
       {busy && <p role="status" className="m-0 text-sm text-muted-foreground">{t('supplierVerification.uploading')}</p>}
       {review.published && <p className="m-0 text-sm text-foreground">{t('supplierVerification.published')}</p>}
+      {review.published && <SupplierPublicReach />}
       {publication.failed && <Alert variant="destructive" withIcon><AlertDescription>{t('supplierVerification.publishFailed')}</AlertDescription></Alert>}
       {review.canPublish && (
         <footer>
