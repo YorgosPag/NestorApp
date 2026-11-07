@@ -11,6 +11,8 @@ import type { IAccountingRepository } from '../types/interfaces';
 import type {
   FiscalPeriod,
   FiscalPeriodDraft,
+  FiscalYearOpenOrigin,
+  FiscalYearOpenOutcome,
   PostingPeriodDenial,
   PostingValidationResult,
   YearEndChecklist,
@@ -18,12 +20,18 @@ import type {
 } from '../types/fiscal-period';
 import { ADJUSTMENT_PERIOD_NUMBER, FISCAL_PERIODS_PER_YEAR, fiscalPeriodKey, fiscalPeriodKeyForDate } from './fiscal-period-keys';
 import { postingPeriodDenialOf } from './fiscal-period-transitions';
+import { fiscalYearOfDay, isAutoOpenableFiscalYear } from './fiscal-year-window';
+import { FiscalYearIncompleteError } from './repository/accounting-repo-fiscal-periods';
 import { isoNow } from './repository/firestore-helpers';
+import { accountingDayOf, accountingToday } from '../utils/accounting-day';
 import { daysInMonth } from '@/lib/date/calendar-arithmetic';
 import { isoCalendarDay } from '@/lib/date/calendar-day';
+import { createModuleLogger } from '@/lib/telemetry/Logger';
+
+const logger = createModuleLogger('ACCOUNTING_FISCAL_PERIODS');
 
 // ============================================================================
-// CREATE FISCAL YEAR (Q8 — Auto-create 13 periods)
+// OPEN FISCAL YEAR (Q8 — 13 periods · ADR-ACC-010 §2.1.1 Φ9: ΕΝΑΣ γραφέας, τρεις προελεύσεις)
 // ============================================================================
 
 /** Οι 13 περίοδοι μιας χρήσης, πριν γραφτούν — 1–12 μήνες, 13 = κλείσιμο (ημερομηνίες Δεκεμβρίου). */
@@ -53,16 +61,55 @@ function fiscalYearPeriodDrafts(fiscalYear: number, now: string): FiscalPeriodDr
 }
 
 /**
- * Δημιουργεί τις 13 περιόδους μιας χρήσης για τον μισθωτή του repository — ΟΛΕΣ ή ΚΑΜΙΑ. Υπάρχουσα χρήση ⇒
- * `FiscalYearExistsError` από τον γραφέα (μέσα στη συναλλαγή — ποτέ αντικατάσταση κλειδωμένης περιόδου).
+ * ΡΗΤΗ διοικητική πράξη: οι 13 περίοδοι μιας χρήσης — ΟΛΕΣ ή ΚΑΜΙΑ, για ΟΠΟΙΟ έτος (και εκτός παραθύρου, π.χ.
+ * μεταφορά ιστορικού). Υπάρχουσα χρήση ⇒ `FiscalYearExistsError` (ο χρήστης μαθαίνει ότι δεν έγινε τίποτα).
  */
 export async function createFiscalYear(
   repository: IAccountingRepository,
   fiscalYear: number
 ): Promise<FiscalPeriodDraft[]> {
   const periods = fiscalYearPeriodDrafts(fiscalYear, isoNow());
-  await repository.createFiscalPeriods(fiscalYear, periods);
+  await repository.openFiscalYear(fiscalYear, periods, { origin: 'manual', ifExists: 'refuse' });
   return periods;
+}
+
+/**
+ * ΙΔΕΜΠΟΤΗΤΗ εξασφάλιση από το σύστημα: η χρήση υπάρχει μετά την κλήση — `'created'` αν γεννήθηκε τώρα, `'existing'`
+ * αν υπήρχε (καμία εγγραφή). Κλεισμένη / κλειδωμένη χρήση μένει ΑΘΙΚΤΗ. Το «επιτρέπεται αυτό το έτος;» το κρίνει ο
+ * καλών με το `fiscal-year-window.ts` — εδώ μόνο ο ΕΝΑΣ γραφέας.
+ */
+export async function ensureFiscalYear(
+  repository: IAccountingRepository,
+  fiscalYear: number,
+  origin: Exclude<FiscalYearOpenOrigin, 'manual'>
+): Promise<FiscalYearOpenOutcome> {
+  const periods = fiscalYearPeriodDrafts(fiscalYear, isoNow());
+  return repository.openFiscalYear(fiscalYear, periods, { origin, ifExists: 'accept' });
+}
+
+/**
+ * Το ΔΙΧΤΥ του συνόρου καταχώρησης (N.7.2 #4): ανοίγει τη χρήση μιας ημερομηνίας ΜΟΝΟ αν είναι μέσα στο παράθυρο
+ * αυτόματου ανοίγματος. `true` ⇒ η χρήση υπάρχει πλέον (αξίζει νέος έλεγχος) · `false` ⇒ η άρνηση μένει.
+ * Μερική χρήση ⇒ `false` + καταγραφή: αρνούμαστε την εγγραφή, ΠΟΤΕ δεν επισκευάζουμε σιωπηλά.
+ */
+export async function openFiscalYearAutomaticallyFor(
+  repository: IAccountingRepository,
+  dateStr: string,
+  today: string = accountingToday()
+): Promise<boolean> {
+  const day = accountingDayOf(dateStr);
+  if (day === null) return false;
+  const fiscalYear = fiscalYearOfDay(day);
+  const profile = await repository.getCompanySetup();
+  if (!isAutoOpenableFiscalYear(fiscalYear, today, profile?.businessStart ?? null)) return false;
+  try {
+    await ensureFiscalYear(repository, fiscalYear, 'posting');
+    return true;
+  } catch (error) {
+    if (!(error instanceof FiscalYearIncompleteError)) throw error;
+    logger.error('Fiscal year incomplete — posting refused, no repair', { fiscalYear, owned: error.owned });
+    return false;
+  }
 }
 
 // ============================================================================
@@ -94,12 +141,17 @@ export async function getPeriodForDate(
 /**
  * Επιτρέπεται καταχώρηση σε μία ημερομηνία; Πριν από κάθε εγγραφή Ε-Ε / τιμολόγιο / αντιστοίχιση τράπεζας.
  * Η άρνηση είναι ΚΩΔΙΚΟΣ + δομημένα στοιχεία (ADR-ACC-010 §2.1.1 Φ7) — το κείμενο το αποδίδει ο πελάτης.
+ * Καμία περίοδος ⇒ πρώτα το δίχτυ της Φ9 (χρήση μέσα στο παράθυρο ανοίγει μόνη της, όπως στο Xero), μετά άρνηση.
  */
 export async function validatePostingAllowed(
   repository: IAccountingRepository,
-  dateStr: string
+  dateStr: string,
+  today: string = accountingToday()
 ): Promise<PostingValidationResult> {
-  const period = await getPeriodForDate(repository, dateStr);
+  let period = await getPeriodForDate(repository, dateStr);
+  if (period === null && await openFiscalYearAutomaticallyFor(repository, dateStr, today)) {
+    period = await getPeriodForDate(repository, dateStr);
+  }
   if (period === null) return deniedPosting('PERIOD_NOT_FOUND', dateStr, null);
   const denial = postingPeriodDenialOf(period);
   return denial === null

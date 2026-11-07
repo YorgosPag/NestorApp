@@ -156,7 +156,7 @@ function createMockRepository(): jest.Mocked<IAccountingRepository> {
     getFiscalPeriod: noop,
     listFiscalPeriods: noop,
     transitionFiscalPeriod: noop,
-    createFiscalPeriods: noop,
+    openFiscalYear: noop,
     createAuditEntry: noop,
     listAuditEntries: noop,
   } as jest.Mocked<IAccountingRepository>;

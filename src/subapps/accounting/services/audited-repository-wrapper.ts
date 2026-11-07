@@ -27,7 +27,7 @@ import { legalNameChangeAudit } from './audit/company-legal-name-audit';
  *
  * - Mutations (create/update): automatic audit entry after successful operation
  * - Reads (get/list): pass-through, zero overhead
- * - Bulk operations (createFiscalPeriods, createBankTransaction): skipped (bulk imports)
+ * - Bulk operations (createBankTransaction): skipped (bulk imports) · `openFiscalYear` audits itself (Φ9)
  *
  * Pattern: Google infrastructure interceptors / SAP BAPI framework
  */
@@ -104,7 +104,8 @@ export function createAuditedRepository(
     // ── Bulk / setup operations — NO audit (batch imports, setup) ─────────
     createBankTransaction: repo.createBankTransaction.bind(repo),
     createImportBatch: repo.createImportBatch.bind(repo),
-    createFiscalPeriods: repo.createFiscalPeriods.bind(repo),
+    // Φ9: ο γραφέας γράφει ΜΟΝΟΣ του το ίχνος `FISCAL_YEAR_OPENED`, στην ίδια συναλλαγή.
+    openFiscalYear: repo.openFiscalYear.bind(repo),
     createFixedAsset: repo.createFixedAsset.bind(repo),
     createExpenseDocument: repo.createExpenseDocument.bind(repo),
     createAPYCertificate: repo.createAPYCertificate.bind(repo),

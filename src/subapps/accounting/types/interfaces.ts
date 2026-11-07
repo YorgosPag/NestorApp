@@ -101,7 +101,13 @@ import type {
   UpdateCustomCategoryInput,
 } from './custom-category';
 import type { CustomerBalance, InvoiceLedgerQuery } from './customer-balance';
-import type { FiscalPeriod, FiscalPeriodDraft, FiscalPeriodTransitionRequest } from './fiscal-period';
+import type {
+  FiscalPeriod,
+  FiscalPeriodDraft,
+  FiscalPeriodTransitionRequest,
+  FiscalYearOpenOutcome,
+  FiscalYearOpenRequest,
+} from './fiscal-period';
 import type { AccountingAuditEntry, AuditEntryFilters } from './accounting-audit';
 
 // ============================================================================
@@ -277,8 +283,15 @@ export interface IAccountingRepository {
   listFiscalPeriods(fiscalYear: number): Promise<FiscalPeriod[]>;
   /** Μετάβαση κατάστασης — απόφαση + εγγραφή + ίχνος `PERIOD_*` σε ΜΙΑ συναλλαγή. */
   transitionFiscalPeriod(periodId: string, request: FiscalPeriodTransitionRequest): Promise<FiscalPeriod>;
-  /** Όλες ή καμία — υπάρχουσα χρήση ⇒ `FiscalYearExistsError`, ποτέ αντικατάσταση. */
-  createFiscalPeriods(fiscalYear: number, periods: readonly FiscalPeriodDraft[]): Promise<void>;
+  /**
+   * Ο ΕΝΑΣ γραφέας χρήσης (Φ9): όλες ή καμία + ίχνος `FISCAL_YEAR_OPENED` σε ΜΙΑ συναλλαγή. Υπάρχουσα χρήση ⇒
+   * `refuse` = `FiscalYearExistsError` / `accept` = `'existing'` · μερική ⇒ `FiscalYearIncompleteError`.
+   */
+  openFiscalYear(
+    fiscalYear: number,
+    periods: readonly FiscalPeriodDraft[],
+    request: FiscalYearOpenRequest
+  ): Promise<FiscalYearOpenOutcome>;
 
   // ── Audit Log (Phase 1c — Q1-Q3, immutable: create + list ONLY) ────────
   createAuditEntry(entry: AccountingAuditEntry): Promise<void>;

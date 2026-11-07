@@ -30,6 +30,9 @@ export type AccountingAuditEventType =
   | 'PERIOD_CLOSED'
   | 'PERIOD_LOCKED'
   | 'PERIOD_REOPENED'
+  // ADR-ACC-010 §2.1.1 Φ9: a fiscal year's 13 periods were born — written in the SAME transaction,
+  // with the origin (setup · posting · manual). Until 2026-11-07 opening a year left NO trace.
+  | 'FISCAL_YEAR_OPENED'
   | 'CREDIT_LIMIT_CHANGED'
   | 'DISPUTE_FLAGGED'
   | 'BANK_MATCHED'

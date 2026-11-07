@@ -55,7 +55,7 @@ import type {
   UpdateCustomCategoryInput,
 } from '../../types/custom-category';
 import type { CustomerBalance, InvoiceLedgerQuery } from '../../types/customer-balance';
-import type { FiscalPeriodDraft, FiscalPeriodTransitionRequest } from '../../types/fiscal-period';
+import type { FiscalPeriodDraft, FiscalPeriodTransitionRequest, FiscalYearOpenRequest } from '../../types/fiscal-period';
 import type { AccountingAuditEntry, AuditEntryFilters } from '../../types/accounting-audit';
 import type { MatchingConfig } from '../../types/matching-config';
 
@@ -283,8 +283,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     fiscalPeriods.listFiscalPeriods(this.tenant, fiscalYear);
   transitionFiscalPeriod = (periodId: string, request: FiscalPeriodTransitionRequest) =>
     fiscalPeriods.transitionFiscalPeriod(this.tenant, periodId, request);
-  createFiscalPeriods = (fiscalYear: number, periods: readonly FiscalPeriodDraft[]) =>
-    fiscalPeriods.createFiscalPeriods(this.tenant, fiscalYear, periods);
+  openFiscalYear = (fiscalYear: number, periods: readonly FiscalPeriodDraft[], request: FiscalYearOpenRequest) =>
+    fiscalPeriods.openFiscalYear(this.tenant, fiscalYear, periods, request);
 
   // ── Audit Log (Phase 1c — immutable: create + list ONLY) ──────────────
   createAuditEntry = (entry: AccountingAuditEntry) =>

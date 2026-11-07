@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { defineRoute, ok, notFound } from '@/lib/api/define-route';
 import { ADMINISTRATIVE_ROLES } from '@/lib/auth/roles';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import { getPeriodForDate, openFiscalYearAutomaticallyFor } from '@/subapps/accounting/services/fiscal-period-service';
 import { isReversalReasonComplete } from '@/subapps/accounting/services/journal/journal-reversal-policy';
 import { JOURNAL_REVERSAL_REASON_CODES } from '@/subapps/accounting/types/journal-reversal';
 import { accountingToday } from '@/subapps/accounting/utils/accounting-day';
@@ -40,13 +41,17 @@ export const POST = defineRoute({
   fallbackError: 'Failed to reverse journal entry',
   handler: async ({ auth, body, params }) => {
     const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const today = accountingToday();
+    // ADR-ACC-010 §2.1.1 Φ9: το «σήμερα» είναι η εφεδρική ημερομηνία του storno — η χρήση του εξασφαλίζεται ΠΡΙΝ
+    // τη συναλλαγή του γραφέα (ίδιο δίχτυ με κάθε σύνορο καταχώρησης, ίδιο παράθυρο).
+    if (await getPeriodForDate(repository, today) === null) await openFiscalYearAutomaticallyFor(repository, today, today);
     const outcome = await withJournalReversalErrors(() => repository.reverseJournalEntry({
       entryId: params.id,
       trigger: 'manual',
       datePolicy: 'original_period_if_open',
       reasonCode: body.reasonCode,
       reasonNotes: body.notes?.trim() || null,
-      today: accountingToday(),
+      today,
     }));
 
     switch (outcome.kind) {

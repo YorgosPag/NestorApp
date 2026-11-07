@@ -115,7 +115,7 @@ function createMockRepository(): MockRepository {
     getFiscalPeriod: jest.fn(),
     listFiscalPeriods: jest.fn(),
     transitionFiscalPeriod: jest.fn(),
-    createFiscalPeriods: jest.fn(),
+    openFiscalYear: jest.fn(),
     createAuditEntry: jest.fn(),
     listAuditEntries: jest.fn(),
   };

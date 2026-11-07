@@ -60,7 +60,7 @@ export interface FiscalPeriod {
   lockedBy: string | null;
 
   // — Tenant Isolation (Q3/Q7) —
-  /** Ο μισθωτής — το γράφει ΜΟΝΟ ο γραφέας (`createFiscalPeriods`), από το `TenantContext`. */
+  /** Ο μισθωτής — το γράφει ΜΟΝΟ ο γραφέας (`openFiscalYear`), από το `TenantContext`. */
   companyId: string;
 
   // — Reopen audit trail (CLOSED → OPEN only) —
@@ -80,6 +80,34 @@ export interface FiscalPeriod {
 
 /** Περίοδος πριν γραφτεί — τον μισθωτή τον βάζει ο γραφέας, ποτέ ο καλών. */
 export type FiscalPeriodDraft = Omit<FiscalPeriod, 'companyId'>;
+
+// ============================================================================
+// OPENING A FISCAL YEAR (ADR-ACC-010 §2.1.1 Φάση 9)
+// ============================================================================
+
+/**
+ * ΠΟΙΟΣ άνοιξε τη χρήση — γράφεται στο ίχνος `FISCAL_YEAR_OPENED`:
+ * - `setup`: η αποθήκευση της ρύθμισης εταιρείας (η πρωτεύουσα διαδρομή — προληπτικά, N.7.2 #1)·
+ * - `posting`: το σύνορο καταχώρησης, μόνο μέσα στο παράθυρο αυτόματου ανοίγματος (δίχτυ ασφαλείας)·
+ * - `manual`: ρητή διοικητική πράξη (`POST /api/accounting/fiscal-periods` — και για έτη εκτός παραθύρου).
+ */
+export type FiscalYearOpenOrigin = 'setup' | 'posting' | 'manual';
+
+/**
+ * Τι κάνει ο γραφέας αν η χρήση υπάρχει ΗΔΗ ολόκληρη: `refuse` ⇒ `FiscalYearExistsError` (ρητή πράξη — ο χρήστης
+ * πρέπει να μάθει ότι δεν έγινε τίποτα) · `accept` ⇒ «υπάρχει», καμία εγγραφή (ιδεμπότητη εξασφάλιση).
+ * Μερική χρήση ⇒ ΠΑΝΤΑ σφάλμα (`FiscalYearIncompleteError`) — ποτέ σιωπηλή «επισκευή».
+ */
+export type FiscalYearExistingPolicy = 'refuse' | 'accept';
+
+/** Αίτημα ανοίγματος χρήσης προς τον ΕΝΑ γραφέα. */
+export interface FiscalYearOpenRequest {
+  readonly origin: FiscalYearOpenOrigin;
+  readonly ifExists: FiscalYearExistingPolicy;
+}
+
+/** Αποτέλεσμα: γεννήθηκαν τώρα οι 13 περίοδοι, ή υπήρχαν ήδη (μόνο με `ifExists: 'accept'`). */
+export type FiscalYearOpenOutcome = 'created' | 'existing';
 
 // ============================================================================
 // STATE TRANSITIONS (Q5/Q7 — η απόφαση τρέχει ΜΕΣΑ στη συναλλαγή)

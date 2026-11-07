@@ -63,6 +63,16 @@ jest.mock('@/subapps/accounting/services/audited-repository-wrapper', () => ({
   createAuditedRepository: () => ({ saveCompanySetup: (...args: unknown[]) => repo.saveCompanySetup(...args) }),
 }));
 
+// ADR-ACC-010 §2.1.1 Φ9: η ρύθμιση εξασφαλίζει την τρέχουσα χρήση — ψεύτικος ο γραφέας, πραγματικό το παράθυρο.
+const ensureFiscalYearMock = jest.fn();
+jest.mock('@/subapps/accounting/services/fiscal-period-service', () => ({
+  ensureFiscalYear: (...args: unknown[]) => ensureFiscalYearMock(...args),
+}));
+jest.mock('@/subapps/accounting/utils/accounting-day', () => ({
+  ...jest.requireActual<typeof import('@/subapps/accounting/utils/accounting-day')>('@/subapps/accounting/utils/accounting-day'),
+  accountingToday: () => '2026-11-07',
+}));
+
 const propagateMock = jest.fn();
 const reconcileMock = jest.fn();
 jest.mock('@/services/company/company-rename.service', () => ({
@@ -294,5 +304,30 @@ describe('Μ — η αλλαγή επωνυμίας διαδίδεται, μόν
     await put(VALID);
 
     expect(repo.getCompanySetup).not.toHaveBeenCalled();
+  });
+});
+
+describe('Χ — η ρύθμιση εξασφαλίζει την τρέχουσα χρήση (ADR-ACC-010 §2.1.1 Φ9)', () => {
+  it('🔑 Χ1 — αποθήκευση ⇒ ιδεμπότητη εξασφάλιση της χρήσης 2026, origin setup', async () => {
+    ensureFiscalYearMock.mockResolvedValue('created');
+    const answer = await put(VALID);
+
+    expect(answer.status).toBe(200);
+    expect(ensureFiscalYearMock).toHaveBeenCalledWith(repo, 2026, 'setup');
+  });
+
+  it('🔑 Χ2 — έναρξη εργασιών ΜΕΤΑ το επόμενο έτος ⇒ καμία χρήση ανοίγει', async () => {
+    givenTransaction(null, { ...VALID, businessStart: { date: '2030-01-01', origin: 'new' } });
+    await put(VALID);
+
+    expect(ensureFiscalYearMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Χ3 — αποτυχία εξασφάλισης ΔΕΝ ρίχνει την αποθηκευμένη ρύθμιση (καλύπτει το δίχτυ του συνόρου)', async () => {
+    ensureFiscalYearMock.mockRejectedValue(new Error('firestore down'));
+    const answer = await put(VALID);
+
+    expect(answer.status).toBe(200);
+    expect(repo.saveCompanySetup).toHaveBeenCalled();
   });
 });

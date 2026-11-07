@@ -43,6 +43,11 @@ import {
 import { registryRetentionCompanion } from '@/services/company-registry/company-registry-retention.service';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { createAuditedRepository } from '@/subapps/accounting/services/audited-repository-wrapper';
+import { ensureFiscalYear } from '@/subapps/accounting/services/fiscal-period-service';
+import { fiscalYearOfDay, isAutoOpenableFiscalYear } from '@/subapps/accounting/services/fiscal-year-window';
+import { accountingToday } from '@/subapps/accounting/utils/accounting-day';
+import type { BusinessStart } from '@/subapps/accounting/types/company';
+import type { IAccountingRepository } from '@/subapps/accounting/types/interfaces';
 import { parseBusinessStart } from '@/subapps/accounting/services/setup/business-start';
 import {
   changedProfileFields,
@@ -114,6 +119,27 @@ function scheduleConsequence(companyId: string, failure: string, task: () => Pro
       logger.error(failure, { companyId, error: getErrorMessage(error) });
     }
   });
+}
+
+/**
+ * ADR-ACC-010 §2.1.1 Φ9 — η ΠΡΩΤΕΥΟΥΣΑ διαδρομή της χρήσης (N.7.2 #1, προληπτικά): με τη ρύθμιση της εταιρείας η
+ * τρέχουσα χρήση ΥΠΑΡΧΕΙ — ο χρήστης δεν βλέπει ποτέ «δημιουργήστε πρώτα τη χρήση» (Xero / QuickBooks). Ιδεμπότητη:
+ * υπάρχουσα (και κλειδωμένη) χρήση μένει άθικτη. Σεβασμός της έναρξης εργασιών (`fiscal-year-window.ts`).
+ * Αποτυχία ΔΕΝ ακυρώνει την αποθηκευμένη ρύθμιση: γραμμή `error`, και το δίχτυ του συνόρου καταχώρησης καλύπτει.
+ */
+async function ensureCurrentFiscalYear(
+  repository: IAccountingRepository,
+  companyId: string,
+  businessStart: BusinessStart | null
+): Promise<void> {
+  const today = accountingToday();
+  const fiscalYear = fiscalYearOfDay(today);
+  if (!isAutoOpenableFiscalYear(fiscalYear, today, businessStart)) return;
+  try {
+    await ensureFiscalYear(repository, fiscalYear, 'setup');
+  } catch (error) {
+    logger.error('Η τρέχουσα χρήση δεν εξασφαλίστηκε μετά τη ρύθμιση', { companyId, fiscalYear, error: getErrorMessage(error) });
+  }
 }
 
 /**
@@ -270,6 +296,7 @@ export const PUT = defineRoute({
     });
 
     scheduleProfileConsequences(auth.companyId, auth.uid, saved);
+    await ensureCurrentFiscalYear(repository, auth.companyId, saved.after.businessStart ?? null);
 
     return ok();
   },

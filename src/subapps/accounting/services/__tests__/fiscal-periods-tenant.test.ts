@@ -7,11 +7,12 @@
  *   Π1  ΜΙΑ διεύθυνση ανά (μισθωτής, κλειδί) + `companyId` στο έγγραφο — δύο μισθωτές, δύο «2026-12»
  *   Π2  κλείσιμο / κλείδωμα ενός μισθωτή ΔΕΝ αγγίζει τον άλλο (τιμολόγια, Ε-Ε, τράπεζα ακολουθούν το `validatePostingAllowed`)
  *   Π3  η λίστα της χρήσης ΒΡΙΣΚΕΙ τις περιόδους (πριν: φίλτρο `companyId` σε έγγραφα χωρίς `companyId` ⇒ πάντα κενή)
- *   Π4  δεύτερη δημιουργία ⇒ `FiscalYearExistsError`, η ΚΛΕΙΔΩΜΕΝΗ περίοδος μένει κλειδωμένη (πριν: `batch.set` ⇒ OPEN)
+ *   Π4  δεύτερη δημιουργία ⇒ `FiscalYearExistsError` (μερική ⇒ `FiscalYearIncompleteError`), η ΚΛΕΙΔΩΜΕΝΗ περίοδος μένει κλειδωμένη (πριν: `batch.set` ⇒ OPEN)
  *   Π5  ξένο έγγραφο στη ΔΙΚΗ μου διεύθυνση = ανύπαρκτο (δεύτερη ζώνη: `ownedOrNull`)
  *   Π6  μετάβαση: απόφαση πάνω στη ΦΡΕΣΚΙΑ περίοδο + ίχνος στην ΙΔΙΑ συναλλαγή· κλείδωμα ΚΑΤΑ το ξανάνοιγμα ⇒ άρνηση
  *   Π7  ημερομηνία ⇒ περίοδος χωρίς ζώνη διακομιστή (στιγμή με ώρα = ημέρα Αθήνας· άκυρη ⇒ καμία περίοδος)
  *   Π8  άρνηση καταχώρησης = κωδικός `POSTING_PERIOD_DENIALS` + χρήση/αριθμός περιόδου, χωρίς ετικέτα σε γλώσσα (Φ7)
+ *   Π9  άνοιγμα χρήσης (Φ9): ίχνος με προέλευση · δίχτυ ΜΟΝΟ μέσα στο παράθυρο · ιδεμπότητα · κλειδωμένη άθικτη · μερική ⇒ άρνηση
  */
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -22,12 +23,13 @@ import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 import type { AccountingAuditEntry } from '../../types/accounting-audit';
 import type { FiscalPeriod, FiscalPeriodStatus } from '../../types/fiscal-period';
-import { createFiscalYear, getPeriodForDate, validatePostingAllowed } from '../fiscal-period-service';
+import { createFiscalYear, ensureFiscalYear, getPeriodForDate, validatePostingAllowed } from '../fiscal-period-service';
 import { FirestoreAccountingRepository } from '../repository/firestore-accounting-repository';
 import {
   FiscalPeriodNotFoundError,
   FiscalPeriodTransitionError,
   FiscalYearExistsError,
+  FiscalYearIncompleteError,
 } from '../repository/accounting-repo-fiscal-periods';
 
 const fake = new FakeFirestore();
@@ -117,10 +119,10 @@ describe('Π4 — η χρήση γεννιέται μία φορά', () => {
     expect(storedStatus(A.companyId, '2026-03')).toBe('LOCKED');
   });
 
-  it('ΜΙΑ υπάρχουσα περίοδος αρκεί για άρνηση — και δεν γράφεται ΚΑΜΙΑ από τις υπόλοιπες', async () => {
+  it('ΜΙΑ υπάρχουσα περίοδος (μερική χρήση) ⇒ FiscalYearIncompleteError — και δεν γράφεται ΚΑΜΙΑ από τις υπόλοιπες', async () => {
     fake.seedCollection(PERIODS, { [docIdOf(A.companyId, '2026-07')]: { periodId: '2026-07', companyId: 'comp_a', status: 'CLOSED' } });
 
-    await expect(createFiscalYear(repoOf(A), 2026)).rejects.toBeInstanceOf(FiscalYearExistsError);
+    await expect(createFiscalYear(repoOf(A), 2026)).rejects.toBeInstanceOf(FiscalYearIncompleteError);
     expect(Object.keys(fake.getAllDocs(PERIODS))).toHaveLength(1);
   });
 });
@@ -175,7 +177,7 @@ describe('Π6 — μετάβαση + ίχνος σε μία συναλλαγή',
 
     await expect(transition(A, '2026-05', 'reopen', 'λόγος')).rejects.toBeInstanceOf(FiscalPeriodTransitionError);
     expect(storedStatus(A.companyId, '2026-05')).toBe('LOCKED');
-    expect(periodAudits().map((e) => e.eventType)).toEqual(['PERIOD_CLOSED']);
+    expect(periodAudits().map((e) => e.eventType)).toEqual(['FISCAL_YEAR_OPENED', 'PERIOD_CLOSED']);
   });
 });
 
@@ -209,8 +211,9 @@ describe('Π8 — άρνηση καταχώρησης = ΚΩΔΙΚΟΣ + δομ�
       periodId: '2026-03', periodStatus: 'CLOSED', fiscalYear: 2026, periodNumber: 3,
     });
     expect(await validatePostingAllowed(repoOf(A), '2026-04-10')).toMatchObject({ denial: 'PERIOD_LOCKED', periodNumber: 4 });
-    expect(await validatePostingAllowed(repoOf(A), '2027-01-10')).toEqual({
-      allowed: false, denial: 'PERIOD_NOT_FOUND', postingDate: '2027-01-10',
+    // Εκτός παραθύρου αυτόματου ανοίγματος (Φ9: [2025, 2027] για «σήμερα» 2026-11-07) ⇒ η άρνηση μένει.
+    expect(await validatePostingAllowed(repoOf(A), '2029-01-10', '2026-11-07')).toEqual({
+      allowed: false, denial: 'PERIOD_NOT_FOUND', postingDate: '2029-01-10',
       periodId: null, periodStatus: null, fiscalYear: null, periodNumber: null,
     });
   });
@@ -218,5 +221,69 @@ describe('Π8 — άρνηση καταχώρησης = ΚΩΔΙΚΟΣ + δομ�
   it('η περίοδος ΔΕΝ αποθηκεύει ετικέτα σε γλώσσα — την παράγει ο πελάτης από το `periodNumber`', async () => {
     await createFiscalYear(repoOf(A), 2026);
     expect(fake.getData(PERIODS, docIdOf(A.companyId, '2026-01'))).not.toHaveProperty('label');
+  });
+});
+
+describe('Π9 — άνοιγμα χρήσης: ΕΝΑΣ γραφέας, ίχνος με προέλευση, δίχτυ μόνο μέσα στο παράθυρο (Φ9)', () => {
+  const TODAY = '2026-11-07';
+  const opened = () => fake.all<AccountingAuditEntry>(AUDIT).filter((e) => e.eventType === 'FISCAL_YEAR_OPENED');
+  const periodsOf = (companyId: string) => fake.all<FiscalPeriod>(PERIODS).filter((p) => p.companyId === companyId);
+
+  it('ρητή δημιουργία ⇒ ίχνος `FISCAL_YEAR_OPENED` origin manual, στον ΧΡΗΣΤΗ και τον ΜΙΣΘΩΤΗ', async () => {
+    await createFiscalYear(repoOf(A), 2026);
+    expect(opened()).toHaveLength(1);
+    expect(opened()[0]).toMatchObject({
+      entityType: 'period', entityId: '2026', userId: 'user_a', companyId: 'comp_a',
+      metadata: { fiscalYear: 2026, origin: 'manual', periods: 13 },
+    });
+  });
+
+  it('καμία χρήση + ημερομηνία ΜΕΣΑ στο παράθυρο ⇒ η χρήση ανοίγει και η εγγραφή επιτρέπεται (origin posting)', async () => {
+    expect(await validatePostingAllowed(repoOf(A), '2026-11-07', TODAY)).toEqual({
+      allowed: true, periodId: '2026-11', periodStatus: 'OPEN',
+    });
+    expect(periodsOf('comp_a')).toHaveLength(13);
+    expect(opened().map((e) => e.metadata)).toEqual([{ fiscalYear: 2026, origin: 'posting', periods: 13 }]);
+  });
+
+  it('προηγούμενη χρήση τον Ιανουάριο (παραστατικό Δεκεμβρίου) ⇒ ανοίγει', async () => {
+    expect(await validatePostingAllowed(repoOf(A), '2025-12-20', '2026-01-15')).toMatchObject({ allowed: true, periodId: '2025-12' });
+  });
+
+  it.each(['2028-01-01', '2024-12-31', '2062-03-01'])('%s ΕΚΤΟΣ παραθύρου ⇒ PERIOD_NOT_FOUND, τίποτα δεν γράφεται', async (date) => {
+    expect(await validatePostingAllowed(repoOf(A), date, TODAY)).toMatchObject({ allowed: false, denial: 'PERIOD_NOT_FOUND' });
+    expect(Object.keys(fake.getAllDocs(PERIODS))).toHaveLength(0);
+    expect(opened()).toHaveLength(0);
+  });
+
+  it('ιδεμπότητα: δεύτερη εξασφάλιση ⇒ «υπάρχει», ΚΑΝΕΝΑ δεύτερο ίχνος', async () => {
+    expect(await ensureFiscalYear(repoOf(A), 2026, 'setup')).toBe('created');
+    expect(await ensureFiscalYear(repoOf(A), 2026, 'setup')).toBe('existing');
+    expect(await validatePostingAllowed(repoOf(A), '2026-03-01', TODAY)).toMatchObject({ allowed: true });
+    expect(opened()).toHaveLength(1);
+  });
+
+  it('κλειδωμένη χρήση ⇒ η εξασφάλιση ΔΕΝ την αγγίζει, η άρνηση μένει PERIOD_LOCKED', async () => {
+    await createFiscalYear(repoOf(A), 2026);
+    await transition(A, '2026-11', 'close');
+    await transition(A, '2026-11', 'lock');
+
+    expect(await ensureFiscalYear(repoOf(A), 2026, 'posting')).toBe('existing');
+    expect(storedStatus(A.companyId, '2026-11')).toBe('LOCKED');
+    expect(await validatePostingAllowed(repoOf(A), '2026-11-07', TODAY)).toMatchObject({ denial: 'PERIOD_LOCKED' });
+  });
+
+  it('η εξασφάλιση του Β δεν βλέπει / δεν αγγίζει τη χρήση του Α', async () => {
+    await createFiscalYear(repoOf(A), 2026);
+    expect(await ensureFiscalYear(repoOf(B), 2026, 'setup')).toBe('created');
+    expect([periodsOf('comp_a').length, periodsOf('comp_b').length]).toEqual([13, 13]);
+  });
+
+  it('ΜΕΡΙΚΗ χρήση (ξένο έγγραφο στη διεύθυνσή μου) ⇒ καμία «επισκευή», η καταχώρηση αρνείται', async () => {
+    fake.seedCollection(PERIODS, { [docIdOf(A.companyId, '2026-12')]: { periodId: '2026-12', companyId: 'comp_x', status: 'OPEN' } });
+
+    expect(await validatePostingAllowed(repoOf(A), '2026-11-07', TODAY)).toMatchObject({ allowed: false, denial: 'PERIOD_NOT_FOUND' });
+    expect(Object.keys(fake.getAllDocs(PERIODS))).toHaveLength(1);
+    expect(opened()).toHaveLength(0);
   });
 });

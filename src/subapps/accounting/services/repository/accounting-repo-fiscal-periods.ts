@@ -11,8 +11,8 @@
  * Συμβόλαιο (SAP OB52 ανά company code · Xero lock date ανά οργανισμό):
  *   - διεύθυνση = (μισθωτής, κλειδί) ⇒ ξένη περίοδος δεν είναι καν προσβάσιμη· `ownedOrNull` = δεύτερη ζώνη·
  *   - η λίστα μιας χρήσης = `getAll` των 13 γνωστών διευθύνσεων — κανένα ερώτημα, κανένας δείκτης·
- *   - η χρήση γεννιέται ΟΛΗ ή ΚΑΘΟΛΟΥ (συναλλαγή + `create`): δεύτερη δημιουργία = `FiscalYearExistsError`, ποτέ
- *     αντικατάσταση·
+ *   - η χρήση γεννιέται ΟΛΗ ή ΚΑΘΟΛΟΥ (συναλλαγή + `create`) με ίχνος `FISCAL_YEAR_OPENED` (Φ9): ρητή δεύτερη
+ *     δημιουργία = `FiscalYearExistsError`, εξασφάλιση = «υπάρχει» — ποτέ αντικατάσταση·
  *   - μετάβαση = απόφαση πάνω στη ΦΡΕΣΚΙΑ περίοδο + εγγραφή + ίχνος στην ΙΔΙΑ συναλλαγή.
  *
  * @see ADR-ACC-010 §2.1.1 (Φάση 6)
@@ -27,7 +27,13 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateDeterministicFiscalPeriodId } from '@/services/enterprise-id.service';
 
 import type { TenantContext } from '../../types/common';
-import type { FiscalPeriod, FiscalPeriodDraft, FiscalPeriodTransitionRequest } from '../../types/fiscal-period';
+import type {
+  FiscalPeriod,
+  FiscalPeriodDraft,
+  FiscalPeriodTransitionRequest,
+  FiscalYearOpenOutcome,
+  FiscalYearOpenRequest,
+} from '../../types/fiscal-period';
 import { accountingAuditEntryOf } from '../accounting-audit-service';
 import { fiscalPeriodKeysOf } from '../fiscal-period-keys';
 import { decideFiscalPeriodTransition } from '../fiscal-period-transitions';
@@ -59,6 +65,18 @@ export class FiscalYearExistsError extends Error {
   constructor(readonly fiscalYear: number) {
     super(`Fiscal year ${fiscalYear} already has periods`);
     this.name = 'FiscalYearExistsError';
+  }
+}
+
+/**
+ * Η χρήση υπάρχει ΜΕΡΙΚΩΣ — ή κάποια διεύθυνσή της κρατά ξένο έγγραφο. Κατάσταση που κανένας γραφέας δεν παράγει
+ * (όλες ή καμία)· δεν «επισκευάζεται» σιωπηλά: θέλει ανθρώπινη διερεύνηση.
+ */
+export class FiscalYearIncompleteError extends Error {
+  readonly code = 'FISCAL_YEAR_INCOMPLETE';
+  constructor(readonly fiscalYear: number, readonly owned: number, readonly expected: number) {
+    super(`Fiscal year ${fiscalYear} is incomplete: ${owned}/${expected} periods`);
+    this.name = 'FiscalYearIncompleteError';
   }
 }
 
@@ -97,20 +115,44 @@ export async function listFiscalPeriods(tenant: TenantContext, fiscalYear: numbe
   });
 }
 
-/** Γεννά τις περιόδους μιας χρήσης — ΟΛΕΣ ή ΚΑΜΙΑ· ο μισθωτής μπαίνει ΕΔΩ, από το `TenantContext`. */
-export async function createFiscalPeriods(
+/**
+ * Ανοίγει τη χρήση — ο ΕΝΑΣ γραφέας για ρητή πράξη, ρύθμιση εταιρείας και σύνορο καταχώρησης (Φ9). Σε ΜΙΑ συναλλαγή:
+ * καμία περίοδος ⇒ `create` ΟΛΩΝ + ίχνος `FISCAL_YEAR_OPENED` (με την προέλευση) · ΟΛΕΣ υπάρχουν ⇒ `refuse` =
+ * `FiscalYearExistsError`, `accept` = «υπάρχει» χωρίς εγγραφή · ΜΕΡΙΚΕΣ (ή ξένο έγγραφο στη διεύθυνσή μου) ⇒
+ * `FiscalYearIncompleteError`, ποτέ σιωπηλή επισκευή. Δύο ταυτόχρονες εξασφαλίσεις ⇒ η συναλλαγή της δεύτερης
+ * ξανατρέχει, βλέπει ΟΛΕΣ ⇒ «υπάρχει» (ιδεμπότητα από τις ντετερμινιστικές διευθύνσεις).
+ */
+export async function openFiscalYear(
   tenant: TenantContext,
   fiscalYear: number,
-  periods: readonly FiscalPeriodDraft[]
-): Promise<void> {
-  await safeFirestoreOperation((db) => db.runTransaction(async (transaction) => {
+  periods: readonly FiscalPeriodDraft[],
+  request: FiscalYearOpenRequest
+): Promise<FiscalYearOpenOutcome> {
+  return safeFirestoreOperation((db) => db.runTransaction(async (transaction) => {
     const refs = periods.map((period) => fiscalPeriodRef(db, tenant, period.periodId));
-    const existing = refs.length === 0 ? [] : await transaction.getAll(...refs);
-    if (existing.some((snap) => snap.exists)) throw new FiscalYearExistsError(fiscalYear);
+    const snaps = refs.length === 0 ? [] : await transaction.getAll(...refs);
+    const owned = snaps.filter((snap, i) => ownedFiscalPeriodOf(snap, tenant, periods[i].periodId) !== null).length;
+    const occupied = snaps.filter((snap) => snap.exists).length;
+
+    if (occupied > 0 && owned === periods.length) {
+      if (request.ifExists === 'refuse') throw new FiscalYearExistsError(fiscalYear);
+      return 'existing';
+    }
+    if (occupied > 0) throw new FiscalYearIncompleteError(fiscalYear, owned, periods.length);
+
     periods.forEach((period, i) => {
       const doc: FiscalPeriod = { ...period, companyId: tenant.companyId };
       transaction.create(refs[i], sanitizeForFirestore(doc as unknown as Record<string, unknown>));
     });
+    appendAuditEntryInTransaction(db, transaction, tenant, accountingAuditEntryOf({
+      eventType: 'FISCAL_YEAR_OPENED',
+      entityType: 'period',
+      entityId: String(fiscalYear),
+      userId: tenant.userId,
+      details: `Άνοιγμα χρήσης ${fiscalYear} (${periods.length} περίοδοι)`,
+      metadata: { fiscalYear, origin: request.origin, periods: periods.length },
+    }));
+    return 'created';
   }));
 }
 

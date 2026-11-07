@@ -1,6 +1,6 @@
 /**
  * Οι αρνήσεις του γραφέα περιόδων (ADR-ACC-010 §2.1.1 Φάση 6) ⇒ HTTP με `errorCode` (ADR-284):
- * ανύπαρκτη ή ξένη περίοδος ⇒ 404 (ίδια απάντηση — καμία διαρροή ύπαρξης) · άκυρη μετάβαση / υπάρχουσα χρήση ⇒ 409
+ * ανύπαρκτη ή ξένη περίοδος ⇒ 404 (ίδια απάντηση — καμία διαρροή ύπαρξης) · άκυρη μετάβαση / υπάρχουσα ή μερική χρήση ⇒ 409
  * (κατάσταση, όχι κακό αίτημα). Οτιδήποτε άλλο ανεβαίνει αμετάβλητο (500 από το `defineRoute`).
  * Άρνηση ΚΑΤΑΧΩΡΗΣΗΣ σε περίοδο ⇒ `assertPostingAllowed` (Φάση 7): ίδιο 409, κωδικός από `POSTING_PERIOD_DENIALS`.
  *
@@ -14,6 +14,7 @@ import {
   FiscalPeriodNotFoundError,
   FiscalPeriodTransitionError,
   FiscalYearExistsError,
+  FiscalYearIncompleteError,
 } from '@/subapps/accounting/services/repository/accounting-repo-fiscal-periods';
 import type { PostingValidationResult } from '@/subapps/accounting/types/fiscal-period';
 
@@ -22,7 +23,11 @@ export async function withFiscalPeriodErrors<T>(run: () => Promise<T>): Promise<
     return await run();
   } catch (error) {
     if (error instanceof FiscalPeriodNotFoundError) throw new ApiError(404, error.message, error.code);
-    if (error instanceof FiscalPeriodTransitionError || error instanceof FiscalYearExistsError) {
+    if (
+      error instanceof FiscalPeriodTransitionError ||
+      error instanceof FiscalYearExistsError ||
+      error instanceof FiscalYearIncompleteError
+    ) {
       throw new ApiError(409, error.message, error.code);
     }
     throw error;
