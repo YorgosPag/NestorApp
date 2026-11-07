@@ -680,6 +680,18 @@ accounting/shared/
 
 Εκτός εύρους (◐, αναμένουν ισχύον κείμενο): ΕΦΚΑ όλων των εταίρων ΕΠΕ (ACC-027 §1), μέλος ΔΣ ΑΕ με αμοιβή (ACC-028 §1).
 
+## Ενημέρωση 2026-11-07 — ΕΦΚΑ: το Βιβλίο Ε-Ε ως ΜΙΑ πηγή (ADR-ACC-006 §7.1)
+
+**Υπερισχύει** κάθε παλαιότερης περιγραφής «ΕΦΚΑ από τις πληρωμές» σε αυτό το ADR.
+
+| Θέμα | Τώρα | SSoT |
+|---|---|---|
+| Πηγή εκπιπτόμενων εισφορών | ΜΟΝΟ το Βιβλίο Ε-Ε, κατηγορία `efka` (Ε3 `585_005`). Οι εγγραφές πληρωμών ΕΦΚΑ = βοηθητικό βιβλίο, **ποτέ** ποσό φόρου | `ledgerTaxTotals(ledger)` (`services/journal/journal-ledger.ts`) |
+| Είσοδος μηχανής | Υπογραφή **αμετάβλητη**: `totalDeductibleExpenses` / `EntityTaxInput.totalExpenses` = έξοδα **ΧΩΡΙΣ** ΕΦΚΑ· `totalEfkaContributions` / `deductibleEfka` = ΕΦΚΑ του βιβλίου. Φορολογητέο = έσοδα − ΟΛΑ τα έξοδα (ίδιο αποτέλεσμα με πριν) | `LedgerTaxTotals` |
+| Ορατότητα | `TaxResult.efkaContributions` (**νέο**) → γραμμή «Εισφορές ΕΦΚΑ» στο TaxDashboard της ατομικής· ΟΕ/ΕΠΕ/ΑΕ ήδη μέσω `CorporateTaxResult.efkaContributions`. Έσοδα − έξοδα − ΕΦΚΑ = φορολογητέο, ορατά | `TaxEngine.calculateAnnualTax` |
+| `estimateTax` | Η ΕΦΚΑ του βιβλίου περνά χωριστά (`scaleLedgerTaxTotals`)· το σχόλιο «Will be filled from EFKA data later» ήταν **παραπλανητικό** — η ΕΦΚΑ ήταν ήδη στα έξοδα, και μια πρόσθετη αφαίρεση θα ήταν διπλομέτρηση. `actualExpenses` / `projectedAnnualExpenses` = ΟΛΑ τα έξοδα (εμφάνιση) | `tax-engine.ts` |
+| Αφαιρέθηκαν | `deductibleEfka(profile, period)`, `IncomeTaxTotals.efkaScale`, `PartnerTaxProfile`, πεδία `efka` / `managerEfka` / `boardEfka` των προφίλ, φόρτωση πληρωμών ΕΦΚΑ από loaders προφίλ και από το `tax/dashboard` route· το `sumPaidEfka` έμεινε (μη εξαγόμενο) στο `accounting-efka-operations.ts` μόνο για την οθόνη ΕΦΚΑ | `entity-tax-profile.ts` |
+
 ## 14. Decision Log
 
 | Date | Decision | Author |
@@ -705,6 +717,7 @@ accounting/shared/
 | 2026-11-06 | **Τέλος επιτηδεύματος ατομικής = 0 €** (καταργήθηκε για φυσικά πρόσωπα από φορολογικό έτος 2024) — `PROFESSIONAL_TAX_BY_ENTITY` και `GREEK_TAX_SCALES` 2024–2026· νομικά πρόσωπα 1.000 € (το 800 €/μικρός οικισμός και +600 €/υποκατάστημα δεν μοντελοποιούνται). ⚠️ Ο `calculatePartnershipTax` (διαφανής φορολόγηση ΟΕ) **δεν άλλαξε ακόμη** — ADR-ACC-024 §6. Βλ. ADR-ACC-022 §8.1 | Giorgio + Claude Code |
 | 2026-11-06 | **Αποκλίσεις ADR-ACC-022 #1-3 διορθώθηκαν** — (1) προκαταβολή: μείωση στο μισό **υπολογίζεται** από `businessStart` (φυσικό 1ο έτος / νομικό 3 πρώτα, όχι συνέχεια), αφαιρέθηκε το `isFirstFiveYears`· νέο `prepayment-policy.ts` + `prepaymentBasis` σε κάθε αποτέλεσμα· (2) ΟΕ ως οντότητα 22% μέσω του κοινού `computeEntityTax` (ΕΠΕ/ΑΕ/ΟΕ), διανομή με παρακράτηση 0%/5% κατά βιβλία· (3) ΟΕ προκαταβολή 80%. `ITaxEngine`: είσοδος `EntityTaxInput` + `EntityHolder[]`. Αφαιρέθηκαν `TaxScaleConfig.prepaymentRate`, `getDividendTaxRate`, `PartnerTaxInput`, `PartnerTaxResult` | Claude Code |
 | 2026-11-06 | **Μετά τη ζωντανή επαλήθευση** — (α) `distributionCoverage` σε κάθε αποτέλεσμα οντότητας: ΑΕ χωρίς μετόχους έδειχνε «Φόρος Μερισμάτων 5%: 0 €» με μερίσματα 113.225,81 € — πλέον «—» + εξήγηση + σύνδεσμος· (β) αφαιρέσεις γράφονται `formatCurrency(-x)` αντί για «-» κολλημένο μπροστά (έβγαζε «-0 €»), και ο κεντρικός `formatCurrencyIn` δεν γράφει ποτέ αρνητικό μηδέν (ADR-216)· (γ) η ΟΕ χωρίς εταίρους δεν δείχνει πια την εξήγηση «απλογραφικά, 0% παρακράτηση» (κενά αληθές `every`)· (δ) `isCompleteShareSum` = ένας κανόνας αθροίσματος (ήταν 2 αντίγραφα)· (ε) κοινό `SetupLink` για τις σημειώσεις φόρου | Giorgio + Claude Code |
+| 2026-11-07 | **ΕΦΚΑ: Βιβλίο Ε-Ε = ΜΙΑ πηγή (ADR-ACC-006 §7.1)** — η εισφορά έφτανε στον φόρο από δύο δρόμους (έξοδο `efka` στο βιβλίο **και** εγγραφές πληρωμών, αφαιρούμενες επιπλέον) ⇒ κρυφή διπλομέτρηση μόλις υπήρχε πληρωμή. Νέο SSoT `ledgerTaxTotals`· αφαιρέθηκε ο δρόμος των πληρωμών από `entity-tax-profile`, `report-tax-basis`, `accounting-service`, `tax/dashboard` route· `estimateTax` περνά την ΕΦΚΑ χωριστά (+ διόρθωση σχολίου)· νέο `TaxResult.efkaContributions` + γραμμή TaxDashboard. Κανένας αριθμός παραγωγής δεν άλλαξε (ο δρόμος των πληρωμών ήταν άδειος). Βλ. ενότητα «Ενημέρωση 2026-11-07» | Giorgio + Claude Code |
 
 ---
 

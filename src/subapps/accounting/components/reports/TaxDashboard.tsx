@@ -122,7 +122,7 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Key Figures */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <article className="space-y-1">
                 <p className={cn("text-xs", colors.text.muted)}>{t('reports.grossIncome')}</p>
                 <p className="text-lg font-bold text-foreground">
@@ -133,6 +133,12 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
                 <p className={cn("text-xs", colors.text.muted)}>{t('reports.deductibleExpenses')}</p>
                 <p className="text-lg font-bold text-foreground">
                   {formatAccountingCurrency(data.taxResult.deductibleExpenses)}
+                </p>
+              </article>
+              <article className="space-y-1">
+                <p className={cn("text-xs", colors.text.muted)}>{t('reports.metrics.efkaContributions')}</p>
+                <p className="text-lg font-bold text-foreground">
+                  {formatAccountingCurrency(data.taxResult.efkaContributions)}
                 </p>
               </article>
               <article className="space-y-1">

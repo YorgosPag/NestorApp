@@ -26,9 +26,10 @@ import type {
   EntityHolder,
 } from '../../types/tax';
 import type { ExpenseCategory, IncomeCategory } from '../../types/common';
+import type { JournalEntry } from '../../types/journal';
 import { getTaxScaleForYear, getProfessionalTaxForEntity } from '../config/tax-config';
 import { getQuarterFromDate } from '../repository/firestore-helpers';
-import { loadLedger } from '../journal/journal-ledger';
+import { groupNetAmount, ledgerTaxTotals, loadLedger, scaleLedgerTaxTotals } from '../journal/journal-ledger';
 import { resolvePrepayment } from '../tax/prepayment-policy';
 import { nowISO } from '@/lib/date-local';
 import { roundToTwo } from '../../utils/math';
@@ -40,6 +41,16 @@ import { yearToDateProgress } from './helpers/tax-date-utils';
 // ============================================================================
 // TAX ENGINE IMPLEMENTATION
 // ============================================================================
+
+/** Οι 5 μεγαλύτερες κατηγορίες κατά καθαρό ποσό — ομαδοποίηση μέσω του SSoT `groupNetAmount`. */
+function topCategoriesOf<C extends JournalEntry['category']>(
+  entries: readonly JournalEntry[]
+): Array<{ category: C; amount: number }> {
+  return Array.from(groupNetAmount(entries, (e) => e.category))
+    .map(([category, group]) => ({ category: category as C, amount: group.total }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+}
 
 /**
  * Tax Engine — Υπολογισμός Φόρου Εισοδήματος
@@ -91,6 +102,7 @@ export class TaxEngine implements ITaxEngine {
       fiscalYear: params.fiscalYear,
       grossIncome: params.totalIncome,
       deductibleExpenses: params.totalDeductibleExpenses,
+      efkaContributions: params.totalEfkaContributions,
       taxableIncome,
       bracketBreakdown,
       incomeTax,
@@ -116,7 +128,6 @@ export class TaxEngine implements ITaxEngine {
    */
   async estimateTax(fiscalYear: number, upToDate?: string): Promise<TaxEstimate> {
     const refDate = upToDate ?? nowISO().split('T')[0];
-
     const ledger = await loadLedger(this.repository, { kind: 'fiscalYear', fiscalYear });
     const actualIncome = ledger.totalIncomeNet;
     const actualExpenses = ledger.totalExpenseNet;
@@ -125,58 +136,34 @@ export class TaxEngine implements ITaxEngine {
     const projectionMultiplier = yearToDateProgress(fiscalYear, refDate).factor;
     const projectedAnnualIncome = roundToTwo(actualIncome * projectionMultiplier);
     const projectedAnnualExpenses = roundToTwo(actualExpenses * projectionMultiplier);
+    // ΕΦΚΑ: ΜΟΝΟ από το βιβλίο (κατηγορία `efka`), ΧΩΡΙΣΤΑ από τα έξοδα ⇒ αφαιρείται ΜΙΑ φορά (ADR-ACC-006 §7.1)
+    const projected = scaleLedgerTaxTotals(ledgerTaxTotals(ledger), projectionMultiplier);
 
     const profile = await this.repository.getCompanySetup();
-    const entityType = profile?.entityType ?? 'sole_proprietor';
-    const professionalTax = getProfessionalTaxForEntity(entityType);
+    const professionalTax = getProfessionalTaxForEntity(profile?.entityType ?? 'sole_proprietor');
 
     const taxResult = this.calculateAnnualTax({
       fiscalYear,
-      totalIncome: projectedAnnualIncome,
-      totalDeductibleExpenses: projectedAnnualExpenses,
-      totalEfkaContributions: 0, // Will be filled from EFKA data later
+      totalIncome: projected.totalIncome,
+      totalDeductibleExpenses: projected.totalExpenses,
+      totalEfkaContributions: projected.efkaContributions,
       professionalTax,
-      totalWithholdings: 0,
-      previousYearPrepayment: 0,
+      totalWithholdings: 0, previousYearPrepayment: 0,
       businessStart: profile?.businessStart ?? null,
     });
 
-    const incomeCatMap = new Map<string, number>();
-    for (const e of ledger.income) {
-      incomeCatMap.set(e.category, (incomeCatMap.get(e.category) ?? 0) + e.netAmount);
-    }
-    const expenseCatMap = new Map<string, number>();
-    for (const e of ledger.expense) {
-      expenseCatMap.set(e.category, (expenseCatMap.get(e.category) ?? 0) + e.netAmount);
-    }
-
-    const topIncomeCategories = Array.from(incomeCatMap.entries())
-      .map(([category, amount]) => ({ category: category as IncomeCategory, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-
-    const topExpenseCategories = Array.from(expenseCatMap.entries())
-      .map(([category, amount]) => ({ category: category as ExpenseCategory, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-
-    const currentQuarter = getQuarterFromDate(refDate);
-
     return {
       estimatedAt: nowISO(),
-      period: {
-        from: `${fiscalYear}-01-01`,
-        to: refDate,
-      },
-      currentQuarter,
+      period: { from: `${fiscalYear}-01-01`, to: refDate },
+      currentQuarter: getQuarterFromDate(refDate),
       actualIncome,
       actualExpenses,
       projectedAnnualIncome,
       projectedAnnualExpenses,
       projectedAnnualTax: taxResult.incomeTax,
       projectedFinalAmount: taxResult.finalAmount,
-      topIncomeCategories,
-      topExpenseCategories,
+      topIncomeCategories: topCategoriesOf<IncomeCategory>(ledger.income),
+      topExpenseCategories: topCategoriesOf<ExpenseCategory>(ledger.expense),
     };
   }
 

@@ -21,13 +21,14 @@ import type { DepreciationPreview, DepreciationRunResult } from '../types/assets
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
 import type { FiscalQuarter } from '../types/common';
 import { getCategoryByCode } from '../config/account-categories';
+import { roundToTwo } from '../utils/math';
 import {
   calculatePartnershipEfkaSummary,
   calculateEPEEfkaSummary,
   calculateAEEfkaSummary,
   buildEfkaAnnualSummary,
 } from './accounting-efka-operations';
-import { loadLedger } from './journal/journal-ledger';
+import { ledgerTaxTotals, loadLedger, type LedgerTaxTotals } from './journal/journal-ledger';
 import {
   entityHoldersOf,
   entityTaxInputOf,
@@ -146,13 +147,15 @@ export class AccountingService {
   ): Promise<TaxResult> {
     const scale = this.taxEngine.getTaxScale(fiscalYear);
 
-    const { totalIncome, totalExpenses } = await this.loadYearTotals(fiscalYear);
+    const totals = await this.loadYearTotals(fiscalYear);
 
+    // ⚠️ Χωρίς καλούντα. Η ΕΦΚΑ του βιβλίου αφαιρείται εδώ· το `efkaTotal` του καλούντα είναι ΕΠΙΠΛΕΟΝ αφαίρεση
+    //   (ίδια αριθμητική με πριν) — ποτέ από εγγραφές πληρωμών ΕΦΚΑ (ADR-ACC-006 §7.1).
     return this.taxEngine.calculateAnnualTax({
       fiscalYear,
-      totalIncome,
-      totalDeductibleExpenses: totalExpenses,
-      totalEfkaContributions: efkaTotal,
+      totalIncome: totals.totalIncome,
+      totalDeductibleExpenses: totals.totalExpenses,
+      totalEfkaContributions: roundToTwo(totals.efkaContributions + efkaTotal),
       professionalTax: scale.professionalTax,
       totalWithholdings: withholdings,
       previousYearPrepayment: previousPrepayment,
@@ -193,7 +196,7 @@ export class AccountingService {
   async calculatePartnershipTax(fiscalYear: number): Promise<PartnershipTaxResult> {
     const standing = await this.loadTaxStanding();
     const [profile, totals] = await Promise.all([
-      loadPartnershipProfile(this.repository, fiscalYear, standing),
+      loadPartnershipProfile(this.repository, standing),
       this.loadYearTotals(fiscalYear),
     ]);
     return this.taxEngine.calculatePartnershipTax(entityTaxInputOf(profile, fiscalYear, totals), entityHoldersOf(profile));
@@ -203,10 +206,9 @@ export class AccountingService {
    * Υπολογισμός εταιρικού φόρου ΕΠΕ (22% flat + μερίσματα 5%)
    */
   async calculateEPETax(fiscalYear: number): Promise<EPETaxResult> {
-    // EFKA only for active managers — SSoT `entity-tax-profile`
     const standing = await this.loadTaxStanding();
     const [profile, totals] = await Promise.all([
-      loadEpeProfile(this.repository, fiscalYear, standing),
+      loadEpeProfile(this.repository, standing),
       this.loadYearTotals(fiscalYear),
     ]);
     return this.taxEngine.calculateCorporateTax(entityTaxInputOf(profile, fiscalYear, totals), entityHoldersOf(profile));
@@ -225,10 +227,9 @@ export class AccountingService {
    * Υπολογισμός εταιρικού φόρου ΑΕ (22% flat + μερίσματα 5%)
    */
   async calculateAETax(fiscalYear: number): Promise<AETaxResult> {
-    // EFKA only for self-employed board members with compensation — SSoT `entity-tax-profile` (ADR-ACC-017)
     const standing = await this.loadTaxStanding();
     const [profile, totals] = await Promise.all([
-      loadAeProfile(this.repository, fiscalYear, standing),
+      loadAeProfile(this.repository, standing),
       this.loadYearTotals(fiscalYear),
     ]);
     return this.taxEngine.calculateAETax(entityTaxInputOf(profile, fiscalYear, totals), entityHoldersOf(profile));
@@ -263,12 +264,12 @@ export class AccountingService {
     return buildEfkaAnnualSummary(year, payments, userConfig);
   }
 
-  /** Καθαρά έσοδα / έξοδα ΟΛΗΣ της χρήσης — από το SSoT καθολικού, ποτέ από σελίδα. */
-  private async loadYearTotals(
-    fiscalYear: number
-  ): Promise<{ totalIncome: number; totalExpenses: number }> {
-    const ledger = await loadLedger(this.repository, { kind: 'fiscalYear', fiscalYear });
-    return { totalIncome: ledger.totalIncomeNet, totalExpenses: ledger.totalExpenseNet };
+  /**
+   * Σύνολα φόρου ΟΛΗΣ της χρήσης — από το SSoT καθολικού, ποτέ από σελίδα. Η ΕΦΚΑ (κατηγορία `efka`) χωριστά
+   * από τα έξοδα, ΜΙΑ φορά· οι εγγραφές πληρωμών ΕΦΚΑ δεν μετέχουν στον φόρο (ADR-ACC-006 §7.1).
+   */
+  private async loadYearTotals(fiscalYear: number): Promise<LedgerTaxTotals> {
+    return ledgerTaxTotals(await loadLedger(this.repository, { kind: 'fiscalYear', fiscalYear }));
   }
 }
 

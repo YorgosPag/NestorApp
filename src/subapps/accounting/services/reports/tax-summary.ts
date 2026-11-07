@@ -65,10 +65,10 @@ async function fetchTaxSnapshot(
   loadBasis: PeriodTaxBasisLoader,
   period: { from: string; to: string }
 ): Promise<TaxSnapshot> {
-  const { ledger, efkaPaid: efka, estimatedIncomeTax: estimatedTax } = await loadBasis(period);
+  const { ledger, totals, estimatedIncomeTax: estimatedTax } = await loadBasis(period);
 
-  const income = ledger.totalIncomeNet;
-  const deductibleExpenses = ledger.totalExpenseNet;
+  // ΕΦΚΑ: ΜΙΑ φορά, ως δική της γραμμή — ΟΧΙ και μέσα στα έξοδα (SSoT `ledgerTaxTotals`, ADR-ACC-006 §7.1)
+  const { totalIncome: income, totalExpenses: deductibleExpenses, efkaContributions: efka } = totals;
   const taxableIncome = Math.max(0, income - deductibleExpenses - efka);
   const vatSummary = computeVATSummary(ledger.income, ledger.expense);
 

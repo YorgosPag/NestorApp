@@ -24,12 +24,11 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { loadLedger } from '@/subapps/accounting/services/journal/journal-ledger';
+import { ledgerTaxTotals, loadLedger } from '@/subapps/accounting/services/journal/journal-ledger';
 import { isPartnership, isLlc, isCorporation } from '@/subapps/accounting/utils/entity-guards';
 import { getProfessionalTaxForEntity } from '@/subapps/accounting/services/config/tax-config';
 import type { TaxResult, TaxInstallment } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
-import { sumPaidEfka } from '@/subapps/accounting/services/tax/entity-tax-profile';
 
 // =============================================================================
 // RESPONSE TYPE
@@ -63,21 +62,17 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           );
         }
 
-        // 1. ΟΛΟ το καθολικό της χρήσης (ποτέ σελίδα) — σφάλμα ανάγνωσης = σφάλμα, ποτέ «0 €»
-        const ledger = await loadLedger(repository, { kind: 'fiscalYear', fiscalYear });
-        const totalIncome = ledger.totalIncomeNet;
-        const totalExpenses = ledger.totalExpenseNet;
+        // 1. ΟΛΟ το καθολικό της χρήσης (ποτέ σελίδα) — σφάλμα ανάγνωσης = σφάλμα, ποτέ «0 €».
+        //    Το βιβλίο είναι η ΜΙΑ πηγή και των εισφορών ΕΦΚΑ (κατηγορία `efka`, χωριστά από τα έξοδα)·
+        //    οι εγγραφές πληρωμών ΕΦΚΑ ΔΕΝ αφαιρούνται ξανά — ήταν κρυφή διπλομέτρηση (ADR-ACC-006 §7.1).
+        const totals = ledgerTaxTotals(await loadLedger(repository, { kind: 'fiscalYear', fiscalYear }));
 
-        // 2. Fetch EFKA payments to deduct contributions
-        const efkaPayments = await repository.getEFKAPayments(fiscalYear);
-        const totalEfka = sumPaidEfka(efkaPayments);
-
-        // 3. Get entity type for correct professional tax & tax path
+        // 2. Get entity type for correct professional tax & tax path
         const profile = await repository.getCompanySetup();
         const entityType = profile?.entityType ?? 'sole_proprietor';
         const professionalTax = getProfessionalTaxForEntity(entityType);
 
-        // 4. Dispatch by entity type
+        // 3. Dispatch by entity type
         // Partnership (OE) → redirect to estimate route, corporate (EPE) → corporate path
         if (profile && isPartnership(profile)) {
           const partnershipResult = await service.calculatePartnershipTax(fiscalYear);
@@ -94,15 +89,15 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           return NextResponse.json({ entityType: 'ae', taxResult: null, corporateResult, installments: [] });
         }
 
-        // 5. Sole proprietor — progressive tax calculation
+        // 4. Sole proprietor — progressive tax calculation
         let taxResult: TaxResult | null = null;
 
-        if (totalIncome > 0 || totalExpenses > 0) {
+        if (totals.totalIncome > 0 || totals.totalExpenses > 0 || totals.efkaContributions > 0) {
           taxResult = taxEngine.calculateAnnualTax({
             fiscalYear,
-            totalIncome,
-            totalDeductibleExpenses: totalExpenses,
-            totalEfkaContributions: totalEfka,
+            totalIncome: totals.totalIncome,
+            totalDeductibleExpenses: totals.totalExpenses,
+            totalEfkaContributions: totals.efkaContributions,
             professionalTax,
             totalWithholdings: 0,
             previousYearPrepayment: 0,

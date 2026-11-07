@@ -207,6 +207,16 @@ describe('TaxEngine', () => {
 
     // ── Negative income (expenses > income → clamp to 0) ────────────────
 
+    it('δείχνει την ΕΦΚΑ ως χωριστή γραμμή: έσοδα − έξοδα − ΕΦΚΑ = φορολογητέο', () => {
+      const result = engine.calculateAnnualTax(
+        makeDefaultParams({ totalIncome: 30_000, totalDeductibleExpenses: 8_000, totalEfkaContributions: 2_000 })
+      );
+
+      expect(result.deductibleExpenses).toBe(8_000);
+      expect(result.efkaContributions).toBe(2_000);
+      expect(result.taxableIncome).toBe(20_000);
+    });
+
     it('should clamp taxable income to zero when expenses exceed income', () => {
       const result = engine.calculateAnnualTax(
         makeDefaultParams({
@@ -1023,6 +1033,26 @@ describe('TaxEngine', () => {
       expect(result.currentQuarter).toBe(2);
       expect(result.period.from).toBe('2025-01-01');
       expect(result.period.to).toBe('2025-06-30');
+    });
+
+    it('ΕΦΚΑ του βιβλίου (κατηγορία efka): χωριστά από τα έξοδα, αφαιρείται ΜΙΑ φορά (ADR-ACC-006 §7.1)', async () => {
+      // Κλεισμένη χρήση (αναγωγή ×1): έσοδα 30.000 · έξοδα 8.000 + ΕΦΚΑ 2.000 ⇒ φορολογητέο 20.000
+      ledgerPages
+        .mockResolvedValueOnce({ items: [makeJournalEntry({ netAmount: 30_000, category: 'service_income' })] })
+        .mockResolvedValueOnce({
+          items: [
+            makeJournalEntry({ netAmount: 8_000, category: 'office_supplies', type: 'expense' }),
+            makeJournalEntry({ netAmount: 2_000, category: 'efka', type: 'expense' }),
+          ],
+        });
+      mockRepo.getCompanySetup.mockResolvedValue({ entityType: 'sole_proprietor' } as CompanyProfile);
+
+      const result = await engine.estimateTax(2025, '2026-03-01');
+      const once = engine.calculateAnnualTax(makeDefaultParams({ totalIncome: 30_000, totalDeductibleExpenses: 10_000 }));
+
+      expect(result.actualExpenses).toBe(10_000); // ΟΛΑ τα έξοδα του βιβλίου
+      expect(result.projectedAnnualTax).toBe(once.incomeTax); // 20.000 φορολογητέο — ΟΧΙ 18.000 (διπλή αφαίρεση)
+      expect(mockRepo.getEFKAPayments).not.toHaveBeenCalled(); // το βοηθητικό βιβλίο ΔΕΝ δίνει ποσό φόρου
     });
 
     it('should use sole_proprietor when getCompanySetup returns null', async () => {

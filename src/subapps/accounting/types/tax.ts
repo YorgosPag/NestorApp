@@ -65,9 +65,12 @@ export interface TaxCalculationParams {
   fiscalYear: number;
   /** Σύνολο εσόδων (καθαρά ποσά) */
   totalIncome: number;
-  /** Σύνολο εξόδων (εκπεστέα) */
+  /** Σύνολο εκπεστέων εξόδων ΧΩΡΙΣ τις εισφορές ΕΦΚΑ (αυτές στο `totalEfkaContributions`) */
   totalDeductibleExpenses: number;
-  /** Σύνολο ΕΦΚΑ (εκπεστέο) */
+  /**
+   * Εισφορές ΕΦΚΑ του Βιβλίου Ε-Ε (κατηγορία `efka` — `ledgerTaxTotals`). ΠΟΤΕ από τις εγγραφές πληρωμών ΕΦΚΑ
+   * (βοηθητικό βιβλίο) — αλλιώς διπλομέτρηση (ADR-ACC-006 §7.1).
+   */
   totalEfkaContributions: number;
   /** Τέλος επιτηδεύματος (650€ ή 0€) */
   professionalTax: number;
@@ -148,8 +151,10 @@ export interface TaxResult {
   fiscalYear: number;
   /** Ακαθάριστα έσοδα */
   grossIncome: number;
-  /** Εκπεστέα έξοδα */
+  /** Εκπεστέα έξοδα (χωρίς ΕΦΚΑ) */
   deductibleExpenses: number;
+  /** Εισφορές ΕΦΚΑ του βιβλίου — χωριστή γραμμή, ώστε έσοδα − έξοδα − ΕΦΚΑ = φορολογητέο να φαίνεται */
+  efkaContributions: number;
   /** Φορολογητέο εισόδημα (income - expenses - ΕΦΚΑ) */
   taxableIncome: number;
 
@@ -305,9 +310,9 @@ export interface EntityTaxInput {
   fiscalYear: number;
   /** Σύνολο εσόδων */
   totalIncome: number;
-  /** Σύνολο εκπιπτόμενων εξόδων */
+  /** Σύνολο εκπιπτόμενων εξόδων — ΧΩΡΙΣ τις εισφορές ΕΦΚΑ (αυτές στο `deductibleEfka`) */
   totalExpenses: number;
-  /** Εκπιπτόμενες εισφορές ΕΦΚΑ (κανόνας ανά μορφή: `entity-tax-profile`) */
+  /** Εισφορές ΕΦΚΑ του Βιβλίου Ε-Ε (κατηγορία `efka` — `ledgerTaxTotals`), ποτέ από εγγραφές πληρωμών (ADR-ACC-006 §7.1) */
   deductibleEfka: number;
   /** Έναρξη εργασιών — από εδώ η μειωμένη προκαταβολή */
   businessStart: BusinessStart | null;

@@ -19,6 +19,7 @@ import { getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 import { nowISO } from '@/lib/date-local';
 import { roundToTwo } from '../../utils/math';
+import { isEfkaContribution } from '../journal/journal-ledger';
 import { createPeriodTaxBasisLoader, type PeriodTaxBasisLoader } from './report-tax-basis';
 
 /** Generate Profit & Loss statement with comparative analysis (ΕΛΠ Β.6) */
@@ -66,12 +67,12 @@ async function fetchPnLSnapshot(
   loadBasis: PeriodTaxBasisLoader,
   period: { from: string; to: string }
 ): Promise<PnLSnapshot> {
-  const { ledger, efkaPaid: efka, estimatedIncomeTax: estimatedTax } = await loadBasis(period);
+  const { ledger, totals, estimatedIncomeTax: estimatedTax } = await loadBasis(period);
 
+  // ΕΦΚΑ: ΜΙΑ φορά, ως δική της γραμμή — ΟΧΙ και μέσα στα έξοδα (SSoT `ledgerTaxTotals`, ADR-ACC-006 §7.1)
   const income = aggregateByCategory(ledger.income);
-  const expenses = aggregateByCategory(ledger.expense);
-  const totalIncome = sumBreakdown(income);
-  const totalExpenses = sumBreakdown(expenses);
+  const expenses = aggregateByCategory(ledger.expense.filter((e) => !isEfkaContribution(e)));
+  const { totalIncome, totalExpenses, efkaContributions: efka } = totals;
   const grossProfit = roundToTwo(totalIncome - totalExpenses);
   const netBeforeTax = roundToTwo(grossProfit - efka);
   const netAfterTax = roundToTwo(netBeforeTax - estimatedTax);

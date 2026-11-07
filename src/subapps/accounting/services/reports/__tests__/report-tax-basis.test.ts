@@ -6,6 +6,9 @@
  * Τα αναμενόμενα νούμερα υπολογίστηκαν ΑΝΕΞΑΡΤΗΤΑ (κλίμακες ν.4172/2013 αρ.15 για 2025 και ν.5246/2025 για
  * 2026), όχι αντιγράφοντας έξοδο του κώδικα. Αντικαθιστά το test της «απλοποιημένης κλίμακας», που κάρφωνε το
  * λάθος: το Q2 2025 (κέρδος 7.500 €) έβγαζε 675 € (9% — σαν να ήταν ΕΤΗΣΙΟ εισόδημα), ενώ κατά IAS 34 είναι 1.430,36 €.
+ *
+ * ΕΦΚΑ (2026-11-07, ADR-ACC-006 §7.1): ΜΙΑ πηγή, το Βιβλίο Ε-Ε (κατηγορία `efka`). Οι εγγραφές πληρωμών ΕΦΚΑ
+ * είναι βοηθητικό βιβλίο — το Φ-7 κλειδώνει ότι ΔΕΝ αφαιρούνται ξανά (ήταν κρυφή διπλομέτρηση).
  */
 
 import type { ReportGeneratorDeps } from '../../../types/reports';
@@ -16,6 +19,9 @@ import { createPeriodTaxBasisLoader } from '../report-tax-basis';
 
 const entry = (type: 'income' | 'expense', netAmount: number, date: string) =>
   ({ type, netAmount, date, fiscalYear: Number(date.slice(0, 4)) } as JournalEntry);
+
+/** Εισφορά ΕΦΚΑ καταχωρημένη στο Βιβλίο Ε-Ε (κατηγορία `efka`) — η ΜΟΝΗ εκπιπτόμενη πηγή. */
+const efkaEntry = (netAmount: number, date: string) => ({ ...entry('expense', netAmount, date), category: 'efka' } as JournalEntry);
 
 const paidEfka = (amount: number, paidDate: string) =>
   ({ amount, status: 'paid', paidDate, dueDate: paidDate } as EFKAPayment);
@@ -45,22 +51,24 @@ function fakeDeps(
   return { deps: { repository, asOf } as unknown as ReportGeneratorDeps, collectJournalEntries };
 }
 
-// Χρήση 2025: έσοδα 40.000, έξοδα 10.000, ΕΦΚΑ 2.000 ⇒ κέρδος 28.000 ⇒ φόρος 5.340 ⇒ συντελεστής 19,0714…%
+// Χρήση 2025: έσοδα 40.000, έξοδα 10.000, ΕΦΚΑ 2.000 (στο βιβλίο) ⇒ κέρδος 28.000 ⇒ φόρος 5.340 ⇒ συντελεστής 19,0714…%
 const BOOK_2025: JournalEntry[] = [
   entry('income', 30_000, '2025-02-10'), entry('income', 10_000, '2025-05-15'),
   entry('expense', 8_000, '2025-03-01'), entry('expense', 2_000, '2025-06-01'),
+  efkaEntry(1_500, '2025-02-28'), efkaEntry(500, '2025-05-31'),
 ];
+/** Οι ΙΔΙΕΣ εισφορές στο βοηθητικό βιβλίο πληρωμών — δεν πρέπει να μετρήσουν δεύτερη φορά. */
 const EFKA_2025 = [paidEfka(1_500, '2025-02-28'), paidEfka(500, '2025-05-31')];
 const Q2_2025 = { from: '2025-04-01', to: '2025-06-30' };
 
 describe('IAS 34 — φόρος περιόδου = κέρδος περιόδου × εκτιμώμενος ετήσιος συντελεστής', () => {
-  it('Φ-1 κλεισμένη χρήση: πραγματικά ετήσια· ΕΦΚΑ μόνο όσα πληρώθηκαν ΜΕΣΑ στην περίοδο', async () => {
+  it('Φ-1 κλεισμένη χρήση: πραγματικά ετήσια· ΕΦΚΑ μόνο όσα καταχωρήθηκαν ΜΕΣΑ στην περίοδο', async () => {
     const { deps } = fakeDeps(BOOK_2025, EFKA_2025, '2026-10-14');
     const basis = await createPeriodTaxBasisLoader(deps)(Q2_2025);
 
     expect(basis.ledger.totalIncomeNet).toBe(10_000);
-    expect(basis.ledger.totalExpenseNet).toBe(2_000);
-    expect(basis.efkaPaid).toBe(500); // όχι 2.000 της χρήσης
+    expect(basis.ledger.totalExpenseNet).toBe(2_500); // ΟΛΑ τα έξοδα του βιβλίου, μαζί η ΕΦΚΑ
+    expect(basis.totals).toEqual({ totalIncome: 10_000, totalExpenses: 2_000, efkaContributions: 500 }); // όχι 2.000 της χρήσης
     expect(basis.estimatedIncomeTax).toBe(1_430.36); // 7.500 × 5.340 / 28.000
   });
 
@@ -112,6 +120,17 @@ describe('IAS 34 — φόρος περιόδου = κέρδος περιόδου
 
     const yearScans = collectJournalEntries.mock.calls.filter(([q]) => q.scope.kind === 'fiscalYear');
     expect(yearScans).toHaveLength(1);
+  });
+
+  it('Φ-7 εγγραφές πληρωμών ΕΦΚΑ (βοηθητικό βιβλίο) ΔΕΝ αφαιρούνται ξανά — μία πηγή, το Βιβλίο Ε-Ε', async () => {
+    const withPayments = fakeDeps(BOOK_2025, EFKA_2025, '2026-10-14');
+    const withoutPayments = fakeDeps(BOOK_2025, [], '2026-10-14');
+
+    const a = await createPeriodTaxBasisLoader(withPayments.deps)(Q2_2025);
+    const b = await createPeriodTaxBasisLoader(withoutPayments.deps)(Q2_2025);
+
+    expect(a.estimatedIncomeTax).toBe(1_430.36); // κέρδος 7.500 — ΟΧΙ 7.000 (διπλή αφαίρεση των 500)
+    expect(a).toEqual(b);
   });
 
   it('Φ-6 σφάλμα ανάγνωσης ⇒ η αναφορά ΑΠΟΡΡΙΠΤΕΤΑΙ (όχι σύνολα μηδέν)', async () => {

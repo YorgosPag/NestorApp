@@ -21,7 +21,18 @@ import type {
 } from '../types/efka';
 import { calculateMonthlyBreakdown } from './config/efka-config';
 import { roundToTwo } from '../utils/math';
-import { sumPaidEfka } from './tax/entity-tax-profile';
+
+// ============================================================================
+// ΒΟΗΘΗΤΙΚΟ ΒΙΒΛΙΟ ΠΛΗΡΩΜΩΝ ΕΦΚΑ — πρόγραμμα / υπενθυμίσεις, ΠΟΤΕ ποσό φόρου
+// ============================================================================
+
+/**
+ * Άθροισμα πληρωμένων εισφορών του βοηθητικού βιβλίου — για την οθόνη ΕΦΚΑ (πληρωμένα / υπόλοιπο).
+ * ❌ ΔΕΝ τροφοδοτεί φόρο: η εκπιπτόμενη εισφορά ζει στο Βιβλίο Ε-Ε (`ledgerTaxTotals`, ADR-ACC-006 §7.1).
+ */
+function sumPaidEfka(payments: readonly EFKAPayment[]): number {
+  return roundToTwo(payments.filter((p) => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0));
+}
 
 // ============================================================================
 // ΕΤΗΣΙΑ ΣΥΝΟΨΗ ΕΝΟΣ ΑΣΦΑΛΙΣΜΕΝΟΥ (SSoT)

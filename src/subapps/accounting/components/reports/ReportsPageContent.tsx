@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { formatAccountingCurrency } from '../../utils/format';
+import { roundToTwo } from '../../utils/math';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { PageLoadingState } from '@/core/states';
@@ -62,7 +63,8 @@ export function ReportsPageContent() {
         },
         {
           title: t('reports.totalExpenses'),
-          value: formatAccountingCurrency(entityTax.deductibleExpenses),
+          // ΟΛΑ τα έξοδα του βιβλίου (ίδια σημασία με την ατομική): η μηχανή παίρνει την ΕΦΚΑ χωριστά (ADR-ACC-006 §7.1)
+          value: formatAccountingCurrency(roundToTwo(entityTax.deductibleExpenses + entityTax.efkaContributions)),
           icon: TrendingDown,
           color: 'red' as const,
           loading,
