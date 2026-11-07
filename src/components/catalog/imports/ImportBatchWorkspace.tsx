@@ -17,7 +17,7 @@ import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
 import { SET_ASIDE_KEYS, useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
-import { XChangeReportNote } from './XChangeReportNote';
+import { XChangeReportSlot } from './import-surfaces';
 
 type Workspace = ReturnType<typeof useImportBatch>;
 
@@ -99,7 +99,7 @@ function BatchProposals({ workspace, view, focused, onFocus }: { readonly worksp
         {open ? <Button type="button" variant="outline" onClick={() => void workspace.discard()}>{t('batch.discard')}</Button> : null}
       </header>
       <PageProgress workspace={workspace} />
-      {batch.xchangeReport ? <XChangeReportNote report={batch.xchangeReport} /> : null}
+      {batch.xchangeReport ? <XChangeReportSlot report={batch.xchangeReport} /> : null}
       {proposals.length === 0 ? <p className="m-0 text-muted-foreground">{t('batch.noProposals')}</p> : null}
       {proposals.map((proposal) => (
         <ProposalReview

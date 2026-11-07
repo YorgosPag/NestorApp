@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
 import type { ImportProposalField } from '@/subapps/catalog/types/catalog-import';
-import { FIELD_STATUS_KEYS, PRICE_FIELD_KEYS, useImportIssueMessage, useImportText } from './import-text';
+import { useImportIssueMessage } from './import-issue-messages';
+import { FIELD_STATUS_KEYS, PRICE_FIELD_KEYS, useImportText } from './import-text';
 import { useImportValueText } from './import-value-text';
 
 const STATUS_VARIANT = { new: 'default', changed: 'secondary', unchanged: 'outline', conflict: 'destructive' } as const;

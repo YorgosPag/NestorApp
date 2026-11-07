@@ -14,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportProposalField, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
-import { PROPOSAL_STATUS_KEYS, ROW_ACTION_KEYS, useImportIssueMessage, useImportText } from './import-text';
+import { useImportIssueMessage } from './import-issue-messages';
+import { PROPOSAL_STATUS_KEYS, ROW_ACTION_KEYS, useImportText } from './import-text';
 import { ProposalFieldRow } from './ProposalFieldRow';
 import type { ProposalChange } from './use-import-batch';
 

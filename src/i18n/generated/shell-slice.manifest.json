@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "2b174fef75f68624a76d6f9349cd841871d1e55da961d8d550be40399c5b85f1",
+    "src/i18n/generated/lazy-route-namespaces.json": "0a43eb1e5e64dbf5aaddc1c83b7b8b306adb98126558fdbb5984a81cfee52348",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -46,7 +46,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__connections.el.json": "230701f207f64cb6a1c6251f1fec5aa09c65efe4c79c82a7f586a03f7e1cc479",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "ed53a8bf5790b1cbbb8248fe4bd32a7bc4d8ce1b44e3a5717054c1e3ea73e025",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "beb4d7d88a17fac46b11a3ccf432f9836c60534f372e8eae2d3e210ef96c3bee",
-    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "dee5ea137cc6629298fc26506079808171467ef69bf1690155b31f5f521f041d",
+    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "49bb8ef93bf74b5ad305377259e6b228c0ec9ad01adf0cdc0decbec71e019f73",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "75c179fc0d473ebff5e7b759acde4b7d4e3236f3bbff4b2c647ee29e2ccf8a4d",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "b0321d9dae3dfae38270e12fb129ec6b3bd175ef4063005258896a44cf2f225f",
@@ -136,7 +136,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "ea809d3dd5036454f9723797b38acf84a96410a2cf8d926571c41a507acb0063",
-      "lazyRouteRegistries": "b0bacc3cf337c275819dff6286bb518d8a5cab18c3c9d88d917b33d0adb7076f",
+      "lazyRouteRegistries": "3b3857b4f777eb04be4a5550ddfe79f0d28d51b96b40fb54b8d900ca9fac6b97",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "e8e26c068462d0017151a7d22a02caf6aa4d3b98ad5eca573aa3101ffd2fc8cd",
@@ -148,7 +148,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "20e5beb1f624f9d3204adc728a5bbf02c22172531ca9f47d49f0c3e712dcbb33",
+      "registries": "f10946e38b945d433c30f6e343c0dd6fa4bc4856720a5e400d2e64ba4d1a4e07",
       "supportedNamespaces": "c71390b60b94884f8fb2f0b12566e44adecace1ad2819f6884a6cbe7a6a980df"
     },
     "namespaceBundles": {
@@ -163,7 +163,7 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "90895c99706fec18bcf449f531ee9af11d37c25b1aa0106aa1fa2cf2f728c832",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "abc4e208fbf26b6e082b57614a81ac623ce95a5d8c7456353ec87441c044e922",
+      "scripts/lib/i18n-shell-slice/config.js": "4752f1cb2e080eb0f01466dae127d5057a07bbcc8d2e4e5f7934e28fc8246f55",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
@@ -209,7 +209,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b8268abd1ccf1ac4876a796219830ff76a61aa0d61d7dd219a7758a5694c35fe",
+  "inputsSha256": "9c3a9b381f2cacfbaf0a37b4fd1946f13c03ba87cca4074c9a34d78e210507cc",
   "languages": [
     "el"
   ],
@@ -9385,7 +9385,6 @@
             "batchStatus.extracting",
             "batchStatus.mapping",
             "batchStatus.reviewing",
-            "common.issuePending",
             "mapping.column",
             "mapping.columnNumber",
             "mapping.ignore",
@@ -9442,22 +9441,7 @@
             "status.changed",
             "status.conflict",
             "status.new",
-            "status.unchanged",
-            "xchange.allowanceSurcharges",
-            "xchange.amountMissing",
-            "xchange.currencyAssumed",
-            "xchange.entryIncomplete",
-            "xchange.imported",
-            "xchange.noValue",
-            "xchange.onRequest",
-            "xchange.otherClass",
-            "xchange.pricesImported",
-            "xchange.ranges",
-            "xchange.title",
-            "xchange.tradeItems",
-            "xchange.unmapped",
-            "xchange.validityAmbiguous",
-            "xchange.validityUncovered"
+            "status.unchanged"
           ],
           "prefixes": [],
           "whole": false
@@ -40089,7 +40073,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1294806
+    "sliceBytes": 1292696
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -48,13 +48,13 @@
     "ranges": "Value ranges not imported, as no attribute holds a range: {codes}.",
     "noValue": "{count} “not applicable” or “unknown” declarations were added to the proposal for review.",
     "pricesImported": "Prices for {imported} of {products} products went to review.",
-    "onRequest": "{count} products state price on request and gave no line.",
-    "amountMissing": "{count} products do not give the amount the price list type needs and were left out.",
-    "entryIncomplete": "{count} prices do not state a price unit or quantity and were left out.",
+    "onRequest": "{count, plural, one {# product states price on request and gave no line.} other {# products state price on request and gave no line.}}",
+    "amountMissing": "{count, plural, one {# product does not give the amount the price list type needs and was left out.} other {# products do not give the amount the price list type needs and were left out.}}",
+    "entryIncomplete": "{count, plural, one {# price does not state a price unit or quantity and was left out.} other {# prices do not state a price unit or quantity and were left out.}}",
     "validityUncovered": "No price is valid from the version start date for: {codes}.",
     "validityAmbiguous": "There are prices with different validity for: {codes}. Set a start date on the version and start a new import.",
     "currencyAssumed": "The file states no currency. Prices were read in {currency}.",
-    "allowanceSurcharges": "{count} products have tiers or surcharges, which a price line does not hold.",
+    "allowanceSurcharges": "{count, plural, one {# product has tiers or surcharges, which a price line does not hold.} other {# products have tiers or surcharges, which a price line does not hold.}}",
     "tradeItems": "{count} products have several trade items: the first was kept."
   },
   "batch": {

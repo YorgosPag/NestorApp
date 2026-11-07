@@ -528,6 +528,9 @@
     "procurement",
     "quotes"
   ],
+  "CatalogXChangeReport": [
+    "catalog-import"
+  ],
   "CompanySettings": [
     "accounting",
     "accounting-setup",

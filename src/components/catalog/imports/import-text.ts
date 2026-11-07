@@ -7,26 +7,20 @@
  *
  * 🔑 Στατικοί πίνακες κλειδιών, ποτέ `t(\`status.${x}\`)`: ο γεννήτορας του route slice και το CHECK 3.8 βλέπουν μόνο ό,τι είναι
  *    γραμμένο, και ο `Record` σπάει τη μεταγλώττιση αν λείψει τιμή του λεξιλογίου.
+ * ⚠️ Μόνο λέξεις: το μήνυμα ευρήματος (`useImportIssueMessage`) ζει στο `import-issue-messages.ts`, ώστε η μηχανή ευρημάτων
+ *    του καταλόγου να μη μπαίνει στην κλειστότητα όποιου θέλει μόνο το `useImportText` (ADR-744 §27).
  */
-
-import { useCallback } from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { CATALOG_IMPORT_NAMESPACES } from '@/i18n/namespace-bundles';
-import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import type { ImportIssue, ImportPageSetAside } from '@/subapps/catalog/types/catalog-import';
-import {
-  IMPORT_ISSUE_CODES,
-  type ImportBatchStatus,
-  type ImportFieldStatus,
-  type ImportIssueCode,
-  type ImportPriceField,
-  type ImportProposalStatus,
-  type ImportRowAction,
+import type { ImportPageSetAside } from '@/subapps/catalog/types/catalog-import';
+import type {
+  ImportBatchStatus,
+  ImportFieldStatus,
+  ImportPriceField,
+  ImportProposalStatus,
+  ImportRowAction,
 } from '@/subapps/catalog/vocabulary/catalog-import';
-import { useDeferredMessage } from '@/i18n/hooks/useDeferredMessageTable';
-import { useIssueMessage, useIssuePending } from '../shared/CatalogIssues';
-import { IMPORT_ISSUE_TABLE } from './import-issue-messages';
 
 export function useImportText() {
   const { t, i18n } = useTranslation(CATALOG_IMPORT_NAMESPACES);
@@ -72,17 +66,3 @@ export const PRICE_FIELD_KEYS: Readonly<Record<ImportPriceField, string>> = {
   unitCode: 'mapping.price.unitCode',
   discountGroup: 'mapping.price.discountGroup',
 };
-
-const isImportCode = (code: ImportIssue['code']): code is ImportIssueCode => (IMPORT_ISSUE_CODES as readonly string[]).includes(code);
-
-/** Το μήνυμα ενός ευρήματος, από όποιο από τα δύο σύνολα κι αν ήρθε. */
-export function useImportIssueMessage(needed = false): (issue: ImportIssue) => string {
-  const { t, uiLanguage } = useImportText();
-  const catalogMessage = useIssueMessage(needed);
-  // ADR-744 §34: ο πίνακας της εισαγωγής φτάνει εκτός πρώτου καρέ· μέχρι τότε η ίδια γενική λέξη με του καταλόγου.
-  const pending = useIssuePending();
-  const translate = useDeferredMessage(IMPORT_ISSUE_TABLE, { language: uiLanguage, needed, t, pending });
-  return useCallback((issue: ImportIssue) => (
-    isImportCode(issue.code) ? translate(issue.code, issue.params) : catalogMessage(issue as CatalogIssue)
-  ), [catalogMessage, translate]);
-}

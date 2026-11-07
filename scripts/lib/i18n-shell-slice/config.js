@@ -172,6 +172,8 @@ const DEFAULTS = Object.freeze({
     'src/components/property-dossier/dossier-surfaces.tsx',
     // ADR-923 §5.13 Σ6 — οι τιμές της βιτρίνας: πίσω από διακόπτη, client-only, με τα κείμενά τους στο chunk.
     'src/components/public-catalog/public-catalog-surfaces.tsx',
+    // ADR-923 §5.5 — η αναφορά ETIM xChange της παρτίδας: μόνο σε παρτίδα xChange, με τα κείμενά της στο chunk (CHECK 3.34).
+    'src/components/catalog/imports/import-surfaces.tsx',
   ],
 
   /**
