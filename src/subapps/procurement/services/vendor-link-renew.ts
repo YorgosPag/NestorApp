@@ -30,6 +30,7 @@ import type { RFQ } from '../types/rfq';
 import { RFQ_ACCEPTING_QUOTES } from '../types/rfq';
 import { resolveChannel } from './channels';
 import { getRfq } from './rfq-service';
+import { admitPlatformQuoteRequest } from './platform-quote-request';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
 import { resolveInviteRecipient } from './vendor-invite-links-service';
 
@@ -64,6 +65,10 @@ export async function renewVendorLink(input: RenewVendorLinkInput): Promise<Vend
   const emailChannel = resolveChannel('email');
   if (!recipient || !emailChannel) return 'no_recipient';
   if (!(await withinRecipientQuota(RENEW_QUOTA_SCOPE, recipient.email, VENDOR_LINK_RENEW_RECIPIENT_QUOTA))) {
+    return 'quota_exhausted';
+  }
+  // ADR-923 §5.13 Τ5 (ανασκόπηση Ε1): ο ίδιος φρουρός με κάθε άλλη αποστολή προς χώρο της πλατφόρμας.
+  if (recipient.platformCompanyId && (await admitPlatformQuoteRequest(invite.companyId, recipient.platformCompanyId)) !== 'admitted') {
     return 'quota_exhausted';
   }
 

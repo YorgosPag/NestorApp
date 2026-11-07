@@ -18,8 +18,6 @@ import admin from 'firebase-admin';
 import { SAFE_BATCH_WRITES } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { userPerformer } from '@/lib/audit/audit-performer';
-import { QUOTE_REQUEST_PAIR_DAILY_QUOTA } from '@/lib/middleware/rate-limit-config';
-import { withinSubjectQuota } from '@/lib/middleware/subject-quota';
 import { resolvePerformer, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 import { resolveQuoteSku, type QuoteSku } from '@/server/supply-relationships/supply-quote-sku.server';
 import { generateDeterministicPlatformCompanyContactId } from '@/services/enterprise-id-convenience-catalog';
@@ -127,23 +125,6 @@ function prepareInvites(ctx: AuthContext, rfqId: string, vendorIds: readonly str
 
 const uniqueInOrder = (ids: readonly string[]): string[] => [...new Set(ids)];
 
-/** Το ίδιο είδος ποσόστωσης για κάθε ζεύγος (αγοραστής, προμηθευτής): ένα κλειδί, όχι ένα ανά διαδρομή. */
-export const QUOTE_REQUEST_PAIR_QUOTA_SCOPE = 'rfq-quote-request:pair';
-
-/**
- * Το όριο ανά ζεύγος (ADR-923 §5.13 Τ5), **μετά** τις φθηνές αρνήσεις και **πριν** από κάθε κρυπτογραφία και εγγραφή: ο
- * αγοραστής ακούει «όχι» αντί να γεννηθεί RFQ που δεν θα παραδοθεί. Το όριο ανά γραμματοκιβώτιο του προμηθευτή κρίνεται
- * χωριστά, στην αποστολή (`admitPlatformQuoteRequest`).
- */
-async function admitQuoteRequestPairs(buyerCompanyId: string, suppliers: readonly PlannedSupplier[]): Promise<void> {
-  for (const { supplierCompanyId } of suppliers) {
-    const pair = `${buyerCompanyId}:${supplierCompanyId}`;
-    if (!(await withinSubjectQuota(QUOTE_REQUEST_PAIR_QUOTA_SCOPE, pair, QUOTE_REQUEST_PAIR_DAILY_QUOTA))) {
-      throw new RfqCreateRefusal('quoteRequestQuotaExhausted', supplierCompanyId);
-    }
-  }
-}
-
 /**
  * Το σχέδιο μιας δημιουργίας. Σειρά: πρώτα οι φθηνές αρνήσεις (SKU, βιτρίνα, μέγεθος), μετά η έκδοση διαπιστευτηρίων, ώστε
  * ένα RFQ που θα αρνηθεί να μην κοστίσει κρυπτογραφία.
@@ -161,7 +142,6 @@ export async function planRfqCreate(ctx: AuthContext, dto: CreateRfqDTO, rfqId: 
     suppliers: suppliers.length,
     sourcingEvent: !!dto.sourcingEventId,
   });
-  await admitQuoteRequestPairs(ctx.companyId, suppliers);
   const invites = await prepareInvites(ctx, rfqId, invitedVendorIds);
   const performer = suppliers.length > 0 ? await resolvePerformer(userPerformer(ctx.uid, ctx.email)) : null;
   return { rfqId, catalogLines, suppliers, invitedVendorIds, invites, performer };

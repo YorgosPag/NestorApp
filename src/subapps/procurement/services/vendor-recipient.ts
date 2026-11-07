@@ -10,12 +10,14 @@
  * | Επαφή | Παραλήπτης |
  * |---|---|
  * | του αγοραστή, με email | το email της επαφής (ο αγοραστής το έγραψε, ο αγοραστής το βλέπει) |
- * | **πλατφόρμας** (`platformCompanyOfContact`) | το `quoteIntake.recipientEmail` του προμηθευτή, **τη στιγμή της αποστολής**, μόνο όσο δέχεται |
+ * | **πλατφόρμας** (`platformCompanyOfContact`) | το `quoteIntake.recipientEmail` του προμηθευτή, **τη στιγμή της αποστολής**, μόνο όσο δέχεται **και** η βιτρίνα του είναι επιβεβαιωμένη |
  * | ξένη, χωρίς tenant, ανύπαρκτη, χωρίς email | κανένας |
  *
  * 🔒 **Ο παραλήπτης αποφασίζεται μόνο από επαληθευμένα δεδομένα του διακομιστή.** Ένα `platformCompanyId` μετρά μόνο αν
  *    συμφωνούν πεδίο, ντετερμινιστικό id ζεύγους, χώρος και τύπος (Τ3)· ποτέ email ή χώρος από το σώμα ενός αιτήματος.
  * 🔒 Για επαφή πλατφόρμας το email της καρτέλας **αγνοείται**: το κανάλι του χώρου είναι ένα, και το ορίζει ο προμηθευτής.
+ * 🔒 **Ίδια πύλη με τη διαδρομή καταλόγου** (ανασκόπηση Ε3β): χωρίς επιβεβαιωμένη βιτρίνα (`readPublicSupplier`, Ε6β) δεν
+ *    υπάρχει opt-in σε καμία διαδρομή, άρα ούτε παραλήπτης — ακόμη κι αν το ιδιωτικό `quoteIntake` λέει «ναι».
  * 🔒 Η διεύθυνση του προμηθευτή **δεν** γράφεται σε έγγραφο του αγοραστή ({@link recipientEmailSnapshot}): το
  *    `vendor_invites` το διαβάζει κάθε μέλος της εταιρείας του αγοραστή, και θα γινόταν κανάλι συλλογής διευθύνσεων.
  *
@@ -29,6 +31,7 @@ import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { readQuoteIntakeRecipient } from '@/server/catalog/public/public-model-snapshot.server';
 import { platformCompanyOfContact } from '@/services/contact/platform-company-contact-resolver';
+import { readPublicSupplier } from '@/services/public-catalog/public-catalog.reader';
 import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
 
 import type { DeliveryChannel } from '../types/vendor-invite';
@@ -78,6 +81,7 @@ export async function recipientOfContact(contact: VendorContactSnapshot, buyerCo
     return contact.email ? { email: contact.email, name: contact.displayName, kind: 'contact', platformCompanyId: null } : null;
   }
   if (supplier === buyerCompanyId) return null;
+  if ((await readPublicSupplier(supplier)) === null) return null;
   const email = await readQuoteIntakeRecipient(supplier);
   return email ? { email, name: contact.displayName, kind: 'platform', platformCompanyId: supplier } : null;
 }

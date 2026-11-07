@@ -131,6 +131,16 @@ export interface EmailProvider {
 export interface AttemptRecord {
   readonly provider: string;
   readonly error: string;
+  /**
+   * 🔑 ADR-923 §5.13 Τ5 (Ε5) — **η απόπειρα έληξε από χρόνο**: ο πάροχος ίσως **δέχτηκε** το μήνυμα και απλώς δεν απάντησε.
+   * Ένας καλών που ξαναστέλνει «ό,τι απέτυχε» πρέπει να ξεχωρίζει το «αρνήθηκε» από το «δεν ξέρω» — αλλιώς διπλό email.
+   */
+  readonly ambiguous?: boolean;
+}
+
+/** Υπάρχει απόπειρα της οποίας η έκβαση είναι άγνωστη (ο πάροχος μπορεί να το δέχτηκε); */
+export function chainOutcomeAmbiguous(outcome: ChainOutcome): boolean {
+  return outcome.kind === 'all-failed' && outcome.attempts.some((attempt) => attempt.ambiguous === true);
 }
 
 /** Τι απέγινε **η αλυσίδα**. */
@@ -188,7 +198,7 @@ export async function sendThroughChain(
       };
     }
 
-    attempts.push({ provider: provider.name, error: result.error });
+    attempts.push({ provider: provider.name, error: result.error, ...('timedOut' in result ? { ambiguous: true } : {}) });
   }
 
   return { kind: 'all-failed', attempts };
@@ -216,17 +226,20 @@ export const PROVIDER_TIMEOUT_MS = 20_000;
  * θα εμπόδιζε τον επόμενο κρίκο να δοκιμαστεί, δηλαδή θα ακύρωνε τον λόγο ύπαρξης
  * του module. Η εξαίρεση γίνεται **ονομασμένη απόρριψη**.
  */
+/** Μία απόπειρα μαζί με το «έληξε από χρόνο» — εσωτερικό, ο πάροχος δεν το δηλώνει ποτέ ο ίδιος. */
+type TimedAttempt = ProviderAttempt | { readonly kind: 'rejected'; readonly error: string; readonly timedOut: true };
+
 async function attemptOne(
   provider: EmailProvider,
   message: OutboundEmail,
-): Promise<ProviderAttempt> {
+): Promise<TimedAttempt> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       provider.send(message),
-      new Promise<never>((_, reject) => {
+      new Promise<TimedAttempt>((resolve) => {
         timer = setTimeout(
-          () => reject(new Error(`${provider.name}: timeout μετά από ${PROVIDER_TIMEOUT_MS}ms`)),
+          () => resolve({ kind: 'rejected', error: `${provider.name}: timeout μετά από ${PROVIDER_TIMEOUT_MS}ms`, timedOut: true }),
           PROVIDER_TIMEOUT_MS,
         );
       }),

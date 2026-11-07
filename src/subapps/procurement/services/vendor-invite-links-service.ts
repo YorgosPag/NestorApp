@@ -32,13 +32,15 @@ import { vendorLinkExpiryMs } from '@/services/vendor-portal/vendor-invite-crede
 import { createModuleLogger } from '@/lib/telemetry';
 
 import type { VendorInvite } from '../types/vendor-invite';
-import type { VendorInviteCredentialSummary } from '../types/vendor-invite-credential';
+import type { VendorCredentialOrigin, VendorInviteCredentialSummary } from '../types/vendor-invite-credential';
+import type { InviteRecipientKind } from '../types/vendor-invite-delivery';
 import { isLiveInviteStatus } from '../utils/vendor-invite-status';
 import { resolveChannel } from './channels';
 import { getRfq } from './rfq-service';
 import { recordVendorInviteAudit } from './vendor-invite-audit';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
 import { VendorInviteStateError, getVendorInviteOfRfq } from './vendor-invite-service';
+import { admitPlatformQuoteRequest } from './platform-quote-request';
 import { resolveVendorRecipient } from './vendor-recipient';
 
 const logger = createModuleLogger('VENDOR_INVITE_LINKS');
@@ -69,63 +71,92 @@ export async function issueVendorInviteCopyLink(
   return { portalUrl: link.portalUrl, expiresAt: link.expiresAtIso, credentialId: link.credential.id };
 }
 
+/** Ο παραλήπτης μιας πρόσκλησης, με το **είδος** του: ο φρουρός της πλατφόρμας και η απόκριση εξαρτώνται από αυτό. */
+export interface InviteRecipient {
+  readonly email: string;
+  readonly name: string;
+  readonly kind: InviteRecipientKind;
+  readonly platformCompanyId: string | null;
+}
+
 /**
  * Ο **καταχωρημένος** παραλήπτης της πρόσκλησης — στιγμιότυπο πρώτα, ζωντανή κρίση (`resolveVendorRecipient`) μόνο όταν
  * λείπει. `null` ⇒ δεν υπάρχει πού να σταλεί. Ο ΜΟΝΟΣ προορισμός κάθε νέου συνδέσμου μέσω email — και της επαναποστολής
  * του γραφείου και της αυτοεξυπηρέτησης λήξης.
  *
  * 🔑 ADR-923 §5.13 Τ5: πρόσκληση προς χώρο της πλατφόρμας δεν έχει ποτέ στιγμιότυπο email (η διεύθυνση είναι ιδιωτική του
- *    προμηθευτή), άρα λύνεται **πάντα** ζωντανά από το `quoteIntake` του — και μόνο όσο ο προμηθευτής δέχεται.
+ *    προμηθευτή), άρα λύνεται **πάντα** ζωντανά από το `quoteIntake` του — και μόνο όσο ο προμηθευτής δέχεται και η βιτρίνα
+ *    του είναι επιβεβαιωμένη. Επιστρέφει `kind`/`platformCompanyId` ώστε ο καλών να ρωτήσει τον έναν φρουρό (ανασκόπηση Ε1).
  */
 export async function resolveInviteRecipient(
   invite: Pick<VendorInvite, 'companyId' | 'vendorContactId' | 'recipientEmail' | 'recipientName'>,
-): Promise<{ email: string; name: string } | null> {
-  if (invite.recipientEmail) return { email: invite.recipientEmail, name: invite.recipientName ?? invite.recipientEmail };
+): Promise<InviteRecipient | null> {
+  if (invite.recipientEmail) {
+    return { email: invite.recipientEmail, name: invite.recipientName ?? invite.recipientEmail, kind: 'contact', platformCompanyId: null };
+  }
   if (!invite.vendorContactId) return null;
   const recipient = await resolveVendorRecipient(invite.companyId, invite.vendorContactId);
-  return recipient ? { email: recipient.email, name: invite.recipientName ?? recipient.name } : null;
+  return recipient ? { ...recipient, name: invite.recipientName ?? recipient.name } : null;
+}
+
+/** Οι προελεύσεις συνδέσμων που φτάνουν **με email** στον παραλήπτη. Ο σύνδεσμος αντιγραφής του γραφείου δεν αγγίζεται. */
+const EMAILED_ORIGINS: ReadonlySet<VendorCredentialOrigin> = new Set(['invite_email', 'rfq_fanout', 'email_resend', 'self_service']);
+
+/**
+ * Μετά από επαναποστολή σε χώρο πλατφόρμας: ανάκληση των **προηγούμενων** ζωντανών συνδέσμων που στάλθηκαν με email
+ * (ανασκόπηση Ε1). Κάθε επαναποστολή αλλιώς άφηνε ένα ακόμη ζωντανό διαπιστευτήριο σε κοινόχρηστο γραμματοκιβώτιο.
+ * Μόνο μετά από **επιτυχή** αποστολή, ώστε ο προμηθευτής να μη μείνει χωρίς σύνδεσμο.
+ */
+async function revokeEarlierEmailedLinks(ctx: AuthContext, inviteId: string, keepCredentialId: string): Promise<void> {
+  const links = await listVendorCredentials(ctx.companyId, inviteId);
+  const earlier = links.filter((link) => link.id !== keepCredentialId && link.revokedAt === null && EMAILED_ORIGINS.has(link.issuedVia));
+  await Promise.all(earlier.map((link) => revokeVendorCredential({
+    companyId: ctx.companyId, inviteId, credentialId: link.id, revokedBy: ctx.uid, nowIso: nowISO(),
+  })));
+}
+
+/** Η απόκριση της επαναποστολής. 🔒 Για χώρο της πλατφόρμας μόνο γενικός κωδικός (ανασκόπηση Ε6): το κείμενο του παρόχου στο log. */
+export type ResendOutcome = { success: boolean; errorReason: string | null };
+
+const PLATFORM_DELIVERY_FAILED = 'delivery_failed';
+
+async function sendResend(ctx: AuthContext, invite: VendorInvite, recipient: InviteRecipient, locale: 'el' | 'en'): Promise<ResendOutcome> {
+  const rfq = await getRfq(ctx.companyId, invite.rfqId);
+  if (!rfq) throw new VendorInviteStateError('not_found');
+  const emailChannel = resolveChannel('email');
+  if (!emailChannel) throw new Error('Email channel not available');
+  const link = await issueAdditionalVendorLink({ invite, issuedVia: 'email_resend', issuedBy: ctx.uid, expiresAtMs: vendorLinkExpiryMs(Date.now()) });
+  const dispatch = await emailChannel.send({
+    inviteId: invite.id, vendorName: recipient.name, recipient: recipient.email, rfqTitle: rfq.title, projectName: null,
+    portalUrl: link.portalUrl, expiresAt: link.expiresAtIso, locale, declineUrl: link.declineUrl,
+  });
+  recordVendorInviteAudit(ctx, invite.id, 'email_sent', [
+    { field: 'portalLink', oldValue: null, newValue: link.credential.id, label: 'email_resend' },
+  ]);
+  logger.info('Vendor invite resent', { inviteId: invite.id, credentialId: link.credential.id, success: dispatch.success, reason: dispatch.errorReason });
+  if (recipient.kind !== 'platform') return { success: dispatch.success, errorReason: dispatch.errorReason };
+  if (dispatch.success) await revokeEarlierEmailedLinks(ctx, invite.id, link.credential.id);
+  return { success: dispatch.success, errorReason: dispatch.success ? null : PLATFORM_DELIVERY_FAILED };
 }
 
 /**
- * **Επαναποστολή** με **νέο** σύνδεσμο στο καταχωρημένο email (DocuSign «Resend»). Οι παλιοί
- * σύνδεσμοι μένουν ζωντανοί ως τη λήξη τους ή ως ρητή ανάκληση.
+ * **Επαναποστολή** με **νέο** σύνδεσμο στο καταχωρημένο email (DocuSign «Resend»). Για επαφή του αγοραστή οι παλιοί σύνδεσμοι
+ * μένουν ζωντανοί ως τη λήξη τους ή ως ρητή ανάκληση (ADR-876 §5). Για χώρο της πλατφόρμας (ADR-923 §5.13 Τ5, ανασκόπηση Ε1):
+ * περνά από τον **έναν** φρουρό (ζεύγος + προμηθευτής) και ανακαλεί τους προηγούμενους συνδέσμους email.
  */
 export async function resendVendorInvite(
   ctx: AuthContext,
   rfqId: string,
   inviteId: string,
   options: { locale?: 'el' | 'en' } = {},
-): Promise<{ success: boolean; errorReason: string | null }> {
+): Promise<ResendOutcome> {
   const invite = await requireLiveInvite(ctx, rfqId, inviteId);
   const recipient = await resolveInviteRecipient(invite);
   if (!recipient) throw new Error('Recipient has no email address');
-  const rfq = await getRfq(ctx.companyId, invite.rfqId);
-  if (!rfq) throw new VendorInviteStateError('not_found');
-  const emailChannel = resolveChannel('email');
-  if (!emailChannel) throw new Error('Email channel not available');
-
-  const link = await issueAdditionalVendorLink({
-    invite,
-    issuedVia: 'email_resend',
-    issuedBy: ctx.uid,
-    expiresAtMs: vendorLinkExpiryMs(Date.now()),
-  });
-  const dispatch = await emailChannel.send({
-    inviteId,
-    vendorName: recipient.name,
-    recipient: recipient.email,
-    rfqTitle: rfq.title,
-    projectName: null,
-    portalUrl: link.portalUrl,
-    expiresAt: link.expiresAtIso,
-    locale: options.locale ?? 'el',
-    declineUrl: link.declineUrl,
-  });
-  recordVendorInviteAudit(ctx, inviteId, 'email_sent', [
-    { field: 'portalLink', oldValue: null, newValue: link.credential.id, label: 'email_resend' },
-  ]);
-  logger.info('Vendor invite resent', { inviteId, credentialId: link.credential.id, success: dispatch.success });
-  return { success: dispatch.success, errorReason: dispatch.errorReason };
+  if (recipient.platformCompanyId !== null && (await admitPlatformQuoteRequest(ctx.companyId, recipient.platformCompanyId)) !== 'admitted') {
+    return { success: false, errorReason: 'recipient_quota' };
+  }
+  return sendResend(ctx, invite, recipient, options.locale ?? 'el');
 }
 
 /** Οι σύνδεσμοι μιας πρόσκλησης — μόνο μεταδεδομένα. */

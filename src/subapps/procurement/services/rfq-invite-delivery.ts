@@ -19,19 +19,24 @@ import 'server-only';
 import admin from 'firebase-admin';
 import { after } from 'next/server';
 
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import { revokeVendorCredential } from '@/services/vendor-portal/vendor-invite-credential-store';
 
 import type { RFQ } from '../types/rfq';
 import { RFQ_ACCEPTING_QUOTES } from '../types/rfq';
 import type { VendorInvite } from '../types/vendor-invite';
 import {
   claimedInviteDelivery,
+  deferredInviteDelivery,
   deliveredInviteDelivery,
   isInviteDeliveryClaimable,
   rejectedInviteDelivery,
   undeliverableInviteDelivery,
+  unknownInviteDelivery,
+  type InviteDeliveryError,
   type InviteDeliveryState,
   type InviteUndeliverableReason,
   type VendorInviteDelivery,
@@ -53,6 +58,8 @@ export interface InviteDeliveryLink {
   readonly portalUrl: string;
   readonly declineUrl: string;
   readonly expiresAtIso: string;
+  /** Το διαπιστευτήριο πίσω από τον σύνδεσμο: ανακαλείται αν η απόπειρα δεν τον παρέδωσε (ανασκόπηση Ε5). */
+  readonly credentialId: string;
 }
 
 /** Μια πρόσκληση προς παράδοση. `link: null` ⇒ η μνήμη χάθηκε (cron): εκδίδεται νέος σύνδεσμος μετά την κράτηση. */
@@ -64,14 +71,25 @@ export interface InviteDeliveryJob {
 /** `skipped` ⇒ η πρόσκληση δεν ήταν διαθέσιμη (ήδη στάλθηκε, την κρατά άλλος, δεν ωρίμασε, δεν υπάρχει). */
 export type InviteDeliveryOutcome = 'skipped' | InviteDeliveryState;
 
+/** Ο δράστης των ανακλήσεων της μηχανής παράδοσης (ADR-195: ταυτότητα, ποτέ όνομα). */
+const DELIVERY_ACTOR = `${SYSTEM_IDENTITY.ID}:rfq-invite-delivery`;
+
 interface Claim {
   readonly invite: VendorInvite;
   readonly delivery: VendorInviteDelivery;
 }
 
+/** Ό,τι έγινε **μέσα** στην απόπειρα και πρέπει να επιβιώσει και μιας εξαίρεσης: η ποσόστωση και το διαπιστευτήριο. */
+interface AttemptTrace {
+  quotaAdmitted: boolean;
+  credentialId: string | null;
+}
+
 type Attempt =
   | { readonly kind: 'sent'; readonly recipient: VendorRecipient; readonly rfqTitle: string }
-  | { readonly kind: 'rejected'; readonly error: string }
+  | { readonly kind: 'rejected'; readonly error: InviteDeliveryError }
+  | { readonly kind: 'ambiguous' }
+  | { readonly kind: 'deferred' }
   | { readonly kind: 'undeliverable'; readonly reason: InviteUndeliverableReason };
 
 const inviteRef = (db: Db, inviteId: string) => db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId);
@@ -105,39 +123,68 @@ async function readAcceptingRfq(db: Db, invite: VendorInvite): Promise<RFQ | nul
   return rfq !== null && RFQ_ACCEPTING_QUOTES.has(rfq.status) ? rfq : null;
 }
 
-function linkFor(job: InviteDeliveryJob, invite: VendorInvite): Promise<InviteDeliveryLink> {
-  if (job.link !== null) return Promise.resolve(job.link);
-  return issueAdditionalVendorLink({ invite, issuedVia: 'email_resend', issuedBy: null, expiresAtMs: invite.expiresAt.toMillis() });
+async function linkFor(job: InviteDeliveryJob, invite: VendorInvite, trace: AttemptTrace): Promise<InviteDeliveryLink> {
+  if (job.link !== null) return job.link;
+  const issued = await issueAdditionalVendorLink({ invite, issuedVia: 'email_resend', issuedBy: null, expiresAtMs: invite.expiresAt.toMillis() });
+  trace.credentialId = issued.credential.id;
+  return { portalUrl: issued.portalUrl, declineUrl: issued.declineUrl, expiresAtIso: issued.expiresAtIso, credentialId: issued.credential.id };
 }
 
-/** Κρίση και αποστολή. Κάθε εξαίρεση εδώ σημαίνει «δεν έφυγε τίποτα» ⇒ ασφαλής επανάληψη. */
-async function attemptDelivery(db: Db, job: InviteDeliveryJob, invite: VendorInvite, nowMs: number): Promise<Attempt> {
-  if (!isLiveInviteStatus(invite.status) || invite.expiresAt.toMillis() <= nowMs) return { kind: 'undeliverable', reason: 'invite_closed' };
+/** Η πρόσκληση και το RFQ της δέχονται ακόμη προσφορές; Αλλιώς ο οριστικός λόγος. */
+async function closedReason(db: Db, invite: VendorInvite, nowMs: number): Promise<{ reason: InviteUndeliverableReason } | { rfq: RFQ }> {
+  if (!isLiveInviteStatus(invite.status) || invite.expiresAt.toMillis() <= nowMs) return { reason: 'invite_closed' };
   const rfq = await readAcceptingRfq(db, invite);
-  if (rfq === null) return { kind: 'undeliverable', reason: 'rfq_closed' };
+  return rfq === null ? { reason: 'rfq_closed' } : { rfq };
+}
+
+/**
+ * Κρίση και αποστολή. Μια εξαίρεση εδώ σημαίνει «δεν έφυγε τίποτα» ⇒ ασφαλής επανάληψη: η αλυσίδα παρόχων **δεν πετά**
+ * (κάθε βλάβη παρόχου γίνεται απάντηση), και η μόνη «ίσως έφυγε» έκβασή της (λήξη χρόνου) έρχεται ως `outcomeUnknown`.
+ * Η ποσόστωση χρεώνεται **μία** φορά ανά πρόσκληση (`quotaAdmitted`), όχι σε κάθε επανάληψη (ανασκόπηση Ε2).
+ */
+async function attemptDelivery(db: Db, job: InviteDeliveryJob, invite: VendorInvite, nowMs: number, trace: AttemptTrace): Promise<Attempt> {
+  const open = await closedReason(db, invite, nowMs);
+  if ('reason' in open) return { kind: 'undeliverable', reason: open.reason };
   const recipient = await resolveVendorRecipient(invite.companyId, invite.vendorContactId);
   if (recipient === null) return { kind: 'undeliverable', reason: 'no_recipient' };
-  if (recipient.platformCompanyId !== null && !(await admitPlatformQuoteRequest(recipient.platformCompanyId))) {
-    return { kind: 'undeliverable', reason: 'recipient_quota' };
+  if (recipient.platformCompanyId !== null && !trace.quotaAdmitted) {
+    if ((await admitPlatformQuoteRequest(invite.companyId, recipient.platformCompanyId)) !== 'admitted') return { kind: 'deferred' };
+    trace.quotaAdmitted = true;
   }
-  const link = await linkFor(job, invite);
+  const link = await linkFor(job, invite, trace);
   const result = await emailVendorInviteChannel.send({
-    inviteId: invite.id, vendorName: recipient.name, recipient: recipient.email, rfqTitle: rfq.title, projectName: null,
+    inviteId: invite.id, vendorName: recipient.name, recipient: recipient.email, rfqTitle: open.rfq.title, projectName: null,
     portalUrl: link.portalUrl, expiresAt: link.expiresAtIso, locale: 'el', declineUrl: link.declineUrl,
   });
-  return result.success ? { kind: 'sent', recipient, rfqTitle: rfq.title } : { kind: 'rejected', error: result.errorReason ?? 'provider rejected' };
+  if (result.success) return { kind: 'sent', recipient, rfqTitle: open.rfq.title };
+  // 🔒 Ανασκόπηση Ε6: το κείμενο του παρόχου (ίσως με τη διεύθυνση) μόνο στο log· στο έγγραφο κλειστός κωδικός.
+  logger.warn('Invite email not delivered', { inviteId: invite.id, reason: result.errorReason, outcomeUnknown: result.outcomeUnknown === true });
+  return result.outcomeUnknown ? { kind: 'ambiguous' } : { kind: 'rejected', error: 'provider_rejected' };
 }
 
 /** Η επόμενη κατάσταση του καθολικού και τα πεδία που τη συνοδεύουν. */
 function settlementOf(claim: Claim, attempt: Attempt, nowMs: number): { next: VendorInviteDelivery; extra: Record<string, unknown> } {
-  if (attempt.kind === 'undeliverable') return { next: undeliverableInviteDelivery(claim.delivery, attempt.reason, nowMs), extra: {} };
-  if (attempt.kind === 'rejected') return { next: rejectedInviteDelivery(claim.delivery, attempt.error, nowMs), extra: {} };
-  const { recipient } = attempt;
-  return {
-    next: deliveredInviteDelivery(claim.delivery, recipient.kind, nowMs),
-    // Στιγμιότυπο παραλήπτη (ADR-876 §5): ποτέ η ιδιωτική διεύθυνση ενός χώρου της πλατφόρμας.
-    extra: { deliveredAt: admin.firestore.Timestamp.fromMillis(nowMs), recipientEmail: recipientEmailSnapshot(recipient), recipientName: recipient.name },
-  };
+  switch (attempt.kind) {
+    case 'undeliverable': return { next: undeliverableInviteDelivery(claim.delivery, attempt.reason, nowMs), extra: {} };
+    case 'rejected': return { next: rejectedInviteDelivery(claim.delivery, attempt.error, nowMs), extra: {} };
+    case 'ambiguous': return { next: unknownInviteDelivery(claim.delivery, nowMs, 'outcome_unknown'), extra: {} };
+    case 'deferred': return { next: deferredInviteDelivery(claim.delivery, nowMs), extra: {} };
+    case 'sent': return {
+      next: deliveredInviteDelivery(claim.delivery, attempt.recipient.kind, nowMs),
+      // Στιγμιότυπο παραλήπτη (ADR-876 §5): ποτέ η ιδιωτική διεύθυνση ενός χώρου της πλατφόρμας.
+      extra: { deliveredAt: admin.firestore.Timestamp.fromMillis(nowMs), recipientEmail: recipientEmailSnapshot(attempt.recipient), recipientName: attempt.recipient.name },
+    };
+  }
+}
+
+/**
+ * Το διαπιστευτήριο μιας απόπειρας που **δεν** παρέδωσε τον σύνδεσμο ανακαλείται (ανασκόπηση Ε5): δεν το κρατά κανείς, και ένα
+ * ζωντανό διαπιστευτήριο χωρίς κάτοχο είναι μόνο επιφάνεια. Μένει ζωντανό όταν στάλθηκε, ή όταν **ίσως** στάλθηκε.
+ */
+async function revokeUndelivered(invite: VendorInvite, attempt: Attempt, credentialId: string | null, nowMs: number): Promise<void> {
+  if (credentialId === null || attempt.kind === 'sent' || attempt.kind === 'ambiguous') return;
+  await revokeVendorCredential({ companyId: invite.companyId, inviteId: invite.id, credentialId, revokedBy: DELIVERY_ACTOR, nowIso: new Date(nowMs).toISOString() })
+    .catch((error: unknown) => logger.warn('Undelivered credential not revoked', { inviteId: invite.id, error: errorText(error) }));
 }
 
 /** Μία απόπειρα παράδοσης. Ιδεμποτική: δεύτερη κλήση για την ίδια πρόσκληση επιστρέφει `skipped`. */
@@ -145,9 +192,14 @@ export async function deliverRfqInvite(job: InviteDeliveryJob, nowMs: number = D
   const db = getAdminFirestore();
   const claim = await claimInvite(db, job.inviteId, nowMs);
   if (claim === null) return 'skipped';
-  const attempt = await attemptDelivery(db, job, claim.invite, nowMs).catch((error: unknown): Attempt => ({ kind: 'rejected', error: errorText(error) }));
+  const trace: AttemptTrace = { quotaAdmitted: claim.delivery.quotaAdmitted === true, credentialId: job.link?.credentialId ?? null };
+  const attempt = await attemptDelivery(db, job, claim.invite, nowMs, trace).catch((error: unknown): Attempt => {
+    logger.warn('Invite delivery attempt failed before sending', { inviteId: job.inviteId, error: errorText(error) });
+    return { kind: 'rejected', error: 'transient_error' };
+  });
   const { next, extra } = settlementOf(claim, attempt, nowMs);
-  if (!(await settleInvite(db, claim, next, extra, nowMs))) return 'skipped';
+  if (!(await settleInvite(db, claim, { ...next, quotaAdmitted: trace.quotaAdmitted }, extra, nowMs))) return 'skipped';
+  await revokeUndelivered(claim.invite, attempt, trace.credentialId, nowMs);
   if (attempt.kind === 'sent' && attempt.recipient.platformCompanyId !== null) {
     await announcePlatformQuoteRequest({
       supplierCompanyId: attempt.recipient.platformCompanyId, buyerCompanyId: claim.invite.companyId, rfqTitle: attempt.rfqTitle, inviteId: claim.invite.id,

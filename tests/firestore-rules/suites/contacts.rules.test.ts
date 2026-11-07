@@ -8,6 +8,7 @@
  * @since 2026-04-11 (ADR-298 Phase A)
  */
 
+import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import {
   initEmulator,
   teardownEmulator,
@@ -76,4 +77,41 @@ describe('contacts.rules — tenant_direct pattern', () => {
       });
     });
   }
+});
+
+/**
+ * ADR-923 §5.13 Τ5 (ανασκόπηση ασφαλείας Ε3): το `platformCompanyId` το γράφει μόνο ο διακομιστής. Ένα πλαστό πεδίο από τον
+ * client θα άνοιγε (χωρίς τη δεύτερη ζώνη `platformCompanyOfContact`) κανάλι email προς το `quoteIntake` ξένου χώρου.
+ */
+describe('contacts.rules — platformCompanyId μόνο από τον διακομιστή', () => {
+  let env: RulesTestEnvironment;
+  const contacts = () => getContext(env, 'same_tenant_admin').firestore().collection('contacts');
+
+  beforeAll(async () => { env = await initEmulator(); });
+  afterAll(async () => { await teardownEmulator(env); });
+  afterEach(async () => { await resetData(env); });
+
+  it('create με platformCompanyId ⇒ άρνηση', async () => {
+    await assertFails(contacts().doc('c_new').set({ companyId: SAME_TENANT_COMPANY_ID, type: 'company', platformCompanyId: 'comp_victim' }));
+  });
+
+  it('create χωρίς platformCompanyId ⇒ επιτρέπεται (η κανονική ροή δεν άλλαξε)', async () => {
+    await assertSucceeds(contacts().doc('c_new').set({ companyId: SAME_TENANT_COMPANY_ID, type: 'company' }));
+  });
+
+  it('update που ΠΡΟΣΘΕΤΕΙ platformCompanyId ⇒ άρνηση', async () => {
+    await seedContact(env, 'c_1', { companyId: SAME_TENANT_COMPANY_ID });
+    await assertFails(contacts().doc('c_1').update({ platformCompanyId: 'comp_victim' }));
+  });
+
+  it('update που ΑΛΛΑΖΕΙ ή ΣΒΗΝΕΙ το platformCompanyId ⇒ άρνηση', async () => {
+    await seedContact(env, 'c_1', { companyId: SAME_TENANT_COMPANY_ID, overrides: { platformCompanyId: 'comp_aries' } });
+    await assertFails(contacts().doc('c_1').update({ platformCompanyId: 'comp_victim' }));
+    await assertFails(contacts().doc('c_1').update({ platformCompanyId: null }));
+  });
+
+  it('update άλλων πεδίων σε επαφή πλατφόρμας ⇒ επιτρέπεται (το πεδίο μένει ως έχει)', async () => {
+    await seedContact(env, 'c_1', { companyId: SAME_TENANT_COMPANY_ID, overrides: { platformCompanyId: 'comp_aries' } });
+    await assertSucceeds(contacts().doc('c_1').update({ name: 'Νέο όνομα' }));
+  });
 });

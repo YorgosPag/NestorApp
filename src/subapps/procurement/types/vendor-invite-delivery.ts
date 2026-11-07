@@ -19,9 +19,21 @@
 export const INVITE_DELIVERY_STATES = ['pending', 'sending', 'delivered', 'failed', 'undeliverable', 'unknown'] as const;
 export type InviteDeliveryState = (typeof INVITE_DELIVERY_STATES)[number];
 
-/** Γιατί δεν θα σταλεί ποτέ — ονομασμένος λόγος, όχι σιωπή. */
+/**
+ * Γιατί δεν στάλθηκε — ονομασμένος λόγος, όχι σιωπή. Τα τρία πρώτα είναι **οριστικά** (`undeliverable`)· το
+ * `recipient_quota` συνοδεύει **αναβολή** (`pending` με `dueAt` σε 24 ώρες, ανασκόπηση Ε2): ένα όριο που γέμισε σήμερα
+ * δεν καταδικάζει για πάντα την πρόσκληση ενός άλλου αγοραστή.
+ */
 export const INVITE_UNDELIVERABLE_REASONS = ['no_recipient', 'rfq_closed', 'invite_closed', 'recipient_quota'] as const;
 export type InviteUndeliverableReason = (typeof INVITE_UNDELIVERABLE_REASONS)[number];
+
+/**
+ * **Γιατί απέτυχε μια απόπειρα: κωδικός, ποτέ το κείμενο του παρόχου.** 🔒 Το `vendor_invites` το διαβάζει κάθε μέλος του
+ * αγοραστή, και το κείμενο ενός παρόχου μπορεί να περιέχει τη διεύθυνση του παραλήπτη (π.χ. «invalid `to`: …»), δηλαδή την
+ * ιδιωτική διεύθυνση `quoteIntake` ενός προμηθευτή. Το ωμό κείμενο πάει μόνο στο log του διακομιστή.
+ */
+export const INVITE_DELIVERY_ERRORS = ['provider_rejected', 'transient_error', 'lease_expired', 'outcome_unknown'] as const;
+export type InviteDeliveryError = (typeof INVITE_DELIVERY_ERRORS)[number];
 
 /** Ποιος παρέλαβε: επαφή του αγοραστή ή ο χώρος ενός προμηθευτή της πλατφόρμας (μέσω του `quoteIntake` του). */
 export type InviteRecipientKind = 'contact' | 'platform';
@@ -34,10 +46,15 @@ export interface VendorInviteDelivery {
    * σάρωση να είναι **ένα** ερώτημα με **έναν** δείκτη. Κλειστή κατάσταση ⇒ `null`.
    */
   readonly dueAt: string | null;
-  readonly lastError: string | null;
+  readonly lastError: InviteDeliveryError | null;
   readonly reason: InviteUndeliverableReason | null;
   readonly recipientKind: InviteRecipientKind | null;
   readonly settledAt: string | null;
+  /**
+   * Η ποσόστωση (ζεύγος + προμηθευτής) καταναλώθηκε ήδη για αυτή την πρόσκληση: οι επαναλήψεις **δεν** την ξαναχρεώνουν
+   * (ανασκόπηση Ε2). Απουσία ⇒ όχι ακόμη (έγγραφα πριν από το πεδίο).
+   */
+  readonly quotaAdmitted?: boolean;
 }
 
 /** Οι καταστάσεις που η σάρωση ξανακοιτά. */
@@ -52,6 +69,8 @@ export const INVITE_DELIVERY_POLICY = {
   backoffMs: [60 * 1000, 5 * 60 * 1000, 30 * 60 * 1000, 2 * 60 * 60 * 1000] as readonly number[],
   /** Προσκλήσεις ανά εκτέλεση της σάρωσης. */
   sweepLimit: 50,
+  /** Πόσο αναβάλλεται μια πρόσκληση όταν γέμισε το ημερήσιο όριο: όσο το παράθυρο της ποσόστωσης. */
+  quotaDeferMs: 24 * 60 * 60 * 1000,
 } as const;
 
 const iso = (ms: number): string => new Date(ms).toISOString();
@@ -72,7 +91,7 @@ export function claimedInviteDelivery(delivery: VendorInviteDelivery, nowMs: num
 }
 
 export function deliveredInviteDelivery(claimed: VendorInviteDelivery, kind: InviteRecipientKind, nowMs: number): VendorInviteDelivery {
-  return { ...claimed, state: 'delivered', dueAt: null, lastError: null, recipientKind: kind, settledAt: iso(nowMs) };
+  return { ...claimed, state: 'delivered', dueAt: null, lastError: null, reason: null, recipientKind: kind, settledAt: iso(nowMs) };
 }
 
 export function undeliverableInviteDelivery(claimed: VendorInviteDelivery, reason: InviteUndeliverableReason, nowMs: number): VendorInviteDelivery {
@@ -80,14 +99,31 @@ export function undeliverableInviteDelivery(claimed: VendorInviteDelivery, reaso
 }
 
 /** Ο πάροχος αρνήθηκε ρητά: νέα απόπειρα αργότερα, ή οριστική αποτυχία όταν τελειώσουν οι απόπειρες. */
-export function rejectedInviteDelivery(claimed: VendorInviteDelivery, error: string, nowMs: number): VendorInviteDelivery {
+export function rejectedInviteDelivery(claimed: VendorInviteDelivery, error: InviteDeliveryError, nowMs: number): VendorInviteDelivery {
   const { maxAttempts, backoffMs } = INVITE_DELIVERY_POLICY;
   if (claimed.attempts >= maxAttempts) return { ...claimed, state: 'failed', dueAt: null, lastError: error, settledAt: iso(nowMs) };
   const wait = backoffMs[Math.min(claimed.attempts - 1, backoffMs.length - 1)];
   return { ...claimed, state: 'pending', dueAt: iso(nowMs + wait), lastError: error };
 }
 
-/** Η κράτηση έληξε χωρίς καταγραφή: δεν ξέρουμε αν έφυγε, άρα **δεν** ξαναστέλνουμε (το πολύ μία φορά). */
-export function unknownInviteDelivery(claimed: VendorInviteDelivery, nowMs: number): VendorInviteDelivery {
-  return { ...claimed, state: 'unknown', dueAt: null, lastError: 'lease expired before the outcome was recorded', settledAt: iso(nowMs) };
+/**
+ * Δεν ξέρουμε αν έφυγε, άρα **δεν** ξαναστέλνουμε (το πολύ μία φορά): η κράτηση έληξε χωρίς καταγραφή (`lease_expired`), ή
+ * ο πάροχος δεν απάντησε εγκαίρως και ίσως το δέχτηκε (`outcome_unknown`, ανασκόπηση Ε5).
+ */
+export function unknownInviteDelivery(
+  claimed: VendorInviteDelivery,
+  nowMs: number,
+  error: Extract<InviteDeliveryError, 'lease_expired' | 'outcome_unknown'> = 'lease_expired',
+): VendorInviteDelivery {
+  return { ...claimed, state: 'unknown', dueAt: null, lastError: error, settledAt: iso(nowMs) };
+}
+
+/**
+ * Το ημερήσιο όριο γέμισε: η πρόσκληση **περιμένει** ως την επόμενη μέρα, χωρίς να χρεωθεί απόπειρα (δεν έφυγε τίποτα,
+ * και ένα γεμάτο όριο δεν είναι βλάβη). Τη σταματά μόνο η λήξη της πρόσκλησης ή το κλείσιμο του RFQ (`attemptDelivery`).
+ */
+export function deferredInviteDelivery(claimed: VendorInviteDelivery, nowMs: number): VendorInviteDelivery {
+  return {
+    ...claimed, state: 'pending', attempts: claimed.attempts - 1, dueAt: iso(nowMs + INVITE_DELIVERY_POLICY.quotaDeferMs), reason: 'recipient_quota',
+  };
 }

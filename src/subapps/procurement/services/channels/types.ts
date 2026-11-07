@@ -38,6 +38,11 @@ export interface ChannelDeliveryResult {
   errorReason: string | null;
   /** Channel that produced the result (for invite delivery audit). */
   channel: DeliveryChannel;
+  /**
+   * ADR-923 §5.13 Τ5 (Ε5) — `success: false` **αλλά** ίσως παραδόθηκε (λήξη χρόνου παρόχου). Ο καλών δεν ξαναστέλνει.
+   * Απουσία ⇒ η άρνηση είναι ρητή.
+   */
+  outcomeUnknown?: boolean;
 }
 
 export interface MessageChannel {

@@ -4,11 +4,15 @@
  * =============================================================================
  *
  * Ό,τι ισχύει **μόνο** όταν ο παραλήπτης είναι ο χώρος ενός προμηθευτή της πλατφόρμας, σε **κάθε** δρόμο που του στέλνει
- * πρόσκληση (fan-out του `createRfq` · χειρόγραφη πρόσκληση):
+ * πρόσκληση (fan-out του `createRfq` · χειρόγραφη πρόσκληση · επαναποστολή · «στείλε μου νέο σύνδεσμο»).
+ *
+ * 🔑 **Ο ΕΝΑΣ φρουρός (ανασκόπηση Ε1/Ε2):** «επιτρέπεται αποστολή σε χώρο της πλατφόρμας;» = επιβεβαιωμένη βιτρίνα + opt-in
+ *    (τα κρίνει ο κριτής παραλήπτη, `recipientOfContact`: χωρίς αυτά δεν υπάρχει παραλήπτης) **και** τα δύο όρια (εδώ). Και οι
+ *    τέσσερις δρόμοι περνούν από τα ίδια δύο σημεία· κανένας δεν είναι παράκαμψη.
  *
  * | Πότε | Τι | Γιατί |
  * |---|---|---|
- * | πριν από την αποστολή | {@link admitPlatformQuoteRequest} — όριο ανά **γραμματοκιβώτιο** του προμηθευτή | δέκα νέοι λογαριασμοί δεν γίνονται δέκα φορές περισσότερο spam |
+ * | πριν από την αποστολή | {@link admitPlatformQuoteRequest} — όριο ανά **ζεύγος** (αγοραστής, προμηθευτής) και ανά **γραμματοκιβώτιο** του προμηθευτή | ένας αγοραστής δεν εξαντλεί μόνος του τον προμηθευτή, δέκα νέοι λογαριασμοί δεν γίνονται δέκα φορές περισσότερο spam |
  * | μετά από παράδοση | {@link announcePlatformQuoteRequest} — ειδοποίηση στους ενεργούς διαχειριστές του χώρου | Alibaba «Inquiry» / Ariba Network: το αίτημα φαίνεται και μέσα στην πλατφόρμα, όχι μόνο στο inbox |
  *
  * 🔑 Η ειδοποίηση είναι **ιδεμποτική** κατά πρόσκληση (`eventId` = id της πρόσκλησης ⇒ ντετερμινιστικό έγγραφο, `create`):
@@ -27,7 +31,7 @@ import {
   SOURCE_SERVICES,
 } from '@/config/notification-events';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { QUOTE_REQUEST_SUPPLIER_DAILY_QUOTA } from '@/lib/middleware/rate-limit-config';
+import { QUOTE_REQUEST_PAIR_DAILY_QUOTA, QUOTE_REQUEST_SUPPLIER_DAILY_QUOTA } from '@/lib/middleware/rate-limit-config';
 import { withinSubjectQuota } from '@/lib/middleware/subject-quota';
 import { createModuleLogger } from '@/lib/telemetry';
 import { activeWorkspaceAdministrators } from '@/lib/workspace/workspace-administrators';
@@ -38,12 +42,24 @@ import { orgWorkspace } from '@/types/workspace-membership';
 
 const logger = createModuleLogger('PLATFORM_QUOTE_REQUEST');
 
-/** Το είδος της ποσόστωσης: δικό του, ώστε να μην τρώει το όριο άλλων μηνυμάτων. */
+/** Τα είδη της ποσόστωσης: δικά τους, ώστε να μην τρώνε το όριο άλλων μηνυμάτων. */
 export const PLATFORM_QUOTE_REQUEST_QUOTA_SCOPE = 'rfq-quote-request:supplier';
+export const QUOTE_REQUEST_PAIR_QUOTA_SCOPE = 'rfq-quote-request:pair';
 
-/** Χωρά ακόμη ένα αίτημα στο γραμματοκιβώτιο αυτού του προμηθευτή σήμερα; Καταναλώνει μία μονάδα. */
-export function admitPlatformQuoteRequest(supplierCompanyId: string): Promise<boolean> {
-  return withinSubjectQuota(PLATFORM_QUOTE_REQUEST_QUOTA_SCOPE, supplierCompanyId, QUOTE_REQUEST_SUPPLIER_DAILY_QUOTA);
+/** `admitted` ⇒ στείλε · αλλιώς ποιο όριο γέμισε. */
+export type PlatformQuoteRequestVerdict = 'admitted' | 'pair_quota' | 'supplier_quota';
+
+/**
+ * **Χωρά ακόμη ένα αίτημα;** Πρώτα το ζεύγος (το δικό του μερίδιο του αγοραστή, 10), μετά ο προμηθευτής (όλοι μαζί, 100).
+ * Δίκαιη κατανομή: κανένας αγοραστής δεν φτάνει μόνος του πάνω από το 10% της ημέρας του προμηθευτή, και ένας που γέμισε το
+ * ζεύγος του **δεν** τρώει θέσεις των άλλων (το όριο του προμηθευτή δεν αγγίζεται). Καταναλώνει μία μονάδα από όσα πέρασε.
+ */
+export async function admitPlatformQuoteRequest(buyerCompanyId: string, supplierCompanyId: string): Promise<PlatformQuoteRequestVerdict> {
+  if (!(await withinSubjectQuota(QUOTE_REQUEST_PAIR_QUOTA_SCOPE, `${buyerCompanyId}:${supplierCompanyId}`, QUOTE_REQUEST_PAIR_DAILY_QUOTA))) {
+    return 'pair_quota';
+  }
+  const supplierOk = await withinSubjectQuota(PLATFORM_QUOTE_REQUEST_QUOTA_SCOPE, supplierCompanyId, QUOTE_REQUEST_SUPPLIER_DAILY_QUOTA);
+  return supplierOk ? 'admitted' : 'supplier_quota';
 }
 
 export interface PlatformQuoteRequestNotice {

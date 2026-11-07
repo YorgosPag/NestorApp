@@ -42,6 +42,7 @@ import type {
 } from '../types/vendor-invite';
 import { getRfq } from './rfq-service';
 import { isLiveInviteStatus, normalizeInviteStatus } from '../utils/vendor-invite-status';
+import type { RFQ } from '../types/rfq';
 import { prepareVendorInvite, writePreparedVendorInvite } from './vendor-invite-issue';
 import { recordVendorInviteAudit } from './vendor-invite-audit';
 
@@ -108,34 +109,45 @@ async function resolveRecipient(
 type PreparedInvite = Awaited<ReturnType<typeof prepareVendorInvite>>;
 type ChannelDriver = NonNullable<ReturnType<typeof resolveChannel>>;
 
-/** Η πρώτη αποστολή — email στον παραλήπτη, ή (copy_link) ο ίδιος ο σύνδεσμος ως «παραλήπτης». */
+/** Τι απέγινε η πρώτη αποστολή, στο σχήμα της απόκρισης. */
+interface InviteDispatch {
+  success: boolean;
+  providerMessageId: string | null;
+  errorReason: string | null;
+}
+
+const notDispatched = (errorReason: string): InviteDispatch => ({ success: false, providerMessageId: null, errorReason });
+
+/**
+ * Η πρώτη αποστολή — email στον παραλήπτη, ή (copy_link) ο ίδιος ο σύνδεσμος ως «παραλήπτης». Χώρος της πλατφόρμας ⇒ ο
+ * **ένας** φρουρός (ζεύγος + προμηθευτής, ανασκόπηση Ε1/Ε2) και 🔒 μόνο γενικός κωδικός προς τον αγοραστή (Ε6).
+ */
 async function dispatchNewInvite(
+  ctx: AuthContext,
   channelDriver: ChannelDriver,
   prepared: PreparedInvite,
   recipient: ResolvedRecipient,
-  rfqTitle: string,
-  locale: 'el' | 'en',
-) {
+  message: { rfqTitle: string; locale: 'el' | 'en' },
+): Promise<InviteDispatch> {
   const isEmail = channelDriver.id === 'email';
-  if (isEmail && !recipient.email) {
-    return { success: false, providerMessageId: null, errorReason: 'Recipient has no email address' };
-  }
-  // ADR-923 §5.13 Τ5 — ίδια ποσόστωση ανά προμηθευτή με το fan-out: η χειρόγραφη πρόσκληση δεν είναι παράκαμψη.
-  if (isEmail && recipient.platformCompanyId && !(await admitPlatformQuoteRequest(recipient.platformCompanyId))) {
-    return { success: false, providerMessageId: null, errorReason: 'Supplier quote-request quota exhausted' };
-  }
+  if (isEmail && !recipient.email) return notDispatched('Recipient has no email address');
+  const platform = isEmail ? recipient.platformCompanyId : null;
+  if (platform && (await admitPlatformQuoteRequest(ctx.companyId, platform)) !== 'admitted') return notDispatched('recipient_quota');
   const { link } = prepared;
-  return channelDriver.send({
+  const result = await channelDriver.send({
     inviteId: prepared.invite.id,
     vendorName: recipient.displayName,
     recipient: isEmail && recipient.email ? recipient.email : link.portalUrl,
-    rfqTitle,
+    rfqTitle: message.rfqTitle,
     projectName: null,
     portalUrl: link.portalUrl,
     expiresAt: link.expiresAtIso,
-    locale,
+    locale: message.locale,
     declineUrl: link.declineUrl,
   });
+  if (result.success || !platform) return { success: result.success, providerMessageId: result.providerMessageId, errorReason: result.errorReason };
+  logger.warn('Platform invite email not delivered', { inviteId: prepared.invite.id, reason: result.errorReason });
+  return notDispatched('delivery_failed');
 }
 
 /** Πρόσκληση + διαπιστευτήριο + εγγραφή του προμηθευτή στο RFQ — **ένα** batch. */
@@ -158,6 +170,36 @@ async function persistNewInvite(
   }, undefined);
 }
 
+async function loadInvitableRfq(ctx: AuthContext, rfqId: string): Promise<RFQ> {
+  const rfq = await getRfq(ctx.companyId, rfqId);
+  if (!rfq) throw new Error(`RFQ ${rfqId} not found`);
+  if (rfq.status === 'archived') throw new Error('Cannot invite vendor on archived RFQ');
+  return rfq;
+}
+
+function prepareNewInvite(ctx: AuthContext, dto: CreateVendorInviteDTO, recipient: ResolvedRecipient, channel: DeliveryChannel): Promise<PreparedInvite> {
+  return prepareVendorInvite({
+    companyId: ctx.companyId,
+    rfqId: dto.rfqId,
+    vendorContactId: recipient.vendorContactId,
+    deliveryChannel: channel,
+    preferredChannel: recipient.preferredChannel,
+    status: 'pending',
+    // 🔒 Ποτέ η διεύθυνση ενός χώρου της πλατφόρμας: το `vendor_invites` το διαβάζει κάθε μέλος του αγοραστή.
+    recipientEmail: recipient.snapshotEmail,
+    recipientName: recipient.displayName,
+    issuedVia: channel === 'email' ? 'invite_email' : 'copy_link',
+    issuedBy: ctx.uid,
+    expiresInDays: dto.expiresInDays,
+  });
+}
+
+/** Η πρόσκληση όπως γράφεται: `sent` μόνο όταν το email πράγματι παραδόθηκε. */
+function settledNewInvite(prepared: PreparedInvite, channel: DeliveryChannel, dispatch: InviteDispatch): VendorInvite {
+  const status: InviteStatus = channel === 'copy_link' || !dispatch.success ? 'pending' : 'sent';
+  return { ...prepared.invite, status, deliveredAt: dispatch.success ? prepared.invite.createdAt : null };
+}
+
 /**
  * Create a new vendor invite for an RFQ. Persists invite + first credential, registers
  * the vendor on `RFQ.invitedVendorIds`, and dispatches the configured channel (default
@@ -168,59 +210,22 @@ export async function createVendorInvite(
   dto: CreateVendorInviteDTO,
   options: { locale?: 'el' | 'en' } = {},
 ): Promise<CreateInviteResult> {
-  const rfq = await getRfq(ctx.companyId, dto.rfqId);
-  if (!rfq) throw new Error(`RFQ ${dto.rfqId} not found`);
-  if (rfq.status === 'archived') throw new Error('Cannot invite vendor on archived RFQ');
-
+  const rfq = await loadInvitableRfq(ctx, dto.rfqId);
   const recipient = await resolveRecipient(ctx, dto);
   const channelDriver = resolveChannel(dto.deliveryChannel) ?? resolveChannel('copy_link');
   if (!channelDriver) throw new Error('No delivery channel available');
-  const effectiveChannel: DeliveryChannel = channelDriver.id;
-
-  const prepared = await prepareVendorInvite({
-    companyId: ctx.companyId,
-    rfqId: dto.rfqId,
-    vendorContactId: recipient.vendorContactId,
-    deliveryChannel: effectiveChannel,
-    preferredChannel: recipient.preferredChannel,
-    status: 'pending',
-    recipientEmail: recipient.snapshotEmail,
-    recipientName: recipient.displayName,
-    issuedVia: effectiveChannel === 'email' ? 'invite_email' : 'copy_link',
-    issuedBy: ctx.uid,
-    expiresInDays: dto.expiresInDays,
-  });
-  const { link } = prepared;
-  const dispatch = await dispatchNewInvite(channelDriver, prepared, recipient, rfq.title, options.locale ?? 'el');
-
-  const status: InviteStatus = effectiveChannel === 'copy_link' || !dispatch.success ? 'pending' : 'sent';
-  const invite: VendorInvite = {
-    ...prepared.invite,
-    status,
-    deliveredAt: dispatch.success ? prepared.invite.createdAt : null,
-  };
-  await persistNewInvite(invite, link, recipient.vendorContactId, rfq.invitedVendorIds);
-  if (dispatch.success && effectiveChannel === 'email' && recipient.platformCompanyId) {
+  const channel: DeliveryChannel = channelDriver.id;
+  const prepared = await prepareNewInvite(ctx, dto, recipient, channel);
+  const dispatch = await dispatchNewInvite(ctx, channelDriver, prepared, recipient, { rfqTitle: rfq.title, locale: options.locale ?? 'el' });
+  const invite = settledNewInvite(prepared, channel, dispatch);
+  await persistNewInvite(invite, prepared.link, recipient.vendorContactId, rfq.invitedVendorIds);
+  if (dispatch.success && channel === 'email' && recipient.platformCompanyId) {
     void announcePlatformQuoteRequest({ supplierCompanyId: recipient.platformCompanyId, buyerCompanyId: ctx.companyId, rfqTitle: rfq.title, inviteId: invite.id });
   }
-
   logger.info('Vendor invite created', {
-    inviteId: invite.id,
-    rfqId: dto.rfqId,
-    vendorContactId: recipient.vendorContactId || '<manual>',
-    channel: effectiveChannel,
-    delivered: dispatch.success,
+    inviteId: invite.id, rfqId: dto.rfqId, vendorContactId: recipient.vendorContactId || '<manual>', channel, delivered: dispatch.success,
   });
-
-  return {
-    invite,
-    portalUrl: link.portalUrl,
-    delivery: {
-      success: dispatch.success,
-      providerMessageId: dispatch.providerMessageId,
-      errorReason: dispatch.errorReason,
-    },
-  };
+  return { invite, portalUrl: prepared.link.portalUrl, delivery: dispatch };
 }
 
 // =============================================================================

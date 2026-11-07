@@ -414,8 +414,7 @@
         "catalogSkuUnavailable": "This product is no longer available for a quote request.",
         "supplierNotAcceptingQuotes": "This supplier is not accepting quote requests right now.",
         "supplierContactUnavailable": "The supplier's contact in your contacts is archived. Check the contact and try again.",
-        "rfqTooLarge": "This request is too large to send at once. Split it into smaller requests.",
-        "quoteRequestQuotaExhausted": "You have sent many requests to this supplier today. Please try again tomorrow."
+        "rfqTooLarge": "This request is too large to send at once. Split it into smaller requests."
       },
       "catalogDraftFailed": "The catalog product could not be loaded. Please try again."
     },
@@ -1178,7 +1177,24 @@
         "revoked": "Revoked"
       }
     },
-    "emptyFiltered": "No invitations match the filter."
+    "emptyFiltered": "No invitations match the filter.",
+    "delivery": {
+      "statuses": {
+        "queued": "Waiting to send",
+        "sent": "Sent",
+        "retrying": "Failed, will retry",
+        "failed": "Failed",
+        "notSent": "Not sent",
+        "unknown": "Unknown whether sent",
+        "deferred": "Postponed until tomorrow"
+      },
+      "reasons": {
+        "no_recipient": "No recipient address, or the supplier is not accepting requests",
+        "rfq_closed": "The request no longer accepts quotes",
+        "invite_closed": "The invitation was closed",
+        "recipient_quota": "The supplier has received many requests today"
+      }
+    }
   },
   "comparison": {
     "title": "Quote Comparison",

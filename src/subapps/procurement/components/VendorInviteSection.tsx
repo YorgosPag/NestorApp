@@ -22,6 +22,7 @@ import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state'
 import { useVendorInvites } from '../hooks/useVendorInvites';
 import { VendorInviteDialog } from './VendorInviteDialog';
 import { VendorInviteLinksPanel } from './VendorInviteLinksPanel';
+import { InviteDeliveryBadge } from './InviteDeliveryBadge';
 import type { RFQ } from '../types/rfq';
 
 // ============================================================================
@@ -135,6 +136,8 @@ function InviteRow({ invite, vendorName, actions, lockState }: InviteRowProps) {
         </td>
         <td className="py-2 pr-4">
           <StatusBadge status={vendorInviteDisplayStatus(invite, Date.now())} />
+          {/* ADR-923 §5.13 Τ5 — η παράδοση, όπως στο Ariba/Gmail· χωρίς παραλήπτη */}
+          <InviteDeliveryBadge delivery={invite.delivery} />
         </td>
         <td className="py-2 pr-4 text-sm tabular-nums">
           {formatExpiry(invite.expiresAt)}
