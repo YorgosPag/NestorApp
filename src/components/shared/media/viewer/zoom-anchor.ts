@@ -1,5 +1,6 @@
 /**
- * **Το ζουμ που δεν σε χάνει** (ADR-928 §5.25) — ό,τι κοιτάς πριν το ζουμ, το κοιτάς και μετά.
+ * **Το ζουμ που δεν σε χάνει** (ADR-928 §5.25 · §5.25.2) — ό,τι κοιτάς πριν το ζουμ, το κοιτάς και μετά. Ένας κανόνας για
+ * **κάθε** θεατή σελίδας: το έγγραφο υπεργολαβίας (`document-zoom-engine`) και τον προβολέα PDF (`usePdfViewport`).
  *
  * 🔑 Ctrl+ροδέλα / pinch: ακίνητο μένει το σημείο **κάτω από τον δείκτη** (Figma · Google Maps).
  *    Κουμπιά / μενού: ακίνητη μένει **η παράγραφος που διαβάζεις** — η πρώτη ορατή γραμμή της σελίδας (Word).
@@ -22,6 +23,11 @@ export interface ZoomAnchor {
   readonly point: Vec2;
   /** Πού πέφτει το σημείο μέσα στη σελίδα, ως κλάσμα πλάτους/ύψους. */
   readonly fraction: Vec2;
+  /**
+   * Ο κάθετος κυλιστής, όταν τον **ξέρει** ο θεατής (προβολέας PDF: ο δικός του χώρος). Απών ⇒ ο πλησιέστερος πρόγονος
+   * που κυλά. ⚠️ Ο ρητός κυλιστής δεν «δραπετεύει»: σελίδα που χωρά ⇒ καμία κύλιση, ποτέ κύλιση της εφαρμογής από κάτω.
+   */
+  readonly verticalScroller?: HTMLElement;
 }
 
 /**
@@ -40,20 +46,20 @@ function viewportTopOf(scroller: HTMLElement): number {
   return scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
 }
 
-export function captureZoomAnchor(page: HTMLElement, frame: HTMLElement, point: Vec2): ZoomAnchor {
+export function captureZoomAnchor(page: HTMLElement, frame: HTMLElement, point: Vec2, verticalScroller?: HTMLElement): ZoomAnchor {
   const rect = page.getBoundingClientRect();
   const fraction = {
     x: rect.width > 0 ? clamp01((point.x - rect.left) / rect.width) : 0,
     y: rect.height > 0 ? clamp01((point.y - rect.top) / rect.height) : 0,
   };
-  return { page, frame, point, fraction };
+  return { page, frame, point, fraction, verticalScroller };
 }
 
 /** Η «παράγραφος ανάγνωσης»: η πρώτη ορατή γραμμή της σελίδας, στο κέντρο του ορατού πλάτους της στήλης. */
-export function readingPointOf(page: HTMLElement, frame: HTMLElement): Vec2 {
+export function readingPointOf(page: HTMLElement, frame: HTMLElement, verticalScroller?: HTMLElement): Vec2 {
   const rect = page.getBoundingClientRect();
   const frameRect = frame.getBoundingClientRect();
-  const visibleTop = Math.max(rect.top, viewportTopOf(verticalScrollerOf(page)));
+  const visibleTop = Math.max(rect.top, viewportTopOf(verticalScroller ?? verticalScrollerOf(page)));
   const y = Math.min(visibleTop + READING_LINE_OFFSET_PX, rect.bottom);
   return { x: frameRect.left + frameRect.width / 2, y };
 }
@@ -63,6 +69,6 @@ export function restoreZoomAnchor(anchor: ZoomAnchor): void {
   const rect = anchor.page.getBoundingClientRect();
   const dx = rect.left + anchor.fraction.x * rect.width - anchor.point.x;
   const dy = rect.top + anchor.fraction.y * rect.height - anchor.point.y;
-  if (Math.abs(dy) >= 1) verticalScrollerOf(anchor.page).scrollTop += dy;
+  if (Math.abs(dy) >= 1) (anchor.verticalScroller ?? verticalScrollerOf(anchor.page)).scrollTop += dy;
   if (Math.abs(dx) >= 1) anchor.frame.scrollLeft += dx;
 }

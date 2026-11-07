@@ -173,6 +173,7 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fitWidth": "Fit to width",
+    "fitPage": "Fit to page",
     "level": "Zoom {percent} — choose zoom"
   },
   "tooltips": {

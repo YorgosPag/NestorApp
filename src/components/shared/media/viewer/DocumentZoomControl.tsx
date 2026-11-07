@@ -34,14 +34,28 @@ export interface DocumentZoomControlProps {
   readonly zoom: number;
   /** «Προσαρμογή στο πλάτος» ενεργή. */
   readonly fitted: boolean;
+  /** «Προσαρμογή στη σελίδα» ενεργή — μόνο για θεατή που τη δίνει (`onFitPage`). */
+  readonly pageFitted?: boolean;
   readonly limits: ZoomLimits;
   readonly onStep: (direction: 1 | -1) => void;
   readonly onZoomTo: (zoom: number) => void;
   readonly onFit: () => void;
+  /**
+   * ADR-928 §5.25.2 — θεατής **σελιδοποιημένου** εγγράφου (PDF: Chrome · Acrobat · pdf.js) ⇒ και «Προσαρμογή στη σελίδα»
+   * στο μενού. Απούσα ⇒ δεν δείχνεται (το έγγραφο υπεργολαβίας ρέει, δεν έχει «ολόκληρη σελίδα» να χωρέσει).
+   */
+  readonly onFitPage?: () => void;
   readonly className?: string;
 }
 
 const FIT_VALUE = 'fit';
+const FIT_PAGE_VALUE = 'fit-page';
+
+function selectedValueOf(zoom: number, fitted: boolean, pageFitted: boolean, presets: readonly number[]): string {
+  if (fitted) return FIT_VALUE;
+  if (pageFitted) return FIT_PAGE_VALUE;
+  return presets.find((preset) => Math.abs(preset - zoom) < 0.005)?.toString() ?? '';
+}
 
 function percentOf(zoom: number): string {
   return formatPercentage(zoom * 100, { maximumFractionDigits: 0 });
@@ -59,14 +73,15 @@ function useUserZoomAnnouncement(zoom: number): { readonly announcement: string;
   return { announcement, markUserAction: () => { pending.current = true; } };
 }
 
-function ZoomLevelMenu({ zoom, fitted, limits, onZoomTo, onFit, onUserAction }: Omit<DocumentZoomControlProps, 'onStep' | 'className'> & { readonly onUserAction: () => void }) {
+function ZoomLevelMenu({ zoom, fitted, pageFitted = false, limits, onZoomTo, onFit, onFitPage, onUserAction }: Omit<DocumentZoomControlProps, 'onStep' | 'className'> & { readonly onUserAction: () => void }) {
   const { t } = useTranslation('common');
   const level = percentOf(zoom);
   const presets = zoomPresetsWithin(limits);
-  const selected = fitted ? FIT_VALUE : presets.find((preset) => Math.abs(preset - zoom) < 0.005)?.toString() ?? '';
+  const selected = selectedValueOf(zoom, fitted, pageFitted, presets);
   const choose = (value: string) => {
     onUserAction();
     if (value === FIT_VALUE) onFit();
+    else if (value === FIT_PAGE_VALUE) onFitPage?.();
     else onZoomTo(Number(value));
   };
   return (
@@ -80,6 +95,7 @@ function ZoomLevelMenu({ zoom, fitted, limits, onZoomTo, onFit, onUserAction }: 
       <DropdownMenuContent align="center" className="min-w-[11rem]">
         <DropdownMenuRadioGroup value={selected} onValueChange={choose}>
           <DropdownMenuRadioItem value={FIT_VALUE}>{t('documentZoom.fitWidth')}</DropdownMenuRadioItem>
+          {onFitPage && <DropdownMenuRadioItem value={FIT_PAGE_VALUE}>{t('documentZoom.fitPage')}</DropdownMenuRadioItem>}
           <DropdownMenuSeparator />
           {presets.map((preset) => (
             <DropdownMenuRadioItem key={preset} value={preset.toString()} className="tabular-nums">{percentOf(preset)}</DropdownMenuRadioItem>
@@ -90,14 +106,17 @@ function ZoomLevelMenu({ zoom, fitted, limits, onZoomTo, onFit, onUserAction }: 
   );
 }
 
-export function DocumentZoomControl({ zoom, fitted, limits, onStep, onZoomTo, onFit, className }: DocumentZoomControlProps) {
+export function DocumentZoomControl({ zoom, fitted, pageFitted, limits, onStep, onZoomTo, onFit, onFitPage, className }: DocumentZoomControlProps) {
   const { t } = useTranslation('common');
   const { announcement, markUserAction } = useUserZoomAnnouncement(zoom);
   const step = (direction: 1 | -1) => { markUserAction(); onStep(direction); };
   return (
     <section role="group" aria-label={t('documentZoom.label')} className={cn('flex items-center gap-0.5', className)}>
       <ViewerToolbarButton label={t('documentZoom.zoomOut')} icon={ZoomOut} onClick={() => step(-1)} disabled={zoom <= limits.min + 0.005} />
-      <ZoomLevelMenu zoom={zoom} fitted={fitted} limits={limits} onZoomTo={onZoomTo} onFit={onFit} onUserAction={markUserAction} />
+      <ZoomLevelMenu
+        zoom={zoom} fitted={fitted} pageFitted={pageFitted} limits={limits}
+        onZoomTo={onZoomTo} onFit={onFit} onFitPage={onFitPage} onUserAction={markUserAction}
+      />
       <ViewerToolbarButton label={t('documentZoom.zoomIn')} icon={ZoomIn} onClick={() => step(1)} disabled={zoom >= limits.max - 0.005} />
       <ViewerToolbarButton label={t('documentZoom.fitWidth')} icon={MoveHorizontal} onClick={() => { markUserAction(); onFit(); }} pressed={fitted} />
       <span role="status" className="sr-only">{announcement}</span>

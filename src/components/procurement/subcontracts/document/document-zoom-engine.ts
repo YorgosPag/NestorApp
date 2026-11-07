@@ -10,9 +10,9 @@
  * 🔑 Η προτίμηση γράφεται **μετά** την κίνηση (debounce), όχι 60 φορές το δευτερόλεπτο.
  */
 
-import { ladderZoom, wheelZoom, type Vec2 } from '@/lib/geometry/zoom-pan-math';
+import { captureZoomAnchor, readingPointOf, restoreZoomAnchor, type ZoomAnchor } from '@/components/shared/media/viewer/zoom-anchor';
+import { ladderZoom, WHEEL_ZOOM_SENSITIVITY, wheelDeltaPx, wheelZoom, type Vec2 } from '@/lib/geometry/zoom-pan-math';
 
-import { captureZoomAnchor, readingPointOf, restoreZoomAnchor, type ZoomAnchor } from './document-zoom-anchor';
 import { readPaperZoomMode, writePaperZoomMode } from './document-zoom-preference';
 import { applyPaperLayout, PAPER_ZOOM_FIT, PAPER_ZOOM_LIMITS, paperLayoutOf, type PaperZoomMode } from './paper-fit';
 
@@ -39,18 +39,7 @@ export interface DocumentZoomEngine {
   readonly flush: () => void;
 }
 
-/** Ροδέλα: ίσο «γύρισμα» = ίσος λόγος. ~100 px ανά εγκοπή ⇒ ×0,77· pinch (λίγα px) ⇒ λείο. */
-const WHEEL_SENSITIVITY = 0.0025;
-const WHEEL_MAX_DELTA_PX = 100;
-const WHEEL_LINE_PX = 33;
-const WHEEL_PAGE_PX = 800;
 const PERSIST_DELAY_MS = 300;
-
-/** Ροδέλα σε px, ανεξάρτητα από τη μονάδα του browser (Firefox: γραμμές), κομμένη ώστε μία εγκοπή = ένα λογικό βήμα. */
-function wheelDeltaPx(event: WheelEvent): number {
-  const unit = event.deltaMode === 1 ? WHEEL_LINE_PX : event.deltaMode === 2 ? WHEEL_PAGE_PX : 1;
-  return Math.max(-WHEEL_MAX_DELTA_PX, Math.min(WHEEL_MAX_DELTA_PX, event.deltaY * unit));
-}
 
 interface Column {
   readonly frame: HTMLElement;
@@ -122,7 +111,7 @@ function wheelHandlerOf(state: EngineState, getColumn: () => Column): (event: Wh
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     const from = currentZoomOf(state);
-    const zoom = wheelZoom(from, wheelDeltaPx(event), WHEEL_SENSITIVITY, PAPER_ZOOM_LIMITS);
+    const zoom = wheelZoom(from, wheelDeltaPx(event), WHEEL_ZOOM_SENSITIVITY, PAPER_ZOOM_LIMITS);
     if (zoom === from && state.zoomMode.mode === 'manual') return;
     changeZoom(state, { mode: 'manual', zoom }, getColumn(), { x: event.clientX, y: event.clientY });
   };

@@ -6,7 +6,8 @@
  * Renders PDF pages to canvas with custom controls that respect the app theme.
  * Replaces browser iframe PDF viewer for consistent dark/light mode UX.
  *
- * Features: wheel zoom, click-drag pan, fit-to-width, page nav, rotation.
+ * Features: native scrolling, Ctrl/⌘+wheel & pinch zoom around the pointer, click-drag pan, fit to width / page,
+ * page nav, rotation. Zoom, fit and scrolling are owned by `usePdfViewport` (ADR-928 §5.25.2).
  *
  * Uses pdfjs-dist@4.5.136 (same version as DXF viewer PdfRenderer).
  * Worker: self-hosted /public/pdf.worker.min.mjs
@@ -17,7 +18,7 @@
 
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,7 +26,7 @@ import {
   Maximize,
 } from 'lucide-react';
 import { DocumentZoomControl } from '@/components/shared/media/viewer/DocumentZoomControl';
-import { clampZoom, ladderZoom, type ZoomLimits } from '@/lib/geometry/zoom-pan-math';
+import { quarterTurnExtent, type Extent, type ZoomLimits } from '@/lib/geometry/zoom-pan-math';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -40,12 +41,12 @@ import {
   type PdfDocProxy,
   MIN_SCALE,
   MAX_SCALE,
-  WHEEL_ZOOM_FACTOR,
   loadPdfJs,
 } from './pdf-canvas-config';
 import { loadPdfBytes } from './pdf-bytes-cache';
 import { pdfFetchTarget } from './pdf-fetch-target';
 import { PdfHighlights, useControlledPdfPage } from './PdfHighlights';
+import { usePdfViewport } from './usePdfViewport';
 
 // ============================================================================
 // COMPONENT
@@ -56,49 +57,60 @@ const logger = createModuleLogger('PdfCanvasViewer');
 /** Τα όρια του ζουμ του θεατή, στη μορφή της κοινής μαθηματικής του ζουμ (`zoom-pan-math`). */
 const PDF_ZOOM_LIMITS: ZoomLimits = { min: MIN_SCALE, max: MAX_SCALE };
 
+/** Πόσο «ηρεμεί» ένα ζουμ πριν ξαναζωγραφιστεί το bitmap — ως τότε τεντώνεται το παλιό (pdf.js). */
+const RENDER_SETTLE_MS = 120;
+
+/**
+ * Το μέγεθος της **τρέχουσας** σελίδας σε κλίμακα 1, χωρίς στροφή — κάθε σελίδα το δικό της (ένα PDF μπορεί να ανακατεύει
+ * Α4 και Α3). Ως την 2026-11-07 η προσαρμογή μετρούσε μόνο τη σελίδα 1, και μία φορά, στη φόρτωση.
+ */
+function usePdfPageBase(docRef: React.RefObject<PdfDocProxy | null>, state: PdfState): Extent | null {
+  const [base, setBase] = useState<Extent | null>(null);
+  useEffect(() => {
+    const doc = docRef.current;
+    if (!doc || state.loading || state.numPages === 0) return;
+    let cancelled = false;
+    doc.getPage(state.currentPage).then((pdfPage) => {
+      if (cancelled) return;
+      const { width, height } = pdfPage.getViewport({ scale: 1 });
+      setBase((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
+    }).catch(() => { /* το σφάλμα σελίδας το δείχνει ο ζωγράφος — εδώ μένει το προηγούμενο μέγεθος */ });
+    return () => { cancelled = true; };
+  }, [docRef, state.loading, state.numPages, state.currentPage]);
+  return base;
+}
+
 export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, page, highlights }: PdfCanvasViewerProps) {
   const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const docRef = useRef<PdfDocProxy | null>(null);
   const renderTaskRef = useRef<{ cancel(): void } | null>(null);
-  const fitScaleRef = useRef<number>(1);
-
-  // Pan state refs (not in React state to avoid re-renders during drag)
-  // Transform-based pan: container is overflow-hidden, canvas is translated.
-  // Works regardless of canvas vs container size (scroll-based pan was a no-op
-  // when canvas <= container, e.g. at fit-to-width with small PDFs).
-  const isPanningRef = useRef(false);
-  const panStartRef = useRef({ x: 0, y: 0 });
-  const panRef = useRef({ x: 0, y: 0 });
-  const panAtDragRef = useRef({ x: 0, y: 0 });
-
-  const applyPanTransform = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px)`;
-  }, []);
+  /** Τι ζωγραφίστηκε τελευταίο — ίδια όψη ⇒ το νέο ζουμ περιμένει να ηρεμήσει· άλλη ⇒ ζωγραφίζεται αμέσως. */
+  const lastDrawnRef = useRef<{ page: number; rotation: number } | null>(null);
 
   const [state, setState] = useState<PdfState>({
     numPages: 0,
     currentPage: 1,
-    scale: 1,
     rotation: 0,
     loading: true,
     error: null,
   });
 
-  /** «Προσαρμογή στο πλάτος» ενεργή — ως την πρώτη χειροκίνητη αλλαγή ζουμ (δείχνεται πατημένο στην μπάρα). */
-  const [fitted, setFitted] = useState(true);
-
   useControlledPdfPage(page, state.numPages, setState);
+
+  // ADR-928 §5.25.2 — η όψη (ζουμ · προσαρμογή πλάτος/σελίδα · κύλιση · χειρονομίες) έχει ΕΝΑΝ κάτοχο.
+  const pageBase = usePdfPageBase(docRef, state);
+  const pageExtent = useMemo(() => (pageBase ? quarterTurnExtent(pageBase, state.rotation) : null), [pageBase, state.rotation]);
+  const viewport = usePdfViewport({ page: pageExtent, pageKey: state.currentPage, limits: PDF_ZOOM_LIMITS, canvasRef });
+  const { containerRef, scale, ready } = viewport;
 
   // Load PDF document
   useEffect(() => {
     let cancelled = false;
 
     async function loadDoc() {
+      lastDrawnRef.current = null;
       setState((s) => ({ ...s, loading: true, error: null }));
 
       try {
@@ -158,38 +170,33 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
     //    **προηγούμενο** PDF κάτω από το νέο όνομα.
   }, [url, fileId, urlDelivery]);
 
-  // Render current page
+  // Render current page — μόνο το BITMAP: το μέγεθος στην οθόνη το γράφει ήδη σύγχρονα ο `usePdfViewport`, άρα στη διάρκεια
+  // ενός ζουμ το παλιό bitmap απλώς τεντώνεται και καθαρίζει όταν η κίνηση ηρεμήσει (pdf.js). Νέα σελίδα/στροφή/έγγραφο ⇒ αμέσως.
   useEffect(() => {
     const doc = docRef.current;
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!doc || !canvas || !container || state.loading) return;
-
-    if (renderTaskRef.current) {
-      renderTaskRef.current.cancel();
-      renderTaskRef.current = null;
-    }
+    if (!doc || !canvas || state.loading || !ready) return;
 
     let cancelled = false;
+    const last = lastDrawnRef.current;
+    const sameView = last !== null && last.page === state.currentPage && last.rotation === state.rotation;
+    const settle = window.setTimeout(() => { void renderPage(); }, sameView ? RENDER_SETTLE_MS : 0);
 
     async function renderPage() {
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+        renderTaskRef.current = null;
+      }
       try {
         const page = await doc!.getPage(state.currentPage);
         if (cancelled) return;
 
-        const viewport = page.getViewport({
-          scale: state.scale,
-          rotation: state.rotation,
-        });
+        const viewport = page.getViewport({ scale, rotation: state.rotation });
 
         const dpr = window.devicePixelRatio || 1;
-        canvas!.width = viewport.width * dpr;
-        canvas!.height = viewport.height * dpr;
-        canvas!.style.width = `${viewport.width}px`;
-        canvas!.style.height = `${viewport.height}px`;
-        canvas!.style.transformOrigin = 'center center';
-        canvas!.style.willChange = 'transform';
-        canvas!.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px)`;
+        canvas!.width = Math.round(viewport.width * dpr);
+        canvas!.height = Math.round(viewport.height * dpr);
+        lastDrawnRef.current = { page: state.currentPage, rotation: state.rotation };
 
         const ctx = canvas!.getContext('2d');
         if (!ctx) return;
@@ -209,99 +216,15 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
       }
     }
 
-    renderPage();
     return () => {
       cancelled = true;
+      window.clearTimeout(settle);
       if (renderTaskRef.current) {
         renderTaskRef.current.cancel();
         renderTaskRef.current = null;
       }
     };
-  }, [state.currentPage, state.scale, state.rotation, state.loading]);
-
-  // Fit to container width on first load
-  useEffect(() => {
-    const doc = docRef.current;
-    const container = containerRef.current;
-    if (!doc || !container || state.loading || state.numPages === 0) return;
-
-    async function fitToWidth() {
-      const page = await doc!.getPage(1);
-      const viewport = page.getViewport({ scale: 1 });
-      const containerWidth = container!.clientWidth - 32;
-      const fitScale = Math.min(containerWidth / viewport.width, 2);
-      const rounded = Math.round(fitScale * 100) / 100;
-      fitScaleRef.current = rounded;
-      setFitted(true);
-      setState((s) => ({ ...s, scale: rounded }));
-    }
-
-    fitToWidth();
-  }, [state.loading, state.numPages]);
-
-  // ── Wheel zoom ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    function handleWheel(e: WheelEvent) {
-      e.preventDefault();
-      setFitted(false);
-      const direction = e.deltaY < 0 ? 1 : -1;
-      setState((s) => {
-        const factor = direction > 0 ? WHEEL_ZOOM_FACTOR : 1 / WHEEL_ZOOM_FACTOR;
-        const newScale = Math.round(Math.min(MAX_SCALE, Math.max(MIN_SCALE, s.scale * factor)) * 100) / 100;
-        return { ...s, scale: newScale };
-      });
-    }
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, [state.loading]);
-
-  // ── Pan (click & drag) — transform-based, works at any zoom ─────────────
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    function handlePointerDown(e: PointerEvent) {
-      if (e.button !== 0) return;
-      isPanningRef.current = true;
-      panStartRef.current = { x: e.clientX, y: e.clientY };
-      panAtDragRef.current = { ...panRef.current };
-      container!.setPointerCapture(e.pointerId);
-      container!.style.cursor = 'grabbing';
-    }
-
-    function handlePointerMove(e: PointerEvent) {
-      if (!isPanningRef.current) return;
-      panRef.current = {
-        x: panAtDragRef.current.x + (e.clientX - panStartRef.current.x),
-        y: panAtDragRef.current.y + (e.clientY - panStartRef.current.y),
-      };
-      applyPanTransform();
-    }
-
-    function handlePointerUp(e: PointerEvent) {
-      if (!isPanningRef.current) return;
-      isPanningRef.current = false;
-      container!.releasePointerCapture(e.pointerId);
-      container!.style.cursor = 'grab';
-    }
-
-    container.style.cursor = 'grab';
-    container.addEventListener('pointerdown', handlePointerDown);
-    container.addEventListener('pointermove', handlePointerMove);
-    container.addEventListener('pointerup', handlePointerUp);
-    container.addEventListener('pointercancel', handlePointerUp);
-
-    return () => {
-      container.removeEventListener('pointerdown', handlePointerDown);
-      container.removeEventListener('pointermove', handlePointerMove);
-      container.removeEventListener('pointerup', handlePointerUp);
-      container.removeEventListener('pointercancel', handlePointerUp);
-    };
-  }, [state.loading, applyPanTransform]);
+  }, [state.currentPage, scale, state.rotation, state.loading, ready]);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {
@@ -316,25 +239,10 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
   }, []);
 
   // ADR-928 §5.25 — τα κουμπιά πατούν **σκαλί** της κοινής σκάλας (`ladderZoom`, Chrome PDF: 90 → 100 → 110 %), όχι ×1,1·
-  // ο τροχός μένει συνεχής. Κάθε χειροκίνητο ζουμ βγάζει την «Προσαρμογή στο πλάτος».
-  const zoomStep = useCallback((direction: 1 | -1) => {
-    setFitted(false);
-    setState((s) => ({ ...s, scale: ladderZoom(s.scale, PDF_ZOOM_LIMITS, direction) }));
-  }, []);
-  const zoomIn = useCallback(() => zoomStep(1), [zoomStep]);
-  const zoomOut = useCallback(() => zoomStep(-1), [zoomStep]);
-
-  const zoomTo = useCallback((scale: number) => {
-    setFitted(false);
-    setState((s) => ({ ...s, scale: clampZoom(scale, PDF_ZOOM_LIMITS) }));
-  }, []);
-
-  const fitToWidth = useCallback(() => {
-    panRef.current = { x: 0, y: 0 };
-    applyPanTransform();
-    setFitted(true);
-    setState((s) => ({ ...s, scale: fitScaleRef.current }));
-  }, [applyPanTransform]);
+  // Ctrl/⌘+ροδέλα και pinch μένουν συνεχή. Κάθε χειροκίνητο ζουμ βγάζει την προσαρμογή (§5.25.2).
+  const { step: zoomStep, zoomTo, fitTo, toggleFit } = viewport;
+  const fitWidth = useCallback(() => fitTo('width'), [fitTo]);
+  const fitPage = useCallback(() => fitTo('page'), [fitTo]);
 
   const rotate = useCallback(() => {
     setState((s) => ({ ...s, rotation: (s.rotation + 90) % 360 }));
@@ -347,19 +255,24 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
   // Keyboard navigation — PgUp/PgDn = σελίδες (Adobe · Chrome PDF). Τα ←/→ μόνο όταν δεν τα διεκδίκησε κανείς:
   // μέσα σε σειρά αρχείων ανήκουν στην πλοήγηση ΑΡΧΕΙΩΝ (`FileSequenceNav`, ADR-912 §12.16 — όπως το Drive).
   // `shouldGlobalShortcutYield`: πεδίο κειμένου / ανοιχτός διάλογος κρατούν τα πλήκτρα τους.
+  // ADR-928 §5.25.2 — Ctrl/⌘ + `\` εναλλάσσει πλάτος ⇄ σελίδα (Chrome PDF)· τα σκέτα `=`/`-`/`0` μόνο **χωρίς** Ctrl/⌘,
+  // αλλιώς το Ctrl + `-` θα σμίκραινε ταυτόχρονα τον θεατή ΚΑΙ τη σελίδα του browser.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.defaultPrevented || shouldGlobalShortcutYield(e)) return;
+      const modified = e.ctrlKey || e.metaKey;
+      if (modified && e.key === '\\') { e.preventDefault(); toggleFit(); return; }
+      if (modified || e.altKey) return;
       if (e.key === 'ArrowLeft' || e.key === 'PageUp') goToPrev();
       else if (e.key === 'ArrowRight' || e.key === 'PageDown') goToNext();
-      else if (e.key === '+' || e.key === '=') zoomIn();
-      else if (e.key === '-') zoomOut();
-      else if (e.key === '0') fitToWidth();
+      else if (e.key === '+' || e.key === '=') zoomStep(1);
+      else if (e.key === '-') zoomStep(-1);
+      else if (e.key === '0') fitWidth();
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrev, goToNext, zoomIn, zoomOut, fitToWidth]);
+  }, [goToPrev, goToNext, zoomStep, fitWidth, toggleFit]);
 
   // Loading / error overlay (rendered inside the main layout so containerRef stays mounted)
   const showOverlay = state.loading || !!state.error;
@@ -414,12 +327,14 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
         <div className="flex items-center gap-1">
           {/* ADR-928 §5.25 — η ΚΟΙΝΗ μπάρα ζουμ σελίδας (μενού ποσοστού, σκάλα, «Προσαρμογή στο πλάτος» πατημένο). */}
           <DocumentZoomControl
-            zoom={state.scale}
-            fitted={fitted}
+            zoom={scale}
+            fitted={viewport.fit === 'width'}
+            pageFitted={viewport.fit === 'page'}
             limits={PDF_ZOOM_LIMITS}
             onStep={zoomStep}
             onZoomTo={zoomTo}
-            onFit={fitToWidth}
+            onFit={fitWidth}
+            onFitPage={fitPage}
           />
 
           <Tooltip>
@@ -442,10 +357,11 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
         </div>
       </nav>
 
-      {/* Canvas area — pan via transform, no scrollbars */}
+      {/* Canvas area — ADR-928 §5.25.2: πλαίσιο ΚΥΛΙΣΗΣ (Chrome PDF · pdf.js · Acrobat). Το `m-auto` της σελίδας κεντράρει
+          όταν χωρά και την αφήνει να ξεκινά από την κορυφή/αριστερά όταν δεν χωρά (το `items-center` έκοβε και τις δύο άκρες). */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-hidden flex items-center justify-center p-4 bg-muted/20 select-none relative touch-none"
+        className="relative flex flex-1 overflow-auto overscroll-contain p-4 bg-muted/20 select-none touch-pan-x touch-pan-y [scrollbar-gutter:stable]"
       >
         {showOverlay && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-muted/20">
@@ -459,10 +375,10 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, pa
             )}
           </div>
         )}
-        <figure className="relative m-0 inline-block">
+        <figure className="relative m-auto shrink-0">
           <canvas
             ref={canvasRef}
-            className="shadow-md rounded bg-white"
+            className="block shadow-md rounded bg-white"
             aria-label={title}
           />
           <PdfHighlights regions={highlights} />

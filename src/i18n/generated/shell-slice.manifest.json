@@ -123,7 +123,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "aa83f8ee087a3c804eca4893efce88833946f7ddd13d19bcc8ed615be9a83bf6",
+    "src/i18n/generated/shell-slice.el.json": "5d8584d076f5e0a0d3e4d1c15043fce3d52213644f07de58800755935a52fd8d",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -209,7 +209,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "9c3a9b381f2cacfbaf0a37b4fd1946f13c03ba87cca4074c9a34d78e210507cc",
+  "inputsSha256": "b5b70a8f10d2870d8875649fc138bb74a7edf4942df89eda62a775f8ab5870b8",
   "languages": [
     "el"
   ],
@@ -9451,6 +9451,7 @@
             "buttons.cancel",
             "buttons.close",
             "buttons.confirm",
+            "documentZoom.fitPage",
             "documentZoom.fitWidth",
             "documentZoom.label",
             "documentZoom.level",
@@ -19839,6 +19840,7 @@
             "buttons.refresh",
             "copy.copyError",
             "descr",
+            "documentZoom.fitPage",
             "documentZoom.fitWidth",
             "documentZoom.label",
             "documentZoom.level",
@@ -22208,6 +22210,7 @@
             "countries.turkey",
             "countries.uk",
             "countries.usa",
+            "documentZoom.fitPage",
             "documentZoom.fitWidth",
             "documentZoom.label",
             "documentZoom.level",
@@ -29212,6 +29215,7 @@
             "contactPersons",
             "copy.copyError",
             "descr",
+            "documentZoom.fitPage",
             "documentZoom.fitWidth",
             "documentZoom.label",
             "documentZoom.level",
@@ -40073,7 +40077,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1292696
+    "sliceBytes": 1292757
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

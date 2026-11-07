@@ -56,7 +56,7 @@ export interface PdfHighlightRegion {
 export interface PdfState {
   numPages: number;
   currentPage: number;
-  scale: number;
+  /** Το ζουμ ΔΕΝ ζει εδώ: έχει έναν κάτοχο, το `usePdfViewport` (ADR-928 §5.25.2). */
   rotation: number;
   loading: boolean;
   error: string | null;
@@ -86,7 +86,6 @@ export interface PdfPageProxy {
 
 export const MIN_SCALE = 0.25;
 export const MAX_SCALE = 5;
-export const WHEEL_ZOOM_FACTOR = 1.1;
 export const WORKER_URL = '/pdf.worker.min.mjs';
 
 // ============================================================================

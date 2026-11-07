@@ -49,6 +49,25 @@ export function wheelZoom(zoom: number, deltaY: number, sensitivity: number, lim
   return clampZoom(zoom * (1 - deltaY * sensitivity), limits);
 }
 
+/**
+ * Η ευαισθησία του **Ctrl/⌘ + ροδέλα** στους θεατές σελίδας (έγγραφο υπεργολαβίας · προβολέας PDF): ~100 px ανά εγκοπή ⇒
+ * ×0,75 · pinch του trackpad (λίγα px ανά γεγονός) ⇒ λείο. Μία τιμή, ώστε η ίδια χειρονομία να δίνει το ίδιο ζουμ παντού.
+ */
+export const WHEEL_ZOOM_SENSITIVITY = 0.0025;
+
+const WHEEL_MAX_DELTA_PX = 100;
+const WHEEL_LINE_PX = 33;
+const WHEEL_PAGE_PX = 800;
+
+/**
+ * Η ροδέλα σε px, ανεξάρτητα από τη μονάδα του browser (`deltaMode` 1 = γραμμές στον Firefox · 2 = σελίδες), **κομμένη**
+ * ώστε μία εγκοπή = ένα λογικό βήμα και ένα «πέταγμα» του trackpad να μην εκτινάσσει το ζουμ.
+ */
+export function wheelDeltaPx(event: { readonly deltaY: number; readonly deltaMode: number }): number {
+  const unit = event.deltaMode === 1 ? WHEEL_LINE_PX : event.deltaMode === 2 ? WHEEL_PAGE_PX : 1;
+  return clamp(event.deltaY * unit, -WHEEL_MAX_DELTA_PX, WHEEL_MAX_DELTA_PX);
+}
+
 /** Ζουμ → θέση στη ράγα `[0, 1]`, λογαριθμικά. */
 export function zoomToUnit(zoom: number, limits: ZoomLimits): number {
   if (limits.max <= limits.min) return 0;
