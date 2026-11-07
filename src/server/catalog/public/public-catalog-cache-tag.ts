@@ -17,3 +17,9 @@ export const publicCatalogModelTag = (modelId: string): string => `public-catalo
  * που αγγίζει όψη τιμών (λίστα, έκδοση, γραμμή, συνθήκη, ανάθεση) το χτυπά μετά το commit.
  */
 export const publicCatalogPricesTag = (companyId: string): string => `public-catalog:prices:${companyId}`;
+
+/**
+ * Τα δημοσιευμένα έντυπα ενός προμηθευτή (ADR-923 §5.15). Χωριστό tag: η δημοσίευση και η απόσυρση δεν περνούν από το outbox,
+ * άρα ο γραφέας των εκδόσεων το χτυπά μετά το commit, και η απόσυρση κλείνει τη λίστα της βιτρίνας χωρίς να περιμένει παράθυρο.
+ */
+export const publicCatalogEditionsTag = (companyId: string): string => `public-catalog:editions:${companyId}`;

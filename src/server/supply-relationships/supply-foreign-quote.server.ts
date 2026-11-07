@@ -10,7 +10,6 @@ import 'server-only';
  * @module server/supply-relationships/supply-foreign-quote.server
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { readOwnedOrNull, runForeignCatalogRead, type CatalogReadScope } from '@/server/catalog/catalog-store.server';
@@ -18,13 +17,12 @@ import { quoteWithin } from '@/server/catalog/price-quote.server';
 import { viewerOfRelationship } from '@/server/catalog/pricing-viewer.server';
 import { FOREIGN_UNAVAILABLE, foreignOutcomeOf, type ForeignPrice, type ForeignQuote } from '@/subapps/catalog/pricing/foreign-quote';
 import { FOREIGN_SKU_NONE, foreignSkuRowText, type ForeignSkuSearch } from '@/subapps/catalog/pricing/foreign-sku-search';
-import { supplyRelationshipFromDocument } from '@/subapps/catalog/schema/zod/supply-relationship.schema';
 import type { CatalogProductDefinition } from '@/subapps/catalog/types/product';
 import type { CatalogProductDerived } from '@/subapps/catalog/types/product-derived';
 import type { SupplierSkuLink, SupplierSkuRef, SupplyRelationship } from '@/subapps/catalog/types/supply-relationship';
 
 import { searchCatalogInScope } from './supply-foreign-search.server';
-import { readActiveSupplyRelationshipInTx } from './supply-relationship-store.server';
+import { readActiveSupplyRelationshipInTx, readBuyerRelationship } from './supply-relationship-store.server';
 
 export interface ForeignQuoteRequest {
   readonly relationshipId: string;
@@ -42,13 +40,9 @@ export type ForeignQuoteForLine =
   | Exclude<ForeignQuote, { kind: 'priced' }>
   | { readonly kind: 'priced'; readonly price: ForeignPrice; readonly versionNumber: number; readonly relationship: SupplyRelationship };
 
-/** Η σχέση του αγοραστή με αυτό το id, ή `null`. Εκτός συναλλαγής: μόνο για να μάθουμε ποιον κατάλογο θα ανοίξουμε. */
-async function readBuyerRelationship(ctx: AuthContext, relationshipId: string): Promise<SupplyRelationship | null> {
-  const db = getAdminFirestore();
-  const snap = await db.collection(COLLECTIONS.SUPPLY_RELATIONSHIPS).doc(relationshipId).get();
-  const relationship = supplyRelationshipFromDocument(snap.data());
-  return relationship?.buyerCompanyId === ctx.companyId ? relationship : null;
-}
+/** Η σχέση του αγοραστή (ο κοινός αναγνώστης του store). */
+const buyerRelationshipOf = (ctx: AuthContext, relationshipId: string): Promise<SupplyRelationship | null> =>
+  readBuyerRelationship(getAdminFirestore(), ctx.companyId, relationshipId);
 
 async function quoteInScope(scope: CatalogReadScope, buyerCompanyId: string, request: ForeignQuoteRequest): Promise<ForeignQuoteForLine> {
   const ends = { supplierCompanyId: scope.ctx.companyId, buyerCompanyId };
@@ -65,7 +59,7 @@ async function quoteInScope(scope: CatalogReadScope, buyerCompanyId: string, req
 
 /** Μία τιμή για τη γραμμή BOQ: η εσωτερική μορφή, με σχέση και έκδοση. */
 export async function quoteForeignLine(ctx: AuthContext, request: ForeignQuoteRequest): Promise<ForeignQuoteForLine> {
-  const relationship = await readBuyerRelationship(ctx, request.relationshipId);
+  const relationship = await buyerRelationshipOf(ctx, request.relationshipId);
   if (relationship === null) return FOREIGN_UNAVAILABLE;
   return runForeignCatalogRead(relationship.companyId, (scope) => quoteInScope(scope, ctx.companyId, request));
 }
@@ -99,7 +93,7 @@ async function visibleSkuTextInScope(scope: CatalogReadScope, buyerCompanyId: st
  * βγαίνει από εδώ, ποτέ από τον πελάτη). Ξένη, ανύπαρκτη, ανακλημένη σχέση και κρυφό SKU δίνουν την **ίδια** απάντηση (Σ7).
  */
 export async function resolveVisibleForeignSku(ctx: AuthContext, link: SupplierSkuLink): Promise<VisibleForeignSku | null> {
-  const relationship = await readBuyerRelationship(ctx, link.relationshipId);
+  const relationship = await buyerRelationshipOf(ctx, link.relationshipId);
   if (relationship === null) return null;
   const text = await runForeignCatalogRead(relationship.companyId, (scope) => visibleSkuTextInScope(scope, ctx.companyId, link));
   return text === null ? null : { ref: { supplierCompanyId: relationship.companyId, variantId: link.variantId }, text };
@@ -121,7 +115,7 @@ async function searchInScope(scope: CatalogReadScope, buyerCompanyId: string, te
 
 /** Τα SKU που βλέπει ο αγοραστής για έναν όρο. Ξένη, ανύπαρκτη, ανακλημένη σχέση ⇒ ίδια κενή απάντηση με «δεν βρέθηκε τίποτα» (Σ7). */
 export async function searchForeignCatalog(ctx: AuthContext, request: ForeignSearchRequest): Promise<ForeignSkuSearch> {
-  const relationship = await readBuyerRelationship(ctx, request.relationshipId);
+  const relationship = await buyerRelationshipOf(ctx, request.relationshipId);
   if (relationship === null) return FOREIGN_SKU_NONE;
   return runForeignCatalogRead(relationship.companyId, (scope) => searchInScope(scope, ctx.companyId, request.term));
 }

@@ -159,6 +159,12 @@ export const CATALOG_PUBLICATION_RUN_TRACKED_FIELDS = defs(
     retention: { nestedKeyCatalog: V.catalogRetentionParts, itemCatalogs: { cause: V.catalogDisposalCause } },
   },
 );
+/** Δημοσιευμένη έκδοση (§5.15): ο κύκλος ζωής της (δημοσίευση → αντικατάσταση / απόσυρση) και σε ποιο κοινό. Το αρχείο δεν αλλάζει ποτέ. */
+export const CATALOG_EDITION_TRACKED_FIELDS = defs(
+  ['status', 'supersededBy', 'endedAt'],
+  ['audience'],
+  { status: enumOf(V.catalogEditionStatus), audience: { itemCatalogs: { kind: V.catalogPriceAudience } } },
+);
 export const CATALOG_VISIBILITY_RULE_TRACKED_FIELDS = defs(
   ['visibility', 'isDeleted'],
   ['subject', 'audience'],

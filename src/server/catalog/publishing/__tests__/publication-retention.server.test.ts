@@ -146,6 +146,14 @@ describe('δικαστική δέσμευση', () => {
     await releasePublicationLegalHold(ctx, 'r1');
     expect(mockOrder).toEqual(['record', 'hold:false']);
   });
+
+  it('🐞 §5.15 Θ.1β: η άρση ΔΕΝ λύνει την κράτηση δημοσιευμένης έκδοσης, ακόμη κι αν δεν κατέβηκε ποτέ', async () => {
+    seed({ publishedEditions: 1, legalHold: { placedBy: 'u', placedAt: 't', reason: 'x' } });
+    mockHeld.add(PATH);
+    await releasePublicationLegalHold(ctx, 'r1');
+    expect(mockHeld.has(PATH)).toBe(true);
+    expect(mockOrder).not.toContain('hold:false');
+  });
 });
 
 describe('σάρωση', () => {

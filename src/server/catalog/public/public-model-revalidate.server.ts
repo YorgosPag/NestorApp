@@ -16,7 +16,7 @@ import { revalidateTag } from 'next/cache';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { isAppFeatureEnabled } from '@/config/feature-flags';
-import { publicCatalogCompanyTag, publicCatalogModelTag, publicCatalogPricesTag } from './public-catalog-cache-tag';
+import { publicCatalogCompanyTag, publicCatalogEditionsTag, publicCatalogModelTag, publicCatalogPricesTag } from './public-catalog-cache-tag';
 
 const logger = createModuleLogger('PublicModelRevalidate');
 
@@ -44,4 +44,9 @@ export function revalidatePublicCompany(companyId: string): void {
 export function revalidatePublicPrices(companyId: string): void {
   if (!isAppFeatureEnabled('PUBLIC_SHOWCASE_PRICES')) return;
   revalidateTags([publicCatalogPricesTag(companyId)], { companyId });
+}
+
+/** Τα έντυπα της βιτρίνας ενός προμηθευτή (ADR-923 §5.15), μετά από δημοσίευση ή απόσυρση. */
+export function revalidatePublicEditions(companyId: string): void {
+  revalidateTags([publicCatalogEditionsTag(companyId)], { companyId });
 }

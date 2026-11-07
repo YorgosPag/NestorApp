@@ -41,6 +41,16 @@ export async function readSupplyRelationshipInTx(tx: Transaction, db: Firestore,
   return supplyRelationshipFromDocument((await tx.get(relationships(db).doc(id))).data());
 }
 
+/**
+ * Η σχέση **του αγοραστή** με αυτό το id, ή `null` (ξένη ≡ ανύπαρκτη). Εκτός συναλλαγής: μόνο για να μάθουμε **ποιον** κατάλογο
+ * θα ανοίξουμε· η ενεργότητα ξαναρωτιέται μέσα στη συναλλαγή της ανάγνωσης (`readActiveSupplyRelationshipInTx`), ώστε η
+ * ανάκληση να κερδίζει κάθε αγώνα. Κοινή για κάθε πόρτα αγοραστή (τιμή · αναζήτηση · εκδόσεις καταλόγου).
+ */
+export async function readBuyerRelationship(db: Firestore, buyerCompanyId: string, relationshipId: string): Promise<SupplyRelationship | null> {
+  const relationship = supplyRelationshipFromDocument((await relationships(db).doc(relationshipId).get()).data());
+  return relationship?.buyerCompanyId === buyerCompanyId ? relationship : null;
+}
+
 /** Σ4 · Σ5: η **μία** ερώτηση «υπάρχει ενεργή σχέση ανάμεσα σε αυτούς τους δύο;». */
 export async function readActiveSupplyRelationshipInTx(tx: Transaction, db: Firestore, ends: SupplyRelationshipEnds): Promise<SupplyRelationship | null> {
   const relationship = await readSupplyRelationshipInTx(tx, db, supplyRelationshipId(ends));

@@ -46,7 +46,17 @@ const laterOf = (a: string, b: string): string => (Date.parse(a) >= Date.parse(b
 /** Το διαβάζει κοινό μέσω δημοσιευμένης έκδοσης καταλόγου (§5.15 Η2). */
 export const isPublished = (run: RetentionFacts): boolean => run.retention.publishedEditions > 0;
 
-const isPricedEvidence = (run: RetentionFacts): boolean => run.priced && run.retention.downloadCount > 0;
+/**
+ * Κρατά η **πλατφόρμα** (GCS `temporaryHold`) τα αρχεία της έκδοσης; Ο ΕΝΑΣ κριτής για κάθε πόρτα που βάζει ή σηκώνει κράτηση:
+ * λήψη, δικαστική δέσμευση, δημοσίευση σε κοινό. Πριν από αυτόν κάθε πόρτα ρωτούσε δικό της υποσύνολο, και η άρση της δέσμευσης
+ * έλυνε την κράτηση δημοσιευμένης έκδοσης (§5.15 Θ.1β).
+ */
+export function publicationHeldByPlatform(run: Pick<PublicationRunDefinition, 'retention'>): boolean {
+  const { downloadCount, legalHold, publishedEditions } = run.retention;
+  return downloadCount > 0 || legalHold !== null || publishedEditions > 0;
+}
+
+const isPricedEvidence =(run: RetentionFacts): boolean => run.priced && run.retention.downloadCount > 0;
 
 /** Η νωρίτερη στιγμή που μπορεί να σβηστεί το PDF· `null` = δεν τρέχει ρολόι. */
 export function publicationDispositionDueAt(run: RetentionFacts): string | null {

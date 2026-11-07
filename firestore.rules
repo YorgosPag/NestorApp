@@ -6461,6 +6461,12 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    // ADR-923 §5.15 — ΔΗΜΟΣΙΕΥΜΕΝΕΣ ΕΚΔΟΣΕΙΣ: ο θεατής (ανώνυμος / αγοραστής) κρίνεται ΜΟΝΟ στον διακομιστή, όπως οι τιμές.
+    // Κανένας κανόνας δεν βλέπει τη σχέση προμήθειας ή την ομάδα πελάτη ⇒ read ΚΑΙ write κλειστά.
+    match /catalog_editions/{editionId} {
+      allow read: if false;
+      allow write: if false;
+    }
     match /catalog_pricing_slots/{slotId} {
       allow read: if false;
       allow write: if false;

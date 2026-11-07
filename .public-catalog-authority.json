@@ -56,6 +56,21 @@
       }
     },
     {
+      "kind": "member",
+      "name": "COLLECTIONS.CATALOG_EDITIONS",
+      "owners": {
+        "src/server/catalog/editions/catalog-edition-store.server.ts": "Η μία διεύθυνση των δημοσιευμένων εντύπων (ADR-923 §5.15): ο γραφέας και το σύνορο ανάγνωσης ζητούν από εδώ ερωτήματα με δείκτη, κανείς άλλος δεν ανοίγει τη συλλογή."
+      }
+    },
+    {
+      "kind": "call",
+      "name": "signCatalogEditionFile",
+      "owners": {
+        "src/app/api/supplier-catalogs/[supplier]/editions/[editionId]/file/route.ts": "Η ανώνυμη πόρτα: ο προμηθευτής από την αυθεντία του ψευδωνύμου, ο θεατής πάντα ανώνυμος.",
+        "src/app/api/catalog/suppliers/[id]/editions/[editionId]/file/route.ts": "Η πόρτα του αγοραστή: ο προμηθευτής από τη σχέση του, ο θεατής από τον χώρο της σύνδεσης."
+      }
+    },
+    {
       "kind": "reference",
       "name": "CATALOG_MODEL_SHELF",
       "owners": {

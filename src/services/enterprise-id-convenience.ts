@@ -475,6 +475,7 @@ export {
   generateCatalogDiscountConditionId,
   generateDeterministicCatalogPublicationRecipeId,
   generateDeterministicCatalogPublicationRunId,
+  generateCatalogEditionId,
   generateDeterministicCatalogPricingSlotId,
   generateDeterministicCatalogPricingViewSignalId,
   generateDeterministicCatalogPublicOutboxId,

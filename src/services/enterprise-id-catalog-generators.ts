@@ -125,6 +125,14 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
     return this.mintDeterministicV4Id(P.CATALOG_PUBLICATION_RUN, seedOf('publication-run', companyId, inputHash));
   }
 
+  /**
+   * Δημοσιευμένη έκδοση — **τυχαία** (ADR-923 §5.15 Η1): αποσυρμένη έκδοση δεν ξαναζωντανεύει, η επαναδημοσίευση του ίδιου
+   * αρχείου στο ίδιο κοινό είναι **νέα** εγγραφή. Η ιδεμποτία της πράξης ζει στον γραφέα (υπάρχουσα ισχύουσα ⇒ επιστρέφεται).
+   */
+  generateCatalogEditionId(): string {
+    return this.generateId(P.CATALOG_EDITION).id;
+  }
+
   /** Συνθήκη — **τυχαία**: δύο συνθήκες του ίδιου κοινού σε διαδοχικές περιόδους είναι νόμιμες. */
   generateCatalogDiscountConditionId(): string {
     return this.generateId(P.CATALOG_DISCOUNT_CONDITION).id;

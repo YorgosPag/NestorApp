@@ -29,6 +29,7 @@ import {
   canDeletePublicationByHand,
   canHoldPublication,
   priceVersionEndedAt,
+  publicationHeldByPlatform,
   PUBLICATION_RETENTION_RULE,
   publicationRetentionStepOf,
   publicationRunOf,
@@ -53,6 +54,21 @@ function refuse(code: CatalogIssueCode): never {
 
 async function setArtifactHolds(run: StoredPublicationRun, held: boolean): Promise<void> {
   await Promise.all(run.artifacts.map((artifact) => publicationBucket().file(artifact.storagePath).setMetadata({ temporaryHold: held })));
+}
+
+/** Βάζει την κράτηση της πλατφόρμας **πριν** από την εγγραφή που θα τη χρειαστεί (λήψη · δέσμευση · δημοσίευση). */
+export function placeArtifactHolds(run: StoredPublicationRun): Promise<void> {
+  return setArtifactHolds(run, true);
+}
+
+/**
+ * Φέρνει την κράτηση της πλατφόρμας στην κατάσταση που λέει **η εγγραφή** (`publicationHeldByPlatform`, ο ένας κριτής). Καλείται
+ * **μετά** από κάθε εγγραφή που μπορεί να αφαιρέσει λόγο κράτησης (άρση δέσμευσης · απόσυρση έκδοσης · αποτυχημένη δημοσίευση).
+ * Η άρση γίνεται μόνο αν δεν μένει κανένας λόγος, ώστε κανένα σημείο να μη λύνει κράτηση που κρατά κάποιο άλλο.
+ */
+export async function syncArtifactHolds(run: StoredPublicationRun): Promise<void> {
+  if (run.retention.disposal !== null) return;
+  await setArtifactHolds(run, publicationHeldByPlatform(run));
 }
 
 /** Το hold φεύγει πρώτα, αλλιώς η πλατφόρμα αρνείται. Αντικείμενο που λείπει ⇒ η προηγούμενη προσπάθεια έφτασε ως εδώ. */
@@ -102,12 +118,12 @@ export async function placePublicationLegalHold(ctx: AuthContext, id: string, re
   return changePublicationRun(id, ctx.uid, (current) => retentionPatch(current, { legalHold }));
 }
 
-/** Άρση: το hold της πλατφόρμας μένει αν το κρατά και η λήψη. */
+/** Άρση: το hold της πλατφόρμας μένει αν το κρατά άλλος λόγος (λήψη, δημοσίευση σε κοινό) — το κρίνει ο ένας κριτής. */
 export async function releasePublicationLegalHold(ctx: AuthContext, id: string): Promise<StoredPublicationRun | null> {
   const run = await ownedRun(ctx, id);
   if (run.retention.legalHold === null) return run;
   const released = await changePublicationRun(id, ctx.uid, (current) => retentionPatch(current, { legalHold: null }));
-  if (run.retention.downloadCount === 0) await setArtifactHolds(run, false);
+  if (released !== null) await syncArtifactHolds(released);
   return released;
 }
 

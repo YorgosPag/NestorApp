@@ -10,7 +10,10 @@ import {
   catalogEditionViewOf,
   editionAudienceKey,
   editionVisibleTo,
+  latestVisibleEdition,
+  PUBLICATION_DISPOSAL_MARGIN_MS,
   publishabilityOf,
+  restoredOnWithdrawal,
   supersededBy,
 } from '../catalog-edition-policy';
 
@@ -28,8 +31,11 @@ const run = (patch: Partial<Parameters<typeof publishabilityOf>[0]> = {}) => ({
   priced: false,
   retention: EMPTY_PUBLICATION_RETENTION,
   artifacts: [artifact('print'), artifact('screen')],
+  dispositionDueAt: null,
   ...patch,
 });
+
+const NOW = '2026-11-07T12:00:00.000Z';
 
 const GROUP_A = { kind: 'customerGroup', customerGroupId: 'cgrp_a' } as const;
 const GROUP_B = { kind: 'customerGroup', customerGroupId: 'cgrp_b' } as const;
@@ -56,19 +62,27 @@ const buyerOf = (customerGroupId: string | null): PricingViewer => ({ kind: 'sig
 
 describe('publishabilityOf: τι δημοσιεύεται', () => {
   it('έτοιμη, χωρίς τιμές ⇒ το PDF οθόνης, ποτέ το εκτύπωσης', () => {
-    const verdict = publishabilityOf(run());
+    const verdict = publishabilityOf(run(), NOW);
     expect(verdict.ok && verdict.artifact.profile).toBe('screen');
   });
 
   it('αρνήσεις, η καθεμία με τη δική της αιτία', () => {
-    expect(publishabilityOf(run({ status: 'running' }))).toEqual({ ok: false, refusal: 'notReady' });
+    expect(publishabilityOf(run({ status: 'running' }), NOW)).toEqual({ ok: false, refusal: 'notReady' });
     const disposal = { disposedAt: 'x', disposedBy: 'u', cause: 'manual', ruleId: 'r' } as const;
-    expect(publishabilityOf(run({ retention: { ...EMPTY_PUBLICATION_RETENTION, disposal } }))).toEqual({ ok: false, refusal: 'disposed' });
-    expect(publishabilityOf(run({ artifacts: [artifact('print')] }))).toEqual({ ok: false, refusal: 'noScreenFile' });
+    expect(publishabilityOf(run({ retention: { ...EMPTY_PUBLICATION_RETENTION, disposal } }), NOW)).toEqual({ ok: false, refusal: 'disposed' });
+    expect(publishabilityOf(run({ artifacts: [artifact('print')] }), NOW)).toEqual({ ok: false, refusal: 'noScreenFile' });
+  });
+
+  it('🔒 αγώνας με τη σάρωση: προθεσμία μέσα στο περιθώριο ⇒ άρνηση· πιο μακριά ή καμία ⇒ δημοσιεύεται', () => {
+    const at = (offsetMs: number) => new Date(Date.parse(NOW) + offsetMs).toISOString();
+    expect(publishabilityOf(run({ dispositionDueAt: at(-1) }), NOW)).toEqual({ ok: false, refusal: 'disposalDue' });
+    expect(publishabilityOf(run({ dispositionDueAt: at(PUBLICATION_DISPOSAL_MARGIN_MS) }), NOW)).toEqual({ ok: false, refusal: 'disposalDue' });
+    expect(publishabilityOf(run({ dispositionDueAt: at(PUBLICATION_DISPOSAL_MARGIN_MS + 1) }), NOW).ok).toBe(true);
+    expect(publishabilityOf(run({ dispositionDueAt: null }), NOW).ok).toBe(true);
   });
 
   it('Θ4: έκδοση με τιμές δεν δημοσιεύεται ποτέ', () => {
-    expect(publishabilityOf(run({ priced: true }))).toEqual({ ok: false, refusal: 'priced' });
+    expect(publishabilityOf(run({ priced: true }), NOW)).toEqual({ ok: false, refusal: 'priced' });
   });
 });
 
@@ -89,6 +103,41 @@ describe('supersededBy: τι αντικαθιστά μια νέα δημοσίε
   it('το κλειδί κοινού είναι το ίδιο με των τιμών', () => {
     expect(editionAudienceKey(GROUP_A)).toBe('customerGroup:cgrp_a');
     expect(editionAudienceKey(ANONYMOUS)).toBe('anonymous');
+  });
+});
+
+describe('restoredOnWithdrawal: ποια ξαναγίνεται ισχύουσα', () => {
+  const at = (iso: string, patch: Partial<CatalogEditionDefinition>) => ({ ...edition(patch), publishedAt: iso });
+  const withdrawnCurrent = { id: 'new', ...edition({ status: 'published' }) };
+
+  it('ο νεότερος προκάτοχος που αντικατέστησε, ίδιο ράφι και κοινό', () => {
+    const older = { id: 'o1', ...at('2026-01-01T00:00:00.000Z', { status: 'superseded', supersededBy: 'new' }) };
+    const newer = { id: 'o2', ...at('2026-06-01T00:00:00.000Z', { status: 'superseded', supersededBy: 'new' }) };
+    expect(restoredOnWithdrawal([older, newer], withdrawnCurrent)?.id).toBe('o2');
+  });
+
+  it('κανένας: άλλος διάδοχος, άλλο κοινό, ή η αποσυρμένη ήταν ήδη παλαιότερη', () => {
+    const otherSuccessor = { id: 'o1', ...edition({ status: 'superseded', supersededBy: 'else' }) };
+    const otherAudience = { id: 'o2', ...edition({ status: 'superseded', supersededBy: 'new', audience: GROUP_A }) };
+    expect(restoredOnWithdrawal([otherSuccessor, otherAudience], withdrawnCurrent)).toBeNull();
+    const wasSuperseded = { id: 'new', ...edition({ status: 'superseded' }) };
+    expect(restoredOnWithdrawal([{ id: 'o3', ...edition({ status: 'superseded', supersededBy: 'new' }) }], wasSuperseded)).toBeNull();
+  });
+});
+
+describe('latestVisibleEdition: το ισχύον του ραφιού για τον θεατή', () => {
+  const anonymousNew = { id: 'a', ...edition({ publishedAt: '2026-06-01T00:00:00.000Z' }) };
+  const groupOld = { id: 'g', ...edition({ audience: GROUP_A, publishedAt: '2026-01-01T00:00:00.000Z' }) };
+  const shelf = [anonymousNew, groupOld];
+
+  it('το πιο ειδικό κοινό κερδίζει τη νεότητα· ο ανώνυμος παίρνει το δικό του', () => {
+    expect(latestVisibleEdition(shelf, buyerOf('cgrp_a'))?.id).toBe('g');
+    expect(latestVisibleEdition(shelf, anonymous)?.id).toBe('a');
+    expect(latestVisibleEdition(shelf, buyerOf('cgrp_b'))?.id).toBe('a');
+  });
+
+  it('μόνο ισχύουσες: παλαιότερη ή αποσυρμένη δεν είναι ποτέ «το ισχύον»', () => {
+    expect(latestVisibleEdition([{ id: 's', ...edition({ status: 'superseded' }) }], anonymous)).toBeNull();
   });
 });
 

@@ -16,7 +16,6 @@ import 'server-only';
  * @module server/catalog/public/public-price-reader.server
  */
 
-import { readActiveSupplyRelationshipInTx } from '@/server/supply-relationships/supply-relationship-store.server';
 import { judgeVisibility, type StoredVisibilityRule } from '@/subapps/catalog/pricing/visibility';
 import {
   SHOWCASE_ON_REQUEST,
@@ -25,15 +24,11 @@ import {
   type ShowcaseModelPrices,
   type ShowcasePrice,
 } from '@/subapps/catalog/public/showcase-price';
-import type { PricingViewer } from '@/subapps/catalog/types/price-list';
 import { runForeignCatalogRead, type CatalogReadScope } from '../catalog-store.server';
 import { quoteOnBasis, readBasisLine, readQuoteBasis, type QuoteBasis } from '../price-quote.server';
-import { viewerOfRelationship } from '../pricing-viewer.server';
 import { readVisibilityRules } from '../visibility-reads.server';
 import { readPublicVariantPlacements, type PublicVariantPlacements } from './public-model-snapshot.server';
-
-/** Ποιος ρωτά. Ο αγοραστής ονομάζεται **μόνο** με τον χώρο του `AuthContext`, ποτέ με κάτι από το αίτημα. */
-export type ShowcaseViewerSource = { readonly kind: 'anonymous' } | { readonly kind: 'buyer'; readonly buyerCompanyId: string };
+import { showcaseViewerOf, type ShowcaseViewerSource } from './showcase-viewer.server';
 
 /** Μία δημοσιεύσιμη ρίζα και τα SKU της που ζητούνται: πάντα τα SKU του **δημόσιου εγγράφου**, ποτέ όλο το δέντρο (Μ3 · Χ5). */
 export interface ShowcasePriceRequest {
@@ -46,15 +41,6 @@ export type ShowcasePriceTable = Readonly<Record<string, ShowcaseModelPrices>>;
 
 /** Όριο ριζών ανά συναλλαγή: μία σελίδα καρτών (48) με περιθώριο. Μεγαλύτερο αίτημα είναι λάθος του καλούντα. */
 export const SHOWCASE_PRICE_MAX_MODELS = 60;
-
-const SIGNED_IN_WITHOUT_RELATIONSHIP: PricingViewer = { kind: 'signedIn', customerGroupId: null, parties: [] };
-
-async function showcaseViewerOf(scope: CatalogReadScope, source: ShowcaseViewerSource): Promise<PricingViewer> {
-  if (source.kind === 'anonymous') return { kind: 'anonymous' };
-  const ends = { supplierCompanyId: scope.ctx.companyId, buyerCompanyId: source.buyerCompanyId };
-  const relationship = await readActiveSupplyRelationshipInTx(scope.tx, scope.db, ends);
-  return relationship === null ? SIGNED_IN_WITHOUT_RELATIONSHIP : viewerOfRelationship(scope, relationship);
-}
 
 interface Judge {
   readonly scope: CatalogReadScope;

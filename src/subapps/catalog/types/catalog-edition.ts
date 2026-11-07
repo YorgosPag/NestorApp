@@ -62,6 +62,15 @@ export interface CatalogEditionDefinition {
   readonly supersededBy: string | null;
 }
 
+/**
+ * Η έκδοση όπως τη βλέπει **ο ιδιοκτήτης** (η οθόνη «Δημοσιευμένοι κατάλογοι»): όλος ο κύκλος ζωής και το κοινό, **χωρίς**
+ * τη διαδρομή αποθήκευσης — το αρχείο φτάνει στον φυλλομετρητή μόνο με υπογεγραμμένη άδεια (Η4).
+ */
+export type CatalogEditionOwnerView = Omit<CatalogEditionDefinition, 'file'> & {
+  readonly id: string;
+  readonly file: Omit<CatalogEditionFile, 'storagePath'>;
+};
+
 /** Η έκδοση όπως τη βλέπει **ο θεατής**: χωρίς διαδρομή αποθήκευσης, χωρίς κοινό, χωρίς ταυτότητες προσώπων. */
 export interface CatalogEditionView {
   readonly id: string;

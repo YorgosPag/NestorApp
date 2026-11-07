@@ -341,9 +341,14 @@
     "publicationScopeEmpty": "The publication scope contains nothing.",
     "publicationAudienceNotCovered": "This price list is not offered to the audience of the publication.",
     "publicationLogoNotEligible": "The logo must be an asset with the Logo role and a PNG, JPEG or TIFF file.",
-    "publicationNotDeletable": "This PDF cannot be deleted by hand: it has been downloaded or is under legal hold.",
+    "publicationNotDeletable": "This PDF cannot be deleted by hand: it has been downloaded, is published to an audience or is under legal hold.",
     "publicationNotHoldable": "A hold can only be placed on a ready publication that still has its file.",
     "publicationAlreadyOnHold": "This publication is already under legal hold.",
+    "catalogEditionNotReady": "Only a completed publication can be published.",
+    "catalogEditionDisposed": "This publication’s PDF has been disposed of; create a new publication to publish it.",
+    "catalogEditionDisposalDue": "This publication’s PDF is about to be disposed of; create a new publication to publish it.",
+    "catalogEditionPriced": "Publications with prices cannot be published yet; publish one without prices.",
+    "catalogEditionNoScreenFile": "This publication has no screen PDF; include the Screen profile in the recipe.",
     "xchangePriceListNotOffered": "The list is not offered to an audience.",
     "xchangeSupplierNameMissing": "The company legal name is missing.",
     "xchangeNothingToExport": "{cause, select, catalogEmpty {The catalogue has no products.} noVisibilityRules {There is no visibility rule, so every product is hidden.} hiddenForAudience {Every product is hidden from this audience.} noUsableIdentifier {No visible product has a code of up to {max} characters.} other {There is no product to export.}} The xChange standard does not accept a file without products.",
@@ -507,7 +512,9 @@
       "grant": "Active grant",
       "relation": "Relation to the brand",
       "reviewNote": "Review note",
-      "quoteIntake": "Quote request intake"
+      "quoteIntake": "Quote request intake",
+      "supersededBy": "Superseded by",
+      "endedAt": "Ended at"
     },
     "values": {
       "linkState": {
@@ -1227,6 +1234,11 @@
       "running": "Running",
       "ready": "Ready",
       "failed": "Failed"
+    },
+    "editionStatus": {
+      "published": "Published",
+      "superseded": "Earlier edition",
+      "withdrawn": "Withdrawn"
     },
     "phase": {
       "queued": "Queued",

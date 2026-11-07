@@ -9,6 +9,7 @@ import {
   isPublicationRunReusable,
   priceVersionEndedAt,
   publicationDispositionDueAt,
+  publicationHeldByPlatform,
   publicationRetentionStepOf,
   publicationRunOf,
   retentionPatch,
@@ -124,6 +125,19 @@ describe('χειροκίνητες πράξεις', () => {
   it('δέσμευση μόνο σε έκδοση που έχει ακόμη αρχείο', () => {
     expect(canHoldPublication(run(downloaded))).toBe(true);
     expect(canHoldPublication(run({ disposal: DISPOSAL }))).toBe(false);
+  });
+});
+
+describe('publicationHeldByPlatform: ο ένας κριτής της κράτησης GCS', () => {
+  it('κάθε λόγος κράτησης αρκεί μόνος του', () => {
+    expect(publicationHeldByPlatform(run({}))).toBe(false);
+    expect(publicationHeldByPlatform(run(downloaded))).toBe(true);
+    expect(publicationHeldByPlatform(run({ legalHold: HOLD }))).toBe(true);
+    expect(publicationHeldByPlatform(run({ publishedEditions: 1 }))).toBe(true);
+  });
+
+  it('🐞 Θ.1β: η άρση της δέσμευσης ΔΕΝ λύνει την κράτηση δημοσιευμένης έκδοσης που δεν κατέβηκε ποτέ', () => {
+    expect(publicationHeldByPlatform(run({ legalHold: null, publishedEditions: 1, downloadCount: 0 }))).toBe(true);
   });
 });
 

@@ -89,7 +89,11 @@ const FOREIGN_READER = `${SUPPLY_ROOT}supply-foreign-quote.server.ts`;
 const PUBLIC_SNAPSHOT_READER = 'src/server/catalog/public/public-model-snapshot.server.ts';
 /** Η τιμή της βιτρίνας (ADR-923 §5.13 Σ6): χτίζει τον θεατή ΜΕΣΑ στη συναλλαγή και αφήνει να φύγει ΜΟΝΟ το κλειστό `showcasePriceOf`. */
 const PUBLIC_PRICE_READER = 'src/server/catalog/public/public-price-reader.server.ts';
-const FOREIGN_READERS = new Set([FOREIGN_READER, PUBLIC_SNAPSHOT_READER, PUBLIC_PRICE_READER]);
+/** Ο ΕΝΑΣ τρόπος να χτιστεί ο θεατής της βιτρίνας (τιμές · έντυπα): ρωτά τη σχέση ΜΕΣΑ στη συναλλαγή (ADR-923 §5.15). */
+const SHOWCASE_VIEWER = 'src/server/catalog/public/showcase-viewer.server.ts';
+/** Τα δημοσιευμένα έντυπα (ADR-923 §5.15 Η3): θεατής μέσα στη συναλλαγή, φεύγει ΜΟΝΟ η κλειστή όψη ή η άδεια μετά την κρίση. */
+const EDITION_READER = 'src/server/catalog/editions/catalog-edition-reads.server.ts';
+const FOREIGN_READERS = new Set([FOREIGN_READER, PUBLIC_SNAPSHOT_READER, PUBLIC_PRICE_READER, EDITION_READER]);
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
   'catalog_attributes', 'catalog_attribute_groups', 'catalog_measurement_families', 'catalog_categories', 'catalog_families',
@@ -98,7 +102,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
   'catalog_pricing_view_signals', 'catalog_public_outbox',
   'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals', 'catalog_import_page_readings',
-  'catalog_publication_recipes', 'catalog_publication_runs',
+  'catalog_publication_recipes', 'catalog_publication_runs', 'catalog_editions',
   'catalog_visibility_rules', 'catalog_supplier_profiles',
   'supply_relationships', 'supply_invitations', 'supply_request_links',
 ];
@@ -168,7 +172,9 @@ const WIRING = {
   // Η ξένη ανάγνωση ρωτά ΠΡΩΤΑ τη σχέση, μέσα στη συναλλαγή, και αφήνει να φύγει ΜΟΝΟ η προβολή (ADR-923 §5.12 Σ4 · Δ5).
   [FOREIGN_READER]: ['runForeignCatalogRead(', 'readActiveSupplyRelationshipInTx(', 'foreignOutcomeOf('],
   [PUBLIC_SNAPSHOT_READER]: ['runForeignCatalogRead('],
-  [PUBLIC_PRICE_READER]: ['runForeignCatalogRead(', 'readActiveSupplyRelationshipInTx(', 'showcasePriceOf('],
+  [PUBLIC_PRICE_READER]: ['runForeignCatalogRead(', 'showcaseViewerOf(', 'showcasePriceOf('],
+  [SHOWCASE_VIEWER]: ['readActiveSupplyRelationshipInTx(', 'viewerOfRelationship('],
+  [EDITION_READER]: ['runForeignCatalogRead(', 'showcaseViewerOf(', 'readPublicSupplier(', 'catalogEditionViewOf(', 'signedDownloadUrl('],
   // Οι υποδοχές (όπως οι κρατήσεις) δεν είναι είδη: ευρετήριο του γραφέα, χωρίς ιστορικό.
   [KINDS]: CATALOG_COLLECTIONS.filter(
     (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS', 'COLLECTIONS.CATALOG_PUBLIC_OUTBOX'].includes(key),

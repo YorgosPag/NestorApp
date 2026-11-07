@@ -1118,6 +1118,11 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_CATALOG_PUBLICATION_RECIPES_COLLECTION || 'catalog_publication_recipes',
   /** Αποτελέσματα έκδοσης (ADR-923 §5.6): id = hash εισόδων, αμετάβλητα όταν γίνουν `ready`. IDs via cpubx_*. */
   CATALOG_PUBLICATION_RUNS: process.env.NEXT_PUBLIC_CATALOG_PUBLICATION_RUNS_COLLECTION || 'catalog_publication_runs',
+  /**
+   * Δημοσιευμένες εκδόσεις καταλόγου (ADR-923 §5.15): «αυτό το αμετάβλητο αρχείο το διαβάζει αυτό το κοινό». Ένας γραφέας
+   * (`server/catalog/editions/catalog-edition-writer.server.ts`), ένα σύνορο ανάγνωσης. Read/write `if false`. IDs via cedx_* (τυχαία).
+   */
+  CATALOG_EDITIONS: process.env.NEXT_PUBLIC_CATALOG_EDITIONS_COLLECTION || 'catalog_editions',
   /** Υποδοχές ασάφειας (συνθήκες · κοινό λίστας) — ευρετήριο του γραφέα, ΟΧΙ οντότητα: χωρίς ιστορικό. IDs via cpslt_*. */
   CATALOG_PRICING_SLOTS: process.env.NEXT_PUBLIC_CATALOG_PRICING_SLOTS_COLLECTION || 'catalog_pricing_slots',
   /**

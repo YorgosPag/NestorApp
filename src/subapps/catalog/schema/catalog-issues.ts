@@ -195,6 +195,12 @@ export const CATALOG_ISSUE_CODES = [
   'publicationNotDeletable',
   'publicationNotHoldable',
   'publicationAlreadyOnHold',
+  // ── Φάση 9 (§5.15): δημοσιευμένες εκδόσεις καταλόγου ──
+  'catalogEditionNotReady',
+  'catalogEditionDisposed',
+  'catalogEditionDisposalDue',
+  'catalogEditionPriced',
+  'catalogEditionNoScreenFile',
   // ── Φάση 7 (§5.14): εξαγωγή ETIM xChange ──
   'xchangePriceListNotOffered',
   'xchangeSupplierNameMissing',

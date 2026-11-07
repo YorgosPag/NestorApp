@@ -341,9 +341,14 @@
     "publicationScopeEmpty": "Το εύρος της έκδοσης δεν περιέχει τίποτα.",
     "publicationAudienceNotCovered": "Αυτός ο τιμοκατάλογος δεν απευθύνεται στο κοινό της έκδοσης.",
     "publicationLogoNotEligible": "Το λογότυπο πρέπει να είναι μέσο με ρόλο «Λογότυπο» και αρχείο PNG, JPEG ή TIFF.",
-    "publicationNotDeletable": "Το PDF δεν σβήνεται με το χέρι: έχει κατέβει ή υπάρχει δικαστική δέσμευση.",
+    "publicationNotDeletable": "Το PDF δεν σβήνεται με το χέρι: έχει κατέβει, είναι δημοσιευμένο σε κοινό ή υπάρχει δικαστική δέσμευση.",
     "publicationNotHoldable": "Η δέσμευση μπαίνει μόνο σε έτοιμη έκδοση που έχει ακόμη αρχείο.",
     "publicationAlreadyOnHold": "Η έκδοση έχει ήδη δικαστική δέσμευση.",
+    "catalogEditionNotReady": "Δημοσιεύεται μόνο έκδοση που έχει ολοκληρωθεί.",
+    "catalogEditionDisposed": "Το PDF αυτής της έκδοσης έχει διατεθεί· φτιάξτε νέα έκδοση για να τη δημοσιεύσετε.",
+    "catalogEditionDisposalDue": "Το PDF αυτής της έκδοσης πρόκειται να διατεθεί· φτιάξτε νέα έκδοση για να τη δημοσιεύσετε.",
+    "catalogEditionPriced": "Εκδόσεις με τιμές δεν δημοσιεύονται ακόμη· δημοσιεύστε έκδοση χωρίς τιμές.",
+    "catalogEditionNoScreenFile": "Η έκδοση δεν έχει PDF για οθόνη· συμπεριλάβετε το προφίλ «Οθόνη» στη συνταγή.",
     "xchangePriceListNotOffered": "Η λίστα δεν προσφέρεται σε κοινό.",
     "xchangeSupplierNameMissing": "Λείπει η επωνυμία της εταιρείας.",
     "xchangeNothingToExport": "{cause, select, catalogEmpty {Ο κατάλογος δεν έχει προϊόντα.} noVisibilityRules {Δεν υπάρχει κανένας κανόνας ορατότητας, άρα όλα τα προϊόντα είναι κρυφά.} hiddenForAudience {Όλα τα προϊόντα είναι κρυφά για αυτό το κοινό.} noUsableIdentifier {Κανένα ορατό προϊόν δεν έχει κωδικό έως {max} χαρακτήρες.} other {Δεν υπάρχει προϊόν για εξαγωγή.}} Το πρότυπο xChange δεν δέχεται αρχείο χωρίς προϊόντα.",
@@ -507,7 +512,9 @@
       "grant": "Δικαίωμα σε ισχύ",
       "relation": "Σχέση με τη μάρκα",
       "reviewNote": "Σημείωση ελέγχου",
-      "quoteIntake": "Λήψη αιτημάτων προσφοράς"
+      "quoteIntake": "Λήψη αιτημάτων προσφοράς",
+      "supersededBy": "Αντικαταστάθηκε από",
+      "endedAt": "Έληξε στις"
     },
     "values": {
       "linkState": {
@@ -1227,6 +1234,11 @@
       "running": "Σε εξέλιξη",
       "ready": "Έτοιμη",
       "failed": "Απέτυχε"
+    },
+    "editionStatus": {
+      "published": "Δημοσιευμένη",
+      "superseded": "Παλαιότερη έκδοση",
+      "withdrawn": "Αποσύρθηκε"
     },
     "phase": {
       "queued": "Σε αναμονή",

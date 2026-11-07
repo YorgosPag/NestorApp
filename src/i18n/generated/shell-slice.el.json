@@ -1421,6 +1421,7 @@
         "catalog_customer_group": "Ομάδα πελάτη",
         "catalog_discount_condition": "Όρος έκπτωσης",
         "catalog_discount_group": "Ομάδα έκπτωσης",
+        "catalog_edition": "Δημοσιευμένος κατάλογος",
         "catalog_family": "Οικογένεια προϊόντων",
         "catalog_import_batch": "Παρτίδα εισαγωγής",
         "catalog_import_profile": "Προφίλ εισαγωγής",

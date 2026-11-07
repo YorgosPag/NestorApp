@@ -175,6 +175,7 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   catalogPaper: { ns: 'catalog', path: 'audit.values.paper' },
   catalogPublicationStatus: { ns: 'catalog', path: 'publishing.status' },
   catalogPublicationFailure: { ns: 'catalog', path: 'publishing.failure' },
+  catalogEditionStatus: { ns: 'catalog', path: 'publishing.editionStatus' },
   catalogRetentionParts: { ns: 'catalog', path: 'audit.values.retentionParts' },
   catalogDisposalCause: { ns: 'catalog', path: 'audit.values.disposalCause' },
   catalogSupplyLinkState: { ns: 'catalog', path: 'audit.values.linkState' },

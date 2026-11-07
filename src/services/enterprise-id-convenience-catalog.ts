@@ -51,6 +51,7 @@ export const generateDeterministicCatalogPublicationRecipeId = (companyId: strin
 export const generateDeterministicCatalogPublicationRunId = (companyId: string, inputHash: string) =>
   enterpriseIdService.generateDeterministicCatalogPublicationRunId(companyId, inputHash);
 export const generateCatalogDiscountConditionId = () => enterpriseIdService.generateCatalogDiscountConditionId();
+export const generateCatalogEditionId = () => enterpriseIdService.generateCatalogEditionId();
 export const generateDeterministicCatalogPricingSlotId = (companyId: string, slotKey: string) =>
   enterpriseIdService.generateDeterministicCatalogPricingSlotId(companyId, slotKey);
 export const generateDeterministicCatalogPricingViewSignalId = (companyId: string, viewKey: string) =>

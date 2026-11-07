@@ -21,7 +21,7 @@ import 'server-only';
  * @module server/catalog/publishing/publication-run.server
  */
 
-import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
+import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
@@ -120,28 +120,49 @@ function recordRunChange(before: StoredPublicationRun | null, after: StoredPubli
   });
 }
 
+export type PublicationRunChange = (run: StoredPublicationRun) => Partial<StoredPublicationRun> | null;
+
+/** Η αλλαγή μέσα σε συναλλαγή: ό,τι χρειάζεται για να γραφτεί το ιστορικό **μετά** το commit. */
+export interface StagedPublicationRunChange {
+  readonly before: StoredPublicationRun;
+  readonly after: StoredPublicationRun;
+  readonly changed: boolean;
+}
+
+/** Μία έκδοση μέσα σε συναλλαγή, ως ανάγνωση (πριν από κάθε εγγραφή της συναλλαγής). */
+export async function readPublicationRunInTx(tx: Transaction, id: string): Promise<StoredPublicationRun | null> {
+  return storedRunOf((await tx.get(runRef(getAdminFirestore(), id))).data()) ?? null;
+}
+
+/**
+ * Η αλλαγή **μέσα σε ξένη συναλλαγή** (π.χ. η δημοσίευση έκδοσης γράφει τον μετρητή `publishedEditions` μαζί με την εγγραφή
+ * της, §5.15 Θ.1β). Το `before` το διάβασε ο καλών με `readPublicationRunInTx`: η Firestore θέλει όλες τις αναγνώσεις πριν από
+ * τις εγγραφές, άρα εδώ **μόνο** γράφεται. Το ιστορικό με `recordPublicationRunChange`, **αφού** κλείσει η συναλλαγή.
+ */
+export function stagePublicationRunChange(tx: Transaction, before: StoredPublicationRun, change: PublicationRunChange): StagedPublicationRunChange {
+  const patch = change(before);
+  if (patch === null) return { before, after: before, changed: false };
+  const updatedAt = nowISO();
+  tx.update(runRef(getAdminFirestore(), before.id), { ...patch, updatedAt });
+  return { before, after: { ...before, ...patch, updatedAt }, changed: true };
+}
+
+/** Το ιστορικό μιας αλλαγής που ετοιμάστηκε σε ξένη συναλλαγή. */
+export async function recordPublicationRunChange(staged: StagedPublicationRunChange | null, performedBy: string): Promise<void> {
+  if (staged?.changed) await recordRunChange(staged.before, staged.after, performedBy);
+}
+
 /**
  * Μία αλλαγή σε ζωντανή έκδοση: συναλλαγή + ιστορικό με τον δράστη της. `change` = `null` ⇒ καμία αλλαγή. Ο κύκλος ζωής της
  * διατήρησης περνά από εδώ, ώστε το αρχείο αυτό να μένει ο ένας γραφέας της συλλογής.
  */
-export async function changePublicationRun(
-  id: string,
-  performedBy: string,
-  change: (run: StoredPublicationRun) => Partial<StoredPublicationRun> | null,
-): Promise<StoredPublicationRun | null> {
-  const db = getAdminFirestore();
-  const ref = runRef(db, id);
-  const outcome = await db.runTransaction(async (tx) => {
-    const before = storedRunOf((await tx.get(ref)).data());
-    if (!before) return null;
-    const patch = change(before);
-    if (patch === null) return { before, after: before, changed: false };
-    const updatedAt = nowISO();
-    tx.update(ref, { ...patch, updatedAt });
-    return { before, after: { ...before, ...patch, updatedAt }, changed: true };
+export async function changePublicationRun(id: string, performedBy: string, change: PublicationRunChange): Promise<StoredPublicationRun | null> {
+  const staged = await getAdminFirestore().runTransaction(async (tx) => {
+    const before = await readPublicationRunInTx(tx, id);
+    return before === null ? null : stagePublicationRunChange(tx, before, change);
   });
-  if (outcome?.changed) await recordRunChange(outcome.before, outcome.after, performedBy);
-  return outcome?.after ?? null;
+  await recordPublicationRunChange(staged, performedBy);
+  return staged?.after ?? null;
 }
 
 /**
