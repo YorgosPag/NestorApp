@@ -27,7 +27,7 @@ import { log10PoissonBinomialTail } from '../../statistics/log-binomial-tail';
 import { median } from '../../statistics/median';
 import {
   chamferField,
-  estimateStrokeWidthPx,
+  judgeStrokeWidthPx,
   pickByChamfer,
   probeStrokeCentre,
   registerToInk,
@@ -181,7 +181,10 @@ export interface AssessContext {
   readonly field?: Float64Array;
   /** **Όλα** τα τμήματα της αλήθειας για το clutter (προεπιλογή: τα ίδια με την καταγραφή). */
   readonly explain?: readonly RegistrationSegment[];
-  /** Το πάχος πινελιάς της καταγραφής (προεπιλογή: δηλωμένο ή μετρημένο στο `transform`). */
+  /**
+   * Παράκαμψη του πάχους πινελιάς του κριτή (px). Προεπιλογή: δηλωμένο (`o.strokeWidthPx`) ή `judgeStrokeWidthPx` στο
+   * `transform`. ⚠️ ΜΗΝ περνάς εδώ το W του ICP (διάμεσος στην αρχή του): §6.9 #21.
+   */
   readonly strokeWidthPx?: number;
   /** Λόγος chamfer καλύτερου / δεύτερου διακριτού (από το `pickByChamfer`). */
   readonly ambiguityRatio?: number | null;
@@ -223,7 +226,7 @@ export function assessRegistration(
   assertSearch(search);
   const { hypotheses, translationStepPx } = search;
   const decisionRadiusPx = o.searchRadiiPx[o.searchRadiiPx.length - 1] ?? 1;
-  const strokeWidthPx = ctx.strokeWidthPx ?? o.strokeWidthPx ?? estimateStrokeWidthPx(segments, ink, transform, o);
+  const strokeWidthPx = ctx.strokeWidthPx ?? o.strokeWidthPx ?? judgeStrokeWidthPx(segments, ink, transform, o);
   const outcomes = segmentOutcomes(segments, ink, transform, decisionRadiusPx, o, strokeWidthPx);
   const { evidence, log10Tail, coverage } = segmentLevel(outcomes);
   const local = shiftNull(outcomes, segmentProbe(ink, decisionRadiusPx, strokeWidthPx, o), o);
@@ -273,7 +276,6 @@ export function registerAndAssess(
   const assessment = assessRegistration(segments, ink, result.fit.transform, search, o, {
     field,
     explain,
-    strokeWidthPx: result.strokeWidthPx,
     ambiguityRatio: ambiguityRatioOf(picked.score, picked.runnerUpScore),
     positionSigmaPx: result.fit.positionSigmaPx,
   });

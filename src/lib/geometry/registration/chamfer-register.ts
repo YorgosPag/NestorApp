@@ -15,6 +15,7 @@
 
 import { applyAffine, invertAffine, type Affine2x3, type AffinePoint } from '../affine-2x3';
 import { median } from '../../statistics/median';
+import { quantile } from '../../market/market-statistics';
 import { squaredDistanceTransform } from '../raster/distance-transform';
 import { inkThicknessAcross } from '../raster/ink-probe';
 import { fitTransform } from './fit-transform';
@@ -95,8 +96,28 @@ export function probeStrokeCentre(ink: InkMask, q: AffinePoint, n: AffinePoint, 
  * 🔑 **Τοπικά, όχι σε όλη τη σελίδα**: το p90 της σελίδας έφτασε 32–64 px σε σαρώσεις με γέμισμα (poché, §6.9 #14).
  */
 export function estimateStrokeWidthPx(segments: readonly RegistrationSegment[], ink: InkMask, t: Affine2x3, o: RegisterOptions): number {
+  const widths = strokeWidthsAt(segments, ink, t, o);
+  return widths.length === 0 ? lastRadius(o) : median(widths);
+}
+
+/**
+ * **Πάχος πινελιάς του ΚΡΙΤΗ** (px): το `strokeWidthQuantile` (p90) των ίδιων παχών με το `estimateStrokeWidthPx`, μετρημένο
+ * στη **θέση που κρίνεται** (την τελική του ICP, όχι την αρχή του).
+ * 🔴 **§6.9 #21 — ο διάμεσος ως όριο μήκους ρίχνει τα μισά δείγματα εξ ορισμού.** Ο θόρυβος σάρωσης ανοίγει την κατανομή
+ * του πάχους ⇒ ~½ των δειγμάτων ξεπερνούν τον διάμεσο ⇒ `too-long` σε σωστή θέση (κάλυψη 0,331). Με p90: θετικά ≥ 0,771,
+ * λάθος ζεύγη 0/33 — το φαρδύτερο probe ανεβάζει και την p της H0, άρα το NFA αυτοβαθμονομείται (min NFA λάθους −1,02 → +0,10).
+ * ⚠️ Το ICP κρατά τον **διάμεσο** (`estimateStrokeWidthPx`): εκεί δεν μετρήθηκε αντιπαράδειγμα.
+ */
+export function judgeStrokeWidthPx(segments: readonly RegistrationSegment[], ink: InkMask, t: Affine2x3, o: RegisterOptions): number {
+  const widths = strokeWidthsAt(segments, ink, t, o);
+  return widths.length === 0 ? lastRadius(o) : quantile([...widths].sort((x, y) => x - y), o.acceptance.strokeWidthQuantile);
+}
+
+const lastRadius = (o: RegisterOptions): number => o.searchRadiiPx[o.searchRadiiPx.length - 1] ?? 1;
+
+/** Τα πάχη (px) στο κέντρο της πλησιέστερης πινελιάς κάθε δείγματος — η **μία** μέτρηση πίσω από ICP και κριτή. */
+function strokeWidthsAt(segments: readonly RegistrationSegment[], ink: InkMask, t: Affine2x3, o: RegisterOptions): number[] {
   const search = o.searchRadiiPx[0] ?? 1;
-  const last = o.searchRadiiPx[o.searchRadiiPx.length - 1] ?? 1;
   const cap = o.acceptance.evaluationRadiusPx;
   const view = { mask: ink.mask, cols: ink.width, rows: ink.height };
   const widths: number[] = [];
@@ -109,7 +130,7 @@ export function estimateStrokeWidthPx(segments: readonly RegistrationSegment[], 
     const w = inkThicknessAcross(view, { x: q.x + n.x * along, y: q.y + n.y * along }, n, cap);
     if (w > 0) widths.push(w);
   }
-  return widths.length === 0 ? last : median(widths);
+  return widths;
 }
 
 /** Μοναδιαίο κάθετο του τμήματος **στην εικόνα** του `t` (px)· `null` για εκφυλισμένο τμήμα. */

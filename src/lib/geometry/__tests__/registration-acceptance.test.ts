@@ -15,7 +15,7 @@ import {
   log10SearchSpace,
   registerAndAssess,
 } from '../registration/registration-acceptance';
-import { chamferField, sampleSegments } from '../registration/chamfer-register';
+import { chamferField, estimateStrokeWidthPx, judgeStrokeWidthPx, sampleSegments } from '../registration/chamfer-register';
 import { segmentProbe, toImageSegment, type ImageSegment, type SegmentOutcome } from '../registration/registration-null-model';
 import { measureBalance, measureClutter, parallelSeparationPx } from '../registration/registration-quality';
 import {
@@ -99,8 +99,8 @@ describe('registerAndAssess', () => {
     expect(a.evaluation.residuals.p95Px).toBeLessThan(1);
     expect(a.evaluation.nearRadiusShare).toBe(0);
     expect(r.initial).toBe(PERTURBED);
-    // §6.9 #15: η αξιολόγηση παίρνει ό,τι ήξερε η καταγραφή — ποτέ δεύτερη, διαφορετική μαντεψιά.
-    expect(a.strokeWidthPx).toBe(r.strokeWidthPx);
+    // §6.9 #21: ο κριτής μετρά το ΔΙΚΟ του πάχος (p90) στην ΤΕΛΙΚΗ θέση — όχι τον διάμεσο του ICP στην αρχή του.
+    expect(a.strokeWidthPx).toBe(judgeStrokeWidthPx(segments, ink, r.fit.transform, DEFAULT_REGISTER));
     expect(a.positionSigmaPx).toBe(r.fit.positionSigmaPx);
     expect(a.ambiguityRatio).toBeNull();
     expect(a.log10Nfa).toBeLessThan(0);
@@ -181,6 +181,24 @@ describe('assessRegistration', () => {
     expect(measured.coverage).toBeGreaterThan(0.9);
     expect(measured.verdict).toEqual({ kind: 'accepted' });
     expect(assessRegistration(segments, thick, TRUTH, ONE, DEFAULT_REGISTER, { strokeWidthPx: 3 }).coverage).toBeLessThan(0.5);
+  });
+
+  it('🔴 §6.9 #21: πάχη ανοιχτής κατανομής (1/3 των παρειών 5 px, οι άλλες 3) ⇒ ο κριτής κρατά το p90, ο διάμεσος θα έκοβε τις χοντρές', () => {
+    const thickIdx = (i: number) => i % 3 === 0;
+    const thin = rasterize(segments.filter((_, i) => !thickIdx(i)), TRUTH, 3);
+    const thick = rasterize(segments.filter((_, i) => thickIdx(i)), TRUTH, 5);
+    const mixed: InkMask = { ...thin, mask: thin.mask.map((v, k) => v | thick.mask[k]) };
+    const med = estimateStrokeWidthPx(segments, mixed, TRUTH, DEFAULT_REGISTER);
+    const judged = judgeStrokeWidthPx(segments, mixed, TRUTH, DEFAULT_REGISTER);
+    expect(med).toBeLessThan(4);
+    expect(judged).toBeGreaterThanOrEqual(4.5);
+    const a = assessRegistration(segments, mixed, TRUTH, ONE, DEFAULT_REGISTER);
+    expect(a.strokeWidthPx).toBe(judged);
+    expect(a.coverage).toBeGreaterThan(0.9);
+    expect(a.verdict).toEqual({ kind: 'accepted' });
+    // Ο διάμεσος ως όριο μήκους (η συμπεριφορά ως το #20) ρίχνει τις χοντρές παρειές σε ΣΩΣΤΗ θέση.
+    const byMedian = assessRegistration(segments, mixed, TRUTH, ONE, DEFAULT_REGISTER, { strokeWidthPx: med });
+    expect(byMedian.coverage).toBeLessThan(a.coverage - 0.15);
   });
 
   it('🔴 §6.9 #10 Υ2/#15: λάθος σχέδιο σε ΠΥΚΝΗ περιοχή αραιής σελίδας ⇒ η H0 σελίδας δέχεται, η τοπική απορρίπτει', () => {

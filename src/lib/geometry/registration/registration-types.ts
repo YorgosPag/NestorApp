@@ -111,6 +111,11 @@ export interface AcceptanceOptions {
   readonly evaluationRadiusPx: number;
   /** Ένα τμήμα «πετυχαίνει» όταν τουλάχιστον τόσο κλάσμα των δειγμάτων του βρίσκει κέντρο πινελιάς. */
   readonly segmentHitShare: number;
+  /**
+   * Ποσοστημόριο των μετρημένων παχών που γίνεται το πάχος πινελιάς (= όριο μήκους του probe) **του κριτή**, στην τελική θέση.
+   * Μετρημένο (§6.9 #21): ο διάμεσος (0,5) απέρριπτε ~½ των δειγμάτων σε σωστή θέση με θόρυβο ⇒ 0,9 (απόφαση Giorgio).
+   */
+  readonly strokeWidthQuantile: number;
   /** Ανώτατο πλήθος θέσεων του εμπειρικού μηδενικού μοντέλου ανά (μήκος, διεύθυνση). */
   readonly maxNullPlacements: number;
   /** Ανώτατο πλήθος τμημάτων στο NFA (ντετερμινιστική αραίωση) — η ουρά Poisson-binomial είναι O(n²). */
@@ -144,6 +149,7 @@ export const DEFAULT_ACCEPTANCE: AcceptanceOptions = {
   minCoverage: 0.3,
   evaluationRadiusPx: 24,
   segmentHitShare: 0.5,
+  strokeWidthQuantile: 0.9,
   maxNullPlacements: 1024,
   maxSegments: 400,
   maxClutter: null,
