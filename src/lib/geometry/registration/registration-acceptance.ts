@@ -7,12 +7,13 @@
  * κέντρο πινελιάς μόνο μέσα στα ±3 px, άρα κάθε υπόλοιπο είναι εξ ορισμού < 3 px (§6.9 #6). Ένα κατώφλι πάνω σε κομμένη
  * ποσότητα δεν μετρά τίποτα.
  *
- * 🔑 **Μηδενική υπόθεση H0** (Desolneux–Moisan–Morel): «το σχέδιο κάθεται σε τυχαία θέση». Τότε κάθε ανεξάρτητο δείγμα
- * βρίσκει μελάνι με πιθανότητα το πολύ p = ποσοστό των pixel της εικόνας κοντά σε μελάνι. Η καταγραφή δέχεται αν
- * NFA = N_tests · P[B(n, p) ≥ k] ≤ ε. Η p βγαίνει από **την ίδια την εικόνα**: πυκνή γραμμοσκίαση ή σχέδιο που έγινε
- * κουκκίδα πάνω σε γεμάτο μελάνι ⇒ p → 1 ⇒ καμία καταγραφή δεν είναι σημαντική. Καμία σταθερά να ρυθμιστεί.
- * 🔑 **Ανεξαρτησία, τίμια.** Τα δείγματα του ICP απέχουν 6 px και τα παράθυρά τους (±3 px) σχεδόν αγγίζονται. Εδώ το
- * βήμα είναι ≥ 2·ακτίνα, ώστε κανένα pixel να μη μετρά σε δύο δοκιμές.
+ * 🔑 **Μηδενική υπόθεση H0** (Desolneux–Moisan–Morel): «το σχέδιο κάθεται σε τυχαία θέση». Η καταγραφή δέχεται αν
+ * NFA = N_tests · P[X ≥ k] ≤ ε, X = Σ Bernoulli(pᵢ) πάνω στα **τμήματα** (Poisson-binomial).
+ * 🔴 **§6.9 #9 — μονάδα τμήμα, p εμπειρικό** ({@link segmentOutcomes}). Ως το #8 η μονάδα ήταν το **δείγμα** με
+ * p = πυκνότητα μελανιού: τα δείγματα ενός τοίχου όμως δεν είναι ανεξάρτητα, και λάθος κατόψεις βγήκαν log₁₀NFA −700.
+ * 🔑 **Πέρα από το NFA** ({@link measureClutter} · {@link measureBalance} · {@link parallelSeparationPx}): clutter
+ * (Cognex PatMax / MVTec HALCON), balance (Autodesk ReCap) και ανάλυση. Τα κατώφλια των δύο πρώτων βαθμονομούνται σε
+ * λάθος ζεύγη· ως τότε `null` ⇒ μόνο αναφορά.
  * 🔑 **N_tests = αρχές × χώρος αναζήτησης.** Το πλήθος αρχών είναι υποχρεωτικό όρισμα: όποιος δοκίμασε 96 και δηλώνει 1
  * κάνει snooping (το NFA φράζει τον **αναμενόμενο αριθμό** ψευδών αποδοχών σε όλες τις δοκιμές). Ο χώρος που ψάχνει το
  * ICP από κάθε αρχή μπαίνει από μόνος του ({@link log10SearchSpace}).
@@ -22,7 +23,7 @@
  */
 
 import { applyAffine, type Affine2x3 } from '../affine-2x3';
-import { log10BinomialTail } from '../../statistics/log-binomial-tail';
+import { log10PoissonBinomialTail } from '../../statistics/log-binomial-tail';
 import {
   chamferField,
   pickByChamfer,
@@ -33,14 +34,18 @@ import {
   type RegistrationSample,
 } from './chamfer-register';
 import { residualStats } from './fit-transform';
+import { segmentOutcomes, type SegmentOutcome } from './registration-null-model';
+import { measureBalance, measureClutter, parallelSeparationPx } from './registration-quality';
 import type {
   AssessedRegistrationResult,
   EvaluationResiduals,
   InkMask,
   RegisterOptions,
   RegistrationAssessment,
+  RegistrationQuality,
   RegistrationSegment,
   RegistrationVerdict,
+  SegmentEvidence,
 } from './registration-types';
 
 /**
@@ -104,15 +109,44 @@ export function evaluateResiduals(
   };
 }
 
-function verdictOf(log10Nfa: number, coverage: number, o: RegisterOptions): RegistrationVerdict {
-  if (log10Nfa > Math.log10(o.acceptance.epsilon)) return { kind: 'rejected', reason: 'not-meaningful' };
-  if (coverage < o.acceptance.minCoverage) return { kind: 'rejected', reason: 'low-coverage' };
+/**
+ * Η σειρά είναι η σειρά των ερωτήσεων: πρώτα «μπορεί καν να κριθεί;» (ανάλυση), μετά «είναι σύμπτωση;» (NFA), μετά «πόσο
+ * από το σχέδιο;» (κάλυψη), μετά «ορίζεται η θέση;» (balance), τέλος «εξηγεί το μελάνι;» (clutter).
+ */
+function verdictOf(log10Nfa: number, coverage: number, q: RegistrationQuality, o: RegisterOptions): RegistrationVerdict {
+  const a = o.acceptance;
+  if (q.parallelSeparationPx !== null && q.parallelSeparationPx < q.resolvablePx) return { kind: 'rejected', reason: 'unresolvable' };
+  if (log10Nfa > Math.log10(a.epsilon)) return { kind: 'rejected', reason: 'not-meaningful' };
+  if (coverage < a.minCoverage) return { kind: 'rejected', reason: 'low-coverage' };
+  if (a.minBalance !== null && (q.balance === null || q.balance < a.minBalance)) return { kind: 'rejected', reason: 'degenerate' };
+  if (a.maxClutter !== null && q.clutter !== null && q.clutter > a.maxClutter) return { kind: 'rejected', reason: 'cluttered' };
   return { kind: 'accepted' };
 }
 
+function median(values: readonly number[]): number {
+  if (values.length === 0) return 0;
+  const s = [...values].sort((x, y) => x - y);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 === 1 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/** NFA + κάλυψη σε επίπεδο **τμήματος** (§6.9 #9). */
+function segmentLevel(outcomes: readonly SegmentOutcome[]): { evidence: SegmentEvidence; log10Tail: number; coverage: number } {
+  const ps = outcomes.map((x) => x.p);
+  const hits = outcomes.filter((x) => x.hit);
+  const total = outcomes.reduce((s, x) => s + x.segment.lengthPx, 0);
+  const hitLength = hits.reduce((s, x) => s + x.segment.lengthPx, 0);
+  return {
+    evidence: { segments: outcomes.length, hits: hits.length, pMedian: median(ps), pMax: ps.length === 0 ? 0 : Math.max(...ps) },
+    log10Tail: log10PoissonBinomialTail(ps, hits.length),
+    coverage: total > 0 ? hitLength / total : 0,
+  };
+}
+
 /**
- * **Αξιολόγησε** μια καταγραφή: NFA a-contrario + κάλυψη ανεξάρτητων δειγμάτων + υπόλοιπα χωρίς αποκοπή.
- * `hypotheses` = πόσες αρχικές υποθέσεις δοκιμάστηκαν **συνολικά** για αυτό το ζεύγος (≥ 1, χωρίς προεπιλογή).
+ * **Αξιολόγησε** μια καταγραφή: NFA a-contrario ανά τμήμα (εμπειρική H0) + κάλυψη μήκους + ανάλυση + balance + clutter +
+ * υπόλοιπα χωρίς αποκοπή. `hypotheses` = πόσες αρχικές υποθέσεις δοκιμάστηκαν **συνολικά** (≥ 1, χωρίς προεπιλογή).
+ * `explain` = **όλα** τα τμήματα της αλήθειας για το clutter (προεπιλογή: τα ίδια με την καταγραφή).
  */
 export function assessRegistration(
   segments: readonly RegistrationSegment[],
@@ -121,26 +155,30 @@ export function assessRegistration(
   hypotheses: number,
   o: RegisterOptions,
   field: Float64Array = chamferField(ink),
+  explain: readonly RegistrationSegment[] = segments,
 ): RegistrationAssessment {
   if (!Number.isInteger(hypotheses) || hypotheses < 1) throw new RangeError(`hypotheses must be an integer ≥ 1, got ${hypotheses}`);
   const decisionRadiusPx = o.searchRadiiPx[o.searchRadiiPx.length - 1] ?? 1;
-  const step = Math.max(o.sampleStepPx, 2 * decisionRadiusPx);
-  const independent = sampleSegments(segments, transform, { ...o, sampleStepPx: step });
-  const hits = probeAll(independent, ink, transform, decisionRadiusPx).filter((v) => v !== null).length;
-  const p = inkProbability(field, decisionRadiusPx);
+  const outcomes = segmentOutcomes(segments, ink, transform, decisionRadiusPx, o);
+  const { evidence, log10Tail, coverage } = segmentLevel(outcomes);
   const searchSpace = log10SearchSpace(o);
-  const log10Nfa = Math.log10(hypotheses) + searchSpace + log10BinomialTail(independent.length, hits, p);
-  const coverage = independent.length === 0 ? 0 : hits / independent.length;
+  const log10Nfa = Math.log10(hypotheses) + searchSpace + log10Tail;
+  const quality: RegistrationQuality = {
+    clutter: measureClutter(explain, ink, transform, decisionRadiusPx),
+    balance: measureBalance(outcomes),
+    parallelSeparationPx: parallelSeparationPx(outcomes),
+    resolvablePx: 2 * decisionRadiusPx + 1,
+  };
   return {
-    verdict: verdictOf(log10Nfa, coverage, o),
+    verdict: verdictOf(log10Nfa, coverage, quality, o),
     log10Nfa,
     hypotheses,
     log10SearchSpace: searchSpace,
     decisionRadiusPx,
-    independentSamples: independent.length,
-    hits,
-    inkProbability: p,
+    segments: evidence,
+    inkProbability: inkProbability(field, decisionRadiusPx),
     coverage,
+    quality,
     evaluation: evaluateResiduals(segments, ink, transform, o),
   };
 }
@@ -154,12 +192,13 @@ export function registerAndAssess(
   ink: InkMask,
   candidates: readonly Affine2x3[],
   o: RegisterOptions,
+  explain: readonly RegistrationSegment[] = segments,
 ): AssessedRegistrationResult {
   const field = chamferField(ink);
   const picked = pickByChamfer(segments, ink, candidates, o, field);
   if (picked === null) return { kind: 'not-converged', reason: 'no-candidates', round: 0 };
   const result = registerToInk(segments, ink, picked.transform, o);
   if (result.kind === 'not-converged') return result;
-  const assessment = assessRegistration(segments, ink, result.fit.transform, candidates.length, o, field);
+  const assessment = assessRegistration(segments, ink, result.fit.transform, candidates.length, o, field, explain);
   return { ...result, assessment, initial: picked.transform };
 }

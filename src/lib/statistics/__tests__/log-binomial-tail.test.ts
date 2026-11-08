@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { log10BinomialTail, logBinomialCoefficient, logGamma } from '../log-binomial-tail';
+import { log10BinomialTail, log10PoissonBinomialTail, logBinomialCoefficient, logGamma } from '../log-binomial-tail';
 
 /** P[X ≥ k] με ακέραιους συντελεστές (ακριβές για μικρά n). */
 function bruteTail(n: number, k: number, p: number): number {
@@ -52,5 +52,48 @@ describe('log10BinomialTail', () => {
     expect(Number.isFinite(v)).toBe(true);
     expect(v).toBeLessThan(-1000);
     expect(log10BinomialTail(3000, 2950, 0.05)).toBeLessThan(v);
+  });
+});
+
+/** P[X ≥ k] για Poisson-binomial με απαρίθμηση όλων των 2ⁿ εκβάσεων (ακριβές για μικρά n). */
+function brutePoissonTail(ps: readonly number[], k: number): number {
+  let sum = 0;
+  for (let mask = 0; mask < 1 << ps.length; mask++) {
+    let prob = 1;
+    let hits = 0;
+    ps.forEach((p, i) => {
+      const on = (mask >> i) & 1;
+      hits += on;
+      prob *= on ? p : 1 - p;
+    });
+    if (hits >= k) sum += prob;
+  }
+  return sum;
+}
+
+describe('log10PoissonBinomialTail (ADR-929 §6.9 #9)', () => {
+  it('ίσα p ⇒ ταυτίζεται με τη διωνυμική', () => {
+    const ps = Array.from({ length: 40 }, () => 0.3);
+    for (const k of [0, 1, 12, 25, 40]) expect(log10PoissonBinomialTail(ps, k)).toBeCloseTo(log10BinomialTail(40, k, 0.3), 9);
+  });
+
+  it('άνισα p ⇒ ίδιο με την απαρίθμηση 2ⁿ', () => {
+    const ps = [0.9, 0.05, 0.5, 0.2, 0.71, 0.33, 0.01, 0.6, 0.15, 0.44];
+    for (let k = 1; k <= ps.length; k++) {
+      expect(log10PoissonBinomialTail(ps, k)).toBeCloseTo(Math.log10(brutePoissonTail(ps, k)), 9);
+    }
+  });
+
+  it('όρια: k ≤ 0 ⇒ 0 · k > n ⇒ −∞ · p = 0 και p = 1 χωρίς NaN', () => {
+    expect(log10PoissonBinomialTail([0.5], 0)).toBe(0);
+    expect(log10PoissonBinomialTail([0.5, 0.5], 3)).toBe(Number.NEGATIVE_INFINITY);
+    expect(log10PoissonBinomialTail([1, 1, 0], 2)).toBeCloseTo(0, 12);
+    expect(log10PoissonBinomialTail([1, 1, 0], 3)).toBe(Number.NEGATIVE_INFINITY);
+  });
+
+  it('πολύ μικρές ουρές μένουν πεπερασμένες (log-space)', () => {
+    const v = log10PoissonBinomialTail(Array.from({ length: 400 }, (_, i) => 0.01 + (i % 7) * 0.01), 400);
+    expect(Number.isFinite(v)).toBe(true);
+    expect(v).toBeLessThan(-500);
   });
 });

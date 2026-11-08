@@ -90,20 +90,37 @@ export type FitResult =
  * **Κριτήριο αποδοχής** (ADR-929 §6.9 #7). Δύο ερωτήσεις, και οι δύο αναγκαίες: «είναι σύμπτωση;» (NFA a-contrario) και
  * «ταιριάζει το σχέδιο ή μόνο ένα κομμάτι του;» (κάλυψη). ⚠️ Όχι απόλυτο κατώφλι υπολοίπων: τα υπόλοιπα του ICP είναι
  * **κομμένα** από την τελευταία ακτίνα, άρα περνούν και σε τυχαίο μελάνι (μετρήθηκε, §6.9 #6).
+ * 🔴 **§6.9 #9: μονάδα = ΤΜΗΜΑ, όχι δείγμα.** Τα δείγματα ενός τοίχου πετυχαίνουν ή αποτυγχάνουν **μαζί**· το NFA ανά δείγμα
+ * μετρούσε ένα γεγονός χίλιες φορές και δεχόταν λάθος κατόψεις με log₁₀NFA −700 (μετρήθηκε, §6.9 #8).
  */
 export interface AcceptanceOptions {
   /** Αναμενόμενες ψευδείς αποδοχές υπό H0 (Desolneux–Moisan–Morel: ε = 1). */
   readonly epsilon: number;
-  /** Ελάχιστο ποσοστό ανεξάρτητων δειγμάτων που βρίσκουν μελάνι. ⚠️ Δηλωμένο, όχι βαθμονομημένο. */
+  /** Ελάχιστο ποσοστό **μήκους** τμημάτων που πέτυχαν. ⚠️ Δηλωμένο, όχι βαθμονομημένο. */
   readonly minCoverage: number;
   /** Ακτίνα μέτρησης των υπολοίπων **μετά** τη σύγκλιση (px) — πολύ μεγαλύτερη από την τελευταία του ICP. */
   readonly evaluationRadiusPx: number;
+  /** Ένα τμήμα «πετυχαίνει» όταν τουλάχιστον τόσο κλάσμα των δειγμάτων του βρίσκει κέντρο πινελιάς. */
+  readonly segmentHitShare: number;
+  /** Ανώτατο πλήθος θέσεων του εμπειρικού μηδενικού μοντέλου ανά (μήκος, διεύθυνση). */
+  readonly maxNullPlacements: number;
+  /** Ανώτατο πλήθος τμημάτων στο NFA (ντετερμινιστική αραίωση) — η ουρά Poisson-binomial είναι O(n²). */
+  readonly maxSegments: number;
+  /** Ανώτατο ποσοστό ανεξήγητου μελανιού μέσα στο περίγραμμα (PatMax «clutter»)· `null` ⇒ μόνο αναφορά, ως τη βαθμονόμηση. */
+  readonly maxClutter: number | null;
+  /** Ελάχιστο balance (ReCap: λ_min/Σλ των καθέτων, ∈ [0, ½])· `null` ⇒ μόνο αναφορά, ως τη βαθμονόμηση. */
+  readonly minBalance: number | null;
 }
 
 export const DEFAULT_ACCEPTANCE: AcceptanceOptions = {
   epsilon: 1,
   minCoverage: 0.5,
   evaluationRadiusPx: 24,
+  segmentHitShare: 0.5,
+  maxNullPlacements: 1024,
+  maxSegments: 400,
+  maxClutter: null,
+  minBalance: null,
 };
 
 export interface RegisterOptions {
@@ -148,7 +165,15 @@ type Registered = {
 export type RegistrationResult = NotConverged | Registered;
 
 /** Γιατί απορρίφθηκε μια καταγραφή που **συνέκλινε**. */
-export type RejectionReason = 'not-meaningful' | 'low-coverage';
+export type RejectionReason =
+  /** Οι παρειές ενός τοίχου απέχουν < 2r+1 px: το «βρήκε το μελάνι του;» δεν τις ξεχωρίζει (π.χ. σελίδα 10 DPI). */
+  | 'unresolvable'
+  | 'not-meaningful'
+  | 'low-coverage'
+  /** Τα τμήματα που πέτυχαν έχουν (σχεδόν) μία διεύθυνση: η κάθετη ολίσθηση δεν ορίζεται (ReCap «balance»). */
+  | 'degenerate'
+  /** Πολύ μελάνι μέσα στο περίγραμμα που το σχέδιο δεν εξηγεί (PatMax «clutter»). */
+  | 'cluttered';
 
 export type RegistrationVerdict = { readonly kind: 'accepted' } | { readonly kind: 'rejected'; readonly reason: RejectionReason };
 
@@ -163,10 +188,32 @@ export interface EvaluationResiduals {
   readonly nearRadiusShare: number;
 }
 
-/** Αξιολόγηση a-contrario (ADR-929 §6.9 #7). */
+/** Το NFA σε επίπεδο τμήματος (ADR-929 §6.9 #9). */
+export interface SegmentEvidence {
+  /** Τμήματα που αξιολογήθηκαν (≥ `minSegmentPx` στην εικόνα, αραιωμένα στο `maxSegments`). */
+  readonly segments: number;
+  readonly hits: number;
+  /** Εμπειρικό p ανά τμήμα υπό H0 (ίδιο μήκος + διεύθυνση σε πλέγμα θέσεων της ίδιας εικόνας): διάμεσος και μέγιστο. */
+  readonly pMedian: number;
+  readonly pMax: number;
+}
+
+/** Ποιότητα πέρα από το «είναι σύμπτωση;»: όσα μετρούν οι μεγάλοι (PatMax, ReCap) και η ανάλυση. */
+export interface RegistrationQuality {
+  /** Ανεξήγητο μελάνι / μελάνι μέσα στο περίγραμμα του σχεδίου ∈ [0, 1]· `null` ⇒ καθόλου μελάνι στο περίγραμμα. */
+  readonly clutter: number | null;
+  /** λ_min/(λ₁+λ₂) του Σ ℓ·n nᵀ των τμημάτων που πέτυχαν ∈ [0, ½]· `null` ⇒ κανένα δεν πέτυχε. */
+  readonly balance: number | null;
+  /** Διάμεσος (βάρος μήκους) της απόστασης κάθε τμήματος από τον πλησιέστερο παράλληλο γείτονα (px)· `null` ⇒ κανένα ζεύγος. */
+  readonly parallelSeparationPx: number | null;
+  /** Η ελάχιστη διακρίσιμη απόσταση = 2·ακτίνα απόφασης + 1 (px). */
+  readonly resolvablePx: number;
+}
+
+/** Αξιολόγηση a-contrario (ADR-929 §6.9 #7, μονάδα τμήμα από το #9). */
 export interface RegistrationAssessment {
   readonly verdict: RegistrationVerdict;
-  /** log₁₀ NFA = log₁₀ hypotheses + log₁₀ χώρου αναζήτησης + log₁₀ P[X ≥ k]· αποδοχή ⇔ ≤ log₁₀ ε. */
+  /** log₁₀ NFA = log₁₀ hypotheses + log₁₀ χώρου αναζήτησης + log₁₀ P[X ≥ k] (Poisson-binomial)· αποδοχή ⇔ ≤ log₁₀ ε. */
   readonly log10Nfa: number;
   /** Πόσες αρχικές υποθέσεις δοκιμάστηκαν — δηλωμένο από τον καλούντα. */
   readonly hypotheses: number;
@@ -174,13 +221,12 @@ export interface RegistrationAssessment {
   readonly log10SearchSpace: number;
   /** Ακτίνα απόφασης «βρήκε μελάνι» (px) = η τελευταία του ICP. */
   readonly decisionRadiusPx: number;
-  /** Ανεξάρτητα δείγματα (βήμα ≥ 2·ακτίνα, ώστε τα παράθυρα να μην επικαλύπτονται). */
-  readonly independentSamples: number;
-  readonly hits: number;
-  /** p υπό H0: ποσοστό των pixel της εικόνας κοντά σε μελάνι — άνω φράγμα, άρα συντηρητικό. */
+  readonly segments: SegmentEvidence;
+  /** Ποσοστό των pixel κοντά σε μελάνι — **μόνο πληροφορία** (ήταν το p του #7, πολύ αδύναμο ως H0). */
   readonly inkProbability: number;
-  /** `hits / independentSamples`. */
+  /** Μήκος τμημάτων που πέτυχαν / συνολικό μήκος. */
   readonly coverage: number;
+  readonly quality: RegistrationQuality;
   readonly evaluation: EvaluationResiduals;
 }
 

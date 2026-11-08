@@ -7,6 +7,7 @@
  * είναι **0** — και το 0 δεν ξεχωρίζει ένα καλό από ένα εξαιρετικό ταίριασμα. Όλα γίνονται σε log-space.
  * 🔑 **Ακριβές άθροισμα, όχι προσέγγιση.** n ≤ μερικές χιλιάδες ⇒ O(n) όροι με log-sum-exp. Όχι Hoeffding/Chernoff
  * (φράγματα, όχι τιμές) και όχι κανονική προσέγγιση (λάθος ακριβώς στην ουρά που μας ενδιαφέρει).
+ * 🔑 **Και με άνισα p** (§6.9 #9): {@link log10PoissonBinomialTail}, όταν κάθε δοκιμή έχει δικό της p (εμπειρικό ανά τμήμα).
  *
  * ⚠️ Καθαρή αριθμητική, χωρίς εισαγωγές· τρέχει σε Worker, διακομιστή και jest.
  */
@@ -54,4 +55,41 @@ export function log10BinomialTail(n: number, k: number, p: number): number {
   let sum = 0;
   for (const term of terms) sum += Math.exp(term - max);
   return Math.min(0, (max + Math.log(sum)) / Math.LN10);
+}
+
+/** ln(eᵃ + eᵇ) χωρίς υπερχείλιση· −∞ είναι το ουδέτερο στοιχείο. */
+function logAddExp(a: number, b: number): number {
+  if (a === Number.NEGATIVE_INFINITY) return b;
+  if (b === Number.NEGATIVE_INFINITY) return a;
+  const m = Math.max(a, b);
+  return m + Math.log(Math.exp(a - m) + Math.exp(b - m));
+}
+
+/**
+ * **log₁₀ P[X ≥ k]**, X = Σ Bernoulli(pᵢ) ανεξάρτητες με **διαφορετικά** pᵢ (Poisson-binomial, ADR-929 §6.9 #9).
+ * 🔑 Ακριβές, με δυναμικό προγραμματισμό O(n·k) σε log-space: μετά από κάθε δοκιμή κρατά ln P[ακριβώς j επιτυχίες] για
+ * j < k και **μία** συσσωρευμένη θέση «≥ k». Όχι B(n, p_max) (φράγμα, συχνά άχρηστα χαλαρό) ούτε κανονική προσέγγιση.
+ * Όρια ορισμένα όπως στο {@link log10BinomialTail}: k ≤ 0 ⇒ 0 · k > n ⇒ −∞. Τα pᵢ κόβονται στο [0, 1].
+ */
+export function log10PoissonBinomialTail(ps: readonly number[], k: number): number {
+  if (k <= 0) return 0;
+  if (k > ps.length) return Number.NEGATIVE_INFINITY;
+  const NEG = Number.NEGATIVE_INFINITY;
+  // cur[j] = ln P[j επιτυχίες] για j < k· cur[k] = ln P[≥ k].
+  let cur = new Array<number>(k + 1).fill(NEG);
+  cur[0] = 0;
+  for (const raw of ps) {
+    const p = Math.min(1, Math.max(0, raw));
+    const lp = p > 0 ? Math.log(p) : NEG;
+    const lq = p < 1 ? Math.log1p(-p) : NEG;
+    const next = new Array<number>(k + 1).fill(NEG);
+    for (let j = 0; j <= k; j++) {
+      if (cur[j] === NEG) continue;
+      const up = Math.min(k, j + 1);
+      next[up] = logAddExp(next[up], cur[j] + (j === k ? 0 : lp));
+      if (j < k) next[j] = logAddExp(next[j], cur[j] + lq);
+    }
+    cur = next;
+  }
+  return Math.min(0, cur[k] / Math.LN10);
 }
