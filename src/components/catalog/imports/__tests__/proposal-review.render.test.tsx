@@ -161,8 +161,8 @@ describe('ProposalReview', () => {
     expect(screen.queryByRole('button', { name: 'review.apply' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'review.rejectAll' })).not.toBeInTheDocument();
     const section = screen.getByRole('region', { name: '099-01-001' });
-    expect(within(section).getByRole('button', { name: 'review.accept' })).toBeDisabled();
-    expect(within(section).getByRole('button', { name: 'review.reject' })).toBeDisabled();
+    expect(within(section).getByRole('radio', { name: 'review.accept' })).toBeDisabled();
+    expect(within(section).getByRole('radio', { name: 'review.reject' })).toBeDisabled();
     expect(within(section).getByRole('button', { name: 'review.acceptRow' })).toBeDisabled();
   });
 

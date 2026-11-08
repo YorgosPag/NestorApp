@@ -29,9 +29,11 @@ import { readBatchTable } from './import-source.server';
 
 const logger = createModuleLogger('CatalogImportReaders');
 
+/** Μόνο προς τα εμπρός: τελειωμένη παρτίδα (`closed` · `discarded`) δεν ξαναγυρνά σε `reviewing` (ADR-934 Ε3). */
 function setStatus(ctx: AuthContext, id: string, status: ImportBatchDefinition['status']): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
+    assertImportBatchOpen(current);
     return current.status === status ? current : stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status });
   });
 }
@@ -40,6 +42,7 @@ function setStatus(ctx: AuthContext, id: string, status: ImportBatchDefinition['
 export async function buildTableProposals(ctx: AuthContext, id: string): Promise<readonly StoredImportProposal[]> {
   const { batch, profile } = await runCatalogTransaction(ctx, async (scope) => {
     const stored = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
+    assertImportBatchOpen(stored); // νέα χαρτογράφηση σε τελειωμένη παρτίδα: τίποτα δεν διαβάζεται ούτε γράφεται
     if (stored.sourceKind === 'etimXchange') return { batch: stored, profile: null };
     if (stored.profileId === null) throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'profileId' }]);
     return { batch: stored, profile: await readOwned<ImportProfileDefinition>(scope, 'importProfile', stored.profileId) };

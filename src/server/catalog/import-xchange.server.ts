@@ -20,7 +20,7 @@ import type { PriceListDefinition, StoredPriceListVersionDefinition } from '@/su
 import { readSchemaSnapshot } from './catalog-product-reads.server';
 import { readOwned, runCatalogTransaction, stageReplace } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
-import { batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
+import { assertImportBatchOpen, batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
 import { groupTableRowsByLiveModel } from './import-proposal-plan.server';
 import { proposeGroup, retireStaleSourceProposals, type StoredImportProposal } from './import-proposal-writer.server';
 
@@ -64,6 +64,7 @@ export async function buildXChangeProposals(ctx: AuthContext, batch: StoredImpor
   await retireStaleSourceProposals(ctx, batch.id, proposals);
   await runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batch.id);
+    assertImportBatchOpen(current); // εγκατάλειψη στο μεταξύ: η αναφορά δεν ξαναζωντανεύει την παρτίδα (ADR-934 Ε3)
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status: 'reviewing', xchangeReport: report });
   });
   return proposals;

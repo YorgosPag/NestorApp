@@ -62,7 +62,7 @@ import { createCatalogCategory } from '../category-writer.server';
 import { createCatalogFamily } from '../family-writer.server';
 import { applyImportProposal } from '../import-apply.server';
 import { createImportBatch } from '../import-batch-writer.server';
-import { readImportPage } from '../import-readers.server';
+import { buildTableProposals, readImportPage } from '../import-readers.server';
 import { setImportLine } from '../import-page-reinterpret.server';
 import { groupTableRowsByLiveModel } from '../import-proposal-plan.server';
 import { discardImportBatch, proposeGroup, rejectImportProposal, retireStaleSourceProposals, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
@@ -459,6 +459,13 @@ describe('ADR-934 Ε3 — η εγκατάλειψη αποσύρει τις εκ
     expect((await rejectionOf(rejectImportProposal(ARIES, pending.id, pending.revision))).kind).toBe('immutable');
     expect((await rejectionOf(updateImportProposal(ARIES, pending.id, decisions))).kind).toBe('immutable');
     expect(proposalDoc(pending.id)).toMatchObject({ status: 'pending', revision: pending.revision });
+  });
+
+  it.each(['discarded', 'closed'])('νέα χαρτογράφηση σε παρτίδα %s αρνείται και δεν την ξαναγυρνά σε «reviewing»', async (status) => {
+    const batch = await createImportBatch(ARIES, attributesBatch());
+    fake.seed('catalog_import_batches', batch.id, { ...batch, status });
+    expect((await rejectionOf(buildTableProposals(ARIES, batch.id))).kind).toBe('immutable');
+    expect(fake.getAllDocs('catalog_import_batches')[batch.id]).toMatchObject({ status, revision: batch.revision });
   });
 });
 
