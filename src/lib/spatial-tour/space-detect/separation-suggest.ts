@@ -12,6 +12,7 @@
  * πρέπει να φτάνεται από το Α· αλλιώς καμία πρόταση (ποτέ γραμμή που δεν χωρίζει).
  */
 
+import { createDisjointSets } from '@/lib/algorithms/disjoint-sets';
 import type { PixelPoint } from '@/lib/geometry/scale-calibration';
 import { squaredDistanceTransform } from '@/lib/geometry/raster/distance-transform';
 import { floodFillMask, forEachNeighbour, NEIGHBOURS_4, NEIGHBOURS_8 } from '@/lib/geometry/raster/flood-fill';
@@ -26,13 +27,6 @@ const CHORD_STEP_PX = 0.5;
 const CANDIDATE_STRIDE_PX = 2;
 /** Πόσες από τις συντομότερες χορδές ελέγχονται με flood fill («χωρίζει;») πριν τα παρατήσουμε. */
 const MAX_VALIDATIONS = 12;
-
-function findRoot(parent: Int32Array, i: number): number {
-  let root = i;
-  while (parent[root] !== root) root = parent[root];
-  while (parent[i] !== root) { const next = parent[i]; parent[i] = root; i = next; }
-  return root;
-}
 
 /** Pixel του χώρου σε φθίνουσα απόσταση από τοίχο (ταξινόμηση κουβάδων — ακέραιο μέρος της απόστασης). */
 function orderByClearance(region: Uint8Array, clearance2: Float64Array): Int32Array {
@@ -82,13 +76,15 @@ function bottleneckPixel(
   const clearance2 = squaredDistanceTransform(complement(region), cols, rows);
   const ridgeA = climbToRidge(clearance2, region, cols, rows, a);
   const ridgeB = climbToRidge(clearance2, region, cols, rows, b);
-  const parent = new Int32Array(region.length).fill(-1);
+  // Τα pixel «ανάβουν» με φθίνουσα απόσταση από τοίχο· ενώνονται μόνο με ήδη αναμμένους γείτονες.
+  const sets = createDisjointSets(region.length);
+  const lit = new Uint8Array(region.length);
   for (const i of orderByClearance(region, clearance2)) {
-    parent[i] = i;
+    lit[i] = 1;
     forEachNeighbour(i, cols, rows, NEIGHBOURS_4, (n) => {
-      if (parent[n] >= 0) parent[findRoot(parent, n)] = findRoot(parent, i);
+      if (lit[n] === 1) sets.union(n, i);
     });
-    if (parent[ridgeA] >= 0 && parent[ridgeB] >= 0 && findRoot(parent, ridgeA) === findRoot(parent, ridgeB)) {
+    if (lit[ridgeA] === 1 && lit[ridgeB] === 1 && sets.same(ridgeA, ridgeB)) {
       return { index: i, clearancePx: Math.sqrt(clearance2[i]) };
     }
   }

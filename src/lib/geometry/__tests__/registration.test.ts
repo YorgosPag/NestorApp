@@ -6,7 +6,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { applyAffine, type Affine2x3, type AffinePoint } from '../affine-2x3';
 import { fitTransform } from '../registration/fit-transform';
-import { pickByChamfer, probeStrokeCentre, registerToInk } from '../registration/chamfer-register';
+import { estimateStrokeWidthPx, pickByChamfer, probeStrokeCentre, registerToInk } from '../registration/chamfer-register';
 import {
   DEFAULT_FIT,
   DEFAULT_REGISTER,
@@ -76,6 +76,37 @@ describe('probeStrokeCentre', () => {
     const full: InkMask = { mask: new Uint8Array(W * H).fill(1), width: W, height: H };
     expect(probeStrokeCentre(full, { x: 200, y: 50 }, { x: 0, y: 1 }, 8)).toBeNull();
   });
+
+  it('🔴 §6.9 #13/#15: πινελιά 5 px με ακτίνα 3 ⇒ null χωρίς πάχος, ΚΕΝΤΡΟ με πάχος 6 (ακτίνα ≠ πάχος)', () => {
+    const thick = rasterize([{ a: { x: 0, y: 0 }, b: { x: 1, y: 0 } }], { a: 400, b: 0, c: 0, d: 1, e: 10, f: 50 }, 5);
+    expect(probeStrokeCentre(thick, { x: 200, y: 50 }, { x: 0, y: 1 }, 3)).toBeNull();
+    const along = probeStrokeCentre(thick, { x: 200, y: 50 }, { x: 0, y: 1 }, 3, 6);
+    expect(along).not.toBeNull();
+    expect(Math.abs(along ?? 99)).toBeLessThanOrEqual(0.5);
+  });
+
+  it('κέντρο πινελιάς έξω από την ακτίνα ⇒ null, όσο φαρδύ κι αν είναι το παράθυρο', () => {
+    // Πινελιά 3 px με κέντρο 5 px μακριά: μέσα στο παράθυρο ±(3+6), αλλά |κέντρο| > r = 3.
+    expect(probeStrokeCentre(ink, { x: 200, y: 47 }, { x: 0, y: 1 }, 3, 6)).toBeNull();
+  });
+});
+
+describe('estimateStrokeWidthPx (§6.9 #15)', () => {
+  const segments = planSegments();
+
+  it('μετρά το πάχος ΤΗΣ πινελιάς στο αποτύπωμα: 3 px ⇒ ≈ 3 · 7 px ⇒ ≈ 7 (± 1 px ψηφιοποίησης)', () => {
+    const w3 = estimateStrokeWidthPx(segments, rasterize(segments, TRUTH, 3), PERTURBED, DEFAULT_REGISTER);
+    const w7 = estimateStrokeWidthPx(segments, rasterize(segments, TRUTH, 7), PERTURBED, DEFAULT_REGISTER);
+    expect(w3).toBeGreaterThanOrEqual(2.5);
+    expect(w3).toBeLessThanOrEqual(4.5);
+    expect(w7).toBeGreaterThanOrEqual(6.5);
+    expect(w7).toBeLessThanOrEqual(8.5);
+  });
+
+  it('κενή εικόνα ⇒ η τελευταία ακτίνα (η συμπεριφορά χωρίς μέτρηση), ποτέ NaN', () => {
+    const empty: InkMask = { mask: new Uint8Array(W * H), width: W, height: H };
+    expect(estimateStrokeWidthPx(segments, empty, PERTURBED, DEFAULT_REGISTER)).toBe(3);
+  });
 });
 
 describe('registerToInk', () => {
@@ -88,6 +119,21 @@ describe('registerToInk', () => {
     expect(maxDeviation(r.fit.transform, TRUTH, CORNERS)).toBeLessThan(0.5);
     expect(r.fit.residuals.p95Px).toBeLessThan(1);
     expect(r.coverage).toBeGreaterThan(0.8);
+    // §6.9 #15: η αβεβαιότητα θέσης είναι πεπερασμένη και μικρότερη από το πραγματικό σφάλμα ανοχής του test.
+    expect(r.fit.positionSigmaPx).toBeGreaterThan(0);
+    expect(r.fit.positionSigmaPx).toBeLessThan(0.5);
+  });
+
+  it('🔴 §6.9 #13/#15: πινελιά 7 px (υψηλά dpi) ⇒ το ICP συγκλίνει με κάλυψη, γιατί το πάχος μετριέται', () => {
+    const thick = rasterize(segments, TRUTH, 7);
+    const r = registerToInk(segments, thick, PERTURBED, DEFAULT_REGISTER);
+    if (r.kind !== 'registered') throw new Error(`expected registered, got ${r.reason}`);
+    expect(r.strokeWidthPx).toBeGreaterThan(6);
+    expect(r.coverage).toBeGreaterThan(0.8);
+    expect(maxDeviation(r.fit.transform, TRUTH, CORNERS)).toBeLessThan(0.5);
+    // Το ίδιο, με το πάχος καρφωμένο στην ακτίνα (η συμπεριφορά ως το #14): η πινελιά είναι «πολύ μακριά».
+    const fixed = registerToInk(segments, thick, PERTURBED, { ...DEFAULT_REGISTER, strokeWidthPx: 3 });
+    expect(fixed.kind === 'registered' ? fixed.coverage : 0).toBeLessThan(0.5);
   });
 
   it('γραμμή του CAD που λείπει από την εικόνα δεν χαλά τη λύση', () => {
@@ -107,5 +153,21 @@ describe('registerToInk', () => {
     const wrong: Affine2x3 = { ...TRUTH, e: TRUTH.e + 60 };
     const best = pickByChamfer(segments, ink, [wrong, PERTURBED], DEFAULT_REGISTER);
     expect(best?.transform).toBe(PERTURBED);
+  });
+
+  it('§6.9 #15 Lowe: ο δεύτερος ΔΙΑΚΡΙΤΟΣ υποψήφιος — επαναλαμβανόμενο μοτίβο ⇒ ίδιο σκορ · κοντινός (≤ R₀) ⇒ δεν μετρά', () => {
+    const at = (e: number, f: number): Affine2x3 => ({ a: 1, b: 0, c: 0, d: 1, e, f });
+    const first = at(30, 30);
+    const copy = at(230, 200);
+    const near = at(35, 30);
+    const one = rasterize(segments, first, 3);
+    const other = rasterize(segments, copy, 3);
+    const both: InkMask = { mask: one.mask.map((v, i) => v | other.mask[i]), width: W, height: H };
+    const repeated = pickByChamfer(segments, both, [first, near, copy], DEFAULT_REGISTER);
+    expect(repeated?.transform).toBe(first);
+    expect(repeated?.runnerUpScore).toBeCloseTo(repeated?.score ?? -1, 6);
+    expect(pickByChamfer(segments, both, [first, near], DEFAULT_REGISTER)?.runnerUpScore).toBeNull();
+    const single = pickByChamfer(segments, one, [first, copy], DEFAULT_REGISTER);
+    expect(single?.runnerUpScore ?? 0).toBeGreaterThan(5);
   });
 });

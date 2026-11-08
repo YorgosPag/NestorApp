@@ -24,6 +24,7 @@ import {
   type MiterPt,
 } from './wall-trims-geometry';
 import type { WallJoinMode } from '../types/wall-types';
+import { createKeyedDisjointSets } from '@/lib/algorithms/disjoint-sets';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -283,33 +284,13 @@ export function resolveCornerClusters(
   cornerRels: ReadonlyArray<{ aKey: string; bKey: string }>,
   acc: Map<string, MutablePatch>,
 ): void {
-  // Union-find over endpoint keys connected by corner relations.
-  const parent = new Map<string, string>();
-  for (const key of endpointRecs.keys()) parent.set(key, key);
-  const find = (k: string): string => {
-    let root = k;
-    while (parent.get(root) !== root) root = parent.get(root)!;
-    while (parent.get(k) !== root) {
-      const next = parent.get(k)!;
-      parent.set(k, root);
-      k = next;
-    }
-    return root;
-  };
-  for (const { aKey, bKey } of cornerRels) {
-    const ra = find(aKey), rb = find(bKey);
-    if (ra !== rb) parent.set(ra, rb);
-  }
+  // SSoT union-find over endpoint keys connected by corner relations (ADR-929 §6.9 #20):
+  // clusters in first-key order, recs in `endpointRecs` insertion order.
+  const sets = createKeyedDisjointSets(endpointRecs.keys());
+  for (const { aKey, bKey } of cornerRels) sets.union(aKey, bKey);
 
-  const clusters = new Map<string, EndpointRec[]>();
-  for (const [key, rec] of endpointRecs) {
-    const root = find(key);
-    const group = clusters.get(root);
-    if (group) group.push(rec);
-    else clusters.set(root, [rec]);
-  }
-
-  for (const group of clusters.values()) {
+  for (const keys of sets.groups()) {
+    const group = keys.map((key) => endpointRecs.get(key)!);
     if (group.length === 2) {
       resolveTwoWayCorner(group[0]!, group[1]!, acc);
     } else if (group.length >= 3) {

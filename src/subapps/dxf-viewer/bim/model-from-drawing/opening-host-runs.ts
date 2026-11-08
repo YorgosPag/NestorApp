@@ -19,6 +19,7 @@
  * Και, εκτός διαδρομών, τα ΝΕΑ ΚΟΜΜΑΤΙΑ λαμπά–λαμπά: καθαροί τοίχοι, χτισμένοι από την αρχή.
  */
 
+import { createKeyedDisjointSets } from '@/lib/algorithms/disjoint-sets';
 import { generateWallId } from '@/services/enterprise-id.service';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -66,33 +67,6 @@ const AXIS_EPS = 1e-9;
 
 const hostWallIds = (plan: OpeningHostPlan): readonly string[] =>
   plan.kind === 'bridge' ? plan.wallIds : plan.kind === 'new-piece' ? [] : [plan.wallId];
-
-interface UnionFind {
-  readonly find: (id: string) => string;
-  readonly union: (a: string, b: string) => void;
-  /** Τα ids με τη σειρά που πρωτοεμφανίστηκαν. */
-  readonly ids: () => string[];
-}
-
-function createUnionFind(): UnionFind {
-  const parent = new Map<string, string>();
-  const find = (id: string): string => {
-    const p = parent.get(id);
-    if (p === undefined || p === id) {
-      parent.set(id, id);
-      return id;
-    }
-    const root = find(p);
-    parent.set(id, root);
-    return root;
-  };
-  const union = (a: string, b: string): void => {
-    const ra = find(a);
-    const rb = find(b);
-    if (ra !== rb) parent.set(rb, ra);
-  };
-  return { find, union, ids: () => [...parent.keys()] };
-}
 
 interface RunOutcome {
   readonly host: WallEntity;
@@ -152,26 +126,32 @@ function buildNewPiece(
 }
 
 interface Runs {
-  readonly uf: UnionFind;
+  /** Οι διαδρομές: τοίχοι με σειρά πρώτης εμφάνισης στα σχέδια (`[0]` = ο πρωτεύων). */
+  readonly groups: readonly (readonly string[])[];
   readonly extendToByWall: ReadonlyMap<string, readonly Point2D[]>;
 }
 
-/** Ένωση-εύρεση πάνω στα σχέδια. `null` = σχέδιο που δείχνει τοίχο ο οποίος δεν υπάρχει πια. */
+/**
+ * Ένωση-εύρεση πάνω στα σχέδια (SSoT union-find, ADR-929 §6.9 #20). `null` = σχέδιο που δείχνει τοίχο
+ * ο οποίος δεν υπάρχει πια.
+ */
 function collectRuns(items: readonly HostedItem[], walls: ReadonlyMap<string, WallEntity>): Runs | null {
-  const uf = createUnionFind();
+  const ids: string[] = [];
   const extendToByWall = new Map<string, Point2D[]>();
   for (const { host } of items) {
-    const ids = hostWallIds(host);
-    if (ids.some((id) => !walls.has(id))) return null;
-    for (const id of ids) uf.find(id);
-    if (host.kind === 'bridge') uf.union(host.wallIds[0], host.wallIds[1]);
+    const hostIds = hostWallIds(host);
+    if (hostIds.some((id) => !walls.has(id))) return null;
+    ids.push(...hostIds);
     if (host.kind === 'extend') extendToByWall.set(host.wallId, [...(extendToByWall.get(host.wallId) ?? []), host.to]);
   }
-  return { uf, extendToByWall };
+  const sets = createKeyedDisjointSets(ids);
+  for (const { host } of items) if (host.kind === 'bridge') sets.union(host.wallIds[0], host.wallIds[1]);
+  return { groups: sets.groups(), extendToByWall };
 }
 
 interface Accumulator {
-  readonly hostIdByRoot: Map<string, string>;
+  /** Τοίχος-πηγή → ο τελικός τοίχος-φορέας της διαδρομής του. */
+  readonly hostIdByWall: Map<string, string>;
   readonly removed: WallEntity[];
   readonly added: WallEntity[];
   readonly reshaped: WallEntity[];
@@ -183,17 +163,13 @@ function resolveRuns(
   walls: ReadonlyMap<string, WallEntity>,
   newWallId: () => string,
 ): Accumulator | 'unmergeable-run' {
-  const membersByRoot = new Map<string, WallEntity[]>();
-  for (const id of runs.uf.ids()) {
-    const root = runs.uf.find(id);
-    membersByRoot.set(root, [...(membersByRoot.get(root) ?? []), walls.get(id)!]);
-  }
-  const acc: Accumulator = { hostIdByRoot: new Map(), removed: [], added: [], reshaped: [], changed: [] };
-  for (const [root, members] of membersByRoot) {
+  const acc: Accumulator = { hostIdByWall: new Map(), removed: [], added: [], reshaped: [], changed: [] };
+  for (const group of runs.groups) {
+    const members = group.map((id) => walls.get(id)!);
     const extendTo = members.flatMap((w) => runs.extendToByWall.get(w.id) ?? []);
     const outcome = resolveRun(members, extendTo, newWallId);
     if (outcome === 'unmergeable-run') return outcome;
-    acc.hostIdByRoot.set(root, outcome.host.id);
+    for (const id of group) acc.hostIdByWall.set(id, outcome.host.id);
     if (outcome.change === 'none') continue;
     acc.changed.push({ hostId: outcome.host.id, sources: members });
     if (outcome.change === 'reshaped') acc.reshaped.push(outcome.host);
@@ -218,7 +194,7 @@ export function resolveOpeningHosts(
   const hostIdByItemKey = new Map<string, string>();
   for (const item of items) {
     if (item.host.kind !== 'new-piece') {
-      hostIdByItemKey.set(item.key, acc.hostIdByRoot.get(runs.uf.find(hostWallIds(item.host)[0]))!);
+      hostIdByItemKey.set(item.key, acc.hostIdByWall.get(hostWallIds(item.host)[0])!);
       continue;
     }
     const piece = buildNewPiece(item.host, walls, ctx);

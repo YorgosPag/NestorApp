@@ -24,6 +24,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 7
  */
 
+import { createDisjointSets } from '@/lib/algorithms/disjoint-sets';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { suggestPadDimensions } from '../structural/footing-design/suggest-pad-dimensions';
 import { rotatePoint } from '../../utils/rotation-math';
@@ -184,41 +185,17 @@ function padsShareFooting(a: PadRect, b: PadRect, clearanceCanvas: number): bool
   return gapX < clearanceCanvas && gapY < clearanceCanvas;
 }
 
-// ─── Union-find (transitive grouping) ────────────────────────────────────────
+// ─── Transitive grouping (SSoT union-find, ADR-929 §6.9 #20) ─────────────────
 
-function find(parent: number[], i: number): number {
-  let root = i;
-  while (parent[root] !== root) root = parent[root];
-  while (parent[i] !== root) {
-    const next = parent[i];
-    parent[i] = root;
-    i = next;
-  }
-  return root;
-}
-
-function union(parent: number[], a: number, b: number): void {
-  const ra = find(parent, a);
-  const rb = find(parent, b);
-  if (ra !== rb) parent[rb] = ra;
-}
-
-/** Ομαδοποίηση κολωνών (indices) με union-find βάσει pad overlap/clearance. */
+/** Ομαδοποίηση κολωνών (indices) βάσει pad overlap/clearance — σειρά του `groups()` του SSoT. */
 function groupColumns(pads: readonly PadRect[], clearanceCanvas: number): number[][] {
-  const parent = pads.map((_, i) => i);
+  const sets = createDisjointSets(pads.length);
   for (let i = 0; i < pads.length; i++) {
     for (let j = i + 1; j < pads.length; j++) {
-      if (padsShareFooting(pads[i], pads[j], clearanceCanvas)) union(parent, i, j);
+      if (padsShareFooting(pads[i], pads[j], clearanceCanvas)) sets.union(i, j);
     }
   }
-  const groups = new Map<number, number[]>();
-  for (let i = 0; i < pads.length; i++) {
-    const root = find(parent, i);
-    const g = groups.get(root);
-    if (g) g.push(i);
-    else groups.set(root, [i]);
-  }
-  return [...groups.values()];
+  return sets.groups();
 }
 
 // ─── Planned-footing builders ────────────────────────────────────────────────

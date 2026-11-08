@@ -15,6 +15,7 @@
  * @module subapps/dxf-viewer/bim/plan-recognition/alignment/sheet-layout
  */
 
+import { createDisjointSets } from '@/lib/algorithms/disjoint-sets';
 import type { Homography } from '@/lib/geometry/homography';
 import { componentStats, type CellBox } from '@/lib/geometry/raster/component-stats';
 import { longLines, longRuns } from '@/lib/geometry/raster/run-length-filter';
@@ -180,16 +181,13 @@ function tableCells(g: Grid, inside: AlignedRectPx): Cell[] {
 
 const gap = (a: CellBox, b: CellBox) => Math.max(0, a.minX - b.maxX, b.minX - a.maxX, a.minY - b.maxY, b.minY - a.maxY);
 
-/** Ομάδες κελιών κατά γειτνίαση (union–find πάνω στα πλαίσια). */
+/** Ομάδες κελιών κατά γειτνίαση (SSoT union-find πάνω στα πλαίσια, ADR-929 §6.9 #20). */
 function clusterCells(cells: readonly Cell[], tol: number): Cell[][] {
-  const parent = cells.map((_, i) => i);
-  const root = (i: number): number => (parent[i] === i ? i : (parent[i] = root(parent[i])));
+  const sets = createDisjointSets(cells.length);
   for (let i = 0; i < cells.length; i++) {
-    for (let j = i + 1; j < cells.length; j++) if (gap(cells[i].box, cells[j].box) <= tol) parent[root(i)] = root(j);
+    for (let j = i + 1; j < cells.length; j++) if (gap(cells[i].box, cells[j].box) <= tol) sets.union(i, j);
   }
-  const groups = new Map<number, Cell[]>();
-  cells.forEach((c, i) => { const r = root(i); groups.set(r, [...(groups.get(r) ?? []), c]); });
-  return [...groups.values()];
+  return sets.groups().map((group) => group.map((i) => cells[i]));
 }
 
 function unionBox(cells: readonly Cell[]): AlignedRectPx {

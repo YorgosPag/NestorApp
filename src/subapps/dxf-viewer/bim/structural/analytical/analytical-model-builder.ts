@@ -31,7 +31,9 @@ import { columnCenterM, beamEndpointsM } from '../loads/member-load-geometry';
 import type { StructuralGraph, StructuralNode } from '../organism/structural-organism-types';
 import { beamInteriorSupports, type BeamInteriorSupport } from './beam-interior-supports';
 import {
-  NodeUnionFind,
+  createNodeSets,
+  priorityRepresentatives,
+  type NodeSets,
   mergeByProximity,
   clusterElevations,
   type RawNode,
@@ -178,14 +180,14 @@ function planDist(a: AnalyticalPoint3D, b: AnalyticalPoint3D): number {
  * κολόνας με τον κόμβο του δοκαριού. **Εσωτερική** στήριξη (ADR-504 Φ2 S5) → ο ειδικός
  * ενδιάμεσος κόμβος της (από το subdivision)· αλλιώς → το πλησιέστερο (στο plan) άκρο.
  */
-function mergeFramingEdges(acc: RawAccumulator, graph: StructuralGraph, uf: NodeUnionFind): void {
+function mergeFramingEdges(acc: RawAccumulator, graph: StructuralGraph, sets: NodeSets): void {
   for (const edge of graph.edges) {
     if (edge.kind !== 'column-bearing') continue;
     const topId = acc.columnTopRaw.get(edge.supportId);
     if (!topId) continue;
     const interiorId = acc.beamInteriorRaw.get(`${edge.supportedId}|${edge.supportId}`);
     if (interiorId) {
-      uf.union(interiorId, topId);
+      sets.union(interiorId, topId);
       continue;
     }
     const ends = acc.beamEnds.get(edge.supportedId);
@@ -194,7 +196,7 @@ function mergeFramingEdges(acc: RawAccumulator, graph: StructuralGraph, uf: Node
     if (!top) continue;
     const nearest = ends.reduce((best, e) =>
       planDist(e.position, top.position) < planDist(best.position, top.position) ? e : best);
-    uf.union(nearest.id, topId);
+    sets.union(nearest.id, topId);
   }
 }
 
@@ -205,10 +207,14 @@ interface ResolvedNodes {
   readonly rootByRaw: Map<string, string>;
 }
 
-/** Επίλυσε τα union sets σε τελικούς κόμβους (ντετερμινιστικά `an-<n>`). */
-function resolveNodes(acc: RawAccumulator, uf: NodeUnionFind): ResolvedNodes {
-  const rootByRaw = new Map<string, string>();
-  for (const raw of acc.raws) rootByRaw.set(raw.id, uf.find(raw.id));
+/**
+ * Επίλυσε τα union sets σε τελικούς κόμβους (ντετερμινιστικά `an-<n>`). Ρίζα = αντιπρόσωπος προτεραιότητας·
+ * η προτεραιότητα ενός id είναι της **πρώτης** εμφάνισής του (όπως το idempotent `add` της παλιάς δομής).
+ */
+function resolveNodes(acc: RawAccumulator, sets: NodeSets): ResolvedNodes {
+  const priorityById = new Map<string, number>();
+  for (const raw of acc.raws) if (!priorityById.has(raw.id)) priorityById.set(raw.id, raw.priority);
+  const rootByRaw = priorityRepresentatives(sets, (id) => priorityById.get(id) ?? 0);
   const roots = [...new Set(rootByRaw.values())].sort();
   const nodeIdByRoot = new Map<string, string>();
   const positionByNode = new Map<string, AnalyticalPoint3D>();
@@ -304,12 +310,11 @@ export function buildAnalyticalModel(input: BuildAnalyticalModelInput): Analytic
   const acc = collectRaws(input);
   if (acc.raws.length === 0) return EMPTY_ANALYTICAL_MODEL;
 
-  const uf = new NodeUnionFind();
-  for (const raw of acc.raws) uf.add(raw.id, raw.priority);
-  mergeFramingEdges(acc, input.graph, uf);
-  mergeByProximity(acc.raws, uf);
+  const sets = createNodeSets(acc.raws);
+  mergeFramingEdges(acc, input.graph, sets);
+  mergeByProximity(acc.raws, sets);
 
-  const resolved = resolveNodes(acc, uf);
+  const resolved = resolveNodes(acc, sets);
   const clustering = clusterElevations([...resolved.positionByNode.values()].map((p) => p.zM));
   const levels: AnalyticalLevel[] = clustering.clusters.map((c, i) => ({ id: `lvl-${i}`, elevationM: c.elevationM }));
   const { supports, restrained } = buildSupports(acc, input.graph, resolved);

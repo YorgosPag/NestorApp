@@ -13,7 +13,13 @@
 
 import { composeAffine, type Affine2x3, type AffinePoint } from '../affine-2x3';
 import { adjustWithDataSnooping } from '../../linear-algebra/robust-adjustment';
-import { solveWeightedLeastSquares, type LinearObservation, type ObservationTerm } from '../../linear-algebra/weighted-least-squares';
+import type { Matrix } from '../../linear-algebra/dense-matrix';
+import {
+  quadraticForm,
+  solveWeightedLeastSquares,
+  type LinearObservation,
+  type ObservationTerm,
+} from '../../linear-algebra/weighted-least-squares';
 import type { FitOptions, FitResult, LineCorrespondence, RegistrationModel, ResidualStats } from './registration-types';
 
 const UNKNOWNS: Readonly<Record<RegistrationModel, number>> = { similarity: 4, affine: 6 };
@@ -62,8 +68,40 @@ export function residualStats(residuals: readonly number[]): ResidualStats {
   return { count, rmsePx, p95Px, maxPx: abs[count - 1] };
 }
 
+/** ∂(x′, y′)/∂παραμέτρων για ένα **κανονικοποιημένο** σημείο `u` — η σειρά των αγνώστων του {@link affineOf}. */
+function pointJacobian(model: RegistrationModel, u: AffinePoint): readonly [ObservationTerm[], ObservationTerm[]] {
+  if (model === 'similarity') {
+    return [
+      [{ index: 0, coefficient: u.x }, { index: 1, coefficient: -u.y }, { index: 2, coefficient: 1 }],
+      [{ index: 0, coefficient: u.y }, { index: 1, coefficient: u.x }, { index: 3, coefficient: 1 }],
+    ];
+  }
+  return [
+    [{ index: 0, coefficient: u.x }, { index: 2, coefficient: u.y }, { index: 4, coefficient: 1 }],
+    [{ index: 1, coefficient: u.x }, { index: 3, coefficient: u.y }, { index: 5, coefficient: 1 }],
+  ];
+}
+
+/**
+ * Αβεβαιότητα θέσης (px, 1σ, √(σ²ₓ+σ²ᵧ)) στη **χειρότερη** από τις 4 γωνίες του περιγράμματος των σημείων: σ₀²·J·Q_xx·Jᵀ.
+ * Στις γωνίες, γιατί η αβεβαιότητα της affine μεγαλώνει τετραγωνικά μακριά από το κέντρο βάρους. σ₀ άγνωστο ⇒ a priori (1).
+ */
+function worstCornerSigma(model: RegistrationModel, points: readonly AffinePoint[], norm: Affine2x3, q: Matrix, sigma0: number | null): number {
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const corners = [Math.min(...xs), Math.max(...xs)].flatMap((x) => [Math.min(...ys), Math.max(...ys)].map((y) => ({ x, y })));
+  const s2 = (sigma0 ?? 1) ** 2;
+  let worst = 0;
+  for (const c of corners) {
+    const [jx, jy] = pointJacobian(model, { x: norm.a * c.x + norm.e, y: norm.d * c.y + norm.f });
+    worst = Math.max(worst, Math.sqrt(s2 * (quadraticForm(jx, q) + quadraticForm(jy, q))));
+  }
+  return worst;
+}
+
 interface Solved {
   readonly singular: boolean;
+  readonly cofactor: Matrix;
   readonly x: readonly number[];
   readonly residuals: readonly (number | null)[];
   readonly rejected: number;
@@ -75,12 +113,13 @@ function solve(obs: readonly LinearObservation[], unknowns: number, o: FitOption
   if (o.snoop) {
     const r = adjustWithDataSnooping(obs, unknowns, { critical: o.critical, minRedundancy: o.minRedundancy });
     const residuals = r.verdicts.map((v) => (v.active ? v.residual : null));
-    return { singular: r.solution.singular, x: r.solution.x, residuals, rejected: r.rejected, sigma0: r.sigma0, globalTestPassed: r.globalTestPassed };
+    const { singular, x, cofactor } = r.solution;
+    return { singular, cofactor, x, residuals, rejected: r.rejected, sigma0: r.sigma0, globalTestPassed: r.globalTestPassed };
   }
   const s = solveWeightedLeastSquares(obs, unknowns);
   const df = s.degreesOfFreedom;
   const sigma0 = !s.singular && df > 0 ? Math.sqrt(s.weightedSquareSum / df) : null;
-  return { singular: s.singular, x: s.x, residuals: s.residuals, rejected: 0, sigma0, globalTestPassed: null };
+  return { singular: s.singular, cofactor: s.cofactor, x: s.x, residuals: s.residuals, rejected: 0, sigma0, globalTestPassed: null };
 }
 
 /** Προσάρμοσε `T: σχέδιο → pixel` στις αντιστοιχίες. Ιδιάζον σύστημα ⇒ `singular`, ποτέ `NaN`. */
@@ -106,5 +145,6 @@ export function fitTransform(correspondences: readonly LineCorrespondence[], o: 
     sigma0: s.sigma0,
     globalTestPassed: s.globalTestPassed,
     perObservation: s.residuals,
+    positionSigmaPx: worstCornerSigma(o.model, correspondences.map((c) => c.drawing), norm, s.cofactor, s.sigma0),
   };
 }

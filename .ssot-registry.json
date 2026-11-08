@@ -2353,6 +2353,23 @@
       ],
       "tier": 3
     },
+    "disjoint-sets": {
+      "ssotFile": "src/lib/algorithms/disjoint-sets.ts",
+      "description": "ΕΝΑΣ union-find (ξένα σύνολα) για όλο το repo: createDisjointSets (δείκτες) + createKeyedDisjointSets (κλειδιά, πρότυπο LLVM EquivalenceClasses). Αντιπρόσωπος με προτεραιότητα = επιλογή πάνω από τα groups(), ποτέ δεύτερη δομή. Το dxf-viewer/utils/connected-components είναι όψη «ακμές → συνιστώσες» πάνω σε αυτό. Τα patterns πιάνουν τα σχήματα των 8 τοπικών αντιγράφων που καταργήθηκαν. ADR-929 §6.9 #20.",
+      "forbiddenPatterns": [
+        "function\\s+find\\s*\\(\\s*parent\\b",
+        "parent\\[\\s*find\\s*\\(",
+        "class\\s+\\w*UnionFind\\b",
+        "\\bcreateUnionFind\\s*\\(",
+        "parent\\[\\s*\\w+\\s*\\]\\s*=\\s*root\\s*\\(",
+        "parent\\[\\s*root\\s*\\]\\s*!==\\s*root",
+        "parent\\.get\\(\\s*root\\s*\\)\\s*!==\\s*root"
+      ],
+      "allowlist": [
+        "src/lib/algorithms/disjoint-sets.ts"
+      ],
+      "tier": 3
+    },
     "admin-batch-utils": {
       "ssotFile": "src/lib/admin-batch-utils.ts",
       "description": "Firestore batch operation data-primitives — BATCH_SIZE_READ (500)/BATCH_SIZE_WRITE (200)/BATCH_WRITE_LIMIT (450) constants, processClientBatch<T>/processAdminBatch<T> processors, buildLookupCache (paginated .select→Map), flushInBatches (chunked batch.update + per-batch resilience). Canonical SSoT for chunked Firestore reads/writes. ADR-314 Phase D.3b, extended ADR-704.",

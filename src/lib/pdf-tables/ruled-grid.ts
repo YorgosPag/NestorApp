@@ -9,6 +9,7 @@
  * @module lib/pdf-tables/ruled-grid
  */
 
+import { createDisjointSets } from '@/lib/algorithms/disjoint-sets';
 import { cellText } from './cell-text';
 import type { PageRule, PageTable, PageTableCell, PageWord } from './page-table-types';
 
@@ -51,24 +52,12 @@ function normalizeAxis(rules: readonly PageRule[], axis: PageRule['axis']): Ruli
   return [...byPosition.values()].flatMap(joinSpans);
 }
 
-function disjointSet(size: number) {
-  const parent = Array.from({ length: size }, (_, index) => index);
-  const find = (item: number): number => {
-    while (parent[item] !== item) {
-      parent[item] = parent[parent[item]];
-      item = parent[item];
-    }
-    return item;
-  };
-  return { find, union: (left: number, right: number) => { parent[find(left)] = find(right); } };
-}
-
 const crosses = (h: Ruling, v: Ruling): boolean => v.at >= h.from - SNAP && v.at <= h.to + SNAP && h.at >= v.from - SNAP && h.at <= v.to + SNAP;
 
 /** Οι ομάδες γραμμών που τέμνονται. */
 function connectedRulings(horizontal: readonly Ruling[], vertical: readonly Ruling[]): Ruling[][] {
   const all = [...horizontal, ...vertical];
-  const sets = disjointSet(all.length);
+  const sets = createDisjointSets(all.length);
   horizontal.forEach((h, i) => vertical.forEach((v, j) => {
     if (crosses(h, v)) sets.union(i, horizontal.length + j);
   }));
@@ -101,7 +90,7 @@ function mergedCellRoots({ xs, ys }: Grid, rules: readonly Ruling[]) {
   const rows = ys.length - 1;
   const cols = xs.length - 1;
   const id = (row: number, col: number): number => row * cols + col;
-  const sets = disjointSet(rows * cols);
+  const sets = createDisjointSets(rows * cols);
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
       if (col + 1 < cols && !ruled(rules, 'v', xs[col + 1], ys[row], ys[row + 1])) sets.union(id(row, col), id(row, col + 1));

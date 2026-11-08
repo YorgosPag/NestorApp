@@ -17,7 +17,7 @@
  */
 
 import { applyAffine, type Affine2x3 } from '../affine-2x3';
-import type { SegmentOutcome } from './registration-null-model';
+import type { ImageSegment, SegmentOutcome } from './registration-null-model';
 import type { InkMask, RegistrationSegment } from './registration-types';
 
 const HALF_PIXEL_DIAGONAL = Math.SQRT2 / 2;
@@ -93,17 +93,27 @@ export function measureBalance(outcomes: readonly SegmentOutcome[]): number | nu
   return Math.max(0, lambdaMin) / trace;
 }
 
-/** Η απόσταση (px) του `j` από το `i`, αν είναι παράλληλα και επικαλύπτονται κατά μήκος· αλλιώς `null`. */
-function parallelGap(i: SegmentOutcome['segment'], j: SegmentOutcome['segment']): number | null {
+/**
+ * **Ο ΕΝΑΣ γεωμετρικός έλεγχος «παράλληλα και αντικριστά»** (SSoT — τον χρησιμοποιούν η ανάλυση εδώ και οι ανεξάρτητες
+ * μονάδες του `registration-units`, ADR-929 §6.9 #19): η απόσταση (px) του μέσου του `j` από την ευθεία του `i`, όταν οι
+ * διευθύνσεις απέχουν ≤ `toleranceRad` **και** οι προβολές τους κατά μήκος του `i` επικαλύπτονται· αλλιώς `null`.
+ * Συγγραμμικά δίνουν ≈ 0 (ο καλών αποφασίζει αν τα θέλει).
+ */
+export function parallelOverlapGap(i: ImageSegment, j: ImageSegment, toleranceRad: number): number | null {
   const cos = Math.abs(i.dir.x * j.dir.x + i.dir.y * j.dir.y);
-  if (cos < Math.cos(PARALLEL_TOL_RAD)) return null;
+  if (cos < Math.cos(toleranceRad)) return null;
   const rel = (p: { x: number; y: number }) => ({ along: (p.x - i.a.x) * i.dir.x + (p.y - i.a.y) * i.dir.y, off: (p.x - i.a.x) * i.normal.x + (p.y - i.a.y) * i.normal.y });
   const ja = rel(j.a);
   const jb = rel({ x: j.a.x + j.dir.x * j.lengthPx, y: j.a.y + j.dir.y * j.lengthPx });
   const overlap = Math.min(i.lengthPx, Math.max(ja.along, jb.along)) - Math.max(0, Math.min(ja.along, jb.along));
   if (overlap <= 0) return null;
-  const gap = Math.abs((ja.off + jb.off) / 2);
-  return gap > COLLINEAR_PX ? gap : null;
+  return Math.abs((ja.off + jb.off) / 2);
+}
+
+/** Η απόσταση (px) δύο **παρειών** (παράλληλα ≤ 2°, επικαλυπτόμενα, όχι συγγραμμικά)· αλλιώς `null`. */
+function parallelGap(i: ImageSegment, j: ImageSegment): number | null {
+  const gap = parallelOverlapGap(i, j, PARALLEL_TOL_RAD);
+  return gap !== null && gap > COLLINEAR_PX ? gap : null;
 }
 
 /**

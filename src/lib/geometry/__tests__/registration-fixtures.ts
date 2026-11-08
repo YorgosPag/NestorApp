@@ -22,6 +22,16 @@ export function planSegments(origin: AffinePoint = { x: 0, y: 0 }): Registration
   ];
 }
 
+/**
+ * Όροφος 3×3 από ίδιες κατόψεις (§6.9 #19): το «σωστό κομμάτι, λίγο από το όλον» — η σάρωση δείχνει μόνο τα πρώτα
+ * διαμερίσματα. Ανά διαμέρισμα, γραμμή-γραμμή· μαζί με το {@link TILED} χωρά στον καμβά W×H.
+ */
+export function tiledPlan(): RegistrationSegment[][] {
+  const blocks: RegistrationSegment[][] = [];
+  for (const y of [0, 115, 230]) for (const x of [0, 155, 310]) blocks.push(planSegments({ x, y }));
+  return blocks;
+}
+
 export function rasterize(segments: readonly RegistrationSegment[], t: Affine2x3, widthPx: number): InkMask {
   const mask = new Uint8Array(W * H);
   for (const seg of segments) {
@@ -54,3 +64,5 @@ export function maxDeviation(p: Affine2x3, q: Affine2x3, points: readonly Affine
 export const TRUTH: Affine2x3 = { a: 2.4, b: 0.05, c: -0.03, d: 2.35, e: 30, f: 25 };
 export const CORNERS: AffinePoint[] = [{ x: 0, y: 0 }, { x: 150, y: 0 }, { x: 150, y: 110 }, { x: 0, y: 110 }];
 export const PERTURBED: Affine2x3 = { a: 2.45, b: 0.03, c: -0.01, d: 2.4, e: 35, f: 20 };
+/** Μετασχηματισμός του {@link tiledPlan}: κλίμακα 0,8 ώστε ο όροφος (460×340 μονάδες) να χωρά στον καμβά. */
+export const TILED: Affine2x3 = { a: 0.8, b: 0.02, c: -0.01, d: 0.8, e: 20, f: 20 };

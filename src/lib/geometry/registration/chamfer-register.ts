@@ -14,7 +14,9 @@
  */
 
 import { applyAffine, invertAffine, type Affine2x3, type AffinePoint } from '../affine-2x3';
+import { median } from '../../statistics/median';
 import { squaredDistanceTransform } from '../raster/distance-transform';
+import { inkThicknessAcross } from '../raster/ink-probe';
 import { fitTransform } from './fit-transform';
 import type {
   FitOptions,
@@ -60,11 +62,15 @@ function isInk(ink: InkMask, x: number, y: number): boolean {
 }
 
 /**
- * Η θέση (κατά μήκος της καθέτου, px) του **μέσου** της πλησιέστερης διαδρομής μελανιού μέσα στο `±radius`, ή `null`
- * όταν δεν υπάρχει ή είναι αμφίσημη (κομμένη στο όριο / μακρύτερη από την ακτίνα).
+ * Η θέση (κατά μήκος της καθέτου, px) του **μέσου** της πλησιέστερης διαδρομής μελανιού με κέντρο μέσα στο `±radius`, ή
+ * `null` όταν δεν υπάρχει ή είναι αμφίσημη (κομμένη στο όριο του παραθύρου / μακρύτερη από την πινελιά).
+ * 🔴 **§6.9 #15 — ακτίνα αναζήτησης ≠ πάχος πινελιάς.** Ως το #14 η ίδια ακτίνα έκανε και τα δύο: στα 185 dpi ένας τοίχος
+ * 0,5 mm (5 px) ήταν «πολύ μακρύς» για ακτίνα 3 ⇒ κάλυψη 0,01 σε **σωστή** θέση (#13). Τώρα W′ = max(r, W), παράθυρο
+ * ±(r + W′) ώστε μια πινελιά με κέντρο μέσα στο ±r να μην κόβεται ποτέ, μήκος ≤ W′, |κέντρο| ≤ r (#14: θετικά 13 → 26/26).
  */
-export function probeStrokeCentre(ink: InkMask, q: AffinePoint, n: AffinePoint, radius: number): number | null {
-  const steps = Math.round(radius / PROBE_STEP_PX);
+export function probeStrokeCentre(ink: InkMask, q: AffinePoint, n: AffinePoint, radius: number, maxStrokePx = radius): number | null {
+  const stroke = Math.max(radius, maxStrokePx);
+  const steps = Math.round((radius + stroke) / PROBE_STEP_PX);
   let best: number | null = null;
   let runStart: number | null = null;
   for (let i = -steps; i <= steps + 1; i++) {
@@ -73,12 +79,37 @@ export function probeStrokeCentre(ink: InkMask, q: AffinePoint, n: AffinePoint, 
     if (inside || runStart === null) continue;
     const end = i - 1;
     const clipped = runStart === -steps || end === steps;
-    const tooLong = (end - runStart) * PROBE_STEP_PX > radius;
+    const tooLong = (end - runStart) * PROBE_STEP_PX > stroke;
     const mid = ((runStart + end) / 2) * PROBE_STEP_PX;
-    if (!clipped && !tooLong && (best === null || Math.abs(mid) < Math.abs(best))) best = mid;
+    const near = Math.abs(mid) <= radius;
+    if (!clipped && !tooLong && near && (best === null || Math.abs(mid) < Math.abs(best))) best = mid;
     runStart = null;
   }
   return best;
+}
+
+/**
+ * **Πάχος πινελιάς** (px) στο αποτύπωμα του `t`: διάμεσος του `inkThicknessAcross` στο κέντρο της πλησιέστερης πινελιάς
+ * κάθε δείγματος, με ακτίνα αναζήτησης την **πρώτη** του ICP (η αρχή μπορεί να απέχει τόσο) και φράγμα το
+ * `evaluationRadiusPx`. Κανένα δείγμα ⇒ η τελευταία ακτίνα (= η συμπεριφορά χωρίς μέτρηση).
+ * 🔑 **Τοπικά, όχι σε όλη τη σελίδα**: το p90 της σελίδας έφτασε 32–64 px σε σαρώσεις με γέμισμα (poché, §6.9 #14).
+ */
+export function estimateStrokeWidthPx(segments: readonly RegistrationSegment[], ink: InkMask, t: Affine2x3, o: RegisterOptions): number {
+  const search = o.searchRadiiPx[0] ?? 1;
+  const last = o.searchRadiiPx[o.searchRadiiPx.length - 1] ?? 1;
+  const cap = o.acceptance.evaluationRadiusPx;
+  const view = { mask: ink.mask, cols: ink.width, rows: ink.height };
+  const widths: number[] = [];
+  for (const s of sampleSegments(segments, t, o)) {
+    const n = unitNormal(t, s.seg);
+    if (n === null) continue;
+    const q = applyAffine(t, s.p);
+    const along = probeStrokeCentre(ink, q, n, search, cap);
+    if (along === null) continue;
+    const w = inkThicknessAcross(view, { x: q.x + n.x * along, y: q.y + n.y * along }, n, cap);
+    if (w > 0) widths.push(w);
+  }
+  return widths.length === 0 ? last : median(widths);
 }
 
 /** Μοναδιαίο κάθετο του τμήματος **στην εικόνα** του `t` (px)· `null` για εκφυλισμένο τμήμα. */
@@ -90,13 +121,19 @@ export function unitNormal(t: Affine2x3, seg: RegistrationSegment): AffinePoint 
 }
 
 /** Αντιστοιχίες του γύρου: για κάθε δείγμα, η γραμμή μελανιού πάνω στην κάθετο του τρέχοντος `t`. */
-export function correspondencesFor(samples: readonly RegistrationSample[], ink: InkMask, t: Affine2x3, radius: number): LineCorrespondence[] {
+export function correspondencesFor(
+  samples: readonly RegistrationSample[],
+  ink: InkMask,
+  t: Affine2x3,
+  radius: number,
+  strokeWidthPx = radius,
+): LineCorrespondence[] {
   const out: LineCorrespondence[] = [];
   for (const s of samples) {
     const normal = unitNormal(t, s.seg);
     if (normal === null) continue;
     const q = applyAffine(t, s.p);
-    const along = probeStrokeCentre(ink, q, normal, radius);
+    const along = probeStrokeCentre(ink, q, normal, radius, strokeWidthPx);
     if (along === null) continue;
     out.push({ drawing: s.p, normal, offset: normal.x * q.x + normal.y * q.y + along });
   }
@@ -123,8 +160,29 @@ export function chamferScore(field: Float64Array, ink: InkMask, samples: readonl
   return sum / samples.length;
 }
 
+/** Η χονδρή επιλογή, με τον **δεύτερο διακριτό** υποψήφιο για τον έλεγχο αμφισημίας (Lowe ratio). */
+export interface ChamferPick {
+  readonly transform: Affine2x3;
+  readonly score: number;
+  /** Chamfer του καλύτερου υποψηφίου που μετακινεί κάποιο δείγμα > R₀ από τον νικητή· `null` ⇒ κανένας τέτοιος. */
+  readonly runnerUpScore: number | null;
+}
+
+/** Μέγιστη απόσταση (px) στην εικόνα ανάμεσα στις θέσεις των ίδιων σημείων κάτω από δύο μετασχηματισμούς. */
+function maxDisplacementPx(points: readonly AffinePoint[], t1: Affine2x3, t2: Affine2x3): number {
+  let worst = 0;
+  for (const p of points) {
+    const a = applyAffine(t1, p);
+    const b = applyAffine(t2, p);
+    worst = Math.max(worst, Math.hypot(a.x - b.x, a.y - b.y));
+  }
+  return worst;
+}
+
 /**
- * Ο υποψήφιος αρχικός μετασχηματισμός με τη μικρότερη απόσταση chamfer (ισοβαθμία ⇒ ο πρώτος, δηλωμένη σειρά).
+ * Ο υποψήφιος αρχικός μετασχηματισμός με τη μικρότερη απόσταση chamfer (ισοβαθμία ⇒ ο πρώτος, δηλωμένη σειρά), και ο
+ * καλύτερος **διακριτός** δεύτερος: «διακριτός» = θέση που το ICP **δεν** φτάνει από τον νικητή (κάποιο δείγμα > R₀).
+ * 🔑 Lowe (SIFT, 2004) / ambiguity check του template matching: λάθος κατόψεις έδωσαν «1ο ≈ 2ο» (§6.9 #10).
  * `field`: το πεδίο απόστασης, όταν ο καλών το έχει ήδη (το ξαναχρησιμοποιεί η αξιολόγηση a-contrario).
  */
 export function pickByChamfer(
@@ -133,14 +191,15 @@ export function pickByChamfer(
   candidates: readonly Affine2x3[],
   o: RegisterOptions,
   field: Float64Array = chamferField(ink),
-): { readonly transform: Affine2x3; readonly score: number } | null {
+): ChamferPick | null {
   const trunc = o.searchRadiiPx[0] ?? 1;
-  let best: { transform: Affine2x3; score: number } | null = null;
-  for (const t of candidates) {
-    const score = chamferScore(field, ink, sampleSegments(segments, t, o), t, trunc);
-    if (best === null || score < best.score) best = { transform: t, score };
-  }
-  return best;
+  const scored = candidates.map((t, order) => ({ t, order, score: chamferScore(field, ink, sampleSegments(segments, t, o), t, trunc) }));
+  if (scored.length === 0) return null;
+  scored.sort((p, q) => p.score - q.score || p.order - q.order);
+  const best = scored[0];
+  const points = sampleSegments(segments, best.t, o).map((s) => s.p);
+  const runnerUp = scored.slice(1).find((c) => maxDisplacementPx(points, best.t, c.t) > trunc);
+  return { transform: best.t, score: best.score, runnerUpScore: runnerUp?.score ?? null };
 }
 
 function roundFit(o: RegisterOptions, last: boolean): FitOptions {
@@ -160,15 +219,19 @@ export function registerToInk(
 ): RegistrationResult {
   let t = initial;
   const samples = sampleSegments(segments, initial, o);
+  // Ένα πάχος για όλους τους γύρους και για την αξιολόγηση: δηλωμένο, ή μετρημένο μία φορά στην αρχή.
+  const strokeWidthPx = o.strokeWidthPx ?? estimateStrokeWidthPx(segments, ink, initial, o);
   for (let round = 0; round < o.searchRadiiPx.length; round++) {
     const last = round === o.searchRadiiPx.length - 1;
-    const corr = correspondencesFor(samples, ink, t, o.searchRadiiPx[round]);
+    const corr = correspondencesFor(samples, ink, t, o.searchRadiiPx[round], strokeWidthPx);
     if (corr.length < o.minCorrespondences) return { kind: 'not-converged', reason: 'too-few-correspondences', round };
     const fit = fitTransform(corr, roundFit(o, last));
     if (fit.kind === 'singular') return { kind: 'not-converged', reason: 'singular', round };
     if (invertAffine(fit.transform) === null) return { kind: 'not-converged', reason: 'degenerate-transform', round };
     t = fit.transform;
-    if (last) return { kind: 'registered', fit, coverage: corr.length / Math.max(1, samples.length), samples: samples.length };
+    if (last) {
+      return { kind: 'registered', fit, coverage: corr.length / Math.max(1, samples.length), samples: samples.length, strokeWidthPx };
+    }
   }
   return { kind: 'not-converged', reason: 'too-few-correspondences', round: 0 };
 }

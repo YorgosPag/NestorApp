@@ -84,6 +84,12 @@ export type FitResult =
       readonly globalTestPassed: boolean | null;
       /** Υπόλοιπο ανά παρατήρηση (px), με τη σειρά της εισόδου· `null` = απορρίφθηκε. */
       readonly perObservation: readonly (number | null)[];
+      /**
+       * Αβεβαιότητα **θέσης** (px, 1σ, 2D RMS) στη **χειρότερη** γωνία του αποτυπώματος των αντιστοιχιών: σ₀²·J·Q_xx·Jᵀ
+       * (ADR-929 §6.9 #15, ICP covariance κατά Censi 2007). ⚠️ Τα πυκνά δείγματα είναι συσχετισμένα ⇒ υποεκτίμηση· γι' αυτό
+       * η πύλη του βαθμονομείται, δεν πιστεύεται.
+       */
+      readonly positionSigmaPx: number;
     };
 
 /**
@@ -96,7 +102,10 @@ export type FitResult =
 export interface AcceptanceOptions {
   /** Αναμενόμενες ψευδείς αποδοχές υπό H0 (Desolneux–Moisan–Morel: ε = 1). */
   readonly epsilon: number;
-  /** Ελάχιστο ποσοστό **μήκους** τμημάτων που πέτυχαν. ⚠️ Δηλωμένο, όχι βαθμονομημένο. */
+  /**
+   * Ελάχιστο ποσοστό **μήκους** τμημάτων που πέτυχαν. Βαθμονομημένο (§6.9 #19): σωστά ≥ 0,331, λάθος διάμεσος 0,041 ⇒ 0,30
+   * (απόφαση Giorgio). Δίχτυ ασφαλείας, όχι διαχωριστής: σωστά και λάθος επικαλύπτονται (λάθος έως 0,697).
+   */
   readonly minCoverage: number;
   /** Ακτίνα μέτρησης των υπολοίπων **μετά** τη σύγκλιση (px) — πολύ μεγαλύτερη από την τελευταία του ICP. */
   readonly evaluationRadiusPx: number;
@@ -110,18 +119,55 @@ export interface AcceptanceOptions {
   readonly maxClutter: number | null;
   /** Ελάχιστο balance (ReCap: λ_min/Σλ των καθέτων, ∈ [0, ½])· `null` ⇒ μόνο αναφορά, ως τη βαθμονόμηση. */
   readonly minBalance: number | null;
+  /** Παράθυρο της τοπικής H0 (§6.9 #15): ±(τόσα × πλάτος/ύψος αποτυπώματος) γύρω από τη θέση. */
+  readonly shiftWindow: number;
+  /** ≈ Ανώτατο πλήθος μετατοπίσεων του σχεδίου στην τοπική H0. */
+  readonly maxShifts: number;
+  /** Ελάχιστο z της θέσης έναντι των μετατοπίσεων (peak-to-sidelobe)· `null` ⇒ μόνο αναφορά, ως τη βαθμονόμηση. */
+  readonly minShiftZ: number | null;
+  /**
+   * Μέγιστος λόγος chamfer καλύτερου / δεύτερου **διακριτού** υποψηφίου (Lowe)· `null` ⇒ μόνο αναφορά. Βαθμονομημένο
+   * (§6.9 #19, με την ευθυγράμμιση της Φ1): σωστά ≤ 0,52, λάθος ≥ 0,683 ⇒ 0,60 (απόφαση Giorgio).
+   */
+  readonly maxAmbiguity: number | null;
+  /**
+   * Ανεξάρτητες μονάδες της τοπικής H0 (§6.9 #19, E4): δύο τμήματα ανήκουν στην ίδια μονάδα όταν οι διευθύνσεις τους απέχουν
+   * ≤ τόσες μοίρες, επικαλύπτονται κατά μήκος και απέχουν < 2r + W (οι παρειές ενός τοίχου πετυχαίνουν **μαζί**).
+   */
+  readonly unitParallelDeg: number;
+  /** Μέγιστη αβεβαιότητα θέσης (px, 1σ) — η πύλη ανάλυσης· `null` ⇒ μόνο αναφορά, ως τη βαθμονόμηση. */
+  readonly maxPositionSigmaPx: number | null;
 }
 
 export const DEFAULT_ACCEPTANCE: AcceptanceOptions = {
   epsilon: 1,
-  minCoverage: 0.5,
+  minCoverage: 0.3,
   evaluationRadiusPx: 24,
   segmentHitShare: 0.5,
   maxNullPlacements: 1024,
   maxSegments: 400,
   maxClutter: null,
   minBalance: null,
+  shiftWindow: 1,
+  maxShifts: 128,
+  minShiftZ: null,
+  maxAmbiguity: 0.6,
+  unitParallelDeg: 5,
+  maxPositionSigmaPx: null,
 };
+
+/**
+ * **Τι απαρίθμησε ο καλών** πριν από το ICP (ADR-929 §6.9 #19) — το N_tests του NFA. Ένα αντικείμενο, ώστε να μην μπορεί
+ * κανείς να δηλώσει θέσεις χωρίς βήμα ή βήμα χωρίς θέσεις.
+ * 🔴 Ως το #18 ο κριτής μετρούσε τη μετάθεση **δύο φορές**: οι θέσεις του χονδρού ήταν ήδη μέσα στο `hypotheses`, και το
+ * ICP μετρούσε ξανά όλο το ±R₀.
+ */
+export interface SearchDeclaration {
+  /** Πόσες αρχικές υποθέσεις δοκιμάστηκαν **συνολικά** (ακέραιος ≥ 1) — μαζί με κάθε θέση που απαρίθμησε ο χονδρός. */
+  readonly hypotheses: number;
+  /** Το βήμα (px εικόνας) με το οποίο ο χονδρός απαρίθμησε θέσεις· `null` ⇒ δεν απαρίθμησε θέσεις. */
+  readonly translationStepPx: number | null;
+}
 
 export interface RegisterOptions {
   readonly fit: FitOptions;
@@ -136,6 +182,11 @@ export interface RegisterOptions {
   readonly minSegmentPx: number;
   /** Ελάχιστες αντιστοιχίες ανά γύρο· λιγότερες ⇒ `not-converged`. */
   readonly minCorrespondences: number;
+  /**
+   * Πάχος πινελιάς (px). `null` ⇒ **μετριέται** στο αποτύπωμα της αρχικής υπόθεσης (§6.9 #15). Το πάχος είναι σε mm
+   * χαρτιού, άρα σε px μεγαλώνει με τα dpi· σταθερό όριο σε px έδωσε κάλυψη 0,01 σε σωστή θέση (§6.9 #13).
+   */
+  readonly strokeWidthPx: number | null;
 }
 
 export const DEFAULT_REGISTER: RegisterOptions = {
@@ -146,6 +197,7 @@ export const DEFAULT_REGISTER: RegisterOptions = {
   maxSamples: 3000,
   minSegmentPx: 12,
   minCorrespondences: 30,
+  strokeWidthPx: null,
 };
 
 /** Γιατί σταμάτησε η καταγραφή χωρίς αποτέλεσμα — ποτέ σιωπηλά. */
@@ -159,6 +211,8 @@ type Registered = {
   /** Ποσοστό των δειγμάτων που βρήκαν μελάνι στον τελευταίο γύρο ∈ [0, 1]. ⚠️ Πυκνά δείγματα, όχι ανεξάρτητα. */
   readonly coverage: number;
   readonly samples: number;
+  /** Το πάχος πινελιάς (px) που χρησιμοποίησε το probe — δηλωμένο ή μετρημένο. */
+  readonly strokeWidthPx: number;
 };
 
 /** ⚠️ **Μη αξιολογημένο**: «συνέκλινε» ≠ «είναι σωστό». Η ετυμηγορία είναι στο {@link AssessedRegistrationResult}. */
@@ -166,9 +220,17 @@ export type RegistrationResult = NotConverged | Registered;
 
 /** Γιατί απορρίφθηκε μια καταγραφή που **συνέκλινε**. */
 export type RejectionReason =
-  /** Οι παρειές ενός τοίχου απέχουν < 2r+1 px: το «βρήκε το μελάνι του;» δεν τις ξεχωρίζει (π.χ. σελίδα 10 DPI). */
+  /**
+   * Η αβεβαιότητα **θέσης** ξεπερνά το όριο (§6.9 #15). ⚠️ Ως το #14 σήμαινε «παρειές < 2r+1 px», που απέρριπτε 22/24
+   * **σωστές** θέσεις (#12): «δεν ξεχωρίζουν οι παρειές» ≠ «δεν κρίνεται η θέση».
+   */
   | 'unresolvable'
+  /** Το NFA της **τοπικής** H0 (μετατόπιση όλου του σχεδίου) > ε. */
   | 'not-meaningful'
+  /** Η θέση δεν ξεχωρίζει από τις γειτονικές μετατοπίσεις (peak-to-sidelobe z < όριο). */
+  | 'not-distinct'
+  /** Άλλη διακριτή υπόθεση ταιριάζει σχεδόν εξίσου (Lowe ratio). */
+  | 'ambiguous'
   | 'low-coverage'
   /** Τα τμήματα που πέτυχαν έχουν (σχεδόν) μία διεύθυνση: η κάθετη ολίσθηση δεν ορίζεται (ReCap «balance»). */
   | 'degenerate'
@@ -204,20 +266,68 @@ export interface RegistrationQuality {
   readonly clutter: number | null;
   /** λ_min/(λ₁+λ₂) του Σ ℓ·n nᵀ των τμημάτων που πέτυχαν ∈ [0, ½]· `null` ⇒ κανένα δεν πέτυχε. */
   readonly balance: number | null;
-  /** Διάμεσος (βάρος μήκους) της απόστασης κάθε τμήματος από τον πλησιέστερο παράλληλο γείτονα (px)· `null` ⇒ κανένα ζεύγος. */
+  /**
+   * Διάμεσος (βάρος μήκους) της απόστασης κάθε τμήματος από τον πλησιέστερο παράλληλο γείτονα (px)· `null` ⇒ κανένα ζεύγος.
+   * ⚠️ Από το §6.9 #15 **μόνο αναφορά** — δεν αποφασίζει πια.
+   */
   readonly parallelSeparationPx: number | null;
-  /** Η ελάχιστη διακρίσιμη απόσταση = 2·ακτίνα απόφασης + 1 (px). */
+  /** 2·ακτίνα απόφασης + 1 (px) — μόνο αναφορά, δίπλα στο `parallelSeparationPx`. */
   readonly resolvablePx: number;
 }
 
-/** Αξιολόγηση a-contrario (ADR-929 §6.9 #7, μονάδα τμήμα από το #9). */
+/**
+ * **Τοπική H0 με μετατόπιση όλου του σχεδίου** (ADR-929 §6.9 #15, Π1 του #11): το ίδιο σχέδιο, ίδια κλίμακα και στροφή,
+ * σε M άλλες θέσεις κοντά (εκτός του δακτυλίου που φτάνει το ICP). Peak-to-sidelobe (correlation filters) + Kish.
+ */
+export interface ShiftNullEvidence {
+  /** Πλήθος μετατοπίσεων M. */
+  readonly shifts: number;
+  /** Τμήματα που πέτυχαν στη θέση της καταγραφής. */
+  readonly observedHits: number;
+  /** Διάμεσος και MAD των επιτυχιών στις μετατοπίσεις. */
+  readonly medianHits: number;
+  readonly madHits: number;
+  /** (k − διάμεσος) / max(1,4826·MAD, √Σp(1−p))· `null` ⇒ μηδενική διασπορά και στα δύο. */
+  readonly z: number | null;
+  /** (1 + #{k_j ≥ k}) / (1 + M) — ποτέ κάτω από 1/(M+1). */
+  readonly empiricalP: number;
+  /**
+   * Συντελεστής σχεδιασμού Kish = max(1, Var(k_j) / Σpᵢ(1−pᵢ)) — **μόνο αναφορά** από το §6.9 #19: ως διαιρέτης της ουράς
+   * επικυρώθηκε μόνο 16/26 σωστά (#18), οπότε την αντικατέστησαν οι ανεξάρτητες μονάδες.
+   */
+  readonly designEffect: number;
+  /** Πλήθος ανεξάρτητων μονάδων (E4, §6.9 #19): ομάδες παράλληλων, αντικριστών τμημάτων που πετυχαίνουν μαζί. */
+  readonly units: number;
+  /** Μονάδες που πέτυχαν στη θέση της καταγραφής (≥ `segmentHitShare` του μήκους τους). */
+  readonly unitHits: number;
+  /** log₁₀ P[X ≥ k] πάνω στις **μονάδες**, με p ανά μονάδα από τις ίδιες μετατοπίσεις (Poisson-binomial, χωρίς διαιρέτη). */
+  readonly log10Tail: number;
+}
+
+/** Αξιολόγηση a-contrario (ADR-929 §6.9 #7, μονάδα τμήμα από το #9, τοπική H0 από το #15). */
 export interface RegistrationAssessment {
   readonly verdict: RegistrationVerdict;
-  /** log₁₀ NFA = log₁₀ hypotheses + log₁₀ χώρου αναζήτησης + log₁₀ P[X ≥ k] (Poisson-binomial)· αποδοχή ⇔ ≤ log₁₀ ε. */
+  /**
+   * log₁₀ NFA της **απόφασης** = log₁₀ hypotheses + log₁₀ χώρου αναζήτησης + `shiftNull.log10Tail`· αποδοχή ⇔ ≤ log₁₀ ε.
+   */
   readonly log10Nfa: number;
+  /** Το NFA με την H0 **όλης της σελίδας** (#9) — μόνο αναφορά: δέχτηκε 5–14/33 λάθος ζεύγη (#10, #14). */
+  readonly log10NfaGlobal: number;
+  readonly shiftNull: ShiftNullEvidence;
+  /** Το πάχος πινελιάς (px) του probe. */
+  readonly strokeWidthPx: number;
+  /** Λόγος chamfer καλύτερου / δεύτερου διακριτού υποψηφίου ∈ [0, 1]· `null` ⇒ ένας μόνο διακριτός υποψήφιος. */
+  readonly ambiguityRatio: number | null;
+  /** Αβεβαιότητα θέσης (px, 1σ) από την προσαρμογή· `null` ⇒ αξιολογήθηκε μετασχηματισμός χωρίς προσαρμογή. */
+  readonly positionSigmaPx: number | null;
   /** Πόσες αρχικές υποθέσεις δοκιμάστηκαν — δηλωμένο από τον καλούντα. */
   readonly hypotheses: number;
-  /** log₁₀ των διακρίσιμων μετασχηματισμών που φτάνει το ICP από μία αρχή: (2R₀/r)^βε. N_tests = hypotheses · 10^αυτό. */
+  /** Το βήμα απαρίθμησης θέσεων του χονδρού (px)· `null` ⇒ καμία απαρίθμηση θέσεων. */
+  readonly translationStepPx: number | null;
+  /**
+   * log₁₀ των διακρίσιμων μετασχηματισμών που φτάνει το ICP από μία αρχή **και δεν απαρίθμησε ήδη ο χονδρός**: μετάθεση
+   * (min(s, 2R₀)/r)², υπόλοιποι βαθμοί (2R₀/r)^(βε−2). N_tests = hypotheses · 10^αυτό.
+   */
   readonly log10SearchSpace: number;
   /** Ακτίνα απόφασης «βρήκε μελάνι» (px) = η τελευταία του ICP. */
   readonly decisionRadiusPx: number;

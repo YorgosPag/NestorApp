@@ -43,22 +43,36 @@ export function toImageSegment(t: Affine2x3, seg: RegistrationSegment): ImageSeg
   return { a, dir, lengthPx, normal: { x: -dir.y, y: dir.x } };
 }
 
-interface Probe {
+/** Οι παράμετροι του «πέτυχε το τμήμα;» — **ένα** probe για καταγραφή, H0 σελίδας και τοπική H0. */
+export interface SegmentProbe {
   readonly ink: InkMask;
   readonly radius: number;
+  /** Πάχος πινελιάς (px) — §6.9 #15. */
+  readonly strokeWidthPx: number;
   readonly stepPx: number;
   readonly share: number;
 }
 
-/** Πετυχαίνει το τμήμα (με αρχή `origin`); Σταματά μόλις η απάντηση είναι βέβαιη. */
-function segmentHits(s: ImageSegment, origin: AffinePoint, q: Probe): boolean {
+/** Το σημείο τυλιγμένο στον τόρο της εικόνας (κυκλική μετατόπιση: κρατά πυκνότητα και δομή, όπως το circular-shift null). */
+function wrapPoint(ink: InkMask, p: AffinePoint): AffinePoint {
+  const mod = (v: number, m: number) => ((v % m) + m) % m;
+  return { x: mod(p.x, ink.width), y: mod(p.y, ink.height) };
+}
+
+/**
+ * Πετυχαίνει το τμήμα (με αρχή `origin`); Σταματά μόλις η απάντηση είναι βέβαιη. `wrap` ⇒ κάθε δείγμα τυλίγεται στην εικόνα
+ * (τοπική H0, §6.9 #15), ώστε μια μετατόπιση κοντά στο όριο να μη μετρά «χαρτί έξω από τη σελίδα» ως αποτυχία.
+ * ⚠️ Το probe ενός τυλιγμένου δείγματος δίπλα στο όριο βλέπει μόνο τη μία πλευρά — αμελητέο μέσα σε παράθυρο ±1 αποτύπωμα.
+ */
+export function segmentHits(s: ImageSegment, origin: AffinePoint, q: SegmentProbe, wrap = false): boolean {
   const n = Math.max(1, Math.floor(s.lengthPx / q.stepPx));
   const need = Math.ceil(q.share * n);
   let hits = 0;
   for (let i = 0; i < n; i++) {
     const k = ((i + 0.5) / n) * s.lengthPx;
-    const p = { x: origin.x + s.dir.x * k, y: origin.y + s.dir.y * k };
-    if (probeStrokeCentre(q.ink, p, s.normal, q.radius) !== null) hits++;
+    const raw = { x: origin.x + s.dir.x * k, y: origin.y + s.dir.y * k };
+    const p = wrap ? wrapPoint(q.ink, raw) : raw;
+    if (probeStrokeCentre(q.ink, p, s.normal, q.radius, q.strokeWidthPx) !== null) hits++;
     if (hits >= need) return true;
     if (hits + (n - 1 - i) < need) return false;
   }
@@ -80,7 +94,7 @@ function placements(s: ImageSegment, ink: InkMask, radius: number, maxPlacements
 }
 
 /** Εμπειρική p υπό H0 για ένα τμήμα: (1 + επιτυχίες)/(1 + θέσεις) στο πλέγμα της ίδιας εικόνας. */
-export function segmentNullProbability(s: ImageSegment, q: Probe, maxPlacements: number): number {
+export function segmentNullProbability(s: ImageSegment, q: SegmentProbe, maxPlacements: number): number {
   const spots = placements(s, q.ink, q.radius, maxPlacements);
   let hits = 0;
   for (const origin of spots) if (segmentHits(s, origin, q)) hits++;
@@ -123,9 +137,14 @@ function thin<T>(items: readonly T[], max: number): readonly T[] {
   return Array.from({ length: max }, (_, i) => items[Math.floor(i * stride)]);
 }
 
+/** Το probe τμήματος της αξιολόγησης, από τις επιλογές — ο **ένας** τόπος που το συναρμολογεί. */
+export function segmentProbe(ink: InkMask, radius: number, strokeWidthPx: number, o: RegisterOptions): SegmentProbe {
+  return { ink, radius, strokeWidthPx, stepPx: o.sampleStepPx, share: o.acceptance.segmentHitShare };
+}
+
 /**
- * Για κάθε τμήμα ≥ `minSegmentPx` στην εικόνα του `t`: πέτυχε; και την εμπειρική του p. Η p υπολογίζεται **μία** φορά ανά
- * κάδο (μήκος, διεύθυνση).
+ * Για κάθε τμήμα ≥ `minSegmentPx` στην εικόνα του `t`: πέτυχε; και την εμπειρική του p **σε όλη τη σελίδα** (H0 του #9 —
+ * από το #15 μόνο αναφορά). Η p υπολογίζεται **μία** φορά ανά κάδο (μήκος, διεύθυνση).
  */
 export function segmentOutcomes(
   segments: readonly RegistrationSegment[],
@@ -133,8 +152,9 @@ export function segmentOutcomes(
   t: Affine2x3,
   radius: number,
   o: RegisterOptions,
+  strokeWidthPx = radius,
 ): SegmentOutcome[] {
-  const q: Probe = { ink, radius, stepPx: o.sampleStepPx, share: o.acceptance.segmentHitShare };
+  const q = segmentProbe(ink, radius, strokeWidthPx, o);
   const image = segments.map((s) => toImageSegment(t, s)).filter((s): s is ImageSegment => s !== null && s.lengthPx >= o.minSegmentPx);
   const cache = new Map<string, number>();
   return thin(image, o.acceptance.maxSegments).map((segment) => {

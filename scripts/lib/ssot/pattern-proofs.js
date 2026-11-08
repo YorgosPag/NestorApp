@@ -24,6 +24,24 @@
 'use strict';
 
 module.exports = {
+  // ADR-929 §6.9 #20 — ΕΝΑΣ union-find (`src/lib/algorithms/disjoint-sets.ts`). Το `shouldMatch` είναι αυτούσιες γραμμές
+  // από τα 8 τοπικά αντίγραφα που καταργήθηκαν (θεμελιώσεις/MEP · κελιά φύλλου · τοίχοι · analytical · ανοίγματα).
+  // Οι παγίδες του `shouldSkip` είναι οι ΝΟΜΙΜΕΣ μορφές: χρήση του SSoT, γονέας δέντρου BFS, `Array.find`.
+  'disjoint-sets': {
+    shouldMatch: `function find(parent: number[], i: number): number {
+        parent[find(parent, j)] = find(parent, i);
+export class NodeUnionFind {
+  const uf = createUnionFind();
+  const root = (i: number): number => (parent[i] === i ? i : (parent[i] = root(parent[i])));
+  while (parent[root] !== root) root = parent[root];
+    while (parent.get(root) !== root) root = parent.get(root)!;`,
+    shouldSkip: `import { createDisjointSets, createKeyedDisjointSets } from '@/lib/algorithms/disjoint-sets';
+const sets = createDisjointSets(pads.length);
+if (padsShareFooting(pads[i], pads[j], clearanceCanvas)) sets.union(i, j);
+const p = tree.parent[node]!;
+const find = (slot: GuideBinding['slot']) => bindings.find((b) => b.slot === slot);
+const parentId = node.parentId ?? root.id;`,
+  },
   // ADR-899 §4.1 — ο πελάτης ΔΕΝ διαβάζει `record.downloadUrl` για να δείξει/ανοίξει/φέρει αρχείο: ρωτά τον ΕΝΑ
   // αναγνώστη εμφάνισης. Οι παγίδες του `shouldSkip` είναι οι ΝΟΜΙΜΕΣ μορφές: ανάθεση (γραφέας), δήλωση τύπου,
   // object shorthand, κλειδί i18n με το ίδιο όνομα, ο ίδιος ο αναγνώστης.

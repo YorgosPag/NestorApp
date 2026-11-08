@@ -22,6 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ10
  */
 
+import { createDisjointSets } from '@/lib/algorithms/disjoint-sets';
 import { compareStrings } from '@/lib/array-utils';
 import type { Entity } from '../../types/entities';
 import { isMepSegmentEntity } from '../../types/entities';
@@ -65,6 +66,18 @@ function sceneUnitsFromSegments(entities: readonly Entity[]): SceneUnits {
  */
 export function resolvePipeJoinTolerance(entities: readonly Entity[]): number {
   return PIPE_JOIN_TOLERANCE_MM * mmToSceneUnits(sceneUnitsFromSegments(entities));
+}
+
+/**
+ * The scene's **pipe** segments (ducts excluded) in id order — the one input both topology
+ * derivations (networks here, junctions in `mep-pipe-junctions`) start from, so they agree
+ * on membership and stay deterministic for undo/redo + tests.
+ */
+export function pipeSegmentsSorted(entities: readonly Entity[]): MepSegmentEntity[] {
+  return entities
+    .filter(isMepSegmentEntity)
+    .filter((s) => s.params.domain === 'pipe')
+    .sort((a, b) => compareStrings(a.id, b.id));
 }
 
 /**
@@ -112,18 +125,6 @@ function touches(a: MepSegmentEntity, b: MepSegmentEntity, tol: number): boolean
   return false;
 }
 
-/** Union-find root with path compression. */
-function find(parent: number[], i: number): number {
-  let root = i;
-  while (parent[root] !== root) root = parent[root]!;
-  while (parent[i] !== root) {
-    const next = parent[i]!;
-    parent[i] = root;
-    i = next;
-  }
-  return root;
-}
-
 /**
  * Group connected **pipe** segments into network drafts. Pure & deterministic:
  * segments are processed in id order, members and components are sorted, so the
@@ -138,35 +139,21 @@ export function derivePipeNetworks(
   defaultClassification: PlumbingSystemClassification = DEFAULT_DERIVED_PIPE_CLASSIFICATION,
 ): PipeNetworkDraft[] {
   const tol = tolerance ?? resolvePipeJoinTolerance(entities);
-  const segments = entities
-    .filter(isMepSegmentEntity)
-    .filter((s) => s.params.domain === 'pipe')
-    .sort((a, b) => compareStrings(a.id, b.id));
-
+  const segments = pipeSegmentsSorted(entities);
   if (segments.length === 0) return [];
 
   // Union segments whose endpoints touch.
-  const parent = segments.map((_, i) => i);
+  const sets = createDisjointSets(segments.length);
   for (let i = 0; i < segments.length; i++) {
     for (let j = i + 1; j < segments.length; j++) {
-      if (touches(segments[i]!, segments[j]!, tol)) {
-        parent[find(parent, j)] = find(parent, i);
-      }
+      if (touches(segments[i]!, segments[j]!, tol)) sets.union(i, j);
     }
   }
 
-  // Bucket segment indices by component root.
-  const components = new Map<number, MepSegmentEntity[]>();
-  for (let i = 0; i < segments.length; i++) {
-    const root = find(parent, i);
-    const bucket = components.get(root) ?? [];
-    bucket.push(segments[i]!);
-    components.set(root, bucket);
-  }
-
+  // SSoT union-find (ADR-929 §6.9 #20): components in first-member order.
   const drafts: PipeNetworkDraft[] = [];
-  for (const bucket of components.values()) {
-    const sorted = bucket.slice().sort((a, b) => compareStrings(a.id, b.id));
+  for (const group of sets.groups()) {
+    const sorted = group.map((i) => segments[i]!).sort((a, b) => compareStrings(a.id, b.id));
     const members: MepSystemMember[] = sorted.flatMap((seg) => [
       { entityId: seg.id, connectorId: SEGMENT_START_CONNECTOR_ID },
       { entityId: seg.id, connectorId: SEGMENT_END_CONNECTOR_ID },

@@ -26,9 +26,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
+import { createDisjointSets } from '@/lib/algorithms/disjoint-sets';
 import { compareStrings } from '@/lib/array-utils';
 import type { Entity } from '../../types/entities';
-import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentEntity } from '../types/mep-segment-types';
 import { resolveSegmentSection, resolveSegmentEndpointElevationsMm } from '../types/mep-segment-types';
 import type { BimPoint } from '../types/bim-base';
@@ -37,7 +37,7 @@ import {
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
 } from '../types/mep-connector-types';
-import { resolvePipeJoinTolerance } from './mep-pipe-network-derive';
+import { pipeSegmentsSorted, resolvePipeJoinTolerance } from './mep-pipe-network-derive';
 import { collectHostConnectorEndpoints } from './mep-host-connector-endpoints';
 import type { HostConnectorEndpoint } from './mep-host-connector-endpoints';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -124,18 +124,6 @@ function hostEndpoint(h: HostConnectorEndpoint): JunctionEndpoint {
     diameterMm: h.diameterMm,
     host: true,
   };
-}
-
-/** Union-find root with path compression (mirrors network-derive). */
-function find(parent: number[], i: number): number {
-  let root = i;
-  while (parent[root] !== root) root = parent[root]!;
-  while (parent[i] !== root) {
-    const next = parent[i]!;
-    parent[i] = root;
-    i = next;
-  }
-  return root;
 }
 
 /**
@@ -262,11 +250,7 @@ export function derivePipeJunctions(
   // which merged a short pipe's own endpoints into a single (cross) junction and
   // collapsed distinct nodes onto one quantized key (ADR-408 Φ11 hotfix).
   const tol = tolerance ?? resolvePipeJoinTolerance(entities);
-  const segments = entities
-    .filter(isMepSegmentEntity)
-    .filter((s) => s.params.domain === 'pipe')
-    .sort((a, b) => compareStrings(a.id, b.id));
-
+  const segments = pipeSegmentsSorted(entities);
   if (segments.length === 0) return [];
 
   const segmentEndpoints = segments.flatMap((seg) => [...segmentEndpointsOf(seg)]);
@@ -276,26 +260,17 @@ export function derivePipeJunctions(
   // Φ-B2b EXT #2). Empty when the scene has no pipe-connectable hosts.
   const hostEndpoints = collectHostConnectorEndpoints(entities).map(hostEndpoint);
   const endpoints: JunctionEndpoint[] = [...segmentEndpoints, ...hostEndpoints];
-  const parent = endpoints.map((_, i) => i);
+  const sets = createDisjointSets(endpoints.length);
   const tol2 = tol * tol;
 
   for (let i = 0; i < endpoints.length; i++) {
     for (let j = i + 1; j < endpoints.length; j++) {
-      if (endpointDist2(endpoints[i]!, endpoints[j]!) <= tol2) {
-        parent[find(parent, j)] = find(parent, i);
-      }
+      if (endpointDist2(endpoints[i]!, endpoints[j]!) <= tol2) sets.union(i, j);
     }
   }
 
-  const buckets = new Map<number, JunctionEndpoint[]>();
-  for (let i = 0; i < endpoints.length; i++) {
-    const root = find(parent, i);
-    const bucket = buckets.get(root) ?? [];
-    bucket.push(endpoints[i]!);
-    buckets.set(root, bucket);
-  }
-
-  return [...buckets.values()]
-    .map((bucket) => buildJunction(bucket, tol))
+  // SSoT union-find (ADR-929 §6.9 #20): buckets in first-member order, members ascending.
+  return sets.groups()
+    .map((group) => buildJunction(group.map((i) => endpoints[i]!), tol))
     .sort((a, b) => compareStrings(a.key, b.key));
 }

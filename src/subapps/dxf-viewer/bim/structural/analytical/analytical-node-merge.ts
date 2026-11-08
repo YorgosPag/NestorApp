@@ -4,10 +4,11 @@
  * Δύο εργαλεία που χρειάζεται ο `analytical-model-builder` για να μετατρέψει τα
  * ακατέργαστα άκρα μελών σε αναλυτικούς κόμβους:
  *
- *   1. `NodeUnionFind` — priority-aware union-find: συνενώνει συντρέχοντα άκρα σε
- *      έναν κόμβο. Ο αντιπρόσωπος (root) επιλέγεται κατά **προτεραιότητα** (π.χ.
- *      κορυφή κολόνας > άκρο δοκαριού) ώστε ένα δοκάρι που πλαισιώνει κολόνα να
- *      «κουμπώνει» στη θέση της κολόνας — ισοπαλία → ντετερμινιστικά το μικρότερο id.
+ *   1. `createNodeSets` + `priorityRepresentatives` — συνενώνει συντρέχοντα άκρα σε
+ *      έναν κόμβο με τον SSoT union-find (`@/lib/algorithms/disjoint-sets`, ADR-929 §6.9 #20).
+ *      Ο αντιπρόσωπος επιλέγεται κατά **προτεραιότητα** (π.χ. κορυφή κολόνας > άκρο
+ *      δοκαριού) ώστε ένα δοκάρι που πλαισιώνει κολόνα να «κουμπώνει» στη θέση της
+ *      κολόνας — ισοπαλία → ντετερμινιστικά το μικρότερο id.
  *   2. `mergeByProximity` — spatial-hash συνένωση κόμβων εντός ανοχής (3D), O(n).
  *   3. `clusterElevations` — ομαδοποίηση υψομέτρων σε στάθμες (για το διάφραγμα).
  *
@@ -16,6 +17,7 @@
  * @see ./analytical-model-builder.ts — ο καταναλωτής
  */
 
+import { createKeyedDisjointSets, type KeyedDisjointSets } from '@/lib/algorithms/disjoint-sets';
 import type { AnalyticalPoint3D } from './analytical-model-types';
 
 /** Ανοχή σύμπτωσης κόμβων (m) — 50mm: άκρα εντός αυτής → ένας κόμβος. */
@@ -29,52 +31,39 @@ export interface RawNode {
   readonly priority: number;
 }
 
+/** Τα ξένα σύνολα των raw κόμβων (SSoT union-find, ADR-929 §6.9 #20)· κλειδί = `RawNode.id`. */
+export type NodeSets = KeyedDisjointSets<string>;
+
+/** Κάθε raw κόμβος μονοσύνολο — με τη σειρά των `nodes` (διπλό id ⇒ μετρά η πρώτη εμφάνιση). */
+export function createNodeSets(nodes: readonly RawNode[]): NodeSets {
+  return createKeyedDisjointSets(nodes.map((n) => n.id));
+}
+
+/** Ο προτιμώμενος από δύο: μεγαλύτερη προτεραιότητα, ισοπαλία → λεξικογραφικά μικρότερο id. */
+function preferred(a: string, b: string, priorityOf: (id: string) => number): string {
+  const pa = priorityOf(a);
+  const pb = priorityOf(b);
+  if (pa !== pb) return pa > pb ? a : b;
+  return a < b ? a : b;
+}
+
 /**
- * Priority-aware union-find επί string ids. Ο root κάθε set είναι το στοιχείο με
- * τη μέγιστη προτεραιότητα (ισοπαλία → το λεξικογραφικά μικρότερο id) → η θέση
- * του γίνεται η θέση του τελικού κόμβου.
+ * Αντιπρόσωπος ανά κόμβο: σε κάθε σύνολο, το στοιχείο **μέγιστης προτεραιότητας** (ισοπαλία → το
+ * λεξικογραφικά μικρότερο id) — η θέση του γίνεται η θέση του τελικού κόμβου (κορυφή κολόνας > άκρο δοκαριού).
+ *
+ * Ολική διάταξη ⇒ ο αντιπρόσωπος είναι συνάρτηση **μόνο** του συνόλου, όχι της σειράς των ενώσεων: ακριβώς η
+ * ρίζα της παλιάς `NodeUnionFind` με προτεραιότητα, διαλεγμένη πάνω από τα `groups()` όπως ορίζει το SSoT.
  */
-export class NodeUnionFind {
-  private readonly parent = new Map<string, string>();
-  private readonly priority = new Map<string, number>();
-
-  /** Καταχώρισε στοιχείο (idempotent — διατηρεί την υπάρχουσα προτεραιότητα). */
-  add(id: string, priority: number): void {
-    if (this.parent.has(id)) return;
-    this.parent.set(id, id);
-    this.priority.set(id, priority);
+export function priorityRepresentatives(
+  sets: NodeSets,
+  priorityOf: (id: string) => number,
+): Map<string, string> {
+  const representativeOf = new Map<string, string>();
+  for (const group of sets.groups()) {
+    const winner = group.reduce((best, id) => preferred(best, id, priorityOf));
+    for (const id of group) representativeOf.set(id, winner);
   }
-
-  /** Βρες τον αντιπρόσωπο με path-compression. */
-  find(id: string): string {
-    let root = id;
-    while (this.parent.get(root) !== root) root = this.parent.get(root) as string;
-    let cur = id;
-    while (cur !== root) {
-      const next = this.parent.get(cur) as string;
-      this.parent.set(cur, root);
-      cur = next;
-    }
-    return root;
-  }
-
-  /** Συνένωσε δύο sets· νέος root = ο υψηλότερης προτεραιότητας (ισοπαλία → μικρότερο id). */
-  union(a: string, b: string): void {
-    const ra = this.find(a);
-    const rb = this.find(b);
-    if (ra === rb) return;
-    const winner = this.preferred(ra, rb);
-    const loser = winner === ra ? rb : ra;
-    this.parent.set(loser, winner);
-  }
-
-  /** Ο προτιμώμενος root μεταξύ δύο (προτεραιότητα, μετά μικρότερο id). */
-  private preferred(a: string, b: string): string {
-    const pa = this.priority.get(a) ?? 0;
-    const pb = this.priority.get(b) ?? 0;
-    if (pa !== pb) return pa > pb ? a : b;
-    return a < b ? a : b;
-  }
+  return representativeOf;
 }
 
 /** Κλειδί κελιού spatial hash για μια συντεταγμένη σε ανοχή `tol`. */
@@ -91,12 +80,12 @@ function dist2(a: AnalyticalPoint3D, b: AnalyticalPoint3D): number {
 }
 
 /**
- * Συνένωσε στο `uf` όσα raw nodes απέχουν ≤ `tolM` (3D). Spatial-hash grid: κάθε
+ * Συνένωσε στα `sets` όσα raw nodes απέχουν ≤ `tolM` (3D). Spatial-hash grid: κάθε
  * κόμβος ελέγχεται μόνο έναντι των γειτονικών κελιών (3×3×3) → ~O(n) αντί O(n²).
  */
 export function mergeByProximity(
   nodes: readonly RawNode[],
-  uf: NodeUnionFind,
+  sets: NodeSets,
   tolM: number = NODE_MERGE_TOLERANCE_M,
 ): void {
   const tol2 = tolM * tolM;
@@ -111,7 +100,7 @@ export function mergeByProximity(
           const bucket = grid.get(`${cx + ix},${cy + iy},${cz + iz}`);
           if (!bucket) continue;
           for (const other of bucket) {
-            if (dist2(node.position, other.position) <= tol2) uf.union(node.id, other.id);
+            if (dist2(node.position, other.position) <= tol2) sets.union(node.id, other.id);
           }
         }
       }
