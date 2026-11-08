@@ -13,15 +13,18 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { pageDerivationOf } from '@/subapps/catalog/import/page-derivation';
+import { attributesGroupKeyOf, pageTableGroupKey } from '@/subapps/catalog/import/import-keys';
 import { lineKeyOf, pendingUnmappedLines } from '@/subapps/catalog/import/page-line-overrides';
-import type { ImportBatchPages, ImportPageUnmappedLine, ImportProposalField, PageRegion } from '@/subapps/catalog/types/catalog-import';
+import type { ImportBatchPages, ImportLineOverride, ImportPageUnmappedLine, ImportProposalField, PageRegion } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
+import { useCatalogAccess } from '../shared/catalog-neutral-hooks';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
+import { ImportPriceTarget } from './ImportPriceTarget';
 import { LINE_REFUSAL_KEYS, SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
-import { XChangeReportSlot } from './import-surfaces';
+import { PriceLineNoteSlot, XChangeReportSlot } from './import-surfaces';
 
 type Workspace = ReturnType<typeof useImportBatch>;
 
@@ -71,7 +74,18 @@ function spotOf(focus: ReviewFocus | null): PdfSpot | null {
 
 /** Ε7 · §5.5.2 Μ9: κάθε γραμμή ανήκει στην πρόταση του **πίνακά** της, όχι σε όποια πρόταση μοιράζεται τη σελίδα. */
 const linesOf = (pages: ImportBatchPages | null | undefined, proposal: ImportProposalWire): ImportPageUnmappedLine[] =>
-  (pages?.unmappedLines ?? []).filter((line) => proposal.groupKey === `page:${line.page}:${line.table}`);
+  (pages?.unmappedLines ?? []).filter((line) => proposal.groupKey === pageTableGroupKey(line.page, line.table));
+
+/** §5.5.2 Β4: η γραμμή τιμής που γέννησε μια πρόταση τιμών, και η πρόταση ιδιοτήτων του πίνακα (η ουρά της απόφασης γραμμής). */
+function priceSourceOf(view: ImportBatchDetailView, proposal: ImportProposalWire): { readonly override: ImportLineOverride; readonly owner: ImportProposalWire } | null {
+  const tableKey = attributesGroupKeyOf(proposal.groupKey);
+  if (tableKey === null) return null;
+  const override = (view.batch.pages?.lineOverrides ?? []).find((entry) => entry.decision.kind === 'price' && pageTableGroupKey(entry.page, entry.table) === tableKey);
+  return override ? { override, owner: view.proposals.find((candidate) => candidate.groupKey === tableKey) ?? proposal } : null;
+}
+
+/** Η παρτίδα έχει τιμοκατάλογο ⇒ μια γραμμή μπορεί να γίνει τιμή (το δικαίωμα κρίνεται και στον διακομιστή). */
+const priceTargetOf = (view: ImportBatchDetailView): string | null => (view.batch.target.purpose === 'attributes' ? (view.batch.target.priceListVersionId ?? null) : null);
 
 /** Ε8: σελίδες χωρίς στρώση κειμένου. Ο άνθρωπος ξέρει γιατί οι τιμές τους δεν ελέγχονται — ή γιατί η σελίδα δεν διαβάστηκε. */
 function TextlessPages({ pages }: { readonly pages: ImportBatchPages }) {
@@ -157,13 +171,24 @@ interface BatchProposalsProps {
   readonly onFocus: (focus: ReviewFocus) => void;
 }
 
-/** Μία πρόταση με τις γραμμές του πίνακά της (§5.5.2 Β3). */
-function ProposalSlot({ workspace, view, focus, onFocus, proposal }: BatchProposalsProps & { readonly proposal: ImportProposalWire }) {
+function PriceSource({ workspace, view, proposal }: Pick<BatchProposalsProps, 'workspace' | 'view'> & { readonly proposal: ImportProposalWire }) {
+  const source = priceSourceOf(view, proposal);
+  const decision = source?.override.decision;
+  if (!source || decision?.kind !== 'price') return null;
+  const { override, owner } = source;
+  const open = proposal.status === 'pending' && !IMPORT_FINISHED_BATCH_STATUSES.includes(view.batch.status);
+  const undo = () => void workspace.decideLine(owner, { page: override.page, table: override.table, line: override.line, decision: null, bind: null });
+  return <PriceLineNoteSlot line={override.line} unitCode={decision.unitCode} disabled={!open} onUndo={undo} />;
+}
+
+/** Μία πρόταση με τις γραμμές του πίνακά της (§5.5.2 Β3) — ή, για πρόταση τιμών, με τη γραμμή τιμής που τη γέννησε (Β4). */
+function ProposalSlot({ workspace, view, focus, onFocus, proposal, canPrice }: BatchProposalsProps & { readonly proposal: ImportProposalWire; readonly canPrice: boolean }) {
   const lines = linesOf(view.batch.pages, proposal);
   const overrides = view.batch.pages?.lineOverrides;
   return (
     <ProposalReview
       proposal={proposal}
+      source={proposal.purpose === 'priceLines' ? <PriceSource workspace={workspace} view={view} proposal={proposal} /> : null}
       batchOpen={!IMPORT_FINISHED_BATCH_STATUSES.includes(view.batch.status)}
       focused={focus?.kind === 'field' ? focus.field : null}
       onFocus={(field) => onFocus({ kind: 'field', field })}
@@ -179,6 +204,7 @@ function ProposalSlot({ workspace, view, focus, onFocus, proposal }: BatchPropos
         activeLine: focus?.kind === 'line' ? lineKeyOf(focus.line) : null,
         onFocusLine: (line) => onFocus({ kind: 'line', line }),
         onDecideLine: (target, request) => void workspace.decideLine(target, request),
+        pricesEnabled: canPrice && priceTargetOf(view) !== null,
       }}
     />
   );
@@ -190,19 +216,21 @@ function BatchProposals(props: BatchProposalsProps) {
   const { batch, proposals } = view;
   const { upgrade } = workspace;
   const open = !IMPORT_FINISHED_BATCH_STATUSES.includes(batch.status);
+  const canPrice = useCatalogAccess('pricing') === 'granted';
   return (
     <div className="flex min-h-0 flex-col gap-3 overflow-auto">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="m-0 text-lg font-semibold">{batch.fileName}</h2>
         {open ? <Button type="button" variant="outline" onClick={() => void workspace.discard()}>{t('batch.discard')}</Button> : null}
       </header>
+      {open ? <ImportPriceTarget batch={batch} disabled={workspace.savingPriceTarget || upgrade !== null} onChange={(id) => void workspace.setPriceTarget(id)} /> : null}
       <PageProgress workspace={workspace} />
       {batch.xchangeReport ? <XChangeReportSlot report={batch.xchangeReport} /> : null}
       {upgrade ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('batch.upgrading', { current: upgrade.done + 1, total: upgrade.total })}</p> : null}
       {proposals.length === 0 ? <p className="m-0 text-muted-foreground">{t('batch.noProposals')}</p> : null}
       {/* §5.5.2 Β3.1: όσο ξαναχτίζονται σελίδες, καμία απόφαση — αλλιώς θα συγκρουόταν με την πρόταση που μόλις αλλάζει. */}
       <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" disabled={upgrade !== null} aria-busy={upgrade !== null}>
-        {proposals.map((proposal) => <ProposalSlot key={proposal.id} {...props} proposal={proposal} />)}
+        {proposals.map((proposal) => <ProposalSlot key={proposal.id} {...props} proposal={proposal} canPrice={canPrice} />)}
       </fieldset>
     </div>
   );

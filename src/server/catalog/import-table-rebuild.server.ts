@@ -18,6 +18,7 @@ import type { AuthContext } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { reconstructPageTables } from '@/lib/pdf-tables/reconstruct-page-tables';
 import type { PageTable } from '@/lib/pdf-tables/page-table-types';
+import { pageTableGroupKey, priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
 import { applyLineOverrides } from '@/subapps/catalog/import/page-line-overrides';
 import { isRawPageMapping, type RawPageMapping, type RawTableMapping } from '@/subapps/catalog/import/page-table-mapping';
 import { readPageTables, type PageTableReading } from '@/subapps/catalog/import/page-table-reading';
@@ -29,7 +30,7 @@ import { runCatalogReadOnly } from './catalog-store.server';
 import { replaceTableLeftOut, type StoredImportBatch } from './import-batch-writer.server';
 import { readPageReadings, type StoredPageReading } from './import-page-reading.server';
 import { axisAttributeIdsOf, loadPdfPageSource, pageSpecs } from './import-page-source.server';
-import { proposeGroup, retireStalePageProposals } from './import-proposal-writer.server';
+import { proposeGroup, retireStalePageProposals, type StoredImportProposal } from './import-proposal-writer.server';
 import { readBatchProposals } from './import-reads.server';
 
 const logger = createModuleLogger('CatalogImportTableRebuild');
@@ -38,7 +39,7 @@ export type Judged<T> = { readonly ok: true; readonly value: T } | { readonly ok
 
 export const refuse = (reason: ImportLineRefusal): { readonly ok: false; readonly reason: ImportLineRefusal } => ({ ok: false, reason });
 
-export const groupKeyOf = (page: number, table: string): string => `page:${page}:${table}`;
+export const groupKeyOf = pageTableGroupKey;
 
 /** Αποτυχημένη απάντηση δεν έγινε ποτέ πρόταση: οι προτάσεις της σελίδας ήρθαν από την αμέσως προηγούμενη επιτυχή. */
 function standingReading(readings: readonly StoredPageReading[]): Judged<StoredPageReading> {
@@ -116,15 +117,28 @@ export function prepareTable(schema: CatalogSchemaSnapshot, basis: TableBasis, o
   const overridden = applyLineOverrides(basis.answer, overrides, specs.codeById, new Set(specs.byCode.keys()));
   if (overridden.unknownAttributeIds.length > 0) return refuse('lineUnknown');
   if (overridden.staleCodes.length > 0) logger.warn('Stored mapping names attributes no longer in the family', { page: basis.page, table: basis.table.key, codes: overridden.staleCodes });
-  const context = { page: basis.page, tables: [basis.table], attributesByCode: specs.byCode, registry: schema.registry, axisAttributeIds: axisAttributeIdsOf(schema) };
+  const context = {
+    page: basis.page,
+    tables: [basis.table],
+    attributesByCode: specs.byCode,
+    registry: schema.registry,
+    axisAttributeIds: axisAttributeIdsOf(schema),
+    priceLinesByTable: new Map([[basis.table.key, overridden.priceLines]]),
+  };
   return { ok: true, value: { basis, reading: readPageTables({ tables: [overridden.mapping] }, context) } };
 }
 
-/** Γράφει ό,τι κρίθηκε: πρόταση του πίνακα, απόσυρση όσων δεν ξαναβρέθηκαν, «απέξω» μόνο αυτού του πίνακα. */
+/** Οι προτάσεις του πίνακα: ιδιότητες **πριν** από τιμές, γιατί η πρόταση τιμών παίρνει την ταυτότητα από εκείνη (§5.5.2 Β4 Δ4). */
+const attributesFirst = (reading: PageTableReading) =>
+  [...reading.groups].sort((a, b) => Number(a.purpose === 'priceLines') - Number(b.purpose === 'priceLines'));
+
+/** Γράφει ό,τι κρίθηκε: προτάσεις του πίνακα, απόσυρση όσων δεν ξαναβρέθηκαν, «απέξω» μόνο αυτού του πίνακα. */
 export async function commitTable(ctx: AuthContext, batchId: string, { basis, reading }: PreparedTable): Promise<void> {
   const { page, table } = basis;
-  const proposals = await Promise.all(reading.groups.map((group) => proposeGroup(ctx, batchId, group)));
-  const others = (await readBatchProposals(ctx, batchId)).filter((proposal) => proposal.groupKey !== groupKeyOf(page, table.key));
+  const proposals: StoredImportProposal[] = [];
+  for (const group of attributesFirst(reading)) proposals.push(await proposeGroup(ctx, batchId, group));
+  const ownKeys = new Set([groupKeyOf(page, table.key), priceGroupKeyOf(groupKeyOf(page, table.key))]);
+  const others = (await readBatchProposals(ctx, batchId)).filter((proposal) => !ownKeys.has(proposal.groupKey));
   await retireStalePageProposals(ctx, batchId, page, new Set([...others, ...proposals].map((proposal) => proposal.id)));
   await replaceTableLeftOut(ctx, batchId, page, table.key, { setAside: reading.setAside, unmappedLines: reading.unmappedLines });
 }

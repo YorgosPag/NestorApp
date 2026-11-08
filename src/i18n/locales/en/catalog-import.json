@@ -68,6 +68,9 @@
   "batch": {
     "loading": "Loading batch…",
     "upgrading": "Updating page interpretation to the new version, without AI: page {current} of {total}…",
+    "priceTarget": "Price list for prices",
+    "priceTargetNone": "No price list",
+    "priceTargetHint": "The draft version that receives the prices from the tables. Changing it does not read the pages again.",
     "discard": "Discard",
     "pages": "Reading pages",
     "pagesProgress": "Read {done} of {total} pages · {failed} failed",
@@ -127,6 +130,17 @@
     "violations": "{count, plural, one {# consistency rule is not met} other {# consistency rules are not met}}",
     "unverified": "not confirmed by the page text",
     "noModel": "No model",
+    "pricesTitle": "Prices",
+    "awaitsAttributes": "Approve the attributes of the same table first. Then the new codes get their prices too.",
+    "priceLine": {
+      "action": "Price",
+      "title": "This line is a price",
+      "lead": "“{label}” · {values}",
+      "unit": "Per unit",
+      "hint": "Each code's price goes to the batch's price list as a separate proposal. It never becomes an attribute.",
+      "confirm": "Set as price",
+      "source": "From line {line} of the table · per {unit}"
+    },
     "modelCode": "Model code",
     "setModelCode": "Set",
     "uncheckable": "not checkable: the page has no text",
@@ -180,7 +194,9 @@
       "refusalReadingClipped": "The stored model answer was clipped at the storage limit.",
       "refusalTablesDrifted": "The table rebuilt from the PDF no longer matches the one the model saw.",
       "refusalProposalClosed": "The proposal for this table has already been applied or rejected.",
-      "refusalLineUnknown": "The line or the attribute was not found in the table or the family."
+      "refusalLineUnknown": "The line or the attribute was not found in the table or the family.",
+      "refusalPriceTargetMissing": "This batch has no price list. Choose a draft version first.",
+      "refusalPriceLineTaken": "This table already has a price line. Undo it first."
     }
   },
   "issues": {
@@ -199,6 +215,7 @@
     "noValueReplacesValue": "The source says “not applicable”, but the attribute has a value in the catalog. Approving will remove it; you decide.",
     "unknownKeepsValue": "The source says “unknown”, but the catalog knows the value. The value stays.",
     "noValueReasonUnreadable": "This text is not a reason for a missing value. Write notApplicable or unknown.",
-    "identityKeysDisagree": "The item code and the GTIN of this row point to different catalogue items. Correct the source."
+    "identityKeysDisagree": "The item code and the GTIN of this row point to different catalogue items. Correct the source.",
+    "awaitsAttributes": "The code “{code}” is created by the attributes proposal of this table. Its price waits for that approval."
   }
 }

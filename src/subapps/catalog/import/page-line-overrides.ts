@@ -46,11 +46,24 @@ export interface OverriddenMapping {
   readonly staleCodes: readonly string[];
   /** Αποφάσεις που δείχνουν ιδιότητα έξω από το σχήμα: δεν εφαρμόστηκαν. */
   readonly unknownAttributeIds: readonly string[];
+  /** Γραμμές που ο άνθρωπος δήλωσε **τιμή** (§5.5.2 Β4): βγαίνουν από την αντιστοίχιση ιδιοτήτων, πάνε στην πρόταση τιμών. */
+  readonly priceLines: readonly PagePriceLine[];
 }
+
+/** Γραμμή τιμής ενός πίνακα, με τη μονάδα που δήλωσε ο άνθρωπος. */
+export interface PagePriceLine {
+  readonly line: number;
+  readonly unitCode: string;
+}
+
+/** Η γραμμή τιμής του πίνακα, αν υπάρχει: ο πίνακας έχει **μία** (`priceLineTaken`). */
+export const priceLineOf = (overrides: readonly ImportLineOverride[]): ImportLineOverride | null =>
+  overrides.find((override) => override.decision.kind === 'price') ?? null;
 
 /**
  * Η απάντηση του μοντέλου με τις αποφάσεις από πάνω. Αντιστοίχιση ⇒ η γραμμή δείχνει την ιδιότητα με βεβαιότητα 1 (αντικαθιστά ό,τι
- * είχε πει το μοντέλο). Αγνόηση ⇒ καμία αλλαγή.
+ * είχε πει το μοντέλο). Τιμή ⇒ η γραμμή φεύγει από την αντιστοίχιση ιδιοτήτων, ακόμη κι αν το μοντέλο της είχε δώσει ιδιότητα: ποτέ
+ * τιμή ως ιδιότητα (§5.4). Αγνόηση ⇒ καμία αλλαγή.
  */
 export function applyLineOverrides(
   mapping: RawTableMapping,
@@ -59,16 +72,19 @@ export function applyLineOverrides(
   knownCodes: ReadonlySet<string>,
 ): OverriddenMapping {
   const chosen = new Map<number, RawLineMapping>();
+  const priceLines: PagePriceLine[] = [];
   const unknownAttributeIds: string[] = [];
   for (const { line, decision } of overrides) {
+    if (decision.kind === 'price') priceLines.push({ line, unitCode: decision.unitCode });
     if (decision.kind !== 'attribute') continue;
     const code = codeById.get(decision.attributeId);
     if (code === undefined) unknownAttributeIds.push(decision.attributeId);
     else chosen.set(line, { line, attribute: code, confidence: HUMAN_CONFIDENCE });
   }
-  const kept = mapping.lines.filter((entry) => !chosen.has(entry.line));
+  const priced = new Set(priceLines.map(({ line }) => line));
+  const kept = mapping.lines.filter((entry) => !chosen.has(entry.line) && !priced.has(entry.line));
   const staleCodes = [...new Set(kept.flatMap((entry) => (entry.attribute !== null && !knownCodes.has(entry.attribute) ? [entry.attribute] : [])))];
-  return { mapping: { ...mapping, lines: [...kept, ...chosen.values()] }, staleCodes, unknownAttributeIds };
+  return { mapping: { ...mapping, lines: [...kept, ...chosen.values()] }, staleCodes, unknownAttributeIds, priceLines };
 }
 
 /** Οι γραμμές χωρίς πεδίο που περιμένουν ακόμη απόφαση: όσες δεν αγνοήθηκαν ρητά. */

@@ -21,7 +21,8 @@ import { parseImportCell } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchTarget, ImportIssue, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
+import { attributesGroupKeyOf, importProposalKey } from '@/subapps/catalog/import/import-keys';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchTarget, ImportIssue, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { AttributeValue } from '@/subapps/catalog/types/product';
 import type { StoredCatalogProductDefinition, StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
 import type { DiscountGroupDefinition, StoredPriceListLineDefinition, StoredPriceListVersionDefinition } from '@/subapps/catalog/types/price-list';
@@ -34,6 +35,7 @@ import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog
 import { readActiveByIds } from './catalog-library-reads.server';
 import { readAggregateReferences, readSchemaSnapshot } from './catalog-product-reads.server';
 import { naturalKeyId, readForUpsert, readOwned, readOwnedOrNull, runCatalogReadOnly, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
+import { CatalogWriteError } from './catalog-write-error';
 import { readUniqueHolders, uniqueHolderKey } from './unique-reservations.server';
 
 type StoredModel = StoredCatalogRecord<StoredCatalogProductModelDefinition>;
@@ -229,15 +231,51 @@ async function variantIdsOf(scope: CatalogTx, group: ExtractedGroup, attributeId
   }));
 }
 
-async function planPrices(scope: CatalogTx, target: Extract<ImportBatchTarget, { purpose: 'priceLines' }>, group: ExtractedGroup): Promise<PlannedProposal> {
-  const version = await readOwned<StoredPriceListVersionDefinition>(scope, 'priceListVersion', target.priceListVersionId);
-  const variantIdByRow = await variantIdsOf(scope, group, target.identifierAttributeId);
+/** Ο ένας αγωγός τιμών, με **ήδη γνωστή** ταυτότητα γραμμής: κοινός για αρχείο, xChange και πίνακα PDF (§5.5.2 Β4). */
+async function priceProposalOf(scope: CatalogTx, versionId: string, group: ExtractedGroup, variantIdByRow: ReadonlyMap<string, string>): Promise<PlannedProposal> {
+  const version = await readOwned<StoredPriceListVersionDefinition>(scope, 'priceListVersion', versionId);
   const variantIds = [...new Set(variantIdByRow.values())];
   const liveLines = await readLines(scope, version.id, variantIds);
   const baseLines = version.basedOnVersionId === null ? new Map() : await readLines(scope, version.basedOnVersionId, variantIds);
   const discountGroupIdByCode = await readDiscountGroupIds(scope, group);
   const rows = buildPriceRows(group, { variantIdByRow, liveLines, baseLines, discountGroupIdByCode });
   return { rows, violations: [], familyId: null, variantSchemeCode: null, modelCode: null, priceListVersionId: version.id };
+}
+
+async function planPrices(scope: CatalogTx, target: Extract<ImportBatchTarget, { purpose: 'priceLines' }>, group: ExtractedGroup): Promise<PlannedProposal> {
+  return priceProposalOf(scope, target.priceListVersionId, group, await variantIdsOf(scope, group, target.identifierAttributeId));
+}
+
+// ── Η τιμή της ίδιας ανάγνωσης σελίδας (§5.5.2 Β4) ─────────────────────────────
+
+interface SiblingIdentity {
+  /** rowKey → id SKU, όπως το κρίνει (ή το γέννησε) η πρόταση ιδιοτήτων του ίδιου πίνακα. */
+  readonly holders: ReadonlyMap<string, string>;
+  /** Η πρόταση ιδιοτήτων εκκρεμεί: όσα SKU θα γεννήσει δεν υπάρχουν ακόμη. */
+  readonly pending: boolean;
+}
+
+/**
+ * 🔑 Δ4: η ταυτότητα της γραμμής τιμής **δεν** ξανακρίνεται. Τη δίνει η πρόταση ιδιοτήτων του πίνακα (ίδιο `rowKey`): το SKU που
+ * ταίριαξε, ή εκείνο που γέννησε η έγκρισή της. Μία κρίση ταυτότητας για όλη την παρτίδα ⇒ η τιμή δεν πέφτει ποτέ σε άλλο SKU.
+ */
+async function siblingIdentityOf(scope: CatalogTx, batchId: string, group: ExtractedGroup): Promise<SiblingIdentity> {
+  const key = attributesGroupKeyOf(group.groupKey);
+  const sibling = key === null ? null : (await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(batchId, key))).current;
+  const holders = new Map((sibling?.rows ?? []).flatMap((row) => (row.holderKind === 'product' && row.holderId !== null ? [[row.rowKey, row.holderId] as const] : [])));
+  return { holders, pending: sibling?.status === 'pending' };
+}
+
+/** SKU που περιμένει την έγκριση των ιδιοτήτων δεν είναι «άγνωστο»: λέει τι να γίνει πρώτα (Δ5). */
+const awaitingAttributes = (rows: readonly ImportProposalRow[]): ImportProposalRow[] =>
+  rows.map((row) => (row.holderId !== null ? row : { ...row, issues: row.issues.map((issue): ImportIssue => (issue.code === 'skuUnknown' ? { ...issue, code: 'awaitsAttributes' } : issue)) }));
+
+async function planPagePrices(scope: CatalogTx, batchId: string, target: Extract<ImportBatchTarget, { purpose: 'attributes' }>, group: ExtractedGroup): Promise<PlannedProposal> {
+  const versionId = target.priceListVersionId ?? null;
+  if (versionId === null) throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'priceListVersionId' }]);
+  const identity = await siblingIdentityOf(scope, batchId, group);
+  const plan = await priceProposalOf(scope, versionId, group, identity.holders);
+  return identity.pending ? { ...plan, rows: awaitingAttributes(plan.rows) } : plan;
 }
 
 /** Τα κλειδιά ταυτότητας της γραμμής, με τη σειρά του `matchRows`: τυπωμένοι κωδικοί, μετά GTIN. */
@@ -299,8 +337,13 @@ export async function groupTableRowsByLiveModel(ctx: AuthContext, target: Import
   return byModelCode(rows);
 }
 
-/** Το σχέδιο μιας ομάδας απέναντι στα ζωντανά: ίδιο για πρώτη κατασκευή και για επανυπολογισμό. */
-export function planProposal(scope: CatalogTx, target: ImportBatchTarget, group: ExtractedGroup, base: ImportBaseValues): Promise<PlannedProposal> {
+/**
+ * Το σχέδιο μιας ομάδας απέναντι στα ζωντανά: ίδιο για πρώτη κατασκευή και για επανυπολογισμό. Ο σκοπός της **ομάδας** κερδίζει:
+ * η πρόταση τιμών ενός πίνακα PDF ζει σε παρτίδα ιδιοτήτων (§5.5.2 Β4).
+ */
+export function planProposal(scope: CatalogTx, batch: { readonly id: string; readonly target: ImportBatchTarget }, group: ExtractedGroup, base: ImportBaseValues): Promise<PlannedProposal> {
+  const { target } = batch;
+  if (target.purpose === 'attributes' && group.purpose === 'priceLines') return planPagePrices(scope, batch.id, target, group);
   return target.purpose === 'attributes' ? planAttributes(scope, target, group, base) : planPrices(scope, target, group);
 }
 

@@ -74,13 +74,16 @@ export function assertImportBatchOpen(batch: Pick<ImportBatchDefinition, 'status
   }
 }
 
-async function assertTargetExists(scope: CatalogTx, target: ImportBatchTarget): Promise<void> {
-  if (target.purpose === 'attributes') {
-    await readOwned<object>(scope, 'family', target.familyId);
-    return;
-  }
-  const version = await readOwned<PriceListVersionDefinition>(scope, 'priceListVersion', target.priceListVersionId);
+/** Οι εισαγωγές γράφουν τιμές **μόνο** σε πρόχειρη έκδοση (§5.4): η δημοσιευμένη δεν αλλάζει. */
+export async function assertDraftPriceVersion(scope: CatalogTx, versionId: string): Promise<void> {
+  const version = await readOwned<PriceListVersionDefinition>(scope, 'priceListVersion', versionId);
   if (version.status !== 'draft') throw new CatalogWriteError('immutable', [{ code: 'versionNotDraft', path: 'target' }]);
+}
+
+async function assertTargetExists(scope: CatalogTx, target: ImportBatchTarget): Promise<void> {
+  if (target.purpose === 'priceLines') return assertDraftPriceVersion(scope, target.priceListVersionId);
+  await readOwned<object>(scope, 'family', target.familyId);
+  if (target.priceListVersionId) await assertDraftPriceVersion(scope, target.priceListVersionId);
 }
 
 function pagesOf(request: CreateImportBatchRequest): ImportBatchPages | null {
@@ -134,6 +137,8 @@ async function reuseStoredFile(ctx: AuthContext, batch: StoredImportBatch): Prom
  */
 export async function createImportBatch(ctx: AuthContext, request: CreateImportBatchRequest): Promise<StoredImportBatch> {
   await assertPurposeAuthority(ctx, request.target.purpose);
+  // §5.5.2 Β4: παρτίδα ιδιοτήτων που δηλώνει τιμοκατάλογο κουβαλά και τιμές.
+  if (request.target.purpose === 'attributes' && request.target.priceListVersionId) await assertPurposeAuthority(ctx, 'priceLines');
   return reuseStoredFile(ctx, await openImportBatch(ctx, request));
 }
 

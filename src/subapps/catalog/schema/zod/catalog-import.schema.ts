@@ -6,6 +6,7 @@
 
 import { z } from 'zod';
 import { HUMAN_LANGUAGES } from '@/i18n/languages';
+import { UOM_CODES } from '@/lib/uom/uom-registry';
 import type { ImportBatchTarget, ImportLineDecision, ImportProfileDefinition, ImportTarget } from '../../types/catalog-import';
 import type {
   AttachImportFileRequest,
@@ -13,6 +14,7 @@ import type {
   ProposalActionRequest,
   ReadImportPageRequest,
   SetImportLineRequest,
+  SetImportPriceTargetRequest,
   UpdateImportProposalRequest,
 } from '../../types/catalog-import-requests';
 import { ANY_SLOT } from '../../types/product';
@@ -70,6 +72,7 @@ const batchTargetSchema: z.ZodType<ImportBatchTarget> = z.discriminatedUnion('pu
     familyId: entityIdSchema,
     variantSchemeCode: catalogCodeSchema.nullable(),
     categoryIds: z.array(entityIdSchema).max(20),
+    priceListVersionId: entityIdSchema.nullable().optional(),
   }),
   z.object({ purpose: z.literal('priceLines'), priceListVersionId: entityIdSchema, identifierAttributeId: entityIdSchema }),
 ]);
@@ -98,6 +101,7 @@ const MAX_TABLE_LINE = 1000;
 
 const importLineDecisionSchema: z.ZodType<ImportLineDecision> = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('attribute'), attributeId: entityIdSchema }),
+  z.object({ kind: z.literal('price'), unitCode: z.enum(UOM_CODES) }),
   z.object({ kind: z.literal('ignore') }),
 ]);
 
@@ -119,6 +123,11 @@ export const updateImportProposalBodySchema: z.ZodType<UpdateImportProposalReque
 });
 
 export const proposalActionBodySchema: z.ZodType<ProposalActionRequest> = z.object({ expectedRevision: expectedRevisionSchema });
+
+export const setImportPriceTargetBodySchema: z.ZodType<SetImportPriceTargetRequest> = z.object({
+  expectedRevision: expectedRevisionSchema,
+  priceListVersionId: entityIdSchema.nullable(),
+});
 
 export const saveImportProfileBodySchema = z.object({ definition: importProfileDefinitionSchema });
 export const updateImportProfileBodySchema = z.object({ expectedRevision: expectedRevisionSchema, definition: importProfileDefinitionSchema });

@@ -12,6 +12,24 @@ import type { ImportLineBindLevel } from '@/subapps/catalog/vocabulary/catalog-i
 
 export type LineToolMode = 'map' | 'new';
 
+/** §5.5.2 Β4 Δ2: «αυτή η γραμμή είναι η τιμή», με τη μονάδα που δηλώνει ο άνθρωπος. */
+export interface PriceLineDialogProps {
+  readonly line: ImportPageUnmappedLine;
+  readonly onClose: () => void;
+  readonly onDecide: (unitCode: string) => void;
+}
+
+/** Η πηγή μιας πρότασης τιμών: ποια γραμμή του πίνακα, ανά ποια μονάδα, και η αναίρεση. */
+export interface PriceLineNoteProps {
+  readonly line: number;
+  readonly unitCode: string;
+  readonly disabled: boolean;
+  readonly onUndo: () => void;
+}
+
+/** Η ΜΙΑ επιφάνεια της γραμμής τιμής: διάλογος ή σημείωση, ώστε να μετρά ένα όριο κλειστότητας, όχι δύο (ADR-744 §27). */
+export type PriceLineToolsProps = ({ readonly kind: 'dialog' } & PriceLineDialogProps) | ({ readonly kind: 'note' } & PriceLineNoteProps);
+
 export interface LineAttributeToolsProps {
   readonly proposal: ImportProposalWire;
   readonly line: ImportPageUnmappedLine;

@@ -13,7 +13,7 @@
  */
 
 import React, { useState } from 'react';
-import { CircleDot, EyeOff, Link2, LoaderCircle, Plus, TriangleAlert, Undo2, type LucideIcon } from 'lucide-react';
+import { CircleDot, Euro, EyeOff, Link2, LoaderCircle, Plus, TriangleAlert, Undo2, type LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import type { ImportLineOverride, ImportPageUnmappedLine } from '@/subapps/catal
 import type { ImportProposalWire, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { useCatalogCanManage } from '../shared/catalog-ui-hooks';
 import { LINE_REFUSAL_KEYS, LINE_STATE_KEYS, useImportText, type LineState } from './import-text';
-import { LineAttributeToolsSlot } from './import-surfaces';
+import { LineAttributeToolsSlot, PriceLineDialogSlot } from './import-surfaces';
 import type { LineToolMode } from './line-tool-props';
 import type { LineActivity } from './use-line-decisions';
 
@@ -37,8 +37,11 @@ const STATE_LOOK: Readonly<Record<LineState, { readonly variant: 'muted' | 'info
 function lineStateOf(activity: LineActivity | undefined, decision: ReturnType<typeof lineDecisionOf>): LineState {
   if (activity) return activity.kind;
   if (decision?.kind === 'ignore') return 'ignored';
-  return decision?.kind === 'attribute' ? 'mapped' : 'pending';
+  return decision?.kind === 'attribute' || decision?.kind === 'price' ? 'mapped' : 'pending';
 }
+
+/** Ποια εργαλεία ανοίγει μια γραμμή: ιδιότητα (Β3) ή τιμή (Β4). */
+type LineTool = LineToolMode | 'price';
 
 export interface UnmappedLinesProps {
   readonly proposal: ImportProposalWire;
@@ -50,6 +53,8 @@ export interface UnmappedLinesProps {
   readonly onDecideLine: (proposal: ImportProposalWire, request: SetImportLineRequest) => void;
   /** Η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η ίδια κρίση με τα πεδία της πρότασης (ADR-934 Ε3). */
   readonly decidable: boolean;
+  /** §5.5.2 Β4: η παρτίδα έχει τιμοκατάλογο **και** ο άνθρωπος δικαίωμα τιμολόγησης ⇒ μια γραμμή μπορεί να γίνει τιμή. */
+  readonly pricesEnabled?: boolean;
 }
 
 interface LineRowProps {
@@ -59,12 +64,13 @@ interface LineRowProps {
   readonly active: boolean;
   readonly readOnly: boolean;
   readonly canManage: boolean;
+  readonly pricesEnabled: boolean;
   readonly onFocus: () => void;
-  readonly onTool: (mode: LineToolMode) => void;
+  readonly onTool: (mode: LineTool) => void;
   readonly onIgnore: (ignore: boolean) => void;
 }
 
-function LineActions({ state, readOnly, canManage, onTool, onIgnore }: Pick<LineRowProps, 'state' | 'readOnly' | 'canManage' | 'onTool' | 'onIgnore'>) {
+function LineActions({ state, readOnly, canManage, pricesEnabled, onTool, onIgnore }: Pick<LineRowProps, 'state' | 'readOnly' | 'canManage' | 'pricesEnabled' | 'onTool' | 'onIgnore'>) {
   const { t } = useImportText();
   const busy = readOnly || state === 'saving';
   if (state === 'ignored' || state === 'mapped') {
@@ -74,6 +80,7 @@ function LineActions({ state, readOnly, canManage, onTool, onIgnore }: Pick<Line
     <span className="flex flex-wrap gap-1">
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onTool('map')}><Link2 className="mr-1 h-3 w-3" aria-hidden />{t('review.lines.map')}</Button>
       {canManage ? <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onTool('new')}><Plus className="mr-1 h-3 w-3" aria-hidden />{t('review.lines.newAttribute')}</Button> : null}
+      {pricesEnabled ? <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onTool('price')}><Euro className="mr-1 h-3 w-3" aria-hidden />{t('review.priceLine.action')}</Button> : null}
       <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => onIgnore(true)}><EyeOff className="mr-1 h-3 w-3" aria-hidden />{t('review.lines.ignore')}</Button>
     </span>
   );
@@ -98,10 +105,10 @@ function LineRow(props: LineRowProps) {
   );
 }
 
-export function ProposalUnmappedLines({ proposal, lines, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable }: UnmappedLinesProps) {
+export function ProposalUnmappedLines({ proposal, lines, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable, pricesEnabled = false }: UnmappedLinesProps) {
   const { t } = useImportText();
   const canManage = useCatalogCanManage();
-  const [tool, setTool] = useState<{ readonly line: ImportPageUnmappedLine; readonly mode: LineToolMode } | null>(null);
+  const [tool, setTool] = useState<{ readonly line: ImportPageUnmappedLine; readonly mode: LineTool } | null>(null);
   if (lines.length === 0) return null;
   const readOnly = !decidable;
   const send = (line: ImportPageUnmappedLine, decision: SetImportLineRequest['decision'], bind: SetImportLineRequest['bind'] = null) =>
@@ -117,13 +124,16 @@ export function ProposalUnmappedLines({ proposal, lines, overrides, activity, ac
           return (
             <LineRow key={key} line={line} state={lineStateOf(current, lineDecisionOf(overrides, line))}
               refusal={current?.kind === 'refused' ? t(LINE_REFUSAL_KEYS[current.reason]) : null}
-              active={key === activeLine} readOnly={readOnly} canManage={canManage}
+              active={key === activeLine} readOnly={readOnly} canManage={canManage} pricesEnabled={pricesEnabled}
               onFocus={() => onFocusLine(line)} onTool={(mode) => setTool({ line, mode })}
               onIgnore={(ignore) => send(line, ignore ? { kind: 'ignore' } : null)} />
           );
         })}
       </ul>
-      {tool ? (
+      {tool?.mode === 'price' ? (
+        <PriceLineDialogSlot line={tool.line} onClose={() => setTool(null)} onDecide={(unitCode) => send(tool.line, { kind: 'price', unitCode })} />
+      ) : null}
+      {tool && tool.mode !== 'price' ? (
         <LineAttributeToolsSlot proposal={proposal} line={tool.line} mode={tool.mode} onClose={() => setTool(null)}
           onDecide={(attributeId, bind) => send(tool.line, { kind: 'attribute', attributeId }, bind)} />
       ) : null}

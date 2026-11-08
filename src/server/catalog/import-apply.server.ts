@@ -13,6 +13,7 @@ import 'server-only';
 
 import type { AuthContext } from '@/lib/auth';
 import { modelDefinitionOf, productDefinitionOf } from '@/subapps/catalog/aggregate/edit-aggregate';
+import { attributesGroupKeyOf, importProposalKey } from '@/subapps/catalog/import/import-keys';
 import { EMPTY_IMPORT_HOLDER, EMPTY_PRODUCT_IMPORT_HOLDER, mergeFieldsIntoHolder, mergeFieldsIntoProduct } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
@@ -25,7 +26,7 @@ import { commitAggregate, type CommittedAggregate, type HolderChange } from './c
 import { assertRevision, naturalKeyId, readForUpsert, readOwned, runCatalogTransaction, stageReplace, type CatalogTx } from './catalog-store.server';
 import { assertNoIssues, CatalogWriteError } from './catalog-write-error';
 import { assertImportBatchOpen, assertPurposeAuthority } from './import-batch-writer.server';
-import { proposalDefinitionOf, settleImportBatch, type StoredImportProposal } from './import-proposal-writer.server';
+import { proposalDefinitionOf, replanPriceSibling, settleImportBatch, type StoredImportProposal } from './import-proposal-writer.server';
 import { stagePriceLineBatch } from './price-line-writer.server';
 
 const accepted = (field: ImportProposalField): boolean => field.decision === 'accept';
@@ -161,8 +162,21 @@ async function applyPrices(scope: CatalogTx, proposal: StoredImportProposal): Pr
 /** `POST /api/catalog/import-proposals/[id]/apply`. Ιδεμπότητη: εφαρμοσμένη πρόταση επιστρέφεται όπως είναι. */
 export async function applyImportProposal(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredImportProposal> {
   const applied = await commitProposal(ctx, id, expectedRevision);
+  await replanPriceSibling(ctx, applied);
   await settleImportBatch(ctx, applied.batchId);
   return applied;
+}
+
+/**
+ * §5.5.2 Β4 Δ5: η πρόταση τιμών ενός πίνακα PDF παίρνει τα SKU από την πρόταση ιδιοτήτων του. Όσο εκείνη εκκρεμεί, η έγκριση των
+ * τιμών θα προσπερνούσε **σιωπηλά** τις γραμμές των SKU που δεν γεννήθηκαν ακόμη (`applyPrices` γράφει μόνο γνωστά SKU) ⇒ άρνηση.
+ * Κρίνεται μέσα στη συναλλαγή, με τη ζωντανή κατάσταση της πρότασης ιδιοτήτων.
+ */
+async function assertAttributesDecided(scope: CatalogTx, proposal: StoredImportProposal): Promise<void> {
+  const key = proposal.purpose === 'priceLines' ? attributesGroupKeyOf(proposal.groupKey) : null;
+  if (key === null) return;
+  const { current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(proposal.batchId, key));
+  if (current?.status === 'pending') throw new CatalogWriteError('confirmationRequired');
 }
 
 async function commitProposal(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredImportProposal> {
@@ -176,6 +190,7 @@ async function commitProposal(ctx: AuthContext, id: string, expectedRevision: nu
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', proposal.batchId);
     assertImportBatchOpen(batch);
     assertDecided(proposal);
+    await assertAttributesDecided(scope, proposal);
     const categoryIds = batch.target.purpose === 'attributes' ? batch.target.categoryIds : [];
     const rows = proposal.purpose === 'attributes' ? await applyAttributes(scope, proposal, categoryIds, vatAuthority) : await applyPrices(scope, proposal);
     return stageReplace(scope, 'importProposal', proposal, { ...proposalDefinitionOf(proposal), rows, status: 'applied', appliedAt: scope.now, appliedBy: ctx.uid });

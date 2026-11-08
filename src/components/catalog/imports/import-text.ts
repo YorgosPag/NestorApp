@@ -92,6 +92,8 @@ export const LINE_REFUSAL_KEYS: Readonly<Record<ImportLineRefusal, string>> = {
   tablesDrifted: 'review.lines.refusalTablesDrifted',
   proposalClosed: 'review.lines.refusalProposalClosed',
   lineUnknown: 'review.lines.refusalLineUnknown',
+  priceTargetMissing: 'review.lines.refusalPriceTargetMissing',
+  priceLineTaken: 'review.lines.refusalPriceLineTaken',
 };
 
 export const LINE_LEVEL_KEYS: Readonly<Record<ImportLineBindLevel, string>> = {

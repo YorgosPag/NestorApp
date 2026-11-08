@@ -16,7 +16,8 @@ import { useCatalogText } from '../shared/catalog-ui-hooks';
 import type { AttributeChoice } from './import-source-file';
 import type { ImportChoice } from './NewImportFields';
 
-function usePriceVersions(enabled: boolean): readonly ImportChoice[] {
+/** Οι **πρόχειρες** εκδόσεις τιμοκαταλόγου ως επιλογές — η νέα εισαγωγή και ο τιμοκατάλογος παρτίδας ιδιοτήτων (§5.5.2 Β4). */
+export function usePriceVersions(enabled: boolean): readonly ImportChoice[] {
   const [view, setView] = useState<PriceListsView | null>(null);
   const { text } = useCatalogText();
   useEffect(() => {

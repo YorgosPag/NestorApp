@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { discardImportBatch, fetchImportBatch, readImportPage } from '@/services/catalog/catalog-import-api.client';
+import { discardImportBatch, fetchImportBatch, readImportPage, setImportPriceTarget } from '@/services/catalog/catalog-import-api.client';
 import { catalogFailureOf, type CatalogFailure } from '@/services/catalog/catalog-failure';
 import type { ImportBatchPages } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
@@ -106,5 +106,23 @@ export function useImportBatch(batchId: string) {
   const reader = usePageReader(batchId, view, setFailure, reload);
   const accept = useCallback((fresh: ImportBatchDetailView) => setView(overlayView(fresh, queuedDecisionsOf(queued.current))), []);
   const upgrade = usePageUpgrade({ view, busy: reader.reading, accept, setFailure });
-  return { view, failure, reload, discard, ...reader, upgrade, ...changes, ...useLineDecisions(changes.line) };
+  const priceTarget = usePriceTarget(view, accept, setFailure);
+  return { view, failure, reload, discard, ...reader, upgrade, ...changes, ...useLineDecisions(changes.line), ...priceTarget };
+}
+
+/** §5.5.2 Β4 Δ1: ο τιμοκατάλογος της παρτίδας. Η απάντηση είναι όλη η όψη, με τις ξανασχεδιασμένες προτάσεις τιμών. */
+function usePriceTarget(view: ImportBatchDetailView | null, accept: (fresh: ImportBatchDetailView) => void, setFailure: SetFailure) {
+  const [savingPriceTarget, setSaving] = useState(false);
+  const setPriceTarget = useCallback(async (priceListVersionId: string | null) => {
+    if (!view) return;
+    setSaving(true);
+    try {
+      accept(await setImportPriceTarget(view.batch.id, { expectedRevision: view.batch.revision, priceListVersionId }));
+    } catch (cause) {
+      setFailure(catalogFailureOf(cause));
+    } finally {
+      setSaving(false);
+    }
+  }, [accept, setFailure, view]);
+  return { savingPriceTarget, setPriceTarget };
 }

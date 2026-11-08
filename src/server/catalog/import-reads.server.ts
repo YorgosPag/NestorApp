@@ -8,6 +8,8 @@ import 'server-only';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
+import { hasPermission } from '@/lib/auth';
+import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { ImportBaseValues } from '@/subapps/catalog/import/build-attribute-proposal';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
@@ -51,11 +53,16 @@ export async function readBatchProposals(ctx: AuthContext, batchId: string): Pro
   return snap.docs.map((doc) => doc.data() as ImportProposalWire);
 }
 
-/** `GET /api/catalog/imports/[id]` — η παρτίδα και οι προτάσεις της. */
+/**
+ * `GET /api/catalog/imports/[id]` — η παρτίδα και οι προτάσεις της. Σε παρτίδα ιδιοτήτων οι προτάσεις τιμών (§5.5.2 Β4) φαίνονται
+ * **μόνο** σε όποιον βλέπει τιμές: ξένο ≡ ανύπαρκτο, ίδιο δόγμα με το `assertPurposeAuthority`.
+ */
 export async function readImportBatchDetail(ctx: AuthContext, id: string): Promise<ImportBatchDetailView> {
   const batch = await runCatalogTransaction(ctx, (scope) => readOwned<ImportBatchDefinition>(scope, 'importBatch', id));
   await assertPurposeAuthority(ctx, batch.target.purpose);
-  return { batch, proposals: await readBatchProposals(ctx, id) };
+  const all = await readBatchProposals(ctx, id);
+  const seesPrices = batch.target.purpose === 'priceLines' || (await hasPermission(ctx, CATALOG_AUTHORITY_PERMISSIONS.pricing));
+  return { batch, proposals: seesPrices ? all : all.filter((proposal) => proposal.purpose !== 'priceLines') };
 }
 
 function acceptedValuesOf(proposal: ImportProposalDefinition, into: Map<string, Map<string, ImportFieldValue>>): void {

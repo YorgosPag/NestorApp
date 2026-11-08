@@ -42,6 +42,21 @@ export function importProposalKey(batchId: string, groupKey: string): string {
   return `${batchId}${SEPARATOR}${groupKey}`;
 }
 
+/** Η πρόταση (ιδιοτήτων) ενός πίνακα σελίδας PDF: κάθε γραμμή του πίνακα ανήκει σε **ακριβώς μία** (§5.5.2 Μ9). */
+export const pageTableGroupKey = (page: number, table: string): string => `page:${page}:${table}`;
+
+const PRICE_GROUP_SUFFIX = ':prices';
+
+/**
+ * Η πρόταση **τιμών** ενός πίνακα PDF (§5.5.2 Β4): ίδιο κλειδί με την πρόταση ιδιοτήτων του πίνακα, με κατάληξη. Οι γραμμές τους
+ * μοιράζονται τα ίδια `rowKey`, άρα η τιμή ξέρει **ποιο** SKU είναι χωρίς δεύτερη αντιστοίχιση.
+ */
+export const priceGroupKeyOf = (attributesGroupKey: string): string => `${attributesGroupKey}${PRICE_GROUP_SUFFIX}`;
+
+/** Η πρόταση ιδιοτήτων από την οποία παίρνει ταυτότητα μια πρόταση τιμών πίνακα· `null` = δεν είναι τέτοια. */
+export const attributesGroupKeyOf = (priceGroupKey: string): string | null =>
+  priceGroupKey.endsWith(PRICE_GROUP_SUFFIX) ? priceGroupKey.slice(0, -PRICE_GROUP_SUFFIX.length) : null;
+
 /** Μία απάντηση του μοντέλου: παρτίδα + σελίδα + διαδρομή + προσπάθεια. */
 export function importPageReadingKey(batchId: string, page: number, route: string, attempt: number): string {
   return [batchId, String(page), route, String(attempt)].join(SEPARATOR);

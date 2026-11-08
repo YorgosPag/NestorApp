@@ -61,6 +61,15 @@ export interface ProposalActionRequest {
   readonly expectedRevision: number;
 }
 
+/**
+ * Η πρόχειρη έκδοση τιμοκαταλόγου μιας παρτίδας ιδιοτήτων (§5.5.2 Β4 Δ1). `null` = καμία. Αλλάζει **χωρίς** νέα ανάγνωση: οι εκκρεμείς
+ * προτάσεις τιμών ξανασχεδιάζονται απέναντι στη νέα έκδοση.
+ */
+export interface SetImportPriceTargetRequest {
+  readonly expectedRevision: number;
+  readonly priceListVersionId: string | null;
+}
+
 export type ImportBatchWire = CatalogWire<ImportBatchDefinition>;
 export type ImportProposalWire = CatalogWire<ImportProposalDefinition>;
 export type ImportProfileWire = CatalogWire<ImportProfileDefinition>;

@@ -15,7 +15,8 @@ export const IMPORT_PURPOSES = ['attributes', 'priceLines'] as const;
 export type ImportPurpose = (typeof IMPORT_PURPOSES)[number];
 
 /**
- * Ποιοι σκοποί διαβάζονται από κάθε πηγή. Το PDF δίνει μόνο ιδιότητες (η ανάγνωση σελίδας ζητά οικογένεια). Το xChange φέρνει
+ * Ποιοι σκοποί **παρτίδας** διαβάζονται από κάθε πηγή. Το PDF δίνει μόνο ιδιότητες (η ανάγνωση σελίδας ζητά οικογένεια)· η τιμή της
+ * **ίδιας** ανάγνωσης πάει σε δεύτερη πρόταση `priceLines`, όταν η παρτίδα δηλώνει πρόχειρη έκδοση (§5.5.2 Β4). Το xChange φέρνει
  * και τιμές (`TradeItem.Pricing`, §23.2 K4γ).
  */
 export const IMPORT_SOURCE_PURPOSES: Readonly<Record<ImportSourceKind, readonly ImportPurpose[]>> = {
@@ -96,6 +97,11 @@ export const IMPORT_ISSUE_CODES = [
    * κερδίζει σιωπηλά: η γραμμή δεν εγκρίνεται μέχρι να διορθωθεί η πηγή.
    */
   'identityKeysDisagree',
+  /**
+   * Γραμμή τιμής της **ίδιας** ανάγνωσης για SKU που γεννά η πρόταση ιδιοτήτων του ίδιου πίνακα (§5.5.2 Β4 Δ4–Δ5): η ταυτότητα έρχεται
+   * από εκείνη. Πρώτα εγκρίνονται οι ιδιότητες, μετά η τιμή βρίσκει το SKU της· ποτέ σιωπηλή απώλεια της γραμμής.
+   */
+  'awaitsAttributes',
 ] as const;
 export type ImportIssueCode = (typeof IMPORT_ISSUE_CODES)[number];
 
@@ -149,6 +155,10 @@ export const IMPORT_LINE_REFUSALS = [
   'proposalClosed',
   /** Η γραμμή ή η ιδιότητα δεν υπάρχει στον πίνακα ή στην οικογένεια. */
   'lineUnknown',
+  /** Γραμμή τιμής (§5.5.2 Β4) σε παρτίδα χωρίς πρόχειρη έκδοση τιμοκαταλόγου: δεν υπάρχει πού να πάει η τιμή. */
+  'priceTargetMissing',
+  /** Ο πίνακας έχει ήδη γραμμή τιμής: δύο τιμές για το ίδιο SKU δεν διαλέγονται σιωπηλά. */
+  'priceLineTaken',
 ] as const;
 export type ImportLineRefusal = (typeof IMPORT_LINE_REFUSALS)[number];
 

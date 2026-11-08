@@ -125,6 +125,11 @@ export interface ExtractedRow {
 export interface ExtractedGroup {
   /** Το φυσικό κλειδί της πρότασης μέσα στην παρτίδα — ίδια πηγή ⇒ ίδια πρόταση. */
   readonly groupKey: string;
+  /**
+   * Ο σκοπός της πρότασης, όταν διαφέρει από της παρτίδας: η γραμμή τιμής ενός πίνακα PDF γίνεται πρόταση `priceLines` μέσα σε
+   * παρτίδα ιδιοτήτων (§5.5.2 Β4). Απών = ο σκοπός της παρτίδας.
+   */
+  readonly purpose?: ImportPurpose;
   readonly modelCode: string | null;
   /** Κελιά επιπέδου μοντέλου (κοινά). */
   readonly sharedCells: readonly ExtractedCell[];
@@ -215,7 +220,17 @@ export interface ImportProposalDefinition {
 // ── Η παρτίδα και το προφίλ ──────────────────────────────────────────────────
 
 export type ImportBatchTarget =
-  | { readonly purpose: 'attributes'; readonly familyId: string; readonly variantSchemeCode: string | null; readonly categoryIds: readonly string[] }
+  | {
+      readonly purpose: 'attributes';
+      readonly familyId: string;
+      readonly variantSchemeCode: string | null;
+      readonly categoryIds: readonly string[];
+      /**
+       * Η **πρόχειρη** έκδοση τιμοκαταλόγου όπου πάει η τιμή της ίδιας ανάγνωσης (§5.5.2 Β4 Δ1). Ρύθμιση της παρτίδας, **όχι** μέρος
+       * του κλειδιού της: αλλιώς ο ορισμός της θα γεννούσε νέα παρτίδα, άρα νέα πληρωμένη ανάγνωση. Απούσα/`null` = καμία.
+       */
+      readonly priceListVersionId?: string | null;
+    }
   /** `identifierAttributeId`: η `unique` ιδιότητα στην οποία ανήκει ο κωδικός SKU του αρχείου. */
   | { readonly purpose: 'priceLines'; readonly priceListVersionId: string; readonly identifierAttributeId: string };
 
@@ -278,7 +293,14 @@ export interface ImportPageUnmappedLine {
 }
 
 /** Η ανθρώπινη απόφαση για μια γραμμή πίνακα (§5.5.2 Β3 Γ1). Δείχνει **id** ιδιότητας: ο κωδικός μετονομάζεται. */
-export type ImportLineDecision = { readonly kind: 'attribute'; readonly attributeId: string } | { readonly kind: 'ignore' };
+export type ImportLineDecision =
+  | { readonly kind: 'attribute'; readonly attributeId: string }
+  /**
+   * Η γραμμή είναι η **τιμή** κάθε παραλλαγής (§5.5.2 Β4 Δ2), ανά `unitCode` (κωδικός του μητρώου μονάδων). Τη μονάδα τη δηλώνει ο
+   * άνθρωπος: ο πίνακας του καταλόγου δεν την τυπώνει, και η νέα γραμμή τιμοκαταλόγου τη χρειάζεται.
+   */
+  | { readonly kind: 'price'; readonly unitCode: string }
+  | { readonly kind: 'ignore' };
 
 /**
  * Απόφαση γραμμής φυλαγμένη στην παρτίδα. Κλειδί `(page, table, line)`, όπως στη `ImportPageUnmappedLine`: η ανασύνθεση του πίνακα

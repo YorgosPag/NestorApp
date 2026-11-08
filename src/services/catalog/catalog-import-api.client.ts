@@ -17,6 +17,7 @@ import type {
   ImportProposalWire,
   SetImportLineRequest,
   SetImportLineResult,
+  SetImportPriceTargetRequest,
   UpdateImportProposalRequest,
 } from '@/subapps/catalog/types/catalog-import-requests';
 
@@ -46,6 +47,10 @@ export const setImportLine = (id: string, request: SetImportLineRequest): Promis
 
 /** Αναβάθμιση μίας σελίδας στην τρέχουσα έκδοση παραγωγής, χωρίς AI (§5.5.2 Β3.1). Ιδεμπότητο: τρέχουσα σελίδα ⇒ καμία αλλαγή. */
 export const reinterpretImportPage = (id: string, page: number): Promise<ImportBatchDetailView> => apiClient.post(CATALOG_API.imports.reinterpret(id), { page });
+
+/** Ο τιμοκατάλογος της παρτίδας ιδιοτήτων (§5.5.2 Β4): χωρίς νέα ανάγνωση· επιστρέφει όλη την όψη με τις ξανασχεδιασμένες τιμές. */
+export const setImportPriceTarget = (id: string, request: SetImportPriceTargetRequest): Promise<ImportBatchDetailView> =>
+  apiClient.put(CATALOG_API.imports.priceTarget(id), request);
 
 export const discardImportBatch = (id: string, expectedRevision: number): Promise<ImportBatchWire> =>
   apiClient.post(CATALOG_API.imports.discard(id), { expectedRevision });

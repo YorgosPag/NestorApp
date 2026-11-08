@@ -14,7 +14,7 @@ import 'server-only';
 import type { AuthContext } from '@/lib/auth';
 import { canonicalJson } from '@/lib/legal/canonical-json';
 import { decisionSourceOf } from '@/subapps/catalog/import/field-diff';
-import { importProposalKey } from '@/subapps/catalog/import/import-keys';
+import { importProposalKey, priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type {
   ExtractedCell,
@@ -49,21 +49,26 @@ const planFields = (plan: PlannedProposal) => ({
   violations: plan.violations,
 });
 
-/** Ίδια ομάδα ⇒ ίδιο έγγραφο. Εφαρμοσμένη ή απορριφθείσα πρόταση **δεν** ξαναγράφεται: η απόφαση του ανθρώπου μένει. */
+/**
+ * Ίδια ομάδα ⇒ ίδιο έγγραφο. Εφαρμοσμένη ή απορριφθείσα πρόταση **δεν** ξαναγράφεται: η απόφαση του ανθρώπου μένει. Σε εκκρεμή, οι
+ * ανθρώπινες αποφάσεις πεδίων **επιβιώνουν** όσο η τιμή δεν άλλαξε (`carryDecisions`), όπως στη διόρθωση: η ξαναερμηνεία πίνακα (Β3),
+ * η αναβάθμιση σελίδας (Β3.1) και ο επανασχεδιασμός της πρότασης τιμών (Β4 Δ5) δεν σβήνουν ό,τι αποφάσισε ο άνθρωπος.
+ */
 async function stageGroup(scope: CatalogTx, batch: StoredCatalogRecord<ImportBatchDefinition>, group: ExtractedGroup, plan: PlannedProposal): Promise<StoredImportProposal> {
   const key = importProposalKey(batch.id, group.groupKey);
   const { target, current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', key);
   if (current !== null && current.status !== 'pending') return current;
+  const rows = current === null ? plan.rows : carryDecisions(current.rows, plan.rows);
   const definition: ImportProposalDefinition = {
     batchId: batch.id,
     groupKey: group.groupKey,
-    purpose: batch.target.purpose,
+    purpose: group.purpose ?? batch.target.purpose,
     status: 'pending',
     pages: group.pages,
     extracted: group,
     appliedAt: null,
     appliedBy: null,
-    ...planFields(plan),
+    ...planFields({ ...plan, rows }),
   };
   return current === null ? stageCreate(scope, 'importProposal', target, definition) : stageReplace(scope, 'importProposal', current, definition);
 }
@@ -78,8 +83,21 @@ export async function proposeGroup(ctx: AuthContext, batchId: string, group: Ext
   return runCatalogTransaction(ctx, async (scope) => {
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
     assertImportBatchOpen(batch);
-    return stageGroup(scope, batch, resolved, await planProposal(scope, batch.target, resolved, base));
+    return stageGroup(scope, batch, resolved, await planProposal(scope, batch, resolved, base));
   });
+}
+
+/**
+ * §5.5.2 Β4 Δ5 — **ο κύριος δρόμος**: η πρόταση ιδιοτήτων ενός πίνακα κρίθηκε (έγκριση · απόρριψη) ⇒ η εκκρεμής πρόταση τιμών του
+ * ξανασχεδιάζεται **αμέσως**, γιατί από εκείνη παίρνει την ταυτότητα των SKU: όσα γέννησε η έγκριση αποκτούν τιμή, όσα δεν γεννήθηκαν
+ * γίνονται δηλωμένα «άγνωστα». Το δίχτυ ασφαλείας είναι ο επανασχεδιασμός σε κάθε διόρθωση (`updateImportProposal`). Ανάγνωση με
+ * ντετερμινιστικό id, όχι ερώτημα: οι παρτίδες αρχείου δεν πληρώνουν τίποτα.
+ */
+export async function replanPriceSibling(ctx: AuthContext, decided: Pick<ImportProposalDefinition, 'batchId' | 'groupKey' | 'purpose'>): Promise<void> {
+  if (decided.purpose !== 'attributes') return;
+  const key = importProposalKey(decided.batchId, priceGroupKeyOf(decided.groupKey));
+  const sibling = await runCatalogReadOnly(ctx, async (scope) => (await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', key)).current);
+  if (sibling?.status === 'pending') await proposeGroup(ctx, decided.batchId, sibling.extracted);
 }
 
 /**
@@ -127,10 +145,12 @@ function editedGroup(group: ExtractedGroup, inputs: readonly ImportFieldEditInpu
 
 /**
  * Απόφαση που ισχύει ακόμη: ίδια εισερχόμενη τιμή με αυτή πάνω στην οποία πάρθηκε. Η προέλευση (§5.5.2 Α1) ταξιδεύει **μαζί**
- * με την απόφαση: ανθρώπινη απόφαση που κρατήθηκε μένει ανθρώπινη.
+ * με την απόφαση: ανθρώπινη απόφαση που κρατήθηκε μένει ανθρώπινη. Απόφαση του **κανόνα** δεν μεταφέρεται: ο κανόνας ξανακρίνει με
+ * τα σημερινά δεδομένα (§5.5.2 Β4 — η γραμμή τιμής που απορρίφθηκε γιατί το SKU δεν υπήρχε ακόμη ξανανοίγει μόλις γεννηθεί).
+ * ⚠️ Μόνο το **ρητό** `rule`: απόφαση χωρίς προέλευση (πριν το Β1) μπορεί να ήταν ανθρώπινη και δεν χάνεται.
  */
 function carriedDecision(next: ImportProposalField, previous: ImportProposalField | undefined): ImportProposalField {
-  if (!previous || previous.decision === 'pending') return next;
+  if (!previous || previous.decision === 'pending' || previous.decisionBy === 'rule') return next;
   const holds = canonicalJson(previous.incoming) === canonicalJson(next.incoming) && next.status !== 'unchanged';
   return holds ? { ...next, decision: previous.decision, decisionBy: decisionSourceOf(previous) } : next;
 }
@@ -170,7 +190,7 @@ export async function updateImportProposal(ctx: AuthContext, id: string, request
   return runCatalogTransaction(ctx, async (scope) => {
     const proposal = await readPendingProposal(scope, id, request.expectedRevision);
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', proposal.batchId);
-    const plan = await planProposal(scope, batch.target, group, base);
+    const plan = await planProposal(scope, batch, group, base);
     const rows = withDecisions(carryDecisions(proposal.rows, plan.rows), request);
     return stageReplace(scope, 'importProposal', proposal, { ...proposalDefinitionOf(proposal), ...planFields({ ...plan, rows }), extracted: group });
   });
@@ -215,6 +235,7 @@ export async function rejectImportProposal(ctx: AuthContext, id: string, expecte
     await assertPurposeAuthority(ctx, proposal.purpose);
     return stageReplace(scope, 'importProposal', proposal, { ...proposalDefinitionOf(proposal), status: 'rejected' });
   });
+  await replanPriceSibling(ctx, rejected);
   await settleImportBatch(ctx, rejected.batchId);
   return rejected;
 }

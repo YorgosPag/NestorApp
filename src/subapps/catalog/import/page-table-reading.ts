@@ -18,10 +18,13 @@ import type { PageTable, PageTableCell } from '@/lib/pdf-tables/page-table-types
 import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportPageSetAside, ImportPageUnmappedLine, ImportTarget, PageRegion } from '../types/catalog-import';
+import { MONEY_CURRENCY } from '@/lib/money/money';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportIssue, ImportPageSetAside, ImportPageUnmappedLine, ImportTarget, PageRegion } from '../types/catalog-import';
 import { ANY_SLOT } from '../types/product';
 import { parseEnteredAmount } from '../values/decimal-amount';
 import { unitForm } from '../values/value-text-codec';
+import { pageTableGroupKey, priceGroupKeyOf } from './import-keys';
+import type { PagePriceLine } from './page-line-overrides';
 import { labelPrintsUnit } from './page-tokens';
 import { textLayerDoubted, type RawLineMapping, type RawPageMapping, type RawTableMapping } from './page-table-mapping';
 import { selectOptionFor } from './proposal-values';
@@ -34,6 +37,8 @@ export interface PageTableContext {
   readonly attributesByCode: ReadonlyMap<string, NamedAttribute>;
   readonly registry: MeasurementRegistry;
   readonly axisAttributeIds: readonly string[];
+  /** Οι γραμμές τιμής ανά πίνακα, από αποφάσεις ανθρώπου (§5.5.2 Β4). Απούσα = καμία· η πληρωμένη ανάγνωση δεν τις έχει ποτέ. */
+  readonly priceLinesByTable?: ReadonlyMap<string, readonly PagePriceLine[]>;
 }
 
 export interface PageTableReading {
@@ -209,10 +214,13 @@ function unitFindings(view: TableView, data: readonly number[], bound: readonly 
     .map(({ attribute, line }) => `Line ${line} is mapped to ${attribute.code}, but it prints no unit of that quantity. Check the mapping of this line.`);
 }
 
+/** Η ταυτότητα μιας παραλλαγής μέσα στη σελίδα: **ίδια** για την πρόταση ιδιοτήτων και την πρόταση τιμών του πίνακα (§5.5.2 Β4). */
+const variantRowKey = (page: number, table: PageTable, position: number): string => `p${page}${table.key}v${position}`;
+
 function rowsOf(view: TableView, table: PageTable, data: readonly number[], lines: readonly LineBinding[], page: number, context: PageTableContext): ExtractedRow[] {
   const disputed = table.witness === 'disputed';
   return data.map((slot, position) => ({
-    rowKey: `p${page}${table.key}v${position}`,
+    rowKey: variantRowKey(page, table, position),
     cells: lines.flatMap(({ line, attribute, confidence }) => {
       const unit = printedUnit(attribute, labelCells(view, line, data), context.registry);
       return extractedCell(view.at(line, slot), { attribute, confidence, unit, disputed }, page) ?? [];
@@ -221,7 +229,7 @@ function rowsOf(view: TableView, table: PageTable, data: readonly number[], line
 }
 
 interface TableOutcome {
-  readonly group: ExtractedGroup | null;
+  readonly groups: readonly ExtractedGroup[];
   readonly setAside: ImportPageSetAside | null;
   readonly unmapped: readonly ImportPageUnmappedLine[];
   readonly findings: readonly string[];
@@ -241,8 +249,8 @@ function lineRegions(view: TableView, line: number, data: readonly number[]): Pa
   return [...cells].filter((cell) => cell.text.trim() !== '').map((cell) => cell.box);
 }
 
-function unmappedLines(view: TableView, data: readonly number[], lines: readonly LineBinding[], page: number, table: PageTable): ImportPageUnmappedLine[] {
-  const taken = new Set(lines.map(({ line }) => line));
+function unmappedLines(view: TableView, data: readonly number[], lines: readonly LineBinding[], page: number, table: PageTable, priced: readonly PagePriceLine[]): ImportPageUnmappedLine[] {
+  const taken = new Set([...lines.map(({ line }) => line), ...priced.map(({ line }) => line)]);
   return range(view.lines).filter((line) => !taken.has(line)).flatMap((line) => {
     const values = lineValues(view, line, data);
     if (values.length === 0) return [];
@@ -259,19 +267,63 @@ const asideOf = (page: number, table: PageTable, role: ImportPageSetAside['role'
   label: table.cells.filter((cell) => cell.row === 0 && cell.text !== '').map((cell) => cell.text).join(' · '),
 });
 
+/** Το σύμβολο του νομίσματος του καταλόγου («€»), από το `Intl` και όχι γραμμένο με το χέρι. */
+const MONEY_SIGN = new Intl.NumberFormat('en', { style: 'currency', currency: MONEY_CURRENCY }).formatToParts(0).find((part) => part.type === 'currency')?.value ?? MONEY_CURRENCY;
+
+/** Σύμβολο νομίσματος (Unicode `Sc`) στην ετικέτα που **δεν** είναι του καταλόγου: η τιμή δεν μετατρέπεται ποτέ σιωπηλά. */
+function foreignCurrencyOf(labels: readonly PageTableCell[]): string | null {
+  const signs = labels.flatMap((cell) => cell.text.match(/\p{Sc}/gu) ?? []);
+  return signs.find((sign) => sign !== MONEY_SIGN) ?? null;
+}
+
+const priceTarget = (field: 'netPrice' | 'unitCode'): ImportTarget => ({ kind: 'price', field });
+
+/**
+ * Τα κελιά τιμής μιας παραλλαγής (§5.5.2 Β4 Δ3): το ποσό από τον πίνακα, η μονάδα από τον άνθρωπο. Ενωμένο κελί (μία τιμή για
+ * πολλές παραλλαγές) δεν μοιράζεται σιωπηλά: γίνεται εύρημα στοίχισης.
+ */
+function priceCells(view: TableView, slot: number, entry: PagePriceLine, labels: readonly PageTableCell[], page: number): ExtractedCell[] {
+  const cell = view.at(entry.line, slot);
+  if (cell === null || cell.text.trim() === '') return [];
+  const foreign = foreignCurrencyOf(labels);
+  const flags: ImportIssue[] = [
+    ...(foreign === null ? [] : [{ code: 'currencyConflict' as const, path: 'netPrice', params: { currency: foreign, expected: MONEY_CURRENCY } }]),
+    ...(view.spansSlots(cell) ? [{ code: 'misaligned' as const, path: 'netPrice' }] : []),
+  ];
+  const anchor = { kind: 'page' as const, page, regions: [cell.box, ...labels.map((label) => label.box)], verified: true };
+  return [
+    { target: priceTarget('netPrice'), text: printedText(cell), confidence: IDENTIFIED_CONFIDENCE, anchor, unitCode: null, flags },
+    { target: priceTarget('unitCode'), text: entry.unitCode, confidence: IDENTIFIED_CONFIDENCE, anchor: null, unitCode: null, flags: [] },
+  ];
+}
+
+/**
+ * Η **δεύτερη** πρόταση της ίδιας ανάγνωσης (§5.5.2 Β4, BMEcat: ένα `PRODUCT`, δύο προορισμοί): οι τιμές του πίνακα, με τα **ίδια**
+ * `rowKey` με την πρόταση ιδιοτήτων. Ο πίνακας έχει μία γραμμή τιμής· τη δεύτερη την αρνείται ο γραφέας (`priceLineTaken`).
+ */
+function priceGroupOf(view: TableView, table: PageTable, data: readonly number[], priced: readonly PagePriceLine[], attributesKey: string, page: number): ExtractedGroup | null {
+  const [entry] = priced;
+  if (!entry) return null;
+  const labels = labelCells(view, entry.line, data);
+  const rows = data.map((slot, position) => ({ rowKey: variantRowKey(page, table, position), cells: priceCells(view, slot, entry, labels, page) }));
+  return { groupKey: priceGroupKeyOf(attributesKey), purpose: 'priceLines', modelCode: null, sharedCells: [], rows: rows.filter((row) => row.cells.length > 0), pages: [page] };
+}
+
 function readTable(table: PageTable, mapping: RawTableMapping, context: PageTableContext): TableOutcome {
   const { page } = context;
-  if (mapping.role !== 'variants') return { group: null, setAside: asideOf(page, table, mapping.role), unmapped: [], findings: [] };
+  if (mapping.role !== 'variants') return { groups: [], setAside: asideOf(page, table, mapping.role), unmapped: [], findings: [] };
   const view = viewOf(table, mapping);
   const data = dataSlots(view);
   const mapped = boundLines(view, mapping.lines, context);
   if (data.length === 0 || mapped.length < MIN_MAPPED_LINES) {
-    return { group: null, setAside: asideOf(page, table, 'unmapped'), unmapped: [], findings: [`Table ${table.key} has role "variants", but only ${mapped.length} lines were mapped to attributes.`] };
+    return { groups: [], setAside: asideOf(page, table, 'unmapped'), unmapped: [], findings: [`Table ${table.key} has role "variants", but only ${mapped.length} lines were mapped to attributes.`] };
   }
   const repeated = [...mapped, ...sameQuantityLines(view, data, mapped, context)];
   const lines = [...repeated, ...identifierLines(view, data, repeated, context), ...axisLines(view, data, repeated, context)];
-  const group: ExtractedGroup = { groupKey: `page:${page}:${table.key}`, modelCode: null, sharedCells: [], rows: rowsOf(view, table, data, lines, page, context), pages: [page] };
-  return { group, setAside: null, unmapped: unmappedLines(view, data, lines, page, table), findings: unitFindings(view, data, mapped, context) };
+  const group: ExtractedGroup = { groupKey: pageTableGroupKey(page, table.key), modelCode: null, sharedCells: [], rows: rowsOf(view, table, data, lines, page, context), pages: [page] };
+  const priced = (context.priceLinesByTable?.get(table.key) ?? []).filter(({ line }) => line >= 0 && line < view.lines);
+  const prices = priceGroupOf(view, table, data, priced, group.groupKey, page);
+  return { groups: prices ? [group, prices] : [group], setAside: null, unmapped: unmappedLines(view, data, lines, page, table, priced), findings: unitFindings(view, data, mapped, context) };
 }
 
 /** Τα ανασυντεθειμένα κείμενα ζουν στον πίνακα: το μοντέλο δεν έχει τρόπο να γράψει τιμή, μόνο να δείξει γραμμή. */
@@ -284,7 +336,7 @@ export function readPageTables(mapping: RawPageMapping, context: PageTableContex
   const outcomes = answered.map(({ table, answer }) => readTable(table, answer, context));
   const unanswered = context.tables.filter((table) => !byKey.has(table.key)).map((table) => `Table ${table.key} has no entry.`);
   return {
-    groups: outcomes.flatMap((outcome) => outcome.group ?? []),
+    groups: outcomes.flatMap((outcome) => outcome.groups),
     setAside: outcomes.flatMap((outcome) => outcome.setAside ?? []),
     unmappedLines: outcomes.flatMap((outcome) => outcome.unmapped),
     findings: [...outcomes.flatMap((outcome) => outcome.findings), ...unanswered],

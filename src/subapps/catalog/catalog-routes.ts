@@ -125,6 +125,8 @@ export const CATALOG_API = {
     lines: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/lines`,
     /** Αναβάθμιση σελίδας στην τρέχουσα έκδοση παραγωγής, χωρίς AI (§5.5.2 Β3.1). */
     reinterpret: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/reinterpret`,
+    /** Η πρόχειρη έκδοση τιμοκαταλόγου της παρτίδας ιδιοτήτων (§5.5.2 Β4). */
+    priceTarget: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/price-target`,
     discard: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/discard`,
   },
   importProfiles: entity('import-profiles'),

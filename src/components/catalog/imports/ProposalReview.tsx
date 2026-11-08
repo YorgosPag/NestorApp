@@ -37,6 +37,16 @@ interface ProposalReviewProps {
   readonly lines?: Omit<UnmappedLinesProps, 'proposal' | 'decidable'>;
   /** Η παρτίδα δέχεται ακόμη αποφάσεις (όχι `closed` / `discarded`) — ο server το επιβάλλει ξανά (ADR-934 Ε3). */
   readonly batchOpen: boolean;
+  /** §5.5.2 Β4: από πού ήρθε η πρόταση τιμών (γραμμή του πίνακα, μονάδα, αναίρεση). */
+  readonly source?: React.ReactNode;
+}
+
+/** §5.5.2 Β4 Δ5: η πρόταση τιμών περιμένει να εγκριθούν οι ιδιότητες που γεννούν τα SKU της. Ο server αρνείται ξανά. */
+const awaitsAttributes = (proposal: ImportProposalWire): boolean =>
+  proposal.rows.some((row) => row.issues.some((issue) => issue.code === 'awaitsAttributes'));
+
+function proposalTitle(proposal: ImportProposalWire, t: ReturnType<typeof useImportText>['t']): string {
+  return proposal.purpose === 'priceLines' && proposal.modelCode === null ? t('review.pricesTitle') : (proposal.modelCode ?? t('review.noModel'));
 }
 
 /** `decidable`: η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η μία κρίση για κάθε κουμπί απόφασης. */
@@ -127,12 +137,13 @@ function ModelCodeField({ proposal, onChange }: Pick<ProposalReviewProps, 'propo
 /** Γραμμή χωρίς ορατό πεδίο στην προβολή κρύβεται· γραμμή με εύρημα μένει, γιατί το εύρημα κλειδώνει την έγκριση. */
 const rowVisibleIn = (view: ProposalView, row: ImportProposalRow): boolean => row.issues.length > 0 || row.fields.some((field) => fieldVisibleIn(view, field));
 
-export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, onReject, saving = false, unmapped = 0, lines, batchOpen }: ProposalReviewProps) {
+export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, onReject, saving = false, unmapped = 0, lines, batchOpen, source }: ProposalReviewProps) {
   const { t } = useImportText();
   const summary = useMemo(() => summarizeProposal(proposal.rows), [proposal.rows]);
   const [view, setView] = useState<ProposalView>(() => initialProposalView(summary));
   const { pending } = summary;
   const open = batchOpen && proposal.status === 'pending';
+  const awaiting = awaitsAttributes(proposal);
   const rows = proposal.rows.filter((row) => rowVisibleIn(view, row));
   const focusNextPending = () => {
     const next = nextPendingField(proposal.rows, focused);
@@ -141,16 +152,18 @@ export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, 
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border p-3">
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="m-0 text-base font-semibold">{proposal.modelCode ?? t('review.noModel')} · {t(PROPOSAL_STATUS_KEYS[proposal.status])}</h3>
+        <h3 className="m-0 text-base font-semibold">{proposalTitle(proposal, t)} · {t(PROPOSAL_STATUS_KEYS[proposal.status])}</h3>
         {open ? (
           <span className="flex items-center gap-2">
             {saving ? <span className="text-sm text-muted-foreground" role="status">{t('review.saving')}</span> : null}
             {pending > 0 ? <span className="text-sm text-muted-foreground" role="status">{t('review.pending', { count: pending })}</span> : null}
             <Button type="button" variant="outline" onClick={() => onReject(proposal)}>{t('review.rejectAll')}</Button>
-            <Button type="button" disabled={pending > 0} onClick={() => onApply(proposal)}>{t('review.apply')}</Button>
+            <Button type="button" disabled={pending > 0 || awaiting} onClick={() => onApply(proposal)}>{t('review.apply')}</Button>
           </span>
         ) : null}
       </header>
+      {source}
+      {open && awaiting ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('review.awaitsAttributes')}</p> : null}
       {open && proposal.modelCode === null && proposal.purpose === 'attributes' && proposal.variantSchemeCode !== null ? <ModelCodeField proposal={proposal} onChange={onChange} /> : null}
       {proposal.violations.length > 0 ? <p className="m-0 text-sm text-destructive" role="status">{t('review.violations', { count: proposal.violations.length })}</p> : null}
       <ProposalSummaryBar summary={summary} unmapped={unmapped} view={view} onView={setView} onNextPending={focusNextPending} />

@@ -13,7 +13,7 @@
 
 import type { XChangeImportReport } from '@/subapps/catalog/interop/etim/xchange-report';
 import { defineLazySurfaces } from '@/utils/lazyRouteFactory';
-import type { LineAttributeToolsProps } from './line-tool-props';
+import type { LineAttributeToolsProps, PriceLineDialogProps, PriceLineNoteProps } from './line-tool-props';
 
 const ImportSurfaces = defineLazySurfaces({
   CatalogXChangeReport: {
@@ -23,6 +23,13 @@ const ImportSurfaces = defineLazySurfaces({
   CatalogLineAttributeTools: {
     load: () => import('./LineAttributeTools').then((mod) => ({ default: mod.LineAttributeTools })),
   },
+  /**
+   * §5.5.2 Β4: η γραμμή τιμής — ο επιλογέας μονάδας (namespace `uom`) μόνο όταν υπάρχει γραμμή τιμής ή ανοίξει ο διάλογος. ΜΙΑ
+   * επιφάνεια για διάλογο και σημείωση: ένα ζεύγος (διαδρομή, namespace), όχι δύο.
+   */
+  CatalogPriceLineTools: {
+    load: () => import('./PriceLineControls').then((mod) => ({ default: mod.PriceLineTools })),
+  },
 });
 
 export function XChangeReportSlot({ report }: { readonly report: XChangeImportReport }) {
@@ -31,4 +38,12 @@ export function XChangeReportSlot({ report }: { readonly report: XChangeImportRe
 
 export function LineAttributeToolsSlot(props: LineAttributeToolsProps) {
   return <ImportSurfaces.CatalogLineAttributeTools {...props} />;
+}
+
+export function PriceLineDialogSlot(props: PriceLineDialogProps) {
+  return <ImportSurfaces.CatalogPriceLineTools kind="dialog" {...props} />;
+}
+
+export function PriceLineNoteSlot(props: PriceLineNoteProps) {
+  return <ImportSurfaces.CatalogPriceLineTools kind="note" {...props} />;
 }

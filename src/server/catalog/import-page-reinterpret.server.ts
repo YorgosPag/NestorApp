@@ -18,7 +18,8 @@ import type { AuthContext } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { canonicalJson } from '@/lib/legal/canonical-json';
-import { lineDecisionOf, tableOverridesOf, withLineOverride } from '@/subapps/catalog/import/page-line-overrides';
+import { priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
+import { lineDecisionOf, priceLineOf, tableOverridesOf, withLineOverride } from '@/subapps/catalog/import/page-line-overrides';
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
 import type { ImportBatchDefinition, ImportLineDecision } from '@/subapps/catalog/types/catalog-import';
 import type { ImportLineOutcome, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
@@ -85,19 +86,46 @@ async function reinterpretTable(ctx: AuthContext, batch: StoredImportBatch, requ
 async function openBatch(ctx: AuthContext, id: string, request: SetImportLineRequest): Promise<Judged<StoredImportBatch>> {
   const batch = await runCatalogReadOnly(ctx, (scope) => readOwned<ImportBatchDefinition>(scope, 'importBatch', id));
   await assertPurposeAuthority(ctx, batch.target.purpose);
-  if (batch.target.purpose !== 'attributes' || !batch.pages?.done.includes(request.page)) return refuse('lineUnknown');
-  const proposal = (await readBatchProposals(ctx, id)).find((candidate) => candidate.groupKey === groupKeyOf(request.page, request.table));
-  return proposal && proposal.status !== 'pending' ? refuse('proposalClosed') : { ok: true, value: batch };
+  return batch.target.purpose !== 'attributes' || !batch.pages?.done.includes(request.page) ? refuse('lineUnknown') : { ok: true, value: batch };
+}
+
+/**
+ * Η πρόταση που αλλάζει η απόφαση έχει κριθεί; Για γραμμή τιμής είναι η πρόταση **τιμών** του πίνακα (§5.5.2 Β4): η τιμή ορίζεται και
+ * αφού εγκριθούν οι ιδιότητες, γιατί η εγκεκριμένη πρόταση ιδιοτήτων δεν ξαναγράφεται (`stageGroup`).
+ */
+async function judgeOpenProposal(ctx: AuthContext, id: string, request: SetImportLineRequest, previous: ImportLineDecision | null): Promise<Judged<null>> {
+  const tableKey = groupKeyOf(request.page, request.table);
+  const priced = request.decision?.kind === 'price' || previous?.kind === 'price';
+  const key = priced ? priceGroupKeyOf(tableKey) : tableKey;
+  const proposal = (await readBatchProposals(ctx, id)).find((candidate) => candidate.groupKey === key);
+  return proposal && proposal.status !== 'pending' ? refuse('proposalClosed') : { ok: true, value: null };
 }
 
 /** Χρειάζεται ο πίνακας μόνο όταν αλλάζει η αντιστοίχιση: η αγνόηση (και η αναίρεσή της) είναι απλώς κατάσταση. */
 const touchesMapping = (decision: ImportLineDecision | null, previous: ImportLineDecision | null): boolean =>
-  decision?.kind === 'attribute' || previous?.kind === 'attribute';
+  decision?.kind === 'attribute' || previous?.kind === 'attribute' || decision?.kind === 'price' || previous?.kind === 'price';
+
+/**
+ * Η γραμμή τιμής (§5.5.2 Β4 Δ2): θέλει το δικαίωμα της τιμολόγησης (ξένο ≡ ανύπαρκτο, όπως το `assertPurposeAuthority`), πρόχειρη
+ * έκδοση στην παρτίδα, και **μία** γραμμή τιμής ανά πίνακα. Και η αναίρεσή της αλλάζει την πρόταση τιμών, άρα θέλει το ίδιο δικαίωμα.
+ */
+async function judgePriceLine(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest, previous: ImportLineDecision | null): Promise<Judged<null>> {
+  if (request.decision?.kind !== 'price' && previous?.kind !== 'price') return { ok: true, value: null };
+  await assertPurposeAuthority(ctx, 'priceLines');
+  if (request.decision?.kind !== 'price') return { ok: true, value: null };
+  if (batch.target.purpose !== 'attributes' || !batch.target.priceListVersionId) return refuse('priceTargetMissing');
+  const taken = priceLineOf(tableOverridesOf(batch.pages?.lineOverrides, request.page, request.table));
+  return taken && taken.line !== request.line ? refuse('priceLineTaken') : { ok: true, value: null };
+}
 
 async function decideLine(ctx: AuthContext, id: string, request: SetImportLineRequest): Promise<ImportLineOutcome> {
   const opened = await openBatch(ctx, id, request);
   if (!opened.ok) return { kind: 'refused', reason: opened.reason };
   const previous = lineDecisionOf(opened.value.pages?.lineOverrides, request);
+  const open = await judgeOpenProposal(ctx, id, request, previous);
+  if (!open.ok) return { kind: 'refused', reason: open.reason };
+  const price = await judgePriceLine(ctx, opened.value, request, previous);
+  if (!price.ok) return { kind: 'refused', reason: price.reason };
   if (!touchesMapping(request.decision, previous)) {
     await setImportLineOverride(ctx, id, request, request.decision);
     return { kind: 'settled' };

@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "3be9f50032a873803363d1b139f4b886b6668ef8262cc2a7a3def83a2afe856f",
+    "src/i18n/generated/lazy-route-namespaces.json": "3f4dc119fe48442db25b75a061379148d9a0a0b4cc0517ec99e9843ec6247f01",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -46,7 +46,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__connections.el.json": "a945c101573af8b73bad5337c825e42cff51f05ab5c12d6abffbf57dfbac8520",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "ed53a8bf5790b1cbbb8248fe4bd32a7bc4d8ce1b44e3a5717054c1e3ea73e025",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "beb4d7d88a17fac46b11a3ccf432f9836c60534f372e8eae2d3e210ef96c3bee",
-    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "1d56250d5a9b9cf132bd50cdc7e0a2ea8eb60fd962624fe60aac4d444e0f0a6d",
+    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "4aaadb1db915f7044c124cba2d979a1360401eae79fd66582fc36934980da922",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "1ada521e13e9e01ac4577ab75a6a5f85538a10f6130c3b3dec5e9582ff50d0ca",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "324fb9244cc0690b312ecd2472727e5f292d9a1d52c33d8cf3d0df7ec8e62d39",
@@ -150,7 +150,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "aa08763e00d3073da35df044e8aa49a6c8c56fc07bfa74bb9a273792c45b0dcc",
+      "registries": "6e52b72148a472d5ad8bbdbd7d8ed1e195c7992dd1f78d4f61fed3c11aec1249",
       "supportedNamespaces": "c71390b60b94884f8fb2f0b12566e44adecace1ad2819f6884a6cbe7a6a980df"
     },
     "namespaceBundles": {
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8fab67079426f461c5087febff21b183dedc59bc7f5db4dfd7b200924edf1f9e",
+  "inputsSha256": "0633b49fb02e9e3d9b6334410e05dc324f94ff9c1a2a854f353f86ca1fbc99f6",
   "languages": [
     "el"
   ],
@@ -9375,6 +9375,8 @@
             "review.lines.map",
             "review.lines.newAttribute",
             "review.lines.refusalLineUnknown",
+            "review.lines.refusalPriceLineTaken",
+            "review.lines.refusalPriceTargetMissing",
             "review.lines.refusalProposalClosed",
             "review.lines.refusalReadingClipped",
             "review.lines.refusalReadingMissing",
@@ -9390,6 +9392,7 @@
             "review.lines.stateSaving",
             "review.lines.title",
             "review.lines.undo",
+            "review.priceLine.action",
             "review.source",
             "values.noValue.notApplicable",
             "values.noValue.unknown"
@@ -9408,6 +9411,9 @@
             "batch.noProposals",
             "batch.pages",
             "batch.pagesProgress",
+            "batch.priceTarget",
+            "batch.priceTargetHint",
+            "batch.priceTargetNone",
             "batch.readPages",
             "batch.retryFailed",
             "batch.setAsideAccessories",
@@ -9468,6 +9474,7 @@
             "review.accept",
             "review.acceptRow",
             "review.apply",
+            "review.awaitsAttributes",
             "review.confidence",
             "review.corroboratedBy",
             "review.decision",
@@ -9482,6 +9489,8 @@
             "review.lines.map",
             "review.lines.newAttribute",
             "review.lines.refusalLineUnknown",
+            "review.lines.refusalPriceLineTaken",
+            "review.lines.refusalPriceTargetMissing",
             "review.lines.refusalProposalClosed",
             "review.lines.refusalReadingClipped",
             "review.lines.refusalReadingMissing",
@@ -9503,6 +9512,8 @@
             "review.noModel",
             "review.nothingToApply",
             "review.pending",
+            "review.priceLine.action",
+            "review.pricesTitle",
             "review.reject",
             "review.rejectAll",
             "review.saving",
@@ -9668,6 +9679,8 @@
             "pdf.sidebar.untitled",
             "preview.rotate",
             "review.lines.refusalLineUnknown",
+            "review.lines.refusalPriceLineTaken",
+            "review.lines.refusalPriceTargetMissing",
             "review.lines.refusalProposalClosed",
             "review.lines.refusalReadingClipped",
             "review.lines.refusalReadingMissing",
@@ -40624,7 +40637,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1307539
+    "sliceBytes": 1308421
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
