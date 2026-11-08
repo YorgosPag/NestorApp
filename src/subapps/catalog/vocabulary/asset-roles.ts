@@ -32,6 +32,10 @@ export const CATALOG_ASSET_ROLES = [
   'video',
   'logo',
   'font',
+  // ADR-934 §5.2 Μ11 — κανονιστικά έγγραφα, χωριστά από το `certificate` επειδή ο καθένας έχει δικό του νόμο:
+  'declaration', // DoP/DoC — Κανονισμός (ΕΕ) 2024/3110 (CPR), υπόδειγμα Παραρτήματος V · ETIM ATX004
+  'energyLabel', // ενεργειακή σήμανση — Κανονισμός (ΕΕ) 2017/1369: στην πώληση από απόσταση δίπλα στην τιμή · ETIM ATX012
+  'safetyDataSheet', // SDS — REACH άρθρο 31: στη γλώσσα του κράτους μέλους, με ημερομηνία αναθεώρησης · ETIM ATX019
 ] as const;
 
 export type CatalogAssetRole = (typeof CATALOG_ASSET_ROLES)[number];
@@ -56,6 +60,10 @@ export const ASSET_ROLE_KINDS: Readonly<Record<CatalogAssetRole, readonly AssetK
   video: ['video'],
   logo: ['image'],
   font: ['font'],
+  declaration: ['document'],
+  // Η σήμανση κυκλοφορεί ως εικόνα (το σχήμα με την κλίμακα) ΚΑΙ ως PDF (σήμανση + δελτίο προϊόντος).
+  energyLabel: ['image', 'document'],
+  safetyDataSheet: ['document'],
 };
 
 export function isKindAllowedForRole(role: CatalogAssetRole, kind: AssetKind): boolean {

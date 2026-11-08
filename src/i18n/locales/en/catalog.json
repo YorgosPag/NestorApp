@@ -824,7 +824,10 @@
       "bim": "BIM object",
       "video": "Video",
       "logo": "Logo",
-      "font": "Font"
+      "font": "Font",
+      "declaration": "Declaration of performance / conformity (DoP/DoC)",
+      "energyLabel": "Energy label",
+      "safetyDataSheet": "Safety data sheet (SDS)"
     },
     "colour": {
       "models": {

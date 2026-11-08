@@ -9,12 +9,27 @@
 import React from 'react';
 
 import { MONEY_CURRENCY } from '@/lib/money/money';
-import type { XChangeAttributeImportReport, XChangeImportReport, XChangePriceImportReport } from '@/subapps/catalog/interop/etim/xchange-report';
+import type { XChangeAttachmentReport, XChangeAttributeImportReport, XChangeImportReport, XChangePriceImportReport } from '@/subapps/catalog/interop/etim/xchange-report';
 import { useImportText } from './import-text';
 
 type ImportText = ReturnType<typeof useImportText>['t'];
 
 const codesOf = (codes: readonly string[]): string => codes.join(' · ');
+
+/** Τα συνημμένα (ADR-934 §5.2 Μ2). Απούσα αναφορά (πριν από το στάδιο Μ-α) ⇒ καμία γραμμή. */
+function attachmentLines(t: ImportText, report: XChangeAttachmentReport | undefined): (string | null)[] {
+  if (!report) return [];
+  const { assets, links, unsupportedTypes, thumbnails, unreachableUris, invalidDates, unreadable } = report;
+  return [
+    assets > 0 ? t('xchange.attachments.assets', { count: assets }) : null,
+    links > 0 ? t('xchange.attachments.links', { count: links }) : null,
+    unsupportedTypes.length > 0 ? t('xchange.attachments.unsupported', { codes: codesOf(unsupportedTypes) }) : null,
+    thumbnails > 0 ? t('xchange.attachments.thumbnails', { count: thumbnails }) : null,
+    unreachableUris > 0 ? t('xchange.attachments.unreachable', { count: unreachableUris }) : null,
+    invalidDates > 0 ? t('xchange.attachments.invalidDates', { count: invalidDates }) : null,
+    unreadable > 0 ? t('xchange.attachments.unreadable', { count: unreadable }) : null,
+  ];
+}
 
 function attributeLines(t: ImportText, report: XChangeAttributeImportReport): (string | null)[] {
   const { products, imported, otherClasses, otherClassProducts, unmappedFeatures, rangeFeatures, declaredNoValue, extraTradeItems } = report;
@@ -30,6 +45,7 @@ function attributeLines(t: ImportText, report: XChangeAttributeImportReport): (s
     extraTradeItems > 0 ? t('xchange.tradeItems', { count: extraTradeItems }) : null,
     extraGtins > 0 ? t('xchange.extraGtins', { count: extraGtins }) : null,
     brandFromManufacturer > 0 ? t('xchange.brandFromManufacturer', { count: brandFromManufacturer }) : null,
+    ...attachmentLines(t, report.attachments),
   ];
 }
 

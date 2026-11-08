@@ -63,7 +63,16 @@
     "allowanceSurcharges": "{count, plural, one {# product has tiers or surcharges, which a price line does not hold.} other {# products have tiers or surcharges, which a price line does not hold.}}",
     "tradeItems": "{count} products have several trade items: the first was kept.",
     "extraGtins": "{count, plural, one {# product gives more GTINs: the one of the unit sold was kept.} other {# products give more GTINs: the one of the unit sold was kept.}}",
-    "brandFromManufacturer": "{count, plural, one {# product declares no brand: the manufacturer name was used. Please check it.} other {# products declare no brand: the manufacturer name was used. Please check them.}}"
+    "brandFromManufacturer": "{count, plural, one {# product declares no brand: the manufacturer name was used. Please check it.} other {# products declare no brand: the manufacturer name was used. Please check them.}}",
+    "attachments": {
+      "assets": "{count, plural, one {# media file was added to the rows; it will be downloaded and checked before it is attached to a product.} other {# media files were added to the rows; they will be downloaded and checked before they are attached to products.}}",
+      "links": "{count, plural, one {# link to a supplier page is not a file and is not imported.} other {# links to supplier pages are not files and are not imported.}}",
+      "unsupported": "Attachments of types that have no media role yet were not imported: {codes}.",
+      "thumbnails": "{count, plural, one {# thumbnail was skipped: the app makes its own renditions.} other {# thumbnails were skipped: the app makes its own renditions.}}",
+      "unreachable": "{count, plural, one {# file has no address it can be downloaded from (missing, a path inside a package, or not http/https).} other {# files have no address they can be downloaded from (missing, a path inside a package, or not http/https).}}",
+      "invalidDates": "{count, plural, one {# issue or expiry date is not in YYYY-MM-DD form and was ignored.} other {# issue or expiry dates are not in YYYY-MM-DD form and were ignored.}}",
+      "unreadable": "{count, plural, one {# attachment could not be read because it does not follow the xChange schema.} other {# attachments could not be read because they do not follow the xChange schema.}}"
+    }
   },
   "batch": {
     "loading": "Loading batch…",

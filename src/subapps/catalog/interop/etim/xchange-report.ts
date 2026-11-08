@@ -27,6 +27,26 @@ export interface XChangeAttributeImportReport {
   readonly extraGtins?: number;
   /** Προϊόντα χωρίς `BrandName`, όπου η μάρκα πάρθηκε από το `ManufacturerName`. Απόν πριν από το Σ1γ. */
   readonly brandFromManufacturer?: number;
+  /** Τα συνημμένα του αρχείου (ADR-934 §5.2 Μ2). Απόν στις αναφορές πριν από το στάδιο Μ-α. */
+  readonly attachments?: XChangeAttachmentReport;
+}
+
+/** Τι έγιναν τα συνημμένα (`ProductAttachments` · `ItemAttachments`): μπήκαν ως μέσα ή μετρήθηκαν — ποτέ σιωπηλά. */
+export interface XChangeAttachmentReport {
+  /** Μέσα που μπήκαν στις γραμμές (ένα ανά αρχείο, χωρίς διπλά στο ίδιο προϊόν). */
+  readonly assets: number;
+  /** ATX024: σύνδεσμοι στη σελίδα του προμηθευτή — διευθύνσεις, όχι αρχεία. */
+  readonly links: number;
+  /** Τύποι χωρίς ρόλο που να λέει την αλήθεια (π.χ. ATX021 εγγύηση · ATX099 άλλο), όσοι εμφανίστηκαν. */
+  readonly unsupportedTypes: readonly string[];
+  /** Μικρογραφίες (MDX048): τις αποδόσεις τις φτιάχνουμε εμείς. */
+  readonly thumbnails: number;
+  /** Αρχεία χωρίς διεύθυνση που κατεβαίνει (λείπει · σχετική διαδρομή πακέτου · όχι http(s)). */
+  readonly unreachableUris: number;
+  /** Ημερομηνίες έκδοσης/λήξης που δεν είναι `YYYY-MM-DD`: το μέσο μπήκε χωρίς αυτές. */
+  readonly invalidDates: number;
+  /** Συνημμένα που δεν διαβάστηκαν καθόλου (λάθος σχήμα). */
+  readonly unreadable: number;
 }
 
 export interface XChangePriceImportReport {

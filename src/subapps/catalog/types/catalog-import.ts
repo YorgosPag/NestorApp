@@ -24,6 +24,8 @@ import type { XChangeImportReport } from '../interop/etim/xchange-report';
 import type { CatalogIssue } from '../schema/catalog-issues';
 import type { AttributeValue, ChannelSlot, LocaleSlot, NoValueReason } from './product';
 import type { ConsistencyViolation } from '../rules/evaluate-consistency';
+import type { CatalogAssetRole } from '../vocabulary/asset-roles';
+import type { EtimAttachmentType } from '../vocabulary/etim-attachments';
 import type { PriceQuantity } from '../vocabulary/pricing';
 import type { BRAND_FIELD, TradeIdentityField } from '../values/trade-identity';
 import type {
@@ -116,10 +118,34 @@ export interface ExtractedCell {
   readonly corroboratedBy?: readonly string[];
 }
 
+/**
+ * Ένα μέσο όπως το λέει η πηγή, **πριν** κατέβει οτιδήποτε (ADR-934 §5.2 Μ1). Μία μορφή για κάθε πηγή: ο αναγνώστης
+ * xChange και η στήλη URL του αρχείου γεμίζουν το ίδιο σχήμα, και από εκεί ένας δρόμος.
+ * 🔑 Ένα μέσο **ανά αρχείο**: στο xChange ένας τύπος συνημμένου έχει πολλές λεπτομέρειες (π.χ. ένα PDF ανά γλώσσα).
+ */
+export interface ExtractedAsset {
+  /** Κανονικό URI (`canonicalAssetUri`) — το πρώτο κλειδί ταυτότητας (Μ5). */
+  readonly uri: string;
+  readonly role: CatalogAssetRole;
+  /** `AttachmentOrder` (≥ 1): η προτιμώμενη σειρά της πηγής. `null` = η πηγή δεν λέει (π.χ. `ItemAttachments`). */
+  readonly order: number | null;
+  readonly filename: string | null;
+  /** Ετικέτες γλώσσας όπως τις γράφει η πηγή (`el-GR`). Κενό = η πηγή δεν δηλώνει γλώσσα. */
+  readonly languages: readonly string[];
+  /** ISO `YYYY-MM-DD`. */
+  readonly issuedOn: string | null;
+  /** ISO `YYYY-MM-DD` — λήξη πιστοποιητικού (Μ8). */
+  readonly expiresOn: string | null;
+  /** Ο κωδικός ETIM, όταν η πηγή είναι xChange: το ATX015 λέει «κύρια φωτογραφία», που είναι **χρήση**, όχι ρόλος. */
+  readonly atx: EtimAttachmentType | null;
+}
+
 export interface ExtractedRow {
   /** Σταθερό μέσα στην πηγή: ο αναγνώστης της πρότασης και η αντιστοίχιση δεν εξαρτώνται από τη σειρά. */
   readonly rowKey: string;
   readonly cells: readonly ExtractedCell[];
+  /** Μέσα επιπέδου SKU (στο xChange το `Product` είναι γραμμή). Απόν = κανένα. */
+  readonly assets?: readonly ExtractedAsset[];
 }
 
 export interface ExtractedGroup {
@@ -136,6 +162,8 @@ export interface ExtractedGroup {
   readonly rows: readonly ExtractedRow[];
   /** Οι σελίδες του PDF απ' όπου προήλθε (κενό για αρχείο). */
   readonly pages: readonly number[];
+  /** Μέσα επιπέδου μοντέλου (στήλη URL αρχείου με επίπεδο «μοντέλο», Μ1). Απόν = κανένα. */
+  readonly assets?: readonly ExtractedAsset[];
 }
 
 // ── Η πρόταση ────────────────────────────────────────────────────────────────

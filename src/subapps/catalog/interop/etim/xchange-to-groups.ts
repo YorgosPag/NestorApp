@@ -9,6 +9,7 @@
  * 🔑 **Ταυτότητα εμπορίου** (ADR-934 Σ1γ): GTIN · μάρκα · MPN γίνονται κελιά `tradeIdentity`, άρα τα κρίνει ο ίδιος κριτής με την
  *    οθόνη (ψηφίο GS1, όρια). Το GTIN του SKU είναι της **μονάδας που πουλιέται** (GS1): πρώτα το `ItemGtin` του είδους, μετά το
  *    `ProductGtin`· τα υπόλοιπα μετριούνται (Δ2).
+ * 🔑 **Συνημμένα** (ADR-934 §5.2 Μ-α): γίνονται `assets` της γραμμής μέσω του `xchange-attachments` — ένας πίνακας ATX → ρόλος.
  * @module subapps/catalog/interop/etim/xchange-to-groups
  */
 
@@ -20,6 +21,7 @@ import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportTradeField } fr
 import { ANY_SLOT } from '../../types/product';
 import { localeSlotFor } from '../../values/value-shape';
 import { ETIM_LANGUAGE_TAG, ETIM_NO_VALUE_REASON_OF, isEtimImperialFeature } from '../../vocabulary/etim';
+import { AttachmentTally, assetsOfProduct } from './xchange-attachments';
 import type { XChangeFeature, XChangeProduct } from './xchange-document';
 import type { XChangeAttributeImportReport } from './xchange-report';
 
@@ -84,6 +86,7 @@ class ReportBuilder {
   readonly otherClasses = new Set<string>();
   readonly unmapped = new Set<string>();
   readonly ranges = new Set<string>();
+  readonly attachments = new AttachmentTally();
 
   noteFeature(feature: XChangeFeature, attribute: XChangeAttribute | undefined): void {
     const code = feature.EtimFeatureCode;
@@ -109,6 +112,7 @@ class ReportBuilder {
       extraTradeItems: this.extraTradeItems,
       extraGtins: this.extraGtins,
       brandFromManufacturer: this.brandFromManufacturer,
+      attachments: this.attachments.build(),
     };
   }
 }
@@ -195,7 +199,9 @@ function tableRowOf(product: XChangeProduct, index: number, schema: XChangeImpor
   report.imported += 1;
   if (product.TradeItem.length > 1) report.extraTradeItems += 1;
   const cells = [...identityCells(product, schema), ...tradeCells(product, report), ...featureCells(classification?.EtimFeatures ?? [], schema, byFeature, report)];
-  const row: ExtractedRow = { rowKey: `p${index + 1}`, cells };
+  const assets = assetsOfProduct(product, report.attachments);
+  // Χωρίς συνημμένα το πεδίο λείπει: η πρόταση μένει byte-προς-byte ίδια με πριν από το Μ-α.
+  const row: ExtractedRow = assets.length > 0 ? { rowKey: `p${index + 1}`, cells, assets } : { rowKey: `p${index + 1}`, cells };
   return { modelCode: schema.hasVariants ? seriesOf(product) : null, row };
 }
 

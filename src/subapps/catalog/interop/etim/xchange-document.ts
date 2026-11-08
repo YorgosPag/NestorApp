@@ -49,12 +49,41 @@ const pricingSchema = z.object({
   AllowanceSurcharge: z.array(z.unknown()).default([]),
 });
 
+/**
+ * Συνημμένο (ETIM xChange 2.0, `ProductAttachments` / `ItemAttachments`, EX000028–EX000032 · ADR-934 §5.2). **Δύο επίπεδα**:
+ * ο τύπος (`AttachmentType` · `AttachmentTypeSpecification` · `AttachmentOrder`, μόνο στο προϊόν) και από κάτω οι
+ * λεπτομέρειες — ένα αρχείο η καθεμία (π.χ. ένα ανά γλώσσα).
+ * 🔑 Όλα ανεκτικά **εδώ**, όπως οι τιμές: κακό συνημμένο δεν ρίχνει την εισαγωγή ιδιοτήτων. Ό,τι δεν διαβάζεται μετριέται.
+ */
+const attachmentDetailSchema = z.object({
+  AttachmentUri: z.string().optional(),
+  AttachmentFilename: z.string().optional(),
+  AttachmentLanguage: z.array(z.string()).default([]),
+  AttachmentIssueDate: z.string().optional(),
+  AttachmentExpiryDate: z.string().optional(),
+});
+
+const attachmentSchema = z.object({
+  AttachmentType: z.string(),
+  AttachmentTypeSpecification: z.string().optional(),
+  AttachmentOrder: z.number().int().optional(),
+  AttachmentDetails: z.array(attachmentDetailSchema).default([]),
+});
+
+/**
+ * Λίστα συνημμένων που **δεν** ρίχνει το έγγραφο: απούσα ή όχι λίστα ⇒ κενή. Κάθε στοιχείο μένει **ωμό** και κρίνεται
+ * χωριστά από το {@link readXChangeAttachment}: ένα στραβό συνημμένο δεν παίρνει μαζί του τα σωστά του ίδιου προϊόντος,
+ * και η απόρριψή του **μετριέται** στην αναφορά αντί να χαθεί μέσα σε ένα `catch`.
+ */
+const attachmentListSchema = z.array(z.unknown()).catch([]);
+
 /** Λίστα GTIN του σχήματος (`^[0-9]{8,14}$`). Εδώ **κάθε** κείμενο: το άκυρο γίνεται εύρημα στο κελί, όχι αόρατη απόρριψη αρχείου. */
 const gtinListSchema = z.array(z.string()).default([]);
 
 const tradeItemSchema = z.object({
   ItemIdentification: z.object({ SupplierItemNumber: z.string(), ItemGtin: gtinListSchema }),
   Pricing: z.array(pricingSchema).default([]),
+  ItemAttachments: attachmentListSchema,
 });
 
 const productSchema = z.object({
@@ -70,6 +99,7 @@ const productSchema = z.object({
   ProductDetails: z.object({ ProductDescriptions: z.array(descriptionSchema).default([]) }).optional(),
   EtimClassification: z.array(classificationSchema).default([]),
   TradeItem: z.array(tradeItemSchema).default([]),
+  ProductAttachments: attachmentListSchema,
 });
 
 const documentSchema = z.object({
@@ -84,6 +114,13 @@ const documentSchema = z.object({
 export type XChangeFeature = z.infer<typeof featureSchema>;
 export type XChangeProduct = z.infer<typeof productSchema>;
 export type XChangePricingEntry = z.infer<typeof pricingSchema>;
+export type XChangeAttachment = z.infer<typeof attachmentSchema>;
+
+/** Ένα ωμό συνημμένο ⇒ η στενή όψη του, ή `null` όταν δεν είναι συνημμένο που διαβάζουμε (ο καλών το μετρά). */
+export function readXChangeAttachment(raw: unknown): XChangeAttachment | null {
+  const parsed = attachmentSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
 
 export interface XChangeDocumentView {
   /** Το `CurrencyCode` του εγγράφου, ή `null` όταν το αρχείο δεν το δηλώνει. */
