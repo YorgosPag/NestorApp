@@ -19,7 +19,9 @@ import { MFP_PAGE_60, MFP_SETTINGS } from '@/subapps/catalog/__tests__/fixtures/
 import type { CatalogPageInput, CatalogPageReading, CatalogTableMapInput, CatalogTableMapping } from '@/subapps/catalog/import/page-analyzer';
 import type { RawPageCell } from '@/subapps/catalog/import/page-extraction';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchDefinition, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchDefinition, ImportBatchPages, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
+import { stalePages } from '@/subapps/catalog/import/page-derivation';
+import { IMPORT_PAGE_DERIVATION } from '@/subapps/catalog/vocabulary/catalog-import';
 import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import type { CreateImportBatchRequest, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { importPageReadingKey } from '@/subapps/catalog/import/import-keys';
@@ -64,6 +66,7 @@ import { applyImportProposal } from '../import-apply.server';
 import { createImportBatch } from '../import-batch-writer.server';
 import { buildTableProposals, readImportPage } from '../import-readers.server';
 import { setImportLine } from '../import-page-reinterpret.server';
+import { reinterpretImportPage } from '../import-page-rederive.server';
 import { groupTableRowsByLiveModel } from '../import-proposal-plan.server';
 import { discardImportBatch, proposeGroup, rejectImportProposal, retireStaleSourceProposals, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
 import { readImportBatchDetail } from '../import-reads.server';
@@ -882,6 +885,82 @@ describe('ανάγνωση σελίδας', () => {
       it('🔒 δομικά χωρίς πληρωμή: η ξαναερμηνεία δεν εισάγει τον αναλυτή', () => {
         const source = readFileSync(join(__dirname, '..', 'import-page-reinterpret.server.ts'), 'utf8');
         expect(source).not.toMatch(/page-analyzer/);
+      });
+
+      describe('🚀 §5.5.2 Β3.1: αναβάθμιση σελίδας στην τρέχουσα έκδοση παραγωγής', () => {
+        const storedBatch = (id: string): ImportBatchDefinition => fake.getAllDocs('catalog_import_batches')[id] as unknown as ImportBatchDefinition;
+
+        /** Όπως μια παρτίδα που διαβάστηκε πριν το Β3: γραμμές χωρίς `regions`, καμία σφραγίδα. */
+        function makeLegacy(id: string): void {
+          const current = storedBatch(id);
+          const pages = current.pages;
+          if (!pages) throw new Error('η παρτίδα PDF έχει σελίδες');
+          const { derivations: _stamp, ...rest } = pages;
+          const unmappedLines = (pages.unmappedLines ?? []).map(({ regions: _regions, ...line }) => line);
+          fake.seed('catalog_import_batches', id, { ...current, pages: { ...rest, unmappedLines } });
+        }
+
+        it('η ανάγνωση σφραγίζει με την τρέχουσα έκδοση ⇒ η αναβάθμιση δεν γράφει τίποτα', async () => {
+          const { batch } = await readBatch();
+          expect(storedBatch(batch.id).pages?.derivations).toEqual([{ page: 60, version: IMPORT_PAGE_DERIVATION, refusal: null }]);
+          const before = fake.getAllDocs('catalog_import_batches')[batch.id];
+          await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(fake.getAllDocs('catalog_import_batches')[batch.id]).toEqual(before);
+        });
+
+        it('🔴 παρτίδα προ-Β3 ⇒ οι γραμμές αποκτούν θέση, σφραγίδα τρέχουσας έκδοσης, καμία κλήση μοντέλου', async () => {
+          const { batch } = await readBatch();
+          makeLegacy(batch.id);
+          expect(stalePages(storedBatch(batch.id).pages as ImportBatchPages)).toEqual([60]);
+          const before = readings().length;
+          const view = await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(mapTables).not.toHaveBeenCalled();
+          expect(readPage).not.toHaveBeenCalled();
+          expect(readings()).toHaveLength(before);
+          const lines = view.batch.pages?.unmappedLines ?? [];
+          expect(lines.length).toBeGreaterThan(0);
+          expect(lines.every((line) => (line.regions?.length ?? 0) > 0)).toBe(true);
+          expect(view.batch.pages?.derivations).toEqual([{ page: 60, version: IMPORT_PAGE_DERIVATION, refusal: null }]);
+        });
+
+        it('🔴 οι αποφάσεις του ανθρώπου επιβιώνουν: αντιστοιχισμένη γραμμή δεν ξαναγυρίζει «χωρίς πεδίο»', async () => {
+          const { batch, coolingL } = await readBatch();
+          await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+          makeLegacy(batch.id);
+          const view = await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(view.batch.pages?.unmappedLines?.some((line) => line.line === coolingL.line)).toBe(false);
+          expect(view.batch.pages?.lineOverrides).toEqual([expect.objectContaining({ line: coolingL.line, decision: { kind: 'attribute', attributeId: attributeId('cooling_l') } })]);
+          const fields = view.proposals[0].rows.flatMap((row) => row.fields).filter((field) => field.target.kind === 'attribute' && field.target.attributeId === attributeId('cooling_l'));
+          expect(fields).toHaveLength(7);
+        });
+
+        it('🔴 άρνηση ⇒ καμία εγγραφή παραγώγων, μόνο σφραγίδα με λόγο· δεύτερη κλήση δεν ξαναδοκιμάζει', async () => {
+          const { batch } = await readBatch();
+          makeLegacy(batch.id);
+          const legacyLines = storedBatch(batch.id).pages?.unmappedLines;
+          mockPdfPage.current = ARIES_PAGES['86'] as typeof EMPTY_PDF_PAGE;
+          const view = await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(view.batch.pages?.unmappedLines).toEqual(legacyLines);
+          expect(view.batch.pages?.derivations).toEqual([{ page: 60, version: IMPORT_PAGE_DERIVATION, refusal: 'tablesDrifted' }]);
+          const stamped = fake.getAllDocs('catalog_import_batches')[batch.id];
+          await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(fake.getAllDocs('catalog_import_batches')[batch.id]).toEqual(stamped);
+        });
+
+        it('εγκαταλειμμένη παρτίδα δεν αγγίζεται', async () => {
+          const { batch } = await readBatch();
+          makeLegacy(batch.id);
+          fake.seed('catalog_import_batches', batch.id, { ...storedBatch(batch.id), status: 'discarded' });
+          const before = fake.getAllDocs('catalog_import_batches')[batch.id];
+          await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(fake.getAllDocs('catalog_import_batches')[batch.id]).toEqual(before);
+        });
+
+        it('🔒 δομικά χωρίς πληρωμή: ούτε η αναβάθμιση ούτε ο κοινός πυρήνας εισάγουν τον αναλυτή', () => {
+          for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts']) {
+            expect(readFileSync(join(__dirname, '..', file), 'utf8')).not.toMatch(/page-analyzer/);
+          }
+        });
       });
     });
   });
