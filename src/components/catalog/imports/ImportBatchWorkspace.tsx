@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { lineKeyOf, pendingUnmappedLines } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportBatchPages, ImportPageUnmappedLine, ImportProposalField, PageRegion } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
+import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
 import { SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
@@ -149,6 +150,7 @@ function ProposalSlot({ workspace, view, focus, onFocus, proposal }: BatchPropos
   return (
     <ProposalReview
       proposal={proposal}
+      batchOpen={!IMPORT_FINISHED_BATCH_STATUSES.includes(view.batch.status)}
       focused={focus?.kind === 'field' ? focus.field : null}
       onFocus={(field) => onFocus({ kind: 'field', field })}
       onChange={(target, change) => void workspace.change(target, change)}
@@ -172,7 +174,7 @@ function BatchProposals(props: BatchProposalsProps) {
   const { t } = useImportText();
   const { workspace, view } = props;
   const { batch, proposals } = view;
-  const open = batch.status !== 'discarded' && batch.status !== 'closed';
+  const open = !IMPORT_FINISHED_BATCH_STATUSES.includes(batch.status);
   return (
     <div className="flex min-h-0 flex-col gap-3 overflow-auto">
       <header className="flex flex-wrap items-center justify-between gap-2">

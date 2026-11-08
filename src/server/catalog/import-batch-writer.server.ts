@@ -62,6 +62,16 @@ export async function assertPurposeAuthority(ctx: AuthContext, purpose: ImportPu
   if (!(await hasPermission(ctx, CATALOG_AUTHORITY_PERMISSIONS.pricing))) throw new CatalogWriteError('notFound');
 }
 
+/**
+ * Παρτίδα που τελείωσε (`closed` · `discarded`) δεν δέχεται αποφάσεις: καμία έγκριση, απόρριψη ή διόρθωση πρότασής της. Ελέγχεται
+ * **μέσα** στη συναλλαγή της απόφασης — η απόσυρση των εκκρεμών στην εγκατάλειψη είναι ο κύριος δρόμος, αυτό η δικλίδα (ADR-934 Ε3).
+ */
+export function assertImportBatchOpen(batch: Pick<ImportBatchDefinition, 'status'>): void {
+  if (IMPORT_FINISHED_BATCH_STATUSES.includes(batch.status)) {
+    throw new CatalogWriteError('immutable', [{ code: 'fieldImmutable', path: 'status', params: { field: 'status' } }]);
+  }
+}
+
 async function assertTargetExists(scope: CatalogTx, target: ImportBatchTarget): Promise<void> {
   if (target.purpose === 'attributes') {
     await readOwned<object>(scope, 'family', target.familyId);
@@ -169,16 +179,6 @@ export async function attachImportBatchFile(ctx: AuthContext, id: string, expect
   });
 }
 
-/** `POST /api/catalog/imports/[id]/discard` — η παρτίδα εγκαταλείπεται· ό,τι εφαρμόστηκε μένει. */
-export async function discardImportBatch(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredImportBatch> {
-  return runCatalogTransaction(ctx, async (scope) => {
-    const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
-    assertRevision(current, expectedRevision);
-    await assertPurposeAuthority(ctx, current.target.purpose);
-    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status: 'discarded' });
-  });
-}
-
 /** Η τελευταία ανάγνωση της σελίδας είναι η αλήθεια και για όσα έμειναν απέξω (πίνακες Ε3 · γραμμές Ε7). */
 export const replacedOnPage = <TEntry extends { readonly page: number }>(current: readonly TEntry[], page: number, next: readonly TEntry[]): TEntry[] =>
   [...current.filter((entry) => entry.page !== page), ...next];
@@ -201,7 +201,7 @@ function pagesOrRefuse(batch: ImportBatchDefinition): ImportBatchPages {
 export function setImportLineOverride(ctx: AuthContext, id: string, address: LineAddress, decision: ImportLineDecision | null): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
-    if (IMPORT_FINISHED_BATCH_STATUSES.includes(current.status)) throw new CatalogWriteError('immutable', [{ code: 'fieldImmutable', path: 'status', params: { field: 'status' } }]);
+    assertImportBatchOpen(current);
     const pages = pagesOrRefuse(current);
     const lineOverrides = withLineOverride(pages.lineOverrides ?? [], address, decision, { by: ctx.uid, at: nowISO() });
     if (lineOverrides.length > IMPORT_MAX_LINE_OVERRIDES) assertNoIssues([{ code: 'tooMany', path: 'lineOverrides', params: { max: IMPORT_MAX_LINE_OVERRIDES } }]);

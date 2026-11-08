@@ -45,9 +45,9 @@ const proposal = (rows: readonly ImportProposalRow[], overrides: Partial<ImportP
   ...overrides,
 });
 
-function setup(value: ImportProposalWire) {
+function setup(value: ImportProposalWire, batchOpen = true) {
   const handlers = { onFocus: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
-  render(<ProposalReview proposal={value} focused={null} {...handlers} />);
+  render(<ProposalReview proposal={value} focused={null} batchOpen={batchOpen} {...handlers} />);
   return handlers;
 }
 
@@ -151,8 +151,19 @@ describe('ProposalReview', () => {
 
   it('σε αποθήκευση: το λέει δίπλα στην έγκριση', () => {
     const handlers = { onFocus: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
-    render(<ProposalReview proposal={proposal([row([field()])])} focused={null} saving {...handlers} />);
+    render(<ProposalReview proposal={proposal([row([field()])])} focused={null} saving batchOpen {...handlers} />);
     expect(screen.getByText('review.saving')).toBeInTheDocument();
+  });
+
+  // ADR-934 Ε3: εκκρεμής πρόταση σε εγκαταλειμμένη/κλειστή παρτίδα — καμία απόφαση, όσο κι αν η πρόταση λέει «pending».
+  it('παρτίδα που τελείωσε: καμία έγκριση, απόρριψη ή αποδοχή, ούτε σε εκκρεμή πρόταση', () => {
+    setup(proposal([row([field({ decision: 'pending' })])]), false);
+    expect(screen.queryByRole('button', { name: 'review.apply' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'review.rejectAll' })).not.toBeInTheDocument();
+    const section = screen.getByRole('region', { name: '099-01-001' });
+    expect(within(section).getByRole('button', { name: 'review.accept' })).toBeDisabled();
+    expect(within(section).getByRole('button', { name: 'review.reject' })).toBeDisabled();
+    expect(within(section).getByRole('button', { name: 'review.acceptRow' })).toBeDisabled();
   });
 
   it('χωρίς κωδικό μοντέλου ζητά τον κωδικό, και τον στέλνει', () => {

@@ -48,6 +48,8 @@ export interface UnmappedLinesProps {
   readonly activeLine: string | null;
   readonly onFocusLine: (line: ImportPageUnmappedLine) => void;
   readonly onDecideLine: (proposal: ImportProposalWire, request: SetImportLineRequest) => void;
+  /** Η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η ίδια κρίση με τα πεδία της πρότασης (ADR-934 Ε3). */
+  readonly decidable: boolean;
 }
 
 interface LineRowProps {
@@ -96,12 +98,12 @@ function LineRow(props: LineRowProps) {
   );
 }
 
-export function ProposalUnmappedLines({ proposal, lines, overrides, activity, activeLine, onFocusLine, onDecideLine }: UnmappedLinesProps) {
+export function ProposalUnmappedLines({ proposal, lines, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable }: UnmappedLinesProps) {
   const { t } = useImportText();
   const canManage = useCatalogCanManage();
   const [tool, setTool] = useState<{ readonly line: ImportPageUnmappedLine; readonly mode: LineToolMode } | null>(null);
   if (lines.length === 0) return null;
-  const readOnly = proposal.status !== 'pending';
+  const readOnly = !decidable;
   const send = (line: ImportPageUnmappedLine, decision: SetImportLineRequest['decision'], bind: SetImportLineRequest['bind'] = null) =>
     onDecideLine(proposal, { page: line.page, table: line.table, line: line.line, decision, bind });
   return (

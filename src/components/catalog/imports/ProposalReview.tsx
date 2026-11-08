@@ -34,14 +34,21 @@ interface ProposalReviewProps {
   /** Ε7: γραμμές της πηγής του πίνακα της πρότασης που περιμένουν απόφαση (§5.5.2 Α6). */
   readonly unmapped?: number;
   /** §5.5.2 Β3: οι γραμμές χωρίς πεδίο του πίνακα της πρότασης, με τις ενέργειές τους. */
-  readonly lines?: Omit<UnmappedLinesProps, 'proposal'>;
+  readonly lines?: Omit<UnmappedLinesProps, 'proposal' | 'decidable'>;
+  /** Η παρτίδα δέχεται ακόμη αποφάσεις (όχι `closed` / `discarded`) — ο server το επιβάλλει ξανά (ADR-934 Ε3). */
+  readonly batchOpen: boolean;
 }
 
-type RowProps = Pick<ProposalReviewProps, 'proposal' | 'focused' | 'onFocus' | 'onChange'> & { readonly row: ImportProposalRow; readonly view: ProposalView };
+/** `decidable`: η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η μία κρίση για κάθε κουμπί απόφασης. */
+type RowProps = Pick<ProposalReviewProps, 'proposal' | 'focused' | 'onFocus' | 'onChange'> & {
+  readonly row: ImportProposalRow;
+  readonly view: ProposalView;
+  readonly decidable: boolean;
+};
 
-function RowFields({ row, proposal, focused, onFocus, onChange, view }: RowProps) {
+function RowFields({ row, proposal, focused, onFocus, onChange, view, decidable }: RowProps) {
   const { t } = useImportText();
-  const readOnly = proposal.status !== 'pending';
+  const readOnly = !decidable;
   return (
       <table className="w-full border-collapse text-sm">
         <thead>
@@ -75,7 +82,7 @@ function RowFields({ row, proposal, focused, onFocus, onChange, view }: RowProps
 }
 
 function RowSection(props: RowProps) {
-  const { row, proposal, onChange } = props;
+  const { row, proposal, onChange, decidable } = props;
   const { t } = useImportText();
   const message = useImportIssueMessage(row.issues.length > 0);
   const acceptAll = () => onChange(proposal, {
@@ -85,7 +92,7 @@ function RowSection(props: RowProps) {
     <section className="flex flex-col gap-1" aria-label={row.label}>
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="m-0 text-sm font-semibold">{row.label} · {t(ROW_ACTION_KEYS[row.action])}</h4>
-        <Button type="button" size="sm" variant="outline" disabled={proposal.status !== 'pending'} onClick={acceptAll}>{t('review.acceptRow')}</Button>
+        <Button type="button" size="sm" variant="outline" disabled={!decidable} onClick={acceptAll}>{t('review.acceptRow')}</Button>
       </header>
       {row.issues.length > 0 ? (
         <ul className="m-0 list-none p-0 text-xs text-destructive" role="alert">
@@ -120,12 +127,12 @@ function ModelCodeField({ proposal, onChange }: Pick<ProposalReviewProps, 'propo
 /** Γραμμή χωρίς ορατό πεδίο στην προβολή κρύβεται· γραμμή με εύρημα μένει, γιατί το εύρημα κλειδώνει την έγκριση. */
 const rowVisibleIn = (view: ProposalView, row: ImportProposalRow): boolean => row.issues.length > 0 || row.fields.some((field) => fieldVisibleIn(view, field));
 
-export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, onReject, saving = false, unmapped = 0, lines }: ProposalReviewProps) {
+export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, onReject, saving = false, unmapped = 0, lines, batchOpen }: ProposalReviewProps) {
   const { t } = useImportText();
   const summary = useMemo(() => summarizeProposal(proposal.rows), [proposal.rows]);
   const [view, setView] = useState<ProposalView>(() => initialProposalView(summary));
   const { pending } = summary;
-  const open = proposal.status === 'pending';
+  const open = batchOpen && proposal.status === 'pending';
   const rows = proposal.rows.filter((row) => rowVisibleIn(view, row));
   const focusNextPending = () => {
     const next = nextPendingField(proposal.rows, focused);
@@ -148,8 +155,8 @@ export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, 
       {proposal.violations.length > 0 ? <p className="m-0 text-sm text-destructive" role="status">{t('review.violations', { count: proposal.violations.length })}</p> : null}
       <ProposalSummaryBar summary={summary} unmapped={unmapped} view={view} onView={setView} onNextPending={focusNextPending} />
       {rows.length === 0 ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('review.viewEmpty')}</p> : null}
-      {rows.map((row) => <RowSection key={row.rowKey} row={row} view={view} proposal={proposal} focused={focused} onFocus={onFocus} onChange={onChange} />)}
-      {lines ? <ProposalUnmappedLines proposal={proposal} {...lines} /> : null}
+      {rows.map((row) => <RowSection key={row.rowKey} row={row} view={view} proposal={proposal} focused={focused} onFocus={onFocus} onChange={onChange} decidable={open} />)}
+      {lines ? <ProposalUnmappedLines proposal={proposal} {...lines} decidable={open} /> : null}
     </article>
   );
 }

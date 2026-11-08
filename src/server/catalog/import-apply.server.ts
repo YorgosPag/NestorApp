@@ -24,7 +24,7 @@ import { readAggregateVatAuthority, type AggregateVatAuthority } from './aggrega
 import { commitAggregate, type CommittedAggregate, type HolderChange } from './catalog-aggregate.server';
 import { assertRevision, naturalKeyId, readForUpsert, readOwned, runCatalogTransaction, stageReplace, type CatalogTx } from './catalog-store.server';
 import { assertNoIssues, CatalogWriteError } from './catalog-write-error';
-import { assertPurposeAuthority } from './import-batch-writer.server';
+import { assertImportBatchOpen, assertPurposeAuthority } from './import-batch-writer.server';
 import { proposalDefinitionOf, settleImportBatch, type StoredImportProposal } from './import-proposal-writer.server';
 import { stagePriceLineBatch } from './price-line-writer.server';
 
@@ -173,8 +173,9 @@ async function commitProposal(ctx: AuthContext, id: string, expectedRevision: nu
     assertRevision(proposal, expectedRevision);
     await assertPurposeAuthority(ctx, proposal.purpose);
     if (proposal.status !== 'pending') throw new CatalogWriteError('immutable', [{ code: 'fieldImmutable', path: 'status', params: { field: 'status' } }]);
-    assertDecided(proposal);
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', proposal.batchId);
+    assertImportBatchOpen(batch);
+    assertDecided(proposal);
     const categoryIds = batch.target.purpose === 'attributes' ? batch.target.categoryIds : [];
     const rows = proposal.purpose === 'attributes' ? await applyAttributes(scope, proposal, categoryIds, vatAuthority) : await applyPrices(scope, proposal);
     return stageReplace(scope, 'importProposal', proposal, { ...proposalDefinitionOf(proposal), rows, status: 'applied', appliedAt: scope.now, appliedBy: ctx.uid });

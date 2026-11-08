@@ -32,8 +32,9 @@ const ignored: ImportLineOverride = { page: 87, table: 't0', line: 9, decision: 
 
 function setup(options: { readonly overrides?: readonly ImportLineOverride[]; readonly activity?: ReadonlyMap<string, LineActivity>; readonly value?: ImportProposalWire } = {}) {
   const handlers = { onFocusLine: jest.fn(), onDecideLine: jest.fn() };
+  const value = options.value ?? proposal();
   render(
-    <ProposalUnmappedLines proposal={options.value ?? proposal()} lines={[LINE]} overrides={options.overrides} activity={options.activity ?? new Map()} activeLine={null} {...handlers} />,
+    <ProposalUnmappedLines proposal={value} lines={[LINE]} overrides={options.overrides} activity={options.activity ?? new Map()} activeLine={null} decidable={value.status === 'pending'} {...handlers} />,
   );
   return handlers;
 }

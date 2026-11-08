@@ -65,7 +65,7 @@ import { createImportBatch } from '../import-batch-writer.server';
 import { readImportPage } from '../import-readers.server';
 import { setImportLine } from '../import-page-reinterpret.server';
 import { groupTableRowsByLiveModel } from '../import-proposal-plan.server';
-import { proposeGroup, rejectImportProposal, retireStaleSourceProposals, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
+import { discardImportBatch, proposeGroup, rejectImportProposal, retireStaleSourceProposals, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
 import { readImportBatchDetail } from '../import-reads.server';
 import { updateCatalogProductModel } from '../product-model-writer.server';
 import { updateCatalogProduct } from '../product-writer.server';
@@ -408,13 +408,57 @@ describe('κύκλος ζωής παρτίδας', () => {
     expect(statusOf(id)).toBe('reviewing');
   });
 
-  it('εγκαταλειμμένη παρτίδα δεν ανοίγει ξανά ως κλεισμένη', async () => {
+  // ADR-934 Ε3: πριν, η απόρριψη περνούσε και απλώς δεν έκλεινε την παρτίδα· τώρα η εγκαταλειμμένη δεν δέχεται καμία απόφαση.
+  it('εγκαταλειμμένη παρτίδα δεν ανοίγει ξανά ως κλεισμένη — και αρνείται την απόφαση', async () => {
     const id = await reviewingBatch();
     const proposal = await proposeGroup(ARIES, id, group(faithful()));
     const stored = fake.getAllDocs('catalog_import_batches')[id];
     fake.seed('catalog_import_batches', id, { ...stored, status: 'discarded' });
-    await rejectImportProposal(ARIES, proposal.id, proposal.revision);
+    expect((await rejectionOf(rejectImportProposal(ARIES, proposal.id, proposal.revision))).kind).toBe('immutable');
     expect(statusOf(id)).toBe('discarded');
+  });
+});
+
+describe('ADR-934 Ε3 — η εγκατάλειψη αποσύρει τις εκκρεμείς, και καμία απόφαση δεν περνά σε παρτίδα που τελείωσε', () => {
+  const faithful = () => MFP_SIZES.map((_, index) => rowFor(index));
+  const proposalDoc = (proposalId: string): unknown => fake.getAllDocs('catalog_import_proposals')[proposalId];
+
+  async function batchWithTwo(): Promise<{ readonly id: string; readonly applied: StoredImportProposal; readonly pending: StoredImportProposal }> {
+    const batch = await createImportBatch(ARIES, attributesBatch());
+    fake.seed('catalog_import_batches', batch.id, { ...batch, status: 'reviewing' });
+    const first = await proposeGroup(ARIES, batch.id, group(faithful(), 'model:mfp:a'));
+    const pending = await proposeGroup(ARIES, batch.id, group([rowFor(0)], 'model:other:b'));
+    return { id: batch.id, applied: await applyImportProposal(ARIES, first.id, first.revision), pending };
+  }
+
+  const revisionOf = (id: string): number => Number(fake.getAllDocs('catalog_import_batches')[id]?.revision);
+
+  it('οι εκκρεμείς φεύγουν με μαλακή διαγραφή· η εφαρμοσμένη μένει, είναι απόφαση', async () => {
+    const { id, applied, pending } = await batchWithTwo();
+    expect((await discardImportBatch(ARIES, id, revisionOf(id))).status).toBe('discarded');
+    expect(proposalDoc(pending.id)).toMatchObject({ status: 'pending', isDeleted: true });
+    expect(proposalDoc(applied.id)).toMatchObject({ status: 'applied', isDeleted: false });
+    expect((await readImportBatchDetail(ARIES, id)).proposals.map((proposal) => proposal.id)).toEqual([applied.id]);
+  });
+
+  it('ιδεμπότητη: δεύτερη κλήση, ακόμη και με παλιά αναθεώρηση, δεν γράφει την παρτίδα ξανά — μόνο συμπληρώνει την απόσυρση', async () => {
+    const { id, pending } = await batchWithTwo();
+    const stale = revisionOf(id);
+    // Η εγκατάλειψη «χάθηκε» μισή: η παρτίδα γράφτηκε, η απόσυρση όχι (η παλιά παρτίδα της παραγωγής, 08/11).
+    fake.seed('catalog_import_batches', id, { ...fake.getAllDocs('catalog_import_batches')[id], status: 'discarded' });
+    const before = revisionOf(id);
+    expect((await discardImportBatch(ARIES, id, stale)).revision).toBe(before);
+    expect(proposalDoc(pending.id)).toMatchObject({ isDeleted: true });
+  });
+
+  it.each(['discarded', 'closed'])('παρτίδα %s: έγκριση, απόρριψη και διόρθωση αρνούνται, και η πρόταση μένει ανέγγιχτη', async (status) => {
+    const { id, pending } = await batchWithTwo();
+    fake.seed('catalog_import_batches', id, { ...fake.getAllDocs('catalog_import_batches')[id], status });
+    const decisions = { expectedRevision: pending.revision, decisions: [], edits: [], modelCode: null };
+    expect((await rejectionOf(applyImportProposal(ARIES, pending.id, pending.revision))).kind).toBe('immutable');
+    expect((await rejectionOf(rejectImportProposal(ARIES, pending.id, pending.revision))).kind).toBe('immutable');
+    expect((await rejectionOf(updateImportProposal(ARIES, pending.id, decisions))).kind).toBe('immutable');
+    expect(proposalDoc(pending.id)).toMatchObject({ status: 'pending', revision: pending.revision });
   });
 });
 

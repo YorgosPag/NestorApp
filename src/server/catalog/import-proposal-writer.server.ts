@@ -1,7 +1,8 @@
 import 'server-only';
 
 /**
- * Ο **γραφέας προτάσεων** (ADR-923 §5.5): κατασκευή από `ExtractedGroup` · απόφαση/διόρθωση ανθρώπου · απόρριψη. Η εφαρμογή
+ * Ο **γραφέας προτάσεων** (ADR-923 §5.5): κατασκευή από `ExtractedGroup` · απόφαση/διόρθωση ανθρώπου · απόρριψη · κλείσιμο και
+ * εγκατάλειψη της παρτίδας (οι μεταβάσεις της που κρίνονται από τις προτάσεις της). Η εφαρμογή
  * ζει στο `import-apply.server.ts`.
  *
  * Η διόρθωση αλλάζει την **πηγή** της πρότασης και ξανατρέχει τον ίδιο αγωγό: ό,τι διόρθωσε ο άνθρωπος περνά από τον ίδιο
@@ -28,7 +29,7 @@ import type { ImportFieldEditInput, UpdateImportProposalRequest } from '@/subapp
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
 import { assertRevision, readForUpsert, readOwned, runCatalogReadOnly, runCatalogTransaction, stageCreate, stageReplace, stageSoftDelete, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
-import { assertPurposeAuthority, batchDefinitionOf } from './import-batch-writer.server';
+import { assertImportBatchOpen, assertPurposeAuthority, batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
 import { planProposal, resolveGroupIdentity, type PlannedProposal } from './import-proposal-plan.server';
 import { readBatchProposals, readImportBase } from './import-reads.server';
 
@@ -147,10 +148,12 @@ function withDecisions(rows: readonly ImportProposalRow[], request: UpdateImport
   }));
 }
 
+/** Η μία πόρτα των αποφάσεων (διόρθωση · απόρριψη): ίδια αναθεώρηση, πρόταση σε εκκρεμότητα, παρτίδα ανοιχτή. */
 async function readPendingProposal(scope: CatalogTx, id: string, expectedRevision: number): Promise<StoredImportProposal> {
   const proposal = await readOwned<ImportProposalDefinition>(scope, 'importProposal', id);
   assertRevision(proposal, expectedRevision);
   if (proposal.status !== 'pending') throw new CatalogWriteError('immutable', [{ code: 'fieldImmutable', path: 'status', params: { field: 'status' } }]);
+  assertImportBatchOpen(await readOwned<ImportBatchDefinition>(scope, 'importBatch', proposal.batchId));
   return proposal;
 }
 
@@ -182,6 +185,23 @@ export async function settleImportBatch(ctx: AuthContext, batchId: string): Prom
     if (batch.status !== 'reviewing' || (batch.pages?.failed.length ?? 0) > 0) return;
     stageReplace(scope, 'importBatch', batch, { ...batchDefinitionOf(batch), status: 'closed' });
   });
+}
+
+/**
+ * `POST /api/catalog/imports/[id]/discard` — η παρτίδα εγκαταλείπεται **και** οι εκκρεμείς της προτάσεις αποσύρονται (μαλακή
+ * διαγραφή, ίδιος δρόμος με τη νέα χαρτογράφηση)· ό,τι εφαρμόστηκε ή απορρίφθηκε μένει, είναι απόφαση. Ιδεμπότητη: σε ήδη
+ * εγκαταλειμμένη παρτίδα ξανατρέχει μόνο η απόσυρση, άρα αν χαθεί μία φορά, τη συμπληρώνει η επόμενη κλήση (ADR-934 Ε3).
+ */
+export async function discardImportBatch(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredImportBatch> {
+  const discarded = await runCatalogTransaction(ctx, async (scope) => {
+    const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
+    await assertPurposeAuthority(ctx, current.target.purpose);
+    if (current.status === 'discarded') return current;
+    assertRevision(current, expectedRevision);
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status: 'discarded' });
+  });
+  await retireStaleProposals(ctx, id, new Set(), () => true);
+  return discarded;
 }
 
 /** `POST /api/catalog/import-proposals/[id]/reject` — τίποτα δεν γράφεται, και η απόφαση μένει στο ιστορικό. */
