@@ -19,7 +19,7 @@ import { MFP_PAGE_60, MFP_SETTINGS } from '@/subapps/catalog/__tests__/fixtures/
 import type { CatalogPageInput, CatalogPageReading, CatalogTableMapInput, CatalogTableMapping } from '@/subapps/catalog/import/page-analyzer';
 import type { RawPageCell } from '@/subapps/catalog/import/page-extraction';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchDefinition, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import type { CreateImportBatchRequest, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { importPageReadingKey } from '@/subapps/catalog/import/import-keys';
@@ -554,6 +554,35 @@ describe('ανάγνωση σελίδας', () => {
     expect(after.pages?.done).toEqual([60]);
     await readImportPage(ARIES, batch.id, 60);
     expect(readPage).toHaveBeenCalledTimes(1);
+  });
+
+  describe('ADR-934 Ε3 — σελίδα σε εξέλιξη όταν πατιέται «Εγκατάλειψη»', () => {
+    const discardNow = (id: string) => discardImportBatch(ARIES, id, Number(fake.getAllDocs('catalog_import_batches')[id]?.revision));
+    const batchDoc = (id: string) => fake.getAllDocs('catalog_import_batches')[id] as unknown as ImportBatchDefinition;
+
+    it('η εγκατάλειψη προλαβαίνει την απάντηση του μοντέλου ⇒ καμία πρόταση, και η παρτίδα μένει εγκαταλειμμένη', async () => {
+      const batch = await attachedBatch();
+      readPage.mockImplementation(async () => { await discardNow(batch.id); return reading(2700); });
+      expect((await rejectionOf(readImportPage(ARIES, batch.id, 60))).kind).toBe('immutable');
+      expect(active()).toEqual([]);
+      expect(batchDoc(batch.id)).toMatchObject({ status: 'discarded', pages: { done: [] } });
+    });
+
+    it('αργοπορημένη αποτυχημένη τελευταία σελίδα δεν ξαναγυρνά την εγκαταλειμμένη παρτίδα σε «reviewing»', async () => {
+      const batch = await attachedBatch();
+      fake.seed('catalog_import_batches', batch.id, { ...batchDoc(batch.id), pages: { ...batchDoc(batch.id).pages, done: [61] } });
+      readPage.mockImplementation(async () => { await discardNow(batch.id); return { kind: 'failed', usage: USED, model: 'gpt-4o', rawText: null }; });
+      expect((await readImportPage(ARIES, batch.id, 60)).status).toBe('discarded');
+      expect(batchDoc(batch.id)).toMatchObject({ status: 'discarded', pages: { done: [61], failed: [] } });
+    });
+
+    it.each(['discarded', 'closed'])('νέα ανάγνωση σε παρτίδα %s αρνείται πριν πληρωθεί το μοντέλο', async (status) => {
+      const batch = await attachedBatch();
+      fake.seed('catalog_import_batches', batch.id, { ...batchDoc(batch.id), status });
+      expect((await rejectionOf(readImportPage(ARIES, batch.id, 60))).kind).toBe('immutable');
+      expect(readPage).not.toHaveBeenCalled();
+      expect(mapTables).not.toHaveBeenCalled();
+    });
   });
 
   it('ευρήματα κανόνων ⇒ μία επανάληψη με ανατροφοδότηση, που ξαναγράφει την ίδια πρόταση', async () => {

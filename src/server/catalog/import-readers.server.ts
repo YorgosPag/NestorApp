@@ -15,10 +15,11 @@ import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import { extractGroupsFromTable } from '@/subapps/catalog/import/apply-column-rules';
 import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
 import type { ImportBatchDefinition, ImportPagesUsage, ImportPageTextless, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
+import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
 import { readOwned, runCatalogTransaction, stageReplace } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
-import { assertPurposeAuthority, batchDefinitionOf, replacedOnPage, type StoredImportBatch } from './import-batch-writer.server';
+import { assertImportBatchOpen, assertPurposeAuthority, batchDefinitionOf, replacedOnPage, type StoredImportBatch } from './import-batch-writer.server';
 import { readAndProposePage, type PageFlowResult } from './import-page-flow.server';
 import { axisAttributeIdsOf, loadPdfPageSource, pageSpecs, readBatchFile } from './import-page-source.server';
 import { groupTableRowsByLiveModel } from './import-proposal-plan.server';
@@ -66,7 +67,8 @@ function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAs
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     const pages = current.pages;
-    if (!pages) return current;
+    // Αργοπορημένο αποτέλεσμα σελίδας σε τελειωμένη παρτίδα δεν γράφεται: αλλιώς η τελευταία σελίδα την ξαναγύριζε σε `reviewing`.
+    if (!pages || IMPORT_FINISHED_BATCH_STATUSES.includes(current.status)) return current;
     const done = ok ? [...new Set([...pages.done, page])] : pages.done;
     const failed = ok ? pages.failed.filter((other) => other !== page) : [...new Set([...pages.failed, page])];
     const total = pages.to - pages.from + 1;
@@ -86,6 +88,7 @@ export async function readImportPage(ctx: AuthContext, id: string, page: number)
   const { batch, schema } = await runCatalogTransaction(ctx, async (scope) => {
     const stored = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     if (stored.target.purpose !== 'attributes') throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'target' }]);
+    assertImportBatchOpen(stored); // πριν πληρωθεί το μοντέλο· η δικλίδα που μετρά είναι μέσα στο `proposeGroup`
     return { batch: stored, schema: await readSchemaSnapshot(scope, stored.target.familyId, stored.target.variantSchemeCode) };
   });
   const pages = batch.pages;

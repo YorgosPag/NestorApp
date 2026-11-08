@@ -68,12 +68,16 @@ async function stageGroup(scope: CatalogTx, batch: StoredCatalogRecord<ImportBat
   return current === null ? stageCreate(scope, 'importProposal', target, definition) : stageReplace(scope, 'importProposal', current, definition);
 }
 
-/** Μία ομάδα σε μία συναλλαγή: σχέδιο απέναντι στα ζωντανά + εγγραφή. */
+/**
+ * Μία ομάδα σε μία συναλλαγή: σχέδιο απέναντι στα ζωντανά + εγγραφή. Η παρτίδα ελέγχεται **μέσα** στη συναλλαγή: ανάγνωση σελίδας
+ * που ήταν ήδη σε εξέλιξη όταν πατήθηκε «Εγκατάλειψη» δεν γεννά πρόταση σε τελειωμένη παρτίδα (ADR-934 Ε3, η σειρά με την απόσυρση).
+ */
 export async function proposeGroup(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<StoredImportProposal> {
   const resolved = await runCatalogReadOnly(ctx, async (scope) => resolveGroupIdentity(scope, (await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId)).target, group));
   const base = await readImportBase(ctx, resolved.modelCode === null ? null : suggestCatalogCode(resolved.modelCode));
   return runCatalogTransaction(ctx, async (scope) => {
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
+    assertImportBatchOpen(batch);
     return stageGroup(scope, batch, resolved, await planProposal(scope, batch.target, resolved, base));
   });
 }
