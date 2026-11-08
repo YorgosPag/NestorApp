@@ -137,14 +137,16 @@ describe('ProposalReview', () => {
   it('εκκρεμότητα: καμία επιλογή πατημένη, και το λέει η λέξη', () => {
     setup(proposal([row([field({ decision: 'pending' })])]));
     expect(screen.getByText('review.decisionPending')).toBeInTheDocument();
-    for (const radio of screen.getAllByRole('radio')) expect(radio).toHaveAttribute('aria-checked', 'false');
+    // Μόνο η ομάδα απόφασης του πεδίου: το φίλτρο προβολής της σύνοψης (Β2) είναι κι αυτό radio, με επιλογή πάντα.
+    const decision = screen.getByRole('group', { name: 'review.decisionFor' });
+    for (const radio of within(decision).getAllByRole('radio')) expect(radio).toHaveAttribute('aria-checked', 'false');
   });
 
   // §5.5.2 Α3: το αμετάβλητο αποθηκεύεται `reject`, αλλά δεν δείχνεται ως «Απόρριψη».
   it('αμετάβλητο: κανένα κουμπί απόφασης, «τίποτα να εφαρμοστεί»', () => {
     setup(proposal([row([field({ status: 'unchanged', decision: 'reject' })])]));
     expect(screen.getByText('review.nothingToApply')).toBeInTheDocument();
-    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'review.decisionFor' })).not.toBeInTheDocument();
   });
 
   it('σε αποθήκευση: το λέει δίπλα στην έγκριση', () => {
