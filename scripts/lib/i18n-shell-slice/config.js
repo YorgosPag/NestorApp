@@ -176,6 +176,8 @@ const DEFAULTS = Object.freeze({
     'src/components/catalog/imports/import-surfaces.tsx',
     // ADR-923 §5.15.3 — ο αναγνώστης εντύπου και το ράφι του αγοραστή: μόνο από ενέργεια χρήστη, με τα κείμενά τους στο chunk.
     'src/components/catalog/editions/edition-surfaces.tsx',
+    // ADR-934 Σ1γ — η αναφορά εξαγωγής xChange: μόνο αφού κατέβει το αρχείο, με τα κείμενά της στο chunk (CHECK 3.34).
+    'src/components/catalog/interop/interop-surfaces.tsx',
   ],
 
   /**

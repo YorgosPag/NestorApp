@@ -49,14 +49,22 @@ const pricingSchema = z.object({
   AllowanceSurcharge: z.array(z.unknown()).default([]),
 });
 
+/** Λίστα GTIN του σχήματος (`^[0-9]{8,14}$`). Εδώ **κάθε** κείμενο: το άκυρο γίνεται εύρημα στο κελί, όχι αόρατη απόρριψη αρχείου. */
+const gtinListSchema = z.array(z.string()).default([]);
+
 const tradeItemSchema = z.object({
-  ItemIdentification: z.object({ SupplierItemNumber: z.string() }),
+  ItemIdentification: z.object({ SupplierItemNumber: z.string(), ItemGtin: gtinListSchema }),
   Pricing: z.array(pricingSchema).default([]),
 });
 
 const productSchema = z.object({
+  // ADR-934 Σ1γ: η ταυτότητα εμπορίου. Όλα προαιρετικά **εδώ** (το σχήμα θέλει υποχρεωτικό το `ManufacturerName`): ελλιπής
+  // ταυτότητα δεν πρέπει να ρίχνει την εισαγωγή ιδιοτήτων — ό,τι λείπει απλώς δεν γίνεται κελί.
   ProductIdentification: z.object({
+    ManufacturerName: z.string().optional(),
     ManufacturerProductNumber: z.string(),
+    ProductGtin: gtinListSchema,
+    BrandName: z.string().optional(),
     BrandDetails: z.array(z.object({ BrandSeries: z.array(seriesSchema).default([]) })).default([]),
   }),
   ProductDetails: z.object({ ProductDescriptions: z.array(descriptionSchema).default([]) }).optional(),

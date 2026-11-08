@@ -81,22 +81,44 @@ describe('οι μονάδες', () => {
 const slots = (value: AttributeValue): ValueSlots => ({ [ANY_SLOT]: { [ANY_SLOT]: value } });
 const SCHEME = { code: 'size', labels: {}, levels: [{ axisAttributeIds: ['power'], attributeIds: [] }] };
 const FAMILY = { id: 'fan', variantSchemes: [SCHEME] } as unknown as StoredFamily;
-const MODEL = { id: 'mfp', parentId: null, variantSchemeCode: 'size', categoryIds: [], values: { color: slots({ type: 'select', optionCode: 'white' }) }, noValueReasons: {}, revision: 1 } as unknown as StoredModel;
+const MODEL = { id: 'mfp', parentId: null, variantSchemeCode: 'size', categoryIds: [], brand: 'Aries', values: { color: slots({ type: 'select', optionCode: 'white' }) }, noValueReasons: {}, revision: 1 } as unknown as StoredModel;
 
 function product(id: string, identifier: string | null, sortKey: string): StoredProduct {
   return {
-    id, familyId: 'fan', modelId: 'mfp', categoryIds: [], revision: 1,
+    id, familyId: 'fan', modelId: 'mfp', categoryIds: [], revision: 1, brand: null, gtin: null, mpn: `MPN-${id}`, noGtinReason: null,
     values: { power: slots({ type: 'measurement', amount: '1800', unitCode: 'W' }) },
     noValueReasons: {},
     derived: { identifier, label: null, completeChannels: [], sortKey },
   } as unknown as StoredProduct;
 }
 
+describe('η ταυτότητα εμπορίου στη συναρμολόγηση (ADR-934 Σ1γ Δ1)', () => {
+  const PRICED = { kind: 'priced' as const, price: { unit: 'C62' as const, quantity: 1, grossList: '1.00', net: null } };
+  const run = (products: readonly StoredProduct[], models: ReadonlyMap<string, StoredModel>, manufacturerBrandKeys: ReadonlySet<string>) =>
+    assembleXChangeProducts({ families: new Map([['fan', FAMILY]]), models, products, pricingOf: () => PRICED, manufacturerBrandKeys });
+  const withoutMpn = (id: string) => ({ ...product(id, `SKU-${id}`, id), mpn: null }) as unknown as StoredProduct;
+
+  it('χωρίς μάρκα ⇒ δεν γράφεται, μετριέται', () => {
+    const noBrand = new Map([['mfp', { ...MODEL, brand: null } as unknown as StoredModel]]);
+    expect(run([product('a', 'SKU-a', 'a')], noBrand, new Set())).toMatchObject({ sources: [], tradeIdentity: { brandMissing: 1, mpnMissing: 0, mpnTooLong: 0 } });
+  });
+  it('μεταπωλητής χωρίς MPN ⇒ δεν γράφεται· κατασκευαστής της μάρκας ⇒ ο κωδικός του είναι το MPN', () => {
+    const models = new Map([['mfp', MODEL]]);
+    expect(run([withoutMpn('a')], models, new Set()).tradeIdentity.mpnMissing).toBe(1);
+    const own = run([withoutMpn('a')], models, new Set(['aries']));
+    expect(own.sources[0]?.trade).toMatchObject({ brand: 'Aries', mpn: 'SKU-a' });
+  });
+  it('MPN πάνω από 35 χαρακτήρες ⇒ δεν γράφεται, ποτέ κομμένο', () => {
+    const long = { ...product('a', 'SKU-a', 'a'), mpn: 'M'.repeat(36) } as unknown as StoredProduct;
+    expect(run([long], new Map([['mfp', MODEL]]), new Set()).tradeIdentity.mpnTooLong).toBe(1);
+  });
+});
+
 describe('η συναρμολόγηση', () => {
   const judge = (byId: Record<string, XChangeSkuPricing>) => (sku: StoredProduct) => byId[sku.id];
   const PRICE = { unit: 'C62' as const, quantity: 1, grossList: '1.00', net: null };
   const input = (products: readonly StoredProduct[], byId: Record<string, XChangeSkuPricing>) =>
-    assembleXChangeProducts({ families: new Map([['fan', FAMILY]]), models: new Map([['mfp', MODEL]]), products, pricingOf: judge(byId) });
+    assembleXChangeProducts({ families: new Map([['fan', FAMILY]]), models: new Map([['mfp', MODEL]]), products, pricingOf: judge(byId), manufacturerBrandKeys: new Set() });
 
   it('η κληρονομιά λύνεται ανά SKU: το χρώμα του μοντέλου και η ισχύς του SKU', () => {
     const { sources } = input([product('a', 'MFP-15', 'a')], { a: { kind: 'priced', price: PRICE } });

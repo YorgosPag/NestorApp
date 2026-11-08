@@ -364,7 +364,9 @@ solo = δικό του προϊόν πλατφόρμας με ΜΙΑ προσφ�
   στήλες στα πεδία πλατφόρμας με τον **ίδιο** μηχανισμό αντιστοίχισης. Η AI **προτείνει** τη στήλη «EAN»· ο προμηθευτής εγκρίνει.
 - ETIM xChange: ανάγνωση `ProductGtin` / `ItemGtin` (πρώτο έγκυρο, με αναφορά των υπολοίπων) · `ManufacturerName` → μάρκα ·
   `ManufacturerProductNumber` → MPN (τώρα **κρατιέται**, δεν χάνεται).
-- Εξαγωγή ETIM: τα **πραγματικά** πεδία. Κενή μάρκα/MPN ⇒ το πεδίο λείπει και η αναφορά εξαγωγής το λέει. Ποτέ ψευδής κατασκευαστής.
+- Εξαγωγή ETIM: τα **πραγματικά** πεδία. ~~Κενή μάρκα/MPN ⇒ το πεδίο λείπει~~ — **διορθώθηκε στο Σ1γ**: το σχήμα 2.0 έχει
+  `ManufacturerName` **και** `ManufacturerProductNumber` στο `required`, άρα «το πεδίο λείπει» = άκυρο αρχείο. Ισχύει το Δ1 του §5.1.12.
+  Ποτέ ψευδής κατασκευαστής.
 
 #### 5.1.8 Κανόνες Firestore · δείκτες · πύλες
 
@@ -418,6 +420,53 @@ solo = δικό του προϊόν πλατφόρμας με ΜΙΑ προσφ�
 ⚠️ **Δεν επαληθεύτηκαν:** η πρόσβαση και το κόστος του Verified by GS1 / GEPIR για έλεγχο «σε ποια εταιρεία ανήκει το πρόθεμα»
 (οι πηγές που βρέθηκαν είναι φόρουμ πωλητών, όχι τεκμηρίωση GS1). Μένει ως μελλοντική αναβάθμιση της ουράς επιμέλειας, όχι μέρος του Σ1.
 
+#### 5.1.12 Σ1γ — όπως υλοποιήθηκε (2026-11-08 · σχέδιο εγκεκριμένο από Giorgio)
+
+**Ευρήματα πριν τον κώδικα** (επαληθευμένα στο `interop/etim/__tests__/fixtures/xchange-2.0.schema.json`): `ManufacturerName` (≤80) και
+`ManufacturerProductNumber` (≤35) **υποχρεωτικά**· `BrandName` (≤50) **χωριστό** από τον κατασκευαστή· `ProductGtin[]` (προϊόν) και
+`ItemGtin[]` (εμπορεύσιμο είδος) **διαφορετικοί** αριθμοί στο επίσημο δείγμα. Η πρόταση στηλών του αρχείου **δεν** είναι AI
+(υποδείξεις επικεφαλίδων)· AI έχει μόνο η ροή PDF.
+
+| # | Απόφαση (πρακτική των μεγάλων) | Στον κώδικα |
+|---|---|---|
+| **Δ1** | Εξαγωγή: `ManufacturerName` = `BrandName` = η μάρκα (βάθος 0) · `ManufacturerProductNumber` = το MPN. Χωρίς MPN, ο κωδικός SKU γίνεται MPN **μόνο** αν ο χώρος κατέχει τη μάρκα **ως κατασκευαστής** με ενεργό δικαίωμα (§16 · κανόνας Google «δώσε δικό σου MPN»). Αλλιώς το SKU **δεν γράφεται και μετριέται** (`brandMissing` · `mpnMissing` · `mpnTooLong`)· όλα εκτός ⇒ νέα αιτία κενού `noTradeIdentity` στον προέλεγχο | `xchange-export-assembly.ts` (`tradeOf`) · `catalog-to-xchange.ts` (`identificationOf`) · `xchange-export.server.ts` (`readManufacturerBrandKeys`) |
+| **Δ2** | Εισαγωγή ETIM: GTIN = της **μονάδας που πουλιέται** (GS1): πρώτο έγκυρο του `ItemGtin` του είδους, μετά του `ProductGtin`· τα άλλα μετριούνται (`extraGtins`). Κανένα έγκυρο ⇒ το πρώτο, ώστε ο κριτής να πει `gtinInvalid`. Μάρκα = `BrandName`, εφεδρεία `ManufacturerName` μετρημένη (`brandFromManufacturer`). Το `ManufacturerProductNumber` **κρατιέται** ως MPN | `xchange-to-groups.ts` (`tradeCells`) · `xchange-document.ts` · `xchange-report.ts` |
+| **Δ2β** | Εξαγωγή GTIN: `ItemGtin` πάντα· `ProductGtin` **μόνο** στη μονάδα βάσης (δείκτης 0): GTIN κιβωτίου δεν είναι το προϊόν | `identificationOf` · `tradeItemOf` |
+| **Δ3** | Το GTIN είναι **κλειδί αντιστοίχισης γραμμών** μετά τον κωδικό (κράτηση `@gtin`, ίδιο κλειδί με τον γραφέα). Κωδικός και GTIN σε **διαφορετικά** SKU ⇒ `identityKeysDisagree` (μπλοκάρει την έγκριση)· GTIN ξένου συνόλου ⇒ `uniqueValueTaken` ήδη στον έλεγχο, όχι 422 στο κουμπί. Πάνω από το Shopify, που απλώς προτιμά το barcode | `import-proposal-plan.server.ts` (`matchByGtin`) |
+| **Δ4** | PDF (AI) **εκτός** Σ1γ — βλ. Σ1γ′ παρακάτω | — |
+
+**Αγωγός εισαγωγής** — ένας δρόμος, κανένα δεύτερο αντίγραφο:
+- Στόχος `tradeIdentity { field }` (`types/catalog-import.ts` · zod), τύπος πεδίου από τα `TRADE_IDENTITY_FIELDS` + `BRAND_FIELD`.
+  Τιμή `tradeText`· το «χωρίς GTIN» ξαναχρησιμοποιεί `ImportNoValueReasonValue` / `parseNoValueReasonText`.
+- `import/trade-identity-fields.ts`: σύγκριση τριών σημείων **κατά κλειδί** μέσω του νέου `tradeFieldKeyOf` (`derived/trade-keys.ts`,
+  που το χρησιμοποιεί πια και το ίδιο το `tradeKeysOf`) ⇒ `4006381333931` ≡ `04006381333931`, «DAIKIN» ≡ «Daikin». «Χωρίς GTIN» πάνω
+  σε ζωντανό GTIN: η σημασιολογία του λόγου απουσίας (`noValueReplacesValue` · `unknownKeepsValue`). Δύο στήλες GTIN που διαφωνούν ⇒
+  `attributeRepeated`.
+- Επίπεδο: μάρκα ⇒ `shared` (ανεβαίνει στη ρίζα με τον υπάρχοντα `sharedCellsOf`· διαφωνία γραμμών **κατά κλειδί** ⇒ `sharedDisagrees`),
+  τα άλλα ⇒ SKU. Χωρίς σχήμα παραλλαγών όλα στο απλό προϊόν (βάθος 0).
+- Εγγραφή: `mergeFieldsIntoHolder` (+ μάρκα) και νέο `mergeFieldsIntoProduct` (+ GTIN/MPN/«χωρίς GTIN»), **μόνο** με `writeBrand` ·
+  `writeMpn` · `writeGtin` · `writeNoGtinReason`. `EMPTY_PRODUCT_IMPORT_HOLDER`: κανένα νέο SKU με χειρόγραφη τριάδα `null`. Το μοντέλο
+  δεν παίρνει ποτέ πεδία SKU: το κλείνει ο τύπος (`ImportHolderContent` ≠ `ImportProductContent`).
+- Κρίση: ο κριτής του γραφέα (`judgeProposal` → `validate-trade-identity`) με διαδρομή `<μέλος>.<πεδίο>` ⇒ `gtinInvalid` ·
+  `noValueConflict` · `valueTooLong` στο κελί. Ιστορικό: ο `commitAggregate` (τα 4 πεδία ήδη στο `audit-tracked-fields-catalog.ts`).
+- UI: ρόλοι στήλης `trade:<field>` + υποδείξεις επικεφαλίδων (`ean` · `gtin` · `barcode` · `upc` · `mpn` · «κωδικός κατασκευαστή» ·
+  «μάρκα» …) **πριν** από τις ιδιότητες· ο άνθρωπος εγκρίνει.
+- **Όριο φόρτωσης (CHECK 3.34)**: τα νέα μηνύματα της αναφοράς εξαγωγής ανέβασαν το route slice της «Εκδόσεις» σε 19471 > 19190.
+  Η αναφορά μπαίνει πλέον **μόνο** ως τεμπέλικη επιφάνεια `CatalogXChangeExportReport` (`components/catalog/interop/interop-surfaces.tsx` ·
+  `defineLazySurfaces`, εγγραφή στο `lazyRouteRegistries`)· το chunk περιμένει το `catalog`. Σφράγιση `lazyRouteMountSeal` 81 → 82 με `why`,
+  εγκεκριμένη από Giorgio. Σκέτο `next/dynamic` απορρίφθηκε (χρέος εισδοχής 339 → 340, ωμά κλειδιά). Άγκυρα:
+  `interop/__tests__/xchange-export-report-boundary.test.ts`.
+
+**Tests** (γραμμένα, **δεν** έτρεξαν — αναμένουν έγκριση): νέο `import/__tests__/trade-identity-import.test.ts` · νέες ενότητες στα
+`etim-xchange-roundtrip` (εξαγωγή + εισαγωγή ταυτότητας, μετ' επιστροφής, Ajv) · `xchange-export-pricing` (κενά ταυτότητας) ·
+`xchange-export-empty-cause` (`noTradeIdentity`). Προσαρμογές σχήματος στα `aries-table-reading` · `no-value-reason-import` ·
+`xchange-export` (διακομιστής) · `xchange-export-preview`.
+
+Εκτός Σ1γ, μόνο με «ναι» του Giorgio: **Σ1γ′** PDF — ντετερμινιστική ανίχνευση γραμμής EAN με το ψηφίο GS1 πριν από την AI ·
+**Π3** GTIN ως κλειδί και στη ροή «μόνο τιμές». ⚠️ Δεν επαληθεύτηκε με το **πλήρες** κείμενο του ETIM Guideline 2.0 η οδηγία για
+private label στο `ManufacturerName` (το απόσπασμα του PDF ορίζει το EX000039 ως «όνομα της μάρκας»)· αν πει άλλο, αλλάζει **μόνο**
+το `identificationOf`.
+
 ## 6. Πάνω από τους μεγάλους — προτάσεις (κρίνονται ανά στάδιο, όχι δεσμευτικές ακόμη)
 
 1. **Σύγκριση με μονάδες, όχι με κείμενο.** Οι ιδιότητες μέτρησης έχουν ήδη τυποποιημένη μονάδα (`amountStandard`).
@@ -455,3 +504,4 @@ solo = δικό του προϊόν πλατφόρμας με ΜΙΑ προσφ�
 | 2026-11-08 | Έγκριση Giorgio: Ε1–Ε5 όπως προτάθηκαν· Plan Mode ανά υπο-βήμα. Ε5 μετρήθηκε (ανάγνωση μόνο): καμία ιδιότητα EAN/GTIN στη βάση ⇒ χωρίς εργαλείο μεταφοράς. |
 | 2026-11-08 | **Σ1α υλοποιήθηκε:** `src/lib/validation/gtin.ts` (ένας αναλυτής `parseGtin`: μήκη 8/12/13/14, ψηφίο GS1, GTIN-14, κατάταξη προθέματος, δείκτης συσκευασίας· μία κρίση `isMatchableGtin`) + `__tests__/gtin.test.ts` (γραμμένο, **δεν** έτρεξε — αναμένει έγκριση). Εύρημα κατά την επαλήθευση: το **GTIN-8 έχει δικό του πίνακα προθεμάτων** (`000–099`, `200–299` = εσωτερικοί κωδικοί) ⇒ η κατάταξη γίνεται στο **αρχικό** μήκος. Τα `980–999` αντιμετωπίζονται συντηρητικά ως μη εμπορεύσιμα (οι πηγές διαφωνούν για 983/984· το `gs1.org/prefixes` απάντησε 403). Το UPC-E δεν γίνεται δεκτό ως GTIN-8· αν δοθεί, αποτυγχάνει με ασφάλεια (κατατάσσεται εσωτερικός, δεν ταυτίζει). |
 | 2026-11-08 | **Σ1β υλοποιήθηκε** (σχέδιο εγκεκριμένο από Giorgio, §5.1.11): πεδία `brand` (βάθος 0) · `gtin` · `mpn` · `noGtinReason` (SKU) στον ορισμό + zod · κρίση `validate-trade-identity` μέσα στην `judgeAggregate` · κράτηση `@gtin` στον υπάρχοντα μηχανισμό · `derived.tradeKeys` με την κλίμακα Α5 (`tradeIdentifierBasis`) · ενότητα επεξεργαστή + 3 στήλες πλέγματος παραλλαγών · ιστορικό ανά πεδίο · i18n el/en. Παλιά έγγραφα: ένας αναγνώστης `?? null`, καμία μετάπτωση. Tests: νέα `trade-keys` · `validate-trade-identity` · `trade-identity` + τα αγγιγμένα (`sort-key` · `aggregate-vat` · `holder-edit` · `product-editor.render` · `catalog-import-pipeline`) — **95/95 πράσινα** (έτρεξαν με έγκριση Giorgio). |
+| 2026-11-08 | **Σ1γ υλοποιήθηκε** (σχέδιο εγκεκριμένο από Giorgio, §5.1.12): στόχος εισαγωγής `tradeIdentity` (αρχείο, με υποδείξεις επικεφαλίδων) · σύγκριση κατά κλειδί (`tradeFieldKeyOf`) · μάρκα στη ρίζα · `mergeFieldsIntoProduct` μόνο με τις πράξεις του `trade-identity` · GTIN ως κλειδί αντιστοίχισης γραμμών (`identityKeysDisagree`) · ανάγνωση ETIM `ItemGtin`/`ProductGtin`/`BrandName`/`ManufacturerName`/MPN · 🔴 **διόρθωση εξαγωγής**: ο κατασκευαστής είναι η μάρκα, ποτέ ο προμηθευτής· SKU χωρίς μάρκα/MPN δεν γράφεται και μετριέται (νέα αιτία `noTradeIdentity`). Εύρημα: το σχήμα 2.0 θέλει υποχρεωτικά `ManufacturerName` + `ManufacturerProductNumber` ⇒ το «κενό ⇒ λείπει» του §5.1.7 ήταν αδύνατο. Tests γραμμένα, **δεν** έτρεξαν (αναμένουν έγκριση). Δεν επαληθεύτηκε ζωντανά. |

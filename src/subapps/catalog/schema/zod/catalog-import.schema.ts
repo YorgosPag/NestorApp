@@ -17,6 +17,7 @@ import {
   IMPORT_SOURCE_KINDS,
 } from '../../vocabulary/catalog-import';
 import { CATALOG_LIMITS } from '../../vocabulary/catalog-limits';
+import { BRAND_FIELD, TRADE_IDENTITY_FIELDS } from '../../values/trade-identity';
 import { catalogCodeSchema, entityIdSchema, expectedRevisionSchema, measurementUnitCodeSchema } from './common.schema';
 
 const MAX_COLUMNS = 200;
@@ -34,6 +35,7 @@ const importTargetSchema: z.ZodType<ImportTarget> = z.discriminatedUnion('kind',
   }),
   z.object({ kind: z.literal('price'), field: z.enum(IMPORT_PRICE_FIELDS) }),
   z.object({ kind: z.literal('noValueReason'), attributeId: entityIdSchema }),
+  z.object({ kind: z.literal('tradeIdentity'), field: z.enum([...TRADE_IDENTITY_FIELDS, BRAND_FIELD]) }),
 ]);
 
 const columnRuleSchema = z.object({

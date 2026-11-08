@@ -11,6 +11,7 @@ import { PLATFORM_MEASUREMENT_REGISTRY } from '../../measurement/measurement-reg
 import type { ExtractedCell, ExtractedGroup, ImportFieldValue, ImportProposalField } from '../../types/catalog-import';
 import { ANY_SLOT, type NoValueReasons, type ProductValues } from '../../types/product';
 import { buildAttributeRows, type AttributeProposalContext, type LiveHolder } from '../build-attribute-proposal';
+import { EMPTY_LIVE_TRADE_IDENTITY } from '../trade-identity-fields';
 import { judgeProposal } from '../judge-proposal';
 import { EMPTY_IMPORT_HOLDER, importTargetKey, mergeFieldsIntoHolder, parseNoValueReasonText } from '../proposal-values';
 
@@ -29,7 +30,7 @@ const valueCell = (attributeId: string, value: string, unitCode: string | null =
 });
 
 const groupOf = (cells: readonly ExtractedCell[]): ExtractedGroup => ({ groupKey: 'g', modelCode: null, sharedCells: [], rows: [{ rowKey: 'p1', cells }], pages: [] });
-const liveOf = (values: ProductValues, noValueReasons: NoValueReasons = {}): LiveHolder => ({ id: 'cpr_1', revision: 2, values, noValueReasons });
+const liveOf = (values: ProductValues, noValueReasons: NoValueReasons = {}): LiveHolder => ({ id: 'cpr_1', revision: 2, values, noValueReasons, trade: EMPTY_LIVE_TRADE_IDENTITY });
 
 function fieldFor(cells: readonly ExtractedCell[], live: LiveHolder | null, base: ReadonlyMap<string, ImportFieldValue> = new Map()): ImportProposalField {
   const context: AttributeProposalContext = {
@@ -115,12 +116,12 @@ describe('η ΜΙΑ συγχώνευση στον φορέα (κριτής + έ�
   const accepted = (field: ImportProposalField) => field.decision === 'accept';
 
   it('ο λόγος σβήνει τις τιμές της ιδιότητας (ποτέ μαζί)', () => {
-    const merged = mergeFieldsIntoHolder({ values: WEIGHT, noValueReasons: {} }, [reasonField('weight', 'notApplicable')], accepted);
-    expect(merged).toEqual({ values: {}, noValueReasons: { weight: 'notApplicable' } });
+    const merged = mergeFieldsIntoHolder({ values: WEIGHT, noValueReasons: {}, brand: null }, [reasonField('weight', 'notApplicable')], accepted);
+    expect(merged).toEqual({ values: {}, noValueReasons: { weight: 'notApplicable' }, brand: null });
   });
 
   it('🔴 η τιμή σβήνει τον λόγο — πριν, το «16 kg» πάνω σε «δεν εφαρμόζεται» έδινε noValueConflict στην έγκριση', () => {
-    const merged = mergeFieldsIntoHolder({ values: {}, noValueReasons: { weight: 'notApplicable' } }, [weightField], accepted);
+    const merged = mergeFieldsIntoHolder({ values: {}, noValueReasons: { weight: 'notApplicable' }, brand: null }, [weightField], accepted);
     expect(merged.noValueReasons).toEqual({});
     expect(merged.values.weight).toEqual({ [ANY_SLOT]: { [ANY_SLOT]: { type: 'measurement', amount: '16', unitCode: 'kg' } } });
   });
@@ -133,12 +134,12 @@ describe('η ΜΙΑ συγχώνευση στον φορέα (κριτής + έ�
   });
 
   it('ό,τι δεν επιλέχθηκε δεν γράφεται', () => {
-    const holder = { values: WEIGHT, noValueReasons: {} };
+    const holder = { values: WEIGHT, noValueReasons: {}, brand: null };
     expect(mergeFieldsIntoHolder(holder, [reasonField('weight', 'notApplicable', 'reject')], accepted)).toEqual(holder);
   });
 
   it('κρατά τα υπόλοιπα πεδία του φορέα (κατηγορίες, κωδικό)', () => {
-    const merged = mergeFieldsIntoHolder({ code: 'mfp', categoryIds: ['c'], values: {}, noValueReasons: {} }, [reasonField('weight', 'unknown')], accepted);
+    const merged = mergeFieldsIntoHolder({ code: 'mfp', categoryIds: ['c'], values: {}, noValueReasons: {}, brand: null }, [reasonField('weight', 'unknown')], accepted);
     expect(merged).toMatchObject({ code: 'mfp', categoryIds: ['c'], noValueReasons: { weight: 'unknown' } });
   });
 });

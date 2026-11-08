@@ -7,8 +7,10 @@ import schema20 from './fixtures/xchange-2.0.schema.json';
 import { xchangeEmptyCause, xchangeNothingToExportIssue, type XChangeAssembly } from '../xchange-export-assembly';
 import { ETIM_ITEM_NUMBER_MAX } from '../../../vocabulary/etim';
 
-const assembly = (over: Partial<XChangeAssembly>): XChangeAssembly => ({ sources: [], hidden: 0, unfitIdentifier: 0, onRequest: {}, ...over });
-const ONE_SOURCE = [{ identifier: 'A', label: 'A', familyId: 'f', values: new Map(), noValueReasons: new Map(), price: null }];
+const NO_GAPS = { brandMissing: 0, mpnMissing: 0, mpnTooLong: 0 };
+const assembly = (over: Partial<XChangeAssembly>): XChangeAssembly => ({ sources: [], hidden: 0, unfitIdentifier: 0, tradeIdentity: NO_GAPS, onRequest: {}, ...over });
+const TRADE = { brand: 'Aries', mpn: 'A', gtin: null, gtinIsBase: false };
+const ONE_SOURCE = [{ identifier: 'A', trade: TRADE, label: 'A', familyId: 'f', values: new Map(), noValueReasons: new Map(), price: null }];
 
 describe('xchangeEmptyCause', () => {
   it('έστω ένα προϊόν ⇒ καμία αιτία, όσα κι αν μένουν εκτός', () => {
@@ -29,6 +31,11 @@ describe('xchangeEmptyCause', () => {
 
   it('κάποια ορατά αλλά κανένα με κωδικό που χωρά ⇒ noUsableIdentifier, ακόμη κι αν τα υπόλοιπα είναι κρυφά', () => {
     expect(xchangeEmptyCause(assembly({ hidden: 5, unfitIdentifier: 3 }), { productCount: 8, visibilityRuleCount: 0 })).toBe('noUsableIdentifier');
+  });
+  it('ADR-934 Σ1γ: ορατά με κωδικό αλλά χωρίς μάρκα/MPN ⇒ noTradeIdentity (ποτέ ψευδής κατασκευαστής)', () => {
+    const gaps = { brandMissing: 2, mpnMissing: 1, mpnTooLong: 0 };
+    expect(xchangeEmptyCause(assembly({ hidden: 5, unfitIdentifier: 0, tradeIdentity: gaps }), { productCount: 8, visibilityRuleCount: 1 })).toBe('noTradeIdentity');
+    expect(xchangeEmptyCause(assembly({ hidden: 5, unfitIdentifier: 1, tradeIdentity: { ...gaps, mpnMissing: 0 } }), { productCount: 8, visibilityRuleCount: 1 })).toBe('noTradeIdentity');
   });
 });
 

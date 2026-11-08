@@ -48,7 +48,7 @@ function seedCatalog(): void {
   });
   const ids = [...MFP_SIZES.map((_, index) => mfpVariantId(index)), SIMPLE_VARIANT_ID];
   ids.forEach((id, index) => fake.seed('catalog_products', id, {
-    ...common, id, familyId: 'fan', modelId: null, categoryIds: [], noValueReasons: {},
+    ...common, id, familyId: 'fan', modelId: null, categoryIds: [], noValueReasons: {}, brand: 'Aries', gtin: null, mpn: `MPN-${index}`, noGtinReason: null,
     values: { power: { [ANY_SLOT]: { [ANY_SLOT]: { type: 'measurement', amount: '1800', unitCode: 'W' } } } },
     derived: { identifier: `SKU-${index}`, label: `Fan coil ${index}`, completeChannels: [], sortKey: String(index).padStart(2, '0') },
   }));
@@ -154,8 +154,8 @@ describe('ο προέλεγχος και η κενή εξαγωγή (§5.14.1 ·
     const preview = await previewXChangeExport(ARIES, PUBLIC);
     const { summary } = await exportXChangeCatalog(ARIES, { audience: PUBLIC, language: 'el' });
     // Η στιγμή (`at`) είναι η μόνη διαφορά δύο κρίσεων με απόσταση χιλιοστών· όλα τα άλλα πρέπει να ταυτίζονται.
-    const { audience, priceSource, exported, hidden, unfitIdentifier, onRequest } = summary;
-    expect(preview).toEqual({ audience, priceSource, at: expect.any(String), exported, hidden, unfitIdentifier, onRequest, emptyCause: null, blockers: [] });
+    const { audience, priceSource, exported, hidden, unfitIdentifier, tradeIdentity, onRequest } = summary;
+    expect(preview).toEqual({ audience, priceSource, at: expect.any(String), exported, hidden, unfitIdentifier, tradeIdentity, onRequest, emptyCause: null, blockers: [] });
   });
 
   it('κανένας κανόνας ⇒ ο προέλεγχος λέει την αιτία, και η εξαγωγή ΑΡΝΕΙΤΑΙ αντί για άκυρο αρχείο με Product: []', async () => {

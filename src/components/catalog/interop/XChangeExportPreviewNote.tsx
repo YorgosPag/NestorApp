@@ -34,6 +34,7 @@ const FIX_OF: Readonly<Record<XChangeEmptyCause, typeof PRODUCTS_FIX | typeof VI
   noVisibilityRules: VISIBILITY_FIX,
   hiddenForAudience: VISIBILITY_FIX,
   noUsableIdentifier: PRODUCTS_FIX,
+  noTradeIdentity: PRODUCTS_FIX,
 };
 
 function NothingToExport({ cause }: { readonly cause: XChangeEmptyCause }) {
@@ -49,7 +50,8 @@ function NothingToExport({ cause }: { readonly cause: XChangeEmptyCause }) {
 
 function ExportableLine({ preview }: { readonly preview: XChangeExportPreview }) {
   const { t } = useCatalogText();
-  const left = preview.hidden + preview.unfitIdentifier;
+  const { brandMissing, mpnMissing, mpnTooLong } = preview.tradeIdentity;
+  const left = preview.hidden + preview.unfitIdentifier + brandMissing + mpnMissing + mpnTooLong;
   return (
     <p className="m-0 text-sm text-muted-foreground" role="status">
       {t('xchangeExport.preview.ready', { count: preview.exported })}

@@ -13,7 +13,7 @@
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { CATALOG_IMPORT_NAMESPACES } from '@/i18n/namespace-bundles';
-import type { ImportPageSetAside, ImportPageTextless } from '@/subapps/catalog/types/catalog-import';
+import type { ImportPageSetAside, ImportPageTextless, ImportTradeField } from '@/subapps/catalog/types/catalog-import';
 import type {
   ImportBatchStatus,
   ImportFieldStatus,
@@ -71,3 +71,14 @@ export const PRICE_FIELD_KEYS: Readonly<Record<ImportPriceField, string>> = {
   unitCode: 'mapping.price.unitCode',
   discountGroup: 'mapping.price.discountGroup',
 };
+
+/** Οι ετικέτες των πεδίων ταυτότητας εμπορίου (ADR-934 Σ1γ), στον επιλογέα στήλης και στη γραμμή της πρότασης. */
+export const TRADE_FIELD_KEYS: Readonly<Record<ImportTradeField, string>> = {
+  gtin: 'mapping.trade.gtin',
+  mpn: 'mapping.trade.mpn',
+  brand: 'mapping.trade.brand',
+  noGtinReason: 'mapping.trade.noGtinReason',
+};
+
+/** Η σειρά τους στον επιλογέα: πρώτα ο κωδικός που ταυτίζει. */
+export const IMPORT_TRADE_FIELDS: readonly ImportTradeField[] = ['gtin', 'mpn', 'brand', 'noGtinReason'];

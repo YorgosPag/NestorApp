@@ -12,9 +12,8 @@ import type { CatalogSchemaSnapshot } from '../derived/chain-derived';
 import { evaluateConsistency, type ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { CatalogIssue } from '../schema/catalog-issues';
 import type { ImportIssue, ImportProposalField, ImportProposalRow } from '../types/catalog-import';
-import { EMPTY_BRAND, EMPTY_TRADE_IDENTITY } from '../values/trade-identity';
 import { defaultDecisionOf } from './field-diff';
-import { EMPTY_IMPORT_HOLDER, mergeFieldsIntoHolder } from './proposal-values';
+import { EMPTY_IMPORT_HOLDER, EMPTY_PRODUCT_IMPORT_HOLDER, mergeFieldsIntoHolder, mergeFieldsIntoProduct } from './proposal-values';
 
 export interface ProposalHoldings {
   readonly rootModel: StoredModelShape | null;
@@ -52,15 +51,15 @@ function rootMember(input: ProposalAggregateInput, row: ImportProposalRow | unde
     return row ? updatedModelMember(rootModel, mergeFieldsIntoHolder(rootModel, fields, proposed)) : unchangedMember({ kind: 'productModel', record: rootModel });
   }
   if (!schema.scheme) return null;
-  const definition = { code: modelCode ?? '', familyId, variantSchemeCode: schema.scheme.code, parentId: null, categoryIds, ...EMPTY_BRAND, ...mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, fields, proposed) };
+  const definition = { code: modelCode ?? '', familyId, variantSchemeCode: schema.scheme.code, parentId: null, categoryIds, ...mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, fields, proposed) };
   return createdModelMember(NEW_ROOT_ID, definition);
 }
 
 function productMember(row: ImportProposalRow, rootId: string | null, input: ProposalAggregateInput): AggregateMember {
   const stored = row.holderId === null ? undefined : input.holdings.products.get(row.holderId);
-  if (stored) return updatedProductMember(stored, mergeFieldsIntoHolder(stored, row.fields, proposed));
-  const content = mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, proposed);
-  return createdProductMember(row.rowKey, { modelId: rootId, familyId: input.familyId, categoryIds: input.categoryIds, ...EMPTY_BRAND, ...EMPTY_TRADE_IDENTITY, ...content });
+  if (stored) return updatedProductMember(stored, mergeFieldsIntoProduct(stored, row.fields, proposed));
+  const content = mergeFieldsIntoProduct(EMPTY_PRODUCT_IMPORT_HOLDER, row.fields, proposed);
+  return createdProductMember(row.rowKey, { modelId: rootId, familyId: input.familyId, categoryIds: input.categoryIds, ...content });
 }
 
 /** Το υποθετικό σύνολο «αν εγκριθούν όλα». Το ίδιο κρίνεται και από το ίδιο διαβάζονται οι αναφορές του (`readAggregateReferences`). */
@@ -109,6 +108,8 @@ function cellPathOf(field: ImportProposalField, memberId: string): { readonly pa
   const { target } = field;
   if (target.kind === 'attribute') return { path: `${memberPath(memberId)}.values.${target.attributeId}`, attributeId: target.attributeId };
   if (target.kind === 'noValueReason') return { path: `${memberPath(memberId)}.noValueReasons.${target.attributeId}`, attributeId: target.attributeId };
+  // Πεδίο πλατφόρμας (ADR-934 Σ1γ): ο κριτής γράφει `<μέλος>.gtin` · `.brand` · … — και την κράτηση `@gtin` στο ίδιο σημείο.
+  if (target.kind === 'tradeIdentity') return { path: `${memberPath(memberId)}.${target.field}`, attributeId: target.field };
   return null;
 }
 

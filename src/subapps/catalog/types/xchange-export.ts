@@ -18,6 +18,19 @@ export type XChangeExportAudience =
   | { readonly kind: 'public' }
   | { readonly kind: 'priceList'; readonly priceListId: string };
 
+/**
+ * Γιατί ένα ορατό SKU **δεν** γράφεται από έλλειψη ταυτότητας (ADR-934 Σ1γ Δ1). Το σχήμα 2.0 θέλει υποχρεωτικά `ManufacturerName`
+ * και `ManufacturerProductNumber`· ψευδής κατασκευαστής ή επινοημένο MPN δεν γράφεται ποτέ.
+ *   - `brandMissing`: καμία μάρκα στη ρίζα του·
+ *   - `mpnMissing`: κανένα MPN, και ο χώρος **δεν** κατέχει τη μάρκα ως κατασκευαστής (αλλιώς ο κωδικός του **είναι** το MPN)·
+ *   - `mpnTooLong`: MPN μακρύτερο από όσο δέχεται το σχήμα — ποτέ κομμένο, θα ήταν άλλο προϊόν.
+ */
+export interface XChangeTradeIdentityGaps {
+  readonly brandMissing: number;
+  readonly mpnMissing: number;
+  readonly mpnTooLong: number;
+}
+
 /** Η λίστα και η έκδοση από τις οποίες βγήκαν οι τιμές. `null` στην αναφορά ⇒ καμία λίστα δεν ισχύει για το κοινό. */
 export interface XChangeExportPriceSource {
   readonly priceListId: string;
@@ -42,6 +55,8 @@ export interface XChangeExportCounts {
   readonly hidden: number;
   /** Ορατά, αλλά χωρίς κωδικό SKU ή με κωδικό μακρύτερο από όσο δέχεται το σχήμα: δεν γράφονται. */
   readonly unfitIdentifier: number;
+  /** Ορατά, με κωδικό, αλλά χωρίς την ταυτότητα που το σχήμα θέλει υποχρεωτική (ADR-934 Σ1γ Δ1): δεν γράφονται. */
+  readonly tradeIdentity: XChangeTradeIdentityGaps;
   /** Γράφονται ως `PriceOnRequest`, ανά αιτία. */
   readonly onRequest: Readonly<Partial<Record<XChangeOnRequestReason, number>>>;
 }

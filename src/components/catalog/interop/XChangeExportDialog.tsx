@@ -11,6 +11,8 @@
  * 🔑 Οι λίστες φορτώνουν **μόνο** όταν ανοίξει το παράθυρο (το component μοντάρεται τότε).
  * 🔒 **Προέλεγχος πριν το κλικ** (§5.14.1 · Ε3): για κάθε κοινό, πόσα προϊόντα θα γραφτούν. Κανένα ⇒ η αιτία και ο δρόμος της
  *    διόρθωσης, και το κουμπί κλειστό: το σχήμα δεν δέχεται κενό αρχείο, άρα δεν υπάρχει «κατέβασέ το έτσι κι αλλιώς».
+ * ⚠️ Η **αναφορά** μπαίνει μόνο ως τεμπέλικη επιφάνεια (`interop-surfaces.tsx`): φαίνεται αφού κατέβει το αρχείο, άρα τα κλειδιά
+ *    της δεν ανήκουν στο πρώτο καρέ της «Εκδόσεις» (CHECK 3.34 · ADR-934 Σ1γ). Άγκυρα: `__tests__/xchange-export-report-boundary.test.ts`.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -27,7 +29,7 @@ import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { useXChangeExport } from './use-xchange-export';
 import { useXChangeExportPreview } from './use-xchange-export-preview';
 import { XChangeExportPreviewNote, XChangeIssueList, xchangePreviewAllowsExport } from './XChangeExportPreviewNote';
-import { XChangeExportReport } from './XChangeExportReport';
+import { XChangeExportReportSlot } from './interop-surfaces';
 
 /** Η τιμή της επιλογής «δημόσια τιμή». Τα ids λίστας έχουν πρόθεμα, άρα δεν συγκρούονται. */
 const PUBLIC_CHOICE = 'public';
@@ -75,7 +77,7 @@ function XChangeExportDialog({ onOpenChange }: { readonly onOpenChange: (open: b
         <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void run(priceListId, resolveHumanLanguage(language)); }}>
           <AudienceSelect value={choice} disabled={exporting} onChange={choose} />
           {state.kind === 'refused' ? <XChangeIssueList issues={state.issues} /> : null}
-          {state.kind === 'done' ? <XChangeExportReport summary={state.summary} /> : null}
+          {state.kind === 'done' ? <XChangeExportReportSlot summary={state.summary} /> : null}
           {state.kind === 'idle' || state.kind === 'exporting' ? <XChangeExportPreviewNote state={preview.state} /> : null}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={close}>{t('xchangeExport.close')}</Button>

@@ -35,6 +35,16 @@ function onRequestLine(summary: XChangeExportSummary, t: Translate): string | nu
   return count === 0 ? null : t('xchangeExport.report.onRequest', { count, reasons: parts.map((part) => part.text).join(' · ') });
 }
 
+/** Ορατά SKU που δεν γράφτηκαν από έλλειψη ταυτότητας (ADR-934 Σ1γ Δ1): ποτέ ψευδής κατασκευαστής, ποτέ επινοημένο MPN. */
+function tradeIdentityLines(summary: XChangeExportSummary, t: Translate): readonly (string | null)[] {
+  const { brandMissing, mpnMissing, mpnTooLong } = summary.tradeIdentity;
+  return [
+    brandMissing > 0 ? t('xchangeExport.report.brandMissing', { count: brandMissing }) : null,
+    mpnMissing > 0 ? t('xchangeExport.report.mpnMissing', { count: mpnMissing }) : null,
+    mpnTooLong > 0 ? t('xchangeExport.report.mpnTooLong', { count: mpnTooLong }) : null,
+  ];
+}
+
 function contentLines(summary: XChangeExportSummary, t: Translate): readonly (string | null)[] {
   const { withoutClass, unitUndeclared, optionUnmapped, typeUnsupported } = summary.content;
   return [
@@ -53,6 +63,7 @@ export function XChangeExportReport({ summary }: { readonly summary: XChangeExpo
     t('xchangeExport.report.at', { date: formatDateTime(new Date(summary.at)) }),
     summary.hidden > 0 ? t('xchangeExport.report.hidden', { count: summary.hidden }) : null,
     summary.unfitIdentifier > 0 ? t('xchangeExport.report.unfitIdentifier', { count: summary.unfitIdentifier }) : null,
+    ...tradeIdentityLines(summary, t),
     onRequestLine(summary, t),
     ...contentLines(summary, t),
     t('xchangeExport.report.codesOnly'),

@@ -24,4 +24,5 @@ export const IMPORT_ISSUE_KEYS: Readonly<Record<ImportIssueCode, string>> = {
   noValueReplacesValue: 'issues.noValueReplacesValue',
   unknownKeepsValue: 'issues.unknownKeepsValue',
   noValueReasonUnreadable: 'issues.noValueReasonUnreadable',
+  identityKeysDisagree: 'issues.identityKeysDisagree',
 };

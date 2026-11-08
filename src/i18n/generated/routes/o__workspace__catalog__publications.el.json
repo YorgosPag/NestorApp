@@ -274,37 +274,11 @@
           "products": "Άνοιγμα προϊόντων",
           "visibility": "Ρύθμιση ορατότητας"
         },
-        "left": "{count, plural, one {# μένει εκτός: κρυφό ή χωρίς κατάλληλο κωδικό.} other {# μένουν εκτός: κρυφά ή χωρίς κατάλληλο κωδικό.}}",
+        "left": "{count, plural, one {# μένει εκτός: κρυφό, ή χωρίς κατάλληλο κωδικό, μάρκα ή MPN.} other {# μένουν εκτός: κρυφά, ή χωρίς κατάλληλο κωδικό, μάρκα ή MPN.}}",
         "loading": "Υπολογίζεται τι θα εξαχθεί…",
         "ready": "{count, plural, one {Θα εξαχθεί # προϊόν.} other {Θα εξαχθούν # προϊόντα.}}"
       },
       "public": "Δημόσια τιμή καταλόγου (ανώνυμος επισκέπτης)",
-      "reason": {
-        "ambiguousDiscount": "{count} με ασαφή έκπτωση",
-        "ambiguousPriceList": "{count} με ασαφή λίστα τιμών",
-        "invalidQuantity": "{count} με άκυρη ποσότητα",
-        "noLine": "{count} χωρίς γραμμή τιμής",
-        "noPriceList": "{count} χωρίς λίστα τιμών",
-        "noVersion": "{count} χωρίς έκδοση σε ισχύ",
-        "unitUnmapped": "{count} με μονάδα χωρίς κωδικό xChange",
-        "visibleNoPrice": "{count, plural, one {# ορατό χωρίς τιμή} other {# ορατά χωρίς τιμή}}"
-      },
-      "report": {
-        "at": "Τιμές και ορατότητα όπως ίσχυαν στις {date}.",
-        "codesOnly": "Το αρχείο περιέχει μόνο κωδικούς ETIM, όχι ονόματα.",
-        "exported": "{count, plural, one {# προϊόν γράφτηκε} other {# προϊόντα γράφτηκαν}} στο {file}.",
-        "hidden": "{count, plural, one {# προϊόν είναι κρυφό για το κοινό και δεν εξήχθη} other {# προϊόντα είναι κρυφά για το κοινό και δεν εξήχθησαν}}.",
-        "noPriceList": "Καμία λίστα τιμών για αυτό το κοινό.",
-        "onRequest": "{count, plural, one {# προϊόν} other {# προϊόντα}} με «ζητήστε προσφορά»: {reasons}.",
-        "optionUnmapped": "Χαρακτηριστικά με επιλογή χωρίς κωδικό ETIM, δεν γράφτηκαν: {codes}.",
-        "priceSource": "Τιμές από «{list}», έκδοση {version}, σε ισχύ από {date}.",
-        "priceSourceNoVersion": "Τιμές από «{list}»: καμία έκδοση σε ισχύ.",
-        "title": "Αναφορά εξαγωγής",
-        "typeUnsupported": "Χαρακτηριστικά που δεν εκφράζονται στο xChange, δεν γράφτηκαν: {codes}.",
-        "unfitIdentifier": "{count, plural, one {# προϊόν δεν εξήχθη} other {# προϊόντα δεν εξήχθησαν}}: χωρίς κωδικό ή με κωδικό πάνω από 35 χαρακτήρες.",
-        "unitUndeclared": "Χαρακτηριστικά χωρίς δηλωμένη μονάδα ETIM, δεν γράφτηκαν: {codes}.",
-        "withoutClass": "{count, plural, one {# προϊόν} other {# προϊόντα}} σε οικογένεια χωρίς κλάση ETIM, χωρίς τεχνικά στοιχεία."
-      },
       "title": "Εξαγωγή ETIM xChange 2.0"
     }
   }

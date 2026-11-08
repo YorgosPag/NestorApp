@@ -18,6 +18,8 @@ import 'server-only';
  *    την **αιτία** (`xchangeEmptyCause`), και ο προέλεγχος (`previewXChangeExport`) το λέει **πριν** τη λήψη, από την **ίδια**
  *    κρίση (`judgeAudience`): οι δύο δεν μπορούν να διαφωνήσουν.
  * 🔑 Η άδεια ODC-BY του μοντέλου ETIM ζητά αναφορά όπου εμφανίζονται **ονόματα** ETIM. Εδώ γράφονται μόνο κωδικοί.
+ * 🔑 **Ταυτότητα εμπορίου** (ADR-934 Σ1γ Δ1): ο κατασκευαστής του αρχείου είναι η **μάρκα** του SKU, ποτέ η επωνυμία του χώρου.
+ *    Ο κωδικός SKU γίνεται MPN **μόνο** για μάρκα που ο χώρος κατέχει ως κατασκευαστής, με ενεργό δικαίωμα (§16).
  * @module server/catalog/xchange-export.server
  */
 
@@ -36,6 +38,7 @@ import {
   type XChangeAssembly,
 } from '@/subapps/catalog/interop/etim/xchange-export-assembly';
 import { xchangeSkuPricing } from '@/subapps/catalog/interop/etim/xchange-pricing';
+import { activeBrandGrant } from '@/subapps/catalog/public/supplier-brand-claim-rules';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { judgeVisibility } from '@/subapps/catalog/pricing/visibility';
 import type { StoredProduct } from '@/subapps/catalog/publishing/publication-chapters';
@@ -54,6 +57,7 @@ import { readOwned, runCatalogReadOnly, type CatalogTx } from './catalog-store.s
 import { CatalogWriteError, assertNoIssues } from './catalog-write-error';
 import { basisVersion, quoteOnBasis, readQuoteBasis, type QuoteBasis, type QuoteLine } from './price-quote.server';
 import { readVersionLines } from './price-version-reads.server';
+import { readOwnBrandClaims } from './supplier-brand-claim.server';
 import { viewerOf } from './pricing-viewer.server';
 import { ancestryOfChain, readVisibilityRules } from './visibility-reads.server';
 
@@ -156,6 +160,12 @@ function pricingJudge({ basis, lines, rules, categories }: Judgement) {
   };
 }
 
+/** Οι μάρκες που ο χώρος κατέχει **ως κατασκευαστής** τη στιγμή της κρίσης (ίδιο κλειδί με το `tradeKeys.brandKey`). */
+async function readManufacturerBrandKeys(scope: CatalogTx, atMs: number): Promise<ReadonlySet<string>> {
+  const records = await readOwnBrandClaims(scope.db, scope.ctx.companyId);
+  return new Set(records.flatMap((record) => (activeBrandGrant(record, atMs)?.relation === 'manufacturer' ? [record.brandKey] : [])));
+}
+
 const dateOf = (iso: string): string => localDateOf(new Date(normalizeToMillisOrNull(iso) ?? Date.now()));
 
 interface AudienceJudgement {
@@ -169,16 +179,21 @@ interface AudienceJudgement {
 async function judgeAudience(scope: CatalogTx, audience: XChangeExportAudience): Promise<AudienceJudgement> {
   const terms = await audienceTermsOf(scope, audience);
   const basis = await readQuoteBasis(scope, { priceListId: terms.priceListId, at: scope.now }, terms.viewer);
-  const [data, rules, lines] = await Promise.all([readExportData(scope), readVisibilityRules(scope), readBasisLines(scope, basis)]);
-  const assembly = assembleXChangeProducts({ ...data, pricingOf: pricingJudge({ basis, lines, rules, categories: data.categories }) });
+  const [data, rules, lines, manufacturerBrandKeys] = await Promise.all([
+    readExportData(scope),
+    readVisibilityRules(scope),
+    readBasisLines(scope, basis),
+    readManufacturerBrandKeys(scope, basis.atMs),
+  ]);
+  const assembly = assembleXChangeProducts({ ...data, manufacturerBrandKeys, pricingOf: pricingJudge({ basis, lines, rules, categories: data.categories }) });
   const emptyCause = xchangeEmptyCause(assembly, { productCount: data.products.length, visibilityRuleCount: rules.length });
   return { basis, data, assembly, emptyCause };
 }
 
 function countsOf(audience: XChangeExportAudience, { basis, assembly }: AudienceJudgement): XChangeExportCounts {
-  const { hidden, unfitIdentifier, onRequest } = assembly;
+  const { hidden, unfitIdentifier, tradeIdentity, onRequest } = assembly;
   const at = new Date(basis.atMs).toISOString();
-  return { audience, priceSource: priceSourceOf(basis), at, exported: assembly.sources.length, hidden, unfitIdentifier, onRequest };
+  return { audience, priceSource: priceSourceOf(basis), at, exported: assembly.sources.length, hidden, unfitIdentifier, tradeIdentity, onRequest };
 }
 
 /** Κενό αρχείο είναι άκυρο έγγραφο (`Product` `minItems: 1`): άρνηση με την αιτία, ποτέ λήψη. */

@@ -84,6 +84,11 @@ export const IMPORT_ISSUE_CODES = [
   'unknownKeepsValue',
   /** Το κείμενο του κελιού δεν είναι λόγος απουσίας (`notApplicable` · `unknown`). */
   'noValueReasonUnreadable',
+  /**
+   * Ο κωδικός της γραμμής και το GTIN της δείχνουν σε **διαφορετικά** SKU του καταλόγου (ADR-934 Σ1γ Δ3). Κανένα κλειδί δεν
+   * κερδίζει σιωπηλά: η γραμμή δεν εγκρίνεται μέχρι να διορθωθεί η πηγή.
+   */
+  'identityKeysDisagree',
 ] as const;
 export type ImportIssueCode = (typeof IMPORT_ISSUE_CODES)[number];
 

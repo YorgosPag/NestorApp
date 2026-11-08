@@ -75,6 +75,12 @@
       "sample": "Δείγμα",
       "skuIdentifier": "Κωδικός είδους",
       "target": "Πού πάει",
+      "trade": {
+        "brand": "Μάρκα",
+        "gtin": "GTIN / EAN",
+        "mpn": "Κωδικός κατασκευαστή (MPN)",
+        "noGtinReason": "Χωρίς GTIN (λόγος)"
+      },
       "unit": "Μονάδα"
     },
     "new": {

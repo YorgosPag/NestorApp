@@ -13,9 +13,8 @@ import 'server-only';
 
 import type { AuthContext } from '@/lib/auth';
 import { modelDefinitionOf, productDefinitionOf } from '@/subapps/catalog/aggregate/edit-aggregate';
-import { EMPTY_IMPORT_HOLDER, mergeFieldsIntoHolder } from '@/subapps/catalog/import/proposal-values';
+import { EMPTY_IMPORT_HOLDER, EMPTY_PRODUCT_IMPORT_HOLDER, mergeFieldsIntoHolder, mergeFieldsIntoProduct } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
-import { EMPTY_BRAND, EMPTY_TRADE_IDENTITY } from '@/subapps/catalog/values/trade-identity';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { ImportBatchDefinition, ImportProposalDefinition, ImportProposalField, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { PriceLineInput } from '@/subapps/catalog/types/price-list-requests';
@@ -31,7 +30,7 @@ import { stagePriceLineBatch } from './price-line-writer.server';
 
 const accepted = (field: ImportProposalField): boolean => field.decision === 'accept';
 const hasAccepted = (row: ImportProposalRow): boolean => row.fields.some(accepted);
-const CATALOG_BLOCKERS = new Set(['modelCodeMissing', 'levelUnsupported', 'priceIncomplete', 'uniqueValueTaken', 'axisComboDuplicate', 'tooManyDescendants']);
+const CATALOG_BLOCKERS = new Set(['modelCodeMissing', 'levelUnsupported', 'priceIncomplete', 'uniqueValueTaken', 'axisComboDuplicate', 'tooManyDescendants', 'identityKeysDisagree']);
 
 /** Τι εμποδίζει την έγκριση: πεδίο σε εκκρεμότητα, ή γραμμή που δεν γίνεται να γραφτεί. */
 function assertDecided(proposal: ImportProposalDefinition): void {
@@ -52,7 +51,6 @@ async function modelChange(scope: CatalogTx, proposal: ImportProposalDefinition,
         variantSchemeCode: proposal.variantSchemeCode ?? '',
         parentId: null,
         categoryIds,
-        ...EMPTY_BRAND,
         ...mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, accepted),
       },
     };
@@ -66,11 +64,11 @@ async function modelChange(scope: CatalogTx, proposal: ImportProposalDefinition,
 async function productChange(scope: CatalogTx, proposal: ImportProposalDefinition, row: ImportProposalRow, rootId: string | null, categoryIds: readonly string[]): Promise<HolderChange | null> {
   if (!hasAccepted(row)) return null;
   if (row.holderId === null) {
-    const content = mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, accepted);
-    return { op: 'create', kind: 'product', requestedId: null, definition: { modelId: rootId, familyId: proposal.familyId ?? '', categoryIds, ...EMPTY_BRAND, ...EMPTY_TRADE_IDENTITY, ...content } };
+    const content = mergeFieldsIntoProduct(EMPTY_PRODUCT_IMPORT_HOLDER, row.fields, accepted);
+    return { op: 'create', kind: 'product', requestedId: null, definition: { modelId: rootId, familyId: proposal.familyId ?? '', categoryIds, ...content } };
   }
   const current = await readOwned<StoredCatalogProductDefinition>(scope, 'product', row.holderId);
-  const definition = mergeFieldsIntoHolder(productDefinitionOf(current), row.fields, accepted);
+  const definition = mergeFieldsIntoProduct(productDefinitionOf(current), row.fields, accepted);
   return { op: 'update', kind: 'product', id: row.holderId, expectedRevision: row.expectedRevision ?? current.revision, definition };
 }
 

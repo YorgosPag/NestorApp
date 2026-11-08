@@ -5,11 +5,13 @@ import 'server-only';
  * τις καθαρές κρίσεις τις κάνουν τα `subapps/catalog/import/*`.
  *
  * **Αντιστοίχιση γραμμής με SKU**, με σειρά: (1) `unique` ιδιότητα μέσα στο σύνολο · (2) κράτηση μοναδικής τιμής
- * (`catalog_unique_values`, ίδιο κλειδί με τον γραφέα) · (3) συνδυασμός αξόνων. Κωδικός που κρατά SKU **άλλου** μοντέλου δεν
- * ταιριάζει σιωπηλά: γίνεται εύρημα, γιατί δημιουργία θα έπεφτε πάνω στην κράτηση.
+ * (`catalog_unique_values`, ίδιο κλειδί με τον γραφέα) · (3) GTIN, με την κράτηση `@gtin` (ADR-934 Σ1γ Δ3) · (4) συνδυασμός
+ * αξόνων. Κωδικός ή GTIN που κρατά SKU **άλλου** μοντέλου δεν ταιριάζει σιωπηλά: γίνεται εύρημα, γιατί η εγγραφή θα έπεφτε
+ * πάνω στην κράτηση. Κωδικός και GTIN που δείχνουν σε **διαφορετικά** SKU ⇒ `identityKeysDisagree`, ποτέ σιωπηλή επιλογή.
  * @module server/catalog/import-proposal-plan.server
  */
 
+import { GTIN_RESERVATION_KEY, gtinReservationKeysOf } from '@/subapps/catalog/derived/trade-keys';
 import { buildAttributeRows, type ImportBaseValues, type LiveHolder } from '@/subapps/catalog/import/build-attribute-proposal';
 import { buildPriceRows, type PriceLineValues } from '@/subapps/catalog/import/build-price-proposal';
 import { judgeProposal, proposalAggregateOf, type ProposalVerdict } from '@/subapps/catalog/import/judge-proposal';
@@ -17,12 +19,13 @@ import { parseImportCell } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchTarget, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchTarget, ImportIssue, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { AttributeValue } from '@/subapps/catalog/types/product';
 import type { StoredCatalogProductDefinition, StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
 import type { DiscountGroupDefinition, StoredPriceListLineDefinition, StoredPriceListVersionDefinition } from '@/subapps/catalog/types/price-list';
 import { axisCombinationKey } from '@/subapps/catalog/values/axis-combination';
 import { uniqueValueKey } from '@/subapps/catalog/values/normalize-unique';
+import { brandOf, EMPTY_TRADE_IDENTITY, gtinInputOf, tradeIdentityOf } from '@/subapps/catalog/values/trade-identity';
 import type { ValueTextContext } from '@/subapps/catalog/values/value-text-codec';
 import { axesAtDepth, leafDepth } from '@/subapps/catalog/values/attribute-levels';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
@@ -73,6 +76,13 @@ function rowUniqueKeys(row: ExtractedRow, schema: CatalogSchemaSnapshot): RowKey
   });
 }
 
+/** Το κλειδί `@gtin` της γραμμής — ο **ίδιος** κανόνας με τον γραφέα (`gtinReservationKeysOf`)· άκυρο GTIN δεν ταιριάζει τίποτα. */
+function rowGtinKey(row: ExtractedRow): RowKey | null {
+  const text = row.cells.find((cell) => cell.target.kind === 'tradeIdentity' && cell.target.field === 'gtin')?.text ?? null;
+  const uniqueKey = text === null ? undefined : gtinReservationKeysOf({ gtin: gtinInputOf(text) })[GTIN_RESERVATION_KEY];
+  return uniqueKey ? { rowKey: row.rowKey, attributeId: GTIN_RESERVATION_KEY, uniqueKey } : null;
+}
+
 function rowAxisKey(row: ExtractedRow, schema: CatalogSchemaSnapshot): string | null {
   const axes = axesAtDepth(schema.scheme, leafDepth(schema.scheme));
   if (axes.length === 0) return null;
@@ -83,7 +93,14 @@ function rowAxisKey(row: ExtractedRow, schema: CatalogSchemaSnapshot): string | 
   return axisCombinationKey(values, axes, schema.attributes, schema.registry);
 }
 
-const asLive = (record: StoredModel | StoredProduct): LiveHolder => ({ id: record.id, revision: record.revision, values: record.values, noValueReasons: record.noValueReasons });
+const asLive = (record: StoredModel | StoredProduct): LiveHolder => ({
+  id: record.id,
+  revision: record.revision,
+  values: record.values,
+  noValueReasons: record.noValueReasons,
+  // Το μοντέλο κρατά μόνο τη μάρκα (βάθος 0)· GTIN · MPN · «χωρίς GTIN» ζουν στο SKU.
+  trade: { brand: brandOf(record), ...('modelId' in record ? tradeIdentityOf(record) : EMPTY_TRADE_IDENTITY) },
+});
 
 async function readRootProducts(scope: CatalogTx, root: StoredModel | null): Promise<ReadonlyMap<string, StoredProduct>> {
   if (!root) return new Map();
@@ -95,6 +112,36 @@ interface RowMatch {
   readonly matches: ReadonlyMap<string, LiveHolder>;
   /** rowKey → ο κωδικός κρατιέται από SKU άλλου συνόλου. */
   readonly foreign: ReadonlyMap<string, RowKey>;
+  /** rowKey → ευρήματα του GTIN της γραμμής (ξένος κάτοχος · διαφωνία με τον κωδικό). */
+  readonly gtinIssues: ReadonlyMap<string, readonly ImportIssue[]>;
+}
+
+/**
+ * Το τρίτο σκαλί (Δ3): το GTIN της γραμμής απέναντι στην κράτηση `@gtin`. Ταιριάζει γραμμή που δεν ταίριαξε· σε γραμμή που
+ * ταίριαξε με τον κωδικό **επιβεβαιώνει** ή διαφωνεί. GTIN ξένου συνόλου ⇒ εύρημα πάντα: η εγγραφή θα έπεφτε στην κράτηση.
+ */
+async function matchByGtin(
+  scope: CatalogTx,
+  group: ExtractedGroup,
+  root: StoredModel | null,
+  products: ReadonlyMap<string, StoredProduct>,
+  matches: Map<string, LiveHolder>,
+  codeForeign: ReadonlySet<string>,
+): Promise<ReadonlyMap<string, readonly ImportIssue[]>> {
+  const keys = group.rows.flatMap((row) => rowGtinKey(row) ?? []);
+  const holders = await readUniqueHolders(scope, keys);
+  const others = await readActiveByIds<StoredCatalogProductDefinition>(scope, 'product', [...holders.values()].map((doc) => doc.holderId));
+  const issues = new Map<string, readonly ImportIssue[]>();
+  for (const key of keys) {
+    const doc = holders.get(uniqueHolderKey(key.attributeId, key.uniqueKey));
+    const product = doc ? (products.get(doc.holderId) ?? others.get(doc.holderId)) : undefined;
+    if (!product) continue;
+    const matched = matches.get(key.rowKey);
+    if (product.modelId !== (root?.id ?? null)) issues.set(key.rowKey, [{ code: 'uniqueValueTaken', path: 'gtin' }]);
+    else if (matched && matched.id !== product.id) issues.set(key.rowKey, [{ code: 'identityKeysDisagree', path: 'gtin' }]);
+    else if (!matched && !codeForeign.has(key.rowKey)) matches.set(key.rowKey, asLive(product));
+  }
+  return issues;
 }
 
 async function matchRows(scope: CatalogTx, group: ExtractedGroup, root: StoredModel | null, products: ReadonlyMap<string, StoredProduct>, schema: CatalogSchemaSnapshot): Promise<RowMatch> {
@@ -112,19 +159,22 @@ async function matchRows(scope: CatalogTx, group: ExtractedGroup, root: StoredMo
   }
   // Δύο τυπωμένοι κωδικοί στη γραμμή: όταν ο ένας ταυτίζεται, ο άλλος δεν είναι σύγκρουση με ξένο SKU.
   for (const rowKey of matches.keys()) foreign.delete(rowKey);
+  const gtinIssues = await matchByGtin(scope, group, root, products, matches, new Set(foreign.keys()));
   const byAxis = new Map([...products.values()].map((product) => [axisCombinationKey(product.values, axesAtDepth(schema.scheme, leafDepth(schema.scheme)), schema.attributes, schema.registry), product]));
   for (const row of group.rows) {
     const key = matches.has(row.rowKey) || foreign.has(row.rowKey) ? null : rowAxisKey(row, schema);
     const product = key === null ? undefined : byAxis.get(key);
     if (product) matches.set(row.rowKey, asLive(product));
   }
-  return { matches, foreign };
+  return { matches, foreign, gtinIssues };
 }
 
-const withForeignIssue = (rows: readonly ImportProposalRow[], foreign: RowMatch['foreign']): ImportProposalRow[] =>
+/** Τα ευρήματα αντιστοίχισης πάνω στις γραμμές: ξένος κωδικός, και ό,τι είπε το GTIN. */
+const withMatchIssues = (rows: readonly ImportProposalRow[], { foreign, gtinIssues }: RowMatch): ImportProposalRow[] =>
   rows.map((row) => {
     const key = foreign.get(row.rowKey);
-    return key ? { ...row, issues: [...row.issues, { code: 'uniqueValueTaken' as const, path: key.attributeId }] } : row;
+    const found: ImportIssue[] = [...(key ? [{ code: 'uniqueValueTaken' as const, path: key.attributeId }] : []), ...(gtinIssues.get(row.rowKey) ?? [])];
+    return found.length > 0 ? { ...row, issues: [...row.issues, ...found] } : row;
   });
 
 async function planAttributes(scope: CatalogTx, target: Extract<ImportBatchTarget, { purpose: 'attributes' }>, group: ExtractedGroup, base: ImportBaseValues): Promise<PlannedProposal> {
@@ -133,9 +183,10 @@ async function planAttributes(scope: CatalogTx, target: Extract<ImportBatchTarge
   const modelCode = code === '' ? null : code;
   const root = modelCode === null ? null : await readOwnedOrNull<StoredCatalogProductModelDefinition>(scope, 'productModel', naturalKeyId(scope, 'productModel', modelCode));
   const products = await readRootProducts(scope, root);
-  const { matches, foreign } = await matchRows(scope, group, root, products, schema);
+  const matched = await matchRows(scope, group, root, products, schema);
+  const { matches } = matched;
   const built = buildAttributeRows({ ...group, modelCode }, { schema, text: textContextOf(schema), model: root ? asLive(root) : null, matches, base });
-  const input = { rows: withForeignIssue(built, foreign), modelCode, familyId: target.familyId, categoryIds: target.categoryIds, holdings: { rootModel: root, products }, schema };
+  const input = { rows: withMatchIssues(built, matched), modelCode, familyId: target.familyId, categoryIds: target.categoryIds, holdings: { rootModel: root, products }, schema };
   const refs = await readAggregateReferences(scope, proposalAggregateOf(input));
   const verdict = judgeProposal({ ...input, refs });
   return { ...verdict, familyId: target.familyId, variantSchemeCode: target.variantSchemeCode, modelCode, priceListVersionId: null };

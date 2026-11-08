@@ -23,12 +23,14 @@ import type { ValueTextContext } from '../values/value-text-codec';
 import {
   isAttributeCell,
   isNoValueReasonCell,
+  isTradeIdentityCell,
   settleRepeatedCells,
   suggestModelCode,
   type AttributeCell,
   type HolderCell,
   type NoValueReasonCell,
 } from './cell-identity';
+import { sameTradeText, settleTradeCells, tradeFieldOf, type LiveTradeIdentity } from './trade-identity-fields';
 import { defaultDecisionOf, proposalFieldOf } from './field-diff';
 import {
   attributeValueEquality,
@@ -47,6 +49,8 @@ export interface LiveHolder {
   readonly revision: number;
   readonly values: ProductValues;
   readonly noValueReasons: NoValueReasons;
+  /** Μάρκα + ταυτότητα εμπορίου (ADR-934 Σ1γ)· στο μοντέλο μόνο η μάρκα. */
+  readonly trade: LiveTradeIdentity;
 }
 
 /** `κάτοχος → κλειδί στόχου → τιμή`: ό,τι έφερε η τελευταία εφαρμοσμένη εισαγωγή. */
@@ -101,8 +105,13 @@ function reasonFieldOf(cell: NoValueReasonCell, holder: LiveHolder | null, conte
   return { ...flagged, decision: defaultDecisionOf(flagged) };
 }
 
-const holderFieldOf = (cell: HolderCell, holder: LiveHolder | null, context: AttributeProposalContext): ImportProposalField =>
-  isNoValueReasonCell(cell) ? reasonFieldOf(cell, holder, context) : fieldOf(cell, holder, context);
+function holderFieldOf(cell: HolderCell, holder: LiveHolder | null, context: AttributeProposalContext): ImportProposalField {
+  if (isTradeIdentityCell(cell)) return tradeFieldOf(cell, { holder, base: holder ? context.base.get(holder.id) : undefined });
+  return isNoValueReasonCell(cell) ? reasonFieldOf(cell, holder, context) : fieldOf(cell, holder, context);
+}
+
+/** Η διαδρομή του ευρήματος: η ιδιότητα, ή το πεδίο ταυτότητας. */
+const cellPathOf = (cell: HolderCell): string => (isTradeIdentityCell(cell) ? cell.target.field : cell.target.attributeId);
 
 /** Το βάθος-ιδιοκτήτης σε σχέση με το σύνολο: κοινό · τελικό SKU · ενδιάμεσο (υπο-μοντέλο, δηλωμένο όριο της Φάσης 4). */
 type CellLevel = 'shared' | 'leaf' | 'unsupported';
@@ -110,13 +119,20 @@ type CellLevel = 'shared' | 'leaf' | 'unsupported';
 function levelOf(cell: HolderCell, schema: CatalogSchemaSnapshot): CellLevel {
   const { scheme } = schema;
   if (!scheme) return 'leaf';
+  // Η μάρκα ανήκει στο βάθος 0 (Δ1)· GTIN · MPN · «χωρίς GTIN» στην εμπορεύσιμη μονάδα.
+  if (isTradeIdentityCell(cell)) return cell.target.field === 'brand' ? 'shared' : 'leaf';
   const depth = attributeOwnerDepth(scheme, cell.target.attributeId);
   if (depth === 0) return 'shared';
   return depth === leafDepth(scheme) ? 'leaf' : 'unsupported';
 }
 
 const attributeCellsOf = (cells: readonly ExtractedCell[]): AttributeCell[] => cells.filter(isAttributeCell);
-const holderCellsOf = (cells: readonly ExtractedCell[]): HolderCell[] => cells.filter((cell): cell is HolderCell => isAttributeCell(cell) || isNoValueReasonCell(cell));
+const holderCellsOf = (cells: readonly ExtractedCell[]): HolderCell[] =>
+  cells.filter((cell): cell is HolderCell => isAttributeCell(cell) || isNoValueReasonCell(cell) || isTradeIdentityCell(cell));
+
+/** Λένε δύο κελιά το ίδιο; Τα πεδία ταυτότητας κατά κλειδί («DAIKIN» ≡ «Daikin»), τα άλλα κατά κείμενο, όπως πριν. */
+const sameText = (left: HolderCell, right: HolderCell): boolean =>
+  isTradeIdentityCell(left) && isTradeIdentityCell(right) ? sameTradeText(left.target.field, left.text, right.text) : left.text === right.text;
 
 /** Τα κοινά κελιά, μία φορά ανά στόχο: από τα κοινά της πηγής και από όσα επαναλαμβάνουν οι γραμμές. */
 function sharedCellsOf(group: ExtractedGroup, schema: CatalogSchemaSnapshot): { readonly cells: HolderCell[]; readonly disagreeing: ReadonlySet<string> } {
@@ -127,7 +143,7 @@ function sharedCellsOf(group: ExtractedGroup, schema: CatalogSchemaSnapshot): { 
     const key = importTargetKey(cell.target);
     const first = cells.get(key);
     if (!first) cells.set(key, cell);
-    else if (first.text !== cell.text) disagreeing.add(key);
+    else if (!sameText(first, cell)) disagreeing.add(key);
   }
   return { cells: [...cells.values()], disagreeing };
 }
@@ -138,7 +154,7 @@ function modelRowOf(group: ExtractedGroup, context: AttributeProposalContext): I
   const fields = cells.map((cell): ImportProposalField => {
     const field = holderFieldOf(cell, context.model, context);
     if (!disagreeing.has(importTargetKey(cell.target))) return field;
-    return { ...field, decision: 'pending', issues: [...field.issues, { code: 'sharedDisagrees', path: cell.target.attributeId }] };
+    return { ...field, decision: 'pending', issues: [...field.issues, { code: 'sharedDisagrees', path: cellPathOf(cell) }] };
   });
   return holderRow(`model:${group.groupKey}`, 'productModel', context.model, group.modelCode ?? '', fields, modelIssues(group, context.schema));
 }
@@ -169,10 +185,10 @@ function rowLabel(rowKey: string, cells: readonly AttributeCell[], schema: Catal
 function variantRowOf(row: ExtractedRow, context: AttributeProposalContext): ImportProposalRow {
   const holder = context.matches.get(row.rowKey) ?? null;
   const valueCells = settleRepeatedCells(attributeCellsOf(row.cells), holder?.values ?? null, context);
-  const cells: HolderCell[] = [...valueCells, ...row.cells.filter(isNoValueReasonCell)];
+  const cells: HolderCell[] = [...valueCells, ...row.cells.filter(isNoValueReasonCell), ...settleTradeCells(row.cells.filter(isTradeIdentityCell))];
   const leaf = cells.filter((cell) => levelOf(cell, context.schema) === 'leaf');
   const unsupported = cells.filter((cell) => levelOf(cell, context.schema) === 'unsupported');
-  const issues = unsupported.map((cell): ImportIssue => ({ code: 'levelUnsupported', path: cell.target.attributeId }));
+  const issues = unsupported.map((cell): ImportIssue => ({ code: 'levelUnsupported', path: cellPathOf(cell) }));
   const fields = leaf.map((cell) => holderFieldOf(cell, holder, context));
   return holderRow(row.rowKey, 'product', holder, rowLabel(row.rowKey, valueCells, context.schema), fields, issues);
 }

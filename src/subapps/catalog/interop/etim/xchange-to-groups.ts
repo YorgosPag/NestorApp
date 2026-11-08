@@ -6,13 +6,17 @@
  * (`mappings.etimUnitCode`). Αδήλωτη ⇒ `unitCode: null`, άρα απόφαση ανθρώπου και ποτέ η προεπιλογή της ιδιότητας (σφάλμα ×1000).
  * 🔑 **Τίποτα δεν χάνεται σιωπηλά**: ό,τι δεν μπαίνει μετριέται στην {@link XChangeAttributeImportReport}.
  * 🔑 **Το `NA`/`UN` είναι δήλωση, όχι κενό** (§23.2 K4): γίνεται κελί `noValueReason` και περνά από την ίδια κρίση και έγκριση.
+ * 🔑 **Ταυτότητα εμπορίου** (ADR-934 Σ1γ): GTIN · μάρκα · MPN γίνονται κελιά `tradeIdentity`, άρα τα κρίνει ο ίδιος κριτής με την
+ *    οθόνη (ψηφίο GS1, όρια). Το GTIN του SKU είναι της **μονάδας που πουλιέται** (GS1): πρώτα το `ItemGtin` του είδους, μετά το
+ *    `ProductGtin`· τα υπόλοιπα μετριούνται (Δ2).
  * @module subapps/catalog/interop/etim/xchange-to-groups
  */
 
 import type { HumanLanguage } from '@/i18n/languages';
+import { tradeFieldKeyOf } from '../../derived/trade-keys';
 import { byModelCode, type TableRow } from '../../import/apply-column-rules';
 import type { CatalogAttributeDefinition } from '../../types/attribute';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow } from '../../types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportTradeField } from '../../types/catalog-import';
 import { ANY_SLOT } from '../../types/product';
 import { localeSlotFor } from '../../values/value-shape';
 import { ETIM_LANGUAGE_TAG, ETIM_NO_VALUE_REASON_OF, isEtimImperialFeature } from '../../vocabulary/etim';
@@ -75,6 +79,8 @@ class ReportBuilder {
   imported = 0;
   declaredNoValue = 0;
   extraTradeItems = 0;
+  extraGtins = 0;
+  brandFromManufacturer = 0;
   readonly otherClasses = new Set<string>();
   readonly unmapped = new Set<string>();
   readonly ranges = new Set<string>();
@@ -101,6 +107,8 @@ class ReportBuilder {
       rangeFeatures: [...this.ranges].sort(),
       declaredNoValue: this.declaredNoValue,
       extraTradeItems: this.extraTradeItems,
+      extraGtins: this.extraGtins,
+      brandFromManufacturer: this.brandFromManufacturer,
     };
   }
 }
@@ -135,6 +143,42 @@ function featureCells(features: readonly XChangeFeature[], schema: XChangeImport
   });
 }
 
+const tradeCellOf = (field: ImportTradeField, text: string): ExtractedCell => ({
+  target: { kind: 'tradeIdentity', field }, text, confidence: 1, anchor: null, unitCode: null, flags: [],
+});
+
+/** Το GTIN του SKU (Δ2): πρώτο **έγκυρο** της σειράς «είδος → προϊόν». Κανένα έγκυρο ⇒ το πρώτο, ώστε ο κριτής να πει γιατί. */
+function gtinOf(product: XChangeProduct, report: ReportBuilder): string | null {
+  const candidates = [...(product.TradeItem[0]?.ItemIdentification.ItemGtin ?? []), ...product.ProductIdentification.ProductGtin].map((gtin) => gtin.trim()).filter((gtin) => gtin !== '');
+  const distinct = [...new Map(candidates.map((gtin) => [tradeFieldKeyOf('gtin', gtin) ?? gtin, gtin])).values()];
+  if (distinct.length === 0) return null;
+  if (distinct.length > 1) report.extraGtins += 1;
+  return distinct.find((gtin) => tradeFieldKeyOf('gtin', gtin) !== null) ?? distinct[0];
+}
+
+/** Η μάρκα: το `BrandName`· χωρίς αυτό, ο κατασκευαστής (μετρημένο: ο άνθρωπος το βλέπει στην αναφορά). */
+function brandOfProduct(product: XChangeProduct, report: ReportBuilder): string | null {
+  const { BrandName, ManufacturerName } = product.ProductIdentification;
+  const brand = BrandName?.trim() ?? '';
+  if (brand !== '') return brand;
+  const manufacturer = ManufacturerName?.trim() ?? '';
+  if (manufacturer === '') return null;
+  report.brandFromManufacturer += 1;
+  return manufacturer;
+}
+
+/** Τα κελιά ταυτότητας εμπορίου: το `ManufacturerProductNumber` **κρατιέται** πια ως MPN, δεν χάνεται μετά τον κωδικό SKU. */
+function tradeCells(product: XChangeProduct, report: ReportBuilder): ExtractedCell[] {
+  const gtin = gtinOf(product, report);
+  const brand = brandOfProduct(product, report);
+  const mpn = product.ProductIdentification.ManufacturerProductNumber.trim();
+  return [
+    ...(gtin === null ? [] : [tradeCellOf('gtin', gtin)]),
+    ...(mpn === '' ? [] : [tradeCellOf('mpn', mpn)]),
+    ...(brand === null ? [] : [tradeCellOf('brand', brand)]),
+  ];
+}
+
 function identityCells(product: XChangeProduct, schema: XChangeImportSchema): ExtractedCell[] {
   const identifier = schema.attributes.find((attribute) => attribute.unique);
   const label = schema.attributes.find((attribute) => attribute.id === schema.labelAttributeId);
@@ -150,7 +194,7 @@ function tableRowOf(product: XChangeProduct, index: number, schema: XChangeImpor
   if (classification === null) return null;
   report.imported += 1;
   if (product.TradeItem.length > 1) report.extraTradeItems += 1;
-  const cells = [...identityCells(product, schema), ...featureCells(classification?.EtimFeatures ?? [], schema, byFeature, report)];
+  const cells = [...identityCells(product, schema), ...tradeCells(product, report), ...featureCells(classification?.EtimFeatures ?? [], schema, byFeature, report)];
   const row: ExtractedRow = { rowKey: `p${index + 1}`, cells };
   return { modelCode: schema.hasVariants ? seriesOf(product) : null, row };
 }

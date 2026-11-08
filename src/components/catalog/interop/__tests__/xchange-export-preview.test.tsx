@@ -27,7 +27,7 @@ jest.mock('../../shared/CatalogIssues', () => ({
 }));
 
 const previewOf = (over: Partial<XChangeExportPreview>): XChangeExportPreview => ({
-  audience: { kind: 'public' }, priceSource: null, at: '2026-11-03T10:00:00.000Z', exported: 3, hidden: 0, unfitIdentifier: 0, onRequest: {},
+  audience: { kind: 'public' }, priceSource: null, at: '2026-11-03T10:00:00.000Z', exported: 3, hidden: 0, unfitIdentifier: 0, tradeIdentity: { brandMissing: 0, mpnMissing: 0, mpnTooLong: 0 }, onRequest: {},
   emptyCause: null, blockers: [], ...over,
 });
 

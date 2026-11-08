@@ -20,6 +20,13 @@ export interface XChangeAttributeImportReport {
   readonly declaredNoValue: number;
   /** Προϊόντα με πολλά εμπορεύσιμα είδη: κρατήθηκε το πρώτο. */
   readonly extraTradeItems: number;
+  /**
+   * Προϊόντα με **κι άλλα** GTIN πέρα από αυτό που κρατήθηκε (ADR-934 Σ1γ Δ2: πρώτα το `ItemGtin` του είδους, μετά το `ProductGtin`).
+   * Απόν στις αναφορές πριν από το Σ1γ.
+   */
+  readonly extraGtins?: number;
+  /** Προϊόντα χωρίς `BrandName`, όπου η μάρκα πάρθηκε από το `ManufacturerName`. Απόν πριν από το Σ1γ. */
+  readonly brandFromManufacturer?: number;
 }
 
 export interface XChangePriceImportReport {

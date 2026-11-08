@@ -13,6 +13,7 @@ import type { PageRule, PageTable } from '@/lib/pdf-tables/page-table-types';
 import { PLATFORM_MEASUREMENT_REGISTRY } from '../../measurement/measurement-registry';
 import type { ExtractedCell, ExtractedGroup, ImportProposalField, ImportProposalRow } from '../../types/catalog-import';
 import { buildAttributeRows, type AttributeProposalContext, type LiveHolder } from '../build-attribute-proposal';
+import { EMPTY_LIVE_TRADE_IDENTITY } from '../trade-identity-fields';
 import { judgeProposal } from '../judge-proposal';
 import { evidenceFindings, type PageExtractionContext } from '../page-extraction';
 import { pageMappingPrompt, pageMappingSchema, imageCheckCells, textLayerDoubted, type RawTableMapping } from '../page-table-mapping';
@@ -72,7 +73,7 @@ const attributeOf = (cell: ExtractedCell): string | null => (cell.target.kind ==
 const cellsOf = (group: ExtractedGroup, attribute: string): readonly ExtractedCell[] => group.rows.flatMap((row) => row.cells).filter((cell) => attributeOf(cell) === attribute);
 
 function liveOf(code: string, index: number): LiveHolder {
-  return { id: `cpr_${index}`, revision: 1, values: { model_code: { '*': { '*': { type: 'text', text: code } } }, size: { '*': { '*': { type: 'select', optionCode: 'mfp_34' } } } }, noValueReasons: {} };
+  return { id: `cpr_${index}`, revision: 1, values: { model_code: { '*': { '*': { type: 'text', text: code } } }, size: { '*': { '*': { type: 'select', optionCode: 'mfp_34' } } } }, noValueReasons: {}, trade: EMPTY_LIVE_TRADE_IDENTITY };
 }
 
 /** Ό,τι κάνει ο `matchRows` στον διακομιστή: ο κωδικός της γραμμής που κρατά ζωντανό SKU. */

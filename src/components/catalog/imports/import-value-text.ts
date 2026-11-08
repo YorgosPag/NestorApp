@@ -34,6 +34,7 @@ function valueText(value: ImportFieldValue | null, reasonLabel: (reason: NoValue
     case 'unit': return value.unitCode;
     case 'discountGroup': return value.discountGroupId ?? '';
     case 'noValueReason': return reasonLabel(value.reason);
+    case 'tradeText': return value.text;
     default: return '';
   }
 }

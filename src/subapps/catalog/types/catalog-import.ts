@@ -25,6 +25,7 @@ import type { CatalogIssue } from '../schema/catalog-issues';
 import type { AttributeValue, ChannelSlot, LocaleSlot, NoValueReason } from './product';
 import type { ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { PriceQuantity } from '../vocabulary/pricing';
+import type { BRAND_FIELD, TradeIdentityField } from '../values/trade-identity';
 import type {
   ImportBatchStatus,
   ImportFieldDecision,
@@ -56,7 +57,16 @@ export interface ImportTargetByKind {
    * θέση κανάλι × γλώσσα — όπως το `noValueReasons` του φορέα. Το κείμενο του κελιού είναι ο κωδικός `NoValueReason`.
    */
   readonly noValueReason: { readonly attributeId: string };
+  /**
+   * **Πεδίο πλατφόρμας** της ταυτότητας εμπορίου (ADR-934 §5.1.7 · Σ1γ), όχι ιδιότητα: GTIN · MPN · «χωρίς GTIN» στο SKU, μάρκα στο
+   * βάθος 0. Γράφεται **μόνο** με τις πράξεις του `values/trade-identity.ts`. Για το `noGtinReason` το κείμενο του κελιού είναι ο
+   * κωδικός `NoValueReason`, όπως στο `noValueReason`.
+   */
+  readonly tradeIdentity: { readonly field: ImportTradeField };
 }
+
+/** Τα πεδία ταυτότητας που δέχεται η εισαγωγή: του SKU και η μάρκα. Από τα SSoT του `trade-identity`, όχι νέα λίστα. */
+export type ImportTradeField = TradeIdentityField | typeof BRAND_FIELD;
 
 export type ImportTarget = {
   [K in keyof ImportTargetByKind]: { readonly kind: K } & ImportTargetByKind[K];
@@ -136,7 +146,16 @@ export interface ImportNoValueReasonValue {
   readonly reason: NoValueReason;
 }
 
-export type ImportFieldValue = AttributeValue | ImportPriceValue | ImportNoValueReasonValue;
+/**
+ * Τιμή πεδίου ταυτότητας (GTIN · MPN · μάρκα), όπως θα γραφτεί στον ορισμό. Η ισότητα γίνεται **κατά κλειδί** (`tradeFieldKeyOf`):
+ * το `4006381333931` και το `04006381333931` είναι το ίδιο GTIN.
+ */
+export interface ImportTradeTextValue {
+  readonly type: 'tradeText';
+  readonly text: string;
+}
+
+export type ImportFieldValue = AttributeValue | ImportPriceValue | ImportNoValueReasonValue | ImportTradeTextValue;
 
 export interface ImportProposalField {
   readonly target: ImportTarget;

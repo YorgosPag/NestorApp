@@ -31,8 +31,14 @@ export type NoValueReasonCell = ExtractedCell & { readonly target: NoValueReason
 
 export const isNoValueReasonCell = (cell: ExtractedCell): cell is NoValueReasonCell => cell.target.kind === 'noValueReason' && cell.text !== null;
 
-/** Κελί που γράφει σε φορέα τιμών: τιμή ιδιότητας ή λόγος απουσίας της. */
-export type HolderCell = AttributeCell | NoValueReasonCell;
+export type TradeIdentityTarget = Extract<ImportTarget, { kind: 'tradeIdentity' }>;
+/** Πεδίο ταυτότητας εμπορίου (ADR-934 Σ1γ): η μάρκα ανήκει στο βάθος 0, τα άλλα στο SKU. */
+export type TradeIdentityCell = ExtractedCell & { readonly target: TradeIdentityTarget; readonly text: string };
+
+export const isTradeIdentityCell = (cell: ExtractedCell): cell is TradeIdentityCell => cell.target.kind === 'tradeIdentity' && cell.text !== null;
+
+/** Κελί που γράφει σε φορέα τιμών: τιμή ιδιότητας, λόγος απουσίας της, ή πεδίο ταυτότητας εμπορίου. */
+export type HolderCell = AttributeCell | NoValueReasonCell | TradeIdentityCell;
 
 interface RepeatContext {
   readonly schema: CatalogSchemaSnapshot;

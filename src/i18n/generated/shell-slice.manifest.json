@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "0e5ab1ff8f979af232f5c7ceaf5c89328dc821b898814bdd29ef44cd47a6f439",
+    "src/i18n/generated/lazy-route-namespaces.json": "ecec37951933e6aca13c5fa27cf0bc94eca95d649a98a348da11e70278efa4bd",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -46,11 +46,11 @@
     "src/i18n/generated/routes/o__workspace__catalog__connections.el.json": "a945c101573af8b73bad5337c825e42cff51f05ab5c12d6abffbf57dfbac8520",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "ed53a8bf5790b1cbbb8248fe4bd32a7bc4d8ce1b44e3a5717054c1e3ea73e025",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "beb4d7d88a17fac46b11a3ccf432f9836c60534f372e8eae2d3e210ef96c3bee",
-    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "cb9146a4f2613ae6707d6357b63b05125cb0882e9d2d3177e9ab92780e5c0e13",
+    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "db2b02ece955bb32fa665cf714f108192e7766a2222b8a278c5ae964598f49ec",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "1ada521e13e9e01ac4577ab75a6a5f85538a10f6130c3b3dec5e9582ff50d0ca",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "324fb9244cc0690b312ecd2472727e5f292d9a1d52c33d8cf3d0df7ec8e62d39",
-    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "036728a59dc73ad3bd09934e830b124ea0bea761f28e7ce45c8b4ba8c20be5d0",
+    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "d47039d4bdc9eb77a9ffe4da5461f9a3b3948fb6258a7782bc34d19c962d9862",
     "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "0f5974343b7bbe05ccd34ad4730893c2e33cc6bdb232a058b82e82b66c8060f9",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
@@ -138,7 +138,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "ea809d3dd5036454f9723797b38acf84a96410a2cf8d926571c41a507acb0063",
-      "lazyRouteRegistries": "12ebe00bce630ed8d81e32bf984b1244a19573f91da53144ff3b0b944f8c1a8c",
+      "lazyRouteRegistries": "08d749c543014c504a882b95c6a95923e489974fe350eb26dc32732a21f6c80f",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "5140862e1a922044ce2d30b7132f7f1a4c5b4d9b38614608d34ee614f83ef934",
@@ -150,7 +150,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "32b6e557652603bbd1669cad08e7b8afbaef60b845b51c33453ad7dc83c6961e",
+      "registries": "91d69777c6377303fc58ce3a37cc2be50f79d8b2c7c693113995f5da053a7853",
       "supportedNamespaces": "c71390b60b94884f8fb2f0b12566e44adecace1ad2819f6884a6cbe7a6a980df"
     },
     "namespaceBundles": {
@@ -165,7 +165,7 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "90895c99706fec18bcf449f531ee9af11d37c25b1aa0106aa1fa2cf2f728c832",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "a03f4c8591faf52ca057af69840cee7712b342d4d40a2c125bbe2c612eec4fe7",
+      "scripts/lib/i18n-shell-slice/config.js": "654a9825afe7232850764decfd945785d0fe0b0cc72e015f0e2a7285c6d1f088",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3e91a28ece6aab80cbab5a093f2f03691a1c117a4f8874370c86edc3027bb07e",
+  "inputsSha256": "1d86ee1a6214af0e5a5416b67a03939eaceb9ff1fd8bee5c8425fbe9d63af3b0",
   "languages": [
     "el"
   ],
@@ -9421,6 +9421,10 @@
             "mapping.sample",
             "mapping.skuIdentifier",
             "mapping.target",
+            "mapping.trade.brand",
+            "mapping.trade.gtin",
+            "mapping.trade.mpn",
+            "mapping.trade.noGtinReason",
             "mapping.unit",
             "new.family",
             "new.file",
@@ -11798,20 +11802,6 @@
             "xchangeExport.preview.loading",
             "xchangeExport.preview.ready",
             "xchangeExport.public",
-            "xchangeExport.report.at",
-            "xchangeExport.report.codesOnly",
-            "xchangeExport.report.exported",
-            "xchangeExport.report.hidden",
-            "xchangeExport.report.noPriceList",
-            "xchangeExport.report.onRequest",
-            "xchangeExport.report.optionUnmapped",
-            "xchangeExport.report.priceSource",
-            "xchangeExport.report.priceSourceNoVersion",
-            "xchangeExport.report.title",
-            "xchangeExport.report.typeUnsupported",
-            "xchangeExport.report.unfitIdentifier",
-            "xchangeExport.report.unitUndeclared",
-            "xchangeExport.report.withoutClass",
             "xchangeExport.title"
           ],
           "prefixes": [
@@ -11822,8 +11812,7 @@
             "publishing.profile",
             "publishing.scope",
             "publishing.status",
-            "publishing.template",
-            "xchangeExport.reason"
+            "publishing.template"
           ],
           "whole": false
         },
@@ -40575,7 +40564,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1306627
+    "sliceBytes": 1304255
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

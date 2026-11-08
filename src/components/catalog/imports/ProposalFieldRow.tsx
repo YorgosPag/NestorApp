@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
 import type { ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import { useImportIssueMessage } from './import-issue-messages';
-import { FIELD_STATUS_KEYS, PRICE_FIELD_KEYS, useImportText } from './import-text';
+import { FIELD_STATUS_KEYS, PRICE_FIELD_KEYS, TRADE_FIELD_KEYS, useImportText } from './import-text';
 import { useImportValueText } from './import-value-text';
 
 const STATUS_VARIANT = { new: 'default', changed: 'secondary', unchanged: 'outline', conflict: 'destructive' } as const;
@@ -26,6 +26,7 @@ function useTargetLabel(field: ImportProposalField): string {
   if (target.kind === 'price') return t(PRICE_FIELD_KEYS[target.field]);
   if (target.kind === 'modelCode') return t('mapping.modelCode');
   if (target.kind === 'skuIdentifier') return t('mapping.skuIdentifier');
+  if (target.kind === 'tradeIdentity') return t(TRADE_FIELD_KEYS[target.field]);
   const attribute = attributes.items.find((item) => item.id === target.attributeId);
   return attribute?.labels.el ?? attribute?.code ?? target.attributeId;
 }

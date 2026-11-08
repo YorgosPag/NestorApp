@@ -34,6 +34,10 @@ export const ETIM_PIECE_UNIT = 'C62';
 /** Μέγιστο μήκος `SupplierItemNumber` / `ManufacturerProductNumber` στο σχήμα 2.0. Μακρύτερος κωδικός δεν κόβεται ποτέ: θα ήταν άλλο SKU. */
 export const ETIM_ITEM_NUMBER_MAX = 35;
 
+/** Μέγιστο μήκος `BrandName` (προαιρετικό) και `ManufacturerName` (υποχρεωτικό) στο σχήμα 2.0 — ADR-934 Σ1γ. */
+export const ETIM_BRAND_NAME_MAX = 50;
+export const ETIM_MANUFACTURER_NAME_MAX = 80;
+
 /**
  * Οι μονάδες που δέχονται το `PriceUnit` **και** το `OrderUnit` του σχήματος 2.0, αυτούσιες (οι δύο λίστες είναι ίδιες). Η άγκυρα
  * `etim-xchange-roundtrip.test.ts` τις συγκρίνει με το επίσημο σχήμα, ώστε νέα έκδοσή του να μη μείνει αθέατη.
@@ -75,8 +79,9 @@ export type XChangeOnRequestReason = (typeof XCHANGE_ON_REQUEST_REASONS)[number]
  * Γιατί μια εξαγωγή xChange **δεν θα είχε κανένα προϊόν** (ADR-923 §5.14.1 · απόφαση Ε3). Το σχήμα 2.0 ζητά `Product` με
  * `minItems: 1`: κενό αρχείο είναι **άκυρο** έγγραφο, άρα ποτέ δεν γράφεται. Η σειρά είναι η σειρά της διάγνωσης: ο κατάλογος
  * χωρίς προϊόντα · κανένας κανόνας ορατότητας (Δ3: χωρίς κανόνα ⇒ κρυφό) · όλα κρυφά για **αυτό** το κοινό · τα ορατά χωρίς
- * κωδικό που χωρά στο σχήμα.
+ * κωδικό που χωρά στο σχήμα · τα ορατά με κωδικό, αλλά χωρίς μάρκα ή MPN (ADR-934 Σ1γ Δ1: το σχήμα τα θέλει υποχρεωτικά, και
+ * επινοημένος κατασκευαστής δεν γράφεται ποτέ).
  */
-export const XCHANGE_EMPTY_CAUSES = ['catalogEmpty', 'noVisibilityRules', 'hiddenForAudience', 'noUsableIdentifier'] as const;
+export const XCHANGE_EMPTY_CAUSES = ['catalogEmpty', 'noVisibilityRules', 'hiddenForAudience', 'noUsableIdentifier', 'noTradeIdentity'] as const;
 
 export type XChangeEmptyCause = (typeof XCHANGE_EMPTY_CAUSES)[number];

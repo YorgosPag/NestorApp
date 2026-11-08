@@ -10,8 +10,9 @@ import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import type { ImportFieldValue, ImportIssue, ImportNoValueReasonValue, ImportProposalField, ImportTarget } from '../types/catalog-import';
-import { NO_VALUE_REASONS, type AttributeValue, type CatalogValueHolder, type NoValueReason, type ProductValues } from '../types/product';
+import { NO_VALUE_REASONS, type AttributeValue, type CatalogTradeIdentity, type CatalogValueHolder, type NoValueReason, type ProductValues } from '../types/product';
 import { writeNoValueReason } from '../values/holder-edit';
+import { EMPTY_BRAND, EMPTY_TRADE_IDENTITY, writeBrand, writeGtin, writeMpn, writeNoGtinReason } from '../values/trade-identity';
 import { listSlots } from '../values/value-shape';
 import { normalizeUniqueText } from '../values/normalize-unique';
 import { standardAmountOf } from '../values/standard-amount';
@@ -27,6 +28,8 @@ export function importTargetKey(target: ImportTarget): string {
       return `p:${target.field}`;
     case 'noValueReason':
       return `r:${target.attributeId}`;
+    case 'tradeIdentity':
+      return `t:${target.field}`;
     default:
       return target.kind;
   }
@@ -94,7 +97,7 @@ export function liveSlotValue(values: ProductValues, target: Extract<ImportTarge
 }
 
 const isAttributeValue = (value: ImportFieldValue): value is AttributeValue =>
-  !['money', 'priceQuantity', 'unit', 'discountGroup', 'noValueReason'].includes(value.type);
+  !['money', 'priceQuantity', 'unit', 'discountGroup', 'noValueReason', 'tradeText'].includes(value.type);
 
 /** Κείμενο κελιού `noValueReason` ⇒ λόγος. Ο κωδικός του λεξιλογίου (`notApplicable` · `unknown`), αυτούσιος — όχι λέξη. */
 export function parseNoValueReasonText(text: string): ImportNoValueReasonValue | null {
@@ -118,10 +121,29 @@ function mergeFieldsIntoValues(
   return merged;
 }
 
-/** Τα δύο μέρη ενός φορέα που αγγίζει η εισαγωγή. */
-export type ImportHolderContent = Pick<CatalogValueHolder, 'values' | 'noValueReasons'>;
+/** Τα μέρη κάθε φορέα που αγγίζει η εισαγωγή: τιμές, λόγοι απουσίας, μάρκα (ADR-934 Σ1γ — ο κάτοχός της είναι το βάθος 0). */
+export type ImportHolderContent = Pick<CatalogValueHolder, 'values' | 'noValueReasons' | 'brand'>;
 
-export const EMPTY_IMPORT_HOLDER: ImportHolderContent = { values: {}, noValueReasons: {} };
+/** Και τα πεδία ταυτότητας του SKU. Το μοντέλο **δεν** τα έχει: ο τύπος το κλείνει. */
+export type ImportProductContent = ImportHolderContent & CatalogTradeIdentity;
+
+export const EMPTY_IMPORT_HOLDER: ImportHolderContent = { values: {}, noValueReasons: {}, ...EMPTY_BRAND };
+
+/** Κάθε **νέο** SKU της εισαγωγής ξεκινά από εδώ — καμία χειρόγραφη τριάδα `null`. */
+export const EMPTY_PRODUCT_IMPORT_HOLDER: ImportProductContent = { ...EMPTY_IMPORT_HOLDER, ...EMPTY_TRADE_IDENTITY };
+
+type TradeTarget = Extract<ImportTarget, { kind: 'tradeIdentity' }>;
+type ChosenTradeField = ImportProposalField & { readonly target: TradeTarget };
+
+const isTradeField = (field: ImportProposalField): field is ChosenTradeField => field.target.kind === 'tradeIdentity';
+const tradeTextOf = (field: ImportProposalField): string | null => (field.incoming?.type === 'tradeText' ? field.incoming.text : null);
+
+/** Η μάρκα (βάθος 0) με την πράξη του `trade-identity`. */
+function mergeBrand<H extends ImportHolderContent>(holder: H, chosen: readonly ImportProposalField[]): H {
+  const brand = chosen.find((field) => isTradeField(field) && field.target.field === 'brand');
+  const text = brand ? tradeTextOf(brand) : null;
+  return text === null ? holder : writeBrand(holder, text);
+}
 
 /**
  * Τα εισερχόμενα των επιλεγμένων πεδίων πάνω στον φορέα — **ο ΕΝΑΣ δρόμος** για τον κριτή της πρότασης και την έγκριση (§23.2 K4).
@@ -144,7 +166,32 @@ export function mergeFieldsIntoHolder<H extends ImportHolderContent>(
   }, holder);
   const valued = new Set(chosen.flatMap((field) => (field.target.kind === 'attribute' && field.incoming !== null && isAttributeValue(field.incoming) ? [field.target.attributeId] : [])));
   const noValueReasons = Object.fromEntries(Object.entries(declared.noValueReasons).filter(([attributeId]) => !valued.has(attributeId)));
-  return { ...declared, values: mergeFieldsIntoValues(declared.values, chosen, () => true), noValueReasons };
+  return mergeBrand({ ...declared, values: mergeFieldsIntoValues(declared.values, chosen, () => true), noValueReasons }, chosen);
+}
+
+/**
+ * Το SKU: ό,τι κάνει το {@link mergeFieldsIntoHolder} **και** GTIN · MPN · «χωρίς GTIN», μόνο με τις πράξεις του `trade-identity`.
+ * 🔑 Πρώτα το «χωρίς GTIN», μετά το GTIN: η ίδια πηγή με τα δύο ⇒ κερδίζει ο κωδικός (`writeGtin` σβήνει τη δήλωση), όπως η τιμή
+ *    κερδίζει τον λόγο απουσίας. Ντετερμινιστικό, ανεξάρτητο από τη σειρά των πεδίων.
+ */
+export function mergeFieldsIntoProduct<H extends ImportProductContent>(
+  holder: H,
+  fields: readonly ImportProposalField[],
+  include: (field: ImportProposalField) => boolean,
+): H {
+  const chosen = fields.filter((field) => field.incoming !== null && include(field)).filter(isTradeField);
+  const pick = (name: ChosenTradeField['target']['field']): ImportProposalField | undefined => chosen.find((field) => field.target.field === name);
+  const textOf = (name: 'gtin' | 'mpn'): string | null => {
+    const found = pick(name);
+    return found ? tradeTextOf(found) : null;
+  };
+  const reason = pick('noGtinReason')?.incoming;
+  const declared = reason?.type === 'noValueReason' ? writeNoGtinReason(holder, reason.reason, null) : holder;
+  const mpn = textOf('mpn');
+  const withMpn = mpn === null ? declared : writeMpn(declared, mpn);
+  const gtin = textOf('gtin');
+  const withGtin = gtin === null ? withMpn : writeGtin(withMpn, gtin);
+  return mergeFieldsIntoHolder(withGtin, fields, include);
 }
 
 /** Έχει η ιδιότητα έστω μία ζωντανή τιμή σε κάποια θέση; Το ίδιο κριτήριο με τον επικυρωτή (`noValueConflict`). */

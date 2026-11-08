@@ -351,7 +351,7 @@
     "catalogEditionNoScreenFile": "This publication has no screen PDF; include the Screen profile in the recipe.",
     "xchangePriceListNotOffered": "The list is not offered to an audience.",
     "xchangeSupplierNameMissing": "The company legal name is missing.",
-    "xchangeNothingToExport": "{cause, select, catalogEmpty {The catalogue has no products.} noVisibilityRules {There is no visibility rule, so every product is hidden.} hiddenForAudience {Every product is hidden from this audience.} noUsableIdentifier {No visible product has a code of up to {max} characters.} other {There is no product to export.}} The xChange standard does not accept a file without products.",
+    "xchangeNothingToExport": "{cause, select, catalogEmpty {The catalogue has no products.} noVisibilityRules {There is no visibility rule, so every product is hidden.} hiddenForAudience {Every product is hidden from this audience.} noUsableIdentifier {No visible product has a code of up to {max} characters.} noTradeIdentity {No visible product has the brand and manufacturer part number (MPN) the standard requires.} other {There is no product to export.}} The xChange standard does not accept a file without products.",
     "gtinInvalid": "{reason, select, format {A GTIN contains digits only.} length {A GTIN has 8, 12, 13 or 14 digits.} checkDigit {Wrong check digit — check the code on the packaging.} allZero {A GTIN cannot be all zeros.} other {Invalid GTIN.}}",
     "gtinNotMatchable": "Internal or restricted-circulation code: it is saved, but it does not match the product with other sellers — matching will use brand + manufacturer part number.",
     "gtinPackagingLevel": "{indicator, select, packaging {Packaging GTIN (case or multipack): a different trade unit from the single item.} variableMeasure {Variable-measure GTIN: the quantity varies per item.} other {GTIN of another packaging level.}}",
@@ -1893,7 +1893,7 @@
       "loading": "Working out what will be exported…",
       "emptyTitle": "No products to export for this audience",
       "ready": "{count, plural, one {# product will be exported.} other {# products will be exported.}}",
-      "left": "{count, plural, one {# is left out: hidden, or without a suitable code.} other {# are left out: hidden, or without a suitable code.}}",
+      "left": "{count, plural, one {# is left out: hidden, or without a suitable code, brand or MPN.} other {# are left out: hidden, or without a suitable code, brand or MPN.}}",
       "fix": {
         "products": "Open products",
         "visibility": "Set up visibility"
@@ -1913,7 +1913,10 @@
       "unitUndeclared": "Features without a declared ETIM unit, not written: {codes}.",
       "optionUnmapped": "Features with an option that has no ETIM code, not written: {codes}.",
       "typeUnsupported": "Features that xChange cannot express, not written: {codes}.",
-      "codesOnly": "The file contains ETIM codes only, not names."
+      "codesOnly": "The file contains ETIM codes only, not names.",
+      "brandMissing": "{count, plural, one {# product was not exported: it has no brand.} other {# products were not exported: they have no brand.}}",
+      "mpnMissing": "{count, plural, one {# product was not exported: it has no manufacturer part number (MPN).} other {# products were not exported: they have no manufacturer part number (MPN).}}",
+      "mpnTooLong": "{count, plural, one {# product was not exported: its manufacturer part number is longer than 35 characters.} other {# products were not exported: their manufacturer part number is longer than 35 characters.}}"
     },
     "reason": {
       "visibleNoPrice": "{count} visible without price",

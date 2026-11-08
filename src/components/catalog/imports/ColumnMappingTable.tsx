@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { RawTable } from '@/lib/tabular-import/tabular-types';
 import type { ImportColumnRule } from '@/subapps/catalog/types/catalog-import';
 import { IMPORT_PRICE_FIELDS, type ImportPurpose } from '@/subapps/catalog/vocabulary/catalog-import';
-import { IGNORE_ROLE, roleOfTarget, targetOfRole, type AttributeChoice, type ImportRoleKey } from './import-source-file';
-import { PRICE_FIELD_KEYS, useImportText } from './import-text';
+import { IGNORE_ROLE, roleOfTarget, targetOfRole, tradeRole, type AttributeChoice, type ImportRoleKey } from './import-source-file';
+import { IMPORT_TRADE_FIELDS, PRICE_FIELD_KEYS, TRADE_FIELD_KEYS, useImportText } from './import-text';
 
 const SAMPLE_ROWS = 3;
 
@@ -36,7 +36,12 @@ function useRoleChoices(purpose: ImportPurpose, attributes: readonly AttributeCh
       ...IMPORT_PRICE_FIELDS.map((field) => ({ value: `price:${field}`, label: t(PRICE_FIELD_KEYS[field]) })),
     ];
   }
-  return [ignore, { value: 'modelCode', label: t('mapping.modelCode') }, ...attributes.map((attribute) => ({ value: `attribute:${attribute.id}`, label: attribute.label }))];
+  return [
+    ignore,
+    { value: 'modelCode', label: t('mapping.modelCode') },
+    ...IMPORT_TRADE_FIELDS.map((field) => ({ value: tradeRole(field), label: t(TRADE_FIELD_KEYS[field]) })),
+    ...attributes.map((attribute) => ({ value: `attribute:${attribute.id}`, label: attribute.label })),
+  ];
 }
 
 interface ColumnRowProps {

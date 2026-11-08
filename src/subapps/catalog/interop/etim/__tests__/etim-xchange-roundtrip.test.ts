@@ -48,6 +48,7 @@ const slots = (value: AttributeValue): ValueSlots => ({ [ANY_SLOT]: { [ANY_SLOT]
 function source(overrides: Partial<XChangeProductSource> = {}): XChangeProductSource {
   return {
     identifier: '016-15-001',
+    trade: { brand: 'Aries', mpn: 'MFP-15', gtin: '4006381333931', gtinIsBase: true },
     label: 'Fan coil MFP-15',
     familyId: 'fan',
     values: new Map([
@@ -210,6 +211,61 @@ describe('επικύρωση αντιστοιχίσεων', () => {
     const codes = (etimClass: string) => validateFamily({ ...family, etimClass }, new Map(), PLATFORM_MEASUREMENT_REGISTRY).map((issue) => issue.code);
     expect(codes('EC1')).toContain('invalidEtimCode');
     expect(codes('EC011533')).not.toContain('invalidEtimCode');
+  });
+});
+
+describe('εξαγωγή — ταυτότητα εμπορίου (ADR-934 Σ1γ)', () => {
+  const identification = (document: ReturnType<typeof buildXChangeDocument>['document']) => document.Supplier[0].Product[0].ProductIdentification;
+  it('🔴 ο κατασκευαστής είναι η μάρκα, ποτέ ο προμηθευτής· το MPN είναι το MPN, όχι ο κωδικός SKU', () => {
+    const { document } = buildXChangeDocument(exportInput({ supplier: { name: 'Μεταπωλητής ΑΕ', vatNumber: null } }));
+    expect(identification(document)).toMatchObject({ ManufacturerName: 'Aries', BrandName: 'Aries', ManufacturerProductNumber: 'MFP-15' });
+    expect(JSON.stringify(identification(document))).not.toContain('Μεταπωλητής');
+    expect(errorsOf(document)).toEqual([]);
+  });
+  it('GTIN μονάδας βάσης ⇒ ItemGtin και ProductGtin· συσκευασία ⇒ μόνο ItemGtin', () => {
+    const base = buildXChangeDocument(exportInput()).document;
+    expect(identification(base).ProductGtin).toEqual(['4006381333931']);
+    expect(base.Supplier[0].Product[0].TradeItem[0].ItemIdentification.ItemGtin).toEqual(['4006381333931']);
+    const caseUnit = buildXChangeDocument(exportInput({ products: [source({ trade: { brand: 'Aries', mpn: 'MFP-15', gtin: '14006381333938', gtinIsBase: false } })] })).document;
+    expect(identification(caseUnit).ProductGtin).toBeUndefined();
+    expect(caseUnit.Supplier[0].Product[0].TradeItem[0].ItemIdentification.ItemGtin).toEqual(['14006381333938']);
+    expect(errorsOf(caseUnit)).toEqual([]);
+  });
+  it('χωρίς GTIN ⇒ κανένα πεδίο GTIN· μάρκα πάνω από 50 ⇒ μόνο ManufacturerName, ποτέ κομμένη', () => {
+    const long = 'A'.repeat(60);
+    const { document } = buildXChangeDocument(exportInput({ products: [source({ trade: { brand: long, mpn: 'MFP-15', gtin: null, gtinIsBase: false } })] }));
+    expect(identification(document)).toEqual({ ManufacturerName: long, ManufacturerProductNumber: 'MFP-15' });
+    expect(errorsOf(document)).toEqual([]);
+  });
+});
+
+describe('εισαγωγή — ταυτότητα εμπορίου (ADR-934 Σ1γ)', () => {
+  const tradeOf = (document: unknown) => {
+    const { groups, report } = cellsOf(document);
+    const cells = groups.flatMap((group) => group.rows.flatMap((row) => row.cells));
+    const byField = new Map(cells.flatMap((cell) => (cell.target.kind === 'tradeIdentity' ? [[cell.target.field, cell.text] as const] : [])));
+    return { byField, report };
+  };
+  it('επίσημο δείγμα: GTIN του είδους που πουλιέται, μάρκα από το BrandName, MPN κρατιέται', () => {
+    const { byField, report } = tradeOf(sample20);
+    expect(byField.get('gtin')).toBe('08012542783404');
+    expect(byField.get('brand')).toBe('Mymake');
+    expect(byField.get('mpn')).toBe('04011969');
+    expect(report).toMatchObject({ extraGtins: 1, brandFromManufacturer: 0 });
+  });
+  it('χωρίς BrandName ⇒ ο κατασκευαστής, μετρημένα· χωρίς έγκυρο GTIN ⇒ το πρώτο, για να το πει ο κριτής', () => {
+    const document = {
+      SchemaVersion: '2.0', CatalogueId: 'c',
+      Supplier: [{ Product: [{ ProductIdentification: { ManufacturerName: 'Maker', ManufacturerProductNumber: 'A', ProductGtin: ['4006381333932'] }, EtimClassification: [{ EtimClassCode: 'EC011533' }] }] }],
+    };
+    const { byField, report } = tradeOf(document);
+    expect(byField.get('brand')).toBe('Maker');
+    expect(byField.get('gtin')).toBe('4006381333932');
+    expect(report).toMatchObject({ brandFromManufacturer: 1, extraGtins: 0 });
+  });
+  it('μετ\' επιστροφής: ό,τι βγήκε ξαναμπαίνει ως ίδιο GTIN, μάρκα και MPN', () => {
+    const { byField } = tradeOf(buildXChangeDocument(exportInput()).document);
+    expect(Object.fromEntries(byField)).toEqual({ gtin: '4006381333931', mpn: 'MFP-15', brand: 'Aries' });
   });
 });
 

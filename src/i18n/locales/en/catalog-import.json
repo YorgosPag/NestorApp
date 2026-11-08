@@ -38,6 +38,12 @@
       "priceQuantity": "Price quantity",
       "unitCode": "Pricing unit",
       "discountGroup": "Discount group"
+    },
+    "trade": {
+      "gtin": "GTIN / EAN",
+      "mpn": "Manufacturer part number (MPN)",
+      "brand": "Brand",
+      "noGtinReason": "No GTIN (reason)"
     }
   },
   "xchange": {
@@ -55,7 +61,9 @@
     "validityAmbiguous": "There are prices with different validity for: {codes}. Set a start date on the version and start a new import.",
     "currencyAssumed": "The file states no currency. Prices were read in {currency}.",
     "allowanceSurcharges": "{count, plural, one {# product has tiers or surcharges, which a price line does not hold.} other {# products have tiers or surcharges, which a price line does not hold.}}",
-    "tradeItems": "{count} products have several trade items: the first was kept."
+    "tradeItems": "{count} products have several trade items: the first was kept.",
+    "extraGtins": "{count, plural, one {# product gives more GTINs: the one of the unit sold was kept.} other {# products give more GTINs: the one of the unit sold was kept.}}",
+    "brandFromManufacturer": "{count, plural, one {# product declares no brand: the manufacturer name was used. Please check it.} other {# products declare no brand: the manufacturer name was used. Please check them.}}"
   },
   "batch": {
     "loading": "Loading batch…",
@@ -140,6 +148,7 @@
     "tableStructureDisputed": "The PDF tags and the table lines point to different cells. Check this value in the PDF.",
     "noValueReplacesValue": "The source says “not applicable”, but the attribute has a value in the catalog. Approving will remove it; you decide.",
     "unknownKeepsValue": "The source says “unknown”, but the catalog knows the value. The value stays.",
-    "noValueReasonUnreadable": "This text is not a reason for a missing value. Write notApplicable or unknown."
+    "noValueReasonUnreadable": "This text is not a reason for a missing value. Write notApplicable or unknown.",
+    "identityKeysDisagree": "The item code and the GTIN of this row point to different catalogue items. Correct the source."
   }
 }

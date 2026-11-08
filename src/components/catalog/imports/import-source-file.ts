@@ -10,7 +10,7 @@ import { readDelimitedText } from '@/lib/tabular-import/delimited-reader';
 import { readExcelToTable } from '@/lib/tabular-import/excel-reader';
 import type { HeaderHints, RawTable } from '@/lib/tabular-import/tabular-types';
 import { decodeSurveyText } from '@/lib/terrain/survey-import/survey-file-read';
-import type { ImportColumnRule, ImportTarget } from '@/subapps/catalog/types/catalog-import';
+import type { ImportColumnRule, ImportTarget, ImportTradeField } from '@/subapps/catalog/types/catalog-import';
 import { ANY_SLOT } from '@/subapps/catalog/types/product';
 import type { ImportPurpose, ImportSourceKind } from '@/subapps/catalog/vocabulary/catalog-import';
 
@@ -51,11 +51,15 @@ const PRICE_HINTS: HeaderHints<ImportRoleKey> = [
 
 const attributeRole = (attributeId: string): ImportRoleKey => `attribute:${attributeId}`;
 
+/** Ο ρόλος στήλης ενός πεδίου ταυτότητας εμπορίου (ADR-934 Σ1γ). */
+export const tradeRole = (field: ImportTradeField): ImportRoleKey => `trade:${field}`;
+
 export function targetOfRole(role: ImportRoleKey): ImportTarget | null {
   if (role === IGNORE_ROLE) return null;
   if (role === 'modelCode' || role === 'skuIdentifier') return { kind: role };
   const [kind, value] = role.split(':');
   if (kind === 'attribute') return { kind: 'attribute', attributeId: value, channel: ANY_SLOT, locale: ANY_SLOT };
+  if (kind === 'trade') return { kind: 'tradeIdentity', field: value as ImportTradeField };
   return { kind: 'price', field: value as Extract<ImportTarget, { kind: 'price' }>['field'] };
 }
 
@@ -64,8 +68,19 @@ export interface AttributeChoice {
   readonly label: string;
 }
 
+/**
+ * Τα πεδία ταυτότητας **πριν** από τις ιδιότητες: η πρώτη υπόδειξη που ταιριάζει κερδίζει, και η ετικέτα «Κωδικός κατασκευαστή»
+ * περιέχει το «κωδικός» μιας ιδιότητας. Μόνο λέξεις που δεν σημαίνουν τίποτα άλλο σε τιμοκατάλογο· ο άνθρωπος εγκρίνει.
+ */
+const TRADE_HINTS: HeaderHints<ImportRoleKey> = [
+  [tradeRole('gtin'), ['ean', 'gtin', 'barcode', 'upc', 'γραμμωτός', 'γραμμωτος']],
+  [tradeRole('mpn'), ['mpn', 'part number', 'κωδικός κατασκευαστή', 'κωδικος κατασκευαστη', 'κωδ. εργοστασίου', 'manufacturer code']],
+  [tradeRole('brand'), ['μάρκα', 'μαρκα', 'brand']],
+];
+
 const attributeHints = (attributes: readonly AttributeChoice[]): HeaderHints<ImportRoleKey> => [
   ['modelCode', ['μοντέλο', 'model', 'σειρά']],
+  ...TRADE_HINTS,
   ...attributes.map((attribute): readonly [ImportRoleKey, readonly string[]] => [attributeRole(attribute.id), [attribute.label.trim().toLowerCase()]]),
 ];
 
@@ -81,5 +96,6 @@ export function proposeColumns(table: RawTable, purpose: ImportPurpose, attribut
 export function roleOfTarget(target: ImportTarget | null): ImportRoleKey {
   if (target === null) return IGNORE_ROLE;
   if (target.kind === 'attribute') return attributeRole(target.attributeId);
+  if (target.kind === 'tradeIdentity') return tradeRole(target.field);
   return target.kind === 'price' ? `price:${target.field}` : target.kind;
 }

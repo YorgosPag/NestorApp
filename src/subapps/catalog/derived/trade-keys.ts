@@ -48,6 +48,18 @@ export function tradeIdentifierBasis(keys: Pick<CatalogTradeKeys, 'gtin14' | 'gt
 /** Κενό κλειδί ⇒ `null` (ένα κλειδί από μόνο κενά δεν ταυτίζει τίποτα). */
 const keyOrNull = (key: string): string | null => (key === '' ? null : key);
 
+/**
+ * Το **κλειδί ταυτότητας** ενός κειμένου πεδίου: η μάρκα με το κλειδί της κατοχής μάρκας, το MPN με τον κανόνα των κωδικών, το
+ * GTIN ως GTIN-14 (`null` αν δεν είναι έγκυρο). Ένας κανόνας για τα παράγωγα **και** για τη σύγκριση της εισαγωγής (ADR-934 Σ1γ):
+ * ό,τι εδώ είναι ίσο δεν είναι «αλλαγή».
+ */
+export function tradeFieldKeyOf(field: 'gtin' | 'mpn' | 'brand', text: string): string | null {
+  if (field === 'brand') return keyOrNull(brandKeyOf(text));
+  if (field === 'mpn') return keyOrNull(normalizeUniqueText(text));
+  const parsed = parseGtin(text);
+  return parsed.kind === 'valid' ? parsed.gtin14 : null;
+}
+
 /** Τα κλειδιά ενός SKU. `chain` = ρίζα → (υπο-μοντέλο) → το ίδιο το SKU· η μάρκα από τον κάτοχό της (βάθος 0). */
 export function tradeKeysOf(chain: readonly InheritanceLink[], product: Partial<CatalogTradeIdentity>): CatalogTradeKeys {
   const gtin = validGtinOf(product);
@@ -58,8 +70,8 @@ export function tradeKeysOf(chain: readonly InheritanceLink[], product: Partial<
     gtinMatchable: gtin !== null && isMatchableGtin(gtin),
     gtinPrefixClass: gtin?.prefixClass ?? null,
     gtinIndicator: gtin?.indicator.kind ?? null,
-    brandKey: brand === null ? null : keyOrNull(brandKeyOf(brand)),
-    mpnKey: mpn === null ? null : keyOrNull(normalizeUniqueText(mpn)),
+    brandKey: brand === null ? null : tradeFieldKeyOf('brand', brand),
+    mpnKey: mpn === null ? null : tradeFieldKeyOf('mpn', mpn),
   };
   return { ...partial, identifierBasis: tradeIdentifierBasis(partial) };
 }

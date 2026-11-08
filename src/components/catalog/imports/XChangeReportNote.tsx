@@ -18,6 +18,9 @@ const codesOf = (codes: readonly string[]): string => codes.join(' · ');
 
 function attributeLines(t: ImportText, report: XChangeAttributeImportReport): (string | null)[] {
   const { products, imported, otherClasses, otherClassProducts, unmappedFeatures, rangeFeatures, declaredNoValue, extraTradeItems } = report;
+  // ADR-934 Σ1γ: απόντα στις αναφορές πριν από τη φάση ⇒ 0.
+  const extraGtins = report.extraGtins ?? 0;
+  const brandFromManufacturer = report.brandFromManufacturer ?? 0;
   return [
     t('xchange.imported', { imported, products }),
     otherClassProducts > 0 ? t('xchange.otherClass', { count: otherClassProducts, classes: codesOf(otherClasses) }) : null,
@@ -25,6 +28,8 @@ function attributeLines(t: ImportText, report: XChangeAttributeImportReport): (s
     rangeFeatures.length > 0 ? t('xchange.ranges', { codes: codesOf(rangeFeatures) }) : null,
     declaredNoValue > 0 ? t('xchange.noValue', { count: declaredNoValue }) : null,
     extraTradeItems > 0 ? t('xchange.tradeItems', { count: extraTradeItems }) : null,
+    extraGtins > 0 ? t('xchange.extraGtins', { count: extraGtins }) : null,
+    brandFromManufacturer > 0 ? t('xchange.brandFromManufacturer', { count: brandFromManufacturer }) : null,
   ];
 }
 

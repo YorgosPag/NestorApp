@@ -6,6 +6,9 @@
  * ETIM, οικογένεια χωρίς κλάση) παραλείπεται και μετριέται στην {@link XChangeExportReport}, ποτέ σιωπηλά.
  * 🔒 Οι τιμές έρχονται **μόνο** ως `price` του κάθε SKU, κριμένες για το κοινό από τον διακομιστή (§12, `xchange-pricing.ts`).
  *    Χωρίς τιμή ⇒ `PriceOnRequest`. Η μονάδα παραγγελίας είναι η μονάδα της τιμής· χωρίς τιμή μένει το «τεμάχιο».
+ * 🔑 **Ποτέ ψευδής κατασκευαστής** (ADR-934 Σ1γ Δ1): `ManufacturerName` / `BrandName` = η μάρκα του SKU, `ManufacturerProductNumber`
+ *    = το MPN του. Η επωνυμία του προμηθευτή είναι μόνο `SupplierName`. SKU χωρίς αυτά **δεν** φτάνει ως εδώ (το κρίνει η
+ *    συναρμολόγηση και μετριέται). GTIN: `ItemGtin` πάντα· `ProductGtin` μόνο στη μονάδα βάσης (Δ2β).
  * @module subapps/catalog/interop/etim/catalog-to-xchange
  */
 
@@ -16,11 +19,31 @@ import type { CatalogAttributeDefinition } from '../../types/attribute';
 import type { CatalogFamilyDefinition } from '../../types/family';
 import type { AttributeValue, NoValueReason, ValueSlots } from '../../types/product';
 import { readSlot } from '../../values/value-shape';
-import { ETIM_LANGUAGE_TAG, ETIM_MAX_FRACTION_DIGITS, ETIM_PIECE_UNIT, ETIM_REASON_OF, ETIM_XCHANGE_SCHEMA_VERSION } from '../../vocabulary/etim';
+import {
+  ETIM_BRAND_NAME_MAX,
+  ETIM_LANGUAGE_TAG,
+  ETIM_MAX_FRACTION_DIGITS,
+  ETIM_PIECE_UNIT,
+  ETIM_REASON_OF,
+  ETIM_XCHANGE_SCHEMA_VERSION,
+} from '../../vocabulary/etim';
 import type { XChangeTradePrice } from './xchange-pricing';
+
+/** Η ταυτότητα εμπορίου ενός SKU, όπως τη γράφει το αρχείο. Μόνο αληθινές τιμές: το «λείπει» δεν φτάνει ως εδώ. */
+export interface XChangeTradeIdentity {
+  /** Η μάρκα της ρίζας (βάθος 0)· ως 70 χαρακτήρες, άρα χωρά πάντα στο `ManufacturerName` (80). */
+  readonly brand: string;
+  /** Το MPN, ή ο κωδικός SKU όταν ο χώρος κατέχει τη μάρκα ως κατασκευαστής. Ως 35 χαρακτήρες. */
+  readonly mpn: string;
+  /** Έγκυρο GTIN, όπως το έγραψε ο προμηθευτής (8–14 ψηφία, το μοτίβο του σχήματος)· `null` = κανένα. */
+  readonly gtin: string | null;
+  /** Μονάδα βάσης (δείκτης 0): μόνο τότε το GTIN είναι και του **προϊόντος**. */
+  readonly gtinIsBase: boolean;
+}
 
 export interface XChangeProductSource {
   readonly identifier: string;
+  readonly trade: XChangeTradeIdentity;
   readonly label: string;
   readonly familyId: string;
   /** Οι τιμές **με την κληρονομιά λυμένη**: το xChange δεν έχει μοντέλο. */
@@ -136,16 +159,27 @@ function pricingOf(price: XChangeTradePrice | null, validityDate: string | null)
 }
 
 function tradeItemOf(product: XChangeProductSource, input: XChangeExportInput) {
+  const { gtin } = product.trade;
   return {
-    ItemIdentification: { SupplierItemNumber: product.identifier },
+    ItemIdentification: { SupplierItemNumber: product.identifier, ...(gtin === null ? {} : { ItemGtin: [gtin] }) },
     Ordering: { OrderUnit: product.price?.unit ?? ETIM_PIECE_UNIT, MinimumOrderQuantity: '1', OrderStepSize: '1' },
     Pricing: [pricingOf(product.price, input.priceValidityDate)],
   };
 }
 
+/** Η ταυτότητα του προϊόντος (ADR-934 Σ1γ). Μάρκα πάνω από 50 χαρακτήρες ⇒ μόνο ως `ManufacturerName`: ποτέ κομμένη. */
+function identificationOf({ trade }: XChangeProductSource) {
+  return {
+    ManufacturerName: trade.brand,
+    ManufacturerProductNumber: trade.mpn,
+    ...(trade.gtin !== null && trade.gtinIsBase ? { ProductGtin: [trade.gtin] } : {}),
+    ...(trade.brand.length <= ETIM_BRAND_NAME_MAX ? { BrandName: trade.brand } : {}),
+  };
+}
+
 function productOf(product: XChangeProductSource, input: XChangeExportInput, notes: ExportNotes) {
   return {
-    ProductIdentification: { ManufacturerName: input.supplier.name, ManufacturerProductNumber: product.identifier },
+    ProductIdentification: identificationOf(product),
     ProductDetails: {
       ProductDescriptions: [{ DescriptionLanguage: ETIM_LANGUAGE_TAG[input.language], MinimalProductDescription: product.label.slice(0, MINIMAL_DESCRIPTION_MAX) }],
     },
