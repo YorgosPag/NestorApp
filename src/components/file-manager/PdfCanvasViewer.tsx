@@ -22,7 +22,7 @@
 
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState, useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { quarterTurnExtent, type ZoomLimits } from '@/lib/geometry/zoom-pan-math';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -41,12 +41,14 @@ import {
 } from './pdf-canvas-config';
 import { PdfHighlights, useControlledPdfPage } from './PdfHighlights';
 import { PdfLinkLayer } from './PdfLinkLayer';
+import { PdfSidebar } from './PdfSidebar';
 import { PdfTextLayer } from './PdfTextLayer';
 import { PdfViewerToolbar } from './PdfViewerToolbar';
 import { usePdfCurrentPage } from './usePdfCurrentPage';
 import { sourceIdentityOf, usePdfDocument } from './usePdfDocument';
 import { usePdfDownload } from './usePdfDownload';
 import { usePdfPageInUrl } from './usePdfPageInUrl';
+import { usePdfReaderSidebar, type PdfReaderSidebar } from './usePdfSidebar';
 import { usePdfViewport, type PdfViewport } from './usePdfViewport';
 
 // ============================================================================
@@ -78,13 +80,17 @@ async function drawPage(page: PdfPageProxy, canvas: HTMLCanvasElement, scale: nu
  * ενός ζουμ το παλιό bitmap απλώς τεντώνεται και καθαρίζει όταν η κίνηση ηρεμήσει (pdf.js). Νέα σελίδα/στροφή/έγγραφο ⇒ αμέσως.
  */
 function usePdfPageRender(
-  { docRef, canvasRef, lastDrawnRef, state, scale, ready, setState }: {
+  { docRef, canvasRef, lastDrawnRef, state, scale, ready, setState, onDrawn }: {
     docRef: RefObject<PdfDocProxy | null>; canvasRef: RefObject<HTMLCanvasElement>;
     lastDrawnRef: { current: { page: number; rotation: number } | null };
     state: PdfState; scale: number; ready: boolean; setState: Dispatch<SetStateAction<PdfState>>;
+    /** Ένα σχέδιο ολοκληρώθηκε — η συγκομιδή μικρογραφίας μηδενικού κόστους (ADR-923 §5.15.2 Θ.2α-3). */
+    onDrawn: (page: number, rotation: number, canvas: HTMLCanvasElement) => void;
   },
 ): void {
   const renderTaskRef = useRef<RenderTask | null>(null);
+  const onDrawnRef = useRef(onDrawn);
+  useEffect(() => { onDrawnRef.current = onDrawn; });
   useEffect(() => {
     const doc = docRef.current;
     const canvas = canvasRef.current;
@@ -100,6 +106,7 @@ function usePdfPageRender(
         if (cancelled) return;
         lastDrawnRef.current = { page: state.currentPage, rotation: state.rotation };
         await drawPage(page, canvas, scale, state.rotation, (task) => { renderTaskRef.current = task; });
+        if (!cancelled) onDrawnRef.current(state.currentPage, state.rotation, canvas);
       } catch (err) {
         if (cancelled || (err instanceof Error && err.message.includes('Rendering cancelled'))) return;
         setState((s) => ({ ...s, error: err instanceof Error ? err.message : 'Render error' }));
@@ -184,7 +191,13 @@ export function PdfCanvasViewer(props: PdfCanvasViewerProps) {
   const current = usePdfCurrentPage(docRef, state);
   const pageExtent = useMemo(() => (current.base ? quarterTurnExtent(current.base, state.rotation) : null), [current.base, state.rotation]);
   const viewport = usePdfViewport({ page: pageExtent, pageKey: state.currentPage, limits: PDF_ZOOM_LIMITS, canvasRef });
-  usePdfPageRender({ docRef, canvasRef, lastDrawnRef, state, scale: viewport.scale, ready: viewport.ready, setState });
+  // ADR-923 §5.15.2 (Θ.2α-3) — πλευρικό πάνελ από το ΙΔΙΟ έγγραφο· ταυτότητα μόνο όταν το έγγραφο είναι έτοιμο.
+  const documentKey = !state.loading && !state.error && state.numPages > 0 ? sourceIdentityOf(source) : null;
+  const reader = usePdfReaderSidebar(docRef, documentKey, features?.sidebar === true);
+  usePdfPageRender({
+    docRef, canvasRef, lastDrawnRef, state, scale: viewport.scale, ready: viewport.ready, setState,
+    onDrawn: reader.thumbnails.offerRendered,
+  });
 
   const { goToPrev, goToNext, goToPage, rotate } = usePdfPageNavigation(setState);
   usePdfKeyboard(viewport, goToPrev, goToNext);
@@ -198,6 +211,8 @@ export function PdfCanvasViewer(props: PdfCanvasViewerProps) {
   const downloadName = features?.download?.fileName ?? null;
   const pdfDownload = usePdfDownload(docRef, downloadName, sourceIdentityOf(source));
   const showOverlay = state.loading || !!state.error;
+  const sidebarId = useId();
+  const sidebarEnabled = features?.sidebar === true;
 
   return (
     <section className={cn('flex flex-col h-full', className)}>
@@ -212,20 +227,50 @@ export function PdfCanvasViewer(props: PdfCanvasViewerProps) {
         onRotate={rotate}
         onFullscreen={fullscreenUrl !== null ? openFullscreen : null}
         download={downloadName !== null ? { status: pdfDownload.status, onDownload: pdfDownload.download } : null}
+        sidebar={sidebarEnabled ? { open: reader.sidebar.open, onToggle: reader.sidebar.toggle, controls: sidebarId } : null}
       />
 
-      <PdfPageStage
-        viewport={viewport}
-        canvasRef={canvasRef}
-        docRef={docRef}
-        title={title}
-        state={state}
-        page={current.page}
-        highlights={highlights}
-        features={features}
-        onNavigate={goToPage}
-      />
+      {/* Πάνελ (αν ζητήθηκε) | σκηνή — το πάνελ στην ίδια γραμμή, η μπάρα πάνω από τα δύο (pdf.js · Acrobat). */}
+      <div className="flex min-h-0 flex-1">
+        {sidebarEnabled && !showOverlay && (
+          <ReaderSidebar id={sidebarId} reader={reader} state={state} pageExtent={pageExtent} onNavigate={goToPage} />
+        )}
+        <PdfPageStage
+          viewport={viewport}
+          canvasRef={canvasRef}
+          docRef={docRef}
+          title={title}
+          state={state}
+          page={current.page}
+          highlights={highlights}
+          features={features}
+          onNavigate={goToPage}
+        />
+      </div>
     </section>
+  );
+}
+
+/** Λόγος ύψους/πλάτους μιας Α4 — το σχήμα των θέσεων πριν μετρηθεί η πρώτη σελίδα. */
+const A4_ASPECT = Math.SQRT2;
+
+function ReaderSidebar({ id, reader, state, pageExtent, onNavigate }: {
+  readonly id: string;
+  readonly reader: PdfReaderSidebar;
+  readonly state: PdfState;
+  readonly pageExtent: { readonly width: number; readonly height: number } | null;
+  readonly onNavigate: (page: number) => void;
+}) {
+  const defaultAspect = pageExtent && pageExtent.width > 0 ? pageExtent.height / pageExtent.width : A4_ASPECT;
+  return (
+    <PdfSidebar
+      id={id}
+      sidebar={reader.sidebar}
+      navigation={reader.navigation}
+      thumbnails={{ store: reader.thumbnails.store, numPages: state.numPages, rotation: state.rotation, defaultAspect }}
+      currentPage={state.currentPage}
+      onNavigate={onNavigate}
+    />
   );
 }
 

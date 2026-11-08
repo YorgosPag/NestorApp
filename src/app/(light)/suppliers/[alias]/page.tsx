@@ -19,7 +19,8 @@ import { supplierStructuredData, type SupplierServiceNode } from '@/lib/catalog/
 import { readPublicCategoryIndex, readPublicModelPage, readPublicProviderFacts, readPublicSupplierBrands, readPublicSupplierProfile } from '@/services/public-catalog/public-catalog.reader';
 import { readShowcaseCardPrices } from '@/services/public-catalog/public-catalog-prices';
 import { orSupplierCatalogUnavailable, requirePublicSupplier } from '@/services/public-catalog/public-supplier-route';
-import { publicAfterOf, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
+import { readPublicCatalogEditions } from '@/server/catalog/editions/catalog-edition-reads.server';
+import { publicAfterOf, publicCatalogsRoute, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import type { PublicModelCard } from '@/subapps/catalog/public/public-model-card';
 
 interface SupplierPageProps {
@@ -48,8 +49,8 @@ export default async function SupplierPage({ params, searchParams }: SupplierPag
   const after = publicAfterOf((await searchParams).after);
   const supplier = await requirePublicSupplier(alias);
   const { companyId, legalName } = supplier;
-  const [page, categories, facts, profile, brands] = await orSupplierCatalogUnavailable(() =>
-    Promise.all([readPublicModelPage(companyId, { categoryId: null, after }), readPublicCategoryIndex(companyId), readPublicProviderFacts(companyId), readPublicSupplierProfile(companyId), readPublicSupplierBrands(companyId)]),
+  const [page, categories, facts, profile, brands, editions] = await orSupplierCatalogUnavailable(() =>
+    Promise.all([readPublicModelPage(companyId, { categoryId: null, after }), readPublicCategoryIndex(companyId), readPublicProviderFacts(companyId), readPublicSupplierProfile(companyId), readPublicSupplierBrands(companyId), readPublicCatalogEditions(companyId)]),
   );
   // §5.13 Σ6: ανώνυμη τιμή «από» για τις κάρτες αυτής της σελίδας. Κλειστός διακόπτης ⇒ `null`, χωρίς ανάγνωση· βλάβη ⇒ `null`, ποτέ 5xx (Μ2).
   const cardPrices = await readShowcaseCardPrices(companyId, page.cards);
@@ -64,6 +65,7 @@ export default async function SupplierPage({ params, searchParams }: SupplierPag
         provider={facts}
         profile={profile}
         brands={brands}
+        catalogsHref={editions.length > 0 ? publicCatalogsRoute(alias) : null}
         cards={page.cards}
         cardPrices={cardPrices}
         categories={categories}

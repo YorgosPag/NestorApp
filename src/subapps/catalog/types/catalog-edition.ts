@@ -71,9 +71,17 @@ export type CatalogEditionOwnerView = Omit<CatalogEditionDefinition, 'file'> & {
   readonly file: Omit<CatalogEditionFile, 'storagePath'>;
 };
 
-/** Η έκδοση όπως τη βλέπει **ο θεατής**: χωρίς διαδρομή αποθήκευσης, χωρίς κοινό, χωρίς ταυτότητες προσώπων. */
+/**
+ * Η έκδοση όπως τη βλέπει **ο θεατής**: χωρίς διαδρομή αποθήκευσης, χωρίς κοινό, χωρίς ταυτότητες προσώπων.
+ * 🔑 Το `current` το αποφασίζει **ο διακομιστής** με τον ένα κριτή (`latestVisibleEdition`), γιατί ο θεατής δεν ξέρει το κοινό
+ *    και δεν μπορεί να το κρίνει μόνος του (ADR-923 §5.15.3).
+ */
 export interface CatalogEditionView {
   readonly id: string;
+  /** Το ράφι (σειρά) της έκδοσης — αδιαφανές id, στόχος του σταθερού συνδέσμου ραφιού. */
+  readonly shelfKey: string;
+  /** Είναι το ισχύον έντυπο του ραφιού **γι' αυτόν τον θεατή**. */
+  readonly current: boolean;
   readonly title: LocalizedText;
   readonly language: HumanLanguage;
   readonly pageCount: number;

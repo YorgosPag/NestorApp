@@ -16,7 +16,8 @@
     "brands": "Μάρκες",
     "brandManufacturer": "Κατασκευαστής",
     "brandRepresentative": "Επίσημος αντιπρόσωπος",
-    "portfolio": "Έργα"
+    "portfolio": "Έργα",
+    "catalogs": "Ψηφιακοί κατάλογοι"
   },
   "model": {
     "code": "Κωδικός: {code}",
@@ -45,5 +46,30 @@
     "yoursFor": "Η τιμή σας για {sku}",
     "vatExcluded": "{price} χωρίς ΦΠΑ",
     "withVat": "Με ΦΠΑ {rate}%: {price}"
+  },
+  "editions": {
+    "title": "Κατάλογοι",
+    "empty": "Δεν υπάρχουν ακόμη δημοσιευμένοι κατάλογοι.",
+    "pages": "{count, plural, one {# σελίδα} other {# σελίδες}}",
+    "language": {
+      "el": "Ελληνικά",
+      "en": "Αγγλικά"
+    },
+    "open": "Ανάγνωση: {title}",
+    "read": "Ανάγνωση",
+    "status": {
+      "current": "Ισχύουσα έκδοση",
+      "superseded": "Παλαιότερη έκδοση",
+      "alternate": "Άλλη έκδοση σε ισχύ"
+    },
+    "others": "{count, plural, one {# ακόμη έκδοση} other {# ακόμη εκδόσεις}}",
+    "shelfLink": "Μόνιμος σύνδεσμος — δείχνει πάντα την ισχύουσα έκδοση",
+    "newerNotice": "Αυτή δεν είναι η ισχύουσα έκδοση. Ισχύει: «{title}».",
+    "openCurrent": "Άνοιγμα ισχύουσας",
+    "backToSupplier": "← {name}",
+    "allEditions": "Όλοι οι κατάλογοι",
+    "supplierTitle": "Κατάλογοι · {name}",
+    "loading": "Φόρτωση καταλόγων…",
+    "unavailable": "Οι κατάλογοι δεν είναι διαθέσιμοι αυτή τη στιγμή."
   }
 }

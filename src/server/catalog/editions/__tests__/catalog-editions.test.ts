@@ -56,7 +56,7 @@ jest.mock('../../catalog-library-reads.server', () => ({
 }));
 
 import { publishCatalogEdition, withdrawCatalogEdition } from '../catalog-edition-writer.server';
-import { readCatalogEditionsFor, resolveLatestCatalogEdition, signCatalogEditionFile } from '../catalog-edition-reads.server';
+import { readCatalogEditionsFor, resolveLatestCatalogEdition, signCatalogEditionFile, signOwnedCatalogEditionFile } from '../catalog-edition-reads.server';
 
 const SUPPLIER = 'supplier';
 const RUN_A = 'cpubx_11111111-1111-4111-8111-111111111111';
@@ -204,5 +204,25 @@ describe('σύνορο ανάγνωσης', () => {
     mockViewers.set('buyer', { kind: 'signedIn', customerGroupId: GROUP, parties: [] });
     expect(await resolveLatestCatalogEdition(SUPPLIER, { kind: 'anonymous' }, 'cpubr_1')).toBe(anonymous.id);
     expect(await resolveLatestCatalogEdition(SUPPLIER, { kind: 'buyer', buyerCompanyId: 'buyer' }, 'cpubr_1')).toBe(group.id);
+  });
+
+  it('η λίστα σημαδεύει το ισχύον με τον ΙΔΙΟ κριτή με τον σταθερό σύνδεσμο (§5.15.3)', async () => {
+    const { anonymous, group } = await shelfOfThree();
+    mockViewers.set('buyer', { kind: 'signedIn', customerGroupId: GROUP, parties: [] });
+    const currentOf = async (source: Parameters<typeof readCatalogEditionsFor>[1]) =>
+      (await readCatalogEditionsFor(SUPPLIER, source)).filter((view) => view.current).map((view) => view.id);
+    expect(await currentOf({ kind: 'anonymous' })).toEqual([anonymous.id]);
+    expect(await currentOf({ kind: 'buyer', buyerCompanyId: 'buyer' })).toEqual([group.id]);
+    expect((await readCatalogEditionsFor(SUPPLIER, { kind: 'anonymous' }))[0]?.shelfKey).toBe('cpubr_1');
+  });
+
+  it('🔒 πόρτα ιδιοκτήτη: μόνο ο δικός του χώρος, όχι αποσυρμένη, όχι άκυρο id (§5.15.3)', async () => {
+    const { anonymous, group } = await shelfOfThree();
+    expect(await signOwnedCatalogEditionFile(ctx, group.id)).toEqual({ url: `signed://${screenPath(RUN_B)}`, expiresAt: 1 });
+    const stranger = { companyId: 'other', uid: 'u9' } as unknown as AuthContext;
+    expect(await signOwnedCatalogEditionFile(stranger, anonymous.id)).toBeNull();
+    expect(await signOwnedCatalogEditionFile(ctx, 'not-an-id')).toBeNull();
+    await withdrawCatalogEdition(ctx, anonymous.id);
+    expect(await signOwnedCatalogEditionFile(ctx, anonymous.id)).toBeNull();
   });
 });

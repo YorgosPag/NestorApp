@@ -1285,6 +1285,26 @@
       "alt": "Preview of a catalogue page",
       "noRecipe": "A publication recipe is needed first.",
       "unavailable": "The preview is not available right now."
+    },
+    "editions": {
+      "title": "Published catalogues",
+      "publishTo": "Publish to…",
+      "publishTitle": "Publish catalogue",
+      "publishDescription": "The screen PDF of this edition becomes a catalogue your audience reads page by page, without downloading the whole file. The file never changes; a new edition supersedes the previous one, which stays visible as an older edition.",
+      "audienceHint": "Public showcase: anyone who visits your page. Customer group: only connected customers in that group.",
+      "publish": "Publish",
+      "published": "The catalogue was published.",
+      "view": "View",
+      "withdraw": "Withdraw",
+      "withdrawTitle": "Withdraw this catalogue?",
+      "withdrawBody": "The catalogue closes for every reader, and anyone who has it open will not be able to continue.",
+      "withdrawCurrentBody": "The catalogue closes for every reader. It is the current one: if there is an earlier edition for the same audience, it becomes current again.",
+      "refusal": {
+        "disposed": "The PDF of this edition has been disposed of; it cannot be published.",
+        "disposalDue": "The PDF of this edition is about to be disposed of; it cannot be published.",
+        "priced": "Contains prices — it cannot be published as a catalogue.",
+        "noScreenFile": "This edition has no screen PDF; it cannot be published."
+      }
     }
   },
   "pricing": {
@@ -1712,7 +1732,8 @@
       "disconnect": "Disconnect",
       "cancelRequest": "Cancel request",
       "disconnectTitle": "Disconnect from this supplier?",
-      "disconnectBody": "You will no longer see their catalogue and prices. Amounts already in your budgets stay as they are."
+      "disconnectBody": "You will no longer see their catalogue and prices. Amounts already in your budgets stay as they are.",
+      "catalogs": "Catalogues"
     },
     "link": {
       "title": "Link and QR",

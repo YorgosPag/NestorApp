@@ -77,6 +77,11 @@ export async function readCatalogEditionInTx(tx: Transaction, db: Firestore, id:
   return storedCatalogEditionOf((await tx.get(catalogEditionRef(db, id))).data()) ?? null;
 }
 
+/** Η εγγραφή μιας έκδοσης χωρίς συναλλαγή (η προβολή του ιδιοκτήτη: ένα έγγραφο, καμία συνδυασμένη κρίση). */
+export async function readCatalogEdition(db: Firestore, id: string): Promise<StoredCatalogEdition | null> {
+  return storedCatalogEditionOf((await catalogEditionRef(db, id).get()).data()) ?? null;
+}
+
 /** Όλες οι εκδόσεις του χώρου, οι νεότερες πρώτες — ό,τι βλέπει ο ιδιοκτήτης (δείκτης: companyId · publishedAt). */
 export function readCompanyEditions(db: Firestore, companyId: string): Promise<StoredCatalogEdition[]> {
   const query = editions(db).where('companyId', '==', companyId).orderBy('publishedAt', 'desc').limit(CATALOG_EDITION_LIST_LIMIT);

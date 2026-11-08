@@ -91,7 +91,17 @@
     "downloading": "Downloading…",
     "downloadFailed": "The download failed. Please try again.",
     "linkToPage": "Go to page {page}",
-    "externalLink": "External link: {target}"
+    "externalLink": "External link: {target}",
+    "sidebar": {
+      "title": "Document navigation",
+      "show": "Show sidebar",
+      "hide": "Hide sidebar",
+      "thumbnails": "Thumbnails",
+      "outline": "Contents",
+      "pageThumb": "Page {label}",
+      "untitled": "Untitled",
+      "emptyOutline": "This document has no contents."
+    }
   },
   "validation": {
     "onlyPdfAllowed": "Only PDF files are allowed",

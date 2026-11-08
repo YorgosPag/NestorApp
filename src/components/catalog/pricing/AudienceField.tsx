@@ -47,6 +47,11 @@ interface AudienceFieldProps {
   readonly disabled: boolean;
   readonly issues: readonly CatalogIssue[];
   readonly hint?: string;
+  /**
+   * Ποια είδη προσφέρονται — **υποσύνολο** της ρίζας, ποτέ δεύτερο λεξιλόγιο (π.χ. έντυπο: `CATALOG_EDITION_AUDIENCE_KINDS`,
+   * ADR-923 §5.15.3). Απόν ⇒ όλα τα `AUDIENCE_KINDS`.
+   */
+  readonly kinds?: readonly AudienceKind[];
 }
 
 function CustomerGroupSelect({ value, onChange, groups, disabled, issues }: {
@@ -73,7 +78,7 @@ function CustomerGroupSelect({ value, onChange, groups, disabled, issues }: {
   );
 }
 
-function AudienceKindSelect({ value, onChange, allowNone, disabled, issues, hint }: Omit<AudienceFieldProps, 'customerGroups'>) {
+function AudienceKindSelect({ value, onChange, allowNone, disabled, issues, hint, kinds = AUDIENCE_KINDS }: Omit<AudienceFieldProps, 'customerGroups'>) {
   const { t } = useCatalogText();
   const choose = (next: string) => onChange(isAudienceKind(next) ? audienceOfKind(next, value) : null);
   return (
@@ -83,7 +88,7 @@ function AudienceKindSelect({ value, onChange, allowNone, disabled, issues, hint
           <SelectTrigger id={id} aria-describedby={describedBy}><SelectValue /></SelectTrigger>
           <SelectContent>
             {allowNone ? <SelectItem value={NO_AUDIENCE}>{t('pricing.audience.none')}</SelectItem> : null}
-            {AUDIENCE_KINDS.map((kind) => {
+            {kinds.map((kind) => {
               const Icon = AUDIENCE_KIND_ICONS[kind];
               return (
                 <SelectItem key={kind} value={kind}>

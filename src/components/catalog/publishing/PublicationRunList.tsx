@@ -19,6 +19,7 @@ import { formatDate } from '@/lib/intl-formatting';
 import { CATALOG_API } from '@/subapps/catalog/catalog-routes';
 import type { PublicationReport, PublicationReportCount, PublicationRunStatus, PublicationRunWire } from '@/subapps/catalog/types/publication';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
+import { PublicationEditionPublish } from './PublicationEditionPublish';
 import { PublicationRunRetention } from './PublicationRunRetention';
 
 const STATUS_BADGES: Readonly<Record<PublicationRunStatus, NonNullable<BadgeVariantProps['variant']>>> = {
@@ -86,7 +87,14 @@ function RunDownloads({ run }: { readonly run: PublicationRunWire }) {
   );
 }
 
-function RunRow({ run, revalidate }: { readonly run: PublicationRunWire; readonly revalidate: () => Promise<void> }) {
+interface RunRowProps {
+  readonly run: PublicationRunWire;
+  readonly revalidate: () => Promise<void>;
+  /** Μετά από «Δημοσίευση σε…»: ανανεώνονται **και** οι εκδόσεις **και** τα έντυπα (η διατήρηση αλλάζει, Η2). */
+  readonly onEditionPublished: () => Promise<void>;
+}
+
+function RunRow({ run, revalidate, onEditionPublished }: RunRowProps) {
   const { t } = useCatalogText();
   const disposed = run.retention.disposal !== null;
   return (
@@ -99,6 +107,7 @@ function RunRow({ run, revalidate }: { readonly run: PublicationRunWire; readonl
       </header>
       {run.status === 'queued' || run.status === 'running' ? <RunProgress run={run} /> : null}
       {run.status === 'ready' && !disposed ? <RunDownloads run={run} /> : null}
+      <PublicationEditionPublish run={run} onPublished={onEditionPublished} />
       {run.status === 'failed' && run.failure !== null ? (
         <p className="m-0 text-sm text-destructive" role="alert">{t(`publishing.failure.${run.failure}`)}</p>
       ) : null}
@@ -108,7 +117,7 @@ function RunRow({ run, revalidate }: { readonly run: PublicationRunWire; readonl
   );
 }
 
-export function PublicationRunList({ runs, revalidate }: { readonly runs: readonly PublicationRunWire[]; readonly revalidate: () => Promise<void> }) {
+export function PublicationRunList({ runs, revalidate, onEditionPublished }: Omit<RunRowProps, 'run'> & { readonly runs: readonly PublicationRunWire[] }) {
   const { t } = useCatalogText();
   const newestFirst = [...runs].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
   return (
@@ -118,7 +127,7 @@ export function PublicationRunList({ runs, revalidate }: { readonly runs: readon
         <p className="m-0 text-sm text-muted-foreground">{t('publishing.noRuns')}</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {newestFirst.map((run) => <RunRow key={run.id} run={run} revalidate={revalidate} />)}
+          {newestFirst.map((run) => <RunRow key={run.id} run={run} revalidate={revalidate} onEditionPublished={onEditionPublished} />)}
         </ul>
       )}
     </section>

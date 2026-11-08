@@ -16,7 +16,8 @@
     "brands": "Brands",
     "brandManufacturer": "Manufacturer",
     "brandRepresentative": "Authorised representative",
-    "portfolio": "Projects"
+    "portfolio": "Projects",
+    "catalogs": "Digital catalogues"
   },
   "model": {
     "code": "Code: {code}",
@@ -45,5 +46,30 @@
     "yoursFor": "Your price for {sku}",
     "vatExcluded": "{price} excl. VAT",
     "withVat": "Incl. {rate}% VAT: {price}"
+  },
+  "editions": {
+    "title": "Catalogues",
+    "empty": "No published catalogues yet.",
+    "pages": "{count, plural, one {# page} other {# pages}}",
+    "language": {
+      "el": "Greek",
+      "en": "English"
+    },
+    "open": "Read: {title}",
+    "read": "Read",
+    "status": {
+      "current": "Current edition",
+      "superseded": "Older edition",
+      "alternate": "Another edition in effect"
+    },
+    "others": "{count, plural, one {# more edition} other {# more editions}}",
+    "shelfLink": "Permanent link — always shows the current edition",
+    "newerNotice": "This is not the current edition. Current: “{title}”.",
+    "openCurrent": "Open current",
+    "backToSupplier": "← {name}",
+    "allEditions": "All catalogues",
+    "supplierTitle": "Catalogues · {name}",
+    "loading": "Loading catalogues…",
+    "unavailable": "Catalogues are not available right now."
   }
 }

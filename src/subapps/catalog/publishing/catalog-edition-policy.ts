@@ -11,6 +11,9 @@
  * | Τη βλέπει αυτός ο θεατής; | `editionVisibleTo` |
  * | Ποιο είναι το ισχύον έντυπο ενός ραφιού γι' αυτόν; | `latestVisibleEdition` |
  * | Τι μαθαίνει ο θεατής γι' αυτήν; | `catalogEditionViewOf` |
+ * | Ποια είναι τα ισχύοντα όλων των ραφιών γι' αυτόν; | `currentEditionIds` |
+ * | Πώς ομαδοποιούνται σε ράφια στην οθόνη; | `catalogEditionShelvesOf` (μόνο ομαδοποίηση, καμία κρίση) |
+ * | Πώς βλέπει ο ιδιοκτήτης το δικό του έντυπο στον αναγνώστη; | `ownerEditionAsView` |
  *
  * 🔑 **Το κλειδί κοινού είναι το `audienceIdentity` των τιμών**, όχι δεύτερη σειριοποίηση: το κοινό του εντύπου είναι υποσύνολο
  *    του `PriceAudience`, άρα «ανώνυμοι» και «ομάδα Χ» λέγονται με τον ίδιο τρόπο παντού.
@@ -29,6 +32,7 @@ import {
   CATALOG_EDITION_AUDIENCE_KINDS,
   type CatalogEditionAudience,
   type CatalogEditionDefinition,
+  type CatalogEditionOwnerView,
   type CatalogEditionView,
 } from '../types/catalog-edition';
 
@@ -137,18 +141,77 @@ export function latestVisibleEdition<T extends Pick<CatalogEditionDefinition, 'a
 export function catalogEditionViewOf(
   id: string,
   edition: CatalogEditionDefinition,
-  visibleIds: ReadonlySet<string>,
+  shown: { readonly visibleIds: ReadonlySet<string>; readonly currentIds: ReadonlySet<string> },
 ): CatalogEditionView | null {
   if (edition.status === 'withdrawn') return null;
-  const successor = edition.supersededBy !== null && visibleIds.has(edition.supersededBy) ? edition.supersededBy : null;
+  const successor = edition.supersededBy !== null && shown.visibleIds.has(edition.supersededBy) ? edition.supersededBy : null;
+  return viewOf(id, edition, { status: edition.status, supersededBy: successor, current: shown.currentIds.has(id) });
+}
+
+/** Ό,τι κοινό έχουν όλες οι προελεύσεις μιας όψης (εγγραφή διακομιστή · όψη ιδιοκτήτη): ποτέ διαδρομή αποθήκευσης. */
+type ViewSource = Pick<CatalogEditionDefinition, 'shelfKey' | 'title' | 'language' | 'publishedAt'> & {
+  readonly file: { readonly pageCount: number; readonly sizeBytes: number };
+};
+
+/** Η **μία** κατασκευή της όψης θεατή: η κρίση (κατάσταση · διάδοχος · ισχύουσα) έρχεται έτοιμη από τον καλούντα. */
+function viewOf(id: string, edition: ViewSource, judged: Pick<CatalogEditionView, 'status' | 'supersededBy' | 'current'>): CatalogEditionView {
   return {
     id,
+    shelfKey: edition.shelfKey,
     title: edition.title,
     language: edition.language,
     pageCount: edition.file.pageCount,
     sizeBytes: edition.file.sizeBytes,
     publishedAt: edition.publishedAt,
-    status: edition.status,
-    supersededBy: successor,
+    ...judged,
   };
+}
+
+/** Τα ισχύοντα έντυπα **όλων** των ραφιών για αυτόν τον θεατή: ένα ανά ράφι, με τον ίδιο κριτή του σταθερού συνδέσμου. */
+export function currentEditionIds<T extends Pick<CatalogEditionDefinition, 'shelfKey' | 'audience' | 'status' | 'publishedAt'> & { readonly id: string }>(
+  editions: readonly T[],
+  viewer: PricingViewer,
+): ReadonlySet<string> {
+  const shelves = new Map<string, T[]>();
+  for (const edition of editions) shelves.set(edition.shelfKey, [...(shelves.get(edition.shelfKey) ?? []), edition]);
+  const ids = new Set<string>();
+  for (const shelf of shelves.values()) {
+    const latest = latestVisibleEdition(shelf, viewer);
+    if (latest !== null) ids.add(latest.id);
+  }
+  return ids;
+}
+
+/** Ένα ράφι όπως το δείχνει η οθόνη: το ισχύον του θεατή (αν υπάρχει) και όλα τα άλλα, τα νεότερα πρώτα. */
+export interface CatalogEditionShelfView {
+  readonly shelfKey: string;
+  readonly current: CatalogEditionView | null;
+  readonly others: readonly CatalogEditionView[];
+}
+
+const newestFirst = (a: CatalogEditionView, b: CatalogEditionView): number => Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
+
+/**
+ * Οι όψεις ομαδοποιημένες σε ράφια. **Καμία κρίση κοινού** εδώ: το `current` ήρθε από τον διακομιστή. Τα ράφια ταξινομούνται
+ * με το νεότερο έντυπό τους πρώτο, ώστε ό,τι μόλις κυκλοφόρησε να φαίνεται πρώτο.
+ */
+export function catalogEditionShelvesOf(views: readonly CatalogEditionView[]): readonly CatalogEditionShelfView[] {
+  const grouped = new Map<string, CatalogEditionView[]>();
+  for (const view of views) grouped.set(view.shelfKey, [...(grouped.get(view.shelfKey) ?? []), view]);
+  const ranked = [...grouped.entries()].map(([shelfKey, members]) => {
+    const sorted = [...members].sort(newestFirst);
+    const current = sorted.find((view) => view.current) ?? null;
+    // Κάθε ομάδα έχει τουλάχιστον ένα μέλος: το νεότερο είναι το κλειδί ταξινόμησης του ραφιού.
+    return { newest: Date.parse(sorted[0]?.publishedAt ?? ''), shelf: { shelfKey, current, others: sorted.filter((view) => view !== current) } };
+  });
+  return ranked.sort((a, b) => b.newest - a.newest).map((entry) => entry.shelf);
+}
+
+/**
+ * Η έκδοση του **ιδιοκτήτη** ως όψη θεατή, για τον ίδιο αναγνώστη: βλέπει ό,τι θα δει το κοινό του. «Ισχύουσα» = δημοσιευμένη
+ * (ο ιδιοκτήτης δεν είναι θεατής κάποιου κοινού). Η αποσυρμένη δεν προβάλλεται ⇒ `null`.
+ */
+export function ownerEditionAsView(edition: CatalogEditionOwnerView): CatalogEditionView | null {
+  if (edition.status === 'withdrawn') return null;
+  return viewOf(edition.id, edition, { status: edition.status, supersededBy: edition.supersededBy, current: edition.status === 'published' });
 }

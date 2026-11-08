@@ -91,7 +91,17 @@
     "downloading": "Λήψη σε εξέλιξη…",
     "downloadFailed": "Η λήψη απέτυχε. Δοκιμάστε ξανά.",
     "linkToPage": "Μετάβαση στη σελίδα {page}",
-    "externalLink": "Εξωτερικός σύνδεσμος: {target}"
+    "externalLink": "Εξωτερικός σύνδεσμος: {target}",
+    "sidebar": {
+      "title": "Πλοήγηση εγγράφου",
+      "show": "Εμφάνιση πλευρικού πάνελ",
+      "hide": "Απόκρυψη πλευρικού πάνελ",
+      "thumbnails": "Μικρογραφίες",
+      "outline": "Περιεχόμενα",
+      "pageThumb": "Σελίδα {label}",
+      "untitled": "Χωρίς τίτλο",
+      "emptyOutline": "Το έγγραφο δεν έχει περιεχόμενα."
+    }
   },
   "validation": {
     "onlyPdfAllowed": "Μόνο αρχεία PDF επιτρέπονται",

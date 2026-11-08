@@ -18,7 +18,8 @@ export type PdfLinkTarget =
 
 const SAFE_EXTERNAL_PROTOCOLS: ReadonlySet<string> = new Set(['http:', 'https:', 'mailto:']);
 
-function externalTargetOf(raw: string): PdfLinkTarget | null {
+/** Ο **ένας** κριτής εξωτερικού συνδέσμου (σημειώσεις σελίδας **και** σελιδοδείκτες, Θ.2α-3). Μη επιτρεπτό ⇒ `null`. */
+export function externalTargetOf(raw: string): Extract<PdfLinkTarget, { kind: 'external' }> | null {
   let parsed: URL;
   try {
     parsed = new URL(raw);

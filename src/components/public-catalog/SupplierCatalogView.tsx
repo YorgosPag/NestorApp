@@ -46,6 +46,8 @@ export interface SupplierCatalogViewProps {
   readonly profile?: PublicSupplierProfile | null;
   /** Μάρκες σε ισχύ (§16). */
   readonly brands?: readonly PublicSupplierBrand[];
+  /** Το ράφι των εντύπων (§5.15.3), μόνο όταν ο ανώνυμος βλέπει τουλάχιστον ένα· αλλιώς κανένας σύνδεσμος σε κενό. */
+  readonly catalogsHref?: string | null;
 }
 
 /** Ακτίνα και περίγραμμα: το μέγεθος, και μετά οι περιοχές που εξυπηρετούν — οι ίδιες που δηλώνει το JSON-LD (Ν11 ε). */
@@ -139,7 +141,7 @@ function CategoryNav({ segment, categories, activeCategoryId }: Pick<SupplierCat
 }
 
 export function SupplierCatalogView(props: SupplierCatalogViewProps): React.JSX.Element {
-  const { segment, legalName, cards, nextHref, provider, profile, brands = [], cardPrices = null } = props;
+  const { segment, legalName, cards, nextHref, provider, profile, brands = [], cardPrices = null, catalogsHref = null } = props;
   const { t } = usePublicCatalogText();
   const logo = provider?.logo ?? null;
   return (
@@ -153,6 +155,7 @@ export function SupplierCatalogView(props: SupplierCatalogViewProps): React.JSX.
           <p className="m-0 text-sm text-muted-foreground">{t('supplier.verified')}</p>
           {provider !== undefined && <ProviderFacts provider={provider} />}
           <SupplierBrands brands={brands} />
+          {catalogsHref !== null && <p className="m-0 text-sm"><Link href={catalogsHref}>{t('supplier.catalogs')}</Link></p>}
         </section>
       </header>
       {profile && <SupplierAbout profile={profile} />}

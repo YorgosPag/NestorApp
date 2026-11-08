@@ -11,6 +11,7 @@ import 'server-only';
  * | Ποια έντυπα βλέπει αυτός ο θεατής; | `readCatalogEditionsFor` · `readPublicCatalogEditions` (ανώνυμος, ISR) |
  * | Ποιο είναι το ισχύον έντυπο ενός ραφιού γι' αυτόν; | `resolveLatestCatalogEdition` |
  * | Δώσε του το αρχείο | `signCatalogEditionFile` |
+ * | Δώσε στον ιδιοκτήτη το δικό του αρχείο (προβολή πριν το μοιραστεί) | `signOwnedCatalogEditionFile` |
  *
  * 🔒 **Ο θεατής χτίζεται εδώ, μέσα στη συναλλαγή** (`showcaseViewerOf`), ποτέ από τον καλούντα: ανώνυμος ή αγοραστής μέσω της
  *    **σχέσης** του ζεύγους. Το αίτημα ονομάζει μόνο **ποιον** προμηθευτή και **ποια** έκδοση.
@@ -28,7 +29,7 @@ import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { signedDownloadUrl } from '@/lib/storage/signed-download-url';
 import { cached, readPublicSupplier } from '@/services/public-catalog/public-catalog.reader';
-import { catalogEditionViewOf, editionVisibleTo, latestVisibleEdition } from '@/subapps/catalog/publishing/catalog-edition-policy';
+import { catalogEditionViewOf, currentEditionIds, editionVisibleTo, latestVisibleEdition } from '@/subapps/catalog/publishing/catalog-edition-policy';
 import type { CatalogEditionOwnerView, CatalogEditionView } from '@/subapps/catalog/types/catalog-edition';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import { isEnterpriseIdOfPrefix } from '@/services/enterprise-id-parse';
@@ -39,6 +40,7 @@ import { publicationBucket } from '../publishing/publication-bucket.server';
 import { publicCatalogCompanyTag, publicCatalogEditionsTag } from '../public/public-catalog-cache-tag';
 import { showcaseViewerOf, type ShowcaseViewerSource } from '../public/showcase-viewer.server';
 import {
+  readCatalogEdition,
   readCatalogEditionInTx,
   readCompanyEditions,
   readShelfInTx,
@@ -98,12 +100,16 @@ export async function readOwnedCatalogEditions(ctx: AuthContext): Promise<Catalo
   return (await readCompanyEditions(getAdminFirestore(), ctx.companyId)).map(ownerViewOf);
 }
 
-/** Τα έντυπα που βλέπει ο θεατής, τα νεότερα πρώτα. Το «αντικαταστάθηκε από» δείχνει μόνο σε ορατή έκδοση. */
+/**
+ * Τα έντυπα που βλέπει ο θεατής, τα νεότερα πρώτα. Το «αντικαταστάθηκε από» δείχνει μόνο σε ορατή έκδοση· το «ισχύον» κάθε
+ * ραφιού το σημαδεύει ο **ίδιος** κριτής με τον σταθερό σύνδεσμο (`currentEditionIds` → `latestVisibleEdition`).
+ */
 export function readCatalogEditionsFor(supplierCompanyId: string, source: ShowcaseViewerSource): Promise<CatalogEditionView[]> {
-  return judgeAs(supplierCompanyId, source, async (scope, { visible }) => {
+  return judgeAs(supplierCompanyId, source, async (scope, { viewer, visible }) => {
     const shown = (await readViewableEditionsInTx(scope.tx, scope.db, supplierCompanyId)).filter(visible);
     const visibleIds = new Set(shown.map((edition) => edition.id));
-    return shown.flatMap((edition) => catalogEditionViewOf(edition.id, edition, visibleIds) ?? []);
+    const currentIds = currentEditionIds(shown, viewer);
+    return shown.flatMap((edition) => catalogEditionViewOf(edition.id, edition, { visibleIds, currentIds }) ?? []);
   });
 }
 
@@ -136,10 +142,25 @@ export async function signCatalogEditionFile(supplierCompanyId: string, source: 
     const edition = await readCatalogEditionInTx(scope.tx, scope.db, editionId);
     return edition !== null && visible(edition) ? edition.file.storagePath : null;
   });
-  if (storagePath === null) return null;
+  return storagePath === null ? null : signEditionPath(storagePath);
+}
+
+/** Η μία υπογραφή, για κάθε πόρτα — πάντα **μετά** την κρίση. */
+async function signEditionPath(storagePath: string): Promise<SignedCatalogEditionFile | null> {
   // Ο κάδος των εκδόσεων, ρητά (ADR-895 Α2): το αρχείο ανήκει στη διαδρομή του εκδότη, όχι σε `FileRecord`.
   const signed = await signedDownloadUrl({ bucket: publicationBucket(), storagePath });
   return signed.outcome === 'signed' ? { url: signed.url, expiresAt: signed.expiresAt } : null;
+}
+
+/**
+ * Η άδεια του **ιδιοκτήτη** για το δικό του έντυπο: βλέπει ό,τι θα δει το κοινό του πριν το μοιραστεί (ADR-923 §5.15.3).
+ * 🔒 Κάτοχος = ο χώρος της σύνδεσης· ξένο ≡ ανύπαρκτο. Η αποσυρμένη **όχι**: η διατήρηση έχει ήδη το δικαίωμα να τη διαθέσει.
+ */
+export async function signOwnedCatalogEditionFile(ctx: AuthContext, editionId: string): Promise<SignedCatalogEditionFile | null> {
+  if (!isEditionId(editionId)) return null;
+  const edition = await readCatalogEdition(getAdminFirestore(), editionId);
+  const readable = edition !== null && isPayloadOwnedByCompany(edition, ctx.companyId) && edition.status !== 'withdrawn';
+  return readable ? signEditionPath(edition.file.storagePath) : null;
 }
 
 /** Ο προμηθευτής πίσω από τη σχέση **του αγοραστή** (ξένη ≡ ανύπαρκτη). Η ενεργότητα κρίνεται μέσα στη συναλλαγή της ανάγνωσης. */

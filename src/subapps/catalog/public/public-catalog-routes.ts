@@ -7,6 +7,8 @@
  * @module subapps/catalog/public/public-catalog-routes
  */
 
+import { DEFAULT_LANGUAGE } from '@/i18n/languages';
+import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
 import { compactUuidOf, uuidOfCompact } from '@/lib/qr/compact-uuid';
 import { CATALOG_ID_PREFIXES } from '@/services/enterprise-id-prefixes-catalog';
 import { transliterateGreekToLatin } from '@/utils/greek-text';
@@ -107,3 +109,25 @@ export const publicModelRoute = (supplierSegment: string, modelSegment: string):
  */
 export const publicProjectRoute = (supplierSegment: string, projectSegment: string): string =>
   `${publicSupplierRoute(supplierSegment)}/w/${encodeURIComponent(projectSegment)}`;
+
+/** Το ράφι των εντύπων του προμηθευτή (ADR-923 §5.15.3). */
+export const publicCatalogsRoute = (supplierSegment: string): string => `${publicSupplierRoute(supplierSegment)}/catalogs`;
+
+/** Το τμήμα διεύθυνσης ενός εντύπου: ο τίτλος στην προεπιλεγμένη γλώσσα + το id — ίδιο σε διακομιστή και πελάτη (κανονική μορφή). */
+export const publicCatalogEditionSegmentOf = (edition: { readonly id: string; readonly title: LocalizedText }): string =>
+  publicSegmentOf(resolveLocalizedText(edition.title, DEFAULT_LANGUAGE), edition.id);
+
+/** Ο αναγνώστης ενός εντύπου: `<slug>-<id>` όπως το μοντέλο· το id (`cedx_…`) είναι η ταυτότητα, ο τίτλος διακόσμηση. */
+export const publicCatalogEditionRoute = (supplierSegment: string, editionSegment: string): string =>
+  `${publicCatalogsRoute(supplierSegment)}/${encodeURIComponent(editionSegment)}`;
+
+/**
+ * Ο **σταθερός** σύνδεσμος ενός ραφιού: λύνεται κάθε φορά στο ισχύον έντυπο **του θεατή** (`resolveLatestCatalogEdition`).
+ * `s` από το *shelf*. Αυτός είναι ο σύνδεσμος που μοιράζεται και που θα τυπώνει το QR (Θ.4) — η έκδοση αλλάζει, αυτός όχι.
+ */
+export const publicCatalogShelfRoute = (supplierSegment: string, shelfKey: string): string =>
+  `${publicCatalogsRoute(supplierSegment)}/s/${encodeURIComponent(shelfKey)}`;
+
+/** Η ανώνυμη πόρτα της άδειας ανάγνωσης (`app/api/supplier-catalogs/…/file`). */
+export const publicCatalogEditionFileApi = (supplierSegment: string, editionId: string): string =>
+  `/api/supplier-catalogs/${encodeURIComponent(supplierSegment)}/editions/${encodeURIComponent(editionId)}/file`;

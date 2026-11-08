@@ -3,14 +3,17 @@
  * στη βιτρίνα (Θ4). Κάθε γραμμή του πίνακα της κεφαλίδας έχει άγκυρα.
  */
 import { catalogEditionAudienceSchema } from '../../schema/zod/catalog-edition.schema';
-import type { CatalogEditionDefinition } from '../../types/catalog-edition';
+import type { CatalogEditionDefinition, CatalogEditionOwnerView, CatalogEditionView } from '../../types/catalog-edition';
 import type { PricingViewer } from '../../types/price-list';
 import { EMPTY_PUBLICATION_RETENTION, type PublicationArtifact } from '../../types/publication';
 import {
+  catalogEditionShelvesOf,
   catalogEditionViewOf,
+  currentEditionIds,
   editionAudienceKey,
   editionVisibleTo,
   latestVisibleEdition,
+  ownerEditionAsView,
   PUBLICATION_DISPOSAL_MARGIN_MS,
   publishabilityOf,
   restoredOnWithdrawal,
@@ -161,22 +164,115 @@ describe('editionVisibleTo: ποιος βλέπει', () => {
   });
 });
 
+const NONE = { visibleIds: new Set<string>(), currentIds: new Set<string>() };
+
+const VIEW_KEYS = ['current', 'id', 'language', 'pageCount', 'publishedAt', 'shelfKey', 'sizeBytes', 'status', 'supersededBy', 'title'];
+
 describe('catalogEditionViewOf: τι μαθαίνει ο θεατής', () => {
   it('κλειστό σχήμα: καμία διαδρομή αρχείου, κανένα κοινό, κανένα πρόσωπο', () => {
-    const view = catalogEditionViewOf('e1', edition(), new Set());
-    expect(view && Object.keys(view).sort()).toEqual(
-      ['id', 'language', 'pageCount', 'publishedAt', 'sizeBytes', 'status', 'supersededBy', 'title'],
-    );
+    const view = catalogEditionViewOf('e1', edition(), NONE);
+    expect(view && Object.keys(view).sort()).toEqual(VIEW_KEYS);
   });
 
   it('το «αντικαταστάθηκε από» σιωπά όταν ο διάδοχος δεν φαίνεται στον θεατή', () => {
     const old = edition({ status: 'superseded', supersededBy: 'e9' });
-    expect(catalogEditionViewOf('e1', old, new Set())?.supersededBy).toBeNull();
-    expect(catalogEditionViewOf('e1', old, new Set(['e9']))?.supersededBy).toBe('e9');
+    expect(catalogEditionViewOf('e1', old, NONE)?.supersededBy).toBeNull();
+    expect(catalogEditionViewOf('e1', old, { ...NONE, visibleIds: new Set(['e9']) })?.supersededBy).toBe('e9');
+  });
+
+  it('το «ισχύον» είναι ό,τι σημάδεψε ο κριτής — όχι η κατάσταση `published`', () => {
+    expect(catalogEditionViewOf('e1', edition(), NONE)?.current).toBe(false);
+    expect(catalogEditionViewOf('e1', edition(), { ...NONE, currentIds: new Set(['e1']) })?.current).toBe(true);
+    expect(catalogEditionViewOf('e1', edition(), NONE)?.shelfKey).toBe('cpubr_1');
   });
 
   it('αποσυρμένη ⇒ ανύπαρκτη', () => {
-    expect(catalogEditionViewOf('e1', edition({ status: 'withdrawn' }), new Set())).toBeNull();
+    expect(catalogEditionViewOf('e1', edition({ status: 'withdrawn' }), NONE)).toBeNull();
+  });
+});
+
+const stored = (id: string, patch: Partial<CatalogEditionDefinition> = {}) => ({ id, ...edition(patch) });
+
+describe('currentEditionIds: ένα ισχύον ανά ράφι, με τον κριτή του σταθερού συνδέσμου', () => {
+  const shelf = [
+    stored('anon', { publishedAt: '2026-11-07T10:00:00.000Z' }),
+    stored('groupA', { audience: GROUP_A, publishedAt: '2026-11-06T10:00:00.000Z' }),
+    stored('other', { shelfKey: 'cpubr_2' }),
+    stored('old', { status: 'superseded', publishedAt: '2026-11-01T10:00:00.000Z' }),
+  ];
+
+  it('ανώνυμος: το ανώνυμο ανά ράφι — ποτέ το παλαιότερο', () => {
+    expect([...currentEditionIds(shelf, anonymous)].sort()).toEqual(['anon', 'other']);
+  });
+
+  it('αγοραστής ομάδας: το πιο ειδικό κοινό κερδίζει, ακόμη κι αν είναι παλαιότερο', () => {
+    expect([...currentEditionIds(shelf, buyerOf('cgrp_a'))].sort()).toEqual(['groupA', 'other']);
+  });
+
+  it('αγοραστής άλλης ομάδας: η έκδοση της Α δεν γίνεται ποτέ ισχύουσα γι\' αυτόν', () => {
+    expect(currentEditionIds(shelf, buyerOf('cgrp_b')).has('groupA')).toBe(false);
+  });
+});
+
+const view = (id: string, patch: Partial<CatalogEditionView> = {}): CatalogEditionView => ({
+  id,
+  shelfKey: 'cpubr_1',
+  current: false,
+  title: { el: id },
+  language: 'el',
+  pageCount: 1,
+  sizeBytes: 1,
+  publishedAt: '2026-11-07T10:00:00.000Z',
+  status: 'published',
+  supersededBy: null,
+  ...patch,
+});
+
+describe('catalogEditionShelvesOf: ομαδοποίηση, καμία κρίση', () => {
+  it('ανά ράφι: το ισχύον μπροστά, τα υπόλοιπα νεότερα πρώτα', () => {
+    const [shelf] = catalogEditionShelvesOf([
+      view('old', { status: 'superseded', publishedAt: '2026-10-01T00:00:00.000Z' }),
+      view('cur', { current: true, publishedAt: '2026-11-01T00:00:00.000Z' }),
+      view('alt', { publishedAt: '2026-11-05T00:00:00.000Z' }),
+    ]);
+    expect(shelf?.current?.id).toBe('cur');
+    expect(shelf?.others.map((item) => item.id)).toEqual(['alt', 'old']);
+  });
+
+  it('ράφι χωρίς ισχύον (π.χ. μόνο παλαιότερες ορατές) ⇒ `current: null`, τίποτα δεν χάνεται', () => {
+    const [shelf] = catalogEditionShelvesOf([view('old', { status: 'superseded' })]);
+    expect(shelf?.current).toBeNull();
+    expect(shelf?.others.map((item) => item.id)).toEqual(['old']);
+  });
+
+  it('τα ράφια ταξινομούνται με το νεότερο έντυπό τους πρώτο', () => {
+    const shelves = catalogEditionShelvesOf([
+      view('a', { shelfKey: 'cpubr_a', current: true, publishedAt: '2026-01-01T00:00:00.000Z' }),
+      view('b', { shelfKey: 'cpubr_b', current: true, publishedAt: '2026-06-01T00:00:00.000Z' }),
+    ]);
+    expect(shelves.map((shelf) => shelf.shelfKey)).toEqual(['cpubr_b', 'cpubr_a']);
+  });
+
+  it('κενή λίστα ⇒ κανένα ράφι', () => {
+    expect(catalogEditionShelvesOf([])).toEqual([]);
+  });
+});
+
+const owned = (patch: Partial<CatalogEditionOwnerView> = {}): CatalogEditionOwnerView => {
+  const { file, ...rest } = edition();
+  return { ...rest, id: 'e1', file: { sizeBytes: file.sizeBytes, pageCount: file.pageCount, sha256: file.sha256 }, ...patch };
+};
+
+describe('ownerEditionAsView: ο ιδιοκτήτης βλέπει ό,τι το κοινό του', () => {
+  it('ίδιο κλειστό σχήμα με τον θεατή — καμία διαδρομή, κανένα κοινό', () => {
+    const shown = ownerEditionAsView(owned());
+    expect(shown && Object.keys(shown).sort()).toEqual(VIEW_KEYS);
+    expect(shown?.current).toBe(true);
+  });
+
+  it('παλαιότερη ⇒ όχι ισχύουσα, με τον διάδοχό της· αποσυρμένη ⇒ δεν προβάλλεται', () => {
+    expect(ownerEditionAsView(owned({ status: 'superseded', supersededBy: 'e2' }))).toMatchObject({ current: false, supersededBy: 'e2' });
+    expect(ownerEditionAsView(owned({ status: 'withdrawn' }))).toBeNull();
   });
 });
 

@@ -79,6 +79,11 @@ export interface PdfViewerFeatures {
   readonly pageInUrl?: boolean;
   /** Λήψη των bytes του **ίδιου** εγγράφου — ο καλών ονομάζει το αρχείο, ο viewer δεν μαντεύει. */
   readonly download?: { readonly fileName: string };
+  /**
+   * Πλευρικό πάνελ (Θ.2α-3): μικρογραφίες από το **ίδιο** φορτωμένο έγγραφο + περιεχόμενα από τους σελιδοδείκτες του.
+   * Σε έντυπο με άδεια κάθε μικρογραφία που δεν έχει ήδη ζωγραφιστεί κοστίζει κομμάτια — γι' αυτό είναι opt-in.
+   */
+  readonly sidebar?: boolean;
 }
 
 interface PdfViewerCommonProps {
@@ -131,6 +136,25 @@ export interface PdfDocProxy {
   getData(): Promise<Uint8Array<ArrayBuffer>>;
   getDestination(id: string): Promise<PdfExplicitDest | null>;
   getPageIndex(ref: RefProxy): Promise<number>;
+  /** Οι σελιδοδείκτες (Θ.2α-3) — `null` ⇒ το έγγραφο δεν έχει. */
+  getOutline(): Promise<readonly PdfRawOutlineItem[] | null>;
+  /** Οι ετικέτες σελίδων (`/PageLabels`, π.χ. «iv», «85») — `null` ⇒ οι αριθμοί σελίδας είναι οι ετικέτες. */
+  getPageLabels(): Promise<readonly string[] | null>;
+  /** Τι ζητά το ίδιο το έγγραφο να δείχνει ο αναγνώστης στο άνοιγμα (`UseOutlines` · `UseThumbs` · …). */
+  getPageMode(): Promise<string>;
+}
+
+/** Ένας σελιδοδείκτης όπως τον δίνει το `getOutline()` του pdf.js — μόνο ό,τι διαβάζει ο θεατής. */
+export interface PdfRawOutlineItem {
+  readonly title: string;
+  readonly bold?: boolean;
+  readonly italic?: boolean;
+  readonly dest: string | PdfExplicitDest | null;
+  /** Ήδη απολυμασμένο από το pdf.js — ξαναελέγχεται από τον κριτή συνδέσμων. */
+  readonly url: string | null;
+  /** > 0 ⇒ ανοιχτός στο άνοιγμα (σύμβαση PDF `/Count`). */
+  readonly count?: number;
+  readonly items: readonly PdfRawOutlineItem[];
 }
 
 /** Ό,τι διαβάζει ο θεατής από μια σημείωση του `getAnnotations()` (ADR-923 §5.15.2 — μόνο σύνδεσμοι). */

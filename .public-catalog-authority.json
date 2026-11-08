@@ -71,6 +71,13 @@
       }
     },
     {
+      "kind": "call",
+      "name": "signOwnedCatalogEditionFile",
+      "owners": {
+        "src/app/api/catalog/editions/[id]/file/route.ts": "Η πόρτα του ιδιοκτήτη (ADR-923 §5.15.3): κάτοχος ο χώρος της σύνδεσης, ποτέ το αίτημα· η αποσυρμένη κλειστή."
+      }
+    },
+    {
       "kind": "reference",
       "name": "CATALOG_MODEL_SHELF",
       "owners": {

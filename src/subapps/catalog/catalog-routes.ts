@@ -33,6 +33,10 @@ export const CATALOG_API = {
     search: (id: string) => `${API_ROOT}/suppliers/${encodeURIComponent(id)}/search`,
     boqPrice: (id: string) => `${API_ROOT}/suppliers/${encodeURIComponent(id)}/boq-price`,
     boqDrift: `${API_ROOT}/suppliers/boq-drift`,
+    /** Τα έντυπα του προμηθευτή που βλέπει ο αγοραστής (ADR-923 §5.15) — `id` = η σχέση. */
+    editions: (id: string) => `${API_ROOT}/suppliers/${encodeURIComponent(id)}/editions`,
+    editionFile: (id: string, editionId: string) =>
+      `${API_ROOT}/suppliers/${encodeURIComponent(id)}/editions/${encodeURIComponent(editionId)}/file`,
   },
   attributes: entity('attributes'),
   attributeGroups: entity('attribute-groups'),
@@ -52,6 +56,12 @@ export const CATALOG_API = {
   publicationDisposal: (id: string) => `${API_ROOT}/publications/${encodeURIComponent(id)}/disposal`,
   publicationLegalHold: (id: string) => `${API_ROOT}/publications/${encodeURIComponent(id)}/legal-hold`,
   publicationPreview: `${API_ROOT}/publication-preview`,
+  // ── Φάση 9 (ADR-923 §5.15) — δημοσιευμένες εκδόσεις (η πλευρά του ιδιοκτήτη) ──
+  editions: {
+    collection: `${API_ROOT}/editions`,
+    withdraw: (id: string) => `${API_ROOT}/editions/${encodeURIComponent(id)}/withdraw`,
+    file: (id: string) => `${API_ROOT}/editions/${encodeURIComponent(id)}/file`,
+  },
   // ── Φάση 2 (ADR-923 §5.10) — δεδομένα ──
   productModels: {
     ...entity('product-models'),

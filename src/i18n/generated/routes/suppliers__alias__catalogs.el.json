@@ -1,0 +1,23 @@
+{
+  "public-catalog": {
+    "editions": {
+      "backToSupplier": "← {name}",
+      "empty": "Δεν υπάρχουν ακόμη δημοσιευμένοι κατάλογοι.",
+      "language": {
+        "el": "Ελληνικά",
+        "en": "Αγγλικά"
+      },
+      "open": "Ανάγνωση: {title}",
+      "others": "{count, plural, one {# ακόμη έκδοση} other {# ακόμη εκδόσεις}}",
+      "pages": "{count, plural, one {# σελίδα} other {# σελίδες}}",
+      "read": "Ανάγνωση",
+      "shelfLink": "Μόνιμος σύνδεσμος — δείχνει πάντα την ισχύουσα έκδοση",
+      "status": {
+        "alternate": "Άλλη έκδοση σε ισχύ",
+        "current": "Ισχύουσα έκδοση",
+        "superseded": "Παλαιότερη έκδοση"
+      },
+      "title": "Κατάλογοι"
+    }
+  }
+}

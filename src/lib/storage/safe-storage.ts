@@ -96,6 +96,11 @@ export const STORAGE_KEYS = {
   // (προτιμήσεις εγκατάστασης): το σωστό ζουμ είναι ιδιότητα της **οθόνης**. Σχήμα: `document/document-zoom-preference.ts`.
   DOCUMENT_ZOOM_PREFIX: 'nestor:document-zoom:v1:',
 
+  // ADR-923 §5.15.2 (Θ.2α-3) — το πλευρικό πάνελ του `PdfCanvasViewer`: ανοιχτό; ποια καρτέλα (μικρογραφίες ·
+  // περιεχόμενα); Ανά **συσκευή**, ένα για κάθε έντυπο, όπως το Acrobat· το `/PageMode` του ίδιου του εγγράφου νικά στο
+  // άνοιγμά του. Σχήμα: `components/file-manager/usePdfSidebar.ts`.
+  PDF_VIEWER_SIDEBAR: 'nestor:pdf-viewer-sidebar:v1',
+
   // ADR-930 — η ταξινόμηση μέσα στις στήλες της ροής πωλήσεων, ανά **συσκευή/χρήστη** (`PipelineSort`). Δική του
   // προτίμηση του καθενός — ποτέ κοινή σειρά (η χειροκίνητη σειρά ενός θα χαλούσε των άλλων).
   PIPELINE_SORT: 'nestor:crm-pipeline-sort:v1',

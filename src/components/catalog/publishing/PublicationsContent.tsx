@@ -15,7 +15,9 @@ import React, { useCallback, useState } from 'react';
 import { BookOpen, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { useOwnedCatalogEditions } from '@/hooks/catalog/useCatalogEditions';
 import { usePublicationsView } from '@/hooks/catalog/usePublicationsView';
+import type { CatalogEditionOwnerView } from '@/subapps/catalog/types/catalog-edition';
 import type { PublicationRecipeWire, PublicationRunWire, PublicationsViewWire } from '@/subapps/catalog/types/publication';
 import { XChangeExportButton } from '../interop/XChangeExportDialog';
 import { useCatalogAccess, useCatalogText } from '../shared/catalog-ui-hooks';
@@ -34,6 +36,7 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 registerRouteSlice(routeSlice);
 
 const NO_RUNS: readonly PublicationRunWire[] = [];
+const NO_EDITIONS: readonly CatalogEditionOwnerView[] = [];
 
 interface DetailsProps {
   readonly record: PublicationRecipeWire | null;
@@ -44,12 +47,18 @@ interface DetailsProps {
 }
 
 function PublicationDetails({ record, runs, selection, unsaved, revalidate }: DetailsProps) {
+  // Τα δημοσιευμένα έντυπα διαβάζονται μόνο όσο είναι ανοιχτή μια συνταγή (ADR-923 §5.15.3).
+  const editionsApi = useOwnedCatalogEditions();
+  const editions = editionsOf(editionsApi.current.state === 'ready' ? editionsApi.current.editions : null, record);
   const [dirty, setDirty] = useState(false);
   const { reportDirty } = unsaved;
   const report = useCallback((next: boolean) => { setDirty(next); reportDirty(next); }, [reportDirty]);
   return (
     <>
-      {record === null ? null : <PublicationRunPanel recipeId={record.id} runs={runs} dirty={dirty} revalidate={revalidate} />}
+      {record === null ? null : (
+        <PublicationRunPanel recipeId={record.id} runs={runs} dirty={dirty} revalidate={revalidate}
+          editions={editions} revalidateEditions={editionsApi.revalidate} />
+      )}
       <PublicationRecipeEditor
         key={selection.key}
         record={record}
@@ -64,6 +73,11 @@ function PublicationDetails({ record, runs, selection, unsaved, revalidate }: De
 
 function runsOf(view: PublicationsViewWire, record: PublicationRecipeWire | null): readonly PublicationRunWire[] {
   return record === null ? NO_RUNS : view.runs.filter((run) => run.recipeId === record.id);
+}
+
+/** Το ράφι μιας συνταγής είναι η ίδια η συνταγή (ο γραφέας γράφει `shelfKey = recipe.id`, ADR-923 §5.15.1). */
+function editionsOf(editions: readonly CatalogEditionOwnerView[] | null, record: PublicationRecipeWire | null): readonly CatalogEditionOwnerView[] {
+  return record === null || editions === null ? NO_EDITIONS : editions.filter((edition) => edition.shelfKey === record.id);
 }
 
 export function PublicationsContent() {

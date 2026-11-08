@@ -174,6 +174,8 @@ const DEFAULTS = Object.freeze({
     'src/components/public-catalog/public-catalog-surfaces.tsx',
     // ADR-923 §5.5 — η αναφορά ETIM xChange της παρτίδας: μόνο σε παρτίδα xChange, με τα κείμενά της στο chunk (CHECK 3.34).
     'src/components/catalog/imports/import-surfaces.tsx',
+    // ADR-923 §5.15.3 — ο αναγνώστης εντύπου και το ράφι του αγοραστή: μόνο από ενέργεια χρήστη, με τα κείμενά τους στο chunk.
+    'src/components/catalog/editions/edition-surfaces.tsx',
   ],
 
   /**

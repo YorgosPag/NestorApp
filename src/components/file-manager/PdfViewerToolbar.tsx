@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Η μπάρα του `PdfCanvasViewer`** — πλοήγηση σελίδων, ζουμ, στροφή, πλήρης οθόνη, λήψη.
+ * @fileoverview **Η μπάρα του `PdfCanvasViewer`** — πλευρικό πάνελ, πλοήγηση σελίδων, ζουμ, στροφή, πλήρης οθόνη, λήψη.
  * @module components/file-manager/PdfViewerToolbar
  *
  * Βγήκε από τον viewer στο ADR-923 §5.15.2 (Θ.2α-2), όταν μπήκε η λήψη: ο viewer κρατά κατάσταση και στρώσεις, η μπάρα
@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { ChevronLeft, ChevronRight, Download, Loader2, Maximize, RotateCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Loader2, Maximize, PanelLeftClose, PanelLeftOpen, RotateCw } from 'lucide-react';
 
 import { DocumentZoomControl } from '@/components/shared/media/viewer/DocumentZoomControl';
 import { Button } from '@/components/ui/button';
@@ -36,18 +36,22 @@ export interface PdfViewerToolbarProps {
   readonly onFullscreen: (() => void) | null;
   /** `null` ⇒ ο καλών δεν ζήτησε λήψη. */
   readonly download: { readonly status: PdfDownloadStatus; readonly onDownload: () => void } | null;
+  /** `null` ⇒ ο καλών δεν ζήτησε πλευρικό πάνελ (ADR-923 §5.15.2 Θ.2α-3). `controls` = id του πάνελ (`aria-controls`). */
+  readonly sidebar: { readonly open: boolean; readonly onToggle: () => void; readonly controls: string } | null;
 }
 
-function ToolButton({ label, onClick, disabled, children }: {
+function ToolButton({ label, onClick, disabled, expanded, controls, children }: {
   readonly label: string;
   readonly onClick: () => void;
   readonly disabled?: boolean;
+  readonly expanded?: boolean;
+  readonly controls?: string;
   readonly children: React.ReactNode;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="sm" onClick={onClick} aria-label={label} disabled={disabled} className="h-7 w-7 p-0">
+        <Button variant="ghost" size="sm" onClick={onClick} aria-label={label} disabled={disabled} aria-expanded={expanded} aria-controls={controls} className="h-7 w-7 p-0">
           {children}
         </Button>
       </TooltipTrigger>
@@ -89,12 +93,25 @@ function DownloadControl({ status, onDownload }: NonNullable<PdfViewerToolbarPro
   );
 }
 
+/** Εναλλαγή του πλευρικού πάνελ — αριστερά, όπως pdf.js · Chrome PDF · Acrobat. */
+function SidebarToggle({ open, onToggle, controls }: NonNullable<PdfViewerToolbarProps['sidebar']>) {
+  const { t } = useTranslation('files');
+  return (
+    <ToolButton label={t(open ? 'pdf.sidebar.hide' : 'pdf.sidebar.show')} onClick={onToggle} expanded={open} controls={controls}>
+      {open ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
+    </ToolButton>
+  );
+}
+
 export function PdfViewerToolbar(props: PdfViewerToolbarProps) {
-  const { viewport, limits, onRotate, onFullscreen, download } = props;
+  const { viewport, limits, onRotate, onFullscreen, download, sidebar } = props;
   const { t } = useTranslation('files');
   return (
     <nav className={cn('flex items-center justify-between px-3 py-1.5 border-b bg-muted/50 gap-2', props.hidden && 'invisible')}>
-      <PageNavigation currentPage={props.currentPage} numPages={props.numPages} onPrev={props.onPrev} onNext={props.onNext} />
+      <div className="flex items-center gap-1">
+        {sidebar !== null && <SidebarToggle open={sidebar.open} onToggle={sidebar.onToggle} controls={sidebar.controls} />}
+        <PageNavigation currentPage={props.currentPage} numPages={props.numPages} onPrev={props.onPrev} onNext={props.onNext} />
+      </div>
       <div className="flex items-center gap-1">
         {/* ADR-928 §5.25 — η ΚΟΙΝΗ μπάρα ζουμ σελίδας (μενού ποσοστού, σκάλα, «Προσαρμογή στο πλάτος» πατημένο). */}
         <DocumentZoomControl
