@@ -14,7 +14,6 @@ import React, { useMemo } from 'react';
 import { Link } from '@/lib/workspace/navigation';
 
 import { CatalogEditionReader } from '@/components/catalog/editions/CatalogEditionReader';
-import { ShellSurface } from '@/core/containers/ShellSurface';
 import { catalogEditionLicenseIssuer } from '@/services/catalog/catalog-editions-api.client';
 import { publicCatalogEditionFileApi, publicCatalogsRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import type { CatalogEditionView } from '@/subapps/catalog/types/catalog-edition';
@@ -40,12 +39,25 @@ export function PublicCatalogReaderView({ segment, legalName, edition, current }
   const opener = useMemo(() => publicEditionOpener(segment), [segment]);
   const issue = useMemo(() => catalogEditionLicenseIssuer(publicCatalogEditionFileApi(segment, edition.id), 'public'), [segment, edition.id]);
   return (
-    <ShellSurface as="main" measure="wide" className="min-h-0 flex-1 gap-y-3">
-      <nav aria-label={t('editions.title')} className="flex flex-wrap gap-4 text-sm">
+    <main
+      /*
+        🖼️ ΑΝΑΓΝΩΣΤΗΣ ΣΕ ΠΛΗΡΕΣ ΠΑΡΑΘΥΡΟ (ADR-923 §5.15.3 · ADR-797 Φάσεις Β+Γ) — πρότυπο Issuu · Google Drive · Acrobat.
+        Ήταν `ShellSurface measure="wide"`: ταβάνι **γραμμής κειμένου** σε χαρακτήρες πάνω σε επιφάνεια-καμβά ⇒
+        ο αναγνώστης έπιανε 576px σε παράθυρο 1920 (30%), με ύψος από `min-h-[36rem]` αντί για την οθόνη.
+        `bleed` = μηδέν διάδρομος· `data-shell-viewport` = το κάδρο κλειδώνει στο παράθυρο και ο αναγνώστης
+        παίρνει «ό,τι περισσεύει» κάτω από την κεφαλίδα (κύλιση ΜΕΣΑ στον αναγνώστη, όχι στο έγγραφο).
+        ⚠️ ΑΜΕΣΟ ΠΑΙΔΙ του διαδρόμου (κανόνας Υ5 του CHECK 3.63) — η σελίδα αποδίδει μόνο αυτό το στοιχείο.
+        Η δήλωση ζει με λόγο (και εξαίρεση WCAG 1.4.10) στο `.shell-surface.json`.
+      */
+      data-shell-surface="bleed"
+      data-shell-viewport
+      className="flex min-h-0 flex-1 flex-col gap-y-2 bg-background"
+    >
+      <nav aria-label={t('editions.title')} className="flex flex-wrap gap-4 px-4 pt-3 text-sm">
         <BackToSupplier segment={segment} legalName={legalName} />
         <p className="m-0"><Link href={publicCatalogsRoute(segment)}>{t('editions.allEditions')}</Link></p>
       </nav>
-      <CatalogEditionReader edition={edition} issue={issue} current={current} opener={opener} pageInUrl className="min-h-[36rem] flex-1" />
-    </ShellSurface>
+      <CatalogEditionReader edition={edition} issue={issue} current={current} opener={opener} pageInUrl className="min-h-0 flex-1 px-4 pb-3" />
+    </main>
   );
 }

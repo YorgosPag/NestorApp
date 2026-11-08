@@ -1,6 +1,6 @@
 {
   "$doc": "ADR-797 / CHECK 3.63 — σελίδες που δηλώνουν γεωμετρία που ανήκει στο κέλυφος: κενό (page/content-padding, negative-margin) ή ΠΛΑΤΟΣ (page-measure). Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι εκστρατεία που τελειώνει στο μηδέν. Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
-  "generated": "2026-10-18",
+  "generated": "2026-11-08",
   "violations": [
     "/admin/audit-log|content-padding",
     "/demo/addresses-editor-state|page-measure",
@@ -13,17 +13,13 @@
     "/o/[workspace]/accounting|page-padding",
     "/o/[workspace]/dashboard|content-padding",
     "/o/[workspace]/dashboard|page-measure",
-    "/o/[workspace]/procurement/quotes/scan|page-measure",
     "/o/[workspace]/procurement/rfqs/new|page-measure",
-    "/o/[workspace]/projects/[id]/procurement/quote/[quoteId]/review|page-measure",
     "/oauth/consent|page-measure",
     "/onboarding/organization|nested-viewport-height",
     "/onboarding/organization|page-padding",
     "/pending-approval|nested-viewport-height",
     "/pending-approval|page-padding",
     "/test-cursor|nested-viewport-height",
-    "/test-harness/contact-mutation|content-padding",
-    "/test-harness/contact-mutation|page-measure",
     "/test-harness/listing-shapes|nested-viewport-height",
     "/test-upload|page-measure",
     "/test-upload|page-padding",
@@ -35,8 +31,10 @@
     "/listing/[id]/tour",
     "/o/[workspace]/dxf/viewer",
     "/search/results",
+    "/suppliers/[alias]/catalogs/[edition]",
     "narrow:src/components/properties/page/PropertyFloorplanView.tsx",
     "viewport:/listing/[id]/tour",
-    "viewport:/search/results"
+    "viewport:/search/results",
+    "viewport:/suppliers/[alias]/catalogs/[edition]"
   ]
 }
