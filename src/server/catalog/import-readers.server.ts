@@ -26,7 +26,8 @@ import { readOwned, runCatalogTransaction, stageReplace } from './catalog-store.
 import { CatalogWriteError } from './catalog-write-error';
 import { assertPurposeAuthority, batchDefinitionOf, fileOwnerOf, type StoredImportBatch } from './import-batch-writer.server';
 import { readAndProposePage, type PageFlowResult, type PageSpecs } from './import-page-flow.server';
-import { proposeGroup, type StoredImportProposal } from './import-proposal-writer.server';
+import { groupTableRowsByLiveModel } from './import-proposal-plan.server';
+import { proposeGroup, retireStaleSourceProposals, type StoredImportProposal } from './import-proposal-writer.server';
 import { buildXChangeProposals } from './import-xchange.server';
 import { downloadBatchFile, readBatchFileRecord, readBatchTable } from './import-source.server';
 
@@ -56,7 +57,8 @@ export async function buildTableProposals(ctx: AuthContext, id: string): Promise
   if (profile === null) return buildXChangeProposals(ctx, batch, await readBatchFile(ctx, batch));
   const table = await readBatchTable(batch, await readBatchFile(ctx, batch), profile);
   const proposals: StoredImportProposal[] = [];
-  for (const group of extractGroupsFromTable(table, profile)) proposals.push(await proposeGroup(ctx, id, group));
+  for (const group of await groupTableRowsByLiveModel(ctx, batch.target, extractGroupsFromTable(table, profile))) proposals.push(await proposeGroup(ctx, id, group));
+  await retireStaleSourceProposals(ctx, id, proposals);
   await setStatus(ctx, id, 'reviewing');
   return proposals;
 }

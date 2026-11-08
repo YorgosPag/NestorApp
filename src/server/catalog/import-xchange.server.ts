@@ -21,7 +21,8 @@ import { readSchemaSnapshot } from './catalog-product-reads.server';
 import { readOwned, runCatalogTransaction, stageReplace } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
-import { proposeGroup, type StoredImportProposal } from './import-proposal-writer.server';
+import { groupTableRowsByLiveModel } from './import-proposal-plan.server';
+import { proposeGroup, retireStaleSourceProposals, type StoredImportProposal } from './import-proposal-writer.server';
 
 const NOT_XCHANGE = new CatalogWriteError('invalid', [{ code: 'fileTypeConflict', path: 'fileId' }]);
 
@@ -59,7 +60,8 @@ export async function buildXChangeProposals(ctx: AuthContext, batch: StoredImpor
   if (view === null) throw NOT_XCHANGE;
   const { groups, report } = await extract(ctx, batch.target, view);
   const proposals: StoredImportProposal[] = [];
-  for (const group of groups) proposals.push(await proposeGroup(ctx, batch.id, group));
+  for (const group of await groupTableRowsByLiveModel(ctx, batch.target, groups)) proposals.push(await proposeGroup(ctx, batch.id, group));
+  await retireStaleSourceProposals(ctx, batch.id, proposals);
   await runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batch.id);
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status: 'reviewing', xchangeReport: report });

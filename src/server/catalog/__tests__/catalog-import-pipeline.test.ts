@@ -58,7 +58,8 @@ import { createCatalogFamily } from '../family-writer.server';
 import { applyImportProposal } from '../import-apply.server';
 import { createImportBatch } from '../import-batch-writer.server';
 import { readImportPage } from '../import-readers.server';
-import { proposeGroup, rejectImportProposal, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
+import { groupTableRowsByLiveModel } from '../import-proposal-plan.server';
+import { proposeGroup, rejectImportProposal, retireStaleSourceProposals, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
 import { readImportBatchDetail } from '../import-reads.server';
 import { updateCatalogProductModel } from '../product-model-writer.server';
 import { updateCatalogProduct } from '../product-writer.server';
@@ -314,6 +315,56 @@ describe('πρόταση → έγκριση', () => {
     await rejectImportProposal(ARIES, proposal.id, proposal.revision);
     expect((await proposeGroup(ARIES, id, group(faithful()))).status).toBe('rejected');
     expect(products()).toHaveLength(0);
+  });
+});
+
+describe('ADR-934 §5.1.13 — ταυτότητα πρώτα, ομαδοποίηση μετά (πινακοειδείς πηγές)', () => {
+  const faithful = () => MFP_SIZES.map((_, index) => rowFor(index));
+  /** Ό,τι βγάζει ο `byModelCode` για αρχείο χωρίς στήλη μοντέλου: κάθε γραμμή δικό της σύνολο. */
+  const standalone = (row: ExtractedRow): ExtractedGroup => ({ groupKey: `row:${row.rowKey}`, modelCode: null, sharedCells: [], rows: [row], pages: [] });
+
+  async function liveModel(): Promise<string> {
+    const id = await batchId();
+    const seed = await proposeGroup(ARIES, id, group(faithful()));
+    await applyImportProposal(ARIES, seed.id, seed.revision);
+    return id;
+  }
+
+  it('🔴 7 γραμμές χωρίς κωδικό μοντέλου πάνω σε ζωντανά SKU ⇒ ΜΙΑ ομάδα του μοντέλου, μία πρόταση, μία γραμμή μοντέλου', async () => {
+    await liveModel();
+    const groups = await groupTableRowsByLiveModel(ARIES, attributesBatch().target, faithful().map(standalone));
+    expect(groups.map((g) => ({ groupKey: g.groupKey, modelCode: g.modelCode, rows: g.rows.length }))).toEqual([{ groupKey: 'model:mfp:0', modelCode: 'mfp', rows: 7 }]);
+    // Η επανεισαγωγή είναι ΝΕΑ παρτίδα: στην ίδια, το ίδιο `groupKey` είναι η ήδη εφαρμοσμένη πρόταση και δεν ξαναγράφεται.
+    const reimport = await createImportBatch(ARIES, attributesBatch({ run: 1 }));
+    const proposal = await proposeGroup(ARIES, reimport.id, groups[0]);
+    expect(proposal.status).toBe('pending');
+    expect(proposal.rows.filter((row) => row.holderKind === 'productModel')).toHaveLength(1);
+    expect(proposal.rows.filter((row) => row.holderKind === 'product').every((row) => row.action === 'update')).toBe(true);
+    expect(rowIssues(proposal.rows)).toEqual([]);
+  });
+
+  it('γραμμή που δεν ανήκει σε κανένα μοντέλο μένει απλό προϊόν, δίπλα στην ομάδα του μοντέλου', async () => {
+    await liveModel();
+    const stranger: ExtractedRow = { rowKey: 'r99', cells: [cell('size', MFP_SIZES[0]), cell('model_code', '099-99-999')] };
+    const groups = await groupTableRowsByLiveModel(ARIES, attributesBatch().target, [...faithful().map(standalone), standalone(stranger)]);
+    expect(groups.map((g) => [g.groupKey, g.modelCode, g.rows.length])).toEqual([['model:mfp:0', 'mfp', 7], ['row:r99', null, 1]]);
+  });
+
+  it('χωρίς ζωντανό μοντέλο: ο τυπωμένος κωδικός γίνεται κανονικός ⇒ «MFP-TM» και «mfp tm» είναι μία ομάδα', async () => {
+    const printed = (row: ExtractedRow, modelCode: string): ExtractedGroup => ({ ...standalone(row), groupKey: `model:${modelCode}:0`, modelCode });
+    const groups = await groupTableRowsByLiveModel(ARIES, attributesBatch().target, [printed(rowFor(0), 'MFP-TM'), printed(rowFor(1), 'mfp tm')]);
+    expect(groups.map((g) => [g.groupKey, g.modelCode, g.rows.length])).toEqual([['model:mfp_tm:0', 'mfp_tm', 2]]);
+  });
+
+  it('νέα χαρτογράφηση αποσύρει την εκκρεμή πρόταση που δεν ξαναβγήκε· η εφαρμοσμένη μένει', async () => {
+    const id = await liveModel();
+    const stale = await proposeGroup(ARIES, id, standalone(rowFor(0, 2800)));
+    const kept = await proposeGroup(ARIES, id, group([rowFor(1, 2900)], 'model:mfp:1'));
+    await retireStaleSourceProposals(ARIES, id, [kept]);
+    const byKey = new Map(proposals().map((proposal) => [proposal.groupKey, proposal as ImportProposalDefinition & { isDeleted?: boolean }]));
+    expect(byKey.get(stale.groupKey)?.isDeleted).toBe(true);
+    expect(byKey.get(kept.groupKey)?.isDeleted).toBe(false);
+    expect(byKey.get('model:mfp:0')).toMatchObject({ status: 'applied', isDeleted: false });
   });
 });
 

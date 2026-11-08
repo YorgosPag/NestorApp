@@ -80,8 +80,20 @@ export async function proposeGroup(ctx: AuthContext, batchId: string, group: Ext
  * Η τελευταία ανάγνωση της σελίδας είναι η αλήθεια: πρόταση σε εκκρεμότητα που γέννησε προηγούμενη ανάγνωση και δεν ξαναβρέθηκε
  * φεύγει, αλλιώς θα έμενε στον έλεγχο μια τιμή που το μοντέλο απέσυρε. Ο άνθρωπος δεν την έχει δει: η σελίδα διαβάζεται ακόμη.
  */
-export async function retireStalePageProposals(ctx: AuthContext, batchId: string, page: number, kept: ReadonlySet<string>): Promise<void> {
-  const stale = (await readBatchProposals(ctx, batchId)).filter((proposal) => proposal.status === 'pending' && proposal.pages.includes(page) && !kept.has(proposal.id));
+export function retireStalePageProposals(ctx: AuthContext, batchId: string, page: number, kept: ReadonlySet<string>): Promise<void> {
+  return retireStaleProposals(ctx, batchId, kept, (proposal) => proposal.pages.includes(page));
+}
+
+/**
+ * Το ίδιο για **όλη** την πηγή (αρχείο · xChange): νέα χαρτογράφηση που ομαδοποιεί αλλιώς (ADR-934 §5.1.13) δεν αφήνει δίπλα τις
+ * παλιές ομάδες σε εκκρεμότητα — θα πρότειναν δεύτερη φορά τις ίδιες τιμές. Εφαρμοσμένες/απορριφθείσες μένουν: είναι απόφαση.
+ */
+export function retireStaleSourceProposals(ctx: AuthContext, batchId: string, kept: readonly StoredImportProposal[]): Promise<void> {
+  return retireStaleProposals(ctx, batchId, new Set(kept.map((proposal) => proposal.id)), () => true);
+}
+
+async function retireStaleProposals(ctx: AuthContext, batchId: string, kept: ReadonlySet<string>, inScope: (proposal: Pick<ImportProposalDefinition, 'pages'>) => boolean): Promise<void> {
+  const stale = (await readBatchProposals(ctx, batchId)).filter((proposal) => proposal.status === 'pending' && inScope(proposal) && !kept.has(proposal.id));
   if (stale.length === 0) return;
   await runCatalogTransaction(ctx, async (scope) => {
     const current = await Promise.all(stale.map((proposal) => readOwned<ImportProposalDefinition>(scope, 'importProposal', proposal.id)));

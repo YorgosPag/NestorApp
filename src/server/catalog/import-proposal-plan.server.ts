@@ -11,7 +11,9 @@ import 'server-only';
  * @module server/catalog/import-proposal-plan.server
  */
 
+import type { AuthContext } from '@/lib/auth';
 import { GTIN_RESERVATION_KEY, gtinReservationKeysOf } from '@/subapps/catalog/derived/trade-keys';
+import { byModelCode, type TableRow } from '@/subapps/catalog/import/apply-column-rules';
 import { buildAttributeRows, type ImportBaseValues, type LiveHolder } from '@/subapps/catalog/import/build-attribute-proposal';
 import { buildPriceRows, type PriceLineValues } from '@/subapps/catalog/import/build-price-proposal';
 import { judgeProposal, proposalAggregateOf, type ProposalVerdict } from '@/subapps/catalog/import/judge-proposal';
@@ -31,7 +33,7 @@ import { axesAtDepth, leafDepth } from '@/subapps/catalog/values/attribute-level
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
 import { readActiveByIds } from './catalog-library-reads.server';
 import { readAggregateReferences, readSchemaSnapshot } from './catalog-product-reads.server';
-import { naturalKeyId, readForUpsert, readOwned, readOwnedOrNull, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
+import { naturalKeyId, readForUpsert, readOwned, readOwnedOrNull, runCatalogReadOnly, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 import { readUniqueHolders, uniqueHolderKey } from './unique-reservations.server';
 
 type StoredModel = StoredCatalogRecord<StoredCatalogProductModelDefinition>;
@@ -238,28 +240,63 @@ async function planPrices(scope: CatalogTx, target: Extract<ImportBatchTarget, {
   return { rows, violations: [], familyId: null, variantSchemeCode: null, modelCode: null, priceListVersionId: version.id };
 }
 
-/** Το μοντέλο που κρατά ήδη τα SKU της ομάδας, αν είναι ένα. Δύο μοντέλα ⇒ καμία απάντηση: τα λέει το `uniqueValueTaken`. */
-async function modelOfHeldSkus(scope: CatalogTx, group: ExtractedGroup, schema: CatalogSchemaSnapshot): Promise<StoredModel | null> {
-  const keys = group.rows.flatMap((row) => rowUniqueKeys(row, schema));
-  const holders = await readUniqueHolders(scope, keys);
-  const held = await readActiveByIds<StoredCatalogProductDefinition>(scope, 'product', [...holders.values()].map((doc) => doc.holderId));
-  const modelIds = new Set([...held.values()].flatMap((product) => product.modelId ?? []));
-  const [modelId] = modelIds;
-  return modelIds.size === 1 ? readOwnedOrNull<StoredCatalogProductModelDefinition>(scope, 'productModel', modelId) : null;
+/** Τα κλειδιά ταυτότητας της γραμμής, με τη σειρά του `matchRows`: τυπωμένοι κωδικοί, μετά GTIN. */
+function rowIdentityKeys(row: ExtractedRow, schema: CatalogSchemaSnapshot): RowKey[] {
+  const gtin = rowGtinKey(row);
+  return gtin ? [...rowUniqueKeys(row, schema), gtin] : rowUniqueKeys(row, schema);
 }
 
 /**
- * Η ταυτότητα της ομάδας **πριν** από το σχέδιο (§5.5.1 Δ3 · Δ7): ο τυπωμένος κωδικός, αν είναι ζωντανό μοντέλο· αλλιώς το μοντέλο
- * που κρατά ήδη τα SKU της. Ο τιμοκατάλογος της Aries δεν τυπώνει κωδικό μοντέλου: χωρίς αυτό το βήμα όλες οι γραμμές θα ήταν
- * «ξένες». Τρέχει πριν από τη βάση σύγκρισης, ώστε και η σύγκριση τριών σημείων να βλέπει το σωστό μοντέλο.
+ * **Το ζωντανό μοντέλο κάθε ομάδας** (§5.5.1 Δ3 · Δ7 · ADR-934 §5.1.13), μαζικά: ο τυπωμένος κωδικός αν είναι ζωντανό μοντέλο·
+ * αλλιώς το **ένα** μοντέλο που κρατά ήδη τα SKU της (κωδικός ή GTIN). Δύο μοντέλα ⇒ καμία απάντηση: τα λέει το
+ * `uniqueValueTaken`. Τρεις αναγνώσεις `getAll` για όλη την πηγή, όχι τρεις ανά γραμμή — ένα xChange έχει χιλιάδες.
+ */
+async function liveModelsOf(scope: CatalogTx, groups: readonly ExtractedGroup[], schema: CatalogSchemaSnapshot): Promise<readonly (StoredModel | null)[]> {
+  const printedIds = groups.map((group) => {
+    const code = group.modelCode === null ? '' : suggestCatalogCode(group.modelCode);
+    return code === '' ? null : naturalKeyId(scope, 'productModel', code);
+  });
+  const keysByGroup = groups.map((group) => group.rows.flatMap((row) => rowIdentityKeys(row, schema)));
+  const holders = await readUniqueHolders(scope, keysByGroup.flat());
+  const held = await readActiveByIds<StoredCatalogProductDefinition>(scope, 'product', [...holders.values()].map((doc) => doc.holderId));
+  const heldIds = keysByGroup.map((keys) => {
+    const ids = new Set(keys.flatMap((key) => held.get(holders.get(uniqueHolderKey(key.attributeId, key.uniqueKey))?.holderId ?? '')?.modelId ?? []));
+    return ids.size === 1 ? [...ids][0] : null;
+  });
+  const models = await readActiveByIds<StoredCatalogProductModelDefinition>(scope, 'productModel', [...printedIds, ...heldIds].flatMap((id) => id ?? []));
+  return groups.map((_, index) => models.get(printedIds[index] ?? '') ?? models.get(heldIds[index] ?? '') ?? null);
+}
+
+/**
+ * Η ταυτότητα της ομάδας **πριν** από το σχέδιο: ο τιμοκατάλογος της Aries δεν τυπώνει κωδικό μοντέλου, και χωρίς αυτό το βήμα
+ * όλες οι γραμμές θα ήταν «ξένες». Τρέχει πριν από τη βάση σύγκρισης, ώστε και η σύγκριση τριών σημείων να βλέπει το σωστό μοντέλο.
+ * Ο κωδικός γίνεται ο **αποθηκευμένος** του μοντέλου — ο ίδιος που θα έβγαζε το `suggestCatalogCode` στο σχέδιο.
  */
 export async function resolveGroupIdentity(scope: CatalogTx, target: ImportBatchTarget, group: ExtractedGroup): Promise<ExtractedGroup> {
   if (target.purpose !== 'attributes') return group;
-  const code = group.modelCode === null ? '' : suggestCatalogCode(group.modelCode);
-  if (code !== '' && (await readOwnedOrNull<StoredCatalogProductModelDefinition>(scope, 'productModel', naturalKeyId(scope, 'productModel', code)))) return group;
-  const schema = await readSchemaSnapshot(scope, target.familyId, target.variantSchemeCode);
-  const model = await modelOfHeldSkus(scope, group, schema);
+  const [model] = await liveModelsOf(scope, [group], await readSchemaSnapshot(scope, target.familyId, target.variantSchemeCode));
   return model ? { ...group, modelCode: model.code } : group;
+}
+
+/**
+ * **Μία πρόταση ανά μοντέλο** (ADR-934 §5.1.13) για τις πινακοειδείς πηγές (αρχείο · ETIM xChange). Η καθαρή ομαδοποίηση
+ * (`byModelCode`) βλέπει μόνο τον **τυπωμένο** κωδικό: αρχείο χωρίς στήλη μοντέλου έβγαζε μία πρόταση ανά γραμμή, και η κοινή
+ * τιμή (μάρκα) προτεινόταν στο ίδιο μοντέλο ×N — κάθε έγκριση μετά την πρώτη σκόνταφτε στην αναθεώρηση (409). Εδώ η ταυτότητα
+ * λύνεται **πρώτα** και η ομαδοποίηση **μετά**, με τον ίδιο `byModelCode` (και τα ίδια τμήματα των 200). Όπως το Akeneo: SKU
+ * που υπάρχει κρατά τον γονέα του όταν η πηγή δεν τον λέει. Γραμμή που δεν ανήκει σε κανένα μοντέλο μένει απλό προϊόν.
+ * ⚠️ Μόνο για ομάδες του `byModelCode` (χωρίς `sharedCells`/`pages`): η σελίδα PDF έχει δικές της ομάδες και δεν περνά από εδώ.
+ */
+export async function groupTableRowsByLiveModel(ctx: AuthContext, target: ImportBatchTarget, groups: readonly ExtractedGroup[]): Promise<readonly ExtractedGroup[]> {
+  if (target.purpose !== 'attributes' || groups.length === 0) return groups;
+  const rows = await runCatalogReadOnly(ctx, async (scope) => {
+    const models = await liveModelsOf(scope, groups, await readSchemaSnapshot(scope, target.familyId, target.variantSchemeCode));
+    return groups.flatMap((group, index): TableRow[] => {
+      const printed = group.modelCode === null ? '' : suggestCatalogCode(group.modelCode);
+      const modelCode = models[index]?.code ?? (printed === '' ? group.modelCode : printed);
+      return group.rows.map((row) => ({ modelCode, row }));
+    });
+  });
+  return byModelCode(rows);
 }
 
 /** Το σχέδιο μιας ομάδας απέναντι στα ζωντανά: ίδιο για πρώτη κατασκευή και για επανυπολογισμό. */

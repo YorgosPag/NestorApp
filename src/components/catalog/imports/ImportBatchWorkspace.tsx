@@ -11,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import { PdfCanvasViewer } from '@/components/file-manager/PdfCanvasViewer';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 import type { ImportBatchPages, ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
@@ -112,15 +113,24 @@ function PageProgress({ workspace }: { readonly workspace: Workspace }) {
   );
 }
 
-function SourcePane({ view, focused }: { readonly view: ImportBatchDetailView; readonly focused: ImportProposalField | null }) {
+/**
+ * **Η μία απάντηση στο «υπάρχει πηγή να δειχτεί δίπλα;»** — την ρωτούν και το πάνελ και η διάταξη. Χωριστά θα διαφωνούσαν:
+ * μετρημένο 2026-11-08 (xlsx, 1121px) η διάταξη κρατούσε δεύτερη στήλη 1032px για πάνελ που δεν αποδιδόταν, και ο τροχός
+ * πάνω στο κενό δεν κυλούσε τίποτα (οι μπάρες κύλισης είναι κρυφές σε όλη την εφαρμογή, άρα ούτε φαινόταν ότι υπάρχει συνέχεια).
+ */
+function sourceFileIdOf(view: ImportBatchDetailView): string | null {
+  const { batch } = view;
+  return batch.sourceKind === 'pdf' ? batch.fileId : null;
+}
+
+function SourcePane({ view, fileId, focused }: { readonly view: ImportBatchDetailView; readonly fileId: string; readonly focused: ImportProposalField | null }) {
   const { t } = useImportText();
   const { batch, proposals } = view;
-  if (batch.sourceKind !== 'pdf' || batch.fileId === null) return null;
   const anchor = focused?.anchor?.kind === 'page' ? focused.anchor : null;
   const page = anchor?.page ?? proposals[0]?.pages[0] ?? batch.pages?.from ?? 1;
   return (
     <aside className="flex min-h-0 flex-col" aria-label={t('review.source')}>
-      <PdfCanvasViewer url="" fileId={batch.fileId} title={batch.fileName} page={page} highlights={anchor?.regions ?? []} className="min-h-0 flex-1" />
+      <PdfCanvasViewer url="" fileId={fileId} title={batch.fileName} page={page} highlights={anchor?.regions ?? []} className="min-h-0 flex-1" />
     </aside>
   );
 }
@@ -165,10 +175,12 @@ export function ImportBatchWorkspace({ batchId }: { readonly batchId: string }) 
   }, [failure, notify]);
 
   if (!view) return <p className="m-0 text-muted-foreground" role="status">{t('batch.loading')}</p>;
+  const sourceFileId = sourceFileIdOf(view);
+  // Χωρίς πηγή δίπλα η λίστα πιάνει όλο το πλάτος: όλη η επιφάνεια είναι το κυλιόμενο δοχείο, όχι η μισή.
   return (
-    <section className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-2" aria-label={view.batch.fileName}>
+    <section className={cn('grid min-h-0 flex-1 grid-cols-1 gap-4', sourceFileId !== null && 'xl:grid-cols-2')} aria-label={view.batch.fileName}>
       <BatchProposals workspace={workspace} view={view} focused={focused} onFocus={setFocused} />
-      <SourcePane view={view} focused={focused} />
+      {sourceFileId === null ? null : <SourcePane view={view} fileId={sourceFileId} focused={focused} />}
     </section>
   );
 }
