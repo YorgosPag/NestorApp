@@ -54,12 +54,15 @@ describe('ταυτότητα κατά κλειδί, όχι κατά γράμμα
     expect(importTargetKey({ kind: 'tradeIdentity', field: 'gtin' })).toBe('t:gtin');
     expect(importTargetKey({ kind: 'tradeIdentity', field: 'brand' })).toBe('t:brand');
   });
-  it('EAN-13 ≡ GTIN-14 · «DAIKIN» ≡ «Daikin» · «ab-12» ≡ «AB 12»', () => {
+  it('EAN-13 ≡ GTIN-14 · «DAIKIN» ≡ «Daikin» · «ab–12» ≡ « AB-12 »', () => {
     expect(sameTradeText('gtin', EAN, EAN_14)).toBe(true);
     expect(sameTradeText('gtin', '4006-3813-3393-1', EAN)).toBe(true);
     expect(sameTradeText('brand', 'DAIKIN', 'Daikin')).toBe(true);
-    expect(sameTradeText('mpn', 'ab-12', 'AB 12')).toBe(true);
+    expect(sameTradeText('mpn', 'ab–12', ' AB-12 ')).toBe(true);
     expect(sameTradeText('gtin', EAN, '4006381333948')).toBe(false);
+  });
+  it('🔴 MPN: η παύλα ΔΕΝ ισούται με κενό — ο κανόνας των κωδικών προμηθευτή (ADR-934 §5.1), ποτέ ψευδής συγχώνευση', () => {
+    expect(sameTradeText('mpn', 'ab-12', 'AB 12')).toBe(false);
   });
   it('🔴 επανεισαγωγή του ίδιου GTIN σε άλλη μορφή ⇒ αμετάβλητο, καμία «αλλαγή»', () => {
     const field = fieldOf(fieldsFor([tradeCell('gtin', EAN_14)], liveOf({ gtin: EAN })), 'gtin');
