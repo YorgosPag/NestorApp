@@ -3,12 +3,11 @@ import 'server-only';
 /**
  * Η **απόφαση γραμμής και η ξαναερμηνεία ενός πίνακα χωρίς AI** (ADR-923 §5.5.2 Β3 Γ3–Γ5).
  *
- * Ο άνθρωπος λέει «αυτή η γραμμή είναι εκείνη η ιδιότητα». Η σελίδα δεν ξαναδιαβάζεται: η ανασύνθεση του πίνακα από το PDF είναι
- * ντετερμινιστική, η απάντηση αντιστοίχισης του μοντέλου είναι φυλαγμένη (Ε6), και η ανθρώπινη απόφαση μπαίνει **από πάνω**. Ίδιος
- * αγωγός (`readPageTables` → `proposeGroup`), ίδιος κριτής, κόστος $0.
+ * Ο άνθρωπος λέει «αυτή η γραμμή είναι εκείνη η ιδιότητα». Η σελίδα δεν ξαναδιαβάζεται: ο πίνακας ξαναχτίζεται από τον κοινό πυρήνα
+ * (`import-table-rebuild.server`) με την ανθρώπινη απόφαση **από πάνω**. Ίδιος αγωγός, ίδιος κριτής, κόστος $0.
  *
- * 🔑 **Δομικά χωρίς πληρωμή:** αυτό το αρχείο δεν εισάγει τον αναλυτή. Όπου λείπει κάτι, αρνείται με λόγο (`ImportLineRefusal`) και
- *    **δεν γράφει τίποτα**· ο άνθρωπος αποφασίζει για νέα ανάγνωση.
+ * 🔑 **Δομικά χωρίς πληρωμή:** ούτε αυτό το αρχείο ούτε ο πυρήνας εισάγουν τον αναλυτή. Όπου λείπει κάτι, αρνείται με λόγο
+ *    (`ImportLineRefusal`) και **δεν γράφει τίποτα**· ο άνθρωπος αποφασίζει για νέα ανάγνωση.
  * 🔑 **Εμβέλεια πίνακα:** ξαναερμηνεύεται μόνο ο πίνακας της γραμμής. Άλλος πίνακας της ίδιας σελίδας έχει δική του πρόταση και δική
  *    του σειρά στην ουρά του πελάτη, άρα δύο αποφάσεις σε διαφορετικούς πίνακες δεν πατούν η μία την άλλη.
  * 🔑 Οι αποφάσεις πεδίων του ανθρώπου επιβιώνουν (`carriedDecision`)· πρόταση που εγκρίθηκε ή απορρίφθηκε δεν αγγίζεται.
@@ -19,81 +18,39 @@ import type { AuthContext } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { canonicalJson } from '@/lib/legal/canonical-json';
-import { createModuleLogger } from '@/lib/telemetry';
-import { reconstructPageTables } from '@/lib/pdf-tables/reconstruct-page-tables';
-import type { PageTable } from '@/lib/pdf-tables/page-table-types';
-import { applyLineOverrides, lineDecisionOf, tableOverridesOf, withLineOverride } from '@/subapps/catalog/import/page-line-overrides';
-import { isRawPageMapping, type RawTableMapping } from '@/subapps/catalog/import/page-table-mapping';
-import { readPageTables } from '@/subapps/catalog/import/page-table-reading';
+import { lineDecisionOf, tableOverridesOf, withLineOverride } from '@/subapps/catalog/import/page-line-overrides';
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
 import type { ImportBatchDefinition, ImportLineDecision } from '@/subapps/catalog/types/catalog-import';
 import type { ImportLineOutcome, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
 import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
-import type { ImportLineBindLevel, ImportLineRefusal } from '@/subapps/catalog/vocabulary/catalog-import';
+import type { ImportLineBindLevel } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
 import { readOwned, runCatalogReadOnly } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { updateCatalogFamily } from './family-writer.server';
-import { assertPurposeAuthority, replaceTableLeftOut, setImportLineOverride, type StoredImportBatch } from './import-batch-writer.server';
-import { readPageReadings, type StoredPageReading } from './import-page-reading.server';
-import { axisAttributeIdsOf, loadPdfPageSource, pageSpecs } from './import-page-source.server';
-import { proposeGroup, retireStalePageProposals } from './import-proposal-writer.server';
+import { assertPurposeAuthority, setImportLineOverride, type StoredImportBatch } from './import-batch-writer.server';
 import { readBatchProposals, readImportBatchDetail } from './import-reads.server';
+import {
+  commitTable,
+  groupKeyOf,
+  pageBasis,
+  prepareTable,
+  readBatchSchema,
+  refuse,
+  tableOf,
+  type Judged,
+  type TableBasis,
+} from './import-table-rebuild.server';
 
-const logger = createModuleLogger('CatalogImportReinterpret');
-
-type Judged<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly reason: ImportLineRefusal };
-
-const refuse = (reason: ImportLineRefusal): { readonly ok: false; readonly reason: ImportLineRefusal } => ({ ok: false, reason });
-
-const groupKeyOf = (page: number, table: string): string => `page:${page}:${table}`;
-
-/** Αποτυχημένη απάντηση δεν έγινε ποτέ πρόταση: οι προτάσεις της σελίδας ήρθαν από την αμέσως προηγούμενη επιτυχή. */
-function standingReading(readings: readonly StoredPageReading[]): Judged<StoredPageReading> {
-  const latest = readings.find((reading) => reading.outcome === 'read');
-  if (!latest) return refuse('readingMissing');
-  if (latest.route !== 'table' || latest.abandoned) return refuse('readingVision');
-  if (latest.rawTextClipped) return refuse('readingClipped');
-  return { ok: true, value: latest };
-}
-
-function tableAnswer(reading: StoredPageReading, table: string): Judged<RawTableMapping> {
-  let parsed: unknown = null;
-  try {
-    parsed = JSON.parse(reading.rawText ?? 'null');
-  } catch {
-    return refuse('readingMissing');
-  }
-  if (!isRawPageMapping(parsed)) return refuse('readingMissing');
-  const answer = parsed.tables.find((entry) => entry.table === table);
-  return answer ? { ok: true, value: answer } : refuse('lineUnknown');
-}
-
-/** Ίδιοι πίνακες με εκείνους που είδε το μοντέλο: κλειδί, πηγή, μάρτυρας, διαστάσεις. Αλλιώς οι αριθμοί γραμμών δεν σημαίνουν το ίδιο. */
-function sameTables(seen: StoredPageReading['tables'], rebuilt: readonly PageTable[]): boolean {
-  if (seen.length !== rebuilt.length) return false;
-  return seen.every((entry) => rebuilt.some((table) => table.key === entry.key && table.source === entry.source && table.witness === entry.witness
-    && table.rowCount === entry.rows && table.colCount === entry.columns));
-}
-
-interface TableBasis {
-  readonly answer: RawTableMapping;
-  readonly table: PageTable;
-}
-
-async function tableBasis(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest): Promise<Judged<TableBasis>> {
-  const reading = standingReading(await readPageReadings(ctx, batch.id, request.page));
-  if (!reading.ok) return reading;
-  const answer = tableAnswer(reading.value, request.table);
-  if (!answer.ok) return answer;
-  const source = await loadPdfPageSource(ctx, batch, request.page);
-  if (source.textLayer.state === 'lost' || source.tokens.length === 0) return refuse('tablesDrifted');
-  const tables = reconstructPageTables({ words: source.tokens, rules: source.rules, tagTables: source.tagTables });
-  if (!sameTables(reading.value.tables, tables)) return refuse('tablesDrifted');
-  const table = tables.find((candidate) => candidate.key === request.table);
-  if (!table) return refuse('tablesDrifted');
-  const lines = answer.value.variantsIn === 'columns' ? table.rowCount : table.colCount;
-  return request.line < lines ? { ok: true, value: { answer: answer.value, table } } : refuse('lineUnknown');
+/** Ο πίνακας της γραμμής, και η γραμμή μέσα στα όριά του (ο προσανατολισμός λέει αν οι γραμμές είναι σειρές ή στήλες). */
+async function lineBasis(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest): Promise<Judged<TableBasis>> {
+  const page = await pageBasis(ctx, batch, request.page);
+  if (!page.ok) return page;
+  const basis = tableOf(page.value, request.table);
+  if (!basis.ok) return basis;
+  const { answer, table } = basis.value;
+  const lines = answer.variantsIn === 'columns' ? table.rowCount : table.colCount;
+  return request.line < lines ? basis : refuse('lineUnknown');
 }
 
 /** Νέα ιδιότητα από τη γραμμή: δέσιμο στην οικογένεια της παρτίδας μέσω της μηχανής σχήματος (CHECK 3.106). Αλλαγή δομής ⇒ `schema`. */
@@ -109,33 +66,19 @@ async function bindToFamily(ctx: AuthContext, batch: StoredImportBatch, attribut
   await updateCatalogFamily(ctx, familyId, familyRecord.revision, next);
 }
 
-interface Reinterpretation {
-  readonly batch: StoredImportBatch;
-  readonly request: SetImportLineRequest;
-  readonly basis: TableBasis;
-}
-
 /**
- * Ο πίνακας με τις αποφάσεις από πάνω ⇒ ίδιος αγωγός ⇒ πρόταση + όσα έμειναν απέξω, μόνο για αυτόν τον πίνακα. Η απόφαση κρίνεται
- * **στη μνήμη** πριν γραφτεί: άρνηση εδώ δεν αφήνει πίσω της μισή κατάσταση.
+ * Ο πίνακας με τις αποφάσεις από πάνω, **μαζί με τη νέα**. Η απόφαση κρίνεται στη μνήμη πριν γραφτεί: άρνηση εδώ δεν αφήνει πίσω της
+ * μισή κατάσταση. Μετά γράφεται η απόφαση και ό,τι παράγει.
  */
-async function reinterpretTable(ctx: AuthContext, { batch, request, basis }: Reinterpretation): Promise<Judged<null>> {
-  if (batch.target.purpose !== 'attributes') return refuse('lineUnknown');
-  const { familyId, variantSchemeCode } = batch.target;
-  const schema = await runCatalogReadOnly(ctx, (scope) => readSchemaSnapshot(scope, familyId, variantSchemeCode));
-  const specs = pageSpecs(schema);
+async function reinterpretTable(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest, basis: TableBasis): Promise<Judged<null>> {
+  const schema = await readBatchSchema(ctx, batch);
+  if (schema === null) return refuse('lineUnknown');
   const stamp = { by: ctx.uid, at: nowISO() };
   const overrides = withLineOverride(tableOverridesOf(batch.pages?.lineOverrides, request.page, request.table), request, request.decision, stamp);
-  const overridden = applyLineOverrides(basis.answer, overrides, specs.codeById, new Set(specs.byCode.keys()));
-  if (overridden.unknownAttributeIds.length > 0) return refuse('lineUnknown');
-  if (overridden.staleCodes.length > 0) logger.warn('Stored mapping names attributes no longer in the family', { batchId: batch.id, page: request.page, codes: overridden.staleCodes });
+  const prepared = prepareTable(schema, basis, overrides);
+  if (!prepared.ok) return prepared;
   await setImportLineOverride(ctx, batch.id, request, request.decision);
-  const context = { page: request.page, tables: [basis.table], attributesByCode: specs.byCode, registry: schema.registry, axisAttributeIds: axisAttributeIdsOf(schema) };
-  const reading = readPageTables({ tables: [overridden.mapping] }, context);
-  const proposals = await Promise.all(reading.groups.map((group) => proposeGroup(ctx, batch.id, group)));
-  const others = (await readBatchProposals(ctx, batch.id)).filter((proposal) => proposal.groupKey !== groupKeyOf(request.page, request.table));
-  await retireStalePageProposals(ctx, batch.id, request.page, new Set([...others, ...proposals].map((proposal) => proposal.id)));
-  await replaceTableLeftOut(ctx, batch.id, request.page, request.table, { setAside: reading.setAside, unmappedLines: reading.unmappedLines });
+  await commitTable(ctx, batch.id, prepared.value);
   return { ok: true, value: null };
 }
 
@@ -159,10 +102,10 @@ async function decideLine(ctx: AuthContext, id: string, request: SetImportLineRe
     await setImportLineOverride(ctx, id, request, request.decision);
     return { kind: 'settled' };
   }
-  const basis = await tableBasis(ctx, opened.value, request);
+  const basis = await lineBasis(ctx, opened.value, request);
   if (!basis.ok) return { kind: 'refused', reason: basis.reason };
   if (request.decision?.kind === 'attribute' && request.bind !== null) await bindToFamily(ctx, opened.value, request.decision.attributeId, request.bind);
-  const outcome = await reinterpretTable(ctx, { batch: opened.value, request, basis: basis.value });
+  const outcome = await reinterpretTable(ctx, opened.value, request, basis.value);
   return outcome.ok ? { kind: 'settled' } : { kind: 'refused', reason: outcome.reason };
 }
 

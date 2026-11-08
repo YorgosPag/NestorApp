@@ -67,6 +67,7 @@
   },
   "batch": {
     "loading": "Loading batch…",
+    "upgrading": "Updating page interpretation to the new version, without AI: page {current} of {total}…",
     "discard": "Discard",
     "pages": "Reading pages",
     "pagesProgress": "Read {done} of {total} pages · {failed} failed",
@@ -156,6 +157,8 @@
       "stateSaving": "Re-interpreting…",
       "stateRefused": "Not done",
       "show": "Show the line in the PDF",
+      "regionMissing": "The line's position on the page is not available — {reason}",
+      "regionLegacy": "the page was read with an older version.",
       "map": "Map…",
       "newAttribute": "New attribute…",
       "ignore": "Ignore",

@@ -152,6 +152,16 @@ export const IMPORT_LINE_REFUSALS = [
 ] as const;
 export type ImportLineRefusal = (typeof IMPORT_LINE_REFUSALS)[number];
 
+/**
+ * **Έκδοση παραγωγής** όσων γεννά από μια σελίδα η ερμηνεία πινάκων (`readPageTables`: προτάσεις · πίνακες απέξω · γραμμές χωρίς
+ * πεδίο) — §5.5.2 Β3.1. Τα παράγωγα **αποθηκεύονται** στην παρτίδα· όταν αλλάζει ο παραγωγός, η παλιά σελίδα θα έμενε σιωπηλά
+ * μπαγιάτικη. Όπως το Revit αναβαθμίζει αρχείο στο άνοιγμα, η σελίδα με σφραγίδα μικρότερη από αυτή ξαναχτίζεται από τη φυλαγμένη
+ * ανάγνωση, χωρίς AI ($0).
+ * ⚠️ **Ανέβασέ το** όταν αλλάζει ό,τι γράφει το `readPageTables` σε προτάσεις ή «απέξω». Απούσα σφραγίδα ≡ 1 (πριν το Β3: γραμμές
+ *    χωρίς `regions`).
+ */
+export const IMPORT_PAGE_DERIVATION = 2;
+
 /** Πού δένεται νέα ιδιότητα από γραμμή: κοινή στο μοντέλο, ή ανά τελικό κωδικό (το τελευταίο επίπεδο του σχήματος). */
 export const IMPORT_LINE_BIND_LEVELS = ['shared', 'leaf'] as const;
 export type ImportLineBindLevel = (typeof IMPORT_LINE_BIND_LEVELS)[number];

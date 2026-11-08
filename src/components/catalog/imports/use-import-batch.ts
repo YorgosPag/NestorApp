@@ -19,6 +19,7 @@ import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-impo
 import { IMPORT_PAGE_ESTIMATED_COST_USD } from '@/subapps/catalog/vocabulary/catalog-import';
 import { createQueueState, overlayView, queuedDecisionsOf, useProposalChangeQueue } from './proposal-change-queue';
 import { useLineDecisions } from './use-line-decisions';
+import { usePageUpgrade } from './use-page-upgrade';
 
 /** Οι σελίδες που μένουν: όσες δεν έχουν κριθεί, και όσες απέτυχαν όταν ζητηθεί ρητά επανάληψη. */
 export function pagesToRead(pages: ImportBatchPages, retryFailed: boolean): number[] {
@@ -102,5 +103,8 @@ export function useImportBatch(batchId: string) {
   }, [reload, view]);
 
   const changes = useProposalChangeQueue({ setView, setFailure, reload, queued });
-  return { view, failure, reload, discard, ...usePageReader(batchId, view, setFailure, reload), ...changes, ...useLineDecisions(changes.line) };
+  const reader = usePageReader(batchId, view, setFailure, reload);
+  const accept = useCallback((fresh: ImportBatchDetailView) => setView(overlayView(fresh, queuedDecisionsOf(queued.current))), []);
+  const upgrade = usePageUpgrade({ view, busy: reader.reading, accept, setFailure });
+  return { view, failure, reload, discard, ...reader, upgrade, ...changes, ...useLineDecisions(changes.line) };
 }

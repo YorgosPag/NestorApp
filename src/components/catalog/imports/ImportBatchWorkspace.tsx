@@ -12,12 +12,13 @@ import { PdfCanvasViewer } from '@/components/file-manager/PdfCanvasViewer';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { pageDerivationOf } from '@/subapps/catalog/import/page-derivation';
 import { lineKeyOf, pendingUnmappedLines } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportBatchPages, ImportPageUnmappedLine, ImportProposalField, PageRegion } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
-import { SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
+import { LINE_REFUSAL_KEYS, SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
 import { XChangeReportSlot } from './import-surfaces';
@@ -124,13 +125,26 @@ function sourceFileIdOf(view: ImportBatchDetailView): string | null {
   return batch.sourceKind === 'pdf' ? batch.fileId : null;
 }
 
+/**
+ * §5.5.2 Β3.1: γραμμή χωρίς θέση στη σελίδα **δεν** σβήνει σιωπηλά την επισήμανση — λέει γιατί. Ο λόγος έρχεται από τη σφραγίδα της
+ * σελίδας (η αναβάθμιση αρνήθηκε) ή είναι «παλαιότερη έκδοση» (δεν έχει ακόμη αναβαθμιστεί).
+ */
+function MissingRegion({ pages, focus }: { readonly pages: ImportBatchPages | null | undefined; readonly focus: ReviewFocus | null }) {
+  const { t } = useImportText();
+  if (focus?.kind !== 'line' || (focus.line.regions?.length ?? 0) > 0 || !pages) return null;
+  const { refusal } = pageDerivationOf(pages, focus.line.page);
+  const reason = refusal === null ? t('review.lines.regionLegacy') : t(LINE_REFUSAL_KEYS[refusal]);
+  return <p className="m-0 text-xs text-muted-foreground" role="status">{t('review.lines.regionMissing', { reason })}</p>;
+}
+
 function SourcePane({ view, fileId, focus }: { readonly view: ImportBatchDetailView; readonly fileId: string; readonly focus: ReviewFocus | null }) {
   const { t } = useImportText();
   const { batch, proposals } = view;
   const spot = spotOf(focus);
   const page = spot?.page ?? proposals[0]?.pages[0] ?? batch.pages?.from ?? 1;
   return (
-    <aside className="flex min-h-0 flex-col" aria-label={t('review.source')}>
+    <aside className="flex min-h-0 flex-col gap-2" aria-label={t('review.source')}>
+      <MissingRegion pages={batch.pages} focus={focus} />
       <PdfCanvasViewer url="" fileId={fileId} title={batch.fileName} page={page} highlights={spot?.regions ?? []} className="min-h-0 flex-1" />
     </aside>
   );
@@ -174,6 +188,7 @@ function BatchProposals(props: BatchProposalsProps) {
   const { t } = useImportText();
   const { workspace, view } = props;
   const { batch, proposals } = view;
+  const { upgrade } = workspace;
   const open = !IMPORT_FINISHED_BATCH_STATUSES.includes(batch.status);
   return (
     <div className="flex min-h-0 flex-col gap-3 overflow-auto">
@@ -183,8 +198,12 @@ function BatchProposals(props: BatchProposalsProps) {
       </header>
       <PageProgress workspace={workspace} />
       {batch.xchangeReport ? <XChangeReportSlot report={batch.xchangeReport} /> : null}
+      {upgrade ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('batch.upgrading', { current: upgrade.done + 1, total: upgrade.total })}</p> : null}
       {proposals.length === 0 ? <p className="m-0 text-muted-foreground">{t('batch.noProposals')}</p> : null}
-      {proposals.map((proposal) => <ProposalSlot key={proposal.id} {...props} proposal={proposal} />)}
+      {/* §5.5.2 Β3.1: όσο ξαναχτίζονται σελίδες, καμία απόφαση — αλλιώς θα συγκρουόταν με την πρόταση που μόλις αλλάζει. */}
+      <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" disabled={upgrade !== null} aria-busy={upgrade !== null}>
+        {proposals.map((proposal) => <ProposalSlot key={proposal.id} {...props} proposal={proposal} />)}
+      </fieldset>
     </div>
   );
 }

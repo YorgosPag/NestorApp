@@ -32,6 +32,7 @@ import type {
   ImportFieldDecision,
   ImportFieldStatus,
   ImportIssueCode,
+  ImportLineRefusal,
   ImportPriceField,
   ImportProposalStatus,
   ImportPurpose,
@@ -304,6 +305,16 @@ export interface ImportPageTextless {
   readonly reason: string | null;
 }
 
+/**
+ * Με ποια **έκδοση παραγωγής** (`IMPORT_PAGE_DERIVATION`) γράφτηκαν τα παράγωγα μιας σελίδας (§5.5.2 Β3.1). `refusal` = η αναβάθμιση
+ * κρίθηκε και δεν μπόρεσε χωρίς νέα ανάγνωση: τα παλιά παράγωγα μένουν ως είχαν, ο λόγος φαίνεται, και δεν ξαναδοκιμάζεται.
+ */
+export interface ImportPageDerivation {
+  readonly page: number;
+  readonly version: number;
+  readonly refusal: ImportLineRefusal | null;
+}
+
 /** Πρόοδος ανάγνωσης PDF, ανά σελίδα. Το `usage` λείπει από παρτίδες παλαιότερες της μέτρησης. */
 export interface ImportBatchPages {
   readonly from: number;
@@ -318,6 +329,8 @@ export interface ImportBatchPages {
   readonly textless?: readonly ImportPageTextless[];
   /** Αποφάσεις ανθρώπου για γραμμές πινάκων (§5.5.2 Β3). Απούσα = καμία. */
   readonly lineOverrides?: readonly ImportLineOverride[];
+  /** Σφραγίδες έκδοσης παραγωγής ανά σελίδα (§5.5.2 Β3.1). Απούσα σφραγίδα σελίδας = έκδοση 1. */
+  readonly derivations?: readonly ImportPageDerivation[];
 }
 
 export interface ImportBatchDefinition {

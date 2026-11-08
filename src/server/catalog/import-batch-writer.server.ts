@@ -17,6 +17,7 @@ import { hasPermission } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { countPdfPages } from '@/services/pdf/pdf-rasterize.service';
 import { importBatchKey } from '@/subapps/catalog/import/import-keys';
+import { currentDerivation } from '@/subapps/catalog/import/page-derivation';
 import { withLineOverride } from '@/subapps/catalog/import/page-line-overrides';
 import type {
   ImportBatchDefinition,
@@ -36,6 +37,7 @@ import {
   IMPORT_MAX_LINE_OVERRIDES,
   IMPORT_MAX_PAGES_PER_BATCH,
   IMPORT_MAX_RUNS,
+  type ImportLineRefusal,
   type ImportPurpose,
 } from '@/subapps/catalog/vocabulary/catalog-import';
 import {
@@ -222,5 +224,19 @@ export function replaceTableLeftOut(ctx: AuthContext, id: string, page: number, 
     const setAside = replacedOnTable(pages.setAside ?? [], page, table, leftOut.setAside);
     const unmappedLines = replacedOnTable(pages.unmappedLines ?? [], page, table, leftOut.unmappedLines);
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, setAside, unmappedLines } });
+  });
+}
+
+/**
+ * `POST /api/catalog/imports/[id]/reinterpret` (τελευταία πράξη) — η σελίδα κρίθηκε με την τρέχουσα έκδοση παραγωγής (§5.5.2 Β3.1):
+ * ξαναχτίστηκε, ή αρνήθηκε με λόγο. Μπαίνει **μετά** τα παράγωγα: διακοπή στη μέση αφήνει τη σελίδα μπαγιάτικη, άρα ξαναδοκιμάζεται.
+ */
+export function stampPageDerivation(ctx: AuthContext, id: string, page: number, refusal: ImportLineRefusal | null): Promise<StoredImportBatch> {
+  return runCatalogTransaction(ctx, async (scope) => {
+    const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
+    if (IMPORT_FINISHED_BATCH_STATUSES.includes(current.status)) return current;
+    const pages = pagesOrRefuse(current);
+    const derivations = replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, refusal)]);
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, derivations } });
   });
 }

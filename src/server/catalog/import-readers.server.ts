@@ -14,6 +14,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import { extractGroupsFromTable } from '@/subapps/catalog/import/apply-column-rules';
 import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
+import { currentDerivation } from '@/subapps/catalog/import/page-derivation';
 import type { ImportBatchDefinition, ImportPagesUsage, ImportPageTextless, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
 import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
@@ -81,6 +82,8 @@ function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAs
       setAside: replacedOnPage(pages.setAside ?? [], page, setAside),
       unmappedLines: replacedOnPage(pages.unmappedLines ?? [], page, unmappedLines),
       textless: replacedOnPage(pages.textless ?? [], page, textless),
+      // §5.5.2 Β3.1: ό,τι μόλις γράφτηκε είναι της τρέχουσας έκδοσης· αποτυχία δεν άγγιξε τα παράγωγα, άρα ούτε τη σφραγίδα τους.
+      derivations: ok ? replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, null)]) : pages.derivations ?? [],
     };
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed, usage: spent, ...leftOut } });
   });

@@ -123,6 +123,8 @@ export const CATALOG_API = {
     pages: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/pages`,
     /** Απόφαση γραμμής πίνακα + ξαναερμηνεία χωρίς AI (§5.5.2 Β3). */
     lines: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/lines`,
+    /** Αναβάθμιση σελίδας στην τρέχουσα έκδοση παραγωγής, χωρίς AI (§5.5.2 Β3.1). */
+    reinterpret: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/reinterpret`,
     discard: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/discard`,
   },
   importProfiles: entity('import-profiles'),

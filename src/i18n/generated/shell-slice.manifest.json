@@ -46,7 +46,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__connections.el.json": "a945c101573af8b73bad5337c825e42cff51f05ab5c12d6abffbf57dfbac8520",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "ed53a8bf5790b1cbbb8248fe4bd32a7bc4d8ce1b44e3a5717054c1e3ea73e025",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "beb4d7d88a17fac46b11a3ccf432f9836c60534f372e8eae2d3e210ef96c3bee",
-    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "0bae72e72b3e08c7da70b4adda584f7c3939d419eb0e18eaa5048dd704d253d0",
+    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "1d56250d5a9b9cf132bd50cdc7e0a2ea8eb60fd962624fe60aac4d444e0f0a6d",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "1ada521e13e9e01ac4577ab75a6a5f85538a10f6130c3b3dec5e9582ff50d0ca",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "324fb9244cc0690b312ecd2472727e5f292d9a1d52c33d8cf3d0df7ec8e62d39",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "90008163ca259790cea76e392b6c5c605a1d7efe511a70d84a349690e9b6d56e",
+  "inputsSha256": "8fab67079426f461c5087febff21b183dedc59bc7f5db4dfd7b200924edf1f9e",
   "languages": [
     "el"
   ],
@@ -9345,6 +9345,7 @@
             "batch.textlessAbsent",
             "batch.textlessLost",
             "batch.textlessTitle",
+            "batch.upgrading",
             "common.actions",
             "common.issuePending",
             "common.loadFailed",
@@ -9379,6 +9380,8 @@
             "review.lines.refusalReadingMissing",
             "review.lines.refusalReadingVision",
             "review.lines.refusalTablesDrifted",
+            "review.lines.regionLegacy",
+            "review.lines.regionMissing",
             "review.lines.show",
             "review.lines.stateIgnored",
             "review.lines.stateMapped",
@@ -9416,6 +9419,7 @@
             "batch.textlessAbsent",
             "batch.textlessLost",
             "batch.textlessTitle",
+            "batch.upgrading",
             "batchStatus.awaitingFile",
             "batchStatus.closed",
             "batchStatus.discarded",
@@ -9483,6 +9487,8 @@
             "review.lines.refusalReadingMissing",
             "review.lines.refusalReadingVision",
             "review.lines.refusalTablesDrifted",
+            "review.lines.regionLegacy",
+            "review.lines.regionMissing",
             "review.lines.show",
             "review.lines.stateIgnored",
             "review.lines.stateMapped",
@@ -9641,6 +9647,7 @@
             "batch.textlessAbsent",
             "batch.textlessLost",
             "batch.textlessTitle",
+            "batch.upgrading",
             "pdf.download",
             "pdf.downloadFailed",
             "pdf.downloading",
@@ -9660,6 +9667,14 @@
             "pdf.sidebar.title",
             "pdf.sidebar.untitled",
             "preview.rotate",
+            "review.lines.refusalLineUnknown",
+            "review.lines.refusalProposalClosed",
+            "review.lines.refusalReadingClipped",
+            "review.lines.refusalReadingMissing",
+            "review.lines.refusalReadingVision",
+            "review.lines.refusalTablesDrifted",
+            "review.lines.regionLegacy",
+            "review.lines.regionMissing",
             "review.source"
           ],
           "prefixes": [],
@@ -40609,7 +40624,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1307144
+    "sliceBytes": 1307539
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
