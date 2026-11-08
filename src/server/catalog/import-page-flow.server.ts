@@ -20,7 +20,7 @@ import type { RawPageMapping } from '@/subapps/catalog/import/page-table-mapping
 import { readPageTables, type PageTableContext } from '@/subapps/catalog/import/page-table-reading';
 import type { PageToken } from '@/subapps/catalog/import/page-tokens';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
-import type { ExtractedGroup, ImportPageRoute, ImportPageSetAside, ImportPagesUsage } from '@/subapps/catalog/types/catalog-import';
+import type { ExtractedGroup, ImportPageRoute, ImportPageSetAside, ImportPageUnmappedLine, ImportPagesUsage } from '@/subapps/catalog/types/catalog-import';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
 import { CatalogWriteError } from './catalog-write-error';
 import { createCatalogPageAnalyzer } from './import-page-analyzer.server';
@@ -49,10 +49,17 @@ export interface PageFlowInput {
   readonly axisAttributeIds: readonly string[];
 }
 
-export interface PageFlowResult {
+/** Ό,τι η σελίδα **δεν** έκανε πρόταση, δηλωμένο: πίνακες στην άκρη (Ε3) και γραμμές χωρίς ιδιότητα (Ε7). */
+interface PageLeftOut {
+  readonly setAside: readonly ImportPageSetAside[];
+  readonly unmappedLines: readonly ImportPageUnmappedLine[];
+}
+
+const NOTHING_LEFT_OUT: PageLeftOut = { setAside: [], unmappedLines: [] };
+
+export interface PageFlowResult extends PageLeftOut {
   readonly ok: boolean;
   readonly usage: ImportPagesUsage;
-  readonly setAside: readonly ImportPageSetAside[];
 }
 
 /** Το μοντέλο ξέρει τους κωδικούς της λίστας του, όχι τα εσωτερικά `cattr_…`: αλλιώς η δεύτερη πληρωμένη ανάγνωση δεν καταλαβαίνει. */
@@ -67,10 +74,9 @@ function proposeGroups(input: PageFlowInput, groups: readonly ExtractedGroup[]):
   return Promise.all(groups.map((group) => proposeGroup(input.ctx, input.batchId, group)));
 }
 
-interface Interpretation {
+interface Interpretation extends PageLeftOut {
   readonly groups: readonly ExtractedGroup[];
   readonly findings: readonly string[];
-  readonly setAside: readonly ImportPageSetAside[];
   /** Η απάντηση διαψεύδει τη διαδρομή: τίποτα δεν προτείνεται από αυτήν. */
   readonly abandoned: boolean;
 }
@@ -83,9 +89,8 @@ interface Route<TValue> {
   readonly attempts: number;
 }
 
-interface RouteResult {
+interface RouteResult extends PageLeftOut {
   readonly proposals: readonly StoredImportProposal[] | null;
-  readonly setAside: readonly ImportPageSetAside[];
   readonly usage: ImportPagesUsage;
   readonly used: number;
   readonly abandoned: boolean;
@@ -108,7 +113,7 @@ function keepReading<TValue>(input: PageFlowInput, route: Route<TValue>, { attem
 
 async function runRoute<TValue>(input: PageFlowInput, route: Route<TValue>): Promise<RouteResult> {
   let feedback: readonly string[] = [];
-  let result: RouteResult = { proposals: null, setAside: [], usage: NO_USAGE, used: 0, abandoned: false };
+  let result: RouteResult = { proposals: null, ...NOTHING_LEFT_OUT, usage: NO_USAGE, used: 0, abandoned: false };
   for (let attempt = 0; attempt < route.attempts; attempt += 1) {
     const answer = await route.ask(feedback);
     if (answer.kind === 'unavailable') throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'analyzer' }]);
@@ -121,7 +126,7 @@ async function runRoute<TValue>(input: PageFlowInput, route: Route<TValue>): Pro
     await keepReading(input, route, { attempt, answer, feedback, abandoned: reading.abandoned });
     if (reading.abandoned) return { ...result, usage, used: attempt + 1, abandoned: true };
     const proposals = await proposeGroups(input, reading.groups);
-    result = { proposals, setAside: reading.setAside, usage, used: attempt + 1, abandoned: false };
+    result = { proposals, setAside: reading.setAside, unmappedLines: reading.unmappedLines, usage, used: attempt + 1, abandoned: false };
     feedback = [...reading.findings, ...ruleFindings(proposals, input.specs.codeById)];
     if (feedback.length === 0) break;
   }
@@ -136,8 +141,8 @@ function tableRoute(input: PageFlowInput, analyzer: ICatalogPageAnalyzer, tables
     attempts: FEEDBACK_ATTEMPTS,
     ask: (feedback) => analyzer.mapTables({ png: input.png, tables, attributes: input.specs.specs, feedback }),
     interpret: (mapping) => {
-      const { groups, findings, setAside, doubted } = readPageTables(mapping, context);
-      return { groups, findings, setAside, abandoned: doubted };
+      const { groups, findings, setAside, unmappedLines, doubted } = readPageTables(mapping, context);
+      return { groups, findings, setAside, unmappedLines, abandoned: doubted };
     },
   };
 }
@@ -151,7 +156,7 @@ function visionRoute(input: PageFlowInput, analyzer: ICatalogPageAnalyzer, attem
     ask: (feedback) => analyzer.readPage({ png: input.png, tokens: input.tokens, attributes: input.specs.specs, feedback }),
     interpret: (extraction) => {
       const groups = extractGroupsFromPage(extraction, context);
-      return { groups, findings: evidenceFindings(groups), setAside: [], abandoned: false };
+      return { groups, findings: evidenceFindings(groups), ...NOTHING_LEFT_OUT, abandoned: false };
     },
   };
 }
@@ -167,5 +172,5 @@ export async function readAndProposePage(input: PageFlowInput): Promise<PageFlow
   const final = seen ?? mapped;
   const proposals = final?.proposals ?? null;
   if (proposals !== null) await retireStalePageProposals(input.ctx, input.batchId, input.page, new Set(proposals.map((proposal) => proposal.id)));
-  return { ok: proposals !== null, usage, setAside: final?.setAside ?? [] };
+  return { ok: proposals !== null, usage, setAside: final?.setAside ?? [], unmappedLines: final?.unmappedLines ?? [] };
 }

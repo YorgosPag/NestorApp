@@ -72,6 +72,9 @@
     "setAsideAccessories": "Σελίδα {page}, εξαρτήματα: {label}",
     "setAsideOther": "Σελίδα {page}, άλλος πίνακας: {label}",
     "setAsideUnmapped": "Σελίδα {page}, δεν αντιστοιχίστηκε: {label}",
+    "unmappedTitle": "{count, plural, one {# γραμμή της πηγής δεν έγινε πεδίο} other {# γραμμές της πηγής δεν έγιναν πεδία}}",
+    "unmappedHint": "Η οικογένεια δεν έχει ιδιότητα που να τους ταιριάζει. Τίποτα από αυτές δεν θα γραφτεί.",
+    "unmappedLine": "Σελίδα {page} · {label}: {values}",
     "noProposals": "Δεν υπάρχουν προτάσεις ακόμη."
   },
   "batchStatus": {
@@ -107,6 +110,7 @@
     "decision": "Απόφαση",
     "accept": "Αποδοχή",
     "reject": "Απόρριψη",
+    "corroboratedBy": "Επιβεβαιώνεται και από: {values}",
     "acceptRow": "Αποδοχή γραμμής",
     "rejectAll": "Απόρριψη πρότασης",
     "apply": "Έγκριση και εφαρμογή",

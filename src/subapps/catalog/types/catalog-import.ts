@@ -97,6 +97,11 @@ export interface ExtractedCell {
   readonly unitCode: string | null;
   /** Ό,τι σήκωσε σημαία **πριν** από την τιμή (στοίχιση πίνακα). */
   readonly flags: readonly ImportIssue[];
+  /**
+   * Άλλα κελιά της πηγής που λένε **το ίδιο** για την ίδια ιδιότητα, σε άλλη μονάδα (1000 W · 3412 Btu/h), όπως τυπώθηκαν (§5.5.1 Ε7).
+   * Επιβεβαίωση, όχι εύρημα: δεν ζητά απόφαση. Απούσα = κανένα.
+   */
+  readonly corroboratedBy?: readonly string[];
 }
 
 export interface ExtractedRow {
@@ -146,6 +151,8 @@ export interface ImportProposalField {
   readonly anchor: SourceAnchor | null;
   readonly issues: readonly ImportIssue[];
   readonly decision: ImportFieldDecision;
+  /** Το `ExtractedCell.corroboratedBy` του κελιού που κέρδισε: ο άνθρωπος βλέπει ότι η γραμμή Btu/h δεν χάθηκε. */
+  readonly corroboratedBy?: readonly string[];
 }
 
 export interface ImportProposalRow {
@@ -230,6 +237,21 @@ export interface ImportPageSetAside {
   readonly label: string;
 }
 
+/**
+ * Γραμμή πίνακα παραλλαγών που **δεν** έγινε πεδίο (§5.5.1 Ε7): η οικογένεια δεν έχει ιδιότητα που να της ταιριάζει, ή το μοντέλο δεν
+ * έδειξε καμία. Δηλωμένη, ώστε να μη χαθεί σιωπηλά. Ό,τι μπήκε ως επιβεβαίωση (Btu/h) ή υποψήφιος κωδικός (Ε2) **δεν** είναι εδώ.
+ */
+export interface ImportPageUnmappedLine {
+  readonly page: number;
+  readonly table: string;
+  /** Η θέση της γραμμής στον πίνακα: σταθερό κλειδί μέσα στη σελίδα. */
+  readonly line: number;
+  /** Οι ετικέτες της γραμμής όπως τυπώνονται, μαζί με τη μονάδα («ΠΑΡ.ΝΕΡΟΥ · ΥΨΗΛΗ (Η) · m³/h»). */
+  readonly label: string;
+  /** Οι τιμές της, στη σειρά της πηγής· ενωμένο κελί μετρά μία φορά. */
+  readonly values: readonly string[];
+}
+
 /** Πρόοδος ανάγνωσης PDF, ανά σελίδα. Το `usage` λείπει από παρτίδες παλαιότερες της μέτρησης. */
 export interface ImportBatchPages {
   readonly from: number;
@@ -238,6 +260,8 @@ export interface ImportBatchPages {
   readonly failed: readonly number[];
   readonly usage?: ImportPagesUsage;
   readonly setAside?: readonly ImportPageSetAside[];
+  /** Απούσα σε παρτίδες παλαιότερες της Ε7. */
+  readonly unmappedLines?: readonly ImportPageUnmappedLine[];
 }
 
 export interface ImportBatchDefinition {

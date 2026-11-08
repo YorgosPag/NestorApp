@@ -72,6 +72,9 @@
     "setAsideAccessories": "Page {page}, accessories: {label}",
     "setAsideOther": "Page {page}, other table: {label}",
     "setAsideUnmapped": "Page {page}, not mapped: {label}",
+    "unmappedTitle": "{count, plural, one {# source line did not become a field} other {# source lines did not become fields}}",
+    "unmappedHint": "The family has no attribute that matches them. Nothing from them will be written.",
+    "unmappedLine": "Page {page} · {label}: {values}",
     "noProposals": "No proposals yet."
   },
   "batchStatus": {
@@ -107,6 +110,7 @@
     "decision": "Decision",
     "accept": "Accept",
     "reject": "Reject",
+    "corroboratedBy": "Also confirmed by: {values}",
     "acceptRow": "Accept row",
     "rejectAll": "Reject proposal",
     "apply": "Approve and apply",

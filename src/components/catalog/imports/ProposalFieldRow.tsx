@@ -62,8 +62,17 @@ function IncomingCell({ field, label, readOnly, onEdit }: Pick<ProposalFieldRowP
           {field.issues.map((issue, index) => <li key={`${issue.code}-${index}`}>{message(issue)}</li>)}
         </ul>
       ) : null}
+      <Corroboration field={field} />
     </td>
   );
+}
+
+/** Ε7: η ίδια ποσότητα σε άλλη μονάδα συμφώνησε. Πληροφορία, όχι εύρημα: δεν ζητά απόφαση. */
+function Corroboration({ field }: { readonly field: ImportProposalField }) {
+  const { t } = useImportText();
+  const others = field.corroboratedBy ?? [];
+  if (others.length === 0) return null;
+  return <p className="m-0 mt-1 text-xs text-muted-foreground">{t('review.corroboratedBy', { values: others.join(' · ') })}</p>;
 }
 
 function DecisionCell({ field, readOnly, onDecide }: Pick<ProposalFieldRowProps, 'field' | 'readOnly' | 'onDecide'>) {

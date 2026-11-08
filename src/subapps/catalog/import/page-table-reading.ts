@@ -8,6 +8,8 @@
  *     (`matchRows` · `settleRepeatedCells`): η ταύτιση δεν περιμένει το μοντέλο.
  *   - **Ε3:** ό,τι δεν είναι πίνακας παραλλαγών μπαίνει στην άκρη δηλωμένα, ποτέ ως πρόταση της οικογένειας.
  *   - **Ε4:** ο άξονας που δεν αντιστοιχίστηκε βγαίνει από γραμμή κωδικών, όταν κάθε κωδικός δείχνει μονοσήμαντα επιλογή.
+ *   - **Ε7:** κάθε γραμμή με τιμές που δεν έγινε πεδίο δηλώνεται, με ετικέτα και τιμές: η οικογένεια που δεν έχει την ιδιότητα δεν
+ *     σημαίνει ότι η πηγή δεν την τυπώνει.
  * @module subapps/catalog/import/page-table-reading
  */
 
@@ -16,7 +18,7 @@ import type { PageTable, PageTableCell } from '@/lib/pdf-tables/page-table-types
 import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportPageSetAside, ImportTarget } from '../types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportPageSetAside, ImportPageUnmappedLine, ImportTarget } from '../types/catalog-import';
 import { ANY_SLOT } from '../types/product';
 import { parseEnteredAmount } from '../values/decimal-amount';
 import { unitForm } from '../values/value-text-codec';
@@ -37,6 +39,7 @@ export interface PageTableContext {
 export interface PageTableReading {
   readonly groups: readonly ExtractedGroup[];
   readonly setAside: readonly ImportPageSetAside[];
+  readonly unmappedLines: readonly ImportPageUnmappedLine[];
   /** Ό,τι δεν στέκει στην αντιστοίχιση, ως ανατροφοδότηση προς το μοντέλο (Ε5). */
   readonly findings: readonly string[];
   /** Η εικόνα διαφωνεί με τη στρώση κειμένου: η σελίδα ξαναδιαβάζεται με όραση. */
@@ -217,7 +220,25 @@ function rowsOf(view: TableView, table: PageTable, data: readonly number[], line
 interface TableOutcome {
   readonly group: ExtractedGroup | null;
   readonly setAside: ImportPageSetAside | null;
+  readonly unmapped: readonly ImportPageUnmappedLine[];
   readonly findings: readonly string[];
+}
+
+const printedText = (cell: PageTableCell): string => normalizeMixedScriptHomoglyphs(cell.text.trim());
+
+/** Ε7: ό,τι τυπώνει η γραμμή στις θέσεις τιμών. Ενωμένο κελί (230V-50Hz-1Ph) μετρά μία φορά. */
+function lineValues(view: TableView, line: number, data: readonly number[]): string[] {
+  const cells = [...new Set(data.flatMap((slot) => view.at(line, slot) ?? []))];
+  return cells.map(printedText).filter((text) => text !== '');
+}
+
+function unmappedLines(view: TableView, data: readonly number[], lines: readonly LineBinding[], page: number, table: PageTable): ImportPageUnmappedLine[] {
+  const taken = new Set(lines.map(({ line }) => line));
+  return range(view.lines).filter((line) => !taken.has(line)).flatMap((line) => {
+    const values = lineValues(view, line, data);
+    if (values.length === 0) return [];
+    return [{ page, table: table.key, line, label: labelCells(view, line, data).map(printedText).join(' · '), values }];
+  });
 }
 
 const asideOf = (page: number, table: PageTable, role: ImportPageSetAside['role']): ImportPageSetAside => ({
@@ -230,17 +251,17 @@ const asideOf = (page: number, table: PageTable, role: ImportPageSetAside['role'
 
 function readTable(table: PageTable, mapping: RawTableMapping, context: PageTableContext): TableOutcome {
   const { page } = context;
-  if (mapping.role !== 'variants') return { group: null, setAside: asideOf(page, table, mapping.role), findings: [] };
+  if (mapping.role !== 'variants') return { group: null, setAside: asideOf(page, table, mapping.role), unmapped: [], findings: [] };
   const view = viewOf(table, mapping);
   const data = dataSlots(view);
   const mapped = boundLines(view, mapping.lines, context);
   if (data.length === 0 || mapped.length < MIN_MAPPED_LINES) {
-    return { group: null, setAside: asideOf(page, table, 'unmapped'), findings: [`Table ${table.key} has role "variants", but only ${mapped.length} lines were mapped to attributes.`] };
+    return { group: null, setAside: asideOf(page, table, 'unmapped'), unmapped: [], findings: [`Table ${table.key} has role "variants", but only ${mapped.length} lines were mapped to attributes.`] };
   }
   const repeated = [...mapped, ...sameQuantityLines(view, data, mapped, context)];
   const lines = [...repeated, ...identifierLines(view, data, repeated, context), ...axisLines(view, data, repeated, context)];
   const group: ExtractedGroup = { groupKey: `page:${page}:${table.key}`, modelCode: null, sharedCells: [], rows: rowsOf(view, table, data, lines, page, context), pages: [page] };
-  return { group, setAside: null, findings: unitFindings(view, data, mapped, context) };
+  return { group, setAside: null, unmapped: unmappedLines(view, data, lines, page, table), findings: unitFindings(view, data, mapped, context) };
 }
 
 /** Τα ανασυντεθειμένα κείμενα ζουν στον πίνακα: το μοντέλο δεν έχει τρόπο να γράψει τιμή, μόνο να δείξει γραμμή. */
@@ -255,6 +276,7 @@ export function readPageTables(mapping: RawPageMapping, context: PageTableContex
   return {
     groups: outcomes.flatMap((outcome) => outcome.group ?? []),
     setAside: outcomes.flatMap((outcome) => outcome.setAside ?? []),
+    unmappedLines: outcomes.flatMap((outcome) => outcome.unmapped),
     findings: [...outcomes.flatMap((outcome) => outcome.findings), ...unanswered],
     doubted: answered.some(({ table, answer }) => textLayerDoubted(table, answer)),
   };

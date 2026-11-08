@@ -157,6 +157,44 @@ describe('🔴 Σελίδα 86: το σφάλμα ×1000', () => {
     const doubled = { ...group, rows: [{ ...row, cells: row.cells.map((cell) => (cell.text === '3412' ? { ...cell, text: '34120' } : cell)) }] };
     expect(fieldOf(rowsAgainstLive(doubled, [])[0], 'cooling_h')?.issues.map((issue) => issue.code)).toEqual(['attributeRepeated']);
   });
+
+  it('Ε7: η συμφωνία σε Btu/h φαίνεται στο πεδίο, χωρίς να ζητά απόφαση', () => {
+    const field = fieldOf(rowsAgainstLive(group, [])[0], 'cooling_h');
+    expect(field?.issues).toEqual([]);
+    expect(field?.corroboratedBy).toHaveLength(1);
+    expect(field?.corroboratedBy?.[0]).toContain('3412');
+  });
+
+  it('Ε7: η διαφωνία δεν είναι επιβεβαίωση', () => {
+    const [row] = group.rows;
+    const doubled = { ...group, rows: [{ ...row, cells: row.cells.map((cell) => (cell.text === '3412' ? { ...cell, text: '34120' } : cell)) }] };
+    expect(fieldOf(rowsAgainstLive(doubled, [])[0], 'cooling_h')?.corroboratedBy).toBeUndefined();
+  });
+});
+
+describe('🔴 Ε7: καμία γραμμή με τιμές δεν χάνεται σιωπηλά (σελ. 86)', () => {
+  const { unmappedLines } = readPage('86', PAGE_86_LINES);
+  const valuesOf = (printed: string) => unmappedLines.find((entry) => entry.values.includes(printed));
+
+  it('οι γραμμές χωρίς ιδιότητα δηλώνονται, με ετικέτα και τιμές', () => {
+    expect(valuesOf('0,17')?.values).toEqual(['0,17', '0,26', '0,34', '0,43']);
+    expect(valuesOf('0,17')?.label).not.toBe('');
+    expect(valuesOf('574,74')).toBeDefined();
+    expect(unmappedLines.every((entry) => entry.page === 86)).toBe(true);
+  });
+
+  it('ό,τι έγινε πεδίο, επιβεβαίωση ή υποψήφιος κωδικός δεν δηλώνεται ως χαμένο', () => {
+    for (const printed of ['1000', '800', '14,5', '3412', '099-02-001']) expect(valuesOf(printed)).toBeUndefined();
+  });
+
+  it('ο πίνακας εξαρτημάτων μένει στην άκρη ολόκληρος, όχι γραμμή-γραμμή', () => {
+    expect(valuesOf('126,00')).toBeUndefined();
+  });
+
+  it('κάθε γραμμή μία φορά', () => {
+    const keys = unmappedLines.map((entry) => `${entry.table}:${entry.line}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
 });
 
 describe('Ε1: η μονάδα κρίνεται με τη γραμμή της', () => {

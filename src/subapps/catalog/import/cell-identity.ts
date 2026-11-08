@@ -6,7 +6,7 @@
  *   1. **Ταύτιση με τα ζωντανά:** ο πίνακας της Aries τυπώνει δύο γραμμές «ΚΩΔΙΚΟΣ» (`MFP-34ΤΜ` · `099-01-001`). Κερδίζει ο
  *      κωδικός που κρατά ήδη το SKU, και το άλλο κελί δεν είναι εύρημα: η κράτηση απάντησε.
  *   2. **Ανεξάρτητη επιβεβαίωση:** ίδιο μέγεθος σε δύο μονάδες (1000 W · 3412 Btu/h). Αν συμφωνούν, είναι απόδειξη ότι η μονάδα
- *      διαβάστηκε σωστά. Σφάλμα ×1000 στη μία δεν περνά.
+ *      διαβάστηκε σωστά. Σφάλμα ×1000 στη μία δεν περνά. Οι άλλες τιμές μένουν στο `corroboratedBy` (Ε7): ορατές, χωρίς απόφαση.
  *   3. Αλλιώς **εύρημα**, με τις άλλες τιμές στο μήνυμα: κανένας κανόνας δεν διαλέγει σιωπηλά.
  * @module subapps/catalog/import/cell-identity
  */
@@ -81,7 +81,8 @@ function settleRepeat(cells: readonly AttributeCell[], values: ProductValues | n
   const winner = readable[0]?.cell ?? cells[0];
   const others = cells.filter((cell) => cell !== winner && importCellText(cell) !== importCellText(winner));
   const unanimous = readable.length === reads.length && readable.every(({ value }) => agree(value, readable[0].value, attributeId, context));
-  if (others.length === 0 || unanimous) return winner;
+  if (others.length === 0) return winner;
+  if (unanimous) return { ...winner, corroboratedBy: others.map(importCellText) };
   return { ...winner, flags: [...winner.flags, { code: 'attributeRepeated', path: attributeId, params: { others: others.map(importCellText).join(' · ') } }] };
 }
 

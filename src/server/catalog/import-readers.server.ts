@@ -16,7 +16,7 @@ import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
 import type { PageAttributeSpec } from '@/subapps/catalog/import/page-extraction';
 import { tokenizePage } from '@/subapps/catalog/import/page-tokens';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
-import type { ImportBatchDefinition, ImportPageSetAside, ImportPagesUsage, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
+import type { ImportBatchDefinition, ImportPagesUsage, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import { IMPORT_PAGE_DPI } from '@/subapps/catalog/vocabulary/catalog-import';
 import { attributeOwnerDepth } from '@/subapps/catalog/values/attribute-levels';
@@ -24,7 +24,7 @@ import { readSchemaSnapshot } from './catalog-product-reads.server';
 import { readOwned, runCatalogTransaction, stageReplace } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { assertPurposeAuthority, batchDefinitionOf, fileOwnerOf, type StoredImportBatch } from './import-batch-writer.server';
-import { readAndProposePage, type PageSpecs } from './import-page-flow.server';
+import { readAndProposePage, type PageFlowResult, type PageSpecs } from './import-page-flow.server';
 import { proposeGroup, type StoredImportProposal } from './import-proposal-writer.server';
 import { buildXChangeProposals } from './import-xchange.server';
 import { downloadBatchFile, readBatchFileRecord, readBatchTable } from './import-source.server';
@@ -80,17 +80,11 @@ function pageSpecs(schema: CatalogSchemaSnapshot): PageSpecs {
   };
 }
 
-interface PageOutcome {
-  readonly ok: boolean;
-  readonly usage: ImportPagesUsage;
-  readonly setAside: readonly ImportPageSetAside[];
-}
-
-/** Η τελευταία ανάγνωση της σελίδας είναι η αλήθεια και για όσα μπήκαν στην άκρη. */
-const replacedSetAside = (current: readonly ImportPageSetAside[], page: number, next: readonly ImportPageSetAside[]): ImportPageSetAside[] =>
+/** Η τελευταία ανάγνωση της σελίδας είναι η αλήθεια και για όσα έμειναν απέξω (πίνακες Ε3 · γραμμές Ε7). */
+const replacedOnPage = <TEntry extends { readonly page: number }>(current: readonly TEntry[], page: number, next: readonly TEntry[]): TEntry[] =>
   [...current.filter((entry) => entry.page !== page), ...next];
 
-function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAside }: PageOutcome): Promise<StoredImportBatch> {
+function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAside, unmappedLines }: PageFlowResult): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     const pages = current.pages;
@@ -100,8 +94,8 @@ function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAs
     const total = pages.to - pages.from + 1;
     const status = done.length + failed.length >= total ? 'reviewing' : current.status;
     const spent = addUsage(pages.usage ?? NO_USAGE, usage);
-    const aside = replacedSetAside(pages.setAside ?? [], page, setAside);
-    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed, usage: spent, setAside: aside } });
+    const leftOut = { setAside: replacedOnPage(pages.setAside ?? [], page, setAside), unmappedLines: replacedOnPage(pages.unmappedLines ?? [], page, unmappedLines) };
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed, usage: spent, ...leftOut } });
   });
 }
 

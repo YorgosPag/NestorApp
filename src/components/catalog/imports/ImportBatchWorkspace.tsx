@@ -51,6 +51,24 @@ function SetAsideTables({ pages }: { readonly pages: ImportBatchPages }) {
   );
 }
 
+/** Ε7: γραμμές με τιμές που δεν έγιναν πεδίο. Ο άνθρωπος ξέρει τι **δεν** θα γραφτεί, χωρίς να το ψάξει στο PDF. */
+function UnmappedLines({ pages }: { readonly pages: ImportBatchPages }) {
+  const { t } = useImportText();
+  const entries = pages.unmappedLines ?? [];
+  if (entries.length === 0) return null;
+  return (
+    <details className="text-xs text-muted-foreground">
+      <summary className="cursor-pointer font-medium">{t('batch.unmappedTitle', { count: entries.length })}</summary>
+      <p className="m-0 mt-1">{t('batch.unmappedHint')}</p>
+      <ul className="m-0 mt-1 list-none p-0">
+        {entries.map((entry) => (
+          <li key={`${entry.page}:${entry.table}:${entry.line}`}>{t('batch.unmappedLine', { page: entry.page, label: entry.label, values: entry.values.join(' · ') })}</li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 function PageProgress({ workspace }: { readonly workspace: Workspace }) {
   const { t } = useImportText();
   const pages = workspace.view?.batch.pages;
@@ -71,6 +89,7 @@ function PageProgress({ workspace }: { readonly workspace: Workspace }) {
       </p>
       <PageCost pages={pages} remaining={remaining} />
       <SetAsideTables pages={pages} />
+      <UnmappedLines pages={pages} />
     </section>
   );
 }

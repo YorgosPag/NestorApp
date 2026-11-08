@@ -52,7 +52,8 @@ export function proposalFieldOf({ cell, incoming, issues, live, base, same }: Pr
   const unreadStatus: ImportFieldStatus = live === null ? 'new' : 'conflict';
   const status = incoming === null || same === null ? unreadStatus : fieldStatusOf(incoming, live, base, same);
   const facts = { status, confidence: cell.confidence, issues: [...cell.flags, ...issues], anchor: cell.anchor, incoming };
-  return { ...facts, target: cell.target, sourceText: cell.text, live, base, decision: defaultDecisionOf(facts) };
+  const corroboration = cell.corroboratedBy && cell.corroboratedBy.length > 0 ? { corroboratedBy: cell.corroboratedBy } : {};
+  return { ...facts, ...corroboration, target: cell.target, sourceText: cell.text, live, base, decision: defaultDecisionOf(facts) };
 }
 
 type DecisionFacts = Pick<ImportProposalField, 'status' | 'confidence' | 'issues' | 'anchor' | 'incoming'>;
