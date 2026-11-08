@@ -252,6 +252,18 @@ export interface ImportPageUnmappedLine {
   readonly values: readonly string[];
 }
 
+/**
+ * Σελίδα που διαβάστηκε **χωρίς στρώση κειμένου** (§5.5.1 Ε8). Δηλωμένη, ώστε οι τιμές της να μη φαίνονται απλώς «χωρίς επιβεβαίωση».
+ * `absent` = η σελίδα δεν έχει κείμενο που εξάγεται: διαβάστηκε με όραση και καμία τιμή της δεν ελέγχεται απέναντι στο κείμενο.
+ * `lost` = έχει κείμενο και η ανάγνωσή του απέτυχε: η σελίδα **δεν** στάλθηκε στο μοντέλο (τίποτα δεν πληρώθηκε) και ξαναδιαβάζεται.
+ */
+export interface ImportPageTextless {
+  readonly page: number;
+  readonly kind: 'absent' | 'lost';
+  /** Το σφάλμα της ανάγνωσης όπως το είπε το pdf.js· `null` για `absent`. */
+  readonly reason: string | null;
+}
+
 /** Πρόοδος ανάγνωσης PDF, ανά σελίδα. Το `usage` λείπει από παρτίδες παλαιότερες της μέτρησης. */
 export interface ImportBatchPages {
   readonly from: number;
@@ -262,6 +274,8 @@ export interface ImportBatchPages {
   readonly setAside?: readonly ImportPageSetAside[];
   /** Απούσα σε παρτίδες παλαιότερες της Ε7. */
   readonly unmappedLines?: readonly ImportPageUnmappedLine[];
+  /** Απούσα σε παρτίδες παλαιότερες της Ε8. */
+  readonly textless?: readonly ImportPageTextless[];
 }
 
 export interface ImportBatchDefinition {

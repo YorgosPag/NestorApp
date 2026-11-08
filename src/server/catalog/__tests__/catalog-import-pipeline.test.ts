@@ -17,6 +17,7 @@ import type { CatalogPageInput, CatalogPageReading, CatalogTableMapInput, Catalo
 import type { RawPageCell } from '@/subapps/catalog/import/page-extraction';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
+import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import type { CreateImportBatchRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { ANY_SLOT, type CatalogProductDefinition, type CatalogProductModelDefinition } from '@/subapps/catalog/types/product';
 import { ARIES, MFP_GROUP_CODES, RIVAL, SEED_RIGHTS, mfpFamilyWith, rejectionOf } from './catalog-writer-seed';
@@ -24,7 +25,7 @@ import { ARIES, MFP_GROUP_CODES, RIVAL, SEED_RIGHTS, mfpFamilyWith, rejectionOf 
 const fake = new FakeFirestore();
 const readPage = jest.fn<Promise<CatalogPageReading>, [CatalogPageInput]>();
 const mapTables = jest.fn<Promise<CatalogTableMapping>, [CatalogTableMapInput]>();
-const EMPTY_PDF_PAGE = { items: [] as readonly PageTextItem[], rules: [] as readonly PageRule[], tagTables: [] as readonly PageTagTable[] };
+const EMPTY_PDF_PAGE = { items: [] as readonly PageTextItem[], rules: [] as readonly PageRule[], tagTables: [] as readonly PageTagTable[], textLayer: undefined as PdfTextLayer | undefined };
 const mockPdfPage = { current: EMPTY_PDF_PAGE };
 const pricingAllowed = jest.fn(async () => true);
 
@@ -34,7 +35,12 @@ jest.mock('@/lib/auth', () => ({ ...jest.requireActual('@/lib/auth'), hasPermiss
 jest.mock('../import-page-analyzer.server', () => ({ createCatalogPageAnalyzer: () => ({ readPage, mapTables }) }));
 jest.mock('@/services/pdf/pdf-rasterize.service', () => ({
   countPdfPages: async () => 100,
-  readPdfPage: async () => ({ png: Buffer.from('png'), pageCount: 100, ...mockPdfPage.current }),
+  readPdfPage: async () => ({
+    png: Buffer.from('png'),
+    pageCount: 100,
+    ...mockPdfPage.current,
+    textLayer: mockPdfPage.current.textLayer ?? (mockPdfPage.current.items.length > 0 ? { state: 'present', recovered: false } : { state: 'absent' }),
+  }),
 }));
 jest.mock('../import-source.server', () => ({
   ...jest.requireActual('../import-source.server'),
@@ -416,6 +422,29 @@ describe('ανάγνωση σελίδας', () => {
     fake.seed('catalog_import_batches', batch.id, { ...batch, fileId: 'file_1', status: 'extracting' });
     return batch;
   }
+
+  it('Ε8: χαμένη στρώση κειμένου ⇒ η σελίδα αποτυγχάνει δηλωμένα, χωρίς κλήση μοντέλου και χωρίς χρέωση', async () => {
+    const batch = await attachedBatch();
+    mockPdfPage.current = { ...EMPTY_PDF_PAGE, textLayer: { state: 'lost', reason: 'Error: Bad FCHECK' } };
+    const after = await readImportPage(ARIES, batch.id, 60);
+    expect(after.pages).toMatchObject({ done: [], failed: [60], textless: [{ page: 60, kind: 'lost', reason: 'Error: Bad FCHECK' }] });
+    expect(after.pages?.usage).toEqual({ requests: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 });
+    expect(readPage).not.toHaveBeenCalled();
+    expect(mapTables).not.toHaveBeenCalled();
+  });
+
+  it('Ε8: σελίδα χωρίς κείμενο διαβάζεται με όραση και δηλώνεται· η επόμενη ανάγνωση με κείμενο σβήνει τη δήλωση', async () => {
+    const batch = await attachedBatch();
+    mockPdfPage.current = { ...EMPTY_PDF_PAGE, textLayer: { state: 'lost', reason: 'Error: Bad FCHECK' } };
+    await readImportPage(ARIES, batch.id, 61);
+    mockPdfPage.current = EMPTY_PDF_PAGE;
+    readPage.mockResolvedValue(reading(2700));
+    const absent = await readImportPage(ARIES, batch.id, 60);
+    expect(absent.pages?.textless).toEqual([{ page: 61, kind: 'lost', reason: 'Error: Bad FCHECK' }, { page: 60, kind: 'absent', reason: null }]);
+    mockPdfPage.current = { ...EMPTY_PDF_PAGE, textLayer: { state: 'present', recovered: true } };
+    const recovered = await readImportPage(ARIES, batch.id, 61);
+    expect(recovered.pages?.textless).toEqual([{ page: 60, kind: 'absent', reason: null }]);
+  });
 
   it('σελίδα χωρίς κανόνα που σπάει: μία κλήση, και η επανάληψη δεν ξαναπληρώνει', async () => {
     const batch = await attachedBatch();

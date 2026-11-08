@@ -14,7 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import type { ImportBatchPages, ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
-import { SET_ASIDE_KEYS, useImportText } from './import-text';
+import { SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
 import { XChangeReportSlot } from './import-surfaces';
@@ -69,6 +69,23 @@ function UnmappedLines({ pages }: { readonly pages: ImportBatchPages }) {
   );
 }
 
+/** Ε8: σελίδες χωρίς στρώση κειμένου. Ο άνθρωπος ξέρει γιατί οι τιμές τους δεν ελέγχονται — ή γιατί η σελίδα δεν διαβάστηκε. */
+function TextlessPages({ pages }: { readonly pages: ImportBatchPages }) {
+  const { t } = useImportText();
+  const entries = pages.textless ?? [];
+  if (entries.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-1 text-xs text-muted-foreground" aria-label={t('batch.textlessTitle')}>
+      <h3 className="m-0 font-medium">{t('batch.textlessTitle')}</h3>
+      <ul className="m-0 list-none p-0">
+        {entries.map((entry) => (
+          <li key={entry.page}>{t(TEXTLESS_KEYS[entry.kind], { page: entry.page, reason: entry.reason ?? '' })}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function PageProgress({ workspace }: { readonly workspace: Workspace }) {
   const { t } = useImportText();
   const pages = workspace.view?.batch.pages;
@@ -90,6 +107,7 @@ function PageProgress({ workspace }: { readonly workspace: Workspace }) {
       <PageCost pages={pages} remaining={remaining} />
       <SetAsideTables pages={pages} />
       <UnmappedLines pages={pages} />
+      <TextlessPages pages={pages} />
     </section>
   );
 }

@@ -21,13 +21,19 @@ export interface PageStructureTagTable {
 export interface PdfPageStructure {
   readonly rules: readonly PageStructureRule[];
   readonly tagTables: readonly PageStructureTagTable[];
+  /**
+   * Πόσες εντολές της σελίδας **γράφουν κείμενο** (`Tj` · `TJ` · `'` · `"`). Μάρτυρας ανεξάρτητος από το `getTextContent`: σελίδα με
+   * τέτοιες εντολές και άδειο κείμενο σημαίνει ότι **η ανάγνωση έχασε** το κείμενο, όχι ότι δεν υπάρχει (ADR-923 §5.5.1 Ε8).
+   */
+  readonly textOperations: number;
 }
 
 /** Οι κωδικοί εντολών του pdf.js που χρειάζονται εδώ. */
 export type PdfjsOperators = Readonly<Record<
   | 'save' | 'restore' | 'transform' | 'constructPath' | 'moveTo' | 'lineTo' | 'curveTo' | 'curveTo2' | 'curveTo3' | 'closePath' | 'rectangle'
   | 'stroke' | 'closeStroke' | 'fill' | 'eoFill' | 'fillStroke' | 'eoFillStroke' | 'closeFillStroke' | 'closeEOFillStroke' | 'endPath'
-  | 'paintFormXObjectBegin' | 'paintFormXObjectEnd',
+  | 'paintFormXObjectBegin' | 'paintFormXObjectEnd'
+  | 'showText' | 'showSpacedText' | 'nextLineShowText' | 'nextLineSetSpacingShowText',
   number
 >>;
 
@@ -194,7 +200,16 @@ async function readTagTables(page: StructurePage): Promise<readonly PageStructur
   }
 }
 
+function countTextOperations(ops: PdfjsOperators, fnArray: readonly number[]): number {
+  const shows = new Set([ops.showText, ops.showSpacedText, ops.nextLineShowText, ops.nextLineSetSpacingShowText]);
+  return fnArray.reduce((count, fn) => (shows.has(fn) ? count + 1 : count), 0);
+}
+
 export async function readPageStructure(page: StructurePage, viewport: StructureViewport, ops: PdfjsOperators): Promise<PdfPageStructure> {
   const { fnArray, argsArray } = await page.getOperatorList();
-  return { rules: collectRules(ops, fnArray, argsArray, fractionOf(viewport)), tagTables: await readTagTables(page) };
+  return {
+    rules: collectRules(ops, fnArray, argsArray, fractionOf(viewport)),
+    tagTables: await readTagTables(page),
+    textOperations: countTextOperations(ops, fnArray),
+  };
 }

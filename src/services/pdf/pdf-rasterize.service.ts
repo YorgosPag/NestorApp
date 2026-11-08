@@ -73,6 +73,8 @@ interface PdfjsLib {
     data: Uint8Array;
     isEvalSupported: boolean;
     canvasFactory?: CanvasFactory;
+    /** Προεπιλογή `false`: το pdf.js καταπίνει τα σφάλματα και επιστρέφει ό,τι πρόλαβε — ακόμη και **άδειο** κείμενο. */
+    stopAtErrors?: boolean;
   }): { promise: Promise<PdfjsDoc> };
 }
 interface PdfjsDoc {
@@ -280,9 +282,21 @@ export interface PdfPageTextItem {
   readonly height: number;
 }
 
+/**
+ * **Η στρώση κειμένου της σελίδας, δηλωμένη** (ADR-923 §5.5.1 Ε8) — όχι συμπέρασμα από άδεια λίστα. Το pdf.js, με την προεπιλογή του,
+ * πιάνει σφάλμα του `getTextContent` και επιστρέφει ό,τι πρόλαβε· αν το σφάλμα έρθει νωρίς, επιστρέφει **τίποτα**, και η σελίδα
+ * έμοιαζε σαρωμένη. `absent` = η σελίδα δεν έχει κείμενο που εξάγεται · `lost` = έχει, και η ανάγνωσή του **απέτυχε** (και στη
+ * δεύτερη, αυστηρή ανάγνωση) · `recovered` = η πρώτη ανάγνωση βγήκε άδεια και η δεύτερη το βρήκε.
+ */
+export type PdfTextLayer =
+  | { readonly state: 'present'; readonly recovered: boolean }
+  | { readonly state: 'absent' }
+  | { readonly state: 'lost'; readonly reason: string };
+
 export interface PdfPageReading {
   readonly png: Buffer;
   readonly items: readonly PdfPageTextItem[];
+  readonly textLayer: PdfTextLayer;
   readonly pageCount: number;
   /** Οι ζωγραφισμένες γραμμές της σελίδας: από εκεί ανασυντίθενται οι πίνακες χωρίς μοντέλο. */
   readonly rules: readonly PageStructureRule[];
@@ -303,33 +317,84 @@ function textItemOf(item: PdfjsTextItem, viewport: PdfjsViewport): PdfPageTextIt
   };
 }
 
-/**
- * **Μία σελίδα ως εικόνα + κείμενο με θέσεις** (ADR-923 §5.5): η εικόνα πάει στο μοντέλο, το κείμενο με τις θέσεις του είναι
- * η απόδειξη απέναντι στην οποία ελέγχεται η απάντησή του. Σαρωμένη σελίδα ⇒ κενά `items`, ποτέ σφάλμα.
- */
-export async function readPdfPage(
-  pdfBuffer: Buffer,
-  pageNumber: number,
-  options: Pick<RasterizeOptions, 'dpi' | 'maxWidthPx'> = {},
-): Promise<PdfPageReading> {
+/** Η αιτία φυλάσσεται στην παρτίδα: ένα μήνυμα σφάλματος, όχι στοίβα. */
+const MAX_TEXT_LAYER_REASON = 500;
+
+interface PageFirstPass {
+  readonly png: Buffer;
+  readonly rawItems: readonly PdfjsTextItem[];
+  readonly viewport: PdfjsViewport;
+  readonly textOperations: number;
+  readonly rules: readonly PageStructureRule[];
+  readonly tagTables: readonly PageStructureTagTable[];
+  readonly pageCount: number;
+}
+
+async function readPageOnce(pdfBuffer: Buffer, pageNumber: number, limits: Required<Pick<RasterizeOptions, 'dpi' | 'maxWidthPx'>>): Promise<PageFirstPass> {
   const pdfjs = await loadPdfjs();
   const { createCanvas } = await loadCanvas();
   const doc = await pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), isEvalSupported: false, canvasFactory: makeCanvasFactory(createCanvas) }).promise;
   try {
     const page = await doc.getPage(pageNumber);
     try {
-      const limits = { dpi: options.dpi ?? DEFAULT_DPI, maxWidthPx: options.maxWidthPx ?? DEFAULT_MAX_WIDTH_PX };
       const viewport = page.getViewport({ scale: 1 });
       const { items } = await page.getTextContent();
       const { png } = await renderPage(page, createCanvas, limits);
       const structure = await readPageStructure(page, viewport, pdfjs.OPS);
-      return { png, items: items.flatMap((item) => textItemOf(item, viewport) ?? []), pageCount: doc.numPages, ...structure };
+      return { png, rawItems: items, viewport, pageCount: doc.numPages, ...structure };
     } finally {
       page.cleanup();
     }
   } finally {
     await doc.destroy();
   }
+}
+
+/** Νέο έγγραφο με `stopAtErrors`: το σφάλμα που η πρώτη ανάγνωση κατάπιε, εδώ **πετιέται** — και γίνεται η αιτία. */
+async function readTextStrictly(pdfBuffer: Buffer, pageNumber: number): Promise<readonly PdfjsTextItem[]> {
+  const pdfjs = await loadPdfjs();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), isEvalSupported: false, stopAtErrors: true }).promise;
+  try {
+    const page = await doc.getPage(pageNumber);
+    try {
+      return (await page.getTextContent()).items;
+    } finally {
+      page.cleanup();
+    }
+  } finally {
+    await doc.destroy();
+  }
+}
+
+/**
+ * Ε8: άδειο κείμενο σε σελίδα που **γράφει** κείμενο (`textOperations` > 0) είναι αντίφαση ⇒ **μία** αυστηρή ανάγνωση, μετά το
+ * κλείσιμο της πρώτης (ποτέ δύο αντίγραφα του αρχείου στη μνήμη). Καμία πληρωμένη κλήση, καμία δεύτερη επανάληψη.
+ */
+async function settleTextLayer(pdfBuffer: Buffer, pageNumber: number, first: PageFirstPass): Promise<{ readonly items: readonly PdfjsTextItem[]; readonly layer: PdfTextLayer }> {
+  if (first.rawItems.length > 0) return { items: first.rawItems, layer: { state: 'present', recovered: false } };
+  if (first.textOperations === 0) return { items: [], layer: { state: 'absent' } };
+  try {
+    const items = await readTextStrictly(pdfBuffer, pageNumber);
+    return { items, layer: items.length > 0 ? { state: 'present', recovered: true } : { state: 'absent' } };
+  } catch (error) {
+    return { items: [], layer: { state: 'lost', reason: String(error).slice(0, MAX_TEXT_LAYER_REASON) } };
+  }
+}
+
+/**
+ * **Μία σελίδα ως εικόνα + κείμενο με θέσεις** (ADR-923 §5.5): η εικόνα πάει στο μοντέλο, το κείμενο με τις θέσεις του είναι
+ * η απόδειξη απέναντι στην οποία ελέγχεται η απάντησή του. Σελίδα χωρίς κείμενο ⇒ κενά `items` **και** δηλωμένο `textLayer`, ποτέ σφάλμα.
+ */
+export async function readPdfPage(
+  pdfBuffer: Buffer,
+  pageNumber: number,
+  options: Pick<RasterizeOptions, 'dpi' | 'maxWidthPx'> = {},
+): Promise<PdfPageReading> {
+  const limits = { dpi: options.dpi ?? DEFAULT_DPI, maxWidthPx: options.maxWidthPx ?? DEFAULT_MAX_WIDTH_PX };
+  const first = await readPageOnce(pdfBuffer, pageNumber, limits);
+  const { items, layer } = await settleTextLayer(pdfBuffer, pageNumber, first);
+  const { png, viewport, pageCount, rules, tagTables } = first;
+  return { png, items: items.flatMap((item) => textItemOf(item, viewport) ?? []), textLayer: layer, pageCount, rules, tagTables };
 }
 
 /** Πόσες σελίδες έχει το PDF (ο στόχος μιας παρτίδας κρίνεται πριν ξοδευτεί ούτε μία ανάγνωση). */

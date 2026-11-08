@@ -75,7 +75,10 @@
     "unmappedTitle": "{count, plural, one {# source line did not become a field} other {# source lines did not become fields}}",
     "unmappedHint": "The family has no attribute that matches them. Nothing from them will be written.",
     "unmappedLine": "Page {page} · {label}: {values}",
-    "noProposals": "No proposals yet."
+    "noProposals": "No proposals yet.",
+    "textlessTitle": "Pages without text",
+    "textlessAbsent": "Page {page}: has no readable text (image). It was read with vision; its values are not checked against the text.",
+    "textlessLost": "Page {page}: the text exists but could not be read ({reason}). It was not sent to the model or charged — read it again."
   },
   "batchStatus": {
     "awaitingFile": "Awaiting file",
@@ -119,7 +122,8 @@
     "unverified": "not confirmed by the page text",
     "noModel": "No model",
     "modelCode": "Model code",
-    "setModelCode": "Set"
+    "setModelCode": "Set",
+    "uncheckable": "not checkable: the page has no text"
   },
   "issues": {
     "misaligned": "This value does not line up with the rest of the variant's column in the PDF. Check whether it belongs to a neighbouring column.",

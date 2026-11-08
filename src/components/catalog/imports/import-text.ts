@@ -13,7 +13,7 @@
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { CATALOG_IMPORT_NAMESPACES } from '@/i18n/namespace-bundles';
-import type { ImportPageSetAside } from '@/subapps/catalog/types/catalog-import';
+import type { ImportPageSetAside, ImportPageTextless } from '@/subapps/catalog/types/catalog-import';
 import type {
   ImportBatchStatus,
   ImportFieldStatus,
@@ -38,6 +38,11 @@ export const SET_ASIDE_KEYS: Readonly<Record<ImportPageSetAside['role'], string>
   accessories: 'batch.setAsideAccessories',
   other: 'batch.setAsideOther',
   unmapped: 'batch.setAsideUnmapped',
+};
+
+export const TEXTLESS_KEYS: Readonly<Record<ImportPageTextless['kind'], string>> = {
+  absent: 'batch.textlessAbsent',
+  lost: 'batch.textlessLost',
 };
 
 export const PROPOSAL_STATUS_KEYS: Readonly<Record<ImportProposalStatus, string>> = {

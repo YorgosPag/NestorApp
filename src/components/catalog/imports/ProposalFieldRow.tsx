@@ -92,7 +92,9 @@ export function ProposalFieldRow({ field, active, readOnly, onFocus, onDecide, o
   const label = useTargetLabel(field);
   const describe = useImportValueText();
   const percent = Math.round(field.confidence * 100);
-  const unverified = field.anchor?.kind === 'page' && field.anchor.verified !== true;
+  const verified = field.anchor?.kind === 'page' ? field.anchor.verified : true;
+  /** Ε8: `null` = η σελίδα δεν είχε κείμενο να ελεγχθεί η τιμή · `false` = είχε, και δεν την επιβεβαίωσε. */
+  const unverifiedNote = verified === null ? t('review.uncheckable') : verified === false ? t('review.unverified') : null;
   return (
     <tr className={active ? 'bg-accent' : 'border-b border-border'}>
       <th scope="row" className="p-2 text-left font-normal">
@@ -102,7 +104,7 @@ export function ProposalFieldRow({ field, active, readOnly, onFocus, onDecide, o
       <IncomingCell field={field} label={label} readOnly={readOnly} onEdit={onEdit} />
       <td className="p-2"><Badge variant={STATUS_VARIANT[field.status]}>{t(FIELD_STATUS_KEYS[field.status])}</Badge></td>
       <td className="p-2 text-xs text-muted-foreground">
-        {percent}%{unverified ? ` · ${t('review.unverified')}` : ''}
+        {percent}%{unverifiedNote ? ` · ${unverifiedNote}` : ''}
       </td>
       <DecisionCell field={field} readOnly={readOnly} onDecide={onDecide} />
     </tr>

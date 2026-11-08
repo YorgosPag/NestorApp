@@ -10,13 +10,14 @@ import 'server-only';
  */
 
 import type { AuthContext } from '@/lib/auth';
-import { readPdfPage } from '@/services/pdf/pdf-rasterize.service';
+import { createModuleLogger } from '@/lib/telemetry';
+import { readPdfPage, type PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import { extractGroupsFromTable } from '@/subapps/catalog/import/apply-column-rules';
 import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
 import type { PageAttributeSpec } from '@/subapps/catalog/import/page-extraction';
 import { tokenizePage } from '@/subapps/catalog/import/page-tokens';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
-import type { ImportBatchDefinition, ImportPagesUsage, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
+import type { ImportBatchDefinition, ImportPagesUsage, ImportPageTextless, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import { IMPORT_PAGE_DPI } from '@/subapps/catalog/vocabulary/catalog-import';
 import { attributeOwnerDepth } from '@/subapps/catalog/values/attribute-levels';
@@ -28,6 +29,8 @@ import { readAndProposePage, type PageFlowResult, type PageSpecs } from './impor
 import { proposeGroup, type StoredImportProposal } from './import-proposal-writer.server';
 import { buildXChangeProposals } from './import-xchange.server';
 import { downloadBatchFile, readBatchFileRecord, readBatchTable } from './import-source.server';
+
+const logger = createModuleLogger('CatalogImportReaders');
 
 async function readBatchFile(ctx: AuthContext, batch: StoredImportBatch): Promise<Buffer> {
   if (batch.fileId === null) throw new CatalogWriteError('invalid', [{ code: 'fileNotFound', path: 'fileId' }]);
@@ -84,7 +87,16 @@ function pageSpecs(schema: CatalogSchemaSnapshot): PageSpecs {
 const replacedOnPage = <TEntry extends { readonly page: number }>(current: readonly TEntry[], page: number, next: readonly TEntry[]): TEntry[] =>
   [...current.filter((entry) => entry.page !== page), ...next];
 
-function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAside, unmappedLines }: PageFlowResult): Promise<StoredImportBatch> {
+/** Ε8: η σελίδα χωρίς κείμενο δηλώνεται· με κείμενο, η δήλωση μιας παλαιότερης ανάγνωσης φεύγει. */
+function textlessOf(page: number, layer: PdfTextLayer): ImportPageTextless[] {
+  if (layer.state === 'present') return [];
+  return [{ page, kind: layer.state, reason: layer.state === 'lost' ? layer.reason : null }];
+}
+
+/** Ε8: χαμένη στρώση κειμένου ⇒ η σελίδα **δεν** στέλνεται στο μοντέλο: αποτυγχάνει δηλωμένα, χωρίς χρέωση, και ξαναδιαβάζεται. */
+const TEXT_LAYER_LOST: PageFlowResult = { ok: false, usage: NO_USAGE, setAside: [], unmappedLines: [] };
+
+function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAside, unmappedLines }: PageFlowResult, textless: readonly ImportPageTextless[]): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     const pages = current.pages;
@@ -94,7 +106,11 @@ function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAs
     const total = pages.to - pages.from + 1;
     const status = done.length + failed.length >= total ? 'reviewing' : current.status;
     const spent = addUsage(pages.usage ?? NO_USAGE, usage);
-    const leftOut = { setAside: replacedOnPage(pages.setAside ?? [], page, setAside), unmappedLines: replacedOnPage(pages.unmappedLines ?? [], page, unmappedLines) };
+    const leftOut = {
+      setAside: replacedOnPage(pages.setAside ?? [], page, setAside),
+      unmappedLines: replacedOnPage(pages.unmappedLines ?? [], page, unmappedLines),
+      textless: replacedOnPage(pages.textless ?? [], page, textless),
+    };
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed, usage: spent, ...leftOut } });
   });
 }
@@ -109,8 +125,13 @@ export async function readImportPage(ctx: AuthContext, id: string, page: number)
   const pages = batch.pages;
   if (!pages || page < pages.from || page > pages.to) throw new CatalogWriteError('invalid', [{ code: 'tooMany', path: 'page' }]);
   if (pages.done.includes(page)) return batch;
-  const { png, items, rules, tagTables } = await readPdfPage(await readBatchFile(ctx, batch), page, { dpi: IMPORT_PAGE_DPI });
+  const { png, items, rules, tagTables, textLayer } = await readPdfPage(await readBatchFile(ctx, batch), page, { dpi: IMPORT_PAGE_DPI });
+  if (textLayer.state === 'lost') {
+    logger.warn('PDF text layer lost on read', { batchId: id, page, reason: textLayer.reason });
+    return markPage(ctx, id, page, TEXT_LAYER_LOST, textlessOf(page, textLayer));
+  }
+  if (textLayer.state === 'present' && textLayer.recovered) logger.info('PDF text layer recovered on strict re-read', { batchId: id, page });
   const axisAttributeIds = schema.scheme?.levels.flatMap((level) => level.axisAttributeIds) ?? [];
   const outcome = await readAndProposePage({ ctx, batchId: id, page, png, tokens: tokenizePage(items), rules, tagTables, specs: pageSpecs(schema), registry: schema.registry, axisAttributeIds });
-  return markPage(ctx, id, page, outcome);
+  return markPage(ctx, id, page, outcome, textlessOf(page, textLayer));
 }
