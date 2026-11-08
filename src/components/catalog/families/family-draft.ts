@@ -12,13 +12,13 @@
  */
 
 import { hasAnyLocalizedText } from '@/i18n/localized-text';
+import { familyDefinitionOf } from '@/subapps/catalog/schema/family-binding';
 import { validateFamily } from '@/subapps/catalog/schema/validate-family';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import {
   deriveFamilyAttributeIds,
-  listingKindOf,
   type CatalogFamilyDefinition,
   type ConsistencyRule,
   type FamilyTableRow,
@@ -51,12 +51,8 @@ export function emptyFamilyDraft(): CatalogFamilyDefinition {
   };
 }
 
-export function familyDraftOf(record: FamilyRecord): CatalogFamilyDefinition {
-  const { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules } = record;
-  // Κανονικοποίηση: παλιά εγγραφή χωρίς τα πεδία της §22 δεν πρέπει να φαίνεται αλλαγμένη.
-  const listing = { listingKind: listingKindOf(record), installationAttributeId: record.installationAttributeId ?? null, etimClass: record.etimClass ?? null };
-  return { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules, ...listing };
-}
+/** Ο ορισμός της εγγραφής (κοινό SSoT με τον διακομιστή: `familyDefinitionOf`). */
+export const familyDraftOf = (record: FamilyRecord): CatalogFamilyDefinition => familyDefinitionOf(record);
 
 /** Αλλαγή είδους: ο δεσμός τοποθέτησης δεν επιβιώνει έξω από το δικό του είδος (§22 Υ5). */
 export const withListingKind = (draft: CatalogFamilyDefinition, listingKind: CatalogListingKind): CatalogFamilyDefinition => ({

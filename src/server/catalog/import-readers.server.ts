@@ -11,32 +11,22 @@ import 'server-only';
 
 import type { AuthContext } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
-import { readPdfPage, type PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
+import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import { extractGroupsFromTable } from '@/subapps/catalog/import/apply-column-rules';
 import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
-import type { PageAttributeSpec } from '@/subapps/catalog/import/page-extraction';
-import { tokenizePage } from '@/subapps/catalog/import/page-tokens';
-import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { ImportBatchDefinition, ImportPagesUsage, ImportPageTextless, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
-import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
-import { IMPORT_PAGE_DPI } from '@/subapps/catalog/vocabulary/catalog-import';
-import { attributeOwnerDepth } from '@/subapps/catalog/values/attribute-levels';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
 import { readOwned, runCatalogTransaction, stageReplace } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
-import { assertPurposeAuthority, batchDefinitionOf, fileOwnerOf, type StoredImportBatch } from './import-batch-writer.server';
-import { readAndProposePage, type PageFlowResult, type PageSpecs } from './import-page-flow.server';
+import { assertPurposeAuthority, batchDefinitionOf, replacedOnPage, type StoredImportBatch } from './import-batch-writer.server';
+import { readAndProposePage, type PageFlowResult } from './import-page-flow.server';
+import { axisAttributeIdsOf, loadPdfPageSource, pageSpecs, readBatchFile } from './import-page-source.server';
 import { groupTableRowsByLiveModel } from './import-proposal-plan.server';
 import { proposeGroup, retireStaleSourceProposals, type StoredImportProposal } from './import-proposal-writer.server';
 import { buildXChangeProposals } from './import-xchange.server';
-import { downloadBatchFile, readBatchFileRecord, readBatchTable } from './import-source.server';
+import { readBatchTable } from './import-source.server';
 
 const logger = createModuleLogger('CatalogImportReaders');
-
-async function readBatchFile(ctx: AuthContext, batch: StoredImportBatch): Promise<Buffer> {
-  if (batch.fileId === null) throw new CatalogWriteError('invalid', [{ code: 'fileNotFound', path: 'fileId' }]);
-  return downloadBatchFile(await readBatchFileRecord(ctx, fileOwnerOf(batch), batch.fileId));
-}
 
 function setStatus(ctx: AuthContext, id: string, status: ImportBatchDefinition['status']): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
@@ -62,32 +52,6 @@ export async function buildTableProposals(ctx: AuthContext, id: string): Promise
   await setStatus(ctx, id, 'reviewing');
   return proposals;
 }
-
-function attributeSpecOf(attribute: CatalogAttributeDefinition, depth: number): PageAttributeSpec {
-  const config = attribute.config as { readonly options?: readonly { readonly code: string }[] };
-  return {
-    code: attribute.code,
-    label: attribute.labels.el ?? attribute.labels.en ?? attribute.code,
-    description: attribute.description.el ?? attribute.description.en ?? null,
-    type: attribute.type,
-    level: depth === 0 ? 'shared' : 'variant',
-    unique: attribute.unique,
-    options: config.options?.map((option) => option.code) ?? [],
-  };
-}
-
-function pageSpecs(schema: CatalogSchemaSnapshot): PageSpecs {
-  const entries = [...schema.attributes].map(([id, attribute]) => ({ id, attribute }));
-  return {
-    specs: entries.map(({ id, attribute }) => attributeSpecOf(attribute, schema.scheme ? attributeOwnerDepth(schema.scheme, id) : 1)),
-    byCode: new Map(entries.map(({ id, attribute }) => [attribute.code, { ...attribute, id }])),
-    codeById: new Map(entries.map(({ id, attribute }) => [id, attribute.code])),
-  };
-}
-
-/** Η τελευταία ανάγνωση της σελίδας είναι η αλήθεια και για όσα έμειναν απέξω (πίνακες Ε3 · γραμμές Ε7). */
-const replacedOnPage = <TEntry extends { readonly page: number }>(current: readonly TEntry[], page: number, next: readonly TEntry[]): TEntry[] =>
-  [...current.filter((entry) => entry.page !== page), ...next];
 
 /** Ε8: η σελίδα χωρίς κείμενο δηλώνεται· με κείμενο, η δήλωση μιας παλαιότερης ανάγνωσης φεύγει. */
 function textlessOf(page: number, layer: PdfTextLayer): ImportPageTextless[] {
@@ -127,13 +91,12 @@ export async function readImportPage(ctx: AuthContext, id: string, page: number)
   const pages = batch.pages;
   if (!pages || page < pages.from || page > pages.to) throw new CatalogWriteError('invalid', [{ code: 'tooMany', path: 'page' }]);
   if (pages.done.includes(page)) return batch;
-  const { png, items, rules, tagTables, textLayer } = await readPdfPage(await readBatchFile(ctx, batch), page, { dpi: IMPORT_PAGE_DPI });
+  const { png, tokens, rules, tagTables, textLayer } = await loadPdfPageSource(ctx, batch, page);
   if (textLayer.state === 'lost') {
     logger.warn('PDF text layer lost on read', { batchId: id, page, reason: textLayer.reason });
     return markPage(ctx, id, page, TEXT_LAYER_LOST, textlessOf(page, textLayer));
   }
   if (textLayer.state === 'present' && textLayer.recovered) logger.info('PDF text layer recovered on strict re-read', { batchId: id, page });
-  const axisAttributeIds = schema.scheme?.levels.flatMap((level) => level.axisAttributeIds) ?? [];
-  const outcome = await readAndProposePage({ ctx, batchId: id, page, png, tokens: tokenizePage(items), rules, tagTables, specs: pageSpecs(schema), registry: schema.registry, axisAttributeIds });
+  const outcome = await readAndProposePage({ ctx, batchId: id, page, png, tokens, rules, tagTables, specs: pageSpecs(schema), registry: schema.registry, axisAttributeIds: axisAttributeIdsOf(schema) });
   return markPage(ctx, id, page, outcome, textlessOf(page, textLayer));
 }

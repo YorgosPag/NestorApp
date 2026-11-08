@@ -8,10 +8,11 @@ import type { CatalogWire } from './catalog-record';
 import type {
   ImportBatchDefinition,
   ImportBatchTarget,
+  ImportLineDecision,
   ImportProfileDefinition,
   ImportProposalDefinition,
 } from './catalog-import';
-import type { ImportFieldDecision, ImportSourceKind } from '../vocabulary/catalog-import';
+import type { ImportFieldDecision, ImportLineBindLevel, ImportLineRefusal, ImportSourceKind } from '../vocabulary/catalog-import';
 
 export interface CreateImportBatchRequest {
   readonly sourceKind: ImportSourceKind;
@@ -67,4 +68,25 @@ export type ImportProfileWire = CatalogWire<ImportProfileDefinition>;
 export interface ImportBatchDetailView {
   readonly batch: ImportBatchWire;
   readonly proposals: readonly ImportProposalWire[];
+}
+
+/**
+ * Απόφαση για γραμμή πίνακα (§5.5.2 Β3 Γ5). `decision: null` = αναίρεση. `bind` = η ιδιότητα μόλις γεννήθηκε στη βιβλιοθήκη από τη
+ * γραμμή: ο διακομιστής τη δένει στην οικογένεια της παρτίδας, στο επίπεδο που διάλεξε ο άνθρωπος, πριν από την αντιστοίχιση.
+ * Η απόφαση είναι κατάσταση με κλειδί, όχι αντικατάσταση εγγράφου: χωρίς CAS παρτίδας, η επανάληψη είναι ιδεμπότητη.
+ */
+export interface SetImportLineRequest {
+  readonly page: number;
+  readonly table: string;
+  readonly line: number;
+  readonly decision: ImportLineDecision | null;
+  readonly bind: ImportLineBindLevel | null;
+}
+
+/** Τι έγινε: ξαναερμηνεύτηκε (ή δεν χρειαζόταν), ή αρνήθηκε **χωρίς** να γράψει τίποτα. */
+export type ImportLineOutcome = { readonly kind: 'settled' } | { readonly kind: 'refused'; readonly reason: ImportLineRefusal };
+
+export interface SetImportLineResult {
+  readonly view: ImportBatchDetailView;
+  readonly outcome: ImportLineOutcome;
 }

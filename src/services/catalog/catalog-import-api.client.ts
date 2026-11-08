@@ -15,6 +15,8 @@ import type {
   ImportBatchWire,
   ImportProfileWire,
   ImportProposalWire,
+  SetImportLineRequest,
+  SetImportLineResult,
   UpdateImportProposalRequest,
 } from '@/subapps/catalog/types/catalog-import-requests';
 
@@ -38,6 +40,9 @@ export const attachImportFile = (id: string, expectedRevision: number, fileId: s
 export const mapImportBatch = (id: string): Promise<readonly ImportProposalWire[]> => apiClient.post(CATALOG_API.imports.map(id), {});
 
 export const readImportPage = (id: string, page: number): Promise<ImportBatchWire> => apiClient.post(CATALOG_API.imports.pages(id), { page });
+
+/** Απόφαση γραμμής πίνακα και ξαναερμηνεία χωρίς AI (§5.5.2 Β3): επιστρέφει όλη την όψη και αν αρνήθηκε, με λόγο. */
+export const setImportLine = (id: string, request: SetImportLineRequest): Promise<SetImportLineResult> => apiClient.post(CATALOG_API.imports.lines(id), request);
 
 export const discardImportBatch = (id: string, expectedRevision: number): Promise<ImportBatchWire> =>
   apiClient.post(CATALOG_API.imports.discard(id), { expectedRevision });

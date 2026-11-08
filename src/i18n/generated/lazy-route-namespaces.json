@@ -543,6 +543,20 @@
     "files-media",
     "public-catalog"
   ],
+  "CatalogLineAttributeTools": [
+    "catalog",
+    "catalog-import",
+    "common",
+    "common-account",
+    "common-actions",
+    "common-empty-states",
+    "common-navigation",
+    "common-photos",
+    "common-sales",
+    "common-shared",
+    "common-status",
+    "common-validation"
+  ],
   "CatalogXChangeExportReport": [
     "catalog",
     "common",

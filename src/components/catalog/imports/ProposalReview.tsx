@@ -17,7 +17,10 @@ import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-
 import { useImportIssueMessage } from './import-issue-messages';
 import { PROPOSAL_STATUS_KEYS, ROW_ACTION_KEYS, useImportText } from './import-text';
 import { ProposalFieldRow } from './ProposalFieldRow';
-import type { ProposalChange } from './use-import-batch';
+import type { ProposalChange } from './proposal-change-queue';
+import { fieldVisibleIn, initialProposalView, nextPendingField, summarizeProposal, type ProposalView } from './proposal-summary';
+import { ProposalSummaryBar } from './ProposalSummaryBar';
+import { ProposalUnmappedLines, type UnmappedLinesProps } from './ProposalUnmappedLines';
 
 interface ProposalReviewProps {
   readonly proposal: ImportProposalWire;
@@ -26,13 +29,17 @@ interface ProposalReviewProps {
   readonly onChange: (proposal: ImportProposalWire, change: ProposalChange) => void;
   readonly onApply: (proposal: ImportProposalWire) => void;
   readonly onReject: (proposal: ImportProposalWire) => void;
+  /** §5.5.2 Α5: αλλαγές της πρότασης ταξιδεύουν ακόμη προς τον διακομιστή. */
+  readonly saving?: boolean;
+  /** Ε7: γραμμές της πηγής του πίνακα της πρότασης που περιμένουν απόφαση (§5.5.2 Α6). */
+  readonly unmapped?: number;
+  /** §5.5.2 Β3: οι γραμμές χωρίς πεδίο του πίνακα της πρότασης, με τις ενέργειές τους. */
+  readonly lines?: Omit<UnmappedLinesProps, 'proposal'>;
 }
 
-const pendingCount = (rows: readonly ImportProposalRow[]): number => rows.flatMap((row) => row.fields).filter((field) => field.decision === 'pending').length;
+type RowProps = Pick<ProposalReviewProps, 'proposal' | 'focused' | 'onFocus' | 'onChange'> & { readonly row: ImportProposalRow; readonly view: ProposalView };
 
-type RowProps = Pick<ProposalReviewProps, 'proposal' | 'focused' | 'onFocus' | 'onChange'> & { readonly row: ImportProposalRow };
-
-function RowFields({ row, proposal, focused, onFocus, onChange }: RowProps) {
+function RowFields({ row, proposal, focused, onFocus, onChange, view }: RowProps) {
   const { t } = useImportText();
   const readOnly = proposal.status !== 'pending';
   return (
@@ -48,7 +55,7 @@ function RowFields({ row, proposal, focused, onFocus, onChange }: RowProps) {
           </tr>
         </thead>
         <tbody>
-          {row.fields.map((field) => {
+          {row.fields.filter((field) => fieldVisibleIn(view, field)).map((field) => {
             const targetKey = importTargetKey(field.target);
             return (
               <ProposalFieldRow
@@ -110,16 +117,27 @@ function ModelCodeField({ proposal, onChange }: Pick<ProposalReviewProps, 'propo
   );
 }
 
-export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, onReject }: ProposalReviewProps) {
+/** Γραμμή χωρίς ορατό πεδίο στην προβολή κρύβεται· γραμμή με εύρημα μένει, γιατί το εύρημα κλειδώνει την έγκριση. */
+const rowVisibleIn = (view: ProposalView, row: ImportProposalRow): boolean => row.issues.length > 0 || row.fields.some((field) => fieldVisibleIn(view, field));
+
+export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, onReject, saving = false, unmapped = 0, lines }: ProposalReviewProps) {
   const { t } = useImportText();
-  const pending = useMemo(() => pendingCount(proposal.rows), [proposal.rows]);
+  const summary = useMemo(() => summarizeProposal(proposal.rows), [proposal.rows]);
+  const [view, setView] = useState<ProposalView>(() => initialProposalView(summary));
+  const { pending } = summary;
   const open = proposal.status === 'pending';
+  const rows = proposal.rows.filter((row) => rowVisibleIn(view, row));
+  const focusNextPending = () => {
+    const next = nextPendingField(proposal.rows, focused);
+    if (next) onFocus(next);
+  };
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border p-3">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="m-0 text-base font-semibold">{proposal.modelCode ?? t('review.noModel')} · {t(PROPOSAL_STATUS_KEYS[proposal.status])}</h3>
         {open ? (
           <span className="flex items-center gap-2">
+            {saving ? <span className="text-sm text-muted-foreground" role="status">{t('review.saving')}</span> : null}
             {pending > 0 ? <span className="text-sm text-muted-foreground" role="status">{t('review.pending', { count: pending })}</span> : null}
             <Button type="button" variant="outline" onClick={() => onReject(proposal)}>{t('review.rejectAll')}</Button>
             <Button type="button" disabled={pending > 0} onClick={() => onApply(proposal)}>{t('review.apply')}</Button>
@@ -128,7 +146,10 @@ export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, 
       </header>
       {open && proposal.modelCode === null && proposal.purpose === 'attributes' && proposal.variantSchemeCode !== null ? <ModelCodeField proposal={proposal} onChange={onChange} /> : null}
       {proposal.violations.length > 0 ? <p className="m-0 text-sm text-destructive" role="status">{t('review.violations', { count: proposal.violations.length })}</p> : null}
-      {proposal.rows.map((row) => <RowSection key={row.rowKey} row={row} proposal={proposal} focused={focused} onFocus={onFocus} onChange={onChange} />)}
+      <ProposalSummaryBar summary={summary} unmapped={unmapped} view={view} onView={setView} onNextPending={focusNextPending} />
+      {rows.length === 0 ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('review.viewEmpty')}</p> : null}
+      {rows.map((row) => <RowSection key={row.rowKey} row={row} view={view} proposal={proposal} focused={focused} onFocus={onFocus} onChange={onChange} />)}
+      {lines ? <ProposalUnmappedLines proposal={proposal} {...lines} /> : null}
     </article>
   );
 }

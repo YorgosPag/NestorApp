@@ -14,13 +14,30 @@ import { createHash } from 'node:crypto';
 
 import type { AuthContext } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth';
+import { nowISO } from '@/lib/date-local';
 import { countPdfPages } from '@/services/pdf/pdf-rasterize.service';
 import { importBatchKey } from '@/subapps/catalog/import/import-keys';
-import type { ImportBatchDefinition, ImportBatchPages, ImportBatchTarget, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
+import { withLineOverride } from '@/subapps/catalog/import/page-line-overrides';
+import type {
+  ImportBatchDefinition,
+  ImportBatchPages,
+  ImportBatchTarget,
+  ImportLineDecision,
+  ImportLineOverride,
+  ImportPageSetAside,
+  ImportPageUnmappedLine,
+  ImportProfileDefinition,
+} from '@/subapps/catalog/types/catalog-import';
 import type { CreateImportBatchRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import type { PriceListVersionDefinition } from '@/subapps/catalog/types/price-list';
 import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
-import { IMPORT_FINISHED_BATCH_STATUSES, IMPORT_MAX_PAGES_PER_BATCH, IMPORT_MAX_RUNS, type ImportPurpose } from '@/subapps/catalog/vocabulary/catalog-import';
+import {
+  IMPORT_FINISHED_BATCH_STATUSES,
+  IMPORT_MAX_LINE_OVERRIDES,
+  IMPORT_MAX_PAGES_PER_BATCH,
+  IMPORT_MAX_RUNS,
+  type ImportPurpose,
+} from '@/subapps/catalog/vocabulary/catalog-import';
 import {
   assertRevision,
   readForUpsert,
@@ -159,5 +176,51 @@ export async function discardImportBatch(ctx: AuthContext, id: string, expectedR
     assertRevision(current, expectedRevision);
     await assertPurposeAuthority(ctx, current.target.purpose);
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status: 'discarded' });
+  });
+}
+
+/** Η τελευταία ανάγνωση της σελίδας είναι η αλήθεια και για όσα έμειναν απέξω (πίνακες Ε3 · γραμμές Ε7). */
+export const replacedOnPage = <TEntry extends { readonly page: number }>(current: readonly TEntry[], page: number, next: readonly TEntry[]): TEntry[] =>
+  [...current.filter((entry) => entry.page !== page), ...next];
+
+/** Η ξαναερμηνεία ενός πίνακα αντικαθιστά μόνο ό,τι ανήκει σε **εκείνον** τον πίνακα (§5.5.2 Β3 Γ3). */
+const replacedOnTable = <TEntry extends { readonly page: number; readonly table: string }>(current: readonly TEntry[], page: number, table: string, next: readonly TEntry[]): TEntry[] =>
+  [...current.filter((entry) => entry.page !== page || entry.table !== table), ...next];
+
+type LineAddress = Pick<ImportLineOverride, 'page' | 'table' | 'line'>;
+
+function pagesOrRefuse(batch: ImportBatchDefinition): ImportBatchPages {
+  if (!batch.pages) throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'pages' }]);
+  return batch.pages;
+}
+
+/**
+ * `POST /api/catalog/imports/[id]/lines` (πρώτο μισό) — η απόφαση γραμμής (§5.5.2 Β3 Γ1). Κατάσταση με κλειδί μέσα σε συναλλαγή, όχι
+ * αντικατάσταση εγγράφου με CAS: δύο αποφάσεις σε διαφορετικές γραμμές δεν συγκρούονται, και η ίδια απόφαση δύο φορές δεν αλλάζει τίποτα.
+ */
+export function setImportLineOverride(ctx: AuthContext, id: string, address: LineAddress, decision: ImportLineDecision | null): Promise<StoredImportBatch> {
+  return runCatalogTransaction(ctx, async (scope) => {
+    const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
+    if (IMPORT_FINISHED_BATCH_STATUSES.includes(current.status)) throw new CatalogWriteError('immutable', [{ code: 'fieldImmutable', path: 'status', params: { field: 'status' } }]);
+    const pages = pagesOrRefuse(current);
+    const lineOverrides = withLineOverride(pages.lineOverrides ?? [], address, decision, { by: ctx.uid, at: nowISO() });
+    if (lineOverrides.length > IMPORT_MAX_LINE_OVERRIDES) assertNoIssues([{ code: 'tooMany', path: 'lineOverrides', params: { max: IMPORT_MAX_LINE_OVERRIDES } }]);
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, lineOverrides } });
+  });
+}
+
+export interface TableLeftOut {
+  readonly setAside: readonly ImportPageSetAside[];
+  readonly unmappedLines: readonly ImportPageUnmappedLine[];
+}
+
+/** `POST /api/catalog/imports/[id]/lines` (δεύτερο μισό) — όσα έμειναν απέξω, για τον πίνακα που ξαναερμηνεύτηκε. */
+export function replaceTableLeftOut(ctx: AuthContext, id: string, page: number, table: string, leftOut: TableLeftOut): Promise<StoredImportBatch> {
+  return runCatalogTransaction(ctx, async (scope) => {
+    const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
+    const pages = pagesOrRefuse(current);
+    const setAside = replacedOnTable(pages.setAside ?? [], page, table, leftOut.setAside);
+    const unmappedLines = replacedOnTable(pages.unmappedLines ?? [], page, table, leftOut.unmappedLines);
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, setAside, unmappedLines } });
   });
 }

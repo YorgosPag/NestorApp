@@ -71,7 +71,7 @@ describe('ProposalReview', () => {
   it('η απόφαση φεύγει με το σταθερό κλειδί του στόχου, όχι με θέση', () => {
     const value = proposal([row([field({ decision: 'pending' })])]);
     const { onChange } = setup(value);
-    fireEvent.click(screen.getByRole('button', { name: 'review.accept' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'review.accept' }));
     expect(onChange).toHaveBeenCalledWith(value, { decisions: [{ rowKey: 'r0', targetKey: importTargetKey(target), decision: 'accept' }] });
   });
 
@@ -79,7 +79,7 @@ describe('ProposalReview', () => {
     const unread = field({ incoming: null, decision: 'pending', issues: [{ code: 'misaligned', path: 'cattr_power' }] });
     const value = proposal([row([unread])]);
     const { onChange } = setup(value);
-    expect(screen.getByRole('button', { name: 'review.accept' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'review.accept' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'review.acceptRow' }));
     expect(onChange).toHaveBeenCalledWith(value, { decisions: [] });
     // ADR-744 §34: πρώτα η λέξη αναμονής, μετά το ακριβές μήνυμα — ποτέ ωμό κλειδί ενδιάμεσα.
@@ -114,7 +114,43 @@ describe('ProposalReview', () => {
     setup(proposal([row([field()])], { status: 'applied' }));
     expect(screen.queryByRole('button', { name: 'review.apply' })).not.toBeInTheDocument();
     const section = screen.getByRole('region', { name: '099-01-001' });
-    expect(within(section).getByRole('button', { name: 'review.reject' })).toBeDisabled();
+    expect(within(section).getByRole('radio', { name: 'review.reject' })).toBeDisabled();
+  });
+
+  // §5.5.2 Α2: η επιλογή είναι κατάσταση radio, όχι χρώμα — ο αναγνώστης οθόνης ακούει ποια είναι πατημένη.
+  it('η απόφαση διαβάζεται ως επιλεγμένο radio, και ξαναζήτηση της ίδιας δεν στέλνει τίποτα', () => {
+    const value = proposal([row([field({ decision: 'accept' })])]);
+    const { onChange } = setup(value);
+    expect(screen.getByRole('radio', { name: 'review.accept' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'review.reject' })).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(screen.getByRole('radio', { name: 'review.accept' }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // §5.5.2 Α1: η «αυτόματη αποδοχή» είναι δηλωμένη από τον διακομιστή· πρόταση χωρίς προέλευση = κανόνας.
+  it('ποιος αποφάσισε: κανόνας ⇒ «αυτόματα», άνθρωπος ⇒ «δική σας»', () => {
+    setup(proposal([row([field({ decisionBy: 'rule' }), field({ target: { ...target, attributeId: 'cattr_other' }, decisionBy: 'human' })])]));
+    expect(screen.getByText('review.decisionAuto')).toBeInTheDocument();
+    expect(screen.getByText('review.decisionHuman')).toBeInTheDocument();
+  });
+
+  it('εκκρεμότητα: καμία επιλογή πατημένη, και το λέει η λέξη', () => {
+    setup(proposal([row([field({ decision: 'pending' })])]));
+    expect(screen.getByText('review.decisionPending')).toBeInTheDocument();
+    for (const radio of screen.getAllByRole('radio')) expect(radio).toHaveAttribute('aria-checked', 'false');
+  });
+
+  // §5.5.2 Α3: το αμετάβλητο αποθηκεύεται `reject`, αλλά δεν δείχνεται ως «Απόρριψη».
+  it('αμετάβλητο: κανένα κουμπί απόφασης, «τίποτα να εφαρμοστεί»', () => {
+    setup(proposal([row([field({ status: 'unchanged', decision: 'reject' })])]));
+    expect(screen.getByText('review.nothingToApply')).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+  });
+
+  it('σε αποθήκευση: το λέει δίπλα στην έγκριση', () => {
+    const handlers = { onFocus: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
+    render(<ProposalReview proposal={proposal([row([field()])])} focused={null} saving {...handlers} />);
+    expect(screen.getByText('review.saving')).toBeInTheDocument();
   });
 
   it('χωρίς κωδικό μοντέλου ζητά τον κωδικό, και τον στέλνει', () => {

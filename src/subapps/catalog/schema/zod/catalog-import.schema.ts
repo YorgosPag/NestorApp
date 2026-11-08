@@ -6,11 +6,19 @@
 
 import { z } from 'zod';
 import { HUMAN_LANGUAGES } from '@/i18n/languages';
-import type { ImportBatchTarget, ImportProfileDefinition, ImportTarget } from '../../types/catalog-import';
-import type { AttachImportFileRequest, CreateImportBatchRequest, ProposalActionRequest, ReadImportPageRequest, UpdateImportProposalRequest } from '../../types/catalog-import-requests';
+import type { ImportBatchTarget, ImportLineDecision, ImportProfileDefinition, ImportTarget } from '../../types/catalog-import';
+import type {
+  AttachImportFileRequest,
+  CreateImportBatchRequest,
+  ProposalActionRequest,
+  ReadImportPageRequest,
+  SetImportLineRequest,
+  UpdateImportProposalRequest,
+} from '../../types/catalog-import-requests';
 import { ANY_SLOT } from '../../types/product';
 import { CATALOG_CHANNELS } from '../../vocabulary/channels';
 import {
+  IMPORT_LINE_BIND_LEVELS,
   IMPORT_MAX_FILE_BYTES,
   IMPORT_PRICE_FIELDS,
   IMPORT_PURPOSES,
@@ -83,6 +91,23 @@ export const attachImportFileBodySchema: z.ZodType<AttachImportFileRequest> = z.
 });
 
 export const readImportPageBodySchema: z.ZodType<ReadImportPageRequest> = z.object({ page: z.number().int().min(1) });
+
+/** Κλειδιά πίνακα της ανασύνθεσης (`t0`, `t1`…): μικρά, χωρίς διαχωριστικά. */
+const TABLE_KEY_MAX = 40;
+const MAX_TABLE_LINE = 1000;
+
+const importLineDecisionSchema: z.ZodType<ImportLineDecision> = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('attribute'), attributeId: entityIdSchema }),
+  z.object({ kind: z.literal('ignore') }),
+]);
+
+export const setImportLineBodySchema: z.ZodType<SetImportLineRequest> = z.object({
+  page: z.number().int().min(1),
+  table: z.string().min(1).max(TABLE_KEY_MAX),
+  line: z.number().int().min(0).max(MAX_TABLE_LINE),
+  decision: importLineDecisionSchema.nullable(),
+  bind: z.enum(IMPORT_LINE_BIND_LEVELS).nullable(),
+});
 
 const fieldAddress = { rowKey: z.string().min(1).max(200), targetKey: z.string().min(1).max(300) };
 

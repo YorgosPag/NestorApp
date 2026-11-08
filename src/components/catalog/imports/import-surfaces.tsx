@@ -13,13 +13,22 @@
 
 import type { XChangeImportReport } from '@/subapps/catalog/interop/etim/xchange-report';
 import { defineLazySurfaces } from '@/utils/lazyRouteFactory';
+import type { LineAttributeToolsProps } from './line-tool-props';
 
 const ImportSurfaces = defineLazySurfaces({
   CatalogXChangeReport: {
     load: () => import('./XChangeReportNote').then((mod) => ({ default: mod.XChangeReportNote })),
   },
+  /** §5.5.2 Β3: αντιστοίχιση γραμμής / νέα ιδιότητα — βιβλιοθήκη και φόρμα ιδιότητας μόνο όταν ο άνθρωπος ανοίξει ενέργεια. */
+  CatalogLineAttributeTools: {
+    load: () => import('./LineAttributeTools').then((mod) => ({ default: mod.LineAttributeTools })),
+  },
 });
 
 export function XChangeReportSlot({ report }: { readonly report: XChangeImportReport }) {
   return <ImportSurfaces.CatalogXChangeReport report={report} />;
+}
+
+export function LineAttributeToolsSlot(props: LineAttributeToolsProps) {
+  return <ImportSurfaces.CatalogLineAttributeTools {...props} />;
 }

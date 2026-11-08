@@ -43,6 +43,13 @@ export type ImportFieldStatus = (typeof IMPORT_FIELD_STATUSES)[number];
 export const IMPORT_FIELD_DECISIONS = ['accept', 'reject', 'pending'] as const;
 export type ImportFieldDecision = (typeof IMPORT_FIELD_DECISIONS)[number];
 
+/**
+ * **Ποιος** πήρε την απόφαση (§5.5.2 Α1): ο κανόνας (`defaultDecisionOf`) ή ο άνθρωπος. Τη γράφει μόνο ο διακομιστής, ώστε η
+ * «αυτόματη αποδοχή» να είναι δηλωμένη και όχι συμπέρασμα της οθόνης.
+ */
+export const IMPORT_DECISION_SOURCES = ['rule', 'human'] as const;
+export type ImportDecisionSource = (typeof IMPORT_DECISION_SOURCES)[number];
+
 export const IMPORT_ROW_ACTIONS = ['create', 'update'] as const;
 export type ImportRowAction = (typeof IMPORT_ROW_ACTIONS)[number];
 
@@ -124,3 +131,36 @@ export const IMPORT_PRICE_LINES_PER_PROPOSAL = 200;
 
 /** Παραλλαγές ανά πρόταση: το έγγραφό της μένει πολύ κάτω από το 1 MiB, με άγκυρες ανά πεδίο. */
 export const IMPORT_ROWS_PER_PROPOSAL = 200;
+
+/**
+ * Γιατί μια απόφαση γραμμής **δεν** ξαναερμήνευσε τη σελίδα (§5.5.2 Β3 Γ4). Καμία δεν οδηγεί σε πληρωμένη κλήση: ο άνθρωπος ξέρει
+ * τον λόγο και αποφασίζει ο ίδιος για νέα ανάγνωση.
+ */
+export const IMPORT_LINE_REFUSALS = [
+  /** Δεν φυλάχτηκε επιτυχής απάντηση αντιστοίχισης για τη σελίδα. */
+  'readingMissing',
+  /** Οι προτάσεις της σελίδας βγήκαν από ανάγνωση με όραση: δεν υπάρχει αντιστοίχιση γραμμών να διορθωθεί. */
+  'readingVision',
+  /** Η φυλαγμένη απάντηση κόπηκε στο όριο αποθήκευσης. */
+  'readingClipped',
+  /** Η ανασύνθεση του πίνακα από το PDF διαφέρει από εκείνη που είδε το μοντέλο. */
+  'tablesDrifted',
+  /** Η πρόταση του πίνακα εγκρίθηκε ή απορρίφθηκε: δεν αλλάζει πια. */
+  'proposalClosed',
+  /** Η γραμμή ή η ιδιότητα δεν υπάρχει στον πίνακα ή στην οικογένεια. */
+  'lineUnknown',
+] as const;
+export type ImportLineRefusal = (typeof IMPORT_LINE_REFUSALS)[number];
+
+/** Πού δένεται νέα ιδιότητα από γραμμή: κοινή στο μοντέλο, ή ανά τελικό κωδικό (το τελευταίο επίπεδο του σχήματος). */
+export const IMPORT_LINE_BIND_LEVELS = ['shared', 'leaf'] as const;
+export type ImportLineBindLevel = (typeof IMPORT_LINE_BIND_LEVELS)[number];
+
+/** Αποφάσεις γραμμής ανά παρτίδα: 60 σελίδες × λίγες γραμμές χωρίς πεδίο, πολύ κάτω από το 1 MiB του εγγράφου. */
+export const IMPORT_MAX_LINE_OVERRIDES = 600;
+
+/**
+ * Πόσες αναγνώσεις δικαιούται μια σελίδα, σε όλες τις διαδρομές μαζί (§5.5.1). Το ίδιο όριο φράζει και τα ids των φυλαγμένων
+ * απαντήσεων (`importPageReadingKey`): η ξαναερμηνεία (§5.5.2 Β3) τα βρίσκει όλα χωρίς ερώτημα.
+ */
+export const IMPORT_PAGE_READ_ATTEMPTS = 2;

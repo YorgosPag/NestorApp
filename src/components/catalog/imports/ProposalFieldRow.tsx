@@ -2,22 +2,19 @@
 
 /**
  * @fileoverview **Ένα πεδίο της πρότασης** (ADR-923 §5.5): ζωντανή τιμή → εισερχόμενη, κατάσταση, βεβαιότητα, ευρήματα,
- *   απόφαση. Το κλικ στην τιμή οδηγεί το PDF στο σημείο της.
+ *   απόφαση (`ProposalDecisionCell`, §5.5.2). Το κλικ στην τιμή οδηγεί το PDF στο σημείο της.
  * @module components/catalog/imports/ProposalFieldRow
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
 import type { ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import { useImportIssueMessage } from './import-issue-messages';
-import { FIELD_STATUS_KEYS, PRICE_FIELD_KEYS, TRADE_FIELD_KEYS, useImportText } from './import-text';
+import { PRICE_FIELD_KEYS, TRADE_FIELD_KEYS, useImportText } from './import-text';
+import { FieldStatusBadge, ProposalDecisionCell } from './ProposalDecisionCell';
 import { useImportValueText } from './import-value-text';
-
-const STATUS_VARIANT = { new: 'default', changed: 'secondary', unchanged: 'outline', conflict: 'destructive' } as const;
 
 function useTargetLabel(field: ImportProposalField): string {
   const { t } = useImportText();
@@ -76,18 +73,6 @@ function Corroboration({ field }: { readonly field: ImportProposalField }) {
   return <p className="m-0 mt-1 text-xs text-muted-foreground">{t('review.corroboratedBy', { values: others.join(' · ') })}</p>;
 }
 
-function DecisionCell({ field, readOnly, onDecide }: Pick<ProposalFieldRowProps, 'field' | 'readOnly' | 'onDecide'>) {
-  const { t } = useImportText();
-  return (
-    <td className="p-2">
-      <span className="flex gap-1">
-        <Button type="button" size="sm" variant={field.decision === 'accept' ? 'default' : 'outline'} disabled={readOnly || field.incoming === null} aria-pressed={field.decision === 'accept'} onClick={() => onDecide('accept')}>{t('review.accept')}</Button>
-        <Button type="button" size="sm" variant={field.decision === 'reject' ? 'default' : 'outline'} disabled={readOnly} aria-pressed={field.decision === 'reject'} onClick={() => onDecide('reject')}>{t('review.reject')}</Button>
-      </span>
-    </td>
-  );
-}
-
 export function ProposalFieldRow({ field, active, readOnly, onFocus, onDecide, onEdit }: ProposalFieldRowProps) {
   const { t } = useImportText();
   const label = useTargetLabel(field);
@@ -96,18 +81,21 @@ export function ProposalFieldRow({ field, active, readOnly, onFocus, onDecide, o
   const verified = field.anchor?.kind === 'page' ? field.anchor.verified : true;
   /** Ε8: `null` = η σελίδα δεν είχε κείμενο να ελεγχθεί η τιμή · `false` = είχε, και δεν την επιβεβαίωσε. */
   const unverifiedNote = verified === null ? t('review.uncheckable') : verified === false ? t('review.unverified') : null;
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  // §5.5.2 Α6: «Επόμενο που θέλει απόφαση» εστιάζει πεδίο που μπορεί να είναι εκτός οθόνης.
+  useEffect(() => { if (active) rowRef.current?.scrollIntoView?.({ block: 'nearest' }); }, [active]);
   return (
-    <tr className={active ? 'bg-accent' : 'border-b border-border'}>
+    <tr ref={rowRef} className={active ? 'bg-accent' : 'border-b border-border'}>
       <th scope="row" className="p-2 text-left font-normal">
         <button type="button" className="text-left underline-offset-2 hover:underline" onClick={onFocus}>{label}</button>
       </th>
       <td className="p-2 text-muted-foreground">{describe(field.live)}</td>
       <IncomingCell field={field} label={label} readOnly={readOnly} onEdit={onEdit} />
-      <td className="p-2"><Badge variant={STATUS_VARIANT[field.status]}>{t(FIELD_STATUS_KEYS[field.status])}</Badge></td>
+      <td className="p-2"><FieldStatusBadge status={field.status} /></td>
       <td className="p-2 text-xs text-muted-foreground">
         {percent}%{unverifiedNote ? ` · ${unverifiedNote}` : ''}
       </td>
-      <DecisionCell field={field} readOnly={readOnly} onDecide={onDecide} />
+      <ProposalDecisionCell field={field} label={label} readOnly={readOnly} onDecide={onDecide} />
     </tr>
   );
 }

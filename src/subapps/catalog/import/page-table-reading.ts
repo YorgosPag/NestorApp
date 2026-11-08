@@ -18,7 +18,7 @@ import type { PageTable, PageTableCell } from '@/lib/pdf-tables/page-table-types
 import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportPageSetAside, ImportPageUnmappedLine, ImportTarget } from '../types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportPageSetAside, ImportPageUnmappedLine, ImportTarget, PageRegion } from '../types/catalog-import';
 import { ANY_SLOT } from '../types/product';
 import { parseEnteredAmount } from '../values/decimal-amount';
 import { unitForm } from '../values/value-text-codec';
@@ -91,10 +91,13 @@ interface PrintedUnit {
   readonly cell: PageTableCell;
 }
 
-type UnitDefinition = { readonly code: string; readonly symbol: string };
+export type UnitDefinition = { readonly code: string; readonly symbol: string };
 
-/** Πρώτα ακριβώς («mW» δεν είναι «MW»), αλλιώς χωρίς πεζά-κεφαλαία μόνο αν απαντά μία μονάδα («Kg»). */
-function unitInLabel(label: string, units: readonly UnitDefinition[]): UnitDefinition | null {
+/**
+ * Πρώτα ακριβώς («mW» δεν είναι «MW»), αλλιώς χωρίς πεζά-κεφαλαία μόνο αν απαντά μία μονάδα («Kg»). Ο **ένας** κανόνας «ποια μονάδα
+ * τυπώνει η ετικέτα» — τον χρησιμοποιεί και η πρόταση νέας ιδιότητας από γραμμή (§5.5.2 Β3 Γ7).
+ */
+export function unitInLabel(label: string, units: readonly UnitDefinition[]): UnitDefinition | null {
   const forms = units.flatMap((unit) => [{ unit, form: unitForm(unit.symbol) }, { unit, form: unitForm(unit.code) }]);
   const exact = forms.filter(({ form }) => labelPrintsUnit(label, form));
   const found = exact.length > 0 ? exact : forms.filter(({ form }) => labelPrintsUnit(label.toLowerCase(), form.toLowerCase()));
@@ -232,12 +235,19 @@ function lineValues(view: TableView, line: number, data: readonly number[]): str
   return cells.map(printedText).filter((text) => text !== '');
 }
 
+/** Τα κελιά της γραμμής στη σελίδα, για εστίαση στο PDF (§5.5.2 Β3). */
+function lineRegions(view: TableView, line: number, data: readonly number[]): PageRegion[] {
+  const cells = new Set([...labelCells(view, line, data), ...data.flatMap((slot) => view.at(line, slot) ?? [])]);
+  return [...cells].filter((cell) => cell.text.trim() !== '').map((cell) => cell.box);
+}
+
 function unmappedLines(view: TableView, data: readonly number[], lines: readonly LineBinding[], page: number, table: PageTable): ImportPageUnmappedLine[] {
   const taken = new Set(lines.map(({ line }) => line));
   return range(view.lines).filter((line) => !taken.has(line)).flatMap((line) => {
     const values = lineValues(view, line, data);
     if (values.length === 0) return [];
-    return [{ page, table: table.key, line, label: labelCells(view, line, data).map(printedText).join(' · '), values }];
+    const label = labelCells(view, line, data).map(printedText).join(' · ');
+    return [{ page, table: table.key, line, label, values, regions: lineRegions(view, line, data) }];
   });
 }
 

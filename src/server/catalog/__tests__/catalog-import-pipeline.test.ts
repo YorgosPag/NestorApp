@@ -3,6 +3,9 @@
  * Firestore. Το μοντέλο AI και τα bytes του PDF είναι ψεύτικα: καμία πληρωμένη κλήση.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import type { Firestore } from 'firebase-admin/firestore';
 
 import type { AuthContext } from '@/lib/auth';
@@ -18,7 +21,9 @@ import type { RawPageCell } from '@/subapps/catalog/import/page-extraction';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
-import type { CreateImportBatchRequest } from '@/subapps/catalog/types/catalog-import-requests';
+import type { CreateImportBatchRequest, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
+import { importPageReadingKey } from '@/subapps/catalog/import/import-keys';
+import { generateDeterministicCatalogImportPageReadingId } from '@/services/enterprise-id.service';
 import { ANY_SLOT, type CatalogProductDefinition, type CatalogProductModelDefinition } from '@/subapps/catalog/types/product';
 import { ARIES, MFP_GROUP_CODES, RIVAL, SEED_RIGHTS, mfpFamilyWith, rejectionOf } from './catalog-writer-seed';
 
@@ -58,6 +63,7 @@ import { createCatalogFamily } from '../family-writer.server';
 import { applyImportProposal } from '../import-apply.server';
 import { createImportBatch } from '../import-batch-writer.server';
 import { readImportPage } from '../import-readers.server';
+import { setImportLine } from '../import-page-reinterpret.server';
 import { groupTableRowsByLiveModel } from '../import-proposal-plan.server';
 import { proposeGroup, rejectImportProposal, retireStaleSourceProposals, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
 import { readImportBatchDetail } from '../import-reads.server';
@@ -697,6 +703,106 @@ describe('ανάγνωση σελίδας', () => {
       await readImportPage(ARIES, batch.id, 60);
       expect(mapTables).toHaveBeenCalledTimes(2);
       expect(mapTables.mock.calls[1][0].feedback.join(' ')).toContain('heating_h');
+    });
+
+    describe('🚀 §5.5.2 Β3: απόφαση γραμμής ⇒ ξαναερμηνεία χωρίς AI', () => {
+      /** Η φυλαγμένη απάντηση όπως τη γράφει ο αναλυτής: το JSON της τιμής που διάβασε. */
+      const stored = (lines: RawTableMapping['lines']): CatalogTableMapping => {
+        const read = mapping(lines);
+        return read.kind === 'read' ? { ...read, rawText: JSON.stringify(read.value) } : read;
+      };
+
+      async function readBatch(answer: CatalogTableMapping = stored(COOLING)) {
+        const batch = await liveCatalogAndBatch();
+        mapTables.mockResolvedValue(answer);
+        const read = await readImportPage(ARIES, batch.id, 60);
+        const coolingL = read.pages?.unmappedLines?.find((line) => line.values.includes('1134'));
+        if (!coolingL) throw new Error('η γραμμή ψύξης L έπρεπε να μείνει χωρίς πεδίο');
+        mapTables.mockClear();
+        readPage.mockClear();
+        return { batch, coolingL };
+      }
+
+      const request = (line: { readonly table: string; readonly line: number }, decision: SetImportLineRequest['decision']): SetImportLineRequest =>
+        ({ page: 60, table: line.table, line: line.line, decision, bind: null });
+
+      it('🔴 αντιστοίχιση ⇒ τα πεδία μπαίνουν με βεβαιότητα 1, η γραμμή φεύγει, και καμία κλήση μοντέλου', async () => {
+        const { batch, coolingL } = await readBatch();
+        const before = readings().length;
+        const result = await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+        expect(result.outcome).toEqual({ kind: 'settled' });
+        expect(mapTables).not.toHaveBeenCalled();
+        expect(readPage).not.toHaveBeenCalled();
+        expect(readings()).toHaveLength(before);
+        const [proposal] = result.view.proposals;
+        const fields = proposal.rows.flatMap((row) => row.fields).filter((field) => field.target.kind === 'attribute' && field.target.attributeId === attributeId('cooling_l'));
+        expect(fields).toHaveLength(7);
+        expect(fields.every((field) => field.confidence === 1)).toBe(true);
+        expect(result.view.batch.pages?.unmappedLines?.some((line) => line.line === coolingL.line)).toBe(false);
+      });
+
+      it('αναίρεση της αντιστοίχισης ⇒ η γραμμή γυρίζει χωρίς πεδίο', async () => {
+        const { batch, coolingL } = await readBatch();
+        await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+        const undone = await setImportLine(ARIES, batch.id, request(coolingL, null));
+        expect(undone.outcome).toEqual({ kind: 'settled' });
+        expect(undone.view.batch.pages?.unmappedLines?.some((line) => line.line === coolingL.line)).toBe(true);
+        expect(undone.view.batch.pages?.lineOverrides ?? []).toEqual([]);
+      });
+
+      it('αγνόηση: μόνο κατάσταση — η γραμμή μένει δηλωμένη, η απόφαση φυλάσσεται, ιδεμπότητη', async () => {
+        const { batch, coolingL } = await readBatch();
+        await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'ignore' }));
+        const again = await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'ignore' }));
+        expect(again.view.batch.pages?.lineOverrides).toEqual([expect.objectContaining({ page: 60, table: coolingL.table, line: coolingL.line, decision: { kind: 'ignore' } })]);
+        expect(again.view.batch.pages?.unmappedLines?.some((line) => line.line === coolingL.line)).toBe(true);
+      });
+
+      it('🔴 η πιο πρόσφατη ανάγνωση κατά χρόνο, όχι κατά δοκιμή: παλιά δεύτερη δοκιμή δεν κρίνει', async () => {
+        const { batch, coolingL } = await readBatch();
+        const staleId = generateDeterministicCatalogImportPageReadingId(ARIES.companyId, importPageReadingKey(batch.id, 60, 'table', 1));
+        fake.seed('catalog_import_page_readings', staleId, { companyId: ARIES.companyId, batchId: batch.id, page: 60, route: 'table', attempt: 1, model: 'gpt-4o', rawText: 'not json', outcome: 'read', abandoned: false, rawTextClipped: false, usage: USED, feedback: [], tables: [], createdAt: '2000-01-01T00:00:00.000Z', createdBy: 'old' });
+        const result = await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+        expect(result.outcome).toEqual({ kind: 'settled' });
+      });
+
+      it('φυλαγμένη απάντηση που δεν διαβάζεται ⇒ άρνηση `readingMissing`, τίποτα δεν γράφεται', async () => {
+        const { batch, coolingL } = await readBatch(mapping(COOLING));
+        const result = await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+        expect(result.outcome).toEqual({ kind: 'refused', reason: 'readingMissing' });
+        expect(result.view.batch.pages?.lineOverrides).toBeUndefined();
+      });
+
+      it('🔴 η ανασύνθεση άλλαξε ⇒ άρνηση `tablesDrifted`: οι αριθμοί γραμμών δεν σημαίνουν πια το ίδιο', async () => {
+        const { batch, coolingL } = await readBatch();
+        mockPdfPage.current = ARIES_PAGES['86'] as typeof EMPTY_PDF_PAGE;
+        const result = await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+        expect(result.outcome).toEqual({ kind: 'refused', reason: 'tablesDrifted' });
+        expect(result.view.batch.pages?.lineOverrides).toBeUndefined();
+      });
+
+      it('πρόταση που απορρίφθηκε ⇒ άρνηση `proposalClosed`', async () => {
+        const { batch, coolingL } = await readBatch();
+        const [proposal] = (await readImportBatchDetail(ARIES, batch.id)).proposals;
+        await rejectImportProposal(ARIES, proposal.id, proposal.revision);
+        const result = await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'ignore' }));
+        expect(result.outcome).toEqual({ kind: 'refused', reason: 'proposalClosed' });
+      });
+
+      it('σελίδα που διαβάστηκε με όραση ⇒ άρνηση `readingVision`', async () => {
+        const batch = await liveCatalogAndBatch();
+        const seen = [[5, 5], [7, 5], [8, 6]].map(([row, col]) => ({ cell: `r${row}c${col}`, seen: '7' }));
+        mapTables.mockResolvedValue(mapping(COOLING, seen));
+        readPage.mockResolvedValue(reading(2700));
+        await readImportPage(ARIES, batch.id, 60);
+        const result = await setImportLine(ARIES, batch.id, request({ table: 't0', line: 9 }, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+        expect(result.outcome).toEqual({ kind: 'refused', reason: 'readingVision' });
+      });
+
+      it('🔒 δομικά χωρίς πληρωμή: η ξαναερμηνεία δεν εισάγει τον αναλυτή', () => {
+        const source = readFileSync(join(__dirname, '..', 'import-page-reinterpret.server.ts'), 'utf8');
+        expect(source).not.toMatch(/page-analyzer/);
+      });
     });
   });
 

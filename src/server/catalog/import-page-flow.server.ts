@@ -22,13 +22,14 @@ import type { PageToken } from '@/subapps/catalog/import/page-tokens';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import type { ExtractedGroup, ImportPageRoute, ImportPageSetAside, ImportPageUnmappedLine, ImportPagesUsage } from '@/subapps/catalog/types/catalog-import';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
+import { IMPORT_PAGE_READ_ATTEMPTS } from '@/subapps/catalog/vocabulary/catalog-import';
 import { CatalogWriteError } from './catalog-write-error';
 import { createCatalogPageAnalyzer } from './import-page-analyzer.server';
 import { recordPageReading } from './import-page-reading.server';
 import { proposeGroup, retireStalePageProposals, type StoredImportProposal } from './import-proposal-writer.server';
 
 /** Πόσες αναγνώσεις δικαιούται μια σελίδα, σε όλες τις διαδρομές μαζί. */
-const FEEDBACK_ATTEMPTS = 2;
+const FEEDBACK_ATTEMPTS = IMPORT_PAGE_READ_ATTEMPTS;
 
 export interface PageSpecs {
   readonly specs: readonly PageAttributeSpec[];

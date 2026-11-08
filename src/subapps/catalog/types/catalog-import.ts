@@ -28,6 +28,7 @@ import type { PriceQuantity } from '../vocabulary/pricing';
 import type { BRAND_FIELD, TradeIdentityField } from '../values/trade-identity';
 import type {
   ImportBatchStatus,
+  ImportDecisionSource,
   ImportFieldDecision,
   ImportFieldStatus,
   ImportIssueCode,
@@ -170,6 +171,8 @@ export interface ImportProposalField {
   readonly anchor: SourceAnchor | null;
   readonly issues: readonly ImportIssue[];
   readonly decision: ImportFieldDecision;
+  /** §5.5.2 Α1: ποιος αποφάσισε. Απόν σε προτάσεις παλαιότερες της Φάσης 4β ⇒ `rule` (`decisionSourceOf`). */
+  readonly decisionBy?: ImportDecisionSource;
   /** Το `ExtractedCell.corroboratedBy` του κελιού που κέρδισε: ο άνθρωπος βλέπει ότι η γραμμή Btu/h δεν χάθηκε. */
   readonly corroboratedBy?: readonly string[];
 }
@@ -269,6 +272,24 @@ export interface ImportPageUnmappedLine {
   readonly label: string;
   /** Οι τιμές της, στη σειρά της πηγής· ενωμένο κελί μετρά μία φορά. */
   readonly values: readonly string[];
+  /** Τα κελιά της γραμμής στη σελίδα (ετικέτες + τιμές), για εστίαση στο PDF (§5.5.2 Β3). Απούσα σε παρτίδες παλαιότερες. */
+  readonly regions?: readonly PageRegion[];
+}
+
+/** Η ανθρώπινη απόφαση για μια γραμμή πίνακα (§5.5.2 Β3 Γ1). Δείχνει **id** ιδιότητας: ο κωδικός μετονομάζεται. */
+export type ImportLineDecision = { readonly kind: 'attribute'; readonly attributeId: string } | { readonly kind: 'ignore' };
+
+/**
+ * Απόφαση γραμμής φυλαγμένη στην παρτίδα. Κλειδί `(page, table, line)`, όπως στη `ImportPageUnmappedLine`: η ανασύνθεση του πίνακα
+ * είναι ντετερμινιστική, άρα η ίδια θέση είναι η ίδια γραμμή όσο δεν αλλάζει η ανασύνθεση (`tablesDrifted`).
+ */
+export interface ImportLineOverride {
+  readonly page: number;
+  readonly table: string;
+  readonly line: number;
+  readonly decision: ImportLineDecision;
+  readonly by: string;
+  readonly at: string;
 }
 
 /**
@@ -295,6 +316,8 @@ export interface ImportBatchPages {
   readonly unmappedLines?: readonly ImportPageUnmappedLine[];
   /** Απούσα σε παρτίδες παλαιότερες της Ε8. */
   readonly textless?: readonly ImportPageTextless[];
+  /** Αποφάσεις ανθρώπου για γραμμές πινάκων (§5.5.2 Β3). Απούσα = καμία. */
+  readonly lineOverrides?: readonly ImportLineOverride[];
 }
 
 export interface ImportBatchDefinition {

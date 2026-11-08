@@ -19,6 +19,8 @@ import type {
   ImportFieldStatus,
   ImportPriceField,
   ImportProposalStatus,
+  ImportLineBindLevel,
+  ImportLineRefusal,
   ImportRowAction,
 } from '@/subapps/catalog/vocabulary/catalog-import';
 
@@ -82,3 +84,32 @@ export const TRADE_FIELD_KEYS: Readonly<Record<ImportTradeField, string>> = {
 
 /** Η σειρά τους στον επιλογέα: πρώτα ο κωδικός που ταυτίζει. */
 export const IMPORT_TRADE_FIELDS: readonly ImportTradeField[] = ['gtin', 'mpn', 'brand', 'noGtinReason'];
+/** §5.5.2 Β3 Γ4: γιατί δεν ξαναερμηνεύτηκε ο πίνακας. */
+export const LINE_REFUSAL_KEYS: Readonly<Record<ImportLineRefusal, string>> = {
+  readingMissing: 'review.lines.refusalReadingMissing',
+  readingVision: 'review.lines.refusalReadingVision',
+  readingClipped: 'review.lines.refusalReadingClipped',
+  tablesDrifted: 'review.lines.refusalTablesDrifted',
+  proposalClosed: 'review.lines.refusalProposalClosed',
+  lineUnknown: 'review.lines.refusalLineUnknown',
+};
+
+export const LINE_LEVEL_KEYS: Readonly<Record<ImportLineBindLevel, string>> = {
+  shared: 'review.lines.levelShared',
+  leaf: 'review.lines.levelLeaf',
+};
+
+/** §5.5.2 Β3 Γ8: η κατάσταση μιας γραμμής χωρίς πεδίο, με λέξη. */
+export const LINE_STATE_KEYS = {
+  pending: 'review.lines.statePending',
+  ignored: 'review.lines.stateIgnored',
+  mapped: 'review.lines.stateMapped',
+  saving: 'review.lines.stateSaving',
+  refused: 'review.lines.stateRefused',
+} as const;
+export type LineState = keyof typeof LINE_STATE_KEYS;
+
+export const LINE_LEVEL_HINT_KEYS: Readonly<Record<ImportLineBindLevel, string>> = {
+  shared: 'review.lines.levelHintShared',
+  leaf: 'review.lines.levelHintLeaf',
+};

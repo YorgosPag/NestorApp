@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SortableList } from '@/components/ui/sortable/SortableList';
 import { reorderByMove } from '@/components/ui/sortable/sortable-model';
 import type { FamilyRecord } from '@/services/catalog/catalog-api.client';
+import { withBoundAttributes } from '@/subapps/catalog/schema/family-binding';
 import type { FamilyAttributeBinding } from '@/subapps/catalog/types/family';
 import { CATALOG_CHANNELS, type CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 import { ATTRIBUTE_TYPE_ICONS, ATTRIBUTE_TYPE_KEYS, CHANNEL_KEYS } from '../shared/catalog-labels';
@@ -88,8 +89,7 @@ function AddControls(props: FamilyAttributesTabProps) {
   const [newOpen, setNewOpen] = useState(false);
   const bound = useMemo(() => new Set(draft.attributes.map((binding) => binding.attributeId)), [draft.attributes]);
   const available = library.attributes.filter((attribute) => !bound.has(attribute.id));
-  const bind = (ids: readonly string[]) =>
-    update({ ...draft, attributes: [...draft.attributes, ...ids.filter((id) => !bound.has(id)).map((attributeId) => ({ attributeId, requiredChannels: [] }))] });
+  const bind = (ids: readonly string[]) => update(withBoundAttributes(draft, ids));
   const groupsWithFree = library.groups.filter((group) => available.some((attribute) => attribute.groupId === group.id));
   return (
     <section className="flex flex-wrap items-center gap-2 border-t pt-3" aria-label={t('families.attributes.add')}>

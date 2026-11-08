@@ -18,7 +18,7 @@
  */
 
 import type { ExtractedCell, ImportFieldValue, ImportIssue, ImportProposalField } from '../types/catalog-import';
-import { IMPORT_REVIEW_CONFIDENCE, type ImportFieldDecision, type ImportFieldStatus } from '../vocabulary/catalog-import';
+import { IMPORT_REVIEW_CONFIDENCE, type ImportDecisionSource, type ImportFieldDecision, type ImportFieldStatus } from '../vocabulary/catalog-import';
 
 export type ImportValueEquality = (left: ImportFieldValue, right: ImportFieldValue) => boolean;
 
@@ -53,8 +53,11 @@ export function proposalFieldOf({ cell, incoming, issues, live, base, same }: Pr
   const status = incoming === null || same === null ? unreadStatus : fieldStatusOf(incoming, live, base, same);
   const facts = { status, confidence: cell.confidence, issues: [...cell.flags, ...issues], anchor: cell.anchor, incoming };
   const corroboration = cell.corroboratedBy && cell.corroboratedBy.length > 0 ? { corroboratedBy: cell.corroboratedBy } : {};
-  return { ...facts, ...corroboration, target: cell.target, sourceText: cell.text, live, base, decision: defaultDecisionOf(facts) };
+  return { ...facts, ...corroboration, target: cell.target, sourceText: cell.text, live, base, decision: defaultDecisionOf(facts), decisionBy: 'rule' };
 }
+
+/** §5.5.2 Α1: πρόταση παλαιότερη της Φάσης 4β δεν δηλώνει προέλευση· τότε την έδωσε ο κανόνας, γιατί ο άνθρωπος δεν άφηνε ίχνος. */
+export const decisionSourceOf = (field: Pick<ImportProposalField, 'decisionBy'>): ImportDecisionSource => field.decisionBy ?? 'rule';
 
 type DecisionFacts = Pick<ImportProposalField, 'status' | 'confidence' | 'issues' | 'anchor' | 'incoming'>;
 

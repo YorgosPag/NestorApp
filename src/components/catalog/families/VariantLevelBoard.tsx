@@ -18,21 +18,13 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { KanbanBoard, type KanbanColumnDef } from '@/components/ui/sortable/KanbanBoard';
 import type { AttributeRecord } from '@/services/catalog/catalog-api.client';
+import { placeAttribute } from '@/subapps/catalog/schema/family-binding';
 import type { VariantScheme } from '@/subapps/catalog/types/family';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 
 /** Στήλη: `common` ή ο δείκτης επιπέδου ως κείμενο. */
 const COMMON = 'common';
 
-export function placeAttribute(scheme: VariantScheme, attributeId: string, column: string): VariantScheme {
-  return {
-    ...scheme,
-    levels: scheme.levels.map((level, index) => {
-      const rest = level.attributeIds.filter((id) => id !== attributeId);
-      return { ...level, attributeIds: String(index) === column ? [...rest, attributeId] : rest };
-    }),
-  };
-}
 
 function columnOf(scheme: VariantScheme, attributeId: string): string {
   const index = scheme.levels.findIndex((level) => level.attributeIds.includes(attributeId));

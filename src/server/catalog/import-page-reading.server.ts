@@ -17,7 +17,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateDeterministicCatalogImportPageReadingId } from '@/services/enterprise-id.service';
 import { importPageReadingKey } from '@/subapps/catalog/import/import-keys';
-import type { ImportPageReadingDefinition } from '@/subapps/catalog/types/catalog-import';
+import type { ImportPageReadingDefinition, ImportPageRoute } from '@/subapps/catalog/types/catalog-import';
+import { IMPORT_PAGE_READ_ATTEMPTS } from '@/subapps/catalog/vocabulary/catalog-import';
 
 const logger = createModuleLogger('CatalogImportPageReading');
 
@@ -36,3 +37,33 @@ export async function recordPageReading(ctx: AuthContext, reading: ImportPageRea
     logger.warn('Page reading was not kept', { batchId: reading.batchId, page: reading.page, error: String(error) });
   }
 }
+
+/** Ό,τι φυλάχτηκε, με τη σφραγίδα του γραφέα. */
+export interface StoredPageReading extends ImportPageReadingDefinition {
+  readonly rawTextClipped: boolean;
+  readonly createdAt: string;
+}
+
+const PAGE_ROUTES: readonly ImportPageRoute[] = ['table', 'vision'];
+
+/**
+ * Όλες οι φυλαγμένες απαντήσεις μιας σελίδας, νεότερη πρώτη (§5.5.2 Β3 Γ3). Τα ids είναι ντετερμινιστικά και φραγμένα
+ * (διαδρομή × δοκιμή): ανάγνωση με `getAll`, χωρίς ερώτημα, άρα χωρίς δείκτη. 🔑 Νεότερη κατά **`createdAt`**, όχι κατά δοκιμή: νέα
+ * ανάγνωση με μία δοκιμή αφήνει ζωντανή την παλιά δεύτερη.
+ */
+export async function readPageReadings(ctx: AuthContext, batchId: string, page: number): Promise<StoredPageReading[]> {
+  const db = getAdminFirestore();
+  const refs = PAGE_ROUTES.flatMap((route) => Array.from({ length: IMPORT_PAGE_READ_ATTEMPTS }, (_, attempt) => {
+    const id = generateDeterministicCatalogImportPageReadingId(ctx.companyId, importPageReadingKey(batchId, page, route, attempt));
+    return db.collection(COLLECTIONS.CATALOG_IMPORT_PAGE_READINGS).doc(id);
+  }));
+  const snapshots = await db.getAll(...refs);
+  const readings = snapshots.flatMap((snapshot) => {
+    const data = snapshot.exists ? (snapshot.data() as StoredPageReading & { readonly companyId?: string }) : null;
+    return data !== null && data.companyId === ctx.companyId ? [data] : [];
+  });
+  return readings.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || readingOrder(b) - readingOrder(a));
+}
+
+/** Ισοπαλία χρόνου: η ροή διαβάζει πρώτα πίνακα και μετά όραση, και τη δοκιμή 1 μετά τη 0. */
+const readingOrder = (reading: Pick<StoredPageReading, 'route' | 'attempt'>): number => PAGE_ROUTES.indexOf(reading.route) * IMPORT_PAGE_READ_ATTEMPTS + reading.attempt;

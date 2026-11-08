@@ -12,6 +12,7 @@ import 'server-only';
 
 import type { AuthContext } from '@/lib/auth';
 import { canonicalJson } from '@/lib/legal/canonical-json';
+import { decisionSourceOf } from '@/subapps/catalog/import/field-diff';
 import { importProposalKey } from '@/subapps/catalog/import/import-keys';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type {
@@ -119,10 +120,14 @@ function editedGroup(group: ExtractedGroup, inputs: readonly ImportFieldEditInpu
   return { ...group, modelCode: modelCode ?? group.modelCode, rows, sharedCells: editedCells(`model:${group.groupKey}`, group.sharedCells, edits) };
 }
 
-/** Απόφαση ανθρώπου που ισχύει ακόμη: ίδια εισερχόμενη τιμή με αυτή πάνω στην οποία αποφάσισε. */
+/**
+ * Απόφαση που ισχύει ακόμη: ίδια εισερχόμενη τιμή με αυτή πάνω στην οποία πάρθηκε. Η προέλευση (§5.5.2 Α1) ταξιδεύει **μαζί**
+ * με την απόφαση: ανθρώπινη απόφαση που κρατήθηκε μένει ανθρώπινη.
+ */
 function carriedDecision(next: ImportProposalField, previous: ImportProposalField | undefined): ImportProposalField {
   if (!previous || previous.decision === 'pending') return next;
-  return canonicalJson(previous.incoming) === canonicalJson(next.incoming) && next.status !== 'unchanged' ? { ...next, decision: previous.decision } : next;
+  const holds = canonicalJson(previous.incoming) === canonicalJson(next.incoming) && next.status !== 'unchanged';
+  return holds ? { ...next, decision: previous.decision, decisionBy: decisionSourceOf(previous) } : next;
 }
 
 function carryDecisions(previous: readonly ImportProposalRow[], next: readonly ImportProposalRow[]): ImportProposalRow[] {
@@ -137,7 +142,7 @@ function withDecisions(rows: readonly ImportProposalRow[], request: UpdateImport
     fields: row.fields.map((field) => {
       const decision = decisions.get(fieldAddress(row.rowKey, importTargetKey(field.target)));
       // Τιμή που δεν διαβάστηκε δεν γίνεται αποδεκτή: δεν υπάρχει τι να γραφτεί, θέλει διόρθωση.
-      return decision === undefined || (decision === 'accept' && field.incoming === null) ? field : { ...field, decision };
+      return decision === undefined || (decision === 'accept' && field.incoming === null) ? field : { ...field, decision, decisionBy: 'human' as const };
     }),
   }));
 }

@@ -7,27 +7,18 @@
  * 🔑 **Οι σελίδες διαβάζονται μία-μία από εδώ**: ένα αίτημα ανά σελίδα, ζωντανή πρόοδος, συνέχιση μετά από διακοπή (η
  *    διαβασμένη σελίδα δεν ξαναπληρώνεται). Ο διακομιστής κρίνει· το hook απλώς προχωρά στην επόμενη.
  * 🔑 **Κάθε απάντηση αντικαθιστά την πρόταση**: ο διακομιστής ξανακρίνει σε κάθε απόφαση, άρα η οθόνη δεν μαντεύει ποτέ τα ευρήματα.
+ *    Η απόφαση φαίνεται αμέσως και στέλνεται σειριακά (`proposal-change-queue`, §5.5.2 Α5)· η επαναφόρτωση τη σέβεται.
  */
 
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import {
-  applyImportProposal,
-  discardImportBatch,
-  fetchImportBatch,
-  readImportPage,
-  rejectImportProposal,
-  updateImportProposal,
-} from '@/services/catalog/catalog-import-api.client';
+import { discardImportBatch, fetchImportBatch, readImportPage } from '@/services/catalog/catalog-import-api.client';
 import { catalogFailureOf, type CatalogFailure } from '@/services/catalog/catalog-failure';
 import type { ImportBatchPages } from '@/subapps/catalog/types/catalog-import';
-import type {
-  ImportBatchDetailView,
-  ImportFieldDecisionInput,
-  ImportFieldEditInput,
-  ImportProposalWire,
-} from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_PAGE_ESTIMATED_COST_USD } from '@/subapps/catalog/vocabulary/catalog-import';
+import { createQueueState, overlayView, queuedDecisionsOf, useProposalChangeQueue } from './proposal-change-queue';
+import { useLineDecisions } from './use-line-decisions';
 
 /** Οι σελίδες που μένουν: όσες δεν έχουν κριθεί, και όσες απέτυχαν όταν ζητηθεί ρητά επανάληψη. */
 export function pagesToRead(pages: ImportBatchPages, retryFailed: boolean): number[] {
@@ -42,34 +33,7 @@ export function costPerPage(pages: ImportBatchPages): number {
   return spent !== null && judged > 0 ? spent / judged : IMPORT_PAGE_ESTIMATED_COST_USD;
 }
 
-export interface ProposalChange {
-  readonly decisions?: readonly ImportFieldDecisionInput[];
-  readonly edits?: readonly ImportFieldEditInput[];
-  readonly modelCode?: string | null;
-}
-
-type SetView = Dispatch<SetStateAction<ImportBatchDetailView | null>>;
 type SetFailure = (failure: CatalogFailure | null) => void;
-
-function useProposalActions(setView: SetView, setFailure: SetFailure, reload: () => Promise<void>) {
-  const run = useCallback(async (work: () => Promise<ImportProposalWire>) => {
-    setFailure(null);
-    try {
-      const next = await work();
-      setView((current) => current && { ...current, proposals: current.proposals.map((proposal) => (proposal.id === next.id ? next : proposal)) });
-      await reload();
-    } catch (cause) {
-      setFailure(catalogFailureOf(cause));
-    }
-  }, [reload, setFailure, setView]);
-
-  const change = useCallback((proposal: ImportProposalWire, input: ProposalChange) => run(() =>
-    updateImportProposal(proposal.id, { expectedRevision: proposal.revision, decisions: input.decisions ?? [], edits: input.edits ?? [], modelCode: input.modelCode ?? null }),
-  ), [run]);
-  const apply = useCallback((proposal: ImportProposalWire) => run(() => applyImportProposal(proposal.id, proposal.revision)), [run]);
-  const reject = useCallback((proposal: ImportProposalWire) => run(() => rejectImportProposal(proposal.id, proposal.revision)), [run]);
-  return { change, apply, reject };
-}
 
 function usePageReader(batchId: string, view: ImportBatchDetailView | null, setFailure: SetFailure, reload: () => Promise<void>) {
   const [reading, setReading] = useState(false);
@@ -112,10 +76,12 @@ function usePageReader(batchId: string, view: ImportBatchDetailView | null, setF
 export function useImportBatch(batchId: string) {
   const [view, setView] = useState<ImportBatchDetailView | null>(null);
   const [failure, setFailure] = useState<CatalogFailure | null>(null);
+  const queued = useRef(createQueueState());
 
   const reload = useCallback(async () => {
     try {
-      setView(await fetchImportBatch(batchId));
+      const fresh = await fetchImportBatch(batchId);
+      setView(overlayView(fresh, queuedDecisionsOf(queued.current)));
     } catch (cause) {
       setFailure(catalogFailureOf(cause));
     }
@@ -135,5 +101,6 @@ export function useImportBatch(batchId: string) {
     }
   }, [reload, view]);
 
-  return { view, failure, reload, discard, ...usePageReader(batchId, view, setFailure, reload), ...useProposalActions(setView, setFailure, reload) };
+  const changes = useProposalChangeQueue({ setView, setFailure, reload, queued });
+  return { view, failure, reload, discard, ...usePageReader(batchId, view, setFailure, reload), ...changes, ...useLineDecisions(changes.line) };
 }

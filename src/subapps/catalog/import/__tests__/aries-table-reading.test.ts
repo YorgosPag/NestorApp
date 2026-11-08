@@ -11,7 +11,8 @@ import { MFP_ATTRIBUTE_MAP, MFP_FAMILY } from '../../__tests__/fixtures/mfp-fan-
 import { reconstructPageTables } from '@/lib/pdf-tables/reconstruct-page-tables';
 import type { PageRule, PageTable } from '@/lib/pdf-tables/page-table-types';
 import { PLATFORM_MEASUREMENT_REGISTRY } from '../../measurement/measurement-registry';
-import type { ExtractedCell, ExtractedGroup, ImportProposalField, ImportProposalRow } from '../../types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ImportLineOverride, ImportPageUnmappedLine, ImportProposalField, ImportProposalRow } from '../../types/catalog-import';
+import { applyLineOverrides, pendingUnmappedLines } from '../page-line-overrides';
 import { buildAttributeRows, type AttributeProposalContext, type LiveHolder } from '../build-attribute-proposal';
 import { EMPTY_LIVE_TRADE_IDENTITY } from '../trade-identity-fields';
 import { judgeProposal } from '../judge-proposal';
@@ -335,5 +336,50 @@ describe('Η όραση μένει ζώνη ασφαλείας (Ε5)', () => {
   it('σαρωμένη σελίδα ή λίγα πεδία δεν κρίνονται', () => {
     expect(evidenceFindings([groupOf(Array(8).fill(unproved(null)))])).toEqual([]);
     expect(evidenceFindings([groupOf(Array(2).fill(unproved(false)))])).toEqual([]);
+  });
+});
+
+describe('🚀 §5.5.2 Β3: η απόφαση γραμμής ξαναδιαβάζει τον πίνακα χωρίς AI (σελ. 85)', () => {
+  const context = contextOf('85');
+  const [main, parts] = context.tables;
+  /** Το μοντέλο «ξέχασε» την παροχή αέρα M: ακριβώς το εύρημα του Giorgio στη Fan coil. */
+  const answer = variantsMapping(main, page85Lines.filter(([, attribute]) => attribute !== 'airflow_m'));
+  const before = readPageTables({ tables: [answer, accessories(parts)] }, context);
+  const codeById = new Map([...MFP_ATTRIBUTE_MAP].map(([id, attribute]) => [id, attribute.code]));
+  const known = new Set(codeById.values());
+
+  function airflowM(): ImportPageUnmappedLine {
+    const line = before.unmappedLines.find((entry) => entry.line === lineOf(main, '280'));
+    if (!line) throw new Error('η γραμμή «280» έπρεπε να μείνει χωρίς πεδίο');
+    return line;
+  }
+
+  const decided = (decision: ImportLineOverride['decision']): ImportLineOverride =>
+    ({ page: 85, table: main.key, line: airflowM().line, decision, by: 'usr_1', at: '2026-11-08T10:00:00.000Z' });
+
+  it('χωρίς απόφαση: η γραμμή μένει χωρίς πεδίο, με τιμές και περιοχές για το PDF', () => {
+    expect(airflowM().values).toContain('280');
+    expect(airflowM().regions?.length ?? 0).toBeGreaterThan(0);
+    expect(cellsOf(before.groups[0], 'airflow_m')).toHaveLength(0);
+  });
+
+  it('🔴 αντιστοίχιση ⇒ οι τιμές έρχονται από τον πίνακα, με βεβαιότητα 1 και μονάδα από τη γραμμή — και η γραμμή φεύγει από τις χωρίς πεδίο', () => {
+    const { mapping } = applyLineOverrides(answer, [decided({ kind: 'attribute', attributeId: 'airflow_m' })], codeById, known);
+    const after = readPageTables({ tables: [mapping, accessories(parts)] }, context);
+    const cells = cellsOf(after.groups[0], 'airflow_m');
+    expect(cells).toHaveLength(CODES_85.length);
+    expect(cells.every((cell) => cell.confidence === 1 && cell.unitCode !== null)).toBe(true);
+    expect(after.unmappedLines.some((entry) => entry.line === airflowM().line)).toBe(false);
+  });
+
+  it('ίδια απάντηση + ίδια απόφαση ⇒ ίδιο αποτέλεσμα (ντετερμινιστικό)', () => {
+    const run = () => readPageTables({ tables: [applyLineOverrides(answer, [decided({ kind: 'attribute', attributeId: 'airflow_m' })], codeById, known).mapping, accessories(parts)] }, context);
+    expect(run()).toEqual(run());
+  });
+
+  it('η αγνόηση δεν αλλάζει τίποτα στην ανάγνωση: μόνο βγάζει τη γραμμή από την εκκρεμότητα', () => {
+    const ignored = decided({ kind: 'ignore' });
+    expect(applyLineOverrides(answer, [ignored], codeById, known).mapping).toEqual(answer);
+    expect(pendingUnmappedLines(before.unmappedLines, [ignored]).some((entry) => entry.line === airflowM().line)).toBe(false);
   });
 });
