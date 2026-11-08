@@ -24,6 +24,7 @@ import 'server-only';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { skeleton } from '@/lib/unicode/skeleton';
 import { generateDeterministicCatalogUniqueValueId } from '@/services/enterprise-id.service';
+import { isPlatformReservationKey } from '@/subapps/catalog/derived/trade-keys';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { CatalogValueHolderKind } from '@/subapps/catalog/types/product';
 import { readActiveByIds } from './catalog-library-reads.server';
@@ -129,6 +130,8 @@ async function readHeld(scope: CatalogTx, claims: readonly Claim[]) {
 async function similarityWarnings(scope: CatalogTx, claims: readonly Claim[]): Promise<Map<string, CatalogIssue[]>> {
   const warnings = new Map<string, CatalogIssue[]>();
   for (const { doc, path } of claims) {
+    // Κλειδί πλατφόρμας (`@gtin`): μόνο ψηφία ⇒ ίδιος σκελετός σημαίνει ίδιο κλειδί — το ερώτημα δεν θα έβρισκε ποτέ τίποτα.
+    if (isPlatformReservationKey(doc.attributeId)) continue;
     const snap = await scope.tx.get(
       scope.db
         .collection(COLLECTIONS.CATALOG_UNIQUE_VALUES)

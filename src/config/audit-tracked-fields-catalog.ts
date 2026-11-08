@@ -90,13 +90,19 @@ export const CATALOG_FAMILY_TRACKED_FIELDS = defs(
 // ── Φάση 2 (ADR-923 §5.10) — δεδομένα. Τα παράγωγα (`derived`) ΔΕΝ παρακολουθούνται: τα γράφει ο γραφέας,
 //    και ένας επανυπολογισμός πληρότητας δεν είναι «αλλαγή» κανενός ανθρώπου.
 
+// ADR-934 Σ1β: η ταυτότητα εμπορίου (μάρκα · GTIN · MPN · «χωρίς GTIN») — **επίπεδα** πεδία ⇒ μία γραμμή ιστορικού ανά
+// πεδίο («GTIN: — → 5201234567890»). Τα κλειδιά της (`derived.tradeKeys`) είναι παράγωγα και ΔΕΝ παρακολουθούνται.
 export const CATALOG_PRODUCT_MODEL_TRACKED_FIELDS = {
-  ...defs(['familyId', 'variantSchemeCode', 'parentId', 'isDeleted'], ['categoryIds', 'noValueReasons']),
+  ...defs(['familyId', 'variantSchemeCode', 'parentId', 'brand', 'isDeleted'], ['categoryIds', 'noValueReasons']),
   [CATALOG_VALUES_AUDIT_FIELD]: valuesByAttribute,
 };
 
 export const CATALOG_PRODUCT_TRACKED_FIELDS = {
-  ...defs(['modelId', 'familyId', 'isDeleted'], ['categoryIds', 'noValueReasons']),
+  ...defs(
+    ['modelId', 'familyId', 'brand', 'gtin', 'mpn', 'noGtinReason', 'isDeleted'],
+    ['categoryIds', 'noValueReasons'],
+    { noGtinReason: enumOf(V.catalogNoValueReason) },
+  ),
   [CATALOG_VALUES_AUDIT_FIELD]: valuesByAttribute,
 };
 

@@ -39,7 +39,7 @@ describe('catalogSortKey', () => {
 
 describe('παράγωγα λίστας πάνω στο MFP × 7', () => {
   it('SKU: αναγνωριστικό = η πρώτη unique ιδιότητα (κωδικός προμηθευτή) · sortKey από την ετικέτα', () => {
-    const derived = productChainDerived(schema, mfpChain(MFP_VARIANTS[2], 2), own(MFP_VARIANTS[2]));
+    const derived = productChainDerived(schema, mfpChain(MFP_VARIANTS[2], 2), own(MFP_VARIANTS[2]), MFP_VARIANTS[2]);
     const code = MFP_VARIANTS[2].values.model_code?.['*']?.['*'];
     expect(code?.type).toBe('text');
     expect(derived.identifier).toBe(code?.type === 'text' ? code.text : null);
@@ -48,7 +48,7 @@ describe('παράγωγα λίστας πάνω στο MFP × 7', () => {
   });
 
   it('οι 7 παραλλαγές ταξινομούνται με τη ΣΕΙΡΑ του καταλόγου (σελ. 60), όχι λεξικογραφικά', () => {
-    const keys = MFP_VARIANTS.map((variant, index) => productChainDerived(schema, mfpChain(variant, index), own(variant)).sortKey);
+    const keys = MFP_VARIANTS.map((variant, index) => productChainDerived(schema, mfpChain(variant, index), own(variant), variant).sortKey);
     expect([...keys].sort()).toEqual(keys);
   });
 

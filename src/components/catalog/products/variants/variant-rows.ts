@@ -18,6 +18,12 @@ import type { VariantScheme } from '@/subapps/catalog/types/family';
 import type { CatalogProductDefinition, ProductValues } from '@/subapps/catalog/types/product';
 import type { VariantBatch } from '@/subapps/catalog/types/product-requests';
 import { axesAtDepth, leafDepth } from '@/subapps/catalog/values/attribute-levels';
+import {
+  EMPTY_BRAND,
+  EMPTY_TRADE_IDENTITY,
+  TRADE_IDENTITY_FIELDS,
+  type TradeIdentityField,
+} from '@/subapps/catalog/values/trade-identity';
 
 export interface VariantRow {
   /** Σταθερή ταυτότητα της γραμμής = το id της παραλλαγής (οι νέες το παίρνουν στον πελάτη). */
@@ -52,7 +58,11 @@ export function variantDraftOf(members: readonly StoredMemberShape[], parentId: 
 
 /** Νέες γραμμές από τις τιμές αξόνων του γεννήτορα (id γεννημένο στον πελάτη). */
 export function newVariantRows(combos: readonly ProductValues[], template: Pick<CatalogProductDefinition, 'modelId' | 'familyId'>, idOf: () => string): VariantRow[] {
-  return combos.map((values) => ({ id: idOf(), stored: null, definition: { ...template, values, noValueReasons: {}, categoryIds: [] } }));
+  return combos.map((values) => ({
+    id: idOf(),
+    stored: null,
+    definition: { ...template, values, noValueReasons: {}, categoryIds: [], ...EMPTY_BRAND, ...EMPTY_TRADE_IDENTITY },
+  }));
 }
 
 /** Ισότητα **περιεχομένου** (όχι σειράς κλειδιών): το Firestore επιστρέφει τα maps με άλλη σειρά απ' ό,τι τα έχτισε η επικόλληση. */
@@ -82,15 +92,26 @@ export function isDraftDirty(draft: VariantDraft): boolean {
   return draft.removed.length > 0 || draft.rows.some(isRowChanged);
 }
 
-/** Τα ευρήματα ενός κελιού (`variants.<id>.values.<attr>` και ό,τι από κάτω). */
-export function cellIssues(issues: readonly CatalogIssue[], rowId: string, attributeId: string): CatalogIssue[] {
-  const path = `${memberPath(rowId)}.values.${attributeId}`;
-  return issues.filter((issue) => issue.path === path || issue.path.startsWith(`${path}.`) || issue.path.startsWith(`${memberPath(rowId)}.noValueReasons.${attributeId}`));
+/** Στήλη πεδίου ταυτότητας εμπορίου (ADR-934 Σ1β) — το id της στήλης **είναι** το όνομα του πεδίου. */
+export const isTradeColumn = (columnId: string): columnId is TradeIdentityField =>
+  (TRADE_IDENTITY_FIELDS as readonly string[]).includes(columnId);
+
+/** Τα ευρήματα ενός κελιού: ιδιότητα (`variants.<id>.values.<attr>` και ό,τι από κάτω) ή πεδίο ταυτότητας (`variants.<id>.gtin`). */
+export function cellIssues(issues: readonly CatalogIssue[], rowId: string, columnId: string): CatalogIssue[] {
+  if (isTradeColumn(columnId)) return issues.filter((issue) => issue.path === `${memberPath(rowId)}.${columnId}`);
+  const path = `${memberPath(rowId)}.values.${columnId}`;
+  return issues.filter((issue) => issue.path === path || issue.path.startsWith(`${path}.`) || issue.path.startsWith(`${memberPath(rowId)}.noValueReasons.${columnId}`));
 }
 
-/** Ευρήματα που **δεν** δένονται σε κελί (τοποθέτηση, όριο απογόνων) — στην περίληψη πάνω από το πλέγμα. */
+/** Δένεται το εύρημα σε κελί; Οι στήλες ταυτότητας υπάρχουν **πάντα** στο πλέγμα των SKU. */
+function isPlaced(issue: CatalogIssue, columnIds: readonly string[]): boolean {
+  if (TRADE_IDENTITY_FIELDS.some((field) => issue.path.endsWith(`.${field}`))) return true;
+  return columnIds.some((column) => issue.path.includes(`.values.${column}`) || issue.path.includes(`.noValueReasons.${column}`));
+}
+
+/** Ευρήματα που **δεν** δένονται σε κελί (τοποθέτηση, όριο απογόνων, μάρκα σε παραλλαγή) — στην περίληψη πάνω από το πλέγμα. */
 export function unplacedIssues(issues: readonly CatalogIssue[], columnIds: readonly string[]): CatalogIssue[] {
-  return issues.filter((issue) => !columnIds.some((column) => issue.path.includes(`.values.${column}`) || issue.path.includes(`.noValueReasons.${column}`)));
+  return issues.filter((issue) => !isPlaced(issue, columnIds));
 }
 
 export interface RebasedDraft {

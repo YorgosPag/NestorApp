@@ -288,7 +288,7 @@ describe('πρόταση → έγκριση', () => {
     const second = await proposeGroup(ARIES, id, group([rowFor(0, 9999)], 'model:mfp:2'));
     const target = products().find((product) => product.id === second.rows.find((row) => row.rowKey === 'r0')?.holderId);
     if (!target) throw new Error('no match');
-    await updateCatalogProduct(ARIES, target.id, target.revision, { modelId: target.modelId, familyId: target.familyId, categoryIds: target.categoryIds, noValueReasons: target.noValueReasons, values: target.values });
+    await updateCatalogProduct(ARIES, target.id, target.revision, { modelId: target.modelId, familyId: target.familyId, categoryIds: target.categoryIds, noValueReasons: target.noValueReasons, values: target.values, brand: null, gtin: null, mpn: null, noGtinReason: null });
     expect((await rejectionOf(applyImportProposal(ARIES, second.id, second.revision))).kind).toBe('revisionMismatch');
     expect(proposals().find((proposal) => proposal.groupKey === 'model:mfp:2')?.status).toBe('pending');
   });
@@ -301,7 +301,7 @@ describe('πρόταση → έγκριση', () => {
     const target = products().find((product) => product.id === holderId);
     if (!target) throw new Error('no holder');
     const heating = attributeId('heating_h');
-    await updateCatalogProduct(ARIES, target.id, target.revision, { modelId: target.modelId, familyId: target.familyId, categoryIds: target.categoryIds, noValueReasons: target.noValueReasons, values: { ...target.values, [heating]: { '*': { '*': { type: 'measurement', amount: '2750', unitCode: 'W' } } } } });
+    await updateCatalogProduct(ARIES, target.id, target.revision, { modelId: target.modelId, familyId: target.familyId, categoryIds: target.categoryIds, noValueReasons: target.noValueReasons, values: { ...target.values, [heating]: { '*': { '*': { type: 'measurement', amount: '2750', unitCode: 'W' } } } }, brand: null, gtin: null, mpn: null, noGtinReason: null });
     const same = await proposeGroup(ARIES, id, group([rowFor(0)], 'model:mfp:same'));
     expect(fieldOf(same, 'r0', 'heating_h')).toMatchObject({ status: 'unchanged', decision: 'reject' });
     const other = await proposeGroup(ARIES, id, group([rowFor(0, 2800)], 'model:mfp:other'));
@@ -582,9 +582,9 @@ describe('ανάγνωση σελίδας', () => {
       const categoryId = await seedCategory();
       const [root] = models();
       const photo = { [attributeId('photo')]: { [ANY_SLOT]: { [ANY_SLOT]: { type: 'asset' as const, assetIds: [assetId] } } } };
-      await updateCatalogProductModel(ARIES, root.id, root.revision, { code: root.code, familyId: root.familyId, variantSchemeCode: root.variantSchemeCode, parentId: root.parentId, categoryIds: [categoryId], noValueReasons: root.noValueReasons, values: { ...root.values, ...photo } });
+      await updateCatalogProductModel(ARIES, root.id, root.revision, { code: root.code, familyId: root.familyId, variantSchemeCode: root.variantSchemeCode, parentId: root.parentId, categoryIds: [categoryId], noValueReasons: root.noValueReasons, values: { ...root.values, ...photo }, brand: null });
       const [sku] = products();
-      await updateCatalogProduct(ARIES, sku.id, sku.revision, { modelId: sku.modelId, familyId: sku.familyId, categoryIds: [categoryId], noValueReasons: sku.noValueReasons, values: sku.values });
+      await updateCatalogProduct(ARIES, sku.id, sku.revision, { modelId: sku.modelId, familyId: sku.familyId, categoryIds: [categoryId], noValueReasons: sku.noValueReasons, values: sku.values, brand: null, gtin: null, mpn: null, noGtinReason: null });
       return { batch, assetId, categoryId, skuId: sku.id };
     }
 

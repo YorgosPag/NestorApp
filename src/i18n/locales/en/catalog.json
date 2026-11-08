@@ -352,6 +352,9 @@
     "xchangePriceListNotOffered": "The list is not offered to an audience.",
     "xchangeSupplierNameMissing": "The company legal name is missing.",
     "xchangeNothingToExport": "{cause, select, catalogEmpty {The catalogue has no products.} noVisibilityRules {There is no visibility rule, so every product is hidden.} hiddenForAudience {Every product is hidden from this audience.} noUsableIdentifier {No visible product has a code of up to {max} characters.} other {There is no product to export.}} The xChange standard does not accept a file without products.",
+    "gtinInvalid": "{reason, select, format {A GTIN contains digits only.} length {A GTIN has 8, 12, 13 or 14 digits.} checkDigit {Wrong check digit — check the code on the packaging.} allZero {A GTIN cannot be all zeros.} other {Invalid GTIN.}}",
+    "gtinNotMatchable": "Internal or restricted-circulation code: it is saved, but it does not match the product with other sellers — matching will use brand + manufacturer part number.",
+    "gtinPackagingLevel": "{indicator, select, packaging {Packaging GTIN (case or multipack): a different trade unit from the single item.} variableMeasure {Variable-measure GTIN: the quantity varies per item.} other {GTIN of another packaging level.}}",
     "supplyNotRequested": "There is no pending request.",
     "contactAlreadyBound": "This contact is already linked to another workspace.",
     "contactWithoutEmail": "This contact has no email.",
@@ -453,6 +456,10 @@
       "modelId": "Model",
       "categoryIds": "Categories",
       "noValueReasons": "Declared missing values",
+      "brand": "Brand",
+      "gtin": "GTIN",
+      "mpn": "Manufacturer part number (MPN)",
+      "noGtinReason": "No GTIN",
       "values": "Values",
       "role": "Role",
       "kind": "Kind",
@@ -1072,6 +1079,21 @@
       "removeRow": "Remove row",
       "addRow": "New row"
     }
+  },
+  "trade": {
+    "title": "Product identity",
+    "lead": "The identifiers by which the product is recognised across all sellers.",
+    "brand": "Brand",
+    "brandHelp": "The manufacturer’s brand — not your own company name if you resell.",
+    "gtin": "GTIN / EAN",
+    "gtinHelp": "The barcode of the trade unit: 8, 12, 13 or 14 digits.",
+    "mpn": "Manufacturer part number (MPN)",
+    "mpnHelp": "The factory code for this exact size or colour.",
+    "noGtinReason": "No GTIN",
+    "noGtinHelp": "For products without a barcode (e.g. sand, made-to-order items) declare “Not applicable”.",
+    "noGtinUndeclared": "—",
+    "internalCode": "Internal code",
+    "packagingCode": "Packaging"
   },
   "completeness": {
     "title": "Completeness",

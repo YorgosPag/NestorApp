@@ -9,7 +9,7 @@ import { readSlot } from '../value-shape';
 const plain = { scopable: false, localizable: false };
 const localized = { scopable: false, localizable: true };
 const scoped = { scopable: true, localizable: true };
-const empty: CatalogValueHolder = { values: {}, noValueReasons: {}, categoryIds: [] };
+const empty: CatalogValueHolder = { values: {}, noValueReasons: {}, categoryIds: [], brand: null };
 
 describe('writeHolderValue', () => {
   it('μη localizable/scopable ⇒ θέση * / * ανεξάρτητα από κανάλι και γλώσσα', () => {

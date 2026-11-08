@@ -205,6 +205,12 @@ export const CATALOG_ISSUE_CODES = [
   'xchangePriceListNotOffered',
   'xchangeSupplierNameMissing',
   'xchangeNothingToExport',
+  // ── ADR-934 Σ1β: ταυτότητα εμπορίου (GTIN · μάρκα · MPN) ──
+  'gtinInvalid',
+  /** Προειδοποίηση: εσωτερικός/περιορισμένος κωδικός — δεν ταυτίζει με άλλους πωλητές. */
+  'gtinNotMatchable',
+  /** Προειδοποίηση: GTIN κιβωτίου/μεταβλητού μέτρου — άλλη εμπορεύσιμη μονάδα. */
+  'gtinPackagingLevel',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

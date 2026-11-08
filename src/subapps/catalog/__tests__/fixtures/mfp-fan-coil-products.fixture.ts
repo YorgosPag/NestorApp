@@ -59,6 +59,7 @@ export const MFP_MODEL: CatalogProductModelDefinition = {
   parentId: null,
   categoryIds: ['cat_fan_coils'],
   noValueReasons: {},
+  brand: null,
   values: {
     description: {
       '*': {
@@ -82,6 +83,10 @@ export function mfpVariant(index: number, columns: Partial<Pick<MfpColumns, 'cod
     familyId: 'fan_coil',
     categoryIds: [],
     noValueReasons: {},
+    brand: null,
+    gtin: null,
+    mpn: null,
+    noGtinReason: null,
     values: {
       size: one({ type: 'select', optionCode: MFP_SIZES[index] }),
       model_code: one({ type: 'text', text: page.code[index] }),

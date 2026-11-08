@@ -19,6 +19,7 @@ import type { ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import type { CatalogSettingsDefinition } from '../types/catalog-settings';
 import type { CatalogFamilyDefinition, VariantScheme } from '../types/family';
+import type { CatalogTradeIdentity } from '../types/product';
 import type {
   CatalogCompletenessSummary,
   CatalogDescendantEntry,
@@ -31,6 +32,7 @@ import { mapCatalogChannels } from '../vocabulary/channels';
 import { facetKeysOf, productIdentifierOf, productLabelOf } from './holder-derived';
 import { catalogSearchIndexHash, catalogSearchIndexOf } from './search-index';
 import { catalogSortKey } from './sort-key';
+import { tradeKeysOf } from './trade-keys';
 
 /** Ό,τι ξέρει ο γραφέας για το σχήμα τη στιγμή της εγγραφής — κοινό για όλη την αλυσίδα. */
 export interface CatalogSchemaSnapshot {
@@ -41,11 +43,15 @@ export interface CatalogSchemaSnapshot {
   readonly scheme: VariantScheme | null;
 }
 
-/** Τα παράγωγα ενός SKU. `chain` = ρίζα → (υπο-μοντέλο) → το ίδιο το SKU, με τις αναθεωρήσεις **μετά** την εγγραφή. */
+/**
+ * Τα παράγωγα ενός SKU. `chain` = ρίζα → (υπο-μοντέλο) → το ίδιο το SKU, με τις αναθεωρήσεις **μετά** την εγγραφή.
+ * `product` = ο ορισμός του ίδιου του SKU — η ταυτότητα εμπορίου του (ADR-934 Σ1β· η μάρκα έρχεται από τη ρίζα της αλυσίδας).
+ */
 export function productChainDerived(
   schema: CatalogSchemaSnapshot,
   chain: readonly InheritanceLink[],
   own: CatalogHolderDerived,
+  product: Partial<CatalogTradeIdentity>,
 ): CatalogProductDerived {
   const resolved = resolveInheritedValues(chain, schema.scheme);
   const completeness = computeCompleteness({ ...schema, resolved });
@@ -63,6 +69,7 @@ export function productChainDerived(
     completeness,
     completenessHash: completenessInputsHash({ ...schema, chain }),
     completeChannels: completeChannelKeys(completeness),
+    tradeKeys: tradeKeysOf(chain, product),
   };
 }
 

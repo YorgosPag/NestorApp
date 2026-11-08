@@ -27,6 +27,12 @@ import { deriveAggregate, type MemberDerived } from '@/subapps/catalog/aggregate
 import { judgeAggregate, memberPath } from '@/subapps/catalog/aggregate/judge-aggregate';
 import { liveMembers, type AggregateMember, type CatalogAggregate } from '@/subapps/catalog/aggregate/aggregate-model';
 import { uniqueKeysOf } from '@/subapps/catalog/derived/holder-derived';
+import {
+  GTIN_RESERVATION_KEY,
+  TRADE_WARNING_CODES,
+  gtinReservationKeysOf,
+  storedGtinReservationKeysOf,
+} from '@/subapps/catalog/derived/trade-keys';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import { assertAggregateKeepsVat, type AggregateVatAuthority } from './aggregate-vat-authority.server';
@@ -76,24 +82,48 @@ function schemaKeyOf(aggregate: CatalogAggregate): { readonly familyId: string; 
   return { familyId: definition.familyId, schemeCode };
 }
 
+/**
+ * Τα κλειδιά κράτησης ενός μέλους: οι ιδιότητες `unique` **και** το GTIN (`@gtin`, ADR-934 Σ1β) — μία μηχανή κράτησης,
+ * ένα `HolderUniqueDelta`. Το «πριν» από τα αποθηκευμένα παράγωγα (`tradeKeys` λείπει από έγγραφα πριν από το Σ1β ⇒ `{}`).
+ */
+function reservationKeysBefore(member: AggregateMember): Readonly<Record<string, string>> {
+  if (!member.before) return {};
+  const tradeKeys = member.kind === 'product' && member.before ? member.before.derived.tradeKeys : undefined;
+  return { ...member.before.derived.uniqueKeys, ...storedGtinReservationKeysOf(tradeKeys) };
+}
+
+function reservationKeysAfter(member: AggregateMember, schema: CatalogSchemaSnapshot): Readonly<Record<string, string>> {
+  if (!member.after) return {};
+  const gtin = member.kind === 'product' && member.after ? gtinReservationKeysOf(member.after) : {};
+  return { ...uniqueKeysOf(member.after, schema.attributes), ...gtin };
+}
+
+/** Η διαδρομή του ευρήματος κράτησης: το πεδίο GTIN, ή η τιμή της ιδιότητας. */
+const reservationPathOf = (memberId: string) => (key: string): string =>
+  key === GTIN_RESERVATION_KEY ? `${memberPath(memberId)}.gtin` : `${memberPath(memberId)}.values.${key}`;
+
 function uniqueDeltas(aggregate: CatalogAggregate, schema: CatalogSchemaSnapshot): HolderUniqueDelta[] {
   return [...aggregate.members.values()]
     .filter((member) => member.changed)
     .map((member) => ({
       holderKind: member.kind,
       holderId: member.id,
-      before: member.before?.derived.uniqueKeys ?? {},
-      after: member.after ? uniqueKeysOf(member.after, schema.attributes) : {},
-      pathOf: (attributeId: string) => `${memberPath(member.id)}.values.${attributeId}`,
+      before: reservationKeysBefore(member),
+      after: reservationKeysAfter(member, schema),
+      pathOf: reservationPathOf(member.id),
     }));
 }
 
-/** Προειδοποιήσεις ανά μέλος: νέες από τις κρατήσεις· αλλιώς οι αποθηκευμένες, όσο τα κλειδιά δεν άλλαξαν. */
+/**
+ * Προειδοποιήσεις **κράτησης** ανά μέλος: νέες από τις κρατήσεις· αλλιώς οι αποθηκευμένες, όσο τα κλειδιά δεν άλλαξαν.
+ * Οι προειδοποιήσεις του GTIN (`TRADE_WARNING_CODES`) **δεν** κρατιούνται — τις ξαναϋπολογίζει πάντα η `deriveAggregate`.
+ */
 function warningsOf(aggregate: CatalogAggregate, plan: ReservationPlan, deltas: readonly HolderUniqueDelta[]) {
   const sameKeys = new Set(deltas.filter((d) => canonicalJson(d.before) === canonicalJson(d.after)).map((d) => d.holderId));
   const warnings = new Map<string, readonly CatalogIssue[]>();
   for (const member of liveMembers(aggregate, 'after')) {
-    const kept = !member.changed || sameKeys.has(member.id) ? member.before?.derived.warnings ?? [] : [];
+    const stored = !member.changed || sameKeys.has(member.id) ? member.before?.derived.warnings ?? [] : [];
+    const kept = stored.filter((issue) => !TRADE_WARNING_CODES.has(issue.code));
     warnings.set(member.id, plan.warnings.get(member.id) ?? kept);
   }
   return warnings;

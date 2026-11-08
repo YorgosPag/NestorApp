@@ -10,7 +10,7 @@ import type { CatalogAggregate, ProductMember } from '../aggregate-model';
 import { aggregateVatShifts, chainCategoryIdsOf, skusWithChangedChains } from '../aggregate-vat';
 
 const definition = (categoryIds: readonly string[], values: CatalogProductDefinition['values'] = {}): CatalogProductDefinition =>
-  ({ modelId: null, familyId: 'fam', categoryIds, noValueReasons: {}, values });
+  ({ modelId: null, familyId: 'fam', categoryIds, noValueReasons: {}, values, brand: null, gtin: null, mpn: null, noGtinReason: null });
 
 // Το `derived` δεν το διαβάζει κανείς εδώ· το σχήμα του είναι της μηχανής παραγώγων.
 const stored = (holder: CatalogProductDefinition): ProductMember['before'] =>

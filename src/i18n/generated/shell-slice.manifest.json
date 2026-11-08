@@ -49,7 +49,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "cb9146a4f2613ae6707d6357b63b05125cb0882e9d2d3177e9ab92780e5c0e13",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "1ada521e13e9e01ac4577ab75a6a5f85538a10f6130c3b3dec5e9582ff50d0ca",
-    "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "b0321d9dae3dfae38270e12fb129ec6b3bd175ef4063005258896a44cf2f225f",
+    "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "324fb9244cc0690b312ecd2472727e5f292d9a1d52c33d8cf3d0df7ec8e62d39",
     "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "036728a59dc73ad3bd09934e830b124ea0bea761f28e7ce45c8b4ba8c20be5d0",
     "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "0f5974343b7bbe05ccd34ad4730893c2e33cc6bdb232a058b82e82b66c8060f9",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "33dd385e685ae1b1b094039179dfd6b400e2c3cf2b360f89e284c9612910f170",
+  "inputsSha256": "3e91a28ece6aab80cbab5a093f2f03691a1c117a4f8874370c86edc3027bb07e",
   "languages": [
     "el"
   ],
@@ -11119,6 +11119,19 @@
             "recompute.running",
             "recompute.searchIndexPrompt",
             "table.merge.equalAdjacent",
+            "trade.brand",
+            "trade.brandHelp",
+            "trade.gtin",
+            "trade.gtinHelp",
+            "trade.internalCode",
+            "trade.lead",
+            "trade.mpn",
+            "trade.mpnHelp",
+            "trade.noGtinHelp",
+            "trade.noGtinReason",
+            "trade.noGtinUndeclared",
+            "trade.packagingCode",
+            "trade.title",
             "values.assets.add",
             "values.assets.moveFirst",
             "values.assets.none",
@@ -11164,6 +11177,7 @@
           "prefixes": [
             "products.columns",
             "products.completeness.tone",
+            "trade",
             "values.noValue"
           ],
           "whole": false
@@ -40561,7 +40575,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1305526
+    "sliceBytes": 1306627
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

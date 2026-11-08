@@ -65,7 +65,7 @@ describe('levelSchema — η πληρότητα που έχει νόημα σε 
   const schema = { family: MFP_FAMILY, attributes: MFP_ATTRIBUTE_MAP, registry: PLATFORM_MEASUREMENT_REGISTRY, settings: MFP_SETTINGS, scheme };
   it('🔴 μοντέλο-ρίζα: ΔΕΝ ζητά «Κωδικό/Μέγεθος/Ψυκτική» (ανήκουν στις παραλλαγές) · SKU: όλη η οικογένεια', () => {
     const rootLevel = levelSchema(schema, true, 0);
-    const missing = computeCompleteness({ ...rootLevel, resolved: resolveInheritedValues([{ id: MFP_MODEL_ID, kind: 'productModel', revision: 1, holder: { values: {}, noValueReasons: {}, categoryIds: [] } }], scheme) }).print.el?.missing.map((gap) => gap.attributeId) ?? [];
+    const missing = computeCompleteness({ ...rootLevel, resolved: resolveInheritedValues([{ id: MFP_MODEL_ID, kind: 'productModel', revision: 1, holder: { values: {}, noValueReasons: {}, categoryIds: [], brand: null } }], scheme) }).print.el?.missing.map((gap) => gap.attributeId) ?? [];
     expect(missing).not.toContain('model_code');
     expect(missing).not.toContain('cooling_h');
     expect(levelSchema(schema, false, 1)).toBe(schema);
@@ -87,7 +87,7 @@ function renderField(holder: CatalogValueHolder, over: Partial<React.ComponentPr
 
 describe('AttributeValueField', () => {
   it('«2,5 kW» + Enter ⇒ μέτρηση στη θέση */* μέσω του ΚΟΙΝΟΥ κωδικοποιητή', () => {
-    const { onHolder } = renderField({ values: {}, noValueReasons: {}, categoryIds: [] });
+    const { onHolder } = renderField({ values: {}, noValueReasons: {}, categoryIds: [], brand: null });
     const input = screen.getByLabelText('Ψυκτική ισχύς H');
     fireEvent.change(input, { target: { value: '2,5 kW' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -104,12 +104,12 @@ describe('AttributeValueField', () => {
   });
 
   it('κενό πεδίο ⇒ η ένδειξη λέει σε ποια μονάδα θα διαβαστεί ο αριθμός', () => {
-    renderField({ values: {}, noValueReasons: {}, categoryIds: [] });
+    renderField({ values: {}, noValueReasons: {}, categoryIds: [], brand: null });
     expect(screen.getByText('kW')).toBeTruthy();
   });
 
   it('🔴 απορριπτέο κείμενο ⇒ ΚΑΜΙΑ δέσμευση, μήνυμα δίπλα, το κείμενο μένει', async () => {
-    const { onHolder } = renderField({ values: {}, noValueReasons: {}, categoryIds: [] });
+    const { onHolder } = renderField({ values: {}, noValueReasons: {}, categoryIds: [], brand: null });
     const input = screen.getByLabelText('Ψυκτική ισχύς H') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '2,5 furlong' } });
     fireEvent.blur(input);

@@ -12,6 +12,7 @@ import type { CatalogSchemaSnapshot } from '../derived/chain-derived';
 import { evaluateConsistency, type ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { CatalogIssue } from '../schema/catalog-issues';
 import type { ImportIssue, ImportProposalField, ImportProposalRow } from '../types/catalog-import';
+import { EMPTY_BRAND, EMPTY_TRADE_IDENTITY } from '../values/trade-identity';
 import { defaultDecisionOf } from './field-diff';
 import { EMPTY_IMPORT_HOLDER, mergeFieldsIntoHolder } from './proposal-values';
 
@@ -51,7 +52,7 @@ function rootMember(input: ProposalAggregateInput, row: ImportProposalRow | unde
     return row ? updatedModelMember(rootModel, mergeFieldsIntoHolder(rootModel, fields, proposed)) : unchangedMember({ kind: 'productModel', record: rootModel });
   }
   if (!schema.scheme) return null;
-  const definition = { code: modelCode ?? '', familyId, variantSchemeCode: schema.scheme.code, parentId: null, categoryIds, ...mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, fields, proposed) };
+  const definition = { code: modelCode ?? '', familyId, variantSchemeCode: schema.scheme.code, parentId: null, categoryIds, ...EMPTY_BRAND, ...mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, fields, proposed) };
   return createdModelMember(NEW_ROOT_ID, definition);
 }
 
@@ -59,7 +60,7 @@ function productMember(row: ImportProposalRow, rootId: string | null, input: Pro
   const stored = row.holderId === null ? undefined : input.holdings.products.get(row.holderId);
   if (stored) return updatedProductMember(stored, mergeFieldsIntoHolder(stored, row.fields, proposed));
   const content = mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, proposed);
-  return createdProductMember(row.rowKey, { modelId: rootId, familyId: input.familyId, categoryIds: input.categoryIds, ...content });
+  return createdProductMember(row.rowKey, { modelId: rootId, familyId: input.familyId, categoryIds: input.categoryIds, ...EMPTY_BRAND, ...EMPTY_TRADE_IDENTITY, ...content });
 }
 
 /** Το υποθετικό σύνολο «αν εγκριθούν όλα». Το ίδιο κρίνεται και από το ίδιο διαβάζονται οι αναφορές του (`readAggregateReferences`). */

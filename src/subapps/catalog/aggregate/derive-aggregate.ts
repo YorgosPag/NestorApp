@@ -13,6 +13,7 @@
 
 import { productChainDerived, rootModelDerived, subModelDerived, type CatalogSchemaSnapshot } from '../derived/chain-derived';
 import { ownHolderDerived } from '../derived/holder-derived';
+import { tradeWarningsOf } from '../derived/trade-keys';
 import type { ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { CatalogIssue } from '../schema/catalog-issues';
 import type {
@@ -23,7 +24,9 @@ import type {
 } from '../types/product-derived';
 import { axesAtDepth } from '../values/attribute-levels';
 import { axisCombinationKey } from '../values/axis-combination';
+import { EMPTY_TRADE_IDENTITY } from '../values/trade-identity';
 import { chainOf, liveMembers, parentIdOf, type AggregateMember, type CatalogAggregate } from './aggregate-model';
+import { memberPath } from './judge-aggregate';
 
 export interface AggregateDeriveInput {
   readonly aggregate: CatalogAggregate;
@@ -38,10 +41,21 @@ export type MemberDerived =
   | { readonly kind: 'productModel'; readonly derived: CatalogProductModelDerived }
   | { readonly kind: 'product'; readonly derived: CatalogProductDerived };
 
+/**
+ * Οι προειδοποιήσεις ενός μέλους: όσες έδωσε η κράτηση (ή κρατήθηκαν) + του GTIN, **πάντα** ξαναϋπολογισμένες από τον
+ * ορισμό (ADR-934 Σ1β) — ποτέ από τα αποθηκευμένα, αλλιώς ένα ανέγγιχτο μέλος θα τις διπλασίαζε.
+ */
+function warningsOf(input: AggregateDeriveInput, member: AggregateMember): readonly CatalogIssue[] {
+  const reserved = input.warnings.get(member.id) ?? [];
+  if (member.kind !== 'product' || member.after === null) return reserved;
+  const prefix = memberPath(member.id);
+  return [...reserved, ...tradeWarningsOf(member.after).map((issue) => ({ ...issue, path: `${prefix}.${issue.path}` }))];
+}
+
 function ownOf(input: AggregateDeriveInput, member: AggregateMember): CatalogHolderDerived {
   const holder = member.after;
   if (!holder) throw new Error(`deriving a deleted member ${member.id}`);
-  return ownHolderDerived(holder, input.schema.attributes, input.schema.registry, input.warnings.get(member.id) ?? []);
+  return ownHolderDerived(holder, input.schema.attributes, input.schema.registry, warningsOf(input, member));
 }
 
 function descendantEntry(input: AggregateDeriveInput, member: AggregateMember, productDerived: CatalogProductDerived | null): CatalogDescendantEntry {
@@ -66,7 +80,8 @@ export function deriveAggregate(input: AggregateDeriveInput): ReadonlyMap<string
     if (member.id === aggregate.rootId) continue;
     const chain = chainOf(aggregate, member.id, 'after');
     if (member.kind === 'product') {
-      const derived = productChainDerived(schema, chain, ownOf(input, member));
+      // `liveMembers(…, 'after')` ⇒ το `after` υπάρχει πάντα (το `ownOf` το ισχυρίζεται)· η κενή ταυτότητα μόνο για τον τύπο.
+      const derived = productChainDerived(schema, chain, ownOf(input, member), member.after ?? EMPTY_TRADE_IDENTITY);
       result.set(member.id, { kind: 'product', derived });
       if (aggregate.rootId !== null) descendants[member.id] = descendantEntry(input, member, derived);
     } else {

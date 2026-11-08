@@ -23,6 +23,7 @@ import type { CatalogValueHolder } from '../types/product';
 import type { AssetLookup, ReferenceLookup } from '../schema/product-validation-context';
 import { checkDescendantBudget, placeProduct, placeProductModel, type PlacementResult } from '../schema/validate-product-placement';
 import { validateHolderValues } from '../schema/validate-product-values';
+import { validateTradeIdentity } from '../schema/validate-trade-identity';
 import { axesAtDepth } from '../values/attribute-levels';
 import { axisClashIssues, axisValueIdentity, findAxisCombinationClashes } from '../values/axis-combination';
 import { resolveInheritedValues } from '../values/resolve-inherited';
@@ -111,8 +112,17 @@ function judgeMembers(input: AggregateJudgeInput): CatalogIssue[] {
     if (!placement.placement) continue;
     const context = { ...input.schema, ...input.refs, ...placement.placement };
     issues.push(...prefixed(member.id, validateHolderValues(member.after, context)), ...axisImmutabilityIssues(input, member));
+    issues.push(...prefixed(member.id, tradeIdentityIssues(member, placement.placement.depth)));
   }
   return issues;
+}
+
+/** ADR-934 Σ1β: μάρκα (βάθος 0) και GTIN/MPN/«χωρίς GTIN» (SKU) — η ίδια κρίση σε οθόνη και γραφέα. */
+function tradeIdentityIssues(member: AggregateMember, depth: number): readonly CatalogIssue[] {
+  if (member.after === null) return [];
+  return member.kind === 'product'
+    ? validateTradeIdentity({ kind: 'product', holder: member.after }, depth)
+    : validateTradeIdentity({ kind: 'productModel', holder: member.after }, depth);
 }
 
 /** 3: το όριο απογόνων — μετρά μόνο ό,τι **προστίθεται** (ένα σύνολο πάνω από το όριο δεν κλειδώνει διορθώσεις). */

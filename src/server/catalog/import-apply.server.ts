@@ -15,6 +15,7 @@ import type { AuthContext } from '@/lib/auth';
 import { modelDefinitionOf, productDefinitionOf } from '@/subapps/catalog/aggregate/edit-aggregate';
 import { EMPTY_IMPORT_HOLDER, mergeFieldsIntoHolder } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
+import { EMPTY_BRAND, EMPTY_TRADE_IDENTITY } from '@/subapps/catalog/values/trade-identity';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { ImportBatchDefinition, ImportProposalDefinition, ImportProposalField, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import type { PriceLineInput } from '@/subapps/catalog/types/price-list-requests';
@@ -51,6 +52,7 @@ async function modelChange(scope: CatalogTx, proposal: ImportProposalDefinition,
         variantSchemeCode: proposal.variantSchemeCode ?? '',
         parentId: null,
         categoryIds,
+        ...EMPTY_BRAND,
         ...mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, accepted),
       },
     };
@@ -65,7 +67,7 @@ async function productChange(scope: CatalogTx, proposal: ImportProposalDefinitio
   if (!hasAccepted(row)) return null;
   if (row.holderId === null) {
     const content = mergeFieldsIntoHolder(EMPTY_IMPORT_HOLDER, row.fields, accepted);
-    return { op: 'create', kind: 'product', requestedId: null, definition: { modelId: rootId, familyId: proposal.familyId ?? '', categoryIds, ...content } };
+    return { op: 'create', kind: 'product', requestedId: null, definition: { modelId: rootId, familyId: proposal.familyId ?? '', categoryIds, ...EMPTY_BRAND, ...EMPTY_TRADE_IDENTITY, ...content } };
   }
   const current = await readOwned<StoredCatalogProductDefinition>(scope, 'product', row.holderId);
   const definition = mergeFieldsIntoHolder(productDefinitionOf(current), row.fields, accepted);

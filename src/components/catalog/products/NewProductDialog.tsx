@@ -23,6 +23,7 @@ import { createCatalogDefinition, type FamilyRecord } from '@/services/catalog/c
 import { catalogFailureOf } from '@/services/catalog/catalog-failure';
 import { generateCatalogProductId } from '@/services/enterprise-id-convenience';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
+import { EMPTY_BRAND, EMPTY_TRADE_IDENTITY } from '@/subapps/catalog/values/trade-identity';
 import { isCatalogCode } from '@/subapps/catalog/vocabulary/catalog-limits';
 
 import { CatalogCodeField } from '../shared/CatalogFormFields';
@@ -53,13 +54,13 @@ function draftIssues(draft: Draft, family: FamilyRecord | null): CatalogIssue[] 
 }
 
 async function create(draft: Draft): Promise<CodeJumpTarget> {
-  const holder = { familyId: draft.familyId, values: {}, noValueReasons: {}, categoryIds: [] };
+  const holder = { familyId: draft.familyId, values: {}, noValueReasons: {}, categoryIds: [], ...EMPTY_BRAND };
   if (draft.kind === 'model') {
     const record = await createCatalogDefinition('productModel', { ...holder, code: draft.code, variantSchemeCode: draft.schemeCode, parentId: null });
     return { kind: 'productModel', id: record.id };
   }
   const id = generateCatalogProductId();
-  await createCatalogDefinition('product', { ...holder, modelId: null }, id);
+  await createCatalogDefinition('product', { ...holder, ...EMPTY_TRADE_IDENTITY, modelId: null }, id);
   return { kind: 'product', id };
 }
 

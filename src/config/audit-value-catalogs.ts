@@ -172,6 +172,8 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   catalogPriceAudience: { ns: 'catalog', path: 'pricing.audience' },
   catalogVisibility: { ns: 'catalog', path: 'pricing.visibility.values' },
   catalogLanguage: { ns: 'catalog', path: 'language' },
+  /** ADR-934 Σ1β: «χωρίς GTIN» — το λεξιλόγιο της ρητής απουσίας τιμής (Δ5) της οθόνης. */
+  catalogNoValueReason: { ns: 'catalog', path: 'values.noValue' },
   catalogPaper: { ns: 'catalog', path: 'audit.values.paper' },
   catalogPublicationStatus: { ns: 'catalog', path: 'publishing.status' },
   catalogPublicationFailure: { ns: 'catalog', path: 'publishing.failure' },

@@ -65,6 +65,11 @@ export const CATALOG_LIMITS = {
   maxAmountSignificantDigits: 15,
   /** Μέγιστες κατηγορίες σε ένα μοντέλο ή προϊόν. */
   maxCategoriesPerProduct: 50,
+  // ── Ταυτότητα εμπορίου (ADR-934 Σ1β) — τα όρια του Google Merchant Center για `brand` / `mpn` ──
+  /** Μέγιστο μήκος μάρκας. */
+  maxBrandLength: 70,
+  /** Μέγιστο μήκος κωδικού κατασκευαστή (MPN). */
+  maxMpnLength: 70,
   // ── Ευρετήριο αναζήτησης SKU (ADR-923 §5.12) ──
   /** Πόσοι χαρακτήρες μιας τιμής μετρούν στο ευρετήριο: μια μακριά περιγραφή δεν στερεί χώρο από τις υπόλοιπες. */
   maxSearchValueLength: 160,

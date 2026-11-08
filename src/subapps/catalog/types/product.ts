@@ -115,6 +115,29 @@ export interface CatalogValueHolder {
   readonly noValueReasons: NoValueReasons;
   /** Κατηγορίες· ο απόγονος κληρονομεί **και** προσθέτει (ένωση, Akeneo). */
   readonly categoryIds: readonly string[];
+  /**
+   * Η μάρκα του κατασκευαστή (ADR-934 §5.1.2) — **πεδίο πλατφόρμας**, όχι ιδιότητα του προμηθευτή (Google Merchant `brand`).
+   * 🔑 Αυστηρή κληρονομιά (Δ1): ζει **μόνο** στο βάθος 0 της αλυσίδας (ρίζα μοντέλου ή απλό προϊόν)· υπο-μοντέλο και
+   * παραλλαγή τη **διαβάζουν** (`brandOfChain`). Έγγραφα πριν από το ADR-934 Σ1β δεν την έχουν ⇒ ανάγνωση **μόνο** μέσω
+   * `tradeIdentityOf` / `brandOfChain` (`values/trade-identity.ts`).
+   */
+  readonly brand: string | null;
+}
+
+// ── Ταυτότητα εμπορίου της παραλλαγής (ADR-934 §5.1.2 · Google `gtin` / `mpn` / `identifier_exists`) ─────
+
+/**
+ * Τα αναγνωριστικά της **εμπορεύσιμης μονάδας** = του φύλλου (SKU). Πεδία πλατφόρμας με **σταθερή** σημασία σε όλους τους
+ * πωλητές — από αυτά κρίνεται η ταύτιση (Α5: GTIN → μάρκα + MPN → χωριστό). Τα **κλειδιά** τους τα γράφει μόνο η μηχανή
+ * (`derived.tradeKeys`).
+ */
+export interface CatalogTradeIdentity {
+  /** Τα ψηφία όπως τα έγραψε ο προμηθευτής, **χωρίς** διαχωριστικά (κανονική μορφή του `parseGtin().digits`). */
+  readonly gtin: string | null;
+  /** Ο κωδικός κατασκευαστή για αυτό ακριβώς το SKU, όπως γράφτηκε. */
+  readonly mpn: string | null;
+  /** «Δεν έχει GTIN» (Δ5): `notApplicable` (άμμος, κατά παραγγελία) · `unknown`. Ποτέ μαζί με `gtin`. */
+  readonly noGtinReason: NoValueReason | null;
 }
 
 export interface CatalogProductModelDefinition extends CatalogValueHolder {
@@ -127,7 +150,7 @@ export interface CatalogProductModelDefinition extends CatalogValueHolder {
   readonly parentId: string | null;
 }
 
-export interface CatalogProductDefinition extends CatalogValueHolder {
+export interface CatalogProductDefinition extends CatalogValueHolder, CatalogTradeIdentity {
   /** Το άμεσο μοντέλο-γονέας (ρίζα ή υπο-μοντέλο)· `null` = απλό προϊόν. */
   readonly modelId: string | null;
   /** Ίδια με του μοντέλου (επικυρώνεται)· κρατιέται εδώ για ερωτήματα `familyId ==`. */

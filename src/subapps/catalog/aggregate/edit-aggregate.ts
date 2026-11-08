@@ -16,6 +16,7 @@ import type { CatalogSettingsDefinition } from '../types/catalog-settings';
 import type { CatalogFamilyDefinition } from '../types/family';
 import type { CatalogProductDefinition, CatalogProductModelDefinition, CatalogReferenceTarget, CatalogValueHolder } from '../types/product';
 import { findVariantScheme } from '../values/attribute-levels';
+import { brandOf, tradeIdentityOf } from '../values/trade-identity';
 import {
   cascadeDeletes,
   createdProductMember,
@@ -30,14 +31,19 @@ import {
 import type { AggregateMember, CatalogAggregate } from './aggregate-model';
 
 /** Ο ορισμός ενός αποθηκευμένου μοντέλου — **χωρίς** μεταδεδομένα και παράγωγα (ό,τι στέλνει ο πελάτης). */
+/**
+ * 🔑 Το **σύνορο** για έγγραφα πριν από το ADR-934 Σ1β: τα πεδία ταυτότητας εμπορίου διαβάζονται μέσω `brandOf` /
+ * `tradeIdentityOf` (`?? null`) ⇒ πρόχειρο οθόνης, εισαγωγή-ενημέρωση και «άλλαξε;» βλέπουν **ίδιο** σχήμα, και η
+ * εισαγωγή **δεν** σβήνει GTIN που δεν αγγίζει. Καμία μαζική μετάπτωση.
+ */
 export function modelDefinitionOf(record: StoredModelShape): CatalogProductModelDefinition {
   const { code, familyId, variantSchemeCode, parentId, values, noValueReasons, categoryIds } = record;
-  return { code, familyId, variantSchemeCode, parentId, values, noValueReasons, categoryIds };
+  return { code, familyId, variantSchemeCode, parentId, values, noValueReasons, categoryIds, brand: brandOf(record) };
 }
 
 export function productDefinitionOf(record: StoredProductShape): CatalogProductDefinition {
   const { modelId, familyId, values, noValueReasons, categoryIds } = record;
-  return { modelId, familyId, values, noValueReasons, categoryIds };
+  return { modelId, familyId, values, noValueReasons, categoryIds, brand: brandOf(record), ...tradeIdentityOf(record) };
 }
 
 export interface AggregateEdits {

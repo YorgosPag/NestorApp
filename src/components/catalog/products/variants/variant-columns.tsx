@@ -21,6 +21,7 @@ import { formatAttributeValue, hasTextForm, parseAttributeText } from '@/subapps
 import type { useCatalogText } from '../../shared/catalog-ui-hooks';
 import type { ValueEditorEnv } from '../../values/value-editor-types';
 import type { ListScope } from '../ProductListToolbar';
+import { tradeColumns } from './trade-columns';
 import type { VariantRow } from './variant-rows';
 
 type Column = DataGridColumn<VariantRow>;
@@ -96,5 +97,6 @@ export function variantColumns(input: VariantColumnsInput): Column[] {
     const attribute = input.attributeById.get(id);
     return attribute ? [attributeColumn(id, attribute, input)] : [];
   });
-  return [...columns, completenessColumn(input)];
+  // ADR-934 Σ1β: τα πεδία ταυτότητας εμπορίου ανήκουν **πάντα** στο φύλλο — στήλες σε κάθε πλέγμα SKU.
+  return [...columns, ...tradeColumns(input), completenessColumn(input)];
 }

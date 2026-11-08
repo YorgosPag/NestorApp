@@ -19,6 +19,7 @@
  */
 
 import type { HumanLanguage } from '@/i18n/languages';
+import type { GtinIndicator, GtinPrefixClass } from '@/lib/validation/gtin';
 import type { CompletenessMatrix, CompletenessSummaryCell } from '../completeness/compute-completeness';
 import type { ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { CatalogIssue } from '../schema/catalog-issues';
@@ -41,8 +42,35 @@ export interface CatalogHolderDerived {
   readonly warnings: readonly CatalogIssue[];
 }
 
+/** Πάνω σε ποιο σκαλί μπορεί να ταυτιστεί το SKU με άλλους πωλητές (ADR-934 Α5) — η κλίμακα, σε **ένα** σημείο. */
+export const TRADE_IDENTIFIER_BASES = ['gtin', 'brand-mpn', 'none'] as const;
+export type TradeIdentifierBasis = (typeof TRADE_IDENTIFIER_BASES)[number];
+
+/**
+ * Τα **κλειδιά** ταυτότητας εμπορίου ενός SKU (ADR-934 §5.1.2–§5.1.3) — από τον ορισμό του **και** τη μάρκα της ρίζας.
+ * Τα γράφει **μόνο** η μηχανή (`derived/trade-keys.ts`)· ο πελάτης δεν τα στέλνει ποτέ.
+ */
+export interface CatalogTradeKeys {
+  /** Κάθε **έγκυρο** GTIN σε 14 ψηφία — κλειδί της κράτησης `@gtin` μέσα στον χώρο (και του μη ταυτίσιμου). */
+  readonly gtin14: string | null;
+  /** Ταυτίζει ανάμεσα σε πωλητές (`isMatchableGtin`): όχι εσωτερικοί/περιορισμένοι κωδικοί. */
+  readonly gtinMatchable: boolean;
+  readonly gtinPrefixClass: GtinPrefixClass | null;
+  readonly gtinIndicator: GtinIndicator['kind'] | null;
+  /** `brandKeyOf` της μάρκας της **ρίζας** — το ίδιο κλειδί με την κατοχή μάρκας (§16). */
+  readonly brandKey: string | null;
+  /** `normalizeUniqueText` του MPN — ο ίδιος κανόνας με τους κωδικούς προμηθευτή. */
+  readonly mpnKey: string | null;
+  readonly identifierBasis: TradeIdentifierBasis;
+}
+
 /** Τα παράγωγα ενός SKU (ή απλού προϊόντος) — πάνω στις **συγχωνευμένες** τιμές. */
 export interface CatalogProductDerived extends CatalogHolderDerived {
+  /**
+   * Τα κλειδιά ταυτότητας εμπορίου (ADR-934 Σ1β). Τα γράφει πάντα ο γραφέας· λείπουν μόνο από έγγραφα πριν από τον
+   * επανυπολογισμό (όπως το `searchText`).
+   */
+  readonly tradeKeys?: CatalogTradeKeys;
   /** Η ρίζα της αλυσίδας (`null` = απλό προϊόν). */
   readonly rootModelId: string | null;
   /** Η ετικέτα από την ιδιότητα-ετικέτα της οικογένειας (Akeneo attribute_as_label) — λίστες και ιστορικό. */

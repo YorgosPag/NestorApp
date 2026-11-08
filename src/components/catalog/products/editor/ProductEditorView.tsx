@@ -19,6 +19,7 @@ import type { HumanLanguage } from '@/i18n/languages';
 import type { ProductModelRecord } from '@/services/catalog/catalog-api.client';
 import type { StoredMemberShape } from '@/subapps/catalog/aggregate/aggregate-members';
 import type { InheritanceLink } from '@/subapps/catalog/values/resolve-inherited';
+import { BRAND_FIELD, TRADE_IDENTITY_FIELDS } from '@/subapps/catalog/values/trade-identity';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 
 import { IssueSummary, type IssueLocation } from '../../shared/CatalogIssues';
@@ -32,6 +33,7 @@ import { recordIdentifier } from '../product-list-rows';
 import type { ProductCatalogContext } from '../use-product-catalog-context';
 import { CompletenessPanel } from './CompletenessPanel';
 import { EditorGroupsTabs } from './EditorGroupsTabs';
+import { focusTradeField, TradeIdentityFields } from './TradeIdentityFields';
 import { attributeIdOfIssuePath, editorGroups, groupOfAttribute } from './editor-layout';
 import { useProductEditor, type HolderRecord } from './use-product-editor';
 import { VariantsPanel } from '../variants/VariantsPanel';
@@ -47,6 +49,9 @@ export interface ProductEditorViewProps {
   readonly onBack: () => void;
   readonly reportDirty: (dirty: boolean) => void;
 }
+
+/** Τα πεδία ταυτότητας εμπορίου που εντοπίζει η σύνοψη ευρημάτων (η διαδρομή του ευρήματος = το όνομα του πεδίου). */
+const TRADE_LOCATABLE_FIELDS = [BRAND_FIELD, ...TRADE_IDENTITY_FIELDS] as const;
 
 /** Όνομα κρίκου της αλυσίδας: ο κωδικός (ο ίδιος κανόνας με τη λίστα) · η ετικέτα · «χωρίς κωδικό» — ποτέ UUID. */
 function useNameOf(members: readonly StoredMemberShape[]) {
@@ -96,13 +101,16 @@ function useEditorPlan(props: HolderEditorProps, judgement: Judgement | null) {
 
 /** Η σύνοψη ευρημάτων ονομάζει την ιδιότητα και πηγαίνει στο πεδίο της (ίδιο `jump` με το πάνελ πληρότητας). */
 function useIssueLocator(props: HolderEditorProps, jump: ReturnType<typeof useEditorPlan>['jump']) {
-  const { text } = useCatalogText();
+  const { t, text } = useCatalogText();
   return useCallback((issue: { readonly path: string }): IssueLocation | null => {
+    // ADR-934 Σ1β: τα πεδία ταυτότητας εμπορίου δεν είναι ιδιότητες — η διαδρομή τους **είναι** το όνομά τους.
+    const tradeField = TRADE_LOCATABLE_FIELDS.find((field) => field === issue.path);
+    if (tradeField) return { label: t(`trade.${tradeField}`), onSelect: () => focusTradeField(tradeField) };
     const attributeId = attributeIdOfIssuePath(issue.path);
     const attribute = attributeId ? props.ctx.library.attributeById.get(attributeId) : undefined;
     if (!attributeId || !attribute) return null;
     return { label: text(attribute.labels, attribute.code), onSelect: () => jump(attributeId, props.scope.channel, props.scope.locale) };
-  }, [props.ctx.library.attributeById, props.scope, jump, text]);
+  }, [props.ctx.library.attributeById, props.scope, jump, t, text]);
 }
 
 /**
@@ -142,6 +150,8 @@ function HolderEditor(props: HolderEditorProps) {
   const attributes = (
     <section className="grid gap-4">
       <IssueSummary issues={issues} title={t('editor.issuesTitle')} locate={locate} />
+      <TradeIdentityFields draft={editor.draft} saved={saved} chain={judgement.chain} depth={judgement.depth} issues={issues}
+        disabled={!props.canManage} nameOf={nameOf} onChange={(next) => editor.update(next)} />
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <EditorGroupsTabs plan={plan} active={active} onActive={setActive} holder={editor.draft} saved={saved} resolved={judgement.resolved} chain={judgement.chain}
           depth={judgement.depth} scope={props.scope} env={env} issues={issues} disabled={!props.canManage} nameOf={nameOf}

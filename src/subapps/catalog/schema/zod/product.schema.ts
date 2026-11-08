@@ -64,10 +64,24 @@ const productValuesSchema: z.ZodType<ProductValues, z.ZodTypeDef, unknown> = z
   .record(entityIdSchema, valueSlotsSchema)
   .refine((values) => Object.keys(values).length <= CATALOG_LIMITS.maxAttributesPerFamily);
 
+/**
+ * Πεδία ταυτότητας εμπορίου (ADR-934 Σ1β): **δομή** μόνο — το μήκος εδώ είναι φράχτης μεγέθους σώματος· τα πραγματικά όρια,
+ * η μορφή GTIN και το επίπεδο της μάρκας κρίνονται στο `validate-trade-identity.ts` (οθόνη **και** γραφέας, ευρήματα ανά πεδίο).
+ * `.default(null)` ⇒ ένα αίτημα χωρίς τα πεδία (παλιός πελάτης) σημαίνει «κενό», όχι σφάλμα.
+ */
+const tradeTextSchema = z.string().max(CATALOG_LIMITS.maxTextValueLength).nullable().default(null);
+
 const holderShape = {
   values: productValuesSchema.default({}),
   noValueReasons: z.record(entityIdSchema, z.enum(NO_VALUE_REASONS)).default({}),
   categoryIds: idListSchema(CATALOG_LIMITS.maxCategoriesPerProduct).default([]),
+  brand: tradeTextSchema,
+};
+
+const tradeIdentityShape = {
+  gtin: tradeTextSchema,
+  mpn: tradeTextSchema,
+  noGtinReason: z.enum(NO_VALUE_REASONS).nullable().default(null),
 };
 
 export const valueHolderSchema: z.ZodType<CatalogValueHolder, z.ZodTypeDef, unknown> = z.object(holderShape);
@@ -82,6 +96,7 @@ export const productModelDefinitionSchema: z.ZodType<CatalogProductModelDefiniti
 
 export const productDefinitionSchema: z.ZodType<CatalogProductDefinition, z.ZodTypeDef, unknown> = z.object({
   ...holderShape,
+  ...tradeIdentityShape,
   modelId: entityIdSchema.nullable(),
   familyId: entityIdSchema,
 });
