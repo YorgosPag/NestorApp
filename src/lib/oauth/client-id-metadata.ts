@@ -35,7 +35,7 @@
 
 import 'server-only';
 
-import { fetchGuardedText } from '@/lib/security/outbound-url-guard';
+import { fetchGuardedText } from '@/lib/security/outbound-fetch';
 import { OAUTH_TTL } from './oauth-config';
 
 // ============================================================================

@@ -19,7 +19,7 @@ import { readIcalCalendar, type IcalEvent } from '@/lib/ical/ical-read';
 import {
   fetchGuardedDocument,
   type GuardedDocumentResult,
-} from '@/lib/security/outbound-url-guard';
+} from '@/lib/security/outbound-fetch';
 import { stayClockAt } from '@/lib/stay/stay-calendar-of';
 import {
   STAY_CHANNEL_MAX_BYTES,

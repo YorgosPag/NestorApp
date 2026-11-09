@@ -72,6 +72,21 @@ describe('isPublicAddress — IPv6', () => {
   });
 });
 
+describe('validateOutboundUrlSyntax — ρητή άδεια http (ADR-934 Μ-β1)', () => {
+  it('δέχεται http μόνο όταν το ζητήσει ο καλών', () => {
+    expect(validateOutboundUrlSyntax('http://cdn.example/a.pdf', { allowHttp: true }).ok).toBe(true);
+    expect(validateOutboundUrlSyntax('http://cdn.example/a.pdf')).toEqual({ ok: false, rejection: 'scheme_not_https' });
+  });
+
+  it('η άδεια http δεν ανοίγει άλλα σχήματα', () => {
+    expect(validateOutboundUrlSyntax('ftp://cdn.example/a.pdf', { allowHttp: true })).toEqual({ ok: false, rejection: 'scheme_not_https' });
+  });
+
+  it('η άδεια http δεν παρακάμπτει τον έλεγχο ιδιωτικής διεύθυνσης', () => {
+    expect(validateOutboundUrlSyntax('http://127.0.0.1/admin', { allowHttp: true })).toEqual({ ok: false, rejection: 'address_not_public' });
+  });
+});
+
 describe('validateOutboundUrlSyntax', () => {
   it('απορρίπτει http', () => {
     const result = validateOutboundUrlSyntax('http://example.com/client.json');

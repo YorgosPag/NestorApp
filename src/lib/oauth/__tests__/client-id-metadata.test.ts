@@ -11,11 +11,11 @@ import {
   validateMetadataDocument,
 } from '../client-id-metadata';
 
-jest.mock('@/lib/security/outbound-url-guard', () => ({
+jest.mock('@/lib/security/outbound-fetch', () => ({
   fetchGuardedText: jest.fn(),
 }));
 
-import { fetchGuardedText } from '@/lib/security/outbound-url-guard';
+import { fetchGuardedText } from '@/lib/security/outbound-fetch';
 
 const mockFetch = fetchGuardedText as unknown as jest.Mock;
 
