@@ -6,6 +6,7 @@
 
 import type jsPDF from 'jspdf';
 import type { InvoiceType } from '../../types';
+import type { HumanLanguage } from '@/i18n/languages';
 
 // ============================================================================
 // CONSTANTS — Brand Colors & Layout
@@ -43,6 +44,12 @@ export const LOGO = {
   width: 25,
   height: 25,
 };
+
+/**
+ * Η γλώσσα του εγγράφου: το τιμολόγιο εκδίδεται στα ελληνικά (όπως όλες οι ετικέτες εδώ). Ό,τι αποδίδεται από
+ * locale JSON έξω από το i18next (μονάδα μέτρησης · αιτία εξαίρεσης ΦΠΑ) ακολουθεί **αυτήν**, όχι τη γλώσσα της UI.
+ */
+export const INVOICE_DOCUMENT_LANGUAGE: HumanLanguage = 'el';
 
 // ============================================================================
 // BILINGUAL LABELS

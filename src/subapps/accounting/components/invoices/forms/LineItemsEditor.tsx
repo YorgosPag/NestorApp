@@ -9,9 +9,12 @@ import { Label } from '@/components/ui/label';
 import { UomSelect } from '@/components/shared/UomSelect';
 import { UOM_CODES, toStoredUom } from '@/lib/uom/uom-registry';
 import { newInvoiceLineItem } from './invoice-line-defaults';
+import { withLineVatExemption, withLineVatRate } from './invoice-line-vat';
 import { VATRateSelector } from '../../shared/VATRateSelector';
+import { VatExemptionReasonField } from '../../shared/VatExemptionReasonField';
 import { ServicePresetCombobox } from '../../shared/ServicePresetCombobox';
 import type { InvoiceLineItem, ServicePreset } from '@/subapps/accounting/types';
+import { requiresVatExemption } from '@/subapps/accounting/services/mydata/mydata-codes';
 import { formatAccountingCurrency } from '../../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -22,9 +25,11 @@ interface LineItemsEditorProps {
   lineItems: InvoiceLineItem[];
   onLineItemsChange: (items: InvoiceLineItem[]) => void;
   presets: ServicePreset[];
+  /** Ημερομηνία έκδοσης — ορίζει ποια έκδοση του Κώδικα ΦΠΑ αναγράφει η αιτία εξαίρεσης. */
+  issueDate: string;
 }
 
-export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineItemsEditorProps) {
+export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDate }: LineItemsEditorProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const fieldId = useId();
@@ -60,24 +65,29 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
     [lineItems, onLineItemsChange]
   );
 
+  /** Αντικαθιστά μία γραμμή με το αποτέλεσμα μιας καθαρής μετάβασης. */
+  const replaceItem = useCallback(
+    (index: number, next: (item: InvoiceLineItem) => InvoiceLineItem) => {
+      onLineItemsChange(lineItems.map((item, i) => (i === index ? next(item) : item)));
+    },
+    [lineItems, onLineItemsChange]
+  );
+
   const applyPreset = useCallback(
     (index: number, preset: ServicePreset) => {
-      const updated = lineItems.map((item, i) => {
-        if (i !== index) return item;
-        const newItem: InvoiceLineItem = {
+      replaceItem(index, (item) => {
+        const newItem = withLineVatRate({
           ...item,
           description: preset.description,
           unit: toStoredUom(preset.unit),
           unitPrice: preset.unitPrice,
-          vatRate: preset.vatRate,
           mydataCode: preset.mydataCode,
-        };
+        }, preset.vatRate);
         newItem.netAmount = Math.round(newItem.quantity * newItem.unitPrice * 100) / 100;
         return newItem;
       });
-      onLineItemsChange(updated);
     },
-    [lineItems, onLineItemsChange]
+    [replaceItem]
   );
 
   return (
@@ -158,7 +168,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
                 <Label>{t('invoices.vatLabel')}</Label>
                 <VATRateSelector
                   value={item.vatRate}
-                  onValueChange={(rate) => updateItem(index, 'vatRate', rate)}
+                  onValueChange={(rate) => replaceItem(index, (current) => withLineVatRate(current, rate))}
                 />
               </fieldset>
 
@@ -177,6 +187,15 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
                 <span className="text-sm font-bold">{formatAccountingCurrency(grossAmount)}</span>
               </div>
             </div>
+
+            {requiresVatExemption(item.vatRate) && (
+              <VatExemptionReasonField
+                id={`${fieldId}-vat-exemption-${index}`}
+                value={item.vatExemptionCategory}
+                issueDate={issueDate}
+                onValueChange={(code) => replaceItem(index, (current) => withLineVatExemption(current, code))}
+              />
+            )}
           </article>
         );
       })}

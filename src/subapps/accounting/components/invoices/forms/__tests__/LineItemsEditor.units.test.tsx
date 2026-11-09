@@ -45,7 +45,7 @@ const HOURLY_PRESET: ServicePreset = {
 };
 
 function renderEditor(onChange = jest.fn(), presets: ServicePreset[] = []) {
-  render(<LineItemsEditor lineItems={[LEGACY_LINE]} onLineItemsChange={onChange} presets={presets} />);
+  render(<LineItemsEditor lineItems={[LEGACY_LINE]} onLineItemsChange={onChange} presets={presets} issueDate="2026-11-09" />);
   return onChange;
 }
 

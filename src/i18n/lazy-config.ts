@@ -99,6 +99,7 @@ export const SUPPORTED_NAMESPACES = [
   'tool-hints', // 🏢 DXF Viewer: Step-by-step tool hints (ADR-082)
   'accounting', // 🏢 Accounting subapp (invoices, journal, VAT, tax, assets, documents)
   'accounting-tax-offices', // 🏢 ΔΟΥ names + regions (DoyPicker component)
+  'accounting-vat-exemptions', // 🏢 Αιτίες εξαίρεσης ΦΠΑ myDATA §8.3 (ADR-ACC-003)
   'banking',    // 🏢 Banking module — bank accounts, IBAN, selectors (ADR-172)
   'addresses',  // 🏢 Shared address system — forms, cards, maps (ADR-172)
   'payments',   // 🏢 Payment plans, installments, loans, cheques, reports (ADR-234)
@@ -433,6 +434,7 @@ export const CRITICAL_NAMESPACES: readonly Namespace[] = [
   'accounting',
   'accounting-setup',
   'accounting-tax-offices',
+  'accounting-vat-exemptions',
   'payments',
   'payments-loans',
   'payments-cost-calc',

@@ -17,8 +17,7 @@ import { roundToTwo } from '../../utils/math';
 import {
   MYDATA_CORRELATION_REQUIRED,
   MYDATA_COUNTERPART_REQUIRED,
-  MYDATA_VAT_CATEGORY_ZERO,
-  isValidMyDataVatExemption,
+  isVatExemptionMissing,
   myDataPaymentMethodOf,
   myDataVatCategoryOf,
   myDataWithholdingCategoryOf,
@@ -95,11 +94,8 @@ function checkLines(invoice: Invoice): MyDataPreflightIssue[] {
   if (invoice.lineItems.length === 0) return [issue('NO_LINES')];
   const issues: MyDataPreflightIssue[] = [];
   for (const line of invoice.lineItems) {
-    const category = myDataVatCategoryOf(line.vatRate);
-    if (category === null) issues.push(issue('VAT_RATE_UNKNOWN', line.lineNumber));
-    if (category === MYDATA_VAT_CATEGORY_ZERO && !isValidMyDataVatExemption(line.vatExemptionCategory)) {
-      issues.push(issue('VAT_EXEMPTION_MISSING', line.lineNumber));
-    }
+    if (myDataVatCategoryOf(line.vatRate) === null) issues.push(issue('VAT_RATE_UNKNOWN', line.lineNumber));
+    if (isVatExemptionMissing(line)) issues.push(issue('VAT_EXEMPTION_MISSING', line.lineNumber));
   }
   return issues;
 }

@@ -17,9 +17,10 @@
  * Καθαρό αρχείο: καμία εξάρτηση εκτέλεσης — πελάτης, διακομιστής, tests.
  */
 
-import type { InvoiceType } from '../../types/invoice';
+import type { InvoiceLineItem, InvoiceType } from '../../types/invoice';
 import type { PaymentMethod } from '../../types/common';
 import { GREEK_VAT_RATES } from '../config/vat-rates';
+import { isVatExemptionCode, type VatExemptionCode } from '../config/vat-exemption-reasons';
 
 /** Η έκδοση των προδιαγραφών ΑΑΔΕ με την οποία είναι γραμμένοι οι πίνακες. */
 export const MYDATA_SPEC_VERSION = '2.0.2' as const;
@@ -66,9 +67,6 @@ export const MYDATA_CORRELATION_REQUIRED: ReadonlySet<InvoiceType> = new Set<Inv
  */
 export const MYDATA_VAT_CATEGORY_ZERO = 7 as const;
 
-/** Έγκυρο εύρος αιτίας εξαίρεσης ΦΠΑ (XSD `VatExemptionType`: 1–31). */
-export const MYDATA_VAT_EXEMPTION_RANGE = { min: 1, max: 31 } as const;
-
 /**
  * Συντελεστής ΦΠΑ → κατηγορία ΑΑΔΕ. **Πηγή ο πίνακας `GREEK_VAT_RATES`** (μία αλήθεια για τους
  * συντελεστές)· εδώ μόνο η αναζήτηση. `null` = συντελεστής που η εφαρμογή δεν γνωρίζει.
@@ -77,11 +75,25 @@ export function myDataVatCategoryOf(vatRate: number): number | null {
   return GREEK_VAT_RATES.find((entry) => entry.rate === vatRate)?.mydataCategory ?? null;
 }
 
-export function isValidMyDataVatExemption(code: number | null | undefined): code is number {
-  return typeof code === 'number'
-    && Number.isInteger(code)
-    && code >= MYDATA_VAT_EXEMPTION_RANGE.min
-    && code <= MYDATA_VAT_EXEMPTION_RANGE.max;
+/**
+ * Αιτία εξαίρεσης ΦΠΑ (§8.3, XSD `VatExemptionType`) — **μέλος του καταλόγου** `VAT_EXEMPTION_REASONS`,
+ * όχι απλώς ακέραιος σε εύρος: ο κατάλογος είναι η μία αλήθεια για το ποιοι κωδικοί υπάρχουν.
+ */
+export function isValidMyDataVatExemption(code: number | null | undefined): code is VatExemptionCode {
+  return isVatExemptionCode(code);
+}
+
+/** Ο συντελεστής ανήκει στην κατηγορία 7 «Άνευ ΦΠΑ» ⇒ η γραμμή **χρειάζεται** αιτία εξαίρεσης. */
+export function requiresVatExemption(vatRate: number): boolean {
+  return myDataVatCategoryOf(vatRate) === MYDATA_VAT_CATEGORY_ZERO;
+}
+
+/**
+ * Λείπει (ή είναι άκυρη) η αιτία που απαιτείται. **ΕΝΑΣ κανόνας** για τη φόρμα (μήνυμα στη γραμμή) και τον
+ * έλεγχο πριν τη διαβίβαση (`VAT_EXEMPTION_MISSING`): ό,τι λέει η φόρμα «λείπει» είναι ό,τι θα μπλοκάρει.
+ */
+export function isVatExemptionMissing(line: Pick<InvoiceLineItem, 'vatRate' | 'vatExemptionCategory'>): boolean {
+  return requiresVatExemption(line.vatRate) && !isValidMyDataVatExemption(line.vatExemptionCategory);
 }
 
 // ============================================================================

@@ -75,6 +75,21 @@
       "targetNamespaces": []
     },
     {
+      "namespace": "accounting-vat-exemptions",
+      "owner": "accounting-subapp",
+      "primarySurface": "accounting-invoice-line-vat-exemption",
+      "stringClasses": [
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 200,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
       "namespace": "addresses",
       "owner": "shared-addressing",
       "primarySurface": "shared-addresses",

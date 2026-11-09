@@ -10,15 +10,11 @@ import { forceRobotoCell, yAfterTable } from '@/services/report-engine/report-pd
 import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 import type { Invoice, InvoiceLineItem } from '../../types';
 import {
-  COLORS, LAYOUT, LOGO, LABELS, INVOICE_TITLES, PAYMENT_METHOD_LABELS,
+  COLORS, LAYOUT, LOGO, LABELS, INVOICE_TITLES, PAYMENT_METHOD_LABELS, INVOICE_DOCUMENT_LANGUAGE,
   ensureSpace, drawHR, setColor, formatIBAN,
   drawPaymentStamp, buildColumnStyles
 } from './invoice-pdf-constants';
 import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
-import type { HumanLanguage } from '@/i18n/languages';
-
-/** Το τιμολόγιο εκδίδεται στα ελληνικά (όπως όλες οι ετικέτες του `invoice-pdf-constants`)· η μονάδα ακολουθεί το έγγραφο. */
-const INVOICE_DOCUMENT_LANGUAGE: HumanLanguage = 'el';
 
 /** Το σώμα των πινάκων του τιμολογίου (γραμμές · τράπεζες) — ΕΝΑ στυλ. */
 const TABLE_BODY_STYLES = {

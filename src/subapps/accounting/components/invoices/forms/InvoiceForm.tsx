@@ -405,6 +405,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
             lineItems={form.lineItems}
             onLineItemsChange={handleLineItemsChange}
             presets={presets}
+            issueDate={form.issueDate}
           />
         </CardContent>
       </Card>

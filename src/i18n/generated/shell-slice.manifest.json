@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "d653efb6ad68ec1d5e1887d0bd87c3aa80ecece69562d5de4b6e5aad378e0fa4",
+    "src/i18n/generated/lazy-route-namespaces.json": "9ab85c247f5043045db956415f36562171ae084dfa512b68702fe7457493db16",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -151,7 +151,7 @@
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
       "registries": "9d477a741f5332f870bc8a11d5769a31f86c1674c1beb1c2b40644d497c1f102",
-      "supportedNamespaces": "c71390b60b94884f8fb2f0b12566e44adecace1ad2819f6884a6cbe7a6a980df"
+      "supportedNamespaces": "4ef755e3e2ff9e382a4495cfb9029ae454d164a438c6a93c420c43987ed036b1"
     },
     "namespaceBundles": {
       "AUDIT_TIMELINE_NAMESPACES": "18e38e5883fc36d385a27c7604dbf4144948e21b9761bdbee3c1dd700b95eb67",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c27659742a09708c2004ff8898b2f4479be1c16a5f1370944eb1d64c86dc77b9",
+  "inputsSha256": "3e5f51d0209fd73516f7a592969b1520da1c7e3512313864b20e684705e1295c",
   "languages": [
     "el"
   ],

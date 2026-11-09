@@ -22,6 +22,8 @@ import { createStaleCache } from '@/lib/stale-cache';
 import { cn } from '@/lib/utils';
 import { useUomLabel } from '@/hooks/useUomLabel';
 import { formatAccountingCurrency } from '../../../utils/format';
+import { requiresVatExemption } from '../../../services/mydata/mydata-codes';
+import { VatExemptionLineNote } from '../../shared/VatExemptionReasonField';
 
 const invoiceDetailsCache = createStaleCache<Invoice>('accounting-invoice-detail-view');
 
@@ -226,6 +228,9 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
                 <p className={cn("text-xs", colors.text.muted)}>
                   {item.quantity} × {uomLabel(item.unit)} @ {formatAccountingCurrency(item.unitPrice)} | {t('invoices.vatLabel')} {item.vatRate}%
                 </p>
+                {requiresVatExemption(item.vatRate) && (
+                  <VatExemptionLineNote value={item.vatExemptionCategory} issueDate={invoice.issueDate} />
+                )}
               </div>
               <span className="font-medium">
                 {formatAccountingCurrency(item.netAmount)}

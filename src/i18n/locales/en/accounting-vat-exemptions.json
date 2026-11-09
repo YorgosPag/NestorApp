@@ -1,0 +1,182 @@
+{
+  "field": {
+    "label": "VAT exemption reason",
+    "placeholder": "Select the exemption provision",
+    "required": "A VAT exemption reason is required for the 0% rate — without it the document cannot be transmitted to myDATA.",
+    "option": "{code}. {title}",
+    "summary": "Code {code} · {provision} ({law})"
+  },
+  "law": {
+    "legacy": "Law 2859/2000",
+    "current": "Law 5144/2024"
+  },
+  "pdf": {
+    "heading": "VAT EXEMPTION",
+    "line": "{lines, plural, one {Line} other {Lines}} {numbers}: {provision} ({law})"
+  },
+  "groups": {
+    "exemptions": "Exemptions",
+    "specialRegimes": "Special schemes",
+    "scope": "Scope, place, time and taxable amount",
+    "vatIncluded": "VAT included",
+    "eCommerce": "E-commerce (OSS / IOSS)",
+    "other": "Other provisions"
+  },
+  "reasons": {
+    "c1": {
+      "title": "Taxable transactions · Taxable persons",
+      "legacy": "No VAT – Articles 2 and 3 of the VAT Code",
+      "current": "No VAT – Articles 2 and 3 of the VAT Code"
+    },
+    "c2": {
+      "title": "Supply of goods",
+      "legacy": "No VAT – Article 5 of the VAT Code",
+      "current": "No VAT – Article 5 of the VAT Code"
+    },
+    "c3": {
+      "title": "Place of supply of goods",
+      "legacy": "No VAT – Article 13 of the VAT Code",
+      "current": "No VAT – Article 17 of the VAT Code"
+    },
+    "c4": {
+      "title": "Place of supply of services",
+      "legacy": "No VAT – Article 14 of the VAT Code",
+      "current": "No VAT – Article 18 of the VAT Code"
+    },
+    "c5": {
+      "title": "Chargeable event and chargeability of VAT",
+      "legacy": "No VAT – Article 16 of the VAT Code",
+      "current": "No VAT – Article 21 of the VAT Code"
+    },
+    "c6": {
+      "title": "Taxable amount",
+      "legacy": "No VAT – Article 19 of the VAT Code",
+      "current": "No VAT – Article 24 of the VAT Code"
+    },
+    "c7": {
+      "title": "Domestic exemptions",
+      "legacy": "No VAT – Article 22 of the VAT Code",
+      "current": "No VAT – Article 27 of the VAT Code"
+    },
+    "c8": {
+      "title": "Exemptions on exports outside the EU and international transport",
+      "legacy": "No VAT – Article 24 of the VAT Code",
+      "current": "No VAT – Article 29 of the VAT Code"
+    },
+    "c9": {
+      "title": "Exemptions relating to international trade in goods",
+      "legacy": "No VAT – Article 25 of the VAT Code",
+      "current": "No VAT – Article 30 of the VAT Code"
+    },
+    "c10": {
+      "title": "Exemptions under tax warehousing arrangements",
+      "legacy": "No VAT – Article 26 of the VAT Code",
+      "current": "No VAT – Article 31 of the VAT Code"
+    },
+    "c11": {
+      "title": "Special exemptions",
+      "legacy": "No VAT – Article 27 of the VAT Code",
+      "current": "No VAT – Article 32 of the VAT Code"
+    },
+    "c12": {
+      "title": "Special exemptions — vessels on the high seas",
+      "legacy": "No VAT – Article 27 of the VAT Code – High-seas vessels",
+      "current": "No VAT – Article 32 of the VAT Code – High-seas vessels"
+    },
+    "c13": {
+      "title": "Special exemptions — vessels on the high seas (para. 1(c))",
+      "legacy": "No VAT – Article 27(1)(c) of the VAT Code – High-seas vessels",
+      "current": "No VAT – Article 32(1)(c) of the VAT Code – High-seas vessels"
+    },
+    "c14": {
+      "title": "Exemptions on supplies of goods to another Member State",
+      "legacy": "No VAT – Article 28 of the VAT Code",
+      "current": "No VAT – Article 33 of the VAT Code"
+    },
+    "c15": {
+      "title": "Special scheme for small enterprises",
+      "legacy": "No VAT – Article 39 of the VAT Code",
+      "current": "No VAT – Article 44 of the VAT Code"
+    },
+    "c16": {
+      "title": "VAT payable by the recipient of goods and services",
+      "legacy": "No VAT – Article 39a of the VAT Code",
+      "current": "No VAT – Article 45 of the VAT Code"
+    },
+    "c17": {
+      "title": "Flat-rate VAT payment scheme",
+      "legacy": "No VAT – Article 40 of the VAT Code",
+      "current": "No VAT – Article 47 of the VAT Code"
+    },
+    "c18": {
+      "title": "Special scheme for farmers",
+      "legacy": "No VAT – Article 41 of the VAT Code",
+      "current": "No VAT – Article 48 of the VAT Code"
+    },
+    "c19": {
+      "title": "Special scheme for investment gold",
+      "legacy": "No VAT – Article 47 of the VAT Code",
+      "current": "No VAT – Article 54 of the VAT Code"
+    },
+    "c20": {
+      "title": "Special scheme for travel agents",
+      "legacy": "VAT included – Article 43 of the VAT Code",
+      "current": "VAT included – Article 50 of the VAT Code"
+    },
+    "c21": {
+      "title": "Special scheme for manufactured tobacco",
+      "legacy": "VAT included – Article 44 of the VAT Code",
+      "current": "VAT included – Article 51 of the VAT Code"
+    },
+    "c22": {
+      "title": "Special scheme for second-hand goods dealers",
+      "legacy": "VAT included – Article 45 of the VAT Code",
+      "current": "VAT included – Article 52 of the VAT Code"
+    },
+    "c23": {
+      "title": "Special scheme for sales by public auction",
+      "legacy": "VAT included – Article 46 of the VAT Code",
+      "current": "VAT included – Article 53 of the VAT Code"
+    },
+    "c24": {
+      "title": "Supply of immovable property",
+      "legacy": "No VAT – Article 6 of the VAT Code",
+      "current": "No VAT – Article 8 of the VAT Code"
+    },
+    "c25": {
+      "title": "Circular POL.1029/1995",
+      "legacy": "No VAT – POL.1029/1995",
+      "current": "No VAT – POL.1029/1995"
+    },
+    "c26": {
+      "title": "Circular POL.1167/2015",
+      "legacy": "No VAT – POL.1167/2015",
+      "current": "No VAT – POL.1167/2015"
+    },
+    "c27": {
+      "title": "Other VAT exemptions",
+      "legacy": "Other VAT exemptions",
+      "current": "Other VAT exemptions"
+    },
+    "c28": {
+      "title": "Export exemptions — Tax Free",
+      "legacy": "No VAT – Article 24(1)(b) of the VAT Code (Tax Free)",
+      "current": "No VAT – Article 29(1)(b) of the VAT Code (Tax Free)"
+    },
+    "c29": {
+      "title": "OSS — non-Union scheme",
+      "legacy": "No VAT – Article 47b of the VAT Code (OSS non-Union scheme)",
+      "current": "No VAT – Article 56 of the VAT Code (OSS non-Union scheme)"
+    },
+    "c30": {
+      "title": "OSS — Union scheme",
+      "legacy": "No VAT – Article 47c of the VAT Code (OSS Union scheme)",
+      "current": "No VAT – Article 57 of the VAT Code (OSS Union scheme)"
+    },
+    "c31": {
+      "title": "IOSS — distance sales of goods imported from third countries",
+      "legacy": "No VAT – Article 47d of the VAT Code (IOSS)",
+      "current": "No VAT – Article 58 of the VAT Code (IOSS)"
+    }
+  }
+}

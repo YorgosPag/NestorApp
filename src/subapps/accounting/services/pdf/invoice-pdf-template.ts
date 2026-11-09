@@ -26,6 +26,7 @@ import {
   drawNotesSection,
   addPageFooters
 } from './invoice-pdf-sections';
+import { drawVatExemptionSection } from './invoice-pdf-vat-exemption';
 
 // Re-export section renderers for direct use
 export {
@@ -87,6 +88,7 @@ export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promis
   y = drawCreditNoteReference(pdf, invoice, y);
   y = drawLineItemsTable(pdf, invoice, y);
   y = drawTotalsSection(pdf, invoice, y, withholdingAmount);
+  y = drawVatExemptionSection(pdf, invoice, y); // ν. 4308/2014 άρθρο 9 — παραπομπή απαλλαγής ΦΠΑ
   y = drawPaymentSection(pdf, invoice, y);
   y = drawBankAccountsSection(pdf, bankAccounts, y);
   y = drawMyDataSection(pdf, invoice, kadCode, y);
