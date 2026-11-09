@@ -12,12 +12,12 @@
  *   3. **πηγή αντικατεστημένης εικόνας** ⇒ `resolveProposalLines` = `null` και καμία εγγραφή.
  */
 
-import type { Entity } from '../../../types/entities';
-import type { Point2D } from '../../../rendering/types/Types';
-import type { RasterSegment } from '../../../bim/plan-recognition/plan-recognition-types';
 import type { WallProposal } from '../../../bim/model-from-drawing/wall-proposal';
 import { imageAnchorFrameId } from '../../../bim/model-from-drawing/decision-anchors';
-import { sceneToRasterPixel, type RasterPlacement } from '../../../floorplan-background/geometry/raster-scene-mapping';
+import {
+  TEST_RASTER_PLACEMENT,
+  wallLinesAsRasterSegments,
+} from '../../../bim/model-from-drawing/__tests__/raster-wall-lines-fixture';
 import {
   seedFloorBackground,
   TEST_CALIBRATION,
@@ -32,49 +32,22 @@ import {
   resolveProposalLines,
   type ProposalLineSource,
 } from '../proposal-line-source';
-import { confirmAllGroups, ENTITIES, harness, WALL_HEX, type Harness } from './model-from-drawing-harness';
+import { confirmAllGroups, harness, type Harness } from './model-from-drawing-harness';
 
 const FLOOR = 'flr_raster';
 const IMAGE_A = 'bg_a';
 const IMAGE_B = 'bg_b';
 
-/** 1 px = 10 mm, εικόνα 1200 × 1300 px: καλύπτει το σχέδιο δοκιμής (≈ 0,7–10,3 m × 0,25–11,3 m). */
-const PLACEMENT: RasterPlacement = {
-  naturalBounds: { width: 1200, height: 1300 },
-  transform: { translateX: 0, translateY: 0, scaleX: 10, scaleY: 10, rotation: 0 },
-};
-
 type RasterSource = Extract<ProposalLineSource, { kind: 'raster' }>;
-type SceneLine = Entity & { readonly start: Point2D; readonly end: Point2D };
-
-const WALL_LINES = ENTITIES.filter(
-  (e) => (e as { color?: string }).color?.toLowerCase() === WALL_HEX,
-) as readonly SceneLine[];
-
-function toPixel(p: Point2D, shiftPx: number): Point2D {
-  const px = sceneToRasterPixel(p, PLACEMENT);
-  if (!px) throw new Error('test placement must be invertible');
-  return { x: px.x + shiftPx, y: px.y + shiftPx };
-}
-
-/** Οι γραμμές τοίχου ως πινελιές της εικόνας· `shiftPx` = η ίδια εικόνα ξαναδιαβασμένη λίγο αλλιώς. */
-function segmentsOf(shiftPx: number): RasterSegment[] {
-  return WALL_LINES.map((line) => ({
-    id: line.id,
-    start: toPixel(line.start, shiftPx),
-    end: toPixel(line.end, shiftPx),
-    style: 'stroke',
-    strokeWidthPx: 1,
-    confidence: { score: 0.9, factors: { geometry: 0.9 } },
-  }));
-}
 
 function rasterSource(backgroundId: string, recognitionId: string, shiftPx = 0): RasterSource {
-  return { kind: 'raster', recognitionId, floorId: FLOOR, backgroundId, segments: segmentsOf(shiftPx) };
+  return { kind: 'raster', recognitionId, floorId: FLOOR, backgroundId, segments: wallLinesAsRasterSegments(shiftPx) };
 }
 
 function installImage(backgroundId: string): void {
-  seedFloorBackground(testFloorplanBackground({ id: backgroundId, floorId: FLOOR, ...PLACEMENT, calibration: TEST_CALIBRATION }));
+  seedFloorBackground(testFloorplanBackground({
+    id: backgroundId, floorId: FLOOR, ...TEST_RASTER_PLACEMENT, calibration: TEST_CALIBRATION,
+  }));
 }
 
 const state = () => modelFromDrawingStore.get();

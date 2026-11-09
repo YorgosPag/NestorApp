@@ -89,6 +89,63 @@ describe('findWallsFromParallelPairs (μέσω createParallelPairStrategy)', () 
   });
 });
 
+/** Κλειστό ορθογώνιο 4 γραμμών w × h με κάτω αριστερή γωνία στο (x0, y0). */
+const closedBox = (x0: number, y0: number, w: number, h: number): RegionLineSeg[] => [
+  seg('s', x0, y0, x0 + w, y0), seg('e', x0 + w, y0, x0 + w, y0 + h),
+  seg('n', x0 + w, y0 + h, x0, y0 + h), seg('w', x0, y0 + h, x0, y0),
+];
+
+describe('ADR-929 §6.14 — βήμα 9: κανένας άξονας που δεν τον ξέρουμε (κανόνας Β)', () => {
+  it('Π-8 κλειστό 300 × 250 (σχεδόν τετράγωνο, καπάκι και στα δύο άκρα) ⇒ ένα ορθογώνιο ΧΩΡΙΣ άξονα, ίδιο σώμα', () => {
+    const rects = strategy(closedBox(0, 0, 300, 250), TOL);
+    expect(rects).toHaveLength(1);
+    expect(rects[0].axis).toBeUndefined();
+    expect(rects[0].area).toBeCloseTo(300 * 250, 6);
+    expect(rects[0].longSide).toBeCloseTo(300, 6);
+    expect(rects[0].shortSide).toBeCloseTo(250, 6);
+  });
+
+  it('Π-8β παραστάδα 200 × 250 (το ζεύγος των παραστάδων είναι το λεπτότερο) ⇒ επίσης χωρίς άξονα', () => {
+    const rects = strategy(closedBox(0, 0, 200, 250), TOL);
+    expect(rects).toHaveLength(1);
+    expect(rects[0].axis).toBeUndefined();
+  });
+
+  it('Π-9 δύο παρειές 300 μήκος σε απόσταση 250, ΧΩΡΙΣ καπάκια ⇒ ο άξονας μένει (είναι γνώση)', () => {
+    const rects = strategy([seg('p', 0, 0, 300, 0), seg('q', 0, 250, 300, 250)], TOL);
+    expect(rects).toHaveLength(1);
+    expect(rects[0].axis).toBeDefined();
+    expect(axisOf(rects[0])).toEqual({ a: { x: 0, y: 125 }, b: { x: 300, y: 125 }, t: 250 });
+  });
+
+  it('Π-10 κοντός τοίχος σύνδεσης ανάμεσα σε δύο κάθετους: τα άκρα του είναι παρειές ΑΛΛΩΝ τοίχων ⇒ ο άξονας μένει', () => {
+    const walls = [
+      seg('W-a', -250, -1000, -250, 1250), seg('W-b', 0, -1000, 0, 1250),
+      seg('E-a', 300, -1000, 300, 1250), seg('E-b', 550, -1000, 550, 1250),
+      seg('C-a', 0, 0, 300, 0), seg('C-b', 0, 250, 300, 250),
+    ];
+    const rects = strategy(walls, TOL);
+    const connector = rects.find((r) => pointInPolygon({ x: 150, y: 125 }, r.polygon));
+    expect(connector).toBeDefined();
+    expect(connector?.axis).toBeDefined();
+    expect(rects.every((r) => r.axis !== undefined)).toBe(true);
+  });
+
+  it('Π-11 όριο του κατωφλίου: λόγος ΑΚΡΙΒΩΣ 1,75 δεν είναι «σχεδόν τετράγωνο»· 0,001 mm κάτω είναι', () => {
+    const ratio = MODEL_FROM_DRAWING_LIMITS.AMBIGUOUS_ASPECT_RATIO;
+    const at = strategy(closedBox(0, 0, 250 * ratio, 250), TOL);
+    const below = strategy(closedBox(0, 0, 250 * ratio - 0.001, 250), TOL);
+    expect(at).toHaveLength(1);
+    expect(at[0].axis).toBeDefined();
+    expect(below).toHaveLength(1);
+    expect(below[0].axis).toBeUndefined();
+  });
+
+  it('Π-4 (ξανά): το μακρόστενο κλειστό ορθογώνιο κρατά τον άξονά του', () => {
+    expect(strategy(closedBox(0, 0, 250, 800), TOL)[0].axis).toBeDefined();
+  });
+});
+
 describe('Π-6 μέσα από το αμετάβλητο computeWallProposal', () => {
   const entities = HOUSE.map((s) => ({ id: s.id, type: 'line', color: '#000000', start: s.start, end: s.end }) as unknown as Entity);
 

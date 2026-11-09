@@ -49,7 +49,8 @@ export interface ParallelPairStrategyOptions {
 
 /**
  * Δύο παράλληλες παρειές σε απόσταση πάχους ⇒ τοίχος. Τα όρια πάχους ζουν **μόνο** στο `MODEL_FROM_DRAWING_LIMITS`
- * (σε mm) και μετατρέπονται εδώ στις μονάδες της σκηνής.
+ * (σε mm) και μετατρέπονται εδώ στις μονάδες της σκηνής. Το κατώφλι «σχεδόν τετράγωνο» είναι το ΙΔΙΟ με του βοηθού
+ * (`AMBIGUOUS_ASPECT_RATIO`, ADR-929 §6.14).
  */
 export function createParallelPairStrategy(options: ParallelPairStrategyOptions): WallDetectionStrategy {
   const scale = mmToSceneUnits(options.sceneUnits);
@@ -60,6 +61,7 @@ export function createParallelPairStrategy(options: ParallelPairStrategyOptions)
       maxThickness: MODEL_FROM_DRAWING_LIMITS.WALL_PAIR_MAX_THICKNESS_MM * scale,
       offsetTol,
       endSnapReach: options.endSnapReach ?? 2 * offsetTol,
+      ambiguousAspectRatio: MODEL_FROM_DRAWING_LIMITS.AMBIGUOUS_ASPECT_RATIO,
     });
   };
 }

@@ -28,9 +28,18 @@
  *      τους το εξήγησε ήδη το λεπτότερο ζεύγος.
  *   8. **Άκρα στις παρειές**: κάθε άκρο έλκεται στην παρειά του γείτονα μέσα σε `endSnapReach`
  *      (`wall-rect-end-snap.ts`), ώστε το auto-join να το πάει στον άξονα και όταν η γραμμή ήρθε από εικόνα.
+ *   9. **Κανένας άξονας που δεν τον ξέρουμε** (ADR-929 §6.14): κομμάτι σχεδόν τετράγωνο (`isNearSquare`) που έκλεισε
+ *      με καπάκι **και στα δύο** άκρα είναι κλειστό σχήμα 4 γραμμών· και τα δύο ζεύγη του είναι παρειές, και το
+ *      βήμα 7 κράτησε το λεπτότερο αυθαίρετα. Βγαίνει **χωρίς** `axis`, όπως από τον ανιχνευτή κλειστών ορθογωνίων,
+ *      ώστε ο βοηθός να κάνει την ΙΔΙΑ ερώτηση (συμφραζόμενο → άνθρωπος) από σχέδιο και από εικόνα. Κομμάτι με
+ *      παρειές μόνο στις δύο πλευρές κρατά τον άξονα: εκεί ο προσανατολισμός είναι γνώση. Η αφαίρεση γίνεται
+ *      **μετά** το βήμα 8, ώστε η έλξη άκρων να μείνει ακριβώς όπως ήταν. (Σε κλειστό κομμάτι ο άξονας του
+ *      λεπτότερου ζεύγους συμπίπτει με τη μεγάλη πλευρά, οπότε η σειρά δεν αλλάζει το αποτέλεσμα. Μένει έτσι για να
+ *      μην εξαρτάται η έλξη από αυτή τη σύμπτωση.)
  *
- * Έξοδος: `DetectedRectangle` με **ρητό** `axis` (κανείς δεν μαντεύει «μεγάλη πλευρά = άξονας», ADR-419). Τα Τ
- * κλείνουν **κατάντη**, από το υπάρχον auto-join (`wall-region-autojoin.ts`) και τα trims.
+ * Έξοδος: `DetectedRectangle` με **ρητό** `axis` (κανείς δεν μαντεύει «μεγάλη πλευρά = άξονας», ADR-419), εκτός από
+ * τα κλειστά σχεδόν τετράγωνα του βήματος 9. Τα Τ κλείνουν **κατάντη**, από το υπάρχον auto-join
+ * (`wall-region-autojoin.ts`) και τα trims.
  *
  * @see ../model-from-drawing/wall-detection-strategy.ts (η ραφή)
  * @see docs/centralized-systems/reference/adrs/ADR-929-raster-plan-recognition.md §6.3
@@ -46,7 +55,7 @@ import {
   type Interval,
 } from '@/lib/geometry/interval-set';
 import { pointInPolygon } from '@/lib/geometry/planar-polygon';
-import type { DetectedRectangle, RegionLineSeg } from './wall-in-region';
+import { isNearSquare, type DetectedRectangle, type RegionLineSeg } from './wall-in-region';
 import { COLLINEAR_SIN_TOL } from './wall-merge';
 import { rectFromAxis, snapRectEndsToFaces } from './wall-rect-end-snap';
 
@@ -61,6 +70,17 @@ export interface ParallelPairOptions {
    * mm. Εικόνα: λίγα px (το άκρο σε λοξό κόμβο χάνει μισή πινελιά / sin γωνίας, μετρημένο στη Φ2).
    */
   readonly endSnapReach: number;
+  /**
+   * Βήμα 9: κάτω από αυτόν τον λόγο πλευρών ένα **κλειστό** κομμάτι δεν έχει γνωστό άξονα. Το ΙΔΙΟ κατώφλι με τον
+   * βοηθό (`MODEL_FROM_DRAWING_LIMITS.AMBIGUOUS_ASPECT_RATIO`), αδιάστατο.
+   */
+  readonly ambiguousAspectRatio: number;
+}
+
+/** Ό,τι παράγει η κρίση των ζευγών: τα ορθογώνια, και ποια από αυτά δεν έχουν γνωστό άξονα (βήμα 9). */
+interface Emission {
+  readonly rects: DetectedRectangle[];
+  readonly axisUnknown: Set<DetectedRectangle>;
 }
 
 interface Oriented {
@@ -308,12 +328,14 @@ function rectCentre(rect: DetectedRectangle): Point2D {
  * καπάκια δύο τοίχων εκατέρωθεν ενός ανοίγματος (παράλληλα, απέναντι) θα γίνονταν «τοίχος» πάχους όσο το άνοιγμα.
  * Καπάκι είναι μόνο διάστημα φορέα που **χωρά ολόκληρο** στο άκρο. Σε κόμβο Τ το άκρο του κορμού κάθεται πάνω στην
  * παρειά του κάθετου τοίχου, που συνεχίζει πέρα από αυτό: εκείνη μένει ανέγγιχτη (μετρημένο στο «Ισόγειο 1»).
+ * Επιστρέφει αν βρέθηκε καπάκι (βήμα 9: καπάκι και στα δύο άκρα = κλειστό σχήμα).
  */
-function consumeCap(field: readonly FamilyCarriers[], a: Point2D, b: Point2D, tol: number): void {
+function consumeCap(field: readonly FamilyCarriers[], a: Point2D, b: Point2D, tol: number): boolean {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const length = Math.hypot(dx, dy);
-  if (length < 1e-9) return;
+  if (length < 1e-9) return false;
+  let capped = false;
   for (const { direction: d, carriers } of field) {
     if (Math.abs(d.ux * dy - d.uy * dx) / length > COLLINEAR_SIN_TOL) continue;
     const offset = -a.x * d.uy + a.y * d.ux;
@@ -321,15 +343,40 @@ function consumeCap(field: readonly FamilyCarriers[], a: Point2D, b: Point2D, to
     const lo = Math.min(...along) - tol;
     const hi = Math.max(...along) + tol;
     for (const c of carriers) {
-      if (Math.abs(c.offset - offset) <= tol) c.free = c.free.filter((i) => i.lo < lo || i.hi > hi);
+      if (Math.abs(c.offset - offset) > tol) continue;
+      const before = c.free.length;
+      c.free = c.free.filter((i) => i.lo < lo || i.hi > hi);
+      if (c.free.length < before) capped = true;
     }
+  }
+  return capped;
+}
+
+/**
+ * Βήματα 6 + 9 για τα ορθογώνια ενός ζεύγους: τα καπάκια τους καταναλώνονται, και όσα είναι σχεδόν τετράγωνα με καπάκι
+ * και στα δύο άκρα σημειώνονται «άγνωστος άξονας». Και τα δύο άκρα κρίνονται πάντα (καμία βραχυκύκλωση).
+ */
+function consumeCaps(
+  rects: readonly DetectedRectangle[], field: readonly FamilyCarriers[], options: ParallelPairOptions, out: Emission,
+): void {
+  for (const rect of rects) {
+    const [p0, p1, p2, p3] = rect.polygon;
+    const cappedEnd = consumeCap(field, p1, p2, options.offsetTol);
+    const cappedStart = consumeCap(field, p3, p0, options.offsetTol);
+    if (cappedEnd && cappedStart && isNearSquare(rect, options.ambiguousAspectRatio)) out.axisUnknown.add(rect);
   }
 }
 
-/** Βήματα 4–6 για ένα ζεύγος: τα κομμάτια του γίνονται ορθογώνια και καταναλώνουν παρειές και καπάκια. */
+/** Βήμα 9: το ίδιο ορθογώνιο χωρίς ρητό άξονα (ίδιο πολύγωνο και μετρικές, όπως από τον ανιχνευτή κλειστών). */
+function withoutAxis(rect: DetectedRectangle): DetectedRectangle {
+  return { polygon: rect.polygon, longSide: rect.longSide, shortSide: rect.shortSide, area: rect.area };
+}
+
+/** Βήματα 4–6 (+ σήμανση του 9) για ένα ζεύγος: τα κομμάτια του γίνονται ορθογώνια και καταναλώνουν παρειές και καπάκια. */
 function resolvePair(
-  c: PairCandidate, options: ParallelPairOptions, field: readonly FamilyCarriers[], emitted: DetectedRectangle[],
+  c: PairCandidate, options: ParallelPairOptions, field: readonly FamilyCarriers[], out: Emission,
 ): void {
+  const emitted = out.rects;
   const { lo, hi, direction } = c;
   const maxGap = options.maxThickness + options.offsetTol;
   const pieces = bridgeJunctions(intersectIntervals(lo.free, hi.free), lo.free, hi.free, maxGap)
@@ -350,11 +397,7 @@ function resolvePair(
   if (kept.length === 0) return;
   lo.free = subtractIntervals(lo.free, kept);
   hi.free = subtractIntervals(hi.free, kept);
-  for (const rect of emitted.slice(-kept.length)) {
-    const [p0, p1, p2, p3] = rect.polygon;
-    consumeCap(field, p1, p2, options.offsetTol);
-    consumeCap(field, p3, p0, options.offsetTol);
-  }
+  consumeCaps(emitted.slice(-kept.length), field, options, out);
 }
 
 /**
@@ -373,7 +416,9 @@ export function findWallsFromParallelPairs(
   const candidates: PairCandidate[] = [];
   for (const { direction, carriers } of field) pairCandidates(carriers, direction, options, candidates);
   candidates.sort((a, b) => a.distance - b.distance);
-  const emitted: DetectedRectangle[] = [];
-  for (const c of candidates) resolvePair(c, options, field, emitted);
-  return snapRectEndsToFaces(emitted, options.endSnapReach);
+  const out: Emission = { rects: [], axisUnknown: new Set() };
+  for (const c of candidates) resolvePair(c, options, field, out);
+  // Βήμα 8 πριν από το 9: η έλξη δουλεύει με τον άξονα του ζεύγους. Η `map` κρατά τη σειρά ⇒ ίδιος δείκτης.
+  const snapped = snapRectEndsToFaces(out.rects, options.endSnapReach);
+  return snapped.map((rect, i) => (out.axisUnknown.has(out.rects[i]) ? withoutAxis(rect) : rect));
 }

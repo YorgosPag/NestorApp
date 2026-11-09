@@ -81,6 +81,15 @@ export interface DetectedRectangle {
   readonly axis?: readonly [Point2D, Point2D];
 }
 
+/**
+ * ADR-911 Δ7 · ADR-929 §6.14 — ορθογώνιο «σχεδόν τετράγωνο»: λόγος μεγάλης/μικρής πλευράς **κάτω** από `ratio`.
+ * Εκεί το σχήμα μόνο του δεν λέει προς τα πού τρέχει ο τοίχος. Ο ΕΝΑΣ έλεγχος για τον βοηθό (`isAmbiguous`) και
+ * τον ανιχνευτή ζευγών (που τότε δεν δηλώνει άξονα), ώστε ίδιο σχήμα ⇒ ίδια ερώτηση, από όποια πηγή κι αν ήρθε.
+ */
+export function isNearSquare(rect: DetectedRectangle, ratio: number): boolean {
+  return rect.longSide / rect.shortSide < ratio;
+}
+
 // ─── Scene → candidate segments ──────────────────────────────────────────────
 
 /** Επιλογές εξαγωγής τμημάτων. */

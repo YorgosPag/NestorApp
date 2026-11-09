@@ -38,6 +38,7 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 import {
   detectedRectAxis,
   extractLineSegments,
+  isNearSquare,
   type DetectedRectangle,
   type RegionLineSeg,
 } from '../walls/wall-in-region';
@@ -155,10 +156,14 @@ function wallProposalKey(rect: DetectedRectangle, sceneUnits: SceneUnits): strin
   return [cx, cy, rect.longSide, rect.shortSide].map((v) => Math.round(v * toMm)).join(':');
 }
 
-/** Δ7 — ορθογώνιο χωρίς προφανή άξονα: «μεγάλη πλευρά = άξονας» θα ήταν αυθαίρετο. */
+/**
+ * Δ7 — ορθογώνιο χωρίς προφανή άξονα: «μεγάλη πλευρά = άξονας» θα ήταν αυθαίρετο. Ρητός `axis` σημαίνει ότι ο
+ * προσανατολισμός είναι **γνώση**: από τις παρειές (ο ανιχνευτής ζευγών δεν τον δηλώνει σε κλειστό σχεδόν τετράγωνο,
+ * ADR-929 §6.14) ή από το συμφραζόμενο. Έτσι το ίδιο σχήμα κάνει την ίδια ερώτηση, από σχέδιο ή από εικόνα.
+ */
 function isAmbiguous(rect: DetectedRectangle): boolean {
-  if (rect.axis) return false; // η πηγή (ή το συμφραζόμενο) γνωρίζει ρητά τον προσανατολισμό
-  return rect.longSide / rect.shortSide < MODEL_FROM_DRAWING_LIMITS.AMBIGUOUS_ASPECT_RATIO;
+  if (rect.axis) return false;
+  return isNearSquare(rect, MODEL_FROM_DRAWING_LIMITS.AMBIGUOUS_ASPECT_RATIO);
 }
 
 /**
