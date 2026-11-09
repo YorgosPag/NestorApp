@@ -23,7 +23,6 @@ import type { DocumentReference } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_LIFECYCLE_STATES } from '@/config/file-lifecycle-states';
 import type { AuthContext } from '@/lib/auth';
-import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { fileRestoreFields } from '@/lib/files/file-trash-fields';
 import { FieldValue, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { fileRecordBucket } from '@/server/files/file-record-bucket';
@@ -44,8 +43,12 @@ export type KeptContentOutcome = 'created' | 'kept' | 'restored' | 'reborn';
 
 type Data = Readonly<Record<string, unknown>>;
 
+/**
+ * Η εγγραφή περιεχομένου ζει στον **χώρο συστήματος** (Μ-β6, `lib/files/system-file-space.ts`) — όχι στο `files` του ανθρώπου:
+ * καμία λίστα, κάδος ή αναζήτηση χρήστη δεν τη βλέπει. Ο **ένας** δείκτης για revival · καραντίνα · αποδέσμευση.
+ */
 export const mediaContentFileRef = (fileId: string): DocumentReference =>
-  getAdminFirestore().collection(COLLECTIONS[FILE_COLLECTION.company]).doc(fileId);
+  getAdminFirestore().collection(COLLECTIONS.FILES_SYSTEM).doc(fileId);
 
 /** Η κατάσταση του περιεχομένου **αυτού του χώρου**, για αυτά τα bytes. */
 export const mediaContentStateIn = (ctx: AuthContext, fileId: string, sha256: string, data: Data | null): MediaContentState =>

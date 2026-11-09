@@ -680,6 +680,13 @@ export const COLLECTIONS = {
    * `FILE_COLLECTION[kind]` (`lib/files/file-custody.ts`)· **ποτέ** στο `IMMUTABLE_COLLECTIONS`.
    */
   FILES_PERSONAL: process.env.NEXT_PUBLIC_FILES_PERSONAL_COLLECTION || 'files_personal',
+  /**
+   * 🔒 ADR-934 §5.2.2 Μ-β6 — **Ο ΧΩΡΟΣ ΣΥΣΤΗΜΑΤΟΣ ΤΩΝ ΑΡΧΕΙΩΝ** (Google Drive `appDataFolder`): ίδιο σχήμα
+   * `FileRecord`, αλλά αρχεία που **κανένας άνθρωπος δεν διαχειρίζεται** (π.χ. καραντίνα μέσων καταλόγου).
+   * **Μόνο Admin SDK** — οι κανόνες αρνούνται κάθε πελάτη· καμία λίστα, κάδος ή αναζήτηση χρήστη δεν τα βλέπει.
+   * **ΔΕΝ** είναι διαμέρισμα κατόχου (όχι στο `FILE_COLLECTION`)· ποιοι τύποι ζουν εδώ: `lib/files/system-file-space.ts`.
+   */
+  FILES_SYSTEM: process.env.NEXT_PUBLIC_FILES_SYSTEM_COLLECTION || 'files_system',
   ATTACHMENTS: process.env.NEXT_PUBLIC_ATTACHMENTS_COLLECTION || 'attachments',
 
   // 🎨 CAD & TECHNICAL DRAWINGS (Enterprise Unified)

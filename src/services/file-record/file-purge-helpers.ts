@@ -6,6 +6,7 @@
  * Reusable functions for purging files from Storage + Firestore.
  * Used by:
  * - Cron file-purge route (Phase A: trash, Phase B: orphan PENDING) — **και τα δύο** διαμερίσματα (ADR-866 §2.6.9)
+ *   **και** ο χώρος συστήματος (ADR-934 §5.2.2 Μ-β6)
  * - AI agent discard_pending_file tool
  *
  * @module services/file-record/file-purge-helpers
@@ -14,9 +15,12 @@
 
 import 'server-only';
 
+import type { DocumentReference } from 'firebase-admin/firestore';
+
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
+import type { FileSpace } from '@/lib/files/system-file-space';
 import {
   custodyKindOfScope,
   custodyScopeFromData,
@@ -57,6 +61,11 @@ export interface PurgeFileParams {
    * βρίσκει κάθε καλούντα. Ο καλών το ξέρει από το **ερώτημα** που βρήκε το έγγραφο.
    */
   custody: CustodyKind;
+  /**
+   * 🔒 Ο **χώρος** της εγγραφής (ADR-934 §5.2.2 Μ-β6) — προεπιλογή `user`. `system` ⇒ `files_system`· ο κάτοχος (`custody`)
+   * διαλέγει τότε **μόνο** το βιβλίο ίχνους. Ο καλών το ξέρει από το ερώτημα που βρήκε το έγγραφο, όπως και τον κάτοχο.
+   */
+  space?: FileSpace;
   storagePath: string | undefined;
   performedBy: string;
   purgeReason: 'ttl_expired' | 'user_discard' | 'cron_trash';
@@ -149,12 +158,23 @@ async function deleteOriginal(bucket: ReturnType<typeof fileRecordBucket>, stora
 }
 
 /**
+ * Η εγγραφή που εκκαθαρίζεται — στον χώρο **και** το διαμέρισμα όπου τη βρήκε ο καλών. Οι δύο συλλογές γράφονται κυριολεκτικά,
+ * ώστε οι στατικές πύλες (3.35 · 3.91) να βλέπουν **κάθε** κλάδο.
+ */
+function purgeTargetRef(params: Pick<PurgeFileParams, 'fileId' | 'custody' | 'space'>): DocumentReference {
+  const db = getAdminFirestore();
+  return params.space === 'system'
+    ? db.collection(COLLECTIONS.FILES_SYSTEM).doc(params.fileId)
+    : db.collection(COLLECTIONS[FILE_COLLECTION[params.custody]]).doc(params.fileId);
+}
+
+/**
  * Purge a single file: delete Storage binary, mark Firestore record as purged,
  * and create an audit log entry.
  */
 export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFileResult> {
-  const { fileId, custody, storagePath } = params;
-  const ref = getAdminFirestore().collection(COLLECTIONS[FILE_COLLECTION[custody]]).doc(fileId);
+  const { fileId, storagePath } = params;
+  const ref = purgeTargetRef(params);
   let storageDeleted = false;
 
   try {

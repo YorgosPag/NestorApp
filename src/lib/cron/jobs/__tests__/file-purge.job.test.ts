@@ -9,7 +9,8 @@
  *
  * 🔴 **Η ΜΕΤΑΛΛΑΞΗ που πρέπει να πιάσει**: `CUSTODY_KINDS.map(...)` → `['company'].map(...)` στο job ⇒
  * το προσωπικό αρχείο δεν ερωτάται ποτέ ⇒ **Δ1 · Δ2 κόκκινα**. Και ανταλλαγή του διαμερίσματος που
- * περνά στο `purgeFileRecord` ⇒ **Δ3 κόκκινο**.
+ * περνά στο `purgeFileRecord` ⇒ **Δ3 κόκκινο**. Αφαίρεση του περάσματος του χώρου συστήματος (ADR-934
+ * Μ-β6) ⇒ **Δ1 · Δ2 · Δ4 κόκκινα**· `space` που δεν ταξιδεύει ⇒ **Δ4 κόκκινο**.
  *
  * ⚠️ Ο δίσκος είναι **ελάχιστο στιγμιότυπο** που καταγράφει ΠΟΙΑ συλλογή ρωτήθηκε με ΠΟΙΟ φίλτρο —
  * το `FakeFirestore` δεν υποστηρίζει `<` (Φάση Β). Ο γραφέας (`purgeFileRecord`) είναι mock: εδώ
@@ -53,14 +54,20 @@ function stubDb() {
   };
 }
 
-const purgeFileRecord = jest.fn(async (_params: { fileId: string; custody: string }) => ({
+interface PurgeCall {
+  fileId: string;
+  custody: string;
+  space?: string;
+}
+
+const purgeFileRecord = jest.fn(async (_params: PurgeCall) => ({
   success: true,
   storageDeleted: true,
 }));
 
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: () => stubDb() }));
 jest.mock('@/services/file-record/file-purge-helpers', () => ({
-  purgeFileRecord: (params: { fileId: string; custody: string }) => purgeFileRecord(params),
+  purgeFileRecord: (params: PurgeCall) => purgeFileRecord(params),
   isFileHeld: () => false,
   PENDING_FILE_TTL_MS: 1000,
 }));
@@ -74,16 +81,17 @@ beforeEach(() => {
 });
 
 describe('Δ — η εκκαθάριση ανά διαμέρισμα', () => {
-  it('🔴 Δ1 — Φάση Α ρωτά ΚΑΙ το `files` ΚΑΙ το `files_personal`', async () => {
+  it('🔴 Δ1 — Φάση Α ρωτά το `files`, το `files_personal` ΚΑΙ τον χώρο συστήματος', async () => {
     await purgeExpiredTrash(stubDb() as never, '2026-09-17T00:00:00.000Z');
 
     expect(queried.sort()).toEqual([
       `${COLLECTIONS.FILES}:isDeleted`,
       `${COLLECTIONS.FILES_PERSONAL}:isDeleted`,
-    ]);
+      `${COLLECTIONS.FILES_SYSTEM}:isDeleted`,
+    ].sort());
   });
 
-  it('🔴 Δ2 — ολόκληρο το job: και οι δύο φάσεις σε ΚΑΙ τα δύο διαμερίσματα', async () => {
+  it('🔴 Δ2 — ολόκληρο το job: και οι δύο φάσεις σε ΚΑΘΕ διαμέρισμα και χώρο', async () => {
     await purgeFiles();
 
     expect(queried.sort()).toEqual([
@@ -91,6 +99,21 @@ describe('Δ — η εκκαθάριση ανά διαμέρισμα', () => {
       `${COLLECTIONS.FILES}:status`,
       `${COLLECTIONS.FILES_PERSONAL}:isDeleted`,
       `${COLLECTIONS.FILES_PERSONAL}:status`,
+      `${COLLECTIONS.FILES_SYSTEM}:isDeleted`,
+      `${COLLECTIONS.FILES_SYSTEM}:status`,
+    ].sort());
+  });
+
+  it('🔒 Δ4 — Μ-β6: ο χώρος συστήματος ταξιδεύει ως `space: system` με εταιρικό κάτοχο (βιβλίο ίχνους)', async () => {
+    trash[COLLECTIONS.FILES_SYSTEM] = [{ id: 'file_quarantine', data: { purgeAt: 'x' } }];
+    trash[COLLECTIONS.FILES] = [{ id: 'file_company', data: { purgeAt: 'x' } }];
+
+    await purgeExpiredTrash(stubDb() as never, '2026-09-17T00:00:00.000Z');
+
+    const calls = purgeFileRecord.mock.calls.map(([p]) => [p.fileId, p.custody, p.space]).sort();
+    expect(calls).toEqual([
+      ['file_company', 'company', 'user'],
+      ['file_quarantine', 'company', 'system'],
     ]);
   });
 

@@ -839,6 +839,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-934 §5.2.2 Μ-β6 — ο χώρος συστήματος των αρχείων (Drive `appDataFolder`): μόνο Admin SDK, κανένας πελάτης.
+    collection: 'files_system',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/files-system.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-923 §5.12 Σ1 — έγγραφο δύο πλευρών: γραφή = ξένη ανάγνωση τιμών χωρίς αποδοχή.
     collection: 'supply_relationships',
     pattern: 'deny_all',

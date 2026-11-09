@@ -14,6 +14,9 @@
  * έληγε ποτέ** — υπερ-διατήρηση προσωπικών δεδομένων (ΓΚΠΔ άρθρο 5 §1ε). Ίδιος μηχανισμός με τον
  * κάδο του Google Drive: μία προθεσμία για «Ο Δίσκος μου» **και** τους κοινόχρηστους δίσκους.
  *
+ * 🔒 **ΚΑΙ Ο ΧΩΡΟΣ ΣΥΣΤΗΜΑΤΟΣ** (ADR-934 §5.2.2 Μ-β6, `files_system`): ίδιες φάσεις, ίδια πολιτική, ίδιος γραφέας — με
+ * `space: 'system'`. Ο χώρος δεν είναι κάτοχος, άρα **δεν** μπαίνει στο `CUSTODY_KINDS`· είναι ένα ρητό πέρασμα ακόμη.
+ *
  * @module lib/cron/jobs/file-purge
  * @enterprise ADR-191 — Enterprise Document Management System (Phase 3.2)
  * @see ADR-740
@@ -24,6 +27,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { FILE_STATUS } from '@/config/domain-constants';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
+import type { FileSpace } from '@/lib/files/system-file-space';
 import { CUSTODY_KINDS, type CustodyKind } from '@/lib/workspace/custody-scope';
 import {
   purgeFileRecord,
@@ -54,6 +58,40 @@ interface PurgePolicy {
 }
 
 /**
+ * **Πού βρέθηκαν τα έγγραφα** — ο χώρος (ανθρώπου / συστήματος) και ο κάτοχος. Ταξιδεύει από το ερώτημα στον γραφέα.
+ * Ο χώρος συστήματος (ADR-934 §5.2.2 Μ-β6) κρατά εγγραφές **εταιρικού** κατόχου ⇒ το ίχνος πάει στο εταιρικό βιβλίο.
+ */
+interface PurgeTarget {
+  readonly custody: CustodyKind;
+  readonly space: FileSpace;
+}
+
+const SYSTEM_SPACE_TARGET: PurgeTarget = { custody: 'company', space: 'system' };
+
+const userSpaceTarget = (custody: CustodyKind): PurgeTarget => ({ custody, space: 'user' });
+
+/** Φάση Α — η πολιτική του κάδου, **μία** για κάθε χώρο και κάτοχο. */
+const EXPIRED_TRASH_POLICY: PurgePolicy = {
+  performedBy: 'system:cron-purge',
+  purgeReason: 'cron_trash',
+  metadata: (data) => ({
+    originalPurgeAt: data.purgeAt ?? null,
+    category: data.category ?? null,
+  }),
+};
+
+/** Φάση Β — η πολιτική των ορφανών PENDING/FAILED. */
+const ORPHAN_PENDING_POLICY: PurgePolicy = {
+  performedBy: 'system:cron-orphan-cleanup',
+  purgeReason: 'ttl_expired',
+  metadata: (data) => ({
+    originalStatus: data.status ?? null,
+    domain: data.domain ?? null,
+    ageHours: Math.round((Date.now() - new Date(data.createdAt).getTime()) / 3_600_000),
+  }),
+};
+
+/**
  * Ο κοινός βρόχος εκκαθάρισης: παράλειψε ό,τι κρατείται, διάγραψε τα υπόλοιπα, μέτρα.
  *
  * ⚠️ Ήταν γραμμένος **δύο φορές** (μία ανά φάση) μέσα στο παλιό route — 19 γραμμές
@@ -68,7 +106,7 @@ interface PurgePolicy {
  */
 async function purgeMatching(
   snapshot: FirebaseFirestore.QuerySnapshot,
-  custody: CustodyKind,
+  target: PurgeTarget,
   policy: PurgePolicy
 ): Promise<FilePurgeTally> {
   let purged = 0;
@@ -85,7 +123,8 @@ async function purgeMatching(
 
     const result = await purgeFileRecord({
       fileId: doc.id,
-      custody,
+      custody: target.custody,
+      space: target.space,
       storagePath: data.storagePath as string | undefined,
       performedBy: policy.performedBy,
       purgeReason: policy.purgeReason,
@@ -114,14 +153,24 @@ async function purgeExpiredTrashIn(
     .limit(100)
     .get();
 
-  return purgeMatching(snapshot, custody, {
-    performedBy: 'system:cron-purge',
-    purgeReason: 'cron_trash',
-    metadata: (data) => ({
-      originalPurgeAt: data.purgeAt ?? null,
-      category: data.category ?? null,
-    }),
-  });
+  return purgeMatching(snapshot, userSpaceTarget(custody), EXPIRED_TRASH_POLICY);
+}
+
+/**
+ * Φάση Α, **χώρος συστήματος** (ADR-934 §5.2.2 Μ-β6): ο κάδος των αρχείων που κανένας άνθρωπος δεν διαχειρίζεται (καραντίνα
+ * μέσων) λήγει με την **ίδια** πολιτική — χωρίς αυτό, ό,τι αποδεσμεύτηκε δεν θα έφευγε ποτέ.
+ * ⚠️ Το ερώτημα γράφεται ολόκληρο εδώ (όχι βοηθός που παίρνει συλλογή): οι πύλες 3.35/3.91 το διαβάζουν στατικά.
+ */
+async function purgeExpiredSystemTrash(db: FirebaseFirestore.Firestore, now: string): Promise<FilePurgeTally> {
+  // tenant-scope-exempt: εργασία συστήματος (cron) στον χώρο συστήματος **κάθε** εταιρείας εκ σχεδιασμού.
+  const snapshot = await db
+    .collection(COLLECTIONS.FILES_SYSTEM)
+    .where(FIELDS.IS_DELETED, '==', true)
+    .where('purgeAt', '<=', now)
+    .limit(100)
+    .get();
+
+  return purgeMatching(snapshot, SYSTEM_SPACE_TARGET, EXPIRED_TRASH_POLICY);
 }
 
 /** Φάση Β, **ένα** διαμέρισμα: ορφανά PENDING/FAILED παλαιότερα του TTL. */
@@ -140,15 +189,25 @@ async function purgeOrphanPendingFilesIn(
     .limit(50)
     .get();
 
-  return purgeMatching(snapshot, custody, {
-    performedBy: 'system:cron-orphan-cleanup',
-    purgeReason: 'ttl_expired',
-    metadata: (data) => ({
-      originalStatus: data.status ?? null,
-      domain: data.domain ?? null,
-      ageHours: Math.round((Date.now() - new Date(data.createdAt).getTime()) / 3_600_000),
-    }),
-  });
+  return purgeMatching(snapshot, userSpaceTarget(custody), ORPHAN_PENDING_POLICY);
+}
+
+/**
+ * Φάση Β, **χώρος συστήματος**: ο γραφέας της καραντίνας γεννά `ready` σε συναλλαγή, άρα ορφανό PENDING/FAILED **δεν
+ * αναμένεται** — η σάρωση είναι το δίχτυ για μελλοντικό τύπο του καταλόγου που θα γεννούσε σε δύο βήματα.
+ */
+async function purgeOrphanPendingSystemFiles(db: FirebaseFirestore.Firestore): Promise<FilePurgeTally> {
+  const cutoff = new Date(Date.now() - PENDING_FILE_TTL_MS).toISOString();
+
+  // tenant-scope-exempt: εργασία συστήματος (cron) στον χώρο συστήματος **κάθε** εταιρείας εκ σχεδιασμού.
+  const snapshot = await db
+    .collection(COLLECTIONS.FILES_SYSTEM)
+    .where('status', 'in', [FILE_STATUS.PENDING, FILE_STATUS.FAILED])
+    .where('createdAt', '<', cutoff)
+    .limit(50)
+    .get();
+
+  return purgeMatching(snapshot, SYSTEM_SPACE_TARGET, ORPHAN_PENDING_POLICY);
 }
 
 /** Άθροισμα απολογισμών — ένας ανά διαμέρισμα. */
@@ -173,12 +232,18 @@ export async function purgeExpiredTrash(
   db: FirebaseFirestore.Firestore = getAdminFirestore(),
   now: string = nowISO()
 ): Promise<FilePurgeTally> {
-  return sumTallies(await Promise.all(CUSTODY_KINDS.map((custody) => purgeExpiredTrashIn(db, now, custody))));
+  return sumTallies(await Promise.all([
+    ...CUSTODY_KINDS.map((custody) => purgeExpiredTrashIn(db, now, custody)),
+    purgeExpiredSystemTrash(db, now),
+  ]));
 }
 
-/** Φάση Β σε **όλα** τα διαμερίσματα. */
+/** Φάση Β σε **όλα** τα διαμερίσματα **και** στον χώρο συστήματος. */
 async function purgeOrphanPendingFiles(db: FirebaseFirestore.Firestore): Promise<FilePurgeTally> {
-  return sumTallies(await Promise.all(CUSTODY_KINDS.map((custody) => purgeOrphanPendingFilesIn(db, custody))));
+  return sumTallies(await Promise.all([
+    ...CUSTODY_KINDS.map((custody) => purgeOrphanPendingFilesIn(db, custody)),
+    purgeOrphanPendingSystemFiles(db),
+  ]));
 }
 
 export interface FilePurgeReport {

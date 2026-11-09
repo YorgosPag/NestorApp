@@ -6504,6 +6504,13 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    // ADR-934 §5.2.2 Μ-β6 — Ο ΧΩΡΟΣ ΣΥΣΤΗΜΑΤΟΣ ΤΩΝ ΑΡΧΕΙΩΝ (Google Drive `appDataFolder`): ίδιο σχήμα FileRecord με το `files`,
+    // αλλά αρχεία που κανένας άνθρωπος δεν διαχειρίζεται (καραντίνα μέσων καταλόγου). ΜΟΝΟ Admin SDK — καμία λίστα, κάδος
+    // ή αναζήτηση χρήστη δεν τα βλέπει. Ποιοι τύποι ζουν εδώ: `src/lib/files/system-file-space.ts` (κλειστός κατάλογος).
+    match /files_system/{fileId} {
+      allow read: if false;
+      allow write: if false;
+    }
     // ADR-923 §12 · §5.12 Δ1 — ΚΑΝΟΝΕΣ ΟΡΑΤΟΤΗΤΑΣ: τους διαβάζει και τους γράφει ΜΟΝΟ ο διακομιστής. Η οθόνη τους παίρνει
     // από την όψη `discounts`, με κριτή `pricingView`.
     match /catalog_visibility_rules/{ruleId} {

@@ -12,7 +12,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 const fake = new FakeFirestore();
@@ -35,7 +34,8 @@ import { MEDIA_RELEASE_ACTOR, mediaContentHold, releaseBatchMedia } from '../med
 import { sweepMediaQuarantine } from '../media-quarantine-sweep.server';
 /* eslint-enable import/first */
 
-const FILES = COLLECTIONS[FILE_COLLECTION.company];
+// ADR-934 §5.2.2 Μ-β6 — η καραντίνα ζει στον χώρο συστήματος, ποτέ στο `files` του ανθρώπου.
+const SYSTEM_FILES = COLLECTIONS.FILES_SYSTEM;
 const FETCHES = COLLECTIONS.CATALOG_IMPORT_ASSET_FETCHES;
 const BATCHES = COLLECTIONS.CATALOG_IMPORT_BATCHES;
 const SHA_A = 'a'.repeat(64);
@@ -62,9 +62,9 @@ describe('releaseBatchMedia — κύριος δρόμος', () => {
   it('παρτίδα εγκαταλείφθηκε ⇒ το περιεχόμενό της στον κάδο, +30 ημέρες, δράστης συστήματος, ίχνος `delete`', async () => {
     fake.seed(BATCHES, 'cibat_1', batch('discarded'));
     fake.seed(FETCHES, 'f1', fetchDoc('cibat_1', 'file_a', SHA_A));
-    fake.seed(FILES, 'file_a', content('file_a', SHA_A));
+    fake.seed(SYSTEM_FILES, 'file_a', content('file_a', SHA_A));
     expect(await releaseBatchMedia('comp_1', 'cibat_1')).toEqual({ released: 1, held: 0, checked: 1 });
-    const record = fake.getAllDocs(FILES).file_a;
+    const record = fake.getAllDocs(SYSTEM_FILES).file_a;
     expect(record).toMatchObject({ isDeleted: true, lifecycleState: 'trashed', trashedBy: MEDIA_RELEASE_ACTOR });
     const days = (Date.parse(String(record.purgeAt)) - Date.now()) / DAY;
     expect(days).toBeGreaterThan(29.9);
@@ -77,9 +77,9 @@ describe('releaseBatchMedia — κύριος δρόμος', () => {
     fake.seed(BATCHES, 'cibat_2', batch('reviewing'));
     fake.seed(FETCHES, 'f1', fetchDoc('cibat_1', 'file_a', SHA_A));
     fake.seed(FETCHES, 'f2', fetchDoc('cibat_2', 'file_a', SHA_A));
-    fake.seed(FILES, 'file_a', content('file_a', SHA_A));
+    fake.seed(SYSTEM_FILES, 'file_a', content('file_a', SHA_A));
     expect(await releaseBatchMedia('comp_1', 'cibat_1')).toEqual({ released: 0, held: 1, checked: 1 });
-    expect(fake.getAllDocs(FILES).file_a.isDeleted).toBe(false);
+    expect(fake.getAllDocs(SYSTEM_FILES).file_a.isDeleted).toBe(false);
     expect(await mediaContentHold('comp_1', 'file_a')).toBe('openBatch');
   });
 
@@ -90,18 +90,18 @@ describe('releaseBatchMedia — κύριος δρόμος', () => {
     fake.seed(FETCHES, 'f1', fetchDoc('cibat_1', 'file_a', SHA_A));
     fake.seed(FETCHES, 'f2', fetchDoc('cibat_2', 'file_a', SHA_A));
     fake.seed(FETCHES, 'f3', fetchDoc('cibat_3', 'file_a', SHA_A));
-    fake.seed(FILES, 'file_a', content('file_a', SHA_A));
+    fake.seed(SYSTEM_FILES, 'file_a', content('file_a', SHA_A));
     expect((await releaseBatchMedia('comp_1', 'cibat_1')).released).toBe(1);
   });
 
   it('🔑 ιδεμπότητο: δεύτερη αποδέσμευση δεν μεταθέτει το `purgeAt`, δεν γράφει δεύτερο ίχνος', async () => {
     fake.seed(BATCHES, 'cibat_1', batch('discarded'));
     fake.seed(FETCHES, 'f1', fetchDoc('cibat_1', 'file_a', SHA_A));
-    fake.seed(FILES, 'file_a', content('file_a', SHA_A));
+    fake.seed(SYSTEM_FILES, 'file_a', content('file_a', SHA_A));
     await releaseBatchMedia('comp_1', 'cibat_1');
-    const first = fake.getAllDocs(FILES).file_a.purgeAt;
+    const first = fake.getAllDocs(SYSTEM_FILES).file_a.purgeAt;
     expect(await releaseBatchMedia('comp_1', 'cibat_1')).toEqual({ released: 0, held: 0, checked: 1 });
-    expect(fake.getAllDocs(FILES).file_a.purgeAt).toBe(first);
+    expect(fake.getAllDocs(SYSTEM_FILES).file_a.purgeAt).toBe(first);
     expect(mockAudits).toHaveLength(1);
   });
 
@@ -109,18 +109,18 @@ describe('releaseBatchMedia — κύριος δρόμος', () => {
     fake.seed(BATCHES, 'cibat_1', batch('discarded'));
     fake.seed(FETCHES, 'f1', fetchDoc('cibat_1', 'file_a', SHA_A, { status: 'failed' }));
     fake.seed(FETCHES, 'f2', fetchDoc('cibat_1', 'file_b', SHA_B, { companyId: 'comp_2' }));
-    fake.seed(FILES, 'file_a', content('file_a', SHA_A));
-    fake.seed(FILES, 'file_b', content('file_b', SHA_B, { companyId: 'comp_2' }));
+    fake.seed(SYSTEM_FILES, 'file_a', content('file_a', SHA_A));
+    fake.seed(SYSTEM_FILES, 'file_b', content('file_b', SHA_B, { companyId: 'comp_2' }));
     expect(await releaseBatchMedia('comp_1', 'cibat_1')).toEqual({ released: 0, held: 0, checked: 0 });
-    expect(fake.getAllDocs(FILES).file_b.isDeleted).toBe(false);
+    expect(fake.getAllDocs(SYSTEM_FILES).file_b.isDeleted).toBe(false);
   });
 
   it('🔴 εγγραφή με ΑΛΛΑ bytes στο κλειδί ⇒ δεν πετιέται (ο κριτής κατάστασης λέει foreign)', async () => {
     fake.seed(BATCHES, 'cibat_1', batch('discarded'));
     fake.seed(FETCHES, 'f1', fetchDoc('cibat_1', 'file_a', SHA_A));
-    fake.seed(FILES, 'file_a', content('file_a', SHA_B));
+    fake.seed(SYSTEM_FILES, 'file_a', content('file_a', SHA_B));
     expect((await releaseBatchMedia('comp_1', 'cibat_1')).released).toBe(0);
-    expect(fake.getAllDocs(FILES).file_a.isDeleted).toBe(false);
+    expect(fake.getAllDocs(SYSTEM_FILES).file_a.isDeleted).toBe(false);
   });
 });
 
@@ -134,25 +134,25 @@ describe('sweepMediaQuarantine — το δίχτυ', () => {
     fake.seed(BATCHES, 'cibat_old', batch('closed', { updatedAt: iso(NOW - 20 * DAY) }));
     fake.seed(FETCHES, 'f1', fetchDoc('cibat_in', 'file_a', SHA_A));
     fake.seed(FETCHES, 'f2', fetchDoc('cibat_new', 'file_b', SHA_B));
-    fake.seed(FILES, 'file_a', content('file_a', SHA_A, { createdAt: new Date(NOW - 3 * DAY) }));
-    fake.seed(FILES, 'file_b', content('file_b', SHA_B, { createdAt: new Date(NOW - 3 * DAY) }));
+    fake.seed(SYSTEM_FILES, 'file_a', content('file_a', SHA_A, { createdAt: new Date(NOW - 3 * DAY) }));
+    fake.seed(SYSTEM_FILES, 'file_b', content('file_b', SHA_B, { createdAt: new Date(NOW - 3 * DAY) }));
     const metrics = await sweepMediaQuarantine(fake as unknown as Firestore, NOW);
     expect(metrics).toMatchObject({ batches: 1, released: 1 });
-    expect(fake.getAllDocs(FILES).file_a.isDeleted).toBe(true);
-    expect(fake.getAllDocs(FILES).file_b.isDeleted).toBe(false);
+    expect(fake.getAllDocs(SYSTEM_FILES).file_a.isDeleted).toBe(true);
+    expect(fake.getAllDocs(SYSTEM_FILES).file_b.isDeleted).toBe(false);
   });
 
   it('Β: ορφανό (καμία λήψη) στο παράθυρο ⇒ κάδος· με λήψη ανοιχτής παρτίδας ⇒ μένει· πολύ νέο ⇒ ανέγγιχτο', async () => {
     fake.seed(BATCHES, 'cibat_open', batch('reviewing'));
     fake.seed(FETCHES, 'f1', fetchDoc('cibat_open', 'file_b', SHA_B));
-    fake.seed(FILES, 'file_a', content('file_a', SHA_A, { createdAt: new Date(NOW - 8 * DAY) }));
-    fake.seed(FILES, 'file_b', content('file_b', SHA_B, { createdAt: new Date(NOW - 8 * DAY) }));
-    fake.seed(FILES, 'file_c', content('file_c', 'c'.repeat(64), { createdAt: new Date(NOW - 2 * DAY) }));
+    fake.seed(SYSTEM_FILES, 'file_a', content('file_a', SHA_A, { createdAt: new Date(NOW - 8 * DAY) }));
+    fake.seed(SYSTEM_FILES, 'file_b', content('file_b', SHA_B, { createdAt: new Date(NOW - 8 * DAY) }));
+    fake.seed(SYSTEM_FILES, 'file_c', content('file_c', 'c'.repeat(64), { createdAt: new Date(NOW - 2 * DAY) }));
     const metrics = await sweepMediaQuarantine(fake as unknown as Firestore, NOW);
     expect(metrics).toMatchObject({ orphansChecked: 2, orphansReleased: 1 });
-    expect(fake.getAllDocs(FILES).file_a).toMatchObject({ isDeleted: true, trashedBy: MEDIA_RELEASE_ACTOR });
-    expect(fake.getAllDocs(FILES).file_b.isDeleted).toBe(false);
-    expect(fake.getAllDocs(FILES).file_c.isDeleted).toBe(false);
+    expect(fake.getAllDocs(SYSTEM_FILES).file_a).toMatchObject({ isDeleted: true, trashedBy: MEDIA_RELEASE_ACTOR });
+    expect(fake.getAllDocs(SYSTEM_FILES).file_b.isDeleted).toBe(false);
+    expect(fake.getAllDocs(SYSTEM_FILES).file_c.isDeleted).toBe(false);
     expect(mockAudits).toEqual([expect.objectContaining({ fileId: 'file_a', metadata: expect.objectContaining({ reason: 'catalog-media-orphan' }) })]);
   });
 });

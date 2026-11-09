@@ -15,7 +15,6 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
-import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { OutboundBodyError } from '@/lib/security/outbound-fetch';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { fakeGcsBucket, type FakeGcsStore } from '@/test-utils/fake-gcs/fake-gcs-bucket';
@@ -56,7 +55,8 @@ import {
 /* eslint-enable import/first */
 
 const ctx = { uid: 'user_1', companyId: 'comp_1' } as AuthContext;
-const FILES = COLLECTIONS[FILE_COLLECTION.company];
+// ADR-934 §5.2.2 Μ-β6 — η καραντίνα ζει στον χώρο συστήματος, ποτέ στο `files` του ανθρώπου.
+const SYSTEM_FILES = COLLECTIONS.FILES_SYSTEM;
 
 const PDF = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(9000, 0x41)]);
 const PDF_SHA = createHash('sha256').update(PDF).digest('hex');
@@ -108,13 +108,19 @@ describe('quarantineDownloadedMedia — δεκτό αρχείο', () => {
       ok: true,
       content: { fileId, sha256: PDF_SHA, sizeBytes: PDF.length, kind: 'document', ext: 'pdf', contentType: 'application/pdf', alreadyKept: false },
     });
-    const record = fake.getAllDocs(FILES)[fileId];
+    const record = fake.getAllDocs(SYSTEM_FILES)[fileId];
     expect(record).toMatchObject({
       companyId: 'comp_1', entityType: 'catalog_media_content', entityId: PDF_SHA, domain: 'catalog', category: 'documents',
       status: 'ready', storagePlacement: 'eu-originals', hash: PDF_SHA, sizeBytes: PDF.length, originalFilename: 'fc-100-datasheet.pdf',
     });
     expect([...store.keys()]).toEqual([record.storagePath]);
     expect(mockPlacements.every((placement) => placement === 'eu-originals')).toBe(true);
+  });
+
+  it('🔒 Μ-β6 — η εγγραφή ζει ΜΟΝΟ στον χώρο συστήματος: το `files` του ανθρώπου μένει άδειο', async () => {
+    await quarantineDownloadedMedia(ctx, media());
+    expect(Object.keys(fake.getAllDocs(SYSTEM_FILES))).toHaveLength(1);
+    expect(fake.getAllDocs(COLLECTIONS.FILES)).toEqual({});
   });
 
   it('ίχνος `remote_fetch` (ποτέ `upload`) με τη διεύθυνση', async () => {
@@ -128,7 +134,7 @@ describe('quarantineDownloadedMedia — δεκτό αρχείο', () => {
     await quarantineDownloadedMedia(ctx, media());
     const again = await quarantineDownloadedMedia(ctx, media({ uri: 'https://mirror.example.com/x.pdf', attemptKey: 'ciafx_2/1', body: bodyOf(PDF) }));
     expect(again.ok && again.content.alreadyKept).toBe(true);
-    expect(Object.keys(fake.getAllDocs(FILES))).toHaveLength(1);
+    expect(Object.keys(fake.getAllDocs(SYSTEM_FILES))).toHaveLength(1);
     expect(store.size).toBe(1);
     expect(mockAudits).toHaveLength(1);
   });
@@ -145,7 +151,7 @@ describe('quarantineDownloadedMedia — απόρριψη στα πρώτα bytes
     const outcome = await quarantineDownloadedMedia(ctx, media({ body: bodyOf(HTML, cancel), contentType: 'text/html' }));
     expect(outcome).toEqual({ ok: false, failure: 'notAFile' });
     expect(store.size).toBe(0);
-    expect(Object.keys(fake.getAllDocs(FILES))).toHaveLength(0);
+    expect(Object.keys(fake.getAllDocs(SYSTEM_FILES))).toHaveLength(0);
     expect(cancel).toHaveBeenCalled();
   });
 
@@ -177,7 +183,7 @@ describe('quarantineDownloadedMedia — αποτυχίες μεταφοράς', 
 describe('quarantineDownloadedMedia — ανάσταση εγγραφής (ADR-934 §5.2.2 Μ-β5)', () => {
   const fileId = () => mediaContentFileIdOf('comp_1', PDF_SHA, 'pdf');
   const again = () => quarantineDownloadedMedia(ctx, media({ attemptKey: 'ciafx_1/2', body: bodyOf(PDF) }));
-  const spoil = (fields: Record<string, unknown>) => fake.seed(FILES, fileId(), { ...fake.getAllDocs(FILES)[fileId()], ...fields });
+  const spoil = (fields: Record<string, unknown>) => fake.seed(SYSTEM_FILES, fileId(), { ...fake.getAllDocs(SYSTEM_FILES)[fileId()], ...fields });
   const TRASH = { isDeleted: true, lifecycleState: 'trashed', purgeAt: '2026-12-09T10:00:00.000Z', trashedBy: 'system:catalog-media-release' };
 
   it('🔑 στον κάδο ⇒ ΕΠΑΝΑΦΟΡΑ: ζωντανή ξανά, εκτός ουράς εκκαθάρισης, ίχνος `restore`, `alreadyKept`', async () => {
@@ -186,7 +192,7 @@ describe('quarantineDownloadedMedia — ανάσταση εγγραφής (ADR-9
     mockAudits.length = 0;
     const outcome = await again();
     expect(outcome.ok && outcome.content.alreadyKept).toBe(true);
-    expect(fake.getAllDocs(FILES)[fileId()]).toMatchObject({ isDeleted: false, lifecycleState: 'active', purgeAt: null, trashedBy: null, restoredBy: 'user_1' });
+    expect(fake.getAllDocs(SYSTEM_FILES)[fileId()]).toMatchObject({ isDeleted: false, lifecycleState: 'active', purgeAt: null, trashedBy: null, restoredBy: 'user_1' });
     expect(mockAudits).toEqual([expect.objectContaining({ fileId: fileId(), action: 'restore', metadata: { uri: media().uri, revival: 'restored' } })]);
   });
 
@@ -197,7 +203,7 @@ describe('quarantineDownloadedMedia — ανάσταση εγγραφής (ADR-9
     mockAudits.length = 0;
     const outcome = await again();
     expect(outcome.ok && outcome.content.alreadyKept).toBe(true);
-    const record = fake.getAllDocs(FILES)[fileId()];
+    const record = fake.getAllDocs(SYSTEM_FILES)[fileId()];
     expect(record).toMatchObject({ isDeleted: false, status: 'ready', hash: PDF_SHA });
     expect(record.lifecycleState).not.toBe('purged');
     expect([...store.keys()]).toEqual([record.storagePath]);
@@ -208,7 +214,7 @@ describe('quarantineDownloadedMedia — ανάσταση εγγραφής (ADR-9
     await quarantineDownloadedMedia(ctx, media());
     spoil({ entityId: 'f'.repeat(64) });
     await expect(again()).rejects.toBeInstanceOf(MediaContentUnavailableError);
-    expect(fake.getAllDocs(FILES)[fileId()].entityId).toBe('f'.repeat(64));
+    expect(fake.getAllDocs(SYSTEM_FILES)[fileId()].entityId).toBe('f'.repeat(64));
   });
 });
 
@@ -225,7 +231,7 @@ describe('readKeptMediaContent — ό,τι χρειάζεται το 304 (ADR-93
 
   it('Μ-β5: στον κάδο ⇒ `trashed` με τα στοιχεία του (ο καλών στέλνει validators· 304 ⇒ επαναφορά χωρίς λήψη)', async () => {
     await quarantineDownloadedMedia(ctx, media());
-    fake.seed(FILES, keptFileId(), { ...fake.getAllDocs(FILES)[keptFileId()], isDeleted: true, lifecycleState: 'trashed' });
+    fake.seed(SYSTEM_FILES, keptFileId(), { ...fake.getAllDocs(SYSTEM_FILES)[keptFileId()], isDeleted: true, lifecycleState: 'trashed' });
     expect(await readKeptMediaContent(ctx, keptFileId(), PDF_SHA)).toMatchObject({ state: 'trashed', content: { fileId: keptFileId(), sha256: PDF_SHA } });
   });
 
@@ -238,7 +244,7 @@ describe('readKeptMediaContent — ό,τι χρειάζεται το 304 (ADR-93
     ['άλλα bytes (άλλος κάτοχος)', { entityId: 'f'.repeat(64) }],
   ])('%s ⇒ null (ο καλών κατεβάζει ξανά, χωρίς validators)', async (_name, spoiled) => {
     await quarantineDownloadedMedia(ctx, media());
-    fake.seed(FILES, keptFileId(), { ...fake.getAllDocs(FILES)[keptFileId()], ...spoiled });
+    fake.seed(SYSTEM_FILES, keptFileId(), { ...fake.getAllDocs(SYSTEM_FILES)[keptFileId()], ...spoiled });
     expect(await readKeptMediaContent(ctx, keptFileId(), PDF_SHA)).toBeNull();
   });
 

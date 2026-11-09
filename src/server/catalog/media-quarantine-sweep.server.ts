@@ -23,7 +23,6 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { mediaContentHold, releaseBatchMedia, trashQuarantinedContent } from './media-quarantine-release.server';
 
@@ -75,7 +74,7 @@ async function sweepOrphanContents(db: Firestore, nowMs: number): Promise<Pick<M
   const { from, to } = windowOf(nowMs, SWEEP_ORPHAN_WINDOW_DAYS);
   // tenant-scope-exempt: εργασία συστήματος (cron) σε **κάθε** χώρο εκ σχεδιασμού· ο χώρος έρχεται από την ίδια την εγγραφή
   // και ξανακρίνεται από τον κριτή κατάστασης μέσα στη συναλλαγή του κάδου.
-  const snapshot = await db.collection(COLLECTIONS[FILE_COLLECTION.company])
+  const snapshot = await db.collection(COLLECTIONS.FILES_SYSTEM)
     .where('entityType', '==', ENTITY_TYPES.CATALOG_MEDIA_CONTENT)
     .where('isDeleted', '==', false)
     .where('createdAt', '>=', from)

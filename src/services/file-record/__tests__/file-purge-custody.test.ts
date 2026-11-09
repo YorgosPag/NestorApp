@@ -10,6 +10,7 @@
  * | Γ | η λήξη γράφεται στη **συλλογή όπου ζει** το αρχείο; | `FILE_COLLECTION[custody]` → `COLLECTIONS.FILES` |
  * | Γ | η γραμμή πάει στο βιβλίο **του κατόχου**, με το **πεδίο** του; (ADR-866 §2.6.11) | `FILE_AUDIT_COLLECTION` → εταιρικό · κάτοχος από το διαμέρισμα αντί των πεδίων |
  * | Γ | η εταιρική γραμμή είναι **ορατή** (φέρει `companyId`); | επιστροφή στο χειρόγραφο δίδυμο χωρίς μισθωτή |
+ * | Γ | ο χώρος συστήματος (ADR-934 Μ-β6) λήγει **εκεί** και γράφει στο εταιρικό βιβλίο; | `space` αγνοείται ⇒ `files` |
  * | Υ | η ΓΚΠΔ βλέπει **και τα δύο** διαμερίσματα; | `CUSTODY_KINDS` → `['company']` |
  * | Υ | ο μεσίτης σβήνει τον φάκελο του ιδιοκτήτη; | `FILE_SUBJECT_FIELD.personal` → `createdBy` |
  *
@@ -115,6 +116,41 @@ describe('Γ — ο γραφέας εκκαθάρισης ανά διαμέρι�
     });
 
     expect(result.success).toBe(false);
+    expect(fake.all(COLLECTIONS.FILES)).toEqual([]);
+  });
+
+  it('🔒 Γ4 — Μ-β6: χώρος συστήματος ⇒ `purged` στο `files_system`, γραμμή στο ΕΤΑΙΡΙΚΟ βιβλίο, το `files` ανέγγιχτο', async () => {
+    fake.seed(COLLECTIONS.FILES_SYSTEM, 'file_q', { companyId: 'comp_1', lifecycleState: 'trashed' });
+
+    const result = await purgeFileRecord({
+      fileId: 'file_q',
+      custody: 'company',
+      space: 'system',
+      storagePath: undefined,
+      performedBy: 'system:cron-purge',
+      purgeReason: 'cron_trash',
+    });
+
+    expect(result.success).toBe(true);
+    expect(fake.all<{ lifecycleState: string }>(COLLECTIONS.FILES_SYSTEM)[0].lifecycleState).toBe('purged');
+    expect(fake.all(COLLECTIONS.FILES)).toEqual([]);
+    expect(fake.all(COLLECTIONS.FILE_AUDIT_LOG)).toEqual([
+      expect.objectContaining({ fileId: 'file_q', action: 'delete', companyId: 'comp_1' }),
+    ]);
+  });
+
+  it('🔴 Γ5 — εγγραφή συστήματος ζητημένη ως χώρου ανθρώπου ⇒ αποτυχία, ποτέ γέννηση στο `files`', async () => {
+    fake.seed(COLLECTIONS.FILES_SYSTEM, 'file_q', { companyId: 'comp_1', lifecycleState: 'trashed' });
+
+    const result = await purgeFileRecord({
+      fileId: 'file_q',
+      custody: 'company',
+      storagePath: undefined,
+      performedBy: 'system:cron-purge',
+      purgeReason: 'cron_trash',
+    });
+
+    expect(result).toMatchObject({ success: false, error: 'record-not-found' });
     expect(fake.all(COLLECTIONS.FILES)).toEqual([]);
   });
 });
