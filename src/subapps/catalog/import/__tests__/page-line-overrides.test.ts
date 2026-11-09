@@ -3,7 +3,7 @@
  */
 
 import type { ImportLineOverride, ImportPageUnmappedLine } from '../../types/catalog-import';
-import { applyLineOverrides, lineDecisionOf, lineKeyOf, pendingUnmappedLines, tableOverridesOf, withLineOverride } from '../page-line-overrides';
+import { applyLineOverrides, lineDecisionOf, lineKeyOf, pendingUnmappedLines, priceLineOf, tableOverridesOf, withLineOverride } from '../page-line-overrides';
 import type { RawTableMapping } from '../page-table-mapping';
 
 const STAMP = { by: 'usr_1', at: '2026-11-08T10:00:00.000Z' } as const;
@@ -90,5 +90,31 @@ describe('§5.5.2 Β3 — εκκρεμείς γραμμές', () => {
     const overrides = [override(9, { kind: 'ignore' }), override(10, { kind: 'attribute', attributeId: 'cattr_airflow_m' })];
     expect(pendingUnmappedLines(lines, overrides).map((entry) => entry.line)).toEqual([10, 11]);
     expect(pendingUnmappedLines(lines, undefined)).toHaveLength(3);
+  });
+});
+
+describe('§5.5.2 Β4 — η γραμμή τιμής', () => {
+  const PRICE = { kind: 'price', unitCode: 'pcs' } as const;
+
+  it('🔴 τιμή ⇒ η γραμμή φεύγει από την αντιστοίχιση ιδιοτήτων, ακόμη κι αν το μοντέλο της είχε δώσει ιδιότητα (ποτέ τιμή ως ιδιότητα, §5.4)', () => {
+    const result = applyLineOverrides(answer, [override(9, PRICE)], codeById, known);
+    expect(result.mapping.lines.some((entry) => entry.line === 9)).toBe(false);
+    expect(result.priceLines).toEqual([{ line: 9, unitCode: 'pcs' }]);
+    expect(result.mapping.lines.find((entry) => entry.line === 3)).toEqual({ line: 3, attribute: 'airflow_h', confidence: 0.9 });
+  });
+
+  it('η μονάδα της γραμμής τιμής είναι αυτή που δήλωσε ο άνθρωπος', () => {
+    expect(applyLineOverrides(answer, [override(15, { kind: 'price', unitCode: 'm' })], codeById, known).priceLines).toEqual([{ line: 15, unitCode: 'm' }]);
+  });
+
+  it('χωρίς απόφαση τιμής ⇒ καμία γραμμή τιμής', () => {
+    expect(applyLineOverrides(answer, [override(9, { kind: 'ignore' })], codeById, known).priceLines).toEqual([]);
+  });
+
+  it('`priceLineOf`: η γραμμή τιμής του πίνακα, ή `null`', () => {
+    const priced = override(9, PRICE);
+    expect(priceLineOf([override(3, { kind: 'ignore' }), priced])).toBe(priced);
+    expect(priceLineOf([override(3, { kind: 'attribute', attributeId: 'cattr_airflow_m' })])).toBeNull();
+    expect(priceLineOf([])).toBeNull();
   });
 });

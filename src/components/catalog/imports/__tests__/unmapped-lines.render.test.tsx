@@ -17,6 +17,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 jest.mock('../../shared/catalog-ui-hooks', () => ({ useCatalogCanManage: () => true }));
 jest.mock('../import-surfaces', () => ({
   LineAttributeToolsSlot: ({ mode }: { readonly mode: string }) => <p>{`tools:${mode}`}</p>,
+  PriceLineDialogSlot: ({ onDecide }: { readonly onDecide: (unitCode: string) => void }) => <button type="button" onClick={() => onDecide('m')}>price-dialog</button>,
 }));
 
 const LINE: ImportPageUnmappedLine = { page: 87, table: 't0', line: 9, label: 'ΠΑΡΟΧΗ ΑΕΡΑ · Μ · m³/h', values: ['280', '340'], regions: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.01 }] };
@@ -30,11 +31,19 @@ const proposal = (overrides: Partial<ImportProposalWire> = {}): ImportProposalWi
 
 const ignored: ImportLineOverride = { page: 87, table: 't0', line: 9, decision: { kind: 'ignore' }, by: 'u', at: '' };
 
-function setup(options: { readonly overrides?: readonly ImportLineOverride[]; readonly activity?: ReadonlyMap<string, LineActivity>; readonly value?: ImportProposalWire } = {}) {
+interface SetupOptions {
+  readonly overrides?: readonly ImportLineOverride[];
+  readonly activity?: ReadonlyMap<string, LineActivity>;
+  readonly value?: ImportProposalWire;
+  readonly pricesEnabled?: boolean;
+}
+
+function setup(options: SetupOptions = {}) {
   const handlers = { onFocusLine: jest.fn(), onDecideLine: jest.fn() };
   const value = options.value ?? proposal();
   render(
-    <ProposalUnmappedLines proposal={value} lines={[LINE]} overrides={options.overrides} activity={options.activity ?? new Map()} activeLine={null} decidable={value.status === 'pending'} {...handlers} />,
+    <ProposalUnmappedLines proposal={value} lines={[LINE]} overrides={options.overrides} activity={options.activity ?? new Map()} activeLine={null}
+      decidable={value.status === 'pending'} pricesEnabled={options.pricesEnabled} {...handlers} />,
   );
   return handlers;
 }
@@ -91,5 +100,35 @@ describe('§5.5.2 Β3 — γραμμές χωρίς πεδίο', () => {
     setup();
     fireEvent.click(screen.getByRole('button', { name: /review\.lines\.newAttribute/ }));
     expect(screen.getByText('tools:new')).toBeTruthy();
+  });
+});
+
+describe('§5.5.2 Β4 — η γραμμή τιμής', () => {
+  const PRICE_ACTION = { name: /review\.priceLine\.action/ };
+
+  it('🔴 χωρίς τιμοκατάλογο ή δικαίωμα τιμολόγησης: κανένα κουμπί «Τιμή»', () => {
+    setup();
+    expect(screen.queryByRole('button', PRICE_ACTION)).toBeNull();
+  });
+
+  it('🔴 «Τιμή» ⇒ διάλογος μονάδας ⇒ απόφαση `price` με τη μονάδα που δηλώθηκε, με το κλειδί της γραμμής', () => {
+    const { onDecideLine } = setup({ pricesEnabled: true });
+    fireEvent.click(screen.getByRole('button', PRICE_ACTION));
+    fireEvent.click(screen.getByRole('button', { name: 'price-dialog' }));
+    expect(onDecideLine).toHaveBeenCalledWith(expect.objectContaining({ id: 'cipsl_1' }), { page: 87, table: 't0', line: 9, decision: { kind: 'price', unitCode: 'm' }, bind: null });
+  });
+
+  it('γραμμή τιμής: λογίζεται αποφασισμένη, με «Αναίρεση» που στέλνει `null`', () => {
+    const priced: ImportLineOverride = { ...ignored, decision: { kind: 'price', unitCode: 'pcs' } };
+    const { onDecideLine } = setup({ overrides: [priced], pricesEnabled: true });
+    expect(screen.getByText('review.lines.stateMapped')).toBeTruthy();
+    expect(screen.queryByRole('button', PRICE_ACTION)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /review\.lines\.undo/ }));
+    expect(onDecideLine).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ decision: null }));
+  });
+
+  it('πρόταση που έκλεισε: το «Τιμή» κλειδώνει', () => {
+    setup({ value: proposal({ status: 'applied' }), pricesEnabled: true });
+    expect((screen.getByRole('button', PRICE_ACTION) as HTMLButtonElement).disabled).toBe(true);
   });
 });

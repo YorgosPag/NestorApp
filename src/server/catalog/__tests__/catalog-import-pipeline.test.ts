@@ -27,6 +27,8 @@ import type { CreateImportBatchRequest, SetImportLineRequest } from '@/subapps/c
 import { importPageReadingKey } from '@/subapps/catalog/import/import-keys';
 import { generateDeterministicCatalogImportPageReadingId } from '@/services/enterprise-id.service';
 import { ANY_SLOT, type CatalogProductDefinition, type CatalogProductModelDefinition } from '@/subapps/catalog/types/product';
+import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
+import { MFP_PRICE_LIST } from '@/subapps/catalog/__tests__/fixtures/mfp-price-list.fixture';
 import { ARIES, MFP_GROUP_CODES, RIVAL, SEED_RIGHTS, mfpFamilyWith, rejectionOf } from './catalog-writer-seed';
 
 const fake = new FakeFirestore();
@@ -70,6 +72,9 @@ import { reinterpretImportPage } from '../import-page-rederive.server';
 import { groupTableRowsByLiveModel } from '../import-proposal-plan.server';
 import { discardImportBatch, proposeGroup, rejectImportProposal, retireStaleSourceProposals, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
 import { readImportBatchDetail } from '../import-reads.server';
+import { setImportPriceTarget } from '../import-price-target.server';
+import { createCatalogPriceList } from '../price-list-writer.server';
+import { createPriceListVersion } from '../price-version-writer.server';
 import { updateCatalogProductModel } from '../product-model-writer.server';
 import { updateCatalogProduct } from '../product-writer.server';
 /* eslint-enable import/first */
@@ -960,6 +965,118 @@ describe('ανάγνωση σελίδας', () => {
           for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts']) {
             expect(readFileSync(join(__dirname, '..', file), 'utf8')).not.toMatch(/page-analyzer/);
           }
+        });
+      });
+
+      describe('🚀 §5.5.2 Β4 Δ5: η τιμή από την ίδια ανάγνωση — σειρά ζωής, χωρίς AI', () => {
+        const batchRevision = (id: string): number => Number(fake.getAllDocs('catalog_import_batches')[id]?.revision);
+        const unmappedOf = (id: string) => (fake.getAllDocs('catalog_import_batches')[id] as unknown as ImportBatchDefinition).pages?.unmappedLines ?? [];
+
+        async function proposalOf(id: string, purpose: 'attributes' | 'priceLines') {
+          const found = (await readImportBatchDetail(ARIES, id)).proposals.find((proposal) => proposal.purpose === purpose);
+          if (!found) throw new Error(`λείπει η πρόταση ${purpose}`);
+          return found;
+        }
+
+        /** Η σελίδα διαβάστηκε μία φορά· μετά ο άνθρωπος ορίζει τιμοκατάλογο και δηλώνει τη γραμμή «ΤΙΜΗ €». `live` = τα SKU υπάρχουν ήδη. */
+        async function pricedBatch(live = true) {
+          let batch: Awaited<ReturnType<typeof attachedBatch>>;
+          if (live) batch = (await readBatch()).batch;
+          else {
+            page85();
+            batch = await attachedBatch();
+            mapTables.mockResolvedValue(stored(COOLING));
+            await readImportPage(ARIES, batch.id, 60);
+          }
+          const list = await createCatalogPriceList(ARIES, MFP_PRICE_LIST.definition);
+          const draft = await createPriceListVersion(ARIES, list.id, { validFrom: '2026-01-01T00:00:00.000Z', basedOn: 'empty' });
+          await setImportPriceTarget(ARIES, batch.id, { expectedRevision: batchRevision(batch.id), priceListVersionId: draft.id });
+          const priceLine = unmappedOf(batch.id).find((line) => line.label.includes('ΤΙΜΗ'));
+          if (!priceLine) throw new Error('η γραμμή «ΤΙΜΗ €» έπρεπε να μείνει χωρίς πεδίο');
+          mapTables.mockClear();
+          readPage.mockClear();
+          const decided = await setImportLine(ARIES, batch.id, request(priceLine, { kind: 'price', unitCode: DEFAULT_UOM }));
+          expect(decided.outcome).toEqual({ kind: 'settled' });
+          return { batch, priceLine, view: decided.view };
+        }
+
+        const issueCodes = (proposal: { readonly rows: readonly ImportProposalRow[] }): string[] => proposal.rows.flatMap((row) => row.issues.map((issue) => issue.code));
+
+        it('🔴 γραμμή τιμής ⇒ δεύτερη πρόταση `priceLines` στα ίδια SKU, η γραμμή φεύγει από τις χωρίς πεδίο, μηδέν κλήσεις αναλυτή', async () => {
+          const before = readings().length;
+          const { batch, priceLine, view } = await pricedBatch();
+          expect(mapTables).not.toHaveBeenCalled();
+          expect(readPage).not.toHaveBeenCalled();
+          expect(readings()).toHaveLength(before + 1);
+          expect(view.proposals.map((proposal) => [proposal.groupKey, proposal.purpose])).toEqual(expect.arrayContaining([['page:60:t0', 'attributes'], ['page:60:t0:prices', 'priceLines']]));
+          expect(view.batch.pages?.unmappedLines?.some((line) => line.line === priceLine.line)).toBe(false);
+          const prices = await proposalOf(batch.id, 'priceLines');
+          expect(prices.rows).toHaveLength(7);
+          expect(prices.rows.every((row) => row.holderId !== null)).toBe(true);
+        });
+
+        it('🔴 έγκριση τιμών όσο εκκρεμούν οι ιδιότητες ⇒ `confirmationRequired`· μετά την έγκριση των ιδιοτήτων περνά', async () => {
+          const { batch } = await pricedBatch();
+          const prices = await proposalOf(batch.id, 'priceLines');
+          expect((await rejectionOf(applyImportProposal(ARIES, prices.id, prices.revision))).kind).toBe('confirmationRequired');
+          const attributes = await proposalOf(batch.id, 'attributes');
+          await applyImportProposal(ARIES, attributes.id, attributes.revision);
+          const replanned = await proposalOf(batch.id, 'priceLines');
+          expect((await applyImportProposal(ARIES, replanned.id, replanned.revision)).status).toBe('applied');
+        });
+
+        it('🔴 SKU που θα γεννήσει η έγκριση των ιδιοτήτων: `awaitsAttributes`, και η έγκρισή τους ξανασχεδιάζει τις τιμές στα νέα SKU', async () => {
+          const { batch } = await pricedBatch(false);
+          expect(issueCodes(await proposalOf(batch.id, 'priceLines'))).toContain('awaitsAttributes');
+          const attributes = await proposalOf(batch.id, 'attributes');
+          /** Νέα SKU: η σελίδα δεν τυπώνει κωδικό μοντέλου, ο άνθρωπος τον δίνει και αποδέχεται ρητά ό,τι εκκρεμεί, όπως στη ροή του ελέγχου. */
+          const decisions = attributes.rows.flatMap((row) => row.fields.filter((field) => field.decision === 'pending').map((field) => ({ rowKey: row.rowKey, targetKey: importTargetKey(field.target), decision: 'accept' as const })));
+          const accepted = await updateImportProposal(ARIES, attributes.id, { expectedRevision: attributes.revision, decisions, edits: [], modelCode: 'mfp' });
+          await applyImportProposal(ARIES, accepted.id, accepted.revision);
+          const replanned = await proposalOf(batch.id, 'priceLines');
+          expect(issueCodes(replanned)).not.toContain('awaitsAttributes');
+          expect(replanned.rows.length).toBeGreaterThan(0);
+          expect(replanned.rows.every((row) => row.holderId !== null)).toBe(true);
+        });
+
+        it('🔴 απόρριψη των ιδιοτήτων ⇒ οι τιμές ξανασχεδιάζονται: τα SKU που δεν γεννήθηκαν γίνονται δηλωμένα «άγνωστα»', async () => {
+          const { batch } = await pricedBatch(false);
+          const attributes = await proposalOf(batch.id, 'attributes');
+          await rejectImportProposal(ARIES, attributes.id, attributes.revision);
+          const replanned = await proposalOf(batch.id, 'priceLines');
+          expect(issueCodes(replanned)).not.toContain('awaitsAttributes');
+          expect(issueCodes(replanned)).toContain('skuUnknown');
+        });
+
+        it('🔴 η απόφαση πεδίου του ανθρώπου επιβιώνει από την ξαναερμηνεία του πίνακα', async () => {
+          /** Νέα SKU: ο κανόνας δεν απορρίπτει το πεδίο, άρα η απόρριψη είναι **μόνο** του ανθρώπου — μόνη της δεν θα ξαναέβγαινε. */
+          const { batch } = await pricedBatch(false);
+          const attributes = await proposalOf(batch.id, 'attributes');
+          const [row] = attributes.rows.filter((candidate) => candidate.holderKind === 'product');
+          const field = row.fields.find((candidate) => candidate.target.kind === 'attribute' && candidate.target.attributeId === attributeId('cooling_h'));
+          if (!field) throw new Error('η πρώτη παραλλαγή έχει ψύξη H');
+          expect(field.decision).not.toBe('reject');
+          expect(field.status).not.toBe('unchanged');
+          const targetKey = importTargetKey(field.target);
+          await updateImportProposal(ARIES, attributes.id, { expectedRevision: attributes.revision, decisions: [{ rowKey: row.rowKey, targetKey, decision: 'reject' }], edits: [], modelCode: null });
+          const coolingL = unmappedOf(batch.id).find((line) => line.values.includes('1134'));
+          if (!coolingL) throw new Error('η γραμμή ψύξης L έπρεπε να μείνει χωρίς πεδίο');
+          const result = await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+          expect(result.outcome).toEqual({ kind: 'settled' });
+          const after = await proposalOf(batch.id, 'attributes');
+          expect(after.revision).toBeGreaterThan(attributes.revision + 1);
+          const kept = after.rows.find((candidate) => candidate.rowKey === row.rowKey)?.fields.find((candidate) => importTargetKey(candidate.target) === targetKey);
+          expect(kept?.decision).toBe('reject');
+          expect(kept?.decisionBy).not.toBe('rule');
+          expect(mapTables).not.toHaveBeenCalled();
+          expect(readPage).not.toHaveBeenCalled();
+        });
+
+        it('χωρίς δικαίωμα τιμολόγησης η πρόταση τιμών δεν φαίνεται', async () => {
+          const { batch } = await pricedBatch();
+          pricingAllowed.mockResolvedValue(false);
+          const { proposals: visible } = await readImportBatchDetail(ARIES, batch.id);
+          expect(visible.map((proposal) => proposal.purpose)).toEqual(['attributes']);
         });
       });
     });

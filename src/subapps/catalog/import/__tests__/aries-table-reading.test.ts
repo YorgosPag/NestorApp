@@ -383,3 +383,70 @@ describe('🚀 §5.5.2 Β3: η απόφαση γραμμής ξαναδιαβά�
     expect(pendingUnmappedLines(before.unmappedLines, [ignored]).some((entry) => entry.line === airflowM().line)).toBe(false);
   });
 });
+
+describe('🚀 §5.5.2 Β4: η τιμή από την ίδια ανάγνωση της σελίδας (σελ. 86, «ΤΙΜΗ €»)', () => {
+  const PRICE_TEXT = '574,74';
+
+  function readPriced(edit: (tables: PageTable[], line: number) => PageTable[] = (tables) => tables) {
+    const original = tablesOf('86');
+    const line = lineOf(original[0], PRICE_TEXT);
+    const tables = edit(original, line);
+    const context: PageTableContext = { ...contextOf('86', tables), priceLinesByTable: new Map([[tables[0].key, [{ line, unitCode: 'pcs' }]]]) };
+    return { line, reading: readPageTables({ tables: [variantsMapping(tables[0], PAGE_86_LINES), accessories(tables[1])] }, context) };
+  }
+
+  const priceCellsOf = (group: ExtractedGroup, field: 'netPrice' | 'unitCode'): readonly ExtractedCell[] =>
+    group.rows.flatMap((row) => row.cells).filter((cell) => cell.target.kind === 'price' && cell.target.field === field);
+
+  /** Αλλάζει ένα κελί του κύριου πίνακα, χωρίς να αγγίζει τα υπόλοιπα. */
+  const withCell = (tables: PageTable[], pick: (cell: PageTable['cells'][number]) => boolean, change: (cell: PageTable['cells'][number]) => PageTable['cells'][number] | null): PageTable[] => {
+    const [main, ...rest] = tables;
+    const cells = main.cells.flatMap((cell) => (pick(cell) ? (change(cell) ?? []) : [cell]));
+    return [{ ...main, cells }, ...rest];
+  };
+
+  it('🔴 δεύτερη πρόταση `priceLines` με τα ΙΔΙΑ `rowKey` με την πρόταση ιδιοτήτων: η τιμή ξέρει ποιο SKU είναι', () => {
+    const { groups } = readPriced().reading;
+    expect(groups.map((group) => [group.groupKey, group.purpose])).toEqual([['page:86:t0', undefined], ['page:86:t0:prices', 'priceLines']]);
+    const [attributes, prices] = groups;
+    expect(prices.rows.map((row) => row.rowKey)).toEqual(attributes.rows.map((row) => row.rowKey));
+  });
+
+  it('το ποσό έρχεται από το PDF με επιβεβαιωμένη περιοχή, η μονάδα από τον άνθρωπο, και το € του καταλόγου δεν είναι σύγκρουση', () => {
+    const [, prices] = readPriced().reading.groups;
+    const [first] = priceCellsOf(prices, 'netPrice');
+    expect(first).toMatchObject({ text: PRICE_TEXT, flags: [], anchor: { kind: 'page', page: 86, verified: true } });
+    expect(priceCellsOf(prices, 'unitCode').map((cell) => cell.text)).toEqual(Array(prices.rows.length).fill('pcs'));
+  });
+
+  it('🔴 η γραμμή τιμής δεν δηλώνεται ως χαμένη, ούτε γίνεται ιδιότητα', () => {
+    const { reading } = readPriced();
+    expect(reading.unmappedLines.some((entry) => entry.values.includes(PRICE_TEXT))).toBe(false);
+    const attributeTexts = reading.groups[0].rows.flatMap((row) => row.cells).map((cell) => cell.text);
+    expect(attributeTexts).not.toContain(PRICE_TEXT);
+  });
+
+  it('χωρίς απόφαση τιμής: καμία πρόταση τιμών, και η γραμμή μένει στις χωρίς πεδίο', () => {
+    const { groups, unmappedLines } = readPage('86', PAGE_86_LINES);
+    expect(groups.some((group) => group.purpose === 'priceLines')).toBe(false);
+    expect(unmappedLines.some((entry) => entry.values.includes(PRICE_TEXT))).toBe(true);
+  });
+
+  it('🔴 ξένο νόμισμα στην ετικέτα ⇒ `currencyConflict`: η τιμή δεν μετατρέπεται ποτέ σιωπηλά', () => {
+    const { reading } = readPriced((tables, line) => withCell(tables, (cell) => cell.row === line && cell.text.includes('€'), (cell) => ({ ...cell, text: cell.text.replace('€', '$') })));
+    const [, prices] = reading.groups;
+    expect(priceCellsOf(prices, 'netPrice')[0].flags).toEqual([{ code: 'currencyConflict', path: 'netPrice', params: { currency: '$', expected: 'EUR' } }]);
+  });
+
+  it('🔴 ενωμένο κελί τιμής (μία τιμή για δύο παραλλαγές) ⇒ `misaligned`, ποτέ σιωπηλό μοίρασμα', () => {
+    const { reading } = readPriced((tables, line) => {
+      const anchor = tables[0].cells.find((cell) => cell.text === PRICE_TEXT);
+      if (!anchor) throw new Error(`ο πίνακας δεν τυπώνει «${PRICE_TEXT}»`);
+      return withCell(tables, (cell) => cell.row === line && (cell.col === anchor.col || cell.col === anchor.col + 1), (cell) => (cell.col === anchor.col ? { ...cell, colSpan: 2 } : null));
+    });
+    const [, prices] = reading.groups;
+    const merged = priceCellsOf(prices, 'netPrice').filter((cell) => cell.text === PRICE_TEXT);
+    expect(merged.length).toBeGreaterThan(0);
+    expect(merged.every((cell) => cell.flags.some((flag) => flag.code === 'misaligned'))).toBe(true);
+  });
+});

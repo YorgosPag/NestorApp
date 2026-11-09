@@ -166,6 +166,37 @@ describe('ProposalReview', () => {
     expect(within(section).getByRole('button', { name: 'review.acceptRow' })).toBeDisabled();
   });
 
+  describe('§5.5.2 Β4 — η πρόταση τιμών', () => {
+    const priceTarget = { kind: 'price', field: 'netPrice' } as const;
+    const priceRow = (issues: ImportProposalRow['issues'] = []) =>
+      row([field({ target: priceTarget, sourceText: '574,74', incoming: { type: 'text', text: '574,74' } })], { holderId: issues.length > 0 ? null : 'cpr_1', action: 'update', issues });
+    const prices = (rows: readonly ImportProposalRow[]) => proposal(rows, { purpose: 'priceLines', modelCode: null, groupKey: 'page:60:t0:prices' });
+
+    it('ο τίτλος λέει «Τιμές», όχι «χωρίς μοντέλο», και δεν ζητά κωδικό μοντέλου', () => {
+      setup(prices([priceRow()]));
+      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('review.pricesTitle');
+      expect(screen.queryByLabelText('review.modelCode')).not.toBeInTheDocument();
+    });
+
+    it('🔴 SKU που περιμένουν τις ιδιότητες: η έγκριση κλειδώνει και λέει τι να γίνει πρώτα', () => {
+      setup(prices([priceRow([{ code: 'awaitsAttributes', path: 'r0' }])]));
+      expect(screen.getByRole('button', { name: 'review.apply' })).toBeDisabled();
+      expect(screen.getByText('review.awaitsAttributes')).toBeInTheDocument();
+    });
+
+    it('χωρίς αναμονή: η έγκριση ανοίγει και καμία σημείωση αναμονής', () => {
+      setup(prices([priceRow()]));
+      expect(screen.getByRole('button', { name: 'review.apply' })).toBeEnabled();
+      expect(screen.queryByText('review.awaitsAttributes')).not.toBeInTheDocument();
+    });
+
+    it('η πηγή της πρότασης (γραμμή, μονάδα, αναίρεση) αποδίδεται μέσα στην πρόταση', () => {
+      const handlers = { onFocus: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
+      render(<ProposalReview proposal={prices([priceRow()])} focused={null} batchOpen source={<p>price-source</p>} {...handlers} />);
+      expect(screen.getByText('price-source')).toBeInTheDocument();
+    });
+  });
+
   it('χωρίς κωδικό μοντέλου ζητά τον κωδικό, και τον στέλνει', () => {
     const value = proposal([row([field()])], { modelCode: null });
     const { onChange } = setup(value);
