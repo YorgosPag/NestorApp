@@ -9,7 +9,8 @@
  * Γράφεται σε διακριτές πράξεις (έναρξη · τέλος ευθυγράμμισης · απάντηση · ανάγνωση) — ποτέ ανά καρέ.
  *
  * ⚠️ ΕΝΑΣ γραφέας: `plan-recognition-session.ts` (μαζί με τα υπο-modules του: `plan-reading-review.ts` ως
- *   `planRecognitionSession.review` — ADR-929 Φ5.3β · `plan-scale-controller.ts` ως `planRecognitionSession.scale` — Φ5.3γ).
+ *   `planRecognitionSession.review` — ADR-929 Φ5.3β · `plan-scale-controller.ts` ως `planRecognitionSession.scale` — Φ5.3γ ·
+ *   `plan-segment-mask-controller.ts`, οι τοίχοι που ακολουθούν την όψη, μέσω του `review` — §6.10 Α2).
  *
  * @see ./plan-recognition-session.ts
  * @see ../../components/dxf-layout/PlanRecognitionOverlay.tsx (καταναλωτής καμβά)
@@ -51,6 +52,11 @@ export interface PlanRecognitionRun {
   readonly segmentRoles?: readonly PlanSegmentRoleVerdict[];
   /** Η κλίμακα του υποβάθρου τη στιγμή της αναγνώρισης (`resolveRasterPixelScale`, Δ4). */
   readonly knownScale: RasterPixelScale | null;
+  /**
+   * ADR-929 §6.10 Α2 — η όψη του ανθρώπου (crop + περιοχές απόκρυψης) από την οποία βγήκαν τα `segments`. Λείπει ⇒ η
+   * πρόταση της ευθυγράμμισης (η αρχική εξαγωγή). Ό,τι βλέπει ο άνθρωπος στην όψη, αυτό μετρά για τους τοίχους.
+   */
+  readonly maskView?: PlanReadingView;
 }
 
 // ─── ADR-929 Φ5.3β: η όψη που ελέγχει ο άνθρωπος πριν φύγει ───────────────────────────────────────────────────────
@@ -102,6 +108,20 @@ export type PlanReadingSendState =
 /** `select`: σύρσιμο/αλλαγή μεγέθους· `add-redaction`: το επόμενο σύρσιμο στον καμβά σχεδιάζει νέα περιοχή. */
 export type PlanReadingTool = 'select' | 'add-redaction';
 
+/**
+ * ADR-929 §6.10 Α2 — οι τοίχοι ακολουθούν την όψη: `following` (βγήκαν από την τρέχουσα όψη) · `updating` (ξαναβγαίνουν
+ * μετά την τελευταία αλλαγή) · `failed` (η επανεξαγωγή απέτυχε· μένουν της προηγούμενης όψης).
+ */
+export type PlanReadingWallsStatus = 'following' | 'updating' | 'failed';
+
+export interface PlanReadingWalls {
+  readonly status: PlanReadingWallsStatus;
+  /** Η ανάγνωση AI ακυρώθηκε επειδή άλλαξε η όψη· `true` ⇒ υπάρχει **Αναίρεση** (ένα επίπεδο). */
+  readonly readingDropped: boolean;
+}
+
+export const WALLS_FOLLOWING: PlanReadingWalls = { status: 'following', readingDropped: false };
+
 export interface PlanReadingReview {
   /** Η πρόταση της ευθυγράμμισης (για «Επαναφορά πρότασης»). */
   readonly proposed: PlanReadingView;
@@ -110,6 +130,8 @@ export interface PlanReadingReview {
   readonly packet: PlanReadingPacket | null;
   readonly preflight: PlanReadingPreflightState;
   readonly send: PlanReadingSendState;
+  /** ADR-929 §6.10 Α2 — οι τοίχοι απέναντι στην όψη. */
+  readonly walls: PlanReadingWalls;
 }
 
 export interface PlanRecognitionState {

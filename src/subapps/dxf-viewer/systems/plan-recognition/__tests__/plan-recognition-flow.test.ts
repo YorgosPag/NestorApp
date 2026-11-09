@@ -152,6 +152,35 @@ describe('ADR-929 Φ5 — εικόνα υποβάθρου → τοίχοι μέ�
     expect(modelFromDrawingStore.get().phase).toBe('picking');
   });
 
+  it('§6.10 Α2 — crop στην όψη ⇒ οι τοίχοι ξαναβγαίνουν μόνοι τους (ίδιος κώδικας με τον Worker) και φτάνουν στον βοηθό· «Επαναφορά» ⇒ όλοι πίσω', async () => {
+    installBackground(CALIBRATED);
+    const h = deps();
+    const unsubscribe = planRecognitionSession.onLineSource((source) => modelFromDrawingSession.adoptRasterSegments(source, h.deps));
+    await recognise(h);
+    confirmAllGroups(h);
+    expect(modelFromDrawingStore.get().proposal?.walls).toHaveLength(SAMPLE_HOUSE_WALLS.length);
+    planRecognitionSession.review.begin();
+    const { proposed } = planRecognitionStore.get().review!;
+    const splitX = Math.round((proposed.crop.minX + proposed.crop.maxX) / 2);
+    planRecognitionSession.review.edit({ crop: { ...proposed.crop, maxX: splitX }, redacted: [] });
+    expect(planRecognitionStore.get().review?.walls.status).toBe('updating');
+    for (let i = 0; i < 50 && planRecognitionStore.get().review?.walls.status === 'updating'; i++) {
+      await new Promise((r) => { setTimeout(r, 0); });
+    }
+    const { run } = planRecognitionStore.get();
+    expect(run?.maskView?.crop.maxX).toBe(splitX);
+    const source = modelFromDrawingStore.get().lineSource;
+    expect(source.kind === 'raster' && source.recognitionId.startsWith(`${run?.id}.`)).toBe(true);
+    confirmAllGroups(h);
+    const cropped = modelFromDrawingStore.get().proposal?.walls.length ?? 0;
+    expect(cropped).toBeLessThan(SAMPLE_HOUSE_WALLS.length);
+    planRecognitionSession.review.reset();
+    expect(planRecognitionStore.get().run?.maskView).toBeUndefined();
+    confirmAllGroups(h);
+    expect(modelFromDrawingStore.get().proposal?.walls).toHaveLength(SAMPLE_HOUSE_WALLS.length);
+    unsubscribe();
+  });
+
   it('δύο διαδοχικές αναγνωρίσεις: μόνο η ΤΕΛΕΥΤΑΙΑ μετρά', async () => {
     installBackground(CALIBRATED);
     const first = planRecognitionSession.run(FLOOR);

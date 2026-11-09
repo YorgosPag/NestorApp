@@ -68,6 +68,7 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
     excludedFromWalls,
     calibrated: sourceCalibrated,
     readingAvailable: recognition.phase === 'ready' && recognition.run !== null,
+    readingAdopted: recognition.reading !== null,
     review: recognition.review,
     scale,
   };
@@ -86,6 +87,7 @@ function usePlanReadingActions(getDeps: () => ModelFromDrawingDeps): PlanReading
       onEnd: () => review.end(),
       onToggleAddRegion: () => review.toggleAddRegion(),
       onReset: () => review.reset(),
+      onUndoReadingDrop: () => review.undoReadingDrop(),
       onPrepare: () => { void review.prepare(); },
       onSend: () => {
         void review.send().then((source) => {
@@ -118,6 +120,12 @@ export function usePlanRecognitionWiring(
     if (closed) planRecognitionSession.close();
   }, [closed]);
   React.useEffect(() => () => planRecognitionSession.close(), []);
+
+  // ADR-929 §6.10 Α2 — οι τοίχοι ξαναβγήκαν από νέα όψη (ή αναίρεση): ο βοηθός υιοθετεί τη νέα πηγή (η ΙΔΙΑ μηχανή).
+  React.useEffect(
+    () => planRecognitionSession.onLineSource((source) => modelFromDrawingSession.adoptRasterSegments(source, getDeps())),
+    [getDeps],
+  );
 
   const reading = usePlanReadingActions(getDeps);
   return { imageSource, recognizeImage, reading, scale: scale.actions };

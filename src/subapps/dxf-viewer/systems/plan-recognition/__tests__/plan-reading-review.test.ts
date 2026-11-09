@@ -16,8 +16,10 @@ import type {
 } from '../../../bim/plan-recognition/reading/plan-reading-contract';
 import { addRedaction } from '../../../bim/plan-recognition/reading/plan-reading-view-edit';
 import type { PlanViewReading } from '../../../bim/plan-recognition/reading/plan-reading-wire';
+import type { PlanReadingView } from '../../../bim/plan-recognition/reading/plan-reading-view';
 import { createPlanReadingReview, type PlanReadingReviewDeps } from '../plan-reading-review';
 import { planRecognitionStore, type PlanRecognitionRun } from '../plan-recognition-store';
+import type { PlanReadingRestore } from '../plan-segment-mask-controller';
 
 const SIZE = 200;
 
@@ -54,8 +56,13 @@ interface Harness {
   readonly sent: Array<{ image: Blob; request: PlanReadingRequest }>;
   readonly adopted: PlanReadingOutcome[];
   readonly revoked: string[];
+  /** ADR-929 §6.10 Α2 — οι δεσμευμένες όψεις που πήγαν στους τοίχους, με την όψη **πριν** την αλλαγή. */
+  readonly committed: Array<{ view: PlanReadingView; before: PlanReadingView }>;
+  readonly resets: { count: number };
   /** Ό,τι απαντά ο ψεύτικος διακομιστής· προεπιλογή: διάβασε, με το sha256 των bytes που **έλαβε**. */
   answer: (receivedSha: string) => PlanReadingRouteResult;
+  /** Ό,τι δίνει η αναίρεση των τοίχων· προεπιλογή: τίποτα να αναιρεθεί. */
+  restore: PlanReadingRestore | null;
 }
 
 function harness(): Harness {
@@ -63,9 +70,12 @@ function harness(): Harness {
   const sent: Harness['sent'] = [];
   const adopted: PlanReadingOutcome[] = [];
   const revoked: string[] = [];
+  const committed: Harness['committed'] = [];
+  const resets = { count: 0 };
   const h: Harness = {
-    sent, adopted, revoked,
+    sent, adopted, revoked, committed, resets,
     answer: readAnswer,
+    restore: null,
     deps: {
       renderer: () => ({
         renderView: async (req) => ({
@@ -83,6 +93,9 @@ function harness(): Harness {
       hash: async (bytes) => `sha:${new TextDecoder().decode(bytes)}`,
       objectUrl: { create: () => `blob:${(urls += 1)}`, revoke: (url) => { revoked.push(url); } },
       adoptReading: (outcome) => { adopted.push(outcome); return 'source.v2'; },
+      onViewCommitted: (view, before) => { committed.push({ view, before: before.view }); },
+      onReviewReset: () => { resets.count += 1; },
+      undoReadingDrop: () => h.restore,
     },
   };
   return h;
@@ -233,5 +246,74 @@ describe('ADR-929 Φ5.3β — έλεγχος της όψης πριν την α�
     c.end();
     expect(review()).toBeNull();
     expect(h.revoked).toEqual(['blob:1']);
+  });
+});
+
+describe('ADR-929 §6.10 Α2 — η όψη οδηγεί τους τοίχους', () => {
+  const CROPPED: PlanReadingView = { crop: { minX: 0, minY: 0, maxX: 120, maxY: SIZE }, redacted: [] };
+
+  it('κάθε δεσμευμένη αλλαγή (και η «Επαναφορά πρότασης») πάει στους τοίχους, με την όψη ΠΡΙΝ την αλλαγή', () => {
+    const h = harness();
+    const c = createPlanReadingReview(() => h.deps);
+    c.begin();
+    const proposed = review()!.view;
+    c.edit(CROPPED);
+    c.reset();
+    expect(h.committed).toEqual([{ view: CROPPED, before: proposed }, { view: proposed, before: CROPPED }]);
+  });
+
+  it('όσο στέλνεται, καμία αλλαγή δεν φτάνει στους τοίχους', async () => {
+    const h = harness();
+    const c = createPlanReadingReview(() => h.deps);
+    c.begin();
+    await c.prepare();
+    const pending = c.send();
+    c.edit(CROPPED);
+    await pending;
+    expect(h.committed).toHaveLength(0);
+  });
+
+  it('begin/end ακυρώνουν ό,τι τρέχει για τους τοίχους· begin ανοίγει στην όψη ΑΠΟ ΤΗΝ ΟΠΟΙΑ βγήκαν οι τοίχοι', () => {
+    const h = harness();
+    planRecognitionStore.patch({ run: { ...run(), maskView: CROPPED } });
+    const c = createPlanReadingReview(() => h.deps);
+    c.begin();
+    expect(review()).toMatchObject({ view: CROPPED, walls: { status: 'following', readingDropped: false } });
+    expect(review()!.proposed.crop).toEqual({ minX: 0, minY: 0, maxX: SIZE, maxY: SIZE });
+    c.end();
+    expect(h.resets.count).toBe(2);
+  });
+
+  it('όσο οι τοίχοι ξαναβγαίνουν, ο «Έλεγχος» δεν ξεκινά (το πακέτο θα είχε τμήματα άλλης όψης)', async () => {
+    const h = harness();
+    const c = createPlanReadingReview(() => h.deps);
+    c.begin();
+    planRecognitionStore.patch({ review: { ...review()!, walls: { status: 'updating', readingDropped: false } } });
+    await c.prepare();
+    expect(review()).toMatchObject({ packet: null, preflight: { status: 'idle' }, send: { status: 'idle' } });
+  });
+
+  it('Αναίρεση: η όψη και η κατάσταση αποστολής πριν την πρώτη αλλαγή· το πακέτο σβήνει και ανακαλείται', async () => {
+    const h = harness();
+    const read = { status: 'read', counts: { texts: 1, dimensions: 2, rooms: 0, openings: 0 }, cacheHit: false } as const;
+    h.restore = { view: CROPPED, send: read };
+    const c = createPlanReadingReview(() => h.deps);
+    c.begin();
+    planRecognitionStore.patch({ review: { ...review()!, walls: { status: 'following', readingDropped: true } } });
+    await c.prepare();
+    c.undoReadingDrop();
+    expect(review()).toMatchObject({ view: CROPPED, send: read, packet: null, walls: { status: 'following', readingDropped: false } });
+    expect(h.revoked).toEqual(['blob:1']);
+  });
+
+  it('Αναίρεση χωρίς τίποτα να αναιρεθεί ⇒ καμία αλλαγή (το πακέτο μένει)', async () => {
+    const h = harness();
+    const c = createPlanReadingReview(() => h.deps);
+    c.begin();
+    await c.prepare();
+    const before = review();
+    c.undoReadingDrop();
+    expect(review()).toBe(before);
+    expect(h.revoked).toEqual([]);
   });
 });

@@ -11,6 +11,8 @@
  * απαντά με το sha256 που **έλαβε**· ασυμφωνία ⇒ η ανάγνωση δεν μπαίνει στη σύντηξη (απόδειξη παραλαβής).
  *
  * 🔑 Αγώνες: σειριακός αριθμός ανά πράξη + ταυτότητα `run`. Αποτέλεσμα για παλιά όψη ή παλιό `run` **αγνοείται**.
+ * 🔑 ADR-929 §6.10 Α2: κάθε δεσμευμένη αλλαγή της όψης πάει και στους τοίχους (`onViewCommitted`). Όσο ξαναβγαίνουν,
+ *   ο «Έλεγχος» περιμένει: το πακέτο πρέπει να φέρει τα τμήματα της όψης που βλέπει ο άνθρωπος.
  * 🔒 Ποτέ αυτόματη αποστολή· με άρνηση (κλειστός διακόπτης, νομική πύλη, όριο) η γεωμετρία μένει ως έχει.
  *
  * Zero React.
@@ -26,7 +28,9 @@ import { readingViewSize } from '../../bim/plan-recognition/reading/plan-reading
 import { planReadingFromView } from '../../bim/plan-recognition/reading/plan-reading-from-view';
 import type { PlanReadingRouteResult } from '../../bim/plan-recognition/reading/plan-reading-contract';
 import type { PlanReadingApi } from './plan-reading-api-client';
+import type { PlanReadingRestore } from './plan-segment-mask-controller';
 import {
+  WALLS_FOLLOWING,
   planRecognitionStore,
   type PlanReadingCounts,
   type PlanReadingPacket,
@@ -45,6 +49,12 @@ export interface PlanReadingReviewDeps<T> {
   readonly objectUrl: { readonly create: (blob: Blob) => string; readonly revoke: (url: string) => void };
   /** Ο ιδιοκτήτης ξανατρέχει **μόνο** τη σύντηξη με την ανάγνωση και δίνει τη νέα πηγή γραμμών. */
   readonly adoptReading: (outcome: PlanReadingOutcome) => T | null;
+  /** ADR-929 §6.10 Α2 — δεσμευμένη όψη ⇒ οι τοίχοι· `before` = η όψη πριν την αλλαγή (για την αναίρεση). */
+  readonly onViewCommitted: (view: PlanReadingView, before: PlanReadingReview) => void;
+  /** Η όψη άνοιξε ή έκλεισε: ό,τι τρέχει για τους τοίχους ακυρώνεται. */
+  readonly onReviewReset: () => void;
+  /** Αναίρεση του σβησίματος της ανάγνωσης· η όψη πριν την πρώτη αλλαγή, ή `null`. */
+  readonly undoReadingDrop: () => PlanReadingRestore | null;
 }
 
 const IDLE_PREFLIGHT: PlanReadingPreflightState = { status: 'idle' };
@@ -102,6 +112,7 @@ export function createPlanReadingReview<T>(depsOf: () => PlanReadingReviewDeps<T
     revokePacket(current.packet);
     // Μετά από κάθε αλλαγή, πίσω στην επιλογή (Figma: ένα ορθογώνιο ανά «Προσθήκη»).
     patchReview({ view, tool: 'select', packet: null, preflight: IDLE_PREFLIGHT, send: { status: 'idle' } });
+    depsOf().onViewCommitted(view, current);
   }
 
   /** Η απάντηση του διακομιστή ⇒ κατάσταση· η ανάγνωση μπαίνει στη σύντηξη **μόνο** με επιβεβαιωμένη παραλαβή. */
@@ -128,15 +139,22 @@ export function createPlanReadingReview<T>(depsOf: () => PlanReadingReviewDeps<T
   }
 
   return {
-    /** Άνοιγμα: η πρόταση της ευθυγράμμισης, για να τη δει και να τη διορθώσει ο άνθρωπος (Δ15 #4). */
+    /**
+     * Άνοιγμα: η πρόταση της ευθυγράμμισης, για να τη δει και να τη διορθώσει ο άνθρωπος (Δ15 #4) — ή, αν οι τοίχοι
+     * βγήκαν ήδη από όψη του ανθρώπου, **εκείνη** η όψη: ό,τι βλέπει, αυτό μετρά (§6.10 Α2).
+     */
     begin(): void {
       const { run } = planRecognitionStore.get();
       if (!run) return;
       sequence += 1;
       revokePacket(review()?.packet);
+      depsOf().onReviewReset();
       const proposed = proposedReadingView(run.alignment);
       planRecognitionStore.patch({
-        review: { proposed, view: proposed, tool: 'select', packet: null, preflight: IDLE_PREFLIGHT, send: { status: 'idle' } },
+        review: {
+          proposed, view: run.maskView ?? proposed, tool: 'select', packet: null, preflight: IDLE_PREFLIGHT,
+          send: { status: 'idle' }, walls: WALLS_FOLLOWING,
+        },
       });
     },
 
@@ -158,18 +176,32 @@ export function createPlanReadingReview<T>(depsOf: () => PlanReadingReviewDeps<T
       patchReview({ tool: current.tool === 'add-redaction' ? 'select' : 'add-redaction' });
     },
 
+    /** ADR-929 §6.10 Α2 — «Αναίρεση»: η ανάγνωση που σβήστηκε επιστρέφει, μαζί με την όψη πριν την πρώτη αλλαγή. */
+    undoReadingDrop(): void {
+      const current = review();
+      if (!current || current.send.status === 'sending') return;
+      const restored = depsOf().undoReadingDrop();
+      if (!restored) return;
+      sequence += 1;
+      revokePacket(current.packet);
+      patchReview({
+        view: restored.view, tool: 'select', packet: null, preflight: IDLE_PREFLIGHT, send: restored.send, walls: WALLS_FOLLOWING,
+      });
+    },
+
     /** Κλείσιμο: ακυρώνει ό,τι τρέχει και ανακαλεί τη μικρογραφία. */
     end(): void {
       sequence += 1;
       revokePacket(review()?.packet);
+      depsOf().onReviewReset();
       planRecognitionStore.patch({ review: null });
     },
 
-    /** «Έλεγχος πριν την αποστολή»: πακέτο + προέλεγχος, παράλληλα. */
+    /** «Έλεγχος πριν την αποστολή»: πακέτο + προέλεγχος, παράλληλα. Όχι όσο οι τοίχοι ξαναβγαίνουν (§6.10 Α2). */
     async prepare(): Promise<void> {
       const { run } = planRecognitionStore.get();
       const current = review();
-      if (!run || !current || current.send.status === 'sending') return;
+      if (!run || !current || current.send.status === 'sending' || current.walls.status === 'updating') return;
       const seq = ++sequence;
       revokePacket(current.packet);
       patchReview({ packet: null, preflight: { status: 'checking' }, send: { status: 'preparing' } });

@@ -160,7 +160,7 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
         ? <ImageSourceSummary view={imageSource} onResample={actions.onResample} t={t} />
         : <SceneSampleLine colorHex={state.wallColorHex} onResample={actions.onResample} t={t} />}
       {fromImage
-        ? <PlanReadingSection available={imageSource.readingAvailable} review={imageSource.review} actions={actions.reading} t={t} />
+        ? <PlanReadingSection available={imageSource.readingAvailable} readingAdopted={imageSource.readingAdopted} review={imageSource.review} actions={actions.reading} t={t} />
         : null}
       {fromImage ? <PlanScaleCardSection view={imageSource.scale} actions={actions.scale} t={t} /> : null}
       <StatusLegend proposal={proposal} t={t} />

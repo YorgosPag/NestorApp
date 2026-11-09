@@ -33,7 +33,9 @@ import { extensionAnchorMap, isWallCandidateRole, segmentRoleMap } from '../../b
 import { createPlanReadingReview, type PlanReadingReviewDeps } from './plan-reading-review';
 import { planReadingApi } from './plan-reading-api-client';
 import { createPlanScaleController, type PlanScaleControllerDeps } from './plan-scale-controller';
+import { createPlanSegmentMaskController, type PlanSegmentMaskDeps } from './plan-segment-mask-controller';
 import { commitCalibration } from '../../floorplan-background/services/commit-calibration';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export type RasterLineSource = Extract<ProposalLineSource, { kind: 'raster' }>;
 
@@ -121,16 +123,40 @@ function lineSourceOf(run: PlanRecognitionRun, fusion: PlanFusionResult, version
 
 let fusionVersion = 0;
 
+/** Νέα έκδοση πηγής γραμμών για αποτέλεσμα που **ήδη** γράφτηκε στο store. */
+function nextLineSource(run: PlanRecognitionRun, fusion: PlanFusionResult): RasterLineSource {
+  return lineSourceOf(run, fusion, ++fusionVersion);
+}
+
+/**
+ * ADR-929 §6.10 Α2 — η τελευταία πηγή γραμμών που ο wiring **δεν** ζήτησε άμεσα (επανεξαγωγή · αναίρεση), στο ΕΝΑ
+ * pub/sub του έργου. Κάθε δημοσίευση είναι νέο αντικείμενο (νέα έκδοση) ⇒ ειδοποιεί πάντα.
+ */
+const publishedLineSource = createExternalStore<RasterLineSource | null>(null);
+
+const DEFAULT_MASK_DEPS: PlanSegmentMaskDeps<RasterLineSource> = {
+  extractor: () => alignerInstance(),
+  fuse,
+  lineSource: nextLineSource,
+  publish: (source) => publishedLineSource.set(source),
+};
+let maskDeps = DEFAULT_MASK_DEPS;
+
+/** Οι τοίχοι ακολουθούν την όψη — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας), μέσω του ελέγχου της όψης. */
+const segmentMask = createPlanSegmentMaskController<RasterLineSource>(() => maskDeps);
+
 /**
  * ADR-929 Φ5.3β — η ανάγνωση μπαίνει στη σύντηξη: ξανατρέχει **μόνο** η `fusePlan` (καθαρή, χωρίς Worker), με νέα έκδοση
- * πηγής γραμμών. Ο σειριακός έλεγχος (`run` ίδιο με εκείνο της αποστολής) γίνεται στον ελεγκτή της όψης.
+ * πηγής γραμμών. Ο σειριακός έλεγχος (`run` ίδιο με εκείνο της αποστολής) γίνεται στον ελεγκτή της όψης. Νέα ανάγνωση ⇒
+ * η αναίρεση του σβησίματος της παλιάς (§6.10 Α2) δεν σημαίνει πια τίποτα.
  */
 function adoptReading(outcome: PlanReadingOutcome): RasterLineSource | null {
   const { run } = planRecognitionStore.get();
   if (!run) return null;
   const fusion = fuse(run, outcome);
   planRecognitionStore.patch({ reading: outcome, fusion });
-  return lineSourceOf(run, fusion, ++fusionVersion);
+  segmentMask.forgetReadingUndo();
+  return nextLineSource(run, fusion);
 }
 
 const DEFAULT_REVIEW_DEPS: PlanReadingReviewDeps<RasterLineSource> = {
@@ -140,6 +166,9 @@ const DEFAULT_REVIEW_DEPS: PlanReadingReviewDeps<RasterLineSource> = {
   hash: (bytes) => sha256Hex(bytes),
   objectUrl: { create: (blob) => URL.createObjectURL(blob), revoke: (url) => URL.revokeObjectURL(url) },
   adoptReading,
+  onViewCommitted: (view, before) => { void segmentMask.apply(view, before); },
+  onReviewReset: () => segmentMask.cancel(),
+  undoReadingDrop: () => segmentMask.undo(),
 };
 let reviewDeps = DEFAULT_REVIEW_DEPS;
 
@@ -149,7 +178,7 @@ const readingReview = createPlanReadingReview<RasterLineSource>(() => reviewDeps
 /** ADR-929 Φ5.3γ — νέα σύντηξη για το ίδιο αποτέλεσμα γεωμετρίας (π.χ. νέα κλίμακα): store + νέα έκδοση πηγής γραμμών. */
 function adoptFusion(run: PlanRecognitionRun, fusion: PlanFusionResult): RasterLineSource {
   planRecognitionStore.patch({ run, fusion });
-  return lineSourceOf(run, fusion, ++fusionVersion);
+  return nextLineSource(run, fusion);
 }
 
 const DEFAULT_SCALE_DEPS: PlanScaleControllerDeps<RasterLineSource> = {
@@ -166,6 +195,7 @@ const scaleController = createPlanScaleController<RasterLineSource>(() => scaleD
 
 function fail(failure: PlanRecognitionFailure): null {
   readingReview.end();
+  segmentMask.track(null, null);
   planRecognitionStore.patch({ phase: 'idle', run: null, fusion: null, reading: null, failure, scaleHoverTextId: null });
   return null;
 }
@@ -202,8 +232,20 @@ export const planRecognitionSession = {
       knownScale,
     };
     const fusion = fuse(run, null);
+    segmentMask.track(run, knownScale);
     planRecognitionStore.patch({ phase: 'ready', run, reading: null, fusion, failure: null, scaleHoverTextId: null });
-    return lineSourceOf(run, fusion, ++fusionVersion);
+    return nextLineSource(run, fusion);
+  },
+
+  /**
+   * ADR-929 §6.10 Α2 — πηγές γραμμών που ο wiring **δεν** ζήτησε άμεσα (οι τοίχοι ξαναβγήκαν από νέα όψη · αναίρεση).
+   * Επιστρέφει την απεγγραφή.
+   */
+  onLineSource(listener: (source: RasterLineSource) => void): () => void {
+    return publishedLineSource.subscribe(() => {
+      const source = publishedLineSource.get();
+      if (source) listener(source);
+    });
   },
 
   /** Η τρέχουσα πηγή γραμμών (μετά από κάθε επανάληψη της σύντηξης), ή `null` χωρίς αποτέλεσμα. */
@@ -228,6 +270,7 @@ export const planRecognitionSession = {
   close(): void {
     runSequence += 1;
     readingReview.end();
+    segmentMask.track(null, null);
     planRecognitionStore.reset();
     aligner?.dispose();
     aligner = null;
@@ -242,6 +285,11 @@ export function __setPlanReadingReviewDepsForTests(next: Partial<PlanReadingRevi
 /** Μόνο για tests: ψεύτικες εξαρτήσεις της κάρτας κλίμακας (εγγραφή, υπόβαθρο, ρολόι). `null` ⇒ οι πραγματικές. */
 export function __setPlanScaleDepsForTests(next: Partial<PlanScaleControllerDeps<RasterLineSource>> | null): void {
   scaleDeps = next ? { ...DEFAULT_SCALE_DEPS, ...next } : DEFAULT_SCALE_DEPS;
+}
+
+/** Μόνο για tests: ψεύτικες εξαρτήσεις των τοίχων που ακολουθούν την όψη (Worker). `null` ⇒ οι πραγματικές. */
+export function __setPlanSegmentMaskDepsForTests(next: Partial<PlanSegmentMaskDeps<RasterLineSource>> | null): void {
+  maskDeps = next ? { ...DEFAULT_MASK_DEPS, ...next } : DEFAULT_MASK_DEPS;
 }
 
 /** Μόνο για tests: ψεύτικος ευθυγραμμιστής (Worker-less). */

@@ -110,26 +110,59 @@ interface FramedFace {
   readonly toOriginal: Homography;
 }
 
+/**
+ * ADR-929 §6.10 Α2 — ό,τι αποφάσισε ο άνθρωπος στην όψη (crop + περιοχές απόκρυψης), σε px της **ευθυγραμμισμένης**
+ * εικόνας. Μετρά **μόνο** το μελάνι μέσα στο `region` και έξω από κάθε `excluded`. Η μάσκα **αφαιρεί μελάνι**· δεν
+ * αλλάζει κανένα κατώφλι (το `minLengthPx` μένει της προτεινόμενης περιοχής σχεδίου).
+ */
+export interface PlanInkMask {
+  readonly region: AlignedRectPx;
+  readonly excluded: readonly AlignedRectPx[];
+}
+
+/**
+ * Ό,τι διαβάζει η εξαγωγή από μια ευθυγράμμιση: **χωρίς** τα pixel της εικόνας (μόνο οι διαστάσεις της). Έτσι μια
+ * επανεξαγωγή στέλνει στον Worker μόνο τη μάσκα μελανιού, όχι ξανά την εικόνα.
+ */
+export type PlanSegmentSource = Pick<PlanAlignment, 'ink' | 'sheet' | 'alignedToOriginal' | 'originalToAligned'> & {
+  readonly image: Pick<PlanAlignment['image'], 'width' | 'height'>;
+};
+
 /** 0,6% της μικρής διάστασης της περιοχής σχεδίου, τουλάχιστον 8 px: πάνω από ύψος γράμματος, κάτω από κοντό τοίχο. */
 export function autoMinLength(region: AlignedRectPx): number {
   return Math.max(8, Math.round(0.006 * Math.min(region.maxX - region.minX, region.maxY - region.minY)));
 }
 
-function drawingRegion(alignment: PlanAlignment): AlignedRectPx {
-  return alignment.sheet?.drawing.aligned ?? { minX: 0, minY: 0, maxX: alignment.image.width, maxY: alignment.image.height };
+function drawingRegion(source: PlanSegmentSource): AlignedRectPx {
+  return source.sheet?.drawing.aligned ?? { minX: 0, minY: 0, maxX: source.image.width, maxY: source.image.height };
 }
 
-/** Η μάσκα μελανιού μόνο μέσα στην περιοχή σχεδίου και έξω από πινακίδες/υπομνήματα (Δ15 #4). */
-function drawingInk(alignment: PlanAlignment): Uint8Array {
-  const cols = alignment.image.width;
-  const region = drawingRegion(alignment);
-  const excluded = alignment.sheet?.annotations.map((a) => a.region.aligned) ?? [];
-  const out = new Uint8Array(alignment.ink.length);
-  for (let y = Math.ceil(region.minY); y < region.maxY; y++) {
-    for (let x = Math.ceil(region.minX); x < region.maxX; x++) {
-      if (excluded.some((r) => x >= r.minX && x < r.maxX && y >= r.minY && y < r.maxY)) continue;
-      out[y * cols + x] = alignment.ink[y * cols + x];
-    }
+/** Η πρόταση της ευθυγράμμισης: η περιοχή σχεδίου, χωρίς πινακίδες/υπομνήματα (Δ15 #4). */
+function proposedInkMask(source: PlanSegmentSource): PlanInkMask {
+  return { region: drawingRegion(source), excluded: source.sheet?.annotations.map((a) => a.region.aligned) ?? [] };
+}
+
+/**
+ * Οι στήλες/γραμμές pixel ενός ορθογωνίου μέσα στην εικόνα, μισάνοιχτο `[from, to)`. Ίδιο κριτήριο με το «κέντρο
+ * pixel»: το ακέραιο `x` ανήκει όταν `minX ≤ x < maxX`, δηλαδή `x ∈ [ceil(minX), ceil(maxX))`.
+ */
+function pixelSpan(min: number, max: number, size: number): readonly [number, number] {
+  return [Math.max(0, Math.ceil(min)), Math.min(size, Math.ceil(max))];
+}
+
+/** Η μάσκα μελανιού μόνο μέσα στο `region` και έξω από κάθε `excluded`: αντιγραφή ανά γραμμή, μετά μηδενισμός ανά γραμμή. */
+function drawingInk(source: PlanSegmentSource, mask: PlanInkMask): Uint8Array {
+  const { width: cols, height: rows } = source.image;
+  const out = new Uint8Array(source.ink.length);
+  const [x0, x1] = pixelSpan(mask.region.minX, mask.region.maxX, cols);
+  const [y0, y1] = pixelSpan(mask.region.minY, mask.region.maxY, rows);
+  if (x0 >= x1) return out;
+  for (let y = y0; y < y1; y++) out.set(source.ink.subarray(y * cols + x0, y * cols + x1), y * cols + x0);
+  for (const r of mask.excluded) {
+    const [ex0, ex1] = pixelSpan(r.minX, r.maxX, cols);
+    const [ey0, ey1] = pixelSpan(r.minY, r.maxY, rows);
+    if (ex0 >= ex1) continue;
+    for (let y = ey0; y < ey1; y++) out.fill(0, y * cols + ex0, y * cols + ex1);
   }
   return out;
 }
@@ -221,14 +254,17 @@ function byPosition(a: UnnamedSegment, b: UnnamedSegment): number {
   return a.start.y - b.start.y || a.start.x - b.start.x || a.end.y - b.end.y || a.end.x - b.end.x;
 }
 
-/** Entry point: τα τμήματα κάτοψης μιας ευθυγράμμισης της Φ1. */
+/**
+ * Entry point: τα τμήματα κάτοψης μιας ευθυγράμμισης της Φ1. Χωρίς `mask` ⇒ η πρόταση της ευθυγράμμισης (περιοχή
+ * σχεδίου, χωρίς πινακίδες)· με `mask` ⇒ η όψη του ανθρώπου (ADR-929 §6.10 Α2).
+ */
 export function extractPlanSegments(
-  alignment: PlanAlignment, options: PlanSegmentOptions = DEFAULT_PLAN_SEGMENTS,
+  alignment: PlanSegmentSource, options: PlanSegmentOptions = DEFAULT_PLAN_SEGMENTS, mask: PlanInkMask | null = null,
 ): PlanSegmentExtraction {
   const { width: cols, height: rows } = alignment.image;
   const minLength = options.minLengthPx ?? autoMinLength(drawingRegion(alignment));
   const bandOptions: AxisBandOptions = { ...DEFAULT_AXIS_BANDS, minLength };
-  const ink = drawingInk(alignment);
+  const ink = drawingInk(alignment, mask ?? proposedInkMask(alignment));
   const bands: AxisBand[] = [
     ...axisBands(ink, cols, rows, 'horizontal', bandOptions),
     ...axisBands(ink, cols, rows, 'vertical', bandOptions),

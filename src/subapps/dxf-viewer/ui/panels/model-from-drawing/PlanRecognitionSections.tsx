@@ -50,6 +50,8 @@ export interface ImageSourceView {
   readonly calibrated: boolean;
   /** ADR-929 Φ5.3β — υπάρχει αποτέλεσμα γεωμετρίας, άρα και όψη που μπορεί να διαβαστεί. */
   readonly readingAvailable: boolean;
+  /** ADR-929 §6.10 Α2 — μια ανάγνωση AI είναι στη σύντηξη: αλλαγή της όψης θα την ακυρώσει (με αναίρεση). */
+  readonly readingAdopted: boolean;
   /** ADR-929 Φ5.3β — η όψη υπό έλεγχο πριν την ανάγνωση (`null` = κλειστή). */
   readonly review: PlanReadingReview | null;
   /** ADR-929 Φ5.3γ — η κάρτα κλίμακας από τις διαβασμένες διαστάσεις. */

@@ -93,7 +93,7 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
     onRecognizeImage: jest.fn(),
     reading: {
       onBegin: jest.fn(), onEnd: jest.fn(), onToggleAddRegion: jest.fn(),
-      onReset: jest.fn(), onPrepare: jest.fn(), onSend: jest.fn(),
+      onReset: jest.fn(), onUndoReadingDrop: jest.fn(), onPrepare: jest.fn(), onSend: jest.fn(),
     },
     scale: { onApply: jest.fn(), onManual: jest.fn(), onHover: jest.fn() },
   };
@@ -105,7 +105,7 @@ const NO_EXCLUSIONS: ImageSourceView['excludedFromWalls'] = { byRole: { dimensio
 /** Η πηγή «εικόνα» όπως τη δίνει ο host — προεπιλογή: όροφος χωρίς υπόβαθρο, πηγή το σχέδιο. */
 const NO_IMAGE: ImageSourceView = {
   available: false, phase: 'idle', failure: null, active: false, countsByTier: null, excludedFromWalls: NO_EXCLUSIONS, calibrated: false,
-  readingAvailable: false, review: null, scale: { card: null, applying: false, stale: false },
+  readingAvailable: false, readingAdopted: false, review: null, scale: { card: null, applying: false, stale: false },
 };
 
 function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {
@@ -275,7 +275,7 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
   const COUNTS = { high: 12, medium: 3, low: 1 } as const;
   const IMAGE_READY: ImageSourceView = {
     available: true, phase: 'ready', failure: null, active: true, countsByTier: COUNTS, excludedFromWalls: { byRole: { dimension: 0, annotation: 0 }, lowConfidence: 1 }, calibrated: true,
-    readingAvailable: true, review: null, scale: NO_IMAGE.scale,
+    readingAvailable: true, readingAdopted: false, review: null, scale: NO_IMAGE.scale,
   };
 
   it('Φ5.2ε — οι γραμμές χαμηλής βεβαιότητας λέγονται ρητά «όχι τοίχοι», και η γραμμή φεύγει όταν δεν υπάρχουν', () => {

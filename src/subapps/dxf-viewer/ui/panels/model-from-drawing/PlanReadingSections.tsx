@@ -12,7 +12,7 @@
  */
 
 import * as React from 'react';
-import { CheckCircle2, Eye, Loader2, ScanText, Send, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, Eye, Loader2, ScanText, Send, ShieldAlert, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
@@ -23,6 +23,7 @@ import type {
   PlanReadingPreflightState,
   PlanReadingReview,
   PlanReadingSendState,
+  PlanReadingWallsStatus,
 } from '../../../systems/plan-recognition/plan-recognition-store';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 
@@ -31,6 +32,8 @@ export interface PlanReadingActions {
   readonly onEnd: () => void;
   readonly onToggleAddRegion: () => void;
   readonly onReset: () => void;
+  /** ADR-929 §6.10 Α2 — η ανάγνωση που ακυρώθηκε από αλλαγή της όψης επιστρέφει (ένα επίπεδο). */
+  readonly onUndoReadingDrop: () => void;
   readonly onPrepare: () => void;
   readonly onSend: () => void;
 }
@@ -46,6 +49,13 @@ const REASON_KEY: Readonly<Record<PlanReadingUnavailableReason, string>> = {
   'reader-unconfigured': 'modelFromDrawing.image.reading.reason.reader-unconfigured',
   'reading-in-progress': 'modelFromDrawing.image.reading.reason.reading-in-progress',
   'reader-failed': 'modelFromDrawing.image.reading.reason.reader-failed',
+};
+
+/** Κάθε κατάσταση των τοίχων με ΡΗΤΟ κλειδί (εξαντλητικό, CHECK 3.8). */
+const WALLS_STATUS_KEY: Readonly<Record<PlanReadingWallsStatus, string>> = {
+  following: 'modelFromDrawing.image.reading.walls.following',
+  updating: 'modelFromDrawing.image.reading.walls.updating',
+  failed: 'modelFromDrawing.image.reading.walls.failed',
 };
 
 /** Ποσά σε USD (η τιμολόγηση του παρόχου): έως 4 δεκαδικά, γιατί μια σελίδα κοστίζει λίγα σεντς. */
@@ -124,6 +134,38 @@ function SendResult({ send, t }: { readonly send: PlanReadingSendState; readonly
   }
 }
 
+/**
+ * ADR-929 §6.10 Α2 — οι τοίχοι απέναντι στην όψη: ακολουθούν · ενημερώνονται · απέτυχαν. Πριν την πρώτη αλλαγή με ζωντανή
+ * ανάγνωση, προειδοποίηση· μετά το σβήσιμό της, «Αναίρεση».
+ */
+function WallsBlock({ review, readingAdopted, onUndo, t }: {
+  readonly review: PlanReadingReview;
+  readonly readingAdopted: boolean;
+  readonly onUndo: () => void;
+  readonly t: Translate;
+}): React.ReactElement {
+  const { status, readingDropped } = review.walls;
+  return (
+    <section className="flex flex-col gap-1" data-testid="mfd-reading-walls" data-status={status}>
+      <p className={status === 'failed' ? 'm-0 text-[11px] text-destructive' : MUTED} role="status">
+        {status === 'updating' ? <Loader2 className="mr-1 inline size-3 animate-spin" aria-hidden="true" /> : null}
+        {t(WALLS_STATUS_KEY[status])}
+      </p>
+      {readingAdopted && !readingDropped ? <p className={MUTED}>{t('modelFromDrawing.image.reading.walls.readingNote')}</p> : null}
+      {readingDropped ? (
+        <p className="m-0 flex flex-wrap items-center gap-1.5 text-[11px] text-foreground" role="status" data-testid="mfd-reading-dropped">
+          <span>{t('modelFromDrawing.image.reading.walls.readingDropped')}</span>
+          <Button type="button" variant="outline" size="xs" disabled={review.send.status === 'sending'} onClick={onUndo}
+            data-testid="mfd-reading-undo">
+            <Undo2 className="size-3" aria-hidden="true" />
+            {t('modelFromDrawing.image.reading.walls.undo')}
+          </Button>
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function MarkingTools({ review, actions, t }: { readonly review: PlanReadingReview; readonly actions: PlanReadingActions; readonly t: Translate }): React.ReactElement {
   const busy = review.send.status === 'sending' || review.send.status === 'preparing';
   const adding = review.tool === 'add-redaction';
@@ -144,8 +186,9 @@ function MarkingTools({ review, actions, t }: { readonly review: PlanReadingRevi
   );
 }
 
-function ReviewBody({ review, actions, language, t }: {
+function ReviewBody({ review, readingAdopted, actions, language, t }: {
   readonly review: PlanReadingReview;
+  readonly readingAdopted: boolean;
   readonly actions: PlanReadingActions;
   readonly language: string;
   readonly t: Translate;
@@ -153,11 +196,14 @@ function ReviewBody({ review, actions, language, t }: {
   const { send, preflight, packet } = review;
   const preparing = send.status === 'preparing';
   const sending = send.status === 'sending';
+  const wallsUpdating = review.walls.status === 'updating';
   const allowed = preflight.status === 'done' && preflight.result.status === 'allowed';
   return (
     <>
       <MarkingTools review={review} actions={actions} t={t} />
-      <Button type="button" variant="outline" size="sm" disabled={preparing || sending} onClick={actions.onPrepare} data-testid="mfd-reading-prepare">
+      <WallsBlock review={review} readingAdopted={readingAdopted} onUndo={actions.onUndoReadingDrop} t={t} />
+      <Button type="button" variant="outline" size="sm" disabled={preparing || sending || wallsUpdating} onClick={actions.onPrepare}
+        data-testid="mfd-reading-prepare">
         {preparing ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Eye className="size-3.5" aria-hidden="true" />}
         {t('modelFromDrawing.image.reading.prepare')}
       </Button>
@@ -176,9 +222,11 @@ function ReviewBody({ review, actions, language, t }: {
 }
 
 /** Στον έλεγχο, όταν η πηγή είναι η εικόνα: η ανάγνωση κειμένων (διαστάσεις, χώροι, ανοίγματα). */
-export function PlanReadingSection({ available, review, actions, t }: {
+export function PlanReadingSection({ available, readingAdopted, review, actions, t }: {
   /** Υπάρχει αποτέλεσμα αναγνώρισης γεωμετρίας για να διαβαστεί. */
   readonly available: boolean;
+  /** ADR-929 §6.10 Α2 — μια ανάγνωση AI είναι στη σύντηξη. */
+  readonly readingAdopted: boolean;
   readonly review: PlanReadingReview | null;
   readonly actions: PlanReadingActions;
   readonly t: Translate;
@@ -188,7 +236,7 @@ export function PlanReadingSection({ available, review, actions, t }: {
   return (
     <section className="flex flex-col gap-1.5 border-t border-border pt-2" data-testid="mfd-reading">
       <h4 className={SECTION_TITLE}>{t('modelFromDrawing.image.reading.title')}</h4>
-      {review ? <ReviewBody review={review} actions={actions} language={language} t={t} /> : (
+      {review ? <ReviewBody review={review} readingAdopted={readingAdopted} actions={actions} language={language} t={t} /> : (
         <>
           <p className={MUTED}>{t('modelFromDrawing.image.reading.intro')}</p>
           <Button type="button" variant="outline" size="sm" onClick={actions.onBegin} data-testid="mfd-reading-begin">

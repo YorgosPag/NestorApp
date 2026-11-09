@@ -506,6 +506,14 @@
         "sendFailed": "Sending failed (network or server). Nothing unread was charged; try again.",
         "prepareFailed": "The view image could not be prepared. Try again.",
         "geometryOnly": "Recognition continues with the image geometry only.",
+        "walls": {
+          "following": "Walls follow the view: anything outside the frame or under a hidden area does not become a wall.",
+          "updating": "Updating walls for the new view…",
+          "failed": "The walls could not be updated and stay as they were before the change. Change the view again to retry.",
+          "readingNote": "If you change the view, the walls will be extracted again and the AI reading will be discarded. You can undo this.",
+          "readingDropped": "The AI reading was discarded because the view changed.",
+          "undo": "Undo"
+        },
         "reason": {
           "ai-disabled-for-company": "AI plan reading is turned off for your company (administrator setting).",
           "ai-legal-disclosure-pending": "AI plan reading is not enabled yet: it is waiting for the privacy policy update.",

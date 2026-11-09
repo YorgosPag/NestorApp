@@ -11,7 +11,11 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
 import type { PlanReadingUnavailableReason } from '../../../../bim/plan-recognition/plan-recognition-types';
-import type { PlanReadingPacket, PlanReadingReview } from '../../../../systems/plan-recognition/plan-recognition-store';
+import {
+  WALLS_FOLLOWING,
+  type PlanReadingPacket,
+  type PlanReadingReview,
+} from '../../../../systems/plan-recognition/plan-recognition-store';
 import { PlanReadingSection, type PlanReadingActions } from '../PlanReadingSections';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -26,18 +30,18 @@ const PACKET: PlanReadingPacket = {
 };
 
 function review(next: Partial<PlanReadingReview> = {}): PlanReadingReview {
-  return { proposed: VIEW, view: VIEW, tool: 'select', packet: null, preflight: { status: 'idle' }, send: { status: 'idle' }, ...next };
+  return { proposed: VIEW, view: VIEW, tool: 'select', packet: null, preflight: { status: 'idle' }, send: { status: 'idle' }, walls: WALLS_FOLLOWING, ...next };
 }
 
 function actions(): jest.Mocked<PlanReadingActions> {
-  return { onBegin: jest.fn(), onEnd: jest.fn(), onToggleAddRegion: jest.fn(), onReset: jest.fn(), onPrepare: jest.fn(), onSend: jest.fn() };
+  return { onBegin: jest.fn(), onEnd: jest.fn(), onToggleAddRegion: jest.fn(), onReset: jest.fn(), onUndoReadingDrop: jest.fn(), onPrepare: jest.fn(), onSend: jest.fn() };
 }
 
 const ALLOWED = { status: 'done', result: { status: 'allowed', model: 'm', estimateUsd: 0.04, remainingUsd: 9.5, monthlyCapUsd: 10 } } as const;
 
-function renderSection(r: PlanReadingReview | null, available = true) {
+function renderSection(r: PlanReadingReview | null, available = true, readingAdopted = false) {
   const a = actions();
-  const view = render(<PlanReadingSection available={available} review={r} actions={a} t={t} />);
+  const view = render(<PlanReadingSection available={available} readingAdopted={readingAdopted} review={r} actions={a} t={t} />);
   return { ...view, a };
 }
 
@@ -99,5 +103,42 @@ describe('PlanReadingSection (ADR-929 Φ5.3β)', () => {
     for (const id of ['mfd-reading-add-region', 'mfd-reading-reset', 'mfd-reading-prepare', 'mfd-reading-send', 'mfd-reading-close']) {
       expect(sending.getByTestId(id)).toBeDisabled();
     }
+  });
+});
+
+describe('PlanReadingSection — οι τοίχοι ακολουθούν την όψη (ADR-929 §6.10 Α2)', () => {
+  it.each([
+    ['following', 'modelFromDrawing.image.reading.walls.following'],
+    ['updating', 'modelFromDrawing.image.reading.walls.updating'],
+    ['failed', 'modelFromDrawing.image.reading.walls.failed'],
+  ] as const)('κατάσταση «%s»: δικό της κείμενο, ως status', (status, key) => {
+    const { getByTestId } = renderSection(review({ walls: { status, readingDropped: false } }));
+    const block = getByTestId('mfd-reading-walls');
+    expect(block).toHaveAttribute('data-status', status);
+    expect(block.querySelector('[role="status"]')?.textContent).toBe(key);
+  });
+
+  it('όσο οι τοίχοι ξαναβγαίνουν, ο «Έλεγχος» είναι κλειστός', () => {
+    const { getByTestId } = renderSection(review({ walls: { status: 'updating', readingDropped: false } }));
+    expect(getByTestId('mfd-reading-prepare')).toBeDisabled();
+  });
+
+  it('ζωντανή ανάγνωση: προειδοποίηση ΠΡΙΝ την αλλαγή· χωρίς ανάγνωση, καμία', () => {
+    const live = renderSection(review(), true, true);
+    expect(live.getByTestId('mfd-reading-walls').textContent).toContain('modelFromDrawing.image.reading.walls.readingNote');
+    live.unmount();
+    const none = renderSection(review(), true, false);
+    expect(none.getByTestId('mfd-reading-walls').textContent).not.toContain('readingNote');
+  });
+
+  it('η ανάγνωση ακυρώθηκε: μήνυμα + «Αναίρεση» (χωρίς προειδοποίηση)· όσο στέλνεται, η αναίρεση κλειστή', () => {
+    const dropped = renderSection(review({ walls: { status: 'following', readingDropped: true } }), true, false);
+    expect(dropped.getByTestId('mfd-reading-dropped').textContent).toContain('modelFromDrawing.image.reading.walls.readingDropped');
+    expect(dropped.getByTestId('mfd-reading-walls').textContent).not.toContain('readingNote');
+    fireEvent.click(dropped.getByTestId('mfd-reading-undo'));
+    expect(dropped.a.onUndoReadingDrop).toHaveBeenCalledTimes(1);
+    dropped.unmount();
+    const sending = renderSection(review({ walls: { status: 'following', readingDropped: true }, send: { status: 'sending' } }));
+    expect(sending.getByTestId('mfd-reading-undo')).toBeDisabled();
   });
 });

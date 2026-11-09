@@ -6,6 +6,9 @@
  * 🔑 **Ένα ταξίδι, ένας Worker.** Τα τμήματα της Φ2 (`extractPlanSegments`) χρειάζονται τη μάσκα μελανιού της ευθυγράμμισης.
  *   Ζητούνται **στο ίδιο αίτημα** (`segments`), ώστε η μάσκα να μη γυρίσει στον κύριο νήμα για να ξαναπάει. Χωρίς `segments`
  *   τρέχει μόνο η ευθυγράμμιση: όσο ο χρήστης σέρνει τις γωνίες της προοπτικής, η προεπισκόπηση δεν πληρώνει τα τμήματα.
+ * 🔑 **Επανεξαγωγή χωρίς κατάσταση (ADR-929 §6.10 Α2).** Όταν ο άνθρωπος αλλάξει την όψη (crop · περιοχές απόκρυψης), η
+ *   ερώτηση `segments` φέρνει **αντίγραφο** της μάσκας μελανιού που ήδη κρατά ο κύριος νήμας, μαζί με τη μάσκα της όψης. Ο
+ *   Worker δεν θυμάται τίποτα ανάμεσα σε κλήσεις: ίδιο με το δίχτυ στον κύριο νήμα.
  *
  * @related `align-plan.ts` (ευθυγράμμιση) · `../segments/plan-segments.ts` (τμήματα) · `plan-align.worker.ts` (λεπτό
  *   περιτύλιγμα) · `plan-align-client.ts` (η άλλη πλευρά) · `lib/workers/*` (το ΕΝΑ RPC του έργου, ADR-884 §4.14)
@@ -19,8 +22,10 @@ import {
   DEFAULT_PLAN_SEGMENTS,
   extractPlanSegments,
   minFillPxFor,
+  type PlanInkMask,
   type PlanSegmentExtraction,
   type PlanSegmentOptions,
+  type PlanSegmentSource,
 } from '../segments/plan-segments';
 import { renderReadingViewRaster } from '../reading/plan-reading-view-raster';
 import type { PlanReadingView } from '../reading/plan-reading-view';
@@ -49,7 +54,7 @@ export interface PlanAlignReply {
 }
 
 /** Οι επιλογές τμημάτων: προεπιλογές, μετά το όριο γεμίσματος από την κλίμακα, μετά ό,τι όρισε ρητά ο καλών. */
-function segmentOptionsFor(alignment: PlanAlignment, request: PlanSegmentRequest): PlanSegmentOptions {
+function segmentOptionsFor(alignment: Pick<PlanAlignment, 'workingScale'>, request: PlanSegmentRequest): PlanSegmentOptions {
   return { ...DEFAULT_PLAN_SEGMENTS, minFillPx: minFillPxFor(alignment, request.scale), ...request.options };
 }
 
@@ -59,6 +64,28 @@ export function handlePlanAlign(message: PlanAlignMessage): PlanAlignReply {
     ? extractPlanSegments(alignment, segmentOptionsFor(alignment, message.segments))
     : null;
   return { alignment, segments };
+}
+
+// ─── ADR-929 §6.10 Α2: επανεξαγωγή τμημάτων με τη μάσκα της όψης ────────────────────────────────────────────────────
+
+/** Η ευθυγράμμιση **χωρίς** τα pixel της εικόνας, συν τον συντελεστή εργασίας (για το όριο γεμίσματος από την κλίμακα). */
+export type PlanSegmentsInput = PlanSegmentSource & Pick<PlanAlignment, 'workingScale'>;
+
+export interface PlanSegmentsMessage {
+  readonly kind: 'segments';
+  /** Το `ink` είναι **αντίγραφο** (μετακομίζει στον Worker)· το πρωτότυπο μένει στο store. */
+  readonly source: PlanSegmentsInput;
+  readonly mask: PlanInkMask;
+  readonly request: PlanSegmentRequest;
+}
+
+export interface PlanSegmentsReply {
+  readonly extraction: PlanSegmentExtraction;
+}
+
+export function handlePlanSegments(message: PlanSegmentsMessage): PlanSegmentsReply {
+  const options = segmentOptionsFor(message.source, message.request);
+  return { extraction: extractPlanSegments(message.source, options, message.mask) };
 }
 
 // ─── ADR-929 Φ5.3β: τα pixel της όψης, στον ΙΔΙΟ Worker ─────────────────────────────────────────────────────────────
@@ -82,9 +109,12 @@ export interface PlanViewRenderReply {
   readonly heightPx: number;
 }
 
-export type PlanWorkerMessage = PlanAlignMessage | PlanViewRenderMessage;
-export type PlanWorkerReply = PlanAlignReply | PlanViewRenderReply;
+export type PlanWorkerMessage = PlanAlignMessage | PlanSegmentsMessage | PlanViewRenderMessage;
+export type PlanWorkerReply = PlanAlignReply | PlanSegmentsReply | PlanViewRenderReply;
 
+/** Οι στενευτές του ενός RPC: κάθε είδος απάντησης έχει ένα πεδίο που έχει μόνο αυτό. */
+export const isPlanAlignReply = (reply: PlanWorkerReply): reply is PlanAlignReply => 'alignment' in reply;
+export const isPlanSegmentsReply = (reply: PlanWorkerReply): reply is PlanSegmentsReply => 'extraction' in reply;
 export const isPlanViewRenderReply = (reply: PlanWorkerReply): reply is PlanViewRenderReply => 'blob' in reply;
 
 export async function handlePlanViewRender(message: PlanViewRenderMessage): Promise<PlanViewRenderReply> {
@@ -92,19 +122,33 @@ export async function handlePlanViewRender(message: PlanViewRenderMessage): Prom
   return { blob: await encodePlanRasterPng(raster), widthPx: raster.width, heightPx: raster.height };
 }
 
-/** Ο χειριστής του Worker: ένα RPC, δύο ερωτήσεις. */
+/** Ο χειριστής του Worker: ένα RPC, τρεις ερωτήσεις. Εξαντλητικός: νέο είδος χωρίς χειριστή = σφάλμα μεταγλώττισης. */
 export async function handlePlanWorker(message: PlanWorkerMessage): Promise<PlanWorkerReply> {
-  return message.kind === 'render-view' ? handlePlanViewRender(message) : handlePlanAlign(message);
+  switch (message.kind) {
+    case 'align': return handlePlanAlign(message);
+    case 'segments': return handlePlanSegments(message);
+    case 'render-view': return handlePlanViewRender(message);
+    default: {
+      const unknownKind: never = message;
+      throw new Error(`plan worker: unknown message ${String(unknownKind)}`);
+    }
+  }
 }
 
-/** Τα buffers του αιτήματος που μετακομίζουν στον Worker: η εικόνα (ο καλών δίνει **νέο** buffer ανά κλήση). */
+/**
+ * Τα buffers του αιτήματος που μετακομίζουν στον Worker: η εικόνα (ο καλών δίνει **νέο** buffer ανά κλήση), ή, στην
+ * επανεξαγωγή, το **αντίγραφο** της μάσκας μελανιού.
+ */
 export function planAlignRequestTransfer(message: PlanWorkerMessage): Transferable[] {
-  return [message.raster.rgba.buffer];
+  return message.kind === 'segments' ? [message.source.ink.buffer] : [message.raster.rgba.buffer];
 }
 
-/** Τα buffers της απάντησης: της ευθυγράμμισης μετακομίζουν· το Blob της όψης αντιγράφεται φθηνά (αναφορά, όχι bytes). */
+/**
+ * Τα buffers της απάντησης: της ευθυγράμμισης μετακομίζουν· τα τμήματα είναι μικρά αντικείμενα (structured clone)· το
+ * Blob της όψης αντιγράφεται φθηνά (αναφορά, όχι bytes).
+ */
 export function planWorkerReplyTransfer(reply: PlanWorkerReply): Transferable[] {
-  return isPlanViewRenderReply(reply) ? [] : planAlignReplyTransfer(reply);
+  return isPlanAlignReply(reply) ? planAlignReplyTransfer(reply) : [];
 }
 
 /**
