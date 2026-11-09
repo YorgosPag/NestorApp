@@ -19,9 +19,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { reconstructPageTables } from '@/lib/pdf-tables/reconstruct-page-tables';
 import type { PageTable } from '@/lib/pdf-tables/page-table-types';
 import { pageTableGroupKey, priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
-import { applyLineOverrides } from '@/subapps/catalog/import/page-line-overrides';
+import { readPageWithDecisions } from '@/subapps/catalog/import/page-decisions-reading';
 import { isRawPageMapping, type RawPageMapping, type RawTableMapping } from '@/subapps/catalog/import/page-table-mapping';
-import { readPageTables, type PageTableReading } from '@/subapps/catalog/import/page-table-reading';
+import type { PageTableReading } from '@/subapps/catalog/import/page-table-reading';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { ImportLineOverride } from '@/subapps/catalog/types/catalog-import';
 import type { ImportLineRefusal } from '@/subapps/catalog/vocabulary/catalog-import';
@@ -111,21 +111,17 @@ export interface PreparedTable {
   readonly reading: PageTableReading;
 }
 
-/** Οι αποφάσεις από πάνω ⇒ ίδιος αγωγός ⇒ πρόταση + «απέξω», **χωρίς εγγραφή**. Ιδιότητα που δεν υπάρχει ⇒ άρνηση. */
+/**
+ * Οι αποφάσεις από πάνω ⇒ ίδιος αγωγός ⇒ πρόταση + «απέξω», **χωρίς εγγραφή**. Ιδιότητα που δεν υπάρχει ⇒ άρνηση. Ίδια συνάρτηση με
+ * την πληρωμένη ανάγνωση (`readPageWithDecisions`, §5.5.2 Β5 Μ5). Η μνήμη **δεν** ρωτιέται εδώ (Απόφαση 4): μετρά ό,τι είναι ήδη φυλαγμένο.
+ */
 export function prepareTable(schema: CatalogSchemaSnapshot, basis: TableBasis, overrides: readonly ImportLineOverride[]): Judged<PreparedTable> {
   const specs = pageSpecs(schema);
-  const overridden = applyLineOverrides(basis.answer, overrides, specs.codeById, new Set(specs.byCode.keys()));
-  if (overridden.unknownAttributeIds.length > 0) return refuse('lineUnknown');
-  if (overridden.staleCodes.length > 0) logger.warn('Stored mapping names attributes no longer in the family', { page: basis.page, table: basis.table.key, codes: overridden.staleCodes });
-  const context = {
-    page: basis.page,
-    tables: [basis.table],
-    attributesByCode: specs.byCode,
-    registry: schema.registry,
-    axisAttributeIds: axisAttributeIdsOf(schema),
-    priceLinesByTable: new Map([[basis.table.key, overridden.priceLines]]),
-  };
-  return { ok: true, value: { basis, reading: readPageTables({ tables: [overridden.mapping] }, context) } };
+  const context = { page: basis.page, tables: [basis.table], attributesByCode: specs.byCode, registry: schema.registry, axisAttributeIds: axisAttributeIdsOf(schema) };
+  const decided = readPageWithDecisions({ tables: [basis.answer] }, context, overrides, { codeById: specs.codeById, knownCodes: new Set(specs.byCode.keys()) });
+  if (decided.unknownAttributeIds.length > 0) return refuse('lineUnknown');
+  if (decided.staleCodes.length > 0) logger.warn('Stored mapping names attributes no longer in the family', { page: basis.page, table: basis.table.key, codes: decided.staleCodes });
+  return { ok: true, value: { basis, reading: decided.reading } };
 }
 
 /** Οι προτάσεις του πίνακα: ιδιότητες **πριν** από τιμές, γιατί η πρόταση τιμών παίρνει την ταυτότητα από εκείνη (§5.5.2 Β4 Δ4). */

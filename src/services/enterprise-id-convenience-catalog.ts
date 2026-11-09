@@ -68,6 +68,8 @@ export const generateDeterministicCatalogImportProposalId = (companyId: string, 
   enterpriseIdService.generateDeterministicCatalogImportProposalId(companyId, proposalKey);
 export const generateDeterministicCatalogImportPageReadingId = (companyId: string, readingKey: string) =>
   enterpriseIdService.generateDeterministicCatalogImportPageReadingId(companyId, readingKey);
+export const generateDeterministicCatalogImportLabelMemoryId = (companyId: string, memoryKey: string) =>
+  enterpriseIdService.generateDeterministicCatalogImportLabelMemoryId(companyId, memoryKey);
 export const generateDeterministicCatalogVisibilityRuleId = (companyId: string, ruleKey: string) =>
   enterpriseIdService.generateDeterministicCatalogVisibilityRuleId(companyId, ruleKey);
 export const generateDeterministicSupplyRelationshipId = (supplierCompanyId: string, buyerCompanyId: string) =>

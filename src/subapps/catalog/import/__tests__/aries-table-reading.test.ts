@@ -18,7 +18,9 @@ import { EMPTY_LIVE_TRADE_IDENTITY } from '../trade-identity-fields';
 import { judgeProposal } from '../judge-proposal';
 import { evidenceFindings, type PageExtractionContext } from '../page-extraction';
 import { pageMappingPrompt, pageMappingSchema, imageCheckCells, textLayerDoubted, type RawTableMapping } from '../page-table-mapping';
-import { readPageTables, type PageTableContext } from '../page-table-reading';
+import { readPageTables, tableLineIdentities, type PageTableContext } from '../page-table-reading';
+import { learnedDecisions, learnedEntry, memoryKeyOf, memoryOverridesFor, type LabelMemoryBook } from '../label-memory';
+import { readPageWithDecisions } from '../page-decisions-reading';
 import { anchorForCell, tokenizePage, unitPrintedBeside } from '../page-tokens';
 import { selectOptionFor } from '../proposal-values';
 
@@ -448,5 +450,82 @@ describe('🚀 §5.5.2 Β4: η τιμή από την ίδια ανάγνωση 
     const merged = priceCellsOf(prices, 'netPrice').filter((cell) => cell.text === PRICE_TEXT);
     expect(merged.length).toBeGreaterThan(0);
     expect(merged.every((cell) => cell.flags.some((flag) => flag.code === 'misaligned'))).toBe(true);
+  });
+});
+
+describe('🚀 §5.5.2 Β5: η μνήμη του προμηθευτή, όλος ο κύκλος πάνω στη σελ. 85', () => {
+  const context = contextOf('85');
+  const [main, parts] = context.tables;
+  const answer = variantsMapping(main, page85Lines.filter(([, attribute]) => attribute !== 'airflow_m'));
+  const codeById = new Map([...MFP_ATTRIBUTE_MAP].map(([id, attribute]) => [id, attribute.code]));
+  const schemaCodes = { codeById, knownCodes: new Set(codeById.values()) };
+  const scope = { supplierContactId: 'cont_aries', familyId: 'cfam_fancoil' };
+  const identities = tableLineIdentities(main, 'columns', PLATFORM_MEASUREMENT_REGISTRY);
+  const airflowMLine = lineOf(main, '280');
+  const stamp = { by: 'usr_1', at: '2026-11-09T10:00:00.000Z' };
+
+  /** Ό,τι μαθαίνει η έγκριση από την απόφαση του ανθρώπου για την «παροχή αέρα M». */
+  function taught(decision: ImportLineOverride['decision']) {
+    const identity = identities.get(airflowMLine);
+    if (!identity) throw new Error('η γραμμή «280» έπρεπε να έχει ταυτότητα');
+    const human: ImportLineOverride = { page: 85, table: main.key, line: airflowMLine, decision, ...stamp, identity };
+    const entry = learnedEntry(null, scope, { ...human, identity }, { batchId: 'cibat_old', ...stamp });
+    return { identity, book: new Map([[entry.code, { id: 'cilm_1', decisions: entry.decisions }]]) };
+  }
+
+  const application = (book: LabelMemoryBook) => ({ scope, book, knownAttributeIds: new Set(codeById.keys()), pricesEnabled: false, stamp });
+
+  it('η ταυτότητα της γραμμής χωρίς πεδίο είναι η ΙΔΙΑ με του κανόνα, και δεν περιέχει τη μονάδα', () => {
+    const before = readPageTables({ tables: [answer, accessories(parts)] }, context);
+    const line = before.unmappedLines.find((entry) => entry.line === airflowMLine);
+    expect(line?.identity).toEqual(identities.get(airflowMLine));
+    expect(line?.identity?.label).not.toBe('');
+    expect(line?.identity?.unitCode).not.toBeNull();
+  });
+
+  it('🔴 οι τρεις παροχές αέρα (H · M · L) είναι τρία διαφορετικά κλειδιά: η μνήμη δεν τις μπερδεύει', () => {
+    const keys = ['340', '280', '180'].map((printed) => {
+      const identity = identities.get(lineOf(main, printed));
+      if (!identity) throw new Error(`η γραμμή «${printed}» έπρεπε να έχει ταυτότητα`);
+      return memoryKeyOf(scope, identity);
+    });
+    expect(new Set(keys).size).toBe(3);
+  });
+
+  it('🔴 νέα ανάγνωση με μνήμη ⇒ η «παροχή αέρα M» που ξέχασε το μοντέλο γίνεται 7 πεδία, χωρίς άνθρωπο', () => {
+    const { book } = taught({ kind: 'attribute', attributeId: 'airflow_m' });
+    const memory = memoryOverridesFor({ page: 85, table: main.key, identities }, [], application(book));
+    expect(memory).toEqual([expect.objectContaining({ line: airflowMLine, origin: expect.objectContaining({ kind: 'memory', memoryId: 'cilm_1', count: 1 }) })]);
+    const { reading } = readPageWithDecisions({ tables: [answer, accessories(parts)] }, context, memory, schemaCodes);
+    expect(cellsOf(reading.groups[0], 'airflow_m')).toHaveLength(CODES_85.length);
+    expect(reading.unmappedLines.some((entry) => entry.line === airflowMLine)).toBe(false);
+  });
+
+  it('🔴 σύγκρουση στο ιστορικό ⇒ τίποτα: η γραμμή μένει χωρίς πεδίο, για τον άνθρωπο', () => {
+    const { identity, book } = taught({ kind: 'attribute', attributeId: 'airflow_m' });
+    const [[key, entry]] = [...book];
+    const conflicted = new Map([[key, { ...entry, decisions: learnedDecisions(entry.decisions, { kind: 'ignore' }, { batchId: 'cibat_2', ...stamp }) }]]);
+    expect(memoryKeyOf(scope, identity)).toBe(key);
+    expect(memoryOverridesFor({ page: 85, table: main.key, identities }, [], application(conflicted))).toEqual([]);
+  });
+
+  it('🔴 ανθρώπινη απόφαση στη γραμμή ⇒ η μνήμη δεν την αγγίζει', () => {
+    const { book } = taught({ kind: 'attribute', attributeId: 'airflow_m' });
+    const human: ImportLineOverride = { page: 85, table: main.key, line: airflowMLine, decision: { kind: 'ignore' }, ...stamp };
+    expect(memoryOverridesFor({ page: 85, table: main.key, identities }, [human], application(book))).toEqual([]);
+  });
+
+  it('ιδιότητα που δεν υπάρχει πια στο σχήμα ⇒ η μνήμη δεν εφαρμόζεται (ποτέ δεν γεννά ούτε δένει ιδιότητα)', () => {
+    const { book } = taught({ kind: 'attribute', attributeId: 'airflow_m' });
+    const withoutIt = { ...application(book), knownAttributeIds: new Set([...codeById.keys()].filter((id) => id !== 'airflow_m')) };
+    expect(memoryOverridesFor({ page: 85, table: main.key, identities }, [], withoutIt)).toEqual([]);
+  });
+
+  it('η ίδια λογική με το ξαναχτίσιμο: απόφαση ανθρώπου και απόφαση μνήμης δίνουν την ίδια ανάγνωση', () => {
+    const { book } = taught({ kind: 'attribute', attributeId: 'airflow_m' });
+    const memory = memoryOverridesFor({ page: 85, table: main.key, identities }, [], application(book));
+    const human = memory.map(({ page, table, line, decision, by, at }) => ({ page, table, line, decision, by, at }));
+    const read = (overrides: readonly ImportLineOverride[]) => readPageWithDecisions({ tables: [answer, accessories(parts)] }, context, overrides, schemaCodes).reading.groups;
+    expect(read(memory)).toEqual(read(human));
   });
 });

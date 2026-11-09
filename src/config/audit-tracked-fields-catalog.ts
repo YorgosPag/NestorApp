@@ -209,6 +209,13 @@ export const CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS = defs(
   { status: enumOf(V.catalogImportProposalStatus) },
 );
 
+// ADR-923 §5.5.2 Β5 — η μνήμη ετικετών: παρακολουθείται ΤΙ θυμάται (οι αποφάσεις με τους μετρητές τους), γιατί αυτό εφαρμόζεται
+// μόνο του σε επόμενους καταλόγους· το «ποιος το δίδαξε» φαίνεται στο ιστορικό.
+export const CATALOG_IMPORT_LABEL_MEMORY_TRACKED_FIELDS = defs(
+  ['supplierContactId', 'familyId', 'label', 'unitCode', 'printedLabel', 'isDeleted'],
+  ['decisions'],
+);
+
 // ── Φάση 6β (ADR-923 §5.13 Ε1α) — έλεγχος προμηθευτή. Παρακολουθείται η πράξη· το αποτύπωμα ΑΦΜ δεν μπαίνει ποτέ στο ιστορικό.
 
 export const SUPPLIER_BRAND_CLAIM_TRACKED_FIELDS = defs(

@@ -19,7 +19,8 @@ import { hasPermission } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { canonicalJson } from '@/lib/legal/canonical-json';
 import { priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
-import { lineDecisionOf, priceLineOf, tableOverridesOf, withLineOverride } from '@/subapps/catalog/import/page-line-overrides';
+import { lineDecisionOf, priceLineOf, tableOverridesOf, withLineOverride, type LineOverrideExtras } from '@/subapps/catalog/import/page-line-overrides';
+import { tableLineIdentities } from '@/subapps/catalog/import/page-table-reading';
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
 import type { ImportBatchDefinition, ImportLineDecision } from '@/subapps/catalog/types/catalog-import';
 import type { ImportLineOutcome, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
@@ -75,10 +76,13 @@ async function reinterpretTable(ctx: AuthContext, batch: StoredImportBatch, requ
   const schema = await readBatchSchema(ctx, batch);
   if (schema === null) return refuse('lineUnknown');
   const stamp = { by: ctx.uid, at: nowISO() };
-  const overrides = withLineOverride(tableOverridesOf(batch.pages?.lineOverrides, request.page, request.table), request, request.decision, stamp);
+  // §5.5.2 Β5: η ταυτότητα της γραμμής ταξιδεύει με την απόφαση, ώστε η έγκριση του πίνακα να τη μάθει για τον προμηθευτή.
+  const identity = tableLineIdentities(basis.table, basis.answer.variantsIn, schema.registry).get(request.line);
+  const extras: LineOverrideExtras = identity ? { identity } : {};
+  const overrides = withLineOverride(tableOverridesOf(batch.pages?.lineOverrides, request.page, request.table), request, request.decision, stamp, extras);
   const prepared = prepareTable(schema, basis, overrides);
   if (!prepared.ok) return prepared;
-  await setImportLineOverride(ctx, batch.id, request, request.decision);
+  await setImportLineOverride(ctx, batch.id, request, request.decision, extras);
   await commitTable(ctx, batch.id, prepared.value);
   return { ok: true, value: null };
 }
@@ -99,6 +103,15 @@ async function judgeOpenProposal(ctx: AuthContext, id: string, request: SetImpor
   const key = priced ? priceGroupKeyOf(tableKey) : tableKey;
   const proposal = (await readBatchProposals(ctx, id)).find((candidate) => candidate.groupKey === key);
   return proposal && proposal.status !== 'pending' ? refuse('proposalClosed') : { ok: true, value: null };
+}
+
+/**
+ * Η ταυτότητα μιας γραμμής χωρίς πεδίο από ό,τι έγραψε η ανάγνωση (§5.5.2 Β5): η «Αγνόηση» δεν ανοίγει PDF. Παλαιότερη παρτίδα χωρίς
+ * ταυτότητα ⇒ η απόφαση ισχύει, απλώς δεν μαθαίνεται.
+ */
+function storedIdentityOf(batch: StoredImportBatch, request: SetImportLineRequest): LineOverrideExtras {
+  const line = batch.pages?.unmappedLines?.find((entry) => entry.page === request.page && entry.table === request.table && entry.line === request.line);
+  return line?.identity ? { identity: line.identity } : {};
 }
 
 /** Χρειάζεται ο πίνακας μόνο όταν αλλάζει η αντιστοίχιση: η αγνόηση (και η αναίρεσή της) είναι απλώς κατάσταση. */
@@ -127,7 +140,7 @@ async function decideLine(ctx: AuthContext, id: string, request: SetImportLineRe
   const price = await judgePriceLine(ctx, opened.value, request, previous);
   if (!price.ok) return { kind: 'refused', reason: price.reason };
   if (!touchesMapping(request.decision, previous)) {
-    await setImportLineOverride(ctx, id, request, request.decision);
+    await setImportLineOverride(ctx, id, request, request.decision, storedIdentityOf(opened.value, request));
     return { kind: 'settled' };
   }
   const basis = await lineBasis(ctx, opened.value, request);

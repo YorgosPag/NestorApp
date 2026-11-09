@@ -19,7 +19,7 @@ import { MFP_PAGE_60, MFP_SETTINGS } from '@/subapps/catalog/__tests__/fixtures/
 import type { CatalogPageInput, CatalogPageReading, CatalogTableMapInput, CatalogTableMapping } from '@/subapps/catalog/import/page-analyzer';
 import type { RawPageCell } from '@/subapps/catalog/import/page-extraction';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchDefinition, ImportBatchPages, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchDefinition, ImportBatchPages, ImportLabelMemoryDefinition, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import { stalePages } from '@/subapps/catalog/import/page-derivation';
 import { IMPORT_PAGE_DERIVATION } from '@/subapps/catalog/vocabulary/catalog-import';
 import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
@@ -73,6 +73,7 @@ import { groupTableRowsByLiveModel } from '../import-proposal-plan.server';
 import { discardImportBatch, proposeGroup, rejectImportProposal, retireStaleSourceProposals, updateImportProposal, type StoredImportProposal } from '../import-proposal-writer.server';
 import { readImportBatchDetail } from '../import-reads.server';
 import { setImportPriceTarget } from '../import-price-target.server';
+import { setImportSupplier } from '../import-supplier.server';
 import { createCatalogPriceList } from '../price-list-writer.server';
 import { createPriceListVersion } from '../price-version-writer.server';
 import { updateCatalogProductModel } from '../product-model-writer.server';
@@ -964,6 +965,140 @@ describe('ανάγνωση σελίδας', () => {
         it('🔒 δομικά χωρίς πληρωμή: ούτε η αναβάθμιση ούτε ο κοινός πυρήνας εισάγουν τον αναλυτή', () => {
           for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts']) {
             expect(readFileSync(join(__dirname, '..', file), 'utf8')).not.toMatch(/page-analyzer/);
+          }
+        });
+      });
+
+      describe('🚀 §5.5.2 Β5: μνήμη ετικετών ανά προμηθευτή — μαθαίνει στην έγκριση, εφαρμόζεται στην επόμενη ανάγνωση', () => {
+        const SUPPLIER = 'cont_aries_hellas';
+        const memories = () => Object.values(fake.getAllDocs('catalog_import_label_memory')) as unknown as (ImportLabelMemoryDefinition & { id: string; isDeleted: boolean })[];
+        const revisionOf = (id: string): number => Number(fake.getAllDocs('catalog_import_batches')[id]?.revision);
+        const storedOf = (id: string) => fake.getAllDocs('catalog_import_batches')[id] as unknown as ImportBatchDefinition;
+
+        async function withSupplier(id: string): Promise<void> {
+          fake.seed('contacts', SUPPLIER, { companyId: ARIES.companyId, displayName: 'Aries Hellas' });
+          await setImportSupplier(ARIES, id, { expectedRevision: revisionOf(id), supplierContactId: SUPPLIER });
+        }
+
+        /** Ο άνθρωπος αποδέχεται ό,τι εκκρεμεί και εγκρίνει, όπως στη ροή του ελέγχου. */
+        async function approveAttributes(id: string) {
+          const found = (await readImportBatchDetail(ARIES, id)).proposals.find((proposal) => proposal.purpose === 'attributes');
+          if (!found) throw new Error('λείπει η πρόταση ιδιοτήτων');
+          const decisions = found.rows.flatMap((row) => row.fields.filter((field) => field.decision === 'pending').map((field) => ({ rowKey: row.rowKey, targetKey: importTargetKey(field.target), decision: 'accept' as const })));
+          const accepted = decisions.length === 0 ? found : await updateImportProposal(ARIES, found.id, { expectedRevision: found.revision, decisions, edits: [], modelCode: found.modelCode });
+          return applyImportProposal(ARIES, accepted.id, accepted.revision);
+        }
+
+        /** Πρώτος κατάλογος του προμηθευτή: ο άνθρωπος δείχνει ότι η «ψύξη L» είναι `cooling_l`, και εγκρίνει τον πίνακα. */
+        async function taughtBatch() {
+          const { batch, coolingL } = await readBatch();
+          await withSupplier(batch.id);
+          await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+          return { batch, coolingL };
+        }
+
+        /** Ο επόμενος κατάλογος του ίδιου προμηθευτή: άλλο αρχείο, ίδια σελίδα, ίδιο «ξεχασμένο» από το μοντέλο. */
+        async function nextCatalog(supplier = true) {
+          const next = await createImportBatch(ARIES, attributesBatch({ sourceKind: 'pdf', contentSha256: 'b'.repeat(64), fileName: 'aries-2027.pdf', pageRange: { from: 60, to: 61 } }));
+          fake.seed('catalog_import_batches', next.id, { ...next, fileId: 'file_2', status: 'extracting' });
+          if (supplier) await withSupplier(next.id);
+          mapTables.mockClear();
+          mapTables.mockResolvedValue(stored(COOLING));
+          await readImportPage(ARIES, next.id, 60);
+          return next.id;
+        }
+
+        const coolingLFields = async (id: string) => {
+          const found = (await readImportBatchDetail(ARIES, id)).proposals.find((proposal) => proposal.purpose === 'attributes');
+          return (found?.rows ?? []).flatMap((row) => row.fields).filter((field) => field.target.kind === 'attribute' && field.target.attributeId === attributeId('cooling_l'));
+        };
+
+        it('🔴 το κλικ ΔΕΝ διδάσκει: πριν την έγκριση η μνήμη είναι άδεια', async () => {
+          await taughtBatch();
+          expect(memories()).toEqual([]);
+        });
+
+        it('🔴 η έγκριση διδάσκει: ένα έγγραφο, η απόφαση με μετρητή 1, ετικέτα χωρίς μονάδα και με μονάδα χωριστά', async () => {
+          const { batch } = await taughtBatch();
+          await approveAttributes(batch.id);
+          const [memory, ...rest] = memories();
+          expect(rest).toEqual([]);
+          expect(memory).toMatchObject({ companyId: ARIES.companyId, supplierContactId: SUPPLIER, familyId: seeded.familyId, decisions: [expect.objectContaining({ decision: { kind: 'attribute', attributeId: attributeId('cooling_l') }, count: 1, lastBatchId: batch.id })] });
+          expect(memory.label).not.toBe('');
+          expect(memory.unitCode).not.toBeNull();
+        });
+
+        it('🔴 η απόρριψη ΔΕΝ διδάσκει', async () => {
+          const { batch } = await taughtBatch();
+          const found = (await readImportBatchDetail(ARIES, batch.id)).proposals.find((proposal) => proposal.purpose === 'attributes');
+          if (!found) throw new Error('λείπει η πρόταση ιδιοτήτων');
+          await rejectImportProposal(ARIES, found.id, found.revision);
+          expect(memories()).toEqual([]);
+        });
+
+        it('χωρίς προμηθευτή στην παρτίδα: η έγκριση δεν διδάσκει τίποτα', async () => {
+          const { batch, coolingL } = await readBatch();
+          await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+          await approveAttributes(batch.id);
+          expect(memories()).toEqual([]);
+        });
+
+        it('🔴 επόμενος κατάλογος: η μνήμη εφαρμόζεται ορατά (προέλευση `memory`), τα 7 πεδία μπαίνουν, ΜΙΑ κλήση μοντέλου', async () => {
+          const { batch, coolingL } = await taughtBatch();
+          await approveAttributes(batch.id);
+          const next = await nextCatalog();
+          expect(mapTables).toHaveBeenCalledTimes(1);
+          const overrides = storedOf(next).pages?.lineOverrides ?? [];
+          expect(overrides).toEqual([expect.objectContaining({ line: coolingL.line, decision: { kind: 'attribute', attributeId: attributeId('cooling_l') }, origin: expect.objectContaining({ kind: 'memory', count: 1, sourceBatchId: batch.id }) })]);
+          expect(await coolingLFields(next)).toHaveLength(7);
+          expect(storedOf(next).pages?.unmappedLines?.some((line) => line.line === coolingL.line)).toBe(false);
+        });
+
+        it('η μνήμη ενός προμηθευτή δεν ισχύει σε παρτίδα χωρίς προμηθευτή', async () => {
+          const { batch } = await taughtBatch();
+          await approveAttributes(batch.id);
+          const next = await nextCatalog(false);
+          expect(storedOf(next).pages?.lineOverrides ?? []).toEqual([]);
+          expect(await coolingLFields(next)).toHaveLength(0);
+        });
+
+        it('🔴 σύγκρουση στο ιστορικό ⇒ καμία αυτόματη εφαρμογή: η γραμμή μένει για τον άνθρωπο', async () => {
+          const { batch } = await taughtBatch();
+          await approveAttributes(batch.id);
+          const [memory] = memories();
+          fake.seed('catalog_import_label_memory', memory.id, { ...memory, decisions: [...memory.decisions, { ...memory.decisions[0], decision: { kind: 'ignore' } }] });
+          const next = await nextCatalog();
+          expect(storedOf(next).pages?.lineOverrides ?? []).toEqual([]);
+          expect(await coolingLFields(next)).toHaveLength(0);
+        });
+
+        it('🔴 Μ5: η πληρωμένη ανάγνωση σέβεται τις αποφάσεις του ανθρώπου που υπάρχουν ήδη για τη σελίδα', async () => {
+          const { batch, coolingL } = await readBatch();
+          const next = await createImportBatch(ARIES, attributesBatch({ sourceKind: 'pdf', contentSha256: 'c'.repeat(64), fileName: 'aries-retry.pdf', pageRange: { from: 60, to: 61 } }));
+          const human = { page: 60, table: coolingL.table, line: coolingL.line, decision: { kind: 'attribute' as const, attributeId: attributeId('cooling_l') }, by: ARIES.uid, at: '2026-11-09T10:00:00.000Z' };
+          const pages: ImportBatchPages = { from: 60, to: 61, done: [], failed: [60], lineOverrides: [human] };
+          fake.seed('catalog_import_batches', next.id, { ...next, fileId: 'file_3', status: 'extracting', pages });
+          mapTables.mockResolvedValue(stored(COOLING));
+          await readImportPage(ARIES, next.id, 60);
+          expect(batch.id).not.toBe(next.id);
+          expect(await coolingLFields(next.id)).toHaveLength(7);
+          expect(storedOf(next.id).pages?.lineOverrides).toEqual([human]);
+        });
+
+        it('🔴 ο ορισμός προμηθευτή δεν εφαρμόζει μνήμη σε σελίδες που διαβάστηκαν (Απόφαση 4)· ξένη επαφή ⇒ άρνηση', async () => {
+          const { batch } = await taughtBatch();
+          await approveAttributes(batch.id);
+          const other = await nextCatalog(false);
+          await withSupplier(other);
+          expect(storedOf(other).pages?.lineOverrides ?? []).toEqual([]);
+          expect(await coolingLFields(other)).toHaveLength(0);
+          fake.seed('contacts', 'cont_foreign', { companyId: RIVAL.companyId });
+          await rejectionOf(setImportSupplier(ARIES, other, { expectedRevision: revisionOf(other), supplierContactId: 'cont_foreign' }));
+        });
+
+        it('🔒 Απόφαση 4 δομικά: ούτε το ξαναχτίσιμο ούτε η αναβάθμιση ρωτούν τη μνήμη', () => {
+          for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts', 'import-page-reinterpret.server.ts']) {
+            expect(readFileSync(join(__dirname, '..', file), 'utf8')).not.toMatch(/import-label-memory|readLabelMemoryBook|memoryOverridesFor/);
           }
         });
       });

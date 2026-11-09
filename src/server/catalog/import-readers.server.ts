@@ -15,13 +15,14 @@ import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import { extractGroupsFromTable } from '@/subapps/catalog/import/apply-column-rules';
 import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
 import { currentDerivation } from '@/subapps/catalog/import/page-derivation';
-import type { ImportBatchDefinition, ImportPagesUsage, ImportPageTextless, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
-import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
+import type { ImportBatchDefinition, ImportBatchPages, ImportLineOverride, ImportPagesUsage, ImportPageTextless, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
+import { IMPORT_FINISHED_BATCH_STATUSES, IMPORT_MAX_LINE_OVERRIDES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
 import { readOwned, runCatalogTransaction, stageReplace } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { assertImportBatchOpen, assertPurposeAuthority, batchDefinitionOf, replacedOnPage, type StoredImportBatch } from './import-batch-writer.server';
-import { readAndProposePage, type PageFlowResult } from './import-page-flow.server';
+import { labelMemoryScopeOf } from './import-label-memory.server';
+import { readAndProposePage, type PageDecisions, type PageFlowResult } from './import-page-flow.server';
 import { axisAttributeIdsOf, loadPdfPageSource, pageSpecs, readBatchFile } from './import-page-source.server';
 import { groupTableRowsByLiveModel } from './import-proposal-plan.server';
 import { proposeGroup, retireStaleSourceProposals, type StoredImportProposal } from './import-proposal-writer.server';
@@ -65,9 +66,19 @@ function textlessOf(page: number, layer: PdfTextLayer): ImportPageTextless[] {
 }
 
 /** Ε8: χαμένη στρώση κειμένου ⇒ η σελίδα **δεν** στέλνεται στο μοντέλο: αποτυγχάνει δηλωμένα, χωρίς χρέωση, και ξαναδιαβάζεται. */
-const TEXT_LAYER_LOST: PageFlowResult = { ok: false, usage: NO_USAGE, setAside: [], unmappedLines: [] };
+const TEXT_LAYER_LOST: PageFlowResult = { ok: false, usage: NO_USAGE, setAside: [], unmappedLines: [], memoryOverrides: [] };
 
-function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAside, unmappedLines }: PageFlowResult, textless: readonly ImportPageTextless[]): Promise<StoredImportBatch> {
+/**
+ * §5.5.2 Β5: οι αποφάσεις της μνήμης για τη σελίδα αντικαθιστούν όσες είχε βάλει η μνήμη σε προηγούμενη ανάγνωσή της· του ανθρώπου
+ * μένουν πάντα. Αποτυχία ανάγνωσης δεν αγγίζει τίποτα.
+ */
+function lineOverridesAfterRead(pages: ImportBatchPages, page: number, ok: boolean, memoryOverrides: readonly ImportLineOverride[]): readonly ImportLineOverride[] | undefined {
+  if (!ok) return pages.lineOverrides;
+  const kept = (pages.lineOverrides ?? []).filter((override) => override.page !== page || override.origin === undefined);
+  return kept.length === 0 && memoryOverrides.length === 0 ? pages.lineOverrides : [...kept, ...memoryOverrides];
+}
+
+function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAside, unmappedLines, memoryOverrides }: PageFlowResult, textless: readonly ImportPageTextless[]): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     const pages = current.pages;
@@ -85,8 +96,26 @@ function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAs
       // §5.5.2 Β3.1: ό,τι μόλις γράφτηκε είναι της τρέχουσας έκδοσης· αποτυχία δεν άγγιξε τα παράγωγα, άρα ούτε τη σφραγίδα τους.
       derivations: ok ? replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, null)]) : pages.derivations ?? [],
     };
-    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed, usage: spent, ...leftOut } });
+    const lineOverrides = lineOverridesAfterRead(pages, page, ok, memoryOverrides);
+    const decided = lineOverrides === undefined ? {} : { lineOverrides };
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed, usage: spent, ...leftOut, ...decided } });
   });
+}
+
+/**
+ * §5.5.2 Β5 (κλείνει το Μ5): η ανάγνωση εφαρμόζει τις αποφάσεις του ανθρώπου για τη σελίδα και τη μνήμη του προμηθευτή. Η μνήμη
+ * χωρά μόνο όσο αφήνει το όριο της παρτίδας, χωρίς τις δικές της παλιές αποφάσεις στη σελίδα (θα αντικατασταθούν).
+ */
+function pageDecisionsOf(batch: StoredImportBatch, page: number): PageDecisions {
+  const all = batch.pages?.lineOverrides ?? [];
+  const staying = all.filter((override) => override.page !== page || override.origin === undefined);
+  const pricesEnabled = batch.target.purpose === 'attributes' && Boolean(batch.target.priceListVersionId);
+  return {
+    human: staying.filter((override) => override.page === page),
+    memory: labelMemoryScopeOf(batch),
+    pricesEnabled,
+    memoryRoom: Math.max(0, IMPORT_MAX_LINE_OVERRIDES - staying.length),
+  };
 }
 
 /** `POST /api/catalog/imports/[id]/pages` — μία σελίδα. */
@@ -106,6 +135,7 @@ export async function readImportPage(ctx: AuthContext, id: string, page: number)
     return markPage(ctx, id, page, TEXT_LAYER_LOST, textlessOf(page, textLayer));
   }
   if (textLayer.state === 'present' && textLayer.recovered) logger.info('PDF text layer recovered on strict re-read', { batchId: id, page });
-  const outcome = await readAndProposePage({ ctx, batchId: id, page, png, tokens, rules, tagTables, specs: pageSpecs(schema), registry: schema.registry, axisAttributeIds: axisAttributeIdsOf(schema) });
+  const decisions = pageDecisionsOf(batch, page);
+  const outcome = await readAndProposePage({ ctx, batchId: id, page, png, tokens, rules, tagTables, specs: pageSpecs(schema), registry: schema.registry, axisAttributeIds: axisAttributeIdsOf(schema), decisions });
   return markPage(ctx, id, page, outcome, textlessOf(page, textLayer));
 }

@@ -116,10 +116,13 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // 2026-11-02: +6 (ADR-923 §5.13 — η δημόσια βιτρίνα, χωρίς ενημέρωση αυτής της άγκυρας) και +3 (§22 Υ8 — `catalog_supplier_profiles` read/write ·
   // `public_supplier_profiles` read, write) ⇒ 862. +1 (§16 — `supplier_brand_claims`) ⇒ 863.
   // 2026-11-07: +2 (ADR-923 §5.15 Θ.1β — `catalog_editions`: read/write `if false`) ⇒ 865.
-  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (865 + 72 allow)', () => {
+  // 2026-11-09: η άγκυρα ήταν ήδη κόκκινη στο κλαδί: το δέντρο μετρούσε 877, όχι 865 (+12 από commits που άλλαξαν το
+  // `firestore.rules` χωρίς αυτή την άγκυρα — πιθανότατα `968ee82f` ADR-931 · `f79d01ae` ADR-930, δεν επαληθεύτηκε ανά commit).
+  // +2 (ADR-923 §5.5.2 Β5 — `catalog_import_label_memory`: read/write `if false`) ⇒ 879, μετρημένο με τη μηχανή.
+  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (879 + 72 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
-    expect(result.perFile.map((f) => f.allows)).toEqual([865, 72]);
+    expect(result.perFile.map((f) => f.allows)).toEqual([879, 72]);
     expect(result.tally[GATE_STATES.COVERED]).toBeGreaterThan(600);
     expect(result.claimName).toBe('revokedSignIns');
   });

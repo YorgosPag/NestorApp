@@ -19,14 +19,15 @@ import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import { MONEY_CURRENCY } from '@/lib/money/money';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportIssue, ImportPageSetAside, ImportPageUnmappedLine, ImportTarget, PageRegion } from '../types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportIssue, ImportLineIdentity, ImportPageSetAside, ImportPageUnmappedLine, ImportTarget, PageRegion } from '../types/catalog-import';
 import { ANY_SLOT } from '../types/product';
 import { parseEnteredAmount } from '../values/decimal-amount';
+import { normalizeUniqueText } from '../values/normalize-unique';
 import { unitForm } from '../values/value-text-codec';
 import { pageTableGroupKey, priceGroupKeyOf } from './import-keys';
 import type { PagePriceLine } from './page-line-overrides';
 import { labelPrintsUnit } from './page-tokens';
-import { textLayerDoubted, type RawLineMapping, type RawPageMapping, type RawTableMapping } from './page-table-mapping';
+import { textLayerDoubted, type RawLineMapping, type RawPageMapping, type RawTableMapping, type VariantOrientation } from './page-table-mapping';
 import { selectOptionFor } from './proposal-values';
 
 type NamedAttribute = CatalogAttributeDefinition & { readonly id: string };
@@ -249,13 +250,46 @@ function lineRegions(view: TableView, line: number, data: readonly number[]): Pa
   return [...cells].filter((cell) => cell.text.trim() !== '').map((cell) => cell.box);
 }
 
-function unmappedLines(view: TableView, data: readonly number[], lines: readonly LineBinding[], page: number, table: PageTable, priced: readonly PagePriceLine[]): ImportPageUnmappedLine[] {
+/** Η μονάδα που τυπώνει η γραμμή, από **όλο** το μητρώο: η μνήμη ρωτά πριν μάθει ποια ιδιότητα είναι η γραμμή (§5.5.2 Β5). */
+function anyPrintedUnit(labels: readonly PageTableCell[], registry: MeasurementRegistry): { readonly code: string; readonly cell: PageTableCell } | null {
+  const units = registry.families.flatMap((family) => family.units);
+  for (const cell of [...labels].reverse()) {
+    const unit = unitInLabel(cell.text, units);
+    if (unit) return { code: unit.code, cell };
+  }
+  return null;
+}
+
+/** Τι είναι η γραμμή, χωρίς τη θέση της: ετικέτες χωρίς τη μονάδα (όπως το `labelsKey`) + η μονάδα. */
+function lineIdentity(view: TableView, line: number, data: readonly number[], registry: MeasurementRegistry): ImportLineIdentity {
+  const labels = labelCells(view, line, data);
+  const unit = anyPrintedUnit(labels, registry);
+  const printed = labels.filter((cell) => cell !== unit?.cell).map(printedText).filter((text) => text !== '').join(' · ');
+  return { label: normalizeUniqueText(printed), unitCode: unit?.code ?? null, printed };
+}
+
+/** Η ταυτότητα κάθε γραμμής ενός πίνακα, στον προσανατολισμό που δίνεται (§5.5.2 Β5). Ο **ένας** κανόνας για μάθηση και εφαρμογή. */
+export function tableLineIdentities(table: PageTable, variantsIn: VariantOrientation, registry: MeasurementRegistry): ReadonlyMap<number, ImportLineIdentity> {
+  const view = viewOf(table, { variantsIn });
+  const data = dataSlots(view);
+  return new Map(range(view.lines).map((line) => [line, lineIdentity(view, line, data, registry)]));
+}
+
+interface LeftOutLines {
+  readonly view: TableView;
+  readonly data: readonly number[];
+  readonly lines: readonly LineBinding[];
+  readonly priced: readonly PagePriceLine[];
+}
+
+function unmappedLines({ view, data, lines, priced }: LeftOutLines, table: PageTable, context: PageTableContext): ImportPageUnmappedLine[] {
   const taken = new Set([...lines.map(({ line }) => line), ...priced.map(({ line }) => line)]);
   return range(view.lines).filter((line) => !taken.has(line)).flatMap((line) => {
     const values = lineValues(view, line, data);
     if (values.length === 0) return [];
     const label = labelCells(view, line, data).map(printedText).join(' · ');
-    return [{ page, table: table.key, line, label, values, regions: lineRegions(view, line, data) }];
+    const identity = lineIdentity(view, line, data, context.registry);
+    return [{ page: context.page, table: table.key, line, label, values, regions: lineRegions(view, line, data), identity }];
   });
 }
 
@@ -323,7 +357,7 @@ function readTable(table: PageTable, mapping: RawTableMapping, context: PageTabl
   const group: ExtractedGroup = { groupKey: pageTableGroupKey(page, table.key), modelCode: null, sharedCells: [], rows: rowsOf(view, table, data, lines, page, context), pages: [page] };
   const priced = (context.priceLinesByTable?.get(table.key) ?? []).filter(({ line }) => line >= 0 && line < view.lines);
   const prices = priceGroupOf(view, table, data, priced, group.groupKey, page);
-  return { groups: prices ? [group, prices] : [group], setAside: null, unmapped: unmappedLines(view, data, lines, page, table, priced), findings: unitFindings(view, data, mapped, context) };
+  return { groups: prices ? [group, prices] : [group], setAside: null, unmapped: unmappedLines({ view, data, lines, priced }, table, context), findings: unitFindings(view, data, mapped, context) };
 }
 
 /** Τα ανασυντεθειμένα κείμενα ζουν στον πίνακα: το μοντέλο δεν έχει τρόπο να γράψει τιμή, μόνο να δείξει γραμμή. */

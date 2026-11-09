@@ -818,6 +818,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-923 §5.5.2 Β5 — η μνήμη ετικετών γραμμής: τη γράφει μόνο η έγκριση πρότασης στον διακομιστή.
+    collection: 'catalog_import_label_memory',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-import-label-memory.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-923 §5.12 Σ1 — έγγραφο δύο πλευρών: γραφή = ξένη ανάγνωση τιμών χωρίς αποδοχή.
     collection: 'supply_relationships',
     pattern: 'deny_all',

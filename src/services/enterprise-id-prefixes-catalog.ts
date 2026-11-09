@@ -46,6 +46,7 @@ export const CATALOG_ID_PREFIXES = {
   CATALOG_IMPORT_BATCH: 'cibat',           // catalog_import_batches — παρτίδα (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση)
   CATALOG_IMPORT_PROPOSAL: 'cipsl',        // catalog_import_proposals — πρόταση (από παρτίδα + σύνολο)
   CATALOG_IMPORT_PAGE_READING: 'cipgr',    // catalog_import_page_readings — απάντηση μοντέλου (από παρτίδα + σελίδα + διαδρομή + προσπάθεια)
+  CATALOG_IMPORT_LABEL_MEMORY: 'cilm',     // catalog_import_label_memory — μνήμη ετικέτας γραμμής (από προμηθευτή + οικογένεια + ετικέτα + μονάδα, §5.5.2 Β5)
   // ── Φάση 6α (ADR-923 §5.12) ──
   CATALOG_SUPPLIER_PROFILE: 'cspro',       // catalog_supplier_profiles — ΕΝΑ προφίλ παρόχου ανά χώρο (§22 Υ8), ντετερμινιστικό
   CATALOG_PORTFOLIO_PROJECT: 'cprjt',      // έργο portfolio, μέσα στο προφίλ (§22 Υ8) — τυχαίο, όπως το SKU

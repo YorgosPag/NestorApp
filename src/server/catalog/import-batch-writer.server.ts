@@ -18,7 +18,7 @@ import { nowISO } from '@/lib/date-local';
 import { countPdfPages } from '@/services/pdf/pdf-rasterize.service';
 import { importBatchKey } from '@/subapps/catalog/import/import-keys';
 import { currentDerivation } from '@/subapps/catalog/import/page-derivation';
-import { withLineOverride } from '@/subapps/catalog/import/page-line-overrides';
+import { withLineOverride, type LineOverrideExtras } from '@/subapps/catalog/import/page-line-overrides';
 import type {
   ImportBatchDefinition,
   ImportBatchPages,
@@ -205,12 +205,18 @@ function pagesOrRefuse(batch: ImportBatchDefinition): ImportBatchPages {
  * `POST /api/catalog/imports/[id]/lines` (πρώτο μισό) — η απόφαση γραμμής (§5.5.2 Β3 Γ1). Κατάσταση με κλειδί μέσα σε συναλλαγή, όχι
  * αντικατάσταση εγγράφου με CAS: δύο αποφάσεις σε διαφορετικές γραμμές δεν συγκρούονται, και η ίδια απόφαση δύο φορές δεν αλλάζει τίποτα.
  */
-export function setImportLineOverride(ctx: AuthContext, id: string, address: LineAddress, decision: ImportLineDecision | null): Promise<StoredImportBatch> {
+export function setImportLineOverride(
+  ctx: AuthContext,
+  id: string,
+  address: LineAddress,
+  decision: ImportLineDecision | null,
+  extras: LineOverrideExtras = {},
+): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     assertImportBatchOpen(current);
     const pages = pagesOrRefuse(current);
-    const lineOverrides = withLineOverride(pages.lineOverrides ?? [], address, decision, { by: ctx.uid, at: nowISO() });
+    const lineOverrides = withLineOverride(pages.lineOverrides ?? [], address, decision, { by: ctx.uid, at: nowISO() }, extras);
     if (lineOverrides.length > IMPORT_MAX_LINE_OVERRIDES) assertNoIssues([{ code: 'tooMany', path: 'lineOverrides', params: { max: IMPORT_MAX_LINE_OVERRIDES } }]);
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, lineOverrides } });
   });

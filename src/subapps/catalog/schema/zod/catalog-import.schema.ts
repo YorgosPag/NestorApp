@@ -15,6 +15,7 @@ import type {
   ReadImportPageRequest,
   SetImportLineRequest,
   SetImportPriceTargetRequest,
+  SetImportSupplierRequest,
   UpdateImportProposalRequest,
 } from '../../types/catalog-import-requests';
 import { ANY_SLOT } from '../../types/product';
@@ -127,6 +128,11 @@ export const proposalActionBodySchema: z.ZodType<ProposalActionRequest> = z.obje
 export const setImportPriceTargetBodySchema: z.ZodType<SetImportPriceTargetRequest> = z.object({
   expectedRevision: expectedRevisionSchema,
   priceListVersionId: entityIdSchema.nullable(),
+});
+
+export const setImportSupplierBodySchema: z.ZodType<SetImportSupplierRequest> = z.object({
+  expectedRevision: expectedRevisionSchema,
+  supplierContactId: entityIdSchema.nullable(),
 });
 
 export const saveImportProfileBodySchema = z.object({ definition: importProfileDefinitionSchema });

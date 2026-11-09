@@ -285,6 +285,8 @@ export const AUDIT_ENTITIES = {
   catalog_import_profile: { collectionKey: 'CATALOG_IMPORT_PROFILES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_import_batch: { collectionKey: 'CATALOG_IMPORT_BATCHES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_import_proposal: { collectionKey: 'CATALOG_IMPORT_PROPOSALS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  // §5.5.2 Β5 — η μνήμη ετικετών γραμμής ανά προμηθευτή: γράφεται ΜΟΝΟ στην έγκριση πρότασης, μέσα στη συναλλαγή της.
+  catalog_import_label_memory: { collectionKey: 'CATALOG_IMPORT_LABEL_MEMORY', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   supplier_brand_claim: { collectionKey: 'SUPPLIER_BRAND_CLAIMS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   supplier_verification: { collectionKey: 'SUPPLIER_VERIFICATIONS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_supplier_profile: { collectionKey: 'CATALOG_SUPPLIER_PROFILES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },

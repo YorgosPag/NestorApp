@@ -258,6 +258,11 @@ export type ImportBatchTarget =
        * του κλειδιού της: αλλιώς ο ορισμός της θα γεννούσε νέα παρτίδα, άρα νέα πληρωμένη ανάγνωση. Απούσα/`null` = καμία.
        */
       readonly priceListVersionId?: string | null;
+      /**
+       * Ο **προμηθευτής** (επαφή) του καταλόγου (§5.5.2 Β5 Απόφαση 1): δίνει τη μνήμη ετικετών γραμμής. Ρύθμιση, **όχι** μέρος του
+       * κλειδιού, όπως ο τιμοκατάλογος. Απών/`null` = κανένας, άρα η μνήμη ούτε εφαρμόζεται ούτε μαθαίνει.
+       */
+      readonly supplierContactId?: string | null;
     }
   /** `identifierAttributeId`: η `unique` ιδιότητα στην οποία ανήκει ο κωδικός SKU του αρχείου. */
   | { readonly purpose: 'priceLines'; readonly priceListVersionId: string; readonly identifierAttributeId: string };
@@ -318,6 +323,19 @@ export interface ImportPageUnmappedLine {
   readonly values: readonly string[];
   /** Τα κελιά της γραμμής στη σελίδα (ετικέτες + τιμές), για εστίαση στο PDF (§5.5.2 Β3). Απούσα σε παρτίδες παλαιότερες. */
   readonly regions?: readonly PageRegion[];
+  /** Η ταυτότητα της γραμμής για τη μνήμη του προμηθευτή (§5.5.2 Β5). Απούσα σε παρτίδες παλαιότερες. */
+  readonly identity?: ImportLineIdentity;
+}
+
+/**
+ * Τι **είναι** μια γραμμή πίνακα, ανεξάρτητα από τη θέση της (§5.5.2 Β5): οι ετικέτες της κανονικοποιημένες (`normalizeUniqueText`)
+ * **χωρίς** τη μονάδα, και η μονάδα που τυπώνει (κωδικός μητρώου). Ίδια ετικέτα σε άλλη μονάδα είναι **άλλη** γραμμή (W ≠ Btu/h).
+ */
+export interface ImportLineIdentity {
+  readonly label: string;
+  readonly unitCode: string | null;
+  /** Οι ετικέτες όπως τυπώνονται, χωρίς τη μονάδα: μόνο για εμφάνιση, **δεν** μετρά στην ταυτότητα. */
+  readonly printed: string;
 }
 
 /** Η ανθρώπινη απόφαση για μια γραμμή πίνακα (§5.5.2 Β3 Γ1). Δείχνει **id** ιδιότητας: ο κωδικός μετονομάζεται. */
@@ -341,6 +359,45 @@ export interface ImportLineOverride {
   readonly decision: ImportLineDecision;
   readonly by: string;
   readonly at: string;
+  /** Η ταυτότητα της γραμμής, για τη μάθηση στην έγκριση (§5.5.2 Β5). Απούσα ⇒ η απόφαση ισχύει, αλλά δεν μαθαίνεται. */
+  readonly identity?: ImportLineIdentity;
+  /** Από πού ήρθε η απόφαση. Απούσα = από άνθρωπο. */
+  readonly origin?: ImportLineOverrideOrigin;
+}
+
+/** Απόφαση που εφάρμοσε η **μνήμη** του προμηθευτή (§5.5.2 Β5 Απόφαση 3): ορατή, με αναίρεση. */
+export interface ImportLineOverrideOrigin {
+  readonly kind: 'memory';
+  readonly memoryId: string;
+  /** Πόσες εγκρίσεις στήριζαν την απόφαση όταν εφαρμόστηκε. */
+  readonly count: number;
+  /** Η παρτίδα της τελευταίας έγκρισης. */
+  readonly sourceBatchId: string;
+}
+
+/** Μία απόφαση του ιστορικού ενός κλειδιού μνήμης, με τον μετρητή της (§5.5.2 Β5). */
+export interface ImportLabelMemoryDecision {
+  readonly decision: ImportLineDecision;
+  readonly count: number;
+  readonly lastBatchId: string;
+  readonly lastBy: string;
+  readonly lastAt: string;
+}
+
+/**
+ * Η **μνήμη ετικέτας γραμμής** ενός προμηθευτή (§5.5.2 Β5): ένα έγγραφο ανά προμηθευτή × οικογένεια × ετικέτα × τυπωμένη μονάδα. Η
+ * διόρθωση **δεν** σβήνει την παλιά απόφαση: προστίθεται δίπλα της, και δύο διαφορετικές αποφάσεις είναι **σύγκρουση** (καμία εφαρμογή).
+ * Ζει **έξω** από το `ImportProfileDefinition`: η αναθεώρηση του προφίλ μπαίνει στο κλειδί της παρτίδας (Μ2).
+ */
+export interface ImportLabelMemoryDefinition {
+  readonly code: string;
+  readonly supplierContactId: string;
+  readonly familyId: string;
+  readonly label: string;
+  readonly unitCode: string | null;
+  /** Η ετικέτα όπως τυπώθηκε στην τελευταία έγκριση, για εμφάνιση. */
+  readonly printedLabel: string;
+  readonly decisions: readonly ImportLabelMemoryDecision[];
 }
 
 /**

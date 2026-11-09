@@ -25,15 +25,26 @@ export function lineDecisionOf(overrides: readonly ImportLineOverride[] | undefi
   return overrides?.find((override) => sameLine(override, address))?.decision ?? null;
 }
 
-/** Νέα λίστα με την απόφαση της γραμμής αντικατεστημένη (`null` = αναίρεση). Ιδεμπότητη. */
+/** Ό,τι συνοδεύει μια απόφαση πέρα από τη σφραγίδα (§5.5.2 Β5): ταυτότητα για τη μάθηση, προέλευση όταν την έδωσε η μνήμη. */
+export type LineOverrideExtras = Pick<ImportLineOverride, 'identity' | 'origin'>;
+
+/** Μόνο τα πεδία που υπάρχουν: το Firestore δεν δέχεται `undefined`. */
+const presentExtras = ({ identity, origin }: LineOverrideExtras): LineOverrideExtras => ({ ...(identity ? { identity } : {}), ...(origin ? { origin } : {}) });
+
+/**
+ * Νέα λίστα με την απόφαση της γραμμής αντικατεστημένη (`null` = αναίρεση). Ιδεμπότητη. Χωρίς `origin` η απόφαση είναι του
+ * ανθρώπου: πάνω σε απόφαση της μνήμης την αντικαθιστά ολόκληρη.
+ */
 export function withLineOverride(
   overrides: readonly ImportLineOverride[],
   address: LineAddress,
   decision: ImportLineDecision | null,
   stamp: Pick<ImportLineOverride, 'by' | 'at'>,
+  extras: LineOverrideExtras = {},
 ): ImportLineOverride[] {
   const rest = overrides.filter((override) => !sameLine(override, address));
-  return decision === null ? rest : [...rest, { page: address.page, table: address.table, line: address.line, decision, ...stamp }];
+  if (decision === null) return rest;
+  return [...rest, { page: address.page, table: address.table, line: address.line, decision, ...stamp, ...presentExtras(extras) }];
 }
 
 /** Οι αποφάσεις ενός πίνακα μιας σελίδας. */

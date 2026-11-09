@@ -174,6 +174,11 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
     return this.mintDeterministicV4Id(P.CATALOG_IMPORT_PAGE_READING, seedOf('import-page-reading', companyId, readingKey));
   }
 
+  /** Κλειδί = `labelMemoryKey(προμηθευτής, οικογένεια, ετικέτα, μονάδα)` ⇒ **ένα** έγγραφο μνήμης ανά γραμμή του προμηθευτή (§5.5.2 Β5). */
+  generateDeterministicCatalogImportLabelMemoryId(companyId: string, memoryKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_IMPORT_LABEL_MEMORY, seedOf('import-label-memory', companyId, memoryKey));
+  }
+
   /** Κλειδί = `visibilityRuleKey` ⇒ **ένας** κανόνας ανά (αντικείμενο, κοινό), δομικά (ADR-923 §5.12 Δ1). */
   generateDeterministicCatalogVisibilityRuleId(companyId: string, ruleKey: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_VISIBILITY_RULE, seedOf('visibility-rule', companyId, ruleKey));

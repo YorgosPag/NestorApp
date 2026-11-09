@@ -36,6 +36,7 @@ import {
   CATALOG_IMPORT_PROFILE_TRACKED_FIELDS,
   CATALOG_IMPORT_BATCH_TRACKED_FIELDS,
   CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS,
+  CATALOG_IMPORT_LABEL_MEMORY_TRACKED_FIELDS,
   CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS,
   CATALOG_VISIBILITY_RULE_TRACKED_FIELDS,
   CATALOG_VALUES_AUDIT_FIELD,
@@ -65,6 +66,7 @@ import {
   generateDeterministicCatalogImportProfileId,
   generateDeterministicCatalogImportBatchId,
   generateDeterministicCatalogImportProposalId,
+  generateDeterministicCatalogImportLabelMemoryId,
   generateDeterministicCatalogPublicationRecipeId,
   generateDeterministicCatalogVisibilityRuleId,
 } from '@/services/enterprise-id.service';
@@ -91,6 +93,8 @@ export const CATALOG_KINDS = [
   'importProfile',
   'importBatch',
   'importProposal',
+  // ── §5.5.2 Β5 — μνήμη ετικετών γραμμής ανά προμηθευτή ──
+  'importLabelMemory',
   // ── Φάση 5 (ADR-923 §5.6) ──
   'publicationRecipe',
   // ── Φάση 6α (ADR-923 §5.12) ──
@@ -252,6 +256,13 @@ export const CATALOG_KIND_SPECS: Readonly<Record<CatalogKind, CatalogKindSpec>> 
     identity: byCode(generateDeterministicCatalogImportProposalId),
     trackedFields: CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS,
     auditName: nameFrom((record) => record.groupKey),
+  },
+  importLabelMemory: {
+    collection: COLLECTIONS.CATALOG_IMPORT_LABEL_MEMORY,
+    entityType: 'catalog_import_label_memory',
+    identity: byCode(generateDeterministicCatalogImportLabelMemoryId),
+    trackedFields: CATALOG_IMPORT_LABEL_MEMORY_TRACKED_FIELDS,
+    auditName: nameFrom((record) => record.printedLabel),
   },
   publicationRecipe: {
     collection: COLLECTIONS.CATALOG_PUBLICATION_RECIPES,

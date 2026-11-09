@@ -11,22 +11,29 @@ import 'server-only';
  */
 
 import type { AuthContext } from '@/lib/auth';
+import { nowISO } from '@/lib/date-local';
+import { createModuleLogger } from '@/lib/telemetry';
 import { reconstructPageTables } from '@/lib/pdf-tables/reconstruct-page-tables';
 import type { PageRule, PageTable, PageTagTable } from '@/lib/pdf-tables/page-table-types';
 import type { CatalogAnalyzerAnswer, ICatalogPageAnalyzer } from '@/subapps/catalog/import/page-analyzer';
 import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
 import { evidenceFindings, extractGroupsFromPage, type PageAttributeSpec, type RawPageExtraction } from '@/subapps/catalog/import/page-extraction';
-import type { RawPageMapping } from '@/subapps/catalog/import/page-table-mapping';
-import { readPageTables, type PageTableContext } from '@/subapps/catalog/import/page-table-reading';
+import { EMPTY_LABEL_MEMORY, memoryKeysOf, memoryOverridesFor, type LabelMemoryBook, type LabelMemoryScope } from '@/subapps/catalog/import/label-memory';
+import { readPageWithDecisions } from '@/subapps/catalog/import/page-decisions-reading';
+import { VARIANT_ORIENTATIONS, type RawPageMapping } from '@/subapps/catalog/import/page-table-mapping';
+import { tableLineIdentities, type PageTableContext } from '@/subapps/catalog/import/page-table-reading';
 import type { PageToken } from '@/subapps/catalog/import/page-tokens';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
-import type { ExtractedGroup, ImportPageRoute, ImportPageSetAside, ImportPageUnmappedLine, ImportPagesUsage } from '@/subapps/catalog/types/catalog-import';
+import type { ExtractedGroup, ImportLineOverride, ImportPageRoute, ImportPageSetAside, ImportPageUnmappedLine, ImportPagesUsage } from '@/subapps/catalog/types/catalog-import';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
 import { IMPORT_PAGE_READ_ATTEMPTS } from '@/subapps/catalog/vocabulary/catalog-import';
 import { CatalogWriteError } from './catalog-write-error';
+import { readLabelMemoryBook } from './import-label-memory.server';
 import { createCatalogPageAnalyzer } from './import-page-analyzer.server';
 import { recordPageReading } from './import-page-reading.server';
 import { proposeGroup, retireStalePageProposals, type StoredImportProposal } from './import-proposal-writer.server';
+
+const logger = createModuleLogger('CatalogImportPageFlow');
 
 /** Πόσες αναγνώσεις δικαιούται μια σελίδα, σε όλες τις διαδρομές μαζί. */
 const FEEDBACK_ATTEMPTS = IMPORT_PAGE_READ_ATTEMPTS;
@@ -35,6 +42,19 @@ export interface PageSpecs {
   readonly specs: readonly PageAttributeSpec[];
   readonly byCode: ReadonlyMap<string, CatalogAttributeDefinition & { readonly id: string }>;
   readonly codeById: ReadonlyMap<string, string>;
+}
+
+/**
+ * Οι αποφάσεις γραμμής που ισχύουν στην ανάγνωση (§5.5.2 Β5, κλείνει το Μ5): του ανθρώπου για τη σελίδα, και η μνήμη του προμηθευτή
+ * (`null` = η παρτίδα δεν έχει προμηθευτή). Περνούν από τον **ίδιο** κριτή με το ξαναχτίσιμο (`readPageWithDecisions`).
+ */
+export interface PageDecisions {
+  readonly human: readonly ImportLineOverride[];
+  readonly memory: LabelMemoryScope | null;
+  /** Η παρτίδα έχει πρόχειρο τιμοκατάλογο: μόνο τότε η μνήμη εφαρμόζει γραμμή τιμής. */
+  readonly pricesEnabled: boolean;
+  /** Πόσες αποφάσεις χωρούν ακόμη στην παρτίδα (`IMPORT_MAX_LINE_OVERRIDES`). Η μνήμη μιας σελίδας μπαίνει όλη ή καθόλου. */
+  readonly memoryRoom: number;
 }
 
 export interface PageFlowInput {
@@ -48,6 +68,7 @@ export interface PageFlowInput {
   readonly specs: PageSpecs;
   readonly registry: MeasurementRegistry;
   readonly axisAttributeIds: readonly string[];
+  readonly decisions: PageDecisions;
 }
 
 /** Ό,τι η σελίδα **δεν** έκανε πρόταση, δηλωμένο: πίνακες στην άκρη (Ε3) και γραμμές χωρίς ιδιότητα (Ε7). */
@@ -61,6 +82,8 @@ const NOTHING_LEFT_OUT: PageLeftOut = { setAside: [], unmappedLines: [] };
 export interface PageFlowResult extends PageLeftOut {
   readonly ok: boolean;
   readonly usage: ImportPagesUsage;
+  /** Οι αποφάσεις που εφάρμοσε η μνήμη στη σελίδα: γράφονται στην παρτίδα, ορατές και αναιρέσιμες (§5.5.2 Β5 Απόφαση 3). */
+  readonly memoryOverrides: readonly ImportLineOverride[];
 }
 
 /** Το μοντέλο ξέρει τους κωδικούς της λίστας του, όχι τα εσωτερικά `cattr_…`: αλλιώς η δεύτερη πληρωμένη ανάγνωση δεν καταλαβαίνει. */
@@ -78,6 +101,7 @@ function proposeGroups(input: PageFlowInput, groups: readonly ExtractedGroup[]):
 interface Interpretation extends PageLeftOut {
   readonly groups: readonly ExtractedGroup[];
   readonly findings: readonly string[];
+  readonly memoryOverrides: readonly ImportLineOverride[];
   /** Η απάντηση διαψεύδει τη διαδρομή: τίποτα δεν προτείνεται από αυτήν. */
   readonly abandoned: boolean;
 }
@@ -92,6 +116,7 @@ interface Route<TValue> {
 
 interface RouteResult extends PageLeftOut {
   readonly proposals: readonly StoredImportProposal[] | null;
+  readonly memoryOverrides: readonly ImportLineOverride[];
   readonly usage: ImportPagesUsage;
   readonly used: number;
   readonly abandoned: boolean;
@@ -114,7 +139,7 @@ function keepReading<TValue>(input: PageFlowInput, route: Route<TValue>, { attem
 
 async function runRoute<TValue>(input: PageFlowInput, route: Route<TValue>): Promise<RouteResult> {
   let feedback: readonly string[] = [];
-  let result: RouteResult = { proposals: null, ...NOTHING_LEFT_OUT, usage: NO_USAGE, used: 0, abandoned: false };
+  let result: RouteResult = { proposals: null, ...NOTHING_LEFT_OUT, memoryOverrides: [], usage: NO_USAGE, used: 0, abandoned: false };
   for (let attempt = 0; attempt < route.attempts; attempt += 1) {
     const answer = await route.ask(feedback);
     if (answer.kind === 'unavailable') throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'analyzer' }]);
@@ -127,23 +152,54 @@ async function runRoute<TValue>(input: PageFlowInput, route: Route<TValue>): Pro
     await keepReading(input, route, { attempt, answer, feedback, abandoned: reading.abandoned });
     if (reading.abandoned) return { ...result, usage, used: attempt + 1, abandoned: true };
     const proposals = await proposeGroups(input, reading.groups);
-    result = { proposals, setAside: reading.setAside, unmappedLines: reading.unmappedLines, usage, used: attempt + 1, abandoned: false };
+    const { setAside, unmappedLines, memoryOverrides } = reading;
+    result = { proposals, setAside, unmappedLines, memoryOverrides, usage, used: attempt + 1, abandoned: false };
     feedback = [...reading.findings, ...ruleFindings(proposals, input.specs.codeById)];
     if (feedback.length === 0) break;
   }
   return result;
 }
 
-function tableRoute(input: PageFlowInput, analyzer: ICatalogPageAnalyzer, tables: readonly PageTable[]): Route<RawPageMapping> {
-  const context: PageTableContext = { page: input.page, tables, attributesByCode: input.specs.byCode, registry: input.registry, axisAttributeIds: input.axisAttributeIds };
+/**
+ * Η μνήμη του προμηθευτή για τη σελίδα, **μία** ανάγνωση πριν την κλήση του μοντέλου: ο προσανατολισμός δεν είναι ακόμη γνωστός, άρα
+ * ζητούνται οι ταυτότητες και των δύο. Γνωστά ids, κανένα ερώτημα.
+ */
+function readPageMemory(input: PageFlowInput, tables: readonly PageTable[]): Promise<LabelMemoryBook> {
+  const { memory } = input.decisions;
+  if (memory === null || tables.length === 0) return Promise.resolve(EMPTY_LABEL_MEMORY);
+  const identities = tables.flatMap((table) => VARIANT_ORIENTATIONS.flatMap((orientation) => [...tableLineIdentities(table, orientation, input.registry).values()]));
+  return readLabelMemoryBook(input.ctx, memoryKeysOf(memory, identities));
+}
+
+/** Οι αποφάσεις της μνήμης για την απάντηση: μόνο όπου ο άνθρωπος δεν αποφάσισε, μόνο ιδιότητες του σχήματος. */
+function memoryOverridesOfPage(input: PageFlowInput, tables: readonly PageTable[], mapping: RawPageMapping, book: LabelMemoryBook): ImportLineOverride[] {
+  const { memory, human, pricesEnabled } = input.decisions;
+  if (memory === null || book.size === 0) return [];
+  const application = { scope: memory, book, knownAttributeIds: new Set(input.specs.codeById.keys()), pricesEnabled, stamp: { by: input.ctx.uid, at: nowISO() } };
+  const found = mapping.tables.flatMap((answer) => {
+    const table = tables.find((candidate) => candidate.key === answer.table);
+    if (!table) return [];
+    const identities = tableLineIdentities(table, answer.variantsIn, input.registry);
+    return memoryOverridesFor({ page: input.page, table: table.key, identities }, human, application);
+  });
+  if (found.length <= input.decisions.memoryRoom) return found;
+  logger.warn('Label memory does not fit the batch line-decision limit; not applied on this page', { batchId: input.batchId, page: input.page, found: found.length });
+  return [];
+}
+
+function tableRoute(input: PageFlowInput, analyzer: ICatalogPageAnalyzer, tables: readonly PageTable[], book: LabelMemoryBook): Route<RawPageMapping> {
+  const context: Omit<PageTableContext, 'priceLinesByTable'> = { page: input.page, tables, attributesByCode: input.specs.byCode, registry: input.registry, axisAttributeIds: input.axisAttributeIds };
+  const schema = { codeById: input.specs.codeById, knownCodes: new Set(input.specs.byCode.keys()) };
   return {
     name: 'table',
     tables,
     attempts: FEEDBACK_ATTEMPTS,
     ask: (feedback) => analyzer.mapTables({ png: input.png, tables, attributes: input.specs.specs, feedback }),
     interpret: (mapping) => {
-      const { groups, findings, setAside, unmappedLines, doubted } = readPageTables(mapping, context);
-      return { groups, findings, setAside, unmappedLines, abandoned: doubted };
+      const memoryOverrides = memoryOverridesOfPage(input, tables, mapping, book);
+      const { reading } = readPageWithDecisions(mapping, context, [...input.decisions.human, ...memoryOverrides], schema);
+      const { groups, findings, setAside, unmappedLines, doubted } = reading;
+      return { groups, findings, setAside, unmappedLines, memoryOverrides, abandoned: doubted };
     },
   };
 }
@@ -157,7 +213,7 @@ function visionRoute(input: PageFlowInput, analyzer: ICatalogPageAnalyzer, attem
     ask: (feedback) => analyzer.readPage({ png: input.png, tokens: input.tokens, attributes: input.specs.specs, feedback }),
     interpret: (extraction) => {
       const groups = extractGroupsFromPage(extraction, context);
-      return { groups, findings: evidenceFindings(groups), ...NOTHING_LEFT_OUT, abandoned: false };
+      return { groups, findings: evidenceFindings(groups), ...NOTHING_LEFT_OUT, memoryOverrides: [], abandoned: false };
     },
   };
 }
@@ -166,12 +222,14 @@ function visionRoute(input: PageFlowInput, analyzer: ICatalogPageAnalyzer, attem
 export async function readAndProposePage(input: PageFlowInput): Promise<PageFlowResult> {
   const analyzer = createCatalogPageAnalyzer();
   const tables = input.tokens.length === 0 ? [] : reconstructPageTables({ words: input.tokens, rules: input.rules, tagTables: input.tagTables });
-  const mapped = tables.length > 0 ? await runRoute(input, tableRoute(input, analyzer, tables)) : null;
+  const book = await readPageMemory(input, tables);
+  const mapped = tables.length > 0 ? await runRoute(input, tableRoute(input, analyzer, tables, book)) : null;
   const needsVision = mapped === null || mapped.abandoned;
   const seen = needsVision ? await runRoute(input, visionRoute(input, analyzer, Math.max(1, FEEDBACK_ATTEMPTS - (mapped?.used ?? 0)))) : null;
   const usage = addUsage(mapped?.usage ?? NO_USAGE, seen?.usage ?? NO_USAGE);
   const final = seen ?? mapped;
   const proposals = final?.proposals ?? null;
   if (proposals !== null) await retireStalePageProposals(input.ctx, input.batchId, input.page, new Set(proposals.map((proposal) => proposal.id)));
-  return { ok: proposals !== null, usage, setAside: final?.setAside ?? [], unmappedLines: final?.unmappedLines ?? [] };
+  const memoryOverrides = proposals !== null ? final?.memoryOverrides ?? [] : [];
+  return { ok: proposals !== null, usage, setAside: final?.setAside ?? [], unmappedLines: final?.unmappedLines ?? [], memoryOverrides };
 }

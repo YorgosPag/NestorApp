@@ -70,6 +70,15 @@ export interface SetImportPriceTargetRequest {
   readonly priceListVersionId: string | null;
 }
 
+/**
+ * Ο προμηθευτής (επαφή) μιας παρτίδας ιδιοτήτων (§5.5.2 Β5 Απόφαση 1). `null` = κανένας. Αλλάζει **χωρίς** νέα ανάγνωση και **χωρίς**
+ * εφαρμογή μνήμης στις σελίδες που διαβάστηκαν ήδη (Απόφαση 4): η μνήμη ισχύει από την επόμενη ανάγνωση και μαθαίνει στις εγκρίσεις.
+ */
+export interface SetImportSupplierRequest {
+  readonly expectedRevision: number;
+  readonly supplierContactId: string | null;
+}
+
 export type ImportBatchWire = CatalogWire<ImportBatchDefinition>;
 export type ImportProposalWire = CatalogWire<ImportProposalDefinition>;
 export type ImportProfileWire = CatalogWire<ImportProfileDefinition>;

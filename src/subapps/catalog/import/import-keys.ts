@@ -13,7 +13,7 @@
  * @module subapps/catalog/import/import-keys
  */
 
-import type { ImportBatchTarget } from '../types/catalog-import';
+import type { ImportBatchTarget, ImportLineIdentity } from '../types/catalog-import';
 
 const SEPARATOR = '|';
 
@@ -42,8 +42,28 @@ export function importProposalKey(batchId: string, groupKey: string): string {
   return `${batchId}${SEPARATOR}${groupKey}`;
 }
 
+const PAGE_TABLE_PREFIX = 'page:';
+
 /** Η πρόταση (ιδιοτήτων) ενός πίνακα σελίδας PDF: κάθε γραμμή του πίνακα ανήκει σε **ακριβώς μία** (§5.5.2 Μ9). */
-export const pageTableGroupKey = (page: number, table: string): string => `page:${page}:${table}`;
+export const pageTableGroupKey = (page: number, table: string): string => `${PAGE_TABLE_PREFIX}${page}:${table}`;
+
+/** Το αντίστροφο του `pageTableGroupKey`: σελίδα + πίνακας, ή `null` αν το κλειδί δεν είναι πρόταση ιδιοτήτων πίνακα. */
+export function pageTableAddressOf(groupKey: string): { readonly page: number; readonly table: string } | null {
+  if (!groupKey.startsWith(PAGE_TABLE_PREFIX) || attributesGroupKeyOf(groupKey) !== null) return null;
+  const rest = groupKey.slice(PAGE_TABLE_PREFIX.length);
+  const split = rest.indexOf(':');
+  const page = Number(rest.slice(0, split));
+  return split > 0 && Number.isInteger(page) ? { page, table: rest.slice(split + 1) } : null;
+}
+
+/**
+ * Η **μνήμη ετικέτας γραμμής** (§5.5.2 Β5): προμηθευτής × οικογένεια × ετικέτα (κανονικοποιημένη, χωρίς μονάδα) × τυπωμένη μονάδα.
+ * Όχι θέση γραμμής ή στήλης: ο επόμενος κατάλογος του ίδιου προμηθευτή τυπώνει την ίδια γραμμή αλλού.
+ */
+export function labelMemoryKey(supplierContactId: string, familyId: string, identity: Pick<ImportLineIdentity, 'label' | 'unitCode'>): string {
+  // JSON και όχι `|`: η ετικέτα είναι τυπωμένο κείμενο και μπορεί να περιέχει τον διαχωριστή («a|W» χωρίς μονάδα ≠ «a» σε W).
+  return JSON.stringify(['label-memory', supplierContactId, familyId, identity.label, identity.unitCode]);
+}
 
 const PRICE_GROUP_SUFFIX = ':prices';
 

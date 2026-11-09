@@ -6489,6 +6489,11 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    // ADR-923 §5.5.2 Β5 — η μνήμη ετικετών γραμμής ανά προμηθευτή: τη γράφει ΜΟΝΟ η έγκριση πρότασης στον διακομιστή.
+    match /catalog_import_label_memory/{memoryId} {
+      allow read: if false;
+      allow write: if false;
+    }
     // ADR-923 §12 · §5.12 Δ1 — ΚΑΝΟΝΕΣ ΟΡΑΤΟΤΗΤΑΣ: τους διαβάζει και τους γράφει ΜΟΝΟ ο διακομιστής. Η οθόνη τους παίρνει
     // από την όψη `discounts`, με κριτή `pricingView`.
     match /catalog_visibility_rules/{ruleId} {
