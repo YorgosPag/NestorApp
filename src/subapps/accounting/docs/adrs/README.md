@@ -95,7 +95,7 @@
 | `types/assets.ts` | FixedAsset, DepreciationRecord, DisposalResult, DepreciationRateConfig | ACC-007 |
 | `types/bank.ts` | BankTransaction, CSVParserConfig, MatchCandidate, MatchResult, ImportBatch | ACC-008 |
 | `types/documents.ts` | ExtractedDocumentData, ReceivedExpenseDocument, VendorCategoryLearning, DocumentClassification | ACC-005 |
-| `types/interfaces.ts` | IAccountingRepository, IVATEngine, ITaxEngine, IDepreciationEngine, IDocumentAnalyzer, IMatchingEngine, IMyDataService, ICSVImportService, AccountingPermission | ACC-010 |
+| `types/interfaces.ts` | IAccountingRepository, IVATEngine, ITaxEngine, IDepreciationEngine, IDocumentAnalyzer, IMatchingEngine, ICSVImportService, AccountingPermission | ACC-010 |
 
 ### Phase 3: Services (Business Logic) (2026-02-09) — DONE
 
