@@ -275,6 +275,19 @@ export function tableLineIdentities(table: PageTable, variantsIn: VariantOrienta
   return new Map(range(view.lines).map((line) => [line, lineIdentity(view, line, data, registry)]));
 }
 
+/**
+ * Ό,τι τυπώνει κάθε γραμμή **ανά παραλλαγή**, στη σειρά των παραλλαγών (`''` = κενό κελί), με την ίδια ανάγνωση κελιού με την
+ * πρόταση. Η πηγή της απόδειξης του §5.5.2 Β7: ποια γραμμή δίνει τον άξονα το κρίνει το ίδιο κείμενο που θα διαβάσει ο αγωγός.
+ */
+export function tableLineTexts(table: PageTable, variantsIn: VariantOrientation): readonly (readonly string[])[] {
+  const view = viewOf(table, { variantsIn });
+  const data = dataSlots(view);
+  return range(view.lines).map((line) => data.map((slot) => {
+    const cell = view.at(line, slot);
+    return cell === null ? '' : printedText(cell);
+  }));
+}
+
 interface LeftOutLines {
   readonly view: TableView;
   readonly data: readonly number[];

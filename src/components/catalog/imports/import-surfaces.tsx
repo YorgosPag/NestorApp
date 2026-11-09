@@ -13,6 +13,7 @@
 
 import type { XChangeImportReport } from '@/subapps/catalog/interop/etim/xchange-report';
 import { defineLazySurfaces } from '@/utils/lazyRouteFactory';
+import type { AxisOptionsDialogProps } from './axis-options-props';
 import type { LineAttributeToolsProps, PriceLineDialogProps, PriceLineNoteProps } from './line-tool-props';
 import type { ImportSupplierFieldProps } from './supplier-field-props';
 
@@ -38,6 +39,13 @@ const ImportSurfaces = defineLazySurfaces({
   CatalogImportSupplier: {
     load: () => import('./ImportSupplierField').then((mod) => ({ default: mod.ImportSupplierField })),
   },
+  /**
+   * §5.5.2 Β7: νέες τιμές άξονα από τον έλεγχο — βιβλιοθήκη ιδιοτήτων, φόρμα και `review.axis.*` μόνο όταν ο άνθρωπος ανοίξει το
+   * πλαίσιο (σπάνια ενέργεια: μόνο σε εύρημα άξονα). Στατικά έφερνε το route slice της σελίδας στα 16042 bytes (ταβάνι 14797).
+   */
+  CatalogAxisOptions: {
+    load: () => import('./AxisOptionsDialog').then((mod) => ({ default: mod.AxisOptionsDialog })),
+  },
 });
 
 export function XChangeReportSlot({ report }: { readonly report: XChangeImportReport }) {
@@ -58,4 +66,8 @@ export function PriceLineNoteSlot(props: PriceLineNoteProps) {
 
 export function ImportSupplierSlot(props: ImportSupplierFieldProps) {
   return <ImportSurfaces.CatalogImportSupplier {...props} />;
+}
+
+export function AxisOptionsDialogSlot(props: AxisOptionsDialogProps) {
+  return <ImportSurfaces.CatalogAxisOptions {...props} />;
 }

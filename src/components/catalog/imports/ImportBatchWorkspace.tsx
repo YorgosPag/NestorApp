@@ -22,6 +22,7 @@ import { useCatalogAccess } from '../shared/catalog-neutral-hooks';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
 import { ImportPriceTarget } from './ImportPriceTarget';
 import { LINE_REFUSAL_KEYS, SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
+import { ProposalAxisOptions } from './ProposalAxisOptions';
 import { ProposalReview } from './ProposalReview';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
 import { useImportAssets } from './use-import-assets';
@@ -209,7 +210,9 @@ function ProposalSlot({ workspace, view, focus, onFocus, proposal, canPrice }: B
   return (
     <ProposalReview
       proposal={proposal}
-      source={proposal.purpose === 'priceLines' ? <PriceSource workspace={workspace} view={view} proposal={proposal} /> : null}
+      source={proposal.purpose === 'priceLines'
+        ? <PriceSource workspace={workspace} view={view} proposal={proposal} />
+        : <ProposalAxisOptions proposal={proposal} state={workspace.axisOptions} decidable={proposal.status === 'pending' && !IMPORT_FINISHED_BATCH_STATUSES.includes(view.batch.status)} />}
       batchOpen={!IMPORT_FINISHED_BATCH_STATUSES.includes(view.batch.status)}
       focused={focus?.kind === 'field' ? focus.field : null}
       onFocus={(field) => onFocus({ kind: 'field', field })}

@@ -55,11 +55,15 @@ export interface ImportFieldDecisionInput {
   readonly decision: Exclude<ImportFieldDecision, 'pending'>;
 }
 
-/** Διόρθωση από τον άνθρωπο: αλλάζει την **πηγή** της πρότασης, και ο ίδιος αγωγός ξανακρίνει τα πάντα. */
+/**
+ * Διόρθωση από τον άνθρωπο (§5.5.2 Β6): γράφεται στον **κατάλογο διορθώσεων** της πρότασης, όχι μέσα στην ανάγνωση, και ο ίδιος
+ * αγωγός ξανακρίνει τα πάντα. `revert` = η διόρθωση φεύγει, ισχύει ξανά η πηγή.
+ */
 export interface ImportFieldEditInput {
   readonly rowKey: string;
   readonly targetKey: string;
   readonly text: string;
+  readonly revert?: boolean;
 }
 
 export interface UpdateImportProposalRequest {
@@ -199,6 +203,24 @@ export interface SetImportLineRequest {
 
 /** Τι έγινε: ξαναερμηνεύτηκε (ή δεν χρειαζόταν), ή αρνήθηκε **χωρίς** να γράψει τίποτα. */
 export type ImportLineOutcome = { readonly kind: 'settled' } | { readonly kind: 'refused'; readonly reason: ImportLineRefusal };
+
+/** §5.5.2 Β7: μία νέα τιμή άξονα, όπως τη βλέπει και την αλλάζει ο άνθρωπος. Η ετικέτα πάει στη γλώσσα προεπιλογής. */
+export interface ImportAxisOptionDraft {
+  readonly code: string;
+  readonly label: string;
+}
+
+/**
+ * §5.5.2 Β7: νέες τιμές στον άξονα του πίνακα **και** δέσιμο της γραμμής που τις τυπώνει. Τη γραμμή τη βρίσκει ο διακομιστής, με
+ * τον ίδιο κανόνα που θα διαβάσει ο αγωγός· ο πελάτης δεν τη δηλώνει. `expectedRevision` = της ιδιότητας (CAS του γραφέα ιδιοτήτων).
+ */
+export interface AddImportAxisOptionsRequest {
+  readonly page: number;
+  readonly table: string;
+  readonly attributeId: string;
+  readonly expectedRevision: number;
+  readonly options: readonly ImportAxisOptionDraft[];
+}
 
 export interface SetImportLineResult {
   readonly view: ImportBatchDetailView;

@@ -243,6 +243,34 @@ export interface ImportProposalDefinition {
   readonly violations: readonly ConsistencyViolation[];
   readonly appliedAt: string | null;
   readonly appliedBy: string | null;
+  /**
+   * §5.5.2 Β6: οι διορθώσεις τιμών του ανθρώπου, **έξω** από την ανάγνωση (`extracted` = καθαρή πηγή). Τις εφαρμόζει μόνο το
+   * `applyHumanEdits`, άρα επιβιώνουν κάθε ξαναχτίσιμο του πίνακα. Απόν = καμία.
+   */
+  readonly edits?: readonly ImportValueEdit[];
+  /** §5.5.2 Β6: ο κωδικός μοντέλου που όρισε ο άνθρωπος. Απόν = κανένας. */
+  readonly modelCodeEdit?: ImportModelCodeEdit;
+}
+
+/** Μία διόρθωση τιμής (§5.5.2 Β6). Θυμάται τι έλεγε η πηγή, ώστε νέα ανάγνωση που λέει άλλο να **μην** καλυφθεί σιωπηλά. */
+export interface ImportValueEdit {
+  readonly rowKey: string;
+  readonly targetKey: string;
+  /** Ό,τι έγραψε ο άνθρωπος· κενό = κενό κελί. */
+  readonly text: string;
+  /** Το κείμενο της πηγής τη στιγμή της διόρθωσης· `null` = κενό κελί. */
+  readonly sourceText: string | null;
+  readonly by: string;
+  readonly at: string;
+}
+
+/** Ο κωδικός μοντέλου του ανθρώπου (§5.5.2 Β6), όταν η πηγή δεν τυπώνει ή τυπώνει λάθος. */
+export interface ImportModelCodeEdit {
+  readonly modelCode: string;
+  /** Ο κωδικός της πηγής τη στιγμή της διόρθωσης. */
+  readonly sourceModelCode: string | null;
+  readonly by: string;
+  readonly at: string;
 }
 
 // ── Η παρτίδα και το προφίλ ──────────────────────────────────────────────────
@@ -351,7 +379,13 @@ export type ImportLineDecision =
    * άνθρωπος: ο πίνακας του καταλόγου δεν την τυπώνει, και η νέα γραμμή τιμοκαταλόγου τη χρειάζεται.
    */
   | { readonly kind: 'price'; readonly unitCode: string }
-  | { readonly kind: 'ignore' };
+  | { readonly kind: 'ignore' }
+  /**
+   * §5.5.2 Β7: η γραμμή δίνει **και** την τιμή του άξονα. **Προσθετική**: ό,τι άλλο δείχνει η γραμμή (ο κωδικός SKU) μένει. Γιατί όχι
+   * `attribute`: εκείνη **αντικαθιστά** την αντιστοίχιση της γραμμής, και η γραμμή κωδικών με διπλό κωδικό στο PDF (δεν είναι γραμμή
+   * κωδικών για το Ε2) θα έχανε τον κωδικό SKU. Μόνο ιδιότητα που είναι άξονας του σχήματος της παρτίδας.
+   */
+  | { readonly kind: 'axis'; readonly attributeId: string };
 
 /**
  * Απόφαση γραμμής φυλαγμένη στην παρτίδα. Κλειδί `(page, table, line)`, όπως στη `ImportPageUnmappedLine`: η ανασύνθεση του πίνακα

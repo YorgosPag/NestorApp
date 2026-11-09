@@ -7,12 +7,14 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { Undo2, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { fieldAddress } from '@/subapps/catalog/import/human-edits';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
-import type { ImportProposalField, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
+import type { ImportProposalField, ImportProposalRow, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { useImportIssueMessage } from './import-issue-messages';
 import { PROPOSAL_STATUS_KEYS, ROW_ACTION_KEYS, useImportText } from './import-text';
@@ -38,7 +40,7 @@ interface ProposalReviewProps {
   readonly lines?: Omit<UnmappedLinesProps, 'proposal' | 'decidable'>;
   /** Η παρτίδα δέχεται ακόμη αποφάσεις (όχι `closed` / `discarded`) — ο server το επιβάλλει ξανά (ADR-934 Ε3). */
   readonly batchOpen: boolean;
-  /** §5.5.2 Β4: από πού ήρθε η πρόταση τιμών (γραμμή του πίνακα, μονάδα, αναίρεση). */
+  /** §5.5.2 Β4: από πού ήρθε η πρόταση τιμών (γραμμή του πίνακα, μονάδα, αναίρεση) · Β7: νέες τιμές άξονα για την πρόταση ιδιοτήτων. */
   readonly source?: React.ReactNode;
 }
 
@@ -57,9 +59,14 @@ type RowProps = Pick<ProposalReviewProps, 'proposal' | 'focused' | 'onFocus' | '
   readonly decidable: boolean;
 };
 
+/** §5.5.2 Β6: οι διορθώσεις του ανθρώπου ανά διεύθυνση πεδίου — η ίδια διεύθυνση με τον διακομιστή (`fieldAddress`). */
+const editsOf = (proposal: ImportProposalWire): ReadonlyMap<string, ImportValueEdit> =>
+  new Map((proposal.edits ?? []).map((edit) => [fieldAddress(edit.rowKey, edit.targetKey), edit]));
+
 function RowFields({ row, proposal, focused, onFocus, onChange, view, decidable }: RowProps) {
   const { t } = useImportText();
   const readOnly = !decidable;
+  const edits = useMemo(() => editsOf(proposal), [proposal]);
   return (
       <table className="w-full border-collapse text-sm">
         <thead>
@@ -79,11 +86,13 @@ function RowFields({ row, proposal, focused, onFocus, onChange, view, decidable 
               <ProposalFieldRow
                 key={targetKey}
                 field={field}
+                edit={edits.get(fieldAddress(row.rowKey, targetKey)) ?? null}
                 active={field === focused}
                 readOnly={readOnly}
                 onFocus={() => onFocus(field)}
                 onDecide={(decision) => onChange(proposal, { decisions: [{ rowKey: row.rowKey, targetKey, decision }] })}
                 onEdit={(text) => onChange(proposal, { edits: [{ rowKey: row.rowKey, targetKey, text }] })}
+                onRevert={() => onChange(proposal, { edits: [{ rowKey: row.rowKey, targetKey, text: '', revert: true }] })}
               />
             );
           })}
@@ -121,19 +130,32 @@ function suggestedModelCode(proposal: ImportProposalWire): string {
   return String(issue?.params?.suggestion ?? '');
 }
 
+/**
+ * Ο κωδικός μοντέλου του ανθρώπου (§5.5.2 Β6): ζει στον κατάλογο διορθώσεων, άρα επιβιώνει κάθε ξαναχτίσιμο του πίνακα. Μένει
+ * επεξεργάσιμος και αφαιρείται (κενό ⇒ ο διακομιστής σβήνει τη διόρθωση).
+ */
 function ModelCodeField({ proposal, onChange }: Pick<ProposalReviewProps, 'proposal' | 'onChange'>) {
   const { t } = useImportText();
-  const [code, setCode] = useState(() => suggestedModelCode(proposal));
+  const ours = proposal.modelCodeEdit?.modelCode ?? null;
+  const [code, setCode] = useState(() => ours ?? suggestedModelCode(proposal));
   return (
-    <p className="m-0 flex items-end gap-2">
-      <span className="flex flex-col gap-1">
-        <Label htmlFor={`model-${proposal.id}`}>{t('review.modelCode')}</Label>
-        <Input id={`model-${proposal.id}`} value={code} onChange={(event) => setCode(event.target.value)} />
-      </span>
-      <Button type="button" size="sm" disabled={code.trim() === ''} onClick={() => onChange(proposal, { modelCode: code.trim() })}>{t('review.setModelCode')}</Button>
-    </p>
+    <section className="flex flex-col gap-1" aria-label={t('review.modelCode')}>
+      <p className="m-0 flex flex-wrap items-end gap-2">
+        <span className="flex flex-col gap-1">
+          <Label htmlFor={`model-${proposal.id}`}>{t('review.modelCode')}</Label>
+          <Input id={`model-${proposal.id}`} value={code} onChange={(event) => setCode(event.target.value)} />
+        </span>
+        <Button type="button" size="sm" disabled={code.trim() === '' || code.trim() === ours} onClick={() => onChange(proposal, { modelCode: code.trim() })}>{t('review.setModelCode')}</Button>
+        {ours !== null ? <Button type="button" size="sm" variant="ghost" onClick={() => onChange(proposal, { modelCode: '' })}><Undo2 className="mr-1 h-3 w-3" aria-hidden />{t('review.removeModelCode')}</Button> : null}
+      </p>
+      {ours !== null ? <p className="m-0 text-xs text-muted-foreground"><UserRound className="mr-1 inline h-3 w-3" aria-hidden />{t('review.modelCodeByYou')}</p> : null}
+    </section>
   );
 }
+
+/** Το πεδίο κωδικού φαίνεται όταν η πηγή δεν έδωσε κωδικό **ή** όταν τον έδωσε ο άνθρωπος (για αλλαγή/αφαίρεση). */
+const showsModelCodeField = (proposal: ImportProposalWire): boolean =>
+  proposal.purpose === 'attributes' && proposal.variantSchemeCode !== null && (proposal.modelCode === null || proposal.modelCodeEdit !== undefined);
 
 /** Γραμμή χωρίς ορατό πεδίο στην προβολή κρύβεται· γραμμή με εύρημα μένει, γιατί το εύρημα κλειδώνει την έγκριση. */
 const rowVisibleIn = (view: ProposalView, row: ImportProposalRow): boolean => row.issues.length > 0 || row.fields.some((field) => fieldVisibleIn(view, field));
@@ -165,7 +187,7 @@ export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, 
       </header>
       {source}
       {open && awaiting ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('review.awaitsAttributes')}</p> : null}
-      {open && proposal.modelCode === null && proposal.purpose === 'attributes' && proposal.variantSchemeCode !== null ? <ModelCodeField proposal={proposal} onChange={onChange} /> : null}
+      {open && showsModelCodeField(proposal) ? <ModelCodeField proposal={proposal} onChange={onChange} /> : null}
       {proposal.violations.length > 0 ? <p className="m-0 text-sm text-destructive" role="status">{t('review.violations', { count: proposal.violations.length })}</p> : null}
       <ProposalSummaryBar summary={summary} unmapped={unmapped} view={view} onView={setView} onNextPending={focusNextPending} />
       {rows.length === 0 ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('review.viewEmpty')}</p> : null}

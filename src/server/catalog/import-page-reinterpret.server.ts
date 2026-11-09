@@ -22,6 +22,7 @@ import { priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
 import { lineDecisionOf, priceLineOf, tableOverridesOf, withLineOverride, type LineOverrideExtras } from '@/subapps/catalog/import/page-line-overrides';
 import { tableLineIdentities } from '@/subapps/catalog/import/page-table-reading';
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
+import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { ImportBatchDefinition, ImportLineDecision } from '@/subapps/catalog/types/catalog-import';
 import type { ImportLineOutcome, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
 import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
@@ -68,13 +69,19 @@ async function bindToFamily(ctx: AuthContext, batch: StoredImportBatch, attribut
   await updateCatalogFamily(ctx, familyId, familyRecord.revision, next);
 }
 
+/** §5.5.2 Β7: η απόφαση `axis` δείχνει **μόνο** άξονα του σχήματος της παρτίδας· οι άλλες αποφάσεις δεν ελέγχονται εδώ. */
+function axisDecisionFits(decision: ImportLineDecision | null, schema: CatalogSchemaSnapshot): boolean {
+  if (decision?.kind !== 'axis') return true;
+  return (schema.scheme?.levels ?? []).some((level) => level.axisAttributeIds.includes(decision.attributeId));
+}
+
 /**
  * Ο πίνακας με τις αποφάσεις από πάνω, **μαζί με τη νέα**. Η απόφαση κρίνεται στη μνήμη πριν γραφτεί: άρνηση εδώ δεν αφήνει πίσω της
  * μισή κατάσταση. Μετά γράφεται η απόφαση και ό,τι παράγει.
  */
 async function reinterpretTable(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest, basis: TableBasis): Promise<Judged<null>> {
   const schema = await readBatchSchema(ctx, batch);
-  if (schema === null) return refuse('lineUnknown');
+  if (schema === null || !axisDecisionFits(request.decision, schema)) return refuse('lineUnknown');
   const stamp = { by: ctx.uid, at: nowISO() };
   // §5.5.2 Β5: η ταυτότητα της γραμμής ταξιδεύει με την απόφαση, ώστε η έγκριση του πίνακα να τη μάθει για τον προμηθευτή.
   const identity = tableLineIdentities(basis.table, basis.answer.variantsIn, schema.registry).get(request.line);
@@ -115,8 +122,9 @@ function storedIdentityOf(batch: StoredImportBatch, request: SetImportLineReques
 }
 
 /** Χρειάζεται ο πίνακας μόνο όταν αλλάζει η αντιστοίχιση: η αγνόηση (και η αναίρεσή της) είναι απλώς κατάσταση. */
+const MAPPING_KINDS: ReadonlySet<ImportLineDecision['kind']> = new Set(['attribute', 'axis', 'price']);
 const touchesMapping = (decision: ImportLineDecision | null, previous: ImportLineDecision | null): boolean =>
-  decision?.kind === 'attribute' || previous?.kind === 'attribute' || decision?.kind === 'price' || previous?.kind === 'price';
+  [decision, previous].some((entry) => entry !== null && MAPPING_KINDS.has(entry.kind));
 
 /**
  * Η γραμμή τιμής (§5.5.2 Β4 Δ2): θέλει το δικαίωμα της τιμολόγησης (ξένο ≡ ανύπαρκτο, όπως το `assertPurposeAuthority`), πρόχειρη

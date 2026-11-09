@@ -38,7 +38,7 @@ const STATE_LOOK: Readonly<Record<LineState, { readonly variant: 'muted' | 'info
 function lineStateOf(activity: LineActivity | undefined, decision: ReturnType<typeof lineDecisionOf>): LineState {
   if (activity) return activity.kind;
   if (decision?.kind === 'ignore') return 'ignored';
-  return decision?.kind === 'attribute' || decision?.kind === 'price' ? 'mapped' : 'pending';
+  return decision?.kind === 'attribute' || decision?.kind === 'axis' || decision?.kind === 'price' ? 'mapped' : 'pending';
 }
 
 /** Ποια εργαλεία ανοίγει μια γραμμή: ιδιότητα (Β3) ή τιμή (Β4). */

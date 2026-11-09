@@ -68,14 +68,22 @@ const NEXT_IS_DIGIT = /^\d/u;
  * «MFP-3» δεν είναι αρχή του «MFP-34», γιατί ακολουθεί ψηφίο. Δύο υποψήφιες ⇒ καμία: κανένας κανόνας δεν διαλέγει σιωπηλά.
  */
 export function selectOptionFor(attribute: CatalogAttributeDefinition, text: string): string | null {
-  if (attribute.type !== 'select') return null;
+  const found = selectOptionCandidates(attribute, text);
+  return found.length === 1 ? found[0] : null;
+}
+
+/**
+ * Οι επιλογές που **μπορεί** να εννοεί το κείμενο, με τον κανόνα του {@link selectOptionFor}: η ακριβής, αλλιώς κάθε επιλογή που
+ * είναι αρχή του. Μία ⇒ αυτή· καμία ή περισσότερες ⇒ καμία. Χωριστά, ώστε η απόδειξη του §5.5.2 Β7 να **ονομάζει** τις υποψήφιες.
+ */
+export function selectOptionCandidates(attribute: CatalogAttributeDefinition, text: string): readonly string[] {
+  if (attribute.type !== 'select') return [];
   const { options } = attribute.config;
   const exact = optionCodeOf(options, text);
-  if (exact) return exact;
+  if (exact) return [exact];
   const printed = printedForm(text);
   const opensWith = (form: string): boolean => form !== '' && printed.startsWith(form) && !NEXT_IS_DIGIT.test(printed.slice(form.length));
-  const found = options.filter((option) => [option.code, ...Object.values(option.labels)].some((label) => label !== undefined && opensWith(printedForm(label))));
-  return found.length === 1 ? found[0].code : null;
+  return options.filter((option) => [option.code, ...Object.values(option.labels)].some((label) => label !== undefined && opensWith(printedForm(label)))).map((option) => option.code);
 }
 
 /**

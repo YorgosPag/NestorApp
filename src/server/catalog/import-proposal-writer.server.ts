@@ -5,27 +5,28 @@ import 'server-only';
  * εγκατάλειψη της παρτίδας (οι μεταβάσεις της που κρίνονται από τις προτάσεις της). Η εφαρμογή
  * ζει στο `import-apply.server.ts`.
  *
- * Η διόρθωση αλλάζει την **πηγή** της πρότασης και ξανατρέχει τον ίδιο αγωγό: ό,τι διόρθωσε ο άνθρωπος περνά από τον ίδιο
- * κωδικοποιητή και τον ίδιο κριτή, και καμία δεύτερη διαδρομή «τιμή από την οθόνη» δεν υπάρχει. Η διορθωμένη τιμή έχει
- * βεβαιότητα 1: την είδε άνθρωπος.
+ * Η διόρθωση γράφεται στον **κατάλογο διορθώσεων** της πρότασης (§5.5.2 Β6), **όχι** μέσα στην ανάγνωση, και ξανατρέχει τον ίδιο
+ * αγωγό: ό,τι διόρθωσε ο άνθρωπος περνά από τον ίδιο κωδικοποιητή και τον ίδιο κριτή, και καμία δεύτερη διαδρομή «τιμή από την
+ * οθόνη» δεν υπάρχει. Η διορθωμένη τιμή έχει βεβαιότητα 1: την είδε άνθρωπος. Κάθε ξαναχτίσιμο της πρότασης ξαναεφαρμόζει τον
+ * κατάλογο (`applyHumanEdits`), άρα αναίρεση γραμμής ή αναβάθμιση σελίδας δεν σβήνει ούτε διόρθωση ούτε κωδικό μοντέλου.
  * @module server/catalog/import-proposal-writer.server
  */
 
 import type { AuthContext } from '@/lib/auth';
+import { nowISO } from '@/lib/date-local';
 import { canonicalJson } from '@/lib/legal/canonical-json';
 import { decisionSourceOf } from '@/subapps/catalog/import/field-diff';
+import { applyHumanEdits, fieldAddress, humanEditFields, recordEdits, recordModelCodeEdit, type EditStamp } from '@/subapps/catalog/import/human-edits';
 import { importProposalKey, priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type {
-  ExtractedCell,
   ExtractedGroup,
-  ExtractedRow,
   ImportBatchDefinition,
   ImportProposalDefinition,
   ImportProposalField,
   ImportProposalRow,
 } from '@/subapps/catalog/types/catalog-import';
-import type { ImportFieldEditInput, UpdateImportProposalRequest } from '@/subapps/catalog/types/catalog-import-requests';
+import type { UpdateImportProposalRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
 import { assertRevision, readForUpsert, readOwned, runCatalogReadOnly, runCatalogTransaction, stageCreate, stageReplace, stageSoftDelete, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
@@ -35,10 +36,19 @@ import { readBatchProposals, readImportBase } from './import-reads.server';
 
 export type StoredImportProposal = StoredCatalogRecord<ImportProposalDefinition>;
 
-export function proposalDefinitionOf(proposal: StoredImportProposal): ImportProposalDefinition {
+/** Ο ορισμός **χωρίς** τον κατάλογο διορθώσεων: ο γραφέας που τον αλλάζει τον ξαναβάζει ρητά (§5.5.2 Β6). */
+function coreDefinitionOf(proposal: StoredImportProposal): ImportProposalDefinition {
   const { batchId, groupKey, purpose, status, familyId, variantSchemeCode, modelCode, priceListVersionId, pages, extracted, rows, violations, appliedAt, appliedBy } = proposal;
   return { batchId, groupKey, purpose, status, familyId, variantSchemeCode, modelCode, priceListVersionId, pages, extracted, rows, violations, appliedAt, appliedBy };
 }
+
+export function proposalDefinitionOf(proposal: StoredImportProposal): ImportProposalDefinition {
+  return { ...coreDefinitionOf(proposal), ...humanEditFields(proposal.edits ?? [], proposal.modelCodeEdit ?? null) };
+}
+
+/** Η πρόταση όπως τη βλέπει ο αγωγός: η καθαρή ανάγνωση **με** τις διορθώσεις του ανθρώπου (§5.5.2 Β6). */
+const effectiveGroup = (group: ExtractedGroup, current: ImportProposalDefinition | null): ExtractedGroup =>
+  applyHumanEdits(group, current?.edits ?? [], current?.modelCodeEdit ?? null);
 
 const planFields = (plan: PlannedProposal) => ({
   familyId: plan.familyId,
@@ -49,15 +59,27 @@ const planFields = (plan: PlannedProposal) => ({
   violations: plan.violations,
 });
 
+/** Η αναθεώρηση της πρότασης πάνω στην οποία διαβάστηκαν οι διορθώσεις· `null` = δεν υπήρχε. */
+type SeenRevision = number | null;
+
 /**
  * Ίδια ομάδα ⇒ ίδιο έγγραφο. Εφαρμοσμένη ή απορριφθείσα πρόταση **δεν** ξαναγράφεται: η απόφαση του ανθρώπου μένει. Σε εκκρεμή, οι
- * ανθρώπινες αποφάσεις πεδίων **επιβιώνουν** όσο η τιμή δεν άλλαξε (`carryDecisions`), όπως στη διόρθωση: η ξαναερμηνεία πίνακα (Β3),
- * η αναβάθμιση σελίδας (Β3.1) και ο επανασχεδιασμός της πρότασης τιμών (Β4 Δ5) δεν σβήνουν ό,τι αποφάσισε ο άνθρωπος.
+ * ανθρώπινες αποφάσεις πεδίων **επιβιώνουν** όσο η τιμή δεν άλλαξε (`carryDecisions`), και οι **διορθώσεις** του επιβιώνουν
+ * αυτούσιες (§5.5.2 Β6): η ξαναερμηνεία πίνακα (Β3), η αναβάθμιση σελίδας (Β3.1) και ο επανασχεδιασμός της πρότασης τιμών (Β4 Δ5)
+ * δεν σβήνουν ό,τι έγραψε ο άνθρωπος. Το `extracted` μένει **καθαρή** ανάγνωση. Διόρθωση που μπήκε ανάμεσα στην ανάγνωση και τη
+ * συναλλαγή ⇒ `revisionMismatch`, και ο `proposeGroup` ξαναπροσπαθεί με τον νέο κατάλογο: ποτέ σχέδιο πάνω σε παλιές διορθώσεις.
  */
-async function stageGroup(scope: CatalogTx, batch: StoredCatalogRecord<ImportBatchDefinition>, group: ExtractedGroup, plan: PlannedProposal): Promise<StoredImportProposal> {
+async function stageGroup(
+  scope: CatalogTx,
+  batch: StoredCatalogRecord<ImportBatchDefinition>,
+  group: ExtractedGroup,
+  plan: PlannedProposal,
+  seen: SeenRevision,
+): Promise<StoredImportProposal> {
   const key = importProposalKey(batch.id, group.groupKey);
   const { target, current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', key);
   if (current !== null && current.status !== 'pending') return current;
+  if ((current?.revision ?? null) !== seen) throw new CatalogWriteError('revisionMismatch', [], { currentRevision: current?.revision ?? 0 });
   const rows = current === null ? plan.rows : carryDecisions(current.rows, plan.rows);
   const definition: ImportProposalDefinition = {
     batchId: batch.id,
@@ -69,22 +91,42 @@ async function stageGroup(scope: CatalogTx, batch: StoredCatalogRecord<ImportBat
     appliedAt: null,
     appliedBy: null,
     ...planFields({ ...plan, rows }),
+    ...humanEditFields(current?.edits ?? [], current?.modelCodeEdit ?? null),
   };
   return current === null ? stageCreate(scope, 'importProposal', target, definition) : stageReplace(scope, 'importProposal', current, definition);
+}
+
+/** Πόσες φορές ξαναπροσπαθεί ο `proposeGroup` όταν μπει διόρθωση ανάμεσα στην ανάγνωση και τη συναλλαγή. */
+const PROPOSE_ATTEMPTS = 3;
+
+async function proposeOnce(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<StoredImportProposal> {
+  const seen = await runCatalogReadOnly(ctx, async (scope) => {
+    const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
+    const { current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(batchId, group.groupKey));
+    const pending = current?.status === 'pending' ? current : null;
+    return { revision: current?.revision ?? null, resolved: await resolveGroupIdentity(scope, batch.target, effectiveGroup(group, pending)) };
+  });
+  const base = await readImportBase(ctx, seen.resolved.modelCode === null ? null : suggestCatalogCode(seen.resolved.modelCode));
+  return runCatalogTransaction(ctx, async (scope) => {
+    const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
+    assertImportBatchOpen(batch);
+    return stageGroup(scope, batch, group, await planProposal(scope, batch, seen.resolved, base), seen.revision);
+  });
 }
 
 /**
  * Μία ομάδα σε μία συναλλαγή: σχέδιο απέναντι στα ζωντανά + εγγραφή. Η παρτίδα ελέγχεται **μέσα** στη συναλλαγή: ανάγνωση σελίδας
  * που ήταν ήδη σε εξέλιξη όταν πατήθηκε «Εγκατάλειψη» δεν γεννά πρόταση σε τελειωμένη παρτίδα (ADR-934 Ε3, η σειρά με την απόσυρση).
+ * Το `group` είναι **καθαρή** ανάγνωση: οι διορθώσεις του ανθρώπου μπαίνουν εδώ, από τον κατάλογο της πρότασης (§5.5.2 Β6).
  */
 export async function proposeGroup(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<StoredImportProposal> {
-  const resolved = await runCatalogReadOnly(ctx, async (scope) => resolveGroupIdentity(scope, (await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId)).target, group));
-  const base = await readImportBase(ctx, resolved.modelCode === null ? null : suggestCatalogCode(resolved.modelCode));
-  return runCatalogTransaction(ctx, async (scope) => {
-    const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
-    assertImportBatchOpen(batch);
-    return stageGroup(scope, batch, resolved, await planProposal(scope, batch, resolved, base));
-  });
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await proposeOnce(ctx, batchId, group);
+    } catch (error) {
+      if (attempt >= PROPOSE_ATTEMPTS || !(error instanceof CatalogWriteError) || error.kind !== 'revisionMismatch') throw error;
+    }
+  }
 }
 
 /**
@@ -125,24 +167,6 @@ async function retireStaleProposals(ctx: AuthContext, batchId: string, kept: Rea
   });
 }
 
-const fieldAddress = (rowKey: string, targetKey: string): string => `${rowKey}\u0000${targetKey}`;
-
-function editedCells(rowKey: string, cells: readonly ExtractedCell[], edits: ReadonlyMap<string, string>): ExtractedCell[] {
-  return cells.map((cell) => {
-    const text = edits.get(fieldAddress(rowKey, importTargetKey(cell.target)));
-    if (text === undefined) return cell;
-    // Η αμφισβητούμενη μονάδα δεν ντύνει ό,τι έγραψε ο άνθρωπος: γυμνός αριθμός εκεί ξαναζητά μονάδα.
-    const unitDoubted = cell.flags.some((flag) => flag.code === 'unitUnconfirmed');
-    return { ...cell, text: text.trim() === '' ? null : text, confidence: 1, flags: [], unitCode: unitDoubted ? null : cell.unitCode };
-  });
-}
-
-function editedGroup(group: ExtractedGroup, inputs: readonly ImportFieldEditInput[], modelCode: string | null): ExtractedGroup {
-  const edits = new Map(inputs.map((edit) => [fieldAddress(edit.rowKey, edit.targetKey), edit.text]));
-  const rows = group.rows.map((row): ExtractedRow => ({ ...row, cells: editedCells(row.rowKey, row.cells, edits) }));
-  return { ...group, modelCode: modelCode ?? group.modelCode, rows, sharedCells: editedCells(`model:${group.groupKey}`, group.sharedCells, edits) };
-}
-
 /**
  * Απόφαση που ισχύει ακόμη: ίδια εισερχόμενη τιμή με αυτή πάνω στην οποία πάρθηκε. Η προέλευση (§5.5.2 Α1) ταξιδεύει **μαζί**
  * με την απόφαση: ανθρώπινη απόφαση που κρατήθηκε μένει ανθρώπινη. Απόφαση του **κανόνα** δεν μεταφέρεται: ο κανόνας ξανακρίνει με
@@ -181,18 +205,46 @@ async function readPendingProposal(scope: CatalogTx, id: string, expectedRevisio
   return proposal;
 }
 
+/**
+ * Οι διορθώσεις του αιτήματος πάνω στον κατάλογο της πρότασης (§5.5.2 Β6). Η πηγή μένει ανέγγιχτη· η διορθωμένη τιμή έχει
+ * βεβαιότητα 1 (την είδε άνθρωπος). Το ίδιο κελί της πρότασης μετά: διόρθωση = **ανθρώπινη** αποδοχή της (`withEditDecisions`).
+ */
+function editedProposal(proposal: ImportProposalDefinition, request: UpdateImportProposalRequest, stamp: EditStamp) {
+  const edits = recordEdits(proposal.edits ?? [], request.edits, proposal.extracted, stamp);
+  const modelCodeEdit = recordModelCodeEdit(proposal.modelCodeEdit ?? null, request.modelCode, proposal.extracted, stamp);
+  return { edits, modelCodeEdit, group: applyHumanEdits(proposal.extracted, edits, modelCodeEdit) };
+}
+
+/** Πεδίο που ο άνθρωπος μόλις διόρθωσε (όχι επανέφερε) έχει απόφαση **του**: την τιμή του τη δέχεται, εκτός αν ο κριτής βρει εύρημα. */
+function withEditDecisions(rows: readonly ImportProposalRow[], request: UpdateImportProposalRequest): ImportProposalRow[] {
+  const typed = new Set(request.edits.filter((edit) => edit.revert !== true).map((edit) => fieldAddress(edit.rowKey, edit.targetKey)));
+  if (typed.size === 0) return [...rows];
+  return rows.map((row) => ({
+    ...row,
+    fields: row.fields.map((field) => {
+      const ours = typed.has(fieldAddress(row.rowKey, importTargetKey(field.target)));
+      return ours && field.incoming !== null && field.issues.length === 0 && field.status !== 'unchanged' ? { ...field, decision: 'accept' as const, decisionBy: 'human' as const } : field;
+    }),
+  }));
+}
+
 /** `PUT /api/catalog/import-proposals/[id]` — αποφάσεις και διορθώσεις. Ο επανυπολογισμός τρέχει κάθε φορά απέναντι στα ζωντανά. */
 export async function updateImportProposal(ctx: AuthContext, id: string, request: UpdateImportProposalRequest): Promise<StoredImportProposal> {
+  const stamp = { by: ctx.uid, at: nowISO() };
   const preview = await runCatalogTransaction(ctx, (scope) => readOwned<ImportProposalDefinition>(scope, 'importProposal', id));
   await assertPurposeAuthority(ctx, preview.purpose);
-  const group = editedGroup(preview.extracted, request.edits, request.modelCode);
   const base = await readImportBase(ctx, preview.modelCode);
   return runCatalogTransaction(ctx, async (scope) => {
     const proposal = await readPendingProposal(scope, id, request.expectedRevision);
+    const edited = editedProposal(proposal, request, stamp);
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', proposal.batchId);
-    const plan = await planProposal(scope, batch, group, base);
-    const rows = withDecisions(carryDecisions(proposal.rows, plan.rows), request);
-    return stageReplace(scope, 'importProposal', proposal, { ...proposalDefinitionOf(proposal), ...planFields({ ...plan, rows }), extracted: group });
+    const plan = await planProposal(scope, batch, edited.group, base);
+    const rows = withDecisions(withEditDecisions(carryDecisions(proposal.rows, plan.rows), request), request);
+    return stageReplace(scope, 'importProposal', proposal, {
+      ...coreDefinitionOf(proposal),
+      ...planFields({ ...plan, rows }),
+      ...humanEditFields(edited.edits, edited.modelCodeEdit),
+    });
   });
 }
 

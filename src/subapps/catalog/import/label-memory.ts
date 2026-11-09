@@ -26,7 +26,7 @@ import { lineDecisionOf, tableOverridesOf } from './page-line-overrides';
 
 /** Ίδια απόφαση: ίδιο είδος και ίδιος στόχος. */
 export function sameLineDecision(a: ImportLineDecision, b: ImportLineDecision): boolean {
-  if (a.kind === 'attribute') return b.kind === 'attribute' && a.attributeId === b.attributeId;
+  if (a.kind === 'attribute' || a.kind === 'axis') return (b.kind === 'attribute' || b.kind === 'axis') && b.kind === a.kind && a.attributeId === b.attributeId;
   if (a.kind === 'price') return b.kind === 'price' && a.unitCode === b.unitCode;
   return b.kind === 'ignore';
 }
@@ -88,7 +88,7 @@ export interface MemoryApplication {
 }
 
 function applicable(decision: ImportLineDecision, application: MemoryApplication): boolean {
-  if (decision.kind === 'attribute') return application.knownAttributeIds.has(decision.attributeId);
+  if (decision.kind === 'attribute' || decision.kind === 'axis') return application.knownAttributeIds.has(decision.attributeId);
   if (decision.kind === 'price') return application.pricesEnabled;
   return true;
 }

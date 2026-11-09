@@ -18,6 +18,7 @@ import type { ImportBatchPages } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_PAGE_ESTIMATED_COST_USD } from '@/subapps/catalog/vocabulary/catalog-import';
 import { createQueueState, overlayView, queuedDecisionsOf, useProposalChangeQueue } from './proposal-change-queue';
+import { useAxisOptions } from './use-axis-options';
 import { useLineDecisions } from './use-line-decisions';
 import { usePageUpgrade } from './use-page-upgrade';
 import { useSupplierMemory } from './use-supplier-memory';
@@ -109,7 +110,8 @@ export function useImportBatch(batchId: string) {
   const upgrade = usePageUpgrade({ view, busy: reader.reading, accept, setFailure });
   const priceTarget = usePriceTarget(view, accept, setFailure);
   const supplier = useSupplierMemory({ view, accept, setFailure });
-  return { view, failure, reload, discard, ...reader, upgrade, ...changes, ...useLineDecisions(changes.line), ...priceTarget, supplier };
+  const axisOptions = useAxisOptions(view?.batch.id ?? null, accept, setFailure);
+  return { view, failure, reload, discard, ...reader, upgrade, ...changes, ...useLineDecisions(changes.line), ...priceTarget, supplier, axisOptions };
 }
 
 /** §5.5.2 Β4 Δ1: ο τιμοκατάλογος της παρτίδας. Η απάντηση είναι όλη η όψη, με τις ξανασχεδιασμένες προτάσεις τιμών. */

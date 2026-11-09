@@ -125,6 +125,8 @@ export const CATALOG_API = {
     lines: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/lines`,
     /** Αναβάθμιση σελίδας στην τρέχουσα έκδοση παραγωγής, χωρίς AI (§5.5.2 Β3.1). */
     reinterpret: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/reinterpret`,
+    /** Νέες τιμές άξονα από τον έλεγχο + δέσιμο της γραμμής τους, χωρίς AI (§5.5.2 Β7). */
+    axisOptions: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/axis-options`,
     /** Η πρόχειρη έκδοση τιμοκαταλόγου της παρτίδας ιδιοτήτων (§5.5.2 Β4). */
     priceTarget: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/price-target`,
     /** Ο προμηθευτής της παρτίδας και ο διακόπτης μάθησης (§5.5.2 Β5). */

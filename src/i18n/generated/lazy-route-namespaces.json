@@ -528,6 +528,19 @@
     "procurement",
     "quotes"
   ],
+  "CatalogAxisOptions": [
+    "catalog-import",
+    "common",
+    "common-account",
+    "common-actions",
+    "common-empty-states",
+    "common-navigation",
+    "common-photos",
+    "common-sales",
+    "common-shared",
+    "common-status",
+    "common-validation"
+  ],
   "CatalogEditionReaderDialog": [
     "common",
     "common-account",

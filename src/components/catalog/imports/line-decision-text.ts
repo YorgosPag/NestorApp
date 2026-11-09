@@ -32,10 +32,12 @@ export function useLineDecisionText(): LineDecisionText {
     if (decision.kind === 'ignore') return t('review.lineDecision.ignore');
     if (decision.kind === 'price') return t('review.lineDecision.price', { unit: decision.unitCode });
     const attribute = attributes.items.find((item) => item.id === decision.attributeId);
-    return attribute ? text(attribute.labels) || attribute.code : decision.attributeId;
+    const name = attribute ? text(attribute.labels) || attribute.code : decision.attributeId;
+    // §5.5.2 Β7: η γραμμή δίνει **και** τον άξονα — ό,τι άλλο έδινε μένει.
+    return decision.kind === 'axis' ? t('review.lineDecision.axis', { attribute: name }) : name;
   }, [attributes.items, t, text]);
   // Μόνο βιβλιοθήκη που φορτώθηκε κρίνει «δεν υπάρχει»: φόρτωση ή αποτυχία δεν είναι απόδειξη απουσίας.
   const known = useCallback((decision: ImportLineDecision): boolean =>
-    decision.kind !== 'attribute' || attributes.state !== 'ready' || attributes.items.some((item) => item.id === decision.attributeId), [attributes.items, attributes.state]);
+    (decision.kind !== 'attribute' && decision.kind !== 'axis') || attributes.state !== 'ready' || attributes.items.some((item) => item.id === decision.attributeId), [attributes.items, attributes.state]);
   return { of, known };
 }

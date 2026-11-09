@@ -168,6 +168,13 @@
     },
     "modelCode": "Model code",
     "setModelCode": "Set",
+    "modelCodeByYou": "You set this model code.",
+    "removeModelCode": "Remove code",
+    "editValue": "Correct the value of “{field}”",
+    "editedByYou": "Corrected by you · the PDF said “{source}”",
+    "editedFromEmpty": "Corrected by you · the PDF was empty",
+    "revertEdit": "Restore the PDF value",
+    "keepEdit": "Keep my correction",
     "uncheckable": "not checkable: the page has no text",
     "decisionFor": "Decision for “{field}”",
     "decisionPending": "Pending",
@@ -221,7 +228,10 @@
       "refusalProposalClosed": "The proposal for this table has already been applied or rejected.",
       "refusalLineUnknown": "The line or the attribute was not found in the table or the family.",
       "refusalPriceTargetMissing": "This batch has no price list. Choose a draft version first.",
-      "refusalPriceLineTaken": "This table already has a price line. Undo it first."
+      "refusalPriceLineTaken": "This table already has a price line. Undo it first.",
+      "refusalAxisOptionsInvalid": "The new values do not hold: check codes and labels. Nothing was saved.",
+      "refusalAxisLineMissing": "No line of the table gives an axis value for every variant, even with the new values. Nothing was saved.",
+      "refusalAxisLineAmbiguous": "More than one line of the table gives an axis value. It is not chosen silently; nothing was saved."
     },
     "decided": {
       "title": "Decided lines",
@@ -240,7 +250,32 @@
     },
     "lineDecision": {
       "ignore": "Ignore",
-      "price": "Price per {unit}"
+      "price": "Price per {unit}",
+      "axis": "Also axis → {attribute}"
+    },
+    "axis": {
+      "title": "New axis values",
+      "hint": "The variants print codes the axis does not recognise.",
+      "open": "New axis values",
+      "lead": "The values are added to the family axis and the code line is bound to it. Each variant shows what will be read with the new values; saving opens when all of them are read.",
+      "notAxis": "The axis of this proposal is not an option list of the family. Its values are changed from the attributes tab.",
+      "newValues": "New values",
+      "nothingNew": "All values already exist; only the code line will be bound to the axis.",
+      "label": "Label",
+      "code": "Code",
+      "proof": "What will be read",
+      "printed": "PDF prints",
+      "reads": "Axis value",
+      "unmatched": "Not recognised",
+      "ambiguous": "Ambiguous: {candidates}",
+      "prefixOf": "Read as the existing value “{option}” only because the code starts that way. If it is a different device with the same number, do not save.",
+      "corrected": "You corrected the code to “{corrected}”: after saving, correct this variant’s axis value too.",
+      "save": "Save and bind",
+      "issueCodeInvalid": "The code needs lowercase Latin letters, digits and _, starting with a letter.",
+      "issueCodeTaken": "The code already exists with another label.",
+      "issueCodeRepeated": "The code is repeated.",
+      "issueLabelMissing": "A label is required.",
+      "issueLabelRepeated": "The label is repeated."
     }
   },
   "issues": {
@@ -260,7 +295,8 @@
     "unknownKeepsValue": "The source says “unknown”, but the catalog knows the value. The value stays.",
     "noValueReasonUnreadable": "This text is not a reason for a missing value. Write notApplicable or unknown.",
     "identityKeysDisagree": "The item code and the GTIN of this row point to different catalogue items. Correct the source.",
-    "awaitsAttributes": "The code “{code}” is created by the attributes proposal of this table. Its price waits for that approval."
+    "awaitsAttributes": "The code “{code}” is created by the attributes proposal of this table. Its price waits for that approval.",
+    "editSourceChanged": "You corrected this to “{edited}” when the PDF said “{was}”. The PDF now says “{now}”: keep your correction or accept the PDF value."
   },
   "assetFetch": {
     "title": "Media from links",

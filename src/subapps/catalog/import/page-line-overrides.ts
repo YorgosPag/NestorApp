@@ -83,19 +83,24 @@ export function applyLineOverrides(
   knownCodes: ReadonlySet<string>,
 ): OverriddenMapping {
   const chosen = new Map<number, RawLineMapping>();
+  const axes: RawLineMapping[] = [];
   const priceLines: PagePriceLine[] = [];
   const unknownAttributeIds: string[] = [];
   for (const { line, decision } of overrides) {
     if (decision.kind === 'price') priceLines.push({ line, unitCode: decision.unitCode });
-    if (decision.kind !== 'attribute') continue;
+    if (decision.kind !== 'attribute' && decision.kind !== 'axis') continue;
     const code = codeById.get(decision.attributeId);
     if (code === undefined) unknownAttributeIds.push(decision.attributeId);
+    else if (decision.kind === 'axis') axes.push({ line, attribute: code, confidence: HUMAN_CONFIDENCE });
     else chosen.set(line, { line, attribute: code, confidence: HUMAN_CONFIDENCE });
   }
   const priced = new Set(priceLines.map(({ line }) => line));
   const kept = mapping.lines.filter((entry) => !chosen.has(entry.line) && !priced.has(entry.line));
   const staleCodes = [...new Set(kept.flatMap((entry) => (entry.attribute !== null && !knownCodes.has(entry.attribute) ? [entry.attribute] : [])))];
-  return { mapping: { ...mapping, lines: [...kept, ...chosen.values()] }, staleCodes, unknownAttributeIds, priceLines };
+  const lines = [...kept, ...chosen.values()];
+  // §5.5.2 Β7: ο άξονας **προστίθεται** στη γραμμή· ίδιο δέσιμο που υπάρχει ήδη δεν διπλασιάζει τα κελιά.
+  const added = axes.filter((axis) => !priced.has(axis.line) && !lines.some((entry) => entry.line === axis.line && entry.attribute === axis.attribute));
+  return { mapping: { ...mapping, lines: [...lines, ...added] }, staleCodes, unknownAttributeIds, priceLines };
 }
 
 /** Οι γραμμές χωρίς πεδίο που περιμένουν ακόμη απόφαση: όσες δεν αγνοήθηκαν ρητά. */

@@ -11,6 +11,7 @@ import { CATALOG_API, EXPECTED_REVISION_PARAM, LABEL_MEMORY_SUPPLIER_PARAM } fro
 import type { ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { ImportAssetView } from '@/subapps/catalog/types/catalog-media';
 import type {
+  AddImportAxisOptionsRequest,
   ClearLabelMemoryResult,
   CreateImportBatchRequest,
   FetchImportAssetRequest,
@@ -53,6 +54,10 @@ export const readImportPage = (id: string, page: number): Promise<ImportBatchWir
 
 /** Απόφαση γραμμής πίνακα και ξαναερμηνεία χωρίς AI (§5.5.2 Β3): επιστρέφει όλη την όψη και αν αρνήθηκε, με λόγο. */
 export const setImportLine = (id: string, request: SetImportLineRequest): Promise<SetImportLineResult> => apiClient.post(CATALOG_API.imports.lines(id), request);
+
+/** Νέες τιμές άξονα από τον έλεγχο + δέσιμο της γραμμής τους (§5.5.2 Β7): όλη η όψη και αν αρνήθηκε, με λόγο. */
+export const addImportAxisOptions = (id: string, request: AddImportAxisOptionsRequest): Promise<SetImportLineResult> =>
+  apiClient.post(CATALOG_API.imports.axisOptions(id), request);
 
 /** Αναβάθμιση μίας σελίδας στην τρέχουσα έκδοση παραγωγής, χωρίς AI (§5.5.2 Β3.1). Ιδεμπότητο: τρέχουσα σελίδα ⇒ καμία αλλαγή. */
 export const reinterpretImportPage = (id: string, page: number): Promise<ImportBatchDetailView> => apiClient.post(CATALOG_API.imports.reinterpret(id), { page });

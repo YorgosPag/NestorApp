@@ -9,6 +9,7 @@ import { HUMAN_LANGUAGES } from '@/i18n/languages';
 import { UOM_CODES } from '@/lib/uom/uom-registry';
 import type { ImportBatchTarget, ImportLineDecision, ImportProfileDefinition, ImportTarget } from '../../types/catalog-import';
 import type {
+  AddImportAxisOptionsRequest,
   AttachImportFileRequest,
   ClearLabelMemoryRequest,
   CreateImportBatchRequest,
@@ -114,6 +115,7 @@ const importLineDecisionSchema: z.ZodType<ImportLineDecision> = z.discriminatedU
   z.object({ kind: z.literal('attribute'), attributeId: entityIdSchema }),
   z.object({ kind: z.literal('price'), unitCode: z.enum(UOM_CODES) }),
   z.object({ kind: z.literal('ignore') }),
+  z.object({ kind: z.literal('axis'), attributeId: entityIdSchema }),
 ]);
 
 export const setImportLineBodySchema: z.ZodType<SetImportLineRequest> = z.object({
@@ -124,12 +126,21 @@ export const setImportLineBodySchema: z.ZodType<SetImportLineRequest> = z.object
   bind: z.enum(IMPORT_LINE_BIND_LEVELS).nullable(),
 });
 
+/** §5.5.2 Β7. Τον κωδικό και την ετικέτα τα κρίνει η απόδειξη (`withAxisOptions`) και ο γραφέας ιδιοτήτων· εδώ μόνο το σχήμα. */
+export const addImportAxisOptionsBodySchema: z.ZodType<AddImportAxisOptionsRequest> = z.object({
+  page: z.number().int().min(1),
+  table: z.string().min(1).max(TABLE_KEY_MAX),
+  attributeId: entityIdSchema,
+  expectedRevision: expectedRevisionSchema,
+  options: z.array(z.object({ code: z.string().max(100), label: z.string().max(CATALOG_LIMITS.maxLabelLength) })).max(CATALOG_LIMITS.maxSelectOptions),
+});
+
 const fieldAddress = { rowKey: z.string().min(1).max(200), targetKey: z.string().min(1).max(300) };
 
 export const updateImportProposalBodySchema: z.ZodType<UpdateImportProposalRequest> = z.object({
   expectedRevision: expectedRevisionSchema,
   decisions: z.array(z.object({ ...fieldAddress, decision: z.enum(['accept', 'reject']) })).max(MAX_FIELD_CHANGES),
-  edits: z.array(z.object({ ...fieldAddress, text: z.string().max(MAX_CELL_TEXT) })).max(MAX_FIELD_CHANGES),
+  edits: z.array(z.object({ ...fieldAddress, text: z.string().max(MAX_CELL_TEXT), revert: z.boolean().optional() })).max(MAX_FIELD_CHANGES),
   modelCode: z.string().max(CATALOG_LIMITS.maxLabelLength).nullable(),
 });
 
