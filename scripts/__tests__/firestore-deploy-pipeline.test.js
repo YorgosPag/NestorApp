@@ -28,7 +28,7 @@ const {
   readWorkflowPermissions,
 } = require('../lib/ci/workflow-meta');
 const { tier1Alert } = require('../lib/ci/health-state');
-const { composeMessage, sendTelegram } = require('../lib/ci/telegram');
+const { composeMessage, sendTelegram, MAX_ATTEMPTS } = require('../lib/ci/telegram');
 const { NETCUP, TIMING: NETCUP_TIMING } = require('../lib/ci/netcup-release');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -295,6 +295,39 @@ describe('ADR-865 §11 — η γραμμή παραγωγής', () => {
       expect((await sendTelegram('x', { env, fetchImpl: async () => ({ ok: false, status: 500 }) })).sent).toBe(false);
       expect((await sendTelegram('x', { env, fetchImpl: async () => { throw new Error('down'); } })).sent).toBe(false);
       expect((await sendTelegram('x', { env, fetchImpl: async () => ({ ok: true, status: 200 }) })).sent).toBe(true);
+    });
+
+    describe('επανάληψη (run 42613191252: fetch failed στις 14:01, timeout-αλλά-παραδόθηκε στις 15:05)', () => {
+      const env = { TELEGRAM_BOT_TOKEN: 't', TELEGRAM_CHAT_ID: 'c' };
+      const noSleep = async () => {};
+      const connectFailure = (code) => Object.assign(new TypeError('fetch failed'), { cause: { code } });
+
+      it('αποτυχία ΣΥΝΔΕΣΗΣ ⇒ ξαναδοκιμάζει και στέλνει', async () => {
+        let calls = 0;
+        const fetchImpl = async () => {
+          calls += 1;
+          if (calls < 3) throw connectFailure('ECONNREFUSED');
+          return { ok: true, status: 200 };
+        };
+        expect(await sendTelegram('x', { env, fetchImpl, sleep: noSleep })).toEqual({ sent: true, reason: null });
+        expect(calls).toBe(3);
+      });
+
+      it('σταματά στο MAX_ATTEMPTS', async () => {
+        let calls = 0;
+        const fetchImpl = async () => { calls += 1; throw connectFailure('ENOTFOUND'); };
+        expect((await sendTelegram('x', { env, fetchImpl, sleep: noSleep })).sent).toBe(false);
+        expect(calls).toBe(MAX_ATTEMPTS);
+      });
+
+      it('🔴 timeout / ECONNRESET ⇒ ΚΑΜΙΑ επανάληψη (το Telegram μπορεί να το παρέδωσε ⇒ διπλό μήνυμα)', async () => {
+        for (const error of [Object.assign(new Error('aborted'), { name: 'TimeoutError' }), connectFailure('ECONNRESET')]) {
+          let calls = 0;
+          const fetchImpl = async () => { calls += 1; throw error; };
+          expect((await sendTelegram('x', { env, fetchImpl, sleep: noSleep })).sent).toBe(false);
+          expect(calls).toBe(1);
+        }
+      });
     });
   });
 });

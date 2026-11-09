@@ -17,7 +17,28 @@
  */
 
 const API = 'https://api.telegram.org';
-const TIMEOUT_MS = 15_000;
+/**
+ * 2026-11-09: 15″ → 30″. Μετρημένο στο run 42613191252: το «Deploy completato» **έφτασε** στο
+ * Telegram, αλλά η απάντηση άργησε >15″ και καταγράφηκε ως αποτυχία (timeout ≠ «δεν στάλθηκε»).
+ */
+const TIMEOUT_MS = 30_000;
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 2_000;
+
+/**
+ * Σφάλματα της **φάσης σύνδεσης** (undici `error.cause.code`): το αίτημα **δεν** έφυγε ποτέ, άρα η
+ * επανάληψη **δεν** μπορεί να διπλασιάσει μήνυμα. ⚠️ ΟΧΙ timeout ή `ECONNRESET`: εκεί το Telegram μπορεί
+ * να το έχει ήδη παραδώσει — επανάληψη = διπλό μήνυμα (ακριβώς η περίπτωση του run 42613191252).
+ */
+const CONNECT_PHASE_CODES = new Set([
+  'ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ENETUNREACH', 'EHOSTUNREACH', 'UND_ERR_CONNECT_TIMEOUT',
+]);
+
+function isConnectPhaseFailure(error) {
+  return CONNECT_PHASE_CODES.has(error?.cause?.code);
+}
+
+const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
 const ICON = Object.freeze({ success: '✅', failure: '❌', cancelled: '⚪', skipped: '⚪', info: 'ℹ️' });
 
@@ -43,21 +64,36 @@ function composeMessage({ status = 'info', title, lines = [], link = null }) {
 /**
  * @returns {Promise<{sent:boolean, reason:string|null}>}
  */
-async function sendTelegram(text, { env = process.env, fetchImpl = fetch } = {}) {
+async function postOnce(url, body, fetchImpl) {
+  const response = await fetchImpl(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  return response.ok ? { sent: true, reason: null } : { sent: false, reason: `Telegram HTTP ${response.status}` };
+}
+
+/**
+ * Επανάληψη **μόνο** σε αποτυχία σύνδεσης (`isConnectPhaseFailure`), έως `MAX_ATTEMPTS`.
+ * @returns {Promise<{sent:boolean, reason:string|null}>}
+ */
+async function sendTelegram(text, { env = process.env, fetchImpl = fetch, sleep = wait } = {}) {
   const token = env.TELEGRAM_BOT_TOKEN;
   const chatId = env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return { sent: false, reason: 'λείπουν TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID' };
-  try {
-    const response = await fetchImpl(`${API}/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    return response.ok ? { sent: true, reason: null } : { sent: false, reason: `Telegram HTTP ${response.status}` };
-  } catch (error) {
-    return { sent: false, reason: `Telegram: ${error.message}` };
+  const url = `${API}/bot${token}/sendMessage`;
+  const body = JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true });
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await postOnce(url, body, fetchImpl);
+    } catch (error) {
+      if (!isConnectPhaseFailure(error) || attempt >= MAX_ATTEMPTS) {
+        return { sent: false, reason: `Telegram: ${error.message} (προσπάθεια ${attempt}/${MAX_ATTEMPTS})` };
+      }
+      await sleep(RETRY_DELAY_MS * attempt);
+    }
   }
 }
 
-module.exports = { composeMessage, sendTelegram, runUrlOf, escapeHtml, ICON };
+module.exports = { composeMessage, sendTelegram, runUrlOf, escapeHtml, ICON, MAX_ATTEMPTS };
