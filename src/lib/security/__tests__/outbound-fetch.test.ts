@@ -35,6 +35,13 @@ function chunkedBody(chunks: number, size: number): { readonly body: ReadableStr
   return { body, cancelled: () => cancelled };
 }
 
+/**
+ * Πηγή που **δεν** έχει τελειώσει όταν ο καλών παίρνει το σώμα (800 bytes σε 100 κομμάτια, κάτω από κάθε όριο εδώ):
+ * μόνο σε ανοιχτή πηγή φαίνεται αν η ακύρωση **φτάνει** στη σύνδεση. Μία πηγή του ενός κομματιού την κλείνει ήδη η
+ * προανάγνωση της ροής (highWaterMark), και η ακύρωση κλειστής ροής δεν καλεί ποτέ το `cancel` της.
+ */
+const openSource = (): ReturnType<typeof chunkedBody> => chunkedBody(100, 8);
+
 async function drain(stream: ReadableStream<Uint8Array>): Promise<number> {
   const reader = stream.getReader();
   let total = 0;
@@ -43,6 +50,17 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<number> {
 }
 
 const calledUrls = (): string[] => mockFetch.mock.calls.map(([url]) => String(url));
+
+/**
+ * Το συμβόλαιο του `fetchGuardedStream`: ο καλών **διαβάζει ή ακυρώνει** το σώμα — μόνο τότε σβήνουν τα χρονόμετρα
+ * (αδράνεια + πράξη) και κλείνει η σύνδεση. Τεστ που το αφήνει ανέγγιχτο κρατά ζωντανούς timers (μετρημένο: ο worker
+ * του jest δεν τερμάτιζε). Ελέγχει και ότι η ακύρωση **φτάνει** στη σύνδεση της πηγής.
+ */
+async function releaseBody(result: Awaited<ReturnType<typeof fetchGuardedStream>>, source: { readonly cancelled: () => boolean }): Promise<void> {
+  if (!result.ok || result.notModified) throw new Error('αναμενόταν σώμα');
+  await result.body.cancel();
+  expect(source.cancelled()).toBe(true);
+}
 
 beforeEach(() => {
   mockLookup.mockReset();
@@ -115,29 +133,35 @@ describe('fetchGuardedStream — αναβάθμιση http → https', () => {
   });
 
   it('η αναβάθμιση πετυχαίνει ⇒ ένα αίτημα, με https, `secure`', async () => {
-    mockFetch.mockResolvedValue(new Response(chunkedBody(1, 10).body, { status: 200 }));
+    const source = openSource();
+    mockFetch.mockResolvedValue(new Response(source.body, { status: 200 }));
 
     const result = await fetchGuardedStream('http://cdn.example/a.pdf', { maxBytes: 1000, scheme: 'https-upgrade' });
 
     expect(calledUrls()).toEqual(['https://cdn.example/a.pdf']);
     expect(result).toMatchObject({ ok: true, transport: 'secure' });
+    await releaseBody(result, source);
   });
 
   it('το https αποτυγχάνει στη μεταφορά ⇒ γυρίζει στο http, `insecure`', async () => {
-    mockFetch.mockRejectedValueOnce(new TypeError('fetch failed')).mockResolvedValueOnce(new Response(chunkedBody(1, 10).body, { status: 200 }));
+    const source = openSource();
+    mockFetch.mockRejectedValueOnce(new TypeError('fetch failed')).mockResolvedValueOnce(new Response(source.body, { status: 200 }));
 
     const result = await fetchGuardedStream('http://cdn.example/a.pdf', { maxBytes: 1000, scheme: 'https-upgrade' });
 
     expect(calledUrls()).toEqual(['https://cdn.example/a.pdf', 'http://cdn.example/a.pdf']);
     expect(result).toMatchObject({ ok: true, transport: 'insecure' });
+    await releaseBody(result, source);
   });
 
   it('το https δίνει 404 ⇒ γυρίζει στο http (όπως ο Chrome)', async () => {
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 404 })).mockResolvedValueOnce(new Response(chunkedBody(1, 10).body, { status: 200 }));
+    const source = openSource();
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 404 })).mockResolvedValueOnce(new Response(source.body, { status: 200 }));
 
     const result = await fetchGuardedStream('http://cdn.example/a.pdf', { maxBytes: 1000, scheme: 'https-upgrade' });
 
     expect(result).toMatchObject({ ok: true, transport: 'insecure' });
+    await releaseBody(result, source);
   });
 
   it('η διεύθυνση είναι ιδιωτική ⇒ **δεν** ξαναδοκιμάζει με http', async () => {
@@ -150,13 +174,15 @@ describe('fetchGuardedStream — αναβάθμιση http → https', () => {
   });
 
   it('ανακατεύθυνση https → http ⇒ `insecure`', async () => {
+    const source = openSource();
     mockFetch
       .mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: 'http://mirror.example/a.pdf' } }))
-      .mockResolvedValueOnce(new Response(chunkedBody(1, 10).body, { status: 200 }));
+      .mockResolvedValueOnce(new Response(source.body, { status: 200 }));
 
     const result = await fetchGuardedStream('https://cdn.example/a.pdf', { maxBytes: 1000, maxRedirects: 3, scheme: 'https-upgrade' });
 
     expect(result).toMatchObject({ ok: true, transport: 'insecure' });
+    await releaseBody(result, source);
   });
 });
 
