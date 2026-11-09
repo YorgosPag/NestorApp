@@ -18,12 +18,13 @@ import { CircleDot, Euro, EyeOff, Link2, LoaderCircle, Plus, TriangleAlert, Undo
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { lineDecisionOf, lineKeyOf } from '@/subapps/catalog/import/page-line-overrides';
-import type { ImportLineOverride, ImportPageUnmappedLine } from '@/subapps/catalog/types/catalog-import';
-import type { ImportProposalWire, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportLineDecision, ImportLineOverride, ImportPageUnmappedLine } from '@/subapps/catalog/types/catalog-import';
+import type { ImportMemoryHint, ImportProposalWire, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { useCatalogCanManage } from '../shared/catalog-ui-hooks';
 import { LINE_REFUSAL_KEYS, LINE_STATE_KEYS, useImportText, type LineState } from './import-text';
 import { LineAttributeToolsSlot, PriceLineDialogSlot } from './import-surfaces';
 import type { LineToolMode } from './line-tool-props';
+import { MemoryHintNote } from './MemoryHintNote';
 import type { LineActivity } from './use-line-decisions';
 
 const STATE_LOOK: Readonly<Record<LineState, { readonly variant: 'muted' | 'info' | 'warning' | 'destructive' | 'outline'; readonly icon: LucideIcon }>> = {
@@ -55,12 +56,16 @@ export interface UnmappedLinesProps {
   readonly decidable: boolean;
   /** §5.5.2 Β4: η παρτίδα έχει τιμοκατάλογο **και** ο άνθρωπος δικαίωμα τιμολόγησης ⇒ μια γραμμή μπορεί να γίνει τιμή. */
   readonly pricesEnabled?: boolean;
+  /** §5.5.2 Β5.2: τι προτείνει η μνήμη του προμηθευτή, ανά γραμμή (`lineKeyOf`). */
+  readonly memoryHints?: ReadonlyMap<string, ImportMemoryHint>;
 }
 
 interface LineRowProps {
   readonly line: ImportPageUnmappedLine;
   readonly state: LineState;
   readonly refusal: string | null;
+  readonly hint: ImportMemoryHint | undefined;
+  readonly onAccept: (decision: ImportLineDecision) => void;
   readonly active: boolean;
   readonly readOnly: boolean;
   readonly canManage: boolean;
@@ -100,15 +105,19 @@ function LineRow(props: LineRowProps) {
       </span>
       <span className="text-xs text-muted-foreground">{line.values.join(' · ')}</span>
       {refusal ? <span className="text-xs text-destructive" role="status">{refusal}</span> : null}
+      {props.hint ? <MemoryHintNote hint={props.hint} disabled={props.readOnly || state === 'saving'} onAccept={props.onAccept} /> : null}
       <LineActions {...props} />
     </li>
   );
 }
 
-export function ProposalUnmappedLines({ proposal, lines, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable, pricesEnabled = false }: UnmappedLinesProps) {
+export function ProposalUnmappedLines(props: UnmappedLinesProps) {
+  const { proposal, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable, pricesEnabled = false, memoryHints } = props;
   const { t } = useImportText();
   const canManage = useCatalogCanManage();
   const [tool, setTool] = useState<{ readonly line: ImportPageUnmappedLine; readonly mode: LineTool } | null>(null);
+  // §5.5.2 Β5.2: μόνο όσες περιμένουν απόφαση· οι αποφασισμένες (και οι αγνοημένες) ζουν στο `ProposalDecidedLines`, με την προέλευσή τους.
+  const lines = props.lines.filter((line) => lineDecisionOf(overrides, line) === null);
   if (lines.length === 0) return null;
   const readOnly = !decidable;
   const send = (line: ImportPageUnmappedLine, decision: SetImportLineRequest['decision'], bind: SetImportLineRequest['bind'] = null) =>
@@ -124,6 +133,7 @@ export function ProposalUnmappedLines({ proposal, lines, overrides, activity, ac
           return (
             <LineRow key={key} line={line} state={lineStateOf(current, lineDecisionOf(overrides, line))}
               refusal={current?.kind === 'refused' ? t(LINE_REFUSAL_KEYS[current.reason]) : null}
+              hint={memoryHints?.get(key)} onAccept={(decision) => send(line, decision)}
               active={key === activeLine} readOnly={readOnly} canManage={canManage} pricesEnabled={pricesEnabled}
               onFocus={() => onFocusLine(line)} onTool={(mode) => setTool({ line, mode })}
               onIgnore={(ignore) => send(line, ignore ? { kind: 'ignore' } : null)} />

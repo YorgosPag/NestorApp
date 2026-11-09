@@ -8,6 +8,7 @@ import 'server-only';
  * 🔑 **Καμία σιωπηλή εγγραφή** (Απόφαση 4): ο ορισμός δεν εφαρμόζει μνήμη στις σελίδες που διαβάστηκαν. Ισχύει από την επόμενη
  *    ανάγνωση, και οι εγκρίσεις από εδώ και πέρα μαθαίνουν για αυτόν τον προμηθευτή.
  * 🔑 Η επαφή πρέπει να υπάρχει στον χώρο (`partyIssues`, ίδιος κριτής με την τιμολόγηση). Ξένη ≡ ανύπαρκτη.
+ * 🔑 §5.5.2 Β5.2: μαζί και ο διακόπτης μάθησης (`learnLabels`, το `block_learning` του Akeneo): ρύθμιση της ίδιας μνήμης, ίδια πόρτα.
  * @module server/catalog/import-supplier.server
  */
 
@@ -28,13 +29,14 @@ function storeSupplier(ctx: AuthContext, id: string, request: SetImportSupplierR
     const { target } = current;
     if (target.purpose !== 'attributes') throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'supplierContactId' }]);
     const { supplierContactId } = request;
+    const learnLabels = request.learnLabels ?? target.learnLabels ?? true;
     if (supplierContactId !== null) assertNoIssues(await partyIssues(scope, { kind: 'contact', contactId: supplierContactId }, 'supplierContactId'));
-    if ((target.supplierContactId ?? null) === supplierContactId) return current;
-    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), target: { ...target, supplierContactId } });
+    if ((target.supplierContactId ?? null) === supplierContactId && (target.learnLabels ?? true) === learnLabels) return current;
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), target: { ...target, supplierContactId, learnLabels } });
   });
 }
 
-/** `PUT /api/catalog/imports/[id]/supplier` — ορισμός/αλλαγή/αφαίρεση του προμηθευτή, χωρίς ανάγνωση και χωρίς εφαρμογή μνήμης. */
+/** `PUT /api/catalog/imports/[id]/supplier` — ορισμός/αλλαγή/αφαίρεση του προμηθευτή και του διακόπτη μάθησης, χωρίς ανάγνωση και χωρίς εφαρμογή μνήμης. */
 export async function setImportSupplier(ctx: AuthContext, id: string, request: SetImportSupplierRequest): Promise<ImportBatchDetailView> {
   await storeSupplier(ctx, id, request);
   return readImportBatchDetail(ctx, id);

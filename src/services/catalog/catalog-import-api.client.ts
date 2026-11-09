@@ -7,17 +7,23 @@
  */
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { CATALOG_API } from '@/subapps/catalog/catalog-routes';
+import { CATALOG_API, EXPECTED_REVISION_PARAM, LABEL_MEMORY_SUPPLIER_PARAM } from '@/subapps/catalog/catalog-routes';
 import type { ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
 import type {
+  ClearLabelMemoryResult,
   CreateImportBatchRequest,
   ImportBatchDetailView,
   ImportBatchWire,
+  ImportLabelMemoryWire,
+  ImportMemoryActionRequest,
+  ImportMemoryActionResult,
   ImportProfileWire,
   ImportProposalWire,
+  LabelMemoryListView,
   SetImportLineRequest,
   SetImportLineResult,
   SetImportPriceTargetRequest,
+  SetImportSupplierRequest,
   UpdateImportProposalRequest,
 } from '@/subapps/catalog/types/catalog-import-requests';
 
@@ -51,6 +57,28 @@ export const reinterpretImportPage = (id: string, page: number): Promise<ImportB
 /** Ο τιμοκατάλογος της παρτίδας ιδιοτήτων (§5.5.2 Β4): χωρίς νέα ανάγνωση· επιστρέφει όλη την όψη με τις ξανασχεδιασμένες τιμές. */
 export const setImportPriceTarget = (id: string, request: SetImportPriceTargetRequest): Promise<ImportBatchDetailView> =>
   apiClient.put(CATALOG_API.imports.priceTarget(id), request);
+
+/** Ο προμηθευτής και ο διακόπτης μάθησης της παρτίδας (§5.5.2 Β5): χωρίς νέα ανάγνωση και χωρίς εφαρμογή μνήμης (Απόφαση 4). */
+export const setImportSupplier = (id: string, request: SetImportSupplierRequest): Promise<ImportBatchDetailView> =>
+  apiClient.put(CATALOG_API.imports.supplier(id), request);
+
+/** Ρητή εφαρμογή ή αναίρεση όλων της μνήμης (§5.5.2 Β5.2), χωρίς AI: επιστρέφει όλη την όψη και τι έγινε. */
+export const runImportMemoryAction = (id: string, request: ImportMemoryActionRequest): Promise<ImportMemoryActionResult> =>
+  apiClient.post(CATALOG_API.imports.memory(id), request);
+
+/** Η μνήμη ετικετών ενός προμηθευτή (§5.5.2 Β5.2). */
+export function fetchLabelMemory(supplierContactId: string): Promise<LabelMemoryListView> {
+  const query = new URLSearchParams({ [LABEL_MEMORY_SUPPLIER_PARAM]: supplierContactId });
+  return apiClient.get(`${CATALOG_API.importLabelMemory.collection}?${query.toString()}`);
+}
+
+export function deleteLabelMemory(id: string, expectedRevision: number): Promise<ImportLabelMemoryWire> {
+  const query = new URLSearchParams({ [EXPECTED_REVISION_PARAM]: String(expectedRevision) });
+  return apiClient.delete<ImportLabelMemoryWire>(`${CATALOG_API.importLabelMemory.item(id)}?${query.toString()}`);
+}
+
+export const clearLabelMemory = (supplierContactId: string): Promise<ClearLabelMemoryResult> =>
+  apiClient.post(CATALOG_API.importLabelMemory.clear, { supplierContactId });
 
 export const discardImportBatch = (id: string, expectedRevision: number): Promise<ImportBatchWire> =>
   apiClient.post(CATALOG_API.imports.discard(id), { expectedRevision });

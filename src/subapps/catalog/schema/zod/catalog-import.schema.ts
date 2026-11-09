@@ -10,7 +10,9 @@ import { UOM_CODES } from '@/lib/uom/uom-registry';
 import type { ImportBatchTarget, ImportLineDecision, ImportProfileDefinition, ImportTarget } from '../../types/catalog-import';
 import type {
   AttachImportFileRequest,
+  ClearLabelMemoryRequest,
   CreateImportBatchRequest,
+  ImportMemoryActionRequest,
   ProposalActionRequest,
   ReadImportPageRequest,
   SetImportLineRequest,
@@ -133,7 +135,14 @@ export const setImportPriceTargetBodySchema: z.ZodType<SetImportPriceTargetReque
 export const setImportSupplierBodySchema: z.ZodType<SetImportSupplierRequest> = z.object({
   expectedRevision: expectedRevisionSchema,
   supplierContactId: entityIdSchema.nullable(),
+  learnLabels: z.boolean().optional(),
 });
+
+/** §5.5.2 Β5.2: ρητή εφαρμογή / αναίρεση της μνήμης σε υπάρχουσα παρτίδα. */
+export const importMemoryActionBodySchema: z.ZodType<ImportMemoryActionRequest> = z.object({ action: z.enum(['apply', 'undo']) });
+
+/** §5.5.2 Β5.2: άδειασμα της μνήμης ενός προμηθευτή. */
+export const clearLabelMemoryBodySchema: z.ZodType<ClearLabelMemoryRequest> = z.object({ supplierContactId: entityIdSchema });
 
 export const saveImportProfileBodySchema = z.object({ definition: importProfileDefinitionSchema });
 export const updateImportProfileBodySchema = z.object({ expectedRevision: expectedRevisionSchema, definition: importProfileDefinitionSchema });

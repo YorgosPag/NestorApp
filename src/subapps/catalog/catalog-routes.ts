@@ -127,9 +127,18 @@ export const CATALOG_API = {
     reinterpret: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/reinterpret`,
     /** Η πρόχειρη έκδοση τιμοκαταλόγου της παρτίδας ιδιοτήτων (§5.5.2 Β4). */
     priceTarget: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/price-target`,
+    /** Ο προμηθευτής της παρτίδας και ο διακόπτης μάθησης (§5.5.2 Β5). */
+    supplier: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/supplier`,
+    /** Ρητή εφαρμογή / αναίρεση της μνήμης ετικετών σε υπάρχουσα παρτίδα, χωρίς AI (§5.5.2 Β5.2). */
+    memory: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/memory`,
     discard: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/discard`,
   },
   importProfiles: entity('import-profiles'),
+  /** Η μνήμη ετικετών γραμμής ανά προμηθευτή (§5.5.2 Β5.2): λίστα (`?supplier=`), διαγραφή, άδειασμα. */
+  importLabelMemory: {
+    ...entity('import-label-memory'),
+    clear: `${API_ROOT}/import-label-memory/clear`,
+  },
   importProposals: {
     item: entity('import-proposals').item,
     apply: (id: string) => `${API_ROOT}/import-proposals/${encodeURIComponent(id)}/apply`,
@@ -160,6 +169,9 @@ export const COST_RATES_PROJECT_PARAM = 'projectId';
 
 /** Η παράμετρος αναθεώρησης της διαγραφής (`DELETE …?expectedRevision=N`) — ένα όνομα για πελάτη και route. */
 export const EXPECTED_REVISION_PARAM = 'expectedRevision';
+
+/** Ο προμηθευτής (επαφή) στη λίστα μνήμης ετικετών (§5.5.2 Β5.2): `GET …/import-label-memory?supplier=<contactId>`. */
+export const LABEL_MEMORY_SUPPLIER_PARAM = 'supplier';
 
 /** Η λίστα πελάτη της εξαγωγής xChange· απούσα ⇒ η δημόσια τιμή καταλόγου (ADR-923 §5.14 απόφαση Ε1). */
 export const XCHANGE_PRICE_LIST_PARAM = 'priceListId';

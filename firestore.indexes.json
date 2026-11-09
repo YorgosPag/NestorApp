@@ -9426,6 +9426,15 @@
       ]
     },
     {
+      "collectionGroup": "catalog_import_label_memory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "supplierContactId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "catalog_price_list_lines",
       "queryScope": "COLLECTION",
       "fields": [

@@ -14,6 +14,7 @@
 import type { XChangeImportReport } from '@/subapps/catalog/interop/etim/xchange-report';
 import { defineLazySurfaces } from '@/utils/lazyRouteFactory';
 import type { LineAttributeToolsProps, PriceLineDialogProps, PriceLineNoteProps } from './line-tool-props';
+import type { ImportSupplierFieldProps } from './supplier-field-props';
 
 const ImportSurfaces = defineLazySurfaces({
   CatalogXChangeReport: {
@@ -29,6 +30,13 @@ const ImportSurfaces = defineLazySurfaces({
    */
   CatalogPriceLineTools: {
     load: () => import('./PriceLineControls').then((mod) => ({ default: mod.PriceLineTools })),
+  },
+  /**
+   * §5.5.2 Β5.2: ο προμηθευτής της παρτίδας και η μνήμη του — η αναζήτηση επαφών (υπηρεσία + κλειδιά επαφών) και ο διάλογος της
+   * μνήμης μόνο όταν η παρτίδα είναι ανοιχτή παρτίδα ιδιοτήτων, ποτέ στο σφραγισμένο route slice.
+   */
+  CatalogImportSupplier: {
+    load: () => import('./ImportSupplierField').then((mod) => ({ default: mod.ImportSupplierField })),
   },
 });
 
@@ -46,4 +54,8 @@ export function PriceLineDialogSlot(props: PriceLineDialogProps) {
 
 export function PriceLineNoteSlot(props: PriceLineNoteProps) {
   return <ImportSurfaces.CatalogPriceLineTools kind="note" {...props} />;
+}
+
+export function ImportSupplierSlot(props: ImportSupplierFieldProps) {
+  return <ImportSurfaces.CatalogImportSupplier {...props} />;
 }

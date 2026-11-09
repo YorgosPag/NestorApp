@@ -11,19 +11,42 @@ import 'server-only';
  * @module server/catalog/import-label-memory.server
  */
 
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
+import { nowISO } from '@/lib/date-local';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { pageTableAddressOf } from '@/subapps/catalog/import/import-keys';
 import {
   EMPTY_LABEL_MEMORY,
   learnableOverrides,
   learnedEntry,
+  memoryHintsFor,
   memoryKeyOf,
+  memoryKeysOf,
   type LabelMemoryBook,
   type LabelMemoryScope,
   type LearnableOverride,
 } from '@/subapps/catalog/import/label-memory';
+import { lineDecisionOf } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportBatchDefinition, ImportLabelMemoryDefinition, ImportProposalDefinition } from '@/subapps/catalog/types/catalog-import';
-import { readForUpsert, runCatalogReadOnly, stageCreate, stageReplace, type CatalogReadScope, type CatalogTx, type CreateTarget, type StoredCatalogRecord } from './catalog-store.server';
+import type { ClearLabelMemoryResult, ImportLabelMemoryWire, ImportMemoryHints, LabelMemoryListView } from '@/subapps/catalog/types/catalog-import-requests';
+import { IMPORT_LABEL_MEMORY_LIST_LIMIT } from '@/subapps/catalog/vocabulary/catalog-import';
+import { readSchemaSnapshot } from './catalog-product-reads.server';
+import {
+  assertRevision,
+  readForUpsert,
+  readOwned,
+  readOwnedOrNull,
+  runCatalogReadOnly,
+  runCatalogTransaction,
+  stageCreate,
+  stageReplace,
+  stageSoftDelete,
+  type CatalogReadScope,
+  type CatalogTx,
+  type CreateTarget,
+  type StoredCatalogRecord,
+} from './catalog-store.server';
 
 type StoredLabelMemory = StoredCatalogRecord<ImportLabelMemoryDefinition>;
 
@@ -33,6 +56,9 @@ export function labelMemoryScopeOf(batch: Pick<ImportBatchDefinition, 'target'>)
   if (target.purpose !== 'attributes' || !target.supplierContactId) return null;
   return { supplierContactId: target.supplierContactId, familyId: target.familyId };
 }
+
+/** Μαθαίνουν οι εγκρίσεις της παρτίδας; Απόν = ναι (§5.5.2 Β5.2). */
+const learnsLabels =(batch: Pick<ImportBatchDefinition, 'target'>): boolean => batch.target.purpose !== 'attributes' || batch.target.learnLabels !== false;
 
 async function readEntries(scope: CatalogReadScope, keys: readonly string[]): Promise<LabelMemoryBook> {
   const found = await Promise.all(keys.map(async (key) => ({ key, read: await readForUpsert<ImportLabelMemoryDefinition>(scope, 'importLabelMemory', key) })));
@@ -63,7 +89,8 @@ const NOTHING_TO_LEARN: LearningPlan = { scope: null, steps: [] };
 export async function readLearning(scope: CatalogTx, batch: ImportBatchDefinition, proposal: Pick<ImportProposalDefinition, 'purpose' | 'groupKey'>): Promise<LearningPlan> {
   const memory = labelMemoryScopeOf(batch);
   const address = proposal.purpose === 'attributes' ? pageTableAddressOf(proposal.groupKey) : null;
-  if (memory === null || address === null) return NOTHING_TO_LEARN;
+  // §5.5.2 Β5.2: «μη μαθαίνεις» (`block_learning` του Akeneo) — η παρτίδα εφαρμόζει μνήμη, αλλά δεν διδάσκει.
+  if (memory === null || address === null || !learnsLabels(batch)) return NOTHING_TO_LEARN;
   const unique = new Map(learnableOverrides(batch.pages?.lineOverrides, address.page, address.table).map((override) => [memoryKeyOf(memory, override.identity), override]));
   const steps = await Promise.all([...unique].map(async ([key, override]) => ({ override, ...(await readForUpsert<ImportLabelMemoryDefinition>(scope, 'importLabelMemory', key)) })));
   return { scope: memory, steps };
@@ -77,5 +104,80 @@ export function stageLearning(scope: CatalogTx, plan: LearningPlan, batchId: str
     const next = learnedEntry(current, plan.scope, override, stamp);
     if (current) stageReplace(scope, 'importLabelMemory', current, next);
     else stageCreate(scope, 'importLabelMemory', target, next);
+  }
+}
+
+/* ── §5.5.2 Β5.2: υποδείξεις στην οθόνη της παρτίδας · διαχείριση ανά προμηθευτή ─────────────────────────────────────────── */
+
+/** Οι ιδιότητες του σχήματος της οικογένειας: μόνο αυτές εφαρμόζονται (ίδιο κριτήριο με την ανάγνωση). */
+async function familyAttributeIds(ctx: AuthContext, batch: ImportBatchDefinition): Promise<ReadonlySet<string>> {
+  if (batch.target.purpose !== 'attributes') return new Set();
+  const { familyId, variantSchemeCode } = batch.target;
+  const schema = await runCatalogReadOnly(ctx, (scope) => readSchemaSnapshot(scope, familyId, variantSchemeCode));
+  return new Set(schema.attributes.keys());
+}
+
+/**
+ * Τι θα έκανε η μνήμη στην παρτίδα, **χωρίς** να το κάνει (Απόφαση 4): η προβολή της λεπτομέρειας το δείχνει, η ρητή «Εφαρμογή μνήμης»
+ * το κάνει. Γνωστά ids, κανένα ερώτημα (CHECK 3.91)· το σχήμα διαβάζεται μόνο όταν υπάρχει κάτι να κριθεί. `undefined` = χωρίς προμηθευτή.
+ */
+export async function readMemoryHints(ctx: AuthContext, batch: ImportBatchDefinition): Promise<ImportMemoryHints | undefined> {
+  const scope = labelMemoryScopeOf(batch);
+  if (scope === null) return undefined;
+  const lines = batch.pages?.unmappedLines ?? [];
+  const overrides = batch.pages?.lineOverrides ?? [];
+  const identities = lines.flatMap((line) => (line.identity && lineDecisionOf(overrides, line) === null ? [line.identity] : []));
+  const book = await readLabelMemoryBook(ctx, memoryKeysOf(scope, identities));
+  const knownAttributeIds = book.size === 0 ? new Set<string>() : await familyAttributeIds(ctx, batch);
+  const pricesEnabled = batch.target.purpose === 'attributes' && Boolean(batch.target.priceListVersionId);
+  return memoryHintsFor(lines, overrides, { scope, book, knownAttributeIds, pricesEnabled, stamp: { by: ctx.uid, at: nowISO() } });
+}
+
+/** Εγγραφές ανά συναλλαγή στο άδειασμα: κάθε σβήσιμο γράφει έγγραφο **και** ίχνος, κάτω από το όριο των 500 εγγραφών. */
+const CLEAR_CHUNK = 100;
+
+const memoryOfSupplier = (ctx: AuthContext, supplierContactId: string) =>
+  getAdminFirestore()
+    .collection(COLLECTIONS.CATALOG_IMPORT_LABEL_MEMORY)
+    .where('companyId', '==', ctx.companyId)
+    .where('supplierContactId', '==', supplierContactId)
+    .where('isDeleted', '==', false);
+
+/** `GET /api/catalog/import-label-memory?supplier=` — η μνήμη ενός προμηθευτή, η πιο στηριγμένη πρώτα. */
+export async function listLabelMemory(ctx: AuthContext, supplierContactId: string): Promise<LabelMemoryListView> {
+  const snap = await memoryOfSupplier(ctx, supplierContactId).limit(IMPORT_LABEL_MEMORY_LIST_LIMIT + 1).get();
+  const entries = snap.docs.slice(0, IMPORT_LABEL_MEMORY_LIST_LIMIT).map((doc) => doc.data() as ImportLabelMemoryWire);
+  const support = (entry: ImportLabelMemoryWire) => entry.decisions.reduce((sum, decision) => sum + decision.count, 0);
+  return { entries: [...entries].sort((a, b) => support(b) - support(a) || a.printedLabel.localeCompare(b.printedLabel)), truncated: snap.size > IMPORT_LABEL_MEMORY_LIST_LIMIT };
+}
+
+/** `DELETE /api/catalog/import-label-memory/[id]` — η μνήμη μιας ετικέτας ξεχνιέται (soft delete, CAS). Η επόμενη έγκριση τη ξαναγεννά. */
+export function deleteLabelMemory(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredLabelMemory> {
+  return runCatalogTransaction(ctx, async (scope) => {
+    const current = await readOwned<ImportLabelMemoryDefinition>(scope, 'importLabelMemory', id);
+    assertRevision(current, expectedRevision);
+    return stageSoftDelete(scope, 'importLabelMemory', current);
+  });
+}
+
+/** Μία δέσμη του αδειάσματος: ξαναδιαβάζει μέσα στη συναλλαγή, ώστε ό,τι άλλαξε ή σβήστηκε στο μεταξύ να μη μετρηθεί δύο φορές. */
+function clearChunk(ctx: AuthContext, ids: readonly string[]): Promise<number> {
+  return runCatalogTransaction(ctx, async (scope) => {
+    const found = await Promise.all(ids.map((id) => readOwnedOrNull<ImportLabelMemoryDefinition>(scope, 'importLabelMemory', id)));
+    const live = found.filter((record): record is StoredLabelMemory => record !== null);
+    for (const record of live) stageSoftDelete(scope, 'importLabelMemory', record);
+    return live.length;
+  });
+}
+
+/** `POST /api/catalog/import-label-memory/clear` — όλη η μνήμη ενός προμηθευτή (Akeneo: «clear all mapping memory»), σε δέσμες. */
+export async function clearLabelMemory(ctx: AuthContext, supplierContactId: string): Promise<ClearLabelMemoryResult> {
+  let deleted = 0;
+  for (;;) {
+    const snap = await memoryOfSupplier(ctx, supplierContactId).limit(CLEAR_CHUNK).get();
+    if (snap.empty) return { deleted };
+    const done = await clearChunk(ctx, snap.docs.map((doc) => doc.id));
+    deleted += done;
+    if (done === 0) return { deleted };
   }
 }

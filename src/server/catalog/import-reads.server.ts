@@ -17,6 +17,7 @@ import type { ImportFieldValue, ImportProposalDefinition } from '@/subapps/catal
 import type { ImportBatchDetailView, ImportBatchWire, ImportProfileWire, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { readOwned, runCatalogTransaction } from './catalog-store.server';
 import { assertPurposeAuthority } from './import-batch-writer.server';
+import { readMemoryHints } from './import-label-memory.server';
 import type { ImportBatchDefinition } from '@/subapps/catalog/types/catalog-import';
 
 const BATCHES_PAGE = 50;
@@ -60,9 +61,11 @@ export async function readBatchProposals(ctx: AuthContext, batchId: string): Pro
 export async function readImportBatchDetail(ctx: AuthContext, id: string): Promise<ImportBatchDetailView> {
   const batch = await runCatalogTransaction(ctx, (scope) => readOwned<ImportBatchDefinition>(scope, 'importBatch', id));
   await assertPurposeAuthority(ctx, batch.target.purpose);
-  const all = await readBatchProposals(ctx, id);
+  const [all, labelMemory] = await Promise.all([readBatchProposals(ctx, id), readMemoryHints(ctx, batch)]);
   const seesPrices = batch.target.purpose === 'priceLines' || (await hasPermission(ctx, CATALOG_AUTHORITY_PERMISSIONS.pricing));
-  return { batch, proposals: seesPrices ? all : all.filter((proposal) => proposal.purpose !== 'priceLines') };
+  const proposalsSeen = seesPrices ? all : all.filter((proposal) => proposal.purpose !== 'priceLines');
+  // §5.5.2 Β5.2: η μνήμη του προμηθευτή απέναντι στην παρτίδα — μόνο ανάγνωση, καμία εγγραφή (Απόφαση 4).
+  return labelMemory ? { batch, proposals: proposalsSeen, labelMemory } : { batch, proposals: proposalsSeen };
 }
 
 function acceptedValuesOf(proposal: ImportProposalDefinition, into: Map<string, Map<string, ImportFieldValue>>): void {

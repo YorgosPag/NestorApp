@@ -18,7 +18,7 @@ import { nowISO } from '@/lib/date-local';
 import { countPdfPages } from '@/services/pdf/pdf-rasterize.service';
 import { importBatchKey } from '@/subapps/catalog/import/import-keys';
 import { currentDerivation } from '@/subapps/catalog/import/page-derivation';
-import { withLineOverride, type LineOverrideExtras } from '@/subapps/catalog/import/page-line-overrides';
+import { tableOverridesOf, withLineOverride, type LineOverrideExtras } from '@/subapps/catalog/import/page-line-overrides';
 import type {
   ImportBatchDefinition,
   ImportBatchPages,
@@ -212,11 +212,36 @@ export function setImportLineOverride(
   decision: ImportLineDecision | null,
   extras: LineOverrideExtras = {},
 ): Promise<StoredImportBatch> {
+  return storeLineOverrides(ctx, id, (all) => withLineOverride(all, address, decision, { by: ctx.uid, at: nowISO() }, extras));
+}
+
+/**
+ * `POST /api/catalog/imports/[id]/memory` (πρώτο μισό, §5.5.2 Β5.2) — οι αποφάσεις **ενός πίνακα** ξαναγράφονται από τον καλούντα,
+ * πάνω σε ό,τι ισχύει **τη στιγμή της συναλλαγής**: απόφαση ανθρώπου που μπήκε στο μεταξύ δεν χάνεται (το `rewrite` τη βλέπει).
+ */
+export function rewriteTableLineOverrides(
+  ctx: AuthContext,
+  id: string,
+  page: number,
+  table: string,
+  rewrite: (own: readonly ImportLineOverride[]) => ImportLineOverride[],
+): Promise<StoredImportBatch> {
+  return storeLineOverrides(ctx, id, (all) => [
+    ...all.filter((override) => override.page !== page || override.table !== table),
+    ...rewrite(tableOverridesOf(all, page, table)),
+  ]);
+}
+
+/**
+ * Ο **ένας** γραφέας των αποφάσεων γραμμής μιας παρτίδας: ανοιχτή παρτίδα, νέα λίστα από την τρέχουσα **μέσα** στη συναλλαγή, όριο
+ * `IMPORT_MAX_LINE_OVERRIDES`. Η απόφαση μίας γραμμής (Β3) και η πράξη μνήμης ενός πίνακα (Β5.2) διαφέρουν μόνο στο `next`.
+ */
+function storeLineOverrides(ctx: AuthContext, id: string, next: (all: readonly ImportLineOverride[]) => ImportLineOverride[]): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     assertImportBatchOpen(current);
     const pages = pagesOrRefuse(current);
-    const lineOverrides = withLineOverride(pages.lineOverrides ?? [], address, decision, { by: ctx.uid, at: nowISO() }, extras);
+    const lineOverrides = next(pages.lineOverrides ?? []);
     if (lineOverrides.length > IMPORT_MAX_LINE_OVERRIDES) assertNoIssues([{ code: 'tooMany', path: 'lineOverrides', params: { max: IMPORT_MAX_LINE_OVERRIDES } }]);
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, lineOverrides } });
   });

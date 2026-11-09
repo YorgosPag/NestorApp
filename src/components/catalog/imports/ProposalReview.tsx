@@ -20,6 +20,7 @@ import { ProposalFieldRow } from './ProposalFieldRow';
 import type { ProposalChange } from './proposal-change-queue';
 import { fieldVisibleIn, initialProposalView, nextPendingField, summarizeProposal, type ProposalView } from './proposal-summary';
 import { ProposalSummaryBar } from './ProposalSummaryBar';
+import { ProposalDecidedLines } from './ProposalDecidedLines';
 import { ProposalUnmappedLines, type UnmappedLinesProps } from './ProposalUnmappedLines';
 
 interface ProposalReviewProps {
@@ -33,7 +34,7 @@ interface ProposalReviewProps {
   readonly saving?: boolean;
   /** Ε7: γραμμές της πηγής του πίνακα της πρότασης που περιμένουν απόφαση (§5.5.2 Α6). */
   readonly unmapped?: number;
-  /** §5.5.2 Β3: οι γραμμές χωρίς πεδίο του πίνακα της πρότασης, με τις ενέργειές τους. */
+  /** §5.5.2 Β3 · Β5.2: οι γραμμές του πίνακα της πρότασης — χωρίς πεδίο (με ενέργειες) και αποφασισμένες (με προέλευση και αναίρεση). */
   readonly lines?: Omit<UnmappedLinesProps, 'proposal' | 'decidable'>;
   /** Η παρτίδα δέχεται ακόμη αποφάσεις (όχι `closed` / `discarded`) — ο server το επιβάλλει ξανά (ADR-934 Ε3). */
   readonly batchOpen: boolean;
@@ -170,6 +171,10 @@ export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, 
       {rows.length === 0 ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('review.viewEmpty')}</p> : null}
       {rows.map((row) => <RowSection key={row.rowKey} row={row} view={view} proposal={proposal} focused={focused} onFocus={onFocus} onChange={onChange} decidable={open} />)}
       {lines ? <ProposalUnmappedLines proposal={proposal} {...lines} decidable={open} /> : null}
+      {lines ? (
+        <ProposalDecidedLines proposal={proposal} lines={lines.lines} overrides={lines.overrides} activity={lines.activity}
+          onDecideLine={lines.onDecideLine} pricesEnabled={lines.pricesEnabled} decidable={open} />
+      ) : null}
     </article>
   );
 }

@@ -123,23 +123,5 @@ export function CatalogField({ label, hint, issues = [], path, children }: Catal
   );
 }
 
-interface SwitchFieldProps {
-  readonly label: string;
-  readonly hint?: string;
-  readonly checked: boolean;
-  readonly onChange: (checked: boolean) => void;
-  readonly disabled?: boolean;
-}
-
-export function SwitchField({ label, hint, checked, onChange, disabled }: SwitchFieldProps) {
-  const id = useId();
-  return (
-    <p className="m-0 flex items-start gap-2">
-      <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onChange} aria-describedby={hint ? `${id}-hint` : undefined} />
-      <span className="flex flex-col">
-        <Label htmlFor={id}>{label}</Label>
-        {hint ? <span id={`${id}-hint`} className="text-xs text-muted-foreground">{hint}</span> : null}
-      </span>
-    </p>
-  );
-}
+/** Ο διακόπτης ζει σε ουδέτερο αρχείο (χωρίς `catalog` στην κλειστότητά του, ADR-923 §5.5.2 Β5.2)· εδώ μένει για τους υπάρχοντες καταναλωτές. */
+export { SwitchField } from './SwitchField';

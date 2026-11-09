@@ -2,17 +2,22 @@
  * Η καθαρή μηχανή της μνήμης ετικετών γραμμής (ADR-923 §5.5.2 Β5): ετυμηγορία, μάθηση, εφαρμογή, κλειδί.
  */
 
-import type { ImportLineDecision, ImportLineIdentity, ImportLineOverride } from '../../types/catalog-import';
+import type { ImportLineDecision, ImportLineIdentity, ImportLineOverride, ImportPageUnmappedLine } from '../../types/catalog-import';
 import { IMPORT_LABEL_MEMORY_MAX_DECISIONS } from '../../vocabulary/catalog-import';
+import { decidedLinesOf } from '../decided-lines';
 import { labelMemoryKey, pageTableAddressOf, pageTableGroupKey, priceGroupKeyOf } from '../import-keys';
 import {
+  EMPTY_LABEL_MEMORY,
   isMemorable,
+  isMemoryOverride,
   learnableOverrides,
   learnedDecisions,
+  memoryHintsFor,
   memoryKeyOf,
   memoryOverridesFor,
   memoryVerdict,
   sameLineDecision,
+  withMemoryApplied,
   type LabelMemoryBook,
   type MemoryApplication,
 } from '../label-memory';
@@ -133,5 +138,77 @@ describe('εφαρμογή', () => {
     const [human] = withLineOverride([memory], memory, { kind: 'ignore' }, STAMP);
     expect(human.origin).toBeUndefined();
     expect(withLineOverride([memory], memory, null, STAMP)).toEqual([]);
+  });
+});
+
+describe('§5.5.2 Β5.2: η μνήμη απέναντι σε παρτίδα που ήδη διαβάστηκε', () => {
+  const unmapped = (line: number, id: ImportLineIdentity | undefined): ImportPageUnmappedLine =>
+    ({ page: 85, table: 't0', line, label: `L${line}`, values: ['1'], ...(id ? { identity: id } : {}) });
+  const AIR = identity('airflow', 'm3h');
+  const NOISE = identity('noise', 'dba');
+
+  it('υπόδειξη μόνο σε γραμμή ΧΩΡΙΣ απόφαση· το `applicable` = ό,τι θα έκανε το `memoryOverridesFor`', () => {
+    const book = bookOf([[AIR, [AIRFLOW]], [NOISE, [AIRFLOW, { kind: 'ignore' }]]]);
+    const lines = [unmapped(3, AIR), unmapped(4, NOISE), unmapped(5, identity('other'))];
+    const hints = memoryHintsFor(lines, [], applicationOf(book));
+    expect(hints.hints.map(({ line, verdict }) => [line, verdict])).toEqual([[3, 'apply'], [4, 'conflict']]);
+    expect(hints.applicable).toBe(memoryOverridesFor(table([[3, AIR], [4, NOISE], [5, identity('other')]]), [], applicationOf(book)).length);
+    expect(hints.applicable).toBe(1);
+  });
+
+  it('🔴 απόφαση ανθρώπου ⇒ καμία υπόδειξη για τη γραμμή· γραμμή χωρίς ταυτότητα μετρά ως παλιά', () => {
+    const book = bookOf([[AIR, [AIRFLOW]]]);
+    const decided = withLineOverride([], { page: 85, table: 't0', line: 3 }, { kind: 'ignore' }, STAMP);
+    const hints = memoryHintsFor([unmapped(3, AIR), unmapped(6, undefined)], decided, applicationOf(book));
+    expect(hints.hints).toEqual([]);
+    expect(hints.applicable).toBe(0);
+    expect(hints.legacyLines).toBe(1);
+  });
+
+  it('απόφαση εκτός σχήματος ⇒ φαίνεται με `usable: false`, δεν μετρά', () => {
+    const book = bookOf([[AIR, [AIRFLOW]]]);
+    const hints = memoryHintsFor([unmapped(3, AIR)], [], applicationOf(book, { knownAttributeIds: new Set() }));
+    expect(hints.hints[0]?.options.map(({ usable }) => usable)).toEqual([false]);
+    expect(hints.applicable).toBe(0);
+  });
+
+  it('`fromMemory` μετρά μόνο αποφάσεις με προέλευση μνήμη', () => {
+    const memory: ImportLineOverride = { page: 85, table: 't0', line: 3, decision: AIRFLOW, ...STAMP, origin: { kind: 'memory', memoryId: 'cilm_0', count: 2, sourceBatchId: 'cibat_1' } };
+    const human: ImportLineOverride = { page: 85, table: 't0', line: 4, decision: { kind: 'ignore' }, ...STAMP };
+    expect(isMemoryOverride(memory)).toBe(true);
+    expect(isMemoryOverride(human)).toBe(false);
+    expect(memoryHintsFor([], [memory, human], applicationOf(EMPTY_LABEL_MEMORY)).fromMemory).toBe(1);
+  });
+
+  it('🔴 ρητή εφαρμογή: ο άνθρωπος κερδίζει τη στιγμή της εγγραφής· η παλιά απόφαση αποκτά ταυτότητα (η «αποθήκευση» Revit)· ιδεμπότητη', () => {
+    const legacy: ImportLineOverride = { page: 85, table: 't0', line: 4, decision: { kind: 'ignore' }, ...STAMP };
+    const raced: ImportLineOverride = { page: 85, table: 't0', line: 3, decision: { kind: 'ignore' }, ...STAMP, identity: AIR };
+    const found = memoryOverridesFor(table([[3, AIR]]), [], applicationOf(bookOf([[AIR, [AIRFLOW]]])));
+    const identities = new Map([[3, AIR], [4, NOISE]]);
+    const next = withMemoryApplied([legacy, raced], found, identities);
+    expect(next.find(({ line }) => line === 3)).toBe(raced);
+    expect(next.find(({ line }) => line === 4)?.identity).toEqual(NOISE);
+    expect(withMemoryApplied(next, found, identities)).toEqual(next);
+    expect(withMemoryApplied([], found, identities).map(({ origin }) => origin?.kind)).toEqual(['memory']);
+  });
+});
+
+describe('§5.5.2 Β5.2: αποφασισμένες γραμμές', () => {
+  it('🔴 γραμμή που έγινε ιδιότητα (έφυγε από τις «χωρίς πεδίο») ΦΑΙΝΕΤΑΙ, με την ετικέτα της ταυτότητας και την προέλευση', () => {
+    const origin = { kind: 'memory' as const, memoryId: 'cilm_0', count: 3, sourceBatchId: 'cibat_1' };
+    const overrides: ImportLineOverride[] = [
+      { page: 85, table: 't0', line: 7, decision: AIRFLOW, ...STAMP, identity: identity('airflow', 'm3h'), origin },
+      { page: 85, table: 't0', line: 2, decision: { kind: 'ignore' }, ...STAMP },
+      { page: 85, table: 't1', line: 1, decision: { kind: 'ignore' }, ...STAMP },
+    ];
+    const ignored: ImportPageUnmappedLine = { page: 85, table: 't0', line: 2, label: 'NOTE · m', values: ['x', 'y'] };
+    const decided = decidedLinesOf(overrides, [ignored], 85, 't0');
+    expect(decided.map(({ line, label, origin: from }) => [line, label, from?.kind ?? 'human'])).toEqual([[2, 'NOTE · m', 'human'], [7, 'AIRFLOW', 'memory']]);
+    expect(decided[0]?.values).toEqual(['x', 'y']);
+  });
+
+  it('χωρίς ταυτότητα και χωρίς γραμμή ⇒ `label: null` (η οθόνη λέει «γραμμή N»), ποτέ επινοημένο κείμενο', () => {
+    const decided = decidedLinesOf([{ page: 85, table: 't0', line: 9, decision: AIRFLOW, ...STAMP }], [], 85, 't0');
+    expect(decided[0]?.label).toBeNull();
   });
 });

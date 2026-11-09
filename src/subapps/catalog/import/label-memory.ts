@@ -17,10 +17,12 @@ import type {
   ImportLineDecision,
   ImportLineIdentity,
   ImportLineOverride,
+  ImportPageUnmappedLine,
 } from '../types/catalog-import';
+import type { ImportMemoryHint, ImportMemoryHints } from '../types/catalog-import-requests';
 import { IMPORT_LABEL_MEMORY_MAX_DECISIONS } from '../vocabulary/catalog-import';
-import { labelMemoryKey } from './import-keys';
-import { tableOverridesOf } from './page-line-overrides';
+import { labelMemoryKey, pageTableGroupKey } from './import-keys';
+import { lineDecisionOf, tableOverridesOf } from './page-line-overrides';
 
 /** Ίδια απόφαση: ίδιο είδος και ίδιος στόχος. */
 export function sameLineDecision(a: ImportLineDecision, b: ImportLineDecision): boolean {
@@ -152,4 +154,66 @@ export function learnedEntry(
     printedLabel: identity.printed,
     decisions: learnedDecisions(current?.decisions ?? [], override.decision, stamp),
   };
+}
+
+/* ── §5.5.2 Β5.2: η μνήμη απέναντι σε υπάρχουσα παρτίδα (υποδείξεις, ρητή εφαρμογή, αναίρεση) ───────────────────────────────── */
+
+/** Από πού ήρθε μια απόφαση γραμμής: η απουσία `origin` σημαίνει άνθρωπο. */
+export const isMemoryOverride = (override: Pick<ImportLineOverride, 'origin'>): boolean => override.origin?.kind === 'memory';
+
+/** Οι γραμμές κάθε πίνακα που η μνήμη **βλέπει**: όσες έχουν ταυτότητα (ίδιο σχήμα με το `tableLineIdentities` της ανάγνωσης). */
+function identitiesByTable(lines: readonly ImportPageUnmappedLine[]): MemoryTable[] {
+  const tables = new Map<string, { page: number; table: string; identities: Map<number, ImportLineIdentity> }>();
+  for (const line of lines) {
+    if (!line.identity) continue;
+    const key = pageTableGroupKey(line.page, line.table);
+    const entry = tables.get(key) ?? { page: line.page, table: line.table, identities: new Map<number, ImportLineIdentity>() };
+    entry.identities.set(line.line, line.identity);
+    tables.set(key, entry);
+  }
+  return [...tables.values()];
+}
+
+function hintOf(line: ImportPageUnmappedLine, application: MemoryApplication): ImportMemoryHint | null {
+  if (!isMemorable(line.identity)) return null;
+  const entry = application.book.get(memoryKeyOf(application.scope, line.identity));
+  const verdict = memoryVerdict(entry);
+  if (!entry || verdict.kind === 'none') return null;
+  const options = entry.decisions.map(({ decision, count, lastBatchId }) => ({ decision, count, lastBatchId, usable: applicable(decision, application) }));
+  return { page: line.page, table: line.table, line: line.line, memoryId: entry.id, verdict: verdict.kind, options };
+}
+
+/**
+ * Τι ξέρει η μνήμη για τις **γραμμές χωρίς πεδίο** μιας παρτίδας που ήδη διαβάστηκε, χωρίς να το εφαρμόσει (Απόφαση 4). Υποδείξεις
+ * μόνο για γραμμές χωρίς απόφαση· το `applicable` μετριέται με τον **ίδιο** κανόνα της εφαρμογής (`memoryOverridesFor`).
+ * ⚠️ Δεν μετρά γραμμές που αντιστοίχισε το μοντέλο: η ταυτότητά τους βγαίνει μόνο από το PDF, άρα τις κρίνει η ρητή «Εφαρμογή
+ *    μνήμης» (`import-memory-apply.server`), που αναφέρει μετά τι έκανε.
+ */
+export function memoryHintsFor(lines: readonly ImportPageUnmappedLine[], overrides: readonly ImportLineOverride[], application: MemoryApplication): ImportMemoryHints {
+  const undecided = lines.filter((line) => lineDecisionOf(overrides, line) === null);
+  const applicableCount = identitiesByTable(undecided).reduce((sum, table) => sum + memoryOverridesFor(table, overrides, application).length, 0);
+  return {
+    hints: undecided.flatMap((line) => hintOf(line, application) ?? []),
+    applicable: applicableCount,
+    legacyLines: undecided.filter((line) => line.identity === undefined).length,
+    fromMemory: overrides.filter(isMemoryOverride).length,
+  };
+}
+
+/**
+ * Οι αποφάσεις ενός πίνακα μετά τη ρητή «Εφαρμογή μνήμης». Ό,τι υπήρχε μένει (πρώτα ο άνθρωπος). Οι αποφάσεις χωρίς ταυτότητα την
+ * αποκτούν: είναι η «αποθήκευση» μιας παλιάς παρτίδας, κατά την πρακτική του Revit. Η μνήμη μπαίνει **μόνο** σε γραμμές που είναι
+ * ακόμη χωρίς απόφαση τη στιγμή της εγγραφής. Ιδεμπότητη.
+ */
+export function withMemoryApplied(
+  own: readonly ImportLineOverride[],
+  found: readonly ImportLineOverride[],
+  identities: ReadonlyMap<number, ImportLineIdentity>,
+): ImportLineOverride[] {
+  const enriched = own.map((override) => {
+    const identity = identities.get(override.line);
+    return identity && !override.identity ? { ...override, identity } : override;
+  });
+  const decided = new Set(own.map(({ line }) => line));
+  return [...enriched, ...found.filter(({ line }) => !decided.has(line))];
 }

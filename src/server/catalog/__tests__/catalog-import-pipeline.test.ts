@@ -66,6 +66,8 @@ import { createCatalogCategory } from '../category-writer.server';
 import { createCatalogFamily } from '../family-writer.server';
 import { applyImportProposal } from '../import-apply.server';
 import { createImportBatch } from '../import-batch-writer.server';
+import { clearLabelMemory, deleteLabelMemory, listLabelMemory } from '../import-label-memory.server';
+import { runImportMemoryAction } from '../import-memory-apply.server';
 import { buildTableProposals, readImportPage } from '../import-readers.server';
 import { setImportLine } from '../import-page-reinterpret.server';
 import { reinterpretImportPage } from '../import-page-rederive.server';
@@ -1100,6 +1102,82 @@ describe('ανάγνωση σελίδας', () => {
           for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts', 'import-page-reinterpret.server.ts']) {
             expect(readFileSync(join(__dirname, '..', file), 'utf8')).not.toMatch(/import-label-memory|readLabelMemoryBook|memoryOverridesFor/);
           }
+        });
+
+        describe('🚀 §5.5.2 Β5.2: η μνήμη σε παρτίδα που ήδη διαβάστηκε — υπόδειξη, ρητή εφαρμογή, αναίρεση, «μη μαθαίνεις», λίστα', () => {
+          /** Ο δεύτερος κατάλογος διαβάστηκε ΠΡΙΝ οριστεί προμηθευτής: η μνήμη δεν τον άγγιξε (Απόφαση 4). */
+          async function readBeforeSupplier() {
+            const { batch, coolingL } = await taughtBatch();
+            await approveAttributes(batch.id);
+            const next = await nextCatalog(false);
+            await withSupplier(next);
+            return { taught: batch.id, next, coolingL };
+          }
+
+          it('🔴 η λεπτομέρεια ΠΡΟΤΕΙΝΕΙ χωρίς να γράψει: υπόδειξη `apply` με μετρητή, αναθεώρηση ίδια, καμία απόφαση', async () => {
+            const { next, coolingL } = await readBeforeSupplier();
+            const revision = revisionOf(next);
+            const { labelMemory } = await readImportBatchDetail(ARIES, next);
+            expect(labelMemory).toMatchObject({ applicable: 1, fromMemory: 0, legacyLines: 0 });
+            expect(labelMemory?.hints).toEqual([expect.objectContaining({ line: coolingL.line, verdict: 'apply', options: [expect.objectContaining({ count: 1, usable: true })] })]);
+            expect(revisionOf(next)).toBe(revision);
+            expect(storedOf(next).pages?.lineOverrides ?? []).toEqual([]);
+          });
+
+          it('🔴 «Εφαρμογή μνήμης»: προέλευση `memory`, τα 7 πεδία, ΜΗΔΕΝ κλήσεις μοντέλου· δεύτερη φορά ⇒ τίποτα (ιδεμπότητη)', async () => {
+            const { taught, next, coolingL } = await readBeforeSupplier();
+            mapTables.mockClear();
+            const first = await runImportMemoryAction(ARIES, next, { action: 'apply' });
+            expect(first.outcome).toMatchObject({ lines: 1, tables: 1, refused: [], limitReached: false });
+            expect(mapTables).not.toHaveBeenCalled();
+            expect(storedOf(next).pages?.lineOverrides).toEqual([expect.objectContaining({ line: coolingL.line, origin: expect.objectContaining({ kind: 'memory', sourceBatchId: taught }) })]);
+            expect(await coolingLFields(next)).toHaveLength(7);
+            expect(first.view.labelMemory).toMatchObject({ applicable: 0, fromMemory: 1 });
+            const again = await runImportMemoryAction(ARIES, next, { action: 'apply' });
+            expect(again.outcome.lines).toBe(0);
+            expect(storedOf(next).pages?.lineOverrides).toHaveLength(1);
+          });
+
+          it('🔴 «αναίρεση όλων από μνήμη»: φεύγουν ΜΟΝΟ της μνήμης, του ανθρώπου μένουν, ο πίνακας ξαναχτίζεται χωρίς AI', async () => {
+            const { batch } = await taughtBatch();
+            await approveAttributes(batch.id);
+            const next = await nextCatalog();
+            const other = storedOf(next).pages?.unmappedLines?.[0];
+            if (!other) throw new Error('λείπει γραμμή χωρίς πεδίο');
+            await setImportLine(ARIES, next, request(other, { kind: 'ignore' }));
+            mapTables.mockClear();
+            const { outcome } = await runImportMemoryAction(ARIES, next, { action: 'undo' });
+            expect(outcome.lines).toBe(1);
+            expect(mapTables).not.toHaveBeenCalled();
+            expect(storedOf(next).pages?.lineOverrides).toEqual([expect.objectContaining({ line: other.line, decision: { kind: 'ignore' } })]);
+            expect(await coolingLFields(next)).toHaveLength(0);
+          });
+
+          it('🔴 «μη μαθαίνεις»: η έγκριση της παρτίδας δεν διδάσκει· η ρύθμιση δεν αλλάζει τον προμηθευτή', async () => {
+            const { batch, coolingL } = await readBatch();
+            await withSupplier(batch.id);
+            await setImportSupplier(ARIES, batch.id, { expectedRevision: revisionOf(batch.id), supplierContactId: SUPPLIER, learnLabels: false });
+            await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+            await approveAttributes(batch.id);
+            expect(memories()).toEqual([]);
+            expect(storedOf(batch.id).target).toMatchObject({ supplierContactId: SUPPLIER, learnLabels: false });
+          });
+
+          it('λίστα ανά προμηθευτή · «Ξέχνα» με CAS · άδειασμα ιδεμπότητο', async () => {
+            const { batch } = await taughtBatch();
+            await approveAttributes(batch.id);
+            const { entries, truncated } = await listLabelMemory(ARIES, SUPPLIER);
+            expect(truncated).toBe(false);
+            expect(entries).toHaveLength(1);
+            await rejectionOf(deleteLabelMemory(ARIES, entries[0].id, entries[0].revision + 1));
+            await deleteLabelMemory(ARIES, entries[0].id, entries[0].revision);
+            expect((await listLabelMemory(ARIES, SUPPLIER)).entries).toEqual([]);
+            expect(await clearLabelMemory(ARIES, SUPPLIER)).toEqual({ deleted: 0 });
+          });
+
+          it('🔒 δομικά χωρίς πληρωμή: η πράξη μνήμης δεν εισάγει τον αναλυτή', () => {
+            expect(readFileSync(join(__dirname, '..', 'import-memory-apply.server.ts'), 'utf8')).not.toMatch(/page-analyzer/);
+          });
         });
       });
 

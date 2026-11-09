@@ -263,6 +263,11 @@ export type ImportBatchTarget =
        * κλειδιού, όπως ο τιμοκατάλογος. Απών/`null` = κανένας, άρα η μνήμη ούτε εφαρμόζεται ούτε μαθαίνει.
        */
       readonly supplierContactId?: string | null;
+      /**
+       * Μαθαίνουν οι εγκρίσεις αυτής της παρτίδας για τον προμηθευτή; (§5.5.2 Β5.2, το `block_learning` του Akeneo). Ρύθμιση εκτός
+       * κλειδιού. Απούσα = `true`· `false` = η μνήμη εφαρμόζεται κανονικά, απλώς η παρτίδα δεν διδάσκει (δοκιμαστικός ή ξένος κατάλογος).
+       */
+      readonly learnLabels?: boolean;
     }
   /** `identifierAttributeId`: η `unique` ιδιότητα στην οποία ανήκει ο κωδικός SKU του αρχείου. */
   | { readonly purpose: 'priceLines'; readonly priceListVersionId: string; readonly identifierAttributeId: string };

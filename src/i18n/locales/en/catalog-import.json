@@ -96,7 +96,23 @@
     "noProposals": "No proposals yet.",
     "textlessTitle": "Pages without text",
     "textlessAbsent": "Page {page}: has no readable text (image). It was read with vision; its values are not checked against the text.",
-    "textlessLost": "Page {page}: the text exists but could not be read ({reason}). It was not sent to the model or charged — read it again."
+    "textlessLost": "Page {page}: the text exists but could not be read ({reason}). It was not sent to the model or charged — read it again.",
+    "supplier": "Catalog supplier",
+    "supplierHint": "The supplier memory fills in the lines it knows on every new reading. It changes without a new reading and never touches pages already read.",
+    "supplierLoading": "Loading contacts…",
+    "supplierLearn": "Learn from the approvals of this batch",
+    "supplierLearnHint": "Turn it off for a trial or foreign catalog: memory still applies, the batch just does not teach it.",
+    "memoryOpen": "Supplier memory",
+    "memoryApply": "Apply memory",
+    "memoryKnown": "{count, plural, one {Memory knows # unmapped line.} other {Memory knows # unmapped lines.}}",
+    "memoryApplyHint": "Checks every open table, including lines the model mapped. No new AI reading; your own decisions stay as they are.",
+    "memoryLegacy": "{count, plural, one {# line was read before memory existed: “Apply memory” fills it in, without a new AI reading.} other {# lines were read before memory existed: “Apply memory” fills them in, without a new AI reading.}}",
+    "memoryUndoAll": "{count, plural, one {Undo # memory decision} other {Undo # memory decisions}}",
+    "memoryWorking": "Applying memory table by table…",
+    "memoryApplied": "{count, plural, =0 {Memory had nothing new to decide.} one {Memory decided # line.} other {Memory decided # lines.}}",
+    "memoryUndone": "{count, plural, =0 {There were no memory decisions to remove.} one {Removed # memory decision.} other {Removed # memory decisions.}}",
+    "memoryRefusedTable": "Page {page} · table {table}: {reason}",
+    "memoryLimit": "Applying stopped at the batch limit of line decisions; the remaining tables were left as they were."
   },
   "batchStatus": {
     "awaitingFile": "Awaiting file",
@@ -206,6 +222,25 @@
       "refusalLineUnknown": "The line or the attribute was not found in the table or the family.",
       "refusalPriceTargetMissing": "This batch has no price list. Choose a draft version first.",
       "refusalPriceLineTaken": "This table already has a price line. Undo it first."
+    },
+    "decided": {
+      "title": "Decided lines",
+      "hint": "The decision on each line of the table, yours or the supplier memory’s. Undo reinterprets the table without a new AI reading.",
+      "lineN": "Line {line}",
+      "byHuman": "By you",
+      "byMemory": "{count, plural, one {From memory · # approval} other {From memory · # approvals}}",
+      "sourceBatch": "Last approved in batch {batch}"
+    },
+    "memory": {
+      "suggests": "Memory suggests",
+      "conflict": "Memory holds conflicting decisions for this label — pick one:",
+      "option": "{count, plural, one {{decision} · # approval} other {{decision} · # approvals}}",
+      "accept": "Accept",
+      "unusable": "not applicable here"
+    },
+    "lineDecision": {
+      "ignore": "Ignore",
+      "price": "Price per {unit}"
     }
   },
   "issues": {
@@ -242,5 +277,25 @@
       "kindMismatch": "The file is valid, but not of a kind this media role accepts.",
       "typeConflict": "The link’s extension or declared type does not match the file’s actual content."
     }
+  },
+  "memory": {
+    "title": "Supplier label memory",
+    "lead": "What approvals have taught: line label → decision, with how many approvals backed it. Forget a label and memory asks again.",
+    "loading": "Loading memory…",
+    "empty": "This supplier has no memory yet. It learns whenever a table is approved.",
+    "truncated": "Showing the {limit} best-supported labels.",
+    "label": "Label",
+    "unit": "Unit",
+    "decisions": "Decision",
+    "noUnit": "no unit",
+    "conflict": "Conflict: asks every time",
+    "inactive": "Inactive: the attribute is no longer in the library",
+    "forget": "Forget",
+    "clear": "Clear memory",
+    "clearConfirm": "Every label of this supplier will be forgotten. Decisions in batches stay; they just will not apply to new readings.",
+    "clearYes": "Yes, clear",
+    "cancel": "Cancel",
+    "close": "Close",
+    "cleared": "{count, plural, =0 {There was nothing to forget.} one {Forgot # label.} other {Forgot # labels.}}"
   }
 }

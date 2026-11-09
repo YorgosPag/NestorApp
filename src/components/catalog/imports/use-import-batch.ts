@@ -20,6 +20,7 @@ import { IMPORT_PAGE_ESTIMATED_COST_USD } from '@/subapps/catalog/vocabulary/cat
 import { createQueueState, overlayView, queuedDecisionsOf, useProposalChangeQueue } from './proposal-change-queue';
 import { useLineDecisions } from './use-line-decisions';
 import { usePageUpgrade } from './use-page-upgrade';
+import { useSupplierMemory } from './use-supplier-memory';
 
 /** Οι σελίδες που μένουν: όσες δεν έχουν κριθεί, και όσες απέτυχαν όταν ζητηθεί ρητά επανάληψη. */
 export function pagesToRead(pages: ImportBatchPages, retryFailed: boolean): number[] {
@@ -107,7 +108,8 @@ export function useImportBatch(batchId: string) {
   const accept = useCallback((fresh: ImportBatchDetailView) => setView(overlayView(fresh, queuedDecisionsOf(queued.current))), []);
   const upgrade = usePageUpgrade({ view, busy: reader.reading, accept, setFailure });
   const priceTarget = usePriceTarget(view, accept, setFailure);
-  return { view, failure, reload, discard, ...reader, upgrade, ...changes, ...useLineDecisions(changes.line), ...priceTarget };
+  const supplier = useSupplierMemory({ view, accept, setFailure });
+  return { view, failure, reload, discard, ...reader, upgrade, ...changes, ...useLineDecisions(changes.line), ...priceTarget, supplier };
 }
 
 /** §5.5.2 Β4 Δ1: ο τιμοκατάλογος της παρτίδας. Η απάντηση είναι όλη η όψη, με τις ξανασχεδιασμένες προτάσεις τιμών. */

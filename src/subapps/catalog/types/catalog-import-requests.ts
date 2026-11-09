@@ -8,6 +8,7 @@ import type { CatalogWire } from './catalog-record';
 import type {
   ImportBatchDefinition,
   ImportBatchTarget,
+  ImportLabelMemoryDefinition,
   ImportLineDecision,
   ImportProfileDefinition,
   ImportProposalDefinition,
@@ -77,6 +78,87 @@ export interface SetImportPriceTargetRequest {
 export interface SetImportSupplierRequest {
   readonly expectedRevision: number;
   readonly supplierContactId: string | null;
+  /** §5.5.2 Β5.2: μαθαίνει η παρτίδα; Απόν = δεν αλλάζει. */
+  readonly learnLabels?: boolean;
+}
+
+/**
+ * Ρητή πράξη μνήμης σε υπάρχουσα παρτίδα (§5.5.2 Β5.2 · Απόφαση 4): `apply` = εφαρμογή της μνήμης σε γραμμές χωρίς απόφαση · `undo` =
+ * αφαίρεση **όλων** των αποφάσεων που έβαλε η μνήμη. Και οι δύο ξαναχτίζουν τους πίνακες χωρίς AI. Κατάσταση με κλειδί ⇒ χωρίς CAS παρτίδας.
+ */
+export interface ImportMemoryActionRequest {
+  readonly action: 'apply' | 'undo';
+}
+
+/** Πίνακας που η πράξη μνήμης δεν άγγιξε, με τον λόγο. */
+export interface ImportMemoryTableRefusal {
+  readonly page: number;
+  readonly table: string;
+  readonly reason: ImportLineRefusal;
+}
+
+export interface ImportMemoryActionOutcome {
+  /** Αποφάσεις που μπήκαν (`apply`) ή βγήκαν (`undo`). */
+  readonly lines: number;
+  /** Πίνακες που ξαναχτίστηκαν. */
+  readonly tables: number;
+  readonly refused: readonly ImportMemoryTableRefusal[];
+  /** Η εφαρμογή σταμάτησε στο όριο αποφάσεων γραμμής της παρτίδας (`IMPORT_MAX_LINE_OVERRIDES`). */
+  readonly limitReached: boolean;
+}
+
+export interface ImportMemoryActionResult {
+  readonly view: ImportBatchDetailView;
+  readonly outcome: ImportMemoryActionOutcome;
+}
+
+/** Μία επιλογή του ιστορικού μνήμης, όπως τη δείχνει η οθόνη: απόφαση + πόσες εγκρίσεις τη στήριξαν. */
+export interface ImportMemoryOption {
+  readonly decision: ImportLineDecision;
+  readonly count: number;
+  readonly lastBatchId: string;
+}
+
+/**
+ * Τι ξέρει η μνήμη για μια γραμμή χωρίς πεδίο **που δεν έχει ακόμη απόφαση** (§5.5.2 Β5.2). `apply` = μία απόφαση στο ιστορικό ·
+ * `conflict` = περισσότερες (η οθόνη ρωτά, ποτέ «κερδίζει ο συχνότερος»). `usable: false` = η απόφαση δεν εφαρμόζεται εδώ (ιδιότητα
+ * εκτός σχήματος, τιμή χωρίς τιμοκατάλογο): φαίνεται, δεν μετρά.
+ */
+export interface ImportMemoryHint {
+  readonly page: number;
+  readonly table: string;
+  readonly line: number;
+  readonly memoryId: string;
+  readonly verdict: 'apply' | 'conflict';
+  readonly options: readonly (ImportMemoryOption & { readonly usable: boolean })[];
+}
+
+/** Η μνήμη του προμηθευτή απέναντι στην παρτίδα: **μόνο ανάγνωση**, καμία εγγραφή (Απόφαση 4). */
+export interface ImportMemoryHints {
+  readonly hints: readonly ImportMemoryHint[];
+  /** Γραμμές που η «Εφαρμογή μνήμης» θα αποφάσιζε τώρα. */
+  readonly applicable: number;
+  /** Γραμμές χωρίς ταυτότητα (παρτίδα παλαιότερη του Β5): η μνήμη δεν τις βλέπει πριν από ρητή «Εφαρμογή μνήμης». */
+  readonly legacyLines: number;
+  /** Αποφάσεις της παρτίδας που έβαλε η μνήμη (για την «αναίρεση όλων»). */
+  readonly fromMemory: number;
+}
+
+export type ImportLabelMemoryWire = CatalogWire<ImportLabelMemoryDefinition>;
+
+/** Η μνήμη ενός προμηθευτή (§5.5.2 Β5.2): οι εγγραφές του, και αν κόπηκε στο όριο ανάγνωσης. */
+export interface LabelMemoryListView {
+  readonly entries: readonly ImportLabelMemoryWire[];
+  readonly truncated: boolean;
+}
+
+/** Άδειασμα της μνήμης ενός προμηθευτή (Akeneo: «clear all mapping memory»). */
+export interface ClearLabelMemoryRequest {
+  readonly supplierContactId: string;
+}
+
+export interface ClearLabelMemoryResult {
+  readonly deleted: number;
 }
 
 export type ImportBatchWire = CatalogWire<ImportBatchDefinition>;
@@ -86,6 +168,8 @@ export type ImportProfileWire = CatalogWire<ImportProfileDefinition>;
 export interface ImportBatchDetailView {
   readonly batch: ImportBatchWire;
   readonly proposals: readonly ImportProposalWire[];
+  /** §5.5.2 Β5.2: απούσα όταν η παρτίδα δεν έχει προμηθευτή. */
+  readonly labelMemory?: ImportMemoryHints;
 }
 
 /**

@@ -16,7 +16,7 @@ import { pageDerivationOf } from '@/subapps/catalog/import/page-derivation';
 import { attributesGroupKeyOf, pageTableGroupKey } from '@/subapps/catalog/import/import-keys';
 import { lineKeyOf, pendingUnmappedLines } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportBatchPages, ImportLineOverride, ImportPageUnmappedLine, ImportProposalField, PageRegion } from '@/subapps/catalog/types/catalog-import';
-import type { ImportBatchDetailView, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportBatchDetailView, ImportMemoryHint, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useCatalogAccess } from '../shared/catalog-neutral-hooks';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
@@ -24,7 +24,7 @@ import { ImportPriceTarget } from './ImportPriceTarget';
 import { LINE_REFUSAL_KEYS, SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
-import { PriceLineNoteSlot, XChangeReportSlot } from './import-surfaces';
+import { ImportSupplierSlot, PriceLineNoteSlot, XChangeReportSlot } from './import-surfaces';
 
 type Workspace = ReturnType<typeof useImportBatch>;
 
@@ -82,6 +82,24 @@ function priceSourceOf(view: ImportBatchDetailView, proposal: ImportProposalWire
   if (tableKey === null) return null;
   const override = (view.batch.pages?.lineOverrides ?? []).find((entry) => entry.decision.kind === 'price' && pageTableGroupKey(entry.page, entry.table) === tableKey);
   return override ? { override, owner: view.proposals.find((candidate) => candidate.groupKey === tableKey) ?? proposal } : null;
+}
+
+/** §5.5.2 Β5.2: οι υποδείξεις της μνήμης του προμηθευτή, ανά γραμμή (`lineKeyOf`). */
+const memoryHintsOf = (view: ImportBatchDetailView): ReadonlyMap<string, ImportMemoryHint> =>
+  new Map((view.labelMemory?.hints ?? []).map((hint) => [lineKeyOf(hint), hint]));
+
+/** Ο προμηθευτής και η μνήμη του: μόνο σε ανοιχτή παρτίδα ιδιοτήτων από PDF (εκεί ζει η μνήμη ετικετών γραμμής). */
+function SupplierSlot({ workspace, view }: Pick<BatchProposalsProps, 'workspace' | 'view'>) {
+  const { batch } = view;
+  const { target } = batch;
+  const { supplier } = workspace;
+  if (batch.sourceKind !== 'pdf' || target.purpose !== 'attributes') return null;
+  return (
+    <ImportSupplierSlot supplierContactId={target.supplierContactId ?? null} learnLabels={target.learnLabels ?? true}
+      hints={view.labelMemory} busy={supplier.savingSupplier || workspace.upgrade !== null || workspace.reading} memoryBusy={supplier.memoryBusy}
+      report={supplier.memoryReport} onSupplier={(id) => void supplier.setSupplier(id)} onLearn={(learn) => void supplier.setLearning(learn)}
+      onMemory={(action) => void supplier.runMemory(action)} onFailure={supplier.reportFailure} />
+  );
 }
 
 /** Η παρτίδα έχει τιμοκατάλογο ⇒ μια γραμμή μπορεί να γίνει τιμή (το δικαίωμα κρίνεται και στον διακομιστή). */
@@ -205,6 +223,7 @@ function ProposalSlot({ workspace, view, focus, onFocus, proposal, canPrice }: B
         onFocusLine: (line) => onFocus({ kind: 'line', line }),
         onDecideLine: (target, request) => void workspace.decideLine(target, request),
         pricesEnabled: canPrice && priceTargetOf(view) !== null,
+        memoryHints: memoryHintsOf(view),
       }}
     />
   );
@@ -224,6 +243,7 @@ function BatchProposals(props: BatchProposalsProps) {
         {open ? <Button type="button" variant="outline" onClick={() => void workspace.discard()}>{t('batch.discard')}</Button> : null}
       </header>
       {open ? <ImportPriceTarget batch={batch} disabled={workspace.savingPriceTarget || upgrade !== null} onChange={(id) => void workspace.setPriceTarget(id)} /> : null}
+      {open ? <SupplierSlot workspace={workspace} view={view} /> : null}
       <PageProgress workspace={workspace} />
       {batch.xchangeReport ? <XChangeReportSlot report={batch.xchangeReport} /> : null}
       {upgrade ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('batch.upgrading', { current: upgrade.done + 1, total: upgrade.total })}</p> : null}
