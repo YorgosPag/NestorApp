@@ -19,8 +19,9 @@
  *
  * ΚΑΘΑΡΟ (pure) — zero React/DOM/store.
  *
- * @see ./wall-proposal.ts (ο μόνος υπολογιστής)
- * @see docs/centralized-systems/reference/adrs/ADR-929-raster-plan-recognition.md §6.11
+ * @see ./wall-proposal.ts (αποφάσεις Δ7)
+ * @see ./opening-review.ts (αποφάσεις κουφωμάτων, §6.13 — ο ίδιος ταιριαστής `matchAnchors`)
+ * @see docs/centralized-systems/reference/adrs/ADR-929-raster-plan-recognition.md §6.11 · §6.12 · §6.13
  */
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -50,11 +51,20 @@ export function imageAnchorFrameId(backgroundId: string): string {
   return `image:${backgroundId}`;
 }
 
-/** Μια απόφαση «αυτό ΕΙΝΑΙ τοίχος», αγκυρωμένη στο πολύγωνο του ορθογωνίου, στο πλαίσιο της πηγής `frameId`. */
-export interface WallDecisionAnchor {
+/** Τετράπλευρο στο πλαίσιο μιας πηγής. */
+export type AnchorQuad = readonly [Point2D, Point2D, Point2D, Point2D];
+
+/**
+ * Μια απόφαση του ανθρώπου, αγκυρωμένη στο **κυρτό** τετράπλευρο που αφορά, στο πλαίσιο της πηγής `frameId`. Ο ΕΝΑΣ
+ * τύπος ταυτότητας για κάθε απόφαση του βοηθού (§6.13): αμφίσημο ορθογώνιο (Δ7) · αποτύπωμα κουφώματος.
+ */
+export interface DecisionAnchor {
   readonly frameId: string;
-  readonly polygon: readonly [Point2D, Point2D, Point2D, Point2D];
+  readonly polygon: AnchorQuad;
 }
+
+/** Μια απόφαση «αυτό ΕΙΝΑΙ τοίχος» (Δ7): η άγκυρα του ορθογωνίου, χωρίς άλλο φορτίο. */
+export type WallDecisionAnchor = DecisionAnchor;
 
 /** Η κατάσταση των αποφάσεων μέσα σε μία πρόταση. */
 export interface WallProposalDecisions {
@@ -69,15 +79,20 @@ export interface WallProposalDecisions {
   readonly orphaned: readonly WallDecisionAnchor[];
 }
 
-/** Η άγκυρα ενός ορθογωνίου στο πλαίσιο της πηγής. */
-export function decisionAnchorOf(rect: DetectedRectangle, frame: AnchorFrame): WallDecisionAnchor {
-  const [a, b, c, d] = rect.polygon;
+/** Η άγκυρα ενός τετραπλεύρου σκηνής στο πλαίσιο της πηγής. */
+export function anchorOfQuad(polygon: AnchorQuad, frame: AnchorFrame): DecisionAnchor {
+  const [a, b, c, d] = polygon;
   const to = frame.toFrame;
   return { frameId: frame.id, polygon: [to(a), to(b), to(c), to(d)] };
 }
 
+/** Η άγκυρα ενός ορθογωνίου στο πλαίσιο της πηγής. */
+export function decisionAnchorOf(rect: DetectedRectangle, frame: AnchorFrame): WallDecisionAnchor {
+  return anchorOfQuad(rect.polygon, frame);
+}
+
 /** Τομή προς ένωση δύο κυρτών τετραπλεύρων (0 όταν κάποιο είναι εκφυλισμένο). */
-function anchorIoU(a: WallDecisionAnchor, b: WallDecisionAnchor): number {
+function anchorIoU(a: DecisionAnchor, b: DecisionAnchor): number {
   const areaA = polygonArea(a.polygon);
   const areaB = polygonArea(b.polygon);
   if (!(areaA > 0) || !(areaB > 0)) return 0;
@@ -87,32 +102,59 @@ function anchorIoU(a: WallDecisionAnchor, b: WallDecisionAnchor): number {
 }
 
 interface Candidate {
-  readonly anchorIndex: number;
-  readonly rectIndex: number;
+  readonly storedIndex: number;
+  readonly freshIndex: number;
   readonly iou: number;
 }
 
-/** Όλα τα ζεύγη πάνω από το κατώφλι, ταξινομημένα: φθίνον IoU, μετά σειρά άγκυρας, μετά σειρά ορθογωνίου. */
+/** Όλα τα ζεύγη πάνω από το κατώφλι, ταξινομημένα: φθίνον IoU, μετά σειρά αποθηκευμένης, μετά σειρά νέας. */
 function rankedCandidates(
-  anchors: readonly WallDecisionAnchor[],
-  fresh: readonly WallDecisionAnchor[],
+  stored: readonly DecisionAnchor[],
+  fresh: readonly DecisionAnchor[],
   minIoU: number,
 ): Candidate[] {
   const out: Candidate[] = [];
-  anchors.forEach((anchor, anchorIndex) => {
-    fresh.forEach((rectAnchor, rectIndex) => {
+  stored.forEach((anchor, storedIndex) => {
+    fresh.forEach((candidate, freshIndex) => {
       // §6.12 — άγκυρα άλλης πηγής δεν συγκρίνεται καν: μένει ορφανή, ορατή, ποτέ ψευδώς δεμένη.
-      if (anchor.frameId !== rectAnchor.frameId) return;
-      const iou = anchorIoU(anchor, rectAnchor);
-      if (iou >= minIoU) out.push({ anchorIndex, rectIndex, iou });
+      if (anchor.frameId !== candidate.frameId) return;
+      const iou = anchorIoU(anchor, candidate);
+      if (iou >= minIoU) out.push({ storedIndex, freshIndex, iou });
     });
   });
-  return out.sort((x, y) => y.iou - x.iou || x.anchorIndex - y.anchorIndex || x.rectIndex - y.rectIndex);
+  return out.sort((x, y) => y.iou - x.iou || x.storedIndex - y.storedIndex || x.freshIndex - y.freshIndex);
+}
+
+/** Το αποτέλεσμα μιας αντιστοίχισης: ποια αποθηκευμένη πήγε σε ποια νέα θέση, και ποιες έμειναν ορφανές. */
+export interface AnchorMatch<A extends DecisionAnchor> {
+  /** Δείκτης στη λίστα `fresh` ⇒ η αποθηκευμένη απόφαση (ίδιο αντικείμενο, με ό,τι φορτίο κουβαλά). */
+  readonly storedByFresh: ReadonlyMap<number, A>;
+  readonly orphaned: readonly A[];
 }
 
 /**
- * Ξαναβρίσκει τις αποφάσεις στα αμφίσημα ορθογώνια της νέας πηγής. Ιδεμποτικό: ίδια είσοδος ⇒ ίδια αντιστοίχιση.
- * Επιστρέφει ποια ορθογώνια καλύπτονται από απόφαση, την άγκυρα κάθε ορθογωνίου και τις ορφανές.
+ * Ο ΕΝΑΣ ταιριαστής (§6.11 · §6.13): ένα-προς-ένα, άπληστα κατά φθίνον IoU, ντετερμινιστική ισοπαλία, μόνο μέσα στην
+ * ίδια πηγή. Γενικός ως προς το φορτίο της απόφασης (`A`: τοίχος · πόρτα · παράθυρο) — ποτέ δεύτερο αντίγραφο.
+ * Ιδεμποτικό: ίδια είσοδος ⇒ ίδια αντιστοίχιση.
+ */
+export function matchAnchors<A extends DecisionAnchor>(
+  stored: readonly A[],
+  fresh: readonly DecisionAnchor[],
+  minIoU: number,
+): AnchorMatch<A> {
+  const storedByFresh = new Map<number, A>();
+  const used = new Set<number>();
+  for (const c of rankedCandidates(stored, fresh, minIoU)) {
+    if (used.has(c.storedIndex) || storedByFresh.has(c.freshIndex)) continue;
+    used.add(c.storedIndex);
+    storedByFresh.set(c.freshIndex, stored[c.storedIndex]);
+  }
+  return { storedByFresh, orphaned: stored.filter((_, i) => !used.has(i)) };
+}
+
+/**
+ * Ξαναβρίσκει τις αποφάσεις στα αμφίσημα ορθογώνια της νέας πηγής. Επιστρέφει ποια ορθογώνια καλύπτονται από απόφαση,
+ * την άγκυρα κάθε ορθογωνίου και τις ορφανές.
  */
 export function matchDecisionAnchors(
   ambiguous: readonly DetectedRectangle[],
@@ -122,22 +164,16 @@ export function matchDecisionAnchors(
   minIoU: number,
 ): WallProposalDecisions {
   const fresh = ambiguous.map((r) => decisionAnchorOf(r, frame));
-  const anchorOfRect = new Map<number, WallDecisionAnchor>();
-  const used = new Set<number>();
-  for (const c of rankedCandidates(anchors, fresh, minIoU)) {
-    if (used.has(c.anchorIndex) || anchorOfRect.has(c.rectIndex)) continue;
-    used.add(c.anchorIndex);
-    anchorOfRect.set(c.rectIndex, anchors[c.anchorIndex]);
-  }
+  const { storedByFresh, orphaned } = matchAnchors(anchors, fresh, minIoU);
   const acceptedKeys = new Set<string>();
   const anchorByKey = new Map<string, WallDecisionAnchor>();
   ambiguous.forEach((rect, i) => {
     const key = keyOf.get(rect) ?? '';
-    const stored = anchorOfRect.get(i);
+    const stored = storedByFresh.get(i);
     if (stored) acceptedKeys.add(key);
     anchorByKey.set(key, stored ?? fresh[i]);
   });
-  return { acceptedKeys, anchorByKey, orphaned: anchors.filter((_, i) => !used.has(i)) };
+  return { acceptedKeys, anchorByKey, orphaned };
 }
 
 /** Οι άγκυρες για κλειδιά μιας πρότασης (ό,τι κάνει ο άνθρωπος πατώντας «τοίχος» σε καθένα). */

@@ -17,9 +17,11 @@ import {
   canChooseOpening,
   countOpeningReview,
   decisionsFromChoices,
+  resolveOpeningDecisions,
   reviewableOpenings,
   similarOpeningKeys,
   suggestedOpeningChoice,
+  withOpeningChoice,
   type OpeningReviewChoice,
 } from '../opening-review';
 import { buildOpeningPreview, openingReviewSignature } from '../opening-preview';
@@ -186,5 +188,41 @@ describe('ADR-911 Φ4-3β — το αποτύπωμα αυτού που είδε
     const preview = previewOf(proposal);
     const more: OpeningProposal = { ...proposal, unexplainedIds: [...proposal.unexplainedIds, 'line_x'] };
     expect(openingReviewSignature(more, preview)).not.toBe(openingReviewSignature(proposal, preview));
+  });
+});
+
+describe('ADR-929 §6.13 — απαντήσεις αγκυρωμένες στο αποτύπωμα', () => {
+  /** Αποτύπωμα κενού [x, x+w] × πάχος 200 πάνω στον άξονα y = 0. */
+  const footprintAt = (x: number, w = 900): NonNullable<OpeningProposalItem['footprint']> =>
+    [{ x, y: 100 }, { x: x + w, y: 100 }, { x: x + w, y: -100 }, { x, y: -100 }];
+  const at = (key: string, x: number) => item(key, { footprint: footprintAt(x) });
+
+  it('οι τοίχοι ξαναγράφτηκαν: το μέσο (άρα το κλειδί) μετακινήθηκε 3 mm, η απάντηση ΜΕΝΕΙ', () => {
+    const before = proposalOf(at('gap:450:0', 0));
+    const decided = withOpeningChoice([], resolveOpeningDecisions(before, []), ['gap:450:0'], 'door');
+    const after = resolveOpeningDecisions(proposalOf(at('gap:453:0', 3)), decided);
+    expect(after.choices.get('gap:453:0')).toBe('door');
+    expect(after.orphaned).toEqual([]);
+    expect(after.anchorByKey.get('gap:453:0')).toBe(decided[0]);
+  });
+
+  it('το κούφωμα χάθηκε: η απάντηση γίνεται ορφανή, ορατή — ποτέ σιωπηλά σβησμένη', () => {
+    const decided = withOpeningChoice([], resolveOpeningDecisions(proposalOf(at('g1', 0)), []), ['g1'], 'window');
+    const after = resolveOpeningDecisions(proposalOf(at('g2', 5000)), decided);
+    expect(after.choices.size).toBe(0);
+    expect(after.orphaned).toEqual(decided);
+  });
+
+  it('νέα απάντηση στο ίδιο στοιχείο ΑΝΤΙΚΑΘΙΣΤΑ την παλιά· «αναποφάσιστο» τη σβήνει', () => {
+    const proposal = proposalOf(at('g1', 0));
+    const once = withOpeningChoice([], resolveOpeningDecisions(proposal, []), ['g1'], 'door');
+    const twice = withOpeningChoice(once, resolveOpeningDecisions(proposal, once), ['g1'], 'none');
+    expect(twice.map((d) => d.choice)).toEqual(['none']);
+    expect(withOpeningChoice(twice, resolveOpeningDecisions(proposal, twice), ['g1'], null)).toEqual([]);
+  });
+
+  it('στοιχείο χωρίς αποτύπωμα δεν δέχεται άγκυρα — κανένα ψεύτικο «το είδα»', () => {
+    const proposal = proposalOf(item('g1'));
+    expect(withOpeningChoice([], resolveOpeningDecisions(proposal, []), ['g1'], 'door')).toEqual([]);
   });
 });

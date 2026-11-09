@@ -203,11 +203,11 @@ describe('ADR-911 Φ4-3β — απαντήσεις ανθρώπου', () => {
     expect(decided.status).toBe('door');
     expect(decided.decided).toBe(true);
     expect(state().openingPreview!.zones.find((z) => z.key === gap)!.status).toBe('door');
-    expect(countOpeningReview(state().openingProposal!, state().openingChoices).writable).toBe(13);
+    expect(countOpeningReview(state().openingProposal!, state().openingReview.choices).writable).toBe(13);
 
     openings.choose([gap], null, h.deps);
     expect(state().openingProposal!.items.find((i) => i.key === gap)!.status).toBe('needs-decision');
-    expect(state().openingChoices.has(gap)).toBe(false);
+    expect(state().openingReview.choices.has(gap)).toBe(false);
   });
 
   it('«τίποτα» δεν γράφει: το στοιχείο μένει «προς απόφαση», σημειωμένο ως ιδωμένο', () => {
@@ -219,7 +219,7 @@ describe('ADR-911 Φ4-3β — απαντήσεις ανθρώπου', () => {
 
     expect(state().openingProposal!.items.find((i) => i.key === gap)!.status).toBe('needs-decision');
     expect(state().openingPreview!.zones.find((z) => z.key === gap)!.dismissed).toBe(true);
-    expect(countOpeningReview(state().openingProposal!, state().openingChoices))
+    expect(countOpeningReview(state().openingProposal!, state().openingReview.choices))
       .toEqual({ writable: 12, undecided: 1, dismissed: 1, blocked: 0 });
   });
 
@@ -240,7 +240,7 @@ describe('ADR-911 Φ4-3β — απαντήσεις ανθρώπου', () => {
 
     openings.choose([door.key, 'no-such-key'], 'none', h.deps);
 
-    expect(state().openingChoices.size).toBe(0);
+    expect(state().openingReview.choices.size).toBe(0);
   });
 
   it('νέο δείγμα ⇒ καμία παλιά απάντηση', () => {
@@ -252,7 +252,7 @@ describe('ADR-911 Φ4-3β — απαντήσεις ανθρώπου', () => {
     captureModelFromDrawingSample(ON_OPENING_LINE);
     openings.adoptSample(h.deps);
 
-    expect(state().openingChoices.size).toBe(0);
+    expect(state().openingReview.choices.size).toBe(0);
   });
 });
 
@@ -328,7 +328,7 @@ describe('ADR-911 Φ4-3β — η ΜΙΑ έγκριση', () => {
     const after = stored(h.live.entities());
 
     expect(countOpeningsByStatus(state().openingProposal!).existing).toBe(12);
-    expect(countOpeningReview(state().openingProposal!, state().openingChoices).writable).toBe(0);
+    expect(countOpeningReview(state().openingProposal!, state().openingReview.choices).writable).toBe(0);
     expect(state().openingPreview!.zones.filter((z) => z.status === 'existing').every((z) => z.pieces.length === 1)).toBe(true);
 
     expect(openings.approve(h.deps)).toBe(false);
@@ -433,6 +433,6 @@ describe('ADR-911 Φ4-3β — η ΜΙΑ έγκριση', () => {
 
     expect(state().openingProposal).not.toBe(shown);
     expect(state().openingProposal).toEqual(shown);
-    expect(state().openingChoices.get(gap)).toBe('none');
+    expect(state().openingReview.choices.get(gap)).toBe('none');
   });
 });

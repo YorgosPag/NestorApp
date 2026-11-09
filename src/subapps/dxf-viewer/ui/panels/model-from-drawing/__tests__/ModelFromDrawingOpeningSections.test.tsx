@@ -41,12 +41,12 @@ interface Options {
 function renderSection(options: Options = {}) {
   const proposal = options.proposal ?? PROPOSAL;
   const actions: jest.Mocked<OpeningReviewActions> = {
-    onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onFocus: jest.fn(), onApproveOpenings: jest.fn(),
+    onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onFocus: jest.fn(), onApproveOpenings: jest.fn(), onDiscardOrphanedOpenings: jest.fn(),
   };
   const view = render(
     <OpeningsSection
       proposal={proposal} preview={options.preview === undefined ? previewOf(proposal) : options.preview}
-      choices={options.choices ?? new Map()} colorHex="#00cccc" focusedKey={options.focusedKey ?? null}
+      choices={options.choices ?? new Map()} orphanedCount={0} colorHex="#00cccc" focusedKey={options.focusedKey ?? null}
       actions={actions} t={t}
     />,
   );

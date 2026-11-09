@@ -15,6 +15,7 @@ import type { Entity } from '../../../../types/entities';
 import type { WallCategory } from '../../../../bim/types/wall-types';
 import { computeWallProposal, type WallProposal } from '../../../../bim/model-from-drawing/wall-proposal';
 import { decisionAnchorsForKeys } from '../../../../bim/model-from-drawing/decision-anchors';
+import { NO_OPENING_REVIEW_DECISIONS } from '../../../../bim/model-from-drawing/opening-review';
 import fixture from '../../../../bim/model-from-drawing/__tests__/fixtures/floor-plan-lines.json';
 import { PREVIEW_ZONE_STYLE } from '../../../../systems/region-preview/preview-zone-style';
 import { ASSISTANT_STATUS_ORDER, ASSISTANT_STATUS_TONE } from '../../../../systems/model-from-drawing/assistant-status-tone';
@@ -77,7 +78,8 @@ function stateOf(patch: Partial<ModelFromDrawingState> = {}): ModelFromDrawingSt
     proposal: UNCONFIRMED,
     preview: null,
     openingColorHex: null,
-    openingChoices: new Map(),
+    openingDecisions: [],
+    openingReview: NO_OPENING_REVIEW_DECISIONS,
     openingProposal: null,
     openingPreview: null,
     focusedKey: null,
@@ -90,7 +92,7 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
   return {
     onClose: jest.fn(), onResample: jest.fn(), onConfirmGroup: jest.fn(),
     onSetUndecided: jest.fn(), onDiscardOrphanedDecisions: jest.fn(), onFocus: jest.fn(), onApprove: jest.fn(),
-    onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onApproveOpenings: jest.fn(),
+    onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onApproveOpenings: jest.fn(), onDiscardOrphanedOpenings: jest.fn(),
     onRecognizeImage: jest.fn(),
     reading: {
       onBegin: jest.fn(), onEnd: jest.fn(), onToggleAddRegion: jest.fn(),

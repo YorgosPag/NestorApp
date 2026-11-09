@@ -33,6 +33,7 @@ import { resolveDoorHost, type HostWalls, type OpeningHostPlan, type OpeningSpan
 import { clusterWindowSymbols, type WindowCluster, type WindowSymbolLine } from './window-symbol-clusters';
 import { frameCoords, isInsideFrameBand, pointOnFrame, wallHostFrame, type WallHostFrame } from './wall-host-frame';
 import { findWallRunGaps, type WallRunGap } from './wall-run-gaps';
+import type { AnchorQuad } from './decision-anchors';
 
 export type OpeningProposalStatus = 'door' | 'window' | 'needs-decision' | 'existing';
 
@@ -71,6 +72,12 @@ export interface OpeningProposalItem {
   readonly occupantIds?: readonly string[];
   /** Η κατάσταση είναι απόφαση ανθρώπου, όχι ανάγνωση του σχεδίου· το `reason` λέει γιατί ρωτήθηκε. */
   readonly decided?: true;
+  /**
+   * ADR-929 §6.13 — το αποτύπωμα του ανοίγματος (τετράγωνο πάνω στο άνοιγμα), σε συντεταγμένες σκηνής. Μόνο σε
+   * στοιχείο που δέχεται απόφαση: είναι η **ταυτότητα** της απόφασης, που ξαναβρίσκεται με επικάλυψη όταν οι τοίχοι
+   * ξαναγραφτούν και το μέσο του ανοίγματος (άρα το `key`) μετακινηθεί λίγα mm.
+   */
+  readonly footprint?: AnchorQuad;
 }
 
 export interface OpeningProposal {
@@ -261,12 +268,41 @@ export function computeOpeningProposal(input: OpeningProposalInput): OpeningProp
   const foreign: readonly WindowSymbolLine[] = input.entities.filter(isLineEntity)
     .filter((e) => input.colorOf(e)?.toLowerCase() !== role);
   const gaps = findWallRunGaps({ ...ctx, claims }).map((gap) => proposeGap(gap, foreign, ctx));
-  const items = [...doors, ...windows, ...gaps]
-    .map((item) => applyDecision(item, input.decisions))
-    .sort((a, b) => a.key.localeCompare(b.key));
+  const items = [...doors, ...windows, ...gaps].map(withFootprint);
   const explained = new Set(items.flatMap((i) => i.sourceIds));
   const unexplainedIds = free.map((l) => l.id).filter((id) => !explained.has(id));
-  return { items, unexplainedIds };
+  return applyOpeningDecisions({ items, unexplainedIds }, input.decisions);
+}
+
+/**
+ * Οι αποφάσεις του ανθρώπου πάνω σε μια πρόταση (κλειδί ⇒ πόρτα/παράθυρο), ως χωριστό καθαρό βήμα: ο ελεγκτής πρώτα
+ * ξαναβρίσκει τις αγκυρωμένες αποφάσεις στην ανάγνωση (§6.13) και μετά τις εφαρμόζει — μία ανάγνωση, όχι δύο.
+ */
+export function applyOpeningDecisions(
+  proposal: OpeningProposal,
+  decisions: OpeningProposalInput['decisions'],
+): OpeningProposal {
+  const items = proposal.items.map((item) => applyDecision(item, decisions)).sort((a, b) => a.key.localeCompare(b.key));
+  return { items, unexplainedIds: proposal.unexplainedIds };
+}
+
+/**
+ * §6.13 — το αποτύπωμα στοιχείου που δέχεται απόφαση: **τετράγωνο πάνω στο άνοιγμα** (πλευρά = το άνοιγμα, κεντραρισμένο
+ * στον άξονα). Μόνο από το άνοιγμα, ΟΧΙ από το πάχος του ξενιστή: η αλλαγή τύπου τοίχου δεν αλλάζει ποια τρύπα είναι.
+ * Κλιμακοανεξάρτητο (καμία σταθερά σε mm)· μετατόπιση κατά μήκος ⇒ IoU ≈ επικάλυψη των ανοιγμάτων. Εκφυλισμένο ⇒ κανένα.
+ */
+function withFootprint(item: OpeningProposalItem): OpeningProposalItem {
+  if (!isDecidableOpening(item) || !item.span) return item;
+  const { start, end } = item.span;
+  const length = calculateDistance(start, end);
+  if (!(length > 0)) return item;
+  const nx = -(end.y - start.y) / 2;
+  const ny = (end.x - start.x) / 2;
+  const footprint: AnchorQuad = [
+    { x: start.x + nx, y: start.y + ny }, { x: end.x + nx, y: end.y + ny },
+    { x: end.x - nx, y: end.y - ny }, { x: start.x - nx, y: start.y - ny },
+  ];
+  return { ...item, footprint };
 }
 
 /** Πλήθη ανά κατάσταση, με παρούσες και τις μηδενικές. */

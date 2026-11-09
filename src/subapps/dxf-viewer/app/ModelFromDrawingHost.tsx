@@ -241,6 +241,7 @@ function usePanelActions(
     },
     onStartOpenings: () => modelFromDrawingOpeningsSession.armSample(),
     onChooseOpening: (keys, choice) => modelFromDrawingOpeningsSession.choose(keys, choice, getOpeningDeps()),
+    onDiscardOrphanedOpenings: () => modelFromDrawingOpeningsSession.discardOrphanedDecisions(getOpeningDeps()),
     onApproveOpenings: () => {
       if (modelFromDrawingOpeningsSession.approve(getOpeningDeps())) modelFromDrawingSession.refresh(getDeps(), true);
     },

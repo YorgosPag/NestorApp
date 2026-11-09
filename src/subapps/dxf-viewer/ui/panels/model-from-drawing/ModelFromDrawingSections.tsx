@@ -193,17 +193,22 @@ function DecisionRow({ item, accepted, focused, onSetUndecided, onFocus, t }: De
   );
 }
 
-/** ADR-929 §6.11 — αποφάσεις που δεν βρήκαν ορθογώνιο στην τρέχουσα πηγή: ορατές, και φεύγουν μόνο με ρητή πράξη. */
-function OrphanedDecisionsNote(props: {
+/**
+ * ADR-929 §6.11 · §6.13 — αποφάσεις που δεν βρήκαν στοιχείο στην τρέχουσα ανάγνωση: ορατές, και φεύγουν μόνο με ρητή
+ * πράξη. ΜΙΑ γραμμή για τοίχους και κουφώματα· αλλάζει μόνο το κείμενο.
+ */
+export function OrphanedDecisionsNote(props: {
   readonly count: number;
+  readonly text: (count: number) => string;
   readonly onDiscard: () => void;
+  readonly testId: string;
   readonly t: Translate;
 }): React.ReactElement | null {
   if (props.count === 0) return null;
   return (
-    <p className="m-0 flex items-center gap-1.5 text-[11px] text-foreground" role="status" data-testid="mfd-orphaned">
+    <p className="m-0 flex items-center gap-1.5 text-[11px] text-foreground" role="status" data-testid={props.testId}>
       <ToneSwatch tone="reject" />
-      <span className="flex-1">{props.t('modelFromDrawing.decisions.orphaned', { count: props.count })}</span>
+      <span className="flex-1">{props.text(props.count)}</span>
       <Button type="button" variant="ghost" size="xs" onClick={props.onDiscard}>
         {props.t('modelFromDrawing.decisions.discardOrphaned')}
       </Button>
@@ -235,7 +240,10 @@ export function DecisionsSection(props: {
           />
         ))}
       </ul>
-      <OrphanedDecisionsNote count={orphaned.length} onDiscard={props.onDiscardOrphaned} t={t} />
+      <OrphanedDecisionsNote
+        count={orphaned.length} text={(count) => t('modelFromDrawing.decisions.orphaned', { count })}
+        onDiscard={props.onDiscardOrphaned} testId="mfd-orphaned" t={t}
+      />
     </section>
   );
 }

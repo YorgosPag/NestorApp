@@ -25,7 +25,11 @@
 
 import { isWallEntity } from '../../types/entities';
 import { addOpeningsToScene } from '../../bim/model-from-drawing/add-openings-to-scene';
-import { computeOpeningProposal, type OpeningProposal } from '../../bim/model-from-drawing/opening-proposal';
+import {
+  applyOpeningDecisions,
+  computeOpeningProposal,
+  type OpeningProposal,
+} from '../../bim/model-from-drawing/opening-proposal';
 import {
   buildOpeningPreview,
   openingReviewSignature,
@@ -34,7 +38,10 @@ import {
 import {
   canChooseOpening,
   decisionsFromChoices,
+  resolveOpeningDecisions,
+  withOpeningChoice,
   type OpeningReviewChoice,
+  type OpeningReviewDecisions,
 } from '../../bim/model-from-drawing/opening-review';
 import { resolveEntityColorHex } from '../selection/select-similar-by-color';
 import {
@@ -54,34 +61,40 @@ export interface OpeningSessionDeps extends SampleDeps {
 }
 
 /** Ό,τι αποφασίζει ο άνθρωπος και καθορίζει την πρόταση ανοιγμάτων. */
-type OpeningInputs = Pick<ModelFromDrawingState, 'openingColorHex' | 'openingChoices'>;
+type OpeningInputs = Pick<ModelFromDrawingState, 'openingColorHex' | 'openingDecisions'>;
 
 interface Computed {
   readonly openingProposal: OpeningProposal;
   readonly openingPreview: OpeningPreview;
+  /** ADR-929 §6.13 — οι αγκυρωμένες απαντήσεις όπως ξαναβρέθηκαν σε ΑΥΤΗ την ανάγνωση. */
+  readonly openingReview: OpeningReviewDecisions;
   /** Η σκηνή της πρότασης — ταξιδεύει ΜΑΖΙ της (βλ. `SceneBasis`). */
   readonly openingBasis: SceneBasis;
 }
 
-/** Πρόταση + προεπισκόπηση από τη ΖΩΝΤΑΝΗ σκηνή. `null` χωρίς σκηνή ή χωρίς δείγμα. */
+/**
+ * Πρόταση + προεπισκόπηση από τη ΖΩΝΤΑΝΗ σκηνή. `null` χωρίς σκηνή ή χωρίς δείγμα. Μία ανάγνωση: οι αποθηκευμένες
+ * απαντήσεις ξαναβρίσκουν τα στοιχεία της με επικάλυψη αποτυπώματος (§6.13) και μετά εφαρμόζονται.
+ */
 function compute(inputs: OpeningInputs, deps: OpeningSessionDeps): Computed | null {
   const live = readLiveScene(deps.accessor);
   if (!live || !inputs.openingColorHex) return null;
-  const openingProposal = computeOpeningProposal({
+  const reading = computeOpeningProposal({
     entities: live.entities,
     openingColorHex: inputs.openingColorHex,
     colorOf: (e) => resolveEntityColorHex(e, deps.layersById),
     sceneUnits: live.sceneUnits,
-    decisions: decisionsFromChoices(inputs.openingChoices),
   });
+  const openingReview = resolveOpeningDecisions(reading, inputs.openingDecisions);
+  const openingProposal = applyOpeningDecisions(reading, decisionsFromChoices(openingReview.choices));
   const openingPreview = buildOpeningPreview({
     proposal: openingProposal,
     entities: live.entities,
     levelId: live.levelId,
     sceneUnits: live.sceneUnits,
-    choices: inputs.openingChoices,
+    choices: openingReview.choices,
   });
-  return { openingProposal, openingPreview, openingBasis: readSceneBasis(deps.accessor) };
+  return { openingProposal, openingPreview, openingReview, openingBasis: readSceneBasis(deps.accessor) };
 }
 
 /** Ξαναϋπολογίζει με (ενδεχομένως) νέες απαντήσεις και γράφει το αποτέλεσμα στο store. */
@@ -89,7 +102,7 @@ function recompute(inputs: Partial<OpeningInputs>, deps: OpeningSessionDeps): vo
   const state = modelFromDrawingStore.get();
   const merged: OpeningInputs = {
     openingColorHex: inputs.openingColorHex ?? state.openingColorHex,
-    openingChoices: inputs.openingChoices ?? state.openingChoices,
+    openingDecisions: inputs.openingDecisions ?? state.openingDecisions,
   };
   modelFromDrawingStore.publishRecomputed(merged, compute(merged, deps), { sampleRole: 'wall' });
 }
@@ -138,24 +151,28 @@ export const modelFromDrawingOpeningsSession = {
       modelFromDrawingStore.patch({ notice: { kind: 'no-walls' } });
       return;
     }
-    recompute({ openingColorHex: sampled, openingChoices: new Map() }, deps);
+    recompute({ openingColorHex: sampled, openingDecisions: [] }, deps);
   },
 
   /**
    * Η απάντηση του ανθρώπου για ένα ή περισσότερα στοιχεία (μαζική απόφαση για όμοια). `null` =
    * «αναποφάσιστο ξανά». Κλειδί που δεν δέχεται απάντηση αγνοείται — ο πυρήνας θα το αγνοούσε
-   * ούτως ή άλλως, αλλά εδώ δεν μένει ούτε ως ψεύτικο «το είδα».
+   * ούτως ή άλλως, αλλά εδώ δεν μένει ούτε ως ψεύτικο «το είδα». Η απάντηση αποθηκεύεται ως **άγκυρα** στο αποτύπωμα
+   * του στοιχείου (§6.13), ώστε να το ξαναβρεί όταν ξαναγραφτούν οι τοίχοι.
    */
   choose(keys: readonly string[], choice: OpeningReviewChoice | null, deps: OpeningSessionDeps): void {
     const state = modelFromDrawingStore.get();
     const choosable = new Set(state.openingProposal?.items.filter(canChooseOpening).map((i) => i.key));
-    const next = new Map(state.openingChoices);
-    for (const key of keys) {
-      if (!choosable.has(key)) continue;
-      if (choice === null) next.delete(key);
-      else next.set(key, choice);
-    }
-    recompute({ openingChoices: next }, deps);
+    const targets = keys.filter((key) => choosable.has(key));
+    recompute({ openingDecisions: withOpeningChoice(state.openingDecisions, state.openingReview, targets, choice) }, deps);
+  },
+
+  /** ADR-929 §6.13 — ο άνθρωπος πετά τις απαντήσεις που δεν βρήκαν κούφωμα (ρητά, ποτέ σιωπηλά). */
+  discardOrphanedDecisions(deps: OpeningSessionDeps): void {
+    const { openingDecisions, openingReview } = modelFromDrawingStore.get();
+    const orphaned = new Set(openingReview.orphaned);
+    if (orphaned.size === 0) return;
+    recompute({ openingDecisions: openingDecisions.filter((d) => !orphaned.has(d)) }, deps);
   },
 
   /**

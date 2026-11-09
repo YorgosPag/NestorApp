@@ -117,7 +117,8 @@ function OpeningsStep({ state, actions, t }: ModelFromDrawingPanelProps & { read
   if (!state.openingProposal) return <OpeningsStart onStart={actions.onStartOpenings} t={t} />;
   return (
     <OpeningsSection
-      proposal={state.openingProposal} preview={state.openingPreview} choices={state.openingChoices}
+      proposal={state.openingProposal} preview={state.openingPreview} choices={state.openingReview.choices}
+      orphanedCount={state.openingReview.orphaned.length}
       colorHex={state.openingColorHex} focusedKey={state.focusedKey} actions={actions} t={t}
     />
   );

@@ -21,6 +21,8 @@ import {
   type OpeningProposal,
   type OpeningProposalItem,
 } from './opening-proposal';
+import { anchorOfQuad, matchAnchors, SCENE_ANCHOR_FRAME, type DecisionAnchor } from './decision-anchors';
+import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 
 /** Ό,τι μπορεί να απαντήσει ο άνθρωπος για ένα στοιχείο «προς απόφαση». */
 export type OpeningReviewChoice = OpeningDecision | 'none';
@@ -28,7 +30,72 @@ export type OpeningReviewChoice = OpeningDecision | 'none';
 /** Οι απαντήσεις με τη σειρά που τις διαβάζει ο άνθρωπος (και τα πλήκτρα 1 · 2 · 3). */
 export const OPENING_REVIEW_CHOICES: readonly OpeningReviewChoice[] = ['door', 'window', 'none'];
 
+/** Οι απαντήσεις **αυτής** της ανάγνωσης, ανά κλειδί — παράγωγο των αγκυρωμένων αποφάσεων, ποτέ αποθηκευμένο. */
 export type OpeningReviewChoices = ReadonlyMap<string, OpeningReviewChoice>;
+
+/**
+ * ADR-929 §6.13 — μια απάντηση του ανθρώπου, αγκυρωμένη στο **αποτύπωμα** του κουφώματος (`OpeningProposalItem.footprint`),
+ * όχι στο κλειδί του: το μέσο ενός κενού ή παραθύρου μετακινείται όταν οι τοίχοι ξαναγραφτούν, το αποτύπωμα επικαλύπτεται.
+ * Το είδος του συμβόλου ΔΕΝ είναι μέρος της ταυτότητας: «αυτή η τρύπα είναι πόρτα» ισχύει κι αν φανεί εκεί σύμβολο.
+ */
+export interface OpeningDecisionAnchor extends DecisionAnchor {
+  readonly choice: OpeningReviewChoice;
+}
+
+/** Οι αποφάσεις κουφωμάτων μέσα σε μία ανάγνωση. */
+export interface OpeningReviewDecisions {
+  readonly choices: OpeningReviewChoices;
+  /** Η άγκυρα κάθε στοιχείου που δέχεται απόφαση: η αποθηκευμένη (ίδιο αντικείμενο) όταν έχει, αλλιώς μια νέα. */
+  readonly anchorByKey: ReadonlyMap<string, DecisionAnchor>;
+  /** Απαντήσεις που δεν βρήκαν κούφωμα σε αυτή την ανάγνωση — ορατές, όχι σβησμένες. */
+  readonly orphaned: readonly OpeningDecisionAnchor[];
+}
+
+export const NO_OPENING_REVIEW_DECISIONS: OpeningReviewDecisions = { choices: new Map(), anchorByKey: new Map(), orphaned: [] };
+
+/**
+ * Ξαναβρίσκει τις αποθηκευμένες απαντήσεις στα στοιχεία μιας ανάγνωσης **πριν** εφαρμοστούν (`applyOpeningDecisions`).
+ * Ο ίδιος ταιριαστής με τις αποφάσεις τοίχων (`matchAnchors`), στο πλαίσιο της σκηνής: τα κουφώματα διαβάζονται μόνο από
+ * το σχέδιο.
+ */
+export function resolveOpeningDecisions(
+  proposal: OpeningProposal,
+  stored: readonly OpeningDecisionAnchor[],
+): OpeningReviewDecisions {
+  const anchored = proposal.items.flatMap((item) =>
+    item.footprint ? [{ key: item.key, anchor: anchorOfQuad(item.footprint, SCENE_ANCHOR_FRAME) }] : []);
+  const { storedByFresh, orphaned } = matchAnchors(
+    stored, anchored.map((a) => a.anchor), MODEL_FROM_DRAWING_LIMITS.DECISION_ANCHOR_MIN_IOU,
+  );
+  const choices = new Map<string, OpeningReviewChoice>();
+  const anchorByKey = new Map<string, DecisionAnchor>();
+  anchored.forEach(({ key, anchor }, i) => {
+    const decision = storedByFresh.get(i);
+    if (decision) choices.set(key, decision.choice);
+    anchorByKey.set(key, decision ?? anchor);
+  });
+  return { choices, anchorByKey, orphaned };
+}
+
+/**
+ * Η απάντηση του ανθρώπου για κλειδιά της τρέχουσας ανάγνωσης, πάνω στις αποθηκευμένες αποφάσεις. `null` = αναποφάσιστο
+ * ξανά. Κλειδί χωρίς άγκυρα (δεν δέχεται απάντηση) αγνοείται. Ιδεμποτικό: η παλιά απόφαση του ίδιου στοιχείου φεύγει.
+ */
+export function withOpeningChoice(
+  stored: readonly OpeningDecisionAnchor[],
+  review: OpeningReviewDecisions,
+  keys: readonly string[],
+  choice: OpeningReviewChoice | null,
+): OpeningDecisionAnchor[] {
+  let next = [...stored];
+  for (const key of keys) {
+    const anchor = review.anchorByKey.get(key);
+    if (!anchor) continue;
+    next = next.filter((decision) => decision !== anchor);
+    if (choice !== null) next.push({ frameId: anchor.frameId, polygon: anchor.polygon, choice });
+  }
+  return next;
+}
 
 /** Οι απαντήσεις που ΓΡΑΦΟΥΝ — ό,τι δίνεται στον πυρήνα ως `decisions`. Το `none` μένει έξω. */
 export function decisionsFromChoices(choices: OpeningReviewChoices): Map<string, OpeningDecision> {

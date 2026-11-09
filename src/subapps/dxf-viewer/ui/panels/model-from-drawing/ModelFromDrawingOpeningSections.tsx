@@ -53,7 +53,15 @@ import {
   OPENING_REFUSAL_LABEL_KEY,
   OPENING_STATUS_LABEL_KEY,
 } from '../../../systems/model-from-drawing/opening-label-keys';
-import { ColorChip, LeftOutNote, MUTED, SECTION_TITLE, ToneSwatch, type Translate } from './ModelFromDrawingSections';
+import {
+  ColorChip,
+  LeftOutNote,
+  MUTED,
+  OrphanedDecisionsNote,
+  SECTION_TITLE,
+  ToneSwatch,
+  type Translate,
+} from './ModelFromDrawingSections';
 
 export interface OpeningReviewActions {
   /** Οπλίζει το δείγμα «κούφωμα» (πρώτη φορά ή «άλλο δείγμα»). */
@@ -62,6 +70,8 @@ export interface OpeningReviewActions {
   readonly onChooseOpening: (keys: readonly string[], choice: OpeningReviewChoice | null) => void;
   readonly onFocus: (key: string) => void;
   readonly onApproveOpenings: () => void;
+  /** ADR-929 §6.13 — πετά τις απαντήσεις που δεν βρήκαν κούφωμα. */
+  readonly onDiscardOrphanedOpenings: () => void;
 }
 
 /** `event.code` → απάντηση. `null` = αναποφάσιστο ξανά. */
@@ -258,6 +268,8 @@ export interface OpeningsSectionProps {
   readonly proposal: OpeningProposal;
   readonly preview: OpeningPreview | null;
   readonly choices: OpeningReviewChoices;
+  /** ADR-929 §6.13 — απαντήσεις που δεν βρήκαν κούφωμα σε αυτή την ανάγνωση. */
+  readonly orphanedCount: number;
   readonly colorHex: string | null;
   readonly focusedKey: string | null;
   readonly actions: OpeningReviewActions;
@@ -319,6 +331,10 @@ export function OpeningsSection(props: OpeningsSectionProps): React.ReactElement
           <p className={MUTED}>{t('modelFromDrawing.openings.review.keys')}</p>
         </>
       ) : null}
+      <OrphanedDecisionsNote
+        count={props.orphanedCount} text={(count) => t('modelFromDrawing.openings.orphaned', { count })}
+        onDiscard={actions.onDiscardOrphanedOpenings} testId="mfd-openings-orphaned" t={t}
+      />
       {proposal.unexplainedIds.length > 0 ? (
         <p className="m-0 flex items-start gap-1.5 text-[11px] text-foreground" role="status" data-testid="mfd-openings-unexplained">
           <ToneSwatch tone="reject" />

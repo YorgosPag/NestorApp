@@ -34,7 +34,11 @@ import type { WallDecisionAnchor } from '../../bim/model-from-drawing/decision-a
 import type { AssistantPreview } from '../../bim/model-from-drawing/assistant-preview';
 import type { OpeningProposal } from '../../bim/model-from-drawing/opening-proposal';
 import type { OpeningPreview } from '../../bim/model-from-drawing/opening-preview';
-import type { OpeningReviewChoices } from '../../bim/model-from-drawing/opening-review';
+import {
+  NO_OPENING_REVIEW_DECISIONS,
+  type OpeningDecisionAnchor,
+  type OpeningReviewDecisions,
+} from '../../bim/model-from-drawing/opening-review';
 import type { AddOpeningsRefusal } from '../../bim/model-from-drawing/add-openings-to-scene';
 import { SCENE_LINE_SOURCE, type ProposalLineSource } from './proposal-line-source';
 import type { SceneBasis } from './model-from-drawing-live';
@@ -92,7 +96,12 @@ export interface ModelFromDrawingState {
   /** Φ4-3β — το αποδιδόμενο χρώμα (hex) που ο άνθρωπος έδειξε ως «σύμβολο κουφώματος». */
   readonly openingColorHex: string | null;
   /** Φ4-3β — ό,τι απάντησε ο άνθρωπος ανά στοιχείο «προς απόφαση» (πόρτα · παράθυρο · τίποτα). */
-  readonly openingChoices: OpeningReviewChoices;
+  readonly openingDecisions: readonly OpeningDecisionAnchor[];
+  /**
+   * ADR-929 §6.13 — οι αποφάσεις όπως ξαναβρέθηκαν στην τρέχουσα πρόταση: απάντηση ανά κλειδί, άγκυρα ανά κλειδί, ορφανές.
+   * Παράγωγο του `openingDecisions` — γράφεται ΜΑΖΙ με την `openingProposal`, ποτέ χωριστά.
+   */
+  readonly openingReview: OpeningReviewDecisions;
   readonly openingProposal: OpeningProposal | null;
   readonly openingPreview: OpeningPreview | null;
   /** «Αυτό κοιτάω τώρα» — βοήθημα ελέγχου· ΠΟΤΕ δεν αποφασίζει τι γράφεται. */
@@ -113,7 +122,8 @@ const CLOSED: ModelFromDrawingState = {
   wallBasis: null,
   openingBasis: null,
   openingColorHex: null,
-  openingChoices: new Map(),
+  openingDecisions: [],
+  openingReview: NO_OPENING_REVIEW_DECISIONS,
   openingProposal: null,
   openingPreview: null,
   focusedKey: null,

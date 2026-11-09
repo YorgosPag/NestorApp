@@ -402,6 +402,7 @@
     "openings": {
       "title": "Doors and windows",
       "undoName": "Openings from drawing",
+      "orphaned": "{count, plural, one {# answer did not find its opening after the walls changed — kept in case it reappears.} other {# answers did not find their opening after the walls changed — kept in case they reappear.}}",
       "start": "Point at an opening line",
       "startHint": "Openings go into the walls already in the drawing — including the ones you drew by hand.",
       "pickHint": "Click a door or window line or arc in the drawing (Esc to go back)",
