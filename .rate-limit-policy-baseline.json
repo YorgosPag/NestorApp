@@ -129,6 +129,7 @@
     "createScanCronRoute::/api/cron/ai-learning",
     "createScanCronRoute::/api/cron/area-market-rollup",
     "createScanCronRoute::/api/cron/backup",
+    "createScanCronRoute::/api/cron/catalog-media-quarantine-sweep",
     "createScanCronRoute::/api/cron/demand-interest-announce",
     "createScanCronRoute::/api/cron/demand-listing-match-announce",
     "createScanCronRoute::/api/cron/file-purge",

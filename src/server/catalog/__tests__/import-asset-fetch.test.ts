@@ -5,7 +5,8 @@
  *   store) και πραγματικούς κριτές (ουρά · κωδικοί αποτυχίας):
  *   • μόνο διεύθυνση που ζητά η παρτίδα — ποτέ αυθαίρετο URL·
  *   • έτοιμη / σε εξέλιξη ⇒ καμία λήψη·
- *   • conditional GET **μόνο** με ζωντανό γνωστό περιεχόμενο· 304 ⇒ `unchanged` χωρίς bytes·
+ *   • conditional GET **μόνο** με γνωστό περιεχόμενο που κρατιέται· 304 ⇒ `unchanged` χωρίς bytes·
+ *   • Μ-β5: 304 σε περιεχόμενο στον κάδο ⇒ **επαναφορά** χωρίς bytes· αν εκκαθαρίστηκε στο μεταξύ ⇒ **μία** λήψη χωρίς validators·
  *   • αποτυχία μεταφοράς / περιεχομένου / κάδου ⇒ κωδικός· βλάβη ⇒ πετιέται (η μίσθωση λήγει μόνη της).
  */
 
@@ -21,6 +22,7 @@ const mockRecordRevalidated = jest.fn();
 const mockClaim = jest.fn();
 const mockSettle = jest.fn();
 const mockProposals = jest.fn();
+const mockRestoreTrashed = jest.fn();
 
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/security/outbound-fetch', () => ({ fetchGuardedStream: (...args: unknown[]) => mockFetchGuardedStream(...args) }));
@@ -36,10 +38,14 @@ jest.mock('../import-asset-fetch-store.server', () => ({
   claimImportAssetFetch: (...args: unknown[]) => mockClaim(...args),
   settleImportAssetFetch: (...args: unknown[]) => mockSettle(...args),
 }));
-jest.mock('../media-quarantine.server', () => {
+jest.mock('../media-content-revival.server', () => {
   class MediaContentUnavailableError extends Error {}
-  return { MediaContentUnavailableError, quarantineDownloadedMedia: (...args: unknown[]) => mockQuarantine(...args), readKeptMediaContent: (...args: unknown[]) => mockReadKept(...args) };
+  return { MediaContentUnavailableError, restoreTrashedMediaContent: (...args: unknown[]) => mockRestoreTrashed(...args) };
 });
+jest.mock('../media-quarantine.server', () => ({
+  quarantineDownloadedMedia: (...args: unknown[]) => mockQuarantine(...args),
+  readKeptMediaContent: (...args: unknown[]) => mockReadKept(...args),
+}));
 jest.mock('../media-source.server', () => ({
   readMediaSource: (...args: unknown[]) => mockReadSource(...args),
   recordFetchedMediaSource: (...args: unknown[]) => mockRecordFetched(...args),
@@ -49,7 +55,7 @@ jest.mock('../media-source.server', () => ({
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθεί η ροή */
 import { CatalogWriteError } from '../catalog-write-error';
 import { fetchImportAsset } from '../import-asset-fetch.server';
-import { MediaContentUnavailableError } from '../media-quarantine.server';
+import { MediaContentUnavailableError } from '../media-content-revival.server';
 /* eslint-enable import/first */
 
 const ctx = { uid: 'user_1', companyId: 'comp_1' } as AuthContext;
@@ -119,16 +125,44 @@ describe('fetchImportAsset — η λήψη', () => {
 
   it('🔑 ζωντανό γνωστό περιεχόμενο ⇒ conditional GET· 304 ⇒ `unchanged` ΧΩΡΙΣ καραντίνα', async () => {
     mockReadSource.mockResolvedValue(SOURCE);
-    mockReadKept.mockResolvedValue(CONTENT);
+    mockReadKept.mockResolvedValue({ state: 'live', content: CONTENT });
     mockFetchGuardedStream.mockResolvedValue({ ok: true, notModified: true, status: 304, transport: 'secure' });
     const view = await fetchImportAsset(ctx, 'cibat_1', { uri: URI });
     expect(mockFetchGuardedStream).toHaveBeenCalledWith(URI, expect.objectContaining({ ifNoneMatch: '"v1"', ifModifiedSince: SOURCE.lastModified }));
     expect(mockQuarantine).not.toHaveBeenCalled();
+    expect(mockRestoreTrashed).not.toHaveBeenCalled();
     expect(mockRecordRevalidated).toHaveBeenCalled();
     expect(view).toMatchObject({ status: 'ready', verdict: 'unchanged', content: CONTENT });
   });
 
-  it('🔴 γνωστή διεύθυνση με περιεχόμενο που ΔΕΝ ζει (κάδος) ⇒ χωρίς validators: ένα 304 θα έδειχνε σε αρχείο που σβήνεται', async () => {
+  it('🔑 Μ-β5: περιεχόμενο στον ΚΑΔΟ + 304 ⇒ ΕΠΑΝΑΦΟΡΑ χωρίς να κατέβει byte, `unchanged`', async () => {
+    mockReadSource.mockResolvedValue(SOURCE);
+    mockReadKept.mockResolvedValue({ state: 'trashed', content: CONTENT });
+    mockRestoreTrashed.mockResolvedValue(true);
+    mockFetchGuardedStream.mockResolvedValue({ ok: true, notModified: true, status: 304, transport: 'secure' });
+    const view = await fetchImportAsset(ctx, 'cibat_1', { uri: URI });
+    expect(mockFetchGuardedStream).toHaveBeenCalledTimes(1);
+    expect(mockFetchGuardedStream).toHaveBeenCalledWith(URI, expect.objectContaining({ ifNoneMatch: '"v1"' }));
+    expect(mockRestoreTrashed).toHaveBeenCalledWith(ctx, 'file_1', SHA, URI);
+    expect(mockQuarantine).not.toHaveBeenCalled();
+    expect(view).toMatchObject({ status: 'ready', verdict: 'unchanged', content: CONTENT });
+  });
+
+  it('🔴 Μ-β5: 304 αλλά η επαναφορά απέτυχε (εκκαθαρίστηκε στο μεταξύ) ⇒ ΜΙΑ λήψη χωρίς validators, ποτέ ψεύτικο «έτοιμο»', async () => {
+    mockReadSource.mockResolvedValue(SOURCE);
+    mockReadKept.mockResolvedValue({ state: 'trashed', content: CONTENT });
+    mockRestoreTrashed.mockResolvedValue(false);
+    mockFetchGuardedStream
+      .mockResolvedValueOnce({ ok: true, notModified: true, status: 304, transport: 'secure' })
+      .mockResolvedValueOnce({ ok: false, rejection: 'timeout', status: null });
+    const view = await fetchImportAsset(ctx, 'cibat_1', { uri: URI });
+    expect(mockFetchGuardedStream).toHaveBeenCalledTimes(2);
+    expect(mockFetchGuardedStream).toHaveBeenLastCalledWith(URI, expect.objectContaining({ ifNoneMatch: null, ifModifiedSince: null }));
+    expect(mockRecordRevalidated).not.toHaveBeenCalled();
+    expect(view).toMatchObject({ status: 'failed', failure: { code: 'timeout' } });
+  });
+
+  it('🔴 γνωστή διεύθυνση με περιεχόμενο που ΔΕΝ κρατιέται (επιτύμβιο) ⇒ χωρίς validators: ένα 304 θα έδειχνε σε αρχείο που δεν υπάρχει', async () => {
     mockReadSource.mockResolvedValue(SOURCE);
     mockReadKept.mockResolvedValue(null);
     mockFetchGuardedStream.mockResolvedValue({ ok: false, rejection: 'timeout', status: null });
@@ -162,7 +196,7 @@ describe('fetchImportAsset — αποτυχίες με κωδικό', () => {
     expect(mockRecordFetched).not.toHaveBeenCalled();
   });
 
-  it('ίδια bytes στον κάδο ανακύκλωσης ⇒ `contentUnavailable`, ποτέ υιοθέτηση', async () => {
+  it('η εγγραφή αυτών των bytes δεν είναι δική μας (αλλοιωμένη) ⇒ `contentUnavailable`, ποτέ υιοθέτηση', async () => {
     mockFetchGuardedStream.mockResolvedValue(okStream);
     mockQuarantine.mockRejectedValue(new MediaContentUnavailableError('file_1'));
     expect((await fetchImportAsset(ctx, 'cibat_1', { uri: URI })).failure).toEqual({ code: 'contentUnavailable', httpStatus: null });

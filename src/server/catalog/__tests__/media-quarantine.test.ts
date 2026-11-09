@@ -6,7 +6,8 @@
  *   • δεκτό αρχείο ⇒ ΕΝΑ αντικείμενο στον κάδο της ΕΕ + ΜΙΑ εγγραφή `ready` με κάτοχο το περιεχόμενο + ίχνος `remote_fetch`·
  *   • ίδια bytes από άλλη διεύθυνση ⇒ `alreadyKept`, κανένα δεύτερο αρχείο, κανένα δεύτερο ίχνος·
  *   • σελίδα HTML / λάθος είδος ⇒ κωδικός, **τίποτα** στον κάδο, και η πηγή **ακυρώνεται** (δεν κατεβαίνει το υπόλοιπο)·
- *   • όριο/σιωπή της μεταφοράς ⇒ κωδικός· εγγραφή στον κάδο ανακύκλωσης ⇒ βλάβη με όνομα, ποτέ υιοθέτηση.
+ *   • όριο/σιωπή της μεταφοράς ⇒ κωδικός·
+ *   • Μ-β5 ανάσταση: εγγραφή στον κάδο ⇒ **επαναφορά** · επιτύμβιο ⇒ **αναγέννηση** · ξένη/αλλοιωμένη ⇒ βλάβη με όνομα.
  */
 
 import { createHash } from 'crypto';
@@ -44,9 +45,9 @@ jest.mock('@/services/file-audit-admin.service', () => ({
 }));
 
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθεί ο γραφέας */
+import { CATALOG_MEDIA_STAGING_PREFIX } from '@/subapps/catalog/vocabulary/asset-fetch';
+import { MediaContentUnavailableError } from '../media-content-revival.server';
 import {
-  CATALOG_MEDIA_STAGING_PREFIX,
-  MediaContentUnavailableError,
   mediaContentFileIdOf,
   quarantineDownloadedMedia,
   readKeptMediaContent,
@@ -119,7 +120,7 @@ describe('quarantineDownloadedMedia — δεκτό αρχείο', () => {
   it('ίχνος `remote_fetch` (ποτέ `upload`) με τη διεύθυνση', async () => {
     await quarantineDownloadedMedia(ctx, media());
     expect(mockAudits).toEqual([
-      { fileId: mediaContentFileIdOf('comp_1', PDF_SHA, 'pdf'), action: 'remote_fetch', performedBy: 'user_1', companyId: 'comp_1', metadata: { uri: media().uri } },
+      { fileId: mediaContentFileIdOf('comp_1', PDF_SHA, 'pdf'), action: 'remote_fetch', performedBy: 'user_1', companyId: 'comp_1', metadata: { uri: media().uri, revival: 'created' } },
     ]);
   });
 
@@ -173,12 +174,41 @@ describe('quarantineDownloadedMedia — αποτυχίες μεταφοράς', 
   });
 });
 
-describe('quarantineDownloadedMedia — εγγραφή που δεν είναι ζωντανή', () => {
-  it('🔴 το περιεχόμενο είναι στον κάδο ανακύκλωσης ⇒ βλάβη με όνομα, ποτέ υιοθέτηση αρχείου που θα σβηστεί', async () => {
+describe('quarantineDownloadedMedia — ανάσταση εγγραφής (ADR-934 §5.2.2 Μ-β5)', () => {
+  const fileId = () => mediaContentFileIdOf('comp_1', PDF_SHA, 'pdf');
+  const again = () => quarantineDownloadedMedia(ctx, media({ attemptKey: 'ciafx_1/2', body: bodyOf(PDF) }));
+  const spoil = (fields: Record<string, unknown>) => fake.seed(FILES, fileId(), { ...fake.getAllDocs(FILES)[fileId()], ...fields });
+  const TRASH = { isDeleted: true, lifecycleState: 'trashed', purgeAt: '2026-12-09T10:00:00.000Z', trashedBy: 'system:catalog-media-release' };
+
+  it('🔑 στον κάδο ⇒ ΕΠΑΝΑΦΟΡΑ: ζωντανή ξανά, εκτός ουράς εκκαθάρισης, ίχνος `restore`, `alreadyKept`', async () => {
     await quarantineDownloadedMedia(ctx, media());
-    const fileId = mediaContentFileIdOf('comp_1', PDF_SHA, 'pdf');
-    fake.seed(FILES, fileId, { ...fake.getAllDocs(FILES)[fileId], isDeleted: true });
-    await expect(quarantineDownloadedMedia(ctx, media({ attemptKey: 'ciafx_1/2', body: bodyOf(PDF) }))).rejects.toBeInstanceOf(MediaContentUnavailableError);
+    spoil(TRASH);
+    mockAudits.length = 0;
+    const outcome = await again();
+    expect(outcome.ok && outcome.content.alreadyKept).toBe(true);
+    expect(fake.getAllDocs(FILES)[fileId()]).toMatchObject({ isDeleted: false, lifecycleState: 'active', purgeAt: null, trashedBy: null, restoredBy: 'user_1' });
+    expect(mockAudits).toEqual([expect.objectContaining({ fileId: fileId(), action: 'restore', metadata: { uri: media().uri, revival: 'restored' } })]);
+  });
+
+  it('🔑 επιτύμβιο (τα bytes έφυγαν) ⇒ ΑΝΑΓΕΝΝΗΣΗ με τα bytes που μόλις ήρθαν, ποτέ `contentUnavailable` για πάντα', async () => {
+    await quarantineDownloadedMedia(ctx, media());
+    spoil({ ...TRASH, lifecycleState: 'purged', purgeAt: null, purgedAt: '2026-12-09T05:00:00.000Z' });
+    store.clear();
+    mockAudits.length = 0;
+    const outcome = await again();
+    expect(outcome.ok && outcome.content.alreadyKept).toBe(true);
+    const record = fake.getAllDocs(FILES)[fileId()];
+    expect(record).toMatchObject({ isDeleted: false, status: 'ready', hash: PDF_SHA });
+    expect(record.lifecycleState).not.toBe('purged');
+    expect([...store.keys()]).toEqual([record.storagePath]);
+    expect(mockAudits).toEqual([expect.objectContaining({ action: 'remote_fetch', metadata: { uri: media().uri, revival: 'reborn' } })]);
+  });
+
+  it('🔴 εγγραφή ΑΛΛΩΝ bytes στο ίδιο κλειδί (αλλοιωμένη) ⇒ βλάβη με όνομα, ποτέ υιοθέτηση ή αντικατάσταση', async () => {
+    await quarantineDownloadedMedia(ctx, media());
+    spoil({ entityId: 'f'.repeat(64) });
+    await expect(again()).rejects.toBeInstanceOf(MediaContentUnavailableError);
+    expect(fake.getAllDocs(FILES)[fileId()].entityId).toBe('f'.repeat(64));
   });
 });
 
@@ -188,8 +218,15 @@ describe('readKeptMediaContent — ό,τι χρειάζεται το 304 (ADR-93
   it('ζωντανό περιεχόμενο ⇒ τα στοιχεία του από την εγγραφή, με το είδος από τον τύπο', async () => {
     await quarantineDownloadedMedia(ctx, media());
     expect(await readKeptMediaContent(ctx, keptFileId(), PDF_SHA)).toEqual({
-      fileId: keptFileId(), sha256: PDF_SHA, sizeBytes: PDF.length, kind: 'document', ext: 'pdf', contentType: 'application/pdf',
+      state: 'live',
+      content: { fileId: keptFileId(), sha256: PDF_SHA, sizeBytes: PDF.length, kind: 'document', ext: 'pdf', contentType: 'application/pdf' },
     });
+  });
+
+  it('Μ-β5: στον κάδο ⇒ `trashed` με τα στοιχεία του (ο καλών στέλνει validators· 304 ⇒ επαναφορά χωρίς λήψη)', async () => {
+    await quarantineDownloadedMedia(ctx, media());
+    fake.seed(FILES, keptFileId(), { ...fake.getAllDocs(FILES)[keptFileId()], isDeleted: true, lifecycleState: 'trashed' });
+    expect(await readKeptMediaContent(ctx, keptFileId(), PDF_SHA)).toMatchObject({ state: 'trashed', content: { fileId: keptFileId(), sha256: PDF_SHA } });
   });
 
   it('ανύπαρκτη εγγραφή ⇒ null', async () => {
@@ -197,7 +234,7 @@ describe('readKeptMediaContent — ό,τι χρειάζεται το 304 (ADR-93
   });
 
   it.each([
-    ['στον κάδο ανακύκλωσης', { isDeleted: true }],
+    ['επιτύμβιο (τα bytes έφυγαν)', { isDeleted: true, lifecycleState: 'purged' }],
     ['άλλα bytes (άλλος κάτοχος)', { entityId: 'f'.repeat(64) }],
   ])('%s ⇒ null (ο καλών κατεβάζει ξανά, χωρίς validators)', async (_name, spoiled) => {
     await quarantineDownloadedMedia(ctx, media());

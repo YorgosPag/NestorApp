@@ -37,13 +37,23 @@ function typeRank(value: unknown): number {
   if (value === null) return 0;
   if (typeof value === 'boolean') return 1;
   if (typeof value === 'number') return 2;
-  if (isInstance(value, Timestamp)) return 3;
+  if (millisOfInstant(value) !== null) return 3;
   if (typeof value === 'string') return 4;
   return 9;
 }
 
+/**
+ * **Χρονική στιγμή** σε ms, ή `null`. Το Admin SDK μετατρέπει κάθε JS `Date` σε `Timestamp` — **και** στην εγγραφή **και**
+ * στο όριο ενός `where` — άρα για τον Firestore `Date` και `Timestamp` είναι **ο ίδιος τύπος** (συμβόλαιο Q14, ADR-934 Μ-β5).
+ */
+function millisOfInstant(value: unknown): number | null {
+  if (isInstance(value, Timestamp)) return value.toMillis();
+  if (value instanceof Date) return value.getTime();
+  return null;
+}
+
 function scalarOf(value: unknown): unknown {
-  return isInstance(value, Timestamp) ? value.toMillis() : value;
+  return millisOfInstant(value) ?? value;
 }
 
 /**
@@ -61,9 +71,12 @@ export function compareValues(a: unknown, b: unknown): number {
   return 0;
 }
 
-/** Ισότητα τιμών — `Timestamp` κατά τιμή (`isEqual`), όλα τα άλλα με `===` (όπως συγκρίνει ο Firestore τα βαθμωτά). */
+/** Ισότητα τιμών — χρονικές στιγμές (`Timestamp` · `Date`) κατά τιμή, όλα τα άλλα με `===` (όπως συγκρίνει ο Firestore τα βαθμωτά). */
 export function valuesEqual(a: unknown, b: unknown): boolean {
   if (isInstance(a, Timestamp) && isInstance(b, Timestamp)) return a.isEqual(b);
+  const left = millisOfInstant(a);
+  const right = millisOfInstant(b);
+  if (left !== null || right !== null) return left === right;
   return a === b;
 }
 

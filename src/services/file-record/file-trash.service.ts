@@ -47,7 +47,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideCapability } from '@/lib/auth/authority';
 import { fileTrashBlockOf } from '@/lib/files/file-hold';
 import { calculatePurgeDate, isInTrash } from '@/lib/files/file-trash-state';
-import { fileTrashFields } from '@/lib/files/file-trash-fields';
+import { fileRestoreFields, fileTrashFields } from '@/lib/files/file-trash-fields';
 import { FieldValue } from '@/lib/firebaseAdmin';
 import { isRetired } from '@/lib/firestore/trashed-status';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
@@ -182,20 +182,9 @@ function trashUpdates(uid: string, purgeAt: string): Record<string, unknown> {
   });
 }
 
+/** Τα πεδία της επαναφοράς — η ΜΙΑ δήλωση (`fileRestoreFields`, κοινή με την ανάσταση καραντίνας, ADR-934 Μ-β5). */
 function restoreUpdates(uid: string): Record<string, unknown> {
-  const now = FieldValue.serverTimestamp();
-  return {
-    lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
-    isDeleted: false,
-    trashedAt: null,
-    trashedBy: null,
-    purgeAt: null,
-    deletedAt: null,
-    deletedBy: null,
-    restoredAt: now,
-    restoredBy: uid,
-    updatedAt: now,
-  };
+  return fileRestoreFields({ activeState: FILE_LIFECYCLE_STATES.ACTIVE, by: uid, now: FieldValue.serverTimestamp() });
 }
 
 export interface WriteFileTrashParams {

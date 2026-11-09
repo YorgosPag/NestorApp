@@ -1,6 +1,41 @@
 {
   "indexes": [
     {
+      "collectionGroup": "catalog_import_asset_fetches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "batchId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_import_asset_fetches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "content.fileId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_import_batches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "files",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "entityType", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "subcontract_agreements",
       "queryScope": "COLLECTION",
       "fields": [

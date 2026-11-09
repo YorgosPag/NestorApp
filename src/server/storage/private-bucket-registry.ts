@@ -18,6 +18,7 @@ import {
 } from '@/config/gcs-buckets';
 import { getFilesEuBucket, getTourMediaBucket } from '@/lib/firebaseAdmin';
 import { TOUR_INGEST_ROOT } from '@/lib/spatial-tour/tour-media-path';
+import { CATALOG_MEDIA_STAGING_PREFIX, CATALOG_MEDIA_STAGING_TTL_DAYS } from '@/subapps/catalog/vocabulary/asset-fetch';
 
 import type { DeclaredPrivateBucket } from './declared-private-bucket';
 
@@ -36,7 +37,10 @@ const TOUR_MEDIA: DeclaredPrivateBucket = {
   cors: GCS_TOUR_MEDIA_BUCKET_CONFIG.cors,
 };
 
-/** Τα πρωτότυπα στην ΕΕ (ADR-895 Α4): soft delete 7 ημέρες, **κανένας** κύκλος ζωής. */
+/**
+ * Τα πρωτότυπα στην ΕΕ (ADR-895 Α4): soft delete 7 ημέρες. **Ένας** κανόνας κύκλου ζωής, μόνο στο πρόθεμα των προσωρινών λήψεων
+ * μέσων καταλόγου (ADR-934 §5.2.2 Μ-β5 — πρότυπο S3 AbortIncompleteMultipartUpload): κανένα πρωτότυπο δεν ζει κάτω από αυτό.
+ */
 const FILES_EU: DeclaredPrivateBucket = {
   id: 'files-eu',
   bucketName: GCS_FILES_EU_BUCKET,
@@ -44,7 +48,10 @@ const FILES_EU: DeclaredPrivateBucket = {
   location: GCS_FILES_EU_BUCKET_CONFIG.location,
   storageClass: GCS_FILES_EU_BUCKET_CONFIG.storageClass,
   softDeleteRetentionSeconds: GCS_FILES_EU_BUCKET_CONFIG.softDeleteRetentionSeconds,
-  lifecycleRules: [],
+  lifecycleRules: [{
+    action: { type: 'Delete' },
+    condition: { age: CATALOG_MEDIA_STAGING_TTL_DAYS, matchesPrefix: [`${CATALOG_MEDIA_STAGING_PREFIX}/`] },
+  }],
   cors: GCS_FILES_EU_BUCKET_CONFIG.cors,
 };
 

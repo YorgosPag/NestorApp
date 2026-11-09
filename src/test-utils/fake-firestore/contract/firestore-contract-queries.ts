@@ -133,4 +133,20 @@ export const contractCasesQueries: readonly ContractCase[] = [
       expect(await idsOf(db.collection('q13').where(FieldPath.documentId(), 'in', ['c', 'a', 'ghost']))).toEqual(['a', 'c']);
     },
   },
+  {
+    id: 'Q14',
+    title: 'JS `Date` = `Timestamp` (το SDK μετατρέπει εγγραφή ΚΑΙ όριο): εύρος και ισότητα με `Date` πάνω σε `Timestamp` και αντίστροφα — ποτέ ISO (ADR-934 Μ-β5)',
+    async run(db) {
+      await seedDocs(db, 'q14', {
+        old: { at: Timestamp.fromMillis(1_000) },
+        mid: { at: new Date(5_000) },
+        new: { at: Timestamp.fromMillis(9_000) },
+        iso: { at: '1970-01-01T00:00:05.000Z' },
+      });
+      const q = db.collection('q14');
+      expect(await idsOf(q.where('at', '>=', new Date(2_000)).where('at', '<=', new Date(9_000)))).toEqual(['mid', 'new']);
+      expect(await idsOf(q.where('at', '<', Timestamp.fromMillis(6_000)))).toEqual(['mid', 'old']);
+      expect(await idsOf(q.where('at', '==', new Date(1_000)))).toEqual(['old']);
+    },
+  },
 ];

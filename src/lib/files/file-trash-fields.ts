@@ -40,3 +40,32 @@ export function fileTrashFields<TTime>(input: FileTrashFieldsInput<TTime>): Reco
     updatedAt: input.now,
   };
 }
+
+export interface FileRestoreFieldsInput<TTime> {
+  /** `FILE_LIFECYCLE_STATES.ACTIVE` — από τις σταθερές του καλούντα. */
+  readonly activeState: string;
+  /** Ποιος — uid ανθρώπου ή `system:<πόρτα>`. */
+  readonly by: string;
+  /** Ο χρόνος του γραφέα — `FieldValue.serverTimestamp()`. */
+  readonly now: TTime;
+}
+
+/**
+ * Τα πεδία που **βγάζουν** μια εγγραφή από τον κάδο — το αντίστροφο του {@link fileTrashFields}, σε ΕΝΑ σημείο: `purgeAt: null`
+ * τη βγάζει από την ουρά του cron. Γραφείς: η επαναφορά ανθρώπου (`file-trash.service`) και η ανάσταση περιεχομένου καραντίνας
+ * (ADR-934 §5.2.2 Μ-β5 — ίδια bytes ξαναζητήθηκαν πριν εκκαθαριστούν).
+ */
+export function fileRestoreFields<TTime>(input: FileRestoreFieldsInput<TTime>): Record<string, TTime | string | boolean | null> {
+  return {
+    lifecycleState: input.activeState,
+    isDeleted: false,
+    trashedAt: null,
+    trashedBy: null,
+    purgeAt: null,
+    deletedAt: null,
+    deletedBy: null,
+    restoredAt: input.now,
+    restoredBy: input.by,
+    updatedAt: input.now,
+  };
+}

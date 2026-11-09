@@ -29,8 +29,16 @@ export function trashRetentionDays(category: FileCategory): number {
  * @enterprise Uses TRASH_RETENTION_BY_CATEGORY from domain-constants
  */
 export function calculatePurgeDate(category: FileCategory): Date {
+  return purgeDateAfterDays(trashRetentionDays(category));
+}
+
+/**
+ * Η ημερομηνία εκκαθάρισης **σε Ν ημέρες από τώρα** — η μία αριθμητική του κάδου, για όποιον έχει πολιτική που **δεν** είναι
+ * ανά κατηγορία (π.χ. η καραντίνα μέσων καταλόγου, ADR-934 §5.2.2 Μ-β5).
+ */
+export function purgeDateAfterDays(days: number): Date {
   const purgeDate = new Date();
-  purgeDate.setDate(purgeDate.getDate() + trashRetentionDays(category));
+  purgeDate.setDate(purgeDate.getDate() + days);
   return purgeDate;
 }
 

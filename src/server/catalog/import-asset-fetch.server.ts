@@ -8,7 +8,8 @@ import 'server-only';
  * Η ροή μιας διεύθυνσης (`fetchImportAsset`):
  *   1. Η διεύθυνση **πρέπει** να τη ζητά ζωντανή πρόταση της παρτίδας (`importAssetRequestsOf`) — ποτέ αυθαίρετο URL.
  *   2. Διεκδίκηση με μίσθωση σε μία συναλλαγή με την ανοιχτή παρτίδα (`claimImportAssetFetch`). Έτοιμη ⇒ επιστρέφεται ως έχει.
- *   3. **Conditional GET** μόνο όταν το γνωστό περιεχόμενο είναι ακόμη ζωντανό: 304 ⇒ `unchanged` **χωρίς** bytes.
+ *   3. **Conditional GET** όταν το γνωστό περιεχόμενο κρατιέται ακόμη: 304 ⇒ `unchanged` **χωρίς** bytes — και αν ήταν στον
+ *      κάδο, **επαναφέρεται** (Μ-β5)· αν εκκαθαρίστηκε στο μεταξύ, **μία** λήψη χωρίς validators, ποτέ ψεύτικο «έτοιμο».
  *   4. Ροή → καραντίνα (`quarantineDownloadedMedia`: κρίση στα πρώτα bytes, όριο μέσα στη ροή) → ταυτότητα διεύθυνσης
  *      (`recordFetchedMediaSource`: νέο · ίδιο περιεχόμενο · αμετάβλητο · νέα έκδοση).
  *   5. Κλείσιμο με σφραγίδα (`settleImportAssetFetch`). Κάθε αποτυχία = **κωδικός** (Μ9) και ξαναδοκιμάσιμη· δεν αγγίζει τιμές.
@@ -28,7 +29,7 @@ import { importAssetRequestsOf, importAssetViewOf, type ImportAssetRequest } fro
 import { downloadByteLimitFor } from '@/subapps/catalog/schema/judge-downloaded-asset';
 import type { ImportBatchDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { FetchImportAssetRequest, ImportAssetsView } from '@/subapps/catalog/types/catalog-import-requests';
-import type { CatalogMediaSourceDefinition, ImportAssetView, MediaContentFacts } from '@/subapps/catalog/types/catalog-media';
+import type { CatalogMediaSourceDefinition, ImportAssetView } from '@/subapps/catalog/types/catalog-media';
 import {
   ASSET_FETCH_DEADLINE_MS,
   ASSET_FETCH_HEADERS_TIMEOUT_MS,
@@ -48,7 +49,8 @@ import {
 } from './import-asset-fetch-store.server';
 import { assertPurposeAuthority } from './import-batch-writer.server';
 import { readBatchProposals } from './import-reads.server';
-import { MediaContentUnavailableError, quarantineDownloadedMedia, readKeptMediaContent } from './media-quarantine.server';
+import { MediaContentUnavailableError, restoreTrashedMediaContent } from './media-content-revival.server';
+import { quarantineDownloadedMedia, readKeptMediaContent, type KeptMediaRecord } from './media-quarantine.server';
 import { readMediaSource, recordFetchedMediaSource, recordRevalidatedMediaSource } from './media-source.server';
 
 type StreamResponse = Extract<GuardedStreamResult, { readonly ok: true; readonly notModified: false }>;
@@ -71,13 +73,18 @@ export async function listImportAssets(ctx: AuthContext, batchId: string): Promi
 const failed = (code: AssetFetchFailure, httpStatus: number | null, transport: OutboundTransport | null): ImportAssetFetchOutcome =>
   ({ status: 'failed', failure: { code, httpStatus }, transport });
 
-/** 304: τίποτα δεν κατέβηκε· ό,τι λέμε για το αρχείο βγαίνει από την ήδη ζωντανή εγγραφή του. */
-async function revalidated(ctx: AuthContext, request: ImportAssetRequest, role: CatalogAssetRole, kept: MediaContentFacts | null, transport: OutboundTransport): Promise<ImportAssetFetchOutcome> {
+/** Το 304 έπεσε σε περιεχόμενο που δεν μπόρεσε να επαναφερθεί (εκκαθαρίστηκε στο μεταξύ) ⇒ ο καλών κατεβάζει χωρίς validators. */
+const REFETCH = 'refetch' as const;
+
+/** 304: τίποτα δεν κατέβηκε· ό,τι λέμε για το αρχείο βγαίνει από την εγγραφή του — που επαναφέρεται αν ήταν στον κάδο (Μ-β5). */
+async function revalidated(ctx: AuthContext, request: ImportAssetRequest, role: CatalogAssetRole, kept: KeptMediaRecord | null, transport: OutboundTransport): Promise<ImportAssetFetchOutcome | typeof REFETCH> {
   // 304 σε GET χωρίς validators = λάθος του server του προμηθευτή, όχι «αμετάβλητο».
   if (kept === null) return failed('httpError', 304, transport);
-  if (!ASSET_ROLE_KINDS[role].includes(kept.kind)) return failed('kindMismatch', null, transport);
+  const { content } = kept;
+  if (!ASSET_ROLE_KINDS[role].includes(content.kind)) return failed('kindMismatch', null, transport);
+  if (kept.state === 'trashed' && !(await restoreTrashedMediaContent(ctx, content.fileId, content.sha256, request.uri))) return REFETCH;
   await recordRevalidatedMediaSource(ctx, request.uri, { transport, checkedAt: nowISO() });
-  return { status: 'ready', verdict: 'unchanged', content: kept, transport };
+  return { status: 'ready', verdict: 'unchanged', content, transport };
 }
 
 /** 200: ροή → καραντίνα → ταυτότητα διεύθυνσης. Οι αποτυχίες περιεχομένου δεν έχουν κωδικό HTTP (ο server απάντησε 200). */
@@ -95,23 +102,24 @@ async function quarantined(ctx: AuthContext, request: ImportAssetRequest, role: 
     );
     return { status: 'ready', verdict, content: { fileId, sha256, sizeBytes, kind, ext, contentType }, transport };
   } catch (error) {
-    // Τα ίδια bytes είναι ήδη στον κάδο ανακύκλωσης: δηλωμένο, ποτέ υιοθέτηση αρχείου που θα σβηστεί (Μ-β5: επαναφορά).
+    // Η εγγραφή αυτών των bytes δεν είναι δική μας (ξένη · αλλοιωμένη): δηλωμένο, ποτέ υιοθέτηση. Κάδος/επιτύμβιο ΔΕΝ φτάνουν
+    // εδώ — ο γραφέας τα επαναφέρει ή τα αναγεννά (Μ-β5).
     if (error instanceof MediaContentUnavailableError) return failed('contentUnavailable', null, transport);
     throw error;
   }
 }
 
-/** Τα validators μόνο όταν το γνωστό περιεχόμενο ζει ακόμη — αλλιώς ένα 304 θα έδειχνε σε αρχείο που δεν υπάρχει. */
-async function knownContent(ctx: AuthContext, uri: string): Promise<{ source: CatalogMediaSourceDefinition; kept: MediaContentFacts } | null> {
+/** Τα validators μόνο όταν το γνωστό περιεχόμενο κρατιέται ακόμη (ζωντανό ή στον κάδο) — αλλιώς ένα 304 θα έδειχνε σε αρχείο που δεν υπάρχει. */
+async function knownContent(ctx: AuthContext, uri: string): Promise<{ source: CatalogMediaSourceDefinition; kept: KeptMediaRecord } | null> {
   const source = await readMediaSource(ctx, uri);
   const kept = source === null ? null : await readKeptMediaContent(ctx, source.contentFileId, source.contentSha256);
   return source !== null && kept !== null ? { source, kept } : null;
 }
 
-async function downloadAsset(ctx: AuthContext, request: ImportAssetRequest, attemptKey: string): Promise<ImportAssetFetchOutcome> {
+async function downloadAsset(ctx: AuthContext, request: ImportAssetRequest, attemptKey: string, conditional = true): Promise<ImportAssetFetchOutcome> {
   const [role] = request.roles;
   if (role === undefined) throw new Error('Import asset request without a role');
-  const known = await knownContent(ctx, request.uri);
+  const known = conditional ? await knownContent(ctx, request.uri) : null;
   const response = await fetchGuardedStream(request.uri, {
     maxBytes: downloadByteLimitFor(role),
     scheme: 'https-upgrade',
@@ -122,7 +130,10 @@ async function downloadAsset(ctx: AuthContext, request: ImportAssetRequest, atte
     ifModifiedSince: known?.source.lastModified ?? null,
   });
   if (!response.ok) return failed(assetFetchFailureOf(response.rejection, response.status), response.status, null);
-  if (response.notModified) return revalidated(ctx, request, role, known?.kept ?? null, response.transport);
+  if (response.notModified) {
+    const outcome = await revalidated(ctx, request, role, known?.kept ?? null, response.transport);
+    return outcome === REFETCH ? downloadAsset(ctx, request, attemptKey, false) : outcome;
+  }
   return quarantined(ctx, request, role, response, attemptKey);
 }
 

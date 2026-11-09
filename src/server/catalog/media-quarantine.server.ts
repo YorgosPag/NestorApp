@@ -12,7 +12,8 @@ import 'server-only';
  *      είδος είναι γνωστό, άρα το όριο στενεύει (μια εικόνα κόβεται στα 200 MiB, όχι στα 500 του BIM).
  *   3. **Μέγεθος → κρίση** (`judgeDownloadedSize`, ίδιο `judgeAssetUpload` με το ανέβασμα) **πριν** την προαγωγή ⇒ κανένα
  *      ορφανό αντικείμενο στο τελικό κλειδί.
- *   4. **Εγγραφή αρχείου `ready`**, create-if-absent σε συναλλαγή, + ίχνος `remote_fetch`.
+ *   4. **Εγγραφή αρχείου `ready`** μέσω του `media-content-revival`: γέννηση · υιοθέτηση · επαναφορά από τον κάδο ·
+ *      αναγέννηση πάνω σε επιτύμβιο (Μ-β5) — σε συναλλαγή, με ίχνος.
  *
  * 🔑 **Κάτοχος = το περιεχόμενο** (`entityId` = sha256), `fileId` = ντετερμινιστικό από (χώρος, sha256, κατάληξη) ⇒ ίδιο
  *   αρχείο από δύο διευθύνσεις ή δύο παρτίδες = **ένα** αρχείο, δομικά ιδεμπότητο. Η κατάληξη μπαίνει στην ταυτότητα γιατί
@@ -25,20 +26,15 @@ import 'server-only';
 
 import { ENTITY_TYPES, FILE_DOMAINS } from '@/config/domain-constants';
 import { filenameFromUrl } from '@/config/file-types/classification-registry';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
-import { judgeContainerFile } from '@/lib/files/container-file-verdict';
 import { CONTENT_SIGNATURE_HEAD_BYTES } from '@/lib/files/content-signature';
-import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { placementForNewFile } from '@/lib/files/new-file-placement';
 import { peekStreamHead } from '@/lib/files/stream-head';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { OutboundBodyError } from '@/lib/security/outbound-fetch';
 import { STREAM_TOO_LARGE_ERROR } from '@/lib/storage/sha256-pass-through';
 import { fileStorageBucket } from '@/server/files/file-record-bucket';
 import { streamObjectOnce, type MeasuredStream } from '@/server/storage/stream-object-once.server';
 import { generateDeterministicFileId } from '@/services/enterprise-id.service';
-import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { buildPendingFileRecordData } from '@/services/file-record';
 import { readyFileRecordData } from '@/services/file-record/ready-file-record.server';
 import {
@@ -47,16 +43,14 @@ import {
   type AcceptedDownload,
   type DownloadedAssetVerdict,
 } from '@/subapps/catalog/schema/judge-downloaded-asset';
-import type { AssetFetchFailure } from '@/subapps/catalog/vocabulary/asset-fetch';
+import { CATALOG_MEDIA_STAGING_PREFIX, type AssetFetchFailure } from '@/subapps/catalog/vocabulary/asset-fetch';
 import { assetKindAcceptsFile, CATALOG_ASSET_MAX_BYTES, MEDIA_CONTENT_STORAGE_CATEGORY } from '@/subapps/catalog/vocabulary/asset-files';
 import type { CatalogAssetRole } from '@/subapps/catalog/vocabulary/asset-roles';
 import { ASSET_KINDS, type AssetKind } from '@/subapps/catalog/vocabulary/attribute-types';
 import type { MediaContentFacts } from '@/subapps/catalog/types/catalog-media';
+import { keepMediaContentRecord, mediaContentFileRef, mediaContentStateIn } from './media-content-revival.server';
 
 const MEDIA_PLACEMENT = placementForNewFile({ kind: 'catalog-media' });
-
-/** Το πρόθεμα των προσωρινών αντικειμένων — ένα, ώστε ο κύκλος ζωής (Μ-β5) να τα βρίσκει όλα. */
-export const CATALOG_MEDIA_STAGING_PREFIX = 'staging/catalog-media';
 
 /** Το σώμα μιας λήψης και ό,τι δήλωσε ο τρίτος γι' αυτό. */
 export interface DownloadedMedia {
@@ -82,17 +76,6 @@ export interface KeptMediaContent extends MediaContentFacts {
 export type QuarantineOutcome =
   | { readonly ok: true; readonly content: KeptMediaContent }
   | { readonly ok: false; readonly failure: AssetFetchFailure; readonly params?: Readonly<Record<string, string | number>> };
-
-/**
- * Η εγγραφή περιεχομένου υπάρχει αλλά **δεν** είναι ζωντανή (στον κάδο ανακύκλωσης ή ανολοκλήρωτη). Δεν υιοθετείται αρχείο
- * που πρόκειται να σβηστεί. ⏳ Μ-β5: ο κύκλος ζωής της καραντίνας θα το επαναφέρει αντί να πετά.
- */
-export class MediaContentUnavailableError extends Error {
-  constructor(readonly fileId: string) {
-    super(`Quarantined media content ${fileId} exists but is not live`);
-    this.name = 'MediaContentUnavailableError';
-  }
-}
 
 /** Το `fileId` του περιεχομένου — ντετερμινιστικό: ίδιος χώρος + ίδια bytes + ίδια κατάληξη ⇒ ίδιο αρχείο. */
 export function mediaContentFileIdOf(companyId: string, sha256: string, ext: string): string {
@@ -131,51 +114,32 @@ function contentRecord(ctx: AuthContext, media: DownloadedMedia, accepted: Accep
 
 type ContentRecord = ReturnType<typeof contentRecord>;
 
-const contentFileRef = (fileId: string) => getAdminFirestore().collection(COLLECTIONS[FILE_COLLECTION.company]).doc(fileId);
-
-/** Η **μία** κρίση «ζωντανό περιεχόμενο αυτού του χώρου, αυτών των bytes» — για την εγγραφή **και** για το 304. */
-const isLiveContent = (ctx: AuthContext, fileId: string, sha256: string, data: Readonly<Record<string, unknown>> | null): boolean =>
-  judgeContainerFile(fileId, data, {
-    owner: { kind: 'company', companyId: ctx.companyId },
-    entityType: ENTITY_TYPES.CATALOG_MEDIA_CONTENT,
-    entityId: sha256,
-    contentType: () => true,
-  }).kind === 'accepted';
-
 const textField = (data: Readonly<Record<string, unknown>>, key: string): string | null => (typeof data[key] === 'string' ? (data[key] as string) : null);
 
 /** Το είδος από τον τύπο του αρχείου: οι οικογένειες του `ASSET_KIND_FILE_CATEGORIES` δεν επικαλύπτονται, άρα ταιριάζει **ένα**. */
 const kindOfKept = (ext: string, contentType: string): AssetKind | null =>
   ASSET_KINDS.find((kind) => assetKindAcceptsFile(kind, { ext, contentType }) === 'accepted') ?? null;
 
+/** Περιεχόμενο που κρατιέται: ζωντανό, ή στον κάδο αλλά **ανακτήσιμο** (Μ-β5: επαναφέρεται αν ο τρίτος απαντήσει 304). */
+export interface KeptMediaRecord {
+  readonly state: 'live' | 'trashed';
+  readonly content: MediaContentFacts;
+}
+
 /**
- * **Το περιεχόμενο σε καραντίνα, αν είναι ακόμη ζωντανό** — για το conditional GET (304: τίποτα δεν κατεβαίνει, άρα ό,τι λέμε
- * για το αρχείο πρέπει να βγει από την εγγραφή του). Κάδος ανακύκλωσης · ξένο · αλλοιωμένο ⇒ `null`, και ο καλών κατεβάζει ξανά.
+ * **Το περιεχόμενο σε καραντίνα, αν κρατιέται ακόμη** — για το conditional GET (304: τίποτα δεν κατεβαίνει, άρα ό,τι λέμε
+ * για το αρχείο πρέπει να βγει από την εγγραφή του). Επιτύμβιο · ξένο · αλλοιωμένο ⇒ `null`, και ο καλών κατεβάζει ξανά.
  */
-export async function readKeptMediaContent(ctx: AuthContext, fileId: string, sha256: string): Promise<MediaContentFacts | null> {
-  const data = (await contentFileRef(fileId).get()).data() ?? null;
-  if (data === null || !isLiveContent(ctx, fileId, sha256, data)) return null;
+export async function readKeptMediaContent(ctx: AuthContext, fileId: string, sha256: string): Promise<KeptMediaRecord | null> {
+  const data = (await mediaContentFileRef(fileId).get()).data() ?? null;
+  const state = mediaContentStateIn(ctx, fileId, sha256, data);
+  if (data === null || (state !== 'live' && state !== 'trashed')) return null;
   const ext = textField(data, 'ext');
   const contentType = textField(data, 'contentType');
   const sizeBytes = typeof data.sizeBytes === 'number' ? data.sizeBytes : null;
   const kind = ext !== null && contentType !== null ? kindOfKept(ext, contentType) : null;
   if (ext === null || contentType === null || sizeBytes === null || kind === null) return null;
-  return { fileId, sha256, sizeBytes, kind, ext, contentType };
-}
-
-/** Create-if-absent σε συναλλαγή. `true` ⇒ γεννήθηκε τώρα· υπάρχουσα αλλά όχι ζωντανή ⇒ {@link MediaContentUnavailableError}. */
-async function keepRecord(ctx: AuthContext, built: ContentRecord, measured: MeasuredStream): Promise<boolean> {
-  const db = getAdminFirestore();
-  const ref = contentFileRef(built.fileId);
-  return db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (snap.exists) {
-      if (!isLiveContent(ctx, built.fileId, measured.sha256, snap.data() ?? null)) throw new MediaContentUnavailableError(built.fileId);
-      return false;
-    }
-    tx.create(ref, readyFileRecordData(built, { sizeBytes: measured.size, placement: MEDIA_PLACEMENT, hash: measured.sha256 }));
-    return true;
-  });
+  return { state, content: { fileId, sha256, sizeBytes, kind, ext, contentType } };
 }
 
 /** Ροή → κρίση μεγέθους → προαγωγή. Επιστρέφει την εγγραφή που αντιστοιχεί στα bytes, ή την άρνηση του μεγέθους. */
@@ -221,14 +185,12 @@ export async function quarantineDownloadedMedia(ctx: AuthContext, media: Downloa
     const { stored, built, sizeRefusal } = await storeContent(ctx, media, verdict, stream);
     if (sizeRefusal !== null && !sizeRefusal.ok) return refusalOf(sizeRefusal);
     if (stored.kind === 'declined' || built === null) throw new Error('Media content was declined without a size verdict');
-    const created = await keepRecord(ctx, built, stored.measured);
-    if (created) {
-      await recordFileAudit({ fileId: built.fileId, action: 'remote_fetch', performedBy: ctx.uid, companyId: ctx.companyId, metadata: { uri: media.uri } });
-    }
+    const record = readyFileRecordData(built, { sizeBytes: stored.measured.size, placement: MEDIA_PLACEMENT, hash: stored.measured.sha256 });
+    const kept = await keepMediaContentRecord(ctx, { fileId: built.fileId, sha256: stored.measured.sha256, record, uri: media.uri });
     const { signature, kind } = verdict;
     return {
       ok: true,
-      content: { fileId: built.fileId, sha256: stored.measured.sha256, sizeBytes: stored.measured.size, kind, ext: signature.ext, contentType: signature.contentType, alreadyKept: !created },
+      content: { fileId: built.fileId, sha256: stored.measured.sha256, sizeBytes: stored.measured.size, kind, ext: signature.ext, contentType: signature.contentType, alreadyKept: kept !== 'created' },
     };
   } catch (error) {
     const failure = transferFailureOf(error);

@@ -318,7 +318,7 @@
       "unknownContent": "The downloaded content is not a file type the catalogue accepts.",
       "kindMismatch": "The file is valid, but not of a kind this media role accepts.",
       "typeConflict": "The link’s extension or declared type does not match the file’s actual content.",
-      "contentUnavailable": "The same file is already in the recycle bin. Restore it from the bin and retry."
+      "contentUnavailable": "The file was downloaded but could not be kept: the record of the same content is in an unexpected state. Retry; if it happens again, contact support."
     }
   },
   "memory": {

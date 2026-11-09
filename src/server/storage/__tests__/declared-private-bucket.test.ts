@@ -97,8 +97,14 @@ describe('Δ — οι δηλώσεις', () => {
     expect(TOUR.lifecycleRules).toEqual([{ action: { type: 'Delete' }, condition: { age: GCS_TOUR_MEDIA_BUCKET_CONFIG.ingestTtlDays, matchesPrefix: ['tour-ingest/'] } }]);
   });
 
-  it('🔴 Δ2 — πρωτότυπα ΕΕ: Φρανκφούρτη · soft delete 7 ημέρες (Ε3) · ΚΑΝΕΝΑΣ κύκλος ζωής (ένα πρωτότυπο δεν λήγει)', () => {
-    expect(FILES_EU).toMatchObject({ location: 'EUROPE-WEST3', storageClass: 'STANDARD', softDeleteRetentionSeconds: 604_800, lifecycleRules: [] });
+  it('🔴 Δ2 — πρωτότυπα ΕΕ: Φρανκφούρτη · soft delete 7 ημέρες (Ε3) · ένα πρωτότυπο ΔΕΝ λήγει: ο ΜΟΝΟΣ κανόνας είναι στα προσωρινά λήψεων (ADR-934 Μ-β5)', () => {
+    expect(FILES_EU).toMatchObject({ location: 'EUROPE-WEST3', storageClass: 'STANDARD', softDeleteRetentionSeconds: 604_800 });
+    expect(FILES_EU.lifecycleRules).toEqual([{ action: { type: 'Delete' }, condition: { age: 1, matchesPrefix: ['staging/catalog-media/'] } }]);
+    // Κάθε πρόθεμα κανόνα είναι προσωρινό· κανένας κανόνας χωρίς πρόθεμα (θα έσβηνε πρωτότυπα).
+    for (const rule of FILES_EU.lifecycleRules) {
+      expect(rule.condition.matchesPrefix?.length).toBeGreaterThan(0);
+      expect(rule.condition.matchesPrefix?.every((prefix) => prefix.startsWith('staging/'))).toBe(true);
+    }
     expect(GCS_FILES_EU_BUCKET_CONFIG.softDeleteRetentionSeconds).toBe(7 * 24 * 3600);
   });
 
@@ -156,7 +162,7 @@ describe.each(DECLARED_PRIVATE_BUCKETS.map((decl) => [decl.id, decl] as const))(
 });
 
 describe('Γ — το αίτημα γέννησης', () => {
-  it('🔴 Γ1 — ΟΛΗ η δήλωση σε ΕΝΑ αίτημα: HNS κλειστό · χωρίς object retention · χωρίς versioning · κανένας κύκλος ζωής στον files-eu', async () => {
+  it('🔴 Γ1 — ΟΛΗ η δήλωση σε ΕΝΑ αίτημα: HNS κλειστό · χωρίς object retention · χωρίς versioning · κύκλος ζωής ΜΟΝΟ στα προσωρινά λήψεων (ADR-934 Μ-β5)', async () => {
     const created: BucketMetadata[] = [];
     const probe = fakeBucket(FILES_EU, null);
     probe.create = (async (request: BucketMetadata) => { created.push(request); probe.metadata = declaredAsReturned(FILES_EU); }) as unknown as Bucket['create'];
@@ -170,6 +176,6 @@ describe('Γ — το αίτημα γέννησης', () => {
       iamConfiguration: { publicAccessPrevention: 'enforced', uniformBucketLevelAccess: { enabled: true } },
       softDeletePolicy: { retentionDurationSeconds: 604_800 },
     });
-    expect(created[0]).not.toHaveProperty('lifecycle');
+    expect(created[0].lifecycle).toEqual({ rule: [{ action: { type: 'Delete' }, condition: { age: 1, matchesPrefix: ['staging/catalog-media/'] } }] });
   });
 });

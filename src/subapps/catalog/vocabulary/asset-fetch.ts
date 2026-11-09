@@ -32,7 +32,7 @@ export const ASSET_FETCH_FAILURES = [
   'kindMismatch', // αρχείο αναγνωρίσιμο, αλλά όχι είδος που δέχεται ο ρόλος
   'typeConflict', // η διεύθυνση/ο τύπος δηλώνουν άλλη οικογένεια από τα bytes
   // ── φύλαξη ──
-  'contentUnavailable', // τα ίδια bytes υπάρχουν ήδη, αλλά στον κάδο ανακύκλωσης (Μ-β5: επαναφορά αντί για αποτυχία)
+  'contentUnavailable', // η εγγραφή αυτών των bytes υπάρχει αλλά δεν είναι δική μας (ξένη · αλλοιωμένη)· κάδος/επιτύμβιο ΔΕΝ φτάνουν εδώ (Μ-β5: ανάσταση)
 ] as const;
 
 export type AssetFetchFailure = (typeof ASSET_FETCH_FAILURES)[number];
@@ -99,3 +99,21 @@ export const ASSET_URI_MAX_LENGTH = 8192;
  */
 export const ASSET_FETCH_DEADLINE_MS = 240_000;
 export const ASSET_FETCH_HEADERS_TIMEOUT_MS = 30_000;
+
+/**
+ * Πόσες ημέρες μένει στον κάδο ένα περιεχόμενο καραντίνας που δεν το κρατά καμία ανοιχτή παρτίδα (ADR-934 §5.2.2 Μ-β5) —
+ * **ενιαία**, όχι ανά κατηγορία (`TRASH_RETENTION_BY_CATEGORY` δίνει 90 σε ένα BIM): τα bytes είναι **ανακτήσιμα** από τον
+ * προμηθευτή, άρα ο κάδος αγοράζει μόνο το «ξαναφέρνω το διορθωμένο αρχείο χωρίς να ξανακατεβεί τίποτα». 30 = ο κάδος του
+ * Google Drive (2020), του Box και του Microsoft 365. Όσο είναι στον κάδο, η ίδια ζήτηση το **επαναφέρει** μόνη της.
+ */
+export const CATALOG_MEDIA_QUARANTINE_TRASH_DAYS = 30;
+
+/**
+ * Το πρόθεμα των **προσωρινών** αντικειμένων μιας λήψης (πριν την προαγωγή στο κλειδί του περιεχομένου) — ένα, ώστε ο κανόνας
+ * κύκλου ζωής του κάδου (`private-bucket-registry`, Μ-β5) να τα βρίσκει όλα. Κανονικά σβήνονται στο `finally` της ροής·
+ * ο κανόνας πιάνει ό,τι αφήνει πίσω ένας server που έπεσε στη μέση.
+ */
+export const CATALOG_MEDIA_STAGING_PREFIX = 'staging/catalog-media';
+
+/** Ηλικία (ημέρες) μετά την οποία ο κάδος σβήνει προσωρινό αντικείμενο λήψης — μία λήψη κρατά το πολύ ~5′ (`maxDuration`). */
+export const CATALOG_MEDIA_STAGING_TTL_DAYS = 1;

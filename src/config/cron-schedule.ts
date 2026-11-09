@@ -55,6 +55,7 @@ import { runDocumentExpiryAlerts } from '@/lib/cron/jobs/document-expiry-alerts.
 import { runEngagementInvitationReminder } from '@/lib/cron/jobs/engagement-invitation-reminder.job';
 import { runIssuanceInvitationReminder } from '@/lib/cron/jobs/issuance-invitation-reminder.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
+import { runCatalogMediaQuarantineSweep } from '@/lib/cron/jobs/catalog-media-quarantine-sweep.job';
 import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
 import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
 import { runHolidayHoursQuestion } from '@/lib/cron/jobs/holiday-hours-question.job';
@@ -729,6 +730,21 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 2,
     leaseMinutes: 5,
     run: runPublicCatalogSweep,
+  },
+  {
+    slug: 'catalog-media-quarantine-sweep',
+    path: '/api/cron/catalog-media-quarantine-sweep',
+    description: 'Δίχτυ καραντίνας μέσων καταλόγου: παρτίδες χωρίς αποδέσμευση · ορφανά περιεχόμενα ⇒ κάδος (ADR-934 §5.2.2 Μ-β5)',
+    enabled: true,
+    // 🔑 **Ημερήσιο, γιατί είναι ΔΙΧΤΥ**: ο κύριος δρόμος αποδεσμεύει στο τέλος της παρτίδας· το παράθυρο των 9 ημερών καλύπτει
+    //    χαμένες εκτελέσεις. Το :39 δεν το κατέχει καμία επαναλαμβανόμενη εργασία (μετρημένο 2026-11-09) και η 04:xx δεν έχει
+    //    ημερήσια στο ίδιο λεπτό· τρέχει **πριν** το `file-purge` (05:00), που αδειάζει τον κάδο.
+    schedule: '39 4 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 15,
+    maxRuntimeMinutes: 2,
+    leaseMinutes: 5,
+    run: runCatalogMediaQuarantineSweep,
   },
   {
     slug: 'ai-pipeline',

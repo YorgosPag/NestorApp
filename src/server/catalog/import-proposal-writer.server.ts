@@ -33,6 +33,7 @@ import { CatalogWriteError } from './catalog-write-error';
 import { assertImportBatchOpen, assertPurposeAuthority, batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
 import { planProposal, resolveGroupIdentity, type PlannedProposal } from './import-proposal-plan.server';
 import { readBatchProposals, readImportBase } from './import-reads.server';
+import { releaseFinishedBatchMedia } from './media-quarantine-release.server';
 
 export type StoredImportProposal = StoredCatalogRecord<ImportProposalDefinition>;
 
@@ -251,22 +252,26 @@ export async function updateImportProposal(ctx: AuthContext, id: string, request
 /**
  * Ο **κύκλος ζωής**: παρτίδα σε έλεγχο κλείνει όταν δεν μένει ούτε πρόταση σε εκκρεμότητα ούτε αποτυχημένη σελίδα. Ιδεμπότητο,
  * και τρέχει μετά από κάθε απόφαση: αν χαθεί μία φορά, το ξανακρίνει η επόμενη, και τα δεδομένα έχουν ήδη γραφτεί.
- * Το ερώτημα είναι έξω από τη συναλλαγή· η συναλλαγή κρίνει μόνο την κατάσταση της παρτίδας.
+ * Το ερώτημα είναι έξω από τη συναλλαγή· η συναλλαγή κρίνει μόνο την κατάσταση της παρτίδας. Όταν κλείνει **τώρα**, η καραντίνα
+ * μέσων της αποδεσμεύεται (ADR-934 §5.2.2 Μ-β5).
  */
 export async function settleImportBatch(ctx: AuthContext, batchId: string): Promise<void> {
   const proposals = await readBatchProposals(ctx, batchId);
   if (proposals.some((proposal) => proposal.status === 'pending')) return;
-  await runCatalogTransaction(ctx, async (scope) => {
+  const closed = await runCatalogTransaction(ctx, async (scope) => {
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
-    if (batch.status !== 'reviewing' || (batch.pages?.failed.length ?? 0) > 0) return;
+    if (batch.status !== 'reviewing' || (batch.pages?.failed.length ?? 0) > 0) return false;
     stageReplace(scope, 'importBatch', batch, { ...batchDefinitionOf(batch), status: 'closed' });
+    return true;
   });
+  if (closed) await releaseFinishedBatchMedia(ctx.companyId, batchId);
 }
 
 /**
  * `POST /api/catalog/imports/[id]/discard` — η παρτίδα εγκαταλείπεται **και** οι εκκρεμείς της προτάσεις αποσύρονται (μαλακή
  * διαγραφή, ίδιος δρόμος με τη νέα χαρτογράφηση)· ό,τι εφαρμόστηκε ή απορρίφθηκε μένει, είναι απόφαση. Ιδεμπότητη: σε ήδη
  * εγκαταλειμμένη παρτίδα ξανατρέχει μόνο η απόσυρση, άρα αν χαθεί μία φορά, τη συμπληρώνει η επόμενη κλήση (ADR-934 Ε3).
+ * Το ίδιο και η αποδέσμευση της καραντίνας μέσων (ADR-934 §5.2.2 Μ-β5) — ιδεμπότητη, με δίχτυ το cron.
  */
 export async function discardImportBatch(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredImportBatch> {
   const discarded = await runCatalogTransaction(ctx, async (scope) => {
@@ -277,6 +282,7 @@ export async function discardImportBatch(ctx: AuthContext, id: string, expectedR
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status: 'discarded' });
   });
   await retireStaleProposals(ctx, id, new Set(), () => true);
+  await releaseFinishedBatchMedia(ctx.companyId, id);
   return discarded;
 }
 
