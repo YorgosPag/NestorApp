@@ -9,9 +9,12 @@
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { CATALOG_API, EXPECTED_REVISION_PARAM, LABEL_MEMORY_SUPPLIER_PARAM } from '@/subapps/catalog/catalog-routes';
 import type { ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
+import type { ImportAssetView } from '@/subapps/catalog/types/catalog-media';
 import type {
   ClearLabelMemoryResult,
   CreateImportBatchRequest,
+  FetchImportAssetRequest,
+  ImportAssetsView,
   ImportBatchDetailView,
   ImportBatchWire,
   ImportLabelMemoryWire,
@@ -82,6 +85,13 @@ export const clearLabelMemory = (supplierContactId: string): Promise<ClearLabelM
 
 export const discardImportBatch = (id: string, expectedRevision: number): Promise<ImportBatchWire> =>
   apiClient.post(CATALOG_API.imports.discard(id), { expectedRevision });
+
+/** Η ουρά μέσων της παρτίδας, με την κατάσταση κάθε διεύθυνσης (ADR-934 §5.2.2 Μ-β4). */
+export const fetchImportAssets = (id: string): Promise<ImportAssetsView> => apiClient.get(CATALOG_API.imports.assets(id));
+
+/** Κατέβασε μία διεύθυνση της παρτίδας σε καραντίνα. Ιδεμπότητο: έτοιμη ⇒ ως έχει· `retry` μόνο για ρητή «Ξαναδοκιμή». */
+export const fetchImportAsset = (id: string, request: FetchImportAssetRequest): Promise<ImportAssetView> =>
+  apiClient.post(CATALOG_API.imports.assets(id), request);
 
 export const updateImportProposal = (id: string, request: UpdateImportProposalRequest): Promise<ImportProposalWire> =>
   apiClient.put(CATALOG_API.importProposals.item(id), request);

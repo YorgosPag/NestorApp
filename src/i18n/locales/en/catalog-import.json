@@ -263,6 +263,12 @@
     "awaitsAttributes": "The code “{code}” is created by the attributes proposal of this table. Its price waits for that approval."
   },
   "assetFetch": {
+    "title": "Media from links",
+    "progress": "{total, plural, one {{ready} of # media file ready} other {{ready} of # media files ready}}",
+    "fetching": "{count, plural, one {Downloading # media file} other {Downloading # media files}}",
+    "failedCount": "{count, plural, one {# media file was not downloaded} other {# media files were not downloaded}}",
+    "retry": "Retry",
+    "retryFailed": "Retry failed downloads",
     "failure": {
       "notFound": "The supplier’s link no longer points to a file (404). Ask the supplier for a new link.",
       "httpError": "The supplier’s server did not return the file. Try again later.",
@@ -275,7 +281,8 @@
       "notAFile": "The link opens a web page, not a file (for example a sign-in page or an error page).",
       "unknownContent": "The downloaded content is not a file type the catalogue accepts.",
       "kindMismatch": "The file is valid, but not of a kind this media role accepts.",
-      "typeConflict": "The link’s extension or declared type does not match the file’s actual content."
+      "typeConflict": "The link’s extension or declared type does not match the file’s actual content.",
+      "contentUnavailable": "The same file is already in the recycle bin. Restore it from the bin and retry."
     }
   },
   "memory": {

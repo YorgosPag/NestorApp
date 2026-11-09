@@ -4,6 +4,7 @@
  * @module subapps/catalog/types/catalog-import-requests
  */
 
+import type { ImportAssetView } from './catalog-media';
 import type { CatalogWire } from './catalog-record';
 import type {
   ImportBatchDefinition,
@@ -35,6 +36,17 @@ export interface AttachImportFileRequest {
 /** Η ανάγνωση μιας σελίδας: ιδεμπότητη, ο πελάτης οδηγεί την πρόοδο σελίδα-σελίδα και συνεχίζει μετά από διακοπή. */
 export interface ReadImportPageRequest {
   readonly page: number;
+}
+
+/** `POST …/imports/[id]/assets` (ADR-934 §5.2.2 Μ-β4): μία διεύθυνση **της παρτίδας**· `retry` = ρητή «Ξαναδοκιμή» αποτυχημένης. */
+export interface FetchImportAssetRequest {
+  readonly uri: string;
+  readonly retry?: boolean;
+}
+
+/** `GET …/imports/[id]/assets` — η ουρά μέσων της παρτίδας. */
+export interface ImportAssetsView {
+  readonly assets: readonly ImportAssetView[];
 }
 
 export interface ImportFieldDecisionInput {

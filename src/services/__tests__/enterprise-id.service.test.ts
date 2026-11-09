@@ -368,6 +368,9 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicCatalogImportBatchId',
       'generateDeterministicCatalogImportProposalId',
       'generateDeterministicCatalogImportPageReadingId',
+      // ADR-923 §5.5.2 Β5 — ΜΙΑ μνήμη ανά (προμηθευτής × οικογένεια × ετικέτα × μονάδα): τυχαίο id = δεύτερη μνήμη για
+      // την ίδια ετικέτα στη δεύτερη έγκριση, και η ανάγνωση δεν θα ήξερε ποια ισχύει.
+      'generateDeterministicCatalogImportLabelMemoryId',
       // ADR-934 §5.2.2 Μ-β3 — ΜΙΑ ταυτότητα ανά διεύθυνση μέσου, ΜΙΑ λήψη ανά (παρτίδα, διεύθυνση): τυχαίο id = δεύτερη
       // λήψη του ίδιου αρχείου στο διπλό «Ξαναδοκιμή», και η «νέα έκδοση» δεν θα ξεχώριζε ποτέ από το «νέο».
       'generateDeterministicCatalogMediaSourceId',
@@ -554,6 +557,8 @@ describe('EnterpriseIdService', () => {
       generateDeterministicCatalogImportBatchId: 'cibat_14ad05af-93df-425e-8a22-03ea7240b242',
       generateDeterministicCatalogImportProposalId: 'cipsl_d1413ee3-667e-4ec3-84b0-13fde3d67a0a',
       generateDeterministicCatalogImportPageReadingId: 'cipgr_58c5dfd7-f233-452c-86c1-408be1905c36',
+      // ADR-923 §5.5.2 Β5.1 — καταγεγραμμένο από τον ίδιο τον γεννήτορα, 2026-11-09 (έλειπε από το `35d83ba2`).
+      generateDeterministicCatalogImportLabelMemoryId: 'cilm_1ed05a43-d195-4539-8b14-abe46c3ec845',
       // ADR-934 §5.2.2 Μ-β3 — καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-11-09.
       generateDeterministicCatalogMediaSourceId: 'cmsrc_55b1bd5a-2d6d-4c1f-81ea-66b420d0fbe1',
       generateDeterministicCatalogImportAssetFetchId: 'ciafx_53e07c03-72b9-4897-8f53-b11d13f47405',

@@ -676,12 +676,58 @@ deny-all · σουίτα κάλυψης · `CATALOG_COLLECTION_NAMES` του CHE
   αρχείου που θα σβηστεί. ⏳ **Μ-β5**: ο κύκλος ζωής την επαναφέρει αντί να πετά (σήμερα κανείς δεν πετά τέτοια αρχεία).
 - Προσωρινά αντικείμενα κάτω από **ένα** πρόθεμα (`staging/catalog-media/{χώρος}/{προσπάθεια}`) ⇒ το δίχτυ του Μ-β5 τα βρίσκει όλα.
 
-Tests (γραμμένα, **δεν** έτρεξαν — αναμένουν έγκριση): `lib/files/__tests__/stream-head.test.ts` ·
+Tests (jest **ΠΕΡΑΣΑΝ** μετά από μία διόρθωση test, έγκριση Giorgio 2026-11-09· οι 2 σουίτες κανόνων αναμένουν χωριστή
+έγκριση· το `enterprise-id.service.test.ts` έχει **προϋπάρχον** κόκκινο του ADR-923 Β5.1, βλ. changelog): `lib/files/__tests__/stream-head.test.ts` ·
 `server/storage/__tests__/stream-object-once.test.ts` (ψεύτικος κάδος: +`createWriteStream`, +προϋπόθεση στο `copy`) ·
 `server/catalog/__tests__/media-quarantine.test.ts` · `server/catalog/__tests__/media-source.test.ts` ·
 `catalog/import/__tests__/media-source-identity.test.ts` · `lib/files/__tests__/new-file-placement.test.ts` (+1) ·
 `services/__tests__/enterprise-id.service.test.ts` (+2 χρυσά) · `scripts/__tests__/rules-liveness-gate.test.js` (879 → 883) ·
 `tests/firestore-rules/suites/catalog-media-sources.rules.test.ts` · `…/catalog-import-asset-fetches.rules.test.ts` (emulator).
+
+**Μ-β4 — όπως υλοποιήθηκε (πόρτες + ουρά):**
+
+SSoT audit (grep): πρότυπο διαδρομής = `catalogEntityRoute`/`catalogReadRoute` (σύνορο ιδεμποτίας 3.92, βαθμίδα δηλωμένη στο
+`route.ts` 3.78) · πρότυπο μίσθωσης σε συναλλαγή = `plan-reading-store` (τοπικό, όχι κοινό) · ουρά με όριο **υπάρχει**:
+`lib/async/priority-task-queue` (ιδεμπότητη ανά κλειδί, ακύρωση ανά ομάδα), **χωρίς** όριο ανά ομάδα· το `use-asset-intake`
+έχει δικό του βρόχο εργατών (μένει ως έχει) · πελάτης HTTP **δεν** ξαναδοκιμάζει σε 429 (`shouldRetry`: μόνο 5xx/409) ·
+`retryAfterMs` υπάρχει (`lib/http/retry-after`) · κλειδιά `assetFetch.failure.*` υπήρχαν χωρίς πίνακα κλειδιών.
+
+| Κομμάτι | Πού | Σημείωση |
+|---|---|---|
+| Λεξιλόγιο | `catalog/vocabulary/asset-fetch.ts` | `ASSET_FETCH_STATUSES` (`queued` = **απουσία** εγγράφου ή ληγμένη μίσθωση, ποτέ γραμμένο) · μίσθωση 330″ (> `maxDuration` 300″) · ≤ 3 / ≤ 2 ανά host · ≤ 5 ανακατευθύνσεις · όρια χρόνου (σύνολο 240″, κεφαλίδες 30″) · μήκος URI 8192 (RFC 9110 §4.1). Νέος κωδικός **`contentUnavailable`** (+ `.domain-vocabulary.json`, i18n el/en) |
+| Τύποι | `catalog/types/catalog-media.ts` | `MediaContentFacts` (κοινός: το `KeptMediaContent` της καραντίνας τον **επεκτείνει**, ένας ορισμός) · `ImportAssetFetchDefinition` · `ImportAssetView` |
+| Ουρά (καθαρό) | **νέο** `catalog/import/import-asset-queue.ts` | Η ουρά **δεν αποθηκεύεται**: ένωση κανονικών URI των ζωντανών προτάσεων (εκκρεμείς + εφαρμοσμένες, όχι απορριφθείσες), ομάδας **και** γραμμών· ρόλοι σε σειρά λεξιλογίου · `importAssetClaimOf` (`settled` · `inFlight` · `claim`) |
+| Αναγνώστης εγγράφου | **νέο** `catalog/import/import-asset-fetch-document.ts` | Ποτέ cast: ξένο/αλλοιωμένο ⇒ «καμία λήψη», ποτέ ψεύτικο «έτοιμο» |
+| Γραφέας | **νέο** `server/catalog/import-asset-fetch-store.server.ts` | Διεκδίκηση σε **μία** συναλλαγή με `assertImportBatchOpen` · **σφραγίδα** = αριθμός προσπάθειας (fencing token): αργή λήψη που έχασε τη μίσθωση δεν σβήνει τη νεότερη · ανάγνωση με `getAll` κατά id (χωρίς δείκτη) |
+| Ροή | **νέο** `server/catalog/import-asset-fetch.server.ts` | Μόνο URI της παρτίδας (αλλιώς `notFound`, πριν από κάθε δίκτυο) · conditional GET **μόνο** με ζωντανό γνωστό περιεχόμενο (`readKeptMediaContent`) · 304 ⇒ `unchanged` χωρίς bytes · `fetchGuardedStream` (`https-upgrade`, όριο του ρόλου) → `quarantineDownloadedMedia` → `recordFetchedMediaSource` · `attemptKey` = id λήψης/προσπάθεια |
+| Αναγνώστης περιεχομένου | `server/catalog/media-quarantine.server.ts` | `readKeptMediaContent` + **ένας** κριτής «ζωντανό περιεχόμενο» (`isLiveContent`) για εγγραφή **και** 304 · είδος από τον τύπο (`assetKindAcceptsFile`, οι οικογένειες δεν επικαλύπτονται) |
+| Φρουρός | `lib/security/outbound-fetch.ts` | `GuardedStreamOptions.headersTimeoutMs` (προεπιλογή = `timeoutMs`, ίδια συμπεριφορά για κάθε άλλον καλούντα) |
+| Πόρτα | **νέο** `app/api/catalog/imports/[id]/assets/route.ts` | `GET` (HIGH) · `POST { uri, retry? }` (STANDARD, `maxDuration = 300`) · `products` · zod `fetchImportAssetBodySchema` · `CATALOG_API.imports.assets` |
+| Ουρά πελάτη | `lib/async/priority-task-queue.ts` (+`perGroup`) · **νέο** `components/catalog/imports/use-import-assets.ts` | Η **υπάρχουσα** ουρά απέκτησε όριο ανά ομάδα (χωρίς όρια ⇒ ίδια συμπεριφορά)· ομάδα = host · αισιόδοξη γραμμή · 429 ⇒ αναμονή `Retry-After` και ξανά (≤ 3) · αυτόματη λήψη **μία** φορά ανά άνοιγμα, «Ξαναδοκιμή» μόνο ρητά · κλειστή παρτίδα ⇒ ακύρωση |
+| Οθόνη | **νέο** `ImportAssetsSection.tsx` · `ImportBatchWorkspace.tsx` · `import-text.ts` (`ASSET_FETCH_FAILURE_KEYS`) | «Έτοιμα X από Y · κατεβαίνουν · δεν κατέβηκαν» + κάθε αποτυχία με λόγο και «Ξαναδοκιμή». ICU πληθυντικός (3.115) · παραγόμενα: `types/i18n.ts`, route slice εισαγωγών |
+
+**Αποφάσεις μέσα στο στάδιο:**
+- 🔴 **Το προεπιλεγμένο όριο του φρουρού (5″) ήταν για ΟΛΗ τη λήψη** — ο μετρητής τρέχει και όσο διαβάζεται το σώμα ⇒ κάθε αρχείο
+  πάνω από λίγα MB θα έπεφτε σε `timeout`. Ρητά όρια: σύνολο 240″ (κάτω από το `maxDuration`, ώστε να προλαβαίνουν αντιγραφή και
+  κλείσιμο) · κεφαλίδες 30″ · σιωπή 30″ (φρουρός).
+- **STANDARD, όχι SENSITIVE**: η λήψη δεν είναι πληρωμένη κλήση AI (οι σελίδες PDF είναι SENSITIVE γι' αυτό)· 20/λεπτό θα έκοβε
+  παρτίδα εκατοντάδων μέσων. Η ουρά του πελάτη σέβεται το `Retry-After`.
+- **Ο πρώτος ρόλος κρίνει το περιεχόμενο**: μία λήψη ανά διεύθυνση· ρόλοι της ίδιας διεύθυνσης είναι στην πράξη της ίδιας
+  οικογένειας (φύλλο δεδομένων + πιστοποιητικό = PDF). Ο ρόλος ανά δέσιμο ξανακρίνεται στο Μ-δ.
+- **`contentUnavailable`**: τα ίδια bytes υπάρχουν ήδη αλλά στον κάδο ανακύκλωσης. Δηλωμένο, με οδηγία (επαναφορά), ποτέ υιοθέτηση·
+  ⏳ Μ-β5: ο κύκλος ζωής το επαναφέρει μόνος του.
+- **Βλάβη ≠ αποτυχία**: βλάβη βάσης/κάδου πετιέται (σφάλμα στον άνθρωπο) και **δεν** κλείνει τη λήψη με ψεύτικο κωδικό του
+  προμηθευτή· η μίσθωση λήγει και η διεύθυνση ξαναμπαίνει στην ουρά.
+- **Η ενότητα δεν είναι τεμπέλικη επιφάνεια**: το CHECK 3.34 αρνήθηκε δεύτερη αναμονή του `catalog-import`, που η σελίδα έχει ήδη
+  (ζεύγη διαδρομή × namespace: μόνο συρρικνώνονται). Τα κείμενά της είναι στο ίδιο namespace και ο πίνακας κλειδιών ήδη στο
+  `import-text.ts` ⇒ απευθείας απόδοση, χωρίς νέο ζεύγος· σφράγιση **αμετάβλητη**.
+
+Tests (**ΠΕΡΑΣΑΝ 76/76**, 7 σουίτες, με την πρώτη εκτέλεση· έγκριση Giorgio 2026-11-09): `catalog/import/__tests__/import-asset-queue.test.ts` ·
+`…/import-asset-fetch-document.test.ts` · `server/catalog/__tests__/import-asset-fetch.test.ts` (ροή: μόνο URI της παρτίδας ·
+conditional GET · 304 · κωδικοί · βλάβη) · `…/import-asset-fetch-store.test.ts` (μίσθωση · σφραγίδα · κλειστή παρτίδα) ·
+`…/media-quarantine.test.ts` (+`readKeptMediaContent`) · `lib/async/__tests__/priority-task-queue.test.ts` (+`perGroup`) ·
+`components/catalog/imports/__tests__/use-import-assets.test.ts` (μόνο όσα περιμένουν · ≤ 3 / ≤ 2 ανά host · 429 · ρητή
+«Ξαναδοκιμή» · κλειστή παρτίδα).
 
 ## 6. Πάνω από τους μεγάλους — προτάσεις (κρίνονται ανά στάδιο, όχι δεσμευτικές ακόμη)
 
@@ -737,3 +783,9 @@ Tests (γραμμένα, **δεν** έτρεξαν — αναμένουν έγκ
 | 2026-11-09 | **§5.2.2 Μ-β2 υλοποιήθηκε** (έγκριση Giorgio· SSoT audit με grep): `content-signature.ts` (υπογραφές δεμένες στο μητρώο τύπων · HTML κατά WHATWG §7.1 + ριζικό στοιχείο · περιέκτες OLE2/ZIP · IFC με `FILE_SCHEMA`) · `judge-downloaded-asset.ts` (κρίση στα πρώτα bytes + μέγεθος μέσω `judgeAssetUpload`) · `vocabulary/asset-fetch.ts` (12 κωδικοί, ρίζα CHECK 3.73) · `canonicalMimeForExt` στο μητρώο · i18n el/en. 🔴 Διόρθωση σχεδίου: HEIC · WOFF · GLB · RVT **εκτός** — το μητρώο δεν τα γνωρίζει. Tests γραμμένα, **δεν** έτρεξαν. Κανένα land/push. |
 | 2026-11-09 | **Μ-β2: tests ΠΕΡΑΣΑΝ** (έγκριση Giorgio): `content-signature.test.ts` + `judge-downloaded-asset.test.ts` ⇒ **93/93** με την πρώτη εκτέλεση, χωρίς προειδοποίηση ανοιχτών χειριστών. Κώδικας και tests αμετάβλητα. Κανένα land/push. |
 | 2026-11-09 | **§5.2.2 Μ-β3 υλοποιήθηκε** (έγκριση Giorgio· SSoT audit με grep): N.6 πρώτα (`cmsrc_` · `ciafx_`) · συλλογές `catalog_media_sources` · `catalog_import_asset_fetches` (deny-all + κάλυψη, χωρίς δείκτες) · `ENTITY_TYPES.CATALOG_MEDIA_CONTENT` · θέση `catalog-media` ⇒ ΕΕ · μετακίνηση `readyFileRecordData` στο `services/file-record/` · `peekStreamHead` · `streamObjectOnce` · καραντίνα (`quarantineDownloadedMedia`) · ταυτότητα διεύθυνσης (`media-source`) · πράξη αρχείου `remote_fetch`. Πιο αυστηρά από το σχέδιο: κατηγορία από το **είδος** (όχι τον ρόλο) και ταυτότητα αρχείου (χώρος, sha256, κατάληξη) — αλλιώς ένα `fileId` με δύο κλειδιά αποθήκευσης. Tests γραμμένα, **δεν** έτρεξαν. Κανένα land/push. |
+| 2026-11-09 | **Μ-β3: tests jest** (έγκριση Giorgio): 8 σουίτες, 357 tests ⇒ **353 πράσινα, 4 κόκκινα**. (α) `media-quarantine.test.ts` «HTML ⇒ η πηγή ακυρώνεται»: λάθος του **test**, όχι του κώδικα. Το δείγμα HTML ήταν ~80 bytes, μικρότερο από την κεφαλή της κρίσης (8 KiB), άρα η προανάγνωση διάβαζε όλη τη ροή και δεν έμενε τίποτα να ακυρωθεί. Το δείγμα έγινε ρεαλιστική σελίδα ~40 KB ⇒ **9/9**. Κώδικας αμετάβλητος. (β) `enterprise-id.service.test.ts` (3 κόκκινα): **προϋπάρχον**, από το `35d83ba2` (ADR-923 Β5.1). Το `generateDeterministicCatalogImportLabelMemoryId` δεν έχει γραμμή στο `DETERMINISTIC_ONLY` ούτε χρυσό id (μετρημένο: `cilm_1ed05a43-d195-4539-8b14-abe46c3ec845`). Οι γεννήτορες του Μ-β3 (`cmsrc_` · `ciafx_`) περνούν. Η διόρθωση αναμένει έγκριση. Οι 2 σουίτες κανόνων (emulator) δεν έχουν τρέξει ακόμη. |
+| 2026-11-09 | **Προϋπάρχον κόκκινο του `enterprise-id.service.test.ts` κλειστό** (έγκριση Giorgio): το `generateDeterministicCatalogImportLabelMemoryId` (ADR-923 Β5.1, `35d83ba2`) μπήκε στο `DETERMINISTIC_ONLY` με τον λόγο του (μία μνήμη ανά προμηθευτή × οικογένεια × ετικέτα × μονάδα) και απέκτησε χρυσό id `cilm_1ed05a43-d195-4539-8b14-abe46c3ec845`. Αλλαγή μόνο στο test ⇒ **287/287**. Τα jest του Μ-β3 είναι πλέον όλα πράσινα. Οι 2 σουίτες κανόνων (emulator) δεν έχουν τρέξει ακόμη. |
+| 2026-11-09 | **Μ-β3: σουίτες κανόνων ΠΕΡΑΣΑΝ** (έγκριση Giorgio, emulator): `catalog-media-sources.rules.test.ts` + `catalog-import-asset-fetches.rules.test.ts` ⇒ **34/34**. Ο harness φορτώνει **απευθείας** το `firestore.rules` (`_harness/emulator.ts`), όχι το παράγωγο `.compiled`. Οι αρνήσεις του emulator δείχνουν τα μπλοκ `match` των νέων συλλογών. **Το Μ-β3 είναι πλήρως ελεγμένο.** |
+| 2026-11-09 | **§5.2.2 Μ-β4 υλοποιήθηκε** (έγκριση Giorgio· SSoT audit με grep): πόρτα `GET/POST /api/catalog/imports/[id]/assets` · ουρά που **δεν αποθηκεύεται** (ένωση URI των ζωντανών προτάσεων) · γραφέας με μίσθωση και **σφραγίδα προσπάθειας** · ροή με conditional GET μόνο πάνω σε ζωντανό περιεχόμενο (304 ⇒ `unchanged` χωρίς bytes) → καραντίνα → ταυτότητα διεύθυνσης · ουρά πελάτη πάνω στην **υπάρχουσα** `priority-task-queue` (+`perGroup`: ≤ 3, ≤ 2 ανά host, σεβασμός `Retry-After`) · ενότητα «Μέσα» με κάθε αποτυχία και «Ξαναδοκιμή». 🔴 Βρέθηκε και διορθώθηκε πριν φύγει: το όριο 5″ του φρουρού κάλυπτε **όλη** τη λήψη (ρητά όρια 240″/30″, νέο `headersTimeoutMs`). Νέος κωδικός `contentUnavailable`. Η ενότητα αποδίδεται απευθείας, γιατί το CHECK 3.34 αρνήθηκε νέο ζεύγος αναμονής. Tests γραμμένα, δεν έτρεξαν. |
+| 2026-11-09 | **Μ-β4: tests ΠΕΡΑΣΑΝ** (έγκριση Giorgio): ουρά · αναγνώστης εγγράφου · ροή · γραφέας (μίσθωση + σφραγίδα) · καραντίνα (+`readKeptMediaContent`) · `priority-task-queue` (+`perGroup`) · hook πελάτη ⇒ **76/76** σε 7 σουίτες, με την πρώτη εκτέλεση. Κώδικας και tests αμετάβλητα. Επόμενο: Μ-β5 (κύκλος ζωής καραντίνας) και ζωντανός έλεγχος μετά από land + push με εντολή. |
+| 2026-11-09 | **Μ-β4: rebase πάνω στο `main` `231e37cb` (ADR-923 Β5.2) + νέα σφράγιση του shell slice** (εντολή Giorgio για `wt:land`, «ναι» για το rebase). Το `wt:land` σταμάτησε σε σύγκρουση στο commit του Μ-β4. Οι 2 συγκρούσεις κώδικα ήταν μόνο εισαγωγές: `ImportBatchWorkspace.tsx` (`ImportSupplierSlot` του Β5.2 + ενότητα «Μέσα») και `catalog-import.schema.ts` (`ImportMemoryActionRequest` + `FetchImportAssetRequest`), λύση = και τα δύο. Τα 2 παραγόμενα (`types/i18n.ts` · `shell-slice.manifest.json`) ξαναπαράχθηκαν από τους γεννήτορες. 🔴 **Εύρημα της ένωσης**: το slice της σελίδας εισαγωγών έγινε **15345** bytes > ταβάνι 14797 (σφράγιση 11838 + 25 %) — κάθε αλλαγή χωρούσε μόνη της, η ένωση όχι (~2/3 Μ-β4 · ~1/3 Β5.2, εκτίμηση). Απόφαση Giorgio «όπως οι μεγάλοι» ⇒ πρότυπο Chromium `Binary-Size:`: **νέα σφράγιση 15345 με γραπτό λόγο** στο `.i18n-shell-slice.json`, όχι όριο `next/dynamic` (η ενότητα «Μέσα» είναι πρώτο καρέ· το CHECK 3.34 αρνείται δεύτερο ζεύγος αναμονής). Τα hashes του κλαδιού άλλαξαν: το Μ-β4 είναι πλέον `368eca97` (ήταν `6e394c87`). Κανένα test, κανένα tsc. |

@@ -12,6 +12,7 @@ import type {
   AttachImportFileRequest,
   ClearLabelMemoryRequest,
   CreateImportBatchRequest,
+  FetchImportAssetRequest,
   ImportMemoryActionRequest,
   ProposalActionRequest,
   ReadImportPageRequest,
@@ -29,6 +30,7 @@ import {
   IMPORT_PURPOSES,
   IMPORT_SOURCE_KINDS,
 } from '../../vocabulary/catalog-import';
+import { ASSET_URI_MAX_LENGTH } from '../../vocabulary/asset-fetch';
 import { CATALOG_LIMITS } from '../../vocabulary/catalog-limits';
 import { BRAND_FIELD, TRADE_IDENTITY_FIELDS } from '../../values/trade-identity';
 import { catalogCodeSchema, entityIdSchema, expectedRevisionSchema, measurementUnitCodeSchema } from './common.schema';
@@ -97,6 +99,12 @@ export const attachImportFileBodySchema: z.ZodType<AttachImportFileRequest> = z.
 });
 
 export const readImportPageBodySchema: z.ZodType<ReadImportPageRequest> = z.object({ page: z.number().int().min(1) });
+
+/** ADR-934 §5.2.2 Μ-β4 — η διεύθυνση κρίνεται στον γραφέα (πρέπει να τη ζητά η παρτίδα)· εδώ μόνο το σχήμα. */
+export const fetchImportAssetBodySchema: z.ZodType<FetchImportAssetRequest> = z.object({
+  uri: z.string().min(1).max(ASSET_URI_MAX_LENGTH),
+  retry: z.boolean().optional(),
+});
 
 /** Κλειδιά πίνακα της ανασύνθεσης (`t0`, `t1`…): μικρά, χωρίς διαχωριστικά. */
 const TABLE_KEY_MAX = 40;

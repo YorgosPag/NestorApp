@@ -238,7 +238,8 @@
         "notAFile",
         "unknownContent",
         "kindMismatch",
-        "typeConflict"
+        "typeConflict",
+        "contentUnavailable"
       ],
       "threshold": 5,
       "reason": "Οι κωδικοί αποτυχίας λήψης μέσου από διεύθυνση (ADR-934 §5.2 Μ9 · §5.2.2 Μ-β2): δηλωμένοι και ξαναδοκιμάσιμοι, ποτέ σιωπηλοί. Τους απαριθμούν η αντιστοίχιση των απορρίψεων του φρουρού SSRF (ASSET_FETCH_FAILURE_OF_REJECTION, Record<GuardedFetchRejection,…>), η κρίση περιεχομένου (judge-downloaded-asset), τα μηνύματα i18n και, από το Μ-β4, το έγγραφο λήψης και η οθόνη της παρτίδας. Χωρίς δεσμό, νέος κωδικός θα αποθηκευόταν χωρίς μήνυμα. Κατώφλι 5 (όχι 3): τέσσερις κωδικοί είναι γενικές λέξεις (timeout · notFound · httpError · tooLarge) που μοιράζονται άσχετα σύνολα σφαλμάτων.",

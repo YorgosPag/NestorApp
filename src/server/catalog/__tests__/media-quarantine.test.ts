@@ -49,6 +49,7 @@ import {
   MediaContentUnavailableError,
   mediaContentFileIdOf,
   quarantineDownloadedMedia,
+  readKeptMediaContent,
   type DownloadedMedia,
 } from '../media-quarantine.server';
 /* eslint-enable import/first */
@@ -58,7 +59,13 @@ const FILES = COLLECTIONS[FILE_COLLECTION.company];
 
 const PDF = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(9000, 0x41)]);
 const PDF_SHA = createHash('sha256').update(PDF).digest('hex');
-const HTML = Buffer.from('<!DOCTYPE html><html><head><title>Sign in</title></head><body>…</body></html>');
+// Μεγαλύτερη από την κεφαλή της κρίσης (8 KiB), όπως μια πραγματική σελίδα σύνδεσης: αλλιώς η προανάγνωση διαβάζει
+// ολόκληρη τη ροή και δεν μένει τίποτα να ακυρωθεί — το test δεν θα μετρούσε το «δεν κατεβαίνει το υπόλοιπο».
+const HTML = Buffer.concat([
+  Buffer.from('<!DOCTYPE html><html><head><title>Sign in</title></head><body>'),
+  Buffer.alloc(40_000, 0x20),
+  Buffer.from('</body></html>'),
+]);
 
 function bodyOf(bytes: Uint8Array, onCancel?: () => void): ReadableStream<Uint8Array> {
   let offset = 0;
@@ -172,5 +179,34 @@ describe('quarantineDownloadedMedia — εγγραφή που δεν είναι 
     const fileId = mediaContentFileIdOf('comp_1', PDF_SHA, 'pdf');
     fake.seed(FILES, fileId, { ...fake.getAllDocs(FILES)[fileId], isDeleted: true });
     await expect(quarantineDownloadedMedia(ctx, media({ attemptKey: 'ciafx_1/2', body: bodyOf(PDF) }))).rejects.toBeInstanceOf(MediaContentUnavailableError);
+  });
+});
+
+describe('readKeptMediaContent — ό,τι χρειάζεται το 304 (ADR-934 §5.2.2 Μ-β4)', () => {
+  const keptFileId = () => mediaContentFileIdOf('comp_1', PDF_SHA, 'pdf');
+
+  it('ζωντανό περιεχόμενο ⇒ τα στοιχεία του από την εγγραφή, με το είδος από τον τύπο', async () => {
+    await quarantineDownloadedMedia(ctx, media());
+    expect(await readKeptMediaContent(ctx, keptFileId(), PDF_SHA)).toEqual({
+      fileId: keptFileId(), sha256: PDF_SHA, sizeBytes: PDF.length, kind: 'document', ext: 'pdf', contentType: 'application/pdf',
+    });
+  });
+
+  it('ανύπαρκτη εγγραφή ⇒ null', async () => {
+    expect(await readKeptMediaContent(ctx, keptFileId(), PDF_SHA)).toBeNull();
+  });
+
+  it.each([
+    ['στον κάδο ανακύκλωσης', { isDeleted: true }],
+    ['άλλα bytes (άλλος κάτοχος)', { entityId: 'f'.repeat(64) }],
+  ])('%s ⇒ null (ο καλών κατεβάζει ξανά, χωρίς validators)', async (_name, spoiled) => {
+    await quarantineDownloadedMedia(ctx, media());
+    fake.seed(FILES, keptFileId(), { ...fake.getAllDocs(FILES)[keptFileId()], ...spoiled });
+    expect(await readKeptMediaContent(ctx, keptFileId(), PDF_SHA)).toBeNull();
+  });
+
+  it('άλλος χώρος ⇒ null', async () => {
+    await quarantineDownloadedMedia(ctx, media());
+    expect(await readKeptMediaContent({ uid: 'user_2', companyId: 'comp_2' } as AuthContext, keptFileId(), PDF_SHA)).toBeNull();
   });
 });

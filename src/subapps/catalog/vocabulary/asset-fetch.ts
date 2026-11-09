@@ -31,6 +31,8 @@ export const ASSET_FETCH_FAILURES = [
   'unknownContent', // τα bytes δεν είναι τύπος που γνωρίζει το μητρώο αρχείων
   'kindMismatch', // αρχείο αναγνωρίσιμο, αλλά όχι είδος που δέχεται ο ρόλος
   'typeConflict', // η διεύθυνση/ο τύπος δηλώνουν άλλη οικογένεια από τα bytes
+  // ── φύλαξη ──
+  'contentUnavailable', // τα ίδια bytes υπάρχουν ήδη, αλλά στον κάδο ανακύκλωσης (Μ-β5: επαναφορά αντί για αποτυχία)
 ] as const;
 
 export type AssetFetchFailure = (typeof ASSET_FETCH_FAILURES)[number];
@@ -58,3 +60,42 @@ export function assetFetchFailureOf(rejection: GuardedFetchRejection, status: nu
   const failure = ASSET_FETCH_FAILURE_OF_REJECTION[rejection];
   return failure === 'httpError' && status !== null && GONE_STATUSES.has(status) ? 'notFound' : failure;
 }
+
+// ── Η ουρά λήψεων μιας παρτίδας (ADR-934 §5.2.2 Μ-β4) ─────────────────────────────────────────────────────────────────
+
+/**
+ * Η κατάσταση μιας διεύθυνσης μέσα στην παρτίδα: `queued` = καμία λήψη ακόμη (δεν γράφεται ποτέ — είναι η **απουσία** εγγράφου,
+ * ή μίσθωση που έληξε) · `fetching` · `ready` · `failed`.
+ */
+export const ASSET_FETCH_STATUSES = ['queued', 'fetching', 'ready', 'failed'] as const;
+export type AssetFetchStatus = (typeof ASSET_FETCH_STATUSES)[number];
+
+/** Όσες γράφει ο server — το `queued` είναι κατάσταση της όψης, όχι του εγγράφου. */
+export type StoredAssetFetchStatus = Exclude<AssetFetchStatus, 'queued'>;
+
+/**
+ * Η μίσθωση μιας λήψης: πάνω από το `maxDuration` της διαδρομής (300″). Μετά από αυτό, όποιος την κράτησε δεν υπάρχει πια
+ * και η διεύθυνση ξαναδιεκδικείται (πρότυπο `plan-reading-store`).
+ */
+export const ASSET_FETCH_LEASE_MS = 330_000;
+
+/** Πόσες λήψεις τρέχουν μαζί από μία οθόνη — και πόσες προς τον **ίδιο** server (ευγένεια προς τον CDN του προμηθευτή). */
+export const ASSET_FETCH_CONCURRENCY = 3;
+export const ASSET_FETCH_PER_HOST = 2;
+
+/** Πόσες ανακατευθύνσεις ακολουθεί η λήψη, με πλήρη επανέλεγχο κάθε άλματος (CDN → υπογεγραμμένο URL αποθήκευσης). */
+export const ASSET_FETCH_MAX_REDIRECTS = 5;
+
+/**
+ * Το μέγιστο μήκος διεύθυνσης που δέχεται η πόρτα λήψης: RFC 9110 §4.1 συνιστά υποστήριξη **τουλάχιστον 8000** οκτάδων. Ο
+ * αναγνώστης xChange δεν κόβει διευθύνσεις, άρα η πόρτα πρέπει να δέχεται ό,τι μπορεί να έχει μια πρόταση.
+ */
+export const ASSET_URI_MAX_LENGTH = 8192;
+
+/**
+ * Τα χρονικά όρια μιας λήψης. Το **συνολικό** μένει κάτω από το `maxDuration` της διαδρομής (300″), ώστε να προλαβαίνουν η
+ * αντιγραφή στον κάδο και το κλείσιμο. Οι **κεφαλίδες** περιμένουν λίγο: server που δεν απαντά δεν κρατά τη λήψη τέσσερα
+ * λεπτά. Η **σιωπή** ανάμεσα σε δύο κομμάτια κρίνεται από τον φρουρό (`IDLE_TIMEOUT_MS`).
+ */
+export const ASSET_FETCH_DEADLINE_MS = 240_000;
+export const ASSET_FETCH_HEADERS_TIMEOUT_MS = 30_000;

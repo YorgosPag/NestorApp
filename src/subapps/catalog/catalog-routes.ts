@@ -132,6 +132,8 @@ export const CATALOG_API = {
     /** Ρητή εφαρμογή / αναίρεση της μνήμης ετικετών σε υπάρχουσα παρτίδα, χωρίς AI (§5.5.2 Β5.2). */
     memory: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/memory`,
     discard: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/discard`,
+    /** Η ουρά μέσων της παρτίδας (GET) και η λήψη μίας διεύθυνσης (POST) — ADR-934 §5.2.2 Μ-β4. */
+    assets: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/assets`,
   },
   importProfiles: entity('import-profiles'),
   /** Η μνήμη ετικετών γραμμής ανά προμηθευτή (§5.5.2 Β5.2): λίστα (`?supplier=`), διαγραφή, άδειασμα. */

@@ -23,6 +23,7 @@ import type {
   ImportLineRefusal,
   ImportRowAction,
 } from '@/subapps/catalog/vocabulary/catalog-import';
+import type { AssetFetchFailure } from '@/subapps/catalog/vocabulary/asset-fetch';
 
 export function useImportText() {
   const { t, i18n } = useTranslation(CATALOG_IMPORT_NAMESPACES);
@@ -114,4 +115,21 @@ export type LineState = keyof typeof LINE_STATE_KEYS;
 export const LINE_LEVEL_HINT_KEYS: Readonly<Record<ImportLineBindLevel, string>> = {
   shared: 'review.lines.levelHintShared',
   leaf: 'review.lines.levelHintLeaf',
+};
+
+/** ADR-934 §5.2.2 Μ-β4: γιατί δεν κατέβηκε ένα μέσο — ένα μήνυμα ανά κωδικό, ο `Record` σπάει τη μεταγλώττιση αν λείψει. */
+export const ASSET_FETCH_FAILURE_KEYS: Readonly<Record<AssetFetchFailure, string>> = {
+  notFound: 'assetFetch.failure.notFound',
+  httpError: 'assetFetch.failure.httpError',
+  timeout: 'assetFetch.failure.timeout',
+  tooLarge: 'assetFetch.failure.tooLarge',
+  notPublic: 'assetFetch.failure.notPublic',
+  dnsFailed: 'assetFetch.failure.dnsFailed',
+  tooManyRedirects: 'assetFetch.failure.tooManyRedirects',
+  invalidUri: 'assetFetch.failure.invalidUri',
+  notAFile: 'assetFetch.failure.notAFile',
+  unknownContent: 'assetFetch.failure.unknownContent',
+  kindMismatch: 'assetFetch.failure.kindMismatch',
+  typeConflict: 'assetFetch.failure.typeConflict',
+  contentUnavailable: 'assetFetch.failure.contentUnavailable',
 };

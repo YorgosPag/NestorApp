@@ -119,3 +119,27 @@ describe('createPriorityTaskQueue', () => {
     await expect(stale).rejects.toBeInstanceOf(TaskCancelledError);
   });
 });
+
+/** ADR-934 §5.2.2 Μ-β4 — όριο ανά ομάδα (λήψεις ανά host): ≤ 2 προς τον ίδιο server, χωρίς να μπλοκάρει άλλους servers. */
+describe('createPriorityTaskQueue — perGroup', () => {
+  it('ποτέ πάνω από perGroup της ίδιας ομάδας· η θέση πάει σε ΑΛΛΗ ομάδα, ακόμη κι αν είναι λιγότερο επείγουσα', async () => {
+    const q = createPriorityTaskQueue(3, { perGroup: 2 });
+    const g = gate();
+    for (const k of ['a1', 'a2', 'a3']) void q.schedule(k, { priority: 0, group: 'cdn-a' }, g.task(k));
+    void q.schedule('b1', { priority: 5, group: 'cdn-b' }, g.task('b1'));
+    expect(g.started).toEqual(['a1', 'a2', 'b1']);
+    g.open('b1');
+    await flush();
+    expect(g.started).toEqual(['a1', 'a2', 'b1']); // το a3 περιμένει θέση στην ομάδα του, όχι στο σύνολο
+    g.open('a1');
+    await flush();
+    expect(g.started).toEqual(['a1', 'a2', 'b1', 'a3']);
+  });
+
+  it('χωρίς όρια ⇒ ίδια συμπεριφορά με πριν (μόνο το συνολικό όριο)', () => {
+    const q = createPriorityTaskQueue(3);
+    const g = gate();
+    for (const k of ['a1', 'a2', 'a3']) void q.schedule(k, { priority: 0, group: 'cdn-a' }, g.task(k));
+    expect(g.started).toEqual(['a1', 'a2', 'a3']);
+  });
+});

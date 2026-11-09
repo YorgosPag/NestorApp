@@ -6,7 +6,7 @@
  * @module components/catalog/imports/ImportBatchWorkspace
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { PdfCanvasViewer } from '@/components/file-manager/PdfCanvasViewer';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,10 @@ import { ImportPriceTarget } from './ImportPriceTarget';
 import { LINE_REFUSAL_KEYS, SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
+import { useImportAssets } from './use-import-assets';
 import { ImportSupplierSlot, PriceLineNoteSlot, XChangeReportSlot } from './import-surfaces';
+import { ImportAssetsSection } from './ImportAssetsSection';
+import type { CatalogFailure } from '@/services/catalog/catalog-failure';
 
 type Workspace = ReturnType<typeof useImportBatch>;
 
@@ -229,6 +232,20 @@ function ProposalSlot({ workspace, view, focus, onFocus, proposal, canPrice }: B
   );
 }
 
+/**
+ * ADR-934 §5.2.2 Μ-β4: η ουρά μέσων. Παρτίδα χωρίς διευθύνσεις μέσων δεν δείχνει τίποτα. **Όχι** τεμπέλικη επιφάνεια: τα κείμενά
+ * της είναι στο namespace της σελίδας, και μια επιφάνεια θα πρόσθετε δεύτερη αναμονή του (CHECK 3.34, μόνο συρρικνώνεται).
+ */
+function BatchAssets({ batchId, open }: { readonly batchId: string; readonly open: boolean }) {
+  const notify = useCatalogFailureNotice();
+  const report = useCallback((failure: CatalogFailure | null) => {
+    if (failure) notify(failure);
+  }, [notify]);
+  const { assets, retry, retryFailed } = useImportAssets(batchId, open, report);
+  if (!assets || assets.length === 0) return null;
+  return <ImportAssetsSection assets={assets} open={open} onRetry={retry} onRetryFailed={retryFailed} />;
+}
+
 function BatchProposals(props: BatchProposalsProps) {
   const { t } = useImportText();
   const { workspace, view } = props;
@@ -246,6 +263,7 @@ function BatchProposals(props: BatchProposalsProps) {
       {open ? <SupplierSlot workspace={workspace} view={view} /> : null}
       <PageProgress workspace={workspace} />
       {batch.xchangeReport ? <XChangeReportSlot report={batch.xchangeReport} /> : null}
+      <BatchAssets batchId={batch.id} open={open} />
       {upgrade ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('batch.upgrading', { current: upgrade.done + 1, total: upgrade.total })}</p> : null}
       {proposals.length === 0 ? <p className="m-0 text-muted-foreground">{t('batch.noProposals')}</p> : null}
       {/* §5.5.2 Β3.1: όσο ξαναχτίζονται σελίδες, καμία απόφαση — αλλιώς θα συγκρουόταν με την πρόταση που μόλις αλλάζει. */}

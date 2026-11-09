@@ -66,13 +66,32 @@ function makeEntry(key: string, options: PriorityTaskOptions, run: (signal: Abor
   return { key, group: options.group, priority: options.priority, run, controller: new AbortController(), promise, resolve, reject };
 }
 
-export function createPriorityTaskQueue(concurrency: number): PriorityTaskQueue {
+/**
+ * Προαιρετικά όρια πέρα από το συνολικό. `perGroup`: πόσες εργασίες της **ίδιας** ομάδας τρέχουν μαζί — π.χ. λήψεις προς τον
+ * ίδιο server (ADR-934 §5.2.2 Μ-β4: ≤ 2 ανά host, όπως οι browsers ανά προέλευση). Εργασία που περιμένει την ομάδα της **δεν**
+ * μπλοκάρει άλλη ομάδα: επιλέγεται η πιο επείγουσα από όσες μπορούν να ξεκινήσουν.
+ */
+export interface PriorityTaskQueueLimits {
+  readonly perGroup?: number;
+}
+
+export function createPriorityTaskQueue(concurrency: number, limits: PriorityTaskQueueLimits = {}): PriorityTaskQueue {
   const waiting = new Map<string, Entry>();
   const running = new Map<string, Entry>();
+  const perGroup = limits.perGroup ?? Number.POSITIVE_INFINITY;
+
+  function runningIn(group: string): number {
+    let count = 0;
+    for (const entry of running.values()) if (entry.group === group) count += 1;
+    return count;
+  }
 
   function next(): Entry | null {
     let best: Entry | null = null;
-    for (const entry of waiting.values()) if (best === null || entry.priority < best.priority) best = entry;
+    for (const entry of waiting.values()) {
+      if (runningIn(entry.group) >= perGroup) continue;
+      if (best === null || entry.priority < best.priority) best = entry;
+    }
     return best;
   }
 

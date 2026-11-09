@@ -48,9 +48,10 @@ import {
   type DownloadedAssetVerdict,
 } from '@/subapps/catalog/schema/judge-downloaded-asset';
 import type { AssetFetchFailure } from '@/subapps/catalog/vocabulary/asset-fetch';
-import { CATALOG_ASSET_MAX_BYTES, MEDIA_CONTENT_STORAGE_CATEGORY } from '@/subapps/catalog/vocabulary/asset-files';
+import { assetKindAcceptsFile, CATALOG_ASSET_MAX_BYTES, MEDIA_CONTENT_STORAGE_CATEGORY } from '@/subapps/catalog/vocabulary/asset-files';
 import type { CatalogAssetRole } from '@/subapps/catalog/vocabulary/asset-roles';
-import type { AssetKind } from '@/subapps/catalog/vocabulary/attribute-types';
+import { ASSET_KINDS, type AssetKind } from '@/subapps/catalog/vocabulary/attribute-types';
+import type { MediaContentFacts } from '@/subapps/catalog/types/catalog-media';
 
 const MEDIA_PLACEMENT = placementForNewFile({ kind: 'catalog-media' });
 
@@ -73,13 +74,7 @@ export interface DownloadedMedia {
 }
 
 /** Το περιεχόμενο που κρατήθηκε. */
-export interface KeptMediaContent {
-  readonly fileId: string;
-  readonly sha256: string;
-  readonly sizeBytes: number;
-  readonly kind: AssetKind;
-  readonly ext: string;
-  readonly contentType: string;
+export interface KeptMediaContent extends MediaContentFacts {
   /** Η εγγραφή αρχείου **υπήρχε ήδη** (ίδιο περιεχόμενο από άλλη διεύθυνση ή παρτίδα). */
   readonly alreadyKept: boolean;
 }
@@ -136,20 +131,46 @@ function contentRecord(ctx: AuthContext, media: DownloadedMedia, accepted: Accep
 
 type ContentRecord = ReturnType<typeof contentRecord>;
 
+const contentFileRef = (fileId: string) => getAdminFirestore().collection(COLLECTIONS[FILE_COLLECTION.company]).doc(fileId);
+
+/** Η **μία** κρίση «ζωντανό περιεχόμενο αυτού του χώρου, αυτών των bytes» — για την εγγραφή **και** για το 304. */
+const isLiveContent = (ctx: AuthContext, fileId: string, sha256: string, data: Readonly<Record<string, unknown>> | null): boolean =>
+  judgeContainerFile(fileId, data, {
+    owner: { kind: 'company', companyId: ctx.companyId },
+    entityType: ENTITY_TYPES.CATALOG_MEDIA_CONTENT,
+    entityId: sha256,
+    contentType: () => true,
+  }).kind === 'accepted';
+
+const textField = (data: Readonly<Record<string, unknown>>, key: string): string | null => (typeof data[key] === 'string' ? (data[key] as string) : null);
+
+/** Το είδος από τον τύπο του αρχείου: οι οικογένειες του `ASSET_KIND_FILE_CATEGORIES` δεν επικαλύπτονται, άρα ταιριάζει **ένα**. */
+const kindOfKept = (ext: string, contentType: string): AssetKind | null =>
+  ASSET_KINDS.find((kind) => assetKindAcceptsFile(kind, { ext, contentType }) === 'accepted') ?? null;
+
+/**
+ * **Το περιεχόμενο σε καραντίνα, αν είναι ακόμη ζωντανό** — για το conditional GET (304: τίποτα δεν κατεβαίνει, άρα ό,τι λέμε
+ * για το αρχείο πρέπει να βγει από την εγγραφή του). Κάδος ανακύκλωσης · ξένο · αλλοιωμένο ⇒ `null`, και ο καλών κατεβάζει ξανά.
+ */
+export async function readKeptMediaContent(ctx: AuthContext, fileId: string, sha256: string): Promise<MediaContentFacts | null> {
+  const data = (await contentFileRef(fileId).get()).data() ?? null;
+  if (data === null || !isLiveContent(ctx, fileId, sha256, data)) return null;
+  const ext = textField(data, 'ext');
+  const contentType = textField(data, 'contentType');
+  const sizeBytes = typeof data.sizeBytes === 'number' ? data.sizeBytes : null;
+  const kind = ext !== null && contentType !== null ? kindOfKept(ext, contentType) : null;
+  if (ext === null || contentType === null || sizeBytes === null || kind === null) return null;
+  return { fileId, sha256, sizeBytes, kind, ext, contentType };
+}
+
 /** Create-if-absent σε συναλλαγή. `true` ⇒ γεννήθηκε τώρα· υπάρχουσα αλλά όχι ζωντανή ⇒ {@link MediaContentUnavailableError}. */
 async function keepRecord(ctx: AuthContext, built: ContentRecord, measured: MeasuredStream): Promise<boolean> {
   const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS[FILE_COLLECTION.company]).doc(built.fileId);
+  const ref = contentFileRef(built.fileId);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (snap.exists) {
-      const verdict = judgeContainerFile(built.fileId, snap.data() ?? null, {
-        owner: { kind: 'company', companyId: ctx.companyId },
-        entityType: ENTITY_TYPES.CATALOG_MEDIA_CONTENT,
-        entityId: measured.sha256,
-        contentType: () => true,
-      });
-      if (verdict.kind !== 'accepted') throw new MediaContentUnavailableError(built.fileId);
+      if (!isLiveContent(ctx, built.fileId, measured.sha256, snap.data() ?? null)) throw new MediaContentUnavailableError(built.fileId);
       return false;
     }
     tx.create(ref, readyFileRecordData(built, { sizeBytes: measured.size, placement: MEDIA_PLACEMENT, hash: measured.sha256 }));

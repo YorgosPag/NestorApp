@@ -74,6 +74,11 @@ export type GuardedDocumentResult =
 export interface GuardedStreamOptions extends Omit<GuardedFetchOptions, 'maxBytes'> {
   readonly maxBytes: number;
   readonly idleTimeoutMs?: number;
+  /**
+   * Αναμονή των **κεφαλίδων** κάθε άλματος (προεπιλογή: το `timeoutMs`). Μια μεγάλη λήψη θέλει μεγάλο συνολικό όριο αλλά
+   * σύντομη αναμονή κεφαλίδων: server που δεν απαντά δεν πρέπει να κρατά τη λήψη όσο ένα αρχείο 500 MiB (ADR-934 Μ-β4).
+   */
+  readonly headersTimeoutMs?: number;
   readonly scheme?: OutboundScheme;
 }
 
@@ -377,7 +382,7 @@ export async function fetchGuardedStream(raw: string, options: GuardedStreamOpti
     headers: headersFor(options),
     maxRedirects: options.maxRedirects ?? 0,
     deadlineMs: timeoutMs,
-    headersTimeoutMs: timeoutMs,
+    headersTimeoutMs: options.headersTimeoutMs ?? timeoutMs,
     allowHttp: scheme === 'https-upgrade',
   };
   const opened = await openWithScheme(raw, request, scheme);
