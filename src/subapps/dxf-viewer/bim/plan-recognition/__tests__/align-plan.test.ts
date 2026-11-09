@@ -20,6 +20,7 @@ import { DEFAULT_PLAN_SEGMENTS, extractPlanSegments, minFillPxFor } from '../seg
 import { MODEL_FROM_DRAWING_LIMITS } from '../../../config/tolerance-config';
 import { colourfulFraction, planInkMask, resolveBinarization } from '../alignment/plan-ink';
 import { SAMPLE_HOUSE_WALLS, renderSyntheticPlan, type SyntheticPlanSpec } from '../testing/synthetic-plan-raster';
+import type { SyntheticDimension } from '../testing/synthetic-dimensions';
 
 const BASE: SyntheticPlanSpec = {
   walls: SAMPLE_HOUSE_WALLS,
@@ -32,6 +33,15 @@ const BASE: SyntheticPlanSpec = {
 };
 
 const OLD_SCAN = { seed: 42, noiseAmplitude: 25, yellowing: 0.8 } as const;
+
+/** Περιγραμμένοι τοίχοι στην κλίμακα των τεστ αναγνώρισης (τα δωμάτια γίνονται ορθογώνια κελιά). */
+const OUTLINED: SyntheticPlanSpec = { ...BASE, pxPerMm: 0.06, marginMm: 600, wallStyle: 'outlined' };
+/** Εξωτερική παρειά των τοίχων 25 cm του δείγματος (άξονας ± 125 mm). */
+const OUT = 125;
+const SOUTH_EAST_DIMENSIONS: readonly SyntheticDimension[] = [
+  { from: { x: -OUT, y: -OUT }, to: { x: 6000 + OUT, y: -OUT }, offsetMm: -875, terminator: 'tick', label: '6.25', text: 'above' },
+  { from: { x: 6000 + OUT, y: -OUT }, to: { x: 6000 + OUT, y: 4000 + OUT }, offsetMm: -875, terminator: 'tick', label: '4.25', text: 'above' },
+];
 
 /** Η γωνία (mod 90°, στο [−45, 45)) με την οποία ο άξονας x της ευθυγραμμισμένης εικόνας πέφτει στη σκηνή. */
 function residualSceneAngleDeg(alignedToOriginal: Homography, toScene: ReturnType<typeof rasterToSceneAffine>, at: { x: number; y: number }): number {
@@ -189,8 +199,8 @@ describe('εικόνα εργασίας', () => {
   });
 });
 
-/** Φύλλο με πλαίσιο, πινακίδα κάτω-δεξιά (πίνακας 3 × 2 με «κείμενο») και την κάτοψη στη μέση. */
-function sheetImage(): { raster: PlanRaster; title: { minX: number; minY: number; maxX: number; maxY: number } } {
+/** Φύλλο με (ή χωρίς) πλαίσιο, πινακίδα κάτω-δεξιά (πίνακας 3 × 2 με «κείμενο») και την κάτοψη στη μέση. */
+function sheetImage(framed = true): { raster: PlanRaster; title: { minX: number; minY: number; maxX: number; maxY: number } } {
   const W = 1200, H = 850;
   const r = blankPlanRaster(W, H);
   const ink = (x: number, y: number) => { if (x >= 0 && y >= 0 && x < W && y < H) for (let c = 0; c < 3; c++) r.rgba[(y * W + x) * 4 + c] = 20; };
@@ -198,7 +208,7 @@ function sheetImage(): { raster: PlanRaster; title: { minX: number; minY: number
     for (let x = x0; x <= x1; x++) for (let k = 0; k < t; k++) { ink(x, y0 + k); ink(x, y1 - k); }
     for (let y = y0; y <= y1; y++) for (let k = 0; k < t; k++) { ink(x0 + k, y); ink(x1 - k, y); }
   };
-  rect(20, 20, W - 21, H - 21, 4);
+  if (framed) rect(20, 20, W - 21, H - 21, 4);
   const title = { minX: 780, minY: 620, maxX: W - 24, maxY: H - 24 };
   rect(title.minX, title.minY, title.maxX + 3, title.maxY + 3, 3);
   for (const y of [690, 760]) for (let x = title.minX; x <= title.maxX; x++) { ink(x, y); ink(x, y + 1); }
@@ -238,6 +248,35 @@ describe('διάταξη φύλλου — πλαίσιο και πινακίδα
     expect(result.sheet?.frame).toBeNull();
     expect(result.sheet?.drawing.aligned).toEqual({ minX: 0, minY: 0, maxX: result.image.width, maxY: result.image.height });
     expect(result.sheet?.annotations).toEqual([]);
+  });
+
+  /**
+   * ADR-929 §6.10 #2 — χωρίς πλαίσιο, πινακίδα είναι μόνο **πλήρης πίνακας** (πεδία + κείμενο + γωνία). Τα δωμάτια ενός
+   * περιγραμμένου σπιτιού είναι ορθογώνια κελιά χωρίς τίποτα πέρα από αυτά στο λευκό περιθώριο: πριν τον κανόνα γίνονταν
+   * «πινακίδες» (μετρημένο: 9 συνθετικά, οι τοίχοι τους χάνονταν).
+   */
+  it.each<[string, SyntheticPlanSpec]>([
+    ['περίγραμμα, −11°, παλιά σάρωση (2 δωμάτια, 4 ακραίες πλευρές)', { ...OUTLINED, rotationDeg: -11, degradation: OLD_SCAN }],
+    ['περίγραμμα, διαστάσεις νότια + ανατολικά (1 κελί, 1–2 ακραίες)', { ...OUTLINED, marginMm: 400, dimensions: SOUTH_EAST_DIMENSIONS }],
+    ['περίγραμμα, περιθώριο 1200, 1,3°, παλιά σάρωση (3 ακραίες)', { ...OUTLINED, marginMm: 1200, rotationDeg: 1.3, degradation: OLD_SCAN }],
+  ])('χωρίς πλαίσιο, %s: τα δωμάτια ΔΕΝ είναι πινακίδα', (_name, spec) => {
+    const sheet = alignPlan(renderSyntheticPlan(spec).image).sheet;
+    expect(sheet?.frame).toBeNull();
+    expect(sheet?.annotations).toEqual([]);
+  });
+
+  it('χωρίς πλαίσιο, πλήρης πίνακας στη γωνία: προτείνεται (πεδία + κείμενο + γωνία) — όχι τα δωμάτια', () => {
+    const { raster, title } = sheetImage(false);
+    const sheet = alignPlan(raster, { deskew: false }).sheet;
+    expect(sheet?.frame).toBeNull();
+    expect(sheet?.annotations).toHaveLength(1);
+    const block = sheet?.annotations[0];
+    if (block === undefined) return;
+    expect(block.anchoredTo).toEqual(expect.arrayContaining(['right', 'bottom']));
+    expect(block.cellCount).toBeGreaterThanOrEqual(3);
+    expect(block.confidence).toBe(1);
+    expect(Math.abs(block.region.originalBounds.minX - title.minX)).toBeLessThan(8);
+    expect(Math.abs(block.region.originalBounds.minY - title.minY)).toBeLessThan(8);
   });
 });
 
