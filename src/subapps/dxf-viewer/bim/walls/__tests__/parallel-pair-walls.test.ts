@@ -95,8 +95,8 @@ const closedBox = (x0: number, y0: number, w: number, h: number): RegionLineSeg[
   seg('n', x0 + w, y0 + h, x0, y0 + h), seg('w', x0, y0 + h, x0, y0),
 ];
 
-describe('ADR-929 §6.14 — βήμα 9: κανένας άξονας που δεν τον ξέρουμε (κανόνας Β)', () => {
-  it('Π-8 κλειστό 300 × 250 (σχεδόν τετράγωνο, καπάκι και στα δύο άκρα) ⇒ ένα ορθογώνιο ΧΩΡΙΣ άξονα, ίδιο σώμα', () => {
+describe('ADR-929 §6.14 — βήμα 9: κανένας άξονας που δεν τον ξέρουμε (κανόνας Α: μόνο ο λόγος, όπως το σχέδιο)', () => {
+  it('Π-8 κλειστό 300 × 250 (σχεδόν τετράγωνο) ⇒ ένα ορθογώνιο ΧΩΡΙΣ άξονα, ίδιο σώμα', () => {
     const rects = strategy(closedBox(0, 0, 300, 250), TOL);
     expect(rects).toHaveLength(1);
     expect(rects[0].axis).toBeUndefined();
@@ -111,24 +111,32 @@ describe('ADR-929 §6.14 — βήμα 9: κανένας άξονας που δε
     expect(rects[0].axis).toBeUndefined();
   });
 
-  it('Π-9 δύο παρειές 300 μήκος σε απόσταση 250, ΧΩΡΙΣ καπάκια ⇒ ο άξονας μένει (είναι γνώση)', () => {
+  it('Π-9 δύο παρειές 300 μήκος σε απόσταση 250, ΧΩΡΙΣ καπάκια ⇒ ΧΩΡΙΣ άξονα: το σχήμα δεν λέει αν το πάχος είναι 250 ή 300', () => {
+    // Κανόνας Α (ADR-929 §6.14): η απόσταση του ζεύγους δεν είναι γνώση προσανατολισμού σε σχεδόν τετράγωνο κομμάτι.
+    // Το σχέδιο εδώ δεν βγάζει ορθογώνιο (δεν κλείνει)· η εικόνα βγάζει ερώτηση, ποτέ σιωπηλό τοίχο με μαντεμένο άξονα.
     const rects = strategy([seg('p', 0, 0, 300, 0), seg('q', 0, 250, 300, 250)], TOL);
     expect(rects).toHaveLength(1);
-    expect(rects[0].axis).toBeDefined();
-    expect(axisOf(rects[0])).toEqual({ a: { x: 0, y: 125 }, b: { x: 300, y: 125 }, t: 250 });
+    expect(rects[0].axis).toBeUndefined();
+    expect(rects[0].area).toBeCloseTo(300 * 250, 6);
   });
 
-  it('Π-10 κοντός τοίχος σύνδεσης ανάμεσα σε δύο κάθετους: τα άκρα του είναι παρειές ΑΛΛΩΝ τοίχων ⇒ ο άξονας μένει', () => {
+  it('Π-10 κοντός τοίχος σύνδεσης 300 × 250 ανάμεσα σε δύο κάθετους ⇒ ΧΩΡΙΣ άξονα, ΙΔΙΑ ερώτηση με το σχέδιο', () => {
     const walls = [
       seg('W-a', -250, -1000, -250, 1250), seg('W-b', 0, -1000, 0, 1250),
       seg('E-a', 300, -1000, 300, 1250), seg('E-b', 550, -1000, 550, 1250),
       seg('C-a', 0, 0, 300, 0), seg('C-b', 0, 250, 300, 250),
     ];
+    const at = (rs: readonly DetectedRectangle[]) => rs.find((r) => pointInPolygon({ x: 150, y: 125 }, r.polygon));
     const rects = strategy(walls, TOL);
-    const connector = rects.find((r) => pointInPolygon({ x: 150, y: 125 }, r.polygon));
+    const connector = at(rects);
     expect(connector).toBeDefined();
-    expect(connector?.axis).toBeDefined();
-    expect(rects.every((r) => r.axis !== undefined)).toBe(true);
+    expect(connector?.axis).toBeUndefined();
+    // Οι μακριοί κάθετοι κρατούν τον άξονά τους.
+    expect(rects.filter((r) => r !== connector).every((r) => r.axis !== undefined)).toBe(true);
+    // Το σχέδιο, με τις ίδιες γραμμές, βγάζει το ίδιο κομμάτι επίσης χωρίς άξονα.
+    const drawn = at(closedRectangleStrategy(walls, TOL));
+    expect(drawn).toBeDefined();
+    expect(drawn?.axis).toBeUndefined();
   });
 
   it('Π-11 όριο του κατωφλίου: λόγος ΑΚΡΙΒΩΣ 1,75 δεν είναι «σχεδόν τετράγωνο»· 0,001 mm κάτω είναι', () => {
