@@ -77,6 +77,14 @@ export const priceGroupKeyOf = (attributesGroupKey: string): string => `${attrib
 export const attributesGroupKeyOf = (priceGroupKey: string): string | null =>
   priceGroupKey.endsWith(PRICE_GROUP_SUFFIX) ? priceGroupKey.slice(0, -PRICE_GROUP_SUFFIX.length) : null;
 
+/**
+ * Μία λήψη μέσου (ADR-934 §5.2.2 Μ-β3): παρτίδα + **κανονικό** URI. Όσοι ρόλοι ή γραμμές κι αν ζητούν την ίδια διεύθυνση μέσα
+ * στην παρτίδα, κατεβαίνει **μία** φορά.
+ */
+export function importAssetFetchKey(batchId: string, canonicalUri: string): string {
+  return [batchId, canonicalUri].join(SEPARATOR);
+}
+
 /** Μία απάντηση του μοντέλου: παρτίδα + σελίδα + διαδρομή + προσπάθεια. */
 export function importPageReadingKey(batchId: string, page: number, route: string, attempt: number): string {
   return [batchId, String(page), route, String(attempt)].join(SEPARATOR);

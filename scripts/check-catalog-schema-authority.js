@@ -104,7 +104,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
   'catalog_pricing_view_signals', 'catalog_public_outbox',
   'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals', 'catalog_import_page_readings',
-  'catalog_import_label_memory',
+  'catalog_import_label_memory', 'catalog_media_sources', 'catalog_import_asset_fetches',
   'catalog_publication_recipes', 'catalog_publication_runs', 'catalog_editions',
   'catalog_visibility_rules', 'catalog_supplier_profiles',
   'supply_relationships', 'supply_invitations', 'supply_request_links',

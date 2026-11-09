@@ -42,6 +42,14 @@ export type NewFileContext =
        * προσώπου, άρα γεννιέται εκεί όπου θα ζήσει. Το αντίτυπο του αγοραστή ακολουθεί αυτό (`handover-copy`).
        */
       readonly kind: 'handover-protocol';
+    }
+  | {
+      /**
+       * ADR-934 §5.2.2 Μ-β3 — μέσο καταλόγου που **κατέβασε** ο διακομιστής από διεύθυνση τρίτου (καραντίνα). Κανένα
+       * ανέβασμα, καμία πηγή μέσα στην πλατφόρμα να ακολουθήσει ⇒ απόφαση **Ε1 = όλα τα νέα πρωτότυπα στην ΕΕ**
+       * (ADR-895 §6), όπως το Πρωτόκολλο. Το αντίγραφο στο μέσο (Μ-δ) ακολουθεί αυτό, rewrite μέσα στην ίδια περιοχή.
+       */
+      readonly kind: 'catalog-media';
     };
 
 /** Κάθε θέση μέσων περιήγησης έχει **δηλωμένη** απάντηση — νέα θέση χωρίς γραμμή εδώ δεν μεταγλωττίζεται. */
@@ -58,6 +66,7 @@ export function placementForNewFile(context: NewFileContext): FileStoragePlaceme
     case 'handover-copy':
       return context.sourcePlacement;
     case 'handover-protocol':
+    case 'catalog-media':
       return 'eu-originals';
   }
 }

@@ -28,7 +28,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
 import { openSealSession, type SealSession } from '@/server/pdf-seal/seal-pdf.server';
 import type { HandoverProtocolIssuer } from '@/server/property-handover-delivery/handover-delivery.server';
-import { readyFileRecordData } from '@/server/property-handover-delivery/handover-delivery-copy.server';
+import { readyFileRecordData } from '@/services/file-record/ready-file-record.server';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { produceHandoverProtocolPdf, type HandoverProtocolPdfFailure } from '@/services/pdf/renderers/handover-protocol/handover-protocol-pdf.server';
 import type { PropertyHandover } from '@/types/property-handover';

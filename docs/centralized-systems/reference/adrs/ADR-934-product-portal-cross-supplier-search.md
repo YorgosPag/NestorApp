@@ -641,9 +641,47 @@ SSoT audit (grep): **κανένας** κοινός ανιχνευτής — μό
   · `unknown/unknown` … + `binary/octet-stream` των παλιών S3) και οι οικογένειες κειμένου **δεν** δεσμεύουν — servers στέλνουν
   IFC ως `text/plain`, SVG ως `text/xml`. PNG με `.jpg` = ίδια οικογένεια ⇒ δεκτό **ως PNG** (το περιεχόμενο γράφει τον τύπο).
 
-Tests (γραμμένα, **δεν** έτρεξαν — αναμένουν έγκριση): `lib/files/__tests__/content-signature.test.ts` (δείγματα bytes ανά μορφή ·
+Tests (**ΠΕΡΑΣΑΝ 93/93**, έγκριση Giorgio 2026-11-09): `lib/files/__tests__/content-signature.test.ts` (δείγματα bytes ανά μορφή ·
 HTML/SVG/IFC/PDF · 🔑 άγκυρα κάλυψης: κάθε δεκτή κατάληξη του μητρώου έχει υπογραφή, κάθε κατάληξη του πίνακα είναι του μητρώου,
 ό,τι βγάζει η ανίχνευση το δέχεται το `assetKindAcceptsFile`) · `catalog/schema/__tests__/judge-downloaded-asset.test.ts`.
+
+**Μ-β3 — όπως υλοποιήθηκε (ταυτότητα διεύθυνσης + περιεχομένου, καραντίνα):**
+
+SSoT audit (grep): **κανένα** κοινό «ροή → αντικείμενο» (υπάρχουν `createObjectOnce` για bytes στη μνήμη · `sha256PassThrough` ·
+`copyProvenPairs`/`sameObject` · `pinnedToGeneration`)· **καμία** προανάγνωση κεφαλής ροής· το `readyFileRecordData` κλειδωμένο
+στον γραφέα της παράδοσης (2 καταναλωτές)· πρότυπο συλλογής αποτελέσματος μηχανής = `catalog_import_page_readings` (κανόνες
+deny-all · σουίτα κάλυψης · `CATALOG_COLLECTION_NAMES` του CHECK 3.106 · άγκυρα πληθυσμού του CHECK 3.96).
+
+| Κομμάτι | Πού | Σημείωση |
+|---|---|---|
+| Αναγνωριστικά (N.6, **πρώτα**) | `enterprise-id-prefixes-catalog.ts` · `…-catalog-generators.ts` · convenience · `enterprise-id.service.ts` | `cmsrc_` = det(χώρος, κανονικό URI) · `ciafx_` = det(χώρος, `importAssetFetchKey(παρτίδα, URI)`) · χρυσά ids στο `enterprise-id.service.test.ts` |
+| Συλλογές | `COLLECTIONS.CATALOG_MEDIA_SOURCES` · `CATALOG_IMPORT_ASSET_FETCHES` · `firestore.rules` (read/write `if false`) · `coverage-manifest.ts` + 2 σουίτες | Αποτελέσματα μηχανής (όπως `page_readings`), **όχι** είδη της μηχανής καταλόγου. **Κανένας δείκτης**: μόνο αναγνώσεις κατά id (3.15/3.91 χωρίς αντικείμενο). Ο γραφέας του `catalog_import_asset_fetches` και ο τύπος του έρχονται στο Μ-β4 |
+| Κάτοχος περιεχομένου | `ENTITY_TYPES.CATALOG_MEDIA_CONTENT` (`entityId` = sha256) | Χωρίς ετικέτα i18n: το `audit.entityTypes` αφορά ίχνος οντοτήτων, όχι αρχεία· οι πίνακες `Record<EntityType,…>` του `deletion-registry`/`entity-linking` έχουν **δικό τους** τοπικό τύπο |
+| Θέση | `new-file-placement.ts` `{ kind: 'catalog-media' }` ⇒ `eu-originals` | ADR-895 Ε1 (όλα τα νέα πρωτότυπα στην ΕΕ), όπως το Πρωτόκολλο |
+| «Έτοιμο από τη γέννηση» | **μετακίνηση** `readyFileRecordData` → `services/file-record/ready-file-record.server.ts` | Τρίτος καταναλωτής ⇒ ΕΝΑΣ τόπος· παράδοση + Πρωτόκολλο εισάγουν από εκεί, ίδια συμπεριφορά· εκτός barrel (Admin SDK) |
+| Κεφαλή ροής | **νέο** `lib/files/stream-head.ts` (`peekStreamHead`) | Τα πρώτα N bytes **και** ολόκληρη η ροή πίσω· `cancel()` φτάνει στην πηγή |
+| Ροή → αντικείμενο | **νέο** `server/storage/stream-object-once.server.ts` | Ροή → προσωρινό (`ifGenerationMatch: 0`, crc32c, sha256 + όριο **μέσα** στη ροή) → `destinationOf(μέτρηση)` → rewrite στο τελικό με `ifGenerationMatch: 0` → απόδειξη `sameObject` → διαγραφή προσωρινού. Ίδια κρίση «υπάρχει ήδη» με το `createObjectOnce` (`isCreateOnceRefusal`, εξαγωγή) · επαληθευμένο στο `@google-cloud/storage` 7.18.0 ότι `copy`/`createWriteStream` δέχονται `preconditionOpts.ifGenerationMatch` |
+| Καραντίνα | **νέο** `server/catalog/media-quarantine.server.ts` (`quarantineDownloadedMedia`) | Κεφαλή → `judgeDownloadedContent` (απόρριψη ⇒ **ακύρωση** της πηγής) → ροή με όριο του **είδους** → `judgeDownloadedSize` **πριν** την προαγωγή → εγγραφή `ready` create-if-absent σε συναλλαγή → ίχνος **`remote_fetch`** (νέα πράξη αρχείου· ποτέ `upload`) |
+| Ταυτότητα διεύθυνσης | **νέο** `server/catalog/media-source.server.ts` + καθαρό `catalog/import/media-source-identity.ts` + τύπος `catalog/types/catalog-media.ts` | `new` · `sameContent` · `unchanged` · `newVersion` μέσα στη συναλλαγή· ιστορικό ≤ 10 sha256· 304 ανανεώνει χρόνο/μεταφορά (και ETag, RFC 9110 §15.4.5)· αναγνώστης εγγράφου με έλεγχο πεδίων, ποτέ cast |
+
+**Αποφάσεις μέσα στο στάδιο (πιο αυστηρές από το σχέδιο):**
+- 🔴 **Η κατηγορία του αρχείου καραντίνας βγαίνει από το ΕΙΔΟΣ, όχι από τον ρόλο** (`MEDIA_CONTENT_STORAGE_CATEGORY`, `asset-files.ts`).
+  Η κατηγορία μπαίνει στο κλειδί αποθήκευσης· με τον ρόλο, το ίδιο PDF ως «φύλλο δεδομένων» και ως «πιστοποιητικό» θα είχε **ένα**
+  `fileId` και **δύο** κλειδιά. Το είδος καθορίζεται μόνο από τα bytes, γιατί οι οικογένειες του `ASSET_KIND_FILE_CATEGORIES` δεν
+  επικαλύπτονται. Ο ρόλος μπαίνει στο αντίγραφο του μέσου (Μ-δ).
+- 🔴 **Η ταυτότητα του αρχείου = (χώρος, sha256, κατάληξη)**, όχι μόνο sha256: η κατάληξη μπαίνει στο κλειδί αποθήκευσης, και τα
+  ίδια bytes με άλλη ερμηνεία (`.zip` / `.docx`) είναι άλλο αρχείο. Κόστος: `.jpg`/`.jpeg` ίδιων bytes = δύο αρχεία (σπάνιο, αθώο).
+- **Το όριο στενεύει μετά την κεφαλή**: η ροή κόβεται στο μέγιστο του **είδους** (εικόνα 200 MiB), όχι του ρόλου.
+- **Εγγραφή περιεχομένου που υπάρχει αλλά δεν είναι ζωντανή** (κάδος ανακύκλωσης) ⇒ `MediaContentUnavailableError`, ποτέ υιοθέτηση
+  αρχείου που θα σβηστεί. ⏳ **Μ-β5**: ο κύκλος ζωής την επαναφέρει αντί να πετά (σήμερα κανείς δεν πετά τέτοια αρχεία).
+- Προσωρινά αντικείμενα κάτω από **ένα** πρόθεμα (`staging/catalog-media/{χώρος}/{προσπάθεια}`) ⇒ το δίχτυ του Μ-β5 τα βρίσκει όλα.
+
+Tests (γραμμένα, **δεν** έτρεξαν — αναμένουν έγκριση): `lib/files/__tests__/stream-head.test.ts` ·
+`server/storage/__tests__/stream-object-once.test.ts` (ψεύτικος κάδος: +`createWriteStream`, +προϋπόθεση στο `copy`) ·
+`server/catalog/__tests__/media-quarantine.test.ts` · `server/catalog/__tests__/media-source.test.ts` ·
+`catalog/import/__tests__/media-source-identity.test.ts` · `lib/files/__tests__/new-file-placement.test.ts` (+1) ·
+`services/__tests__/enterprise-id.service.test.ts` (+2 χρυσά) · `scripts/__tests__/rules-liveness-gate.test.js` (879 → 883) ·
+`tests/firestore-rules/suites/catalog-media-sources.rules.test.ts` · `…/catalog-import-asset-fetches.rules.test.ts` (emulator).
 
 ## 6. Πάνω από τους μεγάλους — προτάσεις (κρίνονται ανά στάδιο, όχι δεσμευτικές ακόμη)
 
@@ -697,3 +735,5 @@ HTML/SVG/IFC/PDF · 🔑 άγκυρα κάλυψης: κάθε δεκτή κατ
 | 2026-11-09 | **§5.2.2 Μ-β: σχέδιο εγκεκριμένο + Μ-β1 υλοποιήθηκε** (Plan Mode, SSoT audit). Διορθώσεις του §5.2: **Μ6** (ο κύκλος ζωής δεν καθαρίζει έτοιμο αδέσμευτο αρχείο ⇒ ρητός κάτοχος στο Μ-β5) · **Μ3** (http ⇒ πρώτα αναβάθμιση σε https, επιστροφή σε http μόνο σε σφάλμα μεταφοράς, με ορατό `insecure` — πρότυπο Chrome HTTPS-Upgrades). Μ-β1: η μεταφορά χωρίστηκε από την κρίση (`outbound-fetch.ts`): ένας πυρήνας αλμάτων, ένας αναγνώστης με όριο σε ροή, `fetchGuardedStream`. Tests γραμμένα, **δεν** έτρεξαν. Κανένα land/push. |
 | 2026-11-09 | **Μ-β1: tests ΠΕΡΑΣΑΝ** (έγκριση Giorgio): `outbound-fetch.test.ts` + `outbound-url-guard.test.ts` + `client-id-metadata.test.ts` ⇒ **78/78** (κανένα test του `stay-calendar` δεν αγγίζει το `stay-channel-fetch` — grep). Η πρώτη εκτέλεση ήταν 78/78 **αλλά** με «A worker process has failed to exit gracefully». Χαρακτηρισμός: **λάθος των tests, όχι του κώδικα** — τέσσερα tests αναβάθμισης/ανακατεύθυνσης έπαιρναν `ok: true` και άφηναν το `body` ανέγγιχτο, παραβιάζοντας το συμβόλαιο του `fetchGuardedStream` («ο καλών διαβάζει ή ακυρώνει») ⇒ χρονόμετρα αδράνειας + πράξης οπλισμένα. Στην παραγωγή ίδιο λάθος καλούντος θα ήταν **πεπερασμένο** (τα χρονόμετρα λήγουν και κόβουν τη σύνδεση), αλλά το Μ-β4 οφείλει να τηρεί το συμβόλαιο. Διόρθωση: `releaseBody` ακυρώνει το σώμα **και** βεβαιώνει ότι η ακύρωση φτάνει στη σύνδεση της πηγής. Ενδιάμεσο εύρημα: με πηγή ενός κομματιού η βεβαίωση έπεφτε (4 κόκκινα), επειδή η προανάγνωση της ροής την είχε ήδη **κλείσει** — η ακύρωση κλειστής ροής δεν καλεί `cancel` (σωστό)· τα tests πήραν **ανοιχτή** πηγή. Τελικό: 78/78 χωρίς προειδοποίηση. Κώδικας παραγωγής αμετάβλητος. |
 | 2026-11-09 | **§5.2.2 Μ-β2 υλοποιήθηκε** (έγκριση Giorgio· SSoT audit με grep): `content-signature.ts` (υπογραφές δεμένες στο μητρώο τύπων · HTML κατά WHATWG §7.1 + ριζικό στοιχείο · περιέκτες OLE2/ZIP · IFC με `FILE_SCHEMA`) · `judge-downloaded-asset.ts` (κρίση στα πρώτα bytes + μέγεθος μέσω `judgeAssetUpload`) · `vocabulary/asset-fetch.ts` (12 κωδικοί, ρίζα CHECK 3.73) · `canonicalMimeForExt` στο μητρώο · i18n el/en. 🔴 Διόρθωση σχεδίου: HEIC · WOFF · GLB · RVT **εκτός** — το μητρώο δεν τα γνωρίζει. Tests γραμμένα, **δεν** έτρεξαν. Κανένα land/push. |
+| 2026-11-09 | **Μ-β2: tests ΠΕΡΑΣΑΝ** (έγκριση Giorgio): `content-signature.test.ts` + `judge-downloaded-asset.test.ts` ⇒ **93/93** με την πρώτη εκτέλεση, χωρίς προειδοποίηση ανοιχτών χειριστών. Κώδικας και tests αμετάβλητα. Κανένα land/push. |
+| 2026-11-09 | **§5.2.2 Μ-β3 υλοποιήθηκε** (έγκριση Giorgio· SSoT audit με grep): N.6 πρώτα (`cmsrc_` · `ciafx_`) · συλλογές `catalog_media_sources` · `catalog_import_asset_fetches` (deny-all + κάλυψη, χωρίς δείκτες) · `ENTITY_TYPES.CATALOG_MEDIA_CONTENT` · θέση `catalog-media` ⇒ ΕΕ · μετακίνηση `readyFileRecordData` στο `services/file-record/` · `peekStreamHead` · `streamObjectOnce` · καραντίνα (`quarantineDownloadedMedia`) · ταυτότητα διεύθυνσης (`media-source`) · πράξη αρχείου `remote_fetch`. Πιο αυστηρά από το σχέδιο: κατηγορία από το **είδος** (όχι τον ρόλο) και ταυτότητα αρχείου (χώρος, sha256, κατάληξη) — αλλιώς ένα `fileId` με δύο κλειδιά αποθήκευσης. Tests γραμμένα, **δεν** έτρεξαν. Κανένα land/push. |

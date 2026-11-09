@@ -825,6 +825,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-934 §5.2.2 Μ-β3 — ταυτότητα διεύθυνσης μέσου (validators · sha256 · εκδόσεις): μόνο διακομιστής.
+    collection: 'catalog_media_sources',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-media-sources.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-934 §5.2.2 Μ-β3/Μ-β4 — κατάσταση λήψης ανά (παρτίδα, διεύθυνση): μόνο διακομιστής, η οθόνη μέσω της πόρτας.
+    collection: 'catalog_import_asset_fetches',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-import-asset-fetches.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-923 §5.12 Σ1 — έγγραφο δύο πλευρών: γραφή = ξένη ανάγνωση τιμών χωρίς αποδοχή.
     collection: 'supply_relationships',
     pattern: 'deny_all',

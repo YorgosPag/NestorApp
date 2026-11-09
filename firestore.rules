@@ -6494,6 +6494,16 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    // ADR-934 §5.2.2 Μ-β3 — λήψη μέσων από διεύθυνση: ταυτότητα διεύθυνσης (validators · sha256) και κατάσταση λήψης ανά
+    // παρτίδα. Τα γράφει και τα διαβάζει ΜΟΝΟ ο διακομιστής· η οθόνη τα παίρνει από την πόρτα της παρτίδας (Μ-β4).
+    match /catalog_media_sources/{sourceId} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /catalog_import_asset_fetches/{fetchId} {
+      allow read: if false;
+      allow write: if false;
+    }
     // ADR-923 §12 · §5.12 Δ1 — ΚΑΝΟΝΕΣ ΟΡΑΤΟΤΗΤΑΣ: τους διαβάζει και τους γράφει ΜΟΝΟ ο διακομιστής. Η οθόνη τους παίρνει
     // από την όψη `discounts`, με κριτή `pricingView`.
     match /catalog_visibility_rules/{ruleId} {

@@ -484,6 +484,8 @@ export {
   generateDeterministicCatalogImportProposalId,
   generateDeterministicCatalogImportPageReadingId,
   generateDeterministicCatalogImportLabelMemoryId,
+  generateDeterministicCatalogMediaSourceId,
+  generateDeterministicCatalogImportAssetFetchId,
   generateDeterministicCatalogVisibilityRuleId,
   generateDeterministicSupplyRelationshipId,
   generateSupplyInvitationId,

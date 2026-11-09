@@ -79,6 +79,20 @@ export const CATALOG_ASSET_UPLOAD_TARGET: Readonly<Record<CatalogAssetRole, { re
   safetyDataSheet: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.DOCUMENTS },
 };
 
+/**
+ * **Η κατηγορία αποθήκευσης περιεχομένου σε καραντίνα** (ADR-934 §5.2.2 Μ-β3) — ανά **είδος**, όχι ανά ρόλο. Το ίδιο αρχείο
+ * μπορεί να το ζητούν δύο ρόλοι (φύλλο δεδομένων · πιστοποιητικό), αλλά κατοικεί **μία** φορά: η κατηγορία μπαίνει στο
+ * κλειδί αποθήκευσης, άρα πρέπει να βγαίνει μόνο από τα bytes. Το είδος βγαίνει μόνο από τα bytes, επειδή οι οικογένειες του
+ * {@link ASSET_KIND_FILE_CATEGORIES} δεν επικαλύπτονται. Ο ρόλος μπαίνει στο αντίγραφο του μέσου (Μ-δ, {@link CATALOG_ASSET_UPLOAD_TARGET}).
+ */
+export const MEDIA_CONTENT_STORAGE_CATEGORY: Readonly<Record<AssetKind, StorageFileCategory>> = {
+  image: FILE_CATEGORIES.PHOTOS,
+  document: FILE_CATEGORIES.DOCUMENTS,
+  bim: FILE_CATEGORIES.MODELS,
+  video: FILE_CATEGORIES.VIDEOS,
+  font: FILE_CATEGORIES.DOCUMENTS,
+};
+
 /** Ό,τι χρειάζεται η κρίση από ένα αρχείο — δομικό (το `FileRecord` το ικανοποιεί). */
 export interface AssetFileTypeFacts {
   readonly ext?: string;

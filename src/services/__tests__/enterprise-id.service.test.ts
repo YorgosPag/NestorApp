@@ -368,6 +368,10 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicCatalogImportBatchId',
       'generateDeterministicCatalogImportProposalId',
       'generateDeterministicCatalogImportPageReadingId',
+      // ADR-934 §5.2.2 Μ-β3 — ΜΙΑ ταυτότητα ανά διεύθυνση μέσου, ΜΙΑ λήψη ανά (παρτίδα, διεύθυνση): τυχαίο id = δεύτερη
+      // λήψη του ίδιου αρχείου στο διπλό «Ξαναδοκιμή», και η «νέα έκδοση» δεν θα ξεχώριζε ποτέ από το «νέο».
+      'generateDeterministicCatalogMediaSourceId',
+      'generateDeterministicCatalogImportAssetFetchId',
       // ADR-923 §5.12 — ΕΝΑΣ κανόνας ανά (αντικείμενο, κοινό), ΜΙΑ σχέση ανά (προμηθευτής, αγοραστής), ΕΝΑΣ σύνδεσμος ανά χώρο.
       'generateDeterministicCatalogVisibilityRuleId',
       'generateDeterministicSupplyRelationshipId',
@@ -550,6 +554,9 @@ describe('EnterpriseIdService', () => {
       generateDeterministicCatalogImportBatchId: 'cibat_14ad05af-93df-425e-8a22-03ea7240b242',
       generateDeterministicCatalogImportProposalId: 'cipsl_d1413ee3-667e-4ec3-84b0-13fde3d67a0a',
       generateDeterministicCatalogImportPageReadingId: 'cipgr_58c5dfd7-f233-452c-86c1-408be1905c36',
+      // ADR-934 §5.2.2 Μ-β3 — καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-11-09.
+      generateDeterministicCatalogMediaSourceId: 'cmsrc_55b1bd5a-2d6d-4c1f-81ea-66b420d0fbe1',
+      generateDeterministicCatalogImportAssetFetchId: 'ciafx_53e07c03-72b9-4897-8f53-b11d13f47405',
       generateDeterministicCatalogVisibilityRuleId: 'cvrul_f3fba08c-d5f5-422b-802e-918b416a292c',
       generateDeterministicSupplyRelationshipId: 'srel_980a4c08-54cc-410f-896b-33f3ff28f694',
       generateDeterministicSupplyRequestLinkId: 'srql_757fa58c-b8fe-465c-8788-4cd319590e8d',

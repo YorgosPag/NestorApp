@@ -26,3 +26,9 @@ describe('placementForNewFile — λήψη περιήγησης', () => {
     expect(FILE_STORAGE_PLACEMENTS).toContain(placementForNewFile({ kind: 'tour-capture', ingestPlacement }));
   });
 });
+
+describe('placementForNewFile — μέσο καταλόγου από διεύθυνση (ADR-934 §5.2.2 Μ-β3)', () => {
+  test('🔴 ο διακομιστής το κατεβάζει, καμία πηγή να ακολουθήσει ⇒ `eu-originals` (Ε1, όπως το Πρωτόκολλο)', () => {
+    expect(placementForNewFile({ kind: 'catalog-media' })).toBe('eu-originals');
+  });
+});

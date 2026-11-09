@@ -19,10 +19,13 @@
  * `404` σε ανύπαρκτη· `delete({ ifGenerationMatch })` ⇒ `412` σε άλλη γενιά, `404` σε απούσα.
  * 📸 ADR-884 Φ0.8 — το ανέβασμα λήψης 360° (`server/spatial-tour/tour-capture-*`): `exists()` · `download()` (λείπει ⇒
  * `404`) · `createResumableUpload({ origin, metadata })` ⇒ URL συνεδρίας, με καταγραφή μέσω `onResumableUpload`.
+ * 🌊 ADR-934 §5.2.2 Μ-β3 — η ροή προς τον κάδο (`server/storage/stream-object-once.server`): `createWriteStream(options)`
+ * γράφει **μόνο** όταν κλείσει επιτυχώς η ροή (όπως το simple upload: ροή που σπάει ⇒ κανένα αντικείμενο), με τους ίδιους
+ * κανόνες με το `save`· `copy(dest, { preconditionOpts: { ifGenerationMatch: 0 } })` σε **υπάρχοντα** προορισμό ⇒ `code: 412`.
  */
 
 import { createHash } from 'crypto';
-import { Readable } from 'stream';
+import { Readable, Writable } from 'stream';
 import { nowISO } from '@/lib/date-local';
 
 export interface FakeGcsObject {
@@ -91,6 +94,12 @@ interface FakeGcsPreconditions {
   readonly ignoreNotFound?: boolean;
 }
 
+/** Ό,τι κοιτάζουν το `save` και το `createWriteStream` (τα υπόλοιπα πεδία του SDK αγνοούνται). */
+export interface FakeGcsSaveOptions {
+  readonly preconditionOpts?: { readonly ifGenerationMatch?: number };
+  readonly contentType?: string;
+}
+
 /** Μέγεθος κομματιού της ψεύτικης ροής — μικρό επίτηδες, ώστε κάθε αρχείο να φτάνει σε **πολλά** κομμάτια. */
 const FAKE_READ_CHUNK = 64;
 
@@ -101,7 +110,9 @@ export interface FakeGcsFile {
   readonly metadata: FakeGcsObject | Record<string, never>;
   copy(dest: { readonly name: string; readonly store: FakeGcsStore }, options?: Record<string, unknown>): Promise<void>;
   /** ADR-916 Σ4 — ανέβασμα· `preconditionOpts.ifGenerationMatch: 0` σε υπάρχον ⇒ σφάλμα `code: 412`, όπως το πραγματικό GCS. */
-  save(data: Uint8Array, options?: { readonly preconditionOpts?: { readonly ifGenerationMatch?: number }; readonly contentType?: string }): Promise<void>;
+  save(data: Uint8Array, options?: FakeGcsSaveOptions): Promise<void>;
+  /** ADR-934 Μ-β3 — ροή· το αντικείμενο γεννιέται **μόνο** στο επιτυχές κλείσιμο, με τους κανόνες του `save`. */
+  createWriteStream(options?: FakeGcsSaveOptions): Writable;
   createReadStream(): Readable;
   delete(options?: FakeGcsPreconditions): Promise<void>;
   /**
@@ -155,6 +166,15 @@ export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGc
     store.delete(path);
     softDeleted.set(path, [...(softDeleted.get(path) ?? []), object]);
   };
+  /** Το ανέβασμα — ΕΝΑΣ κανόνας για `save` και `createWriteStream` (προϋπόθεση γενιάς · δέσμευση · νέα γενιά). */
+  const writeObject = (path: string, data: Uint8Array, writeOptions: FakeGcsSaveOptions): void => {
+    const preconditionFails = writeOptions.preconditionOpts?.ifGenerationMatch === 0 && store.has(path);
+    if (isHeld(store, path) && !(preconditionFails && options.heldSaveCode === 412)) throw heldError(path);
+    if (preconditionFails) throw Object.assign(new Error(`412 precondition ${path}`), { code: 412 });
+    const bytes = new Uint8Array(data);
+    nextGeneration += 1;
+    store.set(path, { crc32c: fakeCrc32cOf(bytes), size: bytes.length, generation: nextGeneration, bytes });
+  };
   const bucket: FakeGcsBucket = {
     name,
     store,
@@ -174,18 +194,30 @@ export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGc
         }
         if (opts?.generation !== undefined && opts.generation !== object.generation) throw new Error(`412 generation ${path}`);
         if (isHeld(dest.store, dest.name)) throw heldError(dest.name);
+        const destinationPrecondition = (copyOptions.preconditionOpts as { readonly ifGenerationMatch?: number } | undefined)?.ifGenerationMatch;
+        if (destinationPrecondition === 0 && dest.store.has(dest.name)) throw coded(412, `precondition ${dest.name}`);
         const metadata = 'metadata' in copyOptions ? (copyOptions.metadata as Record<string, string>) : object.metadata;
         const { temporaryHold: _notCopied, ...carried } = object;
         dest.store.set(dest.name, { ...carried, generation: copiedGeneration(object.generation), ...(metadata ? { metadata } : {}) });
         options.onCopy?.(call);
       },
-      save: async (data, saveOptions = {}) => {
-        const preconditionFails = saveOptions.preconditionOpts?.ifGenerationMatch === 0 && store.has(path);
-        if (isHeld(store, path) && !(preconditionFails && options.heldSaveCode === 412)) throw heldError(path);
-        if (preconditionFails) throw Object.assign(new Error(`412 precondition ${path}`), { code: 412 });
-        const bytes = new Uint8Array(data);
-        nextGeneration += 1;
-        store.set(path, { crc32c: fakeCrc32cOf(bytes), size: bytes.length, generation: nextGeneration, bytes });
+      save: async (data, saveOptions = {}) => writeObject(path, data, saveOptions),
+      createWriteStream: (writeOptions = {}) => {
+        const chunks: Buffer[] = [];
+        return new Writable({
+          write(chunk: Buffer, _encoding, callback) {
+            chunks.push(Buffer.from(chunk));
+            callback();
+          },
+          final(callback) {
+            try {
+              writeObject(path, Buffer.concat(chunks), writeOptions);
+              callback();
+            } catch (error) {
+              callback(error instanceof Error ? error : new Error(String(error)));
+            }
+          },
+        });
       },
       createReadStream: () => {
         options.onRead?.({ path, generation: opts?.generation });

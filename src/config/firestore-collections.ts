@@ -1153,6 +1153,10 @@ export const COLLECTIONS = {
   CATALOG_IMPORT_PAGE_READINGS: process.env.NEXT_PUBLIC_CATALOG_IMPORT_PAGE_READINGS_COLLECTION || 'catalog_import_page_readings',
   /** Μνήμη ετικετών γραμμής ανά προμηθευτή (ADR-923 §5.5.2 Β5): ένα έγγραφο ανά προμηθευτή × οικογένεια × ετικέτα × μονάδα. Μόνο διακομιστής. IDs via cilm_*. */
   CATALOG_IMPORT_LABEL_MEMORY: process.env.NEXT_PUBLIC_CATALOG_IMPORT_LABEL_MEMORY_COLLECTION || 'catalog_import_label_memory',
+  /** Ταυτότητα ΜΙΑΣ διεύθυνσης μέσου στον χώρο (ADR-934 §5.2.2 Μ-β3): validators + sha256 + ιστορικό εκδόσεων. Μόνο διακομιστής. IDs via cmsrc_* (από κανονικό URI). */
+  CATALOG_MEDIA_SOURCES: process.env.NEXT_PUBLIC_CATALOG_MEDIA_SOURCES_COLLECTION || 'catalog_media_sources',
+  /** ΜΙΑ λήψη μέσου ανά (παρτίδα, κανονικό URI) (ADR-934 §5.2.2 Μ-β3/Μ-β4): κατάσταση · lease · αποτυχία με κωδικό. Μόνο διακομιστής. IDs via ciafx_*. */
+  CATALOG_IMPORT_ASSET_FETCHES: process.env.NEXT_PUBLIC_CATALOG_IMPORT_ASSET_FETCHES_COLLECTION || 'catalog_import_asset_fetches',
   /** Κανόνες ορατότητας (ADR-923 §12 · §5.12): ΕΝΑΣ ανά (αντικείμενο, κοινό). IDs via cvrul_* (ντετερμινιστικά). */
   CATALOG_VISIBILITY_RULES: process.env.NEXT_PUBLIC_CATALOG_VISIBILITY_RULES_COLLECTION || 'catalog_visibility_rules',
   /** Σχέσεις προμήθειας (ADR-923 §5.12 Σ1): ΜΙΑ ανά (προμηθευτής, αγοραστής), έγγραφο δύο πλευρών. IDs via srel_* (ντετερμινιστικά). */

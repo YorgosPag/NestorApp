@@ -179,6 +179,18 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
     return this.mintDeterministicV4Id(P.CATALOG_IMPORT_LABEL_MEMORY, seedOf('import-label-memory', companyId, memoryKey));
   }
 
+  // ── ADR-934 §5.2.2 Μ-β3 — λήψη μέσων από διεύθυνση ──
+
+  /** Κλειδί = το **κανονικό** URI (`canonicalAssetUri`) ⇒ **μία** ταυτότητα ανά διεύθυνση στον χώρο, όσες παρτίδες κι αν τη φέρουν. */
+  generateDeterministicCatalogMediaSourceId(companyId: string, canonicalUri: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_MEDIA_SOURCE, seedOf('media-source', companyId, canonicalUri));
+  }
+
+  /** Κλειδί = `importAssetFetchKey(παρτίδα, κανονικό URI)` ⇒ **μία** λήψη ανά διεύθυνση της παρτίδας, όσοι ρόλοι κι αν τη ζητούν. */
+  generateDeterministicCatalogImportAssetFetchId(companyId: string, fetchKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_IMPORT_ASSET_FETCH, seedOf('import-asset-fetch', companyId, fetchKey));
+  }
+
   /** Κλειδί = `visibilityRuleKey` ⇒ **ένας** κανόνας ανά (αντικείμενο, κοινό), δομικά (ADR-923 §5.12 Δ1). */
   generateDeterministicCatalogVisibilityRuleId(companyId: string, ruleKey: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_VISIBILITY_RULE, seedOf('visibility-rule', companyId, ruleKey));

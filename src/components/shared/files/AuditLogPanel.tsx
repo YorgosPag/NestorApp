@@ -104,6 +104,8 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   handover_decision: Scale,
   // ADR-916 Φ-Δ.7γ — η γραμμή παράδοσης έκλεισε χωρίς πλήρες αποτύπωμα (bytes χαμένα οριστικά).
   handover_line_closure: Scale,
+  // ADR-934 §5.2.2 Μ-β3 — ο διακομιστής το κατέβασε από διεύθυνση τρίτου (όχι ανέβασμα).
+  remote_fetch: Globe,
   approval_request: Send,
   approval_approve: CheckCircle,
   approval_reject: XCircle,
@@ -149,6 +151,7 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   handover_protocol_issue: 'text-[hsl(var(--text-success))]',
   handover_decision: 'text-[hsl(var(--text-warning))]',
   handover_line_closure: 'text-[hsl(var(--text-warning))]',
+  remote_fetch: 'text-[hsl(var(--text-info))]',
   approval_request: 'text-[hsl(var(--text-warning))]',
   approval_approve: 'text-[hsl(var(--text-success))]',
   approval_reject: 'text-destructive',

@@ -70,6 +70,12 @@ export const generateDeterministicCatalogImportPageReadingId = (companyId: strin
   enterpriseIdService.generateDeterministicCatalogImportPageReadingId(companyId, readingKey);
 export const generateDeterministicCatalogImportLabelMemoryId = (companyId: string, memoryKey: string) =>
   enterpriseIdService.generateDeterministicCatalogImportLabelMemoryId(companyId, memoryKey);
+
+// Λήψη μέσων από διεύθυνση (ADR-934 §5.2.2 Μ-β3): ντετερμινιστικά από το κανονικό URI
+export const generateDeterministicCatalogMediaSourceId = (companyId: string, canonicalUri: string) =>
+  enterpriseIdService.generateDeterministicCatalogMediaSourceId(companyId, canonicalUri);
+export const generateDeterministicCatalogImportAssetFetchId = (companyId: string, fetchKey: string) =>
+  enterpriseIdService.generateDeterministicCatalogImportAssetFetchId(companyId, fetchKey);
 export const generateDeterministicCatalogVisibilityRuleId = (companyId: string, ruleKey: string) =>
   enterpriseIdService.generateDeterministicCatalogVisibilityRuleId(companyId, ruleKey);
 export const generateDeterministicSupplyRelationshipId = (supplierCompanyId: string, buyerCompanyId: string) =>

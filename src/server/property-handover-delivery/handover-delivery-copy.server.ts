@@ -20,24 +20,23 @@ import 'server-only';
 import type { DocumentReference, Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { File } from '@google-cloud/storage';
 
-import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { fileStoragePlacementOf, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { placementForNewFile } from '@/lib/files/new-file-placement';
-import { FieldValue } from '@/lib/firebaseAdmin';
 import { stillOwedToRecipient, type PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
 import { isHandoverDeliverableDocument } from '@/lib/property-handover/handover-disposition';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { handoverSourceScopeOf } from '@/lib/property-handover/handover-source-scope';
 import { handoverCopyFileIdOf } from '@/lib/property-handover/property-handover-id';
-import { buildProxyUrl } from '@/lib/storage/storage-object-url';
 import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
 import { fileRecordBucket, fileStorageBucket } from '@/server/files/file-record-bucket';
 import { copyProvenPairs, statObjects } from '@/server/storage/placement-copy';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
-import { buildFinalizeFileRecordUpdate, buildPendingFileRecordData } from '@/services/file-record';
+import { buildPendingFileRecordData } from '@/services/file-record';
+import { readyFileRecordData } from '@/services/file-record/ready-file-record.server';
 import { preserveObjectBytes, reconcilePreservedBytes, stagePreservation } from '@/services/file-record/file-preservation.service';
 import { handoverDocRef } from '@/services/property-handover/property-handover-progress-write';
 import type { DeliverableHandoverFile } from '@/services/property-handover/property-handover-set.server';
@@ -120,23 +119,6 @@ async function prepareCopy(ctx: HandoverCopyContext, planned: PlannedHandoverCop
 async function copyAndProve(prepared: readonly PreparedCopy[], placement: FileStoragePlacement): Promise<PreparedCopy[]> {
   const proven = await copyProvenPairs(prepared.map((copy) => ({ source: copy.source, destinationName: copy.built.storagePath })), fileStorageBucket(placement));
   return prepared.filter((copy) => proven.has(copy.built.storagePath));
-}
-
-/**
- * **Η εγγραφή αρχείου που γεννιέται κατευθείαν `ready`** — τα bytes έχουν ήδη αποδειχτεί. Ο ΕΝΑΣ τρόπος για τα αντίγραφα
- * της παράδοσης (Φ-Γ1) **και** τα αντίτυπα του Πρωτοκόλλου (Φ-Γ2 Σ4): ποτέ δύο διατυπώσεις του «έτοιμου» σε δύο γραφείς.
- */
-export function readyFileRecordData(
-  built: ReturnType<typeof buildPendingFileRecordData>,
-  ready: { readonly sizeBytes: number; readonly placement: FileStoragePlacement; readonly hash: string | undefined },
-): Record<string, unknown> {
-  return {
-    ...built.recordBase,
-    ...buildFinalizeFileRecordUpdate({
-      sizeBytes: ready.sizeBytes, downloadUrl: buildProxyUrl(built.storagePath, ready.placement), hash: ready.hash, nextStatus: FILE_STATUS.READY,
-    }),
-    createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
-  };
 }
 
 /**

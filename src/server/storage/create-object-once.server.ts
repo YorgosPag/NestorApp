@@ -31,6 +31,12 @@ const isPreconditionFailed = (error: unknown): boolean =>
 const isForbidden = (error: unknown): boolean =>
   typeof error === 'object' && error !== null && (error as { readonly code?: unknown }).code === 403;
 
+/**
+ * **Η άρνηση «το κλειδί δεν είναι κενό»** (`412` προϋπόθεση · `403` δέσμευση) — όχι βλάβη. Η ΜΙΑ κρίση, για το ανέβασμα από
+ * μνήμη εδώ **και** την προαγωγή ροής (`stream-object-once.server`).
+ */
+export const isCreateOnceRefusal = (error: unknown): boolean => isPreconditionFailed(error) || isForbidden(error);
+
 /** **Γράφει τα bytes μόνο αν το κλειδί είναι κενό** — και επιστρέφει το αντικείμενο με τα μεταδεδομένα του (crc32c · γενιά). */
 export async function createObjectOnce(bucket: Bucket, path: string, bytes: Uint8Array, contentType: string): Promise<CreateObjectOutcome> {
   let failure: unknown = null;
@@ -52,7 +58,7 @@ export async function createObjectOnce(bucket: Bucket, path: string, bytes: Uint
   // 🔑 Αποτυχία ΚΑΙ αντικείμενο που υπάρχει ⇒ `exists`, όχι μόνο στο `412`: το κλειδί μπορεί να είναι **record υπό
   //    `temporaryHold`** (ADR-916 Φ-Δ.6), και η GCS δεν τεκμηριώνει αν απαντά `412` (προϋπόθεση) ή `403` (hold). Ο καλών
   //    κρίνει έτσι κι αλλιώς αυστηρά τι είναι (υιοθέτηση = έγκυρη σφραγίδα + manifest) — ποτέ επανεγγραφή.
-  if (failure !== null && !isPreconditionFailed(failure) && !isForbidden(failure)) throw failure;
+  if (failure !== null && !isCreateOnceRefusal(failure)) throw failure;
   return { kind: failure === null ? 'created' : 'exists', file };
 }
 
