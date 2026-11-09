@@ -475,7 +475,18 @@ export function canonicalMimeForFilename(
   filename: string | undefined,
   fallback: string = UNKNOWN_MIME_TYPE,
 ): string {
-  return EXT_MIME_INDEX.get(extractExtension(filename)) ?? fallback;
+  return canonicalMimeForExt(extractExtension(filename), fallback);
+}
+
+/**
+ * Canonical MIME for a bare extension (with or without leading dot) — the **same** index as
+ * {@link canonicalMimeForFilename}. Used when the extension is decided by the content, not by a name
+ * (`lib/files/content-signature`, ADR-934 Μ-β2).
+ */
+export function canonicalMimeForExt(ext: string | undefined, fallback: string = UNKNOWN_MIME_TYPE): string {
+  if (!ext) return fallback;
+  const normalized = ext.startsWith('.') ? ext.slice(1) : ext;
+  return EXT_MIME_INDEX.get(normalized.toLowerCase()) ?? fallback;
 }
 
 /** Canonical MIME for a URL. See `canonicalMimeForFilename`. */
