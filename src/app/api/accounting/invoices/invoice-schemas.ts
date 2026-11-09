@@ -20,8 +20,28 @@ export const UpdateInvoiceSchema = z.object({
   lineItems: z.array(z.record(z.unknown())).optional(),
   payments: z.array(z.record(z.unknown())).optional(),
   notes: z.string().max(5000).nullable().optional(),
-  mydata: z.record(z.unknown()).optional(),
 }).passthrough();
+
+// ============================================================================
+// SERVER-OWNED FIELDS (ADR-ACC-003 §22 — ένας γραφέας της κατάστασης myDATA)
+// ============================================================================
+
+/**
+ * Πεδία που γράφει **μόνο** ο διακομιστής. Τα schemas είναι `.passthrough()`, άρα η απλή απουσία
+ * τους από το schema **δεν** τα κόβει — κόβονται ρητά εδώ, σε POST και PATCH.
+ *
+ * 🔴 Χωρίς αυτό ένα πρόχειρο τιμολόγιο μπορούσε να σταλεί με `mydata.status = 'accepted'` και ψεύτικο
+ * ΜΑΡΚ — «διαβιβασμένο» χωρίς να φτάσει ποτέ στην ΑΑΔΕ, και πια αμετάβλητο (`IMMUTABLE_STATUSES`).
+ */
+const SERVER_OWNED_INVOICE_FIELDS = ['mydata'] as const;
+
+type ServerOwnedInvoiceField = (typeof SERVER_OWNED_INVOICE_FIELDS)[number];
+
+export function stripServerOwnedInvoiceFields<T extends object>(body: T): Omit<T, ServerOwnedInvoiceField> {
+  const copy = { ...body };
+  for (const field of SERVER_OWNED_INVOICE_FIELDS) Reflect.deleteProperty(copy, field);
+  return copy;
+}
 
 // ============================================================================
 // CANCEL INVOICE SCHEMA + CONSTANTS

@@ -68,7 +68,6 @@ export type {
   ITaxEngine,
   IDepreciationEngine,
   IMatchingEngine,
-  IMyDataService,
   ICSVImportService,
   IDocumentAnalyzer,
 } from '../types/interfaces';

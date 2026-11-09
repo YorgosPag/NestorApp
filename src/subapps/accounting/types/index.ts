@@ -299,7 +299,6 @@ export type {
   IDepreciationEngine,
   IDocumentAnalyzer,
   IMatchingEngine,
-  IMyDataService,
   ICSVImportService,
   AccountingPermission,
 } from './interfaces';

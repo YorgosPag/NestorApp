@@ -13,7 +13,7 @@
 | [ACC-000](./ADR-ACC-000-founding-decision.md) | Founding Decision — Enterprise Accounting Subapp | ACTIVE | — | 2026-02-09 |
 | [ACC-001](./ADR-ACC-001-chart-of-accounts.md) | Chart of Accounts (ΕΛΠ Λογιστικό Σχέδιο) | PARTIAL — κατηγορίες απλογραφικού (Layer 1-2) ✅ · λογαριασμοί ΕΓΛΣ/διπλογραφικό (Layer 3, §10.2) ❌ → ACC-022 Α3 | Phase 1+2 | 2026-02-09 |
 | [ACC-002](./ADR-ACC-002-invoicing-system.md) | Invoicing System (Τιμολόγηση) | IMPLEMENTED | Phase 1+2 | 2026-02-09 |
-| [ACC-003](./ADR-ACC-003-mydata-aade-integration.md) | myDATA/ΑΑΔΕ Integration | STUB | Phase 1+2 | 2026-02-09 |
+| [ACC-003](./ADR-ACC-003-mydata-aade-integration.md) | myDATA/ΑΑΔΕ Integration | PREPARED — στρώμα χωρίς δίκτυο (§22, 2026-11-09)· σύνδεση ❌ | Phase 1+2 | 2026-02-09 |
 | [ACC-004](./ADR-ACC-004-vat-engine.md) | VAT Engine (ΦΠΑ) | IMPLEMENTED | Phase 2 | 2026-02-09 |
 | [ACC-005](./ADR-ACC-005-ai-document-processing.md) | AI Document Processing (Expense Tracker) | IMPLEMENTED | Phase 2 | 2026-02-09 |
 | [ACC-006](./ADR-ACC-006-efka-contribution-tracking.md) | EFKA Contribution Tracking | IMPLEMENTED | Phase 2 | 2026-02-09 |
@@ -138,7 +138,7 @@
 
 | File | Description | ADR |
 |------|-------------|-----|
-| `services/external/mydata-service.stub.ts` | `MyDataServiceStub implements IMyDataService` — throws "not configured" | ACC-003 |
+| ~~`services/external/mydata-service.stub.ts`~~ | Διαγράφηκε ως νεκρός κώδικας (`9a92a079`)· αντικαταστάθηκε από το στρώμα `services/mydata/` (ACC-003 §22, 2026-11-09) | ACC-003 |
 | `services/external/document-analyzer.stub.ts` | `DocumentAnalyzerStub implements IDocumentAnalyzer` — throws "not configured" | ACC-005 |
 
 ### Phase 4: UI Layer (2026-02-09 ~ 2026-02-10) — DONE

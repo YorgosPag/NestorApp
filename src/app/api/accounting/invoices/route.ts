@@ -32,6 +32,8 @@ import { POLICY_ERROR_CODES } from '@/lib/policy/policy-error-codes';
 import { INVOICE_TYPES } from '@/subapps/accounting/types';
 import type { CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
 import { readListContext, readPageRequest, respondWithPage } from '../_shared/list-request-context';
+import { createDraftMyDataMeta } from '@/subapps/accounting/services/mydata/mydata-status-transitions';
+import { stripServerOwnedInvoiceFields } from './invoice-schemas';
 import { invoiceFiltersOf } from '../_shared/list-filters';
 
 const CreateInvoiceSchema = z.object({
@@ -100,7 +102,11 @@ export const POST = defineRoute({
     }
 
     // Create the invoice
-    const { id, number } = await repository.createInvoice(body as unknown as CreateInvoiceInput);
+    // ADR-ACC-003 §22: η αρχική κατάσταση myDATA τη γράφει ο διακομιστής — ό,τι έστειλε ο πελάτης αγνοείται.
+    const { id, number } = await repository.createInvoice({
+      ...stripServerOwnedInvoiceFields(body),
+      mydata: createDraftMyDataMeta(),
+    } as unknown as CreateInvoiceInput);
 
     // Auto-generate journal entry from the new invoice
     const journalEntry = await service.createJournalEntryFromInvoice(id);

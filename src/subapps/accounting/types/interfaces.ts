@@ -43,8 +43,7 @@ import type {
   VATAnnualSummary,
   VATDeductibilityRule,
 } from './vat';
-import type { FiscalQuarter, ExpenseCategory, PeriodRange } from './common';
-import type { MyDataSubmission, ReceivedDocument, MyDataConfig } from './mydata';
+import type { FiscalQuarter, ExpenseCategory } from './common';
 import type {
   TaxScaleConfig,
   TaxCalculationParams,
@@ -444,30 +443,11 @@ export interface IMatchingEngine {
 }
 
 // ============================================================================
-// MYDATA SERVICE — myDATA/ΑΑΔΕ Integration
+// MYDATA — η διαβίβαση ζει στο `services/mydata/` (ADR-ACC-003 §22)
 // ============================================================================
-
-/**
- * Interface για τη διασύνδεση με myDATA
- *
- * Υποβολή, ακύρωση, χαρακτηρισμός παραστατικών.
- */
-export interface IMyDataService {
-  /** Υποβολή τιμολογίου στο myDATA */
-  submitInvoice(invoiceId: string): Promise<MyDataSubmission>;
-
-  /** Ακύρωση τιμολογίου στο myDATA */
-  cancelInvoice(invoiceId: string, mark: string): Promise<MyDataSubmission>;
-
-  /** Χαρακτηρισμός εισερχόμενου παραστατικού */
-  classifyReceivedDocument(mark: string, classification: ExpenseCategory): Promise<MyDataSubmission>;
-
-  /** Λήψη εισερχόμενων παραστατικών */
-  fetchReceivedDocuments(dateRange: PeriodRange): Promise<ReceivedDocument[]>;
-
-  /** Λήψη ρυθμίσεων myDATA */
-  getConfig(): Promise<MyDataConfig>;
-}
+// Το παλιό `IMyDataService` (2026-02) δεν το υλοποίησε ούτε το κάλεσε ποτέ κανείς· αντικαταστάθηκε από
+// την πόρτα `InvoiceTransmissionChannel` (`services/mydata/transmission-channel.ts`), κοινή για
+// απευθείας myDATA και πάροχο ηλεκτρονικής τιμολόγησης.
 
 // ============================================================================
 // CSV IMPORT SERVICE — Εισαγωγή Τραπεζικών CSV

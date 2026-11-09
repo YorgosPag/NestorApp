@@ -45,7 +45,9 @@ export const GREEK_VAT_RATES = [
   {
     code: 'exempt_0',
     rate: 0,
-    mydataCategory: 8,
+    // myDATA v2.0.2 §8.2: 7 = «0% — Άνευ ΦΠΑ» (απαιτεί αιτία εξαίρεσης, §8.3). Ήταν 8, που σημαίνει
+    // «Εγγραφές χωρίς ΦΠΑ (μισθοδοσία, αποσβέσεις)» — όχι γραμμή τιμολογίου (ADR-ACC-003 §7).
+    mydataCategory: 7,
     label: 'vatConfig.labels.exempt_0',
     validFrom: '2016-06-01',
     validTo: null,

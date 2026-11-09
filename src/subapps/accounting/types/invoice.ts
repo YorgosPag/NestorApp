@@ -88,6 +88,12 @@ export interface InvoiceLineItem {
   netAmount: number;
   /** myDATA classification code για αυτή τη γραμμή */
   mydataCode: MyDataIncomeType;
+  /**
+   * Αιτία εξαίρεσης ΦΠΑ — κωδικός ΑΑΔΕ 1–31 (myDATA v2.0.2 §8.3). Υποχρεωτική όταν `vatRate` = 0
+   * (κατηγορία ΦΠΑ 7)· χωρίς αυτήν το παραστατικό δεν διαβιβάζεται (`mydata-preflight.ts`).
+   * Optional — backward compatible. Δεν υπάρχει ακόμη πεδίο στη φόρμα (ADR-ACC-003 §22).
+   */
+  vatExemptionCategory?: number | null;
 }
 
 // ============================================================================

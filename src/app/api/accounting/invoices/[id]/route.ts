@@ -34,6 +34,7 @@ import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import {
   UpdateInvoiceSchema,
   CancelInvoiceSchema,
+  stripServerOwnedInvoiceFields,
   IMMUTABLE_STATUSES,
   VOIDABLE_STATUSES,
   CREDIT_NOTE_STATUSES,
@@ -70,8 +71,10 @@ export const PATCH = defineRoute({
   handler: async ({ auth, body, params }) => {
     const { id } = params;
     const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    // ADR-ACC-003 §22: η κατάσταση myDATA έχει έναν γραφέα, τον διακομιστή — ποτέ από τον πελάτη.
+    const updates = stripServerOwnedInvoiceFields(body);
 
-    if (Object.keys(body).length === 0) {
+    if (Object.keys(updates).length === 0) {
       badRequest('No update fields provided');
     }
 
@@ -87,10 +90,10 @@ export const PATCH = defineRoute({
       httpError(403, `Cannot edit invoice with myDATA status '${currentStatus}'. Only draft or rejected invoices are editable.`);
     }
 
-    await repository.updateInvoice(id, body as UpdateInvoiceInput);
+    await repository.updateInvoice(id, updates as UpdateInvoiceInput);
 
     // ── Hook 3: Update balance if payments/amounts changed (Q4 — sync) ─
-    const affectsBalance = !!(body.payments || body.lineItems);
+    const affectsBalance = !!(updates.payments || updates.lineItems);
     const contactId = existing.customer?.contactId;
     if (affectsBalance && contactId) {
       await refreshCustomerBalance(repository, contactId);
