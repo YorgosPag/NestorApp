@@ -199,8 +199,16 @@ describe('εικόνα εργασίας', () => {
   });
 });
 
+/**
+ * Παραλλαγές του φύλλου: `framed` — πλαίσιο· `text` — «κείμενο» στα κελιά της πινακίδας· `notesAround` — σημειώσεις
+ * δεξιά, πάνω και αριστερά της πινακίδας (ακραία μένει μόνο η κάτω πλευρά ⇒ δεν είναι γωνία).
+ */
+interface SheetImageOptions { readonly framed?: boolean; readonly text?: boolean; readonly notesAround?: boolean }
+
 /** Φύλλο με (ή χωρίς) πλαίσιο, πινακίδα κάτω-δεξιά (πίνακας 3 × 2 με «κείμενο») και την κάτοψη στη μέση. */
-function sheetImage(framed = true): { raster: PlanRaster; title: { minX: number; minY: number; maxX: number; maxY: number } } {
+function sheetImage(
+  { framed = true, text = true, notesAround = false }: SheetImageOptions = {},
+): { raster: PlanRaster; title: { minX: number; minY: number; maxX: number; maxY: number } } {
   const W = 1200, H = 850;
   const r = blankPlanRaster(W, H);
   const ink = (x: number, y: number) => { if (x >= 0 && y >= 0 && x < W && y < H) for (let c = 0; c < 3; c++) r.rgba[(y * W + x) * 4 + c] = 20; };
@@ -215,10 +223,18 @@ function sheetImage(framed = true): { raster: PlanRaster; title: { minX: number;
   for (let y = title.minY; y <= title.maxY; y++) { ink(990, y); ink(991, y); }
   let seed = 7;
   const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
-  for (let k = 0; k < 120; k++) {
+  for (let k = 0; k < (text ? 120 : 0); k++) {
     const x0 = Math.floor(title.minX + 15 + rnd() * 360), y0 = Math.floor(title.minY + 12 + rnd() * 180);
     if ([690, 760].some((y) => Math.abs(y0 - y) < 12) || Math.abs(x0 - 990) < 12) continue;
     for (let y = y0; y < y0 + 8; y++) for (let x = x0; x < x0 + 4; x++) ink(x, y);
+  }
+  // Σημειώσεις πέρα από την πινακίδα (δεξιά · πάνω · αριστερά): σειρές «χαρακτήρων» 2 × 8 px — μελάνι, όχι γραμμή φύλλου.
+  if (notesAround) {
+    for (let a = 4; a + 8 <= 200; a += 15) {
+      for (let k = 0; k < 8; k++) {
+        for (const d of [0, 1]) { ink(1186 + d, title.minY + a + k); ink(title.minX + a + k, 560 + d); ink(740 + d, title.minY + a + k); }
+      }
+    }
   }
   rect(250, 180, 650, 520, 10); // το σπίτι, με περιθώριο από το πλαίσιο
   for (let y = 180; y <= 520; y++) for (let k = 0; k < 6; k++) ink(450 + k, y);
@@ -266,7 +282,7 @@ describe('διάταξη φύλλου — πλαίσιο και πινακίδα
   });
 
   it('χωρίς πλαίσιο, πλήρης πίνακας στη γωνία: προτείνεται (πεδία + κείμενο + γωνία) — όχι τα δωμάτια', () => {
-    const { raster, title } = sheetImage(false);
+    const { raster, title } = sheetImage({ framed: false });
     const sheet = alignPlan(raster, { deskew: false }).sheet;
     expect(sheet?.frame).toBeNull();
     expect(sheet?.annotations).toHaveLength(1);
@@ -277,6 +293,16 @@ describe('διάταξη φύλλου — πλαίσιο και πινακίδα
     expect(block.confidence).toBe(1);
     expect(Math.abs(block.region.originalBounds.minX - title.minX)).toBeLessThan(8);
     expect(Math.abs(block.region.originalBounds.minY - title.minY)).toBeLessThan(8);
+  });
+
+  /** Κάθε τεκμήριο είναι **αναγκαίο** χωριστά: πίνακας στη γωνία με πεδία, όταν του λείπει ΜΟΝΟ ένα, δεν προτείνεται. */
+  it.each<[string, SheetImageOptions]>([
+    ['χωρίς κείμενο στα κελιά (πεδία + γωνία)', { framed: false, text: false }],
+    ['με σημειώσεις γύρω του, άρα ακραία μόνο η κάτω πλευρά (πεδία + κείμενο, όχι γωνία)', { framed: false, notesAround: true }],
+  ])('χωρίς πλαίσιο, πίνακας %s: ΔΕΝ προτείνεται', (_name, options) => {
+    const sheet = alignPlan(sheetImage(options).raster, { deskew: false }).sheet;
+    expect(sheet?.frame).toBeNull();
+    expect(sheet?.annotations).toEqual([]);
   });
 });
 
