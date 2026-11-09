@@ -18,6 +18,7 @@ import type { WallSceneAccessor } from '../../../bim/walls/add-wall-to-scene';
 import { createPlanAligner } from '../../../bim/plan-recognition/alignment/plan-align-client';
 import { renderSyntheticPlan, SAMPLE_HOUSE_WALLS, type SyntheticWall } from '../../../bim/plan-recognition/testing/synthetic-plan-raster';
 import type { CalibrationData, FloorplanBackground } from '../../../floorplan-background/providers/types';
+import { TEST_CALIBRATION, testFloorplanBackground } from '../../../floorplan-background/testing/background-fixture';
 import { modelFromDrawingSession, type ModelFromDrawingDeps } from '../../model-from-drawing/model-from-drawing-session';
 import { modelFromDrawingStore } from '../../model-from-drawing/model-from-drawing-store';
 import { __setPlanAlignerForTests, isWallEvidence, planRecognitionSession } from '../plan-recognition-session';
@@ -36,18 +37,12 @@ const PLAN = renderSyntheticPlan({
   walls: SAMPLE_HOUSE_WALLS, pxPerMm: 0.06, marginMm: 600, wallStyle: 'outlined', strokePx: 2, rotationDeg: 1.3,
   degradation: { seed: 42, noiseAmplitude: 25, yellowing: 0.8 },
 });
-const CALIBRATED: CalibrationData = {
-  method: 'two-point', pointA: { x: 0, y: 0 }, pointB: { x: 1, y: 0 }, realDistance: 1, unit: 'm',
-  rotationDerived: false, calibratedAt: 0, calibratedBy: 'u',
-};
+const CALIBRATED = TEST_CALIBRATION;
 
 function installBackground(calibration: CalibrationData | null): void {
-  mockBackgrounds.set(FLOOR, {
-    id: 'bg_test', companyId: 'co', floorId: FLOOR, fileId: 'file_test', providerId: 'image',
-    providerMetadata: {} as FloorplanBackground['providerMetadata'],
-    naturalBounds: PLAN.placement.naturalBounds, transform: PLAN.placement.transform, calibration,
-    opacity: 1, visible: true, locked: false, createdAt: 0, updatedAt: 0, createdBy: 'u', updatedBy: 'u',
-  });
+  mockBackgrounds.set(FLOOR, testFloorplanBackground({
+    floorId: FLOOR, naturalBounds: PLAN.placement.naturalBounds, transform: PLAN.placement.transform, calibration,
+  }));
   // Νέο buffer σε κάθε κλήση, όπως ο αληθινός provider (ο ευθυγραμμιστής αποσπά το buffer).
   mockProviders.set(FLOOR, { getPlanRaster: () => ({ ...PLAN.image, rgba: new Uint8ClampedArray(PLAN.image.rgba) }) });
 }

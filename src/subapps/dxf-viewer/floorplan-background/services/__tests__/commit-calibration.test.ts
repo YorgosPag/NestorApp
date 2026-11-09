@@ -27,6 +27,7 @@ import {
   transformForAutosave,
 } from '../background-write-ledger';
 import { useFloorplanBackgroundStore } from '../../stores/floorplanBackgroundStore';
+import { seedFloorBackground, testFloorplanBackground } from '../../testing/background-fixture';
 import {
   CALIBRATION_STALE_ERROR_CODE,
   type BackgroundTransform,
@@ -43,15 +44,11 @@ const CALIBRATION: CalibrationData = {
 };
 
 function background(transform: BackgroundTransform, calibration: CalibrationData | null): FloorplanBackground {
-  return {
-    id: 'bg_1', companyId: 'c', floorId: FLOOR, fileId: 'f', providerId: 'image', providerMetadata: {},
-    naturalBounds: { width: 1000, height: 800 }, transform, calibration, opacity: 1, visible: true, locked: false,
-    createdAt: 0, updatedAt: 0, createdBy: 'u', updatedBy: 'u',
-  };
+  return testFloorplanBackground({ id: 'bg_1', floorId: FLOOR, transform, calibration });
 }
 
 function seed(bg: FloorplanBackground): void {
-  useFloorplanBackgroundStore.setState((s) => ({ ...s, floors: { [FLOOR]: { background: bg, isLoading: false, error: null } } }));
+  seedFloorBackground(bg);
   setCommittedBackground(FLOOR, snapshotOf(bg));
 }
 
