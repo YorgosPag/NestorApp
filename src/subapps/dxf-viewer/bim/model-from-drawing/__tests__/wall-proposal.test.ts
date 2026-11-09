@@ -22,6 +22,7 @@ import {
   type WallProposal,
   type WallProposalInput,
 } from '../wall-proposal';
+import { decisionAnchorsForKeys, type WallDecisionAnchor } from '../decision-anchors';
 import { buildAutoWallType } from '../../family-types/auto-wall-type';
 import { getBuiltInWallTypes } from '../../family-types/built-in-types';
 import { createWallTyper } from '../../family-types/wall-typer';
@@ -79,8 +80,11 @@ function countByStatus(p: WallProposal): Record<string, number> {
   return counts;
 }
 
-const undecidedKeys = (p: WallProposal): Set<string> =>
-  new Set(p.items.filter((i) => i.status === 'needs-decision').map((i) => i.key));
+const undecidedKeys = (p: WallProposal): string[] =>
+  p.items.filter((i) => i.status === 'needs-decision').map((i) => i.key);
+
+/** Ό,τι κάνει ο άνθρωπος πατώντας «Είναι τοίχος» σε κάθε αμφίσημο (ADR-929 §6.11: άγκυρες, όχι κλειδιά). */
+const undecidedAnchors = (p: WallProposal): WallDecisionAnchor[] => decisionAnchorsForKeys(p.decisions, undecidedKeys(p));
 
 describe('ADR-911 Α-1 — ανίχνευση στο σχέδιο δοκιμής', () => {
   it('160 γραμμές ρόλου «τοίχος» δίνουν 40 ορθογώνια και εξηγούνται όλες', () => {
@@ -168,14 +172,14 @@ describe('ADR-911 Α-4 — ορθογώνιο χωρίς προφανή άξον
   });
 
   it('με απόφαση ανθρώπου γίνονται τοίχοι — και μόνο όσα αποφασίστηκαν', () => {
-    const keys = [...undecidedKeys(propose())];
-    expect(countByStatus(propose({ acceptedKeys: new Set(keys.slice(0, 1)) })))
+    const anchors = undecidedAnchors(propose());
+    expect(countByStatus(propose({ acceptedDecisions: anchors.slice(0, 1) })))
       .toEqual({ ready: 39, 'needs-decision': 1 });
-    expect(countByStatus(propose({ acceptedKeys: new Set(keys) }))).toEqual({ ready: 40 });
+    expect(countByStatus(propose({ acceptedDecisions: anchors }))).toEqual({ ready: 40 });
   });
 
   it('το πάχος κάθε τοίχου είναι η μικρή πλευρά, όπως μετρήθηκε', () => {
-    const p = propose({ acceptedKeys: undecidedKeys(propose()) });
+    const p = propose({ acceptedDecisions: undecidedAnchors(propose()) });
     const hist: Record<number, number> = {};
     for (const w of p.walls) {
       const t = Math.round(w.params.thickness);
@@ -200,11 +204,11 @@ describe('ADR-911 — απόρριψη με λόγο', () => {
 
 describe('ADR-911 Α-6 — ιδεμποτία', () => {
   it('δεύτερη εκτέλεση, με τους τοίχους ήδη στη σκηνή, προτείνει μηδέν νέους', () => {
-    const first = propose({ acceptedKeys: undecidedKeys(propose()) });
+    const first = propose({ acceptedDecisions: undecidedAnchors(propose()) });
     expect(first.walls).toHaveLength(40);
 
     const scene = [...ENTITIES, ...(first.walls as unknown as Entity[])];
-    const second = propose({ entities: scene, acceptedKeys: undecidedKeys(propose()) });
+    const second = propose({ entities: scene, acceptedDecisions: undecidedAnchors(propose()) });
     expect(second.walls).toEqual([]);
     expect(countByStatus(second)).toEqual({ existing: 40 });
     // Οι γραμμές παραμένουν εξηγημένες: το ορθογώνιο υπάρχει, απλώς έχει ήδη τον τοίχο του.

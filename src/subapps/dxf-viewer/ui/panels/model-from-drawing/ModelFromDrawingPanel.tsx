@@ -61,6 +61,8 @@ export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
   readonly onResample: () => void;
   readonly onConfirmGroup: (thicknessMm: number, category: WallCategory) => void;
   readonly onSetUndecided: (key: string, isWall: boolean) => void;
+  /** ADR-929 §6.11 — πέταμα των αποφάσεων που δεν βρήκαν ορθογώνιο στην τρέχουσα πηγή. */
+  readonly onDiscardOrphanedDecisions: () => void;
   readonly onApprove: () => void;
   /** ADR-929 Φ5 — αναγνώριση από την εικόνα του υποβάθρου του ενεργού ορόφου. */
   readonly onRecognizeImage: () => void;
@@ -166,8 +168,9 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
       <StatusLegend proposal={proposal} t={t} />
       <GroupsSection groups={proposal.groups} onConfirm={actions.onConfirmGroup} t={t} />
       <DecisionsSection
-        proposal={proposal} acceptedKeys={state.acceptedKeys} focusedKey={state.focusedKey}
-        onSetUndecided={actions.onSetUndecided} onFocus={actions.onFocus} t={t}
+        proposal={proposal} focusedKey={state.focusedKey}
+        onSetUndecided={actions.onSetUndecided} onDiscardOrphaned={actions.onDiscardOrphanedDecisions}
+        onFocus={actions.onFocus} t={t}
       />
       <RejectedSection proposal={proposal} focusedKey={state.focusedKey} onFocus={actions.onFocus} t={t} />
       <CoverageSection proposal={proposal} t={t} />

@@ -387,7 +387,9 @@
       "title": "Rectangles with no obvious axis",
       "item": "{longMm} × {shortMm} mm",
       "isWall": "It is a wall",
-      "focus": "Focus in the drawing"
+      "focus": "Focus in the drawing",
+      "orphaned": "{count, plural, one {# decision did not find its rectangle in the new lines — kept in case it reappears.} other {# decisions did not find their rectangle in the new lines — kept in case they reappear.}}",
+      "discardOrphaned": "Discard"
     },
     "rejected": {
       "title": "Why they will not be created",

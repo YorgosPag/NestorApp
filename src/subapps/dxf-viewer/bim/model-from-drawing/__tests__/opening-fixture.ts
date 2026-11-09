@@ -10,6 +10,7 @@ import { buildWallEntity } from '../../../hooks/drawing/wall-completion';
 import { applyTrimPatches, computeWallTrims } from '../../walls/wall-trims';
 import type { WallSceneAccessor } from '../../walls/add-wall-to-scene';
 import { proposeConfirmed } from './confirmed-proposal';
+import { decisionAnchorsForKeys } from '../decision-anchors';
 import { computeOpeningProposal, type OpeningDecision, type OpeningProposal } from '../opening-proposal';
 import fixture from './fixtures/floor-plan-lines.json';
 
@@ -23,8 +24,11 @@ export const OPENING = '#00cccc';
 export function writtenWalls(acceptAll: boolean): WallEntity[] {
   const input = { entities: ENTITIES, wallColorHex: WALL, colorOf, sceneUnits: 'mm' as const, levelId: LEVEL };
   const base = proposeConfirmed(input);
-  const undecided = new Set(base.items.filter((i) => i.status === 'needs-decision').map((i) => i.key));
-  const walls = acceptAll ? proposeConfirmed({ ...input, acceptedKeys: undecided }).walls : base.walls;
+  const undecided = decisionAnchorsForKeys(
+    base.decisions,
+    base.items.filter((i) => i.status === 'needs-decision').map((i) => i.key),
+  );
+  const walls = acceptAll ? proposeConfirmed({ ...input, acceptedDecisions: undecided }).walls : base.walls;
   const trimmed = applyTrimPatches(walls as readonly AnySceneEntity[], computeWallTrims(walls, []));
   return trimmed as unknown as WallEntity[];
 }

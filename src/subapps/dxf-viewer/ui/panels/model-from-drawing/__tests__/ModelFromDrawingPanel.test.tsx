@@ -14,6 +14,7 @@ import { fireEvent, render } from '@testing-library/react';
 import type { Entity } from '../../../../types/entities';
 import type { WallCategory } from '../../../../bim/types/wall-types';
 import { computeWallProposal, type WallProposal } from '../../../../bim/model-from-drawing/wall-proposal';
+import { decisionAnchorsForKeys } from '../../../../bim/model-from-drawing/decision-anchors';
 import fixture from '../../../../bim/model-from-drawing/__tests__/fixtures/floor-plan-lines.json';
 import { PREVIEW_ZONE_STYLE } from '../../../../systems/region-preview/preview-zone-style';
 import { ASSISTANT_STATUS_ORDER, ASSISTANT_STATUS_TONE } from '../../../../systems/model-from-drawing/assistant-status-tone';
@@ -71,7 +72,7 @@ function stateOf(patch: Partial<ModelFromDrawingState> = {}): ModelFromDrawingSt
     pendingSample: null,
     lineSource: SCENE_LINE_SOURCE,
     wallColorHex: '#003fff',
-    acceptedKeys: new Set(),
+    acceptedDecisions: [],
     categoryByThicknessMm: new Map(),
     proposal: UNCONFIRMED,
     preview: null,
@@ -88,7 +89,7 @@ function stateOf(patch: Partial<ModelFromDrawingState> = {}): ModelFromDrawingSt
 function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
   return {
     onClose: jest.fn(), onResample: jest.fn(), onConfirmGroup: jest.fn(),
-    onSetUndecided: jest.fn(), onFocus: jest.fn(), onApprove: jest.fn(),
+    onSetUndecided: jest.fn(), onDiscardOrphanedDecisions: jest.fn(), onFocus: jest.fn(), onApprove: jest.fn(),
     onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onApproveOpenings: jest.fn(),
     onRecognizeImage: jest.fn(),
     reading: {
@@ -207,16 +208,27 @@ describe('ModelFromDrawingPanel — οι αποφάσεις φεύγουν πρ�
 
   it('ορθογώνιο που ο άνθρωπος ΔΕΧΤΗΚΕ μένει στη λίστα, ώστε να μπορεί να το πάρει πίσω', () => {
     const undecided = UNCONFIRMED.items.find((i) => i.status === 'needs-decision')!;
-    const accepted = new Set([undecided.key]);
+    const accepted = decisionAnchorsForKeys(UNCONFIRMED.decisions, [undecided.key]);
     const proposal = computeWallProposal({
-      entities: ENTITIES, wallColorHex: '#003fff', colorOf, sceneUnits: 'mm', levelId: 'lvl', acceptedKeys: accepted,
+      entities: ENTITIES, wallColorHex: '#003fff', colorOf, sceneUnits: 'mm', levelId: 'lvl', acceptedDecisions: accepted,
     });
-    const { all, actions } = renderPanel({ proposal, acceptedKeys: accepted });
+    const { all, actions } = renderPanel({ proposal, acceptedDecisions: accepted });
     expect(all('mfd-decision')).toHaveLength(2);
     const pressed = all('mfd-decision').flatMap((r) => [...r.querySelectorAll('button[aria-pressed="true"]')]);
     expect(pressed).toHaveLength(1);
     fireEvent.click(pressed[0]);
     expect(actions.onSetUndecided).toHaveBeenCalledWith(undecided.key, false);
+  });
+
+  it('ADR-929 §6.11 — αποφάσεις χωρίς ορθογώνιο φαίνονται, και φεύγουν ΜΟΝΟ με ρητή απόρριψη', () => {
+    expect(renderPanel().q('mfd-orphaned')).toBeNull();
+    const anchor = [...UNCONFIRMED.decisions.anchorByKey.values()][0];
+    const proposal: WallProposal = { ...UNCONFIRMED, decisions: { ...UNCONFIRMED.decisions, orphaned: [anchor, anchor] } };
+    const { q, actions } = renderPanel({ proposal });
+    const note = q('mfd-orphaned') as HTMLElement;
+    expect(note.textContent).toContain('modelFromDrawing.decisions.orphaned{"count":2}');
+    fireEvent.click(note.querySelector('button') as HTMLButtonElement);
+    expect(actions.onDiscardOrphanedDecisions).toHaveBeenCalledTimes(1);
   });
 
   it('«Άλλο δείγμα» και κλείσιμο φτάνουν στον host', () => {

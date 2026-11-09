@@ -57,7 +57,10 @@ export interface ModelFromDrawingDeps {
 }
 
 /** Ό,τι αποφασίζει ο άνθρωπος και καθορίζει την πρόταση. */
-type ProposalInputs = Pick<ModelFromDrawingState, 'lineSource' | 'wallColorHex' | 'acceptedKeys' | 'categoryByThicknessMm'>;
+type ProposalInputs = Pick<
+  ModelFromDrawingState,
+  'lineSource' | 'wallColorHex' | 'acceptedDecisions' | 'categoryByThicknessMm'
+>;
 
 interface Computed {
   readonly proposal: WallProposal;
@@ -79,7 +82,7 @@ function compute(inputs: ProposalInputs, deps: ModelFromDrawingDeps): Computed |
     ...lines,
     sceneUnits: live.sceneUnits,
     levelId: live.levelId,
-    acceptedKeys: inputs.acceptedKeys,
+    acceptedDecisions: inputs.acceptedDecisions,
     categoryByThicknessMm: inputs.categoryByThicknessMm,
     typeWall: deps.typing.typeWall,
   });
@@ -92,7 +95,7 @@ function recompute(inputs: Partial<ProposalInputs>, deps: ModelFromDrawingDeps):
   const merged: ProposalInputs = {
     lineSource: inputs.lineSource ?? state.lineSource,
     wallColorHex: inputs.wallColorHex ?? state.wallColorHex,
-    acceptedKeys: inputs.acceptedKeys ?? state.acceptedKeys,
+    acceptedDecisions: inputs.acceptedDecisions ?? state.acceptedDecisions,
     categoryByThicknessMm: inputs.categoryByThicknessMm ?? state.categoryByThicknessMm,
   };
   modelFromDrawingStore.publishRecomputed(merged, compute(merged, deps));
@@ -123,15 +126,16 @@ export const modelFromDrawingSession = {
       return;
     }
     recompute(
-      { lineSource: SCENE_LINE_SOURCE, wallColorHex: sampled, acceptedKeys: new Set(), categoryByThicknessMm: new Map() },
+      { lineSource: SCENE_LINE_SOURCE, wallColorHex: sampled, acceptedDecisions: [], categoryByThicknessMm: new Map() },
       deps,
     );
   },
 
   /**
-   * ADR-929 Φ5 — η πηγή γίνεται τα τμήματα της εικόνας (ή μια νέα αναγνώριση τα αντικαθιστά). Οι αποφάσεις για
-   * αμφίσημα ορθογώνια ανήκουν στα παλιά τμήματα και σβήνουν· οι επιβεβαιωμένες ομάδες πάχους (Δ3) αφορούν πάχη,
-   * όχι τμήματα, και μένουν όταν η πηγή ήταν ήδη εικόνα του ίδιου ορόφου.
+   * ADR-929 Φ5 — η πηγή γίνεται τα τμήματα της εικόνας (ή μια νέα αναγνώριση/όψη/βαθμονόμηση τα αντικαθιστά). Όταν η
+   * πηγή ήταν ήδη εικόνα του ίδιου ορόφου, **μένουν** και οι δύο λογιών αποφάσεις: οι ομάδες πάχους (Δ3) αφορούν πάχη,
+   * όχι τμήματα· οι αποφάσεις αμφίσημων ορθογωνίων (Δ7) είναι άγκυρες στα pixel της εικόνας και ξαναβρίσκουν το
+   * ορθογώνιό τους με επικάλυψη (§6.11) — όσες δεν το βρουν φαίνονται ως ορφανές, δεν σβήνονται σιωπηλά.
    */
   adoptRasterSegments(source: Extract<ProposalLineSource, { kind: 'raster' }>, deps: ModelFromDrawingDeps): void {
     const state = modelFromDrawingStore.get();
@@ -139,7 +143,7 @@ export const modelFromDrawingSession = {
     recompute(
       {
         lineSource: source,
-        acceptedKeys: new Set(),
+        acceptedDecisions: sameFloor ? state.acceptedDecisions : [],
         categoryByThicknessMm: sameFloor ? state.categoryByThicknessMm : new Map(),
       },
       deps,
@@ -153,12 +157,24 @@ export const modelFromDrawingSession = {
     recompute({ categoryByThicknessMm: next }, deps);
   },
 
-  /** Δ7 — ο άνθρωπος αποφασίζει αν ένα αμφίσημο ορθογώνιο ΕΙΝΑΙ τοίχος. */
+  /**
+   * Δ7 — ο άνθρωπος αποφασίζει αν ένα αμφίσημο ορθογώνιο ΕΙΝΑΙ τοίχος. Η άγκυρα έρχεται από την πρόταση που είδε
+   * (ίδιο αντικείμενο με την αποθηκευμένη, όταν υπάρχει) ⇒ ιδεμποτικό, και η αφαίρεση βρίσκει ακριβώς αυτήν.
+   */
   setUndecided(key: string, isWall: boolean, deps: ModelFromDrawingDeps): void {
-    const next = new Set(modelFromDrawingStore.get().acceptedKeys);
-    if (isWall) next.add(key);
-    else next.delete(key);
-    recompute({ acceptedKeys: next }, deps);
+    const { proposal, acceptedDecisions } = modelFromDrawingStore.get();
+    const anchor = proposal?.decisions.anchorByKey.get(key);
+    if (!anchor) return;
+    const rest = acceptedDecisions.filter((a) => a !== anchor);
+    recompute({ acceptedDecisions: isWall ? [...rest, anchor] : rest }, deps);
+  },
+
+  /** ADR-929 §6.11 — ο άνθρωπος πετά τις αποφάσεις που δεν βρήκαν ορθογώνιο στην τρέχουσα πηγή (ρητά, ποτέ σιωπηλά). */
+  discardOrphanedDecisions(deps: ModelFromDrawingDeps): void {
+    const { proposal, acceptedDecisions } = modelFromDrawingStore.get();
+    const orphaned = new Set(proposal?.decisions.orphaned ?? []);
+    if (orphaned.size === 0) return;
+    recompute({ acceptedDecisions: acceptedDecisions.filter((a) => !orphaned.has(a)) }, deps);
   },
 
   /** «Αυτό κοιτάω» — μόνο έμφαση· δεν αγγίζει καμία απόφαση. */

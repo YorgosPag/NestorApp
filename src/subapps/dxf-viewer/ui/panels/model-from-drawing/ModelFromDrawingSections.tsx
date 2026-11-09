@@ -193,18 +193,37 @@ function DecisionRow({ item, accepted, focused, onSetUndecided, onFocus, t }: De
   );
 }
 
+/** ADR-929 §6.11 — αποφάσεις που δεν βρήκαν ορθογώνιο στην τρέχουσα πηγή: ορατές, και φεύγουν μόνο με ρητή πράξη. */
+function OrphanedDecisionsNote(props: {
+  readonly count: number;
+  readonly onDiscard: () => void;
+  readonly t: Translate;
+}): React.ReactElement | null {
+  if (props.count === 0) return null;
+  return (
+    <p className="m-0 flex items-center gap-1.5 text-[11px] text-foreground" role="status" data-testid="mfd-orphaned">
+      <ToneSwatch tone="reject" />
+      <span className="flex-1">{props.t('modelFromDrawing.decisions.orphaned', { count: props.count })}</span>
+      <Button type="button" variant="ghost" size="xs" onClick={props.onDiscard}>
+        {props.t('modelFromDrawing.decisions.discardOrphaned')}
+      </Button>
+    </p>
+  );
+}
+
 /** Δ7 — ορθογώνια χωρίς προφανή άξονα: γίνονται τοίχοι ΜΟΝΟ αν το πει ο άνθρωπος (και ξεγίνονται). */
 export function DecisionsSection(props: {
   readonly proposal: WallProposal;
-  readonly acceptedKeys: ReadonlySet<string>;
   readonly focusedKey: string | null;
   readonly onSetUndecided: (key: string, isWall: boolean) => void;
+  readonly onDiscardOrphaned: () => void;
   readonly onFocus: (key: string) => void;
   readonly t: Translate;
 }): React.ReactElement | null {
-  const { proposal, acceptedKeys, focusedKey, t } = props;
+  const { proposal, focusedKey, t } = props;
+  const { acceptedKeys, orphaned } = proposal.decisions;
   const items = proposal.items.filter((i) => i.status === 'needs-decision' || acceptedKeys.has(i.key));
-  if (items.length === 0) return null;
+  if (items.length === 0 && orphaned.length === 0) return null;
   return (
     <section className="flex flex-col gap-0.5">
       <h4 className={SECTION_TITLE}>{t('modelFromDrawing.decisions.title')}</h4>
@@ -216,6 +235,7 @@ export function DecisionsSection(props: {
           />
         ))}
       </ul>
+      <OrphanedDecisionsNote count={orphaned.length} onDiscard={props.onDiscardOrphaned} t={t} />
     </section>
   );
 }

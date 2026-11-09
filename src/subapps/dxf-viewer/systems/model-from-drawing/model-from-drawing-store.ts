@@ -30,6 +30,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WallCategory } from '../../bim/types/wall-types';
 import type { AddWallsRefusal } from '../../bim/walls/add-wall-to-scene';
 import type { WallProposal } from '../../bim/model-from-drawing/wall-proposal';
+import type { WallDecisionAnchor } from '../../bim/model-from-drawing/decision-anchors';
 import type { AssistantPreview } from '../../bim/model-from-drawing/assistant-preview';
 import type { OpeningProposal } from '../../bim/model-from-drawing/opening-proposal';
 import type { OpeningPreview } from '../../bim/model-from-drawing/opening-preview';
@@ -74,8 +75,12 @@ export interface ModelFromDrawingState {
   readonly lineSource: ProposalLineSource;
   /** Το αποδιδόμενο χρώμα (hex) που ο άνθρωπος έδειξε ως «τοίχος». */
   readonly wallColorHex: string | null;
-  /** Κλειδιά αμφίσημων ορθογωνίων που ο άνθρωπος είπε ότι ΕΙΝΑΙ τοίχοι (Δ7). */
-  readonly acceptedKeys: ReadonlySet<string>;
+  /**
+   * Αμφίσημα ορθογώνια που ο άνθρωπος είπε ότι ΕΙΝΑΙ τοίχοι (Δ7), ως **άγκυρες** στο πλαίσιο της πηγής (ADR-929
+   * §6.11): επιβιώνουν σε νέα πηγή γραμμών του ίδιου ορόφου. Ποια καλύπτουν ποιο ορθογώνιο, και ποιες έμειναν
+   * ορφανές, το λέει η πρόταση (`proposal.decisions`).
+   */
+  readonly acceptedDecisions: readonly WallDecisionAnchor[];
   /** Η λειτουργία που ο άνθρωπος ΕΠΙΒΕΒΑΙΩΣΕ ανά ομάδα πάχους (Δ3). */
   readonly categoryByThicknessMm: ReadonlyMap<number, WallCategory>;
   readonly proposal: WallProposal | null;
@@ -101,7 +106,7 @@ const CLOSED: ModelFromDrawingState = {
   pendingSample: null,
   lineSource: SCENE_LINE_SOURCE,
   wallColorHex: null,
-  acceptedKeys: new Set(),
+  acceptedDecisions: [],
   categoryByThicknessMm: new Map(),
   proposal: null,
   preview: null,

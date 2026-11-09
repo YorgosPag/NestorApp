@@ -17,6 +17,7 @@ import {
   countProposalByStatus,
   wallProposalSignature,
 } from '../assistant-preview';
+import { decisionAnchorsForKeys } from '../decision-anchors';
 import fixture from './fixtures/floor-plan-lines.json';
 
 const ENTITIES = fixture.entities as unknown as readonly Entity[];
@@ -61,7 +62,7 @@ describe('wallProposalSignature — «το ίδιο που ενέκρινα»', 
   it('αλλάζει όταν ένα ορθογώνιο αλλάζει κατάσταση', () => {
     const base = propose();
     const undecided = base.items.find((i) => i.status === 'needs-decision')!;
-    const accepted = propose({ acceptedKeys: new Set([undecided.key]) });
+    const accepted = propose({ acceptedDecisions: decisionAnchorsForKeys(base.decisions, [undecided.key]) });
     expect(wallProposalSignature(accepted)).not.toBe(wallProposalSignature(base));
   });
 

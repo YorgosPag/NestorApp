@@ -211,7 +211,7 @@ describe('ADR-911 Δ3 / Δ7 — οι αποφάσεις του ανθρώπου'
     expect(state().focusedKey).toBe(before.proposal!.items[3].key);
     expect(state().proposal).toBe(before.proposal);
     expect(state().preview).toBe(before.preview);
-    expect(state().acceptedKeys).toBe(before.acceptedKeys);
+    expect(state().acceptedDecisions).toBe(before.acceptedDecisions);
   });
 });
 

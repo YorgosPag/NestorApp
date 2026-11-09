@@ -49,6 +49,13 @@ import { computeDrawingCoverage, type DrawingCoverage } from './drawing-coverage
 import { resolveAxesFromContext } from './context-axis';
 import { suggestWallFunctions, type WallFunctionSuggestion } from './wall-function-proposal';
 import { assignThicknessModes } from './thickness-modes';
+import {
+  matchDecisionAnchors,
+  SCENE_ANCHOR_FRAME,
+  type AnchorFrame,
+  type WallDecisionAnchor,
+  type WallProposalDecisions,
+} from './decision-anchors';
 
 export type WallProposalStatus = 'ready' | 'unconfirmed' | 'needs-decision' | 'existing' | 'rejected';
 
@@ -103,6 +110,8 @@ export interface WallProposal {
   /** Οι ομάδες πάχους, από τη λεπτότερη στην παχύτερη. */
   readonly groups: readonly WallThicknessGroup[];
   readonly coverage: DrawingCoverage;
+  /** ADR-929 §6.11 — οι αποφάσεις Δ7 όπως ξαναβρέθηκαν σε ΑΥΤΗ την πηγή (και όσες έμειναν ορφανές). */
+  readonly decisions: WallProposalDecisions;
 }
 
 export interface WallProposalInput {
@@ -114,8 +123,13 @@ export interface WallProposalInput {
   readonly levelId: string;
   readonly overrides?: WallParamOverrides;
   readonly strategy?: WallDetectionStrategy;
-  /** Κλειδιά `needs-decision` ορθογωνίων που ο άνθρωπος αποφάσισε ότι ΕΙΝΑΙ τοίχοι. */
-  readonly acceptedKeys?: ReadonlySet<string>;
+  /**
+   * Δ7 — οι αποφάσεις «αυτό ΕΙΝΑΙ τοίχος» για αμφίσημα ορθογώνια, ως **άγκυρες** στο πλαίσιο της πηγής (ADR-929 §6.11):
+   * ξαναβρίσκονται με επικάλυψη, άρα επιβιώνουν όταν η πηγή γραμμών ξαναγεννιέται.
+   */
+  readonly acceptedDecisions?: readonly WallDecisionAnchor[];
+  /** Σκηνή ⇒ πλαίσιο της πηγής (εικόνα: pixel της αρχικής εικόνας). Απόν ⇒ η σκηνή (πηγή σχέδιο). */
+  readonly anchorFrame?: AnchorFrame;
   /** Δ3 — η λειτουργία που ο άνθρωπος ΕΠΙΒΕΒΑΙΩΣΕ ανά ομάδα πάχους (ακέραια mm). */
   readonly categoryByThicknessMm?: ReadonlyMap<number, WallCategory>;
   /**
@@ -292,9 +306,28 @@ function resolveBuildable(
 }
 
 interface OutcomeContext {
-  readonly keyOf: ReadonlyMap<DetectedRectangle, string>;
   readonly thicknessOf: ReadonlyMap<DetectedRectangle, number | null>;
   readonly groups: readonly WallThicknessGroup[];
+  /** Τα αμφίσημα ορθογώνια χωρίς απόφαση ανθρώπου. */
+  readonly undecided: ReadonlySet<DetectedRectangle>;
+}
+
+/** ADR-929 §6.11 — οι αποθηκευμένες αποφάσεις ξαναβρίσκουν τα αμφίσημα ορθογώνια αυτής της πηγής. */
+function resolveDecisions(
+  rects: readonly DetectedRectangle[],
+  keyOf: ReadonlyMap<DetectedRectangle, string>,
+  input: WallProposalInput,
+): { readonly decisions: WallProposalDecisions; readonly undecided: ReadonlySet<DetectedRectangle> } {
+  const ambiguous = rects.filter(isAmbiguous);
+  const decisions = matchDecisionAnchors(
+    ambiguous,
+    keyOf,
+    input.acceptedDecisions ?? [],
+    input.anchorFrame ?? SCENE_ANCHOR_FRAME,
+    MODEL_FROM_DRAWING_LIMITS.DECISION_ANCHOR_MIN_IOU,
+  );
+  const undecided = new Set(ambiguous.filter((r) => !decisions.acceptedKeys.has(keyOf.get(r) ?? '')));
+  return { decisions, undecided };
 }
 
 /**
@@ -304,14 +337,11 @@ interface OutcomeContext {
 function decideOutcomes(
   rects: readonly DetectedRectangle[],
   input: WallProposalInput,
-  { keyOf, thicknessOf, groups }: OutcomeContext,
+  { thicknessOf, groups, undecided }: OutcomeContext,
 ): (rect: DetectedRectangle) => ItemOutcome {
   const groupOf = new Map(groups.map((g) => [g.thicknessMm, g] as const));
   const groupOfRect = (rect: DetectedRectangle) => groupOf.get(thicknessOf.get(rect) ?? -1);
   const rare = new Set(rects.filter((r) => thicknessOf.get(r) === null));
-  const undecided = new Set(
-    rects.filter((r) => isAmbiguous(r) && !input.acceptedKeys?.has(keyOf.get(r) ?? '')),
-  );
   const outcome = resolveBuildable(
     rects.filter((r) => !undecided.has(r) && !rare.has(r)),
     input,
@@ -339,7 +369,8 @@ export function computeWallProposal(input: WallProposalInput): WallProposal {
   const columns = collectColumnFootprints(entities as readonly AnySceneEntity[]);
   const suggestions = suggestWallFunctions(rects, columns, scale);
   const groups = buildGroups(rects, thicknessOf, keyOf, suggestions, input.categoryByThicknessMm);
-  const outcomeOf = decideOutcomes(rects, input, { keyOf, thicknessOf, groups });
+  const { decisions, undecided } = resolveDecisions(rects, keyOf, input);
+  const outcomeOf = decideOutcomes(rects, input, { thicknessOf, groups, undecided });
 
   const items: WallProposalItem[] = rects.map((rect) => {
     const axis = detectedRectAxis(rect);
@@ -355,5 +386,5 @@ export function computeWallProposal(input: WallProposalInput): WallProposal {
     };
   });
   const walls = items.flatMap((i) => (i.wall ? [i.wall] : []));
-  return { items, walls, groups, coverage: computeDrawingCoverage(entities, roleSegments, rects, tol) };
+  return { items, walls, groups, coverage: computeDrawingCoverage(entities, roleSegments, rects, tol), decisions };
 }

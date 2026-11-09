@@ -27,7 +27,12 @@ import {
   withRasterSegments,
 } from '../../bim/plan-recognition/segments/raster-segments-to-scene';
 import { getFloorBackground } from '../../floorplan-background/stores/floorplanBackgroundStore';
-import type { RasterPlacement } from '../../floorplan-background/geometry/raster-scene-mapping';
+import {
+  sceneToRasterAffine,
+  type RasterPlacement,
+} from '../../floorplan-background/geometry/raster-scene-mapping';
+import { applyAffine } from '@/lib/geometry/affine-2x3';
+import type { AnchorFrame } from '../../bim/model-from-drawing/decision-anchors';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { resolveEntityColorHex } from '../selection/select-similar-by-color';
@@ -54,6 +59,18 @@ export interface ResolvedProposalLines {
   readonly strategy?: WallDetectionStrategy;
   /** ADR-929 Φ5.2δ — πηγή-εικόνα: ανοχή ομαδοποίησης πάχους (mm) από το μέγεθος του pixel. */
   readonly thicknessToleranceMm?: number;
+  /** ADR-929 §6.11 — το πλαίσιο των αποφάσεων Δ7 (εικόνα: pixel της αρχικής εικόνας). Απόν ⇒ η σκηνή. */
+  readonly anchorFrame?: AnchorFrame;
+}
+
+/**
+ * ADR-929 §6.11 — πηγή-εικόνα: οι αποφάσεις αγκυρώνονται στα pixel της αρχικής εικόνας, όπου η βαθμονόμηση (νέα
+ * τοποθέτηση) και το crop δεν τις μετακινούν. Εκφυλισμένη τοποθέτηση (μη αντιστρέψιμη) ⇒ καμία εικόνα-πλαίσιο: οι
+ * αποφάσεις μένουν στη σκηνή (`undefined`), ρητά — ποτέ `NaN` (ADR-929 αρχή 4).
+ */
+function rasterAnchorFrame(placement: RasterPlacement): AnchorFrame | undefined {
+  const toPixel = sceneToRasterAffine(placement);
+  return toPixel ? (p) => applyAffine(toPixel, p) : undefined;
 }
 
 /** Η τρέχουσα τοποθέτηση της εικόνας ενός ορόφου, ή `null` αν ο όροφος δεν έχει (πια) υπόβαθρο. */
@@ -102,5 +119,6 @@ export function resolveProposalLines(
     ...withRasterSegments(live.entities, sceneColorOf, source.segments, placement),
     strategy: rasterParallelPairStrategy(placement, live.sceneUnits),
     thicknessToleranceMm: rasterThicknessToleranceMm(placement, live.sceneUnits),
+    anchorFrame: rasterAnchorFrame(placement),
   };
 }

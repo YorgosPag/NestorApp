@@ -234,6 +234,7 @@ function usePanelActions(
     onResample: start,
     onConfirmGroup: (thicknessMm, category) => modelFromDrawingSession.confirmGroup(thicknessMm, category, getDeps()),
     onSetUndecided: (key, isWall) => modelFromDrawingSession.setUndecided(key, isWall, getDeps()),
+    onDiscardOrphanedDecisions: () => modelFromDrawingSession.discardOrphanedDecisions(getDeps()),
     onFocus: focusProposalItem,
     onApprove: () => {
       if (modelFromDrawingSession.approve(getDeps())) modelFromDrawingOpeningsSession.refresh(getOpeningDeps(), true);
