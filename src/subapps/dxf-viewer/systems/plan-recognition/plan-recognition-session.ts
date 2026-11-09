@@ -118,7 +118,9 @@ export function wallEvidenceExclusions(
  */
 function lineSourceOf(run: PlanRecognitionRun, fusion: PlanFusionResult, version: number): RasterLineSource {
   const segments = fusion.adjustedSegments.filter((s) => isWallEvidence(fusion, s.id));
-  return { kind: 'raster', recognitionId: `${run.id}.${version}`, floorId: run.floorId, segments };
+  return {
+    kind: 'raster', recognitionId: `${run.id}.${version}`, floorId: run.floorId, backgroundId: run.backgroundId, segments,
+  };
 }
 
 let fusionVersion = 0;

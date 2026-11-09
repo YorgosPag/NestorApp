@@ -32,7 +32,7 @@ import {
   type RasterPlacement,
 } from '../../floorplan-background/geometry/raster-scene-mapping';
 import { applyAffine } from '@/lib/geometry/affine-2x3';
-import type { AnchorFrame } from '../../bim/model-from-drawing/decision-anchors';
+import { imageAnchorFrameId, type AnchorFrame } from '../../bim/model-from-drawing/decision-anchors';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { resolveEntityColorHex } from '../selection/select-similar-by-color';
@@ -45,6 +45,11 @@ export type ProposalLineSource =
       /** Η αναγνώριση από την οποία προήλθαν τα τμήματα: νέα αναγνώριση ⇒ νέα πρόταση. */
       readonly recognitionId: string;
       readonly floorId: string;
+      /**
+       * ADR-929 §6.12 — η εικόνα υποβάθρου από την οποία βγήκαν τα τμήματα. Ο όροφος δεν φτάνει: η «Αντικατάσταση»
+       * βάζει **άλλη** εικόνα στον ίδιο όροφο, και τα pixel της παλιάς δεν σημαίνουν τίποτα πάνω στη νέα.
+       */
+      readonly backgroundId: string;
       /** Σε `raster-px` της αρχικής εικόνας. */
       readonly segments: readonly RasterSegment[];
     };
@@ -66,16 +71,28 @@ export interface ResolvedProposalLines {
 /**
  * ADR-929 §6.11 — πηγή-εικόνα: οι αποφάσεις αγκυρώνονται στα pixel της αρχικής εικόνας, όπου η βαθμονόμηση (νέα
  * τοποθέτηση) και το crop δεν τις μετακινούν. Εκφυλισμένη τοποθέτηση (μη αντιστρέψιμη) ⇒ καμία εικόνα-πλαίσιο: οι
- * αποφάσεις μένουν στη σκηνή (`undefined`), ρητά — ποτέ `NaN` (ADR-929 αρχή 4).
+ * αποφάσεις μένουν στη σκηνή (`undefined`), ρητά — ποτέ `NaN` (ADR-929 αρχή 4). Το πλαίσιο φέρει την ταυτότητα της
+ * εικόνας (§6.12): απόφαση άλλης εικόνας δεν ταιριάζει ποτέ εδώ.
  */
-function rasterAnchorFrame(placement: RasterPlacement): AnchorFrame | undefined {
+function rasterAnchorFrame(placement: RasterPlacement, backgroundId: string): AnchorFrame | undefined {
   const toPixel = sceneToRasterAffine(placement);
-  return toPixel ? (p) => applyAffine(toPixel, p) : undefined;
+  return toPixel ? { id: imageAnchorFrameId(backgroundId), toFrame: (p) => applyAffine(toPixel, p) } : undefined;
 }
 
-/** Η τρέχουσα τοποθέτηση της εικόνας ενός ορόφου, ή `null` αν ο όροφος δεν έχει (πια) υπόβαθρο. */
-export function currentRasterPlacement(floorId: string): RasterPlacement | null {
-  const background = getFloorBackground(floorId);
+type RasterLineSourceRef = Pick<Extract<ProposalLineSource, { kind: 'raster' }>, 'floorId' | 'backgroundId'>;
+
+/**
+ * Το υπόβαθρο της πηγής, μόνο αν είναι **ακόμη** στον όροφό της (§6.12). Αντικατεστημένη εικόνα ⇒ `null`: τα τμήματα
+ * της παλιάς δεν διαβάζονται ποτέ με την τοποθέτηση της νέας (θα έβγαιναν τοίχοι σε λάθος θέση, σιωπηλά).
+ */
+function sourceBackground(source: RasterLineSourceRef) {
+  const background = getFloorBackground(source.floorId);
+  return background && background.id === source.backgroundId ? background : null;
+}
+
+/** Η τρέχουσα τοποθέτηση της εικόνας της πηγής, ή `null` αν ο όροφος δεν έχει (πια) αυτήν την εικόνα. */
+export function currentRasterPlacement(source: RasterLineSourceRef): RasterPlacement | null {
+  const background = sourceBackground(source);
   return background ? { transform: background.transform, naturalBounds: background.naturalBounds } : null;
 }
 
@@ -86,7 +103,7 @@ export function currentRasterPlacement(floorId: string): RasterPlacement | null 
  */
 export function isRasterPlacementCalibrated(source: ProposalLineSource): boolean {
   if (source.kind === 'scene') return true;
-  return (getFloorBackground(source.floorId)?.calibration ?? null) !== null;
+  return (sourceBackground(source)?.calibration ?? null) !== null;
 }
 
 /**
@@ -113,12 +130,12 @@ export function resolveProposalLines(
   if (source.kind === 'scene') {
     return wallColorHex ? { entities: live.entities, colorOf: sceneColorOf, wallColorHex } : null;
   }
-  const placement = currentRasterPlacement(source.floorId);
+  const placement = currentRasterPlacement(source);
   if (!placement) return null;
   return {
     ...withRasterSegments(live.entities, sceneColorOf, source.segments, placement),
     strategy: rasterParallelPairStrategy(placement, live.sceneUnits),
     thicknessToleranceMm: rasterThicknessToleranceMm(placement, live.sceneUnits),
-    anchorFrame: rasterAnchorFrame(placement),
+    anchorFrame: rasterAnchorFrame(placement, source.backgroundId),
   };
 }

@@ -28,14 +28,31 @@ import type { DetectedRectangle } from '../walls/wall-in-region';
 import { clipPolygonByConvex2D } from '@/lib/geometry/planar-polygon-clip';
 import { polygonArea } from '@/lib/geometry/planar-polygon';
 
-/** Σημείο σκηνής ⇒ σημείο στο πλαίσιο της πηγής, όπου η ταυτότητα δεν εξαρτάται από την τοποθέτηση. */
-export type AnchorFrame = (scenePoint: Point2D) => Point2D;
+/**
+ * Το πλαίσιο της πηγής: **ποια** πηγή (`id`) και πώς ένα σημείο σκηνής γίνεται σημείο της (`toFrame`), όπου η ταυτότητα
+ * δεν εξαρτάται από την τοποθέτηση.
+ *
+ * 🔑 ADR-929 §6.12 — το `id` είναι μέρος της ταυτότητας της απόφασης. Συντεταγμένες χωρίς πηγή δεν σημαίνουν τίποτα:
+ *   τα pixel (120, 340) μιας εικόνας και τα ίδια pixel της εικόνας που την αντικατέστησε είναι **άλλο** σημείο του
+ *   κτιρίου. Χωρίς το `id`, μια απόφαση της παλιάς εικόνας θα «έβρισκε» με επικάλυψη ένα ξένο ορθογώνιο της νέας —
+ *   ψευδής αντιστοίχιση, χειρότερη από απώλεια (Revit: η ετικέτα θυμάται το στοιχείο **του συγκεκριμένου** link).
+ */
+export interface AnchorFrame {
+  readonly id: string;
+  readonly toFrame: (scenePoint: Point2D) => Point2D;
+}
 
 /** Πηγή σχέδιο: η σκηνή είναι ήδη το πλαίσιο της πηγής. */
-export const SCENE_ANCHOR_FRAME: AnchorFrame = (p) => ({ x: p.x, y: p.y });
+export const SCENE_ANCHOR_FRAME: AnchorFrame = { id: 'scene', toFrame: (p) => ({ x: p.x, y: p.y }) };
 
-/** Μια απόφαση «αυτό ΕΙΝΑΙ τοίχος», αγκυρωμένη στο πολύγωνο του ορθογωνίου (στο πλαίσιο της πηγής). */
+/** Το `id` του πλαισίου μιας εικόνας υποβάθρου — με πρόθεμα, ώστε να μη συμπέσει ποτέ με το `'scene'`. */
+export function imageAnchorFrameId(backgroundId: string): string {
+  return `image:${backgroundId}`;
+}
+
+/** Μια απόφαση «αυτό ΕΙΝΑΙ τοίχος», αγκυρωμένη στο πολύγωνο του ορθογωνίου, στο πλαίσιο της πηγής `frameId`. */
 export interface WallDecisionAnchor {
+  readonly frameId: string;
   readonly polygon: readonly [Point2D, Point2D, Point2D, Point2D];
 }
 
@@ -55,7 +72,8 @@ export interface WallProposalDecisions {
 /** Η άγκυρα ενός ορθογωνίου στο πλαίσιο της πηγής. */
 export function decisionAnchorOf(rect: DetectedRectangle, frame: AnchorFrame): WallDecisionAnchor {
   const [a, b, c, d] = rect.polygon;
-  return { polygon: [frame(a), frame(b), frame(c), frame(d)] };
+  const to = frame.toFrame;
+  return { frameId: frame.id, polygon: [to(a), to(b), to(c), to(d)] };
 }
 
 /** Τομή προς ένωση δύο κυρτών τετραπλεύρων (0 όταν κάποιο είναι εκφυλισμένο). */
@@ -83,6 +101,8 @@ function rankedCandidates(
   const out: Candidate[] = [];
   anchors.forEach((anchor, anchorIndex) => {
     fresh.forEach((rectAnchor, rectIndex) => {
+      // §6.12 — άγκυρα άλλης πηγής δεν συγκρίνεται καν: μένει ορφανή, ορατή, ποτέ ψευδώς δεμένη.
+      if (anchor.frameId !== rectAnchor.frameId) return;
       const iou = anchorIoU(anchor, rectAnchor);
       if (iou >= minIoU) out.push({ anchorIndex, rectIndex, iou });
     });

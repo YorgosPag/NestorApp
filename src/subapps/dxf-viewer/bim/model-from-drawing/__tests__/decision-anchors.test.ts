@@ -13,6 +13,7 @@ import type { DetectedRectangle } from '../../walls/wall-in-region';
 import {
   decisionAnchorOf,
   decisionAnchorsForKeys,
+  imageAnchorFrameId,
   matchDecisionAnchors,
   SCENE_ANCHOR_FRAME,
   type AnchorFrame,
@@ -72,13 +73,23 @@ describe('ADR-929 §6.11 — ο ταιριαστής αποφάσεων', () => 
   });
 
   it('πλαίσιο πηγής: νέα κλίμακα της σκηνής (βαθμονόμηση) δεν αλλάζει την ταυτότητα', () => {
-    const pixelsAtScale = (s: number): AnchorFrame => (p: Point2D) => ({ x: p.x / s, y: p.y / s });
+    const pixelsAtScale = (s: number): AnchorFrame => ({ id: 'image:bg', toFrame: (p: Point2D) => ({ x: p.x / s, y: p.y / s }) });
     const anchor = decisionAnchorOf(rect(100, 100, 300, 250), pixelsAtScale(1));
     const rescaled = [rect(200, 200, 600, 500)]; // ίδια pixel, διπλάσια μονάδες σκηνής
     const inScene = matchDecisionAnchors(rescaled, keysOf(rescaled), [anchor], SCENE_ANCHOR_FRAME, MIN_IOU);
     const inPixels = matchDecisionAnchors(rescaled, keysOf(rescaled), [anchor], pixelsAtScale(2), MIN_IOU);
     expect(inScene.acceptedKeys.size).toBe(0);
     expect(inPixels.acceptedKeys.has('k0')).toBe(true);
+  });
+
+  it('§6.12 — άγκυρα ΑΛΛΗΣ εικόνας, στα ίδια pixel: ορφανή, ποτέ ψευδώς δεμένη', () => {
+    const imageOf = (id: string): AnchorFrame => ({ id: imageAnchorFrameId(id), toFrame: (p: Point2D) => p });
+    const anchor = decisionAnchorOf(rect(0, 0, 300, 250), imageOf('old'));
+    const same = [rect(0, 0, 300, 250)];
+    const d = matchDecisionAnchors(same, keysOf(same), [anchor], imageOf('new'), MIN_IOU);
+    expect(d.acceptedKeys.size).toBe(0);
+    expect(d.orphaned).toEqual([anchor]);
+    expect(matchDecisionAnchors(same, keysOf(same), [anchor], imageOf('old'), MIN_IOU).acceptedKeys.has('k0')).toBe(true);
   });
 
   it('ιδεμποτία: ίδια είσοδος ⇒ ίδια αντιστοίχιση', () => {
