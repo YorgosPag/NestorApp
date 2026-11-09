@@ -44,3 +44,12 @@ export type CatalogWire<TDefinition> = CatalogRecord<TDefinition, string>;
 
 /** Τα πεδία που ελέγχει **μόνο** ο γραφέας — ποτέ δεν έρχονται από το σώμα αιτήματος. */
 export type CatalogWriterOwnedField = keyof CatalogRecordMeta<unknown>;
+
+/**
+ * **Μόνο** το περίβλημα μιας εγγραφής — ό,τι κρατιέται όταν ο ορισμός αντικαθίσταται ολόκληρος (ADR-923 §5.5.2 Β6).
+ * Ο τύπος επιστροφής κάνει τη λίστα **πλήρη**: νέο πεδίο στο {@link CatalogRecordMeta} χωρίς γραμμή εδώ = σφάλμα τύπου.
+ */
+export function catalogRecordMetaOf<TInstant>(record: CatalogRecordMeta<TInstant>): CatalogRecordMeta<TInstant> {
+  const { id, companyId, revision, isDeleted, createdAt, createdBy, updatedAt, updatedBy, deletedAt, deletedBy } = record;
+  return { id, companyId, revision, isDeleted, createdAt, createdBy, updatedAt, updatedBy, deletedAt, deletedBy };
+}

@@ -106,7 +106,11 @@ export function applyHumanEdits(group: ExtractedGroup, edits: readonly ImportVal
   };
 }
 
-/** Τα πεδία του καταλόγου για το έγγραφο της πρότασης: απόντα όταν είναι άδεια (η Firestore δεν δέχεται `undefined`). */
+/**
+ * Τα πεδία του καταλόγου για το έγγραφο της πρότασης: απόντα όταν είναι άδεια (η Firestore δεν δέχεται `undefined`). Το «απόν»
+ * **σβήνει** την αποθηκευμένη διόρθωση επειδή το `stageReplace` αντικαθιστά τον ορισμό ολόκληρο (μέχρι 2026-11-09 το παλιό κλειδί
+ * επιβίωνε και η «Επαναφορά» δεν έφτανε στην αποθήκευση).
+ */
 export function humanEditFields(edits: readonly ImportValueEdit[], modelCodeEdit: ImportModelCodeEdit | null): {
   readonly edits?: readonly ImportValueEdit[];
   readonly modelCodeEdit?: ImportModelCodeEdit;

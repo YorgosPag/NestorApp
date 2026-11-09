@@ -35,7 +35,7 @@ import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
-import type { CatalogRecord } from '@/subapps/catalog/types/catalog-record';
+import { catalogRecordMetaOf, type CatalogRecord } from '@/subapps/catalog/types/catalog-record';
 import { distinctPricingViews, pricingViewsOfWrite, type PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
 import { showcasePricesTouched } from '@/subapps/catalog/public/showcase-price-writes';
 import { CATALOG_KIND_SPECS, type CatalogKind, type CatalogKindIdentity } from './catalog-kinds';
@@ -350,17 +350,17 @@ export function stageCopied<TDefinition extends object>(
 
 /**
  * Η **μία** διαδρομή κάθε αλλαγής υπάρχουσας εγγραφής: αναθεώρηση +1, σφραγίδα ενημέρωσης, εγγραφή, ίχνος.
- * Αντικατάσταση και διαγραφή διαφέρουν **μόνο** στο τι αλλάζει (`patch`).
+ * Δέχεται την **πλήρη** επόμενη εγγραφή: τι κρατιέται από την τρέχουσα το αποφασίζει **ρητά** ο καλών (`stageReplace` ·
+ * `stageSoftDelete`), ποτέ ένα σιωπηλό spread εδώ — αυτό κρατούσε ζωντανή τη διόρθωση μετά την «Επαναφορά» (ADR-923 §5.5.2 Β6).
  */
 function stageRevision<TDefinition extends object>(
   scope: CatalogTx,
   kind: CatalogKind,
   current: StoredCatalogRecord<TDefinition>,
-  patch: Partial<StoredCatalogRecord<TDefinition>>,
+  next: StoredCatalogRecord<TDefinition>,
 ): StoredCatalogRecord<TDefinition> {
   const record: StoredCatalogRecord<TDefinition> = {
-    ...current,
-    ...patch,
+    ...next,
     revision: revisionAfterWrite(current.revision),
     updatedAt: scope.now,
     updatedBy: scope.ctx.uid,
@@ -371,22 +371,28 @@ function stageRevision<TDefinition extends object>(
   return record;
 }
 
-/** Αντικατάσταση ορισμού (το περίβλημα κρατιέται, η αναθεώρηση ανεβαίνει). */
+/**
+ * **Αντικατάσταση** ορισμού (PUT · Google AIP-134 χωρίς field mask · Firestore `set()`): ο ορισμός έρχεται **ολόκληρος** από τον
+ * καλούντα και πεδίο που **λείπει σβήνεται** — π.χ. ο άδειος κατάλογος διορθώσεων μετά την «Επαναφορά». Το περίβλημα έρχεται από
+ * την αποθηκευμένη εγγραφή και **κερδίζει**: ορισμός που κουβαλά `...current` δεν αλλάζει ταυτότητα, ενοικιαστή ή δημιουργό.
+ * Μερική αλλαγή = ρητό `{ ...definitionOf(current), field }` στον καλούντα, ποτέ σιωπηλή επιβίωση.
+ */
 export function stageReplace<TDefinition extends object>(
   scope: CatalogTx,
   kind: CatalogKind,
   current: StoredCatalogRecord<TDefinition>,
   definition: TDefinition,
 ): StoredCatalogRecord<TDefinition> {
-  return stageRevision(scope, kind, current, definition);
+  return stageRevision(scope, kind, current, { ...definition, ...catalogRecordMetaOf(current) });
 }
 
+/** Ήπια διαγραφή: ο ορισμός μένει όπως είναι, αλλάζει **μόνο** το περίβλημα (ρητό patch). */
 export function stageSoftDelete<TDefinition extends object>(
   scope: CatalogTx,
   kind: CatalogKind,
   current: StoredCatalogRecord<TDefinition>,
 ): StoredCatalogRecord<TDefinition> {
-  return stageRevision(scope, kind, current, { isDeleted: true, deletedAt: scope.now, deletedBy: scope.ctx.uid });
+  return stageRevision(scope, kind, current, { ...current, isDeleted: true, deletedAt: scope.now, deletedBy: scope.ctx.uid });
 }
 
 /**
