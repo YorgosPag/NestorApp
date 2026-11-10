@@ -1,4 +1,13 @@
-# Handoff — ADR-923 §5.5.2 Β8 (χάρτης κατάστασης PDF + αμφίδρομη επιλογή) · ΣΤΑΔΙΟΠΟΙΗΜΕΝΟ, commit ΜΠΛΟΚΑΡΙΣΜΕΝΟ από ξένο κόκκινο test
+# Handoff — ADR-923 §5.5.2 Β8 (χάρτης κατάστασης PDF + αμφίδρομη επιλογή) · ✅ COMMIT `cee098b6` στο κλαδί — περιμένει land/push
+
+> **ΕΝΗΜΕΡΩΣΗ 2026-11-10 (ΙΣΧΥΕΙ ΑΥΤΗ — οι §1/§2/§4 παρακάτω είναι ιστορικό):**
+> - **Commit `cee098b6`** στο `agent/catalog-editions` — Β8 + διόρθωση των 8 σημείων Ο5ε. Όλο το hook πράσινο, δέντρο καθαρό. **ΟΧΙ** `wt:land`, **ΟΧΙ** push — μόνο με ρητή εντολή Giorgio.
+> - **Τα 8 σημεία:** 6 πατημένα ⇒ `ToggleButton` (`ValidFromField` ×2 — όχι `SegmentedControl`: τιμή από ημερολόγιο ⇒ «κανένα πατημένο» νόμιμο · `NotificationInboxFilters` · `ClauseBodyToolbar` ×2 · `PlanReadingSections`). Σημεία 4/7 (απόφαση Giorgio «όπως οι μεγάλοι»): **έμφαση = ιδιότητα της ενέργειας**, ΟΧΙ δήλωση εξαίρεσης — `RowAction.emphasis` (`subcontract-row-actions.ts`: δρόμος `issue/accept/mobilize/complete` ⇒ `primary`, καταστρεπτική ⇒ `caution`, `expire` ⇒ `secondary`) · πίνακας `EMPHASIS` στο `VersionActionBar` · νέος τύπος `ActionEmphasis` (`color-bridge.ts`).
+> - **Κρυφό σφάλμα που διορθώθηκε:** το `COLOR_BRIDGE.action` πάνω σε `<Button>` κληρονομούσε `hover:text-*`/`dark:hover:*` της παραλλαγής ⇒ ο ρόλος κατέχει πλέον το hover· βάση `variant="outline"` σε `DocumentRequestCard` · `DocumentRequestCodeStep` · `RegistryIssuanceAccessCode` · `MapAreaControl`.
+> - **Baselines:** 3.38 μόνο η εγγραφή `color-bridge.ts` element-light-bg 1→2 (χειρόγραφα + σημείωση `examinedByEye`· το `totalInvisible` ΜΕΝΕΙ 371 — το element-light-bg δεν είναι `PROVEN_BROKEN_STATES`)· 3.42 κλείδωσε 182/220 → 173/211 (το κέρδος ήταν ξένο: `dxf-viewer/config/modal-colors.ts`).
+> - ADR-770 (§19.4 · §19.6 #1 · changelog) + ADR-928 changelog ενημερώθηκαν.
+> - **Δεν μετρήθηκε σε browser** (ούτε hover/σκοτεινό των κουμπιών έμφασης).
+> - **ΕΠΟΜΕΝΟ (εγκρίθηκε από Giorgio, ΜΟΝΟ μετά από land+push με δική του εντολή):** ζωντανός έλεγχος μόνο ανάγνωσης του §5 + hover των κουμπιών του συμφωνητικού και της έκδοσης ρήτρας στα δύο θέματα.
 
 **Ημερομηνία:** 2026-11-10 · **Worktree:** `C:\Nestor_Worktrees\catalog-editions` · **Κλαδί:** `agent/catalog-editions`
 **Προηγούμενο:** `HANDOFFS/2026-11-09_ADR-923_revert-fixed-live_next-PDF-status-overlay_handoff.md`
