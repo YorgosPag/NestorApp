@@ -42,6 +42,13 @@ export interface ProposalChange {
   readonly modelCode?: string | null;
 }
 
+/** Η διόρθωση ενός πεδίου (§5.5.2 Β6) — **ένα** σχήμα για την κάρτα του πεδίου και το «Κράτα» του popover του PDF (Β8 βήμα Β). */
+export const fieldEditChange = (
+  row: Pick<ImportProposalWire['rows'][number], 'rowKey'>,
+  field: Pick<ImportProposalWire['rows'][number]['fields'][number], 'target'>,
+  text: string,
+): ProposalChange => ({ edits: [{ rowKey: row.rowKey, targetKey: importTargetKey(field.target), text }] });
+
 type QueuedWork = (expectedRevision: number) => Promise<ImportProposalWire>;
 
 /** Οι αποφάσεις που περιμένουν, ανά πρόταση: ό,τι ζωγραφίζεται πάνω από την απάντηση του διακομιστή. */

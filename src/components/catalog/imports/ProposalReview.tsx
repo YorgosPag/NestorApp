@@ -23,7 +23,7 @@ import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-
 import { useImportIssueMessage } from './import-issue-messages';
 import { PROPOSAL_STATUS_KEYS, ROW_ACTION_KEYS, useImportText } from './import-text';
 import { ProposalFieldRow } from './ProposalFieldRow';
-import type { ProposalChange } from './proposal-change-queue';
+import { fieldEditChange, type ProposalChange } from './proposal-change-queue';
 import { fieldVisibleIn, initialProposalView, nextPendingField, summarizeProposal, type ProposalView } from './proposal-summary';
 import { ProposalSummaryBar } from './ProposalSummaryBar';
 import { ProposalDecidedLines } from './ProposalDecidedLines';
@@ -37,6 +37,9 @@ interface ProposalReviewProps {
   /** §5.5.2 Β8: η επιλογή ήρθε από κλικ στο PDF ⇒ η εστίαση πληκτρολογίου περνά στο πεδίο. */
   readonly focusRequested?: boolean;
   readonly onSelect: (target: ReviewTarget) => void;
+  /** §5.5.2 Β8 βήμα Β: το κλειδί του πεδίου για το οποίο το popover του PDF ζήτησε διόρθωση — `null` = κανένα. */
+  readonly editRequestKey?: string | null;
+  readonly onEditRequestDone?: () => void;
   readonly onChange: (proposal: ImportProposalWire, change: ProposalChange) => void;
   readonly onApply: (proposal: ImportProposalWire) => void;
   readonly onReject: (proposal: ImportProposalWire) => void;
@@ -61,7 +64,7 @@ function proposalTitle(proposal: ImportProposalWire, t: ReturnType<typeof useImp
 }
 
 /** `decidable`: η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η μία κρίση για κάθε κουμπί απόφασης. */
-type RowProps = Pick<ProposalReviewProps, 'proposal' | 'selectedKey' | 'focusRequested' | 'onSelect' | 'onChange'> & {
+type RowProps = Pick<ProposalReviewProps, 'proposal' | 'selectedKey' | 'focusRequested' | 'onSelect' | 'onChange' | 'editRequestKey' | 'onEditRequestDone'> & {
   readonly row: ImportProposalRow;
   readonly view: ProposalView;
   readonly decidable: boolean;
@@ -82,7 +85,7 @@ type FieldEntryProps = Omit<RowProps, 'decidable'> & {
 };
 
 /** Ένα πεδίο στον πίνακα — ή τίποτα, όταν η προβολή το κρύβει **και** δεν είναι το επιλεγμένο (§5.5.2 Β8). */
-function FieldEntry({ field, row, proposal, edits, selectedKey, focusRequested = false, onSelect, onChange, view, readOnly }: FieldEntryProps) {
+function FieldEntry({ field, row, proposal, edits, selectedKey, focusRequested = false, onSelect, onChange, view, readOnly, editRequestKey = null, onEditRequestDone }: FieldEntryProps) {
   const targetKey = importTargetKey(field.target);
   const reviewKey = fieldKeyOf(proposal.id, row, field);
   const active = reviewKey === selectedKey;
@@ -100,8 +103,10 @@ function FieldEntry({ field, row, proposal, edits, selectedKey, focusRequested =
       readOnly={readOnly}
       onFocus={() => onSelect(fieldTargetOf(proposal.id, row, field))}
       onDecide={(decision) => change({ decisions: [{ rowKey: row.rowKey, targetKey, decision }] })}
-      onEdit={(text) => change({ edits: [{ rowKey: row.rowKey, targetKey, text }] })}
+      onEdit={(text) => change(fieldEditChange(row, field, text))}
       onRevert={() => change({ edits: [{ rowKey: row.rowKey, targetKey, text: '', revert: true }] })}
+      editRequested={reviewKey === editRequestKey}
+      onEditRequestDone={onEditRequestDone}
     />
   );
 }
@@ -201,7 +206,7 @@ function nextPendingTarget(proposal: ImportProposalWire, selectedKey: string | n
   return owner ? fieldTargetOf(proposal.id, owner.row, owner.field) : null;
 }
 
-export function ProposalReview({ proposal, selectedKey, focusRequested = false, onSelect, onChange, onApply, onReject, saving = false, unmapped = 0, lines, batchOpen, source }: ProposalReviewProps) {
+export function ProposalReview({ proposal, selectedKey, focusRequested = false, onSelect, onChange, onApply, onReject, saving = false, unmapped = 0, lines, batchOpen, source, editRequestKey = null, onEditRequestDone }: ProposalReviewProps) {
   const { t } = useImportText();
   const summary = useMemo(() => summarizeProposal(proposal.rows), [proposal.rows]);
   const [view, setView] = useState<ProposalView>(() => initialProposalView(summary));
@@ -232,7 +237,8 @@ export function ProposalReview({ proposal, selectedKey, focusRequested = false, 
       {proposal.violations.length > 0 ? <p className="m-0 text-sm text-destructive" role="status">{t('review.violations', { count: proposal.violations.length })}</p> : null}
       <ProposalSummaryBar summary={summary} unmapped={unmapped} view={view} onView={setView} onNextPending={focusNextPending} />
       {rows.length === 0 ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('review.viewEmpty')}</p> : null}
-      {rows.map((row) => <RowSection key={row.rowKey} row={row} view={view} proposal={proposal} selectedKey={selectedKey} focusRequested={focusRequested} onSelect={onSelect} onChange={onChange} decidable={open} />)}
+      {rows.map((row) => <RowSection key={row.rowKey} row={row} view={view} proposal={proposal} selectedKey={selectedKey} focusRequested={focusRequested} onSelect={onSelect} onChange={onChange} decidable={open}
+        editRequestKey={editRequestKey} onEditRequestDone={onEditRequestDone} />)}
       {lines ? <ProposalUnmappedLines proposal={proposal} {...lines} decidable={open} /> : null}
       {lines ? (
         <ProposalDecidedLines proposal={proposal} lines={lines.lines} overrides={lines.overrides} activity={lines.activity}

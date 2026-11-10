@@ -9,7 +9,7 @@
  * ⚠️ «Χωρίς τιμοκατάλογο» = δηλωμένη τιμή `none`, ποτέ `''` (Radix Select, CHECK 3.48).
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import type { ImportBatchWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { useCatalogAccess } from '../shared/catalog-neutral-hooks';
@@ -19,18 +19,35 @@ import { usePriceVersions } from './use-import-target';
 
 const NO_TARGET = 'none';
 
+const priceTargetFieldId = (batchId: string): string => `price-target-${batchId}`;
+
 interface ImportPriceTargetProps {
   readonly batch: ImportBatchWire;
   readonly disabled: boolean;
   readonly onChange: (priceListVersionId: string | null) => void;
+  /** §5.5.2 Β8 βήμα Β: «Διάλεξε τιμοκατάλογο» στο popover του PDF ⇒ το πεδίο έρχεται σε όψη και παίρνει την εστίαση. */
+  readonly focusRequested?: boolean;
+  readonly onFocusDone?: () => void;
 }
 
-export function ImportPriceTarget({ batch, disabled, onChange }: ImportPriceTargetProps) {
+/** Η εστίαση που ζήτησε το popover: μία φορά, μετά η πρόθεση σβήνει (επανάληψη = ίδιο αποτέλεσμα, ιδεμπότητη). */
+function usePriceTargetFocus(batchId: string, requested: boolean, onDone: (() => void) | undefined) {
+  useEffect(() => {
+    if (!requested) return;
+    const trigger = document.getElementById(priceTargetFieldId(batchId));
+    trigger?.scrollIntoView?.({ block: 'nearest' });
+    trigger?.focus({ preventScroll: true });
+    onDone?.();
+  }, [batchId, requested, onDone]);
+}
+
+export function ImportPriceTarget({ batch, disabled, onChange, focusRequested = false, onFocusDone }: ImportPriceTargetProps) {
   const { t } = useImportText();
   const canPrice = useCatalogAccess('pricing') === 'granted';
   const { target } = batch;
   const eligible = canPrice && batch.sourceKind === 'pdf' && target.purpose === 'attributes';
   const versions = usePriceVersions(eligible);
+  usePriceTargetFocus(batch.id, focusRequested, onFocusDone);
   if (!eligible || target.purpose !== 'attributes') return null;
   const current = target.priceListVersionId ?? NO_TARGET;
   // Έκδοση που δεν είναι πια πρόχειρη μένει ορατή ως επιλογή, ποτέ σιωπηλό κενό.
@@ -39,7 +56,7 @@ export function ImportPriceTarget({ batch, disabled, onChange }: ImportPriceTarg
   return (
     <section className="flex flex-col gap-1" aria-label={t('batch.priceTarget')}>
       <fieldset className="m-0 border-0 p-0" disabled={disabled}>
-        <ChoiceField id={`price-target-${batch.id}`} label={t('batch.priceTarget')} value={current} choices={choices}
+        <ChoiceField id={priceTargetFieldId(batch.id)} label={t('batch.priceTarget')} value={current} choices={choices}
           onChange={(value) => { if (value !== current) onChange(value === NO_TARGET ? null : value); }} />
       </fieldset>
       <p className="m-0 text-xs text-muted-foreground">{t('batch.priceTargetHint')}</p>

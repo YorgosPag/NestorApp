@@ -20,6 +20,7 @@ import { FieldStatusBadge, ProposalDecisionCell } from './ProposalDecisionCell';
 import { useImportValueText } from './import-value-text';
 import type { ProposalView } from './proposal-summary';
 import { useReviewHoverHandlers, useReviewHovered } from './review-hover-store';
+import { keepValuesOf } from './review-remedy';
 import { useActiveReviewItem } from './use-review-selection';
 
 interface ProposalFieldRowProps {
@@ -39,9 +40,14 @@ interface ProposalFieldRowProps {
   readonly onEdit: (text: string) => void;
   /** §5.5.2 Β6: η διόρθωση φεύγει, ισχύει ξανά η τιμή του PDF. */
   readonly onRevert: () => void;
+  /** §5.5.2 Β8 βήμα Β: το popover του PDF ζήτησε διόρθωση αυτού του πεδίου ⇒ ανοίγει η **ίδια** διόρθωση με το κλικ στην τιμή. */
+  readonly editRequested?: boolean;
+  /** Η διόρθωση που ζητήθηκε έκλεισε — ο κάτοχος της επιλογής σβήνει την πρόθεση. */
+  readonly onEditRequestDone?: () => void;
 }
 
 type EditProps = Pick<ProposalFieldRowProps, 'field' | 'edit' | 'readOnly' | 'onEdit' | 'onRevert'>;
+type EditRequest = Pick<ProposalFieldRowProps, 'editRequested' | 'onEditRequestDone'>;
 
 /**
  * §5.5.2 Β6: η **προέλευση** της διορθωμένης τιμής — τι έγραφε το PDF — και η επιστροφή σε αυτό. Αν το PDF ξαναδιαβάστηκε και λέει
@@ -63,13 +69,22 @@ function EditNote({ field, edit, readOnly, onEdit, onRevert }: EditProps) {
   );
 }
 
-/** Η εισερχόμενη τιμή: κλικ ⇒ διόρθωση, που γράφεται στον κατάλογο διορθώσεων (§5.5.2 Β6), και ο διακομιστής ξανακρίνει. */
-function IncomingCell({ label, ...props }: EditProps & { readonly label: string }) {
+/**
+ * Η εισερχόμενη τιμή: κλικ ⇒ διόρθωση, που γράφεται στον κατάλογο διορθώσεων (§5.5.2 Β6), και ο διακομιστής ξανακρίνει. Η διόρθωση
+ * που ζήτησε το popover (§5.5.2 Β8 βήμα Β) **παράγεται** από την πρόθεση, δεν αντιγράφεται με effect: ανοίγει μία φορά, κλείνει μία.
+ */
+function IncomingCell({ label, editRequested = false, onEditRequestDone, ...props }: EditProps & EditRequest & { readonly label: string }) {
   const { field, readOnly, onEdit } = props;
   const { t } = useImportText();
   const message = useImportIssueMessage(field.issues.length > 0);
   const describe = useImportValueText();
-  const [draft, setDraft] = useState<string | null>(null);
+  const [typed, setDraft] = useState<string | null>(null);
+  const draft = typed ?? (editRequested && !readOnly ? field.sourceText : null);
+  const finish = (value: string) => {
+    if (value !== field.sourceText) onEdit(value);
+    setDraft(null);
+    if (editRequested) onEditRequestDone?.();
+  };
   return (
     <td className="p-2">
       {draft === null ? (
@@ -83,7 +98,7 @@ function IncomingCell({ label, ...props }: EditProps & { readonly label: string 
           autoFocus
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => { if (draft !== field.sourceText) onEdit(draft); setDraft(null); }}
+          onBlur={() => finish(draft)}
         />
       )}
       {field.issues.length > 0 ? (
@@ -104,9 +119,9 @@ function IncomingCell({ label, ...props }: EditProps & { readonly label: string 
  */
 function KeepValueChoices({ field, label, readOnly, onEdit }: Pick<EditProps, 'field' | 'readOnly' | 'onEdit'> & { readonly label: string }) {
   const { t } = useImportText();
-  const alternatives = field.alternatives ?? [];
-  if (alternatives.length === 0) return null;
-  const values = [field.sourceText, ...alternatives.map((alternative) => alternative.text)];
+  // Η ΙΔΙΑ λίστα τιμών με το popover του PDF (§5.5.2 Β8 βήμα Β).
+  const values = keepValuesOf(field);
+  if (values.length === 0) return null;
   return (
     <p className="m-0 mt-1 flex flex-wrap items-center gap-1" role="group" aria-label={t('review.keepValueGroup', { field: label })}>
       {values.map((value) => (
@@ -138,7 +153,7 @@ function rowClassOf(active: boolean, hovered: boolean): string {
   return hovered ? 'border-b border-border bg-muted' : 'border-b border-border';
 }
 
-export function ProposalFieldRow({ field, edit, active, reviewKey, focusRequested, revealedFrom, readOnly, onFocus, onDecide, onEdit, onRevert }: ProposalFieldRowProps) {
+export function ProposalFieldRow({ field, edit, active, reviewKey, focusRequested, revealedFrom, readOnly, onFocus, onDecide, onEdit, onRevert, editRequested, onEditRequestDone }: ProposalFieldRowProps) {
   const { t } = useImportText();
   const label = useTargetLabeler()(field);
   const describe = useImportValueText();
@@ -157,7 +172,8 @@ export function ProposalFieldRow({ field, edit, active, reviewKey, focusRequeste
         <RevealNote view={revealedFrom} />
       </th>
       <td className="p-2 text-muted-foreground">{describe(field.live)}</td>
-      <IncomingCell field={field} edit={edit} label={label} readOnly={readOnly} onEdit={onEdit} onRevert={onRevert} />
+      <IncomingCell field={field} edit={edit} label={label} readOnly={readOnly} onEdit={onEdit} onRevert={onRevert}
+        editRequested={editRequested} onEditRequestDone={onEditRequestDone} />
       <td className="p-2"><FieldStatusBadge status={field.status} /></td>
       <td className="p-2 text-xs text-muted-foreground">
         {percent}%{unverifiedNote ? ` · ${unverifiedNote}` : ''}

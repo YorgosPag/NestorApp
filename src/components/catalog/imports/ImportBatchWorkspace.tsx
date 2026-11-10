@@ -30,6 +30,7 @@ import { ImportAssetsSection } from './ImportAssetsSection';
 import { ImportSourcePane } from './ImportSourcePane';
 import { ReviewHoverContext, createReviewHoverStore } from './review-hover-store';
 import { buildReviewBoxes, lineTargetOf, resolveReviewTarget, type ReviewBox } from './review-overlay-model';
+import { ownsLine, priceTargetOf, useReviewRemedy } from './use-review-remedy';
 import { useReviewSelection, type ReviewSelection } from './use-review-selection';
 import type { CatalogFailure } from '@/services/catalog/catalog-failure';
 
@@ -67,7 +68,7 @@ function SetAsideTables({ pages }: { readonly pages: ImportBatchPages }) {
 
 /** Ε7 · §5.5.2 Μ9: κάθε γραμμή ανήκει στην πρόταση του **πίνακά** της, όχι σε όποια πρόταση μοιράζεται τη σελίδα. */
 const linesOf = (pages: ImportBatchPages | null | undefined, proposal: ImportProposalWire): ImportPageUnmappedLine[] =>
-  (pages?.unmappedLines ?? []).filter((line) => proposal.groupKey === pageTableGroupKey(line.page, line.table));
+  (pages?.unmappedLines ?? []).filter((line) => ownsLine(proposal, line));
 
 /** §5.5.2 Β4: η γραμμή τιμής που γέννησε μια πρόταση τιμών, και η πρόταση ιδιοτήτων του πίνακα (η ουρά της απόφασης γραμμής). */
 function priceSourceOf(view: ImportBatchDetailView, proposal: ImportProposalWire): { readonly override: ImportLineOverride; readonly owner: ImportProposalWire } | null {
@@ -94,9 +95,6 @@ function SupplierSlot({ workspace, view }: Pick<BatchProposalsProps, 'workspace'
       onMemory={(action) => void supplier.runMemory(action)} onFailure={supplier.reportFailure} />
   );
 }
-
-/** Η παρτίδα έχει τιμοκατάλογο ⇒ μια γραμμή μπορεί να γίνει τιμή (το δικαίωμα κρίνεται και στον διακομιστή). */
-const priceTargetOf = (view: ImportBatchDetailView): string | null => (view.batch.target.purpose === 'attributes' ? (view.batch.target.priceListVersionId ?? null) : null);
 
 /** Ε8: σελίδες χωρίς στρώση κειμένου. Ο άνθρωπος ξέρει γιατί οι τιμές τους δεν ελέγχονται — ή γιατί η σελίδα δεν διαβάστηκε. */
 function TextlessPages({ pages }: { readonly pages: ImportBatchPages }) {
@@ -167,6 +165,11 @@ function PriceSource({ workspace, view, proposal }: Pick<BatchProposalsProps, 'w
   return <PriceLineNoteSlot line={override.line} unitCode={decision.unitCode} disabled={!open} onUndo={undo} />;
 }
 
+/** §5.5.2 Β8 βήμα Β: το εργαλείο γραμμής που ζήτησε το popover του PDF — για τη λίστα που κατέχει τη γραμμή. */
+function toolRequestOf({ intent, target }: ReviewSelection) {
+  return intent?.kind === 'lineTool' && target?.kind === 'line' ? { lineKey: target.lineKey, mode: intent.mode } : null;
+}
+
 /** Μία πρόταση με τις γραμμές του πίνακά της (§5.5.2 Β3) — ή, για πρόταση τιμών, με τη γραμμή τιμής που τη γέννησε (Β4). */
 function ProposalSlot({ workspace, view, selection, proposal, canPrice }: BatchProposalsProps & { readonly proposal: ImportProposalWire; readonly canPrice: boolean }) {
   const lines = linesOf(view.batch.pages, proposal);
@@ -181,6 +184,8 @@ function ProposalSlot({ workspace, view, selection, proposal, canPrice }: BatchP
       selectedKey={selection.key}
       focusRequested={selection.origin === 'pdf'}
       onSelect={selection.selectFromList}
+      editRequestKey={selection.intent?.kind === 'editField' ? selection.key : null}
+      onEditRequestDone={selection.clearIntent}
       onChange={(target, change) => void workspace.change(target, change)}
       onApply={(target) => void workspace.apply(target)}
       onReject={(target) => void workspace.reject(target)}
@@ -196,6 +201,8 @@ function ProposalSlot({ workspace, view, selection, proposal, canPrice }: BatchP
         onDecideLine: (target, request) => void workspace.decideLine(target, request),
         pricesEnabled: canPrice && priceTargetOf(view) !== null,
         memoryHints: memoryHintsOf(view),
+        toolRequest: toolRequestOf(selection),
+        onToolRequestDone: selection.clearIntent,
       }}
     />
   );
@@ -228,7 +235,10 @@ function BatchProposals(props: BatchProposalsProps) {
         <h2 className="m-0 text-lg font-semibold">{batch.fileName}</h2>
         {open ? <Button type="button" variant="outline" onClick={() => void workspace.discard()}>{t('batch.discard')}</Button> : null}
       </header>
-      {open ? <ImportPriceTarget batch={batch} disabled={workspace.savingPriceTarget || upgrade !== null} onChange={(id) => void workspace.setPriceTarget(id)} /> : null}
+      {open ? (
+        <ImportPriceTarget batch={batch} disabled={workspace.savingPriceTarget || upgrade !== null} onChange={(id) => void workspace.setPriceTarget(id)}
+          focusRequested={props.selection.intent?.kind === 'priceTarget'} onFocusDone={props.selection.clearIntent} />
+      ) : null}
       {open ? <SupplierSlot workspace={workspace} view={view} /> : null}
       <PageProgress workspace={workspace} />
       {batch.xchangeReport ? <XChangeReportSlot report={batch.xchangeReport} /> : null}
@@ -260,6 +270,7 @@ export function ImportBatchWorkspace({ batchId }: { readonly batchId: string }) 
   const workspace = useImportBatch(batchId);
   const boxes = useReviewBoxes(workspace);
   const selection = useReviewSelection(boxes);
+  const remedy = useReviewRemedy(workspace, selection);
   // §5.5.2 Β8: ΕΝΑ store hover ανά επιφάνεια — σταθερό, άρα ο πάροχος δεν ξαναζωγραφίζει κανέναν.
   const [hoverStore] = useState(createReviewHoverStore);
   const { view, failure } = workspace;
@@ -276,7 +287,7 @@ export function ImportBatchWorkspace({ batchId }: { readonly batchId: string }) 
     <ReviewHoverContext.Provider value={hoverStore}>
       <section className={cn('grid min-h-0 flex-1 grid-cols-1 gap-4', sourceFileId !== null && 'xl:grid-cols-2')} aria-label={view.batch.fileName}>
         <BatchProposals workspace={workspace} view={view} selection={selection} />
-        {sourceFileId === null ? null : <ImportSourcePane view={view} fileId={sourceFileId} boxes={boxes} selection={selection} resolved={resolved} />}
+        {sourceFileId === null ? null : <ImportSourcePane view={view} fileId={sourceFileId} boxes={boxes} selection={selection} resolved={resolved} remedy={remedy} />}
       </section>
     </ReviewHoverContext.Provider>
   );

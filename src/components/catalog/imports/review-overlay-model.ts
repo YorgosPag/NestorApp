@@ -130,7 +130,10 @@ export interface ReviewBoxTarget {
   /** Η αιτία του προβλήματος (`null` όταν ο τόνος δεν είναι πρόβλημα). */
   readonly reason: ReviewReason | null;
   /** Ό,τι χρειάζεται η οθόνη για να το ονομάσει (η ετικέτα πεδίου λύνεται στην οθόνη, από τη βιβλιοθήκη ιδιοτήτων). */
-  readonly subject: { readonly kind: 'field'; readonly field: ImportProposalField } | { readonly kind: 'line'; readonly label: string };
+  readonly subject:
+    | { readonly kind: 'field'; readonly field: ImportProposalField }
+    /** Η κατάσταση της γραμμής ταξιδεύει μαζί της (§5.5.2 Β8 βήμα Β): από αυτήν κρίνει το `remedyOf` ποιες ενέργειες ισχύουν. */
+    | { readonly kind: 'line'; readonly label: string; readonly state: LineState };
   /** Το κείμενο όπως τυπώθηκε στο PDF. */
   readonly printed: string;
 }
@@ -175,9 +178,9 @@ function placedLines({ lines, overrides, activity }: ReviewOverlaySource): Place
     const target = lineTargetOf(line);
     const key = reviewTargetKey(target);
     const now = activity.get(lineKeyOf(line));
-    const tone = toneOfLine(lineStateOf(now, lineDecisionOf(overrides, line)));
+    const state = lineStateOf(now, lineDecisionOf(overrides, line));
     const reason: ReviewReason | null = now?.kind === 'refused' ? { kind: 'refused', refusal: now.reason } : null;
-    const entry: ReviewBoxTarget = { target, key, tone, reason, subject: { kind: 'line', label: line.label }, printed: line.values.join(' · ') };
+    const entry: ReviewBoxTarget = { target, key, tone: toneOfLine(state), reason, subject: { kind: 'line', label: line.label, state }, printed: line.values.join(' · ') };
     return (line.regions ?? []).map((region) => ({ page: line.page, region, entry }));
   });
 }

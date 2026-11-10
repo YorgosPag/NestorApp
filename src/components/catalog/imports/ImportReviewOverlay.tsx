@@ -10,19 +10,21 @@
  *    γωνίας μένουν σε pixels οθόνης, δεν παραμορφώνονται με το ζουμ ή τη μη τετράγωνη σελίδα, και κανένα inline style (N.3).
  * 🔑 Κάθε πλαίσιο είναι **κουμπί** (`role="button"`, `aria-label`, Enter/Space, δακτύλιος `focus-visible`) — WCAG 2.1.1 / 4.1.2.
  *    Το `aria-label` λέει και την **αιτία** του προβλήματος, με το ίδιο μήνυμα που γράφει η λίστα.
+ * 🔑 §5.5.2 Β8 βήμα Β: σε hover **και** εστίαση κάθε πλαίσιο ανοίγει το ΕΝΑ popover της πηγής (`ReviewBoxPopover`: γιατί · τι κάνεις ·
+ *    κουμπί) — `aria-haspopup="dialog"` + `aria-expanded`. Το `aria-label` μένει ως έχει, από την ίδια πηγή κειμένου.
  * 🔑 Και **χειριστήριο της σελίδας** (`PDF_PAGE_CONTROL_ATTRIBUTE`): το «χέρι» του viewer δεν πιάνει το ποντίκι πάνω του,
  *    αλλιώς το κλικ πήγαινε στο δοχείο και το πλαίσιο δεν επιλεγόταν (μετρημένο live 2026-11-10).
  */
 
-import React, { type KeyboardEvent } from 'react';
+import React, { useEffect, useRef, type FocusEvent, type KeyboardEvent, type PointerEvent, type SyntheticEvent } from 'react';
 
 import { PDF_PAGE_CONTROL_ATTRIBUTE } from '@/components/file-manager/pdf-viewport-gestures';
 import { IMPORT_REVIEW_MARKS, type ReviewMarkGlyph, type ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
-import { useImportIssueMessage } from './import-issue-messages';
-import { LINE_REFUSAL_KEYS, REVIEW_TONE_KEYS, useImportText } from './import-text';
-import { useTargetLabeler } from './import-target-label';
+import { REVIEW_TONE_KEYS, useImportText } from './import-text';
+import { REVIEW_BOX_ATTRIBUTE, useBoxPreviewOpen, type BoxPreviewController } from './review-box-preview';
 import { useReviewHoverHandlers, useReviewHovered } from './review-hover-store';
-import type { ReviewBox, ReviewBoxTarget, ReviewReason } from './review-overlay-model';
+import type { ReviewBox } from './review-overlay-model';
+import { useReviewReasonText, useReviewTargetName } from './review-reason-text';
 
 /** Κλάσεις ανά τόνο — κυριολεκτικές, ώστε το Tailwind να τις βρει (το χρώμα ζει στο token, το σχήμα στο `IMPORT_REVIEW_MARKS`). */
 const TONE_CLASS: Readonly<Record<ReviewMarkTone, { readonly stroke: string; readonly fill: string }>> = {
@@ -45,8 +47,8 @@ const GLYPH_PATH: Readonly<Record<Exclude<ReviewMarkGlyph, 'none'>, string>> = {
 
 const pct = (fraction: number): string => `${fraction * 100}%`;
 
-/** Δηλώνει το πλαίσιο χειριστήριο της σελίδας — το κλικ του είναι επιλογή, όχι σύρσιμο-χέρι. */
-const PAGE_CONTROL = { [PDF_PAGE_CONTROL_ATTRIBUTE]: '' } as const;
+/** Δηλώνει το πλαίσιο χειριστήριο της σελίδας — το κλικ του είναι επιλογή, όχι σύρσιμο-χέρι — και πλαίσιο αναθεώρησης για το popover. */
+const PAGE_CONTROL = { [PDF_PAGE_CONTROL_ATTRIBUTE]: '', [REVIEW_BOX_ATTRIBUTE]: '' } as const;
 
 /** Το σύμβολο γωνίας: λευκός δίσκος με περίγραμμα και σύμβολο στο χρώμα του τόνου. Κοινό με το υπόμνημα. */
 export function ReviewMarkBadge({ tone }: { readonly tone: ReviewMarkTone }) {
@@ -69,30 +71,17 @@ export function ReviewMarkOutline({ tone, x, y, width, height }: { readonly tone
   );
 }
 
-/** Το κείμενο της αιτίας ενός προβλήματος — από τα **ίδια** σημεία με τη λίστα (μήνυμα ευρήματος · λόγος άρνησης). */
-function useReasonText(reason: ReviewReason | null): string | null {
-  const { t } = useImportText();
-  const issueMessage = useImportIssueMessage(reason?.kind === 'issue');
-  if (reason === null) return null;
-  switch (reason.kind) {
-    case 'issue': return issueMessage(reason.issue);
-    case 'unread': return t('review.overlay.reasonUnread');
-    case 'unverified': return t('review.overlay.reasonUnverified');
-    case 'refused': return t(LINE_REFUSAL_KEYS[reason.refusal]);
-  }
-}
-
 /**
  * «Κωδικός, MFP-34K1M-Q1AA1, Πρόβλημα: η πηγή δίνει και άλλη τιμή…» (+ «και 3 ακόμη» όταν το πλαίσιο τροφοδοτεί πολλά).
- * Ονομάζει τον **πρώτο** στόχο, δηλαδή αυτόν που έβαψε το πλαίσιο (`buildReviewBoxes` τους ταξινομεί κατά τόνο).
+ * Ονομάζει τον **πρώτο** στόχο, δηλαδή αυτόν που έβαψε το πλαίσιο (`buildReviewBoxes` τους ταξινομεί κατά τόνο). Τα λόγια από το
+ * **ίδιο** σημείο με το popover και τη λίστα (`review-reason-text`, §5.5.2 Β8 βήμα Β).
  */
 function useBoxLabel(box: ReviewBox): string {
   const { t } = useImportText();
-  const labelOf = useTargetLabeler();
+  const nameOf = useReviewTargetName();
   const [first] = box.targets;
-  const reason = useReasonText(first.reason);
-  const name = (entry: ReviewBoxTarget) => (entry.subject.kind === 'field' ? labelOf(entry.subject.field) : entry.subject.label);
-  const parts = { label: name(first), value: first.printed, state: t(REVIEW_TONE_KEYS[box.tone]) };
+  const reason = useReviewReasonText(first.reason);
+  const parts = { label: nameOf(first), value: first.printed, state: t(REVIEW_TONE_KEYS[box.tone]) };
   const head = reason === null ? t('review.overlay.boxLabel', parts) : t('review.overlay.boxLabelReason', { ...parts, reason });
   return box.targets.length > 1 ? `${head} ${t('review.overlay.boxMore', { count: box.targets.length - 1 })}` : head;
 }
@@ -101,24 +90,52 @@ interface BoxProps {
   readonly box: ReviewBox;
   readonly selected: boolean;
   readonly onSelect: (box: ReviewBox) => void;
+  /** §5.5.2 Β8 βήμα Β: ο ελεγκτής του ΕΝΟΣ popover — `null` = στρώση χωρίς popover (π.χ. σε test). */
+  readonly preview: BoxPreviewController | null;
 }
 
-function ReviewBoxMark({ box, selected, onSelect }: BoxProps) {
+/**
+ * Τα χειριστήρια του popover σε ένα πλαίσιο: ποντίκι (με καθυστέρηση) · εστίαση (αμέσως) · αφή (ταπ = επιλογή **και** popover,
+ * toggletip — η αφή δεν έχει hover) · Tab ⇒ μέσα στο popover. Το hover λίστα ↔ PDF μένει ως είχε.
+ */
+function useBoxPreviewHandlers(box: ReviewBox, preview: BoxPreviewController | null, keys: readonly string[], onSelect: (box: ReviewBox) => void) {
+  const hover = useReviewHoverHandlers(keys);
+  const pointerType = useRef<string>('mouse');
+  const own = (event: SyntheticEvent<SVGGElement>) => ({ boxId: box.id, element: event.currentTarget });
+  useEffect(() => () => preview?.release(box.id), [preview, box.id]);
+  return {
+    onMouseEnter: hover.onMouseEnter,
+    onMouseLeave: hover.onMouseLeave,
+    onPointerDown: (event: PointerEvent<SVGGElement>) => { pointerType.current = event.pointerType; },
+    onPointerEnter: (event: PointerEvent<SVGGElement>) => { if (event.pointerType === 'mouse') preview?.pointerEnter(own(event)); },
+    onPointerLeave: (event: PointerEvent<SVGGElement>) => { if (event.pointerType === 'mouse') preview?.pointerLeave(); },
+    onFocus: (event: FocusEvent<SVGGElement>) => { hover.onFocus(); preview?.focusBox(own(event)); },
+    onBlur: (event: FocusEvent<SVGGElement>) => { hover.onBlur(); if (!preview?.contains(event.relatedTarget)) preview?.blur(); },
+    onClick: (event: React.MouseEvent<SVGGElement>) => {
+      onSelect(box);
+      if (pointerType.current !== 'mouse') preview?.tap(own(event));
+    },
+    onKeyDown: (event: KeyboardEvent<SVGGElement>) => {
+      if (event.key === 'Tab' && !event.shiftKey && preview?.get()?.boxId === box.id && preview.enterContent()) event.preventDefault();
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      onSelect(box);
+    },
+  };
+}
+
+function ReviewBoxMark({ box, selected, onSelect, preview }: BoxProps) {
   const label = useBoxLabel(box);
   const keys = box.targets.map((entry) => entry.key);
   const hovered = useReviewHovered(keys);
-  const hover = useReviewHoverHandlers(keys);
+  const handlers = useBoxPreviewHandlers(box, preview, keys, onSelect);
+  const expanded = useBoxPreviewOpen(preview, box.id);
   const { region, tone } = box;
   const geometry = { x: pct(region.x), y: pct(region.y), width: pct(region.width), height: pct(region.height) };
-  const activate = (event: KeyboardEvent<SVGGElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    onSelect(box);
-  };
   const halo = selected ? 'stroke-paper-mark-selection/70' : hovered ? 'stroke-paper-mark-selection/40' : 'stroke-transparent group-focus-visible:stroke-paper-mark-selection';
   return (
-    <g role="button" tabIndex={0} aria-label={label} aria-current={selected ? 'true' : undefined} {...PAGE_CONTROL} className="group pointer-events-auto cursor-pointer outline-none"
-      onClick={() => onSelect(box)} onKeyDown={activate} {...hover}>
+    <g role="button" tabIndex={0} aria-label={label} aria-current={selected ? 'true' : undefined} aria-haspopup="dialog" aria-expanded={preview ? expanded : undefined}
+      {...PAGE_CONTROL} className="group pointer-events-auto cursor-pointer outline-none" {...handlers}>
       <rect {...geometry} className={`${selected ? 'fill-paper-mark-selection/20' : 'fill-transparent'} ${halo}`}
         strokeWidth={IMPORT_REVIEW_MARKS.tones[tone].strokePx + 4} vectorEffect="non-scaling-stroke" />
       <ReviewMarkOutline tone={tone} {...geometry} />
@@ -136,16 +153,18 @@ interface ImportReviewOverlayProps {
   /** «Εμφάνιση πλαισίων» κλειστό ⇒ μένει **μόνο** το επιλεγμένο (ποτέ «επέλεξα και δεν βλέπω πού»). */
   readonly showAll: boolean;
   readonly onSelect: (box: ReviewBox) => void;
+  /** §5.5.2 Β8 βήμα Β: ο ελεγκτής του ΕΝΟΣ popover της πηγής (`ReviewBoxPopover`, στο `ImportSourcePane`). */
+  readonly preview?: BoxPreviewController | null;
 }
 
-export function ImportReviewOverlay({ boxes, selectedKey, showAll, onSelect }: ImportReviewOverlayProps) {
+export function ImportReviewOverlay({ boxes, selectedKey, showAll, onSelect, preview = null }: ImportReviewOverlayProps) {
   const { t } = useImportText();
   const isSelected = (box: ReviewBox) => selectedKey !== null && box.targets.some((entry) => entry.key === selectedKey);
   const visible = showAll ? boxes : boxes.filter(isSelected);
   if (visible.length === 0) return null;
   return (
     <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" role="group" aria-label={t('review.overlay.layer')}>
-      {visible.map((box) => <ReviewBoxMark key={box.id} box={box} selected={isSelected(box)} onSelect={onSelect} />)}
+      {visible.map((box) => <ReviewBoxMark key={box.id} box={box} selected={isSelected(box)} onSelect={onSelect} preview={preview} />)}
     </svg>
   );
 }

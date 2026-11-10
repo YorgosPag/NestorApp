@@ -8,7 +8,7 @@
  * 🔑 Δεν κρατά επιλογή: τη διαβάζει και τη γράφει στον **έναν** κάτοχο (`useReviewSelection`, στο `ImportBatchWorkspace`).
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { PdfCanvasViewer } from '@/components/file-manager/PdfCanvasViewer';
 import { pageDerivationOf } from '@/subapps/catalog/import/page-derivation';
@@ -16,7 +16,9 @@ import type { ImportBatchPages } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { LINE_REFUSAL_KEYS, useImportText } from './import-text';
 import { ImportReviewOverlay } from './ImportReviewOverlay';
+import { createBoxPreview } from './review-box-preview';
 import { countBoxTones, type ResolvedReviewTarget, type ReviewBox } from './review-overlay-model';
+import { ReviewBoxPopover, type ReviewRemedyHandlers } from './ReviewBoxPopover';
 import { ReviewOverlayLegend } from './ReviewOverlayLegend';
 import type { ReviewSelection } from './use-review-selection';
 
@@ -52,24 +54,35 @@ interface ImportSourcePaneProps {
   readonly boxes: readonly ReviewBox[];
   readonly selection: ReviewSelection;
   readonly resolved: ResolvedReviewTarget | null;
+  /** §5.5.2 Β8 βήμα Β: η κρίση και η ενέργεια λύσης του popover — ζουν στον ΕΝΑ κάτοχο (`ImportBatchWorkspace`). */
+  readonly remedy: ReviewRemedyHandlers;
 }
 
-export function ImportSourcePane({ view, fileId, boxes, selection, resolved }: ImportSourcePaneProps) {
+/** ΕΝΑΣ ελεγκτής popover ανά πηγή — σταθερός, άρα ούτε η στρώση ούτε το popover ξαναζωγραφίζουν επειδή υπάρχει. */
+function useBoxPreviewController() {
+  const [controller] = useState(createBoxPreview);
+  useEffect(() => controller.dispose, [controller]);
+  return controller;
+}
+
+export function ImportSourcePane({ view, fileId, boxes, selection, resolved, remedy }: ImportSourcePaneProps) {
   const { t } = useImportText();
   const { batch, proposals } = view;
   const [showAll, setShowAll] = useState(true);
+  const preview = useBoxPreviewController();
   const byPage = useMemo(() => boxesByPage(boxes), [boxes]);
   const counts = useMemo(() => countBoxTones(boxes), [boxes]);
   const page = pageOfTarget(resolved) ?? proposals[0]?.pages[0] ?? batch.pages?.from ?? 1;
   const { key, selectFromBox } = selection;
   const overlay = useCallback((shown: number) => (
-    <ImportReviewOverlay boxes={byPage.get(shown) ?? []} selectedKey={key} showAll={showAll} onSelect={selectFromBox} />
-  ), [byPage, key, showAll, selectFromBox]);
+    <ImportReviewOverlay boxes={byPage.get(shown) ?? []} selectedKey={key} showAll={showAll} onSelect={selectFromBox} preview={preview} />
+  ), [byPage, key, showAll, selectFromBox, preview]);
   return (
     <aside className="flex min-h-0 flex-col gap-2" aria-label={t('review.source')}>
       {boxes.length > 0 ? <ReviewOverlayLegend counts={counts} showAll={showAll} onShowAll={setShowAll} cycle={selection.cycle} onNext={selection.nextInBox} /> : null}
       <MissingRegion pages={batch.pages} resolved={resolved} />
       <PdfCanvasViewer url="" fileId={fileId} title={batch.fileName} page={page} pageOverlay={overlay} className="min-h-0 flex-1" />
+      <ReviewBoxPopover controller={preview} boxes={boxes} contextOf={remedy.contextOf} onRemedy={remedy.onRemedy} />
     </aside>
   );
 }
