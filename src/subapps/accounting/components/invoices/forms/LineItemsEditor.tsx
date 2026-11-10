@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useId } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,14 @@ import { formatAccountingCurrency } from '../../../utils/format';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
+import type { InvoiceReviewFinding } from '@/subapps/accounting/services/invoices/invoice-review';
+import {
+  invoiceAddLineId,
+  invoiceLineId,
+  invoiceLineReviewId,
+  invoiceLineVatExemptionId,
+} from './invoice-field-ids';
+import { InvoiceLineReviewNote } from './invoice-review-presentation';
 
 interface LineItemsEditorProps {
   lineItems: InvoiceLineItem[];
@@ -32,12 +40,22 @@ interface LineItemsEditorProps {
   issueDate: string;
   /** ΦΠΑ κάθε νέας γραμμής — από το καθεστώς της επιχείρησης (`companyLineVatDefault`, ADR-ACC-003 §22.4). */
   lineVatDefault: CompanyLineVatDefault;
+  /** Πρόθεμα των `id` — κοινό με τη σύνοψη ελέγχου, για τη «μετάβαση στο πεδίο» (ADR-ACC-003 §22.8). */
+  fieldIdPrefix: string;
+  /** Τα ευρήματα του ελέγχου πριν την έκδοση· κάθε γραμμή δείχνει τα δικά της. */
+  findings: readonly InvoiceReviewFinding[];
 }
 
-export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDate, lineVatDefault }: LineItemsEditorProps) {
+/** Τα ευρήματα μιας γραμμής που δεν τα λέει ήδη το πεδίο της αιτίας (το «λείπει» το δείχνει μόνο του). */
+function lineFindingsOf(findings: readonly InvoiceReviewFinding[], lineNumber: number): InvoiceReviewFinding[] {
+  return findings.filter((finding) => finding.lineNumber === lineNumber && finding.code !== 'VAT_EXEMPTION_MISSING');
+}
+
+export function LineItemsEditor({
+  lineItems, onLineItemsChange, presets, issueDate, lineVatDefault, fieldIdPrefix, findings,
+}: LineItemsEditorProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
-  const fieldId = useId();
 
 
   const addItem = useCallback(() => {
@@ -105,10 +123,16 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
         const {
           totalNetAmount: netAmount, totalVatAmount: vatAmount, totalGrossAmount: grossAmount,
         } = invoiceAmountsOf([item]);
+        // Η αρίθμηση της υποβολής (θέση + 1) — ίδια με του ελέγχου, ώστε άγκυρα και στοιχείο να συμπίπτουν.
+        const lineNumber = index + 1;
+        const lineFindings = lineFindingsOf(findings, lineNumber);
+        const reviewNoteId = invoiceLineReviewId(fieldIdPrefix, lineNumber);
 
         return (
           <article
             key={index}
+            id={invoiceLineId(fieldIdPrefix, lineNumber)}
+            tabIndex={-1}
             className="border border-border rounded-lg p-4 relative"
           >
             <div className="flex items-start justify-between mb-3">
@@ -150,9 +174,9 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
               </fieldset>
 
               <fieldset>
-                <Label htmlFor={`${fieldId}-unit-${index}`}>{t('forms.unit')}</Label>
+                <Label htmlFor={`${fieldIdPrefix}-unit-${index}`}>{t('forms.unit')}</Label>
                 <UomSelect
-                  id={`${fieldId}-unit-${index}`}
+                  id={`${fieldIdPrefix}-unit-${index}`}
                   value={item.unit}
                   onValueChange={(code) => updateItem(index, 'unit', code)}
                   units={UOM_CODES}
@@ -199,17 +223,19 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
 
             {requiresVatExemption(item.vatRate) && (
               <VatExemptionReasonField
-                id={`${fieldId}-vat-exemption-${index}`}
+                id={invoiceLineVatExemptionId(fieldIdPrefix, lineNumber)}
                 value={item.vatExemptionCategory}
                 issueDate={issueDate}
                 onValueChange={(code) => replaceItem(index, (current) => withVatExemption(current, code))}
+                reviewNoteId={lineFindings.length > 0 ? reviewNoteId : undefined}
               />
             )}
+            <InvoiceLineReviewNote id={reviewNoteId} findings={lineFindings} />
           </article>
         );
       })}
 
-      <Button variant="outline" onClick={addItem} className="w-full">
+      <Button id={invoiceAddLineId(fieldIdPrefix)} variant="outline" onClick={addItem} className="w-full">
         <Plus className="mr-2 h-4 w-4" />
         {t('forms.addLineItem')}
       </Button>

@@ -62,6 +62,8 @@ function renderEditor(
       presets={presets}
       issueDate="2026-11-09"
       lineVatDefault={lineVatDefault}
+      fieldIdPrefix="invoice-form"
+      findings={[]}
     />,
   );
   return onChange;

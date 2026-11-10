@@ -41,6 +41,9 @@ import { useCustomerVatSuggestion } from './use-customer-vat-suggestion';
 import { CustomerVatSuggestionNotice } from './CustomerVatSuggestionNotice';
 import { INVOICE_TYPES } from '@/subapps/accounting/types/invoice';
 import { invoiceAmountsOf, lineNetAmount } from '@/subapps/accounting/utils/invoice-amounts';
+import { INVOICE_FORM_FIELD_IDS } from './invoice-field-ids';
+import { useInvoiceReview } from './use-invoice-review';
+import { InvoiceReviewSummary } from './InvoiceReviewSummary';
 
 interface InvoiceFormProps {
   onSuccess: (invoiceId: string) => void;
@@ -185,6 +188,8 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
 
   // ADR-ACC-003 §22.2: ο ΕΝΑΣ υπολογισμός ποσών — ο διακομιστής τον ξανατρέχει και απορρίπτει απόκλιση.
   const totals = invoiceAmountsOf(form.lineItems);
+  // ADR-ACC-003 §22.8: ο έλεγχος πριν την έκδοση — ζωντανά, οι ίδιοι κανόνες με τη διαβίβαση.
+  const findings = useInvoiceReview(form, totals, companyProfile?.vatNumber ?? null);
 
   const handleSubmit = useCallback(async () => {
     if (!user) return;
@@ -297,12 +302,12 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <fieldset>
-              <Label htmlFor="invoiceType">{t('invoices.type')}</Label>
+              <Label htmlFor={INVOICE_FORM_FIELD_IDS.type}>{t('invoices.type')}</Label>
               <Select
                 value={form.type}
                 onValueChange={(v) => updateField('type', v as InvoiceType)}
               >
-                <SelectTrigger id="invoiceType">
+                <SelectTrigger id={INVOICE_FORM_FIELD_IDS.type}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -346,8 +351,9 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
             </fieldset>
 
             <fieldset>
-              <Label>{t('invoices.paymentStatus')}</Label>
+              <Label htmlFor={INVOICE_FORM_FIELD_IDS.paymentMethod}>{t('invoices.paymentStatus')}</Label>
               <PaymentMethodSelector
+                id={INVOICE_FORM_FIELD_IDS.paymentMethod}
                 value={form.paymentMethod}
                 onValueChange={(v) => updateField('paymentMethod', v)}
               />
@@ -382,6 +388,8 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
             presets={presets}
             issueDate={form.issueDate}
             lineVatDefault={lineVatDefault}
+            fieldIdPrefix={formId}
+            findings={findings}
           />
         </CardContent>
       </Card>
@@ -394,14 +402,14 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
         <CardContent className="pt-6">
           <div className="flex items-center gap-6">
             <div className="w-52">
-              <Label htmlFor="withholdingRate">{t('accounting:withholdingRate')}</Label>
+              <Label htmlFor={INVOICE_FORM_FIELD_IDS.withholdingRate}>{t('accounting:withholdingRate')}</Label>
               <Select
                 value={String(form.withholdingRate)}
                 onValueChange={(v) =>
                   updateField('withholdingRate', parseInt(v, 10) as WithholdingRateOption)
                 }
               >
-                <SelectTrigger id="withholdingRate" className="mt-1">
+                <SelectTrigger id={INVOICE_FORM_FIELD_IDS.withholdingRate} className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -440,6 +448,8 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
           />
         </CardContent>
       </Card>
+
+      <InvoiceReviewSummary findings={findings} fieldIdPrefix={formId} />
 
       <FormActions
         formId={formId}

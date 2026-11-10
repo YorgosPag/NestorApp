@@ -85,6 +85,44 @@
       "undo": "Undo",
       "unknownCountry": "The country \"{country}\" is not recognised, so no VAT treatment can be suggested. Select a country from the list."
     },
+    "review": {
+      "title": "Pre-issue check",
+      "ready": "No findings: the document is ready to be transmitted to AADE.",
+      "draftNote": "The invoice is still saved as a draft; findings concern the transmission to AADE.",
+      "groups": {
+        "block": "{count, plural, one {# issue will block} other {# issues will block}} transmission to AADE",
+        "warn": "{count, plural, one {# issue needs} other {# issues need}} review",
+        "info": "{count, plural, one {# note} other {# notes}}"
+      },
+      "line": "Line {line}",
+      "goTo": "Go to field",
+      "companySetup": "Fixed in the company details (Settings).",
+      "aadeErrors": "Prevents AADE {count, plural, one {error} other {errors}} {codes}",
+      "dimensions": {
+        "vat_return": "the VAT return (F2) field",
+        "en16931": "the e-invoice VAT category (EN 16931)"
+      },
+      "codes": {
+        "STATUS_NOT_TRANSMITTABLE": "The document has already been transmitted or cancelled.",
+        "UNSUPPORTED_CURRENCY": "myDATA only accepts documents in euro.",
+        "ISSUER_VAT_INVALID": "The company VAT number is not valid.",
+        "COUNTERPART_VAT_MISSING": "The customer VAT number is missing; it is mandatory on an invoice.",
+        "COUNTERPART_VAT_INVALID": "The customer VAT number is not a valid Greek VAT number.",
+        "COUNTERPART_ADDRESS_MISSING": "A customer outside Greece needs a postal code and a city.",
+        "COUNTERPART_COUNTRY_TYPE_MISMATCH": "The document type does not match the customer's country: 2.2 is for a customer in another EU member state and 2.3 for a customer outside the EU.",
+        "CORRELATED_MARK_MISSING": "The credit note needs the MARK of the original invoice.",
+        "PAYMENT_METHOD_NOT_TRANSMITTABLE": "The payment method does not map to a myDATA payment method.",
+        "NO_LINES": "The document has no lines.",
+        "VAT_RATE_UNKNOWN": "The VAT rate does not map to a myDATA VAT category.",
+        "VAT_EXEMPTION_MISSING": "Line at 0% VAT without a VAT exemption reason.",
+        "WITHHOLDING_CATEGORY_AMBIGUOUS": "The withholding rate does not map to a single myDATA category.",
+        "NET_TOTAL_MISMATCH": "The net total does not equal the sum of the lines.",
+        "VAT_TOTAL_MISMATCH": "The VAT total does not equal the sum of the lines.",
+        "VAT_EXEMPTION_SCENARIO_MISMATCH": "Reason {code} means the place of supply is outside Greece, but the customer or the document type does not support it (e.g. a customer in Greece, or a private individual in the EU, who is charged Greek VAT).",
+        "VAT_EXEMPTION_COUNTRY_UNKNOWN": "The customer's country is not recognised, so reason {code} cannot be checked. Select a country from the list.",
+        "VAT_TREATMENT_UNMAPPED": "For reason {code} the application does not determine {dimensions} automatically: there is no official mapping. Confirm with your accountant."
+      }
+    },
     "vatLabel": "VAT",
     "summary": {
       "totalIssued": "Total Issued",

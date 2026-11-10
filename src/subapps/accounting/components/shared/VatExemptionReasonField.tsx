@@ -43,9 +43,13 @@ interface VatExemptionReasonFieldProps {
   readonly issueDate: string;
   readonly onValueChange: (code: VatExemptionCode) => void;
   readonly disabled?: boolean;
+  /** Ευρήματα ελέγχου γι' αυτό το πεδίο, εκτός του `fieldset` (ADR-ACC-003 §22.8) — προστίθενται στο `aria-describedby`. */
+  readonly reviewNoteId?: string;
 }
 
-export function VatExemptionReasonField({ id, value, issueDate, onValueChange, disabled }: VatExemptionReasonFieldProps) {
+export function VatExemptionReasonField({
+  id, value, issueDate, onValueChange, disabled, reviewNoteId,
+}: VatExemptionReasonFieldProps) {
   const { t } = useTranslation(VAT_EXEMPTION_NAMESPACE);
   const selected = isVatExemptionCode(value) ? value : null;
   const hintId = `${id}-hint`;
@@ -61,7 +65,11 @@ export function VatExemptionReasonField({ id, value, issueDate, onValueChange, d
         }}
         disabled={disabled}
       >
-        <SelectTrigger id={id} aria-invalid={selected === null} aria-describedby={hintId}>
+        <SelectTrigger
+          id={id}
+          aria-invalid={selected === null}
+          aria-describedby={reviewNoteId ? `${hintId} ${reviewNoteId}` : hintId}
+        >
           <SelectValue placeholder={t('field.placeholder')} />
         </SelectTrigger>
         <SelectContent>

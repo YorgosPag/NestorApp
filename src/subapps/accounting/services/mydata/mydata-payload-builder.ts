@@ -25,7 +25,7 @@ import {
   myDataVatCategoryOf,
   myDataWithholdingCategoryOf,
 } from './mydata-codes';
-import { preflightMyDataInvoice } from './mydata-preflight';
+import { isBlockingPreflightIssue, preflightMyDataInvoice } from './mydata-preflight';
 import { lineVatAmount } from '../../utils/invoice-amounts';
 import type { MyDataPreflightIssue, MyDataTransmissionInput } from './mydata-preflight';
 import type {
@@ -35,8 +35,12 @@ import type {
   MyDataParty,
 } from './mydata-payload.types';
 
+/**
+ * `ok: false` μόνο για ευρήματα `block`· τα `warn` **δεν** σταματούν τη διαβίβαση, αλλά ταξιδεύουν μαζί της
+ * (`warnings`) ώστε να τα δει ο άνθρωπος — ποτέ σιωπηλά (ADR-ACC-003 §22.8).
+ */
 export type MyDataPayloadResult =
-  | { ok: true; payload: MyDataInvoicePayload }
+  | { ok: true; payload: MyDataInvoicePayload; warnings: readonly MyDataPreflightIssue[] }
   | { ok: false; issues: readonly MyDataPreflightIssue[] };
 
 const GREECE = 'GR';
@@ -149,6 +153,8 @@ function assemble(input: MyDataTransmissionInput, rows: MyDataInvoiceRow[]): MyD
 /** Τιμολόγιο → payload ΑΑΔΕ, ή τα προβλήματα που το εμποδίζουν. Ποτέ μισό payload. */
 export function buildMyDataInvoicePayload(input: MyDataTransmissionInput): MyDataPayloadResult {
   const issues = preflightMyDataInvoice(input);
-  if (issues.length > 0) return { ok: false, issues };
-  return { ok: true, payload: assemble(input, buildRows(input.invoice)) };
+  const blocking = issues.filter(isBlockingPreflightIssue);
+  if (blocking.length > 0) return { ok: false, issues: blocking };
+  const warnings = issues.filter((issue) => !isBlockingPreflightIssue(issue));
+  return { ok: true, payload: assemble(input, buildRows(input.invoice)), warnings };
 }

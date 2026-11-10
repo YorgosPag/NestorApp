@@ -14,6 +14,8 @@ interface PaymentMethodSelectorProps {
   value: PaymentMethod;
   onValueChange: (method: PaymentMethod) => void;
   disabled?: boolean;
+  /** `id` του trigger — για `<Label htmlFor>` και για τη «μετάβαση στο πεδίο» του ελέγχου τιμολογίου. */
+  id?: string;
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = [
@@ -25,7 +27,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   'mixed',
 ];
 
-export function PaymentMethodSelector({ value, onValueChange, disabled }: PaymentMethodSelectorProps) {
+export function PaymentMethodSelector({ value, onValueChange, disabled, id }: PaymentMethodSelectorProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
 
   return (
@@ -34,7 +36,7 @@ export function PaymentMethodSelector({ value, onValueChange, disabled }: Paymen
       onValueChange={(v) => onValueChange(v as PaymentMethod)}
       disabled={disabled}
     >
-      <SelectTrigger>
+      <SelectTrigger id={id}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

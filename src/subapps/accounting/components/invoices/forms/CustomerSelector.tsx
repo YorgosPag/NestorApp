@@ -29,6 +29,7 @@ import {
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
+import { INVOICE_FORM_FIELD_IDS } from './invoice-field-ids';
 
 // ============================================================================
 // TYPES
@@ -110,9 +111,9 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
         </fieldset>
 
         <fieldset>
-          <Label htmlFor="customerVat">{t('invoices.customerForm.vatNumber')}</Label>
+          <Label htmlFor={INVOICE_FORM_FIELD_IDS.customerVatNumber}>{t('invoices.customerForm.vatNumber')}</Label>
           <Input
-            id="customerVat"
+            id={INVOICE_FORM_FIELD_IDS.customerVatNumber}
             value={customer.vatNumber ?? ''}
             onChange={(e) => updateField('vatNumber', e.target.value)}
             maxLength={greekCustomer ? 9 : undefined}
@@ -158,21 +159,21 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <fieldset>
-          <Label htmlFor="customerPostalCode">{t('invoices.customerForm.postalCode')}</Label>
+          <Label htmlFor={INVOICE_FORM_FIELD_IDS.customerPostalCode}>{t('invoices.customerForm.postalCode')}</Label>
           <Input
-            id="customerPostalCode"
+            id={INVOICE_FORM_FIELD_IDS.customerPostalCode}
             value={customer.postalCode ?? ''}
             onChange={(e) => updateField('postalCode', e.target.value)}
           />
         </fieldset>
 
         <fieldset>
-          <Label htmlFor="customerCountry">{t('invoices.customerForm.country')}</Label>
+          <Label htmlFor={INVOICE_FORM_FIELD_IDS.customerCountry}>{t('invoices.customerForm.country')}</Label>
           <Select
             value={countryKnown ? customer.country : undefined}
             onValueChange={(code) => onCustomerChange({ ...customer, country: code })}
           >
-            <SelectTrigger id="customerCountry">
+            <SelectTrigger id={INVOICE_FORM_FIELD_IDS.customerCountry}>
               {/* Άγνωστη αποθηκευμένη χώρα: δείχνεται το κείμενό της, ποτέ σιωπηλά «Ελλάδα». */}
               <SelectValue placeholder={customer.country || t('invoices.customerForm.countryPlaceholder')} />
             </SelectTrigger>
