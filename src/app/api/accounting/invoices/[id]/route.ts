@@ -39,7 +39,7 @@ import {
   VOIDABLE_STATUSES,
   CREDIT_NOTE_STATUSES,
 } from '../invoice-schemas';
-import { withServerPaymentAccountsOnUpdate } from '../invoice-payment-snapshot';
+import { withCurrentPaymentAccounts, withServerPaymentAccountsOnUpdate } from '../invoice-payment-snapshot';
 
 // =============================================================================
 // GET — Single Invoice
@@ -57,7 +57,8 @@ export const GET = defineRoute({
       notFound('Invoice not found');
     }
 
-    return ok(invoice);
+    // ADR-ACC-018 §15.2: πρόχειρο ⇒ οι οδηγίες πληρωμής του σημερινού μητρώου (προεπισκόπηση + PDF)· εκδομένο ⇒ το στιγμιότυπο.
+    return ok(await withCurrentPaymentAccounts(repository, invoice));
   },
 });
 

@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 
-import { conflict, notFound } from '@/lib/api/define-route';
+import { conflict, httpError, notFound } from '@/lib/api/define-route';
 import type { AuthContext } from '@/lib/auth';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { createAuditedRepository } from '@/subapps/accounting/services/audited-repository-wrapper';
@@ -15,7 +15,9 @@ import {
   BANK_ACCOUNT_CURRENCIES, isCurrencyCode, isValidBIC, validateIBAN, type CurrencyCode,
 } from '@/types/contacts/banking';
 import { BANK_ACCOUNT_TYPES } from '@/subapps/accounting/types';
-import { DuplicateBankAccountError } from '@/subapps/accounting/services/repository/accounting-repo-bank-accounts';
+import {
+  BicIbanMismatchError, DuplicateBankAccountError,
+} from '@/subapps/accounting/services/repository/accounting-repo-bank-accounts';
 import { OwnedDocumentNotFoundError } from '@/subapps/accounting/services/repository/tenant-owned-doc';
 
 const bic = z
@@ -64,12 +66,13 @@ export function auditedRepositoryOf(auth: AuthContext) {
   return createAuditedRepository(repository, auth.uid, auth.companyId);
 }
 
-/** Τα σφάλματα του γραφέα ως απαντήσεις HTTP — ξένο ≡ ανύπαρκτο (404), διπλό IBAN = 409. */
+/** Τα σφάλματα του γραφέα ως απαντήσεις HTTP — ξένο ≡ ανύπαρκτο (404), διπλό IBAN = 409, BIC άλλης τράπεζας = 422. */
 export async function withBankAccountErrors<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation();
   } catch (error) {
     if (error instanceof DuplicateBankAccountError) conflict('An active bank account with this IBAN already exists');
+    if (error instanceof BicIbanMismatchError) httpError(422, error.message);
     if (error instanceof OwnedDocumentNotFoundError) notFound('Bank account not found');
     throw error;
   }

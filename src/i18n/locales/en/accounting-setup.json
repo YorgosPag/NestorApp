@@ -343,6 +343,7 @@
       "errors": {
         "ibanInvalid": "The IBAN is not valid.",
         "bicInvalid": "The BIC is not valid (8 or 11 characters).",
+        "bicMismatch": "The BIC belongs to a different bank than the IBAN — correct the bank or the BIC.",
         "bankNameRequired": "Enter the bank name.",
         "holderNameRequired": "Enter the account holder.",
         "duplicateIban": "An active account with this IBAN already exists.",

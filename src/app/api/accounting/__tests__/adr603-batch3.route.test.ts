@@ -249,11 +249,21 @@ beforeEach(() => {
 // ===========================================================================
 
 describe('invoices/[id] — GET/PATCH/DELETE', () => {
-  it('GET found → 200 { success:true, data:invoice }', async () => {
-    repo.getInvoice.mockResolvedValue({ id: 'inv_1', number: 'A-1' });
+  it('GET found (εκδομένο) → 200 { success:true, data:invoice } — το στιγμιότυπο ως έχει', async () => {
+    const issued = fullInvoice({ mydata: { status: 'accepted' }, paymentMethod: 'bank_transfer' });
+    repo.getInvoice.mockResolvedValue(issued);
     const res = (await invGet(req(), seg())) as Envelope;
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true, data: { id: 'inv_1', number: 'A-1' } });
+    expect(await res.json()).toEqual({ success: true, data: issued });
+  });
+
+  it('GET πρόχειρο → οι οδηγίες πληρωμής του σημερινού μητρώου, όχι της δημιουργίας (ADR-ACC-018 §15.2)', async () => {
+    const stale = [{ bankName: 'X', iban: 'GR00', bic: 'PIABORAA', holderName: 'P', isDefault: true }];
+    repo.getInvoice.mockResolvedValue(fullInvoice({ paymentMethod: 'cash', issuer: { ...fullInvoice().issuer, bankAccounts: stale } }));
+    const res = (await invGet(req(), seg())) as Envelope;
+    expect(res.status).toBe(200);
+    // Μετρητά ⇒ ο resolver δεν τυπώνει λογαριασμούς· το παλιό στιγμιότυπο δεν φτάνει στον browser.
+    expect(await res.json()).toMatchObject({ data: { issuer: { bankAccounts: [] } } });
   });
 
   it('GET not found → 404 Invoice not found', async () => {

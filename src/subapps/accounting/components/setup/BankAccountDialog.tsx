@@ -22,7 +22,7 @@ import { BANK_ACCOUNT_TYPES, type BankAccountConfig } from '../../types';
 import { BankAccountMutationError } from '../../hooks/useCompanyBankAccounts';
 import {
   bankAccountErrorOfStatus, bankAccountFormError, bankAccountFormOf, emptyBankAccountForm, isBankAccountType,
-  withDetectedBank,
+  withDetectedBank, withManualBank,
   type BankAccountFormError, type BankAccountFormState,
 } from './bank-account-form-state';
 
@@ -121,17 +121,17 @@ function BankAccountIdentityFields({ form, locked, ids, onChange }: FieldsProps 
       {locked && <p className="text-xs text-muted-foreground">{t('setup.bankAccounts.form.ibanLocked')}</p>}
       <BankSelector
         value={form.bankCode}
-        onChange={(code, bank) => onChange(bank ? bankSelection(code, bank) : {})}
+        onChange={(code, bank) => onChange(bank ? withManualBank(bankSelection(code, bank)) : {})}
         label={t('setup.bankAccounts.form.bank')}
       />
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <p className="space-y-1">
           <Label htmlFor={`${ids}-bank-name`}>{t('setup.bankAccounts.form.bankName')}</Label>
-          <Input id={`${ids}-bank-name`} value={form.bankName} onChange={(e) => onChange({ bankName: e.target.value })} />
+          <Input id={`${ids}-bank-name`} value={form.bankName} onChange={(e) => onChange(withManualBank({ bankName: e.target.value }))} />
         </p>
         <p className="space-y-1">
           <Label htmlFor={`${ids}-bic`}>{t('setup.bankAccounts.form.bic')}</Label>
-          <Input id={`${ids}-bic`} value={form.bankCode} onChange={(e) => onChange({ bankCode: e.target.value.toUpperCase() })} />
+          <Input id={`${ids}-bic`} value={form.bankCode} onChange={(e) => onChange(withManualBank({ bankCode: e.target.value.toUpperCase() }))} />
         </p>
       </section>
       <p className="space-y-1">

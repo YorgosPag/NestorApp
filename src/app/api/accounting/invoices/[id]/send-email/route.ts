@@ -38,6 +38,7 @@ import type { EmailSendRecord, UpdateInvoiceInput } from '@/subapps/accounting/t
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { nowISO } from '@/lib/date-local';
 import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
+import { hasLivePaymentAccounts, withCurrentPaymentAccounts } from '../../invoice-payment-snapshot';
 
 const logger = createModuleLogger('INVOICE_EMAIL');
 
@@ -118,17 +119,20 @@ export const POST = defineRoute({
     // ── 2. Fetch invoice & company profile ────────────────────────────
     const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-    const [invoice, companyProfile] = await Promise.all([
+    const [stored, companyProfile] = await Promise.all([
       repository.getInvoice(id),
       repository.getCompanySetup(),
     ]);
 
-    if (!invoice) {
+    if (!stored) {
       return NextResponse.json(
         { success: false, error: 'Invoice not found' },
         { status: 404 }
       );
     }
+
+    // ADR-ACC-018 §15.2: πρόχειρο ⇒ ο πελάτης παίρνει τους λογαριασμούς του σημερινού μητρώου, όχι της δημιουργίας.
+    const invoice = await withCurrentPaymentAccounts(repository, stored);
 
     // ── 3. Generate PDF server-side ───────────────────────────────────
     const { renderInvoicePDF } = await import(
@@ -226,6 +230,8 @@ export const POST = defineRoute({
 
     const updatePayload: UpdateInvoiceInput = {
       emailHistory: updatedEmailHistory,
+      // Ό,τι έφτασε στον πελάτη μένει και στο έγγραφο — μόνο σε πρόχειρο· το στιγμιότυπο εκδομένου δεν αγγίζεται ποτέ.
+      ...(mailgunResult.success && hasLivePaymentAccounts(stored) && { issuer: invoice.issuer }),
     };
 
     await repository.updateInvoice(id, updatePayload);

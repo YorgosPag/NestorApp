@@ -21,6 +21,7 @@ import { DomainRefusal } from '@/lib/errors/domain-refusal';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateBankAccountId } from '@/services/enterprise-id.service';
 import { cleanBIC, cleanIBAN } from '@/types/contacts/banking';
+import { bicAgreementWithIBAN } from '@/constants/greek-banks';
 
 import type { BankAccountConfig, CreateBankAccountInput, UpdateBankAccountInput } from '../../types/bank';
 import type { TenantContext } from '../../types/common';
@@ -39,6 +40,16 @@ export class DuplicateBankAccountError extends DomainRefusal {
   constructor(readonly iban: string) {
     super(`An active bank account with this IBAN already exists`);
     this.name = 'DuplicateBankAccountError';
+  }
+}
+
+/** Ο BIC ανήκει σε άλλη τράπεζα από αυτή που δηλώνει το IBAN — θα τυπωνόταν λάθος ίδρυμα στο EPC QR. */
+export class BicIbanMismatchError extends DomainRefusal {
+  readonly httpStatus = 422;
+
+  constructor(readonly iban: string, readonly bic: string) {
+    super('The BIC does not belong to the bank of this IBAN');
+    this.name = 'BicIbanMismatchError';
   }
 }
 
@@ -74,6 +85,11 @@ function assertUniqueIban(accounts: readonly BankAccountConfig[], iban: string, 
   }
 }
 
+/** Κάθε εγγραφή BIC κρίνεται απέναντι στο IBAN του λογαριασμού (κατάλογος `greek-banks`· άγνωστη τράπεζα ⇒ δεκτό). */
+function assertBicAgreesWithIban(iban: string, bic: string | null): void {
+  if (bic !== null && bicAgreementWithIBAN(iban, bic) === 'mismatch') throw new BicIbanMismatchError(iban, bic);
+}
+
 /** Γράφει μόνο όσους αλλάζει η σημαία προεπιλογής — ο στόχος γράφεται από τον καλούντα. */
 function writeDefaultFlags(
   db: Firestore, tx: Transaction, accounts: readonly BankAccountConfig[], defaultId: string | null, skipId: string, now: string,
@@ -101,6 +117,8 @@ export async function createBankAccount(tenant: TenantContext, input: CreateBank
   const accountId = generateBankAccountId();
   const now = isoNow();
   const iban = cleanIBAN(input.iban);
+  const bankCode = input.bankCode ? cleanBIC(input.bankCode) : null;
+  assertBicAgreesWithIban(iban, bankCode);
 
   return safeFirestoreOperation((db) => db.runTransaction(async (tx) => {
     const existing = await readTenantAccounts(db, tx, tenant);
@@ -108,7 +126,7 @@ export async function createBankAccount(tenant: TenantContext, input: CreateBank
 
     const draft: BankAccountConfig = {
       accountId, bankName: input.bankName.trim(), iban, label: input.label.trim(), type: input.type,
-      currency: input.currency, isActive: true, bankCode: input.bankCode ? cleanBIC(input.bankCode) : null,
+      currency: input.currency, isActive: true, bankCode,
       holderName: input.holderName.trim(), showOnInvoices: input.showOnInvoices, isDefaultForInvoices: false,
       sortOrder: existing.length, notes: input.notes, companyId: tenant.companyId, createdBy: tenant.userId,
       createdAt: now, updatedAt: now,
@@ -155,11 +173,23 @@ async function mutateBankAccount(
 export function updateBankAccount(
   tenant: TenantContext, accountId: string, updates: UpdateBankAccountInput,
 ): Promise<BankAccountConfig> {
-  return mutateBankAccount(tenant, accountId, (current) => ({
+  const bankCode = updates.bankCode === undefined ? undefined : updates.bankCode ? cleanBIC(updates.bankCode) : null;
+  return mutateBankAccount(tenant, accountId, (current) => {
+    // Το IBAN δεν αλλάζει ποτέ ⇒ κρίνεται μόνο ο BIC που γράφεται τώρα, απέναντι στο αποθηκευμένο IBAN.
+    if (bankCode !== undefined) assertBicAgreesWithIban(cleanIBAN(current.iban), bankCode);
+    return updatedAccount(current, updates, bankCode);
+  });
+}
+
+/** Ο λογαριασμός μετά την αλλαγή — καθαρή συνάρτηση, η προεπιλογή ξαναλύνεται από τον `mutateBankAccount`. */
+function updatedAccount(
+  current: BankAccountConfig, updates: UpdateBankAccountInput, bankCode: string | null | undefined,
+): { next: BankAccountConfig; requestDefault: boolean; avoidDefault: boolean } {
+  return {
     next: {
       ...current,
       ...(updates.bankName !== undefined && { bankName: updates.bankName.trim() }),
-      ...(updates.bankCode !== undefined && { bankCode: updates.bankCode ? cleanBIC(updates.bankCode) : null }),
+      ...(bankCode !== undefined && { bankCode }),
       ...(updates.holderName !== undefined && { holderName: updates.holderName.trim() }),
       ...(updates.label !== undefined && { label: updates.label.trim() }),
       ...(updates.type !== undefined && { type: updates.type }),
@@ -171,7 +201,7 @@ export function updateBankAccount(
     },
     requestDefault: updates.isDefaultForInvoices === true,
     avoidDefault: updates.isDefaultForInvoices === false,
-  }));
+  };
 }
 
 /**

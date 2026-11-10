@@ -274,21 +274,52 @@ const BULGARIAN_BANK_CODES: Record<string, string> = {
   'CECB': 'CECBBGSF', // CCB
 };
 
-export function getBankByIBAN(iban: string): BankInfo | undefined {
+/**
+ * Κωδικοί τράπεζας IBAN όπου, μετά από συγχώνευση, ο λογαριασμός εξυπηρετείται **και** με τον BIC του διαδόχου.
+ * 087 (Παγκρήτια): απορροφήθηκε από την CrediaBank (`ATTIGRAA`, 07/2025). Επίσημη πηγή για το ποιος BIC δρομολογεί
+ * τα παλιά IBAN 087 **δεν βρέθηκε** (2026-11-11) ⇒ γίνονται δεκτοί **και οι δύο** — ποτέ ψευδής άρνηση σωστού BIC.
+ */
+const GREEK_SUCCESSOR_BICS: Readonly<Record<string, readonly string[]>> = {
+  '087': ['ATTIGRAA'],
+};
+
+/** Οι BIC (8 χαρακτήρες, ISO 9362 «ίδρυμα + χώρα + τοποθεσία») που αντιστοιχούν στον κωδικό τράπεζας του IBAN. */
+function registryBicsOfIBAN(iban: string): readonly string[] {
   const cleaned = iban.replace(/\s/g, '').toUpperCase();
   const country = cleaned.substring(0, 2);
 
   if (country === 'GR' && cleaned.length === 27) {
-    const swiftCode = GREEK_BANK_CODES[cleaned.substring(4, 7)];
-    return swiftCode ? getBankByCode(swiftCode) : undefined;
+    const code = cleaned.substring(4, 7);
+    const swiftCode = GREEK_BANK_CODES[code];
+    return swiftCode ? [swiftCode, ...(GREEK_SUCCESSOR_BICS[code] ?? [])] : [];
   }
 
   if (country === 'BG' && cleaned.length === 22) {
     const swiftCode = BULGARIAN_BANK_CODES[cleaned.substring(4, 8)];
-    return swiftCode ? getBankByCode(swiftCode) : undefined;
+    return swiftCode ? [swiftCode] : [];
   }
 
-  return undefined;
+  return [];
+}
+
+export function getBankByIBAN(iban: string): BankInfo | undefined {
+  const [swiftCode] = registryBicsOfIBAN(iban);
+  return swiftCode ? getBankByCode(swiftCode) : undefined;
+}
+
+/** `unknown` = ο κατάλογος δεν ξέρει την τράπεζα του IBAN (ξένο ή άγνωστος κωδικός) — τότε δεν κρίνεται τίποτα. */
+export type BicIbanAgreement = 'match' | 'mismatch' | 'unknown';
+
+/**
+ * Ανήκει ο BIC στην τράπεζα που δηλώνει το ίδιο το IBAN; Συγκρίνονται οι 8 πρώτοι χαρακτήρες (ίδρυμα + χώρα +
+ * τοποθεσία) — ο κωδικός καταστήματος (`XXX` ή άλλος) δεν αλλάζει τον δικαιούχο φορέα. Ο ΕΝΑΣ κριτής για φόρμα
+ * **και** διακομιστή: BIC άλλης τράπεζας στο EPC QR στέλνει την πληρωμή σε λάθος ίδρυμα ή την ακυρώνει (ADR-ACC-018 §15.2).
+ */
+export function bicAgreementWithIBAN(iban: string, bic: string): BicIbanAgreement {
+  const expected = registryBicsOfIBAN(iban);
+  if (expected.length === 0) return 'unknown';
+  const institution = bic.replace(/\s/g, '').toUpperCase().substring(0, 8);
+  return expected.some((swiftCode) => swiftCode.substring(0, 8) === institution) ? 'match' : 'mismatch';
 }
 
 /**

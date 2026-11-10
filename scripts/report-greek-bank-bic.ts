@@ -23,7 +23,7 @@
 import admin from 'firebase-admin';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '../src/config/firestore-collections';
-import { getBankByIBAN } from '../src/constants/greek-banks';
+import { bicAgreementWithIBAN, getBankByIBAN } from '../src/constants/greek-banks';
 import { applyEnvLocal } from './_shared/loadEnvLocal';
 import { initAdminApp } from './_shared/firebaseAdminOps';
 
@@ -45,7 +45,8 @@ export function judgeBic(iban: unknown, bankCode: unknown): BicVerdict {
   if (!bank) return { kind: 'out_of_scope' };
   const stored = typeof bankCode === 'string' ? bankCode.replace(/\s/g, '').toUpperCase() : '';
   if (stored === '') return { kind: 'missing', expected: bank.code };
-  return stored === bank.code ? { kind: 'ok' } : { kind: 'wrong', stored, expected: bank.code };
+  // Ο ΕΝΑΣ κριτής με φόρμα και γραφέα (ADR-ACC-018 §15.2): BIC8 = BIC11 του ίδιου ιδρύματος · δεκτός ο διάδοχος.
+  return bicAgreementWithIBAN(iban, stored) === 'mismatch' ? { kind: 'wrong', stored, expected: bank.code } : { kind: 'ok' };
 }
 
 type Tally = Record<BicVerdict['kind'], number>;
