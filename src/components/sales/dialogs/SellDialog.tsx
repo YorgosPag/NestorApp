@@ -47,6 +47,7 @@ import { useSalesActionMutation } from './use-sales-action-mutation';
 import { SalesValidationAlert, SalesSaveError, SalesInlineWarning } from './SalesDialogAlerts';
 import { dispatchSalesAccountingEventWithPolicy } from '@/services/sales-mutation-gateway';
 import { nowISO } from '@/lib/date-local';
+import { isFinalContractSigned } from '@/lib/conveyance/case-state';
 
 const logger = createModuleLogger('SellDialog');
 
@@ -63,6 +64,9 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   const sellNetArea = unit.area ?? 0;
   const sellGrossArea = (unit.areas as Record<string, number> | undefined)?.gross ?? 0;
   const sellHasArea = sellNetArea > 0 || sellGrossArea > 0;
+  // ADR-935 — «Πωλήθηκε» = η κυριότητα πέρασε: χωρίς υπογεγραμμένο οριστικό ο διάλογος λέει ΓΙΑΤΙ και δεν προχωρά.
+  // Ο server το αρνείται και μόνος του (`assertSaleFollowsFinalContract`) — εδώ είναι η εξήγηση, όχι ο φραγμός.
+  const finalContractSigned = isFinalContractSigned(unit.commercial?.legalPhase);
 
   const linkedSpaces = useLinkedSpacesForSale(unit);
   const companyId = useCompanyId()?.companyId;
@@ -279,6 +283,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </p>
         </section>
 
+        <SalesValidationAlert i18nKeys={finalContractSigned ? [] : ['sales.errors.finalContractNotSigned']} />
         <SalesValidationAlert i18nKeys={sellHasArea ? [] : ['sales.errors.noArea']} />
         <SalesValidationAlert i18nKeys={hierarchy.errors.map((err) => err.i18nKey)} />
         <SalesSaveError message={mutation.saveError} />
@@ -289,7 +294,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </Button>
           <Button
             onClick={handleSave}
-            disabled={mutation.saving || mutation.checking || finalPrice <= 0 || !isOwnersValid(owners) || !hierarchy.isValid || !sellHasArea}
+            disabled={mutation.saving || mutation.checking || finalPrice <= 0 || !isOwnersValid(owners) || !hierarchy.isValid || !sellHasArea || !finalContractSigned}
             className={cn(colors.bg.success, "hover:opacity-90 text-white")}
           >
             {mutation.saving

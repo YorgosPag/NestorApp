@@ -7,6 +7,7 @@
  */
 
 import type { Property } from '@/types/property';
+import { FINAL_CONTRACT_NOT_SIGNED_MESSAGE } from '@/lib/conveyance/case-state';
 
 // =============================================================================
 // TYPES
@@ -50,6 +51,7 @@ export function translateServerError(
     'Buyer contact is required': 'sales.errors.noBuyer',
     'Buyer contact not found': 'sales.errors.buyerNotFound',
     'Service contacts cannot be buyers': 'sales.errors.serviceNotBuyer',
+    [FINAL_CONTRACT_NOT_SIGNED_MESSAGE]: 'sales.errors.finalContractNotSigned',
   };
   /* eslint-enable custom/no-hardcoded-strings */
 

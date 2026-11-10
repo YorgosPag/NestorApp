@@ -27,6 +27,12 @@ export function isFinalContractSigned(legalPhase: unknown): boolean {
   return LEGAL_PHASES.indexOf(legalPhase) >= FINAL_SIGNED_INDEX;
 }
 
+/**
+ * Η άρνηση του server όταν ζητείται «Πωλήθηκε» χωρίς υπογεγραμμένο οριστικό (ADR-935) — ΕΝΑ κείμενο για τις δύο
+ * πόρτες (ακίνητο · θέσεις/αποθήκες) και για τον πελάτη που το μεταφράζει σε `sales.errors.finalContractNotSigned`.
+ */
+export const FINAL_CONTRACT_NOT_SIGNED_MESSAGE = 'Final contract must be signed before sale';
+
 export function effectiveCaseState(
   stored: StoredCaseState,
   legalPhase: LegalPhase | null | undefined,

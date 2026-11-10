@@ -36,6 +36,9 @@ import {
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
 import { nowISO } from '@/lib/date-local';
+import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { FINAL_CONTRACT_NOT_SIGNED_MESSAGE, isFinalContractSigned } from '@/lib/conveyance/case-state';
+import { isPlainRecord } from '@/lib/type-guards';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
@@ -224,6 +227,19 @@ async function assertSpacesHaveArea(
 }
 
 /**
+ * ADR-935 — θέση/αποθήκη «πωλείται» **μόνο** μαζί με ακίνητο του οποίου το οριστικό υπογράφηκε: ο ΙΔΙΟΣ κριτής με την
+ * πόρτα του ακινήτου (`assertSaleFollowsFinalContract`). Αλλιώς ένα απευθείας POST θα έγραφε `sold` στον χώρο ενώ το
+ * ακίνητο μένει κρατημένο.
+ */
+async function assertParentFinalContractSigned(db: Firestore, propertyId: string): Promise<void> {
+  const property = (await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get()).data();
+  const commercial = isPlainRecord(property?.commercial) ? property.commercial : {};
+  if (!isFinalContractSigned(commercial.legalPhase)) {
+    throw new ApiError(409, FINAL_CONTRACT_NOT_SIGNED_MESSAGE);
+  }
+}
+
+/**
  * Εφαρμόζει όλες τις γραφές ατομικά (batch), με **μία** χρονοσήμανση, **και**
  * καταγράφει το ίχνος ελέγχου.
  *
@@ -246,6 +262,9 @@ export async function applyAppurtenanceSync(
   propertyId: string,
   actor: SyncActor,
 ): Promise<void> {
+  if (body.action === 'sell') {
+    await assertParentFinalContractSigned(db, propertyId);
+  }
   if (body.action !== 'revert') {
     await assertSpacesHaveArea(db, body.spaces);
   }

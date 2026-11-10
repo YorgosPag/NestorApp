@@ -369,6 +369,7 @@
       "noCompany": "The project is not linked to a company. Go to Projects → General and link a company.",
       "noAskingPrice": "The property has no asking price. Set a price before reservation or sale.",
       "noArea": "The property has no area (sqm). Set net or gross area before reservation or sale.",
+      "finalContractNotSigned": "The sale is recorded once the final contract is signed. Record the signed final contract in the \"Legal\" tab.",
       "noBuyer": "Buyer contact is required",
       "buyerNotFound": "Buyer contact not found",
       "buyerMissingFields": "Buyer missing required fields: {fields}",

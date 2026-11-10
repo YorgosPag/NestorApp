@@ -12,9 +12,34 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { FINAL_CONTRACT_NOT_SIGNED_MESSAGE, isFinalContractSigned } from '@/lib/conveyance/case-state';
+import { isPlainRecord } from '@/lib/type-guards';
 import { validateContactForSale, isServiceContact } from '@/types/contacts/helpers';
 import type { Contact } from '@/types/contacts/contracts';
 import type { CommercialTransactionType } from '@/types/contacts/helpers';
+
+// ============================================================================
+// assertSaleFollowsFinalContract — ADR-935
+// ============================================================================
+
+/**
+ * 🔑 **«Πωλήθηκε» = η κυριότητα πέρασε** (ADR-935): η είσοδος στο `sold` επιτρέπεται **μόνο** όταν το οριστικό
+ * έχει υπογραφεί — ο ΙΔΙΟΣ κριτής (`isFinalContractSigned`) με το μητρώο λήξεων, την υπόθεση μεταβίβασης και την
+ * παράδοση φακέλου. Ως τότε το ακίνητο μένει «Κρατημένο» (RESO: Pending · Closed = η συμφωνία εκπληρώθηκε).
+ * Ίδια κατάσταση (`sold → sold`) δεν είναι είσοδος ⇒ δεν κρίνεται εδώ.
+ *
+ * @throws ApiError(409) όταν ζητείται `sold` χωρίς υπογεγραμμένο οριστικό
+ */
+export function assertSaleFollowsFinalContract(
+  existing: Record<string, unknown>,
+  incomingCommercialStatus: 'reserved' | 'sold',
+): void {
+  if (incomingCommercialStatus !== 'sold' || existing.commercialStatus === 'sold') return;
+  const commercial = isPlainRecord(existing.commercial) ? existing.commercial : {};
+  if (!isFinalContractSigned(commercial.legalPhase)) {
+    throw new ApiError(409, FINAL_CONTRACT_NOT_SIGNED_MESSAGE);
+  }
+}
 
 // ============================================================================
 // validateCommercialTransaction
@@ -41,6 +66,8 @@ export async function validateCommercialTransaction(
   commercialPayload: Record<string, unknown> | undefined,
   incomingCommercialStatus: 'reserved' | 'sold',
 ): Promise<void> {
+  assertSaleFollowsFinalContract(existing, incomingCommercialStatus);
+
   const buildingId = (existing.buildingId as string) ?? null;
   const floorId = (existing.floorId as string) ?? null;
   // 🔒 ADR-232: Only floorId (document reference) counts as valid floor link
