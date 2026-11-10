@@ -58,7 +58,8 @@ export type AccountingAuditEventType =
   // here is the classic invoice-fraud vector (BEC «we changed bank»), so every create/change/retire leaves a trace.
   | 'BANK_ACCOUNT_CREATED'
   | 'BANK_ACCOUNT_UPDATED'
-  | 'BANK_ACCOUNT_DEACTIVATED';
+  | 'BANK_ACCOUNT_DEACTIVATED'
+  | 'BANK_ACCOUNT_REACTIVATED';
 
 /**
  * Entity types that can be audited

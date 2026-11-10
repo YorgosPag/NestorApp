@@ -304,6 +304,11 @@
       "listAriaLabel": "Business bank accounts",
       "editAriaLabel": "Edit account {iban}",
       "deactivateAriaLabel": "Deactivate account {iban}",
+      "reactivateAriaLabel": "Reactivate account {iban}",
+      "inactiveGroup": "{count, plural, one {# inactive account} other {# inactive accounts}}",
+      "reactivateTitle": "Reactivate account",
+      "reactivateDescription": "Account {iban} will become active again, but it will not be printed on invoices until you explicitly choose so.",
+      "reactivateConfirm": "Reactivate",
       "badges": {
         "onInvoices": "On invoices",
         "default": "Default",
@@ -343,7 +348,9 @@
         "duplicateIban": "An active account with this IBAN already exists.",
         "notFound": "The account was not found.",
         "saveFailed": "Saving failed. Please try again.",
-        "deactivateFailed": "Deactivation failed. Please try again."
+        "deactivateFailed": "Deactivation failed. Please try again.",
+        "reactivateFailed": "Reactivation failed. Please try again.",
+        "reactivateDuplicate": "An active account with this IBAN already exists. Deactivate it first."
       }
     }
   },

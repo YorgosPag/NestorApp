@@ -193,6 +193,13 @@ export function createAuditedRepository(
       return saved;
     },
 
+    async reactivateBankAccount(accountId) {
+      const saved = await repo.reactivateBankAccount(accountId);
+      await logAudit(repo, userId, 'BANK_ACCOUNT_REACTIVATED', 'bank_account', accountId,
+        `Επανενεργοποίηση τραπεζικού λογαριασμού ${maskIBAN(saved.iban)}`, bankAccountAuditMetadata(saved));
+      return saved;
+    },
+
     async upsertCustomerBalance(customerId, balance) {
       await repo.upsertCustomerBalance(customerId, balance);
       await logAudit(repo, userId, 'BALANCE_UPDATED', 'balance', customerId,

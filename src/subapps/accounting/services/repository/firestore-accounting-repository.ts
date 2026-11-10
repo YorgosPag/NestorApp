@@ -222,6 +222,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     bankAccounts.updateBankAccount(this.tenant, accountId, updates);
   deactivateBankAccount = (accountId: string) =>
     bankAccounts.deactivateBankAccount(this.tenant, accountId);
+  reactivateBankAccount = (accountId: string) =>
+    bankAccounts.reactivateBankAccount(this.tenant, accountId);
   createImportBatch = (data: Omit<ImportBatch, 'batchId'>) =>
     operations.createImportBatch(this.tenant, data);
 

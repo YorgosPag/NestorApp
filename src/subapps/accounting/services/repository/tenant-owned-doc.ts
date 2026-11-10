@@ -17,6 +17,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { DomainRefusal } from '@/lib/errors/domain-refusal';
 import { ownedOrNull, type MaybeTenantOwned } from '@/lib/auth/tenant-ownership';
 
 import type { TenantContext } from '../../types/common';
@@ -30,7 +31,8 @@ export interface OwnedDocAddress {
 }
 
 /** Ξένο ή ανύπαρκτο — η ίδια απάντηση, ώστε ο καλών να μη μαθαίνει ποιο από τα δύο */
-export class OwnedDocumentNotFoundError extends Error {
+export class OwnedDocumentNotFoundError extends DomainRefusal {
+  readonly httpStatus = 404;
   readonly resource: string;
   readonly resourceId: string;
 

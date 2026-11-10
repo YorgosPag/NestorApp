@@ -1258,6 +1258,7 @@ export const API_ROUTES = {
     BANK_ACCOUNTS: {
       LIST: '/api/accounting/bank-accounts',
       BY_ID: (id: string) => `/api/accounting/bank-accounts/${encodeURIComponent(id)}` as const,
+      REACTIVATE: (id: string) => `/api/accounting/bank-accounts/${encodeURIComponent(id)}/reactivate` as const,
     },
     APY_CERTIFICATES: {
       LIST: '/api/accounting/apy-certificates',

@@ -25,6 +25,7 @@ import type { Bucket } from '@google-cloud/storage';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { GCS_FILES_EU_BUCKET, GCS_TOUR_MEDIA_BUCKET } from '@/config/gcs-buckets';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isDomainRefusal } from '@/lib/errors/domain-refusal';
 
 import { initializeWithCredentialChain } from './firebaseAdmin-credentials';
 import { FirebaseAdminInitError, type CredentialSource, type AdminDiagnosticReport } from './firebaseAdmin-types';
@@ -259,6 +260,13 @@ export async function safeFirestoreOperation<T>(
     const db = getAdminFirestore();
     return await operation(db);
   } catch (error) {
+    // Αποφασισμένη άρνηση του τομέα (διπλό IBAN, ξένο έγγραφο…) ≠ βλάβη: καταγραφή χωρίς stack, ποτέ ERROR —
+    // αλλιώς οι αρνήσεις πνίγουν τις πραγματικές βλάβες στο log (`lib/errors/domain-refusal.ts`).
+    if (isDomainRefusal(error)) {
+      logger.info('[Firebase Admin] Operation refused by domain rule', { refusal: error.name, status: error.httpStatus });
+      if (fallback !== undefined) return fallback;
+      throw error;
+    }
     logger.error('[Firebase Admin] Operation failed', {
       error: getErrorMessage(error),
       stack: error instanceof Error ? error.stack : undefined,

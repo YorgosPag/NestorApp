@@ -120,6 +120,7 @@ function createMockRepository(): jest.Mocked<IAccountingRepository> {
     createBankAccount: noop,
     updateBankAccount: noop,
     deactivateBankAccount: noop,
+    reactivateBankAccount: noop,
     createImportBatch: noop,
     createFixedAsset: noop,
     getFixedAsset: noop,

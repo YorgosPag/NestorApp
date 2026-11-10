@@ -79,6 +79,7 @@ function createMockRepository(): MockRepository {
     createBankAccount: jest.fn(),
     updateBankAccount: jest.fn(),
     deactivateBankAccount: jest.fn(),
+    reactivateBankAccount: jest.fn(),
     createImportBatch: jest.fn(),
     createFixedAsset: jest.fn(),
     getFixedAsset: jest.fn(),

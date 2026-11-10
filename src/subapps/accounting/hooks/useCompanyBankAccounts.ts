@@ -6,6 +6,7 @@
  *   η οθόνη δείχνει πάντα ό,τι αποφάσισε ο διακομιστής, ποτέ δική της εικασία.
  *
  *   Σφάλμα ⇒ `BankAccountMutationError` με τον κωδικό HTTP (409 = διπλό IBAN), ώστε η φόρμα να μεταφράσει.
+ *   Η οθόνη ρυθμίσεων ζητά και τους **ανενεργούς** (`?includeInactive=true`) — χωρίς αυτούς δεν υπάρχει επανενεργοποίηση.
  */
 
 'use client';
@@ -43,7 +44,10 @@ export interface UseCompanyBankAccountsReturn {
   createAccount: (input: CreateBankAccountInput) => Promise<BankAccountConfig>;
   updateAccount: (accountId: string, updates: UpdateBankAccountInput) => Promise<BankAccountConfig>;
   deactivateAccount: (accountId: string) => Promise<BankAccountConfig>;
+  reactivateAccount: (accountId: string) => Promise<BankAccountConfig>;
 }
+
+const LIST_WITH_INACTIVE = `${API_ROUTES.ACCOUNTING.BANK_ACCOUNTS.LIST}?includeInactive=true`;
 
 export function useCompanyBankAccounts(): UseCompanyBankAccountsReturn {
   const { user } = useAuth();
@@ -55,7 +59,7 @@ export function useCompanyBankAccounts(): UseCompanyBankAccountsReturn {
     if (!user) return;
     setLoading(true);
     try {
-      setAccounts(await apiClient.get<BankAccountConfig[]>(API_ROUTES.ACCOUNTING.BANK_ACCOUNTS.LIST));
+      setAccounts(await apiClient.get<BankAccountConfig[]>(LIST_WITH_INACTIVE));
       setLoadFailed(false);
     } catch {
       setLoadFailed(true);
@@ -89,5 +93,12 @@ export function useCompanyBankAccounts(): UseCompanyBankAccountsReturn {
     return saved;
   }, [refetch]);
 
-  return { accounts, loading, loadFailed, refetch, createAccount, updateAccount, deactivateAccount };
+  const reactivateAccount = useCallback(async (accountId: string) => {
+    const saved = await mutation(() =>
+      apiClient.post<BankAccountConfig>(API_ROUTES.ACCOUNTING.BANK_ACCOUNTS.REACTIVATE(accountId), {}));
+    await refetch();
+    return saved;
+  }, [refetch]);
+
+  return { accounts, loading, loadFailed, refetch, createAccount, updateAccount, deactivateAccount, reactivateAccount };
 }

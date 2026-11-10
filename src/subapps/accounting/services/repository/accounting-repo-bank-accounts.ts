@@ -17,6 +17,7 @@
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { DomainRefusal } from '@/lib/errors/domain-refusal';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateBankAccountId } from '@/services/enterprise-id.service';
 import { cleanBIC, cleanIBAN } from '@/types/contacts/banking';
@@ -32,7 +33,9 @@ const bankAccountAt = (id: string): OwnedDocAddress =>
   ({ collection: COLLECTIONS.ACCOUNTING_BANK_ACCOUNTS, id, resource: 'bank account' });
 
 /** Το IBAN υπάρχει ήδη σε ενεργό λογαριασμό της εταιρείας. */
-export class DuplicateBankAccountError extends Error {
+export class DuplicateBankAccountError extends DomainRefusal {
+  readonly httpStatus = 409;
+
   constructor(readonly iban: string) {
     super(`An active bank account with this IBAN already exists`);
     this.name = 'DuplicateBankAccountError';
@@ -125,7 +128,9 @@ export async function createBankAccount(tenant: TenantContext, input: CreateBank
 async function mutateBankAccount(
   tenant: TenantContext,
   accountId: string,
-  change: (current: BankAccountConfig) => { next: BankAccountConfig; requestDefault: boolean; avoidDefault: boolean },
+  change: (
+    current: BankAccountConfig, existing: readonly BankAccountConfig[],
+  ) => { next: BankAccountConfig; requestDefault: boolean; avoidDefault: boolean },
 ): Promise<BankAccountConfig> {
   const address = bankAccountAt(accountId);
   return safeFirestoreOperation((db) => db.runTransaction(async (tx) => {
@@ -135,7 +140,7 @@ async function mutateBankAccount(
     if (current === null) throw new OwnedDocumentNotFoundError(address);
 
     const now = isoNow();
-    const { next, requestDefault, avoidDefault } = change(current);
+    const { next, requestDefault, avoidDefault } = change(current, existing);
     const all = existing.map((a) => (a.accountId === accountId ? next : a));
     const defaultId = resolveInvoiceDefault(all, requestDefault ? accountId : null, avoidDefault ? accountId : null);
     const saved: BankAccountConfig = { ...next, isDefaultForInvoices: defaultId === accountId, updatedAt: now };
@@ -167,6 +172,22 @@ export function updateBankAccount(
     requestDefault: updates.isDefaultForInvoices === true,
     avoidDefault: updates.isDefaultForInvoices === false,
   }));
+}
+
+/**
+ * Επανενεργοποίηση — ο λογαριασμός επιστρέφει **χωρίς** να τυπώνεται στα τιμολόγια και χωρίς προεπιλογή: το IBAN
+ * που βλέπει ο πελάτης αλλάζει μόνο με **ρητή** απόφαση (αντι-απάτη, BEC). Ο έλεγχος μοναδικού ενεργού IBAN ξανατρέχει
+ * μέσα στη συναλλαγή — στο μεσοδιάστημα μπορεί να μπήκε νέος ενεργός λογαριασμός με το ίδιο IBAN. Ιδεμποτική.
+ */
+export function reactivateBankAccount(tenant: TenantContext, accountId: string): Promise<BankAccountConfig> {
+  return mutateBankAccount(tenant, accountId, (current, existing) => {
+    if (!current.isActive) assertUniqueIban(existing, cleanIBAN(current.iban), current.accountId);
+    return {
+      next: current.isActive ? current : { ...current, isActive: true, showOnInvoices: false, isDefaultForInvoices: false },
+      requestDefault: false,
+      avoidDefault: !current.isActive,
+    };
+  });
 }
 
 /** Απενεργοποίηση — ποτέ διαγραφή (οι κινήσεις κρατούν `accountId`). */

@@ -219,6 +219,8 @@ export interface IAccountingRepository {
   updateBankAccount(accountId: string, updates: UpdateBankAccountInput): Promise<BankAccountConfig>;
   /** Απενεργοποίηση — ποτέ διαγραφή (οι κινήσεις κρατούν `accountId`). */
   deactivateBankAccount(accountId: string): Promise<BankAccountConfig>;
+  /** Επανενεργοποίηση — επιστρέφει εκτός τιμολογίων· διπλό ενεργό IBAN ⇒ `DuplicateBankAccountError`. */
+  reactivateBankAccount(accountId: string): Promise<BankAccountConfig>;
   createImportBatch(data: Omit<ImportBatch, 'batchId'>): Promise<{ id: string }>;
 
   // ── Fixed Assets ────────────────────────────────────────────────────────
