@@ -24,7 +24,8 @@ import {
   drawBankAccountsSection,
   drawMyDataSection,
   drawNotesSection,
-  addPageFooters
+  addPageFooters,
+  invoicePayableAmount,
 } from './invoice-pdf-sections';
 import { drawVatExemptionSection } from './invoice-pdf-vat-exemption';
 
@@ -50,8 +51,6 @@ export interface InvoicePDFRenderOptions {
   invoice: Invoice;
   /** Logo as base64 PNG string (null = skip) */
   logoBase64: string | null;
-  /** Bank accounts (from invoice snapshot, or fallback from settings) */
-  bankAccounts: Array<{ bankName: string; iban: string }>;
   /** KAD code for myDATA section (null = skip) */
   kadCode: string | null;
   /** Withholding tax amount (default: 0) */
@@ -64,7 +63,7 @@ export interface InvoicePDFRenderOptions {
  * @returns The jsPDF instance (caller decides: save, blob, or print)
  */
 export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promise<jsPDF> {
-  const { invoice, logoBase64, bankAccounts, kadCode, withholdingAmount } = options;
+  const { invoice, logoBase64, kadCode, withholdingAmount } = options;
 
   // Dynamic imports for code-splitting
   const { default: jsPDF } = await import('jspdf');
@@ -89,7 +88,9 @@ export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promis
   y = drawTotalsSection(pdf, invoice, y, withholdingAmount);
   y = drawVatExemptionSection(pdf, invoice, y); // ν. 4308/2014 άρθρο 9 §1 ιγ/ιβ — αντίστροφη επιβάρυνση + απαλλαγή ΦΠΑ
   y = drawPaymentSection(pdf, invoice, y);
-  y = drawBankAccountsSection(pdf, bankAccounts, y);
+  // ADR-ACC-018 §15: οι οδηγίες πληρωμής είναι το snapshot του τιμολογίου (`issuer.bankAccounts`) — ποτέ σημερινή
+  // τιμή του μητρώου, ώστε ένα παλιό τιμολόγιο να μην τυπώσει ποτέ IBAN που δεν έγραφε όταν εκδόθηκε.
+  y = drawBankAccountsSection(pdf, invoice, invoicePayableAmount(invoice, withholdingAmount), y);
   y = drawMyDataSection(pdf, invoice, kadCode, y);
   y = drawNotesSection(pdf, invoice, y);
 

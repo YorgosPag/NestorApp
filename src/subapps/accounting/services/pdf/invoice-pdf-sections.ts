@@ -9,7 +9,13 @@ import type jsPDF from 'jspdf';
 import autoTable, { type Styles } from 'jspdf-autotable';
 import { forceRobotoCell, yAfterTable } from '@/services/report-engine/report-pdf-chrome';
 import { formatAccountingCurrency } from '../../utils/format';
-import type { Invoice, InvoiceLineItem } from '../../types';
+import type { Invoice, InvoiceLineItem, InvoicePaymentAccount } from '../../types';
+import { showsPaymentInstructions } from '../payments/invoice-payment-accounts';
+import { formatCreditorReference } from '../payments/creditor-reference';
+import { invoiceCreditorReference } from '../engines/matching-reference';
+import {
+  PAYMENT_QR_CAPTION_MM, PAYMENT_QR_SIZE_MM, drawPaymentQr, paymentQrPayload, paymentQrX,
+} from './invoice-pdf-payment-qr';
 import {
   COLORS, LAYOUT, LABELS, PAYMENT_METHOD_LABELS, INVOICE_DOCUMENT_LANGUAGE,
   ensureSpace, drawHR, setColor, formatIBAN,
@@ -76,6 +82,11 @@ export function drawLineItemsTable(pdf: jsPDF, invoice: Invoice, startY: number)
   return yAfterTable(pdf, y, 0) + 3;
 }
 
+/** Το ΠΛΗΡΩΤΕΟ — ο ΕΝΑΣ αριθμός για τα σύνολα **και** για το EPC QR (ADR-ACC-018 §15). */
+export function invoicePayableAmount(invoice: Invoice, withholdingAmount: number): number {
+  return invoice.totalGrossAmount - withholdingAmount;
+}
+
 /**
  * §5: Totals section
  */
@@ -111,7 +122,7 @@ export function drawTotalsSection(pdf: jsPDF, invoice: Invoice, startY: number, 
     y += 5;
   }
 
-  const payable = invoice.totalGrossAmount - withholdingAmount;
+  const payable = invoicePayableAmount(invoice, withholdingAmount);
   y = drawHR(pdf, y, COLORS.navy);
   setColor(pdf, COLORS.navy);
   pdf.setFontSize(11);
@@ -144,30 +155,56 @@ export function drawPaymentSection(pdf: jsPDF, invoice: Invoice, startY: number)
   return y + 10;
 }
 
-/**
- * §7: Bank accounts section
- */
-export function drawBankAccountsSection(
-  pdf: jsPDF, bankAccounts: Array<{ bankName: string; iban: string }>, startY: number
-): number {
-  if (bankAccounts.length === 0) return startY;
+/** Η αιτιολογία πληρωμής (EN 16931 BT-83): το RF όταν ορίζεται, πάντα μαζί με τον αριθμό του τιμολογίου. */
+export function invoicePaymentReference(invoice: Invoice): { readonly rf: string | null; readonly label: string } {
+  const rf = invoiceCreditorReference(invoice.series, invoice.number);
+  const number = `${invoice.series}-${invoice.number}`;
+  return { rf, label: rf ? `${formatCreditorReference(rf)} (${number})` : number };
+}
 
-  const y = ensureSpace(pdf, startY, 15 + bankAccounts.length * 8);
+/**
+ * §7: Οδηγίες πληρωμής (ADR-ACC-018 §15 · EN 16931 BG-16) — πίνακας Τράπεζα · IBAN · BIC · Δικαιούχος, αιτιολογία
+ * (RF + αριθμός) και, δεξιά, EPC QR για τον προεπιλεγμένο λογαριασμό. Μόνο όταν το παραστατικό πληρώνεται με μεταφορά.
+ *
+ * @param payable Το πληρωτέο όπως τυπώθηκε στα σύνολα — το ΙΔΙΟ ποσό μπαίνει στο QR.
+ */
+export function drawBankAccountsSection(pdf: jsPDF, invoice: Invoice, payable: number, startY: number): number {
+  const accounts = invoice.issuer.bankAccounts ?? [];
+  if (accounts.length === 0 || !showsPaymentInstructions(invoice)) return startY;
+
+  const reference = invoicePaymentReference(invoice);
+  const holderOf = (account: InvoicePaymentAccount) => account.holderName?.trim() || invoice.issuer.name;
+  const [primary] = accounts;
+  const qrPayload = paymentQrPayload({
+    account: primary, beneficiaryName: holderOf(primary), currency: invoice.currency,
+    amount: payable, remittance: reference.rf ?? `${invoice.series}-${invoice.number}`,
+  });
+  const qrRoom = qrPayload ? PAYMENT_QR_SIZE_MM + 4 : 0;
+  const tableHeight = 15 + accounts.length * 8;
+  const y = ensureSpace(pdf, startY, Math.max(tableHeight, qrPayload ? PAYMENT_QR_SIZE_MM + PAYMENT_QR_CAPTION_MM + 8 : 0));
+
   setColor(pdf, COLORS.navy);
   pdf.setFontSize(8);
   pdf.text(LABELS.bankAccounts, LAYOUT.marginLeft, y + 4);
 
-  const body = bankAccounts.map((ba) => [ba.bankName, formatIBAN(ba.iban)]);
-
   autoTable(pdf, {
-    head: [[LABELS.bank, LABELS.iban]], body, startY: y + 7, theme: 'plain',
+    head: [[LABELS.bank, LABELS.iban, LABELS.bic, LABELS.beneficiary]],
+    body: accounts.map((account) => [account.bankName, formatIBAN(account.iban), account.bic ?? '—', holderOf(account)]),
+    startY: y + 7, theme: 'plain', margin: { left: LAYOUT.marginLeft, right: LAYOUT.marginRight + qrRoom },
     styles: TABLE_BODY_STYLES,
     headStyles: { fillColor: [240, 240, 240], textColor: [COLORS.navy[0], COLORS.navy[1], COLORS.navy[2]], fontSize: 7 },
-    columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 65 } },
+    columnStyles: { 0: { cellWidth: 34 }, 1: { cellWidth: 60 }, 2: { cellWidth: 24 } },
     didParseCell: forceRobotoCell,
   });
 
-  return yAfterTable(pdf, y, 0) + 3;
+  let after = yAfterTable(pdf, y, 0) + 4;
+  setColor(pdf, COLORS.gray);
+  pdf.setFontSize(8);
+  pdf.text(`${LABELS.paymentReference}: ${reference.label}`, LAYOUT.marginLeft, after);
+  after += 3;
+
+  if (qrPayload) after = Math.max(after, drawPaymentQr(pdf, qrPayload, paymentQrX(), y + 2));
+  return after + 3;
 }
 
 /**

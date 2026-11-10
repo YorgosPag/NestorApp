@@ -39,6 +39,7 @@ import {
   VOIDABLE_STATUSES,
   CREDIT_NOTE_STATUSES,
 } from '../invoice-schemas';
+import { withServerPaymentAccountsOnUpdate } from '../invoice-payment-snapshot';
 
 // =============================================================================
 // GET — Single Invoice
@@ -90,7 +91,9 @@ export const PATCH = defineRoute({
       httpError(403, `Cannot edit invoice with myDATA status '${currentStatus}'. Only draft or rejected invoices are editable.`);
     }
 
-    await repository.updateInvoice(id, updates as UpdateInvoiceInput);
+    // ADR-ACC-018 §15: αλλαγή τρόπου πληρωμής/εκδότη/τύπου ⇒ ο διακομιστής ξαναχτίζει τους λογαριασμούς από το μητρώο.
+    const withAccounts = await withServerPaymentAccountsOnUpdate(repository, updates, existing);
+    await repository.updateInvoice(id, withAccounts as UpdateInvoiceInput);
 
     // ── Hook 3: Update balance if payments/amounts changed (Q4 — sync) ─
     const affectsBalance = !!(updates.payments || updates.lineItems);

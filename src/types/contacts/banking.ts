@@ -328,6 +328,22 @@ export function cleanIBAN(iban: string): string {
 }
 
 /**
+ * BIC (ISO 9362:2014): 4 χαρακτήρες συμμετέχοντος (αλφαριθμητικοί από την αναθεώρηση 2014) · 2 γράμματα χώρας ·
+ * 2 χαρακτήρες τοποθεσίας · προαιρετικά 3 χαρακτήρες καταστήματος ⇒ 8 ή 11 χαρακτήρες.
+ */
+const BIC_PATTERN = /^[A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
+
+/** BIC για αποθήκευση: χωρίς κενά, κεφαλαία — όπως το {@link cleanIBAN}. */
+export function cleanBIC(bic: string): string {
+  return bic.replace(/\s/g, '').toUpperCase();
+}
+
+/** Έγκυρο BIC κατά ISO 9362 (8 ή 11 χαρακτήρες), με ή χωρίς κενά/πεζά. */
+export function isValidBIC(bic: string): boolean {
+  return BIC_PATTERN.test(cleanBIC(bic));
+}
+
+/**
  * Extracts bank information from a Greek IBAN
  *
  * @param iban - The IBAN to parse

@@ -291,6 +291,60 @@
       "addShareholders": "Add shareholders",
       "fixShares": "Correct the shares",
       "notComputed": "Not calculated"
+    },
+    "bankAccounts": {
+      "title": "Bank accounts",
+      "description": "Your business accounts. The ones you select are printed on invoices paid by bank transfer, together with an RF reference and a payment QR code.",
+      "empty": "No bank account has been added yet.",
+      "loadFailed": "The accounts could not be loaded. Please try again.",
+      "retry": "Retry",
+      "addNew": "New account",
+      "createTitle": "New bank account",
+      "editTitle": "Edit account",
+      "listAriaLabel": "Business bank accounts",
+      "editAriaLabel": "Edit account {iban}",
+      "deactivateAriaLabel": "Deactivate account {iban}",
+      "badges": {
+        "onInvoices": "On invoices",
+        "default": "Default",
+        "inactive": "Inactive"
+      },
+      "form": {
+        "iban": "IBAN",
+        "ibanLocked": "The IBAN cannot change. For a different IBAN, add a new account and deactivate this one.",
+        "bank": "Bank",
+        "bankName": "Bank name",
+        "bic": "BIC / SWIFT",
+        "holderName": "Account holder",
+        "holderNameHint": "The name exactly as the bank holds it.",
+        "label": "Label (internal)",
+        "labelPlaceholder": "e.g. Main account",
+        "type": "Type",
+        "showOnInvoices": "Show on invoices",
+        "isDefaultForInvoices": "Default for invoices (first in the list and in the QR code)",
+        "notes": "Notes"
+      },
+      "types": {
+        "checking": "Current",
+        "savings": "Savings",
+        "business": "Business"
+      },
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Add",
+      "deactivateTitle": "Deactivate account",
+      "deactivateDescription": "Account {iban} will no longer be printed on new invoices. Invoices already issued do not change, and its bank transactions are kept.",
+      "deactivateConfirm": "Deactivate",
+      "errors": {
+        "ibanInvalid": "The IBAN is not valid.",
+        "bicInvalid": "The BIC is not valid (8 or 11 characters).",
+        "bankNameRequired": "Enter the bank name.",
+        "holderNameRequired": "Enter the account holder.",
+        "duplicateIban": "An active account with this IBAN already exists.",
+        "notFound": "The account was not found.",
+        "saveFailed": "Saving failed. Please try again.",
+        "deactivateFailed": "Deactivation failed. Please try again."
+      }
     }
   },
   "reconciliation": {

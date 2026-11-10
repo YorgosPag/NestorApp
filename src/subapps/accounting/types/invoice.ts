@@ -143,11 +143,27 @@ export interface InvoiceIssuer {
   website: string | null;
   /** Δραστηριότητα/Επάγγελμα */
   profession: string;
-  /** Τραπεζικοί λογαριασμοί — snapshot κατά την έκδοση (ADR-ACC-018) */
-  bankAccounts: Array<{
-    bankName: string;
-    iban: string;
-  }>;
+  /**
+   * Οδηγίες πληρωμής — snapshot των λογαριασμών της στιγμής της έκδοσης (ADR-ACC-018 §15, EN 16931 BG-16).
+   * Τον γράφει **μόνο ο διακομιστής** από το μητρώο `accounting_bank_accounts` — ό,τι στείλει ο browser κόβεται.
+   * Ο πρώτος είναι ο προεπιλεγμένος (αυτός μπαίνει στο EPC QR).
+   */
+  bankAccounts: InvoicePaymentAccount[];
+}
+
+/**
+ * Ένας λογαριασμός πληρωμής όπως **τυπώθηκε** στο τιμολόγιο. `bic`/`holderName` απουσιάζουν από τιμολόγια πριν
+ * από 2026-11-10 — ο αναγνώστης πέφτει σε «χωρίς BIC» / επωνυμία εκδότη, ποτέ σε σημερινή τιμή του μητρώου.
+ */
+export interface InvoicePaymentAccount {
+  /** Τράπεζα */
+  bankName: string;
+  /** IBAN χωρίς κενά — EN 16931 BT-84 */
+  iban: string;
+  /** BIC — EN 16931 BT-86 */
+  bic?: string | null;
+  /** Δικαιούχος — EN 16931 BT-85 */
+  holderName?: string | null;
 }
 
 /** Στοιχεία πελάτη/λήπτη */

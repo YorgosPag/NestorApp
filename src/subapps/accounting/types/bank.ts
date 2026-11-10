@@ -37,22 +37,28 @@ export type MatchStatus = (typeof MATCH_STATUSES)[number];
 // BANK ACCOUNT CONFIG
 // ============================================================================
 
-/** Τύπος τραπεζικού λογαριασμού */
-export type BankAccountType = 'checking' | 'savings' | 'business';
+/** Τύπος τραπεζικού λογαριασμού — παράγεται από τη ρίζα {@link BANK_ACCOUNT_TYPES}. */
+export type BankAccountType = (typeof BANK_ACCOUNT_TYPES)[number];
+
+/** Τύποι λογαριασμού — ρίζα του λεξιλογίου (ADR-ACC-008 §2). */
+export const BANK_ACCOUNT_TYPES = ['checking', 'savings', 'business'] as const;
 
 /**
- * Ρύθμιση τραπεζικού λογαριασμού για συμφωνία
+ * Τραπεζικός λογαριασμός **της εταιρείας** — ΕΝΑ μητρώο για τη συμφωνία τράπεζας (ADR-ACC-008) **και** για τις
+ * οδηγίες πληρωμής των τιμολογίων (ADR-ACC-018 §15). Οι λογαριασμοί **τρίτων** ζουν στις επαφές
+ * (`contacts/{id}/bankAccounts`) — άλλο πράγμα.
  *
- * Firestore path: `accounting_bank_accounts/{accountId}`
+ * Firestore path: `accounting_bank_accounts/{accountId}` · γραφέας: ΜΟΝΟ ο διακομιστής (`/api/accounting/bank-accounts`).
+ * Δεν διαγράφεται ποτέ (οι κινήσεις κρατούν `accountId`): απενεργοποίηση.
  */
 export interface BankAccountConfig {
-  /** Μοναδικό ID (Firestore doc ID) */
+  /** Μοναδικό ID (`bacc_…`, enterprise-id) */
   accountId: string;
   /** Τράπεζα (π.χ. 'Εθνική Τράπεζα') */
   bankName: string;
-  /** IBAN (χωρίς κενά) */
+  /** IBAN (χωρίς κενά) — EN 16931 BT-84 */
   iban: string;
-  /** Ετικέτα εμφάνισης (π.χ. 'Κύριος Λογ/μός') */
+  /** Ετικέτα εμφάνισης (π.χ. 'Κύριος Λογ/μός') — εσωτερική, δεν τυπώνεται */
   label: string;
   /** Τύπος λογαριασμού */
   type: BankAccountType;
@@ -60,13 +66,49 @@ export interface BankAccountConfig {
   currency: CurrencyCode;
   /** Ενεργός; */
   isActive: boolean;
-  /** Κωδικός τράπεζας (SWIFT/BIC) */
+  /** Κωδικός τράπεζας (SWIFT/BIC, ISO 9362) — EN 16931 BT-86 */
   bankCode: string | null;
+  /**
+   * Δικαιούχος — η επωνυμία **όπως είναι γνωστή στην τράπεζα** (EN 16931 BT-85, EPC QR «Name»).
+   * Απούσα σε έγγραφα πριν από 2026-11-10 ⇒ ο καταναλωτής πέφτει στην επωνυμία του εκδότη.
+   */
+  holderName?: string | null;
+  /** Εμφανίζεται στις οδηγίες πληρωμής των τιμολογίων; (απούσα = όχι) */
+  showOnInvoices?: boolean;
+  /** Ο ΕΝΑΣ προεπιλεγμένος για τιμολόγια (πρώτος στον πίνακα, αυτός μπαίνει στο QR) — τον επιβάλλει ο γραφέας */
+  isDefaultForInvoices?: boolean;
+  /** Σειρά εμφάνισης (αύξουσα) */
+  sortOrder?: number;
   /** Σημειώσεις */
   notes: string | null;
+  /** Tenant isolation — απαιτείται από τους κανόνες Firestore */
+  companyId?: string;
+  /** Δημιουργός — απαιτείται από τους κανόνες Firestore */
+  createdBy?: string;
   /** Timestamp δημιουργίας (ISO 8601) */
   createdAt: string;
+  /** Timestamp τελευταίας αλλαγής (ISO 8601) */
+  updatedAt?: string;
 }
+
+/** Ό,τι δίνει ο χρήστης για νέο λογαριασμό — ταυτότητα, μισθωτής, χρόνοι: του διακομιστή. */
+export interface CreateBankAccountInput {
+  bankName: string;
+  iban: string;
+  bankCode: string | null;
+  holderName: string;
+  label: string;
+  type: BankAccountType;
+  currency: CurrencyCode;
+  showOnInvoices: boolean;
+  isDefaultForInvoices: boolean;
+  notes: string | null;
+}
+
+/** Μερική αλλαγή — το IBAN αλλάζει μόνο μέσω νέου λογαριασμού (ίχνος + κινήσεις δεμένες στο παλιό). */
+export type UpdateBankAccountInput = Partial<Omit<CreateBankAccountInput, 'iban' | 'currency'>> & {
+  sortOrder?: number;
+};
 
 // ============================================================================
 // BANK TRANSACTION

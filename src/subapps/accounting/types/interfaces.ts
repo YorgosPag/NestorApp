@@ -79,6 +79,8 @@ import type {
   AmountBand,
   InvoiceReference,
   BankAccountConfig,
+  CreateBankAccountInput,
+  UpdateBankAccountInput,
   MatchCandidate,
   MatchCandidateGroup,
   MatchResult,
@@ -207,7 +209,16 @@ export interface IAccountingRepository {
   findOpenInvoicesByReference(references: readonly InvoiceReference[]): Promise<Invoice[]>;
   /** Ενεργές εγγραφές της χρήσης με μικτό ποσό μέσα στη ζώνη — πλήρως, ή σφάλμα. */
   collectActiveJournalEntriesByAmount(fiscalYear: number, band: AmountBand): Promise<JournalEntry[]>;
+  /** Οι ΕΝΕΡΓΟΙ λογαριασμοί της εταιρείας (φράχτης `companyId`) — σφάλμα βάσης ⇒ σφάλμα, ποτέ κενή λίστα. */
   getBankAccounts(): Promise<BankAccountConfig[]>;
+
+  // ── Μητρώο λογαριασμών εταιρείας — ο ΕΝΑΣ γραφέας (ADR-ACC-008 §2 · ADR-ACC-018 §15) ─────────
+  listBankAccounts(includeInactive?: boolean): Promise<BankAccountConfig[]>;
+  /** Μία συναλλαγή: μοναδικό IBAN ανάμεσα στους ενεργούς + ακριβώς ένας προεπιλεγμένος για τιμολόγια. */
+  createBankAccount(data: CreateBankAccountInput): Promise<BankAccountConfig>;
+  updateBankAccount(accountId: string, updates: UpdateBankAccountInput): Promise<BankAccountConfig>;
+  /** Απενεργοποίηση — ποτέ διαγραφή (οι κινήσεις κρατούν `accountId`). */
+  deactivateBankAccount(accountId: string): Promise<BankAccountConfig>;
   createImportBatch(data: Omit<ImportBatch, 'batchId'>): Promise<{ id: string }>;
 
   // ── Fixed Assets ────────────────────────────────────────────────────────

@@ -40,6 +40,8 @@ import type {
   BankTransactionFilters,
   ImportBatch,
   InvoiceReference,
+  CreateBankAccountInput,
+  UpdateBankAccountInput,
 } from '../../types/bank';
 import type {
   CreateFixedAssetInput,
@@ -76,6 +78,7 @@ import * as depreciation from './accounting-repo-depreciation';
 import * as matchCandidates from './accounting-repo-match-candidates';
 import * as entities from './accounting-repo-entities';
 import * as operations from './accounting-repo-operations';
+import * as bankAccounts from './accounting-repo-bank-accounts';
 import * as documents from './accounting-repo-documents';
 import * as balances from './accounting-repo-balances';
 import * as fiscalPeriods from './accounting-repo-fiscal-periods';
@@ -210,7 +213,15 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   collectActiveJournalEntriesByAmount = (fiscalYear: number, band: AmountBand) =>
     matchCandidates.collectActiveJournalEntriesByAmount(this.tenant, fiscalYear, band);
   getBankAccounts = () =>
-    operations.getBankAccounts(this.tenant);
+    bankAccounts.getBankAccounts(this.tenant);
+  listBankAccounts = (includeInactive?: boolean) =>
+    bankAccounts.listBankAccounts(this.tenant, includeInactive);
+  createBankAccount = (data: CreateBankAccountInput) =>
+    bankAccounts.createBankAccount(this.tenant, data);
+  updateBankAccount = (accountId: string, updates: UpdateBankAccountInput) =>
+    bankAccounts.updateBankAccount(this.tenant, accountId, updates);
+  deactivateBankAccount = (accountId: string) =>
+    bankAccounts.deactivateBankAccount(this.tenant, accountId);
   createImportBatch = (data: Omit<ImportBatch, 'batchId'>) =>
     operations.createImportBatch(this.tenant, data);
 

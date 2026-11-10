@@ -64,6 +64,7 @@ export type {
   InvoiceLineItem,
   InvoicePayment,
   InvoiceIssuer,
+  InvoicePaymentAccount,
   InvoiceCustomer,
   VatBreakdown,
   InvoiceMyDataMeta,
@@ -166,6 +167,8 @@ export type {
   MatchStatus,
   BankAccountType,
   BankAccountConfig,
+  CreateBankAccountInput,
+  UpdateBankAccountInput,
   BankTransaction,
   CSVParserConfig,
   CSVColumnMapping,
@@ -193,7 +196,7 @@ export { ENTRY_TYPES, MYDATA_INCOME_TYPES } from './common';
 export { INVOICE_TYPES, INVOICE_PAYMENT_STATUSES } from './invoice';
 export type { InvoicePaymentStatus } from './invoice';
 export { ASSET_CATEGORIES, ASSET_STATUSES } from './assets';
-export { TRANSACTION_DIRECTIONS, MATCH_STATUSES } from './bank';
+export { TRANSACTION_DIRECTIONS, MATCH_STATUSES, BANK_ACCOUNT_TYPES } from './bank';
 
 // ── Matching Rules Types (Phase 2b — Rule Learning) ─────────────────────────
 export type {

@@ -53,7 +53,12 @@ export type AccountingAuditEventType =
   | 'COMPANY_LEGAL_NAME_CHANGED'
   // ADR-841 §7 Α23.12: the stored ΓΕΜΗ copy was erased (number changed/removed in the
   // profile · registry said «does not exist» · owner's erasure request). GDPR art. 5(2).
-  | 'COMPANY_REGISTRY_COPY_ERASED';
+  | 'COMPANY_REGISTRY_COPY_ERASED'
+  // ADR-ACC-018 §15: the company's OWN payment accounts — the IBAN printed on every invoice. A silent change
+  // here is the classic invoice-fraud vector (BEC «we changed bank»), so every create/change/retire leaves a trace.
+  | 'BANK_ACCOUNT_CREATED'
+  | 'BANK_ACCOUNT_UPDATED'
+  | 'BANK_ACCOUNT_DEACTIVATED';
 
 /**
  * Entity types that can be audited
@@ -65,7 +70,8 @@ export type AuditEntityType =
   | 'period'
   | 'bank_transaction'
   | 'company_profile'
-  | 'fixed_asset';
+  | 'fixed_asset'
+  | 'bank_account';
 
 // ============================================================================
 // AUDIT ENTRY (Q2 — Flat collection + composite indexes)

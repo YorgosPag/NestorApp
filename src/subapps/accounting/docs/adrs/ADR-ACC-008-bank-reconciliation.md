@@ -38,7 +38,19 @@
 
 ## 2. Bank Account Configuration
 
-### 2.1 Στοιχεία Λογαριασμού
+> ✅ **Κώδικας = αλήθεια (2026-11-10, ADR-ACC-018 §15)**: ο τύπος που τρέχει είναι το `BankAccountConfig`
+> (`types/bank.ts`), **όχι** το σχέδιο της §2.1. Συλλογή `accounting_bank_accounts/{accountId}` (`bacc_…`), **ένα** μητρώο
+> για τη συμφωνία **και** για τις οδηγίες πληρωμής των τιμολογίων. Πεδία:
+> - `accountId` · `bankName` · `iban` · `label` · `type` · `currency` · `isActive` · `bankCode` (BIC) · `notes` · `createdAt`
+> - **νέα**: `holderName` (δικαιούχος, BT-85) · `showOnInvoices` · `isDefaultForInvoices` · `sortOrder` · `companyId` · `createdBy` · `updatedAt`
+> - **ΔΕΝ** υπάρχουν (σχέδιο, όχι κώδικας): `status` · `isDefault` · `currentBalance` · `balanceDate` · `lastImportDate`
+>
+> Ο **ΕΝΑΣ** γραφέας είναι το `services/repository/accounting-repo-bank-accounts.ts`, μέσω `/api/accounting/bank-accounts`.
+> Κάθε πράξη τρέχει σε μία συναλλαγή: μοναδικό IBAN ανάμεσα στους ενεργούς · ακριβώς ένας προεπιλεγμένος για τιμολόγια ·
+> απενεργοποίηση, **ποτέ** διαγραφή (οι κινήσεις κρατούν `accountId`) · το IBAN δεν αλλάζει. Ίχνη `BANK_ACCOUNT_*`.
+> 🔴 **Διορθώθηκε**: το `getBankAccounts` δεν είχε φράχτη `companyId` (Admin SDK ⇒ λογαριασμοί **όλων** των εταιρειών).
+
+### 2.1 Στοιχεία Λογαριασμού (αρχικό σχέδιο — βλ. σημείωση πάνω)
 
 ```typescript
 interface BankAccount {
@@ -466,7 +478,7 @@ interface ImportBatch {
 
 ```
 accounting/{companyId}/
-  ├── bank_accounts/{accountId}        ← Λογαριασμοί
+  ├── bank_accounts/{accountId}        ← Λογαριασμοί  ⚠️ στον κώδικα: top-level `accounting_bank_accounts/{accountId}` + `companyId`
   │
   ├── bank_transactions/{txId}         ← Κινήσεις
   │
@@ -563,6 +575,7 @@ bank_transactions:
 | 2026-02-09 | **Phase 3 implemented** — services/config/csv-parsers/: 4 bank configs (NBG tab/win1253, Eurobank ;/utf8, Piraeus ,/win1253, Alpha ;/utf8) + index.ts registry. services/external/csv-import-service.ts: `CSVImportService implements ICSVImportService` — `parseCSV()` + `importTransactions()` with batch tracking. services/engines/matching-engine.ts: `MatchingEngine implements IMatchingEngine` — scoring: exact amount +40pts, near ±5% +25pts, exact date +30pts, near ±7d +15pts, counterparty +20pts, EFKA keywords +20pts. Auto-match threshold 85. `findCandidates()`, `matchTransaction()`, `matchBatch()`, `unmatchTransaction()` | Claude Code |
 | 2026-02-09 | **Phase 4 implemented** — API: `GET/POST /api/accounting/bank/transactions`, `POST /api/accounting/bank/match`. Hook: `useBankTransactions(filters)`. UI: `BankPageContent` (3 filters: account/direction/matchStatus + Import CSV button), `TransactionsList` (table: date/description/amount with color credit/debit/matchStatus badges), `ImportCSVDialog` (dialog: bank selection NBG/Eurobank/Piraeus/Alpha + file upload), `MatchingPanel` (split layout: unmatched transactions + match candidates with confidence badges + match button) | Claude Code |
 | 2026-10-14 | **Σελίδα ≠ καθολικό, Φάση 2 (ADR-ACC-010 §2.1.1)** — (1) Η **Κατάσταση Τραπεζικής Συμφωνίας** διάβαζε `listBankTransactions({ dateRange }, 10000)`: το `dateRange` ΔΕΝ εφαρμοζόταν (τρέχουσα / προηγούμενη / πέρσι = οι ίδιες 10.000 νεότερες κινήσεις), η 10.001η κοβόταν, σφάλμα ⇒ «καμία κίνηση». Τώρα `collectBankTransactions({ scope: period })`: πλήρης σάρωση, πετά σε σφάλμα/όριο. Τα αδρανή `dateRange / minAmount / maxAmount / searchText / matchGroupId` αφαιρέθηκαν από τα φίλτρα της σελίδας. (2) **Αυτόματη αντιστοίχιση**: αντί για 100 νεότερα απλήρωτα / μερικώς / εγγραφές, **στένεμα στη βάση** (πρακτική Xero / SAP): ερώτημα εύρους στη ζώνη ανοχής ποσού (`amountBandFor` — ακριβές αντίστροφο του `scoreAmount`) **+** απευθείας εύρεση τιμολογίων που αναγράφονται στο κείμενο της τράπεζας (`extractInvoiceReferences`: κωδικός/πρόθεμα σειράς, ελληνικά/λατινικά ομόγλυφα) — πιάνει μερικές πληρωμές και προμήθειες τράπεζας. **Κανόνας εισόδου**: υποψήφιο = ποσό εντός ανοχής Ή ρητή αναφορά (πριν, μπόνους κανόνα +15 ανέβαζε λάθος ποσό σε «χειροκίνητο έλεγχο»: 65+15 ≥ 70). Το παλιό ερώτημα τιμολογίων **δεν είχε δείκτη** ⇒ `FAILED_PRECONDITION` ⇒ fallback ⇒ κανένα τιμολόγιο υποψήφιο. (3) `unmatchGroup` αποσυνδέει ΟΛΑ τα μέλη (`scope: matchGroup`), όχι τα 100 πρώτα. +3 δείκτες | Giorgio + Claude Code |
+| 2026-11-10 | **Μητρώο λογαριασμών εταιρείας + RF στη συμφωνία (ADR-ACC-018 §15)** — (1) πρώτος **γραφέας** του `accounting_bank_accounts` (μέχρι σήμερα μόνο ανάγνωση, χωρίς UI): `accounting-repo-bank-accounts.ts` + `/api/accounting/bank-accounts` + ενότητα «Τραπεζικοί λογαριασμοί» στις ρυθμίσεις. (2) `BankAccountConfig` + `holderName` · `showOnInvoices` · `isDefaultForInvoices` · `sortOrder` · `companyId` · `createdBy` · `updatedAt`. (3) 🔴 `getBankAccounts`: φράχτης `companyId` (έλειπε), σφάλμα ⇒ σφάλμα (όχι σιωπηλή κενή λίστα). (4) Ίχνη `BANK_ACCOUNT_CREATED / _UPDATED / _DEACTIVATED`. (5) `extractInvoiceReferences` αναγνωρίζει **RF (ISO 11649)** στην αιτιολογία και το αποκωδικοποιεί σε (σειρά, αριθμό) — το RF που τυπώνει το τιμολόγιο ταιριάζει χωρίς μαντεψιά | Giorgio + Claude Code |
 
 ---
 

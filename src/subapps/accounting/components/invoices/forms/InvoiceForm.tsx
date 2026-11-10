@@ -115,7 +115,7 @@ function buildIssuerSnapshot(profile: ReturnType<typeof useCompanySetup>['profil
     email: profile.email ?? null,
     website: profile.website ?? null,
     profession: profile.profession,
-    bankAccounts: [], // Populated later if bank accounts are configured
+    bankAccounts: [], // ADR-ACC-018 §15: τα γράφει ο διακομιστής από το μητρώο λογαριασμών — ό,τι σταλεί εδώ αγνοείται
   };
 }
 

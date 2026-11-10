@@ -36,6 +36,8 @@ import type { TaxInstallment } from '../../types/tax';
 import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
+import { getBankAccounts } from './accounting-repo-bank-accounts';
+import { resolveInvoicePaymentAccounts } from '../payments/invoice-payment-accounts';
 import { accountingDocId } from './accounting-doc-ids';
 import { readAccountingListPage, scanAccountingList } from './accounting-repo-list';
 import { INVOICE_LIST, JOURNAL_LIST } from './accounting-list-specs';
@@ -191,11 +193,18 @@ export async function createInvoice(
   const id = generateInvoiceAccId();
   const now = isoNow();
 
+  // ADR-ACC-018 §15: οι οδηγίες πληρωμής κάθε νέου τιμολογίου (φόρμα · γέφυρα πωλήσεων · πιστωτικό) γράφονται
+  // ΕΔΩ, από το μητρώο της εταιρείας — ό,τι έφερε ο καλών στο `issuer.bankAccounts` αγνοείται.
+  const bankAccounts = await resolveInvoicePaymentAccounts(
+    () => getBankAccounts(tenant), data, data.issuer?.name ?? '',
+  );
+  const withAccounts: CreateInvoiceInput = data.issuer ? { ...data, issuer: { ...data.issuer, bankAccounts } } : data;
+
   // Atomic invoice counter
   const nextNumber = await getNextInvoiceNumber(tenant, data.series);
 
   const doc: Invoice = {
-    ...sanitizeForFirestore(data as unknown as Record<string, unknown>) as unknown as CreateInvoiceInput,
+    ...sanitizeForFirestore(withAccounts as unknown as Record<string, unknown>) as unknown as CreateInvoiceInput,
     invoiceId: id,
     companyId: tenant.companyId,
     createdBy: tenant.userId,

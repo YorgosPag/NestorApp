@@ -14,6 +14,12 @@
 import type { InvoiceReference } from '../../types/bank';
 import type { InvoiceSeries } from '../../types/invoice';
 import { normalizeGreek } from './matching-scoring';
+import {
+  CREDITOR_REFERENCE_MAX_BODY,
+  buildCreditorReference,
+  creditorReferenceBody,
+  findCreditorReferences,
+} from '../payments/creditor-reference';
 
 /**
  * Ελληνικά κεφαλαία που μοιάζουν με λατινικά. Η σειρά «A» γράφεται συχνά με ελληνικό «Α» στις αιτιολογίες —
@@ -64,5 +70,60 @@ export function extractInvoiceReferences(
       }
     }
   }
+  for (const reference of referencesFromCreditorCodes(texts, seriesList)) {
+    found.set(`${reference.series}#${reference.number}`, reference);
+  }
   return [...found.values()];
+}
+
+// ============================================================================
+// ΚΩΔΙΚΟΣ RF ΤΙΜΟΛΟΓΙΟΥ (ISO 11649) — ADR-ACC-018 §15
+// ============================================================================
+
+/** Ο αριθμός μέσα στο RF γράφεται ΠΑΝΤΑ με τόσα ψηφία ⇒ «A1»+23 ≠ «A»+123, αποκωδικοποίηση μονοσήμαντη. */
+export const INVOICE_RF_NUMBER_DIGITS = 9;
+
+/**
+ * Ο κωδικός σειράς όπως μπαίνει στο RF: διπλωμένος στα λατινικά (ίδια ομόγλυφα με τις αιτιολογίες), κεφαλαία.
+ * `null` όταν μένει χαρακτήρας εκτός [A-Z0-9] (π.χ. «Γ», «Δ») ή δεν χωρά — καλύτερα **κανένα** RF παρά δύο σειρές
+ * που καταλήγουν στον ίδιο κωδικό.
+ */
+export function seriesReferenceCode(seriesCode: string): string | null {
+  const folded = foldReferenceText(seriesCode).toUpperCase();
+  const maxLength = CREDITOR_REFERENCE_MAX_BODY - INVOICE_RF_NUMBER_DIGITS;
+  return /^[A-Z0-9]+$/.test(folded) && folded.length <= maxLength ? folded : null;
+}
+
+/** Το RF ενός τιμολογίου — καθαρή συνάρτηση της (αμετάβλητης) σειράς + αριθμού· `null` αν δεν ορίζεται. */
+export function invoiceCreditorReference(seriesCode: string, number: number): string | null {
+  const code = seriesReferenceCode(seriesCode);
+  const digits = String(number);
+  if (code === null || !Number.isSafeInteger(number) || number <= 0 || digits.length > INVOICE_RF_NUMBER_DIGITS) {
+    return null;
+  }
+  return buildCreditorReference(`${code}${digits.padStart(INVOICE_RF_NUMBER_DIGITS, '0')}`);
+}
+
+/** Τα έγκυρα RF των κειμένων, αποκωδικοποιημένα σε (σειρά, αριθμό) με την αντίστροφη του {@link invoiceCreditorReference}. */
+function referencesFromCreditorCodes(
+  texts: ReadonlyArray<string | null | undefined>,
+  seriesList: readonly InvoiceSeries[]
+): InvoiceReference[] {
+  const codes = new Map<string, string>();
+  for (const series of seriesList) {
+    const code = seriesReferenceCode(series.code);
+    if (code !== null) codes.set(code, series.code);
+  }
+  const references: InvoiceReference[] = [];
+  for (const text of texts) {
+    for (const rf of findCreditorReferences(text ?? '')) {
+      const body = creditorReferenceBody(rf);
+      const series = codes.get(body.slice(0, -INVOICE_RF_NUMBER_DIGITS));
+      const number = Number.parseInt(body.slice(-INVOICE_RF_NUMBER_DIGITS), 10);
+      if (series !== undefined && /^\d+$/.test(body.slice(-INVOICE_RF_NUMBER_DIGITS)) && number > 0) {
+        references.push({ series, number });
+      }
+    }
+  }
+  return references;
 }

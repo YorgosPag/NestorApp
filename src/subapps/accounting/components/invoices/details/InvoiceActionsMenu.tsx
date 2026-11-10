@@ -29,18 +29,14 @@ interface InvoiceActionsMenuProps {
 }
 
 /**
- * Build PDF settings from company profile (fallback for old invoices without snapshot).
+ * Ρυθμίσεις σχεδίασης από το προφίλ (ΚΑΔ). Οι λογαριασμοί πληρωμής τυπώνονται ΜΟΝΟ από το snapshot του
+ * τιμολογίου (ADR-ACC-018 §15) — καμία εφεδρεία από το σημερινό μητρώο.
  */
 function buildPDFSettings(profile: CompanyProfile | null): InvoicePDFSettings {
-  const settings: InvoicePDFSettings = {
+  return {
     kadCode: extractKadFromProfile(profile),
     withholdingAmount: 0,
   };
-
-  // Fallback bank accounts from company profile
-  // Note: New invoices have bankAccounts in issuer snapshot (ADR-ACC-018)
-  // This is only needed for backward compatibility with old invoices
-  return settings;
 }
 
 export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendEmail, onEdit, onCancel }: InvoiceActionsMenuProps) {

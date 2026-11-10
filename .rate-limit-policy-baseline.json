@@ -169,6 +169,8 @@
     "defineRoute::/api/accounting/assets/depreciation-run/reversal",
     "defineRoute::/api/accounting/balances",
     "defineRoute::/api/accounting/balances/[customerId]",
+    "defineRoute::/api/accounting/bank-accounts",
+    "defineRoute::/api/accounting/bank-accounts/[id]",
     "defineRoute::/api/accounting/bank/match",
     "defineRoute::/api/accounting/bank/reconcile",
     "defineRoute::/api/accounting/bank/transactions",

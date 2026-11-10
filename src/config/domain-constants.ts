@@ -1254,6 +1254,11 @@ export const API_ROUTES = {
       LIST: '/api/accounting/categories',
       BY_ID: (id: string) => `/api/accounting/categories/${id}` as const,
     },
+    // ADR-ACC-008 §2 · ADR-ACC-018 §15 — λογαριασμοί ΤΗΣ εταιρείας (συμφωνία τράπεζας + οδηγίες πληρωμής τιμολογίων)
+    BANK_ACCOUNTS: {
+      LIST: '/api/accounting/bank-accounts',
+      BY_ID: (id: string) => `/api/accounting/bank-accounts/${encodeURIComponent(id)}` as const,
+    },
     APY_CERTIFICATES: {
       LIST: '/api/accounting/apy-certificates',
       // ADR-ACC-020 — προεπισκόπηση υπολογισμού (GET · ?customerId&fiscalYear)· το POST του LIST τρέχει τον ίδιο υπολογισμό

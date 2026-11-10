@@ -14,6 +14,8 @@ import type {
   AuditEntityType,
 } from '../types/accounting-audit';
 import type { CompanyProfile } from '../types/company';
+import type { BankAccountConfig } from '../types/bank';
+import { maskIBAN } from '@/types/contacts/banking';
 import { accountingAuditEntryOf, logAccountingEvent } from './accounting-audit-service';
 import { diffCompanyOwnership } from './audit/company-ownership-audit';
 import { legalNameChangeAudit } from './audit/company-legal-name-audit';
@@ -63,6 +65,7 @@ export function createAuditedRepository(
     findOpenInvoicesByReference: repo.findOpenInvoicesByReference.bind(repo),
     collectActiveJournalEntriesByAmount: repo.collectActiveJournalEntriesByAmount.bind(repo),
     getBankAccounts: repo.getBankAccounts.bind(repo),
+    listBankAccounts: repo.listBankAccounts.bind(repo),
     getFixedAsset: repo.getFixedAsset.bind(repo),
     listFixedAssets: repo.listFixedAssets.bind(repo),
     collectFixedAssetList: repo.collectFixedAssetList.bind(repo),
@@ -168,6 +171,28 @@ export function createAuditedRepository(
       }
     },
 
+    // ADR-ACC-018 §15: ο λογαριασμός που τυπώνεται στα τιμολόγια — κάθε αλλαγή του αφήνει ίχνος (αντι-απάτη).
+    async createBankAccount(data) {
+      const created = await repo.createBankAccount(data);
+      await logAudit(repo, userId, 'BANK_ACCOUNT_CREATED', 'bank_account', created.accountId,
+        `Νέος τραπεζικός λογαριασμός ${maskIBAN(created.iban)}`, bankAccountAuditMetadata(created));
+      return created;
+    },
+
+    async updateBankAccount(accountId, updates) {
+      const saved = await repo.updateBankAccount(accountId, updates);
+      await logAudit(repo, userId, 'BANK_ACCOUNT_UPDATED', 'bank_account', accountId,
+        `Αλλαγή τραπεζικού λογαριασμού ${maskIBAN(saved.iban)}`, bankAccountAuditMetadata(saved));
+      return saved;
+    },
+
+    async deactivateBankAccount(accountId) {
+      const saved = await repo.deactivateBankAccount(accountId);
+      await logAudit(repo, userId, 'BANK_ACCOUNT_DEACTIVATED', 'bank_account', accountId,
+        `Απενεργοποίηση τραπεζικού λογαριασμού ${maskIBAN(saved.iban)}`, bankAccountAuditMetadata(saved));
+      return saved;
+    },
+
     async upsertCustomerBalance(customerId, balance) {
       await repo.upsertCustomerBalance(customerId, balance);
       await logAudit(repo, userId, 'BALANCE_UPDATED', 'balance', customerId,
@@ -203,6 +228,18 @@ function companySetupAudit(
     entries.push(accountingAuditEntryOf({ ...subject, eventType: 'COMPANY_LEGAL_NAME_CHANGED', ...rename }));
   }
   return entries;
+}
+
+/** Το ίχνος δεν αντιγράφει ολόκληρο το IBAN — το καλυμμένο αρκεί για ταυτοποίηση (ADR-ACC-018 §15). */
+function bankAccountAuditMetadata(account: BankAccountConfig): Record<string, string | boolean | null> {
+  return {
+    iban: maskIBAN(account.iban),
+    bic: account.bankCode,
+    holderName: account.holderName ?? null,
+    showOnInvoices: account.showOnInvoices === true,
+    isDefaultForInvoices: account.isDefaultForInvoices === true,
+    isActive: account.isActive,
+  };
 }
 
 async function logAudit(

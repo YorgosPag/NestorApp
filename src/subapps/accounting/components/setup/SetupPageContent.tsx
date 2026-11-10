@@ -40,6 +40,7 @@ import { MemberManagementSection } from './MemberManagementSection';
 import { ShareholderManagementSection } from './ShareholderManagementSection';
 import { SoleProprietorRegistrySection } from './SoleProprietorRegistrySection';
 import { CustomCategoriesSection } from './CustomCategoriesSection';
+import { BankAccountsSection } from './BankAccountsSection';
 import { FiscalPeriodsSection } from './FiscalPeriodsSection';
 import { nowISO } from '@/lib/date-local';
 
@@ -367,6 +368,8 @@ export function SetupPageContent() {
 
             <KadSection data={formData} onChange={handleChange} errors={translatedErrors} />
             <InvoiceSeriesSection data={formData} onChange={handleChange} />
+            {/* Λογαριασμοί της εταιρείας — οδηγίες πληρωμής τιμολογίων (ADR-ACC-018 §15) */}
+            <BankAccountsSection defaultHolderName={formData.businessName} />
             <ServicePresetsSection />
             <CustomCategoriesSection />
             {/* Λογιστικές χρήσεις — ADR-ACC-010 §2.1.1 Φ9-Β */}

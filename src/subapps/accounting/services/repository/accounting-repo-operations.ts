@@ -21,7 +21,6 @@ import { FIRST_PAGE, type PageRequest, type PaginatedResult } from '@/lib/pagina
 import type {
   BankTransaction,
   BankTransactionFilters,
-  BankAccountConfig,
   ImportBatch,
 } from '../../types/bank';
 import type {
@@ -99,16 +98,6 @@ export function listBankTransactions(
 /** ΟΛΗ η εμβέλεια της λίστας (ίδια φίλτρα/δείκτες με το `listBankTransactions`) — για τα σύνολα της οθόνης. */
 export function collectBankTransactionList(tenant: TenantContext, filters: BankTransactionFilters): Promise<BankTransaction[]> {
   return scanAccountingList(tenant, BANK_TRANSACTION_LIST, filters, (data) => data as BankTransaction);
-}
-
-export async function getBankAccounts(tenant: TenantContext): Promise<BankAccountConfig[]> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_BANK_ACCOUNTS)
-      .where('isActive', '==', true)
-      .get();
-    return snap.docs.map((d) => d.data() as BankAccountConfig);
-  }, []);
 }
 
 export async function createImportBatch(

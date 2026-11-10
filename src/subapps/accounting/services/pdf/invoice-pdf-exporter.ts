@@ -16,10 +16,11 @@ import { openBlobInNewTab } from '@/lib/exports/trigger-export-download';
 // TYPES
 // ============================================================================
 
-/** Optional company settings for fallback data (bankAccounts, KAD, etc.) */
+/**
+ * Ρυθμίσεις σχεδίασης που ΔΕΝ ζουν στο τιμολόγιο (ΚΑΔ, παρακράτηση). Οι λογαριασμοί πληρωμής **δεν** είναι εδώ:
+ * τυπώνεται μόνο το snapshot του τιμολογίου (ADR-ACC-018 §15) — ποτέ «εφεδρεία» από το σημερινό μητρώο.
+ */
 export interface InvoicePDFSettings {
-  /** Fallback bank accounts (used if invoice.issuer.bankAccounts is empty) */
-  bankAccounts?: Array<{ bankName: string; iban: string }>;
   /** Primary KAD code for myDATA section */
   kadCode?: string | null;
   /** Withholding tax amount (default: 0) */
@@ -57,21 +58,6 @@ function buildFilename(invoice: Invoice): string {
 }
 
 /**
- * Resolve bank accounts: prefer invoice snapshot, fallback to settings.
- */
-function resolveBankAccounts(
-  invoice: Invoice,
-  settings?: InvoicePDFSettings
-): Array<{ bankName: string; iban: string }> {
-  // Invoice issuer snapshot (ADR-ACC-018)
-  if (invoice.issuer.bankAccounts && invoice.issuer.bankAccounts.length > 0) {
-    return invoice.issuer.bankAccounts;
-  }
-  // Fallback from settings
-  return settings?.bankAccounts ?? [];
-}
-
-/**
  * Extract KAD code from company profile (primary KAD).
  */
 export function extractKadFromProfile(profile: CompanyProfile | null): string | null {
@@ -87,19 +73,17 @@ export function extractKadFromProfile(profile: CompanyProfile | null): string | 
  * Export invoice as PDF download.
  *
  * @param invoice - The invoice to export
- * @param settings - Optional fallback settings (bankAccounts, KAD, withholding)
+ * @param settings - Optional settings (KAD, withholding)
  */
 export async function exportInvoicePDF(
   invoice: Invoice,
   settings?: InvoicePDFSettings
 ): Promise<void> {
   const logoBase64 = await loadLogo();
-  const bankAccounts = resolveBankAccounts(invoice, settings);
 
   const pdf = await renderInvoicePDF({
     invoice,
     logoBase64,
-    bankAccounts,
     kadCode: settings?.kadCode ?? null,
     withholdingAmount: settings?.withholdingAmount ?? 0,
   });
@@ -119,12 +103,10 @@ export async function getInvoicePDFBlob(
   settings?: InvoicePDFSettings
 ): Promise<Blob> {
   const logoBase64 = await loadLogo();
-  const bankAccounts = resolveBankAccounts(invoice, settings);
 
   const pdf = await renderInvoicePDF({
     invoice,
     logoBase64,
-    bankAccounts,
     kadCode: settings?.kadCode ?? null,
     withholdingAmount: settings?.withholdingAmount ?? 0,
   });

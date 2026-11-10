@@ -222,7 +222,7 @@ pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', undefined, 'Identity-H');
 | Στήλη "Μ.Μ." (Μονάδα Μέτρησης) | **Πάντα** — τεμ., ώρες, τ.μ., κ.α. |
 | Παρακράτηση φόρου | `withholdingTaxAmount > 0` |
 | myDATA MARK | `mydataStatus === 'accepted'` && `mydataMark !== null` |
-| Τραπεζικοί Λογαριασμοί | `bankAccounts.length > 0` — εμφανίζονται **ΟΛΟΙ** οι καταχωρημένοι, ανεξαρτήτως τρόπου πληρωμής |
+| Οδηγίες πληρωμής (λογαριασμοί · αιτιολογία · EPC QR) | `issuer.bankAccounts.length > 0` **και** `showsPaymentInstructions(invoice)` — μόνο τρόπος πληρωμής με μεταφορά (`bank_transfer` · `credit` · `mixed`), ποτέ σε πιστωτικό. Έως 3 λογαριασμοί, ο προεπιλεγμένος πρώτος (§15 — αντικαθιστά το «ΟΛΟΙ, ανεξαρτήτως τρόπου πληρωμής» του 2026-03-17) |
 | Payment stamp "ΕΞΟΦΛΗΘΗΚΕ / PAID" | `paymentStatus === 'paid'` — πράσινο visual stamp |
 | Payment stamp "ΜΕΡΙΚΗ ΕΞΟΦΛΗΣΗ / PARTIALLY PAID" | `paymentStatus === 'partial'` — πορτοκαλί visual stamp |
 | (Τίποτα για pending — default κατάσταση) | `paymentStatus === 'pending'` — κανένα stamp |
@@ -348,13 +348,12 @@ src/subapps/accounting/
 
 ## 6. Invoicing Settings — Δεδομένα Template
 
-Τα στοιχεία εκδότη, IBAN, κλπ. αποθηκεύονται στο Firestore:
+> ⚠️ **Διόρθωση 2026-11-10 (ο κώδικας είναι η αλήθεια)**: η διαδρομή `accounting/{companyId}/settings/invoicing` **δεν
+> υπάρχει**. Το προφίλ εκδότη ζει στο `accounting_settings/{companyId}` (`CompanyProfile`, ADR-439 Φ2) και οι τραπεζικοί
+> λογαριασμοί στο **μητρώο** `accounting_bank_accounts` (ADR-ACC-008 §2 · §15 εδώ) — **όχι** μέσα στο προφίλ.
+> Ο πίνακας παρακάτω μένει ως ιστορικό παράδειγμα τιμών.
 
-```
-accounting/{companyId}/settings/invoicing
-```
-
-Σχήμα (από ACC-002 §10):
+Σχήμα (από ACC-002 §10, ιστορικό):
 
 | Πεδίο | Παράδειγμα | Πηγή |
 |-------|------------|-------|
@@ -382,7 +381,7 @@ accounting/{companyId}/settings/invoicing
 | `mobile` | `string \| null` | Κινητό εκδότη κατά την έκδοση |
 | `email` | `string \| null` | Email εταιρείας (footer) |
 | `website` | `string \| null` | Website εταιρείας (footer) |
-| `bankAccounts` | `Array<{ bankName: string; iban: string }>` | Τραπεζικοί λογαριασμοί κατά την έκδοση |
+| `bankAccounts` | `InvoicePaymentAccount[]` = `{ bankName; iban; bic?; holderName? }` | Οδηγίες πληρωμής κατά την έκδοση — τις γράφει **ο διακομιστής** από το μητρώο (§15) |
 
 **Γιατί snapshot αντί settings:**
 - **Νομική ακεραιότητα** — Τιμολόγιο 2024 δείχνει στοιχεία 2024, ακόμα κι αν αλλάξει τηλέφωνο/IBAN
@@ -390,7 +389,7 @@ accounting/{companyId}/settings/invoicing
 - **Ελεγκτική ικανότητα** — Ο εφοριακός βλέπει ακριβώς τι ίσχυε κατά την έκδοση
 - **Enterprise standard** — SAP, Oracle Financials, Stripe κάνουν το ίδιο
 
-**Backward compatibility:** Παλιά τιμολόγια χωρίς τα νέα πεδία → fallback στα settings (graceful degradation)
+**Backward compatibility (διορθώθηκε 2026-11-10, §15):** **καμία** εφεδρεία από τις σημερινές ρυθμίσεις για τους λογαριασμούς. Ένα παλιό τιμολόγιο τυπώνει μόνο ό,τι έγραφε όταν εκδόθηκε: αν τυπωνόταν το σημερινό IBAN, θα έδειχνε κάτι που δεν έγραφε ποτέ, ακόμη και σε απόδειξη μετρητών. Τα `bic` / `holderName` λείπουν από τα παλιά snapshots, οπότε η σχεδίαση γράφει «—» και την επωνυμία του εκδότη.
 
 ---
 
@@ -535,7 +534,7 @@ accounting/{companyId}/settings/invoicing
 | 2026-03-17 | Πιστωτικό: Σχετ. Παραστατικό ΥΠΟΧΡΕΩΤΙΚΟ (Ν.4308/2014), αιτιολογία ΠΡΟΑΙΡΕΤΙΚΗ (μόνο αν creditReason !== null) | Γιώργος + Claude |
 | 2026-03-17 | InvoiceIssuer snapshot: προσθήκη phone, mobile, bankAccounts — self-contained document (enterprise pattern SAP/Oracle/Stripe) | Γιώργος + Claude |
 | 2026-03-17 | Γλώσσα: Δίγλωσση (EL + EN) — αλλαγή από "μόνο ελληνικά" (ACC-002 §16). Ετικέτες: ελληνικά πρώτα + αγγλικά | Γιώργος |
-| 2026-03-17 | Email πελάτη ΔΕΝ εμφανίζεται στο PDF — GDPR + φορολογικό έγγραφο (μόνο: Επωνυμία, ΑΦΜ, ΔΟΥ, Διεύθυνση) | Claude (enterprise pattern) |
+| 2026-03-17 | ~~Email πελάτη ΔΕΝ εμφανίζεται στο PDF — GDPR~~ **Αντικαταστάθηκε 2026-11-10** (βλ. εκεί) | Claude (enterprise pattern) |
 | 2026-03-17 | ΦΠΑ breakdown: αναλυτικά ΑΝΑ συντελεστή (μία γραμμή per rate) — myDATA compliance | Γιώργος |
 | 2026-03-17 | Payment status stamp: PAID (πράσινο), PARTIAL (πορτοκαλί), PENDING (τίποτα). Enterprise pattern Stripe/QuickBooks | Γιώργος + Claude |
 | 2026-03-17 | Due date: στο header δίπλα στην ημ/νία έκδοσης (conditional — μόνο αν dueDate !== null). Enterprise pattern Stripe/FreshBooks | Γιώργος + Claude |
@@ -548,6 +547,8 @@ accounting/{companyId}/settings/invoicing
 | 2026-11-09 | **Ενότητα «ΑΠΑΛΛΑΓΗ ΦΠΑ / VAT EXEMPTION»** κάτω από τα σύνολα (`invoice-pdf-vat-exemption.ts`): μία γραμμή ανά αιτία εξαίρεσης με τις γραμμές που καλύπτει — ν. 4308/2014 άρθρο 9 (παραπομπή στη διάταξη). Κείμενο από το namespace `accounting-vat-exemptions` μέσω `createBundleTranslate`, διάταξη ν. 2859/2000 ή ν. 5144/2024 ανά ημερομηνία έκδοσης (ADR-ACC-003 §22.1). Το `INVOICE_DOCUMENT_LANGUAGE` μετακόμισε στο `invoice-pdf-constants.ts` (μία γλώσσα εγγράφου για μονάδα και αιτία) | Giorgio + Claude Code |
 | 2026-11-10 | **Μπλοκ «ΑΝΤΙΣΤΡΟΦΗ ΕΠΙΒΑΡΥΝΣΗ / REVERSE CHARGE»** πριν από την παραπομπή απαλλαγής, στην ίδια σημείωση ΦΠΑ (`invoice-pdf-vat-exemption.ts`): ν. 4308/2014 άρθρο 9 §1 ιγ, φράση «Αντίστροφη επιβάρυνση» κατά λέξη (ΔΕΕ C-247/21). Γραμμές από το `services/tax/reverse-charge.ts` (κατηγορία EN 16931 `AE`). Κοινός σχεδιαστής μπλοκ `drawVatNoteBlock` για τα δύο μπλοκ (ADR-ACC-003 §22.9) | Giorgio + Claude Code |
 | 2026-11-10 | **§14 — Διάταξη μερών: προϋπολογισμός στηλών + πλήρης διεύθυνση πελάτη.** Κεφαλίδα και πελάτης μετακόμισαν στο `invoice-pdf-parties.ts`· η δεξιά στήλη μετριέται πρώτα, ο εκδότης αναδιπλώνεται στο υπόλοιπο πλάτος (τέλος η επικάλυψη «Δραστηριότητα» ↔ «Ημ/νία Έκδοσης»)· το πλαίσιο πελάτη μετριέται πριν σχεδιαστεί· διεύθυνση από `formatContactAddressLine` (πόλη + Τ.Κ. χωρίς οδό), χώρα δίγλωσση από `countryLabelIn` (ν. 4308/2014 άρθρο 9 §1 ε) | Giorgio + Claude Code |
+| 2026-11-10 | **Email πελάτη στο PDF = ΝΑΙ** (απόφαση Giorgio): στη στήλη του πελάτη, όπως ήδη τυπώνει ο κώδικας· παραλείπεται όταν είναι κενό. Πρακτική Stripe («Bill to»)· EN 16931 BT-58 (προαιρετικό email επαφής αγοραστή). Η αιτιολογία «GDPR» του 2026-03-17 δεν στέκει: το έγγραφο πηγαίνει στον **ίδιο** τον πελάτη (καμία κοινοποίηση σε τρίτο) και τα στοιχεία τιμολόγησης έχουν νόμιμη βάση (σύμβαση + φορολογική υποχρέωση). Κλείνει το ανοιχτό §14 (δ) | Giorgio + Claude Code |
+| 2026-11-10 | **§15 — Οδηγίες πληρωμής: μητρώο λογαριασμών + snapshot από τον διακομιστή + RF (ISO 11649) + EPC QR (EPC069-12 v3.1).** Αντικαθιστά τα «ΟΛΟΙ οι λογαριασμοί, ανεξαρτήτως τρόπου πληρωμής» (2026-03-17) και «fallback στα settings» (§6.2) | Giorgio + Claude Code |
 
 ---
 
@@ -569,13 +570,63 @@ accounting/{companyId}/settings/invoicing
 - (α) Η διεύθυνση του πελάτη βγαίνει από τη **μία** μορφή `formatContactAddressLine` («Οδός, Πόλη, Τ.Κ.»). Τα κενά παραλείπονται, και ο ελληνικός Τ.Κ. γράφεται «546 30».
 - (β) Η χώρα είναι δίγλωσση («Γερμανία / Germany»), όπως κάθε ετικέτα του εγγράφου. Για ελληνικό πελάτη παραλείπεται, όπως πριν.
 - (γ) Η διεύθυνση του **εκδότη** κρατά τη σημερινή μορφή της (`οδός, πόλη Τ.Κ.`): αλλάζει μόνο η αναδίπλωση.
-- (δ) Το email του πελάτη τυπώνεται, όπως τύπωνε ήδη ο κώδικας.
-  - ⚠️ Αυτό **αντιφάσκει** με τη γραμμή του Decision Log 2026-03-17 («Email πελάτη ΔΕΝ εμφανίζεται στο PDF — GDPR»).
-  - Ο κώδικας είναι η αλήθεια. Η απόφαση μένει **ανοιχτή για τον Giorgio**.
+- (δ) Το email του πελάτη τυπώνεται, όπως τύπωνε ήδη ο κώδικας. ✅ **Αποφασίστηκε 2026-11-10 (Giorgio): ΝΑΙ**, βλ. Decision Log.
 
 **Εκτός εμβέλειας**:
 - Το διπλό κείμενο της δραστηριότητας («γενικός ανάδοχος…/γενικός ανάδοχος…»). Έρχεται αυτούσιο από το `profile.profession`, δηλαδή από τα δεδομένα του προφίλ και όχι από το PDF.
 - Η χρήση του `drawWrappedLines` στις σημειώσεις και στη σημείωση ΦΠΑ, που έχουν τοπικό `splitTextToSize`.
+
+---
+
+## 15. Οδηγίες πληρωμής: λογαριασμοί · αιτιολογία RF · EPC QR (2026-11-10)
+
+**Πρόβλημα**:
+- (α) Η ενότητα λογαριασμών του PDF υπήρχε, αλλά **δεν έδειχνε ποτέ τίποτα**: το snapshot `issuer.bankAccounts` γραφόταν πάντα `[]` (φόρμα **και** γέφυρα πωλήσεων ακινήτων), και δεν υπήρχε πουθενά UI ή API καταχώρισης λογαριασμών.
+- (β) Το `issuer` το έστελνε **ο browser** (σχήμα `.passthrough()`). Αν είχε συνδεθεί ως είχε, ένα πειραγμένο αίτημα θα αποφάσιζε **ποιο IBAN τυπώνεται** στο τιμολόγιο.
+- (γ) Το `getBankAccounts` (Admin SDK) φιλτράριζε μόνο `isActive`, **χωρίς `companyId`** ⇒ θα επέστρεφε λογαριασμούς **άλλων εταιρειών**. Δεν προκάλεσε ζημιά, γιατί η συλλογή ήταν άδεια.
+
+**Πηγές (επαληθευμένες)**:
+- **EN 16931 BG-16** Payment instructions: BT-81 τρόπος, BT-83 αιτιολογία, BT-84 IBAN, BT-85 δικαιούχος, BT-86 BIC.
+- **ISO 11649** (RF): «RF» + 2 ψηφία ελέγχου (mod 97) + έως 21 αλφαριθμητικά. Επαλήθευση στο δημοσιευμένο παράδειγμα `RF18 5390 0754 7034`.
+- **EPC069-12 v3.1** (19/03/2024, επίσημο PDF του EPC), §2.1–2.2:
+  - `BCD` / `002` / charset `1` = UTF-8 / `SCT`
+  - BIC προαιρετικό εντός ΕΟΧ
+  - δικαιούχος ≤ 70 · IBAN ≤ 34
+  - `EUR` 0.01–999999999.99
+  - structured ≤ 35 **ή** unstructured ≤ 140, ποτέ και τα δύο
+  - διαχωριστής LF, κανένας μετά το τελευταίο πεδίο
+  - **≤ 331 bytes** · error level **M**
+  - «it is optional for PSPs». Η υποστήριξη από τις ελληνικές τραπεζικές εφαρμογές **δεν επιβεβαιώθηκε**, γι' αυτό το QR **συμπληρώνει** τον πίνακα και δεν τον αντικαθιστά.
+- ν. 4308/2014 άρθρο 9: δεν απαιτεί IBAN. Είναι καλή πρακτική (Stripe, Xero, QuickBooks).
+
+**Αρχιτεκτονική**:
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `services/repository/accounting-repo-bank-accounts.ts` | Ο **ΕΝΑΣ** γραφέας του `accounting_bank_accounts` (ADR-ACC-008 §2). Κάθε πράξη τρέχει σε μία συναλλαγή που διαβάζει όλους τους λογαριασμούς του μισθωτή: μοναδικό IBAN ανάμεσα στους ενεργούς · **ακριβώς ένας** προεπιλεγμένος ανάμεσα σε όσους τυπώνονται (`resolveInvoiceDefault`) · απενεργοποίηση, ποτέ διαγραφή. Φράχτης `companyId` σε κάθε ανάγνωση. Το IBAN **δεν αλλάζει**: άλλο IBAN = νέος λογαριασμός |
+| `services/audited-repository-wrapper.ts` | Ίχνη `BANK_ACCOUNT_CREATED / _UPDATED / _DEACTIVATED` με καλυμμένο IBAN. Μια σιωπηλή αλλαγή του IBAN που τυπώνεται είναι το κλασικό μοτίβο απάτης «αλλάξαμε τράπεζα» |
+| `app/api/accounting/bank-accounts/` | GET/POST + PATCH/DELETE (`defineRoute`, `sensitive`). Ο διακομιστής ξαναελέγχει IBAN (`validateIBAN`) και BIC (`isValidBIC`, ISO 9362). Διπλό IBAN ⇒ 409, ξένος λογαριασμός ⇒ 404 |
+| `services/payments/invoice-payment-accounts.ts` | Ο **ΕΝΑΣ** κανόνας «ποιοι λογαριασμοί, πότε»: `showsPaymentInstructions` (μεταφορά · `credit` · `mixed`, ποτέ πιστωτικό) · `selectInvoicePaymentAccounts` (ενεργοί + «Στα τιμολόγια», ο προεπιλεγμένος πρώτος, έως 3, δικαιούχος ή επωνυμία εκδότη) · `resolveInvoicePaymentAccounts` (διαβάζει το μητρώο **μόνο** όταν χρειάζεται) · `compareBankAccounts` (η μία σειρά) |
+| `services/repository/accounting-repo-financial.ts` → `createInvoice` | Η **γέννηση** κάθε τιμολογίου (φόρμα · γέφυρα πωλήσεων · πιστωτικό) γράφει το snapshot από το μητρώο. Ό,τι φέρει ο καλών αγνοείται |
+| `app/api/accounting/invoices/invoice-payment-snapshot.ts` | PATCH πρόχειρου: αλλαγή `issuer`/`paymentMethod`/`type` ⇒ το snapshot ξαναχτίζεται με τον ίδιο resolver. Τα διαβιβασμένα τα φυλά το `IMMUTABLE_STATUSES` |
+| `services/payments/creditor-reference.ts` | ISO 11649: `buildCreditorReference` · `isValidCreditorReference` · `formatCreditorReference` · `findCreditorReferences` (μέσα σε κείμενο τράπεζας, το μακρύτερο έγκυρο πρόθεμα) |
+| `services/engines/matching-reference.ts` | `invoiceCreditorReference(series, number)`: κωδικός σειράς διπλωμένος στα λατινικά (ίδια ομόγλυφα με τις αιτιολογίες) + αριθμός **πάντα 9 ψηφία**, ώστε «A1»+23 ≠ «A»+123. Σειρά με χαρακτήρα εκτός [A-Z0-9] (π.χ. «Γ») ⇒ **κανένα** RF. Η συμφωνία τράπεζας **αποκωδικοποιεί** τα RF των αιτιολογιών σε (σειρά, αριθμό), από το ίδιο κανάλι `InvoiceReference` |
+| `services/payments/epc-qr-payload.ts` | Το payload EPC κατά γράμμα του v3.1. Αδύνατο ⇒ `null` + λόγος, ποτέ κομμένο όνομα |
+| `services/pdf/invoice-pdf-payment-qr.ts` | Το QR **διανυσματικά** (`qrModuleRuns`, level M, 26mm): ίδιο σε browser και email, χωρίς PNG |
+| `services/pdf/invoice-pdf-sections.ts` → `drawBankAccountsSection` | Τράπεζα · IBAN · BIC · Δικαιούχος + «Αιτιολογία πληρωμής: RF… (σειρά-αριθμός)» + QR δεξιά για τον προεπιλεγμένο. Ποσό QR = `invoicePayableAmount`, ο **ίδιος** αριθμός με το «ΠΛΗΡΩΤΕΟ» |
+| `components/setup/BankAccountsSection.tsx` · `BankAccountDialog.tsx` · `bank-account-form-state.ts` · `hooks/useCompanyBankAccounts.ts` | Οθόνη ρυθμίσεων. Επαναχρησιμοποιεί `IBANInput` + `BankSelector` (κατάλογος με BIC, αυτόματη τράπεζα από IBAN). Αποθήκευση ανά λογαριασμό, και μετά επανανάγνωση: η οθόνη δείχνει ό,τι αποφάσισε ο γραφέας |
+
+**Αποφάσεις**:
+- (α) **Μία πηγή** για τους λογαριασμούς της εταιρείας: το μητρώο της συμφωνίας τράπεζας (`BankAccountConfig`), επεκταμένο. **Όχι** οι λογαριασμοί επαφών, που ανήκουν σε **τρίτους**.
+- (β) Το snapshot το γράφει **ο διακομιστής**, και η σχεδίαση τυπώνει **μόνο** το snapshot. Η εφεδρεία «σημερινές ρυθμίσεις» αφαιρέθηκε από exporter / μενού / email.
+- (γ) Το RF **δεν αποθηκεύεται**: είναι καθαρή συνάρτηση της (αμετάβλητης) σειράς + αριθμού, άρα δεν υπάρχει δεύτερη αλήθεια ούτε ενημέρωση παλιών εγγράφων.
+- (δ) Το QR κωδικοποιεί τον **προεπιλεγμένο** λογαριασμό (ένα QR = ένα IBAN) και μόνο ευρώ.
+- (ε) Ο αριθμός τιμολογίου μένει ορατός δίπλα στο RF, για όποια τράπεζα δεν δέχεται RF.
+
+**Εκτός εμβέλειας / γνωστά**:
+- **Παρακράτηση στο πληρωτέο**: όλοι οι καλούντες περνούν `withholdingAmount: 0`, ενώ το τιμολόγιο έχει `withholdingAmount`. Το QR ακολουθεί το τυπωμένο «ΠΛΗΡΩΤΕΟ» και δεν διορθώνει μόνο του τη διαφορά.
+- Υποστήριξη EPC QR / RF από ελληνικές τραπεζικές εφαρμογές: **ανεπιβεβαίωτη**. Το μενού «Πληρωμή με RF» των ελληνικών τραπεζών αφορά δικαιούχους εγγεγραμμένους στη ΔΙΑΣ. Το RF εδώ είναι αιτιολογία μεταφοράς (SEPA).
+- Δημόσια σελίδα πληρωμής (link + QR) · IRIS: επόμενο βήμα.
 
 ---
 

@@ -146,17 +146,11 @@ export const POST = defineRoute({
       // Logo unavailable — PDF renders without it
     }
 
-    const bankAccounts =
-      invoice.issuer.bankAccounts.length > 0
-        ? invoice.issuer.bankAccounts
-        : [];
-
     const kadCode = extractKadFromProfile(companyProfile);
 
     const pdf = await renderInvoicePDF({
       invoice,
       logoBase64,
-      bankAccounts,
       kadCode,
       withholdingAmount: 0,
     });
