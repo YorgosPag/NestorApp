@@ -60,7 +60,8 @@ RapidOCR (Apache-2.0, έλεγχος άδειας + ίδια απόδειξη ι
 Μετά το 0.1: βήματα 0.2–0.7 του σχεδίου, το καθένα με «ναι».
 
 ## 5. ΑΝΟΙΧΤΑ
-1. Push / `wt:land` — μόνο με εντολή (κλαδί: `ac237914` + αυτό το handoff).
+1. ✅ `wt:land` με εντολή Giorgio ⇒ main **`a9a74a3f`** (Π-12 + 2 handoffs) · **push έκανε ο Giorgio** (2026-11-10).
+   Ο κώδικας εφαρμογής ΔΕΝ άλλαξε (μόνο test + έγγραφα) ⇒ ζωντανά επαληθεύεται μόνο ότι το `/api/build-info` δείχνει `a9a74a3f`.
 2. Νέα πύλη «μητρώο μοντέλων» (όπως `.font-assets.json`) — πρόταση μίας γραμμής, όχι μέρος της Φ0.
 3. Από πριν: 7β υπόλοιπο · `closedRectangleStrategy` στο Π-10 · απάντηση «κολόνα» · `'#003fff'` σε 6 tests ·
    `publishRecomputed(null)` · `ModelFromDrawingHost.test.tsx` κόκκινο (`NotificationProvider`) · `DECISION_ANCHOR_MIN_IOU` ·
