@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * @fileoverview 🔐 **Η ΔΙΑΓΡΑΦΗ ΓΚΠΔ ΔΕΝ ΘΑΒΕΙ ΠΕΡΙΕΧΟΜΕΝΟ ΕΤΑΙΡΕΙΑΣ** — ADR-935 Στάδιο 1 (Ε1 · Ε2).
+ * @fileoverview 🔐 **Η ΔΙΑΓΡΑΦΗ ΓΚΠΔ ΔΕΝ ΘΑΒΕΙ ΠΕΡΙΕΧΟΜΕΝΟ ΕΤΑΙΡΕΙΑΣ** — ADR-936 Στάδιο 1 (Ε1 · Ε2).
  * @related server/files/gdpr-erasure.server.ts · services/file-record/file-subject-scan.ts · lib/files/file-actor-fields.ts
  *
  * 🔴 **ΤΙ ΦΥΛΑΕΙ**: (Ε1) η διαγραφή έσβηνε οριστικά κάθε **εταιρικό** αρχείο που ανέβασε ο άνθρωπος· (Ε2) έγραφε τα πάντα
@@ -60,7 +60,7 @@ beforeEach(() => {
   fake = new FakeFirestore();
 });
 
-describe('ADR-935 Στάδιο 1 — εταιρικός χώρος: ανωνυμοποίηση, ποτέ σβήσιμο (Ε1)', () => {
+describe('ADR-936 Στάδιο 1 — εταιρικός χώρος: ανωνυμοποίηση, ποτέ σβήσιμο (Ε1)', () => {
   it('Κ1 — αρχείο που ανέβασε: bytes ΑΘΙΚΤΑ, μόνο ο δράστης και το όνομά του φεύγουν', async () => {
     seedCompanyFile('file_plan');
 
@@ -117,7 +117,7 @@ describe('ADR-935 Στάδιο 1 — εταιρικός χώρος: ανωνυμ
   });
 });
 
-describe('ADR-935 Στάδιο 1 — προσωπικός χώρος: σβήσιμο (ό,τι ίσχυε)', () => {
+describe('ADR-936 Στάδιο 1 — προσωπικός χώρος: σβήσιμο (ό,τι ίσχυε)', () => {
   it('Κ2 — αρχείο του φακέλου του: bytes σβήνονται, επιτύμβιο ΓΚΠΔ', async () => {
     fake.seed(COLLECTIONS.FILES_PERSONAL, 'file_home', {
       id: 'file_home', userId: SUBJECT, lifecycleState: 'active', hold: 'none', storagePath: `people/${SUBJECT}/home.jpg`,
@@ -145,7 +145,7 @@ describe('ADR-935 Στάδιο 1 — προσωπικός χώρος: σβήσι
   });
 });
 
-describe('ADR-935 Στάδιο 1 — τεμαχισμένο και επαναλήψιμο (Ε2)', () => {
+describe('ADR-936 Στάδιο 1 — τεμαχισμένο και επαναλήψιμο (Ε2)', () => {
   it('Κ4 — 1.200 εγγραφές ⇒ τρεις δέσμες, όλες γραμμένες', async () => {
     for (let i = 0; i < 1200; i++) seedCompanyFile(`file_${i}`);
     const batches = jest.spyOn(fake, 'batch');
@@ -170,7 +170,7 @@ describe('ADR-935 Στάδιο 1 — τεμαχισμένο και επαναλ�
   });
 });
 
-describe('ADR-935 — η ταυτότητα του διαγραμμένου', () => {
+describe('ADR-936 — η ταυτότητα του διαγραμμένου', () => {
   it('Κ8 — ΔΕΝ είναι μηχανή: το ιστορικό δεν τον γράφει «Σύστημα»', () => {
     expect(isSystemActorId(ERASED_SUBJECT.ID)).toBe(false);
   });

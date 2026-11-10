@@ -156,7 +156,7 @@ describe('δράστης', () => {
     expect(alone).toBe(language === 'el' ? 'Σύστημα · βοηθός AI' : 'System · AI assistant');
   });
 
-  it.each(LANGUAGES)('Δ8 🔐 [%s] ο διαγραμμένος (ADR-935) λέγεται στη γλώσσα του θεατή — ποτέ «[GDPR ANONYMIZED]», ποτέ «Σύστημα»', (language, translate) => {
+  it.each(LANGUAGES)('Δ8 🔐 [%s] ο διαγραμμένος (ADR-936) λέγεται στη γλώσσα του θεατή — ποτέ «[GDPR ANONYMIZED]», ποτέ «Σύστημα»', (language, translate) => {
     const name = resolveActorName({ performedBy: ERASED_SUBJECT.ID, performedByName: ERASED_SUBJECT.DISPLAY_NAME, translate });
 
     expect(name).toBe(language === 'el' ? 'Διαγραμμένος χρήστης' : 'Deleted user');

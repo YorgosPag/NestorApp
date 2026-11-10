@@ -126,7 +126,7 @@ const MATERIAL_DOORS = Object.freeze({
   'src/server/files/gdpr-erasure.server.ts': {
     cover: DOOR_COVER.REFRESH,
     reason:
-      'Α3 — η διαγραφή ΓΚΠΔ (ADR-935 Στάδιο 1: ο γραφέας βγήκε από τη route). Τα bytes των ΠΡΟΣΩΠΙΚΩΝ αρχείων σβήνονται και η εγγραφή γίνεται `purged`· ξαναπροβάλλει αμέσως μετά. Τα εταιρικά μόνο ανωνυμοποιούνται — δεν αλλάζει υλικό αγγελίας.',
+      'Α3 — η διαγραφή ΓΚΠΔ (ADR-936 Στάδιο 1: ο γραφέας βγήκε από τη route). Τα bytes των ΠΡΟΣΩΠΙΚΩΝ αρχείων σβήνονται και η εγγραφή γίνεται `purged`· ξαναπροβάλλει αμέσως μετά. Τα εταιρικά μόνο ανωνυμοποιούνται — δεν αλλάζει υλικό αγγελίας.',
   },
   'src/app/api/properties/[id]/model/route.ts': {
     cover: DOOR_COVER.REFRESH,

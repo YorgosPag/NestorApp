@@ -19,7 +19,7 @@ import { translated } from './audit-field-descriptor';
 /** Το γενικό όνομα της μηχανής — και η πτώση κάθε διεργασίας χωρίς δικό της. */
 const SYSTEM_ACTOR_KEY = 'audit.actors.system';
 
-/** Ο άνθρωπος που ζήτησε διαγραφή (ADR-935): στη γλώσσα του αναγνώστη, όχι το `[GDPR ANONYMIZED]` του γραφέα. */
+/** Ο άνθρωπος που ζήτησε διαγραφή (ADR-936): στη γλώσσα του αναγνώστη, όχι το `[GDPR ANONYMIZED]` του γραφέα. */
 const ERASED_SUBJECT_KEY = 'audit.actors.erasedSubject';
 
 /** Διεργασίες της μηχανής με δικό τους όνομα: ο άνθρωπος θέλει να ξέρει **ποια** μηχανή. */
