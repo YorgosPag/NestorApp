@@ -1,0 +1,99 @@
+{
+  "$doc": "ADR-929 Φ0.2 — ΤΟ ΜΗΤΡΩΟ ΤΩΝ ΜΟΝΤΕΛΩΝ ΜΗΧΑΝΙΚΗΣ ΜΑΘΗΣΗΣ ΠΟΥ ΔΙΑΝΕΜΟΥΜΕ. Κάθε αρχείο μοντέλου που φεύγει στον browser του χρήστη (public/models/) δηλώνεται ΕΔΩ, με προέλευση κλειδωμένη σε revision, sha256, άδεια και το κείμενο της άδειας που ταξιδεύει μαζί. ΕΝΑ σημείο αλήθειας: ο κώδικας που φορτώνει τα μοντέλα (ADR-929 Φ0.4) διαβάζει διαδρομή + sha256 ΑΠΟ ΕΔΩ και αρνείται αρχείο με άλλο αποτύπωμα (fail-closed, πρότυπο YuNet / TOUR_FACE_MODEL_SHA256).",
+  "$whyThisExists": [
+    "🔴 Ο license gate (ADR-598 G13) και το CHECK 3.84 κρίνουν ΠΑΚΕΤΑ npm. Ένα .onnx μέσα στο public/ ΔΕΝ είναι πακέτο ⇒ είναι ΔΟΜΙΚΑ ΑΟΡΑΤΟ σε αυτούς — το ίδιο κενό που έκλεισε για τις γραμματοσειρές το .font-assets.json (CHECK 3.69, ADR-805).",
+    "⚠️ Το «επιτρέπεται;» ΔΕΝ αποφασίζεται εδώ: αποφασίζει το .license-policy.json, η ΙΔΙΑ πολιτική που κρίνει τα npm πακέτα. Εδώ ζει μόνο η ΔΗΛΩΣΗ (τι είναι, από πού ήρθε, ποια άδεια, πού είναι το κείμενό της).",
+    "⚠️ ΤΑ ΑΠΟΘΕΤΗΡΙΑ HUGGING FACE ΔΕΝ ΕΧΟΥΝ ΑΡΧΕΙΟ ΑΔΕΙΑΣ (μετρημένο 2026-11-10: LICENSE/NOTICE = 404 στο καρφωμένο revision και σε κανένα αρχείο της λίστας). Το README τους δηλώνει «license: apache-2.0» και δείχνει σε ./LICENSE που δεν υπάρχει. Το κείμενο παίρνεται από τον κατασκευαστή (PaddlePaddle/PaddleOCR) σε καρφωμένο commit — βλ. licenseTexts.",
+    "⚠️ ΕΚΔΟΣΗ ΣΤΗ ΔΙΑΔΡΟΜΗ (<μοντέλο>@<revision8>): νέα βάρη = ΝΕΟΣ φάκελος, ποτέ αντικατάσταση στη θέση του παλιού (πρακτική MediaPipe / TF Hub). Έτσι ένα URL σημαίνει για πάντα τα ίδια bytes.",
+    "⚠️ CACHE: ΚΑΝΕΝΑΣ κανόνας `immutable` στο next.config.js για /models/ (ADR-860 §Ε2 — ο κανόνας διαδρομής σφραγίζει και την ΑΠΟΥΣΙΑ για ένα χρόνο). Το cache το κρατά ο worker στο Cache Storage ΜΟΝΟ μετά από επιτυχή έλεγχο sha256 (πρότυπο transformers.js / MediaPipe) — απόφαση Giorgio 2026-11-10."
+  ],
+  "licenseTexts": {
+    "public/models/ocr/PaddleOCR-Apache-2.0-LICENSE.txt": {
+      "spdx": "Apache-2.0",
+      "source": "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/dab3fe35379033fdcb2d0e9572fac0b36c9a9ebf/LICENSE",
+      "sha256": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e",
+      "bytes": 11376,
+      "notice": "Το PaddleOCR ΔΕΝ έχει αρχείο NOTICE (NOTICE / NOTICE.txt = 404 στο ίδιο commit, 2026-11-10) ⇒ το Apache-2.0 §4(d) δεν ζητά τίποτα επιπλέον."
+    }
+  },
+  "assets": {
+    "public/models/ocr/PP-OCRv6_small_det_onnx@28fe5895/inference.onnx": {
+      "spdx": "Apache-2.0",
+      "model": "PP-OCRv6_small_det",
+      "role": "ανιχνευτής κειμένου (DB) — βρίσκει τα κουτιά κειμένου στην εικόνα",
+      "source": {
+        "repo": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx",
+        "revision": "28fe5895c24fd108c19eb3e8479f4ab385fbfc62"
+      },
+      "sha256": "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e",
+      "bytes": 9880512,
+      "attribution": "public/models/ocr/PaddleOCR-Apache-2.0-LICENSE.txt",
+      "why": "ADR-929 Φ0.1 — ανιχνευτής του επιλεγμένου «v6dual» (απόφαση Giorgio 2026-11-10). Παλαιολόγου απέναντι στην αλήθεια: διαστάσεις 19/32, ακρίβεια 90%, κουφώματα 5/5 (v6tiny: 16/32, 72%)."
+    },
+    "public/models/ocr/PP-OCRv6_small_det_onnx@28fe5895/inference.yml": {
+      "spdx": "Apache-2.0",
+      "model": "PP-OCRv6_small_det",
+      "role": "επίσημες ρυθμίσεις του ανιχνευτή: κατώφλια DB thresh / box_thresh / unclip_ratio = 0,2 / 0,45 / 1,4 (ΟΧΙ τα 0,3 / 0,6 / 1,5 του v4)",
+      "source": {
+        "repo": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx",
+        "revision": "28fe5895c24fd108c19eb3e8479f4ab385fbfc62"
+      },
+      "sha256": "193f435274bf9f0b5f71a929bbfbcf148282df7e633b34e7c373e8f44741b516",
+      "bytes": 885,
+      "attribution": "public/models/ocr/PaddleOCR-Apache-2.0-LICENSE.txt",
+      "why": "Ρυθμίσεις και λεξικό διαβάζονται από το αρχείο του ΙΔΙΟΥ μοντέλου, ποτέ από σταθερές στον κώδικα: η Φ0.1 μέτρησε ότι κάθε γενιά μοντέλου έχει άλλα."
+    },
+    "public/models/ocr/PP-OCRv6_small_rec_onnx@b8f84f0b/inference.onnx": {
+      "spdx": "Apache-2.0",
+      "model": "PP-OCRv6_small_rec",
+      "role": "πρώτος αναγνώστης (CTC) — λατινικά, ψηφία, σύμβολα· λεξικό 18708 χαρακτήρων (έξοδος 18710 κλάσεις = blank + λεξικό + κενό)",
+      "source": {
+        "repo": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx",
+        "revision": "b8f84f0b80c529de40b4fbb3544b84fa7233a513"
+      },
+      "sha256": "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634",
+      "bytes": 21159378,
+      "attribution": "public/models/ocr/PaddleOCR-Apache-2.0-LICENSE.txt",
+      "why": "ADR-929 Φ0.1 — πρώτος αναγνώστης του «v6dual»: διαβάζει τις διαστάσεις (19/32, ίδιο με το v6dual) αλλά 0/32 ελληνικά ονόματα χώρων — γι' αυτό υπάρχει ο δεύτερος."
+    },
+    "public/models/ocr/PP-OCRv6_small_rec_onnx@b8f84f0b/inference.yml": {
+      "spdx": "Apache-2.0",
+      "model": "PP-OCRv6_small_rec",
+      "role": "επίσημες ρυθμίσεις του αναγνώστη + το λεξικό (character_dict). ⚠️ Το λεξικό περιέχει χαρακτήρες-κενά (U+3000): ανάγνωση μόνο με lstrip(' '), ποτέ strip()",
+      "source": {
+        "repo": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx",
+        "revision": "b8f84f0b80c529de40b4fbb3544b84fa7233a513"
+      },
+      "sha256": "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1",
+      "bytes": 150579,
+      "attribution": "public/models/ocr/PaddleOCR-Apache-2.0-LICENSE.txt",
+      "why": "Ρυθμίσεις και λεξικό διαβάζονται από το αρχείο του ΙΔΙΟΥ μοντέλου, ποτέ από σταθερές στον κώδικα: η Φ0.1 μέτρησε ότι κάθε γενιά μοντέλου έχει άλλα."
+    },
+    "public/models/ocr/el_PP-OCRv5_mobile_rec_onnx@8152b89d/inference.onnx": {
+      "spdx": "Apache-2.0",
+      "model": "el_PP-OCRv5_mobile_rec",
+      "role": "δεύτερος αναγνώστης (CTC) — ελληνικά· διαβάζει ΜΟΝΟ κουτιά όπου ο πρώτος βρήκε γράμμα ή τίποτα (δρομολόγηση κατά γραφή)",
+      "source": {
+        "repo": "https://huggingface.co/PaddlePaddle/el_PP-OCRv5_mobile_rec_onnx",
+        "revision": "8152b89d2ee0e1d4c92decab75fe75e5e3d836b6"
+      },
+      "sha256": "2acf17fcaea2bc81b878e311e6263b8885f48bb03796f75f9f30ed3242bbaa6d",
+      "bytes": 7808735,
+      "attribution": "public/models/ocr/PaddleOCR-Apache-2.0-LICENSE.txt",
+      "why": "ADR-929 Φ0.1 — δεύτερος αναγνώστης του «v6dual»: ελληνικά ονόματα χώρων 0/32 → 29/32. Με δρομολόγηση κατά γραφή: −51% κλήσεις, ίδια βαθμολογία, 1 λάθος λιγότερο."
+    },
+    "public/models/ocr/el_PP-OCRv5_mobile_rec_onnx@8152b89d/inference.yml": {
+      "spdx": "Apache-2.0",
+      "model": "el_PP-OCRv5_mobile_rec",
+      "role": "επίσημες ρυθμίσεις του ελληνικού αναγνώστη + το λεξικό του (354 χαρακτήρες· έξοδος 356 κλάσεις = blank + λεξικό + κενό)",
+      "source": {
+        "repo": "https://huggingface.co/PaddlePaddle/el_PP-OCRv5_mobile_rec_onnx",
+        "revision": "8152b89d2ee0e1d4c92decab75fe75e5e3d836b6"
+      },
+      "sha256": "17d85b2fe2d2f24cd4ab07bcbc33e0c126859b956ced36e281dc65e2d0c1f0bf",
+      "bytes": 3317,
+      "attribution": "public/models/ocr/PaddleOCR-Apache-2.0-LICENSE.txt",
+      "why": "Ρυθμίσεις και λεξικό διαβάζονται από το αρχείο του ΙΔΙΟΥ μοντέλου, ποτέ από σταθερές στον κώδικα: η Φ0.1 μέτρησε ότι κάθε γενιά μοντέλου έχει άλλα."
+    }
+  }
+}
