@@ -47,7 +47,9 @@ These abbreviations can appear anywhere in a prompt (standalone, inline, in task
 
 ## 🚨🚨🚨 SOS. SOS. N.(-1) — TERMINAL PROHIBITION: NEVER GIT COMMIT OR PUSH WITHOUT ORDER
 **ABSOLUTELY FORBIDDEN** to `git commit` or `git push` without EXPLICIT order from Giorgio.
-- ✅ **ΜΟΝΗ ΕΞΑΙΡΕΣΗ (απόφαση Giorgio 2026-10-31, ADR-925):** μέσα σε δικό του worktree, σε κλαδί `agent/*`, ο πράκτορας κάνει **ο ίδιος** commit τη **δική του** δουλειά, χωρίς εντολή. Εκεί δεν φτάνει ούτε στο `main` ούτε στην παραγωγή. **Η ένταξη στο `main` (`npm run wt:land`) και το push γίνονται ΜΟΝΟ με ρητή εντολή Giorgio.** Στο `main` ο κανόνας ισχύει ακέραιος.
+- ✅ **ΜΟΝΗ ΕΞΑΙΡΕΣΗ (απόφαση Giorgio 2026-10-31, ADR-925):** μέσα σε δικό του worktree, σε κλαδί `agent/*`, ο πράκτορας κάνει **ο ίδιος** commit τη **δική του** δουλειά, χωρίς εντολή. Στο `main` ο κανόνας ισχύει ακέραιος.
+- ✅ **COMMIT ⇒ ΑΜΕΣΩΣ LAND (απόφαση Giorgio 2026-11-10, ισχύει για ΚΑΘΕ πράκτορα σε ΚΑΘΕ συνεδρία):** κάθε commit στο δικό σου κλαδί `agent/*` ακολουθείται **αμέσως**, χωρίς ερώτηση, από `npm run wt:land -- <εργασία>` (ένταξη στο **τοπικό** `main`). Πριν το land: `git status --short` καθαρό — **όλα** τα δικά σου αρχεία δεσμευμένα. Αν το land αποτύχει (σύγκρουση rebase ή πύλες) → **ΑΝΑΦΕΡΕ** το ακριβές σφάλμα και σταμάτα· ποτέ παράκαμψη, ποτέ `--no-verify`. Στην αναφορά γράψε το commit **και** το νέο `main` HEAD.
+- ⛔ **Το push παραμένει ΜΟΝΟ με ρητή εντολή Giorgio** (push = ανάπτυξη στην παραγωγή). Το land **δεν** κάνει ποτέ push.
 - **COMMIT** happens ONLY if Giorgio says: "commit", "κάνε commit", "commit it".
 - **PUSH** happens ONLY if Giorgio says: "push", "send it", "upload" (in Greek: "push", "στείλε", "ανέβασε").
 - DO NOT commit automatically, DO NOT commit "because it's done", DO NOT commit "for convenience".
@@ -614,7 +616,7 @@ Quando lancio `Agent` tool, **DEVO** passare `model` param scegliendo il **minim
 
 **Ο commit agent τρέχει πάντα ως Haiku.** Ο Giorgio ενεργοποιεί χειροκίνητα άλλο μοντέλο αν χρειαστεί.
 
-**ΔΙΠΛΗ ΡΟΗ (ADR-925):** ο commit agent αφορά **μόνο** δουλειά που ζει ακόμη στο κύριο αντίγραφο. Σε δικό σου worktree, το commit το κάνεις **εσύ που έγραψες τον κώδικα**, με ρητή λίστα αρχείων. Ροή: `npm run wt:new -- <εργασία>` → `EnterWorktree` με τη διαδρομή → δουλειά + commit στο κλαδί → αναφορά στον Giorgio → **με εντολή του** `npm run wt:land -- <εργασία>` → `npm run wt:remove -- <εργασία>`. 📘 `docs/deployment/git-workflow.md`
+**ΔΙΠΛΗ ΡΟΗ (ADR-925):** ο commit agent αφορά **μόνο** δουλειά που ζει ακόμη στο κύριο αντίγραφο. Σε δικό σου worktree, το commit το κάνεις **εσύ που έγραψες τον κώδικα**, με ρητή λίστα αρχείων. Ροή: `npm run wt:new -- <εργασία>` → `EnterWorktree` με τη διαδρομή → δουλειά + commit στο κλαδί → **αμέσως** `npm run wt:land -- <εργασία>` (χωρίς ερώτηση, N.(-1)) → αναφορά στον Giorgio → push **μόνο με εντολή του** → `npm run wt:remove -- <εργασία>`. 📘 `docs/deployment/git-workflow.md`
 
 ### Εκτέλεση — χρησιμοποίησε ΠΑΝΤΑ το slash command:
 
@@ -821,7 +823,7 @@ export function myFunction(value: string | number): Result {
 
 ## 🔄 GIT / DEPLOY (Netcup) / BACKUP — Quick reference
 
-**Core rule (aggiornata 2026-05-16)**: **Giorgio fa i commit. Giorgio fa i push.** L'agente NON committa MAI e NON pusha MAI autonomamente — neanche "dopo successo", neanche "per comodità", neanche se il task è finito. L'agente prepara il lavoro (`git add`, `git status`, `git diff` per verifica), poi **si ferma** e aspetta l'ordine esplicito di Giorgio. Vedi N.(-1) per zero-tolerance enforcement. **Eccezione (ADR-925, 2026-10-31):** commit dell'autore nel proprio worktree, mai su `main`.
+**Core rule (aggiornata 2026-05-16)**: **Giorgio fa i commit. Giorgio fa i push.** L'agente NON committa MAI e NON pusha MAI autonomamente — neanche "dopo successo", neanche "per comodità", neanche se il task è finito. L'agente prepara il lavoro (`git add`, `git status`, `git diff` per verifica), poi **si ferma** e aspetta l'ordine esplicito di Giorgio. Vedi N.(-1) per zero-tolerance enforcement. **Eccezione (ADR-925, 2026-10-31):** commit dell'autore nel proprio worktree, mai su `main`; **ogni commit è seguito subito da `npm run wt:land`** (Giorgio 2026-11-10). Il push resta solo su ordine.
 
 **Commit/push happen ONLY when Giorgio says** (greco/italiano/inglese):
 - Commit: "commit", "κάνε commit", "fai commit", "commit it"
