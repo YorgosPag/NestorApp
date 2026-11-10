@@ -180,7 +180,7 @@
     "remedy": {
       "title": "What to do",
       "unmappedWhy": "The value was read, but the family has no attribute to receive it.",
-      "pickPriceTarget": "Choose a price list"
+      "pickPriceTarget": "Price — choose a price list first"
     },
     "uncheckable": "not checkable: the page has no text",
     "decisionFor": "Decision for “{field}”",

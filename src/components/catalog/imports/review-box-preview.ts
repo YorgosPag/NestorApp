@@ -117,7 +117,9 @@ export function createBoxPreview(): BoxPreviewController {
     holdPointer: () => { src.hover = store.get(); cancel(); },
     holdFocus: () => { src.focus = store.get(); cancel(); },
     tap: (preview) => { arrive(preview); src.touch = preview; apply(); },
-    close: () => { src.dismissed = store.get()?.boxId ?? null; src.hover = null; src.focus = null; src.touch = null; apply(); },
+    // Ιδεμποτικό: το Esc φτάνει ΔΥΟ φορές (`onEscapeKeyDown` και μετά `onOpenChange(false)` του Radix) — η δεύτερη, με το store ήδη
+    // κενό, δεν σβήνει την απόρριψη της πρώτης (αλλιώς ο δείκτης που γυρνά από το popover στο ίδιο πλαίσιο το ξανανοίγει).
+    close: () => { src.dismissed = store.get()?.boxId ?? src.dismissed; src.hover = null; src.focus = null; src.touch = null; apply(); },
     attachContent: (element) => { src.content = element; },
     contains: (node) => node instanceof Node && src.content?.contains(node) === true,
     enterContent: () => {

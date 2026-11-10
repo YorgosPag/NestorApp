@@ -52,6 +52,11 @@ export interface UnmappedLinesProps {
   readonly decidable: boolean;
   /** §5.5.2 Β4: η παρτίδα έχει τιμοκατάλογο **και** ο άνθρωπος δικαίωμα τιμολόγησης ⇒ μια γραμμή μπορεί να γίνει τιμή. */
   readonly pricesEnabled?: boolean;
+  /**
+   * §5.5.2 Β8 βήμα Γ: δικαίωμα τιμολόγησης **χωρίς** τιμοκατάλογο ⇒ «Τιμή — διάλεξε πρώτα τιμοκατάλογο» στη θέση της «Τιμής». Το πάτημα
+   * περνά στον κάτοχο της επιλογής (εστίαση στον τιμοκατάλογο, και μετά ο διάλογος τιμής της ίδιας γραμμής). Απόν ⇒ καμία τέτοια θέση.
+   */
+  readonly onPickPriceTarget?: (line: ImportPageUnmappedLine) => void;
   /** §5.5.2 Β5.2: τι προτείνει η μνήμη του προμηθευτή, ανά γραμμή (`lineKeyOf`). */
   readonly memoryHints?: ReadonlyMap<string, ImportMemoryHint>;
   /** §5.5.2 Β8 βήμα Β: κουμπί λύσης στο popover του PDF ζήτησε το εργαλείο μιας γραμμής — ανοίγει το **ίδιο** με το κουμπί της λίστας. */
@@ -71,6 +76,8 @@ interface LineRowProps {
   readonly readOnly: boolean;
   readonly canManage: boolean;
   readonly pricesEnabled: boolean;
+  /** Απόν ⇒ καμία θέση «διάλεξε πρώτα τιμοκατάλογο» (χωρίς δικαίωμα τιμολόγησης). */
+  readonly onPickPriceTarget: (() => void) | undefined;
   readonly onFocus: () => void;
   readonly onTool: (mode: LineTool) => void;
   readonly onIgnore: (ignore: boolean) => void;
@@ -78,18 +85,31 @@ interface LineRowProps {
 
 const actionKey = (action: RemedyAction): string => (action.kind === 'lineTool' ? `${action.kind}:${action.mode}` : action.kind);
 
-/** Οι ενέργειες της γραμμής — από τον **ίδιο** κανόνα με το popover του PDF (`lineActionsOf`, §5.5.2 Β8 βήμα Β). */
-function LineActions({ state, readOnly, canManage, pricesEnabled, onTool, onIgnore }: Pick<LineRowProps, 'state' | 'readOnly' | 'canManage' | 'pricesEnabled' | 'onTool' | 'onIgnore'>) {
+type LineActionsProps = Pick<LineRowProps, 'state' | 'readOnly' | 'canManage' | 'pricesEnabled' | 'onPickPriceTarget' | 'onTool' | 'onIgnore'>;
+
+/** Η ενέργεια ενός κουμπιού της γραμμής — εργαλείο · «διάλεξε πρώτα τιμοκατάλογο» · αγνόηση. */
+function runLineAction(action: RemedyAction, { onTool, onIgnore, onPickPriceTarget }: Pick<LineActionsProps, 'onTool' | 'onIgnore' | 'onPickPriceTarget'>) {
+  if (action.kind === 'lineTool') return onTool(action.mode);
+  if (action.kind === 'pickPriceTarget') return onPickPriceTarget?.();
+  onIgnore(true);
+}
+
+/**
+ * Οι ενέργειες της γραμμής — από τον **ίδιο** κανόνα με το popover του PDF (`lineActionsOf`, §5.5.2 Β8 βήμα Β). Βήμα Γ: η θέση
+ * «Τιμή» υπάρχει για όποιον τιμολογεί, και χωρίς τιμοκατάλογο γίνεται «διάλεξε πρώτα».
+ */
+function LineActions({ state, readOnly, canManage, pricesEnabled, onPickPriceTarget, onTool, onIgnore }: LineActionsProps) {
   const { t } = useImportText();
   const labelOf = useRemedyActionLabel();
   const busy = readOnly || state === 'saving';
   if (state === 'ignored' || state === 'mapped') {
     return <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => onIgnore(false)}><Undo2 className="mr-1 h-3 w-3" aria-hidden />{t('review.lines.undo')}</Button>;
   }
-  const run = (action: RemedyAction) => (action.kind === 'lineTool' ? onTool(action.mode) : onIgnore(true));
+  const run = (action: RemedyAction) => runLineAction(action, { onTool, onIgnore, onPickPriceTarget });
+  const rights = { canManage, canPrice: pricesEnabled || onPickPriceTarget !== undefined, hasPriceTarget: pricesEnabled };
   return (
     <span className="flex flex-wrap gap-1">
-      {lineActionsOf({ canManage, pricesEnabled }).map((action) => {
+      {lineActionsOf(rights).map((action) => {
         const { icon: Icon, variant } = remedyActionLook(action);
         return (
           <Button key={actionKey(action)} type="button" size="sm" variant={variant} disabled={busy} onClick={() => run(action)}>
@@ -142,7 +162,7 @@ function useShownTool(lines: readonly ImportPageUnmappedLine[], request: Unmappe
 }
 
 export function ProposalUnmappedLines(props: UnmappedLinesProps) {
-  const { proposal, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable, pricesEnabled = false, memoryHints, focusRequested = false } = props;
+  const { proposal, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable, pricesEnabled = false, memoryHints, focusRequested = false, onPickPriceTarget } = props;
   const { t } = useImportText();
   const reasonText = useReviewReasonFormatter(false);
   const canManage = useCatalogCanManage();
@@ -166,7 +186,7 @@ export function ProposalUnmappedLines(props: UnmappedLinesProps) {
               refusal={current?.kind === 'refused' ? reasonText({ kind: 'refused', refusal: current.reason }) : null}
               hint={memoryHints?.get(key)} onAccept={(decision) => send(line, decision)}
               active={key === activeLine} focusRequested={focusRequested} readOnly={readOnly} canManage={canManage} pricesEnabled={pricesEnabled}
-              onFocus={() => onFocusLine(line)} onTool={(mode) => setTool({ line, mode })}
+              onFocus={() => onFocusLine(line)} onTool={(mode) => setTool({ line, mode })} onPickPriceTarget={onPickPriceTarget && (() => onPickPriceTarget(line))}
               onIgnore={(ignore) => send(line, ignore ? { kind: 'ignore' } : null)} />
           );
         })}

@@ -28,8 +28,10 @@ import { useImportAssets } from './use-import-assets';
 import { ImportSupplierSlot, PriceLineNoteSlot, XChangeReportSlot } from './import-surfaces';
 import { ImportAssetsSection } from './ImportAssetsSection';
 import { ImportSourcePane } from './ImportSourcePane';
+import { ReviewGhostContext, createReviewGhostStore } from './review-ghost-store';
 import { ReviewHoverContext, createReviewHoverStore } from './review-hover-store';
 import { buildReviewBoxes, lineTargetOf, resolveReviewTarget, type ReviewBox } from './review-overlay-model';
+import type { LineTool } from './review-remedy';
 import { ownsLine, priceTargetOf, useReviewRemedy } from './use-review-remedy';
 import { useReviewSelection, type ReviewSelection } from './use-review-selection';
 import type { CatalogFailure } from '@/services/catalog/catalog-failure';
@@ -165,9 +167,14 @@ function PriceSource({ workspace, view, proposal }: Pick<BatchProposalsProps, 'w
   return <PriceLineNoteSlot line={override.line} unitCode={decision.unitCode} disabled={!open} onUndo={undo} />;
 }
 
-/** §5.5.2 Β8 βήμα Β: το εργαλείο γραμμής που ζήτησε το popover του PDF — για τη λίστα που κατέχει τη γραμμή. */
-function toolRequestOf({ intent, target }: ReviewSelection) {
-  return intent?.kind === 'lineTool' && target?.kind === 'line' ? { lineKey: target.lineKey, mode: intent.mode } : null;
+/**
+ * §5.5.2 Β8 βήμα Β: το εργαλείο γραμμής που ζήτησε το popover του PDF — για τη λίστα που κατέχει τη γραμμή. Βήμα Γ: η γραμμή που
+ * **περιμένει** τιμοκατάλογο παίρνει τον διάλογο τιμής **μόλις** η παρτίδα τον αποκτήσει (παράγεται, δεν το ανάβει effect).
+ */
+function toolRequestOf({ intent, target }: ReviewSelection, hasPriceTarget: boolean): { readonly lineKey: string; readonly mode: LineTool } | null {
+  if (target?.kind !== 'line') return null;
+  if (intent?.kind === 'lineTool') return { lineKey: target.lineKey, mode: intent.mode };
+  return intent?.kind === 'awaitPriceTarget' && hasPriceTarget ? { lineKey: target.lineKey, mode: 'price' } : null;
 }
 
 /** Μία πρόταση με τις γραμμές του πίνακά της (§5.5.2 Β3) — ή, για πρόταση τιμών, με τη γραμμή τιμής που τη γέννησε (Β4). */
@@ -200,8 +207,10 @@ function ProposalSlot({ workspace, view, selection, proposal, canPrice }: BatchP
         focusRequested: selection.origin === 'pdf',
         onDecideLine: (target, request) => void workspace.decideLine(target, request),
         pricesEnabled: canPrice && priceTargetOf(view) !== null,
+        // Βήμα Γ: η ίδια πρόθεση με το «Τιμή — διάλεξε πρώτα τιμοκατάλογο» του popover (`use-review-remedy`).
+        onPickPriceTarget: canPrice ? (line) => selection.requestRemedy(lineTargetOf(line), { kind: 'priceTarget' }) : undefined,
         memoryHints: memoryHintsOf(view),
-        toolRequest: toolRequestOf(selection),
+        toolRequest: toolRequestOf(selection, priceTargetOf(view) !== null),
         onToolRequestDone: selection.clearIntent,
       }}
     />
@@ -237,7 +246,7 @@ function BatchProposals(props: BatchProposalsProps) {
       </header>
       {open ? (
         <ImportPriceTarget batch={batch} disabled={workspace.savingPriceTarget || upgrade !== null} onChange={(id) => void workspace.setPriceTarget(id)}
-          focusRequested={props.selection.intent?.kind === 'priceTarget'} onFocusDone={props.selection.clearIntent} />
+          focusRequested={props.selection.intent?.kind === 'priceTarget'} onFocusDone={props.selection.advanceIntent} />
       ) : null}
       {open ? <SupplierSlot workspace={workspace} view={view} /> : null}
       <PageProgress workspace={workspace} />
@@ -273,6 +282,8 @@ export function ImportBatchWorkspace({ batchId }: { readonly batchId: string }) 
   const remedy = useReviewRemedy(workspace, selection);
   // §5.5.2 Β8: ΕΝΑ store hover ανά επιφάνεια — σταθερό, άρα ο πάροχος δεν ξαναζωγραφίζει κανέναν.
   const [hoverStore] = useState(createReviewHoverStore);
+  // §5.5.2 Β8 βήμα Γ: ΕΝΑ store φαντάσματος — τα κουμπιά «Κράτα» (λίστα + popover) γράφουν, η στρώση του PDF διαβάζει.
+  const [ghostStore] = useState(createReviewGhostStore);
   const { view, failure } = workspace;
 
   useEffect(() => {
@@ -285,10 +296,12 @@ export function ImportBatchWorkspace({ batchId }: { readonly batchId: string }) 
   // Χωρίς πηγή δίπλα η λίστα πιάνει όλο το πλάτος: όλη η επιφάνεια είναι το κυλιόμενο δοχείο, όχι η μισή.
   return (
     <ReviewHoverContext.Provider value={hoverStore}>
-      <section className={cn('grid min-h-0 flex-1 grid-cols-1 gap-4', sourceFileId !== null && 'xl:grid-cols-2')} aria-label={view.batch.fileName}>
-        <BatchProposals workspace={workspace} view={view} selection={selection} />
-        {sourceFileId === null ? null : <ImportSourcePane view={view} fileId={sourceFileId} boxes={boxes} selection={selection} resolved={resolved} remedy={remedy} />}
-      </section>
+      <ReviewGhostContext.Provider value={ghostStore}>
+        <section className={cn('grid min-h-0 flex-1 grid-cols-1 gap-4', sourceFileId !== null && 'xl:grid-cols-2')} aria-label={view.batch.fileName}>
+          <BatchProposals workspace={workspace} view={view} selection={selection} />
+          {sourceFileId === null ? null : <ImportSourcePane view={view} fileId={sourceFileId} boxes={boxes} selection={selection} resolved={resolved} remedy={remedy} />}
+        </section>
+      </ReviewGhostContext.Provider>
     </ReviewHoverContext.Provider>
   );
 }

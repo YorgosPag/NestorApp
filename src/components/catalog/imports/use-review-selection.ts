@@ -13,6 +13,10 @@
  * 🔑 **Πρόθεση** (§5.5.2 Β8 βήμα Β): κουμπί λύσης στο popover του PDF ⇒ `requestRemedy` επιλέγει τον στόχο **και** κρατά τι
  *    ζητήθηκε (διόρθωση · εργαλείο γραμμής · τιμοκατάλογος). Την καταναλώνει το **ίδιο** εργαλείο της λίστας που ανοίγει και το
  *    κουμπί της — καμία δεύτερη υλοποίηση ενέργειας — και τη σβήνει (`clearIntent`). Κάθε νέα επιλογή τη σβήνει επίσης.
+ * 🔑 **Συνέχεια τιμοκαταλόγου** (§5.5.2 Β8 βήμα Γ): «Τιμή — διάλεξε πρώτα τιμοκατάλογο» σε γραμμή ⇒ `priceTarget` (το πεδίο παίρνει
+ *    την εστίαση **μία** φορά) ⇒ `advanceIntent` ⇒ `awaitPriceTarget` (η πρόθεση **περιμένει**). Μόλις η παρτίδα αποκτήσει
+ *    τιμοκατάλογο, η λίστα ανοίγει τον διάλογο τιμής **της ίδιας γραμμής**: η ροή δεν κόβεται. Δύο φάσεις, όχι σημαία «εστιάστηκε»
+ *    μέσα στην ίδια: η εστίαση είναι στιγμή, η αναμονή κατάσταση. Άλλη επιλογή ⇒ η αναμονή σβήνει, όπως κάθε πρόθεση.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,7 +31,9 @@ type ReviewSelectionOrigin = 'list' | 'pdf' | 'cycle' | 'remedy';
 export type ReviewIntent =
   | { readonly kind: 'editField' }
   | { readonly kind: 'lineTool'; readonly mode: LineTool }
-  | { readonly kind: 'priceTarget' };
+  | { readonly kind: 'priceTarget' }
+  /** Ο τιμοκατάλογος ζητήθηκε για τον επιλεγμένο στόχο-γραμμή — μόλις υπάρξει, ανοίγει ο διάλογος τιμής της. */
+  | { readonly kind: 'awaitPriceTarget' };
 
 interface SelectionState {
   readonly target: ReviewTarget | null;
@@ -54,9 +60,17 @@ export interface ReviewSelection {
   /** Επιλογή από κουμπί λύσης· `intent: null` = η ενέργεια έγινε ήδη (π.χ. «Κράτα»), μένει μόνο η επιλογή. */
   readonly requestRemedy: (target: ReviewTarget, intent: ReviewIntent | null) => void;
   readonly clearIntent: () => void;
+  /** Η εστίαση του τιμοκαταλόγου έγινε: για στόχο-γραμμή η πρόθεση γίνεται αναμονή, αλλιώς σβήνει. */
+  readonly advanceIntent: () => void;
 }
 
 const EMPTY: SelectionState = { target: null, origin: 'list', cycle: null, intent: null };
+
+/** `priceTarget` ⇒ `awaitPriceTarget` για γραμμή (υπάρχει διάλογος να ανοίξει), αλλιώς τίποτα. Ιδεμποτικό: ό,τι άλλο, μένει ίδιο. */
+function advancedOf(current: SelectionState): SelectionState {
+  if (current.intent?.kind !== 'priceTarget') return current;
+  return { ...current, intent: current.target?.kind === 'line' ? { kind: 'awaitPriceTarget' } : null };
+}
 
 export function useReviewSelection(boxes: readonly ReviewBox[]): ReviewSelection {
   const [state, setState] = useState<SelectionState>(EMPTY);
@@ -88,7 +102,12 @@ export function useReviewSelection(boxes: readonly ReviewBox[]): ReviewSelection
 
   const clearIntent = useCallback(() => setState((current) => (current.intent === null ? current : { ...current, intent: null })), []);
 
-  return { target: state.target, key, origin: state.origin, cycle, intent: state.intent, selectFromList, selectFromBox, nextInBox, requestRemedy, clearIntent };
+  const advanceIntent = useCallback(() => setState(advancedOf), []);
+
+  return {
+    target: state.target, key, origin: state.origin, cycle, intent: state.intent,
+    selectFromList, selectFromBox, nextInBox, requestRemedy, clearIntent, advanceIntent,
+  };
 }
 
 /**

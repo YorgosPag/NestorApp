@@ -15,6 +15,8 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));
 jest.mock('../../shared/catalog-ui-hooks', () => ({ useCatalogCanManage: () => true }));
+// §5.5.2 Β8 βήμα Β: η λίστα γράφει την αιτία από το κοινό `review-reason-text`, που ζητά τα μηνύματα ευρημάτων — εδώ ο κωδικός τους.
+jest.mock('../import-issue-messages', () => ({ useImportIssueMessage: () => (issue: { readonly code: string }) => issue.code }));
 jest.mock('../import-surfaces', () => ({
   LineAttributeToolsSlot: ({ mode }: { readonly mode: string }) => <p>{`tools:${mode}`}</p>,
   PriceLineDialogSlot: ({ onDecide }: { readonly onDecide: (unitCode: string) => void }) => <button type="button" onClick={() => onDecide('m')}>price-dialog</button>,

@@ -5,12 +5,16 @@
  * @module components/catalog/imports/review-remedy
  *
  * 🔑 **Ένας κανόνας ενεργειών γραμμής** (`lineActionsOf`): ως το βήμα Β ζούσε μόνο στο `LineActions` της λίστας.
- * 🔑 **Μία πηγή τιμών «Κράτα»** (`keepValuesOf`): η τυπωμένη τιμή πρώτη, μετά οι εναλλακτικές της πηγής (βήμα Α).
+ * 🔑 **Μία πηγή τιμών «Κράτα»** (`keepValuesOf`): η τυπωμένη τιμή πρώτη, μετά οι εναλλακτικές της πηγής (βήμα Α) — **με την άγκυρά
+ *    τους**, ώστε το κουμπί να δείχνει στο PDF από πού έρχεται (φάντασμα, βήμα Γ).
+ * 🔑 **«Τιμή» πάντα ορατή** για όποιον τιμολογεί (βήμα Γ): χωρίς τιμοκατάλογο γίνεται «Τιμή — διάλεξε πρώτα τιμοκατάλογο», στην
+ *    **ίδια** θέση. Ο server δεν ταξινομεί γραμμές τιμής· γραμμή τιμής γίνεται μόνο όταν το δηλώσει ο άνθρωπος, άρα η επιλογή δεν
+ *    κρύβεται επειδή λείπει μια προϋπόθεση — δείχνει την προϋπόθεση. Και η άρνηση `priceTargetMissing` καταλήγει στο ίδιο κουμπί.
  * 🔑 Μη αποφασίσιμη πρόταση (κλειστή παρτίδα · εγκεκριμένη · σε αναβάθμιση) ⇒ **μόνο** το «γιατί», κανένα κουμπί που θα αρνιόταν.
  * 🔑 Πρόταση αποθηκευμένη πριν από τις εναλλακτικές (χωρίς `alternatives`) ⇒ «Διόρθωση»: ποτέ σιωπηλό κενό.
  */
 
-import type { ImportProposalField } from '@/subapps/catalog/types/catalog-import';
+import type { ImportAlternative, ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import type { LineState } from './import-text';
 import type { LineToolMode } from './line-tool-props';
 import type { ReviewBoxTarget, ReviewReason } from './review-overlay-model';
@@ -19,7 +23,7 @@ import type { ReviewBoxTarget, ReviewReason } from './review-overlay-model';
 export type LineTool = LineToolMode | 'price';
 
 export type RemedyAction =
-  | { readonly kind: 'keepValue'; readonly text: string }
+  | { readonly kind: 'keepValue'; readonly text: string; readonly anchor: ImportAlternative['anchor'] }
   | { readonly kind: 'editField' }
   | { readonly kind: 'lineTool'; readonly mode: LineTool }
   | { readonly kind: 'ignoreLine' }
@@ -44,19 +48,30 @@ export interface RemedyContext {
   readonly hasPriceTarget: boolean;
 }
 
+export interface LineActionRights {
+  readonly canManage: boolean;
+  /** Δικαίωμα τιμολόγησης ⇒ η θέση «Τιμή» υπάρχει. */
+  readonly canPrice: boolean;
+  /** Η παρτίδα έχει τιμοκατάλογο ⇒ η «Τιμή» ανοίγει τον διάλογο· αλλιώς ζητά πρώτα τιμοκατάλογο. */
+  readonly hasPriceTarget: boolean;
+}
+
 /** Οι ενέργειες μιας ανοιχτής γραμμής, με τη σειρά των κουμπιών — **ο ένας κανόνας** για λίστα και popover. */
-export function lineActionsOf({ canManage, pricesEnabled }: { readonly canManage: boolean; readonly pricesEnabled: boolean }): RemedyAction[] {
+export function lineActionsOf({ canManage, canPrice, hasPriceTarget }: LineActionRights): RemedyAction[] {
   const actions: RemedyAction[] = [{ kind: 'lineTool', mode: 'map' }];
   if (canManage) actions.push({ kind: 'lineTool', mode: 'new' });
-  if (pricesEnabled) actions.push({ kind: 'lineTool', mode: 'price' });
+  if (canPrice) actions.push(hasPriceTarget ? { kind: 'lineTool', mode: 'price' } : { kind: 'pickPriceTarget' });
   actions.push({ kind: 'ignoreLine' });
   return actions;
 }
 
-/** Οι τιμές που προσφέρει το «Κράτα»: η τυπωμένη πρώτη, μετά οι εναλλακτικές. Καμία εναλλακτική ⇒ καμία επιλογή. */
-export function keepValuesOf(field: Pick<ImportProposalField, 'sourceText' | 'alternatives'>): string[] {
+/**
+ * Οι τιμές που προσφέρει το «Κράτα»: η τυπωμένη πρώτη (με την άγκυρα του πεδίου), μετά οι εναλλακτικές (με τη δική τους). Καμία
+ * εναλλακτική ⇒ καμία επιλογή.
+ */
+export function keepValuesOf(field: Pick<ImportProposalField, 'sourceText' | 'anchor' | 'alternatives'>): ImportAlternative[] {
   const alternatives = field.alternatives ?? [];
-  return alternatives.length === 0 ? [] : [field.sourceText, ...alternatives.map((alternative) => alternative.text)];
+  return alternatives.length === 0 ? [] : [{ text: field.sourceText, anchor: field.anchor }, ...alternatives];
 }
 
 /** «Η πηγή δίνει και άλλη τιμή» — το μόνο εύρημα πεδίου με ενέργεια λύσης σήμερα. */
@@ -65,7 +80,7 @@ const isRepeated = (field: ImportProposalField): boolean => field.issues.some((i
 function fieldActions(field: ImportProposalField): RemedyAction[] {
   if (!isRepeated(field)) return [];
   const values = keepValuesOf(field);
-  return values.length === 0 ? [{ kind: 'editField' }] : values.map((text) => ({ kind: 'keepValue', text }));
+  return values.length === 0 ? [{ kind: 'editField' }] : values.map(({ text, anchor }) => ({ kind: 'keepValue', text, anchor }));
 }
 
 /** Γραμμή που περιμένει απόφαση (ή που η απόφασή της αρνήθηκε) — οι άλλες καταστάσεις δεν ζητούν ενέργεια εδώ. */
@@ -74,9 +89,8 @@ const OPEN_LINE_STATES: readonly LineState[] = ['pending', 'refused'];
 function lineRemedy(state: LineState, reason: ReviewReason | null, ctx: RemedyContext): ReviewRemedy {
   const why: RemedyWhy | null = state === 'pending' ? { kind: 'unmapped' } : reason;
   if (!ctx.decidable || !OPEN_LINE_STATES.includes(state)) return { why, actions: [] };
-  const missingTarget = reason?.kind === 'refused' && reason.refusal === 'priceTargetMissing' && ctx.canPrice;
-  const fix: RemedyAction[] = missingTarget ? [{ kind: 'pickPriceTarget' }] : [];
-  return { why, actions: [...fix, ...lineActionsOf({ canManage: ctx.canManage, pricesEnabled: ctx.canPrice && ctx.hasPriceTarget })] };
+  // Η άρνηση `priceTargetMissing` δεν χρειάζεται δικό της κουμπί: χωρίς τιμοκατάλογο η θέση «Τιμή» είναι ήδη «διάλεξε πρώτα».
+  return { why, actions: lineActionsOf(ctx) };
 }
 
 /** Η λύση ενός στόχου πλαισίου: γιατί · τι κάνεις. */

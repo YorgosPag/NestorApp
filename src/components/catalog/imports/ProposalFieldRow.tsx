@@ -12,13 +12,14 @@ import { Pencil, Undo2, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { ImportProposalField, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
+import type { ImportAlternative, ImportProposalField, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
 import { useImportIssueMessage } from './import-issue-messages';
 import { PROPOSAL_VIEW_KEYS, useImportText } from './import-text';
 import { useTargetLabeler } from './import-target-label';
 import { FieldStatusBadge, ProposalDecisionCell } from './ProposalDecisionCell';
 import { useImportValueText } from './import-value-text';
 import type { ProposalView } from './proposal-summary';
+import { useReviewGhostHandlers } from './review-ghost-store';
 import { useReviewHoverHandlers, useReviewHovered } from './review-hover-store';
 import { keepValuesOf } from './review-remedy';
 import { useActiveReviewItem } from './use-review-selection';
@@ -113,6 +114,17 @@ function IncomingCell({ label, editRequested = false, onEditRequestDone, ...prop
   );
 }
 
+/** Ένα «Κράτα «…»»: hover/εστίαση ⇒ φάντασμα στο κελί της τιμής στο PDF (§5.5.2 Β8 βήμα Γ) · πάτημα ⇒ η διόρθωση. */
+function KeepValueButton({ value, readOnly, onEdit }: { readonly value: ImportAlternative; readonly readOnly: boolean; readonly onEdit: (text: string) => void }) {
+  const { t } = useImportText();
+  const ghost = useReviewGhostHandlers(value.anchor);
+  return (
+    <Button type="button" size="sm" variant="outline" disabled={readOnly} onClick={() => onEdit(value.text)} {...ghost}>
+      {t('review.keepValue', { value: value.text })}
+    </Button>
+  );
+}
+
 /**
  * §5.5.2 Β8: η πηγή έδωσε **περισσότερες** τιμές για το ίδιο πεδίο (`attributeRepeated`) ⇒ ένα κουμπί ανά τιμή. Το πάτημα είναι η
  * **υπάρχουσα** διόρθωση (§5.5.2 Β6): ο κατάλογος διορθώσεων ενώνει τα κελιά της διεύθυνσης σε ένα και ο διακομιστής ξανακρίνει.
@@ -124,11 +136,7 @@ function KeepValueChoices({ field, label, readOnly, onEdit }: Pick<EditProps, 'f
   if (values.length === 0) return null;
   return (
     <p className="m-0 mt-1 flex flex-wrap items-center gap-1" role="group" aria-label={t('review.keepValueGroup', { field: label })}>
-      {values.map((value) => (
-        <Button key={value} type="button" size="sm" variant="outline" disabled={readOnly} onClick={() => onEdit(value)}>
-          {t('review.keepValue', { value })}
-        </Button>
-      ))}
+      {values.map((value) => <KeepValueButton key={value.text} value={value} readOnly={readOnly} onEdit={onEdit} />)}
     </p>
   );
 }

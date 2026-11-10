@@ -13,6 +13,7 @@
  * 🔑 Τα λόγια είναι τα **ίδια** με τη λίστα και το `aria-label` του πλαισίου (`review-reason-text`)· οι ενέργειες από τον **ίδιο**
  *    κανόνα (`remedyOf`) και περνούν από τον **ένα** κάτοχο (`onRemedy`) — καμία δεύτερη υλοποίηση ενέργειας.
  * 🔑 Πλαίσιο πολλών στόχων ⇒ ο **χειρότερος** (αυτός που το έβαψε) + «και N ακόμη».
+ * 🔑 §5.5.2 Β8 βήμα Γ: hover/εστίαση σε «Κράτα «…»» ⇒ φάντασμα στο κελί **εκείνης** της τιμής (`review-ghost-store`).
  */
 
 import React, { useCallback, useId, useMemo, type KeyboardEvent } from 'react';
@@ -22,6 +23,7 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { REVIEW_TONE_KEYS, useImportText } from './import-text';
 import { ReviewMarkBadge } from './ImportReviewOverlay';
 import { REVIEW_BOX_ATTRIBUTE, useBoxPreview, type BoxPreviewController } from './review-box-preview';
+import { useReviewGhostHandlers } from './review-ghost-store';
 import type { ReviewBox, ReviewBoxTarget, ReviewTarget } from './review-overlay-model';
 import { remedyActionLook, useRemedyActionLabel, useReviewReasonText, useReviewTargetName } from './review-reason-text';
 import { remedyOf, type RemedyAction, type RemedyContext } from './review-remedy';
@@ -70,6 +72,17 @@ const actionKey = (action: RemedyAction): string => {
   return action.kind === 'keepValue' ? `${action.kind}:${action.text}` : action.kind;
 };
 
+/** Ένα κουμπί λύσης· το «Κράτα» δείχνει και από πού έρχεται η τιμή του (φάντασμα). */
+function RemedyButton({ action, label, onRun }: { readonly action: RemedyAction; readonly label: string; readonly onRun: (action: RemedyAction) => void }) {
+  const ghost = useReviewGhostHandlers(action.kind === 'keepValue' ? action.anchor : null);
+  const { icon: Icon, variant } = remedyActionLook(action);
+  return (
+    <Button type="button" size="sm" variant={variant} onClick={() => onRun(action)} {...ghost}>
+      {Icon ? <Icon className="mr-1 h-3 w-3" aria-hidden /> : null}{label}
+    </Button>
+  );
+}
+
 function RemedyActions({ actions, field, onRun }: { readonly actions: readonly RemedyAction[]; readonly field: string; readonly onRun: (action: RemedyAction) => void }) {
   const { t } = useImportText();
   const labelOf = useRemedyActionLabel();
@@ -78,16 +91,7 @@ function RemedyActions({ actions, field, onRun }: { readonly actions: readonly R
     <section className="flex flex-col gap-1" aria-label={t('review.remedy.title')}>
       <h4 className="m-0 text-xs font-medium text-muted-foreground">{t('review.remedy.title')}</h4>
       <ul className="m-0 flex list-none flex-wrap gap-1 p-0">
-        {actions.map((action) => {
-          const { icon: Icon, variant } = remedyActionLook(action);
-          return (
-            <li key={actionKey(action)}>
-              <Button type="button" size="sm" variant={variant} onClick={() => onRun(action)}>
-                {Icon ? <Icon className="mr-1 h-3 w-3" aria-hidden /> : null}{labelOf(action, field)}
-              </Button>
-            </li>
-          );
-        })}
+        {actions.map((action) => <li key={actionKey(action)}><RemedyButton action={action} label={labelOf(action, field)} onRun={onRun} /></li>)}
       </ul>
     </section>
   );

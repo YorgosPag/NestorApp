@@ -40,7 +40,13 @@ export const IMPORT_REVIEW_MARKS = {
     unmapped: { dash: '6 2 1 2', strokePx: 1.5, glyph: 'question', token: 'paper-mark-unmapped' },
     dismissed: { dash: '1 3', strokePx: 1.5, glyph: 'cross', token: 'paper-mark-dismissed' },
   },
-} as const satisfies { readonly tones: Readonly<Record<ReviewMarkTone, ReviewMarkSpec>> };
+  /**
+   * §5.5.2 Β8 βήμα Γ: το **φάντασμα** — «από ποιο κελί έρχεται αυτή η τιμή;», όσο ο δείκτης ή η εστίαση είναι σε «Κράτα «…»». Όπως
+   * το επιλεγμένο, **τροποποιητής**, όχι κατάσταση: γι' αυτό ζει **έξω** από τα `tones` (που κρίνει το CHECK 3.41) και παίρνει το
+   * χρώμα της επιλογής. Αραιή διακεκομμένη γραμμή, ώστε να μη μοιάζει με κανένα μοτίβο τόνου.
+   */
+  ghost: { dash: '4 4', strokePx: 2, token: 'paper-mark-selection' },
+} as const satisfies { readonly tones: Readonly<Record<ReviewMarkTone, ReviewMarkSpec>>; readonly ghost: Omit<ReviewMarkSpec, 'glyph'> };
 
 /** Ο χειρότερος τόνος μιας ομάδας (κατά `REVIEW_MARK_TONES`). Άδεια ομάδα δεν υπάρχει: κάθε πλαίσιο έχει τουλάχιστον έναν στόχο. */
 export function worstReviewTone(tones: readonly ReviewMarkTone[]): ReviewMarkTone {

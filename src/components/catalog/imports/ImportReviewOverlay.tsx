@@ -14,6 +14,9 @@
  *    κουμπί) — `aria-haspopup="dialog"` + `aria-expanded`. Το `aria-label` μένει ως έχει, από την ίδια πηγή κειμένου.
  * 🔑 Και **χειριστήριο της σελίδας** (`PDF_PAGE_CONTROL_ATTRIBUTE`): το «χέρι» του viewer δεν πιάνει το ποντίκι πάνω του,
  *    αλλιώς το κλικ πήγαινε στο δοχείο και το πλαίσιο δεν επιλεγόταν (μετρημένο live 2026-11-10).
+ * 🔑 §5.5.2 Β8 βήμα Γ: η **ίδια** στρώση ζωγραφίζει και το φάντασμα (`review-ghost-store`) — «από ποιο κελί έρχεται αυτή η τιμή;»
+ *    όσο ο δείκτης ή η εστίαση είναι σε «Κράτα «…»». Πάνω από τα πλαίσια, `aria-hidden` (το κουμπί λέει ήδη την τιμή), και **δεν**
+ *    πιάνει το ποντίκι: δεν κρύβει ποτέ το πλαίσιο από κάτω.
  */
 
 import React, { useEffect, useRef, type FocusEvent, type KeyboardEvent, type PointerEvent, type SyntheticEvent } from 'react';
@@ -22,6 +25,7 @@ import { PDF_PAGE_CONTROL_ATTRIBUTE } from '@/components/file-manager/pdf-viewpo
 import { IMPORT_REVIEW_MARKS, type ReviewMarkGlyph, type ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
 import { REVIEW_TONE_KEYS, useImportText } from './import-text';
 import { REVIEW_BOX_ATTRIBUTE, useBoxPreviewOpen, type BoxPreviewController } from './review-box-preview';
+import { useReviewGhostRegions } from './review-ghost-store';
 import { useReviewHoverHandlers, useReviewHovered } from './review-hover-store';
 import type { ReviewBox } from './review-overlay-model';
 import { useReviewReasonText, useReviewTargetName } from './review-reason-text';
@@ -146,7 +150,24 @@ function ReviewBoxMark({ box, selected, onSelect, preview }: BoxProps) {
   );
 }
 
+/** Το φάντασμα **αυτής** της σελίδας: διακεκομμένο περίγραμμα στο χρώμα της επιλογής, ένα ανά περιοχή της άγκυρας. */
+function ReviewGhostMarks({ page }: { readonly page: number }) {
+  const regions = useReviewGhostRegions(page);
+  if (regions === null) return null;
+  const { dash, strokePx } = IMPORT_REVIEW_MARKS.ghost;
+  return (
+    <g aria-hidden="true" className="pointer-events-none">
+      {regions.map((region) => (
+        <rect key={`${region.x}:${region.y}:${region.width}:${region.height}`} x={pct(region.x)} y={pct(region.y)} width={pct(region.width)} height={pct(region.height)}
+          className="fill-paper-mark-selection/10 stroke-paper-mark-selection" strokeWidth={strokePx} strokeDasharray={dash} vectorEffect="non-scaling-stroke" />
+      ))}
+    </g>
+  );
+}
+
 interface ImportReviewOverlayProps {
+  /** Η σελίδα που φαίνεται — για το φάντασμα, που μπορεί να δείχνει σε άλλη. */
+  readonly page: number;
   /** Τα πλαίσια **της σελίδας που φαίνεται**, ήδη ταξινομημένα (`buildReviewBoxes`: περιέκτες πρώτα, σειρά ανάγνωσης). */
   readonly boxes: readonly ReviewBox[];
   readonly selectedKey: string | null;
@@ -157,14 +178,15 @@ interface ImportReviewOverlayProps {
   readonly preview?: BoxPreviewController | null;
 }
 
-export function ImportReviewOverlay({ boxes, selectedKey, showAll, onSelect, preview = null }: ImportReviewOverlayProps) {
+export function ImportReviewOverlay({ page, boxes, selectedKey, showAll, onSelect, preview = null }: ImportReviewOverlayProps) {
   const { t } = useImportText();
   const isSelected = (box: ReviewBox) => selectedKey !== null && box.targets.some((entry) => entry.key === selectedKey);
   const visible = showAll ? boxes : boxes.filter(isSelected);
-  if (visible.length === 0) return null;
+  // Η στρώση μένει και χωρίς ορατά πλαίσια («Πλαίσια» κλειστό): το φάντασμα δείχνει την πηγή και τότε.
   return (
     <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" role="group" aria-label={t('review.overlay.layer')}>
       {visible.map((box) => <ReviewBoxMark key={box.id} box={box} selected={isSelected(box)} onSelect={onSelect} preview={preview} />)}
+      <ReviewGhostMarks page={page} />
     </svg>
   );
 }

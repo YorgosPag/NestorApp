@@ -13,7 +13,7 @@
  */
 
 import { useCallback } from 'react';
-import { Euro, EyeOff, Link2, ListChecks, Pencil, Plus, type LucideIcon } from 'lucide-react';
+import { Euro, EyeOff, Link2, Pencil, Plus, type LucideIcon } from 'lucide-react';
 
 import { useImportIssueMessage } from './import-issue-messages';
 import { LINE_REFUSAL_KEYS, useImportText } from './import-text';
@@ -63,7 +63,8 @@ export function remedyActionLook(action: RemedyAction): RemedyActionLook {
     case 'editField': return { icon: Pencil, variant: 'outline' };
     case 'lineTool': return { icon: LINE_TOOL_ICONS[action.mode], variant: 'outline' };
     case 'ignoreLine': return { icon: EyeOff, variant: 'ghost' };
-    case 'pickPriceTarget': return { icon: ListChecks, variant: 'outline' };
+    // Η ίδια θέση με την «Τιμή» (βήμα Γ), άρα το ίδιο εικονίδιο: είναι η τιμή, με μια προϋπόθεση ακόμη.
+    case 'pickPriceTarget': return { icon: Euro, variant: 'outline' };
   }
 }
 

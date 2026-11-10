@@ -75,7 +75,7 @@ export function ImportSourcePane({ view, fileId, boxes, selection, resolved, rem
   const page = pageOfTarget(resolved) ?? proposals[0]?.pages[0] ?? batch.pages?.from ?? 1;
   const { key, selectFromBox } = selection;
   const overlay = useCallback((shown: number) => (
-    <ImportReviewOverlay boxes={byPage.get(shown) ?? []} selectedKey={key} showAll={showAll} onSelect={selectFromBox} preview={preview} />
+    <ImportReviewOverlay page={shown} boxes={byPage.get(shown) ?? []} selectedKey={key} showAll={showAll} onSelect={selectFromBox} preview={preview} />
   ), [byPage, key, showAll, selectFromBox, preview]);
   return (
     <aside className="flex min-h-0 flex-col gap-2" aria-label={t('review.source')}>
