@@ -259,6 +259,10 @@ export const DXF_TIMING = {
      *  `IMPORT_WORKER_PARSE_TIMEOUT`: a 250 MB LAZ decode followed by CSF over 30M points can
      *  legitimately run for minutes without being wedged. */
     POINTCLOUD_WORKER_PARSE_TIMEOUT: 300000,
+    /** Plan-OCR Worker idle termination — ADR-929 Φ0.4. WASM memory (models + heaps) is never
+     *  returned while the Worker lives, so it is terminated after this much idleness; the next
+     *  read respawns it and the models come back from Cache Storage (same 60s as YuNet). */
+    OCR_WORKER_IDLE: 60000,
     /** Image-fill EXPORT per-op ceiling (URL resolve / decode / raster fetch) — ADR-643 Φ5b /
      *  ADR-644 export-blocker. A deleted material (404) with `crossOrigin='anonymous'` can make
      *  `img.decode()` never settle (Chromium gotcha) and freeze the whole export; this bounds each

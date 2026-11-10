@@ -16,6 +16,7 @@
  *   μάσκα δεν έχει «μισό μελάνι»), έξω από την πηγή `0`. **Ένας** επαναλήπτης δειγμάτων για τα δύο.
  * - **Περιστροφή ισιώματος**: η ομογραφία που φέρνει ευθείες γωνίας `θ` στο οριζόντιο, με καμβά που χωρά ολόκληρη την
  *   εικόνα. Τη χρησιμοποιούν η ευθυγράμμιση της Φ1 **και** οι λοξές ζώνες της Φ2 (ADR-929).
+ * - **Τέταρτα στροφής** (90° · 180° · 270°): ακριβής μετάθεση pixel, καμία δειγματοληψία (OCR του ADR-929 Φ0.3).
  *
  * ⚠️ Το `sampleBilinear` του `spatial-tour/tileset/equirect-to-cube.ts` **δεν** είναι διπλότυπο αυτού: αναδιπλώνει το
  *   μήκος (ραφή 180° του πανοράματος) και διαβάζει N κανάλια χωρίς άλφα. Άλλο συμβόλαιο άκρων, επίτηδες.
@@ -127,6 +128,33 @@ export function warpMask(
     out[i] = mask[Math.floor(y) * cols + Math.floor(x)];
   });
   return out;
+}
+
+/** Δεξιόστροφα τέταρτα στροφής, όπως φαίνονται στην οθόνη (`y` προς τα κάτω). */
+export type QuarterTurns = 1 | 2 | 3;
+
+/**
+ * **Περιστροφή κατά `turns · 90°` δεξιόστροφα** — ακριβής μετάθεση pixel, χωρίς δειγματοληψία (ό,τι το `cv2.rotate`).
+ * Για γωνίες εκτός των τεταρτημορίων υπάρχει το {@link straighteningRotation}, που αναδειγματίζει.
+ */
+export function rotateQuarterTurns(src: PlanRaster, turns: QuarterTurns): Rgba {
+  const swap = turns !== 2;
+  const width = swap ? src.height : src.width;
+  const height = swap ? src.width : src.height;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const sx = turns === 1 ? y : turns === 2 ? src.width - 1 - x : src.width - 1 - y;
+      const sy = turns === 1 ? src.height - 1 - x : turns === 2 ? src.height - 1 - y : x;
+      const o = (sy * src.width + sx) * 4;
+      const t = (y * width + x) * 4;
+      rgba[t] = src.rgba[o];
+      rgba[t + 1] = src.rgba[o + 1];
+      rgba[t + 2] = src.rgba[o + 2];
+      rgba[t + 3] = src.rgba[o + 3];
+    }
+  }
+  return { rgba, width, height };
 }
 
 export interface StraighteningRotation {

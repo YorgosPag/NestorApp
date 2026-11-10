@@ -14,9 +14,29 @@
       "sha256": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e",
       "bytes": 11376,
       "notice": "Το PaddleOCR ΔΕΝ έχει αρχείο NOTICE (NOTICE / NOTICE.txt = 404 στο ίδιο commit, 2026-11-10) ⇒ το Apache-2.0 §4(d) δεν ζητά τίποτα επιπλέον."
+    },
+    "public/ort/onnxruntime-MIT-LICENSE.txt": {
+      "spdx": "MIT",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/f2c39fe2f838cf35ce7da92824f5a5e3ee6e88a7/LICENSE",
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+      "bytes": 1073,
+      "notice": "Το commit f2c39fe2 είναι το tag v1.30.0 (ίδια έκδοση με το εγκατεστημένο onnxruntime-web). ⚠️ Το πακέτο npm onnxruntime-web@1.30.0 ΔΕΝ περιέχει αρχείο LICENSE (μετρημένο 2026-11-10) ⇒ το κείμενο παίρνεται από τον κατασκευαστή. Ο ίδιος φάκελος έχει και ThirdPartyNotices.txt (200), ΟΧΙ NOTICE (404)."
     }
   },
   "assets": {
+    "public/ort/1.30.0/ort-wasm-simd-threaded.wasm": {
+      "spdx": "MIT",
+      "model": "onnxruntime-web",
+      "role": "ο εκτελεστής των μοντέλων (WebAssembly, SIMD) — το ζεύγος του `onnxruntime-web/wasm` (ort.wasm.bundle.min.mjs, glue ενσωματωμένο). Δίνεται στο ort.env.wasm.wasmBinary, ποτέ μέσω wasmPaths",
+      "source": {
+        "repo": "https://www.npmjs.com/package/onnxruntime-web",
+        "revision": "1.30.0"
+      },
+      "sha256": "3398c10d07d229bd91b364548e130e0e51a8e5704b88c7c083ebbeb78842dee2",
+      "bytes": 14239897,
+      "attribution": "public/ort/onnxruntime-MIT-LICENSE.txt",
+      "why": "ADR-929 Φ0.4 — ο ίδιος δρόμος με τα μοντέλα (λήψη από τον δικό μας διακομιστή → sha256 απέναντι σε αυτό το μητρώο → Cache Storage), όπως ζητά το transformers.js για την παραγωγή (self-host, όχι CDN). ⚠️ Η ΕΚΔΟΣΗ ΣΤΗ ΔΙΑΔΡΟΜΗ πρέπει να είναι η εγκατεστημένη: ο worker το ελέγχει (ort.env.versions.web) και αρνείται απόκλιση — νέα έκδοση npm = νέος φάκελος εδώ."
+    },
     "public/models/ocr/PP-OCRv6_small_det_onnx@28fe5895/inference.onnx": {
       "spdx": "Apache-2.0",
       "model": "PP-OCRv6_small_det",

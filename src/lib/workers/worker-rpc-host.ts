@@ -7,15 +7,30 @@
  * 🔑 **Σφάλμα του χειριστή ⇒ απάντηση με σφάλμα**, ποτέ σιωπή: ο πελάτης δεν θα έμενε ποτέ να περιμένει ένα αίτημα που πέθανε.
  * 🔑 **Σειριακά**: ένα αίτημα τη φορά (το `await` μέσα στον ακροατή δεν μπλοκάρει τα επόμενα μηνύματα — γι' αυτό η σειρά
  *   κρατιέται ρητά με αλυσίδα υποσχέσεων· ο χειριστής μπορεί να έχει κρυφή μνήμη χωρίς αγώνες).
+ * 🔑 **Η ακύρωση ΔΕΝ μπαίνει στην ουρά (ADR-929 Φ0.4)**: το `{ cancel: id }` εξυπηρετείται αμέσως, στον ακροατή — αλλιώς θα
+ *   περίμενε πίσω από το ίδιο το αίτημα που θέλει να σταματήσει. Ενεργοποιεί το `AbortController` του αιτήματος: αν τρέχει,
+ *   ο χειριστής το βλέπει στο επόμενο σημείο ελέγχου· αν περιμένει ακόμα στην ουρά, απαντά `cancelled` **χωρίς** να τρέξει.
  */
 
-import type { WorkerRpcReply, WorkerRpcRequest, WorkerRpcScope } from './worker-rpc-protocol';
+import type { WorkerRpcContext, WorkerRpcHandler, WorkerRpcReply, WorkerRpcRequest, WorkerRpcScope } from './worker-rpc-protocol';
+import { isWorkerRpcCancel } from './worker-rpc-protocol';
+
+/** Το πλαίσιο μιας απάντησης χωρίς κανάλι (π.χ. άμεση κλήση σε test): ποτέ ακυρωμένο, καμία πρόοδος. */
+function detachedContext<P>(): WorkerRpcContext<P> {
+  return { signal: new AbortController().signal, progress: () => undefined };
+}
 
 /** Η απάντηση σε ένα αίτημα — ο χειριστής τρέχει εδώ, το σφάλμα του γίνεται απάντηση. */
-export async function answerWorkerRpc<Q, R>(request: WorkerRpcRequest<Q>, handle: (body: Q) => Promise<R> | R): Promise<WorkerRpcReply<R>> {
+export async function answerWorkerRpc<Q, R, P = never>(
+  request: WorkerRpcRequest<Q>,
+  handle: WorkerRpcHandler<Q, R, P>,
+  context: WorkerRpcContext<P> = detachedContext<P>(),
+): Promise<WorkerRpcReply<R>> {
+  if (context.signal.aborted) return { id: request.id, ok: false, cancelled: true };
   try {
-    return { id: request.id, ok: true, value: await handle(request.body) };
+    return { id: request.id, ok: true, value: await handle(request.body, context) };
   } catch (error: unknown) {
+    if (context.signal.aborted) return { id: request.id, ok: false, cancelled: true };
     return { id: request.id, ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
@@ -28,16 +43,26 @@ export async function answerWorkerRpc<Q, R>(request: WorkerRpcRequest<Q>, handle
  * clone θα κόστιζε όσο ένα μέρος της ίδιας της επεξεργασίας (ADR-929 Φ1). Ο χειριστής **δεν** πρέπει να κρατά αναφορά
  * σε ό,τι μεταφέρεται (μένει άδειο σε αυτή την πλευρά).
  */
-export function serveWorkerRpc<Q, R>(
+export function serveWorkerRpc<Q, R, P = never>(
   scope: WorkerRpcScope,
-  handle: (body: Q) => Promise<R> | R,
+  handle: WorkerRpcHandler<Q, R, P>,
   transferOf?: (value: R) => Transferable[],
 ): void {
   let queue: Promise<void> = Promise.resolve();
+  const controllers = new Map<number, AbortController>();
   scope.addEventListener('message', (event) => {
-    const request = event.data as WorkerRpcRequest<Q>;
+    const data: unknown = event.data;
+    if (isWorkerRpcCancel(data)) { controllers.get(data.cancel)?.abort(); return; }
+    const request = data as WorkerRpcRequest<Q>;
+    const controller = new AbortController();
+    controllers.set(request.id, controller);
+    const context: WorkerRpcContext<P> = {
+      signal: controller.signal,
+      progress: (progress) => scope.postMessage({ id: request.id, progress }),
+    };
     queue = queue.then(async () => {
-      const reply = await answerWorkerRpc(request, handle);
+      const reply = await answerWorkerRpc(request, handle, context);
+      controllers.delete(request.id);
       scope.postMessage(reply, reply.ok && transferOf !== undefined ? transferOf(reply.value) : []);
     });
   });
