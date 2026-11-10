@@ -42,7 +42,8 @@ const SCALE_LATER: RasterPixelScale = { metresPerPixelX: 0.02, metresPerPixelY: 
 const PROPOSED: PlanReadingView = { crop: { minX: 0, minY: 0, maxX: SIZE, maxY: SIZE }, redacted: [] };
 const CROPPED: PlanReadingView = { crop: { minX: 0, minY: 0, maxX: 120, maxY: SIZE }, redacted: [] };
 const HIDDEN: PlanReadingView = { crop: PROPOSED.crop, redacted: [{ minX: 150, minY: 150, maxX: 200, maxY: 200 }] };
-const READING = { status: 'read', reading: { tag: 'ai' } } as unknown as PlanReadingOutcome;
+/** Ανάγνωση AI (το `model` δεν έχει το πρόθεμα του τοπικού OCR ⇒ δεμένη στην όψη, `isLocalOcrOutcome`). */
+const READING = { status: 'read', reading: { tag: 'ai', model: 'vlm-test' } } as unknown as PlanReadingOutcome;
 const READ_SEND = { status: 'read', counts: { texts: 3, dimensions: 1, rooms: 0, openings: 0 }, cacheHit: false } as const;
 
 function recognition(): PlanRecognitionRun {

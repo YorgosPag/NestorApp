@@ -5,7 +5,12 @@
 
 import { IDENTITY_HOMOGRAPHY, type Homography, type Quad } from '@/lib/geometry/homography';
 import type { OcrText } from '../ocr/ocr-engine';
-import { localOcrModelId, OCR_READING_SCHEMA_VERSION, planReadingFromOcr } from '../ocr/ocr-reading';
+import {
+  isLocalOcrOutcome, localOcrModelId, ocrDownscaleFor, ocrTextsInView, OCR_READING_SCHEMA_VERSION, planReadingFromOcr,
+} from '../ocr/ocr-reading';
+import { OCR_TILING } from '../ocr/ocr-tiles';
+import type { PlanReadingOutcome } from '../plan-recognition-types';
+import type { PlanReadingView } from '../reading/plan-reading-view';
 import type { OcrAssetSet } from '../ocr/ocr-model-assets';
 
 const quad = (x: number, y: number, w: number, h: number): Quad =>
@@ -63,5 +68,49 @@ describe('localOcrModelId — από το μητρώο, με τα revisions', ()
       detector: m('det@1'), primary: m('rec@2'), secondary: m('el@3'),
     };
     expect(localOcrModelId(assets)).toBe('local-ocr:det@1+rec@2+el@3');
+  });
+});
+
+describe('ocrTextsInView — Φ0.6: ο ΙΔΙΟΣ κανόνας όψης με τα τμήματα (κέντρο κειμένου)', () => {
+  const left = ocr('3.50', quad(100, 100, 40, 10)); // κέντρο (120, 105)
+  const right = ocr('2.85', quad(800, 100, 40, 10)); // κέντρο (820, 105)
+  const straddling = ocr('4.15', quad(480, 300, 60, 10)); // κέντρο (510, 305): εκτείνεται μέσα, το κέντρο έξω
+  const texts = [left, right, straddling];
+  const crop = { minX: 0, minY: 0, maxX: 500, maxY: 1000 };
+
+  it('χωρίς όψη ⇒ όλα, όπως τα τμήματα της αρχικής εξαγωγής', () => {
+    expect(ocrTextsInView(texts, undefined, IDENTITY_HOMOGRAPHY)).toBe(texts);
+  });
+  it('crop ⇒ μόνο όσα έχουν το κέντρο μέσα (όχι όσα απλώς ακουμπούν)', () => {
+    expect(ocrTextsInView(texts, { crop, redacted: [] }, IDENTITY_HOMOGRAPHY)).toEqual([left]);
+  });
+  it('απόκρυψη μέσα στο crop ⇒ το κείμενο κάτω της δεν μετρά', () => {
+    const view: PlanReadingView = { crop: { minX: 0, minY: 0, maxX: 1000, maxY: 1000 }, redacted: [{ minX: 700, minY: 0, maxX: 1000, maxY: 200 }] };
+    expect(ocrTextsInView(texts, view, IDENTITY_HOMOGRAPHY)).toEqual([left, straddling]);
+  });
+  it('το κέντρο περνά από αρχικά px σε ευθυγραμμισμένα (originalToAligned)', () => {
+    const shiftLeft: Homography = { ...IDENTITY_HOMOGRAPHY, c: -400 }; // 820 → 420 μέσα · 120 → -280 έξω
+    expect(ocrTextsInView([left, right], { crop, redacted: [] }, shiftLeft)).toEqual([right]);
+  });
+});
+
+describe('isLocalOcrOutcome — η προέλευση από το `model` (Δ9)', () => {
+  const outcome = (model: string) => ({ status: 'read', reading: { ...read([]), model } }) as PlanReadingOutcome;
+  it('τοπική ⇒ true· VLM ⇒ false· καμία ή όχι-read ⇒ false', () => {
+    expect(isLocalOcrOutcome(outcome('local-ocr:det@1+rec@2+el@3'))).toBe(true);
+    expect(isLocalOcrOutcome(outcome('gpt-x'))).toBe(false);
+    expect(isLocalOcrOutcome(null)).toBe(false);
+    expect(isLocalOcrOutcome({ status: 'unavailable', reason: 'no-key' } as unknown as PlanReadingOutcome)).toBe(false);
+  });
+});
+
+describe('ocrDownscaleFor — ο ακέραιος συντελεστής από τον προϋπολογισμό pixel', () => {
+  it('μέσα στον προϋπολογισμό ⇒ 1· από πάνω ⇒ ο μικρότερος ακέραιος που χωρά', () => {
+    const side = Math.floor(Math.sqrt(OCR_TILING.maxDetectPixels));
+    expect(ocrDownscaleFor({ width: side, height: side })).toBe(1);
+    expect(ocrDownscaleFor({ width: side + 1, height: side + 1 })).toBe(2);
+    const f = ocrDownscaleFor({ width: 4 * side, height: 3 * side });
+    expect(((4 * side) / f) * ((3 * side) / f)).toBeLessThanOrEqual(OCR_TILING.maxDetectPixels);
+    expect(((4 * side) / (f - 1)) * ((3 * side) / (f - 1))).toBeGreaterThan(OCR_TILING.maxDetectPixels);
   });
 });

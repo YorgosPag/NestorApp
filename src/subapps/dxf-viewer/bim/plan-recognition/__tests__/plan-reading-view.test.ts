@@ -147,10 +147,14 @@ describe('renderReadingViewRaster', () => {
 
 describe('planReadingFromView', () => {
   const reading: PlanViewReading = {
-    texts: [{ id: 't1', kind: 'dimension', raw: '3.50', box: { x0: 0, y0: 0, x1: 500, y1: 1000 }, confidence: 0.8 }],
+    texts: [
+      { id: 't1', kind: 'dimension', raw: '3.50', box: { x0: 0, y0: 0, x1: 500, y1: 1000 }, confidence: 0.8 },
+      { id: 't2', kind: 'dimension', raw: 'Α1', box: { x0: 0, y0: 0, x1: 100, y1: 100 }, confidence: 0.3 },
+    ],
+    // v2 (Φ0.6): η τιμή βγαίνει από το κείμενο (`writtenLengthsMm`) — το «Α1» δεν είναι μήκος ⇒ η διάστασή του πετιέται.
     dimensions: [
-      { textId: 't1', valueMm: 3500, segmentIds: ['ps0'], confidence: 0.8 },
-      { textId: 't1', valueMm: null, segmentIds: [], confidence: 0.3 },
+      { textId: 't1', segmentIds: ['ps0'], confidence: 0.8 },
+      { textId: 't2', segmentIds: [], confidence: 0.3 },
     ],
     writtenScale: null,
     rooms: [{ name: 'ΣΑΛΟΝΙ', nameTextId: null, writtenAreaM2: 0, boundarySegmentIds: [], confidence: 0.5 }],
@@ -161,7 +165,7 @@ describe('planReadingFromView', () => {
     const out = planReadingFromView(reading, VIEW, DOUBLE, { model: 'm', schemaVersion: 1 });
     expect(out.texts[0].rect).toEqual({ minX: 200, minY: 100, maxX: 400, maxY: 300 });
     expect(out.texts[0].confidence).toEqual({ score: 0.8, factors: { reading: 0.8 } });
-    expect(out.dimensions).toHaveLength(1);
+    expect(out.dimensions).toEqual([{ textId: 't1', valueMm: 3500, segmentIds: ['ps0'], confidence: { score: 0.8, factors: { reading: 0.8 } } }]);
     expect(out.rooms[0].writtenAreaM2).toBeNull();
     expect([out.model, out.schemaVersion]).toEqual(['m', 1]);
   });

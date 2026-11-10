@@ -3,7 +3,8 @@
  */
 
 import {
-  classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenAreaM2, parseWrittenScale, writtenNumberTokens,
+  classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenAreaM2, parseWrittenScale, writtenLengthsMm,
+  writtenNumberTokens,
 } from '../reading/written-values';
 import { writtenPrecisionMm } from '../fusion/dimension-precision';
 
@@ -49,6 +50,21 @@ describe('inferBareIntegerUnit — η μονάδα των ακεραίων τη 
   });
   it('ρητή μονάδα εκατοστών δεν είναι απόδειξη μέτρων', () => {
     expect(inferBareIntegerUnit(['350 cm', '20'])).toBeNull();
+  });
+});
+
+describe('writtenLengthsMm — Φ0.6: ο ΕΝΑΣ κανόνας τιμής για OCR και VLM', () => {
+  it('η μονάδα των σκέτων ακεραίων κρίνεται ΜΙΑ φορά από όλο το σύνολο, ανεξάρτητα από τη σειρά', () => {
+    expect(writtenLengthsMm(['20', '3.50', '250'])).toEqual([200, 3500, 2500]);
+    expect(writtenLengthsMm(['3.50', '20', '250'])).toEqual([3500, 200, 2500]);
+  });
+  it('μόνο ακέραιοι ⇒ καμία τιμή (η μονάδα δεν αποδεικνύεται)· ρητή μονάδα μετρά πάντα', () => {
+    expect(writtenLengthsMm(['350', '415'])).toEqual([null, null]);
+    expect(writtenLengthsMm(['350', '35 εκ.', '3500 mm'])).toEqual([null, 350, 3500]);
+  });
+  it('κείμενο που δεν είναι μήκος ⇒ null στη θέση του, η αντιστοίχιση θέσεων μένει', () => {
+    expect(writtenLengthsMm(['Α1', '3,50', '', '1:50'])).toEqual([null, 3500, null, null]);
+    expect(writtenLengthsMm([])).toEqual([]);
   });
 });
 
