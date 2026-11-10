@@ -4,6 +4,20 @@
 
 > 🚨 **ΜΟΝΟ ό,τι ΕΚΚΡΕΜΕΙ** (εντολή Giorgio 2026-10-31, N.13). Εργασία που ολοκληρώθηκε → **σβήνεται ολόκληρη**. Καμία αναφορά ολοκλήρωσης εδώ: ούτε ✅, ούτε `[x]`, ούτε «ΕΚΛΕΙΣΕ», ούτε γραμμή changelog. Η ολοκλήρωση γράφεται στο ADR και στο git. Μερικώς ολοκληρωμένη → ξαναγράψε την εγγραφή ώστε να λέει μόνο τι μένει.
 
+- 🟡 **10/11 — ΤΑΥΤΟΤΗΤΕΣ ΜΗΧΑΝΗΣ `'system:…'` ΩΣ ΩΜΟ ΚΕΙΜΕΝΟ: 14 ΕΚΤΟΣ `SYSTEM_IDENTITY`** *(ADR-934 §5.2.2 Μ-β7 · ADR-195 · N.0.2)*
+
+  **Τι:** το `SYSTEM_IDENTITY` (`src/config/domain-constants.ts`) δηλώνει 9 ταυτότητες· μετρημένο 10/11 με grep: **22** διακριτά
+  `'system:…'` στον κώδικα, **14** δεν δηλώνονται εκεί, γραμμένα ως κείμενο σε 13 αρχεία παραγωγής: `cron-purge`
+  (`file-purge.job.ts` · `purge-deleted-contacts.job.ts` · `purge-deleted-entities.job.ts`) · `cron-orphan-cleanup` (`file-purge.job.ts`) ·
+  `purge` (`types/file-audit.ts`) · `stay-hold-expiry` (`stay-command-authority.ts`) · `cron-publication-retention`
+  (`publication-retention.server.ts`) · `document-text` (`document-text-reading.ts`) · `property-handover`
+  (`handover-delivery-copy.server.ts`) · `property-handover-protocol` (`property-handover-protocol-store.server.ts`) ·
+  `residency-migration` (`tour-original-migration.ts`) · `cron-evidence-retention` (`evidence-retention.service.ts`) ·
+  `rfq-invite-delivery` (`rfq-invite-delivery.ts`) · `default-library` (`subcontracts/types/clause.ts`)· +`unknown-job` · `pea-import`
+  μόνο σε tests. Χωρίς δήλωση ⇒ χωρίς εμφανιζόμενο όνομα el/en στο `audit-actor.ts` και χωρίς ένα σημείο που απαριθμεί ποιες
+  διεργασίες γράφουν. **Θεραπεία:** δήλωση στο `SYSTEM_IDENTITY` + ονόματα el/en + αντικατάσταση των literals (ίδιες τιμές ⇒ καμία
+  αλλαγή δεδομένων)· πύλη ratchet κατά ταυτότητα: νέο `'system:…'` εκτός `domain-constants.ts` ⇒ μπλοκ. **Μέγεθος:** > 1h, ~15 αρχεία.
+
 - 🟡 **05/11 — ΤΟ `<main>` ΤΟΥ ΚΕΛΥΦΟΥΣ ΔΕΝ ΕΙΝΑΙ ΠΛΑΙΣΙΟ ΑΝΑΦΟΡΑΣ: ΚΡΥΦΑ `<select>` ΦΟΥΣΚΩΝΟΥΝ ΤΟ ΚΕΛΥΦΟΣ** *(ADR-797 · ADR-928 §5.23.1)*
 
   **Τι:** το `MainContentBridge` (`<main>`, `overflow-y-auto`) δεν είναι `relative`. Κάθε `position:absolute` απόγονος χωρίς
