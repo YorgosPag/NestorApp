@@ -4,7 +4,7 @@
  *
  *   npm run wt:new -- <εργασία>      νέο αντίγραφο από το main
  *   npm run wt:list                  ενεργά αντίγραφα + ελεύθερος δίσκος
- *   npm run wt:land -- <εργασία>     ένταξη στο main, ΜΟΝΟ με εντολή Giorgio
+ *   npm run wt:land -- <εργασία>     ένταξη στο τοπικό main, αμέσως μετά από κάθε commit (ποτέ push)
  *   npm run wt:remove -- <εργασία>   σβήσιμο αντιγράφου
  */
 

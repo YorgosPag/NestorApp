@@ -17,7 +17,7 @@
 | Ξεκίνημα | `npm run wt:new -- <εργασία>`, μετά `EnterWorktree` με τη διαδρομή | Πράκτορας |
 | Commit στο κλαδί | `git add <αρχεία>` + `git commit` σε background (hook ~5,5′) | Πράκτορας, ο συγγραφέας |
 | Εικόνα | `npm run wt:list` | Όλοι |
-| Ένταξη στο `main` | `npm run wt:land -- <εργασία>` σε background | **Μόνο με εντολή Giorgio** |
+| Ένταξη στο `main` | `npm run wt:land -- <εργασία>` σε background | Πράκτορας, **αμέσως μετά από κάθε commit**, χωρίς ερώτηση (απόφαση Giorgio 2026-11-10· CLAUDE.md N.(-1)) |
 | Καθάρισμα | `ExitWorktree`, μετά `npm run wt:remove -- <εργασία>` από το κύριο αντίγραφο | Πράκτορας, μετά την ένταξη |
 | Push | `git push origin main` | **Μόνο με εντολή Giorgio** |
 
