@@ -21,7 +21,10 @@ import { peaPatchOf, peaProposalOf } from '@/lib/energy-certificate/pea-proposal
 import { readPeaText } from '@/lib/energy-certificate/pea-text';
 import { SYNTHETIC_PEA, peaPagesPdfjs } from '@/lib/energy-certificate/__tests__/pea-text.fixture';
 import { propertyDisplayArea } from '@/lib/properties/property-display-area';
-import { buildPropertyUpdatesFromForm } from '@/features/property-details/components/property-fields-form-mapper';
+import {
+  buildPropertyUpdatesFromForm,
+  changedPropertyUpdatesFromForm,
+} from '@/features/property-details/components/property-fields-form-mapper';
 import { buildFormDataFromProperty, diffServerSnapshot } from '@/services/property/property-form-sync';
 import type { Property } from '@/types/property-viewer';
 
@@ -59,10 +62,14 @@ function importedForm(chosenScope: 'building' | 'unit') {
   return { proposal, form: { ...form, ...patchedEnergyFormSlice(form, patch) } };
 }
 
-/** Φόρμα → σώμα (μέσα από JSON, όπως στο δίκτυο) → πόρτα → ό,τι γράφει ο server. */
+/**
+ * Φόρμα → σώμα (μέσα από το ΕΝΑ φίλτρο «μόνο ό,τι άλλαξε» και JSON, όπως στο δίκτυο — ADR-249 §7.7) → πόρτα → ό,τι
+ * γράφει ο server.
+ */
 function savedEnergyOf(form: ReturnType<typeof importedForm>['form']): Record<string, unknown> {
   const updates = buildPropertyUpdatesFromForm({ formData: form, property: STUDIO, isMultiLevel: false });
-  const body = PropertyPatchSchema.parse(JSON.parse(JSON.stringify({ energy: updates.energy })));
+  const sent = changedPropertyUpdatesFromForm({ updates, property: STUDIO, isMultiLevel: false });
+  const body = PropertyPatchSchema.parse(JSON.parse(JSON.stringify({ energy: sent.energy })));
   const written = energyDeclarationPatch(STUDIO.id, body.energy, STUDIO as unknown as Record<string, unknown>, AT);
   return written.energy as Record<string, unknown>;
 }

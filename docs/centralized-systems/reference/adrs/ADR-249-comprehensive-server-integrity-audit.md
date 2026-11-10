@@ -318,6 +318,7 @@ Early validation στο route handler:
 | 2026-11-10 | **Κλείδωμα κατά ΑΛΛΑΓΗ ΤΙΜΗΣ + η φόρμα στέλνει μόνο ό,τι άλλαξε** (§7, Google AIP-203 · AIP-134 · RFC 7396). Ο φρουρός έκρινε **παρουσία κλειδιού** ενώ η φόρμα ξανάστελνε πάντα `name/code/type/commercialStatus/floor/layout/orientations` ⇒ η «Αποθήκευση» σε κρατημένο/πωλημένο ακίνητο έπαιρνε **πάντα** 403. **ΝΕΟ** `lib/property/property-field-change.ts` — ο ΕΝΑΣ κριτής `samePropertyFieldValue` (ισοδυναμίες τομέα `sameAreas` · `sameEnergyCertificate` · `sameCommonCharges`, αλλιώς `serializeScalar` του `audit-diff`) + `changedPropertyFields` (μερική διόρθωση από δύο καταστάσεις). **ΝΕΟ** `judgeLockedFields` (`document` / `partial`). Server: αμετάβλητα κλειδωμένα **αφαιρούνται** από το σώμα, αλλαγμένα ⇒ 403 με ονόματα. Πελάτης: ο ίδιος κριτής στο gateway· η φόρμα περνά ΕΝΑ φίλτρο `changedPropertyUpdatesFromForm` (αντικαθιστά τα 4 σκόρπια «μόνο όταν άλλαξε»)· άδειασμα ⇒ `null`· τίποτα ⇒ καμία εγγραφή· `_v` μέσω `useVersionedSave` (`runVersionedPropertyUpdate`). Διορθώθηκε και η μπαγιάτικη γραμμή του §3. | Claude Code |
 | 2026-11-10 | **Άδειασμα πεδίου: `null` ⇒ διαγραφή** (§7.8, RFC 7396 · AIP-134). Η ζωντανή επαλήθευση του §7 βρήκε 400 στο άδειασμα κοινοχρήστων (`PropertyPatchSchema` χωρίς `null` σε `commonCharges` · `energy` · `description`). Σχήμα `.nullable()` στα τρία· **ΝΕΟ** κλειστό `PROPERTY_CLEARABLE_FIELDS` + `firestoreUpdateOf` (ΕΝΑ σημείο `null → FieldValue.delete()`, μόνο στην εγγραφή) + `propertyAfterUpdate` (η προβολή βλέπει το έγγραφο χωρίς τα σβησμένα). ΠΕΑ: το `null` περνά από το `energyDeclarationPatch` — φεύγει η αξίωση, επιβιώνουν τα legacy πεδία. Δεν άλλαξε η αποθήκευση `null` στα πεδία σύνδεσης (`floorId` · `buildingId` · …). | Claude Code |
 | 2026-11-10 | **Κλείσιμο ανοιχτών §7.8** (§7.9). Άγκυρες `property-patch-clearing.test.ts` (Κ1–Κ5, πραγματικός sentinel) + διόρθωση δύο μπαγιάτικων αγκυρών (`null ⇒ ΑΠΟΡΡΙΨΗ`). **ΝΕΟ** κοινό `lib/firestore/merge-patch-deletes.ts` (`withMergePatchDeletes` · `documentAfterMergePatch`) — καταναλωτές: ακίνητο + `common-space-drawn-area.server.ts`. 🔴 Normalizer: σβησμένα `areas` ⇒ `area: null` (πριν ξαναγραφόταν το αποθηκευμένο μικτό). `legality: []` **μένει** (κανονική μορφή «καμία αξίωση»). Tests 103/103 (5 σουίτες). | Claude Code |
+| 2026-11-11 | **Άγκυρες του ΕΝΟΣ κριτή + ζωντανή επαλήθευση** (§7.10). SSoT audit: `samePropertyFieldValue` · `changedPropertyFields` · `changedPropertyUpdatesFromForm` χωρίς test, `judgeLockedFields` μόνο έμμεσα· 🔴 τα tests του mapper έκριναν το «μόνο όταν άλλαξε» μέσα στον mapper ⇒ **5 κόκκινα στο `main`** από το `70b29d14`. **ΝΕΟ** `property-field-change.test.ts` (Σ1–Σ4 · Δ1–Δ6) · `judgeLockedFields` Κ1–Κ7 · τα 3 tests του mapper κρίνουν πλέον ό,τι φεύγει στο δίκτυο (`changedPropertyUpdatesFromForm`). 45/45 (5 σουίτες). Ζωντανά στη ΔΟΚΙΜΗ Δ (`026b50e`): άδειασμα εμβαδών ⇒ Εμβαδόν 130 → — (ιστορικό), impact-preview 200· μονάδα επανήλθε. §7.7 ξαναγράφτηκε με ό,τι μένει. | Claude Code |
 
 ---
 
@@ -374,9 +375,10 @@ floorId · layout · orientations` — όλα κλειδωμένα σε `sold`/`
 πεδίων αυτό είναι «τελευταία εγγραφή κερδίζει» **ανά πεδίο** (Figma), όχι αντικατάσταση ολόκληρου του εγγράφου.
 
 ### 7.7 Ανοιχτά
-- Τα tests του mapper (`property-form-areas.test.ts`, `property-form-commercial.test.ts`, `property-energy-import-chain.test.ts`)
-  έλεγχαν το «μόνο όταν άλλαξε» **μέσα** στον mapper· πρέπει να κρίνουν πλέον το `changedPropertyUpdatesFromForm`.
-  Άγκυρα για `judgeLockedFields` / `changedPropertyFields` — εκκρεμεί (χωρίς έγκριση δεν τρέχουν tests).
+- Κανένα ζωντανό test για το **403 του server** σε κλειδωμένο πεδίο: η φόρμα δεν μπορεί να το προκαλέσει (ο πελάτης
+  αρνείται πρώτα, ίδιος κριτής)· θέλει απευθείας κλήση API. Καλύπτεται μόνο από το Κ2 του `judgeLockedFields` (§7.10).
+- Σβήσιμο υπάρχοντος ΠΕΑ σε **πωλημένο** ακίνητο — μη δοκιμασμένο ζωντανά.
+- Μετάλλαξη των αγκυρών του §7.9 / §7.10 (κοκκινίζουν;) — δεν έχει τρέξει.
 
 ### 7.8 Το άδειασμα πεδίου: `null` ⇒ ΔΙΑΓΡΑΦΗ, ένα σημείο μετάφρασης (2026-11-10)
 
@@ -441,3 +443,36 @@ SDK: το κλειστό σύνολο ακριβώς (επέκταση σε `flo
 `readLegalityClaims` (απουσία ⇒ `[]`) · ο δεύτερος γραφέας `owner-property-energy-certificate.service.ts` (`[]`) · η
 δημόσια αγγελία (ADR-838, `legality: []` ρητά). Διαγραφή μόνο εδώ θα έδινε **δύο** μορφές για το ίδιο νόημα· στο proto3
 (Google) ο κενός repeated **είναι** η απουσία — καμία υλοποίηση δεν απαιτεί αλλαγή. Κλειδωμένο στο Κ5 της άγκυρας.
+
+### 7.10 Άγκυρες του ΕΝΟΣ κριτή + ζωντανή επαλήθευση του καθρέφτη (2026-11-11)
+
+**SSoT audit** (grep σε `lib/property` · `features/property-details` · `services/property` · `api/properties` ·
+`lib/firestore`): οι `samePropertyFieldValue` · `changedPropertyFields` · `changedPropertyUpdatesFromForm` **δεν είχαν
+κανένα** test· ο `judgeLockedFields` μόνο **έμμεσα** (`property-transaction-exit` · `property-offers-write-gate`).
+🔴 Και χειρότερο: τα tests του mapper έκριναν ακόμη το «μόνο όταν άλλαξε» **μέσα** στον `buildPropertyUpdatesFromForm`,
+που από το §7 δίνει την **πλήρη** εικόνα ⇒ **5 κόκκινα στο `main` από το `70b29d14`** (μετρημένο με τις εκδοχές του
+HEAD: εμβαδά Ε1 · κοινόχρηστα Κ4 · ΠΕΑ Ε4, Ε5 · ποσά Π2). Δεν τα τρέχει καμία πύλη του hook — ίδιο σχήμα με το §7.9.
+
+**Άγκυρες** (5 σουίτες, 45/45):
+- **ΝΕΟ** `lib/property/__tests__/property-field-change.test.ts` — Σ1–Σ4 (ισοδυναμίες τομέα + σειριοποιητής ιστορικού)
+  · Δ1–Δ6 (αμετάβλητο ⇒ έξω · λείπει με τιμή ⇒ `null` · `undefined` ≡ απουσία · κανένα άσκοπο `null` · ιδεμπότητα).
+- `property-locked-fields.test.ts` + `judgeLockedFields` Κ1–Κ7 (ίδια τιμή ⇒ αγνοείται · άλλη ⇒ άρνηση · `document`:
+  λείπει ≡ «δεν δηλώθηκε» · 🔴 `partial`: λείπει ⇒ **αλλαγή**, fail-closed · κρατημένο κρίνει μόνο ταυτότητα).
+- `property-form-areas` / `-commercial` / `property-energy-import-chain`: κρίνουν **ό,τι φεύγει στο δίκτυο** (mapper →
+  `changedPropertyUpdatesFromForm`, ο δρόμος του `PropertyFieldsBlock`). Νέα: Ε5 «όλα άδεια ⇒ `{ areas: null }`» · Ε6
+  «καμία αλλαγή ⇒ `{}`» · Ε7 «η δημιουργία παίρνει την πλήρη εικόνα». Σβήσιμο κοινοχρήστων / κλάσης ΠΕΑ ⇒ `null`
+  (όχι πια άδειο μπλοκ — το §7.8 το κάνει διαγραφή).
+
+**Ζωντανή επαλήθευση** (nestorconstruct.gr, `026b50e`, ΔΟΚΙΜΗ Δ `prop_a0000004-…`, μη πωλημένη· απόδειξη = ιστορικό
+οντότητας + PATCH/impact-preview, ο MCP της Firestore δεν συνδέθηκε):
+
+| Βήμα | Ιστορικό | |
+|---|---|---|
+| Μικτό 120 → 130 | Εμβαδόν 120 → **130** · Εμβαδά → 130/108/10 | ✅ |
+| Άδειασμα όλων | impact-preview **200** · Εμβαδόν 130 → **—** · Εμβαδά → **—** | ✅ |
+| Μόνο καθαρό 108 + μπαλκόνι 10 | μόνο «Εμβαδά» (`gross: 0` = «δεν μετρήθηκε») — **καμία** γραμμή Εμβαδόν (`area` μένει `null`) | ✅ |
+| Επαναφορά (μικτό 120) | Εμβαδόν — → **120** · Εμβαδά → 120/108/10 | ✅ |
+
+Το αρχικό `terrace: 0` δεν επανήλθε ως κλειδί — σκόπιμα (`0` ≡ απουσία, `sameAreas`). Μη επαληθευμένα ζωντανά: `_v` +1
+(μόνο έμμεσα: καμία σύγκρουση έκδοσης σε 4 αποθηκεύσεις) · αν το σβησμένο `areas` λείπει ή είναι `{}` (το ιστορικό
+γράφει «—» και για τα δύο).

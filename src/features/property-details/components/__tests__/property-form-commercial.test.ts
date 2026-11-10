@@ -6,10 +6,20 @@
  * άλλο πράγμα σε ακίνητο και σε θέση.
  */
 
-import { buildPropertyUpdatesFromForm } from '../property-fields-form-mapper';
+import { buildPropertyUpdatesFromForm, changedPropertyUpdatesFromForm } from '../property-fields-form-mapper';
 import type { PropertyFieldsFormData } from '../property-fields-form-types';
 import type { Property } from '@/types/property-viewer';
 import { UNDECLARED_ENERGY_FORM_SLICE } from '@/lib/energy-certificate/energy-certificate-form';
+
+/**
+ * Ό,τι **φεύγει στο δίκτυο** (ADR-249 §7.7): ο mapper δίνει την πλήρη εικόνα και το ΕΝΑ φίλτρο κρατά μόνο ό,τι
+ * διαφέρει από τη φόρμα όπως θα φορτωνόταν από το αποθηκευμένο — ο ίδιος δρόμος με το `PropertyFieldsBlock`.
+ * Πεδίο που ο άνθρωπος άδειασε φεύγει ως `null` (RFC 7396), όχι ως άδειο μπλοκ.
+ */
+function sent(params: { formData: PropertyFieldsFormData; property: Property; isMultiLevel: boolean }) {
+  const updates = buildPropertyUpdatesFromForm(params);
+  return changedPropertyUpdatesFromForm({ updates, property: params.property, isMultiLevel: params.isMultiLevel });
+}
 
 function formOf(overrides: Partial<PropertyFieldsFormData>): PropertyFieldsFormData {
   return {
@@ -33,18 +43,18 @@ const dokimiA = {
 
 describe('Φόρμα ακινήτου → κοινόχρηστα (ADR-777 §8.93)', () => {
   it('Κ1 — καμία αλλαγή ⇒ ΚΑΝΕΝΑ `commonCharges` στο σώμα (αλλιώς κάθε αποθήκευση θα έγραφε ίχνος)', () => {
-    const updates = buildPropertyUpdatesFromForm({ formData: formOf({}), property: dokimiA, isMultiLevel: false });
+    const updates = sent({ formData: formOf({}), property: dokimiA, isMultiLevel: false });
     expect(updates.commonCharges).toBeUndefined();
   });
 
   it('Κ2 — νέα δήλωση ⇒ ολόκληρο το μπλοκ', () => {
     const commonCharges = { monthlyAmount: 120, includes: ['heating' as const] };
-    const updates = buildPropertyUpdatesFromForm({ formData: formOf({ commonCharges }), property: dokimiA, isMultiLevel: false });
+    const updates = sent({ formData: formOf({ commonCharges }), property: dokimiA, isMultiLevel: false });
     expect(updates.commonCharges).toEqual(commonCharges);
   });
 
   it('🔴 Κ3 — «χωρίς κοινόχρηστα» (`0`) γράφεται ως απάντηση, δεν πέφτει ως «κενό»', () => {
-    const updates = buildPropertyUpdatesFromForm({
+    const updates = sent({
       formData: formOf({ commonCharges: { monthlyAmount: 0, includes: null } }),
       property: dokimiA,
       isMultiLevel: false,
@@ -52,17 +62,17 @@ describe('Φόρμα ακινήτου → κοινόχρηστα (ADR-777 §8.93
     expect(updates.commonCharges).toEqual({ monthlyAmount: 0, includes: null });
   });
 
-  it('Κ4 — ίδια δήλωση με το έγγραφο ⇒ δεν ξαναγράφεται· σβήσιμο ⇒ γράφεται το «τίποτα δηλωμένο»', () => {
+  it('Κ4 — ίδια δήλωση με το έγγραφο ⇒ δεν ξαναγράφεται· σβήσιμο ⇒ `null` («σβήσε», ADR-249 §7.8)', () => {
     const stored = { ...dokimiA, commonCharges: { monthlyAmount: 120, includes: null } } as Property;
-    const same = buildPropertyUpdatesFromForm({
+    const same = sent({
       formData: formOf({ commonCharges: { monthlyAmount: 120, includes: null } }),
       property: stored,
       isMultiLevel: false,
     });
     expect(same.commonCharges).toBeUndefined();
 
-    const cleared = buildPropertyUpdatesFromForm({ formData: formOf({}), property: stored, isMultiLevel: false });
-    expect(cleared.commonCharges).toEqual({ monthlyAmount: null, includes: null });
+    const cleared = sent({ formData: formOf({}), property: stored, isMultiLevel: false });
+    expect(cleared.commonCharges).toBeNull();
   });
 });
 
@@ -73,12 +83,12 @@ describe('Φόρμα ακινήτου → ενεργειακό πιστοποι�
   };
 
   it('Ε1 — καμία αλλαγή ⇒ ΚΑΝΕΝΑ `energy` στο σώμα', () => {
-    const updates = buildPropertyUpdatesFromForm({ formData: formOf({}), property: dokimiA, isMultiLevel: false });
+    const updates = sent({ formData: formOf({}), property: dokimiA, isMultiLevel: false });
     expect(updates.energy).toBeUndefined();
   });
 
   it('Ε2 — νέα δήλωση ⇒ ολόκληρο το μπλοκ, κλάση και αριθμοί μαζί', () => {
-    const updates = buildPropertyUpdatesFromForm({
+    const updates = sent({
       formData: formOf({ energyClass: 'B+', energyDetails: figures }),
       property: dokimiA,
       isMultiLevel: false,
@@ -88,7 +98,7 @@ describe('Φόρμα ακινήτου → ενεργειακό πιστοποι�
 
   it('🔴 Ε3 — αλλαγή ΜΟΝΟ της κλάσης δεν σβήνει τους αριθμούς (ο παλιός mapper έγραφε `{ class }` και τους έσβηνε)', () => {
     const stored = { ...dokimiA, energy: { class: 'C', ...figures } } as Property;
-    const updates = buildPropertyUpdatesFromForm({
+    const updates = sent({
       formData: formOf({ energyClass: 'B', energyDetails: figures }),
       property: stored,
       isMultiLevel: false,
@@ -96,22 +106,19 @@ describe('Φόρμα ακινήτου → ενεργειακό πιστοποι�
     expect(updates.energy).toEqual({ class: 'B', ...figures });
   });
 
-  it('🔴 Ε4 — σβήσιμο κλάσης ΓΡΑΦΕΤΑΙ (πριν ήταν αδύνατο), και παίρνει μαζί του τους αριθμούς', () => {
+  it('🔴 Ε4 — σβήσιμο κλάσης ΓΡΑΦΕΤΑΙ (πριν ήταν αδύνατο), και παίρνει μαζί του τους αριθμούς (`energy: null`)', () => {
     const stored = { ...dokimiA, energy: { class: 'C', ...figures } } as Property;
-    const updates = buildPropertyUpdatesFromForm({
+    const updates = sent({
       formData: formOf({ energyClass: '', energyDetails: figures }),
       property: stored,
       isMultiLevel: false,
     });
-    expect(updates.energy).toEqual({
-      class: null, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null,
-      scope: null, sourceFileId: null, absence: null,
-    });
+    expect(updates.energy).toBeNull();
   });
 
   it('Ε5 — ίδια δήλωση με το έγγραφο ⇒ δεν ξαναγράφεται (ούτε ίχνος, ούτε νέα αξίωση)', () => {
     const stored = { ...dokimiA, energy: { class: 'C', ...figures } } as Property;
-    const updates = buildPropertyUpdatesFromForm({
+    const updates = sent({
       formData: formOf({ energyClass: 'C', energyDetails: figures }),
       property: stored,
       isMultiLevel: false,
@@ -122,17 +129,17 @@ describe('Φόρμα ακινήτου → ενεργειακό πιστοποι�
 
 describe('Φόρμα ακινήτου → ποσά μέσα από τον ΕΝΑ κριτή', () => {
   it('🔴 Π1 — αλλαγή ΜΟΝΟ του ενοικίου ⇒ γράφεται το νέο ενοίκιο, τα υπόλοιπα εμπορικά μένουν', () => {
-    const updates = buildPropertyUpdatesFromForm({ formData: formOf({ rentPrice: '650' }), property: dokimiA, isMultiLevel: false });
+    const updates = sent({ formData: formOf({ rentPrice: '650' }), property: dokimiA, isMultiLevel: false });
     expect(updates.commercial).toMatchObject({ rentPrice: 650, owners: [{ contactId: 'c1' }] });
   });
 
   it('Π2 — καμία αλλαγή ποσού ⇒ ΚΑΝΕΝΑ `commercial` στο σώμα (δεν ξαναγράφεται ό,τι δεν αγγίχτηκε)', () => {
-    const updates = buildPropertyUpdatesFromForm({ formData: formOf({}), property: dokimiA, isMultiLevel: false });
+    const updates = sent({ formData: formOf({}), property: dokimiA, isMultiLevel: false });
     expect(updates.commercial).toBeUndefined();
   });
 
   it('Π3 — «0» ή κενό ⇒ `null` (ποτέ «0 €» στην αγγελία)', () => {
-    const updates = buildPropertyUpdatesFromForm({ formData: formOf({ rentPrice: '0' }), property: dokimiA, isMultiLevel: false });
+    const updates = sent({ formData: formOf({ rentPrice: '0' }), property: dokimiA, isMultiLevel: false });
     expect(updates.commercial).toMatchObject({ rentPrice: null });
   });
 });
