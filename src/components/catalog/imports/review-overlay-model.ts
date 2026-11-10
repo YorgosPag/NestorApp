@@ -5,8 +5,9 @@
  *
  * 🔑 **Σταθερή ταυτότητα στόχου** (`reviewTargetKey`): η επιλογή κρατά **κλειδί**, όχι αντικείμενο. Ως το Β8 το ενεργό πεδίο
  *    κρινόταν με `field === focused`, άρα κάθε ξαναφόρτωμα της πρότασης (νέα αντικείμενα) έσβηνε σιωπηλά την επιλογή.
- * 🔑 **Ίδια περιοχή ⇒ ΕΝΑ πλαίσιο με πολλούς στόχους** (ενωμένο κελί `MB-SA11A1` = 4 παραλλαγές). Η κατάσταση του πλαισίου είναι
- *    η **χειρότερη** των στόχων του (`worstReviewTone`): ένα πρόβλημα δεν κρύβεται πίσω από τρία ✓.
+ * 🔑 **Ίδια περιοχή ⇒ ΕΝΑ πλαίσιο με πολλούς στόχους** (ενωμένο κελί `ΠΑΡΟΧΗ ΑΕΡΑ` = 6 στόχοι). Η κατάσταση του πλαισίου είναι
+ *    η **χειρότερη** των στόχων του (`worstReviewTone`): ένα πρόβλημα δεν κρύβεται πίσω από τρία ✓. Οι στόχοι ταξινομούνται με
+ *    τον ίδιο κανόνα, άρα ο **πρώτος** είναι αυτός που έβαψε το πλαίσιο: τον ονομάζει η ετικέτα, τον επιλέγει το κλικ.
  * 🔑 **Σειρά = ζωγραφική = κλικ = Tab.** Πρώτα τα πλαίσια που δεν περιέχονται σε άλλο, μετά όσα περιέχονται, και μέσα σε κάθε
  *    στρώση σειρά ανάγνωσης (πάνω→κάτω, αριστερά→δεξιά). Το περιεχόμενο ζωγραφίζεται **πάνω** από τον περιέκτη, άρα το κλικ
  *    στο μικρό κελί πάει στο κελί και όχι στη γραμμή που το περικλείει. (Κανένα από τα Rossum · Azure DI · ABBYY δεν τεκμηριώνει
@@ -16,9 +17,17 @@
 import { fieldAddress } from '@/subapps/catalog/import/human-edits';
 import { lineDecisionOf, lineKeyOf } from '@/subapps/catalog/import/page-line-overrides';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
-import { worstReviewTone, type ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
-import type { ImportLineOverride, ImportPageUnmappedLine, ImportProposalField, ImportProposalRow, PageRegion } from '@/subapps/catalog/types/catalog-import';
+import { REVIEW_MARK_TONES, worstReviewTone, type ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
+import type {
+  ImportIssue,
+  ImportLineOverride,
+  ImportPageUnmappedLine,
+  ImportProposalField,
+  ImportProposalRow,
+  PageRegion,
+} from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportLineRefusal } from '@/subapps/catalog/vocabulary/catalog-import';
 import type { LineState } from './import-text';
 import { lineStateOf } from './line-state';
 import { bucketOf } from './proposal-summary';
@@ -68,20 +77,42 @@ export function resolveReviewTarget(
 // ── Κατάσταση ────────────────────────────────────────────────────────────────
 
 /**
- * Πρόβλημα = κάτι που ο άνθρωπος πρέπει να **δει**, όχι απλώς να αποφασίσει: εύρημα στο πεδίο ή στη γραμμή του, τιμή που δεν
- * διαβάστηκε, ή τιμή που η στρώση κειμένου **διέψευσε** (`verified === false`). Αλλιώς ο κάδος της σύνοψης (`bucketOf`).
+ * **Γιατί** ένας στόχος είναι πρόβλημα — η αιτία ταξιδεύει με το πλαίσιο ώς το `aria-label`, ώστε το «Πρόβλημα» να μη λέει
+ * ποτέ μόνο «κάτι δεν πάει καλά» (Rossum: ο λόγος του «automation blocker» δίπλα στην τιμή).
  */
+export type ReviewReason =
+  | { readonly kind: 'issue'; readonly issue: ImportIssue }
+  | { readonly kind: 'unread' }
+  | { readonly kind: 'unverified' }
+  | { readonly kind: 'refused'; readonly refusal: ImportLineRefusal };
+
+/**
+ * Πρόβλημα = κάτι που ο άνθρωπος πρέπει να **δει**, όχι απλώς να αποφασίσει: εύρημα στο πεδίο ή στη γραμμή του, τιμή που δεν
+ * διαβάστηκε, ή τιμή που η στρώση κειμένου **διέψευσε** (`verified === false`). Το εύρημα του πεδίου προηγείται του ευρήματος
+ * της γραμμής: είναι το πιο συγκεκριμένο.
+ */
+export function reasonOfField(row: ImportProposalRow, field: ImportProposalField): ReviewReason | null {
+  const issue = field.issues[0] ?? row.issues[0];
+  if (issue) return { kind: 'issue', issue };
+  if (field.incoming === null) return { kind: 'unread' };
+  return field.anchor?.kind === 'page' && field.anchor.verified === false ? { kind: 'unverified' } : null;
+}
+
+/** Αιτία ⇒ πρόβλημα· αλλιώς ο κάδος της σύνοψης (`bucketOf`). */
 export function toneOfField(row: ImportProposalRow, field: ImportProposalField): ReviewMarkTone {
-  const unverified = field.anchor?.kind === 'page' && field.anchor.verified === false;
-  if (field.issues.length > 0 || row.issues.length > 0 || field.incoming === null || unverified) return 'problem';
+  if (reasonOfField(row, field) !== null) return 'problem';
   const bucket = bucketOf(field);
   if (bucket === 'pending') return 'pending';
   return bucket === 'rejected' ? 'dismissed' : 'accepted';
 }
 
-/** Γραμμή **χωρίς πεδίο** = πρόβλημα (η προδιαγραφή: «χωρίς αντιστοίχιση»)· αγνοημένη = απορρίφθηκε· σε αποθήκευση = εκκρεμεί. */
+/**
+ * Γραμμή **χωρίς πεδίο** = δικός της τόνος, **όχι** πρόβλημα: η τιμή διαβάστηκε σωστά, απλώς η οικογένεια δεν έχει ιδιότητα να
+ * τη δεχτεί (live 2026-11-10: 56 από τα 61 κόκκινα της σελ. 87). Πρόβλημα μένει η **άρνηση** της επανερμηνείας.
+ * Αγνοημένη = απορρίφθηκε· σε αποθήκευση = εκκρεμεί.
+ */
 const LINE_TONES: Readonly<Record<LineState, ReviewMarkTone>> = {
-  pending: 'problem',
+  pending: 'unmapped',
   refused: 'problem',
   saving: 'pending',
   mapped: 'accepted',
@@ -96,6 +127,8 @@ export interface ReviewBoxTarget {
   readonly target: ReviewTarget;
   readonly key: string;
   readonly tone: ReviewMarkTone;
+  /** Η αιτία του προβλήματος (`null` όταν ο τόνος δεν είναι πρόβλημα). */
+  readonly reason: ReviewReason | null;
   /** Ό,τι χρειάζεται η οθόνη για να το ονομάσει (η ετικέτα πεδίου λύνεται στην οθόνη, από τη βιβλιοθήκη ιδιοτήτων). */
   readonly subject: { readonly kind: 'field'; readonly field: ImportProposalField } | { readonly kind: 'line'; readonly label: string };
   /** Το κείμενο όπως τυπώθηκε στο PDF. */
@@ -107,6 +140,7 @@ export interface ReviewBox {
   readonly page: number;
   readonly region: PageRegion;
   readonly tone: ReviewMarkTone;
+  /** Ταξινομημένοι κατά τόνο (`REVIEW_MARK_TONES`): ο **πρώτος** είναι αυτός που αποφασίζει το χρώμα — τον ονομάζει η ετικέτα, τον επιλέγει το κλικ. */
   readonly targets: readonly ReviewBoxTarget[];
 }
 
@@ -129,7 +163,9 @@ function placedFields(proposal: ImportProposalWire): Placed[] {
     const anchor = field.anchor;
     if (anchor?.kind !== 'page') return [];
     const target = fieldTargetOf(proposal.id, row, field);
-    const entry: ReviewBoxTarget = { target, key: reviewTargetKey(target), tone: toneOfField(row, field), subject: { kind: 'field', field }, printed: field.sourceText };
+    const entry: ReviewBoxTarget = {
+      target, key: reviewTargetKey(target), tone: toneOfField(row, field), reason: reasonOfField(row, field), subject: { kind: 'field', field }, printed: field.sourceText,
+    };
     return anchor.regions.map((region) => ({ page: anchor.page, region, entry }));
   }));
 }
@@ -138,8 +174,10 @@ function placedLines({ lines, overrides, activity }: ReviewOverlaySource): Place
   return lines.flatMap((line) => {
     const target = lineTargetOf(line);
     const key = reviewTargetKey(target);
-    const tone = toneOfLine(lineStateOf(activity.get(lineKeyOf(line)), lineDecisionOf(overrides, line)));
-    const entry: ReviewBoxTarget = { target, key, tone, subject: { kind: 'line', label: line.label }, printed: line.values.join(' · ') };
+    const now = activity.get(lineKeyOf(line));
+    const tone = toneOfLine(lineStateOf(now, lineDecisionOf(overrides, line)));
+    const reason: ReviewReason | null = now?.kind === 'refused' ? { kind: 'refused', refusal: now.reason } : null;
+    const entry: ReviewBoxTarget = { target, key, tone, reason, subject: { kind: 'line', label: line.label }, printed: line.values.join(' · ') };
     return (line.regions ?? []).map((region) => ({ page: line.page, region, entry }));
   });
 }
@@ -158,6 +196,11 @@ function orderBoxes(boxes: readonly ReviewBox[]): ReviewBox[] {
     || a.region.x - b.region.x);
 }
 
+const toneRank = (tone: ReviewMarkTone): number => REVIEW_MARK_TONES.indexOf(tone);
+
+/** Ο χειρότερος τόνος μπροστά (σταθερή ταξινόμηση: ίσοι τόνοι κρατούν τη σειρά της πηγής). */
+const byTone = (entries: readonly ReviewBoxTarget[]): ReviewBoxTarget[] => [...entries].sort((a, b) => toneRank(a.tone) - toneRank(b.tone));
+
 /** Όλα τα πλαίσια της παρτίδας. Ένας στόχος με περισσότερες περιοχές (πεδίο σε δύο κελιά) εμφανίζεται σε καθεμία. */
 export function buildReviewBoxes(source: ReviewOverlaySource): ReviewBox[] {
   const grouped = new Map<string, { page: number; region: PageRegion; entries: ReviewBoxTarget[] }>();
@@ -168,13 +211,28 @@ export function buildReviewBoxes(source: ReviewOverlaySource): ReviewBox[] {
     grouped.set(id, group);
   }
   return orderBoxes([...grouped].map(([id, { page, region, entries }]) => ({
-    id, page, region, targets: entries, tone: worstReviewTone(entries.map((entry) => entry.tone)),
+    id, page, region, targets: byTone(entries), tone: worstReviewTone(entries.map((entry) => entry.tone)),
   })));
 }
 
-/** Πόσα πλαίσια ανά κατάσταση — για το υπόμνημα. */
-export function countBoxTones(boxes: readonly ReviewBox[]): Readonly<Record<ReviewMarkTone, number>> {
-  const counts: Record<ReviewMarkTone, number> = { problem: 0, pending: 0, accepted: 0, dismissed: 0 };
-  for (const box of boxes) counts[box.tone] += 1;
-  return counts;
+/** Ανά κατάσταση: πόσα **πλαίσια** βλέπει ο άνθρωπος, και πόσα **στοιχεία** (πεδία · γραμμές) κρύβονται πίσω τους. */
+export interface ReviewToneCount {
+  readonly boxes: number;
+  readonly targets: number;
+}
+
+/**
+ * Για το υπόμνημα. Τα στοιχεία μετρούν **μοναδικά** και κατά τον **δικό τους** τόνο: μια γραμμή χωρίς πεδίο με 5 πλαίσια
+ * (ετικέτα + 4 τιμές) είναι **μία** απόφαση — «Χωρίς πεδίο 56 · 11 στοιχεία», όπως η λίστα λέει «11 γραμμές».
+ */
+export function countBoxTones(boxes: readonly ReviewBox[]): Readonly<Record<ReviewMarkTone, ReviewToneCount>> {
+  const seen = new Map<ReviewMarkTone, Set<string>>(REVIEW_MARK_TONES.map((tone) => [tone, new Set<string>()]));
+  const boxCounts = new Map<ReviewMarkTone, number>(REVIEW_MARK_TONES.map((tone) => [tone, 0]));
+  for (const box of boxes) {
+    boxCounts.set(box.tone, (boxCounts.get(box.tone) ?? 0) + 1);
+    for (const entry of box.targets) seen.get(entry.tone)?.add(entry.key);
+  }
+  const countOf = (tone: ReviewMarkTone): ReviewToneCount => ({ boxes: boxCounts.get(tone) ?? 0, targets: seen.get(tone)?.size ?? 0 });
+  // Κυριολεκτικό αντικείμενο, όχι `Object.fromEntries`: ο `Record` σπάει τη μεταγλώττιση αν προστεθεί τόνος και λείψει εδώ.
+  return { problem: countOf('problem'), unmapped: countOf('unmapped'), pending: countOf('pending'), accepted: countOf('accepted'), dismissed: countOf('dismissed') };
 }

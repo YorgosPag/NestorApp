@@ -96,6 +96,7 @@ export default {
           pending: 'hsl(var(--paper-mark-pending) / <alpha-value>)',
           accepted: 'hsl(var(--paper-mark-accepted) / <alpha-value>)',
           problem: 'hsl(var(--paper-mark-problem) / <alpha-value>)',
+          unmapped: 'hsl(var(--paper-mark-unmapped) / <alpha-value>)',
           dismissed: 'hsl(var(--paper-mark-dismissed) / <alpha-value>)',
           selection: 'hsl(var(--paper-mark-selection) / <alpha-value>)',
         },

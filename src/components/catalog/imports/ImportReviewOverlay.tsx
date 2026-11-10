@@ -9,6 +9,7 @@
  * 🔑 SVG **χωρίς** `viewBox`, συντεταγμένες σε **ποσοστά** της σελίδας: τα περιγράμματα (`non-scaling-stroke`) και τα σύμβολα
  *    γωνίας μένουν σε pixels οθόνης, δεν παραμορφώνονται με το ζουμ ή τη μη τετράγωνη σελίδα, και κανένα inline style (N.3).
  * 🔑 Κάθε πλαίσιο είναι **κουμπί** (`role="button"`, `aria-label`, Enter/Space, δακτύλιος `focus-visible`) — WCAG 2.1.1 / 4.1.2.
+ *    Το `aria-label` λέει και την **αιτία** του προβλήματος, με το ίδιο μήνυμα που γράφει η λίστα.
  * 🔑 Και **χειριστήριο της σελίδας** (`PDF_PAGE_CONTROL_ATTRIBUTE`): το «χέρι» του viewer δεν πιάνει το ποντίκι πάνω του,
  *    αλλιώς το κλικ πήγαινε στο δοχείο και το πλαίσιο δεν επιλεγόταν (μετρημένο live 2026-11-10).
  */
@@ -17,16 +18,18 @@ import React, { type KeyboardEvent } from 'react';
 
 import { PDF_PAGE_CONTROL_ATTRIBUTE } from '@/components/file-manager/pdf-viewport-gestures';
 import { IMPORT_REVIEW_MARKS, type ReviewMarkGlyph, type ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
-import { REVIEW_TONE_KEYS, useImportText } from './import-text';
+import { useImportIssueMessage } from './import-issue-messages';
+import { LINE_REFUSAL_KEYS, REVIEW_TONE_KEYS, useImportText } from './import-text';
 import { useTargetLabeler } from './import-target-label';
 import { useReviewHoverHandlers, useReviewHovered } from './review-hover-store';
-import type { ReviewBox, ReviewBoxTarget } from './review-overlay-model';
+import type { ReviewBox, ReviewBoxTarget, ReviewReason } from './review-overlay-model';
 
 /** Κλάσεις ανά τόνο — κυριολεκτικές, ώστε το Tailwind να τις βρει (το χρώμα ζει στο token, το σχήμα στο `IMPORT_REVIEW_MARKS`). */
 const TONE_CLASS: Readonly<Record<ReviewMarkTone, { readonly stroke: string; readonly fill: string }>> = {
   pending: { stroke: 'stroke-paper-mark-pending', fill: 'fill-paper-mark-pending' },
   accepted: { stroke: 'stroke-paper-mark-accepted', fill: 'fill-paper-mark-accepted' },
   problem: { stroke: 'stroke-paper-mark-problem', fill: 'fill-paper-mark-problem' },
+  unmapped: { stroke: 'stroke-paper-mark-unmapped', fill: 'fill-paper-mark-unmapped' },
   dismissed: { stroke: 'stroke-paper-mark-dismissed', fill: 'fill-paper-mark-dismissed' },
 };
 
@@ -37,6 +40,7 @@ const GLYPH_PATH: Readonly<Record<Exclude<ReviewMarkGlyph, 'none'>, string>> = {
   check: 'M3.5 7.2 6 9.7l4.5-5',
   alert: 'M7 3.4v4.4M7 10.2v.4',
   cross: 'M4.6 4.6l4.8 4.8M9.4 4.6l-4.8 4.8',
+  question: 'M5.2 5.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.4M7 10.3v.3',
 };
 
 const pct = (fraction: number): string => `${fraction * 100}%`;
@@ -65,13 +69,31 @@ export function ReviewMarkOutline({ tone, x, y, width, height }: { readonly tone
   );
 }
 
-/** «Παροχή αέρα H, 340, αντιστοιχίστηκε» (+ «και 3 ακόμη» όταν το πλαίσιο τροφοδοτεί πολλά). */
+/** Το κείμενο της αιτίας ενός προβλήματος — από τα **ίδια** σημεία με τη λίστα (μήνυμα ευρήματος · λόγος άρνησης). */
+function useReasonText(reason: ReviewReason | null): string | null {
+  const { t } = useImportText();
+  const issueMessage = useImportIssueMessage(reason?.kind === 'issue');
+  if (reason === null) return null;
+  switch (reason.kind) {
+    case 'issue': return issueMessage(reason.issue);
+    case 'unread': return t('review.overlay.reasonUnread');
+    case 'unverified': return t('review.overlay.reasonUnverified');
+    case 'refused': return t(LINE_REFUSAL_KEYS[reason.refusal]);
+  }
+}
+
+/**
+ * «Κωδικός, MFP-34K1M-Q1AA1, Πρόβλημα: η πηγή δίνει και άλλη τιμή…» (+ «και 3 ακόμη» όταν το πλαίσιο τροφοδοτεί πολλά).
+ * Ονομάζει τον **πρώτο** στόχο, δηλαδή αυτόν που έβαψε το πλαίσιο (`buildReviewBoxes` τους ταξινομεί κατά τόνο).
+ */
 function useBoxLabel(box: ReviewBox): string {
   const { t } = useImportText();
   const labelOf = useTargetLabeler();
-  const name = (entry: ReviewBoxTarget) => (entry.subject.kind === 'field' ? labelOf(entry.subject.field) : entry.subject.label);
   const [first] = box.targets;
-  const head = t('review.overlay.boxLabel', { label: name(first), value: first.printed, state: t(REVIEW_TONE_KEYS[box.tone]) });
+  const reason = useReasonText(first.reason);
+  const name = (entry: ReviewBoxTarget) => (entry.subject.kind === 'field' ? labelOf(entry.subject.field) : entry.subject.label);
+  const parts = { label: name(first), value: first.printed, state: t(REVIEW_TONE_KEYS[box.tone]) };
+  const head = reason === null ? t('review.overlay.boxLabel', parts) : t('review.overlay.boxLabelReason', { ...parts, reason });
   return box.targets.length > 1 ? `${head} ${t('review.overlay.boxMore', { count: box.targets.length - 1 })}` : head;
 }
 

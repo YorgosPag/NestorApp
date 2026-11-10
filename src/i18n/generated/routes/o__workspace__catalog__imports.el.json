@@ -213,17 +213,22 @@
       "nothingToApply": "Ίδιο με τα ζωντανά — τίποτα να εφαρμοστεί",
       "overlay": {
         "boxLabel": "{label}, {value}, {state}",
+        "boxLabelReason": "{label}, {value}, {state}: {reason}",
         "boxMore": "{count, plural, one {και # ακόμη πεδίο στο ίδιο κελί} other {και # ακόμη πεδία στο ίδιο κελί}}",
         "cycle": "Το κελί τροφοδοτεί {total} πεδία · {index} από {total}",
         "layer": "Πλαίσια όσων αναγνωρίστηκαν στη σελίδα",
         "legend": "Υπόμνημα πλαισίων του PDF",
         "next": "Επόμενο",
+        "reasonUnread": "η τιμή δεν διαβάστηκε",
+        "reasonUnverified": "η στρώση κειμένου της σελίδας δεν επιβεβαιώνει την τιμή",
         "revealed": "Φαίνεται επειδή το επέλεξες στο PDF — η προβολή «{view}» το κρύβει.",
         "showBoxes": "Πλαίσια",
         "toneAccepted": "Αντιστοιχίστηκε",
+        "toneCount": "{boxes} · {count, plural, one {# στοιχείο} other {# στοιχεία}}",
         "toneDismissed": "Απορρίφθηκε",
         "tonePending": "Εκκρεμεί",
-        "toneProblem": "Πρόβλημα"
+        "toneProblem": "Πρόβλημα",
+        "toneUnmapped": "Χωρίς πεδίο"
       },
       "pending": "{count, plural, one {# πεδίο θέλει απόφαση} other {# πεδία θέλουν απόφαση}}",
       "priceLine": {

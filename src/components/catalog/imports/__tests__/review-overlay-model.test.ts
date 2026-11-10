@@ -6,10 +6,13 @@ import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportPageUnmappedLine, ImportProposalField, ImportProposalRow, PageRegion } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { ANY_SLOT } from '@/subapps/catalog/types/product';
+import { lineKeyOf } from '@/subapps/catalog/import/page-line-overrides';
 import {
   buildReviewBoxes,
+  countBoxTones,
   fieldTargetOf,
   lineTargetOf,
+  reasonOfField,
   resolveReviewTarget,
   reviewTargetKey,
   toneOfField,
@@ -71,9 +74,22 @@ describe('toneOfField', () => {
   });
 });
 
+describe('reasonOfField', () => {
+  const r = row('r0', []);
+  it('η αιτία ταξιδεύει με τον τόνο: εύρημα πεδίου (πριν από της γραμμής) · αδιάβαστη · διαψευσμένη · καμία', () => {
+    const fieldIssue = { code: 'misaligned', path: 'x' } as const;
+    const rowIssue = { code: 'modelCodeMissing', path: 'x' } as const;
+    expect(reasonOfField(row('r0', [], { issues: [rowIssue] }), field({ issues: [fieldIssue] }))).toEqual({ kind: 'issue', issue: fieldIssue });
+    expect(reasonOfField(row('r0', [], { issues: [rowIssue] }), field())).toEqual({ kind: 'issue', issue: rowIssue });
+    expect(reasonOfField(r, field({ incoming: null }))).toEqual({ kind: 'unread' });
+    expect(reasonOfField(r, field({ anchor: { kind: 'page', page: 87, regions: [CELL], verified: false } }))).toEqual({ kind: 'unverified' });
+    expect(reasonOfField(r, field({ decision: 'pending' }))).toBeNull();
+  });
+});
+
 describe('toneOfLine', () => {
-  it('γραμμή χωρίς πεδίο = πρόβλημα · αγνοημένη = απορρίφθηκε · δεμένη = αντιστοιχίστηκε', () => {
-    expect(toneOfLine('pending')).toBe('problem');
+  it('γραμμή χωρίς πεδίο = ΔΙΚΟΣ της τόνος, όχι πρόβλημα · άρνηση = πρόβλημα · αγνοημένη = απορρίφθηκε · δεμένη = αντιστοιχίστηκε', () => {
+    expect(toneOfLine('pending')).toBe('unmapped');
     expect(toneOfLine('refused')).toBe('problem');
     expect(toneOfLine('ignored')).toBe('dismissed');
     expect(toneOfLine('mapped')).toBe('accepted');
@@ -93,6 +109,27 @@ describe('buildReviewBoxes', () => {
   it('το πρόβλημα κερδίζει το εκκρεμεί και το ✓ — δεν κρύβεται πίσω τους', () => {
     const rows = [row('v0', [field()]), row('v1', [field({ decision: 'pending' })]), row('v2', [field({ incoming: null })])];
     expect(buildReviewBoxes(source([proposal(rows)]))[0].tone).toBe('problem');
+  });
+
+  it('ο στόχος που έβαψε το πλαίσιο μπαίνει ΠΡΩΤΟΣ (τον ονομάζει η ετικέτα, τον επιλέγει το κλικ) — ίσοι κρατούν τη σειρά', () => {
+    const rows = [row('v0', [field()]), row('v1', [field({ decision: 'pending' })]), row('v2', [field({ incoming: null })]), row('v3', [field({ decision: 'pending' })])];
+    const [box] = buildReviewBoxes(source([proposal(rows)]));
+    expect(box.targets.map((entry) => entry.target.kind === 'field' && entry.target.rowKey)).toEqual(['v2', 'v1', 'v3', 'v0']);
+    expect(box.targets[0].reason).toEqual({ kind: 'unread' });
+  });
+
+  it('ενωμένη ετικέτα με ✓ πεδίο + γραμμή χωρίς πεδίο ⇒ «χωρίς πεδίο», όχι πρόβλημα — και η γραμμή μπροστά', () => {
+    const boxes = buildReviewBoxes(source([proposal([row('r0', [field({ anchor: { kind: 'page', page: 87, regions: [ROW_BAND], verified: true } })])])], [line()]));
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0].tone).toBe('unmapped');
+    expect(boxes[0].targets[0].subject.kind).toBe('line');
+  });
+
+  it('γραμμή που αρνήθηκε η επανερμηνεία ⇒ πρόβλημα, με τον λόγο της άρνησης', () => {
+    const refused = { ...source([], [line()]), activity: new Map([[lineKeyOf(line()), { kind: 'refused', reason: 'tablesDrifted' } as const]]) };
+    const [box] = buildReviewBoxes(refused);
+    expect(box.tone).toBe('problem');
+    expect(box.targets[0].reason).toEqual({ kind: 'refused', refusal: 'tablesDrifted' });
   });
 
   it('θόρυβος float στην ίδια περιοχή ⇒ ακόμη ένα πλαίσιο', () => {
@@ -115,6 +152,16 @@ describe('buildReviewBoxes', () => {
   it('πεδίο χωρίς σημείο σελίδας (κελί αρχείου) και γραμμή χωρίς περιοχές ⇒ κανένα πλαίσιο, κανένα σφάλμα', () => {
     const cell = field({ anchor: { kind: 'cell', row: 2, column: 3 } });
     expect(buildReviewBoxes(source([proposal([row('r0', [cell])])], [line({ regions: [] })]))).toEqual([]);
+  });
+});
+
+describe('countBoxTones', () => {
+  it('πλαίσια κατά τόνο του πλαισίου · στοιχεία ΜΟΝΑΔΙΚΑ και κατά τον ΔΙΚΟ τους τόνο (μία γραμμή σε 3 πλαίσια = 1 απόφαση)', () => {
+    const cells = [CELL, { ...CELL, x: 0.3 }, { ...CELL, x: 0.5 }];
+    const counts = countBoxTones(buildReviewBoxes(source([proposal([row('r0', [field({ anchor: { kind: 'page', page: 87, regions: [{ ...CELL, y: 0.6 }], verified: true } })])])], [line({ regions: cells })])));
+    expect(counts.unmapped).toEqual({ boxes: 3, targets: 1 });
+    expect(counts.accepted).toEqual({ boxes: 1, targets: 1 });
+    expect(counts.problem).toEqual({ boxes: 0, targets: 0 });
   });
 });
 

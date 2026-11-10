@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/switch';
 import { REVIEW_MARK_TONES, type ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
 import { REVIEW_TONE_KEYS, useImportText } from './import-text';
 import { ReviewMarkBadge, ReviewMarkOutline } from './ImportReviewOverlay';
+import type { ReviewToneCount } from './review-overlay-model';
 import type { ReviewBoxCycle } from './use-review-selection';
 
 const SAMPLE = { width: 28, height: 16, glyph: 14 } as const;
@@ -32,6 +33,13 @@ function ToneSample({ tone }: { readonly tone: ReviewMarkTone }) {
   );
 }
 
+/** «56 · 11 στοιχεία»: τα πλαίσια που φαίνονται, και πόσες αποφάσεις κρύβουν — μόνο όταν διαφέρουν (αλλιώς σκέτος αριθμός). */
+function ToneCount({ count }: { readonly count: ReviewToneCount }) {
+  const { t } = useImportText();
+  if (count.targets === count.boxes) return <>{count.boxes}</>;
+  return <>{t('review.overlay.toneCount', { boxes: count.boxes, count: count.targets })}</>;
+}
+
 function CycleNote({ cycle, onNext }: { readonly cycle: ReviewBoxCycle; readonly onNext: () => void }) {
   const { t } = useImportText();
   return (
@@ -43,7 +51,7 @@ function CycleNote({ cycle, onNext }: { readonly cycle: ReviewBoxCycle; readonly
 }
 
 interface ReviewOverlayLegendProps {
-  readonly counts: Readonly<Record<ReviewMarkTone, number>>;
+  readonly counts: Readonly<Record<ReviewMarkTone, ReviewToneCount>>;
   readonly showAll: boolean;
   readonly onShowAll: (show: boolean) => void;
   readonly cycle: ReviewBoxCycle | null;
@@ -61,7 +69,7 @@ export function ReviewOverlayLegend({ counts, showAll, onShowAll, cycle, onNext 
             <li key={tone} className="flex items-center gap-1">
               <ToneSample tone={tone} />
               <span>{t(REVIEW_TONE_KEYS[tone])}</span>
-              <span className="text-muted-foreground">{counts[tone]}</span>
+              <span className="text-muted-foreground"><ToneCount count={counts[tone]} /></span>
             </li>
           ))}
         </ul>

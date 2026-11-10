@@ -417,12 +417,19 @@ describe('Μ14..Μ17 — import-review-overlay', () => {
     return { marks: family.marks, failures: [...checkIdentity(family.marks), ...checkColourPromise(family.marks, false)] };
   };
 
-  it('Μ0δ: το ζωντανό δέντρο εκθέτει 4 τόνους, 4 διακριτικά, 4 χρώματα — και περνά', () => {
+  it('Μ0δ: το ζωντανό δέντρο εκθέτει 5 τόνους, 5 διακριτικά, 5 χρώματα — και περνά', () => {
     const { marks, failures } = runReview();
-    expect(marks.map((m) => m.id).sort()).toEqual(['accepted', 'dismissed', 'pending', 'problem']);
-    expect(new Set(marks.map((m) => m.variant)).size).toBe(4);
-    expect(new Set(marks.map((m) => m.hex)).size).toBe(4);
+    expect(marks.map((m) => m.id).sort()).toEqual(['accepted', 'dismissed', 'pending', 'problem', 'unmapped']);
+    expect(new Set(marks.map((m) => m.variant)).size).toBe(5);
+    expect(new Set(marks.map((m) => m.hex)).size).toBe(5);
     expect(failures).toEqual([]);
+  });
+
+  it('Μ0ε: «χωρίς πεδίο» σε ΠΟΡΤΟΚΑΛΙ (το προφανές υποψήφιο, μετρημένο ΔE CVD 4,0 από το πρόβλημα) ⇒ Κ2', () => {
+    const css = liveFile(GLOBALS_CSS_PATH);
+    const mutated = css.replace('--paper-mark-unmapped: 305 60% 34%;', '--paper-mark-unmapped: 25 60% 36%;');
+    expect(mutated).not.toBe(css);
+    expect(rulesOf(runReview({ globalsCss: mutated }).failures)).toContain('Κ2');
   });
 
   it('Μ14: «πρόβλημα» χωρίς διακεκομμένη ΚΑΙ με σύμβολο ✓ ⇒ ίδιο με «αντιστοιχίστηκε» ⇒ Κ1', () => {

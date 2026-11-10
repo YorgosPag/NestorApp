@@ -62,6 +62,7 @@ export const REVIEW_TONE_KEYS: Readonly<Record<ReviewMarkTone, string>> = {
   pending: 'review.overlay.tonePending',
   accepted: 'review.overlay.toneAccepted',
   problem: 'review.overlay.toneProblem',
+  unmapped: 'review.overlay.toneUnmapped',
   dismissed: 'review.overlay.toneDismissed',
 };
 

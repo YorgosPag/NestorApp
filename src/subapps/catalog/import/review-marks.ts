@@ -10,14 +10,17 @@
  *    σημάδια **δεν** αλλάζουν με το θέμα. Τα `--status-*` δεν κάνουν: το πράσινο τους δίνει ≈2,3:1 σε λευκό (< 3:1, WCAG 1.4.11).
  *    Μετρημένα 2026-11-09 σε λευκό: 6,76 · 6,02 · 5,83 · 4,25 — ελάχιστο ΔE CVD 8,5 (αποδεκτό ↔ πρόβλημα).
  * 🔑 Το **επιλεγμένο** δεν είναι κατάσταση: είναι τροποποιητής (γέμισμα + δεύτερο περίγραμμα) πάνω από οποιαδήποτε.
+ * 🔑 **«Χωρίς πεδίο» ≠ «Πρόβλημα»** (2026-11-10): στη σελ. 87 τα 56 από τα 61 κόκκινα ήταν γραμμές **σωστά διαβασμένες** που η
+ *    οικογένεια δεν έχει πού να βάλει — και έκρυβαν τα 4 πραγματικά προβλήματα. Το ABBYY χωρίζει αβέβαιους χαρακτήρες από
+ *    παραβιάσεις κανόνων, το Rossum χαμηλή βεβαιότητα από «automation blockers»· κανείς δεν τα βάφει όλα ένα χρώμα.
  */
 
 /** Οι καταστάσεις, **με σειρά προτεραιότητας**: όταν ένα πλαίσιο τροφοδοτεί πολλούς στόχους, κερδίζει η πρώτη (το πρόβλημα δεν κρύβεται πίσω από ένα ✓). */
-export const REVIEW_MARK_TONES = ['problem', 'pending', 'accepted', 'dismissed'] as const;
+export const REVIEW_MARK_TONES = ['problem', 'unmapped', 'pending', 'accepted', 'dismissed'] as const;
 export type ReviewMarkTone = (typeof REVIEW_MARK_TONES)[number];
 
 /** Το σύμβολο στη γωνία του πλαισίου — το δεύτερο, μη χρωματικό κανάλι μαζί με το μοτίβο γραμμής. */
-export type ReviewMarkGlyph = 'none' | 'check' | 'alert' | 'cross';
+export type ReviewMarkGlyph = 'none' | 'check' | 'alert' | 'cross' | 'question';
 
 interface ReviewMarkSpec {
   /** `strokeDasharray` σε pixels οθόνης (`none` = συνεχής). */
@@ -34,6 +37,7 @@ export const IMPORT_REVIEW_MARKS = {
     pending: { dash: 'none', strokePx: 1.5, glyph: 'none', token: 'paper-mark-pending' },
     accepted: { dash: 'none', strokePx: 3, glyph: 'check', token: 'paper-mark-accepted' },
     problem: { dash: '5 3', strokePx: 2, glyph: 'alert', token: 'paper-mark-problem' },
+    unmapped: { dash: '6 2 1 2', strokePx: 1.5, glyph: 'question', token: 'paper-mark-unmapped' },
     dismissed: { dash: '1 3', strokePx: 1.5, glyph: 'cross', token: 'paper-mark-dismissed' },
   },
 } as const satisfies { readonly tones: Readonly<Record<ReviewMarkTone, ReviewMarkSpec>> };
