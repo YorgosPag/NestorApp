@@ -88,7 +88,7 @@ export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promis
   y = drawCreditNoteReference(pdf, invoice, y);
   y = drawLineItemsTable(pdf, invoice, y);
   y = drawTotalsSection(pdf, invoice, y, withholdingAmount);
-  y = drawVatExemptionSection(pdf, invoice, y); // ν. 4308/2014 άρθρο 9 — παραπομπή απαλλαγής ΦΠΑ
+  y = drawVatExemptionSection(pdf, invoice, y); // ν. 4308/2014 άρθρο 9 §1 ιγ/ιβ — αντίστροφη επιβάρυνση + απαλλαγή ΦΠΑ
   y = drawPaymentSection(pdf, invoice, y);
   y = drawBankAccountsSection(pdf, bankAccounts, y);
   y = drawMyDataSection(pdf, invoice, kadCode, y);

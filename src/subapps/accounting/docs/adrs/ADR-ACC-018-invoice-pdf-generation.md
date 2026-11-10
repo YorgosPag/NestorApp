@@ -546,6 +546,7 @@ accounting/{companyId}/settings/invoicing
 | 2026-03-17 | InvoiceIssuer: +mobile, +website, +bankAccounts fields. CompanyProfileBase: +mobile field. InvoiceForm: snapshot from company settings | Claude Code |
 | 2026-03-17 | Logo: nestor-app-logo.png (47KB) — embedded as base64 via lazy import (same pattern as roboto-font-data.ts) | Claude Code |
 | 2026-11-09 | **Ενότητα «ΑΠΑΛΛΑΓΗ ΦΠΑ / VAT EXEMPTION»** κάτω από τα σύνολα (`invoice-pdf-vat-exemption.ts`): μία γραμμή ανά αιτία εξαίρεσης με τις γραμμές που καλύπτει — ν. 4308/2014 άρθρο 9 (παραπομπή στη διάταξη). Κείμενο από το namespace `accounting-vat-exemptions` μέσω `createBundleTranslate`, διάταξη ν. 2859/2000 ή ν. 5144/2024 ανά ημερομηνία έκδοσης (ADR-ACC-003 §22.1). Το `INVOICE_DOCUMENT_LANGUAGE` μετακόμισε στο `invoice-pdf-constants.ts` (μία γλώσσα εγγράφου για μονάδα και αιτία) | Giorgio + Claude Code |
+| 2026-11-10 | **Μπλοκ «ΑΝΤΙΣΤΡΟΦΗ ΕΠΙΒΑΡΥΝΣΗ / REVERSE CHARGE»** πριν από την παραπομπή απαλλαγής, στην ίδια σημείωση ΦΠΑ (`invoice-pdf-vat-exemption.ts`): ν. 4308/2014 άρθρο 9 §1 ιγ, φράση «Αντίστροφη επιβάρυνση» κατά λέξη (ΔΕΕ C-247/21). Γραμμές από το `services/tax/reverse-charge.ts` (κατηγορία EN 16931 `AE`). Κοινός σχεδιαστής μπλοκ `drawVatNoteBlock` για τα δύο μπλοκ (ADR-ACC-003 §22.9) | Giorgio + Claude Code |
 
 ---
 

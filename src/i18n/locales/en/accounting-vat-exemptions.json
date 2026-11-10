@@ -12,7 +12,11 @@
   },
   "pdf": {
     "heading": "VAT EXEMPTION",
-    "line": "{lines, plural, one {Line} other {Lines}} {numbers}: {provision} ({law})"
+    "line": "{lines, plural, one {Line} other {Lines}} {numbers}: {provision} ({law})",
+    "reverseCharge": {
+      "heading": "REVERSE CHARGE",
+      "line": "{lines, plural, one {Line} other {Lines}} {numbers}: Reverse charge — the customer is liable for the payment of VAT"
+    }
   },
   "groups": {
     "exemptions": "Exemptions",

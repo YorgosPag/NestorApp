@@ -12,7 +12,11 @@
   },
   "pdf": {
     "heading": "ΑΠΑΛΛΑΓΗ ΦΠΑ / VAT EXEMPTION",
-    "line": "{lines, plural, one {Γραμμή} other {Γραμμές}} {numbers}: {provision} ({law})"
+    "line": "{lines, plural, one {Γραμμή} other {Γραμμές}} {numbers}: {provision} ({law})",
+    "reverseCharge": {
+      "heading": "ΑΝΤΙΣΤΡΟΦΗ ΕΠΙΒΑΡΥΝΣΗ / REVERSE CHARGE",
+      "line": "{lines, plural, one {Γραμμή} other {Γραμμές}} {numbers}: Αντίστροφη επιβάρυνση — ο λήπτης είναι υπόχρεος καταβολής του ΦΠΑ"
+    }
   },
   "groups": {
     "exemptions": "Απαλλαγές",
