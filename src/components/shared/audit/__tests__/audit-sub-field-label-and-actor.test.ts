@@ -14,7 +14,7 @@
 /* global describe, it, expect */
 
 import { ADDRESS_COLLECTION_DEF } from '@/config/audit-tracked-fields';
-import { SYSTEM_IDENTITY, isSystemActorId } from '@/config/domain-constants';
+import { ERASED_SUBJECT, SYSTEM_IDENTITY, isSystemActorId } from '@/config/domain-constants';
 import elAudit from '@/i18n/locales/el/common-audit.json';
 import enAudit from '@/i18n/locales/en/common-audit.json';
 import elCommon from '@/i18n/locales/el/common.json';
@@ -154,6 +154,12 @@ describe('δράστης', () => {
     // Χωρίς άνθρωπο (στιγμιότυπο της μηχανής) ⇒ το όνομα της διεργασίας, όχι «για System».
     const alone = resolveActorName({ performedBy: SYSTEM_IDENTITY.AI_AGENT_ID, performedByName: SYSTEM_IDENTITY.DISPLAY_NAME, translate: t });
     expect(alone).toBe(language === 'el' ? 'Σύστημα · βοηθός AI' : 'System · AI assistant');
+  });
+
+  it.each(LANGUAGES)('Δ8 🔐 [%s] ο διαγραμμένος (ADR-935) λέγεται στη γλώσσα του θεατή — ποτέ «[GDPR ANONYMIZED]», ποτέ «Σύστημα»', (language, translate) => {
+    const name = resolveActorName({ performedBy: ERASED_SUBJECT.ID, performedByName: ERASED_SUBJECT.DISPLAY_NAME, translate });
+
+    expect(name).toBe(language === 'el' ? 'Διαγραμμένος χρήστης' : 'Deleted user');
   });
 });
 

@@ -30,6 +30,7 @@ import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { FILE_ACTOR_FIELDS } from '@/lib/files/file-actor-fields';
 import { FILE_AUDIT_COLLECTION, FILE_COLLECTION } from '@/lib/files/file-custody';
 import { CUSTODY_KINDS, type CustodyKind } from '@/lib/workspace/custody-scope';
 
@@ -64,6 +65,28 @@ export async function findSubjectFiles(db: Firestore, uid: string): Promise<Subj
     }),
   );
   return perCustody.flat();
+}
+
+/**
+ * **Κάθε εταιρικό αρχείο όπου ο άνθρωπος είναι δράστης** — σε **οποιοδήποτε** πεδίο του `FILE_ACTOR_FIELDS` (ADR-935 Στάδιο 1).
+ *
+ * 🔴 Το `findSubjectFiles` βρίσκει ό,τι **ανέβασε** (`createdBy`). Ο άνθρωπος όμως μένει και σε αρχεία **άλλων** που πέταξε,
+ * αρχειοθέτησε, ταξινόμησε ή έβαλε σε δέσμευση — εκεί η διαγραφή δεν θα τον έβρισκε ποτέ.
+ * 🔑 Ένα ερώτημα **ανά πεδίο** (το Firestore δεν κάνει OR ανάμεσα σε πεδία), αποδιπλασιασμός κατά id· κάθε έγγραφο βγαίνει
+ * **μία** φορά. Μόνο ισότητα σε ένα πεδίο ⇒ καμία σύνθετη ευρετηρίαση.
+ */
+export async function findSubjectCompanyActorDocs(db: Firestore, uid: string): Promise<QueryDocumentSnapshot[]> {
+  const perField = await Promise.all(
+    FILE_ACTOR_FIELDS.map(async (field) => {
+      // tenant-scope-exempt: αίτημα ΓΚΠΔ του ΙΔΙΟΥ του υποκειμένου — εκ σχεδιασμού διασχίζει κάθε
+      // μισθωτή όπου ο άνθρωπος έχει δεδομένα· το φίλτρο είναι η επαληθευμένη ταυτότητα (`uid`).
+      const snapshot = await db.collection(COLLECTIONS.FILES).where(field, '==', uid).get();
+      return snapshot.docs;
+    }),
+  );
+  const byId = new Map<string, QueryDocumentSnapshot>();
+  for (const doc of perField.flat()) byId.set(doc.id, doc);
+  return [...byId.values()];
 }
 
 /**

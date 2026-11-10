@@ -797,7 +797,8 @@
       "aiAgentFor": "AI assistant · for {name}",
       "emailInbound": "System · inbound email",
       "catalogMedia": "System · catalog media",
-      "catalogMediaRelease": "System · catalog media release"
+      "catalogMediaRelease": "System · catalog media release",
+      "erasedSubject": "Deleted user"
     },
     "cause": {
       "byUserOnEntity": "caused by a change from {name} on “{entity}”",

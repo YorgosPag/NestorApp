@@ -797,7 +797,8 @@
       "aiAgentFor": "Βοηθός AI · για {name}",
       "emailInbound": "Σύστημα · εισερχόμενο email",
       "catalogMedia": "Σύστημα · μέσα καταλόγου",
-      "catalogMediaRelease": "Σύστημα · αποδέσμευση μέσων καταλόγου"
+      "catalogMediaRelease": "Σύστημα · αποδέσμευση μέσων καταλόγου",
+      "erasedSubject": "Διαγραμμένος χρήστης"
     },
     "cause": {
       "byUserOnEntity": "λόγω αλλαγής από {name} στο «{entity}»",

@@ -230,10 +230,10 @@ describe('Σ — ο γραφέας του purge', () => {
 });
 
 describe('Γ — η ΓΚΠΔ περνά από τον ΕΝΑ γραφέα', () => {
-  const route = readFileSync(join(process.cwd(), 'src/app/api/files/gdpr-delete/route.ts'), 'utf8');
+  const route = readFileSync(join(process.cwd(), 'src/server/files/gdpr-erasure.server.ts'), 'utf8');
 
   it('🔴 Γ1 — δίνει στον γραφέα ΟΛΗ την εγγραφή + το id (αλλιώς δεν βλέπει δείκτες ούτε στέλεχος)', () => {
-    expect(route).toMatch(/deleteStorageObjectForPurge\(\{ \.\.\.data, fileId: fileDoc\.id, storagePath \}\)/);
+    expect(route).toMatch(/deleteStorageObjectForPurge\(\{ \.\.\.data, fileId: doc\.id, storagePath \}\)/);
   });
 
   it('🔴 Γ2 — μηδενίζει τους δείκτες συνοδευτικών από το ΙΔΙΟ μητρώο', () => {
@@ -260,7 +260,7 @@ describe('Ε — το επιτύμβιο βγαίνει από την ουρά �
   });
 
   it('🔴 Ε2 — η ΓΚΠΔ γράφει το ΙΔΙΟ επιτύμβιο (`purgedRecordFields`), όχι χειρόγραφο `lifecycleState: \'purged\'`', () => {
-    const route = readFileSync(join(process.cwd(), 'src/app/api/files/gdpr-delete/route.ts'), 'utf8');
+    const route = readFileSync(join(process.cwd(), 'src/server/files/gdpr-erasure.server.ts'), 'utf8');
     expect(route).toMatch(/\.\.\.purgedRecordFields\(nowISO\(\)\),/);
     expect(route).not.toMatch(/lifecycleState: 'purged'/);
   });

@@ -1,8 +1,11 @@
 /**
  * @jest-environment node
  *
- * @fileoverview 🌍 **Η ΔΙΑΓΡΑΦΗ ΓΚΠΔ ΞΑΝΑΠΡΟΒΑΛΛΕΙ ΤΗΝ ΑΓΓΕΛΙΑ** — ADR-845 §7.17 Α3 (κλάση Ο-35).
- * @related app/api/files/gdpr-delete/route.ts · services/listings/listing-media-refresh.ts
+ * @fileoverview 🌍 **Η ΔΙΑΓΡΑΦΗ ΓΚΠΔ ΚΑΙ Η ΑΓΓΕΛΙΑ** — ADR-845 §7.17 Α3 (κλάση Ο-35) · ADR-935 Στάδιο 1 (Ε1).
+ * @related app/api/files/gdpr-delete/route.ts · server/files/gdpr-erasure.server.ts · services/listings/listing-media-refresh.ts
+ *
+ * 🔐 ADR-935 Ε1: οι φωτογραφίες ακινήτου εταιρείας **δεν** σβήνονται πια με τη διαγραφή του ανθρώπου που τις ανέβασε — άρα η
+ * αγγελία δεν χάνει υλικό. Η επαναπροβολή μένει για ό,τι πράγματι σβήνεται (προσωπικός χώρος).
  *
  * 🔴 **ΤΙ ΦΥΛΑΕΙ**: η διαγραφή σβήνει τα bytes και γράφει `lifecycleState: 'purged'`· αν το αρχείο
  * ήταν δημοσιευμένη φωτογραφία ακινήτου, η αγγελία έδειχνε σε υλικό που δεν υπάρχει πια.
@@ -71,7 +74,7 @@ const HELD = 'file_held';
 
 interface Wire {
   success?: boolean;
-  results?: { filesDeleted: number; filesSkippedHold: number };
+  results?: { filesDeleted: number; filesSkippedHold: number; companyFilesAnonymized: number };
   listings?: { propertyId: string; outcome: string }[];
 }
 
@@ -102,20 +105,15 @@ beforeEach(() => {
 });
 
 describe('ADR-845 §7.17 Α3 — η πόρτα της διαγραφής ΓΚΠΔ ξαναπροβάλλει', () => {
-  it('🌍 Γ1 — δημοσιευμένες φωτογραφίες του ΙΔΙΟΥ ακινήτου ⇒ ΜΙΑ επαναπροβολή, ΜΕΤΑ τη γραφή', async () => {
-    let seenAtRepublish: unknown = 'δεν κλήθηκε';
-    republishListing.mockImplementationOnce(async () => {
-      seenAtRepublish = stored(PHOTO).lifecycleState;
-      return 'published';
-    });
-
+  it('🔐 Γ1 — ADR-935 Ε1: δημοσιευμένες φωτογραφίες ΕΤΑΙΡΕΙΑΣ ΜΕΝΟΥΝ ⇒ καμία επαναπροβολή, η αγγελία δεν χάνει υλικό', async () => {
     const { status, body } = await erase({ confirmPhrase: 'DELETE_ALL_MY_DATA' });
 
     expect(status).toBe(200);
-    expect(body.results?.filesDeleted).toBe(2);
-    expect(body.listings).toEqual([{ propertyId: PROPERTY, outcome: 'published' }]);
-    expect(republishListing).toHaveBeenCalledTimes(1);
-    expect(seenAtRepublish).toBe('purged');
+    expect(body.results).toMatchObject({ filesDeleted: 0, companyFilesAnonymized: 2 });
+    expect(stored(PHOTO)).toMatchObject({ lifecycleState: 'active', createdBy: 'anonymized' });
+    expect(deleteStorageObjectForPurge).not.toHaveBeenCalled();
+    expect(body.listings).toEqual([]);
+    expect(republishListing).not.toHaveBeenCalled();
   });
 
   it('🔴 Γ2 — αρχείο σε ΔΕΣΜΕΥΣΗ δεν σβήνεται ⇒ δεν ξαναπροβάλλει κιόλας', async () => {

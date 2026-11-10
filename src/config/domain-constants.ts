@@ -58,6 +58,19 @@ export const SYSTEM_IDENTITY = {
   TYPE: 'system',
 } as const;
 
+/**
+ * Το **υποκείμενο που διαγράφηκε** (ΓΚΠΔ άρθρο 17 — ADR-935 Στάδιο 1): η τιμή που παίρνει κάθε πεδίο δράστη όταν ο
+ * άνθρωπος σβήνεται από περιεχόμενο που **μένει** στην εταιρεία.
+ *
+ * 🔑 **Σταθερή, όχι ανά πρόσωπο**: ψευδώνυμο ανά άνθρωπο θα ξανασύνδεε τις πράξεις του μεταξύ τους = ψευδωνυμοποίηση,
+ * που είναι **ακόμη** προσωπικό δεδομένο (EDPB). Οι τιμές είναι αυτές που ήδη γράφει το ίχνος — καμία αλλαγή στα παλιά.
+ * ⚠️ Δεν είναι μηχανή: το `isSystemActorId` απαντά `false`.
+ */
+export const ERASED_SUBJECT = {
+  ID: 'anonymized',
+  DISPLAY_NAME: '[GDPR ANONYMIZED]',
+} as const;
+
 /** Η ταυτότητα της μηχανής: `system` ή `system:<διεργασία>`. */
 export type SystemActorId = typeof SYSTEM_IDENTITY.ID | `${typeof SYSTEM_IDENTITY.ID}:${string}`;
 

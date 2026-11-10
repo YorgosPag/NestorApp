@@ -23,6 +23,7 @@ import type {
   SetOptions as AdminSetOptions,
   UpdateData as AdminUpdateData,
   WriteResult as AdminWriteResult,
+  WriteBatch as AdminWriteBatch,
 } from 'firebase-admin/firestore';
 import { getErrorMessage } from '@/lib/error-utils';
 import { CDC_WATCHED_COLLECTIONS } from '@/config/audit-cdc-coverage';
@@ -303,17 +304,39 @@ export async function flushInBatches(
     assertStampable(ref, scope.performer);
   }
 
-  const batchSize = scope.batchSize ?? SAFE_BATCH_WRITES;
+  return commitInChunks(db, updates, scope.batchSize ?? SAFE_BATCH_WRITES, (batch, { ref, data }) => {
+    batch.update(ref, withCdcStamp(ref, data, scope.performer));
+  });
+}
+
+/**
+ * Διαγραφή εγγράφων σε δέσμες — ο **ίδιος** βρόχος και το ίδιο συμβόλαιο με το `flushInBatches` (ADR-935 Στάδιο 1).
+ * Η δήλωση ελέγχεται για **όλες** τις αναφορές πριν από το πρώτο commit. Η διαγραφή δεν σφραγίζεται: δεν μένει έγγραφο να τη φέρει.
+ */
+export async function deleteInBatches(
+  db: AdminFirestore,
+  refs: readonly AdminRef[],
+  scope: Pick<DeclaredWriteScope, 'collections' | 'batchSize'>,
+): Promise<FlushResult> {
+  const declared = declaredSet(scope.collections);
+  for (const ref of refs) assertDeclaredRef(ref, declared);
+  return commitInChunks(db, refs, scope.batchSize ?? SAFE_BATCH_WRITES, (batch, ref) => {
+    batch.delete(ref);
+  });
+}
+
+/** **Ο ένας** βρόχος «δέσμες των `batchSize`»: αποτυχημένη δέσμη καταγράφεται και προσπερνιέται, δεν σταματά τις υπόλοιπες. */
+async function commitInChunks<T>(
+  db: AdminFirestore,
+  items: readonly T[],
+  batchSize: number,
+  apply: (batch: AdminWriteBatch, item: T) => void,
+): Promise<FlushResult> {
   const result: FlushResult = { written: 0, errors: [] };
-
-  for (let i = 0; i < updates.length; i += batchSize) {
-    const chunk = updates.slice(i, i + batchSize);
+  for (let i = 0; i < items.length; i += batchSize) {
+    const chunk = items.slice(i, i + batchSize);
     const batch = db.batch();
-
-    for (const { ref, data } of chunk) {
-      batch.update(ref, withCdcStamp(ref, data, scope.performer));
-    }
-
+    for (const item of chunk) apply(batch, item);
     try {
       await batch.commit();
       result.written += chunk.length;
@@ -323,6 +346,5 @@ export async function flushInBatches(
       );
     }
   }
-
   return result;
 }

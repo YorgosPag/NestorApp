@@ -64,7 +64,7 @@ describe('🏆 Α36 — ο κριτής δέσμευσης', () => {
   });
 
   it.each([
-    'src/app/api/files/gdpr-delete/route.ts',
+    'src/server/files/gdpr-erasure.server.ts',
     // ADR-866 §2.6.9 Β4 — το `api/files/purge` έγινε προσαρμογέας του job: ο κριτής ζει ΕΚΕΙ.
     'src/lib/cron/jobs/file-purge.job.ts',
   ])('🔴 %s ρωτά τον ΕΝΑ κριτή — κανένας τοπικός έλεγχος `data.hold`', (file) => {
@@ -200,7 +200,7 @@ describe('🏆 Α48 — οριστική διαγραφή: ποτέ πάνω σ�
 
   it.each([
     'src/app/api/files/purge/route.ts',
-    'src/app/api/files/gdpr-delete/route.ts',
+    'src/server/files/gdpr-erasure.server.ts',
   ])('🔴 %s — κανένα «non-blocking» σβήσιμο bytes δίπλα στον ΕΝΑ γραφέα', (file) => {
     expect(source(file)).not.toMatch(/\.file\([^)]*\)\.delete\(/);
   });

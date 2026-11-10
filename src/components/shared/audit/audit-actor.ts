@@ -12,12 +12,15 @@
  * @module components/shared/audit/audit-actor
  */
 
-import { SYSTEM_IDENTITY, isSystemActorId } from '@/config/domain-constants';
+import { ERASED_SUBJECT, SYSTEM_IDENTITY, isSystemActorId } from '@/config/domain-constants';
 import type { EntityAuditEntry } from '@/types/audit-trail';
 import { translated } from './audit-field-descriptor';
 
 /** Το γενικό όνομα της μηχανής — και η πτώση κάθε διεργασίας χωρίς δικό της. */
 const SYSTEM_ACTOR_KEY = 'audit.actors.system';
+
+/** Ο άνθρωπος που ζήτησε διαγραφή (ADR-935): στη γλώσσα του αναγνώστη, όχι το `[GDPR ANONYMIZED]` του γραφέα. */
+const ERASED_SUBJECT_KEY = 'audit.actors.erasedSubject';
 
 /** Διεργασίες της μηχανής με δικό τους όνομα: ο άνθρωπος θέλει να ξέρει **ποια** μηχανή. */
 const SYSTEM_ACTOR_KEYS: Readonly<Record<string, string>> = {
@@ -84,6 +87,7 @@ export function resolveActorName({
   performedByName,
   translate,
 }: ResolveActorNameParams): string | null {
+  if (performedBy === ERASED_SUBJECT.ID) return translated(translate, ERASED_SUBJECT_KEY) ?? performedByName;
   if (!isSystemActorId(performedBy)) return performedByName;
   const onBehalf = onBehalfName(performedBy, performedByName, translate);
   if (onBehalf) return onBehalf;

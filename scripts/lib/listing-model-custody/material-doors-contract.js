@@ -123,9 +123,10 @@ const MATERIAL_DOORS = Object.freeze({
     cover: DOOR_COVER.REFRESH,
     reason: 'Α3 — η προώθηση έκδοσης. Ξαναπροβάλλει το ακίνητο της πηγής ΚΑΙ της κεφαλής, που μπορεί να διαφέρουν.',
   },
-  'src/app/api/files/gdpr-delete/route.ts': {
+  'src/server/files/gdpr-erasure.server.ts': {
     cover: DOOR_COVER.REFRESH,
-    reason: 'Α3 — η διαγραφή ΓΚΠΔ. Τα bytes σβήνονται και η εγγραφή γίνεται `purged`· ξαναπροβάλλει αμέσως μετά.',
+    reason:
+      'Α3 — η διαγραφή ΓΚΠΔ (ADR-935 Στάδιο 1: ο γραφέας βγήκε από τη route). Τα bytes των ΠΡΟΣΩΠΙΚΩΝ αρχείων σβήνονται και η εγγραφή γίνεται `purged`· ξαναπροβάλλει αμέσως μετά. Τα εταιρικά μόνο ανωνυμοποιούνται — δεν αλλάζει υλικό αγγελίας.',
   },
   'src/app/api/properties/[id]/model/route.ts': {
     cover: DOOR_COVER.REFRESH,

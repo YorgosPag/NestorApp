@@ -31,6 +31,7 @@
  */
 
 import { ENTITY_TYPES, SYSTEM_IDENTITY, isSystemActorId, type SystemActorId } from '@/config/domain-constants';
+import type { FileActorField } from './file-actor-fields';
 
 /** Μια γραμμή του καταλόγου: **γιατί** ο τύπος ζει εδώ και **ποια διεργασία** τον διαχειρίζεται. */
 export interface SystemFileSpaceDeclaration {
@@ -83,7 +84,9 @@ export function isSystemSpaceEntityType(entityType: unknown): entityType is Syst
  * **Τα πεδία δράστη μιας εγγραφής αρχείου** — κλειστή λίστα (`types/file-record.ts` + `fileRestoreFields`). Ό,τι άλλο τελειώνει
  * σε `By` και κρατά άνθρωπο **δεν** ξαναγράφεται σιωπηλά: αναφέρεται (`unlisted-actor-field`) — ποτέ «δεν κοίταξα».
  */
-export const SYSTEM_SPACE_ACTOR_FIELDS = ['createdBy', 'restoredBy', 'trashedBy', 'deletedBy', 'archivedBy', 'classifiedBy'] as const;
+export const SYSTEM_SPACE_ACTOR_FIELDS = [
+  'createdBy', 'restoredBy', 'trashedBy', 'deletedBy', 'archivedBy', 'classifiedBy',
+] as const satisfies readonly FileActorField[];
 
 /** Η απόφαση για μία εγγραφή του χώρου — ονομασμένη, ποτέ boolean. */
 export type SystemSpaceAttributionPlan =
