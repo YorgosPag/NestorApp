@@ -298,6 +298,11 @@ if (!process.env.SKIP_THEME_CLASSES && themeClassesTriggered)
 const stateChannelTriggers = allFiles.filter(
   f => f === 'src/subapps/dxf-viewer/config/color-config.ts'
     || f === 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts'
+    // ADR-923 §5.5.2 Β8: τα σημάδια του PDF της αναθεώρησης, ο ζωγράφος τους και τα tokens χαρτιού τους
+    || f === 'src/subapps/catalog/import/review-marks.ts'
+    || f === 'src/components/catalog/imports/ImportReviewOverlay.tsx'
+    || f === 'src/app/globals.css'
+    || f === 'scripts/check-state-channel-distinctness.js'
     || f.startsWith('scripts/lib/contrast/')
 );
 if (!process.env.SKIP_STATE_CHANNEL && stateChannelTriggers.length > 0)

@@ -39,12 +39,11 @@ import {
   PDF_RENDER_SETTLE_MS,
   pdfDocumentSourceOf,
 } from './pdf-canvas-config';
-import { PdfHighlights, useControlledPdfPage } from './PdfHighlights';
 import { PdfLinkLayer } from './PdfLinkLayer';
 import { PdfSidebar } from './PdfSidebar';
 import { PdfTextLayer } from './PdfTextLayer';
 import { PdfViewerToolbar } from './PdfViewerToolbar';
-import { usePdfCurrentPage } from './usePdfCurrentPage';
+import { useControlledPdfPage, usePdfCurrentPage } from './usePdfCurrentPage';
 import { sourceIdentityOf, usePdfDocument } from './usePdfDocument';
 import { usePdfDownload } from './usePdfDownload';
 import { usePdfPageInUrl } from './usePdfPageInUrl';
@@ -173,7 +172,7 @@ function PdfStatusOverlay({ state }: { readonly state: PdfState }) {
 }
 
 export function PdfCanvasViewer(props: PdfCanvasViewerProps) {
-  const { title, className, page, highlights, features } = props;
+  const { title, className, page, pageOverlay, features } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /** Τι ζωγραφίστηκε τελευταίο — ίδια όψη ⇒ το νέο ζουμ περιμένει να ηρεμήσει· άλλη ⇒ ζωγραφίζεται αμέσως. */
   const lastDrawnRef = useRef<{ page: number; rotation: number } | null>(null);
@@ -242,7 +241,7 @@ export function PdfCanvasViewer(props: PdfCanvasViewerProps) {
           title={title}
           state={state}
           page={current.page}
-          highlights={highlights}
+          pageOverlay={pageOverlay}
           features={features}
           onNavigate={goToPage}
         />
@@ -277,16 +276,16 @@ function ReaderSidebar({ id, reader, state, pageExtent, onNavigate }: {
 /**
  * Canvas area — ADR-928 §5.25.2: πλαίσιο ΚΥΛΙΣΗΣ (Chrome PDF · pdf.js · Acrobat). Το `m-auto` της σελίδας κεντράρει
  * όταν χωρά και την αφήνει να ξεκινά από την κορυφή/αριστερά όταν δεν χωρά (το `items-center` έκοβε και τις δύο άκρες).
- * Στρώσεις, από κάτω προς τα πάνω: bitmap · κείμενο (επιλογή) · επισημάνσεις · σύνδεσμοι (ADR-923 §5.15.2).
+ * Στρώσεις, από κάτω προς τα πάνω: bitmap · κείμενο (επιλογή) · στρώση καλούντα (`pageOverlay`, §5.5.2 Β8) · σύνδεσμοι (ADR-923 §5.15.2).
  */
-function PdfPageStage({ viewport, canvasRef, docRef, title, state, page, highlights, features, onNavigate }: {
+function PdfPageStage({ viewport, canvasRef, docRef, title, state, page, pageOverlay, features, onNavigate }: {
   readonly viewport: PdfViewport;
   readonly canvasRef: RefObject<HTMLCanvasElement>;
   readonly docRef: RefObject<PdfDocProxy | null>;
   readonly title: string;
   readonly state: PdfState;
   readonly page: PdfPageProxy | null;
-  readonly highlights: PdfCanvasViewerProps['highlights'];
+  readonly pageOverlay: PdfCanvasViewerProps['pageOverlay'];
   readonly features: PdfCanvasViewerProps['features'];
   readonly onNavigate: (page: number) => void;
 }) {
@@ -299,7 +298,8 @@ function PdfPageStage({ viewport, canvasRef, docRef, title, state, page, highlig
       <figure className="relative m-auto shrink-0">
         <canvas ref={canvasRef} className="block shadow-md rounded bg-white" aria-label={title} />
         {features?.textSelection === true && <PdfTextLayer page={page} scale={viewport.scale} rotation={state.rotation} />}
-        <PdfHighlights regions={highlights} />
+        {/* η στρώση του καλούντα ΜΟΝΟ πάνω σε ζωγραφισμένη σελίδα — ποτέ πλαίσια της νέας σελίδας πάνω στο bitmap της παλιάς */}
+        {pageOverlay && page !== null ? pageOverlay(state.currentPage) : null}
         {features?.links === true && <PdfLinkLayer docRef={docRef} page={page} rotation={state.rotation} onNavigate={onNavigate} />}
       </figure>
     </div>

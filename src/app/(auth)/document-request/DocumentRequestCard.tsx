@@ -142,7 +142,7 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
       <p className="m-0 text-xs text-muted-foreground">{t('document-request:page.recordedOnly')}</p>
       <footer className="flex flex-wrap gap-2">
         {/* ADR-770 §18.6: `variant="default"` = `bg-primary` ≡ `--card` στο σκοτεινό ⇒ το «ναι» δεν ξεχώριζε (ADR-915 §29.1). */}
-        <Button type="button" className={COLOR_BRIDGE.action.primary} onClick={() => { void answer(texts.answers[0]); }} disabled={sending}>{texts.yes}</Button>
+        <Button type="button" variant="outline" className={COLOR_BRIDGE.action.primary} onClick={() => { void answer(texts.answers[0]); }} disabled={sending}>{texts.yes}</Button>
         <Button type="button" variant="outline" onClick={() => { void answer(texts.answers[1]); }} disabled={sending}>{texts.no}</Button>
       </footer>
       {sending ? <p role="status" className="m-0 text-xs text-muted-foreground">{t('document-request:page.sending')}</p> : null}

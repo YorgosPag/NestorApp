@@ -79,7 +79,7 @@ export function IssuedAccessCode({ code, recipientName, onDone }: { readonly cod
         <Button type="button" variant="outline" onClick={() => { void copy(code); }}>
           {copied ? t(SEND_KEYS.codeCopied) : t(SEND_KEYS.codeCopy)}
         </Button>
-        <Button type="button" className={COLOR_BRIDGE.action.primary} onClick={onDone}>{t(SEND_KEYS.codeDone)}</Button>
+        <Button type="button" variant="outline" className={COLOR_BRIDGE.action.primary} onClick={onDone}>{t(SEND_KEYS.codeDone)}</Button>
       </footer>
     </section>
   );

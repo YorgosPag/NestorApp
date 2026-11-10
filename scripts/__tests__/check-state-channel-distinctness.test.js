@@ -18,12 +18,17 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH } = require('../lib/contrast/state-marks');
+const { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH } = require('../lib/contrast/state-marks');
 const { checkIdentity, checkColourPromise, CVD_TARGET } = require('../check-state-channel-distinctness');
 const { hexToRgb, worstCvdDeltaE } = require('../lib/contrast/cvd');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const PAINTER_PATH = 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts';
+
+const GLOBALS_CSS_PATH = path.join('src', 'app', 'globals.css');
+
+/** Ένα ζωντανό αρχείο του δέντρου, ως κείμενο. */
+const liveFile = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
 
 /** Το ζωντανό `color-config.ts`, ως κείμενο — η βάση κάθε μετάλλαξης. */
 function liveConfigSource() {
@@ -31,11 +36,19 @@ function liveConfigSource() {
 }
 
 /** Στήνει μίνι-repo με το ΑΚΡΙΒΕΣ μονοπάτι που περιμένει ο αναγνώστης. */
-function miniRepo(configSource) {
+function miniRepo(configSource, overrides = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sc41-'));
-  const dest = path.join(root, COLOR_CONFIG_PATH);
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, configSource);
+  // ADR-923 §5.5.2 Β8: η 4η οικογένεια διαβάζει ΚΑΙ τα σημάδια του PDF ΚΑΙ τα tokens χαρτιού — ζωντανά, εκτός αν μεταλλαχθούν.
+  const files = {
+    [COLOR_CONFIG_PATH]: configSource,
+    [REVIEW_MARKS_PATH]: overrides.reviewMarks ?? liveFile(REVIEW_MARKS_PATH),
+    [GLOBALS_CSS_PATH]: overrides.globalsCss ?? liveFile(GLOBALS_CSS_PATH),
+  };
+  for (const [rel, text] of Object.entries(files)) {
+    const dest = path.join(root, rel);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, text);
+  }
   return root;
 }
 
@@ -387,5 +400,52 @@ describe('Μ11..Μ13 — plan-segment (επίπεδα βεβαιότητας + �
     );
     expect(mutated).not.toBe(liveConfigSource());
     expect(() => runPlan(mutated)).toThrow(/PLAN_SEGMENT_ROLE_MARKS/);
+  });
+});
+
+// ─── Μ14..Μ17 — import-review-overlay (ADR-923 §5.5.2 Β8) ─────────────────────
+
+/**
+ * Η 4η οικογένεια: τα πλαίσια κατάστασης πάνω στο PDF της αναθεώρησης. Πρώτη με χρώμα από **CSS token**
+ * (`--paper-mark-*`, μόνο `:root`) — οι μεταλλάξεις αφαιρούν ένα κανάλι τη φορά, και σπάνε την υπόσχεση
+ * «το χαρτί είναι λευκό σε κάθε θέμα».
+ */
+describe('Μ14..Μ17 — import-review-overlay', () => {
+  const live = liveFile(REVIEW_MARKS_PATH);
+  const runReview = (overrides) => {
+    const family = readStateMarkFamilies(miniRepo(liveConfigSource(), overrides)).find((f) => f.id === 'import-review-overlay');
+    return { marks: family.marks, failures: [...checkIdentity(family.marks), ...checkColourPromise(family.marks, false)] };
+  };
+
+  it('Μ0δ: το ζωντανό δέντρο εκθέτει 4 τόνους, 4 διακριτικά, 4 χρώματα — και περνά', () => {
+    const { marks, failures } = runReview();
+    expect(marks.map((m) => m.id).sort()).toEqual(['accepted', 'dismissed', 'pending', 'problem']);
+    expect(new Set(marks.map((m) => m.variant)).size).toBe(4);
+    expect(new Set(marks.map((m) => m.hex)).size).toBe(4);
+    expect(failures).toEqual([]);
+  });
+
+  it('Μ14: «πρόβλημα» χωρίς διακεκομμένη ΚΑΙ με σύμβολο ✓ ⇒ ίδιο με «αντιστοιχίστηκε» ⇒ Κ1', () => {
+    const mutated = live.replace("problem: { dash: '5 3', strokePx: 2, glyph: 'alert'", "problem: { dash: 'none', strokePx: 2, glyph: 'check'");
+    expect(mutated).not.toBe(live);
+    expect(rulesOf(runReview({ reviewMarks: mutated }).failures)).toContain('Κ1');
+  });
+
+  it('Μ15: πράσινο που δεν απέχει από το κόκκινο σε αχρωματοψία (το πρώτο μετρημένο υποψήφιο) ⇒ Κ2', () => {
+    const css = liveFile(GLOBALS_CSS_PATH);
+    const mutated = css.replace('--paper-mark-accepted: 142 72% 26%;', '--paper-mark-accepted: 142 72% 29%;').replace('--paper-mark-problem: 5 85% 42%;', '--paper-mark-problem: 0 72% 45%;');
+    expect(mutated).not.toBe(css);
+    expect(rulesOf(runReview({ globalsCss: mutated }).failures)).toContain('Κ2');
+  });
+
+  it('Μ16: το .dark ξαναδηλώνει token χαρτιού με άλλη τιμή ⇒ σφάλμα (το χαρτί είναι λευκό σε κάθε θέμα)', () => {
+    const css = `${liveFile(GLOBALS_CSS_PATH)}\n.dark { --paper-mark-pending: 221 83% 70%; }\n`;
+    expect(() => runReview({ globalsCss: css })).toThrow(/--paper-mark-pending/);
+  });
+
+  it('Μ17: token που λείπει ή δεν είναι κυριολεκτική HSL ⇒ σφάλμα, ΠΟΤΕ σιωπηλό πράσινο', () => {
+    const css = liveFile(GLOBALS_CSS_PATH);
+    expect(() => runReview({ globalsCss: css.replace('--paper-mark-dismissed: 215 16% 50%;', '') })).toThrow(/--paper-mark-dismissed/);
+    expect(() => runReview({ globalsCss: css.replace('--paper-mark-dismissed: 215 16% 50%;', '--paper-mark-dismissed: var(--muted);') })).toThrow(/κυριολεκτική/);
   });
 });

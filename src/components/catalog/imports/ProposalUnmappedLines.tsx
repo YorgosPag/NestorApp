@@ -23,6 +23,8 @@ import type { ImportMemoryHint, ImportProposalWire, SetImportLineRequest } from 
 import { useCatalogCanManage } from '../shared/catalog-ui-hooks';
 import { LINE_REFUSAL_KEYS, LINE_STATE_KEYS, useImportText, type LineState } from './import-text';
 import { LineAttributeToolsSlot, PriceLineDialogSlot } from './import-surfaces';
+import { lineStateOf } from './line-state';
+import { useReviewLineItem } from './use-review-line-item';
 import type { LineToolMode } from './line-tool-props';
 import { MemoryHintNote } from './MemoryHintNote';
 import type { LineActivity } from './use-line-decisions';
@@ -35,12 +37,6 @@ const STATE_LOOK: Readonly<Record<LineState, { readonly variant: 'muted' | 'info
   refused: { variant: 'destructive', icon: TriangleAlert },
 };
 
-function lineStateOf(activity: LineActivity | undefined, decision: ReturnType<typeof lineDecisionOf>): LineState {
-  if (activity) return activity.kind;
-  if (decision?.kind === 'ignore') return 'ignored';
-  return decision?.kind === 'attribute' || decision?.kind === 'axis' || decision?.kind === 'price' ? 'mapped' : 'pending';
-}
-
 /** Ποια εργαλεία ανοίγει μια γραμμή: ιδιότητα (Β3) ή τιμή (Β4). */
 type LineTool = LineToolMode | 'price';
 
@@ -51,6 +47,8 @@ export interface UnmappedLinesProps {
   readonly activity: ReadonlyMap<string, LineActivity>;
   readonly activeLine: string | null;
   readonly onFocusLine: (line: ImportPageUnmappedLine) => void;
+  /** §5.5.2 Β8: η επιλογή ήρθε από κλικ στο PDF ⇒ η εστίαση πληκτρολογίου περνά στη γραμμή. */
+  readonly focusRequested?: boolean;
   readonly onDecideLine: (proposal: ImportProposalWire, request: SetImportLineRequest) => void;
   /** Η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η ίδια κρίση με τα πεδία της πρότασης (ADR-934 Ε3). */
   readonly decidable: boolean;
@@ -67,6 +65,7 @@ interface LineRowProps {
   readonly hint: ImportMemoryHint | undefined;
   readonly onAccept: (decision: ImportLineDecision) => void;
   readonly active: boolean;
+  readonly focusRequested: boolean;
   readonly readOnly: boolean;
   readonly canManage: boolean;
   readonly pricesEnabled: boolean;
@@ -93,12 +92,15 @@ function LineActions({ state, readOnly, canManage, pricesEnabled, onTool, onIgno
 
 function LineRow(props: LineRowProps) {
   const { t } = useImportText();
-  const { line, state, refusal, active, onFocus } = props;
+  const { line, state, refusal, active, focusRequested, onFocus } = props;
   const { variant, icon: Icon } = STATE_LOOK[state];
+  // §5.5.2 Β8: η ίδια ταυτότητα με το πλαίσιο της γραμμής στο PDF — hover και επιλογή και στις δύο κατευθύνσεις.
+  const { itemProps, buttonRef, hover } = useReviewLineItem(line, active, focusRequested);
   return (
-    <li className={`flex flex-col gap-1 rounded-md border p-2 ${active ? 'border-ring' : 'border-border'}`}>
+    <li {...itemProps}>
       <span className="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" className="text-left text-sm font-medium underline-offset-2 hover:underline" aria-label={`${t('review.lines.show')}: ${line.label}`} onClick={onFocus}>
+        <button ref={buttonRef} type="button" className="text-left text-sm font-medium underline-offset-2 hover:underline" aria-label={`${t('review.lines.show')}: ${line.label}`}
+          aria-current={active ? 'true' : undefined} onClick={onFocus} onFocus={hover.onFocus} onBlur={hover.onBlur}>
           {line.label}
         </button>
         <Badge variant={variant} className="gap-1"><Icon className="h-3 w-3" aria-hidden />{t(LINE_STATE_KEYS[state])}</Badge>
@@ -112,7 +114,7 @@ function LineRow(props: LineRowProps) {
 }
 
 export function ProposalUnmappedLines(props: UnmappedLinesProps) {
-  const { proposal, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable, pricesEnabled = false, memoryHints } = props;
+  const { proposal, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable, pricesEnabled = false, memoryHints, focusRequested = false } = props;
   const { t } = useImportText();
   const canManage = useCatalogCanManage();
   const [tool, setTool] = useState<{ readonly line: ImportPageUnmappedLine; readonly mode: LineTool } | null>(null);
@@ -134,7 +136,7 @@ export function ProposalUnmappedLines(props: UnmappedLinesProps) {
             <LineRow key={key} line={line} state={lineStateOf(current, lineDecisionOf(overrides, line))}
               refusal={current?.kind === 'refused' ? t(LINE_REFUSAL_KEYS[current.reason]) : null}
               hint={memoryHints?.get(key)} onAccept={(decision) => send(line, decision)}
-              active={key === activeLine} readOnly={readOnly} canManage={canManage} pricesEnabled={pricesEnabled}
+              active={key === activeLine} focusRequested={focusRequested} readOnly={readOnly} canManage={canManage} pricesEnabled={pricesEnabled}
               onFocus={() => onFocusLine(line)} onTool={(mode) => setTool({ line, mode })}
               onIgnore={(ignore) => send(line, ignore ? { kind: 'ignore' } : null)} />
           );

@@ -193,6 +193,20 @@
     "viewChanges": "Αλλαγές",
     "viewAll": "Όλα",
     "viewEmpty": "Κανένα πεδίο σε αυτή την εμφάνιση.",
+    "overlay": {
+      "legend": "Υπόμνημα πλαισίων του PDF",
+      "layer": "Πλαίσια όσων αναγνωρίστηκαν στη σελίδα",
+      "showBoxes": "Πλαίσια",
+      "tonePending": "Εκκρεμεί",
+      "toneAccepted": "Αντιστοιχίστηκε",
+      "toneProblem": "Πρόβλημα",
+      "toneDismissed": "Απορρίφθηκε",
+      "boxLabel": "{label}, {value}, {state}",
+      "boxMore": "{count, plural, one {και # ακόμη πεδίο στο ίδιο κελί} other {και # ακόμη πεδία στο ίδιο κελί}}",
+      "cycle": "Το κελί τροφοδοτεί {total} πεδία · {index} από {total}",
+      "next": "Επόμενο",
+      "revealed": "Φαίνεται επειδή το επέλεξες στο PDF — η προβολή «{view}» το κρύβει."
+    },
     "nextPending": "Επόμενο που θέλει απόφαση",
     "lines": {
       "title": "Γραμμές της πηγής χωρίς πεδίο",

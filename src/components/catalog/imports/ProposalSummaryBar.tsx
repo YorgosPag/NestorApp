@@ -11,13 +11,7 @@ import { ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { PROPOSAL_VIEWS, type ProposalSummary, type ProposalView } from './proposal-summary';
-import { useImportText } from './import-text';
-
-const VIEW_KEYS: Readonly<Record<ProposalView, string>> = {
-  pending: 'review.viewPending',
-  changes: 'review.viewChanges',
-  all: 'review.viewAll',
-};
+import { PROPOSAL_VIEW_KEYS, useImportText } from './import-text';
 
 interface ProposalSummaryBarProps {
   readonly summary: ProposalSummary;
@@ -48,7 +42,7 @@ export function ProposalSummaryBar({ summary, unmapped, view, onView, onNextPend
       <span className="flex flex-wrap items-center gap-2">
         <SegmentedControl<ProposalView> value={view} onValueChange={onView} aria-label={t('review.viewLabel')}>
           {PROPOSAL_VIEWS.map((key) => (
-            <SegmentedControlItem key={key} value={key}>{t(VIEW_KEYS[key])}</SegmentedControlItem>
+            <SegmentedControlItem key={key} value={key}>{t(PROPOSAL_VIEW_KEYS[key])}</SegmentedControlItem>
           ))}
         </SegmentedControl>
         {summary.pending > 0 ? (

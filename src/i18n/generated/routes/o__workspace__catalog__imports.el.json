@@ -211,6 +211,20 @@
       "nextPending": "Επόμενο που θέλει απόφαση",
       "noModel": "Χωρίς μοντέλο",
       "nothingToApply": "Ίδιο με τα ζωντανά — τίποτα να εφαρμοστεί",
+      "overlay": {
+        "boxLabel": "{label}, {value}, {state}",
+        "boxMore": "{count, plural, one {και # ακόμη πεδίο στο ίδιο κελί} other {και # ακόμη πεδία στο ίδιο κελί}}",
+        "cycle": "Το κελί τροφοδοτεί {total} πεδία · {index} από {total}",
+        "layer": "Πλαίσια όσων αναγνωρίστηκαν στη σελίδα",
+        "legend": "Υπόμνημα πλαισίων του PDF",
+        "next": "Επόμενο",
+        "revealed": "Φαίνεται επειδή το επέλεξες στο PDF — η προβολή «{view}» το κρύβει.",
+        "showBoxes": "Πλαίσια",
+        "toneAccepted": "Αντιστοιχίστηκε",
+        "toneDismissed": "Απορρίφθηκε",
+        "tonePending": "Εκκρεμεί",
+        "toneProblem": "Πρόβλημα"
+      },
       "pending": "{count, plural, one {# πεδίο θέλει απόφαση} other {# πεδία θέλουν απόφαση}}",
       "priceLine": {
         "action": "Τιμή"

@@ -10,7 +10,7 @@
  * «πού να κοιτάξω πρώτα» — όπως οι μετρητές ανά αποθετήριο του GitHub.
  */
 
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -44,16 +44,16 @@ interface ChipProps {
 
 function Chip({ pressed, onClick, children }: ChipProps) {
   return (
-    <Button
+    <ToggleButton
       type="button"
       size="sm"
-      variant={pressed ? 'default' : 'outline'}
-      aria-pressed={pressed}
+      variant="outline"
+      pressed={pressed}
       onClick={onClick}
       className="gap-1.5 rounded-full"
     >
       {children}
-    </Button>
+    </ToggleButton>
   );
 }
 

@@ -343,15 +343,20 @@ export const COLOR_BRIDGE = {
    * 🔑 Ανεστραμμένο μονόχρωμο (Vercel · Linear · GitHub Primer «emphasis»): το ζεύγος
    * `--foreground`/`--background` είναι θεματικό ΕΞ ΟΡΙΣΜΟΥ, ~14:1 και στα δύο θέματα.
    * Ήταν ήδη η κύρια ενέργεια του δημόσιου site, γραμμένη με το χέρι σε 2 αρχεία.
+   *
+   * 🔑 Ο ρόλος κατέχει ΟΛΕΣ τις καταστάσεις του (ηρεμία ΚΑΙ hover: γέμισμα · μελάνι · περίγραμμα) — αλλιώς πάνω
+   * σε `<Button>` κληρονομεί το `hover:text-*` της παραλλαγής (μπλε μελάνι πάνω σε σκούρο). Πάνω σε `<Button>`
+   * η βάση είναι `variant="outline"`: ουδέτερη, χωρίς `dark:hover:*` που νικούν τον ρόλο (το `default` τα έχει).
+   * Η έμφαση είναι ΙΔΙΟΤΗΤΑ ΤΗΣ ΕΝΕΡΓΕΙΑΣ, δηλωμένη στα δεδομένα — ποτέ τριαδικό στο `variant` (§19.4).
    */
   action: {
     /** ΜΙΑ ανά οθόνη — η επόμενη κίνηση. */
-    primary: 'bg-foreground text-background hover:bg-foreground/90',
+    primary: 'border-transparent bg-foreground text-background hover:bg-foreground/90 hover:text-background',
     /** Δευτερεύουσα — περίγραμμα, καμία γέμιση. */
-    secondary: 'border border-border bg-transparent text-foreground hover:bg-accent/50',
+    secondary: 'border border-border bg-transparent text-foreground hover:bg-accent/50 hover:text-foreground',
     /** Πράξη που αλλάζει τι βλέπει ο ΚΟΣΜΟΣ (απόσυρση) — μελάνι άρνησης, ΟΧΙ γέμισμα:
      *  αναστρέψιμη, άρα δεν φωνάζει όσο μια διαγραφή (GitHub «Danger zone»). */
-    caution: 'border border-border bg-transparent text-[hsl(var(--text-error))] hover:bg-[hsl(var(--bg-error))]/10',
+    caution: 'border border-border bg-transparent text-[hsl(var(--text-error))] hover:bg-[hsl(var(--bg-error))]/10 hover:text-[hsl(var(--text-error))]',
   },
 
   /** 🔘 ENTERPRISE SWITCH TOKENS - Status-based toggle colors (ADR-128) */
@@ -417,6 +422,8 @@ export const COLOR_BRIDGE = {
 export type BgColorKey = keyof typeof COLOR_BRIDGE.bg;
 export type TextColorKey = keyof typeof COLOR_BRIDGE.text;
 export type BorderColorKey = keyof typeof COLOR_BRIDGE.border;
+/** Η έμφαση μιας ενέργειας (ADR-770 §18 · §19.4) — δηλώνεται στα δεδομένα της ενέργειας, όχι στο κουμπί. */
+export type ActionEmphasis = keyof typeof COLOR_BRIDGE.action;
 
 /** Τα ΣΥΜΠΑΓΗ γεμίσματα κατάστασης (`--status-*`) — όσα κουβαλούν κείμενο ΠΑΝΩ τους. */
 export type SolidFillKey = 'errorSolid' | 'infoSolid' | 'successSolid' | 'warningSolid' | 'purpleSolid';

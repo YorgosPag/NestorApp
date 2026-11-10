@@ -99,7 +99,7 @@ export function DocumentRequestCodeStep({ token, gate, onUnlocked }: CodeStepPro
         />
         {remaining === null ? null : <WrongCode remaining={remaining} />}
         <footer className="flex flex-wrap gap-2">
-          <Button type="submit" className={COLOR_BRIDGE.action.primary} disabled={checking || code.length !== CODE_LENGTH}>
+          <Button type="submit" variant="outline" className={COLOR_BRIDGE.action.primary} disabled={checking || code.length !== CODE_LENGTH}>
             {checking ? t('document-request:code.checking') : t('document-request:code.submit')}
           </Button>
         </footer>

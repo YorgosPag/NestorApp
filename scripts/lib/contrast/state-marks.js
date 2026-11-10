@@ -24,6 +24,12 @@ const path = require('path');
 const ts = require('typescript');
 const { openGateInput } = require('../gate-input');
 
+const { readThemes } = require('./css-token-themes');
+const { parseHslToken, hslToRgb, toHex } = require('./wcag-contrast');
+
+/** ADR-923 §5.5.2 Β8 — το αρχείο που ΟΡΙΖΕΙ τα σημάδια κατάστασης πάνω στο PDF της αναθεώρησης εισαγωγής. */
+const REVIEW_MARKS_PATH = path.join('src', 'subapps', 'catalog', 'import', 'review-marks.ts');
+
 /** Το αρχείο που ΟΡΙΖΕΙ τα σημάδια κατάστασης του δεσμού. */
 const COLOR_CONFIG_PATH = path.join(
   'src', 'subapps', 'dxf-viewer', 'config', 'color-config.ts',
@@ -42,10 +48,10 @@ function findConstObject(source, name) {
   return found;
 }
 
-/** `{...} as const` → `{...}`. */
+/** `{...} as const` · `{...} as const satisfies T` → `{...}`. */
 function unwrapAsConst(node) {
   if (node === undefined) return null;
-  return ts.isAsExpression(node) || ts.isTypeAssertionExpression?.(node)
+  return ts.isAsExpression(node) || ts.isTypeAssertionExpression?.(node) || ts.isSatisfiesExpression?.(node)
     ? unwrapAsConst(node.expression)
     : node;
 }
@@ -249,6 +255,43 @@ function readPlanRoleMarks(source, primitives) {
 }
 
 /**
+ * Το token χαρτιού → hex. Το χαρτί είναι λευκό σε **κάθε** θέμα, άρα το token ζει **μόνο** στο `:root`: αν το σκοτεινό
+ * θέμα το ξαναδηλώσει με άλλη τιμή, η υπόσχεση «τα σημάδια δεν αλλάζουν με το θέμα» έσπασε ⇒ σφάλμα, όχι επιλογή.
+ */
+function paperTokenHex(themes, token) {
+  const name = `--${token}`;
+  const light = themes.light.get(name);
+  const dark = themes.dark.get(name);
+  if (light === undefined) throw new Error(`${name} δεν δηλώνεται στο :root του ${themes.source}`);
+  if (dark !== undefined && dark !== light) throw new Error(`${name} αλλάζει στο .dark — το χαρτί είναι λευκό σε κάθε θέμα`);
+  const hsl = parseHslToken(light);
+  if (hsl === null) throw new Error(`${name} δεν είναι κυριολεκτική HSL («${light}») — η πύλη δεν μαντεύει έμμεσες τιμές`);
+  return toHex(hslToRgb(hsl));
+}
+
+/**
+ * Τα σημάδια του **χάρτη κατάστασης πάνω στο PDF** της αναθεώρησης εισαγωγής (`IMPORT_REVIEW_MARKS`, ADR-923 §5.5.2 Β8).
+ * Το `variant` είναι `<dash>:<glyph>` — **ακριβώς** τα δύο πεδία που ζωγραφίζει το `ImportReviewOverlay` (μοτίβο γραμμής
+ * + σύμβολο γωνίας). Το `strokePx` μένει έξω για τον ίδιο λόγο με το μέγεθος του `basemap-correspondence`: το πάχος
+ * είναι έμφαση, όχι ταυτότητα.
+ */
+function readImportReviewMarks(repoRoot, input) {
+  const text = input.readRequired(REVIEW_MARKS_PATH);
+  const source = ts.createSourceFile(path.join(repoRoot, REVIEW_MARKS_PATH), text, ts.ScriptTarget.Latest, true);
+  const spec = propsOf(findConstObject(source, 'IMPORT_REVIEW_MARKS'));
+  if (spec.size === 0) throw new Error(`IMPORT_REVIEW_MARKS δεν βρέθηκε στο ${REVIEW_MARKS_PATH}`);
+  const themes = readThemes(repoRoot, input);
+  const marks = [];
+  for (const [id, node] of propsOf(spec.get('tones') ?? null)) {
+    const tone = propsOf(node);
+    const value = (key) => resolveValue(tone.get(key) ?? null, new Map());
+    marks.push({ id, carrier: 'pdf-region', variant: `${value('dash')}:${value('glyph')}`, hex: paperTokenHex(themes, value('token')) });
+  }
+  if (marks.length === 0) throw new Error(`IMPORT_REVIEW_MARKS.tones είναι κενό στο ${REVIEW_MARKS_PATH}`);
+  return marks;
+}
+
+/**
  * **Όλες** οι οικογένειες καταστάσεων, ρητά ονομασμένες.
  *
  * 🔑 **Οικογένεια, όχι ένας σωρός.** Η κρίση τρέχει **ανά οικογένεια** γιατί και οι δύο κανόνες
@@ -262,18 +305,21 @@ function readPlanRoleMarks(source, primitives) {
  * εδώ για να κριθεί — ποτέ να συμπεριληφθεί κατά λάθος από γενικό σαρωτή.
  */
 function readStateMarkFamilies(repoRoot = process.cwd(), input = undefined) {
-  // ΜΙΑ ανάγνωση + ΕΝΑ parse για όλες τις οικογένειες (ήταν δύο)
-  const parsed = parseColorConfig(repoRoot, input);
+  // ΜΙΑ είσοδος για όλες τις οικογένειες (ADR-924: με `--index` η όψη ΤΟΥ COMMIT) · ΕΝΑ parse του color-config
+  const gateInput = input ?? openGateInput({ root: repoRoot });
+  const parsed = parseColorConfig(repoRoot, gateInput);
   const { source, primitives } = parsed;
   return [
-    { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot, input, parsed) },
+    { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot, gateInput, parsed) },
     { id: 'basemap-correspondence', marks: readCorrespondenceMarks(source, primitives) },
     // ADR-929 Φ5.4β — επίπεδα βεβαιότητας + σημάδια ρόλου: ΜΙΑ επιφάνεια, ΜΙΑ οικογένεια.
     {
       id: 'plan-segment',
       marks: [...readPlanConfidenceMarks(source, primitives), ...readPlanRoleMarks(source, primitives)],
     },
+    // ADR-923 §5.5.2 Β8 — χάρτης κατάστασης πάνω στο PDF της αναθεώρησης: άλλο αρχείο, άλλη επιφάνεια, δική της οικογένεια.
+    { id: 'import-review-overlay', marks: readImportReviewMarks(repoRoot, gateInput) },
   ];
 }
 
-module.exports = { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH };
+module.exports = { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH };

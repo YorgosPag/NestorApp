@@ -34,6 +34,7 @@
  * |---|---|---|---|
  * | 1 | `table-bound-state` (ADR-767/769/771 Φ.1) | ζωντάνια δεσμού + 2 εξαιρέσεις | ένταση · μοτίβο · **γωνία** |
  * | 2 | `basemap-correspondence` (ADR-782 §27.4) | σημείο σχεδίου · εκκρεμές · σημείο χάρτη | **σχήμα** · μοτίβο |
+ * | 4 | `import-review-overlay` (ADR-923 §5.5.2 Β8) | εκκρεμεί · αποδεκτό · πρόβλημα · απορρίφθηκε — πάνω στο PDF | **μοτίβο** · **σύμβολο γωνίας** · χρώμα από tokens χαρτιού (`globals.css`) |
  *
  * 🔑 **Η κρίση τρέχει ΑΝΑ ΟΙΚΟΓΕΝΕΙΑ.** Και οι δύο κανόνες έχουν νόημα μόνο ανάμεσα σε
  * καταστάσεις που ο χρήστης βλέπει **μαζί**: ένα κελί πίνακα και ένα σημάδι χάρτη δεν
@@ -59,7 +60,7 @@
 'use strict';
 
 const { hexToRgb, worstCvdDeltaE, deltaE } = require('./lib/contrast/cvd');
-const { readStateMarkFamilies, COLOR_CONFIG_PATH } = require('./lib/contrast/state-marks');
+const { readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH } = require('./lib/contrast/state-marks');
 const { commitInput } = require('./lib/gate-input');
 
 /**
@@ -148,7 +149,7 @@ function main() {
   try {
     families = readStateMarkFamilies(process.cwd(), commitInput(process.cwd()));
   } catch (err) {
-    console.error(C.red(`  [FAIL] Ανάγνωση ${COLOR_CONFIG_PATH}: ${err.message}`));
+    console.error(C.red(`  [FAIL] Ανάγνωση ${COLOR_CONFIG_PATH} · ${REVIEW_MARKS_PATH} · globals.css: ${err.message}`));
     return 1;
   }
 
@@ -178,7 +179,7 @@ function main() {
 
   for (const f of failures) console.error(C.red(`  [FAIL] ${f.rule}  [${f.family}]  ${f.detail}`));
   console.error(
-    C.red(`\n✗ CHECK 3.41 FAIL — ${failures.length} παραβίαση(εις) στο ${COLOR_CONFIG_PATH}\n`),
+    C.red(`\n✗ CHECK 3.41 FAIL — ${failures.length} παραβίαση(εις) (δες την οικογένεια σε κάθε γραμμή)\n`),
   );
   console.error(C.dim('  Κ1 διορθώνεται ΜΟΝΟ με μη-χρωματικό κανάλι (γωνία/σχήμα/μοτίβο/ένταση).'));
   console.error(C.dim('  Ένα διαφορετικό χρώμα ΔΕΝ ικανοποιεί το Κ1 — δες την κεφαλίδα του script.\n'));

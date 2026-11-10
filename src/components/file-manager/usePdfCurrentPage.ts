@@ -12,7 +12,7 @@
  * @module components/file-manager/usePdfCurrentPage
  */
 
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
 
 import type { Extent } from '@/lib/geometry/zoom-pan-math';
 
@@ -57,4 +57,15 @@ export function usePdfCurrentPage(docRef: RefObject<PdfDocProxy | null>, state: 
   // Οι στρώσεις βλέπουν σελίδα ΜΟΝΟ όταν είναι αυτή που ζητήθηκε — ποτέ τις σημειώσεις της προηγούμενης πάνω στη νέα.
   const current = loaded !== null && loaded.pageNumber === state.currentPage ? loaded.page : null;
   return { page: current, pageNumber: state.currentPage, base: loaded?.base ?? null };
+}
+
+/**
+ * Η σελίδα του καλούντα (έλεγχος δίπλα-δίπλα, ADR-923 §5.5.1) νικά τη δική του πλοήγηση, και ξαναϊσχύει όταν φορτώσει το
+ * έγγραφο. Απούσα ⇒ καμία επίδραση. (Μετακόμισε εδώ από το `PdfHighlights`, που καταργήθηκε στο §5.5.2 Β8: η τρέχουσα σελίδα
+ * έχει **έναν** κάτοχο, αυτό το αρχείο.)
+ */
+export function useControlledPdfPage(page: number | undefined, numPages: number, setState: Dispatch<SetStateAction<PdfState>>): void {
+  useEffect(() => {
+    if (page !== undefined && numPages > 0) setState((s) => ({ ...s, currentPage: Math.min(page, s.numPages) }));
+  }, [page, numPages, setState]);
 }

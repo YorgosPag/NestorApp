@@ -4,7 +4,7 @@
  * @fileoverview ADR-923 §5.15.2 (Θ.2α-2) — **Η στρώση συνδέσμων** του `PdfCanvasViewer`.
  * @module components/file-manager/PdfLinkLayer
  *
- * 🔑 Η τεχνική του `PdfHighlights`: SVG με `viewBox` 0..1 πάνω από το canvas, περιοχές σε κλάσματα σελίδας ⇒ ακολουθούν
+ * 🔑 SVG με `viewBox` 0..1 πάνω από το canvas, περιοχές σε κλάσματα σελίδας ⇒ ακολουθούν
  *    ζουμ και ανάλυση χωρίς inline style (N.3). Πραγματικά `<a>`: πληκτρολόγιο (Tab/Enter), αναγνώστης οθόνης, hover.
  * 🔑 Εσωτερικός σύνδεσμος = `href="#page=N"` (σημασιολογία) + πλοήγηση μέσα στον θεατή· εξωτερικός = νέα καρτέλα με
  *    `noopener noreferrer nofollow` (ξένο περιεχόμενο: κανένα `window.opener`, κανένα referrer με άδεια, καμία ψήφος SEO).

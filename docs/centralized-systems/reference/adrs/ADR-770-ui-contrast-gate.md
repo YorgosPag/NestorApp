@@ -302,6 +302,7 @@ package.json                                 +3 scripts
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-11-10 | **§19.4 — Ο5ε ξανά πράσινο: 6 πατημένα κουμπιά + 2 σημεία έμφασης ως ΙΔΙΟΤΗΤΑ ΕΝΕΡΓΕΙΑΣ.** Η σάρωση Ο5ε βρήκε 8 νέα τριαδικά `variant` (εμπόδιζαν το commit του ADR-923 Β8). **Εναλλαγές ⇒ `ToggleButton`**: `ValidFromField` ×2 (τσιπ γρήγορης ημερομηνίας — ΟΧΙ `SegmentedControl`: η τιμή μπορεί να είναι ημερομηνία του ημερολογίου που δεν αντιστοιχεί σε τσιπ, άρα «κανένα πατημένο» είναι νόμιμο) · `NotificationInboxFilters` · `ClauseBodyToolbar` ×2 (λίστες, `ghost`) · DXF `PlanReadingSections` («Προσθήκη περιοχής»). **Έμφαση ⇒ `COLOR_BRIDGE.action`, ΟΧΙ δήλωση εξαίρεσης** (Primer · Atlassian · Carbon · M3: η έμφαση είναι ιδιότητα της ενέργειας, ΕΝΑ primary ανά ομάδα, η καταστρεπτική μέσα στη σελίδα = μόνο μελάνι): `RowAction.emphasis` (`subcontract-row-actions.ts` — δρόμος `issue/accept/mobilize/complete` ⇒ `primary`, καταστρεπτική ⇒ `caution`, `expire` ⇒ `secondary`· πριν, στο `issued`, `accept` **και** `expire` ήταν δύο κύρια) ⇒ `AgreementLifecycleActions`· πίνακας `EMPHASIS` δίπλα στο `ICONS` ⇒ `VersionActionBar` (μόνο η έγκριση κύρια). Νέος τύπος `ActionEmphasis`. 🔴 **Κρυφό σφάλμα του ρόλου:** πάνω σε `<Button>` (προεπιλογή `default`) το `COLOR_BRIDGE.action.primary` κληρονομούσε το `hover:text-blue-700` και τα `dark:hover:bg-blue-900/20 dark:hover:text-blue-300` της παραλλαγής ⇒ στο hover μπλε μελάνι πάνω σε σκούρο, και στο σκοτεινό ο ρόλος χανόταν. Θεραπεία: ο ρόλος κατέχει και το hover (`hover:text-*`, `border-transparent` στο primary)· βάση `variant="outline"` (ουδέτερη, χωρίς `dark:hover:*`) στους 4 καταναλωτές `<Button>` — `DocumentRequestCard` · `DocumentRequestCodeStep` · `RegistryIssuanceAccessCode` · `MapAreaControl`. **Δεν μετρήθηκε σε browser.** |
 | 2026-11-03 | **Θεραπεία επί τόπου: εικονίδια των καρτών του Πίνακα CRM (`/crm`).** Αναφορά Giorgio από ζωντανή οθόνη: σκούρο σε σκούρο και στις 10 κάρτες. Ρίζα: `text-primary` σε `bg-muted` (`CrmHubPageContent.tsx`) ⇒ **1,17:1** στο σκοτεινό. Στόχος: `colors.text.info` (`--text-info`), **κανένα νέο token**· υπολογισμένη αντίθεση πάνω σε `--muted`: σκοτεινό **6,79:1** · φωτεινό **5,68:1**. 3.38: 379/207 → **378/206** (χειρουργικά, η εγγραφή του αρχείου αφαιρέθηκε). `--primary` ανέγγιχτο. ⚠️ Ζωντανή μέτρηση σε browser εκκρεμεί. |
 | 2026-10-29 | **Στρώμα 8 — ΓΕΜΙΣΜΑ = ΜΕΛΑΝΙ (§22).** Ετικέτες κατάστασης με `bg` + `text` του ΙΔΙΟΥ `--status-*` ⇒ 1,00:1 (PO-0001, browser). Audit AST: **38 ευρήματα / 14 αρχεία** (+4 προμήθειας της 28/10). Μετρήθηκε ότι ούτε η διαφάνεια σώζει (`/15`: success 1,80 φωτεινό · purple 2,28 σκοτεινό) και ότι τα συνθετικά `${getStatusColor(x,'bg')}/NN` δεν παράγονται καν από το Tailwind. Θεραπεία: **ρόλοι** στο `design-system.ts` δίπλα στην ίδια αντιστοίχιση — `getStatusBadgeVariant` · `getStatusSolidClass` (+`SOLID_FILL_INK`) · `getStatusSurfaceClass` (`--bg-X`+`--text-X`, 5,78–7,84:1 και στα δύο θέματα)· `getStatusBadgeClass` χωρίς `text-white` (success 2,30). Διορθώθηκαν τα 13 από τα 14 αρχεία (+4 καταναλωτές). Άγκυρα: ZERO-TOL `same-token-fill-ink.js` μέσα στο CHECK 3.38 + Ο6 στο `theme-token-hygiene.test.js`· 1 ονομαστική δήλωση (`QrCodePanel`, αρχείο άλλης συνεδρίας). Ανοιχτά §22.5. |
 | 2026-10-19 (β) | **Σήματα κατάστασης της καρτέλας «Μονάδες» του κτιρίου — θεραπεία SSoT, όχι αλλαγή κλάσης.** «Πωλήθηκε»/«Ενοικιάστηκε» `text-primary` πάνω σε κάρτα ⇒ **1,00:1** στο σκοτεινό. Ο τοπικός `UNIT_STATUS_COLOR_MAP` (`property-tab-constants.ts`, ήδη στη baseline) **διαγράφηκε**· η καρτέλα ζητά το ένα SSoT σημάτων (ADR-777 §8.60.20.12: `propertyStatusBadges` → `UnitStatusBadges` → `Badge` με μελάνι `SOLID_FILL_INK`). Υπολογισμένη αντίθεση όλων των παραλλαγών ≥ **5,20:1** και στα δύο θέματα. 3.38: 393/212 → **391/211** (χειρουργικά, η εγγραφή του αρχείου αφαιρέθηκε· `examinedByEye` ανέγγιχτο)· 3.39/3.42 αμετάβλητες. `--primary` ανέγγιχτο. ⚠️ Ζωντανή μέτρηση σε browser εκκρεμεί. |
@@ -1458,6 +1459,14 @@ ADR-777 §8.72.8 #2, σε ζωντανή σελίδα: στο σκοτεινό �
 
 Ανήκουν στο §18.7 #1. Ratchet κατά ταυτότητα, με **ακριβές** πλήθος: περισσότερα ⇒ ⛔, λιγότερα ⇒ «μίκρυνε τη δήλωση».
 
+🔑 **Η δήλωση ΔΕΝ είναι η προτιμώμενη θεραπεία νέας έμφασης** *(2026-11-10)*. Όπως στο Primer / Atlassian / Carbon, η έμφαση
+είναι **ιδιότητα της ενέργειας**, δηλωμένη στα δεδομένα της, και ντύνεται από τον ρόλο `COLOR_BRIDGE.action`
+(`primary` · `secondary` · `caution`, τύπος `ActionEmphasis`) πάνω σε `<Button variant="outline">`:
+- `AgreementLifecycleActions` ⇐ `RowAction.emphasis` (ο δρόμος του εγγράφου κύριος, ένας ανά κατάσταση· καταστρεπτική = μελάνι,
+  το κόκκινο γέμισμα μένει στον διάλογο επιβεβαίωσης)·
+- `VersionActionBar` ⇐ πίνακας `EMPHASIS: Record<BarAction, ActionEmphasis>` (μόνο η έγκριση κύρια).
+Ο ρόλος κατέχει **όλες** τις καταστάσεις του (και `hover:text-*`)· η βάση `outline` γιατί το `default` φέρνει `dark:hover:*` που τον νικούν.
+
 Hook: οι triggers του area «Theme Token Hygiene» += `toggle` · `toggle-button` · `segmented-control` ·
 `pressed-variant-ternary.js`. ⚠️ Νέο ternary σε **άλλο** αρχείο το πιάνει το CI (`ui-contrast-ratchet.yml`), όχι το
 hook. Ίδια απόφαση με το Ο5β (§17.4), που επίσης σαρώνει όλο το `src/`.
@@ -1503,6 +1512,7 @@ hook. Ίδια απόφαση με το Ο5β (§17.4), που επίσης σα
 
 ### 19.6 Ανοιχτά — ρητά
 1. **§18.7 #1 παραμένει** (απόφαση Giorgio): τα 8 σημεία έμφασης, και γενικά το `<Button variant="default">` ως κύριο κουμπί.
+   *(2026-11-10)* Η σταδιακή μετάβαση σε `COLOR_BRIDGE.action` έκανε τα δύο πρώτα σημεία με έμφαση-ως-δεδομένα (§19.4).
 2. **`<Badge variant={x ? 'default' : 'outline'}>` ×10:** κατάσταση οντότητας με επιφάνεια ως σήμα. Ανήκει στο
    κανάλι κατάστασης (CHECK 3.41 / §18.1), **όχι** σε αυτό το primitive.
 3. Ομάδες αποκλειστικής επιλογής που έμειναν `ToggleButton`, με σωστή όψη και `aria-pressed` αλλά χωρίς βελάκια:

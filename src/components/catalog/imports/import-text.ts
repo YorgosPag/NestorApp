@@ -24,6 +24,8 @@ import type {
   ImportRowAction,
 } from '@/subapps/catalog/vocabulary/catalog-import';
 import type { AssetFetchFailure } from '@/subapps/catalog/vocabulary/asset-fetch';
+import type { ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
+import type { ProposalView } from './proposal-summary';
 
 export function useImportText() {
   const { t, i18n } = useTranslation(CATALOG_IMPORT_NAMESPACES);
@@ -46,6 +48,21 @@ export const SET_ASIDE_KEYS: Readonly<Record<ImportPageSetAside['role'], string>
 export const TEXTLESS_KEYS: Readonly<Record<ImportPageTextless['kind'], string>> = {
   absent: 'batch.textlessAbsent',
   lost: 'batch.textlessLost',
+};
+
+/** §5.5.2 Α6: οι προβολές της πρότασης — τις ονομάζουν η μπάρα σύνοψης **και** η σημείωση «φαίνεται επειδή το επέλεξες» (Β8). */
+export const PROPOSAL_VIEW_KEYS: Readonly<Record<ProposalView, string>> = {
+  pending: 'review.viewPending',
+  changes: 'review.viewChanges',
+  all: 'review.viewAll',
+};
+
+/** §5.5.2 Β8: η κατάσταση ενός πλαισίου πάνω στο PDF, με λέξη — υπόμνημα και `aria-label` από το ίδιο σημείο. */
+export const REVIEW_TONE_KEYS: Readonly<Record<ReviewMarkTone, string>> = {
+  pending: 'review.overlay.tonePending',
+  accepted: 'review.overlay.toneAccepted',
+  problem: 'review.overlay.toneProblem',
+  dismissed: 'review.overlay.toneDismissed',
 };
 
 export const PROPOSAL_STATUS_KEYS: Readonly<Record<ImportProposalStatus, string>> = {

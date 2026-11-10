@@ -3,6 +3,10 @@
 /**
  * @fileoverview **Έλεγχος μιας πρότασης** (ADR-923 §5.5): γραμμές με διαφορά ανά πεδίο, ευρήματα κανόνων, μαζικές αποφάσεις,
  *   έγκριση. Το PDF το κρατά η γονική όψη· εδώ μόνο δηλώνεται ποιο πεδίο εστιάστηκε.
+ *
+ * 🔑 §5.5.2 Β8: η επιλογή ζει στον **έναν** κάτοχο (`useReviewSelection`) ως **κλειδί** — εδώ μόνο διαβάζεται (`selectedKey`) και
+ *    γράφεται (`onSelect`). Πεδίο που η προβολή κρύβει αλλά επιλέχτηκε στο PDF **φαίνεται**, με σημείωση· το φίλτρο του ανθρώπου
+ *    **δεν** αλλάζει (κανένα από τα Rossum · Azure DI · ABBYY δεν τεκμηριώνει πρότυπο — δική μας απόφαση, δηλωμένη στο ADR).
  * @module components/catalog/imports/ProposalReview
  */
 
@@ -24,11 +28,15 @@ import { fieldVisibleIn, initialProposalView, nextPendingField, summarizeProposa
 import { ProposalSummaryBar } from './ProposalSummaryBar';
 import { ProposalDecidedLines } from './ProposalDecidedLines';
 import { ProposalUnmappedLines, type UnmappedLinesProps } from './ProposalUnmappedLines';
+import { fieldTargetOf, reviewTargetKey, type ReviewTarget } from './review-overlay-model';
 
 interface ProposalReviewProps {
   readonly proposal: ImportProposalWire;
-  readonly focused: ImportProposalField | null;
-  readonly onFocus: (field: ImportProposalField) => void;
+  /** §5.5.2 Β8: το κλειδί του επιλεγμένου στόχου στον έναν κάτοχο (`reviewTargetKey`) — `null` = τίποτα. */
+  readonly selectedKey: string | null;
+  /** §5.5.2 Β8: η επιλογή ήρθε από κλικ στο PDF ⇒ η εστίαση πληκτρολογίου περνά στο πεδίο. */
+  readonly focusRequested?: boolean;
+  readonly onSelect: (target: ReviewTarget) => void;
   readonly onChange: (proposal: ImportProposalWire, change: ProposalChange) => void;
   readonly onApply: (proposal: ImportProposalWire) => void;
   readonly onReject: (proposal: ImportProposalWire) => void;
@@ -53,7 +61,7 @@ function proposalTitle(proposal: ImportProposalWire, t: ReturnType<typeof useImp
 }
 
 /** `decidable`: η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η μία κρίση για κάθε κουμπί απόφασης. */
-type RowProps = Pick<ProposalReviewProps, 'proposal' | 'focused' | 'onFocus' | 'onChange'> & {
+type RowProps = Pick<ProposalReviewProps, 'proposal' | 'selectedKey' | 'focusRequested' | 'onSelect' | 'onChange'> & {
   readonly row: ImportProposalRow;
   readonly view: ProposalView;
   readonly decidable: boolean;
@@ -63,9 +71,44 @@ type RowProps = Pick<ProposalReviewProps, 'proposal' | 'focused' | 'onFocus' | '
 const editsOf = (proposal: ImportProposalWire): ReadonlyMap<string, ImportValueEdit> =>
   new Map((proposal.edits ?? []).map((edit) => [fieldAddress(edit.rowKey, edit.targetKey), edit]));
 
-function RowFields({ row, proposal, focused, onFocus, onChange, view, decidable }: RowProps) {
+/** Το κλειδί αναθεώρησης ενός πεδίου — το ίδιο που κρατά ο κάτοχος και τα πλαίσια του PDF. */
+const fieldKeyOf = (proposalId: string, row: ImportProposalRow, field: ImportProposalField): string =>
+  reviewTargetKey(fieldTargetOf(proposalId, row, field));
+
+type FieldEntryProps = Omit<RowProps, 'decidable'> & {
+  readonly field: ImportProposalField;
+  readonly edits: ReadonlyMap<string, ImportValueEdit>;
+  readonly readOnly: boolean;
+};
+
+/** Ένα πεδίο στον πίνακα — ή τίποτα, όταν η προβολή το κρύβει **και** δεν είναι το επιλεγμένο (§5.5.2 Β8). */
+function FieldEntry({ field, row, proposal, edits, selectedKey, focusRequested = false, onSelect, onChange, view, readOnly }: FieldEntryProps) {
+  const targetKey = importTargetKey(field.target);
+  const reviewKey = fieldKeyOf(proposal.id, row, field);
+  const active = reviewKey === selectedKey;
+  const inView = fieldVisibleIn(view, field);
+  if (!inView && !active) return null;
+  const change = (patch: ProposalChange) => onChange(proposal, patch);
+  return (
+    <ProposalFieldRow
+      field={field}
+      edit={edits.get(fieldAddress(row.rowKey, targetKey)) ?? null}
+      active={active}
+      reviewKey={reviewKey}
+      focusRequested={active && focusRequested}
+      revealedFrom={inView ? null : view}
+      readOnly={readOnly}
+      onFocus={() => onSelect(fieldTargetOf(proposal.id, row, field))}
+      onDecide={(decision) => change({ decisions: [{ rowKey: row.rowKey, targetKey, decision }] })}
+      onEdit={(text) => change({ edits: [{ rowKey: row.rowKey, targetKey, text }] })}
+      onRevert={() => change({ edits: [{ rowKey: row.rowKey, targetKey, text: '', revert: true }] })}
+    />
+  );
+}
+
+function RowFields(props: RowProps) {
+  const { row, proposal, decidable } = props;
   const { t } = useImportText();
-  const readOnly = !decidable;
   const edits = useMemo(() => editsOf(proposal), [proposal]);
   return (
       <table className="w-full border-collapse text-sm">
@@ -80,22 +123,7 @@ function RowFields({ row, proposal, focused, onFocus, onChange, view, decidable 
           </tr>
         </thead>
         <tbody>
-          {row.fields.filter((field) => fieldVisibleIn(view, field)).map((field) => {
-            const targetKey = importTargetKey(field.target);
-            return (
-              <ProposalFieldRow
-                key={targetKey}
-                field={field}
-                edit={edits.get(fieldAddress(row.rowKey, targetKey)) ?? null}
-                active={field === focused}
-                readOnly={readOnly}
-                onFocus={() => onFocus(field)}
-                onDecide={(decision) => onChange(proposal, { decisions: [{ rowKey: row.rowKey, targetKey, decision }] })}
-                onEdit={(text) => onChange(proposal, { edits: [{ rowKey: row.rowKey, targetKey, text }] })}
-                onRevert={() => onChange(proposal, { edits: [{ rowKey: row.rowKey, targetKey, text: '', revert: true }] })}
-              />
-            );
-          })}
+          {row.fields.map((field) => <FieldEntry key={importTargetKey(field.target)} {...props} field={field} edits={edits} readOnly={!decidable} />)}
         </tbody>
       </table>
   );
@@ -157,20 +185,33 @@ function ModelCodeField({ proposal, onChange }: Pick<ProposalReviewProps, 'propo
 const showsModelCodeField = (proposal: ImportProposalWire): boolean =>
   proposal.purpose === 'attributes' && proposal.variantSchemeCode !== null && (proposal.modelCode === null || proposal.modelCodeEdit !== undefined);
 
-/** Γραμμή χωρίς ορατό πεδίο στην προβολή κρύβεται· γραμμή με εύρημα μένει, γιατί το εύρημα κλειδώνει την έγκριση. */
-const rowVisibleIn = (view: ProposalView, row: ImportProposalRow): boolean => row.issues.length > 0 || row.fields.some((field) => fieldVisibleIn(view, field));
+/**
+ * Γραμμή χωρίς ορατό πεδίο στην προβολή κρύβεται· γραμμή με εύρημα μένει, γιατί το εύρημα κλειδώνει την έγκριση· γραμμή με το
+ * **επιλεγμένο** πεδίο μένει (§5.5.2 Β8), αλλιώς το κλικ στο PDF θα κατέληγε σε τίποτα.
+ */
+const rowVisibleIn = (view: ProposalView, row: ImportProposalRow, proposalId: string, selectedKey: string | null): boolean =>
+  row.issues.length > 0 || row.fields.some((field) => fieldVisibleIn(view, field) || fieldKeyOf(proposalId, row, field) === selectedKey);
 
-export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, onReject, saving = false, unmapped = 0, lines, batchOpen, source }: ProposalReviewProps) {
+/** Α6: το επόμενο που θέλει απόφαση **μετά το επιλεγμένο** — ως στόχος για τον κάτοχο. */
+function nextPendingTarget(proposal: ImportProposalWire, selectedKey: string | null): ReviewTarget | null {
+  const located = proposal.rows.flatMap((row) => row.fields.map((field) => ({ row, field })));
+  const current = located.find(({ row, field }) => fieldKeyOf(proposal.id, row, field) === selectedKey)?.field ?? null;
+  const next = nextPendingField(proposal.rows, current);
+  const owner = next ? located.find(({ field }) => field === next) : undefined;
+  return owner ? fieldTargetOf(proposal.id, owner.row, owner.field) : null;
+}
+
+export function ProposalReview({ proposal, selectedKey, focusRequested = false, onSelect, onChange, onApply, onReject, saving = false, unmapped = 0, lines, batchOpen, source }: ProposalReviewProps) {
   const { t } = useImportText();
   const summary = useMemo(() => summarizeProposal(proposal.rows), [proposal.rows]);
   const [view, setView] = useState<ProposalView>(() => initialProposalView(summary));
   const { pending } = summary;
   const open = batchOpen && proposal.status === 'pending';
   const awaiting = awaitsAttributes(proposal);
-  const rows = proposal.rows.filter((row) => rowVisibleIn(view, row));
+  const rows = proposal.rows.filter((row) => rowVisibleIn(view, row, proposal.id, selectedKey));
   const focusNextPending = () => {
-    const next = nextPendingField(proposal.rows, focused);
-    if (next) onFocus(next);
+    const next = nextPendingTarget(proposal, selectedKey);
+    if (next) onSelect(next);
   };
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border p-3">
@@ -191,11 +232,12 @@ export function ProposalReview({ proposal, focused, onFocus, onChange, onApply, 
       {proposal.violations.length > 0 ? <p className="m-0 text-sm text-destructive" role="status">{t('review.violations', { count: proposal.violations.length })}</p> : null}
       <ProposalSummaryBar summary={summary} unmapped={unmapped} view={view} onView={setView} onNextPending={focusNextPending} />
       {rows.length === 0 ? <p className="m-0 text-sm text-muted-foreground" role="status">{t('review.viewEmpty')}</p> : null}
-      {rows.map((row) => <RowSection key={row.rowKey} row={row} view={view} proposal={proposal} focused={focused} onFocus={onFocus} onChange={onChange} decidable={open} />)}
+      {rows.map((row) => <RowSection key={row.rowKey} row={row} view={view} proposal={proposal} selectedKey={selectedKey} focusRequested={focusRequested} onSelect={onSelect} onChange={onChange} decidable={open} />)}
       {lines ? <ProposalUnmappedLines proposal={proposal} {...lines} decidable={open} /> : null}
       {lines ? (
         <ProposalDecidedLines proposal={proposal} lines={lines.lines} overrides={lines.overrides} activity={lines.activity}
-          onDecideLine={lines.onDecideLine} pricesEnabled={lines.pricesEnabled} decidable={open} />
+          onDecideLine={lines.onDecideLine} pricesEnabled={lines.pricesEnabled} decidable={open}
+          activeLine={lines.activeLine} onFocusLine={lines.onFocusLine} focusRequested={lines.focusRequested} />
       ) : null}
     </article>
   );

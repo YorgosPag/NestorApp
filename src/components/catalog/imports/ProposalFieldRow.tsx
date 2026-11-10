@@ -7,35 +7,32 @@
  * @module components/catalog/imports/ProposalFieldRow
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Pencil, Undo2, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
 import type { ImportProposalField, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
 import { useImportIssueMessage } from './import-issue-messages';
-import { PRICE_FIELD_KEYS, TRADE_FIELD_KEYS, useImportText } from './import-text';
+import { PROPOSAL_VIEW_KEYS, useImportText } from './import-text';
+import { useTargetLabeler } from './import-target-label';
 import { FieldStatusBadge, ProposalDecisionCell } from './ProposalDecisionCell';
 import { useImportValueText } from './import-value-text';
-
-function useTargetLabel(field: ImportProposalField): string {
-  const { t } = useImportText();
-  const attributes = useCatalogCollection('CATALOG_ATTRIBUTES');
-  const { target } = field;
-  if (target.kind === 'price') return t(PRICE_FIELD_KEYS[target.field]);
-  if (target.kind === 'modelCode') return t('mapping.modelCode');
-  if (target.kind === 'skuIdentifier') return t('mapping.skuIdentifier');
-  if (target.kind === 'tradeIdentity') return t(TRADE_FIELD_KEYS[target.field]);
-  const attribute = attributes.items.find((item) => item.id === target.attributeId);
-  return attribute?.labels.el ?? attribute?.code ?? target.attributeId;
-}
+import type { ProposalView } from './proposal-summary';
+import { useReviewHoverHandlers, useReviewHovered } from './review-hover-store';
+import { useActiveReviewItem } from './use-review-selection';
 
 interface ProposalFieldRowProps {
   readonly field: ImportProposalField;
   /** §5.5.2 Β6: η διόρθωση του ανθρώπου σε αυτό το πεδίο, από τον κατάλογο της πρότασης. `null` = καμία. */
   readonly edit: ImportValueEdit | null;
   readonly active: boolean;
+  /** §5.5.2 Β8: το σταθερό κλειδί του πεδίου στην αναθεώρηση (`reviewTargetKey`) — ταυτότητα για hover λίστα ↔ PDF. */
+  readonly reviewKey: string;
+  /** §5.5.2 Β8: η επιλογή ήρθε από κλικ στο PDF ⇒ η εστίαση πληκτρολογίου περνά στο πεδίο (όχι μόνο κύλιση). */
+  readonly focusRequested: boolean;
+  /** §5.5.2 Β8: η προβολή που **θα** έκρυβε το πεδίο — φαίνεται μόνο επειδή επιλέχτηκε στο PDF. `null` = ορατό κανονικά. */
+  readonly revealedFrom: ProposalView | null;
   readonly readOnly: boolean;
   readonly onFocus: () => void;
   readonly onDecide: (decision: 'accept' | 'reject') => void;
@@ -108,21 +105,35 @@ function Corroboration({ field }: { readonly field: ImportProposalField }) {
   return <p className="m-0 mt-1 text-xs text-muted-foreground">{t('review.corroboratedBy', { values: others.join(' · ') })}</p>;
 }
 
-export function ProposalFieldRow({ field, edit, active, readOnly, onFocus, onDecide, onEdit, onRevert }: ProposalFieldRowProps) {
+/** §5.5.2 Β8: πεδίο που η προβολή κρύβει, ορατό μόνο επειδή επιλέχτηκε στο PDF — το λέει, ποτέ σιωπηλά. */
+function RevealNote({ view }: { readonly view: ProposalView | null }) {
   const { t } = useImportText();
-  const label = useTargetLabel(field);
+  if (view === null) return null;
+  return <p className="m-0 mt-1 text-xs text-muted-foreground" role="status">{t('review.overlay.revealed', { view: t(PROPOSAL_VIEW_KEYS[view]) })}</p>;
+}
+
+function rowClassOf(active: boolean, hovered: boolean): string {
+  if (active) return 'bg-accent';
+  return hovered ? 'border-b border-border bg-muted' : 'border-b border-border';
+}
+
+export function ProposalFieldRow({ field, edit, active, reviewKey, focusRequested, revealedFrom, readOnly, onFocus, onDecide, onEdit, onRevert }: ProposalFieldRowProps) {
+  const { t } = useImportText();
+  const label = useTargetLabeler()(field);
   const describe = useImportValueText();
   const percent = Math.round(field.confidence * 100);
   const verified = field.anchor?.kind === 'page' ? field.anchor.verified : true;
   /** Ε8: `null` = η σελίδα δεν είχε κείμενο να ελεγχθεί η τιμή · `false` = είχε, και δεν την επιβεβαίωσε. */
   const unverifiedNote = verified === null ? t('review.uncheckable') : verified === false ? t('review.unverified') : null;
-  const rowRef = useRef<HTMLTableRowElement>(null);
-  // §5.5.2 Α6: «Επόμενο που θέλει απόφαση» εστιάζει πεδίο που μπορεί να είναι εκτός οθόνης.
-  useEffect(() => { if (active) rowRef.current?.scrollIntoView?.({ block: 'nearest' }); }, [active]);
+  const { itemRef: rowRef, buttonRef } = useActiveReviewItem<HTMLTableRowElement>(active, focusRequested);
+  const hovered = useReviewHovered([reviewKey]);
+  const hover = useReviewHoverHandlers([reviewKey]);
   return (
-    <tr ref={rowRef} className={active ? 'bg-accent' : 'border-b border-border'}>
+    <tr ref={rowRef} className={rowClassOf(active, hovered)} onMouseEnter={hover.onMouseEnter} onMouseLeave={hover.onMouseLeave}>
       <th scope="row" className="p-2 text-left font-normal">
-        <button type="button" className="text-left underline-offset-2 hover:underline" onClick={onFocus}>{label}</button>
+        <button ref={buttonRef} type="button" className="text-left underline-offset-2 hover:underline" aria-current={active ? 'true' : undefined}
+          onClick={onFocus} onFocus={hover.onFocus} onBlur={hover.onBlur}>{label}</button>
+        <RevealNote view={revealedFrom} />
       </th>
       <td className="p-2 text-muted-foreground">{describe(field.live)}</td>
       <IncomingCell field={field} edit={edit} label={label} readOnly={readOnly} onEdit={onEdit} onRevert={onRevert} />

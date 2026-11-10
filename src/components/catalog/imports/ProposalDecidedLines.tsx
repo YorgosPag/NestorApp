@@ -9,6 +9,8 @@
  *    Πηγή αλήθειας οι αποφάσεις της παρτίδας (`decidedLinesOf`), όχι η ανάγνωση. Πρακτική Akeneo SDM / Flatfile: κάθε αντιστοίχιση
  *    που ήρθε από προηγούμενη δουλειά φαίνεται και αλλάζει.
  * 🔑 Προέλευση και κατάσταση με εικονίδιο **και** λέξη (CHECK 3.41). Η αναίρεση είναι η ίδια απόφαση `null` με τις γραμμές χωρίς πεδίο.
+ * 🔑 §5.5.2 Β8: γραμμή που έχει ακόμη θέση στη σελίδα (αγνοημένη ⇒ «απορρίφθηκε» στο PDF) επιλέγεται και από εδώ και από το
+ *    πλαίσιό της· ίδια ταυτότητα (`lineTargetOf`), ίδιο hover.
  */
 
 import React from 'react';
@@ -24,6 +26,7 @@ import type { ImportProposalWire, SetImportLineRequest } from '@/subapps/catalog
 import { LINE_REFUSAL_KEYS, LINE_STATE_KEYS, useImportText } from './import-text';
 import { useLineDecisionText } from './line-decision-text';
 import type { LineActivity } from './use-line-decisions';
+import { useReviewLineItem } from './use-review-line-item';
 
 interface DecidedLinesProps {
   readonly proposal: ImportProposalWire;
@@ -35,6 +38,10 @@ interface DecidedLinesProps {
   readonly decidable: boolean;
   /** Τιμοκατάλογος + δικαίωμα τιμολόγησης: χωρίς αυτά η γραμμή τιμής φαίνεται, αλλά δεν αναιρείται από εδώ (ο server θα αρνιόταν). */
   readonly pricesEnabled?: boolean;
+  /** §5.5.2 Β8: η επιλεγμένη γραμμή (`lineKeyOf`) στον έναν κάτοχο, και η εγγραφή σε αυτόν. */
+  readonly activeLine?: string | null;
+  readonly onFocusLine?: (line: ImportPageUnmappedLine) => void;
+  readonly focusRequested?: boolean;
 }
 
 function OriginBadge({ entry }: { readonly entry: DecidedLine }) {
@@ -61,14 +68,34 @@ interface DecidedRowProps {
   readonly activity: LineActivity | undefined;
   readonly readOnly: boolean;
   readonly onUndo: () => void;
+  /** §5.5.2 Β8: η γραμμή της σελίδας, όταν υπάρχει ακόμη (αγνοημένη) — μόνο τότε έχει πλαίσιο να επιλεγεί. */
+  readonly source: ImportPageUnmappedLine | undefined;
+  readonly active: boolean;
+  readonly focusRequested: boolean;
+  readonly onFocus: (line: ImportPageUnmappedLine) => void;
 }
 
-function DecidedRow({ entry, decision, activity, readOnly, onUndo }: DecidedRowProps) {
+/** Η ετικέτα της απόφασης· κουμπί επιλογής όταν η γραμμή έχει θέση στη σελίδα (§5.5.2 Β8). */
+function DecidedTitle({ entry, decision, source, active, onFocus, buttonRef, hover }: Pick<DecidedRowProps, 'entry' | 'decision' | 'source' | 'active' | 'onFocus'> & {
+  readonly buttonRef: React.RefObject<HTMLButtonElement>;
+  readonly hover: ReturnType<typeof useReviewLineItem>['hover'];
+}) {
   const { t } = useImportText();
+  const text = `${entry.label ?? t('review.decided.lineN', { line: entry.line + 1 })} → ${decision}`;
+  if (!source) return <span className="text-sm font-medium">{text}</span>;
   return (
-    <li className="flex flex-col gap-1 rounded-md border border-border p-2">
+    <button ref={buttonRef} type="button" className="text-left text-sm font-medium underline-offset-2 hover:underline" aria-current={active ? 'true' : undefined}
+      onClick={() => onFocus(source)} onFocus={hover.onFocus} onBlur={hover.onBlur}>{text}</button>
+  );
+}
+
+function DecidedRow({ entry, decision, activity, readOnly, onUndo, source, active, focusRequested, onFocus }: DecidedRowProps) {
+  const { t } = useImportText();
+  const { itemProps, buttonRef, hover } = useReviewLineItem(entry, active, focusRequested);
+  return (
+    <li {...itemProps}>
       <span className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium">{entry.label ?? t('review.decided.lineN', { line: entry.line + 1 })} → {decision}</span>
+        <DecidedTitle entry={entry} decision={decision} source={source} active={active} onFocus={onFocus} buttonRef={buttonRef} hover={hover} />
         <span className="flex flex-wrap gap-1"><OriginBadge entry={entry} /><StateBadge entry={entry} activity={activity} /></span>
       </span>
       {entry.values.length > 0 ? <span className="text-xs text-muted-foreground">{entry.values.join(' · ')}</span> : null}
@@ -83,13 +110,17 @@ function DecidedRow({ entry, decision, activity, readOnly, onUndo }: DecidedRowP
   );
 }
 
-export function ProposalDecidedLines({ proposal, lines, overrides, activity, onDecideLine, decidable, pricesEnabled = false }: DecidedLinesProps) {
+const noFocus = () => undefined;
+
+export function ProposalDecidedLines(props: DecidedLinesProps) {
+  const { proposal, lines, overrides, activity, onDecideLine, decidable, pricesEnabled = false, activeLine = null, onFocusLine = noFocus, focusRequested = false } = props;
   const { t } = useImportText();
   const decisionText = useLineDecisionText();
   const address = pageTableAddressOf(proposal.groupKey);
   if (address === null) return null;
   const decided = decidedLinesOf(overrides, lines, address.page, address.table);
   if (decided.length === 0) return null;
+  const sources = new Map(lines.map((line) => [lineKeyOf(line), line]));
   const undo = (entry: DecidedLine) => onDecideLine(proposal, { page: entry.page, table: entry.table, line: entry.line, decision: null, bind: null });
   return (
     <section className="flex flex-col gap-2" aria-label={t('review.decided.title')}>
@@ -98,7 +129,8 @@ export function ProposalDecidedLines({ proposal, lines, overrides, activity, onD
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {decided.map((entry) => (
           <DecidedRow key={lineKeyOf(entry)} entry={entry} decision={decisionText.of(entry.decision)} activity={activity.get(lineKeyOf(entry))}
-            readOnly={!decidable || (entry.decision.kind === 'price' && !pricesEnabled)} onUndo={() => undo(entry)} />
+            readOnly={!decidable || (entry.decision.kind === 'price' && !pricesEnabled)} onUndo={() => undo(entry)}
+            source={sources.get(lineKeyOf(entry))} active={lineKeyOf(entry) === activeLine} focusRequested={focusRequested} onFocus={onFocusLine} />
         ))}
       </ul>
     </section>

@@ -13,7 +13,7 @@
 
 import React from 'react';
 
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { DatePickerField } from '@/components/ui/date-picker-field';
 import { addDaysToDateKey, addMonthsToDateKey, instantOfDateKey } from '@/lib/calendar/date-key';
 import { localDateOf } from '@/lib/date-local';
@@ -70,17 +70,17 @@ function QuickChoices({ value, onChange, start, nowMs, allowNone, disabled }: Va
     <ul className="m-0 flex list-none flex-wrap gap-1 p-0" aria-label={t('pricing.versions.quickLabel')}>
       {choices.map((choice) => (
         <li key={choice.key}>
-          <Button type="button" size="sm" variant={value === choice.value ? 'secondary' : 'outline'} aria-pressed={value === choice.value}
+          <ToggleButton type="button" size="sm" variant="outline" pressed={value === choice.value}
             disabled={disabled || isBefore(choice.value, start.earliest)} onClick={() => onChange(choice.value)}>
             {t(QUICK_LABEL_KEYS[choice.key])}
-          </Button>
+          </ToggleButton>
         </li>
       ))}
       {allowNone ? (
         <li>
-          <Button type="button" size="sm" variant={value === null ? 'secondary' : 'outline'} aria-pressed={value === null} disabled={disabled} onClick={() => onChange(null)}>
+          <ToggleButton type="button" size="sm" variant="outline" pressed={value === null} disabled={disabled} onClick={() => onChange(null)}>
             {t('pricing.versions.validFromNone')}
-          </Button>
+          </ToggleButton>
         </li>
       ) : null}
     </ul>

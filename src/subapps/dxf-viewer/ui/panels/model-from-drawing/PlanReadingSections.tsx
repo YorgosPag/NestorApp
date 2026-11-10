@@ -14,6 +14,7 @@
 import * as React from 'react';
 import { CheckCircle2, Eye, Loader2, ScanText, Send, ShieldAlert, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { formatFileSize } from '@/utils/file-validation';
@@ -173,10 +174,10 @@ function MarkingTools({ review, actions, t }: { readonly review: PlanReadingRevi
     <section className="flex flex-col gap-1.5">
       <p className={MUTED}>{t('modelFromDrawing.image.reading.instructions')}</p>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('modelFromDrawing.image.reading.toolsLabel')}>
-        <Button type="button" variant={adding ? 'default' : 'outline'} size="xs" aria-pressed={adding} disabled={busy}
+        <ToggleButton type="button" variant="outline" size="xs" pressed={adding} disabled={busy}
           onClick={actions.onToggleAddRegion} data-testid="mfd-reading-add-region">
           {t('modelFromDrawing.image.reading.addRegion')}
-        </Button>
+        </ToggleButton>
         <Button type="button" variant="ghost" size="xs" disabled={busy} onClick={actions.onReset} data-testid="mfd-reading-reset">
           {t('modelFromDrawing.image.reading.reset')}
         </Button>

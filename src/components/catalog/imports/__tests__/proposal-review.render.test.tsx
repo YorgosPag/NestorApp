@@ -1,6 +1,7 @@
 /**
  * **Ο έλεγχος πρότασης αποδίδει ό,τι είπε ο διακομιστής** (ADR-923 §5.5): η έγκριση κλειδώνει όσο υπάρχει πεδίο σε εκκρεμότητα,
- * οι αποφάσεις φεύγουν με το σταθερό κλειδί του στόχου, το κλικ εστιάζει το πεδίο για το PDF, και το εφαρμοσμένο δεν αλλάζει.
+ * οι αποφάσεις φεύγουν με το σταθερό κλειδί του στόχου, το κλικ επιλέγει το πεδίο στον έναν κάτοχο (§5.5.2 Β8), και το εφαρμοσμένο
+ * δεν αλλάζει.
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
@@ -9,6 +10,7 @@ import type { ImportProposalField, ImportProposalRow } from '@/subapps/catalog/t
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { ANY_SLOT } from '@/subapps/catalog/types/product';
 import { ProposalReview } from '../ProposalReview';
+import { fieldTargetOf, reviewTargetKey } from '../review-overlay-model';
 import { markBundlesComplete } from '@/test-utils/i18n-mock';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -45,9 +47,9 @@ const proposal = (rows: readonly ImportProposalRow[], overrides: Partial<ImportP
   ...overrides,
 });
 
-function setup(value: ImportProposalWire, batchOpen = true) {
-  const handlers = { onFocus: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
-  render(<ProposalReview proposal={value} focused={null} batchOpen={batchOpen} {...handlers} />);
+function setup(value: ImportProposalWire, batchOpen = true, selectedKey: string | null = null) {
+  const handlers = { onSelect: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
+  render(<ProposalReview proposal={value} selectedKey={selectedKey} batchOpen={batchOpen} {...handlers} />);
   return handlers;
 }
 
@@ -86,11 +88,35 @@ describe('ProposalReview', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('issues.misaligned'));
   });
 
-  it('το κλικ στο πεδίο το εστιάζει, με την άγκυρά του για το PDF', () => {
-    const value = field();
-    const { onFocus } = setup(proposal([row([value])]));
+  it('το κλικ στο πεδίο το επιλέγει στον έναν κάτοχο, με σταθερό στόχο (όχι αντικείμενο)', () => {
+    const { onSelect } = setup(proposal([row([field()])]));
     fireEvent.click(screen.getByRole('button', { name: 'Ισχύς' }));
-    expect(onFocus).toHaveBeenCalledWith(value);
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'field', proposalId: 'cipsl_1', rowKey: 'r0', targetKey: importTargetKey(target) });
+  });
+
+  it('§5.5.2 Β8: η επιλογή επιβιώνει ξαναφόρτωμα — ίδιο κλειδί, ΝΕΑ αντικείμενα ⇒ ενεργό πεδίο', () => {
+    const fresh = proposal([row([field()])]);
+    const key = reviewTargetKey(fieldTargetOf('cipsl_1', fresh.rows[0], fresh.rows[0].fields[0]));
+    setup(proposal([row([field()])]), true, key);
+    expect(screen.getByRole('button', { name: 'Ισχύς' })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('§5.5.2 Β8: πεδίο που κρύβει η προβολή αλλά επιλέχτηκε στο PDF φαίνεται, με σημείωση — το φίλτρο δεν αλλάζει', () => {
+    // Ένα σε εκκρεμότητα ⇒ αρχική προβολή «Θέλουν απόφαση», που κρύβει το αποδεκτό «Ισχύς».
+    const accepted = field();
+    const pending = field({ target: { ...target, attributeId: 'cattr_other' }, decision: 'pending' });
+    const value = proposal([row([accepted, pending])]);
+    const key = reviewTargetKey(fieldTargetOf('cipsl_1', value.rows[0], accepted));
+    setup(value, true, key);
+    expect(screen.getByRole('button', { name: 'Ισχύς' })).toBeInTheDocument();
+    expect(screen.getByText('review.overlay.revealed')).toBeInTheDocument();
+  });
+
+  it('§5.5.2 Β8: χωρίς επιλογή, η προβολή κρύβει ό,τι κρύβει — καμία σημείωση', () => {
+    const value = proposal([row([field(), field({ target: { ...target, attributeId: 'cattr_other' }, decision: 'pending' })])]);
+    setup(value);
+    expect(screen.queryByRole('button', { name: 'Ισχύς' })).not.toBeInTheDocument();
+    expect(screen.queryByText('review.overlay.revealed')).not.toBeInTheDocument();
   });
 
   it('η διόρθωση στέλνει το νέο κείμενο της πηγής, μόνο αν άλλαξε', () => {
@@ -150,8 +176,8 @@ describe('ProposalReview', () => {
   });
 
   it('σε αποθήκευση: το λέει δίπλα στην έγκριση', () => {
-    const handlers = { onFocus: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
-    render(<ProposalReview proposal={proposal([row([field()])])} focused={null} saving batchOpen {...handlers} />);
+    const handlers = { onSelect: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
+    render(<ProposalReview proposal={proposal([row([field()])])} selectedKey={null} saving batchOpen {...handlers} />);
     expect(screen.getByText('review.saving')).toBeInTheDocument();
   });
 
@@ -191,8 +217,8 @@ describe('ProposalReview', () => {
     });
 
     it('η πηγή της πρότασης (γραμμή, μονάδα, αναίρεση) αποδίδεται μέσα στην πρόταση', () => {
-      const handlers = { onFocus: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
-      render(<ProposalReview proposal={prices([priceRow()])} focused={null} batchOpen source={<p>price-source</p>} {...handlers} />);
+      const handlers = { onSelect: jest.fn(), onChange: jest.fn(), onApply: jest.fn(), onReject: jest.fn() };
+      render(<ProposalReview proposal={prices([priceRow()])} selectedKey={null} batchOpen source={<p>price-source</p>} {...handlers} />);
       expect(screen.getByText('price-source')).toBeInTheDocument();
     });
   });

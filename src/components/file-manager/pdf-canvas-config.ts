@@ -10,6 +10,7 @@
  * @enterprise ADR-031 - Canonical File Storage System
  */
 
+import type { ReactNode } from 'react';
 import type { PDFDataRangeTransport, PageViewport, TextLayer } from 'pdfjs-dist';
 import type { RefProxy, TextContent } from 'pdfjs-dist/types/src/display/api';
 
@@ -93,8 +94,13 @@ interface PdfViewerCommonProps {
   className?: string;
   /** Η σελίδα που ζητά ο καλών (έλεγχος δίπλα-δίπλα, ADR-923 §5.5.1). Απούσα ⇒ ο viewer κρατά δική του πλοήγηση. */
   page?: number;
-  /** Περιοχές επισήμανσης σε κλάσματα σελίδας (0..1), αρχή πάνω-αριστερά: ακολουθούν ζουμ και ανάλυση. */
-  highlights?: readonly PdfHighlightRegion[];
+  /**
+   * ADR-923 §5.5.2 Β8 — **στρώση του καλούντα** πάνω από τη σελίδα που φαίνεται (π.χ. τα πλαίσια κατάστασης της αναθεώρησης
+   * εισαγωγής). Καλείται με τον αριθμό της **ζωγραφισμένης** σελίδας και αποδίδεται μέσα στο `figure` της, άρα ένα SVG με
+   * `absolute inset-0` και συντεταγμένες σε κλάσματα σελίδας ακολουθεί ζουμ και ανάλυση. Ο viewer δεν ξέρει τι ζωγραφίζεται.
+   * Απούσα ⇒ καμία στρώση. (Αντικατέστησε το `highlights` — ένα στυλ, καμία αλληλεπίδραση.)
+   */
+  pageOverlay?: (page: number) => ReactNode;
   /** Στρώσεις αναγνώστη εντύπου (ADR-923 §5.15.2) — απούσες ⇒ σημερινή συμπεριφορά. */
   features?: PdfViewerFeatures;
 }

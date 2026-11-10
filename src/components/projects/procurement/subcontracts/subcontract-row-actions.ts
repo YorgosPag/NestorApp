@@ -13,6 +13,7 @@
  */
 
 import type { CalendarDay } from '@/constants/platform-operator';
+import type { ActionEmphasis } from '@/design-system/color-bridge';
 import type { AgreementLifecycleRefusal } from '@/subapps/procurement/subcontracts/agreements/agreement-lifecycle';
 import { refuseTransition } from '@/subapps/procurement/subcontracts/agreements/agreement-lifecycle';
 import {
@@ -38,6 +39,19 @@ export const DESTRUCTIVE_TRANSITIONS: ReadonlySet<SubcontractAgreementTransition
  */
 export const CONFIRMED_TRANSITIONS: ReadonlySet<SubcontractAgreementTransition> = new Set([...DESTRUCTIVE_TRANSITIONS, 'issue', 'accept']);
 
+/**
+ * **Ο κανονικός δρόμος** του εγγράφου (`draft → issued → accepted → in_execution → completed`) — η «επόμενη κίνηση».
+ * Κάθε κατάσταση έχει το πολύ **μία** από αυτές ⇒ το πολύ **ένα** κύριο κουμπί ανά οθόνη (Primer · Atlassian · Carbon:
+ * ένα primary ανά ομάδα). Το `expire` ΔΕΝ είναι δρόμος: στο `issued` στέκεται δίπλα στο `accept` ως δευτερεύον.
+ */
+const FORWARD_TRANSITIONS: ReadonlySet<SubcontractAgreementTransition> = new Set(['issue', 'accept', 'mobilize', 'complete']);
+
+/** Η έμφαση της μετάβασης (ADR-770 §19.4): δρόμος ⇒ κύρια · καταστρεπτική ⇒ μελάνι άρνησης · άλλη ⇒ δευτερεύουσα. */
+function emphasisOf(transition: SubcontractAgreementTransition): ActionEmphasis {
+  if (DESTRUCTIVE_TRANSITIONS.has(transition)) return 'caution';
+  return FORWARD_TRANSITIONS.has(transition) ? 'primary' : 'secondary';
+}
+
 /** Γιατί μια μετάβαση δεν προσφέρεται τώρα. */
 export type RowActionBlock =
   | { readonly kind: 'refusal'; readonly refusal: AgreementLifecycleRefusal }
@@ -56,6 +70,8 @@ export function blockedWhileUnsaved(actions: readonly RowAction[], unsaved: bool
 export interface RowAction {
   readonly transition: SubcontractAgreementTransition;
   readonly destructive: boolean;
+  /** Πώς φαίνεται ως κουμπί — ιδιότητα της μετάβασης, όχι του κουμπιού (`emphasisOf`). */
+  readonly emphasis: ActionEmphasis;
   /** Ζητά επιβεβαίωση πριν σταλεί (`CONFIRMED_TRANSITIONS`). */
   readonly confirm: boolean;
   readonly block: RowActionBlock | null;
@@ -95,6 +111,7 @@ export function rowActionsOf(agreement: SubcontractAgreement, context: RowAction
   ).map((transition) => ({
     transition,
     destructive: DESTRUCTIVE_TRANSITIONS.has(transition),
+    emphasis: emphasisOf(transition),
     confirm: CONFIRMED_TRANSITIONS.has(transition),
     block: blockOf(agreement, transition, context),
   }));

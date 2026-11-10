@@ -193,6 +193,20 @@
     "viewChanges": "Changes",
     "viewAll": "All",
     "viewEmpty": "No fields in this view.",
+    "overlay": {
+      "legend": "PDF box legend",
+      "layer": "Boxes around everything recognised on the page",
+      "showBoxes": "Boxes",
+      "tonePending": "Pending",
+      "toneAccepted": "Mapped",
+      "toneProblem": "Problem",
+      "toneDismissed": "Dismissed",
+      "boxLabel": "{label}, {value}, {state}",
+      "boxMore": "{count, plural, one {and # more field in the same cell} other {and # more fields in the same cell}}",
+      "cycle": "This cell feeds {total} fields · {index} of {total}",
+      "next": "Next",
+      "revealed": "Shown because you selected it in the PDF — the “{view}” view hides it."
+    },
     "nextPending": "Next needing a decision",
     "lines": {
       "title": "Source lines without a field",

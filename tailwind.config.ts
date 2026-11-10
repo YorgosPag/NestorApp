@@ -91,6 +91,14 @@ export default {
           outline: 'hsl(var(--control-outline) / <alpha-value>)',
         },
         ring: 'hsl(var(--ring))',
+        // 📄 ADR-923 §5.5.2 Β8 — σημάδια πάνω στο χαρτί του PDF (ίδια σε κάθε θέμα· τόνοι: `review-marks.ts`).
+        'paper-mark': {
+          pending: 'hsl(var(--paper-mark-pending) / <alpha-value>)',
+          accepted: 'hsl(var(--paper-mark-accepted) / <alpha-value>)',
+          problem: 'hsl(var(--paper-mark-problem) / <alpha-value>)',
+          dismissed: 'hsl(var(--paper-mark-dismissed) / <alpha-value>)',
+          selection: 'hsl(var(--paper-mark-selection) / <alpha-value>)',
+        },
         chart: {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',

@@ -21,9 +21,10 @@ export interface ProposalSummary {
   readonly unchanged: number;
 }
 
-type Bucket = keyof ProposalSummary;
+type ProposalBucket = keyof ProposalSummary;
 
-function bucketOf(field: ImportProposalField): Bucket {
+/** Ο κάδος ενός πεδίου — η **μία** ταξινόμηση· τη διαβάζουν η σύνοψη και ο χάρτης κατάστασης του PDF (§5.5.2 Β8). */
+export function bucketOf(field: ImportProposalField): ProposalBucket {
   if (field.status === 'unchanged') return 'unchanged';
   if (field.decision === 'pending') return 'pending';
   if (field.decision === 'reject') return 'rejected';
@@ -31,7 +32,7 @@ function bucketOf(field: ImportProposalField): Bucket {
 }
 
 export function summarizeProposal(rows: readonly ImportProposalRow[]): ProposalSummary {
-  const counts: Record<Bucket, number> = { pending: 0, acceptedByRule: 0, acceptedByHuman: 0, rejected: 0, unchanged: 0 };
+  const counts: Record<ProposalBucket, number> = { pending: 0, acceptedByRule: 0, acceptedByHuman: 0, rejected: 0, unchanged: 0 };
   for (const field of rows.flatMap((row) => row.fields)) counts[bucketOf(field)] += 1;
   return counts;
 }

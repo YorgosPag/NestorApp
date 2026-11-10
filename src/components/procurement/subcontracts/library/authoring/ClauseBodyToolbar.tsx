@@ -8,6 +8,7 @@
 import { Braces, List, ListOrdered, Plus, WandSparkles } from 'lucide-react';
 import { useEditorState, type Editor } from '@tiptap/react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { localizedIn } from '@/subapps/procurement/subcontracts/document/render-parameter-value';
@@ -62,12 +63,12 @@ export function ClauseBodyToolbar(props: ClauseBodyToolbarProps) {
   const state = useToolbarState(editor);
   return (
     <nav aria-label={t('subcontracts.library.authoring.body.toolbar')} className="flex flex-wrap items-center gap-2">
-      <Button type="button" size="sm" variant={state.bullet ? 'secondary' : 'ghost'} aria-pressed={state.bullet} disabled={!editor} onClick={() => editor?.chain().focus().toggleBulletList().run()}>
+      <ToggleButton type="button" size="sm" variant="ghost" pressed={state.bullet} disabled={!editor} onClick={() => editor?.chain().focus().toggleBulletList().run()}>
         <List className="mr-1 h-4 w-4" aria-hidden />{t('subcontracts.library.authoring.body.bulletList')}
-      </Button>
-      <Button type="button" size="sm" variant={state.ordered ? 'secondary' : 'ghost'} aria-pressed={state.ordered} disabled={!editor} onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
+      </ToggleButton>
+      <ToggleButton type="button" size="sm" variant="ghost" pressed={state.ordered} disabled={!editor} onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
         <ListOrdered className="mr-1 h-4 w-4" aria-hidden />{t('subcontracts.library.authoring.body.orderedList')}
-      </Button>
+      </ToggleButton>
       <ParameterMenu {...props} />
       <Button type="button" size="sm" variant="outline" disabled={state.selection === null} onClick={() => props.onNewParameter(state.selection)}>
         <WandSparkles className="mr-1 h-4 w-4" aria-hidden />{t('subcontracts.library.authoring.body.makeParameter')}

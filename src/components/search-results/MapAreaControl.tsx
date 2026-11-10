@@ -76,6 +76,7 @@ function FollowMapPill({ followMap, onFollowMapChange, hasPendingArea, onSearchH
           <Button
             type="button"
             size="sm"
+            variant="outline"
             onClick={onSearchHere}
             className={cn('shrink-0 rounded-full', COLOR_BRIDGE.action.primary)}
           >

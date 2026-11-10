@@ -7,11 +7,14 @@
  * 🔑 Με μη αποθηκευμένες αλλαγές καμία μετάβαση δεν προσφέρεται («αποθήκευσε πρώτα»): η «Έκδοση» θα πάγωνε την
  *    αποθηκευμένη εκδοχή, όχι αυτή που βλέπει ο άνθρωπος στη φόρμα του.
  * 🔑 Η ανενεργή λέει **γιατί** — με τη λέξη του γραφέα (π.χ. «απόκλιση περιμένει έγκριση»).
+ * 🔑 Η όψη = `action.emphasis` (ADR-770 §19.4): ο δρόμος κύριος (ένας ανά κατάσταση), η καταστρεπτική μόνο μελάνι —
+ *    το κόκκινο γέμισμα ανήκει στον διάλογο επιβεβαίωσης (Primer `danger` · Carbon `danger--tertiary`).
  */
 
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { blockedWhileUnsaved } from '@/components/projects/procurement/subcontracts/subcontract-row-actions';
 import { useAgreementTransition } from '@/components/projects/procurement/subcontracts/useAgreementTransition';
@@ -39,8 +42,8 @@ export function AgreementLifecycleActions({ agreement, projectId, unsaved }: Agr
         <span key={action.transition} className="flex flex-col gap-0.5">
           <Button
             type="button"
-            variant={action.destructive ? 'outline' : 'default'}
-            className={action.destructive ? 'text-destructive' : undefined}
+            variant="outline"
+            className={COLOR_BRIDGE.action[action.emphasis]}
             disabled={action.block !== null || pending}
             onClick={() => void transition.run(agreement, action)}
           >

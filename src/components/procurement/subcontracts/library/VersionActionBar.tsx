@@ -16,6 +16,7 @@ import { Check, Scale, Undo2, X, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DatePickerField } from '@/components/ui/date-picker-field';
+import { COLOR_BRIDGE, type ActionEmphasis } from '@/design-system/color-bridge';
 import { Label } from '@/components/ui/label';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -31,6 +32,8 @@ type BarAction = VersionDialog | 'markReviewed';
 
 const ICONS: Readonly<Record<BarAction, LucideIcon>> = { approve: Check, reject: X, withdraw: Undo2, markReviewed: Scale };
 const ORDER: readonly BarAction[] = ['approve', 'reject', 'withdraw', 'markReviewed'];
+/** Η έμφαση είναι ιδιότητα της πράξης (ADR-770 §19.4): ΜΙΑ κύρια — η έγκριση (GitHub «Approve»)· οι άλλες δευτερεύουσες. */
+const EMPHASIS: Readonly<Record<BarAction, ActionEmphasis>> = { approve: 'primary', reject: 'secondary', withdraw: 'secondary', markReviewed: 'secondary' };
 
 interface VersionActionBarProps {
   readonly version: SubcontractClauseVersion;
@@ -50,7 +53,7 @@ function ActionButton({ action, block, onClick }: { readonly action: BarAction; 
   const disabled = block !== null;
   return (
     <span className="flex flex-col gap-0.5">
-      <Button type="button" size="sm" variant={action === 'reject' ? 'outline' : action === 'approve' ? 'default' : 'secondary'} disabled={disabled} onClick={onClick} aria-describedby={block?.kind === 'explained' ? reasonId : undefined}>
+      <Button type="button" size="sm" variant="outline" className={COLOR_BRIDGE.action[EMPHASIS[action]]} disabled={disabled} onClick={onClick} aria-describedby={block?.kind === 'explained' ? reasonId : undefined}>
         <Icon className="mr-1 h-4 w-4" aria-hidden />
         {t(`subcontracts.library.actions.${action}`)}
         {(action === 'approve' || action === 'reject') && <kbd className="ml-2 rounded border px-1 font-mono text-[10px] opacity-70">{action === 'approve' ? 'A' : 'R'}</kbd>}
