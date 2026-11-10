@@ -141,6 +141,9 @@ describe('επίπεδο και κρίση', () => {
   it('δύο στήλες GTIN που διαφωνούν ⇒ εύρημα με την άλλη τιμή· ίδιος κωδικός σε άλλη μορφή ⇒ ένα πεδίο', () => {
     const [disputed] = settleTradeCells([tradeCell('gtin', EAN), tradeCell('gtin', '4006381333948')]);
     expect(disputed.flags.map((flag) => flag.code)).toContain('attributeRepeated');
+    // §5.5.2 Β8: η άλλη τιμή ταξιδεύει δομημένη για το κουμπί «Κράτα …».
+    expect(disputed.alternatives).toEqual([{ text: '4006381333948', anchor: null }]);
+    expect(settleTradeCells([tradeCell('gtin', EAN), tradeCell('gtin', EAN_14)])[0].alternatives).toBeUndefined();
     expect(settleTradeCells([tradeCell('gtin', EAN), tradeCell('gtin', EAN_14)])).toHaveLength(1);
   });
 });

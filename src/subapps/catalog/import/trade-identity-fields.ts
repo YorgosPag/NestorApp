@@ -14,7 +14,7 @@ import { tradeFieldKeyOf } from '../derived/trade-keys';
 import type { ImportFieldValue, ImportIssue, ImportProposalField, ImportTradeField } from '../types/catalog-import';
 import type { CatalogTradeIdentity } from '../types/product';
 import { gtinInputOf } from '../values/trade-identity';
-import type { TradeIdentityCell } from './cell-identity';
+import { flagRepeated, type TradeIdentityCell } from './cell-identity';
 import { defaultDecisionOf, proposalFieldOf, type ImportValueEquality } from './field-diff';
 import { importTargetKey, parseNoValueReasonText, plainValueEquality } from './proposal-values';
 
@@ -98,8 +98,8 @@ export function settleTradeCells(cells: readonly TradeIdentityCell[]): TradeIden
   const byField = new Map<ImportTradeField, TradeIdentityCell[]>();
   for (const cell of cells) byField.set(cell.target.field, [...(byField.get(cell.target.field) ?? []), cell]);
   return [...byField.values()].map(([first, ...rest]) => {
-    const others = rest.filter((cell) => !sameTradeText(first.target.field, first.text, cell.text)).map((cell) => cell.text);
+    const others = rest.filter((cell) => !sameTradeText(first.target.field, first.text, cell.text));
     if (others.length === 0) return first;
-    return { ...first, flags: [...first.flags, { code: 'attributeRepeated', path: first.target.field, params: { others: others.join(' · ') } }] };
+    return flagRepeated(first, first.target.field, others.map((cell) => ({ text: cell.text, anchor: cell.anchor })));
   });
 }

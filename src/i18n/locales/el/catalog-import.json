@@ -175,6 +175,8 @@
     "editedFromEmpty": "Διορθώθηκε από εσάς · το PDF είχε κενό",
     "revertEdit": "Επαναφορά στην τιμή του PDF",
     "keepEdit": "Κράτα τη διόρθωσή μου",
+    "keepValue": "Κράτα «{value}»",
+    "keepValueGroup": "Η πηγή δίνει περισσότερες τιμές για «{field}» · διάλεξε τη σωστή",
     "uncheckable": "δεν ελέγχεται: η σελίδα δεν έχει κείμενο",
     "decisionFor": "Απόφαση για «{field}»",
     "decisionPending": "Εκκρεμεί",

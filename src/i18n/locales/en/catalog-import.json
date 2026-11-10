@@ -175,6 +175,8 @@
     "editedFromEmpty": "Corrected by you · the PDF was empty",
     "revertEdit": "Restore the PDF value",
     "keepEdit": "Keep my correction",
+    "keepValue": "Keep “{value}”",
+    "keepValueGroup": "The source gives more than one value for “{field}” · choose the right one",
     "uncheckable": "not checkable: the page has no text",
     "decisionFor": "Decision for “{field}”",
     "decisionPending": "Pending",

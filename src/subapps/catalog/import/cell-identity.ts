@@ -12,7 +12,7 @@
  */
 
 import type { CatalogSchemaSnapshot } from '../derived/chain-derived';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportTarget } from '../types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportAlternative, ImportIssue, ImportTarget } from '../types/catalog-import';
 import type { AttributeValue, ProductValues } from '../types/product';
 import { uniqueValueKey } from '../values/normalize-unique';
 import { standardAmountOf } from '../values/standard-amount';
@@ -89,7 +89,16 @@ function settleRepeat(cells: readonly AttributeCell[], values: ProductValues | n
   const unanimous = readable.length === reads.length && readable.every(({ value }) => agree(value, readable[0].value, attributeId, context));
   if (others.length === 0) return winner;
   if (unanimous) return { ...winner, corroboratedBy: others.map(importCellText) };
-  return { ...winner, flags: [...winner.flags, { code: 'attributeRepeated', path: attributeId, params: { others: others.map(importCellText).join(' · ') } }] };
+  return flagRepeated(winner, attributeId, others.map((cell) => ({ text: importCellText(cell), anchor: cell.anchor })));
+}
+
+/**
+ * **Ο ένας τρόπος** να πει ένα κελί «η πηγή δίνει και άλλο» (ιδιότητες εδώ · ταυτότητα εμπορίου στο `trade-identity-fields`): το
+ * εύρημα για το μήνυμα **και** οι δομημένες εναλλακτικές για το κουμπί «Κράτα …» (§5.5.2 Β8). Το μήνυμα και τα κουμπιά λένε το ίδιο.
+ */
+export function flagRepeated<TCell extends ExtractedCell>(winner: TCell, path: string, others: readonly ImportAlternative[]): TCell {
+  const flag: ImportIssue = { code: 'attributeRepeated', path, params: { others: others.map((other) => other.text).join(' · ') } };
+  return { ...winner, flags: [...winner.flags, flag], alternatives: others };
 }
 
 /** Ένα κελί ανά στόχο, στη σειρά της πηγής. `values` = τα ζωντανά του φορέα, αν η γραμμή ταυτίστηκε. */

@@ -85,3 +85,50 @@ describe('human-edits — §5.5.2 Β6', () => {
     expect(applyHumanEdits(pdf, [], null)).toBe(pdf);
   });
 });
+
+/** Η Aries τυπώνει δύο γραμμές «ΚΩΔΙΚΟΣ» στην ίδια στήλη: δύο κελιά, **μία** διεύθυνση (§5.5.2 Β8 «Κράτα …»). */
+describe('human-edits — διεύθυνση με δύο κελιά', () => {
+  const FIRST_ANCHOR = { kind: 'cell', row: 5, column: 2 } as const;
+  const twin = (first: string, second: string): ExtractedGroup => ({
+    groupKey: 'p87:t0',
+    modelCode: null,
+    sharedCells: [],
+    pages: [87],
+    rows: [{ rowKey: 'c1', cells: [{ ...cell(first), anchor: FIRST_ANCHOR }, cell(second)] }],
+  });
+  const pdf = twin('MFP-34K1M-Q1AA1', '099-03-001');
+  const keepOf = (text: string) => recordEdits([], [{ rowKey: 'c1', targetKey: CODE_KEY, text }], pdf, STAMP);
+  const keep = keepOf('099-03-001');
+
+  it('η διόρθωση θυμάται ΟΛΑ τα κείμενα της πηγής, και ένα ενωμένο για τον άνθρωπο', () => {
+    expect(keep).toEqual([
+      { rowKey: 'c1', targetKey: CODE_KEY, text: '099-03-001', sourceText: 'MFP-34K1M-Q1AA1 · 099-03-001', sourceTexts: ['MFP-34K1M-Q1AA1', '099-03-001'], ...STAMP },
+    ]);
+  });
+
+  it('«Κράτα» ⇒ ένα κελί, αυτό που την τύπωσε (με τη δική του άγκυρα), χωρίς εύρημα — η σειρά της πηγής δεν αποφασίζει', () => {
+    expect(applyHumanEdits(pdf, keep, null).rows[0].cells).toEqual([{ ...cell('099-03-001'), confidence: 1 }]);
+    const first = applyHumanEdits(pdf, keepOf('MFP-34K1M-Q1AA1'), null).rows[0].cells;
+    expect(first).toEqual([{ ...cell('MFP-34K1M-Q1AA1'), anchor: FIRST_ANCHOR, confidence: 1 }]);
+  });
+
+  it('τιμή που δεν τύπωσε κανένα κελί ⇒ ένα κελί με την τιμή του ανθρώπου', () => {
+    expect(applyHumanEdits(pdf, keepOf('MFP-34K1M-Q1AA2'), null).rows[0].cells.map((each) => each.text)).toEqual(['MFP-34K1M-Q1AA2']);
+  });
+
+  it('η επιλογή μιας από τις δύο τιμές ΔΕΝ είναι «ίδιο με την πηγή»: η διόρθωση μένει', () => {
+    expect(keep).toHaveLength(1);
+  });
+
+  it('άλλαξε ΟΠΟΙΟΔΗΠΟΤΕ κελί της πηγής ⇒ όλα μένουν, με editSourceChanged', () => {
+    const cells = applyHumanEdits(twin('MFP-34K1M-Q1AA1', '099-03-002'), keep, null).rows[0].cells;
+    expect(cells.map((each) => each.text)).toEqual(['MFP-34K1M-Q1AA1', '099-03-002']);
+    const params = { edited: '099-03-001', was: 'MFP-34K1M-Q1AA1 · 099-03-001', now: 'MFP-34K1M-Q1AA1 · 099-03-002' };
+    for (const each of cells) expect(each.flags).toEqual([{ code: 'editSourceChanged', path: CODE_KEY, params }]);
+  });
+
+  it('η πηγή έγινε ένα κελί κάτω από διόρθωση δύο κελιών ⇒ εύρημα, όχι σιωπηλή εφαρμογή', () => {
+    const single: ExtractedGroup = { ...pdf, rows: [{ rowKey: 'c1', cells: [cell('099-03-001')] }] };
+    expect(applyHumanEdits(single, keep, null).rows[0].cells[0].flags[0]?.code).toBe('editSourceChanged');
+  });
+});

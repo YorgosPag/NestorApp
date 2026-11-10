@@ -91,9 +91,30 @@ function IncomingCell({ label, ...props }: EditProps & { readonly label: string 
           {field.issues.map((issue, index) => <li key={`${issue.code}-${index}`}>{message(issue)}</li>)}
         </ul>
       ) : null}
+      <KeepValueChoices field={field} label={label} readOnly={readOnly} onEdit={onEdit} />
       <EditNote {...props} />
       <Corroboration field={field} />
     </td>
+  );
+}
+
+/**
+ * §5.5.2 Β8: η πηγή έδωσε **περισσότερες** τιμές για το ίδιο πεδίο (`attributeRepeated`) ⇒ ένα κουμπί ανά τιμή. Το πάτημα είναι η
+ * **υπάρχουσα** διόρθωση (§5.5.2 Β6): ο κατάλογος διορθώσεων ενώνει τα κελιά της διεύθυνσης σε ένα και ο διακομιστής ξανακρίνει.
+ */
+function KeepValueChoices({ field, label, readOnly, onEdit }: Pick<EditProps, 'field' | 'readOnly' | 'onEdit'> & { readonly label: string }) {
+  const { t } = useImportText();
+  const alternatives = field.alternatives ?? [];
+  if (alternatives.length === 0) return null;
+  const values = [field.sourceText, ...alternatives.map((alternative) => alternative.text)];
+  return (
+    <p className="m-0 mt-1 flex flex-wrap items-center gap-1" role="group" aria-label={t('review.keepValueGroup', { field: label })}>
+      {values.map((value) => (
+        <Button key={value} type="button" size="sm" variant="outline" disabled={readOnly} onClick={() => onEdit(value)}>
+          {t('review.keepValue', { value })}
+        </Button>
+      ))}
+    </p>
   );
 }
 

@@ -241,6 +241,18 @@ describe('Ε2 / Ε4: χωρίς μαντεψιές', () => {
     expect(fieldOf(row, 'model_code')?.issues[0]).toMatchObject({ code: 'attributeRepeated' });
   });
 
+  it('§5.5.2 Β8: η άλλη τιμή ταξιδεύει ΔΟΜΗΜΕΝΗ, με το κελί της — ίδιο κείμενο με το μήνυμα', () => {
+    const [group] = readPage('85', page85Lines).groups;
+    const field = fieldOf(rowsAgainstLive(group, [])[0], 'model_code');
+    const codes = cellsOf(group, 'model_code').filter((cell) => cell.text !== field?.sourceText);
+    expect(field?.alternatives?.map((alternative) => alternative.text)).toEqual([field?.issues[0]?.params?.others]);
+    expect(field?.alternatives?.[0]?.anchor).toEqual(codes.find((cell) => cell.text === field?.alternatives?.[0]?.text)?.anchor);
+  });
+
+  it('§5.5.2 Β8: επιβεβαίωση (ίδιο μέγεθος σε δύο μονάδες) δεν είναι εναλλακτική', () => {
+    expect(fieldOf(rowsAgainstLive(readPage('85', page85Lines).groups[0], [])[0], 'cooling_h')?.alternatives).toBeUndefined();
+  });
+
   const size = attributesByCode.get('size');
 
   it('επιλογή με μονοσήμαντη αρχή, ανεξάρτητα από ελληνικό ή λατινικό Τ', () => {

@@ -166,6 +166,8 @@
       "field": "Πεδίο",
       "incoming": "Από την πηγή",
       "keepEdit": "Κράτα τη διόρθωσή μου",
+      "keepValue": "Κράτα «{value}»",
+      "keepValueGroup": "Η πηγή δίνει περισσότερες τιμές για «{field}» · διάλεξε τη σωστή",
       "lineDecision": {
         "axis": "Και άξονας → {attribute}",
         "ignore": "Αγνόηση",

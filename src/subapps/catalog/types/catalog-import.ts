@@ -95,6 +95,16 @@ export type SourceAnchor =
    */
   | { readonly kind: 'page'; readonly page: number; readonly regions: readonly PageRegion[]; readonly verified: boolean | null };
 
+/**
+ * Μία **άλλη** τιμή που έδωσε η πηγή για την ίδια ιδιότητα, όταν διαφωνεί με το κελί που κέρδισε (εύρημα `attributeRepeated`,
+ * ADR-923 §5.5.2 Β8). Δομημένη, όχι μέσα στο μήνυμα: ο άνθρωπος την κρατά με ένα κουμπί και βλέπει **από ποιο κελί** έρχεται.
+ */
+export interface ImportAlternative {
+  /** Το κείμενο όπως τυπώθηκε — αυτό γίνεται η διόρθωση (§5.5.2 Β6) όταν ο άνθρωπος το διαλέξει. */
+  readonly text: string;
+  readonly anchor: SourceAnchor | null;
+}
+
 // ── Η ουδέτερη μορφή κάθε πηγής ──────────────────────────────────────────────
 
 export interface ExtractedCell {
@@ -116,6 +126,8 @@ export interface ExtractedCell {
    * Επιβεβαίωση, όχι εύρημα: δεν ζητά απόφαση. Απούσα = κανένα.
    */
   readonly corroboratedBy?: readonly string[];
+  /** Άλλα κελιά που λένε **άλλο** για την ίδια ιδιότητα (εύρημα `attributeRepeated`). Απούσα = καμία. */
+  readonly alternatives?: readonly ImportAlternative[];
 }
 
 /**
@@ -209,6 +221,11 @@ export interface ImportProposalField {
   readonly decisionBy?: ImportDecisionSource;
   /** Το `ExtractedCell.corroboratedBy` του κελιού που κέρδισε: ο άνθρωπος βλέπει ότι η γραμμή Btu/h δεν χάθηκε. */
   readonly corroboratedBy?: readonly string[];
+  /**
+   * §5.5.2 Β8: το `ExtractedCell.alternatives` του κελιού που κέρδισε — οι τιμές ανάμεσα στις οποίες διαλέγει ο άνθρωπος. Απούσα σε
+   * προτάσεις παλαιότερες του Β8: τότε η μόνη ενέργεια είναι η διόρθωση.
+   */
+  readonly alternatives?: readonly ImportAlternative[];
 }
 
 export interface ImportProposalRow {
@@ -258,8 +275,13 @@ export interface ImportValueEdit {
   readonly targetKey: string;
   /** Ό,τι έγραψε ο άνθρωπος· κενό = κενό κελί. */
   readonly text: string;
-  /** Το κείμενο της πηγής τη στιγμή της διόρθωσης· `null` = κενό κελί. */
+  /** Το κείμενο της πηγής τη στιγμή της διόρθωσης, για ανάγνωση από άνθρωπο· `null` = κενό κελί. */
   readonly sourceText: string | null;
+  /**
+   * Η πηγή τύπωσε **περισσότερα από ένα** κελιά σε αυτή τη διεύθυνση (δύο γραμμές «ΚΩΔΙΚΟΣ»): όλα τα κείμενα, με τη σειρά της πηγής.
+   * Με αυτά κρίνεται αν η πηγή άλλαξε. Απόν όταν το κελί είναι ένα (Firestore δεν δέχεται `undefined`).
+   */
+  readonly sourceTexts?: readonly (string | null)[];
   readonly by: string;
   readonly at: string;
 }

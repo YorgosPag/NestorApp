@@ -13,7 +13,7 @@
 
 import type { ExtractedCell, ExtractedGroup, ImportModelCodeEdit, ImportValueEdit } from '../types/catalog-import';
 import type { ImportFieldEditInput } from '../types/catalog-import-requests';
-import { importTargetKey } from './proposal-values';
+import { importCellText, importTargetKey } from './proposal-values';
 
 /** Η διεύθυνση ενός πεδίου μέσα στην πρόταση: γραμμή × στόχος. */
 export const fieldAddress = (rowKey: string, targetKey: string): string => `${rowKey}\u0000${targetKey}`;
@@ -27,14 +27,22 @@ export interface EditStamp {
   readonly at: string;
 }
 
-function sourceTexts(group: ExtractedGroup): ReadonlyMap<string, string | null> {
-  const texts = new Map<string, string | null>();
+/** Όλα τα κείμενα της πηγής ανά διεύθυνση, με τη σειρά της. Δύο κελιά στην ίδια διεύθυνση (δύο «ΚΩΔΙΚΟΣ») ⇒ δύο κείμενα. */
+function sourceTexts(group: ExtractedGroup): ReadonlyMap<string, readonly (string | null)[]> {
+  const texts = new Map<string, readonly (string | null)[]>();
   const add = (rowKey: string, cells: readonly ExtractedCell[]): void => {
-    for (const cell of cells) texts.set(fieldAddress(rowKey, importTargetKey(cell.target)), cell.text);
+    for (const [address, same] of cellsByAddress(rowKey, cells)) texts.set(address, same.map((cell) => cell.text));
   };
   for (const row of group.rows) add(row.rowKey, row.cells);
   add(sharedRowKey(group.groupKey), group.sharedCells);
   return texts;
+}
+
+/** Τι έλεγε η πηγή, για τον άνθρωπο: ένα κείμενο, ή όλα ενωμένα όπως στο μήνυμα `attributeRepeated`. */
+function sourceOf(texts: readonly (string | null)[]): Pick<ImportValueEdit, 'sourceText' | 'sourceTexts'> {
+  if (texts.length === 1) return { sourceText: texts[0] };
+  const printed = texts.filter((text): text is string => text !== null);
+  return { sourceText: printed.length > 0 ? printed.join(' · ') : null, sourceTexts: texts };
 }
 
 const editKey = (edit: Pick<ImportValueEdit, 'rowKey' | 'targetKey'>): string => fieldAddress(edit.rowKey, edit.targetKey);
@@ -54,9 +62,10 @@ export function recordEdits(
   for (const input of inputs) {
     const key = editKey(input);
     if (!texts.has(key)) continue;
-    const sourceText = texts.get(key) ?? null;
-    if (input.revert === true || input.text === (sourceText ?? '')) edits.delete(key);
-    else edits.set(key, { rowKey: input.rowKey, targetKey: input.targetKey, text: input.text, sourceText, ...stamp });
+    const source = sourceOf(texts.get(key) ?? [null]);
+    const unchanged = source.sourceTexts === undefined && input.text === (source.sourceText ?? '');
+    if (input.revert === true || unchanged) edits.delete(key);
+    else edits.set(key, { rowKey: input.rowKey, targetKey: input.targetKey, text: input.text, ...source, ...stamp });
   }
   return [...edits.values()];
 }
@@ -77,20 +86,56 @@ export function recordModelCodeEdit(
   return { modelCode, sourceModelCode: source.modelCode, ...stamp };
 }
 
+/** Λέει η πηγή σήμερα ό,τι έλεγε όταν πάρθηκε η διόρθωση; Κρίνεται με **όλα** τα κελιά της διεύθυνσης. */
+function sourceUnchanged(edit: ImportValueEdit, cells: readonly ExtractedCell[]): boolean {
+  const now = cells.map((cell) => cell.text);
+  if (edit.sourceTexts === undefined) return now.length === 1 && now[0] === edit.sourceText;
+  return now.length === edit.sourceTexts.length && now.every((text, index) => text === edit.sourceTexts?.[index]);
+}
+
+function sourceChanged(cell: ExtractedCell, edit: ImportValueEdit, cells: readonly ExtractedCell[]): ExtractedCell {
+  const now = sourceOf(cells.map((each) => each.text)).sourceText;
+  const params = { edited: edit.text, was: edit.sourceText ?? '', now: now ?? '' };
+  return { ...cell, flags: [...cell.flags, { code: 'editSourceChanged', path: edit.targetKey, params }] };
+}
+
+/** Το κελί που κρατά τη διόρθωση: αυτό που τύπωσε ήδη την τιμή του ανθρώπου («Κράτα …»), ώστε η άγκυρα να δείχνει το σωστό σημείο. */
+const keptCell = (cells: readonly ExtractedCell[], text: string): ExtractedCell =>
+  cells.find((cell) => printsText(cell, text.trim())) ?? cells[0];
+
+/** Η τιμή όπως την τύπωσε το κελί — και με τη μονάδα της στήλης, όπως τη δείχνει η εναλλακτική (`importCellText`). */
+const printsText = ({ text, unitCode }: ExtractedCell, wanted: string): boolean =>
+  text !== null && (text.trim() === wanted || importCellText({ text, unitCode }).trim() === wanted);
+
 function editedCell(cell: ExtractedCell, edit: ImportValueEdit): ExtractedCell {
-  if (edit.sourceText !== cell.text) {
-    const params = { edited: edit.text, was: edit.sourceText ?? '', now: cell.text ?? '' };
-    return { ...cell, flags: [...cell.flags, { code: 'editSourceChanged', path: edit.targetKey, params }] };
-  }
   // Η αμφισβητούμενη μονάδα δεν ντύνει ό,τι έγραψε ο άνθρωπος: γυμνός αριθμός εκεί ξαναζητά μονάδα.
   const unitDoubted = cell.flags.some((flag) => flag.code === 'unitUnconfirmed');
   return { ...cell, text: edit.text.trim() === '' ? null : edit.text, confidence: 1, flags: [], unitCode: unitDoubted ? null : cell.unitCode };
 }
 
+function cellsByAddress(rowKey: string, cells: readonly ExtractedCell[]): Map<string, ExtractedCell[]> {
+  const byAddress = new Map<string, ExtractedCell[]>();
+  for (const cell of cells) {
+    const address = fieldAddress(rowKey, importTargetKey(cell.target));
+    byAddress.set(address, [...(byAddress.get(address) ?? []), cell]);
+  }
+  return byAddress;
+}
+
+/**
+ * Η διόρθωση ισχύει για τη διεύθυνση **ολόκληρη**: τα κελιά της γίνονται **ένα**, με την τιμή του ανθρώπου (Figma override). Έτσι η
+ * επανάληψη δεν ξανακρίνεται από τη σειρά της πηγής. Πηγή που άλλαξε ⇒ όλα τα κελιά μένουν, με εύρημα, και διαλέγει ο άνθρωπος.
+ */
 function editedCells(rowKey: string, cells: readonly ExtractedCell[], edits: ReadonlyMap<string, ImportValueEdit>): ExtractedCell[] {
-  return cells.map((cell) => {
-    const edit = edits.get(fieldAddress(rowKey, importTargetKey(cell.target)));
-    return edit === undefined ? cell : editedCell(cell, edit);
+  const byAddress = cellsByAddress(rowKey, cells);
+  return cells.flatMap((cell) => {
+    const address = fieldAddress(rowKey, importTargetKey(cell.target));
+    const edit = edits.get(address);
+    const same = byAddress.get(address) ?? [cell];
+    if (edit === undefined) return [cell];
+    if (!sourceUnchanged(edit, same)) return [sourceChanged(cell, edit, same)];
+    const kept = keptCell(same, edit.text);
+    return kept === cell ? [editedCell(cell, edit)] : [];
   });
 }
 
