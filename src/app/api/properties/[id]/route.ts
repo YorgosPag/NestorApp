@@ -41,6 +41,8 @@ import {
   applyMultiLevelDefaults,
   buildUpdateData,
   detectCancellation,
+  firestoreUpdateOf,
+  propertyAfterUpdate,
   type PropertyMutationResult,
   type PropertyPatchPayload,
 } from './property-patch-helpers';
@@ -201,7 +203,8 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
           collection: COLLECTIONS.PROPERTIES,
           docId: id,
           expectedVersion,
-          updates: updateData,
+          // ADR-249 §7.8 — RFC 7396: `null` σε πεδίο-δήλωση ⇒ διαγραφή (το ΕΝΑ σημείο μετάφρασης).
+          updates: firestoreUpdateOf(updateData),
           userId: ctx.uid,
           companion,
         });
@@ -296,7 +299,7 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
 
         // ADR-777 Α3/Α5 — η δημόσια προβολή. Awaited (όχι fire-and-forget) και ποτέ
         // δεν πετά· το «γιατί» ζει στο property-publish-projection.
-        await republishPublicProjection(adminDb, id, { ...existing, ...updateData } as ListingProperty);
+        await republishPublicProjection(adminDb, id, propertyAfterUpdate(existing, updateData) as ListingProperty);
 
         return apiSuccess<PropertyMutationResult>({ id, _v: versionResult.newVersion }, 'Property updated');
       } catch (error) {

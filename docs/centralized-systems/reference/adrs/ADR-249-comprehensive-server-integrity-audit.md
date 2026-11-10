@@ -316,6 +316,7 @@ Early validation στο route handler:
 | 2026-10-02 | **Μία λίστα κλειδωμάτων** (ADR-898 Φ3β-3, N.0.2): τα `SOLD_LOCKED_FIELDS` · `RESERVED_LOCKED_FIELDS` · `REVERT_ALLOWED_FIELDS` ήταν **δύο αντίγραφα** (server `property-field-locking.ts` + πελάτης `property-mutation-gateway.ts`, «keep both in sync»). Μετακόμισαν στο `lib/property/property-locked-fields.ts` (καθαρό) με `lockedFieldsAttempted` · `isFieldLocked`· ο καθένας ρίχνει το δικό του σφάλμα (403 / `PropertyMutationPolicyError`). Νέο κλειδωμένο πεδίο σε πώληση/μίσθωση: `objectiveValueDeclarations` (φυσικά στοιχεία). Άγκυρα `property-locked-fields.test.ts`. | Claude Code |
 | 2026-10-19 | 🔴 **Το παλιό κλειδί `status` παρέκαμπτε ΚΑΙ τους δύο φρουρούς** (ADR-777 §8.60.20.12). Το `PATCH { status: 'for-sale' }` σε πουλημένο, ενοικιασμένο ή κρατημένο ακίνητο περνούσε: το `'status'` δεν είναι στο `SOLD_LOCKED_FIELDS`, και το `validateTransactionExit` κοίταζε μόνο το `body.commercialStatus`. Μετά ο `property-write-normalizer` («reverse heal») το έκανε `commercialStatus: 'for-sale'`, και η μονάδα έβγαινε από τη συναλλαγή με τον αγοραστή ακόμη γραμμένο. Θεραπεία: το `validatePropertyFieldLockingUnlessRevert` κρίνει πλέον το σώμα **όπως θα γραφτεί** (`withCanonicalStatusKey`: σκέτο `status` ⇒ `commercialStatus`· αν υπάρχουν και τα δύο, κερδίζει το κανονικό, όπως και στον γραφέα). Άγκυρες Π1–Π4 στο `property-transaction-exit.test.ts`· Π2 = πλήρης ισοδυναμία των δύο κλειδιών (4×4 καταστάσεις). Μετάλλαξη (χωρίς τη μετατροπή): **5 κόκκινα**. | Claude Code |
 | 2026-11-10 | **Κλείδωμα κατά ΑΛΛΑΓΗ ΤΙΜΗΣ + η φόρμα στέλνει μόνο ό,τι άλλαξε** (§7, Google AIP-203 · AIP-134 · RFC 7396). Ο φρουρός έκρινε **παρουσία κλειδιού** ενώ η φόρμα ξανάστελνε πάντα `name/code/type/commercialStatus/floor/layout/orientations` ⇒ η «Αποθήκευση» σε κρατημένο/πωλημένο ακίνητο έπαιρνε **πάντα** 403. **ΝΕΟ** `lib/property/property-field-change.ts` — ο ΕΝΑΣ κριτής `samePropertyFieldValue` (ισοδυναμίες τομέα `sameAreas` · `sameEnergyCertificate` · `sameCommonCharges`, αλλιώς `serializeScalar` του `audit-diff`) + `changedPropertyFields` (μερική διόρθωση από δύο καταστάσεις). **ΝΕΟ** `judgeLockedFields` (`document` / `partial`). Server: αμετάβλητα κλειδωμένα **αφαιρούνται** από το σώμα, αλλαγμένα ⇒ 403 με ονόματα. Πελάτης: ο ίδιος κριτής στο gateway· η φόρμα περνά ΕΝΑ φίλτρο `changedPropertyUpdatesFromForm` (αντικαθιστά τα 4 σκόρπια «μόνο όταν άλλαξε»)· άδειασμα ⇒ `null`· τίποτα ⇒ καμία εγγραφή· `_v` μέσω `useVersionedSave` (`runVersionedPropertyUpdate`). Διορθώθηκε και η μπαγιάτικη γραμμή του §3. | Claude Code |
+| 2026-11-10 | **Άδειασμα πεδίου: `null` ⇒ διαγραφή** (§7.8, RFC 7396 · AIP-134). Η ζωντανή επαλήθευση του §7 βρήκε 400 στο άδειασμα κοινοχρήστων (`PropertyPatchSchema` χωρίς `null` σε `commonCharges` · `energy` · `description`). Σχήμα `.nullable()` στα τρία· **ΝΕΟ** κλειστό `PROPERTY_CLEARABLE_FIELDS` + `firestoreUpdateOf` (ΕΝΑ σημείο `null → FieldValue.delete()`, μόνο στην εγγραφή) + `propertyAfterUpdate` (η προβολή βλέπει το έγγραφο χωρίς τα σβησμένα). ΠΕΑ: το `null` περνά από το `energyDeclarationPatch` — φεύγει η αξίωση, επιβιώνουν τα legacy πεδία. Δεν άλλαξε η αποθήκευση `null` στα πεδία σύνδεσης (`floorId` · `buildingId` · …). | Claude Code |
 
 ---
 
@@ -375,3 +376,41 @@ floorId · layout · orientations` — όλα κλειδωμένα σε `sold`/`
 - Τα tests του mapper (`property-form-areas.test.ts`, `property-form-commercial.test.ts`, `property-energy-import-chain.test.ts`)
   έλεγχαν το «μόνο όταν άλλαξε» **μέσα** στον mapper· πρέπει να κρίνουν πλέον το `changedPropertyUpdatesFromForm`.
   Άγκυρα για `judgeLockedFields` / `changedPropertyFields` — εκκρεμεί (χωρίς έγκριση δεν τρέχουν tests).
+- Άγκυρες για το §7.8 (`firestoreUpdateOf` · `propertyAfterUpdate` · `energyDeclarationPatch(…, null, …)` · σχήμα με
+  `null`) — εκκρεμούν, ίδιος λόγος.
+- Το άδειασμα των `areas` **δεν** μηδενίζει τον παλιό καθρέφτη `area` (ο normalizer διαβάζει `payload.areas ??
+  existing.areas`) — ίδια συμπεριφορά με το σημερινό `gross: 0`· πρόταση, όχι διορθωμένο.
+
+### 7.8 Το άδειασμα πεδίου: `null` ⇒ ΔΙΑΓΡΑΦΗ, ένα σημείο μετάφρασης (2026-11-10)
+
+**Πώς βρέθηκε**: ζωντανή επαλήθευση του §7 στο nestorconstruct.gr («ΔΟΚΙΜΗ Ε — Πωλημένο»). Άδειασμα κοινοχρήστων ⇒
+`POST …/impact-preview` με σώμα `{"commonCharges":null}` ⇒ **400 Validation failed**. Το εισήγαγε το §7: πριν, το άδειο
+μπλοκ απλώς δεν στελνόταν (και η παλιά τιμή **δεν σβηνόταν ποτέ**).
+
+**Ρίζα**: το `PropertyPatchSchema` (κοινό σε PATCH **και** `impact-preview`) δεν δεχόταν `null` στα `commonCharges` ·
+`energy` · **`description`** (το τρίτο βρέθηκε στο audit — ίδιο σφάλμα στο άδειασμα περιγραφής). Τα υπόλοιπα
+(`condition` · `finishes` · …) περνούσαν λόγω `.passthrough()` και ο `buildUpdateData` **αποθήκευε** `null`.
+
+**Τι κάνουν οι μεγάλοι**: RFC 7396 — `null` σε merge patch = «remove the member»· Google AIP-134 — πεδίο στη μάσκα
+χωρίς τιμή = «clear»· Firestore — η αφαίρεση πεδίου είναι `FieldValue.delete()`, όχι αποθηκευμένο `null`.
+
+**SSoT audit**: δεν υπάρχει κεντρικός μεταφραστής `null → FieldValue.delete()`· το μοτίβο ζει **τοπικά**
+(`common-space-drawn-area.server.ts`, `opportunity-*.server.ts`, `soft-delete-engine.ts`). Ο γραφέας του ακινήτου
+αποθήκευε `null`. Οι αναγνώστες (`readCommonCharges` · `readEnergyCertificate` · `sameAreas`) δίνουν για απουσία ό,τι
+και για `null` ⇒ η διαγραφή είναι ασφαλής για αυτούς.
+
+**Λύση** (`app/api/properties/[id]/property-patch-helpers.ts`):
+- Σχήμα: `.nullable()` στα `commonCharges` · `energy` · `description` (το `transform` δεν τρέχει σε `null`).
+- `PROPERTY_CLEARABLE_FIELDS` — **κλειστό** σύνολο πεδίων-δηλώσεων που η φόρμα μπορεί να αδειάσει: `description ·
+  condition · areas · energy · commonCharges · systemsOverride · finishes · interiorFeatures · securityFeatures`.
+  ⚠️ **Όχι «κάθε `null`»**: `floor · floorId · buildingId · projectId · area · price` αποθηκεύουν `null` ως
+  «αποσυνδέθηκε», και η διαγραφή θα τα έβγαζε από ερωτήματα `where(…, '==', null)`· το `levelData` το κατέχει ο normalizer.
+- `firestoreUpdateOf(updateData)` — **το ΕΝΑ σημείο μετάφρασης**, καλείται μόνο στο `withVersionCheck`. Ως εκεί κλείδωμα ·
+  ιστορικό (`diffFieldsWithResolution`) · προεπισκόπηση βλέπουν καθαρό `null`, ποτέ το σύμβολο του SDK.
+- `propertyAfterUpdate(existing, updateData)` — το έγγραφο όπως θα είναι μετά την εγγραφή (τα σβησμένα λείπουν)· αυτό
+  παίρνει πλέον η δημόσια προβολή αντί για `{ ...existing, ...updateData }`.
+- **ΠΕΑ** (`property-energy-patch.ts`): το `null` περνά από τον **ίδιο** δρόμο με κάθε δήλωση — `readEnergyCertificate(null)`
+  = αδήλωτο ⇒ το `withEnergyPerformanceClaim` αφαιρεί την αυτο-δηλωμένη αξίωση· τα πεδία του παλιού σχήματος
+  (`certificateId` · `certificateDate` · `validUntil`) **επιβιώνουν**, αλλιώς `energy: null` ⇒ διαγραφή.
+- **Κλείδωμα**: σε πωλημένο το `energy`/`areas` είναι κλειδωμένα ⇒ `null` πάνω σε υπάρχουσα τιμή = αλλαγή ⇒ 403 (σωστό).
+  Το `commonCharges` δεν είναι κλειδωμένο ⇒ περνά.

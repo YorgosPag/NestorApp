@@ -38,7 +38,9 @@ function legacyEnergyFieldsOf(stored: unknown): Record<string, unknown> {
 /**
  * **Ό,τι γράφεται όταν το σώμα φέρει `energy`** — ή τίποτα, όταν δεν το φέρει.
  *
- * @param declared το `energy` του σώματος, **μετά** το `storedEnergyCertificateSchema` (ήδη κανονικοποιημένο)
+ * @param declared το `energy` του σώματος, **μετά** το `storedEnergyCertificateSchema` (ήδη κανονικοποιημένο)· `null` =
+ *   «σβήσε το ΠΕΑ» (ADR-249 §7.8): φεύγει η αξίωση, μένουν μόνο τα πεδία του παλιού σχήματος — ή `energy: null`, που το
+ *   `firestoreUpdateOf` κάνει διαγραφή
  * @param at η στιγμή της δήλωσης — γίνεται `assertedAt` της αξίωσης **μόνο** αν η δήλωση άλλαξε
  * @param facts τα γεγονότα του `sourceFileId` (ADR-915 Φ3β-2, `peaSourceFacts`) — η λήξη της αξίωσης από το αρχείο
  */
@@ -50,9 +52,11 @@ export function energyDeclarationPatch(
   facts: EnergySourceFacts | null = null,
 ): Record<string, unknown> {
   if (declared === undefined) return {};
-  const certificate = readEnergyCertificate(declared);
+  const certificate = readEnergyCertificate(declared); // `null` ⇒ αδήλωτο ⇒ καμία αξίωση
+  const legacy = legacyEnergyFieldsOf(existing.energy);
+  const cleared = Object.keys(legacy).length > 0 ? legacy : null;
   return {
-    energy: { ...legacyEnergyFieldsOf(existing.energy), ...certificate },
+    energy: declared === null ? cleared : { ...legacy, ...certificate },
     legality: withEnergyPerformanceClaim(readLegalityClaims(existing.legality), certificate, propertyId, at, facts),
   };
 }

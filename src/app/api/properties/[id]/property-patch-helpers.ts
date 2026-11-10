@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
@@ -54,7 +55,8 @@ export const PropertyPatchSchema = z.object({
   floorKind: z.undefined(),
   area: z.number().min(0).max(999_999).nullable().optional(),
   price: z.number().min(0).max(999_999_999).nullable().optional(),
-  description: z.string().max(5000).optional(),
+  // ADR-249 §7.8 — `null` = «σβήσε» (RFC 7396): η φόρμα στέλνει μόνο ό,τι άλλαξε, και ό,τι άδειασε φεύγει ως `null`.
+  description: z.string().max(5000).nullable().optional(),
   buildingId: z.string().max(128).nullable().optional(),
   projectId: z.string().max(128).nullable().optional(),
   companyId: z.string().max(128).nullable().optional(),
@@ -129,17 +131,19 @@ export const PropertyPatchSchema = z.object({
    *
    * 🔴 **Ρητό επειδή το σχήμα είναι `.passthrough()`** — ίδιο σκεπτικό με το `publishedMediaOrder`: χωρίς αυτή τη
    * γραμμή ένα αρνητικό ποσό ή άγνωστη παροχή θα έφτανε αυτούσιο στο έγγραφο, και από εκεί στη δημόσια αγγελία.
-   * Το `transform` το περνά από τον ΕΝΑΝ αναγνώστη ⇒ ό,τι γράφεται είναι ήδη κανονικοποιημένο.
+   * Το `transform` το περνά από τον ΕΝΑΝ αναγνώστη ⇒ ό,τι γράφεται είναι ήδη κανονικοποιημένο. `null` = «σβήσε το
+   * μπλοκ» (ADR-249 §7.8): το `transform` δεν τρέχει, τη διαγραφή την κάνει το {@link firestoreUpdateOf}.
    */
-  commonCharges: storedCommonChargesSchema.optional(),
+  commonCharges: storedCommonChargesSchema.nullable().optional(),
   /**
    * **Το ενεργειακό πιστοποιητικό** (ADR-777 §8.94) — ολόκληρο το μπλοκ, όπως το στέλνει η φόρμα.
    *
    * 🔴 **Ρητό επειδή το σχήμα είναι `.passthrough()`**: ως τώρα το `energy` περνούσε **χωρίς κανέναν έλεγχο** — μια
    * κλάση «Z» ή 40.000 kWh/m² θα έφτανε αυτούσια στο έγγραφο. Το `transform` το περνά από τον ΕΝΑΝ αναγνώστη· η
-   * διαδρομή το γράφει μέσω του `energyDeclarationPatch`, μαζί με την αξίωσή του.
+   * διαδρομή το γράφει μέσω του `energyDeclarationPatch`, μαζί με την αξίωσή του — και το `null` («σβήσε το ΠΕΑ»)
+   * περνά από τον ΙΔΙΟ δρόμο: φεύγει η αξίωση, επιβιώνουν τα πεδία του παλιού σχήματος (ADR-249 §7.8).
    */
-  energy: storedEnergyCertificateSchema.optional(),
+  energy: storedEnergyCertificateSchema.nullable().optional(),
   /**
    * **Το «διαθέσιμο από» της μονάδας** (ADR-919 §11) — ως **πρόθεση**, όχι ως γεγονός.
    *
@@ -179,7 +183,7 @@ export interface PropertyPatchPayload extends Record<string, unknown> {
   floor?: string | number;
   area?: number;
   price?: number;
-  description?: string;
+  description?: string | null;
   buildingId?: string | null;
   projectId?: string | null;
   companyId?: string | null;
@@ -277,6 +281,55 @@ export function buildUpdateData(
   }
 
   return updateData;
+}
+
+// ============================================================================
+// CLEARING — RFC 7396 `null` ⇒ διαγραφή πεδίου (ADR-249 §7.8)
+// ============================================================================
+
+/**
+ * **Τα πεδία-δηλώσεις που σβήνονται** όταν το σώμα τα φέρει ως `null` (RFC 7396 «remove» · Google AIP-134: πεδίο
+ * στη μάσκα χωρίς τιμή = «καθάρισε»).
+ *
+ * 🔑 Για αυτά η **απουσία** είναι η κανονική μορφή του «δεν δηλώθηκε» — οι αναγνώστες τους (`readCommonCharges` ·
+ * `readEnergyCertificate` · `sameAreas` · …) δίνουν για απουσία ό,τι και για `null`. Ένα αποθηκευμένο `null` δεν
+ * προσθέτει τίποτα ⇒ `FieldValue.delete()`.
+ *
+ * ⚠️ **Κλειστό σύνολο, επίτηδες — ΟΧΙ «κάθε `null`»**: τα `floor` · `floorId` · `buildingId` · `projectId` · `area` ·
+ * `price` αποθηκεύουν `null` ως τιμή *«αποσυνδέθηκε»*, και μια διαγραφή θα τα έβγαζε από ερωτήματα
+ * `where(…, '==', null)` (το Firestore δεν ευρετηριάζει απόν πεδίο). Το `levelData` το κατέχει ο normalizer (ADR-236).
+ * Είναι τα πεδία που η φόρμα ακινήτου μπορεί να αδειάσει (`property-fields-form-mapper`).
+ */
+export const PROPERTY_CLEARABLE_FIELDS: ReadonlySet<string> = new Set([
+  'description', 'condition', 'areas', 'energy', 'commonCharges',
+  'systemsOverride', 'finishes', 'interiorFeatures', 'securityFeatures',
+]);
+
+function isClearing(field: string, value: unknown): boolean {
+  return value === null && PROPERTY_CLEARABLE_FIELDS.has(field);
+}
+
+/**
+ * **Το ΕΝΑ σημείο μετάφρασης** του `null` σε διαγραφή — καλείται **μόνο** στην εγγραφή (`withVersionCheck`).
+ *
+ * Ως εκείνη τη στιγμή όλη η διαδρομή (κλείδωμα · ιστορικό · προβολή) βλέπει καθαρό `null`, ποτέ το σύμβολο του SDK.
+ */
+export function firestoreUpdateOf(updateData: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(updateData).map(([field, value]) => [field, isClearing(field, value) ? FieldValue.delete() : value]),
+  );
+}
+
+/** **Το έγγραφο όπως θα είναι μετά την εγγραφή** — τα σβησμένα πεδία λείπουν, όπως και στο Firestore. */
+export function propertyAfterUpdate(
+  existing: Readonly<Record<string, unknown>>,
+  updateData: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  const after: Record<string, unknown> = { ...existing, ...updateData };
+  for (const [field, value] of Object.entries(updateData)) {
+    if (isClearing(field, value)) delete after[field];
+  }
+  return after;
 }
 
 // ============================================================================
