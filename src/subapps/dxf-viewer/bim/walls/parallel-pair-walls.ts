@@ -26,6 +26,11 @@
  *   7. **Ένα σώμα, μία ερμηνεία**: κομμάτι που το κέντρο του πέφτει μέσα σε ήδη προτεινόμενο ορθογώνιο
  *      απορρίπτεται. Οι δύο κοντές πλευρές ενός κλειστού ορθογωνίου 4 γραμμών είναι κι αυτές «ζεύγος», αλλά το σώμα
  *      τους το εξήγησε ήδη το λεπτότερο ζεύγος.
+ *  7β. **Το κενό ανοίγματος δεν είναι τοίχος** (ADR-929 §6.15): κομμάτι που συμπίπτει με το κενό ανάμεσα σε δύο
+ *      κομμάτια **ενός** άλλου τοίχου (κενό και στις δύο παρειές = άνοιγμα, βήμα 4) είναι τα καπάκια του ανοίγματος
+ *      ζευγαρωμένα, όχι τοίχος. Συμβαίνει όταν το άνοιγμα είναι ≤ πάχος: τότε το ζεύγος των καπακιών κρίνεται πριν
+ *      από τις παρειές και το βήμα 6 δεν προλαβαίνει. Η κρίση γίνεται αφού κριθούν **όλα** τα ζεύγη, άρα δεν εξαρτάται
+ *      από τη σειρά. Ένας τοίχος σύνδεσης ανάμεσα σε **δύο διαφορετικούς** τοίχους δεν είναι κενό κανενός, και μένει.
  *   8. **Άκρα στις παρειές**: κάθε άκρο έλκεται στην παρειά του γείτονα μέσα σε `endSnapReach`
  *      (`wall-rect-end-snap.ts`), ώστε το auto-join να το πάει στον άξονα και όταν η γραμμή ήρθε από εικόνα.
  *   9. **Κανένας άξονας που δεν τον ξέρουμε** (ADR-929 §6.14, κανόνας Α): κάθε κομμάτι σχεδόν τετράγωνο
@@ -343,9 +348,36 @@ function withoutAxis(rect: DetectedRectangle): DetectedRectangle {
   return { polygon: rect.polygon, longSide: rect.longSide, shortSide: rect.shortSide, area: rect.area };
 }
 
-/** Βήματα 4–6 για ένα ζεύγος: τα κομμάτια του γίνονται ορθογώνια και καταναλώνουν παρειές και καπάκια. */
+/**
+ * Βήμα 7β (ADR-929 §6.15): τα κενά **ανάμεσα** σε διαδοχικά κομμάτια του ΙΔΙΟΥ ζεύγους, εκεί όπου καμία από τις δύο
+ * παρειές δεν έχει γραμμή, είναι ανοίγματα (βήμα 4· τα κενά κόμβων Τ τα γεφύρωσε ήδη το `bridgeJunctions`). Επιστρέφει
+ * το ορθογώνιο κάθε ανοίγματος: μήκος όσο το κενό, πλάτος όσο το πάχος του τοίχου.
+ */
+function openingVoids(c: PairCandidate, kept: readonly Interval[], tol: number): DetectedRectangle[] {
+  const touched = (span: readonly Interval[], gap: Interval) =>
+    intersectIntervals(span, [gap]).some((p) => p.hi - p.lo > tol);
+  const sorted = [...kept].sort((a, b) => a.lo - b.lo);
+  const voids: DetectedRectangle[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const gap: Interval = { lo: sorted[i - 1].hi, hi: sorted[i].lo };
+    if (gap.hi - gap.lo <= tol || touched(c.lo.span, gap) || touched(c.hi.span, gap)) continue;
+    voids.push(pieceRect(c.direction, c.lo.offset, c.hi.offset, gap));
+  }
+  return voids;
+}
+
+/** Ίδιο ορθογώνιο μέσα σε ανοχή: κάθε γωνία του `a` απέχει ≤ `tol` από κάποια γωνία του `b`. */
+function sameRect(a: DetectedRectangle, b: DetectedRectangle, tol: number): boolean {
+  return a.polygon.every((p) => b.polygon.some((q) => Math.hypot(p.x - q.x, p.y - q.y) <= tol));
+}
+
+/**
+ * Βήματα 4–6 για ένα ζεύγος: τα κομμάτια του γίνονται ορθογώνια και καταναλώνουν παρειές και καπάκια. Τα ανοίγματά
+ * του (βήμα 7β) προστίθενται στο `voids`.
+ */
 function resolvePair(
-  c: PairCandidate, options: ParallelPairOptions, field: readonly FamilyCarriers[], emitted: DetectedRectangle[],
+  c: PairCandidate, options: ParallelPairOptions, field: readonly FamilyCarriers[],
+  emitted: DetectedRectangle[], voids: DetectedRectangle[],
 ): void {
   const { lo, hi, direction } = c;
   const maxGap = options.maxThickness + options.offsetTol;
@@ -365,6 +397,7 @@ function resolvePair(
     hi.used.push({ piece, side: -1 });
   }
   if (kept.length === 0) return;
+  voids.push(...openingVoids(c, kept, options.offsetTol));
   lo.free = subtractIntervals(lo.free, kept);
   hi.free = subtractIntervals(hi.free, kept);
   for (const rect of emitted.slice(-kept.length)) {
@@ -376,8 +409,9 @@ function resolvePair(
 
 /**
  * Τοίχοι από παράλληλα ζεύγη παρειών. Τα ζεύγη **όλων** των διευθύνσεων κρίνονται μαζί, από το πλησιέστερο: τα
- * καπάκια ενός κλειστού ορθογωνίου (ζεύγος σε απόσταση = μήκος) έρχονται πάντα μετά τις παρειές του (απόσταση =
- * πάχος), όποια διεύθυνση κι αν έχουν.
+ * καπάκια ενός κλειστού ορθογωνίου (ζεύγος σε απόσταση = μήκος) έρχονται μετά τις παρειές του (απόσταση = πάχος),
+ * όποια διεύθυνση κι αν έχουν. ⚠️ ΔΕΝ ισχύει για τα καπάκια δύο τοίχων εκατέρωθεν ανοίγματος ≤ πάχος (μετρημένο,
+ * ADR-929 §6.15): εκεί το ζεύγος των καπακιών κρίνεται πρώτο. Γι' αυτό το βήμα 7β κρίνει **αφού** κριθούν όλα τα ζεύγη.
  */
 export function findWallsFromParallelPairs(
   segments: readonly RegionLineSeg[],
@@ -391,8 +425,13 @@ export function findWallsFromParallelPairs(
   for (const { direction, carriers } of field) pairCandidates(carriers, direction, options, candidates);
   candidates.sort((a, b) => a.distance - b.distance);
   const emitted: DetectedRectangle[] = [];
-  for (const c of candidates) resolvePair(c, options, field, emitted);
+  const voids: DetectedRectangle[] = [];
+  for (const c of candidates) resolvePair(c, options, field, emitted, voids);
+  // Βήμα 7β μετά από ΟΛΑ τα ζεύγη (ανεξάρτητο από τη σειρά) και πριν από το 8 (το κενό δεν γίνεται παρειά έλξης).
+  // Ανοχή: δύο άκρα από δύο ζεύγη, το καθένα με τη δική του αβεβαιότητα, όπως στο `endTol` της `resolvePair`.
+  const voidTol = options.offsetTol + 2 * options.endSnapReach;
+  const walls = emitted.filter((r) => !voids.some((v) => sameRect(r, v, voidTol)));
   // Βήμα 8 πριν από το 9: η έλξη δουλεύει με τον άξονα του ζεύγους· το 9 κρίνει το ΤΕΛΙΚΟ σχήμα, αυτό που κρίνει και ο βοηθός.
-  return snapRectEndsToFaces(emitted, options.endSnapReach)
+  return snapRectEndsToFaces(walls, options.endSnapReach)
     .map((rect) => (isNearSquare(rect, options.ambiguousAspectRatio) ? withoutAxis(rect) : rect));
 }

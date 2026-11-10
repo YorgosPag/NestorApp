@@ -133,10 +133,25 @@ describe('ADR-929 §6.14 — βήμα 9: κανένας άξονας που δε
     expect(connector?.axis).toBeUndefined();
     // Οι μακριοί κάθετοι κρατούν τον άξονά τους.
     expect(rects.filter((r) => r !== connector).every((r) => r.axis !== undefined)).toBe(true);
-    // Το σχέδιο, με τις ίδιες γραμμές, βγάζει το ίδιο κομμάτι επίσης χωρίς άξονα.
-    const drawn = at(closedRectangleStrategy(walls, TOL));
-    expect(drawn).toBeDefined();
-    expect(drawn?.axis).toBeUndefined();
+    // Το σχέδιο, με τις ίδιες γραμμές, ΔΕΝ βγάζει εδώ ορθογώνιο (μετρημένο 2026-11-10), όπως στο Π-9.
+    expect(at(closedRectangleStrategy(walls, TOL))).toBeUndefined();
+  });
+
+  // Π-12 (ADR-929 §6.15): μετρημένο στην εικόνα του σχεδίου δοκιμής, άνοιγμα 250 σε τοίχο 250 έβγαινε «τοίχος»
+  // 250 × 250 πάνω στο άνοιγμα (τα καπάκια ζευγάρωσαν πριν από τις παρειές). Η περίπτωση 200 < 250 δείχνει ότι
+  // το πρόβλημα είναι η κλάση «άνοιγμα ≤ πάχος», όχι η ισοπαλία.
+  it.each([250, 200])('Π-12 άνοιγμα %i mm σε τοίχο 250 ⇒ δύο τοίχοι, κανένας πάνω στο άνοιγμα', (opening) => {
+    const e = 1000 + opening;
+    const lines = [
+      seg('s-w', 0, 0, 1000, 0), seg('n-w', 0, 250, 1000, 250),
+      seg('s-e', e, 0, 3000, 0), seg('n-e', e, 250, 3000, 250),
+      seg('cap-0', 0, 0, 0, 250), seg('cap-w', 1000, 0, 1000, 250),
+      seg('cap-e', e, 0, e, 250), seg('cap-3', 3000, 0, 3000, 250),
+    ];
+    const rects = strategy(lines, TOL);
+    expect(rects).toHaveLength(2);
+    expect(rects.some((r) => pointInPolygon({ x: 1000 + opening / 2, y: 125 }, r.polygon))).toBe(false);
+    expect(rects.every((r) => r.axis !== undefined)).toBe(true);
   });
 
   it('Π-11 όριο του κατωφλίου: λόγος ΑΚΡΙΒΩΣ 1,75 δεν είναι «σχεδόν τετράγωνο»· 0,001 mm κάτω είναι', () => {
