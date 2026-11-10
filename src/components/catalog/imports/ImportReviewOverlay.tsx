@@ -9,10 +9,13 @@
  * 🔑 SVG **χωρίς** `viewBox`, συντεταγμένες σε **ποσοστά** της σελίδας: τα περιγράμματα (`non-scaling-stroke`) και τα σύμβολα
  *    γωνίας μένουν σε pixels οθόνης, δεν παραμορφώνονται με το ζουμ ή τη μη τετράγωνη σελίδα, και κανένα inline style (N.3).
  * 🔑 Κάθε πλαίσιο είναι **κουμπί** (`role="button"`, `aria-label`, Enter/Space, δακτύλιος `focus-visible`) — WCAG 2.1.1 / 4.1.2.
+ * 🔑 Και **χειριστήριο της σελίδας** (`PDF_PAGE_CONTROL_ATTRIBUTE`): το «χέρι» του viewer δεν πιάνει το ποντίκι πάνω του,
+ *    αλλιώς το κλικ πήγαινε στο δοχείο και το πλαίσιο δεν επιλεγόταν (μετρημένο live 2026-11-10).
  */
 
 import React, { type KeyboardEvent } from 'react';
 
+import { PDF_PAGE_CONTROL_ATTRIBUTE } from '@/components/file-manager/pdf-viewport-gestures';
 import { IMPORT_REVIEW_MARKS, type ReviewMarkGlyph, type ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
 import { REVIEW_TONE_KEYS, useImportText } from './import-text';
 import { useTargetLabeler } from './import-target-label';
@@ -37,6 +40,9 @@ const GLYPH_PATH: Readonly<Record<Exclude<ReviewMarkGlyph, 'none'>, string>> = {
 };
 
 const pct = (fraction: number): string => `${fraction * 100}%`;
+
+/** Δηλώνει το πλαίσιο χειριστήριο της σελίδας — το κλικ του είναι επιλογή, όχι σύρσιμο-χέρι. */
+const PAGE_CONTROL = { [PDF_PAGE_CONTROL_ATTRIBUTE]: '' } as const;
 
 /** Το σύμβολο γωνίας: λευκός δίσκος με περίγραμμα και σύμβολο στο χρώμα του τόνου. Κοινό με το υπόμνημα. */
 export function ReviewMarkBadge({ tone }: { readonly tone: ReviewMarkTone }) {
@@ -89,7 +95,7 @@ function ReviewBoxMark({ box, selected, onSelect }: BoxProps) {
   };
   const halo = selected ? 'stroke-paper-mark-selection/70' : hovered ? 'stroke-paper-mark-selection/40' : 'stroke-transparent group-focus-visible:stroke-paper-mark-selection';
   return (
-    <g role="button" tabIndex={0} aria-label={label} aria-current={selected ? 'true' : undefined} className="group pointer-events-auto cursor-pointer outline-none"
+    <g role="button" tabIndex={0} aria-label={label} aria-current={selected ? 'true' : undefined} {...PAGE_CONTROL} className="group pointer-events-auto cursor-pointer outline-none"
       onClick={() => onSelect(box)} onKeyDown={activate} {...hover}>
       <rect {...geometry} className={`${selected ? 'fill-paper-mark-selection/20' : 'fill-transparent'} ${halo}`}
         strokeWidth={IMPORT_REVIEW_MARKS.tones[tone].strokePx + 4} vectorEffect="non-scaling-stroke" />

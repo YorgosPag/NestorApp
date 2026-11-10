@@ -100,10 +100,19 @@ export function useTouchPinchZoom(containerRef: RefObject<HTMLElement>, sink: Zo
 }
 
 /**
- * ADR-923 §5.15.2 (Θ.2α-2) — στόχοι που **ανήκουν σε άλλη χειρονομία**: σύρσιμο πάνω σε κείμενο = επιλογή, κλικ σε σύνδεσμο
- * = σύνδεσμος (Acrobat · Chrome PDF: στο κενό της σελίδας «χέρι»). Αλλιώς το `setPointerCapture` θα έκλεβε και τα δύο.
+ * ADR-923 §5.5.2 Β8 — **χειριστήριο πάνω στη σελίδα** (π.χ. πλαίσιο αναθεώρησης): το κλικ του είναι επιλογή, όχι «χέρι».
+ * Όποιο επίπεδο του `pageOverlay` ζωγραφίζει κάτι που πατιέται το δηλώνει με αυτό το χαρακτηριστικό — ποτέ ωμό string.
+ * ⚠️ Μετρημένο live 2026-11-10: χωρίς αυτό το `setPointerCapture` έστελνε το `click` στο δοχείο ⇒ το πλαίσιο εστιαζόταν
+ *    αλλά **δεν επιλεγόταν ποτέ** με το ποντίκι (μόνο Enter/Space). Το jsdom δεν έχει pointer capture: κανένα jest δεν το βλέπει.
  */
-const PAN_EXEMPT_TARGETS = '[data-pdf-text-layer] span, [data-pdf-link]';
+export const PDF_PAGE_CONTROL_ATTRIBUTE = 'data-pdf-page-control';
+
+/**
+ * ADR-923 §5.15.2 (Θ.2α-2) — στόχοι που **ανήκουν σε άλλη χειρονομία**: σύρσιμο πάνω σε κείμενο = επιλογή, κλικ σε σύνδεσμο
+ * = σύνδεσμος, κλικ σε χειριστήριο της σελίδας = επιλογή (Acrobat · Chrome PDF: στο κενό της σελίδας «χέρι»).
+ * Αλλιώς το `setPointerCapture` θα έκλεβε και τα τρία.
+ */
+const PAN_EXEMPT_TARGETS = `[data-pdf-text-layer] span, [data-pdf-link], [${PDF_PAGE_CONTROL_ATTRIBUTE}]`;
 
 function isPanExempt(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(PAN_EXEMPT_TARGETS) !== null;
