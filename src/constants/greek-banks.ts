@@ -8,6 +8,15 @@
  *
  * @see https://www.swift.com/bsl/ - SWIFT BIC Directory
  * @see https://www.hba.gr - Ελληνική Ένωση Τραπεζών
+ *
+ * ΠΗΓΗ ΤΩΝ ΤΙΜΩΝ (επαληθεύτηκε 2026-11-10 — ΜΗΝ αλλάξεις τιμή χωρίς επίσημη πηγή):
+ * - Κωδικός τράπεζας (ψηφία 5-7 του ελληνικού IBAN) + ενεργοί φορείς: HEBIC Ένωσης Τραπεζών, έκδοση 2026
+ *   (https://www.hba.gr/En/Hebic/downloadbanks — δεν περιέχει BIC).
+ * - SWIFT BIC: HEBIC, έκδοση 2022, «Classification as to bank code» (https://www.hba.gr/Hebic/UplPDFs/2022DEN/1.pdf).
+ * - Μοναδική εξαίρεση: CrediaBank (016, πρώην Attica Bank + Pancreta, μετονομασία 07/2025) — το BIC
+ *   `ATTIGRAA` είναι της Attica στο HEBIC 2022· τη συνέχειά του επιβεβαιώνουν μόνο τρίτοι κατάλογοι.
+ * Ιστορικό: μέχρι 2026-11-10 ο κατάλογος είχε επινοημένα BIC (`PIABORAA`, `EFABORAA`, `ATABORAA`, BIC 7
+ * χαρακτήρων) και λάθος κωδικούς (Optima = 069, που είναι η Συν. Χανίων) ⇒ λάθος BIC στο EPC QR τιμολογίων.
  */
 
 import type { BankInfo } from '@/types/contacts/banking';
@@ -50,14 +59,14 @@ export const GREEK_BANKS: readonly BankInfo[] = [
     brandColor: '#0066B3'
   },
   {
-    code: 'PIABORAA',
+    code: 'PIRBGRAA',
     name: 'Τράπεζα Πειραιώς',
     country: 'GR',
     city: 'Αθήνα',
     brandColor: '#FFD700'
   },
   {
-    code: 'EFABORAA',
+    code: 'ERBKGRAA',
     name: 'Eurobank',
     country: 'GR',
     city: 'Αθήνα',
@@ -66,36 +75,41 @@ export const GREEK_BANKS: readonly BankInfo[] = [
 
   // Other Active Banks
   {
-    code: 'ATABORAA',
-    name: 'Attica Bank',
+    code: 'ATTIGRAA',
+    name: 'CrediaBank',
     country: 'GR',
     city: 'Αθήνα',
     brandColor: '#003366'
   },
   {
-    code: 'OPTIGRAA',
+    code: 'IBOGGRAA',
     name: 'Optima Bank',
     country: 'GR',
-    city: 'Αθήνα',
+    city: 'Μαρούσι',
     brandColor: '#1E3A5F'
   },
   {
-    code: 'PABORAA',
-    name: 'Παγκρήτια Τράπεζα',
+    code: 'PRXBGRAA',
+    name: 'Vivabank',
     country: 'GR',
-    city: 'Ηράκλειο',
-    brandColor: '#1E4D2B'
+    city: 'Μαρούσι'
   },
   {
-    code: 'HSBORAA',
-    name: 'HSBC Greece',
+    code: 'AEBAGRAA',
+    name: 'Aegean Baltic Bank',
     country: 'GR',
-    city: 'Αθήνα',
-    brandColor: '#DB0011'
+    city: 'Μαρούσι'
   },
   {
-    code: 'CITIGRAX',
-    name: 'Citibank Greece',
+    code: 'STIOGR21',
+    name: 'Τράπεζα Ηπείρου',
+    country: 'GR',
+    city: 'Ιωάννινα',
+    brandColor: '#2F4F4F'
+  },
+  {
+    code: 'CITIGRAA',
+    name: 'Citibank Europe',
     country: 'GR',
     city: 'Αθήνα',
     brandColor: '#003B70'
@@ -103,48 +117,48 @@ export const GREEK_BANKS: readonly BankInfo[] = [
 
   // Cooperative Banks
   {
-    code: 'CBANGRAA',
+    code: 'STXAGRA1',
     name: 'Συνεταιριστική Τράπεζα Χανίων',
     country: 'GR',
     city: 'Χανιά',
     brandColor: '#006B3F'
   },
   {
-    code: 'CBTHGRAA',
+    code: 'STTKGR21',
     name: 'Συνεταιριστική Τράπεζα Θεσσαλίας',
     country: 'GR',
-    city: 'Λάρισα',
+    city: 'Τρίκαλα',
     brandColor: '#4B0082'
   },
   {
-    code: 'CBKAGRAA',
+    code: 'STKAGRA1',
     name: 'Συνεταιριστική Τράπεζα Καρδίτσας',
     country: 'GR',
     city: 'Καρδίτσα',
     brandColor: '#228B22'
   },
-  {
-    code: 'CBIPGRAA',
-    name: 'Συνεταιριστική Τράπεζα Ηπείρου',
-    country: 'GR',
-    city: 'Ιωάννινα',
-    brandColor: '#2F4F4F'
-  },
-  {
-    code: 'CBALGRAA',
-    name: 'Συνεταιριστική Τράπεζα Κεντρικής Μακεδονίας',
-    country: 'GR',
-    city: 'Θεσσαλονίκη',
-    brandColor: '#8B0000'
-  },
 
-  // Investment / Specialized Banks
+  // Historical (no longer in HEBIC 2026 — kept so legacy IBANs/stored BICs still resolve)
   {
-    code: 'INVEBRAA',
-    name: 'Επενδυτική Τράπεζα Ελλάδος',
+    code: 'STPGGRAA',
+    name: 'Παγκρήτια Τράπεζα (πλέον CrediaBank)',
+    country: 'GR',
+    city: 'Ηράκλειο',
+    brandColor: '#1E4D2B'
+  },
+  {
+    code: 'MIDLGRAA',
+    name: 'HSBC Continental Europe, Greece',
     country: 'GR',
     city: 'Αθήνα',
-    brandColor: '#2E8B57'
+    brandColor: '#DB0011'
+  },
+  {
+    code: 'COESGR21',
+    name: 'Συνεταιριστική Τράπεζα Κεντρικής Μακεδονίας',
+    country: 'GR',
+    city: 'Σέρρες',
+    brandColor: '#8B0000'
   },
 
   // Bank of Greece (Central Bank)
@@ -193,19 +207,22 @@ export const SE_EUROPEAN_BANKS: readonly BankInfo[] = [
 export const GREEK_BANK_CODES: Record<string, string> = {
   '011': 'ETHNGRAA', // Εθνική Τράπεζα
   '014': 'CRBAGRAA', // Alpha Bank
-  '017': 'PIABORAA', // Τράπεζα Πειραιώς
-  '026': 'EFABORAA', // Eurobank
-  '016': 'ATABORAA', // Attica Bank
-  '069': 'OPTIGRAA', // Optima Bank
-  '087': 'PABORAA',  // Παγκρήτια
-  '030': 'HSBORAA',  // HSBC
-  '067': 'CITIGRAX', // Citibank
+  '016': 'ATTIGRAA', // CrediaBank (πρώην Attica Bank)
+  '017': 'PIRBGRAA', // Τράπεζα Πειραιώς
+  '026': 'ERBKGRAA', // Eurobank
+  '034': 'IBOGGRAA', // Optima Bank
+  '056': 'AEBAGRAA', // Aegean Baltic Bank
+  '057': 'PRXBGRAA', // Vivabank
+  '075': 'STIOGR21', // Τράπεζα Ηπείρου
+  '084': 'CITIGRAA', // Citibank Europe
   // Cooperative banks
-  '084': 'CBANGRAA', // Συν. Χανίων
-  '078': 'CBTHGRAA', // Συν. Θεσσαλίας
-  '083': 'CBKAGRAA', // Συν. Καρδίτσας
-  '089': 'CBIPGRAA', // Συν. Ηπείρου
-  '099': 'CBALGRAA', // Συν. Κεντρ. Μακεδονίας
+  '069': 'STXAGRA1', // Συν. Χανίων
+  '089': 'STKAGRA1', // Συν. Καρδίτσας
+  '091': 'STTKGR21', // Συν. Θεσσαλίας
+  // Historical (legacy IBANs)
+  '071': 'MIDLGRAA', // HSBC
+  '087': 'STPGGRAA', // Παγκρήτια (πλέον CrediaBank)
+  '099': 'COESGR21', // Συν. Κεντρ. Μακεδονίας
   // Bank of Greece
   '010': 'BNGRGRAA'  // Τράπεζα της Ελλάδος
 } as const;
@@ -291,7 +308,7 @@ export function getAllBanksSorted(): readonly BankInfo[] {
  * @returns Array of the 4 major Greek banks
  */
 export function getSystemicBanks(): readonly BankInfo[] {
-  const systemicCodes = ['ETHNGRAA', 'CRBAGRAA', 'PIABORAA', 'EFABORAA'];
+  const systemicCodes = ['ETHNGRAA', 'CRBAGRAA', 'PIRBGRAA', 'ERBKGRAA'];
   return GREEK_BANKS.filter(bank => systemicCodes.includes(bank.code));
 }
 
