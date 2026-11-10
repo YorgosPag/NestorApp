@@ -13,7 +13,8 @@ import { applyHomography, invertHomography, quadToQuad, rectQuad, type Homograph
 import { blankPlanRaster, type PlanRaster } from '@/lib/geometry/raster/plan-raster';
 import { straighteningRotation, warpHomography } from '@/lib/geometry/raster/raster-warp';
 import { rasterToSceneAffine } from '../../../floorplan-background/geometry/raster-scene-mapping';
-import { alignPlan, workingScaleFor } from '../alignment/align-plan';
+import { alignPlan } from '../alignment/align-plan';
+import { workingScaleFor } from '@/lib/geometry/raster/raster-warp';
 import { createPlanAligner } from '../alignment/plan-align-client';
 import { handlePlanAlign, planAlignReplyTransfer } from '../alignment/plan-align-host';
 import { DEFAULT_PLAN_SEGMENTS, extractPlanSegments, minFillPxFor } from '../segments/plan-segments';

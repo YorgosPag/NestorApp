@@ -9,6 +9,7 @@
  *   για παλιά αλλαγή ή άλλη αναγνώριση **αγνοείται**.
  * - Υπήρχε ανάγνωση AI ⇒ σβήνεται (τα ids των τμημάτων της δεν υπάρχουν πια), με **Αναίρεση ενός επιπέδου** (`undo`):
  *   επιστρέφουν αναγνώριση, σύντηξη, ανάγνωση και η όψη πριν την πρώτη αλλαγή.
+ * - Η **τοπική** ανάγνωση (OCR, Φ0.6) δεν σβήνεται: ξαναπαράγεται για τη νέα όψη (`readingFor`) — δεν δένει σε ids τμημάτων.
  *
  * 🔒 Τίποτα εδώ δεν γράφει στη σκηνή ή στον διακομιστή: η νέα πηγή γραμμών πηγαίνει στον βοηθό του ADR-911 (`publish`).
  * Zero React.
@@ -23,7 +24,9 @@ import type { PlanReadingOutcome, PlanSegmentRoleVerdict, RasterSegment } from '
 import { proposedReadingView, type PlanReadingView } from '../../bim/plan-recognition/reading/plan-reading-view';
 import { readingViewKey } from '../../bim/plan-recognition/reading/plan-reading-view-edit';
 import type { RasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
+import { isLocalOcrOutcome } from '../../bim/plan-recognition/ocr/ocr-reading';
 import {
+  belongsToRecognition,
   planRecognitionStore,
   type PlanReadingReview,
   type PlanReadingSendState,
@@ -39,6 +42,11 @@ export interface PlanSegmentMaskDeps<TSource> {
   readonly lineSource: (run: PlanRecognitionRun, fusion: PlanFusionResult) => TSource;
   /** Παράδοση στον βοηθό: πηγή που δεν ζήτησε άμεσα ο wiring. */
   readonly publish: (source: TSource) => void;
+  /**
+   * ADR-929 Φ0.6 — η ανάγνωση που **κρατά** ένα νέο `run` της ίδιας αναγνώρισης: η τοπική (OCR) ξαναπαράγεται για τη νέα
+   * όψη, χωρίς Worker. Λείπει ⇒ καμία (`null`).
+   */
+  readonly readingFor?: (run: PlanRecognitionRun) => PlanReadingOutcome | null;
 }
 
 /** Ό,τι χρειάζεται η όψη για να επιστρέψει στο σημείο πριν την πρώτη αλλαγή. */
@@ -71,8 +79,10 @@ export function createPlanSegmentMaskController<TSource>(depsOf: () => PlanSegme
   let pending: ReadingSnapshot | null = null;
   let undoable: ReadingSnapshot | null = null;
 
-  const belongs = (run: PlanRecognitionRun, root: OriginalExtraction): boolean =>
-    run.id === root.rootId || run.id.startsWith(`${root.rootId}.`);
+  const belongs = (run: PlanRecognitionRun, root: OriginalExtraction): boolean => belongsToRecognition(run.id, root.rootId);
+  /** Η ανάγνωση AI διάβασε **αυτή** την όψη ⇒ σβήνεται με την αλλαγή της (με αναίρεση). Η τοπική ακολουθεί την όψη. */
+  const isViewBound = (reading: PlanReadingOutcome | null): reading is PlanReadingOutcome =>
+    reading !== null && !isLocalOcrOutcome(reading);
 
   function setWalls(next: Partial<PlanReadingWalls>): void {
     const { review } = planRecognitionStore.get();
@@ -98,11 +108,12 @@ export function createPlanSegmentMaskController<TSource>(depsOf: () => PlanSegme
     const next: PlanRecognitionRun = {
       ...run, id: `${root.rootId}.m${++version}`, segments: extraction.segments, segmentRoles: extraction.segmentRoles, maskView,
     };
-    const fusion = depsOf().fuse(next, null);
-    if (reading !== null) undoable = pending ?? undoable;
+    const carried = depsOf().readingFor?.(next) ?? null;
+    const fusion = depsOf().fuse(next, carried);
+    if (isViewBound(reading)) undoable = pending ?? undoable;
     pending = null;
     const walls: PlanReadingWalls = { status: 'following', readingDropped: undoable !== null };
-    planRecognitionStore.patch({ run: next, fusion, reading: null, review: review ? { ...review, walls } : null });
+    planRecognitionStore.patch({ run: next, fusion, reading: carried, review: review ? { ...review, walls } : null });
     depsOf().publish(depsOf().lineSource(next, fusion));
   }
 
@@ -142,7 +153,7 @@ export function createPlanSegmentMaskController<TSource>(depsOf: () => PlanSegme
         setWalls({ status: 'following' });
         return;
       }
-      if (reading !== null) pending ??= { run, reading, view: before.view, send: before.send };
+      if (isViewBound(reading)) pending ??= { run, reading, view: before.view, send: before.send };
       if (targetKey === proposalKey) {
         adopt(root, root, undefined);
         return;

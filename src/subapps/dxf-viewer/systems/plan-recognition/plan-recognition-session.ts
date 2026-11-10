@@ -6,6 +6,9 @@
  * βοηθό του ADR-911. Κάθε νέα είσοδος (ανάγνωση, απάντηση ανθρώπου) ξανατρέχει **μόνο** τη σύντηξη, που είναι
  * καθαρή και ντετερμινιστική: ίδια είσοδος ⇒ ίδιο αποτέλεσμα, χωρίς δεύτερο ταξίδι στον Worker.
  *
+ * ADR-929 Φ0.6 — μόλις η αναγνώριση γίνει `ready`, η **τοπική ανάγνωση** (OCR στη συσκευή) ξεκινά μόνη της στο παρασκήνιο
+ * και μπαίνει από την ΙΔΙΑ πόρτα (`adoptReading`) με την ανάγνωση AI — κανένας δεύτερος δρόμος (`plan-ocr-controller.ts`).
+ *
  * 🔒 Τίποτα εδώ δεν γράφει στη σκηνή ή στον διακομιστή. Οι τοίχοι γράφονται μόνο από την έγκριση του ADR-911.
  * 🔑 Αγώνας: κάθε `run` παίρνει σειριακό αριθμό· αποτέλεσμα παλαιότερου `run` που τελειώνει αργότερα **αγνοείται**.
  *
@@ -26,7 +29,7 @@ import type { FloorplanBackground } from '../../floorplan-background/providers/t
 import type { ProposalLineSource } from '../model-from-drawing/proposal-line-source';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { sha256Hex } from '@/lib/hash/sha256';
-import { planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
+import { OCR_IDLE, planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
 import { meetsConfidenceTier } from './plan-confidence';
 import { emptyRoleMarkCounts, planRoleMarkKind, type PlanRoleMarkKind } from './plan-role-marks';
 import { extensionAnchorMap, isWallCandidateRole, segmentRoleMap } from '../../bim/plan-recognition/classify/segment-roles';
@@ -36,15 +39,26 @@ import { createPlanScaleController, type PlanScaleControllerDeps } from './plan-
 import { createPlanSegmentMaskController, type PlanSegmentMaskDeps } from './plan-segment-mask-controller';
 import { commitCalibration } from '../../floorplan-background/services/commit-calibration';
 import { createExternalStore } from '../../stores/createExternalStore';
+import { createPlanOcrReader, type PlanOcrReader } from '../../bim/plan-recognition/ocr/plan-ocr-client';
+import { resolveOcrAssets } from '../../bim/plan-recognition/ocr/ocr-model-assets';
+import { localOcrModelId } from '../../bim/plan-recognition/ocr/ocr-reading';
+import { createPlanOcrController, type PlanOcrControllerDeps } from './plan-ocr-controller';
 
 export type RasterLineSource = Extract<ProposalLineSource, { kind: 'raster' }>;
 
 let aligner: PlanAligner | null = null;
+let ocrReader: PlanOcrReader | null = null;
 let runSequence = 0;
 
 function alignerInstance(): PlanAligner {
   aligner ??= createPlanAligner();
   return aligner;
+}
+
+/** ADR-929 Φ0.6 — ένας αναγνώστης κειμένων ανά επεξεργαστή (ο Worker του γεννιέται στην πρώτη ανάγνωση). */
+function ocrReaderInstance(): PlanOcrReader {
+  ocrReader ??= createPlanOcrReader();
+  return ocrReader;
 }
 
 /** Το είδος εισόδου της σύντηξης: PDF ⇒ σελίδα PDF· αλλιώς ό,τι έκρινε η δυαδοποίηση (σάρωση · αγγελία). */
@@ -136,11 +150,14 @@ function nextLineSource(run: PlanRecognitionRun, fusion: PlanFusionResult): Rast
  */
 const publishedLineSource = createExternalStore<RasterLineSource | null>(null);
 
+const publishLineSource = (source: RasterLineSource): void => publishedLineSource.set(source);
+
 const DEFAULT_MASK_DEPS: PlanSegmentMaskDeps<RasterLineSource> = {
   extractor: () => alignerInstance(),
   fuse,
   lineSource: nextLineSource,
-  publish: (source) => publishedLineSource.set(source),
+  publish: publishLineSource,
+  readingFor: (run) => ocrController.readingFor(run),
 };
 let maskDeps = DEFAULT_MASK_DEPS;
 
@@ -174,6 +191,18 @@ const DEFAULT_REVIEW_DEPS: PlanReadingReviewDeps<RasterLineSource> = {
 };
 let reviewDeps = DEFAULT_REVIEW_DEPS;
 
+const DEFAULT_OCR_DEPS: PlanOcrControllerDeps<RasterLineSource> = {
+  reader: () => ocrReaderInstance(),
+  raster: (floorId) => getFloorProvider(floorId)?.getPlanRaster() ?? null,
+  model: () => localOcrModelId(resolveOcrAssets()),
+  adoptReading,
+  publish: publishLineSource,
+};
+let ocrDeps = DEFAULT_OCR_DEPS;
+
+/** ADR-929 Φ0.6 — η τοπική ανάγνωση στο παρασκήνιο — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
+const ocrController = createPlanOcrController<RasterLineSource>(() => ocrDeps);
+
 /** Ο έλεγχος της όψης πριν την αποστολή — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
 const readingReview = createPlanReadingReview<RasterLineSource>(() => reviewDeps);
 
@@ -198,7 +227,10 @@ const scaleController = createPlanScaleController<RasterLineSource>(() => scaleD
 function fail(failure: PlanRecognitionFailure): null {
   readingReview.end();
   segmentMask.track(null, null);
-  planRecognitionStore.patch({ phase: 'idle', run: null, fusion: null, reading: null, failure, scaleHoverTextId: null });
+  ocrController.reset();
+  planRecognitionStore.patch({
+    phase: 'idle', run: null, fusion: null, reading: null, failure, scaleHoverTextId: null, ocr: OCR_IDLE,
+  });
   return null;
 }
 
@@ -210,12 +242,13 @@ export const planRecognitionSession = {
   async run(floorId: string): Promise<RasterLineSource | null> {
     const sequence = ++runSequence;
     readingReview.end(); // νέα αναγνώριση ⇒ η όψη της παλιάς δεν σημαίνει τίποτα
+    ocrController.reset(); // …και η τοπική της ανάγνωση
     const background = getFloorBackground(floorId);
     const provider = getFloorProvider(floorId);
     if (!background || !provider) return fail('no-background');
     const raster = provider.getPlanRaster();
     if (!raster) return fail('no-pixels');
-    planRecognitionStore.patch({ phase: 'running', failure: null });
+    planRecognitionStore.patch({ phase: 'running', failure: null, ocr: OCR_IDLE });
     const knownScale = resolveRasterPixelScale(background);
     const reply = await alignerInstance().align(raster, { segments: { scale: knownScale } });
     if (sequence !== runSequence || reply.kind === 'superseded') return null;
@@ -235,7 +268,10 @@ export const planRecognitionSession = {
     };
     const fusion = fuse(run, null);
     segmentMask.track(run, knownScale);
-    planRecognitionStore.patch({ phase: 'ready', run, reading: null, fusion, failure: null, scaleHoverTextId: null });
+    planRecognitionStore.patch({
+      phase: 'ready', run, reading: null, fusion, failure: null, scaleHoverTextId: null, ocr: OCR_IDLE,
+    });
+    void ocrController.start(run); // Φ0.6: αυτόματα, στο παρασκήνιο — τίποτα δεν φεύγει από τη συσκευή
     return nextLineSource(run, fusion);
   },
 
@@ -268,14 +304,22 @@ export const planRecognitionSession = {
    */
   scale: scaleController,
 
-  /** Κλείσιμο: σβήνει το αποτέλεσμα, ακυρώνει ό,τι τρέχει, τερματίζει τον Worker. */
+  /**
+   * ADR-929 Φ0.6 — η τοπική ανάγνωση που ξεκινά μόνη της μετά την αναγνώριση: `cancel` («Ακύρωση») · `retry` («Ξανά»).
+   */
+  ocr: { cancel: () => ocrController.cancel(), retry: () => ocrController.retry() },
+
+  /** Κλείσιμο: σβήνει το αποτέλεσμα, ακυρώνει ό,τι τρέχει, τερματίζει τους Workers. */
   close(): void {
     runSequence += 1;
     readingReview.end();
     segmentMask.track(null, null);
+    ocrController.reset();
     planRecognitionStore.reset();
     aligner?.dispose();
     aligner = null;
+    ocrReader?.dispose();
+    ocrReader = null;
   },
 };
 
@@ -292,6 +336,11 @@ export function __setPlanScaleDepsForTests(next: Partial<PlanScaleControllerDeps
 /** Μόνο για tests: ψεύτικες εξαρτήσεις των τοίχων που ακολουθούν την όψη (Worker). `null` ⇒ οι πραγματικές. */
 export function __setPlanSegmentMaskDepsForTests(next: Partial<PlanSegmentMaskDeps<RasterLineSource>> | null): void {
   maskDeps = next ? { ...DEFAULT_MASK_DEPS, ...next } : DEFAULT_MASK_DEPS;
+}
+
+/** Μόνο για tests: ψεύτικες εξαρτήσεις της τοπικής ανάγνωσης (Worker, pixel, μητρώο). `null` ⇒ οι πραγματικές. */
+export function __setPlanOcrDepsForTests(next: Partial<PlanOcrControllerDeps<RasterLineSource>> | null): void {
+  ocrDeps = next ? { ...DEFAULT_OCR_DEPS, ...next } : DEFAULT_OCR_DEPS;
 }
 
 /** Μόνο για tests: ψεύτικος ευθυγραμμιστής (Worker-less). */

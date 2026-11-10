@@ -21,15 +21,26 @@
 import { sha256Hex } from '@/lib/hash/sha256';
 import type { OcrAsset } from './ocr-model-assets';
 
-/** Το όνομα του δικού μας cache — εκδομένο: αλλαγή σχήματος = νέο όνομα. */
+/**
+ * Το όνομα του δικού μας cache — εκδομένο: αλλαγή σχήματος = νέο όνομα.
+ * ⚠️ Το ίδιο όνομα ζει στο `PRESERVED_CACHES` του `public/sw.js` (ο SW δεν εισάγει TS): αλλαγή εδώ ⇒ και εκεί.
+ */
 export const OCR_MODEL_CACHE = 'nestor-models-v1';
 
 export type OcrAssetErrorCode = 'http' | 'integrity';
 
+/** Το πρόθεμα του μηνύματος: περνά το σύνορο του Worker ως κείμενο (`isOcrAssetFailure`). */
+const OCR_ASSET_ERROR_PREFIX = 'ocr-asset/';
+
+/** ADR-929 Φ0.6 — το σφάλμα του RPC (κείμενο) λέει «τα μοντέλα δεν ήρθαν ή δεν επαληθεύτηκαν»; */
+export function isOcrAssetFailure(error: string): boolean {
+  return error.startsWith(OCR_ASSET_ERROR_PREFIX);
+}
+
 /** Ο πόρος δεν είναι αυτός που δηλώνει το μητρώο (ή δεν ήρθε) ⇒ η ανάγνωση **δεν** ξεκινά. */
 export class OcrAssetError extends Error {
   constructor(readonly code: OcrAssetErrorCode, detail: string) {
-    super(`ocr-asset/${code}: ${detail}`);
+    super(`${OCR_ASSET_ERROR_PREFIX}${code}: ${detail}`);
     this.name = 'OcrAssetError';
   }
 }

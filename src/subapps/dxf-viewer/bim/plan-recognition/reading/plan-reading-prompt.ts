@@ -18,9 +18,8 @@ Your job is the semantics that only reading can give:
    kind: "dimension" (a written length, e.g. 3.50, 350, 2,85), "room-name" (ΣΑΛΟΝΙ, ΚΟΥΖΙΝΑ, Υ/Δ, WC…),
    "area" (24 τ.μ., 24 m²), "scale" (1:100, Κλ. 1:50), "title" (drawing title), "opening-size" (door/window labels such as
    0.80/2.20 or 1.30/2.20 inside a small circle or box: width/height), "other" (anything else: street names, section marks, levels).
-2. dimensions: for each dimension text, its length in millimetres and the segment ids it measures.
-   Greek plans write metres with two decimals (3.50 = 3500 mm); a bare integer of 2-3 digits is usually centimetres (350 = 3500 mm).
-   If you cannot tell the unit, valueMm = null. segmentIds = the TWO segments between which the distance is measured: the faces
+2. dimensions: for each dimension text, the segment ids it measures. Do not convert the value: the raw text is enough.
+   segmentIds = the TWO segments between which the distance is measured: the faces
    at the two ends of the measurement, PERPENDICULAR to its direction (a horizontal "3.75" across a room = the left and the right
    wall faces, both vertical). Never the wall the dimension line runs along. Give both ids or an empty list, never one.
 3. writtenScale: only if a scale like 1:100 is written in the given area; denominator = 100.

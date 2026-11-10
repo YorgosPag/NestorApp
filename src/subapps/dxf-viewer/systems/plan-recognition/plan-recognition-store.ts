@@ -10,7 +10,8 @@
  *
  * ⚠️ ΕΝΑΣ γραφέας: `plan-recognition-session.ts` (μαζί με τα υπο-modules του: `plan-reading-review.ts` ως
  *   `planRecognitionSession.review` — ADR-929 Φ5.3β · `plan-scale-controller.ts` ως `planRecognitionSession.scale` — Φ5.3γ ·
- *   `plan-segment-mask-controller.ts`, οι τοίχοι που ακολουθούν την όψη, μέσω του `review` — §6.10 Α2).
+ *   `plan-segment-mask-controller.ts`, οι τοίχοι που ακολουθούν την όψη, μέσω του `review` — §6.10 Α2 ·
+ *   `plan-ocr-controller.ts` ως `planRecognitionSession.ocr`, η τοπική ανάγνωση — Φ0.6).
  *
  * @see ./plan-recognition-session.ts
  * @see ../../components/dxf-layout/PlanRecognitionOverlay.tsx (καταναλωτής καμβά)
@@ -57,6 +58,19 @@ export interface PlanRecognitionRun {
    * πρόταση της ευθυγράμμισης (η αρχική εξαγωγή). Ό,τι βλέπει ο άνθρωπος στην όψη, αυτό μετρά για τους τοίχους.
    */
   readonly maskView?: PlanReadingView;
+}
+
+/**
+ * Ανήκει το `run` στην αναγνώριση `rootId`; Η ίδια αναγνώριση ή μια όψη της (`${rootId}.m…`, §6.10 Α2) — ο ΕΝΑΣ κανόνας
+ * για τους τοίχους που ακολουθούν την όψη και για την τοπική ανάγνωση.
+ */
+export function belongsToRecognition(runId: string, rootId: string): boolean {
+  return runId === rootId || runId.startsWith(`${rootId}.`);
+}
+
+/** Η αναγνώριση από την οποία βγήκε ένα `run` (το `run` της ίδιας, ή μιας όψης της). */
+export function recognitionRootId(runId: string): string {
+  return runId.split('.')[0] ?? runId;
 }
 
 // ─── ADR-929 Φ5.3β: η όψη που ελέγχει ο άνθρωπος πριν φύγει ───────────────────────────────────────────────────────
@@ -134,6 +148,27 @@ export interface PlanReadingReview {
   readonly walls: PlanReadingWalls;
 }
 
+// ─── ADR-929 Φ0.6: η τοπική ανάγνωση (OCR στη συσκευή) ────────────────────────────────────────────────────────────
+
+/** Το στάδιο της τοπικής ανάγνωσης: φόρτωση μοντέλων · ανίχνευση κειμένων · ανάγνωση κουτιών. */
+export type PlanOcrStage = 'load' | 'detect' | 'read';
+
+/** Γιατί δεν βγήκε τοπική ανάγνωση — ΠΑΝΤΑ με όνομα (Δ16 #4). */
+export type PlanOcrFailure = 'no-pixels' | 'worker-unavailable' | 'models-unavailable' | 'ocr-failed';
+
+/**
+ * `idle` — δεν ξεκίνησε · `running` — σε εξέλιξη (`stage: null` πριν την πρώτη αναφορά προόδου) · `done` — τα κείμενα
+ * διαβάστηκαν (η ανάγνωση ζει στο `reading`) · `cancelled` — από τον άνθρωπο · `failed` — με λόγο.
+ */
+export type PlanOcrState =
+  | { readonly status: 'idle' }
+  | { readonly status: 'running'; readonly stage: PlanOcrStage | null; readonly done: number; readonly total: number }
+  | { readonly status: 'done' }
+  | { readonly status: 'cancelled' }
+  | { readonly status: 'failed'; readonly reason: PlanOcrFailure };
+
+export const OCR_IDLE: PlanOcrState = { status: 'idle' };
+
 export interface PlanRecognitionState {
   readonly phase: PlanRecognitionPhase;
   readonly run: PlanRecognitionRun | null;
@@ -145,10 +180,12 @@ export interface PlanRecognitionState {
   readonly review: PlanReadingReview | null;
   /** ADR-929 Φ5.3γ — η διάσταση που δείχνει ο άνθρωπος στην κάρτα κλίμακας (επισήμανση στον καμβά). */
   readonly scaleHoverTextId: string | null;
+  /** ADR-929 Φ0.6 — η τοπική ανάγνωση που τρέχει αυτόματα μετά την αναγνώριση. */
+  readonly ocr: PlanOcrState;
 }
 
 const IDLE: PlanRecognitionState = {
-  phase: 'idle', run: null, reading: null, fusion: null, failure: null, review: null, scaleHoverTextId: null,
+  phase: 'idle', run: null, reading: null, fusion: null, failure: null, review: null, scaleHoverTextId: null, ocr: OCR_IDLE,
 };
 
 const store = createExternalStore<PlanRecognitionState>(IDLE, { equals: Object.is });

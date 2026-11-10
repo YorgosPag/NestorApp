@@ -209,8 +209,8 @@ export function ModelFromDrawingHost({ levelManager }: ModelFromDrawingHostProps
   React.useEffect(() => EventBus.on('dxf:model-from-drawing-requested', start), [start]);
   useSceneSync(state.pendingSample, levelManager.currentLevelId, getDeps, getOpeningDeps);
 
-  const { imageSource, recognizeImage, reading, scale } = usePlanRecognitionWiring(state, getDeps);
-  const actions = usePanelActions(start, getDeps, getOpeningDeps, recognizeImage, { reading, scale });
+  const { imageSource, recognizeImage, reading, scale, ocr } = usePlanRecognitionWiring(state, getDeps);
+  const actions = usePanelActions(start, getDeps, getOpeningDeps, recognizeImage, { reading, scale, ocr });
 
   if (state.phase === 'closed') return null;
   return <ModelFromDrawingPanel state={state} actions={actions} imageSource={imageSource} />;
@@ -226,9 +226,9 @@ function usePanelActions(
   getDeps: () => ModelFromDrawingDeps,
   getOpeningDeps: () => OpeningSessionDeps,
   recognizeImage: () => void,
-  image: Pick<ModelFromDrawingPanelActions, 'reading' | 'scale'>,
+  image: Pick<ModelFromDrawingPanelActions, 'reading' | 'scale' | 'ocr'>,
 ): ModelFromDrawingPanelActions {
-  const { reading, scale } = image;
+  const { reading, scale, ocr } = image;
   return React.useMemo((): ModelFromDrawingPanelActions => ({
     onClose: () => modelFromDrawingSession.close(),
     onResample: start,
@@ -248,5 +248,6 @@ function usePanelActions(
     onRecognizeImage: recognizeImage,
     reading,
     scale,
-  }), [start, getDeps, getOpeningDeps, recognizeImage, reading, scale]);
+    ocr,
+  }), [start, getDeps, getOpeningDeps, recognizeImage, reading, scale, ocr]);
 }

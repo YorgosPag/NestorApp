@@ -31,6 +31,7 @@ import {
 import type { WallEvidenceExclusions } from '../../../systems/plan-recognition/plan-recognition-session';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 import type { PlanScaleView } from './PlanScaleCard';
+import type { PlanOcrView } from './PlanOcrSection';
 
 /** Ό,τι χρειάζεται το πάνελ για την πηγή εικόνα — υπολογισμένο από τον host. */
 export interface ImageSourceView {
@@ -56,6 +57,8 @@ export interface ImageSourceView {
   readonly review: PlanReadingReview | null;
   /** ADR-929 Φ5.3γ — η κάρτα κλίμακας από τις διαβασμένες διαστάσεις. */
   readonly scale: PlanScaleView;
+  /** ADR-929 Φ0.6 — η τοπική ανάγνωση τιμών (OCR στη συσκευή). */
+  readonly ocr: PlanOcrView;
 }
 
 /** Κάθε αποτυχία με ΡΗΤΟ κλειδί (CHECK 3.8). */

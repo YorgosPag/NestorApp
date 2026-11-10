@@ -52,6 +52,14 @@ function intersects(a: AlignedRectPx, b: AlignedRectPx): boolean {
   return a.minX < b.maxX && b.minX < a.maxX && a.minY < b.maxY && b.minY < a.maxY;
 }
 
+/**
+ * **Μετρά** αυτό το σημείο της ευθυγραμμισμένης εικόνας στην όψη; Μέσα στο crop **και** έξω από κάθε περιοχή απόκρυψης.
+ * Ο ΕΝΑΣ κανόνας για τμήματα (μέσο) και κείμενα του τοπικού OCR (κέντρο): ό,τι βλέπει ο άνθρωπος, αυτό μετρά (§6.10 Α2).
+ */
+export function isInReadingView(view: PlanReadingView, point: PlanePoint): boolean {
+  return contains(view.crop, point) && !view.redacted.some((r) => contains(r, point));
+}
+
 /** Crop χωρίς εμβαδόν ή με κλασματικά όρια δεν είναι όψη: σφάλμα του καλούντος, όχι κενή ανάγνωση. */
 export function assertReadingView(view: PlanReadingView): void {
   const { minX, minY, maxX, maxY } = view.crop;
@@ -108,7 +116,7 @@ export function viewSegmentsOf(
     const a = applyHomography(originalToAligned, s.start.x, s.start.y);
     const b = applyHomography(originalToAligned, s.end.x, s.end.y);
     const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    if (!contains(view.crop, mid) || view.redacted.some((r) => contains(r, mid))) continue;
+    if (!isInReadingView(view, mid)) continue;
     const va = alignedToView(a, view);
     const vb = alignedToView(b, view);
     out.push({ id: s.id, x0: Math.round(va.x), y0: Math.round(va.y), x1: Math.round(vb.x), y1: Math.round(vb.y), style: s.style });

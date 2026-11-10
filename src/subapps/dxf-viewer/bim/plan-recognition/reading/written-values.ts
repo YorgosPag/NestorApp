@@ -3,10 +3,11 @@
  * ετικέτα ανοίγματος, από το κείμενο **όπως γράφτηκε**.
  *
  * 🔑 Ο κανόνας μονάδων ζούσε σε δύο σημεία: στο prompt του VLM (`plan-reading-prompt.ts`, οδηγία προς το μοντέλο) και
- *   μέσα στο `fusion/dimension-precision.ts` (`[1000, 10, 1]` + δικό του regex αριθμού). Εδώ ζει πλέον μία φορά.
+ *   μέσα στο `fusion/dimension-precision.ts` (`[1000, 10, 1]` + δικό του regex αριθμού). Εδώ ζει πλέον μία φορά· από τη
+ *   Φ0.6 ούτε το VLM δίνει mm (σχήμα v2): δίνει το κείμενο, και η τιμή βγαίνει από το `writtenLengthsMm`.
  * 🔑 Τα ελληνικά σχέδια γράφουν μέτρα με δύο δεκαδικά («3.50» = 3500 mm). Ένας **σκέτος ακέραιος** («350», «20») ΔΕΝ λέει
  *   μόνος του τη μονάδα του: τη λέει το σχέδιο (`inferBareIntegerUnit`). Χωρίς απόδειξη ⇒ `null`, ποτέ μαντεψιά: το κείμενο
- *   μένει ορατό, απλώς δεν γίνεται περιορισμός του λύτη (ίδια συμπεριφορά με το `valueMm = null` του VLM).
+ *   μένει ορατό, απλώς δεν γίνεται περιορισμός του λύτη.
  * ⚠️ Ο εκθέτης των ελληνικών σχεδίων («3.50⁵») δεν αναγνωρίζεται ακόμα: το κείμενο δεν ταιριάζει ⇒ `null`.
  *
  * @module subapps/dxf-viewer/bim/plan-recognition/reading/written-values
@@ -76,6 +77,16 @@ export function parseDimensionValue(raw: string, bareIntegerUnit: BareIntegerUni
 export function inferBareIntegerUnit(dimensionRaws: readonly string[]): BareIntegerUnit {
   const writesMetres = dimensionRaws.some((raw) => parseDimensionValue(raw, null)?.unit === 'm');
   return writesMetres ? 'cm' : null;
+}
+
+/**
+ * ADR-929 Φ0.6 — τα μήκη σε mm **όλων** των κειμένων διαστάσεων ενός σχεδίου, με τη μονάδα των σκέτων ακεραίων κριμένη
+ * **μία φορά** από το ίδιο σύνολο. Ο ΕΝΑΣ δρόμος και για τους δύο αναγνώστες (τοπικό OCR · VLM): ο αναγνώστης λέει μόνο
+ * τι γράφει, την τιμή τη βγάζει ο κανόνας. `null` = δεν είναι μήκος, ή η μονάδα δεν αποδεικνύεται.
+ */
+export function writtenLengthsMm(dimensionRaws: readonly string[]): (number | null)[] {
+  const bareIntegerUnit = inferBareIntegerUnit(dimensionRaws);
+  return dimensionRaws.map((raw) => parseDimensionValue(raw, bareIntegerUnit)?.valueMm ?? null);
 }
 
 /** «1:100», «Κλ. 1:50», «ΚΛΙΜΑΚΑ 1 : 200» ⇒ ο παρονομαστής. */

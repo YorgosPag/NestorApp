@@ -7,13 +7,14 @@
  *   `modelFromDrawingSession.adoptRasterSegments` (η ΙΔΙΑ μηχανή, προεπισκόπηση, ομάδες πάχους, έγκριση).
  *
  * Υπολογίζει και την όψη του πάνελ (`ImageSourceView`) από δύο χαμηλόσυχνα stores (αναγνώριση · υπόβαθρο). Το
- * κλείσιμο του βοηθού ή «άλλο δείγμα» κλείνει και την αναγνώριση (και τον Worker της).
+ * κλείσιμο του βοηθού ή «άλλο δείγμα» κλείνει και την αναγνώριση (και τους Workers της). Η τοπική ανάγνωση (Φ0.6) ξεκινά
+ * μόνη της· όταν τελειώσει, η νέα πηγή γραμμών έρχεται από το ίδιο κανάλι με την επανεξαγωγή (`onLineSource`).
  *
  * @see ./ModelFromDrawingHost.tsx
  */
 
 import * as React from 'react';
-import { usePlanRecognitionState } from '../systems/plan-recognition/plan-recognition-store';
+import { usePlanRecognitionState, type PlanRecognitionState } from '../systems/plan-recognition/plan-recognition-store';
 import {
   NO_WALL_EVIDENCE_EXCLUSIONS,
   planRecognitionSession,
@@ -30,6 +31,8 @@ import { getActiveBackgroundFloorId, useFloorplanBackgroundStore } from '../floo
 import type { ImageSourceView } from '../ui/panels/model-from-drawing/PlanRecognitionSections';
 import type { PlanReadingActions } from '../ui/panels/model-from-drawing/PlanReadingSections';
 import type { PlanScaleActions, PlanScaleView } from '../ui/panels/model-from-drawing/PlanScaleCard';
+import type { PlanOcrActions, PlanOcrView } from '../ui/panels/model-from-drawing/PlanOcrSection';
+import { isLocalOcrOutcome } from '../bim/plan-recognition/ocr/ocr-reading';
 import { usePlanScaleWiring } from './usePlanScaleWiring';
 
 export interface PlanRecognitionWiring {
@@ -39,6 +42,24 @@ export interface PlanRecognitionWiring {
   readonly reading: PlanReadingActions;
   /** ADR-929 Φ5.3γ — η κάρτα κλίμακας από τις διαβασμένες διαστάσεις. */
   readonly scale: PlanScaleActions;
+  /** ADR-929 Φ0.6 — η τοπική ανάγνωση τιμών: «Ακύρωση» · «Ξανά». */
+  readonly ocr: PlanOcrActions;
+}
+
+/** Σταθερή ταυτότητα σε κάθε render: οι πράξεις πάνε κατευθείαν στον έναν ελεγκτή. */
+const OCR_ACTIONS: PlanOcrActions = {
+  onCancel: () => planRecognitionSession.ocr.cancel(),
+  onRetry: () => planRecognitionSession.ocr.retry(),
+};
+
+/** ADR-929 Φ0.6 — η όψη της τοπικής ανάγνωσης: μετρά στη σύντηξη; και τι, στην τρέχουσα όψη. */
+function ocrViewOf(recognition: PlanRecognitionState): PlanOcrView {
+  const { reading, ocr } = recognition;
+  const inUse = isLocalOcrOutcome(reading);
+  const counts = inUse && reading?.status === 'read'
+    ? { texts: reading.reading.texts.length, dimensions: reading.reading.dimensions.length }
+    : null;
+  return { state: ocr, inUse, counts };
 }
 
 /** Η όψη του πάνελ για την πηγή εικόνα. */
@@ -68,9 +89,11 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
     excludedFromWalls,
     calibrated: sourceCalibrated,
     readingAvailable: recognition.phase === 'ready' && recognition.run !== null,
-    readingAdopted: recognition.reading !== null,
+    // §6.10 Α2 — μόνο η ανάγνωση AI ακυρώνεται με αλλαγή της όψης· η τοπική ακολουθεί την όψη (Φ0.6).
+    readingAdopted: recognition.reading !== null && !isLocalOcrOutcome(recognition.reading),
     review: recognition.review,
     scale,
+    ocr: ocrViewOf(recognition),
   };
 }
 
@@ -128,5 +151,5 @@ export function usePlanRecognitionWiring(
   );
 
   const reading = usePlanReadingActions(getDeps);
-  return { imageSource, recognizeImage, reading, scale: scale.actions };
+  return { imageSource, recognizeImage, reading, scale: scale.actions, ocr: OCR_ACTIONS };
 }

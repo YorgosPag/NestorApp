@@ -30,6 +30,14 @@ import { blankPlanRaster, type PlanRaster } from './plan-raster';
 
 type Rgba = PlanRaster & { readonly rgba: Uint8ClampedArray };
 
+/**
+ * Ο μικρότερος ακέραιος συντελεστής του `downscaleArea` που φέρνει την εικόνα κάτω από `maxPixels` (ADR-929: εικόνα
+ * εργασίας της Φ1 · εικόνα ανίχνευσης του τοπικού OCR, Φ0.6).
+ */
+export function workingScaleFor(width: number, height: number, maxPixels: number): number {
+  return Math.max(1, Math.ceil(Math.sqrt((width * height) / Math.max(1, maxPixels))));
+}
+
 /** Μείωση με **ακέραιο** συντελεστή `factor ≥ 1`. Η τελευταία στήλη/γραμμή μετρά μόνο τα pixel που υπάρχουν. */
 export function downscaleArea(src: PlanRaster, factor: number): Rgba {
   const f = Math.max(1, Math.floor(factor));

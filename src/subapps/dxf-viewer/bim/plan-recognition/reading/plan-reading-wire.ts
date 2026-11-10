@@ -20,7 +20,8 @@ import { clamp, clamp01 } from '@/lib/geometry/scalar';
 import type { PlanOpeningKind, PlanTextKind } from '../plan-recognition-types';
 
 /** Αλλάζει μαζί με το prompt ή το σχήμα ⇒ νέο κλειδί ανάγνωσης ⇒ ποτέ μπαγιάτικη απάντηση από την κρυφή μνήμη (Δ11). */
-export const PLAN_READING_SCHEMA_VERSION = 1;
+/** v2 (ADR-929 Φ0.6): το `valueMm` έφυγε από το σύρμα — η τιμή βγαίνει από το κείμενο με τον ΕΝΑ κανόνα (`written-values`). */
+export const PLAN_READING_SCHEMA_VERSION = 2;
 export const PLAN_READING_SCHEMA_NAME = 'plan_reading';
 /** Η πλευρά του πλέγματος της όψης: συντεταγμένες 0…1000. */
 export const PLAN_VIEW_GRID = 1000;
@@ -42,7 +43,6 @@ const wireText = z.strictObject({
 
 const wireDimension = z.strictObject({
   textId: z.string(),
-  valueMm: z.number().nullable().describe('the written length in millimetres; null if unsure of the unit'),
   segmentIds: z.array(z.string()).describe('ids of the given segments this dimension measures (the dimensioned wall faces)'),
   confidence,
 });

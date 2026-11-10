@@ -28,7 +28,7 @@ import {
 } from '@/lib/geometry/homography';
 import { removeSmallComponents } from '@/lib/geometry/raster/component-stats';
 import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
-import { downscaleArea, straighteningRotation, warpHomography } from '@/lib/geometry/raster/raster-warp';
+import { downscaleArea, straighteningRotation, warpHomography, workingScaleFor } from '@/lib/geometry/raster/raster-warp';
 import { estimateSkew } from '@/lib/geometry/raster/skew-estimate';
 import { DEFAULT_PLAN_ALIGN, type PlanAlignment, type PlanAlignOptions, type PlanBinarization, type SkewResult } from './plan-alignment-types';
 import { cleanPlanImage, planInkMask, resolveBinarization } from './plan-ink';
@@ -41,11 +41,6 @@ function compose(m2: Homography, m1: Homography): Homography {
   const m = composeHomography(m2, m1);
   if (m === null) throw new Error('plan-align-degenerate-homography');
   return m;
-}
-
-/** Ο μικρότερος ακέραιος συντελεστής που φέρνει την εικόνα κάτω από `maxPixels`. */
-export function workingScaleFor(width: number, height: number, maxPixels: number): number {
-  return Math.max(1, Math.ceil(Math.sqrt((width * height) / Math.max(1, maxPixels))));
 }
 
 interface Stage {

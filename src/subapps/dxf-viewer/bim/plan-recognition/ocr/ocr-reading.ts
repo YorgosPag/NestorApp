@@ -9,21 +9,31 @@
  * 🔑 **Μόνο ό,τι λέει το κείμενο.** Η μορφή δίνει διάσταση / κλίμακα / εμβαδό / ετικέτα ανοίγματος (`written-values`)· τα
  *   `segmentIds` μένουν κενά (η δέση με τις γραμμές είναι δουλειά της σύντηξης), και χώροι/ανοίγματα δεν προκύπτουν από
  *   κείμενο χωρίς γεωμετρία ⇒ `[]`. Ένα σκέτο ακέραιο χωρίς αποδεδειγμένη μονάδα μένει μόνο στα `texts`.
- * 🔑 **Το όνομα του μοντέλου βγαίνει από το μητρώο** (`.model-assets.json`, με τα revisions), ποτέ χειρόγραφο.
+ * 🔑 **Το όνομα του μοντέλου βγαίνει από το μητρώο** (`.model-assets.json`, με τα revisions), ποτέ χειρόγραφο· το πρόθεμά
+ *   του είναι η **προέλευση** (Δ9) που ξεχωρίζει την τοπική ανάγνωση από του VLM (`isLocalOcrOutcome`).
+ * 🔑 ADR-929 Φ0.6 — **ακολουθεί την όψη**: μετρούν μόνο τα κείμενα που το κέντρο τους πέφτει στην όψη του ανθρώπου
+ *   (`ocrTextsInView`, ο ΙΔΙΟΣ κανόνας με τα τμήματα — `isInReadingView`). Η ανάγνωση ξαναπαράγεται, δεν σβήνεται.
  *
  * @module bim/plan-recognition/ocr/ocr-reading
  */
 
-import type { Homography } from '@/lib/geometry/homography';
+import { applyHomography, type Homography, type PlanePoint } from '@/lib/geometry/homography';
+import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
+import { workingScaleFor } from '@/lib/geometry/raster/raster-warp';
 import { alignedPointToOriginal, rasterBoundsOf } from '../alignment/alignment-region';
-import type { PlanDimension, PlanReading, PlanText, PlanWrittenScale } from '../plan-recognition-types';
+import type { PlanDimension, PlanReading, PlanReadingOutcome, PlanText, PlanWrittenScale } from '../plan-recognition-types';
 import { readingConfidence } from '../reading/plan-reading-from-view';
-import { classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenScale } from '../reading/written-values';
+import { isInReadingView, type PlanReadingView } from '../reading/plan-reading-view';
+import { classifyWrittenText, parseWrittenScale, writtenLengthsMm } from '../reading/written-values';
 import type { OcrText } from './ocr-engine';
 import type { OcrAssetSet } from './ocr-model-assets';
+import { OCR_TILING } from './ocr-tiles';
 
 /** Αλλάζει όταν αλλάζει η μετατροπή κειμένων → ανάγνωση (νέα κλειδιά, ποτέ μπαγιάτικη ανάγνωση). */
 export const OCR_READING_SCHEMA_VERSION = 1;
+
+/** Το πρόθεμα της ταυτότητας κάθε τοπικής ανάγνωσης — η προέλευση (Δ9), σε ΕΝΑ σημείο. */
+const LOCAL_OCR_MODEL_PREFIX = 'local-ocr:';
 
 export interface OcrReadingInput {
   /** Η έξοδος του `recognizePlanText`, με τη σειρά της. */
@@ -39,7 +49,39 @@ const modelDir = (path: string): string => path.split('/').at(-2) ?? path;
 
 /** Η ταυτότητα της τοπικής ανάγνωσης: ανιχνευτής + αναγνώστες, με τα revisions τους. */
 export function localOcrModelId(assets: OcrAssetSet): string {
-  return `local-ocr:${[assets.detector, assets.primary, assets.secondary].map((m) => modelDir(m.onnx.path)).join('+')}`;
+  const dirs = [assets.detector, assets.primary, assets.secondary].map((m) => modelDir(m.onnx.path));
+  return `${LOCAL_OCR_MODEL_PREFIX}${dirs.join('+')}`;
+}
+
+/** Η ανάγνωση στη σύντηξη είναι του τοπικού OCR (όχι του VLM); */
+export function isLocalOcrOutcome(outcome: PlanReadingOutcome | null): boolean {
+  return outcome?.status === 'read' && outcome.reading.model.startsWith(LOCAL_OCR_MODEL_PREFIX);
+}
+
+/** Ο ακέραιος συντελεστής μείωσης πριν την ανίχνευση: η εικόνα χωρά στον προϋπολογισμό pixel (`OCR_TILING.maxDetectPixels`). */
+export function ocrDownscaleFor(raster: Pick<PlanRaster, 'width' | 'height'>): number {
+  return workingScaleFor(raster.width, raster.height, OCR_TILING.maxDetectPixels);
+}
+
+function centreOf(polygon: readonly PlanePoint[]): PlanePoint {
+  const sum = polygon.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+  return { x: sum.x / polygon.length, y: sum.y / polygon.length };
+}
+
+/**
+ * Τα κείμενα που **μετρούν** στην όψη του ανθρώπου: το κέντρο τους (αρχικά px → ευθυγραμμισμένα) μέσα στο crop και έξω από
+ * κάθε περιοχή απόκρυψης. Χωρίς όψη (`undefined`) ⇒ όλα, όπως τα τμήματα της αρχικής εξαγωγής.
+ */
+export function ocrTextsInView(
+  texts: readonly OcrText[],
+  view: PlanReadingView | undefined,
+  originalToAligned: Homography,
+): readonly OcrText[] {
+  if (!view) return texts;
+  return texts.filter((t) => {
+    const c = centreOf(t.polygon);
+    return isInReadingView(view, applyHomography(originalToAligned, c.x, c.y));
+  });
 }
 
 function toPlanTexts(texts: readonly OcrText[], toOriginal: Homography): PlanText[] {
@@ -56,10 +98,10 @@ function toPlanTexts(texts: readonly OcrText[], toOriginal: Homography): PlanTex
 
 function dimensionsOf(texts: readonly PlanText[]): PlanDimension[] {
   const dimensionTexts = texts.filter((t) => t.kind === 'dimension');
-  const bareIntegerUnit = inferBareIntegerUnit(dimensionTexts.map((t) => t.raw));
-  return dimensionTexts.flatMap((t) => {
-    const length = parseDimensionValue(t.raw, bareIntegerUnit);
-    return length === null ? [] : [{ textId: t.id, valueMm: length.valueMm, segmentIds: [], confidence: t.confidence }];
+  const valuesMm = writtenLengthsMm(dimensionTexts.map((t) => t.raw));
+  return dimensionTexts.flatMap((t, i) => {
+    const valueMm = valuesMm[i];
+    return valueMm === null ? [] : [{ textId: t.id, valueMm, segmentIds: [], confidence: t.confidence }];
   });
 }
 

@@ -4,8 +4,8 @@
  *
  * 🔑 Η βεβαιότητα του παρόχου γίνεται ο παράγοντας `reading` (Δ9). Οι παράγοντες `geometry` / `solver` προστίθενται στη
  * σύντηξη της Φ4, ποτέ εδώ: μια ανάγνωση δεν ξέρει τίποτα για τη γεωμετρία.
- * 🔑 Μια διάσταση χωρίς τιμή σε mm (ο πάροχος δεν ήταν σίγουρος για τη μονάδα) **δεν** γίνεται περιορισμός του λύτη. Το
- * κείμενό της μένει στα `texts`, ώστε ο άνθρωπος να το δει.
+ * 🔑 Η τιμή σε mm βγαίνει από το κείμενο με τον ΕΝΑ κανόνα (`written-values`), ίδιο με του τοπικού OCR. Μια διάσταση χωρίς
+ * αποδεδειγμένη μονάδα **δεν** γίνεται περιορισμός του λύτη· το κείμενό της μένει στα `texts`, ώστε ο άνθρωπος να το δει.
  *
  * @module subapps/dxf-viewer/bim/plan-recognition/reading/plan-reading-from-view
  */
@@ -21,6 +21,7 @@ import type {
 } from '../plan-recognition-types';
 import { viewBoxToOriginal, type PlanReadingView } from './plan-reading-view';
 import type { PlanViewReading } from './plan-reading-wire';
+import { writtenLengthsMm } from './written-values';
 
 /** Η βεβαιότητα **μιας ανάγνωσης** (VLM ή τοπικό OCR) ως παράγοντας `reading` (Δ9) — ένα σημείο, ποτέ δεύτερος τύπος. */
 export const readingConfidence = (score: number): PlanConfidence => ({ score, factors: { reading: score } });
@@ -28,6 +29,21 @@ export const readingConfidence = (score: number): PlanConfidence => ({ score, fa
 export interface PlanReadingProvenance {
   readonly model: string;
   readonly schemaVersion: number;
+}
+
+/**
+ * ADR-929 Φ0.6 — η τιμή κάθε διάστασης από το **κείμενό** της, με τον ΕΝΑ κανόνα (`writtenLengthsMm`): ο πάροχος λέει τι
+ * γράφει και ποια τμήματα μετρά, όχι τη μονάδα. Αναφορά σε κείμενο που δεν δόθηκε ⇒ καμία τιμή.
+ */
+function dimensionsOf(wire: PlanViewReading['dimensions'], texts: readonly PlanText[]): PlanDimension[] {
+  const rawById = new Map(texts.map((t) => [t.id, t.raw]));
+  const valuesMm = writtenLengthsMm(wire.map((d) => rawById.get(d.textId) ?? ''));
+  return wire.flatMap((d, i) => {
+    const valueMm = valuesMm[i];
+    return valueMm !== null && valueMm > 0
+      ? [{ textId: d.textId, valueMm, segmentIds: d.segmentIds, confidence: readingConfidence(d.confidence) }]
+      : [];
+  });
 }
 
 export function planReadingFromView(
@@ -43,11 +59,7 @@ export function planReadingFromView(
     rect: viewBoxToOriginal(t.box, view, alignedToOriginal),
     confidence: readingConfidence(t.confidence),
   }));
-  const dimensions: PlanDimension[] = reading.dimensions.flatMap((d) =>
-    d.valueMm !== null && d.valueMm > 0
-      ? [{ textId: d.textId, valueMm: d.valueMm, segmentIds: d.segmentIds, confidence: readingConfidence(d.confidence) }]
-      : [],
-  );
+  const dimensions = dimensionsOf(reading.dimensions, texts);
   const rooms: PlanRoomReading[] = reading.rooms.map((r) => ({
     name: r.name,
     writtenAreaM2: r.writtenAreaM2 !== null && r.writtenAreaM2 > 0 ? r.writtenAreaM2 : null,

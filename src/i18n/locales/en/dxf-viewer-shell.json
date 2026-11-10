@@ -483,6 +483,29 @@
         "dimension": "{count, plural, one {# dimension line — not a wall} other {# dimension lines — not walls}}",
         "annotation": "{count, plural, one {# line inside text — not a wall} other {# lines inside text — not walls}}"
       },
+      "ocr": {
+        "title": "On-device value reading",
+        "localNote": "Texts and dimensions are read on your device: nothing is sent, no charge.",
+        "stage": {
+          "starting": "Preparing to read…",
+          "load": "Loading reading models…",
+          "detect": "Finding texts…",
+          "read": "Reading texts…"
+        },
+        "progress": "{done} of {total}",
+        "progressLabel": "On-device reading progress",
+        "cancel": "Cancel",
+        "retry": "Retry",
+        "cancelled": "On-device reading was cancelled. Recognition continues with the image geometry only.",
+        "result": "Read {texts, plural, one {# text} other {# texts}} · {dimensions, plural, one {# dimension with a value} other {# dimensions with a value}}. The wall proposal was updated.",
+        "aiPreferred": "On-device reading finished; the existing AI reading is the one in use.",
+        "failure": {
+          "no-pixels": "The background image is not available for reading.",
+          "worker-unavailable": "This browser cannot run the reading in the background.",
+          "models-unavailable": "The reading models could not be downloaded or verified. Check your connection and retry.",
+          "ocr-failed": "On-device reading failed. Recognition continues with the image geometry only."
+        }
+      },
       "reading": {
         "title": "Read texts with AI",
         "intro": "Dimensions, room names and openings are read from the image. Before anything leaves, you see and correct exactly what is sent.",

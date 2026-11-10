@@ -23,7 +23,7 @@ const valid = {
     { id: 't1', kind: 'dimension', raw: '3.50', box, confidence: 0.9 },
     { id: 't2', kind: 'room-name', raw: 'ΣΑΛΟΝΙ', box, confidence: 0.8 },
   ],
-  dimensions: [{ textId: 't1', valueMm: 3500, segmentIds: ['ps1', 'ps2'], confidence: 0.9 }],
+  dimensions: [{ textId: 't1', segmentIds: ['ps1', 'ps2'], confidence: 0.9 }],
   writtenScale: null,
   rooms: [{ name: 'ΣΑΛΟΝΙ', nameTextId: 't2', writtenAreaM2: null, boundarySegmentIds: ['ps1'], confidence: 0.7 }],
   openings: [{ kind: 'door', hostSegmentId: 'ps2', alongFraction: 0.4, sizeTextId: null, confidence: 0.6 }],
