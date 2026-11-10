@@ -40,6 +40,8 @@ describe('Π1 — η πόρτα δέχεται το μπλοκ', () => {
     ['μόνο κλάση', { ...UNDECLARED, class: 'G' }],
     ['τίποτα δηλωμένο (σβήσιμο)', UNDECLARED],
     ['υπό έκδοση', { ...UNDECLARED, absence: 'pending' }],
+    // ADR-249 §7.8 — `null` = «σβήσε το ΠΕΑ» (RFC 7396)· τι γράφεται: `property-patch-clearing.test.ts` Κ5.
+    ['null (σβήσιμο του ΠΕΑ)', null],
   ])('%s ⇒ περνά', (_label, energy) => {
     expect(PropertyPatchSchema.safeParse({ energy }).success).toBe(true);
   });
@@ -62,7 +64,6 @@ describe('Π2 — η πόρτα απορρίπτει ό,τι δεν είναι �
     ['ημέρα σε άλλη μορφή', { ...FULL, issuedOn: '12/03/2024' }],
     ['το παλιό σχήμα `{ class }`', { class: 'B' }],
     ['αριθμός πιστοποιητικού', { ...FULL, certificateId: '12345/2024' }],
-    ['null', null],
   ])('🔴 %s ⇒ ΑΠΟΡΡΙΨΗ', (_label, energy) => {
     expect(PropertyPatchSchema.safeParse({ energy }).success).toBe(false);
   });

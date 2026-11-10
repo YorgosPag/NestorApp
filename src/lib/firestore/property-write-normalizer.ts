@@ -34,6 +34,8 @@ import {
   aggregateLevelData,
   buildSeededLevelData,
 } from '@/services/multi-level.service';
+import { measuredAreaOrNull } from '@/lib/properties/property-areas';
+import { isPlainRecord } from '@/lib/type-guards';
 import type { LevelData, PropertyLevel } from '@/types/property';
 
 // =============================================================================
@@ -140,18 +142,31 @@ function hasAggregatedContent(
 // INVARIANT 4 — Legacy flat-area derivation
 // =============================================================================
 
-/** Derive the legacy flat `area` field from the SSoT `areas.gross`. */
+/** Το μετρημένο μικτό ενός μπλοκ εμβαδών — `null` για άδειο/σβησμένο μπλοκ ή μη μετρημένο (`0`) μικτό. */
+function measuredGrossOf(areas: unknown): number | null {
+  return isPlainRecord(areas) ? measuredAreaOrNull(areas.gross) : null;
+}
+
+/**
+ * Derive the legacy flat `area` field from the SSoT `areas.gross`.
+ *
+ * - **Το σώμα φέρει `areas`** (τιμή ή `null`) ⇒ ο καθρέφτης ακολουθεί **αυστηρά**: μετρημένο μικτό, αλλιώς `null`
+ *   (ADR-249 §7.8 — υπολογιζόμενη τιμή αδειάζει μαζί με την πηγή της, όπως οι υπολογιζόμενες παράμετροι του Revit).
+ *   🔴 Ως τις 2026-11-10 το `payload.areas ?? existing.areas` έπεφτε στο **αποθηκευμένο** μπλοκ όταν η φόρμα το
+ *   έσβηνε ⇒ ξαναέγραφε το παλιό μικτό στο `area`. Γράφεται `null`, όχι διαγραφή: το `area` είναι πεδίο αποθηκευμένου
+ *   `null` (εκτός `PROPERTY_CLEARABLE_FIELDS`).
+ * - **Δεν το φέρει** ⇒ μόνο θεραπεία από το αποθηκευμένο μετρημένο μικτό (διόρθωση του παλιού `area: 0`)· ποτέ σβήσιμο.
+ */
 function applyLegacyFlatAreaDerivation(
   payload: Record<string, unknown>,
   { existing }: NormalizePropertyWriteOptions,
 ): void {
-  const areas = (payload.areas ?? existing?.areas) as
-    | { gross?: number }
-    | undefined;
-  const gross = areas?.gross;
-  if (typeof gross === 'number' && Number.isFinite(gross) && gross > 0) {
-    payload.area = gross;
+  if (payload.areas !== undefined) {
+    payload.area = measuredGrossOf(payload.areas);
+    return;
   }
+  const healed = measuredGrossOf(existing?.areas);
+  if (healed !== null) payload.area = healed;
 }
 
 // =============================================================================

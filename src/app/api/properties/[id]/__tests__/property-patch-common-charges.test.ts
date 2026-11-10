@@ -21,6 +21,8 @@ describe('Π1 — η πόρτα δέχεται το μπλοκ', () => {
     ['χωρίς κοινόχρηστα', { monthlyAmount: 0, includes: null }],
     ['τίποτα δηλωμένο (σβήσιμο)', { monthlyAmount: null, includes: null }],
     ['ποσό, τίποτα από τον κατάλογο', { monthlyAmount: 120, includes: [] }],
+    // ADR-249 §7.8 — `null` = «σβήσε το μπλοκ» (RFC 7396)· η διαγραφή: `property-patch-clearing.test.ts`.
+    ['null (σβήσιμο του μπλοκ)', null],
   ])('%s ⇒ περνά', (_label, commonCharges) => {
     expect(PropertyPatchSchema.safeParse({ commonCharges }).success).toBe(true);
   });
@@ -36,7 +38,6 @@ describe('Π2 — η πόρτα απορρίπτει ό,τι δεν είναι �
     ['μισό μπλοκ', { monthlyAmount: 120 }],
     ['άγνωστο κλειδί', { monthlyAmount: 120, includes: null, yearly: 1440 }],
     ['σκέτος αριθμός', 120],
-    ['null', null],
   ])('🔴 %s ⇒ ΑΠΟΡΡΙΨΗ', (_label, commonCharges) => {
     expect(PropertyPatchSchema.safeParse({ commonCharges }).success).toBe(false);
   });

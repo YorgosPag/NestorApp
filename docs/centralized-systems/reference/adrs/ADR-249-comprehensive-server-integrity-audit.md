@@ -317,6 +317,7 @@ Early validation στο route handler:
 | 2026-10-19 | 🔴 **Το παλιό κλειδί `status` παρέκαμπτε ΚΑΙ τους δύο φρουρούς** (ADR-777 §8.60.20.12). Το `PATCH { status: 'for-sale' }` σε πουλημένο, ενοικιασμένο ή κρατημένο ακίνητο περνούσε: το `'status'` δεν είναι στο `SOLD_LOCKED_FIELDS`, και το `validateTransactionExit` κοίταζε μόνο το `body.commercialStatus`. Μετά ο `property-write-normalizer` («reverse heal») το έκανε `commercialStatus: 'for-sale'`, και η μονάδα έβγαινε από τη συναλλαγή με τον αγοραστή ακόμη γραμμένο. Θεραπεία: το `validatePropertyFieldLockingUnlessRevert` κρίνει πλέον το σώμα **όπως θα γραφτεί** (`withCanonicalStatusKey`: σκέτο `status` ⇒ `commercialStatus`· αν υπάρχουν και τα δύο, κερδίζει το κανονικό, όπως και στον γραφέα). Άγκυρες Π1–Π4 στο `property-transaction-exit.test.ts`· Π2 = πλήρης ισοδυναμία των δύο κλειδιών (4×4 καταστάσεις). Μετάλλαξη (χωρίς τη μετατροπή): **5 κόκκινα**. | Claude Code |
 | 2026-11-10 | **Κλείδωμα κατά ΑΛΛΑΓΗ ΤΙΜΗΣ + η φόρμα στέλνει μόνο ό,τι άλλαξε** (§7, Google AIP-203 · AIP-134 · RFC 7396). Ο φρουρός έκρινε **παρουσία κλειδιού** ενώ η φόρμα ξανάστελνε πάντα `name/code/type/commercialStatus/floor/layout/orientations` ⇒ η «Αποθήκευση» σε κρατημένο/πωλημένο ακίνητο έπαιρνε **πάντα** 403. **ΝΕΟ** `lib/property/property-field-change.ts` — ο ΕΝΑΣ κριτής `samePropertyFieldValue` (ισοδυναμίες τομέα `sameAreas` · `sameEnergyCertificate` · `sameCommonCharges`, αλλιώς `serializeScalar` του `audit-diff`) + `changedPropertyFields` (μερική διόρθωση από δύο καταστάσεις). **ΝΕΟ** `judgeLockedFields` (`document` / `partial`). Server: αμετάβλητα κλειδωμένα **αφαιρούνται** από το σώμα, αλλαγμένα ⇒ 403 με ονόματα. Πελάτης: ο ίδιος κριτής στο gateway· η φόρμα περνά ΕΝΑ φίλτρο `changedPropertyUpdatesFromForm` (αντικαθιστά τα 4 σκόρπια «μόνο όταν άλλαξε»)· άδειασμα ⇒ `null`· τίποτα ⇒ καμία εγγραφή· `_v` μέσω `useVersionedSave` (`runVersionedPropertyUpdate`). Διορθώθηκε και η μπαγιάτικη γραμμή του §3. | Claude Code |
 | 2026-11-10 | **Άδειασμα πεδίου: `null` ⇒ διαγραφή** (§7.8, RFC 7396 · AIP-134). Η ζωντανή επαλήθευση του §7 βρήκε 400 στο άδειασμα κοινοχρήστων (`PropertyPatchSchema` χωρίς `null` σε `commonCharges` · `energy` · `description`). Σχήμα `.nullable()` στα τρία· **ΝΕΟ** κλειστό `PROPERTY_CLEARABLE_FIELDS` + `firestoreUpdateOf` (ΕΝΑ σημείο `null → FieldValue.delete()`, μόνο στην εγγραφή) + `propertyAfterUpdate` (η προβολή βλέπει το έγγραφο χωρίς τα σβησμένα). ΠΕΑ: το `null` περνά από το `energyDeclarationPatch` — φεύγει η αξίωση, επιβιώνουν τα legacy πεδία. Δεν άλλαξε η αποθήκευση `null` στα πεδία σύνδεσης (`floorId` · `buildingId` · …). | Claude Code |
+| 2026-11-10 | **Κλείσιμο ανοιχτών §7.8** (§7.9). Άγκυρες `property-patch-clearing.test.ts` (Κ1–Κ5, πραγματικός sentinel) + διόρθωση δύο μπαγιάτικων αγκυρών (`null ⇒ ΑΠΟΡΡΙΨΗ`). **ΝΕΟ** κοινό `lib/firestore/merge-patch-deletes.ts` (`withMergePatchDeletes` · `documentAfterMergePatch`) — καταναλωτές: ακίνητο + `common-space-drawn-area.server.ts`. 🔴 Normalizer: σβησμένα `areas` ⇒ `area: null` (πριν ξαναγραφόταν το αποθηκευμένο μικτό). `legality: []` **μένει** (κανονική μορφή «καμία αξίωση»). Tests 103/103 (5 σουίτες). | Claude Code |
 
 ---
 
@@ -376,10 +377,6 @@ floorId · layout · orientations` — όλα κλειδωμένα σε `sold`/`
 - Τα tests του mapper (`property-form-areas.test.ts`, `property-form-commercial.test.ts`, `property-energy-import-chain.test.ts`)
   έλεγχαν το «μόνο όταν άλλαξε» **μέσα** στον mapper· πρέπει να κρίνουν πλέον το `changedPropertyUpdatesFromForm`.
   Άγκυρα για `judgeLockedFields` / `changedPropertyFields` — εκκρεμεί (χωρίς έγκριση δεν τρέχουν tests).
-- Άγκυρες για το §7.8 (`firestoreUpdateOf` · `propertyAfterUpdate` · `energyDeclarationPatch(…, null, …)` · σχήμα με
-  `null`) — εκκρεμούν, ίδιος λόγος.
-- Το άδειασμα των `areas` **δεν** μηδενίζει τον παλιό καθρέφτη `area` (ο normalizer διαβάζει `payload.areas ??
-  existing.areas`) — ίδια συμπεριφορά με το σημερινό `gross: 0`· πρόταση, όχι διορθωμένο.
 
 ### 7.8 Το άδειασμα πεδίου: `null` ⇒ ΔΙΑΓΡΑΦΗ, ένα σημείο μετάφρασης (2026-11-10)
 
@@ -414,3 +411,33 @@ floorId · layout · orientations` — όλα κλειδωμένα σε `sold`/`
   (`certificateId` · `certificateDate` · `validUntil`) **επιβιώνουν**, αλλιώς `energy: null` ⇒ διαγραφή.
 - **Κλείδωμα**: σε πωλημένο το `energy`/`areas` είναι κλειδωμένα ⇒ `null` πάνω σε υπάρχουσα τιμή = αλλαγή ⇒ 403 (σωστό).
   Το `commonCharges` δεν είναι κλειδωμένο ⇒ περνά.
+
+### 7.9 Κλείσιμο των ανοιχτών του §7.8 (2026-11-10)
+
+**Άγκυρες** — `__tests__/property-patch-clearing.test.ts` (Κ1–Κ5) με τον **πραγματικό** `FieldValue.delete()` του Admin
+SDK: το κλειστό σύνολο ακριβώς (επέκταση σε `floorId` κ.λπ. ⇒ κόκκινο) · σχήμα με `null` · `firestoreUpdateOf` ·
+`propertyAfterUpdate` · `energyDeclarationPatch(…, null, …)` (legacy επιβιώνουν · αξίωση φεύγει · αλλιώς διαγραφή).
+🔴 Οι άγκυρες `property-patch-common-charges` / `-energy-certificate` **έλεγαν ακόμη** `null ⇒ ΑΠΟΡΡΙΨΗ` — το συμβόλαιο
+πριν το §7.8· δεν τις τρέχει καμία πύλη, γι' αυτό το `a8f2f25f` πέρασε. Διορθώθηκαν (το `null` περνά).
+
+**Κοινή μετάφραση** — `lib/firestore/merge-patch-deletes.ts`: `withMergePatchDeletes(patch, isClearable?)` +
+`documentAfterMergePatch(existing, patch, isClearable?)`. Δύο καταναλωτές της **ίδιας** μετάφρασης RFC 7396 → Firestore:
+το ακίνητο (κριτής = `PROPERTY_CLEARABLE_FIELDS`, που μένει εδώ) και ο `common-space-drawn-area.server.ts` (ADR-931 Β1,
+κάθε `null`). ⚠️ **Δεν** μπήκαν τα `opportunity-*` / `soft-delete-engine` / `thread-writer`: εκεί η διαγραφή είναι
+**λίστα πεδίων** μιας μετάβασης, όχι μετάφραση `null` — άλλο σχήμα, όχι διπλότυπο.
+
+**Καθρέφτης `area`** (`property-write-normalizer.ts`, αμετάβλητη 4) — 🔴 ως τώρα το `payload.areas ?? existing.areas`
+έπεφτε στο **αποθηκευμένο** μπλοκ όταν η φόρμα το έσβηνε ⇒ ο normalizer **ξαναέγραφε** το παλιό μικτό στο `area`.
+Τώρα (υπολογιζόμενη τιμή ακολουθεί την πηγή της, όπως οι υπολογιζόμενες παράμετροι Revit/ArchiCAD):
+- σώμα **με** `areas` (τιμή ή `null`) ⇒ `area` = μετρημένο μικτό (`measuredAreaOrNull`, ο ΕΝΑΣ κριτής «μετρήθηκε;» του
+  ADR-777 §8.97), αλλιώς `null` — **και στη δημιουργία** (το `area: 0` της φόρμας χωρίς μικτό γίνεται `null`: `0` =
+  «δεν μετρήθηκε»)· γράφεται `null`, όχι διαγραφή (το `area` είναι πεδίο αποθηκευμένου `null`)·
+- σώμα **χωρίς** `areas` ⇒ μόνο θεραπεία από το αποθηκευμένο μετρημένο μικτό, ποτέ σβήσιμο (όπως πριν)·
+- πολυεπίπεδο: το σβησμένο μπλοκ ξαναϋπολογίζεται από τα επίπεδα (αμετάβλητη 3) και ο καθρέφτης ακολουθεί το άθροισμα.
+Ερωτήματα Firestore πάνω στο `area` δεν υπάρχουν (μόνο ταξινόμηση πελάτη) ⇒ `null` αντί `0` δεν αλλάζει αποτελέσματα.
+
+**`legality: []` — ΑΠΟΦΑΣΗ: μένει.** Το `legality` **δεν** είναι δήλωση του γραφείου (ο πελάτης δεν μπορεί καν να το
+στείλει, `z.undefined()`)· είναι σύνολο αξιώσεων που γράφει μόνο ο server, με κανονική μορφή του «καμία» το `[]`:
+`readLegalityClaims` (απουσία ⇒ `[]`) · ο δεύτερος γραφέας `owner-property-energy-certificate.service.ts` (`[]`) · η
+δημόσια αγγελία (ADR-838, `legality: []` ρητά). Διαγραφή μόνο εδώ θα έδινε **δύο** μορφές για το ίδιο νόημα· στο proto3
+(Google) ο κενός repeated **είναι** η απουσία — καμία υλοποίηση δεν απαιτεί αλλαγή. Κλειδωμένο στο Κ5 της άγκυρας.

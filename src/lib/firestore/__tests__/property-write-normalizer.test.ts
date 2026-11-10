@@ -99,4 +99,44 @@ describe('normalizePropertyWritePayload · legacy flat-area derivation', () => {
     normalizePropertyWritePayload(payload, { mode: 'update', existing: {} });
     expect(payload.area).toBe(75);
   });
+
+  it('heals area from the STORED measured gross when the body carries no areas', () => {
+    const payload: Record<string, unknown> = { name: 'Δ1' };
+    normalizePropertyWritePayload(payload, { mode: 'update', existing: { areas: { gross: 88 }, area: 0 } });
+    expect(payload.area).toBe(88);
+  });
+});
+
+// ADR-249 §7.8 — υπολογιζόμενη τιμή αδειάζει μαζί με την πηγή της.
+describe('normalizePropertyWritePayload · area mirror follows a cleared areas block', () => {
+  const STORED = { areas: { gross: 100, net: 80 }, area: 100 };
+
+  it('🔴 areas: null (cleared) ⇒ area: null — NEVER the stored gross', () => {
+    const payload: Record<string, unknown> = { areas: null };
+    normalizePropertyWritePayload(payload, { mode: 'update', existing: STORED });
+    expect(payload.area).toBeNull();
+  });
+
+  it('🔴 gross emptied (0 = not measured), other areas kept ⇒ area: null', () => {
+    const payload: Record<string, unknown> = { areas: { gross: 0, net: 80 } };
+    normalizePropertyWritePayload(payload, { mode: 'update', existing: STORED });
+    expect(payload.area).toBeNull();
+  });
+
+  it('a body area cannot contradict the areas block it travels with', () => {
+    const payload: Record<string, unknown> = { areas: { gross: 0 }, area: 75 };
+    normalizePropertyWritePayload(payload, { mode: 'create' });
+    expect(payload.area).toBeNull();
+  });
+
+  it('multi-level: a cleared block is re-aggregated from per-level data, and area follows the aggregate', () => {
+    const payload: Record<string, unknown> = {
+      areas: null,
+      levels: LEVELS,
+      levelData: { flr_a: { areas: { gross: 60 } }, flr_b: { areas: { gross: 40 } } },
+    };
+    normalizePropertyWritePayload(payload, { mode: 'update', existing: STORED });
+    expect((payload.areas as { gross: number }).gross).toBe(100);
+    expect(payload.area).toBe(100);
+  });
 });

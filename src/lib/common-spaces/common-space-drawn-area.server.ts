@@ -30,6 +30,7 @@ import { FieldValue } from '@/lib/firebaseAdmin';
 import { requireCommonSpaceInTenant } from '@/lib/auth/tenant-isolation';
 import { isRetired } from '@/lib/firestore/trashed-status';
 import { versionedWrite } from '@/lib/firestore/version-check';
+import { withMergePatchDeletes } from '@/lib/firestore/merge-patch-deletes';
 import { spaceAuditEntry } from '@/lib/api/space-entity-write';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -122,9 +123,8 @@ async function syncOne(db: Firestore, ctx: AuthContext, commonSpaceId: string): 
     const patch = derivedAreaPatch(existing, drawnAreaOfGeometries(geometries));
     if (Object.keys(patch).length === 0) return null;
 
-    const applied = Object.fromEntries(
-      Object.entries(patch).map(([field, value]) => [field, value === null ? FieldValue.delete() : value]),
-    );
+    // Κάθε πεδίο του `derivedAreaPatch` είναι παράγωγο εμβαδόν: `null` ⇒ «δεν υπάρχει πια» ⇒ διαγραφή (ADR-249 §7.8).
+    const applied = withMergePatchDeletes(patch);
     const write = 'area' in patch
       ? versionedWrite(existing, applied, ctx.uid).data
       : { ...applied, updatedAt: FieldValue.serverTimestamp() };

@@ -10,7 +10,6 @@
  */
 
 import { z } from 'zod';
-import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
@@ -22,6 +21,7 @@ import { parseLegacyFloor } from '@/lib/floor/floor-ref';
 import { RETIRED_STATUSES } from '@/lib/firestore/trashed-status';
 import { storedCommonChargesSchema } from '@/lib/common-charges/common-charges';
 import { storedEnergyCertificateSchema } from '@/lib/energy-certificate/energy-certificate';
+import { documentAfterMergePatch, withMergePatchDeletes } from '@/lib/firestore/merge-patch-deletes';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -305,19 +305,16 @@ export const PROPERTY_CLEARABLE_FIELDS: ReadonlySet<string> = new Set([
   'systemsOverride', 'finishes', 'interiorFeatures', 'securityFeatures',
 ]);
 
-function isClearing(field: string, value: unknown): boolean {
-  return value === null && PROPERTY_CLEARABLE_FIELDS.has(field);
-}
+const isPropertyClearable = (field: string): boolean => PROPERTY_CLEARABLE_FIELDS.has(field);
 
 /**
  * **Το ΕΝΑ σημείο μετάφρασης** του `null` σε διαγραφή — καλείται **μόνο** στην εγγραφή (`withVersionCheck`).
  *
  * Ως εκείνη τη στιγμή όλη η διαδρομή (κλείδωμα · ιστορικό · προβολή) βλέπει καθαρό `null`, ποτέ το σύμβολο του SDK.
+ * Η μετάφραση είναι η κοινή του `lib/firestore/merge-patch-deletes`· εδώ ζει μόνο το **ποια** πεδία.
  */
 export function firestoreUpdateOf(updateData: Readonly<Record<string, unknown>>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(updateData).map(([field, value]) => [field, isClearing(field, value) ? FieldValue.delete() : value]),
-  );
+  return withMergePatchDeletes(updateData, isPropertyClearable);
 }
 
 /** **Το έγγραφο όπως θα είναι μετά την εγγραφή** — τα σβησμένα πεδία λείπουν, όπως και στο Firestore. */
@@ -325,11 +322,7 @@ export function propertyAfterUpdate(
   existing: Readonly<Record<string, unknown>>,
   updateData: Readonly<Record<string, unknown>>,
 ): Record<string, unknown> {
-  const after: Record<string, unknown> = { ...existing, ...updateData };
-  for (const [field, value] of Object.entries(updateData)) {
-    if (isClearing(field, value)) delete after[field];
-  }
-  return after;
+  return documentAfterMergePatch(existing, updateData, isPropertyClearable);
 }
 
 // ============================================================================
