@@ -32,6 +32,7 @@ import { EnergyCertificateImport } from '@/components/shared/energy-certificate/
 import { useCompanyPropertyImportPort } from '@/hooks/energy-certificate/useEnergyCertificateImportPorts';
 import type { EnergyCertificatePatch } from '@/lib/energy-certificate/energy-certificate';
 import { energyOfForm, patchedEnergyFormSlice } from '@/lib/energy-certificate/energy-certificate-form';
+import { isFinalContractSigned } from '@/lib/conveyance/case-state';
 import { OrientationPlausibilityWarning } from '@/components/properties/shared/OrientationPlausibilityWarning';
 import { ConditionPlausibilityWarning } from '@/components/properties/shared/ConditionPlausibilityWarning';
 import { PropertyFieldsDetailCardsRow2 } from './PropertyFieldsDetailCardsRow2';
@@ -54,6 +55,9 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
   const colors = useSemanticColors();
   // ADR-777 §8.96 — το ΠΕΑ ανεβαίνει στα «Έγγραφα» του ακινήτου και προτείνει τα πεδία· εφαρμόζεται στη φόρμα.
   const peaImportPort = useCompanyPropertyImportPort(property);
+  // ADR-915 §38 — το ΠΕΑ είναι υποχρέωση του ιδιοκτήτη ΠΡΙΝ την υπογραφή (ν.4122/2013 άρθρο 12): κλειδώνει μόνο όταν
+  // η κυριότητα πέρασε στους αγοραστές — ο ΙΔΙΟΣ κριτής με το μητρώο λήξεων (§25), όχι η εμπορική κατάσταση.
+  const energyLocked = !isEditing || isFinalContractSigned(property.commercial?.legalPhase);
   const energyCertificate = energyOfForm(formData);
   const applyEnergyPatch = (patch: EnergyCertificatePatch) =>
     setFormData(prev => ({ ...prev, ...patchedEnergyFormSlice(prev, patch) }));
@@ -232,14 +236,14 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
               <EnergyCertificateFields
                 value={energyCertificate}
                 onChange={applyEnergyPatch}
-                disabled={!isEditing || isSoldOrRented}
+                disabled={energyLocked}
                 idPrefix="unit"
                 importSlot={
                   <EnergyCertificateImport
                     port={peaImportPort}
                     current={energyCertificate}
                     onApply={applyEnergyPatch}
-                    disabled={!isEditing || isSoldOrRented}
+                    disabled={energyLocked}
                     commit="form-save"
                   />
                 }

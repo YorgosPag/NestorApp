@@ -99,6 +99,11 @@ export interface Property {
       askingPrice?: number | null;
       finalPrice?: number | null;
       rentPrice?: number | null;
+      /**
+       * Νομική φάση (ADR-230) — `unknown`, γιατί το αντικείμενο έρχεται ως ωμό spread χωρίς επικύρωση.
+       * Η **μία** ανάγνωση: `isFinalContractSigned()` (`lib/conveyance/case-state`, ADR-915 §38).
+       */
+      legalPhase?: unknown;
     };
 
     area?: number;

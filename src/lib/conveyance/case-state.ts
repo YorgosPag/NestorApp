@@ -10,7 +10,7 @@
  * @module lib/conveyance/case-state
  */
 
-import { LEGAL_PHASES, type LegalPhase } from '@/constants/legal-phases';
+import { LEGAL_PHASES, isLegalPhase, type LegalPhase } from '@/constants/legal-phases';
 import type { ConveyanceCaseState, StoredCaseState } from '@/types/conveyance-case';
 
 const FINAL_SIGNED_INDEX = LEGAL_PHASES.indexOf('final_signed');
@@ -18,9 +18,12 @@ const FINAL_SIGNED_INDEX = LEGAL_PHASES.indexOf('final_signed');
 /**
  * Έχει υπογραφεί το οριστικό; (κάθε φάση από `final_signed` και μετά) — και η **κυριότητα** πέρασε στους αγοραστές
  * (ADR-915 §25: το μητρώο ρωτά εδώ ποιος είναι πια ο ιδιοκτήτης, όχι δεύτερο κατώφλι φάσης).
+ *
+ * Δέχεται `unknown`: πολλές αναγνώσεις φέρνουν το έγγραφο ως ωμό spread του Firestore. Ο έλεγχος
+ * τύπου γίνεται **εδώ**, μία φορά, ώστε κανένας καταναλωτής να μη χρειάζεται cast (ADR-915 §38).
  */
-export function isFinalContractSigned(legalPhase: LegalPhase | null | undefined): boolean {
-  if (!legalPhase) return false;
+export function isFinalContractSigned(legalPhase: unknown): boolean {
+  if (!isLegalPhase(legalPhase)) return false;
   return LEGAL_PHASES.indexOf(legalPhase) >= FINAL_SIGNED_INDEX;
 }
 
