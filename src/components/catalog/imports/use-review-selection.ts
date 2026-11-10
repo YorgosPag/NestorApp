@@ -17,9 +17,13 @@
  *    την εστίαση **μία** φορά) ⇒ `advanceIntent` ⇒ `awaitPriceTarget` (η πρόθεση **περιμένει**). Μόλις η παρτίδα αποκτήσει
  *    τιμοκατάλογο, η λίστα ανοίγει τον διάλογο τιμής **της ίδιας γραμμής**: η ροή δεν κόβεται. Δύο φάσεις, όχι σημαία «εστιάστηκε»
  *    μέσα στην ίδια: η εστίαση είναι στιγμή, η αναμονή κατάσταση. Άλλη επιλογή ⇒ η αναμονή σβήνει, όπως κάθε πρόθεση.
+ * 🔑 **Ένας κάτοχος της όψης** (§5.5.2 Β8 βήμα Γ, ζωντανή επαλήθευση): όσο η πρόθεση είναι `priceTarget`, την όψη την κατέχει το
+ *    πεδίο του τιμοκαταλόγου — η γραμμή της λίστας **δεν** κυλά. Μετρήθηκε στην παραγωγή: στο ίδιο commit το πεδίο κυλούσε σε όψη
+ *    και αμέσως μετά η γραμμή ξανακυλούσε το πάνελ πίσω (εστίαση σε αόρατο πεδίο). Ερώτηση τη στιγμή του effect (getter), όχι
+ *    στιγμιότυπο: η πρόθεση γίνεται `awaitPriceTarget` στο επόμενο render, και τότε η γραμμή δεν ξανατρέχει.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { reviewTargetKey, type ReviewBox, type ReviewTarget } from './review-overlay-model';
 import type { LineTool } from './review-remedy';
@@ -62,7 +66,12 @@ export interface ReviewSelection {
   readonly clearIntent: () => void;
   /** Η εστίαση του τιμοκαταλόγου έγινε: για στόχο-γραμμή η πρόθεση γίνεται αναμονή, αλλιώς σβήνει. */
   readonly advanceIntent: () => void;
+  /** Getter (σταθερός): κατέχει τώρα η λίστα την όψη; `false` όσο το πεδίο του τιμοκαταλόγου ζητά να έρθει σε όψη. */
+  readonly listOwnsView: () => boolean;
 }
+
+/** Η ερώτηση του `listOwnsView` για τις όψεις λίστας· χωρίς πάροχο (λίστα έξω από τον χώρο εργασίας) η λίστα κατέχει πάντα την όψη. */
+export const ReviewViewOwnerContext = createContext<() => boolean>(() => true);
 
 const EMPTY: SelectionState = { target: null, origin: 'list', cycle: null, intent: null };
 
@@ -104,24 +113,33 @@ export function useReviewSelection(boxes: readonly ReviewBox[]): ReviewSelection
 
   const advanceIntent = useCallback(() => setState(advancedOf), []);
 
+  // Το layout effect τρέχει πριν από τα passive effects του ίδιου commit: οι όψεις λίστας ρωτούν πάντα τη φρέσκια πρόθεση.
+  const intentRef = useRef(state.intent);
+  useLayoutEffect(() => {
+    intentRef.current = state.intent;
+  }, [state.intent]);
+  const listOwnsView = useCallback(() => intentRef.current?.kind !== 'priceTarget', []);
+
   return {
     target: state.target, key, origin: state.origin, cycle, intent: state.intent,
-    selectFromList, selectFromBox, nextInBox, requestRemedy, clearIntent, advanceIntent,
+    selectFromList, selectFromBox, nextInBox, requestRemedy, clearIntent, advanceIntent, listOwnsView,
   };
 }
 
 /**
  * Η **όψη λίστας** του επιλεγμένου στόχου (πεδίο · γραμμή χωρίς πεδίο · αποφασισμένη γραμμή): έρχεται σε όψη (Α6: μπορεί να είναι
  * εκτός οθόνης) και, όταν τον διάλεξε κλικ στο PDF, παίρνει την εστίαση πληκτρολογίου — **μετά** την κύλιση, ώστε ο
- * φυλλομετρητής να μην ξανακυλήσει αλλού. Ένα σημείο για τις τρεις λίστες.
+ * φυλλομετρητής να μην ξανακυλήσει αλλού. Ένα σημείο για τις τρεις λίστες. Όταν την όψη την κατέχει άλλος (`ReviewViewOwnerContext`),
+ * δεν κυλά ούτε εστιάζει.
  */
 export function useActiveReviewItem<TItem extends HTMLElement>(active: boolean, focusRequested: boolean) {
   const itemRef = useRef<TItem>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const listOwnsView = useContext(ReviewViewOwnerContext);
   useEffect(() => {
-    if (!active) return;
+    if (!active || !listOwnsView()) return;
     itemRef.current?.scrollIntoView?.({ block: 'nearest' });
     if (focusRequested) buttonRef.current?.focus({ preventScroll: true });
-  }, [active, focusRequested]);
+  }, [active, focusRequested, listOwnsView]);
   return { itemRef, buttonRef };
 }

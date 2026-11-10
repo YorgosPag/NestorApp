@@ -33,7 +33,7 @@ import { ReviewHoverContext, createReviewHoverStore } from './review-hover-store
 import { buildReviewBoxes, lineTargetOf, resolveReviewTarget, type ReviewBox } from './review-overlay-model';
 import type { LineTool } from './review-remedy';
 import { ownsLine, priceTargetOf, useReviewRemedy } from './use-review-remedy';
-import { useReviewSelection, type ReviewSelection } from './use-review-selection';
+import { ReviewViewOwnerContext, useReviewSelection, type ReviewSelection } from './use-review-selection';
 import type { CatalogFailure } from '@/services/catalog/catalog-failure';
 
 type Workspace = ReturnType<typeof useImportBatch>;
@@ -297,10 +297,12 @@ export function ImportBatchWorkspace({ batchId }: { readonly batchId: string }) 
   return (
     <ReviewHoverContext.Provider value={hoverStore}>
       <ReviewGhostContext.Provider value={ghostStore}>
-        <section className={cn('grid min-h-0 flex-1 grid-cols-1 gap-4', sourceFileId !== null && 'xl:grid-cols-2')} aria-label={view.batch.fileName}>
-          <BatchProposals workspace={workspace} view={view} selection={selection} />
-          {sourceFileId === null ? null : <ImportSourcePane view={view} fileId={sourceFileId} boxes={boxes} selection={selection} resolved={resolved} remedy={remedy} />}
-        </section>
+        <ReviewViewOwnerContext.Provider value={selection.listOwnsView}>
+          <section className={cn('grid min-h-0 flex-1 grid-cols-1 gap-4', sourceFileId !== null && 'xl:grid-cols-2')} aria-label={view.batch.fileName}>
+            <BatchProposals workspace={workspace} view={view} selection={selection} />
+            {sourceFileId === null ? null : <ImportSourcePane view={view} fileId={sourceFileId} boxes={boxes} selection={selection} resolved={resolved} remedy={remedy} />}
+          </section>
+        </ReviewViewOwnerContext.Provider>
       </ReviewGhostContext.Provider>
     </ReviewHoverContext.Provider>
   );
