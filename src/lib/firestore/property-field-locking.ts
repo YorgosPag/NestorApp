@@ -20,7 +20,7 @@ import {
   normalizeCommercialStatus,
 } from '@/constants/commercial-statuses';
 // Η ΜΙΑ λίστα κλειδωμάτων — κοινή με τον πελάτη (ADR-898 Φ3β-3: ήταν δύο αντίγραφα «keep both in sync»).
-import { lockedFieldsAttempted, REVERT_ALLOWED_FIELDS } from '@/lib/property/property-locked-fields';
+import { judgeLockedFields, lockedFieldsAttempted, REVERT_ALLOWED_FIELDS } from '@/lib/property/property-locked-fields';
 
 // ============================================================================
 // PUBLIC API
@@ -28,6 +28,9 @@ import { lockedFieldsAttempted, REVERT_ALLOWED_FIELDS } from '@/lib/property/pro
 
 /**
  * Validates that no locked fields are being modified on a property with a given commercialStatus.
+ *
+ * ⚠️ Κρίνει **παρουσία κλειδιού** — μόνο για πράξεις ενός πεδίου που **πάντα** αλλάζουν κάτι (π.χ. η μερική
+ * διόρθωση της αντικειμενικής). Το γενικό PATCH κρίνει **αλλαγή τιμής**: `validatePropertyFieldLockingUnlessRevert`.
  *
  * @param commercialStatus - Current commercialStatus of the property document
  * @param updateKeys - Keys present in the update payload (Object.keys(body))
@@ -97,18 +100,31 @@ export function validateTransactionExit(
 }
 
 /**
- * Convenience wrapper: runs `validatePropertyFieldLocking` UNLESS the body
- * matches `isPropertyRevertTransition`. Keeps PATCH handlers concise while
- * preserving the defense-in-depth guard — the revert flow is the ONE
- * sanctioned way to flip `commercialStatus` on a locked property.
+ * Ο φρουρός του PATCH: η επίσημη ακύρωση περνά· αλλιώς **κλείδωμα κατά ΑΛΛΑΓΗ ΤΙΜΗΣ** (ADR-249 §7, AIP-203).
+ *
+ * Κλειδωμένο πεδίο με την **ίδια** τιμή με το αποθηκευμένο έγγραφο **αφαιρείται** από το `body` (αγνοείται — δεν
+ * γράφεται, δεν κρίνεται από τους επόμενους φρουρούς, δεν βγάζει γραμμή ιστορικού)· με **άλλη** τιμή ⇒ 403 με τα
+ * ονόματα των πεδίων. Ως τις 2026-11-10 έκρινε την **παρουσία** κλειδιού: μια φόρμα που ξανάστελνε αμετάβλητο
+ * `commercialStatus: 'sold'` έπαιρνε 403 και η «Αποθήκευση» σε πουλημένο/κρατημένο ακίνητο δεν δούλευε ποτέ.
+ *
+ * Μεταλλάσσει το `body` επί τόπου — ίδιο συμβόλαιο με το `applyMultiLevelDefaults` που τρέχει αμέσως μετά.
  */
 export function validatePropertyFieldLockingUnlessRevert(
   currentStatus: string | null | undefined,
   body: Record<string, unknown>,
+  existing: Readonly<Record<string, unknown>>,
 ): void {
   const guarded = withCanonicalStatusKey(body);
   if (isPropertyRevertTransition(currentStatus, guarded)) return;
-  validatePropertyFieldLocking(currentStatus, Object.keys(guarded));
+  const { changed, unchanged } = judgeLockedFields(currentStatus, guarded, { kind: 'document', values: existing });
+  if (changed.length > 0) {
+    throw new ApiError(403, `Cannot modify locked fields on a ${currentStatus} property: ${changed.join(', ')}`);
+  }
+  for (const field of unchanged) {
+    // Το `commercialStatus` μπορεί να ήρθε ως το παλιό `status` (βλ. `withCanonicalStatusKey`): φεύγει όποιο στάλθηκε.
+    if (field === 'commercialStatus' && body.commercialStatus === undefined) delete body.status;
+    delete body[field];
+  }
   validateTransactionExit(currentStatus, guarded);
 }
 

@@ -30,11 +30,12 @@ import {
   deleteProperty as deletePropertyRecord,
   updateProperty as updatePropertyRecord,
   updatePropertyCoverage as updatePropertyCoverageRecord,
+  type PropertyUpdateResult,
 } from '@/services/properties.service';
 import { propagateEntityLabelRenameWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 // Η ΜΙΑ λίστα κλειδωμάτων — κοινή με τον server (ADR-898 Φ3β-3: ήταν δύο αντίγραφα «keep both in sync»).
-import { isFieldLocked, lockedFieldsAttempted, REVERT_ALLOWED_FIELDS } from '@/lib/property/property-locked-fields';
+import { isFieldLocked, judgeLockedFields, REVERT_ALLOWED_FIELDS } from '@/lib/property/property-locked-fields';
 import type { ObjectiveValueDeclarationsPatch } from '@/lib/objective-value/objective-value-declarations';
 import type { ObjectiveValueWriteOutcome } from '@/lib/objective-value/objective-value-improve-subject';
 import { objectiveValueWriteFailureOf } from '@/lib/objective-value/objective-value-write-failure';
@@ -176,14 +177,19 @@ function assertKnownPropertyContext(context: PropertyMutationContext): void {
   }
 }
 
+/**
+ * Ο ΙΔΙΟΣ κριτής με τον server (ADR-249 §7): κλείδωμα κατά **αλλαγή τιμής**. Η εικόνα του πελάτη είναι `partial` —
+ * πεδίο που ο καλών δεν έδωσε κρίνεται ως αλλαγή (fail-closed)· τελικός κριτής μένει ο server, πάνω στο έγγραφο.
+ */
 function assertFieldLocking(
   commercialStatus: CommercialStatus | null,
-  updateKeys: readonly string[],
+  updates: PropertyMutationPayload,
+  currentProperty: PropertyMutationCurrentState,
 ): void {
-  const attempted = lockedFieldsAttempted(commercialStatus, updateKeys);
-  if (attempted.length > 0) {
+  const { changed } = judgeLockedFields(commercialStatus, updates, { kind: 'partial', values: currentProperty });
+  if (changed.length > 0) {
     throw new PropertyMutationPolicyError(
-      `Cannot modify locked fields on a ${commercialStatus} property: ${attempted.join(', ')}`,
+      `Cannot modify locked fields on a ${commercialStatus} property: ${changed.join(', ')}`,
     );
   }
 }
@@ -225,9 +231,8 @@ function assertPropertyMutationPolicy(context: PropertyMutationContext): void {
   }
 
   const currentProperty = context.currentProperty!;
-  const updateKeys = Object.keys(context.updates);
   const commercialStatus = readCurrentCommercialStatus(currentProperty);
-  assertFieldLocking(commercialStatus, updateKeys);
+  assertFieldLocking(commercialStatus, context.updates, currentProperty);
 
   if (context.intent === 'building-link') {
     assertLinkPolicy(context.updates, currentProperty);
@@ -255,7 +260,7 @@ export async function updatePropertyWithPolicy({
   propertyId,
   currentProperty,
   updates,
-}: GuardedPropertyUpdateInput): Promise<{ success: boolean }> {
+}: GuardedPropertyUpdateInput): Promise<PropertyUpdateResult> {
   assertPropertyMutationPolicy({
     intent: 'update',
     propertyId,

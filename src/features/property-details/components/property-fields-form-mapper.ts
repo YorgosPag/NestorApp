@@ -24,10 +24,16 @@ import type {
 } from '@/constants/property-features-enterprise';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
 import { changedCommercialAmounts } from '@/lib/properties/commercial-draft';
-import { readCommonCharges, sameCommonCharges } from '@/lib/common-charges/common-charges';
-import { readEnergyCertificate, sameEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import { energyOfForm } from '@/lib/energy-certificate/energy-certificate-form';
-import { sameAreas, writtenAreasOf } from '@/lib/properties/property-areas';
+import { writtenAreasOf } from '@/lib/properties/property-areas';
+import { changedPropertyFields, samePropertyFieldValue } from '@/lib/property/property-field-change';
+import { buildFormDataFromProperty } from '@/services/property/property-form-sync';
+
+/**
+ * Μπλοκ που εκπέμπονται **μόνο όταν δηλώνουν κάτι** — άδειο (κατά τον ΕΝΑ κριτή) ⇒ απουσία. Η δημιουργία δεν στέλνει
+ * έτσι άδεια μπλοκ, και στην επεξεργασία το φίλτρο μετατρέπει την απουσία σε `null` όταν ο άνθρωπος τα άδειασε.
+ */
+const DECLARED_ONLY_BLOCKS = ['areas', 'energy', 'commercial', 'commonCharges'] as const;
 
 /**
  * Builds the Firestore update payload from the current form state.
@@ -35,9 +41,10 @@ import { sameAreas, writtenAreasOf } from '@/lib/properties/property-areas';
  * Rules:
  * - Uses suggestedCode as fallback if user hasn't typed a custom one (ADR-233)
  * - Preserves existing property.floorId when present (ADR-232)
- * - Emits commercial.askingPrice only when it differs from current value
- * - Emits areas only when they differ — `0` and absent are the same "not measured" (ADR-777 §8.97)
  * - For multi-level units, auto-aggregates per-level data (ADR-236 Phase 2)
+ *
+ * Παράγει την **πλήρη** εικόνα της φόρμας (τη χρειάζεται η δημιουργία). Το «τι άλλαξε» για την επεξεργασία ΔΕΝ
+ * κρίνεται εδώ — το κρίνει το ΕΝΑ φίλτρο {@link changedPropertyUpdatesFromForm} (ADR-249 §7).
  */
 export function buildPropertyUpdatesFromForm(params: {
   formData: PropertyFieldsFormData;
@@ -71,22 +78,18 @@ export function buildPropertyUpdatesFromForm(params: {
     updates.description = formData.description.trim();
   }
 
-  // ADR-777 §8.97 — τα εμβαδά: ολόκληρο το μπλοκ, και μόνο όταν άλλαξε. Ως τώρα έφευγε σε **κάθε** αποθήκευση, και ένα
-  // αποθηκευμένο `terrace: 0` (≡ «δεν μετρήθηκε») έβγαινε «αλλαγή» στον διάλογο επιπτώσεων και σβηνόταν.
-  const areas = writtenAreasOf({
+  // ADR-777 §8.97 — τα εμβαδά: ολόκληρο το μπλοκ (`0` ≡ «δεν μετρήθηκε» — το κρίνει ο `sameAreas` μέσα στο φίλτρο).
+  updates.areas = writtenAreasOf({
     gross: formData.areaGross,
     net: formData.areaNet,
     balcony: formData.areaBalcony,
     terrace: formData.areaTerrace,
     garden: formData.areaGarden,
   });
-  if (!sameAreas(areas, property.areas)) updates.areas = areas;
 
   if (formData.condition) updates.condition = formData.condition as ConditionType;
-  // ADR-777 §8.94 — το ΠΕΑ: ολόκληρο το μπλοκ, και μόνο όταν άλλαξε. Ως τώρα έφευγε `{ class }` σε **κάθε**
-  // αποθήκευση — που αντικαθιστούσε όλο το αντικείμενο (θα έσβηνε τους αριθμούς) και δεν μπορούσε να **σβήσει** κλάση.
-  const energy = energyOfForm(formData);
-  if (!sameEnergyCertificate(energy, readEnergyCertificate(property.energy))) updates.energy = energy;
+  // ADR-777 §8.94 — το ΠΕΑ: ολόκληρο το μπλοκ (ποτέ σκέτο `{ class }`, που θα έσβηνε τους αριθμούς).
+  updates.energy = energyOfForm(formData);
 
   if (formData.heatingType || formData.coolingType) {
     const systemsOverride: Record<string, string> = {};
@@ -110,20 +113,15 @@ export function buildPropertyUpdatesFromForm(params: {
     updates.securityFeatures = formData.securityFeatures as SecurityFeatureCodeType[];
   }
 
-  // Commercial data — preserve existing fields, write only the amounts that changed.
-  // ADR-777 §8.60.18: ο ΙΔΙΟΣ κριτής «τι άλλαξε» με τους επεξεργαστές θέσεων/αποθηκών.
-  const amountChanges = changedCommercialAmounts(formData, property.commercial);
-  if (Object.keys(amountChanges).length > 0) {
-    updates.commercial = {
-      ...(property.commercial as Record<string, unknown>),
-      ...amountChanges,
-    } as Property['commercial'];
-  }
+  // Commercial data — preserve existing fields, merge only the amounts that changed (ADR-777 §8.60.18: ο ΙΔΙΟΣ
+  // κριτής ποσών με τους επεξεργαστές θέσεων/αποθηκών — δεν γράφει `null` σε ποσό που ποτέ δεν δηλώθηκε).
+  updates.commercial = {
+    ...(property.commercial as Record<string, unknown>),
+    ...changedCommercialAmounts(formData, property.commercial),
+  } as Property['commercial'];
 
-  // ADR-777 §8.93 — τα κοινόχρηστα: ολόκληρο το μπλοκ, και μόνο όταν άλλαξε (αλλιώς κάθε αποθήκευση θα έγραφε ίχνος).
-  if (!sameCommonCharges(formData.commonCharges, readCommonCharges(property.commonCharges))) {
-    updates.commonCharges = formData.commonCharges;
-  }
+  // ADR-777 §8.93 — τα κοινόχρηστα: ολόκληρο το μπλοκ.
+  updates.commonCharges = formData.commonCharges;
 
   // ADR-236 Phase 2: Per-level data + auto-aggregation
   if (isMultiLevel && Object.keys(formData.levelData).length > 0) {
@@ -138,5 +136,29 @@ export function buildPropertyUpdatesFromForm(params: {
     updates.orientations = agg.orientations;
   }
 
+  for (const field of DECLARED_ONLY_BLOCKS) {
+    if (samePropertyFieldValue(field, updates[field], undefined)) delete updates[field];
+  }
   return updates;
+}
+
+/**
+ * **Το ΕΝΑ φίλτρο «μόνο ό,τι άλλαξε»** της φόρμας ακινήτου (ADR-249 §7 · AIP-134 μάσκα πεδίων · RFC 7396).
+ *
+ * Συγκρίνει τη φόρμα **τώρα** με τη φόρμα **όπως θα φορτωνόταν** από το αποθηκευμένο ακίνητο — και τις δύο μέσα από
+ * τον ΙΔΙΟ χαρτογράφο, άρα κάθε διαφορά αναπαράστασης (`0` vs απουσία, κενό vs `null`, μορφή ποσών) ακυρώνεται και
+ * μένει μόνο η πρόθεση του ανθρώπου. Ο κριτής είναι ο ίδιος με το κλείδωμα του server και το ιστορικό.
+ *
+ * Αντικαθιστά τα τέσσερα σκόρπια «μόνο όταν άλλαξε» (εμβαδά · ΠΕΑ · κοινόχρηστα · ποσά). Συνέπειες:
+ * - αμετάβλητο κλειδωμένο πεδίο δεν φεύγει ⇒ η «Αποθήκευση» δουλεύει σε κρατημένο/πωλημένο ακίνητο·
+ * - ό,τι ο άνθρωπος **άδειασε** φεύγει ως `null` ⇒ σβήνεται (ως τώρα ένα άδειο μπλοκ απλώς δεν στελνόταν).
+ */
+export function changedPropertyUpdatesFromForm(params: {
+  updates: Partial<Property>;
+  property: Property;
+  isMultiLevel: boolean | undefined;
+}): Record<string, unknown> {
+  const { updates, property, isMultiLevel } = params;
+  const baseline = buildPropertyUpdatesFromForm({ formData: buildFormDataFromProperty(property), property, isMultiLevel });
+  return changedPropertyFields(updates, baseline);
 }

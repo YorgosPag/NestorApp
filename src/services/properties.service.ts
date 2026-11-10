@@ -85,9 +85,15 @@ export async function createProperty(
   }
 }
 
+/** Η απάντηση του PATCH: η νέα έκδοση (`_v`, SPEC-256A) — ώστε η επόμενη αποθήκευση να τη στείλει. */
+export interface PropertyUpdateResult {
+  readonly success: boolean;
+  readonly _v?: number;
+}
+
 // Update a property via Admin SDK API (server-side validation + audit trail)
-export async function updateProperty(propertyId: string, updates: Partial<Property>): Promise<{ success: boolean }> {
-  await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), updates);
+export async function updateProperty(propertyId: string, updates: Partial<Property>): Promise<PropertyUpdateResult> {
+  const response = await apiClient.patch<{ readonly _v?: number } | null>(API_ROUTES.PROPERTIES.BY_ID(propertyId), updates);
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
   // Dispatch event for all components to update their local state
@@ -105,7 +111,7 @@ export async function updateProperty(propertyId: string, updates: Partial<Proper
     timestamp: Date.now()
   });
 
-  return { success: true };
+  return { success: true, ...(typeof response?._v === 'number' ? { _v: response._v } : {}) };
 }
 
 // updateMultiplePropertiesOwner() DELETED 2026-09-06 (ADR-842 §7.6.13) — νεκρό,

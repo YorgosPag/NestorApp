@@ -249,7 +249,7 @@ Early validation στο route handler:
 |---------|--------|-----------|
 | **Cascade ID Propagation** | ✅ SOLID | `propagateCompanyIdChange`, `propagateSpaceAllocationCodeChange` — ID cascades δουλεύουν |
 | **Deletion Guards** | ✅ SOLID | `deletion-registry` blocks deletes when dependencies exist (ADR-226) |
-| **Field Locking (main endpoint)** | ✅ SOLID | `units/[id]/route.ts` locks 17 fields on sold/rented — works correctly |
+| **Field Locking (main endpoint)** | ✅ SOLID | `api/properties/[id]/route.ts` κλειδώνει **21** πεδία σε sold/rented και **3** (`code/type/name`) σε reserved — η ΜΙΑ λίστα στο `lib/property/property-locked-fields.ts`, κρίση κατά **αλλαγή τιμής** (§7). *(Ως 2026-11-10 η γραμμή έγραφε «`units/[id]/route.ts` · 17 πεδία» — μπαγιάτικη και στα δύο.)* |
 | **Change Detection** | ✅ SOLID | `detectChanges()` utility correctly identifies field mutations |
 | **Linked Spaces Uniqueness** | ✅ FIXED | ADR-247 F-1 — `validateLinkedSpacesUniqueness()` now prevents duplicates |
 | **Orphan Reference Cleanup** | ✅ FIXED | ADR-247 F-2 — deletion-registry prevents orphaned linkedCompanyId |
@@ -315,3 +315,63 @@ Early validation στο route handler:
 | 2026-09-19 | **Έξοδος από συναλλαγή μόνο από τη δική της πράξη** (ADR-777 §8.60.20): το `RESERVED_LOCKED_FIELDS` κλειδώνει μόνο `code/type/name`, άρα ένα PATCH `reserved → for-rent/unavailable` περνούσε με τον αγοραστή γραμμένο. **ΝΕΟ** `validateTransactionExit` στο `property-field-locking.ts` (409), με τα **ίδια** κατηγορήματα με τους χώρους (`isTransactionOwnedCommercialStatus` · `isEditorCommercialStatus`)· καλείται **μετά** το ADR-249 (το `sold` απαντά ακόμη 403) και **μετά** την εξαίρεση ακύρωσης. Άγκυρα `property-transaction-exit.test.ts` + μετάλλαξη M13. | Claude Code |
 | 2026-10-02 | **Μία λίστα κλειδωμάτων** (ADR-898 Φ3β-3, N.0.2): τα `SOLD_LOCKED_FIELDS` · `RESERVED_LOCKED_FIELDS` · `REVERT_ALLOWED_FIELDS` ήταν **δύο αντίγραφα** (server `property-field-locking.ts` + πελάτης `property-mutation-gateway.ts`, «keep both in sync»). Μετακόμισαν στο `lib/property/property-locked-fields.ts` (καθαρό) με `lockedFieldsAttempted` · `isFieldLocked`· ο καθένας ρίχνει το δικό του σφάλμα (403 / `PropertyMutationPolicyError`). Νέο κλειδωμένο πεδίο σε πώληση/μίσθωση: `objectiveValueDeclarations` (φυσικά στοιχεία). Άγκυρα `property-locked-fields.test.ts`. | Claude Code |
 | 2026-10-19 | 🔴 **Το παλιό κλειδί `status` παρέκαμπτε ΚΑΙ τους δύο φρουρούς** (ADR-777 §8.60.20.12). Το `PATCH { status: 'for-sale' }` σε πουλημένο, ενοικιασμένο ή κρατημένο ακίνητο περνούσε: το `'status'` δεν είναι στο `SOLD_LOCKED_FIELDS`, και το `validateTransactionExit` κοίταζε μόνο το `body.commercialStatus`. Μετά ο `property-write-normalizer` («reverse heal») το έκανε `commercialStatus: 'for-sale'`, και η μονάδα έβγαινε από τη συναλλαγή με τον αγοραστή ακόμη γραμμένο. Θεραπεία: το `validatePropertyFieldLockingUnlessRevert` κρίνει πλέον το σώμα **όπως θα γραφτεί** (`withCanonicalStatusKey`: σκέτο `status` ⇒ `commercialStatus`· αν υπάρχουν και τα δύο, κερδίζει το κανονικό, όπως και στον γραφέα). Άγκυρες Π1–Π4 στο `property-transaction-exit.test.ts`· Π2 = πλήρης ισοδυναμία των δύο κλειδιών (4×4 καταστάσεις). Μετάλλαξη (χωρίς τη μετατροπή): **5 κόκκινα**. | Claude Code |
+| 2026-11-10 | **Κλείδωμα κατά ΑΛΛΑΓΗ ΤΙΜΗΣ + η φόρμα στέλνει μόνο ό,τι άλλαξε** (§7, Google AIP-203 · AIP-134 · RFC 7396). Ο φρουρός έκρινε **παρουσία κλειδιού** ενώ η φόρμα ξανάστελνε πάντα `name/code/type/commercialStatus/floor/layout/orientations` ⇒ η «Αποθήκευση» σε κρατημένο/πωλημένο ακίνητο έπαιρνε **πάντα** 403. **ΝΕΟ** `lib/property/property-field-change.ts` — ο ΕΝΑΣ κριτής `samePropertyFieldValue` (ισοδυναμίες τομέα `sameAreas` · `sameEnergyCertificate` · `sameCommonCharges`, αλλιώς `serializeScalar` του `audit-diff`) + `changedPropertyFields` (μερική διόρθωση από δύο καταστάσεις). **ΝΕΟ** `judgeLockedFields` (`document` / `partial`). Server: αμετάβλητα κλειδωμένα **αφαιρούνται** από το σώμα, αλλαγμένα ⇒ 403 με ονόματα. Πελάτης: ο ίδιος κριτής στο gateway· η φόρμα περνά ΕΝΑ φίλτρο `changedPropertyUpdatesFromForm` (αντικαθιστά τα 4 σκόρπια «μόνο όταν άλλαξε»)· άδειασμα ⇒ `null`· τίποτα ⇒ καμία εγγραφή· `_v` μέσω `useVersionedSave` (`runVersionedPropertyUpdate`). Διορθώθηκε και η μπαγιάτικη γραμμή του §3. | Claude Code |
+
+---
+
+## 7. Κλείδωμα κατά αλλαγή τιμής — και η φόρμα στέλνει μόνο ό,τι άλλαξε (2026-11-10)
+
+### 7.1 Το πρόβλημα
+Ο φρουρός (`validatePropertyFieldLockingUnlessRevert`) ρωτούσε «**υπάρχει** το κλειδί στο σώμα;». Η φόρμα ακινήτου
+(`property-fields-form-mapper.ts`) έστελνε σε **κάθε** αποθήκευση `name · code · type · commercialStatus · floor ·
+floorId · layout · orientations` — όλα κλειδωμένα σε `sold`/`rented`, τα τρία πρώτα και σε `reserved`. Αποτέλεσμα:
+**καμία** αποθήκευση από τη φόρμα δεν περνούσε σε συναλλαγή, ακόμη και όταν άλλαζε μόνο ένα ανοιχτό πεδίο (π.χ. ΠΕΑ).
+
+### 7.2 Τι κάνουν οι μεγάλοι
+- **Google AIP-203 (IMMUTABLE)**: «the service should ignore the field if the value matches» — σφάλμα **μόνο** όταν αλλάζει.
+- **AIP-134 / RFC 7396**: ο πελάτης στέλνει **μάσκα** / μερική διόρθωση· `null` = «σβήσε το».
+- **Figma**: ο πελάτης στέλνει μόνο τις αλλαγμένες ιδιότητες· σύγκρουση = «τελευταία εγγραφή κερδίζει» **ανά ιδιότητα**.
+Συναίνεση: **και οι δύο** πλευρές — ο πελάτης στέλνει μόνο ό,τι άλλαξε **και** ο server κρίνει από αλλαγή τιμής.
+
+### 7.3 Ο ΕΝΑΣ κριτής — `lib/property/property-field-change.ts`
+`samePropertyFieldValue(field, a, b)` — «ίδια τιμή» σημαίνει ίδια **σημασία**, όχι ίδια bytes:
+
+| Πεδίο | Κριτής | Γιατί |
+|-------|--------|-------|
+| `areas` | `sameAreas` | `0` ≡ απουσία ≡ «δεν μετρήθηκε» (ADR-777 §8.97) |
+| `energy` | `sameEnergyCertificate` ∘ `readEnergyCertificate` | ο αναγνώστης κανονικοποιεί (ADR-777 §8.94) |
+| `commonCharges` | `sameCommonCharges` ∘ `readCommonCharges` | ίδιο (ADR-777 §8.93) |
+| όλα τα άλλα | `serializeScalar` (`lib/audit/audit-diff.ts`) | το «άλλαξε» του κλειδώματος = το «άλλαξε» του ιστορικού |
+
+Κανένας νέος κανόνας ισότητας: οι τρεις κριτές τομέα **υπήρχαν**· το αρχείο απλώς τους δένει σε ένα σημείο.
+
+### 7.4 Server — `judgeLockedFields(status, updates, { kind: 'document', values: existing })`
+Κλειδωμένο πεδίο με ίδια τιμή ⇒ **αφαιρείται** από το `body` πριν από `applyMultiLevelDefaults` /
+`normalizePropertyWritePayload` (δεν γράφεται, δεν κρίνεται, δεν βγάζει ίχνος)· με άλλη τιμή ⇒ **403** με τα ονόματα.
+Το παλιό `status` αφαιρείται όταν είναι αυτό που κουβαλούσε το αμετάβλητο `commercialStatus`.
+Η ακύρωση (`isPropertyRevertTransition`) και το `validateTransactionExit` μένουν **ως έχουν**.
+Το `validatePropertyFieldLocking` (παρουσία κλειδιού) μένει **μόνο** για τη μερική διόρθωση της αντικειμενικής — πράξη
+ενός πεδίου που πάντα αλλάζει κάτι.
+
+### 7.5 Πελάτης
+- **Gateway** (`assertFieldLocking`): ο **ίδιος** κριτής με `kind: 'partial'` — πεδίο που ο καλών δεν έδωσε κρίνεται ως
+  αλλαγή (fail-closed)· αλλιώς ένα `null` πάνω σε τιμή που απλώς δεν δόθηκε θα έμοιαζε «ίδιο». Τελικός κριτής ο server.
+- **Φόρμα** — ΕΝΑ φίλτρο `changedPropertyUpdatesFromForm`: συγκρίνει τη φόρμα **τώρα** με τη φόρμα **όπως θα
+  φορτωνόταν** από το ακίνητο, **μέσα από τον ίδιο χαρτογράφο** ⇒ κάθε διαφορά αναπαράστασης ακυρώνεται. Αντικατέστησε
+  τα 4 σκόρπια `sameAreas`/`sameEnergyCertificate`/`sameCommonCharges`/`changedCommercialAmounts`-ως-συνθήκη του mapper
+  (το `changedCommercialAmounts` μένει ως **συγχώνευση** ποσών — δεν γράφει `null` σε ποσό που ποτέ δεν δηλώθηκε).
+- Ό,τι ο άνθρωπος **άδειασε** φεύγει ως `null` (RFC 7396) — ως τώρα ένα άδειο μπλοκ απλώς δεν στελνόταν και η παλιά τιμή
+  έμενε (`condition` · `finishes` · `interiorFeatures` · `securityFeatures` · `systemsOverride` · `description`).
+- Τίποτα δεν άλλαξε ⇒ **καμία** εγγραφή, απλή έξοδος από την επεξεργασία.
+- Η **δημιουργία** χρησιμοποιεί την πλήρη εικόνα (`buildPropertyUpdatesFromForm`)· τα μπλοκ `areas · energy · commercial
+  · commonCharges` εκπέμπονται μόνο όταν δηλώνουν κάτι (ίδιος κριτής) — καμία αλλαγή στο σώμα δημιουργίας.
+
+### 7.6 Έκδοση (`_v`, SPEC-256A)
+Η φόρμα στέλνει `_v` μέσω του SSoT `useVersionedSave` (`useGuardedPropertyMutation.runVersionedPropertyUpdate`)· το
+`updateProperty` επιστρέφει πλέον το `_v` του PATCH. Σε 409 η επανάληψη χωρίς `_v` (ADR-256) — με σώμα **μόνο αλλαγμένων**
+πεδίων αυτό είναι «τελευταία εγγραφή κερδίζει» **ανά πεδίο** (Figma), όχι αντικατάσταση ολόκληρου του εγγράφου.
+
+### 7.7 Ανοιχτά
+- Τα tests του mapper (`property-form-areas.test.ts`, `property-form-commercial.test.ts`, `property-energy-import-chain.test.ts`)
+  έλεγχαν το «μόνο όταν άλλαξε» **μέσα** στον mapper· πρέπει να κρίνουν πλέον το `changedPropertyUpdatesFromForm`.
+  Άγκυρα για `judgeLockedFields` / `changedPropertyFields` — εκκρεμεί (χωρίς έγκριση δεν τρέχουν tests).

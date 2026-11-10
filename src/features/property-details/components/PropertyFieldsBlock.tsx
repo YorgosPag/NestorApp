@@ -22,7 +22,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { ReadOnlyCompactView } from './PropertyFieldsReadOnly';
 import { PropertyFieldsEditForm } from './PropertyFieldsEditForm';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
-import { buildPropertyUpdatesFromForm } from './property-fields-form-mapper';
+import { buildPropertyUpdatesFromForm, changedPropertyUpdatesFromForm } from './property-fields-form-mapper';
 import { buildCreationPayload } from './property-fields-save-handler';
 import type { PropertyType } from '@/types/property';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
@@ -84,7 +84,7 @@ export function PropertyFieldsBlock({
   const { quick } = useBorderTokens();
   const typography = useTypography();
   const { success, error: notifyError } = useNotifications();
-  const { runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(property);
+  const { runVersionedPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(property);
   // 🗄️ ADR-329 §3.9 — ο μετρητής πληρότητας είναι κάλεσμα σε συμπλήρωση: σε αποσυρμένο ακίνητο δεν έχει τι να ζητήσει.
   const isLocked = useRetiredKind() !== null;
   const [localEditing, setLocalEditing] = useState(false);
@@ -357,15 +357,18 @@ export function PropertyFieldsBlock({
         }
         success(t('save.createSuccess'));
       } else {
-        // ADR-777 §8.69.13 — έξοδος από επεξεργασία + μήνυμα ΜΕΣΑ στην πράξη· `failed` ⇒ catch.
-        outcomeOrThrow(await runExistingPropertyUpdate({
-          commercialStatus: property.commercialStatus,
-          buildingId: property.buildingId,
-          floorId: property.floorId,
-        }, updates as Partial<Property> & Record<string, unknown>, async () => {
+        // ADR-249 §7 — μόνο ό,τι άλλαξε (το ΕΝΑ φίλτρο)· τίποτα ⇒ καμία εγγραφή, απλή έξοδος (όπως Google Contacts).
+        const changed = changedPropertyUpdatesFromForm({ updates, property, isMultiLevel });
+        const exitEditing = () => {
           editExitWasSaveRef.current = true;
           codeEditedByUserRef.current = false;
           if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
+        };
+        if (Object.keys(changed).length === 0) { exitEditing(); return; }
+        // ADR-777 §8.69.13 — έξοδος από επεξεργασία + μήνυμα ΜΕΣΑ στην πράξη· `failed` ⇒ catch.
+        // Ολόκληρο το ακίνητο ως τρέχουσα κατάσταση: ο κριτής κλειδώματος του πελάτη κρίνει ΤΙΜΗ, όχι παρουσία κλειδιού.
+        outcomeOrThrow(await runVersionedPropertyUpdate(property, changed, async () => {
+          exitEditing();
           success(t('save.success'));
         }));
       }
@@ -377,8 +380,7 @@ export function PropertyFieldsBlock({
     }
   }, [buildUpdatesFromForm, formData.areaGross, formData.floor, formData.name, formData.type,
     formData.projectId, formData.buildingId, formData.floorId, formData.levels.length,
-    isCreatingNewUnit, onExitEditMode, onPropertyCreated, property.id, property.buildingId,
-    property.code, property.commercialStatus, property.floorId, runExistingPropertyUpdate,
+    isCreatingNewUnit, isMultiLevel, onExitEditMode, onPropertyCreated, property, runVersionedPropertyUpdate,
     latestSuggestion, success, notifyError, t]);
 
   const toggleArrayItem = useCallback(<T extends string>(

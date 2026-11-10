@@ -111,10 +111,12 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
         // 🔒 ADR-898 §21.6 Ε6-α/γ — η άγκυρα (χώρος εργασίας · έργο · κτίριο) κρίνεται ΠΡΙΝ από οτιδήποτε άλλο.
         const anchorPatch = await assertPropertyAnchorWrite(adminDb, { ctx, path: '/api/properties/[id]' }, id, body, existing);
 
-        // 🛡️ ADR-249: Field locking (sale-revert flow bypasses — see helper).
+        // 🛡️ ADR-249 §7: κλείδωμα κατά ΑΛΛΑΓΗ ΤΙΜΗΣ — αμετάβλητα κλειδωμένα πεδία φεύγουν από το `body`,
+        //    αλλαγμένα ⇒ 403 (η επίσημη ακύρωση περνά — βλ. helper).
         validatePropertyFieldLockingUnlessRevert(
           existing.commercialStatus as string | undefined,
           body,
+          existing,
         );
 
         // ADR-236: Multi-level floors — mutates body in-place (validates primary,
