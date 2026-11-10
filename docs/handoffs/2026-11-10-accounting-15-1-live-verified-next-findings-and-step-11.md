@@ -1,4 +1,4 @@
-# HANDOFF — 2026-11-10 — Λογιστική: BIC ζωντανά ✅ · §15.1 (8e93845d, ΜΟΝΟ στο κλαδί) · 2 ευρήματα · βήμα 11
+# HANDOFF — 2026-11-10 — Λογιστική: BIC ζωντανά ✅ · §15.1 ζωντανό (ff20b63f, deploy 5fcca31) → επαλήθευση · 2 ευρήματα · βήμα 11
 
 **Worktree**: `C:\Nestor_Worktrees\accounting-next` · **Κλαδί**: `agent/accounting-next`
 **Η νέα συνεδρία συνεχίζει ΣΤΟ ΙΔΙΟ worktree.**
@@ -8,13 +8,19 @@
 - Προηγούμενα handoff: `2026-11-10-accounting-bic-fix-live-verify-and-open-items.md` · `2026-11-10-accounting-step-10-live-next-verify-and-step-11.md` (§4 βήμα 11, §5 ευρήματα, §6 ΜΗΝ — **ισχύουν**).
 
 ## 1. Κατάσταση
-- `main` = origin = `4a3b4177` (άλλες εργασίες), **ζωντανό** στο Netcup (run 42891761588) — περιέχει το `61679b87` (BIC).
-- Κλαδί: **`8e93845d`** (πάνω από `c4b53bc1`) — ΔΕΝ έχει γίνει land/push. Περιέχει ADR-ACC-018 **§15.1**:
+- §15.1 **ενταγμένο και ανεβασμένο**: `ff20b63f` (κώδικας, πρώην `8e93845d`) + `56752e89` (handoff) στο `main`/origin. Το deploy του 56752e89 ακυρώθηκε από νεότερο push, αλλά το **`5fcca31` (run 42903302550, success) το περιέχει** ⇒ §15.1 **ζωντανό** στο Netcup.
+- 🔜 **ΠΡΩΤΟ ΒΗΜΑ νέας συνεδρίας: ζωντανή επαλήθευση §15.1** (nestorconstruct.gr → Λογιστική → Ρυθμίσεις → Τραπεζικοί λογαριασμοί):
+  1. ομάδα «1 ανενεργός λογαριασμός» συμπτυγμένη κάτω από τους ενεργούς, με κουμπί επανενεργοποίησης·
+  2. επανενεργοποίηση ⇒ επιστρέφει **εκτός τιμολογίων, χωρίς προεπιλογή**· ίχνος `BANK_ACCOUNT_REACTIVATED` στο ιστορικό·
+  3. επανενεργοποίηση λογαριασμού με IBAN που έχει ήδη **ενεργός** ⇒ 409 + μήνυμα `reactivateDuplicate` στον διάλογο (στα logs `info`, όχι ERROR με stack).
+  - Δοκιμαστικά επιτρέπονται· ΑΑΔΕ ΟΧΙ· Α-3…Α-6 μένουν. Μετά την επαλήθευση → §3 (ευρήματα) → §4 (βήμα 11).
+- Το κλαδί `agent/accounting-next` είναι **πίσω** από το `main` (άλλες εργασίες). Πριν από νέο κώδικα: `git rebase main`· σύγκρουση στο `src/types/i18n.ts` ⇒ **ξαναπαραγωγή** (`npm run generate:i18n-types` + `generate:i18n-shell-slice:index`), ποτέ χειροκίνητη συγχώνευση.
+- Περιεχόμενο ADR-ACC-018 **§15.1**:
   - **Α** ανενεργοί λογαριασμοί σε συμπτυγμένη ομάδα + `POST /api/accounting/bank-accounts/[id]/reactivate` (γραφέας `reactivateBankAccount`: έλεγχος μοναδικού ενεργού IBAN μέσα στη συναλλαγή, επιστρέφει εκτός τιμολογίων/χωρίς προεπιλογή, ίχνος `BANK_ACCOUNT_REACTIVATED`). Ένας διάλογος δύο κατευθύνσεων (`STATUS_COPY` στο `BankAccountsSection.tsx`). Γραμμή στο `.rate-limit-policy-baseline.json`.
   - **Β** `src/lib/errors/domain-refusal.ts` (`DomainRefusal`, `isDomainRefusal`)· `safeFirestoreOperation` (`firebaseAdmin.ts`) καταγράφει αρνήσεις ως `info` χωρίς stack (σέβεται και το `fallback`). Κληρονομούν `DuplicateBankAccountError` (409), `OwnedDocumentNotFoundError` (404). Η μετάφραση HTTP **δεν** άλλαξε.
   - **Γ** `scripts/report-greek-bank-bic.ts` — ΜΟΝΟ ανάγνωση. Ο classifier **αρνήθηκε** να το τρέξει ο πράκτορας (ανάγνωση παραγωγής + `npx tsx`). Ο Giorgio μπορεί: `! node --env-file=C:/Nestor_Pagonis/.env.local "C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js" --yes tsx scripts/report-greek-bank-bic.ts`. Το `tsx` ΔΕΝ είναι στο `node_modules` του worktree.
   - **Δ** δοκιμαστικά μένουν ως το τέλος του βήματος 11, μετά διαγραφή μέσω γραφέων με ίχνος.
-- Hook commit: 85 πύλες + 111 σουίτες ✅.
+- Hook commit: 85 πύλες + 111 σουίτες ✅ (στο αρχικό commit, πριν το rebase).
 
 ## 2. Ζωντανή επαλήθευση (έγινε, όλα ✅)
 Πειραιώς `PIRBGRAA` · Optima (034) «Optima Bank» `IBOGGRAA` · Eurobank (026) `ERBKGRAA` · ίδιο IBAN με ανενεργό δεκτό · νέο πρόχειρο **Α-9** ⇒ QR γραμμή 5 `PIRBGRAA`, `EUR124`, `RF87A000000009` · Α-7 κρατά `PIABORAA` (snapshot).
