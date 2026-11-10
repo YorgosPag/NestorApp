@@ -24,11 +24,14 @@ import path from 'node:path';
 
 import { describe, it, expect } from '@jest/globals';
 
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { ENTITY_TYPES, SYSTEM_IDENTITY, isSystemActorId } from '@/config/domain-constants';
 import {
   isSystemSpaceEntityType,
+  planSystemSpaceAttribution,
+  systemSpaceActorOf,
   SYSTEM_FILE_ENTITY_TYPES,
-  SYSTEM_FILE_ENTITY_TYPE_REASONS,
+  SYSTEM_FILE_SPACE_CATALOG,
+  SYSTEM_SPACE_ACTOR_FIELDS,
 } from '../system-file-space';
 
 const SRC = path.resolve(__dirname, '../../..');
@@ -83,7 +86,17 @@ describe('Κ — ο κλειστός κατάλογος', () => {
     expect(SYSTEM_FILE_ENTITY_TYPES.length).toBeGreaterThan(0);
     for (const value of SYSTEM_FILE_ENTITY_TYPES) {
       expect(entityTypeKeyOf(value)).toBeDefined();
-      expect(SYSTEM_FILE_ENTITY_TYPE_REASONS[value].length).toBeGreaterThan(20);
+      expect(SYSTEM_FILE_SPACE_CATALOG[value].reason.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('🔒 Μ-β7 — κάθε τύπος δηλώνει διαχειριστή που είναι ΜΗΧΑΝΗ, δηλωμένη στο `SYSTEM_IDENTITY`', () => {
+    const declared = new Set<string>(Object.values(SYSTEM_IDENTITY));
+    for (const value of SYSTEM_FILE_ENTITY_TYPES) {
+      const actor = systemSpaceActorOf(value);
+      expect(isSystemActorId(actor)).toBe(true);
+      expect(actor).not.toBe(SYSTEM_IDENTITY.ID);
+      expect(declared.has(actor)).toBe(true);
     }
   });
 
@@ -109,6 +122,56 @@ describe('Σ — κανένα module του χώρου δεν ρωτά τη συ
       .filter(({ text }) => USER_SPACE_COLLECTION.test(text))
       .map(({ file }) => file);
     expect(leaking).toEqual([]);
+  });
+});
+
+/** Module που γράφει στον χώρο συστήματος: ονομάζει τη συλλογή ή τον ΕΝΑ δείκτη εγγραφής. */
+const WRITES_SYSTEM_SPACE = /COLLECTIONS\.FILES_SYSTEM\b|\bmediaContentFileRef\b/;
+/** Πεδίο δράστη (ή το `by` των `fileTrashFields`/`fileRestoreFields`) που παίρνει την ταυτότητα του ανθρώπου. */
+const HUMAN_INTO_ACTOR_FIELD = new RegExp(`\\b(?:${[...SYSTEM_SPACE_ACTOR_FIELDS, 'by'].join('|')})\\s*:\\s*[\\w.]*\\buid\\b`);
+
+describe('Δ — η εγγραφή του χώρου δεν κρατά uid ανθρώπου (Μ-β7)', () => {
+  it('🔴 κανένα module που γράφει στον χώρο συστήματος δεν βάζει `…uid` σε πεδίο δράστη (ο άνθρωπος πάει στο ίχνος)', () => {
+    const writers = SOURCES.filter(({ text }) => WRITES_SYSTEM_SPACE.test(text));
+    expect(writers.map(({ file }) => file)).toContain('server/catalog/media-content-revival.server.ts');
+    expect(writers.filter(({ text }) => HUMAN_INTO_ACTOR_FIELD.test(text)).map(({ file }) => file)).toEqual([]);
+  });
+
+  it('η άγκυρα ΠΙΑΝΕΙ τη μετάλλαξη (αλλιώς πράσινο = «δεν κοίταξα»)', () => {
+    expect(HUMAN_INTO_ACTOR_FIELD.test('createdBy: ctx.uid,')).toBe(true);
+    expect(HUMAN_INTO_ACTOR_FIELD.test('fileRestoreFields({ by: ctx.uid })')).toBe(true);
+    expect(HUMAN_INTO_ACTOR_FIELD.test('performedBy: ctx.uid')).toBe(false);
+  });
+});
+
+describe('Π — ο κριτής της μετανάστευσης απόδοσης (`planSystemSpaceAttribution`)', () => {
+  const TYPE = ENTITY_TYPES.CATALOG_MEDIA_CONTENT;
+  const HUMAN = 'WKBWEg3DSfcdSbLNJfzGEW3vkct1';
+  const trail = new Set([HUMAN]);
+
+  it('άνθρωπος σε πεδία δράστη + στο ίχνος ⇒ διόρθωση ΜΟΝΟ των πεδίων με άνθρωπο', () => {
+    const data = { entityType: TYPE, createdBy: HUMAN, restoredBy: HUMAN, trashedBy: SYSTEM_IDENTITY.CATALOG_MEDIA_RELEASE_ID };
+    expect(planSystemSpaceAttribution(data, trail)).toEqual({
+      kind: 'rewrite',
+      fields: { createdBy: SYSTEM_IDENTITY.CATALOG_MEDIA_ID, restoredBy: SYSTEM_IDENTITY.CATALOG_MEDIA_ID },
+      humans: [HUMAN],
+    });
+  });
+
+  it('μόνο μηχανή ή κενά ⇒ `clean` (ιδεμπότητο: η δεύτερη εκτέλεση δεν γράφει)', () => {
+    expect(planSystemSpaceAttribution({ entityType: TYPE, createdBy: SYSTEM_IDENTITY.CATALOG_MEDIA_ID, trashedBy: null }, trail)).toEqual({ kind: 'clean' });
+  });
+
+  it('🔴 άνθρωπος που ΔΕΝ είναι στο ίχνος ⇒ σύγκρουση, ποτέ σιωπηλή απώλεια της σύνδεσης', () => {
+    expect(planSystemSpaceAttribution({ entityType: TYPE, createdBy: HUMAN }, new Set())).toEqual({ kind: 'conflict', why: 'human-not-in-trail', humans: [HUMAN] });
+  });
+
+  it('🔴 πεδίο `…By` εκτός λίστας με άνθρωπο ⇒ σύγκρουση (ποτέ «δεν κοίταξα»)', () => {
+    expect(planSystemSpaceAttribution({ entityType: TYPE, lockedBy: HUMAN }, trail)).toMatchObject({ kind: 'conflict', why: 'unlisted-actor-field' });
+  });
+
+  it('τύπος εκτός χώρου ⇒ σύγκρουση', () => {
+    expect(planSystemSpaceAttribution({ entityType: ENTITY_TYPES.CATALOG_ASSET, createdBy: HUMAN }, trail)).toMatchObject({ kind: 'conflict', why: 'not-system-type' });
   });
 });
 

@@ -29,6 +29,7 @@ import { filenameFromUrl } from '@/config/file-types/classification-registry';
 import type { AuthContext } from '@/lib/auth';
 import { CONTENT_SIGNATURE_HEAD_BYTES } from '@/lib/files/content-signature';
 import { placementForNewFile } from '@/lib/files/new-file-placement';
+import { systemSpaceActorOf } from '@/lib/files/system-file-space';
 import { peekStreamHead } from '@/lib/files/stream-head';
 import { OutboundBodyError } from '@/lib/security/outbound-fetch';
 import { STREAM_TOO_LARGE_ERROR } from '@/lib/storage/sha256-pass-through';
@@ -106,7 +107,8 @@ function contentRecord(ctx: AuthContext, media: DownloadedMedia, accepted: Accep
     originalFilename: named !== '' ? named : `${measured.sha256}.${signature.ext}`,
     contentType: signature.contentType,
     ext: signature.ext,
-    createdBy: ctx.uid,
+    // 🔑 Μ-β7: ο διαχειριστής του χώρου, ποτέ ο άνθρωπος — εκείνος γράφεται στο ίχνος (`media-content-revival` · `auditKept`).
+    createdBy: systemSpaceActorOf(ENTITY_TYPES.CATALOG_MEDIA_CONTENT),
     storagePlacement: MEDIA_PLACEMENT,
     fileId: mediaContentFileIdOf(ctx.companyId, measured.sha256, signature.ext),
   });

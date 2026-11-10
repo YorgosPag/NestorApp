@@ -22,6 +22,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_LIFECYCLE_STATES } from '@/config/file-lifecycle-states';
 import { nowISO } from '@/lib/date-local';
@@ -40,7 +41,7 @@ import { mediaContentFileRef } from './media-content-revival.server';
 const logger = createModuleLogger('CatalogMediaRelease');
 
 /** Ο δράστης στο ίχνος: η αποδέσμευση είναι **συνέπεια** κανόνα, όχι πράξη ανθρώπου πάνω στο αρχείο. */
-export const MEDIA_RELEASE_ACTOR = 'system:catalog-media-release';
+export const MEDIA_RELEASE_ACTOR = SYSTEM_IDENTITY.CATALOG_MEDIA_RELEASE_ID;
 
 /** Ποιον χώρο αφορά η αποδέσμευση, και γιατί (για το ίχνος). */
 export interface MediaReleaseScope {

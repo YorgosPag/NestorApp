@@ -24,6 +24,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_LIFECYCLE_STATES } from '@/config/file-lifecycle-states';
 import type { AuthContext } from '@/lib/auth';
 import { fileRestoreFields } from '@/lib/files/file-trash-fields';
+import { isSystemSpaceEntityType, systemSpaceActorOf } from '@/lib/files/system-file-space';
 import { FieldValue, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { statObjects } from '@/server/storage/placement-copy';
@@ -54,8 +55,16 @@ export const mediaContentFileRef = (fileId: string): DocumentReference =>
 export const mediaContentStateIn = (ctx: AuthContext, fileId: string, sha256: string, data: Data | null): MediaContentState =>
   mediaContentStateOf({ companyId: ctx.companyId, fileId, sha256 }, data);
 
-const restoreFieldsFor = (ctx: AuthContext): Record<string, unknown> =>
-  fileRestoreFields({ activeState: FILE_LIFECYCLE_STATES.ACTIVE, by: ctx.uid, now: FieldValue.serverTimestamp() });
+/**
+ * Τα πεδία επαναφοράς, με δράστη τον **διαχειριστή του χώρου** που δηλώνει η ίδια η εγγραφή (ADR-934 §5.2.2 Μ-β7) — ποτέ το uid
+ * του ανθρώπου: εκείνος γράφεται στο ίχνος (`auditKept`). Καλείται μόνο σε κατάσταση `trashed`, όπου ο κριτής έχει ήδη επιβεβαιώσει
+ * τον τύπο· άγνωστος τύπος εδώ = αλλοιωμένη εγγραφή ⇒ άρνηση, ποτέ εφεδρεία στον άνθρωπο.
+ */
+function restoreFieldsFor(fileId: string, data: Data | null): Record<string, unknown> {
+  const entityType = data?.entityType;
+  if (!isSystemSpaceEntityType(entityType)) throw new MediaContentUnavailableError(fileId);
+  return fileRestoreFields({ activeState: FILE_LIFECYCLE_STATES.ACTIVE, by: systemSpaceActorOf(entityType), now: FieldValue.serverTimestamp() });
+}
 
 /** Το ίχνος της πράξης — **μετά** τη γραφή· η υιοθέτηση ζωντανού δεν γράφει τίποτα. */
 async function auditKept(ctx: AuthContext, fileId: string, outcome: KeptContentOutcome, uri: string): Promise<void> {
@@ -80,10 +89,11 @@ export interface KeepContentRequest {
 export async function keepMediaContentRecord(ctx: AuthContext, request: KeepContentRequest): Promise<KeptContentOutcome> {
   const ref = mediaContentFileRef(request.fileId);
   const outcome = await getAdminFirestore().runTransaction(async (tx): Promise<KeptContentOutcome> => {
-    const state = mediaContentStateIn(ctx, request.fileId, request.sha256, (await tx.get(ref)).data() ?? null);
+    const data = (await tx.get(ref)).data() ?? null;
+    const state = mediaContentStateIn(ctx, request.fileId, request.sha256, data);
     switch (state) {
       case 'live': return 'kept';
-      case 'trashed': tx.update(ref, restoreFieldsFor(ctx)); return 'restored';
+      case 'trashed': tx.update(ref, restoreFieldsFor(request.fileId, data)); return 'restored';
       case 'purged': tx.set(ref, request.record); return 'reborn';
       case 'absent': tx.create(ref, request.record); return 'created';
       case 'foreign': throw new MediaContentUnavailableError(request.fileId);
@@ -112,8 +122,9 @@ export async function restoreTrashedMediaContent(ctx: AuthContext, fileId: strin
   if (state !== 'trashed' || before === null) return state === 'live';
   if (!(await bytesStillThere(before))) return false;
   const restored = await getAdminFirestore().runTransaction(async (tx) => {
-    const now = mediaContentStateIn(ctx, fileId, sha256, (await tx.get(ref)).data() ?? null);
-    if (now === 'trashed') tx.update(ref, restoreFieldsFor(ctx));
+    const data = (await tx.get(ref)).data() ?? null;
+    const now = mediaContentStateIn(ctx, fileId, sha256, data);
+    if (now === 'trashed') tx.update(ref, restoreFieldsFor(fileId, data));
     return now === 'trashed' ? 'restored' : now;
   });
   if (restored === 'restored') await auditKept(ctx, fileId, 'restored', uri);

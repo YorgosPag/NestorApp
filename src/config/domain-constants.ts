@@ -45,6 +45,13 @@ export const SYSTEM_IDENTITY = {
   AI_AGENT_ID: 'system:ai-agent',
   /** Η εισερχόμενη αλληλογραφία: επαφή από άγνωστο αποστολέα (ADR-195) */
   EMAIL_INBOUND_ID: 'system:email-inbound',
+  /**
+   * Ο διαχειριστής της καραντίνας μέσων καταλόγου στον χώρο συστήματος (ADR-934 §5.2.2 Μ-β7): γεννά και επαναφέρει τις
+   * εγγραφές της. Ο άνθρωπος που ζήτησε τη λήψη γράφεται **μόνο** στο ίχνος — η εγγραφή δεν κρατά uid.
+   */
+  CATALOG_MEDIA_ID: 'system:catalog-media',
+  /** Η αποδέσμευση της καραντίνας στον κάδο όταν καμία ανοιχτή παρτίδα δεν την κρατά (ADR-934 §5.2.2 Μ-β5) */
+  CATALOG_MEDIA_RELEASE_ID: 'system:catalog-media-release',
   /** Display name for system messages */
   DISPLAY_NAME: 'System',
   /** System type identifier */

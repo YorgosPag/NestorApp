@@ -44,6 +44,7 @@ jest.mock('@/services/file-audit-admin.service', () => ({
 }));
 
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθεί ο γραφέας */
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { CATALOG_MEDIA_STAGING_PREFIX } from '@/subapps/catalog/vocabulary/asset-fetch';
 import { MediaContentUnavailableError } from '../media-content-revival.server';
 import {
@@ -123,6 +124,14 @@ describe('quarantineDownloadedMedia — δεκτό αρχείο', () => {
     expect(fake.getAllDocs(COLLECTIONS.FILES)).toEqual({});
   });
 
+  it('🔒 Μ-β7 — η εγγραφή ΔΕΝ κρατά uid ανθρώπου: δράστης = ο διαχειριστής του χώρου, ο άνθρωπος μένει στο ίχνος', async () => {
+    await quarantineDownloadedMedia(ctx, media());
+    const record = fake.getAllDocs(SYSTEM_FILES)[mediaContentFileIdOf('comp_1', PDF_SHA, 'pdf')];
+    expect(record.createdBy).toBe(SYSTEM_IDENTITY.CATALOG_MEDIA_ID);
+    expect(Object.values(record)).not.toContain('user_1');
+    expect(mockAudits).toEqual([expect.objectContaining({ performedBy: 'user_1' })]);
+  });
+
   it('ίχνος `remote_fetch` (ποτέ `upload`) με τη διεύθυνση', async () => {
     await quarantineDownloadedMedia(ctx, media());
     expect(mockAudits).toEqual([
@@ -192,8 +201,9 @@ describe('quarantineDownloadedMedia — ανάσταση εγγραφής (ADR-9
     mockAudits.length = 0;
     const outcome = await again();
     expect(outcome.ok && outcome.content.alreadyKept).toBe(true);
-    expect(fake.getAllDocs(SYSTEM_FILES)[fileId()]).toMatchObject({ isDeleted: false, lifecycleState: 'active', purgeAt: null, trashedBy: null, restoredBy: 'user_1' });
-    expect(mockAudits).toEqual([expect.objectContaining({ fileId: fileId(), action: 'restore', metadata: { uri: media().uri, revival: 'restored' } })]);
+    // 🔒 Μ-β7: η επαναφορά τη γράφει ο διαχειριστής του χώρου· ο άνθρωπος μένει ΜΟΝΟ στο ίχνος.
+    expect(fake.getAllDocs(SYSTEM_FILES)[fileId()]).toMatchObject({ isDeleted: false, lifecycleState: 'active', purgeAt: null, trashedBy: null, restoredBy: SYSTEM_IDENTITY.CATALOG_MEDIA_ID });
+    expect(mockAudits).toEqual([expect.objectContaining({ fileId: fileId(), action: 'restore', performedBy: 'user_1', metadata: { uri: media().uri, revival: 'restored' } })]);
   });
 
   it('🔑 επιτύμβιο (τα bytes έφυγαν) ⇒ ΑΝΑΓΕΝΝΗΣΗ με τα bytes που μόλις ήρθαν, ποτέ `contentUnavailable` για πάντα', async () => {

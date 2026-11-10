@@ -27,6 +27,8 @@ const SYSTEM_ACTOR_KEYS: Readonly<Record<string, string>> = {
   [SYSTEM_IDENTITY.FLOOR_REF_ID]: 'audit.actors.floorRef',
   [SYSTEM_IDENTITY.AI_AGENT_ID]: 'audit.actors.aiAgent',
   [SYSTEM_IDENTITY.EMAIL_INBOUND_ID]: 'audit.actors.emailInbound',
+  [SYSTEM_IDENTITY.CATALOG_MEDIA_ID]: 'audit.actors.catalogMedia',
+  [SYSTEM_IDENTITY.CATALOG_MEDIA_RELEASE_ID]: 'audit.actors.catalogMediaRelease',
 };
 
 /**

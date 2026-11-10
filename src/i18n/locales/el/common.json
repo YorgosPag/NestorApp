@@ -795,7 +795,9 @@
       "floorRef": "Σύστημα · συγχρονισμός ορόφου",
       "aiAgent": "Σύστημα · βοηθός AI",
       "aiAgentFor": "Βοηθός AI · για {name}",
-      "emailInbound": "Σύστημα · εισερχόμενο email"
+      "emailInbound": "Σύστημα · εισερχόμενο email",
+      "catalogMedia": "Σύστημα · μέσα καταλόγου",
+      "catalogMediaRelease": "Σύστημα · αποδέσμευση μέσων καταλόγου"
     },
     "cause": {
       "byUserOnEntity": "λόγω αλλαγής από {name} στο «{entity}»",

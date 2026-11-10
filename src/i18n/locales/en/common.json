@@ -795,7 +795,9 @@
       "floorRef": "System · floor sync",
       "aiAgent": "System · AI assistant",
       "aiAgentFor": "AI assistant · for {name}",
-      "emailInbound": "System · inbound email"
+      "emailInbound": "System · inbound email",
+      "catalogMedia": "System · catalog media",
+      "catalogMediaRelease": "System · catalog media release"
     },
     "cause": {
       "byUserOnEntity": "caused by a change from {name} on “{entity}”",

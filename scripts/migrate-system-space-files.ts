@@ -25,7 +25,13 @@
  * ```bash
  * npx tsx scripts/migrate-system-space-files.ts            # dry-run (μέτρηση)
  * npx tsx scripts/migrate-system-space-files.ts --execute  # εγγραφή
+ * npx tsx scripts/migrate-system-space-files.ts --attribution            # Μ-β7: dry-run απόδοσης
+ * npx tsx scripts/migrate-system-space-files.ts --attribution --execute  # Μ-β7: εγγραφή
  * ```
+ *
+ * **`--attribution` (ADR-934 §5.2.2 Μ-β7)**: τα πεδία δράστη (`SYSTEM_SPACE_ACTOR_FIELDS`) που κρατούν uid ανθρώπου γίνονται ο
+ * διαχειριστής του χώρου (`systemSpaceActorOf`) — **μόνο** αν ο ίδιος άνθρωπος μένει στο ίχνος του αρχείου (`performedBy`).
+ * Αλλιώς σύγκρουση, καμία γραφή, καμία κατασκευασμένη γραμμή ίχνους. Ιδεμπότητη: δεύτερη εκτέλεση = 0 διορθώσεις.
  *
  * @see src/lib/files/system-file-space.ts · firestore.rules `match /files_system/{fileId}`
  */
@@ -33,7 +39,11 @@
 import admin from 'firebase-admin';
 
 import { COLLECTIONS } from '../src/config/firestore-collections';
-import { SYSTEM_FILE_ENTITY_TYPES } from '../src/lib/files/system-file-space';
+import {
+  planSystemSpaceAttribution,
+  SYSTEM_FILE_ENTITY_TYPES,
+  type SystemSpaceAttributionPlan,
+} from '../src/lib/files/system-file-space';
 import { applyEnvLocal } from './_shared/loadEnvLocal';
 import { initAdminApp } from './_shared/firebaseAdminOps';
 
@@ -73,14 +83,67 @@ async function moveOne(db: admin.firestore.Firestore, fileId: string): Promise<M
   });
 }
 
+// =============================================================================
+// ΦΑΣΗ `--attribution` — ο άνθρωπος φεύγει από την εγγραφή, μένει στο ίχνος (ADR-934 §5.2.2 Μ-β7)
+// =============================================================================
+
+type AttributionOutcome = SystemSpaceAttributionPlan['kind'] | 'gone';
+
+/** Οι `performedBy` του ίχνους **αυτού** του αρχείου — από το εταιρικό βιβλίο, όπου γράφει ο χώρος συστήματος. */
+async function trailPerformersOf(db: admin.firestore.Firestore, fileId: string): Promise<Set<string>> {
+  // tenant-scope-exempt: μετανάστευση συστήματος· το `fileId` είναι ντετερμινιστικό ανά εταιρεία (χώρος · sha256 · κατάληξη).
+  const snapshot = await db.collection(COLLECTIONS.FILE_AUDIT_LOG).where('fileId', '==', fileId).get();
+  return new Set(snapshot.docs.map((doc) => String(doc.data().performedBy)));
+}
+
+/** Μία διόρθωση, σε συναλλαγή: ξανακρίνεται μέσα της. Το ίχνος μόνο **μεγαλώνει**, άρα η ανάγνωσή του έξω από τη συναλλαγή αρκεί. */
+async function attributeOne(db: admin.firestore.Firestore, fileId: string, trail: ReadonlySet<string>): Promise<AttributionOutcome> {
+  const ref = db.collection(COLLECTIONS.FILES_SYSTEM).doc(fileId);
+  return db.runTransaction(async (tx): Promise<AttributionOutcome> => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return 'gone';
+    const plan = planSystemSpaceAttribution(snap.data() ?? {}, trail);
+    // Καμία αλλαγή `updatedAt`: η διόρθωση απόδοσης δεν είναι πράξη πάνω στο αρχείο (ίδιο δόγμα με τη μετακόμιση).
+    if (plan.kind === 'rewrite') tx.update(ref, plan.fields);
+    return plan.kind;
+  });
+}
+
+async function runAttribution(db: admin.firestore.Firestore, execute: boolean): Promise<void> {
+  // tenant-scope-exempt: μετανάστευση συστήματος σε **κάθε** εταιρεία εκ σχεδιασμού· ο κάτοχος ταξιδεύει μέσα στην εγγραφή.
+  const snapshot = await db.collection(COLLECTIONS.FILES_SYSTEM).get();
+  const tally: Record<AttributionOutcome, number> = { clean: 0, rewrite: 0, conflict: 0, gone: 0 };
+  for (const doc of snapshot.docs) {
+    const trail = await trailPerformersOf(db, doc.id);
+    const preview = planSystemSpaceAttribution(doc.data(), trail);
+    const outcome: AttributionOutcome = execute ? await attributeOne(db, doc.id, trail) : preview.kind;
+    tally[outcome] += 1;
+    const detail = preview.kind === 'rewrite'
+      ? ` ${Object.keys(preview.fields).join('+')} · άνθρωποι στο ίχνος: ${preview.humans.length}`
+      : preview.kind === 'conflict' ? ` ⛔ ${preview.why} · άνθρωποι: ${preview.humans.length}` : '';
+    console.log(`  ${doc.id} [${String(doc.data().lifecycleState)}] ${outcome}${detail}`);
+  }
+  // Κάθε κάδος τυπώνεται, και τα μηδενικά: «0» που δεν φαίνεται διαβάζεται «δεν κοίταξα».
+  console.log(
+    `\nΣύνολο ${snapshot.size} · καθαρά ${tally.clean} · διόρθωση ${tally.rewrite} · συγκρούσεις ${tally.conflict} · ` +
+      `χαμένα ${tally.gone}${execute ? ' · ΓΡΑΦΤΗΚΑΝ' : ' · (dry-run, τίποτα δεν γράφτηκε)'}\n`,
+  );
+  if (tally.conflict > 0) process.exitCode = 1;
+}
+
 async function main(): Promise<void> {
   const execute = process.argv.includes('--execute');
+  const attribution = process.argv.includes('--attribution');
   applyEnvLocal();
   const { db, projectId } = initAdminApp(admin);
 
-  console.log(`\nΧώρος συστήματος αρχείων — ${execute ? 'EXECUTE (εγγραφή)' : 'DRY-RUN'} · ${projectId}`);
+  console.log(`\nΧώρος συστήματος αρχείων — ${attribution ? 'ΑΠΟΔΟΣΗ' : 'ΜΕΤΑΚΟΜΙΣΗ'} · ${execute ? 'EXECUTE (εγγραφή)' : 'DRY-RUN'} · ${projectId}`);
   console.log(`Τύποι: ${SYSTEM_FILE_ENTITY_TYPES.join(', ')}\n`);
+  if (attribution) return runAttribution(db, execute);
+  return runMove(db, execute);
+}
 
+async function runMove(db: admin.firestore.Firestore, execute: boolean): Promise<void> {
   // tenant-scope-exempt: μετανάστευση συστήματος σε **κάθε** εταιρεία εκ σχεδιασμού· ο κάτοχος ταξιδεύει μέσα στην εγγραφή.
   const snapshot = await db.collection(COLLECTIONS.FILES).where('entityType', 'in', [...SYSTEM_FILE_ENTITY_TYPES]).get();
   const tally: Record<MoveOutcome, number> = { move: 0, 'drop-source': 0, conflict: 0, gone: 0 };

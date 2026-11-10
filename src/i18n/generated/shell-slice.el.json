@@ -1378,6 +1378,8 @@
         "addressPosition": "Σύστημα · εντοπισμός θέσης",
         "aiAgent": "Σύστημα · βοηθός AI",
         "aiAgentFor": "Βοηθός AI · για {name}",
+        "catalogMedia": "Σύστημα · μέσα καταλόγου",
+        "catalogMediaRelease": "Σύστημα · αποδέσμευση μέσων καταλόγου",
         "emailInbound": "Σύστημα · εισερχόμενο email",
         "floorRef": "Σύστημα · συγχρονισμός ορόφου",
         "floorStack": "Σύστημα · στοίβα ορόφων",
