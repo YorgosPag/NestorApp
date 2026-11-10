@@ -30,7 +30,7 @@ import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { assertPostingAllowed } from '../_shared/fiscal-period-errors';
 import { POLICY_ERROR_CODES } from '@/lib/policy/policy-error-codes';
 import { INVOICE_TYPES } from '@/subapps/accounting/types';
-import type { CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
+import type { CreateInvoiceInput, CreditCheckResult, InvoiceCreatedResponse } from '@/subapps/accounting/types';
 import { readListContext, readPageRequest, respondWithPage } from '../_shared/list-request-context';
 import { createDraftMyDataMeta } from '@/subapps/accounting/services/mydata/mydata-status-transitions';
 import { invoiceSharedFields, refineInvoiceAmounts, stripServerOwnedInvoiceFields } from './invoice-schemas';
@@ -112,7 +112,8 @@ export const POST = defineRoute({
       await refreshCustomerBalance(repository, contactId);
     }
 
-    return created({
+    // ADR-ACC-003 §22.10: το ΕΝΑ συμβόλαιο που διαβάζει και η φόρμα (`InvoiceCreatedResponse`).
+    return created<InvoiceCreatedResponse>({
       invoiceId: id,
       number,
       journalEntryId: journalEntry?.entryId ?? null,

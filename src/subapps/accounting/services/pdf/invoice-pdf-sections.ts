@@ -1,16 +1,17 @@
 /**
  * @fileoverview Invoice PDF Section Renderers (§1-§10)
  * @description Each function draws one section and returns the new Y position.
+ *   §1 κεφαλίδα + §2 πελάτης ζουν στο `invoice-pdf-parties.ts` (ADR-ACC-018 §14).
  * @see ADR-ACC-018 Invoice PDF Generation
  */
 
 import type jsPDF from 'jspdf';
 import autoTable, { type Styles } from 'jspdf-autotable';
 import { forceRobotoCell, yAfterTable } from '@/services/report-engine/report-pdf-chrome';
-import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import type { Invoice, InvoiceLineItem } from '../../types';
 import {
-  COLORS, LAYOUT, LOGO, LABELS, INVOICE_TITLES, PAYMENT_METHOD_LABELS, INVOICE_DOCUMENT_LANGUAGE,
+  COLORS, LAYOUT, LABELS, PAYMENT_METHOD_LABELS, INVOICE_DOCUMENT_LANGUAGE,
   ensureSpace, drawHR, setColor, formatIBAN,
   drawPaymentStamp, buildColumnStyles
 } from './invoice-pdf-constants';
@@ -20,119 +21,6 @@ import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
 const TABLE_BODY_STYLES = {
   fontSize: 7.5, font: 'Roboto', cellPadding: 1.5, textColor: [COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]],
 } satisfies Partial<Styles>;
-
-/**
- * §1: Header — Logo + Issuer info + Invoice type/number/dates
- */
-export function drawHeader(
-  pdf: jsPDF, invoice: Invoice, logoBase64: string | null, startY: number
-): number {
-  let y = startY;
-  const rightCol = LAYOUT.pageWidth - LAYOUT.marginRight;
-
-  // Logo
-  let issuerStartX = LAYOUT.marginLeft;
-  if (logoBase64) {
-    try {
-      pdf.addImage(
-        `data:image/png;base64,${logoBase64}`, 'PNG',
-        LAYOUT.marginLeft, y, LOGO.width, LOGO.height
-      );
-      issuerStartX = LAYOUT.marginLeft + LOGO.width + 4;
-    } catch { /* Logo failed — skip */ }
-  }
-
-  // Issuer info (left)
-  const { issuer } = invoice;
-  setColor(pdf, COLORS.navy);
-  pdf.setFontSize(11);
-  pdf.text(issuer.name, issuerStartX, y + 5);
-
-  pdf.setFontSize(8);
-  setColor(pdf, COLORS.gray);
-  let infoY = y + 10;
-  pdf.text(`${LABELS.vatNumber}: ${issuer.vatNumber}`, issuerStartX, infoY);
-  infoY += 4;
-  pdf.text(`${LABELS.taxOffice}: ${issuer.taxOffice}`, issuerStartX, infoY);
-  infoY += 4;
-  pdf.text(`${issuer.address}, ${issuer.city} ${issuer.postalCode}`, issuerStartX, infoY);
-  infoY += 4;
-  pdf.text(`${LABELS.profession}: ${issuer.profession}`, issuerStartX, infoY);
-  infoY += 4;
-
-  const contactParts: string[] = [];
-  if (issuer.phone) contactParts.push(`${LABELS.phone}: ${issuer.phone}`);
-  if (issuer.mobile) contactParts.push(`${LABELS.mobile}: ${issuer.mobile}`);
-  if (issuer.email) contactParts.push(`${LABELS.email}: ${issuer.email}`);
-  if (contactParts.length > 0) {
-    pdf.text(contactParts.join('  |  '), issuerStartX, infoY);
-    infoY += 4;
-  }
-
-  // Invoice title + number (right)
-  const title = INVOICE_TITLES[invoice.type];
-  setColor(pdf, COLORS.navy);
-  pdf.setFontSize(12);
-  pdf.text(title.el, rightCol, y + 5, { align: 'right' });
-  pdf.setFontSize(8);
-  setColor(pdf, COLORS.grayLight);
-  pdf.text(title.en, rightCol, y + 10, { align: 'right' });
-
-  pdf.setFontSize(10);
-  setColor(pdf, COLORS.navy);
-  pdf.text(`${invoice.series}-${invoice.number}`, rightCol, y + 17, { align: 'right' });
-
-  pdf.setFontSize(8);
-  setColor(pdf, COLORS.gray);
-  pdf.text(`${LABELS.invoiceDate}: ${formatAccountingDate(invoice.issueDate)}`, rightCol, y + 23, { align: 'right' });
-  if (invoice.dueDate) {
-    pdf.text(`${LABELS.dueDate}: ${formatAccountingDate(invoice.dueDate)}`, rightCol, y + 27, { align: 'right' });
-  }
-
-  y = Math.max(infoY, y + 30) + 3;
-  y = drawHR(pdf, y);
-  return y;
-}
-
-/**
- * §2: Customer section
- */
-export function drawCustomerSection(pdf: jsPDF, invoice: Invoice, startY: number): number {
-  let y = ensureSpace(pdf, startY, 30);
-  const { customer } = invoice;
-
-  setColor(pdf, COLORS.navy);
-  pdf.setFontSize(9);
-  pdf.text(LABELS.customer, LAYOUT.marginLeft, y + 4);
-
-  pdf.setDrawColor(COLORS.grayBorder[0], COLORS.grayBorder[1], COLORS.grayBorder[2]);
-  pdf.setLineWidth(0.3);
-  pdf.roundedRect(LAYOUT.marginLeft, y + 6, LAYOUT.contentWidth, 22, 1, 1);
-
-  setColor(pdf, COLORS.gray);
-  pdf.setFontSize(8);
-  let boxY = y + 11;
-
-  pdf.text(customer.name, LAYOUT.marginLeft + 3, boxY);
-  if (customer.vatNumber) {
-    pdf.text(`${LABELS.vatNumber}: ${customer.vatNumber}`, LAYOUT.marginLeft + 100, boxY);
-  }
-  boxY += 4;
-  if (customer.address) {
-    const addressLine = [customer.address, customer.city, customer.postalCode].filter(Boolean).join(', ');
-    pdf.text(addressLine, LAYOUT.marginLeft + 3, boxY);
-  }
-  if (customer.taxOffice) {
-    pdf.text(`${LABELS.taxOffice}: ${customer.taxOffice}`, LAYOUT.marginLeft + 100, boxY);
-  }
-  boxY += 4;
-  if (customer.email) pdf.text(`${LABELS.email}: ${customer.email}`, LAYOUT.marginLeft + 3, boxY);
-  if (customer.country && customer.country !== 'GR') {
-    pdf.text(`Χώρα / Country: ${customer.country}`, LAYOUT.marginLeft + 100, boxY);
-  }
-
-  return y + 32;
-}
 
 /**
  * §3: Credit note reference (conditional)

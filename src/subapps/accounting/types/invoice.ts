@@ -10,6 +10,7 @@
  */
 
 import type { CurrencyCode } from '@/types/contacts/banking';
+import type { CreditCheckResult } from './customer-balance';
 import type {
   MyDataDocumentStatus,
   MyDataIncomeType,
@@ -430,6 +431,20 @@ export type CreateInvoiceInput = Omit<
   Invoice,
   'invoiceId' | 'number' | 'createdAt' | 'updatedAt'
 >;
+
+/**
+ * **Η απάντηση του `POST /api/accounting/invoices`** — το `data` του φακέλου `created(…)` (ADR-ACC-003 §22.10).
+ *
+ * 🔑 Ένα συμβόλαιο για δύο πλευρές: ο route το δηλώνει (`created<InvoiceCreatedResponse>`) και η φόρμα το διαβάζει.
+ * Ως 2026-11-10 η φόρμα υπέθετε `data.id` ενώ ο διακομιστής έστελνε `invoiceId` ⇒ μετάβαση στο `?view=undefined`
+ * και «Invoice not found» μετά από **κάθε** επιτυχή δημιουργία.
+ */
+export interface InvoiceCreatedResponse {
+  readonly invoiceId: string;
+  readonly number: number;
+  readonly journalEntryId: string | null;
+  readonly creditWarning: CreditCheckResult | null;
+}
 
 /**
  * Input για ενημέρωση τιμολογίου

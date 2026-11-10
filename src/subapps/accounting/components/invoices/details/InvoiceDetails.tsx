@@ -57,7 +57,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
       // 🔑 **Η σιωπή διατηρείται, και δεν είναι σύμπτωση**: εδώ το `if (res.ok)`
       //    **παρέλειπε** το μπλοκ σε μη-ok, αφήνοντας το `invoice` ως είχε· τώρα ο
       //    `apiClient` **πετά** και ο ίδιος κενός `catch` το καταπίνει — με
-      //    **ταυτόσημο** αποτέλεσμα (κενή κατάσταση «Invoice not found»).
+      //    **ταυτόσημο** αποτέλεσμα (κενή κατάσταση `invoices.notFound`).
       //    ⚠️ Αυτή η ισοδυναμία είναι ο λόγος που η μετανάστευση εδώ είναι ασφαλής,
       //    ενώ το αδελφό `EditInvoicePageContent` — που **δείχνει** το σφάλμα —
       //    αλλάζει ορατά κείμενο. Η τεκμηρίωση του παλιού `authorizedFetch` προειδοποιούσε
@@ -89,10 +89,10 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   if (!invoice) {
     return (
       <div className="text-center py-12">
-        <p className={colors.text.muted}>Invoice not found</p>
+        <p className={colors.text.muted}>{t('invoices.notFound')}</p>
         <Button variant="outline" onClick={onBack} className="mt-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          {t('forms.back')}
         </Button>
       </div>
     );

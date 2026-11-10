@@ -111,7 +111,8 @@ describe('Κ1 — InvoiceDetails ΣΙΩΠΑ στην άρνηση', () => {
 
     render(<InvoiceDetails invoiceId="inv_1" onBack={jest.fn()} />);
 
-    await waitFor(() => expect(screen.getByText('Invoice not found')).toBeInTheDocument());
+    // Η κενή κατάσταση είναι πλέον κλειδί i18n (ADR-ACC-003 §22.10) — ο διπλός `t` το επιστρέφει αυτούσιο.
+    await waitFor(() => expect(screen.getByText('invoices.notFound')).toBeInTheDocument());
     expect(screen.queryByTestId('summary')).not.toBeInTheDocument();
   });
 });
@@ -134,6 +135,6 @@ describe('Κ3 — η επιτυχία φτάνει ΞΕΤΥΛΙΓΜΕΝΗ', () =
     render(<InvoiceDetails invoiceId="inv_1" onBack={jest.fn()} />);
 
     await waitFor(() => expect(screen.getByTestId('summary')).toHaveTextContent('inv_1'));
-    expect(screen.queryByText('Invoice not found')).not.toBeInTheDocument();
+    expect(screen.queryByText('invoices.notFound')).not.toBeInTheDocument();
   });
 });

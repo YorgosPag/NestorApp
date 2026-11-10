@@ -7,16 +7,16 @@
  *
  * Split structure (ADR-065 SRP):
  * - invoice-pdf-constants.ts  — Colors, layout, labels, helpers (EXEMPT)
- * - invoice-pdf-sections.ts   — Section renderers §1-§10
+ * - invoice-pdf-parties.ts    — §1 κεφαλίδα + §2 πελάτης (προϋπολογισμός στηλών, ADR-ACC-018 §14)
+ * - invoice-pdf-sections.ts   — Section renderers §3-§10
  * - invoice-pdf-template.ts   — This file: main render function
  */
 
 import type jsPDF from 'jspdf';
 import type { Invoice } from '../../types';
 import { LAYOUT } from './invoice-pdf-constants';
+import { drawHeader, drawCustomerSection } from './invoice-pdf-parties';
 import {
-  drawHeader,
-  drawCustomerSection,
   drawCreditNoteReference,
   drawLineItemsTable,
   drawTotalsSection,
@@ -29,9 +29,8 @@ import {
 import { drawVatExemptionSection } from './invoice-pdf-vat-exemption';
 
 // Re-export section renderers for direct use
+export { drawHeader, drawCustomerSection } from './invoice-pdf-parties';
 export {
-  drawHeader,
-  drawCustomerSection,
   drawCreditNoteReference,
   drawLineItemsTable,
   drawTotalsSection,

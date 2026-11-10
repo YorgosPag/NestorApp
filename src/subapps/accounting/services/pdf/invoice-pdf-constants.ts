@@ -62,6 +62,7 @@ export const LABELS = {
   taxOffice: 'ΔΟΥ / Tax Office',
   profession: 'Δραστηριότητα / Activity',
   address: 'Διεύθυνση / Address',
+  country: 'Χώρα / Country',
   phone: 'Τηλ / Tel',
   mobile: 'Κιν / Mob',
   email: 'Email',
@@ -136,6 +137,27 @@ export function drawHR(pdf: jsPDF, y: number, color: RGB = COLORS.grayBorder): n
 /** Set text color from RGB tuple. */
 export function setColor(pdf: jsPDF, color: readonly [number, number, number]): void {
   pdf.setTextColor(color[0], color[1], color[2]);
+}
+
+/** Οριζόντια οριοθέτηση: αυτό που χρειάζεται η αναδίπλωση για να ξέρει **πού** γράφει και **πόσο** χωράει. */
+export interface WrapBox {
+  readonly x: number;
+  readonly maxWidth: number;
+  readonly lineStep: number;
+  readonly align?: 'left' | 'right';
+}
+
+/**
+ * Γράφει κείμενο **αναδιπλωμένο** στο πλάτος του κουτιού και επιστρέφει το y μετά την τελευταία γραμμή
+ * (ADR-ACC-018 §14). Το ύψος μετρά τις **πραγματικές** γραμμές — ποτέ σταθερό βήμα, γιατί σταθερό βήμα σημαίνει
+ * ότι η επόμενη γραμμή πέφτει πάνω στη δεύτερη γραμμή ενός μακριού κειμένου. Η γραμματοσειρά/μέγεθος ορίζονται πριν.
+ */
+export function drawWrappedLines(pdf: jsPDF, text: string, y: number, box: WrapBox): number {
+  const lines = pdf.splitTextToSize(text, box.maxWidth) as string[];
+  lines.forEach((line, index) => {
+    pdf.text(line, box.x, y + index * box.lineStep, box.align === 'right' ? { align: 'right' } : undefined);
+  });
+  return y + lines.length * box.lineStep;
 }
 
 /** Format IBAN with spaces every 4 characters. */

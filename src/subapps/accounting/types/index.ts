@@ -72,6 +72,7 @@ export type {
   InvoiceSeries,
   InvoiceFilters,
   CreateInvoiceInput,
+  InvoiceCreatedResponse,
   UpdateInvoiceInput,
   ServicePreset,
   ServicePresetsDocument,

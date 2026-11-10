@@ -16,7 +16,6 @@ import {
 import { FormActions } from '@/components/ui/form/FormActions';
 import { submitOnlyExplicitly } from '@/components/ui/form/form-keyboard';
 import { useAuth } from '@/hooks/useAuth';
-import { API_ROUTES } from '@/config/domain-constants';
 import { PaymentMethodSelector } from '../../shared/PaymentMethodSelector';
 import { CustomerSelector } from './CustomerSelector';
 import { LineItemsEditor } from './LineItemsEditor';
@@ -34,7 +33,7 @@ import type {
 import { nowISO } from '@/lib/date-local';
 import { useTranslation as usePolicyTranslation } from '@/i18n/hooks/useTranslation';
 import { POLICY_ERROR_NAMESPACES } from '@/lib/policy/policy-error-translator';
-import { invoiceSubmitErrorMessage } from './invoice-submit-error';
+import { submitInvoice } from './invoice-submit';
 import { newInvoiceLineItem } from './invoice-line-defaults';
 import { useCompanyLineVatDefault } from './use-company-line-vat-default';
 import { useCustomerVatSuggestion } from './use-customer-vat-suggestion';
@@ -206,7 +205,6 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
     setError(null);
 
     try {
-      const token = await user.getIdToken();
       const today = nowISO().split('T')[0];
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
@@ -258,30 +256,9 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
         fiscalYear: currentYear,
       };
 
-      const url = editMode && initialData
-        ? API_ROUTES.ACCOUNTING.INVOICES.BY_ID(initialData.invoiceId)
-        : API_ROUTES.ACCOUNTING.INVOICES.LIST;
-      const method = editMode ? 'PATCH' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        throw new Error(invoiceSubmitErrorMessage(errJson, res.status, { policy: tPolicy, accounting: t }));
-      }
-
-      const result = await res.json();
-      const invoiceId = editMode && initialData
-        ? initialData.invoiceId
-        : (result.data?.id ?? result.id);
-      onSuccess(invoiceId);
+      // ADR-ACC-003 §22.10: ο ΕΝΑΣ μεταφορέας + το ΕΝΑ συμβόλαιο απάντησης (`InvoiceCreatedResponse`).
+      const editInvoiceId = editMode && initialData ? initialData.invoiceId : null;
+      onSuccess(await submitInvoice(body, editInvoiceId, { policy: tPolicy, accounting: t }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

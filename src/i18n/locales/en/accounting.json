@@ -17,6 +17,7 @@
     "newInvoice": "New Invoice",
     "newExpense": "New Expense",
     "editInvoice": "Edit Invoice",
+    "notFound": "Invoice not found.",
     "updateInvoice": "Update",
     "editNotAllowed": "This invoice cannot be edited (status: {status}).",
     "loading": "Loading invoice...",
