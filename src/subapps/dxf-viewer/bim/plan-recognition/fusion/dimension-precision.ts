@@ -12,18 +12,17 @@
  */
 
 import { normalizeNumber } from '../../../systems/dynamic-input/utils/number';
+import { WRITTEN_UNITS_MM, writtenNumberTokens } from '../reading/written-values';
 
 /** Χωρίς αναγνωρίσιμο αριθμό στο κείμενο: η συνήθης ακρίβεια σχεδίου (εκατοστό). */
 export const DEFAULT_DIMENSION_PRECISION_MM = 10;
 
-/** Οι μονάδες με τις οποίες γράφονται διαστάσεις στα σχέδια, σε mm. */
-const WRITTEN_UNITS_MM = [1000, 10, 1] as const;
-
-const NUMBER_TOKEN = /\d+(?:[.,]\d+)?/g;
-
-/** Το μέγεθος του τελευταίου γραμμένου ψηφίου, σε mm· η προεπιλογή όταν κανένας αριθμός του κειμένου δεν δίνει την τιμή. */
+/**
+ * Το μέγεθος του τελευταίου γραμμένου ψηφίου, σε mm· η προεπιλογή όταν κανένας αριθμός του κειμένου δεν δίνει την τιμή.
+ * Οι μονάδες και ο αριθμός έρχονται από το SSoT `reading/written-values` (ADR-929 Φ0.5).
+ */
 export function writtenPrecisionMm(raw: string, valueMm: number): number {
-  for (const token of raw.match(NUMBER_TOKEN) ?? []) {
+  for (const token of writtenNumberTokens(raw)) {
     const decimals = token.split(/[.,]/)[1]?.length ?? 0;
     const value = Number.parseFloat(normalizeNumber(token));
     for (const unit of WRITTEN_UNITS_MM) {

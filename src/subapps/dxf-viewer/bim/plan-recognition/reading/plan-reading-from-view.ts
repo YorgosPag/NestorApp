@@ -22,7 +22,8 @@ import type {
 import { viewBoxToOriginal, type PlanReadingView } from './plan-reading-view';
 import type { PlanViewReading } from './plan-reading-wire';
 
-const readingConfidence = (score: number): PlanConfidence => ({ score, factors: { reading: score } });
+/** Η βεβαιότητα **μιας ανάγνωσης** (VLM ή τοπικό OCR) ως παράγοντας `reading` (Δ9) — ένα σημείο, ποτέ δεύτερος τύπος. */
+export const readingConfidence = (score: number): PlanConfidence => ({ score, factors: { reading: score } });
 
 export interface PlanReadingProvenance {
   readonly model: string;
