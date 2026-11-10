@@ -57,6 +57,7 @@ interface ServicePreset {
   unitPrice: number;          // 0 = variable
   vatRate: number;            // 24, 13, 6, 0
   mydataCode: MyDataIncomeType;
+  vatExemptionCategory?: number | null; // κωδικός ΑΑΔΕ §8.3 — ΜΟΝΟ όταν vatRate = 0 (2026-11-09)
   isActive: boolean;
   sortOrder: number;
 }
@@ -119,3 +120,4 @@ interface ServicePreset {
 | Date | Change |
 |------|--------|
 | 2026-02-10 | Initial implementation — Phase 1 complete |
+| 2026-11-09 | **Αιτία εξαίρεσης ΦΠΑ στην υπηρεσία** (ADR-ACC-003 §22.3): πεδίο `vatExemptionCategory` (μόνο στο 0%)· η γραμμή τιμολογίου το **κληρονομεί** στο `applyPreset` (πρότυπο NetSuite tax code / Xero default tax). Νέο `components/setup/PresetVatFields.tsx` (συντελεστής + αιτία) σε προσθήκη **και** επεξεργασία — η επεξεργασία **δεν είχε καθόλου επιλογέα ΦΠΑ**. Ο `PUT` απορρίπτει κωδικό εκτός §8.3 και αιτία σε συντελεστή ≠ 0% (`hasVatExemptionContradiction`, ίδιος κανόνας με τις γραμμές) |

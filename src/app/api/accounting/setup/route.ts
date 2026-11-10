@@ -49,6 +49,7 @@ import { accountingToday } from '@/subapps/accounting/utils/accounting-day';
 import type { BusinessStart } from '@/subapps/accounting/types/company';
 import type { IAccountingRepository } from '@/subapps/accounting/types/interfaces';
 import { parseBusinessStart } from '@/subapps/accounting/services/setup/business-start';
+import { parseCompanyVatRegime } from '@/subapps/accounting/services/setup/company-vat-regime';
 import {
   changedProfileFields,
   parseProfileFieldMask,
@@ -211,6 +212,12 @@ export const PUT = defineRoute({
       badRequest('businessStart must be { date: YYYY-MM-DD, origin: new | continuation } or null');
     }
 
+    // ADR-ACC-003 §22.4: άγνωστο καθεστώς, κωδικός εκτός §8.3 ή αιτία σε κανονικό καθεστώς ⇒ 400.
+    const vatRegime = parseCompanyVatRegime(body);
+    if (vatRegime.kind === 'invalid') {
+      badRequest(vatRegime.reason);
+    }
+
     // Common fields (Firestore compliance: nullable)
     const entityType = (body as Record<string, unknown>).entityType as string ?? 'sole_proprietor';
     const commonFields = {
@@ -228,7 +235,8 @@ export const PUT = defineRoute({
       mainKad: body.mainKad!,
       secondaryKads: body.secondaryKads ?? [],
       bookCategory: body.bookCategory ?? 'simplified',
-      vatRegime: body.vatRegime ?? 'normal',
+      vatRegime: vatRegime.kind === 'value' ? vatRegime.vatRegime : 'normal',
+      vatExemptionCategory: vatRegime.kind === 'value' ? vatRegime.vatExemptionCategory : null,
       fiscalYearEnd: body.fiscalYearEnd ?? 12,
       currency: 'EUR' as const,
       businessStart: businessStart.kind === 'value' ? businessStart.value : null,

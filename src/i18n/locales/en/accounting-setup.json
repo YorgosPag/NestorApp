@@ -23,6 +23,7 @@
       "normal": "Normal",
       "exempt": "Exempt"
     },
+    "vatExemptionDefaultHint": "New invoice lines start at 0% with this exemption reason. You can change it on any line.",
     "fiscalYearEnd": "Fiscal Year End",
     "efkaCategory": "EFKA Category",
     "efkaCategoryLabel": "Category {number}",

@@ -21,6 +21,8 @@ import { createAccountingServices } from '@/subapps/accounting/services/create-a
 import type { ServicePreset } from '@/subapps/accounting/types';
 import { toStoredUom } from '@/lib/uom/uom-registry';
 import { GREEK_VAT_RATE_PERCENTS, isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
+import { isVatExemptionCode } from '@/subapps/accounting/services/config/vat-exemption-reasons';
+import { hasVatExemptionContradiction } from '@/subapps/accounting/services/mydata/mydata-codes';
 
 // =============================================================================
 // VALIDATION
@@ -45,6 +47,22 @@ function validatePreset(preset: Partial<ServicePreset>, index: number): string |
   }
   if (!preset.mydataCode || typeof preset.mydataCode !== 'string') {
     return `presets[${index}].mydataCode is required`;
+  }
+  return validatePresetVatExemption(preset, index);
+}
+
+/**
+ * Αιτία εξαίρεσης της υπηρεσίας (ADR-ACC-003 §22.3): κωδικός του καταλόγου §8.3, και **μόνο** σε συντελεστή που τη
+ * δέχεται — ο ίδιος κανόνας αντίφασης με τις γραμμές τιμολογίου (`hasVatExemptionContradiction`).
+ */
+function validatePresetVatExemption(preset: Partial<ServicePreset>, index: number): string | null {
+  const code = preset.vatExemptionCategory;
+  if (code == null) return null;
+  if (!isVatExemptionCode(code)) {
+    return `presets[${index}].vatExemptionCategory is not an AADE §8.3 code`;
+  }
+  if (typeof preset.vatRate === 'number' && hasVatExemptionContradiction({ vatRate: preset.vatRate, vatExemptionCategory: code })) {
+    return `presets[${index}].vatExemptionCategory is allowed only on a 0% (AADE VAT category 7) preset`;
   }
   return null;
 }
@@ -101,6 +119,7 @@ export const PUT = defineRoute({
       unitPrice: p.unitPrice!,
       vatRate: p.vatRate!,
       mydataCode: p.mydataCode!,
+      vatExemptionCategory: p.vatExemptionCategory ?? null,
       isActive: p.isActive !== false,
       sortOrder: typeof p.sortOrder === 'number' ? p.sortOrder : i,
     }));

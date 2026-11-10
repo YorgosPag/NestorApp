@@ -186,6 +186,37 @@ describe('Ε — έναρξη εργασιών: η ρίζα της μειωμέ�
   });
 });
 
+describe('Π — καθεστώς ΦΠΑ: ΠΟΙΑ απαλλαγή (ADR-ACC-003 §22.4)', () => {
+  it.each([
+    ['άγνωστο καθεστώς', { vatRegime: 'common' }],
+    ['κωδικός εκτός §8.3', { vatRegime: 'exempt', vatExemptionCategory: 32 }],
+    ['αιτία σε κανονικό καθεστώς (αντίφαση)', { vatRegime: 'normal', vatExemptionCategory: 15 }],
+  ])('🔴 Π1 — %s ⇒ 400, και ΤΙΠΟΤΑ δεν γράφεται', async (_label, vat) => {
+    const answer = await put({ ...VALID, ...vat });
+
+    expect(answer.status).toBe(400);
+    expect(repo.saveCompanySetup).not.toHaveBeenCalled();
+  });
+
+  it('🔑 Π2 — απαλλασσόμενη με κωδ. 15 ⇒ γράφεται όπως δηλώθηκε', async () => {
+    await put({ ...VALID, vatRegime: 'exempt', vatExemptionCategory: 15 });
+
+    expect(repo.saveCompanySetup).toHaveBeenCalledWith(
+      expect.objectContaining({ vatRegime: 'exempt', vatExemptionCategory: 15 }),
+      expect.anything(),
+    );
+  });
+
+  it('🔑 Π3 — απουσία ⇒ κανονικό + `null`, ποτέ `undefined` (Firestore)', async () => {
+    await put({ ...VALID });
+
+    expect(repo.saveCompanySetup).toHaveBeenCalledWith(
+      expect.objectContaining({ vatRegime: 'normal', vatExemptionCategory: null }),
+      expect.anything(),
+    );
+  });
+});
+
 describe('Φ — μάσκα πεδίων (ADR-841 Α23 Γ3 · AIP-134 / AIP-161)', () => {
   it('🔴 Φ1 — άγνωστο πεδίο στη μάσκα ⇒ 400 με τα απορριφθέντα, και ΤΙΠΟΤΑ δεν γράφεται', async () => {
     const answer = await put({ ...VALID, fields: ['phone', 'companyId'] });

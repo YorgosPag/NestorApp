@@ -80,6 +80,27 @@ const COUNTRY_TABLE: readonly CountryEntry[] = [
   { code: 'ro', labelKey: 'common:countries.romania', aliases: ['romania', 'ρουμανία'] },
   { code: 'tr', labelKey: 'common:countries.turkey', aliases: ['turkey', 'τουρκία'] },
   { code: 'rs', labelKey: 'common:countries.serbia', aliases: ['serbia', 'σερβία'] },
+  // Τα υπόλοιπα κράτη μέλη της ΕΕ (ADR-ACC-003 §22.5): χωρίς αυτά ένας πελάτης π.χ. από την Ολλανδία δεν
+  // διαλεγόταν, και ο κριτής τόπου παροχής (`customer-vat-treatment.ts`) δεν μπορούσε να τον δει ως ΕΕ.
+  { code: 'at', labelKey: 'common:countries.austria', aliases: ['austria', 'αυστρία'] },
+  { code: 'be', labelKey: 'common:countries.belgium', aliases: ['belgium', 'βέλγιο'] },
+  { code: 'cz', labelKey: 'common:countries.czechia', aliases: ['czechia', 'czech republic', 'τσεχία'] },
+  { code: 'dk', labelKey: 'common:countries.denmark', aliases: ['denmark', 'δανία'] },
+  { code: 'ee', labelKey: 'common:countries.estonia', aliases: ['estonia', 'εσθονία'] },
+  { code: 'fi', labelKey: 'common:countries.finland', aliases: ['finland', 'φινλανδία'] },
+  { code: 'hr', labelKey: 'common:countries.croatia', aliases: ['croatia', 'κροατία'] },
+  { code: 'hu', labelKey: 'common:countries.hungary', aliases: ['hungary', 'ουγγαρία'] },
+  { code: 'ie', labelKey: 'common:countries.ireland', aliases: ['ireland', 'ιρλανδία'] },
+  { code: 'lt', labelKey: 'common:countries.lithuania', aliases: ['lithuania', 'λιθουανία'] },
+  { code: 'lu', labelKey: 'common:countries.luxembourg', aliases: ['luxembourg', 'λουξεμβούργο'] },
+  { code: 'lv', labelKey: 'common:countries.latvia', aliases: ['latvia', 'λετονία'] },
+  { code: 'mt', labelKey: 'common:countries.malta', aliases: ['malta', 'μάλτα'] },
+  { code: 'nl', labelKey: 'common:countries.netherlands', aliases: ['netherlands', 'the netherlands', 'holland', 'ολλανδία', 'κάτω χώρες'] },
+  { code: 'pl', labelKey: 'common:countries.poland', aliases: ['poland', 'πολωνία'] },
+  { code: 'pt', labelKey: 'common:countries.portugal', aliases: ['portugal', 'πορτογαλία'] },
+  { code: 'se', labelKey: 'common:countries.sweden', aliases: ['sweden', 'σουηδία'] },
+  { code: 'si', labelKey: 'common:countries.slovenia', aliases: ['slovenia', 'σλοβενία'] },
+  { code: 'sk', labelKey: 'common:countries.slovakia', aliases: ['slovakia', 'σλοβακία'] },
 ];
 
 /**

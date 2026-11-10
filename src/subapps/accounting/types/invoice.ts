@@ -461,6 +461,11 @@ export interface ServicePreset {
   vatRate: number;
   /** myDATA classification code */
   mydataCode: MyDataIncomeType;
+  /**
+   * Αιτία εξαίρεσης ΦΠΑ (κωδικός ΑΑΔΕ §8.3) — **μόνο** όταν `vatRate` = 0. Η γραμμή τιμολογίου την κληρονομεί
+   * με την επιλογή της υπηρεσίας (ADR-ACC-003 §22.3). Optional — backward compatible.
+   */
+  vatExemptionCategory?: number | null;
   /** Ενεργό preset */
   isActive: boolean;
   /** Σειρά ταξινόμησης */

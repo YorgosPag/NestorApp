@@ -106,14 +106,18 @@ export type AccountCategory = IncomeCategory | ExpenseCategory | `custom_${strin
 // ============================================================================
 
 /**
- * myDATA κωδικοί εσόδων (category1_x)
+ * myDATA κωδικοί εσόδων (category1_x) — ρίζα του λεξιλογίου: ο τύπος **παράγεται** από εδώ, και ο διακομιστής
+ * επικυρώνει γραμμές τιμολογίου απέναντι στον ίδιο πίνακα (ADR-ACC-003 §22.2).
  * @see https://www.aade.gr/mydata
  */
-export type MyDataIncomeType =
-  | 'category1_1'  // Πώληση αγαθών
-  | 'category1_3'  // Παροχή υπηρεσιών
-  | 'category1_4'  // Πώληση παγίων
-  | 'category1_5'; // Λοιπά έσοδα
+export const MYDATA_INCOME_TYPES = [
+  'category1_1', // Πώληση αγαθών
+  'category1_3', // Παροχή υπηρεσιών
+  'category1_4', // Πώληση παγίων
+  'category1_5', // Λοιπά έσοδα
+] as const;
+
+export type MyDataIncomeType = (typeof MYDATA_INCOME_TYPES)[number];
 
 /**
  * myDATA κωδικοί εξόδων (category2_x)

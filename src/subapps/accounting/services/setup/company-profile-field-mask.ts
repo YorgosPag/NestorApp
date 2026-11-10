@@ -69,6 +69,7 @@ const FIELD_SCOPE: { readonly [K in CompanyProfileField]: FieldScope } = {
   mainKad: 'common',
   secondaryKads: 'common',
   vatRegime: 'common',
+  vatExemptionCategory: 'common',
   fiscalYearEnd: 'common',
   currency: 'common',
   businessStart: 'common',

@@ -33,6 +33,7 @@ const COMMON = {
   secondaryKads: [],
   bookCategory: 'simplified',
   vatRegime: 'normal',
+  vatExemptionCategory: null,
   fiscalYearEnd: 12,
   businessStart: null,
   currency: 'EUR',

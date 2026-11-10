@@ -25,7 +25,8 @@ import {
   myDataVatCategoryOf,
   myDataWithholdingCategoryOf,
 } from './mydata-codes';
-import { lineVatAmount, preflightMyDataInvoice } from './mydata-preflight';
+import { preflightMyDataInvoice } from './mydata-preflight';
+import { lineVatAmount } from '../../utils/invoice-amounts';
 import type { MyDataPreflightIssue, MyDataTransmissionInput } from './mydata-preflight';
 import type {
   MyDataIncomeClassification,

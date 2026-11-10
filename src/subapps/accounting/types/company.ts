@@ -58,6 +58,16 @@ export interface BusinessStart {
 }
 
 // ============================================================================
+// ΚΑΘΕΣΤΩΣ ΦΠΑ — ADR-ACC-003 §22.4 (κανόνες: services/setup/company-vat-regime)
+// ============================================================================
+
+/** Καθεστώς ΦΠΑ της επιχείρησης: κανονικό ή απαλλασσόμενο. */
+export const COMPANY_VAT_REGIMES = ['normal', 'exempt'] as const;
+
+/** Παράγεται από τη ρίζα {@link COMPANY_VAT_REGIMES}. */
+export type CompanyVatRegime = (typeof COMPANY_VAT_REGIMES)[number];
+
+// ============================================================================
 // COMPANY PROFILE BASE — Κοινά πεδία για όλες τις μορφές
 // ============================================================================
 
@@ -108,7 +118,12 @@ interface CompanyProfileBase {
   /** Κατηγορία βιβλίων: Β' Απλογραφικά ή Γ' Διπλογραφικά */
   bookCategory: BookCategory;
   /** Καθεστώς ΦΠΑ: Κανονικό ή Απαλλαγμένο */
-  vatRegime: 'normal' | 'exempt';
+  vatRegime: CompanyVatRegime;
+  /**
+   * **Ποια** απαλλαγή (κωδικός ΑΑΔΕ §8.3, `VAT_EXEMPTION_REASONS`) — μόνο όταν `vatRegime === 'exempt'`
+   * (ADR-ACC-003 §22.4). Η νέα γραμμή τιμολογίου ξεκινά 0% με αυτή την αιτία. Απούσα σε παλιά προφίλ.
+   */
+  vatExemptionCategory?: number | null;
   /** Μήνας λήξης φορολογικού έτους (12 = Δεκέμβριος) */
   fiscalYearEnd: number;
   /** Νόμισμα (πάντα EUR για Ελλάδα) */

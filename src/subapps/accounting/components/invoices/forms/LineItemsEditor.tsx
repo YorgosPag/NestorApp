@@ -9,11 +9,14 @@ import { Label } from '@/components/ui/label';
 import { UomSelect } from '@/components/shared/UomSelect';
 import { UOM_CODES, toStoredUom } from '@/lib/uom/uom-registry';
 import { newInvoiceLineItem } from './invoice-line-defaults';
-import { withLineVatExemption, withLineVatRate } from './invoice-line-vat';
+import { withVatExemption, withVatRate } from '../../shared/vat-rate-transition';
+import { invoiceAmountsOf, lineNetAmount } from '@/subapps/accounting/utils/invoice-amounts';
+import { isVatExemptionCode } from '@/subapps/accounting/services/config/vat-exemption-reasons';
 import { VATRateSelector } from '../../shared/VATRateSelector';
 import { VatExemptionReasonField } from '../../shared/VatExemptionReasonField';
 import { ServicePresetCombobox } from '../../shared/ServicePresetCombobox';
 import type { InvoiceLineItem, ServicePreset } from '@/subapps/accounting/types';
+import type { CompanyLineVatDefault } from '@/subapps/accounting/services/setup/company-vat-regime';
 import { requiresVatExemption } from '@/subapps/accounting/services/mydata/mydata-codes';
 import { formatAccountingCurrency } from '../../../utils/format';
 
@@ -27,9 +30,11 @@ interface LineItemsEditorProps {
   presets: ServicePreset[];
   /** Ημερομηνία έκδοσης — ορίζει ποια έκδοση του Κώδικα ΦΠΑ αναγράφει η αιτία εξαίρεσης. */
   issueDate: string;
+  /** ΦΠΑ κάθε νέας γραμμής — από το καθεστώς της επιχείρησης (`companyLineVatDefault`, ADR-ACC-003 §22.4). */
+  lineVatDefault: CompanyLineVatDefault;
 }
 
-export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDate }: LineItemsEditorProps) {
+export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDate, lineVatDefault }: LineItemsEditorProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const fieldId = useId();
@@ -38,9 +43,9 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
   const addItem = useCallback(() => {
     onLineItemsChange([
       ...lineItems,
-      newInvoiceLineItem(lineItems.length + 1),
+      newInvoiceLineItem(lineItems.length + 1, lineVatDefault),
     ]);
-  }, [lineItems, onLineItemsChange]);
+  }, [lineItems, onLineItemsChange, lineVatDefault]);
 
   const removeItem = useCallback(
     (index: number) => {
@@ -57,7 +62,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
       const updated = lineItems.map((item, i) => {
         if (i !== index) return item;
         const newItem = { ...item, [field]: value };
-        newItem.netAmount = Math.round(newItem.quantity * newItem.unitPrice * 100) / 100;
+        newItem.netAmount = lineNetAmount(newItem.quantity, newItem.unitPrice);
         return newItem;
       });
       onLineItemsChange(updated);
@@ -76,15 +81,18 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
   const applyPreset = useCallback(
     (index: number, preset: ServicePreset) => {
       replaceItem(index, (item) => {
-        const newItem = withLineVatRate({
+        const withRate = withVatRate({
           ...item,
           description: preset.description,
           unit: toStoredUom(preset.unit),
           unitPrice: preset.unitPrice,
           mydataCode: preset.mydataCode,
+          netAmount: lineNetAmount(item.quantity, preset.unitPrice),
         }, preset.vatRate);
-        newItem.netAmount = Math.round(newItem.quantity * newItem.unitPrice * 100) / 100;
-        return newItem;
+        // ADR-ACC-003 §22.3: η αιτία της υπηρεσίας περνά στη γραμμή· υπηρεσία χωρίς αιτία ΔΕΝ σβήνει αιτία που
+        // διάλεξε ήδη ο χρήστης στο 0% (σιωπή ≠ «καμία αιτία»).
+        const code = preset.vatExemptionCategory;
+        return isVatExemptionCode(code) ? withVatExemption(withRate, code) : withRate;
       });
     },
     [replaceItem]
@@ -93,9 +101,10 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
   return (
     <div className="space-y-4">
       {lineItems.map((item, index) => {
-        const netAmount = Math.round(item.quantity * item.unitPrice * 100) / 100;
-        const vatAmount = Math.round(netAmount * (item.vatRate / 100) * 100) / 100;
-        const grossAmount = Math.round((netAmount + vatAmount) * 100) / 100;
+        // Ο ΕΝΑΣ υπολογισμός (ADR-ACC-003 §22.2): ό,τι δείχνει η γραμμή είναι ό,τι ελέγχει ο διακομιστής.
+        const {
+          totalNetAmount: netAmount, totalVatAmount: vatAmount, totalGrossAmount: grossAmount,
+        } = invoiceAmountsOf([item]);
 
         return (
           <article
@@ -168,7 +177,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
                 <Label>{t('invoices.vatLabel')}</Label>
                 <VATRateSelector
                   value={item.vatRate}
-                  onValueChange={(rate) => replaceItem(index, (current) => withLineVatRate(current, rate))}
+                  onValueChange={(rate) => replaceItem(index, (current) => withVatRate(current, rate))}
                 />
               </fieldset>
 
@@ -193,7 +202,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets, issueDa
                 id={`${fieldId}-vat-exemption-${index}`}
                 value={item.vatExemptionCategory}
                 issueDate={issueDate}
-                onValueChange={(code) => replaceItem(index, (current) => withLineVatExemption(current, code))}
+                onValueChange={(code) => replaceItem(index, (current) => withVatExemption(current, code))}
               />
             )}
           </article>

@@ -379,6 +379,35 @@ describe('setup + presets — manual validation', () => {
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('Request body must be an array of presets');
   });
+
+  // ADR-ACC-003 §22.3 — αιτία εξαίρεσης στην υπηρεσία: ίδιος κατάλογος και ίδιος κανόνας αντίφασης με τη γραμμή.
+  const presetBody = (overrides: Record<string, unknown>) => [{
+    presetId: 'sp_1', description: 'Υπηρεσία', unit: 'pcs', unitPrice: 100, vatRate: 0, mydataCode: 'category1_3',
+    ...overrides,
+  }];
+  const presetsUrl = 'https://app.test/api/accounting/setup/presets';
+
+  it('PUT presets κωδικός εκτός §8.3 → 400', async () => {
+    const res = (await presetsPut(req(presetBody({ vatExemptionCategory: 32 }), presetsUrl))) as Envelope;
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('presets[0].vatExemptionCategory is not an AADE §8.3 code');
+    expect(repo.saveServicePresets).not.toHaveBeenCalled();
+  });
+
+  it('PUT presets αιτία σε 24% → 400 (αντίφαση)', async () => {
+    const res = (await presetsPut(req(presetBody({ vatRate: 24, vatExemptionCategory: 15 }), presetsUrl))) as Envelope;
+    expect(res.status).toBe(400);
+    expect((await res.json()).error)
+      .toBe('presets[0].vatExemptionCategory is allowed only on a 0% (AADE VAT category 7) preset');
+  });
+
+  it('PUT presets 0% + αιτία 15 → αποθηκεύεται· παλιό preset χωρίς πεδίο → null', async () => {
+    const body = [...presetBody({ vatExemptionCategory: 15 }), { ...presetBody({})[0], presetId: 'sp_2', vatRate: 24 }];
+    const res = (await presetsPut(req(body, presetsUrl))) as Envelope;
+    expect(res.status).toBe(200);
+    const saved = repo.saveServicePresets.mock.calls[0][0] as Array<{ vatExemptionCategory: number | null }>;
+    expect(saved.map((p) => p.vatExemptionCategory)).toEqual([15, null]);
+  });
 });
 
 describe('efka + tax/estimate — entityType extra field (sole path)', () => {
@@ -472,13 +501,20 @@ describe('bank/transactions + invoices — created shapes', () => {
     svcExtras.checkCreditLimit.mockReturnValue(creditCheck);
     const res = (await invPost(req({
       series: 'A', type: 'service_invoice', issueDate: '2026-01-01', contactId: 'cust_1',
-      lineItems: [{ grossAmount: 500 }],
+      // ADR-ACC-003 §22.2: γραμμή πλήρους σχήματος — το `{ grossAmount: 500 }` δεν υπήρξε ποτέ σε γραμμή, και το
+      // όριο έβλεπε 0 €. Το ποσό που κρίνεται το υπολογίζει ο διακομιστής: 400 + 24% = 496.
+      lineItems: [{
+        lineNumber: 1, description: 'Υπηρεσία', quantity: 1, unit: 'pcs', unitPrice: 400,
+        vatRate: 24, netAmount: 400, mydataCode: 'category1_3',
+      }],
+      totalNetAmount: 400, totalVatAmount: 96, totalGrossAmount: 496,
     }))) as Envelope;
     expect(res.status).toBe(422);
     expect(await res.json()).toMatchObject({
       success: false, errorCode: 'POLICY_CREDIT_LIMIT_EXCEEDED', creditCheck, creditLimit: 100,
     });
     expect(svcExtras.computeCustomerBalance).toHaveBeenCalledWith(repo, 'cust_1');
+    expect(svcExtras.checkCreditLimit).toHaveBeenCalledWith(expect.anything(), 496);
     expect(repo.createInvoice).not.toHaveBeenCalled();
   });
 });

@@ -3,31 +3,19 @@
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { InvoiceLineItem } from '@/subapps/accounting/types';
+import type { InvoiceAmounts } from '@/subapps/accounting/utils/invoice-amounts';
 import { formatAccountingCurrency } from '../../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface InvoicePreviewProps {
-  totals: {
-    totalNetAmount: number;
-    totalVatAmount: number;
-    totalGrossAmount: number;
-  };
-  lineItems: InvoiceLineItem[];
+  /** Από το `invoiceAmountsOf` — ο ΙΔΙΟΣ υπολογισμός που στέλνεται και που ελέγχει ο διακομιστής (ADR-ACC-003 §22.2). */
+  totals: InvoiceAmounts;
 }
 
-export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
+export function InvoicePreview({ totals }: InvoicePreviewProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
-
-  // Group VAT by rate
-  const vatByRate = new Map<number, number>();
-  for (const item of lineItems) {
-    const net = item.quantity * item.unitPrice;
-    const vat = Math.round(net * (item.vatRate / 100) * 100) / 100;
-    vatByRate.set(item.vatRate, (vatByRate.get(item.vatRate) ?? 0) + vat);
-  }
 
   return (
     <Card>
@@ -41,10 +29,10 @@ export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
             <span className="font-medium">{formatAccountingCurrency(totals.totalNetAmount)}</span>
           </div>
 
-          {Array.from(vatByRate.entries()).map(([rate, amount]) => (
-            <div key={rate} className="flex justify-between text-sm">
-              <span className={colors.text.muted}>ΦΠΑ {rate}%</span>
-              <span className="font-medium">{formatAccountingCurrency(amount)}</span>
+          {totals.vatBreakdown.map(({ vatRate, vatAmount }) => (
+            <div key={vatRate} className="flex justify-between text-sm">
+              <span className={colors.text.muted}>ΦΠΑ {vatRate}%</span>
+              <span className="font-medium">{formatAccountingCurrency(vatAmount)}</span>
             </div>
           ))}
 

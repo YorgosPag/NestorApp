@@ -36,6 +36,11 @@ import { useTranslation as usePolicyTranslation } from '@/i18n/hooks/useTranslat
 import { POLICY_ERROR_NAMESPACES } from '@/lib/policy/policy-error-translator';
 import { invoiceSubmitErrorMessage } from './invoice-submit-error';
 import { newInvoiceLineItem } from './invoice-line-defaults';
+import { useCompanyLineVatDefault } from './use-company-line-vat-default';
+import { useCustomerVatSuggestion } from './use-customer-vat-suggestion';
+import { CustomerVatSuggestionNotice } from './CustomerVatSuggestionNotice';
+import { INVOICE_TYPES } from '@/subapps/accounting/types/invoice';
+import { invoiceAmountsOf, lineNetAmount } from '@/subapps/accounting/utils/invoice-amounts';
 
 interface InvoiceFormProps {
   onSuccess: (invoiceId: string) => void;
@@ -112,24 +117,6 @@ function buildIssuerSnapshot(profile: ReturnType<typeof useCompanySetup>['profil
   };
 }
 
-function calculateTotals(lineItems: InvoiceLineItem[]) {
-  let totalNet = 0;
-  let totalVat = 0;
-
-  for (const item of lineItems) {
-    const net = item.quantity * item.unitPrice;
-    const vat = Math.round(net * (item.vatRate / 100) * 100) / 100;
-    totalNet += net;
-    totalVat += vat;
-  }
-
-  return {
-    totalNetAmount: Math.round(totalNet * 100) / 100,
-    totalVatAmount: Math.round(totalVat * 100) / 100,
-    totalGrossAmount: Math.round((totalNet + totalVat) * 100) / 100,
-  };
-}
-
 /**
  * Build form state from existing invoice (edit mode pre-fill)
  */
@@ -175,6 +162,12 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
         }
   );
 
+  // ADR-ACC-003 §22.4: ΦΠΑ νέας γραμμής από το καθεστώς της επιχείρησης· το προφίλ φτάνει ΜΕΤΑ τη φόρμα.
+  const companyVatDefault = useCompanyLineVatDefault(companyProfile, editMode === true, setForm);
+  // ADR-ACC-003 §22.5: πρόταση από τον πελάτη — ΠΟΤΕ σιωπηλά· η αποδεκτή γίνεται αφετηρία των νέων γραμμών.
+  const customerVat = useCustomerVatSuggestion(form, setForm);
+  const lineVatDefault = customerVat.acceptedLineVatDefault ?? companyVatDefault;
+
   const updateField = useCallback(<K extends keyof InvoiceFormState>(
     key: K,
     value: InvoiceFormState[K]
@@ -190,7 +183,8 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
     setForm((prev) => ({ ...prev, customer }));
   }, []);
 
-  const totals = calculateTotals(form.lineItems);
+  // ADR-ACC-003 §22.2: ο ΕΝΑΣ υπολογισμός ποσών — ο διακομιστής τον ξανατρέχει και απορρίπτει απόκλιση.
+  const totals = invoiceAmountsOf(form.lineItems);
 
   const handleSubmit = useCallback(async () => {
     if (!user) return;
@@ -213,29 +207,11 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
       const currentMonth = new Date().getMonth() + 1;
       const quarter = currentMonth <= 3 ? 1 : currentMonth <= 6 ? 2 : currentMonth <= 9 ? 3 : 4;
 
-      // Build vatBreakdown from line items
-      const vatMap = new Map<number, { netAmount: number; vatAmount: number }>();
-      for (const item of form.lineItems) {
-        const net = item.quantity * item.unitPrice;
-        const vat = Math.round(net * (item.vatRate / 100) * 100) / 100;
-        const existing = vatMap.get(item.vatRate) ?? { netAmount: 0, vatAmount: 0 };
-        vatMap.set(item.vatRate, {
-          netAmount: existing.netAmount + net,
-          vatAmount: existing.vatAmount + vat,
-        });
-      }
-
-      const vatBreakdown = Array.from(vatMap.entries()).map(([vatRate, amounts]) => ({
-        vatRate,
-        netAmount: Math.round(amounts.netAmount * 100) / 100,
-        vatAmount: Math.round(amounts.vatAmount * 100) / 100,
-      }));
-
-      // Recalculate line items with proper netAmount
+      // Καθαρό ανά γραμμή από τον ΙΔΙΟ υπολογισμό με τα σύνολα (ο διακομιστής ελέγχει ότι συμφωνούν).
       const processedLineItems = form.lineItems.map((item, idx) => ({
         ...item,
         lineNumber: idx + 1,
-        netAmount: Math.round(item.quantity * item.unitPrice * 100) / 100,
+        netAmount: lineNetAmount(item.quantity, item.unitPrice),
       }));
 
       const body = {
@@ -250,7 +226,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
         totalNetAmount: totals.totalNetAmount,
         totalVatAmount: totals.totalVatAmount,
         totalGrossAmount: totals.totalGrossAmount,
-        vatBreakdown,
+        vatBreakdown: totals.vatBreakdown,
         paymentMethod: form.paymentMethod,
         paymentStatus: 'unpaid' as const,
         payments: [],
@@ -330,11 +306,9 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="service_invoice">{t('invoices.types.service_invoice')}</SelectItem>
-                  <SelectItem value="sales_invoice">{t('invoices.types.sales_invoice')}</SelectItem>
-                  <SelectItem value="retail_receipt">{t('invoices.types.retail_receipt')}</SelectItem>
-                  <SelectItem value="service_receipt">{t('invoices.types.service_receipt')}</SelectItem>
-                  <SelectItem value="credit_invoice">{t('invoices.types.credit_invoice')}</SelectItem>
+                  {INVOICE_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>{t(`invoices.types.${type}`)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </fieldset>
@@ -392,6 +366,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
             customer={form.customer}
             onCustomerChange={handleCustomerChange}
           />
+          <CustomerVatSuggestionNotice controls={customerVat} issueDate={form.issueDate} />
         </CardContent>
       </Card>
 
@@ -406,12 +381,13 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
             onLineItemsChange={handleLineItemsChange}
             presets={presets}
             issueDate={form.issueDate}
+            lineVatDefault={lineVatDefault}
           />
         </CardContent>
       </Card>
 
       {/* Preview & Totals */}
-      <InvoicePreview totals={totals} lineItems={form.lineItems} />
+      <InvoicePreview totals={totals} />
 
       {/* Withholding Tax — ADR-ACC-020 */}
       <Card>

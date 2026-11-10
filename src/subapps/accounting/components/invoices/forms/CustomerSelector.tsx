@@ -13,12 +13,18 @@ import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DoyPicker } from '@/components/ui/doy-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import type { Contact } from '@/types/contacts';
 import { extractContactParty } from '@/subapps/accounting/utils/contact-party';
 import { useContactAutoFill } from '@/subapps/accounting/hooks/useContactAutoFill';
 import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { InvoiceCustomer } from '@/subapps/accounting/types';
+import {
+  ADDRESS_COUNTRY_OPTIONS,
+  isGreekAddressCountry,
+  storedCountryCodeOrDefault,
+} from '@/utils/address/country-codes';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -48,7 +54,8 @@ function mapContactToCustomer(contact: Contact): InvoiceCustomer {
     address: party.street || null,
     city: party.city,
     postalCode: party.postalCode,
-    country: party.country ?? 'GR',
+    // Κωδικός, ποτέ ετικέτα (ADR-332 D27): «Ολλανδία» → 'NL' — ο κριτής τόπου παροχής κρίνει με κωδικό (§22.5).
+    country: storedCountryCodeOrDefault(party.country),
     email: party.email,
   };
 }
@@ -58,7 +65,7 @@ function mapContactToCustomer(contact: Contact): InvoiceCustomer {
 // ============================================================================
 
 export function CustomerSelector({ customer, onCustomerChange }: CustomerSelectorProps) {
-  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices', 'common']);
   const colors = useSemanticColors();
   const applyContact = useCallback(
     (contact: Contact) => onCustomerChange(mapContactToCustomer(contact)),
@@ -66,7 +73,10 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
   );
   const { selectedContactId, autoFillMessage, handleContactAutoFill } =
     useContactAutoFill(applyContact, customer.contactId ?? '');
-  const { result: vatResult } = useVatUniqueness(customer.vatNumber ?? undefined);
+  // ADR-ACC-003 §22.5: ΑΦΜ αλλοδαπού (π.χ. ΑΦΜ ΦΠΑ ΕΕ) δεν είναι 9 ψηφία, και η μοναδικότητα αφορά το ελληνικό μητρώο.
+  const greekCustomer = isGreekAddressCountry(customer.country);
+  const { result: vatResult } = useVatUniqueness(greekCustomer ? (customer.vatNumber ?? undefined) : undefined);
+  const countryKnown = ADDRESS_COUNTRY_OPTIONS.some((option) => option.value === customer.country);
 
   const updateField = (field: keyof InvoiceCustomer, value: string | null) => {
     onCustomerChange({ ...customer, [field]: value || null });
@@ -105,7 +115,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
             id="customerVat"
             value={customer.vatNumber ?? ''}
             onChange={(e) => updateField('vatNumber', e.target.value)}
-            maxLength={9}
+            maxLength={greekCustomer ? 9 : undefined}
           />
           {vatResult && !vatResult.isUnique && vatResult.existingContact && (
             <p className="mt-1 text-xs text-destructive font-medium" role="alert">
@@ -154,6 +164,24 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
             value={customer.postalCode ?? ''}
             onChange={(e) => updateField('postalCode', e.target.value)}
           />
+        </fieldset>
+
+        <fieldset>
+          <Label htmlFor="customerCountry">{t('invoices.customerForm.country')}</Label>
+          <Select
+            value={countryKnown ? customer.country : undefined}
+            onValueChange={(code) => onCustomerChange({ ...customer, country: code })}
+          >
+            <SelectTrigger id="customerCountry">
+              {/* Άγνωστη αποθηκευμένη χώρα: δείχνεται το κείμενό της, ποτέ σιωπηλά «Ελλάδα». */}
+              <SelectValue placeholder={customer.country || t('invoices.customerForm.countryPlaceholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              {ADDRESS_COUNTRY_OPTIONS.map(({ value, labelKey }) => (
+                <SelectItem key={value} value={value}>{t(labelKey)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </fieldset>
 
         <fieldset>

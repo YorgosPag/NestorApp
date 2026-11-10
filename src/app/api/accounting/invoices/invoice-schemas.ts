@@ -5,22 +5,137 @@
  */
 
 import { z } from 'zod';
-import type { CancellationReasonCode, MyDataDocumentStatus } from '@/subapps/accounting/types';
+import { MYDATA_INCOME_TYPES } from '@/subapps/accounting/types';
+import type {
+  CancellationReasonCode,
+  InvoiceLineItem,
+  MyDataDocumentStatus,
+  VatBreakdown,
+} from '@/subapps/accounting/types';
+import { isGreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
+import { isVatExemptionCode } from '@/subapps/accounting/services/config/vat-exemption-reasons';
+import { hasVatExemptionContradiction } from '@/subapps/accounting/services/mydata/mydata-codes';
+import { invoiceAmountsOf, lineNetAmount } from '@/subapps/accounting/utils/invoice-amounts';
+
+// ============================================================================
+// INVOICE LINE + AMOUNTS (ADR-ACC-003 §22.2 — ο διακομιστής δεν εμπιστεύεται ποσά του πελάτη)
+// ============================================================================
+
+/** Ανώτατο πλήθος γραμμών ανά παραστατικό — φράχτης μεγέθους εγγράφου, όχι επιχειρηματικό όριο. */
+export const MAX_INVOICE_LINES = 500;
+
+const money = z.number().finite();
+
+const InvoiceLineItemShape = z.object({
+  lineNumber: z.number().int().min(1),
+  description: z.string().max(1000),
+  quantity: z.number().finite(),
+  unit: z.string().max(50),
+  unitPrice: money,
+  vatRate: z.number().refine(isGreekVatRatePercent, { message: 'vatRate is not a Greek VAT rate (GREEK_VAT_RATES)' }),
+  netAmount: money,
+  mydataCode: z.enum(MYDATA_INCOME_TYPES),
+  vatExemptionCategory: z
+    .number()
+    .refine(isVatExemptionCode, { message: 'vatExemptionCategory is not an AADE §8.3 code (VAT_EXEMPTION_REASONS)' })
+    .nullable()
+    .optional(),
+});
+
+/**
+ * Γραμμή τιμολογίου — **ένα** συμβόλαιο για POST και PATCH. Το `satisfies` δένει το σχήμα με τον τύπο: νέο
+ * υποχρεωτικό πεδίο στο `InvoiceLineItem` χωρίς γραμμή εδώ = σφάλμα μεταγλώττισης, όχι σιωπηλό πέταμα.
+ *
+ * 🔑 Αντίφαση = απόρριψη, ποτέ σιωπηλή διόρθωση: αιτία εξαίρεσης σε γραμμή που δεν τη δέχεται, ή καθαρό που δεν
+ * ισούται με ποσότητα × τιμή. Γραμμή 0% **χωρίς** αιτία περνά (πρόχειρο) — τη μπλοκάρει ο `mydata-preflight.ts`.
+ */
+export const InvoiceLineItemSchema = InvoiceLineItemShape.superRefine((line, ctx) => {
+  if (hasVatExemptionContradiction(line)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['vatExemptionCategory'],
+      message: `vatExemptionCategory is allowed only on a 0% (AADE VAT category 7) line, not on vatRate ${line.vatRate}`,
+    });
+  }
+  const expectedNet = lineNetAmount(line.quantity, line.unitPrice);
+  if (line.netAmount !== expectedNet) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['netAmount'],
+      message: `netAmount must equal quantity × unitPrice rounded per line (expected ${expectedNet})`,
+    });
+  }
+}) satisfies z.ZodType<InvoiceLineItem>;
+
+const VatBreakdownSchema = z.object({ vatRate: z.number(), netAmount: money, vatAmount: money });
+
+/** Τα πεδία ποσών του σώματος POST/PATCH — όλα παράγωγα των γραμμών. */
+export const invoiceAmountFields = {
+  lineItems: z.array(InvoiceLineItemSchema).max(MAX_INVOICE_LINES).optional(),
+  totalNetAmount: money.optional(),
+  totalVatAmount: money.optional(),
+  totalGrossAmount: money.optional(),
+  vatBreakdown: z.array(VatBreakdownSchema).optional(),
+};
+
+interface InvoiceAmountBody {
+  lineItems?: readonly InvoiceLineItem[];
+  totalNetAmount?: number;
+  totalVatAmount?: number;
+  totalGrossAmount?: number;
+  vatBreakdown?: readonly VatBreakdown[];
+}
+
+const INVOICE_TOTAL_FIELDS = ['totalNetAmount', 'totalVatAmount', 'totalGrossAmount'] as const;
+
+function sameVatBreakdown(sent: readonly VatBreakdown[], expected: readonly VatBreakdown[]): boolean {
+  return sent.length === expected.length && expected.every((row) => sent.some((other) =>
+    other.vatRate === row.vatRate && other.netAmount === row.netAmount && other.vatAmount === row.vatAmount));
+}
+
+/**
+ * Τα σύνολα **ισούνται** με αυτά που υπολογίζει ο διακομιστής από τις γραμμές (`invoiceAmountsOf` — ο ίδιος
+ * υπολογισμός με τη φόρμα και τον preflight). Γραμμές ⇒ σύνολα υποχρεωτικά· σύνολα χωρίς γραμμές ⇒ απόρριψη
+ * (θα ξέφευγαν από τις αποθηκευμένες γραμμές).
+ */
+export function refineInvoiceAmounts(body: InvoiceAmountBody, ctx: z.RefinementCtx): void {
+  const sentAmounts = INVOICE_TOTAL_FIELDS.some((field) => body[field] !== undefined) || body.vatBreakdown !== undefined;
+  if (!body.lineItems) {
+    if (sentAmounts) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['lineItems'], message: 'invoice amounts are derived from lineItems: send them together' });
+    }
+    return;
+  }
+  const expected = invoiceAmountsOf(body.lineItems);
+  for (const field of INVOICE_TOTAL_FIELDS) {
+    if (body[field] !== expected[field]) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `${field} must equal the sum of the line amounts (expected ${expected[field]})` });
+    }
+  }
+  if (body.vatBreakdown && !sameVatBreakdown(body.vatBreakdown, expected.vatBreakdown)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['vatBreakdown'], message: 'vatBreakdown must equal the per-rate sums of the line amounts' });
+  }
+}
 
 // ============================================================================
 // UPDATE INVOICE SCHEMA
 // ============================================================================
 
-export const UpdateInvoiceSchema = z.object({
-  type: z.string().max(50).optional(),
-  issueDate: z.string().max(30).optional(),
+/** Τα πεδία που POST και PATCH ελέγχουν **ίδια** — ένα σημείο, ώστε τα δύο σχήματα να μην αποκλίνουν. */
+export const invoiceSharedFields = {
   dueDate: z.string().max(30).nullable().optional(),
   contactId: z.string().max(128).nullable().optional(),
   contactName: z.string().max(200).nullable().optional(),
-  lineItems: z.array(z.record(z.unknown())).optional(),
-  payments: z.array(z.record(z.unknown())).optional(),
+  ...invoiceAmountFields,
   notes: z.string().max(5000).nullable().optional(),
-}).passthrough();
+};
+
+export const UpdateInvoiceSchema = z.object({
+  type: z.string().max(50).optional(),
+  issueDate: z.string().max(30).optional(),
+  ...invoiceSharedFields,
+  payments: z.array(z.record(z.unknown())).optional(),
+}).passthrough().superRefine(refineInvoiceAmounts);
 
 // ============================================================================
 // SERVER-OWNED FIELDS (ADR-ACC-003 §22 — ένας γραφέας της κατάστασης myDATA)

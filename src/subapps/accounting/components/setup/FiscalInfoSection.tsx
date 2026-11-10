@@ -10,6 +10,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML, ADR-001 Radix Select
  */
 
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -20,7 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import type { CompanySetupInput } from '../../types';
+import { COMPANY_VAT_REGIMES } from '../../types/company';
+import { isCompanyVatRegime, withVatRegime } from '../../services/setup/company-vat-regime';
+import { accountingToday } from '../../utils/accounting-day';
+import { VatExemptionReasonField } from '../shared/VatExemptionReasonField';
 import { BusinessStartFields } from './BusinessStartFields';
 
 // ============================================================================
@@ -44,6 +51,8 @@ const EFKA_CATEGORIES = [1, 2, 3, 4, 5, 6] as const;
 
 export function FiscalInfoSection({ data, onChange }: FiscalInfoSectionProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
+  const colors = useSemanticColors();
+  const exemptionHintId = useId();
 
   return (
     <Card>
@@ -80,24 +89,40 @@ export function FiscalInfoSection({ data, onChange }: FiscalInfoSectionProps) {
               <Label htmlFor="vatRegime">{t('setup.vatRegime')}</Label>
               <Select
                 value={data.vatRegime}
-                onValueChange={(value) =>
-                  onChange({ vatRegime: value as 'normal' | 'exempt' })
-                }
+                onValueChange={(value) => {
+                  if (!isCompanyVatRegime(value)) return;
+                  const current = { vatRegime: data.vatRegime, vatExemptionCategory: data.vatExemptionCategory };
+                  onChange(withVatRegime(current, value));
+                }}
               >
                 <SelectTrigger id="vatRegime">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="normal">
-                    {t('setup.vatRegimes.normal')}
-                  </SelectItem>
-                  <SelectItem value="exempt">
-                    {t('setup.vatRegimes.exempt')}
-                  </SelectItem>
+                  {COMPANY_VAT_REGIMES.map((regime) => (
+                    <SelectItem key={regime} value={regime}>
+                      {t(`setup.vatRegimes.${regime}`)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {/* ADR-ACC-003 §22.4: ΠΟΙΑ απαλλαγή — η αφετηρία κάθε νέας γραμμής τιμολογίου */}
+          {data.vatRegime === 'exempt' && (
+            <section aria-describedby={exemptionHintId}>
+              <VatExemptionReasonField
+                id="companyVatExemption"
+                value={data.vatExemptionCategory}
+                issueDate={accountingToday()}
+                onValueChange={(code) => onChange({ vatExemptionCategory: code })}
+              />
+              <p id={exemptionHintId} className={cn('mt-1 text-xs', colors.text.muted)}>
+                {t('setup.vatExemptionDefaultHint')}
+              </p>
+            </section>
+          )}
 
           {/* Row 2: Λήξη Φ.Ε. + Κατηγορία ΕΦΚΑ (sole_proprietor μόνο) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

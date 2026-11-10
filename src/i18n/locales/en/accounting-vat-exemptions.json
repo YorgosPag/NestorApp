@@ -178,5 +178,14 @@
       "legacy": "No VAT – Article 47d of the VAT Code (IOSS)",
       "current": "No VAT – Article 58 of the VAT Code (IOSS)"
     }
+  },
+  "placeOfSupply": {
+    "art18_2a": "Article 18(2)(a) of the Greek VAT Code (Law 5144/2024): services to a taxable person are taxed where the customer is established. A legal person with a VAT number counts as a taxable person (para. 1(b)).",
+    "art18_15": "Article 18(15) of the Greek VAT Code (Law 5144/2024): certain services to a private individual established outside the EU are taxed outside Greece — consultants, engineers, design offices, lawyers, accountants, advertising, licensing of rights, supply of staff, etc.",
+    "caveats": {
+      "immovableProperty": "If the service relates to immovable property in Greece (e.g. design, supervision or construction works), Greek VAT applies (Article 18(4)).",
+      "listedServicesOnly": "Applies only to the services listed in para. 15; for any other service to a private individual Greek VAT applies (para. 2(b)).",
+      "vatNumberNotVerified": "The customer's VAT number is declared, not verified (VIES or the national register)."
+    }
   }
 }

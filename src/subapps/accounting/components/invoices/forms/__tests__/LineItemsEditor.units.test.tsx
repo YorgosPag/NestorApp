@@ -8,6 +8,7 @@
  * - Λ2: παλιά γραμμή με «τεμ» ⇒ ο επιλογέας τη διαβάζει ως `pcs` και έχει **όνομα πεδίου** από την ετικέτα της φόρμας.
  * - Λ3: επιλογή από τη λίστα ⇒ γράφεται ο κωδικός (`m2`), όχι η ετικέτα.
  * - Λ4: προκαθορισμένη υπηρεσία με παλιά γραφή («ώρες») ⇒ στη γραμμή φτάνει ο κανονικός κωδικός (`hr`).
+ * - Λ8–Λ9 (ADR-ACC-003 §22.4): η νέα γραμμή ξεκινά από το καθεστώς ΦΠΑ της επιχείρησης.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -31,6 +32,10 @@ jest.mock('../../../shared/ServicePresetCombobox', () => ({
 
 import { installPointerEvents } from '@/test-utils/pointer-event';
 import { LineItemsEditor } from '../LineItemsEditor';
+import {
+  companyLineVatDefault,
+  type CompanyLineVatDefault,
+} from '@/subapps/accounting/services/setup/company-vat-regime';
 
 beforeAll(installPointerEvents);
 
@@ -44,8 +49,21 @@ const HOURLY_PRESET: ServicePreset = {
   isActive: true, sortOrder: 0,
 };
 
-function renderEditor(onChange = jest.fn(), presets: ServicePreset[] = []) {
-  render(<LineItemsEditor lineItems={[LEGACY_LINE]} onLineItemsChange={onChange} presets={presets} issueDate="2026-11-09" />);
+function renderEditor(
+  onChange = jest.fn(),
+  presets: ServicePreset[] = [],
+  lines: InvoiceLineItem[] = [LEGACY_LINE],
+  lineVatDefault: CompanyLineVatDefault = companyLineVatDefault(null),
+) {
+  render(
+    <LineItemsEditor
+      lineItems={lines}
+      onLineItemsChange={onChange}
+      presets={presets}
+      issueDate="2026-11-09"
+      lineVatDefault={lineVatDefault}
+    />,
+  );
   return onChange;
 }
 
@@ -74,5 +92,49 @@ describe('LineItemsEditor — μονάδα ως κωδικός του μητρώ
     const onChange = renderEditor(jest.fn(), [HOURLY_PRESET]);
     await userEvent.setup().click(screen.getByRole('button', { name: 'preset' }));
     expect((onChange.mock.calls[0][0] as InvoiceLineItem[])[0].unit).toBe('hr');
+  });
+});
+
+describe('LineItemsEditor — αιτία εξαίρεσης από την υπηρεσία (ADR-ACC-003 §22.3)', () => {
+  const EXEMPT_PRESET: ServicePreset = { ...HOURLY_PRESET, vatRate: 0, vatExemptionCategory: 15 };
+  const ZERO_LINE: InvoiceLineItem = { ...LEGACY_LINE, vatRate: 0, vatExemptionCategory: 7 };
+
+  async function applyFirstPreset(presets: ServicePreset[], lines?: InvoiceLineItem[]) {
+    const onChange = renderEditor(jest.fn(), presets, lines);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'preset' }));
+    return (onChange.mock.calls[0][0] as InvoiceLineItem[])[0];
+  }
+
+  it('Λ5: υπηρεσία 0% με αιτία ⇒ η γραμμή την κληρονομεί, καθαρό από τον ένα υπολογισμό', async () => {
+    const line = await applyFirstPreset([EXEMPT_PRESET]);
+    expect(line).toMatchObject({ vatRate: 0, vatExemptionCategory: 15, unitPrice: 80, netAmount: 80 });
+  });
+
+  it('Λ6: υπηρεσία 0% ΧΩΡΙΣ αιτία δεν σβήνει αιτία που είχε ήδη η γραμμή', async () => {
+    const line = await applyFirstPreset([{ ...EXEMPT_PRESET, vatExemptionCategory: null }], [ZERO_LINE]);
+    expect(line.vatExemptionCategory).toBe(7);
+  });
+
+  it('Λ7: υπηρεσία 24% πάνω σε γραμμή 0% ⇒ η αιτία καθαρίζει', async () => {
+    const line = await applyFirstPreset([HOURLY_PRESET], [ZERO_LINE]);
+    expect(line).toMatchObject({ vatRate: 24, vatExemptionCategory: null });
+  });
+});
+
+describe('LineItemsEditor — νέα γραμμή από το καθεστώς ΦΠΑ της επιχείρησης (ADR-ACC-003 §22.4)', () => {
+  async function addLine(lineVatDefault: CompanyLineVatDefault) {
+    const onChange = renderEditor(jest.fn(), [], [LEGACY_LINE], lineVatDefault);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'forms.addLineItem' }));
+    return (onChange.mock.calls[0][0] as InvoiceLineItem[])[1];
+  }
+
+  it('Λ8: απαλλασσόμενη με κωδ. 15 ⇒ νέα γραμμή 0% + αιτία 15', async () => {
+    const line = await addLine(companyLineVatDefault({ vatRegime: 'exempt', vatExemptionCategory: 15 }));
+    expect(line).toMatchObject({ lineNumber: 2, vatRate: 0, vatExemptionCategory: 15 });
+  });
+
+  it('Λ9: κανονικό καθεστώς ⇒ νέα γραμμή 24%, χωρίς αιτία', async () => {
+    const line = await addLine(companyLineVatDefault({ vatRegime: 'normal' }));
+    expect(line).toMatchObject({ vatRate: 24, vatExemptionCategory: null });
   });
 });

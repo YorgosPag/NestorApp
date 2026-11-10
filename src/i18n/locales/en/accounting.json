@@ -64,7 +64,26 @@
       "taxOffice": "Tax Office",
       "address": "Address",
       "city": "City",
-      "postalCode": "Postal Code"
+      "postalCode": "Postal Code",
+      "country": "Country",
+      "countryPlaceholder": "Select country"
+    },
+    "vatSuggestion": {
+      "scenario": {
+        "eu_business": "Customer: business in an EU member state ({country})",
+        "non_eu_business": "Customer: business outside the EU ({country})",
+        "non_eu_consumer": "Customer: private individual outside the EU ({country})"
+      },
+      "proposal": "Suggested: 0% VAT with reason: {provision} ({law})",
+      "typeChange": "Document type: {from} → {to}",
+      "linesChange": "Lines {lines}: become 0% with this reason",
+      "noLineChanges": "No line changes: all lines already have 0% with a reason.",
+      "disclaimer": "The place of supply is a legal judgement. Review the suggestion before applying it.",
+      "apply": "Apply",
+      "dismiss": "Dismiss",
+      "applied": "The VAT treatment suggested for this customer has been applied.",
+      "undo": "Undo",
+      "unknownCountry": "The country \"{country}\" is not recognised, so no VAT treatment can be suggested. Select a country from the list."
     },
     "vatLabel": "VAT",
     "summary": {

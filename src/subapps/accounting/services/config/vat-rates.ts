@@ -66,6 +66,13 @@ export const GREEK_VAT_RATE_PERCENTS: readonly GreekVatRatePercent[] = GREEK_VAT
  */
 export const GREEK_STANDARD_VAT_RATE = GREEK_VAT_RATES[0].rate;
 
+/**
+ * Ο συντελεστής «Άνευ ΦΠΑ» (κατηγορία myDATA 7, απαιτεί αιτία εξαίρεσης) — η αφετηρία της γραμμής απαλλασσόμενης
+ * επιχείρησης (ADR-ACC-003 §22.4). Η γραμμή `exempt_0` του πίνακα· ότι απαιτεί αιτία το φυλά το
+ * `company-vat-regime.test.ts`.
+ */
+export const GREEK_EXEMPT_VAT_RATE = GREEK_VAT_RATES[3].rate;
+
 /** Στενευτής χωρίς `as`: `unknown` → συντελεστής, ή `false`. */
 export function isGreekVatRatePercent(value: unknown): value is GreekVatRatePercent {
   return GREEK_VAT_RATE_PERCENTS.some((rate) => rate === value);

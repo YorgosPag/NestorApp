@@ -14,6 +14,8 @@ import { isValidGreekVat } from '@/lib/validation/greek-vat-number';
 
 import type { Invoice } from '../../types/invoice';
 import { roundToTwo } from '../../utils/math';
+// Ποσό ΦΠΑ γραμμής: ο ΕΝΑΣ υπολογισμός της φόρμας και του διακομιστή (ADR-ACC-003 §22.2).
+import { lineVatAmount } from '../../utils/invoice-amounts';
 import {
   MYDATA_CORRELATION_REQUIRED,
   MYDATA_COUNTERPART_REQUIRED,
@@ -60,11 +62,6 @@ const GREECE = 'GR';
 
 function issue(code: MyDataPreflightIssueCode, lineNumber: number | null = null): MyDataPreflightIssue {
   return { code, lineNumber };
-}
-
-/** Ποσό ΦΠΑ γραμμής — ίδιος κανόνας με τη φόρμα έκδοσης: στρογγύλευση **ανά γραμμή**. */
-export function lineVatAmount(netAmount: number, vatRate: number): number {
-  return roundToTwo(netAmount * (vatRate / 100));
 }
 
 function checkHeader({ invoice, correlatedMarks }: MyDataTransmissionInput): MyDataPreflightIssue[] {

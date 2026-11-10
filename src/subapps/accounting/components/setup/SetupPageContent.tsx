@@ -72,6 +72,7 @@ function createDefaultData(): CompanySetupInput {
     secondaryKads: [],
     bookCategory: 'simplified',
     vatRegime: 'normal',
+    vatExemptionCategory: null,
     fiscalYearEnd: 12,
     currency: 'EUR',
     businessStart: null,

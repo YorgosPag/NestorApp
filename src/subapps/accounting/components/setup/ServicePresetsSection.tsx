@@ -23,7 +23,10 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Plus, Trash2, Download, Pencil, Check, X } from 'lucide-react';
-import { VATRateSelector } from '../shared/VATRateSelector';
+import { VatExemptionLineNote } from '../shared/VatExemptionReasonField';
+import { PresetVatFields } from './PresetVatFields';
+import { requiresVatExemption } from '../../services/mydata/mydata-codes';
+import { accountingToday } from '../../utils/accounting-day';
 import { useServicePresets } from '../../hooks';
 import type { ServicePreset, MyDataIncomeType } from '../../types';
 import { formatAccountingCurrency } from '../../utils/format';
@@ -64,6 +67,8 @@ interface NewPresetFormState {
   unit: string;
   unitPrice: string;
   vatRate: number;
+  /** Αιτία εξαίρεσης — μόνο στο 0% (ADR-ACC-003 §22.3). */
+  vatExemptionCategory: number | null;
 }
 
 const INITIAL_FORM: NewPresetFormState = {
@@ -71,6 +76,7 @@ const INITIAL_FORM: NewPresetFormState = {
   unit: DEFAULT_UOM,
   unitPrice: '0',
   vatRate: 24,
+  vatExemptionCategory: null,
 };
 
 // ============================================================================
@@ -119,6 +125,7 @@ export function ServicePresetsSection() {
       unit: toStoredUom(form.unit),
       unitPrice: parseFloat(form.unitPrice) || 0,
       vatRate: form.vatRate,
+      vatExemptionCategory: form.vatExemptionCategory,
       mydataCode: 'category1_3' as MyDataIncomeType,
       isActive: true,
       sortOrder: localPresets.length,
@@ -144,6 +151,7 @@ export function ServicePresetsSection() {
       unit: preset.unit,
       unitPrice: String(preset.unitPrice),
       vatRate: preset.vatRate,
+      vatExemptionCategory: preset.vatExemptionCategory ?? null,
     });
   }, []);
 
@@ -163,6 +171,7 @@ export function ServicePresetsSection() {
             unit: toStoredUom(editForm.unit),
             unitPrice: parseFloat(editForm.unitPrice) || 0,
             vatRate: editForm.vatRate,
+            vatExemptionCategory: editForm.vatExemptionCategory,
           }
         : p,
     );
@@ -266,14 +275,8 @@ export function ServicePresetsSection() {
                   />
                 </fieldset>
               </div>
-              <div className="flex items-end gap-3">
-                <fieldset>
-                  <Label>{t('setup.vatLabel')}</Label>
-                  <VATRateSelector
-                    value={form.vatRate}
-                    onValueChange={(rate) => setForm((f) => ({ ...f, vatRate: rate }))}
-                  />
-                </fieldset>
+              <div className="flex flex-wrap items-end gap-3">
+                <PresetVatFields idPrefix={`${fieldId}-new`} value={form} onChange={setForm} />
                 <div className="flex gap-2">
                   <Button size="sm" onClick={handleAddPreset} disabled={!form.description.trim() || saving}>
                     {saving ? <Spinner size="small" className="mr-2" /> : null}
@@ -299,7 +302,7 @@ export function ServicePresetsSection() {
             {localPresets.map((preset) => (
               <li
                 key={preset.presetId}
-                className="flex items-center gap-3 border border-border rounded-md px-3 py-2"
+                className="flex flex-wrap items-center gap-3 border border-border rounded-md px-3 py-2"
               >
                 {editingId === preset.presetId ? (
                   /* Inline edit mode */
@@ -328,6 +331,9 @@ export function ServicePresetsSection() {
                         onChange={(e) => setEditForm((f) => ({ ...f, unitPrice: e.target.value }))}
                       />
                     </fieldset>
+                    <div className="md:col-span-5 flex flex-wrap items-end gap-3 md:order-last">
+                      <PresetVatFields idPrefix={`${fieldId}-edit`} value={editForm} onChange={setEditForm} />
+                    </div>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={confirmEdit}>
                         <Check className="h-4 w-4 text-[hsl(var(--text-success))]" />
@@ -362,6 +368,11 @@ export function ServicePresetsSection() {
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
+                    {requiresVatExemption(preset.vatRate) && (
+                      <div className="basis-full">
+                        <VatExemptionLineNote value={preset.vatExemptionCategory} issueDate={accountingToday()} />
+                      </div>
+                    )}
                   </>
                 )}
               </li>

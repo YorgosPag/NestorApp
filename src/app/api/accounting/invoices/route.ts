@@ -33,19 +33,16 @@ import { INVOICE_TYPES } from '@/subapps/accounting/types';
 import type { CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
 import { readListContext, readPageRequest, respondWithPage } from '../_shared/list-request-context';
 import { createDraftMyDataMeta } from '@/subapps/accounting/services/mydata/mydata-status-transitions';
-import { stripServerOwnedInvoiceFields } from './invoice-schemas';
+import { invoiceSharedFields, refineInvoiceAmounts, stripServerOwnedInvoiceFields } from './invoice-schemas';
+import { invoiceAmountsOf } from '@/subapps/accounting/utils/invoice-amounts';
 import { invoiceFiltersOf } from '../_shared/list-filters';
 
 const CreateInvoiceSchema = z.object({
   series: z.string().min(1).max(20),
   type: z.enum(INVOICE_TYPES),
   issueDate: z.string().min(10).max(30),
-  dueDate: z.string().max(30).nullable().optional(),
-  contactId: z.string().max(128).nullable().optional(),
-  contactName: z.string().max(200).nullable().optional(),
-  lineItems: z.array(z.record(z.unknown())).optional(),
-  notes: z.string().max(5000).nullable().optional(),
-}).passthrough();
+  ...invoiceSharedFields,
+}).passthrough().superRefine(refineInvoiceAmounts);
 
 // =============================================================================
 // GET — List Invoices
@@ -85,11 +82,9 @@ export const POST = defineRoute({
       // παραστατικά όλων των χρήσεων (SAP credit exposure) — ποτέ από μια προβολή που μπορεί να έχει μείνει πίσω.
       const settings = await repository.getCustomerBalance(contactId);
       if (hasActiveCreditLimit(settings)) {
-        const grossAmount = body.lineItems?.reduce(
-          (sum: number, li: Record<string, unknown>) =>
-            sum + (typeof li.grossAmount === 'number' ? li.grossAmount : 0),
-          0
-        ) ?? 0;
+        // Το ποσό που κρίνεται το υπολογίζει ο διακομιστής από τις επικυρωμένες γραμμές — ποτέ δηλωμένο ποσό του
+        // πελάτη (ADR-ACC-003 §22.2). Ήταν άθροισμα ενός `lineItems[].grossAmount` που καμία γραμμή δεν έχει ⇒ 0 €.
+        const grossAmount = invoiceAmountsOf(body.lineItems ?? []).totalGrossAmount;
         const creditCheck = checkCreditLimit(await computeCustomerBalance(repository, contactId), grossAmount);
         if (!creditCheck.allowed) {
           throw new ApiError(422, 'Credit limit exceeded', POLICY_ERROR_CODES.CREDIT_LIMIT_EXCEEDED, {
