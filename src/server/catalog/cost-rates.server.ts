@@ -17,7 +17,7 @@ import { pricingFreshUntil } from '@/subapps/catalog/pricing/pricing-view-freshn
 import { publishedTimeline, versionAt } from '@/subapps/catalog/pricing/version-timeline';
 import type { CostRate, CostRateBook } from '@/subapps/catalog/types/cost-rate';
 import { effectiveFenceBp, isPublishedStatus } from '@/subapps/catalog/vocabulary/pricing';
-import { readPricingViewRevisionInTx } from './pricing-view-signal.server';
+import { readCatalogViewRevisionInTx } from './catalog-view-signal.server';
 import { runCatalogTransaction, type CatalogTx } from './catalog-store.server';
 import type { StoredPriceLine, StoredPriceVersion } from './price-version-aggregate.server';
 import { readActivePriceLists, readListVersions, readVersionLines, versionRefOf, type StoredPriceList } from './price-version-reads.server';
@@ -66,7 +66,7 @@ function rateOf(list: StoredPriceList, version: StoredPriceVersion, line: Stored
 
 export function readCostRateBook(ctx: AuthContext, projectId: string | null, nowMs = Date.now()): Promise<CostRateBook> {
   return runCatalogTransaction(ctx, async (scope) => {
-    const revision = await readPricingViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'lists' });
+    const revision = await readCatalogViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'lists' });
     const lists = await readCostLists(scope, projectId);
     const versions = await Promise.all(lists.map((list) => readListVersions(scope, list.id)));
     const picks = lists.map((list, index) => versionsOf(list, versions[index], nowMs));

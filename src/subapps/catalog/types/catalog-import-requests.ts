@@ -4,6 +4,7 @@
  * @module subapps/catalog/types/catalog-import-requests
  */
 
+import type { ViewFreshness } from '@/types/server-view';
 import type { ImportAssetView } from './catalog-media';
 import type { CatalogWire } from './catalog-record';
 import type {
@@ -182,6 +183,8 @@ export type ImportProposalWire = CatalogWire<ImportProposalDefinition>;
 export type ImportProfileWire = CatalogWire<ImportProfileDefinition>;
 
 export interface ImportBatchDetailView {
+  /** §5.5.2 (ADR-905): η αναθεώρηση του σήματος `importBatch:{id}` — ο πελάτης ξαναρωτά **μόνο** όταν το σήμα την ξεπεράσει. */
+  readonly freshness: ViewFreshness;
   readonly batch: ImportBatchWire;
   readonly proposals: readonly ImportProposalWire[];
   /** §5.5.2 Β5.2: απούσα όταν η παρτίδα δεν έχει προμηθευτή. */

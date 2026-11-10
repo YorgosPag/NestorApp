@@ -15,7 +15,9 @@ import type { ImportBaseValues } from '@/subapps/catalog/import/build-attribute-
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportFieldValue, ImportProposalDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView, ImportBatchWire, ImportProfileWire, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
+import { pricingFreshUntil } from '@/subapps/catalog/pricing/pricing-view-freshness';
 import { readOwned, runCatalogTransaction } from './catalog-store.server';
+import { readCatalogViewRevisionInTx } from './catalog-view-signal.server';
 import { assertPurposeAuthority } from './import-batch-writer.server';
 import { readMemoryHints } from './import-label-memory.server';
 import type { ImportBatchDefinition } from '@/subapps/catalog/types/catalog-import';
@@ -57,15 +59,22 @@ export async function readBatchProposals(ctx: AuthContext, batchId: string): Pro
 /**
  * `GET /api/catalog/imports/[id]` — η παρτίδα και οι προτάσεις της. Σε παρτίδα ιδιοτήτων οι προτάσεις τιμών (§5.5.2 Β4) φαίνονται
  * **μόνο** σε όποιον βλέπει τιμές: ξένο ≡ ανύπαρκτο, ίδιο δόγμα με το `assertPurposeAuthority`.
+ * 📡 **Ζωντανή όψη** (§5.5.2, ADR-905): η αναθεώρηση του σήματος `importBatch:{id}` διαβάζεται στην **ίδια** συναλλαγή με την
+ *    παρτίδα και **πριν** από το ερώτημα των προτάσεων — η όψη είναι τουλάχιστον τόσο φρέσκια όσο ο αριθμός της, άρα μια
+ *    εγγραφή ανάμεσα φτάνει ως σήμα και ο πελάτης ξαναρωτά. Ο **μόνος** παραγωγός όψης παρτίδας (GET + κάθε απάντηση εγγραφής).
  */
-export async function readImportBatchDetail(ctx: AuthContext, id: string): Promise<ImportBatchDetailView> {
-  const batch = await runCatalogTransaction(ctx, (scope) => readOwned<ImportBatchDefinition>(scope, 'importBatch', id));
+export async function readImportBatchDetail(ctx: AuthContext, id: string, nowMs = Date.now()): Promise<ImportBatchDetailView> {
+  const { batch, revision } = await runCatalogTransaction(ctx, async (scope) => {
+    const read = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
+    return { batch: read, revision: await readCatalogViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'importBatch', batchId: read.id }) };
+  });
   await assertPurposeAuthority(ctx, batch.target.purpose);
   const [all, labelMemory] = await Promise.all([readBatchProposals(ctx, id), readMemoryHints(ctx, batch)]);
   const seesPrices = batch.target.purpose === 'priceLines' || (await hasPermission(ctx, CATALOG_AUTHORITY_PERMISSIONS.pricing));
   const proposalsSeen = seesPrices ? all : all.filter((proposal) => proposal.purpose !== 'priceLines');
   // §5.5.2 Β5.2: η μνήμη του προμηθευτή απέναντι στην παρτίδα — μόνο ανάγνωση, καμία εγγραφή (Απόφαση 4).
-  return labelMemory ? { batch, proposals: proposalsSeen, labelMemory } : { batch, proposals: proposalsSeen };
+  const freshness = { revision, freshUntil: pricingFreshUntil(nowMs, []) };
+  return labelMemory ? { freshness, batch, proposals: proposalsSeen, labelMemory } : { freshness, batch, proposals: proposalsSeen };
 }
 
 function acceptedValuesOf(proposal: ImportProposalDefinition, into: Map<string, Map<string, ImportFieldValue>>): void {

@@ -14,7 +14,7 @@
 
 import { useCatalogOptimistic, type CatalogOptimistic } from '@/hooks/catalog/useCatalogOptimistic';
 import { useDiscountsView } from '@/hooks/catalog/usePriceListViews';
-import { usePendingHold, useReleaseWhenSettled, type PricingViewApi } from '@/hooks/catalog/usePricingView';
+import { usePendingHold, useReleaseWhenSettled, type CatalogServerViewApi } from '@/hooks/catalog/useCatalogServerView';
 import type {
   CustomerAssignmentWire,
   VisibilityRuleWire,
@@ -34,7 +34,7 @@ const NO_VISIBILITY_RULES: readonly VisibilityRuleWire[] = [];
 const NO_NAMES: PartyNames = {};
 
 export interface DiscountsWorkspace {
-  readonly api: PricingViewApi<DiscountsView>;
+  readonly api: CatalogServerViewApi<DiscountsView>;
   /** `null` όσο φορτώνει ή αν απέτυχε. */
   readonly view: DiscountsView | null;
   readonly forbidden: boolean;

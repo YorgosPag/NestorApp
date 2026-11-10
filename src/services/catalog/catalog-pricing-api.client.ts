@@ -6,7 +6,7 @@
  * @module services/catalog/catalog-pricing-api.client
  *
  * 🔑 **Οι τιμές διαβάζονται ΜΟΝΟ από εδώ** (απόφαση Ζ): οι 8 συλλογές είναι `read: false` και ο κριτής `pricingView` ζει
- *    στον διακομιστή. Καμία Firestore για τιμές στον πελάτη — μόνο το σήμα της όψης (`pricing-view-signal.client-ref`).
+ *    στον διακομιστή. Καμία Firestore για τιμές στον πελάτη — μόνο το σήμα της όψης (`catalog-view-signal.client-ref`).
  * 🔑 **`apiClient`, όχι `fetch`**: `Idempotency-Key` (CHECK 3.92), χώρος, σώμα άρνησης για τα ευρήματα (`catalogFailureOf`).
  */
 

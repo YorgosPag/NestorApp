@@ -154,9 +154,9 @@ describe('Κ1 + Κ2 + Κ6 — η ΤΙΜΟΛΟΓΗΣΗ (Φάση 3β, ADR-923 §5
     expect(findingsOf('await tx.get(pricingSlotRef(db, id));', gate.PRICING_SLOTS)).toEqual([]);
   });
 
-  it('⛔ `pricingViewSignalRef(` έξω από τον ΕΝΑ γραφέα σημάτων (ADR-923 «3δ» Ζ) — ✅ μόνο εκεί', () => {
-    expect(findingsOf('tx.set(pricingViewSignalRef(db, cid, view), { revision: 0 });')).toEqual([gate.STATES.DOC_REF_OUTSIDE]);
-    expect(findingsOf('tx.set(pricingViewSignalRef(db, cid, view), patch, { merge: true });', gate.PRICING_VIEW_SIGNALS)).toEqual([]);
+  it('⛔ `catalogViewSignalRef(` έξω από τον ΕΝΑ γραφέα σημάτων (ADR-923 «3δ» Ζ) — ✅ μόνο εκεί', () => {
+    expect(findingsOf('tx.set(catalogViewSignalRef(db, cid, view), { revision: 0 });')).toEqual([gate.STATES.DOC_REF_OUTSIDE]);
+    expect(findingsOf('tx.set(catalogViewSignalRef(db, cid, view), patch, { merge: true });', gate.CATALOG_VIEW_SIGNALS)).toEqual([]);
   });
 
   it('⛔ ωμή γραφή στη συλλογή σημάτων έξω από τη μηχανή', () => {

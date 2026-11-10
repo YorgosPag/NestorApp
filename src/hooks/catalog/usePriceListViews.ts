@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Οι δύο όψεις της σελίδας τιμοκαταλόγων** — λίστες + χρονογραμμή, και οι γραμμές μιας έκδοσης
- *   (ADR-923 §5.11 «3δ» Τμήμα 1). Λεπτές συνδέσεις του {@link usePricingView}: ποια ανάγνωση, ποιο σήμα.
+ *   (ADR-923 §5.11 «3δ» Τμήμα 1). Λεπτές συνδέσεις του {@link useCatalogServerView}: ποια ανάγνωση, ποιο σήμα.
  * @module hooks/catalog/usePriceListViews
  *
  * 🔑 Οι γραμμές ακούν το σήμα `list:{id}` (κάθε γραφή γραμμής/έκδοσης της λίστας), **όχι** το `lists`: μια αλλαγή σε
@@ -12,34 +12,34 @@
 import { useCallback, useMemo } from 'react';
 
 import { fetchAllPriceLines, fetchCostRateBook, fetchDiscountsView, fetchPriceListsView } from '@/services/catalog/catalog-pricing-api.client';
-import type { PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
+import type { PricingView } from '@/subapps/catalog/views/catalog-view-key';
 import type { CostRateBook } from '@/subapps/catalog/types/cost-rate';
 import type { DiscountsView, PriceLinesPageView, PriceListsView } from '@/subapps/catalog/types/pricing-views';
-import { usePricingView, type PricingViewApi } from './usePricingView';
+import { useCatalogServerView, type CatalogServerViewApi } from './useCatalogServerView';
 
 const LISTS_VIEW: PricingView = { kind: 'lists' };
 
-export function usePriceListsView(isHeld?: () => boolean): PricingViewApi<PriceListsView> {
-  return usePricingView({ view: LISTS_VIEW, read: fetchPriceListsView, isHeld, label: 'catalog-price-lists-view' });
+export function usePriceListsView(isHeld?: () => boolean): CatalogServerViewApi<PriceListsView> {
+  return useCatalogServerView({ view: LISTS_VIEW, read: fetchPriceListsView, isHeld, label: 'catalog-price-lists-view' });
 }
 
 const DISCOUNTS_VIEW: PricingView = { kind: 'discounts' };
 
 /** Ομάδες έκπτωσης · ομάδες πελατών · αναθέσεις · συνθήκες — ό,τι αναφέρει το κοινό μιας λίστας και οι γραμμές της. */
-export function useDiscountsView(isHeld?: () => boolean): PricingViewApi<DiscountsView> {
-  return usePricingView({ view: DISCOUNTS_VIEW, read: fetchDiscountsView, isHeld, label: 'catalog-discounts-view' });
+export function useDiscountsView(isHeld?: () => boolean): CatalogServerViewApi<DiscountsView> {
+  return useCatalogServerView({ view: DISCOUNTS_VIEW, read: fetchDiscountsView, isHeld, label: 'catalog-discounts-view' });
 }
 
 /** Το βιβλίο τιμών κόστους του έργου: ακούει το `lists`, γιατί μόνο δημοσίευση έκδοσης το αλλάζει. `null` ⇒ καμία ανάγνωση. */
-export function useCostRateBook(projectId: string | null): PricingViewApi<CostRateBook> {
+export function useCostRateBook(projectId: string | null): CatalogServerViewApi<CostRateBook> {
   const view = projectId === null ? null : LISTS_VIEW;
   const read = useCallback(() => fetchCostRateBook(projectId ?? ''), [projectId]);
-  return usePricingView({ view, read, label: 'catalog-cost-rate-book' });
+  return useCatalogServerView({ view, read, label: 'catalog-cost-rate-book' });
 }
 
 /** Οι γραμμές της έκδοσης `versionId` του τιμοκαταλόγου `priceListId` (όλες οι σελίδες, ένα συνεπές στιγμιότυπο). */
-export function usePriceLinesView(priceListId: string, versionId: string, isHeld?: () => boolean): PricingViewApi<PriceLinesPageView> {
+export function usePriceLinesView(priceListId: string, versionId: string, isHeld?: () => boolean): CatalogServerViewApi<PriceLinesPageView> {
   const view = useMemo<PricingView>(() => ({ kind: 'list', priceListId }), [priceListId]);
   const read = useCallback(() => fetchAllPriceLines(versionId), [versionId]);
-  return usePricingView({ view, read, isHeld, label: 'catalog-price-lines-view' });
+  return useCatalogServerView({ view, read, isHeld, label: 'catalog-price-lines-view' });
 }

@@ -9,10 +9,10 @@ import { stageReplace, stageSoftDelete, type CatalogTx, type StoredCatalogRecord
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: jest.fn() }));
 jest.mock('@/services/entity-audit-tracked-write', () => ({ recordTrackedEntityWrite: jest.fn() }));
-jest.mock('@/subapps/catalog/pricing/pricing-view-key', () => ({ distinctPricingViews: jest.fn(() => []), pricingViewsOfWrite: jest.fn(() => []) }));
+jest.mock('@/subapps/catalog/views/catalog-view-key', () => ({ distinctCatalogViews: jest.fn(() => []), catalogViewsOfWrite: jest.fn(() => []) }));
 jest.mock('@/subapps/catalog/public/public-scopes-of-write', () => ({ distinctPublicScopes: jest.fn(() => []), publicScopesOfWrite: jest.fn(() => []) }));
 jest.mock('@/subapps/catalog/public/showcase-price-writes', () => ({ showcasePricesTouched: jest.fn(() => false) }));
-jest.mock('../pricing-view-signal.server', () => ({ signalPricingViewsInTx: jest.fn() }));
+jest.mock('../catalog-view-signal.server', () => ({ signalCatalogViewsInTx: jest.fn() }));
 jest.mock('../public/public-drain-schedule.server', () => ({ schedulePublicDrain: jest.fn() }));
 jest.mock('../public/public-model-revalidate.server', () => ({ revalidatePublicPrices: jest.fn() }));
 jest.mock('../public/public-outbox.server', () => ({ signalPublicScopesInTx: jest.fn() }));
@@ -33,7 +33,7 @@ function fakeScope() {
     ctx: { companyId: 'comp_a', uid: 'u_editor' } as unknown as AuthContext,
     now: NOW,
     changes: [],
-    pricingViews: [],
+    views: [],
     publicScopes: [],
   } as unknown as CatalogTx;
   return { scope, set };

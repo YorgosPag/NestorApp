@@ -18,7 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { presentedInvitationState } from '@/server/invitations/invitation-lifecycle';
 import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocsInTransaction } from '@/server/lib/owned-contact-docs';
-import { readPricingViewRevisionInTx } from '@/server/catalog/pricing-view-signal.server';
+import { readCatalogViewRevisionInTx } from '@/server/catalog/catalog-view-signal.server';
 import { pricingFreshUntil } from '@/subapps/catalog/pricing/pricing-view-freshness';
 import { supplyInvitationFromDocument, supplyRelationshipFromDocument } from '@/subapps/catalog/schema/zod/supply-relationship.schema';
 import type { SupplyInvitation } from '@/subapps/catalog/types/supply-invitation';
@@ -98,7 +98,7 @@ async function readPendingInvitations(tx: Transaction, db: Firestore, companyId:
 export function readSupplierSupplyView(ctx: AuthContext, nowMs = Date.now()): Promise<SupplierSupplyView> {
   const db = getAdminFirestore();
   return db.runTransaction(async (tx) => {
-    const revision = await readPricingViewRevisionInTx(tx, db, ctx.companyId, { kind: 'supply' });
+    const revision = await readCatalogViewRevisionInTx(tx, db, ctx.companyId, { kind: 'supply' });
     const relationships = relationshipsOf(await tx.get(db.collection(COLLECTIONS.SUPPLY_RELATIONSHIPS).where('companyId', '==', ctx.companyId).limit(SUPPLY_VIEW_LIMIT)));
     const invitations = await readPendingInvitations(tx, db, ctx.companyId);
     const link = await readSupplyRequestLinkInTx(tx, db, ctx.companyId);
@@ -130,7 +130,7 @@ function buyerRow(relationship: SupplyRelationship, suppliers: ReadonlyMap<strin
 export function readBuyerSupplyView(ctx: AuthContext, nowMs = Date.now()): Promise<BuyerSupplyView> {
   const db = getAdminFirestore();
   return db.runTransaction(async (tx) => {
-    const revision = await readPricingViewRevisionInTx(tx, db, ctx.companyId, { kind: 'supply' });
+    const revision = await readCatalogViewRevisionInTx(tx, db, ctx.companyId, { kind: 'supply' });
     // firestore-tenant-scope-exempt: έγγραφο δύο πλευρών· ο αγοραστής είναι ο δεύτερος ιδιοκτήτης του, με το δικό του πεδίο.
     const query = db.collection(COLLECTIONS.SUPPLY_RELATIONSHIPS).where('buyerCompanyId', '==', ctx.companyId).limit(SUPPLY_VIEW_LIMIT);
     const relationships = relationshipsOf(await tx.get(query));

@@ -31,7 +31,7 @@ import { readActiveByIds } from './catalog-library-reads.server';
 import { readOwned, runCatalogTransaction, type CatalogTx } from './catalog-store.server';
 import type { StoredPriceLine, StoredPriceVersion } from './price-version-aggregate.server';
 import { readListVersions, readSkuIdentifiers, versionLinesPage } from './price-version-reads.server';
-import { readPricingViewRevisionInTx } from './pricing-view-signal.server';
+import { readCatalogViewRevisionInTx } from './catalog-view-signal.server';
 
 /** Οι ενεργές εγγραφές μιας συλλογής ρυθμίσεων του χώρου (λίγες δεκάδες — ίδια πρακτική με το σχήμα του καταλόγου). */
 async function readActive<T>(scope: CatalogTx, collection: string): Promise<T[]> {
@@ -45,7 +45,7 @@ const asOfOf = (nowMs: number): string => new Date(nowMs).toISOString();
 /** `lists` — οι τιμοκατάλογοι + όλες οι ενεργές εκδόσεις τους (η χρονογραμμή χτίζεται στον πελάτη, από τον ίδιο κώδικα). */
 export function readPriceListsView(ctx: AuthContext, nowMs = Date.now()): Promise<PriceListsView> {
   return runCatalogTransaction(ctx, async (scope) => {
-    const revision = await readPricingViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'lists' });
+    const revision = await readCatalogViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'lists' });
     const lists = await readActive<PriceListWire>(scope, COLLECTIONS.CATALOG_PRICE_LISTS);
     const versions = (await Promise.all(lists.map((list) => readListVersions(scope, list.id)))).flat();
     const starts = versions.filter((version) => isPublishedStatus(version.status)).map((version) => version.validFrom);
@@ -65,7 +65,7 @@ export function readPriceLinesPage(ctx: AuthContext, versionId: string, cursor: 
   return runCatalogTransaction(ctx, async (scope) => {
     const version = await readOwned<StoredPriceVersion>(scope, 'priceListVersion', versionId);
     const view = { kind: 'list', priceListId: version.priceListId } as const;
-    const revision = await readPricingViewRevisionInTx(scope.tx, scope.db, ctx.companyId, view);
+    const revision = await readCatalogViewRevisionInTx(scope.tx, scope.db, ctx.companyId, view);
     const snap = await scope.tx.get(versionLinesPage(scope.db, ctx.companyId, version.id, cursor));
     const lines = snap.docs.map((doc) => doc.data() as StoredPriceLine);
     const nextCursor = lines.length === PRICE_LINES_PER_TRANSACTION ? lines[lines.length - 1].id : null;
@@ -77,7 +77,7 @@ export function readPriceLinesPage(ctx: AuthContext, versionId: string, cursor: 
 /** `discounts` — ομάδες, αναθέσεις, συνθήκες· η φρεσκάδα λήγει στο πρώτο όριο ισχύος συνθήκης που έρχεται. */
 export function readDiscountsView(ctx: AuthContext, nowMs = Date.now()): Promise<DiscountsView> {
   return runCatalogTransaction(ctx, async (scope) => {
-    const revision = await readPricingViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'discounts' });
+    const revision = await readCatalogViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'discounts' });
     const [discountGroups, customerGroups, assignments, conditions, visibilityRules] = await Promise.all([
       readActive<DiscountsView['discountGroups'][number]>(scope, COLLECTIONS.CATALOG_DISCOUNT_GROUPS),
       readActive<DiscountsView['customerGroups'][number]>(scope, COLLECTIONS.CATALOG_CUSTOMER_GROUPS),

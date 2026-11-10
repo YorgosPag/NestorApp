@@ -16,7 +16,7 @@
 import React from 'react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { pricingLoadState } from '@/hooks/catalog/usePricingView';
+import { catalogViewLoadState } from '@/hooks/catalog/useCatalogServerView';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogPageFrame } from '../shared/CatalogPageFrame';
 import { useCatalogSelection } from '../shared/use-catalog-selection';
@@ -63,7 +63,7 @@ export function DiscountsContent() {
     <CatalogPageFrame
       title={t('pages.discounts.title')}
       lead={t('pages.discounts.lead')}
-      state={workspace.forbidden ? 'ready' : pricingLoadState(workspace.api.current)}
+      state={workspace.forbidden ? 'ready' : catalogViewLoadState(workspace.api.current)}
     >
       {workspace.forbidden || workspace.view === null ? (
         <p className="m-0 text-muted-foreground" role="status">{t('pricing.noView')}</p>

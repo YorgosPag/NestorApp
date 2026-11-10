@@ -23,7 +23,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { decodeSignedToken, encodeSignedToken, requireTokenSecret } from '@/lib/tokens/signed-token';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
-import { signalPricingViewsInTx } from '@/server/catalog/pricing-view-signal.server';
+import { signalCatalogViewsInTx } from '@/server/catalog/catalog-view-signal.server';
 import { invitationRefusalOfToken } from '@/server/invitations/invitation-guards';
 import { SUPPLY_REQUEST_LINK_TRACKED_FIELDS } from '@/config/audit-tracked-fields-catalog';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
@@ -112,7 +112,7 @@ async function changeLink(ctx: AuthContext, act: LinkAct): Promise<SupplyRequest
     const next = nextLink(current, act, ctx, nowISO());
     if (next === null) return [current, current] as const;
     tx.set(links(db).doc(next.id), next);
-    signalPricingViewsInTx(tx, db, ctx.companyId, [{ kind: 'supply' }]);
+    signalCatalogViewsInTx(tx, db, ctx.companyId, [{ kind: 'supply' }]);
     return [current, next] as const;
   });
   if (after !== null && after !== before) {

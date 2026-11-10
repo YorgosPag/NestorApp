@@ -21,7 +21,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { runCatalogTransaction, type CatalogTx } from '@/server/catalog/catalog-store.server';
 import { assertNoIssues, CatalogWriteError } from '@/server/catalog/catalog-write-error';
 import { planCustomerAssignment } from '@/server/catalog/customer-assignment-writer.server';
-import { signalPricingViewsInTx } from '@/server/catalog/pricing-view-signal.server';
+import { signalCatalogViewsInTx } from '@/server/catalog/catalog-view-signal.server';
 import { newPendingInvitationCore, revokeInvitationAt, stageInvitationWithSupersede } from '@/server/invitations/invitation-lifecycle';
 import { mintInvitationToken } from '@/server/invitations/invitation-token';
 import { extractContactEmails } from '@/server/lib/contact-doc-fields';
@@ -100,7 +100,7 @@ async function stageIssue(scope: CatalogTx, input: IssueSupplyInvitationInput, d
   });
   staged.commit();
   assignment?.commit();
-  scope.pricingViews.push({ kind: 'supply' });
+  scope.views.push({ kind: 'supply' });
   return invitation;
 }
 
@@ -122,7 +122,7 @@ export async function revokeSupplyInvitation(ctx: AuthContext, invitationId: str
     isOwned: (stored) => supplyInvitationFromDocument(stored)?.companyId === ctx.companyId,
     revokedByUid: ctx.uid,
     nowValue: nowISO(),
-    observe: (tx) => signalPricingViewsInTx(tx, db, ctx.companyId, [{ kind: 'supply' }]),
+    observe: (tx) => signalCatalogViewsInTx(tx, db, ctx.companyId, [{ kind: 'supply' }]),
   });
   if (outcome.kind === 'absent') throw new CatalogWriteError('notFound');
 }

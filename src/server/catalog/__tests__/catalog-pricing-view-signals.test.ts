@@ -8,7 +8,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { generateDeterministicCatalogPricingViewSignalId } from '@/services/enterprise-id.service';
 import { PRICING_VIEW_MAX_AGE_MS } from '@/subapps/catalog/pricing/pricing-view-freshness';
-import { pricingViewKey, type PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
+import { catalogViewKey, type PricingView } from '@/subapps/catalog/views/catalog-view-key';
 import { PARTNER } from '@/subapps/catalog/__tests__/fixtures/mfp-price-list.fixture';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { ARIES, RIVAL, rejectionOf } from './catalog-writer-seed';
@@ -32,7 +32,7 @@ const LISTS: PricingView = { kind: 'lists' };
 const DISCOUNTS: PricingView = { kind: 'discounts' };
 
 function signalOf(companyId: string, view: PricingView): Record<string, unknown> | undefined {
-  return fake.getData(SIGNALS, generateDeterministicCatalogPricingViewSignalId(companyId, pricingViewKey(view)));
+  return fake.getData(SIGNALS, generateDeterministicCatalogPricingViewSignalId(companyId, catalogViewKey(view)));
 }
 const revisionOf = (companyId: string, view: PricingView): number => {
   const revision = signalOf(companyId, view)?.revision;

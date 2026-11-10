@@ -15,7 +15,7 @@ import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDiscountsView } from '@/hooks/catalog/usePriceListViews';
-import { pricingLoadState } from '@/hooks/catalog/usePricingView';
+import { catalogViewLoadState } from '@/hooks/catalog/useCatalogServerView';
 import { useSupplierSupplyView } from '@/hooks/catalog/useSupplyViews';
 import {
   declineSupplyRequest,
@@ -118,7 +118,7 @@ export function CustomersPanel() {
   const [inviting, setInviting] = useState(false);
   const [approving, setApproving] = useState<SupplierRelationshipRow | null>(null);
   const [ending, setEnding] = useState<SupplierRelationshipRow | null>(null);
-  const load = pricingLoadState(api.current);
+  const load = catalogViewLoadState(api.current);
   if (api.current.state !== 'ready') return <p className="m-0 text-muted-foreground" role="status">{t(load === 'failed' ? 'pricing.noView' : 'common.loading')}</p>;
 
   const { view } = api.current;

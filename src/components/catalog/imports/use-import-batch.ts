@@ -8,18 +8,21 @@
  *    διαβασμένη σελίδα δεν ξαναπληρώνεται). Ο διακομιστής κρίνει· το hook απλώς προχωρά στην επόμενη.
  * 🔑 **Κάθε απάντηση αντικαθιστά την πρόταση**: ο διακομιστής ξανακρίνει σε κάθε απόφαση, άρα η οθόνη δεν μαντεύει ποτέ τα ευρήματα.
  *    Η απόφαση φαίνεται αμέσως και στέλνεται σειριακά (`proposal-change-queue`, §5.5.2 Α5)· η επαναφόρτωση τη σέβεται.
+ * 📡 **Ζωντανή σε κάθε καρτέλα** (§5.5.2, ADR-905): η όψη ακούει το σήμα της παρτίδας (`use-live-import-batch-view`).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { discardImportBatch, fetchImportBatch, readImportPage, setImportPriceTarget } from '@/services/catalog/catalog-import-api.client';
+import { usePendingHold, useReleaseWhenSettled } from '@/hooks/catalog/useCatalogServerView';
+import { discardImportBatch, readImportPage, setImportPriceTarget } from '@/services/catalog/catalog-import-api.client';
 import { catalogFailureOf, type CatalogFailure } from '@/services/catalog/catalog-failure';
 import type { ImportBatchPages } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_PAGE_ESTIMATED_COST_USD } from '@/subapps/catalog/vocabulary/catalog-import';
-import { createQueueState, overlayView, queuedDecisionsOf, useProposalChangeQueue } from './proposal-change-queue';
+import { createQueueState, useProposalChangeQueue } from './proposal-change-queue';
 import { useAxisOptions } from './use-axis-options';
 import { useLineDecisions } from './use-line-decisions';
+import { useLiveImportBatchView } from './use-live-import-batch-view';
 import { usePageUpgrade } from './use-page-upgrade';
 import { useSupplierMemory } from './use-supplier-memory';
 
@@ -77,22 +80,9 @@ function usePageReader(batchId: string, view: ImportBatchDetailView | null, setF
 }
 
 export function useImportBatch(batchId: string) {
-  const [view, setView] = useState<ImportBatchDetailView | null>(null);
-  const [failure, setFailure] = useState<CatalogFailure | null>(null);
   const queued = useRef(createQueueState());
-
-  const reload = useCallback(async () => {
-    try {
-      const fresh = await fetchImportBatch(batchId);
-      setView(overlayView(fresh, queuedDecisionsOf(queued.current)));
-    } catch (cause) {
-      setFailure(catalogFailureOf(cause));
-    }
-  }, [batchId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const hold = usePendingHold();
+  const { view, setView, failure, setFailure, reload, accept, refreshing, release } = useLiveImportBatchView(batchId, queued, hold);
 
   const discard = useCallback(async () => {
     if (!view) return;
@@ -102,11 +92,12 @@ export function useImportBatch(batchId: string) {
     } catch (cause) {
       setFailure(catalogFailureOf(cause));
     }
-  }, [reload, view]);
+  }, [reload, setFailure, view]);
 
   const changes = useProposalChangeQueue({ setView, setFailure, reload, queued });
+  // §5.5.2 (ADR-905): η ανανέωση από το σήμα περιμένει τις αισιόδοξες αλλαγές **και** τις δικές μας επαναφορτώσεις.
+  useReleaseWhenSettled(hold, changes.saving.size + refreshing, release);
   const reader = usePageReader(batchId, view, setFailure, reload);
-  const accept = useCallback((fresh: ImportBatchDetailView) => setView(overlayView(fresh, queuedDecisionsOf(queued.current))), []);
   const upgrade = usePageUpgrade({ view, busy: reader.reading, accept, setFailure });
   const priceTarget = usePriceTarget(view, accept, setFailure);
   const supplier = useSupplierMemory({ view, accept, setFailure });

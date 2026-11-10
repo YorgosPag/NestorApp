@@ -5,7 +5,7 @@
  * @module components/catalog/pricing/PriceListsContent
  *
  * 🔑 **Οι τιμές ΜΟΝΟ από τον διακομιστή** (απόφαση Ζ): η όψη `lists` + η όψη `discounts` (ομάδες πελατών για το κοινό),
- *    ζωντανές με σήματα όψης (`usePricingView`) — καμία ανάγνωση Firestore για τιμές.
+ *    ζωντανές με σήματα όψης (`useCatalogServerView`) — καμία ανάγνωση Firestore για τιμές.
  * 🔑 **Αισιόδοξες εγγραφές πάνω στην όψη**: `useCatalogOptimistic(view.lists)`. Όσο εκκρεμεί εγγραφή, η ανανέωση της όψης
  *    **περιμένει** (`isHeld`) — αλλιώς θα έσβηνε την αισιόδοξη εικόνα πριν απαντήσει ο γραφέας· όταν αδειάσει η ουρά, `release()`.
  * 🔑 **Χωρίς δικαίωμα προβολής** ⇒ το λέμε με το **δικό** μας κλειδί (`pricing.noView`), όχι γενικό «δεν φορτώθηκε».
@@ -18,7 +18,7 @@ import { Plus, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCatalogOptimistic, type CatalogOptimistic } from '@/hooks/catalog/useCatalogOptimistic';
 import { useDiscountsView, usePriceListsView } from '@/hooks/catalog/usePriceListViews';
-import { pricingLoadState, usePendingHold, useReleaseWhenSettled } from '@/hooks/catalog/usePricingView';
+import { catalogViewLoadState, usePendingHold, useReleaseWhenSettled } from '@/hooks/catalog/useCatalogServerView';
 import type { CustomerGroupWire, DiscountGroupWire, PriceListsView, PriceListWire } from '@/subapps/catalog/types/pricing-views';
 import { useCatalogAccess, useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogPageFrame } from '../shared/CatalogPageFrame';
@@ -106,7 +106,7 @@ export function PriceListsContent() {
     <CatalogPageFrame
       title={t('pages.priceLists.title')}
       lead={t('pages.priceLists.lead')}
-      state={forbidden ? 'ready' : pricingLoadState(lists.current)}
+      state={forbidden ? 'ready' : catalogViewLoadState(lists.current)}
       actions={canManage && view ? (
         <Button type="button" onClick={() => choose(NEW_SELECTION)}><Plus className="mr-1 h-4 w-4" aria-hidden />{t('pricing.list.newList')}</Button>
       ) : null}

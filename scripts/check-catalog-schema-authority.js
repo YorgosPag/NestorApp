@@ -120,8 +120,8 @@ const AGGREGATE = 'src/server/catalog/catalog-aggregate.server.ts';
 /** Φάση 3β — η μηχανή συνόλου της έκδοσης τιμοκαταλόγου και ο σχεδιαστής των υποδοχών ασάφειας. */
 const PRICE_AGGREGATE = 'src/server/catalog/price-version-aggregate.server.ts';
 const PRICING_SLOTS = 'src/server/catalog/pricing-slots.server.ts';
-/** Φάση 3δ — ο ΕΝΑΣ γραφέας των σημάτων όψεων τιμών (ADR-905): τον καλεί ΜΟΝΟ η μηχανή, μέσα στη συναλλαγή. */
-const PRICING_VIEW_SIGNALS = 'src/server/catalog/pricing-view-signal.server.ts';
+/** Φάση 3δ — ο ΕΝΑΣ γραφέας των σημάτων όψεων καταλόγου (ADR-905 · §5.5.2): τον καλεί ΜΟΝΟ η μηχανή, μέσα στη συναλλαγή. */
+const CATALOG_VIEW_SIGNALS = 'src/server/catalog/catalog-view-signal.server.ts';
 
 /** Ποια αρχεία επιτρέπεται να καλούν `catalogDocRef(` (Κ2) — η μηχανή γράφει, οι αναγνώσεις διαβάζουν. */
 const DOC_REF_USERS = new Set([STORE, LIBRARY_READS]);
@@ -130,7 +130,7 @@ const DOC_REF_FUNCTIONS = {
   catalogDocRef: DOC_REF_USERS,
   uniqueValueRef: new Set([STORE, UNIQUE_RESERVATIONS]),
   pricingSlotRef: new Set([STORE, PRICING_SLOTS]),
-  pricingViewSignalRef: new Set([PRICING_VIEW_SIGNALS]),
+  catalogViewSignalRef: new Set([CATALOG_VIEW_SIGNALS]),
 };
 /** Ποιος καλεί τον δρόμο των παραγώγων (Κ6β): μόνο η μηχανή του συνόλου, που κρίνει το σύνολο πριν γράψει. */
 const DERIVED_USERS = new Set([STORE, AGGREGATE, PRICE_AGGREGATE]);
@@ -142,7 +142,7 @@ const DERIVED_FORBIDDEN = ['revision', 'updatedAt', 'updatedBy', 'changes.push',
 /** Κάθε δηλωμένος γραφέας, με το πώς ΑΠΟΔΕΙΚΝΥΕΙ ότι περνά από τη μηχανή (Κ4). Κλειστό σύνολο. */
 const WIRING = {
   // Φάση 3δ: η μηχανή ΟΦΕΙΛΕΙ να σηματοδοτεί — αλλιώς γραφή τιμών χωρίς σήμα = οθόνη μπαγιάτικη ως το F5 (ADR-905 §4.2).
-  [STORE]: ['runTransaction(', 'recordTrackedEntityWrite(', 'signalPricingViewsInTx(', 'noteWrite('],
+  [STORE]: ['runTransaction(', 'recordTrackedEntityWrite(', 'signalCatalogViewsInTx(', 'noteWrite('],
   'src/server/catalog/attribute-writer.server.ts': ['runCatalogTransaction('],
   'src/server/catalog/attribute-group-writer.server.ts': ['runCatalogTransaction('],
   'src/server/catalog/measurement-family-writer.server.ts': ['runCatalogTransaction('],
@@ -165,9 +165,9 @@ const WIRING = {
   'src/server/catalog/price-publication.server.ts': ['runCatalogTransaction(', 'assertRevision('],
   [PRICE_AGGREGATE]: ['stageDerived(', 'stageCopied(', "status !== 'draft'"],
   [PRICING_SLOTS]: ['stagePricingSlot('],
-  [PRICING_VIEW_SIGNALS]: ['FieldValue.increment(1)'],
+  [CATALOG_VIEW_SIGNALS]: ['FieldValue.increment(1)'],
   // Φάση 6α — ο ΕΝΑΣ γραφέας της σχέσης: σήμα στις ΔΥΟ πλευρές, ίχνος στα ΔΥΟ βιβλία (ADR-923 §5.12 Σ1).
-  [`${SUPPLY_ROOT}supply-relationship-store.server.ts`]: ['signalPricingViewsInTx(', 'recordTrackedEntityWrite(', '[after.companyId, after.buyerCompanyId]'],
+  [`${SUPPLY_ROOT}supply-relationship-store.server.ts`]: ['signalCatalogViewsInTx(', 'recordTrackedEntityWrite(', '[after.companyId, after.buyerCompanyId]'],
   // Η έγκριση γράφει κατάταξη: πράξη του προμηθευτή, στη μηχανή. Η αποδοχή του αγοραστή ΔΕΝ αγγίζει κατάλογο.
   [`${SUPPLY_ROOT}supply-relationship-writer.server.ts`]: ['runCatalogTransaction(', 'assertRevision('],
   [`${SUPPLY_ROOT}supply-invitation-issue.server.ts`]: ['runCatalogTransaction(', 'stageInvitationWithSupersede('],
@@ -300,7 +300,7 @@ function wiringFindings(root, input = openGateInput({ root })) {
   return findings;
 }
 
-const RELEVANT = /COLLECTIONS\.CATALOG_|COLLECTIONS\.SUPPLY_|runForeignCatalogRead\(|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|pricingViewSignalRef\(|stageDerived\(|stageCopied\(/;
+const RELEVANT = /COLLECTIONS\.CATALOG_|COLLECTIONS\.SUPPLY_|runForeignCatalogRead\(|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|catalogViewSignalRef\(|stageDerived\(|stageCopied\(/;
 
 const { measure, report, main } = defineScanGate({
   projectRoot: PROJECT_ROOT, relevant: RELEVANT, findingsIn, wiringFindings, states: STATES,
@@ -322,5 +322,5 @@ if (require.main === module) process.exit(main());
 
 module.exports = {
   measure, report, main, findingsIn, wiringFindings, directDoorOpen, derivedPathFindings,
-  STATES, BLOCKING, WIRING, STORE, AGGREGATE, PRICE_AGGREGATE, PRICING_SLOTS, PRICING_VIEW_SIGNALS, DOC_REF_USERS, DIRECT_WRITE_DOOR, CATALOG_COLLECTIONS,
+  STATES, BLOCKING, WIRING, STORE, AGGREGATE, PRICE_AGGREGATE, PRICING_SLOTS, CATALOG_VIEW_SIGNALS, DOC_REF_USERS, DIRECT_WRITE_DOOR, CATALOG_COLLECTIONS,
 };

@@ -79,7 +79,7 @@ export function overlayView(view: ImportBatchDetailView, queued: QueuedDecisions
   return { ...view, proposals: view.proposals.map((proposal) => overlayDecisions(proposal, queued.get(proposal.id) ?? [])) };
 }
 
-interface QueueState {
+export interface QueueState {
   readonly chains: Map<string, Promise<void>>;
   readonly revisions: Map<string, number>;
   readonly decisions: Map<string, ImportFieldDecisionInput[]>;

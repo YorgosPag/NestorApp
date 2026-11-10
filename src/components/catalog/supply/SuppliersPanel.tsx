@@ -13,7 +13,7 @@ import React, { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { pricingLoadState } from '@/hooks/catalog/usePricingView';
+import { catalogViewLoadState } from '@/hooks/catalog/useCatalogServerView';
 import { useBuyerSupplyView } from '@/hooks/catalog/useSupplyViews';
 import { endRelationshipAsBuyer } from '@/services/catalog/supply-api.client';
 import type { BuyerRelationshipRow } from '@/subapps/catalog/types/supply-views';
@@ -62,7 +62,7 @@ export function SuppliersPanel() {
   const [ending, setEnding] = useState<BuyerRelationshipRow | null>(null);
   const [browsing, setBrowsing] = useState<BuyerRelationshipRow | null>(null);
   if (api.current.state !== 'ready') {
-    return <p className="m-0 text-muted-foreground" role="status">{t(pricingLoadState(api.current) === 'failed' ? 'pricing.noView' : 'common.loading')}</p>;
+    return <p className="m-0 text-muted-foreground" role="status">{t(catalogViewLoadState(api.current) === 'failed' ? 'pricing.noView' : 'common.loading')}</p>;
   }
   const { relationships } = api.current.view;
   return (

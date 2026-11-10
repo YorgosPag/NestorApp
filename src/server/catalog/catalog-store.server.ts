@@ -36,12 +36,12 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import { catalogRecordMetaOf, type CatalogRecord } from '@/subapps/catalog/types/catalog-record';
-import { distinctPricingViews, pricingViewsOfWrite, type PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
+import { catalogViewsOfWrite, distinctCatalogViews, type CatalogView } from '@/subapps/catalog/views/catalog-view-key';
 import { showcasePricesTouched } from '@/subapps/catalog/public/showcase-price-writes';
 import { CATALOG_KIND_SPECS, type CatalogKind, type CatalogKindIdentity } from './catalog-kinds';
 import { CatalogWriteError } from './catalog-write-error';
 import { distinctPublicScopes, publicScopesOfWrite, type PublicScope } from '@/subapps/catalog/public/public-scopes-of-write';
-import { signalPricingViewsInTx } from './pricing-view-signal.server';
+import { signalCatalogViewsInTx } from './catalog-view-signal.server';
 import { schedulePublicDrain } from './public/public-drain-schedule.server';
 import { revalidatePublicPrices } from './public/public-model-revalidate.server';
 import { signalPublicScopesInTx } from './public/public-outbox.server';
@@ -72,9 +72,9 @@ export interface CatalogReadScope {
 export interface CatalogTx extends CatalogReadScope {
   readonly ctx: AuthContext;
   readonly changes: StagedChange[];
-  /** Οι όψεις τιμών που άγγιξε η συναλλαγή (ADR-923 §5.11 «3δ» Ζ) — **κάθε** `stage*` τις σημειώνει, ακόμη και χωρίς ίχνος. */
-  readonly pricingViews: PricingView[];
-  /** Οι δημόσιες προβολές που άγγιξε η συναλλαγή (ADR-923 §5.13 Δ3) — ίδιος δρόμος με τις όψεις τιμών. */
+  /** Οι όψεις καταλόγου που άγγιξε η συναλλαγή (ADR-923 §5.11 «3δ» Ζ · §5.5.2) — **κάθε** `stage*` τις σημειώνει, ακόμη και χωρίς ίχνος. */
+  readonly views: CatalogView[];
+  /** Οι δημόσιες προβολές που άγγιξε η συναλλαγή (ADR-923 §5.13 Δ3) — ίδιος δρόμος με τις όψεις. */
   readonly publicScopes: PublicScope[];
 }
 
@@ -96,8 +96,9 @@ export { revisionAfterWrite };
  * Τρέχει τη δουλειά σε **μία** συναλλαγή και γράφει το ίχνος **κάθε** αλλαγής μετά το commit
  * (ADR-195· ίδιο πρότυπο με την παράδοση φακέλου). Το ίχνος αποτυγχάνει **σιωπηλά προς τον χρήστη**
  * (το `recordChange` καταγράφει και επιστρέφει) — η αποθήκευση έχει ήδη γίνει.
- * Τα σήματα όψεων τιμών γράφονται **μέσα** στη συναλλαγή, μετά τη δουλειά (όλες οι αναγνώσεις έχουν γίνει): μία
- * αύξηση ανά όψη, ποτέ αλλαγή χωρίς σήμα (ADR-905 §4.2).
+ * Τα σήματα όψεων γράφονται **μέσα** στη συναλλαγή, μετά τη δουλειά (όλες οι αναγνώσεις έχουν γίνει): μία
+ * αύξηση ανά όψη, ποτέ αλλαγή χωρίς σήμα (ADR-905 §4.2). Η βιτρίνα ρωτά **μόνο** τις όψεις τιμών (`isPricingView`):
+ * σήμα παρτίδας εισαγωγής ή προμήθειας δεν αλλάζει τιμή.
  */
 export async function runCatalogTransaction<T>(ctx: AuthContext, work: (scope: CatalogTx) => Promise<T>): Promise<T> {
   const db = getAdminFirestore();
@@ -105,11 +106,11 @@ export async function runCatalogTransaction<T>(ctx: AuthContext, work: (scope: C
   let touched: readonly PublicScope[] = [];
   let pricesTouched = false;
   const result = await db.runTransaction(async (tx) => {
-    const scope: CatalogTx = { db, tx, ctx, now: nowISO(), changes: [], pricingViews: [], publicScopes: [] };
+    const scope: CatalogTx = { db, tx, ctx, now: nowISO(), changes: [], views: [], publicScopes: [] };
     const value = await work(scope);
-    const pricingViews = distinctPricingViews(scope.pricingViews);
-    signalPricingViewsInTx(tx, db, ctx.companyId, pricingViews);
-    pricesTouched = showcasePricesTouched(pricingViews, scope.changes.map((change) => change.kind));
+    const views = distinctCatalogViews(scope.views);
+    signalCatalogViewsInTx(tx, db, ctx.companyId, views);
+    pricesTouched = showcasePricesTouched(views, scope.changes.map((change) => change.kind));
     touched = distinctPublicScopes(scope.publicScopes);
     signalPublicScopesInTx(tx, db, ctx.companyId, touched);
     staged = scope.changes;
@@ -128,7 +129,7 @@ export async function runCatalogTransaction<T>(ctx: AuthContext, work: (scope: C
  */
 export async function runCatalogReadOnly<T>(ctx: AuthContext, work: (scope: CatalogTx) => Promise<T>): Promise<T> {
   const db = getAdminFirestore();
-  return db.runTransaction((tx) => work({ db, tx, ctx, now: nowISO(), changes: [], pricingViews: [], publicScopes: [] }), { readOnly: true });
+  return db.runTransaction((tx) => work({ db, tx, ctx, now: nowISO(), changes: [], views: [], publicScopes: [] }), { readOnly: true });
 }
 
 /**
@@ -285,10 +286,10 @@ export function readSingleton<TDefinition>(scope: CatalogReadScope, kind: Catalo
 
 // ── Σκηνοθεσία εγγραφών (ΜΕΤΑ από όλες τις αναγνώσεις) ──────────────────────
 
-/** Κάθε γραφή εγγραφής σημειώνει όψεις τιμών και δημόσιες προβολές — ο **ένας** δρόμος προς το σήμα και το outbox. */
+/** Κάθε γραφή εγγραφής σημειώνει όψεις καταλόγου και δημόσιες προβολές — ο **ένας** δρόμος προς το σήμα και το outbox. */
 function noteWrite(scope: CatalogTx, kind: CatalogKind, record: object): void {
   const written = record as Readonly<Record<string, unknown>>;
-  scope.pricingViews.push(...pricingViewsOfWrite(kind, written));
+  scope.views.push(...catalogViewsOfWrite(kind, written));
   scope.publicScopes.push(...publicScopesOfWrite(kind, written));
 }
 

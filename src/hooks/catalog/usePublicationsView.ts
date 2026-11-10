@@ -3,7 +3,7 @@
 /**
  * @fileoverview **Η όψη του εκδότη καταλόγου, ζωντανή όσο τρέχει έκδοση** — συνταγές + πρόσφατες εκδόσεις
  *   (ADR-923 §5.6.1).
- * @related services/catalog/catalog-publishing-api.client.ts (η ανάγνωση) · hooks/catalog/usePricingView.ts (το ίδιο ιδίωμα φόρτωσης)
+ * @related services/catalog/catalog-publishing-api.client.ts (η ανάγνωση) · hooks/catalog/useCatalogServerView.ts (το ίδιο ιδίωμα φόρτωσης)
  * @module hooks/catalog/usePublicationsView
  *
  * 🔑 **Ρολόι μόνο όσο χρειάζεται**: η όψη δεν έχει σήμα όψης — η πρόοδος μιας έκδοσης γράφεται από τον διακομιστή στο

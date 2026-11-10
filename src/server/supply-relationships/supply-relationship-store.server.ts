@@ -19,7 +19,7 @@ import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { SUPPLY_RELATIONSHIP_TRACKED_FIELDS } from '@/config/audit-tracked-fields-catalog';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { signalPricingViewsInTx } from '@/server/catalog/pricing-view-signal.server';
+import { signalCatalogViewsInTx } from '@/server/catalog/catalog-view-signal.server';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { generateDeterministicSupplyRelationshipId } from '@/services/enterprise-id.service';
 import { revisionAfterWrite } from '@/subapps/catalog/aggregate/aggregate-members';
@@ -118,7 +118,7 @@ export function stageSupplyRelationship(
     updatedBy: uid,
   };
   tx.set(relationships(db).doc(id), after);
-  for (const companyId of [after.companyId, after.buyerCompanyId]) signalPricingViewsInTx(tx, db, companyId, [{ kind: 'supply' }]);
+  for (const companyId of [after.companyId, after.buyerCompanyId]) signalCatalogViewsInTx(tx, db, companyId, [{ kind: 'supply' }]);
   return { before, after };
 }
 

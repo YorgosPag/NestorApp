@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * @fileoverview **Μια όψη τιμών του διακομιστή, ζωντανή** — φόρτωση μετά την ταυτότητα, ανανέωση στο παρασκήνιο όταν
+ * @fileoverview **Μια όψη καταλόγου του διακομιστή, ζωντανή** (τιμές · εκπτώσεις · προμήθεια · κόστη) — φόρτωση μετά την ταυτότητα, ανανέωση στο παρασκήνιο όταν
  *   αλλάξει το σήμα της, μονοτονική αποδοχή (ADR-923 §5.11 «3δ» Ζ · ADR-905 · ADR-901 §14.8).
- * @related services/catalog/catalog-pricing-api.client.ts (οι όψεις) · services/catalog/pricing-view-signal.client-ref.ts ·
+ * @related services/catalog/catalog-pricing-api.client.ts (οι όψεις) · services/catalog/catalog-view-signal.client-ref.ts ·
  *   services/realtime/hooks/use-server-view-signal.ts (ο ΕΝΑΣ ελεγκτής: σήμα · `freshUntil` · δίκτυο · ορατότητα)
- * @module hooks/catalog/usePricingView
+ * @module hooks/catalog/useCatalogServerView
  *
  * 🔑 **Κανένας νέος μηχανισμός**: η πρώτη ανάγνωση περνά από το `useIdentityGatedResource` (καμία ερώτηση πριν λυθεί η
  *    ταυτότητα — περιστατικό 0/251), η ζωντάνια από το `useServerViewSignal` (ίδιο ιδίωμα με την υπόθεση μεταβίβασης).
@@ -21,10 +21,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useIdentityGatedResource } from '@/hooks/useIdentityGatedResource';
 import { catalogFailureOf, type CatalogFailure } from '@/services/catalog/catalog-failure';
-import { pricingViewSignalSource } from '@/services/catalog/pricing-view-signal.client-ref';
+import { catalogViewSignalSource } from '@/services/catalog/catalog-view-signal.client-ref';
 import { useServerViewSignal, type ServerViewSignalSource } from '@/services/realtime/hooks/use-server-view-signal';
 import { viewSignalRevisionOf } from '@/services/realtime/view-signal-revision';
-import type { PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
+import type { CatalogView } from '@/subapps/catalog/views/catalog-view-key';
 import type { CatalogLoadState } from './useCatalogCollection';
 import type { ViewFreshness } from '@/types/server-view';
 
@@ -32,13 +32,13 @@ export interface FreshView {
   readonly freshness: ViewFreshness;
 }
 
-export type PricingViewState<V> =
+export type CatalogServerViewState<V> =
   | { readonly state: 'loading' }
   | { readonly state: 'failed'; readonly failure: CatalogFailure }
   | { readonly state: 'ready'; readonly view: V };
 
-export interface PricingViewApi<V> {
-  readonly current: PricingViewState<V>;
+export interface CatalogServerViewApi<V> {
+  readonly current: CatalogServerViewState<V>;
   /** Ρητή ξαναφόρτωση (κουμπί «Δοκιμάστε ξανά») — σβήνει την οθόνη σε «φορτώνει». */
   readonly reload: () => void;
   /** Ανανέωση **στο παρασκήνιο** μετά από πράξη της ίδιας οθόνης — τα δεδομένα μένουν ορατά. */
@@ -47,9 +47,9 @@ export interface PricingViewApi<V> {
   readonly release: () => void;
 }
 
-export interface PricingViewInput<V extends FreshView> {
+export interface CatalogServerViewInput<V extends FreshView> {
   /** Ποια όψη ακούμε· `null` ⇒ καμία (π.χ. δεν επιλέχθηκε ακόμη έκδοση). ⚠️ Σταθερή αναφορά (`useMemo`). */
-  readonly view: PricingView | null;
+  readonly view: CatalogView | null;
   /** Η ανάγνωση της όψης. ⚠️ Σταθερή αναφορά (`useCallback`), αλλιώς η πρώτη φόρτωση ξανατρέχει σε κάθε απόδοση. */
   readonly read: () => Promise<V>;
   readonly isHeld?: () => boolean;
@@ -75,9 +75,9 @@ function acceptFresher<V extends FreshView>(prev: Fresher<V> | null, base: V, ne
   return next.freshness.revision >= shown.freshness.revision ? { base, next } : prev;
 }
 
-function useSignalSource(view: PricingView | null): ServerViewSignalSource | null {
+function useSignalSource(view: CatalogView | null): ServerViewSignalSource | null {
   const companyId = useCompanyId()?.companyId ?? null;
-  return useMemo(() => (companyId && view ? pricingViewSignalSource(companyId, view) : null), [companyId, view]);
+  return useMemo(() => (companyId && view ? catalogViewSignalSource(companyId, view) : null), [companyId, view]);
 }
 
 function useInitialLoad<V>(read: () => Promise<V>) {
@@ -91,7 +91,7 @@ function useInitialLoad<V>(read: () => Promise<V>) {
   return useIdentityGatedResource<Load<V>>(load, NOBODY);
 }
 
-export function usePricingView<V extends FreshView>(input: PricingViewInput<V>): PricingViewApi<V> {
+export function useCatalogServerView<V extends FreshView>(input: CatalogServerViewInput<V>): CatalogServerViewApi<V> {
   const { read } = input;
   const { value: loaded, reload } = useInitialLoad(read);
   const base = loaded?.kind === 'ready' ? loaded.view : null;
@@ -145,7 +145,7 @@ export function useReleaseWhenSettled(hold: PendingHold, pending: number, releas
   useEffect(() => { if (pending === 0) release(); }, [pending, release]);
 }
 
-/** Η κατάσταση φόρτωσης του πλαισίου σελίδας (`CatalogPageFrame`) από μια όψη τιμών. */
-export function pricingLoadState<V>(current: PricingViewState<V>): CatalogLoadState {
+/** Η κατάσταση φόρτωσης του πλαισίου σελίδας (`CatalogPageFrame`) από μια όψη καταλόγου. */
+export function catalogViewLoadState<V>(current: CatalogServerViewState<V>): CatalogLoadState {
   return current.state;
 }
