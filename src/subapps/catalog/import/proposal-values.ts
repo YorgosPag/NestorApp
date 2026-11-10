@@ -9,7 +9,16 @@ import { canonicalJson } from '@/lib/legal/canonical-json';
 import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
-import type { ImportFieldValue, ImportIssue, ImportNoValueReasonValue, ImportProposalField, ImportTarget } from '../types/catalog-import';
+import type {
+  ExtractedCell,
+  ImportCorroboration,
+  ImportFieldValue,
+  ImportIssue,
+  ImportNoValueReasonValue,
+  ImportProposalField,
+  ImportSourceValue,
+  ImportTarget,
+} from '../types/catalog-import';
 import { NO_VALUE_REASONS, type AttributeValue, type CatalogTradeIdentity, type CatalogValueHolder, type NoValueReason, type ProductValues } from '../types/product';
 import { writeNoValueReason } from '../values/holder-edit';
 import { EMPTY_BRAND, EMPTY_TRADE_IDENTITY, writeBrand, writeGtin, writeMpn, writeNoGtinReason } from '../values/trade-identity';
@@ -54,6 +63,18 @@ interface ImportCellText {
 /** Το κείμενο του κελιού μαζί με τη μονάδα της πηγής: ό,τι διαβάζει ο κωδικοποιητής και ό,τι βλέπει ο άνθρωπος στη διόρθωση. */
 export function importCellText({ text, unitCode }: ImportCellText): string {
   return unitCode !== null && isBareAmountText(text) ? `${text} ${unitCode}` : text;
+}
+
+/** Ένα κελί της πηγής ως τιμή με θέση (§5.5.2 Β8): ο **ένας** τρόπος για εναλλακτικές **και** επιβεβαιώσεις. */
+export const importSourceValueOf = (cell: ImportCellText & Pick<ExtractedCell, 'anchor'>): ImportSourceValue =>
+  ({ text: importCellText(cell), anchor: cell.anchor });
+
+/**
+ * Οι επιβεβαιώσεις ενός πεδίου ή κελιού, σε **ένα** σχήμα. Η αποθηκευμένη μορφή πριν από το §5.5.2 Β8 (α) ήταν σκέτο κείμενο
+ * (`ImportCorroboration`): διαβάζεται ως τιμή **χωρίς** θέση — φαίνεται στη λίστα, δεν παίρνει πλαίσιο, ποτέ σιωπηλή απώλεια.
+ */
+export function corroborationsOf(holder: { readonly corroboratedBy?: readonly ImportCorroboration[] }): ImportSourceValue[] {
+  return (holder.corroboratedBy ?? []).map((entry) => (typeof entry === 'string' ? { text: entry, anchor: null } : entry));
 }
 
 export type ImportCellParse =

@@ -183,3 +183,39 @@ describe('ταυτότητα στόχου', () => {
     expect(resolveReviewTarget(lineTargetOf(line()), [p], [])).toBeNull();
   });
 });
+
+describe('§5.5.2 Β8 (β): κάθε διαβασμένο κελί παίρνει πλαίσιο', () => {
+  const ALT_CELL: PageRegion = { x: 0.1, y: 0.8, width: 0.1, height: 0.02 };
+  const BTU_CELL: PageRegion = { x: 0.1, y: 0.5, width: 0.1, height: 0.02 };
+  const at = (region: PageRegion) => ({ kind: 'page', page: 87, regions: [region], verified: true } as const);
+
+  it('εναλλακτική ⇒ δικό της πλαίσιο, ίδιος στόχος, δικό της τυπωμένο κείμενο', () => {
+    const repeated = field({ sourceText: 'MFP-34K1M-Q1AA1', issues: [{ code: 'attributeRepeated', path: 'x' }], alternatives: [{ text: '099-03-001', anchor: at(ALT_CELL) }] });
+    const boxes = buildReviewBoxes(source([proposal([row('r0', [repeated])])]));
+    expect(boxes).toHaveLength(2);
+    const [value, alternative] = boxes;
+    expect(value.targets[0]).toMatchObject({ relation: 'value', printed: 'MFP-34K1M-Q1AA1' });
+    expect(alternative.targets[0]).toMatchObject({ relation: 'alternative', printed: '099-03-001', tone: 'problem' });
+    expect(alternative.targets[0].key).toBe(value.targets[0].key);
+  });
+
+  it('επιβεβαίωση με θέση ⇒ πλαίσιο με τον τόνο του πεδίου· σκέτο κείμενο (παλιό σχήμα) ⇒ κανένα, ποτέ σφάλμα', () => {
+    const corroborated = field({ corroboratedBy: [{ text: '6142 BTU/h', anchor: at(BTU_CELL) }, '8189 BTU/h'] });
+    const boxes = buildReviewBoxes(source([proposal([row('r0', [corroborated])])]));
+    expect(boxes.map((box) => box.targets[0].relation)).toEqual(['value', 'corroboration']);
+    expect(boxes[1].targets[0]).toMatchObject({ printed: '6142 BTU/h', tone: 'accepted' });
+  });
+
+  it('μετρά πλαίσια, όχι νέα στοιχεία: το πεδίο μένει ΕΝΑ στοιχείο', () => {
+    const corroborated = field({ corroboratedBy: [{ text: '6142 BTU/h', anchor: at(BTU_CELL) }] });
+    expect(countBoxTones(buildReviewBoxes(source([proposal([row('r0', [corroborated])])]))).accepted).toEqual({ boxes: 2, targets: 1 });
+  });
+
+  it('ίδια περιοχή με τον νικητή ⇒ ένα πλαίσιο, ως τιμή', () => {
+    const same = field({ corroboratedBy: [{ text: '340', anchor: at(CELL) }] });
+    const boxes = buildReviewBoxes(source([proposal([row('r0', [same])])]));
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0].targets).toHaveLength(1);
+    expect(boxes[0].targets[0].relation).toBe('value');
+  });
+});

@@ -48,6 +48,20 @@ export function useReviewTargetName(): (entry: ReviewBoxTarget) => string {
   return useCallback((entry: ReviewBoxTarget) => (entry.subject.kind === 'field' ? labelOf(entry.subject.field) : entry.subject.label), [labelOf]);
 }
 
+/**
+ * §5.5.2 Β8 (β): **ποιο** κελί του πεδίου είναι το πλαίσιο — `null` για το κελί της τιμής. Το όνομα μένει το όνομα του πεδίου (το
+ * ζητά και η «Διόρθωση της τιμής «…»»)· η σχέση είναι χωριστή πρόταση, ίδια στο `aria-label` και στο popover.
+ * ⚠️ Κυριολεκτικές κλήσεις `t('…')` (CHECK 3.34, όπως το `useRemedyActionLabel`).
+ */
+export function useReviewRelationText(): (entry: ReviewBoxTarget) => string | null {
+  const { t } = useImportText();
+  return useCallback((entry: ReviewBoxTarget) => {
+    if (entry.subject.kind !== 'field' || entry.relation === 'value') return null;
+    const value = entry.subject.field.sourceText;
+    return entry.relation === 'alternative' ? t('review.overlay.relationAlternative', { value }) : t('review.overlay.relationCorroboration', { value });
+  }, [t]);
+}
+
 export interface RemedyActionLook {
   readonly icon: LucideIcon | null;
   /** Η αγνόηση είναι η «ήπια» ενέργεια — όπως στη λίστα. */

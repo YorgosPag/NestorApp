@@ -14,7 +14,7 @@
  * 🔑 Πρόταση αποθηκευμένη πριν από τις εναλλακτικές (χωρίς `alternatives`) ⇒ «Διόρθωση»: ποτέ σιωπηλό κενό.
  */
 
-import type { ImportAlternative, ImportProposalField } from '@/subapps/catalog/types/catalog-import';
+import type { ImportProposalField, ImportSourceValue } from '@/subapps/catalog/types/catalog-import';
 import type { LineState } from './import-text';
 import type { LineToolMode } from './line-tool-props';
 import type { ReviewBoxTarget, ReviewReason } from './review-overlay-model';
@@ -23,7 +23,7 @@ import type { ReviewBoxTarget, ReviewReason } from './review-overlay-model';
 export type LineTool = LineToolMode | 'price';
 
 export type RemedyAction =
-  | { readonly kind: 'keepValue'; readonly text: string; readonly anchor: ImportAlternative['anchor'] }
+  | { readonly kind: 'keepValue'; readonly text: string; readonly anchor: ImportSourceValue['anchor'] }
   | { readonly kind: 'editField' }
   | { readonly kind: 'lineTool'; readonly mode: LineTool }
   | { readonly kind: 'ignoreLine' }
@@ -69,7 +69,7 @@ export function lineActionsOf({ canManage, canPrice, hasPriceTarget }: LineActio
  * Οι τιμές που προσφέρει το «Κράτα»: η τυπωμένη πρώτη (με την άγκυρα του πεδίου), μετά οι εναλλακτικές (με τη δική τους). Καμία
  * εναλλακτική ⇒ καμία επιλογή.
  */
-export function keepValuesOf(field: Pick<ImportProposalField, 'sourceText' | 'anchor' | 'alternatives'>): ImportAlternative[] {
+export function keepValuesOf(field: Pick<ImportProposalField, 'sourceText' | 'anchor' | 'alternatives'>): ImportSourceValue[] {
   const alternatives = field.alternatives ?? [];
   return alternatives.length === 0 ? [] : [{ text: field.sourceText, anchor: field.anchor }, ...alternatives];
 }

@@ -16,7 +16,7 @@
 
 import { fieldAddress } from '@/subapps/catalog/import/human-edits';
 import { lineDecisionOf, lineKeyOf } from '@/subapps/catalog/import/page-line-overrides';
-import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
+import { corroborationsOf, importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import { REVIEW_MARK_TONES, worstReviewTone, type ReviewMarkTone } from '@/subapps/catalog/import/review-marks';
 import type {
   ImportIssue,
@@ -24,6 +24,7 @@ import type {
   ImportPageUnmappedLine,
   ImportProposalField,
   ImportProposalRow,
+  ImportSourceValue,
   PageRegion,
 } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
@@ -123,9 +124,20 @@ export const toneOfLine = (state: LineState): ReviewMarkTone => LINE_TONES[state
 
 // ── Πλαίσια ──────────────────────────────────────────────────────────────────
 
+/**
+ * §5.5.2 Β8 (β): **ποιο** κελί του πεδίου είναι αυτό το πλαίσιο. Κάθε κελί που διαβάστηκε παίρνει πλαίσιο, όχι μόνο ο νικητής
+ * (Azure DI: πεδίο με **πίνακα** περιοχών · Rossum: hover στο πλαίσιο λέει σε ποιο πεδίο ανήκει):
+ *   - `value`: το κελί που έδωσε την τιμή·
+ *   - `alternative`: λέει **άλλο** για το ίδιο πεδίο — ο ίδιος στόχος, άρα το ίδιο popover με «Κράτα «…»»·
+ *   - `corroboration`: λέει **το ίδιο** σε άλλη μονάδα (Btu/h) — δεν ζητά απόφαση, αλλά δεν μένει πια αόρατο.
+ * Σχέση, **όχι** τόνος: ο τόνος είναι του πεδίου (το CHECK 3.41 κρίνει μόνο τους τόνους)· η σχέση ταξιδεύει ώς το `aria-label`.
+ */
+export type ReviewRelation = 'value' | 'alternative' | 'corroboration';
+
 export interface ReviewBoxTarget {
   readonly target: ReviewTarget;
   readonly key: string;
+  readonly relation: ReviewRelation;
   readonly tone: ReviewMarkTone;
   /** Η αιτία του προβλήματος (`null` όταν ο τόνος δεν είναι πρόβλημα). */
   readonly reason: ReviewReason | null;
@@ -134,7 +146,7 @@ export interface ReviewBoxTarget {
     | { readonly kind: 'field'; readonly field: ImportProposalField }
     /** Η κατάσταση της γραμμής ταξιδεύει μαζί της (§5.5.2 Β8 βήμα Β): από αυτήν κρίνει το `remedyOf` ποιες ενέργειες ισχύουν. */
     | { readonly kind: 'line'; readonly label: string; readonly state: LineState };
-  /** Το κείμενο όπως τυπώθηκε στο PDF. */
+  /** Το κείμενο **αυτού** του κελιού όπως τυπώθηκε στο PDF (στην εναλλακτική ή την επιβεβαίωση: το δικό της, όχι του νικητή). */
   readonly printed: string;
 }
 
@@ -161,16 +173,27 @@ const regionId = (page: number, region: PageRegion): string =>
 
 interface Placed { readonly page: number; readonly region: PageRegion; readonly entry: ReviewBoxTarget }
 
-function placedFields(proposal: ImportProposalWire): Placed[] {
-  return proposal.rows.flatMap((row) => row.fields.flatMap((field) => {
-    const anchor = field.anchor;
+/** Τα κελιά ενός πεδίου με τη σχέση τους: ο νικητής πρώτος, ώστε σε κοινή περιοχή να κρατηθεί αυτός (`buildReviewBoxes`). */
+const fieldSources = (field: ImportProposalField): readonly { readonly relation: ReviewRelation; readonly source: ImportSourceValue }[] => [
+  { relation: 'value', source: { text: field.sourceText, anchor: field.anchor } },
+  ...(field.alternatives ?? []).map((source) => ({ relation: 'alternative' as const, source })),
+  ...corroborationsOf(field).map((source) => ({ relation: 'corroboration' as const, source })),
+];
+
+/** Κάθε διαβασμένο κελί του πεδίου γίνεται πλαίσιο του **ίδιου** στόχου: κλικ οπουδήποτε ⇒ το ίδιο πεδίο, η ίδια επιλογή. */
+function fieldPlacements(proposalId: string, row: ImportProposalRow, field: ImportProposalField): Placed[] {
+  const target = fieldTargetOf(proposalId, row, field);
+  const base = { target, key: reviewTargetKey(target), tone: toneOfField(row, field), reason: reasonOfField(row, field), subject: { kind: 'field', field } } as const;
+  return fieldSources(field).flatMap(({ relation, source }) => {
+    const { anchor } = source;
     if (anchor?.kind !== 'page') return [];
-    const target = fieldTargetOf(proposal.id, row, field);
-    const entry: ReviewBoxTarget = {
-      target, key: reviewTargetKey(target), tone: toneOfField(row, field), reason: reasonOfField(row, field), subject: { kind: 'field', field }, printed: field.sourceText,
-    };
+    const entry: ReviewBoxTarget = { ...base, relation, printed: source.text };
     return anchor.regions.map((region) => ({ page: anchor.page, region, entry }));
-  }));
+  });
+}
+
+function placedFields(proposal: ImportProposalWire): Placed[] {
+  return proposal.rows.flatMap((row) => row.fields.flatMap((field) => fieldPlacements(proposal.id, row, field)));
 }
 
 function placedLines({ lines, overrides, activity }: ReviewOverlaySource): Placed[] {
@@ -180,7 +203,9 @@ function placedLines({ lines, overrides, activity }: ReviewOverlaySource): Place
     const now = activity.get(lineKeyOf(line));
     const state = lineStateOf(now, lineDecisionOf(overrides, line));
     const reason: ReviewReason | null = now?.kind === 'refused' ? { kind: 'refused', refusal: now.reason } : null;
-    const entry: ReviewBoxTarget = { target, key, tone: toneOfLine(state), reason, subject: { kind: 'line', label: line.label, state }, printed: line.values.join(' · ') };
+    const entry: ReviewBoxTarget = {
+      target, key, relation: 'value', tone: toneOfLine(state), reason, subject: { kind: 'line', label: line.label, state }, printed: line.values.join(' · '),
+    };
     return (line.regions ?? []).map((region) => ({ page: line.page, region, entry }));
   });
 }

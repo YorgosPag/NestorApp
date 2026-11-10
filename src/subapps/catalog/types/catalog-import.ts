@@ -96,14 +96,23 @@ export type SourceAnchor =
   | { readonly kind: 'page'; readonly page: number; readonly regions: readonly PageRegion[]; readonly verified: boolean | null };
 
 /**
- * Μία **άλλη** τιμή που έδωσε η πηγή για την ίδια ιδιότητα, όταν διαφωνεί με το κελί που κέρδισε (εύρημα `attributeRepeated`,
- * ADR-923 §5.5.2 Β8). Δομημένη, όχι μέσα στο μήνυμα: ο άνθρωπος την κρατά με ένα κουμπί και βλέπει **από ποιο κελί** έρχεται.
+ * Μία **άλλη** τιμή που τύπωσε η πηγή για την ίδια ιδιότητα, σε **άλλο** κελί, με τη θέση της (ADR-923 §5.5.2 Β8). Ένα σχήμα για τις
+ * δύο σχέσεις με το κελί που κέρδισε:
+ *   - **εναλλακτική** (`alternatives`, εύρημα `attributeRepeated`): λέει **άλλο** · ο άνθρωπος την κρατά με ένα κουμπί·
+ *   - **επιβεβαίωση** (`corroboratedBy`, Ε7): λέει **το ίδιο** σε άλλη μονάδα (1800 W · 6142 Btu/h) · δεν ζητά απόφαση.
+ * Δομημένη, όχι μέσα στο μήνυμα: η θέση δίνει πλαίσιο στο PDF (Β8 (β)) και φάντασμα στο «Κράτα «…»» (βήμα Γ).
  */
-export interface ImportAlternative {
-  /** Το κείμενο όπως τυπώθηκε — αυτό γίνεται η διόρθωση (§5.5.2 Β6) όταν ο άνθρωπος το διαλέξει. */
+export interface ImportSourceValue {
+  /** Το κείμενο όπως τυπώθηκε — στην εναλλακτική αυτό γίνεται η διόρθωση (§5.5.2 Β6) όταν ο άνθρωπος το διαλέξει. */
   readonly text: string;
   readonly anchor: SourceAnchor | null;
 }
+
+/**
+ * Επιβεβαίωση όπως **αποθηκεύτηκε**. Το σκέτο κείμενο είναι το σχήμα πριν από το §5.5.2 Β8 (α) (χωρίς θέση): ζει ακόμη σε προτάσεις
+ * εγκεκριμένες ή από αρχείο, που δεν ξαναπαράγονται. Διαβάζεται **μόνο** μέσω `corroborationsOf` — κανείς άλλος δεν ξέρει τα δύο σχήματα.
+ */
+export type ImportCorroboration = ImportSourceValue | string;
 
 // ── Η ουδέτερη μορφή κάθε πηγής ──────────────────────────────────────────────
 
@@ -123,11 +132,12 @@ export interface ExtractedCell {
   readonly flags: readonly ImportIssue[];
   /**
    * Άλλα κελιά της πηγής που λένε **το ίδιο** για την ίδια ιδιότητα, σε άλλη μονάδα (1000 W · 3412 Btu/h), όπως τυπώθηκαν (§5.5.1 Ε7).
-   * Επιβεβαίωση, όχι εύρημα: δεν ζητά απόφαση. Απούσα = κανένα.
+   * Επιβεβαίωση, όχι εύρημα: δεν ζητά απόφαση. Απούσα = κανένα. Με θέση από το §5.5.2 Β8 (α)· το `extracted` παλαιότερων προτάσεων
+   * κρατά σκέτο κείμενο (`ImportCorroboration`).
    */
-  readonly corroboratedBy?: readonly string[];
+  readonly corroboratedBy?: readonly ImportCorroboration[];
   /** Άλλα κελιά που λένε **άλλο** για την ίδια ιδιότητα (εύρημα `attributeRepeated`). Απούσα = καμία. */
-  readonly alternatives?: readonly ImportAlternative[];
+  readonly alternatives?: readonly ImportSourceValue[];
 }
 
 /**
@@ -219,13 +229,16 @@ export interface ImportProposalField {
   readonly decision: ImportFieldDecision;
   /** §5.5.2 Α1: ποιος αποφάσισε. Απόν σε προτάσεις παλαιότερες της Φάσης 4β ⇒ `rule` (`decisionSourceOf`). */
   readonly decisionBy?: ImportDecisionSource;
-  /** Το `ExtractedCell.corroboratedBy` του κελιού που κέρδισε: ο άνθρωπος βλέπει ότι η γραμμή Btu/h δεν χάθηκε. */
-  readonly corroboratedBy?: readonly string[];
+  /**
+   * Το `ExtractedCell.corroboratedBy` του κελιού που κέρδισε: ο άνθρωπος βλέπει ότι η γραμμή Btu/h δεν χάθηκε, και (από το Β8 (α))
+   * **πού** τυπώθηκε. Ανάγνωση μόνο μέσω `corroborationsOf`.
+   */
+  readonly corroboratedBy?: readonly ImportCorroboration[];
   /**
    * §5.5.2 Β8: το `ExtractedCell.alternatives` του κελιού που κέρδισε — οι τιμές ανάμεσα στις οποίες διαλέγει ο άνθρωπος. Απούσα σε
    * προτάσεις παλαιότερες του Β8: τότε η μόνη ενέργεια είναι η διόρθωση.
    */
-  readonly alternatives?: readonly ImportAlternative[];
+  readonly alternatives?: readonly ImportSourceValue[];
 }
 
 export interface ImportProposalRow {

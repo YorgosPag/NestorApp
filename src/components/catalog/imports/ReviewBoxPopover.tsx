@@ -25,7 +25,7 @@ import { ReviewMarkBadge } from './ImportReviewOverlay';
 import { REVIEW_BOX_ATTRIBUTE, useBoxPreview, type BoxPreviewController } from './review-box-preview';
 import { useReviewGhostHandlers } from './review-ghost-store';
 import type { ReviewBox, ReviewBoxTarget, ReviewTarget } from './review-overlay-model';
-import { remedyActionLook, useRemedyActionLabel, useReviewReasonText, useReviewTargetName } from './review-reason-text';
+import { remedyActionLook, useRemedyActionLabel, useReviewReasonText, useReviewRelationText, useReviewTargetName } from './review-reason-text';
 import { remedyOf, type RemedyAction, type RemedyContext } from './review-remedy';
 
 /** Μέγεθος του σήματος τόνου στην κεφαλίδα (ίδιο με τη γωνία του πλαισίου). */
@@ -58,10 +58,13 @@ function ToneTag({ box }: { readonly box: ReviewBox }) {
 
 function Heading({ box, first, id }: { readonly box: ReviewBox; readonly first: ReviewBoxTarget; readonly id: string }) {
   const nameOf = useReviewTargetName();
+  // §5.5.2 Β8 (β): η ίδια πρόταση σχέσης με το `aria-label` του πλαισίου.
+  const relation = useReviewRelationText()(first);
   return (
     <header className="flex flex-col gap-1">
       <h3 id={id} className="m-0 text-sm font-semibold">{nameOf(first)}</h3>
       {first.printed ? <p className="m-0 break-words text-xs text-muted-foreground">{first.printed}</p> : null}
+      {relation ? <p className="m-0 text-xs text-muted-foreground">{relation}</p> : null}
       <ToneTag box={box} />
     </header>
   );

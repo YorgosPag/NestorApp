@@ -28,7 +28,7 @@ import { REVIEW_BOX_ATTRIBUTE, useBoxPreviewOpen, type BoxPreviewController } fr
 import { useReviewGhostRegions } from './review-ghost-store';
 import { useReviewHoverHandlers, useReviewHovered } from './review-hover-store';
 import type { ReviewBox } from './review-overlay-model';
-import { useReviewReasonText, useReviewTargetName } from './review-reason-text';
+import { useReviewReasonText, useReviewRelationText, useReviewTargetName } from './review-reason-text';
 
 /** Κλάσεις ανά τόνο — κυριολεκτικές, ώστε το Tailwind να τις βρει (το χρώμα ζει στο token, το σχήμα στο `IMPORT_REVIEW_MARKS`). */
 const TONE_CLASS: Readonly<Record<ReviewMarkTone, { readonly stroke: string; readonly fill: string }>> = {
@@ -83,11 +83,15 @@ export function ReviewMarkOutline({ tone, x, y, width, height }: { readonly tone
 function useBoxLabel(box: ReviewBox): string {
   const { t } = useImportText();
   const nameOf = useReviewTargetName();
+  const relationOf = useReviewRelationText();
   const [first] = box.targets;
   const reason = useReviewReasonText(first.reason);
   const parts = { label: nameOf(first), value: first.printed, state: t(REVIEW_TONE_KEYS[box.tone]) };
   const head = reason === null ? t('review.overlay.boxLabel', parts) : t('review.overlay.boxLabelReason', { ...parts, reason });
-  return box.targets.length > 1 ? `${head} ${t('review.overlay.boxMore', { count: box.targets.length - 1 })}` : head;
+  // §5.5.2 Β8 (β): εναλλακτική ή επιβεβαίωση — ο αναγνώστης οθόνης ακούει ότι **δεν** είναι το κελί της τιμής.
+  const relation = relationOf(first);
+  const told = relation === null ? head : `${head}. ${relation}`;
+  return box.targets.length > 1 ? `${told} ${t('review.overlay.boxMore', { count: box.targets.length - 1 })}` : told;
 }
 
 interface BoxProps {

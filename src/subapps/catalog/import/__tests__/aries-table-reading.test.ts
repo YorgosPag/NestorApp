@@ -22,7 +22,7 @@ import { readPageTables, tableLineIdentities, type PageTableContext } from '../p
 import { learnedDecisions, learnedEntry, memoryKeyOf, memoryOverridesFor, type LabelMemoryBook } from '../label-memory';
 import { readPageWithDecisions } from '../page-decisions-reading';
 import { anchorForCell, tokenizePage, unitPrintedBeside } from '../page-tokens';
-import { selectOptionFor } from '../proposal-values';
+import { corroborationsOf, selectOptionFor } from '../proposal-values';
 
 type AriesPage = '85' | '86';
 
@@ -166,7 +166,15 @@ describe('🔴 Σελίδα 86: το σφάλμα ×1000', () => {
     const field = fieldOf(rowsAgainstLive(group, [])[0], 'cooling_h');
     expect(field?.issues).toEqual([]);
     expect(field?.corroboratedBy).toHaveLength(1);
-    expect(field?.corroboratedBy?.[0]).toContain('3412');
+    expect(corroborationsOf(field ?? {})[0]?.text).toContain('3412');
+  });
+
+  it('§5.5.2 Β8 (α): η επιβεβαίωση κρατά τη θέση του κελιού της, όπως η εναλλακτική', () => {
+    const cell = group.rows[0].cells.find((candidate) => candidate.text === '3412');
+    const field = fieldOf(rowsAgainstLive(group, [])[0], 'cooling_h');
+    const [corroboration] = corroborationsOf(field ?? {});
+    expect(corroboration?.anchor?.kind).toBe('page');
+    expect(corroboration?.anchor).toEqual(cell?.anchor);
   });
 
   it('Ε7: η διαφωνία δεν είναι επιβεβαίωση', () => {

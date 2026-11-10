@@ -12,13 +12,13 @@
  */
 
 import type { CatalogSchemaSnapshot } from '../derived/chain-derived';
-import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportAlternative, ImportIssue, ImportTarget } from '../types/catalog-import';
+import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportIssue, ImportSourceValue, ImportTarget } from '../types/catalog-import';
 import type { AttributeValue, ProductValues } from '../types/product';
 import { uniqueValueKey } from '../values/normalize-unique';
 import { standardAmountOf } from '../values/standard-amount';
 import type { ValueTextContext } from '../values/value-text-codec';
 import { IMPORT_UNIT_AGREEMENT_TOLERANCE } from '../vocabulary/catalog-import';
-import { attributeValueEquality, importCellText, importTargetKey, liveSlotValue, parseImportCell } from './proposal-values';
+import { attributeValueEquality, importCellText, importSourceValueOf, importTargetKey, liveSlotValue, parseImportCell } from './proposal-values';
 
 export type AttributeTarget = Extract<ImportTarget, { kind: 'attribute' }>;
 export type AttributeCell = ExtractedCell & { readonly target: AttributeTarget; readonly text: string };
@@ -88,15 +88,17 @@ function settleRepeat(cells: readonly AttributeCell[], values: ProductValues | n
   const others = cells.filter((cell) => cell !== winner && importCellText(cell) !== importCellText(winner));
   const unanimous = readable.length === reads.length && readable.every(({ value }) => agree(value, readable[0].value, attributeId, context));
   if (others.length === 0) return winner;
-  if (unanimous) return { ...winner, corroboratedBy: others.map(importCellText) };
-  return flagRepeated(winner, attributeId, others.map((cell) => ({ text: importCellText(cell), anchor: cell.anchor })));
+  // §5.5.2 Β8 (α): η επιβεβαίωση κρατά τη θέση της, όπως η εναλλακτική — αλλιώς η γραμμή Btu/h διαβάζεται αλλά δεν παίρνει πλαίσιο.
+  const sources = others.map(importSourceValueOf);
+  if (unanimous) return { ...winner, corroboratedBy: sources };
+  return flagRepeated(winner, attributeId, sources);
 }
 
 /**
  * **Ο ένας τρόπος** να πει ένα κελί «η πηγή δίνει και άλλο» (ιδιότητες εδώ · ταυτότητα εμπορίου στο `trade-identity-fields`): το
  * εύρημα για το μήνυμα **και** οι δομημένες εναλλακτικές για το κουμπί «Κράτα …» (§5.5.2 Β8). Το μήνυμα και τα κουμπιά λένε το ίδιο.
  */
-export function flagRepeated<TCell extends ExtractedCell>(winner: TCell, path: string, others: readonly ImportAlternative[]): TCell {
+export function flagRepeated<TCell extends ExtractedCell>(winner: TCell, path: string, others: readonly ImportSourceValue[]): TCell {
   const flag: ImportIssue = { code: 'attributeRepeated', path, params: { others: others.map((other) => other.text).join(' · ') } };
   return { ...winner, flags: [...winner.flags, flag], alternatives: others };
 }

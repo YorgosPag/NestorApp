@@ -29,12 +29,12 @@ const field = (overrides: Partial<ImportProposalField> = {}): ImportProposalFiel
 });
 
 const fieldEntry = (subject: ImportProposalField, reason: ReviewReason | null = null): ReviewBoxTarget => ({
-  target: { kind: 'field', proposalId: 'p', rowKey: 'r', targetKey: 'k' }, key: 'f', tone: reason ? 'problem' : 'pending', reason,
+  target: { kind: 'field', proposalId: 'p', rowKey: 'r', targetKey: 'k' }, key: 'f', relation: 'value', tone: reason ? 'problem' : 'pending', reason,
   subject: { kind: 'field', field: subject }, printed: subject.sourceText,
 });
 
 const lineEntry = (state: LineState, reason: ReviewReason | null = null): ReviewBoxTarget => ({
-  target: { kind: 'line', lineKey: 'l' }, key: 'l', tone: 'unmapped', reason, subject: { kind: 'line', label: 'ΕΝΑΛΛΑΚΤΗΣ', state }, printed: 'A · B',
+  target: { kind: 'line', lineKey: 'l' }, key: 'l', relation: 'value', tone: 'unmapped', reason, subject: { kind: 'line', label: 'ΕΝΑΛΛΑΚΤΗΣ', state }, printed: 'A · B',
 });
 
 const ALL: RemedyContext = { decidable: true, canManage: true, canPrice: true, hasPriceTarget: true };

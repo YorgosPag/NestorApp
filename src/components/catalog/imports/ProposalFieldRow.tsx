@@ -12,7 +12,8 @@ import { Pencil, Undo2, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { ImportAlternative, ImportProposalField, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
+import { corroborationsOf } from '@/subapps/catalog/import/proposal-values';
+import type { ImportProposalField, ImportSourceValue, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
 import { useImportIssueMessage } from './import-issue-messages';
 import { PROPOSAL_VIEW_KEYS, useImportText } from './import-text';
 import { useTargetLabeler } from './import-target-label';
@@ -115,7 +116,7 @@ function IncomingCell({ label, editRequested = false, onEditRequestDone, ...prop
 }
 
 /** Ένα «Κράτα «…»»: hover/εστίαση ⇒ φάντασμα στο κελί της τιμής στο PDF (§5.5.2 Β8 βήμα Γ) · πάτημα ⇒ η διόρθωση. */
-function KeepValueButton({ value, readOnly, onEdit }: { readonly value: ImportAlternative; readonly readOnly: boolean; readonly onEdit: (text: string) => void }) {
+function KeepValueButton({ value, readOnly, onEdit }: { readonly value: ImportSourceValue; readonly readOnly: boolean; readonly onEdit: (text: string) => void }) {
   const { t } = useImportText();
   const ghost = useReviewGhostHandlers(value.anchor);
   return (
@@ -144,9 +145,10 @@ function KeepValueChoices({ field, label, readOnly, onEdit }: Pick<EditProps, 'f
 /** Ε7: η ίδια ποσότητα σε άλλη μονάδα συμφώνησε. Πληροφορία, όχι εύρημα: δεν ζητά απόφαση. */
 function Corroboration({ field }: { readonly field: ImportProposalField }) {
   const { t } = useImportText();
-  const others = field.corroboratedBy ?? [];
+  // Ο ΕΝΑΣ αναγνώστης των δύο αποθηκευμένων σχημάτων (§5.5.2 Β8 (α)).
+  const others = corroborationsOf(field);
   if (others.length === 0) return null;
-  return <p className="m-0 mt-1 text-xs text-muted-foreground">{t('review.corroboratedBy', { values: others.join(' · ') })}</p>;
+  return <p className="m-0 mt-1 text-xs text-muted-foreground">{t('review.corroboratedBy', { values: others.map((other) => other.text).join(' · ') })}</p>;
 }
 
 /** §5.5.2 Β8: πεδίο που η προβολή κρύβει, ορατό μόνο επειδή επιλέχτηκε στο PDF — το λέει, ποτέ σιωπηλά. */
