@@ -124,7 +124,9 @@ export const setImportLineBodySchema: z.ZodType<SetImportLineRequest> = z.object
   line: z.number().int().min(0).max(MAX_TABLE_LINE),
   decision: importLineDecisionSchema.nullable(),
   bind: z.enum(IMPORT_LINE_BIND_LEVELS).nullable(),
-});
+  // §5.5.2 Β9δ: η επιστροφή στη μνήμη υπάρχει μόνο ως αναίρεση — ποτέ δίπλα σε απόφαση.
+  fallback: z.literal('memory').optional(),
+}).refine((body) => body.fallback === undefined || body.decision === null, { path: ['fallback'] });
 
 /** §5.5.2 Β7. Τον κωδικό και την ετικέτα τα κρίνει η απόδειξη (`withAxisOptions`) και ο γραφέας ιδιοτήτων· εδώ μόνο το σχήμα. */
 export const addImportAxisOptionsBodySchema: z.ZodType<AddImportAxisOptionsRequest> = z.object({

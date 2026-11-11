@@ -18,11 +18,17 @@ type LineAddress = Pick<ImportLineOverride, 'page' | 'table' | 'line'>;
 
 export const lineKeyOf = ({ page, table, line }: LineAddress): string => `${page}\u0000${table}\u0000${line}`;
 
-const sameLine = (a: LineAddress, b: LineAddress): boolean => a.page === b.page && a.table === b.table && a.line === b.line;
+/** Ίδια γραμμή: ίδια σελίδα, ίδιος πίνακας, ίδια θέση — για αποφάσεις και για γραμμές χωρίς πεδίο (`ImportPageUnmappedLine`). */
+export const sameLine = (a: LineAddress, b: LineAddress): boolean => a.page === b.page && a.table === b.table && a.line === b.line;
+
+/** Ολόκληρη η απόφαση της γραμμής (με ταυτότητα και προέλευση), ή `null`. */
+export function lineOverrideOf(overrides: readonly ImportLineOverride[] | undefined, address: LineAddress): ImportLineOverride | null {
+  return overrides?.find((override) => sameLine(override, address)) ?? null;
+}
 
 /** Η απόφαση της γραμμής, ή `null`. */
 export function lineDecisionOf(overrides: readonly ImportLineOverride[] | undefined, address: LineAddress): ImportLineDecision | null {
-  return overrides?.find((override) => sameLine(override, address))?.decision ?? null;
+  return lineOverrideOf(overrides, address)?.decision ?? null;
 }
 
 /** Ό,τι συνοδεύει μια απόφαση πέρα από τη σφραγίδα (§5.5.2 Β5): ταυτότητα για τη μάθηση, προέλευση όταν την έδωσε η μνήμη. */

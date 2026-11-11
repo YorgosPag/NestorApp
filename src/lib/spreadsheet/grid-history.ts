@@ -72,5 +72,15 @@ export function redoHistory<P>(history: History<P>): HistoryStep<P> {
   };
 }
 
+/**
+ * Αντικαθιστά ένα βήμα **κατά ταυτότητα**, όπου κι αν βρίσκεται (παρελθόν ή μέλλον) — `null` ⇒ το βγάζει. Για πράξη που γράφεται τη
+ * στιγμή που γίνεται (η σειρά της στοίβας = η σειρά των πράξεων) και μαθαίνει **μετά** τι έγινε ή ότι αρνήθηκε (ADR-923 §5.5.2 Β9δ:
+ * η απόφαση γραμμής). Βήμα που δεν υπάρχει πια (π.χ. βγήκε από το όριο) ⇒ καμία αλλαγή.
+ */
+export function replaceHistoryEntry<P>(history: History<P>, entry: HistoryEntry<P>, next: HistoryEntry<P> | null): History<P> {
+  const swap = (entries: readonly HistoryEntry<P>[]) => entries.flatMap((item) => (item !== entry ? [item] : next ? [next] : []));
+  return { past: swap(history.past), future: swap(history.future), limit: history.limit };
+}
+
 export const canUndo = <P>(history: History<P>): boolean => history.past.length > 0;
 export const canRedo = <P>(history: History<P>): boolean => history.future.length > 0;

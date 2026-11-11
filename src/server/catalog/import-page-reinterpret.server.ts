@@ -11,6 +11,8 @@ import 'server-only';
  * 🔑 **Εμβέλεια πίνακα:** ξαναερμηνεύεται μόνο ο πίνακας της γραμμής. Άλλος πίνακας της ίδιας σελίδας έχει δική του πρόταση και δική
  *    του σειρά στην ουρά του πελάτη, άρα δύο αποφάσεις σε διαφορετικούς πίνακες δεν πατούν η μία την άλλη.
  * 🔑 Οι αποφάσεις πεδίων του ανθρώπου επιβιώνουν (`carriedDecision`)· πρόταση που εγκρίθηκε ή απορρίφθηκε δεν αγγίζεται.
+ * 🔑 §5.5.2 Β9δ: `fallback: 'memory'` (μόνο με `decision: null`, από την αναίρεση) ⇒ η γραμμή επιστρέφει στην κρίση της μνήμης του
+ *    προμηθευτή, ρωτημένης **ξανά** εδώ (`resolveLine`) — ο client δεν δηλώνει ποτέ προέλευση.
  * @module server/catalog/import-page-reinterpret.server
  */
 
@@ -23,7 +25,7 @@ import { lineDecisionOf, priceLineOf, tableOverridesOf, withLineOverride, type L
 import { tableLineIdentities } from '@/subapps/catalog/import/page-table-reading';
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
-import type { ImportBatchDefinition, ImportLineDecision } from '@/subapps/catalog/types/catalog-import';
+import type { ImportBatchDefinition, ImportLineDecision, ImportLineOverrideOrigin } from '@/subapps/catalog/types/catalog-import';
 import type { ImportLineOutcome, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
 import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
 import type { ImportLineBindLevel } from '@/subapps/catalog/vocabulary/catalog-import';
@@ -32,6 +34,7 @@ import { readOwned, runCatalogReadOnly } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { updateCatalogFamily } from './family-writer.server';
 import { assertPurposeAuthority, setImportLineOverride, type StoredImportBatch } from './import-batch-writer.server';
+import { memoryOverrideForLine, wantsMemoryFallback } from './import-line-memory.server';
 import { readBatchProposals, readImportBatchDetail } from './import-reads.server';
 import {
   commitTable,
@@ -79,13 +82,14 @@ function axisDecisionFits(decision: ImportLineDecision | null, schema: CatalogSc
  * Ο πίνακας με τις αποφάσεις από πάνω, **μαζί με τη νέα**. Η απόφαση κρίνεται στη μνήμη πριν γραφτεί: άρνηση εδώ δεν αφήνει πίσω της
  * μισή κατάσταση. Μετά γράφεται η απόφαση και ό,τι παράγει.
  */
-async function reinterpretTable(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest, basis: TableBasis): Promise<Judged<null>> {
+async function reinterpretTable(ctx: AuthContext, batch: StoredImportBatch, resolved: ResolvedLine, basis: TableBasis): Promise<Judged<null>> {
+  const { request, origin } = resolved;
   const schema = await readBatchSchema(ctx, batch);
   if (schema === null || !axisDecisionFits(request.decision, schema)) return refuse('lineUnknown');
   const stamp = { by: ctx.uid, at: nowISO() };
   // §5.5.2 Β5: η ταυτότητα της γραμμής ταξιδεύει με την απόφαση, ώστε η έγκριση του πίνακα να τη μάθει για τον προμηθευτή.
   const identity = tableLineIdentities(basis.table, basis.answer.variantsIn, schema.registry).get(request.line);
-  const extras: LineOverrideExtras = identity ? { identity } : {};
+  const extras: LineOverrideExtras = { ...(identity ? { identity } : {}), ...(origin ? { origin } : {}) };
   const overrides = withLineOverride(tableOverridesOf(batch.pages?.lineOverrides, request.page, request.table), request, request.decision, stamp, extras);
   const prepared = prepareTable(schema, basis, overrides);
   if (!prepared.ok) return prepared;
@@ -139,22 +143,42 @@ async function judgePriceLine(ctx: AuthContext, batch: StoredImportBatch, reques
   return taken && taken.line !== request.line ? refuse('priceLineTaken') : { ok: true, value: null };
 }
 
-async function decideLine(ctx: AuthContext, id: string, request: SetImportLineRequest): Promise<ImportLineOutcome> {
-  const opened = await openBatch(ctx, id, request);
+/** Η απόφαση που θα γραφτεί, με την προέλευσή της όταν τη δίνει η μνήμη (§5.5.2 Β9δ, `fallback: 'memory'`). */
+interface ResolvedLine {
+  readonly request: SetImportLineRequest;
+  readonly origin?: ImportLineOverrideOrigin;
+}
+
+/**
+ * Η επιστροφή στη μνήμη κρίνεται **εδώ**, πριν από κάθε άλλη κρίση: από εκεί και πέρα η απόφαση της μνήμης περνά από τους ίδιους
+ * κριτές (κλειστή πρόταση · γραμμή τιμής · ξαναερμηνεία) με οποιαδήποτε άλλη. Καμία απάντηση της μνήμης ⇒ σκέτη αναίρεση.
+ */
+async function resolveLine(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest): Promise<ResolvedLine> {
+  if (!wantsMemoryFallback(request)) return { request };
+  const schema = await readBatchSchema(ctx, batch);
+  const memory = schema === null ? null : await memoryOverrideForLine(ctx, batch, schema, request);
+  return memory?.origin ? { request: { ...request, decision: memory.decision }, origin: memory.origin } : { request };
+}
+
+async function decideLine(ctx: AuthContext, id: string, asked: SetImportLineRequest): Promise<ImportLineOutcome> {
+  const opened = await openBatch(ctx, id, asked);
   if (!opened.ok) return { kind: 'refused', reason: opened.reason };
+  const resolved = await resolveLine(ctx, opened.value, asked);
+  const { request } = resolved;
   const previous = lineDecisionOf(opened.value.pages?.lineOverrides, request);
   const open = await judgeOpenProposal(ctx, id, request, previous);
   if (!open.ok) return { kind: 'refused', reason: open.reason };
   const price = await judgePriceLine(ctx, opened.value, request, previous);
   if (!price.ok) return { kind: 'refused', reason: price.reason };
   if (!touchesMapping(request.decision, previous)) {
-    await setImportLineOverride(ctx, id, request, request.decision, storedIdentityOf(opened.value, request));
+    const origin = resolved.origin ? { origin: resolved.origin } : {};
+    await setImportLineOverride(ctx, id, request, request.decision, { ...storedIdentityOf(opened.value, request), ...origin });
     return { kind: 'settled' };
   }
   const basis = await lineBasis(ctx, opened.value, request);
   if (!basis.ok) return { kind: 'refused', reason: basis.reason };
   if (request.decision?.kind === 'attribute' && request.bind !== null) await bindToFamily(ctx, opened.value, request.decision.attributeId, request.bind);
-  const outcome = await reinterpretTable(ctx, opened.value, request, basis.value);
+  const outcome = await reinterpretTable(ctx, opened.value, resolved, basis.value);
   return outcome.ok ? { kind: 'settled' } : { kind: 'refused', reason: outcome.reason };
 }
 

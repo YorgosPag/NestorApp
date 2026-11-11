@@ -75,6 +75,15 @@ export function recordEdits(
 }
 
 /**
+ * **Ο ΕΝΑΣ κανόνας** για το τι γίνεται ο κωδικός μοντέλου που ζήτησε ο άνθρωπος: η διόρθωση που θα φυλαχτεί, ή `null` = καμία
+ * (κενό κείμενο, ή ίδιο με την πηγή). Τον ρωτούν ο γραφέας και η στοίβα αναίρεσης (§5.5.2 Β9δ), ώστε να μην υπάρχουν δύο.
+ */
+export function normalizedModelCodeEdit(requested: string, sourceModelCode: string | null): string | null {
+  const modelCode = requested.trim();
+  return modelCode === '' || modelCode === sourceModelCode ? null : modelCode;
+}
+
+/**
  * Ο κωδικός μοντέλου του ανθρώπου. `null` στο αίτημα = καμία αλλαγή (το συμβόλαιο του `UpdateImportProposalRequest`)·
  * κενό κείμενο = αφαίρεση της διόρθωσης.
  */
@@ -85,9 +94,8 @@ export function recordModelCodeEdit(
   stamp: EditStamp,
 ): ImportModelCodeEdit | null {
   if (requested === null) return previous;
-  const modelCode = requested.trim();
-  if (modelCode === '' || modelCode === source.modelCode) return null;
-  return { modelCode, sourceModelCode: source.modelCode, ...stamp };
+  const modelCode = normalizedModelCodeEdit(requested, source.modelCode);
+  return modelCode === null ? null : { modelCode, sourceModelCode: source.modelCode, ...stamp };
 }
 
 /** Λέει η πηγή σήμερα ό,τι έλεγε όταν πάρθηκε η διόρθωση; Κρίνεται με **όλα** τα κελιά της διεύθυνσης. */

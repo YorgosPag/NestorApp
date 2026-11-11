@@ -6,7 +6,8 @@
 import { act, renderHook } from '@testing-library/react';
 
 import { emptyHistory, recordHistory, redoHistory, undoHistory, type History } from '@/lib/spreadsheet/grid-history';
-import type { ReviewStep } from '../review-history';
+import type { ImportTarget } from '@/subapps/catalog/types/catalog-import';
+import type { FieldsStep, ReviewStep } from '../review-history';
 import { useReviewUndoToast, type ReviewEntry } from '../use-review-undo-toast';
 
 const notify = jest.fn();
@@ -18,9 +19,9 @@ jest.mock('../import-text', () => ({ useImportText: () => ({ t: mockT }) }));
 const mockName = (label: { kind: string; count: number } | null) => (label ? `${label.kind}·${label.count}` : null);
 jest.mock('../use-review-step-name', () => ({ useStepName: () => mockName }));
 
-const TARGET = { kind: 'modelCode' } as unknown as ReviewStep['label']['target'];
+const TARGET: ImportTarget = { kind: 'modelCode' };
 const entry = (count: number): ReviewEntry => {
-  const side: ReviewStep = { proposalId: 'p1', label: { kind: 'acceptRow', target: TARGET, count }, marks: [] };
+  const side: FieldsStep = { kind: 'fields', proposalId: 'p1', label: { kind: 'acceptRow', target: TARGET, count }, marks: [] };
   return { before: side, after: side };
 };
 

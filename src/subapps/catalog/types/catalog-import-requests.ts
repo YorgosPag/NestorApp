@@ -203,6 +203,11 @@ export interface SetImportLineRequest {
   readonly line: number;
   readonly decision: ImportLineDecision | null;
   readonly bind: ImportLineBindLevel | null;
+  /**
+   * §5.5.2 Β9δ: μαζί με `decision: null` — η γραμμή επιστρέφει στην κρίση της **μνήμης** του προμηθευτή, όπως το `null` ενός πεδίου
+   * στην κρίση του κανόνα. Ο client δεν δηλώνει ποτέ ποια ήταν η μνήμη: ο διακομιστής τη ρωτά ξανά (`memoryOverrideForLine`).
+   */
+  readonly fallback?: 'memory';
 }
 
 /** Τι έγινε: ξαναερμηνεύτηκε (ή δεν χρειαζόταν), ή αρνήθηκε **χωρίς** να γράψει τίποτα. */

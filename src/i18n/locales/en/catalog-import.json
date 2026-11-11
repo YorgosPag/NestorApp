@@ -196,13 +196,24 @@
       "undoNamed": "Undo: {action}",
       "redoNamed": "Redo: {action}",
       "skipped": "{count, plural, one {# field was not undone: it changed meanwhile in another tab or by another user, or the proposal is no longer pending} other {# fields were not undone: they changed meanwhile in another tab or by another user, or the proposal is no longer pending}}",
+      "skippedModelCode": "{count, plural, one {The model code was not undone: it changed meanwhile in another tab or by another user, or the proposal is no longer pending} other {The model code was not undone in # proposals: it changed meanwhile in another tab or by another user, or the proposal is no longer pending}}",
+      "skippedLine": "{count, plural, one {The line decision was not undone: it changed meanwhile, the proposal is no longer pending, or the table did not accept the change} other {# line decisions were not undone: they changed meanwhile, the proposal is no longer pending, or the table did not accept the change}}",
+      "bindKept": "The line was restored; the new attribute stays in the family schema, because the schema is shared by the whole catalog.",
       "step": {
         "accept": "Accept «{field}»",
         "reject": "Reject «{field}»",
-        "undoDecision": "Undo decision «{field}»",
+        "undoDecision": "Clear decision «{field}»",
         "edit": "Edit «{field}»",
         "revertEdit": "Restore value «{field}»",
-        "acceptRow": "{count, plural, one {Accept row · # field} other {Accept row · # fields}}"
+        "acceptRow": "{count, plural, one {Accept row · # field} other {Accept row · # fields}}",
+        "modelCode": "Model code «{code}»",
+        "removeModelCode": "Source model code instead of «{code}»",
+        "lineAttribute": "Line «{line}» → «{field}»",
+        "lineAttributeBound": "Line «{line}» → new attribute «{field}»",
+        "lineAxis": "Line «{line}» → axis «{field}»",
+        "linePrice": "Line «{line}» → price",
+        "lineIgnore": "Ignore line «{line}»",
+        "lineUndo": "Clear line decision «{line}»"
       }
     },
     "nothingToApply": "Same as live — nothing to apply",

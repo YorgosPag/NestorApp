@@ -17,7 +17,6 @@ import 'server-only';
  */
 
 import type { AuthContext } from '@/lib/auth';
-import { hasPermission } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { pageTableAddressOf, pageTableGroupKey, priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
 import { isMemoryOverride, memoryKeysOf, memoryOverridesFor, withMemoryApplied } from '@/subapps/catalog/import/label-memory';
@@ -32,12 +31,12 @@ import type {
   ImportMemoryTableRefusal,
   ImportProposalWire,
 } from '@/subapps/catalog/types/catalog-import-requests';
-import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
 import { IMPORT_MAX_LINE_OVERRIDES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readOwned, runCatalogReadOnly } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { assertImportBatchOpen, assertPurposeAuthority, rewriteTableLineOverrides, type StoredImportBatch } from './import-batch-writer.server';
 import { labelMemoryScopeOf, readLabelMemoryBook } from './import-label-memory.server';
+import { memoryMayPrice } from './import-line-memory.server';
 import { readBatchProposals, readImportBatchDetail } from './import-reads.server';
 import { commitTable, pageBasis, prepareTable, readBatchSchema, tableOf, type Judged, type TableBasis } from './import-table-rebuild.server';
 
@@ -75,7 +74,7 @@ async function openRun(ctx: AuthContext, id: string): Promise<MemoryRun> {
   assertImportBatchOpen(batch);
   const schema = await readBatchSchema(ctx, batch);
   if (schema === null || batch.target.purpose !== 'attributes') throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'target' }]);
-  const canPrice = Boolean(batch.target.priceListVersionId) && (await hasPermission(ctx, CATALOG_AUTHORITY_PERMISSIONS.pricing));
+  const canPrice = await memoryMayPrice(ctx, batch);
   return { ctx, batch, schema, canPrice, proposals: await readBatchProposals(ctx, id) };
 }
 

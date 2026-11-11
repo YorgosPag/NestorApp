@@ -97,8 +97,10 @@ export function useImportBatch(batchId: string) {
   }, [reload, setFailure, view]);
 
   const changes = useProposalChangeQueue({ setView, setFailure, reload, queued });
-  // §5.5.2 Β9β: κάθε αλλαγή πεδίου γράφεται στη στοίβα αναίρεσης εδώ, στο ΕΝΑ σημείο από όπου περνούν όλες.
-  const review = useReviewHistory(view, changes.change, changes.saving.size);
+  const lines = useLineDecisions(changes.line);
+  // §5.5.2 Β9β · Β9δ: κάθε πράξη του ανθρώπου (πεδία · κωδικός μοντέλου · απόφαση γραμμής) γράφεται στη στοίβα αναίρεσης εδώ,
+  // στο ΕΝΑ σημείο από όπου περνούν όλες.
+  const review = useReviewHistory(view, changes.change, lines.decideLine, changes.saving.size);
   // §5.5.2 (ADR-905): η ανανέωση από το σήμα περιμένει τις αισιόδοξες αλλαγές **και** τις δικές μας επαναφορτώσεις.
   useReleaseWhenSettled(hold, changes.saving.size + refreshing, release);
   const reader = usePageReader(batchId, view, setFailure, reload);
@@ -106,7 +108,7 @@ export function useImportBatch(batchId: string) {
   const priceTarget = usePriceTarget(view, accept, setFailure);
   const supplier = useSupplierMemory({ view, accept, setFailure });
   const axisOptions = useAxisOptions(view?.batch.id ?? null, accept, setFailure);
-  return { view, failure, reload, discard, ...reader, upgrade, ...changes, change: review.change, history: review.history, ...useLineDecisions(changes.line), ...priceTarget, supplier, axisOptions };
+  return { view, failure, reload, discard, ...reader, upgrade, ...changes, change: review.change, history: review.history, lineActivity: lines.lineActivity, decideLine: review.decideLine, ...priceTarget, supplier, axisOptions };
 }
 
 /** §5.5.2 Β4 Δ1: ο τιμοκατάλογος της παρτίδας. Η απάντηση είναι όλη η όψη, με τις ξανασχεδιασμένες προτάσεις τιμών. */

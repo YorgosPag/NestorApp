@@ -32,9 +32,9 @@ import type {
   ImportBatchDetailView,
   ImportFieldDecisionInput,
   ImportFieldEditInput,
-  ImportLineOutcome,
   ImportProposalWire,
   SetImportLineRequest,
+  SetImportLineResult,
 } from '@/subapps/catalog/types/catalog-import-requests';
 
 export interface ProposalChange {
@@ -118,17 +118,20 @@ function useSavingSet() {
 
 type Enqueue = (proposal: ImportProposalWire, decisions: readonly ImportFieldDecisionInput[], work: QueuedWork) => Promise<void>;
 
-/** Η απόφαση γραμμής ξαναερμηνεύει τον πίνακα της πρότασης. `null` = απέτυχε η μεταφορά (το μήνυμα το δείχνει η όψη). */
+/**
+ * Η απόφαση γραμμής ξαναερμηνεύει τον πίνακα της πρότασης. Επιστρέφει **όλη** την απάντηση (έκβαση + όψη): η στοίβα αναίρεσης
+ * (§5.5.2 Β9δ) κρίνει από αυτήν ποιες αποφάσεις πεδίων έσβησε η ξαναερμηνεία. `null` = απέτυχε η μεταφορά (το μήνυμα το δείχνει η όψη).
+ */
 function useQueuedLine(enqueue: Enqueue, setView: SetView, queued: { current: QueueState }) {
-  return useCallback(async (proposal: ImportProposalWire, request: SetImportLineRequest): Promise<ImportLineOutcome | null> => {
-    const answer: { outcome: ImportLineOutcome | null } = { outcome: null };
+  return useCallback(async (proposal: ImportProposalWire, request: SetImportLineRequest): Promise<SetImportLineResult | null> => {
+    const answer: { result: SetImportLineResult | null } = { result: null };
     await enqueue(proposal, [], async () => {
       const result = await setImportLine(proposal.batchId, request);
-      answer.outcome = result.outcome;
+      answer.result = result;
       setView(() => overlayView(result.view, queued.current.decisions));
       return result.view.proposals.find((item) => item.id === proposal.id) ?? proposal;
     });
-    return answer.outcome;
+    return answer.result;
   }, [enqueue, queued, setView]);
 }
 
