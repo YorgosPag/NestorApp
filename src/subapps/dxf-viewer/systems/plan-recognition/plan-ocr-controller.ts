@@ -20,7 +20,9 @@
 
 import { IDENTITY_HOMOGRAPHY } from '@/lib/geometry/homography';
 import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
-import type { WorkerRpcCancellableResult } from '@/lib/workers/worker-rpc-protocol';
+import {
+  WORKER_RPC_MESSAGE_ERROR, WORKER_RPC_UNREADY, type WorkerRpcCancellableResult,
+} from '@/lib/workers/worker-rpc-protocol';
 import type { PlanReadingOutcome } from '../../bim/plan-recognition/plan-recognition-types';
 import type { OcrText } from '../../bim/plan-recognition/ocr/ocr-engine';
 import { isOcrAssetFailure } from '../../bim/plan-recognition/ocr/ocr-asset-loader';
@@ -55,8 +57,11 @@ interface OcrTexts {
   readonly texts: readonly OcrText[];
 }
 
+/** Ο Worker δεν υπάρχει ή δεν ξεκίνησε ποτέ (χωρίς χειραψία / μήνυμα που δεν διαβάζεται — ADR-929 Φ0.6). */
+const WORKER_DOWN: ReadonlySet<string> = new Set(['worker-unavailable', WORKER_RPC_UNREADY, WORKER_RPC_MESSAGE_ERROR]);
+
 const failureOf = (error: string): PlanOcrFailure => {
-  if (error === 'worker-unavailable') return 'worker-unavailable';
+  if (WORKER_DOWN.has(error)) return 'worker-unavailable';
   return isOcrAssetFailure(error) ? 'models-unavailable' : 'ocr-failed';
 };
 

@@ -9,10 +9,14 @@
  * - χωρίς Worker ⇒ δίχτυ · χωρίς δίχτυ ⇒ `worker-unavailable` · `dispose` ⇒ `disposed` + τερματισμός
  * - `transferOf`: buffers μετακομίζουν (zero-copy) — όχι προς το δίχτυ
  * - `latestOnly`: 5 γρήγορα ⇒ εκτελούνται 1ο + 5ο, τα ενδιάμεσα `superseded` χωρίς να σταλούν
+ * - χειραψία εκκίνησης (ADR-929 Φ0.6): σιωπηλός Worker ⇒ `worker-unready` · αργή απάντηση μετά τη χειραψία ≠ κατάρρευση ·
+ *   ξαναοπλίζεται σε κάθε γέννηση · `messageerror` ⇒ `failed`
  */
 
 import { createWorkerRpcClient, latestOnly } from '../worker-rpc-client';
-import { absoluteWorkerUrl, type WorkerRpcResult } from '../worker-rpc-protocol';
+import {
+  absoluteWorkerUrl, WORKER_RPC_MESSAGE_ERROR, WORKER_RPC_UNREADY, type WorkerLike, type WorkerRpcResult,
+} from '../worker-rpc-protocol';
 
 import { FakeWorker } from './fake-worker';
 
@@ -87,6 +91,53 @@ describe('createWorkerRpcClient', () => {
     expect(workers[0].terminated).toBe(true);
     await expect(client.call(2)).resolves.toEqual(ok(2));
     expect(workers).toHaveLength(2);
+  });
+});
+
+/** Worker που πέθανε πριν γράψει τον ακροατή του, χωρίς `error` (ζωντανά: `unhandledrejection` μέσα στον Worker). */
+class SilentWorker implements WorkerLike {
+  terminated = false;
+  postMessage(): void { /* κανείς δεν ακούει */ }
+  addEventListener(): void { /* κανένα συμβάν δεν έρχεται ποτέ */ }
+  terminate(): void { this.terminated = true; }
+}
+
+describe('χειραψία εκκίνησης — ADR-929 Φ0.6 (μετρημένο ζωντανά: Worker νεκρός χωρίς `error` ⇒ πάνελ κολλημένο για πάντα)', () => {
+  it('Worker χωρίς χειραψία ⇒ ΟΛΑ τα εκκρεμή worker-unready, τερματισμός · οι επόμενες στο δίχτυ, χωρίς επαναγέννηση', async () => {
+    const silent = new SilentWorker();
+    const spawn = jest.fn(() => silent);
+    const client = createWorkerRpcClient<number, number>({ spawn, fallback: async (n) => -n, readyTimeoutMs: 20 });
+    await expect(Promise.all([client.call(1), client.call(2)])).resolves.toEqual([
+      { kind: 'failed', error: WORKER_RPC_UNREADY }, { kind: 'failed', error: WORKER_RPC_UNREADY },
+    ]);
+    expect(silent.terminated).toBe(true);
+    await expect(client.call(3)).resolves.toEqual(ok(-3));
+    expect(spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it('ο πραγματικός host στέλνει χειραψία ⇒ αργή απάντηση ΜΕΤΑ το όριο δεν είναι κατάρρευση', async () => {
+    const client = createWorkerRpcClient<number, number>({
+      spawn: () => new FakeWorker<number, number>(async (n) => { await delay(60); return n; }), readyTimeoutMs: 20,
+    });
+    await expect(client.call(7)).resolves.toEqual(ok(7));
+  });
+
+  it('η χειραψία ξαναοπλίζεται σε κάθε γέννηση (αδράνεια ⇒ νέος Worker ⇒ νέα αναμονή)', async () => {
+    const spawned: WorkerLike[] = [];
+    const spawn = jest.fn(() => { const w = spawned.length === 0 ? new FakeWorker<number, number>((n) => n) : new SilentWorker(); spawned.push(w); return w; });
+    const client = createWorkerRpcClient<number, number>({ spawn, idleTimeoutMs: 5, readyTimeoutMs: 20 });
+    await expect(client.call(1)).resolves.toEqual(ok(1));
+    await delay(15);
+    await expect(client.call(2)).resolves.toEqual({ kind: 'failed', error: WORKER_RPC_UNREADY });
+    expect(spawn).toHaveBeenCalledTimes(2);
+  });
+
+  it('messageerror ⇒ ΟΛΑ τα εκκρεμή failed (worker-messageerror), όχι σιωπή', async () => {
+    let worker: FakeWorker<number, number> | null = null;
+    const client = createWorkerRpcClient<number, number>({ spawn: () => (worker = new FakeWorker<number, number>(async (n) => { await delay(50); return n; })) });
+    const pending = client.call(1);
+    worker?.garble();
+    await expect(pending).resolves.toEqual({ kind: 'failed', error: WORKER_RPC_MESSAGE_ERROR });
   });
 });
 

@@ -15,13 +15,19 @@
  * 🔑 **Τερματισμός μετά από αδράνεια (`idleTimeoutMs`, ADR-929 Φ0.4)**: η μνήμη ενός WASM **δεν μικραίνει ποτέ** (μάθημα
  *   YuNet, `yunet-session.ts`) ⇒ ο Worker τερματίζεται όταν μείνει χωρίς εκκρεμή κλήση για τόσο χρόνο, και ξαναγεννιέται
  *   στην επόμενη. Χωρίς την επιλογή ⇒ ζει ως το `dispose` (η συμπεριφορά των υπαρχόντων Workers).
+ * 🔑 **Χειραψία εκκίνησης (ADR-929 Φ0.6, μετρημένο ζωντανά)**: ένας Worker που σκάει **πριν** γράψει τον ακροατή του δεν
+ *   στέλνει πάντα `error` (ασύγχρονη εκκίνηση webpack ⇒ `unhandledrejection` μέσα στον Worker). Χωρίς `{ ready: true }` σε
+ *   `readyTimeoutMs` ⇒ κατάρρευση (`worker-unready`), όπως και στο `messageerror`. Τα αιτήματα στέλνονται **αμέσως** (ο
+ *   browser τα κρατά στην ουρά του Worker)· η χειραψία αποφασίζει μόνο πότε σταματάμε να περιμένουμε.
  */
 
 import type {
   WorkerLike, WorkerRpcCallOptions, WorkerRpcCancel, WorkerRpcCancellableResult, WorkerRpcContext, WorkerRpcProgress,
   WorkerRpcReply, WorkerRpcRequest, WorkerRpcResult,
 } from './worker-rpc-protocol';
-import { isWorkerRpcProgress } from './worker-rpc-protocol';
+import {
+  isWorkerRpcProgress, isWorkerRpcReady, WORKER_RPC_MESSAGE_ERROR, WORKER_RPC_READY_TIMEOUT_MS, WORKER_RPC_UNREADY,
+} from './worker-rpc-protocol';
 
 export interface WorkerRpcClientOptions<Q, R, P = never> {
   /** Γεννά τον Worker — `null` όταν ο browser δεν μπορεί (SSR, παλιός browser, απαγόρευση CSP). */
@@ -37,6 +43,8 @@ export interface WorkerRpcClientOptions<Q, R, P = never> {
   readonly transferOf?: (body: Q) => Transferable[];
   /** Τερματισμός του Worker μετά από τόσα ms χωρίς εκκρεμή κλήση (βλ. κεφαλίδα). */
   readonly idleTimeoutMs?: number;
+  /** Χωρίς χειραψία σε τόσα ms από τη γέννηση ⇒ ο Worker θεωρείται νεκρός (προεπιλογή `WORKER_RPC_READY_TIMEOUT_MS`). */
+  readonly readyTimeoutMs?: number;
 }
 
 export interface WorkerRpcClient<Q, R, P = never> {
@@ -126,8 +134,8 @@ function spawnSafely(spawn: () => WorkerLike | null): WorkerLike | null {
   }
 }
 
-/** Το χρονόμετρο αδράνειας: ξεκινά όταν αδειάσει ο πίνακας, σταματά στην επόμενη κλήση. */
-function createIdleTimer(ms: number | undefined, expire: () => void): { readonly arm: () => void; readonly disarm: () => void } {
+/** Χρονόμετρο μίας λήξης — της αδράνειας (ξεκινά όταν αδειάσει ο πίνακας) και της χειραψίας (ξεκινά στη γέννηση). */
+function createOneShotTimer(ms: number | undefined, expire: () => void): { readonly arm: () => void; readonly disarm: () => void } {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const disarm = (): void => {
     if (timer !== null) clearTimeout(timer);
@@ -164,18 +172,20 @@ function sendRequest<Q, R, P>(
 export function createWorkerRpcClient<Q, R, P = never>(options: WorkerRpcClientOptions<Q, R, P>): WorkerRpcClient<Q, R, P> {
   let worker: WorkerLike | null = null;
   let broken = false;
-  const retire = (): void => { worker?.terminate(); worker = null; };
-  const idle = createIdleTimer(options.idleTimeoutMs, retire);
+  const handshake = createOneShotTimer(options.readyTimeoutMs ?? WORKER_RPC_READY_TIMEOUT_MS, () => crash(WORKER_RPC_UNREADY));
+  const retire = (): void => { handshake.disarm(); worker?.terminate(); worker = null; };
+  const idle = createOneShotTimer(options.idleTimeoutMs, retire);
   const table = createPendingTable<R, P>(idle.arm);
 
-  const crash = (event: ErrorEvent) => {
+  function crash(reason: string): void {
     broken = true;
     idle.disarm();
     retire();
-    table.failAll(event.message || 'worker-crashed');
-  };
+    table.failAll(reason);
+  }
   const receive = (data: unknown): void => {
-    if (isWorkerRpcProgress(data)) table.progress(data as WorkerRpcProgress<P>);
+    if (isWorkerRpcReady(data)) handshake.disarm();
+    else if (isWorkerRpcProgress(data)) table.progress(data as WorkerRpcProgress<P>);
     else table.settle(data as WorkerRpcReply<R>);
   };
   const ensure = (): WorkerLike | null => {
@@ -183,7 +193,9 @@ export function createWorkerRpcClient<Q, R, P = never>(options: WorkerRpcClientO
     worker = spawnSafely(options.spawn);
     if (worker === null) { broken = true; return null; }
     worker.addEventListener('message', (event) => receive(event.data));
-    worker.addEventListener('error', crash);
+    worker.addEventListener('error', (event) => crash(event.message || 'worker-crashed'));
+    worker.addEventListener('messageerror', () => crash(WORKER_RPC_MESSAGE_ERROR));
+    handshake.arm();
     return worker;
   };
 

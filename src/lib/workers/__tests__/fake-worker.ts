@@ -29,6 +29,7 @@ export class FakeWorker<Q, R> implements WorkerLike {
   private readonly toClient: Listener[] = [];
   private readonly errors: ErrorListener[] = [];
   private readonly toHost: Listener[] = [];
+  private readonly messageErrors: Listener[] = [];
 
   constructor(handle: (body: Q) => Promise<R> | R) {
     const scope: WorkerRpcScope = {
@@ -48,12 +49,16 @@ export class FakeWorker<Q, R> implements WorkerLike {
     setTimeout(() => this.toHost.forEach((l) => l({ data } as MessageEvent)), 0);
   }
 
-  addEventListener(type: 'message' | 'error', listener: Listener | ErrorListener): void {
+  addEventListener(type: 'message' | 'error' | 'messageerror', listener: Listener | ErrorListener): void {
     if (type === 'message') this.toClient.push(listener as Listener);
-    else this.errors.push(listener as ErrorListener);
+    else if (type === 'error') this.errors.push(listener as ErrorListener);
+    else this.messageErrors.push(listener as Listener);
   }
 
   terminate(): void { this.terminated = true; }
 
   crash(message: string): void { this.errors.forEach((l) => l({ message } as ErrorEvent)); }
+
+  /** Μήνυμα που δεν αποσειριοποιήθηκε στον κύριο νήμα (ο browser στέλνει `messageerror`). */
+  garble(): void { this.messageErrors.forEach((l) => l({ data: null } as MessageEvent)); }
 }

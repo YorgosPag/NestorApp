@@ -13,7 +13,7 @@
  */
 
 import type { WorkerRpcContext, WorkerRpcHandler, WorkerRpcReply, WorkerRpcRequest, WorkerRpcScope } from './worker-rpc-protocol';
-import { isWorkerRpcCancel } from './worker-rpc-protocol';
+import { isWorkerRpcCancel, WORKER_RPC_READY } from './worker-rpc-protocol';
 
 /** Το πλαίσιο μιας απάντησης χωρίς κανάλι (π.χ. άμεση κλήση σε test): ποτέ ακυρωμένο, καμία πρόοδος. */
 function detachedContext<P>(): WorkerRpcContext<P> {
@@ -66,4 +66,6 @@ export function serveWorkerRpc<Q, R, P = never>(
       scope.postMessage(reply, reply.ok && transferOf !== undefined ? transferOf(reply.value) : []);
     });
   });
+  // Χειραψία ΜΕΤΑ τον ακροατή: φτάνει στον πελάτη μόνο αν ο Worker αξιολογήθηκε ολόκληρος (βλ. `WorkerRpcReady`).
+  scope.postMessage(WORKER_RPC_READY);
 }

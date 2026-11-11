@@ -389,12 +389,12 @@ const nextConfig = {
 
     // [ENTERPRISE] Fix ESM compatibility for .mjs files (pdfjs-dist)
     // This prevents "Object.defineProperty called on non-object" error
+    // ⚠️ ΟΧΙ για `.mjs` που ζητούνται ως URL (`new URL('x.mjs', import.meta.url)`): εκεί ο
+    //    κανόνας έκανε το URL module JS και σκότωνε σιωπηλά τον Worker του OCR στην
+    //    παραγωγή (ADR-929 Φ0.6). Το «γιατί» + η άγκυρα: `scripts/webpack/node-modules-mjs-rule.js`.
     if (!isServer) {
-      config.module.rules.push({
-        test: /\.mjs$/,
-        include: /node_modules/,
-        type: 'javascript/auto',
-      });
+      const { nodeModulesMjsRule } = require('./scripts/webpack/node-modules-mjs-rule');
+      config.module.rules.push(nodeModulesMjsRule());
     }
 
     // [ENTERPRISE] Copy PDF worker to public folder

@@ -301,6 +301,8 @@ describe('κάθε αποτυχία με όνομα', () => {
 
   it.each([
     ['worker-unavailable', 'worker-unavailable'],
+    ['worker-unready', 'worker-unavailable'],
+    ['worker-messageerror', 'worker-unavailable'],
     ['ocr-asset/integrity', 'models-unavailable'],
     ['boom', 'ocr-failed'],
   ] as const)('Worker: «%s» ⇒ %s', async (error, reason) => {

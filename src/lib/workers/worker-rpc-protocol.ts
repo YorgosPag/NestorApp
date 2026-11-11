@@ -41,6 +41,31 @@ export interface WorkerRpcProgress<P> {
   readonly progress: P;
 }
 
+/**
+ * **Η χειραψία εκκίνησης** (ADR-929 Φ0.6, μετρημένο ζωντανά): ο οικοδεσπότης τη στέλνει **μόλις** γράψει τον ακροατή του.
+ * Αν η αξιολόγηση του Worker σκάσει **πριν** φτάσει εκεί, ο webpack ξεκινά τον Worker ασύγχρονα (`r.x = () => r.e(…).then(…)`),
+ * οπότε το σφάλμα γίνεται `unhandledrejection` **μέσα** στον Worker. Αυτό **δεν** φτάνει ποτέ ως `error` στο αντικείμενο
+ * `Worker`, και ο πελάτης θα έστελνε αιτήματα στο κενό για πάντα. Χωρίς χειραψία μέσα σε `readyTimeoutMs` ⇒ ο Worker είναι νεκρός.
+ * Πρότυπο: το «ready» του Comlink (GoogleChromeLabs/comlink #635).
+ */
+export interface WorkerRpcReady {
+  readonly ready: true;
+}
+
+export const WORKER_RPC_READY: WorkerRpcReady = { ready: true };
+
+/** Χωρίς χειραψία σε τόσο χρόνο από τη γέννηση ⇒ ο Worker δεν ξεκίνησε ποτέ (η εκκίνηση είναι εκατοστά του δευτερολέπτου). */
+export const WORKER_RPC_READY_TIMEOUT_MS = 15_000;
+
+/** Το σφάλμα των κλήσεων όταν ο Worker δεν έστειλε χειραψία εγκαίρως. */
+export const WORKER_RPC_UNREADY = 'worker-unready';
+
+/** Το σφάλμα των κλήσεων όταν ένα μήνυμα δεν μπόρεσε να αποσειριοποιηθεί στον κύριο νήμα (`messageerror`). */
+export const WORKER_RPC_MESSAGE_ERROR = 'worker-messageerror';
+
+export const isWorkerRpcReady = (data: unknown): data is WorkerRpcReady =>
+  typeof data === 'object' && data !== null && (data as { ready?: unknown }).ready === true && !('id' in data);
+
 export const isWorkerRpcCancel = (data: unknown): data is WorkerRpcCancel =>
   typeof data === 'object' && data !== null && typeof (data as { cancel?: unknown }).cancel === 'number';
 
@@ -87,6 +112,7 @@ export interface WorkerLike {
   postMessage(message: unknown, transfer?: Transferable[]): void;
   addEventListener(type: 'message', listener: (event: MessageEvent) => void): void;
   addEventListener(type: 'error', listener: (event: ErrorEvent) => void): void;
+  addEventListener(type: 'messageerror', listener: (event: MessageEvent) => void): void;
   terminate(): void;
 }
 
