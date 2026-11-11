@@ -6,7 +6,7 @@ import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { ANY_SLOT } from '@/subapps/catalog/types/product';
-import { planReviewStep, reviewStepOf } from '../review-history';
+import { isGroupStep, planReviewStep, reviewStepOf } from '../review-history';
 
 jest.mock('@/services/catalog/catalog-import-api.client', () => ({}));
 
@@ -104,5 +104,16 @@ describe('planReviewStep — αναίρεση και επανάληψη', () => 
       decisions: [{ rowKey: 'r0', targetKey: keyOf('a'), decision: null }],
       edits: [{ rowKey: 'r0', targetKey: keyOf('a'), text: '', revert: true }],
     });
+  });
+});
+
+describe('isGroupStep — ποια πράξη παίρνει toast «Αναίρεση» (Β9γ)', () => {
+  it('ομαδική (πάνω από ένα πεδίο, π.χ. «Αποδοχή γραμμής») ⇒ ναι · ένα πεδίο ⇒ όχι (αναιρείται στη θέση του)', () => {
+    const row = reviewStepOf(proposal([field('a'), field('b')]), {
+      decisions: [{ rowKey: 'r0', targetKey: keyOf('a'), decision: 'accept' }, { rowKey: 'r0', targetKey: keyOf('b'), decision: 'accept' }],
+    });
+    const single = reviewStepOf(proposal([field('a')]), decide('a', 'accept'));
+    expect(row && isGroupStep(row.after.label)).toBe(true);
+    expect(single && isGroupStep(single.after.label)).toBe(false);
   });
 });

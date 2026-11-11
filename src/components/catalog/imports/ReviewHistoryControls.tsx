@@ -5,7 +5,7 @@
  * @module components/catalog/imports/ReviewHistoryControls
  *
  * 🔑 **Ονομασμένο βήμα** (λίστα αναίρεσης του Revit): το κουμπί λέει **τι** θα αναιρεθεί — «Αναίρεση: Αποδοχή «Κωδικός»» —
- *    με τη λέξη του πεδίου από τον ίδιο ονοματοδότη με τη λίστα (`useTargetLabeler`).
+ *    με το όνομα από τον ΕΝΑ ονοματοδότη βημάτων (`useStepName`, κοινός με το toast του Β9γ).
  * 🔑 Το πληκτρολόγιο δηλώνεται στον αναγνώστη οθόνης (`aria-keyshortcuts`), και η λέξη μένει ορατή (όχι μόνο εικονίδιο).
  */
 
@@ -14,24 +14,8 @@ import { Redo2, Undo2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useImportText } from './import-text';
-import { useTargetLabeler } from './import-target-label';
-import type { ReviewStepKind, ReviewStepLabel } from './review-history';
 import type { ReviewHistory } from './use-review-history';
-
-const STEP_KEYS: Readonly<Record<ReviewStepKind, string>> = {
-  accept: 'review.history.step.accept',
-  reject: 'review.history.step.reject',
-  undoDecision: 'review.history.step.undoDecision',
-  edit: 'review.history.step.edit',
-  revertEdit: 'review.history.step.revertEdit',
-  acceptRow: 'review.history.step.acceptRow',
-};
-
-function useStepName(): (label: ReviewStepLabel | null) => string | null {
-  const { t } = useImportText();
-  const labelOf = useTargetLabeler();
-  return (label) => (label ? t(STEP_KEYS[label.kind], { field: labelOf(label), count: label.count }) : null);
-}
+import { useStepName } from './use-review-step-name';
 
 export function ReviewHistoryControls({ history, disabled }: { readonly history: ReviewHistory; readonly disabled: boolean }) {
   const { t } = useImportText();

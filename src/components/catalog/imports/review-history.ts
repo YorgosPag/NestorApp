@@ -42,6 +42,12 @@ export interface ReviewStepLabel {
   readonly count: number;
 }
 
+/**
+ * **Ομαδική πράξη** = πάνω από ένα πεδίο με μία κίνηση (§5.5.2 Β9γ). Μόνο αυτή παίρνει toast «Αναίρεση» (Gmail): η πράξη σε ΕΝΑ
+ * πεδίο φαίνεται ήδη στη θέση της και αναιρείται εκεί (↺) — toast σε κάθε κλικ θα ήταν θόρυβος.
+ */
+export const isGroupStep = (label: ReviewStepLabel): boolean => label.count > 1;
+
 /** Μία πλευρά του βήματος: η πρόταση, τα πεδία της, και το όνομα της ενέργειας (ίδιο και στις δύο πλευρές). */
 export interface ReviewStep {
   readonly proposalId: string;
