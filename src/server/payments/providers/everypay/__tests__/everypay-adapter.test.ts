@@ -14,8 +14,10 @@ const credentials: EverypayCredentials = {
 };
 const provider = createEverypayProvider(credentials);
 
+/** Όπως η Everypay: `base64_encode(hash_hmac('sha256', …))` — base64 του **hex** του HMAC. */
 function signedHeaders(body: string, secret = credentials.secretKey): Headers {
-  return new Headers({ 'X-Signature-SHA256': createHmac('sha256', secret).update(body).digest('base64') });
+  const hex = createHmac('sha256', secret).update(body).digest('hex');
+  return new Headers({ 'X-Signature-SHA256': Buffer.from(hex).toString('base64') });
 }
 
 function irisHash(payload: Record<string, unknown>, secret = credentials.secretKey): string {

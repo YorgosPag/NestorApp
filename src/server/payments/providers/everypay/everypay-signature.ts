@@ -3,7 +3,10 @@
  * @description Δύο μορφές, και οι δύο HMAC-SHA256 με το **secret key** του εμπόρου:
  *
  *   1. **Webhooks** (Notification paid/expired · Refund · New payment): κεφαλίδα `X-Signature-SHA256` =
- *      base64(HMAC-SHA256(ωμό σώμα)). Κρίνεται πάνω στο **ωμό** σώμα, πριν από κάθε ανάλυση.
+ *      base64(**κείμενο hex** του HMAC-SHA256(ωμό σώμα)) — ο τύπος της τεκμηρίωσης είναι
+ *      `base64_encode(hash_hmac('sha256', $payload, $secretKey))`, και το `hash_hmac` της PHP επιστρέφει **hex**
+ *      (64 χαρακτήρες), όχι τα 32 bytes. Κρίνεται πάνω στο **ωμό** σώμα, πριν από κάθε ανάλυση.
+ *      ⚠️ Μέχρι 2026-11-12 κρίναμε base64 των **bytes** ⇒ κάθε γνήσιο webhook `signature-invalid` (ADR §5.9 #3).
  *   2. **IRIS** (callback + webhook): πεδίο `hash` = base64(«υπογραφή|JSON»), με HMAC-SHA256 του JSON. Τα στοιχεία
  *      (`token`, `md`) διαβάζονται **από το υπογεγραμμένο JSON**, ποτέ από τα εξωτερικά πεδία — αλλιώς κάποιος θα
  *      κολλούσε έγκυρο hash πάνω σε άλλο token.
@@ -57,7 +60,13 @@ export function jsonObjectOrNull(text: string): Record<string, unknown> | null {
   }
 }
 
-/** Webhook: υπογραφή κεφαλίδας πάνω στο ωμό σώμα ⇒ το σώμα ως αντικείμενο. */
+/** Κεφαλίδα webhook ⇒ το κείμενο hex που κωδικοποιεί, ή `null` (δεν είναι base64 ενός HMAC-SHA256 σε hex). */
+function base64HexDigestOrNull(value: string): string | null {
+  const decoded = Buffer.from(value.trim(), 'base64').toString('utf8');
+  return HEX_SHA256.test(decoded) ? decoded.toLowerCase() : null;
+}
+
+/** Webhook: υπογραφή κεφαλίδας (base64 του hex) πάνω στο ωμό σώμα ⇒ το σώμα ως αντικείμενο. */
 export function judgeEverypayBodySignature(
   rawBody: string,
   signatureHeader: string | null,
@@ -65,7 +74,7 @@ export function judgeEverypayBodySignature(
 ): EverypaySignedPayload {
   if (!signatureHeader?.trim()) return { valid: false, reason: 'signature-missing' };
   const expected = hmacHex(secretKey, rawBody);
-  const provided = base64DigestAsHex(signatureHeader);
+  const provided = base64HexDigestOrNull(signatureHeader);
   if (provided === null || !equalsInConstantTime(provided, expected)) return { valid: false, reason: 'signature-invalid' };
   const payload = jsonObjectOrNull(rawBody);
   return payload === null ? { valid: false, reason: 'payload-malformed' } : { valid: true, payload };

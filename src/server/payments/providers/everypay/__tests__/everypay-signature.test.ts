@@ -10,8 +10,10 @@ import { judgeEverypayBodySignature, judgeEverypayIrisHash } from '../everypay-s
 
 const SECRET = 'sk_test_secret';
 
+/** Ο τύπος της τεκμηρίωσης: `base64_encode(hash_hmac('sha256', $payload, $secretKey))` — base64 του **hex**. */
 function bodySignature(body: string, secret = SECRET): string {
-  return createHmac('sha256', secret).update(body, 'utf8').digest('base64');
+  const hex = createHmac('sha256', secret).update(body, 'utf8').digest('hex');
+  return Buffer.from(hex, 'utf8').toString('base64');
 }
 
 function irisHash(json: string, encoding: 'hex' | 'base64', secret = SECRET): string {
@@ -34,6 +36,11 @@ describe('judgeEverypayBodySignature', () => {
   it('απορρίπτει αλλοιωμένο σώμα (ένας χαρακτήρας)', () => {
     const tampered = body.replace('pnt_abc', 'pnt_abd');
     expect(judgeEverypayBodySignature(tampered, bodySignature(body), SECRET)).toEqual({ valid: false, reason: 'signature-invalid' });
+  });
+
+  it('απορρίπτει base64 των 32 bytes του ΙΔΙΟΥ HMAC — η μορφή της Everypay είναι base64 του hex (§5.9 #3)', () => {
+    const rawDigest = createHmac('sha256', SECRET).update(body, 'utf8').digest('base64');
+    expect(judgeEverypayBodySignature(body, rawDigest, SECRET)).toEqual({ valid: false, reason: 'signature-invalid' });
   });
 
   it('απορρίπτει απούσα κεφαλίδα', () => {

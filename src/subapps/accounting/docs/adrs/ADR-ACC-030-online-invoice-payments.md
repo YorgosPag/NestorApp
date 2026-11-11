@@ -74,7 +74,7 @@
 | API | `https://sandbox-api.everypay.gr` / `https://api.everypay.gr` · Basic auth (`sk_…:`) · form-encoded · ποσά σε cents |
 | Κάρτα + Apple Pay + Google Pay | `POST /notifications` ⇒ hosted σελίδα `payment_link_url` (`pnt_…`), `metadata`, `expiration_date` (≥ 5′), `locale`, `skip_notify=1` · `GET /notifications/{id}` ⇒ `payment` · `DELETE` όσο Pending |
 | IRIS (Direct) | `POST /iris/sessions` ⇒ `signature` ⇒ form POST στο payform (`flow=direct`) ⇒ τράπεζα / QR **στον πάροχο** ⇒ callback (`token src_…`, `md`, `hash`) ⇒ **εμείς** `POST /payments {token, amount}` (μία φορά ανά token· 2η = `41001`) |
-| Webhooks | `X-Signature-SHA256` = base64(HMAC-SHA256(raw body, secret key)) · IRIS: πεδίο `hash` = base64(«υπογραφή\|JSON») με HMAC-SHA256 του JSON · **κανένα event id**, **κανένα idempotency header** |
+| Webhooks | `X-Signature-SHA256` = base64(**κείμενο hex** του HMAC-SHA256(raw body, secret key)) — `base64_encode(hash_hmac(…))` της PHP, όχι base64 των 32 bytes (§5.9 #3) · IRIS: πεδίο `hash` = base64(«υπογραφή\|JSON») με HMAC-SHA256 του JSON · **κανένα event id**, **κανένα idempotency header** |
 | Πληρωμές / επιστροφές | `GET /payments/{id}` · `GET /payments?merchant_ref=` · `POST /refunds {payment, amount?}` (μερικές) · `GET /refunds?payment=` |
 
 ⚠️ **Ανοιχτό προς επαλήθευση στο sandbox**: η κωδικοποίηση της υπογραφής πριν από το `|` στο IRIS `hash` (hex ή
@@ -172,6 +172,18 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
    sandbox τα ενεργοποιεί η υποστήριξη — docs «Sandbox Account» βήμα 3). Ο Giorgio έστειλε 2026-11-11 email στο
    `support@everypay.gr` ζητώντας ενεργοποίηση IRIS (Direct) · κάρτας μέσω Payment Notifications · Apple Pay /
    Google Pay — αίτημα υποστήριξης **00128279** (παραλαβή επιβεβαιώθηκε ίδια μέρα). **Αναμονή απάντησης**· μετά: επανάληψη της δοκιμής IRIS, καμία αλλαγή κώδικα αν δεν βγει νέο σφάλμα.
+3. 🔴 **Κάθε γνήσιο webhook ⇒ `401 signature-invalid`** (2026-11-12, πληρωμή κάρτας Α-10 12,40 €). Με το `+0000`
+   το εύρημα 1 έκλεισε: η ειδοποίηση δημιουργήθηκε, η hosted σελίδα ζήτησε 3DS (δοκιμαστικό) και η Everypay
+   **χρέωσε** (`pmt_MAFG2v3iKbk6JYS…`, συναλλαγή 53433). Τα δύο webhooks όμως απορρίφθηκαν (log
+   `Payment webhook refused … signature-invalid`) ⇒ το Α-10 έμεινε «Προς πληρωμή». Αιτία: η τεκμηρίωση δίνει
+   `base64_encode(hash_hmac('sha256', $payload, $secretKey))` — το `hash_hmac` της PHP επιστρέφει **hex** (64
+   χαρακτήρες), άρα η κεφαλίδα είναι base64 **του κειμένου hex**· εμείς κρίναμε base64 των **32 bytes**, και τα
+   tests έφτιαχναν την υπογραφή με την **ίδια** λάθος υπόθεση (πράσινα, ενώ η παραγωγή απέρριπτε τα πάντα).
+   Διόρθωση **μόνο στον adapter**: `judgeEverypayBodySignature` (`everypay-signature.ts`) αποκωδικοποιεί σε hex·
+   τα test helpers ακολουθούν πλέον τον τύπο της τεκμηρίωσης + test που καρφώνει ότι η μορφή «bytes» απορρίπτεται.
+   Επίσης: η άρνηση υπογραφής είναι `warn` ⇒ **καμία** ειδοποίηση Telegram — το έπιασαν μόνο τα logs.
+   Παρατήρηση §5.8 #4: μετά την πληρωμή η hosted σελίδα **δεν** επιστρέφει στον έμπορο (δείχνει απόδειξη) —
+   η νέα καρτέλα ήταν σωστή επιλογή.
 
 ## 6. Εκτός εμβέλειας
 
@@ -188,3 +200,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-11 | Βήματα 2–6: port + adapter Everypay · έναρξη πληρωμής · webhook · επιστροφή browser · συμφιλίωση cron · «Πληρωμή τώρα» στη δημόσια σελίδα · `isPayableByLink` και για κάρτα/IRIS. |
 | 2026-11-11 | §5.9 ζωντανή επαλήθευση sandbox: ρύθμιση dashboard/κλειδιών· εύρημα 1 `expiration_date` σε μορφή `YYYY-MM-DDTHH:mm:ss+0000` (`everypayDateTime`). |
 | 2026-11-11 | §5.9 εύρημα 2: IRIS «Invalid account setup» = ρύθμιση λογαριασμού sandbox· email στην υποστήριξη Everypay για ενεργοποίηση IRIS / κάρτας / Apple Pay / Google Pay. |
+| 2026-11-12 | §5.9 εύρημα 3: η κάρτα χρεώθηκε στο sandbox (εύρημα 1 κλειστό) αλλά κάθε webhook `signature-invalid` — η κεφαλίδα είναι base64 του **hex** του HMAC· διόρθωση στο `judgeEverypayBodySignature` + test helpers· §4 πίνακας διορθώθηκε. |
