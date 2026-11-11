@@ -23,6 +23,7 @@ import { ImportPriceTarget } from './ImportPriceTarget';
 import { SET_ASIDE_KEYS, TEXTLESS_KEYS, useImportText } from './import-text';
 import { ProposalAxisOptions } from './ProposalAxisOptions';
 import { ProposalReview } from './ProposalReview';
+import { ReviewHistoryControls } from './ReviewHistoryControls';
 import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
 import { useImportAssets } from './use-import-assets';
 import { ImportSupplierSlot, PriceLineNoteSlot, XChangeReportSlot } from './import-surfaces';
@@ -242,7 +243,13 @@ function BatchProposals(props: BatchProposalsProps) {
     <div className="flex min-h-0 flex-col gap-3 overflow-auto">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="m-0 text-lg font-semibold">{batch.fileName}</h2>
-        {open ? <Button type="button" variant="outline" onClick={() => void workspace.discard()}>{t('batch.discard')}</Button> : null}
+        {open ? (
+          <span className="flex flex-wrap items-center gap-2">
+            {/* §5.5.2 Β9β: μία στοίβα για όλη την οθόνη — κουμπιά με όνομα βήματος + Ctrl+Z / Ctrl+Shift+Z. */}
+            <ReviewHistoryControls history={workspace.history} disabled={upgrade !== null} />
+            <Button type="button" variant="outline" onClick={() => void workspace.discard()}>{t('batch.discard')}</Button>
+          </span>
+        ) : null}
       </header>
       {open ? (
         <ImportPriceTarget batch={batch} disabled={workspace.savingPriceTarget || upgrade !== null} onChange={(id) => void workspace.setPriceTarget(id)}

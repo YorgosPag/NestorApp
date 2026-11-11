@@ -94,7 +94,7 @@ describe('grid-history', () => {
   });
   it('άδεια στοίβα ⇒ τίποτα να εφαρμοστεί, ίδια στοίβα', () => {
     const empty = emptyHistory<string>();
-    expect(undoHistory(empty)).toEqual({ history: empty, apply: null });
+    expect(undoHistory(empty)).toEqual({ history: empty, apply: null, entry: null });
     expect(redoHistory(empty).apply).toBeNull();
     expect(canUndo(empty)).toBe(false);
   });

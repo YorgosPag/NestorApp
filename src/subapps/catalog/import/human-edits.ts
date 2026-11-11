@@ -18,6 +18,10 @@ import { importCellText, importTargetKey } from './proposal-values';
 /** Η διεύθυνση ενός πεδίου μέσα στην πρόταση: γραμμή × στόχος. */
 export const fieldAddress = (rowKey: string, targetKey: string): string => `${rowKey}\u0000${targetKey}`;
 
+/** Οι διορθώσεις ανά διεύθυνση πεδίου (§5.5.2 Β6) — η ίδια διεύθυνση με τον γραφέα. Τη ρωτούν η λίστα και η στοίβα αναίρεσης (Β9β). */
+export const editsByAddress = (edits: readonly ImportValueEdit[] | undefined): ReadonlyMap<string, ImportValueEdit> =>
+  new Map((edits ?? []).map((edit) => [fieldAddress(edit.rowKey, edit.targetKey), edit]));
+
 /** Τα κοινά κελιά του μοντέλου έχουν δική τους «γραμμή». */
 export const sharedRowKey = (groupKey: string): string => `model:${groupKey}`;
 

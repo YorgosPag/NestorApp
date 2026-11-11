@@ -9,6 +9,7 @@
  * 🔑 **Κάθε απάντηση αντικαθιστά την πρόταση**: ο διακομιστής ξανακρίνει σε κάθε απόφαση, άρα η οθόνη δεν μαντεύει ποτέ τα ευρήματα.
  *    Η απόφαση φαίνεται αμέσως και στέλνεται σειριακά (`proposal-change-queue`, §5.5.2 Α5)· η επαναφόρτωση τη σέβεται.
  * 📡 **Ζωντανή σε κάθε καρτέλα** (§5.5.2, ADR-905): η όψη ακούει το σήμα της παρτίδας (`use-live-import-batch-view`).
+ * ↶ **Αναίρεση / επανάληψη** (§5.5.2 Β9β): το `change` που βγαίνει από εδώ γράφει και στη στοίβα (`use-review-history`).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,6 +25,7 @@ import { useAxisOptions } from './use-axis-options';
 import { useLineDecisions } from './use-line-decisions';
 import { useLiveImportBatchView } from './use-live-import-batch-view';
 import { usePageUpgrade } from './use-page-upgrade';
+import { useReviewHistory } from './use-review-history';
 import { useSupplierMemory } from './use-supplier-memory';
 
 /** Οι σελίδες που μένουν: όσες δεν έχουν κριθεί, και όσες απέτυχαν όταν ζητηθεί ρητά επανάληψη. */
@@ -95,6 +97,8 @@ export function useImportBatch(batchId: string) {
   }, [reload, setFailure, view]);
 
   const changes = useProposalChangeQueue({ setView, setFailure, reload, queued });
+  // §5.5.2 Β9β: κάθε αλλαγή πεδίου γράφεται στη στοίβα αναίρεσης εδώ, στο ΕΝΑ σημείο από όπου περνούν όλες.
+  const review = useReviewHistory(view, changes.change, changes.saving.size);
   // §5.5.2 (ADR-905): η ανανέωση από το σήμα περιμένει τις αισιόδοξες αλλαγές **και** τις δικές μας επαναφορτώσεις.
   useReleaseWhenSettled(hold, changes.saving.size + refreshing, release);
   const reader = usePageReader(batchId, view, setFailure, reload);
@@ -102,7 +106,7 @@ export function useImportBatch(batchId: string) {
   const priceTarget = usePriceTarget(view, accept, setFailure);
   const supplier = useSupplierMemory({ view, accept, setFailure });
   const axisOptions = useAxisOptions(view?.batch.id ?? null, accept, setFailure);
-  return { view, failure, reload, discard, ...reader, upgrade, ...changes, ...useLineDecisions(changes.line), ...priceTarget, supplier, axisOptions };
+  return { view, failure, reload, discard, ...reader, upgrade, ...changes, change: review.change, history: review.history, ...useLineDecisions(changes.line), ...priceTarget, supplier, axisOptions };
 }
 
 /** §5.5.2 Β4 Δ1: ο τιμοκατάλογος της παρτίδας. Η απάντηση είναι όλη η όψη, με τις ξανασχεδιασμένες προτάσεις τιμών. */

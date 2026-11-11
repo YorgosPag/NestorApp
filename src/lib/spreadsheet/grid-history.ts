@@ -45,23 +45,30 @@ export interface HistoryStep<P> {
   readonly history: History<P>;
   /** Τι πρέπει να εφαρμόσει ο καταναλωτής — `null` ⇒ τίποτα να αναιρεθεί/επαναληφθεί. */
   readonly apply: P | null;
+  /**
+   * Ολόκληρο το βήμα που μετακινήθηκε — `null` όταν δεν υπήρχε. Το χρειάζεται καταναλωτής που κρίνει **και** την πλευρά από την
+   * οποία φεύγει (ADR-923 §5.5.2 Β9β: αναιρείς μόνο ό,τι είναι ακόμη όπως το άφησες).
+   */
+  readonly entry: HistoryEntry<P> | null;
 }
 
 export function undoHistory<P>(history: History<P>): HistoryStep<P> {
   const entry = history.past[history.past.length - 1];
-  if (!entry) return { history, apply: null };
+  if (!entry) return { history, apply: null, entry: null };
   return {
     history: { past: history.past.slice(0, -1), future: [entry, ...history.future], limit: history.limit },
     apply: entry.before,
+    entry,
   };
 }
 
 export function redoHistory<P>(history: History<P>): HistoryStep<P> {
   const entry = history.future[0];
-  if (!entry) return { history, apply: null };
+  if (!entry) return { history, apply: null, entry: null };
   return {
     history: { past: [...history.past, entry], future: history.future.slice(1), limit: history.limit },
     apply: entry.after,
+    entry,
   };
 }
 

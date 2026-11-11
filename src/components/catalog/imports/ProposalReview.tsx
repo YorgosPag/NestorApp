@@ -16,7 +16,7 @@ import { Undo2, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { fieldAddress } from '@/subapps/catalog/import/human-edits';
+import { editsByAddress, fieldAddress } from '@/subapps/catalog/import/human-edits';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportProposalField, ImportProposalRow, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
@@ -70,9 +70,6 @@ type RowProps = Pick<ProposalReviewProps, 'proposal' | 'selectedKey' | 'focusReq
   readonly decidable: boolean;
 };
 
-/** §5.5.2 Β6: οι διορθώσεις του ανθρώπου ανά διεύθυνση πεδίου — η ίδια διεύθυνση με τον διακομιστή (`fieldAddress`). */
-const editsOf = (proposal: ImportProposalWire): ReadonlyMap<string, ImportValueEdit> =>
-  new Map((proposal.edits ?? []).map((edit) => [fieldAddress(edit.rowKey, edit.targetKey), edit]));
 
 /** Το κλειδί αναθεώρησης ενός πεδίου — το ίδιο που κρατά ο κάτοχος και τα πλαίσια του PDF. */
 const fieldKeyOf = (proposalId: string, row: ImportProposalRow, field: ImportProposalField): string =>
@@ -114,7 +111,7 @@ function FieldEntry({ field, row, proposal, edits, selectedKey, focusRequested =
 function RowFields(props: RowProps) {
   const { row, proposal, decidable } = props;
   const { t } = useImportText();
-  const edits = useMemo(() => editsOf(proposal), [proposal]);
+  const edits = useMemo(() => editsByAddress(proposal.edits), [proposal]);
   return (
       <table className="w-full border-collapse text-sm">
         <thead>

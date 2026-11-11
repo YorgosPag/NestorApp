@@ -13,12 +13,12 @@ import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
 import type { ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import { PRICE_FIELD_KEYS, TRADE_FIELD_KEYS, useImportText } from './import-text';
 
-type TargetLabeler = (field: ImportProposalField) => string;
+type TargetLabeler = (field: Pick<ImportProposalField, 'target'>) => string;
 
 export function useTargetLabeler(): TargetLabeler {
   const { t } = useImportText();
   const attributes = useCatalogCollection('CATALOG_ATTRIBUTES');
-  return useCallback((field: ImportProposalField) => {
+  return useCallback((field: Pick<ImportProposalField, 'target'>) => {
     const { target } = field;
     if (target.kind === 'price') return t(PRICE_FIELD_KEYS[target.field]);
     if (target.kind === 'modelCode') return t('mapping.modelCode');

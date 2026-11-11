@@ -189,6 +189,22 @@
     "decisionHuman": "your decision",
     "decisionUndo": "Undo",
     "decisionUndoFor": "Undo your decision for «{field}» — back to the automatic judgement",
+    "history": {
+      "title": "Undo and redo",
+      "undo": "Undo",
+      "redo": "Redo",
+      "undoNamed": "Undo: {action}",
+      "redoNamed": "Redo: {action}",
+      "skipped": "{count, plural, one {# field was not undone: it changed meanwhile in another tab or by another user, or the proposal is no longer pending} other {# fields were not undone: they changed meanwhile in another tab or by another user, or the proposal is no longer pending}}",
+      "step": {
+        "accept": "Accept «{field}»",
+        "reject": "Reject «{field}»",
+        "undoDecision": "Undo decision «{field}»",
+        "edit": "Edit «{field}»",
+        "revertEdit": "Restore value «{field}»",
+        "acceptRow": "{count, plural, one {Accept row · # field} other {Accept row · # fields}}"
+      }
+    },
     "nothingToApply": "Same as live — nothing to apply",
     "saving": "Saving…",
     "summaryTitle": "Proposal summary",

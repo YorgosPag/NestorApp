@@ -53,7 +53,7 @@ export type GridKeyIntent =
   | { readonly kind: 'cancel' }
   /** `Delete` / `Backspace` σε πλοήγηση: άδειασε την επιλογή. */
   | { readonly kind: 'clear' }
-  | { readonly kind: 'history'; readonly direction: 'undo' | 'redo' }
+  | { readonly kind: 'history'; readonly direction: HistoryDirection }
   | { readonly kind: 'selectAll' }
   /** `Ctrl+D`: γέμισμα προς τα κάτω (Excel). */
   | { readonly kind: 'fillDown' }
@@ -83,12 +83,26 @@ function moveOrExtend(move: GridMove, mod: GridKeyModifiers, mode: GridEditMode)
   return mod.shiftKey && mode === 'nav' ? { kind: 'extend', move } : { kind: 'move', move };
 }
 
+export type HistoryDirection = 'undo' | 'redo';
+
+/**
+ * **Η μία** ερμηνεία των πλήκτρων αναίρεσης/επανάληψης (ADR-923 §5.5.2 Β9β): `Ctrl/Cmd+Z` ⇒ αναίρεση · `Ctrl/Cmd+Shift+Z` ή
+ * `Ctrl/Cmd+Y` ⇒ επανάληψη, με τη **φυσική** θέση (`KeyZ`), γιατί σε ελληνική διάταξη φτάνει `key: 'ζ'`. Την ρωτούν το πλέγμα
+ * (`ctrlIntent`) και η οθόνη ελέγχου εισαγωγής — **ποιος** δικαιούται το πλήκτρο το αποφασίζει ο καταναλωτής (κατάσταση γραφής
+ * εδώ, `shouldGlobalShortcutYield` στο επίπεδο του παραθύρου). Εξήχθη αυτούσια από το `ctrlIntent`: καμία αλλαγή συμπεριφοράς.
+ */
+export function historyDirectionOf(mod: GridKeyModifiers): HistoryDirection | null {
+  if (!ctrlOf(mod)) return null;
+  if (mod.code === 'KeyZ') return mod.shiftKey ? 'redo' : 'undo';
+  return mod.code === 'KeyY' ? 'redo' : null;
+}
+
 /** Συντομεύσεις `Ctrl` — μόνο σε πλοήγηση· σε γραφή ανήκουν στο πεδίο (αναίρεση κειμένου, επιλογή κειμένου). */
 function ctrlIntent(mod: GridKeyModifiers, mode: GridEditMode): GridKeyIntent | null {
   if (!ctrlOf(mod) || mode !== 'nav') return null;
+  const direction = historyDirectionOf(mod);
+  if (direction) return { kind: 'history', direction };
   switch (mod.code) {
-    case 'KeyZ': return { kind: 'history', direction: mod.shiftKey ? 'redo' : 'undo' };
-    case 'KeyY': return { kind: 'history', direction: 'redo' };
     case 'KeyA': return { kind: 'selectAll' };
     case 'KeyD': return { kind: 'fillDown' };
     default: return null;
