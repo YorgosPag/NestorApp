@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ShareStatusBanner } from './ShareStatusBanner';
 import type { ShareSurfaceShellProps } from '@/types/sharing';
 
@@ -40,8 +41,10 @@ export function ShareSurfaceShell({
   headerIcon,
   footer,
 }: ShareSurfaceShellProps): React.ReactElement {
+  const colors = useSemanticColors();
+  // Θεματικό ζεύγος του κύκλου `--bg-info`: το `text-primary` στο σκοτεινό θέμα = `--card` ⇒ αόρατο (CHECK 3.38).
   const icon = headerIcon ?? (
-    <Share2 className="h-5 w-5 text-primary" aria-hidden="true" />
+    <Share2 className={cn('h-5 w-5', colors.text.info)} aria-hidden="true" />
   );
 
   const subtitle = labels.subtitle ?? entity.subtitle;

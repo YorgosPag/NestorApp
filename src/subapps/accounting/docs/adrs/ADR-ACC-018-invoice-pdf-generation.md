@@ -554,6 +554,7 @@ src/subapps/accounting/
 | 2026-11-11 | **§15.2 — Ο BIC ακολουθεί το IBAN + ζωντανές οδηγίες πληρωμής πρόχειρου.** (α) Ένας κριτής `bicAgreementWithIBAN` (`greek-banks.ts`) για φόρμα · γραφέα · αναφορά· άρνηση `BicIbanMismatchError` (422, `DomainRefusal`). (β) Η φόρμα ξαναγράφει τράπεζα/BIC σε κάθε αλλαγή IBAN όσο είναι παράγωγα (`bankSource`). (γ) Πρόχειρο ⇒ οι λογαριασμοί του σημερινού μητρώου σε GET και email (`withCurrentPaymentAccounts`)· εκδομένο ⇒ το στιγμιότυπο, αμετάβλητο (Stripe draft → finalize) | Giorgio + Claude Code |
 | 2026-11-11 | **§16 — Δημόσια σελίδα πληρωμής τιμολογίου.** Νέο είδος κοινοποίησης `invoice_payment` πάνω στο υπάρχον σύστημα (`src/server/sharing/*` + `ShareEntityRegistry`), χωρίς δεύτερο σύστημα. Όψη + PDF μέσω `GET /api/shares/[shareId]/invoice-payment[/pdf]` με κουπόνι επίσκεψης. EPC QR ανά λογαριασμό με το υπόλοιπο. Σύνδεσμος στο email + στο συνημμένο PDF. Ίχνος `INVOICE_PAYMENT_LINK_OPENED`. Οι οδηγίες πληρωμής ως δεδομένα (`invoice-payment-instructions.ts`) και το PDF ως έγγραφο (`invoice-pdf-document.ts`) έγιναν από ένα | Giorgio + Claude Code |
 | 2026-11-11 | **§16.1 — Κανάλια συνομιλίας του εκδότη (Φάση 1).** Νέο SSoT `lib/contact/social-chat-links.ts` (Viber · WhatsApp · Messenger · Telegram · Instagram, επίσημα πρότυπα, έτοιμο κείμενο μόνο με τον αριθμό). Νέα πλατφόρμα `viber` στη ρίζα `SOCIAL_PLATFORMS` (δωρεάν σύνδεσμος `viber.me`, όχι bot). `InvoicePublicView.issuerChatChannels` = **τρέχοντα** κανάλια του μισθωτή (`resolveTenantSocialAccounts`). Μπλοκ `InvoiceIssuerContact.tsx`. Άγκυρα `lib/contact/__tests__/social-chat-links.test.ts` (Σ1–Σ5) | Giorgio + Claude Code |
+| 2026-11-11 | **§16.2 — Ευρήματα ζωντανής επαλήθευσης.** Λογότυπο PDF συμπιεσμένο (`drawPdfLogo`: 4,1 MB → 36 KB) · μονάδα στη γλώσσα του επισκέπτη (`unitLabel` από το `uomLabelIn`) · προεπισκόπηση email σε απομονωμένο λευκό χαρτί (`SandboxedHtmlFrame`) · θεματικό εικονίδιο στο `ShareSurfaceShell` | Giorgio + Claude Code |
 
 ---
 
@@ -699,6 +700,15 @@ src/subapps/accounting/
 - (στ) **UI**: `InvoiceIssuerContact.tsx` (εξήχθη από τη σελίδα), λίστα κουμπιών με εικονίδιο (`CHAT_CHANNEL_ICONS`, Simple Icons CC0 για Viber/Messenger), `target=_blank` + `noopener noreferrer`, κρυφή στην εκτύπωση. Στο Instagram, που δεν δέχεται έτοιμο κείμενο, το κλικ **αντιγράφει** το μήνυμα (`useCopyToClipboard`) και ανακοινώνεται σε `role=status` (εδώ ξεπερνάμε το απλό «άνοιξε συνομιλία»).
 
 **Επόμενα (σχέδιο, όχι υλοποίηση)**: Φάση 2: κανάλι CRM «Γράψτε μας» μέσα στη σελίδα (ADR-029). Φάση 3: αυτόματη σύνδεση συνομιλίας ↔ παραστατικό μέσω `ref` (Messenger/Instagram) και `start` (Telegram) με σύντομο κωδικό του server.
+
+### 16.2 Ευρήματα ζωντανής επαλήθευσης (2026-11-11, live `561f201`)
+
+Επαληθεύτηκαν ζωντανά στο πρόχειρο Α-7: δημιουργία (λήξη 30 μέρες) · ανώνυμη όψη και PDF με `no-store`/`noindex` · άρνηση χωρίς κουπόνι επίσκεψης (`visit-expired`) · EPC QR με `PIRBGRAA` · αντιγραφή χωρίς κενά · άρνηση πλαισίωσης · el/en · email με κουμπί και σύνδεσμο · ετικέτα = παραλήπτης · ανάκληση. Τέσσερα ευρήματα, τα τρία προϋπήρχαν:
+
+- (α) **Λογότυπο ασυμπίεστο στο PDF** (προϋπήρχε). Το jsPDF αποκωδικοποιεί το PNG και, χωρίς ρητή συμπίεση, γράφει ωμά pixels. ΜΕΤΡΗΜΕΝΟ: PDF Α-7 4,4 MB, από τα οποία 4,0 MB το λογότυπο 1024×1024 (3 MB χρώμα + 1 MB διαφάνεια)· email 6,1 MB. Λύση: ο ΕΝΑΣ `drawPdfLogo` (`services/pdf/pdf-logo.ts`, Flate `'FAST'` + alias) για τιμολόγιο και βεβαίωση ΑΠΥ. ΜΕΤΡΗΜΕΝΟ με το jsPDF: 4.100 KB → 36 KB (`'SLOW'` 33 KB, όχι αξιόλογο κέρδος).
+- (β) **Μονάδα «pcs» στη δημόσια σελίδα** (από το §16). Η όψη έδινε τον αποθηκευμένο κωδικό. Τώρα η προβολή δίνει `unitLabel` σε κάθε γλώσσα από τον ΙΔΙΟ μορφοποιητή με το PDF (`uomLabelIn`), και η σελίδα διαλέγει τη γλώσσα του επισκέπτη. Όχι `useUomLabel` στη σελίδα: θα έφερνε όλο το namespace `uom` στην επιφάνεια και νέο ζεύγος στη σφράγιση `lazyRouteMountSeal`, για μία λέξη.
+- (γ) **«Άσπρα κουτιά» στην προεπισκόπηση email** (προϋπήρχε, ADR-ACC-019). Το HTML του email χυνόταν με `dangerouslySetInnerHTML` μέσα σε σκοτεινή επιφάνεια και κληρονομούσε το θέμα. Τώρα ο ΕΝΑΣ `SandboxedHtmlFrame` (`components/ui/sandboxed-html-frame.tsx`: iframe `srcDoc`, `sandbox` χωρίς σενάρια, λευκό χαρτί) για προεπισκόπηση τιμολογίου, υπενθύμισης ΑΠΥ και αρχείου HTML (`HtmlPreview`).
+- (δ) **Αόρατο εικονίδιο στον διάλογο κοινοποίησης** (προϋπήρχε). Το `text-primary` στο σκοτεινό θέμα = `--card` (CHECK 3.38). Το κέλυφος `ShareSurfaceShell` παίρνει πλέον το θεματικό `colors.text.info`, ζεύγος του κύκλου `--bg-info`, για όλους τους διαλόγους.
 
 ---
 

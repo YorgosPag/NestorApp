@@ -12,6 +12,7 @@ import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 import type { APYCertificate, APYCertificateLineItem } from '../../types';
+import { drawPdfLogo } from './pdf-logo';
 
 // ============================================================================
 // CONSTANTS — Reuse from invoice-pdf-template pattern
@@ -119,14 +120,7 @@ function drawAPYHeader(
   let providerStartX = LAYOUT.marginLeft;
   if (logoBase64) {
     try {
-      pdf.addImage(
-        `data:image/png;base64,${logoBase64}`,
-        'PNG',
-        LAYOUT.marginLeft,
-        y,
-        LOGO.width,
-        LOGO.height
-      );
+      drawPdfLogo(pdf, logoBase64, { x: LAYOUT.marginLeft, y, width: LOGO.width, height: LOGO.height });
       providerStartX = LAYOUT.marginLeft + LOGO.width + 4;
     } catch {
       // Logo failed — proceed without

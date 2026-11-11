@@ -3,6 +3,7 @@
  */
 
 import type { Invoice } from '../../../types';
+import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
 import { buildInvoicePublicView } from '../invoice-public-view';
 
 const TODAY = '2026-11-11';
@@ -50,6 +51,12 @@ describe('buildInvoicePublicView', () => {
     for (const secret of ['comp_secret', 'user_secret', 'cont_secret', 'secret@customer.gr', 'uid_secret', 'auth_secret']) {
       expect(serialized).not.toContain(secret);
     }
+  });
+
+  it('unit label in every language from the same formatter as the PDF — never the raw stored code', () => {
+    const [line] = buildInvoicePublicView(invoice({ lineItems: [{ ...invoice().lineItems[0], unit: 'pcs' }] }), TODAY).lines;
+    expect(line?.unitLabel).toEqual({ el: uomLabelIn('pcs', 'el'), en: uomLabelIn('pcs', 'en') });
+    expect(line?.unitLabel.el).toBe(uomLabelIn('τεμ', 'el'));
   });
 
   it('payable: amount due = balance, one EPC QR per account with that amount, IBAN without spaces', () => {

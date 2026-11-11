@@ -14,6 +14,7 @@ import type { ChatChannelRef } from '@/lib/contact/social-chat-links';
 import type { InvoiceType } from './invoice';
 import type { MyDataDocumentStatus } from './common';
 import type { InvoicePaymentStanding } from '../services/payments/invoice-payment-link';
+import type { HumanLanguage } from '@/i18n/languages';
 
 export interface InvoicePublicParty {
   readonly name: string;
@@ -37,6 +38,11 @@ export interface InvoicePublicLine {
   readonly description: string;
   readonly quantity: number;
   readonly unit: string;
+  /**
+   * Η ετικέτα της μονάδας σε κάθε γλώσσα (`τεμ.` / `pcs`), από τον ΙΔΙΟ μορφοποιητή με το PDF (`uomLabelIn`).
+   * Λύνεται στον διακομιστή ώστε η σελίδα να μη φορτώνει όλο το namespace `uom` για μία λέξη.
+   */
+  readonly unitLabel: Readonly<Record<HumanLanguage, string>>;
   readonly unitPrice: number;
   readonly vatRate: number;
   readonly netAmount: number;

@@ -10,6 +10,7 @@
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { resolveHumanLanguage } from '@/i18n/languages';
 import { cn } from '@/lib/utils';
 import type { InvoicePublicParty, InvoicePublicView } from '@/subapps/accounting/types/invoice-public-view';
 import { formatAccountingCurrency } from '@/subapps/accounting/utils/format';
@@ -46,8 +47,9 @@ export function InvoicePublicParties({ view }: { readonly view: InvoicePublicVie
 }
 
 function LinesTable({ view }: { readonly view: InvoicePublicView }): React.ReactElement {
-  const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
+  const { t, i18n } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
   const colors = useSemanticColors();
+  const language = resolveHumanLanguage(i18n.language);
   return (
     <section aria-labelledby="invoice-lines-title" className="space-y-2">
       <h2 id="invoice-lines-title" className="text-base font-semibold">{t('lines.title')}</h2>
@@ -66,7 +68,7 @@ function LinesTable({ view }: { readonly view: InvoicePublicView }): React.React
             {view.lines.map((line) => (
               <tr key={line.lineNumber} className="border-t align-top">
                 <td className="py-2 pr-2">{line.description}</td>
-                <td className="py-2 px-2 text-right tabular-nums">{line.quantity} {line.unit}</td>
+                <td className="py-2 px-2 text-right tabular-nums">{line.quantity} {line.unitLabel[language]}</td>
                 <td className="py-2 px-2 text-right tabular-nums">{formatAccountingCurrency(line.unitPrice)}</td>
                 <td className="py-2 px-2 text-right tabular-nums">{line.vatRate}%</td>
                 <td className="py-2 pl-2 text-right tabular-nums">{formatAccountingCurrency(line.netAmount)}</td>

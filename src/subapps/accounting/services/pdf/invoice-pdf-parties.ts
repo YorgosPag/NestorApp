@@ -19,6 +19,7 @@ import type { Invoice, InvoiceCustomer } from '../../types';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 import { isGreekAddressCountry } from '@/utils/address/country-codes';
 import { countryLabelIn } from '@/utils/address/country-label-text';
+import { drawPdfLogo } from './pdf-logo';
 import {
   COLORS, LAYOUT, LOGO, LABELS, INVOICE_TITLES,
   ensureSpace, drawHR, setColor, drawWrappedLines, type RGB,
@@ -104,7 +105,7 @@ function drawIssuerBlock(pdf: jsPDF, invoice: Invoice, x: number, startY: number
 function drawLogo(pdf: jsPDF, logoBase64: string | null, y: number): number {
   if (!logoBase64) return LAYOUT.marginLeft;
   try {
-    pdf.addImage(`data:image/png;base64,${logoBase64}`, 'PNG', LAYOUT.marginLeft, y, LOGO.width, LOGO.height);
+    drawPdfLogo(pdf, logoBase64, { x: LAYOUT.marginLeft, y, width: LOGO.width, height: LOGO.height });
     return LAYOUT.marginLeft + LOGO.width + 4;
   } catch {
     return LAYOUT.marginLeft; // Το λογότυπο απέτυχε — συνεχίζουμε χωρίς αυτό.

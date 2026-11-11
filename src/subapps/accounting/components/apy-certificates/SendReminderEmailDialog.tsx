@@ -38,6 +38,7 @@ import {
 } from '../../services/email/apy-certificate-email-template';
 import type { APYEmailLanguage } from '../../services/email/apy-certificate-email-template';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { SandboxedHtmlFrame } from '@/components/ui/sandboxed-html-frame';
 
 // ============================================================================
 // TYPES
@@ -232,10 +233,10 @@ export function SendReminderEmailDialog({
           {/* Preview */}
           <div className="space-y-1.5">
             <Label>{t('apyCertificates.reminderEmail.preview')}</Label>
-            <div
-              className="rounded-md border border-border bg-muted/50 p-3 text-sm overflow-auto max-h-48"
-              /* biome-ignore lint/security/noDangerouslySetInnerHtml: preview of server-generated HTML */
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            <SandboxedHtmlFrame
+              html={previewHtml}
+              title={t('apyCertificates.reminderEmail.preview')}
+              className="h-48 rounded-md border border-border"
             />
           </div>
 

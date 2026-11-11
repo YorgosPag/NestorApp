@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, FileWarning } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SandboxedHtmlFrame } from '@/components/ui/sandboxed-html-frame';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -63,13 +64,7 @@ export function HtmlPreview({ url, title }: HtmlPreviewProps) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" aria-label={title}>
-      {/* sandbox blocks scripts/forms/popups — safe rendering of untrusted HTML */}
-      <iframe
-        srcDoc={content}
-        aria-label={title}
-        className="flex-1 w-full border-0 bg-white"
-        sandbox="allow-same-origin"
-      />
+      <SandboxedHtmlFrame html={content} title={title} className="flex-1" />
     </div>
   );
 }

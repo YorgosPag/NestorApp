@@ -26,9 +26,16 @@ import {
   invoicePayableAmount, invoicePaymentReference, paymentBeneficiaryOf, paymentQrPayload,
 } from '../payments/invoice-payment-instructions';
 import { invoiceAmountDueNow, invoicePaymentStanding } from '../payments/invoice-payment-link';
+import type { HumanLanguage } from '@/i18n/languages';
+import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
 
 /** Παρακράτηση: 0 σε κάθε σημερινό καλούντα (ADR-ACC-018 §15, «Εκτός εμβέλειας»). Ίδια τιμή με PDF και email. */
 const WITHHOLDING_AMOUNT = 0;
+
+/** Η μονάδα σε κάθε γλώσσα, με τον ίδιο μορφοποιητή με το PDF. Η σελίδα διαλέγει τη γλώσσα του επισκέπτη. */
+function unitLabels(unit: string): Readonly<Record<HumanLanguage, string>> {
+  return { el: uomLabelIn(unit, 'el'), en: uomLabelIn(unit, 'en') };
+}
 
 function publicCustomer(customer: InvoiceCustomer): InvoicePublicParty {
   return {
@@ -100,7 +107,7 @@ export function buildInvoicePublicView(
     issuerChatChannels,
     customer: publicCustomer(invoice.customer),
     lines: invoice.lineItems.map(({ lineNumber, description, quantity, unit, unitPrice, vatRate, netAmount }) => ({
-      lineNumber, description, quantity, unit, unitPrice, vatRate, netAmount,
+      lineNumber, description, quantity, unit, unitLabel: unitLabels(unit), unitPrice, vatRate, netAmount,
     })),
     vatBreakdown: invoice.vatBreakdown.map(({ vatRate, netAmount, vatAmount }) => ({ vatRate, netAmount, vatAmount })),
     totalNetAmount: invoice.totalNetAmount,

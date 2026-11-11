@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice } from '@/subapps/accounting/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { SandboxedHtmlFrame } from '@/components/ui/sandboxed-html-frame';
 
 import { cn } from '@/lib/utils';
 
@@ -253,10 +254,10 @@ export function SendInvoiceEmailDialog({
           {/* Email body preview */}
           <div className="space-y-1.5">
             <Label>{t('forms.sendEmailDialog.previewLabel')}</Label>
-            <div
-              className="rounded-md border border-border bg-muted/30 p-3 text-sm overflow-auto max-h-52"
-              /* biome-ignore lint/security/noDangerouslySetInnerHtml: preview of server-generated HTML */
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            <SandboxedHtmlFrame
+              html={previewHtml}
+              title={t('forms.sendEmailDialog.previewLabel')}
+              className="h-52 rounded-md border border-border"
             />
           </div>
 
