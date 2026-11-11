@@ -45,6 +45,13 @@ export const IMPORT_FIELD_DECISIONS = ['accept', 'reject', 'pending'] as const;
 export type ImportFieldDecision = (typeof IMPORT_FIELD_DECISIONS)[number];
 
 /**
+ * Ό,τι μπορεί να **ζητήσει** ο άνθρωπος για ένα πεδίο (§5.5.2 Β9α). `null` = αναίρεση της δικής του απόφασης: το πεδίο
+ * επιστρέφει στην κρίση του κανόνα (ίδιο λεξιλόγιο με την αναίρεση γραμμής). Το `pending` δεν ζητιέται ποτέ: είναι απουσία
+ * απόφασης και προκύπτει μόνο από τον κανόνα. Τον κανόνα εφαρμογής τον έχει το `decidedField` (`import/field-diff.ts`).
+ */
+export type HumanFieldDecision = Exclude<ImportFieldDecision, 'pending'> | null;
+
+/**
  * **Ποιος** πήρε την απόφαση (§5.5.2 Α1): ο κανόνας (`defaultDecisionOf`) ή ο άνθρωπος. Τη γράφει μόνο ο διακομιστής, ώστε η
  * «αυτόματη αποδοχή» να είναι δηλωμένη και όχι συμπέρασμα της οθόνης.
  */

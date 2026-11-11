@@ -18,7 +18,7 @@
  */
 
 import type { ExtractedCell, ImportFieldValue, ImportIssue, ImportProposalField } from '../types/catalog-import';
-import { IMPORT_REVIEW_CONFIDENCE, type ImportDecisionSource, type ImportFieldDecision, type ImportFieldStatus } from '../vocabulary/catalog-import';
+import { IMPORT_REVIEW_CONFIDENCE, type HumanFieldDecision, type ImportDecisionSource, type ImportFieldDecision, type ImportFieldStatus } from '../vocabulary/catalog-import';
 
 export type ImportValueEquality = (left: ImportFieldValue, right: ImportFieldValue) => boolean;
 
@@ -80,4 +80,15 @@ export function defaultDecisionOf(field: DecisionFacts): ImportFieldDecision {
     field.confidence < IMPORT_REVIEW_CONFIDENCE ||
     contradictsPage(field);
   return needsHuman ? 'pending' : 'accept';
+}
+
+/**
+ * Η απόφαση ανθρώπου πάνω σε πεδίο (§5.5.2 Β9α) — **ένας** κανόνας για τον γραφέα και για την αισιόδοξη όψη, ώστε η οθόνη να δείχνει ό,τι
+ * θα γράψει ο διακομιστής. Τιμή που δεν διαβάστηκε δεν γίνεται αποδεκτή (δεν υπάρχει τι να γραφτεί, θέλει διόρθωση). Η αναίρεση
+ * ξαναρωτά τον κανόνα με τα **σημερινά** δεδομένα του πεδίου, άρα είναι ιδεμπότητη.
+ */
+export function decidedField(field: ImportProposalField, decision: HumanFieldDecision): ImportProposalField {
+  if (decision === null) return { ...field, decision: defaultDecisionOf(field), decisionBy: 'rule' };
+  if (decision === 'accept' && field.incoming === null) return field;
+  return { ...field, decision, decisionBy: 'human' };
 }

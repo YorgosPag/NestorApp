@@ -26,6 +26,7 @@ import {
   updateImportProposal,
 } from '@/services/catalog/catalog-import-api.client';
 import { catalogFailureOf, type CatalogFailure } from '@/services/catalog/catalog-failure';
+import { decidedField } from '@/subapps/catalog/import/field-diff';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type {
   ImportBatchDetailView,
@@ -57,7 +58,8 @@ export type QueuedDecisions = ReadonlyMap<string, readonly ImportFieldDecisionIn
 const fieldAddress = (rowKey: string, targetKey: string): string => `${rowKey}\u0000${targetKey}`;
 
 /**
- * Η πρόταση όπως θα είναι όταν φτάσουν οι αποφάσεις. Ίδιος κανόνας με τον γραφέα: τιμή που δεν διαβάστηκε δεν γίνεται αποδεκτή.
+ * Η πρόταση όπως θα είναι όταν φτάσουν οι αποφάσεις. **Ο ίδιος** κανόνας με τον γραφέα (`decidedField`, §5.5.2 Β9α): τιμή που
+ * δεν διαβάστηκε δεν γίνεται αποδεκτή· `null` ⇒ το πεδίο επιστρέφει στην κρίση του κανόνα.
  */
 export function overlayDecisions(proposal: ImportProposalWire, decisions: readonly ImportFieldDecisionInput[]): ImportProposalWire {
   if (decisions.length === 0) return proposal;
@@ -65,9 +67,8 @@ export function overlayDecisions(proposal: ImportProposalWire, decisions: readon
   const rows = proposal.rows.map((row) => ({
     ...row,
     fields: row.fields.map((field) => {
-      const decision = wanted.get(fieldAddress(row.rowKey, importTargetKey(field.target)));
-      if (decision === undefined || (decision === 'accept' && field.incoming === null)) return field;
-      return { ...field, decision, decisionBy: 'human' as const };
+      const address = fieldAddress(row.rowKey, importTargetKey(field.target));
+      return wanted.has(address) ? decidedField(field, wanted.get(address) ?? null) : field;
     }),
   }));
   return { ...proposal, rows };

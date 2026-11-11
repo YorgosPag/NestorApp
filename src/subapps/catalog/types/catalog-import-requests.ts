@@ -15,7 +15,7 @@ import type {
   ImportProfileDefinition,
   ImportProposalDefinition,
 } from './catalog-import';
-import type { ImportFieldDecision, ImportLineBindLevel, ImportLineRefusal, ImportSourceKind } from '../vocabulary/catalog-import';
+import type { HumanFieldDecision, ImportLineBindLevel, ImportLineRefusal, ImportSourceKind } from '../vocabulary/catalog-import';
 
 export interface CreateImportBatchRequest {
   readonly sourceKind: ImportSourceKind;
@@ -53,7 +53,8 @@ export interface ImportAssetsView {
 export interface ImportFieldDecisionInput {
   readonly rowKey: string;
   readonly targetKey: string;
-  readonly decision: Exclude<ImportFieldDecision, 'pending'>;
+  /** `null` = αναίρεση της απόφασης ανθρώπου, το πεδίο επιστρέφει στον κανόνα (§5.5.2 Β9α, `HumanFieldDecision`). */
+  readonly decision: HumanFieldDecision;
 }
 
 /**

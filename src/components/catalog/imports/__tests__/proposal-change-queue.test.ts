@@ -68,3 +68,34 @@ describe('decisionSourceOf', () => {
     expect(decisionSourceOf({ decisionBy: 'human' })).toBe('human');
   });
 });
+
+describe('αναίρεση απόφασης πεδίου (§5.5.2 Β9α) — `null` ⇒ επιστροφή στην κρίση του κανόνα', () => {
+  const issue = { code: 'repeatedValue' } as unknown as ImportProposalField['issues'][number];
+  const undo = (value: ImportProposalField) =>
+    overlayDecisions(proposal([value]), [{ rowKey: 'r0', targetKey: keyOf('a'), decision: null }]).rows[0].fields[0];
+
+  it('πεδίο με δεύτερη τιμή στην πηγή (εύρημα) επιστρέφει σε «Εκκρεμεί» — το ζωντανό εύρημα της σελ. 87', () => {
+    expect(undo(field('a', { decisionBy: 'human', issues: [issue] }))).toMatchObject({ decision: 'pending', decisionBy: 'rule' });
+  });
+
+  it('καθαρό πεδίο επιστρέφει στην αυτόματη αποδοχή, ως απόφαση του κανόνα', () => {
+    expect(undo(field('a', { decision: 'reject', decisionBy: 'human' }))).toMatchObject({ decision: 'accept', decisionBy: 'rule' });
+  });
+
+  it('σύγκρουση επιστρέφει σε «Εκκρεμεί»', () => {
+    expect(undo(field('a', { status: 'conflict', decisionBy: 'human' }))).toMatchObject({ decision: 'pending', decisionBy: 'rule' });
+  });
+
+  it('είναι ιδεμπότητη: δεύτερη αναίρεση δίνει την ίδια απόφαση', () => {
+    const once = undo(field('a', { decision: 'reject', decisionBy: 'human' }));
+    expect(undo(once)).toEqual(once);
+  });
+
+  it('απόφαση και αναίρεση στην ίδια ουρά: η τελευταία κερδίζει', () => {
+    const next = overlayDecisions(proposal([field('a', { decision: 'pending', status: 'conflict' })]), [
+      { rowKey: 'r0', targetKey: keyOf('a'), decision: 'accept' },
+      { rowKey: 'r0', targetKey: keyOf('a'), decision: null },
+    ]);
+    expect(next.rows[0].fields[0]).toMatchObject({ decision: 'pending', decisionBy: 'rule' });
+  });
+});

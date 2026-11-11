@@ -187,6 +187,8 @@
     "decisionPending": "Pending",
     "decisionAuto": "automatic: new value, no finding",
     "decisionHuman": "your decision",
+    "decisionUndo": "Undo",
+    "decisionUndoFor": "Undo your decision for «{field}» — back to the automatic judgement",
     "nothingToApply": "Same as live — nothing to apply",
     "saving": "Saving…",
     "summaryTitle": "Proposal summary",

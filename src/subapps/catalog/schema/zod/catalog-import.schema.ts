@@ -139,7 +139,7 @@ const fieldAddress = { rowKey: z.string().min(1).max(200), targetKey: z.string()
 
 export const updateImportProposalBodySchema: z.ZodType<UpdateImportProposalRequest> = z.object({
   expectedRevision: expectedRevisionSchema,
-  decisions: z.array(z.object({ ...fieldAddress, decision: z.enum(['accept', 'reject']) })).max(MAX_FIELD_CHANGES),
+  decisions: z.array(z.object({ ...fieldAddress, decision: z.enum(['accept', 'reject']).nullable() })).max(MAX_FIELD_CHANGES),
   edits: z.array(z.object({ ...fieldAddress, text: z.string().max(MAX_CELL_TEXT), revert: z.boolean().optional() })).max(MAX_FIELD_CHANGES),
   modelCode: z.string().max(CATALOG_LIMITS.maxLabelLength).nullable(),
 });

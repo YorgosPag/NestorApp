@@ -15,7 +15,7 @@ import 'server-only';
 import type { AuthContext } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { canonicalJson } from '@/lib/legal/canonical-json';
-import { decisionSourceOf } from '@/subapps/catalog/import/field-diff';
+import { decidedField, decisionSourceOf } from '@/subapps/catalog/import/field-diff';
 import { applyHumanEdits, fieldAddress, humanEditFields, recordEdits, recordModelCodeEdit, type EditStamp } from '@/subapps/catalog/import/human-edits';
 import { importProposalKey, priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
@@ -190,9 +190,9 @@ function withDecisions(rows: readonly ImportProposalRow[], request: UpdateImport
   return rows.map((row) => ({
     ...row,
     fields: row.fields.map((field) => {
-      const decision = decisions.get(fieldAddress(row.rowKey, importTargetKey(field.target)));
-      // Τιμή που δεν διαβάστηκε δεν γίνεται αποδεκτή: δεν υπάρχει τι να γραφτεί, θέλει διόρθωση.
-      return decision === undefined || (decision === 'accept' && field.incoming === null) ? field : { ...field, decision, decisionBy: 'human' as const };
+      const address = fieldAddress(row.rowKey, importTargetKey(field.target));
+      // Ο ΕΝΑΣ κανόνας (§5.5.2 Β9α): ίδιος με την αισιόδοξη όψη· `null` ⇒ επιστροφή στον κανόνα.
+      return decisions.has(address) ? decidedField(field, decisions.get(address) ?? null) : field;
     }),
   }));
 }

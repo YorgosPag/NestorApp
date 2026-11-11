@@ -187,6 +187,8 @@
     "decisionPending": "Εκκρεμεί",
     "decisionAuto": "αυτόματα: νέα τιμή, χωρίς εύρημα",
     "decisionHuman": "δική σας απόφαση",
+    "decisionUndo": "Αναίρεση",
+    "decisionUndoFor": "Αναίρεση της απόφασής σας για «{field}» — επιστροφή στην αυτόματη κρίση",
     "nothingToApply": "Ίδιο με τα ζωντανά — τίποτα να εφαρμοστεί",
     "saving": "Αποθηκεύεται…",
     "summaryTitle": "Σύνοψη πρότασης",

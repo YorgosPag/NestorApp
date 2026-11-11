@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { corroborationsOf } from '@/subapps/catalog/import/proposal-values';
 import type { ImportProposalField, ImportSourceValue, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
+import type { HumanFieldDecision } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useImportIssueMessage } from './import-issue-messages';
 import { PROPOSAL_VIEW_KEYS, useImportText } from './import-text';
 import { useTargetLabeler } from './import-target-label';
@@ -38,7 +39,7 @@ interface ProposalFieldRowProps {
   readonly revealedFrom: ProposalView | null;
   readonly readOnly: boolean;
   readonly onFocus: () => void;
-  readonly onDecide: (decision: 'accept' | 'reject') => void;
+  readonly onDecide: (decision: HumanFieldDecision) => void;
   readonly onEdit: (text: string) => void;
   /** §5.5.2 Β6: η διόρθωση φεύγει, ισχύει ξανά η τιμή του PDF. */
   readonly onRevert: () => void;

@@ -46,7 +46,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__connections.el.json": "a945c101573af8b73bad5337c825e42cff51f05ab5c12d6abffbf57dfbac8520",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "ed53a8bf5790b1cbbb8248fe4bd32a7bc4d8ce1b44e3a5717054c1e3ea73e025",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "beb4d7d88a17fac46b11a3ccf432f9836c60534f372e8eae2d3e210ef96c3bee",
-    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "c5d99bb3d01cb7cfc1d7c476a9769cf7f6a994692b479c5c5a7f952eb4c761fc",
+    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "0a488a54c368e16ed8b8798b2fdb9fb2717f647c9b3f66cf5f8f02347f4ca601",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "1ada521e13e9e01ac4577ab75a6a5f85538a10f6130c3b3dec5e9582ff50d0ca",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "324fb9244cc0690b312ecd2472727e5f292d9a1d52c33d8cf3d0df7ec8e62d39",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0733185d296e69400cc8fbac680fb4facd5c6a3d63e3283820989e0ac89edceb",
+  "inputsSha256": "a88f6ec8061fa59b5120a7009f76b087f7937f25135d51d1991f7bd74b34f620",
   "languages": [
     "el"
   ],
@@ -9509,6 +9509,8 @@
             "review.decisionFor",
             "review.decisionHuman",
             "review.decisionPending",
+            "review.decisionUndo",
+            "review.decisionUndoFor",
             "review.editValue",
             "review.editedByYou",
             "review.editedFromEmpty",
@@ -40637,7 +40639,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1319035
+    "sliceBytes": 1319232
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

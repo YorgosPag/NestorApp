@@ -160,6 +160,8 @@
       "decisionFor": "Απόφαση για «{field}»",
       "decisionHuman": "δική σας απόφαση",
       "decisionPending": "Εκκρεμεί",
+      "decisionUndo": "Αναίρεση",
+      "decisionUndoFor": "Αναίρεση της απόφασής σας για «{field}» — επιστροφή στην αυτόματη κρίση",
       "editValue": "Διόρθωση της τιμής «{field}»",
       "editedByYou": "Διορθώθηκε από εσάς · το PDF έγραφε «{source}»",
       "editedFromEmpty": "Διορθώθηκε από εσάς · το PDF είχε κενό",
