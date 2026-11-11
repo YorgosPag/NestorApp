@@ -5083,6 +5083,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── ADR-ACC-030: online πληρωμές τιμολογίων — ΚΛΕΙΣΤΑ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ ─────────────
+    //
+    // 🔴 Συνεδρία πληρωμής: το ποσό και ο σύνδεσμος τα ορίζει ΜΟΝΟ ο διακομιστής. Γραφή από πελάτη =
+    //    «πληρώθηκε» χωρίς χρήματα (status: 'paid') ή συνεδρία με ποσό της επιλογής του. Ανάγνωση = ποσά και
+    //    αναφορές παρόχου όλων των συνδέσμων. Γράφει μόνο το `POST …/invoice-payment/checkout` + το webhook.
+    match /accounting_payment_checkouts/{checkoutId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // 🔴 Ημερολόγιο συμβάντων παρόχου: γραφή από πελάτη = προ-«κατανάλωση» του id ενός αληθινού συμβάντος ⇒ το
+    //    webhook θα το έβλεπε ως διπλό και η πληρωμή δεν θα καταγραφόταν ποτέ. Γράφει μόνο το υπογεγραμμένο
+    //    webhook (`/api/payments/webhooks/[provider]`).
+    match /payment_provider_events/{eventId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     // ── Pattern C: Fiscal Periods — ΜΟΝΟ ο server γράφει (ADR-ACC-010 §2.1.1 Φ6) ─
     //
     // 🔒 Κάθε περίοδος ανήκει σε ΕΝΑΝ μισθωτή: docId = generateDeterministicFiscalPeriodId(companyId, 'YYYY-MM')

@@ -157,7 +157,8 @@ export type MyDataDocumentStatus =
 export type PaymentMethod =
   | 'cash'           // Μετρητά (max 500€)
   | 'bank_transfer'  // Τραπεζική κατάθεση/μεταφορά
-  | 'card'           // Κάρτα (χρεωστική/πιστωτική)
+  | 'card'           // Κάρτα (χρεωστική/πιστωτική) — και τα πορτοφόλια καρτών Apple Pay / Google Pay
+  | 'iris'           // Άμεση πληρωμή λογαριασμού-σε-λογαριασμό IRIS (ΔΙΑΣ) — ADR-ACC-030
   | 'check'          // Επιταγή
   | 'credit'         // Πίστωση (πληρωμή αργότερα)
   | 'mixed'          // Μικτός τρόπος

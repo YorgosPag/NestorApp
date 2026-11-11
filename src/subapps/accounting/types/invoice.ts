@@ -101,18 +101,34 @@ export interface InvoiceLineItem {
 // INVOICE PAYMENT
 // ============================================================================
 
-/** Πληρωμή τιμολογίου */
+/**
+ * Είδος κίνησης στο `payments[]` (ADR-ACC-030). Η επιστροφή χρημάτων ΔΕΝ σβήνει την πληρωμή: γράφεται ως νέα
+ * κίνηση (Stripe: `charge` + `refund` · Xero: payment + refund) ώστε το ιστορικό να μένει αναλλοίωτο.
+ */
+export const INVOICE_PAYMENT_KINDS = ['payment', 'refund'] as const;
+
+export type InvoicePaymentKind = (typeof INVOICE_PAYMENT_KINDS)[number];
+
+/** Πληρωμή τιμολογίου — τη γράφει ΜΟΝΟ ο `recordInvoicePayment` (ADR-ACC-030). */
 export interface InvoicePayment {
-  /** Μοναδικό ID πληρωμής */
+  /** Μοναδικό ID πληρωμής (`ipay_…`, ντετερμινιστικό από πάροχο + αναγνωριστικό παρόχου) */
   paymentId: string;
   /** Ημερομηνία πληρωμής (ISO 8601) */
   date: string;
-  /** Ποσό πληρωμής σε EUR */
+  /** Ποσό σε EUR — πάντα θετικό· η κατεύθυνση δηλώνεται από το `kind` */
   amount: number;
   /** Τρόπος πληρωμής */
   method: PaymentMethod;
   /** Σημειώσεις πληρωμής */
   notes: string | null;
+  /** Είδος κίνησης· απουσία = `payment` (εγγραφές πριν το ADR-ACC-030) */
+  kind?: InvoicePaymentKind;
+  /** Πάροχος πληρωμών που την εκτέλεσε (π.χ. `everypay`) — απουσία = χειροκίνητη */
+  provider?: string;
+  /** Αναγνωριστικό της κίνησης στον πάροχο (πληρωμή ή επιστροφή) */
+  providerReference?: string;
+  /** Η συνεδρία πληρωμής που τη γέννησε (`pchk_…`) */
+  checkoutId?: string;
 }
 
 // ============================================================================

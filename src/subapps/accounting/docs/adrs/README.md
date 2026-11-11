@@ -40,6 +40,7 @@
 | [ACC-027](./ADR-ACC-027-epe-benchmark.md) | ΕΠΕ — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types | 2026-11-06 |
 | [ACC-028](./ADR-ACC-028-ae-benchmark.md) | ΑΕ — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types | 2026-11-06 |
 | [ACC-029](./ADR-ACC-029-joint-venture-benchmark.md) | Κοινοπραξία — σύγκριση & οδικός χάρτης | PROPOSED | Entity Types / Construction | 2026-11-06 |
+| [ACC-030](./ADR-ACC-030-online-invoice-payments.md) | Online πληρωμές τιμολογίων — port παρόχου, Everypay, ένας γραφέας πληρωμής | IN PROGRESS | Payments | 2026-11-11 |
 
 ---
 

@@ -23,4 +23,23 @@ export abstract class AccountingIdGenerators extends DocumentRegistryIdGenerator
   generateDeterministicJournalReversalEntryId(originalEntryId: string): string {
     return this.mintDeterministicV4Id(P.JOURNAL_ENTRY, `journal-reversal:${originalEntryId}`);
   }
+
+  /**
+   * ADR-ACC-030 — **ΜΙΑ** κίνηση πληρωμής ανά κίνηση του παρόχου: σπόρος = `πάροχος:είδος:αναγνωριστικό παρόχου`
+   * ⇒ το ίδιο webhook δύο φορές, ή webhook + συμφιλίωση cron, βγάζουν το **ίδιο** `paymentId` και ο γραφέας
+   * (`recordInvoicePayment`) το βρίσκει ήδη καταγεγραμμένο.
+   */
+  generateDeterministicInvoicePaymentId(seed: string): string {
+    return this.mintDeterministicV4Id(P.INVOICE_PAYMENT, `invoice-payment:${seed}`);
+  }
+
+  /** ADR-ACC-030 — μία απόπειρα online πληρωμής από τον σύνδεσμο (κάρτα ή IRIS). */
+  generatePaymentCheckoutId(): string {
+    return this.generateId(P.PAYMENT_CHECKOUT).id;
+  }
+
+  /** ADR-ACC-030 — ένα συμβάν παρόχου, μία φορά: σπόρος = `πάροχος:φυσικό κλειδί συμβάντος`. */
+  generateDeterministicPaymentProviderEventId(seed: string): string {
+    return this.mintDeterministicV4Id(P.PAYMENT_PROVIDER_EVENT, `payment-provider-event:${seed}`);
+  }
 }

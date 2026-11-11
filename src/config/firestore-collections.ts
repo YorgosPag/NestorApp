@@ -947,6 +947,11 @@ export const COLLECTIONS = {
   ACCOUNTING_FISCAL_PERIODS: process.env.NEXT_PUBLIC_ACCOUNTING_FISCAL_PERIODS_COLLECTION || 'accounting_fiscal_periods',
   ACCOUNTING_MATCHING_RULES: process.env.NEXT_PUBLIC_ACCOUNTING_MATCHING_RULES_COLLECTION || 'accounting_matching_rules',
   ACCOUNTING_AUDIT_LOG: process.env.NEXT_PUBLIC_ACCOUNTING_AUDIT_LOG_COLLECTION || 'accounting_audit_log',
+  // 💳 ADR-ACC-030 — online πληρωμές τιμολογίων. ΜΟΝΟ Admin SDK (κανόνες: deny-all για τον πελάτη).
+  //    Συνεδρία πληρωμής: μία απόπειρα (κάρτα / IRIS) από τον σύνδεσμο, με ποσό που όρισε ο διακομιστής.
+  ACCOUNTING_PAYMENT_CHECKOUTS: process.env.NEXT_PUBLIC_ACCOUNTING_PAYMENT_CHECKOUTS_COLLECTION || 'accounting_payment_checkouts',
+  //    Ημερολόγιο συμβάντων παρόχου: ντετερμινιστικό id ανά συμβάν ⇒ κάθε webhook επεξεργάζεται ΜΙΑ φορά.
+  PAYMENT_PROVIDER_EVENTS: process.env.NEXT_PUBLIC_PAYMENT_PROVIDER_EVENTS_COLLECTION || 'payment_provider_events',
 
   // 📄 FILE AUDIT LOG (ADR-191: Enterprise Document Management — Phase 3.1)
   FILE_AUDIT_LOG: process.env.NEXT_PUBLIC_FILE_AUDIT_LOG_COLLECTION || 'file_audit_log',

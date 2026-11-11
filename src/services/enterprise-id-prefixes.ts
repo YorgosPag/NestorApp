@@ -378,6 +378,10 @@ export const ENTERPRISE_ID_PREFIXES = {
   MATCHING_RULE: 'mrule',
   EXPENSE_DOC: 'exdoc',
   APY_CERTIFICATE: 'apy',
+  // ADR-ACC-030 — online πληρωμές τιμολογίων. Το `pay` ανήκει στα πλάνα πληρωμών ακινήτων (PAYMENT_RECORD).
+  INVOICE_PAYMENT: 'ipay',
+  PAYMENT_CHECKOUT: 'pchk',
+  PAYMENT_PROVIDER_EVENT: 'pevt',
   SERVICE_PRESET: 'sp',
   CUSTOM_CATEGORY: 'custcat',
   CUSTOMER_BALANCE: 'cbal',

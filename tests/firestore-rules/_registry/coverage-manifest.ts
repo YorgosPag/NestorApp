@@ -429,6 +429,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-ACC-030 — ΣΥΝΕΔΡΙΑ ΠΛΗΡΩΜΗΣ. Ο πειρασμός: πελάτης γράφει `status: 'paid'` ή δικό του ποσό.
+    collection: 'accounting_payment_checkouts',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/accounting-payment-checkouts.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-ACC-030 — ΗΜΕΡΟΛΟΓΙΟ ΣΥΜΒΑΝΤΩΝ ΠΑΡΟΧΟΥ. Ο πειρασμός: πελάτης «καταναλώνει» το id αληθινού συμβάντος.
+    collection: 'payment_provider_events',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/payment-provider-events.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-841 §7 Α21.20 — ΚΑΤΑΣΤΑΣΗ ΑΝΑ ΔΙΕΥΘΥΝΣΗ. Γεγονός του κόσμου, όχι μισθωτή· γράφει μόνο το webhook.
     collection: 'email_recipient_standing',
     pattern: 'deny_all',

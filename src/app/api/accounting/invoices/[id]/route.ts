@@ -40,6 +40,7 @@ import {
   CREDIT_NOTE_STATUSES,
 } from '../invoice-schemas';
 import { withCurrentPaymentAccounts, withServerPaymentAccountsOnUpdate } from '../invoice-payment-snapshot';
+import { resettleInvoicePayments } from '@/subapps/accounting/services/repository/accounting-repo-invoice-payments';
 
 // =============================================================================
 // GET — Single Invoice
@@ -96,8 +97,14 @@ export const PATCH = defineRoute({
     const withAccounts = await withServerPaymentAccountsOnUpdate(repository, updates, existing);
     await repository.updateInvoice(id, withAccounts as UpdateInvoiceInput);
 
+    // ADR-ACC-030: νέες γραμμές ⇒ νέο σύνολο ⇒ το υπόλοιπο ξαναβγαίνει από τον ΕΝΑ υπολογισμό, σε συναλλαγή πάνω
+    // στις τρέχουσες κινήσεις (ποτέ πάνω στο αντίγραφο που διαβάστηκε πριν — μπορεί να μπήκε πληρωμή στο μεταξύ).
+    if (updates.lineItems) {
+      await resettleInvoicePayments({ companyId: auth.companyId }, id);
+    }
+
     // ── Hook 3: Update balance if payments/amounts changed (Q4 — sync) ─
-    const affectsBalance = !!(updates.payments || updates.lineItems);
+    const affectsBalance = !!updates.lineItems;
     const contactId = existing.customer?.contactId;
     if (affectsBalance && contactId) {
       await refreshCustomerBalance(repository, contactId);

@@ -163,7 +163,8 @@ export function myDataWithholdingCategoryOf(withholdingRate: number): number | n
  * 6 Web Banking · 7 POS / e-POS · 8 Άμεσες Πληρωμές IRIS.
  *
  * - `bank_transfer` → 1: κατάθεση στον δηλωμένο επαγγελματικό λογαριασμό.
- * - `card` → 7: η εφαρμογή δεν ξεχωρίζει άλλο κανάλι κάρτας.
+ * - `card` → 7: η εφαρμογή δεν ξεχωρίζει άλλο κανάλι κάρτας (και τα πορτοφόλια Apple Pay / Google Pay είναι κάρτα).
+ * - `iris` → 8: άμεση πληρωμή IRIS (ΑΑΔΕ, myDATA v1.0.9 — 15.07.2024· ADR-ACC-030).
  * - `mixed` → `null`: ο μικτός τρόπος θέλει **ανάλυση ποσών ανά τρόπο**, που το τιμολόγιο δεν κρατά.
  * - `non_cash` → `null`: μη ταμειακή εγγραφή (απόσβεση) — δεν είναι παραστατικό προς διαβίβαση.
  */
@@ -173,6 +174,7 @@ export const MYDATA_PAYMENT_METHOD_CODES = {
   check: 4,
   credit: 5,
   card: 7,
+  iris: 8,
   mixed: null,
   non_cash: null,
 } as const satisfies Record<PaymentMethod, number | null>;

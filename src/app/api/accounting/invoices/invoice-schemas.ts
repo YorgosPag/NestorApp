@@ -134,7 +134,6 @@ export const UpdateInvoiceSchema = z.object({
   type: z.string().max(50).optional(),
   issueDate: z.string().max(30).optional(),
   ...invoiceSharedFields,
-  payments: z.array(z.record(z.unknown())).optional(),
 }).passthrough().superRefine(refineInvoiceAmounts);
 
 // ============================================================================
@@ -148,7 +147,16 @@ export const UpdateInvoiceSchema = z.object({
  * 🔴 Χωρίς αυτό ένα πρόχειρο τιμολόγιο μπορούσε να σταλεί με `mydata.status = 'accepted'` και ψεύτικο
  * ΜΑΡΚ — «διαβιβασμένο» χωρίς να φτάσει ποτέ στην ΑΑΔΕ, και πια αμετάβλητο (`IMMUTABLE_STATUSES`).
  */
-const SERVER_OWNED_INVOICE_FIELDS = ['mydata'] as const;
+const SERVER_OWNED_INVOICE_FIELDS = [
+  'mydata',
+  // ADR-ACC-030: οι κινήσεις πληρωμής έχουν ΕΝΑΝ γραφέα (`recordInvoicePayment`, σε transaction) και τα τρία
+  // παράγωγα τα βγάζει ΜΟΝΟ το `settleInvoicePayments`. Ένα PATCH με παλιό αντίγραφο του `payments[]` θα έσβηνε
+  // σιωπηλά πληρωμή που μόλις κατέγραψε το webhook του παρόχου (lost update).
+  'payments',
+  'totalPaid',
+  'balanceDue',
+  'paymentStatus',
+] as const;
 
 type ServerOwnedInvoiceField = (typeof SERVER_OWNED_INVOICE_FIELDS)[number];
 

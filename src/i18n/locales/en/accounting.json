@@ -741,6 +741,7 @@
       "cash": "Cash",
       "bank_transfer": "Bank Transfer",
       "card": "Card",
+      "iris": "IRIS (instant payment)",
       "check": "Check",
       "credit": "Credit",
       "mixed": "Mixed",

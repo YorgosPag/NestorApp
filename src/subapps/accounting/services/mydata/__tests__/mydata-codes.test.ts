@@ -65,6 +65,8 @@ describe('myDATA codes (ΑΑΔΕ v2.0.2 §8)', () => {
       check: 4,
       credit: 5,
       card: 7,
+      // ADR-ACC-030: άμεση πληρωμή IRIS (ΑΑΔΕ myDATA v1.0.9, 15.07.2024).
+      iris: 8,
       mixed: null,
       non_cash: null,
     });

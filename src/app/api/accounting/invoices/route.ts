@@ -35,6 +35,7 @@ import { readListContext, readPageRequest, respondWithPage } from '../_shared/li
 import { createDraftMyDataMeta } from '@/subapps/accounting/services/mydata/mydata-status-transitions';
 import { invoiceSharedFields, refineInvoiceAmounts, stripServerOwnedInvoiceFields } from './invoice-schemas';
 import { invoiceAmountsOf } from '@/subapps/accounting/utils/invoice-amounts';
+import { initialInvoicePaymentState } from '@/subapps/accounting/services/payments/invoice-payment-settlement';
 import { invoiceFiltersOf } from '../_shared/list-filters';
 
 const CreateInvoiceSchema = z.object({
@@ -76,15 +77,15 @@ export const POST = defineRoute({
 
     // ── Hook 1b: Credit limit check (Q4 — SAP KNKK pattern) ──────────
     const contactId = body.contactId;
+    // Το ποσό που κρίνεται το υπολογίζει ο διακομιστής από τις επικυρωμένες γραμμές — ποτέ δηλωμένο ποσό του
+    // πελάτη (ADR-ACC-003 §22.2).
+    const grossAmount = invoiceAmountsOf(body.lineItems ?? []).totalGrossAmount;
     let creditWarning: CreditCheckResult | null = null;
     if (contactId) {
       // Η αποθηκευμένη εγγραφή δίνει ΜΟΝΟ τις ρυθμίσεις πίστωσης· η έκθεση υπολογίζεται ΖΩΝΤΑΝΑ από τα
       // παραστατικά όλων των χρήσεων (SAP credit exposure) — ποτέ από μια προβολή που μπορεί να έχει μείνει πίσω.
       const settings = await repository.getCustomerBalance(contactId);
       if (hasActiveCreditLimit(settings)) {
-        // Το ποσό που κρίνεται το υπολογίζει ο διακομιστής από τις επικυρωμένες γραμμές — ποτέ δηλωμένο ποσό του
-        // πελάτη (ADR-ACC-003 §22.2). Ήταν άθροισμα ενός `lineItems[].grossAmount` που καμία γραμμή δεν έχει ⇒ 0 €.
-        const grossAmount = invoiceAmountsOf(body.lineItems ?? []).totalGrossAmount;
         const creditCheck = checkCreditLimit(await computeCustomerBalance(repository, contactId), grossAmount);
         if (!creditCheck.allowed) {
           throw new ApiError(422, 'Credit limit exceeded', POLICY_ERROR_CODES.CREDIT_LIMIT_EXCEEDED, {
@@ -101,6 +102,8 @@ export const POST = defineRoute({
     const { id, number } = await repository.createInvoice({
       ...stripServerOwnedInvoiceFields(body),
       mydata: createDraftMyDataMeta(),
+      // ADR-ACC-030: τα πεδία πληρωμής τα γράφει ΜΟΝΟ ο διακομιστής — νέο παραστατικό = καμία κίνηση.
+      ...initialInvoicePaymentState(grossAmount),
     } as unknown as CreateInvoiceInput);
 
     // Auto-generate journal entry from the new invoice
