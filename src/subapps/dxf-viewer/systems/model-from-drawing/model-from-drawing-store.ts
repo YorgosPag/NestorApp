@@ -42,6 +42,7 @@ import {
 import type { AddOpeningsRefusal } from '../../bim/model-from-drawing/add-openings-to-scene';
 import { SCENE_LINE_SOURCE, type ProposalLineSource } from './proposal-line-source';
 import type { SceneBasis } from './model-from-drawing-live';
+import type { DimensionWriteOutcome, RecognizedDimensionSummary } from './model-from-drawing-dimensions';
 
 /**
  * `closed`  — ο βοηθός δεν τρέχει.
@@ -63,7 +64,13 @@ export type ModelFromDrawingNotice =
   /** ADR-929 Φ5 — πηγή η εικόνα, αλλά η θέση της δεν είναι βαθμονομημένη: τα mm θα ήταν λάθος. */
   | { readonly kind: 'uncalibrated' }
   | { readonly kind: 'refused'; readonly refusal: AddWallsRefusal; readonly blocked: number }
-  | { readonly kind: 'written'; readonly count: number; readonly retrimmed: number }
+  /** ADR-929 Δ20 Σ1.3β — `dimensions`: τι έγινε με τη στρώση διαστάσεων στην ίδια έγκριση (`null` ⇔ δεν υπήρχε). */
+  | {
+      readonly kind: 'written';
+      readonly count: number;
+      readonly retrimmed: number;
+      readonly dimensions: DimensionWriteOutcome | null;
+    }
   /** Φ4-3β — δεν υπάρχει τοίχος στο σχέδιο να φιλοξενήσει κούφωμα. */
   | { readonly kind: 'no-walls' }
   | { readonly kind: 'openings-refused'; readonly refusal: AddOpeningsRefusal }
@@ -89,6 +96,11 @@ export interface ModelFromDrawingState {
   readonly categoryByThicknessMm: ReadonlyMap<number, WallCategory>;
   readonly proposal: WallProposal | null;
   readonly preview: AssistantPreview | null;
+  /**
+   * ADR-929 Δ20 Σ1.3β — η στρώση «Διαστάσεις» της ίδιας έγκρισης: θα δημιουργηθούν / υπάρχουν ήδη / σε ποιο επίπεδο.
+   * Γράφεται ΜΑΖΙ με την πρόταση (ίδιος υπολογισμός), ποτέ χωριστά. `null` ⇔ η πηγή δεν έχει διαστάσεις.
+   */
+  readonly dimensionSummary: RecognizedDimensionSummary | null;
   /** Η σκηνή πάνω στην οποία υπολογίστηκε η πρόταση τοίχων (ο συγχρονιστής σκηνής ξέρει έτσι αν είναι μπαγιάτικη). */
   readonly wallBasis: SceneBasis | null;
   /** Το ίδιο για την πρόταση ανοιγμάτων — δική της, γιατί οι δύο ελεγκτές ξαναϋπολογίζουν χωριστά. */
@@ -119,6 +131,7 @@ const CLOSED: ModelFromDrawingState = {
   categoryByThicknessMm: new Map(),
   proposal: null,
   preview: null,
+  dimensionSummary: null,
   wallBasis: null,
   openingBasis: null,
   openingColorHex: null,

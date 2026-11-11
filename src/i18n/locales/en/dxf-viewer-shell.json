@@ -597,11 +597,26 @@
       "no-color": "The line has no colour that can become a role.",
       "stale": "The drawing changed since the proposal was lit. Nothing was written — check the new preview and approve again.",
       "uncalibrated": "The background image is not calibrated, so lengths and thicknesses would be wrong. Calibrate the background first.",
-      "written": "{count} walls created. Ctrl+Z to undo.",
+      "written": "{count, plural, one {# wall created} other {# walls created}}. Ctrl+Z to undo.",
+      "writtenWithDimensions": "{count, plural, one {# wall} other {# walls}} and {dimensions, plural, one {# dimension} other {# dimensions}} created. Ctrl+Z to undo.",
+      "writtenDimensionsRefused": "{count, plural, one {# wall created} other {# walls created}}, without dimensions: {reason} Ctrl+Z to undo.",
       "refused": {
         "overlap": "Nothing was written: {blocked} walls sit on an existing structural element.",
         "nothing-to-write": "There is no new wall to create.",
         "no-active-scene": "There is no active drawing."
+      }
+    },
+    "dimensions": {
+      "title": "Dimensions",
+      "layer": {
+        "existing": "On layer “{name}”.",
+        "create": "On layer “{name}” (will be created).",
+        "current": "On the current layer.",
+        "refused": "The dimensions will not be written: {reason}"
+      },
+      "refusal": {
+        "no-scene": "There is no active drawing.",
+        "no-layer": "There is no current layer."
       }
     }
   },

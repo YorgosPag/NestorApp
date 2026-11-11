@@ -35,6 +35,8 @@ import type {
   ModelFromDrawingState,
 } from '../../../systems/model-from-drawing/model-from-drawing-store';
 import { OPENING_REFUSAL_LABEL_KEY } from '../../../systems/model-from-drawing/opening-label-keys';
+import { DIMENSION_LAYER_REFUSAL_LABEL_KEY } from '../../../systems/model-from-drawing/dimension-label-keys';
+import { RecognizedDimensionsSection } from './RecognizedDimensionsSection';
 import { TopoReviewPanel } from '../topography/TopoReviewPanel';
 import {
   OpeningsSection,
@@ -82,6 +84,22 @@ export interface ModelFromDrawingPanelProps {
   readonly imageSource: ImageSourceView;
 }
 
+/**
+ * ADR-929 Δ20 Σ1.3β — «γράφτηκαν»: τοίχοι, και στην ίδια πρόταση ό,τι έγινε με τις διαστάσεις της ίδιας έγκρισης.
+ * Τρία ολόκληρα μηνύματα (κανένα συναρμολογημένο): μόνο τοίχοι · τοίχοι + διαστάσεις · τοίχοι, διαστάσεις αρνήθηκαν.
+ */
+function writtenText(notice: Extract<ModelFromDrawingNotice, { kind: 'written' }>, t: Translate): string {
+  const { count, dimensions } = notice;
+  if (dimensions?.kind === 'refused') {
+    const reason = t(DIMENSION_LAYER_REFUSAL_LABEL_KEY[dimensions.reason]);
+    return t('modelFromDrawing.notice.writtenDimensionsRefused', { count, reason });
+  }
+  if (dimensions && dimensions.count > 0) {
+    return t('modelFromDrawing.notice.writtenWithDimensions', { count, dimensions: dimensions.count });
+  }
+  return t('modelFromDrawing.notice.written', { count });
+}
+
 /** Κάθε ειδοποίηση με ΡΗΤΟ κλειδί (όχι συναρμολογημένο): το CHECK 3.8 βλέπει ότι υπάρχουν όλα. */
 function noticeText(notice: ModelFromDrawingNotice, role: ModelFromDrawingSampleRole, t: Translate): string {
   switch (notice.kind) {
@@ -91,7 +109,7 @@ function noticeText(notice: ModelFromDrawingNotice, role: ModelFromDrawingSample
     case 'no-color': return t('modelFromDrawing.notice.no-color');
     case 'stale': return t('modelFromDrawing.notice.stale');
     case 'uncalibrated': return t('modelFromDrawing.notice.uncalibrated');
-    case 'written': return t('modelFromDrawing.notice.written', { count: notice.count });
+    case 'written': return writtenText(notice, t);
     case 'no-walls': return t('modelFromDrawing.notice.no-walls');
     case 'openings-written': return t('modelFromDrawing.notice.openings-written', { count: notice.count });
     case 'openings-refused': return t(OPENING_REFUSAL_LABEL_KEY[notice.refusal]);
@@ -183,6 +201,7 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
         count={countProposalByStatus(proposal).unconfirmed}
         text={(count) => t('modelFromDrawing.leftOut', { count })} testId="mfd-left-out"
       />
+      <RecognizedDimensionsSection summary={state.dimensionSummary} t={t} />
       <Button
         type="button" size="sm" disabled={locked} onClick={actions.onApprove}
         data-testid="mfd-approve"
@@ -194,7 +213,8 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
 }
 
 export function ModelFromDrawingPanel({ state, actions, imageSource }: ModelFromDrawingPanelProps): React.ReactElement | null {
-  const { t } = useTranslation('dxf-viewer-shell');
+  // `dxf-viewer-panels`: οι λόγοι «άκυρο όνομα επιπέδου» είναι τα ίδια κείμενα με τη μετονομασία layer (Σ1.3β).
+  const { t } = useTranslation(['dxf-viewer-shell', 'dxf-viewer-panels']);
   if (state.phase === 'closed') return null;
   return (
     <TopoReviewPanel

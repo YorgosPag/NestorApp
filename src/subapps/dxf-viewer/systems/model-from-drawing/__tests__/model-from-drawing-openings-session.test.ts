@@ -401,7 +401,7 @@ describe('ADR-911 Φ4-3β — η ΜΙΑ έγκριση', () => {
   it('refresh με `keepNotice` κρατά ό,τι είχε πει ο άλλος ελεγκτής· χωρίς, το σβήνει', () => {
     const h = harness();
     sampleOpening(h);
-    const written = { kind: 'written', count: 38, retrimmed: 0 } as const;
+    const written = { kind: 'written', count: 38, retrimmed: 0, dimensions: null } as const;
 
     modelFromDrawingStore.patch({ notice: written });
     openings.refresh(h.deps, true);

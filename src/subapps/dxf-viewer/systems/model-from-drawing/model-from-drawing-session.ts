@@ -43,7 +43,11 @@ import {
   type ProposalLineSource,
 } from './proposal-line-source';
 import { modelFromDrawingStore, type ModelFromDrawingState } from './model-from-drawing-store';
-import { writeRecognizedDimensions } from './model-from-drawing-dimensions';
+import {
+  summarizeRecognizedDimensions,
+  writeRecognizedDimensions,
+  type RecognizedDimensionSummary,
+} from './model-from-drawing-dimensions';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 
 /** Ό,τι χρειάζεται ο ελεγκτής από τον κόσμο — διαβάζεται ΤΗ ΣΤΙΓΜΗ της πράξης, ποτέ νωρίτερα. */
@@ -69,6 +73,8 @@ interface Computed {
   readonly preview: AssistantPreview;
   /** Η σκηνή της πρότασης — ταξιδεύει ΜΑΖΙ της, ώστε κάθε δρόμος που γράφει πρόταση να γράφει και τη βάση της. */
   readonly wallBasis: SceneBasis;
+  /** ADR-929 Δ20 Σ1.3β — η στρώση «Διαστάσεις» της ίδιας έγκρισης, από τον ΙΔΙΟ υπολογισμό με την εγγραφή. */
+  readonly dimensionSummary: RecognizedDimensionSummary | null;
 }
 
 /**
@@ -88,7 +94,12 @@ function compute(inputs: ProposalInputs, deps: ModelFromDrawingDeps): Computed |
     categoryByThicknessMm: inputs.categoryByThicknessMm,
     typeWall: deps.typing.typeWall,
   });
-  return { proposal, preview: buildAssistantPreview(proposal, lines.entities), wallBasis: readSceneBasis(deps.accessor) };
+  return {
+    proposal,
+    preview: buildAssistantPreview(proposal, lines.entities),
+    wallBasis: readSceneBasis(deps.accessor),
+    dimensionSummary: summarizeRecognizedDimensions(inputs.lineSource, deps.accessor),
+  };
 }
 
 /** Ξαναϋπολογίζει με (ενδεχομένως) νέες αποφάσεις και γράφει το αποτέλεσμα στο store. */
@@ -231,23 +242,25 @@ export const modelFromDrawingSession = {
 function writeApproved(proposal: WallProposal, lineSource: ProposalLineSource, deps: ModelFromDrawingDeps): boolean {
   // ADR-412 — οι τύποι που κόπηκαν για ΑΥΤΟΥΣ τους τοίχους αποθηκεύονται ακριβώς πριν την εγγραφή.
   deps.typing.commit(proposal.walls);
-  const result = getGlobalCommandHistory().runAsSingleUndo(deps.undoName, () => {
-    const walls = addWallsToScene(proposal.walls, deps.accessor, {
+  const { walls, dimensions } = getGlobalCommandHistory().runAsSingleUndo(deps.undoName, () => {
+    const wallResult = addWallsToScene(proposal.walls, deps.accessor, {
       origin: 'bulk',
       onOverlap: 'refuse',
       undoName: deps.undoName,
     });
-    if (!walls.refusal) writeRecognizedDimensions(lineSource, deps.accessor, deps.undoName);
-    return walls;
+    const dimensionResult = wallResult.refusal
+      ? null
+      : writeRecognizedDimensions(lineSource, deps.accessor, deps.undoName);
+    return { walls: wallResult, dimensions: dimensionResult };
   });
-  if (result.refusal) {
-    modelFromDrawingStore.patch({ notice: { kind: 'refused', refusal: result.refusal, blocked: result.blocked } });
+  if (walls.refusal) {
+    modelFromDrawingStore.patch({ notice: { kind: 'refused', refusal: walls.refusal, blocked: walls.blocked } });
     return false;
   }
   // Η σκηνή έχει πλέον τους τοίχους ⇒ η νέα πρόταση τους δείχνει ως «υπάρχοντες» (Α-6, ορατό).
   recompute({}, deps);
   modelFromDrawingStore.patch({
-    notice: { kind: 'written', count: result.written.length, retrimmed: result.retrimmedNeighbours },
+    notice: { kind: 'written', count: walls.written.length, retrimmed: walls.retrimmedNeighbours, dimensions },
   });
   return true;
 }

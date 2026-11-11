@@ -52,9 +52,22 @@ export interface NamedLayerAccessor {
   setLevelScene: (levelId: string, scene: SceneModel) => void;
 }
 
+/** Γιατί δεν υπάρχει layer να γραφτεί κάτι — ΕΝΑ λεξιλόγιο για την εγγραφή και την προεπισκόπηση. */
+export type NamedLayerRefusal = 'no-scene' | 'no-layer' | LayerNameValidationError;
+
 export type EnsureNamedLayerResult =
   | { readonly ok: true; readonly layerId: string; readonly created: boolean }
-  | { readonly ok: false; readonly reason: 'no-scene' | 'no-layer' | LayerNameValidationError };
+  | { readonly ok: false; readonly reason: NamedLayerRefusal };
+
+/**
+ * ADR-929 Δ20 Σ1.3β — πού **θα** γραφτούν οι διαστάσεις ενός στυλ, **χωρίς** να γραφτεί τίποτα (προεπισκόπηση).
+ * Ίδια επίλυση με το {@link ensureDimensionLayer}: ό,τι λέει εδώ το πάνελ, αυτό κάνει η έγκριση.
+ */
+export type DimensionLayerTarget =
+  | { readonly kind: 'existing'; readonly name: string }
+  | { readonly kind: 'create'; readonly name: string }
+  | { readonly kind: 'current' }
+  | { readonly kind: 'refused'; readonly reason: NamedLayerRefusal };
 
 /**
  * Το layer των διαστάσεων ενός στυλ (`DimStyle.targetLayer`, ≡ `DIMLAYER`).
@@ -109,6 +122,29 @@ export function ensureDimensionLayer(
 ): EnsureNamedLayerResult {
   const spec = resolveDimensionLayerSpec(style);
   if (spec) return ensureNamedLayer(accessor, spec, history);
-  const layerId = getCurrentLayerId() || getDefaultLayerId();
+  const layerId = currentDimensionLayerId();
   return layerId ? { ok: true, layerId, created: false } : { ok: false, reason: 'no-layer' };
+}
+
+/**
+ * ADR-929 Δ20 Σ1.3β — η **ανάγνωση** του {@link ensureDimensionLayer}: ίδιοι κλάδοι, ίδια σειρά (σκηνή → υπάρχον →
+ * φρουρός ονόματος → νέο), μηδέν εγγραφές. Για την προεπισκόπηση «σε ποιο επίπεδο, και αν θα δημιουργηθεί».
+ */
+export function planDimensionLayer(
+  scene: SceneModel | null,
+  style: Pick<DimStyle, 'targetLayer'>,
+): DimensionLayerTarget {
+  const spec = resolveDimensionLayerSpec(style);
+  if (!spec) return currentDimensionLayerId() ? { kind: 'current' } : { kind: 'refused', reason: 'no-layer' };
+  if (!scene) return { kind: 'refused', reason: 'no-scene' };
+  const existing = findSceneLayerByName(scene, spec.name);
+  if (existing) return { kind: 'existing', name: existing.name };
+  const guard = guardLayerName({ name: spec.name, scene });
+  if (guard) return { kind: 'refused', reason: guard.validationError };
+  return { kind: 'create', name: spec.name };
+}
+
+/** `DIMLAYER` = `"."`/κενό ⇒ το τρέχον layer, αλλιώς το προεπιλεγμένο (ΕΝΑ σημείο για εγγραφή και προεπισκόπηση). */
+function currentDimensionLayerId(): string | null {
+  return getCurrentLayerId() || getDefaultLayerId() || null;
 }

@@ -6,7 +6,8 @@
  *   · η έγκριση είναι κλειδωμένη όσο εκκρεμεί ομάδα πάχους, και γράφει τον αριθμό·
  *   · κάθε απόφαση φεύγει προς τα πάνω — το πάνελ δεν γράφει τίποτα μόνο του·
  *   · το υπόμνημα δείχνει κάθε κατάσταση με το μοτίβο γραμμής του καμβά·
- *   · κάθε ειδοποίηση έχει δικό της κείμενο (καμία σιωπηλή άρνηση).
+ *   · κάθε ειδοποίηση έχει δικό της κείμενο (καμία σιωπηλή άρνηση)·
+ *   · ADR-929 Δ20 Σ1.3β: η στρώση «Διαστάσεις» (θα δημιουργηθούν · υπάρχουν ήδη · επίπεδο · άρνηση με λόγο).
  */
 
 import React from 'react';
@@ -77,6 +78,7 @@ function stateOf(patch: Partial<ModelFromDrawingState> = {}): ModelFromDrawingSt
     categoryByThicknessMm: new Map(),
     proposal: UNCONFIRMED,
     preview: null,
+    dimensionSummary: null,
     openingColorHex: null,
     openingDecisions: [],
     openingReview: NO_OPENING_REVIEW_DECISIONS,
@@ -273,7 +275,23 @@ describe('ModelFromDrawingPanel — υπόμνημα, κάλυψη, ειδοπο
     [{ kind: 'no-scene' }, 'modelFromDrawing.notice.no-scene'],
     [{ kind: 'no-color' }, 'modelFromDrawing.notice.no-color'],
     [{ kind: 'stale' }, 'modelFromDrawing.notice.stale'],
-    [{ kind: 'written', count: 38, retrimmed: 0 }, 'modelFromDrawing.notice.written{"count":38}'],
+    [{ kind: 'written', count: 38, retrimmed: 0, dimensions: null }, 'modelFromDrawing.notice.written{"count":38}'],
+    [
+      { kind: 'written', count: 38, retrimmed: 0, dimensions: { kind: 'written', count: 0 } },
+      'modelFromDrawing.notice.written{"count":38}',
+    ],
+    [
+      { kind: 'written', count: 38, retrimmed: 0, dimensions: { kind: 'written', count: 12 } },
+      'modelFromDrawing.notice.writtenWithDimensions{"count":38,"dimensions":12}',
+    ],
+    [
+      { kind: 'written', count: 38, retrimmed: 0, dimensions: { kind: 'refused', reason: 'INVALID_CHARS' } },
+      'modelFromDrawing.notice.writtenDimensionsRefused{"count":38,"reason":"dxf-viewer-panels:layerValidation.INVALID_CHARS"}',
+    ],
+    [
+      { kind: 'written', count: 38, retrimmed: 0, dimensions: { kind: 'refused', reason: 'no-layer' } },
+      'modelFromDrawing.notice.writtenDimensionsRefused{"count":38,"reason":"modelFromDrawing.dimensions.refusal.no-layer"}',
+    ],
     [{ kind: 'refused', refusal: 'overlap', blocked: 3 }, 'modelFromDrawing.notice.refused.overlap{"blocked":3}'],
     [{ kind: 'refused', refusal: 'nothing-to-write', blocked: 0 }, 'modelFromDrawing.notice.refused.nothing-to-write'],
     [{ kind: 'refused', refusal: 'no-active-scene', blocked: 0 }, 'modelFromDrawing.notice.refused.no-active-scene'],
@@ -360,5 +378,43 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
   it('η ειδοποίηση «αβαθμονόμητη» έχει το δικό της κείμενο', () => {
     expect(renderPanel({ notice: { kind: 'uncalibrated' } }).q('mfd-notice')?.textContent)
       .toBe('modelFromDrawing.notice.uncalibrated');
+  });
+});
+
+describe('ModelFromDrawingPanel — στρώση «Διαστάσεις» (ADR-929 Δ20 Σ1.3β)', () => {
+  const rows = (view: ReturnType<typeof renderPanel>) =>
+    [...(view.q('mfd-dimensions')?.querySelectorAll('li') ?? [])].map((li) => [
+      li.getAttribute('data-status'), li.querySelector('span:last-child')?.textContent,
+    ]);
+
+  it('χωρίς στρώση ή χωρίς καμία διάσταση ⇒ καμία ενότητα', () => {
+    expect(renderPanel().q('mfd-dimensions')).toBeNull();
+    const empty = renderPanel({ dimensionSummary: { fresh: 0, existing: 0, layer: { kind: 'current' } } });
+    expect(empty.q('mfd-dimensions')).toBeNull();
+  });
+
+  it('θα δημιουργηθούν · υπάρχουν ήδη, με το λεξιλόγιο του υπομνήματος, και σε ποιο επίπεδο', () => {
+    const view = renderPanel({ dimensionSummary: { fresh: 9, existing: 3, layer: { kind: 'create', name: 'A-ANNO-DIMS' } } });
+    expect(rows(view)).toEqual([['ready', '9'], ['existing', '3']]);
+    const layer = view.q('mfd-dimensions-layer');
+    expect(layer?.textContent).toBe('modelFromDrawing.dimensions.layer.create{"name":"A-ANNO-DIMS"}');
+    expect(layer?.getAttribute('role')).toBeNull();
+  });
+
+  it('όλες υπάρχουν ήδη ⇒ καμία γραμμή επιπέδου (δεν θα γραφτεί τίποτα)', () => {
+    const view = renderPanel({ dimensionSummary: { fresh: 0, existing: 4, layer: { kind: 'existing', name: 'DIMS' } } });
+    expect(rows(view)).toEqual([['ready', '0'], ['existing', '4']]);
+    expect(view.q('mfd-dimensions-layer')).toBeNull();
+  });
+
+  it('🔴 άκυρο επίπεδο ⇒ alert με τον λόγο ΠΡΙΝ την έγκριση', () => {
+    const view = renderPanel({
+      dimensionSummary: { fresh: 2, existing: 0, layer: { kind: 'refused', reason: 'RESERVED' } },
+    });
+    const layer = view.q('mfd-dimensions-layer');
+    expect(layer?.getAttribute('role')).toBe('alert');
+    expect(layer?.textContent).toBe(
+      'modelFromDrawing.dimensions.layer.refused{"reason":"dxf-viewer-panels:layerValidation.RESERVED"}',
+    );
   });
 });

@@ -8,6 +8,11 @@
  *   3. άρνηση τοίχων ⇒ καμία διάσταση, κανένα layer, κανένα βήμα ιστορικού·
  *   4. ιδεμποτία: δεύτερη εγγραφή της ίδιας πηγής ⇒ μηδέν νέες διαστάσεις, κανένα βήμα·
  *   5. πηγή χωρίς διαστάσεις ⇒ μόνο τοίχοι (η συμπεριφορά πριν το Σ1.3).
+ *   Σ1.3β:
+ *   6. η προεπισκόπηση («Θα δημιουργηθούν / Υπάρχουν ήδη / σε ποιο επίπεδο») λέει ΑΚΡΙΒΩΣ ό,τι κάνει η έγκριση,
+ *      και το «γράφτηκαν» φέρει το πλήθος των διαστάσεων·
+ *   7. άκυρο όνομα επιπέδου στο στυλ ⇒ η προεπισκόπηση το λέει ΠΡΙΝ, η έγκριση γράφει τοίχους χωρίς διαστάσεις και
+ *      λέει ΓΙΑΤΙ — ποτέ σιωπηλό μηδέν.
  */
 
 import { IDENTITY_HOMOGRAPHY } from '@/lib/geometry/homography';
@@ -33,6 +38,7 @@ import {
   testFloorplanBackground,
 } from '../../../floorplan-background/testing/background-fixture';
 import { modelFromDrawingSession } from '../model-from-drawing-session';
+import { modelFromDrawingStore } from '../model-from-drawing-store';
 import { writeRecognizedDimensions } from '../model-from-drawing-dimensions';
 import type { ProposalLineSource } from '../proposal-line-source';
 import { confirmAllGroups, harness, type Harness } from './model-from-drawing-harness';
@@ -135,7 +141,7 @@ describe('ADR-929 Δ20 Σ1.3 — διαστάσεις στην έγκριση', 
     const h = harness([]);
     reviewAndApprove(h, rasterSource());
     const undoBefore = getGlobalCommandHistory().getUndoStack().length;
-    expect(writeRecognizedDimensions(rasterSource(), h.deps.accessor, 'again')).toBe(0);
+    expect(writeRecognizedDimensions(rasterSource(), h.deps.accessor, 'again')).toEqual({ kind: 'written', count: 0 });
     expect(dims(h)).toHaveLength(SPANS);
     expect(getGlobalCommandHistory().getUndoStack().length).toBe(undoBefore);
   });
@@ -146,5 +152,72 @@ describe('ADR-929 Δ20 Σ1.3 — διαστάσεις στην έγκριση', 
     expect(h.walls().length).toBeGreaterThan(0);
     expect(dims(h)).toHaveLength(0);
     expect(findSceneLayerByName(sceneOf(h)!, layerName())).toBeNull();
+  });
+});
+
+describe('ADR-929 Δ20 Σ1.3β — η στρώση «Διαστάσεις» φαίνεται πριν και μετά την έγκριση', () => {
+  const INVALID_LAYER_NAME = 'DIM<BAD';
+  let restoreStyleId: string | null = null;
+
+  afterEach(() => {
+    if (restoreStyleId) getDimStyleRegistry().setActiveStyleId(restoreStyleId);
+    restoreStyleId = null;
+  });
+
+  /** Ενεργό στυλ με άκυρο `targetLayer` (validator AutoCAD-strict ⇒ `INVALID_CHARS`). */
+  function activateStyleWithInvalidLayer(): void {
+    const registry = getDimStyleRegistry();
+    restoreStyleId = registry.getActiveStyleId();
+    const copy = registry.duplicateStyle(restoreStyleId, 'invalid-layer');
+    registry.updateCustomStyle(copy.id, { targetLayer: INVALID_LAYER_NAME });
+    registry.setActiveStyleId(copy.id);
+  }
+
+  function review(h: Harness, source: RasterSource): void {
+    modelFromDrawingSession.open();
+    modelFromDrawingSession.adoptRasterSegments(source, h.deps);
+    confirmAllGroups(h);
+  }
+
+  it('η προεπισκόπηση λέει ό,τι κάνει η έγκριση· μετά την έγκριση, ίδιες διαστάσεις ⇒ «υπάρχουν ήδη»', () => {
+    const h = harness([]);
+    review(h, rasterSource());
+    const before = modelFromDrawingStore.get().dimensionSummary;
+    expect(before).toEqual({ fresh: SPANS, existing: 0, layer: { kind: 'create', name: layerName() } });
+    expect(dims(h)).toHaveLength(0);
+
+    expect(modelFromDrawingSession.approve(h.deps)).toBe(true);
+    expect(dims(h)).toHaveLength(before?.fresh ?? -1);
+    expect(modelFromDrawingStore.get().notice).toMatchObject({
+      kind: 'written', dimensions: { kind: 'written', count: SPANS },
+    });
+    expect(modelFromDrawingStore.get().dimensionSummary).toEqual({
+      fresh: 0, existing: SPANS, layer: { kind: 'existing', name: layerName() },
+    });
+  });
+
+  it('πηγή χωρίς διαστάσεις ⇒ καμία στρώση στην προεπισκόπηση, `dimensions: null` στο «γράφτηκαν»', () => {
+    const h = harness([]);
+    review(h, rasterSource(false));
+    expect(modelFromDrawingStore.get().dimensionSummary).toBeNull();
+    expect(modelFromDrawingSession.approve(h.deps)).toBe(true);
+    expect(modelFromDrawingStore.get().notice).toMatchObject({ kind: 'written', dimensions: null });
+  });
+
+  it('🔴 άκυρο επίπεδο ⇒ προειδοποίηση ΠΡΙΝ, τοίχοι χωρίς διαστάσεις ΜΕ λόγο, κανένα layer', () => {
+    activateStyleWithInvalidLayer();
+    const h = harness([]);
+    review(h, rasterSource());
+    expect(modelFromDrawingStore.get().dimensionSummary).toEqual({
+      fresh: SPANS, existing: 0, layer: { kind: 'refused', reason: 'INVALID_CHARS' },
+    });
+
+    expect(modelFromDrawingSession.approve(h.deps)).toBe(true);
+    expect(h.walls().length).toBeGreaterThan(0);
+    expect(dims(h)).toHaveLength(0);
+    expect(findSceneLayerByName(sceneOf(h)!, INVALID_LAYER_NAME)).toBeNull();
+    expect(modelFromDrawingStore.get().notice).toMatchObject({
+      kind: 'written', dimensions: { kind: 'refused', reason: 'INVALID_CHARS' },
+    });
   });
 });

@@ -79,17 +79,31 @@ export function LeftOutNote({ count, text, testId }: {
   return <p className={MUTED} data-testid={testId}>{text(count)}</p>;
 }
 
+/**
+ * ΜΙΑ γραμμή υπομνήματος: μοτίβο γραμμής του καμβά + ετικέτα κατάστασης + πλήθος. Την ίδια γραμμή διαβάζουν οι
+ * τοίχοι και η στρώση «Διαστάσεις» (ADR-929 Δ20 Σ1.3β): «Θα δημιουργηθούν» φαίνεται και σημαίνει το ίδιο παντού.
+ */
+export function StatusCountRow({ status, count, t }: {
+  readonly status: WallProposalStatus;
+  readonly count: number;
+  readonly t: Translate;
+}): React.ReactElement {
+  return (
+    <li className="flex items-center gap-2 text-xs text-foreground" data-status={status}>
+      <ToneSwatch tone={ASSISTANT_STATUS_TONE[status]} />
+      <span className="flex-1">{t(STATUS_LABEL_KEY[status])}</span>
+      <span className="font-mono">{count}</span>
+    </li>
+  );
+}
+
 /** Υπόμνημα + πλήθη: κάθε κατάσταση με το μοτίβο γραμμής της. */
 export function StatusLegend({ proposal, t }: { readonly proposal: WallProposal; readonly t: Translate }): React.ReactElement {
   const counts = countProposalByStatus(proposal);
   return (
     <ul className="m-0 flex list-none flex-col gap-1 p-0" data-testid="mfd-legend">
       {ASSISTANT_STATUS_ORDER.map((status) => (
-        <li key={status} className="flex items-center gap-2 text-xs text-foreground" data-status={status}>
-          <ToneSwatch tone={ASSISTANT_STATUS_TONE[status]} />
-          <span className="flex-1">{t(STATUS_LABEL_KEY[status])}</span>
-          <span className="font-mono">{counts[status]}</span>
-        </li>
+        <StatusCountRow key={status} status={status} count={counts[status]} t={t} />
       ))}
     </ul>
   );

@@ -8,6 +8,7 @@
  *   - μέσα σε runAsSingleUndo: layer + οντότητες = ΕΝΑ βήμα, Ctrl+Z τα παίρνει όλα·
  *   - άκυρο όνομα / χωρίς σκηνή ⇒ ok:false, καμία εγγραφή·
  *   - DimStyle.targetLayer ≡ DIMLAYER (κενό ή "." ⇒ τρέχον layer).
+ *   - Σ1.3β: planDimensionLayer = η ΑΝΑΓΝΩΣΗ του ensureDimensionLayer — ίδια απάντηση, μηδέν εγγραφές.
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
@@ -17,7 +18,9 @@ import { CommandHistory } from '../../core/commands/CommandHistory';
 import type { ICommand } from '../../core/commands/interfaces';
 import { getLayer, __resetLayerStoreForTesting } from '../../stores/LayerStore';
 import {
+  ensureDimensionLayer,
   ensureNamedLayer,
+  planDimensionLayer,
   resolveDimensionLayerSpec,
   type NamedLayerAccessor,
 } from '../named-layer';
@@ -169,5 +172,40 @@ describe('resolveDimensionLayerSpec — DimStyle.targetLayer ≡ DIMLAYER', () =
     expect(resolveDimensionLayerSpec({ targetLayer: '' })).toBeNull();
     expect(resolveDimensionLayerSpec({ targetLayer: '.' })).toBeNull();
     expect(resolveDimensionLayerSpec({ targetLayer: '  ' })).toBeNull();
+  });
+});
+
+describe('planDimensionLayer — η προεπισκόπηση του ensureDimensionLayer (Σ1.3β)', () => {
+  it('υπάρχον layer (άλλα πεζά/κεφαλαία) ⇒ «existing» με το όνομα του εγγράφου, καμία εγγραφή', () => {
+    const scene = baseScene();
+    const dims = createSceneLayer({ id: 'lyr_dims', name: 'A-ANNO-DIMS' });
+    const withDims = { ...scene, layersById: { ...scene.layersById, [dims.id]: dims } };
+    expect(planDimensionLayer(withDims, { targetLayer: 'a-anno-dims' })).toEqual({ kind: 'existing', name: 'A-ANNO-DIMS' });
+  });
+
+  it('νέο όνομα ⇒ «create»· και η εγγραφή πράγματι το δημιουργεί (ίδια απάντηση)', () => {
+    const acc = makeAccessor(baseScene());
+    const style = { targetLayer: 'A-ANNO-DIMS' };
+    expect(planDimensionLayer(acc.scene(), style)).toEqual({ kind: 'create', name: 'A-ANNO-DIMS' });
+    expect(acc.writes()).toBe(0);
+    expect(ensureDimensionLayer(acc, style, new CommandHistory())).toMatchObject({ ok: true, created: true });
+  });
+
+  it('🔴 άκυρο όνομα ⇒ «refused» με τον ΙΔΙΟ λόγο που θα έδινε η εγγραφή', () => {
+    const acc = makeAccessor(baseScene());
+    const style = { targetLayer: 'DIM<BAD' };
+    const planned = planDimensionLayer(acc.scene(), style);
+    expect(planned).toEqual({ kind: 'refused', reason: 'INVALID_CHARS' });
+    expect(ensureDimensionLayer(acc, style, new CommandHistory())).toEqual({ ok: false, reason: 'INVALID_CHARS' });
+  });
+
+  it('χωρίς σκηνή ⇒ «refused no-scene»', () => {
+    expect(planDimensionLayer(null, { targetLayer: 'X' })).toEqual({ kind: 'refused', reason: 'no-scene' });
+  });
+
+  it('"." χωρίς τρέχον/προεπιλεγμένο layer ⇒ «refused no-layer», όπως η εγγραφή', () => {
+    const acc = makeAccessor(baseScene());
+    expect(planDimensionLayer(acc.scene(), { targetLayer: '.' })).toEqual({ kind: 'refused', reason: 'no-layer' });
+    expect(ensureDimensionLayer(acc, { targetLayer: '.' }, new CommandHistory())).toEqual({ ok: false, reason: 'no-layer' });
   });
 });
