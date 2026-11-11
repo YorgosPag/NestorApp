@@ -60,3 +60,18 @@ export function derivePropertyOrientations(input: PropertyOrientationInputs): Or
   }
   return canonicalOrientations(found);
 }
+
+export interface BoundariesOrientationInputs extends Omit<PropertyOrientationInputs, 'polygon'> {
+  /** Ένα ή περισσότερα όρια — π.χ. ένα ανά κλειστή αλυσίδα εξωτερικού κελύφους σε κάτοψη ακινήτου (ADR-937 §2.2). */
+  readonly polygons: readonly (readonly PlanarPoint[])[];
+}
+
+/**
+ * Το ίδιο ερώτημα πάνω σε **πολλά** όρια: η ένωση των όψεων, στη σειρά του λεξιλογίου. Σε κάτοψη ακινήτου όλη η κάτοψη
+ * **είναι** το ακίνητο, άρα όριο = η εξωτερική παρειά του κελύφους (όπως το Gross Area του Revit / η Zone «Gross» του
+ * ArchiCAD) — καμία δεύτερη μέθοδος, ο ίδιος κανόνας ανά όριο.
+ */
+export function deriveOrientationsOverBoundaries(input: BoundariesOrientationInputs): OrientationType[] {
+  const { polygons, ...rest } = input;
+  return canonicalOrientations(polygons.flatMap((polygon) => derivePropertyOrientations({ ...rest, polygon })));
+}

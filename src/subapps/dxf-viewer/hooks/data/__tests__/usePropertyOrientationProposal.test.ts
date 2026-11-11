@@ -5,6 +5,8 @@
  *   Κ2  τοίχοι χωρίς αναγνωρισμένο εξωτερικό κέλυφος ⇒ `no-envelope`
  *   Κ3  κέλυφος + παράθυρο στη νότια ακμή ⇒ `derived` + ['south']· κέλυφος χωρίς ανοίγματα ⇒ `derived` + []
  *   Κ4  χωρίς σκηνή ή εκφυλισμένο πολύγωνο ⇒ `null` (η λωρίδα δεν αποδίδεται)
+ *   Κ5  κάτοψη ακινήτου (`envelope`): όριο = εξωτερική παρειά κάθε ΚΛΕΙΣΤΗΣ αλυσίδας κελύφους· ανοιχτή αλυσίδα ⇒ καμία
+ *       μαντεψιά (`derived` + [])
  *
  * Το «ποιος τοίχος είναι εξωτερικός» έχει δικές του άγκυρες (envelope-perimeter) — εδώ ελέγχεται η ΔΙΑΚΛΑΔΩΣΗ.
  */
@@ -12,7 +14,11 @@
 // jest globals injected (no '@jest/globals' import) so @swc/jest hoists the mocks above the hook import.
 import { renderHook } from '@testing-library/react';
 
-import { usePropertyOrientationProposal } from '../usePropertyOrientationProposal';
+import {
+  ENVELOPE_BOUNDARY,
+  usePropertyOrientationProposal,
+  type PropertyBoundarySource,
+} from '../usePropertyOrientationProposal';
 
 interface MockEntity {
   readonly type: string;
@@ -23,12 +29,17 @@ interface MockEntity {
 
 let mockScene: { units: string; entities: MockEntity[] } | null = null;
 let mockExteriorWallIds = new Set<string>();
+let mockChains: Array<{
+  closed: boolean;
+  enclosesRegion: boolean;
+  exteriorFaceLoop: { points: Array<{ x: number; y: number }> };
+}> = [];
 
 jest.mock('../../../systems/levels/useCurrentLevelScene', () => ({
   useCurrentLevelScene: () => mockScene,
 }));
 jest.mock('../../../bim/geometry/exterior-wall-ids', () => ({
-  resolveExteriorWallIds: () => mockExteriorWallIds,
+  resolveExteriorEnvelope: () => ({ chains: mockChains, wallIds: mockExteriorWallIds }),
 }));
 jest.mock('../../../systems/geo-referencing/geo-reference-store', () => ({
   getGeoReference: () => null,
@@ -47,14 +58,22 @@ const SOUTH_WINDOW: MockEntity = {
 };
 const DXF_LINE: MockEntity = { type: 'line', id: 'ln-1' };
 
+/** Η ίδια εξωτερική παρειά ως αλυσίδα κελύφους (σημεία σκηνής). */
+const LOOP = { points: POLYGON.map(([x, y]) => ({ x, y })) };
+
+function runSource(source: PropertyBoundarySource | undefined) {
+  return renderHook(() => usePropertyOrientationProposal(source)).result.current;
+}
+
 function run(polygon: ReadonlyArray<[number, number]> | undefined) {
-  return renderHook(() => usePropertyOrientationProposal(polygon)).result.current;
+  return runSource(polygon ? { kind: 'polygon', polygon } : undefined);
 }
 
 describe('usePropertyOrientationProposal — αιτία κενής πρότασης', () => {
   beforeEach(() => {
     mockScene = null;
     mockExteriorWallIds = new Set<string>();
+    mockChains = [];
   });
 
   it('Κ1 μόνο γραμμές DXF ⇒ no-model', () => {
@@ -80,5 +99,14 @@ describe('usePropertyOrientationProposal — αιτία κενής πρότασ�
     mockScene = { units: 'mm', entities: [WALL] };
     expect(run([[0, 0], [1, 1]])).toBeNull();
     expect(run(undefined)).toBeNull();
+  });
+
+  it('Κ5 κάτοψη ακινήτου: όριο = κλειστό κέλυφος· ανοιχτή αλυσίδα δεν μαντεύει', () => {
+    mockExteriorWallIds = new Set(['ext-s']);
+    mockScene = { units: 'mm', entities: [WALL, SOUTH_WINDOW] };
+    mockChains = [{ closed: true, enclosesRegion: true, exteriorFaceLoop: LOOP }];
+    expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'derived', values: ['south'], northAssumed: true });
+    mockChains = [{ closed: false, enclosesRegion: false, exteriorFaceLoop: LOOP }];
+    expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'derived', values: [], northAssumed: true });
   });
 });

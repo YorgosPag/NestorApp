@@ -14,6 +14,8 @@ import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import { PANEL_TOKENS, PANEL_LAYOUT, PanelTokenUtils } from '../../config/panel-tokens';
 import { OverlayList } from '../OverlayList';
 import { OverlayProperties } from '../OverlayProperties';
+import { PropertyOrientationProposal } from './OverlayOrientationProposal';
+import { ENVELOPE_BOUNDARY } from '../../hooks/data/usePropertyOrientationProposal';
 import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection';
 import { OpenCreateLauncher } from './open-create/OpenCreateLauncher';
@@ -100,6 +102,8 @@ export function LevelPanel({
     [levels, currentLevelId]
   );
   const showOverlayPanel = currentLevel?.floorplanType === 'floor';
+  // ADR-937 §2.2 — κάτοψη ακινήτου: όλη η κάτοψη ΕΙΝΑΙ το ακίνητο ⇒ η πρόταση προσανατολισμού ζει στο επίπεδο, όχι σε overlay.
+  const unitPropertyId = currentLevel?.floorplanType === 'unit' ? currentLevel.propertyId : undefined;
   const selectedOverlayId = universalSelection.getPrimaryId();
   const selectedOverlay = selectedOverlayId ? (overlayStore.overlays[selectedOverlayId] ?? null) : null;
   const levelScenes = useMemo(() => {
@@ -372,6 +376,11 @@ export function LevelPanel({
             </div>
           )}
         </div>
+      )}
+      {unitPropertyId && (
+        <section className={PANEL_TOKENS.LEVEL_PANEL.OVERLAY_SECTION}>
+          <PropertyOrientationProposal propertyId={unitPropertyId} source={ENVELOPE_BOUNDARY} />
+        </section>
       )}
       {onSceneImported && duplicateSource && (
         <DuplicateFloorplanDialog

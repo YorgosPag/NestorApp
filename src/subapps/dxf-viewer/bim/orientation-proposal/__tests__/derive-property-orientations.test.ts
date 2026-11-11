@@ -5,12 +5,17 @@
  *   Κ2  ΜΟΝΟ εξωτερικοί τοίχοι μετρούν · ΜΟΝΟ ανοίγματα στο όριο του ακινήτου (ανοχή)
  *   Κ3  σύμβαση Βορρά = `forwardRigidMap` (world = R(r)·local): r = 90 ⇒ η νότια ακμή της σκηνής βλέπει Ανατολικά
  *   Κ4  κανένα άνοιγμα / εκφυλισμένο πολύγωνο ⇒ κενή πρόταση (καμία μαντεψιά)
+ *   Κ5  πολλά όρια (κελύφη κάτοψης ακινήτου, §2.2) ⇒ ένωση όψεων χωρίς διπλότυπα· κάθε άνοιγμα κρίνεται στο ΔΙΚΟ του όριο
  */
 
 import { createOpening } from '@/services/factories/opening.factory';
 
 import type { OpeningEntity, OpeningGeometry } from '../../types/opening-types';
-import { derivePropertyOrientations, type PropertyOrientationInputs } from '../derive-property-orientations';
+import {
+  deriveOrientationsOverBoundaries,
+  derivePropertyOrientations,
+  type PropertyOrientationInputs,
+} from '../derive-property-orientations';
 
 /** Τετράγωνο 10×10 m (mm), αριστερόστροφο. */
 const SQUARE = [
@@ -70,5 +75,29 @@ describe('derivePropertyOrientations', () => {
     expect(derivePropertyOrientations(inputs([]))).toEqual([]);
     expect(derivePropertyOrientations(inputs([makeWindow('w1', 'ext-s', 5_000, 0)], { polygon: SQUARE.slice(0, 2) })))
       .toEqual([]);
+  });
+});
+
+describe('deriveOrientationsOverBoundaries', () => {
+  /** Δεύτερο κέλυφος 10×10 m, 20 m ανατολικά του πρώτου. */
+  const FAR_SQUARE = SQUARE.map((p) => ({ x: p.x + 20_000, y: p.y }));
+
+  function over(openings: OpeningEntity[], polygons: (typeof SQUARE)[]) {
+    return { openings, polygons, exteriorWallIds: new Set(['ext-s', 'ext-e']), tol: 600, northRotationDeg: 0 };
+  }
+
+  it('Κ5 ένωση όψεων πάνω σε πολλά όρια, χωρίς διπλότυπα', () => {
+    const openings = [
+      makeWindow('w1', 'ext-s', 5_000, 0),
+      makeWindow('w2', 'ext-s', 25_000, 0),
+      makeWindow('w3', 'ext-e', 30_000, 5_000),
+    ];
+    expect(deriveOrientationsOverBoundaries(over(openings, [SQUARE, FAR_SQUARE]))).toEqual(['east', 'south']);
+    // Το w3 κρινόμενο ΜΟΝΟ στο πρώτο όριο είναι 20 m μακριά ⇒ δεν μετρά.
+    expect(deriveOrientationsOverBoundaries(over(openings, [SQUARE]))).toEqual(['south']);
+  });
+
+  it('Κ5 κανένα όριο ⇒ κενή πρόταση', () => {
+    expect(deriveOrientationsOverBoundaries(over([makeWindow('w1', 'ext-s', 5_000, 0)], []))).toEqual([]);
   });
 });

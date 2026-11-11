@@ -1,18 +1,24 @@
 /**
- * **Η πρόταση προσανατολισμού για το πολύγωνο ενός ακινήτου στην κάτοψη** (ADR-937 Φάση Β) — ζωντανά, από τη σκηνή του
- * ενεργού ορόφου και τη γεωαναφορά του έργου.
+ * **Η πρόταση προσανατολισμού για ένα ακίνητο στην κάτοψη** (ADR-937 Φάση Β) — ζωντανά, από τη σκηνή του ενεργού
+ * επιπέδου και τη γεωαναφορά του έργου.
  *
- * 🔑 Χαμηλής συχνότητας συνδρομές μόνο (σκηνή · γεωαναφορά) — καταναλωτής είναι το πάνελ ιδιοτήτων του overlay, όχι
- *    ορχηστρωτής του καμβά (ADR-040).
+ * Το **όριο** του ακινήτου έρχεται από δύο πηγές (ADR-937 §2.2):
+ * - `polygon`  — κάτοψη ορόφου: το πολύγωνο του overlay `kind:'property'`·
+ * - `envelope` — κάτοψη ακινήτου (`floorplanType: 'unit'`): όλη η κάτοψη **είναι** το ακίνητο ⇒ όριο = η εξωτερική παρειά
+ *   κάθε κλειστής αλυσίδας κελύφους (Revit Gross Area · ArchiCAD Zone «Gross»).
+ *
+ * 🔑 Χαμηλής συχνότητας συνδρομές μόνο (σκηνή · γεωαναφορά) — καταναλωτής είναι πάνελ, όχι ορχηστρωτής του καμβά
+ *    (ADR-040).
  * 🔑 Χωρίς γεωαναφορά ο Βορράς **θεωρείται** +Y και το λέμε (`northAssumed`) — ο άνθρωπος αποφασίζει αν εμπιστεύεται.
  */
 
 import { useMemo, useSyncExternalStore } from 'react';
 
 import type { OrientationType } from '@/constants/property-features-enterprise';
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 
-import { derivePropertyOrientations } from '../../bim/orientation-proposal/derive-property-orientations';
-import { resolveExteriorWallIds } from '../../bim/geometry/exterior-wall-ids';
+import { deriveOrientationsOverBoundaries } from '../../bim/orientation-proposal/derive-property-orientations';
+import { resolveExteriorEnvelope, type ExteriorEnvelope } from '../../bim/geometry/exterior-wall-ids';
 import { getGeoReference, subscribeGeoReference } from '../../systems/geo-referencing/geo-reference-store';
 import { useCurrentLevelScene } from '../../systems/levels/useCurrentLevelScene';
 import { isOpeningEntity, isWallEntity } from '../../types/entities';
@@ -20,8 +26,8 @@ import { overlayVertexToPoint2D } from '../../utils/entity-conversion';
 import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 
 /**
- * Ανοχή «το άνοιγμα κάθεται στο όριο του ακινήτου» (m). Το πολύγωνο σχεδιάζεται συνήθως στην εξωτερική ή στην εσωτερική
- * παρειά, ενώ η θέση του ανοίγματος είναι στον άξονα του τοίχου ⇒ αρκεί λίγο πάνω από το μισό πάχος ενός χοντρού τοίχου.
+ * Ανοχή «το άνοιγμα κάθεται στο όριο του ακινήτου» (m). Το όριο είναι συνήθως στην εξωτερική ή στην εσωτερική παρειά,
+ * ενώ η θέση του ανοίγματος είναι στον άξονα του τοίχου ⇒ αρκεί λίγο πάνω από το μισό πάχος ενός χοντρού τοίχου.
  */
 const OPENING_ON_BOUNDARY_TOL_M = 0.6;
 
@@ -30,7 +36,7 @@ const OPENING_ON_BOUNDARY_TOL_M = 0.6;
  * (live 2026-11-11: κάτοψη μόνο με γραμμές DXF έλεγε «δεν βρέθηκαν ανοίγματα» ενώ έλειπε όλο το μοντέλο). Όπως Revit
  * («Use Building Elements») και ArchiCAD (Energy Evaluation): ο προσανατολισμός βγαίνει **μόνο** από στοιχεία μοντέλου.
  * - `no-model`    — καμία οντότητα τοίχου BIM στη σκηνή (σκέτες γραμμές DXF)·
- * - `no-envelope` — υπάρχουν τοίχοι, αλλά κανένας δεν αναγνωρίστηκε εξωτερικός (`resolveExteriorWallIds`)·
+ * - `no-envelope` — υπάρχουν τοίχοι, αλλά κανένας δεν αναγνωρίστηκε εξωτερικός (`resolveExteriorEnvelope`)·
  * - `derived`     — υπάρχει κέλυφος· οι `values` μπορεί να είναι κενές (κανένα άνοιγμα στο όριο).
  */
 export type FloorplanOrientationProposalStatus = 'no-model' | 'no-envelope' | 'derived';
@@ -41,27 +47,50 @@ export interface FloorplanOrientationProposal {
   readonly northAssumed: boolean;
 }
 
+/** Από πού έρχεται το όριο του ακινήτου (δες την κεφαλίδα). */
+export type PropertyBoundarySource =
+  | { readonly kind: 'polygon'; readonly polygon: ReadonlyArray<[number, number]> }
+  | { readonly kind: 'envelope' };
+
+/** Σταθερή αναφορά για την κάτοψη ακινήτου — ώστε το `useMemo` να μην ξαναϋπολογίζει σε κάθε render. */
+export const ENVELOPE_BOUNDARY: PropertyBoundarySource = { kind: 'envelope' };
+
+/**
+ * Τα όρια σε σημεία σκηνής. Στο `envelope` μετρούν μόνο αλυσίδες που **περικλείουν** χώρο: η «εξωτερική κάθετος» μιας
+ * ανοιχτής αλυσίδας (Π / L) δεν ορίζεται — καμία μαντεψιά.
+ */
+function boundaryPolygons(source: PropertyBoundarySource, envelope: ExteriorEnvelope): PlanarPoint[][] {
+  if (source.kind === 'polygon') return [source.polygon.map(overlayVertexToPoint2D)];
+  return envelope.chains
+    .filter((c) => (c.closed || c.enclosesRegion) && c.exteriorFaceLoop.points.length >= 3)
+    .map((c) => c.exteriorFaceLoop.points.map((p) => ({ x: p.x, y: p.y })));
+}
+
+function isDegenerate(source: PropertyBoundarySource | undefined): boolean {
+  return !source || (source.kind === 'polygon' && source.polygon.length < 3);
+}
+
 export function usePropertyOrientationProposal(
-  polygon: ReadonlyArray<[number, number]> | undefined,
+  source: PropertyBoundarySource | undefined,
 ): FloorplanOrientationProposal | null {
   const scene = useCurrentLevelScene();
   const geo = useSyncExternalStore(subscribeGeoReference, getGeoReference, getGeoReference);
 
   return useMemo(() => {
-    if (!scene || !polygon || polygon.length < 3) return null;
+    if (!scene || !source || isDegenerate(source)) return null;
     const northAssumed = geo === null;
     const walls = scene.entities.filter(isWallEntity);
     if (walls.length === 0) return { status: 'no-model', values: [], northAssumed };
     const sceneUnits = resolveSceneUnits(scene);
-    const exteriorWallIds = resolveExteriorWallIds(walls, sceneUnits);
-    if (exteriorWallIds.size === 0) return { status: 'no-envelope', values: [], northAssumed };
-    const values = derivePropertyOrientations({
-      polygon: polygon.map(overlayVertexToPoint2D),
+    const envelope = resolveExteriorEnvelope(walls, sceneUnits);
+    if (envelope.wallIds.size === 0) return { status: 'no-envelope', values: [], northAssumed };
+    const values = deriveOrientationsOverBoundaries({
+      polygons: boundaryPolygons(source, envelope),
       openings: scene.entities.filter(isOpeningEntity),
-      exteriorWallIds,
+      exteriorWallIds: envelope.wallIds,
       tol: OPENING_ON_BOUNDARY_TOL_M / sceneUnitsToMeters(sceneUnits),
       northRotationDeg: geo?.rotationDeg ?? 0,
     });
     return { status: 'derived', values, northAssumed };
-  }, [scene, polygon, geo]);
+  }, [scene, source, geo]);
 }
