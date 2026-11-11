@@ -734,6 +734,7 @@
     "cancel": "No"
   },
   "autoDimension": {
+    "undoName": "Auto-dimension",
     "dialog": {
       "title": "Auto Dimension",
       "tiersLegend": "Dimension rows",

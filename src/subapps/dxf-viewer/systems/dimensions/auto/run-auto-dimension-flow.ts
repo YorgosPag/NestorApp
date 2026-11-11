@@ -11,12 +11,24 @@
  */
 
 import type { SceneAppendAccessor } from '../../../bim/scene/append-entity-to-scene';
-import { addDimensionsToScene } from '../../../bim/scene/add-dimensions-to-scene';
+import {
+  addDimensionsToScene,
+  type AddDimensionsOptions,
+} from '../../../bim/scene/add-dimensions-to-scene';
+import { i18n } from '@/i18n';
 import { getLayer } from '../../../stores/LayerStore';
 import { DXF_DEFAULT_LAYER } from '../../../config/layer-config';
 import { getDimStyleRegistry } from '../dim-style-registry';
 import { runAutoDimension } from './auto-dimension-engine';
 import { requestAutoDimensionDialog } from './auto-dimension-dialog-store';
+
+/**
+ * ADR-929 Δ20 Σ1.3 — the ONE write identity of auto-dimension (dialog + cut-line flows):
+ * broadcast tag + translated undo label, resolved at commit time (not at import).
+ */
+export function autoDimensionWriteOptions(): AddDimensionsOptions {
+  return { tool: 'dim-auto', undoName: i18n.t('autoDimension.undoName', { ns: 'dxf-viewer-shell' }) };
+}
 
 /**
  * Run the full auto-dimension flow. Returns the number of dimensions placed
@@ -46,6 +58,6 @@ export async function runAutoDimensionFlow(
   const dims = runAutoDimension(elements, result.options, { styleId: style.id, layerId, style });
   if (dims.length === 0) return 0;
 
-  addDimensionsToScene(dims, accessor);
+  addDimensionsToScene(dims, accessor, autoDimensionWriteOptions());
   return dims.length;
 }

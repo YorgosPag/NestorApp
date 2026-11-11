@@ -19,6 +19,13 @@
 
 import type { Entity, SceneLayer } from '../../types/entities';
 import type { RasterSegment } from '../../bim/plan-recognition/plan-recognition-types';
+import type { DimensionEntityInput } from '../../bim/plan-recognition/fusion/dimension-entities';
+
+/**
+ * ADR-929 Δ20 Σ1.3 — ό,τι χρειάζεται η στρώση «Διαστάσεις» από την αναγνώριση, **χωρίς** την τοποθέτηση: εκείνη
+ * διαβάζεται τη στιγμή της πράξης (`currentRasterPlacement`), όπως για τους τοίχους.
+ */
+export type RasterDimensionSource = Omit<DimensionEntityInput, 'placement'>;
 import type { WallDetectionStrategy } from '../../bim/model-from-drawing/wall-detection-strategy';
 import type { EntityColorResolver } from '../../bim/walls/same-color-rects';
 import {
@@ -52,6 +59,11 @@ export type ProposalLineSource =
       readonly backgroundId: string;
       /** Σε `raster-px` της αρχικής εικόνας. */
       readonly segments: readonly RasterSegment[];
+      /**
+       * ADR-929 Δ20 Σ1.3 — η είσοδος των διαστάσεων από την **ίδια** σύντηξη με τα `segments` (ίδιο `recognitionId`):
+       * η ταύτιση είναι εκ κατασκευής, όχι έλεγχος. Απόν ⇒ η έγκριση γράφει μόνο τοίχους.
+       */
+      readonly dimensions?: RasterDimensionSource;
     };
 
 export const SCENE_LINE_SOURCE: ProposalLineSource = { kind: 'scene' };

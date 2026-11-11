@@ -43,6 +43,8 @@ import {
   type ProposalLineSource,
 } from './proposal-line-source';
 import { modelFromDrawingStore, type ModelFromDrawingState } from './model-from-drawing-store';
+import { writeRecognizedDimensions } from './model-from-drawing-dimensions';
+import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 
 /** Ό,τι χρειάζεται ο ελεγκτής από τον κόσμο — διαβάζεται ΤΗ ΣΤΙΓΜΗ της πράξης, ποτέ νωρίτερα. */
 export interface ModelFromDrawingDeps {
@@ -217,18 +219,26 @@ export const modelFromDrawingSession = {
       modelFromDrawingStore.patch({ ...fresh, notice: { kind: 'stale' } });
       return false;
     }
-    return writeApproved(fresh.proposal, deps);
+    return writeApproved(fresh.proposal, state.lineSource, deps);
   },
 };
 
-/** Η εγγραφή: τύποι → τοίχοι (όλα ή τίποτα) → νέα πρόταση από τη σκηνή που προέκυψε. */
-function writeApproved(proposal: WallProposal, deps: ModelFromDrawingDeps): boolean {
+/**
+ * Η εγγραφή: τύποι → [τοίχοι (όλα ή τίποτα) → διαστάσεις] ως ΕΝΑ βήμα αναίρεσης → νέα πρόταση από τη σκηνή που
+ * προέκυψε. ADR-929 Δ20 Σ1.3: οι διαστάσεις γράφονται μόνο αν γράφτηκαν οι τοίχοι — άρνηση τοίχων ⇒ η ομάδα μένει
+ * χωρίς παιδιά ⇒ καμία εγγραφή ιστορικού, κανένα ορφανό layer.
+ */
+function writeApproved(proposal: WallProposal, lineSource: ProposalLineSource, deps: ModelFromDrawingDeps): boolean {
   // ADR-412 — οι τύποι που κόπηκαν για ΑΥΤΟΥΣ τους τοίχους αποθηκεύονται ακριβώς πριν την εγγραφή.
   deps.typing.commit(proposal.walls);
-  const result = addWallsToScene(proposal.walls, deps.accessor, {
-    origin: 'bulk',
-    onOverlap: 'refuse',
-    undoName: deps.undoName,
+  const result = getGlobalCommandHistory().runAsSingleUndo(deps.undoName, () => {
+    const walls = addWallsToScene(proposal.walls, deps.accessor, {
+      origin: 'bulk',
+      onOverlap: 'refuse',
+      undoName: deps.undoName,
+    });
+    if (!walls.refusal) writeRecognizedDimensions(lineSource, deps.accessor, deps.undoName);
+    return walls;
   });
   if (result.refusal) {
     modelFromDrawingStore.patch({ notice: { kind: 'refused', refusal: result.refusal, blocked: result.blocked } });

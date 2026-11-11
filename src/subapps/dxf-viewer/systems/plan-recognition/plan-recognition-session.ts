@@ -26,7 +26,7 @@ import type { PlanInputKind, PlanReadingOutcome, RasterSegment } from '../../bim
 import { getFloorBackground, getFloorProvider } from '../../floorplan-background/stores/floorplanBackgroundStore';
 import { resolveRasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
 import type { FloorplanBackground } from '../../floorplan-background/providers/types';
-import type { ProposalLineSource } from '../model-from-drawing/proposal-line-source';
+import type { ProposalLineSource, RasterDimensionSource } from '../model-from-drawing/proposal-line-source';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { sha256Hex } from '@/lib/hash/sha256';
 import { OCR_IDLE, planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
@@ -130,10 +130,21 @@ export function wallEvidenceExclusions(
  * έκδοσης. Τα χαμηλά μένουν στην επικάλυψη («κοίτα την εικόνα»), όχι στους τοίχους: στη ζωντανή επαλήθευση ήταν
  * αυτοκίνητα, διαστάσεις και κείμενα.
  */
+function dimensionSourceOf(run: PlanRecognitionRun, fusion: PlanFusionResult): RasterDimensionSource {
+  return {
+    fusion,
+    segments: run.segments,
+    originalToAligned: run.alignment.originalToAligned,
+    alignedToOriginal: run.alignment.alignedToOriginal,
+    verdicts: run.segmentRoles ?? [],
+  };
+}
+
 function lineSourceOf(run: PlanRecognitionRun, fusion: PlanFusionResult, version: number): RasterLineSource {
   const segments = fusion.adjustedSegments.filter((s) => isWallEvidence(fusion, s.id));
   return {
     kind: 'raster', recognitionId: `${run.id}.${version}`, floorId: run.floorId, backgroundId: run.backgroundId, segments,
+    dimensions: dimensionSourceOf(run, fusion),
   };
 }
 

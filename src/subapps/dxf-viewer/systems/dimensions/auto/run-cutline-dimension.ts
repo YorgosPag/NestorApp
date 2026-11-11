@@ -33,6 +33,7 @@ import type {
 import { getDimStyleRegistry } from '../dim-style-registry';
 import { planCutLineChain } from './auto-dimension-cutline-planner';
 import { buildAutoDimensionEntities } from './auto-dimension-entity-factory';
+import { autoDimensionWriteOptions } from './run-auto-dimension-flow';
 import {
   getCutlineSession,
   setCutlineStart,
@@ -72,7 +73,7 @@ export function commitCutLineChain(
   const layerId = getLayer(DXF_DEFAULT_LAYER)?.id ?? '0';
   const dims = buildAutoDimensionEntities(segments, { styleId: style.id, layerId, style });
   if (dims.length === 0) return 0;
-  addDimensionsToScene(dims, accessor);
+  addDimensionsToScene(dims, accessor, autoDimensionWriteOptions());
   return dims.length;
 }
 

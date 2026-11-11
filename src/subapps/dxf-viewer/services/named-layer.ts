@@ -37,6 +37,7 @@ import {
 } from '../core/commands/layer/EnsureSceneLayerCommand';
 import { guardLayerName } from './shared/layer-naming-guard';
 import type { LayerNameValidationError } from './layer-name-validator';
+import { getCurrentLayerId, getDefaultLayerId } from '../stores/LayerStore';
 
 /** Ό,τι περιγράφει ένα layer προς δημιουργία (ταυτότητα + προέλευση τα ορίζει η πόρτα). */
 export type NamedLayerSpec = Omit<Parameters<typeof createSceneLayer>[0], 'id' | 'source' | 'sourceName'>;
@@ -53,7 +54,7 @@ export interface NamedLayerAccessor {
 
 export type EnsureNamedLayerResult =
   | { readonly ok: true; readonly layerId: string; readonly created: boolean }
-  | { readonly ok: false; readonly reason: 'no-scene' | LayerNameValidationError };
+  | { readonly ok: false; readonly reason: 'no-scene' | 'no-layer' | LayerNameValidationError };
 
 /**
  * Το layer των διαστάσεων ενός στυλ (`DimStyle.targetLayer`, ≡ `DIMLAYER`).
@@ -93,4 +94,21 @@ export function ensureNamedLayer(
   history.execute(command);
   const layerId = command.getLayerId();
   return layerId ? { ok: true, layerId, created: command.didCreate() } : { ok: false, reason: 'no-scene' };
+}
+
+/**
+ * ADR-929 Δ20 Σ1.3 — το layer όπου γράφονται οι διαστάσεις ενός στυλ (≡ AutoCAD `DIMLAYER`):
+ *   - όνομα ⇒ {@link ensureNamedLayer} (βρες ή φτιάξε, αναιρέσιμα)·
+ *   - κενό ή `"."` ⇒ το **τρέχον** layer (ή το προεπιλεγμένο, αν δεν έχει οριστεί τρέχον).
+ * Fail-closed: κανένα layer ⇒ `ok: false` — ο καλών **δεν** γράφει διαστάσεις (ποτέ σιωπηλά στο «0»).
+ */
+export function ensureDimensionLayer(
+  accessor: NamedLayerAccessor,
+  style: Pick<DimStyle, 'targetLayer'>,
+  history: CommandHistory = getGlobalCommandHistory(),
+): EnsureNamedLayerResult {
+  const spec = resolveDimensionLayerSpec(style);
+  if (spec) return ensureNamedLayer(accessor, spec, history);
+  const layerId = getCurrentLayerId() || getDefaultLayerId();
+  return layerId ? { ok: true, layerId, created: false } : { ok: false, reason: 'no-layer' };
 }

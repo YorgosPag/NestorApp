@@ -7,55 +7,18 @@
 
 import { describe, expect, it } from '@jest/globals';
 import { IDENTITY_HOMOGRAPHY } from '@/lib/geometry/homography';
-import { rasterPixelToScene, type RasterPlacement } from '../../../../floorplan-background/geometry/raster-scene-mapping';
-import type { PlanSegmentRoleVerdict, PlanTerminatorKind, RasterSegment } from '../../plan-recognition-types';
+import { rasterPixelToScene } from '../../../../floorplan-background/geometry/raster-scene-mapping';
+import type { PlanSegmentRoleVerdict, PlanTerminatorKind } from '../../plan-recognition-types';
 import { planDimensionEntities, type DimensionEntityFusion, type DimensionEntityInput } from '../dimension-entities';
-import type { DimensionSpan, FaceLine } from '../plan-fusion-types';
-
-const PLACEMENT: RasterPlacement = {
-  naturalBounds: { width: 300, height: 300 },
-  transform: { translateX: 5, translateY: -7, scaleX: 2, scaleY: 3, rotation: 0 },
-};
-const CONFIDENCE = { score: 1, factors: {} };
-const EXT_X = [10, 60, 160, 210] as const;
-const RUN_Y = 100;
-const FOOT_Y = 200;
-
-const segment = (id: string, x0: number, y0: number, x1: number, y1: number): RasterSegment => ({
-  id, start: { x: x0, y: y0 }, end: { x: x1, y: y1 }, style: 'stroke', strokeWidthPx: 1, confidence: CONFIDENCE,
-});
-
-/** Επεκτάσεις κατακόρυφες, από λίγο πάνω από τη γραμμή ως τον τοίχο από κάτω (το πόδι στο y = 200). */
-const SEGMENTS: readonly RasterSegment[] = [
-  segment('d0', 0, RUN_Y, 220, RUN_Y),
-  ...EXT_X.map((x, i) => segment(`e${i}`, x, RUN_Y - 5, x, FOOT_Y)),
-];
-
-/** Οικογένεια 1 (π/2): n = (−1, 0) ⇒ μετατόπιση = −x. */
-const offsetOfX = (x: number): number => -x;
-
-function span(i: number, lineIds: readonly [string | null, string | null] = [null, null]): DimensionSpan {
-  const [a, b] = [EXT_X[i + 1], EXT_X[i]];
-  return {
-    id: `ds${i}`, segmentIds: ['d0'], runFamilyId: 0, runOffsetPx: RUN_Y, familyId: 1,
-    ends: [
-      { extensionId: `e${i + 1}`, lineId: lineIds[0], offsetPx: offsetOfX(a) },
-      { extensionId: `e${i}`, lineId: lineIds[1], offsetPx: offsetOfX(b) },
-    ],
-    gapPx: a - b,
-  };
-}
-
-const FACE: FaceLine = { id: 'L1', familyId: 1, offsetPx: offsetOfX(10), extentMinPx: 150, extentMaxPx: 300, segmentIds: [] };
-
-function fusion(spans: readonly DimensionSpan[], adjusted: ReadonlyMap<string, number> = new Map()): DimensionEntityFusion {
-  return {
-    families: [{ id: 0, angleRad: 0 }, { id: 1, angleRad: Math.PI / 2 }],
-    faceLines: [FACE],
-    adjustedOffsetPx: adjusted,
-    dimensionSpans: spans,
-  };
-}
+import {
+  CHAIN_PLACEMENT as PLACEMENT,
+  CHAIN_SEGMENTS as SEGMENTS,
+  chainFusion as fusion,
+  chainSpan as span,
+  FOOT_Y,
+  offsetOfX,
+  RUN_Y,
+} from './dimension-chain-fixture';
 
 const verdict = (terminators: readonly [PlanTerminatorKind, PlanTerminatorKind]): PlanSegmentRoleVerdict => ({
   segmentId: 'd0', role: 'dimension-line', dimensionScore: 1, factors: {}, terminators,
