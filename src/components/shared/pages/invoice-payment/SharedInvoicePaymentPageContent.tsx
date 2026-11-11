@@ -33,6 +33,7 @@ import { formatAccountingCurrency } from '@/subapps/accounting/utils/format';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { InvoiceIssuerContact } from './InvoiceIssuerContact';
+import { InvoiceIssuerMessages } from './InvoiceIssuerMessages';
 import { InvoicePublicBody, InvoicePublicParties } from './InvoicePublicDocument';
 import { InvoicePayNowSection } from './InvoicePayNowSection';
 import { INVOICE_PUBLIC_PAYMENT_NS } from './invoice-payment-primitives';
@@ -152,6 +153,7 @@ function InvoiceView({ view, shareId, refresh }: InvoiceViewProps): React.ReactE
       <InvoicePublicParties view={view} />
       <InvoicePublicBody view={view} />
       <InvoiceIssuerContact view={view} />
+      <InvoiceIssuerMessages shareId={shareId} reference={`${view.series}-${view.number}`} />
       <footer className={cn('border-t pt-4 text-xs', colors.text.muted)}>{t('page.privateLink')}</footer>
     </article>
   );

@@ -58,6 +58,9 @@
     "email": {
       "newFrom": "New email from {sender}"
     },
+    "portal": {
+      "newMessage": "Message from {customer} about document {reference}"
+    },
     "dismissed": "Notification dismissed",
     "undo": "Undo"
   },

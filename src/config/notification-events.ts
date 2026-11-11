@@ -722,6 +722,8 @@ export const NOTIFICATION_ENTITY_TYPES = {
   SUPPLY_RELATIONSHIP: 'supply_relationship',
   /** ADR-923 §16 — η κατοχή μάρκας (`supplier_brand_claims/{id}`). */
   SUPPLIER_BRAND_CLAIM: 'supplier_brand_claim',
+  /** ADR-939 — το παραστατικό λογιστικής (`Invoice.invoiceId`) για το οποίο έγραψε ο πελάτης από τη σελίδα του. */
+  INVOICE: 'invoice',
 } as const;
 
 export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof typeof NOTIFICATION_ENTITY_TYPES];

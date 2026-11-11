@@ -75,6 +75,8 @@ export const IDENTITY_PROVIDER = {
   INSTAGRAM: 'instagram',
   SMS: 'sms',
   PHONE: 'phone',
+  /** Ο κάτοχος ενός συνδέσμου σελίδας πελάτη (ADR-939): ταυτότητα = ο σύνδεσμος, όχι λογαριασμός. */
+  PORTAL: 'portal',
 } as const;
 
 export type IdentityProvider = typeof IDENTITY_PROVIDER[keyof typeof IDENTITY_PROVIDER];

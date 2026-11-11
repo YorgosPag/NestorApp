@@ -111,6 +111,29 @@
     "draftCopied": "Message copied. Paste it into the chat.",
     "chatDraft": "Hello, I am contacting you about document {number}."
   },
+  "messages": {
+    "title": "Write to us",
+    "intro": "Send your question about document {number}. The issuer's reply will appear here.",
+    "thread": "Messages about the document",
+    "you": "You",
+    "issuer": "Issuer",
+    "label": "Your message",
+    "remaining": "{count, plural, one {# character left} other {# characters left}}",
+    "send": "Send",
+    "sending": "Sending…",
+    "sent": "Your message was sent to the issuer.",
+    "errors": {
+      "invalidText": "Write a message of up to {max} characters.",
+      "quotaExhausted": "You have sent many messages today. Try again tomorrow or use the contact details.",
+      "expired": "This page has been open for a long time. Refresh the page: your text will be kept.",
+      "generic": "The message was not sent. Your text is kept; please try again."
+    }
+  },
+  "replyEmail": {
+    "subject": "Reply about document {reference}",
+    "intro": "{issuer} replied to your message about document {reference}:",
+    "continue": "To continue the conversation, open the document link from the email you received."
+  },
   "refused": {
     "title": "This invoice is not available",
     "body": "This link is no longer active. Please ask the issuer of the invoice for a new link.",

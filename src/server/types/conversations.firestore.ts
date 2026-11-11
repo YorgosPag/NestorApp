@@ -63,7 +63,23 @@ export interface ConversationDocument {
     createdAt: Timestamp;
     updatedAt: Timestamp;
   };
+
+  /**
+   * **Από πού ήρθε η συνομιλία** (ADR-939) — το «via» του Zendesk. Υπάρχει μόνο στο κανάλι `portal`, όπου
+   * η συνομιλία δένεται με ένα έγγραφο της εταιρείας. Γράφεται **μία φορά**, στη γέννηση της συνομιλίας.
+   */
+  subject?: ConversationSubjectDoc;
 }
+
+/** Η πηγή μιας συνομιλίας σελίδας πελάτη. Κλειστή ένωση: νέα σελίδα πελάτη ⇒ νέο `kind`. */
+export type ConversationSubjectDoc = {
+  readonly kind: 'invoice';
+  readonly invoiceId: string;
+  /** Ο σύνδεσμος από τον οποίο γράφει ο πελάτης (η ταυτότητά του). */
+  readonly shareId: string;
+  /** Ό,τι διαβάζει ο άνθρωπος: σειρά-αριθμός του παραστατικού (π.χ. «Α-10»). */
+  readonly reference: string;
+};
 
 /**
  * Conversation participant sub-document

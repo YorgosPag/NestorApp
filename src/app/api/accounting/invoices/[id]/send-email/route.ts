@@ -29,6 +29,7 @@ import {
   buildInvoiceEmailSubject,
   buildInvoiceEmailPlainText,
   detectInvoiceEmailLanguage,
+  invoiceIssuerEmailFrame,
 } from '@/subapps/accounting/services/email/invoice-email-template';
 import {
   wrapInBrandedTemplate,
@@ -174,16 +175,7 @@ export const POST = defineRoute({
     const textBody = buildInvoiceEmailPlainText(invoice, language, paymentLink?.url ?? null);
     const contentHtml = buildInvoiceEmailContent(invoice, language, paymentLink?.url ?? null);
 
-    const htmlBody = wrapInBrandedTemplate({
-      contentHtml,
-      companyName: invoice.issuer.name,
-      companyPhone: invoice.issuer.phone ?? undefined,
-      companyEmail: invoice.issuer.email ?? undefined,
-      companyAddress: invoice.issuer.address
-        ? `${invoice.issuer.address}, ${invoice.issuer.city} ${invoice.issuer.postalCode}`
-        : undefined,
-      companyWebsite: invoice.issuer.website ?? undefined,
-    });
+    const htmlBody = wrapInBrandedTemplate({ contentHtml, ...invoiceIssuerEmailFrame(invoice) });
 
     // ── 6. Send via Mailgun ───────────────────────────────────────────
     const mailgunResult = await sendReplyViaMailgun({

@@ -73,3 +73,8 @@ export function useInvoicePublicView(shareId: string): InvoicePublicViewHandle {
 export function invoiceCheckoutUrl(shareId: string): string {
   return `${invoicePublicViewUrl(shareId)}/checkout`;
 }
+
+/** Το νήμα «Γράψτε μας» (ADR-939) — δίπλα στην όψη, ίδιος ορισμός. */
+export function invoicePortalMessagesUrl(shareId: string): string {
+  return `${invoicePublicViewUrl(shareId)}/messages`;
+}

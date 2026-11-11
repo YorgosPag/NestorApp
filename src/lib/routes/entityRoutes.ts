@@ -20,6 +20,8 @@ export const ENTITY_ROUTES = {
     lead: (id: string) => typedHref(`/crm/leads/${id}`),
     tasks: '/crm/tasks',
     task: (id: string) => typedHref(`/crm/tasks/${id}`),
+    /** Τα ενιαία εισερχόμενα συνομιλιών (Telegram · WhatsApp · σελίδα πελάτη …) με απάντηση — ADR-939. */
+    communications: '/crm/communications',
   },
   contacts: {
     list: '/contacts',

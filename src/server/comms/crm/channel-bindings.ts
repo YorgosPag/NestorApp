@@ -31,7 +31,8 @@ import { IDENTITY_PROVIDER, type IdentityProvider } from '@/types/conversations'
 export type CrmChannel =
   | typeof COMMUNICATION_CHANNELS.WHATSAPP
   | typeof COMMUNICATION_CHANNELS.MESSENGER
-  | typeof COMMUNICATION_CHANNELS.INSTAGRAM;
+  | typeof COMMUNICATION_CHANNELS.INSTAGRAM
+  | typeof COMMUNICATION_CHANNELS.PORTAL;
 
 export interface ChannelBinding {
   provider: IdentityProvider;
@@ -51,6 +52,11 @@ export const CRM_CHANNEL_BINDINGS: Readonly<Record<CrmChannel, ChannelBinding>> 
   [COMMUNICATION_CHANNELS.INSTAGRAM]: {
     provider: IDENTITY_PROVIDER.INSTAGRAM,
     platform: PLATFORMS.INSTAGRAM,
+  },
+  // ADR-939 — σελίδα πελάτη: ο «πάροχος» είναι ο σύνδεσμος, η πλατφόρμα ο ιστός.
+  [COMMUNICATION_CHANNELS.PORTAL]: {
+    provider: IDENTITY_PROVIDER.PORTAL,
+    platform: PLATFORMS.WEB,
   },
 } as const;
 

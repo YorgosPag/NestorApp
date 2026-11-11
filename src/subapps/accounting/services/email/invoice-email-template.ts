@@ -40,6 +40,30 @@ const BRAND = {
 /** Supported email languages */
 export type InvoiceEmailLanguage = 'el' | 'en';
 
+/** Τα στοιχεία του εκδότη στο πλαίσιο του email (`wrapInBrandedTemplate`), όπως τα τυπώνει το παραστατικό. */
+export interface InvoiceIssuerEmailFrame {
+  readonly companyName: string;
+  readonly companyPhone?: string;
+  readonly companyEmail?: string;
+  readonly companyAddress?: string;
+  readonly companyWebsite?: string;
+}
+
+/**
+ * **Ο ΕΝΑΣ ορισμός** του πλαισίου κάθε email που στέλνει ο εκδότης για ένα παραστατικό (ADR-939): το email του
+ * παραστατικού και η απάντηση στο «Γράψτε μας» δείχνουν τα ίδια στοιχεία, από το στιγμιότυπο του εκδότη.
+ */
+export function invoiceIssuerEmailFrame(invoice: Pick<Invoice, 'issuer'>): InvoiceIssuerEmailFrame {
+  const { issuer } = invoice;
+  return {
+    companyName: issuer.name,
+    companyPhone: issuer.phone ?? undefined,
+    companyEmail: issuer.email ?? undefined,
+    companyAddress: issuer.address ? `${issuer.address}, ${issuer.city} ${issuer.postalCode}` : undefined,
+    companyWebsite: issuer.website ?? undefined,
+  };
+}
+
 // ============================================================================
 // CONSTANTS — Bilingual Labels
 // ============================================================================

@@ -2207,6 +2207,9 @@
       "loading": "Φόρτωση...",
       "markAllRead": "Ανάγνωση όλων",
       "markRead": "Προβλήθηκε",
+      "portal": {
+        "newMessage": "Μήνυμα από {customer} για το παραστατικό {reference}"
+      },
       "retry": "Δοκιμή ξανά",
       "title": "Ειδοποιήσεις",
       "undo": "Αναίρεση",

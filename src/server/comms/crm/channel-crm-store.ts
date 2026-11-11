@@ -39,11 +39,11 @@ import {
 } from '@/server/lib/id-generation';
 import type {
   ConversationDocument,
+  ConversationSubjectDoc,
   MessageDocument,
   ExternalIdentityDocument,
 } from '@/server/types/conversations.firestore';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
-import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 import { resolveChannelBinding, type CrmChannel } from './channel-bindings';
 
@@ -63,6 +63,12 @@ const LAST_MESSAGE_PREVIEW_LENGTH = 100;
  * `channel` via the binding registry, so a caller cannot desynchronize them.
  */
 export interface ChannelMessageInput {
+  /**
+   * 🏢 **Ο μισθωτής που κατέχει τη συνομιλία — ΡΗΤΑ, από τον καλούντα** (ADR-939). Πριν ο store έγραφε πάντα
+   * `getCompanyId()` (η εταιρεία της ρύθμισης περιβάλλοντος): μήνυμα προς άλλον μισθωτή θα γραφόταν σε ξένη
+   * εταιρεία και θα ήταν αόρατο στα εισερχόμενά του, που φιλτράρουν με `companyId`.
+   */
+  companyId: string;
   /** Which channel this message arrived on. Drives provider + platform. */
   channel: CrmChannel;
   /** Provider-side user id: phone (WhatsApp), PSID (Messenger), IGSID (Instagram). */
@@ -74,6 +80,13 @@ export interface ChannelMessageInput {
   /** Already-extracted display text (per-channel adapters own the extraction). */
   text: string;
   direction: MessageDirection;
+  /** Η πηγή της συνομιλίας (μόνο `portal`) — γράφεται στη γέννησή της, ποτέ ξανά. */
+  subject?: ConversationSubjectDoc;
+  /**
+   * Ο **άνθρωπος** που απάντησε από τα εισερχόμενα. Χωρίς αυτό, το εξερχόμενο γράφεται ως bot (η συμπεριφορά των
+   * webhooks). Με αυτό, το ίχνος λέει ποιος απάντησε (`senderType: agent`).
+   */
+  agent?: { readonly id: string; readonly name: string };
 }
 
 export interface ChannelStoreResult {
@@ -127,6 +140,22 @@ export async function storeChannelMessage(
 // MESSAGE WRITE
 // ============================================================================
 
+/** Ο αποστολέας του μηνύματος: ο πελάτης (εισερχόμενο) · ο άνθρωπος που απάντησε · αλλιώς το bot. */
+function senderOf(input: ChannelMessageInput): Pick<MessageDocument, 'senderId' | 'senderName' | 'senderType'> {
+  if (input.direction === MESSAGE_DIRECTION.INBOUND) {
+    const { provider } = resolveChannelBinding(input.channel);
+    return {
+      senderId: generateExternalIdentityId(provider, input.externalUserId),
+      senderName: input.senderName,
+      senderType: SENDER_TYPES.CUSTOMER,
+    };
+  }
+  if (input.agent) {
+    return { senderId: input.agent.id, senderName: input.agent.name, senderType: SENDER_TYPES.AGENT };
+  }
+  return { senderId: BOT_IDENTITY.ID, senderName: BOT_IDENTITY.DISPLAY_NAME, senderType: SENDER_TYPES.BOT };
+}
+
 /** Write the canonical message doc, then refresh the conversation preview. */
 async function writeMessage(
   db: FirebaseFirestore.Firestore,
@@ -134,22 +163,18 @@ async function writeMessage(
   docId: string,
   conversationId: string
 ): Promise<void> {
-  const { channel, externalUserId, providerMessageId, senderName, text, direction } = input;
-  const { provider, platform } = resolveChannelBinding(channel);
+  const { channel, externalUserId, providerMessageId, text, direction } = input;
+  const { platform } = resolveChannelBinding(channel);
   const now = Timestamp.now();
   const isInbound = direction === MESSAGE_DIRECTION.INBOUND;
 
   const messageDoc = {
     id: docId,
-    companyId: getCompanyId(),
+    companyId: input.companyId,
     conversationId,
     channel,
     direction,
-    senderId: isInbound
-      ? generateExternalIdentityId(provider, externalUserId)
-      : BOT_IDENTITY.ID,
-    senderName: isInbound ? senderName : BOT_IDENTITY.DISPLAY_NAME,
-    senderType: isInbound ? SENDER_TYPES.CUSTOMER : SENDER_TYPES.BOT,
+    ...senderOf(input),
     content: {
       text,
       attachments: [],
@@ -216,7 +241,7 @@ function buildNewConversation(
 
   return {
     id: conversationId,
-    companyId: getCompanyId(), // 🏢 TENANT ISOLATION
+    companyId: input.companyId, // 🏢 TENANT ISOLATION — ρητά από τον καλούντα (ADR-939)
     channel,
     participants: [
       {
@@ -248,6 +273,7 @@ function buildNewConversation(
       createdAt: now,
       updatedAt: now,
     },
+    ...(input.subject ? { subject: input.subject } : {}),
   } satisfies ConversationDocument;
 }
 
@@ -277,7 +303,7 @@ async function upsertExternalIdentity(
 
   const newIdentity = {
     id: identityId,
-    companyId: getCompanyId(), // 🏢 TENANT ISOLATION
+    companyId: input.companyId, // 🏢 TENANT ISOLATION — ρητά από τον καλούντα (ADR-939)
     provider,
     externalUserId,
     displayName: senderName,

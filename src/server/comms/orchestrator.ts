@@ -384,6 +384,7 @@ function getPlatformName(channel: CommunicationChannel): string {
     [COMMUNICATION_CHANNELS.SMS]: 'sms_provider',
     [COMMUNICATION_CHANNELS.MESSENGER]: 'messenger',
     [COMMUNICATION_CHANNELS.INSTAGRAM]: 'instagram',
+    [COMMUNICATION_CHANNELS.PORTAL]: 'web',
   };
   return platforms[channel] || channel;
 }
@@ -423,6 +424,8 @@ function getMaxAttempts(channel: CommunicationChannel, priority?: MessagePriorit
     [COMMUNICATION_CHANNELS.SMS]: 2,
     [COMMUNICATION_CHANNELS.MESSENGER]: 3,
     [COMMUNICATION_CHANNELS.INSTAGRAM]: 3,
+    // Η σελίδα πελάτη δεν έχει πάροχο να ξαναδοκιμάσει: το μήνυμα γράφεται απευθείας (ADR-939).
+    [COMMUNICATION_CHANNELS.PORTAL]: 1,
   };
 
   const base = baseAttempts[channel] || 3;

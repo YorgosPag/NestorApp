@@ -25,6 +25,12 @@ export const COMMUNICATION_CHANNELS = {
   SMS: 'sms',
   MESSENGER: 'messenger',
   INSTAGRAM: 'instagram',
+  /**
+   * Μήνυμα γραμμένο σε **δική μας** σελίδα πελάτη (σήμερα: η σελίδα κοινόχρηστου παραστατικού, ADR-939).
+   * Ένα γενικό κανάλι «web» με την πηγή ως ξεχωριστό πεδίο της συνομιλίας (`subject`), όπως το «Web» του
+   * Zendesk με το «via web form / Help Center»: νέα σελίδα πελάτη ⇒ νέο `subject.kind`, όχι νέο κανάλι.
+   */
+  PORTAL: 'portal',
 } as const;
 
 /**

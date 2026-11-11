@@ -24,6 +24,7 @@ import { loadOwnedConversation } from '../../_shared/conversation-owned-doc';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { sendTelegramMessage } from '@/app/api/communications/webhooks/telegram/telegram/client';
 import { storeOutboundMessage } from './store-outbound-message';
+import { sendPortalReply } from './portal-reply';
 import type {
   SendMessageRequest,
   SendMessageResponse,
@@ -122,7 +123,18 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
 
   const channel = convData?.channel;
 
-  // Currently only Telegram is supported
+  // ADR-939 — απάντηση στο «Γράψτε μας» σελίδας πελάτη: σελίδα + email, χωρίς εξωτερικό πάροχο.
+  if (channel === COMMUNICATION_CHANNELS.PORTAL) {
+    return apiSuccess<SendMessageResponse>(await sendPortalReply({
+      conversationId,
+      conversation: convData,
+      caller: ctx,
+      text: hasText ? body.text!.trim() : '',
+      hasAttachments: Boolean(hasAttachments),
+    }));
+  }
+
+  // Otherwise only Telegram is supported
   if (channel !== COMMUNICATION_CHANNELS.TELEGRAM) {
     throw new ApiError(400, `Channel ${channel} not supported for outbound messages yet`);
   }

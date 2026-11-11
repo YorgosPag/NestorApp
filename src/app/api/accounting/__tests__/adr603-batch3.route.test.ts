@@ -188,6 +188,7 @@ jest.mock('@/subapps/accounting/services/email/invoice-email-template', () => ({
   buildInvoiceEmailSubject: () => 'Subject',
   buildInvoiceEmailPlainText: () => 'text',
   detectInvoiceEmailLanguage: () => 'el',
+  invoiceIssuerEmailFrame: () => ({ companyName: 'Issuer' }),
 }));
 
 jest.mock('@/services/email-templates/base-email-template', () => ({

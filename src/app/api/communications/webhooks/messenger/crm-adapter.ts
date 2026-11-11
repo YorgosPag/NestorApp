@@ -15,6 +15,7 @@
  */
 
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
+import { getCompanyId } from '@/config/tenant';
 import { MESSAGE_DIRECTION, type MessageDirection } from '@/types/conversations';
 import {
   storeChannelMessage,
@@ -43,6 +44,8 @@ export async function storeMessengerMessage(
   direction: MessageDirection = MESSAGE_DIRECTION.INBOUND
 ): Promise<MessengerStoreResult> {
   return storeChannelMessage({
+    // Τα webhooks του Meta ανήκουν στον μισθωτή του περιβάλλοντος: η ΙΔΙΑ τιμή που έγραφε πριν ο store (ADR-939).
+    companyId: getCompanyId(),
     channel: COMMUNICATION_CHANNELS.MESSENGER,
     externalUserId: psid,
     providerMessageId: message.mid,

@@ -18,6 +18,7 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
+import { getCompanyId } from '@/config/tenant';
 import {
   DELIVERY_STATUS,
   MESSAGE_DIRECTION,
@@ -58,6 +59,8 @@ export async function storeWhatsAppMessage(
   const senderPhone = message.from;
 
   return storeChannelMessage({
+    // Τα webhooks του Meta ανήκουν στον μισθωτή του περιβάλλοντος: η ΙΔΙΑ τιμή που έγραφε πριν ο store (ADR-939).
+    companyId: getCompanyId(),
     channel: COMMUNICATION_CHANNELS.WHATSAPP,
     externalUserId: senderPhone,
     providerMessageId: message.id,

@@ -58,6 +58,9 @@
     "email": {
       "newFrom": "Νέο email από {sender}"
     },
+    "portal": {
+      "newMessage": "Μήνυμα από {customer} για το παραστατικό {reference}"
+    },
     "dismissed": "Η ειδοποίηση απορρίφθηκε",
     "undo": "Αναίρεση"
   },
