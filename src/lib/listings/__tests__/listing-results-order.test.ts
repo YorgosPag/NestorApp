@@ -104,6 +104,7 @@ function listingOf(
     floorplans: [],
     type: 'apartment',
     areaSqm: 90,
+    areaKind: 'gross',
     offerKinds: price.offerKinds,
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,

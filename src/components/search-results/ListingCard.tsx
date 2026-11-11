@@ -50,6 +50,8 @@ import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
 import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
 import { LISTING_CARD_FOCUS_VISIBLE_CLASS, LISTING_FOCUS_CARD_CLASS } from './listing-focus-card';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
+import { resolveListingDisplayArea } from '@/lib/properties/property-display-area';
+import { listingAreaLabel } from '@/lib/listings/listing-area-label';
 import styles from './ListingCard.module.css';
 
 /**
@@ -210,6 +212,7 @@ export function ListingCard({
   const images = listingGalleryImages(listing);
   const href = listingDetailHref(listing.id, filterQuery);
   const floorText = floorLabel(hostedFloorRef(listing));
+  const displayArea = resolveListingDisplayArea(listing);
 
   return (
     /*
@@ -368,9 +371,8 @@ export function ListingCard({
           </p>
 
           <dl className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-            {listing.areaSqm !== null && (
-              <div><dd>{t('search-results:listing.areaSqm', { value: listing.areaSqm })}</dd></div>
-            )}
+            {/* ADR-777 §8.100 — το εμβαδόν με το είδος του· χωρίς μικτό, το καθαρό ΟΝΟΜΑΣΜΕΝΟ («108 τ.μ. καθαρά»). */}
+            {displayArea && <div><dd>{listingAreaLabel(t, displayArea)}</dd></div>}
             {/* ADR-900 §8 #2 (2β.2) — η ΜΙΑ ετικέτα ορόφου, με το είδος (πυλωτή ≠ ισόγειο). */}
             {floorText !== '' && <div><dd>{floorText}</dd></div>}
             {listing.bedrooms !== null && (

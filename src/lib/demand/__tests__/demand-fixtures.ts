@@ -93,6 +93,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     terrain: null,
     type: 'apartment',
     areaSqm: 100,
+    areaKind: 'gross',
     offerKinds: ['sell'],
     position: {
       kind: 'known',

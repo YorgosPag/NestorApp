@@ -125,7 +125,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "14dcb9691795fa942b1c03522528d61fd64a899d5b0be7a6255d2db83535fd98",
+    "src/i18n/generated/shell-slice.el.json": "4598777ac9f7a30c7cb60484e338171f3ff0ea60b468b3fda4a13875ae86d3e0",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "fa9d8da58ecf078890b7e3e3d290f94ba50cc48edaed2ef48d4c3e9cce91b19d",
+  "inputsSha256": "4972aa756bb42189e78c05e94ad6f3d92a3c42fd75e3d0e0183dc38824dc31f5",
   "languages": [
     "el"
   ],
@@ -326,6 +326,10 @@
         "common": {
           "keys": [
             "common.loading",
+            "displayArea.basis.gross",
+            "displayArea.basis.net",
+            "displayArea.qualified",
+            "displayArea.sqm",
             "listingAvailability.deliveryOn",
             "map.gestures.mac",
             "map.gestures.mobile",
@@ -3972,6 +3976,10 @@
       "wants": {
         "common": {
           "keys": [
+            "displayArea.basis.gross",
+            "displayArea.basis.net",
+            "displayArea.qualified",
+            "displayArea.sqm",
             "listingAvailability.deliveryOn",
             "listingAvailability.readyNow",
             "priceAmount.nightly",
@@ -38109,6 +38117,10 @@
           "keys": [
             "buttons.close",
             "common.loading",
+            "displayArea.basis.gross",
+            "displayArea.basis.net",
+            "displayArea.qualified",
+            "displayArea.sqm",
             "listingAvailability.deliveryOn",
             "map.gestures.mac",
             "map.gestures.mobile",
@@ -38912,6 +38924,10 @@
         "common": {
           "keys": [
             "common.loading",
+            "displayArea.basis.gross",
+            "displayArea.basis.net",
+            "displayArea.qualified",
+            "displayArea.sqm",
             "listingAvailability.deliveryOn",
             "priceAmount.nightly",
             "priceAmount.rent",
@@ -39025,6 +39041,10 @@
           "keys": [
             "buttons.close",
             "common.loading",
+            "displayArea.basis.gross",
+            "displayArea.basis.net",
+            "displayArea.qualified",
+            "displayArea.sqm",
             "listingAvailability.deliveryOn",
             "priceAmount.nightly",
             "priceAmount.rent",
@@ -39469,6 +39489,10 @@
         "common": {
           "keys": [
             "common.loading",
+            "displayArea.basis.gross",
+            "displayArea.basis.net",
+            "displayArea.qualified",
+            "displayArea.sqm",
             "dropdown.addNewOption",
             "dropdown.clearSelection",
             "dropdown.toggleOptions",
@@ -40779,7 +40803,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1318343
+    "sliceBytes": 1318522
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -41179,6 +41203,7 @@
         "src/design-system/primitives/Card/CardActionsToolbar.tsx",
         "src/hooks/notifications/useFilesNotifications.ts",
         "src/lib/listings/listing-price-label.ts",
+        "src/lib/properties/display-area-label.ts",
         "src/lib/units/unit-status-badges.ts",
         "src/providers/NotificationProvider.tsx"
       ],
@@ -41319,6 +41344,10 @@
         "crm.pipeline",
         "crm.tasks",
         "crm.teams",
+        "displayArea.basis.gross",
+        "displayArea.basis.net",
+        "displayArea.qualified",
+        "displayArea.sqm",
         "dropdown.addNewOption",
         "dropdown.clearSelection",
         "dropdown.toggleOptions",
@@ -46593,6 +46622,7 @@
         "src/components/search/SearchLandingContent.tsx",
         "src/components/shared/ModuleBreadcrumb.tsx",
         "src/components/ui/navigation/route-tabs.tsx",
+        "src/lib/listings/listing-area-label.ts",
         "src/lib/listings/listing-price-label.ts",
         "src/lib/units/unit-status-badges.ts"
       ],

@@ -180,9 +180,10 @@ export class SharingService {
       text += `\n💰 ${formatCurrency(property.price)}`;
     }
 
-    const shareArea = property.areas?.gross || property.areas?.net || property.area;
-    if (shareArea) {
-      text += `\n📐 ${shareArea} τ.μ.`;
+    // ADR-777 §8.100 — εδώ φτάνει ΗΔΗ ένα εμβαδόν (`area`): ο τύπος της παραμέτρου δεν έχει `areas`, άρα η παλιά
+    // αλυσίδα «μικτό → καθαρό → area» ήταν νεκρή δεύτερη κρίση. Το «ποιο εμβαδόν» λύνεται πριν από εδώ.
+    if (property.area) {
+      text += `\n📐 ${property.area} τ.μ.`;
     }
 
     if (property.description) {

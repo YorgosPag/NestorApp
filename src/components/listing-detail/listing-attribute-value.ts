@@ -65,6 +65,7 @@ import {
   type AttributeVocabulary,
 } from '@/lib/listings/listing-attribute-vocabulary';
 import type { PublicRecordRegistry } from '@/lib/property/attribute-provenance';
+import { listingAreaLabel } from '@/lib/listings/listing-area-label';
 import type { PublicListing } from '@/types/public-listing';
 
 // ============================================================================
@@ -131,7 +132,7 @@ const ATTRIBUTE_VALUE_KIND: {
   readonly [K in ListingAttributeKey]: AttributeValueKindFor<K>;
 } = {
   type: { kind: 'custom', render: renderType },
-  areaSqm: { kind: 'sqm' },
+  areaSqm: { kind: 'custom', render: renderArea },
   floor: { kind: 'custom', render: renderFloor },
   frontage: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.frontage },
   bedrooms: { kind: 'custom', render: renderBedrooms },
@@ -192,6 +193,15 @@ function renderEnergyClass(t: TFunction, listing: PublicListing): string {
 }
 
 /** Πληθυντικός ICU — `0` είναι **γκαρσονιέρα**, υπαρκτή τιμή. */
+/**
+ * **Το εμβαδόν-βάση, με το είδος του** (ADR-777 §8.100) — «95 τ.μ. μικτά»· σκέτο «95 τ.μ.» όταν η βάση δεν είναι γνωστή
+ * (παλιό `area` · έγγραφο πριν από την v29). Ο ΕΝΑΣ δρόμος (`listingAreaLabel`), ίδιος με την κάρτα αποτελεσμάτων.
+ * Το καθαρό έχει δική του, ονομασμένη γραμμή (`netAreaSqm`). Καλείται μόνο για δηλωμένο `areaSqm` (`isAttributeDeclared`).
+ */
+function renderArea(t: TFunction, listing: PublicListing): string {
+  return listingAreaLabel(t, { value: listing.areaSqm ?? 0, kind: listing.areaKind ?? 'unspecified' });
+}
+
 function renderBedrooms(t: TFunction, listing: PublicListing): string {
   return t('search-results:listing.bedrooms', { count: listing.bedrooms ?? 0 });
 }

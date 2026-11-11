@@ -41,6 +41,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     gallery: [],
     type: 'apartment',
     areaSqm: null,
+    areaKind: null,
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,

@@ -24,6 +24,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole, formatDate as formatDateIntl } from '@/lib/intl-utils';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { pricePerDisplayAreaLabel } from '@/lib/properties/display-area-label';
 import { normalizeToDate } from '@/lib/date-local';
 import { InfoRow } from '@/components/shared/InfoRow';
 import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
@@ -94,8 +96,10 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
   const commercial = unit.commercial;
   const askingPrice = commercial?.askingPrice;
   const finalPrice = commercial?.finalPrice;
-  const area = unit.areas?.gross ?? unit.area ?? 0;
-  const pricePerSqm = askingPrice && area > 0 ? Math.round(askingPrice / area) : null;
+  // ADR-777 §8.100 — €/m² πάνω στο ΕΝΑ «ποιο εμβαδόν», με τη βάση του (ως τις 2026-11-11 `gross ?? area ?? 0`).
+  const pricePerSqm = askingPrice
+    ? pricePerDisplayAreaLabel(t, { role: 'sale', amount: askingPrice }, resolveDisplayArea(unit))
+    : null;
   const discount = computeDiscount(askingPrice, finalPrice);
   const daysOnMarket = computeDaysOnMarket(commercial?.listedDate);
 
@@ -134,7 +138,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
               icon={TrendingDown}
               iconColor={SALES_ICON_COLORS.pricePerSqm}
               label="€/m²"
-              value={formatCurrencyWhole(pricePerSqm)}
+              value={pricePerSqm}
             />
           )}
         </CardContent>

@@ -26,10 +26,13 @@ import {
 import { pricePerSqmAmount } from '@/lib/listings/listing-price-label';
 import { resolveDisplayPrice, type MissingPriceReason } from '@/lib/properties/price-resolver';
 import type { Property } from '@/types/property-viewer';
+import type { DisplayArea } from '@/lib/properties/property-display-area';
 
 /** Το `t` επιστρέφει το ίδιο το κλειδί — κρίνουμε ΠΟΙΟ κλειδί ζητήθηκε (και με ποιο ποσό). */
 const t = (key: string, opts?: Record<string, unknown>): string =>
   opts && 'price' in opts ? `${key}:${String(opts.price)}` : key;
+
+const GROSS_100: DisplayArea = { value: 100, kind: 'gross' };
 
 /** Δομικό ελάχιστο — μόνο ό,τι διαβάζει ο resolver. */
 function unit(commercialStatus: string, commercial: Record<string, number>): Property {
@@ -100,7 +103,7 @@ describe('Κ3 — €/τ.μ. δεν τυπώνεται δύο φορές κάτ�
   it('πωλημένο → ΜΙΑ γραμμή (και οι δύο αριθμοί είναι πώληση)', () => {
     const rows = buildPropertyPricePerSqmStats(
       unit('sold', { askingPrice: 200_000, finalPrice: 185_000 }),
-      100,
+      GROSS_100,
       t,
     );
     // Δύο γραμμές «Πώληση/τ.μ.» με διαφορετικό νούμερο είναι γραμμή που ο
@@ -117,7 +120,7 @@ describe('Κ3 — €/τ.μ. δεν τυπώνεται δύο φορές κάτ�
   it('διπλό listing → ΔΥΟ γραμμές (πώληση και ενοίκιο είναι άλλη πλευρά)', () => {
     const rows = buildPropertyPricePerSqmStats(
       unit('for-sale-and-rent', { askingPrice: 200_000, rentPrice: 500 }),
-      100,
+      GROSS_100,
       t,
     );
     expect(rows.map((r) => r.label)).toEqual([
@@ -126,9 +129,18 @@ describe('Κ3 — €/τ.μ. δεν τυπώνεται δύο φορές κάτ�
     ]);
   });
 
+  // ADR-777 §8.100 — η βάση του €/m² λέγεται όταν δεν είναι η σύμβαση της αγοράς (μικτό).
+  it('βάση καθαρό → η γραμμή λέει «καθαρά»· βάση μικτό → σκέτη', () => {
+    const sold = unit('sold', { finalPrice: 185_000 });
+    const [net] = buildPropertyPricePerSqmStats(sold, { value: 100, kind: 'net' }, t);
+    const [gross] = buildPropertyPricePerSqmStats(sold, GROSS_100, t);
+    expect(String(net?.value)).toBe('common:displayArea.qualified');
+    expect(String(gross?.value)).toMatch(/^common:pricePerArea.sale:/);
+  });
+
   it('χωρίς εμβαδόν → καμία γραμμή', () => {
     expect(
-      buildPropertyPricePerSqmStats(unit('sold', { finalPrice: 185_000 }), 0, t),
+      buildPropertyPricePerSqmStats(unit('sold', { finalPrice: 185_000 }), null, t),
     ).toEqual([]);
   });
 });
@@ -152,8 +164,8 @@ describe('Κ4 — τιμή ανά νύχτα: ποτέ «Τιμή», ποτέ χ
   });
 
   it('🔴 €/τ.μ.: καμία γραμμή — και η κάρτα ΔΕΝ σκάει (πριν: destructuring σε undefined)', () => {
-    expect(() => buildPropertyPricePerSqmStats(nightly, 85, t)).not.toThrow();
-    expect(buildPropertyPricePerSqmStats(nightly, 85, t)).toEqual([]);
+    expect(() => buildPropertyPricePerSqmStats(nightly, { value: 85, kind: 'gross' }, t)).not.toThrow();
+    expect(buildPropertyPricePerSqmStats(nightly, { value: 85, kind: 'gross' }, t)).toEqual([]);
     expect(pricePerSqmAmount({ role: 'nightly', amount: 50 }, 85)).toBeNull();
   });
 

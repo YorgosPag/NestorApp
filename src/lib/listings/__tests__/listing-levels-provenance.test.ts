@@ -181,6 +181,7 @@ function listingWith(levels: PublicListing['levels']): PublicListing {
     gallery: [],
     type: 'maisonette',
     areaSqm: 95,
+    areaKind: 'gross',
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,

@@ -198,6 +198,7 @@ describe('Τ4 — 🔴 καμία τιμή ιδιότητας δεν γίνετ�
     gallery: [],
     type: 'maisonette',
     areaSqm: 95,
+    areaKind: 'gross',
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,

@@ -4202,11 +4202,9 @@
   κρατούνται (`hold` ≠ none · `retentionUntil` · `preservedFor` · `handoverProtocolOf`) και ανά κατηγορία — μόνο ανάγνωση, με θετικό
   έλεγχο σε όλη τη συλλογή. Αν 0 ⇒ το κενό ήταν λανθάνον. Δεν υπάρχει script στο repo (θα αντέγραφε τον κριτή — όχι SSoT).
 
-### 📐 Εμβαδόν ακινήτου `areas?.gross || areas?.net || area` — αντίγραφα έξω από το `propertyDisplayArea` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-02, ADR-898 Φ4β · ADR-184)
-- **SSoT**: `src/lib/properties/property-display-area.ts` (`propertyDisplayArea` — `null` για «δεν μετρήθηκε», ποτέ `0`). Το χρησιμοποιούν ήδη η καρτέλα Μονάδων κτιρίου (στήλη · κάρτα · στατιστικά).
-- **Πού μένουν** (grep `areas?.gross ||` 2026-10-02): `domain/cards/property/usePropertyCardModel.ts` (`displayAreaOf`) · `features/property-grid/components/PropertyCard.tsx` (×2) · `features/property-hover/components/PropertyQuickView.tsx` · `lib/social-platform-system/sharing-service.ts`.
-- **Θεραπεία**: ανάθεση στο SSoT· προσοχή ότι το SSoT επιστρέφει `null` αντί για `undefined` (`?? undefined` όπου ο καταναλωτής περιμένει `undefined`).
-- **Παρεμπιπτόντως** (ίδια συνεδρία): `tabs/FloorsTabContent.tsx:154` έχει σκληρό `retryLabel="Retry"` (N.11) — η Στάθμευση διορθώθηκε με το υπάρχον `unitStats.retry`.
+### 🌐 `FloorsTabContent` — σκληρό `retryLabel="Retry"` (N.11) (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-02)
+- **Πού**: `src/components/building-management/tabs/FloorsTabContent.tsx` (`<BuildingSpaceTabError … retryLabel="Retry" />`).
+- **Θεραπεία**: το υπάρχον κλειδί `unitStats.retry`, όπως διορθώθηκε η Στάθμευση.
 
 ### 📒 Ημερολόγιο αρχείου: ΚΑΜΙΑ ετικέτα πράξης — όλες εμφανίζονται ωμές (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-14, ADR-915 Φ3α §10 · ADR-191 · N.0.2)
 - **Τι**: το `components/shared/files/AuditLogPanel.tsx` καλεί `t(\`audit.action.${entry.action}\`, entry.action)`, αλλά **κανένα** κλειδί `audit.action.*` δεν υπάρχει στο `locales/{el,en}/files.json` (grep 2026-10-14). Ο άνθρωπος βλέπει `cde_seal` · `hold_place` · `document_facts_record` αντί για κείμενο.

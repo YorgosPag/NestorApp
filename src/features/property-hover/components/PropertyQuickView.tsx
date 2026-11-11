@@ -23,7 +23,10 @@ import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { resolveCommercialStatus } from '@/constants/commercial-statuses';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { pricePerAreaLabel, pricePerSqmAmount, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { measuredAreaOrNull } from '@/lib/properties/property-areas';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { pricePerDisplayAreaLabel } from '@/lib/properties/display-area-label';
 import { getEffectivePrice, type PriceRole } from '@/lib/properties/price-resolver';
 import '@/lib/design-system';
 
@@ -70,9 +73,13 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
   const headlinePrice = resolvedPrice ? { role: resolvedPrice.mode, amount: resolvedPrice.amount } : null;
   const parkingCount = linkedSpaces?.filter(s => s.spaceType === 'parking').length ?? 0;
   const storageCount = linkedSpaces?.filter(s => s.spaceType === 'storage').length ?? 0;
-  const displayArea = property.areas?.gross || property.areas?.net || property.area;
-  // One €/m² rule with the property cards — and none for a nightly rate.
-  const pricePerSqm = headlinePrice ? pricePerSqmAmount(headlinePrice, displayArea) : null;
+  // ADR-777 §8.100 — κάθε γραμμή λέει ΤΙ μετρά. Ως τις 2026-11-11 η γραμμή «Μικτό εμβαδόν» έδειχνε την αλυσίδα
+  // `gross || net || area` ⇒ σε μονάδα χωρίς μικτό τύπωνε το καθαρό ως μικτό (και ξανά από κάτω ως καθαρό).
+  const grossArea = measuredAreaOrNull(areas?.gross);
+  const displayArea = resolveDisplayArea(property);
+  const legacyArea = displayArea?.kind === 'unspecified' ? displayArea.value : null;
+  // One €/m² rule with the property cards — over the area shown, saying its basis; none for a nightly rate.
+  const pricePerSqm = headlinePrice ? pricePerDisplayAreaLabel(t, headlinePrice, displayArea) : null;
 
   // Translate orientations using SSoT ORIENTATION_LABELS → i18n
   const translatedOrientations = orientations
@@ -99,10 +106,16 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
       {/* 2-column grid: labels (left) + values (right) */}
       <div className="space-y-0.5">
         <QuickViewRow label={floorLabel(property.floor)} value="" />
-        {displayArea && (
+        {grossArea !== null && (
           <QuickViewRow
             label={t('hoverInfo.gross')}
-            value={`${displayArea} m²`}
+            value={`${grossArea} m²`}
+          />
+        )}
+        {legacyArea !== null && (
+          <QuickViewRow
+            label={t('hoverInfo.area')}
+            value={`${legacyArea} m²`}
           />
         )}
         {areas?.net && (
@@ -171,7 +184,7 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
                 <span className={`${COLOR_BRIDGE.text.price} font-semibold`}>
                   {resolvedPriceLabel(t, headlinePrice)}
                   {pricePerSqm !== null && (
-                    <span className={`${colors.text.muted} font-normal text-[10px]`}> ({pricePerAreaLabel(t, { role: headlinePrice.role, amount: pricePerSqm })})</span>
+                    <span className={`${colors.text.muted} font-normal text-[10px]`}> ({pricePerSqm})</span>
                   )}
                 </span>
               }

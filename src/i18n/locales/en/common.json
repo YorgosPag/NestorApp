@@ -1063,6 +1063,14 @@
     "rent": "{price}/m²/month",
     "nightly": "{price}/m²/night"
   },
+  "displayArea": {
+    "sqm": "{value} m²",
+    "basis": {
+      "gross": "gross",
+      "net": "net"
+    },
+    "qualified": "{text} {basis}"
+  },
   "commercialCard": {
     "title": "Availability & price",
     "transactionLocked": "A reservation, sale or lease holds this availability — it changes only from Sales."

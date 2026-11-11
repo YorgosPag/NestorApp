@@ -1878,6 +1878,14 @@
       "unavailableCount": "Μη διαθέσιμος αριθμός",
       "understood": "Κατάλαβα"
     },
+    "displayArea": {
+      "basis": {
+        "gross": "μικτά",
+        "net": "καθαρά"
+      },
+      "qualified": "{text} {basis}",
+      "sqm": "{value} m²"
+    },
     "documentStatus": {
       "approved": "Εγκεκριμένο",
       "archived": "Αρχειοθετημένο",

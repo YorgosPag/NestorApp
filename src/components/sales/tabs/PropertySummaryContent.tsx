@@ -23,6 +23,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { displayAreaLabel } from '@/lib/properties/display-area-label';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import type { Property } from '@/types/property';
 import '@/lib/design-system';
@@ -77,7 +79,8 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
 
   if (!unit) return null;
 
-  const area = unit.areas?.gross ?? unit.area;
+  // ADR-777 §8.100 — το ΕΝΑ «ποιο εμβαδόν», με το είδος του (ως τις 2026-11-11 `gross ?? area`).
+  const area = resolveDisplayArea(unit);
   const orientation = unit.orientations?.[0];
 
   return (
@@ -101,7 +104,7 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
               icon={Maximize2}
               iconColor="text-primary"
               label={t('sales.unitSummary.area')}
-              value={area ? `${area} m²` : undefined}
+              value={area ? displayAreaLabel(t, area) : undefined}
             />
             <SummaryField
               icon={Layers}

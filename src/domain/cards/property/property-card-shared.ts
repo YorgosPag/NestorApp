@@ -15,8 +15,6 @@ import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import { priceAmountStat } from '@/domain/cards/shared/spot-card-stats';
 import {
-  pricePerAreaLabel,
-  pricePerSqmAmount,
   priceStandingLabel,
   quotesRatePerArea,
   resolvedPriceLabel,
@@ -35,6 +33,8 @@ import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status'
 import { badgeFromSpec, commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import { resolveCommercialStatus } from '@/constants/commercial-statuses';
 import type { Property } from '@/types/property-viewer';
+import type { DisplayArea } from '@/lib/properties/property-display-area';
+import { pricePerDisplayAreaLabel } from '@/lib/properties/display-area-label';
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
 
@@ -311,14 +311,17 @@ const PRICE_PER_SQM_PRESENTATION: Readonly<Record<PerAreaPriceRole, PricePerSqmP
  * absolute price with no €/m² beside it, and a rented unit carrying a stale
  * asking price advertised a sale rate it is not offered at.
  *
+ * The rate is taken over the SAME area the card shows, and says its basis when that is
+ * the net area («4.500 €/m² καθαρά») — never a silent switch of basis (ADR-777 §8.100).
+ *
  * @see ADR-777 Α6 — one price rule, consumed everywhere
  */
 export function buildPropertyPricePerSqmStats(
   property: Property,
-  displayArea: number,
+  displayArea: DisplayArea | null,
   t: TFn,
 ): StatItem[] {
-  if (!(displayArea > 0)) return [];
+  if (displayArea === null) return [];
 
   const resolved = resolveDisplayPrice(property);
   if (resolved.kind === 'missing') return [];
@@ -333,7 +336,7 @@ export function buildPropertyPricePerSqmStats(
 
   return prices.flatMap((price) => {
     const { role } = price;
-    const perSqm = pricePerSqmAmount(price, displayArea);
+    const perSqm = pricePerDisplayAreaLabel(t, price, displayArea);
     if (!quotesRatePerArea(role) || perSqm === null) return [];
     const presentation = PRICE_PER_SQM_PRESENTATION[role];
     return [{
@@ -341,7 +344,7 @@ export function buildPropertyPricePerSqmStats(
       iconColor: presentation.iconColor,
       label: t(presentation.labelKey),
       // ADR-777 §8.60.14.14 — «9 €/m²/μήνα», never a bare «9 €/m²» under a rent.
-      value: pricePerAreaLabel(t, { role: price.role, amount: perSqm }),
+      value: perSqm,
     }];
   });
 }

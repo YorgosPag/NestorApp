@@ -118,6 +118,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     terrain: null,
     type: 'apartment',
     areaSqm: 95,
+    areaKind: 'gross',
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     floor: 1,
@@ -358,8 +359,15 @@ describe('Ο4 — κάθε ποσό λέει τι είναι', () => {
   });
 
   it('χωρίς εμβαδόν ⇒ ΚΑΜΙΑ γραμμή ανά m², ποτέ «0 €/m²»', () => {
-    renderWith({ state: 'found', listing: listing({ areaSqm: null }) });
+    // ADR-777 §8.100 — «χωρίς εμβαδόν» σημαίνει ούτε βάση ούτε καθαρό: το καθαρό μόνο του δίνει «… €/m² καθαρά».
+    renderWith({ state: 'found', listing: listing({ areaSqm: null, areaKind: null, netAreaSqm: null }) });
     expect(screen.queryByText('listing-detail:price.perArea')).not.toBeInTheDocument();
+  });
+
+  it('🔴 χωρίς μικτό, με καθαρό ⇒ η γραμμή ανά m² ΛΕΕΙ τη βάση της (ADR-777 §8.100)', () => {
+    renderWith({ state: 'found', listing: listing({ areaSqm: null, areaKind: null, netAreaSqm: 80 }) });
+    expect(screen.getByText('listing-detail:price.perArea')).toBeInTheDocument();
+    expect(screen.getAllByText(/common:displayArea.qualified/).length).toBeGreaterThan(0);
   });
 
   it('🔴 πωλημένο ⇒ ΜΙΑ τιμή ανά m² (και τα δύο ποσά είναι πώληση)', () => {

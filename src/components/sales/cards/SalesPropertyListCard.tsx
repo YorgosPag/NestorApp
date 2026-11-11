@@ -18,6 +18,8 @@ import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { displayAreaLabel, pricePerDisplayAreaLabel } from '@/lib/properties/display-area-label';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { Property, CommercialStatus } from '@/types/property';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
@@ -89,7 +91,9 @@ export function SalesPropertyListCard({
   }], [t, badgeConfig, commercialStatus, hasCommercialStatus]);
 
   // Row 2: Physical stats
-  const area = unit.areas?.gross ?? unit.area ?? 0;
+  // ADR-777 §8.100 — το ΕΝΑ «ποιο εμβαδόν», με το είδος του. Ως τις 2026-11-11: `gross ?? area ?? 0` ⇒ «0 m²» σε
+  // μονάδα χωρίς μικτό, και το καθαρό δεν έφτανε ποτέ εδώ.
+  const area = useMemo(() => resolveDisplayArea(unit), [unit]);
   const physicalStats = useMemo(() => [
     {
       icon: NAVIGATION_ENTITIES.property.icon,
@@ -101,7 +105,7 @@ export function SalesPropertyListCard({
       icon: NAVIGATION_ENTITIES.area?.icon ?? Calculator,
       iconColor: 'text-primary',
       label: t('sales.fields.area'),
-      value: `${area} m²`,
+      value: area ? displayAreaLabel(t, area) : '—',
     },
     ...(unit.floor !== undefined ? [{
       icon: NAVIGATION_ENTITIES.floor?.icon ?? Calendar,
@@ -113,7 +117,8 @@ export function SalesPropertyListCard({
 
   // Row 3: Commercial stats
   const askingPrice = unit.commercial?.askingPrice;
-  const pricePerSqm = askingPrice && area > 0 ? Math.round(askingPrice / area) : null;
+  // Πάνω στο ΙΔΙΟ εμβαδόν, με τη βάση του («… €/m² καθαρά») και τη μονάδα του ρόλου — ο ΕΝΑΣ δρόμος €/m².
+  const pricePerSqm = askingPrice ? pricePerDisplayAreaLabel(t, { role: 'sale', amount: askingPrice }, area) : null;
   const daysOnMarket = computeDaysOnMarket(unit.commercial?.listedDate);
 
   const commercialStats = useMemo(() => {
@@ -131,7 +136,7 @@ export function SalesPropertyListCard({
         icon: Calculator,
         iconColor: 'text-primary',
         label: t('sales.fields.pricePerSqm'),
-        value: `${formatCurrencyWhole(pricePerSqm)}/m²`,
+        value: pricePerSqm,
       });
     }
 

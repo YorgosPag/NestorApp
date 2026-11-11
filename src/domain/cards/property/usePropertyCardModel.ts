@@ -18,10 +18,11 @@ import { Bed, Bath, Wrench } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
-import { formatNumber } from '@/lib/intl-utils';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { useHierarchyNames } from '@/components/navigation/core/hooks/useHierarchyNames';
 import { joinLocationParts } from '@/lib/properties/property-location';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { displayAreaLabel } from '@/lib/properties/display-area-label';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { getPropertyTypeLabel } from '@/components/building-management/tabs/property-tab-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -81,10 +82,6 @@ function buildingStat(buildingName: string | null, t: TFn): StatItem | null {
   };
 }
 
-function displayAreaOf(property: Property): number | undefined {
-  return property.areas?.gross || property.areas?.net || property.area;
-}
-
 // =============================================================================
 // 🏢 GRID MODEL
 // =============================================================================
@@ -96,7 +93,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
 
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
-    const displayArea = displayAreaOf(property);
+    const displayArea = resolveDisplayArea(property);
 
     const b = buildingStat(buildingName(property.buildingId), t);
     if (b) items.push(b);
@@ -115,7 +112,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
         label: t('card.stats.area'),
-        value: `${formatNumber(displayArea)} m²`,
+        value: displayAreaLabel(t, displayArea),
       });
     }
 
@@ -193,13 +190,13 @@ export function usePropertyListModel(property: Property): CardViewModel {
       });
     }
 
-    const displayArea = displayAreaOf(property);
+    const displayArea = resolveDisplayArea(property);
     if (displayArea) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
         label: t('card.stats.area'),
-        value: `${displayArea} m²`,
+        value: displayAreaLabel(t, displayArea),
       });
     }
 

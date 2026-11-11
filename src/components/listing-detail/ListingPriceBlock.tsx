@@ -28,7 +28,8 @@ import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveDisplayPrice, type DisplayPrice, type ResolvedPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY, PRICE_ROLE_KEY } from '@/lib/listings/listing-price-keys';
-import { pricePerAreaLabel, pricePerSqmAmount } from '@/lib/listings/listing-price-label';
+import { resolveListingDisplayArea, type DisplayArea } from '@/lib/properties/property-display-area';
+import { pricePerDisplayAreaLabel } from '@/lib/properties/display-area-label';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { ListingPriceReduction } from './ListingPriceReduction';
 import { ListingCommonCharges } from './ListingCommonCharges';
@@ -65,16 +66,17 @@ function PriceRow({ price, emphasis }: { readonly price: ResolvedPrice; readonly
  * δεν μπερδεύονται. Χωρίς εμβαδόν ή σε ρόλο χωρίς τέτοια τιμή (διανυκτέρευση) η γραμμή **δεν υπάρχει**:
  * η απουσία του εμβαδού λέγεται ήδη, μία φορά, στα στοιχεία του ακινήτου.
  */
-function PricePerAreaRow({ price, areaSqm }: { readonly price: ResolvedPrice; readonly areaSqm: number | null }) {
+function PricePerAreaRow({ price, area }: { readonly price: ResolvedPrice; readonly area: DisplayArea | null }) {
   const { t } = useTranslation(['listing-detail']);
-  const perSqm = pricePerSqmAmount(price, areaSqm);
+  // ADR-777 §8.100 — πάνω στο ΙΔΙΟ εμβαδόν που δείχνει η αγγελία, με τη βάση του («… €/m² καθαρά»).
+  const perSqm = pricePerDisplayAreaLabel(t, price, area);
   if (perSqm === null) return null;
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3">
       <dt className="text-sm text-muted-foreground">{t('listing-detail:price.perArea')}</dt>
       <dd className="text-sm font-medium text-foreground">
-        {pricePerAreaLabel(t, { role: price.role, amount: perSqm })}
+        {perSqm}
       </dd>
     </div>
   );
@@ -93,6 +95,7 @@ function monthlyRentOf(price: DisplayPrice): number | null {
 export function ListingPriceBlock({ listing }: ListingPriceBlockProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
+  const area = resolveListingDisplayArea(listing);
 
   return (
     <SectionFrame headingId="listing-price-heading" title={t('search-results:detail.price.heading')} headingLevel="h2" titleSize="eyebrow">
@@ -103,11 +106,11 @@ export function ListingPriceBlock({ listing }: ListingPriceBlockProps) {
             {/* Το δεύτερο ποσό υπάρχει **μόνο** όταν λέει κάτι νέο: ο SSoT πετά τη
                 ζητούμενη όταν είναι ίδια με την τελική — «το ίδιο γεγονός δύο φορές». */}
             {price.secondary && <PriceRow price={price.secondary} emphasis={false} />}
-            <PricePerAreaRow price={price.headline} areaSqm={listing.areaSqm} />
+            <PricePerAreaRow price={price.headline} area={area} />
             {/* Δεύτερη τιμή ανά m² μόνο όταν είναι ΑΛΛΗ πλευρά της συναλλαγής (πώληση + ενοίκιο). Σε πωλημένο
                 και τα δύο ποσά είναι πώληση: δύο αριθμοί κάτω από μία ετικέτα δεν διαβάζονται. */}
             {price.secondary && price.secondary.role !== price.headline.role && (
-              <PricePerAreaRow price={price.secondary} areaSqm={listing.areaSqm} />
+              <PricePerAreaRow price={price.secondary} area={area} />
             )}
           </dl>
           {/* ADR-777 §8.69 — εδώ, στη «σκάβω» βαθμίδα, η μείωση λέει ΚΑΙ πότε ΚΑΙ σε σχέση με τι. */}

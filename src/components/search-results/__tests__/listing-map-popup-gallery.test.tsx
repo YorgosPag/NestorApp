@@ -91,6 +91,7 @@ const LISTING: PublicListing = {
   terrain: null,
   type: 'apartment',
   areaSqm: 80,
+  areaKind: 'gross',
   offerKinds: ['rent'],
   position: {
     kind: 'known',

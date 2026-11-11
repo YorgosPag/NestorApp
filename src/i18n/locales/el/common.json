@@ -1063,6 +1063,14 @@
     "rent": "{price}/m²/μήνα",
     "nightly": "{price}/m²/νύχτα"
   },
+  "displayArea": {
+    "sqm": "{value} m²",
+    "basis": {
+      "gross": "μικτά",
+      "net": "καθαρά"
+    },
+    "qualified": "{text} {basis}"
+  },
   "commercialCard": {
     "title": "Διάθεση & τιμή",
     "transactionLocked": "Τη διάθεση την κατέχει κράτηση, πώληση ή μίσθωση — αλλάζει μόνο από τις Πωλήσεις."

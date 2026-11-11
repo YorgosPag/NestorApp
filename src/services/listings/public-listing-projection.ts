@@ -52,7 +52,7 @@ import {
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
 import { projectLegality } from './legality-projection';
-import { propertyDisplayArea } from '@/lib/properties/property-display-area';
+import { resolveGrossBasisArea } from '@/lib/properties/property-display-area';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
@@ -436,7 +436,10 @@ export function projectListingShape(
   //    απάντηση στο «τι διατίθεται», ελεύθερη να αποκλίνει (δες `projectStay`).
   const offerKinds = projectedOfferKinds(property);
   // Μία τιμή για το εμφανές εμβαδόν **και** τον έλεγχο αθροίσματος της βάσης ανά όροφο (ADR-898 Φ3β-3β).
-  const areaSqm = propertyDisplayArea(property);
+  // ADR-777 §8.100 — η **βάση σύγκρισης** (μικτό · παλιό `area`), ΠΟΤΕ το καθαρό· εκείνο φεύγει ονομασμένο στο
+  // `netAreaSqm`. Το είδος ταξιδεύει μαζί, ώστε η σελίδα να μην ισχυρίζεται «μικτά» για παλιό `area`.
+  const areaBasis = resolveGrossBasisArea(property);
+  const areaSqm = areaBasis?.value ?? null;
   // ADR-919 §7 · §10 — μία τιμή για το πεδίο **και** για το δίχτυ της ιστορίας της.
   const availability = listingAvailabilityOf(property, place);
 
@@ -502,6 +505,7 @@ export function projectListingShape(
     //    γραφτεί οτιδήποτε: επιβιώνει μόνο στο δόλωμα του §12.6, που μιλά στον κάτοχο.
     type: normalizePropertyType(property.type),
     areaSqm,
+    areaKind: areaBasis?.kind ?? null,
     offerKinds,
     position: resolveListingPosition(place, property.locationDisclosure),
     // 🔑 **Ο δεσμός προς το επίπεδο Α ταξιδεύει ΑΥΤΟΥΣΙΟΣ** — καμία κρίση, καμία

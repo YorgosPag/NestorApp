@@ -55,6 +55,7 @@ const FIRST_SCHEMA_DOCUMENT: StoredListingDocument = {
   gallery: [],
   type: 'apartment',
   areaSqm: 90,
+  areaKind: 'gross',
   offerKinds: ['sell'],
   position: { kind: 'unknown', reason: 'never-asked' },
   place: null,

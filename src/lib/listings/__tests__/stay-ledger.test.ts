@@ -43,6 +43,7 @@ function listing(id: string, mapped: boolean): PublicListing {
     gallery: [],
     type: 'apartment',
     areaSqm: 60,
+    areaKind: 'gross',
     offerKinds: ['leaseShort'],
     position: mapped
       ? { kind: 'known', provenance: 'manual', point: { lat: 40.6, lng: 22.9 }, locatedAt: '2026-08-01T00:00:00.000Z' }

@@ -18,6 +18,8 @@ import { CheckCircle, DollarSign, TrendingUp, Maximize2 } from 'lucide-react';
 import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { displayAreaLabel } from '@/lib/properties/display-area-label';
 import { SalesGridCard } from '@/components/sales/shared/SalesGridCard';
 import {
   SalesCardGrid,
@@ -96,10 +98,11 @@ function SalesSoldContent() {
           ariaLabel={t('sales.sold.gridLabel')}
           emptyMessage={t('sales.sold.noResults')}
           renderCard={unit => {
-            const area = unit.areas?.gross ?? unit.area ?? 0;
+            // ADR-777 §8.100 — το ΕΝΑ «ποιο εμβαδόν», με το είδος του (ως τις 2026-11-11 `gross ?? area ?? 0`).
+            const area = resolveDisplayArea(unit);
             // ADR-777 §8.2 #3 + §8.60.14.14: ο SSoT (για `sold` οδηγεί η τιμή συμβολαίου),
             // και το ΚΕΙΜΕΝΟ με τη μονάδα του ρόλου — ο ΕΝΑΣ δρόμος όλων των καρτών πωλήσεων.
-            const pricing = salesCardPricing({ ...unit, area }, t);
+            const pricing = salesCardPricing(unit, t, area);
             return (
               <SalesGridCard
                 key={unit.id}
@@ -110,7 +113,7 @@ function SalesSoldContent() {
                 statusLabel={unit.commercialStatus
                   ? t(`sales.commercialStatus.${unit.commercialStatus}`)
                   : t('sales.commercialStatus.sold')}
-                description={`${t(`properties-enums:types.${unit.type}`, { defaultValue: unit.type })} · ${area || '—'} m²`}
+                description={`${t(`properties-enums:types.${unit.type}`, { defaultValue: unit.type })} · ${area ? displayAreaLabel(t, area) : '—'}`}
                 {...pricing}
                 onClick={handleSelectProperty}
               />

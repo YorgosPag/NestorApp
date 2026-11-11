@@ -14,6 +14,7 @@ import { readStoredAvailability, readStoredTerrain } from './public-listing-shap
 import { readStoredAvailabilityTrack } from './availability-history';
 import type { ListingMigration } from './public-listing-schema-types';
 import { deepestAssignedLevel } from '@/lib/geo/admin-area-of-point';
+import { readStoredGrossBasisKind } from '@/lib/properties/property-display-area';
 
 /** Οι κρίκοι `to: 21` … `to: 30`, με τη σειρά που συνέβησαν. Παγωμένοι — δες την κεφαλίδα του `public-listing-schema.ts`. */
 export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
@@ -172,6 +173,20 @@ export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
      * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας (με `measuredDepth`) μένει αυτούσιο.
      */
     apply: (doc) => ({ ...doc, adminArea: withMeasuredDepth(doc.adminArea) }),
+  },
+  {
+    to: 29,
+    adr: 'ADR-777 §8.100',
+    adds: ['areaKind'],
+    /**
+     * 🔴 **ΤΟ ΕΜΒΑΔΟΝ ΑΠΕΚΤΗΣΕ ΤΟ ΕΙΔΟΣ ΤΟΥ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΟ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «Η ΒΑΣΗ ΔΕΝ ΕΙΝΑΙ ΓΝΩΣΤΗ»** (`'unspecified'`), ποτέ `'gross'`: πριν από
+     * την v29 το `areaSqm` μπορούσε να είναι και το **καθαρό** (σιωπηλή πτώση της παλιάς αλυσίδας). Την αλήθεια τη γράφει
+     * η **επαναπροβολή** (`resolveGrossBasisArea`). Χωρίς εμβαδόν ⇒ `null` (ποτέ ορφανό είδος).
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας περνά από τον κριτή (`readStoredGrossBasisKind`) αυτούσιο.
+     */
+    apply: (doc) => ({ ...doc, areaKind: readStoredGrossBasisKind(doc.areaKind, doc.areaSqm) }),
   },
 ];
 

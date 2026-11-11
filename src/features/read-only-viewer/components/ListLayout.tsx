@@ -50,6 +50,8 @@ import { PROPERTY_STATUS_LABELS } from '@/constants/domains/property-status-core
 import { resolveCommercialStatus } from '@/constants/commercial-statuses';
 import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { displayAreaLabel } from '@/lib/properties/display-area-label';
 
 /**
  * ADR-912 §12.17 — στη στενή οθόνη η σκηνή ΕΙΝΑΙ η οθόνη (Zillow · Idealista): ο θεατής μέσων χάνει πλαίσιο, ακτίνα και
@@ -126,13 +128,12 @@ export function ListLayout({
   // ADR-340 §3.6 — pre-formatted in-polygon hover labels for FloorplanGallery.
   // Locale-agnostic strings: caller formats with i18n + currency, the canvas
   // renderer just draws them. Three lines per property: code (small),
-  // gross sqm (small), headline price with its unit (emphasis / larger).
-  const sqmUnit = t('units.sqm', { ns: 'properties-enums' });
+  // the displayed area WITH its kind (small — ADR-777 §8.100: «108 m² καθαρά», never a bare
+  // number that may be the net area), headline price with its unit (emphasis / larger).
   const propertyLabels = React.useMemo(() => {
     const map = new Map<string, OverlayLabel>();
     for (const p of properties) {
-      const grossSqm = p.areas?.gross ?? p.area;
-      const hasSqm = typeof grossSqm === 'number' && Number.isFinite(grossSqm);
+      const area = resolveDisplayArea(p);
       const effectivePrice = getEffectivePrice(p);
       const statusKey = resolveCommercialStatus(p);
       const statusI18nKey = statusKey ? PROPERTY_STATUS_LABELS[statusKey] : undefined;
@@ -140,7 +141,7 @@ export function ListLayout({
       map.set(p.id, {
         statusText,
         primaryText: p.code || undefined,
-        secondaryText: hasSqm ? `${grossSqm} ${sqmUnit}` : undefined,
+        secondaryText: area ? displayAreaLabel(t, area) : undefined,
         // ADR-777 §8.60.13: the amount WITH its unit — «900 €/μήνα», «50 €/νύχτα».
         emphasisText: effectivePrice
           ? resolvedPriceLabel(t, { role: effectivePrice.mode, amount: effectivePrice.amount })
@@ -148,7 +149,7 @@ export function ListLayout({
       });
     }
     return map;
-  }, [properties, sqmUnit, t]);
+  }, [properties, t]);
 
   const handleSelectFloor = React.useCallback(
     (floorId: string | null) => {

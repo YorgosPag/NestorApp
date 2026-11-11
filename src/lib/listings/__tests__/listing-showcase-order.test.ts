@@ -42,6 +42,7 @@ function listingOf(id: string, title: string, projectedAt = AT): PublicListing {
     gallery: [],
     type: 'apartment',
     areaSqm: 90,
+    areaKind: 'gross',
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,

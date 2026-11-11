@@ -39,6 +39,7 @@ export function listingOf(
     gallery: [],
     type: 'apartment',
     areaSqm: 60,
+    areaKind: 'gross',
     offerKinds,
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,

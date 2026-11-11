@@ -191,7 +191,8 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // Ίδιος κανόνας με το `legality` (ADR-838): **βαθμίδα**, ποτέ έγγραφο ή ταυτότητα
       // μητρώου. Ο έλεγχος διαρροής (Κ4, από πάνω) το επιβεβαιώνει ανεξάρτητα.
       'amenities',
-      'areaSqm', 'authorship',
+      // ADR-777 §8.100: `areaKind` — το είδος του `areaSqm` (μικτό · άγνωστη βάση), ποτέ ορφανό.
+      'areaKind', 'areaSqm', 'authorship',
       // ADR-919 §7: `availability` — **μόνο** το παράγωγο (`ready`/`scheduled`/`unknown`)· η δήλωση, η προέλευσή της
       // και η πρόβλεψη του χρονοδιαγράμματος **δεν** ταξιδεύουν (Δ1 · ADR-842 Α7).
       'availability',
@@ -540,19 +541,25 @@ describe('Κ5 — τιμή: ωμοί αριθμοί, καμία δεύτερη �
   });
 });
 
-describe('Κ5γ — το εμβαδόν της αγγελίας = το εμβαδόν της οθόνης (ADR-777 §8.96.5, ένα SSoT)', () => {
-  const areaOf = (over: Partial<ProjectableProperty>) =>
-    buildPublicListing({ ...REAL_MAISONETTE, ...over }, NO_PLACE, AT)!.areaSqm;
+describe('Κ5γ — το εμβαδόν της αγγελίας = η ΒΑΣΗ ΣΥΓΚΡΙΣΗΣ, με το είδος της (ADR-777 §8.96.5 · §8.100)', () => {
+  const areaOf = (over: Partial<ProjectableProperty>) => {
+    const listing = buildPublicListing({ ...REAL_MAISONETTE, ...over }, NO_PLACE, AT)!;
+    return { areaSqm: listing.areaSqm, areaKind: listing.areaKind, netAreaSqm: listing.netAreaSqm };
+  };
 
-  it('μικτό, αλλιώς καθαρό, αλλιώς το παλιό `area`', () => {
-    expect(areaOf({})).toBe(95);
-    expect(areaOf({ areas: { net: 80 }, area: undefined })).toBe(80);
-    expect(areaOf({ areas: undefined, area: 70 })).toBe(70);
+  it('μικτό ⇒ `gross` · μόνο το παλιό `area` ⇒ `unspecified` (η βάση δεν δηλώθηκε)', () => {
+    expect(areaOf({})).toMatchObject({ areaSqm: 95, areaKind: 'gross' });
+    expect(areaOf({ areas: undefined, area: 70 })).toMatchObject({ areaSqm: 70, areaKind: 'unspecified' });
   });
 
-  it('🔴 μικτό `0` = «δεν μετρήθηκε» ⇒ το καθαρό, όχι «0 m²» στο κοινό', () => {
-    expect(areaOf({ areas: { gross: 0, net: 80 }, area: 0 })).toBe(80);
-    expect(areaOf({ areas: { gross: 0 }, area: 0 })).toBeNull();
+  it('🔴 χωρίς μικτό το καθαρό ΔΕΝ γίνεται `areaSqm` — φεύγει ΟΝΟΜΑΣΜΕΝΟ στο `netAreaSqm` (Idealista: útiles χωριστά)', () => {
+    // Ως τις 2026-11-11: `areaSqm: 80` — και το διάβαζαν ως μικτό αντικειμενική, αγορά €/m² και ζήτηση.
+    expect(areaOf({ areas: { net: 80 }, area: undefined })).toEqual({ areaSqm: null, areaKind: null, netAreaSqm: 80 });
+    expect(areaOf({ areas: { gross: 0, net: 80 }, area: 0 })).toEqual({ areaSqm: null, areaKind: null, netAreaSqm: 80 });
+  });
+
+  it('μικτό `0` χωρίς τίποτα άλλο ⇒ `null`, ποτέ «0 m²» στο κοινό — και ποτέ ορφανό είδος', () => {
+    expect(areaOf({ areas: { gross: 0 }, area: 0 })).toMatchObject({ areaSqm: null, areaKind: null });
   });
 });
 

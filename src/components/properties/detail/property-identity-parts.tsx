@@ -40,6 +40,8 @@ import type { GridCardBadge } from '@/design-system/components/GridCard/GridCard
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { displayAreaLabel } from '@/lib/properties/display-area-label';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import type { Property } from '@/types/property-viewer';
@@ -104,7 +106,9 @@ export function PropertyIdentityFacts({ property }: { readonly property: Propert
 
   const price = resolveDisplayPrice(property);
   const priceText = buildCardPriceText(price, t);
-  const displayArea = property.areas?.gross ?? property.areas?.net ?? property.area;
+  // ADR-777 §8.100 — το ΕΝΑ «ποιο εμβαδόν», με το είδος του. Ως τις 2026-11-11: `gross ?? net ?? area` ⇒ μικτό `0`
+  // (= «δεν μετρήθηκε») έκρυβε το καθαρό 108 και η ταυτότητα έμενε χωρίς εμβαδόν.
+  const displayArea = resolveDisplayArea(property);
 
   return (
     // Μόνο λεπτή γραμμή από πάνω: το `quick.input` ζωγράφιζε πλήρες πλαίσιο πεδίου γύρω από δύο τιμές.
@@ -141,8 +145,8 @@ export function PropertyIdentityFacts({ property }: { readonly property: Propert
         )}
       </IdentityFact>
 
-      {typeof displayArea === 'number' && displayArea > 0 ? (
-        <IdentityFact label={t('properties-detail:card.stats.area')}>{displayArea} m²</IdentityFact>
+      {displayArea ? (
+        <IdentityFact label={t('properties-detail:card.stats.area')}>{displayAreaLabel(t, displayArea)}</IdentityFact>
       ) : null}
     </dl>
   );

@@ -72,6 +72,7 @@ import type { CommonCharges } from '@/lib/common-charges/common-charges';
 import type { ListedEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import type { ResidenceFrontage } from '@/lib/objective-value/objective-value-types';
 import type { LevelArea } from '@/lib/properties/level-areas';
+import type { GrossBasisAreaKind } from '@/lib/properties/property-display-area';
 import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
 import type { FloorKind } from '@/utils/floor-naming';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
@@ -770,8 +771,20 @@ export interface PublicListing {
    * μιλά στον **κάτοχο** και όχι στον κόσμο.
    */
   readonly type: PropertyTypeCanonical | null;
-  /** Μικτό εμβαδόν σε m². `null` = δεν καταχωρήθηκε — **ποτέ** `0` ως «άγνωστο». */
+  /**
+   * **Το εμβαδόν-βάση σύγκρισης** σε m² — μικτό, αλλιώς το παλιό επίπεδο `area`· **ΠΟΤΕ** το καθαρό (ADR-777 §8.100,
+   * `resolveGrossBasisArea`). `null` = δεν καταχωρήθηκε — **ποτέ** `0` ως «άγνωστο».
+   *
+   * 🔴 Ως τις 2026-11-11 έπαιρνε σιωπηλά το **καθαρό** όταν έλειπε το μικτό — και το διαβάζουν ως μικτό η αντικειμενική
+   * αξία, τα στατιστικά €/m² της αγοράς, το ταίριασμα ζήτησης και οι ανακοινώσεις μείωσης τιμής. Το καθαρό ζει
+   * **ονομασμένο** στο {@link netAreaSqm} (Idealista: *construidos* κύριο, *útiles* χωριστά).
+   */
   readonly areaSqm: number | null;
+  /**
+   * **Το είδος του {@link areaSqm}** — `'gross'` (μικτό δηλωμένο) ή `'unspecified'` (παλιό `area` · ή παλιό έγγραφο
+   * πριν από την v29, όπου η βάση δεν είναι γνωστή). `null` ⇔ `areaSqm === null` — ποτέ ορφανό είδος.
+   */
+  readonly areaKind: GrossBasisAreaKind | null;
 
   // ── 4. ΔΙΑΘΕΣΕΙΣ (Α20) ────────────────────────────────────────────────────
   /**

@@ -17,6 +17,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePropertyLocationLine } from '@/hooks/usePropertyLocationLine';
 // 🏢 SSoT: WHICH price to show is decided once, in the resolver (ADR-777 Α6)
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
+import { resolveDisplayArea } from '@/lib/properties/property-display-area';
+import { displayAreaLabel } from '@/lib/properties/display-area-label';
 // 🏢 SSoT: το σήμα κατάστασης ανέβηκε στο shared module όταν απέκτησε δεύτερο
 // καταναλωτή (η κεφαλίδα ταυτότητας της καρτέλας, ADR-777 §8.30).
 import {
@@ -44,6 +46,8 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const price = resolveDisplayPrice(property);
   // ADR-777 Α21: η διατύπωση κάθε ποσού ζει δίπλα στον κανόνα που το επιλέγει.
   const priceText = buildCardPriceText(price, t);
+  // ADR-777 §8.100 — το ΕΝΑ «ποιο εμβαδόν», με το είδος του («108 m² καθαρά», ποτέ σκέτο).
+  const displayArea = resolveDisplayArea(property);
 
   return (
     <article className={`relative w-full h-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
@@ -125,10 +129,10 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         </aside>
 
         <section className={`flex flex-wrap items-center gap-2 sm:gap-4 ${colors.text.muted} text-sm mb-4`} aria-label={t('card.aria.propertyFeatures')}>
-          {(property.areas?.gross || property.areas?.net || property.area) && (
+          {displayArea && (
           <span className="flex items-center gap-1" itemProp="floorSize">
             <Square className={iconSizes.sm} />
-            {property.areas?.gross || property.areas?.net || property.area} m²
+            {displayAreaLabel(t, displayArea)}
           </span>
           )}
           {property.layout?.bedrooms !== undefined && property.layout.bedrooms > 0 && (

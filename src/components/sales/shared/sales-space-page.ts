@@ -18,14 +18,15 @@
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 import {
-  pricePerAreaLabel,
-  pricePerSqmAmount,
   priceStandingLabel,
   resolvedPriceLabel,
   type PriceLabelT,
 } from '@/lib/listings/listing-price-label';
 import { EMPTY_PRICE_RANGE, type RolePriceRange } from '@/lib/properties/price-range';
 import { resolveDisplayPrice, type PricedPropertyLike } from '@/lib/properties/price-resolver';
+import { measuredAreaOrNull } from '@/lib/properties/property-areas';
+import type { DisplayArea } from '@/lib/properties/property-display-area';
+import { pricePerDisplayAreaLabel } from '@/lib/properties/display-area-label';
 import type { SalesSpaceFilterState, SalesSpaceItem } from '@/types/sales-shared';
 
 /** Το κομμάτι της κατάστασης που ταΐζει το sidebar ενός βοηθητικού χώρου. */
@@ -86,6 +87,12 @@ export interface SalesCardPricing {
   standingLabel: string | null;
 }
 
+/** Επίπεδο `area` χώρου χωρίς μπλοκ εμβαδών (θέση · αποθήκη) — άγνωστη βάση, άρα `unspecified`. */
+function flatAreaOf(area: number | null | undefined): DisplayArea | null {
+  const value = measuredAreaOrNull(area);
+  return value === null ? null : { value, kind: 'unspecified' };
+}
+
 /**
  * Τιμή και τιμή/m² μιας κάρτας πωλήσεων (θέση · αποθήκη · πωλημένο ακίνητο).
  *
@@ -96,19 +103,24 @@ export interface SalesCardPricing {
  * `pricePerAreaLabel`), με τη μονάδα του ρόλου — και η τιμή/m² υπάρχει μόνο όπου ο ρόλος
  * την ορίζει (`pricePerSqmAmount`: καμία «€/m²/νύχτα»).
  *
+ * 🔑 ADR-777 §8.100: η τιμή/m² μετριέται πάνω σε `DisplayArea` (τιμή **και** είδος) μέσω του
+ * `pricePerDisplayAreaLabel`. Το ακίνητο περνά το `resolveDisplayArea` του (⇒ «… €/m² καθαρά» όταν η βάση
+ * είναι το καθαρό)· θέση/αποθήκη έχουν μόνο επίπεδο `area` ⇒ είδος `unspecified`, χωρίς προσδιορισμό.
+ *
  * @see lib/properties/price-resolver — ο ΕΝΑΣ κανόνας τιμής
  */
 export function salesCardPricing(
   item: PricedPropertyLike & { area?: number | null },
   t: PriceLabelT,
+  displayArea?: DisplayArea | null,
 ): SalesCardPricing {
   const price = resolveDisplayPrice(item);
   if (price.kind !== 'priced') return { price: null, pricePerSqm: null, standingLabel: null };
 
-  const perSqm = pricePerSqmAmount(price.headline, item.area);
+  const area = displayArea !== undefined ? displayArea : flatAreaOf(item.area);
   return {
     price: resolvedPriceLabel(t, price.headline),
-    pricePerSqm: perSqm === null ? null : pricePerAreaLabel(t, { role: price.headline.role, amount: perSqm }),
+    pricePerSqm: pricePerDisplayAreaLabel(t, price.headline, area),
     standingLabel: priceStandingLabel(t, price),
   };
 }
