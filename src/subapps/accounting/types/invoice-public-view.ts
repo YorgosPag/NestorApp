@@ -15,6 +15,7 @@ import type { InvoiceType } from './invoice';
 import type { MyDataDocumentStatus } from './common';
 import type { InvoicePaymentStanding } from '../services/payments/invoice-payment-link';
 import type { HumanLanguage } from '@/i18n/languages';
+import type { OnlinePaymentMethod } from './online-payment';
 
 export interface InvoicePublicParty {
   readonly name: string;
@@ -107,6 +108,11 @@ export interface InvoicePublicView {
   readonly overdue: boolean;
   /** `null` όταν η κατάσταση δεν είναι `payable`: δεν δείχνουμε ποτέ οδηγίες για ποσό που δεν οφείλεται. */
   readonly payment: InvoicePublicPayment | null;
+  /**
+   * Οι τρόποι **online** πληρωμής που προσφέρει ο λογαριασμός εμπόρου (ADR-ACC-030). Κενό όταν δεν οφείλεται ποσό
+   * ή όταν δεν είναι ρυθμισμένος πάροχος — τότε μένει μόνο η μεταφορά. Το αποφασίζει ο διακομιστής.
+   */
+  readonly onlineMethods: readonly OnlinePaymentMethod[];
   readonly notes: string | null;
 }
 

@@ -209,6 +209,29 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/server/internal-webhooks/signed-webhook-door.ts',
   },
   {
+    name: 'EVERYPAY_SECRET_KEY',
+    severity: 'feature',
+    feature: 'Online πληρωμή τιμολογίου με κάρτα / Apple Pay / Google Pay / IRIS και αυτόματη καταγραφή πληρωμής (ADR-ACC-030)',
+    consequence:
+      'Η δημόσια σελίδα τιμολογίου δείχνει μόνο τραπεζική μεταφορά με QR· το webhook της Everypay απαντά 503 και ' +
+      'καμία online πληρωμή δεν καταγράφεται. Είναι και το κλειδί υπογραφής των webhooks (HMAC-SHA256).',
+    consumer: 'src/server/payments/providers/everypay/everypay-config.ts',
+  },
+  {
+    name: 'EVERYPAY_PUBLIC_KEY',
+    severity: 'feature',
+    feature: 'Online πληρωμή τιμολογίου μέσω IRIS (φόρμα του payform της Everypay — ADR-ACC-030)',
+    consequence: 'Όπως το EVERYPAY_SECRET_KEY: χωρίς το ζεύγος κλειδιών η online πληρωμή δεν εμφανίζεται.',
+    consumer: 'src/server/payments/providers/everypay/everypay-config.ts',
+  },
+  {
+    name: 'PAYMENTS_PROVIDER_MODE',
+    severity: 'feature',
+    feature: 'Λειτουργία παρόχου πληρωμών — δεκτό ΜΟΝΟ «sandbox» (ADR-ACC-030 §2.5: κλειδωμένο live)',
+    consequence: 'Οποιαδήποτε άλλη τιμή (ή απουσία) απενεργοποιεί την online πληρωμή — ποτέ σιωπηλή μετάβαση σε live.',
+    consumer: 'src/server/payments/providers/everypay/everypay-config.ts',
+  },
+  {
     name: 'MAILGUN_WEBHOOK_SIGNING_KEY',
     severity: 'feature',
     feature: 'Webhooks Mailgun: εισερχόμενα email και συμβάντα παράδοσης (ADR-071 · ADR-841 Α21.20)',

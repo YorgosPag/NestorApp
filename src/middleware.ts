@@ -31,6 +31,7 @@ import { redirectFromMiddleware } from '@/lib/http/request-origin';
 //    δηλώνει ρητά «no Firestore/Firebase»).
 import { personalWorkspaceLanding } from '@/lib/workspace/personal-workspace-surface';
 import { EMAIL_SUBSCRIPTION_API } from '@/lib/notifications/email-subscription-routes';
+import { PAYMENT_PROVIDER_ROUTE_PREFIX } from '@/lib/payments/payment-routes';
 import { withRequestPath } from '@/lib/http/request-path';
 import { isSearchEngineOnOpenPath } from '@/lib/middleware/search-engine-access';
 
@@ -273,6 +274,9 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/api/cron/oauth-cleanup') ||
     pathname.startsWith('/api/stay-ical') ||
     pathname.startsWith(EMAIL_SUBSCRIPTION_API) ||
+    // ADR-ACC-030 — ο πάροχος πληρωμών (webhooks + επιστροφή browser). 403 εδώ = χαμένη πληρωμή: ο πάροχος το
+    // διαβάζει ως οριστική άρνηση. Ταυτοποίηση: HMAC του παρόχου στον adapter· όριο ρυθμού `WEBHOOK`.
+    pathname.startsWith(PAYMENT_PROVIDER_ROUTE_PREFIX) ||
     pathname.startsWith('/.well-known/oauth-');
 
   // ADR-923 §5.13 Ε2 — η βιτρίνα προμηθευτών, και μόνο αυτή, είναι ανοιχτή στις μηχανές αναζήτησης.

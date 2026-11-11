@@ -71,6 +71,7 @@ import { runPropertyHandoverReconcile } from '@/lib/cron/jobs/property-handover-
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
 import { runRfqInviteDelivery } from '@/lib/cron/jobs/rfq-invite-delivery.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
+import { runPaymentReconcile } from '@/lib/cron/jobs/payment-reconcile.job';
 import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
 import { runStorageBucketDrift } from '@/lib/cron/jobs/storage-bucket-drift.job';
 import { runSupplierBrandExpiryNotices } from '@/lib/cron/jobs/supplier-brand-expiry-notices.job';
@@ -426,6 +427,22 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 2,
     leaseMinutes: 5,
     run: runStayHoldExpiry,
+  },
+  {
+    slug: 'payment-reconcile',
+    path: '/api/cron/payment-reconcile',
+    description: 'Συμφιλίωση online πληρωμών τιμολογίων με τον πάροχο — δίχτυ κάτω από το webhook (ADR-ACC-030)',
+    enabled: true,
+    // 🔑 **Ο ρυθμός ορίζει ΜΟΝΟ πόσο αργεί η καταγραφή όταν χαθεί το webhook — ΟΧΙ την ορθότητα.** Η κύρια οδός
+    // είναι το webhook (δευτερόλεπτα)· εδώ πιάνεται ό,τι ξέφυγε, ~20′ αργότερα το πολύ.
+    // ⚠️ Λεπτά 9 · 28 · 48: κανένα κοινό με τον παλμό (`0/5`) ή άλλη εργασία του προγράμματος.
+    schedule: '9,28,48 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    // Ως 100 συνεδρίες × (1–3 αιτήματα στον πάροχο + μία συναλλαγή), σειριακά — κάτω από το `maxDuration = 120`.
+    maxRuntimeMinutes: 2,
+    leaseMinutes: 5,
+    run: runPaymentReconcile,
   },
   {
     slug: 'outbound-email-flush',

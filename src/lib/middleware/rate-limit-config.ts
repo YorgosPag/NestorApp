@@ -251,6 +251,8 @@ export const ENDPOINT_CATEGORY_MAPPINGS: Record<string, RateLimitCategory> = {
 
   // Webhook endpoints - WEBHOOK
   '/api/communications/webhooks': 'WEBHOOK',
+  // ADR-ACC-030 — webhooks + επιστροφή browser του παρόχου πληρωμών (fail-open: ο πάροχος δεν ξαναστέλνει ό,τι χάθηκε).
+  '/api/payments': 'WEBHOOK',
   // ADR-848 — η διαγραφή ενός κλικ (RFC 8058): δημόσια, την χτυπούν ΜΗΧΑΝΕΣ (Gmail ·
   // Outlook), άρα δικός της κάδος — όχι ο ίδιος με την επικυρωμένη κίνηση CRUD.
   [EMAIL_SUBSCRIPTION_API]: 'WEBHOOK',

@@ -36,7 +36,29 @@
     "dueBy": "Due {date}",
     "paidBody": "This invoice has been paid. Thank you!",
     "cancelledBody": "This document was cancelled. Nothing is owed.",
-    "notPayableBody": "This document is not paid by bank transfer. Please contact the issuer to arrange payment."
+    "notPayableBody": "This document cannot be paid through this link. Please contact the issuer to arrange payment."
+  },
+  "payNow": {
+    "title": "Pay now",
+    "methodsLabel": "Payment method",
+    "card": "Card",
+    "cardHint": "Visa, Mastercard and, where supported, Apple Pay or Google Pay. You pay on the payment provider’s secure page, in a new tab.",
+    "iris": "IRIS",
+    "irisHint": "Instant payment from your bank account: on the provider’s secure page you choose your bank or scan a QR code, then approve the amount in your banking app.",
+    "transfer": "Bank transfer",
+    "continue": "Pay {amount}",
+    "starting": "Taking you to secure payment…",
+    "secureNote": "Your card or account details never pass through us.",
+    "noMethodBody": "No payment method is available through this link. Please contact the issuer to arrange payment.",
+    "processingTitle": "Your payment is being recorded",
+    "processingBody": "As soon as the provider confirms the payment, this page will show “Paid”. This usually takes a few seconds.",
+    "processingSlow": "Confirmation is taking longer. If you completed the payment, do not pay again: it will appear once confirmed.",
+    "errors": {
+      "method-unavailable": "This payment method is not available. Please choose another method.",
+      "provider-unavailable": "The payment provider did not respond. Try again shortly or pay by bank transfer.",
+      "not-payable": "Nothing is owed on this invoice any more. Please refresh the page.",
+      "generic": "The payment did not start. Check your connection and try again."
+    }
   },
   "pay": {
     "title": "Pay by bank transfer",

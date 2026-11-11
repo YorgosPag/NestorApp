@@ -3,7 +3,9 @@
  * Η ΔΗΜΟΣΙΑ ΣΕΛΙΔΑ ΠΛΗΡΩΜΗΣ ΤΙΜΟΛΟΓΙΟΥ — `/shared/[token]`, είδος `invoice_payment` (ADR-ACC-018 §16)
  * =============================================================================
  *
- * Πρότυπο Stripe Hosted Invoice Page: πρώτα **τι οφείλεται και ως πότε**, μετά **πώς πληρώνεται**, μετά το έγγραφο.
+ * Πρότυπο Stripe Hosted Invoice Page: πρώτα **τι οφείλεται και ως πότε**, μετά **πώς πληρώνεται** («Πληρωμή τώρα»:
+ * κάρτα / IRIS / μεταφορά — ADR-ACC-030), μετά το έγγραφο. Μετά από online πληρωμή η σελίδα περιμένει την
+ * επιβεβαίωση του παρόχου (ξαναδιαβάζει σιωπηλά την όψη) ώσπου να πει «Εξοφλήθηκε».
  * Η σελίδα δεν κρίνει τίποτα μόνη της. Κατάσταση, ποσό, λογαριασμοί και QR έρχονται έτοιμα από τη συνεδρία
  * προβολής του διακομιστή (`invoice-public-session.ts`).
  *
@@ -32,9 +34,10 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { InvoiceIssuerContact } from './InvoiceIssuerContact';
 import { InvoicePublicBody, InvoicePublicParties } from './InvoicePublicDocument';
-import { InvoicePublicPaymentSection } from './InvoicePublicPaymentSection';
+import { InvoicePayNowSection } from './InvoicePayNowSection';
 import { INVOICE_PUBLIC_PAYMENT_NS } from './invoice-payment-primitives';
 import { invoicePublicPdfUrl, useInvoicePublicView } from './useInvoicePublicView';
+import { usePaymentConfirmationWatch } from './usePaymentConfirmationWatch';
 
 type BadgeVariant = 'warning' | 'error' | 'success' | 'muted';
 
@@ -102,9 +105,35 @@ function DocumentActions({ shareId }: { readonly shareId: string }): React.React
   );
 }
 
-function InvoiceView({ view, shareId }: { readonly view: InvoicePublicView; readonly shareId: string }): React.ReactElement {
+/** Επιστροφή από τον πάροχο (`?payment=pchk_…`, ADR-ACC-030): η σελίδα ξεκινά περιμένοντας επιβεβαίωση. */
+function returnedFromPayment(): boolean {
+  return typeof window !== 'undefined' && /^pchk_/.test(new URLSearchParams(window.location.search).get('payment') ?? '');
+}
+
+function PaymentProcessing({ slow }: { readonly slow: boolean }): React.ReactElement {
+  const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
+  return (
+    <Alert role="status">
+      <Spinner size="small" />
+      <AlertTitle>{t('payNow.processingTitle')}</AlertTitle>
+      <AlertDescription>{t(slow ? 'payNow.processingSlow' : 'payNow.processingBody')}</AlertDescription>
+    </Alert>
+  );
+}
+
+interface InvoiceViewProps {
+  readonly view: InvoicePublicView;
+  readonly shareId: string;
+  readonly refresh: () => Promise<void>;
+}
+
+function InvoiceView({ view, shareId, refresh }: InvoiceViewProps): React.ReactElement {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
   const colors = useSemanticColors();
+  const [awaiting, setAwaiting] = React.useState(returnedFromPayment);
+  const markLaunched = React.useCallback(() => setAwaiting(true), []);
+  const confirming = awaiting && view.standing === 'payable';
+  const { slow } = usePaymentConfirmationWatch(confirming, refresh);
   const isDraft = view.documentStatus === 'draft' || view.documentStatus === 'rejected';
   return (
     <article className="space-y-6">
@@ -117,7 +146,8 @@ function InvoiceView({ view, shareId }: { readonly view: InvoicePublicView; read
         </Alert>
       )}
       <AmountSummary view={view} />
-      {view.payment && <InvoicePublicPaymentSection payment={view.payment} amountDue={view.amountDue} />}
+      {confirming && <PaymentProcessing slow={slow} />}
+      {view.standing === 'payable' && <InvoicePayNowSection view={view} shareId={shareId} onLaunched={markLaunched} />}
       <DocumentActions shareId={shareId} />
       <InvoicePublicParties view={view} />
       <InvoicePublicBody view={view} />
@@ -144,7 +174,7 @@ export function SharedInvoicePaymentPageContent(
   { data }: { readonly data: InvoicePaymentShareResolvedData },
 ): React.ReactElement {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
-  const { state, retry } = useInvoicePublicView(data.shareId);
+  const { state, retry, refresh } = useInvoicePublicView(data.shareId);
   // Άρνηση = ο σύνδεσμος ή το κουπόνι επίσκεψης δεν ισχύουν πια ⇒ νέα επίλυση του token (ανανέωση σελίδας).
   const reload = () => window.location.reload();
   return (
@@ -152,7 +182,7 @@ export function SharedInvoicePaymentPageContent(
       {state.kind === 'loading' && (
         <p className="flex items-center justify-center gap-2 py-8 text-sm"><Spinner size="small" />{t('page.loading')}</p>
       )}
-      {state.kind === 'ready' && <InvoiceView view={state.view} shareId={data.shareId} />}
+      {state.kind === 'ready' && <InvoiceView view={state.view} shareId={data.shareId} refresh={refresh} />}
       {state.kind === 'refused' && <Unavailable failed={false} onRetry={reload} />}
       {state.kind === 'failed' && <Unavailable failed onRetry={retry} />}
     </main>

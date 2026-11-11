@@ -84,7 +84,76 @@ base64) δεν δηλώνεται ρητά. Ο έλεγχος δέχεται κ�
 
 ## 5. Ροή (Βήματα 2–6)
 
-_Συμπληρώνεται ανά βήμα._
+### 5.1 Port + adapter (`src/server/payments/`)
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `payment-provider.ts` | Το συμβόλαιο: `startCheckout` · `readSettlement` (η αλήθεια) · `captureAuthorizedSource` (IRIS Direct) · `cancelCheckout` (→ `true` μόνο όταν ο πάροχος **εγγυάται** ότι δεν θα χρεώσει) · `judgeWebhook` / `judgeReturn` (καθαρά). |
+| `payment-provider-registry.ts` | `paymentProviderForCompany(companyId)` — ο λογαριασμός εμπόρου. Σήμερα ένας, από το περιβάλλον· αύριο ανά εταιρεία χωρίς αλλαγή καταναλωτών. |
+| `providers/everypay/*` | Ρυθμίσεις (μόνο sandbox URLs — **κλειδωμένο live**) · υπογραφές (καθαρές) · πελάτης REST με `fetch` (κανένα πακέτο, N.5) · αναγνώστες με φρουρούς (κανένα `as`) · adapter. |
+| `payment-checkout-store.ts` | Η συνεδρία πληρωμής: ανάγνωση με φρουρούς, αναζητήσεις συστήματος με αιτιολογία `tenant-scope-exempt`. |
+| `payment-provider-event-log.ts` | Ίχνος παραλαβής: αποτύπωμα SHA-256 + σήμα + αποτέλεσμα, **ποτέ** το σώμα (email/τηλέφωνο/ψηφία κάρτας). TTL 400 μέρες (`expireAt`, Timestamp). |
+| `payment-return-cookie.ts` | Η επιστροφή του browser χωρίς να δοθεί το token του συνδέσμου στον πάροχο. |
+| `lib/payments/payment-routes.ts` | Αναγνωριστικά παρόχων + διαδρομές (ένας ορισμός για route, middleware, πάροχο). |
+
+### 5.2 Έναρξη — `POST /api/shares/[shareId]/invoice-payment/checkout`
+
+Ανώνυμο, με το κουπόνι επίσκεψης (όπως η όψη), STANDARD, ιδεμποτία εξ ορισμού (`Idempotency-Key` ανά πάτημα).
+Σώμα: `{ method, locale, returnPath }` — **ποτέ** ποσό. Σειρά (`server/accounting/payments/invoice-payment-checkout.ts`):
+`readSharedInvoice` (ΙΔΙΑ είσοδος με όψη/PDF) → η `returnPath` λύνεται στον **ίδιο** σύνδεσμο → πάροχος + τρόπος
+ενεργός → ποσό = `invoiceAmountDueNow` σε λεπτά → οι ανοιχτές συνεδρίες του συνδέσμου κλείνουν (μόνο όσες ο πάροχος
+εγγυάται) → **η συνεδρία γράφεται ΠΡΙΝ** τον πάροχο → πάροχος → ίχνος `INVOICE_PAYMENT_CHECKOUT_STARTED`.
+Επιτυχία ⇒ cookie επιστροφής `HttpOnly; Secure; SameSite=None; Path=/api/payments/return`.
+
+- **Κάρτα / Apple Pay / Google Pay**: Payment Notification ⇒ hosted σελίδα σε **νέα καρτέλα** (ανοίγει συγχρονικά στο
+  πάτημα — αλλιώς μπλοκάρεται). Η σελίδα μας περιμένει.
+- **IRIS**: συνεδρία IRIS ⇒ φόρμα POST στην **ίδια** καρτέλα ⇒ τράπεζα/QR στον πάροχο ⇒ επιστροφή.
+
+### 5.3 Καταγραφή — `POST /api/payments/webhooks/[provider]`
+
+`withAuth(allowUnauthenticated)` + `withWebhookRateLimit`, ιδεμποτία **natural** (CHECK 3.92 Κ1: ο πάροχος δεν
+στέλνει κλειδί ούτε event id· η απόδειξη είναι ο γραφέας). Υπογραφή πάνω στο ωμό σώμα ⇒ σήμα ⇒ συνεδρία ⇒ (IRIS:
+`captureAuthorizedSource`) ⇒ `syncCheckoutSettlement` ⇒ `recordInvoicePayment` ανά κίνηση. Κωδικοί: 401 πλαστό ·
+400 άκυρο σώμα · 503 πάροχος μη ρυθμισμένος **ή** αποτυχία εφαρμογής (το σύνορο δεν κρατά 503 ⇒ ο πάροχος
+ξαναδοκιμάζει· ένα 500 θα αναπαραγόταν 24 ώρες) · 200 αλλιώς.
+
+🔴 Η καταγραφή **δεν** κοιτά την κατάσταση της συνεδρίας: IRIS που ολοκληρώθηκε σε `canceled`/`expired` συνεδρία
+**είναι** χρήματα που μπήκαν. Απόκλιση ποσού ⇒ καταγράφεται η αλήθεια του παρόχου + προειδοποίηση.
+
+### 5.4 Επιστροφή browser — `GET|POST /api/payments/return/[provider]`
+
+**Καμία εγγραφή.** 303 (σχετικό `Location` — ποτέ `request.url`, πίσω από τον proxy είναι το εσωτερικό host) στη
+διαδρομή του cookie με `?payment=<checkoutId>`. Η σελίδα δείχνει «Η πληρωμή σας καταχωρείται» και ξαναδιαβάζει
+σιωπηλά την όψη (3″ το πρώτο λεπτό, μετά 15″, ως 15′) ώσπου να πει «Εξοφλήθηκε».
+
+### 5.5 Συμφιλίωση — cron `payment-reconcile` (`9,28,48 * * * *`)
+
+Ανοιχτές συνεδρίες > 10′ ⇒ ο **ίδιος** `syncCheckoutSettlement`. Ανοιχτή πολύ μετά τη λήξη ⇒ `expired`: κάρτα μόνο
+αν ο πάροχος εγγυηθεί την ακύρωση· IRIS μετά από 24 ώρες. Δείκτης `(status, createdAt)`.
+
+### 5.6 Δημόσια σελίδα
+
+«Πληρωμή τώρα» (`InvoicePayNowSection`): καρτέλες ανά τρόπο — Κάρτα · IRIS · Τραπεζική μεταφορά (οι υπάρχουσες
+οδηγίες + EPC QR, αμετάβλητες). Ποιοι τρόποι φαίνονται το λέει ο διακομιστής (`view.onlineMethods`). Κανένα
+λογότυπο τράπεζας από εμάς. Χωρίς ρυθμισμένο πάροχο η σελίδα είναι ακριβώς όπως πριν.
+
+**Επιλεξιμότητα συνδέσμου**: `isPayableByLink` = εισπρακτέο ∧ (μεταφορά ∨ κάρτα ∨ IRIS). Οι λογαριασμοί στο PDF
+μένουν στο `showsPaymentInstructions` (όχι IBAN σε τιμολόγιο «κάρτα»).
+
+### 5.7 Ρύθμιση από τον άνθρωπο (ποτέ από πράκτορα)
+
+`EVERYPAY_SECRET_KEY` · `EVERYPAY_PUBLIC_KEY` · `PAYMENTS_PROVIDER_MODE=sandbox` (δηλωμένα στο
+`environment-contract.ts` + `.env.example`). Στο dashboard της Everypay: webhooks «Notification paid» ·
+«Notification expired» · «Refund» · «New Payment (IRIS)» ⇒ `https://<domain>/api/payments/webhooks/everypay`.
+Ενεργοποίηση IRIS / Apple Pay / Google Pay στον λογαριασμό εμπόρου.
+
+### 5.8 Ανοιχτά προς επαλήθευση στο sandbox
+
+1. Κωδικοποίηση υπογραφής IRIS `hash` (hex / base64 — δεκτά και τα δύο).
+2. Η ακριβής μορφή του σώματος κάθε webhook (η τεκμηρίωση δίνει λίστα πεδίων, όχι παράδειγμα ανά συμβάν): ο adapter
+   ταξινομεί με το πρόθεμα του `token` (`pnt_` / `pmt_`)· άγνωστη μορφή ⇒ `ignored` + ίχνος, και η συμφιλίωση καλύπτει.
+3. Η μορφή απάντησης λίστας (`GET /payments?merchant_ref=` · `GET /refunds?payment=`): δεκτά πίνακας ή `data`.
+4. Αν η hosted σελίδα της ειδοποίησης επιστρέφει στον έμπορο (δεν τεκμηριώνεται πεδίο) — γι' αυτό νέα καρτέλα.
 
 ## 6. Εκτός εμβέλειας
 
@@ -98,3 +167,4 @@ _Συμπληρώνεται ανά βήμα._
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-11-11 | Βήμα 1: μοντέλο, ένας γραφέας, server-owned πεδία, ταυτότητες, συλλογές + κανόνες. |
+| 2026-11-11 | Βήματα 2–6: port + adapter Everypay · έναρξη πληρωμής · webhook · επιστροφή browser · συμφιλίωση cron · «Πληρωμή τώρα» στη δημόσια σελίδα · `isPayableByLink` και για κάρτα/IRIS. |

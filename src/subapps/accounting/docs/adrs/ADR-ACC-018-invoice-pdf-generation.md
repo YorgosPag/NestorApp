@@ -555,6 +555,7 @@ src/subapps/accounting/
 | 2026-11-11 | **§16 — Δημόσια σελίδα πληρωμής τιμολογίου.** Νέο είδος κοινοποίησης `invoice_payment` πάνω στο υπάρχον σύστημα (`src/server/sharing/*` + `ShareEntityRegistry`), χωρίς δεύτερο σύστημα. Όψη + PDF μέσω `GET /api/shares/[shareId]/invoice-payment[/pdf]` με κουπόνι επίσκεψης. EPC QR ανά λογαριασμό με το υπόλοιπο. Σύνδεσμος στο email + στο συνημμένο PDF. Ίχνος `INVOICE_PAYMENT_LINK_OPENED`. Οι οδηγίες πληρωμής ως δεδομένα (`invoice-payment-instructions.ts`) και το PDF ως έγγραφο (`invoice-pdf-document.ts`) έγιναν από ένα | Giorgio + Claude Code |
 | 2026-11-11 | **§16.1 — Κανάλια συνομιλίας του εκδότη (Φάση 1).** Νέο SSoT `lib/contact/social-chat-links.ts` (Viber · WhatsApp · Messenger · Telegram · Instagram, επίσημα πρότυπα, έτοιμο κείμενο μόνο με τον αριθμό). Νέα πλατφόρμα `viber` στη ρίζα `SOCIAL_PLATFORMS` (δωρεάν σύνδεσμος `viber.me`, όχι bot). `InvoicePublicView.issuerChatChannels` = **τρέχοντα** κανάλια του μισθωτή (`resolveTenantSocialAccounts`). Μπλοκ `InvoiceIssuerContact.tsx`. Άγκυρα `lib/contact/__tests__/social-chat-links.test.ts` (Σ1–Σ5) | Giorgio + Claude Code |
 | 2026-11-11 | **§16.2 — Ευρήματα ζωντανής επαλήθευσης.** Λογότυπο PDF συμπιεσμένο (`drawPdfLogo`: 4,1 MB → 36 KB) · μονάδα στη γλώσσα του επισκέπτη (`unitLabel` από το `uomLabelIn`) · προεπισκόπηση email σε απομονωμένο λευκό χαρτί (`SandboxedHtmlFrame`) · θεματικό εικονίδιο στο `ShareSurfaceShell` | Giorgio + Claude Code |
+| 2026-11-11 | **§16 → ADR-ACC-030.** Τα δύο «εκτός εμβέλειας» της σελίδας (κάρτα/IRIS · γραφέας πληρωμών) κλείνουν στο ADR-ACC-030. Ο σύνδεσμος πληρωμής δίνεται πλέον και σε τιμολόγιο «κάρτα» / «IRIS» (`isPayableByLink`)· οι λογαριασμοί στο PDF μένουν στον κανόνα `showsPaymentInstructions` | Giorgio + Claude Code |
 
 ---
 
@@ -679,8 +680,8 @@ src/subapps/accounting/
 - (κ) **Διαχείριση από την εφαρμογή**: «Σύνδεσμος πληρωμής» στο μενού του τιμολογίου ⇒ ο ΕΝΑΣ διάλογος `UnifiedShareDialog` (δημιουργία + αντιγραφή, λίστα, ανάκληση).
 
 **Εκτός εμβέλειας / γνωστά**:
-- Πληρωμή με κάρτα ή IRIS: απαιτεί PSP.
-- Δεν υπάρχει γραφέας καταγραφής πληρωμών. Η σελίδα διαβάζει τα υπάρχοντα `paymentStatus` / `balanceDue`.
+- ~~Πληρωμή με κάρτα ή IRIS: απαιτεί PSP.~~ → **[ADR-ACC-030](./ADR-ACC-030-online-invoice-payments.md)** (Everypay, «Πληρωμή τώρα»).
+- ~~Δεν υπάρχει γραφέας καταγραφής πληρωμών.~~ → **ADR-ACC-030 §3**: ο ΕΝΑΣ `recordInvoicePayment` + αυτόματη καταγραφή από webhook / συμφιλίωση.
 - Η σελίδα ληγμένου συνδέσμου δείχνει τη γενική άρνηση, χωρίς στοιχεία εκδότη. Το Stripe τα δείχνει, και αυτό θα απαιτούσε `invoiceMeta` στο έγγραφο κοινοποίησης.
 - `qrUrl` myDATA (πριν από την πρώτη διαβίβαση). Η σελίδα δείχνει ήδη τον ΜΑΡΚ όταν υπάρχει.
 - Παρακράτηση στο πληρωτέο (όπως στο §15).

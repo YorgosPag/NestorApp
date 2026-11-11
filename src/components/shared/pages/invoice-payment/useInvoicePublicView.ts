@@ -2,8 +2,8 @@
  * useInvoicePublicView — φέρνει την όψη του τιμολογίου για τον κάτοχο του συνδέσμου (ADR-ACC-018 §16).
  *
  * Το αίτημα φέρει μόνο το `shareId` και το `HttpOnly` κουπόνι επίσκεψης (cookie, `Path=/api`) που έγραψε
- * η επίλυση του token λίγο πριν. Το token δεν ξαναταξιδεύει. Μία ανάγνωση ανά άνοιγμα, χωρίς polling:
- * ένα τιμολόγιο δεν αλλάζει όσο ο πελάτης το διαβάζει.
+ * η επίλυση του token λίγο πριν. Το token δεν ξαναταξιδεύει. Μία ανάγνωση ανά άνοιγμα· ανανέωση **μόνο** όσο
+ * περιμένουμε επιβεβαίωση online πληρωμής (ADR-ACC-030, `refresh`).
  *
  * @module components/shared/pages/invoice-payment/useInvoicePublicView
  */
@@ -37,7 +37,18 @@ async function fetchView(shareId: string, signal: AbortSignal): Promise<InvoiceP
   return body.status === 'ok' ? { kind: 'ready', view: body.view } : { kind: 'refused', reason: body.reason };
 }
 
-export function useInvoicePublicView(shareId: string): { readonly state: InvoicePublicViewState; readonly retry: () => void } {
+export interface InvoicePublicViewHandle {
+  readonly state: InvoicePublicViewState;
+  /** Νέα φόρτωση με ένδειξη «φόρτωση» (μετά από αποτυχία). */
+  readonly retry: () => void;
+  /**
+   * Σιωπηλή ανανέωση: η τρέχουσα όψη μένει στην οθόνη ώσπου να έρθει η νέα (ADR-ACC-030 — αναμονή επιβεβαίωσης
+   * πληρωμής). Αποτυχία δικτύου δεν σβήνει την όψη.
+   */
+  readonly refresh: () => Promise<void>;
+}
+
+export function useInvoicePublicView(shareId: string): InvoicePublicViewHandle {
   const [state, setState] = useState<InvoicePublicViewState>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
@@ -51,5 +62,14 @@ export function useInvoicePublicView(shareId: string): { readonly state: Invoice
   }, [shareId, attempt]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
-  return { state, retry };
+  const refresh = useCallback(async () => {
+    const next = await fetchView(shareId, new AbortController().signal).catch((): InvoicePublicViewState => ({ kind: 'failed' }));
+    if (next.kind !== 'failed') setState(next);
+  }, [shareId]);
+  return { state, retry, refresh };
+}
+
+/** Η διεύθυνση έναρξης online πληρωμής (ADR-ACC-030) — δίπλα στην όψη, ίδιος ορισμός. */
+export function invoiceCheckoutUrl(shareId: string): string {
+  return `${invoicePublicViewUrl(shareId)}/checkout`;
 }

@@ -24,8 +24,10 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { withCurrentPaymentAccounts } from '@/app/api/accounting/invoices/invoice-payment-snapshot';
 import { chatChannelsOf, type ChatChannelRef } from '@/lib/contact/social-chat-links';
 import { todayLocalDate } from '@/lib/date-local';
+import { paymentProviderForCompany } from '@/server/payments/payment-provider-registry';
 import { findActiveShareOf } from '@/server/sharing/share-active-lookup';
 import { resolveTenantSocialAccounts } from '@/services/company/company-branding-resolver';
+import type { StoredShare } from '@/server/sharing/share-token-lookup';
 import { buildInvoicePublicView } from '@/subapps/accounting/services/public-invoice/invoice-public-view';
 import type { Invoice } from '@/subapps/accounting/types';
 import type { InvoicePublicRefusal, InvoicePublicViewResponse } from '@/subapps/accounting/types/invoice-public-view';
@@ -38,14 +40,22 @@ export interface InvoicePublicSessionInput {
   readonly nowMs: number;
 }
 
-type SharedInvoice =
+export type SharedInvoice =
   | {
-    readonly kind: 'found'; readonly invoice: Invoice; readonly repository: IAccountingRepository; readonly companyId: string;
+    readonly kind: 'found';
+    readonly invoice: Invoice;
+    readonly repository: IAccountingRepository;
+    readonly companyId: string;
+    /** Ο σύνδεσμος — ο μισθωτής του (`companyId`) και ο δημιουργός του (`createdBy`). */
+    readonly share: StoredShare;
   }
   | { readonly kind: 'refused'; readonly reason: InvoicePublicRefusal };
 
-/** Σύνδεσμος ενεργός → τιμολόγιο του μισθωτή του → οι οδηγίες πληρωμής που θα τύπωνε σήμερα. */
-async function readSharedInvoice(db: Firestore, input: InvoicePublicSessionInput): Promise<SharedInvoice> {
+/**
+ * Σύνδεσμος ενεργός → τιμολόγιο του μισθωτή του → οι οδηγίες πληρωμής που θα τύπωνε σήμερα. Η ΜΙΑ είσοδος για
+ * όψη, PDF και έναρξη online πληρωμής (ADR-ACC-030).
+ */
+export async function readSharedInvoice(db: Firestore, input: InvoicePublicSessionInput): Promise<SharedInvoice> {
   const share = await findActiveShareOf(db, {
     shareId: input.shareId, kind: 'invoice_payment', entityId: null, nowMs: input.nowMs,
   });
@@ -54,7 +64,7 @@ async function readSharedInvoice(db: Firestore, input: InvoicePublicSessionInput
   const found = await readTenantInvoice({ companyId: share.companyId, userId: share.createdBy }, share.entityId);
   if (found === null) return { kind: 'refused', reason: 'invoice-absent' };
   const invoice = await withCurrentPaymentAccounts(found.repository, found.invoice);
-  return { kind: 'found', invoice, repository: found.repository, companyId: share.companyId };
+  return { kind: 'found', invoice, repository: found.repository, companyId: share.companyId, share };
 }
 
 /** Τα **τρέχοντα** κανάλια συνομιλίας του μισθωτή του συνδέσμου (Viber, WhatsApp, Messenger, Telegram, Instagram). */
@@ -69,7 +79,8 @@ export async function openInvoicePublicView(
   const shared = await readSharedInvoice(db, input);
   if (shared.kind === 'refused') return { status: 'refused', reason: shared.reason };
   const channels = await issuerChatChannelsOf(db, shared.companyId);
-  return { status: 'ok', view: buildInvoicePublicView(shared.invoice, todayLocalDate(), channels) };
+  const onlineMethods = paymentProviderForCompany(shared.companyId)?.methods ?? [];
+  return { status: 'ok', view: buildInvoicePublicView(shared.invoice, todayLocalDate(), channels, onlineMethods) };
 }
 
 export type InvoicePublicPdfOutcome =

@@ -16,6 +16,7 @@
 import type { ChatChannelRef } from '@/lib/contact/social-chat-links';
 
 import type { Invoice, InvoiceCustomer, InvoiceIssuer } from '../../types/invoice';
+import type { OnlinePaymentMethod } from '../../types/online-payment';
 import type {
   InvoicePublicIssuer,
   InvoicePublicParty,
@@ -86,9 +87,14 @@ function publicPayment(invoice: Invoice, amountDue: number): InvoicePublicPaymen
  *
  * @param today Η σημερινή ημερομηνία (`YYYY-MM-DD`) για το «ληξιπρόθεσμο». Παράμετρος, ώστε η προβολή να μένει καθαρή.
  * @param issuerChatChannels Τα **τρέχοντα** κανάλια συνομιλίας της εταιρείας. Τα διαβάζει ο καλών, όχι η προβολή.
+ * @param onlineMethods Οι τρόποι online πληρωμής του λογαριασμού εμπόρου (ADR-ACC-030) — προσφέρονται μόνο όταν
+ *   οφείλεται ποσό.
  */
 export function buildInvoicePublicView(
-  invoice: Invoice, today: string, issuerChatChannels: readonly ChatChannelRef[],
+  invoice: Invoice,
+  today: string,
+  issuerChatChannels: readonly ChatChannelRef[],
+  onlineMethods: readonly OnlinePaymentMethod[] = [],
 ): InvoicePublicView {
   const standing = invoicePaymentStanding(invoice);
   const amountDue = invoiceAmountDueNow(invoice);
@@ -118,6 +124,7 @@ export function buildInvoicePublicView(
     standing,
     overdue: standing === 'payable' && invoice.dueDate !== null && invoice.dueDate < today,
     payment: standing === 'payable' && hasAccounts ? publicPayment(invoice, amountDue) : null,
+    onlineMethods: standing === 'payable' && amountDue > 0 ? [...onlineMethods] : [],
     notes: invoice.notes,
   };
 }

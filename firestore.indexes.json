@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "accounting_payment_checkouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "catalog_import_asset_fetches",
       "queryScope": "COLLECTION",
       "fields": [
@@ -9666,6 +9674,12 @@
     {
       "collectionGroup": "idempotency_records",
       "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "payment_provider_events",
+      "fieldPath": "expireAt",
       "ttl": true,
       "indexes": []
     },
