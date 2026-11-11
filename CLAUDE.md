@@ -616,7 +616,7 @@ Quando lancio `Agent` tool, **DEVO** passare `model` param scegliendo il **minim
 
 **Ο commit agent τρέχει πάντα ως Haiku.** Ο Giorgio ενεργοποιεί χειροκίνητα άλλο μοντέλο αν χρειαστεί.
 
-**ΔΙΠΛΗ ΡΟΗ (ADR-925):** ο commit agent αφορά **μόνο** δουλειά που ζει ακόμη στο κύριο αντίγραφο. Σε δικό σου worktree, το commit το κάνεις **εσύ που έγραψες τον κώδικα**, με ρητή λίστα αρχείων. Ροή: `npm run wt:new -- <εργασία>` → `EnterWorktree` με τη διαδρομή → δουλειά + commit στο κλαδί → **αμέσως** `npm run wt:land -- <εργασία>` (χωρίς ερώτηση, N.(-1)) → αναφορά στον Giorgio → push **μόνο με εντολή του** → `npm run wt:remove -- <εργασία>`. 📘 `docs/deployment/git-workflow.md`
+**ΔΙΠΛΗ ΡΟΗ (ADR-925):** ο commit agent αφορά **μόνο** δουλειά που ζει ακόμη στο κύριο αντίγραφο. Σε δικό σου worktree, το commit το κάνεις **εσύ που έγραψες τον κώδικα**, με ρητή λίστα αρχείων. Ροή: `npm run wt:new -- <εργασία>` → `EnterWorktree` με τη διαδρομή → δουλειά + commit στο κλαδί → **αμέσως** `npm run wt:land -- <εργασία>` (χωρίς ερώτηση, N.(-1)) → αναφορά στον Giorgio → push **μόνο με εντολή του** → `npm run wt:remove -- <εργασία>`. **Handoff** σε worktree: γράψ' το στο `HANDOFFS\` του worktree **χωρίς commit** και αμέσως `npm run wt:handoffs -- <εργασία>` (αντιγραφή στο `C:\Nestor_Pagonis\HANDOFFS\`, που μπαίνει στο backup)· το μήνυμα για τη νέα συνεδρία δείχνει **εκείνη** τη διαδρομή (ADR-925 §16). 📘 `docs/deployment/git-workflow.md`
 
 ### Εκτέλεση — χρησιμοποίησε ΠΑΝΤΑ το slash command:
 

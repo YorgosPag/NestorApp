@@ -52,6 +52,23 @@ function isDirty(dir) {
   return git(dir, ['status', '--porcelain']).length > 0;
 }
 
+/** `-z`: ονόματα με ελληνικά ή κενά έρχονται αυτούσια, όχι σε εισαγωγικά του `core.quotePath`. */
+function listFiles(cwd, args) {
+  return git(cwd, ['ls-files', '-z', ...args]).split('\0').filter(Boolean);
+}
+
+/**
+ * ΟΛΑ τα untracked, και τα αγνοημένα: χωρίς `--exclude-standard` κανένας κανόνας αγνόησης δεν
+ * κρύβει αρχείο. Το `isDirty` δεν τα βλέπει, άρα εδώ ζει ό,τι το `git worktree remove` θα έσβηνε.
+ */
+function untrackedFiles(cwd, pathspec) {
+  return listFiles(cwd, ['--others', '--', pathspec]);
+}
+
+function isTracked(cwd, file) {
+  return listFiles(cwd, ['--', file]).length > 0;
+}
+
 function branchExists(cwd, branch) {
   return tryGit(cwd, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]).ok;
 }
@@ -64,4 +81,15 @@ function commitsAhead(cwd, base, branch) {
   return Number(git(cwd, ['rev-list', '--count', `${base}..${branch}`]));
 }
 
-module.exports = { branchExists, commitsAhead, git, isDirty, primaryDir, revision, tryGit, worktrees };
+module.exports = {
+  branchExists,
+  commitsAhead,
+  git,
+  isDirty,
+  isTracked,
+  primaryDir,
+  revision,
+  tryGit,
+  untrackedFiles,
+  worktrees,
+};

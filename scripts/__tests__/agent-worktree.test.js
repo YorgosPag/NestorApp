@@ -6,12 +6,12 @@
 
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { assertDiskRoom, assertTask, locate } = require('../lib/agent-worktree/config');
 const { git } = require('../lib/agent-worktree/git');
 const { clearResidue, createWorkspace, listWorkspaces, removeWorkspace } = require('../lib/agent-worktree/lifecycle');
 const { composeLandMessage, land } = require('../lib/agent-worktree/land');
+const { commitIn, createSandbox, fakeInstall, openWorkspace, removeSandbox, write } = require('./agent-worktree-fixture');
 
 jest.setTimeout(60000);
 
@@ -19,38 +19,13 @@ let sandbox;
 let primary;
 let env;
 
-const write = (dir, name, text) => fs.writeFileSync(path.join(dir, name), text);
-
-function commitIn(dir, name, text, message = `add ${name}`) {
-  write(dir, name, text);
-  git(dir, ['add', name]);
-  git(dir, ['commit', '-m', message]);
-}
-
-function initRepo() {
-  git(primary, ['init', '-b', 'main']);
-  git(primary, ['config', 'user.email', 'test@example.com']);
-  git(primary, ['config', 'user.name', 'test']);
-  git(primary, ['config', 'core.hooksPath', '.no-hooks']);
-  commitIn(primary, '.gitignore', 'node_modules/\n');
-}
-
-function fakeInstall(dir) {
-  fs.mkdirSync(path.join(dir, 'node_modules'));
-  write(path.join(dir, 'node_modules'), 'dep.txt', 'εξάρτηση\n');
-}
-
 beforeEach(() => {
-  sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-wt-'));
-  primary = path.join(sandbox, 'repo');
-  fs.mkdirSync(primary);
-  env = { NESTOR_WORKTREE_ROOT: path.join(sandbox, 'worktrees') };
-  initRepo();
+  ({ sandbox, primary, env } = createSandbox());
 });
 
-afterEach(() => fs.rmSync(sandbox, { recursive: true, force: true }));
+afterEach(() => removeSandbox({ sandbox }));
 
-const open = (task) => createWorkspace(task, { cwd: primary, env, minimumFree: 0, install: fakeInstall });
+const open = (task) => openWorkspace({ primary, env }, task);
 const options = () => ({ cwd: primary, env });
 
 describe('κανόνες', () => {

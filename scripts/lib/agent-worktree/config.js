@@ -14,6 +14,14 @@ const MAIN_BRANCH = 'main';
 const LAND_LOCK = 'agent-worktree-land.lock';
 
 /**
+ * Φάκελος των handoffs, σχετικός με τη ρίζα κάθε αντιγράφου. Τα handoffs του worktree
+ * συλλέγονται στον ομώνυμο φάκελο του κύριου αντιγράφου, γιατί μόνο εκεί τα παίρνει το
+ * backup και μόνο εκεί επιζούν το σβήσιμο του worktree (ADR-925 §9, 2026-11-11).
+ */
+const HANDOFF_DIR = 'HANDOFFS';
+const HANDOFF_EXTENSION = '.md';
+
+/**
  * 1,5 GB: ένα worktree πιάνει ~0,6 GB (μετρημένο 2026-10-31) και το repo χρειάζεται
  * περιθώριο για hooks και δοκιμές. Κάτω από αυτό, ο δίσκος που γεμίζει θα έριχνε
  * και τις υπόλοιπες εργασίες, όχι μόνο τη νέα.
@@ -51,6 +59,8 @@ function assertDiskRoom(freeBytes, minimum = MIN_FREE_BYTES) {
 
 module.exports = {
   BRANCH_PREFIX,
+  HANDOFF_DIR,
+  HANDOFF_EXTENSION,
   LAND_LOCK,
   MAIN_BRANCH,
   MIN_FREE_BYTES,

@@ -5,7 +5,7 @@
 | **Status** | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ (2026-10-31)** · εντολές `wt:*` + CHECK 3.109 · η επιβολή (`enforce`) ενεργοποιείται στο καθαρό σημείο (§10) |
 | **Date** | 2026-10-30 |
 | **Category** | Tooling / Multi-agent workflow |
-| **Canonical Location** | `scripts/lib/agent-worktree/` · `scripts/agent-worktree.js` · `scripts/check-agent-worktree-policy.js` · `.agent-worktree-policy.json` · `.claude/settings.json` (`worktree.baseRef`) |
+| **Canonical Location** | `scripts/lib/agent-worktree/` (συλλογή handoffs: `handoffs.js`, §16) · `scripts/lib/fs/atomic-write.js` · `scripts/agent-worktree.js` · `scripts/check-agent-worktree-policy.js` · `.agent-worktree-policy.json` · `.claude/settings.json` (`worktree.baseRef`) |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Σχετικά** | ADR-924 (οι πύλες κρίνουν το commit — η **άμυνα**, αυτό εδώ η **θεραπεία**) · `.claude-rules/fleet/` (κλειδώματα αρχείων/λωρίδων) · `heavy-mutex` (ένα βαρύ έργο τη φορά) · ADR-800 (μία έκδοση πακέτου) |
 
@@ -111,6 +111,7 @@
 
 | ημερομηνία | αλλαγή |
 |---|---|
+| 2026-11-11 | §16: τα handoffs του worktree χάνονταν σιωπηλά στο `wt:remove` (αγνοημένα, άρα αόρατα στο `isDirty`) και δεν έμπαιναν ποτέ στο backup. Νέο `handoffs.js`: συλλογή μόνο των untracked `HANDOFFS/*.md` στο κύριο αντίγραφο, ιδεμποτική, ατομική, με σύγκρουση αντί για αντικατάσταση νεότερου ή tracked. `wt:land` συλλέγει μετά την ένταξη, `wt:remove` πριν το σβήσιμο (αρνείται σε σύγκρουση), νέα εντολή `wt:handoffs` (`--all`). Νέο SSoT `scripts/lib/fs/atomic-write.js`. |
 | 2026-11-07 | §15: ο τίτλος του ενιαίου commit του `wt:land` ήταν ο τίτλος του **παλαιότερου** commit, συχνά το `docs(handoff)` της προηγούμενης συνεδρίας (`21474786`). Τώρα `composeLandMessage`: τίτλος από το νεότερο που δεν είναι handoff, αλλιώς το νεότερο· το σώμα κρατά όλα τα μηνύματα, νεότερο πρώτο. |
 | 2026-11-06 | §14: ο pre-commit έτρεξε git στο πραγματικό repo (`core.bare=true`, 14 commits «base»). Αιτίες: μη αγκυρωμένα μοτίβα jest που ταίριαξαν στο όνομα του worktree, και `GIT_DIR`/`GIT_INDEX_FILE` του hook κληρονομημένα από tests που καλούν `git`. Διόρθωση: `scripts/lib/git-hook-env.js` (SSoT), `jest.global-setup.js`, μοτίβο μόνο σχετικής διαδρομής στο pre-commit. |
 | 2026-11-05 | §13: μαθήματα από την ένταξη `raster-plan-recognition` + `check-3-51-oracle`, που ήταν ήδη στο `main`. Πριν από ένταξη ή σβήσιμο, η σύγκριση με το `main` γίνεται με περιεχόμενο (`merge-tree`), όχι με ονόματα commits. Τα worktrees του harness (`.claude/worktrees/`) δεν τα πιάνει το `wt:remove`. Το `git worktree remove` έδωσε «Invalid argument» σε φάκελο με πλήρες `node_modules`. |
@@ -341,3 +342,32 @@ Commit στο worktree `accounting-competitive-parity`. Μετά το pre-commit
 - Η αναγνώριση του handoff γίνεται μόνο με το πρόθεμα `docs(handoff)` στον τίτλο.
 - Γραμμές `Co-Authored-By` των παλαιότερων μηνυμάτων μένουν μέσα στο σώμα, όχι μόνο στο τέλος. Το git αναγνωρίζει ως trailers μόνο τις τελευταίες.
 - Δεν καλύπτει το δεύτερο εύρημα του handoff: όταν ο πράκτορας κάνει ο ίδιος το rebase, το `wt:land` βλέπει «δεν κινήθηκε» και κάνει fast-forward χωρίς να ξανατρέξει τις πύλες.
+
+## 16. Συλλογή των handoffs στο κύριο αντίγραφο (2026-11-11)
+
+### 16.1 Το πρόβλημα (μετρημένο)
+
+- Ο πράκτορας σε worktree γράφει το handoff στο `C:\Nestor_Worktrees\<εργασία>\HANDOFFS\`. Τα `HANDOFFS/*.md` αγνοούνται (`C:\Nestor_Pagonis\.git\info\exclude:19`, κοινό για όλα τα worktrees).
+- Το φρένο του `wt:remove` (`isDirty` = `git status --porcelain`) δεν βλέπει αγνοημένα αρχεία. Το `git worktree remove` στο `unregister` σβήνει τον φάκελο **μαζί** με τα αγνοημένα, άρα ένα handoff χωρίς `git add -f` χανόταν σιωπηλά. Το handoff της 2026-11-11 έγραφε ότι τα σβήνει το `clearResidue`· στην πράξη χάνονται ένα βήμα νωρίτερα.
+- Το backup (`enterprise-backup.ps1`) αντιγράφει μόνο το `C:\Nestor_Pagonis`. Το `C:\Nestor_Worktrees` δεν μπαίνει καθόλου.
+- Η συνεδρία worktree δεν μπορεί να γράψει με `Write` στο κύριο αντίγραφο (απομόνωση του harness). Ένα npm script μπορεί, όπως ήδη το `wt:land`.
+
+### 16.2 Απόφαση (Giorgio)
+
+- `scripts/lib/agent-worktree/handoffs.js` — `harvestHandoffs(worktreeDir, primaryDir)`:
+  - πηγή: **μόνο untracked** άμεσα παιδιά `HANDOFFS/*.md` (`git ls-files -z --others`, χωρίς `--exclude-standard`, ώστε κανένας κανόνας αγνόησης να μην κρύβει αρχείο). Τα tracked ταξιδεύουν ήδη με το git· το repo έχει 1.026.
+  - προορισμός tracked στο κύριο αντίγραφο ⇒ **ποτέ** εγγραφή (θα λέρωνε το `main`), αναφέρεται ως σύγκρουση `tracked`.
+  - λείπει ⇒ αντιγραφή · ίδια bytes ⇒ τίποτα (ιδεμποτικό) · άλλο περιεχόμενο και **αυστηρά** νεότερη πηγή ⇒ αντικατάσταση · αλλιώς σύγκρουση `destination-newer`, καμία εγγραφή. Ίδια λογική με `rsync --update` / `robocopy /XO`, με τη διαφορά ότι η παλαιότερη πηγή **αναφέρεται** αντί να προσπερνιέται σιωπηλά.
+  - ατομική εγγραφή με διατήρηση του mtime της πηγής: νέο SSoT `scripts/lib/fs/atomic-write.js` (`writeFileAtomic(file, data, { mtime })`).
+- Ρίζα και κατάληξη ως σταθερές `HANDOFF_DIR` / `HANDOFF_EXTENSION` στο `config.js`.
+- **`wt:land`**: συλλογή **μετά** το fast-forward (`tryHarvest`). Αποτυχία ή σύγκρουση δεν ακυρώνει την ένταξη που έγινε· αναφέρεται και η εντολή βγαίνει με κωδικό 1.
+- **`wt:remove`**: συλλογή **πριν** από το `unregister` (`secureHandoffs`). Σύγκρουση ή αποτυχία ⇒ εξαίρεση, τίποτα δεν σβήνεται. Μετά, ανεξάρτητη επαλήθευση (`unharvested`) ότι κάθε handoff υπάρχει byte-ίδιο στον προορισμό, χωρίς εμπιστοσύνη στην αναφορά της συλλογής.
+- **`npm run wt:handoffs -- <εργασία>`** μόνο συλλογή· **`-- --all`** για κάθε ενεργό worktree πράκτορα (μία φορά για τα υπάρχοντα, απόφαση Giorgio (α)).
+- Κανόνας: το handoff γράφεται στο `HANDOFFS\` του worktree **χωρίς commit** και ακολουθεί αμέσως `npm run wt:handoffs -- <εργασία>`. Το μήνυμα για τη νέα συνεδρία δείχνει `C:\Nestor_Pagonis\HANDOFFS\<όνομα>`.
+- Tests: `scripts/__tests__/agent-worktree-handoffs.test.js`, με τον ίδιο κανόνα αγνόησης στο sandbox. Το στήσιμο είναι κοινό με το `agent-worktree.test.js` στο `scripts/__tests__/agent-worktree-fixture.js`.
+
+### 16.3 Όρια
+
+- Υπόλειμμα χωρίς καταχώρηση git (φάκελος που έμεινε μετά από μισό σβήσιμο) δεν συλλέγεται: το git δεν έχει τι να απαριθμήσει εκεί. Η συλλογή έχει ήδη γίνει στο πρώτο πέρασμα, πριν από το `unregister`.
+- Σύγκριση ηλικίας με mtime: αξιόπιστη στον ίδιο δίσκο και την ίδια μηχανή, όχι ως ρολόι μεταξύ μηχανών.
+- Το `scripts/lib/i18n-shell-slice/source-cache.js` κρατά ακόμη τη δική του `writeFileAtomic`. Η μεταφορά του στο νέο SSoT αλλάζει το αποτύπωμα toolchain του shell slice (ADR-744 §30, CHECK 3.34) και θέλει αναπαραγωγή του `src/i18n/generated/shell-slice.el.json`. Εκκρεμεί ως ξεχωριστή εργασία.

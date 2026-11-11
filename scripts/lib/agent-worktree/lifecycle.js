@@ -8,6 +8,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { MAIN_BRANCH, BRANCH_PREFIX, assertDiskRoom, locate, worktreeRoot } = require('./config');
 const { branchExists, commitsAhead, git, isDirty, primaryDir, tryGit, worktrees } = require('./git');
+const { secureHandoffs } = require('./handoffs');
 
 function freeBytes(dir) {
   const stats = fs.statfsSync(dir);
@@ -160,6 +161,17 @@ function unregister(primary, target) {
 }
 
 /**
+ * Τα handoffs είναι αγνοημένα, άρα αόρατα στο `isDirty`, και το `git worktree remove` τα σβήνει
+ * μαζί με τον φάκελο. Συλλέγονται ΠΡΙΝ από το `unregister`· αν κάτι δεν συλλεχθεί, εξαίρεση.
+ * Μόνο από ζωντανό worktree: σε υπόλειμμα χωρίς καταχώρηση το git δεν έχει τι να απαριθμήσει.
+ */
+function harvestBeforeRemoval(primary, target) {
+  const entry = findEntry(primary, target);
+  if (!entry || !fs.existsSync(entry.dir)) return null;
+  return secureHandoffs(entry.dir, primary);
+}
+
+/**
  * Σύγκλιση, όχι σειρά βημάτων: κάθε εκτέλεση ολοκληρώνει ό,τι βρει, άρα μια διακοπή
  * διορθώνεται ξανατρέχοντας την ίδια εντολή. Το κλαδί σβήνεται πριν από τον φάκελο, ώστε
  * ένα κρατημένο υπόλειμμα να μην το αφήνει πίσω.
@@ -169,6 +181,7 @@ function removeWorkspace(task, { cwd = process.cwd(), env = process.env, retry =
   assertOutside(cwd, target.dir);
   assertNotForeignRepo(target.dir);
   const primary = primaryDir(cwd);
+  const handoffs = harvestBeforeRemoval(primary, target);
   const registered = unregister(primary, target);
   const hasBranch = branchExists(primary, target.branch);
   const hasDir = fs.existsSync(target.dir);
@@ -179,6 +192,7 @@ function removeWorkspace(task, { cwd = process.cwd(), env = process.env, retry =
     nothingFound: !registered && !hasBranch && !hasDir,
     branchKept: branch.ok ? null : branch.out,
     residue: hasDir ? clearResidue(target.dir, retry) : null,
+    handoffs,
   };
 }
 

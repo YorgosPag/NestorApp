@@ -12,6 +12,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { LAND_LOCK, MAIN_BRANCH, locate } = require('./config');
 const { commitsAhead, git, isDirty, primaryDir, revision, tryGit } = require('./git');
+const { tryHarvest } = require('./handoffs');
 const { requireWorkspace } = require('./lifecycle');
 
 function withLandLock(primary, action) {
@@ -109,7 +110,9 @@ function land(task, { cwd = process.cwd(), env = process.env } = {}) {
       recommitThroughGates(entry.dir, base);
     }
     fastForwardMain(primary, target.branch, base);
-    return { ...target, reverified: moved, head: revision(primary, MAIN_BRANCH) };
+    // Μετά την ένταξη, όχι πριν: το `main` ήδη κινήθηκε, άρα μια αποτυχία εδώ αναφέρεται, δεν ακυρώνει.
+    const handoffs = tryHarvest(entry.dir, primary);
+    return { ...target, reverified: moved, head: revision(primary, MAIN_BRANCH), handoffs };
   });
 }
 
