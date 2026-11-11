@@ -10,6 +10,10 @@
  * 4. ανάγνωση κάθε κουτιού (κόψιμο → δοκιμές προσανατολισμού → αναγνώστης, με **δρομολόγηση κατά γραφή**)·
  * 5. συγχώνευση των περασμάτων.
  *
+ * 🔑 **Ανίχνευση στη μειωμένη, ανάγνωση στην ΑΡΧΙΚΗ** (ADR-929 §6.16 βήμα 2): η μείωση υπάρχει για τον χρόνο του
+ *   ανιχνευτή· το κόψιμο του αναγνώστη γίνεται από την αρχική εικόνα, ώστε ένα κείμενο 20 px να μη διαβάζεται ως 10 px
+ *   ξαναμεγεθυμένα σε 48. ⚠️ Απόκλιση από το Python της Φ0.1 (εκείνο έκοβε από τη μειωμένη) — μετρημένη στην παραγωγή.
+ *
  * 🔑 **Δρομολόγηση κατά γραφή** (πρότυπο script-ID του Google Vision): ο δεύτερος (ελληνικός) αναγνώστης τρέχει ΜΟΝΟ
  *   όταν ο πρώτος βρήκε γράμμα (οποιουδήποτε αλφαβήτου) ή τίποτα — οι καθαροί αριθμοί («2.35») δεν ξαναδιαβάζονται — και
  *   η ανάγνωσή του κρατιέται ΜΟΝΟ αν βγάλει ελληνικό γράμμα. Μετρημένο στη Φ0.1 (v6dual): ίδια βαθμολογία, μισές κλήσεις.
@@ -132,9 +136,10 @@ async function readRouted(tensors: readonly OcrTensor[], models: OcrModels, sign
   return GREEK_LETTER.test(second.text) ? { ...second, reader: 'secondary' } : { ...first, reader: 'primary' };
 }
 
-async function readCandidate(image: PlanRaster, c: OcrCandidate, models: OcrModels, signal?: AbortSignal): Promise<OcrRead> {
+/** Ανάγνωση ενός υποψηφίου: κόψιμο από την **αρχική** εικόνα (`cropQuad` σε δείκτες της αρχικής). */
+async function readCandidate(source: PlanRaster, c: OcrCandidate, models: OcrModels, signal?: AbortSignal): Promise<OcrRead> {
   signal?.throwIfAborted();
-  const crop = cropReadingQuad(image, c.cropQuad);
+  const crop = cropReadingQuad(source, c.cropQuad);
   if (crop === null) return { text: '', score: 0, reader: 'primary' };
   return readRouted(orientationTensors(crop), models, signal);
 }
@@ -153,7 +158,7 @@ export async function recognizePlanText(source: PlanRaster, models: OcrModels, o
   const candidates = dropUnfitDuplicates(await detectAll(image, models, options));
   const reads: CandidateRead[] = [];
   for (const candidate of candidates) {
-    const read = await readCandidate(image, candidate, models, options.signal);
+    const read = await readCandidate(source, candidate, models, options.signal);
     reads.push({ candidate, read, pass: candidate.pass, bbox: candidate.bbox, fits: candidate.fits, recScore: read.score });
     options.onProgress?.({ stage: 'read', done: reads.length, total: candidates.length });
   }

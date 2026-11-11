@@ -63,6 +63,22 @@ export function ocrDownscaleFor(raster: Pick<PlanRaster, 'width' | 'height'>): n
   return workingScaleFor(raster.width, raster.height, OCR_TILING.maxDetectPixels);
 }
 
+/**
+ * ADR-929 §6.16 βήμα 4 — τα κείμενα από τα px της εικόνας που διάβασε το OCR στα px των `naturalBounds`
+ * (`RecognitionRaster.naturalPerRasterPx`). Ομοιόμορφη κλίμακα με αρχή την πάνω-αριστερή γωνία (συνεχή px). `1` ⇒ ίδια.
+ */
+export function ocrTextsToNatural(texts: readonly OcrText[], naturalPerRasterPx: number): readonly OcrText[] {
+  if (naturalPerRasterPx === 1) return texts;
+  const k = naturalPerRasterPx;
+  return texts.map((t) => ({
+    ...t,
+    polygon: [
+      { x: t.polygon[0].x * k, y: t.polygon[0].y * k }, { x: t.polygon[1].x * k, y: t.polygon[1].y * k },
+      { x: t.polygon[2].x * k, y: t.polygon[2].y * k }, { x: t.polygon[3].x * k, y: t.polygon[3].y * k },
+    ],
+  }));
+}
+
 function centreOf(polygon: readonly PlanePoint[]): PlanePoint {
   const sum = polygon.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
   return { x: sum.x / polygon.length, y: sum.y / polygon.length };

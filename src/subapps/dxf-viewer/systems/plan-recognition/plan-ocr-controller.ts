@@ -10,7 +10,10 @@
  *   τα κείμενα κρατιούνται αλλά **δεν** την αντικαθιστούν. Η συμφωνία δύο αναγνώσεων ανήκει στη σύντηξη (Δ20 Σ1).
  * 🔑 **Ακολουθεί την όψη**: σε αλλαγή όψης η ανάγνωση **ξαναπαράγεται** από τα ίδια κείμενα (`readingFor`), χωρίς Worker.
  * 🔑 Αγώνες: σειριακός αριθμός + ταυτότητα αναγνώρισης. Αποτέλεσμα για παλιό `run` ή ακυρωμένο **αγνοείται**.
- * ⚠️ Zero-copy: το `raster` μετακομίζει στον Worker ⇒ νέο buffer ανά κλήση (`provider.getPlanRaster`).
+ * ⚠️ Zero-copy: το `raster` μετακομίζει στον Worker ⇒ νέο buffer ανά κλήση (`provider.getRecognitionRaster`).
+ * 🔑 ADR-929 §6.16 βήμα 4 — η εικόνα αναγνώρισης μπορεί να είναι **πυκνότερη** από τα `naturalBounds` (σάρωση PDF στην εγγενή
+ *   της ανάλυση). Τα κείμενα γυρίζουν σε px των `naturalBounds` **μία φορά, στην παραλαβή** (`ocrTextsToNatural`)· από εκεί και
+ *   πέρα όλα (όψη, ανάγνωση, σύντηξη) μένουν στον ίδιο χώρο με τα τμήματα και την ευθυγράμμιση.
  *
  * Zero React.
  *
@@ -19,14 +22,16 @@
  */
 
 import { IDENTITY_HOMOGRAPHY } from '@/lib/geometry/homography';
-import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
+import type { RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
 import {
   WORKER_RPC_MESSAGE_ERROR, WORKER_RPC_UNREADY, type WorkerRpcCancellableResult,
 } from '@/lib/workers/worker-rpc-protocol';
 import type { PlanReadingOutcome } from '../../bim/plan-recognition/plan-recognition-types';
 import type { OcrText } from '../../bim/plan-recognition/ocr/ocr-engine';
 import { isOcrAssetFailure } from '../../bim/plan-recognition/ocr/ocr-asset-loader';
-import { isLocalOcrOutcome, ocrDownscaleFor, ocrTextsInView, planReadingFromOcr } from '../../bim/plan-recognition/ocr/ocr-reading';
+import {
+  isLocalOcrOutcome, ocrDownscaleFor, ocrTextsInView, ocrTextsToNatural, planReadingFromOcr,
+} from '../../bim/plan-recognition/ocr/ocr-reading';
 import type { PlanOcrReader } from '../../bim/plan-recognition/ocr/plan-ocr-client';
 import type { PlanOcrProgress, PlanOcrReply } from '../../bim/plan-recognition/ocr/plan-ocr-host';
 import {
@@ -40,8 +45,8 @@ import {
 
 export interface PlanOcrControllerDeps<T> {
   readonly reader: () => Pick<PlanOcrReader, 'read'>;
-  /** Νέο buffer της **αρχικής** εικόνας ανά κλήση (`provider.getPlanRaster`). */
-  readonly raster: (floorId: string) => PlanRaster | null;
+  /** Νέο buffer της εικόνας **αναγνώρισης** ανά κλήση (`provider.getRecognitionRaster`), με την κλίμακά της προς τα `naturalBounds`. */
+  readonly recognitionRaster: (floorId: string) => Promise<RecognitionRaster | null>;
   /** Η ταυτότητα της τοπικής ανάγνωσης από το μητρώο (`localOcrModelId(resolveOcrAssets())`) — μπορεί να πετάξει. */
   readonly model: () => string;
   /** Ο ιδιοκτήτης ξανατρέχει **μόνο** τη σύντηξη με την ανάγνωση και δίνει τη νέα πηγή γραμμών. */
@@ -97,12 +102,18 @@ export function createPlanOcrController<T>(depsOf: () => PlanOcrControllerDeps<T
     if (source) depsOf().publish(source);
   }
 
-  function settle(rootId: string, model: string, reply: WorkerRpcCancellableResult<PlanOcrReply>): void {
+  function settle(
+    rootId: string, model: string, naturalPerRasterPx: number, reply: WorkerRpcCancellableResult<PlanOcrReply>,
+  ): void {
     if (reply.kind === 'superseded') return; // μια νεότερη ανάγνωση κατέχει την κατάσταση
     if (reply.kind === 'cancelled') setOcr({ status: 'cancelled' });
     else if (reply.kind === 'failed') setOcr({ status: 'failed', reason: failureOf(reply.error) });
-    else adopt({ rootId, model, texts: reply.value.texts });
+    else adopt({ rootId, model, texts: ocrTextsToNatural(reply.value.texts, naturalPerRasterPx) });
   }
+
+  /** Η εικόνα αναγνώρισης· μια απόρριψη του provider μετρά ως «χωρίς pixel», όχι ως εξαίρεση. */
+  const recognitionRasterOf = (floorId: string): Promise<RecognitionRaster | null> =>
+    depsOf().recognitionRaster(floorId).catch(() => null);
 
   function onProgress(seq: number): (progress: PlanOcrProgress) => void {
     return ({ stage, done, total }) => {
@@ -120,23 +131,25 @@ export function createPlanOcrController<T>(depsOf: () => PlanOcrControllerDeps<T
       setOcr({ status: 'failed', reason: 'models-unavailable' });
       return;
     }
-    const raster = depsOf().raster(run.floorId);
-    if (!raster) {
+    const rootId = recognitionRootId(run.id);
+    const seq = sequence;
+    setOcr({ status: 'running', stage: null, done: 0, total: 0 });
+    const source = await recognitionRasterOf(run.floorId); // απόδοση PDF στην εγγενή ανάλυση: δευτερόλεπτα
+    if (seq !== sequence) return; // ακύρωση / νεότερη ανάγνωση στο μεταξύ
+    if (!source) {
       setOcr({ status: 'failed', reason: 'no-pixels' });
       return;
     }
-    const rootId = recognitionRootId(run.id);
-    const seq = sequence;
+    const { raster, naturalPerRasterPx } = source;
     const controller = new AbortController();
     abort = controller;
-    setOcr({ status: 'running', stage: null, done: 0, total: 0 });
     const reply = await depsOf().reader()
       .read(raster, { downscale: ocrDownscaleFor(raster), signal: controller.signal, onProgress: onProgress(seq) })
       .catch((): WorkerRpcCancellableResult<PlanOcrReply> => ({ kind: 'failed', error: 'ocr-failed' }));
     if (seq !== sequence) return;
     abort = null;
     const current = planRecognitionStore.get().run;
-    if (current && belongsToRecognition(current.id, rootId)) settle(rootId, model, reply);
+    if (current && belongsToRecognition(current.id, rootId)) settle(rootId, model, naturalPerRasterPx, reply);
   }
 
   return {

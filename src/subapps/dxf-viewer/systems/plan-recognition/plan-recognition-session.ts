@@ -204,7 +204,8 @@ let reviewDeps = DEFAULT_REVIEW_DEPS;
 
 const DEFAULT_OCR_DEPS: PlanOcrControllerDeps<RasterLineSource> = {
   reader: () => ocrReaderInstance(),
-  raster: (floorId) => getFloorProvider(floorId)?.getPlanRaster() ?? null,
+  // ADR-929 §6.16 βήμα 4: πυκνότερη εικόνα για το OCR όταν υπάρχει (σάρωση PDF στην εγγενή της ανάλυση)
+  recognitionRaster: async (floorId) => (await getFloorProvider(floorId)?.getRecognitionRaster()) ?? null,
   model: () => localOcrModelId(resolveOcrAssets()),
   adoptReading,
   publish: publishLineSource,

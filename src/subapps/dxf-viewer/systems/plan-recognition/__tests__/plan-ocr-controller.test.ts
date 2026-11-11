@@ -61,7 +61,7 @@ function harness(overrides: Partial<PlanOcrControllerDeps<string>> = {}) {
     reader: () => ({
       read: (_raster, options) => new Promise((resolve, reject) => { calls.push({ options, resolve, reject }); }),
     }),
-    raster: () => RASTER,
+    recognitionRaster: async () => ({ raster: RASTER, naturalPerRasterPx: 1 }),
     model: () => MODEL,
     adoptReading: (outcome) => {
       adopted.push(outcome);
@@ -86,6 +86,16 @@ function startOn(h: ReturnType<typeof harness>, r: PlanRecognitionRun): Promise<
   return h.controller.start(r);
 }
 
+/**
+ * Ξεκινά και περιμένει να φτάσει το αίτημα στον αναγνώστη (η εικόνα αναγνώρισης είναι ασύγχρονη, §6.16 βήμα 4). Η υπόσχεση
+ * του `start` επιστρέφεται τυλιγμένη, ώστε το `await` να μην την ξετυλίξει.
+ */
+async function begin(h: ReturnType<typeof harness>, r: PlanRecognitionRun): Promise<{ done: Promise<void> }> {
+  const done = startOn(h, r);
+  await flush();
+  return { done };
+}
+
 beforeEach(() => {
   planRecognitionStore.reset();
 });
@@ -93,7 +103,7 @@ beforeEach(() => {
 describe('ADR-929 Φ0.6 — ροή: πρόοδος → κείμενα → ΜΙΑ ανάγνωση από την ίδια πόρτα', () => {
   it('running με πρόοδο, συντελεστής μείωσης από τον προϋπολογισμό, μετά done + adoptReading + publish', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     expect(state().ocr).toEqual({ status: 'running', stage: null, done: 0, total: 0 });
     expect(h.calls).toHaveLength(1);
     expect(h.calls[0].options.downscale).toBe(2);
@@ -113,7 +123,7 @@ describe('ADR-929 Φ0.6 — ροή: πρόοδος → κείμενα → ΜΙΑ
 
   it('η πόρτα δεν δίνει πηγή ⇒ τίποτα στο κανάλι', async () => {
     const h = harness({ adoptReading: () => null });
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.calls[0].resolve(ok());
     await done;
     expect(state().ocr.status).toBe('done');
@@ -122,7 +132,7 @@ describe('ADR-929 Φ0.6 — ροή: πρόοδος → κείμενα → ΜΙΑ
 
   it('απάντηση `superseded` ⇒ η κατάσταση δεν αγγίζεται (την κατέχει νεότερη ανάγνωση)', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.calls[0].resolve({ kind: 'superseded' });
     await done;
     expect(state().ocr.status).toBe('running');
@@ -133,7 +143,7 @@ describe('ADR-929 Φ0.6 — ροή: πρόοδος → κείμενα → ΜΙΑ
 describe('προτεραιότητα AI — ένα `reading`, το OCR δεν αντικαθιστά ποτέ ανάγνωση AI', () => {
   it('μετρά ήδη ανάγνωση AI ⇒ done, καμία υιοθέτηση, αλλά τα κείμενα κρατιούνται για την όψη', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     planRecognitionStore.patch({ reading: AI_READING });
     h.calls[0].resolve(ok());
     await done;
@@ -146,11 +156,12 @@ describe('προτεραιότητα AI — ένα `reading`, το OCR δεν α
 
   it('η τρέχουσα ανάγνωση είναι ήδη τοπική ⇒ αντικαθίσταται (νέα κείμενα, ίδια πόρτα)', async () => {
     const h = harness();
-    const first = startOn(h, run('rec1'));
+    const { done: first } = await begin(h, run('rec1'));
     h.calls[0].resolve(ok());
     await first;
     planRecognitionStore.patch({ reading: h.adopted[0], ocr: { status: 'failed', reason: 'ocr-failed' } });
     h.controller.retry();
+    await flush();
     h.calls[1].resolve(ok([TEXTS[0]]));
     await flush();
     expect(h.adopted).toHaveLength(2);
@@ -161,7 +172,7 @@ describe('προτεραιότητα AI — ένα `reading`, το OCR δεν α
 describe('ακολουθεί την όψη — η ανάγνωση ξαναπαράγεται από τα ίδια κείμενα, χωρίς Worker', () => {
   it('όψη με crop ⇒ μόνο τα κείμενα με κέντρο μέσα· άλλη αναγνώριση ⇒ null', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.calls[0].resolve(ok());
     await done;
     expect(rawsOf(h.controller.readingFor(run('rec1.m2', LEFT_HALF)))).toEqual(['3.50']);
@@ -179,7 +190,7 @@ describe('ακολουθεί την όψη — η ανάγνωση ξαναπα�
 describe('ακύρωση και αγώνες', () => {
   it('«Ακύρωση» ⇒ cancelled + abort· η μεταγενέστερη απάντηση και η πρόοδός της αγνοούνται', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.controller.cancel();
     expect(state().ocr).toEqual({ status: 'cancelled' });
     expect(h.calls[0].options.signal?.aborted).toBe(true);
@@ -192,7 +203,7 @@ describe('ακύρωση και αγώνες', () => {
 
   it('«Ακύρωση» όταν δεν τρέχει τίποτα ⇒ καμία αλλαγή', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.calls[0].resolve(ok());
     await done;
     h.controller.cancel();
@@ -201,8 +212,8 @@ describe('ακύρωση και αγώνες', () => {
 
   it('νέα αναγνώριση ⇒ η παλιά ακυρώνεται και η απάντησή της αγνοείται', async () => {
     const h = harness();
-    const first = startOn(h, run('rec1'));
-    const second = startOn(h, run('rec2'));
+    const { done: first } = await begin(h, run('rec1'));
+    const { done: second } = await begin(h, run('rec2'));
     expect(h.calls[0].options.signal?.aborted).toBe(true);
     h.calls[0].resolve(ok());
     await first;
@@ -216,7 +227,7 @@ describe('ακύρωση και αγώνες', () => {
 
   it('το store έχει πια άλλη αναγνώριση (χωρίς νέο start) ⇒ η απάντηση αγνοείται', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     planRecognitionStore.patch({ run: run('rec2') });
     h.calls[0].resolve(ok());
     await done;
@@ -225,7 +236,7 @@ describe('ακύρωση και αγώνες', () => {
 
   it('η αναγνώριση πέρασε σε όψη της (rec1 → rec1.m2) ⇒ η απάντηση μετρά, με την όψη της', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     planRecognitionStore.patch({ run: run('rec1.m2', LEFT_HALF) });
     h.calls[0].resolve(ok());
     await done;
@@ -234,10 +245,11 @@ describe('ακύρωση και αγώνες', () => {
 
   it('reset ⇒ abort, τα κείμενα ξεχνιούνται', async () => {
     const h = harness();
-    const first = startOn(h, run('rec1'));
+    const { done: first } = await begin(h, run('rec1'));
     h.calls[0].resolve(ok());
     await first;
     const second = h.controller.start(run('rec1'));
+    await flush();
     h.controller.reset();
     expect(h.calls[1].options.signal?.aborted).toBe(true);
     expect(h.controller.readingFor(run('rec1'))).toBeNull();
@@ -253,6 +265,7 @@ describe('«Ξανά»', () => {
     planRecognitionStore.patch({ phase: 'ready', run: run('rec1.m2', LEFT_HALF), ocr: { status: 'failed', reason: 'ocr-failed' } });
     h.controller.retry();
     expect(state().ocr.status).toBe('running');
+    await flush();
     h.calls[0].resolve(ok());
     await flush();
     expect(state().ocr.status).toBe('done');
@@ -261,18 +274,20 @@ describe('«Ξανά»', () => {
 
   it('μετά από ακύρωση ⇒ ξεκινά· όταν τρέχει ή τελείωσε ⇒ τίποτα', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.controller.retry();
     expect(h.calls).toHaveLength(1);
     h.controller.cancel();
     h.calls[0].resolve({ kind: 'cancelled' });
     await done;
     h.controller.retry();
+    await flush();
     expect(h.calls).toHaveLength(2);
     h.calls[1].resolve(ok());
     await flush();
     expect(state().ocr.status).toBe('done');
     h.controller.retry();
+    await flush();
     expect(h.calls).toHaveLength(2);
   });
 
@@ -293,7 +308,7 @@ describe('κάθε αποτυχία με όνομα', () => {
   });
 
   it('χωρίς pixel ⇒ no-pixels, κανένας Worker', async () => {
-    const h = harness({ raster: () => null });
+    const h = harness({ recognitionRaster: async () => null });
     await startOn(h, run('rec1'));
     expect(state().ocr).toEqual({ status: 'failed', reason: 'no-pixels' });
     expect(h.calls).toHaveLength(0);
@@ -307,7 +322,7 @@ describe('κάθε αποτυχία με όνομα', () => {
     ['boom', 'ocr-failed'],
   ] as const)('Worker: «%s» ⇒ %s', async (error, reason) => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.calls[0].resolve({ kind: 'failed', error });
     await done;
     expect(state().ocr).toEqual({ status: 'failed', reason });
@@ -316,7 +331,7 @@ describe('κάθε αποτυχία με όνομα', () => {
 
   it('ο αναγνώστης απορρίπτει ⇒ ocr-failed', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.calls[0].reject(new Error('crash'));
     await done;
     expect(state().ocr).toEqual({ status: 'failed', reason: 'ocr-failed' });
@@ -324,9 +339,48 @@ describe('κάθε αποτυχία με όνομα', () => {
 
   it('απάντηση `cancelled` από τον Worker ⇒ cancelled', async () => {
     const h = harness();
-    const done = startOn(h, run('rec1'));
+    const { done } = await begin(h, run('rec1'));
     h.calls[0].resolve({ kind: 'cancelled' });
     await done;
     expect(state().ocr).toEqual({ status: 'cancelled' });
+  });
+});
+
+describe('ADR-929 §6.16 βήμα 4 — εικόνα αναγνώρισης πυκνότερη από τα naturalBounds', () => {
+  it('naturalPerRasterPx ½ ⇒ τα κείμενα γυρίζουν σε px των naturalBounds ΠΡΙΝ από την όψη', async () => {
+    // Σε px της εικόνας αναγνώρισης: κέντρο «3.50» (740, 210) ⇒ φυσικό (370, 105), μέσα στο αριστερό μισό· χωρίς κλιμάκωση έξω.
+    const dense = [ocr('3.50', quad(700, 200, 80, 20)), ocr('2.85', quad(1600, 200, 80, 20))];
+    const h = harness({ recognitionRaster: async () => ({ raster: RASTER, naturalPerRasterPx: 0.5 }) });
+    const { done } = await begin(h, run('rec1'));
+    h.calls[0].resolve(ok(dense));
+    await done;
+    expect(rawsOf(h.controller.readingFor(run('rec1.m2', LEFT_HALF)))).toEqual(['3.50']);
+    expect(rawsOf(h.adopted[0])).toEqual(['3.50', '2.85']);
+  });
+
+  it('ο συντελεστής μείωσης κρίνεται πάνω στην εικόνα αναγνώρισης', async () => {
+    const small: PlanRaster = { width: 1000, height: 1000, rgba: new Uint8ClampedArray(0) };
+    const h = harness({ recognitionRaster: async () => ({ raster: small, naturalPerRasterPx: 2 }) });
+    await begin(h, run('rec1'));
+    expect(h.calls[0].options.downscale).toBe(1);
+  });
+
+  it('«Ακύρωση» όσο αποδίδεται η εικόνα ⇒ cancelled, κανένα αίτημα στον Worker όταν φτάσει', async () => {
+    let deliver: (r: { raster: PlanRaster; naturalPerRasterPx: number }) => void = () => undefined;
+    const h = harness({ recognitionRaster: () => new Promise((resolve) => { deliver = resolve; }) });
+    const done = startOn(h, run('rec1'));
+    expect(state().ocr.status).toBe('running');
+    h.controller.cancel();
+    deliver({ raster: RASTER, naturalPerRasterPx: 1 });
+    await done;
+    expect(state().ocr).toEqual({ status: 'cancelled' });
+    expect(h.calls).toHaveLength(0);
+  });
+
+  it('ο provider απορρίπτει ⇒ no-pixels, κανένας Worker', async () => {
+    const h = harness({ recognitionRaster: () => Promise.reject(new Error('render failed')) });
+    await startOn(h, run('rec1'));
+    expect(state().ocr).toEqual({ status: 'failed', reason: 'no-pixels' });
+    expect(h.calls).toHaveLength(0);
   });
 });

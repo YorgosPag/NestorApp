@@ -9,8 +9,8 @@ import type {
   ProviderSource,
 } from './types';
 import { isTiff } from './image-compression';
-import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
-import { readPlanRaster } from './provider-plan-raster';
+import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
+import { naturalRecognitionRaster, readPlanRaster } from './provider-plan-raster';
 // 🔑 ΕΝΑΣ πίνακας px εικόνας → καμβάς, χτισμένος από το SSoT `rasterToSceneAffine` (ADR-929 Δ3):
 // ο ίδιος που ρωτά η αναγνώριση κάτοψης, ώστε προεπισκόπηση ≡ αποτέλεσμα.
 import { applyRasterCanvasTransform } from './provider-canvas-transforms';
@@ -75,6 +75,11 @@ export class ImageProvider implements IFloorplanBackgroundProvider {
 
   getPlanRaster(): PlanRaster | null {
     return readPlanRaster(this._canvas, this._bounds);
+  }
+
+  /** Η εικόνα αποκωδικοποιείται ήδη στην εγγενή της ανάλυση ⇒ ίδια με το `getPlanRaster()`. */
+  async getRecognitionRaster(): Promise<RecognitionRaster | null> {
+    return naturalRecognitionRaster(this.getPlanRaster());
   }
 
   dispose(): void {

@@ -95,6 +95,11 @@ export const PDF_RENDER_CONFIG = {
   MIN_RENDER_SCALE: 0.5,
   /** Padding factor for fit-to-view calculation (0.9 = 10% padding) */
   FIT_TO_VIEW_PADDING: 0.9,
+  /**
+   * ADR-929 §6.16 βήμα 4 — ανώτατα pixel της απόδοσης στην εγγενή ανάλυση σάρωσης, για αναγνώριση (OCR). 64 MP RGBA = 256 MB·
+   * ο Chrome δέχεται καμβά έως 16.384 px ανά πλευρά και ~268 MP. Η Παλαιολόγου στα 200 dpi = 7200 × 7696 ≈ 55 MP (χωρά).
+   */
+  RECOGNITION_MAX_PIXELS: 64_000_000,
 } as const;
 
 // ============================================================================

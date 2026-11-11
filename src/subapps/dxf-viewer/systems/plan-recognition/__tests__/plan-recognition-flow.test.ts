@@ -18,6 +18,7 @@ import type { WallSceneAccessor } from '../../../bim/walls/add-wall-to-scene';
 import { createPlanAligner } from '../../../bim/plan-recognition/alignment/plan-align-client';
 import { renderSyntheticPlan, SAMPLE_HOUSE_WALLS, type SyntheticWall } from '../../../bim/plan-recognition/testing/synthetic-plan-raster';
 import type { CalibrationData, FloorplanBackground } from '../../../floorplan-background/providers/types';
+import type { IFloorplanBackgroundProvider } from '../../../floorplan-background/providers/IFloorplanBackgroundProvider';
 import { TEST_CALIBRATION, testFloorplanBackground } from '../../../floorplan-background/testing/background-fixture';
 import { modelFromDrawingSession, type ModelFromDrawingDeps } from '../../model-from-drawing/model-from-drawing-session';
 import { modelFromDrawingStore } from '../../model-from-drawing/model-from-drawing-store';
@@ -26,7 +27,7 @@ import { meetsConfidenceTier } from '../plan-confidence';
 import { planRecognitionStore } from '../plan-recognition-store';
 
 const mockBackgrounds = new Map<string, FloorplanBackground>();
-const mockProviders = new Map<string, { getPlanRaster: () => PlanRaster | null }>();
+const mockProviders = new Map<string, Pick<IFloorplanBackgroundProvider, 'getPlanRaster' | 'getRecognitionRaster'>>();
 jest.mock('../../../floorplan-background/stores/floorplanBackgroundStore', () => ({
   getFloorBackground: (id: string) => mockBackgrounds.get(id) ?? null,
   getFloorProvider: (id: string) => mockProviders.get(id) ?? null,
@@ -44,7 +45,11 @@ function installBackground(calibration: CalibrationData | null): void {
     floorId: FLOOR, naturalBounds: PLAN.placement.naturalBounds, transform: PLAN.placement.transform, calibration,
   }));
   // Νέο buffer σε κάθε κλήση, όπως ο αληθινός provider (ο ευθυγραμμιστής αποσπά το buffer).
-  mockProviders.set(FLOOR, { getPlanRaster: () => ({ ...PLAN.image, rgba: new Uint8ClampedArray(PLAN.image.rgba) }) });
+  const fresh = (): PlanRaster => ({ ...PLAN.image, rgba: new Uint8ClampedArray(PLAN.image.rgba) });
+  mockProviders.set(FLOOR, {
+    getPlanRaster: fresh,
+    getRecognitionRaster: async () => ({ raster: fresh(), naturalPerRasterPx: 1 }),
+  });
 }
 
 function deps(): { deps: ModelFromDrawingDeps; walls: () => Entity[] } {

@@ -16,6 +16,17 @@ export interface PlanRaster {
   readonly height: number;
 }
 
+/**
+ * Εικόνα για **αναγνώριση**, που μπορεί να έχει άλλη ανάλυση από τα `naturalBounds` του υποβάθρου (ADR-929 §6.16 βήμα 4: μια
+ * σάρωση PDF αποδίδεται στην εγγενή της ανάλυση για το OCR, ενώ η οθόνη μένει στην απόδοση ×2).
+ * 📏 `naturalPerRasterPx`: πόσα px των `naturalBounds` αντιστοιχούν σε 1 px αυτής της εικόνας (`1` = ίδια ανάλυση). Η απεικόνιση
+ *   είναι ομοιόμορφη κλίμακα με αρχή την πάνω-αριστερή γωνία: `natural = raster × naturalPerRasterPx` (συνεχή px).
+ */
+export interface RecognitionRaster {
+  readonly raster: PlanRaster;
+  readonly naturalPerRasterPx: number;
+}
+
 /** Νέα κενή (λευκή, αδιαφανής) εικόνα — το «χαρτί» κάθε μετασχηματισμού που γεμίζει ό,τι πέφτει έξω από την πηγή. */
 export function blankPlanRaster(width: number, height: number): PlanRaster & { readonly rgba: Uint8ClampedArray } {
   const rgba = new Uint8ClampedArray(width * height * 4);

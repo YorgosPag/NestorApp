@@ -10,7 +10,7 @@
  * @module subapps/dxf-viewer/floorplan-background/providers/provider-plan-raster
  */
 
-import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
+import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
 import type { NaturalBounds } from './types';
 
 /** Οι πηγές που κρατούν οι providers: `OffscreenCanvas` (εικόνα, TIFF) ή `HTMLImageElement` (απόδοση PDF). */
@@ -30,4 +30,9 @@ export function readPlanRaster(source: DecodedRasterSource | null, bounds: Natur
   ctx.drawImage(source, 0, 0, width, height);
   const { data } = ctx.getImageData(0, 0, width, height);
   return { rgba: data, width, height };
+}
+
+/** ADR-929 §6.16 βήμα 4 — τα pixel των `naturalBounds` ως εικόνα αναγνώρισης (ίδια ανάλυση ⇒ `naturalPerRasterPx = 1`). */
+export function naturalRecognitionRaster(raster: PlanRaster | null): RecognitionRaster | null {
+  return raster === null ? null : { raster, naturalPerRasterPx: 1 };
 }

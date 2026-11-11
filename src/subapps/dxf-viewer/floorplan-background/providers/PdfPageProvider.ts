@@ -10,11 +10,14 @@ import type {
 // 🔑 ΕΝΑΣ πίνακας px εικόνας → καμβάς, χτισμένος από το SSoT `rasterToSceneAffine` (ADR-929 Δ3):
 // ο ίδιος που ρωτά η αναγνώριση κάτοψης, ώστε προεπισκόπηση ≡ αποτέλεσμα.
 import { applyRasterCanvasTransform } from './provider-canvas-transforms';
-import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
-import { readPlanRaster } from './provider-plan-raster';
+import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
+import { naturalRecognitionRaster, readPlanRaster } from './provider-plan-raster';
+import { renderPdfPageAtNativeResolution } from '../../pdf-background/services/pdf-recognition-raster';
+import { PDF_RENDER_CONFIG } from '../../pdf-background/types/pdf.types';
 
 const SUPPORTED_MIME_TYPES = ['application/pdf'] as const;
 const RENDER_SCALE = 2;
+const PAGE_NUMBER = 1;
 
 /**
  * PDF provider for the floorplan-background system. Wraps the existing
@@ -38,6 +41,8 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
 
   private _image: HTMLImageElement | null = null;
   private _bounds: NaturalBounds = { width: 0, height: 0 };
+  /** Το PDF, για την κατ' απαίτηση απόδοση αναγνώρισης (ADR-929 §6.16 βήμα 4). Ο singleton μπορεί να έχει ήδη άλλο έγγραφο. */
+  private _pdf: Blob | null = null;
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -49,7 +54,7 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
         throw new Error(loadResult.error ?? 'PDF load failed');
       }
 
-      const renderResult = await PdfRenderer.renderPage(1, { scale: RENDER_SCALE });
+      const renderResult = await PdfRenderer.renderPage(PAGE_NUMBER, { scale: RENDER_SCALE });
       if (!renderResult.success || !renderResult.imageUrl || !renderResult.dimensions) {
         throw new Error(renderResult.error ?? 'PDF page render failed');
       }
@@ -59,6 +64,7 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
       // pdf.js: εκείνες είναι δεκαδικές (π.χ. 1683,78) ενώ ο καμβάς τις κόβει (1683). Με τα δεκαδικά, η
       // απεικόνιση px → σκηνή και η εικόνα στην οθόνη θα διέφεραν κατά το κλάσμα σε κάθε υπόβαθρο PDF.
       this._bounds = { width: this._image.naturalWidth, height: this._image.naturalHeight };
+      this._pdf = file;
 
       return {
         success: true,
@@ -88,9 +94,26 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
     return readPlanRaster(this._image, this._bounds);
   }
 
+  /**
+   * ADR-929 §6.16 βήμα 4 — σάρωση πυκνότερη από την απόδοση της οθόνης ⇒ η σελίδα στην εγγενή της ανάλυση, με
+   * `naturalPerRasterPx = RENDER_SCALE / κλίμακα` (και τα δύο είναι px ανά pt της ίδιας σελίδας, άρα η απεικόνιση είναι ακριβής
+   * ομοιόμορφη κλίμακα). Διανυσματική σελίδα ή όχι πυκνότερη σάρωση ⇒ η εικόνα της οθόνης (`naturalPerRasterPx = 1`).
+   */
+  async getRecognitionRaster(): Promise<RecognitionRaster | null> {
+    const pdf = this._pdf;
+    if (pdf === null || this._image === null) return null;
+    const native = await renderPdfPageAtNativeResolution(pdf, PAGE_NUMBER, {
+      minScale: RENDER_SCALE, maxPixels: PDF_RENDER_CONFIG.RECOGNITION_MAX_PIXELS,
+    });
+    if (this._pdf !== pdf) return null; // dispose / νέα φόρτωση στο μεταξύ
+    if (native !== null) return { raster: native.raster, naturalPerRasterPx: RENDER_SCALE / native.scale };
+    return naturalRecognitionRaster(this.getPlanRaster());
+  }
+
   dispose(): void {
     this._image = null;
     this._bounds = { width: 0, height: 0 };
+    this._pdf = null;
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────

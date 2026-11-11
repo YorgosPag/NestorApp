@@ -70,7 +70,10 @@ export interface Box {
 export interface OcrCandidate {
   readonly pass: OcrPass;
   readonly detScore: number;
-  /** Κορυφές με σειρά ανάγνωσης (πάνω-αριστερά · πάνω-δεξιά · κάτω-δεξιά · κάτω-αριστερά), σε δείκτες pixel της εικόνας ανίχνευσης. */
+  /**
+   * Κορυφές με σειρά ανάγνωσης (πάνω-αριστερά · πάνω-δεξιά · κάτω-δεξιά · κάτω-αριστερά), σε δείκτες pixel της **αρχικής**
+   * εικόνας (ADR-929 §6.16 βήμα 2): η ανίχνευση γίνεται στη μειωμένη, το κόψιμο για ανάγνωση στην αρχική.
+   */
   readonly cropQuad: Quad;
   /** Το ίδιο τετράπλευρο σε συνεχή raster-px της **αρχικής** εικόνας. */
   readonly polygon: Quad;
@@ -134,13 +137,15 @@ function fitsPass(b: Box, pass: OcrPass): boolean {
 
 /**
  * Κουτί του ανιχνευτή (σε δείκτες του πλακιδίου) → υποψήφιο: μετατόπιση πλακιδίου, σειρά ανάγνωσης **στην όψη**, μετά
- * στην εικόνα ανίχνευσης και τέλος σε συνεχή px της αρχικής εικόνας (`(i + ½) · συντελεστής μείωσης`).
+ * στην εικόνα ανίχνευσης και τέλος σε συνεχή px της αρχικής εικόνας (`(i + ½) · συντελεστής μείωσης`). Το `cropQuad` είναι
+ * το ίδιο τετράπλευρο σε δείκτες pixel της αρχικής (`− ½`), για κόψιμο από την αρχική (με `1` ταυτίζεται με της ανίχνευσης).
  */
 export function toCandidate(box: DetectedBox, tile: TileRegion, pass: OcrPass, imageWidth: number, downscale: number): OcrCandidate {
   const rect = { ...box.rect, cx: box.rect.cx + tile.x, cy: box.rect.cy + tile.y };
   const ordered = readingOrder(rotatedRectCorners(rect));
-  const cropQuad = mapQuad(ordered, (p) => viewToImage(pass, imageWidth, p));
-  const polygon = mapQuad(cropQuad, (p) => ({ x: (p.x + 0.5) * downscale, y: (p.y + 0.5) * downscale }));
+  const detectQuad = mapQuad(ordered, (p) => viewToImage(pass, imageWidth, p));
+  const polygon = mapQuad(detectQuad, (p) => ({ x: (p.x + 0.5) * downscale, y: (p.y + 0.5) * downscale }));
+  const cropQuad = mapQuad(polygon, (p) => ({ x: p.x - 0.5, y: p.y - 0.5 }));
   const bbox = boundsOf(polygon);
   return { pass, detScore: box.score, cropQuad, polygon, bbox, fits: fitsPass(bbox, pass) };
 }

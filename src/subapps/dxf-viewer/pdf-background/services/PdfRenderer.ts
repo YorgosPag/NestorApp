@@ -159,6 +159,16 @@ class PdfRendererService {
   // ============================================================
 
   /**
+   * ADR-929 §6.16 βήμα 4 — το pdf.js, αρχικοποιημένο με τον self-hosted worker (ΜΙΑ ρύθμιση, εδώ). Για αποδόσεις σε
+   * **απομονωμένο** έγγραφο (`pdf-recognition-raster.ts`), που δεν αγγίζουν το έγγραφο αυτού του singleton.
+   */
+  async pdfjs(): Promise<PdfjsModule> {
+    await this.initialize();
+    if (!this.pdfjsModule) throw new Error('PDF.js not initialized');
+    return this.pdfjsModule;
+  }
+
+  /**
    * Load a PDF document from a File object
    */
   async loadDocument(file: File): Promise<{
