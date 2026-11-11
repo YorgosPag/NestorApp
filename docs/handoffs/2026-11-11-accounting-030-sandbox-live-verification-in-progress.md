@@ -13,11 +13,8 @@
 - Ισχύουν τα §ΜΗΝ του `2026-11-11-accounting-030-pay-now-landed-next-live-sandbox-verification.md`.
 
 ## 1. Κατάσταση
-- Τοπικό `main` = `bdbbc204` (ήδη στην παραγωγή, live `65c48f6`). Firebase κανόνες + δείκτες **ανεπτυγμένα** (run 43039664994, `firestore:rules,firestore:indexes`).
-- **Στο κλαδί, ΧΩΡΙΣ land/push** (περιμένουν εντολή Giorgio):
-  - `0c2ae57b` fix: `expiration_date` σε μορφή Everypay (`everypayDateTime()` στο `everypay-client.ts`, UTC `+0000`).
-  - `e19a7890` docs: §5.9 εύρημα 2 (IRIS).
-  - + το commit αυτού του handoff.
+- `main` = **`4fede2ac`** — land (squash) + **push έγινε** με εντολή Giorgio (11/11). Περιέχει: fix `expiration_date` σε μορφή Everypay (`everypayDateTime()` στο `everypay-client.ts`, UTC `+0000`) + ADR §5.9 (ευρήματα 1–2, αίτημα 00128279). Firebase κανόνες + δείκτες **ανεπτυγμένα** (run 43039664994).
+- ⏳ **Η ανάπτυξη του push (Netcup) έτρεχε στο κλείσιμο της συνεδρίας.** Ο Giorgio θα ενημερώσει όταν ολοκληρωθεί — **μην ξεκινήσεις τη δοκιμή κάρτας πριν από αυτό.**
 - **Ρύθμιση (έγινε από Giorgio, επαληθευμένη):**
   - Λογαριασμός sandbox Everypay (`sandbox-dashboard.everypay.gr`, ΑΦΜ Giorgio).
   - Coolify (Runtime μόνο): `EVERYPAY_SECRET_KEY` (= «Ιδιωτικό Κλειδί») · `EVERYPAY_PUBLIC_KEY` · `PAYMENTS_PROVIDER_MODE=sandbox`. Restart έγινε.
@@ -28,11 +25,11 @@
   - Η σελίδα δείχνει σωστά «Πληρωμή τώρα» (Κάρτα · IRIS · Τραπεζική μεταφορά).
 
 ## 2. Ευρήματα (λεπτομέρειες: ADR-ACC-030 §5.9)
-1. 🔧 Κάρτα: `POST /notifications` ⇒ «Invalid expiration date» (στέλναμε `….123Z`). Διορθώθηκε στο `0c2ae57b`. **Δεν έχει επαληθευτεί** ότι η Everypay δέχεται `+0000` (το παράδειγμά της: `+0300`).
+1. 🔧 Κάρτα: `POST /notifications` ⇒ «Invalid expiration date» (στέλναμε `….123Z`). Διορθώθηκε (στο `main` `4fede2ac`). **Δεν έχει επαληθευτεί** ότι η Everypay δέχεται `+0000` (το παράδειγμά της: `+0300`).
 2. ⏳ IRIS: «Invalid account setup. Please contact customer support» = ρύθμιση λογαριασμού, όχι κώδικας. Ο Giorgio έστειλε email στο `support@everypay.gr` (11/11) για ενεργοποίηση IRIS · κάρτας (Payment Notifications) · Apple/Google Pay. Αίτημα **00128279** (παραλαβή επιβεβαιώθηκε 11/11). Αναμονή.
 
 ## 3. ΕΠΟΜΕΝΟ
-1. Ρώτα Giorgio ναι/όχι: **land + push** (`0c2ae57b` + `e19a7890` + handoff). Μετά την ανάπτυξη: επιβεβαίωσε ότι το live περιέχει το `0c2ae57b` (`git merge-base --is-ancestor`).
+1. Περίμενε τον Giorgio να πει ότι ολοκληρώθηκε η ανάπτυξη. Επιβεβαίωσε ότι το live commit περιέχει το `4fede2ac` (`git merge-base --is-ancestor 4fede2ac <live>`).
 2. **Κάρτα** (Giorgio πληκτρολογεί): σύνδεσμος Α-10 → Κάρτα → «Πληρωμή 12,40 €» → δοκιμαστική Visa επιτυχίας `4556390755719395` (docs.everypay.gr/tools/test-cases/), λήξη μελλοντική, CVV τυχαίο.
    - Αναμενόμενο: σελίδα ⇒ «Εξοφλήθηκε» · στο Α-10 `payments[]` + υπόλοιπο 0 + `PAYMENT_RECORDED` στο ίχνος.
    - Αν «Invalid expiration date» ξανά ⇒ δοκίμασε ζώνη `+0300`/Europe/Athens στο `everypayDateTime()` (μόνο adapter) — έρευνα στο API reference πρώτα.
@@ -46,4 +43,4 @@
 - Όροι Everypay: στο live απαιτούν λογότυπο + ενημερωτικό κείμενο Everypay στον ιστότοπο εμπόρου (ΙΙΙ.Α.4γ) — σύγκρουση με «κανένα λογότυπο» (εκείνο αφορούσε τράπεζες). Απόφαση στο live.
 
 ## 5. Δεν έτρεξαν
-- Τα tests του προηγούμενου handoff §4 (δεν ζητήθηκε έγκριση). Το pre-commit hook έτρεξε μόνο του τη ζώνη Accounting (101 σουίτες ✅) στο `0c2ae57b`.
+- Τα tests του προηγούμενου handoff §4 (δεν ζητήθηκε έγκριση). Το pre-commit hook έτρεξε μόνο του τη ζώνη Accounting (101 σουίτες ✅) στο commit του fix.
