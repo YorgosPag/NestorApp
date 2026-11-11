@@ -22,6 +22,7 @@ import {
   real,
   ref,
 } from './ifc-entity-graph';
+import { trueNorthInProject } from '@/lib/geo/project-geo-frame';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -122,7 +123,8 @@ export function appendAxis2Placement3D(
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
 
-function appendSIUnit(
+/** One `IfcSIUnit`. Exported for `ifc-georeference` (`IfcProjectedCRS.MapUnit` = METRE). */
+export function appendSIUnit(
   graph: IfcGraph,
   unitType: string,
   prefix: string | null,
@@ -190,12 +192,10 @@ function appendPascalUnit(graph: IfcGraph): number {
 }
 
 function appendTrueNorth(graph: IfcGraph, northRotationDeg: number): number {
-  // Project Y axis points to True North when northRotation=0. A positive
-  // rotation (counter-clockwise as seen from above) tilts the project grid
-  // East of True North, so the True-North direction relative to the project
-  // grid rotates by -northRotation around Z.
-  const rad = (northRotationDeg * Math.PI) / 180;
-  const x = -Math.sin(rad);
-  const y = Math.cos(rad);
+  // IFC4 `TrueNorth` = direction of True North EXPRESSED IN THE PROJECT (local)
+  // coordinate system. The meaning of `Project.northRotation` lives in ONE place,
+  // `lib/geo/project-geo-frame` (shared with the DXF viewer transform): (sin r, cos r).
+  // ADR-937 §3.1: this used to write (−sin r, cos r) — a mirrored North for every r ≠ 0.
+  const [x, y] = trueNorthInProject(northRotationDeg);
   return appendDirection(graph, [x, y]);
 }

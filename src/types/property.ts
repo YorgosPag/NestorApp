@@ -115,6 +115,7 @@ import type { ObjectiveValueDeclarations } from '@/lib/objective-value/objective
 import type { CommonCharges } from '@/lib/common-charges/common-charges';
 import type { StoredEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import type { LegalityClaim } from '@/lib/legality/legality-claim';
+import type { OrientationProposal } from '@/lib/property/orientation-proposal';
 
 // =============================================================================
 // 🏢 COMMERCIAL DATA (Sales/Rental Pricing — ADR-197)
@@ -599,6 +600,11 @@ export interface Property extends PropertySpecificationFields {
   // === ORIENTATION & VIEWS ===
   /** Orientations using full names: ['north', 'east'] NOT ['N', 'E'] */
   orientations?: OrientationType[];
+  /**
+   * ADR-937 — ό,τι **υπολόγισε** το σύστημα (κάτοψη ή χάρτης). Ποτέ δεν γράφει το `orientations`· ο άνθρωπος
+   * το εφαρμόζει. `null` = η πρόταση σβήστηκε (απορρίφθηκε).
+   */
+  orientationProposal?: OrientationProposal | null;
 
   /** Views with type and quality */
   views?: Array<{

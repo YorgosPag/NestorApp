@@ -13,29 +13,18 @@
  */
 
 import type { PlanarPoint } from '../../types/bim-base';
-import { segmentNormal, isPolygonCCW } from './polygon-utils';
-import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
 import { clamp01 } from '../../../utils/scalar-math';
-
-const RAD_TO_DEG = 180 / Math.PI;
-
-/** Below this vector length a direction is treated as degenerate (zero). */
-const DEGENERATE_LENGTH_EPS = 0.001;
+import { edgeOutwardAzimuthDeg } from '@/lib/geometry/polygon-azimuth';
 
 /**
- * Azimuth (deg ∈ [0,360)) of the 2D direction `(dx,dy)` under the compass
- * convention **0°=+Y ("North"), increasing clockwise toward +X ("East")**:
- * +Y→0, +X→90, −Y→180, −X→270. Returns `null` for a (near-)zero vector.
+ * ADR-937 Φάση Γ — `directionAzimuthDeg` + `edgeOutwardAzimuthDeg` προωθήθηκαν στο `@/lib/geometry/polygon-azimuth`
+ * (τα χρειάζεται και ο διάλογος χάρτη της καρτέλας ακινήτου — CHECK 3.62). Οι εισαγωγείς του subapp μένουν αμετάβλητοι.
  *
- * Frame note: callers that map this to a geographic compass treat scene **+Y as
- * project north (= true north, no rotation)** — a documented advisory
- * simplification (ADR-422 L7.2; a configurable north angle is future work).
+ * Frame note: callers that map this to a geographic compass treat scene **+Y as project north (= true north, no
+ * rotation)** — a documented advisory simplification (ADR-422 L7.2). The property orientation proposal (ADR-937) applies
+ * the project north rotation on top.
  */
-export function directionAzimuthDeg(dx: number, dy: number): number | null {
-  if (Math.hypot(dx, dy) < DEGENERATE_LENGTH_EPS) return null;
-  const deg = Math.atan2(dx, dy) * RAD_TO_DEG;
-  return normalizeAngleDeg(deg);
-}
+export { directionAzimuthDeg, edgeOutwardAzimuthDeg } from '@/lib/geometry/polygon-azimuth';
 
 /** Clamped distance² from point `(px,py)` to segment `a→b` (XY plane). */
 function pointSegmentDistanceSq(
@@ -55,32 +44,6 @@ function pointSegmentDistanceSq(
   const cx = ax + t * dx;
   const cy = ay + t * dy;
   return (px - cx) ** 2 + (py - cy) ** 2;
-}
-
-/**
- * Outward-facing azimuth (deg — see {@link directionAzimuthDeg}) of polygon edge
- * `edgeIndex` (vertex i → i+1). **"Outward"** = the edge-normal side pointing
- * **away from the polygon interior**, resolved from the polygon **winding** (no
- * centroid → robust for concave rings). `segmentNormal (Y` is the CCW (+90°)
- * normal, which points *inward* for a CCW ring, so it is flipped accordingly.
- *
- * Returns `null` for `<3` vertices or a degenerate edge. **SSoT** for «outward
- * azimuth of a specific edge» — consumed by {@link nearestEdgeOutwardAzimuthDeg}
- * (after picking the nearest index) and by the roof per-edge compass labels
- * (ADR-417 Φ-per-edge).
- */
-export function edgeOutwardAzimuthDeg(
-  polygon: readonly PlanarPoint[],
-  edgeIndex: number,
-): number | null {
-  const n = polygon.length;
-  if (n < 3) return null;
-  const a = polygon[edgeIndex % n];
-  const b = polygon[(edgeIndex + 1) % n];
-  const nrm = segmentNormal(a, b);
-  if (nrm === null) return null;
-  const outwardSign = isPolygonCCW(polygon) ? -1 : 1;
-  return directionAzimuthDeg(outwardSign * nrm.x, outwardSign * nrm.y);
 }
 
 /**

@@ -33,6 +33,7 @@ import { useLevels } from '../systems/levels/useLevels';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { commercialToPropertyStatus, getStatusColors } from '../config/color-mapping';
 import { linkedEntityIdOf, linkedPayloadFor } from '@/types/floorplan-overlays';
+import { OverlayOrientationProposal } from './components/OverlayOrientationProposal';
 
 // ============================================================================
 // TYPES
@@ -288,6 +289,9 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
           <div>{t('overlayProperties.perimeter')} {formatLengthForDisplay(perimeter)}</div>
         </div>
       </div>
+
+      {/* ADR-937 Φάση Β — πρόταση προσανατολισμού από τα ανοίγματα της κάτοψης (μόνο για συνδεδεμένο ακίνητο). */}
+      <OverlayOrientationProposal overlay={overlay} />
     </div>
   );
 };

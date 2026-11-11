@@ -36,6 +36,7 @@ import {
   appendIfcGeometricContext,
   appendIfcUnitAssignment,
 } from './ifc-units';
+import { appendIfcMapConversion } from './ifc-georeference';
 import { generateIfcGuid } from '@/services/enterprise-id-convenience';
 
 // ─── Public types ───────────────────────────────────────────────────────────
@@ -94,6 +95,8 @@ export function buildIfcSpatialHierarchy(
   // 1. Units + geometric context.
   const unitAssignment = appendIfcUnitAssignment(graph);
   const context = appendIfcGeometricContext(graph, project.northRotation ?? 0);
+  // ADR-937 §3.1 — where the project sits on the ΕΓΣΑ'87 grid (no-op when not geo-referenced).
+  appendIfcMapConversion(graph, context, project);
 
   // 2. Project root.
   const projectID = graph.add('IFCPROJECT', [

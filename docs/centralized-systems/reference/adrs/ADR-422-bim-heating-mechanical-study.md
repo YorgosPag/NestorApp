@@ -59,6 +59,12 @@
 
 ## 4. Changelog
 
+### Αζιμούθιο ακμής + εξωτερικοί τοίχοι → κοινά (2026-11-11, ADR-937)
+
+- `directionAzimuthDeg` + `edgeOutwardAzimuthDeg` προωθήθηκαν στο `src/lib/geometry/polygon-azimuth.ts` (τα χρειάζεται ο διάλογος χάρτη της καρτέλας ακινήτου)· το `bim/geometry/shared/polygon-azimuth-utils.ts` τα **επανεξάγει**, το `nearestEdgeOutwardAzimuthDeg` έμεινε εκεί. Συμπεριφορά ταυτόσημη.
+- `resolveExteriorWallIds` εξήχθη από το `hooks/data/useHeatLoadInputs.ts` στο `bim/geometry/exterior-wall-ids.ts` — δεύτερος καταναλωτής η πρόταση προσανατολισμού ακινήτου.
+- `bim-3d/lighting/solar-position.ts` επανεξάγει πλέον από `src/lib/solar/solar-position.ts` (αλγόριθμος ταυτόσημος).
+
 ### Κεντρικοποίηση union-find (2026-08-01, ADR-745 Φ1)
 
 Ο `computeComponents` του `thermal/sizing/pipe-network-graph.ts` έγινε **λεπτό περιτύλιγμα**

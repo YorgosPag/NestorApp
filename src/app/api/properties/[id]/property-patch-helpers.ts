@@ -17,6 +17,7 @@ import { MARKETING_AUDIENCES } from '@/constants/marketing-audiences';
 import { photoFocalPointSchema, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { declaredCaptureSpotsSchema, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
+import { orientationProposalSchema, type OrientationProposal } from '@/lib/property/orientation-proposal';
 import { parseLegacyFloor } from '@/lib/floor/floor-ref';
 import { RETIRED_STATUSES } from '@/lib/firestore/trashed-status';
 import { storedCommonChargesSchema } from '@/lib/common-charges/common-charges';
@@ -127,6 +128,11 @@ export const PropertyPatchSchema = z.object({
    */
   publishedFloorplanNorth: declaredFloorplanNorthSchema(PUBLISHED_MEDIA_LIMIT).optional(),
   /**
+   * 🧭 **Η πρόταση προσανατολισμού** (ADR-937) — από την κάτοψη ή τον χάρτη. Ρητό επειδή το σχήμα είναι
+   * `.passthrough()`. **Δεν** αγγίζει το `orientations` (το δηλωμένο)· `null` = απόρριψη της πρότασης.
+   */
+  orientationProposal: orientationProposalSchema.nullable().optional(),
+  /**
    * **Τα κοινόχρηστα** (ADR-777 §8.93) — ολόκληρο το μπλοκ, όπως το στέλνει η φόρμα.
    *
    * 🔴 **Ρητό επειδή το σχήμα είναι `.passthrough()`** — ίδιο σκεπτικό με το `publishedMediaOrder`: χωρίς αυτή τη
@@ -208,6 +214,8 @@ export interface PropertyPatchPayload extends Record<string, unknown> {
   publishedPhotoCaptureSpots?: Record<string, PhotoCaptureSpot>;
   /** ADR-897 Φ5.2 — ο δηλωμένος βορράς ανά κάτοψη. */
   publishedFloorplanNorth?: Record<string, number>;
+  /** ADR-937 — η πρόταση προσανατολισμού (κάτοψη/χάρτης)· `null` = απόρριψη. */
+  orientationProposal?: OrientationProposal | null;
 }
 
 // ============================================================================
@@ -303,6 +311,8 @@ export function buildUpdateData(
 export const PROPERTY_CLEARABLE_FIELDS: ReadonlySet<string> = new Set([
   'description', 'condition', 'areas', 'energy', 'commonCharges',
   'systemsOverride', 'finishes', 'interiorFeatures', 'securityFeatures',
+  // ADR-937 — η απόρριψη πρότασης προσανατολισμού: απουσία = «καμία πρόταση» (`readOrientationProposal`).
+  'orientationProposal',
 ]);
 
 const isPropertyClearable = (field: string): boolean => PROPERTY_CLEARABLE_FIELDS.has(field);

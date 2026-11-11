@@ -272,6 +272,23 @@
       "previous": "Προηγούμενες ενότητες",
       "price": "Τιμή"
     },
+    "sunExposure": {
+      "disclaimer": "Εκτίμηση από τον προσανατολισμό και τη θέση του ακινήτου. Δεν λαμβάνει υπόψη σκιές από γειτονικά κτίρια, δέντρα ή το ανάγλυφο.",
+      "heading": "Ηλιασμός",
+      "hours": "{count, plural, one {~# ώρα ήλιο} other {~# ώρες ήλιο}}",
+      "hoursWithPeriods": "{hours} · {periods}",
+      "noDirectSun": "Χωρίς άμεσο ήλιο",
+      "period": {
+        "afternoon": "απόγευμα",
+        "midday": "μεσημέρι",
+        "morning": "πρωί"
+      },
+      "season": {
+        "equinox": "Άνοιξη / φθινόπωρο",
+        "summer": "Καλοκαίρι",
+        "winter": "Χειμώνας"
+      }
+    },
     "video": {
       "alt": {
         "agency": "Βίντεο του ακινήτου — υλικό μεσιτικού γραφείου",
@@ -394,6 +411,18 @@
       "narrow": "Μόνο σε δρόμο πλάτους έως 6 μ.",
       "rearOnly": "Μόνο σε ακάλυπτο ή τυφλό οικόπεδο",
       "single": "Σε έναν δρόμο"
+    },
+    "orientation": {
+      "short": {
+        "east": "Α",
+        "north": "Β",
+        "northeast": "ΒΑ",
+        "northwest": "ΒΔ",
+        "south": "Ν",
+        "southeast": "ΝΑ",
+        "southwest": "ΝΔ",
+        "west": "Δ"
+      }
     },
     "systems": {
       "cooling": {

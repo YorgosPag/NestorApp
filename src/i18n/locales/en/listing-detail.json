@@ -170,6 +170,23 @@
     "total": "Total per month",
     "totalBasis": "Rent and common charges"
   },
+  "sunExposure": {
+    "heading": "Sunlight",
+    "season": {
+      "winter": "Winter",
+      "equinox": "Spring / autumn",
+      "summer": "Summer"
+    },
+    "period": {
+      "morning": "morning",
+      "midday": "midday",
+      "afternoon": "afternoon"
+    },
+    "hours": "{count, plural, one {~# hour of sun} other {~# hours of sun}}",
+    "hoursWithPeriods": "{hours} · {periods}",
+    "noDirectSun": "No direct sun",
+    "disclaimer": "Estimate based on the property's orientation and location. It does not account for shade from neighbouring buildings, trees or terrain."
+  },
   "energyCertificate": {
     "heading": "Energy performance certificate",
     "scaleLabel": "Energy scale, from A+ (best) to G (worst)",

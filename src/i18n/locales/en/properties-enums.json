@@ -186,6 +186,28 @@
   },
   "orientation": {
     "sectionTitle": "Orientation",
+    "compass": {
+      "northUp": "North is up. Select the sides of the property that have openings."
+    },
+    "proposal": {
+      "fromFloorplan": "Suggested from the floor plan: {names}",
+      "fromMap": "Suggested from the map: {names}",
+      "northAssumed": "The drawing is not geo-referenced; north was assumed to be up. Please check the suggestion.",
+      "apply": "Apply",
+      "dismiss": "Dismiss",
+      "dismissFailed": "The suggestion was not dismissed. Please try again."
+    },
+    "map": {
+      "open": "From the map",
+      "noLocation": "Set the building's location first to use the map.",
+      "title": "Orientation from the map",
+      "pickBuilding": "Click on the building.",
+      "pickEdges": "Click the sides of the building where the property has openings (windows, balcony doors).",
+      "selected": "Facades: {names}",
+      "noneSelected": "No side selected.",
+      "apply": "Apply",
+      "cancel": "Cancel"
+    },
     "short": {
       "north": "N",
       "northeast": "NE",

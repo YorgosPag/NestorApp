@@ -18,6 +18,18 @@ import { gridToGeographic } from './egsa87-projection';
 import { ggrs87ToWgs84 } from './ggrs87-datum';
 
 /**
+ * Η **ταυτότητα** του καννάβου ΕΓΣΑ'87 όπως τη δημοσιεύει το μητρώο EPSG — ό,τι χρειάζεται ένα ανταλλάξιμο αρχείο
+ * (π.χ. IFC4 `IfcProjectedCRS`) για να πει **σε ποιο σύστημα** είναι οι συντεταγμένες. Γεγονότα του μητρώου
+ * (epsg.io/2100), όχι επιλογές: όνομα `EPSG:2100`, datum GGRS87 (EPSG:6121), προβολή Transverse Mercator, μέτρα.
+ */
+export const GREEK_GRID_CRS = {
+  name: 'EPSG:2100',
+  description: 'GGRS87 / Greek Grid',
+  geodeticDatum: 'GGRS87',
+  mapProjection: 'Transverse Mercator',
+} as const;
+
+/**
  * Η **περιοχή χρήσης** του EPSG:2100 («Greece – onshore»), στις προβαλλόμενες συντεταγμένες του, σε μέτρα — όπως τη
  * δημοσιεύει το μητρώο EPSG (epsg.io/2100: 94874.71 3859448.36 / 892934.13 4631226.44). Γεγονός του μητρώου, όχι
  * εκτίμηση: δεν εφευρίσκεται δεύτερο «κουτί της Ελλάδας» (ADR-920 §13.3).

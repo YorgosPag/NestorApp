@@ -48,7 +48,6 @@ import {
   isEnergyClass,
 } from '@/constants/energy-classes';
 import {
-  ORIENTATION_OPTIONS,
   INTERIOR_FEATURE_OPTIONS,
   SECURITY_FEATURE_OPTIONS,
   CONDITION_OPTIONS,
@@ -86,7 +85,6 @@ const VOCABULARIES: ReadonlyArray<readonly [string, readonly string[]]> = [
  * του λεξιλογίου **είναι** η σειρά της οθόνης, όπως και στο `LISTING_DISCLOSURE`.
  */
 const VIEWS: ReadonlyArray<readonly [string, readonly string[], readonly string[]]> = [
-  ['ORIENTATION_OPTIONS', ORIENTATION_OPTIONS, ORIENTATIONS],
   ['INTERIOR_FEATURE_OPTIONS', INTERIOR_FEATURE_OPTIONS, INTERIOR_FEATURES],
   ['SECURITY_FEATURE_OPTIONS', SECURITY_FEATURE_OPTIONS, SECURITY_FEATURES],
   ['CONDITION_OPTIONS', CONDITION_OPTIONS, CONDITIONS],

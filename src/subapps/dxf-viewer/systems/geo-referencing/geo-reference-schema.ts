@@ -25,6 +25,7 @@
 import type { ProjectBasePoint } from '@/types/project-elevation.schemas';
 import type { GeoReference } from './geo-transform';
 import { isIdentityGeoReference } from './geo-transform';
+import { projectGeoFrame } from '@/lib/geo/project-geo-frame';
 
 /** ADR-462 canonical-mm scale — geometry authored in metres is baked ×1000. */
 const M_TO_MM = 1000;
@@ -45,11 +46,12 @@ export interface ProjectGeoReferenceFields {
 export function geoReferenceFromProject(
   fields: ProjectGeoReferenceFields | null | undefined,
 ): GeoReference | null {
-  const bp = fields?.basePoint;
-  if (!bp || typeof bp.x !== 'number' || typeof bp.y !== 'number') return null;
+  // ADR-937 §3.1 — η ΜΙΑ ανάγνωση των πεδίων (κοινή με τον εξαγωγέα IFC)· εδώ μόνο η μετατροπή σε mm.
+  const frame = projectGeoFrame(fields);
+  if (!frame) return null;
   return {
-    originWorld: { x: bp.x * M_TO_MM, y: bp.y * M_TO_MM },
-    rotationDeg: fields?.northRotation ?? 0,
+    originWorld: { x: frame.eastingM * M_TO_MM, y: frame.northingM * M_TO_MM },
+    rotationDeg: frame.northRotationDeg,
   };
 }
 

@@ -14,7 +14,6 @@ import type { PropertyType, OperationalStatus } from '@/types/property';
 import { CREATABLE_PROPERTY_TYPES } from '@/constants/property-types';
 import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
 import type {
-  OrientationType,
   ConditionType,
   HeatingType,
   CoolingType,
@@ -26,7 +25,6 @@ import type {
 } from '@/constants/property-features-enterprise';
 // ADR-842 Α4 — η αυθεντία του λεξιλογίου· οι λίστες παρακάτω είναι **όψη** του.
 import {
-  ORIENTATIONS,
   INTERIOR_FEATURES,
   SECURITY_FEATURES,
   CONDITIONS,
@@ -52,9 +50,9 @@ import {
  * 🔑 Το `[...X]` δεν είναι διακοσμητικό: η SSoT είναι `readonly` (`as const`) ενώ τα
  * controls ζητούν μεταβλητό πίνακα — **ίδιο ιδίωμα με το `EDITABLE_PROPERTY_TYPES`**
  * λίγες γραμμές πιο κάτω, που το κάνει ήδη για τους τύπους ακινήτου.
+ *
+ * ℹ️ Το `ORIENTATION_OPTIONS` αφαιρέθηκε (ADR-937): η πυξίδα 3×3 διαβάζει το `ORIENTATIONS` απευθείας.
  */
-export const ORIENTATION_OPTIONS: OrientationType[] = [...ORIENTATIONS];
-
 export const CONDITION_OPTIONS: ConditionType[] = [...CONDITIONS];
 
 export const HEATING_OPTIONS: HeatingType[] = [...HEATING_TYPES];

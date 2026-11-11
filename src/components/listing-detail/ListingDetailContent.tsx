@@ -75,6 +75,7 @@ import { ListingAttributeList } from './ListingAttributeList';
 import { ListingPositionSection } from './ListingPositionSection';
 import { ListingLegality } from './ListingLegality';
 import { ListingEnergyCertificate } from './ListingEnergyCertificate';
+import { ListingSunExposure } from './ListingSunExposure';
 import { ListingOpenSubjects } from './ListingOpenSubjects';
 import { ListingMediaViewer } from './media/ListingMediaViewer';
 import { ListingStay } from './ListingStay';
@@ -338,6 +339,8 @@ function ListingSections({ listing }: { readonly listing: PublicListing }) {
         <ListingAttributeList listing={listing} />
         {/* ADR-777 §8.94 — το ΠΕΑ: κλίμακα, αριθμοί, ισχύς. Αποδίδει **τίποτα** όπου η ερώτηση δεν τίθεται (γη). */}
         <ListingEnergyCertificate listing={listing} />
+        {/* ADR-937 Φάση Α — ηλιασμός ανά εποχή από τις όψεις + τη θέση. Τίποτα όταν λείπει κάποιο από τα δύο. */}
+        <ListingSunExposure listing={listing} />
       </ListingSectionAnchor>
 
       <ListingSectionAnchor section="location" className="flex flex-col gap-4">

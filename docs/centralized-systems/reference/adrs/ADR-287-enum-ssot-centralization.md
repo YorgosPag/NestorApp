@@ -72,6 +72,12 @@
 
 ## Changelog
 
+- **2026-11-11**: Προσανατολισμός — πυξίδα 3×3 αντί για σειρά πλήκτρων.
+  - **Created**: `src/components/properties/shared/OrientationCompassGrid.tsx` — πλέγμα `ΒΔ Β ΒΑ / Δ ◎ Α / ΝΔ Ν ΝΑ` (Βορράς πάνω), πολλαπλή επιλογή (`ToggleButton`, `aria-pressed`), ολογράφως όνομα σε `aria-label` + Tooltip (από `ORIENTATION_LABELS`), σύνοψη επιλογής ολογράφως κάτω από το πλέγμα. Το λεξιλόγιο **δεν** ξαναγράφεται: τιμές από `Orientation`, μόνο η χωρική διάταξη ζει στο component.
+  - **Migrated**: `PropertyFieldsDetailCards.tsx` — η σειρά `ToggleButton` αντικαταστάθηκε· η αποθήκευση (ανά όροφο ή ακίνητο) έμεινε ίδια.
+  - **i18n**: `orientation.compass.northUp` (el/en, `properties-enums`).
+  - **Μεικτό σύστημα (απόφαση Giorgio)** → **ADR-937**: ηλιασμός στη δημόσια αγγελία · πρόταση από κάτοψη (πεδίο `orientationProposal`) · επιλογή από χάρτη. Η διάταξη της πυξίδας ζει στο `src/constants/orientation-compass.ts` (κοινή με την αγγελία).
+
 - **2026-10-02 (ADR-898 §18.2)**: `BuildingCategory` centralization + building status aliases.
   - **Created**: `src/constants/building-categories.ts` — `BUILDING_CATEGORIES` (4), `BuildingCategory`, `isBuildingCategory()`. ⚠️ ≠ `BuildingType` (6 τιμές, άλλο πεδίο).
   - **Filled** the empty «RUNTIME TYPE GUARD» section of `building-statuses.ts`: `isBuildingStatus()` + `parseBuildingStatus()` με **έναν** πίνακα ψευδωνύμων (`in_progress` → `construction` — λεξιλόγιο έργου γραμμένο σε κτίρια παλιού seed).

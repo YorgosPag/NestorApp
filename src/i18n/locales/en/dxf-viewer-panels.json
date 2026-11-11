@@ -693,6 +693,14 @@
       "storage": "Storage",
       "common_space": "Common Space",
       "footprint": "Footprint"
+    },
+    "orientationProposal": {
+      "label": "Orientation from the floor plan",
+      "none": "No openings found on exterior walls along the property boundary.",
+      "northAssumed": "The drawing is not geo-referenced: north was assumed to be up.",
+      "send": "Propose to property",
+      "sent": "Proposal sent. Confirm it on the property card.",
+      "failed": "The proposal was not sent. Please try again."
     }
   },
   "overlayCard": {

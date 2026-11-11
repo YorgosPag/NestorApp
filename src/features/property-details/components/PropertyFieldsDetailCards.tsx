@@ -12,7 +12,6 @@
  */
 
 import React from 'react';
-import { ToggleButton } from '@/components/ui/toggle-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,9 +21,11 @@ import { ClearableSelect } from '@/components/ui/clearable-select';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Bed, Bath, Compass, Wrench, Zap } from 'lucide-react';
-import type { OrientationType } from '@/constants/property-features-enterprise';
+import { ORIENTATIONS, type OrientationType } from '@/constants/property-features-enterprise';
+import { PropertyOrientationProposalSlot } from './PropertyOrientationProposalSlot';
+import { PropertyOrientationMapAction } from './PropertyOrientationMapAction';
 import {
-  ORIENTATION_OPTIONS, CONDITION_OPTIONS,
+  CONDITION_OPTIONS,
   PROPERTY_CARD_COLORS,
 } from './property-fields-constants';
 import { EnergyCertificateFields } from '@/components/shared/energy-certificate/EnergyCertificateFields';
@@ -34,6 +35,7 @@ import type { EnergyCertificatePatch } from '@/lib/energy-certificate/energy-cer
 import { energyOfForm, patchedEnergyFormSlice } from '@/lib/energy-certificate/energy-certificate-form';
 import { isFinalContractSigned } from '@/lib/conveyance/case-state';
 import { OrientationPlausibilityWarning } from '@/components/properties/shared/OrientationPlausibilityWarning';
+import { OrientationCompassGrid } from '@/components/properties/shared/OrientationCompassGrid';
 import { ConditionPlausibilityWarning } from '@/components/properties/shared/ConditionPlausibilityWarning';
 import { PropertyFieldsDetailCardsRow2 } from './PropertyFieldsDetailCardsRow2';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
@@ -61,6 +63,14 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
   const energyCertificate = energyOfForm(formData);
   const applyEnergyPatch = (patch: EnergyCertificatePatch) =>
     setFormData(prev => ({ ...prev, ...patchedEnergyFormSlice(prev, patch) }));
+  // Η φόρμα κρατά `string[]`· η πυξίδα και η πρόταση μιλούν το λεξιλόγιο — φιλτράρισμα μέσα από τη ρίζα, όχι cast.
+  const orientationSource: readonly string[] = isMultiLevel && activeLevelId
+    ? (currentLevelData?.orientations ?? [])
+    : formData.orientations;
+  const declaredOrientations = ORIENTATIONS.filter((o) => orientationSource.includes(o));
+  // ADR-937 — πρόταση (κάτοψη) ή χάρτης: αλλάζει ΜΟΝΟ τη φόρμα· ο άνθρωπος αποθηκεύει.
+  const applyOrientations = (values: readonly OrientationType[]) =>
+    setFormData(prev => ({ ...prev, orientations: [...values] }));
 
   return (
     <>
@@ -159,34 +169,42 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                 <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   {t('orientation.sectionTitle')}
                 </Label>
-                <div className="flex flex-wrap gap-1">
-                  {ORIENTATION_OPTIONS.map((orientation) => {
-                    const levelOrientations = isMultiLevel && activeLevelId
-                      ? (currentLevelData?.orientations ?? [])
-                      : formData.orientations;
-                    const isSelected = levelOrientations.includes(orientation);
-                    return (
-                      <ToggleButton key={orientation} type="button"
-                        pressed={isSelected} variant="outline" size="sm"
-                        className="h-6 px-1.5 text-xs"
-                        disabled={!isEditing || isSoldOrRented}
-                        onClick={() => {
-                          if (isMultiLevel && activeLevelId) {
-                            const current = currentLevelData?.orientations ?? [];
-                            const updated = current.includes(orientation)
-                              ? current.filter(o => o !== orientation)
-                              : [...current, orientation];
-                            updateLevelField('orientations', updated as OrientationType[]);
-                          } else {
-                            toggleArrayItem('orientations', orientation);
-                          }
-                        }}>
-                        {t(`orientation.short.${orientation}`)}
-                      </ToggleButton>
-                    );
-                  })}
-                </div>
+                {/* Πυξίδα 3×3 (ADR-287): η θέση λέει την κατεύθυνση· η αποθήκευση έμεινε ίδια (όροφος ή ακίνητο). */}
+                <OrientationCompassGrid
+                  value={declaredOrientations}
+                  disabled={!isEditing || isSoldOrRented}
+                  t={t}
+                  onToggle={(orientation) => {
+                    if (isMultiLevel && activeLevelId) {
+                      const current = currentLevelData?.orientations ?? [];
+                      const updated = current.includes(orientation)
+                        ? current.filter(o => o !== orientation)
+                        : [...current, orientation];
+                      updateLevelField('orientations', updated as OrientationType[]);
+                    } else {
+                      toggleArrayItem('orientations', orientation);
+                    }
+                  }}
+                />
               </fieldset>
+            )}
+            {/* ADR-937 — πρόταση από κάτοψη/χάρτη: «Εφαρμογή» αλλάζει μόνο τη φόρμα· ο άνθρωπος αποθηκεύει. */}
+            {!isMultiLevel && (
+              <>
+                <PropertyOrientationProposalSlot
+                  property={property}
+                  declared={declaredOrientations}
+                  disabled={!isEditing || isSoldOrRented}
+                  onApply={applyOrientations}
+                  t={t}
+                />
+                <PropertyOrientationMapAction
+                  buildingId={property.buildingId}
+                  disabled={!isEditing || isSoldOrRented}
+                  onApply={applyOrientations}
+                  t={t}
+                />
+              </>
             )}
             <OrientationPlausibilityWarning
               propertyType={formData.type}

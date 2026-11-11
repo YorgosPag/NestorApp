@@ -38,10 +38,7 @@ import { useSiteNeighbourMasses } from './useSiteNeighbourMasses';
 import type { SlabEntity, SlabKind } from '../../bim/types/slab-types';
 import type { OverhangOutline } from '../../bim/thermal/heat-load/solar-overhang-geometry';
 import type { SlabMatchCandidate } from '../../bim/thermal/heat-load/slab-space-match';
-import {
-  computeEnvelopePerimeter,
-  type WallForEnvelope,
-} from '../../bim/geometry/envelope-perimeter';
+import { resolveExteriorWallIds } from '../../bim/geometry/exterior-wall-ids';
 import {
   resolveSceneUnits,
   sceneUnitsToMeters,
@@ -115,17 +112,6 @@ function resolveStoreyPosition(
   if (counted[0].id === activeFloorId) return 'lowest';
   if (counted[counted.length - 1].id === activeFloorId) return 'highest';
   return 'middle';
-}
-
-/** Εξωτερικοί τοίχοι = όσοι ανήκουν σε αλυσίδα κελύφους (spec-free perimeter). */
-function resolveExteriorWallIds(
-  walls: readonly WallForEnvelope[],
-  sceneUnits: SceneUnits,
-): Set<string> {
-  const { chains } = computeEnvelopePerimeter(walls, 0, sceneUnits);
-  const set = new Set<string>();
-  for (const chain of chains) for (const id of chain.wallIds) set.add(id);
-  return set;
 }
 
 /**

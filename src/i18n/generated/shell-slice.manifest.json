@@ -31,7 +31,7 @@
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
-    "src/i18n/generated/routes/listing__id.el.json": "ef2d0d7fa65b34263239c40e7fecd4ec155ec25fea7a6ecfcf0edf2b451c17f7",
+    "src/i18n/generated/routes/listing__id.el.json": "5ac9b3387ec3fd1a520599d93f369a72de36a7655d79999feb53dbbea9ddba09",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "40faa0a4a561d7e7c6ea0aa7c630472ec585301f9b4b3c5a774aa2c0aaa17387",
     "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8d3929ce80abb99ac1d71d4949716eea6df3cd54c5f72bec0c8e51d08c601054",
+  "inputsSha256": "c4309e942ef104a5c02a0c2d5451b8cad60f8a3985bcc04884c4fdecef738511",
   "languages": [
     "el"
   ],
@@ -4222,6 +4222,17 @@
             "sections.next",
             "sections.previous",
             "sections.price",
+            "sunExposure.disclaimer",
+            "sunExposure.heading",
+            "sunExposure.hours",
+            "sunExposure.hoursWithPeriods",
+            "sunExposure.noDirectSun",
+            "sunExposure.period.afternoon",
+            "sunExposure.period.midday",
+            "sunExposure.period.morning",
+            "sunExposure.season.equinox",
+            "sunExposure.season.summer",
+            "sunExposure.season.winter",
             "video.alt.agency",
             "video.alt.ownerDeclared",
             "video.failed",
@@ -4293,6 +4304,7 @@
             "finishes.frames",
             "finishes.glazing",
             "frontage",
+            "orientation.short",
             "systems.cooling",
             "systems.fuel",
             "systems.heating",
@@ -40765,7 +40777,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1317024
+    "sliceBytes": 1318090
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
