@@ -17,6 +17,7 @@ import { totalPriceByRole } from '@/lib/properties/price-totals';
 import type { SalesDashboardStats } from '@/types/sales-shared';
 import { matchesPropertyLocation, reconcileLocationSelection } from '@/lib/properties/property-location';
 import { resolveSpaceStatuses } from '@/lib/spaces/space-status-split';
+import { resolveGrossBasisArea } from '@/lib/properties/property-display-area';
 
 // =============================================================================
 // 🏢 TYPES
@@ -131,7 +132,8 @@ export function useSalesPropertiesViewerState(
       const askingPrice = unit.commercial?.askingPrice;
       const rentPrice = unit.commercial?.rentPrice;
       const finalPrice = unit.commercial?.finalPrice;
-      const grossArea = unit.areas?.gross ?? unit.area;
+      // ADR-777 §8.101 — η ΒΑΣΗ σύγκρισης (μικτό → παλιό `area`, ποτέ καθαρό): `0` = «δεν μετρήθηκε», όχι τιμή.
+      const grossArea = resolveGrossBasisArea(unit)?.value ?? null;
 
       if (viewScope === 'sold') {
         if (unit.commercialStatus !== 'sold') return false;
@@ -209,12 +211,15 @@ export function useSalesPropertiesViewerState(
       result = result.filter((u) => matchesPriceRange(u, filters.priceRange));
     }
 
-    // Advanced filter: area range
-    if (filters.areaRange.min !== null) {
-      result = result.filter(u => (u.areas?.gross ?? u.area ?? 0) >= (filters.areaRange.min ?? 0));
-    }
-    if (filters.areaRange.max !== null) {
-      result = result.filter(u => (u.areas?.gross ?? u.area ?? 0) <= (filters.areaRange.max ?? Infinity));
+    // Advanced filter: area range — ADR-777 §8.101: κρίνεται η ΒΑΣΗ σύγκρισης (`resolveGrossBasisArea`)·
+    // μονάδα χωρίς αυτήν φεύγει από ενεργό εύρος (κανόνας SQL, ίδιος με το εύρος τιμής) — ποτέ «0 m²».
+    const { min: minArea, max: maxArea } = filters.areaRange;
+    if (minArea !== null || maxArea !== null) {
+      result = result.filter((u) => {
+        const area = resolveGrossBasisArea(u)?.value;
+        if (area === undefined) return false;
+        return (minArea === null || area >= minArea) && (maxArea === null || area <= maxArea);
+      });
     }
 
     // Search (code, name, type, buyer)
@@ -245,7 +250,7 @@ export function useSalesPropertiesViewerState(
       : salesUnits.filter(u => requiresAskingPrice(u.commercialStatus));
     return {
       availableCount: units.length,
-      priceTotals: totalPriceByRole(units, u => u.areas?.gross ?? u.area),
+      priceTotals: totalPriceByRole(units, (u) => resolveGrossBasisArea(u)?.value ?? null),
     };
   }, [salesUnits, viewScope]);
 

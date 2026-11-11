@@ -3,8 +3,8 @@
     "description": "SSoT centralized-module violations baseline (ratchet, ανά αρχείο ΚΑΙ module)",
     "schema": 2,
     "generated": "2026-10-01T21:36:32Z",
-    "totalViolations": 123,
-    "totalFiles": 94,
+    "totalViolations": 118,
+    "totalFiles": 92,
     "rule": "Κανένα module δεν ανεβαίνει σε κανένα αρχείο. Νέο αρχείο = μηδενική ανοχή.",
     "registry": ".ssot-registry.json",
     "engine": "scripts/lib/ssot/scan.js (ΜΙΑ μηχανή — ADR-749)"
@@ -157,14 +157,8 @@
     "src/hooks/useEscapeKey.ts": {
       "escape-command-bus": 1
     },
-    "src/hooks/useSalesPropertiesViewerState.ts": {
-      "property-display-area": 4
-    },
     "src/services/ai-pipeline/agentic-openai-client.ts": {
       "openai-provider": 1
-    },
-    "src/services/ai-pipeline/modules/uc-003-property-search/property-search-query.ts": {
-      "property-display-area": 1
     },
     "src/services/ai-pipeline/tools/esco-search-utils.ts": {
       "quote-comparison": 1

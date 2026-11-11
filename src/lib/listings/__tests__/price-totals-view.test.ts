@@ -47,13 +47,13 @@ const totals = (units: readonly Unit[]) => totalPriceByRole(units, (u) => u.area
 describe('Α. ΜΙΑ ΚΛΑΣΗ ⇒ ΕΝΑ ΠΟΣΟ, ΧΩΡΙΣ ΕΠΙΓΡΑΦΗ (όπως τα τμήματα της λίστας)', () => {
   it('Α1 — μόνο πωλήσεις: η οθόνη μένει ένα ποσό — τώρα ΜΕ τη μονάδα του ρόλου', () => {
     const view = priceTotalsView(t, totals([sale(100_000), sale(200_000)]), 'total');
-    expect(view.priceBreakdown).toEqual([]);
+    expect(view.breakdown).toEqual([]);
     expect(keyOf(view.value)).toBe(PRICE_AMOUNT_KEY.sale);
   });
 
   it('🔴 Α2 — μόνο ενοίκια: γράφει «/μήνα» — πριν διαβαζόταν «€3K», σαν τιμή πώλησης', () => {
     const view = priceTotalsView(t, totals([rent(900), rent(500)]), 'total');
-    expect(view.priceBreakdown).toEqual([]);
+    expect(view.breakdown).toEqual([]);
     expect(keyOf(view.value)).toBe(PRICE_AMOUNT_KEY.rent);
   });
 
@@ -73,12 +73,12 @@ describe('🔴 Β. ΔΥΟ ΚΛΑΣΕΙΣ ΚΑΙ ΠΑΝΩ ⇒ ΥΠΟΣΥΝΟΛΑ 
   it('Β1 — μία γραμμή ανά κλάση, στη δηλωμένη σειρά, με την απουσία ΤΕΛΕΥΤΑΙΑ', () => {
     const view = priceTotalsView(t, totals(MIXED), 'total');
     expect(view.value).toBe('');
-    expect(view.priceBreakdown.map((row) => row.key)).toEqual(['sale', 'rent', 'nightly', 'unpriced']);
+    expect(view.breakdown.map((row) => row.key)).toEqual(['sale', 'rent', 'nightly', 'unpriced']);
   });
 
   it('🔴 Β2 — κάθε ποσό με τη ΔΙΚΗ ΤΟΥ μονάδα — ποτέ ένα κλειδί για όλα', () => {
     const view = priceTotalsView(t, totals(MIXED), 'total');
-    const byKey = Object.fromEntries(view.priceBreakdown.map((row) => [row.key, keyOf(row.value)]));
+    const byKey = Object.fromEntries(view.breakdown.map((row) => [row.key, keyOf(row.value)]));
     expect(byKey).toEqual({
       sale: PRICE_AMOUNT_KEY.sale,
       rent: PRICE_AMOUNT_KEY.rent,
@@ -89,7 +89,7 @@ describe('🔴 Β. ΔΥΟ ΚΛΑΣΕΙΣ ΚΑΙ ΠΑΝΩ ⇒ ΥΠΟΣΥΝΟΛΑ 
 
   it('Β3 — η επιγραφή ΜΕΤΡΑ: ποια κλάση και πόσες μονάδες καλύπτει', () => {
     const view = priceTotalsView(t, totals(MIXED), 'total');
-    expect(view.priceBreakdown.map((row) => row.label)).toEqual([
+    expect(view.breakdown.map((row) => row.label)).toEqual([
       `${PRICE_SECTION_KEY.sale}|{"count":2}`,
       `${PRICE_SECTION_KEY.rent}|{"count":1}`,
       `${PRICE_SECTION_KEY.nightly}|{"count":1}`,
@@ -99,13 +99,13 @@ describe('🔴 Β. ΔΥΟ ΚΛΑΣΕΙΣ ΚΑΙ ΠΑΝΩ ⇒ ΥΠΟΣΥΝΟΛΑ 
 
   it('Β4 — ρόλος με μηδέν μονάδες ΔΕΝ τυπώνεται («Βραχυχρόνια: 0 €» είναι θόρυβος)', () => {
     const view = priceTotalsView(t, totals([sale(1), rent(1)]), 'total');
-    expect(view.priceBreakdown.map((row) => row.key)).toEqual(['sale', 'rent']);
+    expect(view.breakdown.map((row) => row.key)).toEqual(['sale', 'rent']);
   });
 
   it('🔴 Β5 — ένας ρόλος + μονάδες χωρίς τιμή ⇒ υποσύνολα: το άθροισμα λέει ΠΟΣΟ καλύπτει', () => {
     const view = priceTotalsView(t, totals([sale(1), unpriced(), unpriced()]), 'total');
-    expect(view.priceBreakdown.map((row) => row.key)).toEqual(['sale', 'unpriced']);
-    expect(view.priceBreakdown[1].label).toBe(`${PRICE_SECTION_KEY.unpriced}|{"count":2}`);
+    expect(view.breakdown.map((row) => row.key)).toEqual(['sale', 'unpriced']);
+    expect(view.breakdown[1].label).toBe(`${PRICE_SECTION_KEY.unpriced}|{"count":2}`);
   });
 
   it('Β6 — η πρόταση για αναγνώστη οθόνης κρατά ΚΑΘΕ ποσό στη γραμμή του', () => {
@@ -130,7 +130,7 @@ describe('Γ. ΜΕΣΟΣ ΟΡΟΣ ΚΑΙ €/m²', () => {
 
   it('🔴 Γ2 — το €/m² ζητά το ΔΙΚΟ ΤΟΥ κλειδί ανά ρόλο («/m²/μήνα», όχι σκέτο «€/τ.μ.»)', () => {
     const view = priceTotalsView(t, totals([sale(200_000, 100), rent(900, 100)]), 'perArea');
-    expect(view.priceBreakdown.map((row) => keyOf(row.value))).toEqual([
+    expect(view.breakdown.map((row) => keyOf(row.value))).toEqual([
       PRICE_PER_AREA_KEY.sale,
       PRICE_PER_AREA_KEY.rent,
     ]);
@@ -138,7 +138,7 @@ describe('Γ. ΜΕΣΟΣ ΟΡΟΣ ΚΑΙ €/m²', () => {
 
   it('Γ3 — στο €/m² η επιγραφή μετρά όσες έχουν ΚΑΙ εμβαδόν, όχι όσες έχουν τιμή', () => {
     const view = priceTotalsView(t, totals([sale(1, 10), sale(1), rent(1, 5)]), 'perArea');
-    expect(view.priceBreakdown[0].label).toBe(`${PRICE_SECTION_KEY.sale}|{"count":1}`);
+    expect(view.breakdown[0].label).toBe(`${PRICE_SECTION_KEY.sale}|{"count":1}`);
   });
 });
 

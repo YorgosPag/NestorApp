@@ -11,8 +11,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import '@/lib/design-system';
-import type { PriceTotalsRow } from '@/lib/listings/listing-price-label';
-import { PriceTotalsBreakdown } from '@/components/shared/price-totals/PriceTotalsBreakdown';
+import type { StatBreakdownRow } from '@/types/stat-breakdown';
+import { StatBreakdown } from '@/components/shared/stat-breakdown/StatBreakdown';
 
 /**
  * Ο ΚΛΕΙΣΤΟΣ κατάλογος χρωμάτων — ADR-770 §18. Ήταν `color: string` + `as keyof`, και
@@ -36,10 +36,11 @@ interface StatsCardProps {
     loading?: boolean;
     description?: string;
     /**
-     * Υποσύνολα τιμής ανά ρόλο (ADR-777 §8.60.14.13). Όταν έχει γραμμές, **αντικαθιστά** το
-     * `value`: ποσά άλλης μονάδας δεν γίνονται ένας αριθμός. Το παράγει **μόνο** το `priceTotalsView`.
+     * Υποσύνολα — τιμή ανά ρόλο (ADR-777 §8.60.14.13) · εμβαδόν ανά είδος (§8.101). Όταν έχει γραμμές,
+     * **αντικαθιστά** το `value`: μεγέθη άλλης μονάδας/άλλου είδους δεν γίνονται ένας αριθμός. Τα παράγουν **μόνο**
+     * το `priceTotalsView` και το `areaTotalsView`.
      */
-    priceBreakdown?: readonly PriceTotalsRow[];
+    breakdown?: readonly StatBreakdownRow[];
     /**
      * Η κάρτα είναι **εναλλαγή φίλτρου** και αυτή είναι η κατάστασή της (ADR-840 §7.8). `undefined` ⇒ δεν είναι
      * εναλλαγή. Λέγεται με `aria-pressed` **και** με παχύτερο περίγραμμα τονισμού — ποτέ μόνο με χρώμα (ADR-771).
@@ -47,7 +48,7 @@ interface StatsCardProps {
     pressed?: boolean;
 }
 
-export function StatsCard({ title, value, icon: Icon, color, onClick, loading, description, priceBreakdown, pressed }: StatsCardProps) {
+export function StatsCard({ title, value, icon: Icon, color, onClick, loading, description, breakdown, pressed }: StatsCardProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -89,8 +90,8 @@ export function StatsCard({ title, value, icon: Icon, color, onClick, loading, d
                         ) : (
                             <>
                                 <p className={`text-xs font-medium ${toneClass} truncate leading-tight`}>{title}</p>
-                                {priceBreakdown && priceBreakdown.length > 0 ? (
-                                    <PriceTotalsBreakdown rows={priceBreakdown} valueClassName={valueToneClass} />
+                                {breakdown && breakdown.length > 0 ? (
+                                    <StatBreakdown rows={breakdown} valueClassName={valueToneClass} />
                                 ) : (
                                     <p className={`${typeof value === 'string' ? 'text-sm sm:text-base' : 'text-lg sm:text-xl lg:text-2xl'} font-bold ${valueToneClass} truncate leading-tight`}>{value}</p>
                                 )}

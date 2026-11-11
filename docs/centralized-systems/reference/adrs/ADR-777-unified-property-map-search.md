@@ -18526,3 +18526,63 @@ construidos*, τα *útiles* **χωριστά και ονομασμένα**, €
 «108 m² καθαρά»· αγγελία «2.407 €/m² καθαρά» + «Καθαρό εμβαδόν 108 τ.μ.», χωρίς γραμμή μικτού. Επαναφορά στο 120 ⇒
 αγγελία «120 m² gross» (η αποθήκευση την ξαναπροέβαλε σε v29· πριν, το παλιό έγγραφο έγραφε «120 τ.μ.» χωρίς είδος =
 `unspecified`, όπως σχεδιάστηκε). **Δεν** ελέγχθηκε: hover κάτοψης.
+
+### 8.101 Η ΒΑΣΗ ΣΥΓΚΡΙΣΗΣ ΣΤΟΥΣ ΥΠΟΛΟΓΙΣΜΟΥΣ — ΚΑΙ ΣΥΝΟΛΑ ΕΜΒΑΔΟΥ ΑΝΑ ΕΙΔΟΣ *(2026-11-11)*
+
+**Αφορμή:** τα «Εκτός» του §8.100 που είναι **βάση σύγκρισης** ή **άθροισμα**, όχι προβολή.
+
+**Audit (git grep, `src/` χωρίς tests):** μετά το §8.100 έμεναν **5** χειρόγραφες αλυσίδες `areas.gross ?? area` = ακριβώς η
+baseline του φρουρού `property-display-area` (4 στο `useSalesPropertiesViewerState.ts`, 1 στο ai-pipeline
+`property-search-query.ts`), και **ένα** άθροισμα που ανακάτευε είδη (`PropertiesTabContent`: `Σ propertyDisplayArea` =
+μικτό όπου υπήρχε, αλλιώς καθαρό). Κανένα δεύτερο SSoT· το `resolveGrossBasisArea` υπήρχε ήδη.
+
+**1 — Πωλήσεις (`useSalesPropertiesViewerState`) → `resolveGrossBasisArea`:**
+- **Πύλη Διαθέσιμα/Πωληθέντα**: το `gross ?? area` έδινε `0` όταν το μικτό ήταν `0` ⇒ η μονάδα έλειπε ακόμη κι όταν υπήρχε
+  έγκυρο παλιό `area`. Τώρα `0` = «δεν μετρήθηκε» και η αλυσίδα προχωρά. **Απόφαση Giorgio (Idealista: τα *construidos*
+  είναι υποχρεωτικά για δημοσίευση):** μονάδα με **μόνο καθαρό** μένει **εκτός** των σελίδων πωλήσεων — το
+  `SalesDashboardRequirementsAlert` λέει ήδη «λείπει μικτό εμβαδόν». Ο κανόνας του `isDisplayableInSalesDashboard` **δεν** άλλαξε.
+- **Φίλτρο εύρους εμβαδού**: κρίνεται η βάση σύγκρισης· μονάδα **χωρίς** αυτήν φεύγει από ενεργό εύρος (κανόνας SQL, ίδιος
+  με το `matchesPriceRange`). Πριν: `?? 0` ⇒ περνούσε σιωπηλά κάθε «μέγιστο».
+- **Σύνολα / €/m²** (`totalPriceByRole`): ίδια βάση· η κάλυψη (`measuredCount`) υπήρχε ήδη.
+
+**2 — ai-pipeline UC-003 (`property-search-query.ts`):** `resolveGrossBasisArea(data)` πάνω στο ωμό έγγραφο (ανεκτικός
+αναγνώστης). Το `0` μένει **μόνο** ως «δεν μετρήθηκε» για τον υπάρχοντα έλεγχο `> 0` του ταιριάσματος και του email.
+
+**3 — «Συν. Εμβαδόν» καρτέλας Μονάδων κτιρίου → υποσύνολα ΑΝΑ ΕΙΔΟΣ.** Τι κάνουν οι μεγάλοι: **ArchiCAD** (Zone schedule)
+— στήλη *Gross* και στήλη *Net*, η καθεμιά με το **δικό της** σύνολο· **Revit** — κάθε πίνακας εμβαδών ανήκει σε **ένα**
+*Area Scheme* και δεν αθροίζει σχήματα. Κανείς δεν βγάζει έναν αριθμό από ανάμεικτα είδη. Εδώ, ένα βήμα πιο πέρα: η κάρτα
+λέει **και την κάλυψη** κάθε υποσυνόλου (Revit *«Title, count, and totals»*, το σχήμα του `priceTotalsView` §8.60.14.13):
+- `lib/properties/area-totals.ts` — `totalAreaByKind(items)` → `{ byKind: Record<DisplayAreaKind, {total, measuredCount}>,
+  unmeasuredCount }`. Δίδυμο του `price-totals.ts`. Διαβάζει **μόνο** μέσω του `measuredAreasOf` (πρώην ιδιωτικό
+  `measuredOf` του `property-display-area.ts`, εξήχθη — **ένας** αναγνώστης). Οι κλάσεις **δεν** είναι διαμέριση: μονάδα με
+  μικτό και καθαρό μετρά και στις δύο (δύο στήλες)· το παλιό `area` μετρά ως `unspecified` **μόνο** χωρίς μικτό (αλλού
+  είναι καθρέφτης ⇒ θα διπλομετρούσε) και **δεν** βαφτίζεται «μικτά».
+- `display-area-label.ts` — `areaTotalsView(t, totals)`: ένα είδος χωρίς απουσίες ⇒ «1.450 m² μικτά» (με το είδος, §8.100)·
+  αλλιώς υποσύνολα «Μικτά · 12 ακίνητα: 1.450 m²» · «Καθαρά · 14 ακίνητα: 1.280 m²» · «Χωρίς δηλωμένο είδος εμβαδού · 1» ·
+  «Χωρίς καταγεγραμμένο εμβαδόν · 2» (χωρίς τιμή). Τίποτα ⇒ «—», ποτέ «0 m²». Κλειδιά `common:areaSection.*` (el/en,
+  πληθυντικός ICU), κυριολεκτικά (CHECK 3.34 F/G).
+- **Η κάρτα γενικεύτηκε — ΕΝΑΣ ζωγράφος, όχι δεύτερος:** το σχήμα των υποσυνόλων ήταν δεμένο στην τιμή
+  (`PriceTotalsRow.key: PriceClass` · prop `priceBreakdown` · `components/shared/price-totals/PriceTotalsBreakdown`). Τώρα:
+  `types/stat-breakdown.ts` (`StatBreakdownRow` · `StatBreakdownView` · `EMPTY_STAT_VALUE`) · prop **`breakdown`** στα
+  `StatsCard` / `UnifiedDashboard` / `ReportKPIGrid` · component `components/shared/stat-breakdown/StatBreakdown.tsx`
+  (git mv). Το `PriceTotalsRow` **επεκτείνει** το γενικό με `key: PriceClass` (η τιμή κρατά τον κλειστό της κατάλογο)·
+  `NO_PRICE_TOTAL = EMPTY_STAT_VALUE`· `priceTotalsSentence` δέχεται κάθε `StatBreakdownView`. Οι καλούντες του
+  `priceTotalsView` κάνουν spread ⇒ **κανένας** δεν άλλαξε.
+- **Παρενέργεια στα παραγόμενα i18n (σωστή):** ο αναλυτής του κελύφους ακολουθεί και `import type`. Το
+  `PriceTotalsBreakdown` εισήγαγε τύπο από το `listing-price-label` ⇒ κάθε σελίδα με `StatsCard` (π.χ. `AccountingDashboard`)
+  «κληρονομούσε» κλειδιά τιμής και namespaces `common-*` που **δεν** καλούσε. Το `StatBreakdown` εισάγει μόνο το
+  `types/stat-breakdown` ⇒ οι εγγραφές έφυγαν από `lazy-route-namespaces.json` / `shell-slice.manifest.json`. Όποια σελίδα
+  καλεί `priceTotalsView` εισάγει η ίδια το `listing-price-label`.
+
+**Φρουρός:** η baseline του `property-display-area` **μηδενίστηκε** (στοχευμένη αφαίρεση 2 εγγραφών, 123 → 118 / 94 → 92 —
+όχι πλήρες `ssot:baseline`, που θα απορροφούσε ξένες παραβιάσεις).
+
+**Άγκυρες:** `area-totals.test.ts` (Σ1 δύο στήλες · το ζωντανό σφάλμα: μικτό 0 + καθαρό ΔΕΝ μπαίνει στα «μικτά» · Σ2 άγνωστη
+βάση χωριστή, απουσία ονομασμένη, ανεκτικός αναγνώστης · Σ3 μία κλάση ⇒ μέγεθος με είδος, «—» · Σ4 σειρά υποσυνόλων ·
+Σ5 κλειδιά el/en με πληθυντικό) · `stat-breakdown.test.tsx` (πρώην `price-totals-breakdown.test.tsx`) ·
+`price-totals-view.test.ts` (πεδίο `breakdown`).
+
+**Εκτός (χωριστή μελέτη, ΔΕΝ αγγίχθηκαν):** `cost-engine` · `floor-helpers` · `multi-level.service` · `property-form-sync` ·
+`PropertyFieldsEditForm:390` · report-engine · φίλτρο αγγελιών στο `areaSqm` · `energy-certificate-import` (συγκρίνει το
+εμβαδόν του ΠΕΑ — θερμαινόμενη επιφάνεια — με το `propertyDisplayArea`, δηλαδή μικτό **ή** καθαρό) · στήλη εμβαδού
+`property-tab-columns.tsx` (αριθμός χωρίς είδος).

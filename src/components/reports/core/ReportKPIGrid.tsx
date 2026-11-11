@@ -22,8 +22,9 @@ import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 import { ReportSparkline } from "./ReportSparkline";
 import { ReportTrafficLight, type RAGStatus } from "./ReportTrafficLight";
-import { PriceTotalsBreakdown } from "@/components/shared/price-totals/PriceTotalsBreakdown";
-import { priceTotalsSentence, type PriceTotalsRow } from "@/lib/listings/listing-price-label";
+import { StatBreakdown } from "@/components/shared/stat-breakdown/StatBreakdown";
+import { priceTotalsSentence } from "@/lib/listings/listing-price-label";
+import type { StatBreakdownRow } from "@/types/stat-breakdown";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,10 +36,10 @@ export interface ReportKPI {
   /** Display value (pre-formatted string or number) */
   value: string | number;
   /**
-   * Υποσύνολα τιμής ανά ρόλο (ADR-777 §8.60.14.13) — όταν έχει γραμμές, αντικαθιστά το
-   * `value`. Το παράγει **μόνο** το `priceTotalsView`, μαζί με το `value`.
+   * Υποσύνολα — τιμή ανά ρόλο (ADR-777 §8.60.14.13) · εμβαδόν ανά είδος (§8.101). Όταν έχει γραμμές, αντικαθιστά
+   * το `value`. Τα παράγουν **μόνο** το `priceTotalsView` / `areaTotalsView`, μαζί με το `value`.
    */
-  priceBreakdown?: readonly PriceTotalsRow[];
+  breakdown?: readonly StatBreakdownRow[];
   /** Optional description */
   description?: string;
   /** Tooltip explanation shown via info icon next to the title */
@@ -125,7 +126,7 @@ const ICON_BG_MAP: Record<string, string> = {
 
 /** Η τιμή ως κείμενο για τον αναγνώστη οθόνης — τα υποσύνολα γραμμή-γραμμή, ποτέ άθροισμα. */
 function kpiValueText(kpi: ReportKPI): string {
-  return priceTotalsSentence({ value: String(kpi.value), priceBreakdown: kpi.priceBreakdown ?? [] });
+  return priceTotalsSentence({ value: String(kpi.value), breakdown: kpi.breakdown ?? [] });
 }
 
 function KPICard({
@@ -226,8 +227,8 @@ function KPICard({
 
           {/* Value + Sparkline */}
           <div className="flex items-end justify-between">
-            {kpi.priceBreakdown && kpi.priceBreakdown.length > 0 ? (
-              <PriceTotalsBreakdown rows={kpi.priceBreakdown} valueClassName={colors.text.primary} />
+            {kpi.breakdown && kpi.breakdown.length > 0 ? (
+              <StatBreakdown rows={kpi.breakdown} valueClassName={colors.text.primary} />
             ) : (
               <span
                 className={cn(

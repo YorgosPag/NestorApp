@@ -1071,6 +1071,12 @@
     },
     "qualified": "{text} {basis}"
   },
+  "areaSection": {
+    "gross": "Gross · {count, plural, one {# property} other {# properties}}",
+    "net": "Net · {count, plural, one {# property} other {# properties}}",
+    "unspecified": "Area type not stated · {count, plural, one {# property} other {# properties}}",
+    "unmeasured": "No recorded area · {count, plural, one {# property} other {# properties}}"
+  },
   "commercialCard": {
     "title": "Availability & price",
     "transactionLocked": "A reservation, sale or lease holds this availability — it changes only from Sales."

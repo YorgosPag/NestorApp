@@ -22,7 +22,8 @@ import type { Property, PropertyType } from '@/types/property';
 import { UnitQuickCreateSheet } from '../dialogs/UnitQuickCreateSheet';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, BuildingSpaceViewSwitch, useSpaceTableExport } from '../shared';
-import { propertyDisplayArea } from '@/lib/properties/property-display-area';
+import { totalAreaByKind } from '@/lib/properties/area-totals';
+import { areaTotalsView } from '@/lib/properties/display-area-label';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
 import type { LinkableItem } from '../shared';
 import { usePropertyTabColumns, usePropertyTabCardFields, renderUnitStatusBadge } from './property-tab-columns';
@@ -154,7 +155,8 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
     available: units.filter(u => isListedCommercialStatus(resolveCommercialStatus(u))).length,
     // ADR-777 Α5/Α6 + §8.60.14.13 — the price SSoT, PER ROLE (never one sum across units).
     priceTotals: totalPriceByRole(units),
-    totalArea: units.reduce((sum, u) => sum + (propertyDisplayArea(u) ?? 0), 0),
+    // ADR-777 §8.101 — υποσύνολο ΑΝΑ ΕΙΔΟΣ (ArchiCAD: στήλη Gross + στήλη Net)· ποτέ ένα άθροισμα από μικτά ΚΑΙ καθαρά.
+    areaTotals: totalAreaByKind(units),
   }), [units]);
 
   const filteredUnits = useMemo(() => {
@@ -173,7 +175,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
     { title: t('unitStats.total'), value: stats.total, icon: Home, color: 'blue' },
     { title: t('unitStats.available'), value: stats.available, icon: CheckCircle, color: 'green' },
     { title: t('unitStats.totalValue'), ...priceTotalsView(t, stats.priceTotals, 'total'), icon: Euro, color: 'gray' },
-    { title: t('unitStats.totalArea'), value: `${stats.totalArea.toFixed(1)} m²`, icon: Ruler, color: 'blue' },
+    { title: t('unitStats.totalArea'), ...areaTotalsView(t, stats.areaTotals), icon: Ruler, color: 'blue' },
   ], [stats, t]);
 
   const handleCreateSuccess = useCallback(async () => {

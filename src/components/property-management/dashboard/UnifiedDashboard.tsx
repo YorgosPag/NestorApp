@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { StatsCard } from './StatsCard';
-import type { PriceTotalsRow } from '@/lib/listings/listing-price-label';
+import type { StatBreakdownRow } from '@/types/stat-breakdown';
 // 🏢 ENTERPRISE: Centralized layout classes
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -13,8 +13,8 @@ interface DashboardStat {
   title: string;
   value: string | number;
   description?: string;
-  /** Υποσύνολα τιμής ανά ρόλο — δες `StatsCard.priceBreakdown` (ADR-777 §8.60.14.13). */
-  priceBreakdown?: readonly PriceTotalsRow[];
+  /** Υποσύνολα (τιμή ανά ρόλο · εμβαδόν ανά είδος) — δες `StatsCard.breakdown` (ADR-777 §8.60.14.13 · §8.101). */
+  breakdown?: readonly StatBreakdownRow[];
   icon: React.ElementType;
   color?: 'blue' | 'green' | 'purple' | 'orange' | 'cyan' | 'pink' | 'gray' | 'red' | 'yellow' | 'indigo';
   trend?: {
@@ -101,7 +101,7 @@ export function UnifiedDashboard({
             icon={stat.icon}
             color={stat.color || 'blue'}
             description={stat.description}
-            priceBreakdown={stat.priceBreakdown}
+            breakdown={stat.breakdown}
             loading={stat.loading}
             pressed={stat.pressed}
             onClick={stat.onActivate ?? (onCardClick ? () => onCardClick(stat, index) : undefined)}

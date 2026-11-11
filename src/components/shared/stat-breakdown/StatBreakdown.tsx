@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * @fileoverview **Υποσύνολα τιμής ανά ρόλο, μέσα σε κάρτα στατιστικού** (ADR-777 §8.60.14.13).
- * @module components/shared/price-totals/PriceTotalsBreakdown
+ * @fileoverview **Υποσύνολα μέσα σε κάρτα στατιστικού** — τιμή ανά ρόλο (ADR-777 §8.60.14.13) · εμβαδόν ανά είδος (§8.101).
+ * @module components/shared/stat-breakdown/StatBreakdown
  *
- * Ζωγραφίζει ό,τι αποφάσισε το `priceTotalsView` — **καμία** κρίση εδώ: ούτε ποιες κλάσεις,
- * ούτε σειρά, ούτε μορφή ποσού. Κοινό για το `StatsCard` (πίνακες ελέγχου) **και** το
+ * Ζωγραφίζει ό,τι αποφάσισε το `priceTotalsView` ή το `areaTotalsView` — **καμία** κρίση εδώ: ούτε ποιες κλάσεις,
+ * ούτε σειρά, ούτε μορφή μεγέθους. Ως τις 2026-11-11 λεγόταν `PriceTotalsBreakdown` (`components/shared/price-totals/`)
+ * και δεχόταν μόνο κλάσεις τιμής — το εμβαδόν δεν είχε πού να πάει (§8.101). Κοινό για το `StatsCard` (πίνακες ελέγχου) **και** το
  * `ReportKPIGrid` (αναφορές): δύο αντίγραφα της ίδιας λίστας θα ήταν δίδυμο (N.18).
  *
  * 🔑 `<dl>`: ζεύγη «όρος → τιμή» είναι ακριβώς αυτό που δηλώνει ο αναγνώστης οθόνης.
@@ -15,16 +16,16 @@
  */
 
 import { cn } from '@/lib/utils';
-import type { PriceTotalsRow } from '@/lib/listings/listing-price-label';
+import type { StatBreakdownRow } from '@/types/stat-breakdown';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-interface PriceTotalsBreakdownProps {
-  readonly rows: readonly PriceTotalsRow[];
+interface StatBreakdownProps {
+  readonly rows: readonly StatBreakdownRow[];
   /** Το χρώμα του ποσού — το αποφασίζει η κάρτα που φιλοξενεί τη λίστα. */
   readonly valueClassName?: string;
 }
 
-export function PriceTotalsBreakdown({ rows, valueClassName }: PriceTotalsBreakdownProps) {
+export function StatBreakdown({ rows, valueClassName }: StatBreakdownProps) {
   const colors = useSemanticColors();
 
   return (

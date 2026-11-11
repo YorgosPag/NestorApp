@@ -54,14 +54,19 @@ export interface GrossBasisArea extends DisplayArea {
   readonly kind: GrossBasisAreaKind;
 }
 
-interface MeasuredAreas {
+/** Τα τρία μετρημένα εμβαδά μιας πηγής, **ανεξάρτητα** — `null` για ό,τι δεν μετρήθηκε. */
+export interface MeasuredAreas {
   readonly gross: number | null;
   readonly net: number | null;
   readonly legacy: number | null;
 }
 
-/** Τα μετρημένα εμβαδά μιας πηγής — `null` για ό,τι δεν μετρήθηκε (`0` · άκυρο · απόν). */
-function measuredOf(source: DisplayAreaSource): MeasuredAreas {
+/**
+ * Τα μετρημένα εμβαδά μιας πηγής — `null` για ό,τι δεν μετρήθηκε (`0` · άκυρο · απόν). Ο **ΕΝΑΣ** αναγνώστης: τον
+ * διαβάζουν οι δύο επιλυτές εδώ **και** τα σύνολα ανά είδος (`area-totals.ts`), που χρειάζονται μικτό **και** καθαρό
+ * της ίδιας μονάδας (ArchiCAD: δύο στήλες, όχι αλυσίδα).
+ */
+export function measuredAreasOf(source: DisplayAreaSource): MeasuredAreas {
   const areas = isPlainRecord(source.areas) ? source.areas : {};
   return {
     gross: measuredAreaOrNull(areas.gross),
@@ -76,7 +81,7 @@ function measuredOf(source: DisplayAreaSource): MeasuredAreas {
  * ⚠️ Για **οθόνη** ανθρώπου. Ό,τι συγκρίνεται ή υπολογίζεται ⇒ {@link resolveGrossBasisArea}.
  */
 export function resolveDisplayArea(source: DisplayAreaSource): DisplayArea | null {
-  const { gross, net, legacy } = measuredOf(source);
+  const { gross, net, legacy } = measuredAreasOf(source);
   if (gross !== null) return { value: gross, kind: 'gross' };
   if (net !== null) return { value: net, kind: 'net' };
   return legacy === null ? null : { value: legacy, kind: 'unspecified' };
@@ -88,7 +93,7 @@ export function resolveDisplayArea(source: DisplayAreaSource): DisplayArea | nul
  * το ταίριασμα ζήτησης — ένα καθαρό εκεί αλλάζει σιωπηλά τη βάση **κάθε** σύγκρισης.
  */
 export function resolveGrossBasisArea(source: DisplayAreaSource): GrossBasisArea | null {
-  const { gross, legacy } = measuredOf(source);
+  const { gross, legacy } = measuredAreasOf(source);
   if (gross !== null) return { value: gross, kind: 'gross' };
   return legacy === null ? null : { value: legacy, kind: 'unspecified' };
 }

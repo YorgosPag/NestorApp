@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "968c041b09f7104f8552d4679540ca4390fd1d0b926b12e8e4bddf5559e86758",
+    "src/i18n/generated/lazy-route-namespaces.json": "c53995b196892ef3ce5c63ca71f46f185cd217ee937d78787d719cbb1068ff4f",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -125,7 +125,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "4598777ac9f7a30c7cb60484e338171f3ff0ea60b468b3fda4a13875ae86d3e0",
+    "src/i18n/generated/shell-slice.el.json": "6e2f0364bf9d4acf05eb092d26eb58ed1fc5be8be4df6cbfa8399816fe799ceb",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4972aa756bb42189e78c05e94ad6f3d92a3c42fd75e3d0e0183dc38824dc31f5",
+  "inputsSha256": "0733185d296e69400cc8fbac680fb4facd5c6a3d63e3283820989e0ac89edceb",
   "languages": [
     "el"
   ],
@@ -325,6 +325,10 @@
         },
         "common": {
           "keys": [
+            "areaSection.gross",
+            "areaSection.net",
+            "areaSection.unmeasured",
+            "areaSection.unspecified",
             "common.loading",
             "displayArea.basis.gross",
             "displayArea.basis.net",
@@ -2029,25 +2033,6 @@
     "document-request": {
       "page": "src/app/(auth)/document-request/page.tsx",
       "wants": {
-        "common": {
-          "keys": [
-            "priceAmount.nightly",
-            "priceAmount.rent",
-            "priceAmount.sale",
-            "priceAmount.stayTotal",
-            "pricePerArea.nightly",
-            "pricePerArea.rent",
-            "pricePerArea.sale",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced",
-            "priceStanding.offMarket",
-            "priceStanding.retired"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "conveyance": {
           "keys": [
             "items.energy_certificate.label",
@@ -2145,16 +2130,6 @@
             "licences.energyInspector.name",
             "registries.regionalAuthority.name",
             "registries.ypen.name"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "search-results": {
-          "keys": [
-            "listing.priceMissing.nightlyRateMissing",
-            "listing.priceMissing.notListed",
-            "listing.priceMissing.rentPriceMissing",
-            "listing.priceMissing.salePriceMissing"
           ],
           "prefixes": [],
           "whole": false
@@ -3976,6 +3951,10 @@
       "wants": {
         "common": {
           "keys": [
+            "areaSection.gross",
+            "areaSection.net",
+            "areaSection.unmeasured",
+            "areaSection.unspecified",
             "displayArea.basis.gross",
             "displayArea.basis.net",
             "displayArea.qualified",
@@ -13273,20 +13252,7 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm",
-            "priceAmount.nightly",
-            "priceAmount.rent",
-            "priceAmount.sale",
-            "priceAmount.stayTotal",
-            "pricePerArea.nightly",
-            "pricePerArea.rent",
-            "pricePerArea.sale",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced",
-            "priceStanding.offMarket",
-            "priceStanding.retired"
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -13655,16 +13621,6 @@
             "licences.energyInspector.name",
             "registries.regionalAuthority.name",
             "registries.ypen.name"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "search-results": {
-          "keys": [
-            "listing.priceMissing.nightlyRateMissing",
-            "listing.priceMissing.notListed",
-            "listing.priceMissing.rentPriceMissing",
-            "listing.priceMissing.salePriceMissing"
           ],
           "prefixes": [],
           "whole": false
@@ -14394,19 +14350,6 @@
             "placeholders.searchBuildings",
             "placeholders.searchContacts",
             "placeholders.searchProjects",
-            "priceAmount.nightly",
-            "priceAmount.rent",
-            "priceAmount.sale",
-            "priceAmount.stayTotal",
-            "pricePerArea.nightly",
-            "pricePerArea.rent",
-            "pricePerArea.sale",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced",
-            "priceStanding.offMarket",
-            "priceStanding.retired",
             "tasks.quickFilters.ariaLabel",
             "toolbar.search.placeholder",
             "toolbar.ui.clearAllCount",
@@ -16229,16 +16172,6 @@
           ],
           "prefixes": [],
           "whole": false
-        },
-        "search-results": {
-          "keys": [
-            "listing.priceMissing.nightlyRateMissing",
-            "listing.priceMissing.notListed",
-            "listing.priceMissing.rentPriceMissing",
-            "listing.priceMissing.salePriceMissing"
-          ],
-          "prefixes": [],
-          "whole": false
         }
       }
     },
@@ -16517,19 +16450,6 @@
             "placeholders.searchBuildings",
             "placeholders.searchContacts",
             "placeholders.searchProjects",
-            "priceAmount.nightly",
-            "priceAmount.rent",
-            "priceAmount.sale",
-            "priceAmount.stayTotal",
-            "pricePerArea.nightly",
-            "pricePerArea.rent",
-            "pricePerArea.sale",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced",
-            "priceStanding.offMarket",
-            "priceStanding.retired",
             "tasks.quickFilters.ariaLabel",
             "toolbar.search.placeholder",
             "toolbar.ui.clearAllCount",
@@ -18294,16 +18214,6 @@
           "prefixes": [],
           "whole": false
         },
-        "search-results": {
-          "keys": [
-            "listing.priceMissing.nightlyRateMissing",
-            "listing.priceMissing.notListed",
-            "listing.priceMissing.rentPriceMissing",
-            "listing.priceMissing.salePriceMissing"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "uom": {
           "keys": [],
           "prefixes": [
@@ -18459,19 +18369,6 @@
             "placeholders.searchBuildings",
             "placeholders.searchContacts",
             "placeholders.searchProjects",
-            "priceAmount.nightly",
-            "priceAmount.rent",
-            "priceAmount.sale",
-            "priceAmount.stayTotal",
-            "pricePerArea.nightly",
-            "pricePerArea.rent",
-            "pricePerArea.sale",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced",
-            "priceStanding.offMarket",
-            "priceStanding.retired",
             "tasks.quickFilters.ariaLabel",
             "toolbar.search.placeholder",
             "toolbar.ui.clearAllCount",
@@ -20242,16 +20139,6 @@
           "prefixes": [],
           "whole": false
         },
-        "search-results": {
-          "keys": [
-            "listing.priceMissing.nightlyRateMissing",
-            "listing.priceMissing.notListed",
-            "listing.priceMissing.rentPriceMissing",
-            "listing.priceMissing.salePriceMissing"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "uom": {
           "keys": [],
           "prefixes": [
@@ -20400,19 +20287,6 @@
             "placeholders.searchBuildings",
             "placeholders.searchContacts",
             "placeholders.searchProjects",
-            "priceAmount.nightly",
-            "priceAmount.rent",
-            "priceAmount.sale",
-            "priceAmount.stayTotal",
-            "pricePerArea.nightly",
-            "pricePerArea.rent",
-            "pricePerArea.sale",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced",
-            "priceStanding.offMarket",
-            "priceStanding.retired",
             "quotes.vendorAddresseeFallback",
             "quotes.vendorUnknown",
             "quotes.vendorUnknownWithQuote",
@@ -22633,16 +22507,6 @@
             "rfqs.scan.stage",
             "trades"
           ],
-          "whole": false
-        },
-        "search-results": {
-          "keys": [
-            "listing.priceMissing.nightlyRateMissing",
-            "listing.priceMissing.notListed",
-            "listing.priceMissing.rentPriceMissing",
-            "listing.priceMissing.salePriceMissing"
-          ],
-          "prefixes": [],
           "whole": false
         },
         "uom": {
@@ -26255,19 +26119,6 @@
             "placeholders.searchBuildings",
             "placeholders.searchContacts",
             "placeholders.searchProjects",
-            "priceAmount.nightly",
-            "priceAmount.rent",
-            "priceAmount.sale",
-            "priceAmount.stayTotal",
-            "pricePerArea.nightly",
-            "pricePerArea.rent",
-            "pricePerArea.sale",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced",
-            "priceStanding.offMarket",
-            "priceStanding.retired",
             "tasks.quickFilters.ariaLabel",
             "toolbar.search.placeholder",
             "toolbar.ui.clearAllCount",
@@ -27870,16 +27721,6 @@
             "vatConfig.labels.reduced_13",
             "vatConfig.labels.standard_24",
             "vatConfig.labels.super_reduced_6"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "search-results": {
-          "keys": [
-            "listing.priceMissing.nightlyRateMissing",
-            "listing.priceMissing.notListed",
-            "listing.priceMissing.rentPriceMissing",
-            "listing.priceMissing.salePriceMissing"
           ],
           "prefixes": [],
           "whole": false
@@ -29895,19 +29736,6 @@
             "placeholders.searchBuildings",
             "placeholders.searchContacts",
             "placeholders.searchProjects",
-            "priceAmount.nightly",
-            "priceAmount.rent",
-            "priceAmount.sale",
-            "priceAmount.stayTotal",
-            "pricePerArea.nightly",
-            "pricePerArea.rent",
-            "pricePerArea.sale",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced",
-            "priceStanding.offMarket",
-            "priceStanding.retired",
             "probability",
             "protocol",
             "quotes.vendorAddresseeFallback",
@@ -34888,16 +34716,6 @@
           ],
           "whole": false
         },
-        "search-results": {
-          "keys": [
-            "listing.priceMissing.nightlyRateMissing",
-            "listing.priceMissing.notListed",
-            "listing.priceMissing.rentPriceMissing",
-            "listing.priceMissing.salePriceMissing"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "uom": {
           "keys": [],
           "prefixes": [
@@ -38115,6 +37933,10 @@
       "wants": {
         "common": {
           "keys": [
+            "areaSection.gross",
+            "areaSection.net",
+            "areaSection.unmeasured",
+            "areaSection.unspecified",
             "buttons.close",
             "common.loading",
             "displayArea.basis.gross",
@@ -38923,6 +38745,10 @@
       "wants": {
         "common": {
           "keys": [
+            "areaSection.gross",
+            "areaSection.net",
+            "areaSection.unmeasured",
+            "areaSection.unspecified",
             "common.loading",
             "displayArea.basis.gross",
             "displayArea.basis.net",
@@ -39039,6 +38865,10 @@
       "wants": {
         "common": {
           "keys": [
+            "areaSection.gross",
+            "areaSection.net",
+            "areaSection.unmeasured",
+            "areaSection.unspecified",
             "buttons.close",
             "common.loading",
             "displayArea.basis.gross",
@@ -39488,6 +39318,10 @@
       "wants": {
         "common": {
           "keys": [
+            "areaSection.gross",
+            "areaSection.net",
+            "areaSection.unmeasured",
+            "areaSection.unspecified",
             "common.loading",
             "displayArea.basis.gross",
             "displayArea.basis.net",
@@ -40803,7 +40637,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1318522
+    "sliceBytes": 1319035
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -41249,6 +41083,10 @@
         "aiInbox",
         "appUpdate.message",
         "appUpdate.reload",
+        "areaSection.gross",
+        "areaSection.net",
+        "areaSection.unmeasured",
+        "areaSection.unspecified",
         "auditLog",
         "backup",
         "bimDiagnostics",

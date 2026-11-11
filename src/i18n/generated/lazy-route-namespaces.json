@@ -131,17 +131,7 @@
   "AccountingDashboard": [
     "accounting",
     "accounting-setup",
-    "accounting-tax-offices",
-    "common",
-    "common-account",
-    "common-actions",
-    "common-empty-states",
-    "common-navigation",
-    "common-photos",
-    "common-sales",
-    "common-shared",
-    "common-status",
-    "common-validation"
+    "accounting-tax-offices"
   ],
   "AccountingDocuments": [
     "accounting",
@@ -989,16 +979,6 @@
     "uom"
   ],
   "EmailAnalytics": [
-    "common",
-    "common-account",
-    "common-actions",
-    "common-empty-states",
-    "common-navigation",
-    "common-photos",
-    "common-sales",
-    "common-shared",
-    "common-status",
-    "common-validation",
     "crm",
     "crm-inbox"
   ],
@@ -1976,17 +1956,7 @@
     "accounting-public-payment"
   ],
   "SpacesCommon": [
-    "common",
-    "common-account",
-    "common-actions",
-    "common-empty-states",
-    "common-navigation",
-    "common-photos",
-    "common-sales",
-    "common-shared",
-    "common-spaces",
-    "common-status",
-    "common-validation"
+    "common-spaces"
   ],
   "SpacesHub": [
     "common",

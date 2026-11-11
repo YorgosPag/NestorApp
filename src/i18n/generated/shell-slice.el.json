@@ -1344,6 +1344,12 @@
       "message": "Κυκλοφόρησε νέα έκδοση της εφαρμογής. Αποθηκεύστε τις αλλαγές σας και ανανεώστε τη σελίδα.",
       "reload": "Ανανέωση"
     },
+    "areaSection": {
+      "gross": "Μικτά · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
+      "net": "Καθαρά · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
+      "unmeasured": "Χωρίς καταγεγραμμένο εμβαδόν · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
+      "unspecified": "Χωρίς δηλωμένο είδος εμβαδού · {count, plural, one {# ακίνητο} other {# ακίνητα}}"
+    },
     "audit": {
       "actions": {
         "auto_submit_accepted": "Αυτόματη υποβολή εγκρίθηκε",

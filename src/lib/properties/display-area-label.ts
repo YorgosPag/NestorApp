@@ -1,6 +1,7 @@
 /**
  * @fileoverview **Το εμβαδόν που δείχνουμε → ΚΕΙΜΕΝΟ ΟΘΟΝΗΣ, με το είδος του.** Ένα σημείο (ADR-777 §8.100).
  * @related lib/properties/property-display-area.ts (τιμή + είδος) · lib/listings/listing-price-label.ts (€/m²) ·
+ *   lib/properties/area-totals.ts (σύνολα ανά είδος → {@link areaTotalsView}) ·
  *   lib/listings/listing-area-label.ts (η ίδια ετικέτα στη μονάδα της δημόσιας αγγελίας)
  * @module lib/properties/display-area-label
  *
@@ -29,6 +30,8 @@ import {
 } from '@/lib/listings/listing-price-label';
 import type { ResolvedPrice } from '@/lib/properties/price-resolver';
 import type { DisplayArea, DisplayAreaKind } from '@/lib/properties/property-display-area';
+import { AREA_TOTAL_KINDS, type AreaTotalsByKind } from '@/lib/properties/area-totals';
+import { EMPTY_STAT_VALUE, type StatBreakdownRow, type StatBreakdownView } from '@/types/stat-breakdown';
 
 /** Η λέξη του είδους — `null` για το `unspecified` (η βάση δεν δηλώθηκε, άρα δεν τη λέμε). */
 function basisWord(t: PriceLabelT, kind: DisplayAreaKind): string | null {
@@ -82,4 +85,51 @@ export function pricePerDisplayAreaLabel(
   const amount = pricePerSqmAmount(price, area.value);
   if (amount === null) return null;
   return withStatedAreaBasis(t, pricePerAreaLabel(t, { role: price.role, amount }), area.kind);
+}
+
+// ============================================================================
+// ΣΥΝΟΛΑ ΑΝΑ ΕΙΔΟΣ → ΚΑΡΤΑ ΣΤΑΤΙΣΤΙΚΟΥ (ADR-777 §8.101)
+// ============================================================================
+
+/** Η κλάση μιας γραμμής υποσυνόλου εμβαδού — τα είδη, και η απουσία ως **κλάση** (τελευταία). */
+export type AreaTotalClass = DisplayAreaKind | 'unmeasured';
+
+/** «Μικτά · 12 ακίνητα» — κάθε κλειδί κυριολεκτικό (CHECK 3.34 G), όλα στο `common:` (CHECK 3.34 F). */
+function areaSectionLabel(t: PriceLabelT, heading: AreaTotalClass, count: number): string {
+  switch (heading) {
+    case 'gross':
+      return t('common:areaSection.gross', { count });
+    case 'net':
+      return t('common:areaSection.net', { count });
+    case 'unspecified':
+      return t('common:areaSection.unspecified', { count });
+    case 'unmeasured':
+      return t('common:areaSection.unmeasured', { count });
+  }
+}
+
+/**
+ * **Υποσύνολα εμβαδού ανά είδος → κάρτα στατιστικού.** Ο ΕΝΑΣ δρόμος για κάθε «Συνολικό Εμβαδόν».
+ *
+ * 🔑 Ίδιος κανόνας με το `priceTotalsView`: **ένα** είδος χωρίς απουσίες ⇒ ένα μέγεθος, **με το είδος του**
+ *    («1.450 m² μικτά» — η ετικέτα εδώ είναι η μόνη διάκριση, §8.100)· αλλιώς υποσύνολα, κάθε γραμμή με το πλήθος
+ *    της, και οι μονάδες χωρίς εμβαδόν **ονομασμένες** στο τέλος — ποτέ σιωπηλά έξω από τον αριθμό.
+ */
+export function areaTotalsView(t: PriceLabelT, totals: AreaTotalsByKind): StatBreakdownView {
+  const present = AREA_TOTAL_KINDS.filter((kind) => totals.byKind[kind].measuredCount > 0);
+  if (present.length === 0) return { value: EMPTY_STAT_VALUE, breakdown: [] };
+  if (present.length === 1 && totals.unmeasuredCount === 0) {
+    const kind = present[0];
+    return { value: displayAreaLabel(t, { value: totals.byKind[kind].total, kind }), breakdown: [] };
+  }
+
+  const rows: StatBreakdownRow[] = present.map((kind) => ({
+    key: kind,
+    label: areaSectionLabel(t, kind, totals.byKind[kind].measuredCount),
+    value: t('common:displayArea.sqm', { value: formatAreaValue(totals.byKind[kind].total) }),
+  }));
+  if (totals.unmeasuredCount > 0) {
+    rows.push({ key: 'unmeasured', label: areaSectionLabel(t, 'unmeasured', totals.unmeasuredCount), value: null });
+  }
+  return { value: '', breakdown: rows };
 }

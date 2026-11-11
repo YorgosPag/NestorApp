@@ -12,6 +12,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { isRetired } from '@/lib/firestore/trashed-status';
 import { arePropertyTypesEquivalent } from '@/constants/property-type-aliases';
 import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
+import { resolveGrossBasisArea } from '@/lib/properties/property-display-area';
 import type { PropertySearchCriteria } from '@/services/property-search.service';
 import type { ContactMatch } from '../../shared/contact-lookup';
 
@@ -97,8 +98,9 @@ export async function queryAvailableUnits(
     if (EXCLUDED_STATUSES.has(status)) continue;
     if (operationalStatus && operationalStatus !== 'ready') continue;
 
-    const areas = data.areas as { gross?: number } | undefined;
-    const resolvedArea = (areas?.gross ?? data.area ?? 0) as number;
+    // ADR-777 §8.101 — η ΒΑΣΗ σύγκρισης (μικτό → παλιό `area`, ποτέ καθαρό), με τον ανεκτικό αναγνώστη
+    // πάνω στο ωμό έγγραφο. `0` εδώ = «δεν μετρήθηκε»: το ταίριασμα εύρους και η πρόταση το παραλείπουν (`> 0`).
+    const resolvedArea = resolveGrossBasisArea(data)?.value ?? 0;
     const layout = data.layout as { bedrooms?: number } | undefined;
 
     allAvailable.push({

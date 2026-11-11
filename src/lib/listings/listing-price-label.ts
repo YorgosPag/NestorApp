@@ -45,6 +45,7 @@ import {
   PRICE_STANDING_KEY,
 } from './listing-price-keys';
 import type { StayTotal } from './listing-stay-total';
+import { EMPTY_STAT_VALUE, type StatBreakdownRow, type StatBreakdownView } from '@/types/stat-breakdown';
 
 /**
  * Ό,τι χρειάζεται από το `t`: κλειδί + παράμετροι → κείμενο.
@@ -206,23 +207,21 @@ export type PriceTotalsMeasure = 'total' | 'average' | 'perArea';
  *
  * `value: null` ⇒ η κλάση **δεν έχει** ποσό (`'unpriced'`) — ονομάζεται, δεν μηδενίζεται.
  */
-export interface PriceTotalsRow {
+export interface PriceTotalsRow extends StatBreakdownRow {
   readonly key: PriceClass;
-  readonly label: string;
-  readonly value: string | null;
 }
 
 /**
  * Η απάντηση μιας κάρτας στατιστικού: **είτε** ένα ποσό **είτε** υποσύνολα — ποτέ και τα δύο.
  *
- * ⚠️ Τα ονόματα ταιριάζουν επίτηδες με το `DashboardStat` (`value` · `priceBreakdown`), ώστε
+ * ⚠️ Τα ονόματα ταιριάζουν επίτηδες με το `DashboardStat` (`value` · `breakdown`), ώστε
  * η σελίδα να γράφει `{ title, ...priceTotalsView(…), icon }` και να μη μεταφέρει πεδία.
  */
-export interface PriceTotalsView {
+export interface PriceTotalsView extends StatBreakdownView {
   /** Το ποσό της μίας κλάσης, ή `NO_PRICE_TOTAL`· κενό όταν μιλούν τα υποσύνολα. */
   readonly value: string;
   /** Κενό ⇔ **μία** κλάση: η επιγραφή δεν θα πρόσθετε τίποτα (ίδιος κανόνας με τα τμήματα λίστας). */
-  readonly priceBreakdown: readonly PriceTotalsRow[];
+  readonly breakdown: readonly PriceTotalsRow[];
 }
 
 /**
@@ -230,7 +229,7 @@ export interface PriceTotalsView {
  * Μετακόμισε εδώ από το `sales-stat-values` (`SALES_STAT_EMPTY`) όταν οι σελίδες πωλήσεων
  * πέρασαν σε υποσύνολα: ο κανόνας «μηδέν σημαίνει άγνωστο» ανήκει στα αθροίσματα, όχι στις πωλήσεις.
  */
-export const NO_PRICE_TOTAL = '—';
+export const NO_PRICE_TOTAL = EMPTY_STAT_VALUE;
 
 /** Το μέγεθος ενός ρόλου — `null` όταν αυτός ο ρόλος δεν το μετρά. */
 function measureOf(totals: PriceTotals, measure: PriceTotalsMeasure): { amount: number; count: number } | null {
@@ -275,9 +274,9 @@ export function priceTotalsView(
     });
   }
 
-  if (rows.length === 0) return { value: NO_PRICE_TOTAL, priceBreakdown: [] };
+  if (rows.length === 0) return { value: NO_PRICE_TOTAL, breakdown: [] };
   if (rows.length === 1 && totals.unpricedCount === 0) {
-    return { value: rows[0].value ?? NO_PRICE_TOTAL, priceBreakdown: [] };
+    return { value: rows[0].value ?? NO_PRICE_TOTAL, breakdown: [] };
   }
   if (totals.unpricedCount > 0) {
     rows.push({
@@ -286,16 +285,16 @@ export function priceTotalsView(
       value: null,
     });
   }
-  return { value: '', priceBreakdown: rows };
+  return { value: '', breakdown: rows };
 }
 
 /**
  * Τα υποσύνολα ως **μία πρόταση** — για `aria-label` και για επιφάνειες χωρίς διάταξη
  * γραμμών. Ποτέ άθροισμα: κάθε ποσό μένει στη γραμμή της κλάσης του.
  */
-export function priceTotalsSentence(view: PriceTotalsView): string {
-  if (view.priceBreakdown.length === 0) return view.value;
-  return view.priceBreakdown
+export function priceTotalsSentence(view: StatBreakdownView): string {
+  if (view.breakdown.length === 0) return view.value;
+  return view.breakdown
     .map((row) => (row.value === null ? row.label : `${row.label}: ${row.value}`))
     .join(' · ');
 }
