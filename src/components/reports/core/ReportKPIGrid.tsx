@@ -25,6 +25,7 @@ import { ReportTrafficLight, type RAGStatus } from "./ReportTrafficLight";
 import { StatBreakdown } from "@/components/shared/stat-breakdown/StatBreakdown";
 import { priceTotalsSentence } from "@/lib/listings/listing-price-label";
 import type { StatBreakdownRow } from "@/types/stat-breakdown";
+import { STAT_TONE_TEXT, type StatTone } from "@/design-system/stat-tone";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,18 +47,8 @@ export interface ReportKPI {
   tooltip?: string;
   /** Icon component */
   icon: React.ElementType;
-  /** Color accent */
-  color?:
-    | "blue"
-    | "green"
-    | "purple"
-    | "orange"
-    | "cyan"
-    | "pink"
-    | "gray"
-    | "red"
-    | "yellow"
-    | "indigo";
+  /** Color accent — ο ΕΝΑΣ κατάλογος τόνων κάρτας στατιστικού (`design-system/stat-tone`) */
+  color?: StatTone;
   /** Trend indicator */
   trend?: {
     /** Percentage change */
@@ -94,20 +85,9 @@ export interface ReportKPIGridProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const COLOR_MAP: Record<string, string> = {
-  blue: "text-primary",
-  green: "text-[hsl(var(--text-success))]",
-  purple: "text-primary",
-  orange: "text-[hsl(var(--text-warning))]",
-  cyan: "text-primary",
-  pink: "text-primary",
-  gray: "text-muted-foreground",
-  red: "text-destructive",
-  yellow: "text-[hsl(var(--text-warning))]",
-  indigo: "text-primary",
-};
-
-const ICON_BG_MAP: Record<string, string> = {
+// Μελάνι εικονιδίου: ο ΕΝΑΣ χάρτης `STAT_TONE_TEXT` (ADR-777 §8.101). Ο δίδυμος χάρτης που ζούσε εδώ έστελνε
+// 5 τόνους σε `text-primary` ⇒ αόρατα εικονίδια στο σκοτεινό θέμα (`--primary` ≡ `--card`, CHECK 3.38).
+const ICON_BG_MAP: Record<StatTone, string> = {
   blue: "bg-[hsl(var(--bg-info))]/20",
   green: "bg-[hsl(var(--bg-success))]/10",
   purple: "bg-accent",
@@ -211,7 +191,7 @@ function KPICard({
                   ICON_BG_MAP[color],
                 )}
               >
-                <Icon className={cn("h-4 w-4", COLOR_MAP[color])} />
+                <Icon className={cn("h-4 w-4", STAT_TONE_TEXT[color])} />
               </span>
               <span
                 className={cn("text-sm font-medium", colors.text.secondary)}

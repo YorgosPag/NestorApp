@@ -14,18 +14,10 @@ import '@/lib/design-system';
 import type { StatBreakdownRow } from '@/types/stat-breakdown';
 import { StatBreakdown } from '@/components/shared/stat-breakdown/StatBreakdown';
 
-/**
- * Ο ΚΛΕΙΣΤΟΣ κατάλογος χρωμάτων — ADR-770 §18. Ήταν `color: string` + `as keyof`, και
- * το `"teal"` (ανύπαρκτο κλειδί) προσγειώθηκε σε ΔΥΟ οθόνες ιστορικού βάφοντας την κλάση
- * `undefined`. Με union ο μεταγλωττιστής το αρνείται.
- *
- * 🔑 `gray` = ΟΥΔΕΤΕΡΗ κάρτα (ετικέτα/εικονίδιο muted, αριθμός foreground). Είναι η
- * προεπιλογή των μεγάλων (GitHub · Linear · Stripe): το χρώμα σε στατιστικό ΣΗΜΑΙΝΕΙ
- * κατάσταση, ποτέ ποικιλία.
- */
-export type StatsCardColor =
-  | 'blue' | 'gray' | 'green' | 'purple' | 'red' | 'orange'
-  | 'cyan' | 'pink' | 'yellow' | 'indigo';
+import { STAT_TONE_TEXT, type StatTone } from '@/design-system/stat-tone';
+
+/** Ο ΚΛΕΙΣΤΟΣ κατάλογος χρωμάτων — ο ΕΝΑΣ, στο `design-system/stat-tone` (ADR-770 §18). */
+export type StatsCardColor = StatTone;
 
 interface StatsCardProps {
     title: string;
@@ -53,24 +45,10 @@ export function StatsCard({ title, value, icon: Icon, color, onClick, loading, d
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
-    // Enterprise semantic color mapping (ONLY text colors - NO borders, NO backgrounds).
-    // ΕΝΑΣ χάρτης τόνου: ετικέτα + εικονίδιο τον παίρνουν αυτούσιο· ο αριθμός διαφέρει ΜΟΝΟ
-    // στην ουδέτερη κάρτα (μελάνι κειμένου αντί muted) — τρεις δίδυμοι χάρτες έκρυβαν αυτή τη μία διαφορά.
-    const toneClasses: Record<StatsCardColor, string> = {
-        blue: colors.text.info,
-        gray: colors.text.muted,
-        green: colors.text.success,
-        purple: colors.text.purple,
-        red: colors.text.danger,
-        orange: colors.text.warning,
-        cyan: colors.text.info,
-        pink: colors.text.purple,
-        yellow: colors.text.warning,
-        indigo: colors.text.info
-    };
-
+    // ΕΝΑΣ χάρτης τόνου (`STAT_TONE_TEXT`): ετικέτα + εικονίδιο τον παίρνουν αυτούσιο· ο αριθμός διαφέρει ΜΟΝΟ
+    // στην ουδέτερη κάρτα (μελάνι κειμένου αντί muted).
     const colorKey = color;
-    const toneClass = toneClasses[colorKey];
+    const toneClass = STAT_TONE_TEXT[colorKey];
     const valueToneClass = colorKey === 'gray' ? colors.text.primary : toneClass;
 
     return (

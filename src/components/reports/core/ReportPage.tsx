@@ -146,8 +146,8 @@ export function ReportPage({
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
           {Icon && (
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Icon className="h-5 w-5 text-primary" />
+            <span className={cn('flex h-10 w-10 items-center justify-center rounded-lg', colors.bg.info)}>
+              <Icon className={cn('h-5 w-5', colors.text.info)} />
             </span>
           )}
           <div>
