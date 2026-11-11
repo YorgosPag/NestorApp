@@ -1,0 +1,58 @@
+# Handoff: Κανάλια «Επικοινωνία με τον εκδότη» · Φάση 1 ΕΠΑΛΗΘΕΥΤΗΚΕ ΖΩΝΤΑΝΑ · Επόμενο: Φάση 2 (CRM «Γράψτε μας»)
+
+**Ημερομηνία:** 2026-11-12 · **Worktree:** `C:\Nestor_Worktrees\product-portal` · **Κλαδί:** `agent/product-portal`
+Προηγούμενα handoff (ίδια εργασία):
+- `HANDOFFS/2026-11-11_issuer-contact-channels_phase1-live-gap-found_telegram-incident_next-socialMedia-test-fix-phase2_handoff.md`
+- `HANDOFFS/2026-11-11_issuer-contact-channels_phase1-landed-pushed_next-live-verification-then-phase2_handoff.md` (§4 = σχέδιο Φάσης 2)
+
+## Κανόνες (Giorgio), αμετάβλητοι
+Κάθε βήμα μόνο με «ναι» · κανένα test χωρίς έγκριση · όχι tsc · πραγματικό SSoT grep πριν από κώδικα · έρευνα στο διαδίκτυο
+όπου δεν είσαι σίγουρος · ποιότητα «μεγάλων παικτών» και καλύτερα · commit μόνο σε `agent/*` με ρητή λίστα · ποτέ commit
+στο `main` · **wt:land και push ΜΟΝΟ με ρητή εντολή Giorgio** · ποτέ `--no-verify` / `SKIP_*` · ελληνικά · μην αγγίξεις
+αρχεία άλλων worktrees · **ΠΟΤΕ** μη ζητήσεις / επαναλάβεις / γράψεις tokens ή secrets.
+
+## 1. Κατάσταση
+- Κώδικας Φάσης 1 `49318674` (ADR-ACC-018 §16.1): στο `main` και στην παραγωγή.
+- Τοπικό `main` HEAD κατά τη σύνταξη: `9f93d3a8` (land του handoff `cad15857`). **Χωρίς push.**
+- Σε αυτή τη συνεδρία **δεν άλλαξε κανένα αρχείο κώδικα.**
+
+## 2. Ζωντανή επαλήθευση Φάσης 1: ΠΕΡΑΣΕ (2026-11-12, κινητό Giorgio)
+- Ο agent έγραψε (Chrome → Firebase Console, με εντολή Giorgio) στο **`companies/comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757`**
+  (`name` = «ΠΑΓΩΝΗΣ Ενεργειακή Κατασκευαστική Α.Ε.») το πεδίο `socialMedia` (array από maps `{platform, username}`):
+  viber `306974050023` · whatsapp `306974050023` · facebook `giorgio.pagoni` · telegram `SteFanoThess` · instagram `giorgio_pagoni`.
+  Είναι **προσωπικά δοκιμαστικά** στοιχεία του Giorgio (περίοδος ανάπτυξης· η πραγματική εταιρεία δεν έχει αποφασιστεί).
+  ⚠️ **ΔΙΟΡΘΩΣΗ** του προηγούμενου handoff: το `comp_01bf19bc-…` ΔΕΝ είναι η εταιρεία του Giorgio (demo seed).
+- Σελίδα Α-10: email + τηλέφωνο + **5 κουμπιά** (Viber, WhatsApp, Messenger, Telegram, Instagram), σωστή σειρά και εικονίδια,
+  χωρίς οριζόντια κύλιση. **Όλα ανοίγουν τη σωστή εφαρμογή.** Telegram: έτοιμο κείμενο «Καλησπέρα σας, επικοινωνώ σχετικά με
+  το παραστατικό Α-10.» σωστό· κατέληξε στα «Αποθηκευμένα» επειδή ο αποστολέας ήταν ο ίδιος λογαριασμός (αναμενόμενο).
+- **Ανοιχτό:** δοκιμή με **δεύτερο άνθρωπο/λογαριασμό** (το μήνυμα να φτάνει πραγματικά στον εκδότη).
+- **Παρατήρηση (δεν ελέγχθηκε, πρόταση μόνο):** στη δημόσια σελίδα `/shared/<token>` φαίνεται η μπάρα της εφαρμογής
+  (μενού, αναζήτηση, ειδοποιήσεις, avatar) όταν ο Giorgio είναι συνδεδεμένος. Έλεγχος σε ανώνυμη καρτέλα· αν φαίνεται και
+  σε επισκέπτη → θέμα συνόρου κελύφους (CHECK 3.52 / 3.63). Μόνο με «ναι».
+
+## 3. ΕΠΟΜΕΝΟ (απόφαση Giorgio 2026-11-12): Φάση 2, κανάλι CRM «Γράψτε μας» (Plan Mode)
+Το κουμπί CRM δεν εμφανίζεται: **αναμενόμενο, δεν έχει υλοποιηθεί.** Σχέδιο υψηλού επιπέδου στο §4 του handoff
+`…phase1-landed-pushed…` (δημόσιο POST με πρόσβαση συνδέσμου, rate limit + ημερήσιο όριο + ιδεμποτία, αποθήκευση στο μοντέλο
+ADR-029 `MESSAGES`/`CONVERSATIONS` με νέο κανάλι «σύνδεσμος παραστατικού», ειδοποίηση εκδότη με `dispatchNotification`,
+απάντηση ορατή στη σελίδα + email στον πελάτη, νέο ADR).
+Ροή: (1) πραγματικό SSoT grep κάθε σημείου του σχεδίου (οι αναφορές θέλουν επαλήθευση στον τρέχοντα κώδικα) · (2) έρευνα
+μεγάλων παικτών (Stripe / Xero / QuickBooks / Intercom σε σελίδα τιμολογίου) · (3) σχέδιο αρχείων · (4) «ναι» Giorgio · (5) κώδικας.
+⚠️ Πιθανότατα 5+ αρχεία σε 2+ τομείς ⇒ ενημέρωσε τον Giorgio για τρόπο εκτέλεσης (N.8) πριν ξεκινήσεις.
+
+## 4. Μετά τη Φάση 2
+- **§3.2 του προηγούμενου handoff:** ΜΙΑ οθόνη μέσα στην εφαρμογή για τα social της εταιρείας (σήμερα ΚΑΝΕΝΑΣ γραφέας του
+  `companies.socialMedia`· μπήκαν χειροκίνητα στο Console). Νεκρό δεύτερο σχήμα `communicationSettings.socialMedia`.
+- Φάση 3 (ref/start κωδικοί, Viber bot): όπως στο §4 του `…phase1-landed-pushed…`.
+
+## 5. Telegram (σφήνα ασφαλείας, τα κάνει ο Giorgio)
+- ✅ Νέο κλειδί του bot ειδοποιήσεων δουλεύει (μήνυμα deploy 23:34)· ✅ ο BotFather έγραψε «Your token was replaced» 21:14
+  (**δεν ξέρουμε για ποιο bot**).
+- Μένουν (ρώτα τον Giorgio): revoke **@Nestor_AdminBot** → Coolify `ADMIN_TELEGRAM_BOT_TOKEN` → Redeploy (και @NestorAppDevBot) ·
+  BotFather → Clear history · Telegram → Devices + Two-Step Verification · έλεγχος Commands / Menu Button / Mini App ·
+  `/start` στο @Nestor_P_Bot.
+- Πρόταση (δεν εγκρίθηκε): χωριστή συνεδρία ασφαλείας (Coolify σε `http://<IP>:8000` χωρίς HTTPS, πηγή επαναλαμβανόμενης διαρροής).
+
+## 6. Πρώτο βήμα της νέας συνεδρίας
+1. `git branch --show-current` = `agent/product-portal`.
+2. Ρώτα σύντομα για τα εκκρεμή Telegram (§5).
+3. Ξεκίνα §3 (Φάση 2) σε Plan Mode: SSoT grep → έρευνα → σχέδιο αρχείων → «ναι». Τίποτα χωρίς «ναι».
