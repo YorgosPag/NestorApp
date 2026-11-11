@@ -60,7 +60,8 @@ export function ImportsContent() {
       actions={<Button type="button" onClick={() => { selection.select(null); setCreating(true); }}>{t('page.new')}</Button>}
     >
       {creating ? <NewImportPanel onReady={open} /> : null}
-      {selection.selected ? <ImportBatchWorkspace batchId={selection.selected} /> : null}
+      {/* §5.5.2 Β9: ένας χώρος εργασίας ΑΝΑ παρτίδα — άλλη παρτίδα ⇒ καθαρή στοίβα αναίρεσης, ουρά και toast (Figma: ανά έγγραφο). */}
+      {selection.selected ? <ImportBatchWorkspace key={selection.selected} batchId={selection.selected} /> : null}
       {!creating && !selection.selected ? (
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {batches.length === 0 ? <li className="text-muted-foreground">{t('page.empty')}</li> : null}
