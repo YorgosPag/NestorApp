@@ -4,10 +4,18 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { SOLID_FILL_INK, type SolidFillKey } from '@/design-system/color-bridge';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+
+/**
+ * Ο κύκλος ενεργού/ολοκληρωμένου βήματος κουβαλά ΑΡΙΘΜΟ πάνω του ⇒ συμπαγές γέμισμα + το ΜΕΤΡΗΜΕΝΟ μελάνι του
+ * (`SOLID_FILL_INK`, ADR-854 §3). Ήταν `bg.info` (απαλό θεματικό φόντο) + `text.inverted` (λευκό) ⇒ λευκό σε σχεδόν
+ * λευκό στο φωτεινό θέμα (live 2026-11-12, οδηγός «Φόρτωση Κάτοψης»).
+ */
+const ACTIVE_STEP_FILL: SolidFillKey = 'infoSolid';
 
 interface WizardProgressProps {
   currentStep: number;
@@ -40,7 +48,7 @@ export function WizardProgress({
                   <div
                     className={`${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.ROUNDED.FULL} flex items-center justify-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                       stepNum <= currentStep
-                        ? `${colors.bg.info} ${colors.text.inverted}`
+                        ? `${colors.bg[ACTIVE_STEP_FILL]} ${colors.text[SOLID_FILL_INK[ACTIVE_STEP_FILL]]}`
                         : `${colors.bg.muted} ${colors.text.muted}`
                     }`}
                   >

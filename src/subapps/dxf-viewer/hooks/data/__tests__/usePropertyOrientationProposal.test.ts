@@ -6,7 +6,7 @@
  *   Κ3  κέλυφος + παράθυρο στη νότια ακμή ⇒ `derived` + ['south']· κέλυφος χωρίς ανοίγματα ⇒ `derived` + []
  *   Κ4  χωρίς σκηνή ή εκφυλισμένο πολύγωνο ⇒ `null` (η λωρίδα δεν αποδίδεται)
  *   Κ5  κάτοψη ακινήτου (`envelope`): όριο = εξωτερική παρειά κάθε ΚΛΕΙΣΤΗΣ αλυσίδας κελύφους· ανοιχτή αλυσίδα ⇒ καμία
- *       μαντεψιά (`derived` + [])
+ *       μαντεψιά, και το λέει: `open-envelope` + [] (live 2026-11-12: ανένωτες γωνίες έλεγαν «δεν βρέθηκαν ανοίγματα»)
  *
  * Το «ποιος τοίχος είναι εξωτερικός» έχει δικές του άγκυρες (envelope-perimeter) — εδώ ελέγχεται η ΔΙΑΚΛΑΔΩΣΗ.
  */
@@ -107,6 +107,9 @@ describe('usePropertyOrientationProposal — αιτία κενής πρότασ�
     mockChains = [{ closed: true, enclosesRegion: true, exteriorFaceLoop: LOOP }];
     expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'derived', values: ['south'], northAssumed: true });
     mockChains = [{ closed: false, enclosesRegion: false, exteriorFaceLoop: LOOP }];
-    expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'derived', values: [], northAssumed: true });
+    expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'open-envelope', values: [], northAssumed: true });
+    // T-junction που περικλείει χώρο χωρίς να είναι κύκλος ⇒ μετρά ως όριο.
+    mockChains = [{ closed: false, enclosesRegion: true, exteriorFaceLoop: LOOP }];
+    expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'derived', values: ['south'], northAssumed: true });
   });
 });

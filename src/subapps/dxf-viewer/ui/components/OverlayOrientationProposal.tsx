@@ -31,6 +31,7 @@ import type { Overlay } from '../../overlays/types';
 const EMPTY_MESSAGE_KEY: Record<FloorplanOrientationProposalStatus, string> = {
   'no-model': 'overlayProperties.orientationProposal.noModel',
   'no-envelope': 'overlayProperties.orientationProposal.noEnvelope',
+  'open-envelope': 'overlayProperties.orientationProposal.openEnvelope',
   derived: 'overlayProperties.orientationProposal.none',
 };
 

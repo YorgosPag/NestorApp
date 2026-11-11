@@ -36,10 +36,13 @@ const OPENING_ON_BOUNDARY_TOL_M = 0.6;
  * (live 2026-11-11: κάτοψη μόνο με γραμμές DXF έλεγε «δεν βρέθηκαν ανοίγματα» ενώ έλειπε όλο το μοντέλο). Όπως Revit
  * («Use Building Elements») και ArchiCAD (Energy Evaluation): ο προσανατολισμός βγαίνει **μόνο** από στοιχεία μοντέλου.
  * - `no-model`    — καμία οντότητα τοίχου BIM στη σκηνή (σκέτες γραμμές DXF)·
- * - `no-envelope` — υπάρχουν τοίχοι, αλλά κανένας δεν αναγνωρίστηκε εξωτερικός (`resolveExteriorEnvelope`)·
- * - `derived`     — υπάρχει κέλυφος· οι `values` μπορεί να είναι κενές (κανένα άνοιγμα στο όριο).
+ * - `no-envelope`   — υπάρχουν τοίχοι, αλλά κανένας δεν αναγνωρίστηκε εξωτερικός (`resolveExteriorEnvelope`)·
+ * - `open-envelope` — κάτοψη ακινήτου: υπάρχουν εξωτερικοί τοίχοι, αλλά **καμία** αλυσίδα τους δεν κλείνει ⇒ δεν ορίζεται
+ *   όριο (Revit «Not Enclosed» για Room/Area). Live 2026-11-12: 38 τοίχοι από το σχέδιο με ανένωτες γωνίες (κενά
+ *   0,1–1,45 m) έλεγαν «δεν βρέθηκαν ανοίγματα» ενώ 12 ανοίγματα κάθονταν στην περίμετρο·
+ * - `derived`       — υπάρχει όριο· οι `values` μπορεί να είναι κενές (κανένα άνοιγμα στο όριο).
  */
-export type FloorplanOrientationProposalStatus = 'no-model' | 'no-envelope' | 'derived';
+export type FloorplanOrientationProposalStatus = 'no-model' | 'no-envelope' | 'open-envelope' | 'derived';
 
 export interface FloorplanOrientationProposal {
   readonly status: FloorplanOrientationProposalStatus;
@@ -84,8 +87,10 @@ export function usePropertyOrientationProposal(
     const sceneUnits = resolveSceneUnits(scene);
     const envelope = resolveExteriorEnvelope(walls, sceneUnits);
     if (envelope.wallIds.size === 0) return { status: 'no-envelope', values: [], northAssumed };
+    const polygons = boundaryPolygons(source, envelope);
+    if (polygons.length === 0) return { status: 'open-envelope', values: [], northAssumed };
     const values = deriveOrientationsOverBoundaries({
-      polygons: boundaryPolygons(source, envelope),
+      polygons,
       openings: scene.entities.filter(isOpeningEntity),
       exteriorWallIds: envelope.wallIds,
       tol: OPENING_ON_BOUNDARY_TOL_M / sceneUnitsToMeters(sceneUnits),
