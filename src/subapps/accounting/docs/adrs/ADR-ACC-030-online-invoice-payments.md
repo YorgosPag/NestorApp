@@ -155,6 +155,24 @@ base64) δεν δηλώνεται ρητά. Ο έλεγχος δέχεται κ�
 3. Η μορφή απάντησης λίστας (`GET /payments?merchant_ref=` · `GET /refunds?payment=`): δεκτά πίνακας ή `data`.
 4. Αν η hosted σελίδα της ειδοποίησης επιστρέφει στον έμπορο (δεν τεκμηριώνεται πεδίο) — γι' αυτό νέα καρτέλα.
 
+### 5.9 Ευρήματα ζωντανής επαλήθευσης (sandbox, 2026-11-11)
+
+Ρύθμιση: κλειδιά στο περιβάλλον (επιβεβαίωση: πλαστή υπογραφή ⇒ `401 signature-invalid`, πριν `503
+provider-not-configured`) · ένα webhook στο dashboard με τα συμβάντα «Νέα Πληρωμή (Card)» · «Επιστροφή ποσού
+(Card)» · «Νέα Πληρωμή (IRIS)» · `paymentNotificationPaid` · `paymentNotificationExpired` (ΟΧΙ τα POS/Soft POS).
+Το webhook είναι **ένα** με πολλά συμβάντα, όχι ένα ανά συμβάν. Το **Ιδιωτικό Κλειδί** του dashboard είναι το
+`EVERYPAY_SECRET_KEY`· το «Κοινόχρηστο κλειδί» δεν χρησιμοποιείται.
+
+1. 🔴 **`expiration_date` απορρίφθηκε** («Invalid expiration date»): στέλναμε `toISOString()` (`….123Z`). Το API
+   reference δίνει `2027-11-23T15:52:00+0300` — χωρίς χιλιοστά, ζώνη `±HHMM`. Διόρθωση **μόνο στον adapter**:
+   `everypayDateTime()` στο `everypay-client.ts` (UTC, `+0000`). Η σελίδα «Πληρωμή τώρα» εμφανίστηκε σωστά
+   (Κάρτα · IRIS · Μεταφορά) πριν από το εύρημα.
+2. ⏳ **IRIS: «Invalid account setup. Please contact customer support»** (`POST /iris/sessions`, 2026-11-11). **Όχι
+   σφάλμα κώδικα**: η κλήση αυθεντικοποιήθηκε, ο λογαριασμός sandbox δεν έχει ενεργό το IRIS (τα προϊόντα του
+   sandbox τα ενεργοποιεί η υποστήριξη — docs «Sandbox Account» βήμα 3). Ο Giorgio έστειλε 2026-11-11 email στο
+   `support@everypay.gr` ζητώντας ενεργοποίηση IRIS (Direct) · κάρτας μέσω Payment Notifications · Apple Pay /
+   Google Pay — αίτημα υποστήριξης **00128279** (παραλαβή επιβεβαιώθηκε ίδια μέρα). **Αναμονή απάντησης**· μετά: επανάληψη της δοκιμής IRIS, καμία αλλαγή κώδικα αν δεν βγει νέο σφάλμα.
+
 ## 6. Εκτός εμβέλειας
 
 - Επιστροφή χρημάτων **από** την εφαρμογή (το port την υποστηρίζει· οι επιστροφές από το dashboard του παρόχου
@@ -168,3 +186,5 @@ base64) δεν δηλώνεται ρητά. Ο έλεγχος δέχεται κ�
 |---|---|
 | 2026-11-11 | Βήμα 1: μοντέλο, ένας γραφέας, server-owned πεδία, ταυτότητες, συλλογές + κανόνες. |
 | 2026-11-11 | Βήματα 2–6: port + adapter Everypay · έναρξη πληρωμής · webhook · επιστροφή browser · συμφιλίωση cron · «Πληρωμή τώρα» στη δημόσια σελίδα · `isPayableByLink` και για κάρτα/IRIS. |
+| 2026-11-11 | §5.9 ζωντανή επαλήθευση sandbox: ρύθμιση dashboard/κλειδιών· εύρημα 1 `expiration_date` σε μορφή `YYYY-MM-DDTHH:mm:ss+0000` (`everypayDateTime`). |
+| 2026-11-11 | §5.9 εύρημα 2: IRIS «Invalid account setup» = ρύθμιση λογαριασμού sandbox· email στην υποστήριξη Everypay για ενεργοποίηση IRIS / κάρτας / Apple Pay / Google Pay. |

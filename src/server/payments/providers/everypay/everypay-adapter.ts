@@ -27,7 +27,7 @@ import type {
   WebhookSignal,
   WebhookVerdict,
 } from '../../payment-provider';
-import { EverypayApiError, EVERYPAY_TOKEN_ALREADY_USED, everypayRequest } from './everypay-client';
+import { EverypayApiError, EVERYPAY_TOKEN_ALREADY_USED, everypayDateTime, everypayRequest } from './everypay-client';
 import type { EverypayCredentials } from './everypay-config';
 import {
   CAPTURED_PAYMENT_STATUSES,
@@ -58,7 +58,7 @@ async function startCardCheckout(credentials: EverypayCredentials, request: Chec
       description: request.description.slice(0, NOTIFICATION_DESCRIPTION_MAX),
       skip_notify: '1',
       locale: request.locale,
-      expiration_date: request.expiresAt,
+      expiration_date: everypayDateTime(request.expiresAt),
     },
   }));
   const reference = textField(body, 'token');

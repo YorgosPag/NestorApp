@@ -31,6 +31,18 @@ export class EverypayApiError extends Error {
 /** Ο κωδικός του παρόχου για «αυτό το token χρησιμοποιήθηκε ήδη» (IRIS Direct: δεύτερη χρέωση της ίδιας πηγής). */
 export const EVERYPAY_TOKEN_ALREADY_USED = 41001;
 
+/**
+ * Στιγμή ⇒ η μορφή ημερομηνίας του API: ISO 8601 **χωρίς χιλιοστά**, με ζώνη `±HHMM` (παράδειγμα του API reference:
+ * `2027-11-23T15:52:00+0300`). Το `toISOString()` (`….123Z`) απορρίπτεται με «Invalid expiration date» —
+ * μετρημένο ζωντανά στο sandbox 2026-11-11 (ADR-ACC-030 §5.8). Πάντα UTC (`+0000`): καμία εξάρτηση από τη ζώνη
+ * του διακομιστή.
+ */
+export function everypayDateTime(instantIso: string): string {
+  const instant = new Date(instantIso);
+  if (Number.isNaN(instant.getTime())) throw new RangeError(`Not an instant: ${instantIso}`);
+  return `${instant.toISOString().slice(0, 19)}+0000`;
+}
+
 interface EverypayCall {
   readonly method: 'GET' | 'POST' | 'DELETE';
   readonly path: string;
