@@ -697,6 +697,8 @@
     "orientationProposal": {
       "label": "Orientation from the floor plan",
       "none": "No openings found on exterior walls along the property boundary.",
+      "noModel": "The floor plan has no BIM model (walls and openings). The proposal needs a model — drawing lines are not enough.",
+      "noEnvelope": "The floor plan has walls, but no exterior envelope was recognized.",
       "northAssumed": "The drawing is not geo-referenced: north was assumed to be up.",
       "send": "Propose to property",
       "sent": "Proposal sent. Confirm it on the property card.",

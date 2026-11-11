@@ -18,8 +18,27 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-import { usePropertyOrientationProposal } from '../../hooks/data/usePropertyOrientationProposal';
+import { EventBus } from '../../systems/events';
+import {
+  usePropertyOrientationProposal,
+  type FloorplanOrientationProposalStatus,
+} from '../../hooks/data/usePropertyOrientationProposal';
 import type { Overlay } from '../../overlays/types';
+
+/** Το μήνυμα της κενής πρότασης ανά αιτία — «δεν βρέθηκαν ανοίγματα» **μόνο** όταν υπάρχει μοντέλο να ψάξει. */
+const EMPTY_MESSAGE_KEY: Record<FloorplanOrientationProposalStatus, string> = {
+  'no-model': 'overlayProperties.orientationProposal.noModel',
+  'no-envelope': 'overlayProperties.orientationProposal.noEnvelope',
+  derived: 'overlayProperties.orientationProposal.none',
+};
+
+/**
+ * Χωρίς μοντέλο ο επόμενος δρόμος είναι «σχέδιο → μοντέλο» (ADR-929 / ADR-911 Φ3β) — το **ίδιο** σήμα που στέλνει το
+ * πλήκτρο του ribbon (`open-model-from-drawing` → `ModelFromDrawingHost`), όχι δεύτερος δρόμος.
+ */
+function openModelFromDrawing(): void {
+  EventBus.emit('dxf:model-from-drawing-requested', {});
+}
 
 interface OverlayOrientationProposalProps {
   readonly overlay: Overlay;
@@ -28,6 +47,7 @@ interface OverlayOrientationProposalProps {
 export function OverlayOrientationProposal({ overlay }: OverlayOrientationProposalProps) {
   const { t } = useTranslation('dxf-viewer');
   const { t: tEnums } = useTranslation('properties-enums');
+  const { t: tShell } = useTranslation('dxf-viewer-shell');
   const colors = useSemanticColors();
   const notifications = useNotifications();
   const [sending, setSending] = useState(false);
@@ -62,9 +82,20 @@ export function OverlayOrientationProposal({ overlay }: OverlayOrientationPropos
       <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${hasValues ? '' : colors.text.muted}`}>
         {hasValues
           ? proposal.values.map((o) => tEnums(ORIENTATION_LABELS[o])).join(', ')
-          : t('overlayProperties.orientationProposal.none')}
+          : t(EMPTY_MESSAGE_KEY[proposal.status])}
       </p>
-      {proposal.northAssumed && (
+      {proposal.status === 'no-model' && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={PANEL_LAYOUT.HEIGHT.INPUT_SM}
+          onClick={openModelFromDrawing}
+        >
+          {tShell('ribbon.commands.bim.wallsFromDrawing.label')}
+        </Button>
+      )}
+      {proposal.northAssumed && proposal.status === 'derived' && (
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
           {t('overlayProperties.orientationProposal.northAssumed')}
         </p>

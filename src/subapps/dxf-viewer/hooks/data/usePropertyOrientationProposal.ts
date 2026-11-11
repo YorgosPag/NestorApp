@@ -25,7 +25,18 @@ import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
  */
 const OPENING_ON_BOUNDARY_TOL_M = 0.6;
 
+/**
+ * **Γιατί** η λίστα είναι ό,τι είναι — η κενή λίστα έχει τρεις διαφορετικές αιτίες και ο άνθρωπος πρέπει να τις ξεχωρίζει
+ * (live 2026-11-11: κάτοψη μόνο με γραμμές DXF έλεγε «δεν βρέθηκαν ανοίγματα» ενώ έλειπε όλο το μοντέλο). Όπως Revit
+ * («Use Building Elements») και ArchiCAD (Energy Evaluation): ο προσανατολισμός βγαίνει **μόνο** από στοιχεία μοντέλου.
+ * - `no-model`    — καμία οντότητα τοίχου BIM στη σκηνή (σκέτες γραμμές DXF)·
+ * - `no-envelope` — υπάρχουν τοίχοι, αλλά κανένας δεν αναγνωρίστηκε εξωτερικός (`resolveExteriorWallIds`)·
+ * - `derived`     — υπάρχει κέλυφος· οι `values` μπορεί να είναι κενές (κανένα άνοιγμα στο όριο).
+ */
+export type FloorplanOrientationProposalStatus = 'no-model' | 'no-envelope' | 'derived';
+
 export interface FloorplanOrientationProposal {
+  readonly status: FloorplanOrientationProposalStatus;
   readonly values: readonly OrientationType[];
   readonly northAssumed: boolean;
 }
@@ -38,15 +49,19 @@ export function usePropertyOrientationProposal(
 
   return useMemo(() => {
     if (!scene || !polygon || polygon.length < 3) return null;
+    const northAssumed = geo === null;
     const walls = scene.entities.filter(isWallEntity);
+    if (walls.length === 0) return { status: 'no-model', values: [], northAssumed };
     const sceneUnits = resolveSceneUnits(scene);
+    const exteriorWallIds = resolveExteriorWallIds(walls, sceneUnits);
+    if (exteriorWallIds.size === 0) return { status: 'no-envelope', values: [], northAssumed };
     const values = derivePropertyOrientations({
       polygon: polygon.map(overlayVertexToPoint2D),
       openings: scene.entities.filter(isOpeningEntity),
-      exteriorWallIds: resolveExteriorWallIds(walls, sceneUnits),
+      exteriorWallIds,
       tol: OPENING_ON_BOUNDARY_TOL_M / sceneUnitsToMeters(sceneUnits),
       northRotationDeg: geo?.rotationDeg ?? 0,
     });
-    return { values, northAssumed: geo === null };
+    return { status: 'derived', values, northAssumed };
   }, [scene, polygon, geo]);
 }
