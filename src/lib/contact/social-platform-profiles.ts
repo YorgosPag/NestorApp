@@ -43,6 +43,9 @@ export const SOCIAL_PLATFORM_PROFILES = {
   // Το click-to-chat θέλει τον αριθμό σε διεθνή μορφή, ΜΟΝΟ ψηφία (χωρίς +, κενά, παύλες) — βλ. normaliseSocialHandle.
   whatsapp: { brandName: 'WhatsApp', profileTemplate: 'https://wa.me/{username}', hosts: ['wa.me', 'whatsapp.com'] },
   telegram: { brandName: 'Telegram', profileTemplate: 'https://t.me/{username}', hosts: ['t.me', 'telegram.me', 'telegram.org'] },
+  // Ο ΕΠΙΣΗΜΟΣ σύνδεσμος συνομιλίας Viber (help.viber.com, «chat link» λογαριασμού Business): αριθμός σε διεθνή μορφή,
+  // ΜΟΝΟ ψηφία. Δωρεάν — η χρέωση της Viber αφορά μόνο τα bots. Το `viber://chat?number=` ΔΕΝ είναι τεκμηριωμένο.
+  viber: { brandName: 'Viber', profileTemplate: 'https://viber.me/{username}', hosts: ['viber.me', 'viber.com'] },
 } as const satisfies Readonly<Record<NamedSocialPlatform, SocialPlatformProfile>>;
 
 /** Κάθε πλατφόρμα με προφίλ, με τη σειρά της ρίζας — χωρίς τυφλό `as` πάνω στο `Object.keys`. */
@@ -71,10 +74,13 @@ export function detectPlatformFromUrl(url: string): NamedSocialPlatform | null {
   return NAMED_SOCIAL_PLATFORMS.find(platform => SOCIAL_PLATFORM_PROFILES[platform].hosts.some(owns)) ?? null;
 }
 
-/** Το όνομα χρήστη όπως μπαίνει στο URL: χωρίς κενά και αρχικό `@`· για WhatsApp μόνο ψηφία. */
+/** Οι πλατφόρμες όπου «όνομα χρήστη» είναι ο αριθμός τηλεφώνου σε διεθνή μορφή — στο URL μπαίνουν ΜΟΝΟ ψηφία. */
+const PHONE_HANDLE_PLATFORMS: ReadonlySet<SocialPlatform> = new Set<SocialPlatform>(['whatsapp', 'viber']);
+
+/** Το όνομα χρήστη όπως μπαίνει στο URL: χωρίς κενά και αρχικό `@`· για WhatsApp/Viber μόνο ψηφία. */
 export function normaliseSocialHandle(platform: SocialPlatform, handle: string): string {
   const trimmed = handle.trim().replace(/^@+/, '');
-  return platform === 'whatsapp' ? trimmed.replace(/\D/g, '') : trimmed;
+  return PHONE_HANDLE_PLATFORMS.has(platform) ? trimmed.replace(/\D/g, '') : trimmed;
 }
 
 /** URL προφίλ από όνομα χρήστη· `undefined` για `other` ή κενό όνομα (δεν υπάρχει τίποτα να χτιστεί). */

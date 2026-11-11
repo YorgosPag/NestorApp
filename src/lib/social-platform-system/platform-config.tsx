@@ -43,6 +43,7 @@ import {
   YouTubeIcon,
   GitHubIcon,
   TikTokIcon,
+  ViberIcon,
 } from './platform-icons';
 
 // Types extracted to platform-config-types.ts (ADR-065)
@@ -336,6 +337,37 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
     urls: {
       profileTemplate: SOCIAL_PLATFORM_PROFILES.tiktok.profileTemplate,
       usernamePlaceholder: 'johndoe',
+    },
+  },
+
+  viber: {
+    id: 'viber',
+    capabilities: {
+      // Η κοινοποίηση στο Viber θέλει το μη τεκμηριωμένο `viber://forward` — μένει εκτός, όπως το Instagram.
+      externalSharing: false,
+      contactProfiles: true,
+      directCommunication: true,
+      mediaSupport: true,
+      mobileOptimized: true,
+      requiresEmail: false,
+    },
+    ui: {
+      name: SOCIAL_PLATFORM_PROFILES.viber.brandName,
+      icon: ViberIcon,
+      colors: {
+        primary: designSystem.getStatusColor('info', 'bg'),
+        gradient: 'from-violet-500 via-violet-600 to-violet-700', // Viber purple
+        hover: designSystem.cn(
+          designSystem.getStatusColor('info', 'bg'),
+          HOVER_SHADOWS.COLORED.PURPLE
+        ),
+        text: designSystem.getStatusColor('foreground', 'text')
+      },
+      displayOrder: 11,
+    },
+    urls: {
+      profileTemplate: SOCIAL_PLATFORM_PROFILES.viber.profileTemplate,
+      usernamePlaceholder: '306912345678',
     },
   },
 

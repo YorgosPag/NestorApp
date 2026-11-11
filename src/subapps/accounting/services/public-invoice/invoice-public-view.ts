@@ -13,6 +13,8 @@
  * @see ADR-ACC-018 §15 · §16
  */
 
+import type { ChatChannelRef } from '@/lib/contact/social-chat-links';
+
 import type { Invoice, InvoiceCustomer, InvoiceIssuer } from '../../types/invoice';
 import type {
   InvoicePublicIssuer,
@@ -76,8 +78,11 @@ function publicPayment(invoice: Invoice, amountDue: number): InvoicePublicPaymen
  * Η δημόσια όψη. Οδηγίες πληρωμής **μόνο** όταν οφείλεται ποσό και υπάρχει λογαριασμός.
  *
  * @param today Η σημερινή ημερομηνία (`YYYY-MM-DD`) για το «ληξιπρόθεσμο». Παράμετρος, ώστε η προβολή να μένει καθαρή.
+ * @param issuerChatChannels Τα **τρέχοντα** κανάλια συνομιλίας της εταιρείας. Τα διαβάζει ο καλών, όχι η προβολή.
  */
-export function buildInvoicePublicView(invoice: Invoice, today: string): InvoicePublicView {
+export function buildInvoicePublicView(
+  invoice: Invoice, today: string, issuerChatChannels: readonly ChatChannelRef[],
+): InvoicePublicView {
   const standing = invoicePaymentStanding(invoice);
   const amountDue = invoiceAmountDueNow(invoice);
   const hasAccounts = (invoice.issuer.bankAccounts ?? []).length > 0;
@@ -92,6 +97,7 @@ export function buildInvoicePublicView(invoice: Invoice, today: string): Invoice
     dueDate: invoice.dueDate,
     currency: invoice.currency,
     issuer: publicIssuer(invoice.issuer),
+    issuerChatChannels,
     customer: publicCustomer(invoice.customer),
     lines: invoice.lineItems.map(({ lineNumber, description, quantity, unit, unitPrice, vatRate, netAmount }) => ({
       lineNumber, description, quantity, unit, unitPrice, vatRate, netAmount,

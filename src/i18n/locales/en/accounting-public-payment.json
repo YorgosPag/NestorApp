@@ -82,7 +82,12 @@
     "title": "Contact the issuer",
     "email": "Email",
     "phone": "Phone",
-    "website": "Website"
+    "website": "Website",
+    "chatChannels": "Chat with the issuer",
+    "chatVia": "Chat with the issuer on {channel}",
+    "chatViaCopy": "Chat with the issuer on {channel} (the message is copied for pasting)",
+    "draftCopied": "Message copied. Paste it into the chat.",
+    "chatDraft": "Hello, I am contacting you about document {number}."
   },
   "refused": {
     "title": "This invoice is not available",

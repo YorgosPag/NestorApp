@@ -46,14 +46,14 @@ function invoice(overrides: Partial<Invoice> = {}): Invoice {
 
 describe('buildInvoicePublicView', () => {
   it('never carries tenant, author, contact ids, customer email, email history or myDATA internals', () => {
-    const serialized = JSON.stringify(buildInvoicePublicView(invoice(), TODAY));
+    const serialized = JSON.stringify(buildInvoicePublicView(invoice(), TODAY, []));
     for (const secret of ['comp_secret', 'user_secret', 'cont_secret', 'secret@customer.gr', 'uid_secret', 'auth_secret']) {
       expect(serialized).not.toContain(secret);
     }
   });
 
   it('payable: amount due = balance, one EPC QR per account with that amount, IBAN without spaces', () => {
-    const view = buildInvoicePublicView(invoice({ balanceDue: 50, paymentStatus: 'partial' }), TODAY);
+    const view = buildInvoicePublicView(invoice({ balanceDue: 50, paymentStatus: 'partial' }), TODAY, []);
     expect(view.standing).toBe('payable');
     expect(view.amountDue).toBe(50);
     expect(view.payment?.accounts[0]?.iban).toBe('GR1601101250000000012300695');
@@ -62,17 +62,17 @@ describe('buildInvoicePublicView', () => {
   });
 
   it('overdue only when payable and past the due date', () => {
-    expect(buildInvoicePublicView(invoice({ dueDate: '2026-11-10' }), TODAY).overdue).toBe(true);
-    expect(buildInvoicePublicView(invoice({ dueDate: '2026-11-11' }), TODAY).overdue).toBe(false);
-    expect(buildInvoicePublicView(invoice({ dueDate: '2026-11-10', paymentStatus: 'paid' }), TODAY).overdue).toBe(false);
+    expect(buildInvoicePublicView(invoice({ dueDate: '2026-11-10' }), TODAY, []).overdue).toBe(true);
+    expect(buildInvoicePublicView(invoice({ dueDate: '2026-11-11' }), TODAY, []).overdue).toBe(false);
+    expect(buildInvoicePublicView(invoice({ dueDate: '2026-11-10', paymentStatus: 'paid' }), TODAY, []).overdue).toBe(false);
   });
 
   it('paid / cancelled / cash: no payment instructions and nothing due', () => {
-    const paid = buildInvoicePublicView(invoice({ paymentStatus: 'paid', balanceDue: 0 }), TODAY);
+    const paid = buildInvoicePublicView(invoice({ paymentStatus: 'paid', balanceDue: 0 }), TODAY, []);
     expect([paid.standing, paid.amountDue, paid.payment]).toEqual(['paid', 0, null]);
-    const cancelled = buildInvoicePublicView(invoice({ mydata: { ...invoice().mydata, status: 'cancelled' } }), TODAY);
+    const cancelled = buildInvoicePublicView(invoice({ mydata: { ...invoice().mydata, status: 'cancelled' } }), TODAY, []);
     expect([cancelled.standing, cancelled.amountDue, cancelled.payment]).toEqual(['cancelled', 0, null]);
-    const cash = buildInvoicePublicView(invoice({ paymentMethod: 'cash' }), TODAY);
+    const cash = buildInvoicePublicView(invoice({ paymentMethod: 'cash' }), TODAY, []);
     expect([cash.standing, cash.payment]).toEqual(['not-payable', null]);
   });
 });

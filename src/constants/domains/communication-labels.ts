@@ -69,6 +69,7 @@ export const SOCIAL_PLATFORM_LABELS = {
   tiktok: 'communication.platforms.tiktok',
   whatsapp: 'communication.platforms.whatsapp',
   telegram: 'communication.platforms.telegram',
+  viber: 'communication.platforms.viber',
   other: 'communication.platforms.other'
 } as const satisfies Readonly<Record<SocialPlatform, string>>;
 

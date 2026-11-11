@@ -430,6 +430,7 @@
         "tiktok",
         "whatsapp",
         "telegram",
+        "viber",
         "other"
       ],
       "threshold": 6,

@@ -309,6 +309,18 @@ function extractTenantBranding(
 }
 
 /**
+ * Οι λογαριασμοί social του **μισθωτή** (`companies/{companyId}`), ίδιοι με αυτούς της βιτρίνας. Τους διαβάζει η
+ * δημόσια σελίδα τιμολογίου για τα κανάλια συνομιλίας του εκδότη. Κενό όταν δεν υπάρχει έγγραφο ή λογαριασμός.
+ */
+export async function resolveTenantSocialAccounts(
+  adminDb: Firestore,
+  companyId: string,
+): Promise<ShowcaseContactSocial[]> {
+  const snap = await adminDb.collection(COLLECTIONS.COMPANIES).doc(companyId).get();
+  return snap.exists ? pickAllSocials(snap.data()?.socialMedia) ?? [] : [];
+}
+
+/**
  * Resolve showcase company branding via domain hierarchy with graceful
  * fallback. Never throws — worst case returns an identifier-based label.
  */

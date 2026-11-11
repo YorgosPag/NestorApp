@@ -25,12 +25,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatOperatorDate } from '@/lib/operator-time-format';
 import { cn } from '@/lib/utils';
-import { emailHref, phoneHref, webHref } from '@/lib/validation/text-link-segments';
 import type { InvoicePublicView } from '@/subapps/accounting/types/invoice-public-view';
 import type { InvoicePaymentShareResolvedData } from '@/services/sharing/resolvers/invoice-payment.resolver';
 import { formatAccountingCurrency } from '@/subapps/accounting/utils/format';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+import { InvoiceIssuerContact } from './InvoiceIssuerContact';
 import { InvoicePublicBody, InvoicePublicParties } from './InvoicePublicDocument';
 import { InvoicePublicPaymentSection } from './InvoicePublicPaymentSection';
 import { INVOICE_PUBLIC_PAYMENT_NS } from './invoice-payment-primitives';
@@ -86,25 +86,6 @@ function AmountSummary({ view }: { readonly view: InvoicePublicView }): React.Re
   );
 }
 
-function IssuerContact({ view }: { readonly view: InvoicePublicView }): React.ReactElement | null {
-  const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
-  const { email, phone, website } = view.issuer;
-  if (!email && !phone && !website) return null;
-  const mailto = email ? emailHref(email) : null;
-  const tel = phone ? phoneHref(phone) : null;
-  const web = website ? webHref(website) : null;
-  return (
-    <section aria-labelledby="invoice-contact-title" className="space-y-1 text-sm">
-      <h2 id="invoice-contact-title" className="font-semibold">{t('contact.title')}</h2>
-      <address className="not-italic flex flex-wrap gap-x-4 gap-y-1">
-        {email && (mailto ? <a className="underline" href={mailto}>{email}</a> : <span>{email}</span>)}
-        {phone && (tel ? <a className="underline" href={tel}>{phone}</a> : <span>{phone}</span>)}
-        {website && (web ? <a className="underline" href={web} rel="noopener noreferrer" target="_blank">{website}</a> : <span>{website}</span>)}
-      </address>
-    </section>
-  );
-}
-
 function DocumentActions({ shareId }: { readonly shareId: string }): React.ReactElement {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
   return (
@@ -140,7 +121,7 @@ function InvoiceView({ view, shareId }: { readonly view: InvoicePublicView; read
       <DocumentActions shareId={shareId} />
       <InvoicePublicParties view={view} />
       <InvoicePublicBody view={view} />
-      <IssuerContact view={view} />
+      <InvoiceIssuerContact view={view} />
       <footer className={cn('border-t pt-4 text-xs', colors.text.muted)}>{t('page.privateLink')}</footer>
     </article>
   );

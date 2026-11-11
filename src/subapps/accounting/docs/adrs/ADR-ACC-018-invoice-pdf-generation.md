@@ -553,6 +553,7 @@ src/subapps/accounting/
 | 2026-11-10 | **§15.1 — Κύκλος ζωής λογαριασμού + αρνήσεις εκτός ERROR + αναφορά BIC.** (α) Οι ανενεργοί λογαριασμοί φαίνονται σε συμπτυγμένη ομάδα (πρακτική Xero «Archived»)· νέα πράξη `POST …/bank-accounts/[id]/reactivate` (ρήμα-ενέργεια όπως Stripe `/void`), ίχνος `BANK_ACCOUNT_REACTIVATED`. (β) `DomainRefusal` (`src/lib/errors/domain-refusal.ts`): το `safeFirestoreOperation` καταγράφει τις αποφασισμένες αρνήσεις ως `info` χωρίς stack. (γ) `scripts/report-greek-bank-bic.ts`: μέτρηση μόνο ανάγνωσης των αποθηκευμένων BIC | Giorgio + Claude Code |
 | 2026-11-11 | **§15.2 — Ο BIC ακολουθεί το IBAN + ζωντανές οδηγίες πληρωμής πρόχειρου.** (α) Ένας κριτής `bicAgreementWithIBAN` (`greek-banks.ts`) για φόρμα · γραφέα · αναφορά· άρνηση `BicIbanMismatchError` (422, `DomainRefusal`). (β) Η φόρμα ξαναγράφει τράπεζα/BIC σε κάθε αλλαγή IBAN όσο είναι παράγωγα (`bankSource`). (γ) Πρόχειρο ⇒ οι λογαριασμοί του σημερινού μητρώου σε GET και email (`withCurrentPaymentAccounts`)· εκδομένο ⇒ το στιγμιότυπο, αμετάβλητο (Stripe draft → finalize) | Giorgio + Claude Code |
 | 2026-11-11 | **§16 — Δημόσια σελίδα πληρωμής τιμολογίου.** Νέο είδος κοινοποίησης `invoice_payment` πάνω στο υπάρχον σύστημα (`src/server/sharing/*` + `ShareEntityRegistry`), χωρίς δεύτερο σύστημα. Όψη + PDF μέσω `GET /api/shares/[shareId]/invoice-payment[/pdf]` με κουπόνι επίσκεψης. EPC QR ανά λογαριασμό με το υπόλοιπο. Σύνδεσμος στο email + στο συνημμένο PDF. Ίχνος `INVOICE_PAYMENT_LINK_OPENED`. Οι οδηγίες πληρωμής ως δεδομένα (`invoice-payment-instructions.ts`) και το PDF ως έγγραφο (`invoice-pdf-document.ts`) έγιναν από ένα | Giorgio + Claude Code |
+| 2026-11-11 | **§16.1 — Κανάλια συνομιλίας του εκδότη (Φάση 1).** Νέο SSoT `lib/contact/social-chat-links.ts` (Viber · WhatsApp · Messenger · Telegram · Instagram, επίσημα πρότυπα, έτοιμο κείμενο μόνο με τον αριθμό). Νέα πλατφόρμα `viber` στη ρίζα `SOCIAL_PLATFORMS` (δωρεάν σύνδεσμος `viber.me`, όχι bot). `InvoicePublicView.issuerChatChannels` = **τρέχοντα** κανάλια του μισθωτή (`resolveTenantSocialAccounts`). Μπλοκ `InvoiceIssuerContact.tsx`. Άγκυρα `lib/contact/__tests__/social-chat-links.test.ts` (Σ1–Σ5) | Giorgio + Claude Code |
 
 ---
 
@@ -682,6 +683,22 @@ src/subapps/accounting/
 - Η σελίδα ληγμένου συνδέσμου δείχνει τη γενική άρνηση, χωρίς στοιχεία εκδότη. Το Stripe τα δείχνει, και αυτό θα απαιτούσε `invoiceMeta` στο έγγραφο κοινοποίησης.
 - `qrUrl` myDATA (πριν από την πρώτη διαβίβαση). Η σελίδα δείχνει ήδη τον ΜΑΡΚ όταν υπάρχει.
 - Παρακράτηση στο πληρωτέο (όπως στο §15).
+
+### 16.1 Κανάλια συνομιλίας του εκδότη (2026-11-11, Φάση 1)
+
+**Πρόβλημα**: το μπλοκ «Επικοινωνία με τον εκδότη» έδειχνε μόνο email, τηλέφωνο και ιστότοπο. Οι εταιρείες έχουν ήδη δηλωμένους λογαριασμούς Viber/WhatsApp/Messenger/Telegram/Instagram, και στην Ελλάδα αυτά είναι τα κανάλια που ο πελάτης χρησιμοποιεί πραγματικά.
+
+**Τι κάνουν οι άλλοι** (2026-11-11): κανείς (Stripe, Xero, QuickBooks, Zoho) δεν δείχνει κουμπιά εφαρμογών μηνυμάτων στη σελίδα τιμολογίου. Ο Zoho έχει σχόλια πάνω στο τιμολόγιο.
+
+**Αποφάσεις** (Giorgio):
+- (α) **Τρέχοντα κανάλια της εταιρείας, όχι στιγμιότυπο.** Το πεδίο `InvoicePublicView.issuerChatChannels` είναι **έξω** από το `issuer` (που είναι στιγμιότυπο της έκδοσης). Πηγή: οι λογαριασμοί social του μισθωτή (`resolveTenantSocialAccounts`, ίδιο `pickAllSocials` με τη βιτρίνα). Ένα παλιό τιμολόγιο δεν δείχνει ποτέ κανάλι που καταργήθηκε.
+- (β) **Ένα SSoT «άνοιξε συνομιλία με έτοιμο κείμενο»**: `src/lib/contact/social-chat-links.ts`. Τρίτη οικογένεια συνδέσμων, δίπλα στο **προφίλ** (`social-platform-profiles.ts`) και στην **κοινοποίηση** (`social-platform-system`), όπου ο χρήστης διαλέγει παραλήπτη. Κάθε κανάλι **προκύπτει** από λογαριασμό της ρίζας `SOCIAL_PLATFORMS`: Messenger από τη σελίδα Facebook, Instagram Direct από το Instagram. Ο δείκτης επικυρώνεται ανά κανάλι (`handlePattern`) και ό,τι δεν ταιριάζει δεν γίνεται σύνδεσμος. Ο server βγάζει τα κανάλια (`chatChannelsOf`) και ο client χτίζει τον σύνδεσμο (`buildChatLink`) με κείμενο στη γλώσσα του επισκέπτη.
+- (γ) **Επίσημα πρότυπα** (επαληθευμένα 2026-11-11): WhatsApp `wa.me/<E164>?text=` · Viber `viber.me/<E164>?draft=` (help.viber.com, chat link λογαριασμού Business) · Messenger `m.me/<σελίδα>?text=` (developers.facebook.com, m.me links) · Telegram `t.me/<χρήστης>?text=` (core.telegram.org/api/links) · Instagram `ig.me/m/<χρήστης>`, **χωρίς** κείμενο. Το `viber://chat?number=` **δεν** είναι τεκμηριωμένο και απορρίφθηκε.
+- (δ) **Viber = δωρεάν σύνδεσμος, όχι bot.** Νέα πλατφόρμα `viber` στη ρίζα (`.domain-vocabulary.json`, CHECK 3.73), με «όνομα χρήστη» τον αριθμό (μόνο ψηφία, όπως το WhatsApp). Το Viber bot κοστίζει στον κάτοχό του και θα έρθει ως «σύνδεσε το δικό σου bot» μαζί με τη Φάση 3, με χρέωση της εταιρείας απευθείας από τη Viber.
+- (ε) **Έτοιμο κείμενο = μόνο ο αριθμός του παραστατικού** (`contact.chatDraft`). Ποτέ ποσό, ποτέ PII, **ποτέ ο σύνδεσμος**, που είναι διαπιστευτήριο (W3C capability URLs) και δεν φεύγει προς τρίτους.
+- (στ) **UI**: `InvoiceIssuerContact.tsx` (εξήχθη από τη σελίδα), λίστα κουμπιών με εικονίδιο (`CHAT_CHANNEL_ICONS`, Simple Icons CC0 για Viber/Messenger), `target=_blank` + `noopener noreferrer`, κρυφή στην εκτύπωση. Στο Instagram, που δεν δέχεται έτοιμο κείμενο, το κλικ **αντιγράφει** το μήνυμα (`useCopyToClipboard`) και ανακοινώνεται σε `role=status` (εδώ ξεπερνάμε το απλό «άνοιξε συνομιλία»).
+
+**Επόμενα (σχέδιο, όχι υλοποίηση)**: Φάση 2: κανάλι CRM «Γράψτε μας» μέσα στη σελίδα (ADR-029). Φάση 3: αυτόματη σύνδεση συνομιλίας ↔ παραστατικό μέσω `ref` (Messenger/Instagram) και `start` (Telegram) με σύντομο κωδικό του server.
 
 ---
 

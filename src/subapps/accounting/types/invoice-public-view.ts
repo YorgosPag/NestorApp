@@ -9,6 +9,8 @@
  *   Τα **σχόλια** (`notes`) περιέχονται, γιατί τυπώνονται ήδη στο PDF που λαμβάνει ο πελάτης.
  */
 
+import type { ChatChannelRef } from '@/lib/contact/social-chat-links';
+
 import type { InvoiceType } from './invoice';
 import type { MyDataDocumentStatus } from './common';
 import type { InvoicePaymentStanding } from '../services/payments/invoice-payment-link';
@@ -78,6 +80,12 @@ export interface InvoicePublicView {
   readonly dueDate: string | null;
   readonly currency: string;
   readonly issuer: InvoicePublicIssuer;
+  /**
+   * Τα κανάλια συνομιλίας του εκδότη (Viber, WhatsApp, Messenger, Telegram, Instagram). Είναι τα **τρέχοντα** της
+   * εταιρείας, όχι στιγμιότυπο της έκδοσης: ένα παλιό τιμολόγιο δεν δείχνει ποτέ κανάλι που δεν υπάρχει πια.
+   * Μόνο δημόσιοι λογαριασμοί της εταιρείας, ήδη επικυρωμένοι (`chatChannelsOf`).
+   */
+  readonly issuerChatChannels: readonly ChatChannelRef[];
   readonly customer: InvoicePublicParty;
   readonly lines: readonly InvoicePublicLine[];
   readonly vatBreakdown: readonly InvoicePublicVatRow[];

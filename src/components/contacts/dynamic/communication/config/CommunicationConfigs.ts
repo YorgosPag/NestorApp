@@ -135,6 +135,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'tiktok', label: SOCIAL_PLATFORM_LABELS.tiktok },
       { value: 'whatsapp', label: SOCIAL_PLATFORM_LABELS.whatsapp },
       { value: 'telegram', label: SOCIAL_PLATFORM_LABELS.telegram },
+      { value: 'viber', label: SOCIAL_PLATFORM_LABELS.viber },
       { value: 'other', label: SOCIAL_PLATFORM_LABELS.other }
     ],
     defaultType: DEFAULT_SOCIAL_MEDIA_TYPE.individual,

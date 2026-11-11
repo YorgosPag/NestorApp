@@ -54,7 +54,7 @@ export function isSocialMediaTypeOfferedFor(type: unknown, owner: ContactOwnerKi
  * χάρτης του AI τα έγραφε `other`, και ο mapper της φόρμας έκανε τυφλό `as`.
  */
 export const SOCIAL_PLATFORMS = [
-  'linkedin', 'facebook', 'instagram', 'twitter', 'youtube', 'github', 'tiktok', 'whatsapp', 'telegram', 'other',
+  'linkedin', 'facebook', 'instagram', 'twitter', 'youtube', 'github', 'tiktok', 'whatsapp', 'telegram', 'viber', 'other',
 ] as const;
 
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];

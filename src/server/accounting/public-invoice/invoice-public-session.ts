@@ -12,6 +12,7 @@ import 'server-only';
  *   3. Το τιμολόγιο διαβάζεται **με τον μισθωτή του συνδέσμου** (`readTenantInvoice`).
  *   4. Οι λογαριασμοί είναι αυτοί που **θα τύπωνε σήμερα** (`withCurrentPaymentAccounts`: πρόχειρο ⇒ μητρώο,
  *      εκδομένο ⇒ στιγμιότυπο): ο ίδιος κριτής με το GET, το PDF και το email.
+ *   5. Τα κανάλια συνομιλίας του εκδότη είναι τα **τρέχοντα** του μισθωτή (`chatChannelsOf`), όχι στιγμιότυπο.
  *
  *   Το ακυρωμένο **δεν** είναι άρνηση: η όψη λέει `standing: 'cancelled'`, και ο πελάτης μαθαίνει ότι δεν οφείλει.
  *
@@ -21,8 +22,10 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { withCurrentPaymentAccounts } from '@/app/api/accounting/invoices/invoice-payment-snapshot';
+import { chatChannelsOf, type ChatChannelRef } from '@/lib/contact/social-chat-links';
 import { todayLocalDate } from '@/lib/date-local';
 import { findActiveShareOf } from '@/server/sharing/share-active-lookup';
+import { resolveTenantSocialAccounts } from '@/services/company/company-branding-resolver';
 import { buildInvoicePublicView } from '@/subapps/accounting/services/public-invoice/invoice-public-view';
 import type { Invoice } from '@/subapps/accounting/types';
 import type { InvoicePublicRefusal, InvoicePublicViewResponse } from '@/subapps/accounting/types/invoice-public-view';
@@ -36,7 +39,9 @@ export interface InvoicePublicSessionInput {
 }
 
 type SharedInvoice =
-  | { readonly kind: 'found'; readonly invoice: Invoice; readonly repository: IAccountingRepository }
+  | {
+    readonly kind: 'found'; readonly invoice: Invoice; readonly repository: IAccountingRepository; readonly companyId: string;
+  }
   | { readonly kind: 'refused'; readonly reason: InvoicePublicRefusal };
 
 /** Σύνδεσμος ενεργός → τιμολόγιο του μισθωτή του → οι οδηγίες πληρωμής που θα τύπωνε σήμερα. */
@@ -49,7 +54,12 @@ async function readSharedInvoice(db: Firestore, input: InvoicePublicSessionInput
   const found = await readTenantInvoice({ companyId: share.companyId, userId: share.createdBy }, share.entityId);
   if (found === null) return { kind: 'refused', reason: 'invoice-absent' };
   const invoice = await withCurrentPaymentAccounts(found.repository, found.invoice);
-  return { kind: 'found', invoice, repository: found.repository };
+  return { kind: 'found', invoice, repository: found.repository, companyId: share.companyId };
+}
+
+/** Τα **τρέχοντα** κανάλια συνομιλίας του μισθωτή του συνδέσμου (Viber, WhatsApp, Messenger, Telegram, Instagram). */
+async function issuerChatChannelsOf(db: Firestore, companyId: string): Promise<ChatChannelRef[]> {
+  return chatChannelsOf(await resolveTenantSocialAccounts(db, companyId));
 }
 
 /** Η όψη για τη σελίδα. */
@@ -58,7 +68,8 @@ export async function openInvoicePublicView(
 ): Promise<InvoicePublicViewResponse> {
   const shared = await readSharedInvoice(db, input);
   if (shared.kind === 'refused') return { status: 'refused', reason: shared.reason };
-  return { status: 'ok', view: buildInvoicePublicView(shared.invoice, todayLocalDate()) };
+  const channels = await issuerChatChannelsOf(db, shared.companyId);
+  return { status: 'ok', view: buildInvoicePublicView(shared.invoice, todayLocalDate(), channels) };
 }
 
 export type InvoicePublicPdfOutcome =
