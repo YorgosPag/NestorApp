@@ -15,6 +15,9 @@ jest.mock('@/lib/telemetry', () => ({
 jest.mock('@/server/spatial-tour/tour-access-notifier', () => ({
   announceTourLinkOpened: jest.fn(async () => undefined),
 }));
+jest.mock('@/server/accounting/public-invoice/invoice-link-opened', () => ({
+  recordInvoiceLinkOpened: jest.fn(async () => undefined),
+}));
 
 import { NextResponse } from 'next/server';
 import type { Firestore } from 'firebase-admin/firestore';
@@ -157,9 +160,16 @@ describe('πολιτική ⇔ αναγγελέας', () => {
     expect([...OPEN_NOTICE_KINDS].sort()).toEqual(promised.sort());
   });
 
+  /**
+   * ADR-ACC-018 §16: ο σύνδεσμος πληρωμής τιμολογίου έχει παραλήπτη **εξ ορισμού**, τον πελάτη του παραστατικού.
+   * Το «ποιος» το λέει το τιμολόγιο, και η αναγγελία είναι ίχνος λογιστικής, όχι ειδοποίηση. Κλειστό σύνολο: νέο
+   * είδος εδώ είναι απόφαση, όχι παράλειψη.
+   */
+  const RECIPIENT_BY_DEFINITION: readonly ResolvableShareKind[] = ['invoice_payment'];
+
   it('`openNotice` μόνο σε ονομαστικό σύνδεσμο — αλλιώς η ειδοποίηση δεν λέει ΠΟΙΟΣ', () => {
-    for (const policy of Object.values(SHARE_KIND_LINK_POLICY)) {
-      if (policy.openNotice) expect(policy.labelRequired).toBe(true);
+    for (const [kind, policy] of Object.entries(SHARE_KIND_LINK_POLICY) as Array<[ResolvableShareKind, { openNotice: boolean; labelRequired: boolean }]>) {
+      if (policy.openNotice && !RECIPIENT_BY_DEFINITION.includes(kind)) expect(policy.labelRequired).toBe(true);
     }
   });
 });

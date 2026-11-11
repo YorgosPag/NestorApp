@@ -20,7 +20,6 @@ import 'server-only';
 
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { TOUR_SPACE_AREA_DISPLAY_DEFAULT, type TourSpaceAreaDisplay } from '@/constants/spatial-tour-vocabulary';
 import { tourAccessRequestFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, tourAccessStanding, type TourActor } from '@/lib/spatial-tour/tour-authority';
@@ -28,7 +27,7 @@ import { judgeTourView } from '@/lib/spatial-tour/tour-view-policy';
 import type { TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import { viewerLevelsOf, type TourViewerLevel } from '@/lib/spatial-tour/viewer/tour-viewer-graph';
 import { isOwnedByCustody } from '@/lib/workspace/custody-scope';
-import { normalizeUnifiedShare } from '@/server/sharing/share-token-lookup';
+import { findActiveShareOf } from '@/server/sharing/share-active-lookup';
 import type { SpatialTour, TourNode, TourSubject } from '@/types/spatial-tour';
 
 import { tourAccessRequestRef } from './tour-access-shared';
@@ -80,15 +79,11 @@ export type TourViewSessionOutcome =
     }
   | TourViewSessionRefused;
 
-/** Ενεργός σύνδεσμος **αυτής** της περιήγησης; — ανάγνωση **με id**, κρίση ζωντάνιας και στόχου. */
+/** Ενεργός σύνδεσμος **αυτής** της περιήγησης; — ο ΕΝΑΣ κριτής ζωντάνιας και στόχου (`share-active-lookup.ts`). */
 async function activeTourShareId(db: Firestore, shareId: string | null, tourId: string, nowMs: number): Promise<string | null> {
   if (shareId === null) return null;
-  const snap = await db.collection(COLLECTIONS.SHARES).doc(shareId).get();
-  const raw = (snap.data() ?? null) as Record<string, unknown> | null;
-  if (raw === null || raw.isActive !== true) return null;
-  const share = normalizeUnifiedShare(snap.id, raw);
-  if (share === null || share.entityType !== 'spatial_tour' || share.entityId !== tourId) return null;
-  return Date.parse(share.expiresAt) > nowMs ? share.id : null;
+  const share = await findActiveShareOf(db, { shareId, kind: 'spatial_tour', entityId: tourId, nowMs });
+  return share?.id ?? null;
 }
 
 async function requestStandingOf(tourRef: DocumentReference, uid: string | null, nowMs: number) {

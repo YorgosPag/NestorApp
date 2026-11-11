@@ -162,8 +162,25 @@ jest.mock('@/subapps/accounting/services/accounting-audit-service', () => ({
 var mailgun = { result: { success: true, messageId: 'mg_1', error: null } as { success: boolean; messageId: string | null; error: string | null } };
 var orgResolver = { result: null as null | { email: string; source: string } };
 
-jest.mock('@/subapps/accounting/services/pdf/invoice-pdf-exporter', () => ({
+// ADR-ACC-018 §16 — ο σύνδεσμος πληρωμής του email. Προεπιλογή: κανένας (το email φεύγει όπως πριν).
+var paymentLink = {
+  minted: null as null | { shareId: string; url: string },
+  mint: jest.fn(),
+  revoke: jest.fn(async () => undefined),
+};
+
+jest.mock('@/server/accounting/public-invoice/invoice-email-payment-link', () => ({
+  mintInvoiceEmailPaymentLink: (...a: unknown[]) => { paymentLink.mint(...a); return Promise.resolve(paymentLink.minted); },
+  revokeInvoiceEmailPaymentLink: (...a: unknown[]) => paymentLink.revoke(...a),
+}));
+
+jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: () => ({}) }));
+
+// ADR-ACC-018 §16 — το route φτάνει στο PDF μόνο μέσω του ΕΝΟΣ module εγγράφου (λογότυπο · όνομα · απόδοση).
+jest.mock('@/subapps/accounting/services/pdf/invoice-pdf-document', () => ({
+  renderInvoicePdfDocument: jest.fn(async () => ({ output: () => new ArrayBuffer(16) })),
   extractKadFromProfile: () => '62010',
+  invoicePdfFilename: () => 'A-1_ACME_LTD_20260115.pdf',
 }));
 
 jest.mock('@/subapps/accounting/services/email/invoice-email-template', () => ({
@@ -242,6 +259,7 @@ beforeEach(() => {
   bankExtras.validatePostingAllowed.mockResolvedValue({ allowed: true, periodId: 'p1', periodStatus: 'OPEN' });
   mailgun.result = { success: true, messageId: 'mg_1', error: null };
   orgResolver.result = null;
+  paymentLink.minted = null;
 });
 
 // ===========================================================================
@@ -397,6 +415,27 @@ describe('invoices/[id]/send-email — POST', () => {
       success: true,
       data: { mailgunMessageId: 'mg_9', recipientEmail: 'c@x.com', subject: 'Subject' },
     });
+  });
+
+  it('ADR-ACC-018 §16: the minted payment link is recorded on the email entry and NOT revoked on success', async () => {
+    repo.getInvoice.mockResolvedValue(fullInvoice());
+    paymentLink.minted = { shareId: 'shr_1', url: 'https://app.test/shared/tok' };
+    const res = (await emailPost(req({ recipientEmail: 'c@x.com' }), seg())) as Envelope;
+    expect(res.status).toBe(200);
+    expect(paymentLink.mint).toHaveBeenCalledWith(expect.anything(), { uid: expect.any(String), companyId: expect.any(String) },
+      expect.objectContaining({ series: 'A' }), 'c@x.com');
+    const [, update] = repo.updateInvoice.mock.calls[0] as unknown as [string, { emailHistory: Array<{ paymentLinkShareId: string | null }> }];
+    expect(update.emailHistory.at(-1)?.paymentLinkShareId).toBe('shr_1');
+    expect(paymentLink.revoke).not.toHaveBeenCalled();
+  });
+
+  it('ADR-ACC-018 §16: delivery failure revokes the payment link — nobody received it', async () => {
+    repo.getInvoice.mockResolvedValue(fullInvoice());
+    paymentLink.minted = { shareId: 'shr_2', url: 'https://app.test/shared/tok' };
+    mailgun.result = { success: false, messageId: null, error: 'down' };
+    const res = (await emailPost(req({ recipientEmail: 'c@x.com' }), seg())) as Envelope;
+    expect(res.status).toBe(502);
+    expect(paymentLink.revoke).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'shr_2');
   });
 });
 

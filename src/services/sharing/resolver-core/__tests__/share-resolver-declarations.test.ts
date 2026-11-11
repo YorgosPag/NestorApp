@@ -380,8 +380,9 @@ describe('share resolvers ↔ ShareEntityType (anchor)', () => {
   const WITHOUT_RESOLVER = ['vendor_rfq_invite'];
 
   it('finds the whole union (guards against a vacuous anchor)', () => {
-    // 9 = 7 επιλύσιμα + `spatial_tour` (ADR-884 Κ3β) + `vendor_rfq_invite` (χωρίς resolver).
-    expect(declaredEntityTypes()).toHaveLength(9);
+    // 10 = 7 επιλύσιμα + `spatial_tour` (ADR-884 Κ3β) + `invoice_payment` (ADR-ACC-018 §16)
+    //      + `vendor_rfq_invite` (χωρίς resolver).
+    expect(declaredEntityTypes()).toHaveLength(10);
   });
 
   it('registers a resolver for every share type that has a token lifecycle', () => {

@@ -115,6 +115,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'accounting-setup': return () => import('./locales/el/accounting-setup.json');
     case 'accounting-tax-offices': return () => import('./locales/el/accounting-tax-offices.json');
     case 'accounting-vat-exemptions': return () => import('./locales/el/accounting-vat-exemptions.json');
+    case 'accounting-public-payment': return () => import('./locales/el/accounting-public-payment.json');
     case 'banking': return () => import('./locales/el/banking.json');
     case 'addresses': return () => import('./locales/el/addresses.json');
     case 'payments': return () => import('./locales/el/payments.json');
@@ -259,6 +260,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'accounting-setup': return () => import('./locales/en/accounting-setup.json');
     case 'accounting-tax-offices': return () => import('./locales/en/accounting-tax-offices.json');
     case 'accounting-vat-exemptions': return () => import('./locales/en/accounting-vat-exemptions.json');
+    case 'accounting-public-payment': return () => import('./locales/en/accounting-public-payment.json');
     case 'banking': return () => import('./locales/en/banking.json');
     case 'addresses': return () => import('./locales/en/addresses.json');
     case 'payments': return () => import('./locales/en/payments.json');

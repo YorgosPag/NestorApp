@@ -21,6 +21,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { announceTourLinkOpened } from '@/server/spatial-tour/tour-access-notifier';
+import { recordInvoiceLinkOpened } from '@/server/accounting/public-invoice/invoice-link-opened';
 import {
   isResolvableShareKind,
   linkPolicyOf,
@@ -56,8 +57,24 @@ const announceSpatialTourOpen: OpenAnnouncer = async (adminDb, share, payload, r
   });
 };
 
+/**
+ * Τιμολόγιο (ADR-ACC-018 §16): ο παραλήπτης είναι **εξ ορισμού** ο πελάτης, άρα δεν χρειάζεται «για ποιον».
+ * Η αναγγελία είναι ίχνος λογιστικής στο τιμολόγιο (το «Viewed» του Stripe), όχι ειδοποίηση.
+ */
+const announceInvoicePaymentOpen: OpenAnnouncer = async (_adminDb, share, payload, registration) => {
+  if (payload.kind !== 'invoice_payment') return;
+  await recordInvoiceLinkOpened({
+    companyId: share.companyId,
+    createdBy: share.createdBy,
+    shareId: share.id,
+    invoiceId: payload.data.invoiceId,
+    deviceOrdinal: registration.ordinal,
+  });
+};
+
 const OPEN_ANNOUNCERS: Readonly<Partial<Record<ResolvableShareKind, OpenAnnouncer>>> = {
   spatial_tour: announceSpatialTourOpen,
+  invoice_payment: announceInvoicePaymentOpen,
 };
 
 /** Τα είδη που **ξέρουν** να αναγγείλουν — για την άγκυρα απόκλισης από την πολιτική. */

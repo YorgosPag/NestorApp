@@ -56,6 +56,8 @@ const LABELS = {
     noDueDate: 'Άμεση Εξόφληση',
     closing: 'Με εκτίμηση,',
     pdfAttached: 'Το τιμολόγιο επισυνάπτεται ως PDF.',
+    payOnline: 'Προβολή & πληρωμή online',
+    payOnlineHint: 'Στη σελίδα θα βρείτε τους λογαριασμούς πληρωμής, την αιτιολογία και κωδικό QR για την εφαρμογή της τράπεζάς σας.',
   },
   en: {
     greeting: 'Dear',
@@ -68,6 +70,8 @@ const LABELS = {
     noDueDate: 'Due Immediately',
     closing: 'Kind regards,',
     pdfAttached: 'The invoice is attached as a PDF file.',
+    payOnline: 'View & pay online',
+    payOnlineHint: 'The page shows the payment accounts, the payment reference and a QR code for your banking app.',
   },
 } as const;
 
@@ -156,7 +160,8 @@ function invoiceEmailFacts(invoice: Invoice, language: InvoiceEmailLanguage): In
  */
 export function buildInvoiceEmailPlainText(
   invoice: Invoice,
-  language: InvoiceEmailLanguage
+  language: InvoiceEmailLanguage,
+  paymentPageUrl: string | null = null,
 ): string {
   const { L, invoiceRef, typeLabel, dueDateText, issueDateText, amountText } = invoiceEmailFacts(invoice, language);
 
@@ -171,6 +176,7 @@ export function buildInvoiceEmailPlainText(
     `${L.dueDate}: ${dueDateText}`,
     `${L.amount}: ${amountText}`,
     '',
+    ...(paymentPageUrl ? [`${L.payOnline}: ${paymentPageUrl}`, ''] : []),
     L.pdfAttached,
     '',
     L.closing,
@@ -182,16 +188,31 @@ export function buildInvoiceEmailPlainText(
 // HTML CONTENT BLOCK
 // ============================================================================
 
+/** Το κουμπί «Προβολή & πληρωμή online» (ADR-ACC-018 §16): πίνακας, γιατί τα προγράμματα email αγνοούν το CSS. */
+function paymentButtonHtml(url: string, label: string, hint: string): string {
+  const href = escapeHtml(url);
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+      <tbody><tr><td style="border-radius:6px;background-color:${BRAND.navy};">
+        <a href="${href}" style="display:inline-block;padding:12px 20px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">${escapeHtml(label)}</a>
+      </td></tr></tbody>
+    </table>
+    <p style="margin:0 0 24px;font-size:13px;color:${BRAND.grayLight};">${escapeHtml(hint)}</p>`;
+}
+
 /**
  * Build the HTML content block for the invoice email.
  * Designed to be injected into wrapInBrandedTemplate() as `contentHtml`.
  *
  * Uses inline styles (required for email client compatibility).
  * XSS prevention: all dynamic content passes through escapeHtml().
+ *
+ * @param paymentPageUrl ADR-ACC-018 §16 — ο σύνδεσμος της δημόσιας σελίδας πληρωμής, ή `null` (χωρίς κουμπί).
  */
 export function buildInvoiceEmailContent(
   invoice: Invoice,
-  language: InvoiceEmailLanguage
+  language: InvoiceEmailLanguage,
+  paymentPageUrl: string | null = null,
 ): string {
   const { L, invoiceRef, typeLabel, dueDateText, issueDateText, amountText } = invoiceEmailFacts(invoice, language);
 
@@ -236,6 +257,8 @@ export function buildInvoiceEmailContent(
         </tr>
       </tbody>
     </table>
+
+    ${paymentPageUrl ? paymentButtonHtml(paymentPageUrl, L.payOnline, L.payOnlineHint) : ''}
 
     <!-- PDF note -->
     <p style="margin:0 0 24px;font-size:13px;color:${BRAND.grayLight};">

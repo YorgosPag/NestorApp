@@ -8,8 +8,8 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles
  */
 
-import type { Invoice, CompanyProfile } from '../../types';
-import { renderInvoicePDF } from './invoice-pdf-template';
+import type { Invoice } from '../../types';
+import { invoicePdfFilename, renderInvoicePdfDocument } from './invoice-pdf-document';
 import { openBlobInNewTab } from '@/lib/exports/trigger-export-download';
 
 // ============================================================================
@@ -31,39 +31,8 @@ export interface InvoicePDFSettings {
 // HELPERS
 // ============================================================================
 
-/**
- * Lazy-load the logo base64 data.
- * Returns null if loading fails (PDF renders without logo).
- */
-async function loadLogo(): Promise<string | null> {
-  try {
-    const { PAGONIS_LOGO_BASE64 } = await import('./logo-data');
-    return PAGONIS_LOGO_BASE64;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Build filename: {Series}-{Number}_{CustomerName}_{IssueDate}.pdf
- * Sanitizes customer name for filesystem safety.
- */
-function buildFilename(invoice: Invoice): string {
-  const sanitized = invoice.customer.name
-    .replace(/[<>:"/\\|?*]/g, '')
-    .replace(/\s+/g, '_')
-    .substring(0, 50);
-  const date = invoice.issueDate.replace(/-/g, '');
-  return `${invoice.series}-${invoice.number}_${sanitized}_${date}.pdf`;
-}
-
-/**
- * Extract KAD code from company profile (primary KAD).
- */
-export function extractKadFromProfile(profile: CompanyProfile | null): string | null {
-  if (!profile) return null;
-  return profile.mainKad?.code ?? null;
-}
+/** Ο κύριος ΚΑΔ: ζει στο `invoice-pdf-document.ts` (ένας ορισμός για browser και διακομιστή). */
+export { extractKadFromProfile } from './invoice-pdf-document';
 
 // ============================================================================
 // PUBLIC API
@@ -79,16 +48,13 @@ export async function exportInvoicePDF(
   invoice: Invoice,
   settings?: InvoicePDFSettings
 ): Promise<void> {
-  const logoBase64 = await loadLogo();
-
-  const pdf = await renderInvoicePDF({
+  const pdf = await renderInvoicePdfDocument({
     invoice,
-    logoBase64,
     kadCode: settings?.kadCode ?? null,
     withholdingAmount: settings?.withholdingAmount ?? 0,
   });
 
-  pdf.save(buildFilename(invoice));
+  pdf.save(invoicePdfFilename(invoice));
 }
 
 /**
@@ -102,11 +68,8 @@ export async function getInvoicePDFBlob(
   invoice: Invoice,
   settings?: InvoicePDFSettings
 ): Promise<Blob> {
-  const logoBase64 = await loadLogo();
-
-  const pdf = await renderInvoicePDF({
+  const pdf = await renderInvoicePdfDocument({
     invoice,
-    logoBase64,
     kadCode: settings?.kadCode ?? null,
     withholdingAmount: settings?.withholdingAmount ?? 0,
   });

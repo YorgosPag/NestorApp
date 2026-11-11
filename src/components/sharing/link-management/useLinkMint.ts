@@ -23,6 +23,7 @@ import { draftToCreatePolicy } from '@/components/ui/sharing/panels/link-token/d
 import type { LinkTokenDraft } from '@/components/ui/sharing/panels/link-token/types';
 import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
 import type { CreateShareInput, ShareEntityType } from '@/types/sharing';
+import { shareLinkPath } from '@/lib/sharing/share-token';
 
 /** Ό,τι μόνο αυτή η συνεδρία του διαλόγου ξέρει — το διακριτικό **δεν ξαναδείχνεται** ποτέ. */
 export interface MintedShare {
@@ -54,7 +55,7 @@ export interface UseLinkMintResult {
 }
 
 function shareUrlOf(token: string): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/shared/${token}`;
+  return `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}${shareLinkPath(token)}`;
 }
 
 export function useLinkMint({ entityType, entityId, preSubmit, ...meta }: UseLinkMintOptions): UseLinkMintResult {

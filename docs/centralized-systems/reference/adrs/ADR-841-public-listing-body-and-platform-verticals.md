@@ -8172,7 +8172,7 @@ JSON-LD `LocalBusiness` ανά κατάστημα **χωρίς `telephone`** (α
 ##### Α21.17.4 Αρχεία
 
 Νέα: `lib/seo/json-ld.ts` · `components/seo/JsonLdScript.tsx` · `lib/http/content-disposition.ts` · `lib/contact/vcard.ts` · `lib/qr/qr-code.ts` ·
-`lib/agency/{showcase-structured-data,showcase-vcard}.ts` · `app/api/pro/private-response-headers.ts` · `app/api/pro/[companyId]/locations/[locationId]/vcard/route.ts` ·
+`lib/agency/{showcase-structured-data,showcase-vcard}.ts` · `lib/http/private-response-headers.ts` (μετακόμισε από το `app/api/pro/` 2026-11-11, ADR-ACC-018 §16) · `app/api/pro/[companyId]/locations/[locationId]/vcard/route.ts` ·
 `hooks/mandate/useShowcaseQr.ts` · `components/mandate/{ShowcaseShareDialog,ShowcaseQrPanel}.tsx` · `components/mandate/showcase-card-paths.ts` · 5 σουίτες jest.
 Αλλαγές: `pro/[alias]/page.tsx` · `services/mandate/showcase-card-reveal.ts` · `channels/route.ts` · `ChannelReveal` · `ShowcaseContactCard` · `AgencyProfileContent` ·
 `ShowcaseCardContent` · `LandingPage` · `api/download` · `api/attendance/qr/generate` · `EnterpriseTwoFactorService` · `dxf-viewer/.../qr-image-client` ·

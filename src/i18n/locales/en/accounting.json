@@ -12,6 +12,10 @@
     "reports": "Reports & Tax"
   },
   "invoices": {
+    "paymentLink": {
+      "menu": "Payment link",
+      "dialogTitle": "Payment link {number}"
+    },
     "title": "Invoices",
     "description": "Issue and manage invoices & receipts",
     "newInvoice": "New Invoice",

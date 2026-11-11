@@ -28,6 +28,8 @@ export type ShareEntityType =
   | 'parking_showcase'
   /** ADR-884 Φ0.12 — προσωπικός σύνδεσμος θέασης περιήγησης 360° (`link-only`), ανά παραλήπτη. */
   | 'spatial_tour'
+  /** ADR-ACC-018 §16 — ιδιωτικός σύνδεσμος «δες και πλήρωσε» ενός τιμολογίου (πρότυπο Stripe Hosted Invoice Page). */
+  | 'invoice_payment'
   | 'vendor_rfq_invite';
 
 export type ShareDispatchChannel =

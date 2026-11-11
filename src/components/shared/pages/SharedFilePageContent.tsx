@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SharedContactPageContent } from '@/components/shared/pages/SharedContactPageContent';
 import { SharedTourPageContent } from '@/components/shared/pages/SharedTourPageContent';
+import { SharedInvoicePaymentSlot } from '@/components/shared/pages/invoice-payment/invoice-payment-surfaces';
 import { SharedShowcasePageContent } from '@/components/shared/pages/SharedShowcasePageContent';
 import { SharedProjectShowcasePageContent } from '@/components/shared/pages/SharedProjectShowcasePageContent';
 import { SharedBuildingShowcasePageContent } from '@/components/shared/pages/SharedBuildingShowcasePageContent';
@@ -163,6 +164,7 @@ function renderEntityPage(share: ResolvedSharePayload, expiresAt: string, token:
     case 'storage_showcase': return <SharedStorageShowcasePageContent token={token} />;
     case 'parking_showcase': return <SharedParkingShowcasePageContent token={token} />;
     case 'spatial_tour': return <SharedTourPageContent data={share.data} />;
+    case 'invoice_payment': return <SharedInvoicePaymentSlot data={share.data} />;
     case 'file': return null;
   }
 }

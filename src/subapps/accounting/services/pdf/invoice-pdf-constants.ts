@@ -88,6 +88,7 @@ export const LABELS = {
   bic: 'BIC',
   beneficiary: 'Δικαιούχος / Beneficiary',
   paymentReference: 'Αιτιολογία πληρωμής / Payment reference',
+  paymentPage: 'Προβολή & πληρωμή online / View & pay online',
   scanToPay: 'Σάρωση για πληρωμή / Scan to pay',
   mydata: 'myDATA',
   mark: 'ΜΑΡΚ',
@@ -162,11 +163,6 @@ export function drawWrappedLines(pdf: jsPDF, text: string, y: number, box: WrapB
     pdf.text(line, box.x, y + index * box.lineStep, box.align === 'right' ? { align: 'right' } : undefined);
   });
   return y + lines.length * box.lineStep;
-}
-
-/** Format IBAN with spaces every 4 characters. */
-export function formatIBAN(iban: string): string {
-  return iban.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
 }
 
 /** Draw a payment status stamp (rotated rectangle with text). */

@@ -1972,6 +1972,9 @@
     "showcase",
     "spatial-tour"
   ],
+  "SharedInvoicePayment": [
+    "accounting-public-payment"
+  ],
   "SpacesCommon": [
     "common",
     "common-account",

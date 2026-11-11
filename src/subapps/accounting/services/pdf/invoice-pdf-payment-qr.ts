@@ -7,14 +7,15 @@
  * Αν το payload δεν μπορεί να υπάρξει (π.χ. όνομα > 70, > 331 bytes), **δεν** σχεδιάζεται τίποτα — ο πίνακας
  * λογαριασμών μένει η πλήρης οδηγία πληρωμής. Ποτέ κομμένο όνομα ή «διορθωμένο» ποσό μέσα σε κωδικό πληρωμής.
  *
- * @see ADR-ACC-018 §15 · services/payments/epc-qr-payload.ts
+ * Το payload το φτιάχνει ο ΕΝΑΣ ορισμός των οδηγιών πληρωμής (`services/payments/invoice-payment-instructions.ts`,
+ * τον ίδιο που χρησιμοποιεί η δημόσια σελίδα πληρωμής). Εδώ γίνεται μόνο η σχεδίαση.
+ *
+ * @see ADR-ACC-018 §15 · §16 · services/payments/epc-qr-payload.ts
  */
 
 import type jsPDF from 'jspdf';
 
 import { qrModuleRuns } from '@/lib/qr/qr-code';
-import type { InvoicePaymentAccount } from '../../types';
-import { buildEpcQrPayload } from '../payments/epc-qr-payload';
 import { COLORS, LABELS, LAYOUT, setColor } from './invoice-pdf-constants';
 
 /** Πλευρά του τυπωμένου QR (mm, μαζί με τη ζώνη ησυχίας) — ~0,33 mm/μονάδα στη μέγιστη έκδοση 13 του EPC. */
@@ -25,33 +26,6 @@ export const PAYMENT_QR_CAPTION_MM = 4;
 
 /** Επικάλυψη σειρών (mm) — πολύ κάτω από τη μονάδα (~0,33 mm), αόρατη στη σάρωση. */
 const ROW_OVERLAP_MM = 0.02;
-
-/** Το EPC QR είναι **μόνο** για ευρώ (SEPA Credit Transfer). */
-const EPC_CURRENCY = 'EUR';
-
-export interface PaymentQrRequest {
-  readonly account: InvoicePaymentAccount;
-  /** Δικαιούχος όπως τυπώνεται (ο λογαριασμός ή, αλλιώς, η επωνυμία του εκδότη) */
-  readonly beneficiaryName: string;
-  readonly currency: string;
-  /** Το πληρωτέο — ο ΙΔΙΟΣ αριθμός που τυπώνεται στα σύνολα */
-  readonly amount: number;
-  /** RF ή, αλλιώς, ο αριθμός του τιμολογίου */
-  readonly remittance: string;
-}
-
-/** Το payload, ή `null` όταν το QR δεν ορίζεται (μη ευρώ, μηδενικό ποσό, όρια του EPC). */
-export function paymentQrPayload(request: PaymentQrRequest): string | null {
-  if (request.currency !== EPC_CURRENCY) return null;
-  const result = buildEpcQrPayload({
-    beneficiaryName: request.beneficiaryName,
-    iban: request.account.iban,
-    bic: request.account.bic ?? null,
-    amount: request.amount,
-    remittance: request.remittance,
-  });
-  return result.ok ? result.payload : null;
-}
 
 /** Σχεδιάζει το QR με πάνω-αριστερή γωνία (x, y) και τη λεζάντα από κάτω· επιστρέφει το y μετά τη λεζάντα. */
 export function drawPaymentQr(pdf: jsPDF, payload: string, x: number, y: number): number {

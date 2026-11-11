@@ -32,6 +32,7 @@ import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 import '@/services/sharing/resolvers';
 import {
   isResolvableShareKind,
+  linkPolicyOf,
   SHARE_LABEL_MAX_LENGTH,
   SHARE_PASSWORD_MAX_LENGTH,
 } from '@/services/sharing/share-resolve-contract';
@@ -44,7 +45,6 @@ const logger = createModuleLogger('ShareCreate');
 /** Λήξη **υποχρεωτική** — ίδιο εύρος με τις επιλογές του διαλόγου (1 ώρα … 30 ημέρες). */
 export const SHARE_MIN_EXPIRY_HOURS = 1;
 export const SHARE_MAX_EXPIRY_HOURS = 720;
-const DEFAULT_EXPIRY_HOURS = 72;
 const NOTE_MAX_LENGTH = 1000;
 /**
  * Οι κανόνες των πεδίων **πολιτικής** — **ένας** ορισμός για τη δημιουργία (`share-create`)
@@ -97,6 +97,14 @@ export function parseCreateShareRequest(body: unknown): CreateShareRequest | nul
   };
 }
 
+/**
+ * Η λήξη του αιτήματος, αλλιώς η προεπιλογή της πολιτικής του **είδους** (ADR-ACC-018 §16). Ο διάλογος διαβάζει την
+ * ίδια τιμή (`initialLinkTokenDraftFor`).
+ */
+function expiryHoursOf(input: Pick<CreateShareInput, 'entityType' | 'expiresInHours'>): number {
+  return input.expiresInHours ?? linkPolicyOf(input.entityType).defaultExpiresInHours;
+}
+
 /** Λήξη από **τώρα** — κοινή για δημιουργία και αλλαγή ρυθμίσεων (Α8 · Α13). */
 export function shareExpiryFromNow(hours: number, nowMs: number = Date.now()): string {
   return new Date(nowMs + hours * 3_600_000).toISOString();
@@ -107,7 +115,7 @@ export function shareExpiryFromNow(hours: number, nowMs: number = Date.now()): s
  * §4.7 Α3′′: άγκυρα με χειροποίητο έγγραφο `note: 'για ποιον'` έμεινε πράσινη ενώ ο γραφέας γράφει `label`).
  */
 export async function buildShareDocument(input: CreateShareInput, tokenHash: string) {
-  const expiresAt = shareExpiryFromNow(input.expiresInHours ?? DEFAULT_EXPIRY_HOURS);
+  const expiresAt = shareExpiryFromNow(expiryHoursOf(input));
   return {
     tokenHash,
     entityType: input.entityType,
@@ -141,7 +149,7 @@ async function auditFileShare(input: CreateShareInput, shareId: string, requires
     action: 'share',
     performedBy: input.createdBy,
     companyId: input.companyId,
-    metadata: { shareId, expiresInHours: input.expiresInHours ?? DEFAULT_EXPIRY_HOURS, requiresPassword },
+    metadata: { shareId, expiresInHours: expiryHoursOf(input), requiresPassword },
   });
 }
 

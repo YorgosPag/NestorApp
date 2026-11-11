@@ -37,3 +37,11 @@ export const INITIAL_LINK_TOKEN_DRAFT: LinkTokenDraft = {
   maxDownloads: '0',
   note: '',
 };
+
+/**
+ * Το αρχικό πρόχειρο **για ένα είδος**: η λήξη είναι η προεπιλογή της πολιτικής του είδους
+ * (`ShareKindLinkPolicy.defaultExpiresInHours`), την ίδια που εφαρμόζει και ο διακομιστής όταν λείπει.
+ */
+export function initialLinkTokenDraftFor(policy: { readonly defaultExpiresInHours: number }): LinkTokenDraft {
+  return { ...INITIAL_LINK_TOKEN_DRAFT, expiresInHours: String(policy.defaultExpiresInHours) };
+}

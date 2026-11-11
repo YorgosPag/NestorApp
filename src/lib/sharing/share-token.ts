@@ -60,3 +60,12 @@ export function hashShareToken(token: string): Promise<string> {
 export function isPlausibleShareToken(token: unknown): token is string {
   return typeof token === 'string' && TOKEN_SHAPE.test(token);
 }
+
+/**
+ * Η διαδρομή της δημόσιας σελίδας ενός συνδέσμου (`/shared/[token]`). Ο ΕΝΑΣ ορισμός για τον διάλογο
+ * (browser) και για όσους γράφουν σύνδεσμο σε email ή PDF (διακομιστής, ADR-ACC-018 §16). Το token
+ * κωδικοποιείται: είναι base64url, αλλά η διαδρομή δεν το υποθέτει.
+ */
+export function shareLinkPath(token: string): string {
+  return `/shared/${encodeURIComponent(token)}`;
+}

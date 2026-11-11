@@ -11,17 +11,20 @@ import { forceRobotoCell, yAfterTable } from '@/services/report-engine/report-pd
 import { formatAccountingCurrency } from '../../utils/format';
 import type { Invoice, InvoiceLineItem, InvoicePaymentAccount } from '../../types';
 import { showsPaymentInstructions } from '../payments/invoice-payment-accounts';
-import { formatCreditorReference } from '../payments/creditor-reference';
-import { invoiceCreditorReference } from '../engines/matching-reference';
 import {
-  PAYMENT_QR_CAPTION_MM, PAYMENT_QR_SIZE_MM, drawPaymentQr, paymentQrPayload, paymentQrX,
+  invoicePayableAmount, invoicePaymentReference, paymentBeneficiaryOf, paymentQrPayload,
+} from '../payments/invoice-payment-instructions';
+import {
+  PAYMENT_QR_CAPTION_MM, PAYMENT_QR_SIZE_MM, drawPaymentQr, paymentQrX,
 } from './invoice-pdf-payment-qr';
 import {
   COLORS, LAYOUT, LABELS, PAYMENT_METHOD_LABELS, INVOICE_DOCUMENT_LANGUAGE,
-  ensureSpace, drawHR, setColor, formatIBAN,
+  ensureSpace, drawHR, setColor,
   drawPaymentStamp, buildColumnStyles
 } from './invoice-pdf-constants';
 import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
+// Ο ΕΝΑΣ μορφοποιητής IBAN (ομάδες των 4) — ίδιος με την οθόνη, τη σελίδα πληρωμής και τις επαφές.
+import { formatIBAN } from '@/types/contacts/banking';
 
 /** Το σώμα των πινάκων του τιμολογίου (γραμμές · τράπεζες) — ΕΝΑ στυλ. */
 const TABLE_BODY_STYLES = {
@@ -80,11 +83,6 @@ export function drawLineItemsTable(pdf: jsPDF, invoice: Invoice, startY: number)
   });
 
   return yAfterTable(pdf, y, 0) + 3;
-}
-
-/** Το ΠΛΗΡΩΤΕΟ — ο ΕΝΑΣ αριθμός για τα σύνολα **και** για το EPC QR (ADR-ACC-018 §15). */
-export function invoicePayableAmount(invoice: Invoice, withholdingAmount: number): number {
-  return invoice.totalGrossAmount - withholdingAmount;
 }
 
 /**
@@ -155,29 +153,25 @@ export function drawPaymentSection(pdf: jsPDF, invoice: Invoice, startY: number)
   return y + 10;
 }
 
-/** Η αιτιολογία πληρωμής (EN 16931 BT-83): το RF όταν ορίζεται, πάντα μαζί με τον αριθμό του τιμολογίου. */
-export function invoicePaymentReference(invoice: Invoice): { readonly rf: string | null; readonly label: string } {
-  const rf = invoiceCreditorReference(invoice.series, invoice.number);
-  const number = `${invoice.series}-${invoice.number}`;
-  return { rf, label: rf ? `${formatCreditorReference(rf)} (${number})` : number };
-}
-
 /**
  * §7: Οδηγίες πληρωμής (ADR-ACC-018 §15 · EN 16931 BG-16) — πίνακας Τράπεζα · IBAN · BIC · Δικαιούχος, αιτιολογία
  * (RF + αριθμός) και, δεξιά, EPC QR για τον προεπιλεγμένο λογαριασμό. Μόνο όταν το παραστατικό πληρώνεται με μεταφορά.
  *
  * @param payable Το πληρωτέο όπως τυπώθηκε στα σύνολα — το ΙΔΙΟ ποσό μπαίνει στο QR.
+ * @param paymentPageUrl Ο σύνδεσμος της δημόσιας σελίδας πληρωμής (ADR-ACC-018 §16), ή `null`.
  */
-export function drawBankAccountsSection(pdf: jsPDF, invoice: Invoice, payable: number, startY: number): number {
+export function drawBankAccountsSection(
+  pdf: jsPDF, invoice: Invoice, payable: number, startY: number, paymentPageUrl: string | null = null,
+): number {
   const accounts = invoice.issuer.bankAccounts ?? [];
   if (accounts.length === 0 || !showsPaymentInstructions(invoice)) return startY;
 
   const reference = invoicePaymentReference(invoice);
-  const holderOf = (account: InvoicePaymentAccount) => account.holderName?.trim() || invoice.issuer.name;
+  const holderOf = (account: InvoicePaymentAccount) => paymentBeneficiaryOf(account, invoice.issuer.name);
   const [primary] = accounts;
   const qrPayload = paymentQrPayload({
     account: primary, beneficiaryName: holderOf(primary), currency: invoice.currency,
-    amount: payable, remittance: reference.rf ?? `${invoice.series}-${invoice.number}`,
+    amount: payable, remittance: reference.remittance,
   });
   const qrRoom = qrPayload ? PAYMENT_QR_SIZE_MM + 4 : 0;
   const tableHeight = 15 + accounts.length * 8;
@@ -202,9 +196,18 @@ export function drawBankAccountsSection(pdf: jsPDF, invoice: Invoice, payable: n
   pdf.setFontSize(8);
   pdf.text(`${LABELS.paymentReference}: ${reference.label}`, LAYOUT.marginLeft, after);
   after += 3;
+  if (paymentPageUrl !== null) after = drawPaymentPageLink(pdf, paymentPageUrl, after + 1);
 
   if (qrPayload) after = Math.max(after, drawPaymentQr(pdf, qrPayload, paymentQrX(), y + 2));
   return after + 3;
+}
+
+/** Η γραμμή «Προβολή & πληρωμή online», ενεργός σύνδεσμος στο PDF. Επιστρέφει το y μετά τη γραμμή. */
+function drawPaymentPageLink(pdf: jsPDF, url: string, y: number): number {
+  setColor(pdf, COLORS.navy);
+  pdf.setFontSize(8);
+  pdf.textWithLink(`${LABELS.paymentPage}: ${url}`, LAYOUT.marginLeft, y, { url });
+  return y + 4;
 }
 
 /**

@@ -31,6 +31,8 @@ import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 import type { ResolvableShareKind } from '@/services/sharing/share-resolve-contract';
 import { locateManagedTour } from '@/server/spatial-tour/tour-access-shared';
 import { readViewerStops } from '@/server/spatial-tour/tour-viewer-stops';
+import { readTenantInvoice } from '@/server/accounting/public-invoice/tenant-invoice';
+import { isPayableByLink } from '@/subapps/accounting/services/payments/invoice-payment-link';
 import type { CapabilitySubject } from '@/types/capability-authority';
 
 import { mayShareEntity } from './share-entity-access';
@@ -78,6 +80,17 @@ async function tourManagerAuthority(adminDb: Firestore, creator: ShareCreator, t
   return (await readViewerStops(managed.tourRef)).length > 0 ? 'granted' : 'nothing-to-share';
 }
 
+/**
+ * Τιμολόγιο (ADR-ACC-018 §16): ο μισθωτής του, και μόνο για παραστατικό που **πληρώνεται με μεταφορά**
+ * (`isPayableByLink`, ο ίδιος κανόνας με τους λογαριασμούς του PDF). Πιστωτικό, ακυρωμένο ή μετρητοίς ⇒
+ * `nothing-to-share` (422 με λόγο), **μετά** την εξουσία: σε ξένο δεν λέμε ποτέ «υπάρχει, αλλά δεν πληρώνεται».
+ */
+async function invoicePaymentAuthority(_adminDb: Firestore, creator: ShareCreator, invoiceId: string): Promise<ShareCreateVerdict> {
+  const found = await readTenantInvoice({ companyId: creator.companyId, userId: creator.uid }, invoiceId);
+  if (found === null) return 'forbidden';
+  return isPayableByLink(found.invoice) ? 'granted' : 'nothing-to-share';
+}
+
 const AUTHORITY: Readonly<Record<ResolvableShareKind, ShareCreateAuthority>> = {
   file: tenantAuthority('file'),
   contact: tenantAuthority('contact'),
@@ -87,6 +100,7 @@ const AUTHORITY: Readonly<Record<ResolvableShareKind, ShareCreateAuthority>> = {
   storage_showcase: tenantAuthority('storage_showcase'),
   parking_showcase: tenantAuthority('parking_showcase'),
   spatial_tour: tourManagerAuthority,
+  invoice_payment: invoicePaymentAuthority,
 };
 
 /** **Μπορεί ο καλών να δώσει σύνδεσμο για αυτή την οντότητα;** */

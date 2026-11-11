@@ -18,6 +18,7 @@
 import type { FileShareResolvedData } from './resolvers/file.resolver';
 import type { ContactShareResolvedData } from './resolvers/contact.resolver';
 import type { SpatialTourShareResolvedData } from './resolvers/spatial-tour.resolver';
+import type { InvoicePaymentShareResolvedData } from './resolvers/invoice-payment.resolver';
 import type {
   BuildingShowcaseResolvedData,
   ParkingShowcaseResolvedData,
@@ -36,6 +37,7 @@ export interface ResolvedShareDataByKind {
   storage_showcase: StorageShowcaseResolvedData;
   parking_showcase: ParkingShowcaseResolvedData;
   spatial_tour: SpatialTourShareResolvedData;
+  invoice_payment: InvoicePaymentShareResolvedData;
 }
 
 export type ResolvableShareKind = keyof ResolvedShareDataByKind;
@@ -90,21 +92,33 @@ export const SHARE_LABEL_MAX_LENGTH = 80;
  * - `openNotice` — ειδοποίηση του αποστολέα όταν ανοίγει ο σύνδεσμος (ADR-884 §9.1 Α3′): **μόνο** στο **πρώτο**
  *   άνοιγμα και από **νέα** συσκευή. Έχει νόημα μόνο όπου ο σύνδεσμος είναι **ονομαστικός** (`labelRequired`) — αλλιώς
  *   η ειδοποίηση δεν λέει **ποιος**. Είδος με `true` χρειάζεται αναγγελέα (`share-open-notice.ts`· άγκυρα).
+ *   Εξαίρεση το τιμολόγιο: ο παραλήπτης είναι **εξ ορισμού** ο πελάτης του, άρα το «ποιος» το λέει το ίδιο το
+ *   παραστατικό. Η αναγγελία γράφει ίχνος λογιστικής (το «Viewed» του Stripe), όχι ειδοποίηση.
+ * - `defaultExpiresInHours` — η λήξη όταν ο δημιουργός δεν διάλεξε (ADR-ACC-018 §16). Ο διακομιστής **και** ο
+ *   διάλογος διαβάζουν την ίδια τιμή. Σύνδεσμος προβολής ή λήψης ζει 3 ημέρες. Σύνδεσμος πληρωμής τιμολογίου
+ *   ζει όσο το ανώτατο όριο του συστήματος (30 ημέρες, όπως το Stripe: 30 ημέρες μετά τη λήξη), γιατί ο πελάτης
+ *   πληρώνει όταν λήξει η προθεσμία, όχι όταν λάβει το email.
  */
 export interface ShareKindLinkPolicy {
   readonly password: boolean;
   readonly labelRequired: boolean;
   readonly accessLimit: boolean;
   readonly openNotice: boolean;
+  readonly defaultExpiresInHours: number;
 }
+
+/** Η προεπιλεγμένη λήξη συνδέσμων προβολής/λήψης (3 ημέρες). */
+const DEFAULT_LINK_EXPIRY_HOURS = 72;
 
 /** Ό,τι κατεβαίνει: κωδικός και όριο λήψεων επιτρέπονται. */
 const DOWNLOAD_LINK_POLICY: ShareKindLinkPolicy = {
   password: true, labelRequired: false, accessLimit: true, openNotice: false,
+  defaultExpiresInHours: DEFAULT_LINK_EXPIRY_HOURS,
 };
 /** Ό,τι προβάλλεται: κωδικός ναι, όριο ανοιγμάτων όχι. */
 const VIEW_LINK_POLICY: ShareKindLinkPolicy = {
   password: true, labelRequired: false, accessLimit: false, openNotice: false,
+  defaultExpiresInHours: DEFAULT_LINK_EXPIRY_HOURS,
 };
 
 /** ⚠️ `Record<ResolvableShareKind, …>` — νέο είδος **δεν μεταγλωττίζεται** χωρίς να δηλώσει την πολιτική του. */
@@ -116,7 +130,14 @@ export const SHARE_KIND_LINK_POLICY: Readonly<Record<ResolvableShareKind, ShareK
   building_showcase: VIEW_LINK_POLICY,
   storage_showcase: VIEW_LINK_POLICY,
   parking_showcase: VIEW_LINK_POLICY,
-  spatial_tour: { password: false, labelRequired: true, accessLimit: false, openNotice: true },
+  spatial_tour: {
+    password: false, labelRequired: true, accessLimit: false, openNotice: true,
+    defaultExpiresInHours: DEFAULT_LINK_EXPIRY_HOURS,
+  },
+  invoice_payment: {
+    password: false, labelRequired: false, accessLimit: false, openNotice: true,
+    defaultExpiresInHours: 720,
+  },
 };
 
 /** Η πολιτική ενός είδους — μη επιλύσιμο είδος ⇒ η προεπιλογή (δεν περνά ποτέ από σύνδεσμο). */
@@ -138,4 +159,5 @@ export const RESOLVABLE_SHARE_KINDS = [
   'storage_showcase',
   'parking_showcase',
   'spatial_tour',
+  'invoice_payment',
 ] as const satisfies readonly ResolvableShareKind[];

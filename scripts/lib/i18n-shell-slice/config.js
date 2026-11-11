@@ -178,6 +178,8 @@ const DEFAULTS = Object.freeze({
     'src/components/catalog/editions/edition-surfaces.tsx',
     // ADR-934 Σ1γ — η αναφορά εξαγωγής xChange: μόνο αφού κατέβει το αρχείο, με τα κείμενά της στο chunk (CHECK 3.34).
     'src/components/catalog/interop/interop-surfaces.tsx',
+    // ADR-ACC-018 §16 — η σελίδα πληρωμής τιμολογίου: μόνο όταν ο σύνδεσμος είναι τιμολόγιο, με τα κείμενά της στο chunk.
+    'src/components/shared/pages/invoice-payment/invoice-payment-surfaces.tsx',
   ],
 
   /**

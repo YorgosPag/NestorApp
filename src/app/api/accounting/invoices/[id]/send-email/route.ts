@@ -9,6 +9,7 @@
  *   3. Builds branded HTML email with invoice summary
  *   4. Sends via Mailgun with PDF attachment
  *   5. Records audit trail (EmailSendRecord) in invoice.emailHistory
+ *   6. ADR-ACC-018 §16: mints the invoice's payment link (body button + attached PDF); revoked if delivery fails
  *
  * Auth: withAuth (authenticated users)
  * Rate: withSensitiveRateLimit (20 req/min — email is a side-effect)
@@ -23,7 +24,6 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { defineRoute } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { extractKadFromProfile } from '@/subapps/accounting/services/pdf/invoice-pdf-exporter';
 import {
   buildInvoiceEmailContent,
   buildInvoiceEmailSubject,
@@ -39,6 +39,11 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { nowISO } from '@/lib/date-local';
 import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
 import { hasLivePaymentAccounts, withCurrentPaymentAccounts } from '../../invoice-payment-snapshot';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import {
+  mintInvoiceEmailPaymentLink,
+  revokeInvoiceEmailPaymentLink,
+} from '@/server/accounting/public-invoice/invoice-email-payment-link';
 
 const logger = createModuleLogger('INVOICE_EMAIL');
 
@@ -134,29 +139,16 @@ export const POST = defineRoute({
     // ADR-ACC-018 §15.2: πρόχειρο ⇒ ο πελάτης παίρνει τους λογαριασμούς του σημερινού μητρώου, όχι της δημιουργίας.
     const invoice = await withCurrentPaymentAccounts(repository, stored);
 
-    // ── 3. Generate PDF server-side ───────────────────────────────────
-    const { renderInvoicePDF } = await import(
-      '@/subapps/accounting/services/pdf/invoice-pdf-template'
-    );
+    // ── 3. Payment link (ADR-ACC-018 §16) + PDF server-side ───────────
+    const db = getAdminFirestore();
+    const creator = { uid: auth.uid, companyId: auth.companyId };
+    const paymentLink = await mintInvoiceEmailPaymentLink(db, creator, invoice, recipientEmail.trim());
 
-    // Load logo (lazy — returns null if unavailable)
-    let logoBase64: string | null = null;
-    try {
-      const { PAGONIS_LOGO_BASE64 } = await import(
-        '@/subapps/accounting/services/pdf/logo-data'
-      );
-      logoBase64 = PAGONIS_LOGO_BASE64;
-    } catch {
-      // Logo unavailable — PDF renders without it
-    }
-
-    const kadCode = extractKadFromProfile(companyProfile);
-
-    const pdf = await renderInvoicePDF({
+    const pdfDocument = await import('@/subapps/accounting/services/pdf/invoice-pdf-document');
+    const pdf = await pdfDocument.renderInvoicePdfDocument({
       invoice,
-      logoBase64,
-      kadCode,
-      withholdingAmount: 0,
+      kadCode: pdfDocument.extractKadFromProfile(companyProfile),
+      paymentPageUrl: paymentLink?.url ?? null,
     });
 
     const pdfArrayBuffer = pdf.output('arraybuffer');
@@ -165,6 +157,7 @@ export const POST = defineRoute({
     // Safety check: Mailgun limit is 25MB; we enforce 10MB
     const PDF_SIZE_LIMIT_BYTES = 10 * 1024 * 1024;
     if (pdfBuffer.length > PDF_SIZE_LIMIT_BYTES) {
+      if (paymentLink !== null) await revokeInvoiceEmailPaymentLink(db, creator, paymentLink.shareId);
       return NextResponse.json(
         { success: false, error: 'Generated PDF exceeds 10MB limit' },
         { status: 422 }
@@ -172,19 +165,14 @@ export const POST = defineRoute({
     }
 
     // ── 4. Build PDF filename ─────────────────────────────────────────
-    const sanitizedCustomer = invoice.customer.name
-      .replace(/[<>:"/\\|?*]/g, '')
-      .replace(/\s+/g, '_')
-      .substring(0, 50);
-    const dateCompact = invoice.issueDate.replace(/-/g, '');
-    const pdfFilename = `${invoice.series}-${invoice.number}_${sanitizedCustomer}_${dateCompact}.pdf`;
+    const pdfFilename = pdfDocument.invoicePdfFilename(invoice);
 
     // ── 5. Build email content ────────────────────────────────────────
     const language = langOverride ?? detectInvoiceEmailLanguage(invoice.customer.country);
 
     const subject = subjectOverride ?? buildInvoiceEmailSubject(invoice, language);
-    const textBody = buildInvoiceEmailPlainText(invoice, language);
-    const contentHtml = buildInvoiceEmailContent(invoice, language);
+    const textBody = buildInvoiceEmailPlainText(invoice, language, paymentLink?.url ?? null);
+    const contentHtml = buildInvoiceEmailContent(invoice, language, paymentLink?.url ?? null);
 
     const htmlBody = wrapInBrandedTemplate({
       contentHtml,
@@ -221,6 +209,7 @@ export const POST = defineRoute({
       status: mailgunResult.success ? 'sent' : 'failed',
       error: mailgunResult.error ?? null,
       resolvedSource,
+      paymentLinkShareId: paymentLink?.shareId ?? null,
     };
 
     const updatedEmailHistory: EmailSendRecord[] = [
@@ -235,6 +224,10 @@ export const POST = defineRoute({
     };
 
     await repository.updateInvoice(id, updatePayload);
+    // Το email δεν έφυγε ⇒ κανείς δεν έλαβε τον σύνδεσμο ⇒ ανάκληση (ADR-ACC-018 §16).
+    if (!mailgunResult.success && paymentLink !== null) {
+      await revokeInvoiceEmailPaymentLink(db, creator, paymentLink.shareId);
+    }
 
     logger.info('Invoice email processed', {
       invoiceId: id,

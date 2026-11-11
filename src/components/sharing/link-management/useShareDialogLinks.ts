@@ -14,14 +14,15 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
-  INITIAL_LINK_TOKEN_DRAFT,
+  initialLinkTokenDraftFor,
   type LinkTokenDraft,
 } from '@/components/ui/sharing/panels/link-token/types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { copyDeferredText, copyToClipboard } from '@/lib/share-utils';
+import { linkPolicyOf } from '@/services/sharing/share-resolve-contract';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useLinkMint, type MintedShare, type UseLinkMintOptions } from './useLinkMint';
 import { useShareLinks, type UseShareLinksResult } from './useShareLinks';
@@ -51,7 +52,9 @@ export function useShareDialogLinks({
 }: UseShareDialogLinksOptions): UseShareDialogLinksResult {
   const { t } = useTranslation('files');
   const notifications = useNotifications();
-  const [draft, setDraft] = useState<LinkTokenDraft>(INITIAL_LINK_TOKEN_DRAFT);
+  // ADR-ACC-018 §16: η λήξη ξεκινά από την πολιτική του ΕΙΔΟΥΣ — ίδια τιμή με τον διακομιστή.
+  const initialDraft = useMemo(() => initialLinkTokenDraftFor(linkPolicyOf(mintOptions.entityType)), [mintOptions.entityType]);
+  const [draft, setDraft] = useState<LinkTokenDraft>(initialDraft);
   const [error, setError] = useState<string | null>(null);
   const mintState = useLinkMint(mintOptions);
   const links = useShareLinks({ entityType: mintOptions.entityType, entityId: mintOptions.entityId, enabled });
@@ -73,11 +76,11 @@ export function useShareDialogLinks({
     copyDeferredText(url)
       .then((copied) => {
         reportCopy(copied);
-        setDraft(INITIAL_LINK_TOKEN_DRAFT); // ο επόμενος σύνδεσμος (άλλος παραλήπτης) ξεκινά καθαρός
+        setDraft(initialDraft); // ο επόμενος σύνδεσμος (άλλος παραλήπτης) ξεκινά καθαρός
       })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)))
       .finally(() => void refreshLinks());
-  }, [mint, draft, reportCopy, refreshLinks]);
+  }, [mint, draft, reportCopy, refreshLinks, initialDraft]);
 
   const copyAgain = useCallback(() => {
     if (minted) void copyToClipboard(minted.url).then(reportCopy);
@@ -85,9 +88,9 @@ export function useShareDialogLinks({
 
   const reset = useCallback(() => {
     resetMint();
-    setDraft(INITIAL_LINK_TOKEN_DRAFT);
+    setDraft(initialDraft);
     setError(null);
-  }, [resetMint]);
+  }, [resetMint, initialDraft]);
 
   return { draft, setDraft, minted, minting, error, links, createAndCopy, copyAgain, startOver, reset };
 }

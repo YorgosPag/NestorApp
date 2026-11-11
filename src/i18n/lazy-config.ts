@@ -100,6 +100,7 @@ export const SUPPORTED_NAMESPACES = [
   'accounting', // 🏢 Accounting subapp (invoices, journal, VAT, tax, assets, documents)
   'accounting-tax-offices', // 🏢 ΔΟΥ names + regions (DoyPicker component)
   'accounting-vat-exemptions', // 🏢 Αιτίες εξαίρεσης ΦΠΑ myDATA §8.3 (ADR-ACC-003)
+  'accounting-public-payment', // 🏢 Δημόσια σελίδα πληρωμής τιμολογίου — ανώνυμος πελάτης (ADR-ACC-018 §16)
   'banking',    // 🏢 Banking module — bank accounts, IBAN, selectors (ADR-172)
   'addresses',  // 🏢 Shared address system — forms, cards, maps (ADR-172)
   'payments',   // 🏢 Payment plans, installments, loans, cheques, reports (ADR-234)

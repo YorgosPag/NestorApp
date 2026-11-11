@@ -19,6 +19,7 @@ import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 import { fileShareResolver } from './file.resolver';
 import { contactShareResolver } from './contact.resolver';
 import { spatialTourShareResolver } from './spatial-tour.resolver';
+import { invoicePaymentShareResolver } from './invoice-payment.resolver';
 import {
   buildingShowcaseShareResolver,
   parkingShowcaseShareResolver,
@@ -39,6 +40,7 @@ export function registerShareResolvers(): void {
   ShareEntityRegistry.register('storage_showcase', storageShowcaseShareResolver);
   ShareEntityRegistry.register('parking_showcase', parkingShowcaseShareResolver);
   ShareEntityRegistry.register('spatial_tour', spatialTourShareResolver);
+  ShareEntityRegistry.register('invoice_payment', invoicePaymentShareResolver);
   registered = true;
 }
 
@@ -54,10 +56,12 @@ export {
   storageShowcaseShareResolver,
   parkingShowcaseShareResolver,
   spatialTourShareResolver,
+  invoicePaymentShareResolver,
 };
 export type { FileShareResolvedData } from './file.resolver';
 export type { ContactShareResolvedData } from './contact.resolver';
 export type { SpatialTourShareResolvedData } from './spatial-tour.resolver';
+export type { InvoicePaymentShareResolvedData } from './invoice-payment.resolver';
 export type {
   PropertyShowcaseResolvedData,
   ProjectShowcaseResolvedData,

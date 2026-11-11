@@ -59,7 +59,10 @@ export type AccountingAuditEventType =
   | 'BANK_ACCOUNT_CREATED'
   | 'BANK_ACCOUNT_UPDATED'
   | 'BANK_ACCOUNT_DEACTIVATED'
-  | 'BANK_ACCOUNT_REACTIVATED';
+  | 'BANK_ACCOUNT_REACTIVATED'
+  // ADR-ACC-018 §16: the customer opened the invoice's payment link (first open · new device) — Stripe's «Viewed».
+  // The actor is the link holder (`share:<shareId>`), never the user who created the link.
+  | 'INVOICE_PAYMENT_LINK_OPENED';
 
 /**
  * Entity types that can be audited

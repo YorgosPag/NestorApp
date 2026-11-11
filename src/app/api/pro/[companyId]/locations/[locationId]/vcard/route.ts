@@ -23,7 +23,7 @@ import { attachmentDisposition } from '@/lib/http/content-disposition';
 import { absoluteUrl } from '@/lib/http/request-origin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { revealLocationCard } from '@/services/mandate/showcase-card-reveal';
-import { PRIVATE_CHANNEL_HEADERS } from '@/app/api/pro/private-response-headers';
+import { PRIVATE_CHANNEL_HEADERS } from '@/lib/http/private-response-headers';
 
 interface VCardSegment {
   readonly params: Promise<{ readonly companyId: string; readonly locationId: string }>;

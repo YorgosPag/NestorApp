@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MoreHorizontal, Printer, Download, Mail, Loader2, Pencil, Ban, FileX2 } from 'lucide-react';
+import { MoreHorizontal, Printer, Download, Mail, Loader2, Pencil, Ban, FileX2, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ import {
   extractKadFromProfile,
 } from '@/subapps/accounting/services/pdf/invoice-pdf-exporter';
 import type { InvoicePDFSettings } from '@/subapps/accounting/services/pdf/invoice-pdf-exporter';
+import { isPayableByLink } from '@/subapps/accounting/services/payments/invoice-payment-link';
 
 interface InvoiceActionsMenuProps {
   invoice: Invoice;
@@ -26,6 +27,8 @@ interface InvoiceActionsMenuProps {
   onSendEmail: () => void;
   onEdit?: () => void;
   onCancel?: () => void;
+  /** ADR-ACC-018 §16 — «Σύνδεσμος πληρωμής». Εμφανίζεται μόνο όταν το παραστατικό πληρώνεται με σύνδεσμο. */
+  onPaymentLink?: () => void;
 }
 
 /**
@@ -39,7 +42,9 @@ function buildPDFSettings(profile: CompanyProfile | null): InvoicePDFSettings {
   };
 }
 
-export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendEmail, onEdit, onCancel }: InvoiceActionsMenuProps) {
+export function InvoiceActionsMenu({
+  invoice, onRefresh, companyProfile, onSendEmail, onEdit, onCancel, onPaymentLink,
+}: InvoiceActionsMenuProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -105,6 +110,12 @@ export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendE
           <Mail className="mr-2 h-4 w-4" />
           {t('forms.sendEmail')}
         </DropdownMenuItem>
+        {onPaymentLink && isPayableByLink(invoice) && (
+          <DropdownMenuItem onClick={onPaymentLink}>
+            <Link2 className="mr-2 h-4 w-4" />
+            {t('invoices.paymentLink.menu')}
+          </DropdownMenuItem>
+        )}
         {showCancelAction && onCancel && (
           <>
             <DropdownMenuSeparator />

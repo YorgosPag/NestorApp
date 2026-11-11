@@ -15,6 +15,7 @@ import { InvoiceSummaryCard } from './InvoiceSummaryCard';
 import { InvoiceActionsMenu } from './InvoiceActionsMenu';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
 import { CancelInvoiceDialog } from './CancelInvoiceDialog';
+import { InvoicePaymentLinkDialog } from './InvoicePaymentLinkDialog';
 import { Badge } from '@/components/ui/badge';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -44,6 +45,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   const [loading, setLoading] = useState(!invoiceDetailsCache.hasLoaded(invoiceId));
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [paymentLinkOpen, setPaymentLinkOpen] = useState(false);
 
   const fetchInvoice = useCallback(async () => {
     if (!user) {
@@ -119,6 +121,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
           onSendEmail={() => setEmailDialogOpen(true)}
           onEdit={() => router.push(`/accounting/invoices/${invoiceId}/edit`)}
           onCancel={() => setCancelDialogOpen(true)}
+          onPaymentLink={invoice.companyId ? () => setPaymentLinkOpen(true) : undefined}
         />
       </header>
 
@@ -188,6 +191,15 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
         onOpenChange={setCancelDialogOpen}
         onSuccess={fetchInvoice}
       />
+
+      {invoice.companyId && (
+        <InvoicePaymentLinkDialog
+          invoice={invoice}
+          companyId={invoice.companyId}
+          open={paymentLinkOpen}
+          onOpenChange={setPaymentLinkOpen}
+        />
+      )}
 
       {/* APY Certificate shortcut — ADR-ACC-020 */}
       {invoice.withholdingAmount != null && invoice.withholdingAmount > 0 && (

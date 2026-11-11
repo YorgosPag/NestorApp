@@ -25,8 +25,8 @@ import {
   drawMyDataSection,
   drawNotesSection,
   addPageFooters,
-  invoicePayableAmount,
 } from './invoice-pdf-sections';
+import { invoicePayableAmount } from '../payments/invoice-payment-instructions';
 import { drawVatExemptionSection } from './invoice-pdf-vat-exemption';
 
 // Re-export section renderers for direct use
@@ -55,6 +55,11 @@ export interface InvoicePDFRenderOptions {
   kadCode: string | null;
   /** Withholding tax amount (default: 0) */
   withholdingAmount: number;
+  /**
+   * ADR-ACC-018 §16: ο σύνδεσμος της δημόσιας σελίδας πληρωμής, κάτω από τις οδηγίες πληρωμής (Stripe: στο PDF).
+   * Μόνο στο PDF που **συνοδεύει** τον σύνδεσμο (email). Η λήψη από την εφαρμογή δεν έχει σύνδεσμο.
+   */
+  paymentPageUrl?: string | null;
 }
 
 /**
@@ -63,7 +68,7 @@ export interface InvoicePDFRenderOptions {
  * @returns The jsPDF instance (caller decides: save, blob, or print)
  */
 export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promise<jsPDF> {
-  const { invoice, logoBase64, kadCode, withholdingAmount } = options;
+  const { invoice, logoBase64, kadCode, withholdingAmount, paymentPageUrl = null } = options;
 
   // Dynamic imports for code-splitting
   const { default: jsPDF } = await import('jspdf');
@@ -90,7 +95,7 @@ export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promis
   y = drawPaymentSection(pdf, invoice, y);
   // ADR-ACC-018 §15: οι οδηγίες πληρωμής είναι το snapshot του τιμολογίου (`issuer.bankAccounts`) — ποτέ σημερινή
   // τιμή του μητρώου, ώστε ένα παλιό τιμολόγιο να μην τυπώσει ποτέ IBAN που δεν έγραφε όταν εκδόθηκε.
-  y = drawBankAccountsSection(pdf, invoice, invoicePayableAmount(invoice, withholdingAmount), y);
+  y = drawBankAccountsSection(pdf, invoice, invoicePayableAmount(invoice, withholdingAmount), y, paymentPageUrl);
   y = drawMyDataSection(pdf, invoice, kadCode, y);
   y = drawNotesSection(pdf, invoice, y);
 

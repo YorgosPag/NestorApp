@@ -1,0 +1,93 @@
+{
+  "page": {
+    "loading": "Loading invoice…",
+    "documentNumber": "No. {number}",
+    "issuedBy": "From",
+    "billedTo": "Bill to",
+    "issueDate": "Issue date",
+    "dueDate": "Due date",
+    "mark": "AADE MARK",
+    "vatNumber": "VAT no. {value}",
+    "taxOffice": "Tax office {value}",
+    "privateLink": "Private link for the recipient of this invoice. Please do not forward it."
+  },
+  "documentType": {
+    "service_invoice": "Invoice for Services",
+    "sales_invoice": "Sales Invoice",
+    "retail_receipt": "Retail Receipt",
+    "service_receipt": "Service Receipt",
+    "credit_invoice": "Credit Note",
+    "service_invoice_eu": "Invoice for Services (EU)",
+    "service_invoice_3rd": "Invoice for Services (non-EU)"
+  },
+  "draft": {
+    "title": "Draft",
+    "body": "This document has not been issued yet. Details and amounts may change until it is issued."
+  },
+  "standing": {
+    "payable": "Due",
+    "overdue": "Overdue",
+    "paid": "Paid",
+    "cancelled": "Cancelled",
+    "notPayable": "No online payment"
+  },
+  "amount": {
+    "due": "Amount due",
+    "dueBy": "Due {date}",
+    "paidBody": "This invoice has been paid. Thank you!",
+    "cancelledBody": "This document was cancelled. Nothing is owed.",
+    "notPayableBody": "This document is not paid by bank transfer. Please contact the issuer to arrange payment."
+  },
+  "pay": {
+    "title": "Pay by bank transfer",
+    "accountsLabel": "Payment accounts",
+    "scanTitle": "Scan with your banking app",
+    "scanHint": "The SEPA QR code fills in the beneficiary, IBAN, amount and reference. Check them before you approve.",
+    "qrAlt": "SEPA payment QR code for {bank}",
+    "noQr": "No QR code is available for this account. Use the details below.",
+    "bank": "Bank",
+    "iban": "IBAN",
+    "bic": "BIC",
+    "beneficiary": "Beneficiary",
+    "reference": "Reference",
+    "referenceHint": "Enter the reference exactly as shown, so your payment is matched to this invoice automatically.",
+    "amount": "Amount",
+    "copy": "Copy: {field}",
+    "copied": "Copied: {field}",
+    "copyFailed": "Copying failed. Select the text and copy it manually."
+  },
+  "lines": {
+    "title": "Details",
+    "description": "Description",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price",
+    "vat": "VAT",
+    "net": "Amount"
+  },
+  "totals": {
+    "title": "Totals",
+    "net": "Net amount",
+    "vat": "VAT {rate}%",
+    "gross": "Total",
+    "payable": "Amount payable"
+  },
+  "notes": {
+    "title": "Notes"
+  },
+  "actions": {
+    "downloadPdf": "Download PDF",
+    "print": "Print"
+  },
+  "contact": {
+    "title": "Contact the issuer",
+    "email": "Email",
+    "phone": "Phone",
+    "website": "Website"
+  },
+  "refused": {
+    "title": "This invoice is not available",
+    "body": "This link is no longer active. Please ask the issuer of the invoice for a new link.",
+    "retry": "Reload page",
+    "loadFailed": "Loading failed. Check your connection and try again."
+  }
+}

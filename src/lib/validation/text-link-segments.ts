@@ -135,6 +135,24 @@ export function emailHref(email: string): string | null {
 }
 
 /**
+ * The `tel:` href for a value that **is** one phone number, or `null` — the twin of {@link emailHref}.
+ * Same rule: the scanner decides, so a value it does not read as one phone is shown as text (ADR-ACC-018 §16,
+ * the issuer's number on the public invoice payment page).
+ */
+export function phoneHref(phone: string): string | null {
+  const segments = splitTextIntoLinkSegments(phone, { kinds: ['phone'] });
+  const only = segments.length === 1 ? segments[0] : undefined;
+  return only?.kind === 'phone' ? only.href : null;
+}
+
+/** The href for a value that **is** one web address, or `null` — the scanner decides, so no `javascript:` ever reaches an `<a>`. */
+export function webHref(url: string): string | null {
+  const segments = splitTextIntoLinkSegments(url, { kinds: ['url'] });
+  const only = segments.length === 1 ? segments[0] : undefined;
+  return only?.kind === 'url' ? only.href : null;
+}
+
+/**
  * True when `source` contains at least one address — the cheap question, for callers that
  * only need to decide whether to do more work.
  *
