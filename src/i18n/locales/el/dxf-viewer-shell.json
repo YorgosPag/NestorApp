@@ -542,6 +542,7 @@
           "acceptSuggestionLabel": "Αποδοχή της πρότασης «{value}»",
           "focusSource": "Εστίαση",
           "focusSourceLabel": "Εστίαση στο «{raw}» στην εικόνα",
+          "thumbnailAlt": "Απόσπασμα της εικόνας: «{raw}»",
           "priority": {
             "suspect": "ύποπτη",
             "checked": "ελέγχθηκε",

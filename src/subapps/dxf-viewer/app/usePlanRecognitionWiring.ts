@@ -38,6 +38,7 @@ import { applyReadingCorrectionsToOutcome } from '../bim/plan-recognition/readin
 import type { PlanReadingOutcome } from '../bim/plan-recognition/plan-recognition-types';
 import { planReadValueRows, type PlanReadValueRow } from '../systems/plan-recognition/plan-read-values';
 import { usePlanScaleWiring } from './usePlanScaleWiring';
+import { usePlanReadValueThumbnails } from './usePlanReadValueThumbnails';
 import { focusReviewTarget, reviewFocusExtent } from '../systems/coordination/review-focus';
 import { ASSISTANT_FOCUS_PAD_MM } from '../systems/model-from-drawing/assistant-focus';
 
@@ -122,6 +123,7 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
   const sourceCalibrated = useFloorplanBackgroundStore((s) =>
     (sourceFloorId ? (s.floors[sourceFloorId]?.background?.calibration ?? null) !== null : false));
   const { effectiveReading, readValues } = useReadValues(recognition);
+  const readValueThumbnails = usePlanReadValueThumbnails(recognition.run?.floorId ?? null, recognition.reading);
   const { counts, excludedFromWalls } = React.useMemo(() => {
     const { run, fusion } = recognition;
     if (!run || !fusion) return { counts: null, excludedFromWalls: NO_WALL_EVIDENCE_EXCLUSIONS };
@@ -147,6 +149,7 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
     scale,
     ocr: ocrViewOf(recognition, effectiveReading),
     readValues,
+    readValueThumbnails,
   };
 }
 

@@ -10,7 +10,8 @@ import type {
 } from './types';
 import { isTiff } from './image-compression';
 import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
-import { naturalRecognitionRaster, readPlanRaster } from './provider-plan-raster';
+import { cropPlanRegion, naturalRecognitionRaster, readPlanRaster } from './provider-plan-raster';
+import type { RasterRectPx } from '../../types/coordinate-space';
 // 🔑 ΕΝΑΣ πίνακας px εικόνας → καμβάς, χτισμένος από το SSoT `rasterToSceneAffine` (ADR-929 Δ3):
 // ο ίδιος που ρωτά η αναγνώριση κάτοψης, ώστε προεπισκόπηση ≡ αποτέλεσμα.
 import { applyRasterCanvasTransform } from './provider-canvas-transforms';
@@ -75,6 +76,11 @@ export class ImageProvider implements IFloorplanBackgroundProvider {
 
   getPlanRaster(): PlanRaster | null {
     return readPlanRaster(this._canvas, this._bounds);
+  }
+
+  /** ADR-929 Δ21 (δ) βήμα 1 — μικρογραφία περιοχής από την ίδια πηγή (`cropPlanRegion`). */
+  getRegionImage(rect: RasterRectPx, maxEdgePx: number): Promise<Blob | null> {
+    return cropPlanRegion(this._canvas, this._bounds, rect, maxEdgePx);
   }
 
   /** Η εικόνα αποκωδικοποιείται ήδη στην εγγενή της ανάλυση ⇒ ίδια με το `getPlanRaster()`. */

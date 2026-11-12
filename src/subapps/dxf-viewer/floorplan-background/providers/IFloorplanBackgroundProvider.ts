@@ -1,4 +1,5 @@
 import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
+import type { RasterRectPx } from '../../types/coordinate-space';
 import type {
   NaturalBounds,
   ProviderCapabilities,
@@ -29,6 +30,13 @@ export interface IFloorplanBackgroundProvider {
    * της, αλλιώς ό,τι το `getPlanRaster()` με `naturalPerRasterPx = 1`. Η εμφάνιση δεν αλλάζει. `null` όπως το `getPlanRaster`.
    */
   getRecognitionRaster(): Promise<RecognitionRaster | null>;
+
+  /**
+   * ADR-929 Δ21 (δ) βήμα 1: μικρογραφία (PNG) μιας περιοχής σε px των `naturalBounds`, κομμένη απευθείας από την ήδη
+   * αποκωδικοποιημένη πηγή, με μεγαλύτερη πλευρά ≤ `maxEdgePx`. `null` όπως το `getPlanRaster`, ή περιοχή εκτός εικόνας.
+   * Βλ. `cropPlanRegion` (`provider-plan-raster.ts`).
+   */
+  getRegionImage(rect: RasterRectPx, maxEdgePx: number): Promise<Blob | null>;
 
   setActivePage?(page: number): Promise<void>;
 

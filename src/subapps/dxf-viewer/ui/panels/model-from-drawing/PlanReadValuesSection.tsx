@@ -185,8 +185,21 @@ function RowSuggestion({ row, actions, t }: {
   );
 }
 
-function ValueRow({ row, editing, onEdit, actions, t }: {
+/** Βήμα 1 — το απόσπασμα της εικόνας από το οποίο διαβάστηκε το κείμενο (τεκμήριο δίπλα στην τιμή). */
+function SourceThumbnail({ url, raw, t }: { readonly url: string | undefined; readonly raw: string; readonly t: Translate }): React.ReactElement | null {
+  if (url === undefined) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- object URL μικρογραφίας από τον provider, όχι στατικό asset
+    <img
+      src={url} alt={t('modelFromDrawing.image.ocr.values.thumbnailAlt', { raw })} data-testid="mfd-read-value-thumbnail"
+      className="h-8 max-w-full self-start rounded-sm border border-border bg-background object-contain object-left"
+    />
+  );
+}
+
+function ValueRow({ row, thumbnail, editing, onEdit, actions, t }: {
   readonly row: PlanReadValueRow;
+  readonly thumbnail: string | undefined;
   readonly editing: boolean;
   readonly onEdit: (textId: string | null) => void;
   readonly actions: PlanReadValuesActions;
@@ -222,6 +235,7 @@ function ValueRow({ row, editing, onEdit, actions, t }: {
           {t('modelFromDrawing.image.ocr.values.focusSource')}
         </Button>
       </header>
+      <SourceThumbnail url={thumbnail} raw={row.raw} t={t} />
       {editing ? <RowEditor row={row} onSave={save} onCancel={() => onEdit(null)} preview={actions.previewCorrection} t={t} /> : null}
       <p className="m-0 text-[11px] text-foreground">{interpretationOf(row, t)}</p>
       <p className={MUTED}>{metaOf(row, t)}</p>
@@ -238,9 +252,11 @@ function ValueRow({ row, editing, onEdit, actions, t }: {
 }
 
 /** Στον έλεγχο, όταν υπάρχει ανάγνωση: οι γραμμένες τιμές όπως τις διάβασε η μηχανή, με διόρθωση ενός κλικ. */
-export function PlanReadValuesSection({ rows, actions, t }: {
+export function PlanReadValuesSection({ rows, thumbnails, actions, t }: {
   /** `null` = καμία ανάγνωση στη σύντηξη. */
   readonly rows: readonly PlanReadValueRow[] | null;
+  /** Βήμα 1 — `textId → URL` μικρογραφίας· όσα λείπουν απλώς δεν δείχνουν εικόνα. */
+  readonly thumbnails: ReadonlyMap<string, string>;
   readonly actions: PlanReadValuesActions;
   readonly t: Translate;
 }): React.ReactElement | null {
@@ -261,7 +277,7 @@ export function PlanReadValuesSection({ rows, actions, t }: {
       {rows.length > 0 ? (
         <ol className="m-0 flex list-none flex-col gap-1 p-0">
           {rows.map((row) => (
-            <ValueRow key={row.textId} row={row} editing={editing === row.textId} onEdit={setEditing} actions={actions} t={t} />
+            <ValueRow key={row.textId} row={row} thumbnail={thumbnails.get(row.textId)} editing={editing === row.textId} onEdit={setEditing} actions={actions} t={t} />
           ))}
         </ol>
       ) : null}

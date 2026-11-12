@@ -11,7 +11,8 @@ import type {
 // ο ίδιος που ρωτά η αναγνώριση κάτοψης, ώστε προεπισκόπηση ≡ αποτέλεσμα.
 import { applyRasterCanvasTransform } from './provider-canvas-transforms';
 import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
-import { naturalRecognitionRaster, readPlanRaster } from './provider-plan-raster';
+import { cropPlanRegion, naturalRecognitionRaster, readPlanRaster } from './provider-plan-raster';
+import type { RasterRectPx } from '../../types/coordinate-space';
 import { renderPdfPageAtNativeResolution } from '../../pdf-background/services/pdf-recognition-raster';
 import { PDF_RENDER_CONFIG } from '../../pdf-background/types/pdf.types';
 
@@ -92,6 +93,11 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
 
   getPlanRaster(): PlanRaster | null {
     return readPlanRaster(this._image, this._bounds);
+  }
+
+  /** ADR-929 Δ21 (δ) βήμα 1 — μικρογραφία περιοχής από την ίδια πηγή (`cropPlanRegion`). */
+  getRegionImage(rect: RasterRectPx, maxEdgePx: number): Promise<Blob | null> {
+    return cropPlanRegion(this._image, this._bounds, rect, maxEdgePx);
   }
 
   /**

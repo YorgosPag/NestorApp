@@ -24,14 +24,14 @@ const ROWS: readonly PlanReadValueRow[] = [
   row({ textId: 't1', raw: 'ΣΑΛΟΝΙ', kind: 'other', confidence: 0.4, priority: 'suspect' }),
 ];
 
-function renderValues(rows: readonly PlanReadValueRow[] | null = ROWS) {
+function renderValues(rows: readonly PlanReadValueRow[] | null = ROWS, thumbnails: ReadonlyMap<string, string> = new Map()) {
   const actions: jest.Mocked<PlanReadValuesActions> = {
     onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(), onConfirm: jest.fn(), onFocusSource: jest.fn(),
     previewCorrection: jest.fn((_textId: string, raw: string) => (
       raw.trim() === '' ? null : { kind: 'dimension' as const, valueMm: raw === '412' ? null : 4120 }
     )),
   };
-  return { ...render(<PlanReadValuesSection rows={rows} actions={actions} t={t} />), actions };
+  return { ...render(<PlanReadValuesSection rows={rows} thumbnails={thumbnails} actions={actions} t={t} />), actions };
 }
 
 const item = (getAll: (id: string) => HTMLElement[], textId: string): HTMLElement => {
@@ -148,6 +148,14 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(actions.onFocusSource).toHaveBeenCalledWith('t4');
     expect(queryByTestId('mfd-read-value-input')).toBeNull();
     expect(actions.onCorrect).not.toHaveBeenCalled();
+  });
+
+  it('βήμα 1 — μικρογραφία του αποσπάσματος όπου υπάρχει, με ΡΗΤΟ alt· όπου λείπει, καμία εικόνα', () => {
+    const { getAllByTestId } = renderValues(ROWS, new Map([['t4', 'blob:thumb-t4']]));
+    const img = item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-thumbnail"]');
+    expect(img?.getAttribute('src')).toBe('blob:thumb-t4');
+    expect(img?.getAttribute('alt')).toBe('modelFromDrawing.image.ocr.values.thumbnailAlt{"raw":"412"}');
+    expect(item(getAllByTestId, 't3').querySelector('[data-testid="mfd-read-value-thumbnail"]')).toBeNull();
   });
 
   it('«Επαναφορά» μόνο σε διορθωμένη· «Δεν είναι διάσταση» μόνο σε διάσταση· δείκτης ⇒ onHover', () => {

@@ -62,6 +62,8 @@ export interface ImageSourceView {
   readonly ocr: PlanOcrView;
   /** ADR-929 Δ21 (δ) — η λίστα «Τι διάβασα» (η πιο ύποπτη πρώτη)· `null` = καμία ανάγνωση στη σύντηξη. */
   readonly readValues: readonly PlanReadValueRow[] | null;
+  /** ADR-929 Δ21 (δ) βήμα 1 — `textId → object URL` της μικρογραφίας (ο κάτοχος ανακαλεί). */
+  readonly readValueThumbnails: ReadonlyMap<string, string>;
 }
 
 /** Κάθε αποτυχία με ΡΗΤΟ κλειδί (CHECK 3.8). */

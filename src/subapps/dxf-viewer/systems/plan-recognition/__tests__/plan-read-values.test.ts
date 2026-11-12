@@ -5,7 +5,7 @@
 
 import type { FusedDimension, FusedDimensionStatus } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
-import { isHumanChecked, planReadValueRows, planReadValuesProgress } from '../plan-read-values';
+import { isHumanChecked, planReadThumbRect, planReadValueRows, planReadValuesProgress } from '../plan-read-values';
 
 const RECT = { minX: 0, minY: 0, maxX: 10, maxY: 10 };
 
@@ -137,5 +137,14 @@ describe('Δ21 (δ) βήμα 7 — πρόταση από τη συνόρθωση
     expect(planReadValueRows(READING, noAdjusted).find((r) => r.textId === 't3')?.suggestion).toBeNull();
     const same = { dimensions: [fused('t3', 4120, 'conflict', -4.2, 4118)] };
     expect(planReadValueRows(READING, same).find((r) => r.textId === 't3')?.suggestion).toBeNull();
+  });
+});
+
+describe('Δ21 (δ) βήμα 1 — planReadThumbRect: το πλαίσιο της μικρογραφίας', () => {
+  it('περιθώριο 0,35 × ύψος γύρω από το κείμενο', () => {
+    expect(planReadThumbRect({ minX: 100, minY: 50, maxX: 180, maxY: 70 })).toEqual({ minX: 93, minY: 43, maxX: 187, maxY: 77 });
+  });
+  it('ελάχιστο περιθώριο 2 px σε πολύ χαμηλό πλαίσιο', () => {
+    expect(planReadThumbRect({ minX: 10, minY: 10, maxX: 20, maxY: 12 })).toEqual({ minX: 8, minY: 8, maxX: 22, maxY: 14 });
   });
 });

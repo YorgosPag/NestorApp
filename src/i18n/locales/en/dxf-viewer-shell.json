@@ -542,6 +542,7 @@
           "acceptSuggestionLabel": "Accept the suggestion “{value}”",
           "focusSource": "Focus",
           "focusSourceLabel": "Focus on “{raw}” in the image",
+          "thumbnailAlt": "Image excerpt: “{raw}”",
           "priority": {
             "suspect": "suspect",
             "checked": "checked",

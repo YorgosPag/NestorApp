@@ -26,6 +26,7 @@ function makeMockProvider(): IFloorplanBackgroundProvider {
     getNaturalBounds: jest.fn().mockReturnValue(MOCK_BOUNDS),
     getPlanRaster: jest.fn().mockReturnValue(null),
     getRecognitionRaster: jest.fn().mockResolvedValue(null),
+    getRegionImage: jest.fn().mockResolvedValue(null),
     dispose: jest.fn(),
   };
 }

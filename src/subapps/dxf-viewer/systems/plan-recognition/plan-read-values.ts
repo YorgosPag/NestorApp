@@ -19,6 +19,7 @@
 
 import type { FusedDimension, FusedDimensionStatus, PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../bim/plan-recognition/plan-recognition-types';
+import type { RasterRectPx } from '../../types/coordinate-space';
 import { inferBareIntegerUnit, writtenLike, type BareIntegerUnit } from '../../bim/plan-recognition/reading/written-values';
 import { meetsConfidenceTier } from './plan-confidence';
 
@@ -135,4 +136,16 @@ export function isHumanChecked(row: Pick<PlanReadValueRow, 'correctedFrom' | 'co
 /** Βήμα 3 — η πρόοδος του ελέγχου: πόσες γραμμές ελέγχθηκαν από άνθρωπο, από πόσες. */
 export function planReadValuesProgress(rows: readonly PlanReadValueRow[]): { readonly checked: number; readonly total: number } {
   return { checked: rows.filter(isHumanChecked).length, total: rows.length };
+}
+
+/** Βήμα 1 — η μεγαλύτερη πλευρά μιας μικρογραφίας, σε px (αρκεί για 2× οθόνη στο ύψος της γραμμής). */
+export const PLAN_READ_THUMB_MAX_EDGE_PX = 192;
+
+/** Βήμα 1 — περιθώριο γύρω από το κείμενο, ως κλάσμα του ύψους του (λίγο χαρτί γύρω, για να φαίνεται και η γραμμή). */
+const THUMB_PAD_OF_HEIGHT = 0.35;
+
+/** Βήμα 1 — η περιοχή της μικρογραφίας: το πλαίσιο του κειμένου με περιθώριο (το κόψιμο στα όρια το κάνει ο provider). */
+export function planReadThumbRect(rect: RasterRectPx): RasterRectPx {
+  const pad = Math.max(2, (rect.maxY - rect.minY) * THUMB_PAD_OF_HEIGHT);
+  return { minX: rect.minX - pad, minY: rect.minY - pad, maxX: rect.maxX + pad, maxY: rect.maxY + pad };
 }
