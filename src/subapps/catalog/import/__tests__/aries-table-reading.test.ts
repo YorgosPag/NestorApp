@@ -221,6 +221,31 @@ describe('🔴 §5.5.2 Β8 (β): η διασταύρωση δεν σβήνει �
   });
 });
 
+describe('🔴 §5.5.2 Β8 (γ): κάθε στήλη της κοινής τιμής παίρνει πλαίσιο (live σελ. 85, 2026-11-13)', () => {
+  const { groups: [group] } = readPage('85', [...page85Lines, ['3/4’’-3/4’’', 'water_connections']]);
+  const isConnections = (cell: ExtractedCell): boolean => attributeOf(cell) === 'water_connections';
+  function sharedField(source: ExtractedGroup): ImportProposalField | undefined {
+    const rows = buildAttributeRows({ ...source, modelCode: MFP_MODEL.code }, { schema, text, model: null, matches: new Map(), base: new Map() });
+    const model = rows.find((row) => row.holderKind === 'productModel');
+    return model ? fieldOf(model, 'water_connections') : undefined;
+  }
+
+  it('η ΣΥΝΔΕΣΕΙΣ: ένα πεδίο μοντέλου, και οι άλλες 6 στήλες ταξιδεύουν με τη θέση τους', () => {
+    const field = sharedField(group);
+    expect(field?.issues).toEqual([]);
+    expect(field?.repeats?.map((repeat) => repeat.text)).toEqual(Array(6).fill(field?.sourceText));
+    expect(field?.repeats?.every((repeat) => repeat.anchor?.kind === 'page' && repeat.anchor.regions.length > 0)).toBe(true);
+  });
+
+  it('η στήλη που διαφωνεί: εύρημα, ΚΑΙ ο άνθρωπος βλέπει ποιο κελί', () => {
+    const [first, second, ...rest] = group.rows;
+    const altered = { ...second, cells: second.cells.map((cell) => (isConnections(cell) ? { ...cell, text: '1"' } : cell)) };
+    const field = sharedField({ ...group, rows: [first, altered, ...rest] });
+    expect(field?.issues.map((issue) => issue.code)).toEqual(['sharedDisagrees']);
+    expect(field?.repeats?.map((repeat) => repeat.text)).toContain('1"');
+  });
+});
+
 describe('🔴 Ε7: καμία γραμμή με τιμές δεν χάνεται σιωπηλά (σελ. 86)', () => {
   const { unmappedLines } = readPage('86', PAGE_86_LINES);
   const valuesOf = (printed: string) => unmappedLines.find((entry) => entry.values.includes(printed));

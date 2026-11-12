@@ -36,6 +36,7 @@ import {
   attributeValueEquality,
   holdsValue,
   importCellText,
+  importSourceValueOf,
   importTargetKey,
   liveSlotValue,
   parseImportCell,
@@ -134,18 +135,26 @@ const holderCellsOf = (cells: readonly ExtractedCell[]): HolderCell[] =>
 const sameText = (left: HolderCell, right: HolderCell): boolean =>
   isTradeIdentityCell(left) && isTradeIdentityCell(right) ? sameTradeText(left.target.field, left.text, right.text) : left.text === right.text;
 
+/**
+ * §5.5.2 Β8 (γ): τα άλλα κελιά του κοινού πεδίου ταξιδεύουν με τη θέση τους, ώστε **κάθε** στήλη που το τύπωσε να πάρει πλαίσιο — ως τώρα
+ * πετιούνταν και η ΣΥΝΔΕΣΕΙΣ της σελ. 85 είχε πλαίσιο μόνο στην 1η στήλη (live 2026-11-13). Μόνο άγκυρες σελίδας: ο καταναλωτής είναι τα
+ * πλαίσια, και σε Excel χιλιάδων γραμμών θα φούσκωνε το έγγραφο της πρότασης.
+ */
+function withRepeats(first: HolderCell, others: readonly HolderCell[]): HolderCell {
+  const repeats = others.filter((cell) => cell.anchor?.kind === 'page').map(importSourceValueOf);
+  return repeats.length === 0 ? first : { ...first, repeats };
+}
+
 /** Τα κοινά κελιά, μία φορά ανά στόχο: από τα κοινά της πηγής και από όσα επαναλαμβάνουν οι γραμμές. */
 function sharedCellsOf(group: ExtractedGroup, schema: CatalogSchemaSnapshot): { readonly cells: HolderCell[]; readonly disagreeing: ReadonlySet<string> } {
   const fromRows = group.rows.flatMap((row) => holderCellsOf(row.cells)).filter((cell) => levelOf(cell, schema) === 'shared');
-  const cells = new Map<string, HolderCell>();
-  const disagreeing = new Set<string>();
+  const byTarget = new Map<string, HolderCell[]>();
   for (const cell of [...holderCellsOf(group.sharedCells), ...fromRows]) {
     const key = importTargetKey(cell.target);
-    const first = cells.get(key);
-    if (!first) cells.set(key, cell);
-    else if (!sameText(first, cell)) disagreeing.add(key);
+    byTarget.set(key, [...(byTarget.get(key) ?? []), cell]);
   }
-  return { cells: [...cells.values()], disagreeing };
+  const disagreeing = new Set([...byTarget].filter(([, [first, ...rest]]) => rest.some((cell) => !sameText(first, cell))).map(([key]) => key));
+  return { cells: [...byTarget.values()].map(([first, ...rest]) => withRepeats(first, rest)), disagreeing };
 }
 
 function modelRowOf(group: ExtractedGroup, context: AttributeProposalContext): ImportProposalRow | null {

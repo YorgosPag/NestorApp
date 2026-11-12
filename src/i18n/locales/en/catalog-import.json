@@ -248,7 +248,9 @@
       "next": "Next",
       "revealed": "Shown because you selected it in the PDF — the “{view}” view hides it.",
       "relationAlternative": "Another value the source prints for the same field; read “{value}”",
-      "relationCorroboration": "Confirms the value “{value}” in another unit"
+      "relationCorroboration": "Confirms the value “{value}” in another unit",
+      "relationRepeat": "The same shared value “{value}”, printed in this column too",
+      "relationDisagreement": "Disagrees with the shared value: this column prints “{value}”"
     },
     "nextPending": "Next needing a decision",
     "lines": {

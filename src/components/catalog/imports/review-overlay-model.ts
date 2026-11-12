@@ -130,9 +130,11 @@ export const toneOfLine = (state: LineState): ReviewMarkTone => LINE_TONES[state
  *   - `value`: το κελί που έδωσε την τιμή·
  *   - `alternative`: λέει **άλλο** για το ίδιο πεδίο — ο ίδιος στόχος, άρα το ίδιο popover με «Κράτα «…»»·
  *   - `corroboration`: λέει **το ίδιο** σε άλλη μονάδα (Btu/h) — δεν ζητά απόφαση, αλλά δεν μένει πια αόρατο.
+ *   - `repeat` / `disagreement` (Β8 (γ)): άλλη στήλη που τύπωσε το ίδιο **κοινό** πεδίο — το ίδιο κείμενο, ή άλλο (`sharedDisagrees`:
+ *     ο άνθρωπος βλέπει **ποιο** κελί διαφωνεί).
  * Σχέση, **όχι** τόνος: ο τόνος είναι του πεδίου (το CHECK 3.41 κρίνει μόνο τους τόνους)· η σχέση ταξιδεύει ώς το `aria-label`.
  */
-export type ReviewRelation = 'value' | 'alternative' | 'corroboration';
+export type ReviewRelation = 'value' | 'alternative' | 'corroboration' | 'repeat' | 'disagreement';
 
 export interface ReviewBoxTarget {
   readonly target: ReviewTarget;
@@ -178,6 +180,7 @@ const fieldSources = (field: ImportProposalField): readonly { readonly relation:
   { relation: 'value', source: { text: field.sourceText, anchor: field.anchor } },
   ...(field.alternatives ?? []).map((source) => ({ relation: 'alternative' as const, source })),
   ...corroborationsOf(field).map((source) => ({ relation: 'corroboration' as const, source })),
+  ...(field.repeats ?? []).map((source) => ({ relation: source.text === field.sourceText ? 'repeat' as const : 'disagreement' as const, source })),
 ];
 
 /** Κάθε διαβασμένο κελί του πεδίου γίνεται πλαίσιο του **ίδιου** στόχου: κλικ οπουδήποτε ⇒ το ίδιο πεδίο, η ίδια επιλογή. */

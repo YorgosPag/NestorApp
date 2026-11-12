@@ -58,6 +58,8 @@ export function useReviewRelationText(): (entry: ReviewBoxTarget) => string | nu
   return useCallback((entry: ReviewBoxTarget) => {
     if (entry.subject.kind !== 'field' || entry.relation === 'value') return null;
     const value = entry.subject.field.sourceText;
+    if (entry.relation === 'repeat') return t('review.overlay.relationRepeat', { value });
+    if (entry.relation === 'disagreement') return t('review.overlay.relationDisagreement', { value: entry.printed });
     return entry.relation === 'alternative' ? t('review.overlay.relationAlternative', { value }) : t('review.overlay.relationCorroboration', { value });
   }, [t]);
 }

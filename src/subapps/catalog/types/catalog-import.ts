@@ -138,6 +138,11 @@ export interface ExtractedCell {
   readonly corroboratedBy?: readonly ImportCorroboration[];
   /** Άλλα κελιά που λένε **άλλο** για την ίδια ιδιότητα (εύρημα `attributeRepeated`). Απούσα = καμία. */
   readonly alternatives?: readonly ImportSourceValue[];
+  /**
+   * §5.5.2 Β8 (γ): τα **άλλα** κελιά της πηγής για το ίδιο **κοινό** πεδίο (μία τιμή μοντέλου τυπωμένη σε κάθε στήλη), με κείμενο και
+   * θέση — ίδιο ή διαφορετικό (`sharedDisagrees`). Μόνο με άγκυρα σελίδας: ο καταναλωτής είναι τα πλαίσια. Απούσα = κανένα.
+   */
+  readonly repeats?: readonly ImportSourceValue[];
 }
 
 /**
@@ -239,6 +244,8 @@ export interface ImportProposalField {
    * προτάσεις παλαιότερες του Β8: τότε η μόνη ενέργεια είναι η διόρθωση.
    */
   readonly alternatives?: readonly ImportSourceValue[];
+  /** §5.5.2 Β8 (γ): το `ExtractedCell.repeats` του κοινού κελιού — κάθε στήλη που το τύπωσε παίρνει πλαίσιο του ίδιου πεδίου. */
+  readonly repeats?: readonly ImportSourceValue[];
 }
 
 export interface ImportProposalRow {

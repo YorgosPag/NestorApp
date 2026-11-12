@@ -248,7 +248,9 @@
       "next": "Επόμενο",
       "revealed": "Φαίνεται επειδή το επέλεξες στο PDF — η προβολή «{view}» το κρύβει.",
       "relationAlternative": "Άλλη τιμή της πηγής για το ίδιο πεδίο· διαβάστηκε «{value}»",
-      "relationCorroboration": "Επιβεβαιώνει την τιμή «{value}» σε άλλη μονάδα"
+      "relationCorroboration": "Επιβεβαιώνει την τιμή «{value}» σε άλλη μονάδα",
+      "relationRepeat": "Η ίδια κοινή τιμή «{value}», τυπωμένη και σε αυτή τη στήλη",
+      "relationDisagreement": "Διαφωνεί με την κοινή τιμή: εδώ τυπώνεται «{value}»"
     },
     "nextPending": "Επόμενο που θέλει απόφαση",
     "lines": {

@@ -249,6 +249,11 @@ describe('πρόταση ιδιοτήτων — κριτής ΠΡΙΝ από τ�
     expect(field).toMatchObject({ decision: 'pending', issues: [{ code: 'sharedDisagrees' }] });
   });
 
+  it('§5.5.2 Β8 (γ): κοινή στήλη αρχείου (χωρίς θέση σελίδας) δεν κουβαλά επαναλήψεις — το έγγραφο δεν φουσκώνει', () => {
+    const [field] = fieldsOf(buildAttributeRows(groupOf(faithful), noLive), 'power_supply');
+    expect(field.repeats).toBeUndefined();
+  });
+
   it('ίδια ισχύς σε άλλη μονάδα είναι αμετάβλητο, όχι αλλαγή', () => {
     const live = { id: 'cpr_1', revision: 3, values: mfpVariant(0).values, noValueReasons: {} };
     const row: ExtractedRow = { rowKey: 'r0', cells: [cell('cooling_h', '1,8', 'kW')] };

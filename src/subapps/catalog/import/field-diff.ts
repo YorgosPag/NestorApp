@@ -55,7 +55,8 @@ export function proposalFieldOf({ cell, incoming, issues, live, base, same }: Pr
   const corroboration = cell.corroboratedBy && cell.corroboratedBy.length > 0 ? { corroboratedBy: cell.corroboratedBy } : {};
   // §5.5.2 Β8: οι εναλλακτικές ταξιδεύουν όπως η επιβεβαίωση — απούσες όταν δεν υπάρχουν (Firestore δεν δέχεται `undefined`).
   const alternatives = cell.alternatives && cell.alternatives.length > 0 ? { alternatives: cell.alternatives } : {};
-  return { ...facts, ...corroboration, ...alternatives, target: cell.target, sourceText: cell.text, live, base, decision: defaultDecisionOf(facts), decisionBy: 'rule' };
+  const repeats = cell.repeats && cell.repeats.length > 0 ? { repeats: cell.repeats } : {};
+  return { ...facts, ...corroboration, ...alternatives, ...repeats, target: cell.target, sourceText: cell.text, live, base, decision: defaultDecisionOf(facts), decisionBy: 'rule' };
 }
 
 /** §5.5.2 Α1: πρόταση παλαιότερη της Φάσης 4β δεν δηλώνει προέλευση· τότε την έδωσε ο κανόνας, γιατί ο άνθρωπος δεν άφηνε ίχνος. */

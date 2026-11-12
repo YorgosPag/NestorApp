@@ -219,3 +219,23 @@ describe('§5.5.2 Β8 (β): κάθε διαβασμένο κελί παίρνε�
     expect(boxes[0].targets[0].relation).toBe('value');
   });
 });
+
+describe('§5.5.2 Β8 (γ): κάθε στήλη της κοινής τιμής παίρνει πλαίσιο', () => {
+  const column = (index: number) => ({ kind: 'page', page: 87, regions: [{ ...CELL, x: 0.2 + index * 0.1 }], verified: true } as const);
+  const modelBoxes = (shared: ImportProposalField) => buildReviewBoxes(source([proposal([row('model', [shared], { holderKind: 'productModel' })])]));
+
+  it('κοινό πεδίο σε 7 στήλες ⇒ 7 πλαίσια ΕΝΟΣ στόχου, σχέση «επανάληψη»', () => {
+    const boxes = modelBoxes(field({ sourceText: '3/4"', repeats: Array.from({ length: 6 }, (_, i) => ({ text: '3/4"', anchor: column(i) })) }));
+    expect(boxes).toHaveLength(7);
+    expect(new Set(boxes.map((box) => box.targets[0].key)).size).toBe(1);
+    expect(boxes.filter((box) => box.targets[0].relation === 'repeat')).toHaveLength(6);
+    expect(countBoxTones(boxes).accepted).toEqual({ boxes: 7, targets: 1 });
+  });
+
+  it('η στήλη που διαφωνεί ⇒ σχέση «διαφωνία», με το ΔΙΚΟ της κείμενο, και τόνος πρόβλημα', () => {
+    const repeats = [{ text: '3/4"', anchor: column(0) }, { text: '1"', anchor: column(1) }];
+    const boxes = modelBoxes(field({ sourceText: '3/4"', issues: [{ code: 'sharedDisagrees', path: 'x' }], repeats }));
+    expect(boxes.map((box) => box.targets[0].relation).sort()).toEqual(['disagreement', 'repeat', 'value']);
+    expect(boxes.find((box) => box.targets[0].relation === 'disagreement')?.targets[0]).toMatchObject({ printed: '1"', tone: 'problem' });
+  });
+});
