@@ -66,3 +66,4 @@
 |---|---|---|
 | 2026-11-12 | Αρχική υλοποίηση (§3 α–ι) | Giorgio + Claude Code |
 | 2026-11-12 | §3(στ): νέος τύπος `crm.portalMessage` (ανοιχτός από προεπιλογή) στη θέση του κλειστού `crm.newCommunication`. Καταγραφή του `skipped`/`reason` στο `notifyIssuer`. Άγκυρες Γ4 (+3) | Giorgio + Claude Code |
+| 2026-11-12 | Εύρημα ζωντανής επαλήθευσης: ωμό κλειδί στην κεφαλίδα φίλτρων των εισερχομένων (`/crm/communications`). Το `communicationsFiltersConfig` διαβάζει το namespace `filters`, αλλά το `communicationsTitle` υπήρχε μόνο στο `building-filters.json`. Προστέθηκε στο `filters.json` (el/en). Μένουν ωμά στο ίδιο πάνελ: `allChannels`, `status.sent`, `status.received`, `status.failed` | Giorgio + Claude Code |

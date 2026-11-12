@@ -6,6 +6,7 @@
   "operatorInboxTitle": "Φίλτρα Εισερχομένων Χειριστή",
   "intent": "Πρόθεση",
   "tasksTitle": "Φίλτρα Εργασιών",
+  "communicationsTitle": "Φίλτρα Επικοινωνιών",
   "searchFilters": "Φίλτρα Αναζήτησης",
   "showAdvanced": "Εμφάνιση προχωρημένων",
   "hideAdvanced": "Απόκρυψη προχωρημένων",

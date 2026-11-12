@@ -6,6 +6,7 @@
   "operatorInboxTitle": "Operator Inbox Filters",
   "intent": "Intent",
   "tasksTitle": "Task Filters",
+  "communicationsTitle": "Communications Filters",
   "searchFilters": "Search Filters",
   "showAdvanced": "Show advanced",
   "hideAdvanced": "Hide advanced",
