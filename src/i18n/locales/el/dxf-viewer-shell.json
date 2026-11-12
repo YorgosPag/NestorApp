@@ -543,6 +543,8 @@
           "focusSource": "Εστίαση",
           "focusSourceLabel": "Εστίαση στο «{raw}» στην εικόνα",
           "thumbnailAlt": "Απόσπασμα της εικόνας: «{raw}»",
+          "listLabel": "Τιμές που διάβασε η μηχανή",
+          "keys": "Πλήκτρα: ↑/↓ γραμμή · Enter διόρθωση · Space «Σωστό» · N «Δεν είναι διάσταση»",
           "priority": {
             "suspect": "ύποπτη",
             "checked": "ελέγχθηκε",

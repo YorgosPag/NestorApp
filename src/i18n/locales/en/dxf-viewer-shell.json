@@ -543,6 +543,8 @@
           "focusSource": "Focus",
           "focusSourceLabel": "Focus on “{raw}” in the image",
           "thumbnailAlt": "Image excerpt: “{raw}”",
+          "listLabel": "Values the machine read",
+          "keys": "Keys: ↑/↓ row · Enter correct · Space “Correct” · N “Not a dimension”",
           "priority": {
             "suspect": "suspect",
             "checked": "checked",

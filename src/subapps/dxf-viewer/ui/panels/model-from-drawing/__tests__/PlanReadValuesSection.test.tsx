@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render } from '@testing-library/react';
 import type { PlanReadValueRow } from '../../../../systems/plan-recognition/plan-read-values';
 import { PlanReadValuesSection, type PlanReadValuesActions } from '../PlanReadValuesSection';
 
@@ -171,5 +171,73 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(actions.onHover).toHaveBeenLastCalledWith('t3');
     fireEvent.mouseLeave(t3);
     expect(actions.onHover).toHaveBeenLastCalledWith(null);
+  });
+});
+
+describe('PlanReadValuesSection — βήμα 6: πλήκτρα όπως στο Figma (μόνο με εστίαση σε γραμμή)', () => {
+  const rowOf = (getAll: (id: string) => HTMLElement[], textId: string): HTMLElement => item(getAll, textId);
+
+  it('listbox/option (οι καθολικοί accelerators υποχωρούν) · roving tabindex · aria-keyshortcuts', () => {
+    const { getAllByTestId, getByTestId } = renderValues();
+    expect(getByTestId('mfd-read-values-list').getAttribute('role')).toBe('listbox');
+    const t3 = rowOf(getAllByTestId, 't3');
+    expect(t3.getAttribute('role')).toBe('option');
+    expect(t3.getAttribute('aria-keyshortcuts')).toBe('ArrowUp ArrowDown Enter Space N');
+    expect(getAllByTestId('mfd-read-value').map((el) => el.tabIndex)).toEqual([0, -1, -1]);
+  });
+
+  it('↓ / ↑ μετακινούν την εστίαση (σταματούν στα άκρα) και η εστίαση φέρνει την επισήμανση', () => {
+    const { getAllByTestId, actions } = renderValues();
+    const t3 = rowOf(getAllByTestId, 't3');
+    act(() => { t3.focus(); });
+    fireEvent.keyDown(t3, { code: 'ArrowDown', key: 'ArrowDown' });
+    const t4 = rowOf(getAllByTestId, 't4');
+    expect(document.activeElement).toBe(t4);
+    expect(t4.getAttribute('aria-selected')).toBe('true');
+    expect(actions.onHover).toHaveBeenLastCalledWith('t4');
+    fireEvent.keyDown(t4, { code: 'ArrowUp', key: 'ArrowUp' });
+    fireEvent.keyDown(document.activeElement as HTMLElement, { code: 'ArrowUp', key: 'ArrowUp' });
+    expect(document.activeElement).toBe(t3);
+  });
+
+  it('Enter ⇒ πεδίο· Esc ⇒ κλείνει και η εστίαση γυρίζει στη ΓΡΑΜΜΗ', () => {
+    const { getAllByTestId, getByTestId, queryByTestId } = renderValues();
+    const t4 = rowOf(getAllByTestId, 't4');
+    act(() => { t4.focus(); });
+    fireEvent.keyDown(t4, { code: 'Enter', key: 'Enter' });
+    fireEvent.keyDown(getByTestId('mfd-read-value-input'), { key: 'Escape', code: 'Escape' });
+    expect(queryByTestId('mfd-read-value-input')).toBeNull();
+    expect(document.activeElement).toBe(rowOf(getAllByTestId, 't4'));
+  });
+
+  it('Space ⇒ «Σωστό» μόνο σε μη ελεγμένη· N ⇒ «δεν είναι διάσταση» μόνο σε διάσταση', () => {
+    const { getAllByTestId, actions } = renderValues();
+    const press = (textId: string, code: string, key: string): void => {
+      const row = rowOf(getAllByTestId, textId);
+      act(() => { row.focus(); });
+      fireEvent.keyDown(row, { code, key });
+    };
+    press('t4', 'Space', ' ');
+    press('t3', 'Space', ' '); // διορθωμένη ⇒ ήδη ελεγμένη
+    expect(actions.onConfirm.mock.calls).toEqual([['t4']]);
+    press('t4', 'KeyN', 'ν'); // ελληνική διάταξη: ίδια θέση πλήκτρου
+    press('t1', 'KeyN', 'n'); // «άλλο κείμενο» ⇒ τίποτα
+    expect(actions.onMarkNotDimension.mock.calls).toEqual([['t4']]);
+  });
+
+  it('στο πεδίο ή σε κουμπί τα πλήκτρα ΔΕΝ είναι της λίστας· με Ctrl/Shift δεν είναι δικά της', () => {
+    const { getAllByTestId, getByTestId, actions } = renderValues();
+    const t4 = rowOf(getAllByTestId, 't4');
+    act(() => { t4.focus(); });
+    fireEvent.keyDown(t4, { code: 'Enter', key: 'Enter' });
+    fireEvent.keyDown(getByTestId('mfd-read-value-input'), { code: 'Space', key: ' ' });
+    fireEvent.keyDown(getByTestId('mfd-read-value-input'), { code: 'KeyN', key: 'n' });
+    fireEvent.keyDown(rowOf(getAllByTestId, 't1').querySelector('[data-testid="mfd-read-value-focus"]') as HTMLElement, { code: 'Space', key: ' ' });
+    const t1 = rowOf(getAllByTestId, 't1');
+    act(() => { t1.focus(); });
+    fireEvent.keyDown(t1, { code: 'Space', key: ' ', shiftKey: true });
+    fireEvent.keyDown(t1, { code: 'KeyN', key: 'n', ctrlKey: true });
+    expect(actions.onConfirm).not.toHaveBeenCalled();
+    expect(actions.onMarkNotDimension).not.toHaveBeenCalled();
   });
 });

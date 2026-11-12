@@ -9,6 +9,15 @@
  *
  * Καθαρή παρουσίαση: δεν διαβάζει store, δεν γράφει τίποτα· ό,τι αποφασίζει ο άνθρωπος φεύγει προς τα πάνω ως callback.
  *
+ * Βήμα 6 — πλήκτρα όπως στο Figma, **μόνο** όσο η εστίαση είναι σε γραμμή (κανένα καθολικό πλήκτρο):
+ *   ↑ / ↓  προηγούμενη / επόμενη γραμμή (η εστίαση φέρνει και την επισήμανση στον καμβά)·
+ *   Enter  διόρθωση (το πεδίο ανοίγει· Enter αποθηκεύει, Esc ακυρώνει, η εστίαση γυρίζει στη γραμμή)·
+ *   Space  «Σωστό ✓» · N  «Δεν είναι διάσταση».
+ * Τα πλήκτρα διαβάζονται από το `event.code` (θέση πλήκτρου): ίδια σε ελληνική και αγγλική διάταξη.
+ * ⚠️ ADR-711 — `role="listbox"` / `role="option"` ΓΙΑ ΛΟΓΟ, όπως η ουρά ανοιγμάτων του ίδιου πάνελ
+ * (`ModelFromDrawingOpeningSections.tsx`): αυτοί οι ρόλοι κάνουν τους καθολικούς accelerators του viewer να υποχωρούν
+ * (`shouldGlobalShortcutYield`)· αλλιώς το Space ή το N θα έτρεχαν και ό,τι είναι δεμένο σε αυτά στον καμβά.
+ *
  * @see ../../../systems/plan-recognition/plan-reading-corrections.ts (ο ελεγκτής)
  */
 
@@ -95,6 +104,28 @@ function metaOf(row: PlanReadValueRow, t: Translate): string {
   if (row.status !== null) parts.push(t(STATUS_KEY[row.status]));
   if (row.deviationMm !== null) parts.push(t('modelFromDrawing.image.ocr.values.deviation', { value: Math.round(row.deviationMm) }));
   return parts.join(' · ');
+}
+
+/** Βήμα 6 — τι σημαίνει ένα πλήκτρο πάνω σε γραμμή. `null` = δεν είναι δικό της (π.χ. Ctrl+N του browser). */
+type ReadValueKey =
+  | { readonly kind: 'step'; readonly delta: 1 | -1 }
+  | { readonly kind: 'edit' | 'confirm' | 'not-dimension' };
+
+const READ_VALUE_KEY_BY_CODE: Readonly<Record<string, ReadValueKey>> = {
+  ArrowDown: { kind: 'step', delta: 1 },
+  ArrowUp: { kind: 'step', delta: -1 },
+  Enter: { kind: 'edit' },
+  NumpadEnter: { kind: 'edit' },
+  Space: { kind: 'confirm' },
+  KeyN: { kind: 'not-dimension' },
+};
+
+/** Τα πλήκτρα της γραμμής, για το `aria-keyshortcuts` (WAI-ARIA). */
+const ROW_KEY_SHORTCUTS = 'ArrowUp ArrowDown Enter Space N';
+
+function decodeReadValueKey(event: React.KeyboardEvent): ReadValueKey | null {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return null;
+  return READ_VALUE_KEY_BY_CODE[event.code] ?? null;
 }
 
 function RowEditor({ row, onSave, onCancel, preview, t }: {
@@ -197,46 +228,69 @@ function SourceThumbnail({ url, raw, t }: { readonly url: string | undefined; re
   );
 }
 
-function ValueRow({ row, thumbnail, editing, onEdit, actions, t }: {
+/** Ετικέτα προτεραιότητας · το κείμενο (κλικ = διόρθωση) · «Εστίαση» (βήμα 2). */
+function RowHeader({ row, editing, onEdit, onFocusSource, t }: {
+  readonly row: PlanReadValueRow;
+  readonly editing: boolean;
+  readonly onEdit: () => void;
+  readonly onFocusSource: PlanReadValuesActions['onFocusSource'];
+  readonly t: Translate;
+}): React.ReactElement {
+  return (
+    <header className="flex items-center gap-1.5">
+      <PriorityBadge priority={row.priority} t={t} />
+      {editing ? null : (
+        <button
+          type="button" onClick={onEdit} className="flex items-center gap-1.5 text-xs font-mono text-foreground"
+          aria-label={t('modelFromDrawing.image.ocr.values.editLabel', { raw: row.raw })} data-testid="mfd-read-value-edit"
+        >
+          <span>{row.raw}</span>
+          <Pencil className="size-3 shrink-0" aria-hidden="true" />
+        </button>
+      )}
+      <Button
+        type="button" variant="ghost" size="xs" className="ml-auto" onClick={() => onFocusSource(row.textId)}
+        aria-label={t('modelFromDrawing.image.ocr.values.focusSourceLabel', { raw: row.raw })} data-testid="mfd-read-value-focus"
+      >
+        <Crosshair className="size-3" aria-hidden="true" />
+        {t('modelFromDrawing.image.ocr.values.focusSource')}
+      </Button>
+    </header>
+  );
+}
+
+interface ValueRowProps {
   readonly row: PlanReadValueRow;
   readonly thumbnail: string | undefined;
   readonly editing: boolean;
-  readonly onEdit: (textId: string | null) => void;
+  /** Η γραμμή που κατέχει τα πλήκτρα (roving tabindex): η μόνη με `tabIndex=0`. */
+  readonly active: boolean;
+  readonly rowRef: (node: HTMLLIElement | null) => void;
+  readonly onActivate: () => void;
+  readonly onEdit: () => void;
+  /** Το πεδίο έκλεισε (αποθήκευση ή Esc): η εστίαση γυρίζει στη γραμμή. */
+  readonly onEndEdit: () => void;
   readonly actions: PlanReadValuesActions;
   readonly t: Translate;
-}): React.ReactElement {
+}
+
+function ValueRow({ row, thumbnail, editing, active, rowRef, onActivate, onEdit, onEndEdit, actions, t }: ValueRowProps): React.ReactElement {
   const save = (raw: string): void => {
-    onEdit(null);
+    onEndEdit();
     if (raw.trim() !== '' && raw.trim() !== row.raw) actions.onCorrect(row.textId, raw);
   };
   return (
     <li
-      className="flex flex-col gap-0.5 rounded-md border border-border p-1.5" data-testid="mfd-read-value" data-text-id={row.textId}
+      ref={rowRef} tabIndex={active ? 0 : -1} role="option" aria-selected={active} aria-keyshortcuts={ROW_KEY_SHORTCUTS}
+      className="flex flex-col gap-0.5 rounded-md border border-border p-1.5 outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      data-testid="mfd-read-value" data-text-id={row.textId}
       data-status={row.status ?? 'none'} data-corrected={row.correctedFrom !== null} data-confirmed={row.confirmed}
       onMouseEnter={() => actions.onHover(row.textId)} onMouseLeave={() => actions.onHover(null)}
-      onFocus={() => actions.onHover(row.textId)} onBlur={() => actions.onHover(null)}
+      onFocus={() => { onActivate(); actions.onHover(row.textId); }} onBlur={() => actions.onHover(null)}
     >
-      <header className="flex items-center gap-1.5">
-        <PriorityBadge priority={row.priority} t={t} />
-        {editing ? null : (
-          <button
-            type="button" onClick={() => onEdit(row.textId)} className="flex items-center gap-1.5 text-xs font-mono text-foreground"
-            aria-label={t('modelFromDrawing.image.ocr.values.editLabel', { raw: row.raw })} data-testid="mfd-read-value-edit"
-          >
-            <span>{row.raw}</span>
-            <Pencil className="size-3 shrink-0" aria-hidden="true" />
-          </button>
-        )}
-        <Button
-          type="button" variant="ghost" size="xs" className="ml-auto" onClick={() => actions.onFocusSource(row.textId)}
-          aria-label={t('modelFromDrawing.image.ocr.values.focusSourceLabel', { raw: row.raw })} data-testid="mfd-read-value-focus"
-        >
-          <Crosshair className="size-3" aria-hidden="true" />
-          {t('modelFromDrawing.image.ocr.values.focusSource')}
-        </Button>
-      </header>
+      <RowHeader row={row} editing={editing} onEdit={onEdit} onFocusSource={actions.onFocusSource} t={t} />
       <SourceThumbnail url={thumbnail} raw={row.raw} t={t} />
-      {editing ? <RowEditor row={row} onSave={save} onCancel={() => onEdit(null)} preview={actions.previewCorrection} t={t} /> : null}
+      {editing ? <RowEditor row={row} onSave={save} onCancel={onEndEdit} preview={actions.previewCorrection} t={t} /> : null}
       <p className="m-0 text-[11px] text-foreground">{interpretationOf(row, t)}</p>
       <p className={MUTED}>{metaOf(row, t)}</p>
       <RowSuggestion row={row} actions={actions} t={t} />
@@ -251,6 +305,75 @@ function ValueRow({ row, thumbnail, editing, onEdit, actions, t }: {
   );
 }
 
+/** Βήμα 6 — η πράξη ενός πλήκτρου πάνω στη γραμμή `row` (η εστιασμένη). */
+function applyReadValueKey(
+  key: ReadValueKey,
+  row: PlanReadValueRow,
+  ops: { readonly step: (delta: 1 | -1) => void; readonly edit: () => void; readonly actions: PlanReadValuesActions },
+): void {
+  if (key.kind === 'step') ops.step(key.delta);
+  else if (key.kind === 'edit') ops.edit();
+  else if (key.kind === 'confirm') { if (!isHumanChecked(row)) ops.actions.onConfirm(row.textId); }
+  else if (row.kind === 'dimension') ops.actions.onMarkNotDimension(row.textId);
+}
+
+/**
+ * Βήμα 6 — ο χειριστής πλήκτρων της λίστας. Μόνο όταν η εστίαση είναι στη ΓΡΑΜΜΗ: στο πεδίο το Enter αποθηκεύει και το
+ * Space γράφει κενό. Η γραμμή διαβάζεται από το `event.target` τη στιγμή του πλήκτρου (ADR-711: όχι από state, που μπορεί
+ * να μην έχει προλάβει την εστίαση).
+ */
+function readValueKeyHandler(
+  rows: readonly PlanReadValueRow[],
+  ops: { readonly focusRow: (textId: string) => void; readonly edit: (textId: string) => void; readonly actions: PlanReadValuesActions },
+): (event: React.KeyboardEvent<HTMLOListElement>) => void {
+  return (event) => {
+    const { target } = event;
+    if (!(target instanceof Element) || target.getAttribute('role') !== 'option') return;
+    const textId = target.getAttribute('data-text-id');
+    const index = rows.findIndex((r) => r.textId === textId);
+    const key = decodeReadValueKey(event);
+    if (index < 0 || key === null) return;
+    event.preventDefault();
+    applyReadValueKey(key, rows[index], {
+      step: (delta) => ops.focusRow(rows[Math.min(rows.length - 1, Math.max(0, index + delta))].textId),
+      edit: () => ops.edit(rows[index].textId),
+      actions: ops.actions,
+    });
+  };
+}
+
+/** Η λίστα: roving tabindex, ένα πεδίο διόρθωσης τη φορά, τα πλήκτρα του βήματος 6 (βλ. κεφαλίδα). */
+function ReadValueList({ rows, thumbnails, actions, t }: {
+  readonly rows: readonly PlanReadValueRow[];
+  readonly thumbnails: ReadonlyMap<string, string>;
+  readonly actions: PlanReadValuesActions;
+  readonly t: Translate;
+}): React.ReactElement {
+  const [editing, setEditing] = React.useState<string | null>(null);
+  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const nodes = React.useRef(new Map<string, HTMLLIElement>());
+  const activeIndex = Math.max(0, rows.findIndex((r) => r.textId === activeId));
+  const focusRow = (textId: string): void => { nodes.current.get(textId)?.focus(); };
+
+  const onKeyDown = readValueKeyHandler(rows, { focusRow, edit: setEditing, actions });
+
+  return (
+    <ol
+      className="m-0 flex list-none flex-col gap-1 p-0" role="listbox" onKeyDown={onKeyDown}
+      aria-label={t('modelFromDrawing.image.ocr.values.listLabel')} data-testid="mfd-read-values-list"
+    >
+      {rows.map((row, i) => (
+        <ValueRow
+          key={row.textId} row={row} thumbnail={thumbnails.get(row.textId)} editing={editing === row.textId} active={i === activeIndex}
+          rowRef={(node) => { if (node) nodes.current.set(row.textId, node); else nodes.current.delete(row.textId); }}
+          onActivate={() => setActiveId(row.textId)} onEdit={() => setEditing(row.textId)}
+          onEndEdit={() => { setEditing(null); focusRow(row.textId); }} actions={actions} t={t}
+        />
+      ))}
+    </ol>
+  );
+}
+
 /** Στον έλεγχο, όταν υπάρχει ανάγνωση: οι γραμμένες τιμές όπως τις διάβασε η μηχανή, με διόρθωση ενός κλικ. */
 export function PlanReadValuesSection({ rows, thumbnails, actions, t }: {
   /** `null` = καμία ανάγνωση στη σύντηξη. */
@@ -260,7 +383,6 @@ export function PlanReadValuesSection({ rows, thumbnails, actions, t }: {
   readonly actions: PlanReadValuesActions;
   readonly t: Translate;
 }): React.ReactElement | null {
-  const [editing, setEditing] = React.useState<string | null>(null);
   if (rows === null) return null;
   const progress = planReadValuesProgress(rows);
   return (
@@ -274,13 +396,8 @@ export function PlanReadValuesSection({ rows, thumbnails, actions, t }: {
       <p className={MUTED}>
         {rows.length > 0 ? t('modelFromDrawing.image.ocr.values.hint') : t('modelFromDrawing.image.ocr.values.empty')}
       </p>
-      {rows.length > 0 ? (
-        <ol className="m-0 flex list-none flex-col gap-1 p-0">
-          {rows.map((row) => (
-            <ValueRow key={row.textId} row={row} thumbnail={thumbnails.get(row.textId)} editing={editing === row.textId} onEdit={setEditing} actions={actions} t={t} />
-          ))}
-        </ol>
-      ) : null}
+      {rows.length > 0 ? <p className={MUTED} data-testid="mfd-read-values-keys">{t('modelFromDrawing.image.ocr.values.keys')}</p> : null}
+      {rows.length > 0 ? <ReadValueList rows={rows} thumbnails={thumbnails} actions={actions} t={t} /> : null}
     </section>
   );
 }
