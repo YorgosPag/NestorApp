@@ -13,34 +13,24 @@ export default {
     'max-w-[var(--entity-list-max)]',
     'w-[calc(100%-var(--entity-list-scrollbar-space))]',
   ],
+  // 🔑 ADR-940 §9 — ΟΛΟ το `src/`, όχι λίστα φακέλων (ισοτιμία με την αυτόματη ανίχνευση πηγών του Tailwind v4).
+  // Η παλιά λίστα φακέλων έπεσε ΤΡΕΙΣ φορές στο ίδιο σφάλμα (2026-10-10 `lib/design-system.ts` · 2026-10-13
+  // `lib/**/*.tsx` · 2026-10-22 `lib/ui/**/*.ts`) και ΕΜΕΝΕ ανοιχτή: μετρημένο 2026-11-12, 3.962 αρχεία παραγωγής
+  // εκτός σάρωσης και 14 κλάσεις που δεν παράγονταν ΠΟΤΕ — ανάμεσά τους τα `.tsx` του `design-system` (το glob
+  // ήταν `**/*.ts`): `ring-primary/40` του `ListCard` · `rounded-r-full` του `CardSelectionIndicator`.
+  // ⚠️ Κάθε γραμμή `!…` είναι ΔΗΛΩΜΕΝΗ εξαίρεση, με λόγο. Αρχείο του `src/` εκτός σάρωσης ΧΩΡΙΣ να ταιριάζει σε
+  // εξαίρεση = «ξεχασμένο» ⇒ το CHECK 3.116 μπλοκάρει (`engine.isExcludedFile`). ΜΗΝ ξαναγυρίσεις σε λίστα φακέλων.
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/core/**/*.{ts,tsx}',
-    './src/styles/design-tokens.ts',
-    './src/styles/design-tokens/**/*.ts',
-    './src/design-system/**/*.ts',
-    // Οι κλάσεις χρώματος κατάστασης (`getStatusColor`) ζουν ΕΔΩ ως κυριολεκτικές συμβολοσειρές. Το `src/lib` δεν
-    // σαρώνεται ολόκληρο· χωρίς αυτή τη γραμμή 7 από τις 15 δεν παράγονταν (μετρημένο 2026-10-10).
-    './src/lib/design-system.ts',
-    // Τα **components** του `src/lib` (3 αρχεία `.tsx` με `className`, μετρημένο 2026-10-13). Χωρίς αυτή τη γραμμή
-    // το `text-[0.625rem]` + `rounded-tl` της απόδοσης χάρτη (`lib/maps/map-attribution-view.tsx`) ΔΕΝ παράγονταν:
-    // το «© OpenStreetMap contributors» έβγαινε σε κληρονομημένο μέγεθος και σκέπαζε τη μισή μικρογραφία (ADR-777 §8.70.8).
-    './src/lib/**/*.tsx',
-    // Οι **κλάσεις-SSoT** εμφάνισης (`lib/ui/link-style.ts`: `VISIBLE_LINK_CLASS` · `ENTITY_LINK_CLASS` · `BACK_LINK_CLASS`).
-    // Χωρίς αυτή τη γραμμή το `decoration-1` και το `hover:decoration-2` ΔΕΝ παράγονταν ποτέ (μετρημένο ζωντανά
-    // 2026-10-22, ADR-242 Βήμα 4): η υπογράμμιση έβγαινε, γιατί το `underline` υπάρχει και αλλού — το πάχος όχι.
-    './src/lib/ui/**/*.ts',
-    './src/features/**/*.{ts,tsx}',
-    './src/domain/**/*.{ts,tsx}',
-    './src/hooks/**/*.ts',
-    './src/subapps/**/*.{ts,tsx}',
-    // 🏢 Τα subapps έχουν ΔΙΚΟ τους node_modules (pnpm symlinks — `src/subapps/dxf-viewer/node_modules`
-    // = 33 πακέτα, incl. next/firebase/typescript). Το fast-glob ακολουθεί symlinks by default, οπότε
-    // χωρίς αυτό το negation ο scanner κατέβαινε σε ΟΛΟ το pnpm store σε κάθε compile.
-    // Επίσημη σύσταση Tailwind v3 για monorepo· στη v4 γίνεται αυτόματα μέσω .gitignore.
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+    // Τα subapps έχουν ΔΙΚΟ τους node_modules (pnpm symlinks — `src/subapps/dxf-viewer/node_modules` = 33 πακέτα,
+    // incl. next/firebase/typescript). Το fast-glob ακολουθεί symlinks, οπότε χωρίς αυτή τη γραμμή ο scanner
+    // κατέβαινε σε ΟΛΟ το pnpm store σε κάθε compile (επίσημη σύσταση Tailwind v3· στη v4 μέσω `.gitignore`).
     '!./src/**/node_modules/**',
+    // Τα tests δεν φτάνουν ποτέ στον browser· οι κλάσεις τους (fixtures, assertions) θα γέμιζαν το CSS παραγωγής.
+    // Ίδιος ορισμός με το `isTestSource` των πυλών (`scripts/lib/gate-input.js`: `__tests__` · `.test.` · `.spec.`).
+    '!./src/**/__tests__/**',
+    '!./src/**/*.test.*',
+    '!./src/**/*.spec.*',
   ],
   theme: {
     extend: {

@@ -23,8 +23,14 @@
  * σημεία της διόρθωσης. Σήμερα: **0** ⇒ zero-tol εφικτό χωρίς baseline (πρότυπο 3.48 · 3.55).
  *
  * ## ΕΜΒΕΛΕΙΑ — ΔΗΛΩΜΕΝΗ
- * Αρχεία παραγωγής (όχι tests) που **σαρώνει το build** (`content` του Tailwind). ⚠️ Κλάσεις σε αρχεία ΕΚΤΟΣ
- * `content` δεν παράγονται **καθόλου**, με ή χωρίς modifier — αυτό είναι άλλο ερώτημα, ΔΕΝ το κρίνει αυτή η πύλη.
+ * Αρχεία παραγωγής (όχι tests) που **σαρώνει το build** (`content` του Tailwind).
+ *
+ * ## ΔΕΥΤΕΡΟ ΚΡΙΤΗΡΙΟ — ΤΟ ΞΕΧΑΣΜΕΝΟ ΑΡΧΕΙΟ (ADR-940 §9)
+ * Κλάση σε αρχείο ΕΚΤΟΣ `content` δεν παράγεται **ποτέ**, με ή χωρίς modifier — και το κριτήριο του modifier
+ * ΔΕΝ μπορεί να το δει (κρίνει μόνο ό,τι σαρώνει το build). Άρα: κάθε αρχείο κώδικα του `src/` είτε **σαρώνεται**
+ * είτε ταιριάζει σε **δηλωμένη** εξαίρεση `!…` του `content` (`engine.isExcludedFile`). Τρίτη περίπτωση =
+ * «ξεχασμένο» ⇒ ⛔. Μετρημένο 2026-11-12, πριν σαρωθεί όλο το `src/`: 3.962 ξεχασμένα αρχεία παραγωγής, 14 κλάσεις
+ * που δεν παράγονταν ποτέ (`ring-primary/40` του `ListCard` · `rounded-r-full` του `CardSelectionIndicator`).
  *
  * CLI:
  *   node scripts/check-tailwind-modifier-generation.js <αρχεία…> [--index]   # σταδιοποιημένα (hook)
@@ -52,6 +58,15 @@ const NC = '\x1b[0m';
 
 /** Κρίνεται; = αρχείο παραγωγής που σαρώνει το build. */
 const inScope = (engine) => (rel) => SCAN_EXT.test(rel) && !isTestSource(rel) && engine.isContentFile(rel);
+
+/** Ξεχασμένο; = αρχείο κώδικα του `src/` που το build ΔΕΝ σαρώνει και ΚΑΜΙΑ δηλωμένη εξαίρεση δεν εξηγεί. */
+const isForgotten = (engine) => (rel) => rel.startsWith('src/') && SCAN_EXT.test(rel)
+  && !engine.isContentFile(rel) && !engine.isExcludedFile(rel);
+
+/** Τα ξεχασμένα όλου του `src/` — και tests: αν δεν εξαιρούνται ρητά, πρέπει να σαρώνονται. */
+function collectForgotten(input, engine) {
+  return input.files(['src'], { accept: isForgotten(engine) }).map(input.rel);
+}
 
 /** Όλα τα αρχεία της εμβέλειας — με φρουρό «δεν κοίταξε». */
 function collectAll(input, engine) {
@@ -84,8 +99,9 @@ function measure(files, { input, engine }) {
   return { ledger, blocked, total, scanned };
 }
 
-function printReport(m) {
+function printReport(m, forgotten) {
   console.log(`\nCHECK 3.116 — modifiers Tailwind σε ${m.scanned} αρχεία (εμβέλεια: content του build, χωρίς tests)\n`);
+  console.log(`  ⛔ ${'ξεχασμένα'.padEnd(14)} ${forgotten.length}   (αρχεία του src/ εκτός content, χωρίς δηλωμένη εξαίρεση)\n`);
   // ⚠️ Κάθε κάδος τυπώνεται ΚΑΙ ΣΤΟ ΜΗΔΕΝ: ένα «0» που δεν τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος».
   for (const state of ALL_STATES) {
     const mark = BLOCKING.includes(state) ? '⛔' : (state === STATES.GENERATED ? '✅' : '➖');
@@ -105,12 +121,22 @@ function printBlocked(blocked) {
   console.log(`  ${YELLOW}Κλίμακα = theme.opacity του tailwind.config.ts (ADR-940).${NC}\n`);
 }
 
-function filesFromArgs(argv, engine) {
-  const accept = inScope(engine);
+function printForgotten(forgotten) {
+  console.log(`\n${RED}═══════════════════════════════════════════════════════════════${NC}`);
+  console.log(`${RED}  🚫 COMMIT BLOCKED — αρχείο που το build του Tailwind ΔΕΝ σαρώνει (CHECK 3.116)${NC}`);
+  console.log(`${RED}  Καμία κλάση του δεν παράγεται ΠΟΤΕ — σιωπηλά, όσο σωστά κι αν είναι γραμμένη.${NC}`);
+  console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}\n`);
+  for (const f of forgotten.slice(0, 50)) console.log(`  ❌ ${f}`);
+  if (forgotten.length > 50) console.log(`  … και ${forgotten.length - 50} ακόμα`);
+  console.log(`\n  ${YELLOW}Λύση:${NC} το \`content\` του tailwind.config.ts σαρώνει ΟΛΟ το src/ — μην το στενεύεις.`);
+  console.log('       Αν το αρχείο ΠΡΕΠΕΙ να μείνει εκτός: δηλωμένη γραμμή `!./src/…` με λόγο (ADR-940 §9).\n');
+}
+
+/** Τα ορίσματα της γραμμής εντολών ως διαδρομές σχετικές με τη ρίζα, posix. */
+function relArgs(argv) {
   return argv.slice(2).filter((a) => !a.startsWith('--'))
     .map((f) => f.replace(/\\/g, '/').replace(/^\.\//, ''))
-    .map((f) => (path.isAbsolute(f) ? path.relative(ROOT, f).replace(/\\/g, '/') : f))
-    .filter(accept);
+    .map((f) => (path.isAbsolute(f) ? path.relative(ROOT, f).replace(/\\/g, '/') : f));
 }
 
 function main(argv = process.argv) {
@@ -119,7 +145,14 @@ function main(argv = process.argv) {
   const report = argv.includes('--report');
   const input = openGateInput({ root: ROOT, index: argv.includes(INDEX_FLAG) });
   const engine = loadTailwindEngine(ROOT, input);
-  const files = (all || report) ? collectAll(input, engine) : filesFromArgs(argv, engine);
+  const full = all || report;
+  const args = full ? [] : relArgs(argv);
+  const forgotten = full ? collectForgotten(input, engine) : args.filter(isForgotten(engine));
+  if (forgotten.length && !report) {
+    printForgotten(forgotten);
+    return 1;
+  }
+  const files = full ? collectAll(input, engine) : args.filter(inScope(engine));
   if (!files.length) return 0;
 
   const m = measure(files, { input, engine });
@@ -129,14 +162,14 @@ function main(argv = process.argv) {
     return 1;
   }
   if (report) {
-    printReport(m);
-    return m.blocked.length ? 1 : 0;
+    printReport(m, forgotten);
+    return (m.blocked.length || forgotten.length) ? 1 : 0;
   }
   if (m.blocked.length) {
     printBlocked(m.blocked);
     return 1;
   }
-  if (all) console.log(`${GREEN}✅ CHECK 3.116 — κανένας πεταμένος modifier${NC} (${m.scanned} αρχεία · ${m.ledger.generated} modifiers παράγονται)`);
+  if (all) console.log(`${GREEN}✅ CHECK 3.116 — κανένας πεταμένος modifier · κανένα ξεχασμένο αρχείο${NC} (${m.scanned} αρχεία · ${m.ledger.generated} modifiers παράγονται)`);
   return 0;
 }
 
@@ -149,4 +182,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { measure, collectAll, inScope, main };
+module.exports = { measure, collectAll, collectForgotten, inScope, isForgotten, main };

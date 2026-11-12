@@ -8,6 +8,7 @@
  *        ⚠️ ΚΑΡΦΩΜΕΝΑ commits, ΠΟΤΕ `HEAD`· το `gitShow` ΣΚΑΕΙ σε κενή απάντηση.
  *   Μ  — μεταλλάξεις στην ΕΙΣΟΔΟ: κάθε μορφή, μία-μία (κόκκινο / πράσινο / εκτός εμβέλειας).
  *   Κ  — το συμβόλαιο: fail-closed, κλειστή λογιστική, εμβέλεια = content του build χωρίς tests.
+ *   Ξ  — το ξεχασμένο αρχείο (ADR-940 §9): εκτός `content` ΧΩΡΙΣ δηλωμένη εξαίρεση ⇒ ⛔· μετάλλαξη σε μίνι-repo.
  */
 
 'use strict';
@@ -20,7 +21,7 @@ const { execFileSync } = require('node:child_process');
 const REPO = path.resolve(__dirname, '..', '..');
 const { loadTailwindEngine } = require('../lib/tailwind/engine');
 const { judgeText, splitModifier, STATES } = require('../lib/tailwind/modifier-generation');
-const { measure, inScope } = require('../check-tailwind-modifier-generation');
+const { measure, inScope, isForgotten, collectForgotten } = require('../check-tailwind-modifier-generation');
 
 /** Πριν και μετά τη διόρθωση `/12 → /10` (ADR-770 §11). */
 const BEFORE = '0de6dc9e';
@@ -95,12 +96,13 @@ describe('Κ — το συμβόλαιο της πύλης', () => {
     }
   });
 
-  it('Κ2: εμβέλεια = content του build, χωρίς tests', () => {
+  it('Κ2: εμβέλεια = content του build (ΟΛΟ το src/), χωρίς tests', () => {
     const accept = inScope(engine);
     expect(accept('src/components/dashboard/NavigationCard.tsx')).toBe(true);
     expect(accept('src/design-system/stat-tone.ts')).toBe(true);
+    expect(accept('src/utils/contactFormUtils.ts')).toBe(true);
     expect(accept('src/components/__tests__/x.test.tsx')).toBe(false);
-    expect(accept('src/utils/not-scanned-by-tailwind.ts')).toBe(false);
+    expect(accept('scripts/not-in-src.js')).toBe(false);
   });
 
   it('Κ3: κλειστή λογιστική — κάθε υποψήφια σε ΕΝΑΝ κάδο, και το μπλοκ φέρει αρχείο:γραμμή', () => {
@@ -115,5 +117,70 @@ describe('Κ — το συμβόλαιο της πύλης', () => {
 
   it('Κ4: το `gitShow` ΣΚΑΕΙ σε ανύπαρκτη διαδρομή — ποτέ σιωπηλά πράσινο test', () => {
     expect(() => gitShow(BEFORE, 'src/δεν/υπαρχει.tsx')).toThrow();
+  });
+});
+
+/**
+ * Ξ — το δεύτερο κριτήριο: το ΞΕΧΑΣΜΕΝΟ αρχείο (ADR-940 §9). Κλάση σε αρχείο εκτός `content` δεν παράγεται ΠΟΤΕ·
+ * κάθε αρχείο του `src/` είτε σαρώνεται είτε ταιριάζει σε ΔΗΛΩΜΕΝΗ εξαίρεση `!…`.
+ * Οι μεταλλάξεις τρέχουν σε μίνι-repo με ΠΡΑΓΜΑΤΙΚΟ `tailwind.config.ts` (η μηχανή εκτελείται, όχι mock).
+ */
+describe('Ξ — το ξεχασμένο αρχείο', () => {
+  /** Το ιστορικό σφάλμα: τα `.tsx` του design-system + αρχεία κλάσεων του `lib`/`config`/`constants`. */
+  const ONCE_FORGOTTEN = [
+    'src/design-system/components/ListCard/ListCard.tsx',
+    'src/design-system/primitives/Card/CardSelectionIndicator.tsx',
+    'src/lib/status-helpers.ts',
+    'src/config/study-groups-config.ts',
+    'src/constants/contacts.ts',
+  ];
+
+  it('Ξ1: με το config του repo, τα ΠΑΛΑΙ ξεχασμένα σαρώνονται και τίποτα δεν είναι ξεχασμένο', () => {
+    const forgotten = isForgotten(engine);
+    for (const f of ONCE_FORGOTTEN) {
+      expect(engine.isContentFile(f)).toBe(true);
+      expect(forgotten(f)).toBe(false);
+    }
+  });
+
+  it('Ξ2: τα tests είναι ΔΗΛΩΜΕΝΑ εκτός (εξαίρεση `!…`), όχι ξεχασμένα', () => {
+    for (const f of ['src/components/__tests__/x.test.tsx', 'src/lib/a.spec.ts', 'src/hooks/__tests__/h.tsx']) {
+      expect(engine.isContentFile(f)).toBe(false);
+      expect(engine.isExcludedFile(f)).toBe(true);
+      expect(isForgotten(engine)(f)).toBe(false);
+    }
+  });
+
+  describe('μετάλλαξη: config που ΣΤΕΝΕΥΕΙ ξανά σε λίστα φακέλων', () => {
+    let root;
+    let narrow;
+    beforeAll(() => {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-forgotten-'));
+      fs.writeFileSync(path.join(root, 'tailwind.config.ts'), `export default {
+  content: ['./src/components/**/*.{ts,tsx}', './src/design-system/**/*.ts', '!./src/**/__tests__/**'],
+  theme: { extend: {} },
+};
+`);
+      narrow = loadTailwindEngine(root);
+    });
+    afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
+
+    it.each([
+      ['src/design-system/components/ListCard/ListCard.tsx', true],
+      ['src/lib/status-helpers.ts', true],
+      ['src/components/Button.tsx', false],
+      ['src/components/__tests__/Button.test.tsx', false],
+      ['scripts/tool.js', false],
+      ['src/lib/data.json', false],
+    ])('%s → ξεχασμένο: %s', (rel, expected) => {
+      expect(isForgotten(narrow)(rel)).toBe(expected);
+    });
+
+    it('η πλήρης σάρωση μαζεύει ΜΟΝΟ τα ξεχασμένα, από την είσοδο της πύλης', () => {
+      const tree = ['src/components/Button.tsx', 'src/lib/status-helpers.ts',
+        'src/components/__tests__/Button.test.tsx', 'src/design-system/primitives/Card/CardIcon.tsx'];
+      const input = { files: (_roots, { accept }) => tree.filter(accept), rel: (f) => f };
+      expect(collectForgotten(input, narrow)).toEqual(['src/lib/status-helpers.ts', 'src/design-system/primitives/Card/CardIcon.tsx']);
+    });
   });
 });

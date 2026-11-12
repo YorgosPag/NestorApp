@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ IMPLEMENTED — πύλη CHECK 3.116 (Στρώμα 1 hook + Στρώμα 2 CI) · ένα σημείο φόρτωσης του Tailwind (κλαδί `agent/pea-sold-truth`, 2026-11-12) |
+| **Status** | ✅ IMPLEMENTED — πύλη CHECK 3.116 (Στρώμα 1 hook + Στρώμα 2 CI) · ένα σημείο φόρτωσης του Tailwind · §9 `content` = όλο το `src/` + κριτήριο ξεχασμένου αρχείου (κλαδί `agent/pea-sold-truth`, 2026-11-12) |
 | **Date** | 2026-11-12 |
 | **Category** | UI / Quality Gates |
 | **Canonical Location** | `scripts/lib/tailwind/engine.js` · `scripts/lib/tailwind/modifier-generation.js` · `scripts/check-tailwind-modifier-generation.js` |
@@ -61,7 +61,8 @@
 | Μηχανή (config · `generates` · `extract` · `isContentFile`) | `scripts/lib/tailwind/engine.js` |
 | Κριτής (καθαρή συνάρτηση) | `scripts/lib/tailwind/modifier-generation.js` |
 | Πύλη (CLI) | `scripts/check-tailwind-modifier-generation.js` |
-| Σουίτα (23) | `scripts/__tests__/check-tailwind-modifier-generation.test.js` |
+| Σουίτα (32) | `scripts/__tests__/check-tailwind-modifier-generation.test.js` |
+| Εμβέλεια του build (`content`: όλο το `src/` + δηλωμένες εξαιρέσεις, §9) | `tailwind.config.ts` |
 | Καταναλωτής της μηχανής | `scripts/lib/contrast/tailwind-class-resolver.js` (CHECK 3.42) |
 | Δρομολόγηση | `scripts/run-checks-parallel.js` · `.github/workflows/ssot-discover.yml` · `package.json` |
 | Μητρώο πυλών | `docs/gates/3.116.md` → `CLAUDE.md` (γεννήτορας) |
@@ -79,8 +80,8 @@
 ## 6. Δηλωμένα κενά
 
 - Modifier-**λέξη** (`text-sm/tight` έγκυρο · `text-sm/foo` πετιέται): δεν κρίνεται.
-- Κλάσεις σε αρχεία **εκτός** `content` δεν παράγονται **καθόλου**. Άλλο ερώτημα (π.χ. `src/utils`, `src/config`):
-  **δεν** το κρίνει αυτή η πύλη. Πρόταση ξεχωριστής δουλειάς, μόνο με «ναι».
+- ~~Κλάσεις σε αρχεία **εκτός** `content` δεν κρίνονται.~~ **Έκλεισε**: §9 (δεύτερο κριτήριο). Από το `src/` μένει εκτός
+  μόνο ό,τι δηλώνεται ρητά με `!…`.
 - Στο Στρώμα 1 κρίνονται τα σταδιοποιημένα `.ts/.tsx`. Τα `.js/.jsx/.mdx` του `content` τα βλέπει μόνο η πλήρης σάρωση.
 
 ## 7. ⚠️ ΜΗΝ
@@ -89,8 +90,44 @@
 - **ΜΗΝ** γράψεις λίστα επιτρεπτών βημάτων ή δικό σου `loadConfig`. Υπάρχει **ένα** σημείο, το `engine.js`.
 - **ΜΗΝ** κάνεις mock τη μηχανή στη σουίτα: θα έκρινε τη δική μας υπόθεση για τον compiler.
 
-## 8. Changelog
+## 9. Το ξεχασμένο αρχείο: `content` = όλο το `src/` και δεύτερο κριτήριο (Giorgio, «ναι», 2026-11-12)
+
+**Το κενό της §6, μετρημένο** με τη μηχανή (`isContentFile` + `extract` + `generates`, μέτρηση μόνο για ανάγνωση):
+23.366 αρχεία κώδικα στο `src/` · 17.620 σαρώνονταν · **3.962 αρχεία παραγωγής εκτός σάρωσης** (`lib` 1.494 ·
+`services` 1.359 · `server` 394 · …) · **14 κλάσεις που δεν παράγονταν ΠΟΤΕ**, σε 7 αρχεία:
+
+| Αρχείο | Κλάσεις που δεν παράγονταν | Ορατό αποτέλεσμα |
+|---|---|---|
+| `design-system/components/ListCard/ListCard.tsx` | `ring-primary/40` | κανένα δαχτυλίδι στο hover της κάρτας λίστας |
+| `design-system/primitives/Card/CardSelectionIndicator.tsx` | `rounded-r-full` | τετράγωνη μπάρα επιλογής |
+| `lib/status-helpers.ts` | `bg-[hsl(var(--bg-error))]/20` · `bg-[hsl(var(--bg-success))]/20` | κανένα φόντο σε `closed_lost` · `cancelled` · … |
+| `config/study-groups-config.ts` | 3× `border-l-…` | κανένα χρώμα αριστερού περιγράμματος |
+| `constants/contacts.ts` | 6 (`ring-accent` · `w-max` · `active:bg-accent/70` · …) | |
+| `lib/geo/osm/osm-building.ts` · `lib/geocoding/overpass-housenumber.ts` | `[out:json]` | ψευδώς θετικό: ερώτημα Overpass, όχι κλάση |
+
+**Η αιτία δεν ήταν κάποιο συγκεκριμένο glob, ήταν η λίστα φακέλων.** Έπεσε τρεις φορές (2026-10-10 · 10-13 · 10-22) και
+κάθε φορά «διορθώθηκε» με μια γραμμή ακόμα. Το `design-system/**/*.ts` άφηνε έξω τα `.tsx` των καρτών.
+
+**Τι κάνουν οι άλλοι**: το Tailwind **v4** καταργεί τη λίστα, με αυτόματη ανίχνευση πηγών σε όλο το έργο εκτός
+`.gitignore` και δυαδικών, συν `@source` / `@source not`. Αδύναμο σημείο του: στα monorepos ένα ξεχασμένο `@source` αφήνει
+components χωρίς στυλ, **σιωπηλά**.
+
+**Αποφάσεις**:
+- **(α) `content` = `./src/**/*.{js,ts,jsx,tsx,mdx}`** με **δηλωμένες** εξαιρέσεις, η καθεμία με λόγο: `node_modules`
+  (pnpm store των subapps) · tests (`__tests__` · `.test.` · `.spec.`, ίδιος ορισμός με το `isTestSource`). Κόστος
+  σε CSS: +14 κανόνες (οι 2 άχρηστοι, `[out:json]`, γίνονται δεκτοί αντί για δεύτερη λίστα εξαιρέσεων).
+- **(β) Δεύτερο κριτήριο του CHECK 3.116, πέρα από το v4**: κάθε αρχείο κώδικα του `src/` είτε σαρώνεται είτε
+  ταιριάζει σε γραμμή `!…`. Τρίτη περίπτωση = **ξεχασμένο** ⇒ ⛔. Νέο ερώτημα της μηχανής: `engine.isExcludedFile()`,
+  χωρίς δεύτερη υλοποίηση glob. Hook: τα σταδιοποιημένα. Αλλαγή στο config ⇒ πλήρης σάρωση. CI: πλήρης σάρωση.
+- **(γ) Μετάλλαξη στη σουίτα**: μίνι-repo με **πραγματικό** config που στενεύει ξανά σε λίστα φακέλων ⇒ το
+  `ListCard.tsx` και το `status-helpers.ts` κρίνονται ξεχασμένα.
+
+⏳ **Ανοιχτό, μη μετρημένο**: ο χρόνος σάρωσης του build (+~22% αρχεία). Το `[out:json]` και η ορατή επαλήθευση των
+14 κλάσεων περιμένουν build/deploy.
+
+## 10. Changelog
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-11-12 | **§9 — το ξεχασμένο αρχείο.** `content` = όλο το `src/` με δηλωμένες εξαιρέσεις (`node_modules` · tests). Κλείνουν 14 κλάσεις που δεν παράγονταν ποτέ (μεταξύ τους `ListCard` hover ring, `CardSelectionIndicator`). Δεύτερο κριτήριο του CHECK 3.116 (`engine.isExcludedFile` · `isForgotten` · `collectForgotten`). Σουίτα 23 → 32 (Ξ×9, με μετάλλαξη σε μίνι-repo). |
 | 2026-11-12 | Δημιουργία: CHECK 3.116 (hook + CI), `engine.js` ως ένα σημείο φόρτωσης του Tailwind (και για το 3.42), σουίτα 23 tests με βαθμονόμηση σε καρφωμένο ιστορικό (`0de6dc9e` ⇒ 7 · `aec900e2` ⇒ 0). Πλήρης σάρωση σήμερα: 0. |

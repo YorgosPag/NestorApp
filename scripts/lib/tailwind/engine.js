@@ -10,6 +10,7 @@
  *                     που σαρώνει τα αρχεία του `content` στο build.
  *   · `isContentFile()` → σαρώνει το build αυτό το αρχείο; — τα globs του `content` με το
  *                     `micromatch` του ίδιου του Tailwind.
+ *   · `isExcludedFile()` → το εξαιρεί ΡΗΤΑ μια γραμμή `!…` του `content`; (εκτός-με-λόγο ≠ ξεχασμένο)
  *
  * 🔑 ΓΙΑΤΙ ΟΧΙ ΧΕΙΡΟΓΡΑΦΗ ΚΛΙΜΑΚΑ: μετρημένο 2026-11-12 (tailwindcss 3.4.19) — το `bg-primary/12`
  * **δεν** παράγεται (το `/12` δεν είναι βήμα της `theme.opacity`), ενώ το `w-1/12` **παράγεται**
@@ -123,6 +124,15 @@ function loadTailwindEngine(repoRoot = process.cwd(), input = null) {
     isContentFile(rel) {
       mm = mm || tailwindMicromatch(root);
       return mm.isMatch(rel, globs.include, { dot: true }) && !mm.isMatch(rel, globs.exclude, { dot: true });
+    },
+    /**
+     * Το εξαιρεί **ρητά** το `content` (γραμμή `!…`); — η διάκριση ανάμεσα σε «δηλωμένα εκτός» και «ξεχασμένο».
+     * Ένα αρχείο που δεν σαρώνεται ΧΩΡΙΣ να ταιριάζει σε εξαίρεση έπεσε ανάμεσα στα globs (ADR-940 §9).
+     * @param {string} rel διαδρομή σχετική με τη ρίζα, posix
+     */
+    isExcludedFile(rel) {
+      mm = mm || tailwindMicromatch(root);
+      return globs.exclude.length > 0 && mm.isMatch(rel, globs.exclude, { dot: true });
     },
   };
 }
