@@ -21,6 +21,7 @@ interface PaymentMethodSelectorProps {
 const PAYMENT_METHODS: PaymentMethod[] = [
   'bank_transfer',
   'card',
+  'iris',
   'cash',
   'check',
   'credit',

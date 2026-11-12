@@ -15,18 +15,13 @@
  * @see ADR-ACC-018 §16 · `invoice-payment-accounts.ts` (λογαριασμοί) · `utils/invoice-open-amount.ts` (υπόλοιπο)
  */
 
-import type { PaymentMethod } from '../../types/common';
 import type { Invoice } from '../../types/invoice';
+import { isOnlinePaymentMethod } from '../../types/online-payment';
 import { invoiceOpenAmount, isCollectibleInvoice, isVoidedInvoice } from '../../utils/invoice-open-amount';
 import { showsPaymentInstructions } from './invoice-payment-accounts';
 
 type PaymentLinkSubject = Pick<Invoice, 'type' | 'paymentMethod' | 'mydata' | 'creditNoteInvoiceId'>;
 
-/**
- * Τρόποι πληρωμής που εξοφλούνται **online** από τον σύνδεσμο (ADR-ACC-030): κάρτα (και πορτοφόλια) και IRIS.
- * Μετρητά και επιταγή δεν πληρώνονται ποτέ από σύνδεσμο.
- */
-const ONLINE_LINK_PAYMENT_METHODS: ReadonlySet<PaymentMethod> = new Set<PaymentMethod>(['card', 'iris']);
 
 /**
  * Μπορεί να δοθεί σύνδεσμος πληρωμής για αυτό το παραστατικό; Απαίτηση (όχι πιστωτικό/ακυρωμένο/πιστωμένο) που
@@ -35,7 +30,7 @@ const ONLINE_LINK_PAYMENT_METHODS: ReadonlySet<PaymentMethod> = new Set<PaymentM
  */
 export function isPayableByLink(invoice: PaymentLinkSubject): boolean {
   return isCollectibleInvoice(invoice)
-    && (showsPaymentInstructions(invoice) || ONLINE_LINK_PAYMENT_METHODS.has(invoice.paymentMethod));
+    && (showsPaymentInstructions(invoice) || isOnlinePaymentMethod(invoice.paymentMethod));
 }
 
 /** Τι βλέπει ο πελάτης στη σελίδα. Ονομασμένη κατάσταση, ποτέ boolean. */

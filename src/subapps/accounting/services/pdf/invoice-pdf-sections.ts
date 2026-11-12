@@ -138,7 +138,7 @@ export function drawPaymentSection(pdf: jsPDF, invoice: Invoice, startY: number)
   const y = ensureSpace(pdf, startY, 15);
   setColor(pdf, COLORS.gray);
   pdf.setFontSize(8);
-  const methodLabel = PAYMENT_METHOD_LABELS[invoice.paymentMethod] ?? invoice.paymentMethod;
+  const methodLabel = PAYMENT_METHOD_LABELS[invoice.paymentMethod];
   pdf.text(`${LABELS.paymentMethod}: ${methodLabel}`, LAYOUT.marginLeft, y + 4);
 
   const stampX = LAYOUT.pageWidth - LAYOUT.marginRight - 35;

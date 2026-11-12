@@ -50,6 +50,12 @@
 
 - `PaymentMethod` + `'iris'` ⇒ `MYDATA_PAYMENT_METHOD_CODES.iris = 8`. Τα πορτοφόλια (Apple Pay / Google Pay)
   είναι `card` (7).
+- **Επιλογή στη φόρμα** (2026-11-12): ο κοινός `PaymentMethodSelector` (φόρμα τιμολογίου **και** εγγραφής Βιβλίου
+  Ε-Ε) προσφέρει `iris` μετά την κάρτα· ετικέτα i18n `common.paymentMethods.iris`. Οι ετικέτες του PDF
+  (`PAYMENT_METHOD_LABELS`) είναι πλέον `Record<PaymentMethod, string>` — εξαντλητικές: νέος τρόπος χωρίς ετικέτα
+  δεν μεταγλωττίζεται (πριν: `Record<string, string>` ⇒ το PDF τύπωνε ωμό `iris` / `mixed`).
+- Οι online τρόποι του συνδέσμου (`isPayableByLink`) διαβάζονται από τη **μία** ρίζα `ONLINE_PAYMENT_METHODS`
+  (`types/online-payment.ts`, `isOnlinePaymentMethod`) — όχι από δεύτερο τοπικό σύνολο.
 - `InvoicePayment` + προαιρετικά `kind` (`payment` | `refund`), `provider`, `providerReference`, `checkoutId`. Η
   επιστροφή είναι **νέα κίνηση**· η πληρωμή δεν σβήνεται ποτέ (Stripe charge + refund · Xero payment + refund).
 - `services/payments/invoice-payment-settlement.ts`: `settleInvoicePayments(totalGross, payments)` ·
@@ -281,3 +287,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-12 | §5.9 #6: επιστροφή δεν καταγράφηκε — λίστες Everypay = `{ total_count, items }`· `listItemsOrNull` + `listRequest` (502 σε μορφή εκτός συμβολαίου)· §5.8 #3 κλειστό· §4 πίνακας. |
 | 2026-11-12 | §5.9 #6 ✅ επαληθεύτηκε ζωντανά (επιστροφή 1,00 € στο Α-11 ⇒ `recorded`, και οι δύο επιστροφές, υπόλοιπο 6,00 €)· (β) απαντήθηκε: το `amount` πληρωμής του API δεν μειώνεται μετά από επιστροφή. |
 | 2026-11-12 | §5.9 #2 ✅ IRIS ενεργό στο sandbox και επαληθευμένο ζωντανά (Α-12): callback `authorized-source` · webhook `hash` ⇒ χρέωση πηγής ⇒ `recorded` · δεύτερο webhook `pmt_` ⇒ `unchanged` (ιδεμποτία)· καμία αλλαγή κώδικα. |
+| 2026-11-12 | §3: IRIS στον `PaymentMethodSelector` (τιμολόγιο + Βιβλίο Ε-Ε)· `PAYMENT_METHOD_LABELS` εξαντλητικό (`iris`, `mixed`, `non_cash`)· `isPayableByLink` διαβάζει το `isOnlinePaymentMethod` (διπλότυπο `ONLINE_LINK_PAYMENT_METHODS` αφαιρέθηκε). |

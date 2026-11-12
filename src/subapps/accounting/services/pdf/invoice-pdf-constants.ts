@@ -5,7 +5,7 @@
  */
 
 import type jsPDF from 'jspdf';
-import type { InvoiceType } from '../../types';
+import type { InvoiceType, PaymentMethod } from '../../types';
 import type { HumanLanguage } from '@/i18n/languages';
 
 // ============================================================================
@@ -109,13 +109,19 @@ export const INVOICE_TITLES: Record<InvoiceType, { el: string; en: string }> = {
   service_invoice_3rd: { el: 'ΤΙΜΟΛΟΓΙΟ Π.Υ. ΤΡΙΤΕΣ ΧΩΡΕΣ', en: '3RD COUNTRY SERVICE INVOICE' },
 };
 
-/** Payment method labels — bilingual */
-export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+/**
+ * Payment method labels — bilingual. Εξαντλητικό πάνω στο `PaymentMethod` (ADR-ACC-030): νέος τρόπος χωρίς ετικέτα
+ * ΔΕΝ μεταγλωττίζεται — αλλιώς το PDF τύπωνε το ωμό κλειδί (όπως `mixed` / `iris` πριν).
+ */
+export const PAYMENT_METHOD_LABELS: Readonly<Record<PaymentMethod, string>> = {
   cash: 'Μετρητά / Cash',
   bank_transfer: 'Τραπεζική Μεταφορά / Bank Transfer',
   card: 'Κάρτα / Card',
+  iris: 'IRIS (Άμεση πληρωμή) / IRIS (Instant payment)',
   check: 'Επιταγή / Check',
   credit: 'Πίστωση / Credit',
+  mixed: 'Μικτός / Mixed',
+  non_cash: 'Χωρίς πληρωμή / No payment',
 };
 
 // ============================================================================
