@@ -144,10 +144,22 @@ resolves **immediately** when nothing is pending, **even offline**, otherwise on
 - probe every `PROBE_INTERVAL_MS` (500) + on `offline` + on `visibilitychange`;
 - the owner `firestore:pending-writes` is marked in `unsaved-work-registry` only if a probe stays
   open past `SETTLE_THRESHOLD_MS` (400 — above a normal online ack) → no flicker on every save;
-- a **slow** resolution never clears — it re-probes (writes enqueued while waiting were not covered);
-  only a **fast** resolution ("nothing pending") clears; rejection (terminated / user change) clears.
-- Failure direction: a busy SDK queue > threshold may mark briefly (harmless false positive). The
-  opposite — "clean" while writes are pending — cannot happen.
+- **queue barrier (2026-11-12)** — elapsed time was a *proxy*, not the truth: a busy SDK queue
+  answered as slowly as a real pending write. **Measured in production** (`/catalog/imports`, full
+  load, no input): the single guard `g` (`preventDefault` + `returnValue=""`) armed 7,214 → 7,743 ms
+  ⇒ spurious *"Leave site?"* (+ deploy auto-reload deferred, + header «Αποθήκευση…»). Fix, verified in
+  firebase-js-sdk source: `AsyncQueue.enqueueInternal` chains on `tail.then` ⇒ **strictly sequential
+  FIFO**; `waitForPendingWrites` resolves *inside its own op* when `BATCHID_UNKNOWN`; both it and
+  `getDocFromCache` go through `enqueueAndForget`. So each probe enqueues, right after the question, a
+  **barrier** (`getDocFromCache` — local only, no network, no rules; resolve **or** reject = passed):
+  - question answered **before** the barrier ⇒ nothing was pending — however slow both were;
+  - barrier passed while the question is **still open** ⇒ a write is genuinely pending.
+  Mark only on the second **and** past `SETTLE_THRESHOLD_MS` (still the no-flicker debounce for a
+  normal online ack). Queue latency **cancels out** of the comparison instead of "raising the threshold".
+- an answer **after** the barrier never clears — it re-probes (writes enqueued while waiting were not
+  covered); only an answer **before** the barrier clears; rejection (terminated / user change) clears.
+- Failure direction: "clean" while writes are pending — cannot happen (unchanged). The busy-queue false
+  positive is closed. A terminated queue never settles the barrier ⇒ no mark (nothing to guard there).
 
 Consumers of the registry (ADR-860 §Ε3β/§Ε3γ): the single `beforeunload` guard warns the human; the
 deploy-skew recovery **defers** its automatic reload. Installed lazily from `GlobalErrorSetup` (root).
@@ -209,7 +221,7 @@ State from `src/hooks/useSaveStatus.ts` (**NEW**) = pure `deriveSaveStatus({pend
 | `src/components/GlobalErrorSetup.tsx` | Wire-in dynamic import of recovery listener. |
 | `src/lib/firestore-legacy-cache.ts` | **NEW (§2.5)** — one-time purge of the orphaned `persistentLocalCache` IndexedDB + SDK zombie lease keys. |
 | `src/app/layout.tsx` / `src/app/(app)/layout.tsx` | **§2.5** — `GlobalErrorSetup` moved from the `(app)` group to the root layout. |
-| `src/lib/firestore-pending-writes.ts` + `__tests__/firestore-pending-writes.test.ts` | **NEW (§2.6)** — SDK pending-writes → `unsaved-work-registry`; 7 tests pin no-flicker, slow-never-clears, stale-timer, rejection. |
+| `src/lib/firestore-pending-writes.ts` + `__tests__/firestore-pending-writes.test.ts` | **NEW (§2.6)** — SDK pending-writes → `unsaved-work-registry`; queue barrier (2026-11-12); 9 tests pin no-flicker, busy-queue-no-mark (the production bug), busy-queue-with-write marks, after-barrier-never-clears, stale timer/barrier, rejection. |
 | `src/components/header/SaveStatusIndicator.tsx` · `src/hooks/useSaveStatus.ts` · `src/hooks/useConnectivity.ts` + 2 tests | **NEW (§2.7)** — header save status; 21 derive cases + 6 component tests. |
 | `src/lib/__tests__/firestore-legacy-cache.test.ts` | **NEW (§2.5)** — pins the exact SDK database name, zombie-only key removal, success-only flag. |
 | `docs/centralized-systems/reference/adrs/ADR-367-...md` | **NEW** — this document. |
@@ -252,4 +264,5 @@ State from `src/hooks/useSaveStatus.ts` (**NEW**) = pure `deriveSaveStatus({pend
 - **2026-06-08** — Added §2.4 **Root fix #2 (subscription listener-churn stabilization)**. A second, deterministic `ca9 {ve:-1}` trigger was found: BIM persistence hooks re-subscribed `onSnapshot` on every render because their effect depended on the unstable `levelManager` object — amplified into a render storm by the MEP pipe auto-design reconcilers. Stabilized all 20 persistence hooks to key off `currentLevelId` + scope primitives via a `levelManagerRef` (mirror of the `useMepFittingAutoReconciliation` render-loop fix). No behavior change; §2.1/§2.2 remain as the SDK-internal safety net.
 - **2026-09-22** — §2.5 **memory cache in every environment** (supersedes §2.1 single-tab). Trigger: `b815` with *"Failed to obtain exclusive access to the persistence layer"* at public `/search/results` (errorId `err_9a24e54b`). Both tab managers proven to produce `b815`; §4's offline rationale void (`sw.js` = zero-cache passthrough). NEW `firestore-legacy-cache.ts` purges orphaned IndexedDB; `GlobalErrorSetup` moved to root layout so public route groups get the recovery net; recovery drops `clearIndexedDbPersistence`.
 - **2026-09-22** — §2.6 **pending writes → unsaved-work registry**: closes the §2.5 trade-off. `waitForPendingWrites` probe (immediate when empty, even offline — measured in SDK source) with a 400ms settle threshold; registry drives the single `beforeunload` guard (ADR-860 §Ε3γ) and defers deploy auto-reload.
+- **2026-11-12** — §2.6 **queue barrier — a busy SDK queue is no longer a pending write.** Measured on production `/catalog/imports` (full load, zero input): the `beforeunload` guard armed ~530 ms ⇒ spurious *"Leave site?"* (ADR-923 §5.5.2 follow-up). Root: elapsed time of `waitForPendingWrites` was the only signal, and queue backlog inflates it. Fix: a `getDocFromCache` barrier enqueued right after the question on the SDK's strictly-FIFO `AsyncQueue` (verified in firebase-js-sdk source); mark only if the barrier passed while the question is still open **and** past the threshold; clear only on an answer before the barrier. `PendingWritesWatcherDeps` gains `queueBarrier`; tests rewritten (9).
 - **2026-09-22** — §2.7 **visible save status in the header** (Google Docs pattern): `saving` / `offline-pending` ("do not close the tab") / `offline` / `saved` (3 s) / `idle`. New `useConnectivity` SSoT replaced two hand-composed copies in procurement. No change count — the SDK does not expose one.
