@@ -226,7 +226,12 @@ cron εκπέμπει `refunds checked · recorded · unmatched · failed`. Οι
 
 ### 5.8 Ανοιχτά προς επαλήθευση στο sandbox
 
-1. Κωδικοποίηση υπογραφής IRIS `hash` (hex / base64 — δεκτά και τα δύο).
+1. Κωδικοποίηση υπογραφής IRIS `hash` (hex / base64 — δεκτά και τα δύο). Η τεκμηρίωση ξαναελέγχθηκε 2026-11-13:
+   μόνο ψευδοκώδικας `Hmacsha256(json, sk)`, καμία κωδικοποίηση εξόδου. Τα Α-12 / Α-13 πέρασαν χωρίς να καταγραφεί
+   **ποια** ταίριαξε. Από 2026-11-13 ο έλεγχος **λέει** τη μορφή (`AcceptedVerdict.signatureScheme`: `iris-hash-hex`
+   · `iris-hash-base64` · `webhook-header`) στο «Payment webhook applied», στην επιστροφή browser και στο
+   `payment_provider_events.signatureScheme`. **Επόμενο βήμα**: με το πρώτο ζωντανό IRIS, ο έλεγχος στενεύει στη μία
+   μορφή που είδαμε.
 2. Η ακριβής μορφή του σώματος κάθε webhook (η τεκμηρίωση δίνει λίστα πεδίων, όχι παράδειγμα ανά συμβάν): ο adapter
    ταξινομεί με το πρόθεμα του `token` (`pnt_` / `pmt_`)· άγνωστη μορφή ⇒ `ignored` + ίχνος, και η συμφιλίωση καλύπτει.
 3. ~~Η μορφή απάντησης λίστας~~ — **έκλεισε** (§5.9 #6): `{ total_count, items }`, μόνο αυτή· άλλη μορφή ⇒ 502.
@@ -428,3 +433,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-13 | §5.5 / §5.9 #8: σελιδοποίηση όλων των λιστών Everypay (`everypayListAll`, `count=20` + `offset`, αποδιπλασιασμός, όριο ⇒ 502)· port `listRecentlyRefundedPayments` + πέρασμα επιστροφών στο cron (`payment-refund-reconcile.service.ts`)· `chronologicalMovements` στον συγχρονισμό· §4 πίνακας· 3 νέες σουίτες (list · refund reconcile · chronology). |
 | 2026-11-13 | §5.10: η επιστροφή δεν ξανανοίγει την οφειλή (πρότυπο Stripe) — `totalPaid` μόνο πληρωμές, νέο παράγωγο `totalRefunded` (server-owned), `paidAsOf` του καθολικού απαιτήσεων αγνοεί τις επιστροφές (πριν τις μετρούσε ως πληρωμή), `isRefundMovement` ένα κριτήριο· tests εξόφλησης ενημερωμένα + ένα καθολικού. |
 | 2026-11-13 | §5.3: το `[WARN] [AUTH_CONTEXT] DENY` σε κάθε webhook = καταγραφή ανώνυμου σε **δημόσια** διαδρομή, όχι άρνηση ⇒ `debug` όταν `allowUnauthenticated` (ADR-821), απόφαση αμετάβλητη. |
+| 2026-11-13 | §5.8 #1: η μορφή υπογραφής που ταίριαξε καταγράφεται (`AcceptedVerdict.signatureScheme` → `webhookSignalDiagnostics` → logs webhook/επιστροφής + `payment_provider_events.signatureScheme`) ώστε το επόμενο ζωντανό IRIS να κλείσει το hex/base64· σουίτα `webhook-signal-diagnostics` (4). |

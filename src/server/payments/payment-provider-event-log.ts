@@ -32,6 +32,8 @@ export interface ProviderEventReceipt {
   readonly signal: string;
   /** Ο λόγος του σήματος (`webhookSignalDiagnostics`) — π.χ. `unrecognised-event`, `provider-code:41001`· `null` αλλιώς. */
   readonly reason: string | null;
+  /** Ποια μορφή υπογραφής ταίριαξε (`webhookSignalDiagnostics`) — π.χ. `iris-hash-hex` (ADR-ACC-030 §5.8 #1). */
+  readonly signatureScheme: string;
   /** Τι έγινε (`recorded` · `unchanged` · `open` · `closed` · `unknown` · `failed` · …). */
   readonly outcome: string;
   readonly receivedAtMs: number;
@@ -45,6 +47,7 @@ export async function recordProviderEventReceipt(db: Firestore, receipt: Provide
     bodySha256,
     signal: receipt.signal,
     reason: receipt.reason,
+    signatureScheme: receipt.signatureScheme,
     outcome: receipt.outcome,
     lastReceivedAt: new Date(receipt.receivedAtMs).toISOString(),
     deliveries: FieldValue.increment(1),

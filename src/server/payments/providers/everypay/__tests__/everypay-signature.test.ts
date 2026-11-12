@@ -26,7 +26,7 @@ describe('judgeEverypayBodySignature', () => {
 
   it('δέχεται σωστή υπογραφή και επιστρέφει το σώμα', () => {
     const verdict = judgeEverypayBodySignature(body, bodySignature(body), SECRET);
-    expect(verdict).toEqual({ valid: true, payload: { token: 'pnt_abc', status: 'Paid' } });
+    expect(verdict).toEqual({ valid: true, payload: { token: 'pnt_abc', status: 'Paid' }, scheme: 'webhook-header' });
   });
 
   it('απορρίπτει υπογραφή με άλλο κλειδί', () => {
@@ -55,10 +55,14 @@ describe('judgeEverypayBodySignature', () => {
 describe('judgeEverypayIrisHash', () => {
   const json = JSON.stringify({ callback_url: 'https://x/cb', token: 'src_123', md: 'pchk_1', type: 'iris' });
 
-  it.each(['hex', 'base64'] as const)('δέχεται υπογραφή %s του ΙΔΙΟΥ HMAC και δίνει το υπογεγραμμένο JSON', (encoding) => {
-    const verdict = judgeEverypayIrisHash(irisHash(json, encoding), SECRET);
-    expect(verdict).toEqual({ valid: true, payload: JSON.parse(json) });
-  });
+  // ADR-ACC-030 §5.8 #1: και οι δύο δεκτές — και ΛΕΕΙ ποια ταίριαξε, ώστε το ζωντανό συμβάν να κλείσει το ερώτημα.
+  it.each([['hex', 'iris-hash-hex'], ['base64', 'iris-hash-base64']] as const)(
+    'δέχεται υπογραφή %s του ΙΔΙΟΥ HMAC, δίνει το υπογεγραμμένο JSON και τη μορφή %s',
+    (encoding, scheme) => {
+      const verdict = judgeEverypayIrisHash(irisHash(json, encoding), SECRET);
+      expect(verdict).toEqual({ valid: true, payload: JSON.parse(json), scheme });
+    },
+  );
 
   it('απορρίπτει hash με άλλο κλειδί', () => {
     expect(judgeEverypayIrisHash(irisHash(json, 'hex', 'sk_other'), SECRET)).toEqual({ valid: false, reason: 'signature-invalid' });

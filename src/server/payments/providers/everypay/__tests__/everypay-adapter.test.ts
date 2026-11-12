@@ -30,21 +30,21 @@ describe('judgeWebhook', () => {
   it('ειδοποίηση (`pnt_`) ⇒ checkout-reference', () => {
     const body = JSON.stringify({ token: 'pnt_1', status: 'Paid' });
     expect(provider.judgeWebhook(body, signedHeaders(body))).toEqual({
-      valid: true, signal: { kind: 'checkout-reference', providerReference: 'pnt_1' },
+      valid: true, signal: { kind: 'checkout-reference', providerReference: 'pnt_1' }, signatureScheme: 'webhook-header',
     });
   });
 
   it('πληρωμή (`pmt_`, π.χ. επιστροφή) ⇒ payment-reference', () => {
     const body = JSON.stringify({ token: 'pmt_9', refunded: true });
     expect(provider.judgeWebhook(body, signedHeaders(body))).toEqual({
-      valid: true, signal: { kind: 'payment-reference', paymentReference: 'pmt_9' },
+      valid: true, signal: { kind: 'payment-reference', paymentReference: 'pmt_9' }, signatureScheme: 'webhook-header',
     });
   });
 
   it('IRIS: τα στοιχεία βγαίνουν από το ΥΠΟΓΕΓΡΑΜΜΕΝΟ json, όχι από τα εξωτερικά πεδία', () => {
     const body = JSON.stringify({ token: 'src_FORGED', md: 'pchk_FORGED', hash: irisHash({ token: 'src_1', md: 'pchk_1', type: 'iris' }) });
     expect(provider.judgeWebhook(body, new Headers())).toEqual({
-      valid: true, signal: { kind: 'authorized-source', checkoutId: 'pchk_1', sourceToken: 'src_1' },
+      valid: true, signal: { kind: 'authorized-source', checkoutId: 'pchk_1', sourceToken: 'src_1' }, signatureScheme: 'iris-hash-hex',
     });
   });
 
@@ -56,6 +56,7 @@ describe('judgeWebhook', () => {
         kind: 'authorization-failed', checkoutId: 'pchk_1', providerCode: '41001',
         signedFields: ['error_code', 'error_status', 'md'],
       },
+      signatureScheme: 'iris-hash-hex',
     });
   });
 
@@ -67,6 +68,7 @@ describe('judgeWebhook', () => {
         kind: 'authorization-failed', checkoutId: null, providerCode: '12345',
         signedFields: ['error_code', 'error_status'],
       },
+      signatureScheme: 'iris-hash-hex',
     });
   });
 
@@ -87,7 +89,7 @@ describe('judgeReturn', () => {
   it('επιστροφή IRIS με έγκυρο hash ⇒ authorized-source', () => {
     const fields = new URLSearchParams({ hash: irisHash({ token: 'src_2', md: 'pchk_2', type: 'iris' }) });
     expect(provider.judgeReturn(fields)).toEqual({
-      valid: true, signal: { kind: 'authorized-source', checkoutId: 'pchk_2', sourceToken: 'src_2' },
+      valid: true, signal: { kind: 'authorized-source', checkoutId: 'pchk_2', sourceToken: 'src_2' }, signatureScheme: 'iris-hash-hex',
     });
   });
 

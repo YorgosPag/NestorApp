@@ -11,8 +11,10 @@
  *      (`token`, `md`) διαβάζονται **από το υπογεγραμμένο JSON**, ποτέ από τα εξωτερικά πεδία — αλλιώς κάποιος θα
  *      κολλούσε έγκυρο hash πάνω σε άλλο token.
  *
- *   ⚠️ Η τεκμηρίωση IRIS δεν λέει ρητά αν η «υπογραφή» πριν από το `|` είναι hex ή base64. Δεχόμαστε **και τις
- *   δύο** κωδικοποιήσεις του **ίδιου** HMAC — δεν χαλαρώνει τίποτα (ίδια 32 bytes). Και η υπογραφή είναι μόνο ο
+ *   ⚠️ Η τεκμηρίωση IRIS δεν λέει ρητά αν η «υπογραφή» πριν από το `|` είναι hex ή base64 (μόνο ψευδοκώδικας
+ *   `Hmacsha256(json, sk)` — ξαναελέγχθηκε 2026-11-13). Δεχόμαστε **και τις δύο** κωδικοποιήσεις του **ίδιου** HMAC
+ *   — δεν χαλαρώνει τίποτα (ίδια 32 bytes) — και **λέμε ποια ταίριαξε** (`scheme`), ώστε το πρώτο ζωντανό συμβάν
+ *   να κλείσει το ερώτημα και ο έλεγχος να στενέψει σε μία (ADR-ACC-030 §5.8 #1). Και η υπογραφή είναι μόνο ο
  *   πρώτος φραγμός: χρήματα κινούνται μόνο όταν πετύχει το `POST /payments` με το **δικό μας** κλειδί.
  *
  *   Σύγκριση πάντα σταθερού χρόνου, μέσω του ΕΝΟΣ `equalsInConstantTime` (πάνω σε hex).
@@ -29,8 +31,11 @@ export const EVERYPAY_SIGNATURE_HEADER = 'x-signature-sha256';
 
 export type EverypaySignatureRefusal = 'signature-missing' | 'signature-invalid' | 'payload-malformed';
 
+/** Ποια μορφή υπογραφής ταίριαξε — διάγνωση για logs / ίχνος παραλαβής, ποτέ κριτήριο. */
+export type EverypaySignatureScheme = 'webhook-header' | 'iris-hash-hex' | 'iris-hash-base64';
+
 export type EverypaySignedPayload =
-  | { readonly valid: true; readonly payload: Record<string, unknown> }
+  | { readonly valid: true; readonly payload: Record<string, unknown>; readonly scheme: EverypaySignatureScheme }
   | { readonly valid: false; readonly reason: EverypaySignatureRefusal };
 
 const HEX_SHA256 = /^[0-9a-f]{64}$/i;
@@ -45,10 +50,12 @@ function base64DigestAsHex(value: string): string | null {
   return bytes.length === 32 ? bytes.toString('hex') : null;
 }
 
-/** Η υπογραφή (hex **ή** base64) ταιριάζει με το αναμενόμενο HMAC; */
-function digestMatches(provided: string, expectedHex: string): boolean {
-  const asHex = HEX_SHA256.test(provided) ? provided.toLowerCase() : base64DigestAsHex(provided);
-  return asHex !== null && equalsInConstantTime(asHex, expectedHex);
+/** Η υπογραφή (hex **ή** base64) ταιριάζει με το αναμενόμενο HMAC; ⇒ η μορφή που ταίριαξε, ή `null`. */
+function matchingIrisScheme(provided: string, expectedHex: string): EverypaySignatureScheme | null {
+  const hex = HEX_SHA256.test(provided);
+  const asHex = hex ? provided.toLowerCase() : base64DigestAsHex(provided);
+  if (asHex === null || !equalsInConstantTime(asHex, expectedHex)) return null;
+  return hex ? 'iris-hash-hex' : 'iris-hash-base64';
 }
 
 /** Κείμενο JSON ⇒ αντικείμενο, ή `null` (άκυρο JSON / όχι αντικείμενο). */
@@ -77,7 +84,7 @@ export function judgeEverypayBodySignature(
   const provided = base64HexDigestOrNull(signatureHeader);
   if (provided === null || !equalsInConstantTime(provided, expected)) return { valid: false, reason: 'signature-invalid' };
   const payload = jsonObjectOrNull(rawBody);
-  return payload === null ? { valid: false, reason: 'payload-malformed' } : { valid: true, payload };
+  return payload === null ? { valid: false, reason: 'payload-malformed' } : { valid: true, payload, scheme: 'webhook-header' };
 }
 
 /** IRIS: το `hash` ⇒ το **υπογεγραμμένο** JSON (με `token`, `md`, …). */
@@ -88,7 +95,8 @@ export function judgeEverypayIrisHash(hash: string | null | undefined, secretKey
   if (separator <= 0) return { valid: false, reason: 'signature-invalid' };
   const signature = decoded.slice(0, separator);
   const signedJson = decoded.slice(separator + 1);
-  if (!digestMatches(signature, hmacHex(secretKey, signedJson))) return { valid: false, reason: 'signature-invalid' };
+  const scheme = matchingIrisScheme(signature, hmacHex(secretKey, signedJson));
+  if (scheme === null) return { valid: false, reason: 'signature-invalid' };
   const payload = jsonObjectOrNull(signedJson);
-  return payload === null ? { valid: false, reason: 'payload-malformed' } : { valid: true, payload };
+  return payload === null ? { valid: false, reason: 'payload-malformed' } : { valid: true, payload, scheme };
 }

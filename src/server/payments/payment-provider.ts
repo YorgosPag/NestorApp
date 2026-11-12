@@ -114,28 +114,42 @@ export interface WebhookSignalDiagnostics {
   readonly reason: string | null;
   /** Τα **ονόματα** των υπογεγραμμένων πεδίων όταν η αποτυχία δεν φέρει υπογεγραμμένη συνεδρία — η διάγνωση του §5.8. */
   readonly signedFields: string | null;
+  /** Ποια μορφή υπογραφής ταίριαξε (π.χ. `iris-hash-hex`) — κλείνει το §5.8 #1 από το πρώτο ζωντανό συμβάν. */
+  readonly signatureScheme: string;
 }
 
 /** Ο ΕΝΑΣ ορισμός της διάγνωσης ενός σήματος (webhook route · return route · ίχνος παραλαβής). */
-export function webhookSignalDiagnostics(signal: WebhookSignal): WebhookSignalDiagnostics {
-  if (signal.kind === 'ignored') return { signal: signal.kind, reason: signal.reason, signedFields: null };
-  if (signal.kind !== 'authorization-failed') return { signal: signal.kind, reason: null, signedFields: null };
+export function webhookSignalDiagnostics(verdict: AcceptedVerdict): WebhookSignalDiagnostics {
+  const { signal, signatureScheme } = verdict;
+  if (signal.kind === 'ignored') return { signal: signal.kind, reason: signal.reason, signedFields: null, signatureScheme };
+  if (signal.kind !== 'authorization-failed') return { signal: signal.kind, reason: null, signedFields: null, signatureScheme };
   return {
     signal: signal.kind,
     reason: signal.providerCode === null ? 'provider-code-absent' : `provider-code:${signal.providerCode}`,
     signedFields: signal.checkoutId === null ? signal.signedFields.join(',') : null,
+    signatureScheme,
   };
 }
 
 export type WebhookRefusal = 'secret-missing' | 'signature-missing' | 'signature-invalid' | 'payload-malformed';
 
+/**
+ * Επαληθευμένο συμβάν: το σήμα **και** ποια μορφή υπογραφής το απέδειξε (`signatureScheme`, όνομα του adapter) —
+ * διάγνωση για logs / ίχνος παραλαβής, ποτέ κριτήριο.
+ */
+export interface AcceptedVerdict {
+  readonly valid: true;
+  readonly signal: WebhookSignal;
+  readonly signatureScheme: string;
+}
+
 export type WebhookVerdict =
-  | { readonly valid: true; readonly signal: WebhookSignal }
+  | AcceptedVerdict
   | { readonly valid: false; readonly reason: WebhookRefusal };
 
 /** Η επιστροφή του browser από τον πάροχο, αφού κριθεί. Δεν καταγράφει τίποτα — μόνο οδηγεί πίσω. */
 export type ReturnVerdict =
-  | { readonly valid: true; readonly signal: WebhookSignal }
+  | AcceptedVerdict
   | { readonly valid: false; readonly reason: WebhookRefusal };
 
 /** Ο πάροχος. Κάθε μέθοδος που ρωτά το δίκτυο **ρίχνει** σε σφάλμα (ο καλών αποφασίζει retry). */

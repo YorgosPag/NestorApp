@@ -186,15 +186,15 @@ function judgeWebhookWith(credentials: EverypayCredentials, rawBody: string, hea
   const iris = jsonObjectOrNull(rawBody);
   if (typeof iris?.hash === 'string') {
     const verdict = judgeEverypayIrisHash(iris.hash, credentials.secretKey);
-    return verdict.valid ? { valid: true, signal: irisSignalOf(verdict.payload) } : verdict;
+    return verdict.valid ? { valid: true, signal: irisSignalOf(verdict.payload), signatureScheme: verdict.scheme } : verdict;
   }
   const verdict = judgeEverypayBodySignature(rawBody, headers.get(EVERYPAY_SIGNATURE_HEADER), credentials.secretKey);
-  return verdict.valid ? { valid: true, signal: bodySignalOf(verdict.payload) } : verdict;
+  return verdict.valid ? { valid: true, signal: bodySignalOf(verdict.payload), signatureScheme: verdict.scheme } : verdict;
 }
 
 function judgeReturnWith(credentials: EverypayCredentials, fields: URLSearchParams): ReturnVerdict {
   const verdict = judgeEverypayIrisHash(fields.get('hash'), credentials.secretKey);
-  return verdict.valid ? { valid: true, signal: irisSignalOf(verdict.payload) } : verdict;
+  return verdict.valid ? { valid: true, signal: irisSignalOf(verdict.payload), signatureScheme: verdict.scheme } : verdict;
 }
 
 // ─── ΧΡΕΩΣΗ ΠΗΓΗΣ / ΑΚΥΡΩΣΗ ──────────────────────────────────────────────────

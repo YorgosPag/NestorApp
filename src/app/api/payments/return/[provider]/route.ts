@@ -86,7 +86,7 @@ async function noteProviderVerdict(request: NextRequest, providerId: string, che
   }
   const failure = await noteReturnedFailure(provider, verdict.signal, checkoutId);
   logger.info('Browser returned from payment provider', {
-    provider: providerId, checkoutId, ...webhookSignalDiagnostics(verdict.signal), failure,
+    provider: providerId, checkoutId, ...webhookSignalDiagnostics(verdict), failure,
   });
 }
 

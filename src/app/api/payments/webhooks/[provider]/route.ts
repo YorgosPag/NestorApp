@@ -28,7 +28,7 @@ import { isPaymentProviderId } from '@/lib/payments/payment-routes';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { createModuleLogger } from '@/lib/telemetry';
 import { handlePaymentSignal } from '@/server/accounting/payments/payment-webhook-handler';
-import { webhookSignalDiagnostics, type PaymentProvider, type WebhookSignal } from '@/server/payments/payment-provider';
+import { webhookSignalDiagnostics, type AcceptedVerdict, type PaymentProvider } from '@/server/payments/payment-provider';
 import { recordProviderEventReceipt } from '@/server/payments/payment-provider-event-log';
 import { paymentProviderById } from '@/server/payments/payment-provider-registry';
 
@@ -51,10 +51,11 @@ function reply(status: number, body: WebhookReply): NextResponse<WebhookReply> {
 }
 
 async function processSignal(
-  provider: PaymentProvider, signal: WebhookSignal, rawBody: string,
+  provider: PaymentProvider, verdict: AcceptedVerdict, rawBody: string,
 ): Promise<NextResponse<WebhookReply>> {
   const db = getAdminFirestore();
-  const diagnostics = webhookSignalDiagnostics(signal);
+  const { signal } = verdict;
+  const diagnostics = webhookSignalDiagnostics(verdict);
   let outcome: string;
   try {
     outcome = await handlePaymentSignal(db, provider, signal);
@@ -71,7 +72,7 @@ async function processSignal(
   }
   await recordProviderEventReceipt(db, {
     provider: provider.id, rawBody, signal: diagnostics.signal, reason: diagnostics.reason,
-    outcome, receivedAtMs: Date.now(),
+    signatureScheme: diagnostics.signatureScheme, outcome, receivedAtMs: Date.now(),
   }).catch((error: unknown) => logger.warn('Provider event receipt not written', {
     error: error instanceof Error ? error.message : String(error),
   }));
@@ -92,7 +93,7 @@ async function handler(
     logger.warn('Payment webhook refused', { provider: providerId, reason: verdict.reason });
     return reply(verdict.reason === 'payload-malformed' ? 400 : 401, { received: false, error: verdict.reason });
   }
-  return processSignal(provider, verdict.signal, rawBody);
+  return processSignal(provider, verdict, rawBody);
 }
 
 export const POST = withWebhookRateLimit(
