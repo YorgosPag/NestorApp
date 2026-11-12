@@ -15,7 +15,7 @@ import { PlanReadValuesSection, type PlanReadValuesActions } from '../PlanReadVa
 const t = (key: string, params?: Record<string, string | number>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
 const row = (over: Partial<PlanReadValueRow> & Pick<PlanReadValueRow, 'textId' | 'raw'>): PlanReadValueRow => ({
-  correctedFrom: null, kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, ...over,
+  correctedFrom: null, confirmed: false, kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, ...over,
 });
 
 const ROWS: readonly PlanReadValueRow[] = [
@@ -26,7 +26,7 @@ const ROWS: readonly PlanReadValueRow[] = [
 
 function renderValues(rows: readonly PlanReadValueRow[] | null = ROWS) {
   const actions: jest.Mocked<PlanReadValuesActions> = {
-    onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(),
+    onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(), onConfirm: jest.fn(),
     previewCorrection: jest.fn((_textId: string, raw: string) => (
       raw.trim() === '' ? null : { kind: 'dimension' as const, valueMm: raw === '412' ? null : 4120 }
     )),
@@ -98,6 +98,23 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     fireEvent.change(getByTestId('mfd-read-value-input'), { target: { value: '' } });
     expect(preview.textContent).toBe('');
     expect(actions.onCorrect).not.toHaveBeenCalled();
+  });
+
+  it('βήμα 3 — «Σωστό ✓» μόνο σε μη ελεγμένη· επιβεβαιωμένη ⇒ σήμανση + «Επαναφορά»· πρόοδος N από M', () => {
+    const rows = [...ROWS, row({ textId: 't9', raw: '2.05', valueMm: 2050, confirmed: true, confidence: 1 })];
+    const { getAllByTestId, getByTestId, actions } = renderValues(rows);
+    expect(getByTestId('mfd-read-values-progress').textContent)
+      .toBe('modelFromDrawing.image.ocr.values.progress{"checked":2,"total":4}');
+    expect(item(getAllByTestId, 't3').querySelector('[data-testid="mfd-read-value-confirm"]')).toBeNull();
+    const t9 = item(getAllByTestId, 't9');
+    expect(t9.getAttribute('data-confirmed')).toBe('true');
+    expect(t9.querySelector('[data-testid="mfd-read-value-confirm"]')).toBeNull();
+    expect(t9.querySelector('[data-testid="mfd-read-value-confirmed"]')).not.toBeNull();
+    expect(t9.querySelector('[data-testid="mfd-read-value-corrected"]')).toBeNull();
+    fireEvent.click(t9.querySelector('[data-testid="mfd-read-value-revert"]') as HTMLElement);
+    expect(actions.onRevert).toHaveBeenCalledWith('t9');
+    fireEvent.click(item(getAllByTestId, 't1').querySelector('[data-testid="mfd-read-value-confirm"]') as HTMLElement);
+    expect(actions.onConfirm).toHaveBeenCalledWith('t1');
   });
 
   it('«Επαναφορά» μόνο σε διορθωμένη· «Δεν είναι διάσταση» μόνο σε διάσταση· δείκτης ⇒ onHover', () => {

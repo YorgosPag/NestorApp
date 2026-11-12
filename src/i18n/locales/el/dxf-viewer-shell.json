@@ -533,7 +533,10 @@
           "inputLabel": "Τι γράφει το σχέδιο",
           "preview": "Θα διαβαστεί ως: {value}",
           "notDimension": "Δεν είναι διάσταση",
-          "revert": "Επαναφορά"
+          "revert": "Επαναφορά",
+          "confirm": "Σωστό",
+          "confirmed": "επιβεβαιώθηκε από εσένα · η μηχανή διάβασε σωστά",
+          "progress": "Ελέγχθηκαν {checked} από {total, plural, one {# κείμενο} other {# κείμενα}}"
         }
       },
       "reading": {

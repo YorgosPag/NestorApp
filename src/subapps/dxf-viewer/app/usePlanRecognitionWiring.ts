@@ -48,7 +48,7 @@ export interface PlanRecognitionWiring {
   readonly scale: PlanScaleActions;
   /** ADR-929 Φ0.6 — η τοπική ανάγνωση τιμών: «Ακύρωση» · «Ξανά». */
   readonly ocr: PlanOcrActions;
-  /** ADR-929 Δ21 (δ) — «Τι διάβασα»: διόρθωση · «δεν είναι διάσταση» · επαναφορά · επισήμανση. */
+  /** ADR-929 Δ21 (δ) — «Τι διάβασα»: διόρθωση · «Σωστό ✓» · «δεν είναι διάσταση» · επαναφορά · επισήμανση. */
   readonly readValues: PlanReadValuesActions;
 }
 
@@ -66,6 +66,7 @@ const READ_VALUES_ACTIONS: PlanReadValuesActions = {
   onCorrect: (textId, raw) => { planRecognitionSession.corrections.correct(textId, raw); },
   onMarkNotDimension: (textId) => { planRecognitionSession.corrections.markNotDimension(textId); },
   onRevert: (textId) => { planRecognitionSession.corrections.revert(textId); },
+  onConfirm: (textId) => { planRecognitionSession.corrections.confirm(textId); },
   onHover: (textId) => planRecognitionSession.corrections.hover(textId),
   previewCorrection: (textId, raw) => planRecognitionSession.corrections.preview(textId, raw),
 };

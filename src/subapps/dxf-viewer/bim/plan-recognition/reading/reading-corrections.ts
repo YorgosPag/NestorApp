@@ -1,8 +1,8 @@
 /**
  * ADR-929 Δ21 (δ) — **οι διορθώσεις του ανθρώπου πάνω σε μια ανάγνωση**, ως καθαρή μετατροπή `PlanReading → PlanReading`.
  *
- * Τρεις πράξεις ανά κείμενο: «διόρθωση τιμής» (ο άνθρωπος γράφει τι λέει το χαρτί) · «δεν είναι διάσταση» · «επαναφορά»
- * (η διόρθωση σβήνεται, ισχύει πάλι η μηχανή).
+ * Τέσσερις πράξεις ανά κείμενο: «διόρθωση τιμής» (ο άνθρωπος γράφει τι λέει το χαρτί) · «δεν είναι διάσταση» ·
+ * «Σωστό ✓» (βήμα 3: επιβεβαίωση χωρίς αλλαγή, `PlanText.confirmed`) · «επαναφορά» (η διόρθωση σβήνεται, ισχύει πάλι η μηχανή).
  *
  * 🔑 **Ο ΙΔΙΟΣ κανόνας με τη μηχανή.** Η διορθωμένη τιμή είναι **κείμενο**, όχι αριθμός σε mm: το είδος βγαίνει από το
  *   `classifyWrittenText` και τα mm από το `writtenLengthsMm` (`written-values.ts`), όπως για κάθε αναγνώστη. Ο άνθρωπος
@@ -25,10 +25,11 @@ import type {
 import { readingConfidence } from './plan-reading-from-view';
 import { classifyWrittenText, parseWrittenScale, writtenDimensions } from './written-values';
 
-/** Η διόρθωση ενός κειμένου: νέο κείμενο όπως γράφεται στο χαρτί, ή «δεν είναι διάσταση». */
+/** Η διόρθωση ενός κειμένου: νέο κείμενο όπως γράφεται στο χαρτί · «δεν είναι διάσταση» · «Σωστό ✓» (ίδιο κείμενο). */
 export type PlanReadingCorrection =
   | { readonly kind: 'value'; readonly raw: string }
-  | { readonly kind: 'not-dimension' };
+  | { readonly kind: 'not-dimension' }
+  | { readonly kind: 'confirmed' };
 
 export interface PlanReadingCorrections {
   /** Η ανάγνωση (`PlanReading.model`) στην οποία ανήκουν· `null` = καμία. */
@@ -66,6 +67,7 @@ function correctionsFor(reading: PlanReading, corrections: PlanReadingCorrection
 
 function correctedText(text: PlanText, correction: PlanReadingCorrection | undefined): PlanText {
   if (!correction) return text;
+  if (correction.kind === 'confirmed') return { ...text, confirmed: true, confidence: HUMAN_READING };
   const correctedFrom = text.correctedFrom ?? text.raw;
   if (correction.kind === 'not-dimension') return { ...text, kind: 'other', correctedFrom, confidence: HUMAN_READING };
   const raw = correction.raw.trim();

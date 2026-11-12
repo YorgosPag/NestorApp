@@ -533,7 +533,10 @@
           "inputLabel": "What the drawing says",
           "preview": "Will be read as: {value}",
           "notDimension": "Not a dimension",
-          "revert": "Revert"
+          "revert": "Revert",
+          "confirm": "Correct",
+          "confirmed": "confirmed by you · the machine read it correctly",
+          "progress": "Checked {checked} of {total, plural, one {# text} other {# texts}}"
         }
       },
       "reading": {

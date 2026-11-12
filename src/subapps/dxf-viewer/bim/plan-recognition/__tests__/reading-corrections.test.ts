@@ -63,6 +63,16 @@ describe('applyReadingCorrections — Δ21 (δ)', () => {
     expect(dims(r)).toEqual([['t1', 2050]]);
   });
 
+  it('βήμα 3 — «Σωστό ✓»: ίδιο κείμενο και τιμή, confirmed, βεβαιότητα 1 και στη διάσταση, ΧΩΡΙΣ correctedFrom', () => {
+    const r = applyReadingCorrections(readingOf(), correct(NO_READING_CORRECTIONS, 't2', { kind: 'confirmed' }));
+    const t2 = r.texts.find((t) => t.id === 't2');
+    expect(t2).toMatchObject({ raw: '4.15', kind: 'dimension', confirmed: true, confidence: { score: 1 } });
+    expect(t2?.correctedFrom).toBeUndefined();
+    expect(dims(r)).toEqual([['t1', 2050], ['t2', 4150]]);
+    expect(r.dimensions.find((d) => d.textId === 't2')?.confidence.score).toBe(1);
+    expect(r.dimensions.find((d) => d.textId === 't1')?.confidence.score).toBe(0.8);
+  });
+
   it('επαναφορά ⇒ ξανά η ανάγνωση της μηχανής', () => {
     const corrected = correct(NO_READING_CORRECTIONS, 't2', { kind: 'value', raw: '4.12' });
     const reverted = correct(corrected, 't2', null);

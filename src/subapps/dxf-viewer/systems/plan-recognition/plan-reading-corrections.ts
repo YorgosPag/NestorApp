@@ -2,7 +2,7 @@
  * ADR-929 Δ21 (δ) — οι **διορθώσεις τιμών** του ανθρώπου μέσα στον ελεγκτή της αναγνώρισης. Υπο-module του ενός γραφέα του
  * `planRecognitionStore` (`planRecognitionSession.corrections`), όπως το `plan-ocr-controller`.
  *
- * Κύκλος: κλικ σε γραμμή της λίστας «Τι διάβασα» → `correct` · `markNotDimension` · `revert` → νέο σύνολο διορθώσεων στο
+ * Κύκλος: κλικ σε γραμμή της λίστας «Τι διάβασα» → `correct` · `markNotDimension` · `confirm` · `revert` → νέο σύνολο διορθώσεων στο
  * store → ξανατρέχει **μόνο** η `fusePlan` (καθαρή, χωρίς Worker) με την ανάγνωση της μηχανής **και** τις διορθώσεις →
  * νέα πηγή γραμμών στον βοηθό από το ΙΔΙΟ κανάλι (`publish`).
  *
@@ -70,6 +70,11 @@ export function createPlanReadingCorrectionsController<T>(depsOf: () => PlanRead
     /** «Δεν είναι διάσταση»: το κείμενο μένει ορατό, δεν γίνεται περιορισμός του λύτη. */
     markNotDimension(textId: string): boolean {
       return commit(textId, { kind: 'not-dimension' });
+    },
+
+    /** Βήμα 3 — «Σωστό ✓»: η μηχανή διάβασε σωστά· προέλευση «άνθρωπος», βεβαιότητα 1, ίδιο κείμενο. */
+    confirm(textId: string): boolean {
+      return commit(textId, { kind: 'confirmed' });
     },
 
     /** «Επαναφορά»: ισχύει πάλι ό,τι διάβασε η μηχανή. */

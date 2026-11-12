@@ -350,7 +350,7 @@ export const planRecognitionSession = {
   ocr: { cancel: () => ocrController.cancel(), retry: () => ocrController.retry() },
 
   /**
-   * ADR-929 Δ21 (δ) — η λίστα «Τι διάβασα»: `correct` (διόρθωση τιμής) · `markNotDimension` · `revert` · `hover`. Κάθε
+   * ADR-929 Δ21 (δ) — η λίστα «Τι διάβασα»: `correct` (διόρθωση τιμής) · `markNotDimension` · `confirm` · `revert` · `hover` · `preview`. Κάθε
    * αλλαγή ξανατρέχει μόνο τη σύντηξη και δίνει νέα πηγή γραμμών από το `onLineSource`.
    */
   corrections: readingCorrections,

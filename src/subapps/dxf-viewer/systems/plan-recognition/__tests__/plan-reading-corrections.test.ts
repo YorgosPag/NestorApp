@@ -91,3 +91,16 @@ describe('Δ21 (δ) — commit με τον κοινό κανόνα «ίδιο μ
     expect(planRecognitionStore.get().readingCorrections.byTextId).toEqual({ t2: { kind: 'value', raw: '4.12' } });
   });
 });
+
+describe('Δ21 (δ) βήμα 3 — confirm', () => {
+  it('«Σωστό ✓» ⇒ ΜΙΑ σύντηξη· ξανά ⇒ τίποτα· επαναφορά ⇒ ξανά η μηχανή', () => {
+    const h = harness();
+    h.controller.confirm('t2');
+    h.controller.confirm('t2');
+    expect(h.fused).toHaveLength(1);
+    expect(planRecognitionStore.get().readingCorrections.byTextId).toEqual({ t2: { kind: 'confirmed' } });
+    h.controller.revert('t2');
+    expect(planRecognitionStore.get().readingCorrections.byTextId).toEqual({});
+    expect(h.fused).toHaveLength(2);
+  });
+});

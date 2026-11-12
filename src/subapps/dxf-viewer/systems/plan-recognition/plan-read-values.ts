@@ -23,6 +23,8 @@ export interface PlanReadValueRow {
   readonly raw: string;
   /** Τι διάβασε η μηχανή, όταν ο άνθρωπος το διόρθωσε· `null` = όπως διαβάστηκε. */
   readonly correctedFrom: string | null;
+  /** Βήμα 3 — ο άνθρωπος επιβεβαίωσε την ανάγνωση χωρίς αλλαγή («Σωστό ✓»). */
+  readonly confirmed: boolean;
   readonly kind: PlanTextKind;
   /** Η τιμή σε mm, αν το κείμενο έγινε περιορισμός του λύτη. */
   readonly valueMm: number | null;
@@ -50,6 +52,7 @@ function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | u
     textId: text.id,
     raw: text.raw,
     correctedFrom: text.correctedFrom ?? null,
+    confirmed: text.confirmed === true,
     kind: text.kind,
     valueMm,
     confidence: text.confidence.score,
@@ -73,4 +76,14 @@ export function planReadValueRows(reading: PlanReading, fusion: Pick<PlanFusionR
     || a.row.confidence - b.row.confidence
     || a.order - b.order);
   return rows.map((r) => r.row);
+}
+
+/** Βήμα 3 — η γραμμή ελέγχθηκε από άνθρωπο: διορθώθηκε (και «δεν είναι διάσταση») ή επιβεβαιώθηκε. */
+export function isHumanChecked(row: Pick<PlanReadValueRow, 'correctedFrom' | 'confirmed'>): boolean {
+  return row.correctedFrom !== null || row.confirmed;
+}
+
+/** Βήμα 3 — η πρόοδος του ελέγχου: πόσες γραμμές ελέγχθηκαν από άνθρωπο, από πόσες. */
+export function planReadValuesProgress(rows: readonly PlanReadValueRow[]): { readonly checked: number; readonly total: number } {
+  return { checked: rows.filter(isHumanChecked).length, total: rows.length };
 }

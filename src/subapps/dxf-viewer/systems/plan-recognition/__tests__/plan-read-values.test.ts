@@ -5,7 +5,7 @@
 
 import type { FusedDimension, FusedDimensionStatus } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
-import { planReadValueRows } from '../plan-read-values';
+import { isHumanChecked, planReadValueRows, planReadValuesProgress } from '../plan-read-values';
 
 const RECT = { minX: 0, minY: 0, maxX: 10, maxY: 10 };
 
@@ -59,7 +59,7 @@ describe('planReadValueRows — Δ21 (δ): η πιο ύποπτη πρώτη', (
   it('κάθε γραμμή: τιμή, κατάσταση, απόκλιση σχεδίου − γραμμένου, w, προέλευση «διορθώθηκε»', () => {
     const rows = new Map(planReadValueRows(READING, FUSION).map((r) => [r.textId, r]));
     expect(rows.get('t3')).toEqual({
-      textId: 't3', raw: '4.12', correctedFrom: '4.15', kind: 'dimension', valueMm: 4120, confidence: 0.9,
+      textId: 't3', raw: '4.12', correctedFrom: '4.15', confirmed: false, kind: 'dimension', valueMm: 4120, confidence: 0.9,
       status: 'conflict', deviationMm: -420, w: -4.2,
     });
     expect(rows.get('t4')).toMatchObject({ valueMm: null, status: null, deviationMm: null, correctedFrom: null });
@@ -69,5 +69,26 @@ describe('planReadValueRows — Δ21 (δ): η πιο ύποπτη πρώτη', (
     const rows = planReadValueRows(READING, null);
     expect(rows).toHaveLength(READING.texts.length);
     expect(rows.every((r) => r.status === null && r.w === null)).toBe(true);
+  });
+});
+
+describe('Δ21 (δ) βήμα 3 — «Σωστό ✓»: επιβεβαίωση ≠ διόρθωση, και η πρόοδος του ελέγχου', () => {
+  const confirmedReading: PlanReading = {
+    ...READING,
+    texts: READING.texts.map((t) => (t.id === 't2' ? { ...t, confirmed: true, confidence: { score: 1, factors: { reading: 1 } } } : t)),
+  };
+
+  it('επιβεβαιωμένη γραμμή: confirmed, ΧΩΡΙΣ correctedFrom (το κείμενο δεν άλλαξε)', () => {
+    const t2 = planReadValueRows(confirmedReading, FUSION).find((r) => r.textId === 't2');
+    expect(t2).toMatchObject({ raw: '2.05', confirmed: true, correctedFrom: null, confidence: 1 });
+  });
+
+  it('ελέγχθηκε = διορθώθηκε ή επιβεβαιώθηκε· πρόοδος N από M', () => {
+    expect(isHumanChecked({ correctedFrom: null, confirmed: false })).toBe(false);
+    expect(isHumanChecked({ correctedFrom: '4.15', confirmed: false })).toBe(true);
+    expect(isHumanChecked({ correctedFrom: null, confirmed: true })).toBe(true);
+    expect(planReadValuesProgress(planReadValueRows(READING, FUSION))).toEqual({ checked: 1, total: 7 });
+    expect(planReadValuesProgress(planReadValueRows(confirmedReading, FUSION))).toEqual({ checked: 2, total: 7 });
+    expect(planReadValuesProgress([])).toEqual({ checked: 0, total: 0 });
   });
 });

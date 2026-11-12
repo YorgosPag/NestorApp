@@ -3,7 +3,8 @@
 /**
  * ADR-929 Δ21 (δ) — η λίστα **«Τι διάβασα»**: κάθε κείμενο της ανάγνωσης με την ερμηνεία του (τιμή ή είδος), βεβαιότητα,
  * κατάσταση στη σύντηξη και απόκλιση, η πιο ύποπτη πρώτη (`plan-read-values.ts`). Κλικ στο κείμενο ⇒ πεδίο διόρθωσης
- * (Enter αποθηκεύει, Esc ακυρώνει)· «Δεν είναι διάσταση» · «Επαναφορά» με την αρχική ανάγνωση ορατή. Το δείκτη πάνω σε
+ * (Enter αποθηκεύει, Esc ακυρώνει)· «Σωστό ✓» · «Δεν είναι διάσταση» · «Επαναφορά» με την αρχική ανάγνωση ορατή· πρόοδος
+ * «ελέγχθηκαν N από M». Το δείκτη πάνω σε
  * γραμμή ⇒ επισήμανση του κειμένου στην εικόνα.
  *
  * Καθαρή παρουσίαση: δεν διαβάζει store, δεν γράφει τίποτα· ό,τι αποφασίζει ο άνθρωπος φεύγει προς τα πάνω ως callback.
@@ -12,19 +13,23 @@
  */
 
 import * as React from 'react';
-import { Pencil, RotateCcw } from 'lucide-react';
+import { Check, Pencil, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { FusedDimensionStatus } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
 import type { PlanCorrectionPreview } from '../../../bim/plan-recognition/reading/reading-corrections';
-import type { PlanReadValueRow } from '../../../systems/plan-recognition/plan-read-values';
+import {
+  isHumanChecked, planReadValuesProgress, type PlanReadValueRow,
+} from '../../../systems/plan-recognition/plan-read-values';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 
 export interface PlanReadValuesActions {
   readonly onCorrect: (textId: string, raw: string) => void;
   readonly onMarkNotDimension: (textId: string) => void;
   readonly onRevert: (textId: string) => void;
+  /** Βήμα 3 — «Σωστό ✓»: η ανάγνωση επιβεβαιώνεται χωρίς αλλαγή. */
+  readonly onConfirm: (textId: string) => void;
   /** Η γραμμή που δείχνει ο άνθρωπος (`null` = καμία). */
   readonly onHover: (textId: string | null) => void;
   /** Βήμα 5 — τι θα γινόταν το κείμενο με αυτή τη διόρθωση (ο ΙΔΙΟΣ δρόμος με την αποθήκευση)· `null` = τίποτα να δειχτεί. */
@@ -103,17 +108,23 @@ function RowActions({ row, actions, t }: {
   readonly row: PlanReadValueRow;
   readonly actions: PlanReadValuesActions;
   readonly t: Translate;
-}): React.ReactElement | null {
+}): React.ReactElement {
   const canDrop = row.kind === 'dimension';
-  if (!canDrop && row.correctedFrom === null) return null;
+  const checked = isHumanChecked(row);
   return (
     <p className="m-0 flex flex-wrap items-center gap-1">
+      {!checked ? (
+        <Button type="button" variant="ghost" size="xs" onClick={() => actions.onConfirm(row.textId)} data-testid="mfd-read-value-confirm">
+          <Check className="size-3" aria-hidden="true" />
+          {t('modelFromDrawing.image.ocr.values.confirm')}
+        </Button>
+      ) : null}
       {canDrop ? (
         <Button type="button" variant="ghost" size="xs" onClick={() => actions.onMarkNotDimension(row.textId)} data-testid="mfd-read-value-not-dimension">
           {t('modelFromDrawing.image.ocr.values.notDimension')}
         </Button>
       ) : null}
-      {row.correctedFrom !== null ? (
+      {checked ? (
         <Button type="button" variant="ghost" size="xs" onClick={() => actions.onRevert(row.textId)} data-testid="mfd-read-value-revert">
           <RotateCcw className="size-3" aria-hidden="true" />
           {t('modelFromDrawing.image.ocr.values.revert')}
@@ -137,7 +148,7 @@ function ValueRow({ row, editing, onEdit, actions, t }: {
   return (
     <li
       className="flex flex-col gap-0.5 rounded-md border border-border p-1.5" data-testid="mfd-read-value" data-text-id={row.textId}
-      data-status={row.status ?? 'none'} data-corrected={row.correctedFrom !== null}
+      data-status={row.status ?? 'none'} data-corrected={row.correctedFrom !== null} data-confirmed={row.confirmed}
       onMouseEnter={() => actions.onHover(row.textId)} onMouseLeave={() => actions.onHover(null)}
       onFocus={() => actions.onHover(row.textId)} onBlur={() => actions.onHover(null)}
     >
@@ -155,6 +166,9 @@ function ValueRow({ row, editing, onEdit, actions, t }: {
       {row.correctedFrom !== null ? (
         <p className={MUTED} data-testid="mfd-read-value-corrected">{t('modelFromDrawing.image.ocr.values.corrected', { raw: row.correctedFrom })}</p>
       ) : null}
+      {row.confirmed ? (
+        <p className={MUTED} data-testid="mfd-read-value-confirmed">{t('modelFromDrawing.image.ocr.values.confirmed')}</p>
+      ) : null}
       <RowActions row={row} actions={actions} t={t} />
     </li>
   );
@@ -169,9 +183,15 @@ export function PlanReadValuesSection({ rows, actions, t }: {
 }): React.ReactElement | null {
   const [editing, setEditing] = React.useState<string | null>(null);
   if (rows === null) return null;
+  const progress = planReadValuesProgress(rows);
   return (
     <section className="flex flex-col gap-1.5 border-t border-border pt-2" data-testid="mfd-read-values">
       <h4 className={SECTION_TITLE}>{t('modelFromDrawing.image.ocr.values.title')}</h4>
+      {rows.length > 0 ? (
+        <p className={MUTED} role="status" data-testid="mfd-read-values-progress">
+          {t('modelFromDrawing.image.ocr.values.progress', { checked: progress.checked, total: progress.total })}
+        </p>
+      ) : null}
       <p className={MUTED}>
         {rows.length > 0 ? t('modelFromDrawing.image.ocr.values.hint') : t('modelFromDrawing.image.ocr.values.empty')}
       </p>
