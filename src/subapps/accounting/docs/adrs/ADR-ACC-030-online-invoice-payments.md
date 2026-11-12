@@ -49,7 +49,8 @@
 ## 3. Μοντέλο δεδομένων (Βήμα 1)
 
 - `PaymentMethod` + `'iris'` ⇒ `MYDATA_PAYMENT_METHOD_CODES.iris = 8`. Τα πορτοφόλια (Apple Pay / Google Pay)
-  είναι `card` (7).
+  είναι `card` (7). Ο AI αναλυτής παραστατικών (ACC-005) διαβάζει πλέον και `iris` (2026-11-13· η λίστα του παράγεται
+  εξαντλητικά από τον τύπο).
 - **Επιλογή στη φόρμα** (2026-11-12): ο κοινός `PaymentMethodSelector` (φόρμα τιμολογίου **και** εγγραφής Βιβλίου
   Ε-Ε) προσφέρει `iris` μετά την κάρτα· ετικέτα i18n `common.paymentMethods.iris`. Οι ετικέτες του PDF
   (`PAYMENT_METHOD_LABELS`) είναι πλέον `Record<PaymentMethod, string>` — εξαντλητικές: νέος τρόπος χωρίς ετικέτα
@@ -434,3 +435,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-13 | §5.10: η επιστροφή δεν ξανανοίγει την οφειλή (πρότυπο Stripe) — `totalPaid` μόνο πληρωμές, νέο παράγωγο `totalRefunded` (server-owned), `paidAsOf` του καθολικού απαιτήσεων αγνοεί τις επιστροφές (πριν τις μετρούσε ως πληρωμή), `isRefundMovement` ένα κριτήριο· tests εξόφλησης ενημερωμένα + ένα καθολικού. |
 | 2026-11-13 | §5.3: το `[WARN] [AUTH_CONTEXT] DENY` σε κάθε webhook = καταγραφή ανώνυμου σε **δημόσια** διαδρομή, όχι άρνηση ⇒ `debug` όταν `allowUnauthenticated` (ADR-821), απόφαση αμετάβλητη. |
 | 2026-11-13 | §5.8 #1: η μορφή υπογραφής που ταίριαξε καταγράφεται (`AcceptedVerdict.signatureScheme` → `webhookSignalDiagnostics` → logs webhook/επιστροφής + `payment_provider_events.signatureScheme`) ώστε το επόμενο ζωντανό IRIS να κλείσει το hex/base64· σουίτα `webhook-signal-diagnostics` (4). |
+| 2026-11-13 | §3: το enum `paymentMethod` του AI αναλυτή (`document-analyzer.schemas.ts`) χωρίς `iris` ⇒ παράγεται εξαντλητικά από τον `PaymentMethod` (ACC-005 changelog). |

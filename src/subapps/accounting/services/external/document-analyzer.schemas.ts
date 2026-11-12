@@ -8,6 +8,23 @@
  * - NO `oneOf`/`anyOf` at root
  */
 
+import type { PaymentMethod } from '../../types/common';
+
+/**
+ * Οι τρόποι πληρωμής που μπορεί να διαβάσει ο αναλυτής από ένα παραστατικό — **όλοι** οι `PaymentMethod` εκτός από
+ * το `non_cash` (μη ταμειακή εγγραφή του συστήματος, δεν τυπώνεται ποτέ σε παραστατικό). `Record` ⇒ νέος τρόπος
+ * πληρωμής χωρίς γραμμή εδώ **δεν μεταγλωττίζεται** (πριν: χειρόγραφη λίστα, έλειπε το `iris` — ADR-ACC-030 §3).
+ */
+const DOCUMENT_PAYMENT_METHODS: Readonly<Record<Exclude<PaymentMethod, 'non_cash'>, true>> = {
+  cash: true,
+  bank_transfer: true,
+  card: true,
+  iris: true,
+  check: true,
+  credit: true,
+  mixed: true,
+};
+
 // ============================================================================
 // CLASSIFY SCHEMA
 // ============================================================================
@@ -113,7 +130,7 @@ export const EXPENSE_EXTRACT_SCHEMA = {
       },
       paymentMethod: {
         type: ['string', 'null'],
-        enum: ['cash', 'bank_transfer', 'card', 'check', 'credit', 'mixed', null],
+        enum: [...Object.keys(DOCUMENT_PAYMENT_METHODS), null],
       },
       overallConfidence: { type: 'number' },
     },
@@ -157,7 +174,7 @@ export const EXTRACT_SYSTEM_PROMPT = `Είσαι AI σύστημα εξαγωγ�
 - grossAmount: Μικτό ποσό (συνολικό)
 - vatRate: Συντελεστής ΦΠΑ (6, 13, 24)
 - lineItems: Γραμμές αν υπάρχουν
-- paymentMethod: Τρόπος πληρωμής αν αναγράφεται
+- paymentMethod: Τρόπος πληρωμής αν αναγράφεται (IRIS / άμεση πληρωμή ⇒ iris· Apple Pay / Google Pay ⇒ card)
 - overallConfidence: Βαθμός εμπιστοσύνης 0-100
 
 Αν δεν αναγνωρίζεις κάποιο πεδίο, βάλε null. Μην μαντεύεις.
