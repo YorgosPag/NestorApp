@@ -136,3 +136,34 @@ describe('readSettlement (κάρτα)', () => {
     await expect(provider.readSettlement(subject)).resolves.toEqual({ state: 'open' });
   });
 });
+
+// ADR-ACC-030 §5.8 #6: η συνεδρία IRIS δεν δέχεται λήξη — τη δηλώνει ο πάροχος, και αυτή γίνεται η αλήθεια.
+describe('startCheckout — λήξη του παρόχου', () => {
+  const request = {
+    checkoutId: 'pchk_9', amountMinor: 500, currency: 'EUR' as const, description: 'Α-13', locale: 'el' as const,
+    returnUrl: 'https://example.test/r', webhookUrl: 'https://example.test/w', expiresAt: '2026-11-13T10:30:00.000Z',
+  };
+  const respond = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+  afterEach(() => jest.restoreAllMocks());
+
+  it('IRIS: `expiration_date` (μετατόπιση χωρίς «:») ⇒ providerExpiresAt σε ISO', async () => {
+    jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({
+      token: 'src_1', signature: 'sig_1', date_created: '2025-10-02T16:05:32+0200', expiration_date: '2025-10-02T16:20:32+0200',
+    }));
+    const started = await provider.startCheckout({ ...request, method: 'iris' });
+    expect(started.providerExpiresAt).toBe('2025-10-02T14:20:32.000Z');
+  });
+
+  it('IRIS χωρίς `expiration_date` ⇒ null (ισχύει η ζητούμενη λήξη)', async () => {
+    jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({ signature: 'sig_1' }));
+    await expect(provider.startCheckout({ ...request, method: 'iris' })).resolves.toMatchObject({ providerExpiresAt: null });
+  });
+
+  it('κάρτα: η λήξη που επιστρέφει η ειδοποίηση', async () => {
+    jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({
+      token: 'pnt_9', payment_link_url: 'https://pay.test/pnt_9', expiration_date: '2026-11-13T12:30:00+0200',
+    }));
+    const started = await provider.startCheckout({ ...request, method: 'card' });
+    expect(started).toMatchObject({ providerReference: 'pnt_9', providerExpiresAt: '2026-11-13T10:30:00.000Z' });
+  });
+});

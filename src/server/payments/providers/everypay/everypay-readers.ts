@@ -61,8 +61,16 @@ export function notificationPaymentReference(notification: Record<string, unknow
 /** Οι καταστάσεις πληρωμής που σημαίνουν «τα χρήματα εισπράχθηκαν» (και ίσως επιστράφηκαν μετά). */
 export const CAPTURED_PAYMENT_STATUSES: ReadonlySet<string> = new Set(['captured', 'refunded', 'partiallyrefunded', 'disputed']);
 
+/**
+ * Στιγμή του παρόχου ως ISO 8601, ή `null`. Η Everypay γράφει με μετατόπιση χωρίς άνω-κάτω τελεία
+ * (`2025-10-02T16:20:32+0200`).
+ */
+export function instantField(record: Record<string, unknown> | null, key: string): string | null {
+  return normalizeToISO(textField(record, key));
+}
+
 function occurredAtOf(record: Record<string, unknown>): string {
-  return normalizeToISO(textField(record, 'date_created')) ?? nowISO();
+  return instantField(record, 'date_created') ?? nowISO();
 }
 
 /** Μία κίνηση από εγγραφή πληρωμής ή επιστροφής του παρόχου· `null` αν λείπει ταυτότητα ή ποσό. */

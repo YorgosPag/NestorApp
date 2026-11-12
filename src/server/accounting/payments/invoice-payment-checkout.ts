@@ -25,7 +25,7 @@ import { isPlausibleShareToken } from '@/lib/sharing/share-token';
 import { createModuleLogger } from '@/lib/telemetry';
 import { linkHolderActor } from '@/server/accounting/public-invoice/invoice-link-opened';
 import { readSharedInvoice } from '@/server/accounting/public-invoice/invoice-public-session';
-import type { PaymentProvider } from '@/server/payments/payment-provider';
+import type { PaymentProvider, StartedCheckout } from '@/server/payments/payment-provider';
 import { paymentProviderForCompany } from '@/server/payments/payment-provider-registry';
 import { findActiveShareByToken } from '@/server/sharing/share-token-lookup';
 import { generatePaymentCheckoutId } from '@/services/enterprise-id.service';
@@ -36,12 +36,20 @@ import type { InvoiceCheckoutRequestBody, InvoiceCheckoutResponse } from '@/suba
 import type { IAccountingRepository } from '@/subapps/accounting/types/interfaces';
 
 import { closePendingCheckoutsOfShare } from './invoice-payment-checkout-closing';
-import { createPaymentCheckout, updatePaymentCheckout, type PaymentCheckoutRecord } from '@/server/payments/payment-checkout-store';
+import {
+  createPaymentCheckout,
+  updatePaymentCheckout,
+  type PaymentCheckoutPatch,
+  type PaymentCheckoutRecord,
+} from '@/server/payments/payment-checkout-store';
 import { paymentReturnRoute, paymentWebhookRoute } from '@/lib/payments/payment-routes';
 
 const logger = createModuleLogger('InvoicePaymentCheckout');
 
-/** Πόσο ζει μια συνεδρία στον πάροχο. Η Everypay ζητά ≥ 5′· 30′ αρκούν για τράπεζα + 3-D Secure. */
+/**
+ * Η λήξη που **ζητάμε**. Η Everypay ζητά ≥ 5′· 30′ αρκούν για τράπεζα + 3-D Secure. Όταν ο πάροχος δηλώσει δική
+ * του λήξη (IRIS), αυτή αντικαθιστά τη ζητούμενη (`startedCheckoutPatch`).
+ */
 const CHECKOUT_LIFETIME_MS = 30 * 60 * 1000;
 
 export interface StartInvoiceCheckoutInput extends InvoiceCheckoutRequestBody {
@@ -88,6 +96,16 @@ async function recordCheckoutStarted(repository: IAccountingRepository, record: 
   });
 }
 
+/**
+ * Ό,τι έμαθε η συνεδρία από τον πάροχο. Η δηλωμένη λήξη του **νικά** τη ζητούμενη: η συμφιλίωση (§5.5) και η
+ * σελίδα μετρούν από τη λήξη που ο πάροχος πράγματι τηρεί (IRIS: δεν δέχεται δική μας).
+ */
+function startedCheckoutPatch(started: StartedCheckout): PaymentCheckoutPatch {
+  return started.providerExpiresAt === null
+    ? { providerReference: started.providerReference }
+    : { providerReference: started.providerReference, expiresAt: started.providerExpiresAt };
+}
+
 /** Ξεκινά τη συνεδρία στον πάροχο. Αποτυχία ⇒ `failed` στη συνεδρία και ονομασμένη άρνηση, ποτέ 500 στον πελάτη. */
 async function launchAtProvider(
   db: Firestore, provider: PaymentProvider, record: PaymentCheckoutRecord, input: StartInvoiceCheckoutInput, invoice: Invoice,
@@ -99,7 +117,7 @@ async function launchAtProvider(
       returnUrl: joinOrigin(input.origin, paymentReturnRoute(provider.id, record.checkoutId)),
       webhookUrl: joinOrigin(input.origin, paymentWebhookRoute(provider.id)),
     });
-    await updatePaymentCheckout(db, record.checkoutId, { providerReference: started.providerReference }, nowISO());
+    await updatePaymentCheckout(db, record.checkoutId, startedCheckoutPatch(started), nowISO());
     return { status: 'started', checkoutId: record.checkoutId, launch: started.launch };
   } catch (error) {
     logger.error('Provider refused to start a checkout', {

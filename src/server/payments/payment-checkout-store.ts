@@ -55,7 +55,9 @@ export interface PaymentCheckoutRecord {
   readonly updatedAt: string;
 }
 
-export type PaymentCheckoutPatch = Partial<Pick<PaymentCheckoutRecord, 'status' | 'providerReference' | 'paymentReference'>>;
+export type PaymentCheckoutPatch = Partial<
+  Pick<PaymentCheckoutRecord, 'status' | 'providerReference' | 'paymentReference' | 'expiresAt'>
+>;
 
 function checkoutsOf(db: Firestore) {
   return db.collection(COLLECTIONS.ACCOUNTING_PAYMENT_CHECKOUTS);

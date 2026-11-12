@@ -45,6 +45,12 @@ export interface StartedCheckout {
   /** Το αναγνωριστικό της συνεδρίας στον πάροχο, όταν υπάρχει (π.χ. `pnt_…`). */
   readonly providerReference: string | null;
   readonly launch: CheckoutLaunch;
+  /**
+   * Η λήξη που **δηλώνει ο πάροχος** (ISO 8601), όταν τη δηλώνει. Νικά τη ζητούμενη `CheckoutRequest.expiresAt`:
+   * ο πάροχος δεν δέχεται πάντα δική μας λήξη (IRIS: καμία παράμετρος), και η συνεδρία μας δεν πρέπει να
+   * υπόσχεται ζωή που ο πάροχος δεν τηρεί (ADR-ACC-030 §5.5).
+   */
+  readonly providerExpiresAt: string | null;
 }
 
 /** Η συνεδρία όπως την ξέρει η εφαρμογή — ό,τι χρειάζεται ο adapter για να ρωτήσει τον πάροχο. */
