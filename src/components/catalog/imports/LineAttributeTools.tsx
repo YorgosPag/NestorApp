@@ -7,6 +7,8 @@
  *
  * 🔑 Ο επιλογέας δείχνει **πρώτα** όσες ιδιότητες μετρούν το μέγεθος που τυπώνει η γραμμή (ίδια οικογένεια μέτρησης) και
  *    προειδοποιεί όταν η ιδιότητα έχει ήδη τιμές από άλλη γραμμή του πίνακα.
+ * 🔑 §5.5.2 Β3 Γ11: γραμμή με **αδελφή** ⇒ πρώτα σύνοψη και «Ναι» (ο διακομιστής γράφει ιδιότητα + δέσιμο μαζί)· «Επεξεργασία…»
+ *    ανοίγει τη φόρμα με την ίδια αφετηρία.
  * 🔑 Νέα ιδιότητα: ίδια φόρμα με την καρτέλα της οικογένειας, προσυμπληρωμένη· το **επίπεδο** το βλέπει και το αλλάζει ο άνθρωπος,
  *    και το δέσιμο στην οικογένεια το κάνει ο διακομιστής μέσω της μηχανής σχήματος.
  */
@@ -26,10 +28,13 @@ import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-
 import { IMPORT_LINE_BIND_LEVELS, type ImportLineBindLevel } from '@/subapps/catalog/vocabulary/catalog-import';
 import { AttributePicker } from '../families/AttributePicker';
 import { familyAttributes } from '../families/family-draft';
+import { useOrderKeyAtEnd } from '../attributes/use-attribute-order';
 import { NewAttributeDialog } from '../families/NewAttributeDialog';
 import { useCatalogCanManage, useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
 import { LINE_LEVEL_HINT_KEYS, LINE_LEVEL_KEYS, useImportText } from './import-text';
 import { lineAttributeDraft } from './line-attribute-draft';
+import { LineSiblingStep } from './LineSiblingProposalDialog';
+import { siblingProposalsOf } from './sibling-attribute-draft';
 import type { LineAttributeToolsProps } from './line-tool-props';
 
 const measurementFamilyOf = (attribute: AttributeRecord): string | null => (attribute.type === 'measurement' ? attribute.config.measurementFamilyCode : null);
@@ -98,21 +103,33 @@ function LoadingDialog({ onClose }: { readonly onClose: () => void }) {
   );
 }
 
-export function LineAttributeTools({ proposal, line, mode, onClose, onDecide }: LineAttributeToolsProps) {
+export function LineAttributeTools({ proposal, line, mode, onClose, onDecide, onCreate, siblings }: LineAttributeToolsProps) {
   const notify = useCatalogFailureNotice();
   const canManage = useCatalogCanManage();
   const library = useCatalogLibrary(notify);
   const families = useCatalogCollection('CATALOG_FAMILIES');
+  const orderKeyAtEnd = useOrderKeyAtEnd(library.attributes);
   const family = families.items.find((item) => item.id === proposal.familyId) ?? null;
   const suggestion = useMemo(() => suggestAttributeFromLine(line, library.registry), [line, library.registry]);
   const [level, setLevel] = useState<ImportLineBindLevel | null>(null);
-  const prefill = useCallback((blank: CatalogAttributeDefinition) => lineAttributeDraft(blank, suggestion), [suggestion]);
+  const [editing, setEditing] = useState(false);
+  const scheme = proposal.variantSchemeCode;
+  const proposals = useMemo(
+    () => (family === null ? [] : siblingProposalsOf(siblings ?? [line], family, scheme, { attributeById: library.attributeById, orderKeyAtEnd })),
+    [family, siblings, line, scheme, library.attributeById, orderKeyAtEnd],
+  );
+  const own = proposals.find((item) => item.line === line) ?? null;
+  const prefill = useCallback((blank: CatalogAttributeDefinition) => (own ? own.create.definition : lineAttributeDraft(blank, suggestion)), [own, suggestion]);
   if (library.state !== 'ready' || families.state !== 'ready' || family === null) return <LoadingDialog onClose={onClose} />;
   if (mode === 'map') {
     const options = rankedOptions(familyAttributes(family, library.attributeById), suggestion);
     return <MapLineDialog line={line} options={options} used={usedAttributeIds(proposal)} onClose={onClose} onPick={(attributeId) => onDecide(attributeId, null)} />;
   }
-  const chosenLevel = level ?? suggestion.level;
+  if (canManage && !editing && proposals.length > 0) {
+    const onEdit = proposals.length === 1 && own ? () => setEditing(true) : null;
+    return <LineSiblingStep proposals={proposals} family={family} registry={library.registry} onCreate={onCreate} onEdit={onEdit} onClose={onClose} />;
+  }
+  const chosenLevel = level ?? own?.level ?? suggestion.level;
   const lead = proposal.variantSchemeCode !== null ? <LevelChoice level={chosenLevel} suggested={suggestion.level} onLevel={setLevel} /> : null;
   return (
     <NewAttributeDialog open onOpenChange={(open) => { if (!open) onClose(); }} library={library} families={families.items} canManage={canManage}

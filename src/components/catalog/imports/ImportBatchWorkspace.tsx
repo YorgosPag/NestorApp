@@ -206,7 +206,7 @@ function ProposalSlot({ workspace, view, selection, proposal, canPrice }: BatchP
         activeLine: selection.target?.kind === 'line' ? selection.target.lineKey : null,
         onFocusLine: (line) => selection.selectFromList(lineTargetOf(line)),
         focusRequested: selection.origin === 'pdf',
-        onDecideLine: (target, request) => void workspace.decideLine(target, request),
+        onDecideLine: (target, request) => workspace.decideLine(target, request),
         pricesEnabled: canPrice && priceTargetOf(view) !== null,
         // Βήμα Γ: η ίδια πρόθεση με το «Τιμή — διάλεξε πρώτα τιμοκατάλογο» του popover (`use-review-remedy`).
         onPickPriceTarget: canPrice ? (line) => selection.requestRemedy(lineTargetOf(line), { kind: 'priceTarget' }) : undefined,

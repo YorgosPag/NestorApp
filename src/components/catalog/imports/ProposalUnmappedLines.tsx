@@ -13,17 +13,18 @@
  */
 
 import React, { useState } from 'react';
-import { CircleDot, EyeOff, Link2, LoaderCircle, TriangleAlert, Undo2, type LucideIcon } from 'lucide-react';
+import { CircleDot, EyeOff, Link2, LoaderCircle, Sparkles, TriangleAlert, Undo2, type LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { lineDecisionOf, lineKeyOf } from '@/subapps/catalog/import/page-line-overrides';
-import type { ImportLineDecision, ImportLineOverride, ImportPageUnmappedLine } from '@/subapps/catalog/types/catalog-import';
+import type { ImportLineDecision, ImportLineOverride, ImportLineSibling, ImportPageUnmappedLine } from '@/subapps/catalog/types/catalog-import';
 import type { ImportMemoryHint, ImportProposalWire, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { useCatalogCanManage } from '../shared/catalog-ui-hooks';
 import { LINE_STATE_KEYS, useImportText, type LineState } from './import-text';
 import { LineAttributeToolsSlot, PriceLineDialogSlot } from './import-surfaces';
 import { lineRequestOf, lineStateOf } from './line-state';
+import type { LineAttributeToolsProps } from './line-tool-props';
 import { useReviewLineItem } from './use-review-line-item';
 import { MemoryHintNote } from './MemoryHintNote';
 import { remedyActionLook, useRemedyActionLabel, useReviewReasonFormatter } from './review-reason-text';
@@ -47,7 +48,8 @@ export interface UnmappedLinesProps {
   readonly onFocusLine: (line: ImportPageUnmappedLine) => void;
   /** §5.5.2 Β8: η επιλογή ήρθε από κλικ στο PDF ⇒ η εστίαση πληκτρολογίου περνά στη γραμμή. */
   readonly focusRequested?: boolean;
-  readonly onDecideLine: (proposal: ImportProposalWire, request: SetImportLineRequest) => void;
+  /** Επιστρέφει την απάντηση όταν ο κάτοχος την έχει: η μαζική «νέα ιδιότητα» (§5.5.2 Β3 Γ11) περιμένει κάθε γραμμή πριν την επόμενη. */
+  readonly onDecideLine: (proposal: ImportProposalWire, request: SetImportLineRequest) => void | Promise<unknown>;
   /** Η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η ίδια κρίση με τα πεδία της πρότασης (ADR-934 Ε3). */
   readonly decidable: boolean;
   /** §5.5.2 Β4: η παρτίδα έχει τιμοκατάλογο **και** ο άνθρωπος δικαίωμα τιμολόγησης ⇒ μια γραμμή μπορεί να γίνει τιμή. */
@@ -121,6 +123,21 @@ function LineActions({ state, readOnly, canManage, pricesEnabled, onPickPriceTar
   );
 }
 
+/**
+ * §5.5.2 Β3 Γ11: «αυτή η γραμμή δεν είναι ιδιότητα — θέλεις να την προσθέσω;». Το κουμπί ανοίγει τη **σύνοψη** (τίποτα δεν γράφεται
+ * εδώ)· η βιβλιοθήκη φορτώνεται μόνο τότε, γι' αυτό η πρόταση εδώ λέει μόνο τη λέξη που αλλάζει.
+ */
+function SiblingNote({ sibling, disabled, onPropose }: { readonly sibling: ImportLineSibling; readonly disabled: boolean; readonly onPropose: () => void }) {
+  const { t } = useImportText();
+  return (
+    <span className="flex flex-wrap items-center gap-2 text-xs" role="note">
+      <Sparkles className="h-3 w-3 text-muted-foreground" aria-hidden />
+      <span>{t('review.lines.siblingNote', { from: sibling.from, to: sibling.to })}</span>
+      <Button type="button" size="sm" variant="secondary" disabled={disabled} onClick={onPropose}>{t('review.lines.siblingPropose')}</Button>
+    </span>
+  );
+}
+
 function LineRow(props: LineRowProps) {
   const { t } = useImportText();
   const { line, state, refusal, active, focusRequested, onFocus } = props;
@@ -137,14 +154,18 @@ function LineRow(props: LineRowProps) {
         <Badge variant={variant} className="gap-1"><Icon className="h-3 w-3" aria-hidden />{t(LINE_STATE_KEYS[state])}</Badge>
       </span>
       <span className="text-xs text-muted-foreground">{line.values.join(' · ')}</span>
-      {refusal ? <span className="text-xs text-destructive" role="status">{refusal}</span> : null}
+      {line.sibling && state === 'pending' && props.canManage ? (
+        <SiblingNote sibling={line.sibling} disabled={props.readOnly} onPropose={() => props.onTool('new')} />
+      ) : null}
+      {refusal ?<span className="text-xs text-destructive" role="status">{refusal}</span> : null}
       {props.hint ? <MemoryHintNote hint={props.hint} disabled={props.readOnly || state === 'saving'} onAccept={props.onAccept} /> : null}
       <LineActions {...props} />
     </li>
   );
 }
 
-type OpenTool = { readonly line: ImportPageUnmappedLine; readonly mode: LineTool };
+/** `siblings`: η μαζική πρόταση (§5.5.2 Β3 Γ11) — όλες οι γραμμές με αδελφή, σε μία σύνοψη. */
+type OpenTool = { readonly line: ImportPageUnmappedLine; readonly mode: LineTool; readonly siblings?: readonly ImportPageUnmappedLine[] };
 
 /**
  * Το εργαλείο που φαίνεται: του κουμπιού της λίστας, αλλιώς αυτό που ζήτησε το popover του PDF (§5.5.2 Β8 βήμα Β). **Παράγεται**,
@@ -161,6 +182,19 @@ function useShownTool(lines: readonly ImportPageUnmappedLine[], request: Unmappe
   return { shown, open: setTool, close };
 }
 
+/** §5.5.2 Β3 Γ11: δύο ή περισσότερες γραμμές με αδελφή (M + L) ⇒ μία σύνοψη για όλες. Μία μόνο ⇒ αρκεί η πρόταση της γραμμής. */
+function SiblingBulkAction({ lines, disabled, onOpen }: { readonly lines: readonly ImportPageUnmappedLine[]; readonly disabled: boolean; readonly onOpen: (tool: OpenTool) => void }) {
+  const { t } = useImportText();
+  const withSibling = lines.filter((line) => line.sibling !== undefined);
+  if (withSibling.length < 2) return null;
+  return (
+    <Button type="button" size="sm" variant="secondary" className="self-start" disabled={disabled}
+      onClick={() => onOpen({ line: withSibling[0], mode: 'new', siblings: withSibling })}>
+      <Sparkles className="mr-1 h-3 w-3" aria-hidden />{t('review.lines.siblingBulk', { count: withSibling.length })}
+    </Button>
+  );
+}
+
 export function ProposalUnmappedLines(props: UnmappedLinesProps) {
   const { proposal, overrides, activity, activeLine, onFocusLine, onDecideLine, decidable, pricesEnabled = false, memoryHints, focusRequested = false, onPickPriceTarget } = props;
   const { t } = useImportText();
@@ -173,10 +207,13 @@ export function ProposalUnmappedLines(props: UnmappedLinesProps) {
   const readOnly = !decidable;
   const send = (line: ImportPageUnmappedLine, decision: SetImportLineRequest['decision'], bind: SetImportLineRequest['bind'] = null) =>
     onDecideLine(proposal, lineRequestOf(line, decision, bind));
+  const create: LineAttributeToolsProps['onCreate'] = async (line, attribute, bind) =>
+    onDecideLine(proposal, { ...lineRequestOf(line, null, bind), create: attribute });
   return (
     <section className="flex flex-col gap-2" aria-label={t('review.lines.title')}>
       <h4 className="m-0 text-sm font-semibold">{t('review.lines.title')}</h4>
       <p className="m-0 text-xs text-muted-foreground">{t('review.lines.hint')}</p>
+      {canManage ? <SiblingBulkAction lines={lines} disabled={readOnly} onOpen={setTool} /> : null}
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {lines.map((line) => {
           const key = lineKeyOf(line);
@@ -195,8 +232,8 @@ export function ProposalUnmappedLines(props: UnmappedLinesProps) {
         <PriceLineDialogSlot line={tool.line} onClose={closeTool} onDecide={(unitCode) => send(tool.line, { kind: 'price', unitCode })} />
       ) : null}
       {tool && tool.mode !== 'price' ? (
-        <LineAttributeToolsSlot proposal={proposal} line={tool.line} mode={tool.mode} onClose={closeTool}
-          onDecide={(attributeId, bind) => send(tool.line, { kind: 'attribute', attributeId }, bind)} />
+        <LineAttributeToolsSlot proposal={proposal} line={tool.line} mode={tool.mode} onClose={closeTool} siblings={tool.siblings}
+          onDecide={(attributeId, bind) => send(tool.line, { kind: 'attribute', attributeId }, bind)} onCreate={create} />
       ) : null}
     </section>
   );

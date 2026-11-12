@@ -84,11 +84,15 @@ function linePair(view: ImportBatchDetailView, ownerId: string, before: LineMark
   };
 }
 
-/** Το βήμα τη στιγμή της πράξης: πριν = η όψη τώρα, μετά = ό,τι ζητήθηκε. `null` ⇒ το αίτημα δεν αλλάζει τίποτα. */
+/**
+ * Το βήμα τη στιγμή της πράξης: πριν = η όψη τώρα, μετά = ό,τι ζητήθηκε. `null` ⇒ το αίτημα δεν αλλάζει τίποτα. Νέα ιδιότητα (`create`,
+ * §5.5.2 Β3 Γ11) αλλάζει **πάντα** τη γραμμή, με id που μαθαίνεται από την απάντηση (`settledLineStep`)· η αναίρεσή της αφήνει την
+ * ιδιότητα στη βιβλιοθήκη και στην οικογένεια (Α).
+ */
 export function lineStepOf(view: ImportBatchDetailView, owner: ImportProposalWire, request: SetImportLineRequest): StepPair<LineStep> | null {
   const before = currentMark(view, request);
   const after: LineMark = { page: request.page, table: request.table, line: request.line, decision: request.decision, memory: false, bind: request.bind };
-  if (sameDecision(before.decision, after.decision) && !before.memory) return null;
+  if (request.create === undefined && sameDecision(before.decision, after.decision) && !before.memory) return null;
   return linePair(view, owner.id, before, after, []);
 }
 

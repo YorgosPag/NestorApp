@@ -288,7 +288,20 @@
       "refusalPriceLineTaken": "This table already has a price line. Undo it first.",
       "refusalAxisOptionsInvalid": "The new values do not hold: check codes and labels. Nothing was saved.",
       "refusalAxisLineMissing": "No line of the table gives an axis value for every variant, even with the new values. Nothing was saved.",
-      "refusalAxisLineAmbiguous": "More than one line of the table gives an axis value. It is not chosen silently; nothing was saved."
+      "refusalAxisLineAmbiguous": "More than one line of the table gives an axis value. It is not chosen silently; nothing was saved.",
+      "siblingNote": "Differs from a mapped line of this table only in \"{from}\" → \"{to}\". It is not a registered attribute.",
+      "siblingPropose": "Add it…",
+      "siblingBulk": "{count, plural, one {Add # attribute…} other {Add # attributes…}}",
+      "siblingTitle": "{count, plural, one {Add this attribute?} other {Add # attributes?}}",
+      "siblingLead": "\"Yes\" creates it in the library, adds it to the family and maps the line — all together. Nothing is written before.",
+      "siblingCreates": "New attribute \"{label}\" ({code})",
+      "siblingLike": "Settings like \"{label}\" ({code})",
+      "siblingFamily": "Family: {family}",
+      "siblingLevel": "Value level: {level}",
+      "siblingRequired": "Required in: {channels}",
+      "siblingRequiredNone": "Required in: no channel",
+      "siblingEdit": "Edit…",
+      "siblingConfirm": "{count, plural, one {Yes, add it} other {Yes, add all #}}"
     },
     "decided": {
       "title": "Decided lines",

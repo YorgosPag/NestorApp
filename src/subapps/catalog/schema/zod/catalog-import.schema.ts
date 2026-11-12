@@ -34,6 +34,7 @@ import {
 import { ASSET_URI_MAX_LENGTH } from '../../vocabulary/asset-fetch';
 import { CATALOG_LIMITS } from '../../vocabulary/catalog-limits';
 import { BRAND_FIELD, TRADE_IDENTITY_FIELDS } from '../../values/trade-identity';
+import { attributeDefinitionSchema } from './attribute.schema';
 import { catalogCodeSchema, entityIdSchema, expectedRevisionSchema, measurementUnitCodeSchema } from './common.schema';
 
 const MAX_COLUMNS = 200;
@@ -118,7 +119,7 @@ const importLineDecisionSchema: z.ZodType<ImportLineDecision> = z.discriminatedU
   z.object({ kind: z.literal('axis'), attributeId: entityIdSchema }),
 ]);
 
-export const setImportLineBodySchema: z.ZodType<SetImportLineRequest> = z.object({
+export const setImportLineBodySchema: z.ZodType<SetImportLineRequest, z.ZodTypeDef, unknown> = z.object({
   page: z.number().int().min(1),
   table: z.string().min(1).max(TABLE_KEY_MAX),
   line: z.number().int().min(0).max(MAX_TABLE_LINE),
@@ -126,7 +127,13 @@ export const setImportLineBodySchema: z.ZodType<SetImportLineRequest> = z.object
   bind: z.enum(IMPORT_LINE_BIND_LEVELS).nullable(),
   // §5.5.2 Β9δ: η επιστροφή στη μνήμη υπάρχει μόνο ως αναίρεση — ποτέ δίπλα σε απόφαση.
   fallback: z.literal('memory').optional(),
-}).refine((body) => body.fallback === undefined || body.decision === null, { path: ['fallback'] });
+  // §5.5.2 Β3 Γ11: τον ορισμό τον κρίνει ο γραφέας ιδιοτήτων (βιβλιοθήκη, ομάδα, μητρώο)· εδώ μόνο το σχήμα.
+  create: z.object({
+    definition: attributeDefinitionSchema,
+    requiredChannels: z.array(z.enum(CATALOG_CHANNELS)).max(CATALOG_CHANNELS.length),
+  }).optional(),
+}).refine((body) => body.fallback === undefined || body.decision === null, { path: ['fallback'] })
+  .refine((body) => body.create === undefined || (body.decision === null && body.bind !== null && body.fallback === undefined), { path: ['create'] });
 
 /** §5.5.2 Β7. Τον κωδικό και την ετικέτα τα κρίνει η απόδειξη (`withAxisOptions`) και ο γραφέας ιδιοτήτων· εδώ μόνο το σχήμα. */
 export const addImportAxisOptionsBodySchema: z.ZodType<AddImportAxisOptionsRequest> = z.object({

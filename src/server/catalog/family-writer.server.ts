@@ -14,7 +14,9 @@ import 'server-only';
  */
 
 import type { AuthContext } from '@/lib/auth';
+import { familyDefinitionOf } from '@/subapps/catalog/schema/family-binding';
 import { validateFamily } from '@/subapps/catalog/schema/validate-family';
+import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import {
   deriveFamilyAttributeIds,
   type CatalogFamilyDefinition,
@@ -33,6 +35,7 @@ import {
   type CatalogTx,
   type StoredCatalogRecord,
 } from './catalog-store.server';
+import { toStored, validateAgainstLibrary } from './attribute-writer.server';
 import { assertNoIssues } from './catalog-write-error';
 import { assertFamilyChangeKeepsProducts, assertFamilyHasNoProducts } from './schema-product-locks.server';
 
@@ -80,5 +83,34 @@ export async function deleteCatalogFamily(ctx: AuthContext, id: string, expected
     assertRevision(current, expectedRevision);
     await assertFamilyHasNoProducts(scope, id);
     return stageSoftDelete(scope, 'family', current);
+  });
+}
+
+/** Νέα ιδιότητα **μέσα** σε οικογένεια: ο ορισμός της, και πού μπαίνει (δέσιμο · επίπεδο · κανάλια) όταν μάθει το id της. */
+export interface AttributeIntoFamily {
+  readonly definition: CatalogAttributeDefinition;
+  readonly familyId: string;
+  readonly place: (family: CatalogFamilyDefinition, attributeId: string) => CatalogFamilyDefinition;
+}
+
+/**
+ * Ιδιότητα της βιβλιοθήκης **και** δέσιμο στην οικογένεια σε **μία** συναλλαγή (ADR-923 §5.5.2 Β3 Γ11): ή γίνονται και τα δύο, ή κανένα
+ * — καμία ορφανή ιδιότητα όταν η οικογένεια αρνηθεί. Όλες οι αναγνώσεις πριν από τις εγγραφές (κανόνας συναλλαγής Firestore)· η
+ * οικογένεια επικυρώνεται με τη νέα ιδιότητα **όπως θα γραφτεί**, γιατί μέσα στη συναλλαγή δεν διαβάζεται ακόμη.
+ */
+export async function createAttributeInFamily(ctx: AuthContext, request: AttributeIntoFamily): Promise<string> {
+  return runCatalogTransaction(ctx, async (scope) => {
+    const target = await readForCreate(scope, 'attribute', request.definition.code);
+    const registry = await validateAgainstLibrary(scope, request.definition);
+    const current = await readOwned<StoredCatalogFamilyDefinition>(scope, 'family', request.familyId);
+    const next = request.place(familyDefinitionOf(current), target.id);
+    const attributeIds = deriveFamilyAttributeIds(next);
+    const library = await readAttributesByIds(scope, attributeIds.filter((id) => id !== target.id));
+    library.set(target.id, toStored(request.definition));
+    assertNoIssues(validateFamily(next, library, registry));
+    await assertFamilyChangeKeepsProducts(scope, request.familyId, current, next);
+    stageCreate(scope, 'attribute', target, toStored(request.definition));
+    stageReplace(scope, 'family', current, { ...next, attributeIds });
+    return target.id;
   });
 }

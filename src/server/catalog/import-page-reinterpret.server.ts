@@ -11,6 +11,7 @@ import 'server-only';
  * 🔑 **Εμβέλεια πίνακα:** ξαναερμηνεύεται μόνο ο πίνακας της γραμμής. Άλλος πίνακας της ίδιας σελίδας έχει δική του πρόταση και δική
  *    του σειρά στην ουρά του πελάτη, άρα δύο αποφάσεις σε διαφορετικούς πίνακες δεν πατούν η μία την άλλη.
  * 🔑 Οι αποφάσεις πεδίων του ανθρώπου επιβιώνουν (`carriedDecision`)· πρόταση που εγκρίθηκε ή απορρίφθηκε δεν αγγίζεται.
+ * 🔑 §5.5.2 Β3 Γ11: `create` ⇒ η ιδιότητα γεννιέται **μέσα** στην οικογένεια (μία συναλλαγή) και η γραμμή αντιστοιχίζεται σε αυτήν.
  * 🔑 §5.5.2 Β9δ: `fallback: 'memory'` (μόνο με `decision: null`, από την αναίρεση) ⇒ η γραμμή επιστρέφει στην κρίση της μνήμης του
  *    προμηθευτή, ρωτημένης **ξανά** εδώ (`resolveLine`) — ο client δεν δηλώνει ποτέ προέλευση.
  * @module server/catalog/import-page-reinterpret.server
@@ -26,13 +27,14 @@ import { tableLineIdentities } from '@/subapps/catalog/import/page-table-reading
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { ImportBatchDefinition, ImportLineDecision, ImportLineOverrideOrigin } from '@/subapps/catalog/types/catalog-import';
+import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import type { ImportLineOutcome, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
 import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
 import type { ImportLineBindLevel } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
 import { readOwned, runCatalogReadOnly } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
-import { updateCatalogFamily } from './family-writer.server';
+import { createAttributeInFamily, updateCatalogFamily } from './family-writer.server';
 import { assertPurposeAuthority, setImportLineOverride, type StoredImportBatch } from './import-batch-writer.server';
 import { memoryOverrideForLine, wantsMemoryFallback } from './import-line-memory.server';
 import { readBatchProposals, readImportBatchDetail } from './import-reads.server';
@@ -70,6 +72,20 @@ async function bindToFamily(ctx: AuthContext, batch: StoredImportBatch, attribut
   const next = withAttributeAtLevel(current, attributeId, level, variantSchemeCode);
   if (canonicalJson(next) === canonicalJson(current)) return;
   await updateCatalogFamily(ctx, familyId, familyRecord.revision, next);
+}
+
+/**
+ * §5.5.2 Β3 Γ11: «Ναι, πρόσθεσέ την» — ιδιότητα **και** δέσιμο (επίπεδο + κανάλια) σε **μία** συναλλαγή της μηχανής σχήματος· μετά η
+ * γραμμή αντιστοιχίζεται στη νέα ιδιότητα από τον ίδιο δρόμο με κάθε αντιστοίχιση. Ίδιο δικαίωμα και ίδια σιωπή με το `bindToFamily`.
+ */
+async function createLineAttribute(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest): Promise<SetImportLineRequest> {
+  const { create, bind } = request;
+  if (create === undefined || bind === null || batch.target.purpose !== 'attributes') throw new CatalogWriteError('notFound');
+  if (!(await hasPermission(ctx, CATALOG_AUTHORITY_PERMISSIONS.schema))) throw new CatalogWriteError('notFound');
+  const { familyId, variantSchemeCode } = batch.target;
+  const place = (family: CatalogFamilyDefinition, id: string) => withAttributeAtLevel(family, id, bind, variantSchemeCode, create.requiredChannels);
+  const attributeId = await createAttributeInFamily(ctx, { definition: create.definition, familyId, place });
+  return { page: request.page, table: request.table, line: request.line, decision: { kind: 'attribute', attributeId }, bind: null };
 }
 
 /** §5.5.2 Β7: η απόφαση `axis` δείχνει **μόνο** άξονα του σχήματος της παρτίδας· οι άλλες αποφάσεις δεν ελέγχονται εδώ. */
@@ -170,6 +186,7 @@ async function decideLine(ctx: AuthContext, id: string, asked: SetImportLineRequ
   if (!open.ok) return { kind: 'refused', reason: open.reason };
   const price = await judgePriceLine(ctx, opened.value, request, previous);
   if (!price.ok) return { kind: 'refused', reason: price.reason };
+  if (request.create !== undefined) return createAndMap(ctx, opened.value, request);
   if (!touchesMapping(request.decision, previous)) {
     const origin = resolved.origin ? { origin: resolved.origin } : {};
     await setImportLineOverride(ctx, id, request, request.decision, { ...storedIdentityOf(opened.value, request), ...origin });
@@ -179,6 +196,15 @@ async function decideLine(ctx: AuthContext, id: string, asked: SetImportLineRequ
   if (!basis.ok) return { kind: 'refused', reason: basis.reason };
   if (request.decision?.kind === 'attribute' && request.bind !== null) await bindToFamily(ctx, opened.value, request.decision.attributeId, request.bind);
   const outcome = await reinterpretTable(ctx, opened.value, resolved, basis.value);
+  return outcome.ok ? { kind: 'settled' } : { kind: 'refused', reason: outcome.reason };
+}
+
+/** Ο πίνακας κρίνεται **πριν** γεννηθεί η ιδιότητα: άρνηση εδώ δεν αφήνει πίσω της ιδιότητα χωρίς γραμμή. */
+async function createAndMap(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest): Promise<ImportLineOutcome> {
+  const basis = await lineBasis(ctx, batch, request);
+  if (!basis.ok) return { kind: 'refused', reason: basis.reason };
+  const mapped = await createLineAttribute(ctx, batch, request);
+  const outcome = await reinterpretTable(ctx, batch, { request: mapped }, basis.value);
   return outcome.ok ? { kind: 'settled' } : { kind: 'refused', reason: outcome.reason };
 }
 

@@ -9,6 +9,7 @@
  */
 
 import { listingKindOf, type CatalogFamilyDefinition, type VariantScheme } from '../types/family';
+import type { CatalogChannel } from '../vocabulary/channels';
 
 /**
  * Ο **ορισμός** μιας οικογένειας χωρίς περίβλημα εγγραφής και χωρίς παράγωγα (`attributeIds`, id, αναθεώρηση). Κανονικοποιεί τα πεδία
@@ -31,15 +32,22 @@ export function placeAttribute(scheme: VariantScheme, attributeId: string, colum
   };
 }
 
-/** Δένει ιδιότητες που λείπουν από την οικογένεια, χωρίς απαιτούμενα κανάλια. Όσες είναι ήδη δεμένες μένουν όπως είναι. */
-export function withBoundAttributes(family: CatalogFamilyDefinition, attributeIds: readonly string[]): CatalogFamilyDefinition {
+/**
+ * Δένει ιδιότητες που λείπουν από την οικογένεια, με τα απαιτούμενα κανάλια που δίνονται (προεπιλογή: κανένα). Όσες είναι ήδη δεμένες
+ * μένουν όπως είναι.
+ */
+export function withBoundAttributes(
+  family: CatalogFamilyDefinition,
+  attributeIds: readonly string[],
+  requiredChannels: readonly CatalogChannel[] = [],
+): CatalogFamilyDefinition {
   const bound = new Set(family.attributes.map((binding) => binding.attributeId));
-  const added = [...new Set(attributeIds)].filter((id) => !bound.has(id)).map((attributeId) => ({ attributeId, requiredChannels: [] }));
+  const added = [...new Set(attributeIds)].filter((id) => !bound.has(id)).map((attributeId) => ({ attributeId, requiredChannels: [...requiredChannels] }));
   return added.length === 0 ? family : { ...family, attributes: [...family.attributes, ...added] };
 }
 
 /**
- * Δένει την ιδιότητα και, για `leaf`, την τοποθετεί στο τελευταίο επίπεδο του σχήματος `schemeCode`. Χωρίς σχήμα δεν υπάρχει επίπεδο:
+ * Δένει την ιδιότητα (με τα απαιτούμενα κανάλια της, §5.5.2 Β3 Γ11) και, για `leaf`, την τοποθετεί στο τελευταίο επίπεδο του σχήματος `schemeCode`. Χωρίς σχήμα δεν υπάρχει επίπεδο:
  * κάθε τιμή ανήκει στο τελικό προϊόν. Ιδεμπότητη: δεύτερη κλήση δεν αλλάζει τίποτα.
  */
 export function withAttributeAtLevel(
@@ -47,8 +55,9 @@ export function withAttributeAtLevel(
   attributeId: string,
   level: 'shared' | 'leaf',
   schemeCode: string | null,
+  requiredChannels: readonly CatalogChannel[] = [],
 ): CatalogFamilyDefinition {
-  const bound = withBoundAttributes(family, [attributeId]);
+  const bound = withBoundAttributes(family, [attributeId], requiredChannels);
   if (level === 'shared' || schemeCode === null) return bound;
   return {
     ...bound,

@@ -48,11 +48,13 @@ import { assertAttributeChangeKeepsValues } from './schema-product-locks.server'
 
 type StoredAttribute = StoredCatalogRecord<StoredCatalogAttributeDefinition>;
 
-function toStored(definition: CatalogAttributeDefinition): StoredCatalogAttributeDefinition {
+/** Ο αποθηκευμένος ορισμός με τα παράγωγά του — κοινός με τη δημιουργία μέσα σε οικογένεια (`createAttributeInFamily`). */
+export function toStored(definition: CatalogAttributeDefinition): StoredCatalogAttributeDefinition {
   return { ...definition, measurementFamilyCodes: deriveAttributeMeasurementFamilyCodes(definition) };
 }
 
-async function validateAgainstLibrary(
+/** Ομάδα στον ίδιο χώρο + επικύρωση απέναντι στο μητρώο μονάδων, μέσα στη συναλλαγή. */
+export async function validateAgainstLibrary(
   scope: CatalogTx,
   definition: CatalogAttributeDefinition,
 ): Promise<MeasurementRegistry> {

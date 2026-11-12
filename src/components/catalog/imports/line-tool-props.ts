@@ -7,7 +7,7 @@
  */
 
 import type { ImportPageUnmappedLine } from '@/subapps/catalog/types/catalog-import';
-import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportLineAttributeCreate, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import type { ImportLineBindLevel } from '@/subapps/catalog/vocabulary/catalog-import';
 
 export type LineToolMode = 'map' | 'new';
@@ -36,4 +36,8 @@ export interface LineAttributeToolsProps {
   readonly mode: LineToolMode;
   readonly onClose: () => void;
   readonly onDecide: (attributeId: string, bind: ImportLineBindLevel | null) => void;
+  /** §5.5.2 Β3 Γ11: «Ναι» — νέα ιδιότητα από την αδελφή, γραμμένη από τον διακομιστή μαζί με το δέσιμο. Επιστρέφει όταν τελειώσει. */
+  readonly onCreate: (line: ImportPageUnmappedLine, create: ImportLineAttributeCreate, bind: ImportLineBindLevel) => Promise<unknown>;
+  /** Μαζική πρόταση: όλες οι γραμμές του πίνακα με αδελφή (η `line` είναι η πρώτη). Απούσα = μόνο η `line`. */
+  readonly siblings?: readonly ImportPageUnmappedLine[];
 }

@@ -178,8 +178,13 @@ const GREEK_TO_LATIN_HOMOGLYPHS: ReadonlyMap<string, string> = new Map(
 
 const countMatches = (word: string, letter: RegExp): number => [...word].filter((char) => letter.test(char)).length;
 
-/** Ελληνικοί χαρακτήρες μέσα σε λατινική λέξη → λατινικοί, μόνο αν **όλοι** είναι ομοιόμορφοι. */
-function foldLatinWord(word: string): string {
+/**
+ * Ελληνικοί χαρακτήρες μέσα σε λατινική λέξη → λατινικοί, μόνο αν **όλοι** είναι ομοιόμορφοι. Εξάγεται για τον κωδικό αδελφής
+ * ιδιότητας (ADR-923 §5.5.2 Β3 Γ11): το «(Η)» της πηγής είναι συχνά ελληνικό Ήτα, ενώ ο κωδικός `airflow_h` έχει λατινικό h.
+ * @example foldLatinWord('Η') → 'H'   // Greek Eta → Latin H
+ * @example foldLatinWord('ΥΨΗΛΗ') → unchanged   // Ψ, Λ have no Latin twin
+ */
+export function foldLatinWord(word: string): string {
   let folded = '';
   for (const char of word) {
     const latin = GREEK_LETTER.test(char) ? GREEK_TO_LATIN_HOMOGLYPHS.get(char) : char;

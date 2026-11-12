@@ -26,6 +26,7 @@ import { normalizeUniqueText } from '../values/normalize-unique';
 import { unitForm } from '../values/value-text-codec';
 import { pageTableGroupKey, priceGroupKeyOf } from './import-keys';
 import type { PagePriceLine } from './page-line-overrides';
+import { lineSiblingOf, type BoundLineOfTable } from './line-sibling';
 import { labelPrintsUnit } from './page-tokens';
 import { textLayerDoubted, type RawLineMapping, type RawPageMapping, type RawTableMapping, type VariantOrientation } from './page-table-mapping';
 import { selectOptionFor } from './proposal-values';
@@ -295,14 +296,23 @@ interface LeftOutLines {
   readonly priced: readonly PagePriceLine[];
 }
 
-function unmappedLines({ view, data, lines, priced }: LeftOutLines, table: PageTable, context: PageTableContext): ImportPageUnmappedLine[] {
+/** §5.5.2 Β3 Γ11: οι γραμμές που μπορούν να γίνουν πρότυπο νέας ιδιότητας — όχι άξονας, όχι κωδικός (μοναδική). */
+function siblingCandidates({ view, data, lines }: LeftOutLines, context: PageTableContext): BoundLineOfTable[] {
+  const usable = lines.filter(({ attribute }) => !attribute.unique && !context.axisAttributeIds.includes(attribute.id));
+  return usable.map(({ line, attribute }) => ({ identity: lineIdentity(view, line, data, context.registry), attributeId: attribute.id }));
+}
+
+function unmappedLines(left: LeftOutLines, table: PageTable, context: PageTableContext): ImportPageUnmappedLine[] {
+  const { view, data, lines, priced } = left;
   const taken = new Set([...lines.map(({ line }) => line), ...priced.map(({ line }) => line)]);
+  const candidates = siblingCandidates(left, context);
   return range(view.lines).filter((line) => !taken.has(line)).flatMap((line) => {
     const values = lineValues(view, line, data);
     if (values.length === 0) return [];
     const label = labelCells(view, line, data).map(printedText).join(' · ');
     const identity = lineIdentity(view, line, data, context.registry);
-    return [{ page: context.page, table: table.key, line, label, values, regions: lineRegions(view, line, data), identity }];
+    const sibling = lineSiblingOf(identity, candidates);
+    return [{ page: context.page, table: table.key, line, label, values, regions: lineRegions(view, line, data), identity, ...(sibling ? { sibling } : {}) }];
   });
 }
 

@@ -5,6 +5,7 @@
  */
 
 import type { ViewFreshness } from '@/types/server-view';
+import type { CatalogAttributeDefinition } from './attribute';
 import type { ImportAssetView } from './catalog-media';
 import type { CatalogWire } from './catalog-record';
 import type {
@@ -16,6 +17,7 @@ import type {
   ImportProposalDefinition,
 } from './catalog-import';
 import type { HumanFieldDecision, ImportLineBindLevel, ImportLineRefusal, ImportSourceKind } from '../vocabulary/catalog-import';
+import type { CatalogChannel } from '../vocabulary/channels';
 
 export interface CreateImportBatchRequest {
   readonly sourceKind: ImportSourceKind;
@@ -208,6 +210,17 @@ export interface SetImportLineRequest {
    * στην κρίση του κανόνα. Ο client δεν δηλώνει ποτέ ποια ήταν η μνήμη: ο διακομιστής τη ρωτά ξανά (`memoryOverrideForLine`).
    */
   readonly fallback?: 'memory';
+  /**
+   * §5.5.2 Β3 Γ11: «Ναι, πρόσθεσέ την» — η ιδιότητα **δημιουργείται** και δένεται στην οικογένεια της παρτίδας (επίπεδο από το `bind`) σε
+   * **μία** συναλλαγή της μηχανής σχήματος, και μετά η γραμμή αντιστοιχίζεται σε αυτήν. Μαζί του: `decision: null`, `bind` όχι `null`.
+   */
+  readonly create?: ImportLineAttributeCreate;
+}
+
+/** Η νέα ιδιότητα μιας γραμμής: ο ορισμός της βιβλιοθήκης και τα κανάλια όπου είναι υποχρεωτική στην οικογένεια. */
+export interface ImportLineAttributeCreate {
+  readonly definition: CatalogAttributeDefinition;
+  readonly requiredChannels: readonly CatalogChannel[];
 }
 
 /** Τι έγινε: ξαναερμηνεύτηκε (ή δεν χρειαζόταν), ή αρνήθηκε **χωρίς** να γράψει τίποτα. */

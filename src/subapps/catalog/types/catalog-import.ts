@@ -393,6 +393,18 @@ export interface ImportPageUnmappedLine {
   readonly regions?: readonly PageRegion[];
   /** Η ταυτότητα της γραμμής για τη μνήμη του προμηθευτή (§5.5.2 Β5). Απούσα σε παρτίδες παλαιότερες. */
   readonly identity?: ImportLineIdentity;
+  /**
+   * §5.5.2 Β3 Γ11: αντιστοιχισμένη γραμμή του **ίδιου** πίνακα που διαφέρει σε μία λέξη, με ίδια μονάδα — η ιδιότητά της είναι το
+   * πρότυπο της νέας. Απούσα = καμία (ή παρτίδα παλαιότερη).
+   */
+  readonly sibling?: ImportLineSibling;
+}
+
+/** Η αδελφή μιας γραμμής: ποια ιδιότητα, και ποια λέξη αλλάζει («H» → «M»), όπως τυπώνονται. */
+export interface ImportLineSibling {
+  readonly attributeId: string;
+  readonly from: string;
+  readonly to: string;
 }
 
 /**
