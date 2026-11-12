@@ -81,7 +81,7 @@
 | Κάρτα + Apple Pay + Google Pay | `POST /notifications` ⇒ hosted σελίδα `payment_link_url` (`pnt_…`), `metadata`, `expiration_date` (≥ 5′), `locale`, `skip_notify=1` · `GET /notifications/{id}` ⇒ `payment` · `DELETE` όσο Pending |
 | IRIS (Direct) | `POST /iris/sessions` ⇒ `signature` ⇒ form POST στο payform (`flow=direct`) ⇒ τράπεζα / QR **στον πάροχο** ⇒ callback (`token src_…`, `md`, `hash`) ⇒ **εμείς** `POST /payments {token, amount}` (μία φορά ανά token· 2η = `41001`) |
 | Webhooks | `X-Signature-SHA256` = base64(**κείμενο hex** του HMAC-SHA256(raw body, secret key)) — `base64_encode(hash_hmac(…))` της PHP, όχι base64 των 32 bytes (§5.9 #3) · IRIS: πεδίο `hash` = base64(«υπογραφή\|JSON») με HMAC-SHA256 του JSON · **κανένα event id**, **κανένα idempotency header** |
-| Πληρωμές / επιστροφές | `GET /payments/{id}` · `GET /payments?merchant_ref=` · `POST /refunds {payment, amount?}` (μερικές) · `GET /refunds?payment=` · λίστες = `{ total_count, items: [...] }` (§5.9 #6) · επιστροφή: `ref_…`, `status` `Captured`/`Failed`, `payment` = `pmt_…` |
+| Πληρωμές / επιστροφές | `GET /payments/{id}` · `GET /payments?merchant_ref=` · `POST /refunds {payment, amount?}` (μερικές) · `GET /refunds?payment=` · λίστες = `{ total_count, items: [...] }` (§5.9 #6), σελιδοποίηση `count` 1–20 (**προεπιλογή 10**) + `offset` (§5.9 #8) · `GET /refunds?date_from=YYYY-MM-DD` · επιστροφή: `ref_…`, `status` `Captured`/`Failed`, `payment` = `pmt_…` |
 
 ⚠️ **Ανοιχτό προς επαλήθευση στο sandbox**: η κωδικοποίηση της υπογραφής πριν από το `|` στο IRIS `hash` (hex ή
 base64) δεν δηλώνεται ρητά. Ο έλεγχος δέχεται και τις δύο κωδικοποιήσεις του **ίδιου** HMAC. Αυτό δεν χαλαρώνει την
@@ -174,6 +174,16 @@ logs (§5.9 #4). Κάθε δεκτό συμβάν γράφει και ίχνος
 (`GET /payments?merchant_ref=`) — δεν υπάρχει GET συνεδρίας IRIS. Η αναμονή της σελίδας (15′, §5.6) ταυτίζεται με
 τη λήξη του παρόχου.
 
+**Επιστροφές με χαμένο webhook** (2026-11-13, πρότυπο Stripe / Adyen: συμφιλίωση από τη λίστα κινήσεων του παρόχου, όχι
+από τη δική μας κατάσταση): το πέρασμα των `pending` **δεν** βλέπει ποτέ επιστροφή — η συνεδρία της είναι ήδη `paid`.
+Δεύτερο πέρασμα (`payment-refund-reconcile.service.ts`): `provider.listRecentlyRefundedPayments(τώρα − 3 μέρες)`
+(Everypay: `GET /refunds?date_from=`, ημέρα UTC — λίγο περισσότερα, ποτέ λιγότερα) ⇒ `findPaymentCheckoutBy
+('paymentReference')` ⇒ ο **ίδιος** `syncCheckoutSettlement`, ιδεμποτικά. Πληρωμή χωρίς δική μας συνεδρία ⇒
+`unmatched`, δεν αγγίζεται· σφάλμα ⇒ `failed`, το επόμενο πέρασμα ξαναδοκιμάζει· > 100 ανά πέρασμα ⇒ `TRUNCATED`. Το
+cron εκπέμπει `refunds checked · recorded · unmatched · failed`. Οι κινήσεις γράφονται **χρονολογικά**
+(`chronologicalMovements`, η πληρωμή πριν από τις επιστροφές σε ισοπαλία): ο πάροχος τις δίνει νεότερες πρώτες και
+το ίχνος ακολουθούσε εκείνη τη σειρά.
+
 ### 5.6 Δημόσια σελίδα
 
 «Πληρωμή τώρα» (`InvoicePayNowSection`): καρτέλες ανά τρόπο — Κάρτα · IRIS · Τραπεζική μεταφορά (οι υπάρχουσες
@@ -188,6 +198,9 @@ logs (§5.9 #4). Κάθε δεκτό συμβάν γράφει και ίχνος
 απόπειρα ⇒ η **ίδια** άρνηση `unknown-attempt` (κανένα μαντείο ύπαρξης). Η απάντηση δεν φέρει τίποτα άλλο (ούτε ποσό,
 ούτε κωδικό παρόχου). Συμβόλαιο και ονόματα παραμέτρων (`PAYMENT_PAGE_ATTEMPT_PARAM` · `INVOICE_CHECKOUT_ATTEMPT_PARAM`
 · `PAYMENT_ATTEMPT_ID_PATTERN`) ζουν στο `types/online-payment.ts` — ένας ορισμός για σελίδα, return route και API.
+Η **πόρτα** έχει δική της σουίτα (`checkout/__tests__/checkout-attempt-route.test.ts`, 2026-11-13): χωρίς κουπόνι ή
+με αναγνωριστικό εκτός σχήματος η βάση **δεν** ρωτιέται· `shareId` αποκωδικοποιημένο· 200 + `no-store`/`noindex`
+σε κάθε απάντηση.
 
 `usePaymentConfirmationWatch({ shareId, checkoutId, active, refresh })`: ο πρώτος γύρος γίνεται **αμέσως**, μετά κάθε
 3″ ως το 1′, μετά κάθε 15″, ως τα 15′. Κάθε γύρος ρωτά έκβαση **και** όψη. Φάσεις: `waiting` · `slow` («μην πληρώσετε
@@ -351,6 +364,12 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
    `104000` (όχι από τεκμηρίωση). Καμία αλλαγή κώδικα.
    - Παρατήρηση: η συμφιλίωση **πριν** από τη δοκιμή έγραψε `pending 1 · still-open 1` — ανοιχτή συνεδρία που δεν
      είναι του Α-13 (δεν διερευνήθηκε ποια).
+8. 🔴 **Οι λίστες διάβαζαν μόνο την πρώτη σελίδα** (εύρημα κώδικα, 2026-11-13 — όχι ζωντανό περιστατικό): η
+   τεκμηρίωση («List all payments / refunds») δίνει `count` 1–20 με **προεπιλογή 10** και `offset`. Το `listRequest`
+   δεν έστελνε κανένα από τα δύο ⇒ πληρωμή με 11 επιστροφές θα κατέγραφε σιωπηλά τις 10 (`GET /refunds?payment=`),
+   και το ίδιο το `GET /payments?merchant_ref=`. Διόρθωση: `everypay-list.ts` (`everypayListAll`) — σελίδα 20 ως το
+   `total_count` ή κενή σελίδα, αποδιπλασιασμός κατά `token` (μετατόπιση σελίδων), όριο 50 σελίδων ⇒ **502**, ποτέ
+   σιωπηλή αποκοπή· το `total_count` είναι πλέον υποχρεωτικό (`listPageOrNull`), αλλιώς 502.
 
 ## 6. Εκτός εμβέλειας
 
@@ -378,3 +397,5 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-12 | §5.9 #7 διόρθωση: σήμα `authorization-failed` (μόνο υπογεγραμμένο `md`) · `lastFailure` σε `pending` συνεδρία (ΟΧΙ `status: 'failed'`), σε συναλλαγή, από webhook **και** επιστροφή browser (απόφαση Giorgio — η Everypay εγγυάται webhook μόνο για επιτυχίες) · `GET …/checkout?checkout=` έκβαση απόπειρας · η σελίδα δείχνει «δεν ολοκληρώθηκε», τέλος αναμονής στα 15′, σβήνει το `?payment=` · λόγος σήματος σε log + `payment_provider_events` · §5.8 #5–#7 νέα ανοιχτά. |
 | 2026-11-13 | §5.9 #7 ✅ επαληθεύτηκε ζωντανά (Α-13, `pchk_59a3be71…`): επιστροφή `failure-noted` · webhook `unchanged` · σελίδα «δεν ολοκληρώθηκε»· κωδικός sandbox `104000`· §5.8 #5 κλειστό (το `md` υπογράφεται και στην αποτυχία). |
 | 2026-11-13 | §5.5 / §5.8 #6: η λήξη που δηλώνει ο πάροχος (`StartedCheckout.providerExpiresAt`, Everypay `expiration_date`) γίνεται το `expiresAt` της συνεδρίας — IRIS 15′ αντί για τα 30′ που ζητούσαμε· οι 24 ώρες του IRIS = παράθυρο ανάκτησης από την πραγματική λήξη· `instantField` στους αναγνώστες· 3 tests `startCheckout`· jest των 3 σουιτών 30/30. |
+| 2026-11-13 | §5.6: σουίτα για την πόρτα `GET …/checkout?checkout=` (9 tests — κουπόνι, σχήμα αναγνωριστικού, αποκωδικοποίηση `shareId`, ιδιωτικές κεφαλίδες). |
+| 2026-11-13 | §5.5 / §5.9 #8: σελιδοποίηση όλων των λιστών Everypay (`everypayListAll`, `count=20` + `offset`, αποδιπλασιασμός, όριο ⇒ 502)· port `listRecentlyRefundedPayments` + πέρασμα επιστροφών στο cron (`payment-refund-reconcile.service.ts`)· `chronologicalMovements` στον συγχρονισμό· §4 πίνακας· 3 νέες σουίτες (list · refund reconcile · chronology). |

@@ -29,11 +29,11 @@ import type {
 } from '../../payment-provider';
 import { EverypayApiError, EVERYPAY_TOKEN_ALREADY_USED, everypayDateTime, everypayRequest } from './everypay-client';
 import type { EverypayCredentials } from './everypay-config';
+import { everypayListAll } from './everypay-list';
 import {
   CAPTURED_PAYMENT_STATUSES,
   codeField,
   instantField,
-  listItemsOrNull,
   movementOf,
   notificationPaymentReference,
   statusField,
@@ -48,15 +48,6 @@ import {
 
 /** Το όριο του παρόχου για την αιτιολογία της ειδοποίησης. */
 const NOTIFICATION_DESCRIPTION_MAX = 200;
-
-/** Μια σελίδα λίστας του παρόχου. Μορφή εκτός συμβολαίου ⇒ 502 (ο πάροχος ξαναδοκιμάζει), ποτέ σιωπηλό «τίποτα». */
-async function listRequest(
-  credentials: EverypayCredentials, path: '/payments' | '/refunds', query: Readonly<Record<string, string>>,
-): Promise<Record<string, unknown>[]> {
-  const items = listItemsOrNull(await everypayRequest(credentials, { method: 'GET', path, query }));
-  if (items === null) throw new EverypayApiError(502, null, `List response without items: ${path}`);
-  return items;
-}
 
 // ─── ΕΚΚΙΝΗΣΗ ────────────────────────────────────────────────────────────────
 
@@ -116,7 +107,7 @@ async function settledMovements(credentials: EverypayCredentials, paymentReferen
   if (status === 'failed') return { state: 'closed', reason: 'failed' };
   const charged = payment === null || status === null || !CAPTURED_PAYMENT_STATUSES.has(status) ? null : movementOf(payment, 'payment');
   if (charged === null) return { state: 'open' };
-  const refunds = await listRequest(credentials, '/refunds', { payment: paymentReference });
+  const refunds = await everypayListAll(credentials, '/refunds', { payment: paymentReference });
   const refundMovements = refunds
     .filter((refund) => statusField(refund) === 'captured')
     .map((refund) => movementOf(refund, 'refund'))
@@ -138,10 +129,25 @@ async function readCardSettlement(credentials: EverypayCredentials, subject: Che
 }
 
 async function readIrisSettlement(credentials: EverypayCredentials, subject: CheckoutSubject): Promise<CheckoutSettlement> {
-  const payments = await listRequest(credentials, '/payments', { merchant_ref: subject.checkoutId });
+  const payments = await everypayListAll(credentials, '/payments', { merchant_ref: subject.checkoutId });
   const captured = payments.find((payment) => CAPTURED_PAYMENT_STATUSES.has(statusField(payment) ?? ''));
   const reference = captured ? textField(captured, 'token') : null;
   return reference === null ? { state: 'open' } : settledMovements(credentials, reference);
+}
+
+/**
+ * `GET /refunds?date_from=` ⇒ οι πληρωμές (`pmt_…`) με επιστροφή από εκείνη την **ημέρα** (UTC — η ημέρα του παρόχου
+ * μπορεί να είναι η επόμενη, άρα φέρνουμε λίγο περισσότερα, ποτέ λιγότερα). Κάθε επιστροφή, όποια κατάσταση κι αν
+ * έχει: την αλήθεια (μόνο `Captured`) την κρίνει ο συγχρονισμός.
+ */
+async function recentlyRefundedPayments(credentials: EverypayCredentials, sinceIso: string): Promise<readonly string[]> {
+  const refunds = await everypayListAll(credentials, '/refunds', { date_from: sinceIso.slice(0, 10) });
+  const payments = new Set<string>();
+  for (const refund of refunds) {
+    const payment = notificationPaymentReference(refund);
+    if (payment !== null) payments.add(payment);
+  }
+  return [...payments];
 }
 
 // ─── WEBHOOK / ΕΠΙΣΤΡΟΦΗ ─────────────────────────────────────────────────────
@@ -236,6 +242,7 @@ export function createEverypayProvider(credentials: EverypayCredentials): Paymen
     readSettlement: (subject) => (subject.method === 'iris'
       ? readIrisSettlement(credentials, subject)
       : readCardSettlement(credentials, subject)),
+    listRecentlyRefundedPayments: (sinceIso) => recentlyRefundedPayments(credentials, sinceIso),
     captureAuthorizedSource: (subject, sourceToken) => captureSource(credentials, subject, sourceToken),
     cancelCheckout: (subject) => cancelWith(credentials, subject),
     judgeWebhook: (rawBody, headers) => judgeWebhookWith(credentials, rawBody, headers),

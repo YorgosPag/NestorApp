@@ -46,9 +46,20 @@ export function statusField(record: Record<string, unknown> | null): string | nu
  * της τεκμηρίωσης, **μόνο** αυτή. Άλλη μορφή ⇒ `null`, ποτέ `[]`: μια κενή λίστα από απάντηση που δεν καταλάβαμε
  * σημαίνει «καμία επιστροφή» και καταγράφεται σιωπηλά ως `unchanged` (ADR-ACC-030 §5.9 #6 — έτσι χάθηκε επιστροφή).
  */
-export function listItemsOrNull(body: unknown): Record<string, unknown>[] | null {
-  const items = plainRecordOrNull(body)?.items;
-  return Array.isArray(items) ? items.filter(isPlainRecord) : null;
+export function listPageOrNull(body: unknown): EverypayListPage | null {
+  const record = plainRecordOrNull(body);
+  const items = record?.items;
+  const totalCount = record?.total_count;
+  if (!Array.isArray(items) || typeof totalCount !== 'number' || !Number.isSafeInteger(totalCount) || totalCount < 0) {
+    return null;
+  }
+  return { items: items.filter(isPlainRecord), totalCount };
+}
+
+/** Μία σελίδα λίστας: οι εγγραφές της και το **σύνολο** των εγγραφών του ερωτήματος (`total_count`). */
+export interface EverypayListPage {
+  readonly items: Record<string, unknown>[];
+  readonly totalCount: number;
 }
 
 /** Το αναγνωριστικό της πληρωμής μιας ειδοποίησης: κείμενο (`pmt_…`) ή αντικείμενο με `token`. */

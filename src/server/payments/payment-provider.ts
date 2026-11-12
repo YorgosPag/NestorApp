@@ -145,6 +145,13 @@ export interface PaymentProvider {
   readonly methods: readonly OnlinePaymentMethod[];
   startCheckout(request: CheckoutRequest): Promise<StartedCheckout>;
   readSettlement(subject: CheckoutSubject): Promise<CheckoutSettlement>;
+  /**
+   * Οι πληρωμές του παρόχου (`paymentReference`) που απέκτησαν **επιστροφή** από το `sinceIso` και μετά — το δίχτυ
+   * ασφαλείας για επιστροφή με χαμένο webhook (ADR-ACC-030 §5.5): η συνεδρία της είναι ήδη `paid`, άρα το πέρασμα
+   * των ανοιχτών συνεδριών δεν τη βλέπει ποτέ. Μπορεί να φέρει και λίγο παλαιότερες (ο πάροχος φιλτράρει ανά
+   * ημέρα)· ο καλών συγχρονίζει ιδεμποτικά.
+   */
+  listRecentlyRefundedPayments(sinceIso: string): Promise<readonly string[]>;
   /** Χρεώνει εξουσιοδοτημένη πηγή (IRIS Direct). Ιδεμποτικό: πηγή που χρεώθηκε ήδη δεν είναι σφάλμα. */
   captureAuthorizedSource(subject: CheckoutSubject, sourceToken: string): Promise<void>;
   /**

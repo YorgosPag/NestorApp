@@ -64,12 +64,26 @@ function invoicePaymentOf(provider: PaymentProvider, checkout: PaymentCheckoutRe
   };
 }
 
-/** Περνά κάθε κίνηση από τον ΕΝΑ γραφέα. `true` όταν γράφτηκε τουλάχιστον μία νέα. */
+/**
+ * Οι κινήσεις σε **χρονολογική** σειρά (η πληρωμή πριν από τις επιστροφές της σε ισοπαλία). Ο πάροχος τις δίνει
+ * νεότερες πρώτες· το ίχνος (`PAYMENT_RECORDED` / `PAYMENT_REFUNDED`) πρέπει να διαβάζεται όπως έγιναν. Στιγμή που
+ * δεν διαβάζεται πάει στο τέλος, χωρίς να ανακατέψει τις υπόλοιπες.
+ */
+export function chronologicalMovements(movements: readonly ProviderMovement[]): ProviderMovement[] {
+  const instantOf = (movement: ProviderMovement): number => {
+    const ms = Date.parse(movement.occurredAt);
+    return Number.isNaN(ms) ? Number.POSITIVE_INFINITY : ms;
+  };
+  const kindRank = (movement: ProviderMovement): number => (movement.kind === 'payment' ? 0 : 1);
+  return [...movements].sort((a, b) => (instantOf(a) - instantOf(b)) || (kindRank(a) - kindRank(b)));
+}
+
+/** Περνά κάθε κίνηση από τον ΕΝΑ γραφέα, χρονολογικά. `true` όταν γράφτηκε τουλάχιστον μία νέα. */
 async function recordMovements(
   provider: PaymentProvider, checkout: PaymentCheckoutRecord, movements: readonly ProviderMovement[],
 ): Promise<CheckoutSyncOutcome> {
   let recorded = false;
-  for (const movement of movements) {
+  for (const movement of chronologicalMovements(movements)) {
     const outcome = await recordInvoicePayment({ companyId: checkout.companyId }, checkout.invoiceId, {
       payment: invoicePaymentOf(provider, checkout, movement),
       actor: providerActor(provider),
