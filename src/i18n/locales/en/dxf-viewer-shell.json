@@ -537,6 +537,9 @@
           "confirm": "Correct",
           "confirmed": "confirmed by you · the machine read it correctly",
           "progress": "Checked {checked} of {total, plural, one {# text} other {# texts}}",
+          "suggestion": "Suggestion: “{value}” — from the other dimensions and the drawing",
+          "acceptSuggestion": "Accept",
+          "acceptSuggestionLabel": "Accept the suggestion “{value}”",
           "priority": {
             "suspect": "suspect",
             "checked": "checked",

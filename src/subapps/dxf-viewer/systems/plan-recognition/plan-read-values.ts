@@ -19,6 +19,7 @@
 
 import type { FusedDimension, FusedDimensionStatus, PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../bim/plan-recognition/plan-recognition-types';
+import { inferBareIntegerUnit, writtenLike, type BareIntegerUnit } from '../../bim/plan-recognition/reading/written-values';
 import { meetsConfidenceTier } from './plan-confidence';
 
 /** Βήμα 4 — η ετικέτα προτεραιότητας μιας γραμμής. */
@@ -45,9 +46,25 @@ export interface PlanReadValueRow {
   readonly w: number | null;
   /** Βήμα 4 — «ύποπτη» · «ελέγχθηκε» · «εντάξει». */
   readonly priority: PlanReadValuePriority;
+  /**
+   * Βήμα 7 — για τιμή σε σύγκρουση, η πρόταση της συνόρθωσης **ως κείμενο** όπως θα το έγραφε το σχέδιο («4,12»)· `null` =
+   * καμία. Περνά από τον ΙΔΙΟ δρόμο με κάθε διόρθωση (`correct`).
+   */
+  readonly suggestion: string | null;
 }
 
-type RowFacts = Omit<PlanReadValueRow, 'priority'>;
+type RowFacts = Omit<PlanReadValueRow, 'priority' | 'suggestion'>;
+
+/**
+ * Βήμα 7 — η πρόταση για μια διάσταση σε σύγκρουση. Ο Baarda την απέρριψε, άρα στην **τελική** λύση έχει βάρος 0
+ * (`adjustWithDataSnooping`): το `adjustedMm` είναι η απόσταση των παρειών όπως την ορίζουν **οι υπόλοιπες** διαστάσεις μαζί
+ * με τις θέσεις των γραμμών — ποτέ η ίδια η απορριφθείσα τιμή. Γράφεται με την ακρίβεια γραφής του κειμένου (`writtenLike`).
+ */
+function suggestionOf(text: PlanText, fused: FusedDimension | undefined, bareIntegerUnit: BareIntegerUnit): string | null {
+  if (fused?.status !== 'conflict' || fused.adjustedMm === null) return null;
+  const suggestion = writtenLike(fused.adjustedMm, text.raw, bareIntegerUnit);
+  return suggestion !== null && suggestion !== text.raw.trim() ? suggestion : null;
+}
 
 /** Θέλει έλεγχο: σύγκρουση · αδέτη · διάσταση χωρίς τιμή · ανάγνωση κάτω από «υψηλή». Ο ΕΝΑΣ κανόνας για σειρά και ετικέτα. */
 function needsReview(row: RowFacts): boolean {
@@ -69,7 +86,12 @@ function suspicionGroup(row: PlanReadValueRow): number {
   return 3;
 }
 
-function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | undefined): PlanReadValueRow {
+function rowOf(
+  text: PlanText,
+  valueMm: number | null,
+  fused: FusedDimension | undefined,
+  bareIntegerUnit: BareIntegerUnit,
+): PlanReadValueRow {
   const measured = fused?.measuredMm ?? null;
   const facts: RowFacts = {
     textId: text.id,
@@ -83,16 +105,19 @@ function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | u
     deviationMm: measured !== null && valueMm !== null ? measured - valueMm : null,
     w: fused?.w ?? null,
   };
-  return { ...facts, priority: priorityOf(facts) };
+  return { ...facts, priority: priorityOf(facts), suggestion: suggestionOf(text, fused, bareIntegerUnit) };
 }
 
 /** Οι γραμμές της λίστας, η πιο ύποπτη πρώτη. `reading` = η ανάγνωση που ισχύει (με τις διορθώσεις). */
 export function planReadValueRows(reading: PlanReading, fusion: Pick<PlanFusionResult, 'dimensions'> | null): PlanReadValueRow[] {
   const valueById = new Map(reading.dimensions.map((d) => [d.textId, d.valueMm]));
   const fusedById = new Map((fusion?.dimensions ?? []).map((d) => [d.textId, d]));
+  // Η μονάδα των σκέτων ακεραίων του σχεδίου: την ορίζουν τα κείμενα σε μέτρα, που έχουν πάντα τιμή ⇒ ίδια με του κανόνα.
+  const rawById = new Map(reading.texts.map((t) => [t.id, t.raw]));
+  const bareIntegerUnit = inferBareIntegerUnit(reading.dimensions.map((d) => rawById.get(d.textId) ?? ''));
   const rows = reading.texts.map((t, order) => ({
     order,
-    row: rowOf(t, valueById.get(t.id) ?? null, fusedById.get(t.id)),
+    row: rowOf(t, valueById.get(t.id) ?? null, fusedById.get(t.id), bareIntegerUnit),
   }));
   rows.sort((a, b) =>
     suspicionGroup(a.row) - suspicionGroup(b.row)

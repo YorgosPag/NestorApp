@@ -3,7 +3,7 @@
  */
 
 import {
-  classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenAreaM2, parseWrittenScale, writtenDimensions, writtenLengthsMm,
+  classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenAreaM2, parseWrittenScale, writtenDimensions, writtenLengthsMm, writtenLike,
   writtenNumberTokens,
 } from '../reading/written-values';
 import { writtenPrecisionMm } from '../fusion/dimension-precision';
@@ -124,5 +124,28 @@ describe('ADR-929 Δ21 (δ) βήμα 8 — writtenDimensions: η ΜΙΑ μετα
   });
   it('χωρίς αποδεδειγμένη μονάδα ή κενό κείμενο ⇒ καμία διάσταση (ποτέ μαντεψιά)', () => {
     expect(writtenDimensions([candidate('t1', '20'), candidate('t2', ''), candidate('t3', '0.00')])).toEqual([]);
+  });
+});
+
+describe('ADR-929 Δ21 (δ) βήμα 7 — writtenLike: μήκος γραμμένο όπως το γράφει το σχέδιο', () => {
+  it.each([
+    [4118.3, '4.15', null, '4.12'],
+    [4118, '4,15 μ.μ.', null, '4,12 μ.μ.'],
+    [4118, '412', 'cm', '412'],
+    [3421, '350 cm', null, '342 cm'],
+    [4118.3, '3.505', null, '4.118'],
+    [3700, '4.12', null, '3.70'],
+  ] as const)('%d mm σαν «%s» (ακέραιοι σε %s) ⇒ «%s»', (valueMm, sample, bare, expected) => {
+    expect(writtenLike(valueMm, sample, bare)).toBe(expected);
+  });
+  it('ξαναδιαβάζεται από τον ΙΔΙΟ κανόνα στην ακρίβεια γραφής του δείγματος', () => {
+    const written = writtenLike(4118.3, '4,15 μ.μ.', null) ?? '';
+    expect(parseDimensionValue(written, null)?.valueMm).toBeCloseTo(4120, 6);
+  });
+  it('δείγμα που δεν είναι μήκος, ακέραιος χωρίς αποδεδειγμένη μονάδα, ή τιμή ≤ 0 ⇒ null', () => {
+    expect(writtenLike(4118, 'ΣΑΛΟΝΙ', null)).toBeNull();
+    expect(writtenLike(4118, '412', null)).toBeNull();
+    expect(writtenLike(0, '4.15', null)).toBeNull();
+    expect(writtenLike(2, '4.15', null)).toBeNull();
   });
 });

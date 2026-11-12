@@ -15,7 +15,7 @@ import { PlanReadValuesSection, type PlanReadValuesActions } from '../PlanReadVa
 const t = (key: string, params?: Record<string, string | number>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
 const row = (over: Partial<PlanReadValueRow> & Pick<PlanReadValueRow, 'textId' | 'raw'>): PlanReadValueRow => ({
-  correctedFrom: null, confirmed: false, priority: 'ok', kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, ...over,
+  correctedFrom: null, confirmed: false, priority: 'ok', suggestion: null, kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, ...over,
 });
 
 const ROWS: readonly PlanReadValueRow[] = [
@@ -126,6 +126,18 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(badge('t9')?.textContent).toBe('modelFromDrawing.image.ocr.values.priority.ok');
     expect(badge('t3')?.textContent).toBe('modelFromDrawing.image.ocr.values.priority.checked');
     expect(badge('t3')?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('βήμα 7 — πρόταση μόνο όπου υπάρχει· αποδοχή ⇒ onCorrect με το κείμενο της πρότασης (ο ΙΔΙΟΣ δρόμος)', () => {
+    const rows = [row({ textId: 't3', raw: '4.12', status: 'conflict', suggestion: '3.70' }), row({ textId: 't4', raw: '412' })];
+    const { getAllByTestId, actions } = renderValues(rows);
+    expect(item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-suggestion"]')).toBeNull();
+    const suggestion = item(getAllByTestId, 't3').querySelector('[data-testid="mfd-read-value-suggestion"]');
+    expect(suggestion?.textContent).toContain('modelFromDrawing.image.ocr.values.suggestion{"value":"3.70"}');
+    const accept = suggestion?.querySelector('[data-testid="mfd-read-value-accept-suggestion"]') as HTMLElement;
+    expect(accept.getAttribute('aria-label')).toBe('modelFromDrawing.image.ocr.values.acceptSuggestionLabel{"value":"3.70"}');
+    fireEvent.click(accept);
+    expect(actions.onCorrect).toHaveBeenCalledWith('t3', '3.70');
   });
 
   it('«Επαναφορά» μόνο σε διορθωμένη· «Δεν είναι διάσταση» μόνο σε διάσταση· δείκτης ⇒ onHover', () => {

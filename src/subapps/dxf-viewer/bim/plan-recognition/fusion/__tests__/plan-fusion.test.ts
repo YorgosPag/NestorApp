@@ -84,6 +84,15 @@ describe('plan-fusion — ποιος φταίει (Baarda)', () => {
     expect(q.kind === 'dimension-conflict' && [q.textId, q.writtenMm]).toEqual(['t-west', 2900]);
   });
 
+  it('ADR-929 Δ21 (δ) βήμα 7 — το adjustedMm μιας απορριφθείσας τιμής είναι η εκτίμηση από τις ΥΠΟΛΟΙΠΕΣ, όχι από την ίδια', () => {
+    const { texts, dimensions } = houseDimensions({ 't-west': { raw: '2.90', valueMm: 2900 } });
+    const r = fusePlan(fusionInput({ segments: houseSegments(), reading: read(reading({ texts, dimensions })), knownScale: KNOWN_SCALE }));
+    const west = r.dimensions.find((d) => d.textId === 't-west');
+    expect(west?.status).toBe('conflict');
+    // Βάρος 0 στην τελική λύση ⇒ καμία έλξη προς το 2900· μένει στα ~3325 που ορίζουν γραμμές και υπόλοιπες διαστάσεις.
+    expect(Math.abs((west?.adjustedMm ?? 0) - 3325)).toBeLessThan(10);
+  });
+
   it('🔴 παρειά εκτός θέσης κατά 8 cm (≈5σ σάρωσης), ενώ τρεις διαστάσεις συμφωνούν ⇒ face-displaced με τη μετατόπιση', () => {
     const { texts, dimensions } = houseDimensions();
     const extra = [textAt('t-west-out', '3.575', 1662.5, 2400, 'h'), textAt('t-wall', '0.10', 3500, 1000, 'h')];

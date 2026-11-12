@@ -537,6 +537,9 @@
           "confirm": "Σωστό",
           "confirmed": "επιβεβαιώθηκε από εσένα · η μηχανή διάβασε σωστά",
           "progress": "Ελέγχθηκαν {checked} από {total, plural, one {# κείμενο} other {# κείμενα}}",
+          "suggestion": "Πρόταση: «{value}» — από τις υπόλοιπες διαστάσεις και το σχέδιο",
+          "acceptSuggestion": "Αποδοχή",
+          "acceptSuggestionLabel": "Αποδοχή της πρότασης «{value}»",
           "priority": {
             "suspect": "ύποπτη",
             "checked": "ελέγχθηκε",

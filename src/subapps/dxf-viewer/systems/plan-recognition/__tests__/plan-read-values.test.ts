@@ -60,7 +60,7 @@ describe('planReadValueRows — Δ21 (δ): η πιο ύποπτη πρώτη', (
     const rows = new Map(planReadValueRows(READING, FUSION).map((r) => [r.textId, r]));
     expect(rows.get('t3')).toEqual({
       textId: 't3', raw: '4.12', correctedFrom: '4.15', confirmed: false, kind: 'dimension', valueMm: 4120, confidence: 0.9,
-      status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked',
+      status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked', suggestion: '3.70',
     });
     expect(rows.get('t4')).toMatchObject({ valueMm: null, status: null, deviationMm: null, correctedFrom: null });
   });
@@ -110,5 +110,32 @@ describe('Δ21 (δ) βήμα 4 — ετικέτα προτεραιότητας �
       texts: READING.texts.map((t) => (t.id === 't7' ? { ...t, confirmed: true, confidence: { score: 1, factors: { reading: 1 } } } : t)),
     };
     expect(planReadValueRows(reading, FUSION).find((r) => r.textId === 't7')?.priority).toBe('checked');
+  });
+});
+
+describe('Δ21 (δ) βήμα 7 — πρόταση από τη συνόρθωση για τιμή σε σύγκρουση', () => {
+  it('μόνο σε σύγκρουση· γραμμένη με την ακρίβεια του κειμένου (adjustedMm 3700 ⇒ «3.70»)', () => {
+    const rows = planReadValueRows(READING, FUSION);
+    expect(rows.filter((r) => r.suggestion !== null).map((r) => [r.textId, r.suggestion])).toEqual([['t3', '3.70']]);
+  });
+
+  it('σκέτος ακέραιος σε σχέδιο που γράφει μέτρα ⇒ η πρόταση σε εκατοστά, όπως το κείμενο', () => {
+    const reading: PlanReading = {
+      ...READING,
+      texts: [text('t2', '2.05', 'dimension', 0.95), text('t8', '412', 'dimension', 0.9)],
+      dimensions: [
+        { textId: 't2', valueMm: 2050, segmentIds: [], confidence: { score: 0.95, factors: {} } },
+        { textId: 't8', valueMm: 4120, segmentIds: [], confidence: { score: 0.9, factors: {} } },
+      ],
+    };
+    const fusion = { dimensions: [fused('t2', 2050, 'consistent', 0.4, 2060), fused('t8', 4120, 'conflict', 5, 3330)] };
+    expect(planReadValueRows(reading, fusion).find((r) => r.textId === 't8')?.suggestion).toBe('333');
+  });
+
+  it('χωρίς συνορθωμένη τιμή, ή πρόταση ίδια με το κείμενο ⇒ καμία πρόταση', () => {
+    const noAdjusted = { dimensions: [{ ...fused('t3', 4120, 'conflict', -4.2, null) }] };
+    expect(planReadValueRows(READING, noAdjusted).find((r) => r.textId === 't3')?.suggestion).toBeNull();
+    const same = { dimensions: [fused('t3', 4120, 'conflict', -4.2, 4118)] };
+    expect(planReadValueRows(READING, same).find((r) => r.textId === 't3')?.suggestion).toBeNull();
   });
 });

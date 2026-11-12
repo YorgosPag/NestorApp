@@ -13,7 +13,7 @@
  */
 
 import * as React from 'react';
-import { Check, CircleCheck, Pencil, RotateCcw, TriangleAlert, UserCheck, type LucideIcon } from 'lucide-react';
+import { Check, CircleCheck, Lightbulb, Pencil, RotateCcw, TriangleAlert, UserCheck, type LucideIcon } from 'lucide-react';
 import { Badge, type BadgeVariantProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -160,6 +160,29 @@ function RowActions({ row, actions, t }: {
   );
 }
 
+/** Βήμα 7 — η πρόταση της συνόρθωσης για τιμή σε σύγκρουση, με αποδοχή ενός κλικ (ο ΙΔΙΟΣ δρόμος με κάθε διόρθωση). */
+function RowSuggestion({ row, actions, t }: {
+  readonly row: PlanReadValueRow;
+  readonly actions: PlanReadValuesActions;
+  readonly t: Translate;
+}): React.ReactElement | null {
+  const { suggestion } = row;
+  if (suggestion === null) return null;
+  return (
+    <p className="m-0 flex flex-wrap items-center gap-1 text-[11px] text-foreground" data-testid="mfd-read-value-suggestion">
+      <Lightbulb className="size-3 shrink-0" aria-hidden="true" />
+      <span>{t('modelFromDrawing.image.ocr.values.suggestion', { value: suggestion })}</span>
+      <Button
+        type="button" variant="outline" size="xs" onClick={() => actions.onCorrect(row.textId, suggestion)}
+        aria-label={t('modelFromDrawing.image.ocr.values.acceptSuggestionLabel', { value: suggestion })}
+        data-testid="mfd-read-value-accept-suggestion"
+      >
+        {t('modelFromDrawing.image.ocr.values.acceptSuggestion')}
+      </Button>
+    </p>
+  );
+}
+
 function ValueRow({ row, editing, onEdit, actions, t }: {
   readonly row: PlanReadValueRow;
   readonly editing: boolean;
@@ -193,6 +216,7 @@ function ValueRow({ row, editing, onEdit, actions, t }: {
       {editing ? <RowEditor row={row} onSave={save} onCancel={() => onEdit(null)} preview={actions.previewCorrection} t={t} /> : null}
       <p className="m-0 text-[11px] text-foreground">{interpretationOf(row, t)}</p>
       <p className={MUTED}>{metaOf(row, t)}</p>
+      <RowSuggestion row={row} actions={actions} t={t} />
       {row.correctedFrom !== null ? (
         <p className={MUTED} data-testid="mfd-read-value-corrected">{t('modelFromDrawing.image.ocr.values.corrected', { raw: row.correctedFrom })}</p>
       ) : null}

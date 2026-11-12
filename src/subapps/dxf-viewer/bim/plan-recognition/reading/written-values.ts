@@ -93,6 +93,22 @@ export function writtenLengthsMm(dimensionRaws: readonly string[]): (number | nu
   return dimensionRaws.map((raw) => parseDimensionValue(raw, bareIntegerUnit)?.valueMm ?? null);
 }
 
+/**
+ * ADR-929 Δ21 (δ) βήμα 7 — ένα μήκος γραμμένο **όπως γράφει το σχέδιο** ένα δείγμα του: ίδια μονάδα, ίδια δεκαδικά (άρα
+ * ίδια ακρίβεια γραφής), ίδιο διαχωριστικό, ίδια κατάληξη («4,15 μ.μ.» + 4118 mm ⇒ «4,12 μ.μ.»). Το αποτέλεσμα ξαναδιαβάζεται
+ * από το `parseDimensionValue` με την ίδια μονάδα. `null` = το δείγμα δεν είναι μήκος ή η τιμή στρογγυλεύεται σε ≤ 0.
+ */
+export function writtenLike(valueMm: number, sampleRaw: string, bareIntegerUnit: BareIntegerUnit): string | null {
+  const sample = parseDimensionValue(sampleRaw, bareIntegerUnit);
+  const text = sampleRaw.trim();
+  const token = LENGTH_TEXT.exec(text)?.[1];
+  if (sample === null || token === undefined || !(valueMm > 0)) return null;
+  const decimals = token.split(/[.,]/)[1]?.length ?? 0;
+  const fixed = (valueMm / WRITTEN_UNIT_MM[sample.unit]).toFixed(decimals);
+  if (!(Number.parseFloat(fixed) > 0)) return null;
+  return `${token.includes(',') ? fixed.replace('.', ',') : fixed}${text.slice(token.length)}`;
+}
+
 /** Ένα κείμενο που **ίσως** είναι διάσταση: το κείμενό του + ό,τι ξέρει ήδη ο αναγνώστης (τμήματα, βεβαιότητα). */
 export interface WrittenDimensionCandidate {
   readonly textId: string;
