@@ -177,6 +177,29 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
    sandbox τα ενεργοποιεί η υποστήριξη — docs «Sandbox Account» βήμα 3). Ο Giorgio έστειλε 2026-11-11 email στο
    `support@everypay.gr` ζητώντας ενεργοποίηση IRIS (Direct) · κάρτας μέσω Payment Notifications · Apple Pay /
    Google Pay — αίτημα υποστήριξης **00128279** (παραλαβή επιβεβαιώθηκε ίδια μέρα). **Αναμονή απάντησης**· μετά: επανάληψη της δοκιμής IRIS, καμία αλλαγή κώδικα αν δεν βγει νέο σφάλμα.
+
+   ✅ **Επαληθεύτηκε ζωντανά 2026-11-12** (η Everypay απάντησε στο 00128279 «ενεργοποιήθηκαν οι υπηρεσίες», χωρίς
+   να πει ποιες): νέο τιμολόγιο Α-12 12,40 € (τρόπος «Κάρτα» — η φόρμα τιμολογίου **δεν** προσφέρει IRIS· η δημόσια
+   σελίδα δείχνει πάντως Κάρτα + IRIS), συνεδρία `pchk_23d2493a-d769-4432-af5c-cfa8d0e37d08`. Το `POST
+   /iris/sessions` πέτυχε ⇒ η φόρμα POST οδήγησε στον **προσομοιωτή IRIS** του sandbox
+   (`sandbox-dashboard.everypay.gr/iris-emulator`: «Δημιουργία QR» ή «Επιλέξτε τράπεζα» ⇒ «Επιτυχής / Αποτυχία
+   Ταυτοποίησης»). «Επιλέξτε τράπεζα» ⇒ «Επιτυχής Ταυτοποίηση» ⇒ η δημόσια σελίδα «Εξοφλήθηκε», η Λογιστική
+   «Εξοφλημένο». Logs (με τη σειρά τους):
+   - `PaymentReturnRoute` «Browser returned from payment provider» `signal: authorized-source` — το `hash` του
+     callback **επαληθεύτηκε**.
+   - `PaymentWebhookRoute` «Payment webhook applied» `signal: authorized-source` · `outcome: recorded` — το webhook
+     IRIS (`hash`, JSON) ⇒ `POST /payments {token, amount, merchant_ref}` ⇒ `GET /payments?merchant_ref=` ⇒
+     `recordInvoicePayment`.
+   - `PaymentWebhookRoute` «Payment webhook applied» `signal: payment-reference` · `outcome: unchanged` — **δεύτερο**
+     webhook, σε **άλλη** μορφή: σώμα πληρωμής (`pmt_…`) με κεφαλίδα `X-Signature-SHA256`, όχι `hash`. Βρήκε τη
+     συνεδρία από το `paymentReference` και δεν ξαναέγραψε (ιδεμποτία). ⚠️ Συμπέρασμα (όχι τεκμηρίωση): το πρώτο
+     ήρθε από το `webhook_url` της συνεδρίας, το δεύτερο από το συμβάν «Νέα Πληρωμή (IRIS)» του dashboard.
+   - Συμφιλίωση στο επόμενο πέρασμα: `pending 0` — η συνεδρία ήταν ήδη `paid`.
+
+   Ο φόβος «δεύτερη χρέωση της ίδιας πηγής» (`41001` έναντι σφάλματος διπλού `merchant_ref`) **δεν** εμφανίστηκε: το
+   δεύτερο webhook δεν είναι `authorized-source`, άρα δεν χρεώνει. Μένει θεωρητικός μόνο για **επανάληψη** του webhook
+   `hash` από τον πάροχο (πολιτική επαναλήψεων: ανεπιβεβαίωτη, §5.3). Ανοιχτό ακόμη: §5.8 #1 (hex ή base64 πριν από
+   το `|`) — πέρασε, αλλά τα logs δεν λένε ποια μορφή. Καμία αλλαγή κώδικα.
 3. 🔴 **Κάθε γνήσιο webhook ⇒ `401 signature-invalid`** (2026-11-12, πληρωμή κάρτας Α-10 12,40 €). Με το `+0000`
    το εύρημα 1 έκλεισε: η ειδοποίηση δημιουργήθηκε, η hosted σελίδα ζήτησε 3DS (δοκιμαστικό) και η Everypay
    **χρέωσε** (`pmt_MAFG2v3iKbk6JYS…`, συναλλαγή 53433). Τα δύο webhooks όμως απορρίφθηκαν (log
@@ -257,3 +280,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-12 | §5.9 #3 ✅ επαληθεύτηκε ζωντανά με γνήσιο webhook (Α-11)· #4 `info` «Payment webhook applied» στο route (§5.3)· #5 τι γράφεται στα λογιστικά· §6 κενά συμφωνίας απόδοσης / προμήθειας / απόδειξης. |
 | 2026-11-12 | §5.9 #6: επιστροφή δεν καταγράφηκε — λίστες Everypay = `{ total_count, items }`· `listItemsOrNull` + `listRequest` (502 σε μορφή εκτός συμβολαίου)· §5.8 #3 κλειστό· §4 πίνακας. |
 | 2026-11-12 | §5.9 #6 ✅ επαληθεύτηκε ζωντανά (επιστροφή 1,00 € στο Α-11 ⇒ `recorded`, και οι δύο επιστροφές, υπόλοιπο 6,00 €)· (β) απαντήθηκε: το `amount` πληρωμής του API δεν μειώνεται μετά από επιστροφή. |
+| 2026-11-12 | §5.9 #2 ✅ IRIS ενεργό στο sandbox και επαληθευμένο ζωντανά (Α-12): callback `authorized-source` · webhook `hash` ⇒ χρέωση πηγής ⇒ `recorded` · δεύτερο webhook `pmt_` ⇒ `unchanged` (ιδεμποτία)· καμία αλλαγή κώδικα. |
