@@ -14,6 +14,7 @@ import {
   Copy, Check, Mail, Send, HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MainLandmark } from '@/core/containers/main-landmark';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { componentSizes } from '@/styles/design-tokens';
 import { notificationConfig } from '@/config/error-reporting';
@@ -54,7 +55,8 @@ export function ErrorFallbackUI({
   } = actionHandlers;
 
   return (
-    <main className={`min-h-screen ${colors.bg.primary} flex items-center justify-center ${spacingTokens.padding.md}`}>
+    // ADR-939 §6.1 Γ2: `main` μόνο όπου δεν υπάρχει ήδη (στο `(app)` το δίνει το κέλυφος).
+    <MainLandmark className={`min-h-screen ${colors.bg.primary} flex items-center justify-center ${spacingTokens.padding.md}`}>
       {showTourTrigger}
 
       <article className="max-w-2xl w-full">
@@ -323,6 +325,6 @@ export function ErrorFallbackUI({
           </footer>
         </section>
       </article>
-    </main>
+    </MainLandmark>
   );
 }

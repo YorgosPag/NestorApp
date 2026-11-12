@@ -24,6 +24,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { MainLandmark } from '@/core/containers/main-landmark';
 
 import { useBackendRetry, type BackendRetryState } from './useBackendRetry';
 
@@ -51,26 +52,30 @@ export function BackendUnavailableFallback(): React.ReactElement {
   const { t } = useTranslation('errors');
   const { state, retryNow } = useBackendRetry();
 
+  // ADR-939 §6.1 Γ2: έξω από κέλυφος (`(link)`, `global-error`) η σελίδα έμενε ΧΩΡΙΣ `main`·
+  // μέσα στο `(app)` το `MainLandmark` αποδίδει `div` και δεν γεννά δεύτερο ορόσημο.
   return (
-    <section
-      aria-labelledby="backend-unavailable-title"
-      className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col justify-center gap-4 p-6"
-    >
-      <h1 id="backend-unavailable-title" className="text-xl font-semibold text-foreground">
-        {t(`${K}.title`)}
-      </h1>
-      <p className="text-sm text-muted-foreground">{t(`${K}.body`)}</p>
-      <PhaseAnnouncement state={state} />
-      <footer className="flex items-center gap-3">
-        <Button onClick={retryNow} disabled={state.phase === 'retrying'}>
-          {t(`${K}.retryNow`)}
-        </Button>
-        {state.phase === 'waiting' ? (
-          <span className="text-sm text-muted-foreground">
-            {t(`${K}.retryIn`, { seconds: state.secondsLeft })}
-          </span>
-        ) : null}
-      </footer>
-    </section>
+    <MainLandmark>
+      <section
+        aria-labelledby="backend-unavailable-title"
+        className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col justify-center gap-4 p-6"
+      >
+        <h1 id="backend-unavailable-title" className="text-xl font-semibold text-foreground">
+          {t(`${K}.title`)}
+        </h1>
+        <p className="text-sm text-muted-foreground">{t(`${K}.body`)}</p>
+        <PhaseAnnouncement state={state} />
+        <footer className="flex items-center gap-3">
+          <Button onClick={retryNow} disabled={state.phase === 'retrying'}>
+            {t(`${K}.retryNow`)}
+          </Button>
+          {state.phase === 'waiting' ? (
+            <span className="text-sm text-muted-foreground">
+              {t(`${K}.retryIn`, { seconds: state.secondsLeft })}
+            </span>
+          ) : null}
+        </footer>
+      </section>
+    </MainLandmark>
   );
 }

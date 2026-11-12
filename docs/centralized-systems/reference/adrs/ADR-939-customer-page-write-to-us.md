@@ -96,7 +96,21 @@
 - Στην ίδια λογική, η κατάσταση φόρτωσης του `ShowcaseClient` γίνεται `<main aria-busy="true">`.
 - `PhotoSharePageContent`: η ρίζα είναι `<main>` σε **κάθε** κατάσταση (φόρτωση με `aria-busy`, δεν βρέθηκε, έτοιμη). Πριν, ούτε η έτοιμη κατάσταση είχε `<main>`.
 - Ακολουθείται το σχήμα του `PublicPOPageContent`: ρίζα `<main>` σε κάθε κατάσταση.
-- **Εκτός εμβέλειας (Β):** τα `error.tsx` της ομάδας αποδίδουν το κοινό `RouteErrorFallback`, που δεν έχει `<main>`. Το ίδιο συστατικό χρησιμοποιείται σε 56 αρχεία του `src/app`, και πολλά από αυτά βρίσκονται μέσα στο κέλυφος, που έχει ήδη `<main>`. Γι' αυτό δεν αλλάζει εδώ.
+- **Εκτός εμβέλειας (Β):** τα `error.tsx` της ομάδας αποδίδουν το κοινό `RouteErrorFallback`. Το ίδιο συστατικό χρησιμοποιείται σε 56 αρχεία του `src/app`, και πολλά από αυτά βρίσκονται μέσα στο κέλυφος, που έχει ήδη `<main>`. Γι' αυτό δεν αλλάζει εδώ. ⚠️ Η υπόθεση «δεν έχει `<main>`» ήταν **λάθος**: βλ. Γ2.
+
+**Γ2. Ένα ορόσημο `main` στις οθόνες σφάλματος, όπου κι αν αποδοθούν.** Το SSoT audit (2026-11-12) διέψευσε την υπόθεση του Β. Η διαδρομή `RouteErrorFallback` → `ErrorFallbackUI` απέδιδε **πάντα** `<main>`, άρα τα 3 `error.tsx` της `(link)` είχαν ήδη ένα. Η πραγματική βλάβη ήταν αλλού:
+- **52** από τους 56 καταναλωτές ζουν στο `(app)`, όπου το κέλυφος δίνει ήδη `<main>` (`MainContentBridge` → `ShellSurface as="main"`). Εκεί έβγαινε **διπλό** ορόσημο. Το ίδιο ίσχυε για την εφεδρεία έκτακτης ανάγκης του `ErrorBoundaryClass`.
+- Ο κλάδος αδυναμίας backend (`BackendUnavailableFallback`) απέδιδε `<section>` **χωρίς** `<main>`, άρα στην `(link)` και στο `global-error` η σελίδα έμενε με **μηδέν**.
+- **Απόφαση:** το ορόσημο προκύπτει από τη **θέση** στο δέντρο και δεν γράφεται ανά καταναλωτή. Νέο primitive `src/core/containers/main-landmark.tsx`:
+  - context «είμαι ήδη μέσα σε `main`»·
+  - `MainLandmarkScope` (δήλωση)·
+  - `useIsWithinMainLandmark()` (εσωτερικό)·
+  - `MainLandmark`, που αποδίδει `<main>` όταν λείπει και αλλιώς `<div>` με την **ίδια** κλάση.
+
+  Το `ShellSurface as="main"` δηλώνει το πεδίο **μία φορά**, για όλους τους ιδιοκτήτες `main` που περνούν από εκεί. Τα `ErrorFallbackUI`, `BackendUnavailableFallback` και `ErrorBoundaryClass` (εφεδρεία) ρωτούν. **Κανένα `error.tsx` δεν άλλαξε.**
+- **Γιατί όχι prop στους 56:** θα ήταν 56 χειρόγραφες δηλώσεις για κάτι που ορίζει ήδη ο φάκελος, και θα έσπαγαν σιωπηλά σε κάθε μετακόμιση group (όπως έγινε με την `(link)`). Το σχήμα είναι το ίδιο με τα αυτόματα επίπεδα επικεφαλίδων (`HeadingLevel`/`Heading` του React Aria).
+- **Όριο:** ωμό `<main>` γραμμένο με το χέρι **δεν** δηλώνει πεδίο. Μετρημένα, και εκτός εμβέλειας: `(app)/o/[workspace]/account/layout.tsx:80` και `(app)/admin/layout.tsx:33` αποδίδουν δικό τους `<main>` μέσα στο κέλυφος. Αυτό είναι πιθανό διπλό ορόσημο ανεξάρτητα από τα σφάλματα, ΑΝΕΠΑΛΗΘΕΥΤΟ ζωντανά.
+- **Άγκυρα:** `src/core/containers/__tests__/main-landmark.test.tsx` (Μ1–Μ6). Μετάλλαξη: αν αφαιρεθεί το `MainLandmarkScope` από το `ShellSurface`, το Μ2 κοκκινίζει.
 
 **Γ1. Η βλάβη δεν ξαναγίνεται σιωπηλά: κανόνας Κ4 στην CHECK 3.52** («διεύθυνση = κλειδί»). Η βλάβη του §6 πέρασε με την πύλη **πράσινη**: ο Κ1 είναι αυτο-συνεπής με τον φάκελο, και ο Κ2 ορίζει «δημόσιο» μόνο από τα hooks αγγελιών.
 - **Κανόνας:** σελίδα που δηλώνει ότι η διεύθυνσή της είναι κλειδί και φορά το κέλυφος (από τη δομή ή από τη δήλωση της ομάδας) ⇒ κατάσταση `credential-link-wearing-shell`, μπλοκάρει, zero tolerance. «Δηλώνει» σημαίνει ότι η ίδια ή layout-πρόγονός της εισάγει το `CREDENTIAL_LINK_PAGE_METADATA`.
@@ -122,3 +136,4 @@
 | 2026-11-12 | §6: οι σελίδες με κλειδί (`/shared/*`, `/showcase/[token]`, `/share/photo/*`) βγήκαν από το κέλυφος του γραφείου και πήγαν στο νέο route group `(link)`. Δηλώσεις στις CHECK 3.52, 3.63 και 3.60. Τέλος το διπλό `<main>` | Giorgio + Claude Code |
 | 2026-11-12 | §6.1 Α: η δήλωση `noindex`/`no-referrer` (SSoT `CREDENTIAL_LINK_PAGE_METADATA`) μπαίνει μία φορά στο `(link)/layout.tsx` και αφαιρείται από τα `shared/layout.tsx` και `showcase/[token]/page.tsx`. Τώρα την έχει και το `/share/photo/*`. §6.1 Β: ρίζα `<main>` στις καταστάσεις «δεν βρέθηκε»/«έληξε»/σφάλμα/φόρτωση του showcase (`MessageScreen`, `ShowcaseClient`) και σε όλες τις καταστάσεις του `PhotoSharePageContent` | Giorgio + Claude Code |
 | 2026-11-12 | §6.1 Γ1: κανόνας Κ4 στην CHECK 3.52. Σελίδα που δηλώνει `CREDENTIAL_LINK_PAGE_METADATA` (η ίδια ή layout-πρόγονός της) και φορά κέλυφος μπλοκάρει (`credential-link-wearing-shell`). Νέα δήλωση `credentialLinkMetadata` στο `.shell-boundary.json`, άγκυρες 24 → 32, `docs/gates/3.52.md` και ADR-777 §8.12 #7 | Giorgio + Claude Code |
+| 2026-11-12 | §6.1 Γ2: νέο primitive `MainLandmark` (`core/containers/main-landmark.tsx`), όπου το ορόσημο `main` προκύπτει από τη θέση. Το `ShellSurface as="main"` δηλώνει το πεδίο. Τα `ErrorFallbackUI`, `BackendUnavailableFallback` και `ErrorBoundaryClass` το χρησιμοποιούν. Τέλος το διπλό `<main>` στους 52 `error.tsx` του `(app)` και το μηδενικό στον κλάδο backend-unavailable της `(link)`. Άγκυρα `main-landmark.test.tsx` (Μ1–Μ6) | Giorgio + Claude Code |

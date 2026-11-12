@@ -2,6 +2,8 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { MainLandmarkScope } from './main-landmark';
+
 /**
  * 🏛️ **Ο ΕΝΑΣ ΓΡΑΦΕΑΣ ΤΟΥ ΔΙΑΔΡΟΜΟΥ** — η επιφάνεια που κατέχει το κενό γύρω
  * από το περιεχόμενο μιας σελίδας (ADR-797 · ΦΑΣΗ Β).
@@ -137,7 +139,9 @@ export function ShellSurface({
       aria-busy={as === 'main' ? busy : undefined}
       className={cn('w-full', className)}
     >
-      {children}
+      {/* ADR-939 §6.1 Γ2: ο ιδιοκτήτης του `<main>` το ΔΗΛΩΝΕΙ, ώστε περιεχόμενο που δεν ξέρει
+          πού αποδίδεται (οθόνες σφάλματος) να μη γεννά δεύτερο ορόσημο. */}
+      {as === 'main' ? <MainLandmarkScope>{children}</MainLandmarkScope> : children}
     </Tag>
   );
 }

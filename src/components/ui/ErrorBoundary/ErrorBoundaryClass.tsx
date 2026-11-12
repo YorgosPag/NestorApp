@@ -14,6 +14,7 @@ import { getStatusColor } from '@/lib/design-system';
 import { errorTracker } from '@/services/ErrorTracker';
 import { generateErrorId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { MainLandmark } from '@/core/containers/main-landmark';
 import { useErrorActions } from './useErrorActions';
 import { ErrorFallbackUI } from './ErrorFallbackUI';
 import { ErrorDialogTourTrigger } from './tour-wrappers';
@@ -213,7 +214,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       const borderColor = getStatusColor('error', 'border');
       const textColor = getStatusColor('error', 'text');
       return (
-        <main className="min-h-screen bg-background flex items-center justify-center p-4">
+        // ADR-939 §6.1 Γ2: `main` μόνο όπου δεν υπάρχει ήδη.
+        <MainLandmark className="min-h-screen bg-background flex items-center justify-center p-4">
           <article className={`max-w-md w-full bg-card border ${borderColor} p-8 rounded-lg shadow-lg`}>
             <h1 className={`text-xl font-semibold ${textColor} mb-4`}>{tFallback('errors:boundary.title')}</h1>
             <p className={`text-sm ${textColor} mb-4`}>{tFallback('errors:generic.unknown')}</p>
@@ -224,7 +226,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               {tFallback('errors:actions.tryAgain')}
             </button>
           </article>
-        </main>
+        </MainLandmark>
       );
     }
 
