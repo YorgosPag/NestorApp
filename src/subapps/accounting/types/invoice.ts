@@ -334,9 +334,11 @@ export interface Invoice {
   paymentStatus: InvoicePaymentStatus;
   /** Καταχωρημένες πληρωμές */
   payments: InvoicePayment[];
-  /** Σύνολο πληρωμών */
+  /** Σύνολο πληρωμών (μόνο πληρωμές — οι επιστροφές δεν αφαιρούνται, ADR-ACC-030 §5.10) */
   totalPaid: number;
-  /** Υπόλοιπο */
+  /** Σύνολο επιστροφών χρημάτων (παράγωγο, ADR-ACC-030 §5.10). Απόν σε έγγραφα πριν το 2026-11-13 = 0. */
+  totalRefunded?: number;
+  /** Υπόλοιπο — το μειώνουν πληρωμές και πιστωτικά, **ποτέ** δεν το ξανανοίγει επιστροφή */
   balanceDue: number;
 
   // — myDATA Integration —

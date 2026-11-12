@@ -202,3 +202,13 @@ describe('Ζ — ομαδοποίηση και κριτήριο είσπραξη
     expect(isCollectibleInvoice(invoice({ id: 'c', issueDate: '2026-01-01', gross: 1, creditNoteInvoiceId: 'cn' }))).toBe(false);
   });
 });
+
+// ADR-ACC-030 §5.10: η επιστροφή χρημάτων του παρόχου ΔΕΝ είναι πληρωμή — ούτε ξανανοίγει την οφειλή, ούτε την
+// «υπερπληρώνει». Πριν, το `paidAsOf` τη μετρούσε ως πληρωμή: 100 πληρωμή + 100 επιστροφή = πίστωση 100 υπέρ πελάτη.
+describe('επιστροφή χρημάτων παρόχου (`kind: refund`)', () => {
+  it('εξοφλημένο 100 με πλήρη επιστροφή ⇒ κανένα ανοιχτό στοιχείο (την οφειλή την αλλάζει μόνο πιστωτικό)', () => {
+    const refund: InvoicePayment = { ...pay('2026-11-12', 100), paymentId: 'r_1', kind: 'refund' };
+    const paid = invoice({ id: 'inv_r', issueDate: '2026-11-01', gross: 100, payments: [pay('2026-11-02', 100), refund] });
+    expect(buildOpenItems([paid], '2026-11-30')).toEqual([]);
+  });
+});

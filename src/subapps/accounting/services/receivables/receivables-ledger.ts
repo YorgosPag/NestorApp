@@ -25,6 +25,7 @@ import type { Invoice } from '../../types/invoice';
 import type { AgingBuckets, ReceivablesPosition } from '../../types/customer-balance';
 import { roundToTwo } from '../../utils/math';
 import { isCreditNote, isVoidedInvoice } from '../../utils/invoice-open-amount';
+import { isRefundMovement } from '../payments/invoice-payment-settlement';
 
 /** Ένα ανοιχτό στοιχείο: θετικό = μας οφείλει, αρνητικό = πίστωση υπέρ του πελάτη. */
 export interface OpenItem {
@@ -50,11 +51,13 @@ const dayOf = (iso: string): string => iso.slice(0, 10);
 /**
  * Πληρωμές (ή, σε πιστωτικό, επιστροφές χρημάτων) ως και το `asOf`. Παλιά έγγραφα χωρίς `payments[]` αλλά με
  * `totalPaid` μετρούν το `totalPaid` — η ημερομηνία τους είναι άγνωστη, άρα θεωρούνται ήδη καταβεβλημένα.
+ * Κινήσεις επιστροφής παρόχου (`kind: 'refund'`) **δεν** μετρούν: δεν αλλάζουν την οφειλή — την αλλάζει το
+ * πιστωτικό (ADR-ACC-030 §5.10, ίδιο κριτήριο με το `settleInvoicePayments`). 🔴 Πριν μετρούσαν ως **πληρωμή**.
  */
 export function paidAsOf(invoice: Pick<Invoice, 'payments' | 'totalPaid'>, asOf: string): number {
   const payments = invoice.payments ?? [];
   if (payments.length === 0) return invoice.totalPaid ?? 0;
-  return payments.reduce((sum, p) => (dayOf(p.date) <= asOf ? sum + p.amount : sum), 0);
+  return payments.reduce((sum, p) => (dayOf(p.date) <= asOf && !isRefundMovement(p) ? sum + p.amount : sum), 0);
 }
 
 /** Τα παραστατικά που υπάρχουν στις `asOf`: εκδόθηκαν ως τότε και δεν ακυρώθηκαν. */

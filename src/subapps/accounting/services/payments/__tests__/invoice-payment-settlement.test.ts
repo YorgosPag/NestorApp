@@ -15,7 +15,9 @@ function movement(amount: number, overrides: Partial<InvoicePayment> = {}): Invo
 
 describe('settleInvoicePayments', () => {
   it('νέο παραστατικό: ανεξόφλητο, οφείλεται όλο το ποσό', () => {
-    expect(initialInvoicePaymentState(124)).toEqual({ payments: [], totalPaid: 0, balanceDue: 124, paymentStatus: 'unpaid' });
+    expect(initialInvoicePaymentState(124)).toEqual({
+      payments: [], totalPaid: 0, totalRefunded: 0, balanceDue: 124, paymentStatus: 'unpaid',
+    });
   });
 
   it('μερική πληρωμή ⇒ partial με σωστό υπόλοιπο', () => {
@@ -32,15 +34,21 @@ describe('settleInvoicePayments', () => {
     expect(settleInvoicePayments(100, [movement(120)])).toMatchObject({ totalPaid: 120, balanceDue: 0, paymentStatus: 'paid' });
   });
 
-  it('επιστροφή αφαιρεί από το εισπραγμένο — η πληρωμή μένει στο ιστορικό', () => {
+  // ADR-ACC-030 §5.10 (πρότυπο Stripe): η επιστροφή ΔΕΝ ξανανοίγει την οφειλή — την οφειλή τη μειώνει το πιστωτικό.
+  it('μερική επιστροφή ⇒ μένει εξοφλημένο· η επιστροφή μετριέται χωριστά, η πληρωμή μένει στο ιστορικό', () => {
     const state = settleInvoicePayments(100, [movement(100), movement(40, { paymentId: 'r', kind: 'refund' })]);
-    expect(state).toMatchObject({ totalPaid: 60, balanceDue: 40, paymentStatus: 'partial' });
+    expect(state).toMatchObject({ totalPaid: 100, totalRefunded: 40, balanceDue: 0, paymentStatus: 'paid' });
     expect(state.payments).toHaveLength(2);
   });
 
-  it('πλήρης επιστροφή ⇒ ξανά ανεξόφλητο', () => {
+  it('πλήρης επιστροφή ⇒ ΔΕΝ γίνεται ξανά ανεξόφλητο (ο πελάτης δεν ξαναχρεώνεται)', () => {
     const state = settleInvoicePayments(100, [movement(100), movement(100, { paymentId: 'r', kind: 'refund' })]);
-    expect(state).toMatchObject({ totalPaid: 0, balanceDue: 100, paymentStatus: 'unpaid' });
+    expect(state).toMatchObject({ totalPaid: 100, totalRefunded: 100, balanceDue: 0, paymentStatus: 'paid' });
+  });
+
+  it('επιστροφή σε μερικώς πληρωμένο ⇒ το υπόλοιπο δεν μεγαλώνει', () => {
+    const state = settleInvoicePayments(100, [movement(60), movement(10, { paymentId: 'r', kind: 'refund' })]);
+    expect(state).toMatchObject({ totalPaid: 60, totalRefunded: 10, balanceDue: 40, paymentStatus: 'partial' });
   });
 
   it('κινήσεις πριν το ADR-ACC-030 (χωρίς `kind`) μετρούν ως πληρωμές', () => {

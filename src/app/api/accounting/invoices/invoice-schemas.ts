@@ -149,11 +149,13 @@ export const UpdateInvoiceSchema = z.object({
  */
 const SERVER_OWNED_INVOICE_FIELDS = [
   'mydata',
-  // ADR-ACC-030: οι κινήσεις πληρωμής έχουν ΕΝΑΝ γραφέα (`recordInvoicePayment`, σε transaction) και τα τρία
-  // παράγωγα τα βγάζει ΜΟΝΟ το `settleInvoicePayments`. Ένα PATCH με παλιό αντίγραφο του `payments[]` θα έσβηνε
-  // σιωπηλά πληρωμή που μόλις κατέγραψε το webhook του παρόχου (lost update).
+  // ADR-ACC-030: οι κινήσεις πληρωμής έχουν ΕΝΑΝ γραφέα (`recordInvoicePayment`, σε transaction) και τα
+  // παράγωγα (`totalPaid` · `totalRefunded` · `balanceDue` · `paymentStatus`) τα βγάζει ΜΟΝΟ το
+  // `settleInvoicePayments`. Ένα PATCH με παλιό αντίγραφο του `payments[]` θα έσβηνε σιωπηλά πληρωμή που μόλις
+  // κατέγραψε το webhook του παρόχου (lost update).
   'payments',
   'totalPaid',
+  'totalRefunded',
   'balanceDue',
   'paymentStatus',
 ] as const;

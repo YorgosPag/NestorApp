@@ -27,6 +27,7 @@ import type { TenantContext } from '../../types/common';
 import { accountingAuditEntryOf } from '../accounting-audit-service';
 import {
   hasInvoicePayment,
+  isRefundMovement,
   settleInvoicePayments,
   type InvoicePaymentState,
 } from '../payments/invoice-payment-settlement';
@@ -53,7 +54,7 @@ function ownedInvoiceOf(data: unknown, tenant: InvoiceTenant, invoiceId: string)
 
 function paymentAuditEntry(invoiceId: string, entry: InvoicePaymentEntry, state: InvoicePaymentState) {
   const { payment } = entry;
-  const refund = payment.kind === 'refund';
+  const refund = isRefundMovement(payment);
   return accountingAuditEntryOf({
     eventType: refund ? 'PAYMENT_REFUNDED' : 'PAYMENT_RECORDED',
     entityType: 'invoice',
@@ -70,6 +71,7 @@ function paymentAuditEntry(invoiceId: string, entry: InvoicePaymentEntry, state:
       providerReference: payment.providerReference ?? null,
       checkoutId: payment.checkoutId ?? null,
       totalPaid: state.totalPaid,
+      totalRefunded: state.totalRefunded,
       balanceDue: state.balanceDue,
       paymentStatus: state.paymentStatus,
     },
