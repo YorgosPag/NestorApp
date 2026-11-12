@@ -30,7 +30,7 @@ import type { PlanReadingOutcome } from '../../bim/plan-recognition/plan-recogni
 import type { OcrText } from '../../bim/plan-recognition/ocr/ocr-engine';
 import { isOcrAssetFailure } from '../../bim/plan-recognition/ocr/ocr-asset-loader';
 import {
-  isLocalOcrOutcome, ocrTextsInView, ocrTextsToNatural, planReadingFromOcr,
+  isLocalOcrOutcome, ocrTextsToNatural, planReadingFromOcr,
 } from '../../bim/plan-recognition/ocr/ocr-reading';
 import type { PlanOcrReader } from '../../bim/plan-recognition/ocr/plan-ocr-client';
 import type { PlanOcrProgress, PlanOcrReply } from '../../bim/plan-recognition/ocr/plan-ocr-host';
@@ -87,8 +87,9 @@ export function createPlanOcrController<T>(depsOf: () => PlanOcrControllerDeps<T
   /** Η ανάγνωση των κειμένων για την όψη **αυτού** του `run` (ή `null`: άλλη αναγνώριση, ή δεν διαβάστηκε). */
   function readingFor(run: PlanRecognitionRun): PlanReadingOutcome | null {
     if (!read || !belongsToRecognition(run.id, read.rootId)) return null;
-    const texts = ocrTextsInView(read.texts, run.maskView, run.alignment.originalToAligned);
-    return { status: 'read', reading: planReadingFromOcr({ texts, toOriginal: IDENTITY_HOMOGRAPHY, model: read.model }) };
+    // Δ21 (δ): ΟΛΗ η έξοδος + η όψη ⇒ οι ταυτότητες των κειμένων δεν αλλάζουν με την περικοπή (οι διορθώσεις επιβιώνουν)
+    const view = { view: run.maskView, originalToAligned: run.alignment.originalToAligned };
+    return { status: 'read', reading: planReadingFromOcr({ texts: read.texts, toOriginal: IDENTITY_HOMOGRAPHY, model: read.model, view }) };
   }
 
   /** Τα κείμενα ⇒ ανάγνωση στη σύντηξη — εκτός αν ήδη μετρά ανάγνωση AI (προτεραιότητα, Δ5). */

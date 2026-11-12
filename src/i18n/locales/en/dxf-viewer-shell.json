@@ -504,6 +504,35 @@
           "worker-unavailable": "This browser cannot run the reading in the background.",
           "models-unavailable": "The reading models could not be downloaded or verified. Check your connection and retry.",
           "ocr-failed": "On-device reading failed. Recognition continues with the image geometry only."
+        },
+        "values": {
+          "title": "What I read",
+          "hint": "Most suspicious value first. Click a text to correct it: Enter saves, Esc cancels.",
+          "empty": "No text was read in the current view.",
+          "kind": {
+            "dimension": "dimension",
+            "room-name": "room name",
+            "area": "area",
+            "scale": "scale",
+            "title": "title",
+            "opening-size": "opening label",
+            "other": "other text"
+          },
+          "valueMm": "= {value} mm",
+          "noUnit": "unit not proven",
+          "confidence": "confidence {percent}%",
+          "status": {
+            "consistent": "agrees with the drawing",
+            "conflict": "conflicts with the drawing",
+            "uncheckable": "not checkable",
+            "unbound": "not bound to a line"
+          },
+          "deviation": "drawn − written: {value} mm",
+          "corrected": "corrected · the engine read “{raw}”",
+          "editLabel": "Correct the text “{raw}”",
+          "inputLabel": "What the drawing says",
+          "notDimension": "Not a dimension",
+          "revert": "Revert"
         }
       },
       "reading": {

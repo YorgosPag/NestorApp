@@ -148,6 +148,11 @@ export interface PlanText {
   readonly raw: string;
   readonly rect: RasterRectPx;
   readonly confidence: PlanConfidence;
+  /**
+   * ADR-929 Δ21 (δ) — τι διάβασε η **μηχανή**, όταν ο άνθρωπος διόρθωσε το κείμενο (`reading/reading-corrections.ts`).
+   * Η παρουσία του **είναι** η προέλευση «άνθρωπος» (Δ9): το `raw` λέει τι ισχύει, αυτό λέει τι διαβάστηκε.
+   */
+  readonly correctedFrom?: string;
 }
 
 /** Γραμμένη διάσταση δεμένη σε τμήματα της Φ2: ο **ισχυρός** περιορισμός του λύτη (Δ8). */

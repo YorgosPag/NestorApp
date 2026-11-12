@@ -12,6 +12,7 @@ import { rasterPixelToScene, type RasterPlacement } from '../../floorplan-backgr
 import { planConfidenceTier, type PlanConfidenceTier } from './plan-confidence';
 import { planRoleMarkKind, type PlanRoleMarkKind } from './plan-role-marks';
 import type { PlanScaleReferenceSet } from '../../bim/plan-recognition/fusion/scale-references';
+import type { RasterRectPx } from '../../types/coordinate-space';
 
 export type SceneSegment = readonly [Point2D, Point2D];
 
@@ -43,18 +44,20 @@ interface SceneScaleReferences {
   readonly rejected: readonly SceneRejectedDimension[];
 }
 
+/** Το πλαίσιο ενός κειμένου (αρχικά px) ως κλειστό τετράπλευρο στη σκηνή — κάρτα κλίμακας και «Τι διάβασα» (Δ21 (δ)). */
+export function sceneTextRing(rect: RasterRectPx, placement: RasterPlacement): readonly Point2D[] {
+  return [
+    { x: rect.minX, y: rect.minY }, { x: rect.maxX, y: rect.minY },
+    { x: rect.maxX, y: rect.maxY }, { x: rect.minX, y: rect.maxY },
+  ].map((p) => rasterPixelToScene(p, placement));
+}
+
 /** ADR-929 Φ5.3γ — οι διαστάσεις της κάρτας κλίμακας στη σκηνή (η ίδια αντιστοίχιση px → σκηνή, Δ3). */
 export function sceneScaleReferences(set: PlanScaleReferenceSet, placement: RasterPlacement): SceneScaleReferences {
   const toScene = (p: Point2D): Point2D => rasterPixelToScene(p, placement);
   return {
     used: set.used.map((r) => ({ textId: r.textId, segment: [toScene(r.a), toScene(r.b)] as const })),
-    rejected: set.rejected.map((r) => ({
-      textId: r.textId,
-      ring: [
-        { x: r.rect.minX, y: r.rect.minY }, { x: r.rect.maxX, y: r.rect.minY },
-        { x: r.rect.maxX, y: r.rect.maxY }, { x: r.rect.minX, y: r.rect.maxY },
-      ].map(toScene),
-    })),
+    rejected: set.rejected.map((r) => ({ textId: r.textId, ring: sceneTextRing(r.rect, placement) })),
   };
 }
 

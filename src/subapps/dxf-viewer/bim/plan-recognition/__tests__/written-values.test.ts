@@ -93,3 +93,19 @@ describe('ένα SSoT — η ακρίβεια της σύντηξης διαβά
     }
   });
 });
+
+describe('ADR-929 Δ21 (ε) — «μ.μ.» = μέτρα· «μμ» χωρίς τελείες ΔΕΝ γίνεται δεκτό', () => {
+  it.each([['4,12 μ.μ.', 4120], ['2.05μ.μ', 2050], ['4.12 Μ.Μ.', 4120]] as const)('«%s» ⇒ %d mm, μέτρα, διάσταση', (raw, valueMm) => {
+    const got = parseDimensionValue(raw, null);
+    expect(got?.unit).toBe('m');
+    expect(got?.valueMm).toBeCloseTo(valueMm, 6);
+    expect(classifyWrittenText(raw)).toBe('dimension');
+  });
+  it.each(['4,12 μμ', '412μμ'])('«%s» ⇒ καμία τιμή, όχι διάσταση (σύγχυση με χιλιοστά)', (raw) => {
+    expect(parseDimensionValue(raw, 'cm')).toBeNull();
+    expect(classifyWrittenText(raw)).toBe('other');
+  });
+  it('«μ.μ.» στο σχέδιο ⇒ οι σκέτοι ακέραιοι γίνονται εκατοστά (ο ΙΔΙΟΣ κανόνας)', () => {
+    expect(writtenLengthsMm(['4,12 μ.μ.', '20'])).toEqual([4120, 200]);
+  });
+});

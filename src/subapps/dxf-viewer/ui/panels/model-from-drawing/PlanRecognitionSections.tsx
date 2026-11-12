@@ -32,6 +32,7 @@ import type { WallEvidenceExclusions } from '../../../systems/plan-recognition/p
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 import type { PlanScaleView } from './PlanScaleCard';
 import type { PlanOcrView } from './PlanOcrSection';
+import type { PlanReadValueRow } from '../../../systems/plan-recognition/plan-read-values';
 
 /** Ό,τι χρειάζεται το πάνελ για την πηγή εικόνα — υπολογισμένο από τον host. */
 export interface ImageSourceView {
@@ -59,6 +60,8 @@ export interface ImageSourceView {
   readonly scale: PlanScaleView;
   /** ADR-929 Φ0.6 — η τοπική ανάγνωση τιμών (OCR στη συσκευή). */
   readonly ocr: PlanOcrView;
+  /** ADR-929 Δ21 (δ) — η λίστα «Τι διάβασα» (η πιο ύποπτη πρώτη)· `null` = καμία ανάγνωση στη σύντηξη. */
+  readonly readValues: readonly PlanReadValueRow[] | null;
 }
 
 /** Κάθε αποτυχία με ΡΗΤΟ κλειδί (CHECK 3.8). */

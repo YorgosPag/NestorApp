@@ -13,6 +13,9 @@
  *   του είναι η **προέλευση** (Δ9) που ξεχωρίζει την τοπική ανάγνωση από του VLM (`isLocalOcrOutcome`).
  * 🔑 ADR-929 Φ0.6 — **ακολουθεί την όψη**: μετρούν μόνο τα κείμενα που το κέντρο τους πέφτει στην όψη του ανθρώπου
  *   (`ocrTextsInView`, ο ΙΔΙΟΣ κανόνας με τα τμήματα — `isInReadingView`). Η ανάγνωση ξαναπαράγεται, δεν σβήνεται.
+ * 🔑 ADR-929 Δ21 (δ) — **η ταυτότητα ενός κειμένου δεν εξαρτάται από την όψη**: το `t<N>` είναι η θέση του στην **πλήρη**
+ *   έξοδο του OCR (χωρίς τα κενά), και το φίλτρο της όψης εφαρμόζεται **μετά**. Αλλιώς μια αλλαγή περικοπής θα αριθμούσε
+ *   ξανά τα κείμενα και μια διόρθωση του ανθρώπου θα έπεφτε σε άλλο κείμενο.
  *
  * @module bim/plan-recognition/ocr/ocr-reading
  */
@@ -39,6 +42,14 @@ export interface OcrReadingInput {
   readonly toOriginal: Homography;
   /** `localOcrModelId(resolveOcrAssets())`. */
   readonly model: string;
+  /** Φ0.6 — η όψη του ανθρώπου· λείπει ⇒ όλα τα κείμενα. Το φίλτρο μπαίνει **μετά** την αρίθμηση (Δ21 (δ)). */
+  readonly view?: OcrReadingViewFilter;
+}
+
+/** Η όψη (crop + απόκρυψη) και η ομογραφία αρχικά → ευθυγραμμισμένα px με την οποία κρίνεται. */
+export interface OcrReadingViewFilter {
+  readonly view: PlanReadingView | undefined;
+  readonly originalToAligned: Homography;
 }
 
 /** Ο φάκελος του μοντέλου μέσα στη διαδρομή του (`/models/ocr/<όνομα>@<revision>/inference.onnx`). */
@@ -92,16 +103,18 @@ export function ocrTextsInView(
   });
 }
 
-function toPlanTexts(texts: readonly OcrText[], toOriginal: Homography): PlanText[] {
-  return texts
-    .filter((t) => t.text.trim() !== '')
-    .map((t, i) => ({
-      id: `t${i + 1}`,
-      kind: classifyWrittenText(t.text),
-      raw: t.text,
-      rect: rasterBoundsOf(t.polygon.map((p) => alignedPointToOriginal(p, toOriginal))),
-      confidence: readingConfidence(t.recScore),
-    }));
+/** Αριθμεί στην πλήρη λίστα (χωρίς κενά), κρατά όσα είναι στην όψη: ίδιο κείμενο ⇒ ίδιο `id` σε κάθε όψη. */
+function toPlanTexts(input: OcrReadingInput): PlanText[] {
+  const numbered = input.texts.filter((t) => t.text.trim() !== '');
+  const { view } = input;
+  const inView = view ? new Set(ocrTextsInView(numbered, view.view, view.originalToAligned)) : null;
+  return numbered.flatMap((t, i) => (inView !== null && !inView.has(t) ? [] : [{
+    id: `t${i + 1}`,
+    kind: classifyWrittenText(t.text),
+    raw: t.text,
+    rect: rasterBoundsOf(t.polygon.map((p) => alignedPointToOriginal(p, input.toOriginal))),
+    confidence: readingConfidence(t.recScore),
+  }]));
 }
 
 function dimensionsOf(texts: readonly PlanText[]): PlanDimension[] {
@@ -126,7 +139,7 @@ function writtenScaleOf(texts: readonly PlanText[]): PlanWrittenScale | null {
 
 /** Τα κείμενα του OCR ⇒ μία ανάγνωση στα **αρχικά** px. Καθαρή συνάρτηση. */
 export function planReadingFromOcr(input: OcrReadingInput): PlanReading {
-  const texts = toPlanTexts(input.texts, input.toOriginal);
+  const texts = toPlanTexts(input);
   return {
     model: input.model,
     schemaVersion: OCR_READING_SCHEMA_VERSION,

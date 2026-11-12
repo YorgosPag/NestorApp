@@ -32,7 +32,11 @@ import type { ImageSourceView } from '../ui/panels/model-from-drawing/PlanRecogn
 import type { PlanReadingActions } from '../ui/panels/model-from-drawing/PlanReadingSections';
 import type { PlanScaleActions, PlanScaleView } from '../ui/panels/model-from-drawing/PlanScaleCard';
 import type { PlanOcrActions, PlanOcrView } from '../ui/panels/model-from-drawing/PlanOcrSection';
+import type { PlanReadValuesActions } from '../ui/panels/model-from-drawing/PlanReadValuesSection';
 import { isLocalOcrOutcome } from '../bim/plan-recognition/ocr/ocr-reading';
+import { applyReadingCorrectionsToOutcome } from '../bim/plan-recognition/reading/reading-corrections';
+import type { PlanReadingOutcome } from '../bim/plan-recognition/plan-recognition-types';
+import { planReadValueRows, type PlanReadValueRow } from '../systems/plan-recognition/plan-read-values';
 import { usePlanScaleWiring } from './usePlanScaleWiring';
 
 export interface PlanRecognitionWiring {
@@ -44,6 +48,8 @@ export interface PlanRecognitionWiring {
   readonly scale: PlanScaleActions;
   /** ADR-929 Φ0.6 — η τοπική ανάγνωση τιμών: «Ακύρωση» · «Ξανά». */
   readonly ocr: PlanOcrActions;
+  /** ADR-929 Δ21 (δ) — «Τι διάβασα»: διόρθωση · «δεν είναι διάσταση» · επαναφορά · επισήμανση. */
+  readonly readValues: PlanReadValuesActions;
 }
 
 /** Σταθερή ταυτότητα σε κάθε render: οι πράξεις πάνε κατευθείαν στον έναν ελεγκτή. */
@@ -52,14 +58,44 @@ const OCR_ACTIONS: PlanOcrActions = {
   onRetry: () => planRecognitionSession.ocr.retry(),
 };
 
-/** ADR-929 Φ0.6 — η όψη της τοπικής ανάγνωσης: μετρά στη σύντηξη; και τι, στην τρέχουσα όψη. */
-function ocrViewOf(recognition: PlanRecognitionState): PlanOcrView {
-  const { reading, ocr } = recognition;
+/**
+ * ADR-929 Δ21 (δ) — οι διορθώσεις πάνε κατευθείαν στον έναν ελεγκτή· η νέα πηγή γραμμών έρχεται από το `onLineSource`,
+ * όπως στην επανεξαγωγή. Σταθερή ταυτότητα σε κάθε render.
+ */
+const READ_VALUES_ACTIONS: PlanReadValuesActions = {
+  onCorrect: (textId, raw) => { planRecognitionSession.corrections.correct(textId, raw); },
+  onMarkNotDimension: (textId) => { planRecognitionSession.corrections.markNotDimension(textId); },
+  onRevert: (textId) => { planRecognitionSession.corrections.revert(textId); },
+  onHover: (textId) => planRecognitionSession.corrections.hover(textId),
+};
+
+/** ADR-929 Φ0.6 — η όψη της τοπικής ανάγνωσης: μετρά στη σύντηξη; και τι, στην τρέχουσα όψη (με τις διορθώσεις). */
+function ocrViewOf(recognition: PlanRecognitionState, reading: PlanReadingOutcome | null): PlanOcrView {
+  const { ocr } = recognition;
   const inUse = isLocalOcrOutcome(reading);
   const counts = inUse && reading?.status === 'read'
     ? { texts: reading.reading.texts.length, dimensions: reading.reading.dimensions.length }
     : null;
   return { state: ocr, inUse, counts };
+}
+
+/**
+ * ADR-929 Δ21 (δ) — η ανάγνωση που ισχύει (της μηχανής + οι διορθώσεις του ανθρώπου, η ίδια που μπήκε στη σύντηξη) και οι
+ * γραμμές της λίστας «Τι διάβασα».
+ */
+function useReadValues(recognition: PlanRecognitionState): {
+  readonly effectiveReading: PlanReadingOutcome | null;
+  readonly readValues: readonly PlanReadValueRow[] | null;
+} {
+  const { reading, readingCorrections, fusion } = recognition;
+  const effectiveReading = React.useMemo(
+    () => applyReadingCorrectionsToOutcome(reading, readingCorrections),
+    [reading, readingCorrections],
+  );
+  const readValues = React.useMemo((): readonly PlanReadValueRow[] | null => (
+    effectiveReading?.status === 'read' ? planReadValueRows(effectiveReading.reading, fusion) : null
+  ), [effectiveReading, fusion]);
+  return { effectiveReading, readValues };
 }
 
 /** Η όψη του πάνελ για την πηγή εικόνα. */
@@ -70,6 +106,7 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
   const sourceFloorId = state.lineSource.kind === 'raster' ? state.lineSource.floorId : null;
   const sourceCalibrated = useFloorplanBackgroundStore((s) =>
     (sourceFloorId ? (s.floors[sourceFloorId]?.background?.calibration ?? null) !== null : false));
+  const { effectiveReading, readValues } = useReadValues(recognition);
   const { counts, excludedFromWalls } = React.useMemo(() => {
     const { run, fusion } = recognition;
     if (!run || !fusion) return { counts: null, excludedFromWalls: NO_WALL_EVIDENCE_EXCLUSIONS };
@@ -93,7 +130,8 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
     readingAdopted: recognition.reading !== null && !isLocalOcrOutcome(recognition.reading),
     review: recognition.review,
     scale,
-    ocr: ocrViewOf(recognition),
+    ocr: ocrViewOf(recognition, effectiveReading),
+    readValues,
   };
 }
 
@@ -151,5 +189,5 @@ export function usePlanRecognitionWiring(
   );
 
   const reading = usePlanReadingActions(getDeps);
-  return { imageSource, recognizeImage, reading, scale: scale.actions, ocr: OCR_ACTIONS };
+  return { imageSource, recognizeImage, reading, scale: scale.actions, ocr: OCR_ACTIONS, readValues: READ_VALUES_ACTIONS };
 }

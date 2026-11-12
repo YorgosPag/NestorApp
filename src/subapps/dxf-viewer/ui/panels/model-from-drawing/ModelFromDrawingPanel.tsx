@@ -56,6 +56,7 @@ import {
 import { ImageSourceStart, ImageSourceSummary, type ImageSourceView } from './PlanRecognitionSections';
 import { PlanReadingSection, type PlanReadingActions } from './PlanReadingSections';
 import { PlanOcrSection, type PlanOcrActions } from './PlanOcrSection';
+import { PlanReadValuesSection, type PlanReadValuesActions } from './PlanReadValuesSection';
 import { PlanScaleCardSection, type PlanScaleActions } from './PlanScaleCard';
 
 export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
@@ -75,6 +76,8 @@ export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
   readonly scale: PlanScaleActions;
   /** ADR-929 Φ0.6 — η τοπική ανάγνωση τιμών: «Ακύρωση» · «Ξανά». */
   readonly ocr: PlanOcrActions;
+  /** ADR-929 Δ21 (δ) — «Τι διάβασα»: διόρθωση τιμής · «δεν είναι διάσταση» · επαναφορά · επισήμανση. */
+  readonly readValues: PlanReadValuesActions;
 }
 
 export interface ModelFromDrawingPanelProps {
@@ -184,6 +187,7 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
         ? <ImageSourceSummary view={imageSource} onResample={actions.onResample} t={t} />
         : <SceneSampleLine colorHex={state.wallColorHex} onResample={actions.onResample} t={t} />}
       {fromImage ? <PlanOcrSection view={imageSource.ocr} actions={actions.ocr} t={t} /> : null}
+      {fromImage ? <PlanReadValuesSection rows={imageSource.readValues} actions={actions.readValues} t={t} /> : null}
       {fromImage
         ? <PlanReadingSection available={imageSource.readingAvailable} readingAdopted={imageSource.readingAdopted} review={imageSource.review} actions={actions.reading} t={t} />
         : null}

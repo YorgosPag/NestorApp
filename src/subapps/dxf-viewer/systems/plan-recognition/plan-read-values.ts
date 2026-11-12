@@ -1,0 +1,76 @@
+/**
+ * ADR-929 Δ21 (δ) — οι γραμμές της λίστας **«Τι διάβασα»**: κάθε κείμενο της ανάγνωσης που ισχύει (μηχανή + διορθώσεις),
+ * με ό,τι χρειάζεται ο άνθρωπος για να κρίνει: όπως διαβάστηκε · ερμηνεία (τιμή σε mm ή είδος) · βεβαιότητα ανάγνωσης ·
+ * κατάσταση στη σύντηξη · απόκλιση σχεδίου από γραμμένο · υπόλοιπο Baarda.
+ *
+ * 🔑 **Πιο ύποπτη πρώτη** (ο άνθρωπος ελέγχει από πάνω προς τα κάτω):
+ *   1. σύγκρουση στη συνόρθωση (ο Baarda την απέρριψε) ·
+ *   2. διάσταση χωρίς δέση, ή κείμενο-διάσταση χωρίς τιμή (η μονάδα δεν αποδεικνύεται) ·
+ *   3. οι υπόλοιπες διαστάσεις ·
+ *   4. τα άλλα κείμενα.
+ *   Μέσα σε κάθε ομάδα: μεγαλύτερο |w| πρώτα, μετά χαμηλότερη βεβαιότητα ανάγνωσης, μετά η σειρά της ανάγνωσης.
+ * 🔑 Τα δεδομένα υπάρχουν ήδη (`PlanReading` + `FusedDimension`): εδώ μόνο συνδυάζονται, τίποτα δεν υπολογίζεται ξανά.
+ *
+ * ΚΑΘΑΡΟ — zero React/DOM/store.
+ */
+
+import type { FusedDimension, FusedDimensionStatus, PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
+import type { PlanReading, PlanText, PlanTextKind } from '../../bim/plan-recognition/plan-recognition-types';
+
+export interface PlanReadValueRow {
+  readonly textId: string;
+  /** Το κείμενο που ισχύει (διορθωμένο ή όπως το διάβασε η μηχανή). */
+  readonly raw: string;
+  /** Τι διάβασε η μηχανή, όταν ο άνθρωπος το διόρθωσε· `null` = όπως διαβάστηκε. */
+  readonly correctedFrom: string | null;
+  readonly kind: PlanTextKind;
+  /** Η τιμή σε mm, αν το κείμενο έγινε περιορισμός του λύτη. */
+  readonly valueMm: number | null;
+  /** Βεβαιότητα ανάγνωσης στο [0, 1]. */
+  readonly confidence: number;
+  /** Η κατάσταση στη σύντηξη· `null` = δεν μπήκε ως διάσταση. */
+  readonly status: FusedDimensionStatus | null;
+  /** Σχεδιασμένο μείον γραμμένο, σε mm· `null` όταν δεν μετρήθηκε. */
+  readonly deviationMm: number | null;
+  /** Τυποποιημένο υπόλοιπο Baarda· `null` όταν δεν ελέγχεται. */
+  readonly w: number | null;
+}
+
+/** Ομάδα υποψίας: μικρότερη = πιο ύποπτη. */
+function suspicionGroup(row: PlanReadValueRow): number {
+  if (row.status === 'conflict') return 0;
+  if (row.status === 'unbound' || (row.kind === 'dimension' && row.valueMm === null)) return 1;
+  if (row.kind === 'dimension') return 2;
+  return 3;
+}
+
+function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | undefined): PlanReadValueRow {
+  const measured = fused?.measuredMm ?? null;
+  return {
+    textId: text.id,
+    raw: text.raw,
+    correctedFrom: text.correctedFrom ?? null,
+    kind: text.kind,
+    valueMm,
+    confidence: text.confidence.score,
+    status: fused?.status ?? null,
+    deviationMm: measured !== null && valueMm !== null ? measured - valueMm : null,
+    w: fused?.w ?? null,
+  };
+}
+
+/** Οι γραμμές της λίστας, η πιο ύποπτη πρώτη. `reading` = η ανάγνωση που ισχύει (με τις διορθώσεις). */
+export function planReadValueRows(reading: PlanReading, fusion: Pick<PlanFusionResult, 'dimensions'> | null): PlanReadValueRow[] {
+  const valueById = new Map(reading.dimensions.map((d) => [d.textId, d.valueMm]));
+  const fusedById = new Map((fusion?.dimensions ?? []).map((d) => [d.textId, d]));
+  const rows = reading.texts.map((t, order) => ({
+    order,
+    row: rowOf(t, valueById.get(t.id) ?? null, fusedById.get(t.id)),
+  }));
+  rows.sort((a, b) =>
+    suspicionGroup(a.row) - suspicionGroup(b.row)
+    || Math.abs(b.row.w ?? 0) - Math.abs(a.row.w ?? 0)
+    || a.row.confidence - b.row.confidence
+    || a.order - b.order);
+  return rows.map((r) => r.row);
+}

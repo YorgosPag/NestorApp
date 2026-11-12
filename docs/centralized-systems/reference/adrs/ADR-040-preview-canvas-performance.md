@@ -113,6 +113,13 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-11-12 — Νέο φύλλο: επισήμανση κειμένου της λίστας «Τι διάβασα» (ADR-929 Δ21 (δ))
+
+- `components/dxf-layout/PlanReadValueHoverOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` αμέσως **μετά** το `PlanScaleReferencesOverlay`. Πλαίσιο γύρω από το κείμενο της γραμμής της λίστας «Τι διάβασα» που δείχνει ο άνθρωπος (`readHoverTextId` στο χαμηλόσυχνο store αναγνώρισης, μία εγγραφή ανά αλλαγή γραμμής, ποτέ ανά καρέ).
+- Gate-at-mount: ο εξωτερικός ακούει μόνο χαμηλόσυχνα stores (αναγνώριση · υπόβαθρο του ορόφου) και επιστρέφει `null` όταν δεν δείχνεται κείμενο· ο εσωτερικός κάνει το **ένα** υψίσυχνο hook (`useTransformValue`). Το πλαίσιο σκηνής υπολογίζεται μία φορά ανά (κείμενο, τοποθέτηση) με `useMemo`· ανά transform μόνο η προβολή. Read-only, `pointer-events-none`. Σημάδι από τα υπάρχοντα `PLAN_CONFIDENCE_MARKS` (CHECK 3.41).
+- Το πλαίσιο σκηνής από το κοινό `sceneTextRing` (`systems/plan-recognition/plan-overlay-geometry.ts`), που χρησιμοποιεί πλέον και το `sceneScaleReferences` (ίδια γεωμετρία, ένα σημείο).
+- Το κέλυφος (`CanvasSection` / `CanvasLayerStack`) δεν άλλαξε· καμία νέα `useSyncExternalStore` σε orchestrator.
+
 ### 2026-11-07 — Εντολή «Περιοχή»: το είδος φεύγει από τα props του κελύφους (ADR-933)
 
 - `CanvasSection`: αφαιρέθηκε το prop `currentKind` (το `NormalView`/`FullscreenView` περνούσαν καρφωμένο `"property"`). Το είδος της νέας περιοχής διαβάζεται **τη στιγμή της αποθήκευσης** από το `overlayDrawSettingsStore.get()` μέσα στο `commitOverlayPolygon` (κανόνας #2) — καμία νέα συνδρομή στο κέλυφος.

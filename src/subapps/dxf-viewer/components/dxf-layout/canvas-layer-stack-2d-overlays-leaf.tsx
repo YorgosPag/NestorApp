@@ -24,6 +24,7 @@ import { TopoAutoBreaklinePreviewOverlay } from './TopoAutoBreaklinePreviewOverl
 import { ModelFromDrawingPreviewOverlay } from './ModelFromDrawingPreviewOverlay';
 import { PlanRecognitionOverlay } from './PlanRecognitionOverlay';
 import { PlanScaleReferencesOverlay } from './PlanScaleReferencesOverlay';
+import { PlanReadValueHoverOverlay } from './PlanReadValueHoverOverlay';
 import { PlanReadingViewOverlay } from './PlanReadingViewOverlay';
 import type { Viewport } from '../../rendering/types/Types';
 
@@ -71,6 +72,10 @@ export function CanvasLayerStack2DOverlays({ viewport }: CanvasLayerStack2DOverl
           την κλίμακα, πλαίσια όσων έμειναν έξω, τονισμένη όποια δείχνει ο άνθρωπος στην κάρτα. Self-subscribes
           στο LOW-freq store αναγνώρισης· read-only, pointer-events-none. STAGE ADR-040 + ADR-929. */}
       <PlanScaleReferencesOverlay viewport={viewport} />
+      {/* ADR-929 Δ21 (δ) — πλαίσιο γύρω από το κείμενο της γραμμής «Τι διάβασα» που δείχνει ο άνθρωπος.
+          Gate-at-mount στο LOW-freq store αναγνώρισης (μόνο όσο δείχνεται κείμενο)· ένα υψίσυχνο hook
+          (transform) στον εσωτερικό. Read-only, pointer-events-none. STAGE ADR-040 + ADR-929. */}
+      <PlanReadValueHoverOverlay viewport={viewport} />
       {/* ADR-911 Φ3β — προτεινόμενοι τοίχοι του βοηθού «Μοντέλο από το σχέδιο» υπό έγκριση:
           τέσσερις καταστάσεις, τέσσερα μοτίβα γραμμής. Self-subscribes στο LOW-freq store της
           συνεδρίας· read-only, pointer-events-none. STAGE ADR-040 + ADR-911. */}

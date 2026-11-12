@@ -9,6 +9,9 @@
  * ADR-929 Φ0.6 — μόλις η αναγνώριση γίνει `ready`, η **τοπική ανάγνωση** (OCR στη συσκευή) ξεκινά μόνη της στο παρασκήνιο
  * και μπαίνει από την ΙΔΙΑ πόρτα (`adoptReading`) με την ανάγνωση AI — κανένας δεύτερος δρόμος (`plan-ocr-controller.ts`).
  *
+ * ADR-929 Δ21 (δ) — οι **διορθώσεις τιμών** του ανθρώπου εφαρμόζονται σε **ένα** σημείο, τη `fuse` αυτού του αρχείου, που
+ * τη μοιράζονται όλοι οι υπο-ελεγκτές (όψη · κλίμακα · διορθώσεις): καμία σύντηξη δεν τις προσπερνά. Νέα ανάγνωση ⇒ σβήνουν.
+ *
  * 🔒 Τίποτα εδώ δεν γράφει στη σκηνή ή στον διακομιστή. Οι τοίχοι γράφονται μόνο από την έγκριση του ADR-911.
  * 🔑 Αγώνας: κάθε `run` παίρνει σειριακό αριθμό· αποτέλεσμα παλαιότερου `run` που τελειώνει αργότερα **αγνοείται**.
  *
@@ -43,6 +46,12 @@ import { createPlanOcrReader, type PlanOcrReader } from '../../bim/plan-recognit
 import { resolveOcrAssets } from '../../bim/plan-recognition/ocr/ocr-model-assets';
 import { localOcrModelId } from '../../bim/plan-recognition/ocr/ocr-reading';
 import { createPlanOcrController, type PlanOcrControllerDeps } from './plan-ocr-controller';
+import {
+  applyReadingCorrectionsToOutcome,
+  NO_READING_CORRECTIONS,
+  type PlanReadingCorrections,
+} from '../../bim/plan-recognition/reading/reading-corrections';
+import { createPlanReadingCorrectionsController, type PlanReadingCorrectionsDeps } from './plan-reading-corrections';
 
 export type RasterLineSource = Extract<ProposalLineSource, { kind: 'raster' }>;
 
@@ -66,17 +75,25 @@ function inputKindOf(background: FloorplanBackground, alignment: PlanAlignment):
   return background.providerId === 'pdf-page' ? 'multipage-pdf' : alignment.binarization;
 }
 
-function fuse(run: PlanRecognitionRun, reading: PlanReadingOutcome | null): PlanFusionResult {
+/** Η σύντηξη με **ρητές** διορθώσεις του ανθρώπου πάνω στην ανάγνωση της μηχανής (Δ21 (δ)). */
+function fuseWith(
+  run: PlanRecognitionRun, reading: PlanReadingOutcome | null, corrections: PlanReadingCorrections,
+): PlanFusionResult {
   return fusePlan({
     kind: run.kind,
     alignment: run.alignment,
     segments: run.segments,
-    reading,
+    reading: applyReadingCorrectionsToOutcome(reading, corrections),
     knownScale: run.knownScale,
     sourceDpi: null,
     segmentRoles: segmentRoleMap(run.segmentRoles ?? []),
     extensionAnchors: extensionAnchorMap(run.segmentRoles ?? []),
   });
+}
+
+/** Η σύντηξη με τις διορθώσεις που ισχύουν τώρα — η ΜΙΑ που μοιράζονται όψη, κλίμακα και ανάγνωση. */
+function fuse(run: PlanRecognitionRun, reading: PlanReadingOutcome | null): PlanFusionResult {
+  return fuseWith(run, reading, planRecognitionStore.get().readingCorrections);
 }
 
 /** Ό,τι διαβάζει η πολιτική «είσοδος τοίχων» από τη σύντηξη — τίποτα άλλο. */
@@ -178,13 +195,14 @@ const segmentMask = createPlanSegmentMaskController<RasterLineSource>(() => mask
 /**
  * ADR-929 Φ5.3β — η ανάγνωση μπαίνει στη σύντηξη: ξανατρέχει **μόνο** η `fusePlan` (καθαρή, χωρίς Worker), με νέα έκδοση
  * πηγής γραμμών. Ο σειριακός έλεγχος (`run` ίδιο με εκείνο της αποστολής) γίνεται στον ελεγκτή της όψης. Νέα ανάγνωση ⇒
- * η αναίρεση του σβησίματος της παλιάς (§6.10 Α2) δεν σημαίνει πια τίποτα.
+ * η αναίρεση του σβησίματος της παλιάς (§6.10 Α2) δεν σημαίνει πια τίποτα — ούτε οι διορθώσεις της (Δ21 (δ)): τα `id`
+ * κειμένων μιας νέας ανάγνωσης δεν μιλούν για τα ίδια κείμενα.
  */
 function adoptReading(outcome: PlanReadingOutcome): RasterLineSource | null {
   const { run } = planRecognitionStore.get();
   if (!run) return null;
-  const fusion = fuse(run, outcome);
-  planRecognitionStore.patch({ reading: outcome, fusion });
+  const fusion = fuseWith(run, outcome, NO_READING_CORRECTIONS);
+  planRecognitionStore.patch({ reading: outcome, fusion, readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null });
   segmentMask.forgetReadingUndo();
   return nextLineSource(run, fusion);
 }
@@ -215,6 +233,14 @@ let ocrDeps = DEFAULT_OCR_DEPS;
 /** ADR-929 Φ0.6 — η τοπική ανάγνωση στο παρασκήνιο — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
 const ocrController = createPlanOcrController<RasterLineSource>(() => ocrDeps);
 
+/** ADR-929 Δ21 (δ) — οι διορθώσεις τιμών του ανθρώπου — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
+const CORRECTIONS_DEPS: PlanReadingCorrectionsDeps<RasterLineSource> = {
+  fuse: fuseWith,
+  lineSource: nextLineSource,
+  publish: publishLineSource,
+};
+const readingCorrections = createPlanReadingCorrectionsController<RasterLineSource>(() => CORRECTIONS_DEPS);
+
 /** Ο έλεγχος της όψης πριν την αποστολή — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
 const readingReview = createPlanReadingReview<RasterLineSource>(() => reviewDeps);
 
@@ -242,6 +268,7 @@ function fail(failure: PlanRecognitionFailure): null {
   ocrController.reset();
   planRecognitionStore.patch({
     phase: 'idle', run: null, fusion: null, reading: null, failure, scaleHoverTextId: null, ocr: OCR_IDLE,
+    readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null,
   });
   return null;
 }
@@ -282,6 +309,7 @@ export const planRecognitionSession = {
     segmentMask.track(run, knownScale);
     planRecognitionStore.patch({
       phase: 'ready', run, reading: null, fusion, failure: null, scaleHoverTextId: null, ocr: OCR_IDLE,
+      readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null,
     });
     void ocrController.start(run); // Φ0.6: αυτόματα, στο παρασκήνιο — τίποτα δεν φεύγει από τη συσκευή
     return nextLineSource(run, fusion);
@@ -320,6 +348,12 @@ export const planRecognitionSession = {
    * ADR-929 Φ0.6 — η τοπική ανάγνωση που ξεκινά μόνη της μετά την αναγνώριση: `cancel` («Ακύρωση») · `retry` («Ξανά»).
    */
   ocr: { cancel: () => ocrController.cancel(), retry: () => ocrController.retry() },
+
+  /**
+   * ADR-929 Δ21 (δ) — η λίστα «Τι διάβασα»: `correct` (διόρθωση τιμής) · `markNotDimension` · `revert` · `hover`. Κάθε
+   * αλλαγή ξανατρέχει μόνο τη σύντηξη και δίνει νέα πηγή γραμμών από το `onLineSource`.
+   */
+  corrections: readingCorrections,
 
   /** Κλείσιμο: σβήνει το αποτέλεσμα, ακυρώνει ό,τι τρέχει, τερματίζει τους Workers. */
   close(): void {

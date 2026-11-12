@@ -11,7 +11,8 @@
  * ⚠️ ΕΝΑΣ γραφέας: `plan-recognition-session.ts` (μαζί με τα υπο-modules του: `plan-reading-review.ts` ως
  *   `planRecognitionSession.review` — ADR-929 Φ5.3β · `plan-scale-controller.ts` ως `planRecognitionSession.scale` — Φ5.3γ ·
  *   `plan-segment-mask-controller.ts`, οι τοίχοι που ακολουθούν την όψη, μέσω του `review` — §6.10 Α2 ·
- *   `plan-ocr-controller.ts` ως `planRecognitionSession.ocr`, η τοπική ανάγνωση — Φ0.6).
+ *   `plan-ocr-controller.ts` ως `planRecognitionSession.ocr`, η τοπική ανάγνωση — Φ0.6 ·
+ *   `plan-reading-corrections.ts` ως `planRecognitionSession.corrections`, οι διορθώσεις τιμών — Δ21 (δ)).
  *
  * @see ./plan-recognition-session.ts
  * @see ../../components/dxf-layout/PlanRecognitionOverlay.tsx (καταναλωτής καμβά)
@@ -30,6 +31,7 @@ import type {
 } from '../../bim/plan-recognition/plan-recognition-types';
 import type { PlanReadingView, PlanViewSegment } from '../../bim/plan-recognition/reading/plan-reading-view';
 import type { PlanReadingPreflightResult } from '../../bim/plan-recognition/reading/plan-reading-contract';
+import { NO_READING_CORRECTIONS, type PlanReadingCorrections } from '../../bim/plan-recognition/reading/reading-corrections';
 import type { RasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
 
 /** `idle` — καμία αναγνώριση · `running` — ευθυγράμμιση/τμήματα σε εξέλιξη · `ready` — υπάρχει αποτέλεσμα. */
@@ -172,7 +174,10 @@ export const OCR_IDLE: PlanOcrState = { status: 'idle' };
 export interface PlanRecognitionState {
   readonly phase: PlanRecognitionPhase;
   readonly run: PlanRecognitionRun | null;
-  /** `null` = δεν ζητήθηκε ανάγνωση (η γεωμετρία μόνη της, Δ15 #1). */
+  /**
+   * `null` = δεν ζητήθηκε ανάγνωση (η γεωμετρία μόνη της, Δ15 #1). Η ανάγνωση της **μηχανής**· ό,τι μετρά είναι αυτή μαζί
+   * με τα `readingCorrections` (`applyReadingCorrectionsToOutcome`), και έτσι μπαίνει στη σύντηξη.
+   */
   readonly reading: PlanReadingOutcome | null;
   readonly fusion: PlanFusionResult | null;
   readonly failure: PlanRecognitionFailure | null;
@@ -182,10 +187,15 @@ export interface PlanRecognitionState {
   readonly scaleHoverTextId: string | null;
   /** ADR-929 Φ0.6 — η τοπική ανάγνωση που τρέχει αυτόματα μετά την αναγνώριση. */
   readonly ocr: PlanOcrState;
+  /** ADR-929 Δ21 (δ) — οι διορθώσεις του ανθρώπου στην ανάγνωση· σβήνουν σε νέα αναγνώριση ή νέα ανάγνωση. */
+  readonly readingCorrections: PlanReadingCorrections;
+  /** ADR-929 Δ21 (δ) — το κείμενο που δείχνει ο άνθρωπος στη λίστα «Τι διάβασα» (επισήμανση στον καμβά). */
+  readonly readHoverTextId: string | null;
 }
 
 const IDLE: PlanRecognitionState = {
   phase: 'idle', run: null, reading: null, fusion: null, failure: null, review: null, scaleHoverTextId: null, ocr: OCR_IDLE,
+  readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null,
 };
 
 const store = createExternalStore<PlanRecognitionState>(IDLE, { equals: Object.is });
