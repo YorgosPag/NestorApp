@@ -38,6 +38,8 @@ import { applyReadingCorrectionsToOutcome } from '../bim/plan-recognition/readin
 import type { PlanReadingOutcome } from '../bim/plan-recognition/plan-recognition-types';
 import { planReadValueRows, type PlanReadValueRow } from '../systems/plan-recognition/plan-read-values';
 import { usePlanScaleWiring } from './usePlanScaleWiring';
+import { focusReviewTarget, reviewFocusExtent } from '../systems/coordination/review-focus';
+import { ASSISTANT_FOCUS_PAD_MM } from '../systems/model-from-drawing/assistant-focus';
 
 export interface PlanRecognitionWiring {
   readonly imageSource: ImageSourceView;
@@ -59,6 +61,16 @@ const OCR_ACTIONS: PlanOcrActions = {
 };
 
 /**
+ * ADR-929 Δ21 (δ) βήμα 2 — «Εστίαση στην πηγή»: η όψη πάει στο κείμενο με το ΕΝΑ SSoT εστίασης ελέγχου (`review-focus`,
+ * ίδιο με τα στοιχεία της πρότασης): το πρώτο άλμα της ανάγνωσης πλαισιώνει, τα επόμενα μόνο κεντράρουν.
+ */
+function focusReadValueSource(textId: string): void {
+  const target = planRecognitionSession.corrections.focusTarget(textId);
+  const extent = target ? reviewFocusExtent(target.points, ASSISTANT_FOCUS_PAD_MM) : null;
+  if (target && extent) focusReviewTarget(extent, () => null, target.preserveZoom);
+}
+
+/**
  * ADR-929 Δ21 (δ) — οι διορθώσεις πάνε κατευθείαν στον έναν ελεγκτή· η νέα πηγή γραμμών έρχεται από το `onLineSource`,
  * όπως στην επανεξαγωγή. Σταθερή ταυτότητα σε κάθε render.
  */
@@ -69,6 +81,7 @@ const READ_VALUES_ACTIONS: PlanReadValuesActions = {
   onConfirm: (textId) => { planRecognitionSession.corrections.confirm(textId); },
   onHover: (textId) => planRecognitionSession.corrections.hover(textId),
   previewCorrection: (textId, raw) => planRecognitionSession.corrections.preview(textId, raw),
+  onFocusSource: focusReadValueSource,
 };
 
 /** ADR-929 Φ0.6 — η όψη της τοπικής ανάγνωσης: μετρά στη σύντηξη; και τι, στην τρέχουσα όψη (με τις διορθώσεις). */

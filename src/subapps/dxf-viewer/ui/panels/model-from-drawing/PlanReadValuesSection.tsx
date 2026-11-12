@@ -13,7 +13,7 @@
  */
 
 import * as React from 'react';
-import { Check, CircleCheck, Lightbulb, Pencil, RotateCcw, TriangleAlert, UserCheck, type LucideIcon } from 'lucide-react';
+import { Check, CircleCheck, Crosshair, Lightbulb, Pencil, RotateCcw, TriangleAlert, UserCheck, type LucideIcon } from 'lucide-react';
 import { Badge, type BadgeVariantProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,8 @@ export interface PlanReadValuesActions {
   readonly onCorrect: (textId: string, raw: string) => void;
   readonly onMarkNotDimension: (textId: string) => void;
   readonly onRevert: (textId: string) => void;
+  /** Βήμα 2 — «Εστίαση στην πηγή»: η όψη πάει στο κείμενο στην εικόνα (ξεχωριστό κουμπί· το κλικ στο κείμενο = διόρθωση). */
+  readonly onFocusSource: (textId: string) => void;
   /** Βήμα 3 — «Σωστό ✓»: η ανάγνωση επιβεβαιώνεται χωρίς αλλαγή. */
   readonly onConfirm: (textId: string) => void;
   /** Η γραμμή που δείχνει ο άνθρωπος (`null` = καμία). */
@@ -212,6 +214,13 @@ function ValueRow({ row, editing, onEdit, actions, t }: {
             <Pencil className="size-3 shrink-0" aria-hidden="true" />
           </button>
         )}
+        <Button
+          type="button" variant="ghost" size="xs" className="ml-auto" onClick={() => actions.onFocusSource(row.textId)}
+          aria-label={t('modelFromDrawing.image.ocr.values.focusSourceLabel', { raw: row.raw })} data-testid="mfd-read-value-focus"
+        >
+          <Crosshair className="size-3" aria-hidden="true" />
+          {t('modelFromDrawing.image.ocr.values.focusSource')}
+        </Button>
       </header>
       {editing ? <RowEditor row={row} onSave={save} onCancel={() => onEdit(null)} preview={actions.previewCorrection} t={t} /> : null}
       <p className="m-0 text-[11px] text-foreground">{interpretationOf(row, t)}</p>

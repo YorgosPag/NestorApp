@@ -27,6 +27,9 @@ import {
   type PlanReadingCorrection,
   type PlanReadingCorrections,
 } from '../../bim/plan-recognition/reading/reading-corrections';
+import type { Point2D } from '../../rendering/types/Types';
+import type { RasterPlacement } from '../../floorplan-background/geometry/raster-scene-mapping';
+import { sceneTextRing } from './plan-overlay-geometry';
 import { planRecognitionStore, type PlanRecognitionRun } from './plan-recognition-store';
 
 export interface PlanReadingCorrectionsDeps<T> {
@@ -36,6 +39,14 @@ export interface PlanReadingCorrectionsDeps<T> {
   readonly lineSource: (run: PlanRecognitionRun, fusion: PlanFusionResult) => T;
   /** Παράδοση στον βοηθό: πηγή που δεν ζήτησε άμεσα ο wiring. */
   readonly publish: (source: T) => void;
+  /** Βήμα 2 — η τοποθέτηση του υποβάθρου ενός ορόφου, διαβασμένη τη στιγμή της πράξης· `null` = κανένα. */
+  readonly placement: (floorId: string) => RasterPlacement | null;
+}
+
+/** Βήμα 2 — πού να πάει η όψη: το πλαίσιο του κειμένου στη σκηνή, και αν κρατιέται το ζουμ του ανθρώπου. */
+export interface PlanReadFocusTarget {
+  readonly points: readonly Point2D[];
+  readonly preserveZoom: boolean;
 }
 
 const sameCorrection = (a: PlanReadingCorrection | undefined, b: PlanReadingCorrection | null): boolean => {
@@ -89,6 +100,20 @@ export function createPlanReadingCorrectionsController<T>(depsOf: () => PlanRead
     preview(textId: string, raw: string): PlanCorrectionPreview | null {
       const { reading, readingCorrections } = planRecognitionStore.get();
       return reading?.status === 'read' ? previewReadingCorrection(reading.reading, readingCorrections, textId, raw) : null;
+    },
+
+    /**
+     * Βήμα 2 — «Εστίαση στην πηγή»: το πλαίσιο του κειμένου στη **σκηνή** (η ΙΔΙΑ αντιστοίχιση px → σκηνή με την
+     * επισήμανση, `sceneTextRing`) και αν είναι επόμενο άλμα αυτής της ανάγνωσης (`preserveZoom`). Θυμάται το κείμενο·
+     * την κίνηση της όψης την κάνει ο καλών (`focusReviewTarget`). `null` = άγνωστο κείμενο ή χωρίς υπόβαθρο.
+     */
+    focusTarget(textId: string): PlanReadFocusTarget | null {
+      const { run, reading, readFocusTextId } = planRecognitionStore.get();
+      const text = reading?.status === 'read' ? reading.reading.texts.find((t) => t.id === textId) : undefined;
+      const placement = run ? depsOf().placement(run.floorId) : null;
+      if (!text || !placement) return null;
+      planRecognitionStore.patch({ readFocusTextId: textId });
+      return { points: sceneTextRing(text.rect, placement), preserveZoom: readFocusTextId !== null };
     },
 
     /** Η γραμμή της λίστας που δείχνει ο άνθρωπος (επισήμανση στον καμβά)· `null` = καμία. */

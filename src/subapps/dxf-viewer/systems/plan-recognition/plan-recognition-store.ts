@@ -191,11 +191,21 @@ export interface PlanRecognitionState {
   readonly readingCorrections: PlanReadingCorrections;
   /** ADR-929 Δ21 (δ) — το κείμενο που δείχνει ο άνθρωπος στη λίστα «Τι διάβασα» (επισήμανση στον καμβά). */
   readonly readHoverTextId: string | null;
+  /**
+   * ADR-929 Δ21 (δ) βήμα 2 — το κείμενο στο οποίο έγινε η τελευταία «Εστίαση στην πηγή»· `null` = καμία σε αυτή την
+   * ανάγνωση. Κρίνει «πρώτο άλμα» (πλαισίωση) ή «επόμενο» (μόνο κεντράρισμα, η κλίμακα του ανθρώπου μένει).
+   */
+  readonly readFocusTextId: string | null;
 }
+
+/** Η επισκόπηση «Τι διάβασα» από την αρχή: χωρίς διορθώσεις, επισήμανση ή εστίαση — ΕΝΑ σημείο για κάθε επαναφορά. */
+export const NO_READ_REVIEW: Pick<PlanRecognitionState, 'readingCorrections' | 'readHoverTextId' | 'readFocusTextId'> = {
+  readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null, readFocusTextId: null,
+};
 
 const IDLE: PlanRecognitionState = {
   phase: 'idle', run: null, reading: null, fusion: null, failure: null, review: null, scaleHoverTextId: null, ocr: OCR_IDLE,
-  readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null,
+  ...NO_READ_REVIEW,
 };
 
 const store = createExternalStore<PlanRecognitionState>(IDLE, { equals: Object.is });

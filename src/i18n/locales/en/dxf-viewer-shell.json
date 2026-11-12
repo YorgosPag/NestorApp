@@ -540,6 +540,8 @@
           "suggestion": "Suggestion: “{value}” — from the other dimensions and the drawing",
           "acceptSuggestion": "Accept",
           "acceptSuggestionLabel": "Accept the suggestion “{value}”",
+          "focusSource": "Focus",
+          "focusSourceLabel": "Focus on “{raw}” in the image",
           "priority": {
             "suspect": "suspect",
             "checked": "checked",

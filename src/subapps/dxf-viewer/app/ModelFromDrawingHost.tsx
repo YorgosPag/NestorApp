@@ -33,6 +33,7 @@ import { getLayersById } from '../stores/LayerStore';
 import { getImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
 import { HIT_TEST_RADIUS_PX } from '../config/tolerance-config';
 import { focusReviewTarget, reviewFocusExtent } from '../systems/coordination/review-focus';
+import { ASSISTANT_FOCUS_PAD_MM } from '../systems/model-from-drawing/assistant-focus';
 import { useWallAutoTyping } from '../bim/family-types/useWallAutoTyping';
 import type { WallTypingSession } from '../bim/family-types/wall-typer';
 import {
@@ -57,9 +58,6 @@ import {
   ModelFromDrawingPanel,
   type ModelFromDrawingPanelActions,
 } from '../ui/panels/model-from-drawing/ModelFromDrawingPanel';
-
-/** Περιθώριο (mm) γύρω από το ορθογώνιο όταν ο άνθρωπος ζητά «δείξε μου αυτό». */
-const FOCUS_PAD_MM = 1500;
 
 export interface ModelFromDrawingHostProps {
   readonly levelManager: LevelsHookReturn;
@@ -91,7 +89,7 @@ function proposalItemPoints(key: string): readonly Point2D[] {
 function focusProposalItem(key: string): void {
   const preserveZoom = modelFromDrawingStore.get().focusedKey !== null;
   modelFromDrawingSession.focus(key);
-  const extent = reviewFocusExtent(proposalItemPoints(key), FOCUS_PAD_MM);
+  const extent = reviewFocusExtent(proposalItemPoints(key), ASSISTANT_FOCUS_PAD_MM);
   if (extent) focusReviewTarget(extent, () => null, preserveZoom);
 }
 

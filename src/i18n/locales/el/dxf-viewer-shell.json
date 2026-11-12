@@ -540,6 +540,8 @@
           "suggestion": "Πρόταση: «{value}» — από τις υπόλοιπες διαστάσεις και το σχέδιο",
           "acceptSuggestion": "Αποδοχή",
           "acceptSuggestionLabel": "Αποδοχή της πρότασης «{value}»",
+          "focusSource": "Εστίαση",
+          "focusSourceLabel": "Εστίαση στο «{raw}» στην εικόνα",
           "priority": {
             "suspect": "ύποπτη",
             "checked": "ελέγχθηκε",

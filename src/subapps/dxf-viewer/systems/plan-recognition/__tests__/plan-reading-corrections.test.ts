@@ -16,8 +16,10 @@ import type { OcrText } from '../../../bim/plan-recognition/ocr/ocr-engine';
 import { planReadingFromOcr } from '../../../bim/plan-recognition/ocr/ocr-reading';
 import type { PlanReadingOutcome } from '../../../bim/plan-recognition/plan-recognition-types';
 import type { PlanReadingCorrections } from '../../../bim/plan-recognition/reading/reading-corrections';
+import type { RasterPlacement } from '../../../floorplan-background/geometry/raster-scene-mapping';
 import { createPlanReadingCorrectionsController } from '../plan-reading-corrections';
-import { planRecognitionStore, type PlanRecognitionRun } from '../plan-recognition-store';
+import { sceneTextRing } from '../plan-overlay-geometry';
+import { NO_READ_REVIEW, planRecognitionStore, type PlanRecognitionRun } from '../plan-recognition-store';
 
 const MODEL = 'local-ocr:test';
 const ALIGNMENT = { alignedToOriginal: IDENTITY_HOMOGRAPHY, originalToAligned: IDENTITY_HOMOGRAPHY } as unknown as PlanAlignment;
@@ -35,13 +37,19 @@ const READING: PlanReadingOutcome = {
   reading: planReadingFromOcr({ texts: [ocr('2.05', 0), ocr('4.15', 100), ocr('μ.μ', 200)], toOriginal: IDENTITY_HOMOGRAPHY, model: MODEL }),
 };
 
-function harness() {
+const PLACEMENT: RasterPlacement = {
+  naturalBounds: { width: 1000, height: 800 },
+  transform: { translateX: 2500, translateY: -1200, scaleX: 8.78, scaleY: 8.82, rotation: 0 },
+};
+
+function harness(placement: RasterPlacement | null = PLACEMENT) {
   const fused: PlanReadingCorrections[] = [];
   const published: string[] = [];
   const controller = createPlanReadingCorrectionsController<string>(() => ({
     fuse: (_run, _reading, corrections) => { fused.push(corrections); return FUSION; },
     lineSource: () => `src#${fused.length}`,
     publish: (source) => { published.push(source); },
+    placement: (floorId) => (floorId === 'flr' ? placement : null),
   }));
   return { controller, fused, published };
 }
@@ -102,5 +110,29 @@ describe('Δ21 (δ) βήμα 3 — confirm', () => {
     h.controller.revert('t2');
     expect(planRecognitionStore.get().readingCorrections.byTextId).toEqual({});
     expect(h.fused).toHaveLength(2);
+  });
+});
+
+describe('Δ21 (δ) βήμα 2 — focusTarget: «Εστίαση στην πηγή»', () => {
+  it('το πλαίσιο του κειμένου στη σκηνή από την ΙΔΙΑ αντιστοίχιση με την επισήμανση· πρώτο άλμα πλαισιώνει, επόμενο κεντράρει', () => {
+    const h = harness();
+    const t2 = READING.status === 'read' ? READING.reading.texts[1] : null;
+    expect(h.controller.focusTarget('t2')).toEqual({ points: sceneTextRing(t2!.rect, PLACEMENT), preserveZoom: false });
+    expect(planRecognitionStore.get().readFocusTextId).toBe('t2');
+    expect(h.controller.focusTarget('t1')?.preserveZoom).toBe(true);
+    expect(h.fused).toEqual([]);
+  });
+
+  it('νέα ανάγνωση/αναγνώριση (NO_READ_REVIEW) ⇒ το επόμενο άλμα είναι ξανά «πρώτο»', () => {
+    const h = harness();
+    h.controller.focusTarget('t2');
+    planRecognitionStore.patch({ ...NO_READ_REVIEW });
+    expect(h.controller.focusTarget('t2')?.preserveZoom).toBe(false);
+  });
+
+  it('άγνωστο κείμενο ή χωρίς υπόβαθρο ⇒ null, και τίποτα δεν θυμάται', () => {
+    expect(harness().controller.focusTarget('t99')).toBeNull();
+    expect(harness(null).controller.focusTarget('t2')).toBeNull();
+    expect(planRecognitionStore.get().readFocusTextId).toBeNull();
   });
 });

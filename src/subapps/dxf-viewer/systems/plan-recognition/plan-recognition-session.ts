@@ -32,7 +32,9 @@ import type { FloorplanBackground } from '../../floorplan-background/providers/t
 import type { ProposalLineSource, RasterDimensionSource } from '../model-from-drawing/proposal-line-source';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { sha256Hex } from '@/lib/hash/sha256';
-import { OCR_IDLE, planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun } from './plan-recognition-store';
+import {
+  NO_READ_REVIEW, OCR_IDLE, planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun,
+} from './plan-recognition-store';
 import { meetsConfidenceTier } from './plan-confidence';
 import { emptyRoleMarkCounts, planRoleMarkKind, type PlanRoleMarkKind } from './plan-role-marks';
 import { extensionAnchorMap, isWallCandidateRole, segmentRoleMap } from '../../bim/plan-recognition/classify/segment-roles';
@@ -202,7 +204,7 @@ function adoptReading(outcome: PlanReadingOutcome): RasterLineSource | null {
   const { run } = planRecognitionStore.get();
   if (!run) return null;
   const fusion = fuseWith(run, outcome, NO_READING_CORRECTIONS);
-  planRecognitionStore.patch({ reading: outcome, fusion, readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null });
+  planRecognitionStore.patch({ reading: outcome, fusion, ...NO_READ_REVIEW });
   segmentMask.forgetReadingUndo();
   return nextLineSource(run, fusion);
 }
@@ -238,6 +240,7 @@ const CORRECTIONS_DEPS: PlanReadingCorrectionsDeps<RasterLineSource> = {
   fuse: fuseWith,
   lineSource: nextLineSource,
   publish: publishLineSource,
+  placement: (floorId) => getFloorBackground(floorId) ?? null,
 };
 const readingCorrections = createPlanReadingCorrectionsController<RasterLineSource>(() => CORRECTIONS_DEPS);
 
@@ -267,8 +270,7 @@ function fail(failure: PlanRecognitionFailure): null {
   segmentMask.track(null, null);
   ocrController.reset();
   planRecognitionStore.patch({
-    phase: 'idle', run: null, fusion: null, reading: null, failure, scaleHoverTextId: null, ocr: OCR_IDLE,
-    readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null,
+    phase: 'idle', run: null, fusion: null, reading: null, failure, scaleHoverTextId: null, ocr: OCR_IDLE, ...NO_READ_REVIEW,
   });
   return null;
 }
@@ -308,8 +310,7 @@ export const planRecognitionSession = {
     const fusion = fuse(run, null);
     segmentMask.track(run, knownScale);
     planRecognitionStore.patch({
-      phase: 'ready', run, reading: null, fusion, failure: null, scaleHoverTextId: null, ocr: OCR_IDLE,
-      readingCorrections: NO_READING_CORRECTIONS, readHoverTextId: null,
+      phase: 'ready', run, reading: null, fusion, failure: null, scaleHoverTextId: null, ocr: OCR_IDLE, ...NO_READ_REVIEW,
     });
     void ocrController.start(run); // Φ0.6: αυτόματα, στο παρασκήνιο — τίποτα δεν φεύγει από τη συσκευή
     return nextLineSource(run, fusion);
@@ -350,7 +351,8 @@ export const planRecognitionSession = {
   ocr: { cancel: () => ocrController.cancel(), retry: () => ocrController.retry() },
 
   /**
-   * ADR-929 Δ21 (δ) — η λίστα «Τι διάβασα»: `correct` (διόρθωση τιμής) · `markNotDimension` · `confirm` · `revert` · `hover` · `preview`. Κάθε
+   * ADR-929 Δ21 (δ) — η λίστα «Τι διάβασα»: `correct` (διόρθωση τιμής) · `markNotDimension` · `confirm` · `revert` · `hover` ·
+   * `preview` · `focusTarget`. Κάθε
    * αλλαγή ξανατρέχει μόνο τη σύντηξη και δίνει νέα πηγή γραμμών από το `onLineSource`.
    */
   corrections: readingCorrections,

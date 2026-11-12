@@ -26,7 +26,7 @@ const ROWS: readonly PlanReadValueRow[] = [
 
 function renderValues(rows: readonly PlanReadValueRow[] | null = ROWS) {
   const actions: jest.Mocked<PlanReadValuesActions> = {
-    onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(), onConfirm: jest.fn(),
+    onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(), onConfirm: jest.fn(), onFocusSource: jest.fn(),
     previewCorrection: jest.fn((_textId: string, raw: string) => (
       raw.trim() === '' ? null : { kind: 'dimension' as const, valueMm: raw === '412' ? null : 4120 }
     )),
@@ -138,6 +138,16 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(accept.getAttribute('aria-label')).toBe('modelFromDrawing.image.ocr.values.acceptSuggestionLabel{"value":"3.70"}');
     fireEvent.click(accept);
     expect(actions.onCorrect).toHaveBeenCalledWith('t3', '3.70');
+  });
+
+  it('βήμα 2 — «Εστίαση» = ξεχωριστό κουμπί· το κλικ στο κείμενο μένει «διόρθωση»', () => {
+    const { getAllByTestId, queryByTestId, actions } = renderValues();
+    const focus = item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-focus"]') as HTMLElement;
+    expect(focus.getAttribute('aria-label')).toBe('modelFromDrawing.image.ocr.values.focusSourceLabel{"raw":"412"}');
+    fireEvent.click(focus);
+    expect(actions.onFocusSource).toHaveBeenCalledWith('t4');
+    expect(queryByTestId('mfd-read-value-input')).toBeNull();
+    expect(actions.onCorrect).not.toHaveBeenCalled();
   });
 
   it('«Επαναφορά» μόνο σε διορθωμένη· «Δεν είναι διάσταση» μόνο σε διάσταση· δείκτης ⇒ onHover', () => {
