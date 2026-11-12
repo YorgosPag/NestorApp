@@ -273,6 +273,21 @@ describe('Ε2 / Ε4: χωρίς μαντεψιές', () => {
     const one = { ...size, config: { options: [{ code: 'mfp_3', labels: { el: 'MFP-3' } }] } } as NonNullable<typeof size>;
     expect(selectOptionFor(one, 'MFP-34ΤΜ')).toBeNull();
   });
+
+  const optionsOf = (labels: readonly string[]) =>
+    ({ ...size, config: { options: labels.map((label) => ({ code: label, labels: { el: label } })) } }) as NonNullable<typeof size>;
+
+  it('σελ. 85: «3/4’’-3/4’’» (δύο U+2019, όπως στο text layer) → «3/4"»· το «1"» δεν πιάνει το «1-1/4"»', () => {
+    const inches = optionsOf(['1/2"', '3/4"', '1"', '1-1/4"']);
+    expect(ARIES['85'].items.some((item) => item.text ==='3/4’’-3/4’’')).toBe(true);
+    expect(selectOptionFor(inches, '3/4’’-3/4’’')).toBe('3/4"');
+    expect(selectOptionFor(inches, '1″')).toBe('1"');
+    expect(selectOptionFor(inches, '1-1/4’’')).toBe('1-1/4"');
+  });
+
+  it('σελ. 85: «dn 20» → «DN 20», όχι «DN 2»', () => {
+    expect(selectOptionFor(optionsOf(['DN 15', 'DN 2', 'DN 20', 'DN 25']), 'dn 20')).toBe('DN 20');
+  });
 });
 
 describe('Ε3 / Ε5: η αντιστοίχιση που δεν στέκει', () => {

@@ -2,7 +2,8 @@ import { evaluateConsistency } from '../../rules/evaluate-consistency';
 import { PLATFORM_MEASUREMENT_REGISTRY } from '../../measurement/measurement-registry';
 import { MFP_ATTRIBUTE_MAP, MFP_FAMILY } from '../../__tests__/fixtures/mfp-fan-coil.fixture';
 import { amountFromCanonical, amountIdentityKey, isCanonicalAmount, parseEnteredAmount } from '../decimal-amount';
-import { normalizeUniqueText, uniqueValueKey } from '../normalize-unique';
+import { DOUBLE_QUOTE_FORMS, SINGLE_QUOTE_FORMS, normalizeUniqueText, uniqueValueKey } from '../normalize-unique';
+import { skeleton } from '@/lib/unicode/skeleton';
 
 describe('parseEnteredAmount — ό,τι πληκτρολογεί ο άνθρωπος → κανονικό ποσό', () => {
   it.each([
@@ -73,6 +74,28 @@ describe('normalizeUniqueText — η ΜΙΑ ταυτότητα κωδικού (�
   it('🔑 ΔΕΝ ταυτίζει ομόγλυφα: ελληνικό «Α» ≠ λατινικό «A» (αυτό είναι προειδοποίηση, όχι ταυτότητα)', () => {
     expect(normalizeUniqueText('ΑB-1')).not.toBe(normalizeUniqueText('AB-1'));
     expect(normalizeUniqueText('I1')).not.toBe(normalizeUniqueText('11'));
+  });
+
+  it.each([
+    ['3/4’’-3/4’’', "3/4''-3/4''"], // ARIES σελ. 85: δύο U+2019
+    ['3/4"', "3/4''"],
+    ['3/4″', "3/4''"], // NFKC: ″ → ′′
+    ['3/4“', "3/4''"],
+    ['1/2＂', "1/2''"],
+    ["κατ’ αποκοπή", "κατ' αποκοπή"],
+  ])('εισαγωγικά → πρότυπο UTS #39: %p ≡ %p', (input, key) => {
+    expect(normalizeUniqueText(input)).toBe(key);
+  });
+
+  it('🔑 κάθε μορφή εισαγωγικού έχει ΠΡΑΓΜΑΤΙ αυτό το πρότυπο στον πίνακα του Unicode (η λίστα δεν αποκλίνει)', () => {
+    for (const form of DOUBLE_QUOTE_FORMS) expect([form, skeleton(form)]).toEqual([form, "''"]);
+    for (const form of SINGLE_QUOTE_FORMS) expect([form, skeleton(form)]).toEqual([form, "'"]);
+  });
+
+  it('🔑 γράμμα με πρότυπο «\'» ΔΕΝ πειράζεται (εβραϊκό yod) — η κεραία «αʹ» ≡ «α\'» ναι (σημείο, όχι γράμμα)', () => {
+    expect(skeleton('י')).toBe("'");
+    expect(normalizeUniqueText('י')).toBe('י');
+    expect(normalizeUniqueText('αʹ')).toBe(normalizeUniqueText("α'"));
   });
 
   it('κρατά τους τόνους: «Κωδικός» ≠ «Κωδικος»', () => {
