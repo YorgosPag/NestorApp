@@ -102,7 +102,7 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
     },
     scale: { onApply: jest.fn(), onManual: jest.fn(), onHover: jest.fn() },
     ocr: { onCancel: jest.fn(), onRetry: jest.fn() },
-    readValues: { onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn() },
+    readValues: { onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(), previewCorrection: jest.fn(() => null) },
   };
 }
 

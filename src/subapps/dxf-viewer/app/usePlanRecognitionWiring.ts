@@ -67,6 +67,7 @@ const READ_VALUES_ACTIONS: PlanReadValuesActions = {
   onMarkNotDimension: (textId) => { planRecognitionSession.corrections.markNotDimension(textId); },
   onRevert: (textId) => { planRecognitionSession.corrections.revert(textId); },
   onHover: (textId) => planRecognitionSession.corrections.hover(textId),
+  previewCorrection: (textId, raw) => planRecognitionSession.corrections.preview(textId, raw),
 };
 
 /** ADR-929 Φ0.6 — η όψη της τοπικής ανάγνωσης: μετρά στη σύντηξη; και τι, στην τρέχουσα όψη (με τις διορθώσεις). */

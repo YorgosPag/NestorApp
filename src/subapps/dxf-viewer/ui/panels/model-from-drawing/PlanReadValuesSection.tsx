@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { FusedDimensionStatus } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
+import type { PlanCorrectionPreview } from '../../../bim/plan-recognition/reading/reading-corrections';
 import type { PlanReadValueRow } from '../../../systems/plan-recognition/plan-read-values';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 
@@ -26,6 +27,8 @@ export interface PlanReadValuesActions {
   readonly onRevert: (textId: string) => void;
   /** Η γραμμή που δείχνει ο άνθρωπος (`null` = καμία). */
   readonly onHover: (textId: string | null) => void;
+  /** Βήμα 5 — τι θα γινόταν το κείμενο με αυτή τη διόρθωση (ο ΙΔΙΟΣ δρόμος με την αποθήκευση)· `null` = τίποτα να δειχτεί. */
+  readonly previewCorrection: (textId: string, raw: string) => PlanCorrectionPreview | null;
 }
 
 /** Κάθε είδος με ΡΗΤΟ κλειδί (CHECK 3.8)· εξαντλητικό: νέο είδος χωρίς κείμενο = σφάλμα μεταγλώττισης. */
@@ -46,8 +49,8 @@ const STATUS_KEY: Readonly<Record<FusedDimensionStatus, string>> = {
   unbound: 'modelFromDrawing.image.ocr.values.status.unbound',
 };
 
-/** Η ερμηνεία: είδος, και για διάσταση η τιμή ή «χωρίς αποδεδειγμένη μονάδα». */
-function interpretationOf(row: PlanReadValueRow, t: Translate): string {
+/** Η ερμηνεία: είδος, και για διάσταση η τιμή ή «χωρίς αποδεδειγμένη μονάδα». Ίδια για γραμμή και προεπισκόπηση. */
+function interpretationOf(row: PlanCorrectionPreview, t: Translate): string {
   const kind = t(KIND_KEY[row.kind]);
   if (row.valueMm !== null) return `${kind} ${t('modelFromDrawing.image.ocr.values.valueMm', { value: Math.round(row.valueMm) })}`;
   return row.kind === 'dimension' ? `${kind} · ${t('modelFromDrawing.image.ocr.values.noUnit')}` : kind;
@@ -61,13 +64,15 @@ function metaOf(row: PlanReadValueRow, t: Translate): string {
   return parts.join(' · ');
 }
 
-function RowEditor({ row, onSave, onCancel, t }: {
+function RowEditor({ row, onSave, onCancel, preview, t }: {
   readonly row: PlanReadValueRow;
   readonly onSave: (raw: string) => void;
   readonly onCancel: () => void;
+  readonly preview: PlanReadValuesActions['previewCorrection'];
   readonly t: Translate;
 }): React.ReactElement {
   const [draft, setDraft] = React.useState(row.raw);
+  const interpreted = preview(row.textId, draft);
   const submit = (event: React.FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     onSave(draft);
@@ -79,11 +84,17 @@ function RowEditor({ row, onSave, onCancel, t }: {
     onCancel();
   };
   return (
-    <form onSubmit={submit} className="flex items-center gap-1" data-testid="mfd-read-value-editor">
+    <form onSubmit={submit} className="flex flex-col gap-0.5" data-testid="mfd-read-value-editor">
       <Input
         autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onKeyDown}
         aria-label={t('modelFromDrawing.image.ocr.values.inputLabel')} className="h-7 text-xs" data-testid="mfd-read-value-input"
+        aria-describedby={`mfd-read-value-preview-${row.textId}`}
       />
+      <output
+        id={`mfd-read-value-preview-${row.textId}`} aria-live="polite" className={MUTED} data-testid="mfd-read-value-preview"
+      >
+        {interpreted !== null ? t('modelFromDrawing.image.ocr.values.preview', { value: interpretationOf(interpreted, t) }) : null}
+      </output>
     </form>
   );
 }
@@ -130,7 +141,7 @@ function ValueRow({ row, editing, onEdit, actions, t }: {
       onMouseEnter={() => actions.onHover(row.textId)} onMouseLeave={() => actions.onHover(null)}
       onFocus={() => actions.onHover(row.textId)} onBlur={() => actions.onHover(null)}
     >
-      {editing ? <RowEditor row={row} onSave={save} onCancel={() => onEdit(null)} t={t} /> : (
+      {editing ? <RowEditor row={row} onSave={save} onCancel={() => onEdit(null)} preview={actions.previewCorrection} t={t} /> : (
         <button
           type="button" onClick={() => onEdit(row.textId)} className="flex items-center gap-1.5 self-start text-xs font-mono text-foreground"
           aria-label={t('modelFromDrawing.image.ocr.values.editLabel', { raw: row.raw })} data-testid="mfd-read-value-edit"

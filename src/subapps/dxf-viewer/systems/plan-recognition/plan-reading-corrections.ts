@@ -20,7 +20,10 @@
 import type { PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReadingOutcome } from '../../bim/plan-recognition/plan-recognition-types';
 import {
+  effectiveReadingCorrection,
+  previewReadingCorrection,
   withReadingCorrection,
+  type PlanCorrectionPreview,
   type PlanReadingCorrection,
   type PlanReadingCorrections,
 } from '../../bim/plan-recognition/reading/reading-corrections';
@@ -48,7 +51,7 @@ export function createPlanReadingCorrectionsController<T>(depsOf: () => PlanRead
     const machine = reading.reading.texts.find((t) => t.id === textId);
     if (!machine) return false;
     const { model } = reading.reading;
-    const correction = requested?.kind === 'value' && requested.raw.trim() === machine.raw.trim() ? null : requested;
+    const correction = effectiveReadingCorrection(machine, requested);
     const current = readingCorrections.model === model ? readingCorrections.byTextId[textId] : undefined;
     if (sameCorrection(current, correction)) return true;
     const next = withReadingCorrection(readingCorrections, model, textId, correction);
@@ -72,6 +75,15 @@ export function createPlanReadingCorrectionsController<T>(depsOf: () => PlanRead
     /** «Επαναφορά»: ισχύει πάλι ό,τι διάβασε η μηχανή. */
     revert(textId: string): boolean {
       return commit(textId, null);
+    },
+
+    /**
+     * Βήμα 5 — τι **θα** γινόταν το κείμενο αν αποθηκευόταν τώρα το `raw` (ζωντανή ερμηνεία στο πεδίο). Μόνο ανάγνωση:
+     * τίποτα δεν γράφεται, καμία σύντηξη. Διαβάζει το store τη στιγμή της κλήσης (getter, ποτέ στιγμιότυπο).
+     */
+    preview(textId: string, raw: string): PlanCorrectionPreview | null {
+      const { reading, readingCorrections } = planRecognitionStore.get();
+      return reading?.status === 'read' ? previewReadingCorrection(reading.reading, readingCorrections, textId, raw) : null;
     },
 
     /** Η γραμμή της λίστας που δείχνει ο άνθρωπος (επισήμανση στον καμβά)· `null` = καμία. */

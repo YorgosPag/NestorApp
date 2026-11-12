@@ -8,7 +8,8 @@ import type { OcrText } from '../ocr/ocr-engine';
 import { planReadingFromOcr } from '../ocr/ocr-reading';
 import type { PlanReading } from '../plan-recognition-types';
 import {
-  applyReadingCorrections, NO_READING_CORRECTIONS, withReadingCorrection, type PlanReadingCorrections,
+  applyReadingCorrections, effectiveReadingCorrection, NO_READING_CORRECTIONS, previewReadingCorrection, withReadingCorrection,
+  type PlanReadingCorrections,
 } from '../reading/reading-corrections';
 
 const MODEL = 'local-ocr:test';
@@ -90,5 +91,33 @@ describe('Δ21 (δ) — η διόρθωση επιβιώνει όταν αλλά
     const r = applyReadingCorrections(cropped, corrections);
     expect(r.texts.find((t) => t.id === 't2')).toMatchObject({ raw: '4.12', correctedFrom: '4.15' });
     expect(dims(r)).toEqual([['t2', 4120]]);
+  });
+});
+
+describe('Δ21 (δ) βήμα 5 — previewReadingCorrection: η ζωντανή ερμηνεία από τον ΙΔΙΟ δρόμο με την αποθήκευση', () => {
+  it('σκέτος ακέραιος σε σχέδιο που γράφει μέτρα ⇒ εκατοστά (η μονάδα κρίνεται από ΟΛΟ το σχέδιο, όχι από το πεδίο)', () => {
+    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't3', '412')).toEqual({ kind: 'dimension', valueMm: 4120 });
+  });
+  it('σκέτος ακέραιος σε σχέδιο χωρίς μέτρα ⇒ διάσταση χωρίς τιμή («η μονάδα δεν αποδεικνύεται»)', () => {
+    const lone = readingOf([ocr('ΣΑΛΟΝΙ', quad(0, 0, 40, 10))]);
+    expect(previewReadingCorrection(lone, NO_READING_CORRECTIONS, 't1', '412')).toEqual({ kind: 'dimension', valueMm: null });
+  });
+  it('ταυτίζεται με ό,τι δίνει η αποθήκευση· δεν γράφει τίποτα', () => {
+    const corrections = correct(NO_READING_CORRECTIONS, 't1', { kind: 'not-dimension' });
+    const preview = previewReadingCorrection(readingOf(), corrections, 't4', '4,12 μ.μ.');
+    const saved = applyReadingCorrections(readingOf(), correct(corrections, 't4', { kind: 'value', raw: '4,12 μ.μ.' }));
+    expect(preview).toEqual({ kind: 'dimension', valueMm: saved.dimensions.find((d) => d.textId === 't4')?.valueMm });
+    expect(corrections.byTextId).toEqual({ t1: { kind: 'not-dimension' } });
+  });
+  it('κείμενο που δεν είναι μήκος ⇒ το είδος του, χωρίς τιμή· κενό ή άγνωστο κείμενο ⇒ null', () => {
+    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't2', '1:50')).toEqual({ kind: 'scale', valueMm: null });
+    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't2', '  ')).toBeNull();
+    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't99', '4.12')).toBeNull();
+  });
+  it('effectiveReadingCorrection: ίδιο κείμενο με της μηχανής ⇒ καμία διόρθωση (επαναφορά)', () => {
+    const machine = readingOf().texts[1];
+    expect(effectiveReadingCorrection(machine, { kind: 'value', raw: ' 4.15 ' })).toBeNull();
+    expect(effectiveReadingCorrection(machine, { kind: 'value', raw: '4.12' })).toEqual({ kind: 'value', raw: '4.12' });
+    expect(effectiveReadingCorrection(machine, { kind: 'not-dimension' })).toEqual({ kind: 'not-dimension' });
   });
 });

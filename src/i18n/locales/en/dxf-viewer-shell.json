@@ -531,6 +531,7 @@
           "corrected": "corrected · the engine read “{raw}”",
           "editLabel": "Correct the text “{raw}”",
           "inputLabel": "What the drawing says",
+          "preview": "Will be read as: {value}",
           "notDimension": "Not a dimension",
           "revert": "Revert"
         }

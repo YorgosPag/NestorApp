@@ -19,7 +19,9 @@
  * @module subapps/dxf-viewer/bim/plan-recognition/reading/reading-corrections
  */
 
-import type { PlanDimension, PlanReading, PlanReadingOutcome, PlanText, PlanWrittenScale } from '../plan-recognition-types';
+import type {
+  PlanDimension, PlanReading, PlanReadingOutcome, PlanText, PlanTextKind, PlanWrittenScale,
+} from '../plan-recognition-types';
 import { readingConfidence } from './plan-reading-from-view';
 import { classifyWrittenText, parseWrittenScale, writtenDimensions } from './written-values';
 
@@ -115,6 +117,43 @@ export function applyReadingCorrections(reading: PlanReading, corrections: PlanR
     dimensions: correctedDimensions(reading, texts, active),
     writtenScale: correctedWrittenScale(reading.writtenScale, texts, active),
   };
+}
+
+/**
+ * Η διόρθωση που **πραγματικά** ζητείται για ένα κείμενο της μηχανής: τιμή ίση με ό,τι διάβασε η μηχανή ⇒ καμία
+ * (επαναφορά). Ένα σημείο για τον ελεγκτή και την προεπισκόπηση.
+ */
+export function effectiveReadingCorrection(
+  machine: PlanText,
+  requested: PlanReadingCorrection | null,
+): PlanReadingCorrection | null {
+  return requested?.kind === 'value' && requested.raw.trim() === machine.raw.trim() ? null : requested;
+}
+
+/** Τι θα γίνει ένα κείμενο με μια διόρθωση: είδος, και τιμή σε mm αν θα γίνει περιορισμός του λύτη. */
+export interface PlanCorrectionPreview {
+  readonly kind: PlanTextKind;
+  readonly valueMm: number | null;
+}
+
+/**
+ * ADR-929 Δ21 (δ) βήμα 5 — **ζωντανή ερμηνεία πριν από το Enter**: τι θα γινόταν το κείμενο `textId` αν ο άνθρωπος
+ * αποθήκευε τώρα το `raw`. Περνά από τον **ΙΔΙΟ** δρόμο με την αποθήκευση (`withReadingCorrection` +
+ * `applyReadingCorrections`), άρα και η μονάδα των σκέτων ακεραίων κρίνεται από **όλο** το σχέδιο, όχι από το πεδίο μόνο.
+ * `reading` = η ανάγνωση της **μηχανής**. Κενό κείμενο ή άγνωστο `textId` ⇒ `null`.
+ */
+export function previewReadingCorrection(
+  reading: PlanReading,
+  corrections: PlanReadingCorrections,
+  textId: string,
+  raw: string,
+): PlanCorrectionPreview | null {
+  const machine = reading.texts.find((t) => t.id === textId);
+  if (!machine || raw.trim() === '') return null;
+  const correction = effectiveReadingCorrection(machine, { kind: 'value', raw: raw.trim() });
+  const corrected = applyReadingCorrections(reading, withReadingCorrection(corrections, reading.model, textId, correction));
+  const text = corrected.texts.find((t) => t.id === textId) ?? machine;
+  return { kind: text.kind, valueMm: corrected.dimensions.find((d) => d.textId === textId)?.valueMm ?? null };
 }
 
 /** Το ίδιο, για το αποτέλεσμα μιας ανάγνωσης (χωρίς ανάγνωση ⇒ ίδιο). */

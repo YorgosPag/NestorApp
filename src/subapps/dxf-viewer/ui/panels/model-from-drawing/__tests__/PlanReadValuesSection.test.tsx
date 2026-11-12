@@ -27,6 +27,9 @@ const ROWS: readonly PlanReadValueRow[] = [
 function renderValues(rows: readonly PlanReadValueRow[] | null = ROWS) {
   const actions: jest.Mocked<PlanReadValuesActions> = {
     onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(),
+    previewCorrection: jest.fn((_textId: string, raw: string) => (
+      raw.trim() === '' ? null : { kind: 'dimension' as const, valueMm: raw === '412' ? null : 4120 }
+    )),
   };
   return { ...render(<PlanReadValuesSection rows={rows} actions={actions} t={t} />), actions };
 }
@@ -78,6 +81,22 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(queryByTestId('mfd-read-value-input')).toBeNull();
     edit();
     fireEvent.submit(getByTestId('mfd-read-value-editor'));
+    expect(actions.onCorrect).not.toHaveBeenCalled();
+  });
+
+  it('βήμα 5 — ζωντανή ερμηνεία στο πεδίο, πριν από το Enter, από τον ελεγκτή (aria-live)', () => {
+    const { getAllByTestId, getByTestId, actions } = renderValues();
+    fireEvent.click(item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-edit"]') as HTMLElement);
+    const preview = getByTestId('mfd-read-value-preview');
+    expect(preview.getAttribute('aria-live')).toBe('polite');
+    expect(getByTestId('mfd-read-value-input').getAttribute('aria-describedby')).toBe(preview.id);
+    expect(preview.textContent).toContain('modelFromDrawing.image.ocr.values.noUnit');
+    fireEvent.change(getByTestId('mfd-read-value-input'), { target: { value: '4,12 μ.μ.' } });
+    expect(actions.previewCorrection).toHaveBeenLastCalledWith('t4', '4,12 μ.μ.');
+    expect(preview.textContent).toContain('modelFromDrawing.image.ocr.values.preview');
+    expect(preview.textContent).toMatch(/values\.valueMm\{\\+"value\\+":4120\}/);
+    fireEvent.change(getByTestId('mfd-read-value-input'), { target: { value: '' } });
+    expect(preview.textContent).toBe('');
     expect(actions.onCorrect).not.toHaveBeenCalled();
   });
 
