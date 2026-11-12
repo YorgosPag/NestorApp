@@ -77,7 +77,7 @@ export function HandoverProtocolVerifyRoute() {
   const { t } = useTranslation('legal');
   const protocolId = useRouteProtocolId();
   return (
-    <ShellSurface measure="prose">
+    <ShellSurface as="main" measure="prose">
       <article className="flex flex-col gap-6">
         <header className="flex flex-col gap-2">
           <h1 className="m-0">{t('handoverVerify.title')}</h1>

@@ -32,7 +32,7 @@ export default function OpenSourcePage() {
   const { t } = useTranslation('legal');
 
   return (
-    <ShellSurface measure="prose">
+    <ShellSurface as="main" measure="prose">
       <h1>{t('openSource.title')}</h1>
       <p>{t('openSource.intro')}</p>
 

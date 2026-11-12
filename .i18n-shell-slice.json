@@ -1495,7 +1495,7 @@
       ],
       "reason": "ADR-744 §18 — Η ΣΕΛΙΔΑ ΣΥΝΔΕΣΗΣ, ΠΡΩΤΗ ΕΠΑΦΗ ΜΕ ΤΟ ΠΡΟΪΟΝ. ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-22 στην παραγωγή με τον χρησμό (CHECK 3.51 Χ): **16** ωμά κλειδιά (`form.titles.signin` · `form.labels.email` · `form.submitButtons.signin` · `google.signInButton` κ.λπ.), σε ΚΕΙΜΕΝΟ και σε `aria-label`. 🔑 ΚΛΑΣΗ Α — ΤΟ NAMESPACE ΥΠΑΡΧΕΙ ΑΛΛΑ ΚΟΜΜΕΝΟ: το `auth` είναι στο slice με **69 από 9.180 bytes** (1 κλειδί από 130) — ακριβώς η παγίδα «πληρότητα bundle» του ADR-744 §11, ίδιο σχήμα με το μόνιμο `page.loadingMessage` του /projects (1/49), άλλο namespace. 🔴 ΓΙΑΤΙ ΤΟ `CRITICAL_NAMESPACES` ΔΕΝ ΕΙΝΑΙ ΘΕΡΑΠΕΙΑ ΕΝΩ ΦΑΙΝΕΤΑΙ ΟΤΙ ΕΙΝΑΙ: το `auth` **είναι ήδη** εκεί (`lazy-config.ts:275`) και γι' αυτό η οθόνη αυτοθεραπεύεται μετά την ενυδάτωση — αλλά το preload ζει πίσω από `if (typeof window !== 'undefined')` (`config.ts:119`), άρα **δεν αγγίζει ΠΟΤΕ τον server**. Μια λίστα που διορθώνει την οθόνη και αφήνει ωμό το SSR HTML είναι ψεύτικη θεραπεία με πράσινη όψη — και ήταν ο λόγος που αυτή η κλάση επέζησε. ⚠️ Το slice έχει **22** κλειδιά, όχι 16: η στατική κλειστότητα βλέπει και τις καταστάσεις signup/forgot-password του ίδιου `AuthForm`, που ο χρησμός δεν μπορεί να ζωγραφίσει. Αυτό είναι ΟΡΘΟ — το slice φυλάει τη ΣΕΛΙΔΑ, όχι το στιγμιότυπο που έτυχε να μετρηθεί. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces — Η ΕΝΑΛΛΑΚΤΙΚΗ ΜΕΤΡΗΘΗΚΕ ΜΕ ΤΟΝ ΙΔΙΟ GENERATOR ΠΡΙΝ ΕΠΙΛΕΓΕΙ ΔΡΟΜΟΣ: το `legal` ΟΛΟΚΛΗΡΟ μεγαλώνει το κέλυφος κατά 7.151 bytes και το `auth` κατά 9.111 — σε ΚΑΘΕ μία από τις 150 σερβιρισμένες διαδρομές, δηλαδή 2.439.300 byte-διαδρομές για να θεραπευτούν ΤΕΣΣΕΡΙΣ. Τα τέσσερα route slices κοστίζουν 8.840 bytes συνολικά, το καθένα μόνο στο δικό του chunk: **276× φθηνότερα**. Και το κόστος δεν είναι μόνο bytes: το κατάστιχο μετανάστευσης θα πήγαινε 154.494 → 170.816 (καίγοντας το 53% του περιθωρίου των 30.506 bytes) και οι εγγραφές 10 → 12, δηλαδή ΑΝΤΙΘΕΤΑ από τον δηλωμένο στόχο «να φτάσει στο μηδέν» (ADR-744 §8). Το ίδιο το `ledger.js` το γράφει: «η θεραπεία είναι ΜΕΤΑΚΟΜΙΣΗ ή per-route slice — όχι μεγαλύτερος αριθμός». 🔴 ΤΟ ΤΑΒΑΝΙ ΑΝΕΒΗΚΕ 1.800 → 3.400, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ Η ΘΕΡΑΠΕΙΑ — ΟΧΙ Η ΔΙΟΓΚΩΣΗ. Η πρώτη μέτρηση (1.666 bytes / 22 κλειδιά) ΗΤΑΝ Η ΒΛΑΒΗ ΜΕΤΡΗΜΕΝΗ: το `AuthForm.tsx` δανειζόταν το `t` από το `useAuthFormState` (`state.t(...)`) και το `MfaVerificationForm.tsx` το έπαιρνε ως **prop**, οπότε **και τα δύο δήλωναν ΜΗΔΕΝ namespace**· το `addEntry` του `plan.js` δίνει τότε `targets = []` και **42 λυμένα κλειδιά έπεφταν σιωπηλά** (ADR-744 §18). Αφού τα δύο components δήλωσαν το δικό τους `useTranslation('auth')`, το slice έγινε **3.288 bytes / 64 κλειδιά** και καλύπτει **16/16** των ωμών κλειδιών του χρησμού — ήταν **3/16**. ⚠️ Ο κανόνας «ΜΗΝ ανεβάσεις αριθμό για να γίνει πράσινο» ΔΕΝ παραβιάζεται, και η διάκριση είναι ελέγξιμη: εκεί ο αριθμός ανεβαίνει για να **κρύψει** διόγκωση άγνωστης αιτίας· εδώ ανεβαίνει επειδή το slice απέκτησε κλειδιά που **όφειλε πάντα** να έχει, ονομαστικά μετρημένα έναντι της baseline του χρησμού. 3.288 = 2,0% του κελύφους (Κ1 άνετα εντός)."
     },
-    "src/app/(app)/private-marketing-disclosure/page.tsx": {
+    "src/app/(light)/private-marketing-disclosure/page.tsx": {
       "sealed": 1355,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1508,7 +1508,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 + ADR-864 Φ3 — Η ΕΝΗΜΕΡΩΣΗ ΚΛΕΙΣΤΗΣ ΔΙΑΘΕΣΗΣ, δημόσια οθόνη χωρίς σύνδεση όπως οι αδελφές της. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. Σελίδα της έκδοσης σε ισχύ."
     },
-    "src/app/(app)/private-marketing-disclosure/versions/page.tsx": {
+    "src/app/(light)/private-marketing-disclosure/versions/page.tsx": {
       "sealed": 1907,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1521,7 +1521,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 + ADR-864 Φ3 — Η ΕΝΗΜΕΡΩΣΗ ΚΛΕΙΣΤΗΣ ΔΙΑΘΕΣΗΣ, δημόσια οθόνη χωρίς σύνδεση όπως οι αδελφές της. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. Λίστα εκδόσεων."
     },
-    "src/app/(app)/private-marketing-disclosure/versions/[version]/page.tsx": {
+    "src/app/(light)/private-marketing-disclosure/versions/[version]/page.tsx": {
       "sealed": 2677,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1534,7 +1534,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 + ADR-864 Φ3 — Η ΕΝΗΜΕΡΩΣΗ ΚΛΕΙΣΤΗΣ ΔΙΑΘΕΣΗΣ, δημόσια οθόνη χωρίς σύνδεση όπως οι αδελφές της. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. Μία έκδοση — και το εκτυπώσιμο έντυπο του δρόμου «υπογεγραμμένο έντυπο»."
     },
-    "src/app/(app)/handover-protocol/page.tsx": {
+    "src/app/(light)/handover-protocol/page.tsx": {
       "sealed": 1355,
       "sealedAt": "2026-10-22",
       "history": [
@@ -1547,7 +1547,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 + ADR-916 Φ-Γ2 Σ3 — ΟΙ ΡΗΤΡΕΣ ΤΟΥ ΠΡΩΤΟΚΟΛΛΟΥ ΠΑΡΑΔΟΣΗΣ, δημόσια οθόνη χωρίς σύνδεση όπως οι αδελφές της. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. Σελίδα της έκδοσης σε ισχύ."
     },
-    "src/app/(app)/handover-protocol/versions/page.tsx": {
+    "src/app/(light)/handover-protocol/versions/page.tsx": {
       "sealed": 1907,
       "sealedAt": "2026-10-22",
       "history": [
@@ -1560,7 +1560,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 + ADR-916 Φ-Γ2 Σ3 — ΟΙ ΡΗΤΡΕΣ ΤΟΥ ΠΡΩΤΟΚΟΛΛΟΥ ΠΑΡΑΔΟΣΗΣ, δημόσια οθόνη χωρίς σύνδεση όπως οι αδελφές της. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. Λίστα εκδόσεων."
     },
-    "src/app/(app)/handover-protocol/versions/[version]/page.tsx": {
+    "src/app/(light)/handover-protocol/versions/[version]/page.tsx": {
       "sealed": 2677,
       "sealedAt": "2026-10-22",
       "history": [
@@ -1573,7 +1573,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 + ADR-916 Φ-Γ2 Σ3 — ΟΙ ΡΗΤΡΕΣ ΤΟΥ ΠΡΩΤΟΚΟΛΛΟΥ ΠΑΡΑΔΟΣΗΣ, δημόσια οθόνη χωρίς σύνδεση όπως οι αδελφές της. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. Μία έκδοση — εκεί παραπέμπει το σφραγισμένο PDF (έκδοση + αποτύπωμα κειμένου)."
     },
-    "src/app/(app)/handover-protocol/verify/page.tsx": {
+    "src/app/(light)/handover-protocol/verify/page.tsx": {
       "sealed": 7823,
       "sealedAt": "2026-10-22",
       "history": [
@@ -1586,7 +1586,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-916 Φ-Γ2 Σ6 — Η ΔΗΜΟΣΙΑ ΠΟΡΤΑ ΕΠΑΛΗΘΕΥΣΗΣ ΤΟΥ ΠΡΩΤΟΚΟΛΛΟΥ ΠΑΡΑΔΟΣΗΣ, οθόνη χωρίς σύνδεση όπως οι αδελφές της. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. Έλεγχος PDF στη συσκευή + έλεγχος πακέτου."
     },
-    "src/app/(app)/handover-protocol/verify/[protocolId]/page.tsx": {
+    "src/app/(light)/handover-protocol/verify/[protocolId]/page.tsx": {
       "sealed": 7823,
       "sealedAt": "2026-10-22",
       "history": [
@@ -1599,7 +1599,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-916 Φ-Γ2 Σ6 — Ο ΣΥΝΔΕΣΜΟΣ ΤΟΥ QR ΤΟΥ ΠΡΩΤΟΚΟΛΛΟΥ: η καταχώριση του μητρώου για αυτόν τον κωδικό + ο έλεγχος του PDF. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος."
     },
-    "src/app/(app)/legal-notice/page.tsx": {
+    "src/app/(light)/legal-notice/page.tsx": {
       "sealed": 1504,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1612,7 +1612,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ2 — ΔΗΜΟΣΙΑ ΝΟΜΙΚΗ ΟΘΟΝΗ, Π.Δ. 131/2003 άρθ. 4 («εύκολη, άμεση και συνεχής πρόσβαση» στα στοιχεία του φορέα). Κλάση Β, ίδιος μηχανισμός με τις τρεις αδελφές οθόνες: το `legal` είναι `absent` στο κέλυφος (18 namespaces), άρα στον server ΔΕΝ υπάρχει τίποτα να βρεθεί και το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. 🔴 ΓΙΑΤΙ Η ΕΓΓΡΑΦΗ ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΗ: η σελίδα ΕΙΣΑΓΕΙ στατικά το `@/i18n/generated/routes/legal-notice.el.json` (ADR-744 §18 — ποτέ `import()`, ποτέ Server Component). Χωρίς δήλωση, το artifact ΔΕΝ παράγεται και το `next build` σπάει στην εισαγωγή. ⚠️ Η λογιστική του generator έλεγε «0 απόντα» ΕΝΩ το αρχείο έλειπε, και είναι δομικό: μετρά μόνο ΔΗΛΩΜΕΝΕΣ διαδρομές — μια αδήλωτη σελίδα είναι αόρατη, όχι απούσα. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: μετρημένο στο §18, το `legal` ολόκληρο κοστίζει 7.151 bytes σε ΚΑΘΕ μία από τις ~150 σερβιρισμένες διαδρομές· εδώ 1.504 bytes μόνο στο δικό της chunk."
     },
-    "src/app/(app)/open-source/page.tsx": {
+    "src/app/(light)/open-source/page.tsx": {
       "sealed": 2637,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1625,7 +1625,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-863 Φ3 — Η ΔΗΜΟΣΙΑ ΑΠΟΔΟΣΗ ΤΩΝ ΑΔΕΙΩΝ ΑΝΟΙΧΤΟΥ ΚΩΔΙΚΑ. Κλάση Β, ίδιος μηχανισμός με τις τέσσερις αδελφές νομικές οθόνες: το `legal` είναι `absent` στο κέλυφος, άρα στον server ΔΕΝ υπάρχει τίποτα να βρεθεί και το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. 🔴 ΓΙΑΤΙ Η ΕΓΓΡΑΦΗ ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΗ: η σελίδα ΕΙΣΑΓΕΙ στατικά το `@/i18n/generated/routes/open-source.el.json` (ποτέ `import()`, ποτέ Server Component). Χωρίς δήλωση, το artifact ΔΕΝ παράγεται και το `next build` σπάει στην εισαγωγή — και ΚΑΜΙΑ πύλη δεν το πιάνει· το `legal-notice` μπήκε έτσι σπασμένο στο `5aaf6a72` (ADR-861 §6.2). ⚠️ ΓΙΑΤΙ ΤΟ ΚΕΙΜΕΝΟ ΕΙΝΑΙ ΣΤΟ i18n ΕΝΩ Ο ΚΑΤΑΛΟΓΟΣ ΤΩΝ 1.071 ΔΕΝ ΕΙΝΑΙ: το πρώτο είναι ΠΡΟΖΑ που μεταφράζεται (el+en)· ο κατάλογος είναι ΔΕΔΟΜΕΝΑ — ονόματα πακέτων, εκδόσεις και αναγνωριστικά SPDX δεν μεταφράζονται σε καμία γλώσσα, και ταξιδεύουν τεμπέλικα από το `public/third-party/index.json` (μηδέν κόστος στη ratchet μεγέθους, ADR-598 G6). Μεταφράζονται ΜΟΝΟ οι ετικέτες των στηλών και τα ονόματα των επιφανειών."
     },
-    "src/app/(app)/privacy-policy/page.tsx": {
+    "src/app/(light)/privacy-policy/page.tsx": {
       "sealed": 1228,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1650,7 +1650,7 @@
       ],
       "reason": "ADR-744 §18 — ΔΗΜΟΣΙΑ ΝΟΜΙΚΗ ΟΘΟΝΗ. ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-22 με τον χρησμό (CHECK 3.51 Χ): **21** ωμά κλειδιά — ΟΛΟΚΛΗΡΗ η Πολιτική Απορρήτου, δηλαδή ακριβώς το κείμενο που ο GDPR απαιτεί να είναι αναγνώσιμο. 🔑 ΚΛΑΣΗ Β — ΤΟ NAMESPACE ΔΕΝ ΥΠΑΡΧΕΙ ΚΑΘΟΛΟΥ: το `legal` είναι `absent` στο slice (18 namespaces, κανένα `legal`), άρα στον server δεν υπάρχει τίποτα να βρεθεί. Το wiring είναι ΣΩΣΤΟ (`namespace-loaders.ts:99/211` έχει case σε el+en ⇒ ΔΕΝ είναι CHECK 3.36) και τα κλειδιά υπάρχουν (⇒ ΔΕΝ είναι CHECK 3.8): έλειπε **μόνο** ο σύγχρονος δρόμος. ⚠️ Τα τρία νομικά slices ΔΕΝ επικαλύπτονται: οι σελίδες ζητούν ξένα υποδέντρα (`privacyPolicy.*` · `termsOfService.*` · `dataDeletion.*`), οπότε το άθροισμά τους (7.174) είναι ουσιαστικά ΟΛΟ το `legal.json` (7.142) — μοιρασμένο σε τρία chunks αντί να ταξιδεύει σε 150 διαδρομές. Αυτό ΕΙΝΑΙ η αφαίρεση του ADR-744 §15.4 στην καθαρότερη μορφή της: ίδια bytes, 150× μικρότερη διανομή. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces — Η ΕΝΑΛΛΑΚΤΙΚΗ ΜΕΤΡΗΘΗΚΕ ΜΕ ΤΟΝ ΙΔΙΟ GENERATOR ΠΡΙΝ ΕΠΙΛΕΓΕΙ ΔΡΟΜΟΣ: το `legal` ΟΛΟΚΛΗΡΟ μεγαλώνει το κέλυφος κατά 7.151 bytes και το `auth` κατά 9.111 — σε ΚΑΘΕ μία από τις 150 σερβιρισμένες διαδρομές, δηλαδή 2.439.300 byte-διαδρομές για να θεραπευτούν ΤΕΣΣΕΡΙΣ. Τα τέσσερα route slices κοστίζουν 8.840 bytes συνολικά, το καθένα μόνο στο δικό του chunk: **276× φθηνότερα**. Και το κόστος δεν είναι μόνο bytes: το κατάστιχο μετανάστευσης θα πήγαινε 154.494 → 170.816 (καίγοντας το 53% του περιθωρίου των 30.506 bytes) και οι εγγραφές 10 → 12, δηλαδή ΑΝΤΙΘΕΤΑ από τον δηλωμένο στόχο «να φτάσει στο μηδέν» (ADR-744 §8). Το ίδιο το `ledger.js` το γράφει: «η θεραπεία είναι ΜΕΤΑΚΟΜΙΣΗ ή per-route slice — όχι μεγαλύτερος αριθμός»."
     },
-    "src/app/(app)/privacy-policy/versions/page.tsx": {
+    "src/app/(light)/privacy-policy/versions/page.tsx": {
       "sealed": 1780,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1663,7 +1663,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 — ΤΟ ΑΡΧΕΙΟ ΕΚΔΟΣΕΩΝ του /privacy-policy, δημόσια οθόνη χωρίς σύνδεση όπως η σελίδα-μητέρα του. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. ⚠️ ΕΠΙΠΕΔΗ διεύθυνση ανά έγγραφο και ΟΧΙ /legal/<έγγραφο>/versions: απόφαση Giorgio 2026-09-16 (η οικογένεια νομικών οθονών έχει ΕΝΑ σχήμα διεύθυνσης)."
     },
-    "src/app/(app)/privacy-policy/versions/[version]/page.tsx": {
+    "src/app/(light)/privacy-policy/versions/[version]/page.tsx": {
       "sealed": 2550,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1676,7 +1676,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 — ΜΙΑ ΕΚΔΟΣΗ του /privacy-policy (κείμενο · αποτύπωμα · λήψη · «τι άλλαξε»), δημόσια οθόνη χωρίς σύνδεση. Κλάση Β, ίδιος μηχανισμός με το αρχείο εκδόσεων του ίδιου εγγράφου."
     },
-    "src/app/(app)/terms/page.tsx": {
+    "src/app/(light)/terms/page.tsx": {
       "sealed": 1228,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1701,7 +1701,7 @@
       ],
       "reason": "ADR-744 §18 — ΔΗΜΟΣΙΑ ΝΟΜΙΚΗ ΟΘΟΝΗ. ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-22 με τον χρησμό (CHECK 3.51 Χ): **17** ωμά κλειδιά — ΟΛΟΚΛΗΡΟΙ οι Όροι Χρήσης, το έγγραφο που ορίζει τη συμβατική σχέση με τον χρήστη. Κλάση Β (`legal` = `absent`), ίδιος μηχανισμός και ίδια θεραπεία με το `/privacy-policy`. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces — Η ΕΝΑΛΛΑΚΤΙΚΗ ΜΕΤΡΗΘΗΚΕ ΜΕ ΤΟΝ ΙΔΙΟ GENERATOR ΠΡΙΝ ΕΠΙΛΕΓΕΙ ΔΡΟΜΟΣ: το `legal` ΟΛΟΚΛΗΡΟ μεγαλώνει το κέλυφος κατά 7.151 bytes και το `auth` κατά 9.111 — σε ΚΑΘΕ μία από τις 150 σερβιρισμένες διαδρομές, δηλαδή 2.439.300 byte-διαδρομές για να θεραπευτούν ΤΕΣΣΕΡΙΣ. Τα τέσσερα route slices κοστίζουν 8.840 bytes συνολικά, το καθένα μόνο στο δικό του chunk: **276× φθηνότερα**. Και το κόστος δεν είναι μόνο bytes: το κατάστιχο μετανάστευσης θα πήγαινε 154.494 → 170.816 (καίγοντας το 53% του περιθωρίου των 30.506 bytes) και οι εγγραφές 10 → 12, δηλαδή ΑΝΤΙΘΕΤΑ από τον δηλωμένο στόχο «να φτάσει στο μηδέν» (ADR-744 §8). Το ίδιο το `ledger.js` το γράφει: «η θεραπεία είναι ΜΕΤΑΚΟΜΙΣΗ ή per-route slice — όχι μεγαλύτερος αριθμός»."
     },
-    "src/app/(app)/terms/versions/page.tsx": {
+    "src/app/(light)/terms/versions/page.tsx": {
       "sealed": 1780,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1714,7 +1714,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 — ΤΟ ΑΡΧΕΙΟ ΕΚΔΟΣΕΩΝ του /terms, δημόσια οθόνη χωρίς σύνδεση όπως η σελίδα-μητέρα του. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. ⚠️ ΕΠΙΠΕΔΗ διεύθυνση ανά έγγραφο και ΟΧΙ /legal/<έγγραφο>/versions: απόφαση Giorgio 2026-09-16 (η οικογένεια νομικών οθονών έχει ΕΝΑ σχήμα διεύθυνσης)."
     },
-    "src/app/(app)/terms/versions/[version]/page.tsx": {
+    "src/app/(light)/terms/versions/[version]/page.tsx": {
       "sealed": 2550,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1727,7 +1727,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 — ΜΙΑ ΕΚΔΟΣΗ του /terms (κείμενο · αποτύπωμα · λήψη · «τι άλλαξε»), δημόσια οθόνη χωρίς σύνδεση. Κλάση Β, ίδιος μηχανισμός με το αρχείο εκδόσεων του ίδιου εγγράφου."
     },
-    "src/app/(app)/data-deletion/page.tsx": {
+    "src/app/(light)/data-deletion/page.tsx": {
       "sealed": 1228,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1752,7 +1752,7 @@
       ],
       "reason": "ADR-744 §18 — ΔΗΜΟΣΙΑ ΝΟΜΙΚΗ ΟΘΟΝΗ. ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-22 με τον χρησμό (CHECK 3.51 Χ): **14** ωμά κλειδιά — ΟΛΟΚΛΗΡΗ η οδηγία διαγραφής δεδομένων. Κλάση Β (`legal` = `absent`). ⚠️ Αυτή η σελίδα δεν είναι διακοσμητική: είναι το **data deletion callback** που απαιτεί η Meta για το Facebook Login, δηλαδή σελίδα που τη διαβάζει **εξωτερικός ελεγκτής**, συχνά χωρίς JavaScript — και έβλεπε `dataDeletion.howToRequest.step1` αντί για οδηγία. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces — Η ΕΝΑΛΛΑΚΤΙΚΗ ΜΕΤΡΗΘΗΚΕ ΜΕ ΤΟΝ ΙΔΙΟ GENERATOR ΠΡΙΝ ΕΠΙΛΕΓΕΙ ΔΡΟΜΟΣ: το `legal` ΟΛΟΚΛΗΡΟ μεγαλώνει το κέλυφος κατά 7.151 bytes και το `auth` κατά 9.111 — σε ΚΑΘΕ μία από τις 150 σερβιρισμένες διαδρομές, δηλαδή 2.439.300 byte-διαδρομές για να θεραπευτούν ΤΕΣΣΕΡΙΣ. Τα τέσσερα route slices κοστίζουν 8.840 bytes συνολικά, το καθένα μόνο στο δικό του chunk: **276× φθηνότερα**. Και το κόστος δεν είναι μόνο bytes: το κατάστιχο μετανάστευσης θα πήγαινε 154.494 → 170.816 (καίγοντας το 53% του περιθωρίου των 30.506 bytes) και οι εγγραφές 10 → 12, δηλαδή ΑΝΤΙΘΕΤΑ από τον δηλωμένο στόχο «να φτάσει στο μηδέν» (ADR-744 §8). Το ίδιο το `ledger.js` το γράφει: «η θεραπεία είναι ΜΕΤΑΚΟΜΙΣΗ ή per-route slice — όχι μεγαλύτερος αριθμός»."
     },
-    "src/app/(app)/data-deletion/versions/page.tsx": {
+    "src/app/(light)/data-deletion/versions/page.tsx": {
       "sealed": 1780,
       "sealedAt": "2026-09-16",
       "history": [
@@ -1765,7 +1765,7 @@
       ],
       "reason": "ADR-744 §18 + ADR-861 Φ3 — ΤΟ ΑΡΧΕΙΟ ΕΚΔΟΣΕΩΝ του /data-deletion, δημόσια οθόνη χωρίς σύνδεση όπως η σελίδα-μητέρα του. Κλάση Β: το `legal` είναι `absent` στο κέλυφος, άρα το route slice είναι ο ΜΟΝΟΣ σύγχρονος δρόμος. ⚠️ ΕΠΙΠΕΔΗ διεύθυνση ανά έγγραφο και ΟΧΙ /legal/<έγγραφο>/versions: απόφαση Giorgio 2026-09-16 (η οικογένεια νομικών οθονών έχει ΕΝΑ σχήμα διεύθυνσης)."
     },
-    "src/app/(app)/data-deletion/versions/[version]/page.tsx": {
+    "src/app/(light)/data-deletion/versions/[version]/page.tsx": {
       "sealed": 2550,
       "sealedAt": "2026-09-16",
       "history": [
@@ -2864,15 +2864,15 @@
     "entry:SalesSold ⟵ src/components/conveyance/my-cases/CaseFilePreviewDialog.tsx": ["conveyance"],
     "entry:SalesSold ⟵ src/components/sales/conveyance/ConveyanceTab.tsx": ["conveyance"],
     "src/app/(app)/admin/audit-log/page.tsx ⟵ (στατική)": ["common-audit", "listing-detail"],
-    "src/app/(app)/data-deletion/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/data-deletion/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/data-deletion/versions/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/handover-protocol/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/handover-protocol/verify/[protocolId]/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/handover-protocol/verify/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/handover-protocol/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/handover-protocol/versions/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/legal-notice/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/data-deletion/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/data-deletion/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/data-deletion/versions/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/handover-protocol/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/handover-protocol/verify/[protocolId]/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/handover-protocol/verify/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/handover-protocol/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/handover-protocol/versions/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/legal-notice/page.tsx ⟵ (στατική)": ["legal"],
     "src/app/(app)/o/[workspace]/cases/[engagementId]/page.tsx ⟵ (στατική)": ["conveyance"],
     "src/app/(app)/o/[workspace]/cases/[engagementId]/page.tsx ⟵ src/components/conveyance/my-cases/CaseFilePreviewDialog.tsx": ["conveyance"],
     "src/app/(app)/o/[workspace]/cases/[engagementId]/page.tsx ⟵ src/components/conveyance/my-cases/ReviseTransmittalDialog.tsx": ["conveyance"],
@@ -2924,16 +2924,16 @@
     "src/app/(app)/o/[workspace]/settings/agency-profile/page.tsx ⟵ src/components/geo/PlaceUnitLevels.tsx": ["property-market"],
     "src/app/(app)/o/[workspace]/settings/agency-profile/registry/page.tsx ⟵ (στατική)": ["property-market"],
     "src/app/(app)/onboarding/organization/page.tsx ⟵ (στατική)": ["onboarding"],
-    "src/app/(app)/open-source/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/privacy-policy/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/privacy-policy/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/privacy-policy/versions/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/private-marketing-disclosure/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/private-marketing-disclosure/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/private-marketing-disclosure/versions/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/terms/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/terms/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
-    "src/app/(app)/terms/versions/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/open-source/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/privacy-policy/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/privacy-policy/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/privacy-policy/versions/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/private-marketing-disclosure/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/private-marketing-disclosure/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/private-marketing-disclosure/versions/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/terms/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/terms/versions/[version]/page.tsx ⟵ (στατική)": ["legal"],
+    "src/app/(light)/terms/versions/page.tsx ⟵ (στατική)": ["legal"],
     "src/app/(app)/test-harness/first-contact-proof/page.tsx ⟵ (στατική)": ["property-market"],
     "src/app/(app)/test-harness/listing-shapes/page.tsx ⟵ (στατική)": ["search-focus", "search-region"],
     "src/app/(app)/test-harness/listing-shapes/page.tsx ⟵ src/components/search-results/ClusterApproximationKey.tsx": ["search-focus"],

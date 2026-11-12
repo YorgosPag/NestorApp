@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview ⚖️ **Η ΑΠΟΔΟΣΗ ΤΩΝ ΑΔΕΙΩΝ ΠΟΥ ΒΛΕΠΕΙ Ο ΑΝΘΡΩΠΟΣ** (ADR-863 Φ3).
- * @related app/(app)/open-source/page.tsx · components/legal/ThirdPartyComponentTable.tsx ·
+ * @related app/(light)/open-source/page.tsx · components/legal/ThirdPartyComponentTable.tsx ·
  *   scripts/generate-third-party-notices.js (τα τρία παραδοτέα)
  * @module components/legal/ThirdPartyAttribution
  *

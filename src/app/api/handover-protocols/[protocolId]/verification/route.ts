@@ -2,7 +2,7 @@
  * @fileoverview **Η ΔΗΜΟΣΙΑ ΠΟΡΤΑ ΕΠΑΛΗΘΕΥΣΗΣ ΠΡΩΤΟΚΟΛΛΟΥ ΠΑΡΑΔΟΣΗΣ** (ADR-916 Φ-Γ2 Σ6).
  * @related server/property-handover-verification/handover-protocol-verification.server.ts ·
  *          lib/property-handover/handover-protocol-verification.ts (κρίση + συμβόλαιο) ·
- *          app/(app)/handover-protocol/verify (η σελίδα)
+ *          app/(light)/handover-protocol/verify (η σελίδα)
  * @module app/api/handover-protocols/[protocolId]/verification/route
  *
  * 🔴 **ΧΩΡΙΣ `withAuth`, ΕΠΙΤΗΔΕΣ**: τη χτυπά ο τρίτος (συμβολαιογράφος · τράπεζα · επόμενος αγοραστής), που δεν έχει

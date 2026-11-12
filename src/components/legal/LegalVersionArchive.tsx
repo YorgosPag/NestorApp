@@ -133,7 +133,7 @@ function ArchiveContent({
  */
 export function LegalVersionsRoute({ document }: { readonly document: LegalDocumentId }): React.JSX.Element {
   return (
-    <ShellSurface measure="prose">
+    <ShellSurface as="main" measure="prose">
       <LegalVersionArchive document={document} />
     </ShellSurface>
   );

@@ -13,7 +13,7 @@ registerRouteSlice(routeSlice);
 
 export default function PrivateMarketingDisclosurePage() {
   return (
-    <ShellSurface measure="prose">
+    <ShellSurface as="main" measure="prose">
       <LegalDocumentView document="private-marketing-disclosure" />
     </ShellSurface>
   );

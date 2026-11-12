@@ -141,7 +141,7 @@
       "lazyRouteRegistries": "086ac53a38a4b1d4b3491be342032995a4d91f3a7b3db12f18660e9b34291469",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "5140862e1a922044ce2d30b7132f7f1a4c5b4d9b38614608d34ee614f83ef934",
+      "routeSlices": "3463fd9666b61d2a3e504b0560c1e2c1bd9a491651a34eb68fd035adda7836af",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a56064ef20758243a47bbc555592ed95d8f046431ea74160a9a75d56d05879fd",
+  "inputsSha256": "054dd0631519f9c58b10b8d12f958f4d571d30b5ed0a02d108054971c2f7814f",
   "languages": [
     "el"
   ],
@@ -1386,7 +1386,7 @@
       }
     },
     "data-deletion": {
-      "page": "src/app/(app)/data-deletion/page.tsx",
+      "page": "src/app/(light)/data-deletion/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -1415,7 +1415,7 @@
       }
     },
     "data-deletion__versions": {
-      "page": "src/app/(app)/data-deletion/versions/page.tsx",
+      "page": "src/app/(light)/data-deletion/versions/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -1451,7 +1451,7 @@
       }
     },
     "data-deletion__versions__version": {
-      "page": "src/app/(app)/data-deletion/versions/[version]/page.tsx",
+      "page": "src/app/(light)/data-deletion/versions/[version]/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -3347,7 +3347,7 @@
       }
     },
     "handover-protocol": {
-      "page": "src/app/(app)/handover-protocol/page.tsx",
+      "page": "src/app/(light)/handover-protocol/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -3376,7 +3376,7 @@
       }
     },
     "handover-protocol__verify": {
-      "page": "src/app/(app)/handover-protocol/verify/page.tsx",
+      "page": "src/app/(light)/handover-protocol/verify/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -3467,7 +3467,7 @@
       }
     },
     "handover-protocol__verify__protocolId": {
-      "page": "src/app/(app)/handover-protocol/verify/[protocolId]/page.tsx",
+      "page": "src/app/(light)/handover-protocol/verify/[protocolId]/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -3558,7 +3558,7 @@
       }
     },
     "handover-protocol__versions": {
-      "page": "src/app/(app)/handover-protocol/versions/page.tsx",
+      "page": "src/app/(light)/handover-protocol/versions/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -3594,7 +3594,7 @@
       }
     },
     "handover-protocol__versions__version": {
-      "page": "src/app/(app)/handover-protocol/versions/[version]/page.tsx",
+      "page": "src/app/(light)/handover-protocol/versions/[version]/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -3907,7 +3907,7 @@
       }
     },
     "legal-notice": {
-      "page": "src/app/(app)/legal-notice/page.tsx",
+      "page": "src/app/(light)/legal-notice/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -37536,7 +37536,7 @@
       }
     },
     "open-source": {
-      "page": "src/app/(app)/open-source/page.tsx",
+      "page": "src/app/(light)/open-source/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -37581,7 +37581,7 @@
       }
     },
     "privacy-policy": {
-      "page": "src/app/(app)/privacy-policy/page.tsx",
+      "page": "src/app/(light)/privacy-policy/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -37610,7 +37610,7 @@
       }
     },
     "privacy-policy__versions": {
-      "page": "src/app/(app)/privacy-policy/versions/page.tsx",
+      "page": "src/app/(light)/privacy-policy/versions/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -37646,7 +37646,7 @@
       }
     },
     "privacy-policy__versions__version": {
-      "page": "src/app/(app)/privacy-policy/versions/[version]/page.tsx",
+      "page": "src/app/(light)/privacy-policy/versions/[version]/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -37695,7 +37695,7 @@
       }
     },
     "private-marketing-disclosure": {
-      "page": "src/app/(app)/private-marketing-disclosure/page.tsx",
+      "page": "src/app/(light)/private-marketing-disclosure/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -37724,7 +37724,7 @@
       }
     },
     "private-marketing-disclosure__versions": {
-      "page": "src/app/(app)/private-marketing-disclosure/versions/page.tsx",
+      "page": "src/app/(light)/private-marketing-disclosure/versions/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -37760,7 +37760,7 @@
       }
     },
     "private-marketing-disclosure__versions__version": {
-      "page": "src/app/(app)/private-marketing-disclosure/versions/[version]/page.tsx",
+      "page": "src/app/(light)/private-marketing-disclosure/versions/[version]/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -40058,7 +40058,7 @@
       }
     },
     "terms": {
-      "page": "src/app/(app)/terms/page.tsx",
+      "page": "src/app/(light)/terms/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -40087,7 +40087,7 @@
       }
     },
     "terms__versions": {
-      "page": "src/app/(app)/terms/versions/page.tsx",
+      "page": "src/app/(light)/terms/versions/page.tsx",
       "wants": {
         "legal": {
           "keys": [
@@ -40123,7 +40123,7 @@
       }
     },
     "terms__versions__version": {
-      "page": "src/app/(app)/terms/versions/[version]/page.tsx",
+      "page": "src/app/(light)/terms/versions/[version]/page.tsx",
       "wants": {
         "legal": {
           "keys": [

@@ -28,7 +28,7 @@ export default function LegalNoticePage() {
   const { t } = useTranslation('legal');
 
   return (
-    <ShellSurface measure="prose">
+    <ShellSurface as="main" measure="prose">
       <h1>{t('legalNotice.title')}</h1>
       <p>{t('legalNotice.intro')}</p>
 

@@ -176,7 +176,7 @@ export function LegalVersionRoute({ document }: { readonly document: LegalDocume
   const { version } = useParams<{ version: string }>();
   if (!VERSION_SEGMENT.test(version)) notFound();
   return (
-    <ShellSurface measure="prose">
+    <ShellSurface as="main" measure="prose">
       <LegalVersionDetail document={document} version={Number(version)} />
     </ShellSurface>
   );

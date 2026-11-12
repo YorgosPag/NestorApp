@@ -13,7 +13,7 @@ registerRouteSlice(routeSlice);
 
 export default function HandoverProtocolPage() {
   return (
-    <ShellSurface measure="prose">
+    <ShellSurface as="main" measure="prose">
       <LegalDocumentView document="handover-protocol" />
     </ShellSurface>
   );
