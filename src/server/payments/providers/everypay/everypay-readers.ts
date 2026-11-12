@@ -30,11 +30,14 @@ export function statusField(record: Record<string, unknown> | null): string | nu
   return status === null ? null : status.toLowerCase().replace(/[\s_-]+/g, '');
 }
 
-/** Η λίστα μιας απάντησης λίστας: πίνακας, ή αντικείμενο με `data` / `payments` / `refunds`. */
-export function listOf(body: unknown, key: 'payments' | 'refunds'): Record<string, unknown>[] {
-  const record = plainRecordOrNull(body);
-  const candidate = Array.isArray(body) ? body : record?.data ?? record?.[key];
-  return Array.isArray(candidate) ? candidate.filter(isPlainRecord) : [];
+/**
+ * Οι εγγραφές μιας απάντησης λίστας (`GET /payments` · `GET /refunds`): `{ total_count, items: [...] }` — η μορφή
+ * της τεκμηρίωσης, **μόνο** αυτή. Άλλη μορφή ⇒ `null`, ποτέ `[]`: μια κενή λίστα από απάντηση που δεν καταλάβαμε
+ * σημαίνει «καμία επιστροφή» και καταγράφεται σιωπηλά ως `unchanged` (ADR-ACC-030 §5.9 #6 — έτσι χάθηκε επιστροφή).
+ */
+export function listItemsOrNull(body: unknown): Record<string, unknown>[] | null {
+  const items = plainRecordOrNull(body)?.items;
+  return Array.isArray(items) ? items.filter(isPlainRecord) : null;
 }
 
 /** Το αναγνωριστικό της πληρωμής μιας ειδοποίησης: κείμενο (`pmt_…`) ή αντικείμενο με `token`. */

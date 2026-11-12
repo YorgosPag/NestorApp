@@ -63,6 +63,10 @@ async function processSignal(
     });
     outcome = 'failed';
   }
+  if (outcome !== 'failed') {
+    // Η ΜΟΝΗ γραμμή log αποδοχής: χωρίς αυτήν, webhook που πέρασε και συμφιλίωση δεν ξεχωρίζουν στα logs (§5.9 #3).
+    logger.info('Payment webhook applied', { provider: provider.id, signal: signal.kind, outcome });
+  }
   await recordProviderEventReceipt(db, {
     provider: provider.id, rawBody, signal: signal.kind, outcome, receivedAtMs: Date.now(),
   }).catch((error: unknown) => logger.warn('Provider event receipt not written', {

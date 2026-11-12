@@ -79,7 +79,7 @@ describe('readSettlement (κάρτα)', () => {
     jest.spyOn(global, 'fetch')
       .mockImplementationOnce(() => respond({ token: 'pnt_1', status: 'Paid', payment: 'pmt_1' }))
       .mockImplementationOnce(() => respond({ token: 'pmt_1', status: 'Partially Refunded', amount: 12400, currency: 'EUR', date_created: '2026-11-11T10:00:00Z' }))
-      .mockImplementationOnce(() => respond({ data: [{ token: 'ref_1', status: 'Captured', amount: 2400, date_created: '2026-11-12T10:00:00Z' }] }));
+      .mockImplementationOnce(() => respond({ total_count: 1, items: [{ token: 'ref_1', status: 'Captured', amount: 2400, date_created: '2026-11-12T10:00:00Z' }] }));
     const settlement = await provider.readSettlement(subject);
     expect(settlement).toEqual({
       state: 'settled',
@@ -89,6 +89,15 @@ describe('readSettlement (κάρτα)', () => {
         { kind: 'refund', reference: 'ref_1', amountMinor: 2400, currency: 'EUR', occurredAt: '2026-11-12T10:00:00.000Z' },
       ],
     });
+  });
+
+  // ADR-ACC-030 §5.9 #6: η μαντεμένη μορφή `{ data }` έδινε σιωπηλά «καμία επιστροφή» ⇒ η επιστροφή χάθηκε.
+  it('λίστα επιστροφών εκτός συμβολαίου (χωρίς `items`) ⇒ σφάλμα, ποτέ «καμία επιστροφή»', async () => {
+    jest.spyOn(global, 'fetch')
+      .mockImplementationOnce(() => respond({ token: 'pnt_1', status: 'Paid', payment: 'pmt_1' }))
+      .mockImplementationOnce(() => respond({ token: 'pmt_1', status: 'Partially Refunded', amount: 12400, currency: 'EUR', date_created: '2026-11-11T10:00:00Z' }))
+      .mockImplementationOnce(() => respond({ data: [{ token: 'ref_1', status: 'Captured', amount: 2400, date_created: '2026-11-12T10:00:00Z' }] }));
+    await expect(provider.readSettlement(subject)).rejects.toMatchObject({ httpStatus: 502 });
   });
 
   it('ληγμένη ειδοποίηση ⇒ closed/expired· εκκρεμής ⇒ open', async () => {
