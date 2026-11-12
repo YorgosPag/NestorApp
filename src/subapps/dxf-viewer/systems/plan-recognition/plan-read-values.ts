@@ -5,10 +5,13 @@
  *
  * 🔑 **Πιο ύποπτη πρώτη** (ο άνθρωπος ελέγχει από πάνω προς τα κάτω):
  *   1. σύγκρουση στη συνόρθωση (ο Baarda την απέρριψε) ·
- *   2. διάσταση χωρίς δέση, ή κείμενο-διάσταση χωρίς τιμή (η μονάδα δεν αποδεικνύεται) ·
+ *   2. διάσταση χωρίς δέση, κείμενο-διάσταση χωρίς τιμή (η μονάδα δεν αποδεικνύεται), ή ανάγνωση κάτω από το επίπεδο
+ *      «υψηλή» (`meetsConfidenceTier`, βήμα 4 — η βεβαιότητα ως σήμα ιεράρχησης, όπως Document AI / Content Understanding) ·
  *   3. οι υπόλοιπες διαστάσεις ·
  *   4. τα άλλα κείμενα.
  *   Μέσα σε κάθε ομάδα: μεγαλύτερο |w| πρώτα, μετά χαμηλότερη βεβαιότητα ανάγνωσης, μετά η σειρά της ανάγνωσης.
+ * 🔑 Βήμα 4 — **ετικέτα προτεραιότητας** σε κάθε γραμμή (`priority`): «ύποπτη» · «ελέγχθηκε» · «εντάξει», από τον ΙΔΙΟ
+ *   κανόνα με τη σειρά (`needsReview`), ώστε ετικέτα και θέση να μη διαφωνούν ποτέ. Ο έλεγχος του ανθρώπου νικά.
  * 🔑 Τα δεδομένα υπάρχουν ήδη (`PlanReading` + `FusedDimension`): εδώ μόνο συνδυάζονται, τίποτα δεν υπολογίζεται ξανά.
  *
  * ΚΑΘΑΡΟ — zero React/DOM/store.
@@ -16,6 +19,10 @@
 
 import type { FusedDimension, FusedDimensionStatus, PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../bim/plan-recognition/plan-recognition-types';
+import { meetsConfidenceTier } from './plan-confidence';
+
+/** Βήμα 4 — η ετικέτα προτεραιότητας μιας γραμμής. */
+export type PlanReadValuePriority = 'suspect' | 'checked' | 'ok';
 
 export interface PlanReadValueRow {
   readonly textId: string;
@@ -36,19 +43,35 @@ export interface PlanReadValueRow {
   readonly deviationMm: number | null;
   /** Τυποποιημένο υπόλοιπο Baarda· `null` όταν δεν ελέγχεται. */
   readonly w: number | null;
+  /** Βήμα 4 — «ύποπτη» · «ελέγχθηκε» · «εντάξει». */
+  readonly priority: PlanReadValuePriority;
+}
+
+type RowFacts = Omit<PlanReadValueRow, 'priority'>;
+
+/** Θέλει έλεγχο: σύγκρουση · αδέτη · διάσταση χωρίς τιμή · ανάγνωση κάτω από «υψηλή». Ο ΕΝΑΣ κανόνας για σειρά και ετικέτα. */
+function needsReview(row: RowFacts): boolean {
+  return row.status === 'conflict' || row.status === 'unbound'
+    || (row.kind === 'dimension' && row.valueMm === null)
+    || !meetsConfidenceTier(row.confidence, 'high');
+}
+
+function priorityOf(row: RowFacts): PlanReadValuePriority {
+  if (isHumanChecked(row)) return 'checked';
+  return needsReview(row) ? 'suspect' : 'ok';
 }
 
 /** Ομάδα υποψίας: μικρότερη = πιο ύποπτη. */
 function suspicionGroup(row: PlanReadValueRow): number {
   if (row.status === 'conflict') return 0;
-  if (row.status === 'unbound' || (row.kind === 'dimension' && row.valueMm === null)) return 1;
+  if (needsReview(row)) return 1;
   if (row.kind === 'dimension') return 2;
   return 3;
 }
 
 function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | undefined): PlanReadValueRow {
   const measured = fused?.measuredMm ?? null;
-  return {
+  const facts: RowFacts = {
     textId: text.id,
     raw: text.raw,
     correctedFrom: text.correctedFrom ?? null,
@@ -60,6 +83,7 @@ function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | u
     deviationMm: measured !== null && valueMm !== null ? measured - valueMm : null,
     w: fused?.w ?? null,
   };
+  return { ...facts, priority: priorityOf(facts) };
 }
 
 /** Οι γραμμές της λίστας, η πιο ύποπτη πρώτη. `reading` = η ανάγνωση που ισχύει (με τις διορθώσεις). */

@@ -15,13 +15,13 @@ import { PlanReadValuesSection, type PlanReadValuesActions } from '../PlanReadVa
 const t = (key: string, params?: Record<string, string | number>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
 const row = (over: Partial<PlanReadValueRow> & Pick<PlanReadValueRow, 'textId' | 'raw'>): PlanReadValueRow => ({
-  correctedFrom: null, confirmed: false, kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, ...over,
+  correctedFrom: null, confirmed: false, priority: 'ok', kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, ...over,
 });
 
 const ROWS: readonly PlanReadValueRow[] = [
-  row({ textId: 't3', raw: '4.12', correctedFrom: '4.15', valueMm: 4120, status: 'conflict', deviationMm: -420, w: -4.2 }),
-  row({ textId: 't4', raw: '412' }),
-  row({ textId: 't1', raw: 'ΣΑΛΟΝΙ', kind: 'other', confidence: 0.4 }),
+  row({ textId: 't3', raw: '4.12', correctedFrom: '4.15', valueMm: 4120, status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked' }),
+  row({ textId: 't4', raw: '412', priority: 'suspect' }),
+  row({ textId: 't1', raw: 'ΣΑΛΟΝΙ', kind: 'other', confidence: 0.4, priority: 'suspect' }),
 ];
 
 function renderValues(rows: readonly PlanReadValueRow[] | null = ROWS) {
@@ -101,7 +101,7 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
   });
 
   it('βήμα 3 — «Σωστό ✓» μόνο σε μη ελεγμένη· επιβεβαιωμένη ⇒ σήμανση + «Επαναφορά»· πρόοδος N από M', () => {
-    const rows = [...ROWS, row({ textId: 't9', raw: '2.05', valueMm: 2050, confirmed: true, confidence: 1 })];
+    const rows = [...ROWS, row({ textId: 't9', raw: '2.05', valueMm: 2050, confirmed: true, confidence: 1, priority: 'checked' })];
     const { getAllByTestId, getByTestId, actions } = renderValues(rows);
     expect(getByTestId('mfd-read-values-progress').textContent)
       .toBe('modelFromDrawing.image.ocr.values.progress{"checked":2,"total":4}');
@@ -115,6 +115,17 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(actions.onRevert).toHaveBeenCalledWith('t9');
     fireEvent.click(item(getAllByTestId, 't1').querySelector('[data-testid="mfd-read-value-confirm"]') as HTMLElement);
     expect(actions.onConfirm).toHaveBeenCalledWith('t1');
+  });
+
+  it('βήμα 4 — ετικέτα προτεραιότητας σε κάθε γραμμή, ΡΗΤΟ κλειδί ανά κατάσταση', () => {
+    const rows = [...ROWS, row({ textId: 't9', raw: '2.05', valueMm: 2050 })];
+    const { getAllByTestId } = renderValues(rows);
+    const badge = (id: string): Element | null => item(getAllByTestId, id).querySelector('[data-testid="mfd-read-value-priority"]');
+    expect(badge('t3')?.getAttribute('data-priority')).toBe('checked');
+    expect(badge('t4')?.textContent).toBe('modelFromDrawing.image.ocr.values.priority.suspect');
+    expect(badge('t9')?.textContent).toBe('modelFromDrawing.image.ocr.values.priority.ok');
+    expect(badge('t3')?.textContent).toBe('modelFromDrawing.image.ocr.values.priority.checked');
+    expect(badge('t3')?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('«Επαναφορά» μόνο σε διορθωμένη· «Δεν είναι διάσταση» μόνο σε διάσταση· δείκτης ⇒ onHover', () => {

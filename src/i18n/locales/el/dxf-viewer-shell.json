@@ -536,7 +536,12 @@
           "revert": "Επαναφορά",
           "confirm": "Σωστό",
           "confirmed": "επιβεβαιώθηκε από εσένα · η μηχανή διάβασε σωστά",
-          "progress": "Ελέγχθηκαν {checked} από {total, plural, one {# κείμενο} other {# κείμενα}}"
+          "progress": "Ελέγχθηκαν {checked} από {total, plural, one {# κείμενο} other {# κείμενα}}",
+          "priority": {
+            "suspect": "ύποπτη",
+            "checked": "ελέγχθηκε",
+            "ok": "εντάξει"
+          }
         }
       },
       "reading": {

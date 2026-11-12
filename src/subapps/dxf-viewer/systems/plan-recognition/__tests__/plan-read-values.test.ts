@@ -52,15 +52,15 @@ const FUSION = {
 };
 
 describe('planReadValueRows — Δ21 (δ): η πιο ύποπτη πρώτη', () => {
-  it('σύγκρουση → αδέτη / χωρίς τιμή → διαστάσεις κατά |w| και μετά χαμηλή βεβαιότητα → άλλα κείμενα', () => {
-    expect(planReadValueRows(READING, FUSION).map((r) => r.textId)).toEqual(['t3', 't6', 't4', 't7', 't5', 't2', 't1']);
+  it('σύγκρουση → θέλει έλεγχο (αδέτη · χωρίς τιμή · ανάγνωση κάτω από «υψηλή») κατά |w| και μετά βεβαιότητα → διαστάσεις → άλλα', () => {
+    expect(planReadValueRows(READING, FUSION).map((r) => r.textId)).toEqual(['t3', 't7', 't5', 't1', 't6', 't4', 't2']);
   });
 
   it('κάθε γραμμή: τιμή, κατάσταση, απόκλιση σχεδίου − γραμμένου, w, προέλευση «διορθώθηκε»', () => {
     const rows = new Map(planReadValueRows(READING, FUSION).map((r) => [r.textId, r]));
     expect(rows.get('t3')).toEqual({
       textId: 't3', raw: '4.12', correctedFrom: '4.15', confirmed: false, kind: 'dimension', valueMm: 4120, confidence: 0.9,
-      status: 'conflict', deviationMm: -420, w: -4.2,
+      status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked',
     });
     expect(rows.get('t4')).toMatchObject({ valueMm: null, status: null, deviationMm: null, correctedFrom: null });
   });
@@ -90,5 +90,25 @@ describe('Δ21 (δ) βήμα 3 — «Σωστό ✓»: επιβεβαίωση �
     expect(planReadValuesProgress(planReadValueRows(READING, FUSION))).toEqual({ checked: 1, total: 7 });
     expect(planReadValuesProgress(planReadValueRows(confirmedReading, FUSION))).toEqual({ checked: 2, total: 7 });
     expect(planReadValuesProgress([])).toEqual({ checked: 0, total: 0 });
+  });
+});
+
+describe('Δ21 (δ) βήμα 4 — ετικέτα προτεραιότητας από τον ΙΔΙΟ κανόνα με τη σειρά', () => {
+  it('ύποπτη: σύγκρουση · αδέτη · χωρίς τιμή · ανάγνωση < 0,8· εντάξει: τα υπόλοιπα· ελέγχθηκε: ο άνθρωπος νικά', () => {
+    const priority = Object.fromEntries(planReadValueRows(READING, FUSION).map((r) => [r.textId, r.priority]));
+    expect(priority).toEqual({ t1: 'suspect', t2: 'ok', t3: 'checked', t4: 'suspect', t5: 'suspect', t6: 'suspect', t7: 'suspect' });
+  });
+
+  it('καμία «εντάξει» πάνω από «ύποπτη» που δεν ελέγχθηκε (ετικέτα και θέση δεν διαφωνούν)', () => {
+    const order = planReadValueRows(READING, FUSION).filter((r) => r.priority !== 'checked').map((r) => r.priority);
+    expect(order.indexOf('ok')).toBeGreaterThan(order.lastIndexOf('suspect'));
+  });
+
+  it('επιβεβαίωση ⇒ «ελέγχθηκε» ακόμα κι αν η ανάγνωση ήταν χαμηλή', () => {
+    const reading: PlanReading = {
+      ...READING,
+      texts: READING.texts.map((t) => (t.id === 't7' ? { ...t, confirmed: true, confidence: { score: 1, factors: { reading: 1 } } } : t)),
+    };
+    expect(planReadValueRows(reading, FUSION).find((r) => r.textId === 't7')?.priority).toBe('checked');
   });
 });

@@ -13,14 +13,15 @@
  */
 
 import * as React from 'react';
-import { Check, Pencil, RotateCcw } from 'lucide-react';
+import { Check, CircleCheck, Pencil, RotateCcw, TriangleAlert, UserCheck, type LucideIcon } from 'lucide-react';
+import { Badge, type BadgeVariantProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { FusedDimensionStatus } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
 import type { PlanCorrectionPreview } from '../../../bim/plan-recognition/reading/reading-corrections';
 import {
-  isHumanChecked, planReadValuesProgress, type PlanReadValueRow,
+  isHumanChecked, planReadValuesProgress, type PlanReadValuePriority, type PlanReadValueRow,
 } from '../../../systems/plan-recognition/plan-read-values';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 
@@ -53,6 +54,31 @@ const STATUS_KEY: Readonly<Record<FusedDimensionStatus, string>> = {
   uncheckable: 'modelFromDrawing.image.ocr.values.status.uncheckable',
   unbound: 'modelFromDrawing.image.ocr.values.status.unbound',
 };
+
+/**
+ * Βήμα 4 — η ετικέτα προτεραιότητας: λέξη **και** σχήμα εικονιδίου διαφορετικά σε κάθε κατάσταση, ώστε να ξεχωρίζουν χωρίς
+ * χρώμα (WCAG 1.4.1, πνεύμα του CHECK 3.41)· το χρώμα από τις παραλλαγές του κεντρικού `Badge` (μετρημένο μελάνι).
+ */
+const PRIORITY_MARK: Readonly<Record<PlanReadValuePriority, {
+  readonly key: string;
+  readonly icon: LucideIcon;
+  readonly variant: NonNullable<BadgeVariantProps['variant']>;
+}>> = {
+  suspect: { key: 'modelFromDrawing.image.ocr.values.priority.suspect', icon: TriangleAlert, variant: 'warning' },
+  checked: { key: 'modelFromDrawing.image.ocr.values.priority.checked', icon: UserCheck, variant: 'info' },
+  ok: { key: 'modelFromDrawing.image.ocr.values.priority.ok', icon: CircleCheck, variant: 'outline' },
+};
+
+function PriorityBadge({ priority, t }: { readonly priority: PlanReadValuePriority; readonly t: Translate }): React.ReactElement {
+  const mark = PRIORITY_MARK[priority];
+  const Icon = mark.icon;
+  return (
+    <Badge variant={mark.variant} className="shrink-0 gap-1 px-1.5 py-0 text-[10px]" data-testid="mfd-read-value-priority" data-priority={priority}>
+      <Icon className="size-3" aria-hidden="true" />
+      {t(mark.key)}
+    </Badge>
+  );
+}
 
 /** Η ερμηνεία: είδος, και για διάσταση η τιμή ή «χωρίς αποδεδειγμένη μονάδα». Ίδια για γραμμή και προεπισκόπηση. */
 function interpretationOf(row: PlanCorrectionPreview, t: Translate): string {
@@ -152,15 +178,19 @@ function ValueRow({ row, editing, onEdit, actions, t }: {
       onMouseEnter={() => actions.onHover(row.textId)} onMouseLeave={() => actions.onHover(null)}
       onFocus={() => actions.onHover(row.textId)} onBlur={() => actions.onHover(null)}
     >
-      {editing ? <RowEditor row={row} onSave={save} onCancel={() => onEdit(null)} preview={actions.previewCorrection} t={t} /> : (
-        <button
-          type="button" onClick={() => onEdit(row.textId)} className="flex items-center gap-1.5 self-start text-xs font-mono text-foreground"
-          aria-label={t('modelFromDrawing.image.ocr.values.editLabel', { raw: row.raw })} data-testid="mfd-read-value-edit"
-        >
-          <span>{row.raw}</span>
-          <Pencil className="size-3 shrink-0" aria-hidden="true" />
-        </button>
-      )}
+      <header className="flex items-center gap-1.5">
+        <PriorityBadge priority={row.priority} t={t} />
+        {editing ? null : (
+          <button
+            type="button" onClick={() => onEdit(row.textId)} className="flex items-center gap-1.5 text-xs font-mono text-foreground"
+            aria-label={t('modelFromDrawing.image.ocr.values.editLabel', { raw: row.raw })} data-testid="mfd-read-value-edit"
+          >
+            <span>{row.raw}</span>
+            <Pencil className="size-3 shrink-0" aria-hidden="true" />
+          </button>
+        )}
+      </header>
+      {editing ? <RowEditor row={row} onSave={save} onCancel={() => onEdit(null)} preview={actions.previewCorrection} t={t} /> : null}
       <p className="m-0 text-[11px] text-foreground">{interpretationOf(row, t)}</p>
       <p className={MUTED}>{metaOf(row, t)}</p>
       {row.correctedFrom !== null ? (

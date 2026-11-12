@@ -536,7 +536,12 @@
           "revert": "Revert",
           "confirm": "Correct",
           "confirmed": "confirmed by you · the machine read it correctly",
-          "progress": "Checked {checked} of {total, plural, one {# text} other {# texts}}"
+          "progress": "Checked {checked} of {total, plural, one {# text} other {# texts}}",
+          "priority": {
+            "suspect": "suspect",
+            "checked": "checked",
+            "ok": "OK"
+          }
         }
       },
       "reading": {
