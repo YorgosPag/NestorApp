@@ -14,7 +14,7 @@ import { formatEuro } from '@/lib/number/greek-decimal';
 import { formatOperatorDate } from '@/lib/operator-time-format';
 import { GREEK_STANDARD_VAT_RATE } from '@/subapps/accounting/services/config/vat-rates';
 import { floorLabelIn } from '@/lib/floor/floor-label-bundle';
-import { BRAND, escapeHtml } from '@/services/email-templates';
+import { BRAND, escapeHtml, formatPaymentMethod } from '@/services/email-templates';
 import { resolveTenantNotificationEmail } from '@/services/org-structure/org-routing-resolver';
 import type { ResolveResult } from '@/services/org-structure/org-routing-resolver';
 import type { NotificationEventCode } from '@/config/notification-events';
@@ -253,17 +253,8 @@ export function textInvoiceLink(url: string | null): readonly string[] {
  */
 export { formatEuro };
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  bank_transfer: 'Τραπεζική κατάθεση',
-  cash: 'Μετρητά',
-  check: 'Επιταγή',
-  credit_card: 'Πιστωτική κάρτα',
-  debit_card: 'Χρεωστική κάρτα',
-};
-
-export function formatPaymentMethod(method: string): string {
-  return PAYMENT_METHOD_LABELS[method] ?? method;
-}
+/** Ο ΕΝΑΣ μορφοποιητής τρόπου πληρωμής των email (ADR-ACC-030 §3) — ήταν δεύτερο χειρόγραφο αντίγραφο εδώ. */
+export { formatPaymentMethod };
 
 // ============================================================================
 // SHARED TYPES

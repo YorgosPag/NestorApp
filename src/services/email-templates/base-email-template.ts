@@ -19,6 +19,7 @@ import { escapeHtml } from '@/lib/html/escape-html';
 import { formatEuro } from '@/lib/number/greek-decimal';
 import { formatOperatorDate } from '@/lib/operator-time-format';
 import { baseEmailTexts } from './base-email-texts';
+import { paymentMethodLabelIn } from '@/subapps/accounting/services/payments/payment-method-label-bundle';
 
 // ============================================================================
 // BRAND CONSTANTS
@@ -438,15 +439,10 @@ export function formatEmailDateGreek(date: Date): string {
 // Back-compat alias — consumer migration deferred (email templates have pre-existing Greek UI strings, out of scope Boy Scout C.5.13)
 export { formatEmailDateGreek as formatDateGreek };
 
-/** Payment method labels */
-const PAYMENT_LABELS: Record<string, string> = {
-  bank_transfer: 'Τραπεζική κατάθεση',
-  cash: 'Μετρητά',
-  check: 'Επιταγή',
-  credit_card: 'Πιστωτική κάρτα',
-  debit_card: 'Χρεωστική κάρτα',
-};
-
+/**
+ * Ο τρόπος πληρωμής στα (ελληνικά) email πωλήσεων — τα **ίδια** κλειδιά i18n με την UI (`paymentMethodLabelIn`,
+ * ADR-ACC-030 §3). Ήταν χειρόγραφος πίνακας με `credit_card` / `debit_card` που δεν υπάρχουν στον `PaymentMethod`.
+ */
 export function formatPaymentMethod(method: string): string {
-  return PAYMENT_LABELS[method] ?? method;
+  return paymentMethodLabelIn(method, 'el');
 }
