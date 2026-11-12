@@ -14,7 +14,7 @@
  */
 
 import { normalizeNumber } from '../../../systems/dynamic-input/utils/number';
-import type { PlanTextKind } from '../plan-recognition-types';
+import type { PlanConfidence, PlanDimension, PlanTextKind } from '../plan-recognition-types';
 
 export type WrittenLengthUnit = 'm' | 'cm' | 'mm';
 
@@ -91,6 +91,28 @@ export function inferBareIntegerUnit(dimensionRaws: readonly string[]): BareInte
 export function writtenLengthsMm(dimensionRaws: readonly string[]): (number | null)[] {
   const bareIntegerUnit = inferBareIntegerUnit(dimensionRaws);
   return dimensionRaws.map((raw) => parseDimensionValue(raw, bareIntegerUnit)?.valueMm ?? null);
+}
+
+/** Ένα κείμενο που **ίσως** είναι διάσταση: το κείμενό του + ό,τι ξέρει ήδη ο αναγνώστης (τμήματα, βεβαιότητα). */
+export interface WrittenDimensionCandidate {
+  readonly textId: string;
+  readonly raw: string;
+  readonly segmentIds: readonly string[];
+  readonly confidence: PlanConfidence;
+}
+
+/**
+ * ADR-929 Δ21 (δ) βήμα 8 — **η ΜΙΑ μετατροπή «κείμενα → διαστάσεις με τιμή»**, για κάθε πηγή (τοπικό OCR · VLM ·
+ * διορθώσεις του ανθρώπου). Η πηγή διαλέγει **ποια** κείμενα είναι υποψήφια· η τιμή βγαίνει από το `writtenLengthsMm`
+ * πάνω σε **όλο** το σύνολο (η μονάδα των σκέτων ακεραίων κρίνεται μία φορά), και όποιο δεν έχει αποδεδειγμένη τιμή
+ * μένει έξω — το κείμενό του μένει ορατό στα `texts`.
+ */
+export function writtenDimensions(candidates: readonly WrittenDimensionCandidate[]): PlanDimension[] {
+  const valuesMm = writtenLengthsMm(candidates.map((c) => c.raw));
+  return candidates.flatMap((c, i) => {
+    const valueMm = valuesMm[i];
+    return valueMm === null ? [] : [{ textId: c.textId, valueMm, segmentIds: c.segmentIds, confidence: c.confidence }];
+  });
 }
 
 /** «1:100», «Κλ. 1:50», «ΚΛΙΜΑΚΑ 1 : 200» ⇒ ο παρονομαστής. */

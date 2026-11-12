@@ -21,7 +21,7 @@
 
 import type { PlanDimension, PlanReading, PlanReadingOutcome, PlanText, PlanWrittenScale } from '../plan-recognition-types';
 import { readingConfidence } from './plan-reading-from-view';
-import { classifyWrittenText, parseWrittenScale, writtenLengthsMm } from './written-values';
+import { classifyWrittenText, parseWrittenScale, writtenDimensions } from './written-values';
 
 /** Η διόρθωση ενός κειμένου: νέο κείμενο όπως γράφεται στο χαρτί, ή «δεν είναι διάσταση». */
 export type PlanReadingCorrection =
@@ -85,14 +85,11 @@ function correctedDimensions(
   const candidates = [...reading.dimensions.map((d) => d.textId), ...added]
     .map((id) => byId.get(id))
     .filter((t): t is PlanText => t !== undefined && t.kind === 'dimension');
-  const valuesMm = writtenLengthsMm(candidates.map((t) => t.raw));
-  return candidates.flatMap((t, i) => {
-    const valueMm = valuesMm[i];
-    if (valueMm === null) return [];
+  return writtenDimensions(candidates.map((t) => {
     const before = original.get(t.id);
     const confidence = corrections.has(t.id) || !before ? t.confidence : before.confidence;
-    return [{ textId: t.id, valueMm, segmentIds: before?.segmentIds ?? [], confidence }];
-  });
+    return { textId: t.id, raw: t.raw, segmentIds: before?.segmentIds ?? [], confidence };
+  }));
 }
 
 /** Η γραμμένη κλίμακα: ίδια αν το κείμενό της δεν διορθώθηκε· αλλιώς από το διορθωμένο κείμενο, ή καμία. */

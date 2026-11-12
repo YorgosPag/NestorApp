@@ -21,7 +21,7 @@ import type {
 } from '../plan-recognition-types';
 import { viewBoxToOriginal, type PlanReadingView } from './plan-reading-view';
 import type { PlanViewReading } from './plan-reading-wire';
-import { writtenLengthsMm } from './written-values';
+import { writtenDimensions } from './written-values';
 
 /** Η βεβαιότητα **μιας ανάγνωσης** (VLM ή τοπικό OCR) ως παράγοντας `reading` (Δ9) — ένα σημείο, ποτέ δεύτερος τύπος. */
 export const readingConfidence = (score: number): PlanConfidence => ({ score, factors: { reading: score } });
@@ -37,13 +37,12 @@ export interface PlanReadingProvenance {
  */
 function dimensionsOf(wire: PlanViewReading['dimensions'], texts: readonly PlanText[]): PlanDimension[] {
   const rawById = new Map(texts.map((t) => [t.id, t.raw]));
-  const valuesMm = writtenLengthsMm(wire.map((d) => rawById.get(d.textId) ?? ''));
-  return wire.flatMap((d, i) => {
-    const valueMm = valuesMm[i];
-    return valueMm !== null && valueMm > 0
-      ? [{ textId: d.textId, valueMm, segmentIds: d.segmentIds, confidence: readingConfidence(d.confidence) }]
-      : [];
-  });
+  return writtenDimensions(wire.map((d) => ({
+    textId: d.textId,
+    raw: rawById.get(d.textId) ?? '',
+    segmentIds: d.segmentIds,
+    confidence: readingConfidence(d.confidence),
+  })));
 }
 
 export function planReadingFromView(

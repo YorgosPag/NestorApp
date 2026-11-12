@@ -3,7 +3,7 @@
  */
 
 import {
-  classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenAreaM2, parseWrittenScale, writtenLengthsMm,
+  classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenAreaM2, parseWrittenScale, writtenDimensions, writtenLengthsMm,
   writtenNumberTokens,
 } from '../reading/written-values';
 import { writtenPrecisionMm } from '../fusion/dimension-precision';
@@ -107,5 +107,22 @@ describe('ADR-929 Δ21 (ε) — «μ.μ.» = μέτρα· «μμ» χωρίς τ
   });
   it('«μ.μ.» στο σχέδιο ⇒ οι σκέτοι ακέραιοι γίνονται εκατοστά (ο ΙΔΙΟΣ κανόνας)', () => {
     expect(writtenLengthsMm(['4,12 μ.μ.', '20'])).toEqual([4120, 200]);
+  });
+});
+
+describe('ADR-929 Δ21 (δ) βήμα 8 — writtenDimensions: η ΜΙΑ μετατροπή «κείμενα → διαστάσεις»', () => {
+  const conf = { score: 0.8, factors: { reading: 0.8 } };
+  const candidate = (textId: string, raw: string, segmentIds: readonly string[] = []) => ({ textId, raw, segmentIds, confidence: conf });
+
+  it('κρατά τμήματα και βεβαιότητα της πηγής, τιμή από τον κανόνα', () => {
+    expect(writtenDimensions([candidate('t1', '3.50', ['s1', 's2'])])).toEqual([
+      { textId: 't1', valueMm: 3500, segmentIds: ['s1', 's2'], confidence: conf },
+    ]);
+  });
+  it('η μονάδα των σκέτων ακεραίων κρίνεται από ΟΛΟ το σύνολο, μία φορά', () => {
+    expect(writtenDimensions([candidate('t1', '20'), candidate('t2', '3.50')]).map((d) => d.valueMm)).toEqual([200, 3500]);
+  });
+  it('χωρίς αποδεδειγμένη μονάδα ή κενό κείμενο ⇒ καμία διάσταση (ποτέ μαντεψιά)', () => {
+    expect(writtenDimensions([candidate('t1', '20'), candidate('t2', ''), candidate('t3', '0.00')])).toEqual([]);
   });
 });

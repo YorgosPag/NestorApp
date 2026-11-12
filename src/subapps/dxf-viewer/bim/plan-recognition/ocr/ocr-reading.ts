@@ -25,7 +25,7 @@ import { alignedPointToOriginal, rasterBoundsOf } from '../alignment/alignment-r
 import type { PlanDimension, PlanReading, PlanReadingOutcome, PlanText, PlanWrittenScale } from '../plan-recognition-types';
 import { readingConfidence } from '../reading/plan-reading-from-view';
 import { isInReadingView, type PlanReadingView } from '../reading/plan-reading-view';
-import { classifyWrittenText, parseWrittenScale, writtenLengthsMm } from '../reading/written-values';
+import { classifyWrittenText, parseWrittenScale, writtenDimensions } from '../reading/written-values';
 import type { OcrText } from './ocr-engine';
 import type { OcrAssetSet } from './ocr-model-assets';
 
@@ -117,13 +117,11 @@ function toPlanTexts(input: OcrReadingInput): PlanText[] {
   }]));
 }
 
+/** Υποψήφια = κάθε κείμενο με μορφή διάστασης· τα τμήματα τα δένει η σύντηξη ⇒ κενά. */
 function dimensionsOf(texts: readonly PlanText[]): PlanDimension[] {
-  const dimensionTexts = texts.filter((t) => t.kind === 'dimension');
-  const valuesMm = writtenLengthsMm(dimensionTexts.map((t) => t.raw));
-  return dimensionTexts.flatMap((t, i) => {
-    const valueMm = valuesMm[i];
-    return valueMm === null ? [] : [{ textId: t.id, valueMm, segmentIds: [], confidence: t.confidence }];
-  });
+  return writtenDimensions(texts
+    .filter((t) => t.kind === 'dimension')
+    .map((t) => ({ textId: t.id, raw: t.raw, segmentIds: [], confidence: t.confidence })));
 }
 
 /** Η γραμμένη κλίμακα με τη μεγαλύτερη βεβαιότητα ανάγνωσης. */
