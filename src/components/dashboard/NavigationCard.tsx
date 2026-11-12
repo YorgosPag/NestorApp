@@ -43,7 +43,7 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
     ringHover: 'group-hover:ring-[hsl(var(--text-success))]',
   },
   purple: {
-    iconBg: 'bg-[hsl(var(--hue-purple))]/12',
+    iconBg: 'bg-[hsl(var(--hue-purple))]/10',
     iconText: 'text-[hsl(var(--hue-purple))]',
     ringHover: 'group-hover:ring-[hsl(var(--hue-purple))]',
   },
@@ -58,17 +58,17 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
     ringHover: 'group-hover:ring-[hsl(var(--text-warning))]',
   },
   pink: {
-    iconBg: 'bg-[hsl(var(--hue-pink))]/12',
+    iconBg: 'bg-[hsl(var(--hue-pink))]/10',
     iconText: 'text-[hsl(var(--hue-pink))]',
     ringHover: 'group-hover:ring-[hsl(var(--hue-pink))]',
   },
   indigo: {
-    iconBg: 'bg-[hsl(var(--hue-indigo))]/12',
+    iconBg: 'bg-[hsl(var(--hue-indigo))]/10',
     iconText: 'text-[hsl(var(--hue-indigo))]',
     ringHover: 'group-hover:ring-[hsl(var(--hue-indigo))]',
   },
   teal: {
-    iconBg: 'bg-[hsl(var(--hue-teal))]/12',
+    iconBg: 'bg-[hsl(var(--hue-teal))]/10',
     iconText: 'text-[hsl(var(--hue-teal))]',
     ringHover: 'group-hover:ring-[hsl(var(--hue-teal))]',
   },

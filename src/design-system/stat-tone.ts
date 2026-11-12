@@ -43,18 +43,21 @@ export const STAT_TONE_TEXT: Readonly<Record<StatTone, string>> = {
  *
  * ⚠️ **Ολόκληρες κλάσεις, ποτέ συναρμολόγηση** (`COLOR_BRIDGE.bg.info + '/20'`): ο Tailwind JIT βλέπει μόνο ό,τι
  *    γράφεται αυτούσιο στην πηγή — συναρμολογημένη κλάση δεν παράγεται και το φόντο χάνεται σιωπηλά.
- * 📏 Μετρημένο (τα νέα ζεύγη): μελάνι πάνω στο φόντο του, συντεθειμένο στην κάρτα — purple φωτεινό ≥5,22:1 ·
- *    σκοτεινό ≥4,57:1 · pink φωτεινό ≥4,37:1 · σκοτεινό ≥4,45:1 (WCAG 1.4.11 = 3:1).
+ * ⛔ **Διαφάνεια ΜΟΝΟ από την κλίμακα** (5 · 10 · 15 · 20 · 25 · …): το `/12` **δεν παράγεται** από τον Tailwind 3.4
+ *    — μετρήθηκε ζωντανά 2026-11-12 (live `0b404fb`): κανόνας απών, φόντο `rgba(0,0,0,0)`. Εκτός κλίμακας ⇒ `/[0.12]`.
+ * 📏 Μετρημένο (τα νέα ζεύγη, `/10`): μελάνι πάνω στο φόντο του, συντεθειμένο στην κάρτα — purple φωτεινό ≥5,22:1 ·
+ *    σκοτεινό ≥4,57:1 · pink φωτεινό ≥4,37:1 · σκοτεινό ≥4,45:1 (μετρημένα με `/12` — το `/10` είναι πιο ανοιχτό,
+ *    άρα ίσο ή καλύτερο · WCAG 1.4.11 = 3:1).
  */
 export const STAT_TONE_ICON_BG: Readonly<Record<StatTone, string>> = {
   blue: 'bg-[hsl(var(--bg-info))]/20',
   gray: 'bg-muted',
   green: 'bg-[hsl(var(--bg-success))]/10',
-  purple: 'bg-[hsl(var(--hue-purple))]/12',
+  purple: 'bg-[hsl(var(--hue-purple))]/10',
   red: 'bg-destructive/10',
   orange: 'bg-[hsl(var(--bg-warning))]/40',
   cyan: 'bg-[hsl(var(--bg-info))]/20',
-  pink: 'bg-[hsl(var(--hue-pink))]/12',
+  pink: 'bg-[hsl(var(--hue-pink))]/10',
   yellow: 'bg-[hsl(var(--bg-warning))]/40',
   indigo: 'bg-[hsl(var(--bg-info))]/20',
 };
