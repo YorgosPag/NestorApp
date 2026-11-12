@@ -50,6 +50,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'taskAssigned', labelKey: 'common-account:account.notificationSettings.categories.crm.taskAssigned' },
       { key: 'opportunityAssigned', labelKey: 'common-account:account.notificationSettings.categories.crm.opportunityAssigned' },
       { key: 'newCommunication', labelKey: 'common-account:account.notificationSettings.categories.crm.newCommunication' },
+      // ADR-939 §3(στ) — «ο πελάτης έγραψε από τη σελίδα παραστατικού» (δικός του διακόπτης, ανοιχτός).
+      { key: 'portalMessage', labelKey: 'common-account:account.notificationSettings.categories.crm.portalMessage' },
       { key: 'contactTrashed', labelKey: 'common-account:account.notificationSettings.categories.crm.contactTrashed' },
       { key: 'contactPermanentlyDeleted', labelKey: 'common-account:account.notificationSettings.categories.crm.contactPermanentlyDeleted' },
     ],

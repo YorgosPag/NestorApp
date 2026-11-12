@@ -105,6 +105,8 @@ export interface CrmNotificationSettings {
   opportunityAssigned: boolean;
   /** Notify when communication is received */
   newCommunication: boolean;
+  /** ADR-939 §3(στ) — ο πελάτης έγραψε από τη σελίδα παραστατικού (χωριστό από το `newCommunication`, ανοιχτό) */
+  portalMessage: boolean;
   /** Notify when a contact is moved to trash */
   contactTrashed: boolean;
   /** Notify when a contact is permanently deleted */
@@ -494,6 +496,7 @@ export const DEFAULT_CRM_SETTINGS: CrmNotificationSettings = {
   taskAssigned: true,
   opportunityAssigned: true,
   newCommunication: false,
+  portalMessage: true,
   contactTrashed: true,
   contactPermanentlyDeleted: true,
 };

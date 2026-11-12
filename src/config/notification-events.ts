@@ -63,6 +63,16 @@ export const NOTIFICATION_EVENT_TYPES = {
   /** ADR-930 §3.8 — η ευκαιρία μεταβιβάστηκε σε αυτόν (HubSpot «assigned to you»). */
   CRM_OPPORTUNITY_ASSIGNED: 'crm.opportunityAssigned',
   CRM_NEW_COMMUNICATION: 'crm.newCommunication',
+  /**
+   * ADR-939 §3(στ) — **ο πελάτης έγραψε από τη σελίδα παραστατικού** («Γράψτε μας»). Παραλήπτης: ο δημιουργός
+   * του συνδέσμου. Ένα γεγονός ανά μήνυμα (`eventId` = έγγραφο μηνύματος).
+   *
+   * 🔴 **ΞΕΧΩΡΙΣΤΟ από το `CRM_NEW_COMMUNICATION`, και είναι απόφαση.** Εκείνο είναι το γενικό omnichannel του
+   * γραφείου και είναι **κλειστό** από προεπιλογή. Ο δανεισμός του έκανε τον εκδότη να χάνει **σιωπηλά** κάθε μήνυμα
+   * πελάτη (ζωντανή επαλήθευση 2026-11-12). Μοντέλο FreshBooks (δικός διακόπτης «ο πελάτης σχολίασε το τιμολόγιο»)
+   * και Intercom (ό,τι ανατέθηκε **σε σένα** ειδοποιεί πάντα).
+   */
+  CRM_PORTAL_MESSAGE: 'crm.portalMessage',
   CRM_CONTACT_TRASHED: 'crm.contactTrashed',
   CRM_CONTACT_PERMANENTLY_DELETED: 'crm.contactPermanentlyDeleted',
   // Properties Events
@@ -318,6 +328,14 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.CRM_NEW_COMMUNICATION]: {
     category: 'crm',
     settingKey: 'newCommunication',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-939 §3(στ) — ΟΧΙ υποχρεωτικό (ο εκδότης το κλείνει από τις ρυθμίσεις, όπως στο FreshBooks)· προεπιλογή `true`,
+  //    ίδιος λόγος με το `properties.firstContactReceived`: χωρίς αυτό ο εκδότης μαθαίνει μόνο αν ανοίξει τα εισερχόμενα.
+  [NOTIFICATION_EVENT_TYPES.CRM_PORTAL_MESSAGE]: {
+    category: 'crm',
+    settingKey: 'portalMessage',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },

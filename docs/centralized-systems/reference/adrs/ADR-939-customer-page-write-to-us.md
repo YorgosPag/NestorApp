@@ -29,7 +29,11 @@
 - **(γ) Ταυτότητα πελάτη = ο σύνδεσμος.** `externalUserId = share:<shareId>` (ο ίδιος δράστης με το `INVOICE_PAYMENT_LINK_OPENED`). **Μία** συνομιλία ανά σύνδεσμο. Το παραστατικό, ο μισθωτής και ο εκδότης βγαίνουν **μόνο** από τον σύνδεσμο (`readSharedInvoice`)· το σώμα του αιτήματος φέρει μόνο κείμενο.
 - **(δ) Διαδρομή** `GET · POST /api/shares/[shareId]/invoice-payment/messages`. Ίδιοι φρουροί με την όψη/checkout: `withAuth({ allowUnauthenticated })` + κουπόνι επίσκεψης + ενεργός σύνδεσμος. POST με `Idempotency-Key` ανά πάτημα (σύνορο `withAuth`, CHECK 3.92) και `withSensitiveRateLimit`. Κεφαλίδες `no-store` + `noindex`.
 - **(ε) Όρια**: κείμενο 1–2.000 χαρακτήρες μετά το trim (`INVOICE_PORTAL_MESSAGE_MAX_LENGTH`, ίδιο για φόρμα και διακομιστή)· **20 μηνύματα ανά σύνδεσμο ανά 24ω** (`INVOICE_PORTAL_MESSAGE_DAILY_QUOTA`, μέσω του υπάρχοντος `withinSubjectQuota`). Αποτυχία του store ⇒ επιτρέπει (ADR-855 Α3).
-- **(στ) Ειδοποίηση εκδότη**: `dispatchNotification` με το **υπάρχον** `CRM_NEW_COMMUNICATION`, παραλήπτης ο δημιουργός του συνδέσμου, οντότητα `INVOICE` (νέος τύπος), προορισμός `ENTITY_ROUTES.crm.communications` (νέα διαδρομή στο SSoT). Παράπλευρη πράξη: αποτυχία της δεν ακυρώνει το μήνυμα.
+- **(στ) Ειδοποίηση εκδότη**: `dispatchNotification` με **δικό του** τύπο `CRM_PORTAL_MESSAGE` (`crm.portalMessage`), παραλήπτης ο δημιουργός του συνδέσμου, οντότητα `INVOICE` (νέος τύπος), προορισμός `ENTITY_ROUTES.crm.communications` (νέα διαδρομή στο SSoT). Παράπλευρη πράξη: αποτυχία της δεν ακυρώνει το μήνυμα.
+  - **Γιατί όχι το `CRM_NEW_COMMUNICATION`** (αρχική υλοποίηση, διορθώθηκε 2026-11-12): εκείνο είναι το γενικό omnichannel και είναι **κλειστό** από προεπιλογή (`newCommunication: false`). Η ζωντανή επαλήθευση έδειξε ότι ο εκδότης **έχανε σιωπηλά** κάθε μήνυμα πελάτη: ο orchestrator επέστρεφε `skipped` και κανείς δεν το διάβαζε.
+  - **Πολιτική**: `isMandatory: false`, προεπιλογή **`true`**, δική του γραμμή στις ρυθμίσεις («Μήνυμα πελάτη από σελίδα παραστατικού»). Ίδια απόφαση με το `properties.firstContactReceived` (ADR-843). Οι υπάρχοντες χρήστες το παίρνουν ανοιχτό **χωρίς migration**, γιατί μόνο ρητό `false` κλείνει (`categorySettingEnabled`).
+  - **Καμία σιωπηλή παράλειψη**: το `notifyIssuer` διαβάζει το `DispatchResult`. Το `skipped` (διακόπτης κλειστός, επανάληψη) γράφεται ως `info` με τον λόγο, και το `success:false` ως `warn`.
+  - **Έρευνα**: το FreshBooks έχει **δικό του** διακόπτη «ο πελάτης σχολίασε το τιμολόγιο» στις ειδοποιήσεις τιμολογίων. Το Zoho Invoice στέλνει email στον εκδότη όταν σχολιάσει ο πελάτης. Στο Intercom, ό,τι ανατέθηκε **σε σένα** ειδοποιεί πάντα, ενώ το «Unassigned» είναι κλειστό από προεπιλογή.
 - **(ζ) Απάντηση εκδότη** από τα εισερχόμενα (`POST /api/conversations/[id]/send`, κλάδος `portal` → `send/portal-reply.ts` → `replyOnInvoicePortal`). Αποστολέας ο **άνθρωπος** (`senderType: agent`, νέο προαιρετικό `agent` στο `storeChannelMessage`· χωρίς αυτό τα webhooks γράφουν bot όπως πριν). Συνημμένα δεν υποστηρίζονται ακόμη στη σελίδα ⇒ ρητό 400.
 - **(η) Email απάντησης** στη διεύθυνση όπου στάλθηκε **αυτός** ο σύνδεσμος (`emailHistory[].paymentLinkShareId`, πιο πρόσφατη επιτυχής), αλλιώς στο email του πελάτη στο παραστατικό· χωρίς διεύθυνση η απάντηση μένει μόνο στη σελίδα. **Χωρίς** τον σύνδεσμο μέσα (διαπιστευτήριο, αποθηκεύεται μόνο το hash του). Κείμενα από το **ίδιο** locale της σελίδας (`createBundleTranslate`). Το πλαίσιο του εκδότη από ένα SSoT (`invoiceIssuerEmailFrame`), κοινό με το email του παραστατικού.
 - **(θ) Όψη για τον πελάτη = ρητή λίστα**: `{ id, author: 'customer' | 'issuer', text, sentAt }`. Ποτέ ονόματα υπαλλήλων, ids εγγράφων ή email.
@@ -40,6 +44,7 @@
 | Ρόλος | Αρχείο |
 |---|---|
 | Λεξιλόγιο | `types/communications.ts` · `types/conversations.ts` · `server/comms/crm/channel-bindings.ts` · `server/comms/orchestrator.ts` · `config/notification-events.ts` |
+| Ρύθμιση ειδοποίησης | `services/user-notification-settings/user-notification-settings.types.ts` (`portalMessage`) · `config/notification-preference-rows.ts` · `locales/{el,en}/common-account.json` |
 | Σχήμα | `server/types/conversations.firestore.ts` (`subject`) |
 | Γραφέας CRM | `server/comms/crm/channel-crm-store.ts` (+ 3 `webhooks/*/crm-adapter.ts`) |
 | Πελάτης | `server/accounting/public-invoice/invoice-portal-messages.ts` · `app/api/shares/[shareId]/invoice-payment/messages/route.ts` · `subapps/accounting/types/invoice-portal-messages.ts` |
@@ -60,3 +65,4 @@
 | Ημερομηνία | Αλλαγή | Συντάκτης |
 |---|---|---|
 | 2026-11-12 | Αρχική υλοποίηση (§3 α–ι) | Giorgio + Claude Code |
+| 2026-11-12 | §3(στ): νέος τύπος `crm.portalMessage` (ανοιχτός από προεπιλογή) στη θέση του κλειστού `crm.newCommunication`. Καταγραφή του `skipped`/`reason` στο `notifyIssuer`. Άγκυρες Γ4 (+3) | Giorgio + Claude Code |

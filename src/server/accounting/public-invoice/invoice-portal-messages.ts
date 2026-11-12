@@ -33,7 +33,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { storeChannelMessage } from '@/server/comms/crm/channel-crm-store';
 import { generateConversationId } from '@/server/lib/id-generation';
-import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
+import { dispatchNotification, type DispatchResult } from '@/server/notifications/notification-orchestrator';
 import type { ConversationSubjectDoc } from '@/server/types/conversations.firestore';
 import { generateMessageId } from '@/services/enterprise-id.service';
 import type { Invoice } from '@/subapps/accounting/types';
@@ -109,6 +109,21 @@ interface IssuerNotice {
 }
 
 /**
+ * ADR-939 §3(στ)(β) — **κανένα αποτέλεσμα της ειδοποίησης δεν χάνεται σιωπηλά.** Ο orchestrator επιστρέφει
+ * `success:true, skipped:true` όταν ο εκδότης έκλεισε τον τύπο ή όταν η ίδια ειδοποίηση υπάρχει ήδη (επανάληψη)·
+ * αυτό είναι **νόμιμο** αποτέλεσμα, άρα `info`, όχι σφάλμα. Το `success:false` (π.χ. οι ρυθμίσεις δεν διαβάστηκαν)
+ * σημαίνει ότι ο εκδότης **δεν** ειδοποιήθηκε χωρίς να το επιλέξει, άρα `warn`.
+ */
+function reportIssuerNoticeOutcome(messageDocId: string, recipientId: string, result: DispatchResult): void {
+  const data = { messageDocId, recipientId, reason: result.reason ?? null };
+  if (!result.success) {
+    logger.warn('Η ειδοποίηση του εκδότη δεν γράφτηκε: το μήνυμα είναι ήδη στα εισερχόμενα', { data });
+  } else if (result.skipped) {
+    logger.info('Η ειδοποίηση του εκδότη παραλείφθηκε', { data });
+  }
+}
+
+/**
  * Ειδοποίηση στον δημιουργό του συνδέσμου. **Παράπλευρη** πράξη: το μήνυμα έχει ήδη αποθηκευτεί και φαίνεται στα
  * εισερχόμενα, οπότε αποτυχία εδώ καταγράφεται και δεν γυρίζει στον πελάτη ως «δεν στάλθηκε».
  */
@@ -116,8 +131,8 @@ async function notifyIssuer(notice: IssuerNotice): Promise<void> {
   const reference = invoiceReferenceOf(notice.invoice);
   const customer = notice.invoice.customer.name;
   try {
-    await dispatchNotification({
-      eventType: NOTIFICATION_EVENT_TYPES.CRM_NEW_COMMUNICATION,
+    const result = await dispatchNotification({
+      eventType: NOTIFICATION_EVENT_TYPES.CRM_PORTAL_MESSAGE,
       recipientId: notice.recipientId,
       tenantId: notice.companyId,
       title: `${customer} · ${reference}`,
@@ -131,6 +146,7 @@ async function notifyIssuer(notice: IssuerNotice): Promise<void> {
       entityType: NOTIFICATION_ENTITY_TYPES.INVOICE,
       ...viewDestination(ENTITY_ROUTES.crm.communications, orgWorkspace(notice.companyId)),
     });
+    reportIssuerNoticeOutcome(notice.messageDocId, notice.recipientId, result);
   } catch (error: unknown) {
     logger.warn('Η ειδοποίηση του εκδότη απέτυχε: το μήνυμα είναι ήδη στα εισερχόμενα', {
       messageDocId: notice.messageDocId, error: getErrorMessage(error),

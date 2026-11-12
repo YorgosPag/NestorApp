@@ -7,7 +7,15 @@
 
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: jest.fn() }));
-jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }) }));
+const mockLoggerInfo = jest.fn();
+const mockLoggerWarn = jest.fn();
+jest.mock('@/lib/telemetry', () => ({
+  createModuleLogger: () => ({
+    info: (...args: unknown[]) => mockLoggerInfo(...args),
+    warn: (...args: unknown[]) => mockLoggerWarn(...args),
+    error: jest.fn(),
+  }),
+}));
 
 const mockReadMessagesPage = jest.fn();
 jest.mock('@/app/api/conversations/[conversationId]/messages/conversation-messages-page', () => ({
@@ -44,6 +52,8 @@ import {
   toInvoicePortalMessage,
 } from '../invoice-portal-messages';
 import type { MessageListItem } from '@/app/api/conversations/[conversationId]/messages/conversation-messages-page';
+import { EVENT_CATEGORY_MAP, NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
+import { DEFAULT_CRM_SETTINGS } from '@/services/user-notification-settings/user-notification-settings.types';
 import { INVOICE_PORTAL_MESSAGE_MAX_LENGTH } from '@/subapps/accounting/types/invoice-portal-messages';
 
 const db = {} as Firestore;
@@ -137,9 +147,31 @@ describe('Γ4 — ροή αποστολής', () => {
     const outcome = await post('  γεια σας  ');
     expect(outcome.status).toBe('sent');
     expect(mockDispatchNotification).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: NOTIFICATION_EVENT_TYPES.CRM_PORTAL_MESSAGE,
       recipientId: 'user_issuer', tenantId: TENANT, eventId: 'msg_doc_1', body: 'γεια σας',
       titleParams: { customer: 'Πελάτης ΑΕ', reference: 'Α-10' },
     }));
+    expect(mockLoggerInfo).not.toHaveBeenCalled();
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
+  });
+  it('🔴 ADR-939 §3(στ) — ο τύπος είναι ΑΝΟΙΧΤΟΣ από προεπιλογή, όχι ο κλειστός `newCommunication`', () => {
+    const mapping = EVENT_CATEGORY_MAP[NOTIFICATION_EVENT_TYPES.CRM_PORTAL_MESSAGE];
+    expect(mapping).toEqual(expect.objectContaining({ category: 'crm', settingKey: 'portalMessage', isMandatory: false }));
+    expect(DEFAULT_CRM_SETTINGS.portalMessage).toBe(true);
+  });
+  it('παραλείφθηκε (διακόπτης κλειστός) ⇒ το μήνυμα στάλθηκε ΚΑΙ ο λόγος καταγράφεται', async () => {
+    mockDispatchNotification.mockResolvedValue({ success: true, skipped: true, reason: 'crm.portalMessage disabled' });
+    await expect(post('γεια')).resolves.toEqual(expect.objectContaining({ status: 'sent' }));
+    expect(mockLoggerInfo).toHaveBeenCalledWith(expect.any(String), {
+      data: { messageDocId: 'msg_doc_1', recipientId: 'user_issuer', reason: 'crm.portalMessage disabled' },
+    });
+  });
+  it('δεν γράφτηκε (success:false) ⇒ το μήνυμα στάλθηκε ΚΑΙ προειδοποίηση', async () => {
+    mockDispatchNotification.mockResolvedValue({ success: false, skipped: true, reason: 'Failed to load user settings' });
+    await expect(post('γεια')).resolves.toEqual(expect.objectContaining({ status: 'sent' }));
+    expect(mockLoggerWarn).toHaveBeenCalledWith(expect.any(String), {
+      data: { messageDocId: 'msg_doc_1', recipientId: 'user_issuer', reason: 'Failed to load user settings' },
+    });
   });
   it('αποτυχία ειδοποίησης δεν ακυρώνει το μήνυμα', async () => {
     mockDispatchNotification.mockRejectedValue(new Error('down'));

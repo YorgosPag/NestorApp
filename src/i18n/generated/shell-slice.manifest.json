@@ -17,7 +17,7 @@
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
-    "src/i18n/generated/routes/email__preferences__token.el.json": "10af573ed743aedc7634b9afb999c7f281c4cf3f7db6dfc6e34f90a2b3559a4b",
+    "src/i18n/generated/routes/email__preferences__token.el.json": "197e165b18d884c0f087807a3ca7845df0b25f74a24cf736c034e42eb1d3a54f",
     "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4ed23a876ee879960eb5b5d15b9327daf0e83d3d4ee601d5a7564cd5da4435b5",
+  "inputsSha256": "c53ea7c9c057d6b6f8478708faae7546a20097993cce6fcf6ff2beb0b6f67b43",
   "languages": [
     "el"
   ],
@@ -2648,6 +2648,7 @@
             "account.notificationSettings.categories.crm.newCommunication",
             "account.notificationSettings.categories.crm.newLead",
             "account.notificationSettings.categories.crm.opportunityAssigned",
+            "account.notificationSettings.categories.crm.portalMessage",
             "account.notificationSettings.categories.crm.taskAssigned",
             "account.notificationSettings.categories.crm.title",
             "account.notificationSettings.categories.network.teamJoined",
@@ -40702,7 +40703,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1322377
+    "sliceBytes": 1322480
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -136,6 +136,7 @@
           "taskAssigned": "Task assigned",
           "opportunityAssigned": "Opportunity assigned to me",
           "newCommunication": "New communication",
+          "portalMessage": "Customer message from an invoice page",
           "contactTrashed": "Contact moved to trash",
           "contactPermanentlyDeleted": "Contact permanently deleted"
         },
