@@ -4,7 +4,8 @@
  *
  * Ένα πεδίο πρότασης αντιστοιχεί σε μία ιδιότητα. Τα επαναλαμβανόμενα κελιά κρίνονται με σειρά:
  *   1. **Ταύτιση με τα ζωντανά:** ο πίνακας της Aries τυπώνει δύο γραμμές «ΚΩΔΙΚΟΣ» (`MFP-34ΤΜ` · `099-01-001`). Κερδίζει ο
- *      κωδικός που κρατά ήδη το SKU, και το άλλο κελί δεν είναι εύρημα: η κράτηση απάντησε.
+ *      κωδικός που κρατά ήδη το SKU, και το άλλο κελί δεν είναι εύρημα: η κράτηση απάντησε. Η ταύτιση διαλέγει **μόνο** τον
+ *      νικητή: τα βήματα 2–3 τρέχουν και τότε (§5.5.2 Β8 (β)) — εξαίρεση μόνο οι διαφορετικοί μοναδικοί κωδικοί.
  *   2. **Ανεξάρτητη επιβεβαίωση:** ίδιο μέγεθος σε δύο μονάδες (1000 W · 3412 Btu/h). Αν συμφωνούν, είναι απόδειξη ότι η μονάδα
  *      διαβάστηκε σωστά. Σφάλμα ×1000 στη μία δεν περνά. Οι άλλες τιμές μένουν στο `corroboratedBy` (Ε7): ορατές, χωρίς απόφαση.
  *   3. Αλλιώς **εύρημα**, με τις άλλες τιμές στο μήνυμα: κανένας κανόνας δεν διαλέγει σιωπηλά.
@@ -82,15 +83,19 @@ function settleRepeat(cells: readonly AttributeCell[], values: ProductValues | n
   const { attributeId } = cells[0].target;
   const live = values ? liveSlotValue(values, cells[0].target) : null;
   const held = matchingLive(reads, live, attributeId, context);
-  if (held) return held;
   const readable = reads.filter((read): read is ReadCell & { readonly value: AttributeValue } => read.value !== null);
-  const winner = readable[0]?.cell ?? cells[0];
+  // §5.5.2 Β8 (β): ΕΝΑΣ δρόμος. Η ταύτιση με τα ζωντανά διαλέγει μόνο τον νικητή· η διασταύρωση των υπολοίπων γίνεται ΠΑΝΤΑ —
+  // αλλιώς σε αμετάβλητο πεδίο η γραμμή Btu/h χάνει το πλαίσιό της, και ένα λάθος της περνά σιωπηλά (live σελ. 85, 2026-11-13).
+  const winner = held ?? readable[0]?.cell ?? cells[0];
   const others = cells.filter((cell) => cell !== winner && importCellText(cell) !== importCellText(winner));
-  const unanimous = readable.length === reads.length && readable.every(({ value }) => agree(value, readable[0].value, attributeId, context));
   if (others.length === 0) return winner;
+  const winnerValue = reads.find((read) => read.cell === winner)?.value ?? null;
+  const unanimous = winnerValue !== null && readable.length === reads.length && readable.every(({ value }) => agree(value, winnerValue, attributeId, context));
   // §5.5.2 Β8 (α): η επιβεβαίωση κρατά τη θέση της, όπως η εναλλακτική — αλλιώς η γραμμή Btu/h διαβάζεται αλλά δεν παίρνει πλαίσιο.
   const sources = others.map(importSourceValueOf);
   if (unanimous) return { ...winner, corroboratedBy: sources };
+  // Δ3 (1): δύο **διαφορετικοί** μοναδικοί κωδικοί είναι δύο αναγνωριστικά, όχι αντίφαση — η κράτηση απάντησε.
+  if (held && context.schema.attributes.get(attributeId)?.unique === true) return held;
   return flagRepeated(winner, attributeId, sources);
 }
 

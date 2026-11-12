@@ -184,6 +184,43 @@ describe('🔴 Σελίδα 86: το σφάλμα ×1000', () => {
   });
 });
 
+describe('🔴 §5.5.2 Β8 (β): η διασταύρωση δεν σβήνει όταν η τιμή ήδη ισχύει (live σελ. 85, 2026-11-13)', () => {
+  const { groups } = readPage('85', page85Lines);
+  const [group] = groups;
+  const wattsOf = (row: ExtractedGroup['rows'][number]): string =>
+    row.cells.find((cell) => attributeOf(cell) === 'cooling_h' && cell.unitCode === 'W')?.text ?? '';
+  /** Τα SKU κρατούν ήδη την ψυκτική ισχύ σε W: το πεδίο βγαίνει αμετάβλητο, όπως στην παραγωγή. */
+  function rowsHeld(source: ExtractedGroup): readonly ImportProposalRow[] {
+    const matches: AttributeProposalContext['matches'] = new Map(source.rows.map((row, index) => {
+      const live = liveOf(CODES_85[index], index);
+      const coolingH = { '*': { '*': { type: 'measurement' as const, amount: wattsOf(row), unitCode: 'W' } } };
+      return [row.rowKey, { ...live, values: { ...live.values, cooling_h: coolingH } }] as const;
+    }));
+    return buildAttributeRows({ ...source, modelCode: MFP_MODEL.code }, { schema, text, model: null, matches, base: new Map() })
+      .filter((row) => row.holderKind === 'product');
+  }
+
+  it('αμετάβλητο πεδίο κρατά τις 7 επιβεβαιώσεις Btu/h, με θέση στη σελίδα (πλαίσιο)', () => {
+    const fields = rowsHeld(group).map((row) => fieldOf(row, 'cooling_h'));
+    expect(fields.map((field) => field?.status)).toEqual(Array(7).fill('unchanged'));
+    for (const field of fields) {
+      const [corroboration, ...more] = corroborationsOf(field ?? {});
+      expect(more).toEqual([]);
+      expect(corroboration?.text).toContain('BTU/h');
+      expect(corroboration?.anchor?.kind === 'page' ? corroboration.anchor.regions.length : 0).toBeGreaterThan(0);
+    }
+  });
+
+  it('λάθος Btu/h σε αμετάβλητο πεδίο ΔΕΝ περνά σιωπηλά', () => {
+    const [row, ...rest] = group.rows;
+    const doubled = { ...group, rows: [{ ...row, cells: row.cells.map((cell) => (cell.text === '6142' ? { ...cell, text: '61420' } : cell)) }, ...rest] };
+    const field = fieldOf(rowsHeld(doubled)[0], 'cooling_h');
+    expect(field?.status).toBe('unchanged');
+    expect(field?.issues.map((issue) => issue.code)).toEqual(['attributeRepeated']);
+    expect(field?.corroboratedBy).toBeUndefined();
+  });
+});
+
 describe('🔴 Ε7: καμία γραμμή με τιμές δεν χάνεται σιωπηλά (σελ. 86)', () => {
   const { unmappedLines } = readPage('86', PAGE_86_LINES);
   const valuesOf = (printed: string) => unmappedLines.find((entry) => entry.values.includes(printed));
