@@ -80,14 +80,15 @@ function CheckoutRefusal({ checkout }: { readonly checkout: InvoiceCheckoutState
 interface InvoicePayNowSectionProps {
   readonly view: InvoicePublicView;
   readonly shareId: string;
-  /** Η πληρωμή άνοιξε σε άλλη καρτέλα ⇒ η σελίδα αρχίζει να περιμένει επιβεβαίωση. */
-  readonly onLaunched: () => void;
+  /** Η πληρωμή άνοιξε σε άλλη καρτέλα ⇒ η σελίδα αρχίζει να παρακολουθεί **αυτή** την απόπειρα. */
+  readonly onLaunched: (checkoutId: string) => void;
 }
 
 export function InvoicePayNowSection({ view, shareId, onLaunched }: InvoicePayNowSectionProps): React.ReactElement {
   const { t, i18n } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
   const { state: checkout, start } = useInvoiceCheckout(shareId, i18n.language === 'en' ? 'en' : 'el');
-  React.useEffect(() => { if (checkout.kind === 'launched') onLaunched(); }, [checkout.kind, onLaunched]);
+  const launchedId = checkout.kind === 'launched' ? checkout.checkoutId : null;
+  React.useEffect(() => { if (launchedId !== null) onLaunched(launchedId); }, [launchedId, onLaunched]);
 
   const tabs: PayTab[] = [...view.onlineMethods, ...(view.payment ? ['transfer' as const] : [])];
   if (tabs.length === 0) return <p className="rounded-lg border p-4 text-sm">{t('payNow.noMethodBody')}</p>;

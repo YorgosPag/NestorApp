@@ -86,8 +86,40 @@ export type WebhookSignal =
   | { readonly kind: 'payment-reference'; readonly paymentReference: string }
   /** Εξουσιοδοτήθηκε πηγή που πρέπει **εμείς** να χρεώσουμε (IRIS Direct) — η συνεδρία με το δικό μας id. */
   | { readonly kind: 'authorized-source'; readonly checkoutId: string; readonly sourceToken: string }
-  /** Υπογεγραμμένο αλλά άσχετο / αποτυχημένο συμβάν — καμία ενέργεια. */
+  /**
+   * Ο πάροχος **αρνήθηκε** την εξουσιοδότηση μιας απόπειρας (π.χ. IRIS «Αποτυχία Ταυτοποίησης») — ADR-ACC-030 §5.3.
+   * Δεν είναι χρήματα και **δεν** κλείνει τη συνεδρία (πρότυπο Stripe `last_payment_error`): σημειώνεται μόνο η
+   * έκβαση ώστε η σελίδα να πει «δεν ολοκληρώθηκε». `checkoutId` **μόνο** από το υπογεγραμμένο περιεχόμενο· `null`
+   * όταν ο πάροχος δεν το υπέγραψε. `signedFields` = τα **ονόματα** των υπογεγραμμένων πεδίων (διάγνωση, ποτέ τιμές).
+   */
+  | {
+    readonly kind: 'authorization-failed';
+    readonly checkoutId: string | null;
+    readonly providerCode: string | null;
+    readonly signedFields: readonly string[];
+  }
+  /** Υπογεγραμμένο αλλά άσχετο / ελλιπές συμβάν — καμία ενέργεια. */
   | { readonly kind: 'ignored'; readonly reason: string };
+
+/** Τι γράφεται για ένα σήμα σε logs / ίχνος παραλαβής — **ποτέ** τιμές του payload πέρα από κωδικό παρόχου. */
+export interface WebhookSignalDiagnostics {
+  readonly signal: WebhookSignal['kind'];
+  /** Ο λόγος (`ignored`) ή ο κωδικός άρνησης του παρόχου (`authorization-failed`)· `null` αλλιώς. */
+  readonly reason: string | null;
+  /** Τα **ονόματα** των υπογεγραμμένων πεδίων όταν η αποτυχία δεν φέρει υπογεγραμμένη συνεδρία — η διάγνωση του §5.8. */
+  readonly signedFields: string | null;
+}
+
+/** Ο ΕΝΑΣ ορισμός της διάγνωσης ενός σήματος (webhook route · return route · ίχνος παραλαβής). */
+export function webhookSignalDiagnostics(signal: WebhookSignal): WebhookSignalDiagnostics {
+  if (signal.kind === 'ignored') return { signal: signal.kind, reason: signal.reason, signedFields: null };
+  if (signal.kind !== 'authorization-failed') return { signal: signal.kind, reason: null, signedFields: null };
+  return {
+    signal: signal.kind,
+    reason: signal.providerCode === null ? 'provider-code-absent' : `provider-code:${signal.providerCode}`,
+    signedFields: signal.checkoutId === null ? signal.signedFields.join(',') : null,
+  };
+}
 
 export type WebhookRefusal = 'secret-missing' | 'signature-missing' | 'signature-invalid' | 'payload-malformed';
 

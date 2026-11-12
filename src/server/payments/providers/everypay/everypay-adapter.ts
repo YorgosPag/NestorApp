@@ -31,6 +31,7 @@ import { EverypayApiError, EVERYPAY_TOKEN_ALREADY_USED, everypayDateTime, everyp
 import type { EverypayCredentials } from './everypay-config';
 import {
   CAPTURED_PAYMENT_STATUSES,
+  codeField,
   listItemsOrNull,
   movementOf,
   notificationPaymentReference,
@@ -142,10 +143,20 @@ async function readIrisSettlement(credentials: EverypayCredentials, subject: Che
 
 // ─── WEBHOOK / ΕΠΙΣΤΡΟΦΗ ─────────────────────────────────────────────────────
 
-/** Το υπογεγραμμένο JSON του IRIS ⇒ σήμα. Αποτυχία στον πάροχο ⇒ καμία ενέργεια (η συνεδρία λήγει μόνη της). */
+/**
+ * Το υπογεγραμμένο JSON του IRIS ⇒ σήμα. Όλα τα πεδία διαβάζονται **μόνο** από το υπογεγραμμένο περιεχόμενο: το
+ * `md` φτάνει **και** ως χωριστό, ανυπόγραφο πεδίο (docs «IRIS Direct», παράδειγμα αποτυχίας), που δεν το
+ * εμπιστευόμαστε — αλλιώς μια έγκυρη υπογραφή άλλης συνεδρίας θα σημάδευε ξένη συνεδρία ως αποτυχημένη.
+ * Αποτυχία ⇒ `authorization-failed` (καμία χρέωση· η συνεδρία μένει ανοιχτή — ADR-ACC-030 §5.3).
+ */
 function irisSignalOf(payload: Record<string, unknown>): WebhookSignal {
   if (payload.error_status !== undefined || payload.error_code !== undefined) {
-    return { kind: 'ignored', reason: 'iris-authorization-failed' };
+    return {
+      kind: 'authorization-failed',
+      checkoutId: textField(payload, 'md'),
+      providerCode: codeField(payload, 'error_code'),
+      signedFields: Object.keys(payload).sort(),
+    };
   }
   const checkoutId = textField(payload, 'md');
   const sourceToken = textField(payload, 'token');

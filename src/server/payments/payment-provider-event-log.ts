@@ -28,8 +28,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export interface ProviderEventReceipt {
   readonly provider: PaymentProviderId;
   readonly rawBody: string;
-  /** Το είδος του σήματος (`checkout-reference` · `payment-reference` · `authorized-source` · `ignored` · `refused`). */
+  /** Το είδος του σήματος (`checkout-reference` · `payment-reference` · `authorized-source` · `authorization-failed` · `ignored`). */
   readonly signal: string;
+  /** Ο λόγος του σήματος (`webhookSignalDiagnostics`) — π.χ. `unrecognised-event`, `provider-code:41001`· `null` αλλιώς. */
+  readonly reason: string | null;
   /** Τι έγινε (`recorded` · `unchanged` · `open` · `closed` · `unknown` · `failed` · …). */
   readonly outcome: string;
   readonly receivedAtMs: number;
@@ -42,6 +44,7 @@ export async function recordProviderEventReceipt(db: Firestore, receipt: Provide
     provider: receipt.provider,
     bodySha256,
     signal: receipt.signal,
+    reason: receipt.reason,
     outcome: receipt.outcome,
     lastReceivedAt: new Date(receipt.receivedAtMs).toISOString(),
     deliveries: FieldValue.increment(1),

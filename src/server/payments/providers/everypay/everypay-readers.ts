@@ -17,6 +17,17 @@ export function textField(record: Record<string, unknown> | null, key: string): 
   return isNonEmptyTrimmedString(value) ? value.trim() : null;
 }
 
+/**
+ * Κωδικός του παρόχου ως κείμενο (`41001`), ή `null`. Η τεκμηρίωση τον δείχνει **και** ως αριθμό (webhook JSON)
+ * **και** ως κείμενο (πεδίο φόρμας του callback) — ένας αναγνώστης για τις δύο μορφές.
+ */
+export function codeField(record: Record<string, unknown> | null, key: string): string | null {
+  const value = record?.[key];
+  if (typeof value === 'number' && Number.isSafeInteger(value)) return String(value);
+  const text = textField(record, key);
+  return text !== null && /^[A-Za-z0-9_.-]{1,32}$/.test(text) ? text : null;
+}
+
 /** Ακέραιο ποσό σε λεπτά, ή `null`. */
 export function minorAmountField(record: Record<string, unknown> | null, key: string): number | null {
   const value = record?.[key];

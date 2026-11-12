@@ -3,6 +3,9 @@ import 'server-only';
 /**
  * **POST /api/shares/[shareId]/invoice-payment/checkout** — ο κάτοχος του συνδέσμου ξεκινά online πληρωμή
  * (κάρτα / Apple Pay / Google Pay · IRIS) — ADR-ACC-030 §5.
+ * **GET …/checkout?checkout=pchk_…** — η **έκβαση** αυτής της απόπειρας (`pending` · `failed` · `paid` · `closed`,
+ * ADR-ACC-030 §5.6): τίποτα πέρα από αυτό, και μόνο για απόπειρα του **ίδιου** συνδέσμου. GET χωρίς εγγραφή ⇒ εκτός
+ * ιδεμποτίας (CHECK 3.92). Ίδιο κουπόνι επίσκεψης, ίδιο όριο STANDARD με την όψη.
  *
  * Δημόσια (ο πελάτης δεν έχει λογαριασμό): `withAuth` με `allowUnauthenticated` και το **κουπόνι επίσκεψης** του
  * συνδέσμου, όπως η όψη. Το σώμα φέρει **μόνο** τρόπο, γλώσσα και τη διαδρομή της σελίδας — ποτέ ποσό.
@@ -26,10 +29,17 @@ import { publicOrigin } from '@/lib/http/public-origin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { safeJsonBody } from '@/lib/validation/shared-schemas';
+import { readInvoicePaymentAttempt } from '@/server/accounting/payments/invoice-payment-attempt';
 import { startInvoicePaymentCheckout } from '@/server/accounting/payments/invoice-payment-checkout';
 import { isPaymentReturnPath, setPaymentReturnCookie } from '@/server/payments/payment-return-cookie';
 import { requestHasShareAccessGrant } from '@/server/sharing/share-access-grant';
-import { ONLINE_PAYMENT_METHODS, type InvoiceCheckoutResponse } from '@/subapps/accounting/types/online-payment';
+import {
+  INVOICE_CHECKOUT_ATTEMPT_PARAM,
+  ONLINE_PAYMENT_METHODS,
+  PAYMENT_ATTEMPT_ID_PATTERN,
+  type InvoiceCheckoutAttemptResponse,
+  type InvoiceCheckoutResponse,
+} from '@/subapps/accounting/types/online-payment';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,4 +75,22 @@ async function handler(
   return response;
 }
 
+async function attemptHandler(
+  request: NextRequest, _ctx: unknown, _cache: unknown, routeContext?: RouteContext,
+): Promise<NextResponse<InvoiceCheckoutAttemptResponse>> {
+  const shareId = decodeRouteParam((await routeContext?.params)?.shareId ?? '');
+  const checkoutId = request.nextUrl.searchParams.get(INVOICE_CHECKOUT_ATTEMPT_PARAM) ?? '';
+  // 200 για κάθε απάντηση της ροής, όπως η όψη: η σελίδα διακλαδώνεται στο `reason`.
+  const outcome: InvoiceCheckoutAttemptResponse = shareId === '' || !requestHasShareAccessGrant(request, shareId)
+    ? { status: 'refused', reason: 'visit-expired' }
+    : !PAYMENT_ATTEMPT_ID_PATTERN.test(checkoutId)
+      ? { status: 'refused', reason: 'unknown-attempt' }
+      : await readInvoicePaymentAttempt(getAdminFirestore(), { shareId, checkoutId });
+  return NextResponse.json(outcome, { status: 200, headers: PRIVATE_CHANNEL_HEADERS });
+}
+
 export const POST = withStandardRateLimit(withAuth<unknown, RouteContext>(handler, { allowUnauthenticated: true }));
+
+export const GET = withStandardRateLimit(
+  withAuth<InvoiceCheckoutAttemptResponse, RouteContext>(attemptHandler, { allowUnauthenticated: true }),
+);

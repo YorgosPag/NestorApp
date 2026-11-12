@@ -30,8 +30,8 @@ import { invoiceCheckoutUrl } from './useInvoicePublicView';
 export type InvoiceCheckoutState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'starting'; readonly method: OnlinePaymentMethod }
-  /** Η πληρωμή άνοιξε σε άλλη καρτέλα — η σελίδα περιμένει επιβεβαίωση. */
-  | { readonly kind: 'launched' }
+  /** Η πληρωμή άνοιξε σε άλλη καρτέλα — η σελίδα παρακολουθεί την έκβαση **αυτής** της απόπειρας. */
+  | { readonly kind: 'launched'; readonly checkoutId: string }
   | { readonly kind: 'refused'; readonly reason: InvoiceCheckoutRefusal | 'generic' };
 
 /** Το όνομα της καρτέλας πληρωμής — μία, ώστε δεύτερο πάτημα να μην ανοίγει τρίτη. */
@@ -92,7 +92,9 @@ export function useInvoiceCheckout(shareId: string, locale: 'el' | 'en'): {
     requestCheckout(shareId, { method, locale, returnPath: window.location.pathname })
       .then((outcome) => {
         if (outcome?.status === 'started') {
-          setState(launch(outcome.launch, paymentWindow) ? { kind: 'launched' } : { kind: 'starting', method });
+          setState(launch(outcome.launch, paymentWindow)
+            ? { kind: 'launched', checkoutId: outcome.checkoutId }
+            : { kind: 'starting', method });
           return;
         }
         paymentWindow?.close();

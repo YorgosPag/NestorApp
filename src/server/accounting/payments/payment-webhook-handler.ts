@@ -13,12 +13,15 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
+import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PaymentProvider, WebhookSignal } from '@/server/payments/payment-provider';
 import {
   checkoutSubjectOf,
   findPaymentCheckoutBy,
   readPaymentCheckout,
+  recordCheckoutFailure,
+  type CheckoutFailureOutcome,
   type PaymentCheckoutRecord,
 } from '@/server/payments/payment-checkout-store';
 
@@ -26,10 +29,27 @@ import { syncCheckoutSettlement, type CheckoutSyncOutcome } from './invoice-paym
 
 const logger = createModuleLogger('PaymentWebhookHandler');
 
-export type PaymentSignalOutcome = CheckoutSyncOutcome | 'ignored' | 'unknown';
+export type PaymentSignalOutcome = CheckoutSyncOutcome | CheckoutFailureOutcome | 'ignored';
+
+type AttemptFailureSignal = Extract<WebhookSignal, { kind: 'authorization-failed' }>;
+
+/**
+ * Αρνημένη απόπειρα ⇒ `lastFailure` στη συνεδρία — **καμία** χρέωση, κανένας συγχρονισμός, καμία αλλαγή κατάστασης
+ * (ADR-ACC-030 §5.3). Ο ΕΝΑΣ δρόμος για webhook **και** επιστροφή browser. Χωρίς υπογεγραμμένη συνεδρία ⇒ `unknown`.
+ */
+export async function notePaymentAttemptFailure(
+  db: Firestore, provider: PaymentProvider, signal: AttemptFailureSignal, nowIso: string,
+): Promise<CheckoutFailureOutcome> {
+  if (signal.checkoutId === null) return 'unknown';
+  return recordCheckoutFailure(db, provider.id, signal.checkoutId, {
+    code: 'authorization-failed', providerCode: signal.providerCode,
+  }, nowIso);
+}
 
 async function checkoutOfSignal(
-  db: Firestore, provider: PaymentProvider, signal: Exclude<WebhookSignal, { kind: 'ignored' }>,
+  db: Firestore,
+  provider: PaymentProvider,
+  signal: Exclude<WebhookSignal, { kind: 'ignored' } | { kind: 'authorization-failed' }>,
 ): Promise<PaymentCheckoutRecord | null> {
   switch (signal.kind) {
     case 'checkout-reference':
@@ -48,6 +68,7 @@ export async function handlePaymentSignal(
   db: Firestore, provider: PaymentProvider, signal: WebhookSignal,
 ): Promise<PaymentSignalOutcome> {
   if (signal.kind === 'ignored') return 'ignored';
+  if (signal.kind === 'authorization-failed') return notePaymentAttemptFailure(db, provider, signal, nowISO());
   const checkout = await checkoutOfSignal(db, provider, signal);
   if (checkout === null) {
     logger.warn('Signed provider event for an unknown checkout', { provider: provider.id, signal: signal.kind });

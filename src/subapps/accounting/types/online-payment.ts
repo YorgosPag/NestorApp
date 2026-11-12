@@ -45,3 +45,30 @@ export type InvoiceCheckoutRefusal =
 export type InvoiceCheckoutResponse =
   | { readonly status: 'started'; readonly checkoutId: string; readonly launch: CheckoutLaunch }
   | { readonly status: 'refused'; readonly reason: InvoiceCheckoutRefusal };
+
+/**
+ * Η έκβαση μιας απόπειρας, όπως τη βλέπει η δημόσια σελίδα (`GET …/checkout?checkout=pchk_…`, ADR-ACC-030 §5.6) —
+ * τίποτα πέρα από αυτό (ούτε ποσό, ούτε κωδικός παρόχου). Πρότυπο Stripe: η σελίδα επιστροφής ρωτά τον διακομιστή,
+ * δεν μαντεύει από τη διεύθυνση.
+ *   - `pending` — ανοιχτή, καμία γνωστή άρνηση (η σελίδα περιμένει).
+ *   - `failed`  — ο πάροχος **αρνήθηκε** την απόπειρα· η συνεδρία μένει ανοιχτή στον διακομιστή, ο πελάτης ξαναδοκιμάζει.
+ *   - `paid`    — εισπράχθηκε (η όψη θα πει «Εξοφλήθηκε»).
+ *   - `closed`  — έληξε / ακυρώθηκε / δεν ξεκίνησε στον πάροχο.
+ */
+export const PAYMENT_ATTEMPT_OUTCOMES = ['pending', 'failed', 'paid', 'closed'] as const;
+
+export type PaymentAttemptOutcome = (typeof PAYMENT_ATTEMPT_OUTCOMES)[number];
+
+/** Το μοτίβο αναγνωριστικού απόπειρας στη διεύθυνση (`?payment=` / `?checkout=`) — ένας ορισμός client + server. */
+export const PAYMENT_ATTEMPT_ID_PATTERN = /^pchk_[A-Za-z0-9-]{1,64}$/;
+
+/** Η παράμετρος της **σελίδας** μετά την επιστροφή από τον πάροχο (`/shared/<token>?payment=pchk_…`). */
+export const PAYMENT_PAGE_ATTEMPT_PARAM = 'payment';
+
+/** Η παράμετρος του `GET …/invoice-payment/checkout?checkout=pchk_…` (έκβαση απόπειρας). */
+export const INVOICE_CHECKOUT_ATTEMPT_PARAM = 'checkout';
+
+/** Ξένη ή ανύπαρκτη απόπειρα ⇒ η **ίδια** άρνηση (`unknown-attempt`) — κανένα μαντείο ύπαρξης συνεδριών. */
+export type InvoiceCheckoutAttemptResponse =
+  | { readonly status: 'ok'; readonly attempt: PaymentAttemptOutcome }
+  | { readonly status: 'refused'; readonly reason: 'visit-expired' | 'unknown-attempt' };

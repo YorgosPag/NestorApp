@@ -72,7 +72,7 @@ function newCheckoutRecord(
   return {
     checkoutId: generatePaymentCheckoutId(), companyId, invoiceId: invoice.invoiceId, shareId: input.shareId,
     provider: provider.id, method: input.method, amountMinor, currency: 'EUR', status: 'pending',
-    providerReference: null, paymentReference: null, createdAt,
+    providerReference: null, paymentReference: null, lastFailure: null, createdAt,
     expiresAt: new Date(input.nowMs + CHECKOUT_LIFETIME_MS).toISOString(), updatedAt: createdAt,
   };
 }

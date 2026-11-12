@@ -53,6 +53,10 @@
     "processingTitle": "Your payment is being recorded",
     "processingBody": "As soon as the provider confirms the payment, this page will show “Paid”. This usually takes a few seconds.",
     "processingSlow": "Confirmation is taking longer. If you completed the payment, do not pay again: it will appear once confirmed.",
+    "failedTitle": "The payment was not completed",
+    "failedBody": "Please try again or choose another payment method. If you do see a charge, it will appear here automatically once confirmed.",
+    "timedOutTitle": "We have not received confirmation yet",
+    "timedOutBody": "If you completed the payment, do not pay again: it will appear here once the provider confirms it. If you did not complete it, you can try again.",
     "errors": {
       "method-unavailable": "This payment method is not available. Please choose another method.",
       "provider-unavailable": "The payment provider did not respond. Try again shortly or pay by bank transfer.",

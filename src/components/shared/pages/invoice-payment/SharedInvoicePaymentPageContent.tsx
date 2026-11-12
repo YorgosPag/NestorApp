@@ -4,8 +4,9 @@
  * =============================================================================
  *
  * Πρότυπο Stripe Hosted Invoice Page: πρώτα **τι οφείλεται και ως πότε**, μετά **πώς πληρώνεται** («Πληρωμή τώρα»:
- * κάρτα / IRIS / μεταφορά — ADR-ACC-030), μετά το έγγραφο. Μετά από online πληρωμή η σελίδα περιμένει την
- * επιβεβαίωση του παρόχου (ξαναδιαβάζει σιωπηλά την όψη) ώσπου να πει «Εξοφλήθηκε».
+ * κάρτα / IRIS / μεταφορά — ADR-ACC-030), μετά το έγγραφο. Μετά από online απόπειρα η σελίδα **ρωτά την έκβασή
+ * της** (ADR-ACC-030 §5.6): «Εξοφλήθηκε» · «Η πληρωμή δεν ολοκληρώθηκε — δοκιμάστε ξανά» · ή, μετά από 15′,
+ * ουδέτερο μήνυμα. Σε κάθε τέλος αναμονής σβήνει το `?payment=`, ώστε η ανανέωση να μην ξαναρχίζει την αναμονή.
  * Η σελίδα δεν κρίνει τίποτα μόνη της. Κατάσταση, ποσό, λογαριασμοί και QR έρχονται έτοιμα από τη συνεδρία
  * προβολής του διακομιστή (`invoice-public-session.ts`).
  *
@@ -26,9 +27,11 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatOperatorDate } from '@/lib/operator-time-format';
+import { currentSearchParams, replaceUrlSearchParams } from '@/lib/url-query-state';
 import { cn } from '@/lib/utils';
 import type { InvoicePublicView } from '@/subapps/accounting/types/invoice-public-view';
 import type { InvoicePaymentShareResolvedData } from '@/services/sharing/resolvers/invoice-payment.resolver';
+import { PAYMENT_ATTEMPT_ID_PATTERN, PAYMENT_PAGE_ATTEMPT_PARAM } from '@/subapps/accounting/types/online-payment';
 import { formatAccountingCurrency } from '@/subapps/accounting/utils/format';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -38,7 +41,7 @@ import { InvoicePublicBody, InvoicePublicParties } from './InvoicePublicDocument
 import { InvoicePayNowSection } from './InvoicePayNowSection';
 import { INVOICE_PUBLIC_PAYMENT_NS } from './invoice-payment-primitives';
 import { invoicePublicPdfUrl, useInvoicePublicView } from './useInvoicePublicView';
-import { usePaymentConfirmationWatch } from './usePaymentConfirmationWatch';
+import { usePaymentConfirmationWatch, type PaymentWatchPhase } from './usePaymentConfirmationWatch';
 
 type BadgeVariant = 'warning' | 'error' | 'success' | 'muted';
 
@@ -106,18 +109,46 @@ function DocumentActions({ shareId }: { readonly shareId: string }): React.React
   );
 }
 
-/** Επιστροφή από τον πάροχο (`?payment=pchk_…`, ADR-ACC-030): η σελίδα ξεκινά περιμένοντας επιβεβαίωση. */
-function returnedFromPayment(): boolean {
-  return typeof window !== 'undefined' && /^pchk_/.test(new URLSearchParams(window.location.search).get('payment') ?? '');
+/** Η απόπειρα στην οποία επέστρεψε ο browser από τον πάροχο (`?payment=pchk_…`, ADR-ACC-030), ή `null`. */
+function returnedAttemptId(): string | null {
+  const id = currentSearchParams().get(PAYMENT_PAGE_ATTEMPT_PARAM) ?? '';
+  return PAYMENT_ATTEMPT_ID_PATTERN.test(id) ? id : null;
 }
 
-function PaymentProcessing({ slow }: { readonly slow: boolean }): React.ReactElement {
+/**
+ * Τέλος αναμονής ⇒ σβήνει το `?payment=` χωρίς πλοήγηση, ώστε η ανανέωση να μην ξαναρχίσει κλειστή αναμονή. Μέσω
+ * του ΕΝΟΣ γραφέα query state (κρατά hash, άσχετα κλειδιά και το `history.state` του App Router).
+ */
+function forgetReturnedAttempt(): void {
+  if (!currentSearchParams().has(PAYMENT_PAGE_ATTEMPT_PARAM)) return;
+  replaceUrlSearchParams((params) => params.delete(PAYMENT_PAGE_ATTEMPT_PARAM));
+}
+
+/** Η έκβαση της απόπειρας για τον άνθρωπο. Το κείμενο φέρει πάντα το νόημα, όχι μόνο το χρώμα. */
+function PaymentAttemptStatus({ phase }: { readonly phase: PaymentWatchPhase }): React.ReactElement {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
+  if (phase === 'failed') {
+    return (
+      <Alert variant="destructive" role="alert">
+        <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+        <AlertTitle>{t('payNow.failedTitle')}</AlertTitle>
+        <AlertDescription>{t('payNow.failedBody')}</AlertDescription>
+      </Alert>
+    );
+  }
+  if (phase === 'timed-out') {
+    return (
+      <Alert role="status">
+        <AlertTitle>{t('payNow.timedOutTitle')}</AlertTitle>
+        <AlertDescription>{t('payNow.timedOutBody')}</AlertDescription>
+      </Alert>
+    );
+  }
   return (
     <Alert role="status">
       <Spinner size="small" />
       <AlertTitle>{t('payNow.processingTitle')}</AlertTitle>
-      <AlertDescription>{t(slow ? 'payNow.processingSlow' : 'payNow.processingBody')}</AlertDescription>
+      <AlertDescription>{t(phase === 'slow' ? 'payNow.processingSlow' : 'payNow.processingBody')}</AlertDescription>
     </Alert>
   );
 }
@@ -131,10 +162,12 @@ interface InvoiceViewProps {
 function InvoiceView({ view, shareId, refresh }: InvoiceViewProps): React.ReactElement {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
   const colors = useSemanticColors();
-  const [awaiting, setAwaiting] = React.useState(returnedFromPayment);
-  const markLaunched = React.useCallback(() => setAwaiting(true), []);
-  const confirming = awaiting && view.standing === 'payable';
-  const { slow } = usePaymentConfirmationWatch(confirming, refresh);
+  const [attemptId, setAttemptId] = React.useState<string | null>(returnedAttemptId);
+  const markLaunched = React.useCallback((checkoutId: string) => setAttemptId(checkoutId), []);
+  const payable = view.standing === 'payable';
+  const { phase } = usePaymentConfirmationWatch({ shareId, checkoutId: attemptId, active: payable, refresh });
+  const watchEnded = attemptId !== null && (!payable || phase === 'failed' || phase === 'timed-out');
+  React.useEffect(() => { if (watchEnded) forgetReturnedAttempt(); }, [watchEnded]);
   const isDraft = view.documentStatus === 'draft' || view.documentStatus === 'rejected';
   return (
     <article className="space-y-6">
@@ -147,7 +180,7 @@ function InvoiceView({ view, shareId, refresh }: InvoiceViewProps): React.ReactE
         </Alert>
       )}
       <AmountSummary view={view} />
-      {confirming && <PaymentProcessing slow={slow} />}
+      {attemptId !== null && payable && <PaymentAttemptStatus phase={phase} />}
       {view.standing === 'payable' && <InvoicePayNowSection view={view} shareId={shareId} onLaunched={markLaunched} />}
       <DocumentActions shareId={shareId} />
       <InvoicePublicParties view={view} />

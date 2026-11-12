@@ -22,6 +22,19 @@ export const PAYMENT_CHECKOUT_STATUSES = ['pending', 'paid', 'failed', 'expired'
 
 export type PaymentCheckoutStatus = (typeof PAYMENT_CHECKOUT_STATUSES)[number];
 
+/**
+ * Η τελευταία **αρνημένη απόπειρα** μιας ανοιχτής συνεδρίας (πρότυπο Stripe `last_payment_error`) — ADR-ACC-030 §5.3.
+ * Δεν είναι κατάσταση: η συνεδρία μένει `pending`, ώστε συμφιλίωση και κλείσιμο (που κοιτούν **μόνο** `pending`)
+ * να μη χάσουν ποτέ πληρωμή που ήρθε αργότερα. Το `failed` του `PAYMENT_CHECKOUT_STATUSES` είναι άλλο πράγμα: ο
+ * πάροχος αρνήθηκε την **έναρξη**.
+ */
+export interface PaymentCheckoutFailure {
+  readonly code: 'authorization-failed';
+  /** Ο κωδικός του παρόχου (π.χ. `41001`), όταν τον υπέγραψε. Ποτέ μήνυμα — δεν μεταφράζεται και δεν δείχνεται. */
+  readonly providerCode: string | null;
+  readonly at: string;
+}
+
 export interface PaymentCheckoutRecord {
   readonly checkoutId: string;
   readonly companyId: string;
@@ -36,6 +49,7 @@ export interface PaymentCheckoutRecord {
   readonly providerReference: string | null;
   /** Η πληρωμή στον πάροχο (π.χ. `pmt_…`), όταν εισπράχθηκε — δένει τις επιστροφές με τη συνεδρία. */
   readonly paymentReference: string | null;
+  readonly lastFailure: PaymentCheckoutFailure | null;
   readonly createdAt: string;
   readonly expiresAt: string;
   readonly updatedAt: string;
@@ -45,6 +59,16 @@ export type PaymentCheckoutPatch = Partial<Pick<PaymentCheckoutRecord, 'status' 
 
 function checkoutsOf(db: Firestore) {
   return db.collection(COLLECTIONS.ACCOUNTING_PAYMENT_CHECKOUTS);
+}
+
+/** Η αποθηκευμένη αποτυχία, ή `null` όταν λείπει / έχει άλλη μορφή (ποτέ «περίπου σωστή»). */
+function checkoutFailureOf(data: unknown): PaymentCheckoutFailure | null {
+  const raw = plainRecordOrNull(data);
+  const at = trimmedStringOrNull(raw?.at);
+  const providerCode = raw?.providerCode;
+  if (raw?.code !== 'authorization-failed' || at === null) return null;
+  if (providerCode !== null && typeof providerCode !== 'string') return null;
+  return { code: 'authorization-failed', providerCode, at };
 }
 
 /** Έγγραφο ⇒ συνεδρία, ή `null` όταν λείπει κάποιο υποχρεωτικό πεδίο ή έχει άλλη μορφή. */
@@ -62,7 +86,7 @@ export function checkoutRecordOf(checkoutId: string, data: unknown): PaymentChec
   return {
     checkoutId, companyId, invoiceId, shareId, provider, method, amountMinor,
     currency: 'EUR', status, providerReference: text('providerReference'),
-    paymentReference: text('paymentReference'), createdAt, expiresAt, updatedAt: text('updatedAt') ?? createdAt,
+    paymentReference: text('paymentReference'), lastFailure: checkoutFailureOf(raw?.lastFailure), createdAt, expiresAt, updatedAt: text('updatedAt') ?? createdAt,
   };
 }
 
@@ -86,6 +110,34 @@ export async function updatePaymentCheckout(
   db: Firestore, checkoutId: string, patch: PaymentCheckoutPatch, nowIso: string,
 ): Promise<void> {
   await checkoutsOf(db).doc(checkoutId).update({ ...patch, updatedAt: nowIso });
+}
+
+export type CheckoutFailureOutcome = 'failure-noted' | 'unchanged' | 'unknown';
+
+/**
+ * Σημειώνει αρνημένη απόπειρα (webhook **και** επιστροφή browser — ίδια υπογραφή παρόχου, ADR-ACC-030 §5.3–5.4).
+ * Σε συναλλαγή: γράφει **μόνο** σε `pending` συνεδρία του ίδιου παρόχου και δεν αγγίζει κατάσταση ή χρήματα.
+ * Ιδεμποτικό: η ίδια αποτυχία ξανά ⇒ `unchanged`. Πληρωμένη / κλειστή ⇒ `unchanged` (η αλήθεια έχει προχωρήσει).
+ */
+export async function recordCheckoutFailure(
+  db: Firestore,
+  provider: PaymentProviderId,
+  checkoutId: string,
+  failure: Omit<PaymentCheckoutFailure, 'at'>,
+  nowIso: string,
+): Promise<CheckoutFailureOutcome> {
+  const ref = checkoutsOf(db).doc(checkoutId);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const record = snap.exists ? checkoutRecordOf(snap.id, snap.data()) : null;
+    if (record === null || record.provider !== provider) return 'unknown';
+    if (record.status !== 'pending') return 'unchanged';
+    const known = record.lastFailure;
+    if (known !== null && known.code === failure.code && known.providerCode === failure.providerCode) return 'unchanged';
+    const lastFailure: PaymentCheckoutFailure = { ...failure, at: nowIso };
+    tx.update(ref, { lastFailure, updatedAt: nowIso });
+    return 'failure-noted';
+  });
 }
 
 /** Η συνεδρία με αυτό το αναγνωριστικό παρόχου (`providerReference` ή `paymentReference`). */

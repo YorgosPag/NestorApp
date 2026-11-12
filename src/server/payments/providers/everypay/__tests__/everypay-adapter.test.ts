@@ -48,10 +48,32 @@ describe('judgeWebhook', () => {
     });
   });
 
-  it('IRIS αποτυχία στον πάροχο ⇒ ignored', () => {
+  it('IRIS αποτυχία στον πάροχο ⇒ authorization-failed με την ΥΠΟΓΕΓΡΑΜΜΕΝΗ συνεδρία (κωδικός αριθμός ⇒ κείμενο)', () => {
     const body = JSON.stringify({ hash: irisHash({ md: 'pchk_1', error_status: 400, error_code: 41001 }) });
+    expect(provider.judgeWebhook(body, new Headers())).toEqual({
+      valid: true,
+      signal: {
+        kind: 'authorization-failed', checkoutId: 'pchk_1', providerCode: '41001',
+        signedFields: ['error_code', 'error_status', 'md'],
+      },
+    });
+  });
+
+  it('IRIS αποτυχία: ανυπόγραφο `md` (εξωτερικό πεδίο) ΔΕΝ γίνεται δεκτό ⇒ checkoutId null + ονόματα υπογεγραμμένων πεδίων', () => {
+    const body = JSON.stringify({ md: 'pchk_FOREIGN', hash: irisHash({ error_status: 402, error_code: '12345' }) });
+    expect(provider.judgeWebhook(body, new Headers())).toEqual({
+      valid: true,
+      signal: {
+        kind: 'authorization-failed', checkoutId: null, providerCode: '12345',
+        signedFields: ['error_code', 'error_status'],
+      },
+    });
+  });
+
+  it('IRIS αποτυχία με κωδικό εκτός μορφής ⇒ providerCode null (ποτέ ελεύθερο κείμενο στο ίχνος)', () => {
+    const body = JSON.stringify({ hash: irisHash({ md: 'pchk_1', error_status: 402, error_code: 'a b <script>' }) });
     const verdict = provider.judgeWebhook(body, new Headers());
-    expect(verdict.valid && verdict.signal.kind).toBe('ignored');
+    expect(verdict.valid && verdict.signal.kind === 'authorization-failed' && verdict.signal.providerCode).toBeNull();
   });
 
   it('πλαστή υπογραφή ⇒ άρνηση, καμία ανάγνωση σήματος', () => {
@@ -67,6 +89,12 @@ describe('judgeReturn', () => {
     expect(provider.judgeReturn(fields)).toEqual({
       valid: true, signal: { kind: 'authorized-source', checkoutId: 'pchk_2', sourceToken: 'src_2' },
     });
+  });
+
+  it('επιστροφή IRIS «Αποτυχία Ταυτοποίησης» ⇒ authorization-failed (ο ΙΔΙΟΣ αναγνώστης με το webhook)', () => {
+    const fields = new URLSearchParams({ hash: irisHash({ md: 'pchk_3', error_status: 402, error_code: 12345 }) });
+    const verdict = provider.judgeReturn(fields);
+    expect(verdict.valid && verdict.signal).toMatchObject({ kind: 'authorization-failed', checkoutId: 'pchk_3' });
   });
 });
 

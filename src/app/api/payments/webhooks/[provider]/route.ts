@@ -28,7 +28,7 @@ import { isPaymentProviderId } from '@/lib/payments/payment-routes';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { createModuleLogger } from '@/lib/telemetry';
 import { handlePaymentSignal } from '@/server/accounting/payments/payment-webhook-handler';
-import type { PaymentProvider, WebhookSignal } from '@/server/payments/payment-provider';
+import { webhookSignalDiagnostics, type PaymentProvider, type WebhookSignal } from '@/server/payments/payment-provider';
 import { recordProviderEventReceipt } from '@/server/payments/payment-provider-event-log';
 import { paymentProviderById } from '@/server/payments/payment-provider-registry';
 
@@ -54,21 +54,24 @@ async function processSignal(
   provider: PaymentProvider, signal: WebhookSignal, rawBody: string,
 ): Promise<NextResponse<WebhookReply>> {
   const db = getAdminFirestore();
+  const diagnostics = webhookSignalDiagnostics(signal);
   let outcome: string;
   try {
     outcome = await handlePaymentSignal(db, provider, signal);
   } catch (error) {
     logger.error('Payment event could not be applied — provider will retry', {
-      provider: provider.id, signal: signal.kind, error: error instanceof Error ? error.message : String(error),
+      provider: provider.id, ...diagnostics, error: error instanceof Error ? error.message : String(error),
     });
     outcome = 'failed';
   }
   if (outcome !== 'failed') {
     // Η ΜΟΝΗ γραμμή log αποδοχής: χωρίς αυτήν, webhook που πέρασε και συμφιλίωση δεν ξεχωρίζουν στα logs (§5.9 #3).
-    logger.info('Payment webhook applied', { provider: provider.id, signal: signal.kind, outcome });
+    // Με τον ΛΟΓΟ του σήματος (§5.9 #7: «ignored» χωρίς λόγο δεν έλεγε αν ήταν αποτυχία ή ελλιπές payload).
+    logger.info('Payment webhook applied', { provider: provider.id, ...diagnostics, outcome });
   }
   await recordProviderEventReceipt(db, {
-    provider: provider.id, rawBody, signal: signal.kind, outcome, receivedAtMs: Date.now(),
+    provider: provider.id, rawBody, signal: diagnostics.signal, reason: diagnostics.reason,
+    outcome, receivedAtMs: Date.now(),
   }).catch((error: unknown) => logger.warn('Provider event receipt not written', {
     error: error instanceof Error ? error.message : String(error),
   }));

@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { InvoicePublicRefusal, InvoicePublicView, InvoicePublicViewResponse } from '@/subapps/accounting/types/invoice-public-view';
+import { INVOICE_CHECKOUT_ATTEMPT_PARAM } from '@/subapps/accounting/types/online-payment';
 
 export type InvoicePublicViewState =
   | { readonly kind: 'loading' }
@@ -72,6 +73,12 @@ export function useInvoicePublicView(shareId: string): InvoicePublicViewHandle {
 /** Η διεύθυνση έναρξης online πληρωμής (ADR-ACC-030) — δίπλα στην όψη, ίδιος ορισμός. */
 export function invoiceCheckoutUrl(shareId: string): string {
   return `${invoicePublicViewUrl(shareId)}/checkout`;
+}
+
+/** Η έκβαση μιας απόπειρας (ADR-ACC-030 §5.6) — δίπλα στην έναρξη, ίδιος ορισμός. */
+export function invoiceCheckoutAttemptUrl(shareId: string, checkoutId: string): string {
+  const query = new URLSearchParams({ [INVOICE_CHECKOUT_ATTEMPT_PARAM]: checkoutId });
+  return `${invoiceCheckoutUrl(shareId)}?${query.toString()}`;
 }
 
 /** Το νήμα «Γράψτε μας» (ADR-939) — δίπλα στην όψη, ίδιος ορισμός. */
