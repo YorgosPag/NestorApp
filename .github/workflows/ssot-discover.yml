@@ -33,6 +33,11 @@ on:
       # CHECK 3.48 (ADR-778) — η ίδια η πύλη είναι είσοδος: αλλαγή στο κριτήριο πρέπει να
       # ξανακρίνει ολόκληρο το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
       - 'scripts/check-empty-select-item.js'
+      # CHECK 3.116 (ADR-940) — η αυθεντία της κλίμακας είναι το `tailwind.config.ts`: μια στένεψη
+      # του `opacity` κάνει παραβάτες αρχεία που ΚΑΝΕΙΣ δεν άγγιξε. Η πύλη και η μηχανή της είναι είσοδοι.
+      - 'tailwind.config.ts'
+      - 'scripts/check-tailwind-modifier-generation.js'
+      - 'scripts/lib/tailwind/**'
       # CHECK 3.50 (ADR-780) — μια ωμή `z-index: 9999` προσγειώνεται εξίσου σε `.css`, και
       # τα `.css` ΔΕΝ ήταν σκανδάλη αυτού του workflow. ⚠️ ΔΗΛΩΜΕΝΗ ΣΥΝΕΠΕΙΑ: ένα PR που
       # αγγίζει μόνο `.css` ξυπνά πλέον και τα τέσσερα αδέλφια jobs. Προτιμήθηκε από το
@@ -112,6 +117,11 @@ on:
       # CHECK 3.48 (ADR-778) — η ίδια η πύλη είναι είσοδος: αλλαγή στο κριτήριο πρέπει να
       # ξανακρίνει ολόκληρο το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
       - 'scripts/check-empty-select-item.js'
+      # CHECK 3.116 (ADR-940) — η αυθεντία της κλίμακας είναι το `tailwind.config.ts`: μια στένεψη
+      # του `opacity` κάνει παραβάτες αρχεία που ΚΑΝΕΙΣ δεν άγγιξε. Η πύλη και η μηχανή της είναι είσοδοι.
+      - 'tailwind.config.ts'
+      - 'scripts/check-tailwind-modifier-generation.js'
+      - 'scripts/lib/tailwind/**'
       # CHECK 3.50 (ADR-780) — μια ωμή `z-index: 9999` προσγειώνεται εξίσου σε `.css`, και
       # τα `.css` ΔΕΝ ήταν σκανδάλη αυτού του workflow. ⚠️ ΔΗΛΩΜΕΝΗ ΣΥΝΕΠΕΙΑ: ένα PR που
       # αγγίζει μόνο `.css` ξυπνά πλέον και τα τέσσερα αδέλφια jobs. Προτιμήθηκε από το
@@ -374,6 +384,63 @@ jobs:
             echo "που κάνει το \`''\` **δομικά αδύνατο** ως τιμή item."
             echo ""
             echo "Απογραφή: \`npm run empty-select-item:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ===========================================================================
+  # CHECK 3.116 / ADR-940 — Στρώμα 2 της πύλης του σιωπηλά πεταμένου modifier.
+  #
+  # ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ ΝΕΟ WORKFLOW: ίδιος λόγος με 3.48/3.49 — το `.ci-gate-tiers.json`
+  # παρακολουθεί ΑΡΧΕΙΑ workflow, όχι jobs (CHECK 3.37 αμετάβλητο).
+  #
+  # ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΔΕΥΤΕΡΟ ΣΤΡΩΜΑ — δηλωμένα: το Στρώμα 1 κρίνει τα σταδιοποιημένα, και πλήρες
+  # δέντρο μόνο όταν αλλάζει το `tailwind.config.ts`. Δεν βλέπει: web UI του GitHub, μηχάνημα
+  # χωρίς hooks, `SKIP_TAILWIND_MODIFIER=1`. Άρα εδώ η πλήρης σάρωση τρέχει άνευ όρων (~20s).
+  # ===========================================================================
+  tailwind-modifier:
+    name: 🎨 Tailwind modifier generation (CHECK 3.116)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # ⚠️ fetch-depth: 0 — η σουίτα βαθμονομεί με ΚΑΡΦΩΜΕΝΑ commits (0de6dc9e / aec900e2).
+      - name: 📥 Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # Μόνο το tailwindcss (η αυθεντία) + jest. ΔΕΝ είναι type-check (CLAUDE.md N.17).
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🎨 CHECK 3.116 — πλήρης σάρωση του content του build
+        run: pnpm run tailwind-modifier:check
+
+      - name: 🧪 Σουίτα μετάλλαξης — CHECK 3.116 (απόδειξη σε πραγματικό ιστορικό)
+        run: pnpm run test:tailwind-modifier
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.116 — ADR-940 (Tailwind modifier που δεν παράγεται)"
+            echo ""
+            echo "Ο Tailwind 3.4 παράγει modifier διαφάνειας ΜΟΝΟ για βήματα της \`theme.opacity\`"
+            echo "(0·5·10·…·100) και πετά τα υπόλοιπα **σιωπηλά** — κανένα σφάλμα, κανένα στυλ."
+            echo ""
+            echo "\`bg-primary/12\` → \`bg-primary/10\` ή \`bg-primary/[0.12]\`"
+            echo ""
+            echo "Απογραφή: \`npm run tailwind-modifier:report\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================

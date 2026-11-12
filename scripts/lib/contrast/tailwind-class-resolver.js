@@ -39,8 +39,7 @@
 const path = require('path');
 const { hslToRgb, parseHslToken, parseComputedColor, toHex } = require('./wcag-contrast');
 const { parseColorUtility, tokenize, COLOR_UTILITIES } = require('./tailwind-classes');
-
-const TAILWIND_CONFIG = 'tailwind.config.ts';
+const { loadResolvedTailwindConfig, TAILWIND_CONFIG } = require('../tailwind/engine');
 
 /** Το φόρτωμα κοστίζει ~300ms· γίνεται μία φορά ανά ρίζα. */
 const paletteCache = new Map();
@@ -53,24 +52,17 @@ const paletteCache = new Map();
  * σχήμα «0 = κανείς δεν κοίταξε» που αυτό το έργο έχει συναντήσει εννέα φορές.
  */
 function loadTailwindColors(repoRoot = process.cwd(), input = null) {
-  // ⚠️ Το config ΕΚΤΕΛΕΙΤΑΙ από τον δίσκο (jiti) — σωστό για την όψη του commit ΜΟΝΟ αν δεν αποκλίνει (ADR-924 §8.5).
-  if (input) input.assertUndivergent([TAILWIND_CONFIG], 'το εκτελεί το Tailwind (jiti) — η παλέτα θα ερχόταν από τον δίσκο');
   const key = path.resolve(repoRoot);
+  // ⚠️ Η φύλαξη της όψης του commit (ADR-924 §8.5) ζει στη μηχανή — ΠΡΙΝ από την cache, όπως πάντα.
+  if (input) input.assertUndivergent([TAILWIND_CONFIG], 'το εκτελεί το Tailwind (jiti) — η παλέτα θα ερχόταν από τον δίσκο');
   if (paletteCache.has(key)) return paletteCache.get(key);
 
-  const configPath = path.join(key, TAILWIND_CONFIG);
   let colors;
   let theme;
   try {
-    // Ο ΙΔΙΟΣ φορτωτής που χρησιμοποιεί το Tailwind για TS configs (jiti).
-    // ⚠️ Η επίλυση ψάχνει ΠΡΩΤΑ στη ρίζα που δόθηκε και μετά δίπλα σε αυτό το αρχείο:
-    // με pnpm το πακέτο ζει σε symlink store, και ένα μίνι-repo των tests δεν έχει
-    // δικό του `node_modules`. Ένα σκέτο `path.join(root, 'node_modules/…')` θα
-    // έσκαγε εκεί — δηλαδή η πύλη θα ήταν αδοκίμαστη ακριβώς όπου δοκιμάζεται.
-    const from = { paths: [key, __dirname] };
-    const loadConfig = require(require.resolve('tailwindcss/loadConfig', from));
-    const resolveConfig = require(require.resolve('tailwindcss/resolveConfig', from));
-    theme = resolveConfig(loadConfig(configPath)).theme;
+    // Ο ΕΝΑΣ φορτωτής του repo (ADR-940): ο ίδιος με τον compiler (jiti), με επίλυση πρώτα από
+    // τη ρίζα και μετά δίπλα στη μηχανή (pnpm symlink store · μίνι-repo των tests).
+    theme = loadResolvedTailwindConfig(key).theme;
     colors = theme.colors;
   } catch (e) {
     throw new Error(

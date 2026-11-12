@@ -37,6 +37,7 @@
  *   SKIP_ADR_IDENTITY              '1' = bypass CHECK 3.49 (ADR number identity)
  *   SKIP_I18N_RAW_FALLBACK         '1' = bypass CHECK 3.97 (raw i18n defaultValue fallback)
  *   SKIP_I18N_PLURAL               '1' = bypass CHECK 3.115 (count without ICU plural)
+ *   SKIP_TAILWIND_MODIFIER         '1' = bypass CHECK 3.116 (Tailwind modifier the compiler drops)
  *   SKIP_CAPTURE_API_CONTRACT      '1' = bypass CHECK 3.98 (mobile capture API contract freshness)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 120000)
  *   CHECK_CONCURRENCY              max checks in flight (default: CPU cores)
@@ -865,6 +866,23 @@ if (!process.env.SKIP_UNBOUND_IDENTIFIERS)
 // αρχείο που κάποιος έγραψε — δεν υπάρχει το μονοπάτι «σπάει αρχείο που κανείς δεν έστειλε».
 if (!process.env.SKIP_LOCALE_DUPLICATE_KEYS)
   addThread('3.71', 'Locale duplicate keys', 'scripts/check-locale-duplicate-keys.js', ['--index']);
+
+// CHECK 3.116 — ΠΥΛΗ ΤΟΥ ΣΙΩΠΗΛΑ ΠΕΤΑΜΕΝΟΥ MODIFIER (ADR-940). «Γράφει κάποιος κλάση Tailwind με modifier
+// που ο compiler ΔΕΝ θα παραγάγει;» 🔴 ΤΟ ΓΕΓΟΝΟΣ (ADR-770 §11, 2026-11-12): `bg-[…]/12` στα τσιπ εικονιδίων
+// δεν αποδόθηκε ΠΟΤΕ — ο Tailwind 3.4 πετά σιωπηλά ό,τι δεν είναι βήμα της `theme.opacity`· το βρήκε ζωντανή
+// μέτρηση στον browser, όχι πύλη. 🔑 Αυθεντία = ο ίδιος ο compiler (`scripts/lib/tailwind/engine.js`:
+// `getClassOrder` + `defaultExtractor` + globs του `content`) — καμία χειρόγραφη κλίμακα (`w-1/12` παράγεται).
+// ⛔ ZERO-TOL, καμία baseline (μετρημένο 0). Σκανδάλη: σταδιοποιημένα αρχεία (~0,5s + 0,1s/αρχείο)· αλλαγή στο
+// `tailwind.config.ts` ή στην ίδια την πύλη ⇒ ΠΛΗΡΗΣ σάρωση (~20s), γιατί η κλίμακα αλλάζει την ετυμηγορία
+// αρχείων που κανείς δεν άγγιξε.
+const tailwindModifierGateFiles = ['tailwind.config.ts', 'scripts/check-tailwind-modifier-generation.js'];
+const tailwindModifierFull = allFiles.some(
+  (f) => tailwindModifierGateFiles.includes(f) || f.startsWith('scripts/lib/tailwind/'),
+);
+if (!process.env.SKIP_TAILWIND_MODIFIER && (tailwindModifierFull || tsFiles.length > 0)) {
+  addThread('3.116', 'Tailwind modifier generation', 'scripts/check-tailwind-modifier-generation.js',
+    tailwindModifierFull ? ['--all', '--index'] : [...tsFiles, '--index']);
+}
 
 // CHECK 3.115 — ΠΥΛΗ ΤΟΥ ΠΛΗΘΥΝΤΙΚΟΥ (ADR-932). «Λέει αυτό το μήνυμα "1 παραγγελίες";»
 // 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-11-06): η αρχική των προμηθειών έγραφε «1 παραγγελίες» / «1 orders»· μετρημένα
