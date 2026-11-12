@@ -42,6 +42,10 @@
  *   CHECK_CONCURRENCY              max checks in flight (default: CPU cores)
  *   CHECK_TRACE                    '1' = print each check id to stderr as it starts
  *
+ * Input scope (ADR-924 §9): the router reads ALL staged changes (incl. deletions) from the index and asks
+ * `scripts/lib/gate-scope/registry.js` which gates those paths can affect. Only when EVERY change belongs to a
+ * declared path class (today: handoff `.md`) are the other gates skipped — and the skip is printed explicitly.
+ *
  * Exit: 0 = all pass, 1 = any fail.
  */
 
@@ -50,6 +54,8 @@ const fs           = require('fs');
 const os           = require('os');
 const path         = require('path');
 const { runThread: runGateThread, prepareCommitRun } = require('./lib/gate-worker');
+const { listStagedPaths } = require('./lib/git-index-snapshot');
+const { describeSkip, resolveGateScope, unknownReaders } = require('./lib/gate-scope/resolve');
 
 const RED    = '\x1b[0;31m';
 const GREEN  = '\x1b[0;32m';
@@ -103,13 +109,32 @@ const threads = [];
 /** @type {{ id:string, name:string, cmd:string, args:string[] }[]} */
 const processes = [];
 
+// ─── Εμβέλεια εισόδων (ADR-924 §9) ────────────────────────────────────────────
+// ΕΝΑ φίλτρο για όλες τις πύλες, από ΕΝΑ μητρώο (`scripts/lib/gate-scope/registry.js`) — κανένα `if` ανά πύλη.
+// Κρίνονται ΟΛΕΣ οι αλλαγές του ευρετηρίου, και οι διαγραφές (`everyChange`), όχι το `STAGED_ALL_FILES` (μόνο ACM).
+// Ισχύει αυτόματα και στο `wt:land`, που ξαναδεσμεύει μέσα από τον ίδιο hook (ADR-925).
+const scope = resolveGateScope(listStagedPaths({ repoRoot: cwd, everyChange: true }));
+/** Κάθε πύλη που ο δρομολογητής θα έτρεχε — για τον έλεγχο ακεραιότητας των δηλωμένων αναγνωστών. */
+const routedIds = new Set();
+/** Οι πύλες που θα έτρεχαν, αλλά τα αρχεία του commit δεν είναι είσοδός τους. */
+const skippedByScope = [];
+
+function admit(id) {
+  routedIds.add(id);
+  if (scope.applies(id)) return true;
+  skippedByScope.push(id);
+  return false;
+}
+
 function addThread(id, name, script, args = []) {
   if (!has(script)) return;
+  if (!admit(id)) return;
   threads.push({ id, name, script, args });
 }
 
 function addBash(id, name, shScript, args = []) {
   if (!has(shScript)) return;
+  if (!admit(id)) return;
   processes.push({ id, name, cmd: 'bash', args: [shScript, ...args] });
 }
 
@@ -1365,8 +1390,28 @@ async function runBounded(factories, limit) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Η εμβέλεια λέει ρητά τι παρέλειψε — ποτέ σιωπηλό πράσινο. Και αρνείται (fail-closed) αν το μητρώο δηλώνει
+ * αναγνώστη που ο δρομολογητής δεν ξέρει: τότε μια πύλη που ΕΠΡΕΠΕ να τρέξει θα χανόταν σιωπηλά.
+ */
+function reportScope() {
+  if (!scope.scoped) return;
+  const unknown = unknownReaders(scope, routedIds);
+  if (unknown.length > 0) {
+    console.error(`${RED}  ⛔ ADR-924 §9 — το μητρώο εισόδων δηλώνει αναγνώστες που δεν δρομολογούνται: ${unknown.join(' · ')}${NC}`);
+    console.error(`${RED}     Διόρθωσε το scripts/lib/gate-scope/registry.js — μην παρακάμψεις.${NC}`);
+    process.exit(1);
+  }
+  const ran = [...threads, ...processes].map(c => c.id).join(' · ') || '—';
+  console.log(`${YELLOW}  ⏭️  ${describeSkip(scope)}${NC}`);
+  console.log(`${YELLOW}     ${skippedByScope.length} πύλες εκτός εισόδου: ${skippedByScope.join(' · ')}${NC}`);
+  console.log(`${YELLOW}     τρέχουν: ${ran} · το CI στο GitHub τρέχει τα πάντα (ADR-924 §9)${NC}`);
+}
+
 async function main() {
   const total = threads.length + processes.length;
+  reportScope();
+  const skippedNote = scope.scoped ? ` · ${skippedByScope.length} παραλείφθηκαν (εκτός εισόδου)` : '';
 
   if (total === 0) {
     console.log(`${GREEN}  ✅ No Phase 1 checks triggered${NC}`);
@@ -1400,7 +1445,7 @@ async function main() {
   if (failed) {
     process.exit(1);
   } else {
-    console.log(`${GREEN}  ✅ All ${total} parallel checks passed${NC}`);
+    console.log(`${GREEN}  ✅ All ${total} parallel checks passed${skippedNote}${NC}`);
     process.exit(0);
   }
 }

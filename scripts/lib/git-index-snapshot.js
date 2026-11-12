@@ -236,11 +236,16 @@ function listTreeEntries({ repoRoot, rev = 'HEAD', paths }) {
  * ⚠️ `-z`, όχι γραμμές: χωρίς αυτό το git βάζει σε εισαγωγικά και escapes κάθε μη-ASCII μονοπάτι (`core.quotepath`) ⇒
  *    ένα ελληνικό όνομα αρχείου δεν ταίριαζε ποτέ σε φίλτρο. ⚠️ Σφάλμα του git ⇒ `throw`, ποτέ σιωπηλό «κανένα»:
  *    μια σκανδάλη που επιστρέφει `[]` όταν αποτυγχάνει κάνει την πύλη σιωπηλά πράσινη.
- * @param {{repoRoot: string}} options
+ *
+ * `everyChange` (ADR-924 §9, εμβέλεια εισόδων): ΚΑΘΕ αλλαγή, μαζί με τις διαγραφές, και η μετονομασία ως διαγραφή +
+ * προσθήκη (`--no-renames`), ώστε να φαίνεται και η ΠΑΛΙΑ διαδρομή. Αλλιώς ένα handoff μαζί με σβήσιμο κώδικα, ή
+ * κώδικας μετονομασμένος σε handoff, θα έμοιαζε «μόνο handoff» και θα παρέλειπε πύλες που το σβήσιμο αφορά.
+ * @param {{repoRoot: string, everyChange?: boolean}} options
  * @returns {string[]}
  */
-function listStagedPaths({ repoRoot }) {
-  return runGit(repoRoot, ['diff', '--cached', '--name-only', '-z', '--diff-filter=ACMR']).split('\0').filter(Boolean);
+function listStagedPaths({ repoRoot, everyChange = false }) {
+  const filter = everyChange ? ['--no-renames'] : ['--diff-filter=ACMR'];
+  return runGit(repoRoot, ['diff', '--cached', '--name-only', '-z', ...filter]).split('\0').filter(Boolean);
 }
 
 /**

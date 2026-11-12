@@ -321,6 +321,7 @@
     "gate-inventory:report": "node scripts/check-gate-inventory.js --report",
     "gate-inventory:baseline": "node scripts/check-gate-inventory.js --write-baseline",
     "test:gate-inventory": "jest scripts/__tests__/gate-inventory.test.js",
+    "test:gate-scope": "jest scripts/__tests__/gate-scope.test.js",
     "gate-commit-view:baseline": "node scripts/check-gate-commit-view.js --generate-baseline",
     "test:gate-commit-view": "jest scripts/__tests__/gate-commit-view.test.js",
     "rate-limit-policy:report": "node scripts/check-rate-limit-policy.js --report",

@@ -22,6 +22,24 @@ const HANDOFF_DIR = 'HANDOFFS';
 const HANDOFF_EXTENSION = '.md';
 
 /**
+ * Οι φάκελοι handoff που ΠΑΡΑΚΟΛΟΥΘΕΙ το git, σχετικοί με τη ρίζα (μετρημένο 2026-11-12: `HANDOFFS/` 985 `.md`
+ * παρά το τοπικό `info/exclude` · `docs/handoffs/` 25 `.md`). Οι υποφάκελοι του `HANDOFFS/` κρατούν και κώδικα
+ * (`.js` · `.ts` · `.sh`), γι' αυτό handoff είναι ΜΟΝΟ το `.md` πρώτου επιπέδου (ADR-924 §9).
+ */
+const TRACKED_HANDOFF_DIRS = Object.freeze([HANDOFF_DIR, 'docs/handoffs']);
+
+/** Είναι η διαδρομή (σχετική, posix ή windows) έγγραφο handoff πρώτου επιπέδου; Καθαρή, χωρίς δίσκο. */
+function isHandoffDocument(relPath) {
+  const posix = String(relPath).replace(/\\/g, '/');
+  const cut = posix.lastIndexOf('/');
+  if (cut < 0) return false;
+  const name = posix.slice(cut + 1);
+  return TRACKED_HANDOFF_DIRS.includes(posix.slice(0, cut))
+    && name.length > HANDOFF_EXTENSION.length
+    && name.endsWith(HANDOFF_EXTENSION);
+}
+
+/**
  * 1,5 GB: ένα worktree πιάνει ~0,6 GB (μετρημένο 2026-10-31) και το repo χρειάζεται
  * περιθώριο για hooks και δοκιμές. Κάτω από αυτό, ο δίσκος που γεμίζει θα έριχνε
  * και τις υπόλοιπες εργασίες, όχι μόνο τη νέα.
@@ -64,8 +82,10 @@ module.exports = {
   LAND_LOCK,
   MAIN_BRANCH,
   MIN_FREE_BYTES,
+  TRACKED_HANDOFF_DIRS,
   assertDiskRoom,
   assertTask,
+  isHandoffDocument,
   locate,
   worktreeRoot,
 };
