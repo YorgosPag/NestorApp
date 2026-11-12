@@ -28,6 +28,13 @@ const REPO = path.resolve(__dirname, '..', '..');
 // ---------------------------------------------------------------------------
 
 const HOOKS_MODULE = 'src/services/realtime/hooks/usePublicListings.ts';
+const CREDENTIAL_MODULE = 'src/lib/tokens/credential-link-page.ts';
+const CREDENTIAL_IMPORT = "import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';\n";
+/** Σελίδα που δηλώνει ΜΟΝΗ της «η διεύθυνση είναι κλειδί» (το σχήμα των 14 σελίδων του `(auth)`). */
+const SELF_DECLARING_PAGE =
+  CREDENTIAL_IMPORT +
+  'export const metadata = CREDENTIAL_LINK_PAGE_METADATA;\n' +
+  'export default function P() { return null; }\n';
 
 /** Το ελάχιστο δέντρο που εκφράζει ΚΑΘΕ ερώτηση της πύλης — και τίποτα παραπάνω. */
 function baseFiles() {
@@ -40,9 +47,19 @@ function baseFiles() {
         '(app)': { wearsShell: true, why: 'η εφαρμογή' },
         '(light)': { wearsShell: false, why: 'οι δημόσιες οθόνες' },
         '(bare)': { wearsShell: false, why: 'golden-image' },
+        '(link)': { wearsShell: false, why: 'σελίδες με κλειδί' },
       },
       publicDataHooks: [{ module: HOOKS_MODULE, names: ['usePublicListings', 'useListingLedger'] }],
+      credentialLinkMetadata: { module: CREDENTIAL_MODULE, names: ['CREDENTIAL_LINK_PAGE_METADATA'] },
     }, null, 2),
+    [CREDENTIAL_MODULE]: "export const CREDENTIAL_LINK_PAGE_METADATA = { referrer: 'no-referrer' };\n",
+
+    // Το σχήμα του πραγματικού `(link)`: η δήλωση στο LAYOUT της ομάδας, η σελίδα την κληρονομεί.
+    'src/app/(link)/layout.tsx':
+      CREDENTIAL_IMPORT +
+      'export const metadata = CREDENTIAL_LINK_PAGE_METADATA;\n' +
+      'export default function K({ children }) { return children; }\n',
+    'src/app/(link)/shared/[token]/page.tsx': 'export default function P() { return null; }\n',
 
     'src/components/app-sidebar.tsx': 'export const AppSidebar = () => null;\n',
     'src/components/app-header.tsx': 'export const AppHeader = () => null;\n',
@@ -138,8 +155,13 @@ describe('Μ0 — η υγιής βάση περνά', () => {
   test('η λογιστική σελίδων κλείνει και ταξινομεί σωστά', () => {
     const { result } = miniRepo();
     expect(result.ledgers.pages[GATE.PAGE_STATES.SHELL_PAGE]).toBe(2);
-    expect(result.ledgers.pages[GATE.PAGE_STATES.BARE_PAGE]).toBe(2);
-    expect(result.pages).toHaveLength(4);
+    expect(result.ledgers.pages[GATE.PAGE_STATES.BARE_PAGE]).toBe(3);
+    expect(result.pages).toHaveLength(5);
+  });
+
+  test('ο Κ4 ΒΛΕΠΕΙ τη δήλωση της βάσης (αλλιώς οι μεταλλάξεις του θα ήταν κενές)', () => {
+    const { result } = miniRepo();
+    expect(result.credentialDeclarers).toEqual(['src/app/(link)/layout.tsx']);
   });
 
   test('ο ιδιοκτήτης είναι εντάξει και είναι το ΜΟΝΟ σημείο εισαγωγής', () => {
@@ -221,6 +243,38 @@ describe('μεταλλάξεις στις εισόδους', () => {
       files['.shell-boundary.json'] = JSON.stringify(cfg, null, 2);
     });
     expect(blockingStates(result)).toContain(GATE.PAGE_STATES.PUBLIC_WEARING_SHELL);
+  });
+
+  /**
+   * 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΤΟΥ ADR-939 §6: σελίδα με κλειδί μέσα στο `(app)`. Ο Κ1 μένει ΠΡΑΣΙΝΟΣ
+   * (η δομή συμφωνεί με τη δήλωση του φακέλου) — μόνο ο Κ4 μπορεί να κοκκινίσει.
+   */
+  test('Μ9 — σελίδα που δηλώνει «κλειδί» μετακομίζει στο (app) ⇒ credential-link-wearing-shell', () => {
+    const { result } = miniRepo(files => {
+      files['src/app/(app)/mandate/[token]/page.tsx'] = SELF_DECLARING_PAGE;
+    });
+    expect(blockingStates(result)).toEqual([GATE.PAGE_STATES.CREDENTIAL_WEARING_SHELL]);
+  });
+
+  test('Μ10 — η ομάδα με το κλειδί στο LAYOUT δηλώνεται wearsShell ⇒ κόκκινο από τον Κ4', () => {
+    const { result } = miniRepo(files => {
+      const cfg = JSON.parse(files['.shell-boundary.json']);
+      cfg.groups['(link)'].wearsShell = true;
+      files['.shell-boundary.json'] = JSON.stringify(cfg, null, 2);
+    });
+    const hit = result.pages.find(p => p.file === 'src/app/(link)/shared/[token]/page.tsx');
+    expect(hit.state).toBe(GATE.PAGE_STATES.CREDENTIAL_WEARING_SHELL);
+  });
+
+  test('Μ11 — η δήλωση σε ΕΜΦΩΛΕΥΜΕΝΟ layout μέσα στο (app) ⇒ κόκκινο (πρόγονος, όχι μόνο η σελίδα)', () => {
+    const { result } = miniRepo(files => {
+      files['src/app/(app)/shared/layout.tsx'] =
+        CREDENTIAL_IMPORT +
+        'export const metadata = CREDENTIAL_LINK_PAGE_METADATA;\n' +
+        'export default function S({ children }) { return children; }\n';
+      files['src/app/(app)/shared/po/[token]/page.tsx'] = 'export default function P() { return null; }\n';
+    });
+    expect(blockingStates(result)).toEqual([GATE.PAGE_STATES.CREDENTIAL_WEARING_SHELL]);
   });
 });
 
@@ -334,7 +388,50 @@ describe('Κ7 — αναφορά σε σχόλιο ΔΕΝ είναι εισαγ�
   });
 });
 
+// ---------------------------------------------------------------------------
+// Κ8 — ο Κ4 κρίνει ΔΗΛΩΣΗ (AST, σελίδα + πρόγονοι), όχι κείμενο ή μεταβατική κλειστότητα
+// ---------------------------------------------------------------------------
+
+describe('Κ8 — τι ΔΕΝ είναι δήλωση σελίδας-κλειδιού', () => {
+  test('Κ8α — σχόλιο που ονομάζει το SSoT σε σελίδα του (app) ⇒ ΚΑΜΙΑ παραβίαση', () => {
+    const { result } = miniRepo(files => {
+      files['src/app/(app)/projects/page.tsx'] =
+        '// εδώ ΔΕΝ μπαίνει CREDENTIAL_LINK_PAGE_METADATA: η σελίδα θέλει σύνδεση\n' +
+        'export default function P() { return null; }\n';
+    });
+    expect(blockingStates(result)).toEqual([]);
+  });
+
+  /** Το Next διαβάζει metadata ΜΟΝΟ από page/layout — ένα component δεν δηλώνει τίποτα. */
+  test('Κ8β — component που εισάγει το SSoT, μέσα σε σελίδα του (app) ⇒ ΚΑΜΙΑ παραβίαση', () => {
+    const { result } = miniRepo(files => {
+      files['src/components/internal/LinkBadge.tsx'] =
+        CREDENTIAL_IMPORT + 'export const LinkBadge = () => CREDENTIAL_LINK_PAGE_METADATA.referrer;\n';
+      files['src/app/(app)/projects/page.tsx'] =
+        "import { LinkBadge } from '@/components/internal/LinkBadge';\n" +
+        'export default function P() { return LinkBadge; }\n';
+    });
+    expect(blockingStates(result)).toEqual([]);
+  });
+
+  test('Κ8γ — η ίδια σελίδα-κλειδί σε γυμνό group ⇒ ΠΡΑΣΙΝΟ (η άγκυρα δεν κοκκινίζει τα πάντα)', () => {
+    const { result } = miniRepo(files => {
+      files['src/app/(link)/mandate/[token]/page.tsx'] = SELF_DECLARING_PAGE;
+    });
+    expect(blockingStates(result)).toEqual([]);
+  });
+});
+
 describe('Π — το πραγματικό δέντρο', () => {
+  /** ADR-939 §6.1 — η ομάδα δηλώνει μία φορά, και ΚΑΘΕ σελίδα της είναι γυμνή. */
+  test('Π5 — το (link)/layout.tsx είναι δήλωση σελίδας-κλειδιού, και οι σελίδες του είναι γυμνές', () => {
+    const result = GATE.analyse(REPO);
+    expect(result.credentialDeclarers).toContain('src/app/(link)/layout.tsx');
+    const linkPages = result.pages.filter(p => p.group === '(link)');
+    expect(linkPages.length).toBeGreaterThanOrEqual(4);
+    for (const page of linkPages) expect(page.state).toBe(GATE.PAGE_STATES.BARE_PAGE);
+  });
+
   test('Π1 — το σύνορο του repo είναι καθαρό μετά τη μετακόμιση ADR-777 §8.12', () => {
     const result = GATE.analyse(REPO);
     expect(GATE.blockingOf(result).map(f => `${f.file || f.group} [${f.state}]`)).toEqual([]);

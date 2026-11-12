@@ -41,6 +41,17 @@
  *  σύμβαση σε σχόλιο: ένας wrapper που κρύβει το κέλυφος μια στάση πιο κάτω θα έκανε
  *  τον έλεγχο τυφλό **σιωπηλά**, που είναι ακριβώς το σχήμα που κυνηγάει η πύλη.
  *
+ *  **Κ4 — ΔΙΕΥΘΥΝΣΗ = ΚΛΕΙΔΙ** (ADR-939 §6.1): σελίδα που **δηλώνει** ότι η διεύθυνσή της
+ *  είναι διαπιστευτήριο —η ίδια ή layout-πρόγονός της εισάγει το
+ *  `CREDENTIAL_LINK_PAGE_METADATA`— ΔΕΝ φοράει κέλυφος, **ανεξάρτητα** από τον φάκελο.
+ *  🔴 Το περιστατικό: `/shared/<token>` · `/showcase/<token>` · `/share/photo/*` ζούσαν στο
+ *  `(app)` και ο πελάτης του εκδότη έβλεπε τα εργαλεία του γραφείου — με την πύλη
+ *  **πράσινη**, γιατί ο Κ1 είναι αυτο-συνεπής και ο Κ2 κοιτά μόνο αγγελίες. Η δήλωση
+ *  `noindex`/`no-referrer` **ταξιδεύει μαζί με τον κώδικα** όπως τα hooks του Κ2.
+ *  ⚠️ Κρίνεται **μόνο** η σελίδα και οι **πρόγονοί της** (εκεί διαβάζει metadata το
+ *  Next), ΟΧΙ μεταβατική κλειστότητα: ένα components που απλώς ονομάζει το SSoT δεν
+ *  κάνει σελίδα-κλειδί όποιον το εισάγει.
+ *
  * ## Κλειστό σύνολο δηλώσεων
  * Ένα route group **χωρίς** δήλωση ΜΠΛΟΚΑΡΕΙ, ακόμα κι αν σήμερα δεν σπάει τίποτα
  * (πρότυπο CHECK 3.39/3.50): ένας νέος φάκελος `(x)` διχάζει το σύνορο, και η στιγμή
@@ -86,11 +97,17 @@ const APP_DIR = 'src/app';
 const PAGE_STATES = Object.freeze({
   UNGROUPED: 'ungrouped-page',
   PUBLIC_WEARING_SHELL: 'public-surface-wearing-shell',
+  CREDENTIAL_WEARING_SHELL: 'credential-link-wearing-shell',
   SHELL_MISMATCH: 'shell-mismatch',
   SHELL_PAGE: 'shell-page',
   BARE_PAGE: 'bare-page',
 });
-const PAGE_BLOCKING = [PAGE_STATES.UNGROUPED, PAGE_STATES.PUBLIC_WEARING_SHELL, PAGE_STATES.SHELL_MISMATCH];
+const PAGE_BLOCKING = [
+  PAGE_STATES.UNGROUPED,
+  PAGE_STATES.PUBLIC_WEARING_SHELL,
+  PAGE_STATES.CREDENTIAL_WEARING_SHELL,
+  PAGE_STATES.SHELL_MISMATCH,
+];
 const PAGE_ORDER = [...PAGE_BLOCKING, PAGE_STATES.SHELL_PAGE, PAGE_STATES.BARE_PAGE];
 
 const SYMBOL_STATES = Object.freeze({
@@ -120,7 +137,7 @@ function loadConfig(projectRoot, input = openGateInput({ root: projectRoot })) {
   const text = input.read(CONFIG_FILE);
   if (text === null) throw new Error(`CHECK 3.52: λείπει το ${CONFIG_FILE}`);
   const cfg = JSON.parse(text);
-  for (const field of ['owner', 'shellSymbols', 'groups', 'publicDataHooks']) {
+  for (const field of ['owner', 'shellSymbols', 'groups', 'publicDataHooks', 'credentialLinkMetadata']) {
     if (!(field in cfg)) throw new Error(`CHECK 3.52: ${CONFIG_FILE} — λείπει το πεδίο «${field}»`);
   }
   return cfg;
@@ -150,13 +167,8 @@ function auditGroups(projectRoot, cfg, input) {
  * `public-surface.js` δήλωνε ήδη ότι «*το κείμενο βρίσκει, ο AST αποφασίζει*» — ίσχυε
  * για τον Κ2 και **όχι** για τον Κ3. *Ένα σχόλιο που δηλώνει κάλυψη δεν είναι κάλυψη.*
  */
-function auditShellSymbols(projectRoot, cfg, input) {
-  const hits = PS.shellImportSites(
-    projectRoot,
-    cfg.owner,
-    cfg.shellSymbols,
-    PS.createResolveContext(projectRoot, input),
-  );
+function auditShellSymbols(projectRoot, cfg, input, resolveCtx = PS.createResolveContext(projectRoot, input)) {
+  const hits = PS.shellImportSites(projectRoot, cfg.owner, cfg.shellSymbols, resolveCtx);
   return hits.map(rel => {
     if (rel === cfg.owner) return { state: SYMBOL_STATES.OWNER_SITE, file: rel };
     if (/__tests__|\.(test|spec)\.[jt]sx?$/.test(rel)) return { state: SYMBOL_STATES.TEST_SITE, file: rel };
@@ -173,9 +185,29 @@ function auditOwner(projectRoot, cfg, symbolFindings, input) {
 }
 
 /**
- * Κ1 + Κ2 ανά σελίδα. **Η ΣΕΙΡΑ ΤΑΞΙΝΟΜΗΣΗΣ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**: χωρίς group δεν
- * μπορεί να τεθεί καμία άλλη ερώτηση, και η δημόσια επιφάνεια κρίνεται **πριν** τη
- * συμφωνία δομής-δήλωσης, γιατί εκεί η δήλωση **είναι** το λάθος.
+ * Κ4 — τα αρχεία (απόλυτα posix) που εισάγουν **ονομαστικά** τη δήλωση σελίδας-κλειδιού.
+ * 🔑 Καμία νέα μηχανή: είναι ΑΚΡΙΒΩΣ η ερώτηση του `seedFiles` του Κ2 («ποιος εισάγει το
+ * όνομα Χ από το module Υ;» — το κείμενο βρίσκει, ο AST αποφασίζει), με άλλη δήλωση.
+ */
+function credentialDeclarers(projectRoot, cfg, resolveCtx) {
+  // Μόνο το `src/app` δηλώνει metadata — μετρημένο: χωρίς το φίλτρο η απογραφή μετρούσε ΚΑΙ την άγκυρα
+  // `credential-link-page.test.ts` (εισάγει το SSoT για να το ελέγξει) ⇒ 16 «δηλώσεις» αντί για 15.
+  const appPrefix = `${TREE.toPosix(path.join(projectRoot, APP_DIR))}/`;
+  const all = PS.seedFiles(projectRoot, [cfg.credentialLinkMetadata], resolveCtx);
+  return new Set([...all].filter(file => file.startsWith(appPrefix)));
+}
+
+/** Κ4 — η σελίδα ή layout-πρόγονός της δηλώνει «η διεύθυνση είναι κλειδί». */
+function isCredentialLinkPage(pageRel, ctx) {
+  if (!ctx.credentialDeclarers) return false;
+  const abs = rel => TREE.toPosix(path.join(ctx.projectRoot, rel));
+  return [pageRel, ...TREE.ancestorLayoutsOf(pageRel, ctx.layouts)].some(rel => ctx.credentialDeclarers.has(abs(rel)));
+}
+
+/**
+ * Κ1 + Κ2 + Κ4 ανά σελίδα. **Η ΣΕΙΡΑ ΤΑΞΙΝΟΜΗΣΗΣ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**: χωρίς group δεν
+ * μπορεί να τεθεί καμία άλλη ερώτηση, και η δημόσια επιφάνεια / η σελίδα-κλειδί
+ * κρίνονται **πριν** τη συμφωνία δομής-δήλωσης, γιατί εκεί η δήλωση **είναι** το λάθος.
  */
 function classifyPage(pageRel, ctx) {
   const group = TREE.rootGroupOf(pageRel, APP_DIR);
@@ -186,6 +218,9 @@ function classifyPage(pageRel, ctx) {
 
   if (ctx.publicReaching && ctx.publicReaching.has(TREE.toPosix(path.join(ctx.projectRoot, pageRel)))) {
     if (declared || wears) return { state: PAGE_STATES.PUBLIC_WEARING_SHELL, file: pageRel, group };
+  }
+  if ((declared || wears) && isCredentialLinkPage(pageRel, ctx)) {
+    return { state: PAGE_STATES.CREDENTIAL_WEARING_SHELL, file: pageRel, group };
   }
   if (wears !== declared) return { state: PAGE_STATES.SHELL_MISMATCH, file: pageRel, group, wears, declared };
   return { state: wears ? PAGE_STATES.SHELL_PAGE : PAGE_STATES.BARE_PAGE, file: pageRel, group };
@@ -200,13 +235,17 @@ function analyse(projectRoot, { withPublicSurface = true, input = openGateInput(
   const layouts = TREE.enumerateLayouts(projectRoot, APP_DIR, input);
   const pages = TREE.enumeratePages(projectRoot, APP_DIR, input);
 
+  // ΕΝΑ περιβάλλον επίλυσης για Κ3 + Κ4 (χτίζεται μία φορά — ίδια είσοδος, ίδιες απαντήσεις).
+  const resolveCtx = PS.createResolveContext(projectRoot, input);
+
   const groupFindings = auditGroups(projectRoot, cfg, input);
-  const symbolFindings = auditShellSymbols(projectRoot, cfg, input);
+  const symbolFindings = auditShellSymbols(projectRoot, cfg, input, resolveCtx);
   const ownerFinding = auditOwner(projectRoot, cfg, symbolFindings, input);
 
   const publicReaching = withPublicSurface
     ? PS.computePublicReaching(projectRoot, cfg.publicDataHooks, input)
     : null;
+  const declarers = credentialDeclarers(projectRoot, cfg, resolveCtx);
 
   const ctx = {
     projectRoot: TREE.toPosix(projectRoot),
@@ -214,11 +253,14 @@ function analyse(projectRoot, { withPublicSurface = true, input = openGateInput(
     owner: cfg.owner,
     layouts,
     publicReaching,
+    credentialDeclarers: declarers,
   };
   const pageFindings = pages.map(p => classifyPage(p, ctx));
+  const rootPosix = `${TREE.toPosix(projectRoot)}/`;
 
   return {
     cfg,
+    credentialDeclarers: [...declarers].map(f => f.replace(rootPosix, '')).sort(),
     pages: pageFindings,
     groups: groupFindings,
     symbols: symbolFindings,
@@ -279,6 +321,7 @@ function main(argv) {
   if (report) {
     console.log('\nCHECK 3.52 — απογραφή συνόρου κελύφους');
     console.log(`  ιδιοκτήτης: ${result.cfg.owner}  [${result.owner.state}]`);
+    console.log(`  δηλώσεις σελίδας-κλειδιού (Κ4): ${result.credentialDeclarers.length}`);
     printLedger('σελίδες', result.ledgers.pages, PAGE_BLOCKING);
     printLedger('route groups', result.ledgers.groups, GROUP_BLOCKING);
     printLedger('σημεία εισαγωγής συμβόλων κελύφους', result.ledgers.symbols, SYMBOL_BLOCKING);
@@ -308,7 +351,7 @@ function main(argv) {
 module.exports = {
   PAGE_STATES, PAGE_BLOCKING, PAGE_ORDER,
   SYMBOL_STATES, SYMBOL_ORDER, GROUP_STATES, GROUP_ORDER, OWNER_STATES,
-  loadConfig, auditGroups, auditShellSymbols, auditOwner, classifyPage, tally,
+  loadConfig, auditGroups, auditShellSymbols, auditOwner, credentialDeclarers, classifyPage, tally,
   analyse, blockingOf, triggers, main,
 };
 
