@@ -25,7 +25,7 @@ import type { PageTableReading } from '@/subapps/catalog/import/page-table-readi
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { ImportLineOverride } from '@/subapps/catalog/types/catalog-import';
 import type { ImportLineRefusal } from '@/subapps/catalog/vocabulary/catalog-import';
-import { readSchemaSnapshot } from './catalog-product-reads.server';
+import { readSchemaSnapshot, type StoredFamilyRecord } from './catalog-product-reads.server';
 import { runCatalogReadOnly } from './catalog-store.server';
 import { replaceTableLeftOut, type StoredImportBatch } from './import-batch-writer.server';
 import { readPageReadings, type StoredPageReading } from './import-page-reading.server';
@@ -99,11 +99,15 @@ export function tableOf(basis: PageBasis, key: string): Judged<TableBasis> {
   return table ? { ok: true, value: { page: basis.page, answer, table } } : refuse('tablesDrifted');
 }
 
-export function readBatchSchema(ctx: AuthContext, batch: StoredImportBatch): Promise<CatalogSchemaSnapshot | null> {
+/** Το σχήμα της παρτίδας **μαζί με την αναθεώρηση της οικογένειας** (σφραγίδα Γ12)· `null` = παρτίδα χωρίς οικογένεια. */
+export function readBatchSchema(ctx: AuthContext, batch: StoredImportBatch): Promise<BatchSchema | null> {
   if (batch.target.purpose !== 'attributes') return Promise.resolve(null);
   const { familyId, variantSchemeCode } = batch.target;
   return runCatalogReadOnly(ctx, (scope) => readSchemaSnapshot(scope, familyId, variantSchemeCode));
 }
+
+/** Το σχήμα που κρίνει τους πίνακες, και η εγγραφή της οικογένειας από την οποία βγήκε (η αναθεώρησή της σφραγίζει τη σελίδα). */
+export type BatchSchema = CatalogSchemaSnapshot & { readonly familyRecord: StoredFamilyRecord };
 
 /** Πίνακας κριμένος στη μνήμη, έτοιμος να γραφτεί. */
 export interface PreparedTable {

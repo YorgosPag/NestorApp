@@ -78,7 +78,15 @@ function lineOverridesAfterRead(pages: ImportBatchPages, page: number, ok: boole
   return kept.length === 0 && memoryOverrides.length === 0 ? pages.lineOverrides : [...kept, ...memoryOverrides];
 }
 
-function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAside, unmappedLines, memoryOverrides }: PageFlowResult, textless: readonly ImportPageTextless[]): Promise<StoredImportBatch> {
+/** `schemaRevision` = η αναθεώρηση της οικογένειας που διαβάστηκε για την ανάγνωση: η σφραγίδα λέει απέναντι σε ποιο σχήμα κρίθηκε (Γ12). */
+function markPage(
+  ctx: AuthContext,
+  id: string,
+  page: number,
+  { ok, usage, setAside, unmappedLines, memoryOverrides }: PageFlowResult,
+  textless: readonly ImportPageTextless[],
+  schemaRevision: number,
+): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     const pages = current.pages;
@@ -94,7 +102,7 @@ function markPage(ctx: AuthContext, id: string, page: number, { ok, usage, setAs
       unmappedLines: replacedOnPage(pages.unmappedLines ?? [], page, unmappedLines),
       textless: replacedOnPage(pages.textless ?? [], page, textless),
       // §5.5.2 Β3.1: ό,τι μόλις γράφτηκε είναι της τρέχουσας έκδοσης· αποτυχία δεν άγγιξε τα παράγωγα, άρα ούτε τη σφραγίδα τους.
-      derivations: ok ? replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, null)]) : pages.derivations ?? [],
+      derivations: ok ? replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, null, schemaRevision)]) : pages.derivations ?? [],
     };
     const lineOverrides = lineOverridesAfterRead(pages, page, ok, memoryOverrides);
     const decided = lineOverrides === undefined ? {} : { lineOverrides };
@@ -132,10 +140,10 @@ export async function readImportPage(ctx: AuthContext, id: string, page: number)
   const { png, tokens, rules, tagTables, textLayer } = await loadPdfPageSource(ctx, batch, page);
   if (textLayer.state === 'lost') {
     logger.warn('PDF text layer lost on read', { batchId: id, page, reason: textLayer.reason });
-    return markPage(ctx, id, page, TEXT_LAYER_LOST, textlessOf(page, textLayer));
+    return markPage(ctx, id, page, TEXT_LAYER_LOST, textlessOf(page, textLayer), schema.familyRecord.revision);
   }
   if (textLayer.state === 'present' && textLayer.recovered) logger.info('PDF text layer recovered on strict re-read', { batchId: id, page });
   const decisions = pageDecisionsOf(batch, page);
   const outcome = await readAndProposePage({ ctx, batchId: id, page, png, tokens, rules, tagTables, specs: pageSpecs(schema), registry: schema.registry, axisAttributeIds: axisAttributeIdsOf(schema), decisions });
-  return markPage(ctx, id, page, outcome, textlessOf(page, textLayer));
+  return markPage(ctx, id, page, outcome, textlessOf(page, textLayer), schema.familyRecord.revision);
 }

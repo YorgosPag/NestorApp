@@ -897,6 +897,9 @@ describe('ανάγνωση σελίδας', () => {
 
       describe('🚀 §5.5.2 Β3.1: αναβάθμιση σελίδας στην τρέχουσα έκδοση παραγωγής', () => {
         const storedBatch = (id: string): ImportBatchDefinition => fake.getAllDocs('catalog_import_batches')[id] as unknown as ImportBatchDefinition;
+        const familyRevision = (): number => (fake.getAllDocs('catalog_families')[seeded.familyId] as { readonly revision: number }).revision;
+        /** Η σφραγίδα της σελίδας 60: τρέχουσα έκδοση παραγωγής, απέναντι στην τρέχουσα αναθεώρηση της οικογένειας (Γ12). */
+        const stampOf = (refusal: string | null) => ({ page: 60, version: IMPORT_PAGE_DERIVATION, refusal, schemaRevision: familyRevision() });
 
         /** Όπως μια παρτίδα που διαβάστηκε πριν το Β3: γραμμές χωρίς `regions`, καμία σφραγίδα. */
         function makeLegacy(id: string): void {
@@ -910,7 +913,7 @@ describe('ανάγνωση σελίδας', () => {
 
         it('η ανάγνωση σφραγίζει με την τρέχουσα έκδοση ⇒ η αναβάθμιση δεν γράφει τίποτα', async () => {
           const { batch } = await readBatch();
-          expect(storedBatch(batch.id).pages?.derivations).toEqual([{ page: 60, version: IMPORT_PAGE_DERIVATION, refusal: null }]);
+          expect(storedBatch(batch.id).pages?.derivations).toEqual([stampOf(null)]);
           const before = fake.getAllDocs('catalog_import_batches')[batch.id];
           await reinterpretImportPage(ARIES, batch.id, 60);
           expect(fake.getAllDocs('catalog_import_batches')[batch.id]).toEqual(before);
@@ -919,7 +922,7 @@ describe('ανάγνωση σελίδας', () => {
         it('🔴 παρτίδα προ-Β3 ⇒ οι γραμμές αποκτούν θέση, σφραγίδα τρέχουσας έκδοσης, καμία κλήση μοντέλου', async () => {
           const { batch } = await readBatch();
           makeLegacy(batch.id);
-          expect(stalePages(storedBatch(batch.id).pages as ImportBatchPages)).toEqual([60]);
+          expect(stalePages(storedBatch(batch.id).pages as ImportBatchPages, familyRevision())).toEqual([60]);
           const before = readings().length;
           const view = await reinterpretImportPage(ARIES, batch.id, 60);
           expect(mapTables).not.toHaveBeenCalled();
@@ -928,7 +931,23 @@ describe('ανάγνωση σελίδας', () => {
           const lines = view.batch.pages?.unmappedLines ?? [];
           expect(lines.length).toBeGreaterThan(0);
           expect(lines.every((line) => (line.regions?.length ?? 0) > 0)).toBe(true);
-          expect(view.batch.pages?.derivations).toEqual([{ page: 60, version: IMPORT_PAGE_DERIVATION, refusal: null }]);
+          expect(view.batch.pages?.derivations).toEqual([stampOf(null)]);
+          expect(view.schemaRevision).toBe(familyRevision());
+        });
+
+        it('🔴 Γ12: αλλαγή σχήματος οικογένειας ⇒ η σελίδα μπαγιάτικη, ξαναχτίζεται μία φορά χωρίς μοντέλο, σφραγίδα με τη νέα αναθεώρηση', async () => {
+          const { batch } = await readBatch();
+          const family = fake.getAllDocs('catalog_families')[seeded.familyId] as { readonly revision: number };
+          fake.seed('catalog_families', seeded.familyId, { ...family, revision: family.revision + 1 });
+          expect(stalePages(storedBatch(batch.id).pages as ImportBatchPages, familyRevision())).toEqual([60]);
+          const paid = readings().length;
+          const view = await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(readings()).toHaveLength(paid);
+          expect(view.schemaRevision).toBe(family.revision + 1);
+          expect(view.batch.pages?.derivations).toEqual([stampOf(null)]);
+          const stamped = fake.getAllDocs('catalog_import_batches')[batch.id];
+          await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(fake.getAllDocs('catalog_import_batches')[batch.id]).toEqual(stamped);
         });
 
         it('🔴 οι αποφάσεις του ανθρώπου επιβιώνουν: αντιστοιχισμένη γραμμή δεν ξαναγυρίζει «χωρίς πεδίο»', async () => {
@@ -949,7 +968,7 @@ describe('ανάγνωση σελίδας', () => {
           mockPdfPage.current = ARIES_PAGES['86'] as typeof EMPTY_PDF_PAGE;
           const view = await reinterpretImportPage(ARIES, batch.id, 60);
           expect(view.batch.pages?.unmappedLines).toEqual(legacyLines);
-          expect(view.batch.pages?.derivations).toEqual([{ page: 60, version: IMPORT_PAGE_DERIVATION, refusal: 'tablesDrifted' }]);
+          expect(view.batch.pages?.derivations).toEqual([stampOf('tablesDrifted')]);
           const stamped = fake.getAllDocs('catalog_import_batches')[batch.id];
           await reinterpretImportPage(ARIES, batch.id, 60);
           expect(fake.getAllDocs('catalog_import_batches')[batch.id]).toEqual(stamped);

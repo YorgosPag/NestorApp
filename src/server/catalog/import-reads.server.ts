@@ -16,11 +16,12 @@ import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportFieldValue, ImportProposalDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView, ImportBatchWire, ImportProfileWire, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { pricingFreshUntil } from '@/subapps/catalog/pricing/pricing-view-freshness';
-import { readOwned, runCatalogTransaction } from './catalog-store.server';
+import { readOwned, readOwnedOrNull, runCatalogTransaction } from './catalog-store.server';
 import { readCatalogViewRevisionInTx } from './catalog-view-signal.server';
 import { assertPurposeAuthority } from './import-batch-writer.server';
 import { readMemoryHints } from './import-label-memory.server';
 import type { ImportBatchDefinition } from '@/subapps/catalog/types/catalog-import';
+import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 
 const BATCHES_PAGE = 50;
 const PROFILES_PAGE = 200;
@@ -64,9 +65,13 @@ export async function readBatchProposals(ctx: AuthContext, batchId: string): Pro
  *    εγγραφή ανάμεσα φτάνει ως σήμα και ο πελάτης ξαναρωτά. Ο **μόνος** παραγωγός όψης παρτίδας (GET + κάθε απάντηση εγγραφής).
  */
 export async function readImportBatchDetail(ctx: AuthContext, id: string, nowMs = Date.now()): Promise<ImportBatchDetailView> {
-  const { batch, revision } = await runCatalogTransaction(ctx, async (scope) => {
+  const { batch, revision, schemaRevision } = await runCatalogTransaction(ctx, async (scope) => {
     const read = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
-    return { batch: read, revision: await readCatalogViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'importBatch', batchId: read.id }) };
+    // §5.5.2 Β3.1 Γ12: η τρέχουσα αναθεώρηση της οικογένειας, στην ίδια στιγμή με την παρτίδα — ο πελάτης κρίνει μ' αυτήν ποιες σελίδες
+    // είναι μπαγιάτικες. Διαγραμμένη/ξένη οικογένεια ⇒ `null` (κρίνει μόνο η έκδοση παραγωγής), ποτέ σφάλμα όψης.
+    const family = read.target.purpose === 'attributes' ? await readOwnedOrNull<CatalogFamilyDefinition>(scope, 'family', read.target.familyId) : null;
+    const signal = await readCatalogViewRevisionInTx(scope.tx, scope.db, ctx.companyId, { kind: 'importBatch', batchId: read.id });
+    return { batch: read, revision: signal, schemaRevision: family?.revision ?? null };
   });
   await assertPurposeAuthority(ctx, batch.target.purpose);
   const [all, labelMemory] = await Promise.all([readBatchProposals(ctx, id), readMemoryHints(ctx, batch)]);
@@ -74,7 +79,8 @@ export async function readImportBatchDetail(ctx: AuthContext, id: string, nowMs 
   const proposalsSeen = seesPrices ? all : all.filter((proposal) => proposal.purpose !== 'priceLines');
   // §5.5.2 Β5.2: η μνήμη του προμηθευτή απέναντι στην παρτίδα — μόνο ανάγνωση, καμία εγγραφή (Απόφαση 4).
   const freshness = { revision, freshUntil: pricingFreshUntil(nowMs, []) };
-  return labelMemory ? { freshness, batch, proposals: proposalsSeen, labelMemory } : { freshness, batch, proposals: proposalsSeen };
+  const view = { freshness, batch, schemaRevision, proposals: proposalsSeen };
+  return labelMemory ? { ...view, labelMemory } : view;
 }
 
 function acceptedValuesOf(proposal: ImportProposalDefinition, into: Map<string, Map<string, ImportFieldValue>>): void {

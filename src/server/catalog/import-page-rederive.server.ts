@@ -4,7 +4,7 @@ import 'server-only';
  * **Αναβάθμιση σελίδας στην τρέχουσα έκδοση παραγωγής** (ADR-923 §5.5.2 Β3.1) — όπως το Revit αναβαθμίζει αρχείο όταν το ανοίγεις.
  *
  * Τα παράγωγα μιας σελίδας (προτάσεις · πίνακες απέξω · γραμμές χωρίς πεδίο) **αποθηκεύονται** στην παρτίδα. Όταν αλλάζει ο παραγωγός
- * (`IMPORT_PAGE_DERIVATION`), η παλιά σελίδα ξαναχτίζεται από την πηγή της: φυλαγμένη απάντηση + PDF + αποφάσεις του ανθρώπου. Ίδιος
+ * (`IMPORT_PAGE_DERIVATION`) **ή το σχήμα της οικογένειας** (Γ12: π.χ. ιδιότητα από «Κοινά» σε «Επίπεδο 1»), η παλιά σελίδα ξαναχτίζεται από την πηγή της: φυλαγμένη απάντηση + PDF + αποφάσεις του ανθρώπου. Ίδιος
  * πυρήνας με την απόφαση γραμμής (`import-table-rebuild.server`), κόστος $0.
  *
  * 🔑 **Ιδεμπότητο από τη φύση του:** σελίδα ήδη τρέχουσα ⇒ καμία εγγραφή. Η σφραγίδα μπαίνει **τελευταία**: διακοπή στη μέση αφήνει τη
@@ -24,21 +24,29 @@ import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/cat
 import { readOwned, runCatalogReadOnly } from './catalog-store.server';
 import { assertPurposeAuthority, stampPageDerivation, type StoredImportBatch } from './import-batch-writer.server';
 import { readImportBatchDetail } from './import-reads.server';
-import { commitTable, pageBasis, prepareTable, readBatchSchema, refuse, tableOf, type Judged, type PreparedTable } from './import-table-rebuild.server';
+import {
+  commitTable,
+  pageBasis,
+  prepareTable,
+  readBatchSchema,
+  refuse,
+  tableOf,
+  type BatchSchema,
+  type Judged,
+  type PreparedTable,
+} from './import-table-rebuild.server';
 
-/** Μόνο ανοιχτή παρτίδα ιδιοτήτων, σε σελίδα διαβασμένη και μπαγιάτικη. Οτιδήποτε άλλο ⇒ τίποτα να γίνει. */
-function needsRederive(batch: StoredImportBatch, page: number): boolean {
+/** Μόνο ανοιχτή παρτίδα ιδιοτήτων, σε σελίδα διαβασμένη. Οτιδήποτε άλλο ⇒ τίποτα να γίνει, χωρίς ανάγνωση σχήματος. */
+function isRederivable(batch: StoredImportBatch, page: number): boolean {
   const { pages } = batch;
   if (batch.target.purpose !== 'attributes' || IMPORT_FINISHED_BATCH_STATUSES.includes(batch.status) || !pages) return false;
-  return pages.done.includes(page) && !isPageCurrent(pages, page);
+  return pages.done.includes(page);
 }
 
 /** Κάθε πίνακας της φυλαγμένης ανάγνωσης, με τις αποφάσεις του ανθρώπου από πάνω, κριμένος στη μνήμη. Μία άρνηση ⇒ άρνηση σελίδας. */
-async function preparePage(ctx: AuthContext, batch: StoredImportBatch, page: number): Promise<Judged<readonly PreparedTable[]>> {
+async function preparePage(ctx: AuthContext, batch: StoredImportBatch, page: number, schema: BatchSchema): Promise<Judged<readonly PreparedTable[]>> {
   const basis = await pageBasis(ctx, batch, page);
   if (!basis.ok) return basis;
-  const schema = await readBatchSchema(ctx, batch);
-  if (schema === null) return refuse('lineUnknown');
   const prepared: PreparedTable[] = [];
   for (const { table: key } of basis.value.answer.tables) {
     const table = tableOf(basis.value, key);
@@ -50,14 +58,23 @@ async function preparePage(ctx: AuthContext, batch: StoredImportBatch, page: num
   return { ok: true, value: prepared };
 }
 
+/**
+ * Η σελίδα κρίνεται απέναντι στο σχήμα που **διαβάστηκε εδώ**, και η σφραγίδα γράφει την αναθεώρησή του (Γ12): αλλαγή οικογένειας
+ * ανάμεσα στην ανάγνωση και τη σφραγίδα αφήνει τη σελίδα μπαγιάτικη, άρα ξαναδοκιμάζεται — ποτέ σφραγίδα νεότερη από την κρίση.
+ */
+async function rederivePage(ctx: AuthContext, batch: StoredImportBatch, page: number): Promise<void> {
+  const schema = await readBatchSchema(ctx, batch);
+  const schemaRevision = schema?.familyRecord.revision ?? null;
+  if (batch.pages === null || isPageCurrent(batch.pages, page, schemaRevision)) return;
+  const prepared = schema === null ? refuse('lineUnknown') : await preparePage(ctx, batch, page, schema);
+  if (prepared.ok) for (const table of prepared.value) await commitTable(ctx, batch.id, table);
+  await stampPageDerivation(ctx, batch.id, page, prepared.ok ? null : prepared.reason, schemaRevision);
+}
+
 /** `POST /api/catalog/imports/[id]/reinterpret` — μία σελίδα στην τρέχουσα έκδοση παραγωγής, χωρίς AI. */
 export async function reinterpretImportPage(ctx: AuthContext, id: string, page: number): Promise<ImportBatchDetailView> {
   const batch = await runCatalogReadOnly(ctx, (scope) => readOwned<ImportBatchDefinition>(scope, 'importBatch', id));
   await assertPurposeAuthority(ctx, batch.target.purpose);
-  if (needsRederive(batch, page)) {
-    const prepared = await preparePage(ctx, batch, page);
-    if (prepared.ok) for (const table of prepared.value) await commitTable(ctx, batch.id, table);
-    await stampPageDerivation(ctx, batch.id, page, prepared.ok ? null : prepared.reason);
-  }
+  if (isRederivable(batch, page)) await rederivePage(ctx, batch, page);
   return readImportBatchDetail(ctx, id);
 }

@@ -267,12 +267,18 @@ export function replaceTableLeftOut(ctx: AuthContext, id: string, page: number, 
  * `POST /api/catalog/imports/[id]/reinterpret` (τελευταία πράξη) — η σελίδα κρίθηκε με την τρέχουσα έκδοση παραγωγής (§5.5.2 Β3.1):
  * ξαναχτίστηκε, ή αρνήθηκε με λόγο. Μπαίνει **μετά** τα παράγωγα: διακοπή στη μέση αφήνει τη σελίδα μπαγιάτικη, άρα ξαναδοκιμάζεται.
  */
-export function stampPageDerivation(ctx: AuthContext, id: string, page: number, refusal: ImportLineRefusal | null): Promise<StoredImportBatch> {
+export function stampPageDerivation(
+  ctx: AuthContext,
+  id: string,
+  page: number,
+  refusal: ImportLineRefusal | null,
+  schemaRevision: number | null,
+): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     if (IMPORT_FINISHED_BATCH_STATUSES.includes(current.status)) return current;
     const pages = pagesOrRefuse(current);
-    const derivations = replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, refusal)]);
+    const derivations = replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, refusal, schemaRevision)]);
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, derivations } });
   });
 }

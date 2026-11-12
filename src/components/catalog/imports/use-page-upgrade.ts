@@ -7,7 +7,8 @@
  * @module components/catalog/imports/use-page-upgrade
  *
  * 🔑 Ο κριτής είναι ο ίδιος με του διακομιστή (`stalePages`)· ο διακομιστής ξανακρίνει, άρα δύο καρτέλες δεν βλάπτουν (ιδεμπότητο).
- * 🔑 Κάθε σελίδα ζητείται **μία φορά ανά άνοιγμα**: αποτυχία μεταφοράς δεν γίνεται βρόχος, ξαναδοκιμάζεται στο επόμενο άνοιγμα.
+ * 🔑 Κάθε σελίδα ζητείται **μία φορά ανά άνοιγμα και αναθεώρηση σχήματος** (Γ12): αποτυχία μεταφοράς δεν γίνεται βρόχος, ξαναδοκιμάζεται
+ *    στο επόμενο άνοιγμα· αλλαγή οικογένειας μέσα στην ίδια συνεδρία (π.χ. «Ναι» που δένει ιδιότητα) τη ζητά ξανά, μία φορά.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -31,16 +32,19 @@ interface PageUpgradeDeps {
   readonly setFailure: (failure: CatalogFailure | null) => void;
 }
 
-/** Οι μπαγιάτικες σελίδες ανοιχτής παρτίδας που δεν ζητήθηκαν ακόμη σε αυτό το άνοιγμα. */
-function pagesToUpgrade(view: ImportBatchDetailView | null, asked: ReadonlySet<number>): number[] {
-  const { batch } = view ?? {};
-  if (!batch?.pages || IMPORT_FINISHED_BATCH_STATUSES.includes(batch.status)) return [];
-  return stalePages(batch.pages).filter((page) => !asked.has(page));
+/** Το κλειδί ενός αιτήματος: σελίδα **και** σχήμα απέναντι στο οποίο ζητήθηκε. */
+const askKey = (page: number, schemaRevision: number | null): string => `${page}@${schemaRevision ?? '-'}`;
+
+/** Οι μπαγιάτικες σελίδες ανοιχτής παρτίδας που δεν ζητήθηκαν ακόμη σε αυτό το άνοιγμα, για αυτό το σχήμα. */
+function pagesToUpgrade(view: ImportBatchDetailView | null, asked: ReadonlySet<string>): number[] {
+  if (!view?.batch.pages || IMPORT_FINISHED_BATCH_STATUSES.includes(view.batch.status)) return [];
+  const { schemaRevision } = view;
+  return stalePages(view.batch.pages, schemaRevision).filter((page) => !asked.has(askKey(page, schemaRevision)));
 }
 
 export function usePageUpgrade({ view, busy, accept, setFailure }: PageUpgradeDeps): PageUpgradeProgress | null {
   const [progress, setProgress] = useState<PageUpgradeProgress | null>(null);
-  const asked = useRef(new Set<number>());
+  const asked = useRef(new Set<string>());
   const running = useRef(false);
   const batchId = view?.batch.id ?? null;
   const active = useRef(batchId);
@@ -52,7 +56,7 @@ export function usePageUpgrade({ view, busy, accept, setFailure }: PageUpgradeDe
     const pages = pagesToUpgrade(view, asked.current);
     if (busy || running.current || batchId === null || pages.length === 0) return;
     running.current = true;
-    for (const page of pages) asked.current.add(page);
+    for (const page of pages) asked.current.add(askKey(page, view?.schemaRevision ?? null));
     void (async () => {
       try {
         for (const [index, page] of pages.entries()) {

@@ -189,6 +189,11 @@ export interface ImportBatchDetailView {
   /** §5.5.2 (ADR-905): η αναθεώρηση του σήματος `importBatch:{id}` — ο πελάτης ξαναρωτά **μόνο** όταν το σήμα την ξεπεράσει. */
   readonly freshness: ViewFreshness;
   readonly batch: ImportBatchWire;
+  /**
+   * §5.5.2 Β3.1 Γ12: η **τρέχουσα** αναθεώρηση της οικογένειας της παρτίδας — ο πελάτης κρίνει μ' αυτήν ποιες σελίδες ξαναχτίζονται
+   * (`stalePages`). `null` = παρτίδα χωρίς οικογένεια, ή οικογένεια που δεν υπάρχει πια.
+   */
+  readonly schemaRevision: number | null;
   readonly proposals: readonly ImportProposalWire[];
   /** §5.5.2 Β5.2: απούσα όταν η παρτίδα δεν έχει προμηθευτή. */
   readonly labelMemory?: ImportMemoryHints;
