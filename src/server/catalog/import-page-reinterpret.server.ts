@@ -12,6 +12,7 @@ import 'server-only';
  *    του σειρά στην ουρά του πελάτη, άρα δύο αποφάσεις σε διαφορετικούς πίνακες δεν πατούν η μία την άλλη.
  * 🔑 Οι αποφάσεις πεδίων του ανθρώπου επιβιώνουν (`carriedDecision`)· πρόταση που εγκρίθηκε ή απορρίφθηκε δεν αγγίζεται.
  * 🔑 §5.5.2 Β3 Γ11: `create` ⇒ η ιδιότητα γεννιέται **μέσα** στην οικογένεια (μία συναλλαγή) και η γραμμή αντιστοιχίζεται σε αυτήν.
+ * 🔑 §5.5.2 Β3 Γ13: μία γραμμή → περισσότερες ιδιότητες (`alsoAttributeIds`)· το `bind` δένει την ιδιότητα που **φέρνει** η απόφαση.
  * 🔑 §5.5.2 Β9δ: `fallback: 'memory'` (μόνο με `decision: null`, από την αναίρεση) ⇒ η γραμμή επιστρέφει στην κρίση της μνήμης του
  *    προμηθευτή, ρωτημένης **ξανά** εδώ (`resolveLine`) — ο client δεν δηλώνει ποτέ προέλευση.
  * @module server/catalog/import-page-reinterpret.server
@@ -22,7 +23,14 @@ import { hasPermission } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { canonicalJson } from '@/lib/legal/canonical-json';
 import { priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
-import { lineDecisionOf, priceLineOf, tableOverridesOf, withLineOverride, type LineOverrideExtras } from '@/subapps/catalog/import/page-line-overrides';
+import {
+  lineDecisionOf,
+  priceLineOf,
+  stepAttributeIdOf,
+  tableOverridesOf,
+  withLineOverride,
+  type LineOverrideExtras,
+} from '@/subapps/catalog/import/page-line-overrides';
 import { tableLineIdentities } from '@/subapps/catalog/import/page-table-reading';
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
@@ -194,7 +202,9 @@ async function decideLine(ctx: AuthContext, id: string, asked: SetImportLineRequ
   }
   const basis = await lineBasis(ctx, opened.value, request);
   if (!basis.ok) return { kind: 'refused', reason: basis.reason };
-  if (request.decision?.kind === 'attribute' && request.bind !== null) await bindToFamily(ctx, opened.value, request.decision.attributeId, request.bind);
+  // §5.5.2 Β3 Γ13: δένεται η ιδιότητα που **φέρνει** η απόφαση — με δεύτερο στόχο, αυτός· η κύρια είναι ήδη στην οικογένεια.
+  const bindTarget = request.decision?.kind === 'attribute' ? stepAttributeIdOf(previous, request.decision) : null;
+  if (bindTarget !== null && request.bind !== null) await bindToFamily(ctx, opened.value, bindTarget, request.bind);
   const outcome = await reinterpretTable(ctx, opened.value, resolved, basis.value);
   return outcome.ok ? { kind: 'settled' } : { kind: 'refused', reason: outcome.reason };
 }

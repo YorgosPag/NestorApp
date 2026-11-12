@@ -9,22 +9,28 @@
  *    Πηγή αλήθειας οι αποφάσεις της παρτίδας (`decidedLinesOf`), όχι η ανάγνωση. Πρακτική Akeneo SDM / Flatfile: κάθε αντιστοίχιση
  *    που ήρθε από προηγούμενη δουλειά φαίνεται και αλλάζει.
  * 🔑 Προέλευση και κατάσταση με εικονίδιο **και** λέξη (CHECK 3.41). Η αναίρεση είναι η ίδια απόφαση `null` με τις γραμμές χωρίς πεδίο.
+ * 🔑 §5.5.2 Β3 Γ13: αντιστοιχισμένη γραμμή γεμίζει **και** άλλη ιδιότητα («Και σε άλλη ιδιότητα») — ίδιο εργαλείο γραμμής, η απόφαση
+ *    στέλνεται πλήρης (`withAlsoAttribute`).
  * 🔑 §5.5.2 Β8: γραμμή που έχει ακόμη θέση στη σελίδα (αγνοημένη ⇒ «απορρίφθηκε» στο PDF) επιλέγεται και από εδώ και από το
  *    πλαίσιό της· ίδια ταυτότητα (`lineTargetOf`), ίδιο hover.
  */
 
-import React from 'react';
-import { BrainCircuit, EyeOff, Link2, LoaderCircle, TriangleAlert, Undo2, UserRound } from 'lucide-react';
+import React, { useState } from 'react';
+import { BrainCircuit, EyeOff, Link2, LoaderCircle, Plus, Sparkles, TriangleAlert, Undo2, UserRound } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { decidedLinesOf, type DecidedLine } from '@/subapps/catalog/import/decided-lines';
+import { canAddLineTarget, decidedLinesOf, decidedToolLineOf, type DecidedLine } from '@/subapps/catalog/import/decided-lines';
 import { pageTableAddressOf } from '@/subapps/catalog/import/import-keys';
-import { lineKeyOf } from '@/subapps/catalog/import/page-line-overrides';
+import { lineKeyOf, withAlsoAttribute } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportLineOverride, ImportPageUnmappedLine } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
+// Ο ουδέτερος αναγνώστης, όχι το `useCatalogCanManage` του `catalog-ui-hooks`: εκείνο φέρνει το namespace `catalog` στο slice (CHECK 3.34).
+import { useCatalogAccess } from '../shared/catalog-neutral-hooks';
+import { LineAttributeToolsSlot } from './import-surfaces';
 import { LINE_REFUSAL_KEYS, LINE_STATE_KEYS, useImportText } from './import-text';
 import { useLineDecisionText } from './line-decision-text';
+import type { LineToolMode } from './line-tool-props';
 import type { LineActivity } from './use-line-decisions';
 import { useReviewLineItem } from './use-review-line-item';
 
@@ -73,6 +79,26 @@ interface DecidedRowProps {
   readonly active: boolean;
   readonly focusRequested: boolean;
   readonly onFocus: (line: ImportPageUnmappedLine) => void;
+  /** §5.5.2 Β3 Γ13: «και σε άλλη ιδιότητα» — `null` όταν η γραμμή δεν δέχεται άλλον στόχο ή ο άνθρωπος δεν μπορεί να τον δώσει. */
+  readonly onAddTarget: ((mode: LineToolMode) => void) | null;
+  readonly canManage: boolean;
+}
+
+/** §5.5.2 Β3 Γ13: η ίδια γραμμή γεμίζει και άλλη ιδιότητα — υπάρχουσα, ή νέα όταν ο άνθρωπος αλλάζει δομή. */
+function AddTargetActions({ onAddTarget, canManage, disabled }: { readonly onAddTarget: (mode: LineToolMode) => void; readonly canManage: boolean; readonly disabled: boolean }) {
+  const { t } = useImportText();
+  return (
+    <>
+      <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => onAddTarget('map')}>
+        <Plus className="mr-1 h-3 w-3" aria-hidden />{t('review.decided.addTarget')}
+      </Button>
+      {canManage ? (
+        <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => onAddTarget('new')}>
+          <Sparkles className="mr-1 h-3 w-3" aria-hidden />{t('review.decided.addTargetNew')}
+        </Button>
+      ) : null}
+    </>
+  );
 }
 
 /** Η ετικέτα της απόφασης· κουμπί επιλογής όταν η γραμμή έχει θέση στη σελίδα (§5.5.2 Β8). */
@@ -89,9 +115,10 @@ function DecidedTitle({ entry, decision, source, active, onFocus, buttonRef, hov
   );
 }
 
-function DecidedRow({ entry, decision, activity, readOnly, onUndo, source, active, focusRequested, onFocus }: DecidedRowProps) {
+function DecidedRow({ entry, decision, activity, readOnly, onUndo, source, active, focusRequested, onFocus, onAddTarget, canManage }: DecidedRowProps) {
   const { t } = useImportText();
   const { itemProps, buttonRef, hover } = useReviewLineItem(entry, active, focusRequested);
+  const busy = readOnly || activity?.kind === 'saving';
   return (
     <li {...itemProps}>
       <span className="flex flex-wrap items-center justify-between gap-2">
@@ -101,10 +128,11 @@ function DecidedRow({ entry, decision, activity, readOnly, onUndo, source, activ
       {entry.values.length > 0 ? <span className="text-xs text-muted-foreground">{entry.values.join(' · ')}</span> : null}
       {entry.origin ? <span className="text-xs text-muted-foreground">{t('review.decided.sourceBatch', { batch: entry.origin.sourceBatchId })}</span> : null}
       {activity?.kind === 'refused' ? <span className="text-xs text-destructive" role="status">{t(LINE_REFUSAL_KEYS[activity.reason])}</span> : null}
-      <span>
-        <Button type="button" size="sm" variant="ghost" disabled={readOnly || activity?.kind === 'saving'} onClick={onUndo}>
+      <span className="flex flex-wrap gap-1">
+        <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onUndo}>
           <Undo2 className="mr-1 h-3 w-3" aria-hidden />{t('review.lines.undo')}
         </Button>
+        {onAddTarget ? <AddTargetActions onAddTarget={onAddTarget} canManage={canManage} disabled={busy} /> : null}
       </span>
     </li>
   );
@@ -112,10 +140,47 @@ function DecidedRow({ entry, decision, activity, readOnly, onUndo, source, activ
 
 const noFocus = () => undefined;
 
+/**
+ * Γραμμή χωρίς αδελφή ⇒ το εργαλείο δεν φτάνει ποτέ στη ροή `create` (Γ11): η νέα ιδιότητα γεννιέται στον διάλογο και έρχεται από το
+ * `onDecide`, όπως στις γραμμές χωρίς πεδίο. Η αντιστοιχισμένη γραμμή δεν έχει αδελφή (`decidedToolLineOf`).
+ */
+const noSiblingCreate = async (): Promise<void> => undefined;
+
+interface AddTargetTool {
+  readonly entry: DecidedLine;
+  readonly line: ImportPageUnmappedLine;
+  readonly mode: LineToolMode;
+}
+
+/** §5.5.2 Β3 Γ13: «και σε άλλη ιδιότητα» — η πλήρης απόφαση (κύρια + όσες υπάρχουν + η νέα): κατάσταση με κλειδί, ιδεμπότητη. */
+function addTargetRequest(entry: DecidedLine, attributeId: string, bind: SetImportLineRequest['bind']): SetImportLineRequest | null {
+  const decision = withAlsoAttribute(entry.decision, attributeId);
+  return decision === null ? null : { page: entry.page, table: entry.table, line: entry.line, decision, bind };
+}
+
+/** §5.5.2 Β3 Γ13: το ανοιχτό εργαλείο «και σε άλλη ιδιότητα» — ποια γραμμή, σε ποια μορφή — και ο διάλογός του. */
+function useAddTargetTool(proposal: ImportProposalWire, decidable: boolean, onDecideLine: DecidedLinesProps['onDecideLine']) {
+  const [tool, setTool] = useState<AddTargetTool | null>(null);
+  const addTargetOf = (entry: DecidedLine): ((mode: LineToolMode) => void) | null => {
+    const line = decidable && canAddLineTarget(entry.decision) ? decidedToolLineOf(entry, proposal.rows) : null;
+    return line === null ? null : (mode) => setTool({ entry, line, mode });
+  };
+  const addTarget = (attributeId: string, bind: SetImportLineRequest['bind']) => {
+    const request = tool === null ? null : addTargetRequest(tool.entry, attributeId, bind);
+    if (request !== null) onDecideLine(proposal, request);
+  };
+  const dialog = tool ? (
+    <LineAttributeToolsSlot proposal={proposal} line={tool.line} mode={tool.mode} onClose={() => setTool(null)} onDecide={addTarget} onCreate={noSiblingCreate} />
+  ) : null;
+  return { addTargetOf, dialog };
+}
+
 export function ProposalDecidedLines(props: DecidedLinesProps) {
   const { proposal, lines, overrides, activity, onDecideLine, decidable, pricesEnabled = false, activeLine = null, onFocusLine = noFocus, focusRequested = false } = props;
   const { t } = useImportText();
   const decisionText = useLineDecisionText();
+  const canManage = useCatalogAccess('schema') === 'granted';
+  const { addTargetOf, dialog } = useAddTargetTool(proposal, decidable, onDecideLine);
   const address = pageTableAddressOf(proposal.groupKey);
   if (address === null) return null;
   const decided = decidedLinesOf(overrides, lines, address.page, address.table);
@@ -130,9 +195,11 @@ export function ProposalDecidedLines(props: DecidedLinesProps) {
         {decided.map((entry) => (
           <DecidedRow key={lineKeyOf(entry)} entry={entry} decision={decisionText.of(entry.decision)} activity={activity.get(lineKeyOf(entry))}
             readOnly={!decidable || (entry.decision.kind === 'price' && !pricesEnabled)} onUndo={() => undo(entry)}
-            source={sources.get(lineKeyOf(entry))} active={lineKeyOf(entry) === activeLine} focusRequested={focusRequested} onFocus={onFocusLine} />
+            source={sources.get(lineKeyOf(entry))} active={lineKeyOf(entry) === activeLine} focusRequested={focusRequested} onFocus={onFocusLine}
+            onAddTarget={addTargetOf(entry)} canManage={canManage} />
         ))}
       </ul>
+      {dialog}
     </section>
   );
 }

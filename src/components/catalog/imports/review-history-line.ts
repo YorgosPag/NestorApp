@@ -17,7 +17,7 @@
 
 import { fieldAddress } from '@/subapps/catalog/import/human-edits';
 import { sameLineDecision } from '@/subapps/catalog/import/label-memory';
-import { lineOverrideOf, sameLine } from '@/subapps/catalog/import/page-line-overrides';
+import { lineOverrideOf, sameLine, stepAttributeIdOf } from '@/subapps/catalog/import/page-line-overrides';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportLineDecision, ImportTarget } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView, ImportProposalWire, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
@@ -69,15 +69,17 @@ const attributeTarget = (attributeId: string): ImportTarget => ({ kind: 'attribu
 const lineTextOf = (view: ImportBatchDetailView, address: LineAddress): string =>
   view.batch.pages?.unmappedLines?.find((line) => sameLine(line, address))?.label ?? String(address.line + 1);
 
-function lineLabelOf(view: ImportBatchDetailView, after: LineMark): ReviewStepLabel {
+function lineLabelOf(view: ImportBatchDetailView, before: LineMark, after: LineMark): ReviewStepLabel {
   const { decision } = after;
-  const target = decision?.kind === 'attribute' || decision?.kind === 'axis' ? attributeTarget(decision.attributeId) : null;
+  // §5.5.2 Β3 Γ13: «και σε άλλη ιδιότητα» ονομάζει τη νέα, όχι την κύρια που υπήρχε ήδη.
+  const attributeId = stepAttributeIdOf(before.decision, decision);
+  const target = attributeId === null ? null : attributeTarget(attributeId);
   const bound = decision?.kind === 'attribute' && after.bind !== null;
   return { kind: decision === null ? 'lineUndo' : LINE_KIND[decision.kind], line: lineTextOf(view, after), target, bound, count: 1 };
 }
 
 function linePair(view: ImportBatchDetailView, ownerId: string, before: LineMark, after: LineMark, restore: readonly FieldRestore[]): StepPair<LineStep> {
-  const label = lineLabelOf(view, after);
+  const label = lineLabelOf(view, before, after);
   return {
     before: { kind: 'line', proposalId: ownerId, label, line: before, restore },
     after: { kind: 'line', proposalId: ownerId, label, line: after, restore: [] },

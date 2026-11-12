@@ -13,9 +13,13 @@
 import { useCallback } from 'react';
 
 import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
+import { decisionAttributeIds } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportLineDecision } from '@/subapps/catalog/types/catalog-import';
 import { useLocalizedTextReader } from '../shared/catalog-neutral-hooks';
 import { useImportText } from './import-text';
+
+/** Σύμβολο, όχι λέξη: ίδιο σε κάθε γλώσσα, όπως το « · » των κελιών. */
+const TARGET_JOINER = ' + ';
 
 export interface LineDecisionText {
   /** Το κείμενο της απόφασης. */
@@ -31,13 +35,17 @@ export function useLineDecisionText(): LineDecisionText {
   const of = useCallback((decision: ImportLineDecision): string => {
     if (decision.kind === 'ignore') return t('review.lineDecision.ignore');
     if (decision.kind === 'price') return t('review.lineDecision.price', { unit: decision.unitCode });
-    const attribute = attributes.items.find((item) => item.id === decision.attributeId);
-    const name = attribute ? text(attribute.labels) || attribute.code : decision.attributeId;
+    const nameOf = (id: string): string => {
+      const attribute = attributes.items.find((item) => item.id === id);
+      return attribute ? text(attribute.labels) || attribute.code : id;
+    };
+    // §5.5.2 Β3 Γ13: μία γραμμή, περισσότερες ιδιότητες — όλες ονομάζονται, η κύρια πρώτη.
+    const name = decisionAttributeIds(decision).map(nameOf).join(TARGET_JOINER);
     // §5.5.2 Β7: η γραμμή δίνει **και** τον άξονα — ό,τι άλλο έδινε μένει.
     return decision.kind === 'axis' ? t('review.lineDecision.axis', { attribute: name }) : name;
   }, [attributes.items, t, text]);
-  // Μόνο βιβλιοθήκη που φορτώθηκε κρίνει «δεν υπάρχει»: φόρτωση ή αποτυχία δεν είναι απόδειξη απουσίας.
+  // Μόνο βιβλιοθήκη που φορτώθηκε κρίνει «δεν υπάρχει»: φόρτωση ή αποτυχία δεν είναι απόδειξη απουσίας. Λείπει **μία** ⇒ δεν υπάρχει.
   const known = useCallback((decision: ImportLineDecision): boolean =>
-    (decision.kind !== 'attribute' && decision.kind !== 'axis') || attributes.state !== 'ready' || attributes.items.some((item) => item.id === decision.attributeId), [attributes.items, attributes.state]);
+    attributes.state !== 'ready' || decisionAttributeIds(decision).every((id) => attributes.items.some((item) => item.id === id)), [attributes.items, attributes.state]);
   return { of, known };
 }

@@ -26,6 +26,7 @@ import { ANY_SLOT } from '../../types/product';
 import { CATALOG_CHANNELS } from '../../vocabulary/channels';
 import {
   IMPORT_LINE_BIND_LEVELS,
+  IMPORT_LINE_MAX_TARGETS,
   IMPORT_MAX_FILE_BYTES,
   IMPORT_PRICE_FIELDS,
   IMPORT_PURPOSES,
@@ -112,8 +113,19 @@ export const fetchImportAssetBodySchema: z.ZodType<FetchImportAssetRequest> = z.
 const TABLE_KEY_MAX = 40;
 const MAX_TABLE_LINE = 1000;
 
-const importLineDecisionSchema: z.ZodType<ImportLineDecision> = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('attribute'), attributeId: entityIdSchema }),
+/** §5.5.2 Β3 Γ13: κάθε στόχος της γραμμής μία φορά — ούτε διπλότυπο στη λίστα, ούτε η κύρια ξανά. */
+const distinctTargets = ({ attributeId, alsoAttributeIds }: { readonly attributeId: string; readonly alsoAttributeIds?: readonly string[] }): boolean =>
+  alsoAttributeIds === undefined || new Set([attributeId, ...alsoAttributeIds]).size === alsoAttributeIds.length + 1;
+
+const attributeLineDecisionSchema = z.object({
+  kind: z.literal('attribute'),
+  attributeId: entityIdSchema,
+  alsoAttributeIds: z.array(entityIdSchema).min(1).max(IMPORT_LINE_MAX_TARGETS - 1).optional(),
+}).refine(distinctTargets, { path: ['alsoAttributeIds'] });
+
+// Το `discriminatedUnion` δέχεται μόνο σκέτα `z.object`: ο έλεγχος των στόχων μένει στο `refine` του κλάδου, γι' αυτό `union`.
+const importLineDecisionSchema: z.ZodType<ImportLineDecision> = z.union([
+  attributeLineDecisionSchema,
   z.object({ kind: z.literal('price'), unitCode: z.enum(UOM_CODES) }),
   z.object({ kind: z.literal('ignore') }),
   z.object({ kind: z.literal('axis'), attributeId: entityIdSchema }),
@@ -130,8 +142,7 @@ export const setImportLineBodySchema: z.ZodType<SetImportLineRequest, z.ZodTypeD
   // §5.5.2 Β3 Γ11: τον ορισμό τον κρίνει ο γραφέας ιδιοτήτων (βιβλιοθήκη, ομάδα, μητρώο)· εδώ μόνο το σχήμα.
   create: z.object({
     definition: attributeDefinitionSchema,
-    requiredChannels: z.array(z.enum(CATALOG_CHANNELS)).max(CATALOG_CHANNELS.length),
-  }).optional(),
+    requiredChannels: z.array(z.enum(CATALOG_CHANNELS)).max(CATALOG_CHANNELS.length),  }).optional(),
 }).refine((body) => body.fallback === undefined || body.decision === null, { path: ['fallback'] })
   .refine((body) => body.create === undefined || (body.decision === null && body.bind !== null && body.fallback === undefined), { path: ['create'] });
 

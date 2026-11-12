@@ -31,6 +31,35 @@ export function lineDecisionOf(overrides: readonly ImportLineOverride[] | undefi
   return lineOverrideOf(overrides, address)?.decision ?? null;
 }
 
+/**
+ * §5.5.2 Β3 Γ13: **όλες** οι ιδιότητες που δείχνει μια απόφαση, η κύρια πρώτη. Ο **ένας** δρόμος προς το `alsoAttributeIds`: κανείς
+ * δεν το διαβάζει απευθείας, ώστε ο καταναλωτής που ξέρει μόνο το `attributeId` να μη χάνει σιωπηλά τη δεύτερη ιδιότητα.
+ */
+export function decisionAttributeIds(decision: ImportLineDecision): readonly string[] {
+  if (decision.kind === 'attribute') return [decision.attributeId, ...(decision.alsoAttributeIds ?? [])];
+  return decision.kind === 'axis' ? [decision.attributeId] : [];
+}
+
+/**
+ * §5.5.2 Β3 Γ13: η απόφαση `attribute` με **έναν ακόμη** στόχο. Ίδιος στόχος που υπάρχει ήδη ⇒ ίδια απόφαση (ιδεμπότητη). Χωρίς
+ * απόφαση `attribute` ⇒ `null`: δεν υπάρχει γραμμή αντιστοιχισμένη για να προστεθεί κάτι.
+ */
+export function withAlsoAttribute(decision: ImportLineDecision | null, attributeId: string): ImportLineDecision | null {
+  if (decision?.kind !== 'attribute') return null;
+  if (decisionAttributeIds(decision).includes(attributeId)) return decision;
+  return { ...decision, alsoAttributeIds: [...(decision.alsoAttributeIds ?? []), attributeId] };
+}
+
+/**
+ * §5.5.2 Β3 Γ13: η ιδιότητα που **φέρνει** μια απόφαση σε σχέση με την προηγούμενη — όποια δεν έδειχνε πριν· αλλιώς η κύρια. Ο ένας
+ * κανόνας για το δέσιμο στην οικογένεια (δένεται αυτή, όχι η κύρια που ήταν ήδη δεμένη) και για το όνομα του βήματος αναίρεσης.
+ */
+export function stepAttributeIdOf(previous: ImportLineDecision | null, next: ImportLineDecision | null): string | null {
+  const now = next === null ? [] : decisionAttributeIds(next);
+  const was = new Set(previous === null ? [] : decisionAttributeIds(previous));
+  return now.find((id) => !was.has(id)) ?? now[0] ?? null;
+}
+
 /** Ό,τι συνοδεύει μια απόφαση πέρα από τη σφραγίδα (§5.5.2 Β5): ταυτότητα για τη μάθηση, προέλευση όταν την έδωσε η μνήμη. */
 export type LineOverrideExtras = Pick<ImportLineOverride, 'identity' | 'origin'>;
 
@@ -88,22 +117,27 @@ export function applyLineOverrides(
   codeById: ReadonlyMap<string, string>,
   knownCodes: ReadonlySet<string>,
 ): OverriddenMapping {
-  const chosen = new Map<number, RawLineMapping>();
+  const chosen = new Map<number, RawLineMapping[]>();
   const axes: RawLineMapping[] = [];
   const priceLines: PagePriceLine[] = [];
   const unknownAttributeIds: string[] = [];
   for (const { line, decision } of overrides) {
     if (decision.kind === 'price') priceLines.push({ line, unitCode: decision.unitCode });
     if (decision.kind !== 'attribute' && decision.kind !== 'axis') continue;
-    const code = codeById.get(decision.attributeId);
-    if (code === undefined) unknownAttributeIds.push(decision.attributeId);
-    else if (decision.kind === 'axis') axes.push({ line, attribute: code, confidence: HUMAN_CONFIDENCE });
-    else chosen.set(line, { line, attribute: code, confidence: HUMAN_CONFIDENCE });
+    // §5.5.2 Β3 Γ13: ένα δέσιμο ανά στόχο· η ανάγνωση (`rowsOf`) δίνει σε κάθε στόχο το ίδιο κελί.
+    const bound: RawLineMapping[] = [];
+    for (const attributeId of decisionAttributeIds(decision)) {
+      const code = codeById.get(attributeId);
+      if (code === undefined) unknownAttributeIds.push(attributeId);
+      else bound.push({ line, attribute: code, confidence: HUMAN_CONFIDENCE });
+    }
+    if (decision.kind === 'axis') axes.push(...bound);
+    else if (bound.length > 0) chosen.set(line, bound);
   }
   const priced = new Set(priceLines.map(({ line }) => line));
   const kept = mapping.lines.filter((entry) => !chosen.has(entry.line) && !priced.has(entry.line));
   const staleCodes = [...new Set(kept.flatMap((entry) => (entry.attribute !== null && !knownCodes.has(entry.attribute) ? [entry.attribute] : [])))];
-  const lines = [...kept, ...chosen.values()];
+  const lines = [...kept, ...[...chosen.values()].flat()];
   // §5.5.2 Β7: ο άξονας **προστίθεται** στη γραμμή· ίδιο δέσιμο που υπάρχει ήδη δεν διπλασιάζει τα κελιά.
   const added = axes.filter((axis) => !priced.has(axis.line) && !lines.some((entry) => entry.line === axis.line && entry.attribute === axis.attribute));
   return { mapping: { ...mapping, lines: [...lines, ...added] }, staleCodes, unknownAttributeIds, priceLines };

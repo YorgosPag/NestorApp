@@ -564,3 +564,36 @@ describe('🚀 §5.5.2 Β5: η μνήμη του προμηθευτή, όλος 
     expect(read(memory)).toEqual(read(human));
   });
 });
+
+describe('🔴 §5.5.2 Β3 Γ13: μία γραμμή → δύο ιδιότητες (σελ. 85, «ΣΥΝΔΕΣΕΙΣ ΕΙΣΑΓ.-ΕΠΙΣΤΡΟΦΗ»)', () => {
+  const CONNECTION_TEXT = '3/4’’-3/4’’';
+  const size = attributesByCode.get('size');
+  if (!size) throw new Error('το fixture δεν έχει `size`');
+  const INCH_OPTIONS = ['1/2"', '3/4"', '1"', '1-1/4"'].map((label, index) => ({ code: `in_${index}`, labels: { el: label } }));
+  const connection = (id: string, code: string) => ({ ...size, id, code, config: { options: INCH_OPTIONS } });
+  const cooling = connection('cattr_nd_cooling', 'nominal_diameter_cooling');
+  const heating = connection('cattr_nd_heating', 'nominal_diameter_heating');
+  const context: PageTableContext = { ...contextOf('85'), attributesByCode: new Map([...attributesByCode, [cooling.code, cooling], [heating.code, heating]]) };
+  const [main, parts] = context.tables;
+  const line = lineOf(main, CONNECTION_TEXT);
+  const answer = variantsMapping(main, page85Lines);
+  const codeById = new Map([...context.attributesByCode.values()].map((attribute) => [attribute.id, attribute.code]));
+  const decision = { kind: 'attribute', attributeId: cooling.id, alsoAttributeIds: [heating.id] } as const;
+  const { mapping } = applyLineOverrides(answer, [{ page: 85, table: main.key, line, decision, by: 'usr_1', at: '2026-11-12T10:00:00.000Z' }], codeById, new Set(codeById.values()));
+  const { groups, unmappedLines } = readPageTables({ tables: [mapping, accessories(parts)] }, context);
+
+  it('το ίδιο κελί φτάνει και στις δύο ιδιότητες, σε κάθε παραλλαγή, με βεβαιότητα 1', () => {
+    // Ο στόχος του κελιού είναι το **id** της ιδιότητας (`attributeTarget`), όχι ο κωδικός.
+    for (const attribute of [cooling.id, heating.id]) {
+      const cells = cellsOf(groups[0], attribute);
+      expect(cells).toHaveLength(CODES_85.length);
+      expect(cells.every((cell) => cell.text === CONNECTION_TEXT && cell.confidence === 1)).toBe(true);
+    }
+    expect(unmappedLines.some((entry) => entry.line === line)).toBe(false);
+  });
+
+  it('το fold της ίντσας: «3/4’’-3/4’’» (δύο U+2019) δίνει την επιλογή 3/4" και στις δύο', () => {
+    expect(selectOptionFor(cooling, CONNECTION_TEXT)).toBe('in_1');
+    expect(selectOptionFor(heating, CONNECTION_TEXT)).toBe('in_1');
+  });
+});

@@ -309,7 +309,9 @@
       "lineN": "Γραμμή {line}",
       "byHuman": "Από εσάς",
       "byMemory": "{count, plural, one {Από μνήμη · # έγκριση} other {Από μνήμη · # εγκρίσεις}}",
-      "sourceBatch": "Τελευταία έγκριση: παρτίδα {batch}"
+      "sourceBatch": "Τελευταία έγκριση: παρτίδα {batch}",
+      "addTarget": "Και σε άλλη ιδιότητα",
+      "addTargetNew": "Και σε νέα ιδιότητα"
     },
     "memory": {
       "suggests": "Η μνήμη προτείνει",

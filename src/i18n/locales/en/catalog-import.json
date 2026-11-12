@@ -309,7 +309,9 @@
       "lineN": "Line {line}",
       "byHuman": "By you",
       "byMemory": "{count, plural, one {From memory · # approval} other {From memory · # approvals}}",
-      "sourceBatch": "Last approved in batch {batch}"
+      "sourceBatch": "Last approved in batch {batch}",
+      "addTarget": "Also to another attribute",
+      "addTargetNew": "Also to a new attribute"
     },
     "memory": {
       "suggests": "Memory suggests",

@@ -197,6 +197,12 @@ export const IMPORT_PAGE_DERIVATION = 3;
 export const IMPORT_LINE_BIND_LEVELS = ['shared', 'leaf'] as const;
 export type ImportLineBindLevel = (typeof IMPORT_LINE_BIND_LEVELS)[number];
 
+/**
+ * §5.5.2 Β3 Γ13: πόσες ιδιότητες γεμίζει **μία** γραμμή (κύρια + `alsoAttributeIds`). Η σελ. 85 του ARIES χρειάζεται δύο (ψύξη ·
+ * θέρμανση)· τέσσερις σκεπάζουν και 4 σωλήνες, χωρίς να γίνει η γραμμή κάδος για ό,τι δεν διαβάστηκε.
+ */
+export const IMPORT_LINE_MAX_TARGETS = 4;
+
 /** Αποφάσεις γραμμής ανά παρτίδα: 60 σελίδες × λίγες γραμμές χωρίς πεδίο, πολύ κάτω από το 1 MiB του εγγράφου. */
 export const IMPORT_MAX_LINE_OVERRIDES = 600;
 

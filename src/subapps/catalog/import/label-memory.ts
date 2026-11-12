@@ -22,11 +22,19 @@ import type {
 import type { ImportMemoryHint, ImportMemoryHints } from '../types/catalog-import-requests';
 import { IMPORT_LABEL_MEMORY_MAX_DECISIONS } from '../vocabulary/catalog-import';
 import { labelMemoryKey, pageTableGroupKey } from './import-keys';
-import { lineDecisionOf, tableOverridesOf } from './page-line-overrides';
+import { decisionAttributeIds, lineDecisionOf, tableOverridesOf } from './page-line-overrides';
 
-/** Ίδια απόφαση: ίδιο είδος και ίδιος στόχος. */
+/** §5.5.2 Β3 Γ13: ίδιοι στόχοι, ίδια κύρια· η σειρά των υπόλοιπων δεν κάνει άλλη απόφαση. */
+function sameTargets(a: ImportLineDecision, b: ImportLineDecision): boolean {
+  const [aMain, ...aAlso] = decisionAttributeIds(a);
+  const [bMain, ...bAlso] = decisionAttributeIds(b);
+  const others = new Set(bAlso);
+  return aMain === bMain && aAlso.length === bAlso.length && aAlso.every((id) => others.has(id));
+}
+
+/** Ίδια απόφαση: ίδιο είδος και ίδιοι στόχοι. */
 export function sameLineDecision(a: ImportLineDecision, b: ImportLineDecision): boolean {
-  if (a.kind === 'attribute' || a.kind === 'axis') return (b.kind === 'attribute' || b.kind === 'axis') && b.kind === a.kind && a.attributeId === b.attributeId;
+  if (a.kind === 'attribute' || a.kind === 'axis') return b.kind === a.kind && sameTargets(a, b);
   if (a.kind === 'price') return b.kind === 'price' && a.unitCode === b.unitCode;
   return b.kind === 'ignore';
 }
@@ -88,7 +96,8 @@ export interface MemoryApplication {
 }
 
 function applicable(decision: ImportLineDecision, application: MemoryApplication): boolean {
-  if (decision.kind === 'attribute' || decision.kind === 'axis') return application.knownAttributeIds.has(decision.attributeId);
+  // §5.5.2 Β3 Γ13: μισή εφαρμογή θα γέμιζε σιωπηλά τη μία ιδιότητα και όχι την άλλη — **όλοι** οι στόχοι γνωστοί, αλλιώς τίποτα.
+  if (decision.kind === 'attribute' || decision.kind === 'axis') return decisionAttributeIds(decision).every((id) => application.knownAttributeIds.has(id));
   if (decision.kind === 'price') return application.pricesEnabled;
   return true;
 }

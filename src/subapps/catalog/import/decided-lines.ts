@@ -9,8 +9,9 @@
  * @module subapps/catalog/import/decided-lines
  */
 
-import type { ImportLineDecision, ImportLineOverride, ImportLineOverrideOrigin, ImportPageUnmappedLine } from '../types/catalog-import';
-import { lineKeyOf, tableOverridesOf } from './page-line-overrides';
+import type { ImportLineDecision, ImportLineOverride, ImportLineOverrideOrigin, ImportPageUnmappedLine, ImportProposalRow } from '../types/catalog-import';
+import { IMPORT_LINE_MAX_TARGETS } from '../vocabulary/catalog-import';
+import { decisionAttributeIds, lineKeyOf, tableOverridesOf } from './page-line-overrides';
 
 export interface DecidedLine {
   readonly page: number;
@@ -48,4 +49,20 @@ export function decidedLinesOf(
       };
     })
     .sort((a, b) => a.line - b.line);
+}
+
+/** §5.5.2 Β3 Γ13: χωράει η γραμμή «και σε άλλη ιδιότητα»; Μόνο αντιστοίχιση `attribute`, και κάτω από το όριο στόχων. */
+export const canAddLineTarget = (decision: ImportLineDecision): boolean =>
+  decision.kind === 'attribute' && decisionAttributeIds(decision).length < IMPORT_LINE_MAX_TARGETS;
+
+/**
+ * §5.5.2 Β3 Γ13: η αντιστοιχισμένη γραμμή **ως είσοδος του εργαλείου γραμμής** («και σε άλλη ιδιότητα»). Η γραμμή έχει φύγει από τις
+ * «χωρίς πεδίο», άρα οι τιμές της έρχονται από τα πεδία της **κύριας** ιδιότητας στην πρόταση, στη σειρά των παραλλαγών — ό,τι διάβασε
+ * ο ίδιος αγωγός, όχι επινοημένο κείμενο. Ετικέτα `null` ⇒ `null`: το εργαλείο δεν ανοίγει χωρίς τι να δείξει.
+ */
+export function decidedToolLineOf(entry: DecidedLine, rows: readonly ImportProposalRow[]): ImportPageUnmappedLine | null {
+  if (entry.decision.kind !== 'attribute' || entry.label === null) return null;
+  const main = entry.decision.attributeId;
+  const values = rows.flatMap((row) => row.fields.flatMap((field) => (field.target.kind === 'attribute' && field.target.attributeId === main ? [field.sourceText] : [])));
+  return { page: entry.page, table: entry.table, line: entry.line, label: entry.label, values };
 }
