@@ -108,7 +108,7 @@ const BASE_SALES_TABS: SalesTabConfig[] = [
   { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo', color: 'text-[hsl(var(--text-success))]' },
   { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary', color: 'text-[hsl(var(--hue-indigo))]' },
   { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', color: 'text-[hsl(var(--text-info))]' },
-  { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos', color: 'text-[hsl(var(--status-purple))]' },
+  { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos', color: 'text-[hsl(var(--hue-purple))]' },
   { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos', color: 'text-[hsl(var(--hue-pink))]' },
   { id: 'history', icon: Clock, labelKey: 'sales.tabs.history', color: 'text-[hsl(var(--text-warning))]' },
 ];

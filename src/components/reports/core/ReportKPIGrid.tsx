@@ -25,7 +25,7 @@ import { ReportTrafficLight, type RAGStatus } from "./ReportTrafficLight";
 import { StatBreakdown } from "@/components/shared/stat-breakdown/StatBreakdown";
 import { priceTotalsSentence } from "@/lib/listings/listing-price-label";
 import type { StatBreakdownRow } from "@/types/stat-breakdown";
-import { STAT_TONE_TEXT, type StatTone } from "@/design-system/stat-tone";
+import { STAT_TONE_ICON_BG, STAT_TONE_TEXT, type StatTone } from "@/design-system/stat-tone";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,20 +85,8 @@ export interface ReportKPIGridProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-// Μελάνι εικονιδίου: ο ΕΝΑΣ χάρτης `STAT_TONE_TEXT` (ADR-777 §8.101). Ο δίδυμος χάρτης που ζούσε εδώ έστελνε
-// 5 τόνους σε `text-primary` ⇒ αόρατα εικονίδια στο σκοτεινό θέμα (`--primary` ≡ `--card`, CHECK 3.38).
-const ICON_BG_MAP: Record<StatTone, string> = {
-  blue: "bg-[hsl(var(--bg-info))]/20",
-  green: "bg-[hsl(var(--bg-success))]/10",
-  purple: "bg-accent",
-  orange: "bg-[hsl(var(--bg-warning))]/40",
-  cyan: "bg-accent",
-  pink: "bg-accent",
-  gray: "bg-muted",
-  red: "bg-destructive/10",
-  yellow: "bg-[hsl(var(--bg-warning))]/40",
-  indigo: "bg-accent",
-};
+// Μελάνι + φόντο εικονιδίου: οι ΔΥΟ χάρτες-ζεύγος του `design-system/stat-tone` (`STAT_TONE_TEXT` ·
+// `STAT_TONE_ICON_BG`, ADR-777 §8.101 · ADR-770 §11). Κανένας τοπικός χάρτης τόνου εδώ.
 
 // ---------------------------------------------------------------------------
 // KPI Card
@@ -188,7 +176,7 @@ function KPICard({
               <span
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-lg",
-                  ICON_BG_MAP[color],
+                  STAT_TONE_ICON_BG[color],
                 )}
               >
                 <Icon className={cn("h-4 w-4", STAT_TONE_TEXT[color])} />

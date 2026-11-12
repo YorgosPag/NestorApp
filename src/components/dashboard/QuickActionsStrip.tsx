@@ -32,7 +32,7 @@ const QUICK_ACTIONS: QuickAction[] = [
 // ✅ ADR-365 follow-up: vivid colored quick-action chips (no dark navy icons)
 const VARIANT_CLASSES: Record<QuickAction['variant'], string> = {
   blue: 'bg-[hsl(var(--bg-info))]/20 text-[hsl(var(--text-info))] hover:bg-[hsl(var(--bg-info))]/30',
-  purple: 'bg-[hsl(var(--status-purple))]/12 text-[hsl(var(--status-purple))] hover:bg-[hsl(var(--status-purple))]/20',
+  purple: 'bg-[hsl(var(--hue-purple))]/12 text-[hsl(var(--hue-purple))] hover:bg-[hsl(var(--hue-purple))]/20',
   green: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))] hover:bg-[hsl(var(--bg-success))]/20',
   neutral: 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground',
 };

@@ -146,6 +146,12 @@
     --hue-teal: 173 80% 23%;          /* ADR-770 §21 — ήταν 36% (teal-600) = 2,50:1 ❌ · τώρα ≥5,32:1 */
     --hue-pink: 330 81% 39%;          /* ADR-770 §21 — ήταν 51% (pink-600) = 3,50:1 · τώρα ≥5,33:1 */
     --hue-indigo: 243 75% 57%;        /* ADR-770 §21 — ήταν 58% = 5,29:1 · τώρα ≥5,53:1 (ισοτιμία) */
+    /* ADR-770 §11 (2026-11-12) — μελάνι του τόνου purple (`COLOR_BRIDGE.text.purple`). Ήταν `text-purple-600`,
+       ΙΔΙΟ και στα δύο θέματα ⇒ 2,75:1 στο σκοτεινό. Το `--status-purple` ΔΕΝ είναι λύση: είναι γέμισμα, ίδιο και
+       στα δύο θέματα (2,50:1 επί σκοτεινής κάρτας). Φωτεινό ≥6,36:1 (accent) — πιο σκούρο από την ισοτιμία §21
+       (50% = 5,30) ΕΠΙΤΗΔΕΣ: το `QuickActionsStrip` γράφει ΚΕΙΜΕΝΟ πάνω σε φόντο `/20` (hover) και χρειάζεται 4,5:1 —
+       50% έδινε 3,90 · 44% δίνει 4,54 (χειρότερο, accent). ⛔ ΜΗΝ το ανοίξεις «για ισοτιμία» χωρίς να ξαναμετρήσεις. */
+    --hue-purple: 271 76% 44%;
 
     /* Enterprise Background Variables - SINGLE SOURCE OF TRUTH */
     --bg-success: 142 45% 97%;        /* success background - green-50 */
@@ -469,6 +475,7 @@
     --hue-teal: 172 66% 50%;          /* teal-400 */
     --hue-pink: 327 87% 68%;          /* pink-400 */
     --hue-indigo: 239 84% 74%;        /* indigo-300/400 */
+    --hue-purple: 270 95% 75%;        /* purple-400 · ADR-770 §11 — ≥5,55:1 (card) · ζεύγος του φωτεινού 271 76% 44% · κείμενο σε φόντο /20 ≥4,66 (background) */
 
     /* 🟧 ViewCube accent — Dark Mode (identical #ff8c00; the ViewCube uses one hex for both modes). */
     --viewcube-accent: 33 100% 50%;

@@ -60,7 +60,7 @@ const SEGMENT_CONFIG: Record<string, { labelKey: string; icon: LucideIcon; color
   'crm':            { labelKey: 'module.crm',            icon: BarChart,     color: 'text-[hsl(var(--text-info))]' },
   'dashboard':      { labelKey: 'module.crmDashboard',   icon: BarChart,     color: 'text-[hsl(var(--text-info))]' },
   'tasks':          { labelKey: 'module.tasks',           icon: ClipboardList, color: 'text-[hsl(var(--text-info))]' },
-  'calendar':       { labelKey: 'module.calendar',        icon: CalendarDays, color: 'text-[hsl(var(--status-purple))]' },
+  'calendar':       { labelKey: 'module.calendar',        icon: CalendarDays, color: 'text-[hsl(var(--hue-purple))]' },
   'leads':          { labelKey: 'module.leads',           icon: Target,       color: 'text-[hsl(var(--text-warning))]' },
   'pipeline':       { labelKey: 'module.pipeline',        icon: Filter,       color: 'text-[hsl(var(--text-warning))]' },
   'communications': { labelKey: 'module.communications',  icon: Phone,        color: 'text-[hsl(var(--hue-teal))]' },

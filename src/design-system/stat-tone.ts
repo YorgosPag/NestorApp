@@ -1,7 +1,7 @@
 /**
  * @fileoverview **Ο ΤΟΝΟΣ ΚΑΡΤΑΣ ΣΤΑΤΙΣΤΙΚΟΥ — ένας κατάλογος, ένας χάρτης** (ADR-770 §18 · ADR-777 §8.101).
  * @module design-system/stat-tone
- * @related design-system/color-bridge.ts (`COLOR_BRIDGE.text` — η πηγή κάθε κλάσης εδώ) ·
+ * @related design-system/color-bridge.ts (`COLOR_BRIDGE.text` — η πηγή κάθε κλάσης μελανιού εδώ) ·
  *   components/property-management/dashboard/StatsCard.tsx · components/reports/core/ReportKPIGrid.tsx
  *
  * 🔴 **ΤΟ ΕΥΡΗΜΑ** (2026-11-11, ζωντανά στις Αναφορές): δύο κάρτες στατιστικού κρατούσαν **δίδυμους** χάρτες για τον
@@ -30,7 +30,31 @@ export const STAT_TONE_TEXT: Readonly<Record<StatTone, string>> = {
   red: COLOR_BRIDGE.text.danger,
   orange: COLOR_BRIDGE.text.warning,
   cyan: COLOR_BRIDGE.text.info,
-  pink: COLOR_BRIDGE.text.purple,
+  pink: COLOR_BRIDGE.text.pink,
   yellow: COLOR_BRIDGE.text.warning,
   indigo: COLOR_BRIDGE.text.info,
+};
+
+/**
+ * Το **φόντο του εικονιδίου** κάθε τόνου — ζεύγος του `STAT_TONE_TEXT`: κάθε φόντο είναι απόχρωση της **ΙΔΙΑΣ**
+ * οικογένειας με το μελάνι του (info · success · warning · hue-purple · hue-pink), ώστε μελάνι και φόντο να μην αποκλίνουν ποτέ.
+ * Ζούσε ως `ICON_BG_MAP` μέσα στο `ReportKPIGrid` (ADR-770 §11, 2026-11-12): purple/cyan/pink/indigo έπαιρναν όλα
+ * το ουδέτερο `bg-accent` — τέσσερις τόνοι με ένα φόντο, και δύο σημεία δήλωσης για ένα εικονίδιο.
+ *
+ * ⚠️ **Ολόκληρες κλάσεις, ποτέ συναρμολόγηση** (`COLOR_BRIDGE.bg.info + '/20'`): ο Tailwind JIT βλέπει μόνο ό,τι
+ *    γράφεται αυτούσιο στην πηγή — συναρμολογημένη κλάση δεν παράγεται και το φόντο χάνεται σιωπηλά.
+ * 📏 Μετρημένο (τα νέα ζεύγη): μελάνι πάνω στο φόντο του, συντεθειμένο στην κάρτα — purple φωτεινό ≥5,22:1 ·
+ *    σκοτεινό ≥4,57:1 · pink φωτεινό ≥4,37:1 · σκοτεινό ≥4,45:1 (WCAG 1.4.11 = 3:1).
+ */
+export const STAT_TONE_ICON_BG: Readonly<Record<StatTone, string>> = {
+  blue: 'bg-[hsl(var(--bg-info))]/20',
+  gray: 'bg-muted',
+  green: 'bg-[hsl(var(--bg-success))]/10',
+  purple: 'bg-[hsl(var(--hue-purple))]/12',
+  red: 'bg-destructive/10',
+  orange: 'bg-[hsl(var(--bg-warning))]/40',
+  cyan: 'bg-[hsl(var(--bg-info))]/20',
+  pink: 'bg-[hsl(var(--hue-pink))]/12',
+  yellow: 'bg-[hsl(var(--bg-warning))]/40',
+  indigo: 'bg-[hsl(var(--bg-info))]/20',
 };

@@ -29,7 +29,8 @@ interface NavigationCardProps {
 }
 
 // ✅ ADR-365 follow-up: each tile = soft tinted chip + VIVID colored icon (SAP Fiori).
-// Reuse vivid theme-aware SSoT vars (--text-*/--status-*/--hue-*); never dark navy icons.
+// Reuse vivid theme-aware SSoT vars (--text-*/--hue-*); never dark navy icons. ⚠️ ΟΧΙ `--status-*` ως μελάνι:
+// είναι γέμισμα, ίδιο και στα δύο θέματα (`--status-purple` = 2,50:1 στη σκοτεινή κάρτα, ADR-770 §11).
 const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHover: string }> = {
   blue: {
     iconBg: 'bg-[hsl(var(--bg-info))]/20',
@@ -42,9 +43,9 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
     ringHover: 'group-hover:ring-[hsl(var(--text-success))]',
   },
   purple: {
-    iconBg: 'bg-[hsl(var(--status-purple))]/12',
-    iconText: 'text-[hsl(var(--status-purple))]',
-    ringHover: 'group-hover:ring-[hsl(var(--status-purple))]',
+    iconBg: 'bg-[hsl(var(--hue-purple))]/12',
+    iconText: 'text-[hsl(var(--hue-purple))]',
+    ringHover: 'group-hover:ring-[hsl(var(--hue-purple))]',
   },
   orange: {
     iconBg: 'bg-[hsl(var(--bg-warning))]/40',

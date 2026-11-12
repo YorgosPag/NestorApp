@@ -191,7 +191,8 @@ export const COLOR_BRIDGE = {
     // ✅ GOOGLE-STYLE FIX: Missing constraint text colors
     yellow: 'text-yellow-600',            // Yellow constraint text
     orange: 'text-orange-600',            // Orange constraint text
-    purple: 'text-purple-600',            // Purple constraint text
+    purple: 'text-[hsl(var(--hue-purple))]', // ADR-770 §11 — θεματικό (ήταν text-purple-600 = 2,75:1 στο σκοτεινό)
+    pink: 'text-[hsl(var(--hue-pink))]',     // ADR-770 §11 — θεματικό μελάνι pink (§21: ≥5,33 φωτεινό · ≥5,25 σκοτεινό)
     magenta: 'text-pink-600',             // Magenta constraint text (pink is closest)
 
     // ✅ ENTERPRISE FIX: Missing text color for LayoutMapper debug components
