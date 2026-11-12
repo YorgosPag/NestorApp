@@ -3,8 +3,11 @@
  *
  * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΑΥΤΟ ΤΟ LAYOUT (ADR-876 Ε6).** Οι δύο σελίδες είναι `'use client'` και
  * φορτώνουν μέσω `LazyRoutes` (client module) — άρα είναι **δομικά ανίκανες** να εξάγουν
- * metadata. Μέχρι σήμερα δεν δήλωναν **τίποτα**: ούτε `noindex`, ούτε `no-referrer`, σε
- * διευθύνσεις που **είναι** το κλειδί του κοινόχρηστου αρχείου / της παραγγελίας.
+ * route segment config. Εδώ ζει το `force-dynamic` τους (καμία ενδιάμεση μνήμη δεν κρατά
+ * σελίδα που ανοίγει με κλειδί — άγκυρα `credential-link-page.test.ts` Π2).
+ *
+ * 🔑 Τα `noindex`/`no-referrer` **ΔΕΝ** δηλώνονται πια εδώ: τα δίνει **μία φορά** το
+ * `(link)/layout.tsx` σε όλη την ομάδα (ADR-939 §6) και κληρονομούνται.
  *
  * ⚠️ **ΟΧΙ μετατροπή των σελίδων σε server component**: ένα `LazyRoutes.X` διαβασμένο από
  * server αρχείο είναι **πρόσβαση ιδιότητας σε αναφορά πελάτη**, όχι component — θα έσπαγε
@@ -15,13 +18,7 @@
  * @module app/(link)/shared/layout
  */
 
-import type { Metadata } from 'next';
-
-import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
-
 export const dynamic = 'force-dynamic';
-
-export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
 export default function SharedLinkLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;

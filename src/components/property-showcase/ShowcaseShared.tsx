@@ -5,17 +5,26 @@ import { PRODUCT_NAME } from '@/constants/product-identity';
 import { showcasePoweredByDefault } from '@/services/showcase-core/labels-shared';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 
+/**
+ * Η οθόνη των μη-έτοιμων καταστάσεων (έληξε · δεν βρέθηκε · σφάλμα) του showcase.
+ *
+ * 🔑 **Η ρίζα είναι `<main>`** (ADR-939 §6): ο ΜΟΝΟΣ καταναλωτής είναι ο
+ * `showcase-core/ShowcaseClient`, που αποδίδει **ή** αυτή την οθόνη **ή** το έτοιμο
+ * `<main>` του — ποτέ και τα δύο. Οι σελίδες της ομάδας `(link)` δεν έχουν `<main>`
+ * από layout, άρα μετρήθηκε ζωντανά **0 `<main>`** στο `/showcase/<άκυρο>`. Ίδιο σχήμα
+ * με το `PublicPOPageContent` (ρίζα `<main>` σε κάθε κατάσταση).
+ */
 export function MessageScreen({
   icon, title, description,
 }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--showcase-bg))] px-4">
-      <div className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-8 max-w-md text-center border border-[hsl(var(--showcase-border))]">
+    <main className="min-h-screen flex items-center justify-center bg-[hsl(var(--showcase-bg))] px-4">
+      <section className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-8 max-w-md text-center border border-[hsl(var(--showcase-border))]">
         <div className="flex justify-center mb-4">{icon}</div>
         <h1 className="text-xl font-bold text-[hsl(var(--showcase-fg))] mb-2">{title}</h1>
         <p className="text-[hsl(var(--showcase-muted-fg))]">{description}</p>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

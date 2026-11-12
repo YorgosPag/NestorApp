@@ -37,14 +37,29 @@
  *     δυνατοτήτων (γλώσσα · θέμα · λογαριασμός όταν υπάρχει, CHECK 3.72). `fixed`,
  *     άρα δεν μπαίνει στη ροή και δεν γεννά φάντασμα κύλισης πάνω από `min-h-screen`.
  *
- * Τα `noindex`/`no-referrer` δηλώνονται ανά υποδέντρο (`shared/layout.tsx`,
- * `showcase/[token]/page.tsx`) από το SSoT `CREDENTIAL_LINK_PAGE_METADATA`.
+ * 🔑 **`noindex`/`no-referrer` ΔΗΛΩΝΟΝΤΑΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ ΓΙΑ ΟΛΗ ΤΗΝ ΟΜΑΔΑ** (ADR-939 §6),
+ * από το SSoT `CREDENTIAL_LINK_PAGE_METADATA`. Ήταν ανά υποδέντρο (`shared/layout.tsx`,
+ * `showcase/[token]/page.tsx`) και το τρίτο υποδέντρο, `/share/photo/*`, **δεν δήλωνε
+ * τίποτα** (μετρημένο ζωντανά 2026-11-12: λείπουν και τα δύο meta). Η ομάδα ορίζεται
+ * ως «η διεύθυνση είναι κλειδί», άρα η δήλωση ανήκει στον **ορισμό** της, όχι σε κάθε
+ * μέλος: κάθε σελίδα, τωρινή ή μελλοντική, την παίρνει **δομικά**.
+ * Το Next συγχωνεύει τα metadata **ρηχά**, από τη ρίζα προς τη σελίδα: μια σελίδα που
+ * δεν δηλώνει `robots`/`referrer` τα **κληρονομεί** (και οι `'use client'` σελίδες,
+ * που δεν μπορούν να δηλώσουν τίποτα). ⚠️ Μια σελίδα που θα ξαναδήλωνε `robots` θα το
+ * **αντικαθιστούσε** ολόκληρο — επέκτεινε το SSoT, μην το ξαναγράφεις.
+ * ⚠️ Το `force-dynamic` **ΔΕΝ** ζει εδώ: το Next το διαβάζει στατικά ανά αρχείο, και η
+ * άγκυρα (`credential-link-page.test.ts` Π2) το απαιτεί στη σελίδα ή σε πιο κοντινό layout.
  *
  * @module app/(link)/layout
  */
 
+import type { Metadata } from 'next';
+
 import { AuthToolbar } from '@/auth/components/AuthScreenChrome';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
+
+export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
 export default function CredentialLinkGroupLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

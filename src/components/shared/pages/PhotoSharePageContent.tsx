@@ -95,14 +95,15 @@ export function PhotoSharePageContent() {
     }
   }, [photoData, id]);
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center">{t('loading.message')}</div>;
+  // ADR-939 §6 — ρίζα `<main>` σε ΚΑΘΕ κατάσταση (μετρήθηκε 0 `<main>`: η ομάδα `(link)` δεν δίνει).
+  if (loading) return <main className="flex min-h-screen items-center justify-center" aria-busy="true">{t('loading.message')}</main>;
 
-  if (!photoData) return <div className="flex min-h-screen items-center justify-center">{t('photos.notFound')}</div>;
+  if (!photoData) return <main className="flex min-h-screen items-center justify-center">{t('photos.notFound')}</main>;
 
   const { url, title, description } = photoData;
 
   return (
-    <div className={`flex min-h-screen flex-col items-center justify-center ${colors.bg.secondary} p-8`}>
+    <main className={`flex min-h-screen flex-col items-center justify-center ${colors.bg.secondary} p-8`}>
       <h1 className="mb-6 text-3xl font-bold text-center">{title}</h1>
       <div className="max-w-3xl overflow-hidden rounded-xl shadow-2xl">
         <Image
@@ -120,6 +121,6 @@ export function PhotoSharePageContent() {
       <p className="mt-2 text-center text-sm text-muted-foreground">
         Κοινοποιήθηκε από το <strong>{PRODUCT_NAME}</strong>
       </p>
-    </div>
+    </main>
   );
 }

@@ -161,9 +161,9 @@ export function ShowcaseClient<TPayload>({
 
   if (state.kind === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--showcase-bg))]">
+      <main className="min-h-screen flex items-center justify-center bg-[hsl(var(--showcase-bg))]" aria-busy="true">
         <Spinner />
-      </div>
+      </main>
     );
   }
 

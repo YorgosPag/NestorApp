@@ -81,7 +81,22 @@
 
 **Δηλώσεις:** `(link)` στο `.shell-boundary.json` (3.52) και στο `.shell-surface.json`, στα `groupsWithoutFrame`/`groupsWithoutCorridor` (3.63). Αφαιρέθηκαν οι 3 δηλώσεις `shared`/`share`/`showcase` από τα `.workspace-scope.json` και `-baseline.json` (3.60), γιατί αφορούν μόνο το `(app)` και θα έμεναν ορφανές. Ο γεννήτορας ξαναπαρήγαγε το `shell-slice.manifest.json`: αλλάζουν μόνο οι διαδρομές των layouts, με μηδέν αλλαγή σε bytes.
 
-**Εκκρεμεί:** ζωντανή επαλήθευση, με ανώνυμο και με συνδεδεμένο επισκέπτη, στις 4 σελίδες. Ο έλεγχος αν η `AuthToolbar` (πάνω δεξιά) επικαλύπτει περιεχόμενο είναι ανοιχτός.
+**Ζωντανή επαλήθευση (ανώνυμος, άκυρο κλειδί, 2400px):** και στις 4 σελίδες κανένα ίχνος κελύφους, μπάρα πάνω δεξιά 87×40px, καμία οριζόντια κύλιση. Μένει ο έλεγχος με συνδεδεμένο επισκέπτη και με αληθινό κλειδί, για να φανεί αν η `AuthToolbar` επικαλύπτει την κεφαλίδα του εγγράφου.
+
+### 6.1 Θωράκιση της ομάδας (2026-11-12)
+
+**Α. `noindex`/`no-referrer` σε ΟΛΗ την ομάδα, από μία δήλωση.** Μετρήθηκε ζωντανά ότι στο `/share/photo/*` έλειπαν και τα δύο meta. Το SSoT `CREDENTIAL_LINK_PAGE_METADATA` (`src/lib/tokens/credential-link-page.ts`) δηλωνόταν ξεχωριστά σε κάθε υποδέντρο (`shared/layout.tsx`, `showcase/[token]/page.tsx`), και το τρίτο υποδέντρο έμενε έξω.
+- **Απόφαση:** η δήλωση μπαίνει στο `(link)/layout.tsx`, **μία φορά**, και αφαιρείται από τα δύο υποδέντρα. Η ομάδα ορίζεται ως «η διεύθυνση είναι κλειδί», άρα η δήλωση ανήκει στον ορισμό της. Κάθε σελίδα, τωρινή ή μελλοντική, την παίρνει δομικά.
+- **Γιατί δουλεύει:** το Next συγχωνεύει τα metadata **ρηχά**, από τη ρίζα προς τη σελίδα. Μια σελίδα που δεν δηλώνει `robots`/`referrer` τα κληρονομεί, ακόμη και όταν είναι `'use client'` και δεν μπορεί να δηλώσει τίποτα (τεκμηρίωση `generateMetadata`, «Merging»/«Inheriting fields»).
+- **Το `force-dynamic` μένει όπου ήταν** (`shared/layout.tsx`, `showcase/[token]/page.tsx`). Η άγκυρα `credential-link-page.test.ts` Π2 ψάχνει ήδη και στα layouts-προγόνους, άρα καλύπτει και τη νέα θέση της δήλωσης χωρίς αλλαγή.
+- **Οι προεπισκοπήσεις κοινοποίησης δεν επηρεάζονται:** το `noindex` αφορά τις μηχανές αναζήτησης. Ο scraper του Facebook διαβάζει τα OG ανεξάρτητα. Το `no-referrer` προστατεύει επιπλέον το query `?data=` της σελίδας φωτογραφίας (όνομα επαφής, URL εικόνας) από τη διαρροή μέσω `Referer` προς τον host της εικόνας.
+
+**Β. Ορόσημο `<main>` στις καταστάσεις «δεν βρέθηκε».** Μετρήθηκε ζωντανά 0 `<main>` στα `/showcase/<άκυρο>` και `/share/photo/<άκυρο>`, γιατί η ομάδα `(link)` δεν δίνει `<main>` από layout, επίτηδες.
+- `MessageScreen` (`property-showcase/ShowcaseShared.tsx`): η ρίζα γίνεται `<main>` και η κάρτα `<section>`. Μοναδικός καταναλωτής είναι το `showcase-core/ShowcaseClient`, που αποδίδει **ή** αυτή την οθόνη **ή** το έτοιμο `<main>` του, άρα δεν προκύπτει ποτέ διπλό. Η αλλαγή καλύπτει και τα 5 showcase (ακίνητο, κτίριο, έργο, στάθμευση, αποθήκη) σε `/showcase` και `/shared`.
+- Στην ίδια λογική, η κατάσταση φόρτωσης του `ShowcaseClient` γίνεται `<main aria-busy="true">`.
+- `PhotoSharePageContent`: η ρίζα είναι `<main>` σε **κάθε** κατάσταση (φόρτωση με `aria-busy`, δεν βρέθηκε, έτοιμη). Πριν, ούτε η έτοιμη κατάσταση είχε `<main>`.
+- Ακολουθείται το σχήμα του `PublicPOPageContent`: ρίζα `<main>` σε κάθε κατάσταση.
+- **Εκτός εμβέλειας:** τα `error.tsx` της ομάδας αποδίδουν το κοινό `RouteErrorFallback`, που δεν έχει `<main>`. Το ίδιο συστατικό χρησιμοποιείται σε 56 αρχεία του `src/app`, και πολλά από αυτά βρίσκονται μέσα στο κέλυφος, που έχει ήδη `<main>`. Γι' αυτό δεν αλλάζει εδώ.
 
 ## 7. Changelog
 
@@ -91,3 +106,4 @@
 | 2026-11-12 | §3(στ): νέος τύπος `crm.portalMessage` (ανοιχτός από προεπιλογή) στη θέση του κλειστού `crm.newCommunication`. Καταγραφή του `skipped`/`reason` στο `notifyIssuer`. Άγκυρες Γ4 (+3) | Giorgio + Claude Code |
 | 2026-11-12 | Εύρημα ζωντανής επαλήθευσης: ωμό κλειδί στην κεφαλίδα φίλτρων των εισερχομένων (`/crm/communications`). Το `communicationsFiltersConfig` διαβάζει το namespace `filters`, αλλά το `communicationsTitle` υπήρχε μόνο στο `building-filters.json`. Προστέθηκε στο `filters.json` (el/en). Μένουν ωμά στο ίδιο πάνελ: `allChannels`, `status.sent`, `status.received`, `status.failed` | Giorgio + Claude Code |
 | 2026-11-12 | §6: οι σελίδες με κλειδί (`/shared/*`, `/showcase/[token]`, `/share/photo/*`) βγήκαν από το κέλυφος του γραφείου και πήγαν στο νέο route group `(link)`. Δηλώσεις στις CHECK 3.52, 3.63 και 3.60. Τέλος το διπλό `<main>` | Giorgio + Claude Code |
+| 2026-11-12 | §6.1 Α: η δήλωση `noindex`/`no-referrer` (SSoT `CREDENTIAL_LINK_PAGE_METADATA`) μπαίνει μία φορά στο `(link)/layout.tsx` και αφαιρείται από τα `shared/layout.tsx` και `showcase/[token]/page.tsx`. Τώρα την έχει και το `/share/photo/*`. §6.1 Β: ρίζα `<main>` στις καταστάσεις «δεν βρέθηκε»/«έληξε»/σφάλμα/φόρτωση του showcase (`MessageScreen`, `ShowcaseClient`) και σε όλες τις καταστάσεις του `PhotoSharePageContent` | Giorgio + Claude Code |
