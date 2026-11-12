@@ -12,7 +12,7 @@
  *
  * ⚠️ Μηδέν DOM: το κέλυφος το αποφασίζει ο γονικός φάκελος (CHECK 3.52/3.63), όχι αυτό.
  *
- * @module app/(app)/shared/layout
+ * @module app/(link)/shared/layout
  */
 
 import type { Metadata } from 'next';

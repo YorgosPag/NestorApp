@@ -85,6 +85,10 @@
     "(bare)": {
       "reason": "ΑΠΟΔΙΔΕΙ ΜΗΔΕΝ DOM, ΕΠΙΤΗΔΕΣ (ADR-775 §13) — το layout της είναι μόνο 'TooltipProvider', χωρίς κανένα στοιχείο. Δεν υπάρχει τίποτα να κατέχει ύψος, και ΔΕΝ πρέπει να υπάρξει: η φωτογραφία ΕΙΝΑΙ το συμβόλαιο, και ένα κάδρο μέσα στο κάδρο θα μετακινούσε κάθε pixel των 40 golden snapshots (CHECK 3.46). Οι δύο διαδρομές της ορίζουν οι ίδιες το ύψος τους. Ίδιος λόγος με το 'groupsWithoutCorridor' — ΔΥΟ ξεχωριστές δηλώσεις για ΔΥΟ ξεχωριστά ερωτήματα, ποτέ μία με «ή».",
       "measured": "2026-08-25: κανένα [data-shell-surface] και κανένα [data-shell-frame] στο DOM — επαληθευμένο ζωντανά"
+    },
+    "(link)": {
+      "reason": "ΑΥΤΟΤΕΛΗ ΕΓΓΡΑΦΑ — ΚΑΘΕ ΣΕΛΙΔΑ ΚΑΤΕΧΕΙ ΤΟ <main>, ΤΟ ΥΨΟΣ ΚΑΙ ΤΟ ΠΕΡΙΘΩΡΙΟ ΤΗΣ (ADR-939 §6). Το layout είναι μόνο TooltipProvider + AuthToolbar (fixed, εκτός ροής) — κανένα [data-shell-surface], κανένα [data-shell-frame]. Οι σελίδες γράφουν ήδη <main className=\"min-h-screen …\"> (SharedFilePageContent:184 · PublicPOPageContent:85-119 · showcase-core/ShowcaseClient:204). Διάδρομος ή κάδρο από πάνω θα ήταν ΔΕΥΤΕΡΗ αυθεντία πλάτους/ύψους — και ένα ShellSurface as=\"main\" θα ξανάφερνε το διπλό <main> που είχαν μέσα στον MainContentBridge του (app).",
+      "measured": "2026-11-12: μετρημένο με ανάγνωση (layout + 4 σελίδες)· η ζωντανή επαλήθευση εκκρεμεί."
     }
   },
 
@@ -94,6 +98,10 @@
     "(bare)": {
       "reason": "ΓΥΜΝΗ ΕΠΙΦΑΝΕΙΑ ΓΙΑ GOLDEN IMAGES (ADR-775 §13). Εδώ η φωτογραφία ΕΙΝΑΙ το συμβόλαιο: «ό,τι μπαίνει στο κάδρο και δεν το ζωγράφισε ο ζωγράφος είναι μελλοντικό ψευδώς-θετικό». Ένας διάδρομος 32×24px γύρω από τον καμβά θα μετακινούσε ΚΑΘΕ pixel των 40 golden snapshots (CHECK 3.46) — δηλαδή η πύλη του διαδρόμου θα έσπαγε την πύλη των εικόνων, και η αποτυχία θα λεγόταν «διαφορά στον ζωγράφο DXF». ⚠️ Και ο λόγος είναι ΔΟΜΙΚΟΣ, όχι προτίμηση: το layout του `(bare)` αποδίδει ΜΗΔΕΝ DOM (μόνο TooltipProvider), επίτηδες — δες το docblock του. Η προσθήκη wrapper θα ήταν η πρώτη γραμμή κελύφους μέσα στο κάδρο.",
       "measured": "2026-08-25, /test-harness/contrast-matrix: κανένα [data-shell-surface] στο DOM, κύλιση 0/0 — επαληθευμένο ζωντανά μετά την αλλαγή"
+    },
+    "(link)": {
+      "reason": "ΑΥΤΟΤΕΛΗ ΕΓΓΡΑΦΑ — ΚΑΘΕ ΣΕΛΙΔΑ ΚΑΤΕΧΕΙ ΤΟ <main>, ΤΟ ΥΨΟΣ ΚΑΙ ΤΟ ΠΕΡΙΘΩΡΙΟ ΤΗΣ (ADR-939 §6). Το layout είναι μόνο TooltipProvider + AuthToolbar (fixed, εκτός ροής) — κανένα [data-shell-surface], κανένα [data-shell-frame]. Οι σελίδες γράφουν ήδη <main className=\"min-h-screen …\"> (SharedFilePageContent:184 · PublicPOPageContent:85-119 · showcase-core/ShowcaseClient:204). Διάδρομος ή κάδρο από πάνω θα ήταν ΔΕΥΤΕΡΗ αυθεντία πλάτους/ύψους — και ένα ShellSurface as=\"main\" θα ξανάφερνε το διπλό <main> που είχαν μέσα στον MainContentBridge του (app).",
+      "measured": "2026-11-12: μετρημένο με ανάγνωση (layout + 4 σελίδες)· η ζωντανή επαλήθευση εκκρεμεί."
     }
   }
 }

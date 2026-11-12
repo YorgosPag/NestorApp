@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ff1350bc565ac0125ce71f8e633f06f2b54e636ab155b517f733f0700abd8e81",
+  "inputsSha256": "b22202a2fd5a5f90a681b3addf453f5f00cb7548e5a5731a8348e30c3c4b08d9",
   "languages": [
     "el"
   ],
@@ -40698,11 +40698,12 @@
     "src/app/(app)/o/[workspace]/layout.tsx",
     "src/app/(app)/o/[workspace]/projects/[id]/procurement/layout.tsx",
     "src/app/(app)/o/[workspace]/settings/layout.tsx",
-    "src/app/(app)/shared/layout.tsx",
     "src/app/(auth)/layout.tsx",
     "src/app/(bare)/layout.tsx",
     "src/app/(light)/layout.tsx",
     "src/app/(light)/page.tsx",
+    "src/app/(link)/layout.tsx",
+    "src/app/(link)/shared/layout.tsx",
     "src/app/(me)/layout.tsx",
     "src/app/layout.tsx",
     "src/components/search/GlobalSearchDialog.tsx"

@@ -60,10 +60,34 @@
 - Συνημμένα στη σελίδα πελάτη · ζωντανή ανανέωση του νήματος (σήμερα: μία ανάγνωση ανά άνοιγμα).
 - Φάση 3 (ADR-ACC-018 §16.1): `ref`/`start` κωδικοί Messenger/Instagram/Telegram, Viber bot.
 
-## 6. Changelog
+## 6. Κέλυφος των σελίδων με κλειδί: route group `(link)` (2026-11-12)
+
+**Εύρημα (ζωντανή επαλήθευση §3):** η σελίδα πελάτη `/shared/<token>` αποδιδόταν **μέσα στο κέλυφος του γραφείου**: πλαϊνή μπάρα έργων/λογιστικής, εναλλαγή εταιρείας, αναζήτηση, φωνητικός βοηθός.
+
+**Ρίζα:** οι σελίδες `shared/`, `showcase/[token]` και `share/photo/` ζούσαν στο `(app)` **χωρίς καμία δήλωση**. Δεν αναφέρονταν σε κανένα από τα `.shell-boundary.json`, `.shell-surface.json`, `.shell-utilities.json`, ούτε σε ADR. Το `(app)/layout.tsx` αποδίδει το κέλυφος **άνευ όρων**, άρα το έβλεπε και ο ανώνυμος επισκέπτης. Οι πύλες ήταν πράσινες: ο Κ1 της CHECK 3.52 είναι αυτο-συνεπής με τον φάκελο, και ο Κ2 κοιτά μόνο τα hooks δημόσιων αγγελιών. Παρενέργεια: **διπλό `<main>`**, γιατί ο `MainContentBridge` του κελύφους είναι `<main>` και οι σελίδες έχουν δικό τους.
+
+**Μέτρηση πριν τη μετακόμιση:** υπολογίστηκε η κλειστότητα εισαγωγών (με τον ίδιο επιλυτή όπως ο Κ2, `scripts/lib/shell-boundary/public-surface.js`). Από τους 12 providers του `(app)`, οι σελίδες ζητούν **μόνο** τον `TooltipProvider`:
+
+| Σελίδα | Αρχεία | Providers του `(app)` που ζητά |
+|---|---|---|
+| `/shared/[token]` | 1.752 | `TooltipProvider` |
+| `/shared/po/[token]` | 87 | — |
+| `/showcase/[token]` | 262 | `TooltipProvider` |
+| `/share/photo/[id]` | 43 | — |
+
+**Απόφαση:** νέο route group `(link)`, `wearsShell: false`. Οι διευθύνσεις μένουν ίδιες. Το layout είναι **μόνο** `TooltipProvider` + `AuthToolbar`, δηλαδή ο υπάρχων συναρμολογητής των καθολικών δυνατοτήτων (γλώσσα, θέμα, λογαριασμός, CHECK 3.72). Είναι `fixed`, άρα εκτός ροής. Κάθε σελίδα κατέχει το `<main>`, το ύψος και το περιθώριό της, και αυτό δηλώνεται στο `.shell-surface.json`.
+- **Όχι `(auth)`**, παρότι εκεί ζουν ήδη 14 σελίδες με κλειδί: το `ShellSurface` του είναι `<main>` που κεντράρει. Θα ξανάφερνε το διπλό `<main>` και θα συρρίκνωνε τις σελίδες πλήρους πλάτους.
+- **Όχι `(light)`**: είναι ο ιστότοπος της **πλατφόρμας**, ενώ η σελίδα παραστατικού ανήκει στον **εκδότη**. Το ίδιο κάνουν το Stripe hosted invoice και τα client portal των FreshBooks/Zoho: καμία πλοήγηση του παρόχου.
+
+**Δηλώσεις:** `(link)` στο `.shell-boundary.json` (3.52) και στο `.shell-surface.json`, στα `groupsWithoutFrame`/`groupsWithoutCorridor` (3.63). Αφαιρέθηκαν οι 3 δηλώσεις `shared`/`share`/`showcase` από τα `.workspace-scope.json` και `-baseline.json` (3.60), γιατί αφορούν μόνο το `(app)` και θα έμεναν ορφανές. Ο γεννήτορας ξαναπαρήγαγε το `shell-slice.manifest.json`: αλλάζουν μόνο οι διαδρομές των layouts, με μηδέν αλλαγή σε bytes.
+
+**Εκκρεμεί:** ζωντανή επαλήθευση, με ανώνυμο και με συνδεδεμένο επισκέπτη, στις 4 σελίδες. Ο έλεγχος αν η `AuthToolbar` (πάνω δεξιά) επικαλύπτει περιεχόμενο είναι ανοιχτός.
+
+## 7. Changelog
 
 | Ημερομηνία | Αλλαγή | Συντάκτης |
 |---|---|---|
 | 2026-11-12 | Αρχική υλοποίηση (§3 α–ι) | Giorgio + Claude Code |
 | 2026-11-12 | §3(στ): νέος τύπος `crm.portalMessage` (ανοιχτός από προεπιλογή) στη θέση του κλειστού `crm.newCommunication`. Καταγραφή του `skipped`/`reason` στο `notifyIssuer`. Άγκυρες Γ4 (+3) | Giorgio + Claude Code |
 | 2026-11-12 | Εύρημα ζωντανής επαλήθευσης: ωμό κλειδί στην κεφαλίδα φίλτρων των εισερχομένων (`/crm/communications`). Το `communicationsFiltersConfig` διαβάζει το namespace `filters`, αλλά το `communicationsTitle` υπήρχε μόνο στο `building-filters.json`. Προστέθηκε στο `filters.json` (el/en). Μένουν ωμά στο ίδιο πάνελ: `allChannels`, `status.sent`, `status.received`, `status.failed` | Giorgio + Claude Code |
+| 2026-11-12 | §6: οι σελίδες με κλειδί (`/shared/*`, `/showcase/[token]`, `/share/photo/*`) βγήκαν από το κέλυφος του γραφείου και πήγαν στο νέο route group `(link)`. Δηλώσεις στις CHECK 3.52, 3.63 και 3.60. Τέλος το διπλό `<main>` | Giorgio + Claude Code |
