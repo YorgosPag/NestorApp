@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Σάρωση → κείμενα με κουτιά, η μετρημένη ροή του `ocr_onnx.py` (Φ0.1 + (α) της Φ0.1δ):
- * 1. μείωση με ακέραιο συντελεστή (`downscaleArea`, = `INTER_AREA`)·
+ * 1. μείωση με ακέραιο συντελεστή (`downscaleArea`, = `INTER_AREA`), από το ύψος γραμμάτων (βλ. κάτω)·
  * 2. για κάθε πέρασμα (όρθιο · 90° αριστερόστροφα): πλακίδια → ανιχνευτής → `detectBoxes` → NMS ανά πέρασμα·
  * 3. (α) διπλά πριν την ανάγνωση·
  * 4. ανάγνωση κάθε κουτιού (κόψιμο → δοκιμές προσανατολισμού → αναγνώστης, με **δρομολόγηση κατά γραφή**)·
@@ -14,6 +14,9 @@
  *   ανιχνευτή· το κόψιμο του αναγνώστη γίνεται από την αρχική εικόνα, ώστε ένα κείμενο 20 px να μη διαβάζεται ως 10 px
  *   ξαναμεγεθυμένα σε 48. ⚠️ Απόκλιση από το Python της Φ0.1 (εκείνο έκοβε από τη μειωμένη) — μετρημένη στην παραγωγή.
  *
+ * 🔑 **Συντελεστής από το ύψος γραμμάτων** (ADR-929 §6.16 βήμα 3, `ocr-scale.ts`): χωρίς ρητό `downscale`, αδρό πέρασμα ⇒
+ *   ύψος των μικρών γραμμάτων ⇒ ο μεγαλύτερος συντελεστής που τα κρατά ορατά. Ίδιος με τον αδρό ⇒ καμία δεύτερη ανίχνευση.
+ *   Η πρόοδος `detect` μετρά **όλα** τα πλακίδια: το σύνολο μεγαλώνει μία φορά, όταν αποφασιστεί η τελική ανάλυση.
  * 🔑 **Δρομολόγηση κατά γραφή** (πρότυπο script-ID του Google Vision): ο δεύτερος (ελληνικός) αναγνώστης τρέχει ΜΟΝΟ
  *   όταν ο πρώτος βρήκε γράμμα (οποιουδήποτε αλφαβήτου) ή τίποτα — οι καθαροί αριθμοί («2.35») δεν ξαναδιαβάζονται — και
  *   η ανάγνωσή του κρατιέται ΜΟΝΟ αν βγάλει ελληνικό γράμμα. Μετρημένο στη Φ0.1 (v6dual): ίδια βαθμολογία, μισές κλήσεις.
@@ -34,6 +37,7 @@ import type { DecodedText } from './ocr-rec-decode';
 import {
   cropReadingQuad, detectorTensor, tileProbability, type DetectorRunner, type OcrRecognizer, type OcrTensor,
 } from './ocr-tensors';
+import { downscaleForTextHeight, probeDownscaleFor, smallTextHeightPx } from './ocr-scale';
 import {
   dropUnfitDuplicates, mergePasses, OCR_PASSES, passViewSize, suppressWithinPass, tileRegions, toCandidate,
   type Box, type OcrCandidate, type OcrPass, type TileRegion,
@@ -55,10 +59,19 @@ export interface OcrProgress {
 }
 
 export interface OcrEngineOptions {
-  /** Ακέραιος συντελεστής μείωσης πριν την ανίχνευση (`1` = πλήρης ανάλυση, `2` = μισή). */
-  readonly downscale: number;
+  /**
+   * Ακέραιος συντελεστής μείωσης πριν την ανίχνευση (`1` = πλήρης ανάλυση, `2` = μισή). Χωρίς τιμή ⇒ από το μετρημένο ύψος
+   * γραμμάτων (§6.16 βήμα 3). Ρητή τιμή = σταθερός συντελεστής (μετρήσεις, tests).
+   */
+  readonly downscale?: number;
   readonly signal?: AbortSignal;
   readonly onProgress?: (progress: OcrProgress) => void;
+}
+
+/** Η έξοδος του κινητήρα: τα κείμενα, και ο συντελεστής με τον οποίο ανιχνεύθηκαν. */
+export interface OcrRecognition {
+  readonly texts: OcrText[];
+  readonly downscale: number;
 }
 
 export type OcrReader = 'primary' | 'secondary';
@@ -98,32 +111,54 @@ function checkDownscale(downscale: number): void {
 
 /** Ένα πέρασμα ανίχνευσης: όλα τα πλακίδια της όψης του, και NMS. */
 async function detectPass(
-  image: PlanRaster, pass: OcrPass, tiles: readonly TileRegion[], models: OcrModels, options: OcrEngineOptions,
-  tick: () => void,
+  image: PlanRaster, downscale: number, pass: OcrPass, tiles: readonly TileRegion[], models: OcrModels,
+  options: OcrEngineOptions, tick: () => void,
 ): Promise<OcrCandidate[]> {
   const found: OcrCandidate[] = [];
   for (const tile of tiles) {
     options.signal?.throwIfAborted();
     const input = detectorTensor(image, pass, tile);
     const map = tileProbability(await models.detect(input), input, tile);
-    for (const box of detectBoxes(map, models.db)) found.push(toCandidate(box, tile, pass, image.width, options.downscale));
+    for (const box of detectBoxes(map, models.db)) found.push(toCandidate(box, tile, pass, image.width, downscale));
     tick();
   }
   return suppressWithinPass(found);
 }
 
-/** Όλα τα περάσματα, με πρόοδο πάνω στο συνολικό πλήθος πλακιδίων. */
-async function detectAll(image: PlanRaster, models: OcrModels, options: OcrEngineOptions): Promise<OcrCandidate[]> {
+/** Η πρόοδος της ανίχνευσης πάνω σε όλα τα πλακίδια όλων των αναλύσεων που τρέχουν (αδρή + τελική). */
+interface DetectProgress {
+  done: number;
+  total: number;
+}
+
+/** Όλα τα περάσματα σε έναν συντελεστή, με τα διπλά (α) ήδη πεταμένα. */
+async function detectAll(
+  source: PlanRaster, downscale: number, models: OcrModels, options: OcrEngineOptions, progress: DetectProgress,
+): Promise<OcrCandidate[]> {
+  const image = downscale === 1 ? source : downscaleArea(source, downscale);
   const grids = OCR_PASSES.map((pass) => {
     const view = passViewSize(image, pass);
     return { pass, tiles: tileRegions(view.width, view.height) };
   });
-  const total = grids.reduce((n, g) => n + g.tiles.length, 0);
-  let done = 0;
-  const tick = (): void => { done++; options.onProgress?.({ stage: 'detect', done, total }); };
+  progress.total += grids.reduce((n, g) => n + g.tiles.length, 0);
+  const tick = (): void => {
+    progress.done++;
+    options.onProgress?.({ stage: 'detect', done: progress.done, total: progress.total });
+  };
   const out: OcrCandidate[] = [];
-  for (const g of grids) out.push(...(await detectPass(image, g.pass, g.tiles, models, options, tick)));
-  return out;
+  for (const g of grids) out.push(...(await detectPass(image, downscale, g.pass, g.tiles, models, options, tick)));
+  return dropUnfitDuplicates(out);
+}
+
+/** §6.16 βήμα 3: αδρό πέρασμα ⇒ συντελεστής από το ύψος γραμμάτων ⇒ (μόνο αν είναι λεπτότερος) τελική ανίχνευση. */
+async function detectAtTextScale(
+  source: PlanRaster, models: OcrModels, options: OcrEngineOptions, progress: DetectProgress,
+): Promise<{ candidates: OcrCandidate[]; downscale: number }> {
+  const probe = probeDownscaleFor(source);
+  const coarse = await detectAll(source, probe, models, options, progress);
+  const downscale = downscaleForTextHeight(smallTextHeightPx(coarse), probe);
+  if (downscale === probe) return { candidates: coarse, downscale };
+  return { candidates: await detectAll(source, downscale, models, options, progress), downscale };
 }
 
 /** Δρομολόγηση κατά γραφή (βλ. κεφαλίδα). */
@@ -152,15 +187,18 @@ function toText(r: CandidateRead): OcrText {
 }
 
 /** Τα κείμενα μιας σάρωσης κάτοψης. Ρίχνει `AbortError` αν ακυρωθεί. */
-export async function recognizePlanText(source: PlanRaster, models: OcrModels, options: OcrEngineOptions): Promise<OcrText[]> {
-  checkDownscale(options.downscale);
-  const image = options.downscale === 1 ? source : downscaleArea(source, options.downscale);
-  const candidates = dropUnfitDuplicates(await detectAll(image, models, options));
+export async function recognizePlanText(source: PlanRaster, models: OcrModels, options: OcrEngineOptions): Promise<OcrRecognition> {
+  const progress: DetectProgress = { done: 0, total: 0 };
+  const fixed = options.downscale;
+  if (fixed !== undefined) checkDownscale(fixed);
+  const { candidates, downscale } = fixed === undefined
+    ? await detectAtTextScale(source, models, options, progress)
+    : { candidates: await detectAll(source, fixed, models, options, progress), downscale: fixed };
   const reads: CandidateRead[] = [];
   for (const candidate of candidates) {
     const read = await readCandidate(source, candidate, models, options.signal);
     reads.push({ candidate, read, pass: candidate.pass, bbox: candidate.bbox, fits: candidate.fits, recScore: read.score });
     options.onProgress?.({ stage: 'read', done: reads.length, total: candidates.length });
   }
-  return mergePasses(reads).map(toText);
+  return { texts: mergePasses(reads).map(toText), downscale };
 }

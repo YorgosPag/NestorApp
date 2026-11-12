@@ -35,10 +35,8 @@ import { spawnPlanOcrWorker } from './plan-ocr-worker-spawn';
 /** Μετά από τόση αδράνεια ο Worker τερματίζεται (SSoT: `DXF_TIMING.lifecycle.OCR_WORKER_IDLE`). */
 export const PLAN_OCR_IDLE_MS = DXF_TIMING.lifecycle.OCR_WORKER_IDLE;
 
-export interface PlanOcrReadOptions extends WorkerRpcCallOptions<PlanOcrProgress> {
-  /** Ακέραιος συντελεστής μείωσης πριν την ανίχνευση (`1` = πλήρης ανάλυση). */
-  readonly downscale: number;
-}
+/** Ο συντελεστής μείωσης τον αποφασίζει ο Worker από το ύψος γραμμάτων (ADR-929 §6.16 βήμα 3). */
+export type PlanOcrReadOptions = WorkerRpcCallOptions<PlanOcrProgress>;
 
 export interface PlanOcrReader {
   readonly read: (raster: PlanRaster, options: PlanOcrReadOptions) => Promise<WorkerRpcCancellableResult<PlanOcrReply>>;
@@ -64,8 +62,8 @@ export function createPlanOcrReader(deps: PlanOcrReaderDeps = {}): PlanOcrReader
   });
   const readLatest = latestOnly((call: PlanOcrCall) => client.run(call.request, call.options));
   return {
-    read: (raster, { downscale, signal, onProgress }) =>
-      readLatest({ request: { raster, downscale, assetBase: absoluteWorkerUrl('/') }, options: { signal, onProgress } }),
+    read: (raster, { signal, onProgress }) =>
+      readLatest({ request: { raster, assetBase: absoluteWorkerUrl('/') }, options: { signal, onProgress } }),
     dispose: client.dispose,
   };
 }

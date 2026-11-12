@@ -63,7 +63,7 @@ describe('recognizePlanText — ο αναγνώστης κόβει από την
   beforeEach(() => { mockCrops.length = 0; });
 
   it.each([1, 2])('συντελεστής %i: κόψιμο από την αρχική, σε δείκτες της αρχικής', async (downscale) => {
-    const texts = await recognizePlanText(source, models, { downscale });
+    const { texts } = await recognizePlanText(source, models, { downscale });
     expect(texts.map((t) => t.text)).toEqual(['T']);
     expect(mockCrops.length).toBeGreaterThan(0);
     for (const c of mockCrops) expect(c.image).toBe(source);

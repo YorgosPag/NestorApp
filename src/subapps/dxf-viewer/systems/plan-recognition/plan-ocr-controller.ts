@@ -30,7 +30,7 @@ import type { PlanReadingOutcome } from '../../bim/plan-recognition/plan-recogni
 import type { OcrText } from '../../bim/plan-recognition/ocr/ocr-engine';
 import { isOcrAssetFailure } from '../../bim/plan-recognition/ocr/ocr-asset-loader';
 import {
-  isLocalOcrOutcome, ocrDownscaleFor, ocrTextsInView, ocrTextsToNatural, planReadingFromOcr,
+  isLocalOcrOutcome, ocrTextsInView, ocrTextsToNatural, planReadingFromOcr,
 } from '../../bim/plan-recognition/ocr/ocr-reading';
 import type { PlanOcrReader } from '../../bim/plan-recognition/ocr/plan-ocr-client';
 import type { PlanOcrProgress, PlanOcrReply } from '../../bim/plan-recognition/ocr/plan-ocr-host';
@@ -144,7 +144,7 @@ export function createPlanOcrController<T>(depsOf: () => PlanOcrControllerDeps<T
     const controller = new AbortController();
     abort = controller;
     const reply = await depsOf().reader()
-      .read(raster, { downscale: ocrDownscaleFor(raster), signal: controller.signal, onProgress: onProgress(seq) })
+      .read(raster, { signal: controller.signal, onProgress: onProgress(seq) })
       .catch((): WorkerRpcCancellableResult<PlanOcrReply> => ({ kind: 'failed', error: 'ocr-failed' }));
     if (seq !== sequence) return;
     abort = null;

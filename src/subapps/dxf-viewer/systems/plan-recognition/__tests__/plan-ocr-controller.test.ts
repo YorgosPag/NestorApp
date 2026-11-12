@@ -76,7 +76,7 @@ function harness(overrides: Partial<PlanOcrControllerDeps<string>> = {}) {
 
 const state = () => planRecognitionStore.get();
 const flush = () => new Promise<void>((r) => { setTimeout(r, 0); });
-const ok = (texts: readonly OcrText[] = TEXTS): WorkerRpcCancellableResult<PlanOcrReply> => ({ kind: 'ok', value: { texts } });
+const ok = (texts: readonly OcrText[] = TEXTS): WorkerRpcCancellableResult<PlanOcrReply> => ({ kind: 'ok', value: { texts, downscale: 1 } });
 const rawsOf = (outcome: PlanReadingOutcome | null): string[] =>
   outcome?.status === 'read' ? outcome.reading.texts.map((t) => t.raw) : [];
 
@@ -101,12 +101,12 @@ beforeEach(() => {
 });
 
 describe('ADR-929 Φ0.6 — ροή: πρόοδος → κείμενα → ΜΙΑ ανάγνωση από την ίδια πόρτα', () => {
-  it('running με πρόοδο, συντελεστής μείωσης από τον προϋπολογισμό, μετά done + adoptReading + publish', async () => {
+  it('running με πρόοδο, ο συντελεστής μείωσης ΔΕΝ αποφασίζεται εδώ (§6.16 βήμα 3: ο Worker), μετά done + adoptReading + publish', async () => {
     const h = harness();
     const { done } = await begin(h, run('rec1'));
     expect(state().ocr).toEqual({ status: 'running', stage: null, done: 0, total: 0 });
     expect(h.calls).toHaveLength(1);
-    expect(h.calls[0].options.downscale).toBe(2);
+    expect(h.calls[0].options).not.toHaveProperty('downscale');
 
     h.calls[0].options.onProgress?.({ stage: 'detect', done: 3, total: 8 });
     expect(state().ocr).toEqual({ status: 'running', stage: 'detect', done: 3, total: 8 });
@@ -356,13 +356,6 @@ describe('ADR-929 §6.16 βήμα 4 — εικόνα αναγνώρισης πυ
     await done;
     expect(rawsOf(h.controller.readingFor(run('rec1.m2', LEFT_HALF)))).toEqual(['3.50']);
     expect(rawsOf(h.adopted[0])).toEqual(['3.50', '2.85']);
-  });
-
-  it('ο συντελεστής μείωσης κρίνεται πάνω στην εικόνα αναγνώρισης', async () => {
-    const small: PlanRaster = { width: 1000, height: 1000, rgba: new Uint8ClampedArray(0) };
-    const h = harness({ recognitionRaster: async () => ({ raster: small, naturalPerRasterPx: 2 }) });
-    await begin(h, run('rec1'));
-    expect(h.calls[0].options.downscale).toBe(1);
   });
 
   it('«Ακύρωση» όσο αποδίδεται η εικόνα ⇒ cancelled, κανένα αίτημα στον Worker όταν φτάσει', async () => {

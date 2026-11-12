@@ -18,8 +18,6 @@
  */
 
 import { applyHomography, type Homography, type PlanePoint } from '@/lib/geometry/homography';
-import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
-import { workingScaleFor } from '@/lib/geometry/raster/raster-warp';
 import { alignedPointToOriginal, rasterBoundsOf } from '../alignment/alignment-region';
 import type { PlanDimension, PlanReading, PlanReadingOutcome, PlanText, PlanWrittenScale } from '../plan-recognition-types';
 import { readingConfidence } from '../reading/plan-reading-from-view';
@@ -27,7 +25,6 @@ import { isInReadingView, type PlanReadingView } from '../reading/plan-reading-v
 import { classifyWrittenText, parseWrittenScale, writtenLengthsMm } from '../reading/written-values';
 import type { OcrText } from './ocr-engine';
 import type { OcrAssetSet } from './ocr-model-assets';
-import { OCR_TILING } from './ocr-tiles';
 
 /** Αλλάζει όταν αλλάζει η μετατροπή κειμένων → ανάγνωση (νέα κλειδιά, ποτέ μπαγιάτικη ανάγνωση). */
 export const OCR_READING_SCHEMA_VERSION = 1;
@@ -56,11 +53,6 @@ export function localOcrModelId(assets: OcrAssetSet): string {
 /** Η ανάγνωση στη σύντηξη είναι του τοπικού OCR (όχι του VLM); */
 export function isLocalOcrOutcome(outcome: PlanReadingOutcome | null): boolean {
   return outcome?.status === 'read' && outcome.reading.model.startsWith(LOCAL_OCR_MODEL_PREFIX);
-}
-
-/** Ο ακέραιος συντελεστής μείωσης πριν την ανίχνευση: η εικόνα χωρά στον προϋπολογισμό pixel (`OCR_TILING.maxDetectPixels`). */
-export function ocrDownscaleFor(raster: Pick<PlanRaster, 'width' | 'height'>): number {
-  return workingScaleFor(raster.width, raster.height, OCR_TILING.maxDetectPixels);
 }
 
 /**

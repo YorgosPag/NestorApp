@@ -23,8 +23,8 @@ import type { OcrLoadContext, OcrLoadProgress } from './ocr-onnx-runtime';
 export interface PlanOcrRequest {
   /** Η **αρχική** εικόνα του υποβάθρου, νέο buffer (μετακομίζει στον Worker). */
   readonly raster: PlanRaster;
-  /** Ακέραιος συντελεστής μείωσης πριν την ανίχνευση (`OcrEngineOptions.downscale`). */
-  readonly downscale: number;
+  /** Σταθερός συντελεστής μείωσης (`OcrEngineOptions.downscale`)· χωρίς τιμή ⇒ από το ύψος γραμμάτων (§6.16 βήμα 3). */
+  readonly downscale?: number;
   /** Απόλυτη βάση της σελίδας για τα URL των μοντέλων (λυμένη στον κύριο νήμα — `absoluteWorkerUrl`). */
   readonly assetBase: string;
 }
@@ -32,6 +32,8 @@ export interface PlanOcrRequest {
 export interface PlanOcrReply {
   /** Σε συνεχή raster-px της **αρχικής** εικόνας, σειρά ανάγνωσης κορυφών (`OcrText`). */
   readonly texts: readonly OcrText[];
+  /** Ο συντελεστής με τον οποίο ανιχνεύθηκαν (διάγνωση· ADR-929 §6.16). */
+  readonly downscale: number;
 }
 
 /** Φόρτωση μοντέλων → ανίχνευση → ανάγνωση. */
@@ -52,10 +54,9 @@ export function createPlanOcrHost(load: PlanOcrModelLoader): WorkerRpcHandler<Pl
   };
   return async (request, context) => {
     const loaded = await ready(request.assetBase, context);
-    const texts = await recognizePlanText(request.raster, loaded, {
+    return recognizePlanText(request.raster, loaded, {
       downscale: request.downscale, signal: context.signal, onProgress: context.progress,
     });
-    return { texts };
   };
 }
 

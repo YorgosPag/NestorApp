@@ -6,9 +6,8 @@
 import { IDENTITY_HOMOGRAPHY, type Homography, type Quad } from '@/lib/geometry/homography';
 import type { OcrText } from '../ocr/ocr-engine';
 import {
-  isLocalOcrOutcome, localOcrModelId, ocrDownscaleFor, ocrTextsInView, OCR_READING_SCHEMA_VERSION, planReadingFromOcr,
+  isLocalOcrOutcome, localOcrModelId, ocrTextsInView, OCR_READING_SCHEMA_VERSION, planReadingFromOcr,
 } from '../ocr/ocr-reading';
-import { OCR_TILING } from '../ocr/ocr-tiles';
 import type { PlanReadingOutcome } from '../plan-recognition-types';
 import type { PlanReadingView } from '../reading/plan-reading-view';
 import type { OcrAssetSet } from '../ocr/ocr-model-assets';
@@ -101,16 +100,5 @@ describe('isLocalOcrOutcome — η προέλευση από το `model` (Δ9)'
     expect(isLocalOcrOutcome(outcome('gpt-x'))).toBe(false);
     expect(isLocalOcrOutcome(null)).toBe(false);
     expect(isLocalOcrOutcome({ status: 'unavailable', reason: 'no-key' } as unknown as PlanReadingOutcome)).toBe(false);
-  });
-});
-
-describe('ocrDownscaleFor — ο ακέραιος συντελεστής από τον προϋπολογισμό pixel', () => {
-  it('μέσα στον προϋπολογισμό ⇒ 1· από πάνω ⇒ ο μικρότερος ακέραιος που χωρά', () => {
-    const side = Math.floor(Math.sqrt(OCR_TILING.maxDetectPixels));
-    expect(ocrDownscaleFor({ width: side, height: side })).toBe(1);
-    expect(ocrDownscaleFor({ width: side + 1, height: side + 1 })).toBe(2);
-    const f = ocrDownscaleFor({ width: 4 * side, height: 3 * side });
-    expect(((4 * side) / f) * ((3 * side) / f)).toBeLessThanOrEqual(OCR_TILING.maxDetectPixels);
-    expect(((4 * side) / (f - 1)) * ((3 * side) / (f - 1))).toBeGreaterThan(OCR_TILING.maxDetectPixels);
   });
 });
