@@ -186,8 +186,8 @@ export function withAuth<T = unknown, R = unknown>(
   options: WithAuthOptions<R> = {}
 ): (request: NextRequest, routeContext?: R) => Promise<NextResponse<T | ErrorResponse>> {
   return async (request: NextRequest, routeContext?: R): Promise<NextResponse<T | ErrorResponse>> => {
-    // Step 1: Build request context
-    const ctx = await buildRequestContext(request);
+    // Step 1: Build request context (δημόσια διαδρομή ⇒ ο ανώνυμος δεν καταγράφεται ως άρνηση — μόνο η καταγραφή)
+    const ctx = await buildRequestContext(request, { anonymousAllowed: options.allowUnauthenticated === true });
 
     // Step 2: Check authentication
     if (!isAuthenticated(ctx)) {

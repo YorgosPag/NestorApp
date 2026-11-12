@@ -128,6 +128,9 @@ base64) δεν δηλώνεται ρητά. Ο έλεγχος δέχεται κ�
 applied»** (`provider`, `signal`, `outcome`) — χωρίς αυτήν, webhook που πέρασε και συμφιλίωση δεν ξεχωρίζουν στα
 logs (§5.9 #4). Κάθε δεκτό συμβάν γράφει και ίχνος παραλαβής στο `payment_provider_events` (αποτύπωμα, σήμα,
 αποτέλεσμα).
+Το `[WARN] [AUTH_CONTEXT] DENY` που συνόδευε **κάθε** webhook (2026-11-12) ήταν θόρυβος, όχι άρνηση: το
+`buildRequestContext` το έγραφε πριν το `withAuth` εφαρμόσει το `allowUnauthenticated`. Από 2026-11-13 η δημόσια
+διαδρομή γράφει `debug` (ADR-821 changelog)· η απόφαση δεν άλλαξε.
 
 🔴 Η καταγραφή **δεν** κοιτά την κατάσταση της συνεδρίας: IRIS που ολοκληρώθηκε σε `canceled`/`expired` συνεδρία
 **είναι** χρήματα που μπήκαν. Απόκλιση ποσού ⇒ καταγράφεται η αλήθεια του παρόχου + προειδοποίηση.
@@ -424,3 +427,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-13 | §5.6: σουίτα για την πόρτα `GET …/checkout?checkout=` (9 tests — κουπόνι, σχήμα αναγνωριστικού, αποκωδικοποίηση `shareId`, ιδιωτικές κεφαλίδες). |
 | 2026-11-13 | §5.5 / §5.9 #8: σελιδοποίηση όλων των λιστών Everypay (`everypayListAll`, `count=20` + `offset`, αποδιπλασιασμός, όριο ⇒ 502)· port `listRecentlyRefundedPayments` + πέρασμα επιστροφών στο cron (`payment-refund-reconcile.service.ts`)· `chronologicalMovements` στον συγχρονισμό· §4 πίνακας· 3 νέες σουίτες (list · refund reconcile · chronology). |
 | 2026-11-13 | §5.10: η επιστροφή δεν ξανανοίγει την οφειλή (πρότυπο Stripe) — `totalPaid` μόνο πληρωμές, νέο παράγωγο `totalRefunded` (server-owned), `paidAsOf` του καθολικού απαιτήσεων αγνοεί τις επιστροφές (πριν τις μετρούσε ως πληρωμή), `isRefundMovement` ένα κριτήριο· tests εξόφλησης ενημερωμένα + ένα καθολικού. |
+| 2026-11-13 | §5.3: το `[WARN] [AUTH_CONTEXT] DENY` σε κάθε webhook = καταγραφή ανώνυμου σε **δημόσια** διαδρομή, όχι άρνηση ⇒ `debug` όταν `allowUnauthenticated` (ADR-821), απόφαση αμετάβλητη. |

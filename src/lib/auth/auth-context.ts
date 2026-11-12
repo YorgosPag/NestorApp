@@ -253,7 +253,19 @@ async function identityFromDecodedToken(
  * ανεξάρτητοι παραγωγοί ταυτότητας στο ίδιο αρχείο θα ήταν **δύο απαντήσεις σε ένα
  * ερώτημα** — ADR-749, και μάλιστα στην πιο ακριβή του θέση.
  */
-export async function buildApiIdentity(request: NextRequest): Promise<ApiIdentity> {
+/**
+ * Τι **περιμένει** ο καλών από ένα αίτημα χωρίς πιστοποίηση. Αλλάζει **μόνο** την καταγραφή, ποτέ την απόφαση: η
+ * δημόσια διαδρομή (`withAuth({ allowUnauthenticated })` — webhook παρόχου, σύνδεσμος πληρωμής) δέχεται ανώνυμους
+ * εκ σχεδιασμού, άρα η απουσία ταυτότητας εκεί **δεν** είναι άρνηση. Πριν, κάθε τέτοιο αίτημα έγραφε `WARN DENY` και
+ * έθαβε τις πραγματικές αρνήσεις στα logs (ADR-ACC-030 §5.3).
+ */
+export interface IdentityRequestOptions {
+  readonly anonymousAllowed?: boolean;
+}
+
+export async function buildApiIdentity(
+  request: NextRequest, options: IdentityRequestOptions = {},
+): Promise<ApiIdentity> {
   // Step 1: Try Bearer token from Authorization header (API clients)
   const token = extractBearerToken(request);
 
@@ -290,10 +302,14 @@ export async function buildApiIdentity(request: NextRequest): Promise<ApiIdentit
     return { ok: true, scope: 'organization', ctx: await createDevContext() };
   }
 
-  logger.warn('[AUTH_CONTEXT] DENY — καμία πιστοποίηση, καμία κατασκευή', {
-    verdict: fabrication.verdict,
-    reason: fabrication.reason,
-  });
+  if (options.anonymousAllowed === true) {
+    logger.debug('[AUTH_CONTEXT] Ανώνυμο αίτημα σε δημόσια διαδρομή', { verdict: fabrication.verdict });
+  } else {
+    logger.warn('[AUTH_CONTEXT] DENY — καμία πιστοποίηση, καμία κατασκευή', {
+      verdict: fabrication.verdict,
+      reason: fabrication.reason,
+    });
+  }
   return { ok: false, reason: 'missing_token' };
 }
 
@@ -325,9 +341,10 @@ export async function buildApiIdentity(request: NextRequest): Promise<ApiIdentit
  * ```
  */
 export async function buildRequestContext(
-  request: NextRequest
+  request: NextRequest,
+  options: IdentityRequestOptions = {},
 ): Promise<RequestContext> {
-  const identity = await buildApiIdentity(request);
+  const identity = await buildApiIdentity(request, options);
 
   if (!identity.ok) {
     return createUnauthenticatedContext(identity.reason);
