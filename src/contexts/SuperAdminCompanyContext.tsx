@@ -35,7 +35,7 @@ import React, {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { collection, doc, getDocs, orderBy, query, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocFromServer, getDocs, orderBy, query, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { isRoleBypass } from '@/lib/auth/roles';
@@ -87,6 +87,21 @@ const SuperAdminCompanyContext = createContext<SuperAdminCompanyContextValue>({
 function rememberCompany(id: string): void {
   setSuperAdminActiveCompanyId(id);
   localStorage.setItem(STORAGE_KEY, id);
+}
+
+/**
+ * `users/{uid}.activeCompanyId` — εγγραφή **μόνο αν αλλάζει**. Η σύγκριση γίνεται με την τιμή του
+ * **διακομιστή** (`getDocFromServer`): μια τιμή από την προσωρινή μνήμη μπορεί να είναι παλιά και να
+ * κρύψει αλλαγή από άλλη συσκευή. Αν η ανάγνωση αποτύχει (π.χ. εκτός σύνδεσης) γράφει όπως πριν:
+ * η εγγραφή είναι ιδεμπότητη, και καλύτερα μία περιττή παρά καμία.
+ */
+async function persistActiveCompanyIfChanged(uid: string, companyId: string, isCancelled: () => boolean): Promise<void> {
+  const ref = doc(db, 'users', uid);
+  const stored = await getDocFromServer(ref)
+    .then(snap => (snap.data() as { activeCompanyId?: unknown } | undefined)?.activeCompanyId)
+    .catch(() => undefined);
+  if (isCancelled() || stored === companyId) return;
+  await setDoc(ref, { activeCompanyId: companyId }, { merge: true });
 }
 
 // ============================================================================
@@ -142,11 +157,15 @@ export function SuperAdminCompanyProvider({ children }: { children: React.ReactN
 
   // `users/{uid}.activeCompanyId` — η δρομολόγηση του Telegram bot (ADR-145 Option B).
   // Ο διακομιστής το διαβάζει ΜΟΝΟ μέσω `resolveVerifiedActiveWorkspace` (ADR-787 §5.2 στ).
+  // 🔑 Γράφει ΜΟΝΟ όταν διαφέρει από την αποθηκευμένη τιμή: πριν έγραφε σε ΚΑΘΕ φόρτωση, και κάθε
+  //    εγγραφή ξυπνούσε τον ακροατή του `users/{uid}` (`use-claims-refresh`) σε κάθε συσκευή.
+  //    Το `cancelled` κόβει παλιό έλεγχο που θα έγραφε τιμή ήδη ξεπερασμένη από νεότερη επιλογή.
   useEffect(() => {
-    if (isSuperAdmin && activeCompanyId && user?.uid && db) {
-      setDoc(doc(db, 'users', user.uid), { activeCompanyId }, { merge: true })
-        .catch(err => logger.warn('Failed to persist activeCompanyId to Firestore', { error: err }));
-    }
+    if (!isSuperAdmin || !activeCompanyId || !user?.uid || !db) return;
+    let cancelled = false;
+    persistActiveCompanyIfChanged(user.uid, activeCompanyId, () => cancelled)
+      .catch(err => logger.warn('Failed to persist activeCompanyId to Firestore', { error: err }));
+    return () => { cancelled = true; };
   }, [isSuperAdmin, activeCompanyId, user?.uid]);
 
   const setActiveCompanyId = useCallback((id: string) => rememberCompany(id), []);
