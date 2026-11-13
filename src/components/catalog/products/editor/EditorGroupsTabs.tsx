@@ -1,12 +1,14 @@
 'use client';
 /**
  * **Καρτέλες ανά ομάδα ιδιοτήτων**, με μετρητή ευρημάτων στην καρτέλα (ADR-923 §5.10.4 Β3, Akeneo attribute groups).
+ * Μετά τα πεδία, οι **σύνθετες ενδείξεις** της ομάδας, μόνο-ανάγνωσης (§21.6).
  *
  * @module components/catalog/products/editor/EditorGroupsTabs
  */
 
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { AttributeRecord } from '@/services/catalog/catalog-api.client';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { CatalogValueHolder } from '@/subapps/catalog/types/product';
 import type { InheritanceLink, ResolvedValues } from '@/subapps/catalog/values/resolve-inherited';
@@ -16,6 +18,7 @@ import { useCatalogText } from '../../shared/catalog-ui-hooks';
 import type { ValueEditorEnv } from '../../values/value-editor-types';
 import type { ListScope } from '../ProductListToolbar';
 import { AttributeValueField } from './AttributeValueField';
+import { CompositeDisplayField } from './CompositeDisplayField';
 import type { EditorGroupPlan } from './editor-layout';
 
 export interface EditorGroupsTabsProps {
@@ -35,6 +38,10 @@ export interface EditorGroupsTabsProps {
   readonly nameOf: (link: InheritanceLink) => string;
   readonly onHolder: (holder: CatalogValueHolder) => void;
   readonly onOpen: (id: string) => void;
+  /** Για τις σύνθετες ενδείξεις: οι ιδιότητες των μερών τους. */
+  readonly attributeById: ReadonlyMap<string, AttributeRecord>;
+  /** Πήγαινε στο πεδίο μιας ιδιότητας (από μέρος σύνθετης ένδειξης που λείπει). */
+  readonly onJump: (attributeId: string) => void;
 }
 
 function issueCount(group: EditorGroupPlan, issues: readonly CatalogIssue[]): number {
@@ -69,6 +76,10 @@ export function EditorGroupsTabs(props: EditorGroupsTabsProps) {
                 disabled={props.disabled} onHolder={props.onHolder} onOpen={props.onOpen} />
             );
           })}
+          {group.composites.map((composite) => (
+            <CompositeDisplayField key={composite.id} composite={composite} attributeById={props.attributeById} resolved={props.resolved}
+              scope={props.scope} env={props.env} onJump={props.onJump} />
+          ))}
         </TabsContent>
       ))}
     </Tabs>

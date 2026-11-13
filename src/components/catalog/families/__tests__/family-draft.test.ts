@@ -8,6 +8,7 @@ import {
   shownFamilyIssues,
   tabOfIssue,
   validateFamilyDraft,
+  withoutComposite,
   withoutFamilyAttribute,
 } from '../family-draft';
 
@@ -58,6 +59,43 @@ describe('family-draft — το πρόχειρο της οικογένειας',
     };
     const without = withoutFamilyAttribute(composite, 'weight');
     expect(without.compositeDisplays).toEqual([{ id: 'cd_two', labels: { el: 'Β' }, separator: ' ', parts: [part('dimensions')] }]);
+  });
+
+  describe('§21.6 γραμμές πίνακα σύνθετης ένδειξης — καμία ορφανή', () => {
+    const part = (attributeId: string) => ({ attributeId, displayUnitCode: null, affix: { before: '', after: '' } });
+    const row = (compositeId: string) => ({ kind: 'composite' as const, id: `r_${compositeId}`, compositeId, labelOverride: null, merge: 'none' as const });
+    const spec = MFP_FAMILY.tableSpec!;
+    const withComposites = {
+      ...MFP_FAMILY,
+      compositeDisplays: [
+        { id: 'cd_two', labels: { el: 'Β' }, separator: ' ', parts: [part('weight'), part('dimensions')] },
+        { id: 'cd_one', labels: { el: 'Α' }, separator: ' ', parts: [part('weight')] },
+      ],
+      tableSpec: { ...spec, rows: [...spec.rows, row('cd_two'), row('cd_one')] },
+    };
+    const compositeRows = (draft: typeof MFP_FAMILY) => draft.tableSpec?.rows.filter((item) => item.kind === 'composite').map((item) => item.id);
+
+    it('η οικογένεια με γραμμές σύνθετης ένδειξης είναι έγκυρη', () => {
+      expect(validate(withComposites)).toEqual([]);
+    });
+
+    it('αφαίρεση ιδιότητας που ΑΔΕΙΑΖΕΙ ένδειξη ⇒ φεύγει και η γραμμή της· η άλλη μένει', () => {
+      const without = withoutFamilyAttribute(withComposites, 'weight');
+      expect(compositeRows(without)).toEqual(['r_cd_two']);
+      expect(validate(without).map((issue) => issue.code)).not.toContain('tableRowCompositeUnknown');
+    });
+
+    it('αφαίρεση ένδειξης ⇒ φεύγουν οι γραμμές της, τίποτε άλλο', () => {
+      const without = withoutComposite(withComposites, 'cd_one');
+      expect(without.compositeDisplays?.map((composite) => composite.id)).toEqual(['cd_two']);
+      expect(compositeRows(without)).toEqual(['r_cd_two']);
+      expect(without.tableSpec?.rows).toHaveLength(spec.rows.length + 1);
+    });
+
+    it('τα ευρήματα των ενδείξεων πάνε στην καρτέλα «Σύνθετες ενδείξεις»', () => {
+      expect(tabOfIssue({ code: 'compositePartsRequired', path: 'compositeDisplays[0].parts' })).toBe('composites');
+      expect(issueCountByTab([{ code: 'tooMany', path: 'compositeDisplays' }]).composites).toBe(1);
+    });
   });
 
   it('τοπικά αναγνωριστικά: επόμενο μετά το μέγιστο, χωρίς ρολόι', () => {

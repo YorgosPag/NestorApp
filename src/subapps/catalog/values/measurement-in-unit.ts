@@ -5,7 +5,7 @@
  * @module subapps/catalog/values/measurement-in-unit
  */
 
-import { convertMeasurement, toFixedDecimal } from '../measurement/conversion';
+import { convertMeasurement, findUnit, toFixedDecimal } from '../measurement/conversion';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import type { AttributeValue } from '../types/product';
@@ -25,4 +25,14 @@ export function measurementInUnit(
   if (!family) return value;
   const converted = convertMeasurement(family, Number(value.amount), value.unitCode, target);
   return { type: 'measurement', amount: toFixedDecimal(converted, attribute.config.decimals), unitCode: target };
+}
+
+/**
+ * Το **σύμβολο** της μονάδας προβολής (`null` = η προεπιλεγμένη) — κεφαλίδα γραμμής πίνακα και πρότυπο σύνθετης ένδειξης.
+ * `null` όταν η ιδιότητα δεν είναι μέτρηση ή η οικογένεια/μονάδα δεν υπάρχει.
+ */
+export function displayUnitSymbol(attribute: CatalogAttributeDefinition, displayUnitCode: string | null, registry: MeasurementRegistry): string | null {
+  if (attribute.type !== 'measurement') return null;
+  const family = registry.get(attribute.config.measurementFamilyCode);
+  return family ? findUnit(family, displayUnitCode ?? attribute.config.defaultUnitCode)?.symbol ?? null : null;
 }

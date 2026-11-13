@@ -2,13 +2,14 @@
  * Επικύρωση του **πίνακα καταλόγου** της οικογένειας (ADR-923 §21.4.3): οι στήλες
  * έρχονται από ένα σχήμα παραλλαγών που υπάρχει· κάθε γραμμή δείχνει σε ιδιότητα της
  * οικογένειας ή σε άξονα του σχήματος· το φίλτρο άξονα δείχνει σε **επιλογή που υπάρχει**
- * («ΤΙΜΗ € BAC-1-CI» χωρίς επιλογή BAC-1-CI θα τύπωνε σιωπηλά κενή γραμμή).
+ * («ΤΙΜΗ € BAC-1-CI» χωρίς επιλογή BAC-1-CI θα τύπωνε σιωπηλά κενή γραμμή)· η γραμμή σύνθετης
+ * ένδειξης δείχνει σε **ένδειξη που υπάρχει** (§21.6).
  * @module subapps/catalog/schema/validate-family-table-spec
  */
 
 import { hasAnyLocalizedText } from '@/i18n/localized-text';
 import { findUnit } from '../measurement/conversion';
-import type { TableAxisFilter, FamilyTableRow, VariantScheme } from '../types/family';
+import { compositeDisplaysOf, type TableAxisFilter, type FamilyTableRow, type VariantScheme } from '../types/family';
 import { CATALOG_LIMITS } from '../vocabulary/catalog-limits';
 import { reportDuplicates } from './catalog-issues';
 import { familyAttribute, type FamilyValidationContext } from './family-validation-context';
@@ -58,6 +59,12 @@ function validateRow(context: FamilyValidationContext, row: FamilyTableRow, axes
       return;
     case 'attribute':
       return validateAttributeRow(context, row, axes, path);
+    case 'composite':
+      // §21.6: γραμμή προς ένδειξη που σβήστηκε θα τύπωνε σιωπηλά τίποτα — ο builder την παραλείπει.
+      if (!compositeDisplaysOf(context.family).some((composite) => composite.id === row.compositeId)) {
+        context.collector.add('tableRowCompositeUnknown', `${path}.compositeId`);
+      }
+      return;
   }
 }
 

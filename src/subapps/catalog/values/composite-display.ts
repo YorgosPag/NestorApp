@@ -48,15 +48,63 @@ function partValueText(part: CompositeDisplayPart, source: CompositeSource): str
   return formatAttributeValue(attribute, value, source.codec);
 }
 
+/** Ένα κομμάτι της ένδειξης: τιμή **με** τα σύμβολά της, ή η θέση ενός μέρους που λείπει (ποτέ σύμβολο κολλημένο στο κενό). */
+export type ComposedPiece =
+  | { readonly kind: 'value'; readonly text: string }
+  | { readonly kind: 'missing'; readonly attributeId: string };
+
+interface ComposedPieces {
+  /** Κενό όταν λείπουν **όλα** τα μέρη: κενή ένδειξη, όπως κάθε κενό κελί. */
+  readonly pieces: readonly ComposedPiece[];
+  readonly missingAttributeIds: readonly string[];
+}
+
+/** Ο **ένας** κανόνας: κείμενα μερών (`''` = λείπει) → κομμάτια. */
+function piecesOf(composite: CompositeDisplay, texts: readonly string[]): ComposedPieces {
+  const missingAttributeIds = composite.parts.filter((_, index) => texts[index] === '').map((part) => part.attributeId);
+  if (missingAttributeIds.length === composite.parts.length) return { pieces: [], missingAttributeIds };
+  const pieces = composite.parts.map((part, index): ComposedPiece =>
+    (texts[index] === '' ? { kind: 'missing', attributeId: part.attributeId } : { kind: 'value', text: `${part.affix.before}${texts[index]}${part.affix.after}` }));
+  return { pieces, missingAttributeIds };
+}
+
+/**
+ * Τα **κομμάτια** της ένδειξης, για καλούντα που αποδίδει το μέρος που λείπει ως στοιχείο (ο επεξεργαστής προϊόντος: κουμπί
+ * που πάει στο πεδίο). Όποιος θέλει κείμενο καλεί {@link composeDisplay} — ίδια κομμάτια, ενωμένα.
+ */
+export function composeDisplayPieces(composite: CompositeDisplay, source: CompositeSource): ComposedPieces {
+  return piecesOf(composite, composite.parts.map((part) => partValueText(part, source)));
+}
+
+/** Η ένωση των κομματιών με τον διαχωριστή της ένδειξης. */
+function joinPieces(pieces: readonly ComposedPiece[], separator: string, missingText: (attributeId: string) => string): string {
+  return pieces.map((piece) => (piece.kind === 'value' ? piece.text : missingText(piece.attributeId))).join(separator);
+}
+
 export function composeDisplay(
   composite: CompositeDisplay,
   source: CompositeSource,
   missingText: (attributeId: string) => string,
 ): ComposedDisplay {
-  const texts = composite.parts.map((part) => partValueText(part, source));
-  const missingAttributeIds = composite.parts.filter((_, index) => texts[index] === '').map((part) => part.attributeId);
-  if (missingAttributeIds.length === composite.parts.length) return { text: '', missingAttributeIds };
-  const pieces = composite.parts.map((part, index) =>
-    texts[index] === '' ? missingText(part.attributeId) : `${part.affix.before}${texts[index]}${part.affix.after}`);
-  return { text: pieces.join(composite.separator), missingAttributeIds };
+  const { pieces, missingAttributeIds } = composeDisplayPieces(composite, source);
+  return { text: joinPieces(pieces, composite.separator, missingText), missingAttributeIds };
+}
+
+interface CompositeTemplateNames {
+  /** Το όνομα της ιδιότητας του μέρους, όπως θα το δει ο άνθρωπος («Τάση»). */
+  readonly nameOf: (attributeId: string) => string;
+  /** Το σύμβολο της μονάδας προβολής του μέρους (μόνο μέτρηση), αλλιώς `null`. */
+  readonly unitSymbolOf: (part: CompositeDisplayPart) => string | null;
+}
+
+/**
+ * Το **πρότυπο** της ένδειξης για τον επεξεργαστή οικογένειας: «[Φάσεις]~ [Τάση] V [Συχνότητα] Hz». Ο άνθρωπος βλέπει
+ * σειρά, σύμβολα και μονάδες **πριν** υπάρξει προϊόν. Ίδιος κανόνας σύνδεσης με τη σύνθεση (αριθμός ␣ μονάδα, IEC 61293 §4.3.1).
+ */
+export function compositeTemplate(composite: CompositeDisplay, names: CompositeTemplateNames): string {
+  const texts = composite.parts.map((part) => {
+    const unit = names.unitSymbolOf(part);
+    return `[${names.nameOf(part.attributeId)}]${unit ? ` ${unit}` : ''}`;
+  });
+  return joinPieces(piecesOf(composite, texts).pieces, composite.separator, () => '');
 }

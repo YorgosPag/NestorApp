@@ -8,6 +8,9 @@
  *    τυπωμένο PDF περνούν από **αυτόν** τον builder: ό,τι δείχνει η οθόνη είναι ό,τι τυπώνεται, από κατασκευή.
  * 🔑 Άξονας μέτρησης δεν απαριθμείται (συνεχές μέγεθος) ⇒ μία δειγματική στήλη με τη μονάδα του.
  * 🔑 **Η συγχώνευση είναι δηλωμένη ανά γραμμή** (§21.4.3): {@link mergeRowCells} είναι ο ένας κανόνας της.
+ * 🔑 **Σύνθετη ένδειξη** (§21.6): βγαίνει ως γραμμή **τιμών** (`kind: 'attribute'`, χωρίς μονάδα — οι μονάδες είναι μέσα στο
+ *    κείμενο), όπως οι γραμμές τιμής του εκδότη. Άρα οθόνη, διάταξη σελίδας, αναστροφή και Typst δεν τη διακρίνουν: ό,τι
+ *    δείχνει η οθόνη τυπώνεται. Μέρος που λείπει ⇒ {@link COMPOSITE_MISSING_MARK}, ποτέ σιωπηλή σύμπτυξη.
  *
  * Καθαρό, χωρίς I/O: ζούσε στο `components/catalog/families/family-table-preview`, όπου ο διακομιστής δεν μπορούσε να το
  * φτάσει (Φάση 5).
@@ -16,11 +19,12 @@
 
 import type { LocalizedText } from '@/i18n/localized-text';
 import { findUnit } from '../measurement/conversion';
-import { measurementInUnit } from '../values/measurement-in-unit';
+import { displayUnitSymbol, measurementInUnit } from '../values/measurement-in-unit';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
-import type { CatalogFamilyDefinition, FamilyTableRow, TableRowMergeMode, VariantScheme } from '../types/family';
+import { compositeDisplaysOf, type CatalogFamilyDefinition, type CompositeDisplay, type FamilyTableRow, type TableRowMergeMode, type VariantScheme } from '../types/family';
 import type { AttributeValue, ValueSlots } from '../types/product';
+import { COMPOSITE_MISSING_MARK, composeDisplay } from '../values/composite-display';
 import { readSlot } from '../values/value-shape';
 import { displayAmount, formatAttributeValue, type ValueTextContext } from '../values/value-text-codec';
 import type { CatalogChannel } from '../vocabulary/channels';
@@ -63,6 +67,8 @@ export interface RealTableColumn {
   /** Οι κωδικοί επιλογής των αξόνων (για το φίλτρο γραμμής `axisFilter`). */
   readonly axisCodes: ReadonlyMap<string, string>;
   readonly valueOf: (attributeId: string, displayUnitCode: string | null) => string;
+  /** Η σύνθετη ένδειξη στη στήλη (§21.6) — από τις **ίδιες** τιμές με τα κελιά. */
+  readonly compositeOf: (composite: CompositeDisplay) => string;
 }
 
 export interface TablePreview {
@@ -91,12 +97,6 @@ function combinations(axes: readonly TableAttribute[], registry: MeasurementRegi
   );
 }
 
-function unitOf(attribute: TableAttribute, displayUnitCode: string | null, registry: MeasurementRegistry): string | null {
-  if (attribute.type !== 'measurement') return null;
-  const family = registry.get(attribute.config.measurementFamilyCode);
-  return family ? findUnit(family, displayUnitCode ?? attribute.config.defaultUnitCode)?.symbol ?? null : null;
-}
-
 function filterLabel(row: Extract<FamilyTableRow, { kind: 'attribute' }>, library: ReadonlyMap<string, TableAttribute>, words: PreviewWords): string | null {
   if (!row.axisFilter) return null;
   const axis = library.get(row.axisFilter.axisAttributeId);
@@ -115,6 +115,7 @@ function realCells(row: Extract<FamilyTableRow, { kind: 'attribute' }>, real: re
 }
 
 interface RowContext {
+  readonly composites: readonly CompositeDisplay[];
   readonly columns: readonly ReadonlyMap<string, string>[];
   readonly library: ReadonlyMap<string, TableAttribute>;
   readonly registry: MeasurementRegistry;
@@ -122,9 +123,26 @@ interface RowContext {
   readonly real: readonly RealTableColumn[] | null;
 }
 
+/** Η γραμμή σύνθετης ένδειξης ως γραμμή τιμών· ένδειξη που δεν υπάρχει ⇒ καμία γραμμή (την ονομάζει η επικύρωση). */
+function compositeRow(row: Extract<FamilyTableRow, { kind: 'composite' }>, ctx: RowContext): PreviewRow | null {
+  const composite = ctx.composites.find((candidate) => candidate.id === row.compositeId);
+  if (!composite) return null;
+  const name = ctx.words.text(composite.labels, composite.id);
+  return {
+    kind: 'attribute',
+    id: row.id,
+    label: row.labelOverride ? ctx.words.text(row.labelOverride, name) : name,
+    unit: null,
+    filter: null,
+    merge: row.merge,
+    cells: ctx.real ? ctx.real.map((column) => column.compositeOf(composite)) : null,
+  };
+}
+
 function previewRow(row: FamilyTableRow, ctx: RowContext): PreviewRow | null {
   const { columns, library, registry, words, real } = ctx;
   if (row.kind === 'groupHeader') return { kind: 'groupHeader', id: row.id, label: words.text(row.labels) };
+  if (row.kind === 'composite') return compositeRow(row, ctx);
   const attribute = library.get(row.kind === 'axis' ? row.axisAttributeId : row.attributeId);
   if (!attribute) return null;
   const name = words.text(attribute.labels, attribute.code);
@@ -133,7 +151,7 @@ function previewRow(row: FamilyTableRow, ctx: RowContext): PreviewRow | null {
     kind: 'attribute',
     id: row.id,
     label: row.labelOverride ? words.text(row.labelOverride, name) : name,
-    unit: unitOf(attribute, row.displayUnitCode, registry),
+    unit: displayUnitSymbol(attribute, row.displayUnitCode, registry),
     filter: filterLabel(row, library, words),
     merge: row.merge,
     cells: realCells(row, real),
@@ -154,7 +172,7 @@ export function buildTablePreview(
   // Πραγματικά δεδομένα ⇒ **όλες** οι παραλλαγές (ο πίνακας του φυλλαδίου)· δείγμα ⇒ ως MAX_PREVIEW_COLUMNS.
   const all = real ? real.map((column) => column.axes) : combinations(axes, registry, words);
   const columns = real ? all : all.slice(0, MAX_PREVIEW_COLUMNS);
-  const ctx: RowContext = { columns, library, registry, words, real };
+  const ctx: RowContext = { composites: compositeDisplaysOf(draft), columns, library, registry, words, real };
   const rows = spec.rows.flatMap((row) => previewRow(row, ctx) ?? []);
   return { columns, hiddenColumns: all.length - columns.length, rows };
 }
@@ -227,5 +245,10 @@ export function realTableColumn(input: TableColumnInput): RealTableColumn {
   };
   const axes = new Map(axisIds.map((axisId) => [axisId, cellText(attributeById.get(axisId), valueAt(axisId), null, codec)] as const));
   const axisCodes = new Map(axisIds.flatMap((axisId) => { const value = valueAt(axisId); return value?.type === 'select' ? [[axisId, value.optionCode] as const] : []; }));
-  return { axes, axisCodes, valueOf: (attributeId, unit) => cellText(attributeById.get(attributeId), valueAt(attributeId), unit, codec) };
+  return {
+    axes,
+    axisCodes,
+    valueOf: (attributeId, unit) => cellText(attributeById.get(attributeId), valueAt(attributeId), unit, codec),
+    compositeOf: (composite) => composeDisplay(composite, { attributeById, valueOf: valueAt, codec }, () => COMPOSITE_MISSING_MARK).text,
+  };
 }

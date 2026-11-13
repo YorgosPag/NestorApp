@@ -71,6 +71,15 @@ export type FamilyTableRow =
       readonly displayUnitCode: string | null;
       readonly axisFilter: TableAxisFilter | null;
       readonly merge: TableRowMergeMode;
+    }
+  | {
+      /** Γραμμή **σύνθετης ένδειξης** (§21.6): «Ηλεκτρική παροχή · 1~ 230 V 50 Hz». Οι μονάδες ζουν μέσα στην ένδειξη. */
+      readonly kind: 'composite';
+      readonly id: string;
+      readonly compositeId: string;
+      /** Ετικέτα γραμμής αν διαφέρει από της ένδειξης. */
+      readonly labelOverride: LocalizedText | null;
+      readonly merge: TableRowMergeMode;
     };
 
 /** Τι γίνεται όταν οι παραλλαγές δεν χωρούν στο πλάτος: συνέχεια σε νέο μπλοκ, ή αναστροφή αξόνων (§5.6). */

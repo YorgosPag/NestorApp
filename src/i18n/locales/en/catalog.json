@@ -149,7 +149,8 @@
     "rowKinds": {
       "groupHeader": "Group header",
       "axis": "Axis row",
-      "attribute": "Attribute row"
+      "attribute": "Attribute row",
+      "composite": "Composite display row"
     }
   },
   "rules": {
@@ -237,6 +238,7 @@
     "tableSchemeUnknown": "The table's variant scheme does not exist.",
     "tableRowAttributeUnknown": "The row points to an attribute that is not in the family.",
     "tableAxisFilterInvalid": "The axis filter does not match the axis options.",
+    "tableRowCompositeUnknown": "The row points to a composite display that is not in the family.",
     "ruleAttributeNotNumeric": "The rule needs numeric attributes (number or measurement).",
     "ruleMeasurementMismatch": "The rule's attributes must measure the same quantity.",
     "ruleAxisUnknown": "The rule's axis is not in the family's variants.",
@@ -711,6 +713,7 @@
       "general": "General",
       "attributes": "Attributes",
       "variants": "Variants",
+      "composites": "Composite displays",
       "table": "Table",
       "rules": "Rules"
     },
@@ -786,7 +789,27 @@
       "preview": "Preview",
       "sample": "value",
       "onlyFor": "only {value}",
-      "moreColumns": "{count, plural, one {+# more column in the real table} other {+# more columns in the real table}}"
+      "moreColumns": "{count, plural, one {+# more column in the real table} other {+# more columns in the real table}}",
+      "addComposite": "Composite display row",
+      "composite": "Composite display",
+      "chooseComposite": "Choose a composite display"
+    },
+    "composites": {
+      "lead": "One display built from several structured values, e.g. \"Power supply\" = \"1~ 230 V 50 Hz\". It is not stored: it is computed on every view, so it never goes stale. Used in the table, in edition cards and in the product editor.",
+      "none": "No composite displays yet.",
+      "add": "New composite display",
+      "remove": "Remove composite display {index}",
+      "labels": "Label",
+      "separator": "Separator",
+      "separatorHint": "Placed between the parts. Per IEC 61293 it is a single space.",
+      "parts": "Parts, in display order",
+      "partAt": "Part {index}",
+      "attribute": "Attribute",
+      "before": "Symbol before part {index}",
+      "after": "Symbol after part {index}",
+      "addPart": "Add part",
+      "removePart": "Remove part {index}",
+      "preview": "Template"
     },
     "rules": {
       "lead": "Checks that run on every value import — they catch shifted columns and duplicate codes before they reach the catalogue.",
@@ -1073,6 +1096,13 @@
     "perLanguage": "per language",
     "perChannel": "per channel",
     "definedIn": "Defined in {name}",
+    "composite": {
+      "readOnly": "Computed",
+      "hint": "Derived from its fields. It changes only when they do.",
+      "missing": "[{label}: {state}]",
+      "missingState": "empty",
+      "goToField": "Go to the \"{label}\" field"
+    },
     "openHolder": "Open the product that has it",
     "axisLocked": "Variant axis — its identity; cannot change once saved.",
     "noValue": {

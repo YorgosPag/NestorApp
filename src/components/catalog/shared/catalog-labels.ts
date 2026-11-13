@@ -118,6 +118,7 @@ export const TABLE_ROW_KIND_KEYS: Readonly<Record<FamilyTableRow['kind'], string
   groupHeader: 'table.rowKinds.groupHeader',
   axis: 'table.rowKinds.axis',
   attribute: 'table.rowKinds.attribute',
+  composite: 'table.rowKinds.composite',
 };
 
 export const RULE_KIND_KEYS: Readonly<Record<ConsistencyRuleKind, string>> = {

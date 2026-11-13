@@ -59,6 +59,13 @@ const tableRowSchema: z.ZodType<FamilyTableRow, z.ZodTypeDef, unknown> = z.discr
     axisFilter: z.object({ axisAttributeId: entityIdSchema, optionCode: catalogCodeSchema }).nullable(),
     merge: z.enum(TABLE_ROW_MERGE_MODES),
   }),
+  z.object({
+    kind: z.literal('composite'),
+    id: localIdSchema,
+    compositeId: localIdSchema,
+    labelOverride: labelsSchema.nullable(),
+    merge: z.enum(TABLE_ROW_MERGE_MODES),
+  }),
 ]);
 
 const tableSpecSchema: z.ZodType<FamilyTableSpec, z.ZodTypeDef, unknown> = z.object({

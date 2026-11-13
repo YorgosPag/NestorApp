@@ -75,6 +75,7 @@ export const CATALOG_ISSUE_CODES = [
   'tableSchemeUnknown',
   'tableRowAttributeUnknown',
   'tableAxisFilterInvalid',
+  'tableRowCompositeUnknown',
   'ruleAttributeNotNumeric',
   'ruleMeasurementMismatch',
   'ruleAxisUnknown',

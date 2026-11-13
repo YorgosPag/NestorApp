@@ -155,7 +155,8 @@ function HolderEditor(props: HolderEditorProps) {
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <EditorGroupsTabs plan={plan} active={active} onActive={setActive} holder={editor.draft} saved={saved} resolved={judgement.resolved} chain={judgement.chain}
           depth={judgement.depth} scope={props.scope} env={env} issues={issues} disabled={!props.canManage} nameOf={nameOf}
-          onHolder={(holder) => editor.update({ ...editor.draft, ...holder })} onOpen={props.onOpen} />
+          onHolder={(holder) => editor.update({ ...editor.draft, ...holder })} onOpen={props.onOpen}
+          attributeById={props.ctx.library.attributeById} onJump={(attributeId) => jump(attributeId, props.scope.channel, props.scope.locale)} />
         <aside><CompletenessPanel matrix={judgement.completeness} attributeById={props.ctx.library.attributeById} onJump={jump}
           variantSummary={'code' in record ? record.derived.summary : null} /></aside>
       </section>

@@ -1,52 +1,17 @@
 /**
  * ADR-923 §21.6 — η σύνθετη ένδειξη «Ηλεκτρική παροχή» = «1~ 230 V 50 Hz» (IEC 61293 §4.2.5 · §4.3.1), από τρεις δομημένες ιδιότητες.
  */
-import { MFP_ATTRIBUTE_MAP } from '../../__tests__/fixtures/mfp-fan-coil.fixture';
+import { FULL_SUPPLY as FULL, SUPPLY, SUPPLY_ATTRIBUTES, VOLTAGE as voltage, supplyCodec as codec } from '../../__tests__/fixtures/power-supply.fixture';
 import { PLATFORM_MEASUREMENT_REGISTRY } from '../../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../../types/attribute';
 import type { CompositeDisplay } from '../../types/family';
 import type { AttributeValue } from '../../types/product';
-import { COMPOSITE_MISSING_MARK, composeDisplay, type CompositeSource } from '../composite-display';
-import type { ValueTextContext } from '../value-text-codec';
+import { displayUnitSymbol } from '../measurement-in-unit';
+import { COMPOSITE_MISSING_MARK, composeDisplay, composeDisplayPieces, compositeTemplate, type CompositeSource } from '../composite-display';
 
-const codec = (language: 'el' | 'en' = 'el'): ValueTextContext => ({
-  registry: PLATFORM_MEASUREMENT_REGISTRY,
-  language,
-  assetIdByCode: new Map(),
-  assetCodeById: new Map(),
-  yes: 'Ναι',
-  no: 'Όχι',
-});
+const attributeById: ReadonlyMap<string, CatalogAttributeDefinition> = SUPPLY_ATTRIBUTES;
 
-const weight = MFP_ATTRIBUTE_MAP.get('weight')!;
-const voltage = { ...weight, code: 'connection_voltage', type: 'measurement', config: { measurementFamilyCode: 'voltage', defaultUnitCode: 'V', min: 0, max: null, decimals: 0, negativeAllowed: false } } as CatalogAttributeDefinition;
-const frequency = {
-  ...weight, code: 'supply_frequency', type: 'select',
-  config: { options: [{ code: 'hz_50', labels: { el: '50 Hz', en: '50 Hz' } }, { code: 'hz_50_60', labels: { el: '50/60 Hz', en: '50/60 Hz' } }] },
-} as CatalogAttributeDefinition;
-const phases = { ...weight, code: 'phases', type: 'number', config: { min: 1, max: 3, decimals: 0, negativeAllowed: false } } as CatalogAttributeDefinition;
-const power = MFP_ATTRIBUTE_MAP.get('cooling_h')!;
-
-const attributeById = new Map<string, CatalogAttributeDefinition>([['phases', phases], ['voltage', voltage], ['frequency', frequency], ['power', power]]);
-
-const SUPPLY: CompositeDisplay = {
-  id: 'cd_supply',
-  labels: { el: 'Ηλεκτρική παροχή', en: 'Power supply' },
-  separator: ' ',
-  parts: [
-    { attributeId: 'phases', displayUnitCode: null, affix: { before: '', after: '~' } },
-    { attributeId: 'voltage', displayUnitCode: null, affix: { before: '', after: '' } },
-    { attributeId: 'frequency', displayUnitCode: null, affix: { before: '', after: '' } },
-  ],
-};
-
-const FULL: Record<string, AttributeValue> = {
-  phases: { type: 'number', amount: '1' },
-  voltage: { type: 'measurement', amount: '230', unitCode: 'V' },
-  frequency: { type: 'select', optionCode: 'hz_50' },
-};
-
-const source = (values: Record<string, AttributeValue>, language: 'el' | 'en' = 'el'): CompositeSource =>
+const source = (values: Readonly<Record<string, AttributeValue>>, language: 'el' | 'en' = 'el'): CompositeSource =>
   ({ attributeById, valueOf: (id) => values[id], codec: codec(language) });
 const dash = () => COMPOSITE_MISSING_MARK;
 
@@ -85,5 +50,33 @@ describe('§21.6 σύνθετη ένδειξη', () => {
   it('διαχωριστής της δήλωσης (Revit «Electrical Connector Separator»): «230 V / 50 Hz»', () => {
     const slash: CompositeDisplay = { ...SUPPLY, separator: ' / ', parts: SUPPLY.parts.slice(1) };
     expect(composeDisplay(slash, source(FULL), dash).text).toBe('230 V / 50 Hz');
+  });
+});
+
+describe('§21.6 κομμάτια (επεξεργαστής προϊόντος) και πρότυπο (επεξεργαστής οικογένειας)', () => {
+  it('το μέρος που λείπει είναι κομμάτι «missing» με την ιδιότητά του — ο επεξεργαστής το κάνει κουμπί', () => {
+    const { voltage: _omit, ...partial } = FULL;
+    expect(composeDisplayPieces(SUPPLY, source(partial)).pieces).toEqual([
+      { kind: 'value', text: '1~' },
+      { kind: 'missing', attributeId: 'voltage' },
+      { kind: 'value', text: '50 Hz' },
+    ]);
+  });
+
+  it('ίδια κομμάτια με τη σύνθεση: λείπουν όλα ⇒ κανένα κομμάτι (κενή ένδειξη)', () => {
+    expect(composeDisplayPieces(SUPPLY, source({})).pieces).toEqual([]);
+  });
+
+  it('πρότυπο: «[Φάσεις]~ [Τάση] V [Συχνότητα]» — σειρά, σύμβολα και μονάδα της δήλωσης, χωρίς προϊόν', () => {
+    const names = {
+      nameOf: (id: string) => { const attribute = attributeById.get(id); return attribute?.labels.el ?? id; },
+      unitSymbolOf: (part: CompositeDisplay['parts'][number]) => {
+        const attribute = attributeById.get(part.attributeId);
+        return attribute ? displayUnitSymbol(attribute, part.displayUnitCode, PLATFORM_MEASUREMENT_REGISTRY) : null;
+      },
+    };
+    expect(compositeTemplate(SUPPLY, names)).toBe('[Φάσεις]~ [Τάση] V [Συχνότητα]');
+    const kv: CompositeDisplay = { ...SUPPLY, separator: ' / ', parts: [{ ...SUPPLY.parts[1], displayUnitCode: 'kV' }] };
+    expect(compositeTemplate(kv, names)).toBe('[Τάση] kV');
   });
 });

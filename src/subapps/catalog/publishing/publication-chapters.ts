@@ -24,7 +24,8 @@ import type { CatalogProductDerived } from '../types/product-derived';
 import type { PublicationFilter, PublicationScope } from '../types/publication';
 import type { InheritanceLink } from '../values/resolve-inherited';
 import { readSlot } from '../values/value-shape';
-import { formatAttributeValue, type ValueTextContext } from '../values/value-text-codec';
+import type { ValueTextContext } from '../values/value-text-codec';
+import { cardLines } from './card-lines';
 import type { DataVersionRef } from './publication-input-hash';
 import {
   variantModelEntry,
@@ -151,12 +152,11 @@ function modelEntry(data: PublicationDataSet, group: ModelGroup, family: StoredF
 }
 
 function simpleCard(data: PublicationDataSet, product: StoredProduct, family: StoredFamily): SimpleProductCard {
-  const lines = family.attributes.flatMap((binding) => {
-    const attribute = data.attributes.get(binding.attributeId);
-    if (!attribute || attribute.type === 'richText' || attribute.type === 'asset' || attribute.id === family.labelAttributeId) return [];
-    const text = formatAttributeValue(attribute, readSlot(product.values[attribute.id], attribute, 'print', data.language), data.codec);
-    return text === '' ? [] : [`${data.words.text(attribute.labels, attribute.code)}: ${text}`];
-  });
+  const valueOf = (attributeId: string) => {
+    const attribute = data.attributes.get(attributeId);
+    return attribute ? readSlot(product.values[attribute.id], attribute, 'print', data.language) : undefined;
+  };
+  const lines = cardLines({ family, attributeById: data.attributes, valueOf, codec: data.codec, text: data.words.text });
   const image = family.imageAttributeId ? data.attributes.get(family.imageAttributeId) : undefined;
   const asset = image ? readSlot(product.values[image.id], image, 'print', data.language) : undefined;
   return {

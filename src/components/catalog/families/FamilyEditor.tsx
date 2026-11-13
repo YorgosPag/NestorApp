@@ -32,6 +32,7 @@ import { SearchIndexRecompute } from '../shared/RecomputePanel';
 import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import type { FamilyTabProps } from './AttributePicker';
 import { FamilyAttributesTab } from './FamilyAttributesTab';
+import { FamilyCompositesTab } from './FamilyCompositesTab';
 import { FamilyDuplicateDialog } from './FamilyDuplicateDialog';
 import { emptyFamilyDraft, FAMILY_TABS, familyAttributes, familyDraftOf, issueCountByTab, shownFamilyIssues, storedFamilyOf, validateFamilyDraft, type FamilyTab } from './family-draft';
 import { FamilyGeneralTab } from './FamilyGeneralTab';
@@ -43,6 +44,7 @@ const TAB_KEYS: Readonly<Record<FamilyTab, string>> = {
   general: 'families.tabs.general',
   attributes: 'families.tabs.attributes',
   variants: 'families.tabs.variants',
+  composites: 'families.tabs.composites',
   table: 'families.tabs.table',
   rules: 'families.tabs.rules',
 };
@@ -122,6 +124,7 @@ export function FamilyEditor(props: FamilyEditorProps) {
         <TabsContent value="general"><FamilyGeneralTab {...tabProps} codeLocked={record !== null} /></TabsContent>
         <TabsContent value="attributes"><FamilyAttributesTab {...tabProps} families={families} canManage={canManage} /></TabsContent>
         <TabsContent value="variants"><FamilyVariantsTab {...tabProps} /></TabsContent>
+        <TabsContent value="composites"><FamilyCompositesTab {...tabProps} /></TabsContent>
         <TabsContent value="table"><FamilyTableTab {...tabProps} /></TabsContent>
         <TabsContent value="rules"><FamilyRulesTab {...tabProps} /></TabsContent>
         <IssueSummary issues={editor.dirty ? visibleIssues : []} title={t('editor.issuesTitle')} />

@@ -33,7 +33,8 @@ import {
 import { DEFAULT_LISTING_KIND, type CatalogListingKind } from '@/subapps/catalog/vocabulary/listing-kinds';
 import type { AttributeRecord, FamilyRecord } from '@/services/catalog/catalog-api.client';
 
-export const FAMILY_TABS = ['general', 'attributes', 'variants', 'table', 'rules'] as const;
+/** Οι σύνθετες ενδείξεις **πριν** από τον πίνακα: εκεί δηλώνονται, ο πίνακας τις χρησιμοποιεί (§21.6). */
+export const FAMILY_TABS = ['general', 'attributes', 'variants', 'composites', 'table', 'rules'] as const;
 export type FamilyTab = (typeof FAMILY_TABS)[number];
 
 export function emptyFamilyDraft(): CatalogFamilyDefinition {
@@ -83,6 +84,7 @@ export function tabOfIssue(issue: CatalogIssue): FamilyTab {
   if (issue.path.startsWith('variantSchemes')) return 'variants';
   if (issue.path.startsWith('tableSpec')) return 'table';
   if (issue.path.startsWith('consistencyRules')) return 'rules';
+  if (issue.path.startsWith('compositeDisplays')) return 'composites';
   return 'general';
 }
 
@@ -112,7 +114,7 @@ export function shownFamilyIssues(draft: CatalogFamilyDefinition, issues: readon
 }
 
 export function issueCountByTab(issues: readonly CatalogIssue[]): Readonly<Record<FamilyTab, number>> {
-  const counts: Record<FamilyTab, number> = { general: 0, attributes: 0, variants: 0, table: 0, rules: 0 };
+  const counts: Record<FamilyTab, number> = { general: 0, attributes: 0, variants: 0, composites: 0, table: 0, rules: 0 };
   for (const issue of issues) counts[tabOfIssue(issue)] += 1;
   return counts;
 }
@@ -163,13 +165,39 @@ function ruleMentions(rule: ConsistencyRule, id: string): boolean {
 }
 
 function rowMentions(row: FamilyTableRow, id: string): boolean {
-  if (row.kind === 'axis') return row.axisAttributeId === id;
-  if (row.kind === 'attribute') return row.attributeId === id || row.axisFilter?.axisAttributeId === id;
-  return false;
+  switch (row.kind) {
+    case 'axis': return row.axisAttributeId === id;
+    case 'attribute': return row.attributeId === id || row.axisFilter?.axisAttributeId === id;
+    case 'groupHeader':
+    case 'composite': return false;
+  }
 }
 
-/** Βγάζει την ιδιότητα **και** κάθε αναφορά της. */
+/** Οι γραμμές πίνακα που μένουν όταν φύγουν οι ενδείξεις `gone` — γραμμή προς ένδειξη που δεν υπάρχει είναι ορφανή. */
+function withoutCompositeRows(draft: CatalogFamilyDefinition, gone: ReadonlySet<string>): CatalogFamilyDefinition {
+  if (!draft.tableSpec || gone.size === 0) return draft;
+  const rows = draft.tableSpec.rows.filter((row) => row.kind !== 'composite' || !gone.has(row.compositeId));
+  return { ...draft, tableSpec: { ...draft.tableSpec, rows } };
+}
+
+/** Βγάζει τη σύνθετη ένδειξη **και** τις γραμμές πίνακα που τη δείχνουν (§21.6). */
+export function withoutComposite(draft: CatalogFamilyDefinition, compositeId: string): CatalogFamilyDefinition {
+  const compositeDisplays = compositeDisplaysOf(draft).filter((composite) => composite.id !== compositeId);
+  return withoutCompositeRows({ ...draft, compositeDisplays }, new Set([compositeId]));
+}
+
+/**
+ * Βγάζει την ιδιότητα **και** κάθε αναφορά της. Ένδειξη που έμεινε χωρίς μέρη φεύγει — και μαζί οι γραμμές πίνακα που
+ * τη δείχνουν, αλλιώς ο άνθρωπος θα έβλεπε σφάλμα για κάτι που δεν έκανε.
+ */
 export function withoutFamilyAttribute(draft: CatalogFamilyDefinition, id: string): CatalogFamilyDefinition {
+  const compositeDisplays = withoutCompositePart(compositeDisplaysOf(draft), id);
+  const kept = new Set(compositeDisplays.map((composite) => composite.id));
+  const gone = new Set(compositeDisplaysOf(draft).map((composite) => composite.id).filter((compositeId) => !kept.has(compositeId)));
+  return withoutCompositeRows(withoutAttributeReferences(draft, id, compositeDisplays), gone);
+}
+
+function withoutAttributeReferences(draft: CatalogFamilyDefinition, id: string, compositeDisplays: CompositeDisplay[]): CatalogFamilyDefinition {
   return {
     ...draft,
     attributes: draft.attributes.filter((binding) => binding.attributeId !== id),
@@ -185,7 +213,7 @@ export function withoutFamilyAttribute(draft: CatalogFamilyDefinition, id: strin
     })),
     tableSpec: draft.tableSpec ? { ...draft.tableSpec, rows: draft.tableSpec.rows.filter((row) => !rowMentions(row, id)) } : null,
     consistencyRules: draft.consistencyRules.filter((rule) => !ruleMentions(rule, id)),
-    compositeDisplays: withoutCompositePart(compositeDisplaysOf(draft), id),
+    compositeDisplays,
   };
 }
 

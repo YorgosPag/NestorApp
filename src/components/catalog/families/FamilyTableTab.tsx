@@ -11,13 +11,13 @@
  */
 
 import React from 'react';
-import { Heading, Plus, Rows3, Trash2, Wand2 } from 'lucide-react';
+import { Combine, Heading, Plus, Rows3, Trash2, Wand2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SortableList } from '@/components/ui/sortable/SortableList';
 import { reorderByMove } from '@/components/ui/sortable/sortable-model';
-import { tableOverflowOf, type CatalogFamilyDefinition, type FamilyTableRow, type FamilyTableSpec, type TableOverflowMode } from '@/subapps/catalog/types/family';
+import { compositeDisplaysOf, tableOverflowOf, type CatalogFamilyDefinition, type FamilyTableRow, type FamilyTableSpec, type TableOverflowMode } from '@/subapps/catalog/types/family';
 import { CATALOG_LIMITS } from '@/subapps/catalog/vocabulary/catalog-limits';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogField } from '../shared/CatalogFormFields';
@@ -32,11 +32,21 @@ function withSpec(draft: CatalogFamilyDefinition, spec: FamilyTableSpec | null):
   return { ...draft, tableSpec: spec };
 }
 
-function newRow(kind: FamilyTableRow['kind'], spec: FamilyTableSpec, axisId: string, attributeId: string): FamilyTableRow {
+/** Οι πρώτοι υποψήφιοι στόχοι κάθε είδους γραμμής — η νέα γραμμή ξεκινά δείχνοντας κάπου, όχι στο κενό. */
+interface RowTargets {
+  readonly axisId: string;
+  readonly attributeId: string;
+  readonly compositeId: string;
+}
+
+function newRow(kind: FamilyTableRow['kind'], spec: FamilyTableSpec, targets: RowTargets): FamilyTableRow {
   const id = nextLocalId('row', spec.rows.map((row) => row.id));
-  if (kind === 'groupHeader') return { kind, id, labels: {} };
-  if (kind === 'axis') return { kind, id, axisAttributeId: axisId };
-  return { kind, id, attributeId, labelOverride: null, displayUnitCode: null, axisFilter: null, merge: 'none' };
+  switch (kind) {
+    case 'groupHeader': return { kind, id, labels: {} };
+    case 'axis': return { kind, id, axisAttributeId: targets.axisId };
+    case 'composite': return { kind, id, compositeId: targets.compositeId, labelOverride: null, merge: 'none' };
+    case 'attribute': return { kind, id, attributeId: targets.attributeId, labelOverride: null, displayUnitCode: null, axisFilter: null, merge: 'none' };
+  }
 }
 
 function TableRows({ spec, props }: { readonly spec: FamilyTableSpec; readonly props: FamilyTabProps }) {
@@ -46,9 +56,11 @@ function TableRows({ spec, props }: { readonly spec: FamilyTableSpec; readonly p
   const axisIds = new Set(scheme?.levels.flatMap((level) => level.axisAttributeIds) ?? []);
   const axes = inFamily.filter((attribute) => axisIds.has(attribute.id));
   const rowAttributes = inFamily.filter((attribute) => !axisIds.has(attribute.id));
+  const composites = compositeDisplaysOf(draft);
   const rows = spec.rows.map((row, index) => ({ id: row.id, row, index }));
   const setRows = (next: readonly FamilyTableRow[]) => update(withSpec(draft, { ...spec, rows: next }));
-  const add = (kind: FamilyTableRow['kind']) => setRows([...spec.rows, newRow(kind, spec, axes[0]?.id ?? '', rowAttributes[0]?.id ?? '')]);
+  const targets: RowTargets = { axisId: axes[0]?.id ?? '', attributeId: rowAttributes[0]?.id ?? '', compositeId: composites[0]?.id ?? '' };
+  const add = (kind: FamilyTableRow['kind']) => setRows([...spec.rows, newRow(kind, spec, targets)]);
   const full = spec.rows.length >= CATALOG_LIMITS.maxTableSpecRows;
   return (
     <>
@@ -63,7 +75,7 @@ function TableRows({ spec, props }: { readonly spec: FamilyTableSpec; readonly p
           <div className="flex flex-col gap-1 border-b py-1">
             <span className="flex items-center gap-2">
               {handle}
-              <TableRowEditor row={item.row} disabled={disabled} library={library} axes={axes} rowAttributes={rowAttributes}
+              <TableRowEditor row={item.row} disabled={disabled} library={library} axes={axes} rowAttributes={rowAttributes} composites={composites}
                 onChange={(row) => setRows(spec.rows.map((current, at) => (at === item.index ? row : current)))} />
               <Button type="button" variant="ghost" size="icon" disabled={disabled} aria-label={t('families.table.removeRow', { index: item.index + 1 })}
                 onClick={() => setRows(spec.rows.filter((_, at) => at !== item.index))}>
@@ -78,6 +90,7 @@ function TableRows({ spec, props }: { readonly spec: FamilyTableSpec; readonly p
         <Button type="button" variant="outline" size="sm" disabled={disabled || full} onClick={() => add('groupHeader')}><Heading className="mr-1 h-4 w-4" aria-hidden />{t('families.table.addHeader')}</Button>
         <Button type="button" variant="outline" size="sm" disabled={disabled || full || axes.length === 0} onClick={() => add('axis')}><Rows3 className="mr-1 h-4 w-4" aria-hidden />{t('families.table.addAxis')}</Button>
         <Button type="button" variant="outline" size="sm" disabled={disabled || full || rowAttributes.length === 0} onClick={() => add('attribute')}><Plus className="mr-1 h-4 w-4" aria-hidden />{t('families.table.addAttribute')}</Button>
+        <Button type="button" variant="outline" size="sm" disabled={disabled || full || composites.length === 0} onClick={() => add('composite')}><Combine className="mr-1 h-4 w-4" aria-hidden />{t('families.table.addComposite')}</Button>
         {scheme ? (
           <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => setRows(suggestTableRows(scheme, library.attributeById, library.groups))}>
             <Wand2 className="mr-1 h-4 w-4" aria-hidden />{t('families.table.suggest')}

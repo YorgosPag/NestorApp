@@ -16,6 +16,7 @@ import { resolveInheritedValues } from '@/subapps/catalog/values/resolve-inherit
 
 import type { ValueEditorEnv } from '../../../values/value-editor-types';
 import { AttributeValueField } from '../AttributeValueField';
+import { CompositeDisplayField } from '../CompositeDisplayField';
 import { computeCompleteness } from '@/subapps/catalog/completeness/compute-completeness';
 import { MFP_SETTINGS } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil-products.fixture';
 import { editorGroups, groupOfAttribute, levelSchema } from '../editor-layout';
@@ -58,6 +59,23 @@ describe('editorGroups — ό,τι φαίνεται σε κάθε επίπεδο
     const plan = editorGroups(MFP_FAMILY, library, groups, scheme, 1);
     expect(plan.map((group) => group.groupId).slice(0, 2)).toEqual(['general', 'performance']);
     expect(groupOfAttribute(plan, 'cooling_h')).toBe('performance');
+  });
+
+  it('§21.6: σύνθετη ένδειξη στην ομάδα του ΠΡΩΤΟΥ μέρους, και μόνο όπου φαίνονται ΟΛΑ τα μέρη', () => {
+    const part = (attributeId: string) => ({ attributeId, displayUnitCode: null, affix: { before: '', after: '' } });
+    const family = {
+      ...MFP_FAMILY,
+      compositeDisplays: [
+        // μέρη της ρίζας (power_supply · water_connections): φαίνεται και στη ρίζα και στην παραλλαγή
+        { id: 'cd_root', labels: { el: 'Ρίζα' }, separator: ' ', parts: [part('water_connections'), part('power_supply')] },
+        // ένα μέρος της παραλλαγής (cooling_h): στη ρίζα θα έδειχνε πάντα «κενό» ⇒ μόνο στην παραλλαγή
+        { id: 'cd_mixed', labels: { el: 'Μικτή' }, separator: ' ', parts: [part('cooling_h'), part('power_supply')] },
+      ],
+    };
+    const where = (depth: number) => Object.fromEntries(editorGroups(family, library, groups, scheme, depth).map((group) => [group.groupId, group.composites.map((composite) => composite.id)]));
+    expect(where(0)).toMatchObject({ dimensions: ['cd_root'], general: [] });
+    expect(Object.values(where(0)).flat()).not.toContain('cd_mixed');
+    expect(where(1)).toMatchObject({ dimensions: ['cd_root'], performance: ['cd_mixed'] });
   });
 });
 
@@ -147,5 +165,31 @@ describe('AttributeValueField', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: new RegExp(`values.definedIn.*${MFP_MODEL.code}`) }));
     expect(onOpen).toHaveBeenCalledWith(MFP_MODEL_ID);
+  });
+});
+
+describe('CompositeDisplayField — §21.6, πέρα από το Revit', () => {
+  const part = (attributeId: string) => ({ attributeId, displayUnitCode: null, affix: { before: '', after: '' } });
+  const composite = { id: 'cd_root', labels: { el: 'Συνδέσεις και παροχή' }, separator: ' · ', parts: [part('power_supply'), part('water_connections')] };
+  const renderComposite = (holder: CatalogValueHolder) => {
+    const onJump = jest.fn();
+    const resolved = resolveInheritedValues([{ id: MFP_MODEL_ID, kind: 'productModel', revision: 1, holder }], scheme);
+    render(<CompositeDisplayField composite={composite} attributeById={library} resolved={resolved} scope={{ channel: 'print', locale: 'el' }} env={env} onJump={onJump} />);
+    return { onJump };
+  };
+
+  it('το μέρος που λείπει ονομάζει την ιδιότητα ΚΑΙ τον λόγο, και πηγαίνει στο πεδίο της', async () => {
+    const { onJump } = renderComposite({ values: { power_supply: { '*': { '*': { type: 'text', text: '230V' } } } }, noValueReasons: { water_connections: 'notApplicable' }, categoryIds: [], brand: null });
+    expect(screen.getByText('230V')).toBeTruthy();
+    const missing = screen.getByRole('button', { name: /values\.composite\.goToField/ });
+    expect(missing.textContent).toContain('values.noValue.notApplicable');
+    await userEvent.click(missing);
+    expect(onJump).toHaveBeenCalledWith('water_connections');
+  });
+
+  it('λείπουν όλα ⇒ «κενό», χωρίς κουμπιά', () => {
+    renderComposite({ values: {}, noValueReasons: {}, categoryIds: [], brand: null });
+    expect(screen.getByText('values.empty')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

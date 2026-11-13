@@ -150,6 +150,24 @@ describe('validateFamily — σύνθετες ενδείξεις (§21.6)', () =
     expect(familyDefinitionSchema.safeParse(long).success).toBe(false);
     expect(familyDefinitionSchema.safeParse(MFP_FAMILY).success).toBe(true);
   });
+
+  describe('γραμμή πίνακα σύνθετης ένδειξης', () => {
+    const withRow = (compositeId: string): CatalogFamilyDefinition => {
+      const base = withComposite(part('weight'));
+      const row: FamilyTableRow = { kind: 'composite', id: 'r_cd', compositeId, labelOverride: null, merge: 'none' };
+      return { ...base, tableSpec: { ...base.tableSpec!, rows: [...base.tableSpec!.rows, row] } };
+    };
+
+    it('δείχνει σε ένδειξη που υπάρχει ⇒ έγκυρη (και στο zod)', () => {
+      expect(issueCodes(withRow('cd_1'))).toEqual([]);
+      expect(familyDefinitionSchema.safeParse(withRow('cd_1')).success).toBe(true);
+    });
+
+    it('δείχνει σε ένδειξη που δεν υπάρχει ⇒ tableRowCompositeUnknown στη διαδρομή του compositeId', () => {
+      const issues = validateFamily(withRow('cd_gone'), MFP_ATTRIBUTE_MAP, PLATFORM_MEASUREMENT_REGISTRY);
+      expect(issues).toContainEqual(expect.objectContaining({ code: 'tableRowCompositeUnknown', path: expect.stringMatching(/^tableSpec\.rows\[\d+\]\.compositeId$/) }));
+    });
+  });
 });
 
 describe('validateFamily — consistency rules', () => {

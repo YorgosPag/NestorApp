@@ -4,13 +4,16 @@
  * Ιδιότητες του **επιπέδου** και των **προγόνων** (οι δεύτερες γκρι, «ορίζεται στο …»)· οι ιδιότητες των
  * **απογόνων** ζουν στο πλέγμα παραλλαγών, όχι εδώ (Akeneo: τα πεδία παραλλαγής δεν φαίνονται στο μοντέλο).
  * Καρτέλες ανά ομάδα ιδιοτήτων, με τη σειρά της βιβλιοθήκης (`orderKey`)· ιδιότητες με τη σειρά της οικογένειας.
+ * **Σύνθετες ενδείξεις** (§21.6) μόνο-ανάγνωσης στην ομάδα του **πρώτου μέρους** τους (Revit: το «Electrical Data» στην
+ * ομάδα του), και **μόνο** στο επίπεδο όπου φαίνονται **όλα** τα μέρη — αλλιώς θα έδειχνε πάντα «κενό» για τιμή που
+ * ορίζεται σε παραλλαγή.
  *
  * @module components/catalog/products/editor/editor-layout
  */
 
 import type { AttributeGroupRecord, AttributeRecord } from '@/services/catalog/catalog-api.client';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
-import type { CatalogFamilyDefinition, VariantScheme } from '@/subapps/catalog/types/family';
+import { compositeDisplaysOf, type CatalogFamilyDefinition, type CompositeDisplay, type VariantScheme } from '@/subapps/catalog/types/family';
 import { attributeOwnerDepth, isAxisOf } from '@/subapps/catalog/values/attribute-levels';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 
@@ -32,6 +35,23 @@ export interface EditorGroupPlan {
   readonly groupId: string;
   readonly group: AttributeGroupRecord | null;
   readonly fields: readonly EditorFieldPlan[];
+  /** Οι σύνθετες ενδείξεις που ζουν σε αυτή την καρτέλα, μετά τα πεδία της. */
+  readonly composites: readonly CompositeDisplay[];
+}
+
+/** Ομάδα → οι ενδείξεις της: εκείνες με **όλα** τα μέρη ορατά, στην ομάδα του πρώτου μέρους. */
+function compositesByGroup(
+  family: CatalogFamilyDefinition,
+  attributeById: ReadonlyMap<string, AttributeRecord>,
+  visible: ReadonlySet<string>,
+): ReadonlyMap<string, CompositeDisplay[]> {
+  const byGroup = new Map<string, CompositeDisplay[]>();
+  for (const composite of compositeDisplaysOf(family)) {
+    if (!composite.parts.every((part) => visible.has(part.attributeId))) continue;
+    const groupId = attributeById.get(composite.parts[0]?.attributeId ?? '')?.groupId;
+    if (groupId !== undefined) byGroup.set(groupId, [...(byGroup.get(groupId) ?? []), composite]);
+  }
+  return byGroup;
 }
 
 export function editorGroups(
@@ -49,9 +69,13 @@ export function editorGroups(
     const field = { attributeId: binding.attributeId, attribute, requiredChannels: binding.requiredChannels, isAxis: isAxisOf(scheme, binding.attributeId), ownerDepth };
     byGroup.set(attribute.groupId, [...(byGroup.get(attribute.groupId) ?? []), field]);
   }
+  const visible = new Set([...byGroup.values()].flat().map((field) => field.attributeId));
+  const composites = compositesByGroup(family, attributeById, visible);
+  const plan = (groupId: string, group: AttributeGroupRecord | null): EditorGroupPlan =>
+    ({ groupId, group, fields: byGroup.get(groupId) ?? [], composites: composites.get(groupId) ?? [] });
   const ordered = [...groups].sort((a, b) => (a.orderKey < b.orderKey ? -1 : a.orderKey > b.orderKey ? 1 : 0));
-  const known = ordered.filter((group) => byGroup.has(group.id)).map((group) => ({ groupId: group.id, group, fields: byGroup.get(group.id) ?? [] }));
-  const orphans = [...byGroup.keys()].filter((id) => !ordered.some((group) => group.id === id)).map((id) => ({ groupId: id, group: null, fields: byGroup.get(id) ?? [] }));
+  const known = ordered.filter((group) => byGroup.has(group.id)).map((group) => plan(group.id, group));
+  const orphans = [...byGroup.keys()].filter((id) => !ordered.some((group) => group.id === id)).map((id) => plan(id, null));
   return [...known, ...orphans];
 }
 
