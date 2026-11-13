@@ -149,7 +149,7 @@ export function structuralFootprintOf(entity: Entity): Point2D[] | null {
  */
 export function findStructuralOverlap(
   candidateFootprint: readonly Point2D[],
-  existing: readonly Entity[],
+  existing: readonly Entity[] | StructuralFootprintSet,
   opts?: StructuralOverlapOptions,
 ): StructuralOverlapHit | null {
   if (candidateFootprint.length < 3) return null;
@@ -159,19 +159,21 @@ export function findStructuralOverlap(
   if (cand.area <= 0) return null;
   const candBbox = bboxOf(candidateFootprint);
   const candWall = opts?.candidate && isWallEntity(opts.candidate) ? opts.candidate : null;
+  const entries = existing instanceof StructuralFootprintSet ? existing.entries() : existing.map(footprintEntryOf);
 
-  for (const e of existing) {
+  for (const entry of entries) {
+    const e = entry.entity;
     if (opts?.excludeIds?.has(e.id)) continue;
     if (!STRUCTURAL_OVERLAP_TYPES.has(e.type)) continue;
     // ADR-567 Φ1b — μόνο ίδια collision group συγκρούεται (οριζόντιο δοκάρι/πλάκα κάθεται πάνω
     // σε κατακόρυφο τοίχο/κολόνα σε διαφορετικό Z → δεν είναι επικάλυψη όγκου).
     if (candGroup && structuralCollisionGroupOf(e.type) !== candGroup) continue;
-    const ef = structuralFootprintOf(e);
-    if (!ef) continue;
-    // Φτηνό AABB fast-reject ΠΡΙΝ το βαρύ polygon-clipping (per-frame hover, N.17 perf).
+    const box = entry.bbox();
+    if (box === null) continue;
+    // Broad phase: φτηνό AABB fast-reject ΠΡΙΝ το βαρύ polygon-clipping (per-frame hover, N.17 perf).
     // Τα αποτυπώματα μετά την ένωση είναι υποσύνολα των πλήρων ⇒ ο φρουρός ισχύει και γι' αυτά.
-    if (bboxDisjoint(candBbox, bboxOf(ef))) continue;
-    const ratio = occupationRatio(cand, candWall, e, ef);
+    if (bboxDisjoint(candBbox, box)) continue;
+    const ratio = occupationRatio(cand, candWall, entry);
     // ratio 0 = touch-only (κοινή παρειά/σημείο) ή καθαρή ένωση → allow
     if (ratio > 0 && ratio >= threshold) return { blockedById: e.id, ratio };
   }
@@ -186,7 +188,7 @@ export function findStructuralOverlap(
  */
 export function findStructuralOverlapForEntity(
   entity: Entity,
-  existing: readonly Entity[],
+  existing: readonly Entity[] | StructuralFootprintSet,
   opts?: Pick<StructuralOverlapOptions, 'ratioThreshold'>,
 ): StructuralOverlapHit | null {
   if (!STRUCTURAL_OVERLAP_TYPES.has(entity.type)) return null;
@@ -211,6 +213,69 @@ function clipFootprintOf(footprint: readonly Point2D[]): ClipFootprint {
   return { clip, area: multiPolygonArea([clip]) };
 }
 
+/**
+ * Μια υπάρχουσα οντότητα με το αποτύπωμα, το κουτί και το έτοιμο-για-boolean πολύγωνό της, υπολογισμένα **το πολύ μία
+ * φορά** (τεμπέλικα: μόνο όταν ο έλεγχος φτάσει ως εκεί, όπως πριν). Καθαρή συνάρτηση της οντότητας.
+ */
+export class StructuralFootprintEntry {
+  private footprintMemo: Point2D[] | null | undefined;
+  private bboxMemo: ReturnType<typeof bboxOf> | null | undefined;
+  private clipMemo: ClipFootprint | null | undefined;
+
+  constructor(readonly entity: Entity) {}
+
+  private footprint(): Point2D[] | null {
+    if (this.footprintMemo === undefined) this.footprintMemo = structuralFootprintOf(this.entity);
+    return this.footprintMemo;
+  }
+
+  /** Το AABB του αποτυπώματος· `null` = χωρίς έγκυρο αποτύπωμα (η οντότητα δεν συγκρούεται ποτέ). */
+  bbox(): ReturnType<typeof bboxOf> | null {
+    if (this.bboxMemo === undefined) {
+      const fp = this.footprint();
+      this.bboxMemo = fp === null ? null : bboxOf(fp);
+    }
+    return this.bboxMemo;
+  }
+
+  clip(): ClipFootprint | null {
+    if (this.clipMemo === undefined) {
+      const fp = this.footprint();
+      this.clipMemo = fp === null ? null : clipFootprintOf(fp);
+    }
+    return this.clipMemo;
+  }
+}
+
+const footprintEntryOf = (entity: Entity): StructuralFootprintEntry => new StructuralFootprintEntry(entity);
+
+/**
+ * ADR-567 · ADR-929 §6.16 #8 — **σύνολο ελέγχου επικάλυψης για ΠΟΛΛΟΥΣ υποψηφίους** (broad phase / narrow phase).
+ *
+ * 🔑 Ο φρουρός ξαναϋπολόγιζε το αποτύπωμα (με λοξοτομή) **κάθε** υπάρχουσας οντότητας για **κάθε** υποψήφιο, πριν από
+ *   τον φτηνό έλεγχο κουτιών: μετρημένο στην παραγωγή 116 από τα 191 ms του `computeFillingWalls`. Εδώ το αποτύπωμα, το
+ *   κουτί και το πολύγωνο της τομής υπολογίζονται **μία** φορά ανά οντότητα· ο έλεγχος κουτιών μένει η broad phase και το
+ *   polygon-clipping η narrow phase, μόνο για ό,τι επιζεί.
+ * 🔑 **Ίδια σημασιολογία**: ίδια σειρά ελέγχου (σειρά εισαγωγής) ⇒ ίδια «πρώτη» σύγκρουση, ίδιος λόγος.
+ * 🔑 Ζει **όσο μία παρτίδα** (ο καλών το φτιάχνει και το πετά)· ποτέ καθολική cache — οι οντότητες της σκηνής αλλάζουν.
+ */
+export class StructuralFootprintSet {
+  private readonly items: StructuralFootprintEntry[];
+
+  constructor(entities: readonly Entity[] = []) {
+    this.items = entities.map(footprintEntryOf);
+  }
+
+  /** Προσθέτει οντότητα στο τέλος (μια αποδεκτή της παρτίδας γίνεται εμπόδιο για τις επόμενες). */
+  add(entity: Entity): void {
+    this.items.push(footprintEntryOf(entity));
+  }
+
+  entries(): readonly StructuralFootprintEntry[] {
+    return this.items;
+  }
+}
+
 /** Εμβαδό τομής / μικρότερο εμβαδό. `0` όταν δεν μοιράζονται εμβαδό ή κάποιο είναι εκφυλισμένο. */
 function areaOverlapRatio(a: ClipFootprint, b: ClipFootprint): number {
   if (a.area <= 0 || b.area <= 0) return 0;
@@ -227,18 +292,15 @@ function areaOverlapRatio(a: ClipFootprint, b: ClipFootprint): number {
  * στα αποτυπώματα ΜΕΤΑ την ένωση (`wall-join-overlap`)· κάθε άλλο ζεύγος, και οι παράλληλοι
  * τοίχοι, στα πλήρη αποτυπώματα όπως πάντα.
  */
-function occupationRatio(
-  cand: ClipFootprint,
-  candWall: WallEntity | null,
-  existing: Entity,
-  existingFootprint: readonly Point2D[],
-): number {
-  if (candWall && isWallEntity(existing)) {
-    const pair = joinedWallPairFootprints(candWall, existing);
+function occupationRatio(cand: ClipFootprint, candWall: WallEntity | null, existing: StructuralFootprintEntry): number {
+  const entity = existing.entity;
+  if (candWall && isWallEntity(entity)) {
+    const pair = joinedWallPairFootprints(candWall, entity);
     if (pair?.kind === 'swallowed') return 1;
     if (pair) return areaOverlapRatio(clipFootprintOf(pair.a), clipFootprintOf(pair.b));
   }
-  return areaOverlapRatio(cand, clipFootprintOf(existingFootprint));
+  const clip = existing.clip();
+  return clip === null ? 0 : areaOverlapRatio(cand, clip);
 }
 
 /** Διαμέριση μιας παρτίδας: όσες χωρούν, και πόσες (και από ποια) κόπηκαν. */
@@ -264,7 +326,7 @@ export function partitionByStructuralOverlap<E extends { readonly id: string }>(
   entities: readonly E[],
   sceneEntities: readonly Entity[],
 ): StructuralOverlapPartition<E> {
-  const existing: Entity[] = [...sceneEntities];
+  const existing = new StructuralFootprintSet(sceneEntities);
   const accepted: E[] = [];
   let blocked = 0;
   let firstBlockedById: string | null = null;
@@ -279,7 +341,7 @@ export function partitionByStructuralOverlap<E extends { readonly id: string }>(
       continue; // δεν μπαίνει ΚΑΙ δεν γίνεται baseline για τις επόμενες
     }
     accepted.push(e);
-    existing.push(ent);
+    existing.add(ent);
   }
   return { accepted, blocked, firstBlockedById, firstBlockedType };
 }

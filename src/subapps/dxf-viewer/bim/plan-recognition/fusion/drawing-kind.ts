@@ -27,7 +27,7 @@ import type {
   PlanFusionOptions,
   PlanProportionsVerdict,
 } from './plan-fusion-types';
-import { agreeingTargets, dimensionScaleConsensus } from './scale-consensus';
+import { agreeingTargets, dimensionScaleConsensus, type ScaleConsensus } from './scale-consensus';
 
 /** Το λιγότερο που αποδεικνύει αναλογίες: δύο **διαφορετικές** γραμμένες τιμές στην ίδια κλίμακα. */
 const MIN_DISTINCT_VALUES = 2;
@@ -47,24 +47,59 @@ export function distinctWrittenValues(targets: readonly DimensionTarget[]): numb
   return count;
 }
 
+/**
+ * Η συναίνεση κλίμακας **των στόχων που επέστρεψε η απόφαση**, αν υπολογίστηκε ήδη για να κριθούν οι αναλογίες.
+ * 🔑 ADR-929 §6.16 #8 — η συναίνεση είναι το βαρύτερο βήμα της σύντηξης (~300 ms μετρημένα στην παραγωγή) και η κρίση του
+ *   είδους την υπολογίζει **πάνω στους ίδιους στόχους** που μετά ψηφίζουν την κλίμακα. Ένας κάτοχος (αυτή η απόφαση) την
+ *   υπολογίζει, ο επόμενος (`resolveScale`) τη διαβάζει· `computed: false` = δεν ρωτήθηκε (άνθρωπος, διανυσματική πηγή).
+ */
+export type KnownScaleConsensus =
+  | { readonly computed: false }
+  | { readonly computed: true; readonly value: ScaleConsensus | null };
+
+const NOT_COMPUTED: KnownScaleConsensus = { computed: false };
+
+interface ProportionsJudgement {
+  readonly proven: boolean;
+  readonly consensus: KnownScaleConsensus;
+}
+
 /** Συμφωνούν ≥ 2 διαφορετικές τιμές σε μία κλίμακα, μέσα στις ανοχές αυτών των στόχων; */
-function proportionsProven(targets: readonly DimensionTarget[], o: PlanFusionOptions): boolean {
-  const consensus = dimensionScaleConsensus(targets, o);
-  return consensus !== null && distinctWrittenValues(agreeingTargets(targets, consensus.pxPerMm)) >= MIN_DISTINCT_VALUES;
+function judgeProportions(targets: readonly DimensionTarget[], o: PlanFusionOptions): ProportionsJudgement {
+  const value = dimensionScaleConsensus(targets, o);
+  const proven = value !== null && distinctWrittenValues(agreeingTargets(targets, value.pxPerMm)) >= MIN_DISTINCT_VALUES;
+  return { proven, consensus: { computed: true, value } };
+}
+
+interface ProportionsOutcome {
+  readonly verdict: PlanProportionsVerdict;
+  readonly printed: KnownScaleConsensus;
+  readonly sketch: KnownScaleConsensus;
+}
+
+/** Η κρίση των αναλογιών μαζί με τις συναινέσεις που χρειάστηκαν (η σκίτσου μόνο αν ρωτήθηκε). */
+function judgeProportionsOf(
+  printed: readonly DimensionTarget[], sketch: readonly DimensionTarget[], o: PlanFusionOptions,
+): ProportionsOutcome {
+  const asPrinted = judgeProportions(printed, o);
+  if (asPrinted.proven) return { verdict: 'to-scale', printed: asPrinted.consensus, sketch: NOT_COMPUTED };
+  const asSketch = judgeProportions(sketch, o);
+  return { verdict: asSketch.proven ? 'not-to-scale' : 'unproven', printed: asPrinted.consensus, sketch: asSketch.consensus };
 }
 
 /** Η κρίση των αναλογιών: ίδιες διαστάσεις, ανοχή τυπωμένου (`printed`) και ανοχή σκίτσου (`sketch`). */
 export function proportionsVerdict(
   printed: readonly DimensionTarget[], sketch: readonly DimensionTarget[], o: PlanFusionOptions,
 ): PlanProportionsVerdict {
-  if (proportionsProven(printed, o)) return 'to-scale';
-  return proportionsProven(sketch, o) ? 'not-to-scale' : 'unproven';
+  return judgeProportionsOf(printed, sketch, o).verdict;
 }
 
 export interface DrawingKindResolution {
   readonly decision: PlanDrawingKindDecision;
   /** Οι στόχοι διαστάσεων του είδους που κρίθηκε (ώστε η σύντηξη να μην τους ξαναχτίσει). */
   readonly targets: DimensionTarget[];
+  /** Η συναίνεση κλίμακας **αυτών** των `targets`, αν την υπολόγισε ήδη η κρίση (ώστε η σύντηξη να μην την ξαναψηφίσει). */
+  readonly consensus: KnownScaleConsensus;
 }
 
 const SKETCH: PlanInputKind = 'sketch';
@@ -81,12 +116,15 @@ export function resolveDrawingKind(
 ): DrawingKindResolution {
   const { choice, medium } = drawing ?? NO_DRAWING_INPUT;
   const decided = (kind: PlanInputKind, basis: PlanDrawingKindDecision['basis'], proportions: PlanProportionsVerdict | null) =>
-    ({ decision: { kind, basis, proportions }, targets: targetsFor(kind) });
+    ({ decision: { kind, basis, proportions }, targets: targetsFor(kind), consensus: NOT_COMPUTED });
   if (choice !== null) return decided(choice === 'sketch' ? SKETCH : base, 'human', null);
   if (medium === 'vector') return decided(base, 'vector-source', null);
   const printed = targetsFor(base);
   const sketch = targetsFor(SKETCH);
-  const proportions = proportionsVerdict(printed, sketch, o);
-  if (proportions === 'not-to-scale') return { decision: { kind: SKETCH, basis: 'dimensions', proportions }, targets: sketch };
-  return { decision: { kind: base, basis: proportions === 'to-scale' ? 'dimensions' : 'default', proportions }, targets: printed };
+  const { verdict: proportions, printed: printedConsensus, sketch: sketchConsensus } = judgeProportionsOf(printed, sketch, o);
+  if (proportions === 'not-to-scale') {
+    return { decision: { kind: SKETCH, basis: 'dimensions', proportions }, targets: sketch, consensus: sketchConsensus };
+  }
+  const basis = proportions === 'to-scale' ? 'dimensions' : 'default';
+  return { decision: { kind: base, basis, proportions }, targets: printed, consensus: printedConsensus };
 }

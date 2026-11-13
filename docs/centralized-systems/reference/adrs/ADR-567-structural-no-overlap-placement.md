@@ -155,6 +155,20 @@ square off) που καθαρίζει τη γεωμετρία. ArchiCAD: οι τ
   να κοπεί.
 - Διασταύρωση Χ κοντού τοίχου (κανένα άκρο μέσα στον άλλον) δεν παίρνει έκπτωση.
 
+### 1.3 Παρτίδες: broad phase / narrow phase — `StructuralFootprintSet` (ADR-929 §6.16 #8, 2026-11-13)
+
+Μετρημένο στην παραγωγή (trace της παραλαβής του βοηθού τοίχων): ο φρουρός ξαναϋπολόγιζε το αποτύπωμα (με λοξοτομή) **κάθε**
+υπάρχουσας οντότητας για **κάθε** υποψήφιο, **πριν** τον φτηνό έλεγχο κουτιών — 116 από τα 191 ms του `computeFillingWalls`.
+
+- `findStructuralOverlap` / `findStructuralOverlapForEntity` δέχονται `readonly Entity[] | StructuralFootprintSet`.
+- Το `StructuralFootprintSet` κρατά ανά οντότητα αποτύπωμα, AABB και πολύγωνο τομής, **τεμπέλικα** και **το πολύ μία φορά**.
+  Broad phase = έλεγχος κουτιών· narrow phase = polygon-clipping μόνο για ό,τι επιζεί.
+- **Ίδια σημασιολογία**: σειρά ελέγχου = σειρά εισαγωγής (και μετά από `add`) ⇒ ίδια «πρώτη» σύγκρουση, ίδιος λόγος.
+- Ζει **όσο μία παρτίδα** (`computeFillingWalls`: η σκηνή μία φορά για όλους τους γύρους, οι δεκτοί ανά γύρο ·
+  `partitionByStructuralOverlap`). Ποτέ καθολική cache: οι οντότητες της σκηνής αλλάζουν.
+- Πλέγμα (`GridSpatialIndex`) **δεν** μπήκε: το κόστος ήταν ο ξαναϋπολογισμός, όχι το πλήθος των συγκρίσεων κουτιών. Αν μια
+  σκηνή φτάσει χιλιάδες δομικές οντότητες, το πλέγμα μπαίνει **μέσα** στο σύνολο χωρίς αλλαγή στους καλούντες.
+
 ### 2. Enforcement — 2 chokepoints (καλύπτουν όλα τα interactive draws)
 
 - **`bim/scene/append-entity-to-scene.ts`** — `appendEntityToScene` (single) + `appendEntitiesToScene`
@@ -227,6 +241,9 @@ square off) που καθαρίζει τη γεωμετρία. ArchiCAD: οι τ
 ---
 
 ## Changelog
+- **2026-11-13 (ADR-929 §6.16 #8)** — §1.3: `StructuralFootprintSet` (broad phase / narrow phase για παρτίδες)· το
+  `computeFillingWalls` και το `partitionByStructuralOverlap` το χρησιμοποιούν. Καμία αλλαγή κρίσης. Άγκυρες στο
+  `structural-placement-overlap.test.ts` (+3). Tests: 12 σουίτες · 328 tests πράσινα (2026-11-13).
 - **2026-10-11 (ADR-911 Φ3α-3)** — Ο κριτής ένωσης μοιράζεται πλέον **και** το φράγμα των δύο κοψιμάτων
   (`geometry/wall-end-cuts.ts`) με τη γεωμετρία· έφυγε το `stemLen = Infinity`. Καμία αλλαγή κρίσης (οι 15
   άγκυρες του §1.2 αμετάβλητες). Στο `computeFillingWalls` η σειρά **κρίσης** μέσα σε μια παρτίδα είναι πλέον

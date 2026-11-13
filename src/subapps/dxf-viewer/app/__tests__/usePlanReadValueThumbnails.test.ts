@@ -61,6 +61,21 @@ describe('usePlanReadValueThumbnails', () => {
     expect(revoked).toEqual(['blob:1', 'blob:2']);
   });
 
+  it('ADR-929 §6.16 #8: ΚΑΜΙΑ μικρογραφία μέσα στο commit — η πρώτη ξεκινά μετά από ζωγραφική', async () => {
+    const { result } = renderHook(() => usePlanReadValueThumbnails('flr', reading([text('t1', 0), text('t2', 100)])));
+    expect(getRegionImage).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.size).toBe(2));
+    expect(getRegionImage).toHaveBeenCalledTimes(2);
+  });
+
+  it('αποσύνδεση ΠΡΙΝ ξεκινήσει ⇒ καμία δουλειά, κανένα URL', async () => {
+    const { unmount } = renderHook(() => usePlanReadValueThumbnails('flr', reading([text('t1', 0)])));
+    unmount();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 100)); });
+    expect(getRegionImage).not.toHaveBeenCalled();
+    expect(created).toEqual([]);
+  });
+
   it('μικρογραφία που αποτυγχάνει ή επιστρέφει null απλώς λείπει· χωρίς provider ή ανάγνωση ⇒ άδειο', async () => {
     getRegionImage.mockImplementationOnce(async () => { throw new Error('decode'); }).mockImplementationOnce(async () => null);
     const three = reading([text('t1', 0), text('t2', 50), text('t3', 100)]);

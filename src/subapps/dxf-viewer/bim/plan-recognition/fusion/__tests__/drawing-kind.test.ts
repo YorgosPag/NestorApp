@@ -8,7 +8,9 @@
 
 import { describe, expect, it } from '@jest/globals';
 import { fusePlan } from '../plan-fusion';
-import { distinctWrittenValues } from '../drawing-kind';
+import { distinctWrittenValues, resolveDrawingKind } from '../drawing-kind';
+import { dimensionScaleConsensus } from '../scale-consensus';
+import { DEFAULT_PLAN_FUSION } from '../plan-fusion-types';
 import type { DimensionTarget } from '../dimension-binding';
 import { dimensionOf, fusionInput, houseDimensions, houseSegments, reading, segment, textAt } from './fusion-fixture';
 
@@ -86,5 +88,41 @@ describe('Δ7 Γ — ΙΣΕΣ τιμές δεν αποδεικνύουν ανα�
     const r = fusePlan(fusionInput({ segments, reading: read(reading({ texts, dimensions: [dimensionOf('a', 4120), dimensionOf('b', 4120)] })) }));
     expect(r.drawingKind.proportions).toBe('unproven');
     expect(r.drawingKind.kind).toBe('scan');
+  });
+});
+
+describe('ADR-929 §6.16 #8 — η κρίση του είδους δίνει τη συναίνεση που ΗΔΗ ψήφισε (μία ψηφοφορία ανά σύντηξη)', () => {
+  /** Στόχος με ένα υποψήφιο κενό· η ανοχή εξαρτάται από το είδος (τυπωμένο στενή, σκίτσο φαρδιά). */
+  const voteTarget = (valueMm: number, gapPx: number, toleranceRel: number) => ({
+    dimension: { valueMm }, precisionMm: 10, toleranceRel,
+    candidates: [{ gapPx, score: 1, readingHits: 0, extensionHits: 0 }],
+  }) as unknown as DimensionTarget;
+  /** 4,12 × 2,05 γραμμένα· το ύψος στο χαρτί = `heightPx`. */
+  const targetsFor = (heightPx: number) => (kind: string) => {
+    const tol = kind === 'sketch' ? 0.3 : 0.01;
+    return [voteTarget(4120, 4120, tol), voteTarget(2050, heightPx, tol)];
+  };
+  const recomputed = (targets: readonly DimensionTarget[]) =>
+    ({ computed: true, value: dimensionScaleConsensus(targets, DEFAULT_PLAN_FUSION) });
+
+  it('υπό κλίμακα ⇒ η συναίνεση των τυπωμένων στόχων, ίδια με μια νέα ψηφοφορία', () => {
+    const r = resolveDrawingKind('scan', undefined, targetsFor(2050), DEFAULT_PLAN_FUSION);
+    expect(r.decision.proportions).toBe('to-scale');
+    expect(r.consensus).toEqual(recomputed(r.targets));
+    expect(r.consensus).toEqual({ computed: true, value: expect.objectContaining({ support: 2 }) });
+  });
+
+  it('σκίτσο ⇒ η συναίνεση των στόχων ΣΚΙΤΣΟΥ (όχι των τυπωμένων), ίδια με μια νέα ψηφοφορία', () => {
+    const r = resolveDrawingKind('scan', undefined, targetsFor(2500), DEFAULT_PLAN_FUSION);
+    expect(r.decision.kind).toBe('sketch');
+    expect(r.targets[0].toleranceRel).toBe(0.3);
+    expect(r.consensus).toEqual(recomputed(r.targets));
+  });
+
+  it('άνθρωπος / διανυσματική πηγή ⇒ «δεν υπολογίστηκε» (η σύντηξη ψηφίζει μόνη της)', () => {
+    const human = resolveDrawingKind('scan', { choice: 'sketch', medium: 'raster' }, targetsFor(2050), DEFAULT_PLAN_FUSION);
+    const vector = resolveDrawingKind('scan', { choice: null, medium: 'vector' }, targetsFor(2050), DEFAULT_PLAN_FUSION);
+    expect(human.consensus).toEqual({ computed: false });
+    expect(vector.consensus).toEqual({ computed: false });
   });
 });

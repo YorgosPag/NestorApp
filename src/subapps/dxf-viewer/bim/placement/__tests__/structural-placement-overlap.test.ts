@@ -13,6 +13,7 @@ import {
   structuralFootprintOf,
   findStructuralOverlap,
   structuralCollisionGroupOf,
+  StructuralFootprintSet,
 } from '../structural-placement-overlap';
 
 /** Άξονο-ευθυγραμμισμένο ορθογώνιο footprint (κέντρο cx,cy · πλάτος w · ύψος h). */
@@ -207,5 +208,43 @@ describe('findStructuralOverlap · collision groups (ADR-567 Φ1b)', () => {
 describe('DEFAULT_OVERLAP_RATIO_THRESHOLD', () => {
   it('είναι 25%', () => {
     expect(DEFAULT_OVERLAP_RATIO_THRESHOLD).toBe(0.25);
+  });
+});
+
+describe('StructuralFootprintSet · broad phase (ADR-929 §6.16 #8)', () => {
+  const scene: Entity[] = [
+    columnRect('c1', 0, 0, 200, 200),
+    columnRect('c2', 150, 0, 200, 200),
+    slabRect('s1', 1000, 1000, 400, 400),
+    foundationRect('f1', -800, 300, 300, 300),
+    { id: 'line', type: 'line' } as unknown as Entity,
+  ];
+  const probes = [-900, -200, 0, 80, 500, 1000, 1150].flatMap((x) => [-100, 0, 300, 1000].map((y) => rect(x, y, 220, 220)));
+  const options = [undefined, { candidateType: 'column' as const }, { candidateType: 'slab' as const }, { excludeIds: new Set(['c1']) }];
+
+  it('ΙΔΙΟ αποτέλεσμα με τη λίστα, για κάθε υποψήφιο και κάθε επιλογή — με ΕΝΑ σύνολο για όλους', () => {
+    const set = new StructuralFootprintSet(scene);
+    for (const probe of probes) {
+      for (const opts of options) expect(findStructuralOverlap(probe, set, opts)).toEqual(findStructuralOverlap(probe, scene, opts));
+    }
+  });
+
+  it('ίδια «πρώτη» σύγκρουση: η σειρά ελέγχου μένει η σειρά εισαγωγής (και μετά από add)', () => {
+    const set = new StructuralFootprintSet([columnRect('c2', 150, 0, 200, 200)]);
+    set.add(columnRect('c1', 0, 0, 200, 200));
+    expect(findStructuralOverlap(rect(75, 0, 200, 200), set)?.blockedById).toBe('c2');
+  });
+
+  it('το αποτύπωμα κάθε οντότητας υπολογίζεται ΜΙΑ φορά για όλους τους υποψηφίους', () => {
+    let reads = 0;
+    const polygon = { vertices: rect(0, 0, 400, 400).map((p) => ({ ...p, z: 0 })) };
+    const slab = { id: 's', type: 'slab', get geometry() { reads += 1; return { polygon }; } } as unknown as Entity;
+    const set = new StructuralFootprintSet([slab]);
+    for (const probe of probes) findStructuralOverlap(probe, set);
+    const perSet = reads;
+    reads = 0;
+    for (const probe of probes) findStructuralOverlap(probe, [slab]);
+    expect(perSet).toBe(1);
+    expect(reads).toBe(probes.length);
   });
 });

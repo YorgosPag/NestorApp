@@ -33,7 +33,7 @@ import { buildWallFillingRectResult, type DetectedRectangle } from './wall-in-re
 import { extendFillingWallToNeighbors } from './wall-region-autojoin';
 import { computeWallTrims, applyTrimPatches, collectColumnFootprints } from './wall-trims';
 import { resolveWallPaintedBodies, type WallBodyPieces } from './wall-painted-body';
-import { findStructuralOverlapForEntity } from '../placement/structural-placement-overlap';
+import { findStructuralOverlapForEntity, StructuralFootprintSet } from '../placement/structural-placement-overlap';
 
 // ─── Reject reasons (friendly i18n keys — «κόκκινο + tooltip με ΛΟΓΟ») ─────────
 
@@ -176,23 +176,23 @@ interface JudgeOutcome {
  */
 function judgeRound(
   alive: readonly FillingCandidate[],
-  sceneEntities: readonly Entity[],
+  scene: StructuralFootprintSet,
   neighbours: readonly WallEntity[],
   sceneUnits: SceneUnits,
 ): JudgeOutcome {
   const accepted = new Map<number, WallEntity>();
   const dropped = new Map<number, string>();
-  const acceptedEntities: Entity[] = [];
+  const acceptedEntities = new StructuralFootprintSet();
   for (const candidate of alive) {
     const entity = extendFillingWallToNeighbors(candidate.wall, neighbours, sceneUnits);
     const asEntity = entity as unknown as Entity;
-    if (findStructuralOverlapForEntity(asEntity, sceneEntities)) {
+    if (findStructuralOverlapForEntity(asEntity, scene)) {
       dropped.set(candidate.index, REGION_REJECT_OCCUPIED_KEY);
     } else if (findStructuralOverlapForEntity(asEntity, acceptedEntities)) {
       dropped.set(candidate.index, REGION_REJECT_OVERLAPS_CANDIDATE_KEY);
     } else {
       accepted.set(candidate.index, entity);
-      acceptedEntities.push(asEntity);
+      acceptedEntities.add(asEntity);
     }
   }
   return { accepted, dropped };
@@ -204,11 +204,13 @@ function joinAndJudge(
   sceneUnits: SceneUnits,
 ): JudgeOutcome {
   const sceneWalls = sceneEntities.filter(isWallEntity);
+  // ADR-929 §6.16 #8 — τα αποτυπώματα της σκηνής υπολογίζονται ΜΙΑ φορά για όλους τους υποψηφίους και όλους τους γύρους.
+  const scene = new StructuralFootprintSet(sceneEntities);
   const dropped = new Map<number, string>();
   let alive = [...candidates].sort(byJudgingPriority);
   for (;;) {
     const neighbours = [...sceneWalls, ...alive.map((c) => c.wall)];
-    const round = judgeRound(alive, sceneEntities, neighbours, sceneUnits);
+    const round = judgeRound(alive, scene, neighbours, sceneUnits);
     round.dropped.forEach((reason, index) => dropped.set(index, reason));
     if (round.accepted.size === alive.length) return { accepted: round.accepted, dropped };
     alive = alive.filter((c) => round.accepted.has(c.index));
