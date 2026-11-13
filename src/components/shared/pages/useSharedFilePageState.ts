@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 
 import { ApiClientError } from '@/lib/api/api-client-types';
@@ -43,6 +43,13 @@ export interface SharedFilePageState {
   setPassword: (value: string) => void;
   handlePasswordSubmit: (event: React.FormEvent) => Promise<void>;
   handleDownload: () => Promise<void>;
+  /**
+   * **Νέα επίσκεψη χωρίς ανανέωση σελίδας** (ADR-315 Α6): ξανανοίγει το token με το ΙΔΙΟ `resolve`, όταν η
+   * επίσκεψη έληξε από αδράνεια ή έφτασε την απόλυτη λήξη της. `true` ⇒ γράφτηκε νέο κουπόνι. `false` ⇒ η σελίδα
+   * δείχνει ήδη ό,τι είπε ο διακομιστής (πύλη κωδικού · άρνηση), ή το δίκτυο απέτυχε (η όψη μένει). Μία πτήση τη
+   * φορά: ταυτόχρονοι καλούντες μοιράζονται το ίδιο αίτημα (ένα άνοιγμα = μία μέτρηση).
+   */
+  reopenVisit: () => Promise<boolean>;
 }
 
 /** Server outcome → view. */
@@ -63,6 +70,30 @@ function viewOf(outcome: ShareResolveOutcome): SharedPageView {
 function viewOfFailure(error: unknown): SharedPageView {
   const notFound = error instanceof ApiClientError && error.statusCode === 404;
   return { kind: 'refused', reason: notFound ? 'not-found' : 'unavailable' };
+}
+
+/** Ένα νέο άνοιγμα του token → `true` αν γράφτηκε κουπόνι. Η άρνηση/πύλη γίνεται όψη· το σφάλμα δικτύου όχι. */
+async function reopenOnce(token: string, setView: (view: SharedPageView) => void): Promise<boolean> {
+  try {
+    const outcome = await UnifiedSharingService.resolve(token);
+    if (outcome.status === 'resolved') return true;
+    setView(viewOf(outcome));
+  } catch (error: unknown) {
+    // 404 = ετυμηγορία («δεν υπάρχει τέτοιος σύνδεσμος»)· κάθε άλλο σφάλμα είναι δικό μας ⇒ η όψη μένει.
+    if (error instanceof ApiClientError && error.statusCode === 404) setView(viewOfFailure(error));
+  }
+  return false;
+}
+
+/** `reopenVisit` με μία πτήση τη φορά (βλ. `SharedFilePageState.reopenVisit`). */
+function useReopenVisit(token: string, setView: (view: SharedPageView) => void): () => Promise<boolean> {
+  const inFlight = useRef<Promise<boolean> | null>(null);
+  return useCallback(() => {
+    if (inFlight.current === null) {
+      inFlight.current = reopenOnce(token, setView).finally(() => { inFlight.current = null; });
+    }
+    return inFlight.current;
+  }, [token, setView]);
 }
 
 export function useSharedFilePageState(): SharedFilePageState {
@@ -108,5 +139,9 @@ export function useSharedFilePageState(): SharedFilePageState {
     }
   }, [token]);
 
-  return { token, view, password, submitting, downloading, setPassword, handlePasswordSubmit, handleDownload };
+  const reopenVisit = useReopenVisit(token, setView);
+
+  return {
+    token, view, password, submitting, downloading, setPassword, handlePasswordSubmit, handleDownload, reopenVisit,
+  };
 }

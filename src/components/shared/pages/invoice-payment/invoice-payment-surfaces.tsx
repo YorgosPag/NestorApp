@@ -21,6 +21,12 @@ const InvoicePaymentSurfaces = defineLazySurfaces({
   },
 });
 
-export function SharedInvoicePaymentSlot({ data }: { readonly data: InvoicePaymentShareResolvedData }) {
-  return <InvoicePaymentSurfaces.SharedInvoicePayment data={data} />;
+export interface SharedInvoicePaymentSlotProps {
+  readonly data: InvoicePaymentShareResolvedData;
+  /** Νέα επίσκεψη χωρίς ανανέωση σελίδας (`useSharedFilePageState.reopenVisit`, ADR-315 Α6). */
+  readonly reopenVisit: () => Promise<boolean>;
+}
+
+export function SharedInvoicePaymentSlot({ data, reopenVisit }: SharedInvoicePaymentSlotProps) {
+  return <InvoicePaymentSurfaces.SharedInvoicePayment data={data} reopenVisit={reopenVisit} />;
 }

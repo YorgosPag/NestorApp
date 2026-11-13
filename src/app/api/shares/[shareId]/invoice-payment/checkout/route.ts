@@ -27,12 +27,10 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { PRIVATE_CHANNEL_HEADERS } from '@/lib/http/private-response-headers';
 import { publicOrigin } from '@/lib/http/public-origin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { decodeRouteParam } from '@/lib/routes/route-param';
 import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { readInvoicePaymentAttempt } from '@/server/accounting/payments/invoice-payment-attempt';
 import { startInvoicePaymentCheckout } from '@/server/accounting/payments/invoice-payment-checkout';
 import { isPaymentReturnPath, setPaymentReturnCookie } from '@/server/payments/payment-return-cookie';
-import { requestHasShareAccessGrant } from '@/server/sharing/share-access-grant';
 import {
   INVOICE_CHECKOUT_ATTEMPT_PARAM,
   ONLINE_PAYMENT_METHODS,
@@ -41,9 +39,16 @@ import {
   type InvoiceCheckoutResponse,
 } from '@/subapps/accounting/types/online-payment';
 
+import {
+  grantedInvoiceShareId,
+  respondInVisit,
+  visitExpiredResponse,
+  type InvoiceShareRouteContext,
+} from '../_shared/invoice-visit-route';
+
 export const dynamic = 'force-dynamic';
 
-type RouteContext = { params: Promise<{ shareId: string }> };
+type RouteContext = InvoiceShareRouteContext;
 
 const CheckoutBodySchema = z.object({
   method: z.enum(ONLINE_PAYMENT_METHODS),
@@ -58,10 +63,8 @@ function respond(outcome: InvoiceCheckoutResponse): NextResponse<InvoiceCheckout
 async function handler(
   request: NextRequest, _ctx: unknown, _cache: unknown, routeContext?: RouteContext,
 ): Promise<NextResponse> {
-  const shareId = decodeRouteParam((await routeContext?.params)?.shareId ?? '');
-  if (shareId === '' || !requestHasShareAccessGrant(request, shareId)) {
-    return respond({ status: 'refused', reason: 'visit-expired' });
-  }
+  const shareId = await grantedInvoiceShareId(request, routeContext);
+  if (shareId === null) return visitExpiredResponse<InvoiceCheckoutResponse>({ status: 'refused', reason: 'visit-expired' });
   const parsed = await safeJsonBody(CheckoutBodySchema, request);
   if (parsed.error) return parsed.error;
   const origin = publicOrigin();
@@ -70,7 +73,8 @@ async function handler(
   const outcome = await startInvoicePaymentCheckout(getAdminFirestore(), {
     ...parsed.data, shareId, origin, nowMs: Date.now(),
   });
-  const response = respond(outcome);
+  // Η έναρξη ξαναέκρινε τον σύνδεσμο (`readSharedInvoice`) ⇒ ανανεώνει την επίσκεψη (ADR-315 Α6).
+  const response = respondInVisit(request, shareId, outcome);
   if (outcome.status === 'started') setPaymentReturnCookie(response, parsed.data.returnPath);
   return response;
 }
@@ -78,10 +82,11 @@ async function handler(
 async function attemptHandler(
   request: NextRequest, _ctx: unknown, _cache: unknown, routeContext?: RouteContext,
 ): Promise<NextResponse<InvoiceCheckoutAttemptResponse>> {
-  const shareId = decodeRouteParam((await routeContext?.params)?.shareId ?? '');
+  const shareId = await grantedInvoiceShareId(request, routeContext);
   const checkoutId = request.nextUrl.searchParams.get(INVOICE_CHECKOUT_ATTEMPT_PARAM) ?? '';
-  // 200 για κάθε απάντηση της ροής, όπως η όψη: η σελίδα διακλαδώνεται στο `reason`.
-  const outcome: InvoiceCheckoutAttemptResponse = shareId === '' || !requestHasShareAccessGrant(request, shareId)
+  // 200 για κάθε απάντηση της ροής, όπως η όψη: η σελίδα διακλαδώνεται στο `reason`. Η έκβαση **δεν** κρίνει τον
+  // σύνδεσμο ⇒ **δεν** ανανεώνει την επίσκεψη (`_shared/invoice-visit-route.ts`).
+  const outcome: InvoiceCheckoutAttemptResponse = shareId === null
     ? { status: 'refused', reason: 'visit-expired' }
     : !PAYMENT_ATTEMPT_ID_PATTERN.test(checkoutId)
       ? { status: 'refused', reason: 'unknown-attempt' }

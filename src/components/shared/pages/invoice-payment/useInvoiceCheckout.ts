@@ -8,6 +8,8 @@
  *   φέρνει τον πελάτη πίσω εδώ (`?payment=…`).
  *
  * Το σώμα φέρει μόνο τρόπο, γλώσσα και τη διαδρομή της σελίδας — **ποτέ** ποσό. Ένα `Idempotency-Key` ανά πάτημα.
+ * Επίσκεψη που έληξε (ο άνθρωπος διάβαζε πάνω από 15′) ⇒ αθόρυβα νέα και **νέο** αίτημα με νέο κλειδί
+ * (`fetchInVisit`, ADR-315 Α6): η πρώτη απορρίφθηκε χωρίς να εκτελεστεί.
  *
  * @module components/shared/pages/invoice-payment/useInvoiceCheckout
  */
@@ -25,6 +27,7 @@ import type {
   OnlinePaymentMethod,
 } from '@/subapps/accounting/types/online-payment';
 
+import { fetchInVisit, useShareVisitReopen } from './share-visit-fetch';
 import { invoiceCheckoutUrl } from './useInvoicePublicView';
 
 export type InvoiceCheckoutState =
@@ -83,13 +86,15 @@ export function useInvoiceCheckout(shareId: string, locale: 'el' | 'en'): {
   readonly state: InvoiceCheckoutState;
   readonly start: (method: OnlinePaymentMethod) => void;
 } {
+  const reopenVisit = useShareVisitReopen();
   const [state, setState] = useState<InvoiceCheckoutState>({ kind: 'idle' });
 
   const start = useCallback((method: OnlinePaymentMethod) => {
     // Συγχρονικά, μέσα στο πάτημα: αλλιώς ο browser μπλοκάρει την καρτέλα.
     const paymentWindow = method === 'card' ? window.open('', PAYMENT_WINDOW_NAME) : null;
     setState({ kind: 'starting', method });
-    requestCheckout(shareId, { method, locale, returnPath: window.location.pathname })
+    const body: InvoiceCheckoutRequestBody = { method, locale, returnPath: window.location.pathname };
+    fetchInVisit(() => requestCheckout(shareId, body), reopenVisit)
       .then((outcome) => {
         if (outcome?.status === 'started') {
           setState(launch(outcome.launch, paymentWindow)
@@ -104,7 +109,7 @@ export function useInvoiceCheckout(shareId: string, locale: 'el' | 'en'): {
         paymentWindow?.close();
         setState({ kind: 'refused', reason: 'generic' });
       });
-  }, [shareId, locale]);
+  }, [shareId, locale, reopenVisit]);
 
   return { state, start };
 }

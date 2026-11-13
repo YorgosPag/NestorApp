@@ -5,8 +5,9 @@
  *
  * Πρότυπο Stripe Hosted Invoice Page: πρώτα **τι οφείλεται και ως πότε**, μετά **πώς πληρώνεται** («Πληρωμή τώρα»:
  * κάρτα / IRIS / μεταφορά — ADR-ACC-030), μετά το έγγραφο. Μετά από online απόπειρα η σελίδα **ρωτά την έκβασή
- * της** (ADR-ACC-030 §5.6): «Εξοφλήθηκε» · «Η πληρωμή δεν ολοκληρώθηκε — δοκιμάστε ξανά» · ή, μετά από 15′,
- * ουδέτερο μήνυμα. Σε κάθε τέλος αναμονής σβήνει το `?payment=`, ώστε η ανανέωση να μην ξαναρχίζει την αναμονή.
+ * της** (ADR-ACC-030 §5.6): «Εξοφλήθηκε» · «Η πληρωμή δεν ολοκληρώθηκε — δοκιμάστε ξανά» · ή, μετά τη λήξη της
+ * συνεδρίας του παρόχου, ουδέτερο μήνυμα. Η επίσκεψη μένει ζωντανή όσο ζει ο άνθρωπος: κάθε ερώτηση που ακούσει
+ * «έληξε η επίσκεψη» ανοίγει αθόρυβα νέα (`ShareVisitContext`, ADR-315 Α6). Σε κάθε τέλος αναμονής σβήνει το `?payment=`, ώστε η ανανέωση να μην ξαναρχίζει την αναμονή.
  * Η σελίδα δεν κρίνει τίποτα μόνη της. Κατάσταση, ποσό, λογαριασμοί και QR έρχονται έτοιμα από τη συνεδρία
  * προβολής του διακομιστή (`invoice-public-session.ts`).
  *
@@ -39,6 +40,7 @@ import { InvoiceIssuerContact } from './InvoiceIssuerContact';
 import { InvoiceIssuerMessages } from './InvoiceIssuerMessages';
 import { InvoicePublicBody, InvoicePublicParties } from './InvoicePublicDocument';
 import { InvoicePayNowSection } from './InvoicePayNowSection';
+import { ShareVisitContext, type ReopenVisit } from './share-visit-fetch';
 import { INVOICE_PUBLIC_PAYMENT_NS } from './invoice-payment-primitives';
 import { invoicePublicPdfUrl, useInvoicePublicView } from './useInvoicePublicView';
 import { usePaymentConfirmationWatch, type PaymentWatchPhase } from './usePaymentConfirmationWatch';
@@ -93,12 +95,36 @@ function AmountSummary({ view }: { readonly view: InvoicePublicView }): React.Re
   );
 }
 
-function DocumentActions({ shareId }: { readonly shareId: string }): React.ReactElement {
+/**
+ * Η λήψη PDF είναι **κανονικός** σύνδεσμος `download` (λειτουργεί όπως κάθε λήψη του browser). Επειδή όμως ο
+ * σύνδεσμος δεν περνά από το `fetchInVisit`, μια επίσκεψη που έληξε από αδράνεια (σελίδα ανοιχτή πάνω από 15′)
+ * θα έδινε άρνηση: το πρώτο πάτημα κάνει πρώτα σιωπηλή ανανέωση της όψης (ανανεώνει ή ξανανοίγει την επίσκεψη,
+ * ADR-315 Α6) και μετά αφήνει τη λήψη να γίνει κανονικά.
+ */
+function useVisitBeforeDownload(refresh: () => Promise<void>): (event: React.MouseEvent<HTMLAnchorElement>) => void {
+  const renewed = React.useRef(false);
+  return React.useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (renewed.current) { renewed.current = false; return; }
+    event.preventDefault();
+    const anchor = event.currentTarget;
+    void refresh().finally(() => {
+      // Ανάκληση στο μεταξύ ⇒ η σελίδα έδειξε την άρνηση και ο σύνδεσμος δεν υπάρχει πια στην οθόνη.
+      if (!anchor.isConnected) return;
+      renewed.current = true;
+      anchor.click();
+    });
+  }, [refresh]);
+}
+
+function DocumentActions(
+  { shareId, refresh }: { readonly shareId: string; readonly refresh: () => Promise<void> },
+): React.ReactElement {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
+  const onDownload = useVisitBeforeDownload(refresh);
   return (
     <nav className="flex flex-wrap gap-2 print:hidden" aria-label={t('actions.downloadPdf')}>
       <Button asChild variant="outline">
-        <a href={invoicePublicPdfUrl(shareId)} download>
+        <a href={invoicePublicPdfUrl(shareId)} download onClick={onDownload}>
           <Download className="mr-2 h-4 w-4" aria-hidden="true" />{t('actions.downloadPdf')}
         </a>
       </Button>
@@ -182,7 +208,7 @@ function InvoiceView({ view, shareId, refresh }: InvoiceViewProps): React.ReactE
       <AmountSummary view={view} />
       {attemptId !== null && payable && <PaymentAttemptStatus phase={phase} />}
       {view.standing === 'payable' && <InvoicePayNowSection view={view} shareId={shareId} onLaunched={markLaunched} />}
-      <DocumentActions shareId={shareId} />
+      <DocumentActions shareId={shareId} refresh={refresh} />
       <InvoicePublicParties view={view} />
       <InvoicePublicBody view={view} />
       <InvoiceIssuerContact view={view} />
@@ -205,9 +231,7 @@ function Unavailable({ failed, onRetry }: { readonly failed: boolean; readonly o
   );
 }
 
-export function SharedInvoicePaymentPageContent(
-  { data }: { readonly data: InvoicePaymentShareResolvedData },
-): React.ReactElement {
+function InvoicePaymentPage({ data }: { readonly data: InvoicePaymentShareResolvedData }): React.ReactElement {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
   const { state, retry, refresh } = useInvoicePublicView(data.shareId);
   // Άρνηση = ο σύνδεσμος ή το κουπόνι επίσκεψης δεν ισχύουν πια ⇒ νέα επίλυση του token (ανανέωση σελίδας).
@@ -221,5 +245,19 @@ export function SharedInvoicePaymentPageContent(
       {state.kind === 'refused' && <Unavailable failed={false} onRetry={reload} />}
       {state.kind === 'failed' && <Unavailable failed onRetry={retry} />}
     </main>
+  );
+}
+
+/**
+ * Η σελίδα τιμολογίου μέσα στην επίσκεψή της: κάθε ερώτηση (όψη · έκβαση · πληρωμή · μηνύματα) παίρνει το
+ * `reopenVisit` από **ένα** context, όχι με props (ADR-315 Α6).
+ */
+export function SharedInvoicePaymentPageContent(
+  { data, reopenVisit }: { readonly data: InvoicePaymentShareResolvedData; readonly reopenVisit: ReopenVisit },
+): React.ReactElement {
+  return (
+    <ShareVisitContext.Provider value={reopenVisit}>
+      <InvoicePaymentPage data={data} />
+    </ShareVisitContext.Provider>
   );
 }

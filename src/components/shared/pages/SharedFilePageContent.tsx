@@ -155,7 +155,10 @@ function FileSection({ file, expiresAt, state }: { file: FileShareResolvedData; 
 }
 
 /** The non-file kinds own their whole page — they bypass the file-centric chrome. */
-function renderEntityPage(share: ResolvedSharePayload, expiresAt: string, token: string): React.ReactElement | null {
+function renderEntityPage(
+  share: ResolvedSharePayload, expiresAt: string, state: SharedFilePageState,
+): React.ReactElement | null {
+  const { token } = state;
   switch (share.kind) {
     case 'contact': return <SharedContactPageContent data={share.data} expiresAt={expiresAt} />;
     case 'property_showcase': return <SharedShowcasePageContent token={token} />;
@@ -164,19 +167,19 @@ function renderEntityPage(share: ResolvedSharePayload, expiresAt: string, token:
     case 'storage_showcase': return <SharedStorageShowcasePageContent token={token} />;
     case 'parking_showcase': return <SharedParkingShowcasePageContent token={token} />;
     case 'spatial_tour': return <SharedTourPageContent data={share.data} />;
-    case 'invoice_payment': return <SharedInvoicePaymentSlot data={share.data} />;
+    case 'invoice_payment': return <SharedInvoicePaymentSlot data={share.data} reopenVisit={state.reopenVisit} />;
     case 'file': return null;
   }
 }
 
 export function SharedFilePageContent() {
   const state = useSharedFilePageState();
-  const { view, token } = state;
+  const { view } = state;
   const { t } = useTranslation('files-media');
   const colors = useSemanticColors();
 
   if (view.kind === 'resolved') {
-    const entityPage = renderEntityPage(view.share, view.expiresAt, token);
+    const entityPage = renderEntityPage(view.share, view.expiresAt, state);
     if (entityPage !== null) return entityPage;
   }
 

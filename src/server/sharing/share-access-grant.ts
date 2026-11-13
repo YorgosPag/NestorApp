@@ -41,8 +41,10 @@ import {
   ACCESS_GRANT_SECRET_ENV,
   ACCESS_GRANT_TTL_SECONDS,
   attachAccessGrant,
+  clearAccessGrant,
   issueAccessGrant,
   readAccessGrant,
+  renewAccessGrant,
   requestAccessGrant,
   type AccessGrantKind,
 } from '@/server/access-grant/access-grant';
@@ -50,9 +52,18 @@ import {
 /** Το μυστικό — δηλωμένο στο `config/environment-contract.ts`. */
 export const SHARE_ACCESS_SECRET_ENV = ACCESS_GRANT_SECRET_ENV;
 
+/** Λήξη **αδράνειας** της επίσκεψης — ανανεώνεται σε κάθε αυθεντική κρίση του συνδέσμου. */
 export const SHARE_ACCESS_GRANT_TTL_SECONDS = ACCESS_GRANT_TTL_SECONDS;
 
-const SHARE_GRANT: AccessGrantKind = { purpose: 'share-access', subjectFieldCount: 1 };
+/**
+ * **Απόλυτη** λήξη μιας επίσκεψης από το άνοιγμα (ADR-315 Α6, απόφαση Giorgio 2026-11-13): μία «εργάσιμη μέρα», το
+ * πάνω όριο του OWASP για εφαρμογή γραφείου. Μετά ⇒ νέα επίσκεψη (νέο άνοιγμα του token, νέα μέτρηση).
+ */
+export const SHARE_VISIT_CEILING_SECONDS = 8 * 60 * 60;
+
+const SHARE_GRANT: AccessGrantKind = {
+  purpose: 'share-access', subjectFieldCount: 1, visitCeilingSeconds: SHARE_VISIT_CEILING_SECONDS,
+};
 const COOKIE_PREFIX = 'nestor_share_';
 const COOKIE_PATH = '/api';
 
@@ -84,4 +95,21 @@ export function requestHasShareAccessGrant(request: NextRequest, shareId: string
 /** Γράφει το κουπόνι στην απάντηση. */
 export function attachShareAccessGrant(response: NextResponse, shareId: string, grant: string): void {
   attachAccessGrant(response, { name: shareAccessCookieName(shareId), path: COOKIE_PATH }, grant);
+}
+
+/**
+ * **Ανανεώνει** την επίσκεψη που φέρει το αίτημα (λήξη αδράνειας ξανά 15′, ίδια απόλυτη λήξη). Χωρίς έγκυρο κουπόνι
+ * ⇒ τίποτα. ⚠️ Μόνο **μετά** από αυθεντική κρίση ότι ο σύνδεσμος είναι ενεργός (`findActiveShareOf`): έτσι η
+ * ανάκληση κόβει σε ≤ 15′ από την τελευταία κρίση, όπως πριν.
+ */
+export function renewShareAccessGrant(request: NextRequest, response: NextResponse, shareId: string): void {
+  const grant = requestAccessGrant(request, shareAccessCookieName(shareId));
+  if (grant === null || !isShareAccessGrantValid(grant, shareId)) return;
+  const renewed = renewAccessGrant(SHARE_GRANT, grant);
+  if (renewed !== null) attachShareAccessGrant(response, shareId, renewed);
+}
+
+/** **Σβήνει** το κουπόνι — η κρίση είπε «ο σύνδεσμος δεν ισχύει», ο browser δεν κρατά ζωντανή επίσκεψη. */
+export function clearShareAccessGrant(response: NextResponse, shareId: string): void {
+  clearAccessGrant(response, { name: shareAccessCookieName(shareId), path: COOKIE_PATH });
 }

@@ -2,18 +2,22 @@
  * useInvoicePublicView — φέρνει την όψη του τιμολογίου για τον κάτοχο του συνδέσμου (ADR-ACC-018 §16).
  *
  * Το αίτημα φέρει μόνο το `shareId` και το `HttpOnly` κουπόνι επίσκεψης (cookie, `Path=/api`) που έγραψε
- * η επίλυση του token λίγο πριν. Το token δεν ξαναταξιδεύει. Μία ανάγνωση ανά άνοιγμα· ανανέωση **μόνο** όσο
- * περιμένουμε επιβεβαίωση online πληρωμής (ADR-ACC-030, `refresh`).
+ * η επίλυση του token λίγο πριν. Το token δεν ξαναταξιδεύει. Μία ανάγνωση ανά άνοιγμα· σιωπηλή ανανέωση όσο
+ * περιμένουμε επιβεβαίωση online πληρωμής (ADR-ACC-030, `refresh`) **και** όταν η καρτέλα ξαναγίνει ορατή
+ * (πρότυπο SWR `revalidateOnFocus`): ο άνθρωπος που γυρίζει μετά από ώρα βρίσκει ζωντανή επίσκεψη και τρέχουσα
+ * κατάσταση πριν πατήσει «Πληρωμή» ή «PDF». Επίσκεψη που έληξε ⇒ αθόρυβη νέα επίσκεψη (`fetchInVisit`, ADR-315 Α6).
  *
  * @module components/shared/pages/invoice-payment/useInvoicePublicView
  */
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { InvoicePublicRefusal, InvoicePublicView, InvoicePublicViewResponse } from '@/subapps/accounting/types/invoice-public-view';
 import { INVOICE_CHECKOUT_ATTEMPT_PARAM } from '@/subapps/accounting/types/online-payment';
+
+import { fetchInVisit, useShareVisitReopen, type ReopenVisit } from './share-visit-fetch';
 
 export type InvoicePublicViewState =
   | { readonly kind: 'loading' }
@@ -31,11 +35,23 @@ export function invoicePublicPdfUrl(shareId: string): string {
   return `${invoicePublicViewUrl(shareId)}/pdf`;
 }
 
-async function fetchView(shareId: string, signal: AbortSignal): Promise<InvoicePublicViewState> {
+async function askView(shareId: string, signal: AbortSignal): Promise<InvoicePublicViewResponse | null> {
   const response = await fetch(invoicePublicViewUrl(shareId), { credentials: 'same-origin', cache: 'no-store', signal });
-  if (!response.ok) return { kind: 'failed' };
-  const body = (await response.json()) as InvoicePublicViewResponse;
+  return response.ok ? ((await response.json()) as InvoicePublicViewResponse) : null;
+}
+
+async function fetchView(shareId: string, reopenVisit: ReopenVisit, signal: AbortSignal): Promise<InvoicePublicViewState> {
+  const body = await fetchInVisit(() => askView(shareId, signal), reopenVisit);
+  if (body === null) return { kind: 'failed' };
   return body.status === 'ok' ? { kind: 'ready', view: body.view } : { kind: 'refused', reason: body.reason };
+}
+
+/**
+ * Η σιωπηλή ανανέωση αλλάζει την οθόνη **μόνο** με ετυμηγορία: σφάλμα δικτύου ή επίσκεψη που δεν ξανάνοιξε (ο
+ * κάτοχος της σελίδας δείχνει ήδη πύλη κωδικού / άρνηση) αφήνουν την όψη στη θέση της.
+ */
+function isVerdict(next: InvoicePublicViewState): boolean {
+  return next.kind !== 'failed' && !(next.kind === 'refused' && next.reason === 'visit-expired');
 }
 
 export interface InvoicePublicViewHandle {
@@ -49,24 +65,48 @@ export interface InvoicePublicViewHandle {
   readonly refresh: () => Promise<void>;
 }
 
+/** Σιωπηλή ανανέωση με **μία πτήση τη φορά**: ο γύρος αναμονής και η επιστροφή στην καρτέλα μοιράζονται το αίτημα. */
+function useSilentRefresh(
+  shareId: string, reopenVisit: ReopenVisit, setState: (next: InvoicePublicViewState) => void,
+): () => Promise<void> {
+  const inFlight = useRef<Promise<void> | null>(null);
+  return useCallback(() => {
+    if (inFlight.current === null) {
+      inFlight.current = fetchView(shareId, reopenVisit, new AbortController().signal)
+        .catch((): InvoicePublicViewState => ({ kind: 'failed' }))
+        .then((next) => { if (isVerdict(next)) setState(next); })
+        .finally(() => { inFlight.current = null; });
+    }
+    return inFlight.current;
+  }, [shareId, reopenVisit, setState]);
+}
+
+/** Η καρτέλα ξαναέγινε ορατή ⇒ σιωπηλή ανανέωση (η κρυμμένη καρτέλα μπορεί να έμεινε παγωμένη για ώρα). */
+function useRefreshWhenVisible(refresh: () => Promise<void>): void {
+  useEffect(() => {
+    const onVisibility = () => { if (document.visibilityState === 'visible') void refresh(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [refresh]);
+}
+
 export function useInvoicePublicView(shareId: string): InvoicePublicViewHandle {
+  const reopenVisit = useShareVisitReopen();
   const [state, setState] = useState<InvoicePublicViewState>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setState({ kind: 'loading' });
-    fetchView(shareId, controller.signal)
+    fetchView(shareId, reopenVisit, controller.signal)
       .then(setState)
       .catch(() => { if (!controller.signal.aborted) setState({ kind: 'failed' }); });
     return () => controller.abort();
-  }, [shareId, attempt]);
+  }, [shareId, reopenVisit, attempt]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
-  const refresh = useCallback(async () => {
-    const next = await fetchView(shareId, new AbortController().signal).catch((): InvoicePublicViewState => ({ kind: 'failed' }));
-    if (next.kind !== 'failed') setState(next);
-  }, [shareId]);
+  const refresh = useSilentRefresh(shareId, reopenVisit, setState);
+  useRefreshWhenVisible(refresh);
   return { state, retry, refresh };
 }
 

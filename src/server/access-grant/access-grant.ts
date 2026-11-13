@@ -22,6 +22,12 @@ import 'server-only';
  * 🔑 **Γιατί δεν χρειάζεται λίστα ανάκλησης**: η ανάκληση της **πηγής** (σύνδεσμος · αίτημα) την
  * αφαιρεί από την κρίση, οπότε κανένα **νέο** κουπόνι δεν εκδίδεται. Το υπάρχον λήγει σε ≤ 15′.
  *
+ * ♻️ **Ανανεώσιμα είδη** (ADR-315 Α6, 2026-11-13 — πρότυπο OWASP Session Management): ένα είδος με
+ * `visitCeilingSeconds` φέρει **δύο** λήξεις — **αδράνειας** (15′, ανανεώνεται με `renewAccessGrant`) και **απόλυτη**
+ * της επίσκεψης (υπογεγραμμένη, **δεν** παρατείνεται ποτέ). Η ανανέωση γίνεται **μόνο** από καλούντα που μόλις
+ * ξαναέκρινε την πηγή στη βάση ⇒ το όριο ανάκλησης μένει ≤ 15′ από την **τελευταία κρίση**. Είδος χωρίς
+ * `visitCeilingSeconds` (θέαση περιήγησης) κρατά **ακριβώς** τη μορφή μίας λήξης.
+ *
  * @module server/access-grant/access-grant
  */
 
@@ -45,6 +51,18 @@ export interface AccessGrantKind {
   readonly purpose: string;
   /** Πόσα πεδία ταυτότητας ακολουθούν τον σκοπό (π.χ. `[shareId]` = 1). */
   readonly subjectFieldCount: number;
+  /**
+   * Ανανεώσιμο είδος: η **απόλυτη** διάρκεια της επίσκεψης από το άνοιγμα (OWASP absolute timeout). Χωρίς αυτό ⇒
+   * μία λήξη 15′, καμία ανανέωση.
+   */
+  readonly visitCeilingSeconds?: number;
+}
+
+/** Ό,τι κουβαλά ένα έγκυρο κουπόνι πέρα από τον σκοπό: η ταυτότητα και, σε ανανεώσιμο είδος, η απόλυτη λήξη. */
+interface DecodedGrant {
+  readonly subject: readonly string[];
+  /** Δευτερόλεπτα epoch· `null` σε μη ανανεώσιμο είδος. */
+  readonly ceilingAt: number | null;
 }
 
 /** Πού ζει το cookie — όνομα **ανά αντικείμενο**, ώστε δύο ανοιχτά να μην πατούν το ένα το άλλο. */
@@ -74,10 +92,46 @@ export function issueAccessGrant(
   if (subject.length !== kind.subjectFieldCount) {
     throw new Error(`access-grant ${kind.purpose}: expected ${kind.subjectFieldCount} subject fields`);
   }
+  const ceilingAt = kind.visitCeilingSeconds === undefined
+    ? null
+    : Math.floor(nowMs / 1000) + kind.visitCeilingSeconds;
+  return encodeGrant(kind, subject, ceilingAt, nowMs);
+}
+
+/** Τα πεδία μετά την ταυτότητα: λήξη αδράνειας, και σε ανανεώσιμο είδος η απόλυτη λήξη. */
+function lifeFieldCount(kind: AccessGrantKind): number {
+  return kind.visitCeilingSeconds === undefined ? 1 : 2;
+}
+
+/** Η λήξη αδράνειας ενός κουπονιού που εκδίδεται τώρα — ποτέ πέρα από την απόλυτη λήξη της επίσκεψης. */
+function idleExpiryAt(ceilingAt: number | null, nowMs: number): number {
+  const idle = Math.floor(nowMs / 1000) + ACCESS_GRANT_TTL_SECONDS;
+  return ceilingAt === null ? idle : Math.min(idle, ceilingAt);
+}
+
+function encodeGrant(
+  kind: AccessGrantKind, subject: readonly string[], ceilingAt: number | null, nowMs: number,
+): string | null {
   const secret = readSecret();
   if (secret === null) return null;
-  const expiresAt = Math.floor(nowMs / 1000) + ACCESS_GRANT_TTL_SECONDS;
-  return encodeSignedToken(secret, [kind.purpose, ...subject, String(expiresAt)]);
+  const life = [String(idleExpiryAt(ceilingAt, nowMs))];
+  if (ceilingAt !== null) life.push(String(ceilingAt));
+  return encodeSignedToken(secret, [kind.purpose, ...subject, ...life]);
+}
+
+/** Έγκυρο, αυτού του σκοπού, ακριβώς αυτού του σχήματος και ζωντανό — αλλιώς `null`. */
+function decodeGrant(kind: AccessGrantKind, grant: string, nowMs: number): DecodedGrant | null {
+  const secret = readSecret();
+  if (secret === null) return null;
+  const fieldCount = 1 + kind.subjectFieldCount + lifeFieldCount(kind);
+  const verdict = decodeSignedToken(secret, grant, fieldCount);
+  if (!verdict.ok || verdict.fields.length !== fieldCount) return null;
+  const [purpose, ...rest] = verdict.fields;
+  if (purpose !== kind.purpose) return null;
+  const life = rest.slice(kind.subjectFieldCount).map(Number);
+  // Κάθε λήξη (αδράνειας, απόλυτη) πρέπει να είναι αριθμός στο μέλλον.
+  if (life.some((at) => !Number.isFinite(at) || at * 1000 <= nowMs)) return null;
+  return { subject: rest.slice(0, kind.subjectFieldCount), ceilingAt: life.length === 2 ? life[1] : null };
 }
 
 /**
@@ -89,15 +143,23 @@ export function readAccessGrant(
   grant: string,
   nowMs: number = Date.now(),
 ): readonly string[] | null {
-  const secret = readSecret();
-  if (secret === null) return null;
-  const verdict = decodeSignedToken(secret, grant, kind.subjectFieldCount + 2);
-  if (!verdict.ok || verdict.fields.length !== kind.subjectFieldCount + 2) return null;
-  const [purpose, ...rest] = verdict.fields;
-  if (purpose !== kind.purpose) return null;
-  const expiresAtSeconds = Number(rest[rest.length - 1]);
-  if (!Number.isFinite(expiresAtSeconds) || expiresAtSeconds * 1000 <= nowMs) return null;
-  return rest.slice(0, kind.subjectFieldCount);
+  return decodeGrant(kind, grant, nowMs)?.subject ?? null;
+}
+
+/**
+ * **Ανανέωση αδράνειας** ενός ζωντανού κουπονιού ανανεώσιμου είδους: ίδια ταυτότητα, **ίδια** απόλυτη λήξη, νέα
+ * λήξη αδράνειας `min(now + 15′, απόλυτη)`. `null` ⇒ άκυρο, ληγμένο, μη ανανεώσιμο είδος ή λείπει το μυστικό.
+ * ⚠️ Ο καλών ανανεώνει **μόνο** αφού ξαναέκρινε την πηγή στη βάση (αλλιώς το όριο ανάκλησης χάνεται).
+ */
+export function renewAccessGrant(
+  kind: AccessGrantKind,
+  grant: string,
+  nowMs: number = Date.now(),
+): string | null {
+  if (kind.visitCeilingSeconds === undefined) return null;
+  const decoded = decodeGrant(kind, grant, nowMs);
+  if (decoded === null || decoded.ceilingAt === null) return null;
+  return encodeGrant(kind, decoded.subject, decoded.ceilingAt, nowMs);
 }
 
 /** Το κουπόνι που φέρει το αίτημα σε αυτό το cookie, ή `null`. */
