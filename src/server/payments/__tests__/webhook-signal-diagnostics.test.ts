@@ -10,9 +10,9 @@ import { webhookSignalDiagnostics } from '../payment-provider';
 describe('webhookSignalDiagnostics', () => {
   it('κάθε διάγνωση φέρει τη μορφή υπογραφής που ταίριαξε', () => {
     expect(webhookSignalDiagnostics({
-      valid: true, signatureScheme: 'iris-hash-base64',
+      valid: true, signatureScheme: 'iris-hash-hex',
       signal: { kind: 'authorized-source', checkoutId: 'pchk_1', sourceToken: 'src_SECRET' },
-    })).toEqual({ signal: 'authorized-source', reason: null, signedFields: null, signatureScheme: 'iris-hash-base64' });
+    })).toEqual({ signal: 'authorized-source', reason: null, signedFields: null, signatureScheme: 'iris-hash-hex' });
   });
 
   it('ignored ⇒ ο λόγος', () => {

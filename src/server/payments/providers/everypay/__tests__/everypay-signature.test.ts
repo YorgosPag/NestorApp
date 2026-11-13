@@ -55,14 +55,15 @@ describe('judgeEverypayBodySignature', () => {
 describe('judgeEverypayIrisHash', () => {
   const json = JSON.stringify({ callback_url: 'https://x/cb', token: 'src_123', md: 'pchk_1', type: 'iris' });
 
-  // ADR-ACC-030 §5.8 #1: και οι δύο δεκτές — και ΛΕΕΙ ποια ταίριαξε, ώστε το ζωντανό συμβάν να κλείσει το ερώτημα.
-  it.each([['hex', 'iris-hash-hex'], ['base64', 'iris-hash-base64']] as const)(
-    'δέχεται υπογραφή %s του ΙΔΙΟΥ HMAC, δίνει το υπογεγραμμένο JSON και τη μορφή %s',
-    (encoding, scheme) => {
-      const verdict = judgeEverypayIrisHash(irisHash(json, encoding), SECRET);
-      expect(verdict).toEqual({ valid: true, payload: JSON.parse(json), scheme });
-    },
-  );
+  // ADR-ACC-030 §5.8 #1: η μορφή μετρήθηκε ζωντανά 2026-11-14 (`iris-hash-hex`) ⇒ μόνο hex.
+  it('δέχεται υπογραφή hex, δίνει το υπογεγραμμένο JSON και τη μορφή iris-hash-hex', () => {
+    const verdict = judgeEverypayIrisHash(irisHash(json, 'hex'), SECRET);
+    expect(verdict).toEqual({ valid: true, payload: JSON.parse(json), scheme: 'iris-hash-hex' });
+  });
+
+  it('απορρίπτει base64 των 32 bytes του ΙΔΙΟΥ HMAC — η μορφή της Everypay είναι hex (§5.8 #1)', () => {
+    expect(judgeEverypayIrisHash(irisHash(json, 'base64'), SECRET)).toEqual({ valid: false, reason: 'signature-invalid' });
+  });
 
   it('απορρίπτει hash με άλλο κλειδί', () => {
     expect(judgeEverypayIrisHash(irisHash(json, 'hex', 'sk_other'), SECRET)).toEqual({ valid: false, reason: 'signature-invalid' });

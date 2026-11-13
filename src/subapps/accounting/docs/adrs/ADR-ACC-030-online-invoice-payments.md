@@ -248,6 +248,25 @@ cron εκπέμπει `refunds checked · recorded · unmatched · failed`. Οι
   `online`, ακυρώνοντας τον εκκρεμή χρονοδιακόπτη (ένας βρόχος, ποτέ δύο)· η όψη κάνει σιωπηλή ανανέωση όταν η
   καρτέλα ξαναγίνει ορατή (πρότυπο SWR `revalidateOnFocus`), μία πτήση τη φορά.
 
+**Ζωντανή επαλήθευση `ba9366d3` — ✅ ΕΠΑΛΗΘΕΥΤΗΚΕ ΖΩΝΤΑΝΑ** (2026-11-13/14, παραγωγή `bb64c44b`, sandbox, Α-16, IRIS,
+Chrome, καταγραφέας απαντήσεων `fetch` μέσα στη σελίδα):
+- **(α) αναμονή πέρα από 15′** (`pchk_a0222155…`): στο 16′ και σε κάθε γύρο ως το 37′ `ok/pending`, **κανένα**
+  `visit-expired`· `expiresInMs` μειούμενο ως `0` στη λήξη του παρόχου (22:36:20), ένας ακόμη γύρος με `0`, `timed-out`
+  ≈ λήξη + 1′ (το `?payment=` σβήνει, «Δεν λάβαμε ακόμη επιβεβαίωση»).
+- **(β) κρυμμένη καρτέλα** 10,4′ (ο browser πάγωσε τους γύρους μετά από ~4′): στην επιστροφή γύρος σε **2″**.
+- **(γ) αδράνεια > 15′**: επιστροφή μετά από 15′ / 33′ / 39′ ⇒ `visit-expired` → **μία** `resolve` → `ok`, καμία
+  άρνηση στην οθόνη· «Πληρωμή» μετά από 18′ ⇒ `checkout` `visit-expired` → **μία** `resolve` → `checkout` `started`
+  (`pchk_dc324480…`) → προσομοιωτής.
+- **(δ) ανάκληση εν ώρα αναμονής**: στον επόμενο γύρο (3″) η όψη `refused: link-inactive` ⇒ «Το τιμολόγιο δεν είναι
+  διαθέσιμο», οι γύροι σταματούν (κανένας βρόχος). **(ε)** ενεργοί σύνδεσμοι Α-16: 0.
+
+Όρια της απόδειξης: (1) τα `Set-Cookie` (ανανέωση στο (α), σβήσιμο στο (δ)) **δεν** φάνηκαν απευθείας — HttpOnly και το
+εργαλείο δεν δείχνει κεφαλίδες· συνάγονται από τη συμπεριφορά. (2) Στο (δ) η **έκβαση απόπειρας** απάντησε ακόμη
+`pending` 3″ μετά την ανάκληση· την άρνηση την έδωσε η όψη — όπως σχεδιάστηκε (η έκβαση δεν κρίνει τον σύνδεσμο, όριο
+≤ 15′). (3) Για το «Πληρωμή» του (γ) η επιστροφή σε ορατότητα αποκλείστηκε με προσωρινό φράχτη συμβάντων μέσα στον
+browser (αλλιώς η σιωπηλή ανανέωση της όψης προλαβαίνει το πάτημα)· διακομιστής, πάροχος και cookie αληθινά. Ο Chrome
+θεωρεί τη σελίδα κρυμμένη και όταν άλλη καρτέλα γίνει ενεργή — μετρήθηκε ότι χωρίς φράχτη το σενάριο δεν στήνεται.
+
 **Επιλεξιμότητα συνδέσμου**: `isPayableByLink` = εισπρακτέο ∧ (μεταφορά ∨ κάρτα ∨ IRIS). Οι λογαριασμοί στο PDF
 μένουν στο `showsPaymentInstructions` (όχι IBAN σε τιμολόγιο «κάρτα»).
 
@@ -260,12 +279,13 @@ cron εκπέμπει `refunds checked · recorded · unmatched · failed`. Οι
 
 ### 5.8 Ανοιχτά προς επαλήθευση στο sandbox
 
-1. Κωδικοποίηση υπογραφής IRIS `hash` (hex / base64 — δεκτά και τα δύο). Η τεκμηρίωση ξαναελέγχθηκε 2026-11-13:
-   μόνο ψευδοκώδικας `Hmacsha256(json, sk)`, καμία κωδικοποίηση εξόδου. Τα Α-12 / Α-13 πέρασαν χωρίς να καταγραφεί
-   **ποια** ταίριαξε. Από 2026-11-13 ο έλεγχος **λέει** τη μορφή (`AcceptedVerdict.signatureScheme`: `iris-hash-hex`
-   · `iris-hash-base64` · `webhook-header`) στο «Payment webhook applied», στην επιστροφή browser και στο
-   `payment_provider_events.signatureScheme`. **Επόμενο βήμα**: με το πρώτο ζωντανό IRIS, ο έλεγχος στενεύει στη μία
-   μορφή που είδαμε.
+1. ~~Κωδικοποίηση υπογραφής IRIS `hash` (hex / base64)~~ — **έκλεισε 2026-11-14, μετρημένο ζωντανά**: **hex**.
+   Η τεκμηρίωση δίνει μόνο ψευδοκώδικα `Hmacsha256(json, sk)`· γι' αυτό δεχόμασταν και τα δύο και ο έλεγχος **έλεγε**
+   ποια ταίριαξε (`AcceptedVerdict.signatureScheme` → «Payment webhook applied» · επιστροφή browser ·
+   `payment_provider_events.signatureScheme`). Πλήρης IRIS στο Α-16 (`pchk_38bc3118-…`, sandbox, 01:32): **και** η
+   επιστροφή browser **και** το webhook IRIS ⇒ `iris-hash-hex`· το webhook ειδοποίησης ⇒ `webhook-header`
+   (`unchanged`). Ο έλεγχος **στένεψε σε μόνο hex** (`irisSignatureMatches`, `everypay-signature.ts`)· base64 ⇒
+   `signature-invalid` (ορατό `Payment webhook refused`, η συμφιλίωση καλύπτει την πληρωμή).
 2. Η ακριβής μορφή του σώματος κάθε webhook (η τεκμηρίωση δίνει λίστα πεδίων, όχι παράδειγμα ανά συμβάν): ο adapter
    ταξινομεί με το πρόθεμα του `token` (`pnt_` / `pmt_`)· άγνωστη μορφή ⇒ `ignored` + ίχνος, και η συμφιλίωση καλύπτει.
 3. ~~Η μορφή απάντησης λίστας~~ — **έκλεισε** (§5.9 #6): `{ total_count, items }`, μόνο αυτή· άλλη μορφή ⇒ 502.
@@ -304,7 +324,19 @@ cron εκπέμπει `refunds checked · recorded · unmatched · failed`. Οι
    (`GET /payments/{token}`) έχει μόνο `card.type` = δίκτυο (Visa / Mastercard)· κανένα πεδίο wallet (σε αντίθεση με
    το `payment_method_details.card.wallet.type` του Stripe). Αν η Everypay το προσθέσει ⇒ πεδίο στο `ProviderMovement`,
    ποτέ νέα `PaymentMethod`. **Ζωντανή δοκιμή (Giorgio):** «Κάρτα» από Chrome (Google Pay) και Safari/iPhone (Apple
-   Pay) — φαίνεται το κουμπί; ⏳ εκκρεμεί.
+   Pay) — φαίνεται το κουμπί;
+   🔴 **Ζωντανή δοκιμή 2026-11-13 (21:00–21:20, sandbox) — το κουμπί Google Pay ΔΕΝ εμφανίζεται.** Τρεις ειδοποιήσεις
+   (A-13 `pnt_IFbL6N1…`, A-14 `pnt_M9JagQm…`, A-15) πληρώθηκαν **με κάρτα** (δοκιμαστικές Visa …9395 / Mastercard …6273,
+   3DS «Successful Authentication») ⇒ webhook ⇒ «Εξοφλημένο» στην εφαρμογή και στη σελίδα πελάτη, και στις τρεις.
+   Όμως η hosted σελίδα έδειξε **μόνο IRIS + φόρμα κάρτας**, σε Chrome Windows **και** σε Chrome Android με κάρτα στο
+   Πορτοφόλι Google. Εύρημα στη σελίδα: περνά στη φόρμα (`sandbox-payform.everypay.gr`, iframe) `otherPaymentMethods`
+   με `iris` + `applePay` + `googlePay` (`countryCode GR`, `allowedCardNetworks VISA/MASTERCARD`) — αλλά με **κενό
+   `merchantName`**. Δεν ελέγχεται από εμάς (κανένα πεδίο του `POST /notifications`). Παγίδα: στο Android το φύλλο
+   «G Pay — Αυτόματη συμπλήρωση στοιχείων πληρωμής» είναι **αυτόματη συμπλήρωση του Chrome** (γράφει την πραγματική
+   κάρτα στα πεδία), **όχι** το Google Pay της Everypay — μη χρησιμοποιείται στο sandbox. ⏳ **Ρωτήθηκε ξανά η Everypay**
+   (απάντηση στο ίδιο νήμα, 2026-11-13 ~21:25, Gmail message `1a1d65b6348fbf26`): τι λείπει για να εμφανιστεί το
+   Google Pay / Apple Pay στη hosted σελίδα· μνεία του κενού `merchantName`· υπενθύμιση #7 (επαναλήψεις webhook).
+   Οι δοκιμαστικοί σύνδεσμοι των A-13/A-14/A-15 ανακλήθηκαν.
    Ιστορικό ερώτησης:
    Το dashboard (Ρυθμίσεις: Προφίλ · Εταιρεία · Τραπεζικοί λογαριασμοί · Ειδοποιήσεις · Κλειδιά API · Webhooks) **δεν**
    έχει επιλογή πορτοφολιών· κατά την τεκμηρίωση το Apple Pay «not enabled by default» ⇒ αίτημα στην υποστήριξη.
@@ -510,5 +542,8 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-13 | §5.8 #6 διάγνωση 35′ vs 15′: `StartedCheckout.providerClock` (ωμά `date_created` / `expiration_date`, `providerClockOf`) · `startedCheckoutDiagnostics` (διάρκεια ζωής με το ρολόι του παρόχου + απόκλιση από το δικό μας) · log `Checkout started at provider` στην έναρξη· σουίτα `started-checkout-diagnostics` (3) + 2 έλεγχοι στο `everypay-adapter`· jest 18/18. Ανακλήθηκαν οι 10 δοκιμαστικοί σύνδεσμοι πληρωμής (Α-13 ×3 · Α-12 · Α-11 ×2 · Α-10 ×3 · Α-7). |
 | 2026-11-13 | §5.8 #6 ✅ έκλεισε ζωντανά: IRIS sandbox = **35′** (`providerLifetimeSeconds` 2100), ζώνη ώρας σωστή (`providerClockSkewSeconds` −1). §5.6: η αναμονή της σελίδας τελειώνει στη λήξη της συνεδρίας + 1′ αντί για σταθερά 15′ — `expiresInMs` στην απάντηση έκβασης (`attemptExpiresInMs`, ρολόι διακομιστή), `deadlineAfter` στο `usePaymentConfirmationWatch`· §5.5 διορθώθηκε. Tests: `invoice-payment-attempt` (+1) · `checkout-attempt-route`. |
 | 2026-11-13 | §5.8 #7–#8: email στην Everypay (info@everypay.gr, Gmail thread `1a1d4b10d6f17741`) — ενεργοποίηση Apple Pay / Google Pay, εμφάνιση στη hosted σελίδα των Payment Notifications, επαλήθευση domain, πολιτική επαναλήψεων webhook· αναμονή απάντησης. Νομικό πλαίσιο πορτοφολιών καταγράφηκε (ν.3842/2010 άρθρο 20 παρ. 3 · Α.1155/2023 άρθρο 2 παρ. 5). |
-| 2026-11-13 | §5.6 ζωντανή επαλήθευση `e04fdc3b` **απέτυχε** στο 16′ (`visit-expired`: το κουπόνι επίσκεψης δεν ανανεωνόταν ποτέ ⇒ κάθε σελίδα πελάτη πέθαινε στα 15′· κρυμμένη καρτέλα χωρίς γύρο 11′). Διόρθωση: επίσκεψη με αδράνεια 15′ ανανεώσιμη + απόλυτη 8 ώρες (ADR-315 Α6) μέσω ΕΝΟΣ σκελετού διαδρομών (`_shared/invoice-visit-route.ts`) · αθόρυβη νέα επίσκεψη (`fetchInVisit` + `reopenVisit` + `ShareVisitContext`) σε όψη, έκβαση, «Πληρωμή», «Γράψτε μας», PDF · γύρος αμέσως σε `visibilitychange`/`pageshow`/`online`. Σφάλμα `deadlineAfter` (το τέλος έφευγε μπροστά για πάντα μετά τη λήξη) διορθώθηκε. Tests: `access-grant` · `share-access-grant-renewal` · `invoice-visit-route` · `share-visit-fetch` · `usePaymentConfirmationWatch`. Ζωντανή επαλήθευση: εκκρεμεί. |
+| 2026-11-13 | §5.6 ζωντανή επαλήθευση `e04fdc3b` **απέτυχε** στο 16′ (`visit-expired`: το κουπόνι επίσκεψης δεν ανανεωνόταν ποτέ ⇒ κάθε σελίδα πελάτη πέθαινε στα 15′· κρυμμένη καρτέλα χωρίς γύρο 11′). Διόρθωση: επίσκεψη με αδράνεια 15′ ανανεώσιμη + απόλυτη 8 ώρες (ADR-315 Α6) μέσω ΕΝΟΣ σκελετού διαδρομών (`_shared/invoice-visit-route.ts`) · αθόρυβη νέα επίσκεψη (`fetchInVisit` + `reopenVisit` + `ShareVisitContext`) σε όψη, έκβαση, «Πληρωμή», «Γράψτε μας», PDF · γύρος αμέσως σε `visibilitychange`/`pageshow`/`online`. Σφάλμα `deadlineAfter` (το τέλος έφευγε μπροστά για πάντα μετά τη λήξη) διορθώθηκε. Tests: `access-grant` · `share-access-grant-renewal` · `invoice-visit-route` · `share-visit-fetch` · `usePaymentConfirmationWatch`. Ζωντανή επαλήθευση: ✅ 2026-11-14 (βλ. επόμενη γραμμή). |
 | 2026-11-13 | §5.8 #8 ✅ / #7 μερικώς: απάντηση Everypay (Gmail thread `1a1d4b10d6f17741`) — Apple Pay / Google Pay ενεργά στο sandbox από 11/11, εμφανίζονται και στη hosted σελίδα των Payment Notifications, καμία επαλήθευση domain, webhook επιτυχία = HTTP 200 (επαναλήψεις: αναμένεται επιβεβαίωση). SSoT audit + επίσημα docs (api-reference · apple-pay · google-pay): **καμία αλλαγή κώδικα** — πορτοφόλι = `card` (7), το API δεν εκθέτει υποτύπο πορτοφολιού. Ζωντανή δοκιμή πορτοφολιού: Giorgio. |
+| 2026-11-13 | §5.8 #8 ζωντανή δοκιμή: 3 πληρωμές κάρτας sandbox (A-13/A-14/A-15, υπολογιστής + Android) ✅ από άκρη σε άκρη (webhook ⇒ «Εξοφλημένο»)· κουμπί **Google Pay δεν εμφανίζεται** στη hosted σελίδα παρότι η σελίδα περνά `googlePay`/`applePay` στη φόρμα (κενό `merchantName`). Δεύτερο email στην Everypay (ίδιο νήμα, `1a1d65b6348fbf26`). Καμία αλλαγή κώδικα. Σύνδεσμοι δοκιμής ανακλήθηκαν. |
+| 2026-11-14 | §5.6 ✅ **ζωντανή επαλήθευση `ba9366d3`** (επίσκεψη που ανανεώνεται) στην παραγωγή `bb64c44b`, sandbox, Α-16, IRIS: (α) αναμονή ως το 37′ χωρίς `visit-expired`, `timed-out` ≈ λήξη παρόχου + 1′ · (β) κρυμμένη καρτέλα 10,4′ ⇒ γύρος σε 2″ στην επιστροφή · (γ) αδράνεια 15′/33′/39′ ⇒ μία αθόρυβη `resolve`· «Πληρωμή» μετά από 18′ ⇒ `visit-expired` → `resolve` → `started` · (δ) ανάκληση ⇒ `link-inactive` στον επόμενο γύρο (3″), χωρίς βρόχο · (ε) 0 ενεργοί σύνδεσμοι. Όρια: `Set-Cookie` μη ορατό (HttpOnly) · έκβαση απόπειρας `pending` μετά την ανάκληση (σχεδιασμένο, όριο ≤ 15′) · φράχτης συμβάντων ορατότητας στον browser για το (γ). Καμία αλλαγή κώδικα. |
+| 2026-11-14 | §5.8 #1 ✅ **έκλεισε**: πλήρης IRIS στο Α-16 (sandbox, `pchk_38bc3118-…`) ⇒ «Εξοφλημένο»· logs Coolify: επιστροφή browser **και** webhook IRIS `signatureScheme: iris-hash-hex` (`recorded`), webhook ειδοποίησης `webhook-header` (`unchanged`), κανένα `Payment webhook refused`. Ο έλεγχος IRIS στένεψε σε **μόνο hex**: `matchingIrisScheme` + `base64DigestAsHex` ⇒ `irisSignatureMatches`, `EverypaySignatureScheme` χωρίς `iris-hash-base64`. Tests: `everypay-signature` (base64 ⇒ `signature-invalid`) · `webhook-signal-diagnostics`. Logs Coolify (§3Γ #1): `payment-reconcile` «refunds checked 1, recorded 0, unmatched 0, failed 0» ✅. |
