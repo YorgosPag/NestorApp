@@ -23,7 +23,7 @@ import { learnedDecisions, learnedEntry, memoryKeyOf, memoryOverridesFor, type L
 import { readPageWithDecisions } from '../page-decisions-reading';
 import { anchorForCell, tokenizePage, unitPrintedBeside } from '../page-tokens';
 import { corroborationsOf, parseImportCell, selectOptionFor } from '../proposal-values';
-import { fragmentFor } from '../cell-fragments';
+import { fragmentFor, lineFragments } from '../cell-fragments';
 
 type AriesPage = '85' | '86';
 
@@ -695,5 +695,47 @@ describe('🔴 βήμα 3Α: κάθε στόχος του Γ13 παίρνει τ
     expect(fragmentFor(frequency, '50-60Hz', null, text)).toBe('50-60Hz');
     expect(fragmentFor(voltage, '230V-400V', null, text)).toBe('230V-400V');
     expect(fragmentFor(voltage, SUPPLY_TEXT, null, text)).toBe('230V');
+  });
+});
+
+describe('🔴 βήμα 3Β: κομμάτι κατ\' αποκλεισμό — οι φάσεις παίρνουν «1Ph», όχι όλο το «230V-50Hz-1Ph»', () => {
+  const SUPPLY_TEXT = '230V-50Hz-1Ph';
+  const weight = attributesByCode.get('weight');
+  if (!weight) throw new Error('το fixture δεν έχει `weight`');
+  const measured = (id: string, code: string, family: string, unit: string) =>
+    ({ ...weight, id, code, config: { measurementFamilyCode: family, defaultUnitCode: unit, min: 0, max: null, decimals: 0, negativeAllowed: false } });
+  const voltage = measured('cattr_voltage', 'connection_voltage', 'voltage', 'V');
+  const frequency = measured('cattr_frequency', 'supply_frequency', 'frequency', 'Hz');
+  const phases = { ...weight, id: 'cattr_phases', code: 'phases', type: 'number' as const, config: { min: 1, max: 3, decimals: 0, negativeAllowed: false } };
+  const target = (attribute: typeof voltage | typeof phases) => ({ attribute, unitCode: null });
+  const context: PageTableContext = {
+    ...contextOf('85'),
+    attributesByCode: new Map([...attributesByCode, [voltage.code, voltage], [frequency.code, frequency], [phases.code, phases]]),
+  };
+  const [main, parts] = context.tables;
+  const line = lineOf(main, SUPPLY_TEXT);
+  const codeById = new Map([...context.attributesByCode.values()].map((attribute) => [attribute.id, attribute.code]));
+  const decision = { kind: 'attribute', attributeId: voltage.id, alsoAttributeIds: [frequency.id, phases.id] } as const;
+  const { mapping } = applyLineOverrides(variantsMapping(main, page85Lines), [{ page: 85, table: main.key, line, decision, by: 'usr_1', at: '2026-11-13T10:00:00.000Z' }], codeById, new Set(codeById.values()));
+  const { groups } = readPageTables({ tables: [mapping, accessories(parts)] }, context);
+  const textsOf = (attribute: string) => [...new Set(groups[0].rows.flatMap((row) => row.cells).filter((cell) => attributeOf(cell) === attribute).map((cell) => cell.text))];
+
+  it('τάση «230V» · συχνότητα «50Hz» · φάσεις «1Ph» — και το «1Ph» ΔΕΝ διαβάζεται (καμία μαντεψιά τιμής)', () => {
+    expect(textsOf(voltage.id)).toEqual(['230V']);
+    expect(textsOf(frequency.id)).toEqual(['50Hz']);
+    expect(textsOf(phases.id)).toEqual(['1Ph']);
+    expect(parseImportCell(phases, { text: '1Ph', unitCode: null }, text).ok).toBe(false);
+  });
+
+  it('🔑 ακριβώς ένα κομμάτι και ακριβώς ένας στόχος — αλλιώς ολόκληρο το κείμενο', () => {
+    expect(lineFragments([target(voltage), target(frequency), target(phases)], SUPPLY_TEXT, text)).toEqual(['230V', '50Hz', '1Ph']);
+    // Δύο στόχοι χωρίς κομμάτι: δύο περισσεύουν ⇒ κανείς δεν παίρνει τίποτα κατ' αποκλεισμό.
+    expect(lineFragments([target(voltage), target(phases)], SUPPLY_TEXT, text)).toEqual(['230V', SUPPLY_TEXT]);
+    // Δύο στόχοι παίρνουν το ΙΔΙΟ κομμάτι: τίποτα δεν περισσεύει με βεβαιότητα.
+    expect(lineFragments([target(voltage), target(voltage), target(phases)], SUPPLY_TEXT, text)).toEqual(['230V', '230V', SUPPLY_TEXT]);
+  });
+
+  it('το φρένο εύρους ισχύει και στον αποκλεισμό: «220-240V-1Ph» δεν σπάει', () => {
+    expect(lineFragments([target(voltage), target(phases)], '220-240V-1Ph', text)).toEqual(['220-240V-1Ph', '220-240V-1Ph']);
   });
 });

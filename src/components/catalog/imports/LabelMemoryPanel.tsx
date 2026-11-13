@@ -18,7 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { catalogFailureOf, type CatalogFailure } from '@/services/catalog/catalog-failure';
 import { clearLabelMemory, deleteLabelMemory, fetchLabelMemory } from '@/services/catalog/catalog-import-api.client';
-import type { ImportLabelMemoryWire, LabelMemoryListView } from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportValueMemoryDefinition } from '@/subapps/catalog/types/catalog-import';
+import type { ImportLabelMemoryWire, ImportSupplierMemoryWire, LabelMemoryListView } from '@/subapps/catalog/types/catalog-import-requests';
+import type { CatalogWire } from '@/subapps/catalog/types/catalog-record';
 import { IMPORT_LABEL_MEMORY_LIST_LIMIT } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useImportText } from './import-text';
 import { useLineDecisionText, type LineDecisionText } from './line-decision-text';
@@ -44,6 +46,29 @@ function MemoryEntry({ entry, text, disabled, onForget }: { readonly entry: Impo
   );
 }
 
+type ValueMemoryWire = CatalogWire<ImportValueMemoryDefinition>;
+
+/** §5.5.2 Β10: εγγραφή χωρίς `subject` είναι γραμμή (εγγραφές πριν τη μνήμη τιμών). */
+const isValueEntry = (entry: ImportSupplierMemoryWire): entry is ValueMemoryWire => entry.subject === 'value';
+const isLineEntry = (entry: ImportSupplierMemoryWire): entry is ImportLabelMemoryWire => entry.subject !== 'value';
+
+/** §5.5.2 Β10: μία τιμή που θυμάται ο προμηθευτής — «1Ph» → «1» στις «Φάσεις», με τις εγκρίσεις της. */
+function ValueEntry({ entry, text, disabled, onForget }: { readonly entry: ValueMemoryWire; readonly text: LineDecisionText; readonly disabled: boolean; readonly onForget: () => void }) {
+  const { t } = useImportText();
+  return (
+    <li className="flex flex-col gap-1 rounded-md border border-border p-2">
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-medium">{t('memory.valueSource', { attribute: text.attribute(entry.attributeId), source: entry.printedLabel })}</span>
+        <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={onForget}><Trash2 className="mr-1 h-3 w-3" aria-hidden />{t('memory.forget')}</Button>
+      </span>
+      <ul className="m-0 list-none p-0 text-xs text-muted-foreground">
+        {entry.decisions.map((item) => <li key={item.decision.text}>{t('memory.valueOption', { value: item.decision.text, count: item.count })}</li>)}
+      </ul>
+      {entry.decisions.length > 1 ? <span className="flex flex-wrap gap-1"><Badge variant="warning">{t('memory.conflict')}</Badge></span> : null}
+    </li>
+  );
+}
+
 function useMemoryList(supplierContactId: string, notify: (failure: CatalogFailure) => void) {
   const [list, setList] = useState<LabelMemoryListView | null>(null);
   const [busy, setBusy] = useState(false);
@@ -52,7 +77,7 @@ function useMemoryList(supplierContactId: string, notify: (failure: CatalogFailu
     fetchLabelMemory(supplierContactId).then((view) => { if (live) setList(view); }).catch((cause) => notify(catalogFailureOf(cause)));
     return () => { live = false; };
   }, [notify, supplierContactId]);
-  const forget = useCallback(async (entry: ImportLabelMemoryWire) => {
+  const forget = useCallback(async (entry: ImportSupplierMemoryWire) => {
     setList((current) => current && { ...current, entries: current.entries.filter((item) => item.id !== entry.id) });
     try {
       await deleteLabelMemory(entry.id, entry.revision);
@@ -96,9 +121,15 @@ export function LabelMemoryPanel({ supplierContactId, onClose, onFailure }: Labe
         {list?.truncated ? <p className="m-0 text-xs text-muted-foreground">{t('memory.truncated', { limit: IMPORT_LABEL_MEMORY_LIST_LIMIT })}</p> : null}
         {cleared !== null ? <p className="m-0 text-xs" role="status">{t('memory.cleared', { count: cleared })}</p> : null}
         {list && list.entries.length > 0 ? (
-          <ul className="m-0 flex max-h-96 list-none flex-col gap-2 overflow-auto p-0">
-            {list.entries.map((entry) => <MemoryEntry key={entry.id} entry={entry} text={text} disabled={busy} onForget={() => void forget(entry)} />)}
-          </ul>
+          <section className="flex max-h-96 flex-col gap-2 overflow-auto" aria-label={t('memory.title')}>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0" aria-label={t('memory.linesHeading')}>
+              {list.entries.filter(isLineEntry).map((entry) => <MemoryEntry key={entry.id} entry={entry} text={text} disabled={busy} onForget={() => void forget(entry)} />)}
+            </ul>
+            {list.entries.some(isValueEntry) ? <h3 className="m-0 text-sm font-semibold">{t('memory.valuesHeading')}</h3> : null}
+            <ul className="m-0 flex list-none flex-col gap-2 p-0" aria-label={t('memory.valuesHeading')}>
+              {list.entries.filter(isValueEntry).map((entry) => <ValueEntry key={entry.id} entry={entry} text={text} disabled={busy} onForget={() => void forget(entry)} />)}
+            </ul>
+          </section>
         ) : null}
         {confirming ? <p className="m-0 text-sm text-destructive" role="alert">{t('memory.clearConfirm')}</p> : null}
         <DialogFooter>

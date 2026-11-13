@@ -133,6 +133,12 @@ export function parseImportCell(attribute: CatalogAttributeDefinition, cell: Imp
   return parseAttributeText(attribute, importCellText(cell), context);
 }
 
+/** Το κείμενο **διαβάζεται** ως τιμή της ιδιότητας; Ο ένας κανόνας για το σπάσιμο κελιού (βήμα 3Α) και τη μνήμη τιμών (§5.5.2 Β10). */
+export function readsImportCell(attribute: CatalogAttributeDefinition, cell: ImportCellText, context: ValueTextContext): boolean {
+  const parsed = parseImportCell(attribute, cell, context);
+  return parsed.ok && parsed.value !== null;
+}
+
 /** Η ζωντανή τιμή στη θέση του στόχου. */
 export function liveSlotValue(values: ProductValues, target: Extract<ImportTarget, { kind: 'attribute' }>): AttributeValue | null {
   return values[target.attributeId]?.[target.channel]?.[target.locale] ?? null;

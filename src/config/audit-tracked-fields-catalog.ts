@@ -210,9 +210,10 @@ export const CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS = defs(
 );
 
 // ADR-923 §5.5.2 Β5 — η μνήμη ετικετών: παρακολουθείται ΤΙ θυμάται (οι αποφάσεις με τους μετρητές τους), γιατί αυτό εφαρμόζεται
-// μόνο του σε επόμενους καταλόγους· το «ποιος το δίδαξε» φαίνεται στο ιστορικό.
+// μόνο του σε επόμενους καταλόγους· το «ποιος το δίδαξε» φαίνεται στο ιστορικό. §5.5.2 Β10: η ίδια συλλογή κρατά και τη μνήμη τιμών
+// (`subject: 'value'`, ανά ιδιότητα αντί για οικογένεια).
 export const CATALOG_IMPORT_LABEL_MEMORY_TRACKED_FIELDS = defs(
-  ['supplierContactId', 'familyId', 'label', 'unitCode', 'printedLabel', 'isDeleted'],
+  ['subject', 'supplierContactId', 'familyId', 'attributeId', 'label', 'unitCode', 'printedLabel', 'isDeleted'],
   ['decisions'],
 );
 

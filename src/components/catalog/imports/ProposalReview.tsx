@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { editsByAddress, fieldAddress } from '@/subapps/catalog/import/human-edits';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ImportProposalField, ImportProposalRow, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
-import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportProposalWire, ImportValueMemoryHint } from '@/subapps/catalog/types/catalog-import-requests';
 import { useImportIssueMessage } from './import-issue-messages';
 import { PROPOSAL_STATUS_KEYS, ROW_ACTION_KEYS, useImportText } from './import-text';
 import { ProposalFieldRow } from './ProposalFieldRow';
@@ -53,6 +53,8 @@ interface ProposalReviewProps {
   readonly batchOpen: boolean;
   /** §5.5.2 Β4: από πού ήρθε η πρόταση τιμών (γραμμή του πίνακα, μονάδα, αναίρεση) · Β7: νέες τιμές άξονα για την πρόταση ιδιοτήτων. */
   readonly source?: React.ReactNode;
+  /** §5.5.2 Β10: τι ξέρει η μνήμη τιμών για πεδία χωρίς τιμή, ανά διεύθυνση πεδίου (`fieldAddress`). Απόν = τίποτα. */
+  readonly valueHints?: ReadonlyMap<string, ImportValueMemoryHint>;
 }
 
 /** §5.5.2 Β4 Δ5: η πρόταση τιμών περιμένει να εγκριθούν οι ιδιότητες που γεννούν τα SKU της. Ο server αρνείται ξανά. */
@@ -64,7 +66,7 @@ function proposalTitle(proposal: ImportProposalWire, t: ReturnType<typeof useImp
 }
 
 /** `decidable`: η πρόταση εκκρεμεί **και** η παρτίδα της είναι ανοιχτή — η μία κρίση για κάθε κουμπί απόφασης. */
-type RowProps = Pick<ProposalReviewProps, 'proposal' | 'selectedKey' | 'focusRequested' | 'onSelect' | 'onChange' | 'editRequestKey' | 'onEditRequestDone'> & {
+type RowProps = Pick<ProposalReviewProps, 'proposal' | 'selectedKey' | 'focusRequested' | 'onSelect' | 'onChange' | 'editRequestKey' | 'onEditRequestDone' | 'valueHints'> & {
   readonly row: ImportProposalRow;
   readonly view: ProposalView;
   readonly decidable: boolean;
@@ -82,7 +84,7 @@ type FieldEntryProps = Omit<RowProps, 'decidable'> & {
 };
 
 /** Ένα πεδίο στον πίνακα — ή τίποτα, όταν η προβολή το κρύβει **και** δεν είναι το επιλεγμένο (§5.5.2 Β8). */
-function FieldEntry({ field, row, proposal, edits, selectedKey, focusRequested = false, onSelect, onChange, view, readOnly, editRequestKey = null, onEditRequestDone }: FieldEntryProps) {
+function FieldEntry({ field, row, proposal, edits, selectedKey, focusRequested = false, onSelect, onChange, view, readOnly, editRequestKey = null, onEditRequestDone, valueHints }: FieldEntryProps) {
   const targetKey = importTargetKey(field.target);
   const reviewKey = fieldKeyOf(proposal.id, row, field);
   const active = reviewKey === selectedKey;
@@ -93,6 +95,7 @@ function FieldEntry({ field, row, proposal, edits, selectedKey, focusRequested =
     <ProposalFieldRow
       field={field}
       edit={edits.get(fieldAddress(row.rowKey, targetKey)) ?? null}
+      memoryHint={valueHints?.get(fieldAddress(row.rowKey, targetKey)) ?? null}
       active={active}
       reviewKey={reviewKey}
       focusRequested={active && focusRequested}

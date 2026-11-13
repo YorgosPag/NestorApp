@@ -20,8 +20,8 @@ import type {
   ImportPageUnmappedLine,
 } from '../types/catalog-import';
 import type { ImportMemoryHint, ImportMemoryHints } from '../types/catalog-import-requests';
-import { IMPORT_LABEL_MEMORY_MAX_DECISIONS } from '../vocabulary/catalog-import';
 import { labelMemoryKey, pageTableGroupKey } from './import-keys';
+import { learnedRecords, memoryOriginOf, memoryVerdict, type LearningStamp, type MemoryBook } from './supplier-memory-core';
 import { decisionAttributeIds, lineDecisionOf, tableOverridesOf } from './page-line-overrides';
 
 /** §5.5.2 Β3 Γ13: ίδιοι στόχοι, ίδια κύρια· η σειρά των υπόλοιπων δεν κάνει άλλη απόφαση. */
@@ -39,29 +39,12 @@ export function sameLineDecision(a: ImportLineDecision, b: ImportLineDecision): 
   return b.kind === 'ignore';
 }
 
-/** Ένα έγγραφο μνήμης με το id του (ντετερμινιστικό, από το `labelMemoryKey`). */
-export interface LabelMemoryEntry extends Pick<ImportLabelMemoryDefinition, 'decisions'> {
-  readonly id: string;
-}
-
-/** Η μνήμη που αφορά μια σελίδα: κλειδί (`labelMemoryKey`) → έγγραφο. Ό,τι λείπει δεν έχει ιστορικό. */
-export type LabelMemoryBook = ReadonlyMap<string, LabelMemoryEntry>;
+/** Η μνήμη γραμμών που αφορά μια σελίδα: κλειδί (`labelMemoryKey`) → έγγραφο. Ό,τι λείπει δεν έχει ιστορικό. */
+export type LabelMemoryBook = MemoryBook<ImportLineDecision>;
 
 export const EMPTY_LABEL_MEMORY: LabelMemoryBook = new Map();
 
-export type LabelMemoryVerdict =
-  | { readonly kind: 'none' }
-  | { readonly kind: 'conflict' }
-  | { readonly kind: 'apply'; readonly decision: ImportLineDecision; readonly count: number; readonly sourceBatchId: string };
-
-/** Μία διακριτή απόφαση στο ιστορικό ⇒ εφαρμογή· δύο ή περισσότερες ⇒ σύγκρουση· καμία ⇒ τίποτα. */
-export function memoryVerdict(entry: Pick<ImportLabelMemoryDefinition, 'decisions'> | null | undefined): LabelMemoryVerdict {
-  const decisions = entry?.decisions ?? [];
-  if (decisions.length === 0) return { kind: 'none' };
-  if (decisions.length > 1) return { kind: 'conflict' };
-  const [only] = decisions;
-  return { kind: 'apply', decision: only.decision, count: only.count, sourceBatchId: only.lastBatchId };
-}
+export { memoryVerdict };
 
 /** Ο προμηθευτής και η οικογένεια της παρτίδας: χωρίς προμηθευτή η μνήμη ούτε εφαρμόζεται ούτε μαθαίνει. */
 export interface LabelMemoryScope {
@@ -106,8 +89,7 @@ function memoryOverrideOf(table: MemoryTable, line: number, identity: ImportLine
   const entry = application.book.get(memoryKeyOf(application.scope, identity));
   const verdict = memoryVerdict(entry);
   if (!entry || verdict.kind !== 'apply' || !applicable(verdict.decision, application)) return null;
-  const origin = { kind: 'memory' as const, memoryId: entry.id, count: verdict.count, sourceBatchId: verdict.sourceBatchId };
-  return { page: table.page, table: table.table, line, decision: verdict.decision, ...application.stamp, identity, origin };
+  return { page: table.page, table: table.table, line, decision: verdict.decision, ...application.stamp, identity, origin: memoryOriginOf(entry.id, verdict) };
 }
 
 /**
@@ -124,20 +106,9 @@ export function memoryOverridesFor(table: MemoryTable, existing: readonly Import
   return prices.length > 1 || (prices.length === 1 && priceTaken) ? found.filter(({ decision }) => decision.kind !== 'price') : found;
 }
 
-/** Ποιος, πότε, από ποια παρτίδα: η σφραγίδα μιας έγκρισης. */
-export interface LearningStamp {
-  readonly batchId: string;
-  readonly by: string;
-  readonly at: string;
-}
-
-/** +1 στην απόφαση που εγκρίθηκε· οι άλλες μένουν (Akeneo). Πέρα από το όριο φεύγει η λιγότερο στηριγμένη. */
-export function learnedDecisions(current: readonly ImportLabelMemoryDecision[], decision: ImportLineDecision, stamp: LearningStamp): ImportLabelMemoryDecision[] {
-  const found = current.find((entry) => sameLineDecision(entry.decision, decision));
-  const next: ImportLabelMemoryDecision = { decision, count: (found?.count ?? 0) + 1, lastBatchId: stamp.batchId, lastBy: stamp.by, lastAt: stamp.at };
-  const kept = [...current.filter((entry) => entry !== found), next];
-  return kept.sort((a, b) => b.count - a.count).slice(0, IMPORT_LABEL_MEMORY_MAX_DECISIONS);
-}
+/** +1 στην απόφαση γραμμής που εγκρίθηκε, με τον κοινό κανόνα (`learnedRecords`). */
+export const learnedDecisions = (current: readonly ImportLabelMemoryDecision[], decision: ImportLineDecision, stamp: LearningStamp): ImportLabelMemoryDecision[] =>
+  learnedRecords(current, decision, sameLineDecision, stamp);
 
 /** Απόφαση γραμμής με ταυτότητα που μαθαίνεται. */
 export type LearnableOverride = ImportLineOverride & { readonly identity: ImportLineIdentity };
@@ -206,6 +177,7 @@ export function memoryHintsFor(lines: readonly ImportPageUnmappedLine[], overrid
     applicable: applicableCount,
     legacyLines: undecided.filter((line) => line.identity === undefined).length,
     fromMemory: overrides.filter(isMemoryOverride).length,
+    valuesFromMemory: 0,
   };
 }
 

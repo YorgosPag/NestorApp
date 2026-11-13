@@ -18,7 +18,7 @@ import type {
   ImportAssetsView,
   ImportBatchDetailView,
   ImportBatchWire,
-  ImportLabelMemoryWire,
+  ImportSupplierMemoryWire,
   ImportMemoryActionRequest,
   ImportMemoryActionResult,
   ImportProfileWire,
@@ -80,9 +80,9 @@ export function fetchLabelMemory(supplierContactId: string): Promise<LabelMemory
   return apiClient.get(`${CATALOG_API.importLabelMemory.collection}?${query.toString()}`);
 }
 
-export function deleteLabelMemory(id: string, expectedRevision: number): Promise<ImportLabelMemoryWire> {
+export function deleteLabelMemory(id: string, expectedRevision: number): Promise<ImportSupplierMemoryWire> {
   const query = new URLSearchParams({ [EXPECTED_REVISION_PARAM]: String(expectedRevision) });
-  return apiClient.delete<ImportLabelMemoryWire>(`${CATALOG_API.importLabelMemory.item(id)}?${query.toString()}`);
+  return apiClient.delete<ImportSupplierMemoryWire>(`${CATALOG_API.importLabelMemory.item(id)}?${query.toString()}`);
 }
 
 export const clearLabelMemory = (supplierContactId: string): Promise<ClearLabelMemoryResult> =>

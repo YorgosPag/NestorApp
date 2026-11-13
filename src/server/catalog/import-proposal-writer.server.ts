@@ -25,6 +25,7 @@ import type {
   ImportProposalDefinition,
   ImportProposalField,
   ImportProposalRow,
+  ImportValueEdit,
 } from '@/subapps/catalog/types/catalog-import';
 import type { UpdateImportProposalRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
@@ -33,6 +34,7 @@ import { CatalogWriteError } from './catalog-write-error';
 import { assertImportBatchOpen, assertPurposeAuthority, batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
 import { planProposal, resolveGroupIdentity, type PlannedProposal } from './import-proposal-plan.server';
 import { readBatchProposals, readImportBase } from './import-reads.server';
+import { readValueMemoryEdits } from './import-value-memory.server';
 import { releaseFinishedBatchMedia } from './media-quarantine-release.server';
 
 export type StoredImportProposal = StoredCatalogRecord<ImportProposalDefinition>;
@@ -76,6 +78,7 @@ async function stageGroup(
   group: ExtractedGroup,
   plan: PlannedProposal,
   seen: SeenRevision,
+  memoryEdits: readonly ImportValueEdit[],
 ): Promise<StoredImportProposal> {
   const key = importProposalKey(batch.id, group.groupKey);
   const { target, current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', key);
@@ -92,7 +95,8 @@ async function stageGroup(
     appliedAt: null,
     appliedBy: null,
     ...planFields({ ...plan, rows }),
-    ...humanEditFields(current?.edits ?? [], current?.modelCodeEdit ?? null),
+    // §5.5.2 Β10: η μνήμη τιμών μπαίνει **μόνο** στη γέννηση· η πρόταση που υπάρχει κρατά τον δικό της κατάλογο (και τις αναιρέσεις του).
+    ...humanEditFields(current === null ? memoryEdits : current.edits ?? [], current?.modelCodeEdit ?? null),
   };
   return current === null ? stageCreate(scope, 'importProposal', target, definition) : stageReplace(scope, 'importProposal', current, definition);
 }
@@ -101,17 +105,21 @@ async function stageGroup(
 const PROPOSE_ATTEMPTS = 3;
 
 async function proposeOnce(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<StoredImportProposal> {
+  const stamp = { by: ctx.uid, at: nowISO() };
   const seen = await runCatalogReadOnly(ctx, async (scope) => {
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
     const { current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(batchId, group.groupKey));
     const pending = current?.status === 'pending' ? current : null;
-    return { revision: current?.revision ?? null, resolved: await resolveGroupIdentity(scope, batch.target, effectiveGroup(group, pending)) };
+    // §5.5.2 Β10: νέα πρόταση ⇒ η μνήμη τιμών του προμηθευτή, ως διορθώσεις με προέλευση, πριν το σχέδιο (ίδιος κριτής, ίδια ταυτότητα).
+    const memoryEdits = current === null ? await readValueMemoryEdits(scope, batch, group, undefined, stamp) : [];
+    const effective = current === null ? applyHumanEdits(group, memoryEdits, null) : effectiveGroup(group, pending);
+    return { revision: current?.revision ?? null, memoryEdits, resolved: await resolveGroupIdentity(scope, batch.target, effective) };
   });
   const base = await readImportBase(ctx, seen.resolved.modelCode === null ? null : suggestCatalogCode(seen.resolved.modelCode));
   return runCatalogTransaction(ctx, async (scope) => {
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
     assertImportBatchOpen(batch);
-    return stageGroup(scope, batch, group, await planProposal(scope, batch, seen.resolved, base), seen.revision);
+    return stageGroup(scope, batch, group, await planProposal(scope, batch, seen.resolved, base), seen.revision, seen.memoryEdits);
   });
 }
 
@@ -216,6 +224,25 @@ function editedProposal(proposal: ImportProposalDefinition, request: UpdateImpor
   return { edits, modelCodeEdit, group: applyHumanEdits(proposal.extracted, edits, modelCodeEdit) };
 }
 
+/**
+ * §5.5.2 Β10: «επιστροφή στη μνήμη» για τα πεδία που το ζήτησαν (επανάληψη μιας αναιρεμένης εφαρμογής μνήμης). Ό,τι λέει η μνήμη **τώρα**,
+ * με τον ίδιο κανόνα της γέννησης (`readValueMemoryEdits`)· αν δεν λέει πια τίποτα, το πεδίο μένει στην πηγή.
+ */
+async function withMemoryFallback(
+  scope: CatalogTx,
+  batch: ImportBatchDefinition,
+  edited: ReturnType<typeof editedProposal>,
+  extracted: ExtractedGroup,
+  request: UpdateImportProposalRequest,
+  stamp: EditStamp,
+): Promise<ReturnType<typeof editedProposal>> {
+  const wanted = new Set(request.edits.filter((edit) => edit.fallback === 'memory').map((edit) => fieldAddress(edit.rowKey, edit.targetKey)));
+  if (wanted.size === 0) return edited;
+  const found = await readValueMemoryEdits(scope, batch, extracted, edited.edits, stamp);
+  const edits = [...edited.edits, ...found.filter((edit) => wanted.has(fieldAddress(edit.rowKey, edit.targetKey)))];
+  return { ...edited, edits, group: applyHumanEdits(extracted, edits, edited.modelCodeEdit) };
+}
+
 /** Πεδίο που ο άνθρωπος μόλις διόρθωσε (όχι επανέφερε) έχει απόφαση **του**: την τιμή του τη δέχεται, εκτός αν ο κριτής βρει εύρημα. */
 function withEditDecisions(rows: readonly ImportProposalRow[], request: UpdateImportProposalRequest): ImportProposalRow[] {
   const typed = new Set(request.edits.filter((edit) => edit.revert !== true).map((edit) => fieldAddress(edit.rowKey, edit.targetKey)));
@@ -237,8 +264,8 @@ export async function updateImportProposal(ctx: AuthContext, id: string, request
   const base = await readImportBase(ctx, preview.modelCode);
   return runCatalogTransaction(ctx, async (scope) => {
     const proposal = await readPendingProposal(scope, id, request.expectedRevision);
-    const edited = editedProposal(proposal, request, stamp);
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', proposal.batchId);
+    const edited = await withMemoryFallback(scope, batch, editedProposal(proposal, request, stamp), proposal.extracted, request, stamp);
     const plan = await planProposal(scope, batch, edited.group, base);
     const rows = withDecisions(withEditDecisions(carryDecisions(proposal.rows, plan.rows), request), request);
     return stageReplace(scope, 'importProposal', proposal, {

@@ -20,6 +20,8 @@ import { readOwned, readOwnedOrNull, runCatalogTransaction } from './catalog-sto
 import { readCatalogViewRevisionInTx } from './catalog-view-signal.server';
 import { assertPurposeAuthority } from './import-batch-writer.server';
 import { readMemoryHints } from './import-label-memory.server';
+import { memoryEditCount } from '@/subapps/catalog/import/value-memory';
+import { readBatchValueMemoryHints } from './import-value-memory.server';
 import type { ImportBatchDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 
@@ -80,7 +82,11 @@ export async function readImportBatchDetail(ctx: AuthContext, id: string, nowMs 
   // §5.5.2 Β5.2: η μνήμη του προμηθευτή απέναντι στην παρτίδα — μόνο ανάγνωση, καμία εγγραφή (Απόφαση 4).
   const freshness = { revision, freshUntil: pricingFreshUntil(nowMs, []) };
   const view = { freshness, batch, schemaRevision, proposals: proposalsSeen };
-  return labelMemory ? { ...view, labelMemory } : view;
+  if (!labelMemory) return view;
+  // §5.5.2 Β10: και η μνήμη τιμών, για τα πεδία που έμειναν χωρίς τιμή — πάλι μόνο ανάγνωση.
+  const values = await readBatchValueMemoryHints(ctx, batch, all);
+  const counted = { ...labelMemory, valuesFromMemory: memoryEditCount(all) };
+  return { ...view, labelMemory: values.length > 0 ? { ...counted, values } : counted };
 }
 
 function acceptedValuesOf(proposal: ImportProposalDefinition, into: Map<string, Map<string, ImportFieldValue>>): void {

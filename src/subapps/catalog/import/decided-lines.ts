@@ -9,7 +9,7 @@
  * @module subapps/catalog/import/decided-lines
  */
 
-import type { ImportLineDecision, ImportLineOverride, ImportLineOverrideOrigin, ImportPageUnmappedLine, ImportProposalRow } from '../types/catalog-import';
+import type { ImportLineDecision, ImportLineOverride, ImportMemoryOrigin, ImportPageUnmappedLine, ImportProposalRow } from '../types/catalog-import';
 import { IMPORT_LINE_MAX_TARGETS } from '../vocabulary/catalog-import';
 import { decisionAttributeIds, lineKeyOf, tableOverridesOf } from './page-line-overrides';
 
@@ -23,7 +23,7 @@ export interface DecidedLine {
   readonly values: readonly string[];
   readonly decision: ImportLineDecision;
   /** `null` = απόφαση ανθρώπου. */
-  readonly origin: ImportLineOverrideOrigin | null;
+  readonly origin: ImportMemoryOrigin | null;
 }
 
 /**

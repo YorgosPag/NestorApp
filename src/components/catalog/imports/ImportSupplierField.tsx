@@ -28,6 +28,7 @@ function MemoryReport({ report }: { readonly report: MemoryActionReport }) {
   return (
     <section className="flex flex-col gap-1 text-xs" role="status" aria-live="polite">
       <p className="m-0">{t(report.action === 'apply' ? 'batch.memoryApplied' : 'batch.memoryUndone', { count: outcome.lines })}</p>
+      {outcome.values > 0 ? <p className="m-0">{t(report.action === 'apply' ? 'batch.memoryValuesApplied' : 'batch.memoryValuesUndone', { count: outcome.values })}</p> : null}
       {outcome.limitReached ? <p className="m-0 text-destructive">{t('batch.memoryLimit')}</p> : null}
       {outcome.refused.length > 0 ? (
         <ul className="m-0 list-none p-0 text-muted-foreground">
@@ -49,9 +50,9 @@ function MemoryActions(props: ImportSupplierFieldProps & { readonly onOpenList: 
       <span className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" onClick={onOpenList}><History className="mr-1 h-3 w-3" aria-hidden />{t('batch.memoryOpen')}</Button>
         <Button type="button" size="sm" disabled={disabled} onClick={() => onMemory('apply')}><BrainCircuit className="mr-1 h-3 w-3" aria-hidden />{t('batch.memoryApply')}</Button>
-        {hints && hints.fromMemory > 0 ? (
+        {hints && hints.fromMemory + hints.valuesFromMemory > 0 ? (
           <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => onMemory('undo')}>
-            <Undo2 className="mr-1 h-3 w-3" aria-hidden />{t('batch.memoryUndoAll', { count: hints.fromMemory })}
+            <Undo2 className="mr-1 h-3 w-3" aria-hidden />{t('batch.memoryUndoAll', { count: hints.fromMemory + hints.valuesFromMemory })}
           </Button>
         ) : null}
       </span>

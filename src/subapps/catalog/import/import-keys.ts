@@ -65,6 +65,15 @@ export function labelMemoryKey(supplierContactId: string, familyId: string, iden
   return JSON.stringify(['label-memory', supplierContactId, familyId, identity.label, identity.unitCode]);
 }
 
+/**
+ * Η **μνήμη τιμών** (§5.5.2 Β10): προμηθευτής × ιδιότητα × κείμενο πηγής (κανονικοποιημένο) × μονάδα στήλης. Ανά ιδιότητα και όχι ανά
+ * οικογένεια (Akeneo Value Mapping): το «1Ph» του προμηθευτή σημαίνει το ίδιο σε κάθε οικογένεια. Άλλο πρόθεμα από τη μνήμη γραμμών,
+ * άρα δύο κλειδιά δεν συμπίπτουν ποτέ στην κοινή συλλογή.
+ */
+export function valueMemoryKey(supplierContactId: string, attributeId: string, label: string, unitCode: string | null): string {
+  return JSON.stringify(['value-memory', supplierContactId, attributeId, label, unitCode]);
+}
+
 const PRICE_GROUP_SUFFIX = ':prices';
 
 /**

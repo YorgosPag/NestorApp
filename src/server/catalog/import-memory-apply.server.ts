@@ -38,6 +38,7 @@ import { assertImportBatchOpen, assertPurposeAuthority, rewriteTableLineOverride
 import { labelMemoryScopeOf, readLabelMemoryBook } from './import-label-memory.server';
 import { memoryMayPrice } from './import-line-memory.server';
 import { readBatchProposals, readImportBatchDetail } from './import-reads.server';
+import { runValueMemoryAction } from './import-value-memory-action.server';
 import { commitTable, pageBasis, prepareTable, readBatchSchema, tableOf, type Judged, type TableBasis } from './import-table-rebuild.server';
 
 interface TableAddress {
@@ -155,19 +156,21 @@ async function runAction(run: MemoryRun, action: ImportMemoryActionRequest['acti
   for (const address of candidateTables(run, action)) {
     const basis = await tableBasisOf(run, pages, address);
     const result = !basis.ok ? refusedAt(address, basis) : action === 'apply' ? await applyToTable(run, basis.value, address, room) : await undoInTable(run, basis.value, address);
-    if (result.kind === 'full') return { lines, tables, refused, limitReached: true };
+    if (result.kind === 'full') return { lines, tables, refused, limitReached: true, values: 0 };
     if (result.kind === 'refused') refused.push(result.refusal);
     if (result.kind !== 'done') continue;
     lines += result.lines;
     tables += 1;
     room -= action === 'apply' ? result.lines : -result.lines;
   }
-  return { lines, tables, refused, limitReached: false };
+  return { lines, tables, refused, limitReached: false, values: 0 };
 }
 
 /** `POST /api/catalog/imports/[id]/memory` — ρητή εφαρμογή (`apply`) ή αναίρεση όλων (`undo`) της μνήμης, χωρίς AI. */
 export async function runImportMemoryAction(ctx: AuthContext, id: string, request: ImportMemoryActionRequest): Promise<ImportMemoryActionResult> {
   const run = await openRun(ctx, id);
-  const outcome = await runAction(run, request.action);
-  return { view: await readImportBatchDetail(ctx, id), outcome };
+  const lineOutcome = await runAction(run, request.action);
+  // §5.5.2 Β10: μετά τις γραμμές (που ξαναχτίζουν προτάσεις), η μνήμη τιμών — με τις **φρέσκες** αναθεωρήσεις των προτάσεων.
+  const values = await runValueMemoryAction(ctx, run.batch, await readBatchProposals(ctx, id), request.action);
+  return { view: await readImportBatchDetail(ctx, id), outcome: { ...lineOutcome, values } };
 }

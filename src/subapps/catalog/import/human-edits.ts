@@ -151,6 +151,20 @@ function editedCells(rowKey: string, cells: readonly ExtractedCell[], edits: Rea
   });
 }
 
+/** Ένα πεδίο της πρότασης στην πηγή: η διεύθυνσή του και **όλα** τα κελιά της (δύο «ΚΩΔΙΚΟΣ» ⇒ δύο). */
+export interface FieldSource {
+  readonly rowKey: string;
+  readonly targetKey: string;
+  readonly cells: readonly ExtractedCell[];
+}
+
+/** Τα πεδία της καθαρής ανάγνωσης ανά διεύθυνση — η **ίδια** διεύθυνση με τις διορθώσεις. Τη ρωτά η μνήμη τιμών (§5.5.2 Β10). */
+export function fieldSourcesOf(group: ExtractedGroup): FieldSource[] {
+  const of = (rowKey: string, cells: readonly ExtractedCell[]): FieldSource[] =>
+    [...cellsByAddress(rowKey, cells).values()].map((same) => ({ rowKey, targetKey: importTargetKey(same[0].target), cells: same }));
+  return [...group.rows.flatMap((row) => of(row.rowKey, row.cells)), ...of(sharedRowKey(group.groupKey), group.sharedCells)];
+}
+
 /** **Η ΜΙΑ εφαρμογή** των διορθώσεων πάνω σε καθαρή ανάγνωση. Καθαρή συνάρτηση: ίδια είσοδος ⇒ ίδια ομάδα. */
 export function applyHumanEdits(group: ExtractedGroup, edits: readonly ImportValueEdit[], modelCodeEdit: ImportModelCodeEdit | null): ExtractedGroup {
   if (edits.length === 0 && modelCodeEdit === null) return group;

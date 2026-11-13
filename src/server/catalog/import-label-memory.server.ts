@@ -28,8 +28,16 @@ import {
   type LearnableOverride,
 } from '@/subapps/catalog/import/label-memory';
 import { lineDecisionOf } from '@/subapps/catalog/import/page-line-overrides';
-import type { ImportBatchDefinition, ImportLabelMemoryDefinition, ImportProposalDefinition } from '@/subapps/catalog/types/catalog-import';
-import type { ClearLabelMemoryResult, ImportLabelMemoryWire, ImportMemoryHints, LabelMemoryListView } from '@/subapps/catalog/types/catalog-import-requests';
+import type { MemoryBook } from '@/subapps/catalog/import/supplier-memory-core';
+import type {
+  ImportBatchDefinition,
+  ImportLabelMemoryDefinition,
+  ImportLineDecision,
+  ImportMemoryRecord,
+  ImportProposalDefinition,
+  ImportSupplierMemoryDefinition,
+} from '@/subapps/catalog/types/catalog-import';
+import type { ClearLabelMemoryResult, ImportMemoryHints, ImportSupplierMemoryWire, LabelMemoryListView } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_LABEL_MEMORY_LIST_LIMIT } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
 import {
@@ -49,6 +57,8 @@ import {
 } from './catalog-store.server';
 
 type StoredLabelMemory = StoredCatalogRecord<ImportLabelMemoryDefinition>;
+/** §5.5.2 Β10: η ίδια συλλογή κρατά γραμμές και τιμές — η διαχείριση (ξέχνα · άδειασμα) τα χειρίζεται μαζί. */
+type StoredSupplierMemory = StoredCatalogRecord<ImportSupplierMemoryDefinition>;
 
 /** Ο προμηθευτής και η οικογένεια μιας παρτίδας ιδιοτήτων· `null` = χωρίς προμηθευτή, άρα χωρίς μνήμη. */
 export function labelMemoryScopeOf(batch: Pick<ImportBatchDefinition, 'target'>): LabelMemoryScope | null {
@@ -57,18 +67,23 @@ export function labelMemoryScopeOf(batch: Pick<ImportBatchDefinition, 'target'>)
   return { supplierContactId: target.supplierContactId, familyId: target.familyId };
 }
 
-/** Μαθαίνουν οι εγκρίσεις της παρτίδας; Απόν = ναι (§5.5.2 Β5.2). */
-const learnsLabels =(batch: Pick<ImportBatchDefinition, 'target'>): boolean => batch.target.purpose !== 'attributes' || batch.target.learnLabels !== false;
+/**
+ * Μαθαίνουν οι εγκρίσεις της παρτίδας; Απόν = ναι (§5.5.2 Β5.2). **Ένας** διακόπτης για γραμμές **και** τιμές (§5.5.2 Β10): «μαθαίνει
+ * από αυτόν τον προμηθευτή».
+ */
+export const learnsLabels = (batch: Pick<ImportBatchDefinition, 'target'>): boolean => batch.target.purpose !== 'attributes' || batch.target.learnLabels !== false;
 
-async function readEntries(scope: CatalogReadScope, keys: readonly string[]): Promise<LabelMemoryBook> {
-  const found = await Promise.all(keys.map(async (key) => ({ key, read: await readForUpsert<ImportLabelMemoryDefinition>(scope, 'importLabelMemory', key) })));
+/** Τα έγγραφα μνήμης για γνωστά κλειδιά, **ίδια** ανάγνωση για γραμμές και τιμές (§5.5.2 Β10): η συλλογή είναι μία. */
+export async function readMemoryEntries<D>(scope: CatalogReadScope, keys: readonly string[]): Promise<MemoryBook<D>> {
+  type Entry = { readonly decisions: readonly ImportMemoryRecord<D>[] };
+  const found = await Promise.all(keys.map(async (key) => ({ key, read: await readForUpsert<Entry>(scope, 'importLabelMemory', key) })));
   return new Map(found.flatMap(({ key, read }) => (read.current ? [[key, { id: read.current.id, decisions: read.current.decisions }] as const] : [])));
 }
 
 /** Η μνήμη για τα κλειδιά μιας σελίδας. Κανένα κλειδί ⇒ καμία ανάγνωση. */
 export function readLabelMemoryBook(ctx: AuthContext, keys: readonly string[]): Promise<LabelMemoryBook> {
   if (keys.length === 0) return Promise.resolve(EMPTY_LABEL_MEMORY);
-  return runCatalogReadOnly(ctx, (scope) => readEntries(scope, keys));
+  return runCatalogReadOnly(ctx, (scope) => readMemoryEntries<ImportLineDecision>(scope, keys));
 }
 
 interface LearningStep {
@@ -146,15 +161,15 @@ const memoryOfSupplier = (ctx: AuthContext, supplierContactId: string) =>
 /** `GET /api/catalog/import-label-memory?supplier=` — η μνήμη ενός προμηθευτή, η πιο στηριγμένη πρώτα. */
 export async function listLabelMemory(ctx: AuthContext, supplierContactId: string): Promise<LabelMemoryListView> {
   const snap = await memoryOfSupplier(ctx, supplierContactId).limit(IMPORT_LABEL_MEMORY_LIST_LIMIT + 1).get();
-  const entries = snap.docs.slice(0, IMPORT_LABEL_MEMORY_LIST_LIMIT).map((doc) => doc.data() as ImportLabelMemoryWire);
-  const support = (entry: ImportLabelMemoryWire) => entry.decisions.reduce((sum, decision) => sum + decision.count, 0);
+  const entries = snap.docs.slice(0, IMPORT_LABEL_MEMORY_LIST_LIMIT).map((doc) => doc.data() as ImportSupplierMemoryWire);
+  const support = (entry: ImportSupplierMemoryWire) => entry.decisions.reduce((sum: number, decision: { readonly count: number }) => sum + decision.count, 0);
   return { entries: [...entries].sort((a, b) => support(b) - support(a) || a.printedLabel.localeCompare(b.printedLabel)), truncated: snap.size > IMPORT_LABEL_MEMORY_LIST_LIMIT };
 }
 
 /** `DELETE /api/catalog/import-label-memory/[id]` — η μνήμη μιας ετικέτας ξεχνιέται (soft delete, CAS). Η επόμενη έγκριση τη ξαναγεννά. */
-export function deleteLabelMemory(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredLabelMemory> {
+export function deleteLabelMemory(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredSupplierMemory> {
   return runCatalogTransaction(ctx, async (scope) => {
-    const current = await readOwned<ImportLabelMemoryDefinition>(scope, 'importLabelMemory', id);
+    const current = await readOwned<ImportSupplierMemoryDefinition>(scope, 'importLabelMemory', id);
     assertRevision(current, expectedRevision);
     return stageSoftDelete(scope, 'importLabelMemory', current);
   });
@@ -163,8 +178,8 @@ export function deleteLabelMemory(ctx: AuthContext, id: string, expectedRevision
 /** Μία δέσμη του αδειάσματος: ξαναδιαβάζει μέσα στη συναλλαγή, ώστε ό,τι άλλαξε ή σβήστηκε στο μεταξύ να μη μετρηθεί δύο φορές. */
 function clearChunk(ctx: AuthContext, ids: readonly string[]): Promise<number> {
   return runCatalogTransaction(ctx, async (scope) => {
-    const found = await Promise.all(ids.map((id) => readOwnedOrNull<ImportLabelMemoryDefinition>(scope, 'importLabelMemory', id)));
-    const live = found.filter((record): record is StoredLabelMemory => record !== null);
+    const found = await Promise.all(ids.map((id) => readOwnedOrNull<ImportSupplierMemoryDefinition>(scope, 'importLabelMemory', id)));
+    const live = found.filter((record): record is StoredSupplierMemory => record !== null);
     for (const record of live) stageSoftDelete(scope, 'importLabelMemory', record);
     return live.length;
   });

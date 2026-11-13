@@ -8,12 +8,13 @@
  */
 
 import React, { useState } from 'react';
-import { Pencil, Undo2, UserRound } from 'lucide-react';
+import { BrainCircuit, Pencil, Undo2, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { corroborationsOf } from '@/subapps/catalog/import/proposal-values';
 import type { ImportProposalField, ImportSourceValue, ImportValueEdit } from '@/subapps/catalog/types/catalog-import';
+import type { ImportValueMemoryHint } from '@/subapps/catalog/types/catalog-import-requests';
 import type { HumanFieldDecision } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useImportIssueMessage } from './import-issue-messages';
 import { PROPOSAL_VIEW_KEYS, useImportText } from './import-text';
@@ -30,6 +31,8 @@ interface ProposalFieldRowProps {
   readonly field: ImportProposalField;
   /** §5.5.2 Β6: η διόρθωση του ανθρώπου σε αυτό το πεδίο, από τον κατάλογο της πρότασης. `null` = καμία. */
   readonly edit: ImportValueEdit | null;
+  /** §5.5.2 Β10: τι ξέρει η μνήμη τιμών του προμηθευτή για το πεδίο, όταν **δεν** το εφάρμοσε. `null` = τίποτα. */
+  readonly memoryHint?: ImportValueMemoryHint | null;
   readonly active: boolean;
   /** §5.5.2 Β8: το σταθερό κλειδί του πεδίου στην αναθεώρηση (`reviewTargetKey`) — ταυτότητα για hover λίστα ↔ PDF. */
   readonly reviewKey: string;
@@ -49,7 +52,7 @@ interface ProposalFieldRowProps {
   readonly onEditRequestDone?: () => void;
 }
 
-type EditProps = Pick<ProposalFieldRowProps, 'field' | 'edit' | 'readOnly' | 'onEdit' | 'onRevert'>;
+type EditProps = Pick<ProposalFieldRowProps, 'field' | 'edit' | 'memoryHint' | 'readOnly' | 'onEdit' | 'onRevert'>;
 type EditRequest = Pick<ProposalFieldRowProps, 'editRequested' | 'onEditRequestDone'>;
 
 /**
@@ -62,12 +65,41 @@ function EditNote({ field, edit, readOnly, onEdit, onRevert }: EditProps) {
   const detached = field.issues.some((issue) => issue.code === 'editSourceChanged');
   return (
     <p className="m-0 mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-      {detached ? null : (
-        <span><UserRound className="mr-1 inline h-3 w-3" aria-hidden />
-          {edit.sourceText === null ? t('review.editedFromEmpty') : t('review.editedByYou', { source: edit.sourceText })}</span>
-      )}
+      {detached ? null : <EditOrigin edit={edit} />}
       {detached ? <Button type="button" size="sm" variant="ghost" disabled={readOnly} onClick={() => onEdit(edit.text)}>{t('review.keepEdit')}</Button> : null}
       <Button type="button" size="sm" variant="ghost" disabled={readOnly} onClick={onRevert}><Undo2 className="mr-1 h-3 w-3" aria-hidden />{t('review.revertEdit')}</Button>
+    </p>
+  );
+}
+
+/** Ποιος έβαλε τη διόρθωση: ο άνθρωπος, ή η **μνήμη τιμών** του προμηθευτή (§5.5.2 Β10) με τις εγκρίσεις της. Εικονίδιο **και** λέξη. */
+function EditOrigin({ edit }: { readonly edit: ImportValueEdit }) {
+  const { t } = useImportText();
+  const source = edit.sourceText ?? '';
+  if (edit.origin?.kind === 'memory') {
+    return <span><BrainCircuit className="mr-1 inline h-3 w-3" aria-hidden />{t('review.editedByMemory', { count: edit.origin.count, source })}</span>;
+  }
+  return (
+    <span><UserRound className="mr-1 inline h-3 w-3" aria-hidden />
+      {edit.sourceText === null ? t('review.editedFromEmpty') : t('review.editedByYou', { source })}</span>
+  );
+}
+
+/**
+ * §5.5.2 Β10: η μνήμη τιμών ξέρει απάντηση που **δεν** εφάρμοσε — σύγκρουση, απάντηση που αναιρέθηκε, ή που δεν ισχύει πια. Κάθε επιλογή
+ * είναι η **υπάρχουσα** διόρθωση (ο διακομιστής ξανακρίνει)· ποτέ «κερδίζει ο συχνότερος».
+ */
+function MemoryChoices({ hint, label, readOnly, onEdit }: { readonly hint: ImportValueMemoryHint; readonly label: string; readonly readOnly: boolean; readonly onEdit: (text: string) => void }) {
+  const { t } = useImportText();
+  return (
+    <p className="m-0 mt-1 flex flex-wrap items-center gap-1 text-xs" role="group" aria-label={t('review.memoryChoiceGroup', { field: label })}>
+      <BrainCircuit className="h-3 w-3 text-muted-foreground" aria-hidden />
+      <span className="text-muted-foreground">{t(hint.verdict === 'conflict' ? 'review.memoryConflict' : 'review.memoryKnows')}</span>
+      {hint.options.map((option) => (
+        <Button key={option.text} type="button" size="sm" variant="outline" disabled={readOnly || !option.usable} onClick={() => onEdit(option.text)}>
+          {t(option.usable ? 'review.memoryOption' : 'review.memoryStale', { value: option.text, count: option.count })}
+        </Button>
+      ))}
     </p>
   );
 }
@@ -110,6 +142,7 @@ function IncomingCell({ label, editRequested = false, onEditRequestDone, ...prop
         </ul>
       ) : null}
       <KeepValueChoices field={field} label={label} readOnly={readOnly} onEdit={onEdit} />
+      {props.memoryHint && props.edit === null ? <MemoryChoices hint={props.memoryHint} label={label} readOnly={readOnly} onEdit={onEdit} /> : null}
       <EditNote {...props} />
       <Corroboration field={field} />
     </td>
@@ -164,7 +197,7 @@ function rowClassOf(active: boolean, hovered: boolean): string {
   return hovered ? 'border-b border-border bg-muted' : 'border-b border-border';
 }
 
-export function ProposalFieldRow({ field, edit, active, reviewKey, focusRequested, revealedFrom, readOnly, onFocus, onDecide, onEdit, onRevert, editRequested, onEditRequestDone }: ProposalFieldRowProps) {
+export function ProposalFieldRow({ field, edit, memoryHint = null, active, reviewKey, focusRequested, revealedFrom, readOnly, onFocus, onDecide, onEdit, onRevert, editRequested, onEditRequestDone }: ProposalFieldRowProps) {
   const { t } = useImportText();
   const label = useTargetLabeler()(field);
   const describe = useImportValueText();
@@ -183,7 +216,7 @@ export function ProposalFieldRow({ field, edit, active, reviewKey, focusRequeste
         <RevealNote view={revealedFrom} />
       </th>
       <td className="p-2 text-muted-foreground">{describe(field.live)}</td>
-      <IncomingCell field={field} edit={edit} label={label} readOnly={readOnly} onEdit={onEdit} onRevert={onRevert}
+      <IncomingCell field={field} edit={edit} memoryHint={memoryHint} label={label} readOnly={readOnly} onEdit={onEdit} onRevert={onRevert}
         editRequested={editRequested} onEditRequestDone={onEditRequestDone} />
       <td className="p-2"><FieldStatusBadge status={field.status} /></td>
       <td className="p-2 text-xs text-muted-foreground">

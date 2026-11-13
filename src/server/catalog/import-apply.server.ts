@@ -27,6 +27,7 @@ import { assertRevision, naturalKeyId, readForUpsert, readOwned, runCatalogTrans
 import { assertNoIssues, CatalogWriteError } from './catalog-write-error';
 import { assertImportBatchOpen, assertPurposeAuthority } from './import-batch-writer.server';
 import { readLearning, stageLearning } from './import-label-memory.server';
+import { readValueLearning, stageValueLearning } from './import-value-memory.server';
 import { proposalDefinitionOf, replanPriceSibling, settleImportBatch, type StoredImportProposal } from './import-proposal-writer.server';
 import { stagePriceLineBatch } from './price-line-writer.server';
 
@@ -194,9 +195,12 @@ async function commitProposal(ctx: AuthContext, id: string, expectedRevision: nu
     await assertAttributesDecided(scope, proposal);
     // §5.5.2 Β5 Απόφαση 2: η έγκριση του πίνακα διδάσκει τη μνήμη του προμηθευτή. Αναγνώσεις πριν από κάθε εγγραφή (Firestore).
     const learning = await readLearning(scope, batch, proposal);
+    // §5.5.2 Β10: και η μνήμη τιμών — οι διορθώσεις πάνω σε κείμενο που δεν διαβάζεται («1Ph» → 1), σε πεδία που η έγκριση δέχεται.
+    const valueLearning = await readValueLearning(scope, batch, proposal);
     const categoryIds = batch.target.purpose === 'attributes' ? batch.target.categoryIds : [];
     const rows = proposal.purpose === 'attributes' ? await applyAttributes(scope, proposal, categoryIds, vatAuthority) : await applyPrices(scope, proposal);
     stageLearning(scope, learning, proposal.batchId);
+    stageValueLearning(scope, valueLearning, proposal.batchId);
     return stageReplace(scope, 'importProposal', proposal, { ...proposalDefinitionOf(proposal), rows, status: 'applied', appliedAt: scope.now, appliedBy: ctx.uid });
   });
 }

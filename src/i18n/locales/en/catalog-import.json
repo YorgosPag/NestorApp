@@ -111,6 +111,8 @@
     "memoryWorking": "Applying memory table by table…",
     "memoryApplied": "{count, plural, =0 {Memory had nothing new to decide.} one {Memory decided # line.} other {Memory decided # lines.}}",
     "memoryUndone": "{count, plural, =0 {There were no memory decisions to remove.} one {Removed # memory decision.} other {Removed # memory decisions.}}",
+    "memoryValuesApplied": "{count, plural, one {Value memory filled # field.} other {Value memory filled # fields.}}",
+    "memoryValuesUndone": "{count, plural, one {Removed # memory value.} other {Removed # memory values.}}",
     "memoryRefusedTable": "Page {page} · table {table}: {reason}",
     "memoryLimit": "Applying stopped at the batch limit of line decisions; the remaining tables were left as they were."
   },
@@ -177,6 +179,12 @@
     "keepEdit": "Keep my correction",
     "keepValue": "Keep “{value}”",
     "keepValueGroup": "The source gives more than one value for “{field}” · choose the right one",
+    "editedByMemory": "{count, plural, one {From supplier memory · # approval · the PDF said “{source}”} other {From supplier memory · # approvals · the PDF said “{source}”}}",
+    "memoryChoiceGroup": "Supplier memory for “{field}”",
+    "memoryConflict": "Supplier memory has more than one answer · choose:",
+    "memoryKnows": "Supplier memory knows an answer:",
+    "memoryOption": "{count, plural, one {“{value}” · # approval} other {“{value}” · # approvals}}",
+    "memoryStale": "“{value}” · no longer valid",
     "remedy": {
       "title": "What to do",
       "unmappedWhy": "The value was read, but the family has no attribute to receive it.",
@@ -396,8 +404,12 @@
     }
   },
   "memory": {
-    "title": "Supplier label memory",
-    "lead": "What approvals have taught: line label → decision, with how many approvals backed it. Forget a label and memory asks again.",
+    "title": "Supplier memory",
+    "lead": "What approvals have taught: line label → decision, and unreadable text → value, with how many approvals backed them. Forget an entry and memory asks again.",
+    "linesHeading": "Lines",
+    "valuesHeading": "Values",
+    "valueSource": "{attribute} · “{source}”",
+    "valueOption": "{count, plural, one {→ “{value}” · # approval} other {→ “{value}” · # approvals}}",
     "loading": "Loading memory…",
     "empty": "This supplier has no memory yet. It learns whenever a table is approved.",
     "truncated": "Showing the {limit} best-supported labels.",

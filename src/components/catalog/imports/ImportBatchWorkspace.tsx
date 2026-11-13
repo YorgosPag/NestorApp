@@ -12,10 +12,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { fieldAddress } from '@/subapps/catalog/import/human-edits';
 import { attributesGroupKeyOf, pageTableGroupKey } from '@/subapps/catalog/import/import-keys';
 import { lineKeyOf, pendingUnmappedLines } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportBatchPages, ImportLineOverride, ImportPageUnmappedLine } from '@/subapps/catalog/types/catalog-import';
-import type { ImportBatchDetailView, ImportMemoryHint, ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportBatchDetailView, ImportMemoryHint, ImportProposalWire, ImportValueMemoryHint } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { useCatalogAccess } from '../shared/catalog-neutral-hooks';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
@@ -84,6 +85,10 @@ function priceSourceOf(view: ImportBatchDetailView, proposal: ImportProposalWire
 /** §5.5.2 Β5.2: οι υποδείξεις της μνήμης του προμηθευτή, ανά γραμμή (`lineKeyOf`). */
 const memoryHintsOf = (view: ImportBatchDetailView): ReadonlyMap<string, ImportMemoryHint> =>
   new Map((view.labelMemory?.hints ?? []).map((hint) => [lineKeyOf(hint), hint]));
+
+/** §5.5.2 Β10: οι υποδείξεις της μνήμης τιμών για μία πρόταση, ανά διεύθυνση πεδίου (`fieldAddress`). */
+const valueHintsOf = (view: ImportBatchDetailView, proposalId: string): ReadonlyMap<string, ImportValueMemoryHint> =>
+  new Map((view.labelMemory?.values ?? []).filter((hint) => hint.proposalId === proposalId).map((hint) => [fieldAddress(hint.rowKey, hint.targetKey), hint]));
 
 /** Ο προμηθευτής και η μνήμη του: μόνο σε ανοιχτή παρτίδα ιδιοτήτων από PDF (εκεί ζει η μνήμη ετικετών γραμμής). */
 function SupplierSlot({ workspace, view }: Pick<BatchProposalsProps, 'workspace' | 'view'>) {
@@ -198,6 +203,7 @@ function ProposalSlot({ workspace, view, selection, proposal, canPrice }: BatchP
       onApply={(target) => void workspace.apply(target)}
       onReject={(target) => void workspace.reject(target)}
       saving={workspace.saving.has(proposal.id)}
+      valueHints={valueHintsOf(view, proposal.id)}
       unmapped={pendingUnmappedLines(lines, overrides).length}
       lines={{
         lines,

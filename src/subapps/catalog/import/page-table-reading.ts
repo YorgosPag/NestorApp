@@ -30,7 +30,7 @@ import { lineSiblingOf, type BoundLineOfTable } from './line-sibling';
 import { labelPrintsUnit } from './page-tokens';
 import { textLayerDoubted, type RawLineMapping, type RawPageMapping, type RawTableMapping, type VariantOrientation } from './page-table-mapping';
 import { importTextContextOf, selectOptionFor } from './proposal-values';
-import { fragmentFor } from './cell-fragments';
+import { lineFragments } from './cell-fragments';
 
 type NamedAttribute = CatalogAttributeDefinition & { readonly id: string };
 
@@ -220,24 +220,40 @@ function unitFindings(view: TableView, data: readonly number[], bound: readonly 
 /** Η ταυτότητα μιας παραλλαγής μέσα στη σελίδα: **ίδια** για την πρόταση ιδιοτήτων και την πρόταση τιμών του πίνακα (§5.5.2 Β4). */
 const variantRowKey = (page: number, table: PageTable, position: number): string => `p${page}${table.key}v${position}`;
 
-/** Βήμα 3Α: γραμμή με 2+ ιδιότητες (Γ13) ⇒ κάθε στόχος κρατά το δικό του κομμάτι του κελιού (`fragmentFor`). */
-function ownFragment(cell: ExtractedCell, attribute: NamedAttribute, context: PageTableContext): ExtractedCell {
-  if (cell.text === null) return cell;
-  const text = fragmentFor(attribute, cell.text, cell.unitCode, importTextContextOf(context.registry));
-  return text === cell.text ? cell : { ...cell, text };
+interface LineCell {
+  readonly line: number;
+  readonly attribute: NamedAttribute;
+  readonly cell: ExtractedCell;
+}
+
+/**
+ * Βήματα 3Α/3Β: γραμμή με 2+ ιδιότητες (Γ13) ⇒ κάθε στόχος κρατά το δικό του κομμάτι του κελιού, και ο τελευταίος το κομμάτι που
+ * περισσεύει (`lineFragments`). Οι στόχοι της γραμμής κρίνονται **μαζί**, με τη σειρά τους· η σειρά των κελιών μένει ίδια.
+ */
+function withOwnFragments(made: readonly LineCell[], context: PageTableContext): ExtractedCell[] {
+  const texts = new Map<LineCell, string>();
+  for (const line of new Set(made.map((entry) => entry.line))) {
+    const same = made.filter((entry) => entry.line === line);
+    const text = same[0].cell.text;
+    if (text === null || new Set(same.map(({ attribute }) => attribute.id)).size < 2) continue;
+    const targets = same.map(({ attribute, cell }) => ({ attribute, unitCode: cell.unitCode }));
+    lineFragments(targets, text, importTextContextOf(context.registry)).forEach((fragment, index) => texts.set(same[index], fragment));
+  }
+  return made.map((entry) => {
+    const text = texts.get(entry);
+    return text === undefined || text === entry.cell.text ? entry.cell : { ...entry.cell, text };
+  });
 }
 
 function rowsOf(view: TableView, table: PageTable, data: readonly number[], lines: readonly LineBinding[], page: number, context: PageTableContext): ExtractedRow[] {
   const disputed = table.witness === 'disputed';
-  const targetsOn = (line: number): number => new Set(lines.filter((binding) => binding.line === line).map(({ attribute }) => attribute.id)).size;
   return data.map((slot, position) => ({
     rowKey: variantRowKey(page, table, position),
-    cells: lines.flatMap(({ line, attribute, confidence }) => {
+    cells: withOwnFragments(lines.flatMap(({ line, attribute, confidence }) => {
       const unit = printedUnit(attribute, labelCells(view, line, data), context.registry);
       const cell = extractedCell(view.at(line, slot), { attribute, confidence, unit, disputed }, page);
-      if (cell === null) return [];
-      return [targetsOn(line) > 1 ? ownFragment(cell, attribute, context) : cell];
-    }),
+      return cell === null ? [] : [{ line, attribute, cell }];
+    }), context),
   }));
 }
 

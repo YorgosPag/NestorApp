@@ -38,6 +38,8 @@ export interface FieldMark {
   readonly decision?: HumanFieldDecision;
   /** Κείμενο διόρθωσης · `null` = καμία διόρθωση (τιμή της πηγής). */
   readonly edit?: string | null;
+  /** §5.5.2 Β10: τη διόρθωση την είχε βάλει η **μνήμη τιμών** — η επιστροφή σε αυτήν ξαναζητά τη μνήμη, δεν γίνεται διόρθωση του ανθρώπου. */
+  readonly memory?: boolean;
 }
 
 /** Τι έκανε ο άνθρωπος — για το όνομα του βήματος (λίστα αναίρεσης του Revit). */
@@ -129,13 +131,16 @@ export interface ReviewStepPlan {
 export interface FieldAt {
   readonly field: ImportProposalField;
   readonly edit: string | null;
+  /** Η διόρθωση είναι της μνήμης τιμών (§5.5.2 Β10). */
+  readonly memory: boolean;
 }
 
 export function fieldsOf(proposal: ImportProposalWire): ReadonlyMap<string, FieldAt> {
   const edits = editsByAddress(proposal.edits);
   const entries = proposal.rows.flatMap((row) => row.fields.map((field) => {
     const address = fieldAddress(row.rowKey, importTargetKey(field.target));
-    return [address, { field, edit: edits.get(address)?.text ?? null }] as const;
+    const edit = edits.get(address);
+    return [address, { field, edit: edit?.text ?? null, memory: edit?.origin?.kind === 'memory' }] as const;
   }));
   return new Map(entries);
 }
@@ -182,7 +187,8 @@ function fieldsStepOf(proposal: ImportProposalWire, change: ProposalChange): Ste
   if (!label) return null;
   const before = after.map((mark): FieldMark => {
     const at = fields.get(addressOf(mark)) as FieldAt;
-    return { rowKey: mark.rowKey, targetKey: mark.targetKey, decision: humanDecisionOf(at.field), ...(mark.edit !== undefined ? { edit: at.edit } : {}) };
+    const edit = mark.edit === undefined ? {} : { edit: at.edit, ...(at.memory ? { memory: true } : {}) };
+    return { rowKey: mark.rowKey, targetKey: mark.targetKey, decision: humanDecisionOf(at.field), ...edit };
   });
   return { before: { kind: 'fields', proposalId: proposal.id, label, marks: before }, after: { kind: 'fields', proposalId: proposal.id, label, marks: after } };
 }
@@ -214,6 +220,13 @@ export function reviewStepOf(proposal: ImportProposalWire, change: ProposalChang
 export const pendingProposalOf = (proposals: readonly ImportProposalWire[], id: string): ImportProposalWire | null =>
   proposals.find((item) => item.id === id && item.status === 'pending') ?? null;
 
+/** Το αίτημα που ξαναφέρνει ένα σημάδι: η πηγή (`null`), η μνήμη τιμών (§5.5.2 Β10), ή το κείμενο του ανθρώπου. */
+function editInputOf(mark: FieldMark, edit: string | null): ImportFieldEditInput {
+  const address = { rowKey: mark.rowKey, targetKey: mark.targetKey };
+  if (edit === null) return { ...address, text: '', revert: true };
+  return mark.memory === true ? { ...address, text: '', revert: true, fallback: 'memory' } : { ...address, text: edit };
+}
+
 /**
  * Από τα σημάδια `from` στα σημάδια `to`: μόνο τα πεδία που είναι **ακόμη** όπως τα λέει το `from`. Πρόταση που δεν εκκρεμεί
  * πια (εγκρίθηκε · απορρίφθηκε · χάθηκε) ⇒ όλα παρακάμπτονται.
@@ -228,10 +241,7 @@ export function planFieldMarks(proposals: readonly ImportProposalWire[], proposa
   if (marks.length === 0) return { send: null, skipped };
   const decisions = marks.flatMap((mark): ImportFieldDecisionInput[] =>
     mark.decision === undefined ? [] : [{ rowKey: mark.rowKey, targetKey: mark.targetKey, decision: mark.decision }]);
-  const edits = marks.flatMap((mark): ImportFieldEditInput[] => {
-    if (mark.edit === undefined) return [];
-    return [mark.edit === null ? { rowKey: mark.rowKey, targetKey: mark.targetKey, text: '', revert: true } : { rowKey: mark.rowKey, targetKey: mark.targetKey, text: mark.edit }];
-  });
+  const edits = marks.flatMap((mark): ImportFieldEditInput[] => (mark.edit === undefined ? [] : [editInputOf(mark, mark.edit)]));
   return { send: { door: 'change', proposal, change: { decisions, edits } }, skipped };
 }
 

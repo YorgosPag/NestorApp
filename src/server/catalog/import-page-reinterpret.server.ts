@@ -34,7 +34,7 @@ import {
 import { tableLineIdentities } from '@/subapps/catalog/import/page-table-reading';
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
-import type { ImportBatchDefinition, ImportLineDecision, ImportLineOverrideOrigin } from '@/subapps/catalog/types/catalog-import';
+import type { ImportBatchDefinition, ImportLineDecision, ImportMemoryOrigin } from '@/subapps/catalog/types/catalog-import';
 import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import type { ImportLineOutcome, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
 import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
@@ -170,7 +170,7 @@ async function judgePriceLine(ctx: AuthContext, batch: StoredImportBatch, reques
 /** Η απόφαση που θα γραφτεί, με την προέλευσή της όταν τη δίνει η μνήμη (§5.5.2 Β9δ, `fallback: 'memory'`). */
 interface ResolvedLine {
   readonly request: SetImportLineRequest;
-  readonly origin?: ImportLineOverrideOrigin;
+  readonly origin?: ImportMemoryOrigin;
 }
 
 /**

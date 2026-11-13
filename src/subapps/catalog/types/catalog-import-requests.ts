@@ -12,6 +12,7 @@ import type {
   ImportBatchDefinition,
   ImportBatchTarget,
   ImportLabelMemoryDefinition,
+  ImportSupplierMemoryDefinition,
   ImportLineDecision,
   ImportProfileDefinition,
   ImportProposalDefinition,
@@ -68,6 +69,11 @@ export interface ImportFieldEditInput {
   readonly targetKey: string;
   readonly text: string;
   readonly revert?: boolean;
+  /**
+   * §5.5.2 Β10: μαζί με `revert` — «φέρε ξανά ό,τι λέει η μνήμη τιμών» (επανάληψη μιας αναιρεμένης εφαρμογής μνήμης). Ο διακομιστής
+   * αποφασίζει τι λέει η μνήμη· ο πελάτης δεν γράφει ποτέ ο ίδιος προέλευση.
+   */
+  readonly fallback?: 'memory';
 }
 
 export interface UpdateImportProposalRequest {
@@ -125,6 +131,8 @@ export interface ImportMemoryActionOutcome {
   readonly refused: readonly ImportMemoryTableRefusal[];
   /** Η εφαρμογή σταμάτησε στο όριο αποφάσεων γραμμής της παρτίδας (`IMPORT_MAX_LINE_OVERRIDES`). */
   readonly limitReached: boolean;
+  /** §5.5.2 Β10: πεδία που η μνήμη τιμών γέμισε (`apply`) ή άδειασε (`undo`). */
+  readonly values: number;
 }
 
 export interface ImportMemoryActionResult {
@@ -162,13 +170,34 @@ export interface ImportMemoryHints {
   readonly legacyLines: number;
   /** Αποφάσεις της παρτίδας που έβαλε η μνήμη (για την «αναίρεση όλων»). */
   readonly fromMemory: number;
+  /** §5.5.2 Β10: τι ξέρει η μνήμη τιμών για πεδία που έμειναν χωρίς τιμή. Απόν = τίποτα. */
+  readonly values?: readonly ImportValueMemoryHint[];
+  /** §5.5.2 Β10: πεδία εκκρεμών προτάσεων που γέμισε η μνήμη τιμών (για την «αναίρεση όλων»). */
+  readonly valuesFromMemory: number;
+}
+
+/**
+ * Τι ξέρει η **μνήμη τιμών** για ένα πεδίο εκκρεμούς πρότασης που **δεν** εφάρμοσε (§5.5.2 Β10): σύγκρουση (η οθόνη ρωτά, ποτέ «κερδίζει
+ * ο συχνότερος»), ή απάντηση που δεν διαβάζεται πια (`usable: false`) ή που ο άνθρωπος αναίρεσε. Κάθε επιλογή είναι **κείμενο** που θα
+ * περάσει από τον ίδιο κωδικοποιητή.
+ */
+export interface ImportValueMemoryHint {
+  readonly proposalId: string;
+  readonly rowKey: string;
+  readonly targetKey: string;
+  readonly memoryId: string;
+  readonly verdict: 'apply' | 'conflict';
+  readonly options: readonly { readonly text: string; readonly count: number; readonly lastBatchId: string; readonly usable: boolean }[];
 }
 
 export type ImportLabelMemoryWire = CatalogWire<ImportLabelMemoryDefinition>;
 
 /** Η μνήμη ενός προμηθευτή (§5.5.2 Β5.2): οι εγγραφές του, και αν κόπηκε στο όριο ανάγνωσης. */
+/** §5.5.2 Β10: ό,τι ζει στη μνήμη ενός προμηθευτή — γραμμές **και** τιμές, μία συλλογή. */
+export type ImportSupplierMemoryWire = CatalogWire<ImportSupplierMemoryDefinition>;
+
 export interface LabelMemoryListView {
-  readonly entries: readonly ImportLabelMemoryWire[];
+  readonly entries: readonly ImportSupplierMemoryWire[];
   readonly truncated: boolean;
 }
 

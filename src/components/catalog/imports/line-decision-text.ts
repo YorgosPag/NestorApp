@@ -26,26 +26,28 @@ export interface LineDecisionText {
   readonly of: (decision: ImportLineDecision) => string;
   /** Η ιδιότητα υπάρχει ακόμη στη βιβλιοθήκη (όσο φορτώνει η βιβλιοθήκη, θεωρείται ότι υπάρχει). */
   readonly known: (decision: ImportLineDecision) => boolean;
+  /** §5.5.2 Β10: το όνομα μιας ιδιότητας — ο ίδιος ονοματοδότης για τη μνήμη τιμών. */
+  readonly attribute: (attributeId: string) => string;
 }
 
 export function useLineDecisionText(): LineDecisionText {
   const { t, uiLanguage } = useImportText();
   const { text } = useLocalizedTextReader(uiLanguage);
   const attributes = useCatalogCollection('CATALOG_ATTRIBUTES');
+  const attribute = useCallback((id: string): string => {
+    const found = attributes.items.find((item) => item.id === id);
+    return found ? text(found.labels) || found.code : id;
+  }, [attributes.items, text]);
   const of = useCallback((decision: ImportLineDecision): string => {
     if (decision.kind === 'ignore') return t('review.lineDecision.ignore');
     if (decision.kind === 'price') return t('review.lineDecision.price', { unit: decision.unitCode });
-    const nameOf = (id: string): string => {
-      const attribute = attributes.items.find((item) => item.id === id);
-      return attribute ? text(attribute.labels) || attribute.code : id;
-    };
     // §5.5.2 Β3 Γ13: μία γραμμή, περισσότερες ιδιότητες — όλες ονομάζονται, η κύρια πρώτη.
-    const name = decisionAttributeIds(decision).map(nameOf).join(TARGET_JOINER);
+    const name = decisionAttributeIds(decision).map(attribute).join(TARGET_JOINER);
     // §5.5.2 Β7: η γραμμή δίνει **και** τον άξονα — ό,τι άλλο έδινε μένει.
     return decision.kind === 'axis' ? t('review.lineDecision.axis', { attribute: name }) : name;
-  }, [attributes.items, t, text]);
+  }, [attribute, t]);
   // Μόνο βιβλιοθήκη που φορτώθηκε κρίνει «δεν υπάρχει»: φόρτωση ή αποτυχία δεν είναι απόδειξη απουσίας. Λείπει **μία** ⇒ δεν υπάρχει.
   const known = useCallback((decision: ImportLineDecision): boolean =>
     attributes.state !== 'ready' || decisionAttributeIds(decision).every((id) => attributes.items.some((item) => item.id === id)), [attributes.items, attributes.state]);
-  return { of, known };
+  return { of, known, attribute };
 }

@@ -304,6 +304,11 @@ export interface ImportValueEdit {
   readonly sourceTexts?: readonly (string | null)[];
   readonly by: string;
   readonly at: string;
+  /**
+   * §5.5.2 Β10: η διόρθωση την έβαλε η **μνήμη τιμών** του προμηθευτή, όχι ο άνθρωπος. Απόν = άνθρωπος. Ανθρώπινη διόρθωση στην ίδια
+   * διεύθυνση την αντικαθιστά· η αναίρεσή της ξαναφέρνει την πηγή.
+   */
+  readonly origin?: ImportMemoryOrigin;
 }
 
 /** Ο κωδικός μοντέλου του ανθρώπου (§5.5.2 Β6), όταν η πηγή δεν τυπώνει ή τυπώνει λάθος. */
@@ -465,11 +470,11 @@ export interface ImportLineOverride {
   /** Η ταυτότητα της γραμμής, για τη μάθηση στην έγκριση (§5.5.2 Β5). Απούσα ⇒ η απόφαση ισχύει, αλλά δεν μαθαίνεται. */
   readonly identity?: ImportLineIdentity;
   /** Από πού ήρθε η απόφαση. Απούσα = από άνθρωπο. */
-  readonly origin?: ImportLineOverrideOrigin;
+  readonly origin?: ImportMemoryOrigin;
 }
 
-/** Απόφαση που εφάρμοσε η **μνήμη** του προμηθευτή (§5.5.2 Β5 Απόφαση 3): ορατή, με αναίρεση. */
-export interface ImportLineOverrideOrigin {
+/** Απόφαση γραμμής (§5.5.2 Β5 Απόφαση 3) ή διόρθωση τιμής (§5.5.2 Β10) που εφάρμοσε η **μνήμη** του προμηθευτή: ορατή, με αναίρεση. */
+export interface ImportMemoryOrigin {
   readonly kind: 'memory';
   readonly memoryId: string;
   /** Πόσες εγκρίσεις στήριζαν την απόφαση όταν εφαρμόστηκε. */
@@ -478,14 +483,24 @@ export interface ImportLineOverrideOrigin {
   readonly sourceBatchId: string;
 }
 
-/** Μία απόφαση του ιστορικού ενός κλειδιού μνήμης, με τον μετρητή της (§5.5.2 Β5). */
-export interface ImportLabelMemoryDecision {
-  readonly decision: ImportLineDecision;
+/** Μία απόφαση του ιστορικού ενός κλειδιού μνήμης, με τον μετρητή της (§5.5.2 Β5 · Β10). Ίδιο σχήμα για γραμμές και τιμές. */
+export interface ImportMemoryRecord<D> {
+  readonly decision: D;
   readonly count: number;
   readonly lastBatchId: string;
   readonly lastBy: string;
   readonly lastAt: string;
 }
+
+export type ImportLabelMemoryDecision = ImportMemoryRecord<ImportLineDecision>;
+
+/** Η απάντηση της μνήμης τιμών: το **κείμενο** που έγραψε ο άνθρωπος, όχι έτοιμη τιμή — ο κωδικοποιητής το ξανακρίνει κάθε φορά. */
+export interface ImportValueMemoryAnswer {
+  readonly kind: 'value';
+  readonly text: string;
+}
+
+export type ImportValueMemoryDecision = ImportMemoryRecord<ImportValueMemoryAnswer>;
 
 /**
  * Η **μνήμη ετικέτας γραμμής** ενός προμηθευτή (§5.5.2 Β5): ένα έγγραφο ανά προμηθευτή × οικογένεια × ετικέτα × τυπωμένη μονάδα. Η
@@ -493,6 +508,8 @@ export interface ImportLabelMemoryDecision {
  * Ζει **έξω** από το `ImportProfileDefinition`: η αναθεώρηση του προφίλ μπαίνει στο κλειδί της παρτίδας (Μ2).
  */
 export interface ImportLabelMemoryDefinition {
+  /** §5.5.2 Β10: το είδος της εγγραφής. Απόν = γραμμή (εγγραφές πριν τη μνήμη τιμών). */
+  readonly subject?: 'line';
   readonly code: string;
   readonly supplierContactId: string;
   readonly familyId: string;
@@ -502,6 +519,27 @@ export interface ImportLabelMemoryDefinition {
   readonly printedLabel: string;
   readonly decisions: readonly ImportLabelMemoryDecision[];
 }
+
+/**
+ * Η **μνήμη τιμών** ενός προμηθευτή (§5.5.2 Β10, Akeneo SDM Value Mapping): ένα έγγραφο ανά προμηθευτή × ιδιότητα × κείμενο πηγής
+ * (κανονικοποιημένο) × μονάδα στήλης. Μαθαίνει **μόνο** πηγές που ο κωδικοποιητής δεν διαβάζει («1Ph»): συμπληρώνει κενά, δεν αλλάζει
+ * ποτέ τιμή που διαβάζεται. Ζει στην **ίδια** συλλογή με τη μνήμη γραμμών: ένας προμηθευτής, μία μνήμη, ένα «καθάρισε».
+ */
+export interface ImportValueMemoryDefinition {
+  readonly subject: 'value';
+  readonly code: string;
+  readonly supplierContactId: string;
+  readonly attributeId: string;
+  /** Το κείμενο της πηγής, κανονικοποιημένο όπως η ετικέτα γραμμής (`normalizeUniqueText`). */
+  readonly label: string;
+  readonly unitCode: string | null;
+  /** Το κείμενο της πηγής όπως τυπώθηκε στην τελευταία έγκριση, για εμφάνιση. */
+  readonly printedLabel: string;
+  readonly decisions: readonly ImportValueMemoryDecision[];
+}
+
+/** Ό,τι ζει στη μνήμη ενός προμηθευτή (`catalog_import_label_memory`). */
+export type ImportSupplierMemoryDefinition = ImportLabelMemoryDefinition | ImportValueMemoryDefinition;
 
 /**
  * Σελίδα που διαβάστηκε **χωρίς στρώση κειμένου** (§5.5.1 Ε8). Δηλωμένη, ώστε οι τιμές της να μη φαίνονται απλώς «χωρίς επιβεβαίωση».

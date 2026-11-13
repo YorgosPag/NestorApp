@@ -46,7 +46,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__connections.el.json": "a945c101573af8b73bad5337c825e42cff51f05ab5c12d6abffbf57dfbac8520",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "ed53a8bf5790b1cbbb8248fe4bd32a7bc4d8ce1b44e3a5717054c1e3ea73e025",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "beb4d7d88a17fac46b11a3ccf432f9836c60534f372e8eae2d3e210ef96c3bee",
-    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "34ff57f5d8c5ca69c5e9e5077511575a9c78abcde8d7b0a83bff2eebd9d1295c",
+    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "0f5bbc93383f3e2ad50fd7b8315d47cb2b49309e1cbf06153d9fa71163b79344",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "1ada521e13e9e01ac4577ab75a6a5f85538a10f6130c3b3dec5e9582ff50d0ca",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "324fb9244cc0690b312ecd2472727e5f292d9a1d52c33d8cf3d0df7ec8e62d39",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "054dd0631519f9c58b10b8d12f958f4d571d30b5ed0a02d108054971c2f7814f",
+  "inputsSha256": "873be37d6d685f4aac76e46441f701d524c4b1eb40eb78f7845647499e094ab0",
   "languages": [
     "el"
   ],
@@ -9518,6 +9518,7 @@
             "review.decisionUndo",
             "review.decisionUndoFor",
             "review.editValue",
+            "review.editedByMemory",
             "review.editedByYou",
             "review.editedFromEmpty",
             "review.field",
@@ -9585,6 +9586,11 @@
             "review.memory.option",
             "review.memory.suggests",
             "review.memory.unusable",
+            "review.memoryChoiceGroup",
+            "review.memoryConflict",
+            "review.memoryKnows",
+            "review.memoryOption",
+            "review.memoryStale",
             "review.modelCode",
             "review.modelCodeByYou",
             "review.nextPending",
@@ -40714,7 +40720,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1323265
+    "sliceBytes": 1324044
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

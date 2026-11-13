@@ -160,7 +160,9 @@ const fieldAddress = { rowKey: z.string().min(1).max(200), targetKey: z.string()
 export const updateImportProposalBodySchema: z.ZodType<UpdateImportProposalRequest> = z.object({
   expectedRevision: expectedRevisionSchema,
   decisions: z.array(z.object({ ...fieldAddress, decision: z.enum(['accept', 'reject']).nullable() })).max(MAX_FIELD_CHANGES),
-  edits: z.array(z.object({ ...fieldAddress, text: z.string().max(MAX_CELL_TEXT), revert: z.boolean().optional() })).max(MAX_FIELD_CHANGES),
+  // §5.5.2 Β10: η επιστροφή στη μνήμη τιμών υπάρχει μόνο μαζί με αναίρεση — ο πελάτης δεν δηλώνει ποτέ ο ίδιος προέλευση.
+  edits: z.array(z.object({ ...fieldAddress, text: z.string().max(MAX_CELL_TEXT), revert: z.boolean().optional(), fallback: z.literal('memory').optional() })
+    .refine((edit) => edit.fallback === undefined || edit.revert === true, { path: ['fallback'] })).max(MAX_FIELD_CHANGES),
   modelCode: z.string().max(CATALOG_LIMITS.maxLabelLength).nullable(),
 });
 
