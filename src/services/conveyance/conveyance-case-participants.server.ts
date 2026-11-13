@@ -19,14 +19,14 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
-import { LEGAL_ENGAGEMENT_ROLES, type Engagement } from '@/types/engagement';
+import { LEGAL_ENGAGEMENT_ROLES, SCOPE_OF_SUBJECT, type ConveyanceEngagement } from '@/types/engagement';
 import type { CaseParticipantView } from '@/types/conveyance-case';
 import { resolveUserDisplayName } from '@/services/entity-audit.service';
 import { listCaseEngagements } from './conveyance-engagement-support';
 
 /** Συμμετέχει τώρα; — η **ίδια** κρίση με κάθε ανάγνωση της υπόθεσης. */
-function engagedNow(engagement: Engagement, nowMs: number): boolean {
-  const decision = decideEngagement({ engagement, uid: engagement.uid, subject: engagement.subject, scope: 'conveyance:case:view', nowMs });
+function engagedNow(engagement: ConveyanceEngagement, nowMs: number): boolean {
+  const decision = decideEngagement({ engagement, uid: engagement.uid, subject: engagement.subject, scope: SCOPE_OF_SUBJECT.conveyance_case, nowMs });
   return isEngaged(decision.verdict);
 }
 
@@ -35,7 +35,7 @@ function byRoleOrder(a: CaseParticipantView, b: CaseParticipantView): number {
   return LEGAL_ENGAGEMENT_ROLES.indexOf(a.role) - LEGAL_ENGAGEMENT_ROLES.indexOf(b.role);
 }
 
-async function toParticipant(engagement: Engagement, viewerEngagementId: string): Promise<CaseParticipantView> {
+async function toParticipant(engagement: ConveyanceEngagement, viewerEngagementId: string): Promise<CaseParticipantView> {
   return {
     role: engagement.role,
     // Χωρίς όνομα ⇒ `null` (το UI δείχνει μόνο τον ρόλο). ⛔ ΠΟΤΕ εφεδρεία στο email.
@@ -46,7 +46,7 @@ async function toParticipant(engagement: Engagement, viewerEngagementId: string)
 }
 
 /** Οι επαγγελματίες που συμμετέχουν **τώρα** στην υπόθεση του θεατή, μαζί με τον ίδιο (σημειωμένο). */
-export async function listCaseParticipants(db: Firestore, viewer: Engagement, nowMs: number): Promise<CaseParticipantView[]> {
+export async function listCaseParticipants(db: Firestore, viewer: ConveyanceEngagement, nowMs: number): Promise<CaseParticipantView[]> {
   const all = await listCaseEngagements(db, viewer.hostCompanyId, viewer.projectId, viewer.subject.caseId);
   const current = all.filter((engagement) => engagementNowVisible(engagement, nowMs));
   const participants = await Promise.all(current.map((engagement) => toParticipant(engagement, viewer.id)));
@@ -54,6 +54,6 @@ export async function listCaseParticipants(db: Firestore, viewer: Engagement, no
 }
 
 /** Ενεργή **και** κρίνεται ενεργή τώρα. Η πρόταση `offered` δεν είναι ακόμη μέρος της υπόθεσης. */
-function engagementNowVisible(engagement: Engagement, nowMs: number): boolean {
+function engagementNowVisible(engagement: ConveyanceEngagement, nowMs: number): boolean {
   return engagement.state === 'active' && engagedNow(engagement, nowMs);
 }

@@ -164,6 +164,8 @@ const AUDIENCE_REACH: Readonly<Record<CdeAudience, Readonly<Record<CdeState, boo
   supplier: { WIP: false, SHARED: false, PUBLISHED: false, SUPERSEDED: false },
   // ADR-901 Φ2 — ίδια γραμμή με τον πελάτη: τελικό έγγραφο, ποτέ ημιτελής συνεννόηση μηχανικών.
   legal: { WIP: false, SHARED: false, PUBLISHED: true, SUPERSEDED: false },
+  // ADR-862 §5.3.10 — ο εκδότης εγγράφου δουλεύει πάνω σε **τελικά** στοιχεία (κάτοψη · τοπογραφικό), όπως ο νομικός.
+  issuer: { WIP: false, SHARED: false, PUBLISHED: true, SUPERSEDED: false },
 };
 
 // =============================================================================

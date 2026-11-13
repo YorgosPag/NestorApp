@@ -35,7 +35,7 @@ import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { placeEngagement } from './conveyance-acting-workspace.server';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
-import type { Engagement, EngagementState } from '@/types/engagement';
+import type { ConveyanceEngagement, EngagementState } from '@/types/engagement';
 import type { EngagementInvitation } from '@/types/engagement-invitation';
 import { orgWorkspace } from '@/types/workspace-membership';
 
@@ -44,7 +44,7 @@ const logger = createModuleLogger('conveyance-engagement-notifier');
 const elSharedT = createBundleTranslate({ 'common-shared': elShared }, 'common-shared', 'el');
 
 /** Ποιες καταστάσεις λέγονται στον επαγγελματία — και με ποιο κλειδί. `null` = σιωπή (π.χ. δική του απάντηση). */
-function changedTitleKey(engagement: Engagement): string | null {
+function changedTitleKey(engagement: ConveyanceEngagement): string | null {
   const byState: Readonly<Record<EngagementState, string | null>> = {
     offered: `caseEngagementChanged.offeredTitle.${engagement.role}`,
     revoked: 'caseEngagementChanged.revokedTitle',
@@ -71,7 +71,7 @@ function changedTitleKey(engagement: Engagement): string | null {
  * ⚠️ «Δεν μπόρεσα να ρωτήσω το βιβλίο μελών» ⇒ το **γεγονός** (`actingWorkspaceOf`): μια ειδοποίηση δεν χάνεται
  *    επειδή απέτυχε μια ανάγνωση — στη χειρότερη, η σελίδα της υπόθεσης θα τον πάει η ίδια στο σωστό σπίτι.
  */
-export async function caseEngagementChangedDestination(engagement: Pick<Engagement, 'id' | 'uid' | 'actingFor'>): Promise<NotificationDestination> {
+export async function caseEngagementChangedDestination(engagement: Pick<ConveyanceEngagement, 'id' | 'uid' | 'actingFor'>): Promise<NotificationDestination> {
   const placement = await placeEngagement(engagement);
   const home = placement.outcome === 'placed' ? placement.home : actingWorkspaceOf(engagement);
   return viewDestination(myCaseHref(engagement.id, home.kind), home);
@@ -86,7 +86,7 @@ export function caseEngagementAnsweredDestination(propertyId: string, hostCompan
 }
 
 /** Ο επαγγελματίας μαθαίνει την **αλλαγή** της πρόσβασής του. */
-export async function announceEngagementChanged(engagement: Engagement, propertyName: string | null): Promise<void> {
+export async function announceEngagementChanged(engagement: ConveyanceEngagement, propertyName: string | null): Promise<void> {
   const titleKey = changedTitleKey(engagement);
   if (titleKey === null) return;
   const titleParams = { title: propertyName ?? engagement.subject.caseId };
@@ -151,7 +151,7 @@ async function announceToInviter(notice: InviterNotice): Promise<void> {
 
 /** Όποιος πρότεινε μαθαίνει αν ο επαγγελματίας **ανέλαβε**. */
 export async function announceEngagementAnswered(
-  engagement: Engagement,
+  engagement: ConveyanceEngagement,
   propertyId: string,
   propertyName: string | null,
 ): Promise<void> {

@@ -26,7 +26,7 @@ import { viewsAffectedBy, type CaseChange, type CaseViewers } from '@/lib/convey
 import { viewSignalOwner, viewSignalSeed, type CaseViewKey, type HostCaseView } from '@/lib/conveyance/view-signal-key';
 import { generateDeterministicConveyanceViewSignalId } from '@/services/enterprise-id.service';
 import type { ConveyanceCase } from '@/types/conveyance-case';
-import type { Engagement } from '@/types/engagement';
+import { isConveyanceEngagement, type ConveyanceEngagement } from '@/types/engagement';
 import { activeCaseEngagements } from './conveyance-engagement-support';
 
 /** Το έγγραφο-σήμα μιας όψης — υπολογίζεται, δεν αναζητείται. */
@@ -40,7 +40,7 @@ export function hostViewOf(record: Pick<ConveyanceCase, 'companyId' | 'subject'>
 }
 
 /** Η όψη μιας συμμετοχής. */
-export function engagementViewOf(engagement: Pick<Engagement, 'id' | 'uid'>): CaseViewKey {
+export function engagementViewOf(engagement: Pick<ConveyanceEngagement, 'id' | 'uid'>): CaseViewKey {
   return { kind: 'engagement', engagementId: engagement.id, uid: engagement.uid };
 }
 
@@ -48,7 +48,7 @@ export function engagementViewOf(engagement: Pick<Engagement, 'id' | 'uid'>): Ca
  * Οι όψεις μιας υπόθεσης από τις συμμετοχές της. ⚠️ Ο καλών δίνει **μόνο** όσες έχουν πρόσβαση (ενεργές): σήμα σε
  * πρόταση που δεν απαντήθηκε θα έλεγε σε κάποιον χωρίς πρόσβαση *πότε* δουλεύει η υπόθεση.
  */
-export function caseViewersOf(record: Pick<ConveyanceCase, 'companyId' | 'subject'>, active: readonly Engagement[]): CaseViewers {
+export function caseViewersOf(record: Pick<ConveyanceCase, 'companyId' | 'subject'>, active: readonly ConveyanceEngagement[]): CaseViewers {
   return {
     host: hostViewOf(record),
     engaged: active.map((e) => ({ kind: 'engagement', engagementId: e.id, uid: e.uid, role: e.role })),
@@ -84,7 +84,8 @@ export function signalCaseChangeInTx(
  */
 export function caseRosterSignal(db: Firestore, record: Pick<ConveyanceCase, 'companyId' | 'subject'>): EngagementRosterSignal {
   return (tx, roster) => {
-    const active = roster.live.filter((e) => e.state === 'active');
+    // Ο γραφέας διάβασε με `caseSubject(…)` ⇒ μόνο μεταβίβαση· ο φρουρός στενεύει τον τύπο (ADR-862 §5.3.10).
+    const active = roster.live.filter(isConveyanceEngagement).filter((e) => e.state === 'active');
     signalCaseChangeInTx(tx, db, { kind: 'roster' }, caseViewersOf(record, active), roster.changed.map(engagementViewOf));
   };
 }

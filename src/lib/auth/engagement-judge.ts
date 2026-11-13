@@ -25,13 +25,15 @@
  */
 
 import { evaluateScopedGrant, type ScopedGrantVerdict } from './scoped-grant';
-import type {
-  Engagement,
-  EngagementDecision,
-  EngagementScope,
-  EngagementState,
-  EngagementSubject,
-  EngagementVerdict,
+import { isSameSubject } from './engagement-subject';
+import {
+  SCOPE_OF_SUBJECT,
+  type Engagement,
+  type EngagementDecision,
+  type EngagementScope,
+  type EngagementState,
+  type EngagementSubject,
+  type EngagementVerdict,
 } from '@/types/engagement';
 
 /** Ετυμηγορία ανά **τελική/αναμένουσα** κατάσταση — `null` = «ζωντανή, κρίνεται από το grant». */
@@ -54,11 +56,6 @@ const VERDICT_BY_GRANT: Readonly<Record<ScopedGrantVerdict, EngagementVerdict>> 
   'scope-missing': 'scope-missing',
 };
 
-/** Δείχνει αυτή η συμμετοχή στην υπόθεση που ζητήθηκε; */
-function isSameSubject(a: EngagementSubject, b: EngagementSubject): boolean {
-  return a.kind === b.kind && a.caseId === b.caseId;
-}
-
 export interface EngagementQuery {
   /** Η συμμετοχή όπως τη διάβασε ο αναγνώστης — `null` ⇒ δεν υπάρχει. */
   readonly engagement: Engagement | null;
@@ -76,6 +73,9 @@ export interface EngagementQuery {
  *      του διαμερίσματος Α **δεν** βλέπει το Β του ίδιου έργου)
  *   2. μη ζωντανή κατάσταση ⇒ η ετυμηγορία **της** (offered ≠ declined ≠ revoked ≠ completed)
  *   3. ζωντανή ⇒ `evaluateScopedGrant` (ανάκληση · λήξη · εύρος)
+ *
+ * ADR-862 §5.3.10 — το εύρος που ζητήθηκε πρέπει να **ανήκει** στο είδος της υπόθεσης (`SCOPE_OF_SUBJECT`):
+ * εύρος μεταβίβασης πάνω σε ανάθεση έκδοσης (ή ανάποδα) ⇒ `scope-missing`, ακόμη κι αν κάποιο έγγραφο το έφερε.
  */
 export function decideEngagement(query: EngagementQuery): EngagementDecision {
   const { engagement, uid, subject, scope, nowMs } = query;
@@ -84,6 +84,7 @@ export function decideEngagement(query: EngagementQuery): EngagementDecision {
   }
   const byState = VERDICT_BY_STATE[engagement.state];
   if (byState !== null) return { verdict: byState, engagement };
+  if (scope !== SCOPE_OF_SUBJECT[subject.kind]) return { verdict: 'scope-missing', engagement };
   return { verdict: VERDICT_BY_GRANT[evaluateScopedGrant(engagement, scope, nowMs)], engagement };
 }
 

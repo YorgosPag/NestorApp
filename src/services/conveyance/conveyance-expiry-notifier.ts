@@ -22,7 +22,7 @@ import 'server-only';
 import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import { expiryEventId, expirySummary, type ExpiryAlert } from '@/lib/conveyance/expiry-alerts';
 import type { ConveyanceCase } from '@/types/conveyance-case';
-import type { Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement } from '@/types/engagement';
 import { caseNoticeCopy, noticeToEngaged, noticeToHost } from './conveyance-case-notice';
 
 const FEATURE = 'conveyance-expiry';
@@ -52,7 +52,7 @@ export async function announceExpiryToHost(notice: ExpiryNotice & { readonly rec
 }
 
 /** Ο επαγγελματίας: **μόνο** οι γραμμές του ρόλου του, με προσγείωση στη σελίδα της υπόθεσης, στον δικό του χώρο. */
-export async function announceExpiryToEngaged(notice: ExpiryNotice & { readonly engagement: Engagement }): Promise<boolean> {
+export async function announceExpiryToEngaged(notice: ExpiryNotice & { readonly engagement: ConveyanceEngagement }): Promise<boolean> {
   const delivery = await noticeToEngaged({
     record: notice.record,
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED,

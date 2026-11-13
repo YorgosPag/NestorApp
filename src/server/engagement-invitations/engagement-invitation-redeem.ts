@@ -40,13 +40,14 @@ import {
 import { resolveActingFor } from '@/services/conveyance/conveyance-acting-workspace.server';
 import { announceEngagementAnswered, announceInvitationDeclined } from '@/services/conveyance/conveyance-engagement-notifier';
 import {
+  asCaseEngagement,
   caseSubject,
   answerChanges,
   recordEngagementAudit,
 } from '@/services/conveyance/conveyance-engagement-support';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
 import { caseRosterSignal, invitationHostSignal } from '@/services/conveyance/conveyance-view-signal.server';
-import type { Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement } from '@/types/engagement';
 import type { EngagementInvitation, EngagementInvitationKindRefusal } from '@/types/engagement-invitation';
 import type { InvitationDocumentCore } from '@/types/invitation-core';
 import type { WorkspaceRef } from '@/types/workspace-membership';
@@ -71,7 +72,7 @@ export type EngagementRedeemOutcome = InvitationRedeemOutcome<
   EngagementInvitation,
   EngagementInvitationKindRefusal,
   EngagementInvitationUnavailable,
-  Engagement
+  ConveyanceEngagement
 >;
 
 /**
@@ -104,7 +105,7 @@ async function stageAcceptance(
   tx: Transaction,
   accepted: { readonly record: EngagementInvitation; readonly identity: InvitationRedeemer },
   declaration: AcceptanceDeclaration,
-): Promise<InvitationAcceptance<EngagementInvitationKindRefusal, EngagementInvitationUnavailable, Engagement>> {
+): Promise<InvitationAcceptance<EngagementInvitationKindRefusal, EngagementInvitationUnavailable, ConveyanceEngagement>> {
   const { record, identity } = accepted;
   // 🔴 Η αποθηκευμένη κατάσταση ξαναρωτιέται **μέσα** στη συναλλαγή: κλείσιμο/ακύρωση είναι ρητές πράξεις.
   const conveyanceCase = parseConveyanceCase((await tx.get(db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(record.caseId))).data());
@@ -115,13 +116,13 @@ async function stageAcceptance(
   const nowMs = Date.parse(record.resolvedAt ?? nowISO());
   const stage = await stageEngagementByInvitation(db, tx, {
     hostCompanyId: record.hostCompanyId, projectId: record.projectId, uid: identity.uid, email: identity.email,
-    template: 'legal', role: record.role, subject: caseSubject(record.caseId),
+    role: record.role, subject: caseSubject(record.caseId),
     origin: { kind: 'professional_appointment', contactId: record.contactId },
     consents: record.consents, offeredBy: record.invitedByUid, nowMs,
     invitationId: record.id, declaredCredential: declaredCredentialOf(record.role, declaration.credential, new Date(nowMs).toISOString()),
     actingFor: declaration.actingFor,
   }, caseRosterSignal(db, conveyanceCase));
-  if (stage.outcome === 'commit') return { kind: 'commit', write: stage.write };
+  if (stage.outcome === 'commit') return { kind: 'commit', write: () => asCaseEngagement(stage.write()) };
   return stage.reason === 'unreadable'
     ? { kind: 'unavailable', reason: 'engagements-unreadable' }
     : { kind: 'refused', reason: stage.reason };
@@ -131,7 +132,7 @@ async function stageAcceptance(
 function engagementInvitationKind(
   db: Firestore,
   declaration: AcceptanceDeclaration | null,
-): InvitationKind<InvitationDocumentCore, EngagementInvitation, InvitationRedeemer, EngagementInvitationKindRefusal, EngagementInvitationUnavailable, Engagement> {
+): InvitationKind<InvitationDocumentCore, EngagementInvitation, InvitationRedeemer, EngagementInvitationKindRefusal, EngagementInvitationUnavailable, ConveyanceEngagement> {
   return {
     ...ENGAGEMENT_INVITATION_LOCATOR,
     secretMissing: 'secret-missing',

@@ -31,7 +31,7 @@ import { fileLinkTag } from '@/lib/files/file-link-tag';
 import type { CaseChange } from '@/lib/conveyance/view-signal-audience';
 import type { CaseViewKey } from '@/lib/conveyance/view-signal-key';
 import type { ConveyanceCase } from '@/types/conveyance-case';
-import type { Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement } from '@/types/engagement';
 import { HOST_EVIDENCE_VIEWER, type CaseEvidenceViewer } from './conveyance-case-evidence.server';
 import { engagementChecklistViewer } from './conveyance-engagement-access.service';
 import { activeCaseEngagements } from './conveyance-engagement-support';
@@ -116,7 +116,7 @@ function fileChangedFor(record: ConveyanceCase, event: DependencyChangeEvent, vi
   return !sameJson(project(docOf(event.before)), project(docOf(event.after)));
 }
 
-function fileSignal(record: ConveyanceCase, event: DependencyChangeEvent, engaged: readonly Engagement[]): CaseSignal | null {
+function fileSignal(record: ConveyanceCase, event: DependencyChangeEvent, engaged: readonly ConveyanceEngagement[]): CaseSignal | null {
   const hostChanged = fileChangedFor(record, event, HOST_EVIDENCE_VIEWER);
   const extra = engaged.filter((e) => fileChangedFor(record, event, engagementChecklistViewer(e))).map(engagementViewOf);
   if (!hostChanged && extra.length === 0) return null;

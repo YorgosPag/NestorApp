@@ -21,7 +21,7 @@ import {
 import { decideEngagement } from '../engagement-judge';
 import { parseEngagement } from '../engagement-schema';
 import { planTransition, type EngagementTransition } from '../engagement-write';
-import type { DeclaredCredential, Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement, DeclaredCredential } from '@/types/engagement';
 import { orgWorkspace, personalWorkspace, type WorkspaceRef } from '@/types/workspace-membership';
 
 jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }) }));
@@ -34,7 +34,7 @@ const SECOND = 'comp_partners';
 const FOREIGN = 'comp_foreign';
 const CREDENTIAL: DeclaredCredential = { authority: 'bar-association', number: '4321', chapter: 'ΔΣΑ', assurance: 'declared', declaredAt: new Date(NOW).toISOString() };
 
-function engagement(overrides: Partial<Engagement> = {}): Engagement {
+function engagement(overrides: Partial<ConveyanceEngagement> = {}): ConveyanceEngagement {
   return {
     id: 'eng_1', hostCompanyId: 'comp_host', projectId: 'proj_1', uid: UID, email: 'g@example.gr',
     template: 'legal', role: 'buyer_lawyer', subject: { kind: 'conveyance_case', caseId: 'cvc_A' },
@@ -143,7 +143,7 @@ describe('ADR-901 §15.7 — η ΜΙΑ ερμηνεία της απουσίας 
 });
 
 describe('ADR-901 §15.6.1 — ο κριτής ΠΡΟΣΒΑΣΗΣ δεν διαβάζει το πεδίο', () => {
-  const ask = (e: Engagement, uid: string) =>
+  const ask = (e: ConveyanceEngagement, uid: string) =>
     decideEngagement({ engagement: e, uid, subject: e.subject, scope: 'conveyance:case:view', nowMs: NOW }).verdict;
 
   it('Α39 — ο διαχειριστής του γραφείου ΔΕΝ ανοίγει την υπόθεση του συναδέλφου του', () => {

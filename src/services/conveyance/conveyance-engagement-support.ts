@@ -18,11 +18,28 @@ import { workspaceHostRecipients } from '@/lib/workspace/workspace-host-recipien
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import type { CaseEngagementSummary, ConveyanceCase } from '@/types/conveyance-case';
-import type { Engagement, EngagementKey, EngagementSubject } from '@/types/engagement';
+import {
+  isConveyanceEngagement,
+  SCOPE_OF_SUBJECT,
+  type ConveyanceEngagement,
+  type ConveyanceEngagementSubject,
+  type Engagement,
+  type EngagementKey,
+} from '@/types/engagement';
 
 /** Η υπόθεση ως αντικείμενο συμμετοχής. */
-export function caseSubject(caseId: string): EngagementSubject {
+export function caseSubject(caseId: string): ConveyanceEngagementSubject {
   return { kind: 'conveyance_case', caseId };
+}
+
+/**
+ * ADR-862 §5.3.10 — ό,τι επιστρέφει ο **ένας** γραφέας για μια συμμετοχή **αυτής** της υπόθεσης. Ο γραφέας ρώτησε με
+ * `caseSubject(…)` (ή με κλειδί που πήρε από συμμετοχή μεταβίβασης), άρα άλλο είδος εδώ είναι **σφάλμα κώδικα**, όχι
+ * δεδομένων — και ρίχνεται δυνατά, αντί να «περάσει» με `as`.
+ */
+export function asCaseEngagement(engagement: Engagement): ConveyanceEngagement {
+  if (!isConveyanceEngagement(engagement)) throw new Error(`Engagement ${engagement.id} is not a conveyance-case engagement`);
+  return engagement;
 }
 
 /** Το έργο της υπόθεσης — **το** σημείο όπου ζουν οι συμμετοχές της (ADR-862 §5.3.1). */
@@ -34,19 +51,23 @@ export function caseProjectId(record: ConveyanceCase): string | null {
  * **Όλες** οι συμμετοχές μιας υπόθεσης (κάθε κατάστασης). Οι μη αναγνώσιμες παραλείπονται, γιατί δεν δίνουν
  * πρόσβαση. Είναι η ΜΙΑ ανάγνωση για τον οικοδεσπότη (θέσεις), τους «Συμμετέχοντες» και τις ειδοποιήσεις λήξεων.
  */
-export async function listCaseEngagements(db: Firestore, hostCompanyId: string, projectId: string, caseId: string): Promise<Engagement[]> {
+export async function listCaseEngagements(db: Firestore, hostCompanyId: string, projectId: string, caseId: string): Promise<ConveyanceEngagement[]> {
   const snapshot = await engagementsForSubjectQuery(engagementsCollection(db, hostCompanyId, projectId), caseSubject(caseId)).get();
-  return snapshot.docs.map((doc) => parseEngagement(doc.data())).filter((e): e is Engagement => e !== null);
+  // Το ερώτημα φιλτράρει ήδη σε `subject.caseId`· ο φρουρός στενεύει τον τύπο **και** αποκλείει ό,τι άλλο.
+  return snapshot.docs
+    .map((doc) => parseEngagement(doc.data()))
+    .filter((e): e is Engagement => e !== null)
+    .filter(isConveyanceEngagement);
 }
 
 /** Ενεργή **τώρα**: `active` **και** δεκτή από τον ΕΝΑ κριτή (λήξη · ανάκληση · εύρος) — όχι μόνο το πεδίο `state`. */
-export function engagedNow(engagement: Engagement, nowMs: number): boolean {
+export function engagedNow(engagement: ConveyanceEngagement, nowMs: number): boolean {
   if (engagement.state !== 'active') return false;
-  return isEngaged(decideEngagement({ engagement, uid: engagement.uid, subject: engagement.subject, scope: 'conveyance:case:view', nowMs }).verdict);
+  return isEngaged(decideEngagement({ engagement, uid: engagement.uid, subject: engagement.subject, scope: SCOPE_OF_SUBJECT.conveyance_case, nowMs }).verdict);
 }
 
 /** Οι συμμετοχές της υπόθεσης που είναι ενεργές **τώρα** (λήξεις · συντάκτες transmittal · παραλήπτες). */
-export async function activeCaseEngagements(db: Firestore, record: ConveyanceCase, nowMs: number): Promise<Engagement[]> {
+export async function activeCaseEngagements(db: Firestore, record: ConveyanceCase, nowMs: number): Promise<ConveyanceEngagement[]> {
   const projectId = caseProjectId(record);
   if (!projectId) return [];
   return (await listCaseEngagements(db, record.companyId, projectId, record.id)).filter((e) => engagedNow(e, nowMs));
@@ -58,12 +79,12 @@ export async function caseHostRecipients(db: Firestore, record: ConveyanceCase):
 }
 
 /** Το κλειδί μιας συμμετοχής **από την ίδια** — ποτέ από το αίτημα. */
-export function engagementKeyOf(engagement: Engagement): EngagementKey {
+export function engagementKeyOf(engagement: ConveyanceEngagement): EngagementKey {
   return { hostCompanyId: engagement.hostCompanyId, projectId: engagement.projectId, engagementId: engagement.id };
 }
 
 /** Η προβολή για τον οικοδεσπότη — ρητά πεδία, ποτέ spread του εγγράφου. */
-export function toEngagementSummary(engagement: Engagement): CaseEngagementSummary {
+export function toEngagementSummary(engagement: ConveyanceEngagement): CaseEngagementSummary {
   return {
     engagementId: engagement.id,
     role: engagement.role,
@@ -83,7 +104,7 @@ export function toEngagementSummary(engagement: Engagement): CaseEngagementSumma
  * ανακλήθηκε — με τον **δρώντα** (οικοδεσπότης ή επαγγελματίας) ως `performedBy`.
  */
 export async function recordEngagementAudit(params: {
-  readonly engagement: Engagement;
+  readonly engagement: ConveyanceEngagement;
   readonly action: AuditAction;
   readonly changes: readonly AuditFieldChange[];
   readonly performedBy: string;
@@ -103,7 +124,7 @@ export async function recordEngagementAudit(params: {
 }
 
 /** Η αλλαγή κατάστασης ως πεδίο ίχνους. */
-export function stateChange(before: Engagement | null, after: Engagement): AuditFieldChange {
+export function stateChange(before: ConveyanceEngagement | null, after: ConveyanceEngagement): AuditFieldChange {
   return { field: 'state', oldValue: before?.state ?? null, newValue: after.state };
 }
 
@@ -112,7 +133,7 @@ export function stateChange(before: Engagement | null, after: Engagement): Audit
  * δόθηκε μαζί της (Ε-4). Είναι **ένα** σημείο για τις δύο διαδρομές (πρόσκληση · πρόταση), ώστε το ίχνος να
  * μη διαφέρει ανάλογα με το πώς ήρθε ο επαγγελματίας.
  */
-export function answerChanges(before: Engagement | null, after: Engagement): AuditFieldChange[] {
+export function answerChanges(before: ConveyanceEngagement | null, after: ConveyanceEngagement): AuditFieldChange[] {
   const credential = after.declaredCredential;
   if (!credential || before?.declaredCredential === credential) return [stateChange(before, after)];
   const declared = credential.chapter ? `${credential.number} · ${credential.chapter}` : credential.number;
@@ -129,7 +150,7 @@ export function answerChanges(before: Engagement | null, after: Engagement): Aud
  * `personal` για τον προσωπικό χώρο **του ίδιου** — σταθερή, ποτέ όνομα που θα πάλιωνε (το λύνει η οθόνη).
  * ⛔ Όχι `workspaceRefKey`: εκείνο είναι κλειδί προβολής και απαγορεύεται ρητά σε έγγραφο.
  */
-function actingForChange(after: Engagement): AuditFieldChange {
+function actingForChange(after: ConveyanceEngagement): AuditFieldChange {
   const workspace = actingWorkspaceOf(after);
   return { field: 'actingFor', oldValue: null, newValue: workspace.kind === 'org' ? workspace.companyId : workspace.kind };
 }

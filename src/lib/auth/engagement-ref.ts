@@ -19,6 +19,21 @@ import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { EngagementKey, EngagementSubject } from '@/types/engagement';
 
 /**
+ * ADR-862 §5.3.10 — το φίλτρο «αυτή η υπόθεση», **ανά είδος**, με **ρητό** όνομα πεδίου: οι πύλες δεικτών
+ * (CHECK 3.15 · 3.91) διαβάζουν το όνομα στατικά — μια διαδρομή συντεθειμένη σε χρόνο εκτέλεσης θα τους ήταν αόρατη.
+ * Η μεταβίβαση δίνει **ακριβώς** το ερώτημα που έδινε πριν (`subject.caseId`). Μόνο ισότητες ⇒ κανένας σύνθετος δείκτης.
+ */
+function subjectFilter(query: Query, subject: EngagementSubject): Query {
+  // Ο μισθωτής είναι ήδη η διαδρομή της συλλογής (`engagementsCollection`).
+  switch (subject.kind) {
+    case 'conveyance_case':
+      return query.where('subject.caseId', '==', subject.caseId);
+    case 'document_issuance':
+      return query.where('subject.assignmentId', '==', subject.assignmentId);
+  }
+}
+
+/**
  * `companies/{hostCompanyId}/projects/{projectId}/engagements`.
  *
  * 🔑 **Ο μισθωτής ΕΙΝΑΙ Η ΔΙΑΔΡΟΜΗ** — ο χώρος **του έργου**, ποτέ του καλούντα (ADR-862 §2.3, Κ-3:
@@ -51,13 +66,13 @@ export function engagementsOfUserForSubjectQuery(
   subject: EngagementSubject,
 ): Query {
   // Ο μισθωτής είναι ήδη η διαδρομή της συλλογής (`engagementsCollection`).
-  return collection.where('uid', '==', uid).where('subject.caseId', '==', subject.caseId);
+  return subjectFilter(collection.where('uid', '==', uid), subject);
 }
 
 /** Όλες οι συμμετοχές μιας υπόθεσης — η όψη του **οικοδεσπότη** («ποιος βλέπει την υπόθεσή μου;»). */
 export function engagementsForSubjectQuery(collection: CollectionReference, subject: EngagementSubject): Query {
   // Ο μισθωτής είναι ήδη η διαδρομή της συλλογής (`engagementsCollection`).
-  return collection.where('subject.caseId', '==', subject.caseId);
+  return subjectFilter(collection, subject);
 }
 
 /**

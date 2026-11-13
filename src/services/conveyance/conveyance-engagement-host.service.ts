@@ -23,7 +23,7 @@ import { planConsents, requiresAttestation } from '@/lib/conveyance/engagement-c
 import { acceptsEngagements, effectiveCaseState } from '@/lib/conveyance/case-state';
 import { selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import { closeEngagementsForSubject, offerEngagement, transitionEngagement } from '@/lib/auth/engagement-write';
-import { LEGAL_ENGAGEMENT_ROLES, type ConsentBasis, type Engagement } from '@/types/engagement';
+import { LEGAL_ENGAGEMENT_ROLES, type ConsentBasis, type ConveyanceEngagement } from '@/types/engagement';
 import type { CaseProfessionalSlot, ConveyanceCase } from '@/types/conveyance-case';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import { resolveCaseProfessional } from './conveyance-professional.server';
@@ -36,6 +36,7 @@ import { nowISO } from '@/lib/date-local';
 import type { ConveyanceActor } from './conveyance-case.service';
 import { caseRosterSignal } from './conveyance-view-signal.server';
 import {
+  asCaseEngagement,
   caseProjectId,
   caseSubject,
   engagementKeyOf,
@@ -50,8 +51,8 @@ import {
 // =============================================================================
 
 /** Όλες οι συμμετοχές της υπόθεσης, ομαδοποιημένες ανά ρόλο (μη αναγνώσιμες παραλείπονται — δεν δίνουν πρόσβαση). */
-async function engagementsByRole(db: Firestore, record: ConveyanceCase, projectId: string): Promise<Map<LegalProfessionalRole, Engagement[]>> {
-  const byRole = new Map<LegalProfessionalRole, Engagement[]>();
+async function engagementsByRole(db: Firestore, record: ConveyanceCase, projectId: string): Promise<Map<LegalProfessionalRole, ConveyanceEngagement[]>> {
+  const byRole = new Map<LegalProfessionalRole, ConveyanceEngagement[]>();
   for (const engagement of await listCaseEngagements(db, record.companyId, projectId, record.id)) {
     byRole.set(engagement.role, [...(byRole.get(engagement.role) ?? []), engagement]);
   }
@@ -62,7 +63,7 @@ async function engagementsByRole(db: Firestore, record: ConveyanceCase, projectI
 export async function listCaseProfessionalSlots(db: Firestore, record: ConveyanceCase): Promise<readonly CaseProfessionalSlot[]> {
   const projectId = caseProjectId(record);
   const [byRole, invitations] = await Promise.all([
-    projectId ? engagementsByRole(db, record, projectId) : new Map<LegalProfessionalRole, Engagement[]>(),
+    projectId ? engagementsByRole(db, record, projectId) : new Map<LegalProfessionalRole, ConveyanceEngagement[]>(),
     latestCaseInvitations(db, record.companyId, record.id, nowISO()),
   ]);
   return Promise.all(LEGAL_ENGAGEMENT_ROLES.map(async (role): Promise<CaseProfessionalSlot> => {
@@ -134,7 +135,7 @@ export async function offerCaseEngagement(
 
   const outcome = await offerEngagement(db, {
     hostCompanyId: record.companyId, projectId: ready.projectId, uid: professional.uid, email: professional.email,
-    template: 'legal', role: input.role, subject: caseSubject(record.id),
+    role: input.role, subject: caseSubject(record.id),
     origin: { kind: 'professional_appointment', contactId: professional.contactId },
     consents: consents.consents, offeredBy: actor.uid, nowMs: input.nowMs,
   }, caseRosterSignal(db, record));
@@ -142,8 +143,9 @@ export async function offerCaseEngagement(
     return { ok: false, rejection: outcome.outcome };
   }
   if (outcome.outcome === 'offered') {
-    await recordEngagementAudit({ engagement: outcome.engagement, action: 'created', changes: [stateChange(null, outcome.engagement)], performedBy: actor.uid, performedByName: actor.email, entityName: ready.propertyName });
-    await announceEngagementChanged(outcome.engagement, ready.propertyName);
+    const offered = asCaseEngagement(outcome.engagement);
+    await recordEngagementAudit({ engagement: offered, action: 'created', changes: [stateChange(null, offered)], performedBy: actor.uid, performedByName: actor.email, entityName: ready.propertyName });
+    await announceEngagementChanged(offered, ready.propertyName);
   }
   return { ok: true, created: outcome.outcome === 'offered', invited: null, slots: await listCaseProfessionalSlots(db, record) };
 }
@@ -174,8 +176,9 @@ export async function endCaseEngagement(
   if (outcome.outcome === 'changed') {
     const context = await loadConveyanceSubject(db, actor.companyId, record.subject.propertyId);
     const name = context?.propertyName ?? null;
-    await recordEngagementAudit({ engagement: outcome.after, action: 'status_changed', changes: [stateChange(outcome.before, outcome.after)], performedBy: actor.uid, performedByName: actor.email, entityName: name });
-    await announceEngagementChanged(outcome.after, name);
+    const [before, after] = [asCaseEngagement(outcome.before), asCaseEngagement(outcome.after)];
+    await recordEngagementAudit({ engagement: after, action: 'status_changed', changes: [stateChange(before, after)], performedBy: actor.uid, performedByName: actor.email, entityName: name });
+    await announceEngagementChanged(after, name);
   }
   return { ok: true, slots: await listCaseProfessionalSlots(db, record) };
 }
@@ -214,7 +217,7 @@ export async function closeCaseEngagements(
   if (!projectId || acceptsEngagements(record.storedState)) return;
   // Καμία εκκρεμής πρόσκληση δεν επιζεί της υπόθεσης — ο σύνδεσμος στο email σταματά να δίνει οτιδήποτε.
   await revokeCaseInvitation(db, actor, record, { role: null, propertyName, nowMs });
-  const closed = await closeEngagementsForSubject(db, { hostCompanyId: record.companyId, projectId }, caseSubject(record.id), actor.uid, nowMs, caseRosterSignal(db, record));
+  const closed = (await closeEngagementsForSubject(db, { hostCompanyId: record.companyId, projectId }, caseSubject(record.id), actor.uid, nowMs, caseRosterSignal(db, record))).map(asCaseEngagement);
   await Promise.all(closed.map(async (after) => {
     await recordEngagementAudit({ engagement: after, action: 'status_changed', changes: [{ field: 'state', oldValue: after.state === 'completed' ? 'active' : 'offered', newValue: after.state }], performedBy: actor.uid, performedByName: actor.email, entityName: propertyName });
     await announceEngagementChanged(after, propertyName);

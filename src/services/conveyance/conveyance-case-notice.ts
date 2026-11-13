@@ -31,7 +31,7 @@ import elShared from '@/i18n/locales/el/common-shared.json';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification, type DispatchResult } from '@/server/notifications/notification-orchestrator';
 import type { ConveyanceCase } from '@/types/conveyance-case';
-import type { Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement } from '@/types/engagement';
 import { caseEngagementAnsweredDestination, caseEngagementChangedDestination } from './conveyance-engagement-notifier';
 
 const logger = createModuleLogger('conveyance-case-notice');
@@ -106,7 +106,7 @@ export function noticeToHost(notice: CaseNotice & { readonly recipientUid: strin
 }
 
 /** Προς τον **επαγγελματία**: προσγείωση στη σελίδα της υπόθεσης, στον δικό του χώρο. */
-export function noticeToEngaged(notice: CaseNotice & { readonly engagement: Engagement }): Promise<CaseNoticeDelivery> {
+export function noticeToEngaged(notice: CaseNotice & { readonly engagement: ConveyanceEngagement }): Promise<CaseNoticeDelivery> {
   const { engagement } = notice;
   return deliver(notice, async () => dispatchNotification({
     eventType: notice.eventType,

@@ -39,9 +39,9 @@ export type EngagementRead =
  * - **καμία** ζωντανή ⇒ η πιο πρόσφατη ιστορική (ώστε η άρνηση να έχει **όνομα**: revoked/expired/…)
  * - **δύο** ζωντανές ⇒ `null` + `ambiguous` — ο γραφέας το κάνει αδύνατο· αν συμβεί, **δεν διαλέγουμε**.
  */
-export function selectCurrentEngagement(
-  engagements: readonly Engagement[],
-): { readonly engagement: Engagement | null; readonly ambiguous: boolean } {
+export function selectCurrentEngagement<E extends Engagement>(
+  engagements: readonly E[],
+): { readonly engagement: E | null; readonly ambiguous: boolean } {
   const live = engagements.filter((e) => LIVE_ENGAGEMENT_STATES.includes(e.state));
   if (live.length > 1) return { engagement: null, ambiguous: true };
   if (live.length === 1) return { engagement: live[0], ambiguous: false };

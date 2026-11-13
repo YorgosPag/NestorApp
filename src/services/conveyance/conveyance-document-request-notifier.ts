@@ -20,14 +20,14 @@ import 'server-only';
 import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import { fnv1a32 } from '@/lib/hash/fnv1a';
 import type { CaseActorRole, ConveyanceCase } from '@/types/conveyance-case';
-import type { Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement } from '@/types/engagement';
 import { caseNoticeCopy, noticeToEngaged, noticeToHost, type CaseNoticeCopy, type CaseNoticeDelivery } from './conveyance-case-notice';
 
 const FEATURE = 'conveyance-document-request';
 
 export type DocumentRequestRecipient =
   | { readonly kind: 'host'; readonly uid: string }
-  | { readonly kind: 'engaged'; readonly engagement: Engagement };
+  | { readonly kind: 'engaged'; readonly engagement: ConveyanceEngagement };
 
 interface DocumentRequestNotice {
   readonly record: ConveyanceCase;

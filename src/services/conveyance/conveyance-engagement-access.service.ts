@@ -33,7 +33,13 @@ import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { declaredCredentialOf, latestOwnDeclaration, type CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import { deriveFacts } from '@/lib/conveyance/derive-facts';
 import type { ConveyanceCase, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
-import type { Engagement, EngagementDecision, EngagementVerdict } from '@/types/engagement';
+import {
+  isConveyanceEngagement,
+  SCOPE_OF_SUBJECT,
+  type ConveyanceEngagement,
+  type EngagementDecision,
+  type EngagementVerdict,
+} from '@/types/engagement';
 import type { CredentialHint } from '@/types/engagement-invitation';
 import type { WorkspaceRef } from '@/types/workspace-membership';
 import { collectCaseEvidence, HOST_EVIDENCE_VIEWER, type CaseEvidenceViewer } from './conveyance-case-evidence.server';
@@ -45,7 +51,7 @@ import { readCasePartyLabels } from './conveyance-party-labels.server';
 import { visiblePartyKeys, visibleSellers } from '@/lib/conveyance/party-labels';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 import { announceEngagementAnswered } from './conveyance-engagement-notifier';
-import { answerChanges, engagementKeyOf, recordEngagementAudit } from './conveyance-engagement-support';
+import { answerChanges, asCaseEngagement, engagementKeyOf, recordEngagementAudit } from './conveyance-engagement-support';
 import { caseRosterSignal, readViewRevision } from './conveyance-view-signal.server';
 
 // =============================================================================
@@ -53,17 +59,18 @@ import { caseRosterSignal, readViewRevision } from './conveyance-view-signal.ser
 // =============================================================================
 
 /** Η υπόθεση της συμμετοχής — **μόνο** αν ανήκει στον μισθωτή **της συμμετοχής** (ξένη ≡ ανύπαρκτη). */
-async function readCaseOf(db: Firestore, engagement: Engagement): Promise<ConveyanceCase | null> {
+async function readCaseOf(db: Firestore, engagement: ConveyanceEngagement): Promise<ConveyanceCase | null> {
   const record = parseConveyanceCase((await db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(engagement.subject.caseId).get()).data());
   if (!record || record.companyId !== engagement.hostCompanyId || record.subject.projectId !== engagement.projectId) return null;
   return record;
 }
 
 /** Η τρέχουσα συμμετοχή **του ίδιου** με αυτή την ταυτότητα — ή `null` (καμία μαρτυρία ύπαρξης ξένης). */
-async function findOwnEngagement(db: Firestore, uid: string, engagementId: string): Promise<Engagement | null | 'unknown'> {
+async function findOwnEngagement(db: Firestore, uid: string, engagementId: string): Promise<ConveyanceEngagement | null | 'unknown'> {
   const list = await listEngagementsOfUser(db, uid);
   if (list.outcome === 'unknown') return 'unknown';
-  return list.engagements.find((e) => e.id === engagementId) ?? null;
+  // ADR-862 §5.3.10 — συμμετοχή άλλου είδους (ανάθεση έκδοσης) **δεν** είναι υπόθεση μεταβίβασης ⇒ ίδια απάντηση με την ανύπαρκτη.
+  return list.engagements.filter(isConveyanceEngagement).find((e) => e.id === engagementId) ?? null;
 }
 
 /** Το σπίτι μιας **δικής του** συμμετοχής — ή «δεν είναι δική του / δεν υπάρχει» — ή «δεν μπόρεσα να ρωτήσω». */
@@ -88,8 +95,8 @@ export async function locateOwnCaseHome(db: Firestore, uid: string, engagementId
   return placement.outcome === 'placed' ? { outcome: 'home', home: placement.home } : { outcome: 'unknown' };
 }
 
-function judge(engagement: Engagement, uid: string, nowMs: number): EngagementDecision {
-  return decideEngagement({ engagement, uid, subject: engagement.subject, scope: 'conveyance:case:view', nowMs });
+function judge(engagement: ConveyanceEngagement, uid: string, nowMs: number): EngagementDecision {
+  return decideEngagement({ engagement, uid, subject: engagement.subject, scope: SCOPE_OF_SUBJECT.conveyance_case, nowMs });
 }
 
 /** **Ποιος** κοιτά τον κατάλογο — ο θεατής του ΕΝΟΣ συλλέκτη τεκμηρίων (`conveyance-case-evidence.server`). */
@@ -102,7 +109,7 @@ export const HOST_CHECKLIST_VIEWER: ChecklistViewer = HOST_EVIDENCE_VIEWER;
  * Ο επαγγελματίας μιας συμμετοχής: ο ρόλος της, το πρότυπό της, και ποιος είναι (τα δικά του transmittals).
  * Χωρίς `uid` (προεπισκόπηση πρόσκλησης — ο προσκεκλημένος δεν έχει ακόμη λογαριασμό) ⇒ τίποτα δεν είναι «δικό του».
  */
-export function engagementChecklistViewer(engagement: Pick<Engagement, 'role' | 'template'> & { readonly uid?: string }): ChecklistViewer {
+export function engagementChecklistViewer(engagement: Pick<ConveyanceEngagement, 'role' | 'template'> & { readonly uid?: string }): ChecklistViewer {
   return { role: engagement.role, audience: engagement.template, uid: engagement.uid ?? null };
 }
 
@@ -127,7 +134,7 @@ export async function checklistForRole(
   });
 }
 
-function engagedChecklist(db: Firestore, engagement: Engagement, record: ConveyanceCase, context: ConveyanceSubjectContext) {
+function engagedChecklist(db: Firestore, engagement: ConveyanceEngagement, record: ConveyanceCase, context: ConveyanceSubjectContext) {
   return checklistForRole(db, record, context, engagementChecklistViewer(engagement));
 }
 
@@ -139,13 +146,13 @@ function engagedChecklist(db: Firestore, engagement: Engagement, record: Conveya
  * Η προσυμπλήρωση της δήλωσης για **πρόταση** που περιμένει απάντηση: πρώτα η δική του πιο πρόσφατη δήλωση,
  * μετά το βιβλίο του οικοδεσπότη. Για κάθε άλλη κατάσταση `null` (δεν υπάρχει τι να δηλωθεί).
  */
-async function offerCredentialHint(db: Firestore, engagement: Engagement, history: readonly Engagement[]): Promise<CredentialHint | null> {
+async function offerCredentialHint(db: Firestore, engagement: ConveyanceEngagement, history: readonly ConveyanceEngagement[]): Promise<CredentialHint | null> {
   if (engagement.state !== 'offered') return null;
   return latestOwnDeclaration(history, engagement.role)
     ?? contactCredentialHint(db, engagement.hostCompanyId, engagement.origin.contactId, engagement.role);
 }
 
-async function cardOf(db: Firestore, engagement: Engagement, verdict: EngagementVerdict, history: readonly Engagement[], acting: ActingViews): Promise<MyCaseCard> {
+async function cardOf(db: Firestore, engagement: ConveyanceEngagement, verdict: EngagementVerdict, history: readonly ConveyanceEngagement[], acting: ActingViews): Promise<MyCaseCard> {
   const record = await readCaseOf(db, engagement);
   const context = record ? await loadConveyanceSubject(db, record.companyId, record.subject.propertyId) : null;
   const engaged = isEngaged(verdict) && record !== null && context !== null;
@@ -180,9 +187,9 @@ export interface CasesViewer extends ActingViewer {
  * Όσες φαίνονται στον χώρο της σελίδας — καθεμία στο **σπίτι** της (`placement`, §15.15: το γραφείο όπου ανήκει
  * ακόμη, αλλιώς ο προσωπικός του). `unknown` ⇒ τουλάχιστον μία δεν μπόρεσε να κριθεί.
  */
-async function shownIn(engagements: readonly Engagement[], viewed: WorkspaceRef, acting: ActingViews): Promise<readonly Engagement[] | 'unknown'> {
+async function shownIn(engagements: readonly ConveyanceEngagement[], viewed: WorkspaceRef, acting: ActingViews): Promise<readonly ConveyanceEngagement[] | 'unknown'> {
   const placed = await Promise.all(engagements.map(async (engagement) => ({ engagement, placement: await acting.placement(engagement) })));
-  const shown: Engagement[] = [];
+  const shown: ConveyanceEngagement[] = [];
   for (const { engagement, placement } of placed) {
     // Η πρόταση που περιμένει απάντηση φαίνεται παντού — και δεν έχει χώρο, άρα δεν ρωτά ποτέ το βιβλίο.
     if (placement.outcome === 'unknown') return 'unknown';
@@ -203,15 +210,17 @@ export async function listMyCases(db: Firestore, viewer: CasesViewer, nowMs: num
   const acting = actingViews(viewer);
   const list = await listEngagementsOfUser(db, uid);
   if (list.outcome === 'unknown') return { ok: false };
-  const byCase = new Map<string, Engagement[]>();
-  for (const e of list.engagements) byCase.set(e.subject.caseId, [...(byCase.get(e.subject.caseId) ?? []), e]);
+  // ADR-862 §5.3.10 — «Οι υποθέσεις μου» της μεταβίβασης δείχνουν **μόνο** υποθέσεις μεταβίβασης (οι αναθέσεις έκδοσης: Φ-Β).
+  const conveyanceHistory = list.engagements.filter(isConveyanceEngagement);
+  const byCase = new Map<string, ConveyanceEngagement[]>();
+  for (const e of conveyanceHistory) byCase.set(e.subject.caseId, [...(byCase.get(e.subject.caseId) ?? []), e]);
   const candidates = [...byCase.values()]
     .map((history) => selectCurrentEngagement(history).engagement)
-    .filter((e): e is Engagement => e !== null);
+    .filter((e): e is ConveyanceEngagement => e !== null);
   const current = await shownIn(candidates, viewer.viewed, acting);
   // §15.15 — «δεν μπόρεσα να ρωτήσω αν ανήκει ακόμη» ⇒ «δεν φορτώθηκε», ποτέ λίστα που κρύβει σιωπηλά υπόθεση.
   if (current === 'unknown') return { ok: false };
-  const cards = await Promise.all(current.map((e) => cardOf(db, e, judge(e, uid, nowMs).verdict, list.engagements, acting)));
+  const cards = await Promise.all(current.map((e) => cardOf(db, e, judge(e, uid, nowMs).verdict, conveyanceHistory, acting)));
   return { ok: true, cards: [...cards].sort((a, b) => b.offeredAt.localeCompare(a.offeredAt)) };
 }
 
@@ -237,7 +246,7 @@ type PlannedAnswer =
  * χωρίς χώρο «για λογαριασμό ποιου» **δεν** φτάνει ποτέ στον γραφέα (2+ γραφεία χωρίς επιλογή · ξένο γραφείο ·
  * «δεν μπόρεσα να ρωτήσω» ⇒ ονομασμένη άρνηση, καμία γραφή).
  */
-async function planAnswer(own: Engagement, actor: RespondingActor, answer: CaseEngagementAnswer, nowMs: number): Promise<PlannedAnswer> {
+async function planAnswer(own: ConveyanceEngagement, actor: RespondingActor, answer: CaseEngagementAnswer, nowMs: number): Promise<PlannedAnswer> {
   if (answer.decision === 'decline') return { ok: true, transition: { kind: 'decline', byUid: actor.uid } };
   const acting = await resolveActingFor(actor, answer.actingRequest ?? null);
   if (!acting.ok) return { ok: false, rejection: acting.rejection === 'acting-unknown' ? 'unknown' : acting.rejection };
@@ -264,13 +273,13 @@ export async function respondToCaseEngagement(
   const outcome = await transitionEngagement(db, engagementKeyOf(own), planned.transition, nowMs, caseRosterSignal(db, record));
   if (outcome.outcome === 'not-found') return { ok: false, rejection: 'not-found' };
   if (outcome.outcome === 'not-allowed' || outcome.outcome === 'offer-expired') return { ok: false, rejection: outcome.outcome };
-  const after = outcome.outcome === 'changed' ? outcome.after : outcome.engagement;
-  if (outcome.outcome === 'changed') await recordAnswer(db, actor, record, outcome.before, after);
+  const after = asCaseEngagement(outcome.outcome === 'changed' ? outcome.after : outcome.engagement);
+  if (outcome.outcome === 'changed') await recordAnswer(db, actor, record, asCaseEngagement(outcome.before), after);
   return { ok: true, card: await cardOf(db, after, judge(after, actor.uid, nowMs).verdict, [], actingViews(actor)) };
 }
 
 /** Ίχνος στο βιβλίο του οικοδεσπότη + ειδοποίηση όποιου πρότεινε. */
-async function recordAnswer(db: Firestore, actor: { readonly uid: string; readonly email: string | null }, record: ConveyanceCase, before: Engagement, after: Engagement): Promise<void> {
+async function recordAnswer(db: Firestore, actor: { readonly uid: string; readonly email: string | null }, record: ConveyanceCase, before: ConveyanceEngagement, after: ConveyanceEngagement): Promise<void> {
   const context = await loadConveyanceSubject(db, record.companyId, record.subject.propertyId);
   const name = context?.propertyName ?? null;
   await recordEngagementAudit({ engagement: after, action: 'status_changed', changes: answerChanges(before, after), performedBy: actor.uid, performedByName: actor.email, entityName: name });
@@ -283,7 +292,7 @@ async function recordAnswer(db: Firestore, actor: { readonly uid: string; readon
 
 /** Η υπόθεση **μέσω** της δικής μου, ενεργής **τώρα**, συμμετοχής: η συμμετοχή · η πράξη · το πλαίσιο του ακινήτου. */
 export interface EngagedCaseAccess {
-  readonly engagement: Engagement;
+  readonly engagement: ConveyanceEngagement;
   readonly record: ConveyanceCase;
   readonly context: ConveyanceSubjectContext;
 }
@@ -316,7 +325,7 @@ export function engagedChecklistOf(db: Firestore, access: EngagedCaseAccess) {
 }
 
 /** Η όψη μπαγιατεύει μόνη της στην αλλαγή ελληνικής ημέρας — ή νωρίτερα, όταν λήγει η ίδια η συμμετοχή. */
-function engagedFreshUntil(engagement: Engagement, nowMs: number): string {
+function engagedFreshUntil(engagement: ConveyanceEngagement, nowMs: number): string {
   const nextDay = nextConveyanceDayStart(new Date(nowMs)).getTime();
   const expiresAt = Date.parse(engagement.expiresAt);
   return new Date(Number.isFinite(expiresAt) && expiresAt > nowMs ? Math.min(nextDay, expiresAt) : nextDay).toISOString();

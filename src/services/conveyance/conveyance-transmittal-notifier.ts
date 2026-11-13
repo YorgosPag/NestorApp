@@ -21,7 +21,7 @@ import 'server-only';
 import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import type { ConveyanceContribution } from '@/types/conveyance-contribution';
-import type { Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement } from '@/types/engagement';
 import { caseNoticeCopy, noticeToEngaged, noticeToHost, type CaseNoticeCopy } from './conveyance-case-notice';
 
 const FEATURE = 'conveyance-transmittal';
@@ -54,7 +54,7 @@ export async function announceDocumentToHost(notice: TransmittalNotice & { reado
   return delivery !== 'failed';
 }
 
-export async function announceDocumentToEngaged(notice: TransmittalNotice & { readonly engagement: Engagement }): Promise<boolean> {
+export async function announceDocumentToEngaged(notice: TransmittalNotice & { readonly engagement: ConveyanceEngagement }): Promise<boolean> {
   const delivery = await noticeToEngaged({
     record: notice.record,
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_ENGAGED,

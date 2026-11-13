@@ -31,15 +31,17 @@ import { parseEngagement } from './engagement-schema';
 import { engagementRef, engagementsCollection, engagementsForSubjectQuery } from './engagement-ref';
 import {
   LIVE_ENGAGEMENT_STATES,
+  SCOPE_OF_SUBJECT,
+  TEMPLATE_OF_SUBJECT,
+  type ConveyanceEngagement,
   type DeclaredCredential,
   type Engagement,
   type EngagementConsent,
   type EngagementKey,
   type EngagementOrigin,
   type EngagementSubject,
+  type IssuanceEngagement,
 } from '@/types/engagement';
-import type { CdeAudience } from '@/types/container-access';
-import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
 // =============================================================================
 // ΣΗΜΑ ΟΨΕΩΝ (ADR-901 §14.8)
@@ -69,19 +71,39 @@ function withWritten(live: readonly Engagement[], written: Engagement): readonly
 // ΠΡΟΤΑΣΗ
 // =============================================================================
 
-export interface EngagementOfferRequest {
+/**
+ * Το ζεύγος **υπόθεση ↔ ρόλος** — πάνε **μαζί** (ADR-862 §5.3.10): ένας καλών δεν μπορεί καν να ζητήσει
+ * «συμβολαιογράφο σε ανάθεση ΠΕΑ».
+ */
+type ConveyanceSubjectRole = Pick<ConveyanceEngagement, 'subject' | 'role'>;
+type IssuanceSubjectRole = Pick<IssuanceEngagement, 'subject' | 'role'>;
+type EngagementSubjectRole = ConveyanceSubjectRole | IssuanceSubjectRole;
+
+function isConveyanceSubjectRole(pair: EngagementSubjectRole): pair is ConveyanceSubjectRole {
+  return pair.subject.kind === 'conveyance_case';
+}
+
+/** Αντιγράφει **μόνο** το ζεύγος — ποτέ ολόκληρο το αίτημα στο έγγραφο (θα έγραφε `nowMs` στον δίσκο). */
+function subjectRoleOf(pair: EngagementSubjectRole): EngagementSubjectRole {
+  return isConveyanceSubjectRole(pair)
+    ? { subject: pair.subject, role: pair.role }
+    : { subject: pair.subject, role: pair.role };
+}
+
+/**
+ * ⚠️ **Χωρίς `template` και χωρίς `scopes`**: τα **παράγει** ο γραφέας από το είδος της υπόθεσης
+ * (`TEMPLATE_OF_SUBJECT` · `SCOPE_OF_SUBJECT`) — ο καλών δεν μπορεί να δώσει νομικό πρότυπο σε ανάθεση έκδοσης.
+ */
+export type EngagementOfferRequest = EngagementSubjectRole & {
   readonly hostCompanyId: string;
   readonly projectId: string;
   readonly uid: string;
   readonly email: string;
-  readonly template: CdeAudience;
-  readonly role: LegalProfessionalRole;
-  readonly subject: EngagementSubject;
   readonly origin: EngagementOrigin;
   readonly consents: readonly EngagementConsent[];
   readonly offeredBy: string;
   readonly nowMs: number;
-}
+};
 
 export type EngagementOfferOutcome =
   | { readonly outcome: 'offered'; readonly engagement: Engagement }
@@ -95,16 +117,16 @@ export type EngagementOfferOutcome =
 
 function newEngagement(request: EngagementOfferRequest): Engagement {
   const now = new Date(request.nowMs).toISOString();
+  const kind = request.subject.kind;
   return {
+    ...subjectRoleOf(request),
     id: generateEngagementId(),
     hostCompanyId: request.hostCompanyId,
     projectId: request.projectId,
     uid: request.uid,
     email: request.email,
-    template: request.template,
-    role: request.role,
-    subject: request.subject,
-    scopes: ['conveyance:case:view'],
+    template: TEMPLATE_OF_SUBJECT[kind],
+    scopes: [SCOPE_OF_SUBJECT[kind]],
     state: 'offered',
     expiresAt: offerExpiresAt(request.nowMs),
     origin: request.origin,
@@ -165,12 +187,12 @@ export function offerEngagement(db: Firestore, request: EngagementOfferRequest, 
 // =============================================================================
 
 /** Ό,τι γράφει η αποδοχή πρόσκλησης με email — η πρόταση **και** η απάντηση, σε ένα βήμα. */
-export interface EngagementInvitationAcceptance extends EngagementOfferRequest {
+export type EngagementInvitationAcceptance = EngagementOfferRequest & {
   readonly invitationId: string;
   readonly declaredCredential: DeclaredCredential;
   /** ADR-901 §15 — για λογαριασμό ποιου χώρου· κρίθηκε **πριν** από τη συναλλαγή (`decideActingWorkspace`). */
   readonly actingFor: WorkspaceRef;
-}
+};
 
 export type EngagementInvitationStage =
   | { readonly outcome: 'refused'; readonly reason: 'slot-occupied' | 'role-conflict' | 'unreadable' }

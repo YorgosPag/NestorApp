@@ -19,7 +19,20 @@ import {
   transitionEngagement,
   type EngagementOfferRequest,
 } from '../engagement-write';
-import type { DeclaredCredential, Engagement, EngagementSubject } from '@/types/engagement';
+import { parseEngagement } from '../engagement-schema';
+import {
+  ENGAGEMENT_SUBJECT_KINDS,
+  ROLES_OF_SUBJECT,
+  SCOPE_OF_SUBJECT,
+  TEMPLATE_OF_SUBJECT,
+  type ConveyanceEngagement,
+  type ConveyanceEngagementSubject,
+  type DeclaredCredential,
+  type Engagement,
+  type EngagementSubject,
+  type IssuanceEngagement,
+  type IssuanceEngagementSubject,
+} from '@/types/engagement';
 import { personalWorkspace } from '@/types/workspace-membership';
 
 jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }) }));
@@ -28,11 +41,11 @@ const NOW = Date.parse('2026-10-03T10:00:00.000Z');
 /** ADR-901 §14.8 — το σήμα όψεων είναι υποχρεωτικό· εδώ καταγράφεται (οι άγκυρες σήματος ζουν στο τέλος). */
 const signal = jest.fn();
 const DAY = 24 * 60 * 60 * 1000;
-const CASE_A: EngagementSubject = { kind: 'conveyance_case', caseId: 'cvc_A' };
-const CASE_B: EngagementSubject = { kind: 'conveyance_case', caseId: 'cvc_B' };
+const CASE_A: ConveyanceEngagementSubject = { kind: 'conveyance_case', caseId: 'cvc_A' };
+const CASE_B: ConveyanceEngagementSubject = { kind: 'conveyance_case', caseId: 'cvc_B' };
 const CREDENTIAL: DeclaredCredential = { authority: 'notary-association', number: '4321', chapter: 'Αθηνών', assurance: 'declared', declaredAt: new Date(NOW).toISOString() };
 
-function engagement(overrides: Partial<Engagement> = {}): Engagement {
+function engagement(overrides: Partial<ConveyanceEngagement> = {}): ConveyanceEngagement {
   return {
     id: 'eng_1', hostCompanyId: 'comp_host', projectId: 'proj_1', uid: 'u_notary', email: 'n@example.gr',
     template: 'legal', role: 'notary', subject: CASE_A, scopes: ['conveyance:case:view'], state: 'active',
@@ -128,8 +141,9 @@ describe('ADR-862 Φ1 — οι μεταβάσεις (`planTransition`, καθα�
 describe('ADR-862 Φ1 — ο γραφέας πάνω σε βάση (fake Firestore)', () => {
   let fake: FakeFirestore;
   const db = (): AdminFirestore => fake as unknown as AdminFirestore;
-  const request = (overrides: Partial<EngagementOfferRequest> = {}): EngagementOfferRequest => ({
-    hostCompanyId: 'comp_host', projectId: 'proj_1', uid: 'u_notary', email: 'n@example.gr', template: 'legal',
+  type CaseOfferRequest = Extract<EngagementOfferRequest, { readonly subject: ConveyanceEngagementSubject }>;
+  const request = (overrides: Partial<CaseOfferRequest> = {}): CaseOfferRequest => ({
+    hostCompanyId: 'comp_host', projectId: 'proj_1', uid: 'u_notary', email: 'n@example.gr',
     role: 'notary', subject: CASE_A, origin: { kind: 'professional_appointment', contactId: 'cont_1' },
     consents: [], offeredBy: 'u_host', nowMs: NOW, ...overrides,
   });
@@ -208,6 +222,65 @@ describe('ADR-862 Φ1 — ο γραφέας πάνω σε βάση (fake Firesto
   it('αναγνώστης — δύο ζωντανές για το ίδιο ζεύγος ⇒ ΔΕΝ διαλέγουμε (fail-closed)', () => {
     const picked = selectCurrentEngagement([engagement({ id: 'eng_1' }), engagement({ id: 'eng_2', state: 'offered' })]);
     expect(picked).toEqual({ engagement: null, ambiguous: true });
+  });
+});
+
+describe('ADR-862 §5.3.10 — δεύτερο είδος υπόθεσης (ανάθεση έκδοσης)', () => {
+  const ISSUANCE: IssuanceEngagementSubject = { kind: 'document_issuance', assignmentId: 'cvc_A' };
+  const issuance = (overrides: Partial<IssuanceEngagement> = {}): IssuanceEngagement => ({
+    ...engagement(),
+    template: 'issuer', role: 'document_issuer', subject: ISSUANCE, scopes: ['issuance:assignment:collaborate'],
+    ...overrides,
+  });
+
+  it('σχήμα — έγκυρη ανάθεση έκδοσης διαβάζεται· η μεταβίβαση διαβάζεται ΑΚΡΙΒΩΣ όπως πριν', () => {
+    expect(parseEngagement(issuance())).toEqual(issuance());
+    expect(parseEngagement(engagement())).toEqual(engagement());
+  });
+
+  it('σχήμα — ανάμειξη ειδών ⇒ μη αναγνώσιμο (fail-closed), ποτέ «περίπου»', () => {
+    // Μετάλλαξη: το σχήμα δέχεται οποιονδήποτε ρόλο/πρότυπο/εύρος για οποιοδήποτε είδος.
+    expect(parseEngagement({ ...issuance(), role: 'notary' })).toBeNull();
+    expect(parseEngagement({ ...engagement(), role: 'document_issuer' })).toBeNull();
+    expect(parseEngagement({ ...engagement(), template: 'issuer' })).toBeNull();
+    expect(parseEngagement({ ...issuance(), template: 'legal' })).toBeNull();
+    expect(parseEngagement({ ...issuance(), scopes: ['conveyance:case:view'] })).toBeNull();
+    expect(parseEngagement({ ...issuance(), subject: { kind: 'document_issuance', caseId: 'cvc_A' } })).toBeNull();
+  });
+
+  it('σχήμα — εθνική αρχή (ΥΠΕΝ) ΧΩΡΙΣ σύλλογο· με σύλλογο ⇒ μη αναγνώσιμο', () => {
+    const ypen: DeclaredCredential = { authority: 'ypen', number: '12345', chapter: null, assurance: 'declared', declaredAt: new Date(NOW).toISOString() };
+    expect(parseEngagement(issuance({ declaredCredential: ypen }))).not.toBeNull();
+    expect(parseEngagement(issuance({ declaredCredential: { ...ypen, chapter: 'Αθηνών' } }))).toBeNull();
+  });
+
+  it('κριτής — ίδιο id σε ΑΛΛΟ είδος υπόθεσης ⇒ `not-engaged`· εύρος άλλου είδους ⇒ `scope-missing`', () => {
+    // Μετάλλαξη: η σύγκριση υπόθεσης κοιτά μόνο το id (εδώ και τα δύο `cvc_A`).
+    expect(ask(issuance(), CASE_A)).toBe('not-engaged');
+    expect(decideEngagement({ engagement: issuance(), uid: 'u_notary', subject: ISSUANCE, scope: 'issuance:assignment:collaborate', nowMs: NOW }).verdict).toBe('engaged');
+    expect(decideEngagement({ engagement: issuance(), uid: 'u_notary', subject: ISSUANCE, scope: 'conveyance:case:view', nowMs: NOW }).verdict).toBe('scope-missing');
+  });
+
+  it('γραφέας — πρότυπο και εύρος ΠΑΡΑΓΟΝΤΑΙ από το είδος· τα δύο είδη δεν βλέπουν το ένα το άλλο', async () => {
+    const fake = new FakeFirestore();
+    const db = fake as unknown as AdminFirestore;
+    const base = {
+      hostCompanyId: 'comp_host', projectId: 'proj_1', uid: 'u_notary', email: 'n@example.gr',
+      origin: { kind: 'professional_appointment', contactId: 'cont_1' }, consents: [], offeredBy: 'u_host', nowMs: NOW,
+    } as const;
+    const legal = await offerEngagement(db, { ...base, role: 'notary', subject: CASE_A }, signal);
+    // Ίδιος άνθρωπος, ίδιο έργο, ίδιο id — αλλά ΑΛΛΟ είδος ⇒ νέα συμμετοχή, όχι `role-conflict`/`already-live`.
+    const issued = await offerEngagement(db, { ...base, role: 'document_issuer', subject: ISSUANCE }, signal);
+    expect(legal.outcome === 'offered' && [legal.engagement.template, legal.engagement.scopes]).toEqual(['legal', ['conveyance:case:view']]);
+    expect(issued.outcome === 'offered' && [issued.engagement.template, issued.engagement.scopes]).toEqual(['issuer', ['issuance:assignment:collaborate']]);
+  });
+
+  it('ολικότητα — κάθε είδος έχει εύρος, ρόλους και πρότυπο', () => {
+    for (const kind of ENGAGEMENT_SUBJECT_KINDS) {
+      expect(SCOPE_OF_SUBJECT[kind]).toBeTruthy();
+      expect(ROLES_OF_SUBJECT[kind].length).toBeGreaterThan(0);
+      expect(TEMPLATE_OF_SUBJECT[kind]).toBeTruthy();
+    }
   });
 });
 

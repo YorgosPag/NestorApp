@@ -32,7 +32,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { generateDeterministicConveyanceDocumentRequestId } from '@/services/enterprise-id.service';
 import type { CaseActorRole, ChecklistRow, ConveyanceCase } from '@/types/conveyance-case';
 import type { ConveyanceDocumentRequest, DocumentRequestItemOutcome } from '@/types/conveyance-document-request';
-import type { Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement } from '@/types/engagement';
 import { announceDocumentRequest, type DocumentRequestRecipient } from './conveyance-document-request-notifier';
 import { documentRequestsCollection } from './conveyance-document-request-store.server';
 import { checklistForRole, engagementChecklistViewer, HOST_CHECKLIST_VIEWER } from './conveyance-engagement-access.service';
@@ -43,7 +43,7 @@ import { caseViewersOf, signalCaseChangeInTx } from './conveyance-view-signal.se
 /** Ποιος ζητά: ο οικοδεσπότης (ως χώρος, με τον άνθρωπο που πάτησε) ή ένας επαγγελματίας μέσω της συμμετοχής του. */
 export type DocumentRequester =
   | { readonly kind: 'host'; readonly uid: string; readonly name: string | null }
-  | { readonly kind: 'engaged'; readonly engagement: Engagement };
+  | { readonly kind: 'engaged'; readonly engagement: ConveyanceEngagement };
 
 export interface RequestDocumentsInput {
   readonly requester: DocumentRequester;
@@ -92,7 +92,7 @@ function newRequest(input: RequestDocumentsInput, party: RequestParty, planned: 
 }
 
 /** (3) Η συναλλαγή: νέα έγγραφα για όσα δεν ζητήθηκαν σήμερα· τα υπάρχοντα επιστρέφονται ως έχουν. */
-async function writeRequests(db: Firestore, input: RequestDocumentsInput, party: RequestParty, accepted: readonly Accepted[], engagements: readonly Engagement[]) {
+async function writeRequests(db: Firestore, input: RequestDocumentsInput, party: RequestParty, accepted: readonly Accepted[], engagements: readonly ConveyanceEngagement[]) {
   const dayKey = conveyanceToday(new Date(input.nowMs));
   const planned: Planned[] = accepted.map((a) => ({
     ...a,
@@ -130,7 +130,7 @@ async function recordRequests(input: RequestDocumentsInput, party: RequestParty,
 }
 
 /** Οι λογαριασμοί ενός ρόλου-παραλήπτη τώρα — ποτέ ο ίδιος ο αιτών. */
-async function recipientsOf(db: Firestore, input: RequestDocumentsInput, role: CaseActorRole, engagements: readonly Engagement[], requesterUid: string): Promise<DocumentRequestRecipient[]> {
+async function recipientsOf(db: Firestore, input: RequestDocumentsInput, role: CaseActorRole, engagements: readonly ConveyanceEngagement[], requesterUid: string): Promise<DocumentRequestRecipient[]> {
   if (role === 'host') return (await caseHostRecipients(db, input.record)).filter((uid) => uid !== requesterUid).map((uid) => ({ kind: 'host', uid }));
   return engagements.filter((e) => e.role === role && e.uid !== requesterUid).map((engagement) => ({ kind: 'engaged', engagement }));
 }
@@ -141,7 +141,7 @@ async function notifyPending(
   input: RequestDocumentsInput,
   party: RequestParty,
   requests: readonly ConveyanceDocumentRequest[],
-  engagements: readonly Engagement[],
+  engagements: readonly ConveyanceEngagement[],
 ): Promise<void> {
   const pending = requests.filter((r) => r.notifiedAt === null);
   for (const role of new Set(pending.map((r) => r.recipient))) {
@@ -155,7 +155,7 @@ async function notifyPending(
   }
 }
 
-function judgeAll(input: RequestDocumentsInput, party: RequestParty, rows: readonly ChecklistRow[], activeRoles: ReadonlySet<Engagement['role']>) {
+function judgeAll(input: RequestDocumentsInput, party: RequestParty, rows: readonly ChecklistRow[], activeRoles: ReadonlySet<ConveyanceEngagement['role']>) {
   const byId = new Map(rows.map((row) => [row.itemId, row]));
   const state = effectiveCaseState(input.record.storedState, input.context.legalPhase);
   return [...new Set(input.itemIds)].map((itemId): DocumentRequestItemOutcome | Accepted => {

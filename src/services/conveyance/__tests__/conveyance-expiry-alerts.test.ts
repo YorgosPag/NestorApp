@@ -9,13 +9,13 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { ChecklistRow } from '@/types/conveyance-case';
-import type { Engagement } from '@/types/engagement';
+import type { ConveyanceEngagement } from '@/types/engagement';
 
 const announceExpiryToHost = jest.fn(async (_n: { recipientUid: string; alerts: readonly unknown[] }) => true);
-const announceExpiryToEngaged = jest.fn(async (_n: { engagement: Engagement; alerts: readonly { itemId: string }[] }) => true);
+const announceExpiryToEngaged = jest.fn(async (_n: { engagement: ConveyanceEngagement; alerts: readonly { itemId: string }[] }) => true);
 jest.mock('../conveyance-expiry-notifier', () => ({
   announceExpiryToHost: (n: { recipientUid: string; alerts: readonly unknown[] }) => announceExpiryToHost(n),
-  announceExpiryToEngaged: (n: { engagement: Engagement; alerts: readonly { itemId: string }[] }) => announceExpiryToEngaged(n),
+  announceExpiryToEngaged: (n: { engagement: ConveyanceEngagement; alerts: readonly { itemId: string }[] }) => announceExpiryToEngaged(n),
 }));
 
 let legalPhase: string | null = 'preliminary_signed';
@@ -24,7 +24,7 @@ jest.mock('../conveyance-subject.server', () => ({
 }));
 jest.mock('@/lib/workspace/workspace-administrators', () => ({ activeWorkspaceAdministrators: async () => ['u_admin', 'u_host'] }));
 
-let engagements: Engagement[] = [];
+let engagements: ConveyanceEngagement[] = [];
 // Γνήσιοι: ο κριτής «ενεργή τώρα» (`engagedNow`) και οι παραλήπτες του οικοδεσπότη· ψεύτικη μόνο η ανάγνωση συμμετοχών.
 jest.mock('../conveyance-engagement-support', () => {
   const actual = jest.requireActual<typeof import('../conveyance-engagement-support')>('../conveyance-engagement-support');
@@ -52,7 +52,7 @@ const DAY = 86_400_000;
 let fake: FakeFirestore;
 const db = () => fake as unknown as Firestore;
 
-function engagement(overrides: Partial<Engagement>): Engagement {
+function engagement(overrides: Partial<ConveyanceEngagement>): ConveyanceEngagement {
   return {
     id: 'eng_sl', hostCompanyId: 'comp_a', projectId: 'proj_1', uid: 'u_sl', email: 'sl@x.gr', template: 'legal',
     role: 'seller_lawyer', subject: { kind: 'conveyance_case', caseId: 'cvc_1' }, scopes: ['conveyance:case:view'],
