@@ -267,7 +267,7 @@ export function readForUpsert<TDefinition>(scope: CatalogReadScope, kind: Catalo
 }
 
 /** Ο στόχος μιας εγγραφής σε γνωστό id **και** η τρέχουσα ενεργή εγγραφή του χώρου — ο ένας δρόμος upsert/singleton. */
-interface TargetAndCurrent<TDefinition> {
+export interface TargetAndCurrent<TDefinition> {
   readonly target: CreateTarget;
   readonly current: StoredCatalogRecord<TDefinition> | null;
 }

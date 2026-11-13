@@ -21,6 +21,7 @@ import type { RawPageCell } from '@/subapps/catalog/import/page-extraction';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportBatchDefinition, ImportBatchPages, ImportLabelMemoryDefinition, ImportProposalDefinition, ImportProposalRow } from '@/subapps/catalog/types/catalog-import';
 import { stalePages } from '@/subapps/catalog/import/page-derivation';
+import { pageDecisionsDigest } from '@/subapps/catalog/import/page-line-overrides';
 import { IMPORT_PAGE_DERIVATION } from '@/subapps/catalog/vocabulary/catalog-import';
 import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import type { CreateImportBatchRequest, SetImportLineRequest } from '@/subapps/catalog/types/catalog-import-requests';
@@ -56,6 +57,19 @@ jest.mock('../import-source.server', () => ({
   readBatchFileRecord: async () => ({}),
   downloadBatchFile: async () => Buffer.from('bytes'),
 }));
+/** §5.5.2 Β3.2: μία αποτυχία στη μέση της εγγραφής πρότασης (όπως το `params: undefined` της παραγωγής), όταν οπλιστεί. */
+const mockPlanFailure: { next: Error | null } = { next: null };
+jest.mock('../import-proposal-plan.server', () => {
+  const actual = jest.requireActual<typeof import('../import-proposal-plan.server')>('../import-proposal-plan.server');
+  return {
+    ...actual,
+    planProposal: (...args: Parameters<typeof actual.planProposal>) => {
+      const failure = mockPlanFailure.next;
+      mockPlanFailure.next = null;
+      return failure ? Promise.reject(failure) : actual.planProposal(...args);
+    },
+  };
+});
 
 /* eslint-disable import/first -- τα mocks πρέπει να δηλωθούν πριν φορτωθούν οι γραφείς */
 import { createCatalogAttributeGroup } from '../attribute-group-writer.server';
@@ -895,11 +909,64 @@ describe('ανάγνωση σελίδας', () => {
         expect(source).not.toMatch(/page-analyzer/);
       });
 
+      describe('🚀 §5.5.2 Β3.2: η απόφαση και ό,τι παράγει σε ΜΙΑ συναλλαγή — και η μπαγιατίλα αποδεικνύεται', () => {
+        const storedPages = (id: string): ImportBatchPages => {
+          const pages = (fake.getAllDocs('catalog_import_batches')[id] as unknown as ImportBatchDefinition).pages;
+          if (!pages) throw new Error('η παρτίδα PDF έχει σελίδες');
+          return pages;
+        };
+        const familyRevision = (): number => (fake.getAllDocs('catalog_families')[seeded.familyId] as { readonly revision: number }).revision;
+        const proposalsOf = (id: string) => Object.values(fake.getAllDocs('catalog_import_proposals')).filter((doc) => doc.batchId === id);
+        const coolingLFieldsOf = (rows: readonly ImportProposalRow[]) =>
+          rows.flatMap((row) => row.fields).filter((field) => field.target.kind === 'attribute' && field.target.attributeId === attributeId('cooling_l'));
+
+        it('🔴 live 2026-11-13: αποτυχία στη μέση της εγγραφής πρότασης ⇒ ούτε η απόφαση γράφεται (καμία μισή κατάσταση)', async () => {
+          const { batch, coolingL } = await readBatch();
+          const before = { batch: fake.getAllDocs('catalog_import_batches')[batch.id], proposals: proposalsOf(batch.id) };
+          mockPlanFailure.next = new Error('Cannot use "undefined" as a Firestore value');
+          await expect(setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }))).rejects.toThrow('undefined');
+          expect(fake.getAllDocs('catalog_import_batches')[batch.id]).toEqual(before.batch);
+          expect(proposalsOf(batch.id)).toEqual(before.proposals);
+        });
+
+        it('η απόφαση γράφεται μαζί με την πρότασή της, και η σφραγίδα λέει πάνω σε ποιες αποφάσεις κρίθηκε η σελίδα', async () => {
+          const { batch, coolingL } = await readBatch();
+          await setImportLine(ARIES, batch.id, request(coolingL, { kind: 'attribute', attributeId: attributeId('cooling_l') }));
+          const pages = storedPages(batch.id);
+          expect(pages.derivations).toEqual([expect.objectContaining({ page: 60, decisionsDigest: pageDecisionsDigest(pages.lineOverrides, 60) })]);
+          expect(stalePages(pages, familyRevision())).toEqual([]);
+        });
+
+        it('🔴 δίχτυ: απόφαση χωρίς την πρότασή της (όπως η Ν1 της παραγωγής) ⇒ σελίδα μπαγιάτικη ⇒ το ξαναχτίσιμο φέρνει τα κελιά, $0', async () => {
+          const { batch, coolingL } = await readBatch();
+          const stored = fake.getAllDocs('catalog_import_batches')[batch.id] as unknown as ImportBatchDefinition & Record<string, unknown>;
+          const half = { page: 60, table: coolingL.table, line: coolingL.line, decision: { kind: 'attribute', attributeId: attributeId('cooling_l') }, by: ARIES.uid, at: '2026-11-13T20:43:28.000Z' };
+          fake.seed('catalog_import_batches', batch.id, { ...stored, pages: { ...storedPages(batch.id), lineOverrides: [half] } });
+          expect(stalePages(storedPages(batch.id), familyRevision())).toEqual([60]);
+          const paid = readings().length;
+          const view = await reinterpretImportPage(ARIES, batch.id, 60);
+          expect(readings()).toHaveLength(paid);
+          expect(coolingLFieldsOf(view.proposals[0].rows)).toHaveLength(7);
+          expect(stalePages(storedPages(batch.id), familyRevision())).toEqual([]);
+        });
+
+        it('🔴 «Ναι, πρόσθεσέ την» ιδεμπότητη: ιδιότητα ήδη μέσα στην οικογένεια (προηγούμενη προσπάθεια) ⇒ ολοκληρώνεται μόνο η γραμμή', async () => {
+          const { batch, coolingL } = await readBatch();
+          const definition = MFP_ATTRIBUTES.find((attribute) => attribute.code === 'cooling_l');
+          if (!definition) throw new Error('fixture: cooling_l');
+          const attributesBefore = Object.keys(fake.getAllDocs('catalog_attributes')).length;
+          const result = await setImportLine(ARIES, batch.id, { ...request(coolingL, null), bind: 'leaf', create: { definition, requiredChannels: [] } });
+          expect(result.outcome).toEqual({ kind: 'settled' });
+          expect(Object.keys(fake.getAllDocs('catalog_attributes'))).toHaveLength(attributesBefore);
+          expect(result.view.batch.pages?.lineOverrides).toEqual([expect.objectContaining({ line: coolingL.line, decision: { kind: 'attribute', attributeId: attributeId('cooling_l') } })]);
+        });
+      });
+
       describe('🚀 §5.5.2 Β3.1: αναβάθμιση σελίδας στην τρέχουσα έκδοση παραγωγής', () => {
         const storedBatch = (id: string): ImportBatchDefinition => fake.getAllDocs('catalog_import_batches')[id] as unknown as ImportBatchDefinition;
         const familyRevision = (): number => (fake.getAllDocs('catalog_families')[seeded.familyId] as { readonly revision: number }).revision;
         /** Η σφραγίδα της σελίδας 60: τρέχουσα έκδοση παραγωγής, απέναντι στην τρέχουσα αναθεώρηση της οικογένειας (Γ12). */
-        const stampOf = (refusal: string | null) => ({ page: 60, version: IMPORT_PAGE_DERIVATION, refusal, schemaRevision: familyRevision() });
+        const stampOf = (refusal: string | null) => ({ page: 60, version: IMPORT_PAGE_DERIVATION, refusal, schemaRevision: familyRevision(), decisionsDigest: pageDecisionsDigest(undefined, 60) });
 
         /** Όπως μια παρτίδα που διαβάστηκε πριν το Β3: γραμμές χωρίς `regions`, καμία σφραγίδα. */
         function makeLegacy(id: string): void {
@@ -984,7 +1051,7 @@ describe('ανάγνωση σελίδας', () => {
         });
 
         it('🔒 δομικά χωρίς πληρωμή: ούτε η αναβάθμιση ούτε ο κοινός πυρήνας εισάγουν τον αναλυτή', () => {
-          for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts']) {
+          for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts', 'import-table-commit.server.ts']) {
             expect(readFileSync(join(__dirname, '..', file), 'utf8')).not.toMatch(/page-analyzer/);
           }
         });
@@ -1118,7 +1185,7 @@ describe('ανάγνωση σελίδας', () => {
         });
 
         it('🔒 Απόφαση 4 δομικά: ούτε το ξαναχτίσιμο ούτε η αναβάθμιση ρωτούν τη μνήμη', () => {
-          for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts', 'import-page-reinterpret.server.ts']) {
+          for (const file of ['import-page-rederive.server.ts', 'import-table-rebuild.server.ts', 'import-table-commit.server.ts', 'import-page-reinterpret.server.ts']) {
             expect(readFileSync(join(__dirname, '..', file), 'utf8')).not.toMatch(/import-label-memory|readLabelMemoryBook|memoryOverridesFor/);
           }
         });

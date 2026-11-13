@@ -17,8 +17,8 @@ import { hasPermission } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { countPdfPages } from '@/services/pdf/pdf-rasterize.service';
 import { importBatchKey } from '@/subapps/catalog/import/import-keys';
-import { currentDerivation } from '@/subapps/catalog/import/page-derivation';
-import { tableOverridesOf, withLineOverride, type LineOverrideExtras } from '@/subapps/catalog/import/page-line-overrides';
+import { currentDerivation, derivationAfterTable } from '@/subapps/catalog/import/page-derivation';
+import { pageDecisionsDigest, tableOverridesOf, withLineOverride, type LineOverrideExtras } from '@/subapps/catalog/import/page-line-overrides';
 import type {
   ImportBatchDefinition,
   ImportBatchPages,
@@ -196,7 +196,8 @@ const replacedOnTable = <TEntry extends { readonly page: number; readonly table:
 
 type LineAddress = Pick<ImportLineOverride, 'page' | 'table' | 'line'>;
 
-function pagesOrRefuse(batch: ImportBatchDefinition): ImportBatchPages {
+/** Η `pages` της παρτίδας, ή άρνηση: παρτίδα χωρίς σελίδες δεν έχει πίνακες. */
+export function pagesOrRefuse(batch: ImportBatchDefinition): ImportBatchPages {
   if (!batch.pages) throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'pages' }]);
   return batch.pages;
 }
@@ -216,35 +217,24 @@ export function setImportLineOverride(
 }
 
 /**
- * `POST /api/catalog/imports/[id]/memory` (πρώτο μισό, §5.5.2 Β5.2) — οι αποφάσεις **ενός πίνακα** ξαναγράφονται από τον καλούντα,
- * πάνω σε ό,τι ισχύει **τη στιγμή της συναλλαγής**: απόφαση ανθρώπου που μπήκε στο μεταξύ δεν χάνεται (το `rewrite` τη βλέπει).
- */
-export function rewriteTableLineOverrides(
-  ctx: AuthContext,
-  id: string,
-  page: number,
-  table: string,
-  rewrite: (own: readonly ImportLineOverride[]) => ImportLineOverride[],
-): Promise<StoredImportBatch> {
-  return storeLineOverrides(ctx, id, (all) => [
-    ...all.filter((override) => override.page !== page || override.table !== table),
-    ...rewrite(tableOverridesOf(all, page, table)),
-  ]);
-}
-
-/**
- * Ο **ένας** γραφέας των αποφάσεων γραμμής μιας παρτίδας: ανοιχτή παρτίδα, νέα λίστα από την τρέχουσα **μέσα** στη συναλλαγή, όριο
- * `IMPORT_MAX_LINE_OVERRIDES`. Η απόφαση μίας γραμμής (Β3) και η πράξη μνήμης ενός πίνακα (Β5.2) διαφέρουν μόνο στο `next`.
+ * Ο γραφέας των αποφάσεων γραμμής **που δεν ξαναχτίζουν πίνακα** (η «Αγνόηση» και η αναίρεσή της): ανοιχτή παρτίδα, νέα λίστα από την
+ * τρέχουσα **μέσα** στη συναλλαγή, όριο `IMPORT_MAX_LINE_OVERRIDES`. Οι αποφάσεις που αλλάζουν παράγωγα γράφονται **μαζί** με αυτά
+ * (`pagesAfterTable`, §5.5.2 Β3.2).
  */
 function storeLineOverrides(ctx: AuthContext, id: string, next: (all: readonly ImportLineOverride[]) => ImportLineOverride[]): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     assertImportBatchOpen(current);
     const pages = pagesOrRefuse(current);
-    const lineOverrides = next(pages.lineOverrides ?? []);
-    if (lineOverrides.length > IMPORT_MAX_LINE_OVERRIDES) assertNoIssues([{ code: 'tooMany', path: 'lineOverrides', params: { max: IMPORT_MAX_LINE_OVERRIDES } }]);
+    const lineOverrides = withinLineOverrideLimit(next(pages.lineOverrides ?? []));
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, lineOverrides } });
   });
+}
+
+/** Το όριο `IMPORT_MAX_LINE_OVERRIDES` — ένα σημείο για κάθε γραφέα αποφάσεων. */
+function withinLineOverrideLimit(lineOverrides: ImportLineOverride[]): ImportLineOverride[] {
+  if (lineOverrides.length > IMPORT_MAX_LINE_OVERRIDES) assertNoIssues([{ code: 'tooMany', path: 'lineOverrides', params: { max: IMPORT_MAX_LINE_OVERRIDES } }]);
+  return lineOverrides;
 }
 
 export interface TableLeftOut {
@@ -252,20 +242,39 @@ export interface TableLeftOut {
   readonly unmappedLines: readonly ImportPageUnmappedLine[];
 }
 
-/** `POST /api/catalog/imports/[id]/lines` (δεύτερο μισό) — όσα έμειναν απέξω, για τον πίνακα που ξαναερμηνεύτηκε. */
-export function replaceTableLeftOut(ctx: AuthContext, id: string, page: number, table: string, leftOut: TableLeftOut): Promise<StoredImportBatch> {
-  return runCatalogTransaction(ctx, async (scope) => {
-    const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
-    const pages = pagesOrRefuse(current);
-    const setAside = replacedOnTable(pages.setAside ?? [], page, table, leftOut.setAside);
-    const unmappedLines = replacedOnTable(pages.unmappedLines ?? [], page, table, leftOut.unmappedLines);
-    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, setAside, unmappedLines } });
-  });
+/** Ό,τι γράφει στην παρτίδα το ξαναχτίσιμο **ενός** πίνακα (§5.5.2 Β3.2). */
+export interface TableBatchChange {
+  readonly page: number;
+  readonly table: string;
+  /** Οι αποφάσεις του πίνακα, ξαναγραμμένες πάνω στις **τρέχουσες** της συναλλαγής· απούσα = οι αποφάσεις δεν αλλάζουν (αναβάθμιση σελίδας). */
+  readonly rewrite?: (own: readonly ImportLineOverride[]) => ImportLineOverride[];
+  readonly leftOut: TableLeftOut;
+}
+
+/**
+ * Η `pages` μετά το ξαναχτίσιμο ενός πίνακα, **καθαρά**: αποφάσεις του πίνακα · ό,τι έμεινε απέξω · αποτύπωμα σφραγίδας (§5.5.2 Β3.2,
+ * `derivationAfterTable`). Μία εγγραφή της παρτίδας στη συναλλαγή του πίνακα, αντί για δύο χωριστές (απόφαση · απέξω) που άφηναν μισή κατάσταση.
+ */
+export function pagesAfterTable(pages: ImportBatchPages, { page, table, rewrite, leftOut }: TableBatchChange): ImportBatchPages {
+  const all = pages.lineOverrides ?? [];
+  const lineOverrides = rewrite
+    ? withinLineOverrideLimit([...all.filter((override) => override.page !== page || override.table !== table), ...rewrite(tableOverridesOf(all, page, table))])
+    : all;
+  const derivation = derivationAfterTable(pages, page, pageDecisionsDigest(lineOverrides, page));
+  return {
+    ...pages,
+    ...(rewrite ? { lineOverrides } : {}),
+    setAside: replacedOnTable(pages.setAside ?? [], page, table, leftOut.setAside),
+    unmappedLines: replacedOnTable(pages.unmappedLines ?? [], page, table, leftOut.unmappedLines),
+    ...(derivation ? { derivations: replacedOnPage(pages.derivations ?? [], page, [derivation]) } : {}),
+  };
 }
 
 /**
  * `POST /api/catalog/imports/[id]/reinterpret` (τελευταία πράξη) — η σελίδα κρίθηκε με την τρέχουσα έκδοση παραγωγής (§5.5.2 Β3.1):
  * ξαναχτίστηκε, ή αρνήθηκε με λόγο. Μπαίνει **μετά** τα παράγωγα: διακοπή στη μέση αφήνει τη σελίδα μπαγιάτικη, άρα ξαναδοκιμάζεται.
+ * `decisionsDigest` = το αποτύπωμα των αποφάσεων **πάνω στις οποίες κρίθηκε** (§5.5.2 Β3.2): απόφαση που μπήκε στο μεταξύ αφήνει τη
+ * σελίδα μπαγιάτικη — ποτέ σφραγίδα νεότερη από την κρίση, ίδιο δόγμα με το `schemaRevision`.
  */
 export function stampPageDerivation(
   ctx: AuthContext,
@@ -273,12 +282,13 @@ export function stampPageDerivation(
   page: number,
   refusal: ImportLineRefusal | null,
   schemaRevision: number | null,
+  decisionsDigest: string,
 ): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     if (IMPORT_FINISHED_BATCH_STATUSES.includes(current.status)) return current;
     const pages = pagesOrRefuse(current);
-    const derivations = replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, refusal, schemaRevision)]);
+    const derivations = replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, refusal, schemaRevision, decisionsDigest)]);
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), pages: { ...pages, derivations } });
   });
 }

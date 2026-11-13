@@ -81,6 +81,20 @@ describe('§5.5.2 Β3 — γραμμές χωρίς πεδίο', () => {
     expect(screen.getByText('review.lines.refusalReadingVision')).toBeTruthy();
   });
 
+  it('🔴 §5.5.2 Β3.2: η απόφαση δεν έφτασε ⇒ «Δεν αποθηκεύτηκε» στη γραμμή, και η «Ξαναδοκιμή» στέλνει το ΙΔΙΟ αίτημα', () => {
+    const request = { page: 87, table: 't0', line: 9, decision: { kind: 'attribute' as const, attributeId: 'cattr_phases' }, bind: null };
+    const { onDecideLine } = setup({ activity: new Map([[KEY, { kind: 'failed', request }]]) });
+    expect(screen.getByText('review.lines.stateFailed')).toBeTruthy();
+    expect(screen.getByText('review.lines.failedNote')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /review\.lines\.retry/ }));
+    expect(onDecideLine).toHaveBeenCalledWith(expect.objectContaining({ id: 'cipsl_1' }), request);
+  });
+
+  it('χωρίς αποτυχία: καμία «Ξαναδοκιμή»', () => {
+    setup();
+    expect(screen.queryByRole('button', { name: /review\.lines\.retry/ })).toBeNull();
+  });
+
   it('όσο ξαναερμηνεύεται, οι ενέργειες κλειδώνουν', () => {
     setup({ activity: new Map([[KEY, { kind: 'saving' }]]) });
     expect(screen.getByText('review.lines.stateSaving')).toBeTruthy();

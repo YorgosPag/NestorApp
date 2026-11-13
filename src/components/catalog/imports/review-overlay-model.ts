@@ -110,11 +110,12 @@ export function toneOfField(row: ImportProposalRow, field: ImportProposalField):
 /**
  * Γραμμή **χωρίς πεδίο** = δικός της τόνος, **όχι** πρόβλημα: η τιμή διαβάστηκε σωστά, απλώς η οικογένεια δεν έχει ιδιότητα να
  * τη δεχτεί (live 2026-11-10: 56 από τα 61 κόκκινα της σελ. 87). Πρόβλημα μένει η **άρνηση** της επανερμηνείας.
- * Αγνοημένη = απορρίφθηκε· σε αποθήκευση = εκκρεμεί.
+ * Αγνοημένη = απορρίφθηκε· σε αποθήκευση = εκκρεμεί· αποτυχία μεταφοράς (§5.5.2 Β3.2) = πρόβλημα, όπως η άρνηση.
  */
 const LINE_TONES: Readonly<Record<LineState, ReviewMarkTone>> = {
   pending: 'unmapped',
   refused: 'problem',
+  failed: 'problem',
   saving: 'pending',
   mapped: 'accepted',
   ignored: 'dismissed',

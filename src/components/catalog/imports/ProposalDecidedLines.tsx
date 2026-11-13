@@ -16,7 +16,7 @@
  */
 
 import React, { useState } from 'react';
-import { BrainCircuit, EyeOff, Link2, LoaderCircle, Plus, Sparkles, TriangleAlert, Undo2, UserRound } from 'lucide-react';
+import { BrainCircuit, CloudOff, EyeOff, Link2, LoaderCircle, Plus, Sparkles, TriangleAlert, Undo2, UserRound } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ import type { ImportProposalWire, SetImportLineRequest } from '@/subapps/catalog
 import { useCatalogAccess } from '../shared/catalog-neutral-hooks';
 import { LineAttributeToolsSlot } from './import-surfaces';
 import { LINE_REFUSAL_KEYS, LINE_STATE_KEYS, useImportText } from './import-text';
+import { LineFailedNote } from './LineFailedNote';
 import { useLineDecisionText } from './line-decision-text';
 import type { LineToolMode } from './line-tool-props';
 import type { LineActivity } from './use-line-decisions';
@@ -62,6 +63,7 @@ function StateBadge({ entry, activity }: { readonly entry: DecidedLine; readonly
   const { t } = useImportText();
   if (activity?.kind === 'saving') return <Badge variant="outline" className="gap-1"><LoaderCircle className="h-3 w-3" aria-hidden />{t(LINE_STATE_KEYS.saving)}</Badge>;
   if (activity?.kind === 'refused') return <Badge variant="destructive" className="gap-1"><TriangleAlert className="h-3 w-3" aria-hidden />{t(LINE_STATE_KEYS.refused)}</Badge>;
+  if (activity?.kind === 'failed') return <Badge variant="destructive" className="gap-1"><CloudOff className="h-3 w-3" aria-hidden />{t(LINE_STATE_KEYS.failed)}</Badge>;
   const ignored = entry.decision.kind === 'ignore';
   const Icon = ignored ? EyeOff : Link2;
   return <Badge variant={ignored ? 'muted' : 'info'} className="gap-1"><Icon className="h-3 w-3" aria-hidden />{t(ignored ? LINE_STATE_KEYS.ignored : LINE_STATE_KEYS.mapped)}</Badge>;
@@ -74,6 +76,8 @@ interface DecidedRowProps {
   readonly activity: LineActivity | undefined;
   readonly readOnly: boolean;
   readonly onUndo: () => void;
+  /** §5.5.2 Β3.2: η απόφαση (π.χ. η αναίρεση) δεν έφτασε ⇒ το ίδιο αίτημα ξανά. */
+  readonly onRetry: () => void;
   /** §5.5.2 Β8: η γραμμή της σελίδας, όταν υπάρχει ακόμη (αγνοημένη) — μόνο τότε έχει πλαίσιο να επιλεγεί. */
   readonly source: ImportPageUnmappedLine | undefined;
   readonly active: boolean;
@@ -115,7 +119,7 @@ function DecidedTitle({ entry, decision, source, active, onFocus, buttonRef, hov
   );
 }
 
-function DecidedRow({ entry, decision, activity, readOnly, onUndo, source, active, focusRequested, onFocus, onAddTarget, canManage }: DecidedRowProps) {
+function DecidedRow({ entry, decision, activity, readOnly, onUndo, onRetry, source, active, focusRequested, onFocus, onAddTarget, canManage }: DecidedRowProps) {
   const { t } = useImportText();
   const { itemProps, buttonRef, hover } = useReviewLineItem(entry, active, focusRequested);
   const busy = readOnly || activity?.kind === 'saving';
@@ -128,6 +132,7 @@ function DecidedRow({ entry, decision, activity, readOnly, onUndo, source, activ
       {entry.values.length > 0 ? <span className="text-xs text-muted-foreground">{entry.values.join(' · ')}</span> : null}
       {entry.origin ? <span className="text-xs text-muted-foreground">{t('review.decided.sourceBatch', { batch: entry.origin.sourceBatchId })}</span> : null}
       {activity?.kind === 'refused' ? <span className="text-xs text-destructive" role="status">{t(LINE_REFUSAL_KEYS[activity.reason])}</span> : null}
+      {activity?.kind === 'failed' ? <LineFailedNote disabled={readOnly} onRetry={onRetry} /> : null}
       <span className="flex flex-wrap gap-1">
         <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onUndo}>
           <Undo2 className="mr-1 h-3 w-3" aria-hidden />{t('review.lines.undo')}
@@ -187,6 +192,10 @@ export function ProposalDecidedLines(props: DecidedLinesProps) {
   if (decided.length === 0) return null;
   const sources = new Map(lines.map((line) => [lineKeyOf(line), line]));
   const undo = (entry: DecidedLine) => onDecideLine(proposal, { page: entry.page, table: entry.table, line: entry.line, decision: null, bind: null });
+  const retry = (entry: DecidedLine) => {
+    const failed = activity.get(lineKeyOf(entry));
+    if (failed?.kind === 'failed') onDecideLine(proposal, failed.request);
+  };
   return (
     <section className="flex flex-col gap-2" aria-label={t('review.decided.title')}>
       <h4 className="m-0 text-sm font-semibold">{t('review.decided.title')}</h4>
@@ -194,7 +203,7 @@ export function ProposalDecidedLines(props: DecidedLinesProps) {
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {decided.map((entry) => (
           <DecidedRow key={lineKeyOf(entry)} entry={entry} decision={decisionText.of(entry.decision)} activity={activity.get(lineKeyOf(entry))}
-            readOnly={!decidable || (entry.decision.kind === 'price' && !pricesEnabled)} onUndo={() => undo(entry)}
+            readOnly={!decidable || (entry.decision.kind === 'price' && !pricesEnabled)} onUndo={() => undo(entry)} onRetry={() => retry(entry)}
             source={sources.get(lineKeyOf(entry))} active={lineKeyOf(entry) === activeLine} focusRequested={focusRequested} onFocus={onFocusLine}
             onAddTarget={addTargetOf(entry)} canManage={canManage} />
         ))}

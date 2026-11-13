@@ -15,7 +15,11 @@ import { lineKeyOf } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportProposalWire, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
 import type { ImportLineRefusal } from '@/subapps/catalog/vocabulary/catalog-import';
 
-export type LineActivity = { readonly kind: 'saving' } | { readonly kind: 'refused'; readonly reason: ImportLineRefusal };
+export type LineActivity =
+  | { readonly kind: 'saving' }
+  | { readonly kind: 'refused'; readonly reason: ImportLineRefusal }
+  /** §5.5.2 Β3.2: η μεταφορά απέτυχε (δίκτυο · 5xx) — ο διακομιστής δεν έγραψε τίποτα· το ίδιο αίτημα μένει για «Ξαναδοκίμασε». */
+  | { readonly kind: 'failed'; readonly request: SetImportLineRequest };
 
 /** Μία απόφαση γραμμής προς τον διακομιστή. `null` = απέτυχε η μεταφορά. */
 export type SendLine = (proposal: ImportProposalWire, request: SetImportLineRequest) => Promise<SetImportLineResult | null>;
@@ -26,14 +30,19 @@ const withEntry = (map: ReadonlyMap<string, LineActivity>, key: string, entry: L
   return next;
 };
 
+/** Η ένδειξη μετά την απάντηση: άρνηση με λόγο · αποτυχία μεταφοράς (με το αίτημα, για επανάληψη) · τίποτα (η αλήθεια είναι η όψη). */
+function activityAfter(result: SetImportLineResult | null, request: SetImportLineRequest): LineActivity | null {
+  if (result === null) return { kind: 'failed', request };
+  return result.outcome.kind === 'refused' ? { kind: 'refused', reason: result.outcome.reason } : null;
+}
+
 export function useLineDecisions(send: SendLine) {
   const [activity, setActivity] = useState<ReadonlyMap<string, LineActivity>>(() => new Map());
   const decideLine = useCallback<SendLine>(async (proposal, request) => {
     const key = lineKeyOf(request);
     setActivity((current) => withEntry(current, key, { kind: 'saving' }));
     const result = await send(proposal, request);
-    const outcome = result?.outcome;
-    setActivity((current) => withEntry(current, key, outcome?.kind === 'refused' ? { kind: 'refused', reason: outcome.reason } : null));
+    setActivity((current) => withEntry(current, key, activityAfter(result, request)));
     return result;
   }, [send]);
   return { lineActivity: activity, decideLine };

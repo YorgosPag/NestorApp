@@ -11,21 +11,22 @@ import 'server-only';
  *    σελίδα μπαγιάτικη, άρα ξαναδοκιμάζεται, και το ξαναχτίσιμο είναι ντετερμινιστικό.
  * 🔑 **Όλα ή τίποτα ανά σελίδα:** κάθε πίνακας κρίνεται στη μνήμη πριν γραφτεί ο πρώτος. Άρνηση ⇒ καμία εγγραφή παραγώγων, μόνο
  *    σφραγίδα με τον λόγο, ώστε να μη ξαναδοκιμάζεται σε κάθε άνοιγμα και η οθόνη να ξέρει γιατί.
- * 🔑 Παρτίδα κλειστή ή εγκαταλειμμένη δεν αγγίζεται. Πρόταση εγκεκριμένη/απορριφθείσα μένει ως έχει (`stageGroup`).
+ * 🔑 Παρτίδα κλειστή ή εγκαταλειμμένη δεν αγγίζεται. Πρόταση εγκεκριμένη/απορριφθείσα μένει ως έχει (`planGroup`).
  * @module server/catalog/import-page-rederive.server
  */
 
 import type { AuthContext } from '@/lib/auth';
 import { isPageCurrent } from '@/subapps/catalog/import/page-derivation';
-import { tableOverridesOf } from '@/subapps/catalog/import/page-line-overrides';
+import { pageDecisionsDigest, tableOverridesOf } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportBatchDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { IMPORT_FINISHED_BATCH_STATUSES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readOwned, runCatalogReadOnly } from './catalog-store.server';
 import { assertPurposeAuthority, stampPageDerivation, type StoredImportBatch } from './import-batch-writer.server';
 import { readImportBatchDetail } from './import-reads.server';
+import { retryOnRevisionMismatch } from './import-proposal-writer.server';
+import { commitTable } from './import-table-commit.server';
 import {
-  commitTable,
   pageBasis,
   prepareTable,
   readBatchSchema,
@@ -68,13 +69,16 @@ async function rederivePage(ctx: AuthContext, batch: StoredImportBatch, page: nu
   if (batch.pages === null || isPageCurrent(batch.pages, page, schemaRevision)) return;
   const prepared = schema === null ? refuse('lineUnknown') : await preparePage(ctx, batch, page, schema);
   if (prepared.ok) for (const table of prepared.value) await commitTable(ctx, batch.id, table);
-  await stampPageDerivation(ctx, batch.id, page, prepared.ok ? null : prepared.reason, schemaRevision);
+  await stampPageDerivation(ctx, batch.id, page, prepared.ok ? null : prepared.reason, schemaRevision, pageDecisionsDigest(batch.pages.lineOverrides, page));
 }
 
 /** `POST /api/catalog/imports/[id]/reinterpret` — μία σελίδα στην τρέχουσα έκδοση παραγωγής, χωρίς AI. */
 export async function reinterpretImportPage(ctx: AuthContext, id: string, page: number): Promise<ImportBatchDetailView> {
-  const batch = await runCatalogReadOnly(ctx, (scope) => readOwned<ImportBatchDefinition>(scope, 'importBatch', id));
-  await assertPurposeAuthority(ctx, batch.target.purpose);
-  if (isRederivable(batch, page)) await rederivePage(ctx, batch, page);
+  // §5.5.2 Β3.2: απόφαση που μπήκε στη σελίδα ανάμεσα στην κρίση και την εγγραφή ⇒ η σελίδα ξανακρίνεται με την τρέχουσα παρτίδα.
+  await retryOnRevisionMismatch(async () => {
+    const batch = await runCatalogReadOnly(ctx, (scope) => readOwned<ImportBatchDefinition>(scope, 'importBatch', id));
+    await assertPurposeAuthority(ctx, batch.target.purpose);
+    if (isRederivable(batch, page)) await rederivePage(ctx, batch, page);
+  });
   return readImportBatchDetail(ctx, id);
 }

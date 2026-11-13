@@ -8,6 +8,8 @@
  * @module subapps/catalog/import/page-line-overrides
  */
 
+import { fnv1a64Hex } from '@/lib/hash/fnv1a';
+import { canonicalJson } from '@/lib/legal/canonical-json';
 import type { ImportLineDecision, ImportLineOverride, ImportPageUnmappedLine } from '../types/catalog-import';
 import type { RawLineMapping, RawTableMapping } from './page-table-mapping';
 
@@ -85,6 +87,36 @@ export function withLineOverride(
 /** Οι αποφάσεις ενός πίνακα μιας σελίδας. */
 export const tableOverridesOf = (overrides: readonly ImportLineOverride[] | undefined, page: number, table: string): ImportLineOverride[] =>
   (overrides ?? []).filter((override) => override.page === page && override.table === table);
+
+/**
+ * Οι αποφάσεις που **αλλάζουν τα παράγωγα** του πίνακα (`applyLineOverrides`): αντιστοίχιση · άξονας · τιμή. Η «Αγνόηση» μόνο
+ * λογίζει τη γραμμή αποφασισμένη, γι' αυτό δεν ξαναχτίζει πίνακα και δεν μπαίνει στο αποτύπωμα. Ο **ένας** κανόνας για τον γραφέα
+ * (πότε ξαναχτίζεται ο πίνακας) και για τη σφραγίδα σελίδας (ποιες αποφάσεις μετρούν).
+ */
+const DERIVING_KINDS: ReadonlySet<ImportLineDecision['kind']> = new Set(['attribute', 'axis', 'price']);
+
+export const derivesTable = (decision: ImportLineDecision | null): boolean => decision !== null && DERIVING_KINDS.has(decision.kind);
+
+/** Η ουσία μιας απόφασης για τα παράγωγα: θέση + απόφαση — χωρίς ποιος/πότε/ταυτότητα/προέλευση, που δεν αλλάζουν τίποτα στον πίνακα. */
+const derivingMaterial = (overrides: readonly ImportLineOverride[]) =>
+  overrides
+    .filter((override) => derivesTable(override.decision))
+    .map(({ table, line, decision }) => ({ table, line, decision }))
+    .sort((a, b) => (a.table === b.table ? a.line - b.line : a.table < b.table ? -1 : 1));
+
+/**
+ * **Το αποτύπωμα των αποφάσεων μιας σελίδας** (ADR-923 §5.5.2 Β3.2): από ποιες αποφάσεις βγήκαν τα αποθηκευμένα παράγωγά της. Όπως το
+ * κλειδί ενέργειας του Bazel περιέχει τα αποτυπώματα των εισόδων, έτσι η σφραγίδα της σελίδας λέει **πάνω σε τι** κρίθηκε· διαφορετικό
+ * αποτύπωμα από τις τρέχουσες αποφάσεις ⇒ τα παράγωγα είναι μπαγιάτικα, και ξαναχτίζονται μόνα τους ($0). FNV-1a 64 (σύγχρονο, ίδιο
+ * σε browser και Node), πάνω στην κανονική σειριοποίηση.
+ */
+export function pageDecisionsDigest(overrides: readonly ImportLineOverride[] | undefined, page: number): string {
+  return fnv1a64Hex(canonicalJson(derivingMaterial((overrides ?? []).filter((override) => override.page === page))));
+}
+
+/** Ίδιες αποφάσεις για τα παράγωγα ενός πίνακα; Ο φρουρός της συναλλαγής: ο πίνακας κρίθηκε πάνω σε **αυτές**. */
+export const sameDerivingOverrides = (left: readonly ImportLineOverride[], right: readonly ImportLineOverride[]): boolean =>
+  canonicalJson(derivingMaterial(left)) === canonicalJson(derivingMaterial(right));
 
 export interface OverriddenMapping {
   readonly mapping: RawTableMapping;

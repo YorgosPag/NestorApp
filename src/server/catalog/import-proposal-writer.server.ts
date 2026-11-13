@@ -28,11 +28,24 @@ import type {
   ImportValueEdit,
 } from '@/subapps/catalog/types/catalog-import';
 import type { UpdateImportProposalRequest } from '@/subapps/catalog/types/catalog-import-requests';
+import type { ImportBaseValues } from '@/subapps/catalog/import/build-attribute-proposal';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
-import { assertRevision, readForUpsert, readOwned, runCatalogReadOnly, runCatalogTransaction, stageCreate, stageReplace, stageSoftDelete, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
+import {
+  assertRevision,
+  readForUpsert,
+  readOwned,
+  runCatalogReadOnly,
+  runCatalogTransaction,
+  stageCreate,
+  stageReplace,
+  stageSoftDelete,
+  type CatalogTx,
+  type StoredCatalogRecord,
+  type TargetAndCurrent,
+} from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { assertImportBatchOpen, assertPurposeAuthority, batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
-import { planProposal, resolveGroupIdentity, type PlannedProposal } from './import-proposal-plan.server';
+import { planProposal, resolveGroupIdentity, type PlannedProposal, type ProposalSibling } from './import-proposal-plan.server';
 import { readBatchProposals, readImportBase } from './import-reads.server';
 import { readValueMemoryEdits } from './import-value-memory.server';
 import { releaseFinishedBatchMedia } from './media-quarantine-release.server';
@@ -66,24 +79,59 @@ const planFields = (plan: PlannedProposal) => ({
 type SeenRevision = number | null;
 
 /**
- * Ίδια ομάδα ⇒ ίδιο έγγραφο. Εφαρμοσμένη ή απορριφθείσα πρόταση **δεν** ξαναγράφεται: η απόφαση του ανθρώπου μένει. Σε εκκρεμή, οι
- * ανθρώπινες αποφάσεις πεδίων **επιβιώνουν** όσο η τιμή δεν άλλαξε (`carryDecisions`), και οι **διορθώσεις** του επιβιώνουν
- * αυτούσιες (§5.5.2 Β6): η ξαναερμηνεία πίνακα (Β3), η αναβάθμιση σελίδας (Β3.1) και ο επανασχεδιασμός της πρότασης τιμών (Β4 Δ5)
- * δεν σβήνουν ό,τι έγραψε ο άνθρωπος. Το `extracted` μένει **καθαρή** ανάγνωση. Διόρθωση που μπήκε ανάμεσα στην ανάγνωση και τη
- * συναλλαγή ⇒ `revisionMismatch`, και ο `proposeGroup` ξαναπροσπαθεί με τον νέο κατάλογο: ποτέ σχέδιο πάνω σε παλιές διορθώσεις.
+ * Ό,τι διαβάζεται για μια ομάδα **έξω** από τη συναλλαγή (στιγμιότυπο μόνο-ανάγνωσης): η αναθεώρηση της πρότασης, η μνήμη τιμών της
+ * γέννησης, η λυμένη ταυτότητα και η βάση σύγκρισης. Μέσα στη συναλλαγή ελέγχεται ότι η αναθεώρηση δεν άλλαξε (`planGroup`).
  */
-async function stageGroup(
+export interface GroupInputs {
+  readonly group: ExtractedGroup;
+  readonly revision: SeenRevision;
+  readonly memoryEdits: readonly ImportValueEdit[];
+  readonly resolved: ExtractedGroup;
+  readonly base: ImportBaseValues;
+}
+
+export async function readGroupInputs(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<GroupInputs> {
+  const stamp = { by: ctx.uid, at: nowISO() };
+  const seen = await runCatalogReadOnly(ctx, async (scope) => {
+    const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
+    const { current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(batchId, group.groupKey));
+    const pending = current?.status === 'pending' ? current : null;
+    // §5.5.2 Β10: νέα πρόταση ⇒ η μνήμη τιμών του προμηθευτή, ως διορθώσεις με προέλευση, πριν το σχέδιο (ίδιος κριτής, ίδια ταυτότητα).
+    const memoryEdits = current === null ? await readValueMemoryEdits(scope, batch, group, undefined, stamp) : [];
+    const effective = current === null ? applyHumanEdits(group, memoryEdits, null) : effectiveGroup(group, pending);
+    return { revision: current?.revision ?? null, memoryEdits, resolved: await resolveGroupIdentity(scope, batch.target, effective) };
+  });
+  const base = await readImportBase(ctx, seen.resolved.modelCode === null ? null : suggestCatalogCode(seen.resolved.modelCode));
+  return { group, ...seen, base };
+}
+
+/** Η θέση της πρότασης μιας ομάδας μέσα στη συναλλαγή: ντετερμινιστικό id (`importProposalKey`) και ό,τι υπάρχει εκεί. */
+export type GroupSlot = TargetAndCurrent<ImportProposalDefinition>;
+
+export const readGroupSlot = (scope: CatalogTx, batchId: string, groupKey: string): Promise<GroupSlot> =>
+  readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(batchId, groupKey));
+
+/**
+ * Ίδια ομάδα ⇒ ίδιο έγγραφο. Εφαρμοσμένη ή απορριφθείσα πρόταση **δεν** ξαναγράφεται: η απόφαση του ανθρώπου μένει (`null`). Σε
+ * εκκρεμή, οι ανθρώπινες αποφάσεις πεδίων **επιβιώνουν** όσο η τιμή δεν άλλαξε (`carryDecisions`), και οι **διορθώσεις** του
+ * επιβιώνουν αυτούσιες (§5.5.2 Β6): η ξαναερμηνεία πίνακα (Β3), η αναβάθμιση σελίδας (Β3.1) και ο επανασχεδιασμός της πρότασης τιμών
+ * (Β4 Δ5) δεν σβήνουν ό,τι έγραψε ο άνθρωπος. Το `extracted` μένει **καθαρή** ανάγνωση. Διόρθωση που μπήκε ανάμεσα στην ανάγνωση και
+ * τη συναλλαγή ⇒ `revisionMismatch`, και ο καλών ξαναπροσπαθεί με τον νέο κατάλογο: ποτέ σχέδιο πάνω σε παλιές διορθώσεις.
+ * **Μόνο αναγνώσεις** (`planProposal`): η εγγραφή είναι το `writeGroup`, ώστε πολλές ομάδες να μπαίνουν στην **ίδια** συναλλαγή
+ * (Firestore: όλες οι αναγνώσεις πριν από κάθε εγγραφή). `sibling` = η πρόταση ιδιοτήτων που σχεδιάστηκε **στην ίδια** συναλλαγή (Β3.2).
+ */
+export async function planGroup(
   scope: CatalogTx,
   batch: StoredCatalogRecord<ImportBatchDefinition>,
-  group: ExtractedGroup,
-  plan: PlannedProposal,
-  seen: SeenRevision,
-  memoryEdits: readonly ImportValueEdit[],
-): Promise<StoredImportProposal> {
-  const key = importProposalKey(batch.id, group.groupKey);
-  const { target, current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', key);
-  if (current !== null && current.status !== 'pending') return current;
-  if ((current?.revision ?? null) !== seen) throw new CatalogWriteError('revisionMismatch', [], { currentRevision: current?.revision ?? 0 });
+  inputs: GroupInputs,
+  slot: GroupSlot,
+  sibling?: ProposalSibling | null,
+): Promise<GroupPlan> {
+  const { current } = slot;
+  const { group } = inputs;
+  if (current !== null && current.status !== 'pending') return { kind: 'closed', proposal: current };
+  if ((current?.revision ?? null) !== inputs.revision) throw new CatalogWriteError('revisionMismatch', [], { currentRevision: current?.revision ?? 0 });
+  const plan = await planProposal(scope, batch, inputs.resolved, inputs.base, sibling);
   const rows = current === null ? plan.rows : carryDecisions(current.rows, plan.rows);
   const definition: ImportProposalDefinition = {
     batchId: batch.id,
@@ -96,30 +144,46 @@ async function stageGroup(
     appliedBy: null,
     ...planFields({ ...plan, rows }),
     // §5.5.2 Β10: η μνήμη τιμών μπαίνει **μόνο** στη γέννηση· η πρόταση που υπάρχει κρατά τον δικό της κατάλογο (και τις αναιρέσεις του).
-    ...humanEditFields(current === null ? memoryEdits : current.edits ?? [], current?.modelCodeEdit ?? null),
+    ...humanEditFields(current === null ? inputs.memoryEdits : current.edits ?? [], current?.modelCodeEdit ?? null),
   };
-  return current === null ? stageCreate(scope, 'importProposal', target, definition) : stageReplace(scope, 'importProposal', current, definition);
+  return { kind: 'planned', definition };
 }
 
-/** Πόσες φορές ξαναπροσπαθεί ο `proposeGroup` όταν μπει διόρθωση ανάμεσα στην ανάγνωση και τη συναλλαγή. */
+/** Το σχέδιο μιας ομάδας: κλειστή πρόταση (μένει ως έχει) ή ορισμός προς εγγραφή. */
+export type GroupPlan =
+  | { readonly kind: 'closed'; readonly proposal: StoredImportProposal }
+  | { readonly kind: 'planned'; readonly definition: ImportProposalDefinition };
+
+/** Η πρόταση όπως **θα είναι** μετά τη συναλλαγή — ό,τι χρειάζεται η αδελφή πρόταση τιμών για την ταυτότητά της (§5.5.2 Β4 Δ4). */
+export const siblingOfPlan = (plan: GroupPlan): ProposalSibling =>
+  plan.kind === 'closed' ? { rows: plan.proposal.rows, status: plan.proposal.status } : { rows: plan.definition.rows, status: plan.definition.status };
+
+/** Η εγγραφή του σχεδίου στη θέση του. */
+export const writeGroup = (scope: CatalogTx, { target, current }: GroupSlot, definition: ImportProposalDefinition): StoredImportProposal =>
+  current === null ? stageCreate(scope, 'importProposal', target, definition) : stageReplace(scope, 'importProposal', current, definition);
+
+/** Πόσες φορές ξαναπροσπαθεί μια πράξη πρότασης όταν μπει διόρθωση ανάμεσα στην ανάγνωση και τη συναλλαγή. */
 const PROPOSE_ATTEMPTS = 3;
 
+/** Ξανατρέχει την πράξη σε `revisionMismatch` (διόρθωση ή απόφαση που μπήκε στο μεταξύ), ως `PROPOSE_ATTEMPTS` φορές. Ό,τι άλλο πετιέται. */
+export async function retryOnRevisionMismatch<T>(work: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await work();
+    } catch (error) {
+      if (attempt >= PROPOSE_ATTEMPTS || !(error instanceof CatalogWriteError) || error.kind !== 'revisionMismatch') throw error;
+    }
+  }
+}
+
 async function proposeOnce(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<StoredImportProposal> {
-  const stamp = { by: ctx.uid, at: nowISO() };
-  const seen = await runCatalogReadOnly(ctx, async (scope) => {
-    const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
-    const { current } = await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(batchId, group.groupKey));
-    const pending = current?.status === 'pending' ? current : null;
-    // §5.5.2 Β10: νέα πρόταση ⇒ η μνήμη τιμών του προμηθευτή, ως διορθώσεις με προέλευση, πριν το σχέδιο (ίδιος κριτής, ίδια ταυτότητα).
-    const memoryEdits = current === null ? await readValueMemoryEdits(scope, batch, group, undefined, stamp) : [];
-    const effective = current === null ? applyHumanEdits(group, memoryEdits, null) : effectiveGroup(group, pending);
-    return { revision: current?.revision ?? null, memoryEdits, resolved: await resolveGroupIdentity(scope, batch.target, effective) };
-  });
-  const base = await readImportBase(ctx, seen.resolved.modelCode === null ? null : suggestCatalogCode(seen.resolved.modelCode));
+  const inputs = await readGroupInputs(ctx, batchId, group);
   return runCatalogTransaction(ctx, async (scope) => {
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
     assertImportBatchOpen(batch);
-    return stageGroup(scope, batch, group, await planProposal(scope, batch, seen.resolved, base), seen.revision, seen.memoryEdits);
+    const slot = await readGroupSlot(scope, batchId, group.groupKey);
+    const plan = await planGroup(scope, batch, inputs, slot);
+    return plan.kind === 'closed' ? plan.proposal : writeGroup(scope, slot, plan.definition);
   });
 }
 
@@ -128,14 +192,8 @@ async function proposeOnce(ctx: AuthContext, batchId: string, group: ExtractedGr
  * που ήταν ήδη σε εξέλιξη όταν πατήθηκε «Εγκατάλειψη» δεν γεννά πρόταση σε τελειωμένη παρτίδα (ADR-934 Ε3, η σειρά με την απόσυρση).
  * Το `group` είναι **καθαρή** ανάγνωση: οι διορθώσεις του ανθρώπου μπαίνουν εδώ, από τον κατάλογο της πρότασης (§5.5.2 Β6).
  */
-export async function proposeGroup(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<StoredImportProposal> {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      return await proposeOnce(ctx, batchId, group);
-    } catch (error) {
-      if (attempt >= PROPOSE_ATTEMPTS || !(error instanceof CatalogWriteError) || error.kind !== 'revisionMismatch') throw error;
-    }
-  }
+export function proposeGroup(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<StoredImportProposal> {
+  return retryOnRevisionMismatch(() => proposeOnce(ctx, batchId, group));
 }
 
 /**

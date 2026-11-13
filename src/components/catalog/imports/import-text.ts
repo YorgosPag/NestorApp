@@ -130,6 +130,7 @@ export const LINE_STATE_KEYS = {
   mapped: 'review.lines.stateMapped',
   saving: 'review.lines.stateSaving',
   refused: 'review.lines.stateRefused',
+  failed: 'review.lines.stateFailed',
 } as const;
 export type LineState = keyof typeof LINE_STATE_KEYS;
 

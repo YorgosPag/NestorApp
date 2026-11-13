@@ -15,6 +15,7 @@ import type { PdfTextLayer } from '@/services/pdf/pdf-rasterize.service';
 import { extractGroupsFromTable } from '@/subapps/catalog/import/apply-column-rules';
 import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
 import { currentDerivation } from '@/subapps/catalog/import/page-derivation';
+import { pageDecisionsDigest } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportBatchDefinition, ImportBatchPages, ImportLineOverride, ImportPagesUsage, ImportPageTextless, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
 import { IMPORT_FINISHED_BATCH_STATUSES, IMPORT_MAX_LINE_OVERRIDES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
@@ -97,15 +98,17 @@ function markPage(
     const total = pages.to - pages.from + 1;
     const status = done.length + failed.length >= total ? 'reviewing' : current.status;
     const spent = addUsage(pages.usage ?? NO_USAGE, usage);
+    const lineOverrides = lineOverridesAfterRead(pages, page, ok, memoryOverrides);
+    const decided = lineOverrides === undefined ? {} : { lineOverrides };
+    // §5.5.2 Β3.2: η σελίδα δεν δέχεται αποφάσεις όσο διαβάζεται (`openBatch` ⇒ `done`), άρα οι αποφάσεις που γράφονται εδώ είναι αυτές της ανάγνωσης.
+    const digest = pageDecisionsDigest(lineOverrides ?? pages.lineOverrides, page);
     const leftOut = {
       setAside: replacedOnPage(pages.setAside ?? [], page, setAside),
       unmappedLines: replacedOnPage(pages.unmappedLines ?? [], page, unmappedLines),
       textless: replacedOnPage(pages.textless ?? [], page, textless),
       // §5.5.2 Β3.1: ό,τι μόλις γράφτηκε είναι της τρέχουσας έκδοσης· αποτυχία δεν άγγιξε τα παράγωγα, άρα ούτε τη σφραγίδα τους.
-      derivations: ok ? replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, null, schemaRevision)]) : pages.derivations ?? [],
+      derivations: ok ? replacedOnPage(pages.derivations ?? [], page, [currentDerivation(page, null, schemaRevision, digest)]) : pages.derivations ?? [],
     };
-    const lineOverrides = lineOverridesAfterRead(pages, page, ok, memoryOverrides);
-    const decided = lineOverrides === undefined ? {} : { lineOverrides };
     return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed, usage: spent, ...leftOut, ...decided } });
   });
 }

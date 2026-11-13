@@ -240,6 +240,12 @@ async function planPrices(scope: CatalogTx, target: Extract<ImportBatchTarget, {
 
 // ── Η τιμή της ίδιας ανάγνωσης σελίδας (§5.5.2 Β4) ─────────────────────────────
 
+/**
+ * Η πρόταση ιδιοτήτων όπως θα είναι **μετά** τη συναλλαγή που τη σχεδίασε (§5.5.2 Β3.2): μέσα στην ίδια συναλλαγή δεν έχει γραφτεί ακόμη,
+ * άρα η αδελφή πρόταση τιμών την παίρνει από το σχέδιο, όχι από τη βάση. Απούσα ⇒ διαβάζεται, όπως πάντα· `null` = δεν υπάρχει.
+ */
+export type ProposalSibling = Pick<ImportProposalDefinition, 'rows' | 'status'>;
+
 interface SiblingIdentity {
   /** rowKey → id SKU, όπως το κρίνει (ή το γέννησε) η πρόταση ιδιοτήτων του ίδιου πίνακα. */
   readonly holders: ReadonlyMap<string, string>;
@@ -251,9 +257,9 @@ interface SiblingIdentity {
  * 🔑 Δ4: η ταυτότητα της γραμμής τιμής **δεν** ξανακρίνεται. Τη δίνει η πρόταση ιδιοτήτων του πίνακα (ίδιο `rowKey`): το SKU που
  * ταίριαξε, ή εκείνο που γέννησε η έγκρισή της. Μία κρίση ταυτότητας για όλη την παρτίδα ⇒ η τιμή δεν πέφτει ποτέ σε άλλο SKU.
  */
-async function siblingIdentityOf(scope: CatalogTx, batchId: string, group: ExtractedGroup): Promise<SiblingIdentity> {
+async function siblingIdentityOf(scope: CatalogTx, batchId: string, group: ExtractedGroup, given: ProposalSibling | null | undefined): Promise<SiblingIdentity> {
   const key = attributesGroupKeyOf(group.groupKey);
-  const sibling = key === null ? null : (await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(batchId, key))).current;
+  const sibling = given !== undefined ? given : key === null ? null : (await readForUpsert<ImportProposalDefinition>(scope, 'importProposal', importProposalKey(batchId, key))).current;
   const holders = new Map((sibling?.rows ?? []).flatMap((row) => (row.holderKind === 'product' && row.holderId !== null ? [[row.rowKey, row.holderId] as const] : [])));
   return { holders, pending: sibling?.status === 'pending' };
 }
@@ -262,10 +268,16 @@ async function siblingIdentityOf(scope: CatalogTx, batchId: string, group: Extra
 const awaitingAttributes = (rows: readonly ImportProposalRow[]): ImportProposalRow[] =>
   rows.map((row) => (row.holderId !== null ? row : { ...row, issues: row.issues.map((issue): ImportIssue => (issue.code === 'skuUnknown' ? { ...issue, code: 'awaitsAttributes' } : issue)) }));
 
-async function planPagePrices(scope: CatalogTx, batchId: string, target: Extract<ImportBatchTarget, { purpose: 'attributes' }>, group: ExtractedGroup): Promise<PlannedProposal> {
+async function planPagePrices(
+  scope: CatalogTx,
+  batchId: string,
+  target: Extract<ImportBatchTarget, { purpose: 'attributes' }>,
+  group: ExtractedGroup,
+  sibling: ProposalSibling | null | undefined,
+): Promise<PlannedProposal> {
   const versionId = target.priceListVersionId ?? null;
   if (versionId === null) throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'priceListVersionId' }]);
-  const identity = await siblingIdentityOf(scope, batchId, group);
+  const identity = await siblingIdentityOf(scope, batchId, group, sibling);
   const plan = await priceProposalOf(scope, versionId, group, identity.holders);
   return identity.pending ? { ...plan, rows: awaitingAttributes(plan.rows) } : plan;
 }
@@ -333,9 +345,15 @@ export async function groupTableRowsByLiveModel(ctx: AuthContext, target: Import
  * Το σχέδιο μιας ομάδας απέναντι στα ζωντανά: ίδιο για πρώτη κατασκευή και για επανυπολογισμό. Ο σκοπός της **ομάδας** κερδίζει:
  * η πρόταση τιμών ενός πίνακα PDF ζει σε παρτίδα ιδιοτήτων (§5.5.2 Β4).
  */
-export function planProposal(scope: CatalogTx, batch: { readonly id: string; readonly target: ImportBatchTarget }, group: ExtractedGroup, base: ImportBaseValues): Promise<PlannedProposal> {
+export function planProposal(
+  scope: CatalogTx,
+  batch: { readonly id: string; readonly target: ImportBatchTarget },
+  group: ExtractedGroup,
+  base: ImportBaseValues,
+  sibling?: ProposalSibling | null,
+): Promise<PlannedProposal> {
   const { target } = batch;
-  if (target.purpose === 'attributes' && group.purpose === 'priceLines') return planPagePrices(scope, batch.id, target, group);
+  if (target.purpose === 'attributes' && group.purpose === 'priceLines') return planPagePrices(scope, batch.id, target, group, sibling);
   return target.purpose === 'attributes' ? planAttributes(scope, target, group, base) : planPrices(scope, target, group);
 }
 

@@ -8,9 +8,9 @@ import 'server-only';
  * αποφάσεις του ανθρώπου μπαίνουν **από πάνω**. Ίδιος αγωγός με την ανάγνωση (`readPageTables` → `proposeGroup`), κόστος $0.
  *
  * 🔑 **Δομικά χωρίς πληρωμή:** αυτό το αρχείο δεν εισάγει τον αναλυτή. Όπου λείπει κάτι, αρνείται με λόγο (`ImportLineRefusal`).
- * 🔑 **Δύο φάσεις:** `prepareTable` κρίνει στη μνήμη (καμία εγγραφή), `commitTable` γράφει. Ο καλών βάζει ανάμεσα ό,τι πρέπει να
- *    γραφτεί μόνο αν η κρίση πέρασε (η απόφαση γραμμής), ώστε η άρνηση να μην αφήνει πίσω της μισή κατάσταση.
- * 🔑 Πρόταση που εγκρίθηκε ή απορρίφθηκε δεν αγγίζεται (`stageGroup`)· οι αποφάσεις πεδίων επιβιώνουν (`carriedDecision`).
+ * 🔑 **Δύο φάσεις:** `prepareTable` κρίνει στη μνήμη (καμία εγγραφή), `commitTable` (`import-table-commit.server`) γράφει **ατομικά**
+ *    τις αποφάσεις μαζί με ό,τι παράγουν (§5.5.2 Β3.2): η άρνηση δεν γράφει τίποτα, και η αποτυχία δεν αφήνει μισή κατάσταση.
+ * 🔑 Πρόταση που εγκρίθηκε ή απορρίφθηκε δεν αγγίζεται (`planGroup`)· οι αποφάσεις πεδίων επιβιώνουν (`carriedDecision`).
  * @module server/catalog/import-table-rebuild.server
  */
 
@@ -18,7 +18,7 @@ import type { AuthContext } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { reconstructPageTables } from '@/lib/pdf-tables/reconstruct-page-tables';
 import type { PageTable } from '@/lib/pdf-tables/page-table-types';
-import { pageTableGroupKey, priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
+import { pageTableGroupKey } from '@/subapps/catalog/import/import-keys';
 import { readPageWithDecisions } from '@/subapps/catalog/import/page-decisions-reading';
 import { isRawPageMapping, type RawPageMapping, type RawTableMapping } from '@/subapps/catalog/import/page-table-mapping';
 import type { PageTableReading } from '@/subapps/catalog/import/page-table-reading';
@@ -27,11 +27,9 @@ import type { ImportLineOverride } from '@/subapps/catalog/types/catalog-import'
 import type { ImportLineRefusal } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot, type StoredFamilyRecord } from './catalog-product-reads.server';
 import { runCatalogReadOnly } from './catalog-store.server';
-import { replaceTableLeftOut, type StoredImportBatch } from './import-batch-writer.server';
+import type { StoredImportBatch } from './import-batch-writer.server';
 import { readPageReadings, type StoredPageReading } from './import-page-reading.server';
 import { axisAttributeIdsOf, loadPdfPageSource, pageSpecs } from './import-page-source.server';
-import { proposeGroup, retireStalePageProposals, type StoredImportProposal } from './import-proposal-writer.server';
-import { readBatchProposals } from './import-reads.server';
 
 const logger = createModuleLogger('CatalogImportTableRebuild');
 
@@ -109,10 +107,12 @@ export function readBatchSchema(ctx: AuthContext, batch: StoredImportBatch): Pro
 /** Το σχήμα που κρίνει τους πίνακες, και η εγγραφή της οικογένειας από την οποία βγήκε (η αναθεώρησή της σφραγίζει τη σελίδα). */
 export type BatchSchema = CatalogSchemaSnapshot & { readonly familyRecord: StoredFamilyRecord };
 
-/** Πίνακας κριμένος στη μνήμη, έτοιμος να γραφτεί. */
+/** Πίνακας κριμένος στη μνήμη, έτοιμος να γραφτεί (`import-table-commit.server`). */
 export interface PreparedTable {
   readonly basis: TableBasis;
   readonly reading: PageTableReading;
+  /** Οι αποφάσεις του πίνακα πάνω στις οποίες κρίθηκε: ο γραφέας ελέγχει ότι αυτές αποθηκεύονται δίπλα στα παράγωγα (§5.5.2 Β3.2). */
+  readonly overrides: readonly ImportLineOverride[];
 }
 
 /**
@@ -125,20 +125,5 @@ export function prepareTable(schema: CatalogSchemaSnapshot, basis: TableBasis, o
   const decided = readPageWithDecisions({ tables: [basis.answer] }, context, overrides, { codeById: specs.codeById, knownCodes: new Set(specs.byCode.keys()) });
   if (decided.unknownAttributeIds.length > 0) return refuse('lineUnknown');
   if (decided.staleCodes.length > 0) logger.warn('Stored mapping names attributes no longer in the family', { page: basis.page, table: basis.table.key, codes: decided.staleCodes });
-  return { ok: true, value: { basis, reading: decided.reading } };
-}
-
-/** Οι προτάσεις του πίνακα: ιδιότητες **πριν** από τιμές, γιατί η πρόταση τιμών παίρνει την ταυτότητα από εκείνη (§5.5.2 Β4 Δ4). */
-const attributesFirst = (reading: PageTableReading) =>
-  [...reading.groups].sort((a, b) => Number(a.purpose === 'priceLines') - Number(b.purpose === 'priceLines'));
-
-/** Γράφει ό,τι κρίθηκε: προτάσεις του πίνακα, απόσυρση όσων δεν ξαναβρέθηκαν, «απέξω» μόνο αυτού του πίνακα. */
-export async function commitTable(ctx: AuthContext, batchId: string, { basis, reading }: PreparedTable): Promise<void> {
-  const { page, table } = basis;
-  const proposals: StoredImportProposal[] = [];
-  for (const group of attributesFirst(reading)) proposals.push(await proposeGroup(ctx, batchId, group));
-  const ownKeys = new Set([groupKeyOf(page, table.key), priceGroupKeyOf(groupKeyOf(page, table.key))]);
-  const others = (await readBatchProposals(ctx, batchId)).filter((proposal) => !ownKeys.has(proposal.groupKey));
-  await retireStalePageProposals(ctx, batchId, page, new Set([...others, ...proposals].map((proposal) => proposal.id)));
-  await replaceTableLeftOut(ctx, batchId, page, table.key, { setAside: reading.setAside, unmappedLines: reading.unmappedLines });
+  return { ok: true, value: { basis, reading: decided.reading, overrides } };
 }

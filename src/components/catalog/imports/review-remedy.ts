@@ -83,8 +83,8 @@ function fieldActions(field: ImportProposalField): RemedyAction[] {
   return values.length === 0 ? [{ kind: 'editField' }] : values.map(({ text, anchor }) => ({ kind: 'keepValue', text, anchor }));
 }
 
-/** Γραμμή που περιμένει απόφαση (ή που η απόφασή της αρνήθηκε) — οι άλλες καταστάσεις δεν ζητούν ενέργεια εδώ. */
-const OPEN_LINE_STATES: readonly LineState[] = ['pending', 'refused'];
+/** Γραμμή που περιμένει απόφαση (ή που η απόφασή της αρνήθηκε ή δεν έφτασε) — οι άλλες καταστάσεις δεν ζητούν ενέργεια εδώ. */
+const OPEN_LINE_STATES: readonly LineState[] = ['pending', 'refused', 'failed'];
 
 function lineRemedy(state: LineState, reason: ReviewReason | null, ctx: RemedyContext): ReviewRemedy {
   const why: RemedyWhy | null = state === 'pending' ? { kind: 'unmapped' } : reason;

@@ -34,12 +34,13 @@ import type {
 import { IMPORT_MAX_LINE_OVERRIDES } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readOwned, runCatalogReadOnly } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
-import { assertImportBatchOpen, assertPurposeAuthority, rewriteTableLineOverrides, type StoredImportBatch } from './import-batch-writer.server';
+import { assertImportBatchOpen, assertPurposeAuthority, type StoredImportBatch } from './import-batch-writer.server';
 import { labelMemoryScopeOf, readLabelMemoryBook } from './import-label-memory.server';
 import { memoryMayPrice } from './import-line-memory.server';
 import { readBatchProposals, readImportBatchDetail } from './import-reads.server';
 import { runValueMemoryAction } from './import-value-memory-action.server';
-import { commitTable, pageBasis, prepareTable, readBatchSchema, tableOf, type Judged, type TableBasis } from './import-table-rebuild.server';
+import { commitTable } from './import-table-commit.server';
+import { pageBasis, prepareTable, readBatchSchema, tableOf, type Judged, type TableBasis } from './import-table-rebuild.server';
 
 interface TableAddress {
   readonly page: number;
@@ -86,12 +87,14 @@ function tableBasisOf(run: MemoryRun, pages: Map<number, ReturnType<typeof pageB
   return page.then((basis) => (basis.ok ? tableOf(basis.value, address.table) : basis));
 }
 
-/** Κρίνει στη μνήμη, και μόνο αν πέρασε γράφει: πρώτα τις αποφάσεις, μετά ό,τι παράγουν (ίδια σειρά με την απόφαση γραμμής). */
+/**
+ * Κρίνει στη μνήμη, και μόνο αν πέρασε γράφει τις αποφάσεις **μαζί** με ό,τι παράγουν, σε μία συναλλαγή (§5.5.2 Β3.2, ίδιος γραφέας με
+ * την απόφαση γραμμής). Απόφαση ανθρώπου που μπήκε στον πίνακα στο μεταξύ ⇒ revisionMismatch: ο πίνακας δεν γράφεται πάνω σε άλλες αποφάσεις.
+ */
 async function rebuild(run: MemoryRun, basis: TableBasis, next: readonly ImportLineOverride[], rewrite: (own: readonly ImportLineOverride[]) => ImportLineOverride[]): Promise<Judged<null>> {
   const prepared = prepareTable(run.schema, basis, next);
   if (!prepared.ok) return prepared;
-  await rewriteTableLineOverrides(run.ctx, run.batch.id, basis.page, basis.table.key, rewrite);
-  await commitTable(run.ctx, run.batch.id, prepared.value);
+  await commitTable(run.ctx, run.batch.id, prepared.value, rewrite);
   return { ok: true, value: null };
 }
 

@@ -13,7 +13,7 @@
  */
 
 import React, { useState } from 'react';
-import { CircleDot, EyeOff, Link2, LoaderCircle, Sparkles, TriangleAlert, Undo2, type LucideIcon } from 'lucide-react';
+import { CircleDot, CloudOff, EyeOff, Link2, LoaderCircle, Sparkles, TriangleAlert, Undo2, type LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { LineAttributeToolsSlot, PriceLineDialogSlot } from './import-surfaces';
 import { lineRequestOf, lineStateOf } from './line-state';
 import type { LineAttributeToolsProps } from './line-tool-props';
 import { useReviewLineItem } from './use-review-line-item';
+import { LineFailedNote } from './LineFailedNote';
 import { MemoryHintNote } from './MemoryHintNote';
 import { remedyActionLook, useRemedyActionLabel, useReviewReasonFormatter } from './review-reason-text';
 import { lineActionsOf, type LineTool, type RemedyAction } from './review-remedy';
@@ -37,6 +38,7 @@ const STATE_LOOK: Readonly<Record<LineState, { readonly variant: 'muted' | 'info
   mapped: { variant: 'info', icon: Link2 },
   saving: { variant: 'outline', icon: LoaderCircle },
   refused: { variant: 'destructive', icon: TriangleAlert },
+  failed: { variant: 'destructive', icon: CloudOff },
 };
 
 export interface UnmappedLinesProps {
@@ -71,6 +73,8 @@ interface LineRowProps {
   readonly line: ImportPageUnmappedLine;
   readonly state: LineState;
   readonly refusal: string | null;
+  /** §5.5.2 Β3.2: η απόφαση δεν έφτασε ⇒ το ίδιο αίτημα ξανά. Απόν ⇒ καμία αποτυχία. */
+  readonly onRetry: (() => void) | undefined;
   readonly hint: ImportMemoryHint | undefined;
   readonly onAccept: (decision: ImportLineDecision) => void;
   readonly active: boolean;
@@ -158,6 +162,7 @@ function LineRow(props: LineRowProps) {
         <SiblingNote sibling={line.sibling} disabled={props.readOnly} onPropose={() => props.onTool('new')} />
       ) : null}
       {refusal ?<span className="text-xs text-destructive" role="status">{refusal}</span> : null}
+      {props.onRetry ? <LineFailedNote disabled={props.readOnly} onRetry={props.onRetry} /> : null}
       {props.hint ? <MemoryHintNote hint={props.hint} disabled={props.readOnly || state === 'saving'} onAccept={props.onAccept} /> : null}
       <LineActions {...props} />
     </li>
@@ -221,6 +226,7 @@ export function ProposalUnmappedLines(props: UnmappedLinesProps) {
           return (
             <LineRow key={key} line={line} state={lineStateOf(current, lineDecisionOf(overrides, line))}
               refusal={current?.kind === 'refused' ? reasonText({ kind: 'refused', refusal: current.reason }) : null}
+              onRetry={current?.kind === 'failed' ? () => void onDecideLine(proposal, current.request) : undefined}
               hint={memoryHints?.get(key)} onAccept={(decision) => send(line, decision)}
               active={key === activeLine} focusRequested={focusRequested} readOnly={readOnly} canManage={canManage} pricesEnabled={pricesEnabled}
               onFocus={() => onFocusLine(line)} onTool={(mode) => setTool({ line, mode })} onPickPriceTarget={onPickPriceTarget && (() => onPickPriceTarget(line))}

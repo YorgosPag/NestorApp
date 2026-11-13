@@ -24,6 +24,7 @@ import { nowISO } from '@/lib/date-local';
 import { canonicalJson } from '@/lib/legal/canonical-json';
 import { priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
 import {
+  derivesTable,
   lineDecisionOf,
   priceLineOf,
   stepAttributeIdOf,
@@ -34,20 +35,22 @@ import {
 import { tableLineIdentities } from '@/subapps/catalog/import/page-table-reading';
 import { familyDefinitionOf, withAttributeAtLevel } from '@/subapps/catalog/schema/family-binding';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
+import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import type { ImportBatchDefinition, ImportLineDecision, ImportMemoryOrigin } from '@/subapps/catalog/types/catalog-import';
-import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
+import type { CatalogFamilyDefinition, StoredCatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import type { ImportLineOutcome, SetImportLineRequest, SetImportLineResult } from '@/subapps/catalog/types/catalog-import-requests';
 import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
 import type { ImportLineBindLevel } from '@/subapps/catalog/vocabulary/catalog-import';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
-import { readOwned, runCatalogReadOnly } from './catalog-store.server';
+import { readForUpsert, readOwned, runCatalogReadOnly } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { createAttributeInFamily, updateCatalogFamily } from './family-writer.server';
 import { assertPurposeAuthority, setImportLineOverride, type StoredImportBatch } from './import-batch-writer.server';
 import { memoryOverrideForLine, wantsMemoryFallback } from './import-line-memory.server';
+import { retryOnRevisionMismatch } from './import-proposal-writer.server';
 import { readBatchProposals, readImportBatchDetail } from './import-reads.server';
+import { commitTable } from './import-table-commit.server';
 import {
-  commitTable,
   groupKeyOf,
   pageBasis,
   prepareTable,
@@ -82,9 +85,22 @@ async function bindToFamily(ctx: AuthContext, batch: StoredImportBatch, attribut
   await updateCatalogFamily(ctx, familyId, familyRecord.revision, next);
 }
 
+/** Η ιδιότητα με αυτόν τον κωδικό, **αν** είναι ήδη μέλος της οικογένειας· αλλιώς `null`. */
+function createdInFamily(ctx: AuthContext, familyId: string, code: string): Promise<string | null> {
+  return runCatalogReadOnly(ctx, async (scope) => {
+    const { current } = await readForUpsert<CatalogAttributeDefinition>(scope, 'attribute', code);
+    if (current === null) return null;
+    const family = await readOwned<StoredCatalogFamilyDefinition>(scope, 'family', familyId);
+    return family.attributeIds.includes(current.id) ? current.id : null;
+  });
+}
+
 /**
  * §5.5.2 Β3 Γ11: «Ναι, πρόσθεσέ την» — ιδιότητα **και** δέσιμο (επίπεδο + κανάλια) σε **μία** συναλλαγή της μηχανής σχήματος· μετά η
  * γραμμή αντιστοιχίζεται στη νέα ιδιότητα από τον ίδιο δρόμο με κάθε αντιστοίχιση. Ίδιο δικαίωμα και ίδια σιωπή με το `bindToFamily`.
+ * §5.5.2 Β3.2: **ιδεμπότητο κατά φυσικό κλειδί** — ιδιότητα με τον ίδιο κωδικό ήδη **μέσα** στην οικογένεια σημαίνει ότι προηγούμενη
+ * προσπάθεια τη γέννησε και έπεσε πριν γράψει τη γραμμή: η επανάληψη ολοκληρώνει μόνο τη γραμμή (ανάκαμψη προς τα εμπρός, όχι
+ * αναίρεση — η ιδιότητα είναι ήδη ορατή στον χώρο). Ίδιος κωδικός **έξω** από την οικογένεια ⇒ `duplicateCode`, όπως πάντα.
  */
 async function createLineAttribute(ctx: AuthContext, batch: StoredImportBatch, request: SetImportLineRequest): Promise<SetImportLineRequest> {
   const { create, bind } = request;
@@ -92,7 +108,7 @@ async function createLineAttribute(ctx: AuthContext, batch: StoredImportBatch, r
   if (!(await hasPermission(ctx, CATALOG_AUTHORITY_PERMISSIONS.schema))) throw new CatalogWriteError('notFound');
   const { familyId, variantSchemeCode } = batch.target;
   const place = (family: CatalogFamilyDefinition, id: string) => withAttributeAtLevel(family, id, bind, variantSchemeCode, create.requiredChannels);
-  const attributeId = await createAttributeInFamily(ctx, { definition: create.definition, familyId, place });
+  const attributeId = (await createdInFamily(ctx, familyId, create.definition.code)) ?? (await createAttributeInFamily(ctx, { definition: create.definition, familyId, place }));
   return { page: request.page, table: request.table, line: request.line, decision: { kind: 'attribute', attributeId }, bind: null };
 }
 
@@ -104,7 +120,7 @@ function axisDecisionFits(decision: ImportLineDecision | null, schema: CatalogSc
 
 /**
  * Ο πίνακας με τις αποφάσεις από πάνω, **μαζί με τη νέα**. Η απόφαση κρίνεται στη μνήμη πριν γραφτεί: άρνηση εδώ δεν αφήνει πίσω της
- * μισή κατάσταση. Μετά γράφεται η απόφαση και ό,τι παράγει.
+ * μισή κατάσταση. Μετά γράφονται η απόφαση και ό,τι παράγει σε **μία** συναλλαγή (§5.5.2 Β3.2, `commitTable`).
  */
 async function reinterpretTable(ctx: AuthContext, batch: StoredImportBatch, resolved: ResolvedLine, basis: TableBasis): Promise<Judged<null>> {
   const { request, origin } = resolved;
@@ -117,8 +133,8 @@ async function reinterpretTable(ctx: AuthContext, batch: StoredImportBatch, reso
   const overrides = withLineOverride(tableOverridesOf(batch.pages?.lineOverrides, request.page, request.table), request, request.decision, stamp, extras);
   const prepared = prepareTable(schema, basis, overrides);
   if (!prepared.ok) return prepared;
-  await setImportLineOverride(ctx, batch.id, request, request.decision, extras);
-  await commitTable(ctx, batch.id, prepared.value);
+  // §5.5.2 Β3.2: η απόφαση γράφεται **στην ίδια** συναλλαγή με ό,τι παράγει — ποτέ απόφαση χωρίς την πρόταση της.
+  await commitTable(ctx, batch.id, prepared.value, (own) => withLineOverride(own, request, request.decision, stamp, extras));
   return { ok: true, value: null };
 }
 
@@ -130,7 +146,7 @@ async function openBatch(ctx: AuthContext, id: string, request: SetImportLineReq
 
 /**
  * Η πρόταση που αλλάζει η απόφαση έχει κριθεί; Για γραμμή τιμής είναι η πρόταση **τιμών** του πίνακα (§5.5.2 Β4): η τιμή ορίζεται και
- * αφού εγκριθούν οι ιδιότητες, γιατί η εγκεκριμένη πρόταση ιδιοτήτων δεν ξαναγράφεται (`stageGroup`).
+ * αφού εγκριθούν οι ιδιότητες, γιατί η εγκεκριμένη πρόταση ιδιοτήτων δεν ξαναγράφεται (`planGroup`).
  */
 async function judgeOpenProposal(ctx: AuthContext, id: string, request: SetImportLineRequest, previous: ImportLineDecision | null): Promise<Judged<null>> {
   const tableKey = groupKeyOf(request.page, request.table);
@@ -149,10 +165,8 @@ function storedIdentityOf(batch: StoredImportBatch, request: SetImportLineReques
   return line?.identity ? { identity: line.identity } : {};
 }
 
-/** Χρειάζεται ο πίνακας μόνο όταν αλλάζει η αντιστοίχιση: η αγνόηση (και η αναίρεσή της) είναι απλώς κατάσταση. */
-const MAPPING_KINDS: ReadonlySet<ImportLineDecision['kind']> = new Set(['attribute', 'axis', 'price']);
-const touchesMapping = (decision: ImportLineDecision | null, previous: ImportLineDecision | null): boolean =>
-  [decision, previous].some((entry) => entry !== null && MAPPING_KINDS.has(entry.kind));
+/** Χρειάζεται ο πίνακας μόνο όταν αλλάζει η αντιστοίχιση: η αγνόηση (και η αναίρεσή της) είναι απλώς κατάσταση (`derivesTable`). */
+const touchesMapping = (decision: ImportLineDecision | null, previous: ImportLineDecision | null): boolean => derivesTable(decision) || derivesTable(previous);
 
 /**
  * Η γραμμή τιμής (§5.5.2 Β4 Δ2): θέλει το δικαίωμα της τιμολόγησης (ξένο ≡ ανύπαρκτο, όπως το `assertPurposeAuthority`), πρόχειρη
@@ -220,6 +234,7 @@ async function createAndMap(ctx: AuthContext, batch: StoredImportBatch, request:
 
 /** `POST /api/catalog/imports/[id]/lines` — απόφαση γραμμής + ξαναερμηνεία του πίνακά της, χωρίς AI. */
 export async function setImportLine(ctx: AuthContext, id: string, request: SetImportLineRequest): Promise<SetImportLineResult> {
-  const outcome = await decideLine(ctx, id, request);
+  // §5.5.2 Β3.2: απόφαση ή διόρθωση που μπήκε ανάμεσα στην κρίση και τη συναλλαγή ⇒ ξανακρίνεται από την αρχή, με την τρέχουσα παρτίδα.
+  const outcome = await retryOnRevisionMismatch(() => decideLine(ctx, id, request));
   return { view: await readImportBatchDetail(ctx, id), outcome };
 }
