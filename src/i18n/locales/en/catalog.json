@@ -241,6 +241,8 @@
     "ruleMeasurementMismatch": "The rule's attributes must measure the same quantity.",
     "ruleAxisUnknown": "The rule's axis is not in the family's variants.",
     "ruleConstantUnitUnknown": "The constant's unit does not belong to the attribute's measurement family.",
+    "ruleConditionTypeMismatch": "The \"when\" condition does not fit its attribute's type (number or measurement, option, yes/no).",
+    "ruleConditionOptionUnknown": "Option \"{code}\" of the \"when\" condition no longer exists on the attribute.",
     "categoryCycle": "A category cannot be placed under itself or under one of its subcategories.",
     "categoryDepthExceeded": "The tree has at most {max} levels.",
     "categoryParentUnknown": "The parent category does not exist.",
@@ -273,7 +275,7 @@
     "tooManyDescendants": "Up to {max} variants per model.",
     "assetRoleKindMismatch": "The asset role does not accept this kind of file.",
     "channelLocalesRequired": "Each channel needs at least one language.",
-    "consistencyRuleViolated": "{kind, select, unique {The value repeats in another variant — the rule requires a unique value.} orderAcrossAttributes {This variant's values do not follow the order the rule sets (e.g. H ≥ M ≥ L).} monotonicAlongAxis {The value does not rise/fall with the axis as the rule sets.} compare {The value fails the comparison the rule sets.} other {The value breaks the consistency rule “{ruleId}”.}}",
+    "consistencyRuleViolated": "{kind, select, unique {The value repeats in another variant — the rule requires a unique value.} orderAcrossAttributes {This variant's values do not follow the order the rule sets (e.g. H ≥ M ≥ L).} monotonicAlongAxis {The value does not rise/fall with the axis as the rule sets.} compare {The value fails the comparison the rule sets.} other {The value breaks the consistency rule “{ruleId}”.}} {scope, select, conditional { (The rule applies only when its \"when\" condition holds.)} other {}}",
     "fieldImmutable": "This field cannot change after creation.",
     "uniqueValueTaken": "The value is already used by another product.",
     "uniqueValueLooksLike": "The value looks like another product’s — check for look-alike characters.",
@@ -802,7 +804,18 @@
       "orderList": "Attribute order",
       "positionOf": "Position {index}",
       "removePosition": "Remove position {index}",
-      "addPosition": "Add position"
+      "addPosition": "Add position",
+      "when": "When",
+      "whenAdd": "Only when… (condition)",
+      "whenRemove": "Remove \"when\" condition",
+      "whenAttribute": "Condition attribute",
+      "whenOperator": "Condition operator",
+      "whenValue": "Condition value",
+      "whenOptions": "Condition options",
+      "whenOperators": {
+        "in": "is one of",
+        "notIn": "is none of"
+      }
     },
     "duplicate": {
       "action": "Duplicate",

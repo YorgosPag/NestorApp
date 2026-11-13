@@ -65,6 +65,8 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   ruleMeasurementMismatch: 'issues.ruleMeasurementMismatch',
   ruleAxisUnknown: 'issues.ruleAxisUnknown',
   ruleConstantUnitUnknown: 'issues.ruleConstantUnitUnknown',
+  ruleConditionTypeMismatch: 'issues.ruleConditionTypeMismatch',
+  ruleConditionOptionUnknown: 'issues.ruleConditionOptionUnknown',
   categoryCycle: 'issues.categoryCycle',
   categoryDepthExceeded: 'issues.categoryDepthExceeded',
   categoryParentUnknown: 'issues.categoryParentUnknown',

@@ -6,7 +6,6 @@
  * @module subapps/catalog/schema/validate-family-rules
  */
 
-import { findUnit } from '../measurement/conversion';
 import type { ConsistencyRule } from '../types/family';
 import { CATALOG_LIMITS } from '../vocabulary/catalog-limits';
 import { reportDuplicates } from './catalog-issues';
@@ -16,6 +15,7 @@ import {
   numericDimension,
   type FamilyValidationContext,
 } from './family-validation-context';
+import { checkConstantUnit, validateRuleCondition } from './validate-rule-condition';
 
 /** Ελέγχει ότι όλες οι ιδιότητες είναι αριθμητικές και ίδιας διάστασης. */
 function checkSameNumericDimension(context: FamilyValidationContext, attributeIds: readonly string[], path: string): void {
@@ -37,15 +37,7 @@ function checkCompare(context: FamilyValidationContext, rule: Extract<Consistenc
     context.collector.add('ruleAttributeNotNumeric', `${path}.leftAttributeId`);
     return;
   }
-  const { unitCode } = rule.right;
-  if (dimension === null) {
-    if (unitCode !== null) context.collector.add('ruleConstantUnitUnknown', `${path}.right.unitCode`);
-    return;
-  }
-  const family = context.registry.get(dimension);
-  if (unitCode === null || !family || !findUnit(family, unitCode)) {
-    context.collector.add('ruleConstantUnitUnknown', `${path}.right.unitCode`);
-  }
+  checkConstantUnit(context, dimension, rule.right.unitCode, `${path}.right.unitCode`);
 }
 
 function validateRule(context: FamilyValidationContext, rule: ConsistencyRule, path: string): void {
@@ -76,6 +68,10 @@ export function validateFamilyRules(context: FamilyValidationContext): void {
   if (rules.length > CATALOG_LIMITS.maxConsistencyRules) {
     context.collector.add('tooMany', 'consistencyRules', { max: CATALOG_LIMITS.maxConsistencyRules });
   }
-  rules.forEach((rule, index) => validateRule(context, rule, `consistencyRules[${index}]`));
+  rules.forEach((rule, index) => {
+    const path = `consistencyRules[${index}]`;
+    validateRule(context, rule, path);
+    if (rule.when) validateRuleCondition(context, rule.when, `${path}.when`);
+  });
   reportDuplicates(context.collector, rules.map((rule) => rule.id), (index) => `consistencyRules[${index}].id`);
 }

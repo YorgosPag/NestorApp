@@ -25,6 +25,7 @@ import { SwitchField } from '../shared/CatalogFormFields';
 import { FieldIssues } from '../shared/CatalogIssues';
 import { AttributePicker, type FamilyTabProps } from './AttributePicker';
 import { allSchemeAxes, newRule, RULE_KINDS } from './rule-defaults';
+import { RuleConditionFields } from './RuleConditionFields';
 import { CompareRightFields, OrderAttributesList, withLeftAttribute } from './RuleParts';
 
 function EnumSelect<T extends string>({ value, values, label, keyOf, onChange, disabled, className }: {
@@ -118,6 +119,7 @@ function RuleCard({ rule, index, props }: { readonly rule: ConsistencyRule; read
         </span>
       </header>
       <div className="flex flex-wrap items-center gap-2"><RuleFields rule={rule} set={set} props={props} /></div>
+      <RuleConditionFields rule={rule} set={set} props={props} />
       <FieldIssues issues={issues} path={`consistencyRules[${index}]`} />
     </li>
   );

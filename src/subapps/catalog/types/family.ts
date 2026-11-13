@@ -104,9 +104,37 @@ export type CompareOperand =
   | { readonly kind: 'attribute'; readonly attributeId: string }
   | { readonly kind: 'constant'; readonly value: number; readonly unitCode: string | null };
 
+/** Τελεστές συνθήκης επιλογής: «είναι μία από» / «δεν είναι καμία από». */
+export const OPTION_CONDITION_OPERATORS = ['in', 'notIn'] as const;
+export type OptionConditionOperator = (typeof OPTION_CONDITION_OPERATORS)[number];
+
+/**
+ * Ο έλεγχος μιας συνθήκης, ανά είδος τιμής της ιδιότητάς της (ADR-923 §21.5). Αριθμός/μέτρηση: σύγκριση με σταθερά
+ * (η μονάδα της σταθεράς μετατρέπεται στο πρότυπο, όπως στο `compare`) · επιλογή: ανήκει/δεν ανήκει σε σύνολο κωδικών ·
+ * ναι/όχι: ισότητα.
+ */
+export type RuleConditionTest =
+  | { readonly kind: 'number'; readonly operator: CompareOperator; readonly value: number; readonly unitCode: string | null }
+  | { readonly kind: 'option'; readonly operator: OptionConditionOperator; readonly optionCodes: readonly string[] }
+  | { readonly kind: 'boolean'; readonly value: boolean };
+
+export type RuleConditionKind = RuleConditionTest['kind'];
+
+/**
+ * **«Όταν»** ενός κανόνα (Akeneo attribute dependencies · Revit: πόλοι ↔ τάση): ο κανόνας κρίνει **μόνο** τις παραλλαγές
+ * που την ικανοποιούν (π.χ. «όταν φάσεις = 3 ⇒ τάση ≥ 380 V»). Παραλλαγή χωρίς τιμή στην ιδιότητα της συνθήκης **δεν**
+ * κρίνεται — ίδια πολιτική με το `null` του κανόνα (η πληρότητα είναι άλλη ερώτηση).
+ */
+export interface RuleCondition {
+  readonly attributeId: string;
+  readonly test: RuleConditionTest;
+}
+
 interface RuleBase {
   readonly id: string;
   readonly severity: RuleSeverity;
+  /** Έλλειψη ή `null` = ο κανόνας ισχύει για κάθε παραλλαγή (όλοι οι κανόνες πριν το §21.5). */
+  readonly when?: RuleCondition | null;
 }
 
 export type ConsistencyRule =

@@ -9,7 +9,7 @@
  */
 
 import type { AttributeRecord } from '@/services/catalog/catalog-api.client';
-import type { CatalogFamilyDefinition, ConsistencyRule, ConsistencyRuleKind } from '@/subapps/catalog/types/family';
+import type { CatalogFamilyDefinition, ConsistencyRule, ConsistencyRuleKind, RuleCondition } from '@/subapps/catalog/types/family';
 import { isNumericAttributeType } from '@/subapps/catalog/vocabulary/attribute-types';
 import { nextLocalId } from './family-draft';
 
@@ -44,5 +44,28 @@ export function newRule(kind: ConsistencyRuleKind, draft: CatalogFamilyDefinitio
       return { id, kind, severity: 'warning', attributeId: first, axisAttributeId: allSchemeAxes(draft, inFamily)[0]?.id ?? '', direction: 'ascending', strict: true };
     case 'compare':
       return { id, kind, severity: 'warning', leftAttributeId: first, operator: 'gte', right: { kind: 'attribute', attributeId: numeric[1]?.id ?? first } };
+  }
+}
+
+/**
+ * §21.5: η αφετηρία μιας συνθήκης «όταν» για την ιδιότητα που διάλεξε ο άνθρωπος — του σωστού είδους για τον τύπο της
+ * (ό,τι δέχεται ο επικυρωτής). `null` = ο τύπος δεν μπορεί να είναι συνθήκη (κείμενο, μέσο, πίνακας…) ή η επιλογή δεν έχει
+ * ακόμη τιμές.
+ */
+export function conditionFor(attribute: AttributeRecord): RuleCondition | null {
+  const attributeId = attribute.id;
+  switch (attribute.type) {
+    case 'measurement':
+      return { attributeId, test: { kind: 'number', operator: 'eq', value: 0, unitCode: attribute.config.defaultUnitCode } };
+    case 'number':
+      return { attributeId, test: { kind: 'number', operator: 'eq', value: 0, unitCode: null } };
+    case 'select': {
+      const first = attribute.config.options[0];
+      return first ? { attributeId, test: { kind: 'option', operator: 'in', optionCodes: [first.code] } } : null;
+    }
+    case 'boolean':
+      return { attributeId, test: { kind: 'boolean', value: true } };
+    default:
+      return null;
   }
 }

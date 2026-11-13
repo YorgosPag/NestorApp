@@ -142,6 +142,37 @@ describe('validateFamily — consistency rules', () => {
     }))).toContain('ruleConstantUnitUnknown');
   });
 
+  describe('"when" condition (§21.5)', () => {
+    const base: ConsistencyRule = { id: 'r', kind: 'unique', attributeId: 'model_code', severity: 'error' };
+
+    it('accepts a numeric, an option and a well-unitted measurement condition', () => {
+      expect(issueCodes(withRules(
+        { ...base, id: 'a', when: { attributeId: 'size', test: { kind: 'option', operator: 'in', optionCodes: ['mfp_34'] } } },
+        { ...base, id: 'b', when: { attributeId: 'cooling_h', test: { kind: 'number', operator: 'gte', value: 2, unitCode: 'kW' } } },
+      ))).toEqual([]);
+    });
+
+    it('rejects a condition whose test does not fit the attribute type (option test on a measurement, any test on text)', () => {
+      expect(issueCodes(withRules(
+        { ...base, id: 'a', when: { attributeId: 'cooling_h', test: { kind: 'option', operator: 'in', optionCodes: ['x'] } } },
+        { ...base, id: 'b', when: { attributeId: 'model_code', test: { kind: 'boolean', value: true } } },
+      )).filter((code) => code === 'ruleConditionTypeMismatch')).toHaveLength(2);
+    });
+
+    it('rejects an unknown option, a foreign unit and an attribute outside the family', () => {
+      expect(issueCodes(withRules(
+        { ...base, id: 'a', when: { attributeId: 'size', test: { kind: 'option', operator: 'in', optionCodes: ['ghost_size'] } } },
+        { ...base, id: 'b', when: { attributeId: 'cooling_h', test: { kind: 'number', operator: 'gte', value: 2, unitCode: 'kg' } } },
+        { ...base, id: 'c', when: { attributeId: 'ghost', test: { kind: 'boolean', value: true } } },
+      ))).toEqual(expect.arrayContaining(['ruleConditionOptionUnknown', 'ruleConstantUnitUnknown', 'attributeUnknown']));
+    });
+
+    it('the zod schema accepts a rule without "when" (every rule before §21.5) and rejects an empty option set', () => {
+      expect(familyDefinitionSchema.safeParse(withRules(base)).success).toBe(true);
+      expect(familyDefinitionSchema.safeParse(withRules({ ...base, when: { attributeId: 'size', test: { kind: 'option', operator: 'in', optionCodes: [] } } })).success).toBe(false);
+    });
+  });
+
   it('reports duplicate rule ids', () => {
     const rule: ConsistencyRule = { id: 'dup', kind: 'unique', attributeId: 'model_code', severity: 'error' };
     expect(issueCodes(withRules(rule, rule))).toContain('duplicateCode');

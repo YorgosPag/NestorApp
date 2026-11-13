@@ -21,6 +21,7 @@ import { reorderByMove } from '@/components/ui/sortable/sortable-model';
 import type { CatalogLibrary } from '@/hooks/catalog/useCatalogLibrary';
 import type { AttributeRecord } from '@/services/catalog/catalog-api.client';
 import type { ConsistencyRule } from '@/subapps/catalog/types/family';
+import type { MeasurementFamilyDefinition } from '@/subapps/catalog/types/measurement-family';
 import { CATALOG_LIMITS } from '@/subapps/catalog/vocabulary/catalog-limits';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { AttributePicker } from './AttributePicker';
@@ -75,6 +76,26 @@ export function withLeftAttribute(rule: CompareRule, attributeId: string, librar
   return { ...rule, leftAttributeId: attributeId, right: { ...rule.right, unitCode } };
 }
 
+/**
+ * Η μονάδα μιας σταθεράς κανόνα — **μόνο** μονάδες της οικογένειας μέτρησης της ιδιότητας (ό,τι δέχεται ο επικυρωτής).
+ * Καθαρός αριθμός (καμία οικογένεια) ⇒ τίποτα. Κοινό για τη σύγκριση και τη συνθήκη «όταν» (§21.5).
+ */
+export function ConstantUnitSelect({ family, unitCode, disabled, onChange }: {
+  readonly family: MeasurementFamilyDefinition | undefined;
+  readonly unitCode: string | null;
+  readonly disabled: boolean;
+  readonly onChange: (unitCode: string) => void;
+}) {
+  const { t } = useCatalogText();
+  if (!family) return null;
+  return (
+    <Select value={unitCode ?? ''} disabled={disabled} onValueChange={onChange}>
+      <SelectTrigger className="w-28" aria-label={t('families.rules.constantUnit')}><SelectValue placeholder={t('attributes.config.chooseUnit')} /></SelectTrigger>
+      <SelectContent>{family.units.map((unit) => <SelectItem key={unit.code} value={unit.code}>{unit.symbol}</SelectItem>)}</SelectContent>
+    </Select>
+  );
+}
+
 const RIGHT_KINDS = ['attribute', 'constant'] as const satisfies readonly CompareRule['right']['kind'][];
 
 export function CompareRightFields({ rule, numeric, library, disabled, onChange }: {
@@ -105,12 +126,7 @@ export function CompareRightFields({ rule, numeric, library, disabled, onChange 
       ) : (
         <>
           <NumericField className="w-28" aria-label={t('families.rules.constant')} value={right.value} disabled={disabled} onValueChange={(value) => onChange({ ...rule, right: { ...right, value } })} />
-          {family ? (
-            <Select value={right.unitCode ?? ''} disabled={disabled} onValueChange={(unitCode) => onChange({ ...rule, right: { ...right, unitCode } })}>
-              <SelectTrigger className="w-28" aria-label={t('families.rules.constantUnit')}><SelectValue placeholder={t('attributes.config.chooseUnit')} /></SelectTrigger>
-              <SelectContent>{family.units.map((unit) => <SelectItem key={unit.code} value={unit.code}>{unit.symbol}</SelectItem>)}</SelectContent>
-            </Select>
-          ) : null}
+          <ConstantUnitSelect family={family} unitCode={right.unitCode} disabled={disabled} onChange={(unitCode) => onChange({ ...rule, right: { ...right, unitCode } })} />
         </>
       )}
     </>

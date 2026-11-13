@@ -214,7 +214,18 @@
         "rightConstant": "Σταθερά",
         "rightKind": "Είδος σύγκρισης",
         "severity": "Σοβαρότητα",
-        "strict": "Αυστηρά (χωρίς ισότητα)"
+        "strict": "Αυστηρά (χωρίς ισότητα)",
+        "when": "Όταν",
+        "whenAdd": "Μόνο όταν… (συνθήκη)",
+        "whenAttribute": "Ιδιότητα συνθήκης",
+        "whenOperator": "Τελεστής συνθήκης",
+        "whenOperators": {
+          "in": "είναι μία από",
+          "notIn": "δεν είναι καμία από"
+        },
+        "whenOptions": "Επιλογές συνθήκης",
+        "whenRemove": "Αφαίρεση συνθήκης «όταν»",
+        "whenValue": "Τιμή συνθήκης"
       },
       "summary": "{attributes, plural, one {# ιδιότητα} other {# ιδιότητες}} · {schemes, plural, one {# σχήμα παραλλαγών} other {# σχήματα παραλλαγών}}",
       "tabIssues": "{count, plural, one {# πρόβλημα} other {# προβλήματα}}",

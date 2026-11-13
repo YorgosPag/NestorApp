@@ -17,7 +17,7 @@
 
 import type { CatalogSchemaSnapshot } from '../derived/chain-derived';
 import { changedCells, judgeConsistency, toVariantValueRow } from '../rules/consistency-gate';
-import { evaluateConsistency, type ConsistencyViolation, type VariantValueRow } from '../rules/evaluate-consistency';
+import { evaluateConsistency, violationIssueParams, type ConsistencyViolation, type VariantValueRow } from '../rules/evaluate-consistency';
 import type { CatalogIssue } from '../schema/catalog-issues';
 import type { CatalogValueHolder } from '../types/product';
 import type { AssetLookup, ReferenceLookup } from '../schema/product-validation-context';
@@ -164,23 +164,29 @@ function evaluate(schema: CatalogSchemaSnapshot, rows: readonly VariantValueRow[
   return evaluateConsistency({ rules: schema.family.consistencyRules, rows, schemeAxisIds, ...schema });
 }
 
+/**
+ * Παραβιάσεις κανόνων ⇒ ευρήματα `consistencyRuleViolated` **ανά κελί** (παραλλαγή × ιδιότητα) — **ένας** δρόμος για τον
+ * γραφέα προϊόντων και την πρόταση εισαγωγής (`judge-proposal.ts`).
+ */
+export function ruleViolationIssues(violations: readonly ConsistencyViolation[]): CatalogIssue[] {
+  return violations.flatMap((violation) =>
+    violation.variantIds.flatMap((variantId) =>
+      violation.attributeIds.map((attributeId): CatalogIssue => ({
+        code: 'consistencyRuleViolated',
+        path: `${memberPath(variantId)}.values.${attributeId}`,
+        params: violationIssueParams(violation),
+      })),
+    ),
+  );
+}
+
 /** 5: κανόνες πριν/μετά ⇒ «καμία νέα παράβαση». Κάθε μπλοκάρουσα παράβαση γίνεται εύρημα **ανά κελί**. */
 function judgeRules(input: AggregateJudgeInput): AggregateVerdict {
   const { aggregate, schema } = input;
   const beforeRows = consistencyRows(aggregate, schema, 'before');
   const afterRows = consistencyRows(aggregate, schema, 'after');
   const verdict = judgeConsistency(evaluate(schema, beforeRows), evaluate(schema, afterRows), changedCells(beforeRows, afterRows));
-  const issues = verdict.blocking.flatMap((violation) =>
-    violation.variantIds.flatMap((variantId) =>
-      violation.attributeIds.map((attributeId): CatalogIssue => ({
-        code: 'consistencyRuleViolated',
-        path: `${memberPath(variantId)}.values.${attributeId}`,
-        // Το ΕΙΔΟΣ του κανόνα ταξιδεύει μαζί: το μήνυμα λέει «επαναλαμβάνεται», όχι το εσωτερικό «rule_1».
-        params: { ruleId: violation.ruleId, kind: violation.kind },
-      })),
-    ),
-  );
-  return { issues, findings: verdict.findings };
+  return { issues: ruleViolationIssues(verdict.blocking), findings: verdict.findings };
 }
 
 /** Η κρίση του συνόλου. Τα ευρήματα 3–5 κρίνονται μόνο αν 1–2 είναι καθαρά (αλλιώς θα έδιναν ψευδή ευρήματα). */

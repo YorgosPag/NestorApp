@@ -19,12 +19,12 @@
  * @module subapps/catalog/rules/evaluate-consistency
  */
 
-import { toStandardUnit } from '../measurement/conversion';
 import { normalizeUniqueText } from '../values/normalize-unique';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import type { ConsistencyRule, RuleSeverity } from '../types/family';
 import { axisRank, compareNumbers, holdsOrder } from './rule-comparisons';
+import { conditionPredicate, constantInStandardUnit } from './rule-condition';
 
 export type ComparableValue = number | string | boolean | null;
 
@@ -49,6 +49,16 @@ export interface ConsistencyViolation {
   readonly severity: RuleSeverity;
   readonly variantIds: readonly string[];
   readonly attributeIds: readonly string[];
+  /** §21.5: ο κανόνας έκρινε μόνο παραλλαγές που ικανοποιούν το «όταν» του — το μήνυμα το λέει. */
+  readonly conditional: boolean;
+}
+
+/**
+ * Οι παράμετροι του ευρήματος `consistencyRuleViolated` — **μία** φορά για τον γραφέα προϊόντων και την πρόταση εισαγωγής.
+ * Το ΕΙΔΟΣ ταξιδεύει μαζί: το μήνυμα λέει «επαναλαμβάνεται», όχι το εσωτερικό «rule_1».
+ */
+export function violationIssueParams(found: ConsistencyViolation): Readonly<Record<string, string>> {
+  return { ruleId: found.ruleId, kind: found.kind, scope: found.conditional ? 'conditional' : 'all' };
 }
 
 const numberOf = (value: ComparableValue | undefined): number | null => (typeof value === 'number' ? value : null);
@@ -113,10 +123,7 @@ function constantInStandard(
   input: ConsistencyInput,
 ): number | null {
   if (rule.right.kind !== 'constant') return null;
-  const left = input.attributes.get(rule.leftAttributeId);
-  if (left?.type !== 'measurement' || rule.right.unitCode === null) return rule.right.value;
-  const family = input.registry.get(left.config.measurementFamilyCode);
-  return family ? toStandardUnit(family, rule.right.value, rule.right.unitCode) : null;
+  return constantInStandardUnit(input.attributes.get(rule.leftAttributeId), rule.right.value, rule.right.unitCode, input.registry);
 }
 
 function evaluateCompare(rule: Extract<ConsistencyRule, { kind: 'compare' }>, input: ConsistencyInput): ConsistencyViolation[] {
@@ -132,7 +139,7 @@ function evaluateCompare(rule: Extract<ConsistencyRule, { kind: 'compare' }>, in
 }
 
 function violation(rule: ConsistencyRule, variantIds: readonly string[], attributeIds: readonly string[]): ConsistencyViolation {
-  return { ruleId: rule.id, kind: rule.kind, severity: rule.severity, variantIds, attributeIds };
+  return { ruleId: rule.id, kind: rule.kind, severity: rule.severity, variantIds, attributeIds, conditional: Boolean(rule.when) };
 }
 
 function evaluateRule(rule: ConsistencyRule, input: ConsistencyInput): ConsistencyViolation[] {
@@ -148,7 +155,29 @@ function evaluateRule(rule: ConsistencyRule, input: ConsistencyInput): Consisten
   }
 }
 
+/**
+ * §21.5: ο κανόνας με «όταν» κρίνει **μόνο** τις παραλλαγές που ικανοποιούν τη συνθήκη — ένα φίλτρο πριν από κάθε είδος,
+ * όχι συνθήκη μέσα σε κάθε αξιολογητή.
+ */
+function rowsInScope(rule: ConsistencyRule, input: ConsistencyInput): ConsistencyInput {
+  const { when } = rule;
+  if (!when) return input;
+  const holds = conditionPredicate(when, input.attributes, input.registry);
+  return { ...input, rows: input.rows.filter((row) => holds(row.values[when.attributeId])) };
+}
+
+/**
+ * Η ιδιότητα της συνθήκης **συμμετέχει** στην παραβίαση: όταν αλλάζουν οι φάσεις, η πύλη (`judgeConsistency`) πρέπει να
+ * δει την παραβίαση ως «αγγιγμένη» — η αλλαγή των φάσεων είναι που την προκάλεσε.
+ */
+function withConditionAttribute(rule: ConsistencyRule, found: ConsistencyViolation): ConsistencyViolation {
+  const conditionId = rule.when?.attributeId;
+  if (!conditionId || found.attributeIds.includes(conditionId)) return found;
+  return { ...found, attributeIds: [...found.attributeIds, conditionId] };
+}
+
 /** Αξιολογεί όλους τους κανόνες· η σειρά των παραβιάσεων ακολουθεί τη σειρά των κανόνων. */
 export function evaluateConsistency(input: ConsistencyInput): readonly ConsistencyViolation[] {
-  return input.rules.flatMap((rule) => evaluateRule(rule, input));
+  return input.rules.flatMap((rule) =>
+    evaluateRule(rule, rowsInScope(rule, input)).map((found) => withConditionAttribute(rule, found)));
 }

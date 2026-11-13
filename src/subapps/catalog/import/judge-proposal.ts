@@ -7,7 +7,7 @@
 
 import { createdModelMember, createdProductMember, unchangedMember, updatedModelMember, updatedProductMember, type StoredModelShape, type StoredProductShape } from '../aggregate/aggregate-members';
 import type { AggregateMember, CatalogAggregate } from '../aggregate/aggregate-model';
-import { consistencyRows, judgeAggregate, memberPath, type AggregateReferences } from '../aggregate/judge-aggregate';
+import { consistencyRows, judgeAggregate, memberPath, ruleViolationIssues, type AggregateReferences } from '../aggregate/judge-aggregate';
 import type { CatalogSchemaSnapshot } from '../derived/chain-derived';
 import { evaluateConsistency, type ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { CatalogIssue } from '../schema/catalog-issues';
@@ -88,18 +88,6 @@ function issuesByCell(issues: readonly CatalogIssue[]): Map<string, CatalogIssue
   return cells;
 }
 
-function ruleIssues(violations: readonly ConsistencyViolation[]): CatalogIssue[] {
-  return violations.flatMap((violation) =>
-    violation.variantIds.flatMap((variantId) =>
-      violation.attributeIds.map((attributeId): CatalogIssue => ({
-        code: 'consistencyRuleViolated',
-        path: `${memberPath(variantId)}.values.${attributeId}`,
-        params: { ruleId: violation.ruleId, kind: violation.kind },
-      })),
-    ),
-  );
-}
-
 /**
  * Η διαδρομή του κριτή που ανήκει στο κελί: `values.<ιδιότητα>` για τιμή, `noValueReasons.<ιδιότητα>` για λόγο απουσίας
  * (§23.2 K4: `noValueOnAxis` · `noValueConflict`). `null` = το πεδίο δεν είναι φορέα τιμών (τιμή τιμοκαταλόγου, κωδικός).
@@ -140,7 +128,7 @@ export function judgeProposal(input: ProposalJudgeInput): ProposalVerdict {
   const aggregate = proposalAggregateOf(input);
   const verdict = judgeAggregate({ aggregate, schema: input.schema, refs: input.refs });
   const violations = violationsOf(aggregate, input.schema);
-  const issues = [...verdict.issues.filter((issue) => issue.code !== 'consistencyRuleViolated'), ...ruleIssues(violations)];
+  const issues = [...verdict.issues.filter((issue) => issue.code !== 'consistencyRuleViolated'), ...ruleViolationIssues(violations)];
   const cells = issuesByCell(issues);
   const rows = input.rows.map((row): ImportProposalRow => {
     const memberId = row.holderKind === 'productModel' ? (aggregate.rootId ?? row.rowKey) : memberIdOf(row);

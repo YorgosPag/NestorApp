@@ -33,6 +33,20 @@ describe('family-draft — το πρόχειρο της οικογένειας',
     expect(validate(without)).toEqual([]);
   });
 
+  it('§21.5: αφαίρεση της ιδιότητας της συνθήκης «όταν» ⇒ ο κανόνας φεύγει, ΔΕΝ γίνεται καθολικός', () => {
+    const conditional = {
+      ...MFP_FAMILY,
+      consistencyRules: [
+        ...MFP_FAMILY.consistencyRules,
+        { id: 'rule_when', kind: 'unique' as const, attributeId: 'model_code', severity: 'error' as const,
+          when: { attributeId: 'weight', test: { kind: 'number' as const, operator: 'gte' as const, value: 1, unitCode: 'kg' } } },
+      ],
+    };
+    const without = withoutFamilyAttribute(conditional, 'weight');
+    expect(without.consistencyRules.some((rule) => rule.id === 'rule_when')).toBe(false);
+    expect(without.consistencyRules).toHaveLength(MFP_FAMILY.consistencyRules.length);
+  });
+
   it('τοπικά αναγνωριστικά: επόμενο μετά το μέγιστο, χωρίς ρολόι', () => {
     expect(nextLocalId('rule', ['rule_1', 'rule_7', 'other_9'])).toBe('rule_8');
     expect(nextLocalId('row', [])).toBe('row_1');

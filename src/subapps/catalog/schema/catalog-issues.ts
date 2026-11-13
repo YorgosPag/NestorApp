@@ -79,6 +79,8 @@ export const CATALOG_ISSUE_CODES = [
   'ruleMeasurementMismatch',
   'ruleAxisUnknown',
   'ruleConstantUnitUnknown',
+  'ruleConditionTypeMismatch',
+  'ruleConditionOptionUnknown',
   // ── κατηγορία ──
   'categoryCycle',
   'categoryDepthExceeded',

@@ -3557,6 +3557,24 @@ saved» · `editor.supersedes` = «On save, the period “3 tiers, −5% … −
    ~92 % ανά πεδίο σημαίνει ~1 λάθος ανά 12 πεδία — **ποτέ** αυτόματη αποδοχή.
 5. Ανοιχτό: PDF/X (ερώτηση στο τυπογραφείο, §10) · LPPL αν ποτέ διανείμουμε το Typst (ερώτηση στον Giorgio).
 
+### 21.5 Κανόνας με συνθήκη «όταν» (2026-11-13, βήμα 3Γ.1 της ηλεκτρικής παροχής)
+
+Αφορμή: «τριφασικό με 230 V» είναι λάθος δεδομένων που κανένα από τα τέσσερα είδη κανόνα δεν μπορούσε να πει — το «τάση ≥ 380 V»
+χωρίς συνθήκη θα έκρινε και τα μονοφασικά. Πρότυπα: **Akeneo attribute dependencies** (η τιμή κρίνεται μόνο όταν ισχύει η συνθήκη
+πάνω σε άλλη ιδιότητα) · **Revit** (ο connector ελέγχεται απέναντι στο σύστημα διανομής: πόλοι ↔ τάση).
+
+1. **Ένα προαιρετικό `when` στη βάση κάθε κανόνα** (`RuleBase.when?: RuleCondition | null`), όχι νέο είδος κανόνα: κάθε είδος
+   (μοναδικότητα · διάταξη · μονοτονία · σύγκριση) αποκτά συνθήκη με **ένα** φίλτρο γραμμών (`rowsInScope`) πριν τον αξιολογητή του.
+2. **Έλεγχος ανά τύπο ιδιότητας** (`RuleConditionTest`): αριθμός/μέτρηση ⇒ σύγκριση με σταθερά, που μετατρέπεται στη μονάδα-πρότυπο
+   από την **ίδια** `constantInStandardUnit` με τον κανόνα `compare` · επιλογή ⇒ `in`/`notIn` πάνω σε κωδικούς · ναι/όχι ⇒ ισότητα.
+3. **Τιμή που λείπει ⇒ η παραλλαγή δεν κρίνεται** — ποτέ «ισχύει επειδή δεν ξέρω» (ίδια πολιτική με το `null` του §5.2).
+4. **Η ιδιότητα της συνθήκης συμμετέχει στην παραβίαση** (`attributeIds`): η πύλη `judgeConsistency` βλέπει ως «αγγιγμένη» την
+   παραβίαση όταν αλλάζουν οι φάσεις. Το εύρημα λέει ότι ο κανόνας έχει συνθήκη (`scope: conditional`, `violationIssueParams` — **μία**
+   συνάρτηση για γραφέα προϊόντων και πρόταση εισαγωγής).
+5. **Αφαίρεση της ιδιότητας της συνθήκης από την οικογένεια ⇒ ο κανόνας φεύγει** (`ruleMentions`), δεν γίνεται καθολικός.
+6. Επικύρωση στην εγγραφή (`validate-rule-condition.ts`): `ruleConditionTypeMismatch` · `ruleConditionOptionUnknown` · μονάδα σταθεράς
+   με τον κοινό `checkConstantUnit`. Οι αποθηκευμένοι κανόνες χωρίς `when` μένουν έγκυροι (καμία μετάπτωση).
+
 ## 22. Υπηρεσίες, συνεργεία και μελετητές (απόφαση #12)
 
 **Απόφαση:** ✅ **ένα μοντέλο για όλους.** Το είδος καταχώρισης είναι ιδιότητα της **οικογένειας**, όχι νέα οντότητα ούτε νέα συλλογή.
@@ -3703,6 +3721,7 @@ saved» · `editor.supersedes` = «On save, the period “3 tiers, −5% … −
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-13 | **§21.5 (νέο) — κανόνας συνέπειας με συνθήκη «όταν» · βήμα 3Γ.1-Α της ηλεκτρικής παροχής** (σχέδιο εγκεκριμένο από Giorgio· έρευνα: Akeneo attribute dependencies · Revit πόλοι ↔ τάση · ETIM EC011034). `RuleBase.when?` (`RuleCondition`/`RuleConditionTest`, `OPTION_CONDITION_OPERATORS`) · zod `ruleConditionSchema` · `validate-rule-condition.ts` (`validateRuleCondition`, κοινός `checkConstantUnit` με το `compare`) · `rules/rule-condition.ts` (`conditionPredicate`, `constantInStandardUnit` — αντικαθιστά το εσωτερικό `constantInStandard`) · `evaluateConsistency`: `rowsInScope` + `withConditionAttribute` · `ConsistencyViolation.conditional` + `violationIssueParams` (ένας δρόμος για `judge-aggregate.ts` και `judge-proposal.ts`, που είχαν δύο αντίγραφα των παραμέτρων) · ICU `consistencyRuleViolated` + `scope` · UI `RuleConditionFields.tsx` + `ConstantUnitSelect` (κοινός με τη σύγκριση) + `conditionFor` · `ruleMentions` μετρά το `when` · i18n el/en + γεννήτορες. Tests: `rule-condition.test.ts` (νέο) · `validate-family.test.ts` +4 · `family-draft.test.ts` +1. |
 | 2026-11-13 | **§5.5.2 Β10 — βήμα 3Β: μνήμη τιμών ανά προμηθευτή** (Akeneo SDM Value Mapping, επέκταση της μνήμης γραμμών — όχι δεύτερη μνήμη). Κομμάτι κατ' αποκλεισμό (`lineFragments`, σελ. 85: φάσεις ⇒ «1Ph») · `IMPORT_PAGE_DERIVATION` 6→7 · κοινός πυρήνας `supplier-memory-core.ts` · `value-memory.ts` · `import-value-memory.server.ts` · `import-value-memory-action.server.ts` · `readsImportCell` (SSoT 3Α/3Β) · `readMemoryEntries` (γενικός αναγνώστης) · `ImportMemoryOrigin` (μετονομασία από `ImportLineOverrideOrigin`) · tracked fields `subject`/`attributeId` · οθόνη: προέλευση «Από μνήμη προμηθευτή», επιλογές μνήμης, Ctrl+Z → μνήμη, ενότητα «Τιμές», i18n el/en + γεννήτορες. Άγκυρες: νέο `value-memory.test.ts` · +3Β στο `aries-table-reading.test.ts` — εκτελέστηκαν με έγκριση Giorgio: **127/127 πράσινα** · μετάλλαξη 3/3 (φρένο «μόνο αδιάβαστη πηγή» · «ακριβώς ένα» του αποκλεισμού · επανέλεγχος απάντησης). Λεπτομέρειες: πίνακας Β10. |
 | 2026-11-13 | **§5.5.2 Β3 Γ13 — βήμα 3Α: κάθε στόχος παίρνει το δικό του κομμάτι σύνθετου κελιού** (σχέδιο εγκεκριμένο από Giorgio· έρευνα: ETIM EF000351/EF000416 · Akeneo SDM Value Mapping · Rossum formula fields). Μετρημένο: σελ. 85 «ΗΛΕΚΤΡΙΚΗ ΠΑΡΟΧΗ» = **ένα** ενωμένο κελί `230V-50Hz-1Ph`· με Γ13 κάθε στόχος έπαιρνε ολόκληρο το κείμενο, που δεν διαβάζεται ούτε ως τάση ούτε ως συχνότητα. Νέο καθαρό `import/cell-fragments.ts` (`fragmentFor`): μόνο όταν το ολόκληρο κείμενο **δεν** διαβάζεται και η γραμμή έχει 2+ στόχους (`page-table-reading.ts` `rowsOf`/`ownFragment`), ο στόχος κρατά το **μοναδικό** κομμάτι που διαβάζει ο δικός του `parseImportCell` (`230V` · `50Hz`)· κανένα ή περισσότερα ⇒ ολόκληρο, με το εύρημα της ανάγνωσης ορατό. **Φρένο εύρους**: γυμνός αριθμός ανάμεσα στα κομμάτια (`220-240V` · `50-60Hz`) ⇒ κανένα σπάσιμο (αλλιώς σιωπηλό 240 V). Κείμενο δεν σπάει ποτέ. ⚠️ Το πλαίσιο μένει όλο το κελί: η στρώση κειμένου δίνει λέξεις, όχι γεωμετρία μέσα στη λέξη (το σχέδιο το ήθελε «αν βρεθεί» — δεν βρίσκεται). SSoT: το ουδέτερο πλαίσιο ανάγνωσης `importTextContextOf` (`proposal-values.ts`) βγήκε από το `import-proposal-plan.server.ts` και το καλούν και οι δύο. `IMPORT_PAGE_DERIVATION` 5→6. Επόμενα: 3Β (μνήμη τιμών ανά προμηθευτή για το «1Ph») · 3Γ (ιδιότητες κατά ETIM, ένδειξη, κανόνας συνέπειας). |
 | 2026-11-13 | **§5.5.2 Β9δ — η ετικέτα βήματος αναίρεσης για αποφασισμένη γραμμή: «ΠΑΡ.ΝΕΡΟΥ», όχι «Γραμμή "17"»** (εντολή Giorgio). Ρίζα: το `lineTextOf` (`review-history-line.ts`) έψαχνε μόνο τις «χωρίς πεδίο», από όπου η αποφασισμένη γραμμή έχει φύγει. SSoT: ο κανόνας της λίστας αποφάσεων (`decided-lines.ts`) βγήκε σε `printedLineLabelOf` (γραμμή χωρίς πεδίο → `identity.printed` → `null`) και τον καλούν και οι δύο· καμία πηγή ⇒ ο αριθμός της γραμμής, όπως πριν. Άγκυρα `review-history-line.test.ts` +1. Επίσης, ζωντανός έλεγχος του Β8 (γ) μετά την ανάπτυξη `3f6d87a`: ΣΥΝΔΕΣΕΙΣ 7 · `dn 20` 7 · `1,6 MPa` 8 πλαίσια — το 8ο είναι το κελί μονάδας «MPa», σκόπιμα μέρος της άγκυρας (`page-table-reading.ts` `extractedCell`: `[cell.box, unit.cell.box]`). |

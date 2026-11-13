@@ -9,11 +9,13 @@ import type {
   CatalogFamilyDefinition,
   ConsistencyRule,
   FamilyTableSpec,
+  RuleCondition,
   FamilyTableRow,
   VariantScheme,
 } from '../../types/family';
 import {
   COMPARE_OPERATORS,
+  OPTION_CONDITION_OPERATORS,
   ORDER_DIRECTIONS,
   RULE_SEVERITIES,
   TABLE_OVERFLOW_MODES,
@@ -64,7 +66,26 @@ const tableSpecSchema: z.ZodType<FamilyTableSpec, z.ZodTypeDef, unknown> = z.obj
   overflow: z.enum(TABLE_OVERFLOW_MODES).optional(),
 });
 
-const ruleBase = { id: localIdSchema, severity: z.enum(RULE_SEVERITIES) };
+/** §21.5: η συνθήκη «όταν» — δομή εδώ, σημασιολογία (τύπος ιδιότητας ↔ είδος ελέγχου) στο `validate-family-rules.ts`. */
+const ruleConditionSchema: z.ZodType<RuleCondition, z.ZodTypeDef, unknown> = z.object({
+  attributeId: entityIdSchema,
+  test: z.discriminatedUnion('kind', [
+    z.object({
+      kind: z.literal('number'),
+      operator: z.enum(COMPARE_OPERATORS),
+      value: z.number().finite(),
+      unitCode: measurementUnitCodeSchema.nullable(),
+    }),
+    z.object({
+      kind: z.literal('option'),
+      operator: z.enum(OPTION_CONDITION_OPERATORS),
+      optionCodes: z.array(catalogCodeSchema).min(1).max(CATALOG_LIMITS.maxSelectOptions),
+    }),
+    z.object({ kind: z.literal('boolean'), value: z.boolean() }),
+  ]),
+});
+
+const ruleBase = { id: localIdSchema, severity: z.enum(RULE_SEVERITIES), when: ruleConditionSchema.nullable().optional() };
 
 const consistencyRuleSchema: z.ZodType<ConsistencyRule, z.ZodTypeDef, unknown> = z.discriminatedUnion('kind', [
   z.object({ ...ruleBase, kind: z.literal('unique'), attributeId: entityIdSchema }),

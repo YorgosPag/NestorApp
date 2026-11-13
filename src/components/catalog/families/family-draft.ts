@@ -145,7 +145,12 @@ export function nextLocalId(prefix: string, existing: readonly string[]): string
   return `${prefix}_${max + 1}`;
 }
 
+/**
+ * Αναφέρει ο κανόνας την ιδιότητα; Και η συνθήκη «όταν» μετράει (§21.5): κανόνας που χάνει τη συνθήκη του **φεύγει**,
+ * δεν γίνεται καθολικός — το «≥ 380 V» χωρίς «όταν τριφασικό» θα έκρινε σιωπηλά και τα μονοφασικά.
+ */
 function ruleMentions(rule: ConsistencyRule, id: string): boolean {
+  if (rule.when?.attributeId === id) return true;
   switch (rule.kind) {
     case 'unique': return rule.attributeId === id;
     case 'orderAcrossAttributes': return rule.attributeIds.includes(id);
