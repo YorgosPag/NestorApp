@@ -10,7 +10,13 @@ jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: jest.fn() }));
 
 import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import type { PendingEmail } from '@/server/notifications/email-digest';
-import { gateQueuedEmails, type HolidayQuestionLoader, type SettingsLoader } from '@/server/notifications/email-send-gate';
+import {
+  gateQueuedEmails,
+  type CrmUnreadLoader,
+  type HolidayQuestionLoader,
+  type NetworkUnreadLoader,
+  type SettingsLoader,
+} from '@/server/notifications/email-send-gate';
 import {
   getDefaultNotificationSettings,
   type UserNotificationSettings,
@@ -156,5 +162,47 @@ describe('Ρ — ερώτηση αργιών: «έχει ακόμη νόημα;�
       throw new Error('firestore down');
     };
     await expect(gateQueuedEmails([message('q', { facts: HOLIDAY })], loaderFrom({}), asking)).rejects.toThrow('firestore down');
+  });
+});
+
+// =============================================================================
+// Γ — «ο πελάτης σού έγραψε»: ισχύει ακόμη; (ADR-939 §6.1 βήμα 6Β)
+// =============================================================================
+
+const CRM_UNREAD = { kind: 'crm-conversation-unread' as const, conversationId: 'conv_1', messageId: 'msg_1' };
+const PORTAL = NOTIFICATION_EVENT_TYPES.CRM_PORTAL_MESSAGE;
+const noAsking: HolidayQuestionLoader = async () => new Set();
+const noNetwork: NetworkUnreadLoader = async () => new Set();
+
+function crmFrom(keys: readonly string[]): jest.MockedFunction<CrmUnreadLoader> {
+  return jest.fn(async () => new Set(keys));
+}
+
+describe('Γ — email συνομιλίας CRM: κρίνεται τη στιγμή της αποστολής', () => {
+  const portalEmail = message('p', { eventType: PORTAL, facts: CRM_UNREAD, notificationId: 'ntf_1' });
+
+  it('Γ1 — ισχύει ακόμη ⇒ φεύγει· ο κριτής παίρνει και την ειδοποίηση', async () => {
+    const crm = crmFrom(['conv_1:msg_1:ntf_1']);
+    const result = await gateQueuedEmails([portalEmail], loaderFrom({}), noAsking, noNetwork, crm);
+    expect(ids(result.deliverable)).toEqual(['p']);
+    expect(crm).toHaveBeenCalledWith([{ conversationId: 'conv_1', messageId: 'msg_1', notificationId: 'ntf_1' }]);
+  });
+
+  it('Γ2 🔴 — απαντήθηκε / νεότερο μήνυμα / διαβάστηκε ⇒ `thread-settled`', async () => {
+    const result = await gateQueuedEmails([portalEmail], loaderFrom({}), noAsking, noNetwork, crmFrom([]));
+    expect(result.suppressed).toEqual([{ message: portalEmail, reason: 'thread-settled' }]);
+  });
+
+  it('Γ3 — πέρασμα ΧΩΡΙΣ τέτοιο email ⇒ ο κριτής δεν καλείται (μηδέν αναγνώσεις)', async () => {
+    const crm = crmFrom([]);
+    await gateQueuedEmails([message('a')], loaderFrom({}), noAsking, noNetwork, crm);
+    expect(crm).not.toHaveBeenCalled();
+  });
+
+  it('Γ4 🔴 — ο κριτής αποτυγχάνει ⇒ ΡΙΧΝΕΙ', async () => {
+    const crm: CrmUnreadLoader = async () => {
+      throw new Error('firestore down');
+    };
+    await expect(gateQueuedEmails([portalEmail], loaderFrom({}), noAsking, noNetwork, crm)).rejects.toThrow('firestore down');
   });
 });

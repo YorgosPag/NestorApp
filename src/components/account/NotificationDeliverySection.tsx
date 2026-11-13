@@ -107,7 +107,12 @@ function EmailSubSetting({ controlId, label, description, children }: EmailSubSe
 function FrequencyPicker({ value, onChange }: { value: EmailFrequency; onChange: (frequency: EmailFrequency) => void }) {
   const { t } = useNotificationSettingsUi();
   return (
-    <EmailSubSetting controlId={DELIVERY_CONTROL_IDS.emailFrequency} label={t('account.notificationSettings.emailFrequency')}>
+    <EmailSubSetting
+      controlId={DELIVERY_CONTROL_IDS.emailFrequency}
+      label={t('account.notificationSettings.emailFrequency')}
+      // 💬 ADR-849 §6ε — η συχνότητα δεν αφορά τα μηνύματα ανθρώπων: η οθόνη το λέει, δεν το κρύβει.
+      description={t('account.notificationSettings.emailFrequencyDescription')}
+    >
       <Select value={value} onValueChange={(next) => { if (isEmailFrequency(next)) onChange(next); }}>
         <SelectTrigger id={DELIVERY_CONTROL_IDS.emailFrequency} className="w-40">
           <SelectValue />

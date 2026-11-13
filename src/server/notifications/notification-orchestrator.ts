@@ -90,6 +90,12 @@ export interface DispatchContent {
    * («email μόνο αν το μήνυμα μείνει αδιάβαστο 15′» — Slack/Teams). Δεν αγγίζει το κουδούνι.
    */
   emailNotBefore?: Date;
+  /**
+   * 💬 ADR-939 §6.1 βήμα 6Β — **σώμα μόνο για το email**, όταν διαφέρει από το κουδούνι. Το κουδούνι δείχνει το
+   * **ένα** μήνυμα· το email (που φεύγει **ένα** για όλη τη σιωπή, Intercom) κουβαλά **όλα** τα αναπάντητα.
+   * Απουσία ⇒ το `body`, όπως πάντα.
+   */
+  emailBody?: string;
 }
 
 /**
@@ -330,7 +336,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     // στέλνω σε μοναχικό email;» το απαντά ο αποστολέας (`outbound-email-flush`,
     // {@link deliverOne}) τη στιγμή της αποστολής. Ένα πεδίο δεδομένων δεν
     // επιτρέπεται να κουβαλά την απάντηση **άλλου** καταναλωτή.
-    content: body ?? '',
+    content: request.emailBody ?? body ?? '',
     dedupeKey,
     entityId,
     entityType: entityType as EnqueueMessageParams['entityType'],

@@ -145,12 +145,22 @@ function PanelShell({ title, children }: { title: string; children: React.ReactN
 
 /** Τι ισχύει τώρα, σε μία πρόταση. */
 function StateLine({ state }: { state: EmailSubscriptionState }) {
-  const { t } = useTranslation([NS]);
+  const { t } = useTranslation([NS, 'common-account']);
   if (!emailsAreOn(state) || state.emailFrequency === 'disabled') {
     return <p className="text-sm text-card-foreground">{t('auth:emailPreferences.stateOff')}</p>;
   }
   const frequency = t(FREQUENCY_KEYS[state.emailFrequency]);
-  return <p className="text-sm text-card-foreground">{t('auth:emailPreferences.stateOn', { frequency })}</p>;
+  return (
+    <>
+      <p className="text-sm text-card-foreground">{t('auth:emailPreferences.stateOn', { frequency })}</p>
+      {/* 💬 ADR-849 §6ε — η σύνοψη δεν αφορά τα μηνύματα ανθρώπων· το λέμε εδώ, όπου ο άνθρωπος διαλέγει σύνοψη. */}
+      {state.emailFrequency !== 'realtime' && (
+        <p className="text-xs text-muted-foreground">
+          {t('common-account:account.notificationSettings.emailFrequencyDescription')}
+        </p>
+      )}
+    </>
+  );
 }
 
 /** Οι επιλογές — **μόνο** όσες αλλάζουν κάτι στην τρέχουσα κατάσταση. */

@@ -24,6 +24,7 @@ import {
 } from '@/config/notification-preference-rows';
 
 import {
+  isConversationSetting,
   isMandatorySetting,
   parseSettingPath,
   settingPathOf,
@@ -36,6 +37,8 @@ export interface PreferenceRow {
   readonly ref: NotificationSettingRef;
   readonly labelKey: string;
   readonly mandatory: boolean;
+  /** 💬 ADR-849 §6ε — μήνυμα ανθρώπου: το email φεύγει μέσα σε λίγα λεπτά, ανεξάρτητα από τη συχνότητα. */
+  readonly immediate: boolean;
 }
 
 /** Μία ομάδα του μητρώου με τις γραμμές της. */
@@ -51,7 +54,10 @@ function rowsOf(group: NotificationPreferenceGroup): readonly PreferenceRow[] {
     const ref = parseSettingPath(`${group.category}.${row.key}`);
     if (ref === null) return [];
     // Η διαδρομή χτίζεται από το **ίδιο** `settingPathOf` με τον διακομιστή — μία μορφή.
-    return [{ path: settingPathOf(ref), ref, labelKey: row.labelKey, mandatory: isMandatorySetting(ref) }];
+    return [{
+      path: settingPathOf(ref), ref, labelKey: row.labelKey,
+      mandatory: isMandatorySetting(ref), immediate: isConversationSetting(ref),
+    }];
   });
 }
 

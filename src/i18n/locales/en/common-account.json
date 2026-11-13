@@ -120,6 +120,7 @@
       "inApp": "In-app notifications",
       "email": "Email notifications",
       "emailFrequency": "Email frequency",
+      "emailFrequencyDescription": "Messages from clients and partners still arrive within minutes if they stay unread.",
       "disabledMessage": "Notifications are disabled. Enable them to manage categories.",
       "frequency": {
         "realtime": "Real-time",
@@ -220,6 +221,7 @@
           "email": "Also by email"
         },
         "always": "Always",
+        "immediate": "Real-time",
         "mandatoryNote": "Security notifications about your account are always sent, regardless of your settings.",
         "emailsOffNote": "Emails are turned off. Your choices per type are kept for when you turn them back on.",
         "emailsOffAction": "Go to the email setting"

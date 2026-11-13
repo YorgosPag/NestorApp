@@ -106,6 +106,20 @@ export function isMandatorySetting(ref: NotificationSettingRef): boolean {
   );
 }
 
+/**
+ * 💬 ADR-849 §6ε — **Είναι ο διακόπτης τύπος «συνομιλίας»;** (μήνυμα ανθρώπου: το email φεύγει μέσα σε λίγα
+ * λεπτά, όχι στη σύνοψη). Από το **ίδιο** SSoT με την πολιτική παράδοσης, ώστε η οθόνη να μη λέει «Ημερησίως»
+ * για email που φεύγει άμεσα.
+ */
+export function isConversationSetting(ref: NotificationSettingRef): boolean {
+  return Object.values(EVENT_CATEGORY_MAP).some(
+    (mapping) =>
+      mapping.conversationEmail !== undefined &&
+      mapping.category === ref.category &&
+      mapping.settingKey === ref.settingKey,
+  );
+}
+
 /** Οι τύποι που **δεν** φτάνουν με email — ταξινομημένες διαδρομές, για τη σελίδα και την αναίρεση. */
 export function mutedEmailTypes(settings: Pick<UserNotificationSettings, 'emailCategories'>): string[] {
   const muted: string[] = [];

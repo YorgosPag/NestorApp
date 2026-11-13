@@ -28,6 +28,10 @@
  * σίγασε; έφυγε από το ακροατήριο; λείπει;»* — το missed-activity email του Teams, που στέλνεται **μόνο** για ό,τι
  * έμεινε αδιάβαστο. Όχι ⇒ `thread-settled`. Χωρίς αυτό, «απάντησα από το κινητό στις 15:02» δεν σταματούσε το email.
  *
+ * 🔑 **ΤΕΤΑΡΤΗ ΕΡΩΤΗΣΗ, ΙΔΙΟ ΣΧΗΜΑ** (ADR-939 §6.1 βήμα 6Β): email «ο πελάτης σού έγραψε» ρωτά *«είναι ακόμη αυτό το
+ * τελευταίο μήνυμα της συνομιλίας; είδε ο παραλήπτης την ειδοποίηση;»* — το email συνεργάτη του Intercom. Όχι ⇒
+ * `thread-settled`. Χωρίς αυτό, η απάντηση συναδέλφου στο 1′ δεν σταματούσε το email του 3′.
+ *
  * ⚠️ **Αποτυχία ανάγνωσης ⇒ ΡΙΧΝΕΙ.** Ο αγωγός τότε δεν αγγίζει τίποτα και τα μηνύματα
  * μένουν `pending` για το επόμενο πέρασμα (5′). Η εναλλακτική «στείλ' τα» θα αγνοούσε
  * τη θέληση του ανθρώπου· η «σβήσ' τα» θα ήταν σιωπηλή απώλεια.
@@ -50,8 +54,10 @@ import { loadUserNotificationSettingsMany } from '@/server/notifications/user-no
 import type { UserNotificationSettings } from '@/services/user-notification-settings/user-notification-settings.types';
 import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
 import {
+  crmConversationUnreadKey,
   holidayQuestionFactsKey,
   networkUnreadKey,
+  type CrmConversationUnreadRef,
   type HolidayQuestionFactsRef,
   type NetworkUnreadRef,
 } from '@/types/notification-email-facts';
@@ -110,10 +116,37 @@ function networkUnreadRefOf(message: PendingEmail): NetworkUnreadRef | null {
   return { threadId: facts.threadId, recipientUid: recipientId, since: facts.since };
 }
 
+/**
+ * **Ποια email «ο πελάτης σού έγραψε» ισχύουν ακόμη;** (ADR-939 §6.1 βήμα 6Β) — ένεση, όπως οι ρυθμίσεις.
+ * Επιστρέφει κλειδιά `crmConversationUnreadKey`. ⚠️ Αποτυχία ⇒ **ρίχνει** (ίδιο δόγμα).
+ */
+export type CrmUnreadLoader = (refs: readonly CrmConversationUnreadRef[]) => Promise<ReadonlySet<string>>;
+
+/** Δυναμική εισαγωγή: τα περάσματα χωρίς email συνομιλίας CRM δεν φορτώνουν ποτέ τον αναγνώστη μηνυμάτων. */
+const loadPendingCrmUnread: CrmUnreadLoader = async (refs) => {
+  const [{ crmConversationUnreadStillPending }, { getAdminFirestore }] = await Promise.all([
+    import('@/server/comms/crm/crm-conversation-unread-email'),
+    import('@/lib/firebaseAdmin'),
+  ]);
+  return crmConversationUnreadStillPending(getAdminFirestore(), refs);
+};
+
+/** Το μήνυμα CRM ενός email — `null` αν το email δεν είναι τέτοιο. Η ειδοποίηση μπαίνει μόνο αν υπάρχει. */
+function crmUnreadRefOf(message: PendingEmail): CrmConversationUnreadRef | null {
+  const { facts, notificationId } = message;
+  if (facts?.kind !== 'crm-conversation-unread') return null;
+  return {
+    conversationId: facts.conversationId,
+    messageId: facts.messageId,
+    ...(notificationId ? { notificationId } : {}),
+  };
+}
+
 /** Οι απαντήσεις των ερωτήσεων «από γεγονότα» ενός περάσματος. */
 interface FactAnswers {
   readonly asking: ReadonlySet<string>;
   readonly pendingUnread: ReadonlySet<string>;
+  readonly pendingCrmUnread: ReadonlySet<string>;
 }
 
 /**
@@ -129,6 +162,10 @@ function questionSuppressionOf(message: PendingEmail, answers: FactAnswers): Sup
     case 'network-thread-unread': {
       const ref = networkUnreadRefOf(message);
       return ref !== null && answers.pendingUnread.has(networkUnreadKey(ref)) ? null : 'thread-settled';
+    }
+    case 'crm-conversation-unread': {
+      const ref = crmUnreadRefOf(message);
+      return ref !== null && answers.pendingCrmUnread.has(crmConversationUnreadKey(ref)) ? null : 'thread-settled';
     }
   }
 }
@@ -169,17 +206,20 @@ export async function gateQueuedEmails(
   load: SettingsLoader = loadUserNotificationSettingsMany,
   asking: HolidayQuestionLoader = loadAskingHolidayQuestions,
   unread: NetworkUnreadLoader = loadPendingNetworkUnread,
+  crmUnread: CrmUnreadLoader = loadPendingCrmUnread,
 ): Promise<QueueGateResult> {
   const userIds = pending.map(judgedRecipientOf).filter((id): id is string => id !== null);
   const questions = pending.flatMap(({ facts }) => (facts?.kind === 'holiday-hours-question' ? [facts] : []));
   const threads = pending.map(networkUnreadRefOf).filter((ref): ref is NetworkUnreadRef => ref !== null);
-  const [settingsByUser, stillAsking, pendingUnread] = await Promise.all([
+  const conversations = pending.map(crmUnreadRefOf).filter((ref): ref is CrmConversationUnreadRef => ref !== null);
+  const [settingsByUser, stillAsking, pendingUnread, pendingCrmUnread] = await Promise.all([
     userIds.length > 0 ? load(userIds) : new Map<string, UserNotificationSettings>(),
     questions.length > 0 ? asking(questions) : new Set<string>(),
     threads.length > 0 ? unread(threads) : new Set<string>(),
+    conversations.length > 0 ? crmUnread(conversations) : new Set<string>(),
   ]);
 
-  const answers: FactAnswers = { asking: stillAsking, pendingUnread };
+  const answers: FactAnswers = { asking: stillAsking, pendingUnread, pendingCrmUnread };
   const deliverable: PendingEmail[] = [];
   const suppressed: SuppressedEmail[] = [];
   for (const message of pending) {

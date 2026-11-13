@@ -117,6 +117,21 @@ describe('Π — η οθόνη λέει την αλήθεια', () => {
     renderMatrix();
     expect(screen.queryByText(`${PREFS}.emailsOffNote`)).toBeNull();
   });
+
+  it('Π7 🔴 — ADR-849 §6ε: η στήλη λέει «σύνοψη», αλλά τα μηνύματα ανθρώπων λένε «Άμεσα» (ονομαστικά)', () => {
+    renderMatrix(settingsWith({ emailFrequency: 'daily' }));
+    const immediate = PREFERENCE_TABLE.flatMap(({ rows }) => rows.filter((row) => row.immediate)).map((row) => row.path);
+    expect(immediate.sort()).toEqual(['crm.portalMessage', 'network.threadMessage']);
+    expect(screen.getAllByText(`${PREFS}.immediate`)).toHaveLength(immediate.length);
+    for (const path of immediate) {
+      expect(cell(path, 'email').getAttribute('aria-describedby')).toBe(`${preferenceRowId(path)}-immediate`);
+    }
+  });
+
+  it.each(['realtime', 'disabled'] as const)('Π7β — συχνότητα `%s`: καμία ένδειξη «Άμεσα» (θα ήταν περιττή ή ψευδής)', (emailFrequency) => {
+    renderMatrix(settingsWith({ emailFrequency }));
+    expect(screen.queryByText(`${PREFS}.immediate`)).toBeNull();
+  });
 });
 
 describe('Δ — κάθε διακόπτης κάνει ό,τι λέει', () => {

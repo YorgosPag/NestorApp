@@ -34,8 +34,36 @@ export interface NetworkThreadUnreadFacts {
   readonly since: string;
 }
 
+/**
+ * 💬 ADR-939 §6.1 βήμα 6Β — **«ο πελάτης σού έγραψε»** (το email συνεργάτη του Intercom: ένα, μόνο αν δεν το
+ * είδε κανείς). Η πύλη αποστολής ρωτά τη στιγμή της αποστολής: *είναι ακόμη αυτό το τελευταίο μήνυμα της
+ * συνομιλίας; διάβασε ο παραλήπτης την ειδοποίηση;* Νεότερο μήνυμα πελάτη ⇒ το email πάει με **εκείνο**·
+ * απάντηση **οποιουδήποτε** συναδέλφου ⇒ το θέμα κλείστηκε. Οποιοδήποτε από τα δύο ⇒ **δεν** φεύγει.
+ *
+ * ⚠️ Ταυτότητα, ποτέ ώρα: η σύγκριση «είναι το τελευταίο;» γίνεται με το `messageId`.
+ */
+export interface CrmConversationUnreadFacts {
+  readonly kind: 'crm-conversation-unread';
+  readonly conversationId: string;
+  /** Το μήνυμα του πελάτη που γέννησε **αυτό** το email. */
+  readonly messageId: string;
+}
+
 /** Κλειστό σύνολο — νέο είδος = νέο μέλος **και** κλάδος στον αναγνώστη και στην πύλη. */
-export type NotificationEmailFacts = HolidayQuestionFacts | NetworkThreadUnreadFacts;
+export type NotificationEmailFacts = HolidayQuestionFacts | NetworkThreadUnreadFacts | CrmConversationUnreadFacts;
+
+/** Ό,τι ταυτίζει **ένα** αδιάβαστο μήνυμα CRM ενός ανθρώπου — η πύλη αποστολής ρωτά «ισχύει ακόμη;». */
+export interface CrmConversationUnreadRef {
+  readonly conversationId: string;
+  readonly messageId: string;
+  /** Η ειδοποίηση του παραλήπτη (`notifications/{id}`): «την είδε;». Απουσία ⇒ κρίνεται μόνο η συνομιλία. */
+  readonly notificationId?: string;
+}
+
+/** **Ένα κλειδί, δύο πλευρές** (φορτωτής ⇄ πύλη) — ίδιο σχήμα με το {@link networkUnreadKey}. */
+export function crmConversationUnreadKey(ref: CrmConversationUnreadRef): string {
+  return `${ref.conversationId}:${ref.messageId}:${ref.notificationId ?? ''}`;
+}
 
 /** Ό,τι ταυτίζει **μία** ερώτηση ενός email — η πύλη αποστολής ρωτά «έχει ακόμη νόημα;» με αυτό. */
 export type HolidayQuestionFactsRef = Pick<HolidayQuestionFacts, 'questionId' | 'nonce'>;
@@ -60,7 +88,12 @@ export function holidayQuestionFactsKey(ref: HolidayQuestionFactsRef): string {
 /** **Ανεκτικός αναγνώστης** — παλιό έγγραφο της ουράς ή σκουπίδι ⇒ `undefined`, ποτέ σφάλμα (email χωρίς κουμπιά). */
 export function readNotificationEmailFacts(raw: unknown): NotificationEmailFacts | undefined {
   if (typeof raw !== 'object' || raw === null) return undefined;
-  const { kind, questionId, nonce, threadId, since } = raw as Record<string, unknown>;
+  const { kind, questionId, nonce, threadId, since, conversationId, messageId } = raw as Record<string, unknown>;
+  if (kind === 'crm-conversation-unread') {
+    return typeof conversationId === 'string' && typeof messageId === 'string'
+      ? { kind, conversationId, messageId }
+      : undefined;
+  }
   if (kind === 'holiday-hours-question') {
     return typeof questionId === 'string' && typeof nonce === 'string' ? { kind, questionId, nonce } : undefined;
   }

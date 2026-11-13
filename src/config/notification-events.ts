@@ -293,7 +293,31 @@ export interface EventCategoryMapping {
   settingKey: keyof CrmNotificationSettings | keyof PropertiesNotificationSettings | keyof TasksNotificationSettings | keyof SecurityNotificationSettings | keyof ProcurementNotificationSettings | keyof NetworkNotificationSettings;
   isMandatory: boolean;
   defaultSeverity: Severity;
+  /**
+   * 💬 ADR-849 §6ε (ADR-939 §6.1 βήμα 6Β) — **κλάση «συνομιλία»: μήνυμα που έγραψε ΑΝΘΡΩΠΟΣ προς τον παραλήπτη.**
+   *
+   * Δεν περιμένει το παράθυρο `daily`/`weekly`: φεύγει όταν μείνει αδιάβαστο για `graceMs` (Intercom 3′ ·
+   * Slack 15′ — κανένας μεγάλος δεν στέλνει μήνυμα ανθρώπου στη σύνοψη της ημέρας). Τηρεί ώρες ησυχίας και
+   * **κάθε** διακόπτη (`emailSuppressionReason` δεν αλλάζει).
+   *
+   * ⚠️ **ΔΕΝ είναι η «σημαία επείγοντος» που απαγορεύει το `email-delivery-window.ts`**: δηλώνεται ανά **τύπο**
+   * εδώ (όπως το `isMandatory`), ποτέ από τον παραγωγό ανά κλήση, και είναι **κλειστή λίστα** με άγκυρα.
+   * Απουσία ⇒ η κανονική πολιτική συχνότητας.
+   */
+  conversationEmail?: { readonly graceMs: number };
 }
+
+/**
+ * 💬 Αναμονή email για μήνυμα **πελάτη** από τη σελίδα παραστατικού: 3′ σιωπής (Intercom — ένα email για όλα,
+ * μόνο αν δεν το είδε κανείς).
+ */
+export const PORTAL_MESSAGE_EMAIL_GRACE_MS = 3 * 60_000;
+
+/**
+ * 💬 Αναμονή email για μήνυμα **συνεργάτη** στο δίκτυο: 15′ (Slack «when I'm not active»· Teams από 10′) —
+ * αρκετό για να απαντήσει ο άνθρωπος από την εφαρμογή.
+ */
+export const NETWORK_THREAD_EMAIL_GRACE_MS = 15 * 60_000;
 
 /**
  * Event to category/setting mapping
@@ -338,6 +362,7 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'portalMessage',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+    conversationEmail: { graceMs: PORTAL_MESSAGE_EMAIL_GRACE_MS },
   },
   [NOTIFICATION_EVENT_TYPES.CRM_CONTACT_TRASHED]: {
     category: 'crm',
@@ -701,6 +726,7 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'threadMessage',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+    conversationEmail: { graceMs: NETWORK_THREAD_EMAIL_GRACE_MS },
   },
   [NOTIFICATION_EVENT_TYPES.NETWORK_TEAM_JOINED]: {
     category: 'network',

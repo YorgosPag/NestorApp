@@ -18,6 +18,7 @@ import {
   decideEmailDelivery,
   type EmailDeliveryDecision,
 } from '@/server/notifications/email-delivery-window';
+import { EVENT_CATEGORY_MAP } from '@/config/notification-events';
 import { resolveTimeZone } from '@/lib/datetime/supported-timezones';
 import {
   getDefaultNotificationSettings,
@@ -524,5 +525,75 @@ describe('Ζ — το «22:00» κάθε ανθρώπου είναι το ΔΙΚ
     expect(resolveTimeZone('Δεν/Υπάρχει')).toBe('Europe/Athens');
     expect(resolveTimeZone(undefined)).toBe('Europe/Athens');
     expect(resolveTimeZone('')).toBe('Europe/Athens');
+  });
+});
+
+// =============================================================================
+// Κ — ΚΛΑΣΗ «ΣΥΝΟΜΙΛΙΑ»: ΤΟ ΜΗΝΥΜΑ ΑΝΘΡΩΠΟΥ ΔΕΝ ΠΕΡΙΜΕΝΕΙ ΤΗ ΣΥΝΟΨΗ (ADR-849 §6ε)
+// =============================================================================
+
+describe('Κ — κλάση «συνομιλία»: παρακάμπτει ΜΟΝΟ τα παράθυρα σύνοψης', () => {
+  const noQuiet = { enabled: false, startTime: '22:00', endTime: '08:00' };
+  const PORTAL = { category: 'crm', settingKey: 'portalMessage' } as const;
+  const now = athens('2026-08-19T11:00:00+03:00');
+  const grace = new Date(now.getTime() + 3 * 60_000);
+  const CONVERSATION = { ...ORDINARY, setting: PORTAL, conversation: true, notBefore: grace } as const;
+
+  it.each(['daily', 'weekly'] as const)('Κ1 — `%s` ⇒ φεύγει μετά την αναμονή, ΟΧΙ στο παράθυρο', (emailFrequency) => {
+    const d = decideEmailDelivery(settingsWith({ emailFrequency, quietHours: noQuiet }), { now, ...CONVERSATION });
+    expect(d).toEqual({ kind: 'defer', deliverAt: grace, reason: 'unread-grace' });
+  });
+
+  it('Κ2 — χωρίς αναμονή ⇒ τώρα, ακόμη και με `daily`', () => {
+    const d = decideEmailDelivery(settingsWith({ emailFrequency: 'daily', quietHours: noQuiet }), {
+      now, ...ORDINARY, setting: PORTAL, conversation: true,
+    });
+    expect(d).toEqual({ kind: 'send-now' });
+  });
+
+  it('Κ3 🔴 — ο ΜΗ συνομιλιακός τύπος μένει στο παράθυρο (μάρτυρας της μετάλλαξης)', () => {
+    const at = deferredAt(decideEmailDelivery(settingsWith({ emailFrequency: 'daily', quietHours: noQuiet }), {
+      now, ...ORDINARY, setting: PORTAL, notBefore: grace,
+    }));
+    expect(athensHour(at)).toBe(DAILY_WINDOW_HOUR);
+  });
+
+  it('Κ4 — οι ώρες ησυχίας ΤΗΡΟΥΝΤΑΙ: μήνυμα στις 21:58 φεύγει στις 08:00', () => {
+    const late = athens('2026-08-19T21:58:00+03:00');
+    const at = deferredAt(decideEmailDelivery(
+      settingsWith({ emailFrequency: 'daily', quietHours: { enabled: true, startTime: '22:00', endTime: '08:00' } }),
+      { now: late, ...ORDINARY, setting: PORTAL, conversation: true, notBefore: new Date(late.getTime() + 3 * 60_000) },
+    ));
+    expect(athensHour(at)).toBe(8);
+  });
+
+  it('Κ5 🔴 — ΚΑΘΕ διακόπτης ανθρώπου σιγάζει ακόμη', () => {
+    const decide = (overrides: Partial<UserNotificationSettings>) =>
+      decideEmailDelivery(settingsWith({ quietHours: noQuiet, ...overrides }), { now, ...CONVERSATION });
+    const base = getDefaultNotificationSettings('usr_test');
+
+    expect(decide({ emailFrequency: 'disabled' })).toEqual({ kind: 'suppressed', reason: 'frequency-disabled' });
+    expect(decide({ emailEnabled: false })).toEqual({ kind: 'suppressed', reason: 'email-disabled' });
+    expect(decide({ emailCategories: { ...base.emailCategories, crm: { portalMessage: 'off' } } }))
+      .toEqual({ kind: 'suppressed', reason: 'type-email-disabled' });
+    expect(decide({ categories: { ...base.categories, crm: { ...base.categories.crm, portalMessage: false } } }))
+      .toEqual({ kind: 'suppressed', reason: 'category-disabled' });
+  });
+});
+
+describe('Κ6 — η κλάση «συνομιλία» είναι ΚΛΕΙΣΤΗ λίστα στο SSoT', () => {
+  it('ακριβώς δύο τύποι, με την αναμονή των μεγάλων (Intercom 3′ · Slack 15′)', () => {
+    const declared = Object.entries(EVENT_CATEGORY_MAP)
+      .flatMap(([type, mapping]) => (mapping.conversationEmail ? [[type, mapping.conversationEmail.graceMs] as const] : []))
+      .sort(([a], [b]) => a.localeCompare(b));
+    expect(declared).toEqual([
+      ['crm.portalMessage', 3 * 60_000],
+      ['network.threadMessage', 15 * 60_000],
+    ]);
+  });
+
+  it('κανένας υποχρεωτικός τύπος δεν είναι και συνομιλία (δύο παρακάμψεις με άλλη σημασία)', () => {
+    const both = Object.values(EVENT_CATEGORY_MAP).filter((m) => m.isMandatory && m.conversationEmail);
+    expect(both).toEqual([]);
   });
 });

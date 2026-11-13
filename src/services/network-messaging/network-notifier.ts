@@ -30,6 +30,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import {
   getCurrentEnvironment,
+  NETWORK_THREAD_EMAIL_GRACE_MS,
   NOTIFICATION_ENTITY_TYPES,
   NOTIFICATION_EVENT_TYPES,
   SOURCE_SERVICES,
@@ -70,11 +71,11 @@ const logger = createModuleLogger('network-notifier');
 
 /**
  * **Πόσο περιμένει το email** πριν φύγει — και φεύγει **μόνο** αν το μήνυμα είναι ακόμη αδιάβαστο.
- * Slack: ομαδοποίηση ανά **15′** ή ανά ώρα· Teams: από **10′** ως μία φορά τη μέρα. Το 15′ είναι το
- * κατώφλι του Slack: αρκετό για να προλάβει ο άνθρωπος να απαντήσει από την εφαρμογή, αρκετά μικρό ώστε
- * ο πελάτης να μην περιμένει.
+ *
+ * 🔗 ADR-939 §6.1 βήμα 6Β — η τιμή ζει στο SSoT της κλάσης «συνομιλία» (`EVENT_CATEGORY_MAP`), ώστε η πολιτική
+ * παράδοσης και ο παραγωγός να διαβάζουν **τον ίδιο** αριθμό. Το όνομα μένει για τους υπάρχοντες καταναλωτές.
  */
-export const NETWORK_UNREAD_EMAIL_GRACE_MS = 15 * 60_000;
+export const NETWORK_UNREAD_EMAIL_GRACE_MS = NETWORK_THREAD_EMAIL_GRACE_MS;
 
 // =============================================================================
 // ΛΕΞΕΙΣ — κλειδιά για την οθόνη, θέμα email στον διακομιστή

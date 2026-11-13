@@ -23,8 +23,10 @@ import {
   readMessagesPage, type MessageListItem,
 } from '@/app/api/conversations/[conversationId]/messages/conversation-messages-page';
 import {
-  NOTIFICATION_ENTITY_TYPES, NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES, getCurrentEnvironment,
+  NOTIFICATION_ENTITY_TYPES, NOTIFICATION_EVENT_TYPES, PORTAL_MESSAGE_EMAIL_GRACE_MS, SOURCE_SERVICES,
+  getCurrentEnvironment,
 } from '@/config/notification-events';
+import { nowISO } from '@/lib/date-local';
 import { INVOICE_PORTAL_MESSAGE_DAILY_QUOTA } from '@/lib/middleware/rate-limit-config';
 import { withinSubjectQuota } from '@/lib/middleware/subject-quota';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -97,12 +99,29 @@ function invoiceSubjectOf(invoice: Invoice, shareId: string): ConversationSubjec
   return { kind: 'invoice', invoiceId: invoice.invoiceId, shareId, reference: invoiceReferenceOf(invoice) };
 }
 
+/** Πόσα αναπάντητα μηνύματα κουβαλά το email (τα πιο πρόσφατα). Πέρα από αυτό, ο σύνδεσμος ανοίγει το νήμα. */
+export const PORTAL_EMAIL_BURST_LIMIT = 10;
+
+/**
+ * 💬 ADR-939 §6.1 βήμα 6Β — **τα μηνύματα του πελάτη μετά την τελευταία απάντηση του εκδότη**, από το παλαιότερο
+ * στο νεότερο, το πολύ {@link PORTAL_EMAIL_BURST_LIMIT}. Καθαρή. Είναι το σώμα του **ενός** email που φεύγει μετά
+ * τη σιωπή (Intercom: ένα email για όλα): τα παλαιότερα email της ίδιας σιωπής τα σιγάζει η πύλη αποστολής.
+ */
+export function unansweredCustomerBurst(thread: readonly InvoicePortalMessage[]): readonly InvoicePortalMessage[] {
+  let start = thread.length;
+  while (start > 0 && thread[start - 1]?.author === 'customer') start -= 1;
+  return thread.slice(Math.max(start, thread.length - PORTAL_EMAIL_BURST_LIMIT));
+}
+
 interface IssuerNotice {
   readonly companyId: string;
   readonly recipientId: string;
   readonly invoice: Invoice;
+  readonly conversationId: string;
   readonly messageDocId: string;
   readonly text: string;
+  /** Το νήμα όπως διαβάστηκε **μετά** την αποθήκευση — μία ανάγνωση για ειδοποίηση και σελίδα. */
+  readonly thread: readonly InvoicePortalMessage[];
 }
 
 /**
@@ -136,6 +155,10 @@ async function notifyIssuer(notice: IssuerNotice): Promise<void> {
       titleKey: 'notifications.portal.newMessage',
       titleParams: { customer, reference },
       body: notice.text,
+      // 💬 Βήμα 6Β — ένα email για όλη τη σιωπή, με όλα τα αναπάντητα· η αναμονή και ο κριτής «ισχύει ακόμη;».
+      emailBody: unansweredCustomerBurst(notice.thread).map((message) => message.text).join('\n\n'),
+      emailNotBefore: new Date(Date.now() + PORTAL_MESSAGE_EMAIL_GRACE_MS),
+      emailFacts: { kind: 'crm-conversation-unread', conversationId: notice.conversationId, messageId: notice.messageDocId },
       severity: 'info',
       source: { service: SOURCE_SERVICES.CRM, feature: 'invoice-portal', env: getCurrentEnvironment() },
       eventId: notice.messageDocId,
@@ -156,7 +179,7 @@ export interface InvoicePortalPostInput extends InvoicePublicSessionInput {
 }
 
 /**
- * Ο πελάτης γράφει. Σειρά: κείμενο → σύνδεσμος/τιμολόγιο → όριο → αποθήκευση → ειδοποίηση → νήμα.
+ * Ο πελάτης γράφει. Σειρά: κείμενο → σύνδεσμος/τιμολόγιο → όριο → αποθήκευση → νήμα → ειδοποίηση.
  * Η επανάληψη του ίδιου αιτήματος (δίκτυο) αναπαράγεται από το σύνορο ιδεμποτίας της διαδρομής (CHECK 3.92).
  */
 export async function postInvoicePortalMessage(
@@ -179,10 +202,13 @@ export async function postInvoicePortalMessage(
     direction: MESSAGE_DIRECTION.INBOUND,
     subject: invoiceSubjectOf(shared.invoice, input.shareId),
   });
-  if (stored.messageDocId === null) return { status: 'refused', reason: 'store-failed' };
+  if (stored.messageDocId === null || stored.conversationId === null) return { status: 'refused', reason: 'store-failed' };
+  // Η ειδοποίηση δεν εξαρτάται από την ανάγνωση του νήματος: αποτυχία εκεί ⇒ email μόνο με αυτό το μήνυμα.
+  const thread = await threadOf(input.shareId).catch(() => null);
   await notifyIssuer({
     companyId: shared.companyId, recipientId: shared.share.createdBy, invoice: shared.invoice,
-    messageDocId: stored.messageDocId, text,
+    conversationId: stored.conversationId, messageDocId: stored.messageDocId, text,
+    thread: thread ?? [{ id: stored.messageDocId, author: 'customer', text, sentAt: nowISO() }],
   });
-  return { status: 'sent', messages: await threadOf(input.shareId) };
+  return { status: 'sent', messages: thread ?? await threadOf(input.shareId) };
 }

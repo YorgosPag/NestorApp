@@ -144,6 +144,8 @@ export type SuppressReason =
   /**
    * ADR-867 Β6 — **γεγονός του νήματος, όχι ρύθμιση**: το μήνυμα διαβάστηκε, το νήμα σιγάστηκε, ο παραλήπτης
    * βγήκε από το ακροατήριο ή λείπει **αφού** το email μπήκε στην ουρά. Το «έχεις αδιάβαστο» δεν ισχύει πια.
+   * 💬 ADR-939 §6.1 βήμα 6Β — **και** για συνομιλία CRM: απάντησε συνάδελφος, ο πελάτης έγραψε νεότερο μήνυμα
+   * (το email πάει με εκείνο) ή ο παραλήπτης είδε την ειδοποίηση.
    */
   | 'thread-settled';
 
@@ -209,6 +211,12 @@ export interface EmailDeliveryContext {
    * Τα υποχρεωτικά την αγνοούν (φεύγουν αμέσως, όπως πάντα).
    */
   readonly notBefore?: Date;
+  /**
+   * 💬 ADR-849 §6ε — **κλάση «συνομιλία»** (`EVENT_CATEGORY_MAP[τύπος].conversationEmail`): μήνυμα ανθρώπου.
+   * Παρακάμπτει **μόνο** τα παράθυρα `daily`/`weekly` (διαδρομή `realtime`: `notBefore` → ώρες ησυχίας).
+   * Κανέναν διακόπτη, καμία ησυχία. Απουσία ⇒ η κανονική πολιτική συχνότητας.
+   */
+  readonly conversation?: boolean;
 }
 
 /**
@@ -246,7 +254,9 @@ export function emailSuppressionReason(
  *    μήνυμα δεν επιτρέπεται να σιωπήσει από ρύθμιση άνεσης.
  * 2. **Διακόπτες ανθρώπου** ⇒ σιωπή ({@link emailSuppressionReason}): καθολικός, καναλιού,
  *    συχνότητα `disabled` και —ADR-849— ο τύπος ή το email του τύπου.
- * 3. **Συχνότητα** ⇒ παράθυρο (ή τώρα, για `realtime`).
+ * 3. **Συχνότητα** ⇒ παράθυρο (ή τώρα, για `realtime`). 💬 ADR-849 §6ε: η κλάση **«συνομιλία»** (μήνυμα
+ *    ανθρώπου) ακολουθεί πάντα τη διαδρομή `realtime` — κανένας μεγάλος (Intercom · Slack · HubSpot) δεν
+ *    στέλνει μήνυμα ανθρώπου στη σύνοψη της ημέρας. Η αναμονή της έρχεται από το `notBefore`.
  * 4. **Ώρες ησυχίας** ⇒ **μετά** τη συχνότητα, γιατί εφαρμόζεται στη
  *    **στιγμή παράδοσης**, όχι στη στιγμή γέννησης. Ένα `daily` που θα έφτανε
  *    στις 20:00 δεν ενοχλείται από ησυχία 22:00–08:00· ένα `realtime` στις 03:00
@@ -269,7 +279,8 @@ export function decideEmailDelivery(
   // απούσα τιμή πέφτει στην προεπιλογή αντί να ρίξει το `Intl`.
   const timeZone = resolveTimeZone(settings.timezone);
 
-  if (settings.emailFrequency === 'daily') {
+  // 💬 ADR-849 §6ε — μήνυμα ανθρώπου: ποτέ παράθυρο σύνοψης, πάντα η διαδρομή `realtime` πιο κάτω.
+  if (settings.emailFrequency === 'daily' && context.conversation !== true) {
     return withQuietHours(
       notEarlierThan({ kind: 'defer', deliverAt: nextDailyWindow(context.now, timeZone), reason: 'daily-window' }, context),
       settings,
@@ -277,7 +288,7 @@ export function decideEmailDelivery(
     );
   }
 
-  if (settings.emailFrequency === 'weekly') {
+  if (settings.emailFrequency === 'weekly' && context.conversation !== true) {
     return withQuietHours(
       notEarlierThan({ kind: 'defer', deliverAt: nextWeeklyWindow(context.now, timeZone), reason: 'weekly-window' }, context),
       settings,
@@ -285,7 +296,7 @@ export function decideEmailDelivery(
     );
   }
 
-  // `realtime` — η μόνη περίπτωση όπου η στιγμή παράδοσης είναι το τώρα (εκτός αν ο παραγωγός ζήτησε αναμονή).
+  // `realtime` ή συνομιλία — η στιγμή παράδοσης είναι το τώρα (εκτός αν ο παραγωγός ζήτησε αναμονή).
   return withQuietHours(notEarlierThan({ kind: 'send-now' }, context), settings, timeZone, context.now);
 }
 

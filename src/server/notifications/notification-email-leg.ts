@@ -172,11 +172,14 @@ function emailEnvelopeFacts(
 export async function queueNotificationEmail(
   request: EmailLegRequest,
 ): Promise<EmailLegOutcome> {
+  const mapping = EVENT_CATEGORY_MAP[request.eventType];
   const decision = decideEmailDelivery(request.settings, {
     now: request.now ?? new Date(),
     isMandatory: request.isMandatory,
     // 📧 ADR-849 — «όχι email για ταιριάσματα, ναι για εντολές»: ο διακόπτης ΤΟΥ τύπου.
-    setting: EVENT_CATEGORY_MAP[request.eventType],
+    setting: mapping,
+    // 💬 ADR-849 §6ε — μήνυμα ανθρώπου: ποτέ στη σύνοψη της ημέρας. Από το SSoT, ποτέ από τον παραγωγό.
+    conversation: mapping.conversationEmail !== undefined,
     ...(request.notBefore ? { notBefore: request.notBefore } : {}),
   });
 

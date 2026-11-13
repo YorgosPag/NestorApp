@@ -1364,3 +1364,8 @@ network_act_teams/{actKey}      responsibleUid · memberUids[] · hostCompanyId 
   `trash.backToProperties` · `storage` `page.backToProjects` · `tasks` `detail.backToTasks`. Τα 7 «Επιστροφή» που
   μένουν είναι **όλα** έξοδοι ροής (`auth` ×3, `errors` ×2, `exitTooltip`, `exitFullscreenTooltip`). Κανένα παραγόμενο
   artifact (`shell-slice.el.json`, `src/types/i18n.ts` — μόνο κλειδιά) ή test δεν περιείχε τα παλιά κείμενα.
+- **2026-11-13** — 💬 **Β6 — το email «νέο μήνυμα» δεν περιμένει πια τη σύνοψη** (ADR-849 §6ε, ADR-939 §6.1 βήμα 6Β). Το
+  `network.threadMessage` ανήκει στην κλάση «συνομιλία» του `EVENT_CATEGORY_MAP`: ο χρήστης με `daily`/`weekly` παίρνει το email
+  ~15′ μετά, αν το μήνυμα μείνει αδιάβαστο, αντί για τις 20:00 (Slack: τα DM δεν μπαίνουν σε σύνοψη). Η αναμονή των 15′ ζει πλέον
+  στο SSoT (`NETWORK_THREAD_EMAIL_GRACE_MS`)· το `NETWORK_UNREAD_EMAIL_GRACE_MS` διαβάζει από εκεί. Ο κριτής «εκκρεμεί ακόμη;»
+  (`network-unread-email.ts`) δεν άλλαξε.

@@ -25,6 +25,7 @@ import 'server-only';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import type { DeliveryState } from '@/types/notification';
 
 /**
  * Πάνω από αυτό δεν είναι «σημείωσε ό,τι είδα», είναι φορτίο. Το κουδούνι στέλνει
@@ -35,6 +36,30 @@ export const MAX_IDS_PER_MARK = 50;
 /** Τα πεδία του «διαβάστηκε» — **ένας** ορισμός, για το κουδούνι και για το email. */
 export function seenFields(): { readonly seen: true; readonly seenAt: string } {
   return { seen: true, seenAt: nowISO() };
+}
+
+/**
+ * Καταστάσεις του `delivery.state` που σημαίνουν «ο άνθρωπος δεν χρειάζεται πια υπενθύμιση»: την είδε, έκανε
+ * την ενέργεια, την έκλεισε, ή την απέσυρε η πηγή.
+ */
+const SETTLED_STATE_LIST: readonly DeliveryState[] = ['seen', 'acted', 'dismissed', 'withdrawn'];
+const SETTLED_DELIVERY_STATES: ReadonlySet<string> = new Set<string>(SETTLED_STATE_LIST);
+
+/**
+ * **Την είδε ο άνθρωπος;** — **ένας** αναγνώστης για **τα δύο** σχήματα που γράφονται σήμερα.
+ *
+ * ⚠️ Μετρημένο 2026-11-13 (ADR-939 §6.1 βήμα 6Β): ο διακομιστής (κουδούνι μέσω ack · `/n/{id}`) γράφει
+ * {@link seenFields} (`seen: true`), ενώ το κουδούνι του πελάτη (`notificationService.markNotificationsAsRead`)
+ * γράφει `delivery.state: 'seen'`. Όποιος ρωτούσε μόνο το ένα θα έστελνε email για ειδοποίηση που διαβάστηκε.
+ * Ανεκτικό: ό,τι δεν είναι αντικείμενο ⇒ `false` (δεν διαβάστηκε — ποτέ μαντεψιά υπέρ της σιωπής).
+ */
+export function notificationWasSeen(raw: unknown): boolean {
+  if (typeof raw !== 'object' || raw === null) return false;
+  if (Reflect.get(raw, 'seen') === true) return true;
+  const delivery: unknown = Reflect.get(raw, 'delivery');
+  if (typeof delivery !== 'object' || delivery === null) return false;
+  const state: unknown = Reflect.get(delivery, 'state');
+  return typeof state === 'string' && SETTLED_DELIVERY_STATES.has(state);
 }
 
 /** Τι απέγινε κάθε ταυτότητα. Ονομασμένο, ποτέ πλήθος μόνο. */

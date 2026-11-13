@@ -17,7 +17,7 @@
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
-    "src/i18n/generated/routes/email__preferences__token.el.json": "197e165b18d884c0f087807a3ca7845df0b25f74a24cf736c034e42eb1d3a54f",
+    "src/i18n/generated/routes/email__preferences__token.el.json": "45c4179d358aa4900494f31547bd1126905e23cae623d581d4c87d52ac62e516",
     "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "730bab12ea7cb7b47a3e2aab5679272198400a88e3eeda3d46a0c17a0ba49da3",
+  "inputsSha256": "760d57fc09917f05bf57c11dd34de4007ce73ace636ffcd847f4cf5a0a4d5d01",
   "languages": [
     "el"
   ],
@@ -2706,6 +2706,7 @@
             "account.notificationSettings.categories.tasks.dueToday",
             "account.notificationSettings.categories.tasks.overdue",
             "account.notificationSettings.categories.tasks.title",
+            "account.notificationSettings.emailFrequencyDescription",
             "account.notificationSettings.preferences.always",
             "account.notificationSettings.preferences.emailsOffNote",
             "account.notificationSettings.preferences.mandatoryNote"
@@ -40762,7 +40763,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1326609
+    "sliceBytes": 1326817
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

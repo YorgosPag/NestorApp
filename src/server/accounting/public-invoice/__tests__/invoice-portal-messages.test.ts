@@ -50,9 +50,11 @@ import {
   postInvoicePortalMessage,
   readInvoicePortalThread,
   toInvoicePortalMessage,
+  unansweredCustomerBurst,
+  PORTAL_EMAIL_BURST_LIMIT,
 } from '../invoice-portal-messages';
 import type { MessageListItem } from '@/app/api/conversations/[conversationId]/messages/conversation-messages-page';
-import { EVENT_CATEGORY_MAP, NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
+import { EVENT_CATEGORY_MAP, NOTIFICATION_EVENT_TYPES, PORTAL_MESSAGE_EMAIL_GRACE_MS } from '@/config/notification-events';
 import { DEFAULT_CRM_SETTINGS } from '@/services/user-notification-settings/user-notification-settings.types';
 import { INVOICE_PORTAL_MESSAGE_MAX_LENGTH } from '@/subapps/accounting/types/invoice-portal-messages';
 
@@ -190,5 +192,47 @@ describe('Γ5 — μισθωτής και πηγή μόνο από τον σύν
       senderName: 'Πελάτης ΑΕ',
       subject: { kind: 'invoice', invoiceId: 'inv_1', shareId: SHARE_ID, reference: 'Α-10' },
     }));
+  });
+});
+
+describe('Γ6 — ADR-939 §6.1 βήμα 6Β: ένα email για όλη τη σιωπή', () => {
+  const msg = (id: string, author: 'customer' | 'issuer') => ({ id, author, text: id, sentAt: '2026-11-13T10:00:00.000Z' });
+
+  it('Γ6.1 — μόνο τα μηνύματα πελάτη ΜΕΤΑ την τελευταία απάντηση, με τη σειρά τους', () => {
+    const burst = unansweredCustomerBurst([msg('c1', 'customer'), msg('i1', 'issuer'), msg('c2', 'customer'), msg('c3', 'customer')]);
+    expect(burst.map((m) => m.id)).toEqual(['c2', 'c3']);
+  });
+
+  it('Γ6.2 — τελευταίο μήνυμα του εκδότη ⇒ τίποτα αναπάντητο', () => {
+    expect(unansweredCustomerBurst([msg('c1', 'customer'), msg('i1', 'issuer')])).toEqual([]);
+  });
+
+  it('Γ6.3 — όριο: μόνο τα πιο πρόσφατα', () => {
+    const many = Array.from({ length: PORTAL_EMAIL_BURST_LIMIT + 3 }, (_, i) => msg(`c${i}`, 'customer'));
+    const burst = unansweredCustomerBurst(many);
+    expect(burst).toHaveLength(PORTAL_EMAIL_BURST_LIMIT);
+    expect(burst[burst.length - 1]?.id).toBe(`c${PORTAL_EMAIL_BURST_LIMIT + 2}`);
+  });
+
+  it('Γ6.4 🔑 — η ειδοποίηση φέρει αναμονή, γεγονότα συνομιλίας και σώμα email με όλα τα αναπάντητα', async () => {
+    mockReadMessagesPage.mockResolvedValue({
+      messages: [listItem('inbound', 'msg_doc_1'), listItem('inbound', 'a0'), listItem('outbound', 'b')], totalCount: 3, offset: 0,
+    });
+    const before = Date.now();
+    await postInvoicePortalMessage(db, { shareId: SHARE_ID, nowMs: 0, text: 'γεια' });
+    const request = mockDispatchNotification.mock.calls[0]?.[0] as { emailNotBefore: Date };
+    expect(mockDispatchNotification).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'γεια',
+      emailBody: 'κείμενο a0\n\nκείμενο msg_doc_1',
+      emailFacts: { kind: 'crm-conversation-unread', conversationId: 'conv', messageId: 'msg_doc_1' },
+    }));
+    expect(request.emailNotBefore.getTime()).toBeGreaterThanOrEqual(before + PORTAL_MESSAGE_EMAIL_GRACE_MS);
+  });
+
+  it('Γ6.5 🔴 — αποτυχία ανάγνωσης νήματος ΔΕΝ χάνει την ειδοποίηση (email μόνο με αυτό το μήνυμα)', async () => {
+    mockReadMessagesPage.mockRejectedValueOnce(new Error('down'));
+    await expect(postInvoicePortalMessage(db, { shareId: SHARE_ID, nowMs: 0, text: 'γεια' }))
+      .resolves.toEqual(expect.objectContaining({ status: 'sent' }));
+    expect(mockDispatchNotification).toHaveBeenCalledWith(expect.objectContaining({ emailBody: 'γεια' }));
   });
 });

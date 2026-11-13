@@ -95,10 +95,30 @@ function LockedCell() {
   );
 }
 
+/**
+ * 💬 ADR-849 §6ε — **η στήλη λέει «Ημερήσια σύνοψη», αλλά αυτή η γραμμή δεν περιμένει τη σύνοψη.** Μήνυμα
+ * ανθρώπου (πελάτης · συνεργάτης) φεύγει μέσα σε λίγα λεπτά αν μείνει αδιάβαστο — όπως στο Intercom και στο
+ * Slack. Χωρίς αυτή τη γραμμή, ο υπότιτλος της στήλης θα έλεγε ψέματα ακριβώς για τα μηνύματα που μετρούν.
+ */
+function immediateNoteShown(row: PreferenceRow, context: MatrixContext): boolean {
+  const frequency = context.settings.emailFrequency;
+  return row.immediate && context.emailsOn && (frequency === 'daily' || frequency === 'weekly');
+}
+
+function ImmediateNote({ id }: { id: string }) {
+  const { t, colors } = useNotificationSettingsUi();
+  return (
+    <span id={id} className={cn('block text-xs', colors.text.muted)}>
+      {t('common-account:account.notificationSettings.preferences.immediate')}
+    </span>
+  );
+}
+
 function PreferenceRowView({ row, columns, context }: { row: PreferenceRow; columns: ColumnIds; context: MatrixContext }) {
   const { t, colors, typography } = useNotificationSettingsUi();
   const rowId = preferenceRowId(row.path);
   const master = categorySettingEnabled(context.settings, row.ref);
+  const noteId = immediateNoteShown(row, context) ? `${rowId}-immediate` : undefined;
 
   return (
     <TableRow>
@@ -122,11 +142,13 @@ function PreferenceRowView({ row, columns, context }: { row: PreferenceRow; colu
             id={`${rowId}-email`}
             variant="success"
             aria-labelledby={`${rowId} ${columns.email}`}
+            aria-describedby={noteId}
             checked={emailModeFor(context.settings, row.ref) === 'on'}
             disabled={!master || !context.emailsOn}
             onCheckedChange={(checked) => context.onTypeEmail(row.ref, checked ? 'on' : 'off')}
           />
         )}
+        {noteId !== undefined && <ImmediateNote id={noteId} />}
       </TableCell>
     </TableRow>
   );
