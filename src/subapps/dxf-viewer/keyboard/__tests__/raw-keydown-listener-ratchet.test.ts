@@ -134,7 +134,8 @@ const PENDING_MIGRATION: ReadonlySet<string> = new Set([
   'hooks/grips/useGripSpacebarCycle.ts',
   'hooks/tools/useMirrorPreview.ts',
   'hooks/tools/useMirrorTool.ts',
-  'hooks/useDxfToolbarShortcuts.ts',
+  // ✅ ΜΕΤΑΝΑΣΤΕΥΣΕ (ADR-929 Δ21 (δ), 2026-11-13): `hooks/useDxfToolbarShortcuts.ts` — το N με εστίαση σε
+  //   `role="option"` άλλαζε το εργαλείο σε «Πολύγωνο» (ρωτούσε μόνο «γράφει ο χρήστης;»). Μη το ξαναπροσθέσεις.
   'statusbar/CadStatusBar.tsx',
   'systems/properties/QuickPropertiesMiniPanel.tsx',
   'systems/selection/use-selection-cycling.ts',

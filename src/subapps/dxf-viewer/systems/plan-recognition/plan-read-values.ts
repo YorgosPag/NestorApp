@@ -52,6 +52,11 @@ export interface PlanReadValueRow {
    * καμία. Περνά από τον ΙΔΙΟ δρόμο με κάθε διόρθωση (`correct`).
    */
   readonly suggestion: string | null;
+  /**
+   * Δ3 — υπάρχει κλίμακα στη σύντηξη (βαθμονόμηση · συναίνεση διαστάσεων · γραμμένη κλίμακα · εμβαδά). `false` ⇒ το
+   * «σχέδιο − γραμμένο» μετρά μόνο τις αναλογίες του χαρτιού: πληροφορία, ΟΧΙ κρίση της γραμμένης τιμής.
+   */
+  readonly scaleKnown: boolean;
 }
 
 type RowFacts = Omit<PlanReadValueRow, 'priority' | 'suggestion'>;
@@ -60,9 +65,19 @@ type RowFacts = Omit<PlanReadValueRow, 'priority' | 'suggestion'>;
  * Βήμα 7 — η πρόταση για μια διάσταση σε σύγκρουση. Ο Baarda την απέρριψε, άρα στην **τελική** λύση έχει βάρος 0
  * (`adjustWithDataSnooping`): το `adjustedMm` είναι η απόσταση των παρειών όπως την ορίζουν **οι υπόλοιπες** διαστάσεις μαζί
  * με τις θέσεις των γραμμών — ποτέ η ίδια η απορριφθείσα τιμή. Γράφεται με την ακρίβεια γραφής του κειμένου (`writtenLike`).
+ *
+ * 🔑 Δ3 — **καμία πρόταση χωρίς κλίμακα** (`scaleKnown`). Μετρημένο live (DOC014, σκίτσο ~18 % παραμόρφωση, καμία συναίνεση
+ * κλίμακας): η πρόταση ακολουθούσε τις αναλογίες του παραμορφωμένου χαρτιού (2,05 → 2,59, μετά 4,12 → 2,68) και οδηγούσε τον
+ * άνθρωπο να αλλάξει **σωστές** γραμμένες τιμές. Χωρίς κλίμακα το σχέδιο δεν έχει μέτρο να κρίνει γραμμένο αριθμό — κατά
+ * Δ21 οι γραμμένοι αριθμοί δίνουν τη γεωμετρία. Με κλίμακα (π.χ. τυπωμένη σάρωση) η πρόταση μένει: εκεί πιάνει λάθη OCR.
  */
-function suggestionOf(text: PlanText, fused: FusedDimension | undefined, bareIntegerUnit: BareIntegerUnit): string | null {
-  if (fused?.status !== 'conflict' || fused.adjustedMm === null) return null;
+function suggestionOf(
+  text: PlanText,
+  fused: FusedDimension | undefined,
+  bareIntegerUnit: BareIntegerUnit,
+  scaleKnown: boolean,
+): string | null {
+  if (!scaleKnown || fused?.status !== 'conflict' || fused.adjustedMm === null) return null;
   const suggestion = writtenLike(fused.adjustedMm, text.raw, bareIntegerUnit);
   return suggestion !== null && suggestion !== text.raw.trim() ? suggestion : null;
 }
@@ -92,6 +107,7 @@ function rowOf(
   valueMm: number | null,
   fused: FusedDimension | undefined,
   bareIntegerUnit: BareIntegerUnit,
+  scaleKnown: boolean,
 ): PlanReadValueRow {
   const measured = fused?.measuredMm ?? null;
   const facts: RowFacts = {
@@ -105,20 +121,25 @@ function rowOf(
     status: fused?.status ?? null,
     deviationMm: measured !== null && valueMm !== null ? measured - valueMm : null,
     w: fused?.w ?? null,
+    scaleKnown,
   };
-  return { ...facts, priority: priorityOf(facts), suggestion: suggestionOf(text, fused, bareIntegerUnit) };
+  return { ...facts, priority: priorityOf(facts), suggestion: suggestionOf(text, fused, bareIntegerUnit, scaleKnown) };
 }
 
 /** Οι γραμμές της λίστας, η πιο ύποπτη πρώτη. `reading` = η ανάγνωση που ισχύει (με τις διορθώσεις). */
-export function planReadValueRows(reading: PlanReading, fusion: Pick<PlanFusionResult, 'dimensions'> | null): PlanReadValueRow[] {
+export function planReadValueRows(
+  reading: PlanReading,
+  fusion: Pick<PlanFusionResult, 'dimensions' | 'scale'> | null,
+): PlanReadValueRow[] {
   const valueById = new Map(reading.dimensions.map((d) => [d.textId, d.valueMm]));
   const fusedById = new Map((fusion?.dimensions ?? []).map((d) => [d.textId, d]));
   // Η μονάδα των σκέτων ακεραίων του σχεδίου: την ορίζουν τα κείμενα σε μέτρα, που έχουν πάντα τιμή ⇒ ίδια με του κανόνα.
   const rawById = new Map(reading.texts.map((t) => [t.id, t.raw]));
   const bareIntegerUnit = inferBareIntegerUnit(reading.dimensions.map((d) => rawById.get(d.textId) ?? ''));
+  const scaleKnown = (fusion?.scale ?? null) !== null;
   const rows = reading.texts.map((t, order) => ({
     order,
-    row: rowOf(t, valueById.get(t.id) ?? null, fusedById.get(t.id), bareIntegerUnit),
+    row: rowOf(t, valueById.get(t.id) ?? null, fusedById.get(t.id), bareIntegerUnit, scaleKnown),
   }));
   rows.sort((a, b) =>
     suspicionGroup(a.row) - suspicionGroup(b.row)
@@ -138,8 +159,11 @@ export function planReadValuesProgress(rows: readonly PlanReadValueRow[]): { rea
   return { checked: rows.filter(isHumanChecked).length, total: rows.length };
 }
 
-/** Βήμα 1 — η μεγαλύτερη πλευρά μιας μικρογραφίας, σε px (αρκεί για 2× οθόνη στο ύψος της γραμμής). */
-export const PLAN_READ_THUMB_MAX_EDGE_PX = 192;
+/**
+ * Βήμα 1 · Δ5 — η μεγαλύτερη πλευρά μιας μικρογραφίας, σε px. Προβολή 64 CSS px ύψος (`h-16`) με αναλογία έως ~1,8 ⇒ ~115 CSS px
+ * πλάτος ⇒ 2× οθόνη ≈ 230 px: τα 256 αρκούν (τα 192 ήταν για τα παλιά 32 px).
+ */
+export const PLAN_READ_THUMB_MAX_EDGE_PX = 256;
 
 /** Βήμα 1 — περιθώριο γύρω από το κείμενο, ως κλάσμα του ύψους του (λίγο χαρτί γύρω, για να φαίνεται και η γραμμή). */
 const THUMB_PAD_OF_HEIGHT = 0.35;

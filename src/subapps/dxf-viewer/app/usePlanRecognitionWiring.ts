@@ -39,8 +39,8 @@ import type { PlanReadingOutcome } from '../bim/plan-recognition/plan-recognitio
 import { planReadValueRows, type PlanReadValueRow } from '../systems/plan-recognition/plan-read-values';
 import { usePlanScaleWiring } from './usePlanScaleWiring';
 import { usePlanReadValueThumbnails } from './usePlanReadValueThumbnails';
-import { focusReviewTarget, reviewFocusExtent } from '../systems/coordination/review-focus';
-import { ASSISTANT_FOCUS_PAD_MM } from '../systems/model-from-drawing/assistant-focus';
+import { focusReviewTarget } from '../systems/coordination/review-focus';
+import { readValueFocusExtent } from '../systems/model-from-drawing/assistant-focus';
 
 export interface PlanRecognitionWiring {
   readonly imageSource: ImageSourceView;
@@ -63,11 +63,12 @@ const OCR_ACTIONS: PlanOcrActions = {
 
 /**
  * ADR-929 Δ21 (δ) βήμα 2 — «Εστίαση στην πηγή»: η όψη πάει στο κείμενο με το ΕΝΑ SSoT εστίασης ελέγχου (`review-focus`,
- * ίδιο με τα στοιχεία της πρότασης): το πρώτο άλμα της ανάγνωσης πλαισιώνει, τα επόμενα μόνο κεντράρουν.
+ * ίδιο με τα στοιχεία της πρότασης): το πρώτο άλμα της ανάγνωσης πλαισιώνει, τα επόμενα μόνο κεντράρουν. Δ2 — το περιθώριο
+ * είναι σε ύψη κειμένου (`readValueFocusExtent`), ώστε σκίτσο σε μέγεθος χαρτιού να μην απομακρύνεται.
  */
 function focusReadValueSource(textId: string): void {
   const target = planRecognitionSession.corrections.focusTarget(textId);
-  const extent = target ? reviewFocusExtent(target.points, ASSISTANT_FOCUS_PAD_MM) : null;
+  const extent = target ? readValueFocusExtent(target.points) : null;
   if (target && extent) focusReviewTarget(extent, () => null, target.preserveZoom);
 }
 

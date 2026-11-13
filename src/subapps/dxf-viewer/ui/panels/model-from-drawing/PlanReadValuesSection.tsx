@@ -98,11 +98,17 @@ function interpretationOf(row: PlanCorrectionPreview, t: Translate): string {
   return row.kind === 'dimension' ? `${kind} · ${t('modelFromDrawing.image.ocr.values.noUnit')}` : kind;
 }
 
-/** Βεβαιότητα · κατάσταση στη σύντηξη · απόκλιση — ό,τι υπάρχει. */
+/**
+ * Βεβαιότητα · κατάσταση στη σύντηξη · απόκλιση — ό,τι υπάρχει. Δ3 — χωρίς κλίμακα η απόκλιση λέει ρητά ότι **δεν** κρίνει
+ * τη γραμμένη τιμή (μετρά μόνο τις αναλογίες του χαρτιού).
+ */
 function metaOf(row: PlanReadValueRow, t: Translate): string {
   const parts = [t('modelFromDrawing.image.ocr.values.confidence', { percent: Math.round(row.confidence * 100) })];
   if (row.status !== null) parts.push(t(STATUS_KEY[row.status]));
-  if (row.deviationMm !== null) parts.push(t('modelFromDrawing.image.ocr.values.deviation', { value: Math.round(row.deviationMm) }));
+  if (row.deviationMm !== null) {
+    const key = row.scaleKnown ? 'modelFromDrawing.image.ocr.values.deviation' : 'modelFromDrawing.image.ocr.values.deviationUnscaled';
+    parts.push(t(key, { value: Math.round(row.deviationMm) }));
+  }
   return parts.join(' · ');
 }
 
@@ -163,9 +169,17 @@ function RowEditor({ row, onSave, onCancel, preview, t }: {
   );
 }
 
-function RowActions({ row, actions, t }: {
+/**
+ * Δ4 — κάθε πράξη της γραμμής κάνει το ΙΔΙΟ το κουμπί της να χαθεί (το «Σωστό» γίνεται «Επαναφορά», η «Αποδοχή» φεύγει μαζί
+ * με την πρόταση). WAI-ARIA APG: όταν χάνεται το στοιχείο με την εστίαση, η εστίαση πάει σε λογικό σημείο — εδώ η **γραμμή**
+ * (roving tabindex), όπως ήδη μετά το Esc του πεδίου· όχι στο `BODY` (μετρημένο live). `run` = πράξη + επιστροφή εστίασης.
+ */
+type RunRowAction = (action: () => void) => void;
+
+function RowActions({ row, actions, run, t }: {
   readonly row: PlanReadValueRow;
   readonly actions: PlanReadValuesActions;
+  readonly run: RunRowAction;
   readonly t: Translate;
 }): React.ReactElement {
   const canDrop = row.kind === 'dimension';
@@ -173,18 +187,18 @@ function RowActions({ row, actions, t }: {
   return (
     <p className="m-0 flex flex-wrap items-center gap-1">
       {!checked ? (
-        <Button type="button" variant="ghost" size="xs" onClick={() => actions.onConfirm(row.textId)} data-testid="mfd-read-value-confirm">
+        <Button type="button" variant="ghost" size="xs" onClick={() => run(() => actions.onConfirm(row.textId))} data-testid="mfd-read-value-confirm">
           <Check className="size-3" aria-hidden="true" />
           {t('modelFromDrawing.image.ocr.values.confirm')}
         </Button>
       ) : null}
       {canDrop ? (
-        <Button type="button" variant="ghost" size="xs" onClick={() => actions.onMarkNotDimension(row.textId)} data-testid="mfd-read-value-not-dimension">
+        <Button type="button" variant="ghost" size="xs" onClick={() => run(() => actions.onMarkNotDimension(row.textId))} data-testid="mfd-read-value-not-dimension">
           {t('modelFromDrawing.image.ocr.values.notDimension')}
         </Button>
       ) : null}
       {checked ? (
-        <Button type="button" variant="ghost" size="xs" onClick={() => actions.onRevert(row.textId)} data-testid="mfd-read-value-revert">
+        <Button type="button" variant="ghost" size="xs" onClick={() => run(() => actions.onRevert(row.textId))} data-testid="mfd-read-value-revert">
           <RotateCcw className="size-3" aria-hidden="true" />
           {t('modelFromDrawing.image.ocr.values.revert')}
         </Button>
@@ -194,9 +208,10 @@ function RowActions({ row, actions, t }: {
 }
 
 /** Βήμα 7 — η πρόταση της συνόρθωσης για τιμή σε σύγκρουση, με αποδοχή ενός κλικ (ο ΙΔΙΟΣ δρόμος με κάθε διόρθωση). */
-function RowSuggestion({ row, actions, t }: {
+function RowSuggestion({ row, actions, run, t }: {
   readonly row: PlanReadValueRow;
   readonly actions: PlanReadValuesActions;
+  readonly run: RunRowAction;
   readonly t: Translate;
 }): React.ReactElement | null {
   const { suggestion } = row;
@@ -206,7 +221,7 @@ function RowSuggestion({ row, actions, t }: {
       <Lightbulb className="size-3 shrink-0" aria-hidden="true" />
       <span>{t('modelFromDrawing.image.ocr.values.suggestion', { value: suggestion })}</span>
       <Button
-        type="button" variant="outline" size="xs" onClick={() => actions.onCorrect(row.textId, suggestion)}
+        type="button" variant="outline" size="xs" onClick={() => run(() => actions.onCorrect(row.textId, suggestion))}
         aria-label={t('modelFromDrawing.image.ocr.values.acceptSuggestionLabel', { value: suggestion })}
         data-testid="mfd-read-value-accept-suggestion"
       >
@@ -216,14 +231,18 @@ function RowSuggestion({ row, actions, t }: {
   );
 }
 
-/** Βήμα 1 — το απόσπασμα της εικόνας από το οποίο διαβάστηκε το κείμενο (τεκμήριο δίπλα στην τιμή). */
+/**
+ * Βήμα 1 — το απόσπασμα της εικόνας από το οποίο διαβάστηκε το κείμενο (τεκμήριο δίπλα στην τιμή).
+ * Δ5 — ύψος 64 CSS px (`h-16`, ήταν `h-8`: μετρημένο live 43–52 × 29 px, το κείμενο μόλις διαβαζόταν). Η πηγή
+ * (`PLAN_READ_THUMB_MAX_EDGE_PX`) καλύπτει οθόνη 2× σε αυτό το ύψος· ποτέ πάνω από το πλάτος της γραμμής (`max-w-full`).
+ */
 function SourceThumbnail({ url, raw, t }: { readonly url: string | undefined; readonly raw: string; readonly t: Translate }): React.ReactElement | null {
   if (url === undefined) return null;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- object URL μικρογραφίας από τον provider, όχι στατικό asset
     <img
       src={url} alt={t('modelFromDrawing.image.ocr.values.thumbnailAlt', { raw })} data-testid="mfd-read-value-thumbnail"
-      className="h-8 max-w-full self-start rounded-sm border border-border bg-background object-contain object-left"
+      className="h-16 max-w-full self-start rounded-sm border border-border bg-background object-contain object-left"
     />
   );
 }
@@ -270,11 +289,14 @@ interface ValueRowProps {
   readonly onEdit: () => void;
   /** Το πεδίο έκλεισε (αποθήκευση ή Esc): η εστίαση γυρίζει στη γραμμή. */
   readonly onEndEdit: () => void;
+  /** Δ4 — η εστίαση στη γραμμή (μετά από πράξη που κρύβει το κουμπί της). */
+  readonly focusSelf: () => void;
   readonly actions: PlanReadValuesActions;
   readonly t: Translate;
 }
 
-function ValueRow({ row, thumbnail, editing, active, rowRef, onActivate, onEdit, onEndEdit, actions, t }: ValueRowProps): React.ReactElement {
+function ValueRow({ row, thumbnail, editing, active, rowRef, onActivate, onEdit, onEndEdit, focusSelf, actions, t }: ValueRowProps): React.ReactElement {
+  const run: RunRowAction = (action) => { action(); focusSelf(); };
   const save = (raw: string): void => {
     onEndEdit();
     if (raw.trim() !== '' && raw.trim() !== row.raw) actions.onCorrect(row.textId, raw);
@@ -293,14 +315,14 @@ function ValueRow({ row, thumbnail, editing, active, rowRef, onActivate, onEdit,
       {editing ? <RowEditor row={row} onSave={save} onCancel={onEndEdit} preview={actions.previewCorrection} t={t} /> : null}
       <p className="m-0 text-[11px] text-foreground">{interpretationOf(row, t)}</p>
       <p className={MUTED}>{metaOf(row, t)}</p>
-      <RowSuggestion row={row} actions={actions} t={t} />
+      <RowSuggestion row={row} actions={actions} run={run} t={t} />
       {row.correctedFrom !== null ? (
         <p className={MUTED} data-testid="mfd-read-value-corrected">{t('modelFromDrawing.image.ocr.values.corrected', { raw: row.correctedFrom })}</p>
       ) : null}
       {row.confirmed ? (
         <p className={MUTED} data-testid="mfd-read-value-confirmed">{t('modelFromDrawing.image.ocr.values.confirmed')}</p>
       ) : null}
-      <RowActions row={row} actions={actions} t={t} />
+      <RowActions row={row} actions={actions} run={run} t={t} />
     </li>
   );
 }
@@ -367,7 +389,7 @@ function ReadValueList({ rows, thumbnails, actions, t }: {
           key={row.textId} row={row} thumbnail={thumbnails.get(row.textId)} editing={editing === row.textId} active={i === activeIndex}
           rowRef={(node) => { if (node) nodes.current.set(row.textId, node); else nodes.current.delete(row.textId); }}
           onActivate={() => setActiveId(row.textId)} onEdit={() => setEditing(row.textId)}
-          onEndEdit={() => { setEditing(null); focusRow(row.textId); }} actions={actions} t={t}
+          onEndEdit={() => { setEditing(null); focusRow(row.textId); }} focusSelf={() => focusRow(row.textId)} actions={actions} t={t}
         />
       ))}
     </ol>

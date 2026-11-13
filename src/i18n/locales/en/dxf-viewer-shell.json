@@ -528,6 +528,7 @@
             "unbound": "not bound to a line"
           },
           "deviation": "drawn − written: {value} mm",
+          "deviationUnscaled": "drawn − written: {value} mm · no scale, does not judge the written value",
           "corrected": "corrected · the engine read “{raw}”",
           "editLabel": "Correct the text “{raw}”",
           "inputLabel": "What the drawing says",

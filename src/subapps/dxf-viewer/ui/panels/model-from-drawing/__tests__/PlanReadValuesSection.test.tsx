@@ -15,7 +15,7 @@ import { PlanReadValuesSection, type PlanReadValuesActions } from '../PlanReadVa
 const t = (key: string, params?: Record<string, string | number>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
 const row = (over: Partial<PlanReadValueRow> & Pick<PlanReadValueRow, 'textId' | 'raw'>): PlanReadValueRow => ({
-  correctedFrom: null, confirmed: false, priority: 'ok', suggestion: null, kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, ...over,
+  correctedFrom: null, confirmed: false, priority: 'ok', suggestion: null, kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, scaleKnown: true, ...over,
 });
 
 const ROWS: readonly PlanReadValueRow[] = [
@@ -58,6 +58,13 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(t3.textContent).toContain('modelFromDrawing.image.ocr.values.corrected{"raw":"4.15"}');
     expect(item(getAllByTestId, 't4').textContent).toContain('modelFromDrawing.image.ocr.values.noUnit');
     expect(item(getAllByTestId, 't1').textContent).toContain('modelFromDrawing.image.ocr.values.kind.other');
+  });
+
+  it('Δ3 — χωρίς κλίμακα η απόκλιση λέει ρητά ότι ΔΕΝ κρίνει τη γραμμένη τιμή (ΡΗΤΟ κλειδί)', () => {
+    const { getAllByTestId } = renderValues([row({ textId: 't2', raw: '2,05 m', status: 'conflict', deviationMm: 538, scaleKnown: false })]);
+    const t2 = item(getAllByTestId, 't2');
+    expect(t2.textContent).toContain('modelFromDrawing.image.ocr.values.deviationUnscaled{"value":538}');
+    expect(t2.textContent).not.toContain('modelFromDrawing.image.ocr.values.deviation{');
   });
 
   it('κλικ ⇒ πεδίο με το κείμενο· Enter ⇒ onCorrect μία φορά και το πεδίο κλείνει', () => {
@@ -117,6 +124,26 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(actions.onConfirm).toHaveBeenCalledWith('t1');
   });
 
+  /**
+   * Δ4 — μετρημένο live: μετά από «Επαναφορά» / «Αποδοχή» το κουμπί χανόταν και η εστίαση έπεφτε στο `BODY`. Κάθε πράξη
+   * γραμμής που κρύβει το κουμπί της ⇒ η εστίαση στη ΓΡΑΜΜΗ — και μένει εκεί όταν έρθουν οι νέες γραμμές (το κουμπί φεύγει).
+   */
+  it.each([
+    ['revert', row({ textId: 't9', raw: '2.05', confirmed: true, priority: 'checked' }), row({ textId: 't9', raw: '2.05' })],
+    ['confirm', row({ textId: 't9', raw: '2.05' }), row({ textId: 't9', raw: '2.05', confirmed: true, priority: 'checked' })],
+    ['not-dimension', row({ textId: 't9', raw: '2.05' }), row({ textId: 't9', raw: '2.05', kind: 'other', correctedFrom: '2.05' })],
+    ['accept-suggestion', row({ textId: 't9', raw: '2.05', status: 'conflict', suggestion: '2.59' }), row({ textId: 't9', raw: '2.59', correctedFrom: '2.05' })],
+  ] as const)('Δ4 — «%s» ⇒ η εστίαση γυρίζει στη γραμμή, όχι στο BODY', (testId, before, after) => {
+    const { getAllByTestId, rerender, actions } = renderValues([before]);
+    const button = item(getAllByTestId, 't9').querySelector(`[data-testid="mfd-read-value-${testId}"]`) as HTMLElement;
+    act(() => { button.focus(); });
+    fireEvent.click(button);
+    expect(document.activeElement).toBe(item(getAllByTestId, 't9'));
+    rerender(<PlanReadValuesSection rows={[after]} thumbnails={new Map()} actions={actions} t={t} />);
+    expect(item(getAllByTestId, 't9').querySelector(`[data-testid="mfd-read-value-${testId}"]`)).toBeNull();
+    expect(document.activeElement).toBe(item(getAllByTestId, 't9'));
+  });
+
   it('βήμα 4 — ετικέτα προτεραιότητας σε κάθε γραμμή, ΡΗΤΟ κλειδί ανά κατάσταση', () => {
     const rows = [...ROWS, row({ textId: 't9', raw: '2.05', valueMm: 2050 })];
     const { getAllByTestId } = renderValues(rows);
@@ -155,6 +182,10 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     const img = item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-thumbnail"]');
     expect(img?.getAttribute('src')).toBe('blob:thumb-t4');
     expect(img?.getAttribute('alt')).toBe('modelFromDrawing.image.ocr.values.thumbnailAlt{"raw":"412"}');
+    // Δ5 — 64 CSS px ύψος με token (όχι inline style), ποτέ πλατύτερη από τη γραμμή.
+    expect(img?.classList.contains('h-16')).toBe(true);
+    expect(img?.classList.contains('max-w-full')).toBe(true);
+    expect(img?.getAttribute('style')).toBeNull();
     expect(item(getAllByTestId, 't3').querySelector('[data-testid="mfd-read-value-thumbnail"]')).toBeNull();
   });
 

@@ -3,7 +3,7 @@
  * χαμηλή βεβαιότητα), με τιμή, κατάσταση, απόκλιση και προέλευση από τα δεδομένα που ήδη υπάρχουν.
  */
 
-import type { FusedDimension, FusedDimensionStatus } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
+import type { FusedDimension, FusedDimensionStatus, PlanScaleSuggestion } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
 import { isHumanChecked, planReadThumbRect, planReadValueRows, planReadValuesProgress } from '../plan-read-values';
 
@@ -41,7 +41,14 @@ const READING: PlanReading = {
   openings: [],
 };
 
+/** Δ3 — μια κλίμακα στη σύντηξη (εδώ: συναίνεση διαστάσεων)· χωρίς αυτήν καμία πρόταση. */
+const SCALE: PlanScaleSuggestion = {
+  chosen: 'dimension-consensus', mmPerAlignedPx: 10, sigmaRel: 0.005, metresPerOriginalPx: 0.01,
+  evidence: [{ source: 'dimension-consensus', mmPerAlignedPx: 10, support: 4 }],
+};
+
 const FUSION = {
+  scale: SCALE,
   dimensions: [
     fused('t2', 2050, 'consistent', 0.4, 2060),
     fused('t3', 4120, 'conflict', -4.2, 3700),
@@ -60,7 +67,7 @@ describe('planReadValueRows — Δ21 (δ): η πιο ύποπτη πρώτη', (
     const rows = new Map(planReadValueRows(READING, FUSION).map((r) => [r.textId, r]));
     expect(rows.get('t3')).toEqual({
       textId: 't3', raw: '4.12', correctedFrom: '4.15', confirmed: false, kind: 'dimension', valueMm: 4120, confidence: 0.9,
-      status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked', suggestion: '3.70',
+      status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked', suggestion: '3.70', scaleKnown: true,
     });
     expect(rows.get('t4')).toMatchObject({ valueMm: null, status: null, deviationMm: null, correctedFrom: null });
   });
@@ -128,15 +135,37 @@ describe('Δ21 (δ) βήμα 7 — πρόταση από τη συνόρθωση
         { textId: 't8', valueMm: 4120, segmentIds: [], confidence: { score: 0.9, factors: {} } },
       ],
     };
-    const fusion = { dimensions: [fused('t2', 2050, 'consistent', 0.4, 2060), fused('t8', 4120, 'conflict', 5, 3330)] };
+    const fusion = { scale: SCALE, dimensions: [fused('t2', 2050, 'consistent', 0.4, 2060), fused('t8', 4120, 'conflict', 5, 3330)] };
     expect(planReadValueRows(reading, fusion).find((r) => r.textId === 't8')?.suggestion).toBe('333');
   });
 
   it('χωρίς συνορθωμένη τιμή, ή πρόταση ίδια με το κείμενο ⇒ καμία πρόταση', () => {
-    const noAdjusted = { dimensions: [{ ...fused('t3', 4120, 'conflict', -4.2, null) }] };
+    const noAdjusted = { scale: SCALE, dimensions: [{ ...fused('t3', 4120, 'conflict', -4.2, null) }] };
     expect(planReadValueRows(READING, noAdjusted).find((r) => r.textId === 't3')?.suggestion).toBeNull();
-    const same = { dimensions: [fused('t3', 4120, 'conflict', -4.2, 4118)] };
+    const same = { scale: SCALE, dimensions: [fused('t3', 4120, 'conflict', -4.2, 4118)] };
     expect(planReadValueRows(READING, same).find((r) => r.textId === 't3')?.suggestion).toBeNull();
+  });
+});
+
+describe('Δ21 (δ) Δ3 — καμία πρόταση χωρίς κλίμακα (σκίτσο: το χαρτί δεν κρίνει γραμμένο αριθμό)', () => {
+  it('🔴 σύγκρουση χωρίς κλίμακα στη σύντηξη ⇒ καμία πρόταση (DOC014: 2,05 → «2,59» από παραμορφωμένο χαρτί)', () => {
+    const rows = planReadValueRows(READING, { ...FUSION, scale: null });
+    expect(rows.filter((r) => r.suggestion !== null)).toEqual([]);
+    expect(rows.every((r) => !r.scaleKnown)).toBe(true);
+  });
+
+  it('η σύγκρουση και η απόκλιση μένουν ορατές — μόνο η πρόταση φεύγει', () => {
+    const t3 = planReadValueRows(READING, { ...FUSION, scale: null }).find((r) => r.textId === 't3');
+    expect(t3).toMatchObject({ status: 'conflict', deviationMm: 3700 - 4120, suggestion: null, scaleKnown: false });
+  });
+
+  it('ΑΝΤΙΣΤΡΟΦΗ: με κλίμακα η πρόταση μένει (τυπωμένη σάρωση: πιάνει λάθη OCR)', () => {
+    const t3 = planReadValueRows(READING, FUSION).find((r) => r.textId === 't3');
+    expect(t3).toMatchObject({ suggestion: '3.70', scaleKnown: true });
+  });
+
+  it('χωρίς σύντηξη ⇒ ούτε κλίμακα ούτε πρόταση', () => {
+    expect(planReadValueRows(READING, null).every((r) => r.suggestion === null && !r.scaleKnown)).toBe(true);
   });
 });
 

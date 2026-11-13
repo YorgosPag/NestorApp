@@ -16,7 +16,8 @@ import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 // ADR-688 — in 3D the entity clipboard is owned by use-bim3d-entity-clipboard
 // (Ctrl+C / paste-at-pick / Ctrl+D). Guard the 2D in-place clipboard off in 3D.
 import { useViewMode3DStore, selectIs3D } from '../bim-3d/stores/ViewMode3DStore';
-import { isTextEntryTarget } from '@/lib/a11y/keyboard-scope';
+// ADR-711 — ο ΕΝΑΣ δομικός φύλακας των global accelerators (modal · πεδίο · listbox/option · πλοήγηση).
+import { addGlobalShortcutListener } from '../keyboard/global-shortcut-listener';
 
 // ADR-363 Phase 7: BIM multi-char hotkeys — AutoCAD command-line pattern.
 // Leader keys open a 350ms window; second key within window resolves to a tool.
@@ -107,15 +108,12 @@ export function useDxfToolbarShortcuts(
   }, [activeTool, onToolChange, onAction]);
 
   React.useEffect(() => {
+    // 🔴 ADR-711 §5.6 · ADR-929 Δ21 (δ) — ο φύλακας ζει στον wrapper, ΟΧΙ εδώ. Ο τοπικός φύλακας ρωτούσε μόνο την
+    // ερώτηση 1 («γράφει ο χρήστης κείμενο;», `isTextEntryTarget`) ⇒ με εστίαση σε `role="option"` της λίστας «Τι διάβασα»
+    // το N έκανε ΚΑΙ «δεν είναι διάσταση» ΚΑΙ εργαλείο «Πολύγωνο» (μετρημένο live, DOC014). Ο wrapper ρωτά την ερώτηση 2
+    // (listbox/option/combobox καταναλώνουν τον χαρακτήρα), την 3 (βέλη σε slider/tab/grid) και το modal scope.
+    // ⚠️ `capture: false` ΕΠΙΤΗΔΕΣ: ο listener ήταν πάντα στη φάση bubble· η σειρά του απέναντι στους υπόλοιπους δεν αλλάζει.
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      // 🔴 ADR-753 §28 — ο ΕΝΑΣ φύλακας, αντί για τέταρτο αντίγραφο του ίδιου `if`. Το ωμό
-      // `contentEditable === 'true'` ΑΣΤΟΧΟΥΣΕ στο `plaintext-only` του επεξεργαστή κελιού
-      // πίνακα — δηλαδή αυτή η συντόμευση θα πυροδοτούσε ενώ ο χρήστης πληκτρολογεί.
-      if (isTextEntryTarget(target)) {
-        return;
-      }
-
       // ADR-189: Guide chord resolution (G → X/Z/P/D/V/...)
       if (chordRef.current) {
         clearTimeout(chordRef.current.timer);
@@ -230,8 +228,7 @@ export function useDxfToolbarShortcuts(
       // ADR-364 §10.14 — ESC is NOT handled here any more; see the bus slot below.
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return addGlobalShortcutListener(handleKeyDown, { capture: false });
   }, [activeTool, handleToolChange, onAction]);
 
   // ADR-364 §10.14 (Κ2 #13) — «ESC returns to the select tool», on the central bus.

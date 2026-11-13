@@ -683,6 +683,21 @@ dev overlay). Αυτό **ενισχύει** τη διόρθωση αντί να 
 ---
 ## 9. Changelog
 
+### 2026-11-13 — **`useDxfToolbarShortcuts` μετανάστευσε στον wrapper: το N μέσα σε λίστα άλλαζε εργαλείο** (ADR-929 Δ21 (δ))
+
+- 🔴 **Μετρημένο live** (DOC014, nestorconstruct.gr): με εστίαση σε `role="option"` της λίστας «Τι διάβασα» το N έκανε
+  **και** «δεν είναι διάσταση» **και** εργαλείο «Πολύγωνο». Ο hook είχε ωμό window listener με φύλακα μόνο την
+  **ερώτηση 1** (`isTextEntryTarget`) — δηλαδή η απάντηση του §5.6 («ερώτηση 2 για τους global accelerators») δεν είχε
+  φτάσει στον listener με τις περισσότερες συντομεύσεις εργαλείων.
+- **Απόφαση:** ο listener περνά από το `addGlobalShortcutListener` (ερωτήσεις 2 + 3 + modal scope)· ο τοπικός φύλακας
+  **σβήστηκε** — κανένας δεύτερος. `capture: false` επίτηδες: ο listener ήταν πάντα bubble και η σειρά του απέναντι στους
+  υπόλοιπους δεν αλλάζει. Ο κορμός (chords G… / BIM `MultiCharKeySequence`) δεν άλλαξε.
+- Ratchet: βγήκε από το `PENDING_MIGRATION` του `raw-keydown-listener-ratchet.test.ts`.
+- Άγκυρα: `hooks/__tests__/useDxfToolbarShortcuts-key-ownership.test.ts` (6: N σε option/listbox ⇒ τίποτα · N στον καμβά ⇒
+  «Πολύγωνο» · S σε option ⇒ ούτε chord ούτε «Επιλογή» · S στον καμβά ⇒ «Επιλογή» · S→T ⇒ «Σκάλα»). **Μετάλλαξη**: με τον
+  παλιό hook 3/6 κόκκινα (τα τρία της λίστας). Μαζί πράσινα `table-clipboard-key-ownership` + ratchet +
+  `MultiCharKeySequence` (46/46). ⚠️ Δεν επαληθεύτηκε ακόμη σε ζωντανό browser (θέλει push).
+
 ### 2026-10-05 — **το κουμπί επιβεβαίωσης κρατά το πλάτος του όσο τρέχει η πράξη** (`ConfirmDialog`)
 
 - ✅ **Το `aria-disabled` επιβεβαιώθηκε ζωντανά** (ουρά `/admin/ownership-verifications`, ψεύτικη απάντηση 25″): εστίαση
