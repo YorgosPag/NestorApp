@@ -17,7 +17,7 @@ import { byModelCode, type TableRow } from '@/subapps/catalog/import/apply-colum
 import { buildAttributeRows, type ImportBaseValues, type LiveHolder } from '@/subapps/catalog/import/build-attribute-proposal';
 import { buildPriceRows, type PriceLineValues } from '@/subapps/catalog/import/build-price-proposal';
 import { judgeProposal, proposalAggregateOf, type ProposalVerdict } from '@/subapps/catalog/import/judge-proposal';
-import { parseImportCell } from '@/subapps/catalog/import/proposal-values';
+import { importTextContextOf, parseImportCell } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
@@ -48,15 +48,7 @@ export interface PlannedProposal extends ProposalVerdict {
   readonly priceListVersionId: string | null;
 }
 
-/** Ο ναι/όχι σε ουδέτερη μορφή: ο `value-text-codec` δέχεται και τις λέξεις της γλώσσας από τον πίνακά του. */
-const textContextOf = (schema: CatalogSchemaSnapshot): ValueTextContext => ({
-  registry: schema.registry,
-  language: 'el',
-  assetIdByCode: new Map(),
-  assetCodeById: new Map(),
-  yes: 'yes',
-  no: 'no',
-});
+const textContextOf = (schema: CatalogSchemaSnapshot): ValueTextContext => importTextContextOf(schema.registry);
 
 interface RowKey {
   readonly rowKey: string;

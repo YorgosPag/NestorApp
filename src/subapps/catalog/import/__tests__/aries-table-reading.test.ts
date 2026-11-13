@@ -22,7 +22,8 @@ import { readPageTables, tableLineIdentities, type PageTableContext } from '../p
 import { learnedDecisions, learnedEntry, memoryKeyOf, memoryOverridesFor, type LabelMemoryBook } from '../label-memory';
 import { readPageWithDecisions } from '../page-decisions-reading';
 import { anchorForCell, tokenizePage, unitPrintedBeside } from '../page-tokens';
-import { corroborationsOf, selectOptionFor } from '../proposal-values';
+import { corroborationsOf, parseImportCell, selectOptionFor } from '../proposal-values';
+import { fragmentFor } from '../cell-fragments';
 
 type AriesPage = '85' | '86';
 
@@ -657,5 +658,42 @@ describe('🔴 §5.5.2 Β3 Γ13: μία γραμμή → δύο ιδιότητε
   it('το fold της ίντσας: «3/4’’-3/4’’» (δύο U+2019) δίνει την επιλογή 3/4" και στις δύο', () => {
     expect(selectOptionFor(cooling, CONNECTION_TEXT)).toBe('in_1');
     expect(selectOptionFor(heating, CONNECTION_TEXT)).toBe('in_1');
+  });
+});
+
+describe('🔴 βήμα 3Α: κάθε στόχος του Γ13 παίρνει το δικό του κομμάτι (σελ. 85, «ΗΛΕΚΤΡΙΚΗ ΠΑΡΟΧΗ» = «230V-50Hz-1Ph»)', () => {
+  const SUPPLY_TEXT = '230V-50Hz-1Ph';
+  const weight = attributesByCode.get('weight');
+  const supply = attributesByCode.get('power_supply');
+  if (!weight || !supply) throw new Error('το fixture δεν έχει `weight` / `power_supply`');
+  const measured = (id: string, code: string, family: string, unit: string) =>
+    ({ ...weight, id, code, config: { measurementFamilyCode: family, defaultUnitCode: unit, min: 0, max: null, decimals: 0, negativeAllowed: false } });
+  const voltage = measured('cattr_voltage', 'connection_voltage', 'voltage', 'V');
+  const frequency = measured('cattr_frequency', 'supply_frequency', 'frequency', 'Hz');
+  const context: PageTableContext = { ...contextOf('85'), attributesByCode: new Map([...attributesByCode, [voltage.code, voltage], [frequency.code, frequency]]) };
+  const [main, parts] = context.tables;
+  const line = lineOf(main, SUPPLY_TEXT);
+  const codeById = new Map([...context.attributesByCode.values()].map((attribute) => [attribute.id, attribute.code]));
+  const decision = { kind: 'attribute', attributeId: voltage.id, alsoAttributeIds: [frequency.id, supply.id] } as const;
+  const { mapping } = applyLineOverrides(variantsMapping(main, page85Lines), [{ page: 85, table: main.key, line, decision, by: 'usr_1', at: '2026-11-13T10:00:00.000Z' }], codeById, new Set(codeById.values()));
+  const { groups } = readPageTables({ tables: [mapping, accessories(parts)] }, context);
+  const textsOf = (attribute: string) => [...new Set(groups[0].rows.flatMap((row) => row.cells).filter((cell) => attributeOf(cell) === attribute).map((cell) => cell.text))];
+
+  it('η τάση κρατά «230V», η συχνότητα «50Hz» — και διαβάζονται: 230 V · 50 Hz', () => {
+    expect(textsOf(voltage.id)).toEqual(['230V']);
+    expect(textsOf(frequency.id)).toEqual(['50Hz']);
+    expect(parseImportCell(voltage, { text: '230V', unitCode: null }, text)).toEqual({ ok: true, value: { type: 'measurement', amount: '230', unitCode: 'V' } });
+    expect(parseImportCell(frequency, { text: '50Hz', unitCode: null }, text)).toEqual({ ok: true, value: { type: 'measurement', amount: '50', unitCode: 'Hz' } });
+  });
+
+  it('το κείμενο δεν σπάει ποτέ: η `power_supply` κρατά ολόκληρο το κελί', () => {
+    expect(textsOf(supply.id)).toEqual([SUPPLY_TEXT]);
+  });
+
+  it('🔑 φρένο εύρους και ασάφεια: «220-240V» ΔΕΝ γίνεται σιωπηλά 240 V · δύο υποψήφια ⇒ ολόκληρο', () => {
+    expect(fragmentFor(voltage, '220-240V', null, text)).toBe('220-240V');
+    expect(fragmentFor(frequency, '50-60Hz', null, text)).toBe('50-60Hz');
+    expect(fragmentFor(voltage, '230V-400V', null, text)).toBe('230V-400V');
+    expect(fragmentFor(voltage, SUPPLY_TEXT, null, text)).toBe('230V');
   });
 });

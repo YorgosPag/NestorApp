@@ -29,7 +29,8 @@ import type { PagePriceLine } from './page-line-overrides';
 import { lineSiblingOf, type BoundLineOfTable } from './line-sibling';
 import { labelPrintsUnit } from './page-tokens';
 import { textLayerDoubted, type RawLineMapping, type RawPageMapping, type RawTableMapping, type VariantOrientation } from './page-table-mapping';
-import { selectOptionFor } from './proposal-values';
+import { importTextContextOf, selectOptionFor } from './proposal-values';
+import { fragmentFor } from './cell-fragments';
 
 type NamedAttribute = CatalogAttributeDefinition & { readonly id: string };
 
@@ -219,13 +220,23 @@ function unitFindings(view: TableView, data: readonly number[], bound: readonly 
 /** Η ταυτότητα μιας παραλλαγής μέσα στη σελίδα: **ίδια** για την πρόταση ιδιοτήτων και την πρόταση τιμών του πίνακα (§5.5.2 Β4). */
 const variantRowKey = (page: number, table: PageTable, position: number): string => `p${page}${table.key}v${position}`;
 
+/** Βήμα 3Α: γραμμή με 2+ ιδιότητες (Γ13) ⇒ κάθε στόχος κρατά το δικό του κομμάτι του κελιού (`fragmentFor`). */
+function ownFragment(cell: ExtractedCell, attribute: NamedAttribute, context: PageTableContext): ExtractedCell {
+  if (cell.text === null) return cell;
+  const text = fragmentFor(attribute, cell.text, cell.unitCode, importTextContextOf(context.registry));
+  return text === cell.text ? cell : { ...cell, text };
+}
+
 function rowsOf(view: TableView, table: PageTable, data: readonly number[], lines: readonly LineBinding[], page: number, context: PageTableContext): ExtractedRow[] {
   const disputed = table.witness === 'disputed';
+  const targetsOn = (line: number): number => new Set(lines.filter((binding) => binding.line === line).map(({ attribute }) => attribute.id)).size;
   return data.map((slot, position) => ({
     rowKey: variantRowKey(page, table, position),
     cells: lines.flatMap(({ line, attribute, confidence }) => {
       const unit = printedUnit(attribute, labelCells(view, line, data), context.registry);
-      return extractedCell(view.at(line, slot), { attribute, confidence, unit, disputed }, page) ?? [];
+      const cell = extractedCell(view.at(line, slot), { attribute, confidence, unit, disputed }, page);
+      if (cell === null) return [];
+      return [targetsOn(line) > 1 ? ownFragment(cell, attribute, context) : cell];
     }),
   }));
 }

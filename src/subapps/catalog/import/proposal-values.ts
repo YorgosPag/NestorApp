@@ -77,6 +77,19 @@ export function corroborationsOf(holder: { readonly corroboratedBy?: readonly Im
   return (holder.corroboratedBy ?? []).map((entry) => (typeof entry === 'string' ? { text: entry, anchor: null } : entry));
 }
 
+/**
+ * Το **ουδέτερο** πλαίσιο ανάγνωσης της εισαγωγής: μόνο το μητρώο μετρήσεων — καμία γλώσσα οθόνης, κανένα μέσο. Ο ναι/όχι σε ουδέτερη
+ * μορφή: ο `value-text-codec` δέχεται και τις λέξεις της γλώσσας από τον πίνακά του. ΕΝΑ σημείο για τον διακομιστή και την ανάγνωση πίνακα.
+ */
+export const importTextContextOf = (registry: MeasurementRegistry): ValueTextContext => ({
+  registry,
+  language: 'el',
+  assetIdByCode: new Map(),
+  assetCodeById: new Map(),
+  yes: 'yes',
+  no: 'no',
+});
+
 export type ImportCellParse =
   | { readonly ok: true; readonly value: AttributeValue | null }
   | { readonly ok: false; readonly issue: ImportIssue['code']; readonly params?: Readonly<Record<string, string | number>> };
