@@ -288,10 +288,24 @@ cron εκπέμπει `refunds checked · recorded · unmatched · failed`. Οι
    `webhookSignalDiagnostics`): `providerLifetimeSeconds` = λήξη − δημιουργία **με το ρολόι του παρόχου** (λάθος ζώνης
    αλληλοαναιρείται) · `providerClockSkewSeconds` = δημιουργία παρόχου − δική μας `createdAt` (±ακέραιες ώρες ⇒ λάθος
    ζώνη ώρας). Η επόμενη ζωντανή απόπειρα κλείνει το ερώτημα.
-7. Πολιτική επαναλήψεων webhook: δεν τεκμηριώνεται (docs «Webhooks»). ⏳ **Ρωτήθηκε η Everypay** (2026-11-13, email
-   προς info@everypay.gr από georgios.pagonis@gmail.com — βλ. #8, ερώτηση 4). Αναμένεται απάντηση.
-8. ⏳ **Apple Pay / Google Pay — αναμονή ενεργοποίησης από την Everypay** (2026-11-13). Ο κώδικας **δεν** χρειάζεται
-   αλλαγή: τα πορτοφόλια είναι `card` (myDATA κωδικός 7) και τα δείχνει η hosted σελίδα του παρόχου όταν είναι ενεργά.
+7. Πολιτική επαναλήψεων webhook: δεν τεκμηριώνεται (docs «Webhooks»). **Μερικώς απαντήθηκε** (Everypay, 2026-11-13
+   15:23 UTC, Gmail thread `1a1d4b10d6f17741`): επιτυχία = **HTTP 200 OK**. Ο κώδικας ήδη συμφωνεί — η διαδρομή
+   `api/payments/webhooks/[provider]` απαντά 200 σε κάθε αποτέλεσμα εκτός `failed` (και στο `ignored`, ώστε ο πάροχος να
+   μην ξαναστέλνει άσκοπα) και **503** όταν θέλουμε επανάληψη. ⏳ Μένει ανοιχτό: **πλήθος και διαστήματα επαναλήψεων** —
+   η Everypay θα τα επιβεβαιώσει με το τεχνικό τμήμα. Η αλήθεια δεν εξαρτάται από αυτά (συμφιλίωση `readSettlement`).
+8. ✅ **Apple Pay / Google Pay — ενεργά στο sandbox** (απάντηση Everypay 2026-11-13, ερωτήσεις 1–3 **έκλεισαν**):
+   (1) ενεργά στο sandbox από 11/11/2026· για παραγωγή τους ειδοποιούμε μετά τις δοκιμές · (2) εμφανίζονται **και** στη
+   hosted σελίδα των Payment Notifications (`payment_link_url`), αυτόματα, ανάλογα με τις ενεργές υπηρεσίες και τη
+   συμβατότητα συσκευής / browser · (3) **καμία** επαλήθευση domain — η πληρωμή γίνεται στη σελίδα της Everypay, που
+   διαχειρίζεται το δικό της domain. **Καμία αλλαγή κώδικα** (SSoT audit 2026-11-13): τα πορτοφόλια είναι `card`
+   (myDATA κωδικός 7, `mydata-codes.ts`)· η μέθοδος της κίνησης γράφεται από τη συνεδρία (`checkout.method`), όχι από
+   τον πάροχο· η ετικέτα `cardHint` λέει ήδη «όπου υποστηρίζεται, Apple Pay ή Google Pay»· η ειδοποίηση δεν ζητά δόσεις
+   (ασύμβατες με πορτοφόλια). **Υποτύπος πορτοφολιού δεν καταγράφεται**, επειδή δεν υπάρχει: το αντικείμενο πληρωμής
+   (`GET /payments/{token}`) έχει μόνο `card.type` = δίκτυο (Visa / Mastercard)· κανένα πεδίο wallet (σε αντίθεση με
+   το `payment_method_details.card.wallet.type` του Stripe). Αν η Everypay το προσθέσει ⇒ πεδίο στο `ProviderMovement`,
+   ποτέ νέα `PaymentMethod`. **Ζωντανή δοκιμή (Giorgio):** «Κάρτα» από Chrome (Google Pay) και Safari/iPhone (Apple
+   Pay) — φαίνεται το κουμπί; ⏳ εκκρεμεί.
+   Ιστορικό ερώτησης:
    Το dashboard (Ρυθμίσεις: Προφίλ · Εταιρεία · Τραπεζικοί λογαριασμοί · Ειδοποιήσεις · Κλειδιά API · Webhooks) **δεν**
    έχει επιλογή πορτοφολιών· κατά την τεκμηρίωση το Apple Pay «not enabled by default» ⇒ αίτημα στην υποστήριξη.
    Email (Gmail thread `1a1d4b10d6f17741`) με 4 ερωτήσεις: (1) ενεργοποίηση Apple Pay + Google Pay, sandbox και μετά
@@ -497,3 +511,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-13 | §5.8 #6 ✅ έκλεισε ζωντανά: IRIS sandbox = **35′** (`providerLifetimeSeconds` 2100), ζώνη ώρας σωστή (`providerClockSkewSeconds` −1). §5.6: η αναμονή της σελίδας τελειώνει στη λήξη της συνεδρίας + 1′ αντί για σταθερά 15′ — `expiresInMs` στην απάντηση έκβασης (`attemptExpiresInMs`, ρολόι διακομιστή), `deadlineAfter` στο `usePaymentConfirmationWatch`· §5.5 διορθώθηκε. Tests: `invoice-payment-attempt` (+1) · `checkout-attempt-route`. |
 | 2026-11-13 | §5.8 #7–#8: email στην Everypay (info@everypay.gr, Gmail thread `1a1d4b10d6f17741`) — ενεργοποίηση Apple Pay / Google Pay, εμφάνιση στη hosted σελίδα των Payment Notifications, επαλήθευση domain, πολιτική επαναλήψεων webhook· αναμονή απάντησης. Νομικό πλαίσιο πορτοφολιών καταγράφηκε (ν.3842/2010 άρθρο 20 παρ. 3 · Α.1155/2023 άρθρο 2 παρ. 5). |
 | 2026-11-13 | §5.6 ζωντανή επαλήθευση `e04fdc3b` **απέτυχε** στο 16′ (`visit-expired`: το κουπόνι επίσκεψης δεν ανανεωνόταν ποτέ ⇒ κάθε σελίδα πελάτη πέθαινε στα 15′· κρυμμένη καρτέλα χωρίς γύρο 11′). Διόρθωση: επίσκεψη με αδράνεια 15′ ανανεώσιμη + απόλυτη 8 ώρες (ADR-315 Α6) μέσω ΕΝΟΣ σκελετού διαδρομών (`_shared/invoice-visit-route.ts`) · αθόρυβη νέα επίσκεψη (`fetchInVisit` + `reopenVisit` + `ShareVisitContext`) σε όψη, έκβαση, «Πληρωμή», «Γράψτε μας», PDF · γύρος αμέσως σε `visibilitychange`/`pageshow`/`online`. Σφάλμα `deadlineAfter` (το τέλος έφευγε μπροστά για πάντα μετά τη λήξη) διορθώθηκε. Tests: `access-grant` · `share-access-grant-renewal` · `invoice-visit-route` · `share-visit-fetch` · `usePaymentConfirmationWatch`. Ζωντανή επαλήθευση: εκκρεμεί. |
+| 2026-11-13 | §5.8 #8 ✅ / #7 μερικώς: απάντηση Everypay (Gmail thread `1a1d4b10d6f17741`) — Apple Pay / Google Pay ενεργά στο sandbox από 11/11, εμφανίζονται και στη hosted σελίδα των Payment Notifications, καμία επαλήθευση domain, webhook επιτυχία = HTTP 200 (επαναλήψεις: αναμένεται επιβεβαίωση). SSoT audit + επίσημα docs (api-reference · apple-pay · google-pay): **καμία αλλαγή κώδικα** — πορτοφόλι = `card` (7), το API δεν εκθέτει υποτύπο πορτοφολιού. Ζωντανή δοκιμή πορτοφολιού: Giorgio. |
