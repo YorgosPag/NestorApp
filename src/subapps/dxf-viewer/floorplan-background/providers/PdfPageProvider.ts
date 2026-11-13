@@ -14,7 +14,8 @@ import { applyRasterCanvasTransform } from './provider-canvas-transforms';
 import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
 import { cropPlanRegion, naturalRecognitionRaster, readPlanRaster } from './provider-plan-raster';
 import type { RasterRectPx } from '../../types/coordinate-space';
-import { pdfPageMedium, renderPdfPageAtNativeResolution } from '../../pdf-background/services/pdf-recognition-raster';
+import { pdfPageMedium, renderPdfPageAtNativeResolution, withIsolatedPdfPage } from '../../pdf-background/services/pdf-recognition-raster';
+import { readVectorContent, type PdfVectorContent } from '../../pdf-background/services/pdf-vector-content';
 import { PDF_RENDER_CONFIG } from '../../pdf-background/types/pdf.types';
 
 const SUPPORTED_MIME_TYPES = ['application/pdf'] as const;
@@ -128,6 +129,21 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
     if (pdf === null) return 'raster';
     if (this._medium?.pdf !== pdf) this._medium = { pdf, medium: pdfPageMedium(pdf, PAGE_NUMBER) };
     return (await this._medium.medium) ?? 'raster';
+  }
+
+  /**
+   * ADR-941 Φ1 — οι γραμμές και τα κείμενα της σελίδας, στα px της εικόνας της οθόνης (`RENDER_SCALE`, ίδιο πλέγμα με τα
+   * `naturalBounds`). Μόνο για διανυσματική σελίδα· σάρωση, αποτυχία ή νέα φόρτωση στο μεταξύ ⇒ `null`.
+   */
+  async getVectorContent(): Promise<PdfVectorContent | null> {
+    const pdf = this._pdf;
+    if (pdf === null || (await this.getSourceMedium()) !== 'vector') return null;
+    try {
+      const content = await withIsolatedPdfPage(pdf, PAGE_NUMBER, (page, pdfjs) => readVectorContent(page, pdfjs.OPS, RENDER_SCALE));
+      return this._pdf === pdf ? content : null;
+    } catch {
+      return null;
+    }
   }
 
   dispose(): void {

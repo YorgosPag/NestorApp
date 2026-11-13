@@ -335,6 +335,10 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-656 M12 — Βέλος Βορρά (bake). Ίδιο συμβόλαιο: panel-driven, εκπέμπει entities (lwpolyline +
   // text) via completeEntities → σκόπιμη απουσία από TOOL_CREATES_ENTITY.
   'topo-north':        { id: 'topo-north',        category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-941 — εισαγωγή διανυσματικού PDF: panel-driven, εκπέμπει line/polyline/text via completeEntities. `allowsContinuous:
+  // true` ⇒ το `handleToolCompletion` ΔΕΝ αλλάζει το ενεργό εργαλείο: η εισαγωγή γίνεται μέσα από το πάνελ του εργαλείου
+  // τοίχου, και ο χρήστης μένει εκεί που ήταν (το πάνελ δεν κλείνει).
+  'pdf-vector-import': { id: 'pdf-vector-import', category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: true,  preservesOverlayMode: false },
   // ADR-650 M2-Β: «Γραμμές ασυνέχειας» — canvas-click pick εργαλείο (ΟΧΙ panel-driven).
   // category:'drawing' ⇒ isInDrawingMode=true, ώστε το mouse-up select block να ΜΗΝ τρέχει
   // παράλληλα με τον click handler (κανένα διπλό select) — ίδιο σκεπτικό με ADR-649.

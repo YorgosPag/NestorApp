@@ -334,6 +334,8 @@ export type ToolType =
   // ADR-656 M12: Βέλος Βορρά (Κανάβου / Πραγματικός) — «Bake to drawing» → native lwpolyline/text
   // entities via completeEntities. Panel-driven (όχι canvas click).
   | 'topo-north'          // TOPONORTH — bake north arrow (Grid / True North)
+  // ADR-941 — εισαγωγή διανυσματικού PDF (γραμμές + κείμενα) από το πάνελ «Μοντέλο από το σχέδιο», μέσω completeEntities.
+  | 'pdf-vector-import'
   // ADR-650 M2 μέρος Β: «Γραμμές ασυνέχειας» — 1-κλικ pick υπάρχουσας γραμμής (line/
   // polyline/lwpolyline) → breakline constraint στο TopoPointStore (constrained edge στο
   // CDT). Toggle (ξανά-κλικ = αφαίρεση). ΔΕΝ δημιουργεί CAD entity → εκτός TOOL_CREATES_ENTITY.

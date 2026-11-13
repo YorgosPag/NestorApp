@@ -94,6 +94,11 @@ export class ImageProvider implements IFloorplanBackgroundProvider {
     return 'raster';
   }
 
+  /** ADR-941 — μια εικόνα δεν έχει διανύσματα. */
+  async getVectorContent(): Promise<null> {
+    return null;
+  }
+
   dispose(): void {
     this._canvas = null;
     this._bounds = { width: 0, height: 0 };

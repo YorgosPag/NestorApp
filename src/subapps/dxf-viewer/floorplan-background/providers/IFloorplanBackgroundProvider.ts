@@ -1,5 +1,6 @@
 import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
 import type { RasterRectPx } from '../../types/coordinate-space';
+import type { PdfVectorContent } from '../../pdf-background/services/pdf-vector-content';
 import type {
   NaturalBounds,
   ProviderCapabilities,
@@ -37,6 +38,12 @@ export interface IFloorplanBackgroundProvider {
    * αποτυχία ελέγχου, ⇒ `raster` (ποτέ δεν υποθέτουμε «σχεδιασμένο σε CAD» χωρίς απόδειξη).
    */
   getSourceMedium(): Promise<SourceMedium>;
+
+  /**
+   * ADR-941 Φ1 — το διανυσματικό περιεχόμενο της πηγής (γραμμές · πολυγραμμές · κείμενα) σε px των `naturalBounds`, όπως είναι
+   * στο αρχείο. Μόνο όταν το μέσο είναι `vector`· κάθε άλλη περίπτωση (εικόνα, σάρωση, αποτυχία, νέα φόρτωση στο μεταξύ) ⇒ `null`.
+   */
+  getVectorContent(): Promise<PdfVectorContent | null>;
 
   /**
    * ADR-929 Δ21 (δ) βήμα 1: μικρογραφία (PNG) μιας περιοχής σε px των `naturalBounds`, κομμένη απευθείας από την ήδη

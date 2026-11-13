@@ -54,6 +54,7 @@ import {
   StatusLegend,
 } from './ModelFromDrawingSections';
 import { ImageSourceStart, ImageSourceSummary, type ImageSourceView } from './PlanRecognitionSections';
+import { PdfVectorImportSection, type PdfVectorImportView } from './PdfVectorImportSection';
 import { PlanReadingSection, type PlanReadingActions } from './PlanReadingSections';
 import { PlanOcrSection, type PlanOcrActions } from './PlanOcrSection';
 import { PlanReadValuesSection, type PlanReadValuesActions } from './PlanReadValuesSection';
@@ -88,6 +89,8 @@ export interface ModelFromDrawingPanelProps {
   readonly actions: ModelFromDrawingPanelActions;
   /** ADR-929 Φ5 — η πηγή «εικόνα υποβάθρου», όπως την υπολογίζει ο host. */
   readonly imageSource: ImageSourceView;
+  /** ADR-941 — εισαγωγή γραμμών και κειμένων όταν το υπόβαθρο είναι διανυσματικό PDF. */
+  readonly pdfVectorImport: { readonly view: PdfVectorImportView; readonly onImport: () => void };
 }
 
 /**
@@ -220,7 +223,7 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
   );
 }
 
-export function ModelFromDrawingPanel({ state, actions, imageSource }: ModelFromDrawingPanelProps): React.ReactElement | null {
+export function ModelFromDrawingPanel({ state, actions, imageSource, pdfVectorImport }: ModelFromDrawingPanelProps): React.ReactElement | null {
   // `dxf-viewer-panels`: οι λόγοι «άκυρο όνομα επιπέδου» είναι τα ίδια κείμενα με τη μετονομασία layer (Σ1.3β).
   const { t } = useTranslation(['dxf-viewer-shell', 'dxf-viewer-panels']);
   if (state.phase === 'closed') return null;
@@ -241,6 +244,9 @@ export function ModelFromDrawingPanel({ state, actions, imageSource }: ModelFrom
                 : t('modelFromDrawing.pick.instruction')}
             </p>
             <Notice state={state} t={t} />
+            {state.sampleRole === 'wall'
+              ? <PdfVectorImportSection view={pdfVectorImport.view} onImport={pdfVectorImport.onImport} t={t} />
+              : null}
             {state.sampleRole === 'wall'
               ? <ImageSourceStart view={imageSource} onRecognize={actions.onRecognizeImage} t={t} />
               : null}

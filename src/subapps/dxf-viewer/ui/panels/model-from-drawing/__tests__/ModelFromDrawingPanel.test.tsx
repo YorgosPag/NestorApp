@@ -120,9 +120,14 @@ const NO_IMAGE: ImageSourceView = {
   drawingKind: null,
 };
 
+/** ADR-941 — χωρίς διανυσματικό υπόβαθρο το τμήμα εισαγωγής δεν αποδίδεται. */
+const NO_PDF_VECTOR = { view: { available: false, running: false, outcome: null }, onImport: jest.fn() };
+
 function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {
   const actions = actionsMock();
-  const view = render(<ModelFromDrawingPanel state={stateOf(patch)} actions={actions} imageSource={imageSource} />);
+  const view = render(
+    <ModelFromDrawingPanel state={stateOf(patch)} actions={actions} imageSource={imageSource} pdfVectorImport={NO_PDF_VECTOR} />,
+  );
   const q = (testId: string) => view.container.querySelector(`[data-testid="${testId}"]`);
   const all = (testId: string) => [...view.container.querySelectorAll(`[data-testid="${testId}"]`)];
   return { ...view, actions, q, all };

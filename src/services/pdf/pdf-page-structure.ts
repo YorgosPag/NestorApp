@@ -4,8 +4,12 @@
  *
  * Μετράνε μόνο οι διαδρομές που **ζωγραφίζονται**: η ίδια εντολή `re` κόβει και το πλαίσιο μιας φωτογραφίας (`clip`), και αυτό δεν
  * είναι όριο κελιού.
+ * Το βάδισμα των εντολών (πίνακας μετασχηματισμού, «μόνο ό,τι ζωγραφίζεται») ζει στο `pdf-path-walker` (ADR-941): εδώ μένει
+ * μόνο το «ποια κομμάτια είναι κανόνες πίνακα».
  * @module services/pdf/pdf-page-structure
  */
+
+import { walkPaintedPaths, type PdfPathOperators, type PdfPoint, type PdfSubpath } from './pdf-path-walker';
 
 export interface PageStructureRule {
   readonly axis: 'h' | 'v';
@@ -28,12 +32,9 @@ export interface PdfPageStructure {
   readonly textOperations: number;
 }
 
-/** Οι κωδικοί εντολών του pdf.js που χρειάζονται εδώ. */
-export type PdfjsOperators = Readonly<Record<
-  | 'save' | 'restore' | 'transform' | 'constructPath' | 'moveTo' | 'lineTo' | 'curveTo' | 'curveTo2' | 'curveTo3' | 'closePath' | 'rectangle'
-  | 'stroke' | 'closeStroke' | 'fill' | 'eoFill' | 'fillStroke' | 'eoFillStroke' | 'closeFillStroke' | 'closeEOFillStroke' | 'endPath'
-  | 'paintFormXObjectBegin' | 'paintFormXObjectEnd'
-  | 'showText' | 'showSpacedText' | 'nextLineShowText' | 'nextLineSetSpacingShowText',
+/** Οι κωδικοί εντολών του pdf.js που χρειάζονται εδώ: του βαδίσματος (`pdf-path-walker`) + όσες γράφουν κείμενο. */
+export type PdfjsOperators = PdfPathOperators & Readonly<Record<
+  'showText' | 'showSpacedText' | 'nextLineShowText' | 'nextLineSetSpacingShowText',
   number
 >>;
 
@@ -62,24 +63,14 @@ export interface StructurePage {
   getTextContent(options: { readonly includeMarkedContent: true }): Promise<{ readonly items: readonly MarkedTextItem[] }>;
 }
 
-type Matrix = readonly [number, number, number, number, number, number];
-type Point = readonly [number, number];
+type Point = PdfPoint;
 
-const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0];
 /** ≈ 3 pt: λεπτό γεμισμένο ορθογώνιο είναι γραμμή, όχι κουτί. */
 const THIN = 0.004;
 /** Πλάγια κατά τόσο είναι ακόμη η ίδια οριζόντια ή κάθετη. */
 const STRAIGHT = 0.001;
 /** Μικρότερη γραμμή είναι στολίδι ή σημάδι, όχι όριο. */
 const MIN_LENGTH = 0.003;
-
-const multiply = (m: Matrix, n: Matrix): Matrix => [
-  m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1],
-  m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3],
-  m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5],
-];
-
-const applied = (m: Matrix, x: number, y: number): Point => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
 
 type Fraction = (point: Point) => Point;
 
@@ -105,60 +96,24 @@ function rectangleEdges([x1, y1]: Point, [x2, y2]: Point): PageStructureRule[] {
   return [ruleOf([x1, y1], [x2, y1]), ruleOf([x1, y2], [x2, y2]), ruleOf([x1, y1], [x1, y2]), ruleOf([x2, y1], [x2, y2])].flatMap((rule) => rule ?? []);
 }
 
-/** Τα ευθύγραμμα κομμάτια μιας διαδρομής. Οι καμπύλες δεν είναι όρια κελιών, απλώς μετακινούν τον δρομέα των συντεταγμένων. */
-function pathRules(ops: PdfjsOperators, [subOps, coords]: readonly unknown[], matrix: Matrix, toFraction: Fraction): PageStructureRule[] {
-  const values = coords as ArrayLike<number>;
+/** Τα ευθύγραμμα κομμάτια μιας υπο-διαδρομής. Οι καμπύλες δεν είναι όρια κελιών, απλώς μετακινούν τον δρομέα. */
+function subpathRules(subpath: PdfSubpath, toFraction: Fraction): PageStructureRule[] {
+  if (subpath.kind === 'rect') return rectangleEdges(toFraction(subpath.corners[0]), toFraction(subpath.corners[2]));
   const rules: PageStructureRule[] = [];
-  const point = (at: number): Point => toFraction(applied(matrix, values[at], values[at + 1]));
-  let at = 0;
-  let cursor: Point | null = null;
-  let start: Point | null = null;
-  for (const op of subOps as readonly number[]) {
-    if (op === ops.moveTo) { cursor = point(at); start = cursor; at += 2; }
-    else if (op === ops.lineTo) {
-      const next = point(at);
-      at += 2;
-      if (cursor) rules.push(...[ruleOf(cursor, next)].flatMap((rule) => rule ?? []));
-      cursor = next;
-    } else if (op === ops.closePath) {
-      if (cursor && start) rules.push(...[ruleOf(cursor, start)].flatMap((rule) => rule ?? []));
-      cursor = start;
-    } else if (op === ops.rectangle) {
-      const [x, y, width, height] = [values[at], values[at + 1], values[at + 2], values[at + 3]];
-      rules.push(...rectangleEdges(toFraction(applied(matrix, x, y)), toFraction(applied(matrix, x + width, y + height))));
-      at += 4;
-    } else if (op === ops.curveTo) at += 6;
-    else if (op === ops.curveTo2 || op === ops.curveTo3) at += 4;
+  const start = toFraction(subpath.start);
+  let cursor = start;
+  for (const segment of subpath.segments) {
+    const next = toFraction(segment.to);
+    if (segment.kind === 'line') rules.push(...[ruleOf(cursor, next)].flatMap((rule) => rule ?? []));
+    cursor = next;
   }
+  if (subpath.closed) rules.push(...[ruleOf(cursor, start)].flatMap((rule) => rule ?? []));
   return rules;
-}
-
-const paintOperators = (ops: PdfjsOperators): ReadonlySet<number> =>
-  new Set([ops.stroke, ops.closeStroke, ops.fill, ops.eoFill, ops.fillStroke, ops.eoFillStroke, ops.closeFillStroke, ops.closeEOFillStroke]);
-
-function formMatrix(args: readonly unknown[] | null): Matrix {
-  const matrix = args?.[0];
-  return Array.isArray(matrix) && matrix.length === 6 ? (matrix as unknown as Matrix) : IDENTITY;
 }
 
 function collectRules(ops: PdfjsOperators, fnArray: readonly number[], argsArray: readonly (readonly unknown[] | null)[], toFraction: Fraction): PageStructureRule[] {
-  const paints = paintOperators(ops);
-  const rules: PageStructureRule[] = [];
-  const stack: Matrix[] = [];
-  let matrix = IDENTITY;
-  let pending: PageStructureRule[] = [];
-  fnArray.forEach((fn, index) => {
-    const args = argsArray[index];
-    if (fn === ops.save) stack.push(matrix);
-    else if (fn === ops.restore) matrix = stack.pop() ?? matrix;
-    else if (fn === ops.transform) matrix = multiply(matrix, args as unknown as Matrix);
-    else if (fn === ops.paintFormXObjectBegin) { stack.push(matrix); matrix = multiply(matrix, formMatrix(args)); }
-    else if (fn === ops.paintFormXObjectEnd) matrix = stack.pop() ?? matrix;
-    else if (fn === ops.constructPath && args) pending.push(...pathRules(ops, args, matrix, toFraction));
-    else if (paints.has(fn)) { rules.push(...pending); pending = []; }
-    else if (fn === ops.endPath) pending = [];
-  });
-  return rules;
+  return walkPaintedPaths(ops, fnArray, argsArray)
+    .flatMap((path) => path.subpaths.flatMap((subpath) => subpathRules(subpath, toFraction)));
 }
 
 function markedText(items: readonly MarkedTextItem[]): ReadonlyMap<string, string> {

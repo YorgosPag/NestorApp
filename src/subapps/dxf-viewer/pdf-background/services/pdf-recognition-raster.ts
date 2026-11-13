@@ -71,19 +71,30 @@ type PdfJs = Awaited<ReturnType<typeof PdfRenderer.pdfjs>>;
 type PdfDocument = Awaited<ReturnType<PdfJs['getDocument']>['promise']>;
 type PdfPage = Awaited<ReturnType<PdfDocument['getPage']>>;
 
-/** Η σελίδα του `pdf` σε **δικό μας** έγγραφο (βλ. κεφαλίδα), η εγγενής ανάλυση της σάρωσής της, και κλείσιμο ΠΑΝΤΑ. */
-async function withIsolatedPage<T>(
-  pdf: Blob, pageNumber: number, use: (page: PdfPage, native: number | null) => Promise<T>,
+/**
+ * Η σελίδα του `pdf` σε **δικό μας** έγγραφο (βλ. κεφαλίδα) και κλείσιμο ΠΑΝΤΑ. Το ΕΝΑ απομονωμένο άνοιγμα: το χρησιμοποιούν
+ * η απόδοση αναγνώρισης, ο έλεγχος μέσου και η εισαγωγή διανυσμάτων (ADR-941).
+ */
+export async function withIsolatedPdfPage<T>(
+  pdf: Blob, pageNumber: number, use: (page: PdfPage, pdfjs: PdfJs) => Promise<T>,
 ): Promise<T> {
   const pdfjs = await PdfRenderer.pdfjs();
   const doc = await pdfjs.getDocument({ data: await pdf.arrayBuffer() }).promise;
   try {
-    const page = await doc.getPage(pageNumber);
-    const unit = page.getViewport({ scale: 1 });
-    return await use(page, nativeImageScale(await page.getOperatorList(), pdfjs.OPS, unit.width * unit.height));
+    return await use(await doc.getPage(pageNumber), pdfjs);
   } finally {
     await doc.destroy();
   }
+}
+
+/** Όπως το `withIsolatedPdfPage`, μαζί με την εγγενή ανάλυση της σάρωσης της σελίδας. */
+function withIsolatedPage<T>(
+  pdf: Blob, pageNumber: number, use: (page: PdfPage, native: number | null) => Promise<T>,
+): Promise<T> {
+  return withIsolatedPdfPage(pdf, pageNumber, async (page, pdfjs) => {
+    const unit = page.getViewport({ scale: 1 });
+    return use(page, nativeImageScale(await page.getOperatorList(), pdfjs.OPS, unit.width * unit.height));
+  });
 }
 
 const errorText = (error: unknown): string => (error instanceof Error ? error.message : String(error));

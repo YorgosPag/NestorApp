@@ -54,6 +54,7 @@ import { subscribeScene } from '../systems/scene/SceneStore';
 import { getGlobalCommandHistory } from '../core/commands/CommandHistory';
 import { planRecognitionSession } from '../systems/plan-recognition/plan-recognition-session';
 import { usePlanRecognitionWiring } from './usePlanRecognitionWiring';
+import { usePdfVectorImportWiring } from './usePdfVectorImportWiring';
 import {
   ModelFromDrawingPanel,
   type ModelFromDrawingPanelActions,
@@ -209,9 +210,10 @@ export function ModelFromDrawingHost({ levelManager }: ModelFromDrawingHostProps
 
   const { imageSource, recognizeImage, reading, scale, ocr, readValues, drawingKind } = usePlanRecognitionWiring(state, getDeps);
   const actions = usePanelActions(start, getDeps, getOpeningDeps, recognizeImage, { reading, scale, ocr, readValues, drawingKind });
+  const pdfVectorImport = usePdfVectorImportWiring(getDeps);
 
   if (state.phase === 'closed') return null;
-  return <ModelFromDrawingPanel state={state} actions={actions} imageSource={imageSource} />;
+  return <ModelFromDrawingPanel state={state} actions={actions} imageSource={imageSource} pdfVectorImport={pdfVectorImport} />;
 }
 
 /**
