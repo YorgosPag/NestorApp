@@ -50,7 +50,8 @@ interface Codec<K extends AttributeType> {
 
 const LIST_SEPARATOR = /\s*[;\n]\s*/;
 const EMPTY: ValueParse = { ok: true, value: null };
-const fail = (issue: CatalogIssueCode, params?: Record<string, string | number>): ValueParse => ({ ok: false, issue, params });
+// Χωρίς παραμέτρους ⇒ **κλειδί που λείπει**, ποτέ `params: undefined` (ο κανόνας του `issueOf`, ADR-923 §5.5.2 Β10).
+const fail = (issue: CatalogIssueCode, params?: Record<string, string | number>): ValueParse => (params ? { ok: false, issue, params } : { ok: false, issue });
 const norm = (text: string) => normalizeSearchText(text.toLowerCase());
 
 function decimalSeparator(language: HumanLanguage): string {

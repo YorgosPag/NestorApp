@@ -229,12 +229,25 @@ export interface CatalogIssue {
   readonly params?: Readonly<Record<string, string | number>>;
 }
 
+/** Εύρημα με κωδικό από **οποιοδήποτε** κλειστό λεξιλόγιο (καταλόγου ή εισαγωγής) — το ίδιο σχήμα με το {@link CatalogIssue}. */
+export type IssueOf<C extends string> = Omit<CatalogIssue, 'code'> & { readonly code: C };
+
+/**
+ * Ο **ένας** κατασκευαστής ευρήματος (ADR-923 §5.5.2 Β10): παράμετροι που λείπουν ⇒ **κλειδί που λείπει**, ποτέ `params: undefined`.
+ * Το Admin SDK δεν έχει `ignoreUndefinedProperties` (επίτηδες: το `undefined` είναι σφάλμα, όχι τιμή) — και ένα `undefined` μέσα σε
+ * αποθηκευμένη πρόταση έδινε 500 στο «+Φάσεις» (live 2026-11-13, `rows.0.fields.4.issues.0.params`). Ο τύπος δεν το πιάνει χωρίς
+ * `exactOptionalPropertyTypes`, γι' αυτό ο κανόνας ζει σε **μία** συνάρτηση.
+ */
+export function issueOf<C extends string>(code: C, path: string, params?: Readonly<Record<string, string | number>>): IssueOf<C> {
+  return params ? { code, path, params } : { code, path };
+}
+
 /** Συλλέκτης ευρημάτων — κάθε επικυρωτής γράφει εδώ, ποτέ δεν ρίχνει εξαίρεση. */
 export class IssueCollector {
   private readonly items: CatalogIssue[] = [];
 
   add(code: CatalogIssueCode, path: string, params?: Readonly<Record<string, string | number>>): void {
-    this.items.push(params ? { code, path, params } : { code, path });
+    this.items.push(issueOf(code, path, params));
   }
 
   get issues(): readonly CatalogIssue[] {

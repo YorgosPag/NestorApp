@@ -21,7 +21,7 @@
 
 import type { MinorAmount } from '@/lib/money/money';
 import type { XChangeImportReport } from '../interop/etim/xchange-report';
-import type { CatalogIssue } from '../schema/catalog-issues';
+import type { CatalogIssueCode, IssueOf } from '../schema/catalog-issues';
 import type { AttributeValue, ChannelSlot, LocaleSlot, NoValueReason } from './product';
 import type { ConsistencyViolation } from '../rules/evaluate-consistency';
 import type { CatalogAssetRole } from '../vocabulary/asset-roles';
@@ -43,7 +43,8 @@ import type {
 } from '../vocabulary/catalog-import';
 
 /** Εύρημα πεδίου ή γραμμής: του κριτή του καταλόγου ή της ίδιας της εισαγωγής. */
-export type ImportIssue = CatalogIssue | (Omit<CatalogIssue, 'code'> & { readonly code: ImportIssueCode });
+// Ένα σχήμα με ένωση κωδικών (όχι ένωση δύο σχημάτων): έτσι ένας κωδικός `CatalogIssueCode | ImportIssueCode` χωρά χωρίς `as`.
+export type ImportIssue = IssueOf<CatalogIssueCode | ImportIssueCode>;
 
 // ── Πού πάει μια τιμή ────────────────────────────────────────────────────────
 

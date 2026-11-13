@@ -8,6 +8,7 @@
  */
 
 import type { CatalogSchemaSnapshot } from '../derived/chain-derived';
+import { issueOf } from '../schema/catalog-issues';
 import type {
   ExtractedCell,
   ExtractedGroup,
@@ -71,7 +72,7 @@ function parseCell(cell: AttributeCell, context: AttributeProposalContext): { re
   const attribute = context.schema.attributes.get(path);
   if (!attribute) return { value: null, issues: [{ code: 'attributeUnknown', path }] };
   const parsed = parseImportCell(attribute, cell, context.text);
-  return parsed.ok ? { value: parsed.value, issues: [] } : { value: null, issues: [{ code: parsed.issue, path, params: parsed.params } as ImportIssue] };
+  return parsed.ok ? { value: parsed.value, issues: [] } : { value: null, issues: [issueOf(parsed.issue, path, parsed.params)] };
 }
 
 function fieldOf(cell: AttributeCell, holder: LiveHolder | null, context: AttributeProposalContext): ImportProposalField {
