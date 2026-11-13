@@ -94,7 +94,12 @@ export type ImportCellParse =
   | { readonly ok: true; readonly value: AttributeValue | null }
   | { readonly ok: false; readonly issue: ImportIssue['code']; readonly params?: Readonly<Record<string, string | number>> };
 
-const printedForm = (text: string): string => normalizeUniqueText(normalizeMixedScriptHomoglyphs(text));
+/**
+ * Το κενό ανάμεσα σε αριθμό και σύμβολο μονάδας (SI Brochure §5.4.3: «50 Hz») — ο προμηθευτής το παραλείπει («50Hz»). **Μόνο** ψηφίο →
+ * γράμμα: ανάμεσα σε ψηφία το κενό χωρίζει αριθμούς («1 2» ≠ «12»), και το «DN 20» (γράμμα → ψηφίο) δεν είναι μονάδα.
+ */
+const NUMBER_UNIT_SPACE = /(?<=\d) (?=\p{L})/gu;
+const printedForm = (text: string): string => normalizeUniqueText(normalizeMixedScriptHomoglyphs(text)).replace(NUMBER_UNIT_SPACE, '');
 const NEXT_IS_DIGIT = /^\d/u;
 
 /**

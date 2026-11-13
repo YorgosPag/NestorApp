@@ -739,3 +739,35 @@ describe('🔴 βήμα 3Β: κομμάτι κατ\' αποκλεισμό — ο
     expect(lineFragments([target(voltage), target(phases)], '220-240V-1Ph', text)).toEqual(['220-240V-1Ph', '220-240V-1Ph']);
   });
 });
+
+describe('🔴 βήμα 3Γ.1-Γ: η συχνότητα είναι ΕΠΙΛΟΓΗ (ETIM EF005455) — «50Hz» ≡ «50 Hz»', () => {
+  const SUPPLY_TEXT = '230V-50Hz-1Ph';
+  const size = attributesByCode.get('size');
+  const weight = attributesByCode.get('weight');
+  if (!size || !weight) throw new Error('το fixture δεν έχει `size` / `weight`');
+  const option = (code: string, label: string) => ({ code, labels: { el: label, en: label } });
+  const frequency = {
+    ...size, id: 'cattr_frequency', code: 'supply_frequency',
+    config: { options: [option('hz_50', '50 Hz'), option('hz_60', '60 Hz'), option('hz_50_60', '50/60 Hz')] },
+  } as NonNullable<typeof size>;
+  const voltage = { ...weight, id: 'cattr_voltage', code: 'connection_voltage', config: { measurementFamilyCode: 'voltage', defaultUnitCode: 'V', min: 0, max: null, decimals: 0, negativeAllowed: false } };
+  const phases = { ...weight, id: 'cattr_phases', code: 'phases', type: 'number' as const, config: { min: 1, max: 3, decimals: 0, negativeAllowed: false } };
+  const target = (attribute: typeof voltage | typeof phases | typeof frequency) => ({ attribute, unitCode: null });
+
+  it('«50Hz» → η επιλογή «50 Hz», και το «50/60Hz» → «50/60 Hz»', () => {
+    expect(selectOptionFor(frequency, '50Hz')).toBe('hz_50');
+    expect(selectOptionFor(frequency, '50/60Hz')).toBe('hz_50_60');
+    expect(parseImportCell(frequency, { text: '50Hz', unitCode: null }, text)).toEqual({ ok: true, value: { type: 'select', optionCode: 'hz_50' } });
+  });
+
+  it('σελ. 85: τάση «230V» · συχνότητα «50Hz» (επιλογή) · φάσεις «1Ph»', () => {
+    expect(lineFragments([target(voltage), target(frequency), target(phases)], SUPPLY_TEXT, text)).toEqual(['230V', '50Hz', '1Ph']);
+  });
+
+  it('🔑 μόνο ψηφίο → γράμμα: το κενό ανάμεσα σε ψηφία μένει («1 2» ≠ «12»)', () => {
+    const numbers = { ...size, config: { options: [option('n_12', '12'), option('n_1_2', '1 2')] } } as NonNullable<typeof size>;
+    // Μέσω της αρχής (όχι της ακριβούς αντιστοίχισης): αν έφευγε κάθε κενό, «12» και «1 2» θα ήταν δύο υποψήφιες ⇒ καμία.
+    expect(selectOptionFor(numbers, '1 2x')).toBe('n_1_2');
+    expect(selectOptionFor(numbers, '12x')).toBe('n_12');
+  });
+});
