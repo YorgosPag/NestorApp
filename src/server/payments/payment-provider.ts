@@ -12,6 +12,7 @@ import 'server-only';
  * @see ADR-ACC-030 · `providers/everypay/everypay-adapter.ts`
  */
 
+import { normalizeToDate } from '@/lib/date-local';
 import type { PaymentProviderId } from '@/lib/payments/payment-routes';
 import type { CheckoutLaunch, OnlinePaymentMethod } from '@/subapps/accounting/types/online-payment';
 
@@ -51,6 +52,53 @@ export interface StartedCheckout {
    * υπόσχεται ζωή που ο πάροχος δεν τηρεί (ADR-ACC-030 §5.5).
    */
   readonly providerExpiresAt: string | null;
+  /** Οι χρόνοι της συνεδρίας **όπως τους έγραψε ο πάροχος** — διάγνωση (`startedCheckoutDiagnostics`), ποτέ κριτήριο. */
+  readonly providerClock: ProviderClockEcho;
+}
+
+/**
+ * Ωμές τιμές χρόνου του παρόχου, **πριν** από κάθε κανονικοποίηση (π.χ. `2025-10-02T16:20:32+0200`). Η κανονικοποίηση
+ * κρύβει ακριβώς ό,τι χρειάζεται η διάγνωση: αν ο πάροχος έστειλε μετατόπιση ζώνης ή όχι (ADR-ACC-030 §5.8 #6).
+ */
+export interface ProviderClockEcho {
+  readonly createdAt: string | null;
+  readonly expiresAt: string | null;
+}
+
+/** Τι γράφεται στο log της έναρξης — ωμές τιμές χρόνου και ό,τι προκύπτει από αυτές. Κανένα μυστικό / token. */
+export interface StartedCheckoutDiagnostics {
+  readonly providerCreatedAtRaw: string | null;
+  readonly providerExpiresAtRaw: string | null;
+  /** Η λήξη όπως την κράτησε η εφαρμογή (ISO 8601). */
+  readonly providerExpiresAt: string | null;
+  /**
+   * Λήξη − δημιουργία, **με το ρολόι του παρόχου**: οι δύο τιμές έχουν την ίδια μορφή, άρα λάθος ζώνης ώρας
+   * αλληλοαναιρείται. Η πραγματική διάρκεια ζωής της συνεδρίας του παρόχου.
+   */
+  readonly providerLifetimeSeconds: number | null;
+  /**
+   * Δημιουργία στον πάροχο − η δική μας `createdAt`. Δευτερόλεπτα ⇒ καθυστέρηση δικτύου· ±ακέραιες ώρες ⇒ η ζώνη
+   * ώρας του παρόχου διαβάζεται λάθος.
+   */
+  readonly providerClockSkewSeconds: number | null;
+}
+
+function secondsBetween(fromIso: string | null, toIso: string | null): number | null {
+  const from = normalizeToDate(fromIso);
+  const to = normalizeToDate(toIso);
+  return from === null || to === null ? null : Math.round((to.getTime() - from.getTime()) / 1000);
+}
+
+/** Ο ΕΝΑΣ ορισμός της διάγνωσης μιας έναρξης στον πάροχο. `ourCreatedAt` = η `createdAt` της συνεδρίας μας. */
+export function startedCheckoutDiagnostics(started: StartedCheckout, ourCreatedAt: string): StartedCheckoutDiagnostics {
+  const { createdAt, expiresAt } = started.providerClock;
+  return {
+    providerCreatedAtRaw: createdAt,
+    providerExpiresAtRaw: expiresAt,
+    providerExpiresAt: started.providerExpiresAt,
+    providerLifetimeSeconds: secondsBetween(createdAt, expiresAt),
+    providerClockSkewSeconds: secondsBetween(ourCreatedAt, createdAt),
+  };
 }
 
 /** Η συνεδρία όπως την ξέρει η εφαρμογή — ό,τι χρειάζεται ο adapter για να ρωτήσει τον πάροχο. */

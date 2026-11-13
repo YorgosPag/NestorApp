@@ -246,6 +246,13 @@ cron εκπέμπει `refunds checked · recorded · unmatched · failed`. Οι
 6. ~~Λήξη συνεδρίας IRIS 15′ έναντι 24 ωρών~~ — **έκλεισε** (2026-11-13, §5.5): η λήξη του παρόχου γίνεται το
    `expiresAt`· οι 24 ώρες = παράθυρο ανάκτησης από εκεί. Μένει ατεκμηρίωτη η επανάληψη της **ίδιας** συνεδρίας
    IRIS μετά από αποτυχία (ούτε GET συνεδρίας IRIS)· η σελίδα προτείνει νέα απόπειρα, που ανοίγει νέα συνεδρία.
+   ⚠️ **Ανοιχτό: 35′ ή 15′;** Ζωντανά (Α-13 `pchk_0ed36c2b…`) η λήξη βγήκε **35′** μετά τη δική μας `createdAt`, ενώ το
+   παράδειγμα του API reference δείχνει 15′. Η διάρκεια **δεν** τεκμηριώνεται ρητά. Διάγνωση (2026-11-13): ο adapter
+   επιστρέφει τις **ωμές** τιμές (`StartedCheckout.providerClock` ← `date_created` / `expiration_date`, `providerClockOf`)
+   και η έναρξη γράφει `Checkout started at provider` με `startedCheckoutDiagnostics` (ένας ορισμός, πρότυπο
+   `webhookSignalDiagnostics`): `providerLifetimeSeconds` = λήξη − δημιουργία **με το ρολόι του παρόχου** (λάθος ζώνης
+   αλληλοαναιρείται) · `providerClockSkewSeconds` = δημιουργία παρόχου − δική μας `createdAt` (±ακέραιες ώρες ⇒ λάθος
+   ζώνη ώρας). Η επόμενη ζωντανή απόπειρα κλείνει το ερώτημα.
 7. Πολιτική επαναλήψεων webhook: δεν τεκμηριώνεται (docs «Webhooks»).
 
 ### 5.9 Ευρήματα ζωντανής επαλήθευσης (sandbox, 2026-11-11)
@@ -439,3 +446,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-13 | §5.8 #1: η μορφή υπογραφής που ταίριαξε καταγράφεται (`AcceptedVerdict.signatureScheme` → `webhookSignalDiagnostics` → logs webhook/επιστροφής + `payment_provider_events.signatureScheme`) ώστε το επόμενο ζωντανό IRIS να κλείσει το hex/base64· σουίτα `webhook-signal-diagnostics` (4). |
 | 2026-11-13 | §3: το enum `paymentMethod` του AI αναλυτή (`document-analyzer.schemas.ts`) χωρίς `iris` ⇒ παράγεται εξαντλητικά από τον `PaymentMethod` (ACC-005 changelog). |
 | 2026-11-13 | §3: `paymentMethodLabelIn` (`payment-method-label-bundle.ts`) — οι δύο χειρόγραφοι πίνακες ετικετών των email (`base-email-template.ts` · `notification-helpers.ts`, κλειδιά εκτός `PaymentMethod`, χωρίς `card`/`iris`) αντικαταστάθηκαν από τα κλειδιά i18n της UI· test (10). |
+| 2026-11-13 | §5.8 #6 διάγνωση 35′ vs 15′: `StartedCheckout.providerClock` (ωμά `date_created` / `expiration_date`, `providerClockOf`) · `startedCheckoutDiagnostics` (διάρκεια ζωής με το ρολόι του παρόχου + απόκλιση από το δικό μας) · log `Checkout started at provider` στην έναρξη· σουίτα `started-checkout-diagnostics` (3) + 2 έλεγχοι στο `everypay-adapter`· jest 18/18. Ανακλήθηκαν οι 10 δοκιμαστικοί σύνδεσμοι πληρωμής (Α-13 ×3 · Α-12 · Α-11 ×2 · Α-10 ×3 · Α-7). |

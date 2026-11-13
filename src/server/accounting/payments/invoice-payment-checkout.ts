@@ -25,7 +25,11 @@ import { isPlausibleShareToken } from '@/lib/sharing/share-token';
 import { createModuleLogger } from '@/lib/telemetry';
 import { linkHolderActor } from '@/server/accounting/public-invoice/invoice-link-opened';
 import { readSharedInvoice } from '@/server/accounting/public-invoice/invoice-public-session';
-import type { PaymentProvider, StartedCheckout } from '@/server/payments/payment-provider';
+import {
+  startedCheckoutDiagnostics,
+  type PaymentProvider,
+  type StartedCheckout,
+} from '@/server/payments/payment-provider';
 import { paymentProviderForCompany } from '@/server/payments/payment-provider-registry';
 import { findActiveShareByToken } from '@/server/sharing/share-token-lookup';
 import { generatePaymentCheckoutId } from '@/services/enterprise-id.service';
@@ -118,6 +122,10 @@ async function launchAtProvider(
       webhookUrl: joinOrigin(input.origin, paymentWebhookRoute(provider.id)),
     });
     await updatePaymentCheckout(db, record.checkoutId, startedCheckoutPatch(started), nowISO());
+    logger.info('Checkout started at provider', {
+      checkoutId: record.checkoutId, provider: provider.id, method: record.method,
+      ...startedCheckoutDiagnostics(started, record.createdAt),
+    });
     return { status: 'started', checkoutId: record.checkoutId, launch: started.launch };
   } catch (error) {
     logger.error('Provider refused to start a checkout', {

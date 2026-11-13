@@ -10,7 +10,7 @@
 import { normalizeToISO, nowISO } from '@/lib/date-local';
 import { isNonEmptyTrimmedString, isPlainRecord, plainRecordOrNull } from '@/lib/type-guards';
 
-import type { ProviderMovement } from '../../payment-provider';
+import type { ProviderClockEcho, ProviderMovement } from '../../payment-provider';
 
 export function textField(record: Record<string, unknown> | null, key: string): string | null {
   const value = record?.[key];
@@ -78,6 +78,11 @@ export const CAPTURED_PAYMENT_STATUSES: ReadonlySet<string> = new Set(['captured
  */
 export function instantField(record: Record<string, unknown> | null, key: string): string | null {
   return normalizeToISO(textField(record, key));
+}
+
+/** Οι χρόνοι μιας συνεδρίας (ειδοποίηση · IRIS) **όπως ήρθαν**, για τη διάγνωση της έναρξης (ADR-ACC-030 §5.8 #6). */
+export function providerClockOf(record: Record<string, unknown> | null): ProviderClockEcho {
+  return { createdAt: textField(record, 'date_created'), expiresAt: textField(record, 'expiration_date') };
 }
 
 function occurredAtOf(record: Record<string, unknown>): string {

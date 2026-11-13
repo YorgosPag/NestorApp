@@ -154,11 +154,14 @@ describe('startCheckout — λήξη του παρόχου', () => {
     }));
     const started = await provider.startCheckout({ ...request, method: 'iris' });
     expect(started.providerExpiresAt).toBe('2025-10-02T14:20:32.000Z');
+    expect(started.providerClock).toEqual({ createdAt: '2025-10-02T16:05:32+0200', expiresAt: '2025-10-02T16:20:32+0200' });
   });
 
   it('IRIS χωρίς `expiration_date` ⇒ null (ισχύει η ζητούμενη λήξη)', async () => {
     jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({ signature: 'sig_1' }));
-    await expect(provider.startCheckout({ ...request, method: 'iris' })).resolves.toMatchObject({ providerExpiresAt: null });
+    await expect(provider.startCheckout({ ...request, method: 'iris' })).resolves.toMatchObject({
+      providerExpiresAt: null, providerClock: { createdAt: null, expiresAt: null },
+    });
   });
 
   it('κάρτα: η λήξη που επιστρέφει η ειδοποίηση', async () => {

@@ -36,6 +36,7 @@ import {
   instantField,
   movementOf,
   notificationPaymentReference,
+  providerClockOf,
   statusField,
   textField,
 } from './everypay-readers';
@@ -66,7 +67,12 @@ async function startCardCheckout(credentials: EverypayCredentials, request: Chec
   const reference = textField(body, 'token');
   const url = textField(body, 'payment_link_url');
   if (reference === null || url === null) throw new EverypayApiError(502, null, 'Notification response without token/link');
-  return { providerReference: reference, launch: { kind: 'redirect', url }, providerExpiresAt: instantField(body, 'expiration_date') };
+  return {
+    providerReference: reference,
+    launch: { kind: 'redirect', url },
+    providerExpiresAt: instantField(body, 'expiration_date'),
+    providerClock: providerClockOf(body),
+  };
 }
 
 async function startIrisCheckout(credentials: EverypayCredentials, request: CheckoutRequest): Promise<StartedCheckout> {
@@ -85,6 +91,7 @@ async function startIrisCheckout(credentials: EverypayCredentials, request: Chec
     providerReference: null,
     // Η συνεδρία IRIS δεν δέχεται λήξη· τη δηλώνει ο πάροχος (παράδειγμα API: 15′ μετά το `date_created`).
     providerExpiresAt: instantField(body, 'expiration_date'),
+    providerClock: providerClockOf(body),
     launch: {
       kind: 'form-post',
       url: new URL('/api/payment-methods/iris', credentials.endpoints.payform).toString(),
