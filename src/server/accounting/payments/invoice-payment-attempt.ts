@@ -32,11 +32,17 @@ export function paymentAttemptOutcomeOf(
   }
 }
 
+/** Πόσο μένει ως τη λήξη της συνεδρίας, με το ρολόι του διακομιστή (`nowMs`)· `0` μετά τη λήξη ή σε άκυρη λήξη. */
+export function attemptExpiresInMs(record: Pick<PaymentCheckoutRecord, 'expiresAt'>, nowMs: number): number {
+  const expiresAtMs = Date.parse(record.expiresAt);
+  return Number.isFinite(expiresAtMs) ? Math.max(0, expiresAtMs - nowMs) : 0;
+}
+
 /** Η έκβαση της απόπειρας `checkoutId` — μόνο αν ανήκει στον σύνδεσμο `shareId`. */
 export async function readInvoicePaymentAttempt(
-  db: Firestore, input: { readonly shareId: string; readonly checkoutId: string },
+  db: Firestore, input: { readonly shareId: string; readonly checkoutId: string; readonly nowMs: number },
 ): Promise<InvoiceCheckoutAttemptResponse> {
   const record = await readPaymentCheckout(db, input.checkoutId);
   if (record === null || record.shareId !== input.shareId) return { status: 'refused', reason: 'unknown-attempt' };
-  return { status: 'ok', attempt: paymentAttemptOutcomeOf(record) };
+  return { status: 'ok', attempt: paymentAttemptOutcomeOf(record), expiresInMs: attemptExpiresInMs(record, input.nowMs) };
 }

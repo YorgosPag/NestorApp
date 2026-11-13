@@ -7,7 +7,7 @@
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { paymentAttemptOutcomeOf, readInvoicePaymentAttempt } from '../invoice-payment-attempt';
+import { attemptExpiresInMs, paymentAttemptOutcomeOf, readInvoicePaymentAttempt } from '../invoice-payment-attempt';
 
 const FAILURE = { code: 'authorization-failed', providerCode: null, at: '2026-11-12T20:00:00.000Z' } as const;
 
@@ -43,17 +43,27 @@ describe('paymentAttemptOutcomeOf', () => {
   });
 });
 
+describe('attemptExpiresInMs — η αναμονή της σελίδας ακολουθεί τη λήξη του παρόχου (§5.6)', () => {
+  const expiresAt = '2026-11-12T20:20:00.000Z';
+  it('πριν από τη λήξη ⇒ ό,τι μένει· μετά ⇒ 0· άκυρη λήξη ⇒ 0', () => {
+    expect(attemptExpiresInMs({ expiresAt }, Date.parse(expiresAt) - 35 * 60_000)).toBe(35 * 60_000);
+    expect(attemptExpiresInMs({ expiresAt }, Date.parse(expiresAt) + 1_000)).toBe(0);
+    expect(attemptExpiresInMs({ expiresAt: 'not-a-date' }, 0)).toBe(0);
+  });
+});
+
 describe('readInvoicePaymentAttempt', () => {
   const db = fakeDb({ pchk_1: checkoutDoc({ lastFailure: FAILURE }) });
+  const nowMs = Date.parse('2026-11-12T20:10:00.000Z');
 
-  it('απόπειρα του ίδιου συνδέσμου ⇒ μόνο η έκβαση', async () => {
-    await expect(readInvoicePaymentAttempt(db, { shareId: 'share_1', checkoutId: 'pchk_1' }))
-      .resolves.toEqual({ status: 'ok', attempt: 'failed' });
+  it('απόπειρα του ίδιου συνδέσμου ⇒ η έκβαση και ό,τι μένει ως τη λήξη (τίποτα άλλο)', async () => {
+    await expect(readInvoicePaymentAttempt(db, { shareId: 'share_1', checkoutId: 'pchk_1', nowMs }))
+      .resolves.toEqual({ status: 'ok', attempt: 'failed', expiresInMs: 10 * 60_000 });
   });
 
   it('απόπειρα ΑΛΛΟΥ συνδέσμου ⇒ ίδια άρνηση με την ανύπαρκτη (κανένα μαντείο ύπαρξης)', async () => {
-    const foreign = await readInvoicePaymentAttempt(db, { shareId: 'share_2', checkoutId: 'pchk_1' });
-    const absent = await readInvoicePaymentAttempt(db, { shareId: 'share_1', checkoutId: 'pchk_404' });
+    const foreign = await readInvoicePaymentAttempt(db, { shareId: 'share_2', checkoutId: 'pchk_1', nowMs });
+    const absent = await readInvoicePaymentAttempt(db, { shareId: 'share_1', checkoutId: 'pchk_404', nowMs });
     expect(foreign).toEqual({ status: 'refused', reason: 'unknown-attempt' });
     expect(absent).toEqual(foreign);
   });

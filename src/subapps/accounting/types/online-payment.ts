@@ -70,5 +70,14 @@ export const INVOICE_CHECKOUT_ATTEMPT_PARAM = 'checkout';
 
 /** Ξένη ή ανύπαρκτη απόπειρα ⇒ η **ίδια** άρνηση (`unknown-attempt`) — κανένα μαντείο ύπαρξης συνεδριών. */
 export type InvoiceCheckoutAttemptResponse =
-  | { readonly status: 'ok'; readonly attempt: PaymentAttemptOutcome }
+  | {
+    readonly status: 'ok';
+    readonly attempt: PaymentAttemptOutcome;
+    /**
+     * Πόσο μένει ως τη λήξη της συνεδρίας (η λήξη **του παρόχου**, §5.5), σε ms, με το ρολόι του **διακομιστή**· `0`
+     * μετά τη λήξη. Σχετικό, όχι στιγμή: η σελίδα δεν συγκρίνει ποτέ με το ρολόι του browser (πρότυπο Stripe: η
+     * αναμονή ακολουθεί το `expires_at` της συνεδρίας, όχι σταθερό χρονόμετρο).
+     */
+    readonly expiresInMs: number;
+  }
   | { readonly status: 'refused'; readonly reason: 'visit-expired' | 'unknown-attempt' };

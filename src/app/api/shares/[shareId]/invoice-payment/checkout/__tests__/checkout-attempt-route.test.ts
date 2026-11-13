@@ -71,7 +71,7 @@ function call(shareIdInPath: string, checkout: string | null) {
 
 beforeEach(() => {
   grantMock.mockReset().mockReturnValue(true);
-  readAttemptMock.mockReset().mockResolvedValue({ status: 'ok', attempt: 'failed' });
+  readAttemptMock.mockReset().mockResolvedValue({ status: 'ok', attempt: 'failed', expiresInMs: 600_000 });
 });
 
 describe('GET …/invoice-payment/checkout — έκβαση απόπειρας', () => {
@@ -95,9 +95,9 @@ describe('GET …/invoice-payment/checkout — έκβαση απόπειρας',
     const response = await call('share%5F1', 'pchk_59a3be71-fd7a-427f-b318-64f27ff7f50b');
     expect(grantMock).toHaveBeenCalledWith(expect.anything(), 'share_1');
     expect(readAttemptMock).toHaveBeenCalledWith({}, {
-      shareId: 'share_1', checkoutId: 'pchk_59a3be71-fd7a-427f-b318-64f27ff7f50b',
+      shareId: 'share_1', checkoutId: 'pchk_59a3be71-fd7a-427f-b318-64f27ff7f50b', nowMs: expect.any(Number),
     });
-    expect(await response.json()).toEqual({ status: 'ok', attempt: 'failed' });
+    expect(await response.json()).toEqual({ status: 'ok', attempt: 'failed', expiresInMs: 600_000 });
   });
 
   it('κάθε απάντηση: 200 με ιδιωτικές κεφαλίδες (no-store · noindex)', async () => {

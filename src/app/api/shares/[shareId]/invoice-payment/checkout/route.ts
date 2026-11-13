@@ -85,7 +85,7 @@ async function attemptHandler(
     ? { status: 'refused', reason: 'visit-expired' }
     : !PAYMENT_ATTEMPT_ID_PATTERN.test(checkoutId)
       ? { status: 'refused', reason: 'unknown-attempt' }
-      : await readInvoicePaymentAttempt(getAdminFirestore(), { shareId, checkoutId });
+      : await readInvoicePaymentAttempt(getAdminFirestore(), { shareId, checkoutId, nowMs: Date.now() });
   return NextResponse.json(outcome, { status: 200, headers: PRIVATE_CHANNEL_HEADERS });
 }
 
