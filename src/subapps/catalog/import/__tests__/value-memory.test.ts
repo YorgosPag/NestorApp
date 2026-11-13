@@ -9,6 +9,7 @@ import type { ExtractedCell, ExtractedGroup, ImportValueEdit } from '../../types
 import { applyHumanEdits, recordEdits } from '../human-edits';
 import { importTargetKey, importTextContextOf } from '../proposal-values';
 import { learnableValues, learnedValueEntry, memoryEditCount, valueMemoryEditsFor, valueMemoryHintsFor, valueMemoryKeysOf } from '../value-memory';
+import { suggestedOptionIndex } from '../supplier-memory-core';
 
 const weight = [...MFP_ATTRIBUTE_MAP].map(([id, attribute]) => ({ ...attribute, id })).find((attribute) => attribute.code === 'weight');
 if (!weight) throw new Error('το fixture δεν έχει `weight`');
@@ -90,6 +91,28 @@ describe('§5.5.2 Β10 — μνήμη τιμών: «1Ph» → 1', () => {
     const [hint] = valueMemoryHintsFor(taught, undefined, applicationOf(conflicted));
     expect(hint.verdict).toBe('conflict');
     expect(hint.options.map((option) => option.text).sort()).toEqual(['1', '3']);
+    // Ισοπαλία (1 έγκριση η καθεμία) ⇒ καμία προτεινόμενη.
+    expect(hint.options.filter((option) => option.suggested)).toEqual([]);
+  });
+
+  it('🔑 Akeneo SDM: η ΣΥΧΝΟΤΕΡΗ ξεχωρίζει ως προτεινόμενη — αλλά ΔΕΝ εφαρμόζεται· η μη εφαρμόσιμη δεν προτείνεται ποτέ', () => {
+    const one = { group: taught, edits: [humanEdit('v0', '1', '1Ph')] };
+    const majority = bookAfter(one, one, { group: taught, edits: [humanEdit('v0', '3', '1Ph')] });
+    expect(valueMemoryEditsFor(taught, undefined, applicationOf(majority))).toEqual([]);
+    const [hint] = valueMemoryHintsFor(taught, undefined, applicationOf(majority));
+    expect(hint.options.filter((option) => option.suggested).map((option) => option.text)).toEqual(['1']);
+    // Η συχνότερη δεν διαβάζεται πια (η ιδιότητα έγινε μέτρηση) ⇒ καμία προτεινόμενη, ούτε η λιγότερο στηριγμένη που επίσης δεν διαβάζεται.
+    const narrowed = { attributes: new Map([[phases.id, { ...weight, id: phases.id, code: 'phases' }]]), context };
+    const [stale] = valueMemoryHintsFor(taught, undefined, { ...applicationOf(majority), ...narrowed });
+    expect(stale.options.filter((option) => option.suggested)).toEqual([]);
+  });
+
+  it('suggestedOptionIndex: η μόνη εφαρμόσιμη με τις περισσότερες εγκρίσεις· ισοπαλία ή καμία εφαρμόσιμη ⇒ null', () => {
+    expect(suggestedOptionIndex([{ count: 1, usable: true }, { count: 3, usable: true }])).toBe(1);
+    expect(suggestedOptionIndex([{ count: 5, usable: false }, { count: 2, usable: true }])).toBe(1);
+    expect(suggestedOptionIndex([{ count: 2, usable: true }, { count: 2, usable: true }])).toBeNull();
+    expect(suggestedOptionIndex([{ count: 2, usable: false }])).toBeNull();
+    expect(suggestedOptionIndex([])).toBeNull();
   });
 
   it('🔑 θυμάται κείμενο, όχι τιμή: η ιδιότητα έγινε μέτρηση, το «1» δεν διαβάζεται ΠΙΑ ⇒ καμία εφαρμογή — «δεν ισχύει πλέον»', () => {

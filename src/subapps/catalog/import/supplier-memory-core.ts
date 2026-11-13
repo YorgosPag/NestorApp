@@ -35,6 +35,19 @@ export function memoryVerdict<D>(entry: { readonly decisions: readonly ImportMem
   return { kind: 'apply', decision: only.decision, count: only.count, sourceBatchId: only.lastBatchId };
 }
 
+/**
+ * Η **προτεινόμενη** επιλογή μιας υπόδειξης (Akeneo SDM Value Mapping: «suggests the most frequently used target option»): η **μόνη**
+ * εφαρμόσιμη με τις περισσότερες εγκρίσεις. Ισοπαλία ή καμία εφαρμόσιμη ⇒ `null`. **Πρόταση, όχι εφαρμογή**: η σύγκρουση μένει
+ * ερώτηση στον άνθρωπο (`memoryVerdict`), η προτεινόμενη απλώς ξεχωρίζει.
+ */
+export function suggestedOptionIndex(options: readonly { readonly count: number; readonly usable: boolean }[]): number | null {
+  const usableCounts = options.flatMap((option) => (option.usable ? [option.count] : []));
+  if (usableCounts.length === 0) return null;
+  const top = Math.max(...usableCounts);
+  if (usableCounts.filter((count) => count === top).length > 1) return null;
+  return options.findIndex((option) => option.usable && option.count === top);
+}
+
 /** Η προέλευση που φορά ό,τι εφάρμοσε η μνήμη: ορατή, με αναίρεση. */
 export const memoryOriginOf = (memoryId: string, verdict: { readonly count: number; readonly sourceBatchId: string }): ImportMemoryOrigin =>
   ({ kind: 'memory', memoryId, count: verdict.count, sourceBatchId: verdict.sourceBatchId });

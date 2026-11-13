@@ -87,7 +87,8 @@ function EditOrigin({ edit }: { readonly edit: ImportValueEdit }) {
 
 /**
  * §5.5.2 Β10: η μνήμη τιμών ξέρει απάντηση που **δεν** εφάρμοσε — σύγκρουση, απάντηση που αναιρέθηκε, ή που δεν ισχύει πια. Κάθε επιλογή
- * είναι η **υπάρχουσα** διόρθωση (ο διακομιστής ξανακρίνει)· ποτέ «κερδίζει ο συχνότερος».
+ * είναι η **υπάρχουσα** διόρθωση (ο διακομιστής ξανακρίνει)· ποτέ «κερδίζει ο συχνότερος». Η συχνότερη (`suggested`, Akeneo SDM)
+ * **ξεχωρίζει** ως προτεινόμενη, αλλά την επιλέγει ο άνθρωπος.
  */
 function MemoryChoices({ hint, label, readOnly, onEdit }: { readonly hint: ImportValueMemoryHint; readonly label: string; readonly readOnly: boolean; readonly onEdit: (text: string) => void }) {
   const { t } = useImportText();
@@ -96,8 +97,8 @@ function MemoryChoices({ hint, label, readOnly, onEdit }: { readonly hint: Impor
       <BrainCircuit className="h-3 w-3 text-muted-foreground" aria-hidden />
       <span className="text-muted-foreground">{t(hint.verdict === 'conflict' ? 'review.memoryConflict' : 'review.memoryKnows')}</span>
       {hint.options.map((option) => (
-        <Button key={option.text} type="button" size="sm" variant="outline" disabled={readOnly || !option.usable} onClick={() => onEdit(option.text)}>
-          {t(option.usable ? 'review.memoryOption' : 'review.memoryStale', { value: option.text, count: option.count })}
+        <Button key={option.text} type="button" size="sm" variant={option.suggested ? 'default' : 'outline'} disabled={readOnly || !option.usable} onClick={() => onEdit(option.text)}>
+          {t(option.usable ? (option.suggested ? 'review.memorySuggested' : 'review.memoryOption') : 'review.memoryStale', { value: option.text, count: option.count })}
         </Button>
       ))}
     </p>

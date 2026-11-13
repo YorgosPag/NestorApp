@@ -184,6 +184,7 @@
     "memoryConflict": "Η μνήμη του προμηθευτή έχει περισσότερες απαντήσεις · διάλεξε:",
     "memoryKnows": "Η μνήμη του προμηθευτή ξέρει απάντηση:",
     "memoryOption": "{count, plural, one {«{value}» · # έγκριση} other {«{value}» · # εγκρίσεις}}",
+    "memorySuggested": "{count, plural, one {«{value}» · # έγκριση · προτεινόμενη} other {«{value}» · # εγκρίσεις · προτεινόμενη}}",
     "memoryStale": "«{value}» · δεν ισχύει πλέον",
     "remedy": {
       "title": "Τι κάνεις",

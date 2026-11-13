@@ -184,6 +184,7 @@
     "memoryConflict": "Supplier memory has more than one answer · choose:",
     "memoryKnows": "Supplier memory knows an answer:",
     "memoryOption": "{count, plural, one {“{value}” · # approval} other {“{value}” · # approvals}}",
+    "memorySuggested": "{count, plural, one {“{value}” · # approval · suggested} other {“{value}” · # approvals · suggested}}",
     "memoryStale": "“{value}” · no longer valid",
     "remedy": {
       "title": "What to do",

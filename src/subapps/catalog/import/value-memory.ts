@@ -23,7 +23,7 @@ import type { ValueTextContext } from '../values/value-text-codec';
 import { editsByAddress, fieldAddress, fieldSourcesOf, type EditStamp, type FieldSource } from './human-edits';
 import { valueMemoryKey } from './import-keys';
 import { importTargetKey, readsImportCell } from './proposal-values';
-import { learnedRecords, memoryOriginOf, memoryVerdict, type LearningStamp, type MemoryBook } from './supplier-memory-core';
+import { learnedRecords, memoryOriginOf, memoryVerdict, suggestedOptionIndex, type LearningStamp, type MemoryBook } from './supplier-memory-core';
 
 type ValueMemoryBook = MemoryBook<ImportValueMemoryAnswer>;
 
@@ -114,7 +114,9 @@ export function valueMemoryHintsFor(group: ExtractedGroup, edits: readonly Impor
     const entry = application.book.get(key);
     const verdict = memoryVerdict(entry);
     if (!entry || verdict.kind === 'none') return [];
-    const options = entry.decisions.map(({ decision, count, lastBatchId }) => ({ text: decision.text, count, lastBatchId, usable: usable(decision, unread, application.context) }));
+    const judged = entry.decisions.map(({ decision, count, lastBatchId }) => ({ text: decision.text, count, lastBatchId, usable: usable(decision, unread, application.context) }));
+    const suggested = suggestedOptionIndex(judged);
+    const options = judged.map((option, index) => ({ ...option, suggested: index === suggested }));
     return [{ rowKey: source.rowKey, targetKey: source.targetKey, memoryId: entry.id, verdict: verdict.kind, options }];
   });
 }

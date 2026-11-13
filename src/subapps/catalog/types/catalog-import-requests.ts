@@ -187,7 +187,8 @@ export interface ImportValueMemoryHint {
   readonly targetKey: string;
   readonly memoryId: string;
   readonly verdict: 'apply' | 'conflict';
-  readonly options: readonly { readonly text: string; readonly count: number; readonly lastBatchId: string; readonly usable: boolean }[];
+  /** `suggested` = η μόνη εφαρμόσιμη με τις περισσότερες εγκρίσεις (`suggestedOptionIndex`): ξεχωρίζει, **δεν** εφαρμόζεται. */
+  readonly options: readonly { readonly text: string; readonly count: number; readonly lastBatchId: string; readonly usable: boolean; readonly suggested: boolean }[];
 }
 
 export type ImportLabelMemoryWire = CatalogWire<ImportLabelMemoryDefinition>;

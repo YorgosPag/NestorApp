@@ -22,8 +22,10 @@ import { readPageTables, tableLineIdentities, type PageTableContext } from '../p
 import { learnedDecisions, learnedEntry, memoryKeyOf, memoryOverridesFor, type LabelMemoryBook } from '../label-memory';
 import { readPageWithDecisions } from '../page-decisions-reading';
 import { anchorForCell, tokenizePage, unitPrintedBeside } from '../page-tokens';
-import { corroborationsOf, parseImportCell, selectOptionFor } from '../proposal-values';
+import { corroborationsOf, importTargetKey, importTextContextOf, parseImportCell, selectOptionFor } from '../proposal-values';
 import { fragmentFor, lineFragments } from '../cell-fragments';
+import { applyHumanEdits } from '../human-edits';
+import { learnableValues, learnedValueEntry, valueMemoryEditsFor } from '../value-memory';
 
 type AriesPage = '85' | '86';
 
@@ -737,6 +739,33 @@ describe('🔴 βήμα 3Β: κομμάτι κατ\' αποκλεισμό — ο
 
   it('το φρένο εύρους ισχύει και στον αποκλεισμό: «220-240V-1Ph» δεν σπάει', () => {
     expect(lineFragments([target(voltage), target(phases)], '220-240V-1Ph', text)).toEqual(['220-240V-1Ph', '220-240V-1Ph']);
+  });
+
+  it('🔑 από άκρη σε άκρη (Akeneo SDM Value Mapping): «1Ph» → 1 μία φορά, έγκριση, και η ΕΠΟΜΕΝΗ ανάγνωση το βρίσκει μόνη της', () => {
+    const SUPPLIER = 'cont_aries';
+    const stamp = { by: 'usr_1', at: '2026-11-13T10:00:00.000Z' };
+    const schema = { attributes: new Map([...context.attributesByCode.values()].map((attribute) => [attribute.id, attribute])), context: importTextContextOf(PLATFORM_MEASUREMENT_REGISTRY) };
+    const [reading] = groups;
+    // Ο άνθρωπος γράφει «1» πάνω στο κελί που έβγαλε η ΠΡΑΓΜΑΤΙΚΗ ανάγνωση — όχι σε χειροποίητο κελί.
+    const taught = reading.rows.flatMap((row) => row.cells.filter((cell) => attributeOf(cell) === phases.id)
+      .map((cell) => ({ rowKey: row.rowKey, targetKey: importTargetKey(cell.target), text: '1', sourceText: cell.text, ...stamp })));
+    expect(taught.length).toBeGreaterThan(0);
+    const rows = reading.rows.map((row) => ({ rowKey: row.rowKey, fields: row.cells.map((cell) => ({ target: cell.target, decision: 'accept' as const })) }));
+    const learned = learnableValues({ extracted: reading, edits: taught, rows }, SUPPLIER, schema);
+    expect(learned).toEqual([expect.objectContaining({ attributeId: phases.id, printed: '1Ph', answers: ['1'] })]);
+    const entry = learnedValueEntry(null, SUPPLIER, learned[0], { ...stamp, batchId: 'cibat_1' });
+    const book = new Map([[learned[0].key, { id: 'cilm_phases', decisions: entry.decisions }]]);
+
+    const [next] = readPageTables({ tables: [mapping, accessories(parts)] }, context).groups;
+    const applied = valueMemoryEditsFor(next, undefined, { ...schema, supplierContactId: SUPPLIER, book, stamp });
+    expect(applied).toHaveLength(taught.length);
+    expect(applied.every((edit) => edit.text === '1' && edit.sourceText === '1Ph' && edit.origin?.kind === 'memory')).toBe(true);
+    const phaseCells = applyHumanEdits(next, applied, null).rows.flatMap((row) => row.cells).filter((cell) => attributeOf(cell) === phases.id);
+    expect(phaseCells.map((cell) => parseImportCell(phases, { text: cell.text, unitCode: cell.unitCode }, text).ok)).toEqual(phaseCells.map(() => true));
+    // Η τάση και η συχνότητα διαβάζονται ήδη: η μνήμη δεν τις αγγίζει.
+    expect(applied.every((edit) => taught.some((own) => own.targetKey === edit.targetKey))).toBe(true);
+    // Ανά προμηθευτή: άλλος προμηθευτής δεν βλέπει τίποτα.
+    expect(valueMemoryEditsFor(next, undefined, { ...schema, supplierContactId: 'cont_other', book, stamp })).toEqual([]);
   });
 });
 

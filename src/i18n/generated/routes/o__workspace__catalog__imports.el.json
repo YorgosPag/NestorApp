@@ -248,6 +248,7 @@
       "memoryKnows": "Η μνήμη του προμηθευτή ξέρει απάντηση:",
       "memoryOption": "{count, plural, one {«{value}» · # έγκριση} other {«{value}» · # εγκρίσεις}}",
       "memoryStale": "«{value}» · δεν ισχύει πλέον",
+      "memorySuggested": "{count, plural, one {«{value}» · # έγκριση · προτεινόμενη} other {«{value}» · # εγκρίσεις · προτεινόμενη}}",
       "modelCode": "Κωδικός μοντέλου",
       "modelCodeByYou": "Τον κωδικό μοντέλου τον ορίσατε εσείς.",
       "nextPending": "Επόμενο που θέλει απόφαση",
