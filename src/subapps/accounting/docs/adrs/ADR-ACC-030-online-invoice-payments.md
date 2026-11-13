@@ -263,7 +263,19 @@ cron εκπέμπει `refunds checked · recorded · unmatched · failed`. Οι
    `webhookSignalDiagnostics`): `providerLifetimeSeconds` = λήξη − δημιουργία **με το ρολόι του παρόχου** (λάθος ζώνης
    αλληλοαναιρείται) · `providerClockSkewSeconds` = δημιουργία παρόχου − δική μας `createdAt` (±ακέραιες ώρες ⇒ λάθος
    ζώνη ώρας). Η επόμενη ζωντανή απόπειρα κλείνει το ερώτημα.
-7. Πολιτική επαναλήψεων webhook: δεν τεκμηριώνεται (docs «Webhooks»).
+7. Πολιτική επαναλήψεων webhook: δεν τεκμηριώνεται (docs «Webhooks»). ⏳ **Ρωτήθηκε η Everypay** (2026-11-13, email
+   προς info@everypay.gr από georgios.pagonis@gmail.com — βλ. #8, ερώτηση 4). Αναμένεται απάντηση.
+8. ⏳ **Apple Pay / Google Pay — αναμονή ενεργοποίησης από την Everypay** (2026-11-13). Ο κώδικας **δεν** χρειάζεται
+   αλλαγή: τα πορτοφόλια είναι `card` (myDATA κωδικός 7) και τα δείχνει η hosted σελίδα του παρόχου όταν είναι ενεργά.
+   Το dashboard (Ρυθμίσεις: Προφίλ · Εταιρεία · Τραπεζικοί λογαριασμοί · Ειδοποιήσεις · Κλειδιά API · Webhooks) **δεν**
+   έχει επιλογή πορτοφολιών· κατά την τεκμηρίωση το Apple Pay «not enabled by default» ⇒ αίτημα στην υποστήριξη.
+   Email (Gmail thread `1a1d4b10d6f17741`) με 4 ερωτήσεις: (1) ενεργοποίηση Apple Pay + Google Pay, sandbox και μετά
+   παραγωγή · (2) εμφανίζονται και στη hosted σελίδα των Payment Notifications (`payment_link_url`) ή μόνο στο Payform;
+   · (3) χρειάζεται επαλήθευση domain για το Apple Pay και ποιο; · (4) πολιτική επαναλήψεων webhook (#7). **Μετά την
+   απάντηση:** δοκιμή «Κάρτα» από Chrome (Google Pay) και Safari/iPhone (Apple Pay) — φαίνεται το κουμπί;
+   Νομικό πλαίσιο (έρευνα 2026-11-13): ν.3842/2010 άρθρο 20 παρ. 3 ονομάζει ρητά το «ηλεκτρονικό πορτοφόλι» ως
+   επιτρεπτό μέσο για συναλλαγές με ιδιώτες ≥ 500 €· Α.1155/2023 άρθρο 2 παρ. 5 εξαιρεί τις εξ αποστάσεως πωλήσεις
+   με e-POS / άμεσες πληρωμές από τη διασύνδεση POS–ταμειακού συστήματος.
 
 ### 5.9 Ευρήματα ζωντανής επαλήθευσης (sandbox, 2026-11-11)
 
@@ -458,3 +470,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-13 | §3: `paymentMethodLabelIn` (`payment-method-label-bundle.ts`) — οι δύο χειρόγραφοι πίνακες ετικετών των email (`base-email-template.ts` · `notification-helpers.ts`, κλειδιά εκτός `PaymentMethod`, χωρίς `card`/`iris`) αντικαταστάθηκαν από τα κλειδιά i18n της UI· test (10). |
 | 2026-11-13 | §5.8 #6 διάγνωση 35′ vs 15′: `StartedCheckout.providerClock` (ωμά `date_created` / `expiration_date`, `providerClockOf`) · `startedCheckoutDiagnostics` (διάρκεια ζωής με το ρολόι του παρόχου + απόκλιση από το δικό μας) · log `Checkout started at provider` στην έναρξη· σουίτα `started-checkout-diagnostics` (3) + 2 έλεγχοι στο `everypay-adapter`· jest 18/18. Ανακλήθηκαν οι 10 δοκιμαστικοί σύνδεσμοι πληρωμής (Α-13 ×3 · Α-12 · Α-11 ×2 · Α-10 ×3 · Α-7). |
 | 2026-11-13 | §5.8 #6 ✅ έκλεισε ζωντανά: IRIS sandbox = **35′** (`providerLifetimeSeconds` 2100), ζώνη ώρας σωστή (`providerClockSkewSeconds` −1). §5.6: η αναμονή της σελίδας τελειώνει στη λήξη της συνεδρίας + 1′ αντί για σταθερά 15′ — `expiresInMs` στην απάντηση έκβασης (`attemptExpiresInMs`, ρολόι διακομιστή), `deadlineAfter` στο `usePaymentConfirmationWatch`· §5.5 διορθώθηκε. Tests: `invoice-payment-attempt` (+1) · `checkout-attempt-route`. |
+| 2026-11-13 | §5.8 #7–#8: email στην Everypay (info@everypay.gr, Gmail thread `1a1d4b10d6f17741`) — ενεργοποίηση Apple Pay / Google Pay, εμφάνιση στη hosted σελίδα των Payment Notifications, επαλήθευση domain, πολιτική επαναλήψεων webhook· αναμονή απάντησης. Νομικό πλαίσιο πορτοφολιών καταγράφηκε (ν.3842/2010 άρθρο 20 παρ. 3 · Α.1155/2023 άρθρο 2 παρ. 5). |
