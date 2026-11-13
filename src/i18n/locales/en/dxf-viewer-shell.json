@@ -460,13 +460,16 @@
     "approve": "Create walls ({count})",
     "leftOut": "{count, plural, one {# wall will not be written: its thickness group is not confirmed.} other {# walls will not be written: their thickness group is not confirmed.}}",
     "pdfVector": {
-      "hint": "Vector PDF: lines and texts come in exactly as they are in the file, on the PDF_Geometry and PDF_Text layers.",
+      "hint": "Vector PDF: lines and texts come in exactly as they are in the file, on the PDF_Geometry and PDF_Text layers. Written values next to edges become real dimensions, bound to their lines, on the dimension layer.",
       "start": "Import lines and texts from the PDF",
       "running": "Importing…",
       "undoName": "PDF import",
       "imported": "Imported {lines, plural, one {# line} other {# lines}} and {texts, plural, one {# text} other {# texts}}.",
       "replaced": "{count, plural, one {Replaced # entity} other {Replaced # entities}} from the previous import.",
       "skippedFills": "{count, plural, one {# fill was not imported} other {# fills were not imported}}: fills come in a later phase.",
+      "dimensions": "{count, plural, one {# written value became a dimension} other {# written values became dimensions}}, bound to their lines.",
+      "overriddenDimensions": "{count, plural, one {# dimension disagrees} other {# dimensions disagree}} with the geometry and {count, plural, one {keeps} other {keep}} the written text. Calibrate the background for live values.",
+      "unboundDimensions": "{count, plural, one {# written length could not be bound} other {# written lengths could not be bound}} to an edge with certainty and {count, plural, one {stays text} other {stay texts}}.",
       "outcome": {
         "notVector": "The background is not a vector PDF; nothing was written.",
         "sourceChanged": "The background changed while reading; nothing was written. Try again.",

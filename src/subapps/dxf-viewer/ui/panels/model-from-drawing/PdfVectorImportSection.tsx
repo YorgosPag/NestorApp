@@ -39,6 +39,15 @@ function OutcomeMessage({ outcome, t }: { readonly outcome: PdfVectorImportOutco
       <p className="m-0 text-[11px] text-foreground">
         {t('modelFromDrawing.pdfVector.imported', { lines: outcome.lines, texts: outcome.texts })}
       </p>
+      {outcome.dimensions > 0 ? (
+        <p className="m-0 text-[11px] text-foreground">{t('modelFromDrawing.pdfVector.dimensions', { count: outcome.dimensions })}</p>
+      ) : null}
+      {outcome.overriddenDimensions > 0 ? (
+        <p className={MUTED}>{t('modelFromDrawing.pdfVector.overriddenDimensions', { count: outcome.overriddenDimensions })}</p>
+      ) : null}
+      {outcome.unboundDimensions > 0 ? (
+        <p className={MUTED}>{t('modelFromDrawing.pdfVector.unboundDimensions', { count: outcome.unboundDimensions })}</p>
+      ) : null}
       {outcome.replaced > 0 ? <p className={MUTED}>{t('modelFromDrawing.pdfVector.replaced', { count: outcome.replaced })}</p> : null}
       {outcome.skippedFills > 0 ? <p className={MUTED}>{t('modelFromDrawing.pdfVector.skippedFills', { count: outcome.skippedFills })}</p> : null}
     </section>

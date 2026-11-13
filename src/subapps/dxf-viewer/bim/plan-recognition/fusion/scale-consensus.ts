@@ -7,12 +7,35 @@
  * σχήμα Hough/RANSAC πάνω σε **έναν** άγνωστο, άρα εξαντλητικό και ντετερμινιστικό: ιστόγραμμα σε **λογαριθμικό** χώρο
  * (η σχετική ανοχή γίνεται σταθερό πλάτος), όπου κάθε διάσταση δίνει **το πολύ μία ψήφο** ανά κάδο.
  * 🔑 Το πλάτος του πυρήνα κάθε ψήφου είναι η **δική της** ανοχή: ένα σκίτσο ψηφίζει «θολά», μια σάρωση «καθαρά».
+ * 🔑 ADR-941 Φ2α — η μηχανή ψηφίζει πάνω σε **ελάχιστη διεπαφή** (`ScaleVoteTarget` / `ScaleVoteCandidate`), όχι πάνω σε
+ *   ζεύγη παρειών: ο ADR-929 (`DimensionTarget` / `BindingCandidate`) και η εισαγωγή διανυσματικού PDF (ακμές) ρωτούν την
+ *   **ίδια** μηχανή. Η συμπεριφορά για τον ADR-929 είναι αμετάβλητη (ίδιοι τύποι δομικά, ίδια σειρά πράξεων).
  *
  * @module subapps/dxf-viewer/bim/plan-recognition/fusion/scale-consensus
  */
 
-import type { BindingCandidate, DimensionTarget } from './dimension-binding';
 import type { PlanFusionOptions } from './plan-fusion-types';
+
+/** Ό,τι διαβάζει η ψηφοφορία από ένα υποψήφιο: την απόσταση που μετρά, το βάρος του, και ποια τεκμήρια το έδειξαν. */
+export interface ScaleVoteCandidate {
+  /** Η μετρούμενη απόσταση, στα px του πλαισίου της κλίμακας. */
+  readonly gapPx: number;
+  /** Το βάρος της ψήφου (> 0). */
+  readonly score: number;
+  /** Πόσα από τα δύο άκρα έδειξε η ανάγνωση (0–2). */
+  readonly readingHits: number;
+  /** Πόσα από τα δύο άκρα έδειξαν γραμμές επέκτασης (0–2). */
+  readonly extensionHits: number;
+}
+
+/** Μια γραμμένη τιμή με τα υποψήφιά της. */
+export interface ScaleVoteTarget<C extends ScaleVoteCandidate = ScaleVoteCandidate> {
+  readonly dimension: { readonly valueMm: number };
+  /** Σχετική ανοχή «η απόσταση συμφωνεί με την τιμή». */
+  readonly toleranceRel: number;
+  readonly candidates: readonly C[];
+}
+
 
 export interface ScaleConsensus {
   /** Ευθυγραμμισμένα px ανά mm. */
@@ -32,7 +55,7 @@ const logScale = (gapPx: number, valueMm: number): number => Math.log(gapPx / va
 
 /** Ο κάδος του κέντρου μιας ψήφου· μη πεπερασμένος (κενό ή τιμή μηδέν) ⇒ η ψήφος δεν μετρά. */
 const centreBin = (gapPx: number, valueMm: number, bin: number): number => Math.round(logScale(gapPx, valueMm) / bin);
-const spreadOf = (target: DimensionTarget, bin: number): number => Math.max(1, Math.ceil(target.toleranceRel / bin));
+const spreadOf = (target: ScaleVoteTarget, bin: number): number => Math.max(1, Math.ceil(target.toleranceRel / bin));
 
 /** Το εύρος κάδων που αγγίζει οποιαδήποτε ψήφος: `[lo, lo + size)`. */
 interface BinRange {
@@ -40,7 +63,7 @@ interface BinRange {
   readonly size: number;
 }
 
-function binRange(targets: readonly DimensionTarget[], bin: number): BinRange | null {
+function binRange(targets: readonly ScaleVoteTarget[], bin: number): BinRange | null {
   let lo = Infinity;
   let hi = -Infinity;
   for (const t of targets) {
@@ -61,7 +84,7 @@ function binRange(targets: readonly DimensionTarget[], bin: number): BinRange | 
  * 🔑 Πίνακες αντί για `Map` (ADR-929 §6.16 #8: 1 477 ms μετρημένα)· **ίδιο αποτέλεσμα bit προς bit** — ίδια σειρά
  * αθροισμάτων ανά κάδο, ίδιο σύνολο κάδων (μόνο θετικές ψήφοι).
  */
-function addVotesOf(target: DimensionTarget, bin: number, range: BinRange, scratch: Float64Array, density: Float64Array): void {
+function addVotesOf(target: ScaleVoteTarget, bin: number, range: BinRange, scratch: Float64Array, density: Float64Array): void {
   const spread = spreadOf(target, bin);
   let first = range.size;
   let last = -1;
@@ -87,7 +110,7 @@ function addVotesOf(target: DimensionTarget, bin: number, range: BinRange, scrat
 }
 
 /** Ο κάδος με τη μεγαλύτερη πυκνότητα· σε ισοβαθμία ο **μικρότερος**. `null` χωρίς καμία θετική ψήφο. */
-function modeBin(targets: readonly DimensionTarget[], bin: number): number | null {
+function modeBin(targets: readonly ScaleVoteTarget[], bin: number): number | null {
   const range = binRange(targets, bin);
   if (range === null) return null;
   const density = new Float64Array(range.size);
@@ -108,8 +131,8 @@ interface Agreement {
 }
 
 /** Η δέση με το μεγαλύτερο σκορ μέσα στην ανοχή γύρω από το `logK`· σε ισοβαθμία η **πρώτη** (όπως η σταθερή ταξινόμηση). */
-function bestAgreeing(t: DimensionTarget, logK: number): BindingCandidate | undefined {
-  let best: BindingCandidate | undefined;
+function bestAgreeing<C extends ScaleVoteCandidate>(t: ScaleVoteTarget<C>, logK: number): C | undefined {
+  let best: C | undefined;
   for (const c of t.candidates) {
     if (!(Math.abs(logScale(c.gapPx, t.dimension.valueMm) - logK) <= t.toleranceRel)) continue;
     if (best === undefined || c.score > best.score) best = c;
@@ -121,13 +144,21 @@ function bestAgreeing(t: DimensionTarget, logK: number): BindingCandidate | unde
  * ADR-929 Δ7 Γ — οι διαστάσεις που **συμφωνούν** με την κλίμακα `pxPerMm` (ο ΙΔΙΟΣ κανόνας με τη συναίνεση, `bestAgreeing`):
  * η απόδειξη πίσω από μια κλίμακα, ώστε να κρίνεται και **τι** τη στηρίζει (π.χ. πόσες διαφορετικές τιμές).
  */
-export function agreeingTargets(targets: readonly DimensionTarget[], pxPerMm: number): DimensionTarget[] {
+export function agreeingTargets<T extends ScaleVoteTarget>(targets: readonly T[], pxPerMm: number): T[] {
   const logK = Math.log(pxPerMm);
   return targets.filter((t) => bestAgreeing(t, logK) !== undefined);
 }
 
+/**
+ * ADR-941 Φ2α — **ποιο** υποψήφιο ενός στόχου συμφωνεί με την κλίμακα `pxPerMm` (ο ΙΔΙΟΣ κανόνας με τη συναίνεση): η δέση
+ * που διαλέγει η κλίμακα. `undefined` ⇔ κανένα μέσα στην ανοχή.
+ */
+export function agreeingCandidate<C extends ScaleVoteCandidate>(target: ScaleVoteTarget<C>, pxPerMm: number): C | undefined {
+  return bestAgreeing(target, Math.log(pxPerMm));
+}
+
 /** Ο σταθμισμένος μέσος της καλύτερης συμφωνούσας δέσης κάθε διάστασης γύρω από το `logK`. */
-function agreeAround(targets: readonly DimensionTarget[], logK: number): Agreement {
+function agreeAround(targets: readonly ScaleVoteTarget[], logK: number): Agreement {
   let sum = 0;
   let weight = 0;
   let support = 0;
@@ -145,7 +176,9 @@ function agreeAround(targets: readonly DimensionTarget[], logK: number): Agreeme
 }
 
 /** Η κλίμακα που στηρίζουν οι γραμμένες διαστάσεις, ή `null` όταν δεν αποδεικνύεται. */
-export function dimensionScaleConsensus(targets: readonly DimensionTarget[], o: PlanFusionOptions): ScaleConsensus | null {
+export function dimensionScaleConsensus(
+  targets: readonly ScaleVoteTarget[], o: Pick<PlanFusionOptions, 'scaleBinRel'>,
+): ScaleConsensus | null {
   const bin = Math.log1p(o.scaleBinRel);
   const mode = modeBin(targets, bin);
   if (mode === null) return null;

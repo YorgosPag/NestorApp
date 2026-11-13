@@ -37,13 +37,17 @@ describe('readVectorContent', () => {
     expect(content.polylines).toEqual([{ points: [[0, 200], [10, 200], [10, 180], [0, 180]], closed: true }]);
   });
 
-  it('κείμενο: αρχή γραμμής βάσης + ένα em κατά μήκος + ένα em πάνω, σε px· κενά έξω', async () => {
+  it('κείμενο: αρχή γραμμής βάσης + ένα em κατά μήκος + ένα em πάνω + τέλος από το πλάτος, σε px· κενά έξω', async () => {
     const content = await readVectorContent(page([], [], [
-      { str: '4.12', transform: [10, 0, 0, 10, 50, 100] },
+      { str: '4.12', transform: [10, 0, 0, 10, 50, 100], width: 18 },
+      { str: 'A', transform: [10, 0, 0, 10, 0, 50] },
       { str: '   ', transform: [10, 0, 0, 10, 0, 0] },
       { type: 'beginMarkedContent' },
     ]), OPS, 2);
-    expect(content.texts).toEqual([{ text: '4.12', origin: [100, 200], along: [120, 200], up: [100, 180] }]);
+    expect(content.texts).toEqual([
+      { text: '4.12', origin: [100, 200], along: [120, 200], up: [100, 180], end: [136, 200] },
+      { text: 'A', origin: [0, 300], along: [20, 300], up: [0, 280], end: [0, 300] }, // χωρίς πλάτος ⇒ τέλος = αρχή
+    ]);
   });
 });
 

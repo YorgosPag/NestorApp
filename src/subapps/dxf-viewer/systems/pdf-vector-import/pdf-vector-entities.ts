@@ -12,7 +12,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity, LineEntity, PolylineEntity, TextEntity } from '../../types/entities';
+import type { LineEntity, PolylineEntity, TextEntity } from '../../types/entities';
 import { rasterPixelToScene, type RasterPlacement } from '../../floorplan-background/geometry/raster-scene-mapping';
 import type { PdfVectorContent, PdfVectorPolyline, PdfVectorText, PxPoint } from '../../pdf-background/services/pdf-vector-content';
 import { generateEntityId } from '../entity-creation/utils';
@@ -74,11 +74,14 @@ function textEntity(text: PdfVectorText, input: PdfVectorEntityInput): TextEntit
   };
 }
 
-/** Οι οντότητες σκηνής της εισαγωγής: πρώτα η γεωμετρία, μετά τα κείμενα. */
-export function pdfVectorEntities(input: PdfVectorEntityInput): Entity[] {
-  const geometry: Entity[] = input.content.polylines.map((p) => polylineEntity(p, input));
-  const texts: Entity[] = input.content.texts.flatMap((t) => textEntity(t, input) ?? []);
-  return [...geometry, ...texts];
+/** ADR-941 Φ2α — η γεωμετρία: **μία οντότητα ανά πολυγραμμή, με τη σειρά** του `content.polylines` (`[i]` ⇔ `polylines[i]`). */
+export function pdfVectorGeometry(input: PdfVectorEntityInput): (LineEntity | PolylineEntity)[] {
+  return input.content.polylines.map((p) => polylineEntity(p, input));
+}
+
+/** ADR-941 Φ2α — τα κείμενα, **εκτός** όσων έγιναν διαστάσεις (Δ16: μία οντότητα ανά πράγμα). */
+export function pdfVectorTexts(input: PdfVectorEntityInput, asDimensions: ReadonlySet<number>): TextEntity[] {
+  return input.content.texts.flatMap((t, i) => (asDimensions.has(i) ? [] : textEntity(t, input) ?? []));
 }
 
 /** Ανήκει η οντότητα στην εισαγωγή της πηγής `sourceKey`; */

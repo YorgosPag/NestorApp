@@ -29,6 +29,11 @@ export interface PdfVectorText {
   readonly along: PxPoint;
   /** `origin` + ένα ύψος γραμματοσειράς **κάθετα πάνω** (ύψος χαρακτήρα). */
   readonly up: PxPoint;
+  /**
+   * ADR-941 Φ2α — το **τέλος** της γραμμής βάσης (`origin` + το πλάτος προώθησης του κειμένου κατά μήκος της). Χωρίς πλάτος
+   * από το pdf.js ⇒ ίσο με το `origin` (μηδενικό μήκος, ποτέ μαντεψιά).
+   */
+  readonly end: PxPoint;
 }
 
 export interface PdfVectorContent {
@@ -97,19 +102,31 @@ export function strokedPolylines(
 interface PdfjsTextItem {
   readonly str: string;
   readonly transform: readonly number[];
+  /** Πλάτος προώθησης κατά μήκος της γραμμής βάσης, σε μονάδες σελίδας (pdf.js `TextItem.width`). */
+  readonly width?: unknown;
+}
+
+/** Το τέλος της γραμμής βάσης σε μονάδες σελίδας: η αρχή + `width` στη διεύθυνση `(a, b)` του πίνακα του κειμένου. */
+function baselineEnd(item: PdfjsTextItem): PdfPoint {
+  const [a, b, , , e, f] = item.transform;
+  const width = typeof item.width === 'number' && Number.isFinite(item.width) && item.width > 0 ? item.width : 0;
+  const norm = Math.hypot(a, b);
+  return norm > 0 ? [e + (a / norm) * width, f + (b / norm) * width] : [e, f];
 }
 
 const isTextItem = (item: unknown): item is PdfjsTextItem =>
   typeof item === 'object' && item !== null && typeof (item as { str?: unknown }).str === 'string'
   && Array.isArray((item as { transform?: unknown }).transform) && (item as { transform: unknown[] }).transform.length === 6;
 
-/** Τα κείμενα της σελίδας (κενά/λευκά έξω), με τα τρία σημεία τους σε px. */
+/** Τα κείμενα της σελίδας (κενά/λευκά έξω), με τα σημεία τους σε px. */
 export function pageTexts(items: readonly unknown[], toPx: (p: PdfPoint) => PxPoint): PdfVectorText[] {
   return items.filter(isTextItem).flatMap((item) => {
     const text = item.str.trim();
     if (text.length === 0) return [];
     const [a, b, c, d, e, f] = item.transform;
-    return [{ text, origin: toPx([e, f]), along: toPx([e + a, f + b]), up: toPx([e + c, f + d]) }];
+    return [{
+      text, origin: toPx([e, f]), along: toPx([e + a, f + b]), up: toPx([e + c, f + d]), end: toPx(baselineEnd(item)),
+    }];
   });
 }
 
