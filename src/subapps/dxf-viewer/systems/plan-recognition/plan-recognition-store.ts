@@ -21,7 +21,7 @@
 import { useSyncExternalStore } from 'react';
 import { createExternalStore } from '../../stores/createExternalStore';
 import type { PlanAlignment } from '../../bim/plan-recognition/alignment/plan-alignment-types';
-import type { PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
+import type { PlanDrawingKindChoice, PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type {
   PlanInputKind,
   PlanReadingOutcome,
@@ -33,6 +33,7 @@ import type { PlanReadingView, PlanViewSegment } from '../../bim/plan-recognitio
 import type { PlanReadingPreflightResult } from '../../bim/plan-recognition/reading/plan-reading-contract';
 import { NO_READING_CORRECTIONS, type PlanReadingCorrections } from '../../bim/plan-recognition/reading/reading-corrections';
 import type { RasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
+import type { SourceMedium } from '../../floorplan-background/providers/types';
 
 /** `idle` — καμία αναγνώριση · `running` — ευθυγράμμιση/τμήματα σε εξέλιξη · `ready` — υπάρχει αποτέλεσμα. */
 export type PlanRecognitionPhase = 'idle' | 'running' | 'ready';
@@ -55,6 +56,8 @@ export interface PlanRecognitionRun {
   readonly segmentRoles?: readonly PlanSegmentRoleVerdict[];
   /** Η κλίμακα του υποβάθρου τη στιγμή της αναγνώρισης (`resolveRasterPixelScale`, Δ4). */
   readonly knownScale: RasterPixelScale | null;
+  /** ADR-929 Δ7 Γ — το μέσο της πηγής (`getSourceMedium`): διανυσματικό PDF ⇒ υπό κλίμακα. Λείπει ⇒ `raster`. */
+  readonly medium?: SourceMedium;
   /**
    * ADR-929 §6.10 Α2 — η όψη του ανθρώπου (crop + περιοχές απόκρυψης) από την οποία βγήκαν τα `segments`. Λείπει ⇒ η
    * πρόταση της ευθυγράμμισης (η αρχική εξαγωγή). Ό,τι βλέπει ο άνθρωπος στην όψη, αυτό μετρά για τους τοίχους.
@@ -196,6 +199,11 @@ export interface PlanRecognitionState {
    * ανάγνωση. Κρίνει «πρώτο άλμα» (πλαισίωση) ή «επόμενο» (μόνο κεντράρισμα, η κλίμακα του ανθρώπου μένει).
    */
   readonly readFocusTextId: string | null;
+  /**
+   * ADR-929 Δ21 (0) · Δ7 Γ — ο άνθρωπος όρισε το είδος («Σκίτσο με το χέρι» / «Σχέδιο υπό κλίμακα»)· `null` = αποφασίζει
+   * η σύντηξη (`resolveDrawingKind`). Ανήκει στην αναγνώριση: σβήνει σε νέα αναγνώριση, **όχι** σε νέα ανάγνωση.
+   */
+  readonly drawingKindChoice: PlanDrawingKindChoice | null;
 }
 
 /** Η επισκόπηση «Τι διάβασα» από την αρχή: χωρίς διορθώσεις, επισήμανση ή εστίαση — ΕΝΑ σημείο για κάθε επαναφορά. */
@@ -205,7 +213,7 @@ export const NO_READ_REVIEW: Pick<PlanRecognitionState, 'readingCorrections' | '
 
 const IDLE: PlanRecognitionState = {
   phase: 'idle', run: null, reading: null, fusion: null, failure: null, review: null, scaleHoverTextId: null, ocr: OCR_IDLE,
-  ...NO_READ_REVIEW,
+  ...NO_READ_REVIEW, drawingKindChoice: null,
 };
 
 const store = createExternalStore<PlanRecognitionState>(IDLE, { equals: Object.is });

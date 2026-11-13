@@ -17,7 +17,9 @@
  * ΚΑΘΑΡΟ — zero React/DOM/store.
  */
 
-import type { FusedDimension, FusedDimensionStatus, PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
+import type {
+  FusedDimension, FusedDimensionStatus, PlanFusionResult, PlanScaleSource,
+} from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../bim/plan-recognition/plan-recognition-types';
 import type { RasterRectPx } from '../../types/coordinate-space';
 import {
@@ -27,6 +29,13 @@ import { meetsConfidenceTier } from './plan-confidence';
 
 /** Βήμα 4 — η ετικέτα προτεραιότητας μιας γραμμής. */
 export type PlanReadValuePriority = 'suspect' | 'checked' | 'ok';
+
+/**
+ * Δ6 — **από πού** βγαίνει μια πρόταση, ώστε η αιτιολογία που βλέπει ο άνθρωπος να λέει την αλήθεια:
+ * `adjustment` = η συνόρθωση (οι υπόλοιπες διαστάσεις + οι θέσεις των γραμμών) · `drawing-unit` = η μονάδα με την οποία
+ * γράφει το υπόλοιπο σχέδιο (ο αριθμός μένει όπως γράφτηκε).
+ */
+export type PlanReadValueSuggestionBasis = 'adjustment' | 'drawing-unit';
 
 export interface PlanReadValueRow {
   readonly textId: string;
@@ -60,32 +69,63 @@ export interface PlanReadValueRow {
    * από τον ΙΔΙΟ δρόμο με κάθε διόρθωση (`correct`).
    */
   readonly suggestion: string | null;
+  /** Δ6 — η βάση της πρότασης· `null` ⇔ `suggestion === null`. */
+  readonly suggestionBasis: PlanReadValueSuggestionBasis | null;
   /**
-   * Δ3 — υπάρχει κλίμακα στη σύντηξη (βαθμονόμηση · συναίνεση διαστάσεων · γραμμένη κλίμακα · εμβαδά). `false` ⇒ το
-   * «σχέδιο − γραμμένο» μετρά μόνο τις αναλογίες του χαρτιού: πληροφορία, ΟΧΙ κρίση της γραμμένης τιμής.
+   * Δ3 · Δ7 Γ — έχει το σχέδιο **μέτρο** για να κρίνει γραμμένο αριθμό; Μόνο με `known` το «σχέδιο − γραμμένο» είναι κρίση
+   * της τιμής· αλλιώς είναι πληροφορία για τις αναλογίες του χαρτιού (`planReadValueMeasure`).
    */
-  readonly scaleKnown: boolean;
+  readonly measure: PlanReadValueMeasure;
 }
 
-type RowFacts = Omit<PlanReadValueRow, 'priority' | 'suggestion'>;
+/**
+ * Δ3 · Δ7 Γ — το μέτρο του σχεδίου: `known` = **αποδεδειγμένο** μέτρο · `no-scale` = καμία κλίμακα στη σύντηξη ·
+ * `sketch` = σκίτσο με κλίμακα από τις ΙΔΙΕΣ τις γραμμένες τιμές · `unproven` = κλίμακα από τις γραμμένες τιμές, αλλά
+ * **δεν** αποδείχτηκε ότι το χαρτί είναι υπό κλίμακα (π.χ. DOC014: συναίνεση μόνο από δύο ίσα «4,12»).
+ */
+export type PlanReadValueMeasure = 'known' | 'no-scale' | 'sketch' | 'unproven';
+
+/**
+ * Δ7 Γ — οι κλίμακες που **δεν** βγαίνουν από τις γραμμένες διαστάσεις: βαθμονόμηση του ανθρώπου · γραμμένη κλίμακα «1:50».
+ * Η `dimension-consensus` και η `room-area` είναι κυκλικές σε σκίτσο (κάθε «Αποδοχή» ⇒ νέα κλίμακα ⇒ νέες προτάσεις).
+ */
+const INDEPENDENT_SCALE_SOURCES: ReadonlySet<PlanScaleSource> = new Set<PlanScaleSource>(['known-calibration', 'written-scale']);
+
+/**
+ * Δ3 · Δ7 Γ — το μέτρο του σχεδίου, από τη σύντηξη: **προτάσεις μόνο με ΑΠΟΔΕΔΕΙΓΜΕΝΟ μέτρο** — ανεξάρτητη κλίμακα, ή χαρτί
+ * υπό κλίμακα που το αποδεικνύει το διανυσματικό μέσο, ο άνθρωπος («Σχέδιο υπό κλίμακα») ή ≥ 2 διαφορετικές γραμμένες τιμές
+ * που συμφωνούν (`proportions: 'to-scale'`). Σε σχέδιο υπό κλίμακα (ΤΕΣΤ1) και η συναίνεση διαστάσεων είναι μέτρο: εκεί η
+ * πρόταση πιάνει λάθη OCR. Μετρημένο στο πραγματικό DOC014: η κρίση βγαίνει «αναπόδεικτο» (το 2,05 δεν δένεται σε μονές
+ * πινελιές) και η κλίμακα στηρίζεται μόνο σε δύο ίσα «4,12» ⇒ καμία πρόταση.
+ */
+export function planReadValueMeasure(fusion: Pick<PlanFusionResult, 'scale' | 'drawingKind'> | null): PlanReadValueMeasure {
+  const scale = fusion?.scale ?? null;
+  if (fusion === null || scale === null) return 'no-scale';
+  if (INDEPENDENT_SCALE_SOURCES.has(scale.chosen)) return 'known';
+  const { kind, basis, proportions } = fusion.drawingKind;
+  if (kind === 'sketch') return 'sketch';
+  return basis === 'vector-source' || basis === 'human' || proportions === 'to-scale' ? 'known' : 'unproven';
+}
+
+type RowFacts = Omit<PlanReadValueRow, 'priority' | 'suggestion' | 'suggestionBasis'>;
 
 /**
  * Βήμα 7 — η πρόταση για μια διάσταση σε σύγκρουση. Ο Baarda την απέρριψε, άρα στην **τελική** λύση έχει βάρος 0
  * (`adjustWithDataSnooping`): το `adjustedMm` είναι η απόσταση των παρειών όπως την ορίζουν **οι υπόλοιπες** διαστάσεις μαζί
  * με τις θέσεις των γραμμών — ποτέ η ίδια η απορριφθείσα τιμή. Γράφεται με την ακρίβεια γραφής του κειμένου (`writtenLike`).
  *
- * 🔑 Δ3 — **καμία πρόταση χωρίς κλίμακα** (`scaleKnown`). Μετρημένο live (DOC014, σκίτσο ~18 % παραμόρφωση, καμία συναίνεση
- * κλίμακας): η πρόταση ακολουθούσε τις αναλογίες του παραμορφωμένου χαρτιού (2,05 → 2,59, μετά 4,12 → 2,68) και οδηγούσε τον
- * άνθρωπο να αλλάξει **σωστές** γραμμένες τιμές. Χωρίς κλίμακα το σχέδιο δεν έχει μέτρο να κρίνει γραμμένο αριθμό — κατά
- * Δ21 οι γραμμένοι αριθμοί δίνουν τη γεωμετρία. Με κλίμακα (π.χ. τυπωμένη σάρωση) η πρόταση μένει: εκεί πιάνει λάθη OCR.
+ * 🔑 Δ3 · Δ7 Γ — **καμία πρόταση χωρίς μέτρο** (`measure !== 'known'`). Μετρημένο live (DOC014, σκίτσο ~18 % παραμόρφωση):
+ * χωρίς κλίμακα η πρόταση ακολουθούσε τις αναλογίες του παραμορφωμένου χαρτιού (2,05 → 2,59, μετά 4,12 → 2,68)· με κλίμακα
+ * από **τις ίδιες** τις γραμμένες τιμές (`dimension-consensus`) έφτιαχνε αλυσίδα 4,12 → 3,60 → 2,73 → 0,91 m. Σε σκίτσο οι
+ * γραμμένοι αριθμοί δίνουν τη γεωμετρία (Δ21), όχι το αντίστροφο. Σε σχέδιο υπό κλίμακα η πρόταση μένει: πιάνει λάθη OCR.
  */
 function suggestionOf(
   text: PlanText,
   fused: FusedDimension | undefined,
   bareIntegerUnit: BareIntegerUnit,
-  scaleKnown: boolean,
+  measure: PlanReadValueMeasure,
 ): string | null {
-  if (!scaleKnown || fused?.status !== 'conflict' || fused.adjustedMm === null) return null;
+  if (measure !== 'known' || fused?.status !== 'conflict' || fused.adjustedMm === null) return null;
   const suggestion = writtenLike(fused.adjustedMm, text.raw, bareIntegerUnit);
   return suggestion !== null && suggestion !== text.raw.trim() ? suggestion : null;
 }
@@ -93,17 +133,30 @@ function suggestionOf(
 /** Τα δεδομένα του σχεδίου που χρειάζεται η πρόταση μιας γραμμής — κρίνονται μία φορά ανά λίστα. */
 interface SuggestionContext {
   readonly bareIntegerUnit: BareIntegerUnit;
-  readonly scaleKnown: boolean;
+  readonly measure: PlanReadValueMeasure;
   /** Τα κείμενα-διαστάσεις του σχεδίου (για τη μονάδα που γράφει). */
   readonly dimensionRaws: readonly string[];
 }
 
-/** Δ21 (δ) — η πρόταση μιας γραμμής: άγνωστη μονάδα ⇒ η μονάδα του σχεδίου· αλλιώς η πρόταση της συνόρθωσης (βήμα 7). */
+type RowSuggestion = Pick<PlanReadValueRow, 'suggestion' | 'suggestionBasis'>;
+
+const NO_SUGGESTION: RowSuggestion = { suggestion: null, suggestionBasis: null };
+
+const suggestionWith = (suggestion: string | null, basis: PlanReadValueSuggestionBasis): RowSuggestion =>
+  (suggestion === null ? NO_SUGGESTION : { suggestion, suggestionBasis: basis });
+
+/**
+ * Δ21 (δ) — η πρόταση μιας γραμμής: άγνωστη μονάδα ⇒ η μονάδα του σχεδίου· αλλιώς η πρόταση της συνόρθωσης (βήμα 7).
+ * 🔑 Δ7 Β — **καμία πρόταση σε γραμμή που έλεγξε άνθρωπος** (διόρθωσε ή επιβεβαίωσε): η τιμή του ανθρώπου είναι αρχή, όχι
+ *   υπόθεση προς αναθεώρηση. Μετρημένο live (DOC014): προτάσεις εμφανίζονταν και σε γραμμές «ελέγχθηκε», και κάθε «Αποδοχή»
+ *   τροφοδοτούσε την επόμενη (4,12 → 3,60 → 2,73 → 0,91 m).
+ */
 function rowSuggestion(
   text: PlanText, unknownUnit: string | null, fused: FusedDimension | undefined, ctx: SuggestionContext,
-): string | null {
-  if (unknownUnit !== null) return unknownUnitSuggestion(text.raw, ctx.dimensionRaws);
-  return suggestionOf(text, fused, ctx.bareIntegerUnit, ctx.scaleKnown);
+): RowSuggestion {
+  if (text.correctedFrom !== undefined || text.confirmed === true) return NO_SUGGESTION;
+  if (unknownUnit !== null) return suggestionWith(unknownUnitSuggestion(text.raw, ctx.dimensionRaws), 'drawing-unit');
+  return suggestionWith(suggestionOf(text, fused, ctx.bareIntegerUnit, ctx.measure), 'adjustment');
 }
 
 /** Θέλει έλεγχο: σύγκρουση · αδέτη · διάσταση χωρίς τιμή · ανάγνωση κάτω από «υψηλή». Ο ΕΝΑΣ κανόνας για σειρά και ετικέτα. */
@@ -118,12 +171,16 @@ function priorityOf(row: RowFacts): PlanReadValuePriority {
   return needsReview(row) ? 'suspect' : 'ok';
 }
 
-/** Ομάδα υποψίας: μικρότερη = πιο ύποπτη. */
+/**
+ * Ομάδα υποψίας: μικρότερη = πιο ύποπτη. Δ6 — η διάσταση με **άγνωστη μονάδα** πρώτη από όλες: χωρίς μονάδα δεν έχει καν
+ * τιμή, άρα δεν μπαίνει στη συνόρθωση και τίποτα άλλο δεν μπορεί να την ελέγξει (μετρημένο live: ήταν 4η).
+ */
 function suspicionGroup(row: PlanReadValueRow): number {
-  if (row.status === 'conflict') return 0;
-  if (needsReview(row)) return 1;
-  if (row.kind === 'dimension') return 2;
-  return 3;
+  if (row.unknownUnit !== null) return 0;
+  if (row.status === 'conflict') return 1;
+  if (needsReview(row)) return 2;
+  if (row.kind === 'dimension') return 3;
+  return 4;
 }
 
 function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | undefined, ctx: SuggestionContext): PlanReadValueRow {
@@ -141,15 +198,15 @@ function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | u
     status: fused?.status ?? null,
     deviationMm: measured !== null && valueMm !== null ? measured - valueMm : null,
     w: fused?.w ?? null,
-    scaleKnown: ctx.scaleKnown,
+    measure: ctx.measure,
   };
-  return { ...facts, priority: priorityOf(facts), suggestion: rowSuggestion(text, unknownUnit, fused, ctx) };
+  return { ...facts, priority: priorityOf(facts), ...rowSuggestion(text, unknownUnit, fused, ctx) };
 }
 
 /** Οι γραμμές της λίστας, η πιο ύποπτη πρώτη. `reading` = η ανάγνωση που ισχύει (με τις διορθώσεις). */
 export function planReadValueRows(
   reading: PlanReading,
-  fusion: Pick<PlanFusionResult, 'dimensions' | 'scale'> | null,
+  fusion: Pick<PlanFusionResult, 'dimensions' | 'scale' | 'drawingKind'> | null,
 ): PlanReadValueRow[] {
   const valueById = new Map(reading.dimensions.map((d) => [d.textId, d.valueMm]));
   const fusedById = new Map((fusion?.dimensions ?? []).map((d) => [d.textId, d]));
@@ -158,7 +215,7 @@ export function planReadValueRows(
   const bareIntegerUnit = inferBareIntegerUnit(reading.dimensions.map((d) => rawById.get(d.textId) ?? ''));
   const ctx: SuggestionContext = {
     bareIntegerUnit,
-    scaleKnown: (fusion?.scale ?? null) !== null,
+    measure: planReadValueMeasure(fusion),
     dimensionRaws: reading.texts.filter((t) => t.kind === 'dimension').map((t) => t.raw),
   };
   const rows = reading.texts.map((t, order) => ({ order, row: rowOf(t, valueById.get(t.id) ?? null, fusedById.get(t.id), ctx) }));

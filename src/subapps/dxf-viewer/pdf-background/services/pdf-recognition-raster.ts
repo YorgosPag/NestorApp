@@ -67,6 +67,27 @@ async function renderToRaster(page: RenderablePage, scale: number): Promise<Plan
   }
 }
 
+type PdfJs = Awaited<ReturnType<typeof PdfRenderer.pdfjs>>;
+type PdfDocument = Awaited<ReturnType<PdfJs['getDocument']>['promise']>;
+type PdfPage = Awaited<ReturnType<PdfDocument['getPage']>>;
+
+/** Η σελίδα του `pdf` σε **δικό μας** έγγραφο (βλ. κεφαλίδα), η εγγενής ανάλυση της σάρωσής της, και κλείσιμο ΠΑΝΤΑ. */
+async function withIsolatedPage<T>(
+  pdf: Blob, pageNumber: number, use: (page: PdfPage, native: number | null) => Promise<T>,
+): Promise<T> {
+  const pdfjs = await PdfRenderer.pdfjs();
+  const doc = await pdfjs.getDocument({ data: await pdf.arrayBuffer() }).promise;
+  try {
+    const page = await doc.getPage(pageNumber);
+    const unit = page.getViewport({ scale: 1 });
+    return await use(page, nativeImageScale(await page.getOperatorList(), pdfjs.OPS, unit.width * unit.height));
+  } finally {
+    await doc.destroy();
+  }
+}
+
+const errorText = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+
 /**
  * Η σελίδα `pageNumber` του `pdf` στην εγγενή ανάλυση της σάρωσής της, ή `null` (διανυσματική σελίδα · σάρωση όχι πυκνότερη
  * από `minScale` · αποτυχία απόδοσης). Δεν ρίχνει.
@@ -76,23 +97,30 @@ export async function renderPdfPageAtNativeResolution(
 ): Promise<PdfRecognitionRender | null> {
   const started = performance.now();
   try {
-    const pdfjs = await PdfRenderer.pdfjs();
-    const doc = await pdfjs.getDocument({ data: await pdf.arrayBuffer() }).promise;
-    try {
-      const page = await doc.getPage(pageNumber);
-      const unit = page.getViewport({ scale: 1 });
-      const native = nativeImageScale(await page.getOperatorList(), pdfjs.OPS, unit.width * unit.height);
+    return await withIsolatedPage(pdf, pageNumber, async (page, native) => {
       if (native === null) return null;
+      const unit = page.getViewport({ scale: 1 });
       const scale = scaleWithinPixels(native, unit.width, unit.height, options.maxPixels);
       if (scale <= options.minScale) return null;
       const raster = await renderToRaster(page, scale);
       if (raster) logger.info('Native-resolution render', { native, scale, width: raster.width, height: raster.height, ms: Math.round(performance.now() - started) });
       return raster ? { raster, scale } : null;
-    } finally {
-      await doc.destroy();
-    }
+    });
   } catch (error) {
-    logger.warn('Native-resolution render failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.warn('Native-resolution render failed', { error: errorText(error) });
+    return null;
+  }
+}
+
+/**
+ * ADR-929 Δ7 Γ — το μέσο της σελίδας: `vector` = καμία κυρίαρχη εικόνα (σχεδιασμένη σε CAD) · `raster` = σάρωση. Ο ΙΔΙΟΣ
+ * κανόνας με την εγγενή ανάλυση (`nativeImageScale`, κάλυψη ≥ μισή σελίδα). Αποτυχία ⇒ `null` (ο καλών δεν υποθέτει «CAD»).
+ */
+export async function pdfPageMedium(pdf: Blob, pageNumber: number): Promise<'vector' | 'raster' | null> {
+  try {
+    return await withIsolatedPage(pdf, pageNumber, async (_page, native) => (native === null ? 'vector' : 'raster'));
+  } catch (error) {
+    logger.warn('Page medium probe failed', { error: errorText(error) });
     return null;
   }
 }

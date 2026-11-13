@@ -27,7 +27,7 @@ import { meetsConfidenceTier } from '../plan-confidence';
 import { planRecognitionStore } from '../plan-recognition-store';
 
 const mockBackgrounds = new Map<string, FloorplanBackground>();
-const mockProviders = new Map<string, Pick<IFloorplanBackgroundProvider, 'getPlanRaster' | 'getRecognitionRaster'>>();
+const mockProviders = new Map<string, Pick<IFloorplanBackgroundProvider, 'getPlanRaster' | 'getRecognitionRaster' | 'getSourceMedium'>>();
 jest.mock('../../../floorplan-background/stores/floorplanBackgroundStore', () => ({
   getFloorBackground: (id: string) => mockBackgrounds.get(id) ?? null,
   getFloorProvider: (id: string) => mockProviders.get(id) ?? null,
@@ -49,6 +49,7 @@ function installBackground(calibration: CalibrationData | null): void {
   mockProviders.set(FLOOR, {
     getPlanRaster: fresh,
     getRecognitionRaster: async () => ({ raster: fresh(), naturalPerRasterPx: 1 }),
+    getSourceMedium: async () => 'raster',
   });
 }
 
@@ -188,5 +189,43 @@ describe('ADR-929 Φ5 — εικόνα υποβάθρου → τοίχοι μέ�
     const [a, b] = await Promise.all([first, second]);
     expect(a).toBeNull();
     expect(b?.recognitionId.startsWith(planRecognitionStore.get().run?.id ?? '-')).toBe(true);
+  });
+});
+
+describe('ADR-929 Δ21 (0) · Δ7 Γ — ο διακόπτης «Σκίτσο / Υπό κλίμακα» στον ένα ελεγκτή', () => {
+  it('το μέσο της πηγής μπαίνει στο run· χωρίς επιλογή αποφασίζει η σύντηξη', async () => {
+    installBackground(CALIBRATED);
+    await planRecognitionSession.run(FLOOR);
+    const { run, fusion, drawingKindChoice } = planRecognitionStore.get();
+    expect(run?.medium).toBe('raster');
+    expect(drawingKindChoice).toBeNull();
+    expect(fusion?.drawingKind.basis).not.toBe('human');
+  });
+
+  it('«Σκίτσο» ⇒ νέα σύντηξη με είδος sketch (βάση «άνθρωπος») + νέα πηγή γραμμών· ίδια επιλογή ξανά ⇒ τίποτα· null ⇒ πίσω', async () => {
+    installBackground(CALIBRATED);
+    await planRecognitionSession.run(FLOOR);
+    const published: string[] = [];
+    const off = planRecognitionSession.onLineSource((s) => published.push(s.recognitionId));
+    expect(planRecognitionSession.drawingKind.set('sketch')).toBe(true);
+    const sketch = planRecognitionStore.get().fusion;
+    expect(sketch?.drawingKind).toEqual({ kind: 'sketch', basis: 'human', proportions: null });
+    expect(planRecognitionStore.get().drawingKindChoice).toBe('sketch');
+    planRecognitionSession.drawingKind.set('sketch');
+    expect(planRecognitionStore.get().fusion).toBe(sketch);
+    expect(published).toHaveLength(1);
+    planRecognitionSession.drawingKind.set(null);
+    expect(planRecognitionStore.get().drawingKindChoice).toBeNull();
+    expect(planRecognitionStore.get().fusion?.drawingKind.basis).not.toBe('human');
+    off();
+  });
+
+  it('νέα αναγνώριση ⇒ η επιλογή σβήνει· χωρίς αναγνώριση ⇒ false', async () => {
+    expect(planRecognitionSession.drawingKind.set('sketch')).toBe(false);
+    installBackground(CALIBRATED);
+    await planRecognitionSession.run(FLOOR);
+    planRecognitionSession.drawingKind.set('sketch');
+    await planRecognitionSession.run(FLOOR);
+    expect(planRecognitionStore.get().drawingKindChoice).toBeNull();
   });
 });

@@ -483,6 +483,21 @@
         "dimension": "{count, plural, one {# dimension line — not a wall} other {# dimension lines — not walls}}",
         "annotation": "{count, plural, one {# line inside text — not a wall} other {# lines inside text — not walls}}"
       },
+      "drawingKind": {
+        "title": "Drawing type",
+        "drawing": "To-scale drawing",
+        "sketch": "Hand sketch",
+        "auto": "Automatic",
+        "sketchEffect": "In a sketch the written values give the geometry; value suggestions only with a calibration or a written scale.",
+        "unprovenEffect": "Value suggestions only once a measure is proven: a calibration, a written scale or “To-scale drawing”.",
+        "reason": {
+          "human": "Your choice.",
+          "vector": "Automatic: vector PDF — drawn in CAD, so to scale.",
+          "toScale": "Automatic: the written dimensions agree with the proportions of the paper.",
+          "notToScale": "Automatic: the written dimensions do not agree with the proportions of the paper — only within sketch tolerance.",
+          "unproven": "Automatic: there are not yet two different written dimensions to judge by."
+        }
+      },
       "ocr": {
         "title": "On-device value reading",
         "localNote": "Texts and dimensions are read on your device: nothing is sent, no charge.",
@@ -507,7 +522,7 @@
         },
         "values": {
           "title": "What I read",
-          "hint": "Most suspicious value first. Click a text to correct it: Enter saves, Esc cancels.",
+          "hint": "Most suspicious value first. Click a text to correct it: Enter, ✓ or clicking outside the field saves, Esc cancels. What you type stands, even when it matches the machine reading.",
           "empty": "No text was read in the current view.",
           "kind": {
             "dimension": "dimension",
@@ -530,9 +545,13 @@
           },
           "deviation": "drawn − written: {value} mm",
           "deviationUnscaled": "drawn − written: {value} mm · no scale, does not judge the written value",
+          "deviationSketch": "drawn − written: {value} mm · sketch not to scale, does not judge the written value",
+          "deviationUnproven": "drawn − written: {value} mm · the paper is not proven to scale, does not judge the written value",
           "corrected": "corrected · the engine read “{raw}”",
           "editLabel": "Correct the text “{raw}”",
           "inputLabel": "What the drawing says",
+          "save": "Save",
+          "saveLabel": "Save the value",
           "preview": "Will be read as: {value}",
           "notDimension": "Not a dimension",
           "revert": "Revert",
@@ -540,6 +559,7 @@
           "confirmed": "confirmed by you · the machine read it correctly",
           "progress": "Checked {checked} of {total, plural, one {# text} other {# texts}}",
           "suggestion": "Suggestion: “{value}” — from the other dimensions and the drawing",
+          "suggestionUnit": "Suggestion: “{value}” — the same number, in the unit the rest of the drawing uses",
           "acceptSuggestion": "Accept",
           "acceptSuggestionLabel": "Accept the suggestion “{value}”",
           "focusSource": "Focus",

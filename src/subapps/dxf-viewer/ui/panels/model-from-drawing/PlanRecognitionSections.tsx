@@ -33,6 +33,7 @@ import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections
 import type { PlanScaleView } from './PlanScaleCard';
 import type { PlanOcrView } from './PlanOcrSection';
 import type { PlanReadValueRow } from '../../../systems/plan-recognition/plan-read-values';
+import type { PlanDrawingKindView } from './PlanDrawingKindSection';
 
 /** Ό,τι χρειάζεται το πάνελ για την πηγή εικόνα — υπολογισμένο από τον host. */
 export interface ImageSourceView {
@@ -64,6 +65,8 @@ export interface ImageSourceView {
   readonly readValues: readonly PlanReadValueRow[] | null;
   /** ADR-929 Δ21 (δ) βήμα 1 — `textId → object URL` της μικρογραφίας (ο κάτοχος ανακαλεί). */
   readonly readValueThumbnails: ReadonlyMap<string, string>;
+  /** ADR-929 Δ21 (0) · Δ7 Γ — το είδος σχεδίου με τον λόγο του· `null` = καμία σύντηξη ακόμη. */
+  readonly drawingKind: PlanDrawingKindView | null;
 }
 
 /** Κάθε αποτυχία με ΡΗΤΟ κλειδί (CHECK 3.8). */

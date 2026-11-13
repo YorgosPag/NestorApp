@@ -33,6 +33,7 @@ import type { PlanReadingActions } from '../ui/panels/model-from-drawing/PlanRea
 import type { PlanScaleActions, PlanScaleView } from '../ui/panels/model-from-drawing/PlanScaleCard';
 import type { PlanOcrActions, PlanOcrView } from '../ui/panels/model-from-drawing/PlanOcrSection';
 import type { PlanReadValuesActions } from '../ui/panels/model-from-drawing/PlanReadValuesSection';
+import type { PlanDrawingKindActions, PlanDrawingKindView } from '../ui/panels/model-from-drawing/PlanDrawingKindSection';
 import { isLocalOcrOutcome } from '../bim/plan-recognition/ocr/ocr-reading';
 import { applyReadingCorrectionsToOutcome } from '../bim/plan-recognition/reading/reading-corrections';
 import type { PlanReadingOutcome } from '../bim/plan-recognition/plan-recognition-types';
@@ -53,6 +54,18 @@ export interface PlanRecognitionWiring {
   readonly ocr: PlanOcrActions;
   /** ADR-929 Δ21 (δ) — «Τι διάβασα»: διόρθωση · «Σωστό ✓» · «δεν είναι διάσταση» · επαναφορά · επισήμανση. */
   readonly readValues: PlanReadValuesActions;
+  /** ADR-929 Δ21 (0) · Δ7 Γ — «Σχέδιο υπό κλίμακα / Σκίτσο με το χέρι». */
+  readonly drawingKind: PlanDrawingKindActions;
+}
+
+/** Δ21 (0) · Δ7 Γ — ο διακόπτης πάει κατευθείαν στον έναν ελεγκτή. Σταθερή ταυτότητα. */
+const DRAWING_KIND_ACTIONS: PlanDrawingKindActions = {
+  onSet: (choice) => { planRecognitionSession.drawingKind.set(choice); },
+};
+
+/** Δ21 (0) · Δ7 Γ — το είδος σχεδίου της σύντηξης και η επιλογή του ανθρώπου· `null` χωρίς σύντηξη. */
+function drawingKindViewOf({ fusion, drawingKindChoice }: PlanRecognitionState): PlanDrawingKindView | null {
+  return fusion ? { decision: fusion.drawingKind, choice: drawingKindChoice } : null;
 }
 
 /** Σταθερή ταυτότητα σε κάθε render: οι πράξεις πάνε κατευθείαν στον έναν ελεγκτή. */
@@ -151,6 +164,7 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
     ocr: ocrViewOf(recognition, effectiveReading),
     readValues,
     readValueThumbnails,
+    drawingKind: drawingKindViewOf(recognition),
   };
 }
 
@@ -208,5 +222,8 @@ export function usePlanRecognitionWiring(
   );
 
   const reading = usePlanReadingActions(getDeps);
-  return { imageSource, recognizeImage, reading, scale: scale.actions, ocr: OCR_ACTIONS, readValues: READ_VALUES_ACTIONS };
+  return {
+    imageSource, recognizeImage, reading, scale: scale.actions, ocr: OCR_ACTIONS, readValues: READ_VALUES_ACTIONS,
+    drawingKind: DRAWING_KIND_ACTIONS,
+  };
 }

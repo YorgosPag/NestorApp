@@ -182,6 +182,12 @@ export interface ProviderMetadata {
 
 export type ProviderId = 'pdf-page' | 'image';
 
+/**
+ * ADR-929 Δ7 Γ — το μέσο της πηγής: `vector` = σελίδα PDF χωρίς κυρίαρχη εικόνα (σχεδιασμένη σε CAD, άρα υπό κλίμακα) ·
+ * `raster` = σάρωση, φωτογραφία ή εικόνα, όπου το αν είναι σκίτσο το κρίνουν οι γραμμένες διαστάσεις.
+ */
+export type SourceMedium = 'vector' | 'raster';
+
 // ─── Domain entity: FloorplanBackground ──────────────────────────────────────
 
 export interface FloorplanBackground {

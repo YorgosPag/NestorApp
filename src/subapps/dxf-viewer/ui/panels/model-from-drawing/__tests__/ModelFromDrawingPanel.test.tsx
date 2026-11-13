@@ -103,6 +103,7 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
     scale: { onApply: jest.fn(), onManual: jest.fn(), onHover: jest.fn() },
     ocr: { onCancel: jest.fn(), onRetry: jest.fn() },
     readValues: { onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(), onConfirm: jest.fn(), onFocusSource: jest.fn(), previewCorrection: jest.fn(() => null) },
+    drawingKind: { onSet: jest.fn() },
   };
 }
 
@@ -116,6 +117,7 @@ const NO_IMAGE: ImageSourceView = {
   ocr: { state: { status: 'idle' }, inUse: false, counts: null },
   readValues: null,
   readValueThumbnails: new Map(),
+  drawingKind: null,
 };
 
 function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {
@@ -315,6 +317,7 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
     readingAvailable: true, readingAdopted: false, review: null, scale: NO_IMAGE.scale, ocr: NO_IMAGE.ocr,
     readValues: null,
     readValueThumbnails: new Map(),
+    drawingKind: null,
   };
 
   it('Φ5.2ε — οι γραμμές χαμηλής βεβαιότητας λέγονται ρητά «όχι τοίχοι», και η γραμμή φεύγει όταν δεν υπάρχουν', () => {

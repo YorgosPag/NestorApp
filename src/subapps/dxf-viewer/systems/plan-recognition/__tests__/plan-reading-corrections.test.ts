@@ -4,7 +4,7 @@
  * ⚓ ADR-929 Δ21 (δ) — ο ελεγκτής των διορθώσεων τιμών (`planRecognitionSession.corrections`):
  *   · βήμα 5: `preview` = τι θα γινόταν το κείμενο, από τον ΙΔΙΟ δρόμο με την αποθήκευση, διαβασμένο τη στιγμή της κλήσης·
  *     καμία εγγραφή, καμία σύντηξη·
- *   · `correct` ίσο με ό,τι διάβασε η μηχανή ⇒ καμία σύντηξη (ιδεμποτία, `effectiveReadingCorrection`)·
+ *   · Δ7 Α: `correct` ίσο με ό,τι διάβασε η μηχανή ⇒ «Σωστό ✓» (`effectiveReadingCorrection`), ποτέ επαναφορά·
  *   · διόρθωση ⇒ ΜΙΑ σύντηξη + ΜΙΑ δημοσίευση.
  * Ψεύτικα: σύντηξη, πηγή γραμμών. Πραγματικά: store, ελεγκτής, μετατροπή κειμένων OCR → ανάγνωση, διορθώσεις.
  */
@@ -97,12 +97,22 @@ describe('Δ21 (δ) βήμα 5 — preview: ζωντανή ερμηνεία χω
   });
 });
 
-describe('Δ21 (δ) — commit με τον κοινό κανόνα «ίδιο με τη μηχανή ⇒ επαναφορά»', () => {
-  it('διόρθωση ίση με ό,τι διάβασε η μηχανή ⇒ καμία σύντηξη, καμία δημοσίευση', () => {
+describe('Δ7 Α — commit: η τιμή του ανθρώπου είναι αρχή («ίδιο με τη μηχανή» ⇒ «Σωστό ✓», ποτέ επαναφορά)', () => {
+  it('🔴 διόρθωση ίση με ό,τι διάβασε η μηχανή ⇒ «Σωστό ✓» (ΜΙΑ σύντηξη)· ξανά ⇒ τίποτα', () => {
     const h = harness();
     expect(h.controller.correct('t2', ' 4.15 ')).toBe(true);
-    expect(h.fused).toEqual([]);
-    expect(h.published).toEqual([]);
+    expect(planRecognitionStore.get().readingCorrections.byTextId).toEqual({ t2: { kind: 'confirmed' } });
+    expect(h.controller.correct('t2', '4.15')).toBe(true);
+    expect(h.fused).toHaveLength(1);
+    expect(h.published).toEqual(['src#1']);
+  });
+
+  it('🔴 DOC014: διορθωμένη γραμμή, ο άνθρωπος ξαναγράφει την ανάγνωση της μηχανής ⇒ «ελέγχθηκε», όχι «ύποπτη» ξανά', () => {
+    const h = harness();
+    h.controller.correct('t2', '2.73');
+    h.controller.correct('t2', '4.15');
+    expect(planRecognitionStore.get().readingCorrections.byTextId).toEqual({ t2: { kind: 'confirmed' } });
+    expect(h.fused).toHaveLength(2);
   });
 
   it('διόρθωση ⇒ ΜΙΑ σύντηξη + ΜΙΑ δημοσίευση· ίδια διόρθωση ξανά ⇒ τίποτα', () => {

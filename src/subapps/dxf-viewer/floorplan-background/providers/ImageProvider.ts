@@ -7,6 +7,7 @@ import type {
   ProviderLoadResult,
   ProviderRenderParams,
   ProviderSource,
+  SourceMedium,
 } from './types';
 import { isTiff } from './image-compression';
 import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
@@ -86,6 +87,11 @@ export class ImageProvider implements IFloorplanBackgroundProvider {
   /** Η εικόνα αποκωδικοποιείται ήδη στην εγγενή της ανάλυση ⇒ ίδια με το `getPlanRaster()`. */
   async getRecognitionRaster(): Promise<RecognitionRaster | null> {
     return naturalRecognitionRaster(this.getPlanRaster());
+  }
+
+  /** ADR-929 Δ7 Γ — μια εικόνα είναι πάντα pixel. */
+  async getSourceMedium(): Promise<SourceMedium> {
+    return 'raster';
   }
 
   dispose(): void {

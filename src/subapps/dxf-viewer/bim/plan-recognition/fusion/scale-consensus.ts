@@ -117,6 +117,15 @@ function bestAgreeing(t: DimensionTarget, logK: number): BindingCandidate | unde
   return best;
 }
 
+/**
+ * ADR-929 Δ7 Γ — οι διαστάσεις που **συμφωνούν** με την κλίμακα `pxPerMm` (ο ΙΔΙΟΣ κανόνας με τη συναίνεση, `bestAgreeing`):
+ * η απόδειξη πίσω από μια κλίμακα, ώστε να κρίνεται και **τι** τη στηρίζει (π.χ. πόσες διαφορετικές τιμές).
+ */
+export function agreeingTargets(targets: readonly DimensionTarget[], pxPerMm: number): DimensionTarget[] {
+  const logK = Math.log(pxPerMm);
+  return targets.filter((t) => bestAgreeing(t, logK) !== undefined);
+}
+
 /** Ο σταθμισμένος μέσος της καλύτερης συμφωνούσας δέσης κάθε διάστασης γύρω από το `logK`. */
 function agreeAround(targets: readonly DimensionTarget[], logK: number): Agreement {
   let sum = 0;

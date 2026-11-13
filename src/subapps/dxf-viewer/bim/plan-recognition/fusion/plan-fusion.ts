@@ -17,6 +17,7 @@ import type { PlanExtensionAnchor, PlanReading, PlanSegmentRole } from '../plan-
 import { adjustNetwork, type BoundDimension, type NetworkOutcome } from './adjustment-network';
 import { dimensionTargets, selectBinding, type DimensionTarget } from './dimension-binding';
 import { dimensionSpans } from './dimension-spans';
+import { resolveDrawingKind } from './drawing-kind';
 import { buildFusionFrame, type FusionFrame } from './fusion-frame';
 import { planQuestions } from './fusion-questions';
 import { adjustedOffsets, adjustedSegments, fuseDimensions, segmentConfidence } from './fusion-results';
@@ -118,11 +119,14 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
   const frame = buildFusionFrame(faceSegments, input.alignment, o);
   const spans = spansOf(input, roles, frame, o);
   const reading = input.reading?.status === 'read' ? input.reading.reading : null;
-  const targets = reading === null ? [] : dimensionTargets(reading, frame, input.alignment.originalToAligned, input.kind, o, spans);
+  // Δ21 (0) · Δ7 Γ — το είδος (σκίτσο ή όχι) κρίνεται ΕΔΩ, μία φορά· ό,τι ακολουθεί τρέχει με αυτό.
+  const { decision: drawingKind, targets } = resolveDrawingKind(input.kind, input.drawing, (kind) => (
+    reading === null ? [] : dimensionTargets(reading, frame, input.alignment.originalToAligned, kind, o, spans)
+  ), o);
   const stage = resolveScale(input, reading, frame, targets, o);
   const { bindings, bound } = bindAll(targets, stage.chosen, o);
   const network = stage.chosen === null ? null
-    : adjustNetwork(frame, bound, { pxPerMm: 1 / stage.chosen.mmPerAlignedPx, free: stage.chosen.source !== 'known-calibration' }, input.kind, o);
+    : adjustNetwork(frame, bound, { pxPerMm: 1 / stage.chosen.mmPerAlignedPx, free: stage.chosen.source !== 'known-calibration' }, drawingKind.kind, o);
   const scale = suggestion(stage, network, frame);
   const pxPerMm = scale === null ? null : 1 / scale.mmPerAlignedPx;
   const dimensions = fuseDimensions(targets, bindings, bound, network, pxPerMm, o);
@@ -142,5 +146,6 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
     segmentRoles: roles,
     dimensionSpans: spans,
     adjustment: summary(network),
+    drawingKind,
   };
 }

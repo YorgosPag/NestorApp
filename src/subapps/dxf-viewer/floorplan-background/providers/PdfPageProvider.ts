@@ -6,6 +6,7 @@ import type {
   ProviderLoadResult,
   ProviderRenderParams,
   ProviderSource,
+  SourceMedium,
 } from './types';
 // 🔑 ΕΝΑΣ πίνακας px εικόνας → καμβάς, χτισμένος από το SSoT `rasterToSceneAffine` (ADR-929 Δ3):
 // ο ίδιος που ρωτά η αναγνώριση κάτοψης, ώστε προεπισκόπηση ≡ αποτέλεσμα.
@@ -13,7 +14,7 @@ import { applyRasterCanvasTransform } from './provider-canvas-transforms';
 import type { PlanRaster, RecognitionRaster } from '@/lib/geometry/raster/plan-raster';
 import { cropPlanRegion, naturalRecognitionRaster, readPlanRaster } from './provider-plan-raster';
 import type { RasterRectPx } from '../../types/coordinate-space';
-import { renderPdfPageAtNativeResolution } from '../../pdf-background/services/pdf-recognition-raster';
+import { pdfPageMedium, renderPdfPageAtNativeResolution } from '../../pdf-background/services/pdf-recognition-raster';
 import { PDF_RENDER_CONFIG } from '../../pdf-background/types/pdf.types';
 
 const SUPPORTED_MIME_TYPES = ['application/pdf'] as const;
@@ -44,6 +45,8 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
   private _bounds: NaturalBounds = { width: 0, height: 0 };
   /** Το PDF, για την κατ' απαίτηση απόδοση αναγνώρισης (ADR-929 §6.16 βήμα 4). Ο singleton μπορεί να έχει ήδη άλλο έγγραφο. */
   private _pdf: Blob | null = null;
+  /** ADR-929 Δ7 Γ — το μέσο του **συγκεκριμένου** PDF (δεμένο στο Blob, ώστε νέα φόρτωση να μην πάρει το παλιό). */
+  private _medium: { readonly pdf: Blob; readonly medium: Promise<SourceMedium | null> } | null = null;
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -116,10 +119,22 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
     return naturalRecognitionRaster(this.getPlanRaster());
   }
 
+  /**
+   * ADR-929 Δ7 Γ — διανυσματική σελίδα ή σάρωση (`pdfPageMedium`). Υπολογίζεται μία φορά ανά φορτωμένο PDF· αποτυχία ή χωρίς
+   * PDF ⇒ `raster` (ποτέ «CAD» χωρίς απόδειξη).
+   */
+  async getSourceMedium(): Promise<SourceMedium> {
+    const pdf = this._pdf;
+    if (pdf === null) return 'raster';
+    if (this._medium?.pdf !== pdf) this._medium = { pdf, medium: pdfPageMedium(pdf, PAGE_NUMBER) };
+    return (await this._medium.medium) ?? 'raster';
+  }
+
   dispose(): void {
     this._image = null;
     this._bounds = { width: 0, height: 0 };
     this._pdf = null;
+    this._medium = null;
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import type {
   ProviderLoadResult,
   ProviderRenderParams,
   ProviderSource,
+  SourceMedium,
 } from './types';
 
 export interface IFloorplanBackgroundProvider {
@@ -30,6 +31,12 @@ export interface IFloorplanBackgroundProvider {
    * της, αλλιώς ό,τι το `getPlanRaster()` με `naturalPerRasterPx = 1`. Η εμφάνιση δεν αλλάζει. `null` όπως το `getPlanRaster`.
    */
   getRecognitionRaster(): Promise<RecognitionRaster | null>;
+
+  /**
+   * ADR-929 Δ7 Γ — το μέσο της πηγής (`SourceMedium`): PDF χωρίς κυρίαρχη εικόνα ⇒ `vector`· κάθε άλλη περίπτωση, και κάθε
+   * αποτυχία ελέγχου, ⇒ `raster` (ποτέ δεν υποθέτουμε «σχεδιασμένο σε CAD» χωρίς απόδειξη).
+   */
+  getSourceMedium(): Promise<SourceMedium>;
 
   /**
    * ADR-929 Δ21 (δ) βήμα 1: μικρογραφία (PNG) μιας περιοχής σε px των `naturalBounds`, κομμένη απευθείας από την ήδη

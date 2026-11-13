@@ -3,7 +3,7 @@
 /**
  * ADR-929 Δ21 (δ) — η λίστα **«Τι διάβασα»**: κάθε κείμενο της ανάγνωσης με την ερμηνεία του (τιμή ή είδος), βεβαιότητα,
  * κατάσταση στη σύντηξη και απόκλιση, η πιο ύποπτη πρώτη (`plan-read-values.ts`). Κλικ στο κείμενο ⇒ πεδίο διόρθωσης
- * (Enter αποθηκεύει, Esc ακυρώνει)· «Σωστό ✓» · «Δεν είναι διάσταση» · «Επαναφορά» με την αρχική ανάγνωση ορατή· πρόοδος
+ * (Enter, ✓ ή κλικ έξω αποθηκεύουν — Δ7 Δ, Figma· Esc ακυρώνει)· «Σωστό ✓» · «Δεν είναι διάσταση» · «Επαναφορά» με την αρχική ανάγνωση ορατή· πρόοδος
  * «ελέγχθηκαν N από M». Το δείκτη πάνω σε
  * γραμμή ⇒ επισήμανση του κειμένου στην εικόνα.
  *
@@ -30,7 +30,7 @@ import type { FusedDimensionStatus } from '../../../bim/plan-recognition/fusion/
 import type { PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
 import type { PlanCorrectionPreview } from '../../../bim/plan-recognition/reading/reading-corrections';
 import {
-  isHumanChecked, planReadValuesProgress, type PlanReadValuePriority, type PlanReadValueRow,
+  isHumanChecked, planReadValuesProgress, type PlanReadValuePriority, type PlanReadValueMeasure, type PlanReadValueRow, type PlanReadValueSuggestionBasis,
 } from '../../../systems/plan-recognition/plan-read-values';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 
@@ -105,16 +105,20 @@ function interpretationOf(row: PlanCorrectionPreview, t: Translate): string {
   return `${kind} · ${why}`;
 }
 
-/**
- * Βεβαιότητα · κατάσταση στη σύντηξη · απόκλιση — ό,τι υπάρχει. Δ3 — χωρίς κλίμακα η απόκλιση λέει ρητά ότι **δεν** κρίνει
- * τη γραμμένη τιμή (μετρά μόνο τις αναλογίες του χαρτιού).
- */
+/** Δ3 · Δ7 Γ — η απόκλιση λέει ρητά **γιατί** δεν κρίνει τη γραμμένη τιμή, όταν δεν την κρίνει (ρητά κλειδιά, CHECK 3.8). */
+const DEVIATION_KEY: Readonly<Record<PlanReadValueMeasure, string>> = {
+  known: 'modelFromDrawing.image.ocr.values.deviation',
+  'no-scale': 'modelFromDrawing.image.ocr.values.deviationUnscaled',
+  sketch: 'modelFromDrawing.image.ocr.values.deviationSketch',
+  unproven: 'modelFromDrawing.image.ocr.values.deviationUnproven',
+};
+
+/** Βεβαιότητα · κατάσταση στη σύντηξη · απόκλιση — ό,τι υπάρχει. */
 function metaOf(row: PlanReadValueRow, t: Translate): string {
   const parts = [t('modelFromDrawing.image.ocr.values.confidence', { percent: Math.round(row.confidence * 100) })];
   if (row.status !== null) parts.push(t(STATUS_KEY[row.status]));
   if (row.deviationMm !== null) {
-    const key = row.scaleKnown ? 'modelFromDrawing.image.ocr.values.deviation' : 'modelFromDrawing.image.ocr.values.deviationUnscaled';
-    parts.push(t(key, { value: Math.round(row.deviationMm) }));
+    parts.push(t(DEVIATION_KEY[row.measure], { value: Math.round(row.deviationMm) }));
   }
   return parts.join(' · ');
 }
@@ -141,6 +145,35 @@ function decodeReadValueKey(event: React.KeyboardEvent): ReadValueKey | null {
   return READ_VALUE_KEY_BY_CODE[event.code] ?? null;
 }
 
+/**
+ * Δ7 Δ — πώς κλείνει το πεδίο: Enter / ✓ / κλικ έξω (Figma) αποθηκεύουν, Esc ακυρώνει — **ΜΙΑ** φορά. Η σημαία κρατά το Esc
+ * από το να γίνει αποθήκευση: η επιστροφή της εστίασης στη γραμμή ρίχνει `blur` στο πεδίο αμέσως μετά.
+ */
+function useEditorClose(draft: string, onSave: (raw: string) => void, onCancel: () => void) {
+  const settled = React.useRef(false);
+  const settle = (action: () => void): void => {
+    if (settled.current) return;
+    settled.current = true;
+    action();
+  };
+  const submit = (event: React.FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    settle(() => onSave(draft));
+  };
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation(); // το Esc κλείνει το πεδίο, όχι τον βοηθό
+    settle(onCancel);
+  };
+  // Figma — κλικ έξω από το πεδίο = αποθήκευση· η εστίαση που μένει μέσα στη φόρμα (το ✓) δεν μετρά ως «έξω».
+  const onBlur = (event: React.FocusEvent<HTMLFormElement>): void => {
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+    settle(() => onSave(draft));
+  };
+  return { submit, onKeyDown, onBlur };
+}
+
 function RowEditor({ row, onSave, onCancel, preview, t }: {
   readonly row: PlanReadValueRow;
   readonly onSave: (raw: string) => void;
@@ -149,24 +182,21 @@ function RowEditor({ row, onSave, onCancel, preview, t }: {
   readonly t: Translate;
 }): React.ReactElement {
   const [draft, setDraft] = React.useState(row.raw);
+  const { submit, onKeyDown, onBlur } = useEditorClose(draft, onSave, onCancel);
   const interpreted = preview(row.textId, draft);
-  const submit = (event: React.FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    onSave(draft);
-  };
-  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key !== 'Escape') return;
-    event.preventDefault();
-    event.stopPropagation(); // το Esc κλείνει το πεδίο, όχι τον βοηθό
-    onCancel();
-  };
   return (
-    <form onSubmit={submit} className="flex flex-col gap-0.5" data-testid="mfd-read-value-editor">
-      <Input
-        autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onKeyDown}
-        aria-label={t('modelFromDrawing.image.ocr.values.inputLabel')} className="h-7 text-xs" data-testid="mfd-read-value-input"
-        aria-describedby={`mfd-read-value-preview-${row.textId}`}
-      />
+    <form onSubmit={submit} onBlur={onBlur} className="flex flex-col gap-0.5" data-testid="mfd-read-value-editor">
+      <span className="flex items-center gap-1">
+        <Input
+          autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onKeyDown}
+          aria-label={t('modelFromDrawing.image.ocr.values.inputLabel')} className="h-7 text-xs" data-testid="mfd-read-value-input"
+          aria-describedby={`mfd-read-value-preview-${row.textId}`}
+        />
+        <Button type="submit" variant="outline" size="xs" aria-label={t('modelFromDrawing.image.ocr.values.saveLabel')} data-testid="mfd-read-value-save">
+          <Check className="size-3" aria-hidden="true" />
+          {t('modelFromDrawing.image.ocr.values.save')}
+        </Button>
+      </span>
       <output
         id={`mfd-read-value-preview-${row.textId}`} aria-live="polite" className={MUTED} data-testid="mfd-read-value-preview"
       >
@@ -214,6 +244,12 @@ function RowActions({ row, actions, run, t }: {
   );
 }
 
+/** Δ6 — η αιτιολογία κάθε πρότασης λέει την πραγματική της βάση (ρητά κλειδιά, CHECK 3.8). */
+const SUGGESTION_KEY: Readonly<Record<PlanReadValueSuggestionBasis, string>> = {
+  adjustment: 'modelFromDrawing.image.ocr.values.suggestion',
+  'drawing-unit': 'modelFromDrawing.image.ocr.values.suggestionUnit',
+};
+
 /** Βήμα 7 — η πρόταση της συνόρθωσης για τιμή σε σύγκρουση, με αποδοχή ενός κλικ (ο ΙΔΙΟΣ δρόμος με κάθε διόρθωση). */
 function RowSuggestion({ row, actions, run, t }: {
   readonly row: PlanReadValueRow;
@@ -226,7 +262,7 @@ function RowSuggestion({ row, actions, run, t }: {
   return (
     <p className="m-0 flex flex-wrap items-center gap-1 text-[11px] text-foreground" data-testid="mfd-read-value-suggestion">
       <Lightbulb className="size-3 shrink-0" aria-hidden="true" />
-      <span>{t('modelFromDrawing.image.ocr.values.suggestion', { value: suggestion })}</span>
+      <span>{t(SUGGESTION_KEY[row.suggestionBasis ?? 'adjustment'], { value: suggestion })}</span>
       <Button
         type="button" variant="outline" size="xs" onClick={() => run(() => actions.onCorrect(row.textId, suggestion))}
         aria-label={t('modelFromDrawing.image.ocr.values.acceptSuggestionLabel', { value: suggestion })}
@@ -306,7 +342,8 @@ function ValueRow({ row, thumbnail, editing, active, rowRef, onActivate, onEdit,
   const run: RunRowAction = (action) => { action(); focusSelf(); };
   const save = (raw: string): void => {
     onEndEdit();
-    if (raw.trim() !== '' && raw.trim() !== row.raw) actions.onCorrect(row.textId, raw);
+    // Δ7 Α — και τιμή ίδια με την τρέχουσα περνά: ίση με της μηχανής ⇒ «Σωστό ✓»· ο ελεγκτής είναι ιδεμπότης.
+    if (raw.trim() !== '') actions.onCorrect(row.textId, raw);
   };
   return (
     <li

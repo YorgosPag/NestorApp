@@ -15,7 +15,7 @@ import { PlanReadValuesSection, type PlanReadValuesActions } from '../PlanReadVa
 const t = (key: string, params?: Record<string, string | number>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
 const row = (over: Partial<PlanReadValueRow> & Pick<PlanReadValueRow, 'textId' | 'raw'>): PlanReadValueRow => ({
-  correctedFrom: null, confirmed: false, priority: 'ok', suggestion: null, kind: 'dimension', valueMm: null, unknownUnit: null, confidence: 0.9, status: null, deviationMm: null, w: null, scaleKnown: true, ...over,
+  correctedFrom: null, confirmed: false, priority: 'ok', suggestion: null, suggestionBasis: null, kind: 'dimension', valueMm: null, unknownUnit: null, confidence: 0.9, status: null, deviationMm: null, w: null, measure: 'known', ...over,
 });
 
 const ROWS: readonly PlanReadValueRow[] = [
@@ -61,18 +61,34 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
   });
 
   it('Δ21 (δ): άγνωστη μονάδα ⇒ «άγνωστη μονάδα «kh.»», ΟΧΙ «χωρίς αποδεδειγμένη μονάδα»· η πρόταση της μονάδας φαίνεται', () => {
-    const { getAllByTestId } = renderValues([row({ textId: 't9', raw: '2,05 kh.', unknownUnit: 'kh.', priority: 'suspect', suggestion: '2,05 m' })]);
+    const { getAllByTestId } = renderValues([row({
+      textId: 't9', raw: '2,05 kh.', unknownUnit: 'kh.', priority: 'suspect', suggestion: '2,05 m', suggestionBasis: 'drawing-unit',
+    })]);
     const t9 = item(getAllByTestId, 't9');
     expect(t9.textContent).toContain('modelFromDrawing.image.ocr.values.unknownUnit{"suffix":"kh."}');
     expect(t9.textContent).not.toContain('modelFromDrawing.image.ocr.values.noUnit');
-    expect(t9.textContent).toContain('modelFromDrawing.image.ocr.values.suggestion{"value":"2,05 m"}');
+    // Δ6 — η αιτιολογία της πρότασης μονάδας: «η μονάδα του σχεδίου», ΟΧΙ «από τις υπόλοιπες διαστάσεις» (συνόρθωση)
+    expect(t9.textContent).toContain('modelFromDrawing.image.ocr.values.suggestionUnit{"value":"2,05 m"}');
+    expect(t9.textContent).not.toContain('modelFromDrawing.image.ocr.values.suggestion{');
   });
 
   it('Δ3 — χωρίς κλίμακα η απόκλιση λέει ρητά ότι ΔΕΝ κρίνει τη γραμμένη τιμή (ΡΗΤΟ κλειδί)', () => {
-    const { getAllByTestId } = renderValues([row({ textId: 't2', raw: '2,05 m', status: 'conflict', deviationMm: 538, scaleKnown: false })]);
+    const { getAllByTestId } = renderValues([row({ textId: 't2', raw: '2,05 m', status: 'conflict', deviationMm: 538, measure: 'no-scale' })]);
     const t2 = item(getAllByTestId, 't2');
     expect(t2.textContent).toContain('modelFromDrawing.image.ocr.values.deviationUnscaled{"value":538}');
     expect(t2.textContent).not.toContain('modelFromDrawing.image.ocr.values.deviation{');
+  });
+
+  it('Δ7 Γ — σκίτσο εκτός κλίμακας ⇒ η απόκλιση λέει «σκίτσο», όχι «χωρίς κλίμακα» (ΡΗΤΟ κλειδί)', () => {
+    const { getAllByTestId } = renderValues([row({ textId: 't2', raw: '2,05 m', status: 'conflict', deviationMm: 538, measure: 'sketch' })]);
+    const t2 = item(getAllByTestId, 't2');
+    expect(t2.textContent).toContain('modelFromDrawing.image.ocr.values.deviationSketch{"value":538}');
+    expect(t2.textContent).not.toContain('deviationUnscaled');
+  });
+
+  it('Δ7 Γ — αναπόδεικτο μέτρο ⇒ η απόκλιση το λέει ρητά (ΡΗΤΟ κλειδί)', () => {
+    const { getAllByTestId } = renderValues([row({ textId: 't2', raw: '4,12 m', status: 'conflict', deviationMm: -1026, measure: 'unproven' })]);
+    expect(item(getAllByTestId, 't2').textContent).toContain('modelFromDrawing.image.ocr.values.deviationUnproven{"value":-1026}');
   });
 
   it('κλικ ⇒ πεδίο με το κείμενο· Enter ⇒ onCorrect μία φορά και το πεδίο κλείνει', () => {
@@ -87,16 +103,53 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(queryByTestId('mfd-read-value-input')).toBeNull();
   });
 
-  it('Esc ⇒ το πεδίο κλείνει χωρίς διόρθωση· αμετάβλητο κείμενο ⇒ καμία διόρθωση', () => {
+  it('Esc ⇒ το πεδίο κλείνει χωρίς διόρθωση — ΚΑΙ η επιστροφή της εστίασης (blur) δεν γίνεται αποθήκευση', () => {
+    const { getAllByTestId, getByTestId, queryByTestId, actions } = renderValues();
+    fireEvent.click(item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-edit"]') as HTMLElement);
+    const input = getByTestId('mfd-read-value-input');
+    fireEvent.change(input, { target: { value: '9.99' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    fireEvent.blur(input, { relatedTarget: item(getAllByTestId, 't4') });
+    expect(queryByTestId('mfd-read-value-input')).toBeNull();
+    expect(actions.onCorrect).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Δ7 Α — αμετάβλητο κείμενο + Enter ⇒ ΠΕΡΝΑ στον ελεγκτή (ίσο με της μηχανής = «Σωστό ✓», όχι «τίποτα»)', () => {
+    const { getAllByTestId, getByTestId, actions } = renderValues();
+    fireEvent.click(item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-edit"]') as HTMLElement);
+    fireEvent.submit(getByTestId('mfd-read-value-editor'));
+    expect(actions.onCorrect).toHaveBeenCalledWith('t4', '412');
+  });
+
+  it('Δ7 Δ — ορατό κουμπί ✓ Αποθήκευση: ΜΙΑ αποθήκευση· κενό πεδίο ⇒ καμία', () => {
     const { getAllByTestId, getByTestId, queryByTestId, actions } = renderValues();
     const edit = (): void => fireEvent.click(item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-edit"]') as HTMLElement);
     edit();
-    fireEvent.change(getByTestId('mfd-read-value-input'), { target: { value: '9.99' } });
-    fireEvent.keyDown(getByTestId('mfd-read-value-input'), { key: 'Escape' });
+    const save = getByTestId('mfd-read-value-save');
+    expect(save.getAttribute('type')).toBe('submit');
+    expect(save.getAttribute('aria-label')).toBe('modelFromDrawing.image.ocr.values.saveLabel');
+    fireEvent.change(getByTestId('mfd-read-value-input'), { target: { value: '4,12 m' } });
+    fireEvent.click(save);
+    expect(actions.onCorrect).toHaveBeenCalledTimes(1);
+    expect(actions.onCorrect).toHaveBeenCalledWith('t4', '4,12 m');
     expect(queryByTestId('mfd-read-value-input')).toBeNull();
     edit();
-    fireEvent.submit(getByTestId('mfd-read-value-editor'));
+    fireEvent.change(getByTestId('mfd-read-value-input'), { target: { value: '  ' } });
+    fireEvent.click(getByTestId('mfd-read-value-save'));
+    expect(actions.onCorrect).toHaveBeenCalledTimes(1);
+  });
+
+  it('Δ7 Δ (Figma) — κλικ έξω από το πεδίο ⇒ αποθήκευση· εστίαση στο ✓ (μέσα στη φόρμα) ⇒ όχι ακόμη', () => {
+    const { getAllByTestId, getByTestId, queryByTestId, actions } = renderValues();
+    fireEvent.click(item(getAllByTestId, 't4').querySelector('[data-testid="mfd-read-value-edit"]') as HTMLElement);
+    const input = getByTestId('mfd-read-value-input');
+    fireEvent.change(input, { target: { value: '4,12 m' } });
+    fireEvent.blur(input, { relatedTarget: getByTestId('mfd-read-value-save') });
     expect(actions.onCorrect).not.toHaveBeenCalled();
+    fireEvent.blur(input, { relatedTarget: document.body });
+    expect(actions.onCorrect).toHaveBeenCalledTimes(1);
+    expect(actions.onCorrect).toHaveBeenCalledWith('t4', '4,12 m');
+    expect(queryByTestId('mfd-read-value-input')).toBeNull();
   });
 
   it('βήμα 5 — ζωντανή ερμηνεία στο πεδίο, πριν από το Enter, από τον ελεγκτή (aria-live)', () => {

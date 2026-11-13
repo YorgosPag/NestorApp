@@ -129,9 +129,10 @@ describe('Δ21 (δ) βήμα 5 — previewReadingCorrection: η ζωντανή �
     expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't2', '  ')).toBeNull();
     expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't99', '4.12')).toBeNull();
   });
-  it('effectiveReadingCorrection: ίδιο κείμενο με της μηχανής ⇒ καμία διόρθωση (επαναφορά)', () => {
+  it('🔴 Δ7 Α — effectiveReadingCorrection: ίδιο κείμενο με της μηχανής ⇒ «Σωστό ✓», ΟΧΙ επαναφορά', () => {
     const machine = readingOf().texts[1];
-    expect(effectiveReadingCorrection(machine, { kind: 'value', raw: ' 4.15 ' })).toBeNull();
+    expect(effectiveReadingCorrection(machine, { kind: 'value', raw: ' 4.15 ' })).toEqual({ kind: 'confirmed' });
+    expect(effectiveReadingCorrection(machine, null)).toBeNull(); // επαναφορά μόνο ρητά
     expect(effectiveReadingCorrection(machine, { kind: 'value', raw: '4.12' })).toEqual({ kind: 'value', raw: '4.12' });
     expect(effectiveReadingCorrection(machine, { kind: 'not-dimension' })).toEqual({ kind: 'not-dimension' });
   });

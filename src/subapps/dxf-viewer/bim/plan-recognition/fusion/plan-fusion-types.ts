@@ -17,6 +17,7 @@
 import type { PlanePoint } from '@/lib/geometry/homography';
 import type { RasterRectPx } from '../../../types/coordinate-space';
 import type { RasterPixelScale } from '../../../floorplan-background/geometry/raster-pixel-scale';
+import type { SourceMedium } from '../../../floorplan-background/providers/types';
 import type { PlanAlignment } from '../alignment/plan-alignment-types';
 import type {
   PlanConfidence,
@@ -36,7 +37,13 @@ import type {
 export type RoomAreaProbe = (seedAligned: PlanePoint, metresPerAlignedPx: number) => number | null;
 
 export interface PlanFusionInput {
+  /**
+   * Το είδος εισόδου **της εικόνας** (σάρωση · PDF · αγγελία). Αν η κάτοψη είναι σκίτσο το αποφασίζει η σύντηξη
+   * (`resolveDrawingKind`, Δ21 (0) · Δ7 Γ) από το `drawing` και τις γραμμένες διαστάσεις.
+   */
   readonly kind: PlanInputKind;
+  /** Δ21 (0) · Δ7 Γ — επιλογή του ανθρώπου + μέσο της πηγής. Λείπει ⇒ καμία επιλογή, εικόνα (`raster`). */
+  readonly drawing?: PlanDrawingKindInput;
   readonly alignment: Pick<PlanAlignment, 'image' | 'originalToAligned' | 'alignedToOriginal' | 'sheet'>;
   readonly segments: readonly RasterSegment[];
   /**
@@ -266,6 +273,36 @@ export interface PlanScaleSuggestion {
   readonly evidence: readonly PlanScaleEvidence[];
 }
 
+// ─── Είδος σχεδίου: σκίτσο ή υπό κλίμακα (Δ21 (0) · Δ7 Γ) ───────────────────
+
+/** Η επιλογή του ανθρώπου στο πάνελ: «Σκίτσο με το χέρι» · «Σχέδιο υπό κλίμακα» · `null` = άφησε τη μηχανή. */
+export type PlanDrawingKindChoice = 'sketch' | 'drawing';
+
+/** Το μέσο της πηγής — ο ΕΝΑΣ ορισμός ζει στους providers του υποβάθρου (`SourceMedium`). */
+export type PlanSourceMedium = SourceMedium;
+
+/**
+ * Τι λένε οι γραμμένες διαστάσεις για τις αναλογίες του χαρτιού: `to-scale` = συμφωνούν μέσα στην ανοχή **τυπωμένου**
+ * σχεδίου · `not-to-scale` = συμφωνούν **μόνο** μέσα στην ανοχή σκίτσου · `unproven` = δεν φτάνουν για κρίση.
+ */
+export type PlanProportionsVerdict = 'to-scale' | 'not-to-scale' | 'unproven';
+
+/** Ποιος αποφάσισε το είδος: ο άνθρωπος · το διανυσματικό μέσο · οι διαστάσεις · καμία ένδειξη (το είδος της εικόνας). */
+export type PlanDrawingKindBasis = 'human' | 'vector-source' | 'dimensions' | 'default';
+
+export interface PlanDrawingKindInput {
+  readonly choice: PlanDrawingKindChoice | null;
+  readonly medium: PlanSourceMedium;
+}
+
+export interface PlanDrawingKindDecision {
+  /** Το είδος με το οποίο έτρεξε η σύντηξη. */
+  readonly kind: PlanInputKind;
+  readonly basis: PlanDrawingKindBasis;
+  /** Η κρίση των διαστάσεων· `null` όταν δεν χρειάστηκε (ο άνθρωπος ή το διανυσματικό μέσο αποφάσισαν πρώτα). */
+  readonly proportions: PlanProportionsVerdict | null;
+}
+
 // ─── Χώροι, ερωτήσεις, αποτέλεσμα ───────────────────────────────────────────
 
 export type FusedRoomStatus = 'consistent' | 'conflict' | 'unmeasured';
@@ -319,4 +356,6 @@ export interface PlanFusionResult {
   /** ADR-929 Φ5.5 — ποιες δύο παρειές μετρά κάθε διάσταση, από τις γραμμές επέκτασης (υπάρχει και χωρίς ανάγνωση). */
   readonly dimensionSpans: readonly DimensionSpan[];
   readonly adjustment: AdjustmentSummary | null;
+  /** ADR-929 Δ21 (0) · Δ7 Γ — το είδος σχεδίου με το οποίο έτρεξε η σύντηξη, και ποιος το αποφάσισε. */
+  readonly drawingKind: PlanDrawingKindDecision;
 }

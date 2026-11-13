@@ -3,7 +3,9 @@
  * χαμηλή βεβαιότητα), με τιμή, κατάσταση, απόκλιση και προέλευση από τα δεδομένα που ήδη υπάρχουν.
  */
 
-import type { FusedDimension, FusedDimensionStatus, PlanScaleSuggestion } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
+import type {
+  FusedDimension, FusedDimensionStatus, PlanDrawingKindDecision, PlanScaleSuggestion,
+} from '../../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
 import { isHumanChecked, planReadThumbRect, planReadValueRows, planReadValuesProgress } from '../plan-read-values';
 
@@ -47,8 +49,13 @@ const SCALE: PlanScaleSuggestion = {
   evidence: [{ source: 'dimension-consensus', mmPerAlignedPx: 10, support: 4 }],
 };
 
+/** Δ7 Γ — το είδος σχεδίου της σύντηξης: υπό κλίμακα (οι διαστάσεις συμφωνούν) ή σκίτσο (μόνο με ανοχή σκίτσου). */
+const PRINTED: PlanDrawingKindDecision = { kind: 'scan', basis: 'dimensions', proportions: 'to-scale' };
+const SKETCH: PlanDrawingKindDecision = { kind: 'sketch', basis: 'dimensions', proportions: 'not-to-scale' };
+
 const FUSION = {
   scale: SCALE,
+  drawingKind: PRINTED,
   dimensions: [
     fused('t2', 2050, 'consistent', 0.4, 2060),
     fused('t3', 4120, 'conflict', -4.2, 3700),
@@ -67,7 +74,8 @@ describe('planReadValueRows — Δ21 (δ): η πιο ύποπτη πρώτη', (
     const rows = new Map(planReadValueRows(READING, FUSION).map((r) => [r.textId, r]));
     expect(rows.get('t3')).toEqual({
       textId: 't3', raw: '4.12', correctedFrom: '4.15', confirmed: false, kind: 'dimension', valueMm: 4120, unknownUnit: null,
-      confidence: 0.9, status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked', suggestion: '3.70', scaleKnown: true,
+      confidence: 0.9, status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked',
+      suggestion: null, suggestionBasis: null, measure: 'known', // Δ7 Β: διορθωμένη από άνθρωπο ⇒ καμία πρόταση
     });
     expect(rows.get('t4')).toMatchObject({ valueMm: null, status: null, deviationMm: null, correctedFrom: null });
   });
@@ -120,10 +128,17 @@ describe('Δ21 (δ) βήμα 4 — ετικέτα προτεραιότητας �
   });
 });
 
+/** Το t3 όπως το διάβασε η μηχανή (χωρίς διόρθωση ανθρώπου): μόνο τότε δέχεται πρόταση (Δ7 Β). */
+const MACHINE_T3: PlanReading = {
+  ...READING,
+  texts: READING.texts.map((t) => (t.id === 't3' ? text('t3', '4.12', 'dimension', 0.9) : t)),
+};
+
 describe('Δ21 (δ) βήμα 7 — πρόταση από τη συνόρθωση για τιμή σε σύγκρουση', () => {
-  it('μόνο σε σύγκρουση· γραμμένη με την ακρίβεια του κειμένου (adjustedMm 3700 ⇒ «3.70»)', () => {
-    const rows = planReadValueRows(READING, FUSION);
-    expect(rows.filter((r) => r.suggestion !== null).map((r) => [r.textId, r.suggestion])).toEqual([['t3', '3.70']]);
+  it('μόνο σε σύγκρουση· γραμμένη με την ακρίβεια του κειμένου (adjustedMm 3700 ⇒ «3.70»), βάση «συνόρθωση»', () => {
+    const rows = planReadValueRows(MACHINE_T3, FUSION);
+    expect(rows.filter((r) => r.suggestion !== null).map((r) => [r.textId, r.suggestion, r.suggestionBasis]))
+      .toEqual([['t3', '3.70', 'adjustment']]);
   });
 
   it('σκέτος ακέραιος σε σχέδιο που γράφει μέτρα ⇒ η πρόταση σε εκατοστά, όπως το κείμενο', () => {
@@ -135,37 +150,103 @@ describe('Δ21 (δ) βήμα 7 — πρόταση από τη συνόρθωση
         { textId: 't8', valueMm: 4120, segmentIds: [], confidence: { score: 0.9, factors: {} } },
       ],
     };
-    const fusion = { scale: SCALE, dimensions: [fused('t2', 2050, 'consistent', 0.4, 2060), fused('t8', 4120, 'conflict', 5, 3330)] };
+    const fusion = { scale: SCALE, drawingKind: PRINTED, dimensions: [fused('t2', 2050, 'consistent', 0.4, 2060), fused('t8', 4120, 'conflict', 5, 3330)] };
     expect(planReadValueRows(reading, fusion).find((r) => r.textId === 't8')?.suggestion).toBe('333');
   });
 
   it('χωρίς συνορθωμένη τιμή, ή πρόταση ίδια με το κείμενο ⇒ καμία πρόταση', () => {
-    const noAdjusted = { scale: SCALE, dimensions: [{ ...fused('t3', 4120, 'conflict', -4.2, null) }] };
-    expect(planReadValueRows(READING, noAdjusted).find((r) => r.textId === 't3')?.suggestion).toBeNull();
-    const same = { scale: SCALE, dimensions: [fused('t3', 4120, 'conflict', -4.2, 4118)] };
-    expect(planReadValueRows(READING, same).find((r) => r.textId === 't3')?.suggestion).toBeNull();
+    const noAdjusted = { scale: SCALE, drawingKind: PRINTED, dimensions: [{ ...fused('t3', 4120, 'conflict', -4.2, null) }] };
+    expect(planReadValueRows(MACHINE_T3, noAdjusted).find((r) => r.textId === 't3')?.suggestion).toBeNull();
+    const same = { scale: SCALE, drawingKind: PRINTED, dimensions: [fused('t3', 4120, 'conflict', -4.2, 4118)] };
+    expect(planReadValueRows(MACHINE_T3, same).find((r) => r.textId === 't3')?.suggestion).toBeNull();
+  });
+});
+
+describe('Δ7 Β — καμία πρόταση σε γραμμή που έλεγξε άνθρωπος (η τιμή του ανθρώπου είναι αρχή)', () => {
+  it('🔴 διορθωμένη γραμμή σε σύγκρουση ⇒ καμία πρόταση (DOC014: 4,12 → 3,60 → 2,73 → 0,91 m)', () => {
+    expect(planReadValueRows(READING, FUSION).find((r) => r.textId === 't3')).toMatchObject({
+      status: 'conflict', correctedFrom: '4.15', suggestion: null, suggestionBasis: null,
+    });
+  });
+
+  it('🔴 επιβεβαιωμένη («Σωστό ✓») γραμμή σε σύγκρουση ⇒ καμία πρόταση', () => {
+    const confirmed: PlanReading = {
+      ...MACHINE_T3,
+      texts: MACHINE_T3.texts.map((t) => (t.id === 't3' ? { ...t, confirmed: true } : t)),
+    };
+    expect(planReadValueRows(confirmed, FUSION).find((r) => r.textId === 't3')?.suggestion).toBeNull();
+  });
+
+  it('ΑΝΤΙΣΤΡΟΦΗ: η ίδια γραμμή χωρίς έλεγχο ανθρώπου ⇒ η πρόταση μένει', () => {
+    expect(planReadValueRows(MACHINE_T3, FUSION).find((r) => r.textId === 't3')?.suggestion).toBe('3.70');
   });
 });
 
 describe('Δ21 (δ) Δ3 — καμία πρόταση χωρίς κλίμακα (σκίτσο: το χαρτί δεν κρίνει γραμμένο αριθμό)', () => {
   it('🔴 σύγκρουση χωρίς κλίμακα στη σύντηξη ⇒ καμία πρόταση (DOC014: 2,05 → «2,59» από παραμορφωμένο χαρτί)', () => {
-    const rows = planReadValueRows(READING, { ...FUSION, scale: null });
+    const rows = planReadValueRows(MACHINE_T3, { ...FUSION, scale: null });
     expect(rows.filter((r) => r.suggestion !== null)).toEqual([]);
-    expect(rows.every((r) => !r.scaleKnown)).toBe(true);
+    expect(rows.every((r) => r.measure === 'no-scale')).toBe(true);
   });
 
   it('η σύγκρουση και η απόκλιση μένουν ορατές — μόνο η πρόταση φεύγει', () => {
-    const t3 = planReadValueRows(READING, { ...FUSION, scale: null }).find((r) => r.textId === 't3');
-    expect(t3).toMatchObject({ status: 'conflict', deviationMm: 3700 - 4120, suggestion: null, scaleKnown: false });
+    const t3 = planReadValueRows(MACHINE_T3, { ...FUSION, scale: null }).find((r) => r.textId === 't3');
+    expect(t3).toMatchObject({ status: 'conflict', deviationMm: 3700 - 4120, suggestion: null, measure: 'no-scale' });
   });
 
   it('ΑΝΤΙΣΤΡΟΦΗ: με κλίμακα η πρόταση μένει (τυπωμένη σάρωση: πιάνει λάθη OCR)', () => {
-    const t3 = planReadValueRows(READING, FUSION).find((r) => r.textId === 't3');
-    expect(t3).toMatchObject({ suggestion: '3.70', scaleKnown: true });
+    const t3 = planReadValueRows(MACHINE_T3, FUSION).find((r) => r.textId === 't3');
+    expect(t3).toMatchObject({ suggestion: '3.70', measure: 'known' });
   });
 
   it('χωρίς σύντηξη ⇒ ούτε κλίμακα ούτε πρόταση', () => {
-    expect(planReadValueRows(READING, null).every((r) => r.suggestion === null && !r.scaleKnown)).toBe(true);
+    expect(planReadValueRows(READING, null).every((r) => r.suggestion === null && r.measure === 'no-scale')).toBe(true);
+  });
+});
+
+describe('Δ7 Γ — στο ΣΚΙΤΣΟ η πρόταση θέλει ΑΝΕΞΑΡΤΗΤΗ κλίμακα (δρόμος 2)', () => {
+  const withScale = (chosen: PlanScaleSuggestion['chosen']): PlanScaleSuggestion => ({ ...SCALE, chosen });
+
+  it('🔴 σκίτσο + κλίμακα από τις ΙΔΙΕΣ τις γραμμένες τιμές (συναίνεση · εμβαδά) ⇒ καμία πρόταση, μέτρο «sketch»', () => {
+    for (const chosen of ['dimension-consensus', 'room-area'] as const) {
+      const t3 = planReadValueRows(MACHINE_T3, { ...FUSION, drawingKind: SKETCH, scale: withScale(chosen) }).find((r) => r.textId === 't3');
+      expect(t3).toMatchObject({ status: 'conflict', suggestion: null, measure: 'sketch' });
+    }
+  });
+
+  it('σκίτσο + ανεξάρτητη κλίμακα (βαθμονόμηση · γραμμένη «1:50») ⇒ η πρόταση μένει', () => {
+    for (const chosen of ['known-calibration', 'written-scale'] as const) {
+      const t3 = planReadValueRows(MACHINE_T3, { ...FUSION, drawingKind: SKETCH, scale: withScale(chosen) }).find((r) => r.textId === 't3');
+      expect(t3).toMatchObject({ suggestion: '3.70', measure: 'known' });
+    }
+  });
+
+  it('ΑΝΤΙΣΤΡΟΦΗ (ΤΕΣΤ1): υπό κλίμακα + συναίνεση διαστάσεων ⇒ η πρόταση μένει', () => {
+    expect(planReadValueRows(MACHINE_T3, FUSION).find((r) => r.textId === 't3')).toMatchObject({ suggestion: '3.70', measure: 'known' });
+  });
+
+  it('🔴 ΑΝΑΠΟΔΕΙΚΤΟ (DOC014 μετρημένο: συναίνεση μόνο από δύο ίσα «4,12») ⇒ καμία πρόταση, μέτρο «unproven»', () => {
+    const unproven: PlanDrawingKindDecision = { kind: 'multipage-pdf', basis: 'default', proportions: 'unproven' };
+    const t3 = planReadValueRows(MACHINE_T3, { ...FUSION, drawingKind: unproven }).find((r) => r.textId === 't3');
+    expect(t3).toMatchObject({ status: 'conflict', suggestion: null, measure: 'unproven' });
+  });
+
+  it.each([
+    ['διανυσματική πηγή', { kind: 'multipage-pdf', basis: 'vector-source', proportions: null }],
+    ['ο άνθρωπος: «Σχέδιο υπό κλίμακα»', { kind: 'scan', basis: 'human', proportions: null }],
+    ['≥ 2 διαφορετικές τιμές συμφωνούν', PRINTED],
+  ] as const)('αποδεδειγμένο μέτρο (%s) + συναίνεση ⇒ η πρόταση μένει', (_name, drawingKind) => {
+    const t3 = planReadValueRows(MACHINE_T3, { ...FUSION, drawingKind }).find((r) => r.textId === 't3');
+    expect(t3).toMatchObject({ suggestion: '3.70', measure: 'known' });
+  });
+
+  it('η πρόταση ΜΟΝΑΔΑΣ δεν κρίνει αριθμό ⇒ μένει και στο σκίτσο', () => {
+    const reading: PlanReading = {
+      ...READING,
+      texts: [text('a', '4,12 m', 'dimension', 0.98), text('c', '2,05 kh.', 'dimension', 0.99)],
+      dimensions: [{ textId: 'a', valueMm: 4120, segmentIds: [], confidence: { score: 0.98, factors: {} } }],
+    };
+    expect(planReadValueRows(reading, { ...FUSION, drawingKind: SKETCH }).find((r) => r.textId === 'c')?.suggestion).toBe('2,05 m');
   });
 });
 
@@ -195,7 +276,17 @@ describe('Δ21 (δ) — διάσταση με ΑΓΝΩΣΤΗ μονάδα («2,0
   });
 
   it('πρόταση από το ΙΔΙΟ το σχέδιο («2,05 m»), ΚΑΙ χωρίς κλίμακα — δεν κρίνει τον αριθμό, μόνο τη μονάδα', () => {
-    expect(planReadValueRows(DOC014, null).find((r) => r.textId === 'c')?.suggestion).toBe('2,05 m');
+    expect(planReadValueRows(DOC014, null).find((r) => r.textId === 'c')).toMatchObject({
+      suggestion: '2,05 m', suggestionBasis: 'drawing-unit', // Δ6: η αιτιολογία λέει «μονάδα του σχεδίου», όχι «συνόρθωση»
+    });
+  });
+
+  it('🔴 Δ6 — πρώτη ακόμη και μπροστά από σύγκρουση με μεγάλο |w| (μετρημένο live: ήταν 4η)', () => {
+    const withConflict = sketch([
+      text('a', '4,12 m', 'dimension', 0.98), text('b', '2,05 m', 'dimension', 0.4), text('c', '2,05 kh.', 'dimension', 0.99),
+    ]);
+    const fusion = { scale: SCALE, drawingKind: PRINTED, dimensions: [fused('a', 4120, 'conflict', -9, 3600)] };
+    expect(planReadValueRows(withConflict, fusion).map((r) => r.textId)).toEqual(['c', 'a', 'b']);
   });
 
   it('το σχέδιο δεν δίνει μία μονάδα ⇒ καμία πρόταση· η γραμμή μένει ύποπτη', () => {

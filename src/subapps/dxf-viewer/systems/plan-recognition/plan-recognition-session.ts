@@ -24,7 +24,7 @@
 import { createPlanAligner, type PlanAligner } from '../../bim/plan-recognition/alignment/plan-align-client';
 import type { PlanAlignment } from '../../bim/plan-recognition/alignment/plan-alignment-types';
 import { fusePlan } from '../../bim/plan-recognition/fusion/plan-fusion';
-import type { PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
+import type { PlanDrawingKindChoice, PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanInputKind, PlanReadingOutcome, RasterSegment } from '../../bim/plan-recognition/plan-recognition-types';
 import { getFloorBackground, getFloorProvider } from '../../floorplan-background/stores/floorplanBackgroundStore';
 import { resolveRasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
@@ -78,12 +78,17 @@ function inputKindOf(background: FloorplanBackground, alignment: PlanAlignment):
   return background.providerId === 'pdf-page' ? 'multipage-pdf' : alignment.binarization;
 }
 
-/** Η σύντηξη με **ρητές** διορθώσεις του ανθρώπου πάνω στην ανάγνωση της μηχανής (Δ21 (δ)). */
+/**
+ * Η σύντηξη με **ρητές** διορθώσεις του ανθρώπου πάνω στην ανάγνωση της μηχανής (Δ21 (δ)), και με το είδος σχεδίου που
+ * όρισε (Δ21 (0) · Δ7 Γ)· χωρίς επιλογή ⇒ αυτή που ισχύει στο store τη στιγμή της κλήσης.
+ */
 function fuseWith(
   run: PlanRecognitionRun, reading: PlanReadingOutcome | null, corrections: PlanReadingCorrections,
+  choice: PlanDrawingKindChoice | null = planRecognitionStore.get().drawingKindChoice,
 ): PlanFusionResult {
   return fusePlan({
     kind: run.kind,
+    drawing: { choice, medium: run.medium ?? 'raster' },
     alignment: run.alignment,
     segments: run.segments,
     reading: applyReadingCorrectionsToOutcome(reading, corrections),
@@ -92,6 +97,24 @@ function fuseWith(
     segmentRoles: segmentRoleMap(run.segmentRoles ?? []),
     extensionAnchors: extensionAnchorMap(run.segmentRoles ?? []),
   });
+}
+
+/** Το `run` μιας αναγνώρισης: ό,τι έδωσαν οι Φ1/Φ2 + το υπόβαθρο (ταυτότητα, είδος εικόνας από το `inputKindOf`). */
+function recognitionRun(
+  background: FloorplanBackground, parts: Omit<PlanRecognitionRun, 'backgroundId' | 'kind'>,
+): PlanRecognitionRun {
+  return { ...parts, backgroundId: background.id, kind: inputKindOf(background, parts.alignment) };
+}
+
+/** Δ21 (0) · Δ7 Γ — ο άνθρωπος ορίζει το είδος σχεδίου· `false` = καμία αναγνώριση. */
+function setDrawingKind(choice: PlanDrawingKindChoice | null): boolean {
+  const { run, reading, readingCorrections, drawingKindChoice } = planRecognitionStore.get();
+  if (!run) return false;
+  if (drawingKindChoice === choice) return true;
+  const fusion = fuseWith(run, reading, readingCorrections, choice);
+  planRecognitionStore.patch({ drawingKindChoice: choice, fusion });
+  publishLineSource(nextLineSource(run, fusion));
+  return true;
 }
 
 /** Η σύντηξη με τις διορθώσεις που ισχύουν τώρα — η ΜΙΑ που μοιράζονται όψη, κλίμακα και ανάγνωση. */
@@ -294,26 +317,24 @@ export const planRecognitionSession = {
     if (!raster) return fail('no-pixels');
     planRecognitionStore.patch({ phase: 'running', failure: null, ocr: OCR_IDLE });
     const knownScale = resolveRasterPixelScale(background);
-    const reply = await alignerInstance().align(raster, { segments: { scale: knownScale } });
+    // Δ7 Γ — το μέσο της πηγής μετριέται ΠΑΡΑΛΛΗΛΑ με την ευθυγράμμιση (καμία πρόσθετη αναμονή).
+    const [reply, medium] = await Promise.all([
+      alignerInstance().align(raster, { segments: { scale: knownScale } }),
+      provider.getSourceMedium(),
+    ]);
     if (sequence !== runSequence || reply.kind === 'superseded') return null;
     if (reply.kind === 'failed') return fail('aligner-failed');
     const segments = reply.value.segments?.segments ?? [];
     if (segments.length === 0) return fail('no-segments');
-    const segmentRoles = reply.value.segments?.classification.verdicts ?? [];
-    const run: PlanRecognitionRun = {
-      id: `rec${sequence}`,
-      floorId,
-      backgroundId: background.id,
-      kind: inputKindOf(background, reply.value.alignment),
-      alignment: reply.value.alignment,
-      segments,
-      segmentRoles,
-      knownScale,
-    };
-    const fusion = fuse(run, null);
+    const run = recognitionRun(background, {
+      id: `rec${sequence}`, floorId, alignment: reply.value.alignment, segments,
+      segmentRoles: reply.value.segments?.classification.verdicts ?? [], knownScale, medium,
+    });
+    const fusion = fuseWith(run, null, NO_READING_CORRECTIONS, null); // νέα αναγνώριση ⇒ καμία επιλογή είδους ακόμη
     segmentMask.track(run, knownScale);
     planRecognitionStore.patch({
       phase: 'ready', run, reading: null, fusion, failure: null, scaleHoverTextId: null, ocr: OCR_IDLE, ...NO_READ_REVIEW,
+      drawingKindChoice: null,
     });
     void ocrController.start(run); // Φ0.6: αυτόματα, στο παρασκήνιο — τίποτα δεν φεύγει από τη συσκευή
     return nextLineSource(run, fusion);
@@ -359,6 +380,12 @@ export const planRecognitionSession = {
    * αλλαγή ξανατρέχει μόνο τη σύντηξη και δίνει νέα πηγή γραμμών από το `onLineSource`.
    */
   corrections: readingCorrections,
+
+  /**
+   * ADR-929 Δ21 (0) · Δ7 Γ — ο διακόπτης «Σκίτσο με το χέρι / Σχέδιο υπό κλίμακα» (`null` = ξανά η αυτόματη κρίση). Ίδιος
+   * δρόμος με τις διορθώσεις: ξανατρέχει **μόνο** η σύντηξη και δίνει νέα πηγή γραμμών. Ιδεμπότης.
+   */
+  drawingKind: { set: setDrawingKind },
 
   /** Κλείσιμο: σβήνει το αποτέλεσμα, ακυρώνει ό,τι τρέχει, τερματίζει τους Workers. */
   close(): void {
