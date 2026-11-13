@@ -107,7 +107,10 @@
     "reviewed": "Ελέγχθηκε",
     "cancelled": "Ακυρώθηκε",
     "construction": "Υπό Κατασκευή",
-    "delayed": "Καθυστέρηση"
+    "delayed": "Καθυστέρηση",
+    "sent": "Απεσταλμένο",
+    "received": "Ληφθέν",
+    "failed": "Αποτυχημένο"
   },
   "priority": {
     "low": "Χαμηλή",

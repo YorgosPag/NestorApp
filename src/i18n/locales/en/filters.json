@@ -107,7 +107,10 @@
     "reviewed": "Reviewed",
     "cancelled": "Cancelled",
     "construction": "Under Construction",
-    "delayed": "Delayed"
+    "delayed": "Delayed",
+    "sent": "Sent",
+    "received": "Received",
+    "failed": "Failed"
   },
   "priority": {
     "low": "Low",

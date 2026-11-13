@@ -38,7 +38,7 @@ export const communicationsFiltersConfig: FilterPanelConfig = {
           ariaLabel: "Channel filter",
           width: 1,
           options: [
-            { value: "all", label: "filters.allChannels" },
+            { value: "all", label: "filters.channels.all" },
             { value: "email", label: "filters.channels.email" },
             { value: "sms", label: "filters.channels.sms" },
             { value: "telegram", label: "filters.channels.telegram" },
