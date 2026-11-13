@@ -8,7 +8,7 @@
  * @module subapps/catalog/schema/family-binding
  */
 
-import { listingKindOf, type CatalogFamilyDefinition, type VariantScheme } from '../types/family';
+import { compositeDisplaysOf, listingKindOf, type CatalogFamilyDefinition, type VariantScheme } from '../types/family';
 import type { CatalogChannel } from '../vocabulary/channels';
 
 /**
@@ -18,7 +18,9 @@ import type { CatalogChannel } from '../vocabulary/channels';
 export function familyDefinitionOf(record: CatalogFamilyDefinition): CatalogFamilyDefinition {
   const { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules } = record;
   const listing = { listingKind: listingKindOf(record), installationAttributeId: record.installationAttributeId ?? null, etimClass: record.etimClass ?? null };
-  return { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules, ...listing };
+  // §21.6: χωρίς αυτή τη γραμμή κάθε αποθήκευση από τον επεξεργαστή θα έσβηνε σιωπηλά τις σύνθετες ενδείξεις.
+  const compositeDisplays = [...compositeDisplaysOf(record)];
+  return { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules, ...listing, compositeDisplays };
 }
 
 /** Η ιδιότητα σε **ένα** επίπεδο (δείκτης ως κείμενο), ή σε κανένα (κοινή). Από τα άλλα επίπεδα φεύγει. */

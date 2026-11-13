@@ -120,6 +120,38 @@ describe('validateFamily — table layout', () => {
   });
 });
 
+describe('validateFamily — σύνθετες ενδείξεις (§21.6)', () => {
+  const part = (attributeId: string, displayUnitCode: string | null = null) => ({ attributeId, displayUnitCode, affix: { before: '', after: '' } });
+  const withComposite = (...parts: ReturnType<typeof part>[]): CatalogFamilyDefinition => ({
+    ...MFP_FAMILY,
+    compositeDisplays: [{ id: 'cd_1', labels: { el: 'Επιδόσεις' }, separator: ' ', parts }],
+  });
+
+  it('δέχεται μέτρηση με μονάδα της οικογένειάς της και κείμενο', () => {
+    expect(issueCodes(withComposite(part('cooling_h', 'W'), part('dimensions')))).toEqual([]);
+  });
+
+  it('απορρίπτει ιδιότητα εκτός οικογένειας, τύπο χωρίς μονογραμμική μορφή, ξένη μονάδα', () => {
+    expect(issueCodes(withComposite(part('nope')))).toContain('compositePartAttributeUnknown');
+    expect(issueCodes(withComposite(part('description')))).toContain('compositePartTypeUnsupported');
+    expect(issueCodes(withComposite(part('cooling_h', 'm3_h')))).toContain('measurementUnitUnknown');
+  });
+
+  it('απορρίπτει κενή ένδειξη, χωρίς ετικέτα, και διπλό id', () => {
+    expect(issueCodes(withComposite())).toContain('compositePartsRequired');
+    const unlabeled = { ...MFP_FAMILY, compositeDisplays: [{ id: 'cd_1', labels: {}, separator: ' ', parts: [part('weight')] }] };
+    expect(issueCodes(unlabeled)).toContain('labelRequired');
+    const twice = withComposite(part('weight'));
+    expect(issueCodes({ ...twice, compositeDisplays: [...twice.compositeDisplays!, ...twice.compositeDisplays!] })).toContain('duplicateCode');
+  });
+
+  it('zod: σύμβολο μεγαλύτερο από το όριο ⇒ άρνηση· έλλειψη πεδίου ⇒ έγκυρο (παλιές οικογένειες)', () => {
+    const long = { ...MFP_FAMILY, compositeDisplays: [{ id: 'cd_1', labels: { el: 'Χ' }, separator: ' '.repeat(20), parts: [part('weight')] }] };
+    expect(familyDefinitionSchema.safeParse(long).success).toBe(false);
+    expect(familyDefinitionSchema.safeParse(MFP_FAMILY).success).toBe(true);
+  });
+});
+
 describe('validateFamily — consistency rules', () => {
   it('rejects comparing power with air flow (different dimensions)', () => {
     expect(issueCodes(withRules({

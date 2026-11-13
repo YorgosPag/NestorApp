@@ -89,6 +89,36 @@ export interface FamilyTableSpec {
 export const tableOverflowOf = (spec: Pick<FamilyTableSpec, 'overflow'> | null): TableOverflowMode =>
   spec?.overflow ?? DEFAULT_TABLE_OVERFLOW;
 
+// ── Σύνθετη ένδειξη (ADR-923 §21.6 — Revit «Electrical Data» · IEC 61293) ───
+
+/**
+ * Ένα μέρος της σύνθετης ένδειξης: η τιμή μιας ιδιότητας, στη μονάδα προβολής του, με **σύμβολα** πριν/μετά.
+ * Τα σύμβολα είναι ουδέτερα ως προς τη γλώσσα (IEC 60417-5032 «~» = εναλλασσόμενο), όχι λέξεις — δεν μεταφράζονται.
+ */
+export interface CompositeDisplayPart {
+  readonly attributeId: string;
+  /** Μόνο για μέτρηση· `null` = η προεπιλεγμένη μονάδα της ιδιότητας (ίδιος κανόνας με τη γραμμή πίνακα). */
+  readonly displayUnitCode: string | null;
+  readonly affix: { readonly before: string; readonly after: string };
+}
+
+/**
+ * **Σύνθετη ένδειξη** της οικογένειας (π.χ. «Ηλεκτρική παροχή» = «1~ 230 V 50 Hz», IEC 61293 §4.2.5): **δηλωμένη** σύνθεση
+ * δομημένων ιδιοτήτων — ποτέ τύπος-κείμενο (ArchiCAD `CONCAT`) — που **δεν αποθηκεύεται**: υπολογίζεται σε κάθε προβολή,
+ * όπως το «Electrical Data» του Revit, άρα δεν μπαγιατεύει ποτέ (αντίθετα με το αποθηκευμένο concatenate του Akeneo).
+ */
+export interface CompositeDisplay {
+  readonly id: string;
+  readonly labels: LocalizedText;
+  /** Ανάμεσα στα μέρη· IEC 61293: κενό. */
+  readonly separator: string;
+  readonly parts: readonly CompositeDisplayPart[];
+}
+
+/** Οι σύνθετες ενδείξεις μιας οικογένειας. Έλλειψη = καμία: διάβαζε **μόνο** με αυτό. */
+export const compositeDisplaysOf = (family: Pick<CatalogFamilyDefinition, 'compositeDisplays'>): readonly CompositeDisplay[] =>
+  family.compositeDisplays ?? [];
+
 // ── Κανόνες συνέπειας (Φάση 0 §21.3: πιάνουν κάθε μετατόπιση γραμμής της AI) ─
 
 export const RULE_SEVERITIES = ['error', 'warning'] as const;
@@ -186,6 +216,8 @@ export interface CatalogFamilyDefinition {
   readonly installationAttributeId?: string | null;
   /** Η κλάση ETIM (`EC011533`) αυτής της οικογένειας. Έλλειψη = αδέσμευτη. Μία κλάση, γιατί η οικογένεια είναι ένα σχήμα. */
   readonly etimClass?: string | null;
+  /** Σύνθετες ενδείξεις (§21.6). Έλλειψη = καμία: διάβαζε **μόνο** με το `compositeDisplaysOf`. */
+  readonly compositeDisplays?: readonly CompositeDisplay[];
 }
 
 export const listingKindOf = (family: Pick<CatalogFamilyDefinition, 'listingKind'>): CatalogListingKind =>

@@ -47,6 +47,19 @@ describe('family-draft — το πρόχειρο της οικογένειας',
     expect(without.consistencyRules).toHaveLength(MFP_FAMILY.consistencyRules.length);
   });
 
+  it('§21.6: αφαίρεση ιδιότητας ⇒ το μέρος φεύγει από τη σύνθετη ένδειξη· ένδειξη χωρίς μέρη φεύγει ολόκληρη', () => {
+    const part = (attributeId: string) => ({ attributeId, displayUnitCode: null, affix: { before: '', after: '' } });
+    const composite = {
+      ...MFP_FAMILY,
+      compositeDisplays: [
+        { id: 'cd_two', labels: { el: 'Β' }, separator: ' ', parts: [part('weight'), part('dimensions')] },
+        { id: 'cd_one', labels: { el: 'Α' }, separator: ' ', parts: [part('weight')] },
+      ],
+    };
+    const without = withoutFamilyAttribute(composite, 'weight');
+    expect(without.compositeDisplays).toEqual([{ id: 'cd_two', labels: { el: 'Β' }, separator: ' ', parts: [part('dimensions')] }]);
+  });
+
   it('τοπικά αναγνωριστικά: επόμενο μετά το μέγιστο, χωρίς ρολόι', () => {
     expect(nextLocalId('rule', ['rule_1', 'rule_7', 'other_9'])).toBe('rule_8');
     expect(nextLocalId('row', [])).toBe('row_1');

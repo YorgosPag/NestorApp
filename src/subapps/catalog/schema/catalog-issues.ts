@@ -81,6 +81,9 @@ export const CATALOG_ISSUE_CODES = [
   'ruleConstantUnitUnknown',
   'ruleConditionTypeMismatch',
   'ruleConditionOptionUnknown',
+  'compositePartAttributeUnknown',
+  'compositePartTypeUnsupported',
+  'compositePartsRequired',
   // ── κατηγορία ──
   'categoryCycle',
   'categoryDepthExceeded',

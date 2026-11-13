@@ -7,6 +7,7 @@
 import { z } from 'zod';
 import type {
   CatalogFamilyDefinition,
+  CompositeDisplay,
   ConsistencyRule,
   FamilyTableSpec,
   RuleCondition,
@@ -64,6 +65,20 @@ const tableSpecSchema: z.ZodType<FamilyTableSpec, z.ZodTypeDef, unknown> = z.obj
   variantSchemeCode: catalogCodeSchema,
   rows: z.array(tableRowSchema).max(CATALOG_LIMITS.maxTableSpecRows),
   overflow: z.enum(TABLE_OVERFLOW_MODES).optional(),
+});
+
+const affixSchema = z.string().max(CATALOG_LIMITS.maxCompositeAffixLength);
+
+/** §21.6: σύνθετη ένδειξη — δομή εδώ, σημασιολογία (ιδιότητα της οικογένειας, τύπος, μονάδα) στο `validate-family-composites.ts`. */
+const compositeDisplaySchema: z.ZodType<CompositeDisplay, z.ZodTypeDef, unknown> = z.object({
+  id: localIdSchema,
+  labels: labelsSchema,
+  separator: affixSchema,
+  parts: z.array(z.object({
+    attributeId: entityIdSchema,
+    displayUnitCode: measurementUnitCodeSchema.nullable(),
+    affix: z.object({ before: affixSchema, after: affixSchema }),
+  })).min(1).max(CATALOG_LIMITS.maxCompositeParts),
 });
 
 /** §21.5: η συνθήκη «όταν» — δομή εδώ, σημασιολογία (τύπος ιδιότητας ↔ είδος ελέγχου) στο `validate-family-rules.ts`. */
@@ -132,6 +147,7 @@ export const familyDefinitionSchema: z.ZodType<CatalogFamilyDefinition, z.ZodTyp
   listingKind: z.enum(CATALOG_LISTING_KINDS).optional(),
   installationAttributeId: entityIdSchema.nullable().optional(),
   etimClass: z.string().regex(ETIM_CLASS_CODE_PATTERN).nullable().optional(),
+  compositeDisplays: z.array(compositeDisplaySchema).max(CATALOG_LIMITS.maxCompositeDisplays).optional(),
 });
 
 export const createFamilyBodySchema = z.object({ definition: familyDefinitionSchema });

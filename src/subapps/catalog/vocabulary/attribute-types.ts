@@ -50,6 +50,14 @@ export const NUMERIC_ATTRIBUTE_TYPES = ['number', 'measurement'] as const satisf
 
 export type NumericAttributeType = (typeof NUMERIC_ATTRIBUTE_TYPES)[number];
 
+/**
+ * Τύποι που μπαίνουν σε **σύνθετη ένδειξη** (ADR-923 §21.6): όσοι έχουν σύντομη, μονογραμμική κειμενική μορφή. Όχι
+ * `richText` (μορφοποίηση), όχι πολλαπλές επιλογές/μέσα/αναφορές/πίνακες (λίστα μέσα σε ένδειξη = ασαφής).
+ */
+export const COMPOSITE_PART_ATTRIBUTE_TYPES = ['text', 'number', 'measurement', 'select', 'boolean'] as const satisfies readonly AttributeType[];
+
+export const isCompositePartType = (type: AttributeType): boolean => (COMPOSITE_PART_ATTRIBUTE_TYPES as readonly AttributeType[]).includes(type);
+
 /** Τύποι που δέχονται τη σημαία `unique` (μοναδική τιμή στον κατάλογο). */
 export const UNIQUE_CAPABLE_ATTRIBUTE_TYPES = ['text', 'number'] as const satisfies readonly AttributeType[];
 

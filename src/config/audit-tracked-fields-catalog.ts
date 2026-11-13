@@ -83,7 +83,7 @@ const valuesByAttribute: TrackedFieldDef = {
 
 export const CATALOG_FAMILY_TRACKED_FIELDS = defs(
   ['labelAttributeId', 'imageAttributeId', 'listingKind', 'installationAttributeId', 'isDeleted'],
-  ['labels', 'description', 'attributes', 'variantSchemes', 'tableSpec', 'consistencyRules'],
+  ['labels', 'description', 'attributes', 'variantSchemes', 'tableSpec', 'consistencyRules', 'compositeDisplays'],
   { listingKind: enumOf(V.catalogListingKind), ...multilingual('labels', 'description') },
 );
 

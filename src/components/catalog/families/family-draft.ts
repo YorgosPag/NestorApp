@@ -18,8 +18,10 @@ import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import {
+  compositeDisplaysOf,
   deriveFamilyAttributeIds,
   type CatalogFamilyDefinition,
+  type CompositeDisplay,
   type ConsistencyRule,
   type FamilyTableRow,
   type VariantScheme,
@@ -48,6 +50,7 @@ export function emptyFamilyDraft(): CatalogFamilyDefinition {
     listingKind: DEFAULT_LISTING_KIND,
     etimClass: null,
     installationAttributeId: null,
+    compositeDisplays: [],
   };
 }
 
@@ -182,5 +185,13 @@ export function withoutFamilyAttribute(draft: CatalogFamilyDefinition, id: strin
     })),
     tableSpec: draft.tableSpec ? { ...draft.tableSpec, rows: draft.tableSpec.rows.filter((row) => !rowMentions(row, id)) } : null,
     consistencyRules: draft.consistencyRules.filter((rule) => !ruleMentions(rule, id)),
+    compositeDisplays: withoutCompositePart(compositeDisplaysOf(draft), id),
   };
+}
+
+/** Το μέρος φεύγει από κάθε σύνθετη ένδειξη· ένδειξη που μένει χωρίς μέρη φεύγει ολόκληρη (§21.6). */
+function withoutCompositePart(composites: readonly CompositeDisplay[], id: string): CompositeDisplay[] {
+  return composites
+    .map((composite) => ({ ...composite, parts: composite.parts.filter((part) => part.attributeId !== id) }))
+    .filter((composite) => composite.parts.length > 0);
 }

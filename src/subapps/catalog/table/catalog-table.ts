@@ -15,7 +15,8 @@
  */
 
 import type { LocalizedText } from '@/i18n/localized-text';
-import { convertMeasurement, findUnit, toFixedDecimal } from '../measurement/conversion';
+import { findUnit } from '../measurement/conversion';
+import { measurementInUnit } from '../values/measurement-in-unit';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import type { CatalogFamilyDefinition, FamilyTableRow, TableRowMergeMode, VariantScheme } from '../types/family';
@@ -192,12 +193,7 @@ type MeasurementAttribute = Extract<TableAttribute, { type: 'measurement' }>;
 
 /** Η μέτρηση στη μονάδα προβολής της γραμμής, **χωρίς** σύμβολο (η μονάδα είναι στην κεφαλίδα). */
 function measurementCell(attribute: MeasurementAttribute, value: Extract<AttributeValue, { type: 'measurement' }>, unit: string | null, codec: ValueTextContext): string {
-  const target = unit ?? attribute.config.defaultUnitCode;
-  if (target === value.unitCode) return displayAmount(value.amount, codec.language);
-  const family = codec.registry.get(attribute.config.measurementFamilyCode);
-  if (!family) return displayAmount(value.amount, codec.language);
-  const converted = convertMeasurement(family, Number(value.amount), value.unitCode, target);
-  return displayAmount(toFixedDecimal(converted, attribute.config.decimals), codec.language);
+  return displayAmount(measurementInUnit(attribute, value, unit, codec.registry).amount, codec.language);
 }
 
 function cellText(attribute: TableAttribute | undefined, value: AttributeValue | undefined, unit: string | null, codec: ValueTextContext): string {

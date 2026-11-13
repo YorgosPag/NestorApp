@@ -19,6 +19,7 @@ import { CATALOG_LIMITS, isCatalogCode } from '../vocabulary/catalog-limits';
 import { ETIM_CLASS_CODE_PATTERN } from '../vocabulary/etim';
 import { IssueCollector, type CatalogIssue } from './catalog-issues';
 import { familyAttribute, type FamilyValidationContext } from './family-validation-context';
+import { validateFamilyComposites } from './validate-family-composites';
 import { validateFamilyRules } from './validate-family-rules';
 import { validateFamilyTableSpec } from './validate-family-table-spec';
 import { validateFamilyVariants } from './validate-family-variants';
@@ -86,6 +87,7 @@ export function validateFamily(
   validateListingKind(context);
   validateFamilyVariants(context);
   validateFamilyTableSpec(context);
+  validateFamilyComposites(context);
   validateFamilyRules(context);
   return collector.issues;
 }
