@@ -13,6 +13,7 @@
 
 import type { ExtractedCell, ExtractedGroup, ImportModelCodeEdit, ImportValueEdit } from '../types/catalog-import';
 import type { ImportFieldEditInput } from '../types/catalog-import-requests';
+import { NO_MODEL_LEVEL, type ModelLevelTest } from './model-level-cells';
 import { importCellText, importTargetKey } from './proposal-values';
 
 /** Η διεύθυνση ενός πεδίου μέσα στην πρόταση: γραμμή × στόχος. */
@@ -31,15 +32,42 @@ export interface EditStamp {
   readonly at: string;
 }
 
-/** Όλα τα κείμενα της πηγής ανά διεύθυνση, με τη σειρά της. Δύο κελιά στην ίδια διεύθυνση (δύο «ΚΩΔΙΚΟΣ») ⇒ δύο κείμενα. */
-function sourceTexts(group: ExtractedGroup): ReadonlyMap<string, readonly (string | null)[]> {
-  const texts = new Map<string, readonly (string | null)[]>();
-  const add = (rowKey: string, cells: readonly ExtractedCell[]): void => {
-    for (const [address, same] of cellsByAddress(rowKey, cells)) texts.set(address, same.map((cell) => cell.text));
-  };
-  for (const row of group.rows) add(row.rowKey, row.cells);
-  add(sharedRowKey(group.groupKey), group.sharedCells);
-  return texts;
+/** Ένα πεδίο της πρότασης στην πηγή: η διεύθυνσή του και **όλα** τα κελιά της (δύο «ΚΩΔΙΚΟΣ» ⇒ δύο · κοινό πεδίο ανά στήλη ⇒ όλες). */
+export interface FieldSource {
+  readonly rowKey: string;
+  readonly targetKey: string;
+  readonly cells: readonly ExtractedCell[];
+}
+
+interface AddressedCell {
+  readonly rowKey: string;
+  readonly targetKey: string;
+  readonly address: string;
+  readonly cell: ExtractedCell;
+}
+
+/** Η διεύθυνση ενός κελιού: κελί γραμμής που ανήκει στο μοντέλο (`modelLevel`) πηγαίνει στη γραμμή του μοντέλου, όπως στον σχεδιαστή. */
+function addressedCell(groupKey: string, rowKey: string, cell: ExtractedCell, modelLevel: ModelLevelTest): AddressedCell {
+  const owner = modelLevel(cell) ? sharedRowKey(groupKey) : rowKey;
+  const targetKey = importTargetKey(cell.target);
+  return { rowKey: owner, targetKey, address: fieldAddress(owner, targetKey), cell };
+}
+
+/**
+ * **Η ΜΙΑ απογραφή διευθύνσεων** της πηγής (§5.5.2 Β6 · Β10): τη ρωτούν η καταγραφή και η εφαρμογή των διορθώσεων και η μνήμη τιμών.
+ * Τα κελιά κάθε διεύθυνσης με τη σειρά του σχεδιαστή (`sharedCellsOf`: πρώτα τα κοινά, μετά των γραμμών)· οι διευθύνσεις με τη σειρά
+ * της πηγής (γραμμές, μετά κοινά).
+ */
+function fieldSourceMap(group: ExtractedGroup, modelLevel: ModelLevelTest): ReadonlyMap<string, FieldSource> {
+  const shared = group.sharedCells.map((cell) => addressedCell(group.groupKey, sharedRowKey(group.groupKey), cell, modelLevel));
+  const rows = group.rows.flatMap((row) => row.cells.map((cell) => addressedCell(group.groupKey, row.rowKey, cell, modelLevel)));
+  const cells = new Map<string, ExtractedCell[]>();
+  for (const each of [...shared, ...rows]) cells.set(each.address, [...(cells.get(each.address) ?? []), each.cell]);
+  const sources = new Map<string, FieldSource>();
+  for (const each of [...rows, ...shared]) {
+    if (!sources.has(each.address)) sources.set(each.address, { rowKey: each.rowKey, targetKey: each.targetKey, cells: cells.get(each.address) ?? [each.cell] });
+  }
+  return sources;
 }
 
 /** Τι έλεγε η πηγή, για τον άνθρωπο: ένα κείμενο, ή όλα ενωμένα όπως στο μήνυμα `attributeRepeated`. */
@@ -49,24 +77,44 @@ function sourceOf(texts: readonly (string | null)[]): Pick<ImportValueEdit, 'sou
   return { sourceText: printed.length > 0 ? printed.join(' · ') : null, sourceTexts: texts };
 }
 
+/** Η προέλευση που κρατά μια διόρθωση της διεύθυνσης — ο **ίδιος** κανόνας για τον άνθρωπο και τη μνήμη τιμών (§5.5.2 Β10). */
+export const editSourceOf = (source: FieldSource): Pick<ImportValueEdit, 'sourceText' | 'sourceTexts'> =>
+  sourceOf(source.cells.map((cell) => cell.text));
+
 const editKey = (edit: Pick<ImportValueEdit, 'rowKey' | 'targetKey'>): string => fieldAddress(edit.rowKey, edit.targetKey);
 
 /**
+ * Διορθώσεις (όχι επαναφορές) σε διεύθυνση που η πηγή **δεν** έχει. Ο γραφέας τις αρνείται ρητά: ως 2026-11-14 προσπερνιούνταν και
+ * ο άνθρωπος έπαιρνε «αποθηκεύτηκε» για διόρθωση που δεν γράφτηκε ποτέ.
+ */
+export function missingEditTargets(
+  inputs: readonly ImportFieldEditInput[],
+  source: ExtractedGroup,
+  modelLevel: ModelLevelTest = NO_MODEL_LEVEL,
+): ImportFieldEditInput[] {
+  const sources = fieldSourceMap(source, modelLevel);
+  return inputs.filter((input) => input.revert !== true && !sources.has(editKey(input)));
+}
+
+/**
  * Νέες διορθώσεις πάνω στον κατάλογο. Ίδια διεύθυνση ⇒ αντικατάσταση (ιδεμπότητο)· `revert` ή κείμενο ίσο με της πηγής ⇒ η
- * διόρθωση **φεύγει** και ισχύει ξανά η πηγή. Διεύθυνση που η πηγή δεν έχει αγνοείται: δεν υπάρχει κελί να διορθωθεί.
+ * διόρθωση **φεύγει** και ισχύει ξανά η πηγή. Διεύθυνση που η πηγή δεν έχει δεν καταγράφεται — ο γραφέας την έχει ήδη αρνηθεί
+ * (`missingEditTargets`). `modelLevel`: ο κανόνας της γραμμής μοντέλου (`modelLevelTestOf`), ο ίδιος με τον σχεδιαστή.
  */
 export function recordEdits(
   previous: readonly ImportValueEdit[],
   inputs: readonly ImportFieldEditInput[],
   source: ExtractedGroup,
   stamp: EditStamp,
+  modelLevel: ModelLevelTest = NO_MODEL_LEVEL,
 ): ImportValueEdit[] {
-  const texts = sourceTexts(source);
+  const sources = fieldSourceMap(source, modelLevel);
   const edits = new Map(previous.map((edit) => [editKey(edit), edit]));
   for (const input of inputs) {
     const key = editKey(input);
-    if (!texts.has(key)) continue;
-    const source = sourceOf(texts.get(key) ?? [null]);
+    const cells = sources.get(key)?.cells;
+    if (cells === undefined) continue;
+    const source = sourceOf(cells.map((cell) => cell.text));
     const unchanged = source.sourceTexts === undefined && input.text === (source.sourceText ?? '');
     if (input.revert === true || unchanged) edits.delete(key);
     else edits.set(key, { rowKey: input.rowKey, targetKey: input.targetKey, text: input.text, ...source, ...stamp });
@@ -119,61 +167,51 @@ const keptCell = (cells: readonly ExtractedCell[], text: string): ExtractedCell 
 const printsText = ({ text, unitCode }: ExtractedCell, wanted: string): boolean =>
   text !== null && (text.trim() === wanted || importCellText({ text, unitCode }).trim() === wanted);
 
-function editedCell(cell: ExtractedCell, edit: ImportValueEdit): ExtractedCell {
+function withEdit(cell: ExtractedCell, edit: ImportValueEdit): ExtractedCell {
   // Η αμφισβητούμενη μονάδα δεν ντύνει ό,τι έγραψε ο άνθρωπος: γυμνός αριθμός εκεί ξαναζητά μονάδα.
   const unitDoubted = cell.flags.some((flag) => flag.code === 'unitUnconfirmed');
   return { ...cell, text: edit.text.trim() === '' ? null : edit.text, confidence: 1, flags: [], unitCode: unitDoubted ? null : cell.unitCode };
 }
 
-function cellsByAddress(rowKey: string, cells: readonly ExtractedCell[]): Map<string, ExtractedCell[]> {
-  const byAddress = new Map<string, ExtractedCell[]>();
-  for (const cell of cells) {
-    const address = fieldAddress(rowKey, importTargetKey(cell.target));
-    byAddress.set(address, [...(byAddress.get(address) ?? []), cell]);
-  }
-  return byAddress;
-}
-
 /**
  * Η διόρθωση ισχύει για τη διεύθυνση **ολόκληρη**: τα κελιά της γίνονται **ένα**, με την τιμή του ανθρώπου (Figma override). Έτσι η
  * επανάληψη δεν ξανακρίνεται από τη σειρά της πηγής. Πηγή που άλλαξε ⇒ όλα τα κελιά μένουν, με εύρημα, και διαλέγει ο άνθρωπος.
+ * Κοινό πεδίο ανά στήλη: το κελί που μένει ζει στη γραμμή του, και ο σχεδιαστής το ανεβάζει στο μοντέλο με τον ίδιο κανόνα.
  */
-function editedCells(rowKey: string, cells: readonly ExtractedCell[], edits: ReadonlyMap<string, ImportValueEdit>): ExtractedCell[] {
-  const byAddress = cellsByAddress(rowKey, cells);
-  return cells.flatMap((cell) => {
-    const address = fieldAddress(rowKey, importTargetKey(cell.target));
-    const edit = edits.get(address);
-    const same = byAddress.get(address) ?? [cell];
-    if (edit === undefined) return [cell];
-    if (!sourceUnchanged(edit, same)) return [sourceChanged(cell, edit, same)];
-    const kept = keptCell(same, edit.text);
-    return kept === cell ? [editedCell(cell, edit)] : [];
-  });
-}
-
-/** Ένα πεδίο της πρότασης στην πηγή: η διεύθυνσή του και **όλα** τα κελιά της (δύο «ΚΩΔΙΚΟΣ» ⇒ δύο). */
-export interface FieldSource {
-  readonly rowKey: string;
-  readonly targetKey: string;
-  readonly cells: readonly ExtractedCell[];
+function editedCell(entry: AddressedCell, sources: ReadonlyMap<string, FieldSource>, edits: ReadonlyMap<string, ImportValueEdit>): ExtractedCell[] {
+  const { cell, address } = entry;
+  const edit = edits.get(address);
+  if (edit === undefined) return [cell];
+  const same = sources.get(address)?.cells ?? [cell];
+  if (!sourceUnchanged(edit, same)) return [sourceChanged(cell, edit, same)];
+  return keptCell(same, edit.text) === cell ? [withEdit(cell, edit)] : [];
 }
 
 /** Τα πεδία της καθαρής ανάγνωσης ανά διεύθυνση — η **ίδια** διεύθυνση με τις διορθώσεις. Τη ρωτά η μνήμη τιμών (§5.5.2 Β10). */
-export function fieldSourcesOf(group: ExtractedGroup): FieldSource[] {
-  const of = (rowKey: string, cells: readonly ExtractedCell[]): FieldSource[] =>
-    [...cellsByAddress(rowKey, cells).values()].map((same) => ({ rowKey, targetKey: importTargetKey(same[0].target), cells: same }));
-  return [...group.rows.flatMap((row) => of(row.rowKey, row.cells)), ...of(sharedRowKey(group.groupKey), group.sharedCells)];
+export function fieldSourcesOf(group: ExtractedGroup, modelLevel: ModelLevelTest = NO_MODEL_LEVEL): FieldSource[] {
+  return [...fieldSourceMap(group, modelLevel).values()];
 }
 
-/** **Η ΜΙΑ εφαρμογή** των διορθώσεων πάνω σε καθαρή ανάγνωση. Καθαρή συνάρτηση: ίδια είσοδος ⇒ ίδια ομάδα. */
-export function applyHumanEdits(group: ExtractedGroup, edits: readonly ImportValueEdit[], modelCodeEdit: ImportModelCodeEdit | null): ExtractedGroup {
+/**
+ * **Η ΜΙΑ εφαρμογή** των διορθώσεων πάνω σε καθαρή ανάγνωση. Καθαρή συνάρτηση: ίδια είσοδος ⇒ ίδια ομάδα. `modelLevel`: ο κανόνας
+ * της γραμμής μοντέλου, ο ίδιος με την καταγραφή (`recordEdits`) — αλλιώς διόρθωση κοινού πεδίου καταγράφεται και δεν εφαρμόζεται.
+ */
+export function applyHumanEdits(
+  group: ExtractedGroup,
+  edits: readonly ImportValueEdit[],
+  modelCodeEdit: ImportModelCodeEdit | null,
+  modelLevel: ModelLevelTest = NO_MODEL_LEVEL,
+): ExtractedGroup {
   if (edits.length === 0 && modelCodeEdit === null) return group;
   const byAddress = new Map(edits.map((edit) => [editKey(edit), edit]));
+  const sources = fieldSourceMap(group, modelLevel);
+  const edited = (rowKey: string, cells: readonly ExtractedCell[]): ExtractedCell[] =>
+    cells.flatMap((cell) => editedCell(addressedCell(group.groupKey, rowKey, cell, modelLevel), sources, byAddress));
   return {
     ...group,
     modelCode: modelCodeEdit?.modelCode ?? group.modelCode,
-    rows: group.rows.map((row) => ({ ...row, cells: editedCells(row.rowKey, row.cells, byAddress) })),
-    sharedCells: editedCells(sharedRowKey(group.groupKey), group.sharedCells, byAddress),
+    rows: group.rows.map((row) => ({ ...row, cells: edited(row.rowKey, row.cells) })),
+    sharedCells: edited(sharedRowKey(group.groupKey), group.sharedCells),
   };
 }
 

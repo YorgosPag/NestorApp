@@ -16,7 +16,8 @@ import type { AuthContext } from '@/lib/auth';
 import { nowISO } from '@/lib/date-local';
 import { canonicalJson } from '@/lib/legal/canonical-json';
 import { decidedField, decisionSourceOf } from '@/subapps/catalog/import/field-diff';
-import { applyHumanEdits, fieldAddress, humanEditFields, recordEdits, recordModelCodeEdit, type EditStamp } from '@/subapps/catalog/import/human-edits';
+import { applyHumanEdits, fieldAddress, humanEditFields, missingEditTargets, recordEdits, recordModelCodeEdit, type EditStamp } from '@/subapps/catalog/import/human-edits';
+import type { ModelLevelTest } from '@/subapps/catalog/import/model-level-cells';
 import { importProposalKey, priceGroupKeyOf } from '@/subapps/catalog/import/import-keys';
 import { importTargetKey } from '@/subapps/catalog/import/proposal-values';
 import type {
@@ -45,7 +46,7 @@ import {
 } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { assertImportBatchOpen, assertPurposeAuthority, batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
-import { planProposal, resolveGroupIdentity, type PlannedProposal, type ProposalSibling } from './import-proposal-plan.server';
+import { planProposal, readModelLevelTest, resolveGroupIdentity, type PlannedProposal, type ProposalSibling } from './import-proposal-plan.server';
 import { readBatchProposals, readImportBase } from './import-reads.server';
 import { readValueMemoryEdits } from './import-value-memory.server';
 import { releaseFinishedBatchMedia } from './media-quarantine-release.server';
@@ -63,8 +64,8 @@ export function proposalDefinitionOf(proposal: StoredImportProposal): ImportProp
 }
 
 /** Η πρόταση όπως τη βλέπει ο αγωγός: η καθαρή ανάγνωση **με** τις διορθώσεις του ανθρώπου (§5.5.2 Β6). */
-const effectiveGroup = (group: ExtractedGroup, current: ImportProposalDefinition | null): ExtractedGroup =>
-  applyHumanEdits(group, current?.edits ?? [], current?.modelCodeEdit ?? null);
+const effectiveGroup = (group: ExtractedGroup, current: ImportProposalDefinition | null, modelLevel: ModelLevelTest): ExtractedGroup =>
+  applyHumanEdits(group, current?.edits ?? [], current?.modelCodeEdit ?? null, modelLevel);
 
 const planFields = (plan: PlannedProposal) => ({
   familyId: plan.familyId,
@@ -98,7 +99,8 @@ export async function readGroupInputs(ctx: AuthContext, batchId: string, group: 
     const pending = current?.status === 'pending' ? current : null;
     // §5.5.2 Β10: νέα πρόταση ⇒ η μνήμη τιμών του προμηθευτή, ως διορθώσεις με προέλευση, πριν το σχέδιο (ίδιος κριτής, ίδια ταυτότητα).
     const memoryEdits = current === null ? await readValueMemoryEdits(scope, batch, group, undefined, stamp) : [];
-    const effective = current === null ? applyHumanEdits(group, memoryEdits, null) : effectiveGroup(group, pending);
+    const modelLevel = await readModelLevelTest(scope, batch.target, group.purpose ?? batch.target.purpose);
+    const effective = current === null ? applyHumanEdits(group, memoryEdits, null, modelLevel) : effectiveGroup(group, pending, modelLevel);
     return { revision: current?.revision ?? null, memoryEdits, resolved: await resolveGroupIdentity(scope, batch.target, effective) };
   });
   const base = await readImportBase(ctx, seen.resolved.modelCode === null ? null : suggestCatalogCode(seen.resolved.modelCode));
@@ -276,10 +278,19 @@ async function readPendingProposal(scope: CatalogTx, id: string, expectedRevisio
  * Οι διορθώσεις του αιτήματος πάνω στον κατάλογο της πρότασης (§5.5.2 Β6). Η πηγή μένει ανέγγιχτη· η διορθωμένη τιμή έχει
  * βεβαιότητα 1 (την είδε άνθρωπος). Το ίδιο κελί της πρότασης μετά: διόρθωση = **ανθρώπινη** αποδοχή της (`withEditDecisions`).
  */
-function editedProposal(proposal: ImportProposalDefinition, request: UpdateImportProposalRequest, stamp: EditStamp) {
-  const edits = recordEdits(proposal.edits ?? [], request.edits, proposal.extracted, stamp);
+function editedProposal(proposal: ImportProposalDefinition, request: UpdateImportProposalRequest, stamp: EditStamp, modelLevel: ModelLevelTest) {
+  const edits = recordEdits(proposal.edits ?? [], request.edits, proposal.extracted, stamp, modelLevel);
   const modelCodeEdit = recordModelCodeEdit(proposal.modelCodeEdit ?? null, request.modelCode, proposal.extracted, stamp);
-  return { edits, modelCodeEdit, group: applyHumanEdits(proposal.extracted, edits, modelCodeEdit) };
+  return { edits, modelCodeEdit, modelLevel, group: applyHumanEdits(proposal.extracted, edits, modelCodeEdit, modelLevel) };
+}
+
+/**
+ * Διόρθωση σε πεδίο που η πηγή δεν έχει ⇒ **άρνηση**, όχι σιωπηλό 200. Ως 2026-11-14 προσπερνιόταν: η αναθεώρηση ανέβαινε και ο
+ * άνθρωπος έβλεπε «αποθηκεύτηκε» για τιμή που δεν γράφτηκε ποτέ (Φάσεις «1Ph» → «1», σελ. 85, live).
+ */
+function assertEditTargetsExist(proposal: ImportProposalDefinition, request: UpdateImportProposalRequest, modelLevel: ModelLevelTest): void {
+  const missing = missingEditTargets(request.edits, proposal.extracted, modelLevel);
+  if (missing.length > 0) throw new CatalogWriteError('invalid', missing.map((edit) => ({ code: 'unknownReference' as const, path: edit.targetKey })));
 }
 
 /**
@@ -298,7 +309,7 @@ async function withMemoryFallback(
   if (wanted.size === 0) return edited;
   const found = await readValueMemoryEdits(scope, batch, extracted, edited.edits, stamp);
   const edits = [...edited.edits, ...found.filter((edit) => wanted.has(fieldAddress(edit.rowKey, edit.targetKey)))];
-  return { ...edited, edits, group: applyHumanEdits(extracted, edits, edited.modelCodeEdit) };
+  return { ...edited, edits, group: applyHumanEdits(extracted, edits, edited.modelCodeEdit, edited.modelLevel) };
 }
 
 /** Πεδίο που ο άνθρωπος μόλις διόρθωσε (όχι επανέφερε) έχει απόφαση **του**: την τιμή του τη δέχεται, εκτός αν ο κριτής βρει εύρημα. */
@@ -323,7 +334,9 @@ export async function updateImportProposal(ctx: AuthContext, id: string, request
   return runCatalogTransaction(ctx, async (scope) => {
     const proposal = await readPendingProposal(scope, id, request.expectedRevision);
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', proposal.batchId);
-    const edited = await withMemoryFallback(scope, batch, editedProposal(proposal, request, stamp), proposal.extracted, request, stamp);
+    const modelLevel = await readModelLevelTest(scope, batch.target, proposal.purpose);
+    assertEditTargetsExist(proposal, request, modelLevel);
+    const edited = await withMemoryFallback(scope, batch, editedProposal(proposal, request, stamp, modelLevel), proposal.extracted, request, stamp);
     const plan = await planProposal(scope, batch, edited.group, base);
     const rows = withDecisions(withEditDecisions(carryDecisions(proposal.rows, plan.rows), request), request);
     return stageReplace(scope, 'importProposal', proposal, {

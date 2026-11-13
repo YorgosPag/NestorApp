@@ -20,7 +20,8 @@ import type { ExtractedCell, ExtractedGroup, ImportProposalField, ImportProposal
 import type { ImportValueMemoryHint } from '../types/catalog-import-requests';
 import { normalizeUniqueText } from '../values/normalize-unique';
 import type { ValueTextContext } from '../values/value-text-codec';
-import { editsByAddress, fieldAddress, fieldSourcesOf, type EditStamp, type FieldSource } from './human-edits';
+import { editSourceOf, editsByAddress, fieldAddress, fieldSourcesOf, type EditStamp, type FieldSource } from './human-edits';
+import type { ModelLevelTest } from './model-level-cells';
 import { valueMemoryKey } from './import-keys';
 import { importTargetKey, readsImportCell } from './proposal-values';
 import { learnedRecords, memoryOriginOf, memoryVerdict, suggestedOptionIndex, type LearningStamp, type MemoryBook } from './supplier-memory-core';
@@ -31,6 +32,8 @@ type ValueMemoryBook = MemoryBook<ImportValueMemoryAnswer>;
 export interface ValueMemorySchema {
   readonly attributes: ReadonlyMap<string, CatalogAttributeDefinition>;
   readonly context: ValueTextContext;
+  /** Ο κανόνας της γραμμής μοντέλου (`modelLevelTestOf`): η μνήμη βλέπει τις **ίδιες** διευθύνσεις με τη διόρθωση. Απόν = καμία. */
+  readonly modelLevel?: ModelLevelTest;
 }
 
 /** Μία πηγή που η μνήμη τιμών κρίνει: ένα κελί ιδιότητας, που ο κωδικοποιητής της δεν διαβάζει. */
@@ -45,12 +48,16 @@ const reads = (attribute: CatalogAttributeDefinition, text: string, unitCode: st
 /** Το κείμενο της πηγής όπως μπαίνει στο κλειδί: η **ίδια** κανονικοποίηση με την ετικέτα γραμμής («1PH» ≡ «1Ph»). */
 const valueLabelOf = (text: string): string => normalizeUniqueText(normalizeMixedScriptHomoglyphs(text.trim()));
 
+/** Όλα τα κελιά της διεύθυνσης τυπώνουν το ίδιο (κοινό πεδίο ανά στήλη, «1Ph» × 7): μία τιμή, όχι διαφωνία. */
+const oneValue = ([first, ...rest]: readonly ExtractedCell[]): boolean =>
+  rest.every((cell) => cell.text === first.text && cell.unitCode === first.unitCode);
+
 /**
- * Η πηγή που αφορά τη μνήμη: **ένα** κελί (επαναλήψεις = άλλη απόφαση), ιδιότητα του σχήματος που δεν είναι κείμενο, μονάδα που δεν
- * αμφισβητείται, κείμενο που **δεν** διαβάζεται. Οτιδήποτε άλλο ⇒ `null`.
+ * Η πηγή που αφορά τη μνήμη: **μία** τιμή (επαναλήψεις που διαφωνούν = άλλη απόφαση), ιδιότητα του σχήματος που δεν είναι κείμενο,
+ * μονάδα που δεν αμφισβητείται, κείμενο που **δεν** διαβάζεται. Οτιδήποτε άλλο ⇒ `null`.
  */
 function unreadSource(source: FieldSource, schema: ValueMemorySchema): UnreadSource | null {
-  if (source.cells.length !== 1) return null;
+  if (source.cells.length === 0 || !oneValue(source.cells)) return null;
   const [cell] = source.cells;
   const attribute = cell.target.kind === 'attribute' ? schema.attributes.get(cell.target.attributeId) : undefined;
   if (!attribute || attribute.type === 'text' || cell.text === null || cell.text.trim() === '') return null;
@@ -64,7 +71,7 @@ const keyOf = (supplierContactId: string, { attribute, cell }: UnreadSource): st
 /** Οι πηγές χωρίς διόρθωση που δεν διαβάζονται, με το κλειδί τους. */
 function openSources(group: ExtractedGroup, edits: readonly ImportValueEdit[] | undefined, supplierContactId: string, schema: ValueMemorySchema) {
   const taken = editsByAddress(edits);
-  return fieldSourcesOf(group).flatMap((source) => {
+  return fieldSourcesOf(group, schema.modelLevel).flatMap((source) => {
     const unread = taken.has(fieldAddress(source.rowKey, source.targetKey)) ? null : unreadSource(source, schema);
     return unread ? [{ source, unread, key: keyOf(supplierContactId, unread) }] : [];
   });
@@ -96,7 +103,7 @@ export function valueMemoryEditsFor(group: ExtractedGroup, edits: readonly Impor
     const verdict = memoryVerdict(entry);
     if (!entry || verdict.kind !== 'apply' || !usable(verdict.decision, unread, application.context)) return [];
     const origin = memoryOriginOf(entry.id, verdict);
-    return [{ rowKey: source.rowKey, targetKey: source.targetKey, text: verdict.decision.text, sourceText: unread.cell.text, ...application.stamp, origin }];
+    return [{ rowKey: source.rowKey, targetKey: source.targetKey, text: verdict.decision.text, ...editSourceOf(source), ...application.stamp, origin }];
   });
 }
 
@@ -162,7 +169,7 @@ export function learnableValues(proposal: LearningProposal, supplierContactId: s
   const edits = editsByAddress(proposal.edits);
   const accepted = acceptedAddresses(proposal.rows);
   const found = new Map<string, LearnableValue>();
-  for (const source of fieldSourcesOf(proposal.extracted)) {
+  for (const source of fieldSourcesOf(proposal.extracted, schema.modelLevel)) {
     const address = fieldAddress(source.rowKey, source.targetKey);
     const edit = accepted.has(address) ? edits.get(address) : undefined;
     const unread = edit ? unreadSource(source, schema) : null;

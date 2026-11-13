@@ -27,6 +27,7 @@ import {
   type ValueMemorySchema,
 } from '@/subapps/catalog/import/value-memory';
 import type { EditStamp } from '@/subapps/catalog/import/human-edits';
+import { modelLevelTestOf } from '@/subapps/catalog/import/model-level-cells';
 import type { ExtractedGroup, ImportBatchDefinition, ImportValueEdit, ImportValueMemoryAnswer, ImportValueMemoryDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire, ImportValueMemoryHint } from '@/subapps/catalog/types/catalog-import-requests';
 import { readSchemaSnapshot } from './catalog-product-reads.server';
@@ -43,7 +44,7 @@ function supplierOf(batch: ImportBatchDefinition, group: Pick<ExtractedGroup, 'p
 async function memorySchemaOf(scope: CatalogReadScope, batch: ImportBatchDefinition): Promise<ValueMemorySchema | null> {
   if (batch.target.purpose !== 'attributes') return null;
   const schema = await readSchemaSnapshot(scope, batch.target.familyId, batch.target.variantSchemeCode);
-  return { attributes: schema.attributes, context: importTextContextOf(schema.registry) };
+  return { attributes: schema.attributes, context: importTextContextOf(schema.registry), modelLevel: modelLevelTestOf(schema.scheme) };
 }
 
 /** Το σχήμα και το βιβλίο μνήμης για μια ανάγνωση· `null` = τίποτα να κριθεί (χωρίς προμηθευτή, ή καμία αδιάβαστη πηγή). */

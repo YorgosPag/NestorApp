@@ -19,8 +19,9 @@ import type {
   ImportProposalRow,
 } from '../types/catalog-import';
 import type { CatalogValueHolderKind, NoValueReasons, ProductValues } from '../types/product';
-import { attributeOwnerDepth, leafDepth } from '../values/attribute-levels';
 import type { ValueTextContext } from '../values/value-text-codec';
+import { sharedRowKey } from './human-edits';
+import { cellLevelOf, isHolderCell, modelLevelTestOf, type CellLevel } from './model-level-cells';
 import {
   isAttributeCell,
   isNoValueReasonCell,
@@ -115,22 +116,10 @@ function holderFieldOf(cell: HolderCell, holder: LiveHolder | null, context: Att
 /** Η διαδρομή του ευρήματος: η ιδιότητα, ή το πεδίο ταυτότητας. */
 const cellPathOf = (cell: HolderCell): string => (isTradeIdentityCell(cell) ? cell.target.field : cell.target.attributeId);
 
-/** Το βάθος-ιδιοκτήτης σε σχέση με το σύνολο: κοινό · τελικό SKU · ενδιάμεσο (υπο-μοντέλο, δηλωμένο όριο της Φάσης 4). */
-type CellLevel = 'shared' | 'leaf' | 'unsupported';
-
-function levelOf(cell: HolderCell, schema: CatalogSchemaSnapshot): CellLevel {
-  const { scheme } = schema;
-  if (!scheme) return 'leaf';
-  // Η μάρκα ανήκει στο βάθος 0 (Δ1)· GTIN · MPN · «χωρίς GTIN» στην εμπορεύσιμη μονάδα.
-  if (isTradeIdentityCell(cell)) return cell.target.field === 'brand' ? 'shared' : 'leaf';
-  const depth = attributeOwnerDepth(scheme, cell.target.attributeId);
-  if (depth === 0) return 'shared';
-  return depth === leafDepth(scheme) ? 'leaf' : 'unsupported';
-}
+const levelOf = (cell: HolderCell, schema: CatalogSchemaSnapshot): CellLevel => cellLevelOf(cell, schema.scheme);
 
 const attributeCellsOf = (cells: readonly ExtractedCell[]): AttributeCell[] => cells.filter(isAttributeCell);
-const holderCellsOf = (cells: readonly ExtractedCell[]): HolderCell[] =>
-  cells.filter((cell): cell is HolderCell => isAttributeCell(cell) || isNoValueReasonCell(cell) || isTradeIdentityCell(cell));
+const holderCellsOf = (cells: readonly ExtractedCell[]): HolderCell[] => cells.filter(isHolderCell);
 
 /** Λένε δύο κελιά το ίδιο; Τα πεδία ταυτότητας κατά κλειδί («DAIKIN» ≡ «Daikin»), τα άλλα κατά κείμενο, όπως πριν. */
 const sameText = (left: HolderCell, right: HolderCell): boolean =>
@@ -146,9 +135,12 @@ function withRepeats(first: HolderCell, others: readonly HolderCell[]): HolderCe
   return repeats.length === 0 ? first : { ...first, repeats };
 }
 
-/** Τα κοινά κελιά, μία φορά ανά στόχο: από τα κοινά της πηγής και από όσα επαναλαμβάνουν οι γραμμές. */
+/**
+ * Τα κοινά κελιά, μία φορά ανά στόχο: από τα κοινά της πηγής και από όσα επαναλαμβάνουν οι γραμμές — με τον **ίδιο** κανόνα
+ * (`modelLevelTestOf`) που δίνει στη διόρθωση και στη μνήμη τιμών τη διεύθυνση `model:<ομάδα>`.
+ */
 function sharedCellsOf(group: ExtractedGroup, schema: CatalogSchemaSnapshot): { readonly cells: HolderCell[]; readonly disagreeing: ReadonlySet<string> } {
-  const fromRows = group.rows.flatMap((row) => holderCellsOf(row.cells)).filter((cell) => levelOf(cell, schema) === 'shared');
+  const fromRows = group.rows.flatMap((row) => row.cells.filter(modelLevelTestOf(schema.scheme)).filter(isHolderCell));
   const byTarget = new Map<string, HolderCell[]>();
   for (const cell of [...holderCellsOf(group.sharedCells), ...fromRows]) {
     const key = importTargetKey(cell.target);
@@ -166,7 +158,7 @@ function modelRowOf(group: ExtractedGroup, context: AttributeProposalContext): I
     if (!disagreeing.has(importTargetKey(cell.target))) return field;
     return { ...field, decision: 'pending', issues: [...field.issues, { code: 'sharedDisagrees', path: cellPathOf(cell) }] };
   });
-  return holderRow(`model:${group.groupKey}`, 'productModel', context.model, group.modelCode ?? '', fields, modelIssues(group, context.schema));
+  return holderRow(sharedRowKey(group.groupKey), 'productModel', context.model, group.modelCode ?? '', fields, modelIssues(group, context.schema));
 }
 
 function modelIssues(group: ExtractedGroup, schema: CatalogSchemaSnapshot): readonly ImportIssue[] {

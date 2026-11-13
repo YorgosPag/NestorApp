@@ -9,7 +9,7 @@ import type { ExtractedCell, ExtractedGroup, ImportValueEdit } from '../../types
 import { applyHumanEdits, recordEdits } from '../human-edits';
 import { importTargetKey, importTextContextOf } from '../proposal-values';
 import { learnableValues, learnedValueEntry, memoryEditCount, valueMemoryEditsFor, valueMemoryHintsFor, valueMemoryKeysOf } from '../value-memory';
-import { suggestedOptionIndex } from '../supplier-memory-core';
+import { primaryOptionIndex, suggestedOptionIndex } from '../supplier-memory-core';
 
 const weight = [...MFP_ATTRIBUTE_MAP].map(([id, attribute]) => ({ ...attribute, id })).find((attribute) => attribute.code === 'weight');
 if (!weight) throw new Error('το fixture δεν έχει `weight`');
@@ -67,6 +67,18 @@ describe('§5.5.2 Β10 — μνήμη τιμών: «1Ph» → 1', () => {
     expect(applyHumanEdits(fresh, edits, null).rows.map((row) => row.cells[0].text)).toEqual(['1', '1']);
   });
 
+  it('🔑 κοινό πεδίο τυπωμένο ανά στήλη: ΜΙΑ διόρθωση στη γραμμή μοντέλου, με την προέλευση όλων των κελιών (2026-11-14)', () => {
+    const modelLevel = (cell: ExtractedCell): boolean => importTargetKey(cell.target) === PHASES_KEY;
+    const fresh = groupOf([cellOf(phases.id, '1Ph')], [cellOf(phases.id, '1Ph')]);
+    const edits = valueMemoryEditsFor(fresh, undefined, { ...applicationOf(book), modelLevel });
+    expect(edits.map((edit) => [edit.rowKey, edit.text, edit.sourceTexts])).toEqual([['model:p85:t0', '1', ['1Ph', '1Ph']]]);
+    const applied = applyHumanEdits(fresh, edits, null, modelLevel);
+    expect(applied.rows.flatMap((row) => row.cells.map((cell) => cell.text))).toEqual(['1']);
+    // Στήλες που διαφωνούν δεν είναι ΜΙΑ τιμή: η μνήμη δεν διαλέγει (ο σχεδιαστής δείχνει `sharedDisagrees`).
+    const split = groupOf([cellOf(phases.id, '1Ph')], [cellOf(phases.id, '3Ph')]);
+    expect(valueMemoryEditsFor(split, undefined, { ...applicationOf(book), modelLevel })).toEqual([]);
+  });
+
   it('🔑 ΔΕΝ μαθαίνει διόρθωση πάνω σε τιμή που διαβάζεται («2» → «3» είναι λάθος ενός PDF, όχι κανόνας)', () => {
     const readable = groupOf([cellOf(phases.id, '2')]);
     expect(learnableValues({ extracted: readable, edits: [humanEdit('v0', '3', '2')], rows: accepted(readable) }, SUPPLIER, schema)).toEqual([]);
@@ -107,12 +119,24 @@ describe('§5.5.2 Β10 — μνήμη τιμών: «1Ph» → 1', () => {
     expect(stale.options.filter((option) => option.suggested)).toEqual([]);
   });
 
-  it('suggestedOptionIndex: η μόνη εφαρμόσιμη με τις περισσότερες εγκρίσεις· ισοπαλία ή καμία εφαρμόσιμη ⇒ null', () => {
+  it('suggestedOptionIndex: η συχνότερη ανάμεσα σε ≥2 εφαρμόσιμες· ισοπαλία, μία ή καμία εφαρμόσιμη ⇒ null', () => {
     expect(suggestedOptionIndex([{ count: 1, usable: true }, { count: 3, usable: true }])).toBe(1);
-    expect(suggestedOptionIndex([{ count: 5, usable: false }, { count: 2, usable: true }])).toBe(1);
+    expect(suggestedOptionIndex([{ count: 5, usable: false }, { count: 1, usable: true }, { count: 2, usable: true }])).toBe(2);
+    // 🔑 Κατάταξη ≠ προέλευση: μία εφαρμόσιμη δίπλα σε «δεν ισχύει πλέον» δεν είναι «προτεινόμενη» — δεν υπάρχει εναλλακτική.
+    expect(suggestedOptionIndex([{ count: 5, usable: false }, { count: 2, usable: true }])).toBeNull();
+    expect(suggestedOptionIndex([{ count: 2, usable: true }])).toBeNull();
     expect(suggestedOptionIndex([{ count: 2, usable: true }, { count: 2, usable: true }])).toBeNull();
     expect(suggestedOptionIndex([{ count: 2, usable: false }])).toBeNull();
     expect(suggestedOptionIndex([])).toBeNull();
+  });
+
+  it('primaryOptionIndex: η προτεινόμενη, αλλιώς η ΜΟΝΗ εφαρμόσιμη· ισοπαλία ή καμία εφαρμόσιμη ⇒ null', () => {
+    expect(primaryOptionIndex([{ count: 1, usable: true }, { count: 3, usable: true }])).toBe(1);
+    expect(primaryOptionIndex([{ count: 5, usable: false }, { count: 2, usable: true }])).toBe(1);
+    expect(primaryOptionIndex([{ count: 2, usable: true }])).toBe(0);
+    expect(primaryOptionIndex([{ count: 2, usable: true }, { count: 2, usable: true }])).toBeNull();
+    expect(primaryOptionIndex([{ count: 2, usable: false }])).toBeNull();
+    expect(primaryOptionIndex([])).toBeNull();
   });
 
   it('🔑 θυμάται κείμενο, όχι τιμή: η ιδιότητα έγινε μέτρηση, το «1» δεν διαβάζεται ΠΙΑ ⇒ καμία εφαρμογή — «δεν ισχύει πλέον»', () => {

@@ -173,8 +173,9 @@ describe('§5.5.2 Β5.2: η μνήμη απέναντι σε παρτίδα πο
     const majority = bookOf([[AIR, [AIRFLOW, AIRFLOW, { kind: 'ignore' }]]]);
     expect(suggestedOf(majority)).toEqual({ applicable: 0, suggested: [AIRFLOW] });
     expect(suggestedOf(bookOf([[AIR, [AIRFLOW, { kind: 'ignore' }]]])).suggested).toEqual([]);
-    // Η συχνότερη είναι εκτός σχήματος ⇒ προτείνεται η μόνη εφαρμόσιμη, ποτέ η μη εφαρμόσιμη.
-    expect(suggestedOf(majority, { knownAttributeIds: new Set() }).suggested).toEqual([{ kind: 'ignore' }]);
+    // Η συχνότερη είναι εκτός σχήματος ⇒ μένει ΜΙΑ εφαρμόσιμη: χωρίς εναλλακτική δεν υπάρχει «προτεινόμενη» (κατάταξη ≠ προέλευση) —
+    // είναι απλώς η κύρια ενέργεια (`primaryOptionIndex`).
+    expect(suggestedOf(majority, { knownAttributeIds: new Set() }).suggested).toEqual([]);
   });
 
   it('απόφαση εκτός σχήματος ⇒ φαίνεται με `usable: false`, δεν μετρά', () => {

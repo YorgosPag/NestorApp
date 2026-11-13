@@ -158,7 +158,7 @@ export interface ImportMemoryHint {
   readonly line: number;
   readonly memoryId: string;
   readonly verdict: 'apply' | 'conflict';
-  /** `suggested` = η μόνη εφαρμόσιμη με τις περισσότερες εγκρίσεις (`suggestedOptionIndex`): ξεχωρίζει, **δεν** εφαρμόζεται. */
+  /** `suggested` = η εφαρμόσιμη με τις περισσότερες εγκρίσεις ανάμεσα σε ≥2 εφαρμόσιμες (`suggestedOptionIndex`): ξεχωρίζει, **δεν** εφαρμόζεται. */
   readonly options: readonly (ImportMemoryOption & { readonly usable: boolean; readonly suggested: boolean })[];
 }
 
@@ -188,7 +188,7 @@ export interface ImportValueMemoryHint {
   readonly targetKey: string;
   readonly memoryId: string;
   readonly verdict: 'apply' | 'conflict';
-  /** `suggested` = η μόνη εφαρμόσιμη με τις περισσότερες εγκρίσεις (`suggestedOptionIndex`): ξεχωρίζει, **δεν** εφαρμόζεται. */
+  /** `suggested` = η εφαρμόσιμη με τις περισσότερες εγκρίσεις ανάμεσα σε ≥2 εφαρμόσιμες (`suggestedOptionIndex`): ξεχωρίζει, **δεν** εφαρμόζεται. */
   readonly options: readonly { readonly text: string; readonly count: number; readonly lastBatchId: string; readonly usable: boolean; readonly suggested: boolean }[];
 }
 

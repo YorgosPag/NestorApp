@@ -17,6 +17,7 @@ import { byModelCode, type TableRow } from '@/subapps/catalog/import/apply-colum
 import { buildAttributeRows, type ImportBaseValues, type LiveHolder } from '@/subapps/catalog/import/build-attribute-proposal';
 import { buildPriceRows, type PriceLineValues } from '@/subapps/catalog/import/build-price-proposal';
 import { judgeProposal, proposalAggregateOf, type ProposalVerdict } from '@/subapps/catalog/import/judge-proposal';
+import { modelLevelTestOf, NO_MODEL_LEVEL, type ModelLevelTest } from '@/subapps/catalog/import/model-level-cells';
 import { importTextContextOf, parseImportCell } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
@@ -34,7 +35,7 @@ import { axesAtDepth, leafDepth } from '@/subapps/catalog/values/attribute-level
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
 import { readActiveByIds } from './catalog-library-reads.server';
 import { readAggregateReferences, readSchemaSnapshot } from './catalog-product-reads.server';
-import { naturalKeyId, readForUpsert, readOwned, readOwnedOrNull, runCatalogReadOnly, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
+import { naturalKeyId, readForUpsert, readOwned, readOwnedOrNull, runCatalogReadOnly, type CatalogReadScope, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { readUniqueHolders, uniqueHolderKey } from './unique-reservations.server';
 
@@ -172,6 +173,16 @@ const withMatchIssues = (rows: readonly ImportProposalRow[], { foreign, gtinIssu
     const found: ImportIssue[] = [...(key ? [{ code: 'uniqueValueTaken' as const, path: key.attributeId }] : []), ...(gtinIssues.get(row.rowKey) ?? [])];
     return found.length > 0 ? { ...row, issues: [...row.issues, ...found] } : row;
   });
+
+/**
+ * §5.5.2 Β6: ο κανόνας «ποια κελιά ανήκουν στη γραμμή μοντέλου» για μια ομάδα — ο **ίδιος** που εφαρμόζει ο σχεδιαστής
+ * (`modelLevelTestOf`), ώστε η διόρθωση να βλέπει τις διευθύνσεις που βλέπει ο άνθρωπος. Πρόταση τιμών ⇒ καμία γραμμή μοντέλου.
+ */
+export async function readModelLevelTest(scope: CatalogReadScope, target: ImportBatchTarget, purpose: ImportBatchTarget['purpose']): Promise<ModelLevelTest> {
+  if (purpose !== 'attributes' || target.purpose !== 'attributes') return NO_MODEL_LEVEL;
+  const schema = await readSchemaSnapshot(scope, target.familyId, target.variantSchemeCode);
+  return modelLevelTestOf(schema.scheme);
+}
 
 async function planAttributes(scope: CatalogTx, target: Extract<ImportBatchTarget, { purpose: 'attributes' }>, group: ExtractedGroup, base: ImportBaseValues): Promise<PlannedProposal> {
   const schema = await readSchemaSnapshot(scope, target.familyId, target.variantSchemeCode);

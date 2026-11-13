@@ -35,17 +35,37 @@ export function memoryVerdict<D>(entry: { readonly decisions: readonly ImportMem
   return { kind: 'apply', decision: only.decision, count: only.count, sourceBatchId: only.lastBatchId };
 }
 
+/** Μια επιλογή υπόδειξης όπως την κρίνει ο πυρήνας: πόσες εγκρίσεις, και αν εφαρμόζεται εδώ. */
+interface JudgedOption {
+  readonly count: number;
+  readonly usable: boolean;
+}
+
 /**
- * Η **προτεινόμενη** επιλογή μιας υπόδειξης (Akeneo SDM Value Mapping: «suggests the most frequently used target option»): η **μόνη**
- * εφαρμόσιμη με τις περισσότερες εγκρίσεις. Ισοπαλία ή καμία εφαρμόσιμη ⇒ `null`. **Πρόταση, όχι εφαρμογή**: η σύγκρουση μένει
- * ερώτηση στον άνθρωπο (`memoryVerdict`), η προτεινόμενη απλώς ξεχωρίζει.
+ * Η **προτεινόμενη** επιλογή μιας υπόδειξης (Akeneo SDM Value Mapping: «suggests the most frequently used target option»): η εφαρμόσιμη
+ * με τις περισσότερες εγκρίσεις, **ανάμεσα σε τουλάχιστον δύο εφαρμόσιμες**. Ισοπαλία, μία ή καμία εφαρμόσιμη ⇒ `null`.
+ * 🔑 **Κατάταξη ≠ προέλευση** (SAP Fiori AI Notice · Apple HIG «Multiple options»): η προέλευση («από μνήμη · N εγκρίσεις») φαίνεται
+ *    **πάντα**· το «προτεινόμενη» είναι **σύγκριση** και λέει κάτι μόνο όταν υπάρχει εναλλακτική που ο άνθρωπος θα μπορούσε να διαλέξει.
+ *    Μία εφαρμόσιμη δίπλα σε «δεν ισχύει πλέον» δεν κερδίζει τίποτα — είναι απλώς η μόνη ενέργεια (`primaryOptionIndex`).
+ * **Πρόταση, όχι εφαρμογή**: η σύγκρουση μένει ερώτηση στον άνθρωπο (`memoryVerdict`), η προτεινόμενη απλώς ξεχωρίζει.
  */
-export function suggestedOptionIndex(options: readonly { readonly count: number; readonly usable: boolean }[]): number | null {
+export function suggestedOptionIndex(options: readonly JudgedOption[]): number | null {
   const usableCounts = options.flatMap((option) => (option.usable ? [option.count] : []));
-  if (usableCounts.length === 0) return null;
+  if (usableCounts.length < 2) return null;
   const top = Math.max(...usableCounts);
   if (usableCounts.filter((count) => count === top).length > 1) return null;
   return options.findIndex((option) => option.usable && option.count === top);
+}
+
+/**
+ * Η **κύρια ενέργεια** μιας υπόδειξης (το κουμπί που τονίζεται): η προτεινόμενη, αλλιώς η **μόνη** εφαρμόσιμη· ισοπαλία ⇒ `null` (κανένα
+ * κουμπί δεν προηγείται όταν ο άνθρωπος έχει πει δύο πράγματα εξίσου). Ένας κανόνας για τη μνήμη γραμμών και τη μνήμη τιμών.
+ */
+export function primaryOptionIndex(options: readonly JudgedOption[]): number | null {
+  const suggested = suggestedOptionIndex(options);
+  if (suggested !== null) return suggested;
+  const usable = options.flatMap((option, index) => (option.usable ? [index] : []));
+  return usable.length === 1 ? usable[0] : null;
 }
 
 /** Η προέλευση που φορά ό,τι εφάρμοσε η μνήμη: ορατή, με αναίρεση. */
