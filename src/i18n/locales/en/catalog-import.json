@@ -328,6 +328,7 @@
       "suggests": "Memory suggests",
       "conflict": "Memory holds conflicting decisions for this label — pick one:",
       "option": "{count, plural, one {{decision} · # approval} other {{decision} · # approvals}}",
+      "suggested": "· suggested",
       "accept": "Accept",
       "unusable": "not applicable here"
     },

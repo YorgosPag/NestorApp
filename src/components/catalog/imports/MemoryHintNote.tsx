@@ -5,8 +5,9 @@
  *   διαβάστηκε: η μνήμη **δεν** αποφασίζει μόνη της εδώ (Απόφαση 4) — προτείνει, και ο άνθρωπος αποδέχεται με ένα κλικ.
  * @module components/catalog/imports/MemoryHintNote
  *
- * 🔑 **Σύγκρουση ⇒ ερώτηση με τους μετρητές**, ποτέ «κερδίζει ο συχνότερος» (εκεί διαφέρουμε από το Akeneo): δύο αποφάσεις στο
- *    ιστορικό σημαίνει ότι κάποτε ο άνθρωπος διόρθωσε τη μνήμη. Η επιλογή γίνεται **ανθρώπινη** απόφαση και μαθαίνεται στην έγκριση.
+ * 🔑 **Σύγκρουση ⇒ ερώτηση με τους μετρητές**, ποτέ «κερδίζει ο συχνότερος»: δύο αποφάσεις στο ιστορικό σημαίνει ότι κάποτε ο
+ *    άνθρωπος διόρθωσε τη μνήμη. Η συχνότερη (`suggested`) **ξεχωρίζει** ως προτεινόμενη (Akeneo SDM: «suggests the most frequently
+ *    used»), αλλά η επιλογή μένει **ανθρώπινη** απόφαση και μαθαίνεται στην έγκριση.
  * 🔑 Απόφαση που δεν εφαρμόζεται εδώ (ιδιότητα εκτός οικογένειας, τιμή χωρίς τιμοκατάλογο) φαίνεται με τον λόγο, χωρίς κουμπί.
  */
 
@@ -38,9 +39,12 @@ export function MemoryHintNote({ hint, disabled, onAccept }: MemoryHintNoteProps
       <ul className="m-0 flex list-none flex-col gap-1 p-0">
         {hint.options.map((option) => (
           <li key={JSON.stringify(option.decision)} className="flex flex-wrap items-center justify-between gap-2">
-            <span>{t('review.memory.option', { decision: decisionText.of(option.decision), count: option.count })}</span>
+            <span>
+              {t('review.memory.option', { decision: decisionText.of(option.decision), count: option.count })}
+              {option.suggested ? <strong className="ml-1">{t('review.memory.suggested')}</strong> : null}
+            </span>
             {option.usable && decisionText.known(option.decision) ? (
-              <Button type="button" size="sm" variant="outline" disabled={disabled} onClick={() => onAccept(option.decision)}>
+              <Button type="button" size="sm" variant={option.suggested ? 'default' : 'outline'} disabled={disabled} onClick={() => onAccept(option.decision)}>
                 <Check className="mr-1 h-3 w-3" aria-hidden />{t('review.memory.accept')}
               </Button>
             ) : <span className="text-muted-foreground">{t('review.memory.unusable')}</span>}

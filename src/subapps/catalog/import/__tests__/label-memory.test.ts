@@ -165,6 +165,18 @@ describe('§5.5.2 Β5.2: η μνήμη απέναντι σε παρτίδα πο
     expect(hints.legacyLines).toBe(1);
   });
 
+  it('🔑 Akeneo SDM: στη σύγκρουση η ΣΥΧΝΟΤΕΡΗ ξεχωρίζει ως προτεινόμενη — ΔΕΝ εφαρμόζεται· ισοπαλία ⇒ καμία· μη εφαρμόσιμη ⇒ ποτέ', () => {
+    const suggestedOf = (book: LabelMemoryBook, overrides: Partial<MemoryApplication> = {}) => {
+      const hints = memoryHintsFor([unmapped(3, AIR)], [], applicationOf(book, overrides));
+      return { applicable: hints.applicable, suggested: hints.hints[0]?.options.filter((option) => option.suggested).map((option) => option.decision) };
+    };
+    const majority = bookOf([[AIR, [AIRFLOW, AIRFLOW, { kind: 'ignore' }]]]);
+    expect(suggestedOf(majority)).toEqual({ applicable: 0, suggested: [AIRFLOW] });
+    expect(suggestedOf(bookOf([[AIR, [AIRFLOW, { kind: 'ignore' }]]])).suggested).toEqual([]);
+    // Η συχνότερη είναι εκτός σχήματος ⇒ προτείνεται η μόνη εφαρμόσιμη, ποτέ η μη εφαρμόσιμη.
+    expect(suggestedOf(majority, { knownAttributeIds: new Set() }).suggested).toEqual([{ kind: 'ignore' }]);
+  });
+
   it('απόφαση εκτός σχήματος ⇒ φαίνεται με `usable: false`, δεν μετρά', () => {
     const book = bookOf([[AIR, [AIRFLOW]]]);
     const hints = memoryHintsFor([unmapped(3, AIR)], [], applicationOf(book, { knownAttributeIds: new Set() }));

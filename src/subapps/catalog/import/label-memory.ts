@@ -21,7 +21,7 @@ import type {
 } from '../types/catalog-import';
 import type { ImportMemoryHint, ImportMemoryHints } from '../types/catalog-import-requests';
 import { labelMemoryKey, pageTableGroupKey } from './import-keys';
-import { learnedRecords, memoryOriginOf, memoryVerdict, type LearningStamp, type MemoryBook } from './supplier-memory-core';
+import { learnedRecords, memoryOriginOf, memoryVerdict, suggestedOptionIndex, type LearningStamp, type MemoryBook } from './supplier-memory-core';
 import { decisionAttributeIds, lineDecisionOf, tableOverridesOf } from './page-line-overrides';
 
 /** §5.5.2 Β3 Γ13: ίδιοι στόχοι, ίδια κύρια· η σειρά των υπόλοιπων δεν κάνει άλλη απόφαση. */
@@ -159,7 +159,9 @@ function hintOf(line: ImportPageUnmappedLine, application: MemoryApplication): I
   const entry = application.book.get(memoryKeyOf(application.scope, line.identity));
   const verdict = memoryVerdict(entry);
   if (!entry || verdict.kind === 'none') return null;
-  const options = entry.decisions.map(({ decision, count, lastBatchId }) => ({ decision, count, lastBatchId, usable: applicable(decision, application) }));
+  const judged = entry.decisions.map(({ decision, count, lastBatchId }) => ({ decision, count, lastBatchId, usable: applicable(decision, application) }));
+  const suggested = suggestedOptionIndex(judged);
+  const options = judged.map((option, index) => ({ ...option, suggested: index === suggested }));
   return { page: line.page, table: line.table, line: line.line, memoryId: entry.id, verdict: verdict.kind, options };
 }
 

@@ -158,7 +158,8 @@ export interface ImportMemoryHint {
   readonly line: number;
   readonly memoryId: string;
   readonly verdict: 'apply' | 'conflict';
-  readonly options: readonly (ImportMemoryOption & { readonly usable: boolean })[];
+  /** `suggested` = η μόνη εφαρμόσιμη με τις περισσότερες εγκρίσεις (`suggestedOptionIndex`): ξεχωρίζει, **δεν** εφαρμόζεται. */
+  readonly options: readonly (ImportMemoryOption & { readonly usable: boolean; readonly suggested: boolean })[];
 }
 
 /** Η μνήμη του προμηθευτή απέναντι στην παρτίδα: **μόνο ανάγνωση**, καμία εγγραφή (Απόφαση 4). */
