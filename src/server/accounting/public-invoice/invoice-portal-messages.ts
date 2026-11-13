@@ -27,8 +27,6 @@ import {
 } from '@/config/notification-events';
 import { INVOICE_PORTAL_MESSAGE_DAILY_QUOTA } from '@/lib/middleware/rate-limit-config';
 import { withinSubjectQuota } from '@/lib/middleware/subject-quota';
-import { viewDestination } from '@/lib/notifications/notification-destination';
-import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { storeChannelMessage } from '@/server/comms/crm/channel-crm-store';
@@ -43,9 +41,8 @@ import {
 } from '@/subapps/accounting/types/invoice-portal-messages';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { MESSAGE_DIRECTION } from '@/types/conversations';
-import { orgWorkspace } from '@/types/workspace-membership';
-
 import { linkHolderActor } from './invoice-link-opened';
+import { portalMessageDestination } from './invoice-portal-destination';
 import { readSharedInvoice, type InvoicePublicSessionInput } from './invoice-public-session';
 
 const logger = createModuleLogger('InvoicePortalMessages');
@@ -144,7 +141,7 @@ async function notifyIssuer(notice: IssuerNotice): Promise<void> {
       eventId: notice.messageDocId,
       entityId: notice.invoice.invoiceId,
       entityType: NOTIFICATION_ENTITY_TYPES.INVOICE,
-      ...viewDestination(ENTITY_ROUTES.crm.communications, orgWorkspace(notice.companyId)),
+      ...portalMessageDestination(notice.companyId),
     });
     reportIssuerNoticeOutcome(notice.messageDocId, notice.recipientId, result);
   } catch (error: unknown) {

@@ -31,6 +31,7 @@
  * | `properties.caseDocumentRequestHost` | ακίνητο + `caseEngagementAnsweredDestination` | `announceDocumentRequest` (host) |
  * | `properties.caseDocumentRequestEngaged` | `caseEngagementChangedDestination` | `announceDocumentRequest` (engaged) |
  * | `properties.handoverInvitationAnswered` | ακίνητο + `handoverInvitationAnsweredDestination` | `announceHandoverInvitationAnswer` |
+ * | `crm.portalMessage` | παραστατικό + `portalMessageDestination` | `notifyIssuer` (ADR-939) |
  *
  * 🔑 **Κανένας κανόνας δεν γράφει δική του διαδρομή ή δικό του χώρο.** Αν αύριο ο
  * παραγωγός αλλάξει πόρτα, ο ανιχνευτής την ξέρει την ίδια στιγμή — δεν υπάρχει δεύτερο
@@ -60,6 +61,7 @@ import type { NotificationDestination } from '@/lib/notifications/notification-d
 import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { placeDestination } from '@/lib/places/place-detail-route';
+import { portalMessageDestination } from '@/server/accounting/public-invoice/invoice-portal-destination';
 import { handoverInvitationAnsweredDestination } from '@/server/property-handover-invitations/handover-invitation-answer-notifier';
 import { firstContactReceivedDestination } from '@/services/contact/first-contact-notifier.service';
 import { listingMatchDestination } from '@/services/demand/listing-match-notifier.service';
@@ -115,6 +117,15 @@ const unresolvable = (reason: UnresolvableReason): ExpectedDestination => ({
   reason,
 });
 
+/**
+ * **Ο μισθωτής όπως τον γράφει το ίδιο το έγγραφο** — `null` όταν το έγγραφο λείπει ή δεν έχει μισθωτή.
+ * Ένα σημείο για κάθε κανόνα που ρωτά «σε ποιον χώρο ανήκει;» (ποτέ από το `tenantId` της ειδοποίησης).
+ */
+async function companyIdOf(db: AdminFirestore, collection: string, entityId: string): Promise<string | null> {
+  const companyId: unknown = (await db.collection(collection).doc(entityId).get()).data()?.companyId;
+  return typeof companyId === 'string' && companyId !== '' ? companyId : null;
+}
+
 /** Ζήτηση: **σε ποια συλλογή ζει** το ακίνητο ορίζει την πόρτα — ποτέ το πρόθεμα. */
 const demandInterestRule: DestinationRule = async (db, _notification, entityId) => {
   const location = await locatePlace(db, entityId);
@@ -168,8 +179,8 @@ const networkTeamJoinedRule: DestinationRule = async (db, notification, entityId
  */
 const propertyHostRule = (destinationOf: (propertyId: string, companyId: string) => NotificationDestination): DestinationRule =>
   async (db, _notification, entityId) => {
-    const companyId: unknown = (await db.collection(COLLECTIONS.PROPERTIES).doc(entityId).get()).data()?.companyId;
-    if (typeof companyId !== 'string' || companyId === '') return unresolvable('entity-absent');
+    const companyId = await companyIdOf(db, COLLECTIONS.PROPERTIES, entityId);
+    if (companyId === null) return unresolvable('entity-absent');
     return expected(destinationOf(entityId, companyId));
   };
 
@@ -185,9 +196,16 @@ const supplyConnectionRule: DestinationRule = async (db, notification, entityId)
 
 /** ADR-923 §16 — η λήξη μάρκας ανοίγει τις ρυθμίσεις καταλόγου του χώρου που **κατέχει** το αίτημα (από το έγγραφο). */
 const brandGrantExpiringRule: DestinationRule = async (db, _notification, entityId) => {
-  const companyId: unknown = (await db.collection(COLLECTIONS.SUPPLIER_BRAND_CLAIMS).doc(entityId).get()).data()?.companyId;
-  if (typeof companyId !== 'string' || companyId === '') return unresolvable('entity-absent');
+  const companyId = await companyIdOf(db, COLLECTIONS.SUPPLIER_BRAND_CLAIMS, entityId);
+  if (companyId === null) return unresolvable('entity-absent');
   return expected(brandExpiryDestination(companyId));
+};
+
+/** ADR-939 §3(στ) — «ο πελάτης έγραψε»: τα εισερχόμενα στον χώρο του μισθωτή, όπως τον γράφει το **παραστατικό**. */
+const portalMessageRule: DestinationRule = async (db, _notification, entityId) => {
+  const companyId = await companyIdOf(db, COLLECTIONS.ACCOUNTING_INVOICES, entityId);
+  if (companyId === null) return unresolvable('entity-absent');
+  return expected(portalMessageDestination(companyId));
 };
 
 /** ADR-916 Φ-Δ.2 — «ο αγοραστής απάντησε»: η καρτέλα «Παράδοση» του ακινήτου. */
@@ -269,6 +287,8 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROCUREMENT_SUPPLY_CONNECTION]: supplyConnectionRule,
   // ADR-923 §16 — οι ρυθμίσεις καταλόγου του χώρου της μάρκας (ο ΙΔΙΟΣ `brandExpiryDestination` με τον παραγωγό).
   [NOTIFICATION_EVENT_TYPES.PROCUREMENT_BRAND_GRANT_EXPIRING]: brandGrantExpiringRule,
+  // ADR-939 §3(στ) — ο ΙΔΙΟΣ `portalMessageDestination` με τον παραγωγό· ο χώρος από το παραστατικό.
+  [NOTIFICATION_EVENT_TYPES.CRM_PORTAL_MESSAGE]: portalMessageRule,
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

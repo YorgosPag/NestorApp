@@ -27,6 +27,7 @@ import {
   RULED_EVENT_TYPES,
 } from '@/server/notifications/notification-destination-rules';
 import { brandExpiryDestination } from '@/server/catalog/supplier-brand-expiry-notices.server';
+import { portalMessageDestination } from '@/server/accounting/public-invoice/invoice-portal-destination';
 import { handoverInvitationAnsweredDestination } from '@/server/property-handover-invitations/handover-invitation-answer-notifier';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -59,6 +60,8 @@ function world(): AdminFirestore {
   fake.seed(COLLECTIONS.PROPERTIES, 'prop_orphan', { name: 'Χωρίς εταιρεία' });
   fake.seed(COLLECTIONS.SUPPLIER_BRAND_CLAIMS, 'sbc_1', { companyId: 'comp_supplier' });
   fake.seed(COLLECTIONS.SUPPLIER_BRAND_CLAIMS, 'sbc_orphan', { brand: 'Χωρίς εταιρεία' });
+  fake.seed(COLLECTIONS.ACCOUNTING_INVOICES, 'inv_1', { companyId: 'comp_issuer', series: 'Α', number: 10 });
+  fake.seed(COLLECTIONS.ACCOUNTING_INVOICES, 'inv_orphan', { series: 'Α', number: 11 });
   return fake as unknown as AdminFirestore;
 }
 
@@ -140,6 +143,24 @@ describe('Ε — εντολές', () => {
     });
   });
 
+  it('🔴 Ε7 — μήνυμα πελάτη (ADR-939) ⇒ τα εισερχόμενα, στον χώρο που γράφει το ΠΑΡΑΣΤΑΤΙΚΟ (ο ΙΔΙΟΣ προορισμός με τον παραγωγό)', async () => {
+    expect(await expectedDestinationOf(world(), notification('crm.portalMessage', 'inv_1', 'u_issuer'))).toEqual({
+      kind: 'expected',
+      destination: portalMessageDestination('comp_issuer'),
+    });
+    expect(portalMessageDestination('comp_issuer')).toEqual({
+      actions: [{ id: 'view', label: 'view', url: ENTITY_ROUTES.crm.communications }],
+      workspace: { kind: 'org', companyId: 'comp_issuer' },
+    });
+  });
+
+  it.each([['inv_orphan'], ['inv_gone']])('Ε8 — παραστατικό %s χωρίς χώρο ⇒ entity-absent, ΠΟΤΕ μαντεψιά', async (entityId) => {
+    expect(await expectedDestinationOf(world(), notification('crm.portalMessage', entityId))).toEqual({
+      kind: 'unresolvable',
+      reason: 'entity-absent',
+    });
+  });
+
   it('Ε3 — απόφαση για αγγελία που δεν υπάρχει πια ⇒ entity-absent', async () => {
     expect(await expectedDestinationOf(world(), notification('properties.mandateDecided', 'ownp_gone'))).toEqual({
       kind: 'unresolvable',
@@ -170,6 +191,8 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
 
   it('Λ3 — οι τέσσερις τύποι της βάσης (μετρημένοι 2026-09-11) + η επιστροφή email κάρτας (Α21.20) + η ερώτηση αργιών (Α21.21) έχουν κανόνα', () => {
     expect([...RULED_EVENT_TYPES].sort()).toEqual([
+      // ADR-939 §3(στ) — «ο πελάτης έγραψε»: τα εισερχόμενα, στον χώρο του μισθωτή του παραστατικού.
+      'crm.portalMessage',
       // ADR-867 Β7 · §8 #9 — νέο μήνυμα (η πλευρά από το θέμα) · είσοδος στην ομάδα (η εντολή, στο νήμα).
       'network.teamJoined',
       'network.threadMessage',
