@@ -133,8 +133,10 @@ export interface CalibrationReferenceRecord {
 /**
  * ADR-929 Φ5.3γ — από πού ήρθε η βαθμονόμηση: σημεία που έδειξε ο άνθρωπος, ή οι γραμμένες διαστάσεις του σχεδίου
  * (πρόταση της αναγνώρισης που ο άνθρωπος εφάρμοσε με ρητή πράξη). Μία δήλωση, τη διαβάζει και ο διακομιστής.
+ * ADR-941 Δ15 — `pdf-vector-dimensions`: οι γραμμένες τιμές ενός **διανυσματικού** PDF, δεμένες στις ακμές του (χωρίς
+ * `sourceTextId`: τα κείμενα του αρχείου δεν έχουν ταυτότητα).
  */
-export const CALIBRATION_ORIGINS = ['manual', 'plan-dimensions'] as const;
+export const CALIBRATION_ORIGINS = ['manual', 'plan-dimensions', 'pdf-vector-dimensions'] as const;
 export type CalibrationOrigin = (typeof CALIBRATION_ORIGINS)[number];
 
 export function isCalibrationOrigin(value: unknown): value is CalibrationOrigin {

@@ -26,7 +26,11 @@ import type { PdfVectorContent } from '../../pdf-background/services/pdf-vector-
 import { ensureDimensionLayer, ensureNamedLayer, type NamedLayerRefusal } from '../../services/named-layer';
 import { addDimensionsToScene } from '../../bim/scene/add-dimensions-to-scene';
 import { getDimStyleRegistry } from '../dimensions/dim-style-registry';
-import { resolveSceneUnits } from '../../utils/scene-units';
+import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { commitCalibration } from '../../floorplan-background/services/commit-calibration';
+import {
+  isPdfVectorScaleCurrent, pdfVectorScale, pdfVectorScaleCalibration, type PdfVectorScale, type PdfVectorScaleProposal,
+} from './pdf-vector-scale';
 import { isPdfVectorImportOf, pdfVectorGeometry, pdfVectorTexts, type PdfVectorLayers } from './pdf-vector-entities';
 import { bindPdfDimensions, type PdfDimensionReading } from './pdf-vector-dimension-binding';
 import { pdfDimensionEntities } from './pdf-vector-dimension-entities';
@@ -59,10 +63,14 @@ export interface PdfVectorImportCounts {
 
 /** Τι έγινε — ΠΑΝΤΑ με όνομα, ποτέ σιωπηλό μηδέν. */
 export type PdfVectorImportOutcome =
-  | ({ readonly kind: 'imported' } & PdfVectorImportCounts)
+  | ({ readonly kind: 'imported'; readonly calibrated: boolean } & PdfVectorImportCounts)
   | { readonly kind: 'not-vector' }
   | { readonly kind: 'source-changed' }
-  | { readonly kind: 'refused'; readonly reason: NamedLayerRefusal };
+  | { readonly kind: 'refused'; readonly reason: NamedLayerRefusal }
+  /** Δ15: η κάρτα κλίμακας υπολογίστηκε για άλλο υπόβαθρο/τοποθέτηση — τίποτα δεν γράφτηκε. */
+  | { readonly kind: 'calibration-stale' }
+  /** Δ15: η βαθμονόμηση δεν σώθηκε (σύγκρουση ή σφάλμα) — καμία εισαγωγή πάνω σε κλίμακα που δεν έμεινε. */
+  | { readonly kind: 'calibration-failed' };
 
 interface FloorPdfVectors {
   readonly content: PdfVectorContent;
@@ -150,6 +158,30 @@ export async function importFloorPdfVectors(target: PdfVectorImportTarget, undoN
     if (typeof layers === 'string') return { kind: 'refused', reason: layers };
     const replaced = removePreviousImport(target, read.sourceKey);
     const counts = writeImport(target, read, reading, layers, undoName);
-    return { kind: 'imported', ...counts, replaced, skippedFills: read.content.skippedFills };
+    return { kind: 'imported', calibrated: false, ...counts, replaced, skippedFills: read.content.skippedFills };
   });
+}
+
+/**
+ * Δ15 — **πρώτα** η βαθμονόμηση από τις γραμμένες τιμές, **μετά** η εισαγωγή πάνω στη νέα τοποθέτηση. Δύο πράξεις: η
+ * κλίμακα είναι ιδιότητα του υποβάθρου (ο ΕΝΑΣ γραφέας `commitCalibration`, εκτός command history), η εισαγωγή είναι ένα
+ * Ctrl+Z. Μπαγιάτικη κάρτα ⇒ τίποτα· βαθμονόμηση που δεν σώθηκε ⇒ καμία εισαγωγή.
+ */
+export async function calibrateAndImportFloorPdfVectors(
+  target: PdfVectorImportTarget, proposal: PdfVectorScaleProposal, undoName: string,
+): Promise<PdfVectorImportOutcome> {
+  if (!isPdfVectorScaleCurrent(proposal, getFloorBackground(target.floorId) ?? null)) return { kind: 'calibration-stale' };
+  const { transform, data } = pdfVectorScaleCalibration(proposal, Date.now());
+  const saved = await commitCalibration(target.floorId, transform, data);
+  if (saved.status !== 'saved') return { kind: 'calibration-failed' };
+  const outcome = await importFloorPdfVectors(target, undoName);
+  return outcome.kind === 'imported' ? { ...outcome, calibrated: true } : outcome;
+}
+
+/** Η κάρτα κλίμακας του υποβάθρου του ορόφου (προεπισκόπηση, χωρίς εγγραφή), ή `null`. */
+export async function readFloorPdfVectorScale(floorId: string, sceneUnits: SceneUnits): Promise<PdfVectorScale | null> {
+  const read = await readFloorPdfVectors(floorId);
+  const background = getFloorBackground(floorId);
+  if ('kind' in read || !background || background.id !== read.sourceKey) return null;
+  return pdfVectorScale({ reading: bindPdfDimensions(read.content), content: read.content, background, sceneUnits });
 }

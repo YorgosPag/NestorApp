@@ -121,7 +121,7 @@ const NO_IMAGE: ImageSourceView = {
 };
 
 /** ADR-941 — χωρίς διανυσματικό υπόβαθρο το τμήμα εισαγωγής δεν αποδίδεται. */
-const NO_PDF_VECTOR = { view: { available: false, running: false, outcome: null }, onImport: jest.fn() };
+const NO_PDF_VECTOR = { view: { available: false, running: false, outcome: null, scale: null }, onImport: jest.fn(), onCalibrateAndImport: jest.fn() };
 
 function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {
   const actions = actionsMock();

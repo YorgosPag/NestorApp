@@ -473,7 +473,21 @@
       "outcome": {
         "notVector": "The background is not a vector PDF; nothing was written.",
         "sourceChanged": "The background changed while reading; nothing was written. Try again.",
-        "refused": "No layer was found or created for the import; nothing was written."
+        "refused": "No layer was found or created for the import; nothing was written.",
+        "calibrationStale": "The background changed since the scale was computed; nothing was written. Try again.",
+        "calibrationFailed": "The calibration was not saved; nothing was imported. Try again."
+      },
+      "calibrated": "The background was calibrated from the written values. Ctrl+Z undoes the import, not the calibration.",
+      "scale": {
+        "proposal": "{count, plural, one {# written value gives} other {# written values give}} a scale of 1 px = {mmPerPixel} mm, max deviation {deviation}.",
+        "reference": "{raw}: deviation {deviation}",
+        "needsReview": "The values do not fully agree with each other; check the list before calibrating.",
+        "replaces": "The current calibration (1 px = {current} mm) disagrees with the written values.",
+        "confirmed": "The calibration agrees with {count, plural, one {# written value} other {# written values}}, max deviation {deviation}.",
+        "failed": "The written values do not give a consistent scale; calibrate the background by hand.",
+        "calibrateAndImport": "Calibrate and import",
+        "replaceAndImport": "Replace calibration and import",
+        "importWithout": "Import without calibration"
       }
     },
     "image": {

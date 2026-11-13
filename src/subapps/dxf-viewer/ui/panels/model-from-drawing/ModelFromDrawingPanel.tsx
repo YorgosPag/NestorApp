@@ -54,7 +54,7 @@ import {
   StatusLegend,
 } from './ModelFromDrawingSections';
 import { ImageSourceStart, ImageSourceSummary, type ImageSourceView } from './PlanRecognitionSections';
-import { PdfVectorImportSection, type PdfVectorImportView } from './PdfVectorImportSection';
+import { PdfVectorImportSection, type PdfVectorImportActions, type PdfVectorImportView } from './PdfVectorImportSection';
 import { PlanReadingSection, type PlanReadingActions } from './PlanReadingSections';
 import { PlanOcrSection, type PlanOcrActions } from './PlanOcrSection';
 import { PlanReadValuesSection, type PlanReadValuesActions } from './PlanReadValuesSection';
@@ -90,7 +90,7 @@ export interface ModelFromDrawingPanelProps {
   /** ADR-929 Φ5 — η πηγή «εικόνα υποβάθρου», όπως την υπολογίζει ο host. */
   readonly imageSource: ImageSourceView;
   /** ADR-941 — εισαγωγή γραμμών και κειμένων όταν το υπόβαθρο είναι διανυσματικό PDF. */
-  readonly pdfVectorImport: { readonly view: PdfVectorImportView; readonly onImport: () => void };
+  readonly pdfVectorImport: { readonly view: PdfVectorImportView } & PdfVectorImportActions;
 }
 
 /**
@@ -245,7 +245,7 @@ export function ModelFromDrawingPanel({ state, actions, imageSource, pdfVectorIm
             </p>
             <Notice state={state} t={t} />
             {state.sampleRole === 'wall'
-              ? <PdfVectorImportSection view={pdfVectorImport.view} onImport={pdfVectorImport.onImport} t={t} />
+              ? <PdfVectorImportSection view={pdfVectorImport.view} actions={pdfVectorImport} t={t} />
               : null}
             {state.sampleRole === 'wall'
               ? <ImageSourceStart view={imageSource} onRecognize={actions.onRecognizeImage} t={t} />
