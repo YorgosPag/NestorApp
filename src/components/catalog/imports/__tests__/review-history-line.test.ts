@@ -59,6 +59,18 @@ describe('lineStepOf / settledLineStep — η καταγραφή', () => {
     expect(step.after.label).toMatchObject({ kind: 'lineAttribute', line: 'ΠΑΡ.ΝΕΡΟΥ · m³/h', bound: false });
   });
 
+  it('🔑 αποφασισμένη γραμμή (έφυγε από τις «χωρίς πεδίο») ⇒ η ετικέτα από την ταυτότητα της απόφασης, ΟΧΙ «Γραμμή 5»', () => {
+    const decided = (decision: ImportLineOverride['decision']) => override(decision, { identity: { label: 'παρ νερου', unitCode: 'm3_h', printed: 'ΠΑΡ.ΝΕΡΟΥ' } });
+    const withoutUnmapped = (overrides: readonly ImportLineOverride[]): ImportBatchDetailView => ({
+      batch: { id: 'b1', pages: { lineOverrides: overrides, unmappedLines: [] } }, proposals: [proposal([field('a')])],
+    } as unknown as ImportBatchDetailView);
+    const step = recorded(withoutUnmapped([decided({ kind: 'attribute', attributeId: 'a' })]), request(null), withoutUnmapped([]));
+    expect(step.after.label).toMatchObject({ kind: 'lineUndo', line: 'ΠΑΡ.ΝΕΡΟΥ' });
+    // Καμία πηγή ετικέτας ⇒ ο αριθμός της γραμμής (ποτέ επινοημένο κείμενο).
+    const bare = recorded(withoutUnmapped([override({ kind: 'attribute', attributeId: 'a' })]), request(null), withoutUnmapped([]));
+    expect(bare.after.label).toMatchObject({ line: '5' });
+  });
+
   it('άρνηση, αποτυχία μεταφοράς ή καμία αλλαγή ⇒ το βήμα φεύγει', () => {
     const before = view([]);
     const step = lineStepOf(before, before.proposals[0], request({ kind: 'ignore' }));

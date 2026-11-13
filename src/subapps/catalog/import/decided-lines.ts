@@ -26,6 +26,15 @@ export interface DecidedLine {
   readonly origin: ImportLineOverrideOrigin | null;
 }
 
+/**
+ * Η ετικέτα της γραμμής όπως **τυπώνεται** — ΕΝΑΣ κανόνας για τη λίστα αποφάσεων και τη στοίβα αναίρεσης (`review-history-line`).
+ * Η γραμμή χωρίς πεδίο τυπώνει και τη μονάδα· η ταυτότητα της απόφασης μόνο τις ετικέτες. Καμία ⇒ `null` (ποτέ επινοημένο κείμενο).
+ */
+export const printedLineLabelOf = (
+  source: Pick<ImportPageUnmappedLine, 'label'> | undefined,
+  override: Pick<ImportLineOverride, 'identity'> | undefined,
+): string | null => source?.label || override?.identity?.printed || null;
+
 /** Οι αποφάσεις του πίνακα, στη σειρά των γραμμών του. */
 export function decidedLinesOf(
   overrides: readonly ImportLineOverride[] | undefined,
@@ -41,8 +50,7 @@ export function decidedLinesOf(
         page,
         table,
         line: override.line,
-        // Η γραμμή χωρίς πεδίο τυπώνει και τη μονάδα· η ταυτότητα μόνο τις ετικέτες.
-        label: source?.label || override.identity?.printed || null,
+        label: printedLineLabelOf(source, override),
         values: source?.values ?? [],
         decision: override.decision,
         origin: override.origin ?? null,

@@ -15,6 +15,7 @@
  *    «είναι ακόμη όπως το άφησες;». **Γ**: πεδίο που δεν ξαναεμφανίζεται ίδιο παρακάμπτεται και μετριέται.
  */
 
+import { printedLineLabelOf } from '@/subapps/catalog/import/decided-lines';
 import { fieldAddress } from '@/subapps/catalog/import/human-edits';
 import { sameLineDecision } from '@/subapps/catalog/import/label-memory';
 import { lineOverrideOf, sameLine, stepAttributeIdOf } from '@/subapps/catalog/import/page-line-overrides';
@@ -65,9 +66,15 @@ const LINE_KIND: Readonly<Record<ImportLineDecision['kind'], LineStepKind>> = {
 
 const attributeTarget = (attributeId: string): ImportTarget => ({ kind: 'attribute', attributeId, channel: ANY_SLOT, locale: ANY_SLOT });
 
-/** Η λέξη της γραμμής όπως τη βλέπει ο άνθρωπος στη λίστα («ΠΑΡ.ΝΕΡΟΥ · m³/h»)· αλλιώς ο αριθμός της. */
-const lineTextOf = (view: ImportBatchDetailView, address: LineAddress): string =>
-  view.batch.pages?.unmappedLines?.find((line) => sameLine(line, address))?.label ?? String(address.line + 1);
+/**
+ * Η λέξη της γραμμής όπως τη βλέπει ο άνθρωπος στη λίστα («ΠΑΡ.ΝΕΡΟΥ · m³/h»)· αλλιώς ο αριθμός της. Αποφασισμένη γραμμή έχει φύγει
+ * από τις «χωρίς πεδίο» ⇒ η ετικέτα έρχεται από την ταυτότητα της απόφασης, με τον ίδιο κανόνα με τη λίστα αποφάσεων (`printedLineLabelOf`).
+ */
+const lineTextOf = (view: ImportBatchDetailView, address: LineAddress): string => {
+  const pages = view.batch.pages;
+  const source = pages?.unmappedLines?.find((line) => sameLine(line, address));
+  return printedLineLabelOf(source, lineOverrideOf(pages?.lineOverrides, address)) ?? String(address.line + 1);
+};
 
 function lineLabelOf(view: ImportBatchDetailView, before: LineMark, after: LineMark): ReviewStepLabel {
   const { decision } = after;
