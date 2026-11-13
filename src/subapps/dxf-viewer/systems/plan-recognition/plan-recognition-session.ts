@@ -54,6 +54,7 @@ import {
   type PlanReadingCorrections,
 } from '../../bim/plan-recognition/reading/reading-corrections';
 import { createPlanReadingCorrectionsController, type PlanReadingCorrectionsDeps } from './plan-reading-corrections';
+import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
 
 export type RasterLineSource = Extract<ProposalLineSource, { kind: 'raster' }>;
 
@@ -241,6 +242,8 @@ const CORRECTIONS_DEPS: PlanReadingCorrectionsDeps<RasterLineSource> = {
   lineSource: nextLineSource,
   publish: publishLineSource,
   placement: (floorId) => getFloorBackground(floorId) ?? null,
+  // ADR-929 §6.16 #8 — rAF → setTimeout(0) → rAF του κεντρικού scheduler (ADR-040): η λίστα ζωγραφίζεται πρώτα.
+  deferAfterPaint: (task) => UnifiedFrameScheduler.scheduleOnceDelayed('plan-reading-correction-fuse', task, 0),
 };
 const readingCorrections = createPlanReadingCorrectionsController<RasterLineSource>(() => CORRECTIONS_DEPS);
 

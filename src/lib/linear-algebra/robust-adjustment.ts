@@ -19,6 +19,7 @@
  */
 
 import {
+  analyzeObservations,
   chiSquareQuantile,
   solveWeightedLeastSquares,
   standardizedResidual,
@@ -93,12 +94,14 @@ function verdicts(obs: readonly LinearObservation[], active: readonly boolean[],
 /** Η συνόρθωση με επαναληπτική απόρριψη του χειρότερου ελέγξιμου χονδροειδούς σφάλματος. */
 export function adjustWithDataSnooping(obs: readonly LinearObservation[], unknowns: number, o: RobustAdjustmentOptions): RobustAdjustment {
   const active = obs.map(() => true);
-  let solution = solveWeightedLeastSquares(obs, unknowns, factorsOf(active));
+  // Η δομή δεν αλλάζει από γύρο σε γύρο (βγαίνει μόνο ένα βάρος) ⇒ ανάλυση μία φορά (ADR-929 §6.16 #8).
+  const analysis = analyzeObservations(obs, unknowns);
+  let solution = solveWeightedLeastSquares(obs, unknowns, factorsOf(active), analysis);
   for (let round = 0; round < obs.length && !solution.singular; round++) {
     const suspect = worstSuspect(obs, active, solution, o);
     if (suspect === null) break;
     active[suspect] = false;
-    const next = solveWeightedLeastSquares(obs, unknowns, factorsOf(active));
+    const next = solveWeightedLeastSquares(obs, unknowns, factorsOf(active), analysis);
     if (next.singular) {
       active[suspect] = true; // η απόρριψη θα άφηνε άγνωστο χωρίς παρατήρηση: σταματάμε, δεν σπάμε τη λύση
       break;

@@ -96,7 +96,7 @@ export function adjustNetwork(
   });
   const { solution, sigma0 } = adjustment;
   const freeK = scale.free && !solution.singular ? solution.x[kIndex] / MM_PER_M : null;
-  const sigmaK = freeK === null ? null : Math.sqrt(Math.max(0, solution.cofactor[kIndex][kIndex])) * Math.max(1, sigma0 ?? 1) / MM_PER_M;
+  const sigmaK = freeK === null ? null : Math.sqrt(Math.max(0, solution.cofactor.at(kIndex, kIndex))) * Math.max(1, sigma0 ?? 1) / MM_PER_M;
   return {
     adjustment,
     lineIndex,

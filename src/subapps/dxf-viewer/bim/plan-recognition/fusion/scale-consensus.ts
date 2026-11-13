@@ -11,7 +11,7 @@
  * @module subapps/dxf-viewer/bim/plan-recognition/fusion/scale-consensus
  */
 
-import type { DimensionTarget } from './dimension-binding';
+import type { BindingCandidate, DimensionTarget } from './dimension-binding';
 import type { PlanFusionOptions } from './plan-fusion-types';
 
 export interface ScaleConsensus {
@@ -30,37 +30,91 @@ const REFINE_PASSES = 2;
 
 const logScale = (gapPx: number, valueMm: number): number => Math.log(gapPx / valueMm);
 
-/** Οι ψήφοι **μιας** διάστασης ανά κάδο, κανονικοποιημένες ώστε η καλύτερη να είναι 1. */
-function votesOf(target: DimensionTarget, bin: number): Map<number, number> {
-  const local = new Map<number, number>();
-  const spread = Math.max(1, Math.ceil(target.toleranceRel / bin));
-  for (const c of target.candidates) {
-    const centre = Math.round(logScale(c.gapPx, target.dimension.valueMm) / bin);
-    for (let j = centre - spread; j <= centre + spread; j++) {
-      const vote = c.score * (1 - Math.abs(j - centre) / (spread + 1));
-      if (vote > (local.get(j) ?? 0)) local.set(j, vote);
-    }
-  }
-  const best = Math.max(0, ...local.values());
-  if (best > 0) for (const [j, v] of local) local.set(j, v / best);
-  return local;
+/** Ο κάδος του κέντρου μιας ψήφου· μη πεπερασμένος (κενό ή τιμή μηδέν) ⇒ η ψήφος δεν μετρά. */
+const centreBin = (gapPx: number, valueMm: number, bin: number): number => Math.round(logScale(gapPx, valueMm) / bin);
+const spreadOf = (target: DimensionTarget, bin: number): number => Math.max(1, Math.ceil(target.toleranceRel / bin));
+
+/** Το εύρος κάδων που αγγίζει οποιαδήποτε ψήφος: `[lo, lo + size)`. */
+interface BinRange {
+  readonly lo: number;
+  readonly size: number;
 }
 
-function modeBin(targets: readonly DimensionTarget[], bin: number): number | null {
-  const density = new Map<number, number>();
-  for (const t of targets) for (const [j, v] of votesOf(t, bin)) density.set(j, (density.get(j) ?? 0) + v);
-  let best: number | null = null;
-  let bestValue = 0;
-  for (const [j, v] of density) {
-    if (v > bestValue || (v === bestValue && best !== null && j < best)) [best, bestValue] = [j, v];
+function binRange(targets: readonly DimensionTarget[], bin: number): BinRange | null {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const t of targets) {
+    const spread = spreadOf(t, bin);
+    for (const c of t.candidates) {
+      const centre = centreBin(c.gapPx, t.dimension.valueMm, bin);
+      if (!Number.isFinite(centre)) continue;
+      lo = Math.min(lo, centre - spread);
+      hi = Math.max(hi, centre + spread);
+    }
   }
-  return best;
+  return lo <= hi ? { lo, size: hi - lo + 1 } : null;
+}
+
+/**
+ * Οι ψήφοι **μιας** διάστασης (ο καλύτερος πυρήνας ανά κάδο), κανονικοποιημένες ώστε η καλύτερη να είναι 1, προστίθενται
+ * στην πυκνότητα. Το `scratch` είναι μηδενικό στην είσοδο και ξαναγίνεται μηδενικό στην έξοδο (μόνο στο εύρος που αγγίχτηκε).
+ * 🔑 Πίνακες αντί για `Map` (ADR-929 §6.16 #8: 1 477 ms μετρημένα)· **ίδιο αποτέλεσμα bit προς bit** — ίδια σειρά
+ * αθροισμάτων ανά κάδο, ίδιο σύνολο κάδων (μόνο θετικές ψήφοι).
+ */
+function addVotesOf(target: DimensionTarget, bin: number, range: BinRange, scratch: Float64Array, density: Float64Array): void {
+  const spread = spreadOf(target, bin);
+  let first = range.size;
+  let last = -1;
+  let best = 0;
+  for (const c of target.candidates) {
+    const centre = centreBin(c.gapPx, target.dimension.valueMm, bin);
+    if (!Number.isFinite(centre)) continue;
+    const k0 = centre - range.lo;
+    for (let d = -spread; d <= spread; d++) {
+      const vote = c.score * (1 - Math.abs(d) / (spread + 1));
+      const k = k0 + d;
+      if (vote <= scratch[k]) continue;
+      scratch[k] = vote;
+      if (vote > best) best = vote;
+      if (k < first) first = k;
+      if (k > last) last = k;
+    }
+  }
+  for (let k = first; k <= last; k++) {
+    if (scratch[k] > 0) density[k] += scratch[k] / best;
+    scratch[k] = 0;
+  }
+}
+
+/** Ο κάδος με τη μεγαλύτερη πυκνότητα· σε ισοβαθμία ο **μικρότερος**. `null` χωρίς καμία θετική ψήφο. */
+function modeBin(targets: readonly DimensionTarget[], bin: number): number | null {
+  const range = binRange(targets, bin);
+  if (range === null) return null;
+  const density = new Float64Array(range.size);
+  const scratch = new Float64Array(range.size);
+  for (const t of targets) addVotesOf(t, bin, range, scratch, density);
+  let best = -1;
+  let bestValue = 0;
+  for (let k = 0; k < range.size; k++) {
+    if (density[k] > bestValue) [best, bestValue] = [k, density[k]];
+  }
+  return best < 0 ? null : best + range.lo;
 }
 
 interface Agreement {
   readonly logK: number;
   readonly support: number;
   readonly readingBacked: boolean;
+}
+
+/** Η δέση με το μεγαλύτερο σκορ μέσα στην ανοχή γύρω από το `logK`· σε ισοβαθμία η **πρώτη** (όπως η σταθερή ταξινόμηση). */
+function bestAgreeing(t: DimensionTarget, logK: number): BindingCandidate | undefined {
+  let best: BindingCandidate | undefined;
+  for (const c of t.candidates) {
+    if (!(Math.abs(logScale(c.gapPx, t.dimension.valueMm) - logK) <= t.toleranceRel)) continue;
+    if (best === undefined || c.score > best.score) best = c;
+  }
+  return best;
 }
 
 /** Ο σταθμισμένος μέσος της καλύτερης συμφωνούσας δέσης κάθε διάστασης γύρω από το `logK`. */
@@ -70,9 +124,7 @@ function agreeAround(targets: readonly DimensionTarget[], logK: number): Agreeme
   let support = 0;
   let readingBacked = false;
   for (const t of targets) {
-    const best = t.candidates
-      .filter((c) => Math.abs(logScale(c.gapPx, t.dimension.valueMm) - logK) <= t.toleranceRel)
-      .sort((a, b) => b.score - a.score)[0];
+    const best = bestAgreeing(t, logK);
     if (!best) continue;
     const w = 1 / (t.toleranceRel * t.toleranceRel);
     sum += w * logScale(best.gapPx, t.dimension.valueMm);

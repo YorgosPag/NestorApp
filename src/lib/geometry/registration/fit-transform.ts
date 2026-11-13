@@ -13,10 +13,10 @@
 
 import { composeAffine, type Affine2x3, type AffinePoint } from '../affine-2x3';
 import { adjustWithDataSnooping } from '../../linear-algebra/robust-adjustment';
-import type { Matrix } from '../../linear-algebra/dense-matrix';
 import {
   quadraticForm,
   solveWeightedLeastSquares,
+  type Cofactor,
   type LinearObservation,
   type ObservationTerm,
 } from '../../linear-algebra/weighted-least-squares';
@@ -86,7 +86,7 @@ function pointJacobian(model: RegistrationModel, u: AffinePoint): readonly [Obse
  * Αβεβαιότητα θέσης (px, 1σ, √(σ²ₓ+σ²ᵧ)) στη **χειρότερη** από τις 4 γωνίες του περιγράμματος των σημείων: σ₀²·J·Q_xx·Jᵀ.
  * Στις γωνίες, γιατί η αβεβαιότητα της affine μεγαλώνει τετραγωνικά μακριά από το κέντρο βάρους. σ₀ άγνωστο ⇒ a priori (1).
  */
-function worstCornerSigma(model: RegistrationModel, points: readonly AffinePoint[], norm: Affine2x3, q: Matrix, sigma0: number | null): number {
+function worstCornerSigma(model: RegistrationModel, points: readonly AffinePoint[], norm: Affine2x3, q: Cofactor, sigma0: number | null): number {
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
   const corners = [Math.min(...xs), Math.max(...xs)].flatMap((x) => [Math.min(...ys), Math.max(...ys)].map((y) => ({ x, y })));
@@ -101,7 +101,7 @@ function worstCornerSigma(model: RegistrationModel, points: readonly AffinePoint
 
 interface Solved {
   readonly singular: boolean;
-  readonly cofactor: Matrix;
+  readonly cofactor: Cofactor;
   readonly x: readonly number[];
   readonly residuals: readonly (number | null)[];
   readonly rejected: number;

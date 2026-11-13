@@ -41,6 +41,11 @@ export interface PlanReadingCorrectionsDeps<T> {
   readonly publish: (source: T) => void;
   /** Βήμα 2 — η τοποθέτηση του υποβάθρου ενός ορόφου, διαβασμένη τη στιγμή της πράξης· `null` = κανένα. */
   readonly placement: (floorId: string) => RasterPlacement | null;
+  /**
+   * ADR-929 §6.16 #8 — τρέξε τη βαριά δουλειά (σύντηξη + δημοσίευση) **μετά την επόμενη ζωγραφική**, ώστε η λίστα να δείξει
+   * τη διόρθωση στο ίδιο καρέ με το κλικ. Επιστρέφει ακύρωση. Παραγωγή: `UnifiedFrameScheduler.scheduleOnceDelayed(…, 0)`.
+   */
+  readonly deferAfterPaint: (task: () => void) => () => void;
 }
 
 /** Βήμα 2 — πού να πάει η όψη: το πλαίσιο του κειμένου στη σκηνή, και αν κρατιέται το ζουμ του ανθρώπου. */
@@ -55,7 +60,26 @@ const sameCorrection = (a: PlanReadingCorrection | undefined, b: PlanReadingCorr
 };
 
 export function createPlanReadingCorrectionsController<T>(depsOf: () => PlanReadingCorrectionsDeps<T>) {
-  /** Μία αλλαγή για ένα κείμενο της τρέχουσας ανάγνωσης· `false` = δεν υπάρχει τέτοιο κείμενο ή ανάγνωση. */
+  /** Η εκκρεμής σύντηξη της πιο πρόσφατης διόρθωσης· νεότερη διόρθωση την ακυρώνει (μόνο η τελευταία τρέχει). */
+  let cancelPending: (() => void) | null = null;
+
+  /**
+   * Η σύντηξη για τις διορθώσεις `next`, **μόνο** αν ισχύουν ακόμη: ίδια αναγνώριση, ίδια ανάγνωση, ίδιο σύνολο διορθώσεων
+   * στο store. Αλλιώς κάποιος άλλος πέρασε μπροστά (νέα αναγνώριση/ανάγνωση: ο ιδιοκτήτης σβήνει τις διορθώσεις) ⇒ τίποτα.
+   */
+  function fuseIfCurrent(run: PlanRecognitionRun, reading: PlanReadingOutcome, next: PlanReadingCorrections): void {
+    const now = planRecognitionStore.get();
+    if (now.run !== run || now.reading !== reading || now.readingCorrections !== next) return;
+    const fusion = depsOf().fuse(run, reading, next);
+    planRecognitionStore.patch({ fusion });
+    depsOf().publish(depsOf().lineSource(run, fusion));
+  }
+
+  /**
+   * Μία αλλαγή για ένα κείμενο της τρέχουσας ανάγνωσης· `false` = δεν υπάρχει τέτοιο κείμενο ή ανάγνωση.
+   * ADR-929 §6.16 #8 — **αισιόδοξα**, όπως το Figma: οι διορθώσεις γράφονται αμέσως (η λίστα τις δείχνει στο ίδιο καρέ) και η
+   * σύντηξη + δημοσίευση τρέχουν μετά τη ζωγραφική. Γρήγορα διαδοχικά κλικ ⇒ μία σύντηξη, της τελευταίας κατάστασης.
+   */
   function commit(textId: string, requested: PlanReadingCorrection | null): boolean {
     const { run, reading, readingCorrections } = planRecognitionStore.get();
     if (!run || reading?.status !== 'read') return false;
@@ -66,9 +90,12 @@ export function createPlanReadingCorrectionsController<T>(depsOf: () => PlanRead
     const current = readingCorrections.model === model ? readingCorrections.byTextId[textId] : undefined;
     if (sameCorrection(current, correction)) return true;
     const next = withReadingCorrection(readingCorrections, model, textId, correction);
-    const fusion = depsOf().fuse(run, reading, next);
-    planRecognitionStore.patch({ readingCorrections: next, fusion });
-    depsOf().publish(depsOf().lineSource(run, fusion));
+    planRecognitionStore.patch({ readingCorrections: next });
+    cancelPending?.();
+    cancelPending = depsOf().deferAfterPaint(() => {
+      cancelPending = null;
+      fuseIfCurrent(run, reading, next);
+    });
     return true;
   }
 

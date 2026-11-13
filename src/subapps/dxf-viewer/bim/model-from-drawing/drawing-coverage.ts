@@ -20,12 +20,7 @@
  */
 
 import type { Entity } from '../../types/entities';
-import {
-  extractLineSegments,
-  type DetectedRectangle,
-  type RegionLineSeg,
-} from '../walls/wall-in-region';
-import { rectEdgeSourceIds } from '../walls/same-color-rects';
+import { extractLineSegments, type RegionLineSeg } from '../walls/wall-in-region';
 
 export interface DrawingCoverage {
   /** Οντότητες με τον ρόλο που είναι ακμή ανιχνευμένου ορθογωνίου. */
@@ -52,19 +47,19 @@ function distinctSourceIds(segments: readonly RegionLineSeg[]): Set<string> {
  *
  * @param entities      όλες οι οντότητες του σχεδίου
  * @param roleSegments  τα τμήματα των οντοτήτων που έχουν τον ρόλο (ό,τι πήρε ο ανιχνευτής)
- * @param rects         ΟΛΑ τα ανιχνευμένα ορθογώνια, ανεξαρτήτως κατάληξης
- * @param tol           η ίδια ανοχή κόμβων με την ανίχνευση (scene units)
+ * @param rectSourceIds για ΚΑΘΕ ανιχνευμένο ορθογώνιο (ανεξαρτήτως κατάληξης) τα ids-πηγή των ακμών του, όπως τα έδωσε το
+ *                      `rectEdgeSourceIds` με την ίδια ανοχή κόμβων. Δίνονται έτοιμα: ο καλών τα έχει ήδη υπολογίσει για τα
+ *                      στοιχεία της πρότασης, και ο δεύτερος υπολογισμός κόστιζε 458 ms (ADR-929 §6.16 #8, μετρημένο).
  */
 export function computeDrawingCoverage(
   entities: readonly Entity[],
   roleSegments: readonly RegionLineSeg[],
-  rects: readonly DetectedRectangle[],
-  tol: number,
+  rectSourceIds: readonly (readonly (readonly string[])[])[],
 ): DrawingCoverage {
   const roleIds = distinctSourceIds(roleSegments);
   const explained = new Set<string>();
-  for (const rect of rects) {
-    for (const id of rectEdgeSourceIds(rect, roleSegments, tol).flat()) explained.add(id);
+  for (const perEdge of rectSourceIds) {
+    for (const id of perEdge.flat()) explained.add(id);
   }
   const unexplainedIds = [...roleIds].filter((id) => !explained.has(id));
   const totalCount = distinctSourceIds(extractLineSegments(entities)).size;

@@ -14,6 +14,9 @@
  * όταν απέκτησε **δεύτερο** καταναλωτή: τη συνόρθωση διαστάσεων της αναγνώρισης κάτοψης, που λύνει τις κανονικές εξισώσεις
  * `AᵀPA·x = AᵀP·l` (συμμετρικές). Η συνόρθωση χρειάζεται και στήλες του `N⁻¹` (τεστ Baarda) ⇒ {@link factorSymmetric} +
  * {@link solveFactored}: **μία** παραγοντοποίηση, πολλές λύσεις. Το `solveSymmetric` μένει απαράλλακτο για τον FEM.
+ * ⚠️ **ADR-929 §6.16 #8 (2026-11-13)**: η συνόρθωση πέρασε στην **αραιή** εκδοχή (`./sparse-ordering.ts` + `./sparse-ldlt.ts`,
+ * επιλεγμένος αντίστροφος Takahashi). Τα `factorSymmetric`/`solveFactored` μένουν ως η πυκνή αναφορά — είναι το μαντείο της
+ * άγκυρας ισοδυναμίας `__tests__/sparse-ldlt.test.ts`.
  *
  * @see ./dense-matrix.ts
  * @see subapps/dxf-viewer/bim/structural/analytical/solver/analysis-diagnostics.ts — `singular` ⇒ StructuralDiagnostic

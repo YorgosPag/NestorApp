@@ -42,16 +42,31 @@ const PLACEMENT: RasterPlacement = {
   transform: { translateX: 2500, translateY: -1200, scaleX: 8.78, scaleY: 8.82, rotation: 0 },
 };
 
-function harness(placement: RasterPlacement | null = PLACEMENT) {
+/**
+ * `deferred: false` ⇒ η «μετά τη ζωγραφική» δουλειά τρέχει αμέσως (η σημασιολογία των παλιών tests)· `true` ⇒ μένει σε
+ * ουρά ώσπου να καλέσει το test `paint()` (το καρέ ζωγραφίστηκε), με ακύρωση όπως ο scheduler.
+ */
+function harness(placement: RasterPlacement | null = PLACEMENT, deferred = false) {
   const fused: PlanReadingCorrections[] = [];
   const published: string[] = [];
+  const queue: { task: () => void; cancelled: boolean }[] = [];
   const controller = createPlanReadingCorrectionsController<string>(() => ({
     fuse: (_run, _reading, corrections) => { fused.push(corrections); return FUSION; },
     lineSource: () => `src#${fused.length}`,
     publish: (source) => { published.push(source); },
     placement: (floorId) => (floorId === 'flr' ? placement : null),
+    deferAfterPaint: (task) => {
+      if (!deferred) {
+        task();
+        return () => undefined;
+      }
+      const entry = { task, cancelled: false };
+      queue.push(entry);
+      return () => { entry.cancelled = true; };
+    },
   }));
-  return { controller, fused, published };
+  const paint = () => queue.splice(0).forEach((e) => { if (!e.cancelled) e.task(); });
+  return { controller, fused, published, paint };
 }
 
 beforeEach(() => {
@@ -97,6 +112,49 @@ describe('Δ21 (δ) — commit με τον κοινό κανόνα «ίδιο μ
     expect(h.fused).toHaveLength(1);
     expect(h.published).toEqual(['src#1']);
     expect(planRecognitionStore.get().readingCorrections.byTextId).toEqual({ t2: { kind: 'value', raw: '4.12' } });
+  });
+});
+
+describe('ADR-929 §6.16 #8 — αισιόδοξη διόρθωση: πρώτα η λίστα, η σύντηξη μετά τη ζωγραφική', () => {
+  it('το κλικ γράφει τις διορθώσεις αμέσως· η σύντηξη και η δημοσίευση περιμένουν το καρέ', () => {
+    const h = harness(PLACEMENT, true);
+    const fusionBefore = planRecognitionStore.get().fusion;
+    h.controller.correct('t2', '4.12');
+    expect(planRecognitionStore.get().readingCorrections.byTextId).toEqual({ t2: { kind: 'value', raw: '4.12' } });
+    expect(planRecognitionStore.get().fusion).toBe(fusionBefore);
+    expect(h.fused).toEqual([]);
+    h.paint();
+    expect(h.fused).toHaveLength(1);
+    expect(planRecognitionStore.get().fusion).toBe(FUSION);
+    expect(h.published).toEqual(['src#1']);
+  });
+
+  it('γρήγορα διαδοχικά κλικ ⇒ ΜΙΑ σύντηξη, με ΟΛΕΣ τις διορθώσεις', () => {
+    const h = harness(PLACEMENT, true);
+    h.controller.correct('t2', '4.12');
+    h.controller.confirm('t1');
+    h.controller.correct('t2', '4.13');
+    h.paint();
+    expect(h.fused).toHaveLength(1);
+    expect(h.fused[0].byTextId).toEqual({ t1: { kind: 'confirmed' }, t2: { kind: 'value', raw: '4.13' } });
+    expect(h.published).toHaveLength(1);
+  });
+
+  it('νέα αναγνώριση πριν το καρέ ⇒ η παλιά σύντηξη δεν τρέχει (δεν γράφει πάνω στη νέα)', () => {
+    const h = harness(PLACEMENT, true);
+    h.controller.correct('t2', '4.12');
+    planRecognitionStore.patch({ run: { ...RUN, id: 'rec-2' } });
+    h.paint();
+    expect(h.fused).toEqual([]);
+    expect(h.published).toEqual([]);
+  });
+
+  it('οι διορθώσεις άλλαξαν από αλλού πριν το καρέ ⇒ καμία σύντηξη για τις παρωχημένες', () => {
+    const h = harness(PLACEMENT, true);
+    h.controller.correct('t2', '4.12');
+    planRecognitionStore.patch({ readingCorrections: { ...planRecognitionStore.get().readingCorrections } });
+    h.paint();
+    expect(h.fused).toEqual([]);
   });
 });
 

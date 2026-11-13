@@ -44,6 +44,7 @@ import {
 } from '../walls/wall-in-region';
 import { collectColumnFootprints } from '../walls/wall-trims';
 import { rectEdgeSourceIds, type EntityColorResolver } from '../walls/same-color-rects';
+import { EdgeSourceIndex } from '../walls/edge-source-index';
 import { computeFillingWalls, REGION_REJECT_OCCUPIED_KEY } from '../walls/filling-walls-compute';
 import { closedRectangleStrategy, type WallDetectionStrategy } from './wall-detection-strategy';
 import { computeDrawingCoverage, type DrawingCoverage } from './drawing-coverage';
@@ -377,12 +378,15 @@ export function computeWallProposal(input: WallProposalInput): WallProposal {
   const { decisions, undecided } = resolveDecisions(rects, keyOf, input);
   const outcomeOf = decideOutcomes(rects, input, { thicknessOf, groups, undecided });
 
+  // Μία αντιστοίχιση ακμή → τμήματα για όλα τα ορθογώνια, πάνω σε ευρετήριο· την ξαναχρησιμοποιεί η κάλυψη (ADR-929 §6.16 #8).
+  const edgeIndex = new EdgeSourceIndex(roleSegments, tol);
+  const sourceIdsOf = new Map(rects.map((r) => [r, rectEdgeSourceIds(r, edgeIndex, tol)] as const));
   const items: WallProposalItem[] = rects.map((rect) => {
     const axis = detectedRectAxis(rect);
     return {
       key: keyOf.get(rect) ?? '',
       rect,
-      sourceIds: rectEdgeSourceIds(rect, roleSegments, tol),
+      sourceIds: sourceIdsOf.get(rect) ?? [],
       thicknessMm: thicknessOf.get(rect) ?? Math.round(axis.thickness / scale),
       lengthMm: Math.round(axis.length / scale),
       suggestedFunction: suggestions.get(rect) ?? 'interior',
@@ -391,5 +395,5 @@ export function computeWallProposal(input: WallProposalInput): WallProposal {
     };
   });
   const walls = items.flatMap((i) => (i.wall ? [i.wall] : []));
-  return { items, walls, groups, coverage: computeDrawingCoverage(entities, roleSegments, rects, tol), decisions };
+  return { items, walls, groups, coverage: computeDrawingCoverage(entities, roleSegments, [...sourceIdsOf.values()]), decisions };
 }

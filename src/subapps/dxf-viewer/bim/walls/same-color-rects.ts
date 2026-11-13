@@ -25,6 +25,7 @@ import {
   type DetectedRectangle,
   type RegionLineSeg,
 } from './wall-in-region';
+import { EdgeSourceIndex } from './edge-source-index';
 
 /** Resolver resolved/rendered χρώματος (lowercase hex) μιας οντότητας· `null` αν άγνωστο. */
 export type EntityColorResolver = (entity: Entity) => string | null;
@@ -86,16 +87,22 @@ function edgeSourceSegments(
 /**
  * Τα ids των τμημάτων-πηγή των 4 ακμών ενός πλαισίου: ένας πίνακας ανά ακμή, σε σειρά ακμών.
  * Κενός πίνακας = καμία γραμμή-πηγή εντός ανοχής. Πάνω από ένα id = συμπίπτουσες γραμμές.
+ *
+ * `source`: τα τμήματα (γραμμική σάρωση — ένα πλαίσιο, π.χ. η κολώνα) **ή** ένα {@link EdgeSourceIndex} χτισμένο πάνω
+ * τους με την **ίδια** ανοχή, όταν ρωτάνε πολλά πλαίσια (ADR-929 §6.16 #8). Ίδιο αποτέλεσμα και στις δύο μορφές.
  */
 export function rectEdgeSourceIds(
   rect: DetectedRectangle,
-  segments: readonly RegionLineSeg[],
+  source: readonly RegionLineSeg[] | EdgeSourceIndex,
   tol: number,
 ): readonly (readonly string[])[] {
   const poly = rect.polygon;
   const perEdge: string[][] = [];
   for (let i = 0; i < 4; i++) {
-    const ids = edgeSourceSegments(poly[i], poly[(i + 1) % 4], segments, tol)
+    const a = poly[i];
+    const b = poly[(i + 1) % 4];
+    const segments = source instanceof EdgeSourceIndex ? source.candidates(a, b) : source;
+    const ids = edgeSourceSegments(a, b, segments, tol)
       .map((s) => s.id)
       .filter((id): id is string => id !== undefined);
     perEdge.push([...new Set(ids)]);
