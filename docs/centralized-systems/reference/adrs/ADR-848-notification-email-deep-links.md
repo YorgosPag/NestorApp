@@ -56,7 +56,7 @@ Litmus «Bulletproof buttons» / «Dark mode» · WebAIM «Link text» · Postma
 outbound-email-flush ─▶ liveEmailLinks() ─▶ planEmailDelivery(…, links) · soloEnvelope(…, links)
                                             └─▶ αλυσίδα Resend→Mailgun (ΙΔΙΕΣ κεφαλίδες και στους δύο)
 κλικ ─▶ /n/{id} ─(χωρίς συνεδρία)─▶ /login?next=/n/{id} ─▶ πίσω
-               ├─(δική σου)──▶ seen + openedVia:'email' ─▶ /o/<χώρος><προορισμός>
+               ├─(δική σου)──▶ delivery.state='seen' (§6β) + openedVia:'email' ─▶ /o/<χώρος><προορισμός>
                └─(ξένη/ανύπαρκτη)─▶ «Η ειδοποίηση δεν είναι διαθέσιμη»
 υποσέλιδο ─▶ /email/preferences/<token>  (GET = μόνο ανάγνωση)
 κεφαλίδα / κουμπιά ─▶ POST /api/notifications/email/subscription?t=<token> ─▶ transaction ─▶ {previous, current}
@@ -165,6 +165,40 @@ notification-email-render, notification-email-envelope, email-subscription, user
 ανιχνευτής · λάθος χώρος ιδιώτη · μαντεψιά στην επανάληψη · κανάλι · χειρόγραφο PO · χώρος εντολής
 από τον συγγραφέα · κάτοχος = `createdBy`) · CHECK 3.28 (diff, 33 αρχεία) · 3.47 · 3.56 · 3.61 · 3.73
 · 3.70 (`--all`). **Όχι tsc (N.17).**
+
+---
+
+## 6β. ΕΝΑ ΣΧΗΜΑ ΓΙΑ ΤΟ «ΔΙΑΒΑΣΤΗΚΕ» *(2026-11-13, ADR-939 §6.1 βήμα 6Γ)*
+
+🔴 **Η υπόσχεση του §6 («ένας συγγραφέας») κρατούσε για τον διακομιστή, όχι για το σχήμα.** Μετρημένο: ο διακομιστής
+(`POST /api/notifications/ack` · `/n/{id}`) έγραφε `{seen: true, seenAt: ISO}`, ενώ ο πελάτης
+(`notificationService.markNotificationsAsRead`) έγραφε `{'delivery.state': 'seen', seenAt: Timestamp}`. **Όλοι** οι αναγνώστες
+του κουδουνιού (`isNotificationUnread`, unseen count του `GET /api/notifications`, `fetchNotifications({unseenOnly})`) ρωτούν
+**μόνο** το `delivery.state`. Το `seen: true` το διάβαζε μόνο ο κριτής email του ADR-939 6Β. ⇒ Ειδοποίηση που άνοιγε από το
+email ή από το «Προβολή» (που περνά από το `/n/{id}`, §6α) **έμενε αδιάβαστη στο κουδούνι για πάντα**.
+
+**Απόφαση.** Κανονικό σχήμα: `delivery.state = 'seen'` + `seenAt` = **ώρα διακομιστή** (`serverTimestamp`, όπως το
+`createdAt`). Το επιτρέπουν ήδη οι κανόνες στον πελάτη (`isValidNotificationUpdate`: `delivery` · `seenAt`) και είναι μέρος
+της μηχανής καταστάσεων `DeliveryState`. Ένα boolean δίπλα στην κατάσταση θα ήταν δεύτερη αλήθεια.
+
+| Σημείο | Τι |
+|---|---|
+| `lib/notifications/notification-state.ts` | `SEEN_DELIVERY_STATE` · `canMarkSeen(state)`: η **μία** κρίση και για τους δύο γραφείς — μόνο από αδιάβαστη |
+| `server/notifications/notification-read.ts` | `seenFields` ⇒ `seenUpdateFor(raw)` (ή `null`)· `markNotificationsSeen` σε **συναλλαγή** (`getAll` + `update`) |
+| `server/notifications/notification-permalink.ts` | `recordOpened` σε συναλλαγή: το ίχνος (`actionTaken` · `openedVia`) πάντα, η κατάσταση μόνο αν `canMarkSeen` |
+| `services/notificationService.ts` | `markNotificationsAsRead`: `seenAt: serverTimestamp()` (ήταν ρολόι πελάτη) |
+| `app/api/notifications/route.ts` | unseen count ⇒ `isNotificationUnread` (ήταν `!== 'seen'`, που μετρούσε `acted`/`dismissed` ως αδιάβαστα) |
+
+🔑 **Ποτέ υποβάθμιση**: ως τώρα και οι δύο γραφείς έγραφαν τυφλά, άρα ένα άνοιγμα από email μιας ειδοποίησης με ενέργεια
+(`acted`) ή απορριμμένης (`dismissed`) θα την υποβάθμιζε σε `seen` ή θα την αναβίωνε. Η συναλλαγή κρίνει την **τρέχουσα**
+κατάσταση: καμία χαμένη «απόρριψη» κάτω από ένα παράλληλο «διαβάστηκε».
+
+🔶 **Όρια (δηλωμένα).**
+- Τα **παλιά** έγγραφα με `seen: true` και αδιάβαστη κατάσταση φαίνονται ακόμη αδιάβαστα στο κουδούνι. Ο κριτής email
+  (`notificationWasSeen`) τα δέχεται ως διαβασμένα (δίχτυ). Backfill μίας χρήσης: **πρόταση, όχι υλοποίηση**.
+- Το query `fetchNotifications({unseenOnly})` κρατά `where('delivery.state', '!=', 'seen')`, άρα μετρά `acted` ως αδιάβαστα.
+  Η διόρθωση (`in [...]`) αλλάζει δείκτη (CHECK 3.15)· **μόνο αναφορά**.
+- Ο πελάτης γράφει χωρίς συναλλαγή· τον φράζει το φίλτρο `isNotificationUnread` του `useNotificationActions.markRead`.
 
 ---
 
@@ -315,3 +349,6 @@ notification-email-render, notification-email-envelope, email-subscription, user
   σπίτι της υπόθεσης. Δεν δίνει δικαίωμα (το κρίνει το `uid` του token)· απούσα ⇒ το ίδιο 404. Ο αναγνώστης έγινε
   **ένας**: `server/lib/request-path.ts` (`readRequestPath`), και το `loginHrefForRequest` τον καλεί. Έτσι
   γιατρεύονται και ειδοποιήσεις email γραμμένες **πριν** από αποχώρηση από γραφείο (αποθηκευμένος προορισμός).
+- **2026-11-13** — 🔴 **Ένα σχήμα για το «διαβάστηκε» (§6β, ADR-939 §6.1 βήμα 6Γ).** Ο διακομιστής έγραφε `seen: true`, που
+  κανένας αναγνώστης του κουδουνιού δεν διάβαζε ⇒ ειδοποίηση ανοιγμένη από email έμενε αδιάβαστη. Πλέον `delivery.state = 'seen'` +
+  `seenAt` (ώρα διακομιστή) και από τους δύο γραφείς, μόνο από αδιάβαστη (`canMarkSeen`), σε συναλλαγή στον διακομιστή.

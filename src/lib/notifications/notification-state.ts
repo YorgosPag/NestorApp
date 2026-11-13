@@ -37,3 +37,19 @@ export function isNotificationRead(state: DeliveryState): boolean {
 export function isNotificationUnread(state: DeliveryState): boolean {
   return !isNotificationRead(state) && !isHiddenFromInbox(state);
 }
+
+/**
+ * 🔑 **Το ΕΝΑ σχήμα του «διαβάστηκε»** (ADR-848 · ADR-939 §6.1 6Γ): `delivery.state = 'seen'` + `seenAt` (ώρα
+ * διακομιστή). Το γράφουν **και** ο πελάτης (`notificationService.markNotificationsAsRead`) **και** ο διακομιστής
+ * (`server/notifications/notification-read.ts` — ack · `/n/{id}`). Ως 2026-11-13 ο διακομιστής έγραφε `seen: true`,
+ * που **κανένας** αναγνώστης του κουδουνιού δεν διάβαζε ⇒ ειδοποίηση ανοιγμένη από το email έμενε «αδιάβαστη».
+ */
+export const SEEN_DELIVERY_STATE = 'seen' as const satisfies DeliveryState;
+
+/**
+ * **Επιτρέπεται η μετάβαση σε «διαβάστηκε»;** — μόνο από **αδιάβαστη** κατάσταση. Ποτέ υποβάθμιση του `acted`
+ * σε `seen`, ποτέ αναβίωση `dismissed`/`withdrawn` από ένα άνοιγμα. Η ΜΙΑ κρίση και για τους δύο γραφείς.
+ */
+export function canMarkSeen(state: DeliveryState): boolean {
+  return isNotificationUnread(state);
+}

@@ -15,9 +15,16 @@ jest.mock('server-only', () => ({}));
 
 const mockGet = jest.fn();
 const mockUpdate = jest.fn();
+// ADR-939 §6.1 6Γ — το «ανοίχτηκε» γράφεται σε συναλλαγή: ανάγνωση `get` (το ίδιο mock με την κρίση
+// προορισμού) και `update` πάνω στην τρέχουσα κατάσταση.
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: () => ({
-    collection: () => ({ doc: () => ({ get: mockGet, update: mockUpdate }) }),
+    collection: () => ({ doc: () => ({ get: mockGet }) }),
+    runTransaction: (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        get: (ref: { get: () => unknown }) => ref.get(),
+        update: (_ref: unknown, data: unknown) => mockUpdate(data),
+      }),
   }),
 }));
 
@@ -89,8 +96,22 @@ describe('Β — το κλικ', () => {
 
     expect(verdict).toEqual({ kind: 'redirect', to: '/o/nikos/listings/abc' });
     expect(mockUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ seen: true, actionTaken: 'view', openedVia: 'email' }),
+      expect.objectContaining({ 'delivery.state': 'seen', actionTaken: 'view', openedVia: 'email' }),
     );
+    expect(mockUpdate.mock.calls[0][0]).not.toHaveProperty('seen');
+  });
+
+  it('Β1β 🔴 — άνοιγμα ΔΕΝ υποβαθμίζει acted ούτε αναβιώνει dismissed· το ίχνος γράφεται (6Γ)', async () => {
+    for (const state of ['acted', 'dismissed']) {
+      mockUpdate.mockClear();
+      storedNotification({ userId: 'u1', delivery: { state }, actions: [{ url: '/listings/abc' }] });
+
+      await openNotificationPermalink('listing_match:u1:l1', OWNER);
+
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+      expect(mockUpdate.mock.calls[0][0]).not.toHaveProperty(['delivery.state']);
+      expect(mockUpdate.mock.calls[0][0]).toEqual(expect.objectContaining({ actionTaken: 'view' }));
+    }
   });
 
   it('Β2 — προορισμός ΕΚΤΟΣ χώρου (`/offers`) φεύγει αυτούσιος', async () => {
@@ -123,7 +144,9 @@ describe('Β — το κλικ', () => {
 
   it('Β5 — πεσμένη σημείωση «διαβάστηκε» ΔΕΝ εμποδίζει την πλοήγηση', async () => {
     storedNotification({ userId: 'u1', actions: [{ url: '/listings/abc' }] });
-    mockUpdate.mockRejectedValue(new Error('firestore unavailable'));
+    mockUpdate.mockImplementation(() => {
+      throw new Error('firestore unavailable');
+    });
 
     expect(await openNotificationPermalink('listing_match:u1:l1', OWNER)).toEqual({
       kind: 'redirect',

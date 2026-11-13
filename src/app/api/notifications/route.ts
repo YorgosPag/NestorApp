@@ -20,6 +20,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { fetchNotifications } from '@/services/notificationService';
 import type { Notification } from '@/types/notification';
+import { isNotificationUnread } from '@/lib/notifications/notification-state';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -69,8 +70,9 @@ const baseGET = async (request: NextRequest) => {
           unseenOnly
         });
 
-        // ?? ENTERPRISE: Count unseen using delivery.state
-        const unseenCount = items.filter((item: Notification) => item.delivery.state !== 'seen').length;
+        // 🔑 Ο ΕΝΑΣ κριτής του κουδουνιού (ADR-867): ως 2026-11-13 εδώ ζούσε `state !== 'seen'`, που μετρούσε
+        //    ως αδιάβαστες και τις `acted` / `dismissed` / `withdrawn` (ADR-939 §6.1 6Γ).
+        const unseenCount = items.filter((item: Notification) => isNotificationUnread(item.delivery.state)).length;
 
         logger.info('Notifications fetched', {
           userId: ctx.uid,

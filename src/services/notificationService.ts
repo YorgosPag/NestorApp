@@ -14,6 +14,7 @@ import {
   doc,
   deleteField,
   documentId,
+  serverTimestamp,
   Timestamp,
   type QueryConstraint,
   startAfter,
@@ -24,6 +25,7 @@ import type { Notification, Severity } from '@/types/notification';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { fieldToISO, normalizeToMillisOrNull } from '@/lib/date-local';
 import { nowTimestamp } from '@/lib/firestore-now';
+import { SEEN_DELIVERY_STATE } from '@/lib/notifications/notification-state';
 import { firestoreQueryService } from '@/services/firestore';
 
 const COLLECTION_NAME = COLLECTIONS.NOTIFICATIONS;
@@ -107,13 +109,15 @@ export async function fetchNotifications(params: NotificationQuery): Promise<Not
 }
 
 /**
- * Mark notifications as read
+ * Mark notifications as read — το **ίδιο** σχήμα με τον διακομιστή (`SEEN_DELIVERY_STATE` · ADR-848 · ADR-939 §6.1 6Γ).
+ * Ο καλών (`useNotificationActions.markRead`) στέλνει μόνο όσες είναι αδιάβαστες (`isNotificationUnread`).
+ * `seenAt` = ώρα **διακομιστή**, όπως το `createdAt` — το ρολόι του πελάτη δεν είναι μάρτυρας.
  */
 export async function markNotificationsAsRead(notificationIds: string[]): Promise<void> {
   const updatePromises = notificationIds.map(id =>
     updateDoc(doc(db, COLLECTION_NAME, id), {
-      'delivery.state': 'seen',
-      seenAt: nowTimestamp()
+      'delivery.state': SEEN_DELIVERY_STATE,
+      seenAt: serverTimestamp()
     })
   );
 

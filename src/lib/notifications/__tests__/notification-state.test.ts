@@ -4,9 +4,16 @@
  *   Σ-1  🔴 Η αποσυρμένη ΔΕΝ φαίνεται και ΔΕΝ μετρά στο σήμα (μετάλλαξη: λείπει από τις κρυφές)
  *   Σ-2  Η «με ενέργεια» είναι διαβασμένη — ίδια απάντηση στο σήμα και στη λίστα (η παλιά απόκλιση)
  *   Σ-3  Κάθε κατάσταση απαντά σε ΑΚΡΙΒΩΣ ένα από: αδιάβαστη · διαβασμένη · κρυφή
+ *   Σ-4  🔴 Η μετάβαση σε «διαβάστηκε» επιτρέπεται ΜΟΝΟ από αδιάβαστη (μετάλλαξη: `canMarkSeen = () => true`)
  */
 
-import { isHiddenFromInbox, isNotificationRead, isNotificationUnread } from '@/lib/notifications/notification-state';
+import {
+  SEEN_DELIVERY_STATE,
+  canMarkSeen,
+  isHiddenFromInbox,
+  isNotificationRead,
+  isNotificationUnread,
+} from '@/lib/notifications/notification-state';
 import type { DeliveryState } from '@/types/notification';
 
 const ALL: readonly DeliveryState[] = ['queued', 'sent', 'delivered', 'seen', 'acted', 'failed', 'expired', 'dismissed', 'withdrawn'];
@@ -28,5 +35,11 @@ describe('ο κριτής κατάστασης ειδοποίησης', () => {
       const buckets = [isNotificationUnread(state), isNotificationRead(state), isHiddenFromInbox(state)].filter(Boolean);
       expect({ state, buckets: buckets.length }).toStrictEqual({ state, buckets: 1 });
     }
+  });
+
+  it('Σ-4 🔴 «διαβάστηκε» μόνο από αδιάβαστη — ποτέ υποβάθμιση του acted, ποτέ αναβίωση κρυφής (ADR-939 §6.1 6Γ)', () => {
+    const allowed = ALL.filter((state) => canMarkSeen(state));
+    expect(allowed).toStrictEqual(['queued', 'sent', 'delivered', 'failed', 'expired']);
+    expect(SEEN_DELIVERY_STATE).toBe('seen');
   });
 });

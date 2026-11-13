@@ -52,7 +52,7 @@ import {
 import { isInsideWorkspace } from '@/lib/workspace/workspace-scope';
 import type { WorkspaceRef } from '@/types/workspace-membership';
 
-import { seenFields } from './notification-read';
+import { seenUpdateFor } from './notification-read';
 
 const logger = createModuleLogger('NotificationPermalink');
 
@@ -141,10 +141,16 @@ async function addressOf(
  */
 async function recordOpened(notificationId: string, channel: PermalinkChannel): Promise<void> {
   try {
-    await getAdminFirestore()
-      .collection(COLLECTIONS.NOTIFICATIONS)
-      .doc(notificationId)
-      .update({ ...seenFields(), actionTaken: 'view', actionTakenAt: nowISO(), openedVia: channel });
+    const db = getAdminFirestore();
+    const ref = db.collection(COLLECTIONS.NOTIFICATIONS).doc(notificationId);
+    // 🔑 Συναλλαγή (ADR-939 §6.1 6Γ): το «διαβάστηκε» κρίνεται πάνω στην ΤΡΕΧΟΥΣΑ κατάσταση — ένα άνοιγμα δεν
+    //    υποβαθμίζει το `acted` ούτε αναβιώνει απορριμμένη/αποσυρμένη. Το ίχνος του ανοίγματος γράφεται πάντα.
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      if (!snapshot.exists) return;
+      const seen = seenUpdateFor(snapshot.data());
+      transaction.update(ref, { ...(seen ?? {}), actionTaken: 'view', actionTakenAt: nowISO(), openedVia: channel });
+    });
   } catch (error) {
     logger.warn('Η ειδοποίηση άνοιξε αλλά ΔΕΝ σημειώθηκε ως διαβασμένη', {
       data: { notificationId, channel, error: error instanceof Error ? error.message : String(error) },

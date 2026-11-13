@@ -1369,3 +1369,6 @@ network_act_teams/{actKey}      responsibleUid · memberUids[] · hostCompanyId 
   ~15′ μετά, αν το μήνυμα μείνει αδιάβαστο, αντί για τις 20:00 (Slack: τα DM δεν μπαίνουν σε σύνοψη). Η αναμονή των 15′ ζει πλέον
   στο SSoT (`NETWORK_THREAD_EMAIL_GRACE_MS`)· το `NETWORK_UNREAD_EMAIL_GRACE_MS` διαβάζει από εκεί. Ο κριτής «εκκρεμεί ακόμη;»
   (`network-unread-email.ts`) δεν άλλαξε.
+- **2026-11-13 (6Γ)** — Ο κριτής κατάστασης (Β9(β) Ε10) απέκτησε τη μετάβαση `canMarkSeen` + `SEEN_DELIVERY_STATE`, κοινή για
+  πελάτη και διακομιστή (ADR-848 §6β). Η πέμπτη διατύπωση (`!== 'seen'` στο unseen count του `GET /api/notifications`) ρωτά πλέον
+  `isNotificationUnread`. Το query `unseenOnly` (`!= 'seen'`) μένει, γιατί αλλάζει δείκτη (μόνο αναφορά).
