@@ -520,6 +520,7 @@
           },
           "valueMm": "= {value} mm",
           "noUnit": "unit not proven",
+          "unknownUnit": "unknown unit “{suffix}”",
           "confidence": "confidence {percent}%",
           "status": {
             "consistent": "agrees with the drawing",

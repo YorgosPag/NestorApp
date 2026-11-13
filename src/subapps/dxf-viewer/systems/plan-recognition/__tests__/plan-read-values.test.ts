@@ -66,8 +66,8 @@ describe('planReadValueRows — Δ21 (δ): η πιο ύποπτη πρώτη', (
   it('κάθε γραμμή: τιμή, κατάσταση, απόκλιση σχεδίου − γραμμένου, w, προέλευση «διορθώθηκε»', () => {
     const rows = new Map(planReadValueRows(READING, FUSION).map((r) => [r.textId, r]));
     expect(rows.get('t3')).toEqual({
-      textId: 't3', raw: '4.12', correctedFrom: '4.15', confirmed: false, kind: 'dimension', valueMm: 4120, confidence: 0.9,
-      status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked', suggestion: '3.70', scaleKnown: true,
+      textId: 't3', raw: '4.12', correctedFrom: '4.15', confirmed: false, kind: 'dimension', valueMm: 4120, unknownUnit: null,
+      confidence: 0.9, status: 'conflict', deviationMm: -420, w: -4.2, priority: 'checked', suggestion: '3.70', scaleKnown: true,
     });
     expect(rows.get('t4')).toMatchObject({ valueMm: null, status: null, deviationMm: null, correctedFrom: null });
   });
@@ -175,5 +175,37 @@ describe('Δ21 (δ) βήμα 1 — planReadThumbRect: το πλαίσιο της
   });
   it('ελάχιστο περιθώριο 2 px σε πολύ χαμηλό πλαίσιο', () => {
     expect(planReadThumbRect({ minX: 10, minY: 10, maxX: 20, maxY: 12 })).toEqual({ minX: 8, minY: 8, maxX: 22, maxY: 14 });
+  });
+});
+
+describe('Δ21 (δ) — διάσταση με ΑΓΝΩΣΤΗ μονάδα («2,05 kh.»: χειρόγραφο «μ.μ.» διαβασμένο λάθος)', () => {
+  const sketch = (texts: readonly PlanText[]): PlanReading => ({
+    ...READING,
+    texts: [...texts],
+    dimensions: texts.flatMap((t, i) => (t.raw.endsWith(' m') ? [{ textId: t.id, valueMm: 1000 * (i + 1), segmentIds: [], confidence: { score: 0.9, factors: {} } }] : [])),
+  });
+  const DOC014 = sketch([
+    text('a', '4,12 m', 'dimension', 0.98), text('b', '2,05 m', 'dimension', 0.95), text('c', '2,05 kh.', 'dimension', 0.99),
+  ]);
+
+  it('ύποπτη, χωρίς τιμή, με την κατάληξη όπως διαβάστηκε — ΑΚΟΜΗ ΚΑΙ με υψηλή βεβαιότητα ανάγνωσης', () => {
+    const c = planReadValueRows(DOC014, null).find((r) => r.textId === 'c');
+    expect(c).toMatchObject({ kind: 'dimension', valueMm: null, unknownUnit: 'kh.', priority: 'suspect' });
+    expect(planReadValueRows(DOC014, null)[0].textId).toBe('c');
+  });
+
+  it('πρόταση από το ΙΔΙΟ το σχέδιο («2,05 m»), ΚΑΙ χωρίς κλίμακα — δεν κρίνει τον αριθμό, μόνο τη μονάδα', () => {
+    expect(planReadValueRows(DOC014, null).find((r) => r.textId === 'c')?.suggestion).toBe('2,05 m');
+  });
+
+  it('το σχέδιο δεν δίνει μία μονάδα ⇒ καμία πρόταση· η γραμμή μένει ύποπτη', () => {
+    const mixed = sketch([text('a', '4,12 m', 'dimension', 0.98), text('b', '35,5 cm', 'dimension', 0.95), text('c', '2,05 kh.', 'dimension', 0.99)]);
+    expect(planReadValueRows(mixed, null).find((r) => r.textId === 'c')).toMatchObject({ suggestion: null, priority: 'suspect' });
+  });
+
+  it('γνωστή μονάδα ή «άλλο κείμενο» ⇒ unknownUnit null', () => {
+    const rows = planReadValueRows(DOC014, null);
+    expect(rows.find((r) => r.textId === 'a')?.unknownUnit).toBeNull();
+    expect(planReadValueRows(READING, null).every((r) => r.unknownUnit === null)).toBe(true);
   });
 });

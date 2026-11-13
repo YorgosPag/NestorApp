@@ -91,11 +91,18 @@ function PriorityBadge({ priority, t }: { readonly priority: PlanReadValuePriori
   );
 }
 
-/** Η ερμηνεία: είδος, και για διάσταση η τιμή ή «χωρίς αποδεδειγμένη μονάδα». Ίδια για γραμμή και προεπισκόπηση. */
+/**
+ * Η ερμηνεία: είδος, και για διάσταση η τιμή, ή «άγνωστη μονάδα «kh.»» (Δ21 (δ)), ή «χωρίς αποδεδειγμένη μονάδα». Ίδια για
+ * γραμμή και προεπισκόπηση.
+ */
 function interpretationOf(row: PlanCorrectionPreview, t: Translate): string {
   const kind = t(KIND_KEY[row.kind]);
   if (row.valueMm !== null) return `${kind} ${t('modelFromDrawing.image.ocr.values.valueMm', { value: Math.round(row.valueMm) })}`;
-  return row.kind === 'dimension' ? `${kind} · ${t('modelFromDrawing.image.ocr.values.noUnit')}` : kind;
+  if (row.kind !== 'dimension') return kind;
+  const why = row.unknownUnit !== null
+    ? t('modelFromDrawing.image.ocr.values.unknownUnit', { suffix: row.unknownUnit })
+    : t('modelFromDrawing.image.ocr.values.noUnit');
+  return `${kind} · ${why}`;
 }
 
 /**

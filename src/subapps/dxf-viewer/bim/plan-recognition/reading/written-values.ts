@@ -42,7 +42,7 @@ export function writtenNumberTokens(raw: string): string[] {
 /**
  * Ρητή μονάδα στο τέλος: «3.50m», «350 cm», «35εκ.», «3500 χιλ.», «4,12 μ.μ.».
  * ADR-929 Δ21 (ε) — «μ.μ.» / «μ.μ» = **μέτρα** (απόφαση Giorgio). Το «μμ» χωρίς τελείες ΔΕΝ γίνεται δεκτό: διαβάζεται και
- * ως χιλιοστά, άρα η μονάδα δεν αποδεικνύεται ⇒ `null`, ποτέ μαντεψιά.
+ * ως χιλιοστά, άρα η μονάδα δεν αποδεικνύεται ⇒ καμία τιμή, ποτέ μαντεψιά (Δ21 (δ): «άγνωστη μονάδα», ορατή για έλεγχο).
  */
 const UNIT_SUFFIX: ReadonlyArray<readonly [RegExp, WrittenLengthUnit]> = [
   [/^(mm|χιλ\.?)$/iu, 'mm'],
@@ -51,22 +51,63 @@ const UNIT_SUFFIX: ReadonlyArray<readonly [RegExp, WrittenLengthUnit]> = [
 ];
 
 const LENGTH_TEXT = /^(\d+(?:[.,]\d+)?)\s*([\p{L}.]*)$/u;
+const HAS_LETTER = /\p{L}/u;
 
-function suffixUnit(suffix: string): WrittenLengthUnit | null | undefined {
-  if (suffix === '') return undefined;
-  for (const [pattern, unit] of UNIT_SUFFIX) if (pattern.test(suffix)) return unit;
-  return null;
+/**
+ * ADR-929 Δ21 (δ) — **τι μονάδα γράφει ένα κείμενο-μήκος**, ως διακριτή ένωση:
+ * - `explicit` — γνωστή κατάληξη («3.50m», «35 εκ.», «4,12 μ.μ.»)·
+ * - `bare` — σκέτος αριθμός («3.50», «350»): τη μονάδα τη λένε τα δεκαδικά ή το σχέδιο (`inferBareIntegerUnit`)·
+ * - `unknown` — αριθμός **με δεκαδικά** και κατάληξη με γράμμα που **δεν** είναι γνωστή μονάδα («2,05 kh.» — χειρόγραφο «μ.μ.»
+ *   που διαβάστηκε λάθος· «4,12 μμ», όπου μέτρα και χιλιοστά συγχέονται). Μορφή διάστασης, τιμή **ποτέ**: όπως το
+ *   `normalizedValue` του Document AI λείπει όταν η τιμή δεν μετατρέπεται, ενώ το κείμενο μένει.
+ * Ακέραιος + άγνωστη λέξη («3 θέσεις», «2 ΥΠΝ.») ⇒ `null`: τα μήκη στα ελληνικά σχέδια γράφονται με δεκαδικά.
+ */
+export type WrittenLengthUnitReading =
+  | { readonly kind: 'explicit'; readonly unit: WrittenLengthUnit }
+  | { readonly kind: 'bare' }
+  | { readonly kind: 'unknown'; readonly suffix: string };
+
+interface LengthTextParts {
+  /** Ο αριθμός όπως γράφτηκε («2,05»). */
+  readonly token: string;
+  readonly decimals: number;
+  readonly unit: WrittenLengthUnitReading;
 }
 
-/** Ένα μήκος γραμμένο ως **μόνο** περιεχόμενο του κειμένου, ή `null` (άλλο κείμενο, ή μονάδα που δεν αποδεικνύεται). */
-export function parseDimensionValue(raw: string, bareIntegerUnit: BareIntegerUnit): WrittenLength | null {
+function readSuffix(suffix: string, decimals: number): WrittenLengthUnitReading | null {
+  if (suffix === '') return { kind: 'bare' };
+  for (const [pattern, unit] of UNIT_SUFFIX) if (pattern.test(suffix)) return { kind: 'explicit', unit };
+  return decimals > 0 && HAS_LETTER.test(suffix) ? { kind: 'unknown', suffix } : null;
+}
+
+function lengthTextParts(raw: string): LengthTextParts | null {
   const m = LENGTH_TEXT.exec(raw.trim());
   if (m === null) return null;
   const [, token, suffix] = m;
   const decimals = token.split(/[.,]/)[1]?.length ?? 0;
-  const explicit = suffixUnit(suffix);
-  if (explicit === null) return null;
-  const unit: WrittenLengthUnit | null = explicit ?? (decimals > 0 ? 'm' : bareIntegerUnit);
+  const unit = readSuffix(suffix, decimals);
+  return unit === null ? null : { token, decimals, unit };
+}
+
+/** Η μονάδα όπως τη γράφει το κείμενο (βλ. `WrittenLengthUnitReading`)· `null` = δεν έχει μορφή μήκους. */
+export function writtenLengthUnit(raw: string): WrittenLengthUnitReading | null {
+  return lengthTextParts(raw)?.unit ?? null;
+}
+
+/** Η άγνωστη κατάληξη μονάδας («kh.»), αν το κείμενο είναι διάσταση με **άγνωστη μονάδα**· αλλιώς `null`. */
+export function unknownUnitSuffix(raw: string): string | null {
+  const unit = writtenLengthUnit(raw);
+  return unit?.kind === 'unknown' ? unit.suffix : null;
+}
+
+/** Ένα μήκος γραμμένο ως **μόνο** περιεχόμενο του κειμένου, ή `null` (άλλο κείμενο, ή μονάδα που δεν αποδεικνύεται). */
+export function parseDimensionValue(raw: string, bareIntegerUnit: BareIntegerUnit): WrittenLength | null {
+  const parts = lengthTextParts(raw);
+  if (parts === null || parts.unit.kind === 'unknown') return null;
+  const { token, decimals } = parts;
+  const unit: WrittenLengthUnit | null = parts.unit.kind === 'explicit'
+    ? parts.unit.unit
+    : (decimals > 0 ? 'm' : bareIntegerUnit);
   if (unit === null) return null;
   const value = Number.parseFloat(normalizeNumber(token));
   if (!(value > 0)) return null;
@@ -107,6 +148,42 @@ export function writtenLike(valueMm: number, sampleRaw: string, bareIntegerUnit:
   const fixed = (valueMm / WRITTEN_UNIT_MM[sample.unit]).toFixed(decimals);
   if (!(Number.parseFloat(fixed) > 0)) return null;
   return `${token.includes(',') ? fixed.replace('.', ',') : fixed}${text.slice(token.length)}`;
+}
+
+/**
+ * Η γραφή μονάδας («␠m», «␠μ.μ.», «» για σκέτο) με την οποία το σχέδιο γράφει τα **δεκαδικά** μήκη του — μόνο όταν όλα
+ * συμφωνούν σε **μία** μονάδα· η πιο συχνή, ισοπαλία ⇒ σειρά ανάγνωσης (το `Map` κρατά τη σειρά εισαγωγής). Αλλιώς `null`.
+ */
+function dominantDecimalTail(dimensionRaws: readonly string[]): string | null {
+  const units = new Set<WrittenLengthUnit>();
+  const counts = new Map<string, number>();
+  for (const raw of dimensionRaws) {
+    const text = raw.trim();
+    const parts = lengthTextParts(text);
+    const length = parts !== null && parts.decimals > 0 ? parseDimensionValue(text, null) : null;
+    if (parts === null || length === null) continue;
+    units.add(length.unit);
+    const tail = text.slice(parts.token.length);
+    counts.set(tail, (counts.get(tail) ?? 0) + 1);
+  }
+  if (units.size !== 1) return null;
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [tail, count] of counts) if (count > bestCount) { best = tail; bestCount = count; }
+  return best;
+}
+
+/**
+ * ADR-929 Δ21 (δ) — πρόταση για διάσταση με **άγνωστη μονάδα**, από το ίδιο το σχέδιο: ο αριθμός **όπως γράφτηκε** + η γραφή
+ * μονάδας των δεκαδικών μηκών του σχεδίου («2,05 kh.» σε σχέδιο που γράφει «4,12 m» ⇒ «2,05 m»). Μόνο όταν το σχέδιο συμφωνεί
+ * σε **μία** μονάδα. Δεν κρίνει τον αριθμό (άρα δεν χρειάζεται κλίμακα), μόνο τη μονάδα· η αποδοχή είναι πάντα του ανθρώπου.
+ * `null` = το κείμενο δεν έχει άγνωστη μονάδα, ή το σχέδιο δεν δίνει μία.
+ */
+export function unknownUnitSuggestion(raw: string, dimensionRaws: readonly string[]): string | null {
+  const parts = lengthTextParts(raw);
+  if (parts === null || parts.unit.kind !== 'unknown') return null;
+  const tail = dominantDecimalTail(dimensionRaws);
+  return tail === null ? null : `${parts.token}${tail}`;
 }
 
 /** Ένα κείμενο που **ίσως** είναι διάσταση: το κείμενό του + ό,τι ξέρει ήδη ο αναγνώστης (τμήματα, βεβαιότητα). */
@@ -159,7 +236,5 @@ export function classifyWrittenText(raw: string): PlanTextKind {
   if (parseWrittenScale(text) !== null) return 'scale';
   if (parseWrittenAreaM2(text) !== null) return 'area';
   if (OPENING_SIZE.test(text)) return 'opening-size';
-  const m = LENGTH_TEXT.exec(text);
-  if (m !== null && suffixUnit(m[2]) !== null) return 'dimension';
-  return 'other';
+  return writtenLengthUnit(text) !== null ? 'dimension' : 'other';
 }

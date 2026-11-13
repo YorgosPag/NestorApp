@@ -3,8 +3,8 @@
  */
 
 import {
-  classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenAreaM2, parseWrittenScale, writtenDimensions, writtenLengthsMm, writtenLike,
-  writtenNumberTokens,
+  classifyWrittenText, inferBareIntegerUnit, parseDimensionValue, parseWrittenAreaM2, parseWrittenScale, unknownUnitSuffix,
+  unknownUnitSuggestion, writtenDimensions, writtenLengthUnit, writtenLengthsMm, writtenLike, writtenNumberTokens,
 } from '../reading/written-values';
 import { writtenPrecisionMm } from '../fusion/dimension-precision';
 
@@ -101,9 +101,13 @@ describe('ADR-929 Δ21 (ε) — «μ.μ.» = μέτρα· «μμ» χωρίς τ
     expect(got?.valueMm).toBeCloseTo(valueMm, 6);
     expect(classifyWrittenText(raw)).toBe('dimension');
   });
-  it.each(['4,12 μμ', '412μμ'])('«%s» ⇒ καμία τιμή, όχι διάσταση (σύγχυση με χιλιοστά)', (raw) => {
+  it.each(['4,12 μμ', '412μμ'])('«%s» ⇒ καμία τιμή (σύγχυση με χιλιοστά)', (raw) => {
     expect(parseDimensionValue(raw, 'cm')).toBeNull();
-    expect(classifyWrittenText(raw)).toBe('other');
+  });
+  it('Δ21 (δ): «4,12 μμ» ⇒ διάσταση με ΑΓΝΩΣΤΗ μονάδα (ορατή για έλεγχο)· «412μμ» (ακέραιος) ⇒ άλλο κείμενο', () => {
+    expect(classifyWrittenText('4,12 μμ')).toBe('dimension');
+    expect(unknownUnitSuffix('4,12 μμ')).toBe('μμ');
+    expect(classifyWrittenText('412μμ')).toBe('other');
   });
   it('«μ.μ.» στο σχέδιο ⇒ οι σκέτοι ακέραιοι γίνονται εκατοστά (ο ΙΔΙΟΣ κανόνας)', () => {
     expect(writtenLengthsMm(['4,12 μ.μ.', '20'])).toEqual([4120, 200]);
@@ -147,5 +151,55 @@ describe('ADR-929 Δ21 (δ) βήμα 7 — writtenLike: μήκος γραμμέ�
     expect(writtenLike(4118, '412', null)).toBeNull();
     expect(writtenLike(0, '4.15', null)).toBeNull();
     expect(writtenLike(2, '4.15', null)).toBeNull();
+  });
+});
+
+describe('ADR-929 Δ21 (δ) — διάσταση με ΑΓΝΩΣΤΗ μονάδα («2,05 kh.» = χειρόγραφο «μ.μ.» διαβασμένο λάθος)', () => {
+  it.each([['2,05 kh.', 'kh.'], ['4.12 ft', 'ft'], ['2,05kh', 'kh']] as const)('«%s» ⇒ διάσταση, κατάληξη «%s», ΚΑΜΙΑ τιμή', (raw, suffix) => {
+    expect(writtenLengthUnit(raw)).toEqual({ kind: 'unknown', suffix });
+    expect(unknownUnitSuffix(raw)).toBe(suffix);
+    expect(classifyWrittenText(raw)).toBe('dimension');
+    expect(parseDimensionValue(raw, 'cm')).toBeNull();
+    expect(writtenLengthsMm([raw, '4,12 m'])).toEqual([null, 4120]);
+  });
+  it.each(['3 θέσεις', '2 ΥΠΝ.', '3.50.', '2,05 .'])('«%s» ⇒ ΟΧΙ άγνωστη μονάδα (ακέραιος + λέξη, ή μόνο τελείες)', (raw) => {
+    expect(unknownUnitSuffix(raw)).toBeNull();
+    expect(classifyWrittenText(raw)).toBe('other');
+  });
+  it('γνωστή ή σκέτη μονάδα ⇒ ΟΧΙ άγνωστη', () => {
+    expect(writtenLengthUnit('4,12 μ.μ.')).toEqual({ kind: 'explicit', unit: 'm' });
+    expect(writtenLengthUnit('3.50')).toEqual({ kind: 'bare' });
+    expect(writtenLengthUnit('ΣΑΛΟΝΙ')).toBeNull();
+    expect(unknownUnitSuffix('4,12 m')).toBeNull();
+  });
+  it('writtenDimensions: η άγνωστη μονάδα ΔΕΝ γίνεται περιορισμός του λύτη', () => {
+    const c = (textId: string, raw: string) => ({ textId, raw, segmentIds: [], confidence: { score: 0.8, factors: { reading: 0.8 } } });
+    expect(writtenDimensions([c('t1', '2,05 kh.'), c('t2', '4,12 m')]).map((d) => d.textId)).toEqual(['t2']);
+  });
+});
+
+describe('ADR-929 Δ21 (δ) — unknownUnitSuggestion: η μονάδα από το ΙΔΙΟ το σχέδιο', () => {
+  it('το σχέδιο γράφει μέτρα ⇒ ο αριθμός όπως γράφτηκε + η πιο συχνή γραφή', () => {
+    expect(unknownUnitSuggestion('2,05 kh.', ['2,05 m', '4,12 μ.', '4,12 m', '2,05 kh.'])).toBe('2,05 m');
+  });
+  it('ισοπαλία ⇒ η γραφή που διαβάστηκε πρώτη· σκέτα δεκαδικά ⇒ καμία κατάληξη', () => {
+    expect(unknownUnitSuggestion('2,05 kh.', ['4,12 μ.μ.', '3,50 m'])).toBe('2,05 μ.μ.');
+    expect(unknownUnitSuggestion('2,05 kh.', ['3.50', '4.12'])).toBe('2,05');
+  });
+  it('η πρόταση ξαναδιαβάζεται ως μήκος στη μονάδα του σχεδίου', () => {
+    const suggestion = unknownUnitSuggestion('2,05 kh.', ['4,12 m']) ?? '';
+    expect(parseDimensionValue(suggestion, null)?.valueMm).toBeCloseTo(2050, 6);
+  });
+  it('μετρούν μόνο τα ΔΕΚΑΔΙΚΑ μήκη (ίδια γραφή με το άγνωστο)· ακέραιοι σε εκ. δεν αλλάζουν την πρόταση', () => {
+    expect(unknownUnitSuggestion('2,05 kh.', ['4,12 m', '350 cm'])).toBe('2,05 m');
+  });
+  it('το σχέδιο ΔΕΝ συμφωνεί σε μία μονάδα, ή δεν έχει δεκαδικό δείγμα ⇒ καμία πρόταση (ποτέ μαντεψιά)', () => {
+    expect(unknownUnitSuggestion('2,05 kh.', ['4,12 m', '35,5 cm'])).toBeNull();
+    expect(unknownUnitSuggestion('2,05 kh.', ['350 cm', '20'])).toBeNull();
+    expect(unknownUnitSuggestion('2,05 kh.', [])).toBeNull();
+  });
+  it('κείμενο ΧΩΡΙΣ άγνωστη μονάδα ⇒ καμία πρόταση', () => {
+    expect(unknownUnitSuggestion('4,12 m', ['2,05 m'])).toBeNull();
+    expect(unknownUnitSuggestion('ΣΑΛΟΝΙ', ['2,05 m'])).toBeNull();
   });
 });

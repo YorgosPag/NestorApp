@@ -20,7 +20,9 @@
 import type { FusedDimension, FusedDimensionStatus, PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReading, PlanText, PlanTextKind } from '../../bim/plan-recognition/plan-recognition-types';
 import type { RasterRectPx } from '../../types/coordinate-space';
-import { inferBareIntegerUnit, writtenLike, type BareIntegerUnit } from '../../bim/plan-recognition/reading/written-values';
+import {
+  inferBareIntegerUnit, unknownUnitSuffix, unknownUnitSuggestion, writtenLike, type BareIntegerUnit,
+} from '../../bim/plan-recognition/reading/written-values';
 import { meetsConfidenceTier } from './plan-confidence';
 
 /** Βήμα 4 — η ετικέτα προτεραιότητας μιας γραμμής. */
@@ -37,6 +39,11 @@ export interface PlanReadValueRow {
   readonly kind: PlanTextKind;
   /** Η τιμή σε mm, αν το κείμενο έγινε περιορισμός του λύτη. */
   readonly valueMm: number | null;
+  /**
+   * Δ21 (δ) — διάσταση με **άγνωστη μονάδα**: η κατάληξη όπως διαβάστηκε («kh.»)· `null` = γνωστή ή καμία. Τιμή δεν υπάρχει
+   * ποτέ τότε (`writtenLengthUnit`)· η γραμμή είναι «ύποπτη» από τον υπάρχοντα κανόνα «διάσταση χωρίς τιμή».
+   */
+  readonly unknownUnit: string | null;
   /** Βεβαιότητα ανάγνωσης στο [0, 1]. */
   readonly confidence: number;
   /** Η κατάσταση στη σύντηξη· `null` = δεν μπήκε ως διάσταση. */
@@ -48,8 +55,9 @@ export interface PlanReadValueRow {
   /** Βήμα 4 — «ύποπτη» · «ελέγχθηκε» · «εντάξει». */
   readonly priority: PlanReadValuePriority;
   /**
-   * Βήμα 7 — για τιμή σε σύγκρουση, η πρόταση της συνόρθωσης **ως κείμενο** όπως θα το έγραφε το σχέδιο («4,12»)· `null` =
-   * καμία. Περνά από τον ΙΔΙΟ δρόμο με κάθε διόρθωση (`correct`).
+   * Βήμα 7 — για τιμή σε σύγκρουση, η πρόταση της συνόρθωσης **ως κείμενο** όπως θα το έγραφε το σχέδιο («4,12»)· Δ21 (δ) —
+   * για άγνωστη μονάδα, ο ίδιος αριθμός με τη μονάδα του σχεδίου («2,05 m», `unknownUnitSuggestion`)· `null` = καμία. Περνά
+   * από τον ΙΔΙΟ δρόμο με κάθε διόρθωση (`correct`).
    */
   readonly suggestion: string | null;
   /**
@@ -82,6 +90,22 @@ function suggestionOf(
   return suggestion !== null && suggestion !== text.raw.trim() ? suggestion : null;
 }
 
+/** Τα δεδομένα του σχεδίου που χρειάζεται η πρόταση μιας γραμμής — κρίνονται μία φορά ανά λίστα. */
+interface SuggestionContext {
+  readonly bareIntegerUnit: BareIntegerUnit;
+  readonly scaleKnown: boolean;
+  /** Τα κείμενα-διαστάσεις του σχεδίου (για τη μονάδα που γράφει). */
+  readonly dimensionRaws: readonly string[];
+}
+
+/** Δ21 (δ) — η πρόταση μιας γραμμής: άγνωστη μονάδα ⇒ η μονάδα του σχεδίου· αλλιώς η πρόταση της συνόρθωσης (βήμα 7). */
+function rowSuggestion(
+  text: PlanText, unknownUnit: string | null, fused: FusedDimension | undefined, ctx: SuggestionContext,
+): string | null {
+  if (unknownUnit !== null) return unknownUnitSuggestion(text.raw, ctx.dimensionRaws);
+  return suggestionOf(text, fused, ctx.bareIntegerUnit, ctx.scaleKnown);
+}
+
 /** Θέλει έλεγχο: σύγκρουση · αδέτη · διάσταση χωρίς τιμή · ανάγνωση κάτω από «υψηλή». Ο ΕΝΑΣ κανόνας για σειρά και ετικέτα. */
 function needsReview(row: RowFacts): boolean {
   return row.status === 'conflict' || row.status === 'unbound'
@@ -102,14 +126,9 @@ function suspicionGroup(row: PlanReadValueRow): number {
   return 3;
 }
 
-function rowOf(
-  text: PlanText,
-  valueMm: number | null,
-  fused: FusedDimension | undefined,
-  bareIntegerUnit: BareIntegerUnit,
-  scaleKnown: boolean,
-): PlanReadValueRow {
+function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | undefined, ctx: SuggestionContext): PlanReadValueRow {
   const measured = fused?.measuredMm ?? null;
+  const unknownUnit = text.kind === 'dimension' ? unknownUnitSuffix(text.raw) : null;
   const facts: RowFacts = {
     textId: text.id,
     raw: text.raw,
@@ -117,13 +136,14 @@ function rowOf(
     confirmed: text.confirmed === true,
     kind: text.kind,
     valueMm,
+    unknownUnit,
     confidence: text.confidence.score,
     status: fused?.status ?? null,
     deviationMm: measured !== null && valueMm !== null ? measured - valueMm : null,
     w: fused?.w ?? null,
-    scaleKnown,
+    scaleKnown: ctx.scaleKnown,
   };
-  return { ...facts, priority: priorityOf(facts), suggestion: suggestionOf(text, fused, bareIntegerUnit, scaleKnown) };
+  return { ...facts, priority: priorityOf(facts), suggestion: rowSuggestion(text, unknownUnit, fused, ctx) };
 }
 
 /** Οι γραμμές της λίστας, η πιο ύποπτη πρώτη. `reading` = η ανάγνωση που ισχύει (με τις διορθώσεις). */
@@ -136,11 +156,12 @@ export function planReadValueRows(
   // Η μονάδα των σκέτων ακεραίων του σχεδίου: την ορίζουν τα κείμενα σε μέτρα, που έχουν πάντα τιμή ⇒ ίδια με του κανόνα.
   const rawById = new Map(reading.texts.map((t) => [t.id, t.raw]));
   const bareIntegerUnit = inferBareIntegerUnit(reading.dimensions.map((d) => rawById.get(d.textId) ?? ''));
-  const scaleKnown = (fusion?.scale ?? null) !== null;
-  const rows = reading.texts.map((t, order) => ({
-    order,
-    row: rowOf(t, valueById.get(t.id) ?? null, fusedById.get(t.id), bareIntegerUnit, scaleKnown),
-  }));
+  const ctx: SuggestionContext = {
+    bareIntegerUnit,
+    scaleKnown: (fusion?.scale ?? null) !== null,
+    dimensionRaws: reading.texts.filter((t) => t.kind === 'dimension').map((t) => t.raw),
+  };
+  const rows = reading.texts.map((t, order) => ({ order, row: rowOf(t, valueById.get(t.id) ?? null, fusedById.get(t.id), ctx) }));
   rows.sort((a, b) =>
     suspicionGroup(a.row) - suspicionGroup(b.row)
     || Math.abs(b.row.w ?? 0) - Math.abs(a.row.w ?? 0)

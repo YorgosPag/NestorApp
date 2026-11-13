@@ -63,7 +63,7 @@ describe('Δ21 (δ) βήμα 5 — preview: ζωντανή ερμηνεία χω
   it('σκέτος ακέραιος ⇒ εκατοστά, γιατί το σχέδιο γράφει μέτρα· τίποτα δεν γράφεται, καμία σύντηξη', () => {
     const h = harness();
     const before = planRecognitionStore.get();
-    expect(h.controller.preview('t3', '412')).toEqual({ kind: 'dimension', valueMm: 4120 });
+    expect(h.controller.preview('t3', '412')).toEqual({ kind: 'dimension', valueMm: 4120, unknownUnit: null });
     expect(planRecognitionStore.get()).toBe(before);
     expect(h.fused).toEqual([]);
   });
@@ -78,7 +78,7 @@ describe('Δ21 (δ) βήμα 5 — preview: ζωντανή ερμηνεία χω
     const h = harness();
     h.controller.markNotDimension('t1'); // χωρίς μέτρα στο σχέδιο, ο σκέτος ακέραιος δεν αποδεικνύεται
     h.controller.markNotDimension('t2');
-    expect(h.controller.preview('t3', '412')).toEqual({ kind: 'dimension', valueMm: null });
+    expect(h.controller.preview('t3', '412')).toEqual({ kind: 'dimension', valueMm: null, unknownUnit: null });
   });
 });
 

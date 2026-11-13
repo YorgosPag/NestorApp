@@ -520,6 +520,7 @@
           },
           "valueMm": "= {value} mm",
           "noUnit": "χωρίς αποδεδειγμένη μονάδα",
+          "unknownUnit": "άγνωστη μονάδα «{suffix}»",
           "confidence": "βεβαιότητα {percent}%",
           "status": {
             "consistent": "συμφωνεί με το σχέδιο",

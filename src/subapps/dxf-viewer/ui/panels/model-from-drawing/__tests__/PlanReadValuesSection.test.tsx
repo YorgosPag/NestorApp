@@ -15,7 +15,7 @@ import { PlanReadValuesSection, type PlanReadValuesActions } from '../PlanReadVa
 const t = (key: string, params?: Record<string, string | number>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
 const row = (over: Partial<PlanReadValueRow> & Pick<PlanReadValueRow, 'textId' | 'raw'>): PlanReadValueRow => ({
-  correctedFrom: null, confirmed: false, priority: 'ok', suggestion: null, kind: 'dimension', valueMm: null, confidence: 0.9, status: null, deviationMm: null, w: null, scaleKnown: true, ...over,
+  correctedFrom: null, confirmed: false, priority: 'ok', suggestion: null, kind: 'dimension', valueMm: null, unknownUnit: null, confidence: 0.9, status: null, deviationMm: null, w: null, scaleKnown: true, ...over,
 });
 
 const ROWS: readonly PlanReadValueRow[] = [
@@ -28,7 +28,7 @@ function renderValues(rows: readonly PlanReadValueRow[] | null = ROWS, thumbnail
   const actions: jest.Mocked<PlanReadValuesActions> = {
     onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(), onConfirm: jest.fn(), onFocusSource: jest.fn(),
     previewCorrection: jest.fn((_textId: string, raw: string) => (
-      raw.trim() === '' ? null : { kind: 'dimension' as const, valueMm: raw === '412' ? null : 4120 }
+      raw.trim() === '' ? null : { kind: 'dimension' as const, valueMm: raw === '412' ? null : 4120, unknownUnit: null }
     )),
   };
   return { ...render(<PlanReadValuesSection rows={rows} thumbnails={thumbnails} actions={actions} t={t} />), actions };
@@ -58,6 +58,14 @@ describe('PlanReadValuesSection (ADR-929 Δ21 (δ))', () => {
     expect(t3.textContent).toContain('modelFromDrawing.image.ocr.values.corrected{"raw":"4.15"}');
     expect(item(getAllByTestId, 't4').textContent).toContain('modelFromDrawing.image.ocr.values.noUnit');
     expect(item(getAllByTestId, 't1').textContent).toContain('modelFromDrawing.image.ocr.values.kind.other');
+  });
+
+  it('Δ21 (δ): άγνωστη μονάδα ⇒ «άγνωστη μονάδα «kh.»», ΟΧΙ «χωρίς αποδεδειγμένη μονάδα»· η πρόταση της μονάδας φαίνεται', () => {
+    const { getAllByTestId } = renderValues([row({ textId: 't9', raw: '2,05 kh.', unknownUnit: 'kh.', priority: 'suspect', suggestion: '2,05 m' })]);
+    const t9 = item(getAllByTestId, 't9');
+    expect(t9.textContent).toContain('modelFromDrawing.image.ocr.values.unknownUnit{"suffix":"kh."}');
+    expect(t9.textContent).not.toContain('modelFromDrawing.image.ocr.values.noUnit');
+    expect(t9.textContent).toContain('modelFromDrawing.image.ocr.values.suggestion{"value":"2,05 m"}');
   });
 
   it('Δ3 — χωρίς κλίμακα η απόκλιση λέει ρητά ότι ΔΕΝ κρίνει τη γραμμένη τιμή (ΡΗΤΟ κλειδί)', () => {

@@ -106,21 +106,26 @@ describe('Δ21 (δ) — η διόρθωση επιβιώνει όταν αλλά
 
 describe('Δ21 (δ) βήμα 5 — previewReadingCorrection: η ζωντανή ερμηνεία από τον ΙΔΙΟ δρόμο με την αποθήκευση', () => {
   it('σκέτος ακέραιος σε σχέδιο που γράφει μέτρα ⇒ εκατοστά (η μονάδα κρίνεται από ΟΛΟ το σχέδιο, όχι από το πεδίο)', () => {
-    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't3', '412')).toEqual({ kind: 'dimension', valueMm: 4120 });
+    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't3', '412')).toEqual({ kind: 'dimension', valueMm: 4120, unknownUnit: null });
   });
   it('σκέτος ακέραιος σε σχέδιο χωρίς μέτρα ⇒ διάσταση χωρίς τιμή («η μονάδα δεν αποδεικνύεται»)', () => {
     const lone = readingOf([ocr('ΣΑΛΟΝΙ', quad(0, 0, 40, 10))]);
-    expect(previewReadingCorrection(lone, NO_READING_CORRECTIONS, 't1', '412')).toEqual({ kind: 'dimension', valueMm: null });
+    expect(previewReadingCorrection(lone, NO_READING_CORRECTIONS, 't1', '412')).toEqual({ kind: 'dimension', valueMm: null, unknownUnit: null });
   });
   it('ταυτίζεται με ό,τι δίνει η αποθήκευση· δεν γράφει τίποτα', () => {
     const corrections = correct(NO_READING_CORRECTIONS, 't1', { kind: 'not-dimension' });
     const preview = previewReadingCorrection(readingOf(), corrections, 't4', '4,12 μ.μ.');
     const saved = applyReadingCorrections(readingOf(), correct(corrections, 't4', { kind: 'value', raw: '4,12 μ.μ.' }));
-    expect(preview).toEqual({ kind: 'dimension', valueMm: saved.dimensions.find((d) => d.textId === 't4')?.valueMm });
+    expect(preview).toEqual({
+      kind: 'dimension', valueMm: saved.dimensions.find((d) => d.textId === 't4')?.valueMm, unknownUnit: null,
+    });
     expect(corrections.byTextId).toEqual({ t1: { kind: 'not-dimension' } });
   });
+  it('Δ21 (δ): άγνωστη μονάδα ⇒ διάσταση χωρίς τιμή, με την κατάληξη (ίδια ερμηνεία με τη γραμμή)', () => {
+    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't3', '2,05 kh.')).toEqual({ kind: 'dimension', valueMm: null, unknownUnit: 'kh.' });
+  });
   it('κείμενο που δεν είναι μήκος ⇒ το είδος του, χωρίς τιμή· κενό ή άγνωστο κείμενο ⇒ null', () => {
-    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't2', '1:50')).toEqual({ kind: 'scale', valueMm: null });
+    expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't2', '1:50')).toEqual({ kind: 'scale', valueMm: null, unknownUnit: null });
     expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't2', '  ')).toBeNull();
     expect(previewReadingCorrection(readingOf(), NO_READING_CORRECTIONS, 't99', '4.12')).toBeNull();
   });

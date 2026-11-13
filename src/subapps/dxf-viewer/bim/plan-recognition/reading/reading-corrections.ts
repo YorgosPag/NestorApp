@@ -23,7 +23,7 @@ import type {
   PlanDimension, PlanReading, PlanReadingOutcome, PlanText, PlanTextKind, PlanWrittenScale,
 } from '../plan-recognition-types';
 import { readingConfidence } from './plan-reading-from-view';
-import { classifyWrittenText, parseWrittenScale, writtenDimensions } from './written-values';
+import { classifyWrittenText, parseWrittenScale, unknownUnitSuffix, writtenDimensions } from './written-values';
 
 /** Η διόρθωση ενός κειμένου: νέο κείμενο όπως γράφεται στο χαρτί · «δεν είναι διάσταση» · «Σωστό ✓» (ίδιο κείμενο). */
 export type PlanReadingCorrection =
@@ -136,6 +136,8 @@ export function effectiveReadingCorrection(
 export interface PlanCorrectionPreview {
   readonly kind: PlanTextKind;
   readonly valueMm: number | null;
+  /** Δ21 (δ) — η άγνωστη κατάληξη μονάδας («kh.»), ίδια με της γραμμής (`unknownUnitSuffix`)· `null` = γνωστή ή καμία. */
+  readonly unknownUnit: string | null;
 }
 
 /**
@@ -155,7 +157,11 @@ export function previewReadingCorrection(
   const correction = effectiveReadingCorrection(machine, { kind: 'value', raw: raw.trim() });
   const corrected = applyReadingCorrections(reading, withReadingCorrection(corrections, reading.model, textId, correction));
   const text = corrected.texts.find((t) => t.id === textId) ?? machine;
-  return { kind: text.kind, valueMm: corrected.dimensions.find((d) => d.textId === textId)?.valueMm ?? null };
+  return {
+    kind: text.kind,
+    valueMm: corrected.dimensions.find((d) => d.textId === textId)?.valueMm ?? null,
+    unknownUnit: text.kind === 'dimension' ? unknownUnitSuffix(text.raw) : null,
+  };
 }
 
 /** Το ίδιο, για το αποτέλεσμα μιας ανάγνωσης (χωρίς ανάγνωση ⇒ ίδιο). */
