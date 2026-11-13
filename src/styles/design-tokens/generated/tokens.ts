@@ -72,6 +72,8 @@ export interface DesignTokens {
   typography_fontSize_base: string;
   typography_fontSize_lg: string;
   typography_fontSize_xl: string;
+  typography_fontSize_2xl: string;
+  typography_fontSize_3xl: string;
   typography_fontWeight_normal: string;
   typography_fontWeight_medium: string;
   typography_fontWeight_semibold: string;
@@ -242,6 +244,8 @@ export const designTokens: DesignTokens = {
   typography_fontSize_base: 'var(--typography-font-size-base)',
   typography_fontSize_lg: 'var(--typography-font-size-lg)',
   typography_fontSize_xl: 'var(--typography-font-size-xl)',
+  typography_fontSize_2xl: 'var(--typography-font-size-2xl)',
+  typography_fontSize_3xl: 'var(--typography-font-size-3xl)',
   typography_fontWeight_normal: 'var(--typography-font-weight-normal)',
   typography_fontWeight_medium: 'var(--typography-font-weight-medium)',
   typography_fontWeight_semibold: 'var(--typography-font-weight-semibold)',

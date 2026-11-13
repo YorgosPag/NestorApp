@@ -327,6 +327,16 @@
       "xl": {
         "value": "20",
         "type": "fontSizes"
+      },
+      "2xl": {
+        "value": "24",
+        "type": "fontSizes",
+        "comment": "Τίτλος ενότητας σε σελίδα πρόζας (h2) — ADR-816. Ίσο με το `text-2xl` του Tailwind, ώστε κείμενο με κλάση και σκέτο στοιχείο να μιλούν την ίδια κλίμακα."
+      },
+      "3xl": {
+        "value": "30",
+        "type": "fontSizes",
+        "comment": "Τίτλος σελίδας πρόζας (h1) — ADR-816. Ίσο με το `text-3xl` του Tailwind."
       }
     },
     "fontWeight": {

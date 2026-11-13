@@ -467,6 +467,75 @@
   margin-block-start: var(--shell-prose-paragraph-spacing);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   4γ. ΤΑ ΣΤΟΙΧΕΙΑ ΤΗΣ ΠΡΟΖΑΣ                       (ADR-816 §4γ, 2026-11-13)
+   ─────────────────────────────────────────────────────────────────────────
+   🔴 ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ (`/privacy-policy`, μετά το ADR-939 §6.1 Γ4): ο τίτλος
+   της σελίδας, οι τίτλοι ενοτήτων και οι λίστες αποδίδονταν **ως απλό κείμενο**
+   — καμία ιεραρχία, καμία κουκκίδα. Το preflight του Tailwind μηδενίζει
+   `h1`–`h3` (`font-size/weight: inherit`) και `ul`/`ol` (`list-style: none`),
+   και οι νομικές σελίδες γράφουν **σκέτα** σημασιολογικά στοιχεία. Δεν το
+   γέννησε το Γ4 — ίσχυε από την πρώτη εκδοχή των σελίδων.
+
+   🔑 ΤΟ ΠΡΟΤΥΠΟ ΤΩΝ ΜΕΓΑΛΩΝ: GitHub `markdown-body`, Tailwind `prose`
+   (@tailwindcss/typography) — το **δοχείο ανάγνωσης** μορφοποιεί το σκέτο
+   HTML, η σελίδα γράφει μόνο σημασιολογία. Εδώ το δοχείο **υπάρχει ήδη**: η
+   επιφάνεια που δηλώνει `measure='prose'` λέει «εδώ διαβάζουν».
+
+   🔑 ΤΟ ΣΥΝΟΡΟ ΕΙΝΑΙ Η ΔΗΛΩΣΗ ΤΟΥ ΣΥΓΓΡΑΦΕΑ (ίδια λογική με τη «λίστα πρόζας»
+   της §4β): στοιχείο **με** `class` το κατέχει ο συγγραφέας του και **δεν**
+   αγγίζεται — οι σελίδες mandate (`/pro`) γράφουν κλάσεις στους τίτλους τους
+   και μένουν ακέραιες. `:not([class])` ⇒ (0,2,1): νικά το preflight (0,0,1)
+   **δομικά**, χωρίς `!important`.
+
+   ⚠️ **ΜΟΝΟ `prose`**, όχι κάθε `[data-shell-measure]`: το `wide` φιλοξενεί
+   διεπαφές, όπου ένας σκέτος `<h2>` 24px θα ήταν άλλο σχέδιο.
+   ⚠️ Τα μεγέθη ζουν στο `design-tokens.json` (`2xl`/`3xl` = κλίμακα Tailwind),
+   ΟΧΙ εδώ — σκέτο `rem` θα ήταν δεύτερη αυθεντία δίπλα στην κλίμακα.
+   ⛔ ΜΗΝ βάλεις `margin-block-start` στο `h2`: το κενό πριν από τίτλο το δίνει
+   **ήδη** ο κανόνας `p + h2` (§4β) ή το όριο ενότητας παρακάτω — δεύτερος
+   ιδιοκτήτης του ίδιου κενού θα το διπλασίαζε.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+[data-shell-measure='prose'] :is(h1, h2, h3):not([class]) {
+  line-height: var(--typography-line-height-tight);
+  margin-block-end: 0.5em;
+}
+
+[data-shell-measure='prose'] h1:not([class]) {
+  font-size: var(--typography-font-size-3xl);
+  font-weight: var(--typography-font-weight-bold);
+}
+
+[data-shell-measure='prose'] h2:not([class]) {
+  font-size: var(--typography-font-size-2xl);
+  font-weight: var(--typography-font-weight-semibold);
+}
+
+[data-shell-measure='prose'] h3:not([class]) {
+  font-size: var(--typography-font-size-xl);
+  font-weight: var(--typography-font-weight-semibold);
+}
+
+/* Το όριο ενότητας: ο renderer νομικού κειμένου τυλίγει κάθε ενότητα σε
+   `<section>` με τον τίτλο ως ΠΡΩΤΟ παιδί — άρα κανένα `p + h2` δεν τον φτάνει. */
+[data-shell-measure='prose'] section:not([class]) + section:not([class]) {
+  margin-block-start: var(--shell-prose-paragraph-spacing);
+}
+
+[data-shell-measure='prose'] ul:not([class]) {
+  list-style: disc;
+}
+
+[data-shell-measure='prose'] ol:not([class]) {
+  list-style: decimal;
+}
+
+[data-shell-measure='prose'] :is(ul, ol):not([class]) {
+  padding-inline-start: 1.5em;
+  margin-block: 0.75em;
+}
+
 
 /* ══════════════════════════════════════════════════════════════════════════
    5. ΤΟ ΥΨΟΣ ΤΟΥ ΚΑΔΡΟΥ                            (ADR-797 ΦΑΣΗ Γ)
