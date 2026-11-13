@@ -10,13 +10,14 @@
  *    φυλλάδια («Τροφοδοσία: 1~ 230 V 50 Hz», όχι και τρεις γραμμές Φάσεις/Τάση/Συχνότητα). Μέρος που λείπει ⇒
  *    {@link COMPOSITE_MISSING_MARK}· λείπουν όλα ⇒ καμία γραμμή, όπως κάθε κενή τιμή.
  * 🔑 Μέρος που ανήκει σε **δύο** ενδείξεις απορροφάται και από τις δύο· η καθεμιά τυπώνεται στη θέση του δικού της πρώτου μέρους.
+ * 🔑 Ο κανόνας ζει **μία** φορά, στο `absorbComposites` (κοινός με την «Πρόταση γραμμών» του πίνακα).
  * @module subapps/catalog/publishing/card-lines
  */
 
 import type { PreviewWords, TableAttribute } from '../table/catalog-table';
 import { compositeDisplaysOf, type CatalogFamilyDefinition, type CompositeDisplay } from '../types/family';
 import type { AttributeValue } from '../types/product';
-import { COMPOSITE_MISSING_MARK, composeDisplay } from '../values/composite-display';
+import { absorbComposites, COMPOSITE_MISSING_MARK, composeDisplay } from '../values/composite-display';
 import { formatAttributeValue, type ValueTextContext } from '../values/value-text-codec';
 
 interface CardLineInput {
@@ -43,11 +44,6 @@ function compositeLine(input: CardLineInput, composite: CompositeDisplay): reado
 
 /** Οι γραμμές της κάρτας: ιδιότητες με τη σειρά της οικογένειας, κάθε ένδειξη στη θέση του πρώτου μέρους της. */
 export function cardLines(input: CardLineInput): readonly string[] {
-  const composites = compositeDisplaysOf(input.family);
-  const absorbed = new Set(composites.flatMap((composite) => composite.parts.map((part) => part.attributeId)));
-  return input.family.attributes.flatMap((binding) => {
-    const leading = composites.filter((composite) => composite.parts[0]?.attributeId === binding.attributeId);
-    if (leading.length > 0) return leading.flatMap((composite) => compositeLine(input, composite));
-    return absorbed.has(binding.attributeId) ? [] : attributeLine(input, binding.attributeId);
-  });
+  const slots = absorbComposites(input.family.attributes.map((binding) => binding.attributeId), compositeDisplaysOf(input.family));
+  return slots.flatMap((slot) => (slot.kind === 'composite' ? compositeLine(input, slot.composite) : attributeLine(input, slot.attributeId)));
 }

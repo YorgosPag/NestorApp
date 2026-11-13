@@ -40,6 +40,11 @@ describe('§21.6 κάρτα: η σύνθετη ένδειξη απορροφά �
     expect(lines({ weight: WEIGHT })).toHaveLength(1);
   });
 
+  it('🔑 ένδειξη με μέρος εκτός οικογένειας ⇒ δεν απορροφά τίποτα: τα μέρη μένουν γραμμές, ποτέ σιωπηλή απώλεια', () => {
+    const stray: CompositeDisplay = { ...SUPPLY, parts: [{ attributeId: 'not_in_family', displayUnitCode: null, affix: { before: '', after: '' } }, ...SUPPLY.parts] };
+    expect(lines({ ...FULL_SUPPLY }, [stray])).toEqual(['Φάσεις: 1', 'Τάση: 230 V', 'Συχνότητα: 50 Hz']);
+  });
+
   it('χωρίς σύνθετη ένδειξη: κάθε ιδιότητα η δική της γραμμή (όπως πριν)', () => {
     expect(lines({ ...FULL_SUPPLY }, [])).toEqual(['Φάσεις: 1', 'Τάση: 230 V', 'Συχνότητα: 50 Hz']);
   });

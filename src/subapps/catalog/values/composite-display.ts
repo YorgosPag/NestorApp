@@ -90,6 +90,28 @@ export function composeDisplay(
   return { text: joinPieces(pieces, composite.separator, missingText), missingAttributeIds };
 }
 
+/** Μία θέση σε ακολουθία προβολής: ιδιότητα μόνη της, ή σύνθετη ένδειξη που πήρε τη θέση των μερών της. */
+export type DisplaySlot =
+  | { readonly kind: 'attribute'; readonly attributeId: string }
+  | { readonly kind: 'composite'; readonly composite: CompositeDisplay };
+
+/**
+ * Ο **ένας** κανόνας απορρόφησης (§21.6) — κάρτα εκδότη και «Πρόταση γραμμών» πίνακα. Μια ένδειξη μπαίνει μόνο όταν **όλα** τα
+ * μέρη της είναι στην ακολουθία, στη θέση του **πρώτου δηλωμένου** μέρους, και τότε μόνο απορροφά τα μέρη της (μέρος δύο ενδείξεων
+ * απορροφάται και από τις δύο). Ένδειξη με μέρος εκτός ακολουθίας δεν απορροφά τίποτα: οι ιδιότητές της μένουν ορατές — ποτέ
+ * σιωπηλή απώλεια τιμής.
+ */
+export function absorbComposites(attributeIds: readonly string[], composites: readonly CompositeDisplay[]): DisplaySlot[] {
+  const present = new Set(attributeIds);
+  const eligible = composites.filter((composite) => composite.parts.length > 0 && composite.parts.every((part) => present.has(part.attributeId)));
+  const absorbed = new Set(eligible.flatMap((composite) => composite.parts.map((part) => part.attributeId)));
+  return attributeIds.flatMap((attributeId): DisplaySlot[] => {
+    const leading = eligible.filter((composite) => composite.parts[0]?.attributeId === attributeId);
+    if (leading.length > 0) return leading.map((composite) => ({ kind: 'composite', composite }));
+    return absorbed.has(attributeId) ? [] : [{ kind: 'attribute', attributeId }];
+  });
+}
+
 interface CompositeTemplateNames {
   /** Το όνομα της ιδιότητας του μέρους, όπως θα το δει ο άνθρωπος («Τάση»). */
   readonly nameOf: (attributeId: string) => string;

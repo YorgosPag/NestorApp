@@ -92,7 +92,7 @@ function TableRows({ spec, props }: { readonly spec: FamilyTableSpec; readonly p
         <Button type="button" variant="outline" size="sm" disabled={disabled || full || rowAttributes.length === 0} onClick={() => add('attribute')}><Plus className="mr-1 h-4 w-4" aria-hidden />{t('families.table.addAttribute')}</Button>
         <Button type="button" variant="outline" size="sm" disabled={disabled || full || composites.length === 0} onClick={() => add('composite')}><Combine className="mr-1 h-4 w-4" aria-hidden />{t('families.table.addComposite')}</Button>
         {scheme ? (
-          <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => setRows(suggestTableRows(scheme, library.attributeById, library.groups))}>
+          <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => setRows(suggestTableRows(scheme, library.attributeById, library.groups, composites))}>
             <Wand2 className="mr-1 h-4 w-4" aria-hidden />{t('families.table.suggest')}
           </Button>
         ) : null}

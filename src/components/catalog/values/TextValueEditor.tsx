@@ -14,6 +14,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
+import { displayUnitSymbol } from '@/subapps/catalog/values/measurement-in-unit';
 import { formatAttributeValue, isBareAmountText, parseAttributeText } from '@/subapps/catalog/values/value-text-codec';
 import type { AttributeType } from '@/subapps/catalog/vocabulary/attribute-types';
 import { cn } from '@/lib/utils';
@@ -30,8 +31,7 @@ export type TextLikeType = Extract<AttributeType, 'text' | 'richText' | 'number'
 function unitHintOf(props: ValueEditorProps<TextLikeType>, text: string): string | null {
   const { attribute, env } = props;
   if (attribute.type !== 'measurement' || (text.trim() !== '' && !isBareAmountText(text))) return null;
-  const family = env.codec.registry.get(attribute.config.measurementFamilyCode);
-  return family?.units.find((unit) => unit.code === attribute.config.defaultUnitCode)?.symbol ?? null;
+  return displayUnitSymbol(attribute, null, env.codec.registry);
 }
 
 function useCommittedText(props: ValueEditorProps<TextLikeType>) {
