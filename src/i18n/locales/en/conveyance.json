@@ -434,6 +434,20 @@
       "stageLabel": "Status",
       "ballLabel": "Whose turn",
       "ballLine": "Whose turn: {party}",
+      "ball": {
+        "professional": "yours",
+        "office": "the office's",
+        "owner": "the owner's"
+      },
+      "stage": {
+        "proposed": "Proposed to the owner — awaiting their decision",
+        "ownerApproved": "Approved by the owner — the office will notify you",
+        "ownerRejected": "The owner did not approve the assignment",
+        "sent": "Sent to you — awaiting your answer",
+        "accepted": "You took it on — the new document is expected from you",
+        "declined": "You did not take it on",
+        "cancelled": "The assignment was cancelled"
+      },
       "open": "Open space",
       "officeLabel": "Office",
       "propertyLabel": "Property",

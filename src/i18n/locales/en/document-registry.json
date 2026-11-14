@@ -227,6 +227,8 @@
     "professionalUnavailable": "contact no longer available",
     "credential": "{qualification} — declared by the office",
     "credentialWithNumber": "{qualification} · registry no. {number} — declared by the office",
+    "credentialBySelf": "{registry} · registry no. {number} — declared by the professional",
+    "credentialOfficeDiffers": "(the office had declared: {number})",
     "verifyRegistry": "Check in the registry",
     "ballInCourt": "Ball in court: {party}",
     "proposedOn": "Proposed on {date}",

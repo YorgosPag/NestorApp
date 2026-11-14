@@ -227,6 +227,8 @@
     "professionalUnavailable": "επαφή που δεν είναι πια διαθέσιμη",
     "credential": "{qualification} — δηλωμένο από το γραφείο",
     "credentialWithNumber": "{qualification} · αρ. μητρώου {number} — δηλωμένο από το γραφείο",
+    "credentialBySelf": "{registry} · αρ. μητρώου {number} — δηλωμένο από τον ίδιο",
+    "credentialOfficeDiffers": "(το γραφείο είχε δηλώσει: {number})",
     "verifyRegistry": "Έλεγχος στο μητρώο",
     "ballInCourt": "Σειρά έχει: {party}",
     "proposedOn": "Προτάθηκε στις {date}",

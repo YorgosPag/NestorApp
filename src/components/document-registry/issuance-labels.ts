@@ -27,6 +27,9 @@ export const ISSUANCE_KEYS = {
   professionalUnavailable: `${K}issuance.professionalUnavailable`,
   credential: `${K}issuance.credential`,
   credentialWithNumber: `${K}issuance.credentialWithNumber`,
+  // §39.8 — η δήλωση του ίδιου του επαγγελματία (μπήκε στον χώρο) · του γραφείου μόνο όταν διαφέρει.
+  credentialBySelf: `${K}issuance.credentialBySelf`,
+  credentialOfficeDiffers: `${K}issuance.credentialOfficeDiffers`,
   verifyRegistry: `${K}issuance.verifyRegistry`,
   ballInCourt: `${K}issuance.ballInCourt`,
   proposedOn: `${K}issuance.proposedOn`,

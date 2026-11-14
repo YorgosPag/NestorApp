@@ -241,6 +241,10 @@ export interface IssuanceSpaceInvitationSummary extends CaseInvitationSummary {
   readonly assignmentId: string;
   readonly propertyId: string;
   readonly documentKind: DocumentKind;
+  /** §39.8 — το έργο του ακινήτου: εκεί ζει η συμμετοχή που γέννησε η αποδοχή. */
+  readonly projectId: string;
+  /** §39.8 — ποιος την εξαργύρωσε· `null` όσο δεν μπήκε. ⛔ Μένει στον server — η κάρτα παίρνει μόνο τη δήλωση. */
+  readonly resolvedByUid: string | null;
 }
 
 /**
@@ -270,6 +274,8 @@ export async function latestIssuanceSpaceInvitations(
     assignmentId,
     propertyId: invitation.propertyId,
     documentKind: invitation.documentKind,
+    projectId: invitation.projectId,
+    resolvedByUid: invitation.resolvedByUid,
   }]));
   return { byAssignment, truncated: snapshot.size === ISSUANCE_SPACE_SCAN_LIMIT };
 }

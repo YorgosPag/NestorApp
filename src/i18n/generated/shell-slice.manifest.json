@@ -53,7 +53,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "d47039d4bdc9eb77a9ffe4da5461f9a3b3948fb6258a7782bc34d19c962d9862",
     "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "0f5974343b7bbe05ccd34ad4730893c2e33cc6bdb232a058b82e82b66c8060f9",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5df4b358a575551a4c8fcfd7693ef7cb3ccdea5708961e6dac7bc9374e580f93",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "115ffb93f79b3ee2372f1dcdfa57cb317bd7c2624ac6b7f179d634be4abc3092",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d0625e08e571c6f69017f53c653a3ffffae3377055e3e2a4663c2bdf4588bef6",
+  "inputsSha256": "b1a89e5303097c97b3532ceed5c983cab349ad19e4958d3c8840035ab40174a8",
   "languages": [
     "el"
   ],
@@ -13611,6 +13611,8 @@
             "issuance.channel.phone",
             "issuance.channel.written",
             "issuance.credential",
+            "issuance.credentialBySelf",
+            "issuance.credentialOfficeDiffers",
             "issuance.credentialWithNumber",
             "issuance.decided",
             "issuance.decision.description",
@@ -13862,7 +13864,19 @@
           "keys": [
             "licences.electricalInstaller.name",
             "licences.energyInspector.name",
+            "registries.barAssociation.abbreviation",
+            "registries.barAssociation.name",
+            "registries.gemi.abbreviation",
+            "registries.gemi.name",
+            "registries.notaryAssociation.abbreviation",
+            "registries.notaryAssociation.name",
+            "registries.oee.abbreviation",
+            "registries.oee.name",
+            "registries.regionalAuthority.abbreviation",
             "registries.regionalAuthority.name",
+            "registries.tee.abbreviation",
+            "registries.tee.name",
+            "registries.ypen.abbreviation",
             "registries.ypen.name"
           ],
           "prefixes": [],
@@ -40914,7 +40928,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1342705
+    "sliceBytes": 1342914
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

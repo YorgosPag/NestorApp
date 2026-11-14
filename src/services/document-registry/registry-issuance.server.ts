@@ -15,8 +15,14 @@ import type { Firestore } from 'firebase-admin/firestore';
 import type { RegistryRow } from '@/lib/document-validity/document-registry';
 import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
 import { assignableTargets, issuanceOfRows, type RowIssuance } from '@/lib/document-validity/issuance-rows';
-import { issuanceSpaceStatusOf, type IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
-import { latestIssuanceSpaceInvitations } from '@/server/engagement-invitations/engagement-invitation-issue';
+import { issuanceSpaceStatusOf, type IssuanceSpaceStatus, type SpaceDeclaredCredential } from '@/lib/document-validity/issuance-space';
+import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
+import { readEngagementForSubject } from '@/lib/auth/engagement-read';
+import { isIssuanceEngagement, SCOPE_OF_SUBJECT } from '@/types/engagement';
+import {
+  latestIssuanceSpaceInvitations,
+  type IssuanceSpaceInvitationSummary,
+} from '@/server/engagement-invitations/engagement-invitation-issue';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readIssuanceRoster } from './issuance-assignments.server';
@@ -61,12 +67,36 @@ async function readIssuanceSpaces(db: Firestore, companyId: string, now: Date): 
       logger.warn('Οι προσκλήσεις χώρου χτύπησαν το όριο — η κάρτα δεν ισχυρίζεται κατάσταση χώρου', { data: { companyId } });
       return null;
     }
-    return Object.fromEntries([...byAssignment.values()].map((summary) => [
+    const entries = await Promise.all([...byAssignment.values()].map(async (summary) => [
       issuanceKeyOf(summary.propertyId, summary.documentKind),
-      issuanceSpaceStatusOf(summary),
-    ]));
+      issuanceSpaceStatusOf(summary, summary.state === 'accepted' ? await readSpaceDeclaration(db, companyId, summary, now) : null),
+    ] as const));
+    return Object.fromEntries(entries);
   } catch (error) {
     logger.warn('Οι προσκλήσεις χώρου δεν διαβάστηκαν', { data: { companyId, error: getErrorMessage(error, 'unknown') } });
     return null;
   }
+}
+
+/**
+ * §39.8 — **η δήλωση ιδιότητας του ίδιου του επαγγελματία**, από τη συμμετοχή που γέννησε **αυτή** η πρόσκληση.
+ * Ο ΕΝΑΣ αναγνώστης (`readEngagementForSubject`) βρίσκει την τρέχουσα· ο ΕΝΑΣ κριτής (`decideEngagement`) λέει αν
+ * ισχύει **τώρα** (ανακλημένη/ληγμένη ⇒ καμία δήλωση). Οτιδήποτε άλλο ⇒ `null`: η κάρτα μένει στη δήλωση του
+ * γραφείου, ποτέ ψεύτικο «δηλωμένο από τον ίδιο». Ρητή προβολή: μόνο μητρώο + αριθμός.
+ */
+async function readSpaceDeclaration(
+  db: Firestore,
+  hostCompanyId: string,
+  summary: IssuanceSpaceInvitationSummary,
+  now: Date,
+): Promise<SpaceDeclaredCredential | null> {
+  if (summary.resolvedByUid === null) return null;
+  const subject = { kind: 'document_issuance', assignmentId: summary.assignmentId } as const;
+  const read = await readEngagementForSubject(db, { hostCompanyId, projectId: summary.projectId, uid: summary.resolvedByUid, subject });
+  if (read.outcome !== 'found' || read.engagement === null || !isIssuanceEngagement(read.engagement)) return null;
+  const engagement = read.engagement;
+  if (engagement.origin.invitationId !== summary.invitationId || !engagement.declaredCredential) return null;
+  const decision = decideEngagement({ engagement, uid: engagement.uid, subject: engagement.subject, scope: SCOPE_OF_SUBJECT.document_issuance, nowMs: now.getTime() });
+  if (!isEngaged(decision.verdict)) return null;
+  return { authority: engagement.declaredCredential.authority, number: engagement.declaredCredential.number };
 }

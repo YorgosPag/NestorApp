@@ -31,6 +31,8 @@ import type {
   LinkVerification,
 } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
+import type { IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
+import { REGISTRY_AUTHORITY_PRESENTATION } from '@/constants/professional-registries';
 import type { IssuanceReminders } from '@/lib/document-validity/issuance-reminder';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
@@ -75,14 +77,40 @@ function candidateNames(t: Translate, view: RegistryIssuanceView, registry: Name
     .map((candidate) => [candidate.contactId, nameOf(t, candidate.contactId, registry)] as const));
 }
 
-function CredentialLine({ record }: { readonly record: IssuanceAssignmentRecord }): React.ReactElement {
-  const { t } = useTranslation([REGISTRY_NS, PROPERTY_MARKET_NS]);
+/** Ίδιος αριθμός; — χωρίς κενά και πεζά/κεφαλαία, ώστε το «ΥΠ 2600» να μη «διαφωνεί» με το «υπ2600». */
+function sameRegistryNumber(a: string, b: string): boolean {
+  const norm = (value: string) => value.replace(/\s+/g, '').toLowerCase();
+  return norm(a) === norm(b);
+}
+
+/**
+ * §39.8 — **ποια δήλωση δείχνει η κάρτα**: όταν ο επαγγελματίας μπήκε στον χώρο και δήλωσε ο ίδιος, η δική του
+ * («— δηλωμένο από τον ίδιο»), και του γραφείου **μόνο** αν διαφέρει. Αλλιώς η δήλωση του γραφείου, όπως πριν.
+ */
+function credentialTexts(t: Translate, record: IssuanceAssignmentRecord, space: IssuanceSpaceStatus | null): { readonly main: string; readonly officeDiffers: string | null } {
   const { qualification, registryNumber } = record.credential;
-  const lookupUrl = qualificationLookupUrl(qualification);
-  const label = qualificationText(t, qualification);
+  const declared = space?.kind === 'entered' ? space.declared : null;
+  if (declared === null) {
+    const label = qualificationText(t, qualification);
+    const main = registryNumber === null ? t(ISSUANCE_KEYS.credential, { qualification: label }) : t(ISSUANCE_KEYS.credentialWithNumber, { qualification: label, number: registryNumber });
+    return { main, officeDiffers: null };
+  }
+  const registry = t(REGISTRY_AUTHORITY_PRESENTATION[declared.authority].abbreviationKey);
+  const differs = registryNumber !== null && !sameRegistryNumber(registryNumber, declared.number);
+  return {
+    main: t(ISSUANCE_KEYS.credentialBySelf, { registry, number: declared.number }),
+    officeDiffers: differs ? t(ISSUANCE_KEYS.credentialOfficeDiffers, { number: registryNumber }) : null,
+  };
+}
+
+function CredentialLine({ record, space }: { readonly record: IssuanceAssignmentRecord; readonly space: IssuanceSpaceStatus | null }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS, PROPERTY_MARKET_NS]);
+  const lookupUrl = qualificationLookupUrl(record.credential.qualification);
+  const { main, officeDiffers } = credentialTexts(t, record, space);
   return (
     <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-      <span>{registryNumber === null ? t(ISSUANCE_KEYS.credential, { qualification: label }) : t(ISSUANCE_KEYS.credentialWithNumber, { qualification: label, number: registryNumber })}</span>
+      <span>{main}</span>
+      {officeDiffers === null ? null : <span>{officeDiffers}</span>}
       {lookupUrl !== null ? (
         <a href={lookupUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4">
           {t(ISSUANCE_KEYS.verifyRegistry)}<ExternalLink className="size-3" aria-hidden="true" />
@@ -248,7 +276,7 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
         <span className="text-muted-foreground">{t(ISSUANCE_KEYS.professional)}</span>
         <ObligorPerson person={registryPersonOf(state.record.professionalContactId, registry)} />
       </p>
-      <CredentialLine record={state.record} />
+      <CredentialLine record={state.record} space={view.space} />
       <BallInCourtLine state={state} view={view} registry={registry} />
       {/* §39 — μετά το «Αναλαμβάνω»: μπήκε ο επαγγελματίας στον χώρο της ανάθεσης; */}
       {state.stage === 'accepted' ? <RegistryIssuanceSpaceLine view={view} /> : null}

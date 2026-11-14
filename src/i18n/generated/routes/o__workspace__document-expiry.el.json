@@ -91,6 +91,8 @@
         "written": "γραπτώς (υπογεγραμμένο)"
       },
       "credential": "{qualification} — δηλωμένο από το γραφείο",
+      "credentialBySelf": "{registry} · αρ. μητρώου {number} — δηλωμένο από τον ίδιο",
+      "credentialOfficeDiffers": "(το γραφείο είχε δηλώσει: {number})",
       "credentialWithNumber": "{qualification} · αρ. μητρώου {number} — δηλωμένο από το γραφείο",
       "decided": "Απόφαση ιδιοκτήτη: {name} · {channel} · {date}",
       "decision": {

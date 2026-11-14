@@ -7,6 +7,7 @@
  *
  * Ποιο γραφείο, ποιο ακίνητο, ποιο έγγραφο, πού βρίσκεται η ανάθεση και σε ποιον είναι η σειρά — **παραγόμενα** από
  * την ανάθεση, ποτέ αποθηκευμένα δεύτερη φορά. Η ιδιότητα φαίνεται όπως τη δήλωσε ο ίδιος («δηλωμένη»).
+ * 🔑 Στάδιο και σειρά σε **δεύτερο πρόσωπο** (§39.7): διαβάζει ο ίδιος — «Σειρά: δική σας», όχι «ο επαγγελματίας».
  *
  * 🔒 Ε-9′ — **κανένα** τηλέφωνο ή email του γραφείου: μόνο ονόματα και γεγονότα.
  * 🔑 Η παράδοση (Φ-Γ) και τα μηνύματα (Φ-Δ) προστίθενται **εδώ**, πάνω στο ίδιο `kind` — η σελίδα δεν αλλάζει διεύθυνση.
@@ -19,11 +20,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PrivatePageHeader } from '@/components/private-space/PrivatePageHeader';
 import { Card } from '@/components/ui/card';
 import { DOCUMENT_KIND_LABEL_KEYS } from '@/components/document-registry/document-registry-labels';
-import { BALL_IN_COURT_KEYS, ISSUANCE_STAGE_KEYS } from '@/components/document-registry/issuance-labels';
 import { REGISTRY_AUTHORITY_PRESENTATION } from '@/constants/professional-registries';
 import { formatDate } from '@/lib/intl-utils';
 import type { EngagedIssuanceView } from '@/types/my-engagements';
-import { ISSUANCE_SPACE_KEYS } from './issuance-space-labels';
+import { ISSUANCE_SPACE_KEYS, PROFESSIONAL_BALL_KEYS, PROFESSIONAL_STAGE_KEYS } from './issuance-space-labels';
 
 function Facts({ view }: { readonly view: EngagedIssuanceView }) {
   const { t } = useTranslation(['conveyance', 'document-registry', 'legality', 'property-market']);
@@ -37,11 +37,11 @@ function Facts({ view }: { readonly view: EngagedIssuanceView }) {
       <dt className="text-muted-foreground">{t(ISSUANCE_SPACE_KEYS.documentLabel)}</dt>
       <dd>{t(DOCUMENT_KIND_LABEL_KEYS[view.documentKind])}</dd>
       <dt className="text-muted-foreground">{t(ISSUANCE_SPACE_KEYS.stageLabel)}</dt>
-      <dd>{t(ISSUANCE_STAGE_KEYS[view.stage])}</dd>
+      <dd>{t(PROFESSIONAL_STAGE_KEYS[view.stage])}</dd>
       {view.ballInCourt && (
         <>
           <dt className="text-muted-foreground">{t(ISSUANCE_SPACE_KEYS.ballLabel)}</dt>
-          <dd>{t(BALL_IN_COURT_KEYS[view.ballInCourt])}</dd>
+          <dd>{t(PROFESSIONAL_BALL_KEYS[view.ballInCourt])}</dd>
         </>
       )}
       {credential && (

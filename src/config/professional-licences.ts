@@ -52,10 +52,12 @@ export interface ProfessionalLicenceSpec {
 export const PROFESSIONAL_LICENCE_SPECS: Readonly<Record<ProfessionalLicence, ProfessionalLicenceSpec>> = {
   // Μητρώο Ενεργειακών Επιθεωρητών της ΕΥΕΠΕΝ (buildingcert.gr): εγγραφή με αύξοντα αριθμό, που αναγράφεται στην άδεια
   // του επιθεωρητή και στο ΠΕΑ που εκδίδει (έρευνα 2026-10-16, ADR-915 §21).
+  // 🔑 Η ΔΗΜΟΣΙΑ αναζήτηση (περιοχή · προσωπικά στοιχεία), ΧΩΡΙΣ Taxisnet — επαληθευμένο 2026-11-14 (ADR-915 §39.6).
+  //    Η αρχική σελίδα οδηγούσε στην είσοδο ΓΓΠΣ: σωστό για τον ίδιο τον επιθεωρητή, ψευδές για το «δημόσιο μητρώο».
   'energy-inspector': {
     authority: 'ypen',
     statute: 'ν.4122/2013',
-    registryLookupUrl: 'https://www.buildingcert.gr',
+    registryLookupUrl: 'https://www.buildingcert.gr/inspectors/startValues.view',
     nameKey: 'property-market:licences.energyInspector.name',
     heldThroughOccupations: [],
   },

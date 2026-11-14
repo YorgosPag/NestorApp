@@ -16,7 +16,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ActingForLine } from '@/components/conveyance/acting/ActingWorkspaceField';
 import { DOCUMENT_KIND_LABEL_KEYS } from '@/components/document-registry/document-registry-labels';
-import { BALL_IN_COURT_KEYS, ISSUANCE_STAGE_KEYS } from '@/components/document-registry/issuance-labels';
 import { ENGAGEMENT_STATE_PRESENTATION } from '@/components/sales/conveyance/conveyance-presentation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -25,7 +24,7 @@ import { myCaseHref, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
 import type { MyIssuanceCard } from '@/types/my-engagements';
-import { ISSUANCE_SPACE_KEYS } from './issuance-space-labels';
+import { ISSUANCE_SPACE_KEYS, PROFESSIONAL_BALL_KEYS, PROFESSIONAL_STAGE_KEYS } from './issuance-space-labels';
 
 interface MyIssuanceCardViewProps {
   readonly card: MyIssuanceCard;
@@ -39,8 +38,8 @@ function IssuanceFacts({ card }: { readonly card: MyIssuanceCard }) {
   return (
     <p className={cn('flex flex-wrap gap-x-3 gap-y-1 text-xs', colors.text.muted)}>
       <span>{t(ISSUANCE_SPACE_KEYS.fromOffice, { office: card.hostName ?? t(ISSUANCE_SPACE_KEYS.unnamedOffice) })}</span>
-      {card.stage && <span>{t(ISSUANCE_STAGE_KEYS[card.stage])}</span>}
-      {card.ballInCourt && <span>{t(ISSUANCE_SPACE_KEYS.ballLine, { party: t(BALL_IN_COURT_KEYS[card.ballInCourt]) })}</span>}
+      {card.stage && <span>{t(PROFESSIONAL_STAGE_KEYS[card.stage])}</span>}
+      {card.ballInCourt && <span>{t(ISSUANCE_SPACE_KEYS.ballLine, { party: t(PROFESSIONAL_BALL_KEYS[card.ballInCourt]) })}</span>}
       {card.actingFor && <ActingForLine actingFor={card.actingFor} />}
     </p>
   );
