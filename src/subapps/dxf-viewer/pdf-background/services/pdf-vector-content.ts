@@ -7,7 +7,9 @@
  *   (ADR-929 Δ3) — η εισαγωγή κάθεται ακριβώς πάνω στην εικόνα, με κάθε βαθμονόμηση.
  * 🔑 Κείμενο = τρία σημεία (αρχή γραμμής βάσης · ένα «ύψος γραμματοσειράς» κατά μήκος της · ένα κάθετα πάνω), όχι γωνία και
  *   ύψος: ο καταναλωτής τα περνά από τον ίδιο πίνακα, οπότε αναστροφή Y και περιστροφή υποβάθρου μπαίνουν χωρίς πρόσημα.
- * ⚠️ Φ1: μόνο διαδρομές με **πινελιά**· τα γεμίσματα μετριούνται (`skippedFills`) και περιμένουν τη Φ1.1 (ADR-941 Δ6).
+ * ⚠️ Φ1: μόνο διαδρομές με **πινελιά** γίνονται οντότητες· τα γεμίσματα μετριούνται (`skippedFills`) και περιμένουν τη Φ1.1
+ *   (ADR-941 Δ6). Φ2β (Δ21): τα γεμίσματα διαβάζονται **και** ως κλειστά πολύγωνα (`fills`) — **μόνο** ως τεκμήριο (π.χ. γεμάτο
+ *   βέλος διάστασης), ποτέ ως οντότητα.
  *
  * @module subapps/dxf-viewer/pdf-background/services/pdf-vector-content
  */
@@ -41,6 +43,8 @@ export interface PdfVectorContent {
   readonly texts: readonly PdfVectorText[];
   /** Διαδρομές μόνο με γέμισμα — δεν εισάγονται στη Φ1, μετριούνται ώστε να λέγονται. */
   readonly skippedFills: number;
+  /** ADR-941 Δ21 — τα υπο-μονοπάτια των διαδρομών μόνο με γέμισμα, ως κλειστά πολύγωνα σε px: τεκμήριο, όχι οντότητες. */
+  readonly fills: readonly PdfVectorPolyline[];
 }
 
 /** Ό,τι χρειάζεται από μια σελίδα του pdf.js. */
@@ -83,20 +87,26 @@ function subpathPoints(subpath: PdfSubpath): { points: PdfPoint[]; closed: boole
   return { points, closed: subpath.closed };
 }
 
-/** Οι πολυγραμμές των διαδρομών με πινελιά, σε px (`toPx`), και πόσες διαδρομές είχαν μόνο γέμισμα. */
+/**
+ * Οι πολυγραμμές των διαδρομών με πινελιά, σε px (`toPx`), πόσες διαδρομές είχαν μόνο γέμισμα, και τα πολύγωνά τους (Δ21:
+ * ένα γέμισμα είναι πάντα κλειστό — ο κανόνας γεμίσματος του PDF κλείνει σιωπηλά κάθε υπο-μονοπάτι).
+ */
 export function strokedPolylines(
   ops: PdfPathOperators, fnArray: readonly number[], argsArray: readonly (readonly unknown[] | null)[], toPx: (p: PdfPoint) => PxPoint,
-): { polylines: PdfVectorPolyline[]; skippedFills: number } {
+): { polylines: PdfVectorPolyline[]; skippedFills: number; fills: PdfVectorPolyline[] } {
   const polylines: PdfVectorPolyline[] = [];
+  const fills: PdfVectorPolyline[] = [];
   let skippedFills = 0;
   for (const path of walkPaintedPaths(ops, fnArray, argsArray)) {
-    if (!path.stroke) { skippedFills += 1; continue; }
+    if (!path.stroke) skippedFills += 1;
     for (const subpath of path.subpaths) {
       const { points, closed } = subpathPoints(subpath);
-      if (points.length >= 2) polylines.push({ points: points.map(toPx), closed: closed || path.closedByPaint });
+      if (!path.stroke) {
+        if (points.length >= 3) fills.push({ points: points.map(toPx), closed: true });
+      } else if (points.length >= 2) polylines.push({ points: points.map(toPx), closed: closed || path.closedByPaint });
     }
   }
-  return { polylines, skippedFills };
+  return { polylines, skippedFills, fills };
 }
 
 interface PdfjsTextItem {
@@ -138,7 +148,7 @@ export async function readVectorContent(page: VectorSourcePage, ops: PdfPathOper
     return [px, py];
   };
   const { fnArray, argsArray } = await page.getOperatorList();
-  const { polylines, skippedFills } = strokedPolylines(ops, fnArray, argsArray, toPx);
+  const { polylines, skippedFills, fills } = strokedPolylines(ops, fnArray, argsArray, toPx);
   const { items } = await page.getTextContent();
-  return { polylines, texts: pageTexts(items, toPx), skippedFills };
+  return { polylines, texts: pageTexts(items, toPx), skippedFills, fills };
 }

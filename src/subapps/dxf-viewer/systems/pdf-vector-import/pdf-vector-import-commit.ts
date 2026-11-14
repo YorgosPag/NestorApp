@@ -1,5 +1,5 @@
 /**
- * ADR-941 Φ1 · Φ2α — η **εισαγωγή** του διανυσματικού PDF ενός ορόφου στη σκηνή: γραμμές στο `PDF_Geometry`, κείμενα στο
+ * ADR-941 Φ1 · Φ2α · Φ2β — η **εισαγωγή** του διανυσματικού PDF ενός ορόφου στη σκηνή: γραμμές στο `PDF_Geometry`, κείμενα στο
  * `PDF_Text` (ονόματα του AutoCAD `PDFIMPORT`, Δ5), οι γραμμένες τιμές που δένονται σε ακμή ως **πραγματικές διαστάσεις** στο
  * layer του στυλ διάστασης (≡ `DIMLAYER`, Δ13) — ως **μία** ενέργεια χρήστη = **ένα** Ctrl+Z (ADR-729, Δ7).
  *
@@ -57,6 +57,8 @@ export interface PdfVectorImportCounts {
   readonly overriddenDimensions: number;
   /** Γραμμένα μήκη που δεν δέθηκαν σε ακμή — έμειναν κείμενα (Δ12). */
   readonly unboundDimensions: number;
+  /** Φ2β (Δ19) — γραμμές του PDF που ήταν γραφικά δεμένων διαστάσεων και απορροφήθηκαν (η διάσταση τις ζωγραφίζει). */
+  readonly absorbedGraphics: number;
   readonly replaced: number;
   readonly skippedFills: number;
 }
@@ -127,24 +129,27 @@ function writeImport(
   target: PdfVectorImportTarget, read: FloorPdfVectors, reading: PdfDimensionReading, layers: ImportLayers, undoName: string,
 ): Omit<PdfVectorImportCounts, 'replaced' | 'skippedFills'> {
   const entityInput = { content: read.content, placement: read.placement, layers, sourceKey: read.sourceKey };
-  const geometry = pdfVectorGeometry(entityInput);
   const scene = target.getScene(target.levelId);
-  const { dimensions, overridden } = layers.dimension === null || !scene
+  const dimensionLayer = scene ? layers.dimension : null;
+  // Δ19: τα γραφικά διάστασης απορροφώνται ΜΟΝΟ όταν γράφεται η διάσταση που τα ζωγραφίζει — ποτέ χαμένες γραμμές.
+  const absorbed = dimensionLayer !== null && reading.bindings.length > 0 ? reading.absorbed : new Set<number>();
+  const geometry = pdfVectorGeometry(entityInput, absorbed);
+  const { dimensions, overridden } = dimensionLayer === null || !scene
     ? { dimensions: [], overridden: 0 }
     : pdfDimensionEntities({
-      bindings: reading.bindings, content: read.content, geometryIds: geometry.map((g) => g.id), placement: read.placement,
-      sceneUnits: resolveSceneUnits(scene), styleId: getDimStyleRegistry().getActiveStyle().id, layerId: layers.dimension,
+      bindings: reading.bindings, geometryIds: geometry.ids, placement: read.placement,
+      sceneUnits: resolveSceneUnits(scene), styleId: getDimStyleRegistry().getActiveStyle().id, layerId: dimensionLayer,
       sourceKey: read.sourceKey,
     });
   const asDimensions = new Set(dimensions.length > 0 ? reading.bindings.map((b) => b.textIndex) : []);
   const texts = pdfVectorTexts(entityInput, asDimensions);
-  completeEntities([...geometry, ...texts] as Entity[], {
+  completeEntities([...geometry.entities, ...texts] as Entity[], {
     tool: PDF_VECTOR_IMPORT_TOOL, levelId: target.levelId, getScene: target.getScene, setScene: target.setScene, skipStyles: true,
   });
   if (dimensions.length > 0) addDimensionsToScene(dimensions, accessorOf(target), { tool: PDF_VECTOR_IMPORT_TOOL, undoName });
   return {
-    lines: geometry.length, texts: texts.length, dimensions: dimensions.length, overriddenDimensions: overridden,
-    unboundDimensions: reading.unbound + (dimensions.length > 0 ? 0 : reading.bindings.length),
+    lines: geometry.entities.length, texts: texts.length, dimensions: dimensions.length, overriddenDimensions: overridden,
+    unboundDimensions: reading.unbound + (dimensions.length > 0 ? 0 : reading.bindings.length), absorbedGraphics: absorbed.size,
   };
 }
 
@@ -183,5 +188,5 @@ export async function readFloorPdfVectorScale(floorId: string, sceneUnits: Scene
   const read = await readFloorPdfVectors(floorId);
   const background = getFloorBackground(floorId);
   if ('kind' in read || !background || background.id !== read.sourceKey) return null;
-  return pdfVectorScale({ reading: bindPdfDimensions(read.content), content: read.content, background, sceneUnits });
+  return pdfVectorScale({ reading: bindPdfDimensions(read.content), background, sceneUnits });
 }

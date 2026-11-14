@@ -30,6 +30,8 @@ describe('readVectorContent', () => {
     ), OPS, 2);
     expect(content.polylines).toEqual([{ points: [[20, 360], [60, 360]], closed: false }]);
     expect(content.skippedFills).toBe(1);
+    // ADR-941 Δ21: το γέμισμα διαβάζεται και ως κλειστό πολύγωνο σε px — τεκμήριο (π.χ. γεμάτο βέλος), όχι οντότητα.
+    expect(content.fills).toEqual([{ points: [[0, 400], [10, 400], [10, 390], [0, 390]], closed: true }]);
   });
 
   it('ορθογώνιο με πινελιά ⇒ κλειστή πολυγραμμή 4 κορυφών', async () => {

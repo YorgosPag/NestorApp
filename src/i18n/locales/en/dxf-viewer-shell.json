@@ -470,6 +470,7 @@
       "dimensions": "{count, plural, one {# written value became a dimension} other {# written values became dimensions}}, bound to their lines.",
       "overriddenDimensions": "{count, plural, one {# dimension disagrees} other {# dimensions disagree}} with the geometry and {count, plural, one {keeps} other {keep}} the written text. Calibrate the background for live values.",
       "unboundDimensions": "{count, plural, one {# written length could not be bound} other {# written lengths could not be bound}} to an edge with certainty and {count, plural, one {stays text} other {stay texts}}.",
+      "absorbedGraphics": "{count, plural, one {# PDF dimension line (arrowhead, dimension or extension line) became} other {# PDF dimension lines (arrowheads, dimension and extension lines) became}} part of the dimensions.",
       "outcome": {
         "notVector": "The background is not a vector PDF; nothing was written.",
         "sourceChanged": "The background changed while reading; nothing was written. Try again.",

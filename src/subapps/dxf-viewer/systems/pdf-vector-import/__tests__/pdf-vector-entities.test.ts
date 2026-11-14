@@ -1,5 +1,5 @@
 /**
- * ADR-941 Φ1 · Φ2α — `pdfVectorGeometry` / `pdfVectorTexts`: ΕΝΑΣ δρόμος συντεταγμένων (`rasterPixelToScene`), γωνία/ύψος κειμένου από
+ * ADR-941 Φ1 · Φ2α · Φ2β — `pdfVectorGeometry` / `pdfVectorTexts`: ΕΝΑΣ δρόμος συντεταγμένων (`rasterPixelToScene`), γωνία/ύψος κειμένου από
  * απεικονισμένα σημεία, ταυτότητα πηγής σε κάθε οντότητα.
  */
 
@@ -15,11 +15,11 @@ const PLACEMENT: RasterPlacement = {
   naturalBounds: { width: 200, height: 100 },
 };
 
-const content = (patch: Partial<PdfVectorContent>): PdfVectorContent => ({ polylines: [], texts: [], skippedFills: 0, ...patch });
+const content = (patch: Partial<PdfVectorContent>): PdfVectorContent => ({ polylines: [], texts: [], skippedFills: 0, fills: [], ...patch });
 const inputOf = (c: PdfVectorContent, placement: RasterPlacement = PLACEMENT) => ({ content: c, placement, layers: LAYERS, sourceKey: 'bg_1' });
 /** Πρώτα η γεωμετρία, μετά τα κείμενα (κανένα δεν έγινε διάσταση). */
 const entitiesOf = (c: PdfVectorContent, placement: RasterPlacement = PLACEMENT) =>
-  [...pdfVectorGeometry(inputOf(c, placement)), ...pdfVectorTexts(inputOf(c, placement), new Set())];
+  [...pdfVectorGeometry(inputOf(c, placement)).entities, ...pdfVectorTexts(inputOf(c, placement), new Set())];
 
 describe('pdfVectorGeometry · pdfVectorTexts', () => {
   it('ανοιχτή δύο σημείων ⇒ line· αλλιώς polyline (με το closed)· layer γεωμετρίας', () => {
@@ -61,7 +61,20 @@ describe('pdfVectorGeometry · pdfVectorTexts', () => {
 
   it('γεωμετρία: μία οντότητα ανά πολυγραμμή, με τη σειρά τους (τα ids δένουν τις διαστάσεις)', () => {
     const c = content({ polylines: [{ points: [[0, 0], [1, 0]], closed: false }, { points: [[0, 0], [1, 0], [1, 1]], closed: true }] });
-    expect(pdfVectorGeometry(inputOf(c)).map((e) => e.type)).toEqual(['line', 'polyline']);
+    const geometry = pdfVectorGeometry(inputOf(c));
+    expect(geometry.entities.map((e) => e.type)).toEqual(['line', 'polyline']);
+    expect(geometry.ids).toEqual(geometry.entities.map((e) => e.id));
+  });
+
+  it('Φ2β (Δ19): οι απορροφημένες πολυγραμμές δεν γράφονται· το id τους είναι `null` και οι δείκτες των άλλων μένουν', () => {
+    const c = content({ polylines: [
+      { points: [[0, 0], [1, 0]], closed: false },
+      { points: [[5, 5], [6, 5]], closed: false },
+      { points: [[0, 0], [1, 0], [1, 1]], closed: true },
+    ] });
+    const geometry = pdfVectorGeometry(inputOf(c), new Set([1]));
+    expect(geometry.entities.map((e) => e.type)).toEqual(['line', 'polyline']);
+    expect(geometry.ids).toEqual([geometry.entities[0].id, null, geometry.entities[1].id]);
   });
 
   it('Δ16: κείμενο που έγινε διάσταση δεν γράφεται και ως κείμενο', () => {

@@ -30,7 +30,7 @@ import {
 import { buildCalibrationData, type CalibrationDraftReference } from '../../floorplan-background/geometry/calibration-draft';
 import { rasterPixelToScene, type RasterPlacement } from '../../floorplan-background/geometry/raster-scene-mapping';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import type { PdfVectorContent, PxPoint } from '../../pdf-background/services/pdf-vector-content';
+import type { PxPoint } from '../../pdf-background/services/pdf-vector-content';
 import type { PdfDimensionBinding, PdfDimensionReading } from './pdf-vector-dimension-binding';
 
 /** Μία γραμμένη τιμή ως αναφορά της βαθμονόμησης: τα άκρα της ακμής της, σε φυσικά px του υποβάθρου. */
@@ -69,18 +69,16 @@ export type PdfVectorScale = PdfVectorScaleProposal | PdfVectorScaleConfirmed | 
 
 export interface PdfVectorScaleInput {
   readonly reading: PdfDimensionReading;
-  readonly content: PdfVectorContent;
   readonly background: Pick<FloorplanBackground, 'id' | 'transform' | 'naturalBounds' | 'calibration'>;
   readonly sceneUnits: SceneUnits;
 }
 
 const pointOf = (p: PxPoint): { readonly x: number; readonly y: number } => ({ x: p[0], y: p[1] });
 
-function referenceOf(binding: PdfDimensionBinding, content: PdfVectorContent): PdfVectorScaleReference | null {
-  const points = content.polylines[binding.edge.polylineIndex]?.points;
-  const from = points?.[binding.edge.from];
-  const to = points?.[binding.edge.to];
-  if (from === undefined || to === undefined) return null;
+/** Τα δύο μετρούμενα σημεία του δεσίματος (ακμή της Φ2α ή κορυφές των μυτών της Φ2β) ως αναφορά· μηδενικό μήκος ⇒ `null`. */
+function referenceOf(binding: PdfDimensionBinding): PdfVectorScaleReference | null {
+  const [from, to] = binding.measured.map((m) => m.point);
+  if (from[0] === to[0] && from[1] === to[1]) return null;
   return { raw: binding.raw, valueMm: binding.valueMm, a: pointOf(from), b: pointOf(to) };
 }
 
@@ -109,7 +107,7 @@ function currentMmPerPixel(ref: PdfVectorScaleReference, input: PdfVectorScaleIn
 /** Η κάρτα, ή `null` όταν οι γραμμένες τιμές δεν αποδεικνύουν κλίμακα (καμία συναίνεση, κανένα δέσιμο). */
 export function pdfVectorScale(input: PdfVectorScaleInput): PdfVectorScale | null {
   if (input.reading.pxPerMm === null) return null;
-  const paired = input.reading.bindings.flatMap((b) => { const r = referenceOf(b, input.content); return r ? [{ b, r }] : []; });
+  const paired = input.reading.bindings.flatMap((b) => { const r = referenceOf(b); return r ? [{ b, r }] : []; });
   if (paired.length === 0) return null;
   const refs = paired.map((p) => p.r);
   const calibrated = input.background.calibration !== null;

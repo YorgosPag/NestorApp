@@ -5,26 +5,27 @@
 
 import type { CalibrationData, FloorplanBackground } from '../../../floorplan-background/providers/types';
 import { rasterPixelToScene } from '../../../floorplan-background/geometry/raster-scene-mapping';
-import type { PdfVectorContent } from '../../../pdf-background/services/pdf-vector-content';
+import type { PxPoint } from '../../../pdf-background/services/pdf-vector-content';
 import type { PdfDimensionBinding, PdfDimensionReading } from '../pdf-vector-dimension-binding';
 import { isPdfVectorScaleCurrent, pdfVectorScale, pdfVectorScaleCalibration, type PdfVectorScaleProposal } from '../pdf-vector-scale';
 
 /** Το σχήμα του ΤΕΣΤ1: ορθογώνιο 205 × 412 px, γραμμένο «2.05» × «4.12» (m) ⇒ 1 px = 10 mm. */
-const CONTENT: PdfVectorContent = {
-  polylines: [{ points: [[100, 100], [305, 100], [305, 512], [100, 512]], closed: true }],
-  texts: [],
-  skippedFills: 0,
-};
+const RECT: readonly PxPoint[] = [[100, 100], [305, 100], [305, 512], [100, 512]];
+const edgeOf = (from: number, to: number): PdfDimensionBinding['measured'] => [
+  { point: RECT[from], vertex: { polylineIndex: 0, index: from } },
+  { point: RECT[to], vertex: { polylineIndex: 0, index: to } },
+];
 
 const binding = (patch: Partial<PdfDimensionBinding>): PdfDimensionBinding => ({
   textIndex: 0, raw: '2.05', valueMm: 2050, precisionMm: 10,
-  edge: { polylineIndex: 0, from: 0, to: 1 }, baselineMid: [202, 80], ...patch,
+  measured: edgeOf(0, 1), linePoint: [202, 80], arrowheads: null, ...patch,
 });
 
 const READING: PdfDimensionReading = {
-  bindings: [binding({}), binding({ textIndex: 1, raw: '4.12', valueMm: 4120, edge: { polylineIndex: 0, from: 1, to: 2 } })],
+  bindings: [binding({}), binding({ textIndex: 1, raw: '4.12', valueMm: 4120, measured: edgeOf(1, 2) })],
   pxPerMm: 0.1,
   unbound: 0,
+  absorbed: new Set(),
 };
 
 const CALIBRATION: CalibrationData = {
@@ -41,7 +42,7 @@ const background = (scale: number, calibration: CalibrationData | null): Bg => (
 });
 
 const scaleOf = (bg: Bg, reading: PdfDimensionReading = READING) =>
-  pdfVectorScale({ reading, content: CONTENT, background: bg, sceneUnits: 'mm' });
+  pdfVectorScale({ reading, background: bg, sceneUnits: 'mm' });
 
 const proposalOf = (bg: Bg): PdfVectorScaleProposal => {
   const scale = scaleOf(bg);
@@ -82,12 +83,12 @@ describe('pdfVectorScale', () => {
 
   it('χωρίς αποδεδειγμένη συναίνεση ή χωρίς δέσιμο ⇒ καμία κάρτα', () => {
     expect(scaleOf(background(1, null), { ...READING, pxPerMm: null })).toBeNull();
-    expect(scaleOf(background(1, null), { bindings: [], pxPerMm: 0.1, unbound: 2 })).toBeNull();
+    expect(scaleOf(background(1, null), { bindings: [], pxPerMm: 0.1, unbound: 2, absorbed: new Set() })).toBeNull();
   });
 
   it('ασυνεπείς τιμές ⇒ η πρόταση ζητά έλεγχο', () => {
     const reading = { ...READING, bindings: [READING.bindings[0], { ...READING.bindings[1], valueMm: 5000, raw: '5.00' }] };
-    const scale = pdfVectorScale({ reading, content: CONTENT, background: background(1, null), sceneUnits: 'mm' });
+    const scale = pdfVectorScale({ reading, background: background(1, null), sceneUnits: 'mm' });
     expect(scale?.kind === 'proposal' && scale.needsReview).toBe(true);
   });
 });

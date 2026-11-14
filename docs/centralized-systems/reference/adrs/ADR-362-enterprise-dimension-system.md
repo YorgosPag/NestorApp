@@ -713,6 +713,7 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-11-14 (ADR-941 Φ2β — `placeArrowheadBlock`)** — το ιδιωτικό `pushArrowhead` του `dim-block-primitives.ts` έγινε η εξαγόμενη καθαρή `placeArrowheadBlock(blockName, anchor, direction, size, side)`: ο **ένας** τοποθετητής μπλοκ απόληξης για την εξαγωγή DXF **και** για την αναγνώριση απολήξεων στο διανυσματικό PDF (ανάλυση μέσω σύνθεσης). Η έξοδος DXF δεν αλλάζει (`dim-block-primitives.test.ts` πράσινο). Επίπεδο Y-πάνω (αλλιώς τα ασύμμετρα μπλοκ βγαίνουν κατοπτρικά). ⚠️ Εύρημα, όχι διόρθωση: η εξαγωγή DXF δεν εφαρμόζει το `resolveLeaderArrowDir` του renderer (μπλοκ με οδηγό ⇒ προς τα μέσα).
 - **2026-08-01 (R44 — το `defPoints` δεν ήταν ποτέ εγγυημένο· βλ. → [ADR-746](./ADR-746-dimension-geometry-ingress-ssot.md))**
   - **Σύμπτωμα**: ζωντανό `TypeError: dim.defPoints is not iterable` μέσα στο `try` του
     `DxfBitmapCache.rebuild` ⇒ `cacheKey = null` ⇒ **κάθε καρέ** ξαναέχτιζε και ξαναπετούσε το

@@ -74,9 +74,27 @@ function textEntity(text: PdfVectorText, input: PdfVectorEntityInput): TextEntit
   };
 }
 
-/** ADR-941 Φ2α — η γεωμετρία: **μία οντότητα ανά πολυγραμμή, με τη σειρά** του `content.polylines` (`[i]` ⇔ `polylines[i]`). */
-export function pdfVectorGeometry(input: PdfVectorEntityInput): (LineEntity | PolylineEntity)[] {
-  return input.content.polylines.map((p) => polylineEntity(p, input));
+/** Η γεωμετρία της εισαγωγής: οι οντότητες, και το id **ανά πολυγραμμή** (`ids[i]` ⇔ `polylines[i]`, για τις συσχετίσεις). */
+export interface PdfVectorGeometry {
+  readonly entities: readonly (LineEntity | PolylineEntity)[];
+  /** Το id ανά πολυγραμμή, με τη σειρά του `content.polylines`· `null` = απορροφήθηκε σε διάσταση (Φ2β, Δ19). */
+  readonly ids: readonly (string | null)[];
+}
+
+/**
+ * ADR-941 Φ2α · Φ2β — η γεωμετρία: μία οντότητα ανά πολυγραμμή, **εκτός** όσων είναι γραφικά δεμένων διαστάσεων (`absorbed`,
+ * Δ19: η διάσταση τα ζωγραφίζει ήδη — δεύτερο αντίγραφο δεν θα ακολουθούσε το τέντωμα).
+ */
+export function pdfVectorGeometry(input: PdfVectorEntityInput, absorbed: ReadonlySet<number> = new Set()): PdfVectorGeometry {
+  const ids: (string | null)[] = [];
+  const entities: (LineEntity | PolylineEntity)[] = [];
+  input.content.polylines.forEach((p, i) => {
+    if (absorbed.has(i)) { ids.push(null); return; }
+    const entity = polylineEntity(p, input);
+    entities.push(entity);
+    ids.push(entity.id);
+  });
+  return { entities, ids };
 }
 
 /** ADR-941 Φ2α — τα κείμενα, **εκτός** όσων έγιναν διαστάσεις (Δ16: μία οντότητα ανά πράγμα). */

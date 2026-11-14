@@ -27,7 +27,7 @@
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
-import type { ArrowheadPoint } from './dim-arrowhead-blocks';
+import type { ArrowheadPoint, ArrowheadPrimitive } from './dim-arrowhead-blocks';
 import { getArrowheadBlock, resolveArrowBlockNames } from './dim-arrowhead-blocks';
 import {
   buildDimensionGeometry,
@@ -163,12 +163,6 @@ function buildArcPrimitive(g: AngularDimGeometry): DimBlockPrimitive {
   };
 }
 
-/**
- * Place one arrowhead block at `anchor`, rotated so its native `-X` tail aligns
- * with `direction` (world Y-up: rotate by +atan2(dir.y, dir.x) — the canvas
- * renderer negates this only because screen Y points down). A zero-length
- * direction means "no arrow here" (radial single-arrow) → emit nothing.
- */
 function pushArrowhead(
   out: DimBlockPrimitive[],
   blockName: string,
@@ -177,9 +171,33 @@ function pushArrowhead(
   sizeWorld: number,
   side: 1 | 2,
 ): void {
-  if (Math.hypot(direction.x, direction.y) < ZERO_DIRECTION_EPSILON) return;
+  out.push(...placeArrowheadBlock(blockName, anchor, direction, sizeWorld, side));
+}
+
+/**
+ * Place one arrowhead block at `anchor`, rotated so its native `-X` tail aligns
+ * with `direction` (world Y-up: rotate by +atan2(dir.y, dir.x) — the canvas
+ * renderer negates this only because screen Y points down). A zero-length
+ * direction means "no arrow here" (radial single-arrow) → no primitives.
+ *
+ * ADR-941 Φ2β — the ONE placement of a block into a plane: the DXF block writer
+ * AND the vector-PDF arrowhead recogniser (analysis by synthesis: "would stamping
+ * block X here reproduce the drawing?") both ask this function, so a block added to
+ * `ARROWHEAD_BLOCKS` is recognised with zero extra code. The plane must be Y-UP
+ * (world handedness): an asymmetric block (oblique, open-slanted) stamped in a
+ * Y-down plane comes out mirrored, so the recogniser flips page px to Y-up first.
+ */
+export function placeArrowheadBlock(
+  blockName: string,
+  anchor: Point2D,
+  direction: Point2D,
+  sizeWorld: number,
+  side: 1 | 2,
+): DimBlockPrimitive[] {
+  const out: DimBlockPrimitive[] = [];
+  if (Math.hypot(direction.x, direction.y) < ZERO_DIRECTION_EPSILON) return out;
   const block = getArrowheadBlock(blockName);
-  if (block.geometry.length === 0) return; // 'none'
+  if (block.geometry.length === 0) return out; // 'none'
 
   const flip = side === 2 && block.flipOnSecondArrow;
   const angle = Math.atan2(direction.y, direction.x) + (flip ? Math.PI : 0);
@@ -190,30 +208,29 @@ function pushArrowhead(
     const y = p[1] * sizeWorld;
     return { x: anchor.x + (x * cos - y * sin), y: anchor.y + (x * sin + y * cos) };
   };
+  for (const prim of block.geometry) out.push(...placedPrimitive(prim, place, sizeWorld));
+  return out;
+}
 
-  for (const prim of block.geometry) {
-    switch (prim.kind) {
-      case 'line':
-        out.push({ kind: 'line', a: place(prim.from), b: place(prim.to) });
-        break;
-      case 'triangle': {
-        const v1 = place(prim.v1);
-        const v2 = place(prim.v2);
-        const v3 = place(prim.v3);
-        if (prim.solid) {
-          out.push({ kind: 'fill', points: [v1, v2, v3] });
-        } else {
-          out.push({ kind: 'line', a: v1, b: v2 });
-          out.push({ kind: 'line', a: v2, b: v3 });
-          out.push({ kind: 'line', a: v3, b: v1 });
-        }
-        break;
-      }
-      case 'circle':
-        // DXF CIRCLE is an outline; a solid dot renders as a small ring (acceptable
-        // — dot arrowheads are rare and the entity is tiny). Center already placed.
-        out.push({ kind: 'circle', center: place(prim.center), radius: prim.radius * sizeWorld });
-        break;
+/** One unit-space block primitive in world space (`place` = the block's translate · rotate · scale). */
+function placedPrimitive(
+  prim: ArrowheadPrimitive,
+  place: (p: ArrowheadPoint) => Point2D,
+  sizeWorld: number,
+): DimBlockPrimitive[] {
+  switch (prim.kind) {
+    case 'line':
+      return [{ kind: 'line', a: place(prim.from), b: place(prim.to) }];
+    case 'triangle': {
+      const v1 = place(prim.v1);
+      const v2 = place(prim.v2);
+      const v3 = place(prim.v3);
+      if (prim.solid) return [{ kind: 'fill', points: [v1, v2, v3] }];
+      return [{ kind: 'line', a: v1, b: v2 }, { kind: 'line', a: v2, b: v3 }, { kind: 'line', a: v3, b: v1 }];
     }
+    case 'circle':
+      // DXF CIRCLE is an outline; a solid dot renders as a small ring (acceptable
+      // — dot arrowheads are rare and the entity is tiny). Center already placed.
+      return [{ kind: 'circle', center: place(prim.center), radius: prim.radius * sizeWorld }];
   }
 }

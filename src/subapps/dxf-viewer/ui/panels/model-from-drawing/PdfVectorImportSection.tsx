@@ -60,6 +60,9 @@ function OutcomeMessage({ outcome, t }: { readonly outcome: PdfVectorImportOutco
       {outcome.unboundDimensions > 0 ? (
         <p className={MUTED}>{t('modelFromDrawing.pdfVector.unboundDimensions', { count: outcome.unboundDimensions })}</p>
       ) : null}
+      {outcome.absorbedGraphics > 0 ? (
+        <p className={MUTED}>{t('modelFromDrawing.pdfVector.absorbedGraphics', { count: outcome.absorbedGraphics })}</p>
+      ) : null}
       {outcome.replaced > 0 ? <p className={MUTED}>{t('modelFromDrawing.pdfVector.replaced', { count: outcome.replaced })}</p> : null}
       {outcome.skippedFills > 0 ? <p className={MUTED}>{t('modelFromDrawing.pdfVector.skippedFills', { count: outcome.skippedFills })}</p> : null}
     </section>
