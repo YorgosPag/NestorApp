@@ -193,7 +193,11 @@ export function ContactDetailsHeader({
 
         {/* ADR-915 §40 — ο λογαριασμός πίσω από την επαφή (παραγόμενος από συμμετοχές· τίποτα αν δεν υπάρχει/δεν ξέρουμε). */}
         {professionalLink && professionalLink.status !== 'none' && (
-          <ContactLinkSurfaces.ContactProfessionalLinkBadge link={professionalLink} />
+          <ContactLinkSurfaces.ContactProfessionalLinkBadge
+            link={professionalLink}
+            contactId={contact.id ?? ''}
+            contact={isIndividualContact(contact) ? { licences: contact.licences, personas: contact.personas } : null}
+          />
         )}
       </div>
 

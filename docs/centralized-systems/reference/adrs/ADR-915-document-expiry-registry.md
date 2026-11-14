@@ -161,6 +161,7 @@ ADR-838). Ένας τρίτος, χειρόγραφος κατάλογος θα 
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-11-14 | **§40.5 — η επαφή κρατά άδειες, με προέλευση (Φ3β, μέρος 1).** Νέο `licences[]` στο `IndividualContact` (`types/contacts/contact-licences.ts`): **ίδιο σχήμα** με το `ShowcaseLicence` + `provenance { source: office \| self-declared, recordedAt, engagementId }`. Ένας σχηματισμός/αναγνώστης (`lib/contacts/contact-licences.ts` πάνω στα `formShowcaseLicences`/`readShowcaseLicences`)· η τιμή που δεν άλλαξε κρατά την προέλευσή της. Η κατάσταση φόρμας εξήχθη σε `lib/professional/licence-drafts.ts` (βιτρίνα + επαφή)· το `ShowcaseLicenceField` πήρε `voice: self \| office`. «Έλεγχος στο μητρώο» εξήχθη σε `RegistryLookupLink` (βιτρίνα + επαφή). Ίχνος: CDC + `licences: { keyBy: 'licence' }`. Το πεδίο φορτώνεται τεμπέλικα (`ContactLinkSurfaces.ContactLicencesField`, CHECK 3.34: απογραφή 102 → 103). |
+| 2026-11-14 | **§40.6 — υιοθέτηση της δήλωσης του ίδιου (Φ3β, μέρος 2).** Ολικός πίνακας προορισμού ανά αρχή μητρώου (`config/declared-credential-adoption.ts`: άδεια ή πεδίο persona, ΓΕΜΗ ⇒ όχι)· καθαρή σύγκριση `absent/same/different/not-adoptable` κοινή σε πελάτη και server· `POST …/adopt-declared-credential` με δήλωση από τον **server**, CAS σε συναλλαγή (409), `unchanged` χωρίς εγγραφή, σφραγίδες CDC. Η δήλωση απέκτησε `chapter` + `engagementId`. UI «Στην επαφή · Υιοθέτηση · Έλεγχος στο μητρώο» μέσα στο τεμπέλικο σήμα. |
 | 2026-11-14 | **§39.8 — η κάρτα του γραφείου δείχνει τη δήλωση του ίδιου του επαγγελματία.** Μετά την είσοδο: «… — δηλωμένο από τον ίδιο», και «(το γραφείο είχε δηλώσει: Χ)» μόνο όταν διαφέρει. `readSpaceDeclaration` (ένας αναγνώστης + ένας κριτής, μόνο η συμμετοχή της ίδιας πρόσκλησης) → `IssuanceSpaceStatus.entered.declared` (μόνο μητρώο + αριθμός) → `CredentialLine`. |
 | 2026-11-14 | **§39.7 — στάδιο και σειρά σε δεύτερο πρόσωπο στον χώρο του επαγγελματία.** «Σειρά: ο επαγγελματίας» → «Σειρά: δική σας»· το στάδιο από τη θέση του αναγνώστη. Νέοι ολικοί πίνακες `PROFESSIONAL_STAGE_KEYS` · `PROFESSIONAL_BALL_KEYS` (`my-cases/issuance-space-labels.ts`) στα `EngagedIssuanceContent` + `MyIssuanceCardView`· οι πίνακες του γραφείου αμετάβλητοι. |
 | 2026-11-14 | **§39.6 — ο σύνδεσμος μητρώου δείχνει τη ΔΗΜΟΣΙΑ αναζήτηση.** Ζωντανή επαλήθευση του `/case-invite` (λάθος λογαριασμός → σύνδεση `+arch1` → φόρμα ΥΠΕΝ → «Αποδοχή» → `/engagements/[id]` → κάρτα γραφείου «μπήκε»: όλα ✅). Εύρημα: το `https://www.buildingcert.gr` περνούσε από Taxisnet ⇒ `registryLookupUrl` = `…/inspectors/startValues.view` (επαληθευμένο δημόσιο). Ανοιχτά (handoff): η κάρτα γραφείου δείχνει τη δήλωση **του γραφείου**, όχι του επαγγελματία· η γραμμή «Έγγραφο» του `/case-invite` λείπει από το SSR HTML (`IssuanceSurfaces`, σκόπιμο, ADR-744 §27.4). |
@@ -3719,7 +3720,7 @@ namespaces της (`conveyance` · `document-registry` · `legality` · `propert
 καρέ). Σφράγιση `lazyRouteMountSeal` 98 → 102 με γραμμένο `why` (`.i18n-shell-slice.json`), εντολή Giorgio.
 
 ### 40.4 Δηλωμένα όρια — τι ΔΕΝ έγινε και γιατί
-- **«Υιοθέτηση στοιχείων» → όχι** *(το πεδίο υπάρχει πλέον: §40.5· η υιοθέτηση: §40.6)*. Η επαφή **δεν είχε** πεδίο για αριθμό ΥΠΕΝ ενεργειακού επιθεωρητή (η persona `engineer`
+- **«Υιοθέτηση στοιχείων» → ΕΚΛΕΙΣΕ στο §40.6** *(το πεδίο: §40.5)*. Ιστορικό: Η επαφή **δεν είχε** πεδίο για αριθμό ΥΠΕΝ ενεργειακού επιθεωρητή (η persona `engineer`
   έχει μόνο `teeRegistryNumber` — ΤΕΕ ≠ ΥΠΕΝ). Νέο πεδίο θέλει απόφαση Giorgio· μέχρι τότε μόνο εμφάνιση. Για
   δικηγόρο/συμβολαιογράφο τα πεδία υπάρχουν (`legal-professional-credentials.ts`) — υποψήφιο επόμενο βήμα.
 - **Νομικό πρόσωπο → μόνο ένδειξη**, ποτέ αυτόματη επαφή εταιρείας. Η ροή «Προσθήκη εταιρείας του επαγγελματία» θέλει
@@ -3753,3 +3754,26 @@ namespaces της (`conveyance` · `document-registry` · `legality` · `propert
 ⚠️ **Δηλωμένα όρια:** οι κανόνες Firestore των επαφών δεν έχουν λίστα πεδίων (καμία αλλαγή)· ο πελάτης μπορεί τεχνικά
 να γράψει `source: 'self-declared'` — η αξιόπιστη προέλευση της υιοθέτησης έρχεται από τον server (§40.6).
 Tests: `lib/contacts/__tests__/contact-licences.test.ts` (προέλευση κρατιέται · αλλαγή ⇒ office · ονομασμένη άρνηση · διπλή γραμμή · σειρά) · `lib/professional/__tests__/licence-drafts.test.ts` (round-trip) · δείγμα `licences` στο `audit-collection-identity.test.ts`. Browser **δεν** έτρεξε ακόμη.
+
+### 40.6 Υιοθέτηση της δήλωσης του ίδιου (Φ3β μέρος 2, 2026-11-14)
+**Τι βλέπει το γραφείο:** στο σήμα της επαφής, κάτω από «Δηλωμένο από τον ίδιο: ΥΠΕΝ 2600», η γραμμή **«Στην επαφή:
+— / <τιμή> / Ίδιο με τη δήλωση»**. Κουμπί **«Υιοθέτηση»** μόνο όταν η τιμή **λείπει** ή **διαφέρει**, πάντα με διάλογο
+«παλιό → νέο». «Έλεγχος στο μητρώο» δίπλα, όπου η άδεια έχει δημόσια αναζήτηση. Μόνο φυσικό πρόσωπο.
+
+**Πρακτική μεγάλων:** Salesforce Data.com Clean — σύγκριση δίπλα-δίπλα, ενημέρωση πεδίο-πεδίο, **ποτέ** αυτόματη
+αντικατάσταση γεμάτου πεδίου. **Πιο έξυπνα εδώ:** το «διαφέρει» **παράγεται** (δεν αποθηκεύεται), η άδεια κρατά
+προέλευση `self-declared` + ώρα + **συμμετοχή**, και η εγγραφή είναι CAS — ταυτόχρονη χειρόγραφη αλλαγή δεν χάνεται.
+
+| Στοιχείο | Πού |
+|---|---|
+| Προορισμός ανά αρχή (ολικός) | `config/declared-credential-adoption.ts` — ΥΠΕΝ→άδεια `energy-inspector` · Περιφέρεια→`electrical-installer` · ΤΕΕ→`engineer.teeRegistryNumber` · ΟΕΕ→`accountant.oeeNumber` · Σύλλογος→`lawyer` (αριθμός+σύλλογος) · Συμβολαιογράφοι→`notary` (αριθμός+περιφέρεια) · ΓΕΜΗ→`null` (επιχείρηση) |
+| Σύγκριση (πελάτης **και** server) | `lib/contacts/declared-credential-comparison.ts` — `absent · same · different · not-adoptable`· μόνο **ενεργή** persona μετρά· εκδότης χωρίς διάκριση πεζών/κεφαλαίων |
+| Εγγραφή | `lib/contacts/declared-credential-adoption-patch.ts` — άδεια μέσω `formShowcaseLicences` (κανένας δεύτερος validator)· persona: ανενεργή ⇒ ενεργοποιείται, λείπει ⇒ `createDefaultPersonaData`, ποτέ δεύτερη ίδιου τύπου |
+| Server | `POST /api/contacts/[contactId]/adopt-declared-credential` — `crm:contacts:update` · `loadOwnedContact` · η δήλωση **ξαναδιαβάζεται** (`readContactProfessionalLink`), το σώμα έχει **μόνο** `expectedCurrent` · συναλλαγή: ίδια ⇒ `unchanged` · άλλαξε ⇒ 409 · `performerStamp` ⇒ CDC ξέρει ποιος |
+| Δήλωση | `ContactDeclaredCredential` + `chapter` + `engagementId` (`latestDeclarationOf`) |
+| UI | `DeclaredCredentialAdoption.tsx` + `useAdoptDeclaredCredential.ts` μέσα στο `ContactProfessionalLinkBadge` (τεμπέλικο)· κλειδιά `contacts-core:header.professionalLink.*` |
+
+🔄 **Μετά την επιτυχία καμία ανανέωση:** η λίστα επαφών είναι ζωντανή (`subscribeToContacts`) — η σύγκριση γίνεται
+μόνη της «Ίδιο με τη δήλωση» και το κουμπί φεύγει.
+⚠️ **Δηλωμένο όριο:** η persona χωρίς δήλωση εκδότη (ΤΕΕ/ΟΕΕ) κρατά μόνο αριθμό — ίδιο με τα υπάρχοντα πεδία. Νέα tests
+της σύγκρισης/εγγραφής/route και browser **αναμένουν έγκριση**.

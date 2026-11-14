@@ -60,11 +60,13 @@ export function linkStatusOf(judged: readonly JudgedEngagement[]): ContactLinkSt
 
 /** Η πιο πρόσφατη δήλωση ιδιότητας του ίδιου — **μόνο** από συμμετοχή που ισχύει τώρα (`engaged`). */
 export function latestDeclarationOf(judged: readonly JudgedEngagement[]): ContactDeclaredCredential | null {
-  const declared = judged
+  const latest = judged
     .filter((j) => j.verdict === 'engaged')
-    .flatMap((j) => (j.engagement.declaredCredential ? [j.engagement.declaredCredential] : []))
-    .sort((a, b) => b.declaredAt.localeCompare(a.declaredAt))[0];
-  return declared ? { authority: declared.authority, number: declared.number, declaredAt: declared.declaredAt } : null;
+    .flatMap((j) => (j.engagement.declaredCredential ? [{ declared: j.engagement.declaredCredential, engagementId: j.engagement.id }] : []))
+    .sort((a, b) => b.declared.declaredAt.localeCompare(a.declared.declaredAt))[0];
+  if (!latest) return null;
+  const { declared, engagementId } = latest;
+  return { authority: declared.authority, number: declared.number, chapter: declared.chapter, declaredAt: declared.declaredAt, engagementId };
 }
 
 /** Ανέλαβε έστω μία φορά για λογαριασμό **γραφείου** (νομικό πρόσωπο); — μόνο μέσω του `actingWorkspaceOf`. */

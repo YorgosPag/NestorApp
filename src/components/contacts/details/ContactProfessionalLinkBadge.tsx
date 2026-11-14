@@ -8,7 +8,7 @@
  * δήλωσε **ο ίδιος** — όλα **παραγόμενα** από τις συμμετοχές, καμία εγγραφή στην επαφή.
  * 🔑 «Δεν ξέρω» (`undefined`) ή `none` ⇒ **τίποτα** στην οθόνη: η απουσία σήματος δεν ισχυρίζεται τίποτα. Η ανάγνωση
  *    (`useContactProfessionalLink`) ζει στην κεφαλίδα· εδώ μόνο η όψη, τεμπέλικα, με τα κείμενά της στο chunk.
- * ⚠️ Χωρίς «Υιοθέτηση στοιχείων»: η επαφή δεν έχει πεδίο για τον αριθμό ΥΠΕΝ (ADR-915 §40.4) — μόνο εμφάνιση.
+ * 🔑 Δίπλα στη δήλωση: «Στην επαφή» + «Υιοθέτηση» (ADR-915 §40.6, `DeclaredCredentialAdoption`) — μόνο για φυσικό πρόσωπο.
  */
 
 import React from 'react';
@@ -17,10 +17,11 @@ import { Badge } from '@/components/ui/badge';
 import { CASE_INVITE_ROLE_KEY } from '@/components/case-invite/case-invite-labels';
 import { ISSUANCE_SPACE_KEYS } from '@/components/conveyance/my-cases/issuance-space-labels';
 import { DOCUMENT_KIND_LABEL_KEYS } from '@/components/document-registry/document-registry-labels';
-import { REGISTRY_AUTHORITY_PRESENTATION } from '@/constants/professional-registries';
 import { isLegalEngagementRole } from '@/types/engagement';
+import type { ComparableContact } from '@/lib/contacts/declared-credential-comparison';
 import type { ContactProfessionalAssignment, ContactProfessionalLink } from '@/types/contact-professional-link';
 import { ENGAGEMENT_STATE_KEYS, PROFESSIONAL_LINK_KEYS } from './contact-professional-link-labels';
+import { DeclaredCredentialAdoption, credentialText } from './DeclaredCredentialAdoption';
 
 
 /** Τι ανέλαβε: το **έγγραφο** σε ανάθεση έκδοσης, ο **ρόλος** σε μεταβίβαση. */
@@ -41,7 +42,15 @@ function AssignmentLine({ assignment, t }: { readonly assignment: ContactProfess
   );
 }
 
-function LinkFacts({ link, t }: { readonly link: ContactProfessionalLink; readonly t: Translate }) {
+interface LinkFactsProps {
+  readonly link: ContactProfessionalLink;
+  readonly t: Translate;
+  readonly contactId: string;
+  /** Τα πεδία της επαφής για τη σύγκριση — `null` σε νομικό πρόσωπο (καμία υιοθέτηση). */
+  readonly contact: ComparableContact | null;
+}
+
+function LinkFacts({ link, t, contactId, contact }: LinkFactsProps) {
   const declared = link.declared;
   return (
     <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
@@ -55,11 +64,9 @@ function LinkFacts({ link, t }: { readonly link: ContactProfessionalLink; readon
         <>
           <dt className="text-muted-foreground">{t(PROFESSIONAL_LINK_KEYS.declaredLabel)}</dt>
           <dd className="m-0">
-            {t(PROFESSIONAL_LINK_KEYS.declaredValue, {
-              registry: t(REGISTRY_AUTHORITY_PRESENTATION[declared.authority].abbreviationKey),
-              number: declared.number,
-            })}
+            {credentialText(t, declared.authority, { number: declared.number, chapter: declared.chapter })}
           </dd>
+          {contact && <DeclaredCredentialAdoption contactId={contactId} declared={declared} contact={contact} t={t} />}
         </>
       )}
     </dl>
@@ -67,7 +74,13 @@ function LinkFacts({ link, t }: { readonly link: ContactProfessionalLink; readon
 }
 
 /** Φορτώνεται τεμπέλικα (`ContactLinkSurfaces`) — ο καλών την αποδίδει **μόνο** για `linked` / `offered`. */
-export function ContactProfessionalLinkBadge({ link }: { readonly link: ContactProfessionalLink }) {
+export interface ContactProfessionalLinkBadgeProps {
+  readonly link: ContactProfessionalLink;
+  readonly contactId: string;
+  readonly contact: ComparableContact | null;
+}
+
+export function ContactProfessionalLinkBadge({ link, contactId, contact }: ContactProfessionalLinkBadgeProps) {
   const { t } = useTranslation(['contacts-core', 'conveyance', 'document-registry', 'legality', 'property-market']);
   if (link.status === 'none') return null;
   const linked = link.status === 'linked';
@@ -79,7 +92,7 @@ export function ContactProfessionalLinkBadge({ link }: { readonly link: ContactP
         </Badge>
         {link.actingForOffice && <span className="text-muted-foreground">{t(PROFESSIONAL_LINK_KEYS.actingForOffice)}</span>}
       </header>
-      <LinkFacts link={link} t={t} />
+      <LinkFacts link={link} t={t} contactId={contactId} contact={contact} />
     </section>
   );
 }

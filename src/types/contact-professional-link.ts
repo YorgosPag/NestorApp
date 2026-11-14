@@ -35,7 +35,11 @@ export interface ContactProfessionalAssignment extends EngagementHostLine {
 export interface ContactDeclaredCredential {
   readonly authority: RegistryAuthorityId;
   readonly number: string;
+  /** Σύλλογος / Περιφερειακή Ενότητα — `null` σε εθνική αρχή (ίδιο δόγμα με το `DeclaredCredential`). */
+  readonly chapter: string | null;
   readonly declaredAt: string;
+  /** Η συμμετοχή όπου δηλώθηκε — η προέλευση της υιοθέτησης (ADR-915 §40.6). */
+  readonly engagementId: string;
 }
 
 /**
@@ -52,4 +56,17 @@ export interface ContactProfessionalLink {
   readonly declared: ContactDeclaredCredential | null;
   /** Ανέλαβε για λογαριασμό του **γραφείου** του (νομικό πρόσωπο) — μόνο ένδειξη, ποτέ αυτόματη επαφή εταιρείας. */
   readonly actingForOffice: boolean;
+}
+
+/**
+ * ADR-915 §40.6 — το σώμα της υιοθέτησης: **μόνο** η τιμή που είδε το γραφείο στην επαφή (CAS). Η δήλωση **δεν**
+ * ταξιδεύει από τον πελάτη — ο server την ξαναδιαβάζει από τη συμμετοχή.
+ */
+export interface AdoptDeclaredCredentialRequest {
+  readonly expectedCurrent: { readonly number: string; readonly chapter: string | null } | null;
+}
+
+/** `adopted` = γράφτηκε · `unchanged` = η επαφή είχε ήδη την ίδια τιμή (ιδεμπότητα, καμία εγγραφή). */
+export interface AdoptDeclaredCredentialResponse {
+  readonly outcome: 'adopted' | 'unchanged';
 }

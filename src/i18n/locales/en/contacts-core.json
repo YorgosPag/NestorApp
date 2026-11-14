@@ -50,7 +50,18 @@
       "assignmentsLabel": "Took on",
       "declaredLabel": "Declared by themselves",
       "declaredValue": "{registry} {number}",
-      "actingForOffice": "Took on work on behalf of their firm"
+      "actingForOffice": "Took on work on behalf of their firm",
+      "currentLabel": "On the contact",
+      "currentNone": "Not recorded",
+      "valueWithChapter": "{registry} {number} · {chapter}",
+      "same": "Same as the declaration",
+      "adopt": "Adopt",
+      "adoptTitle": "Adopt the declaration",
+      "adoptDescription": "The contact will hold “{next}” instead of “{previous}”. The source will be recorded as the professional’s own declaration.",
+      "adopted": "The declaration was adopted on the contact",
+      "unchanged": "The contact already holds this value",
+      "conflict": "The contact changed in the meantime — review it again before adopting",
+      "failed": "Adoption failed"
     }
   },
   "list": {

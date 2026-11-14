@@ -20,6 +20,21 @@ export const PROFESSIONAL_LINK_KEYS = {
   actingForOffice: 'contacts-core:header.professionalLink.actingForOffice',
 } as const;
 
+/** ADR-915 §40.6 — η υιοθέτηση της δήλωσης στην επαφή. */
+export const ADOPTION_KEYS = {
+  currentLabel: 'contacts-core:header.professionalLink.currentLabel',
+  currentNone: 'contacts-core:header.professionalLink.currentNone',
+  valueWithChapter: 'contacts-core:header.professionalLink.valueWithChapter',
+  same: 'contacts-core:header.professionalLink.same',
+  adopt: 'contacts-core:header.professionalLink.adopt',
+  adoptTitle: 'contacts-core:header.professionalLink.adoptTitle',
+  adoptDescription: 'contacts-core:header.professionalLink.adoptDescription',
+  adopted: 'contacts-core:header.professionalLink.adopted',
+  unchanged: 'contacts-core:header.professionalLink.unchanged',
+  conflict: 'contacts-core:header.professionalLink.conflict',
+  failed: 'contacts-core:header.professionalLink.failed',
+} as const;
+
 /** Η κατάσταση της συμμετοχής, όπως τη διαβάζει το γραφείο — ολικός πάνω στο λεξιλόγιο του πυρήνα. */
 export const ENGAGEMENT_STATE_KEYS: Readonly<Record<EngagementState, string>> = {
   offered: 'conveyance:engagement.states.offered',

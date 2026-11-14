@@ -50,7 +50,18 @@
       "assignmentsLabel": "Ανέλαβε",
       "declaredLabel": "Δηλωμένο από τον ίδιο",
       "declaredValue": "{registry} {number}",
-      "actingForOffice": "Ανέλαβε για λογαριασμό του γραφείου του"
+      "actingForOffice": "Ανέλαβε για λογαριασμό του γραφείου του",
+      "currentLabel": "Στην επαφή",
+      "currentNone": "Δεν έχει καταχωριστεί",
+      "valueWithChapter": "{registry} {number} · {chapter}",
+      "same": "Ίδιο με τη δήλωση",
+      "adopt": "Υιοθέτηση",
+      "adoptTitle": "Υιοθέτηση της δήλωσης",
+      "adoptDescription": "Η επαφή θα έχει «{next}» αντί για «{previous}». Ως προέλευση θα καταγραφεί η δήλωση του ίδιου.",
+      "adopted": "Η δήλωση υιοθετήθηκε στην επαφή",
+      "unchanged": "Η επαφή έχει ήδη αυτή την τιμή",
+      "conflict": "Η επαφή άλλαξε στο μεταξύ — ελέγξτε την ξανά πριν από την υιοθέτηση",
+      "failed": "Η υιοθέτηση απέτυχε"
     }
   },
   "list": {
