@@ -42,6 +42,15 @@
     "avatar": {
       "openPhoto": "View photo: {name}",
       "openLogo": "View logo: {name}"
+    },
+    "professionalLink": {
+      "region": "Professional account",
+      "linked": "Linked account",
+      "offered": "Invitation pending",
+      "assignmentsLabel": "Took on",
+      "declaredLabel": "Declared by themselves",
+      "declaredValue": "{registry} {number}",
+      "actingForOffice": "Took on work on behalf of their firm"
     }
   },
   "list": {

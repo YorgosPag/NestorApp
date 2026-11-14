@@ -65,8 +65,11 @@ import { caseRosterSignal, readViewRevision } from './conveyance-view-signal.ser
 // ΚΟΙΝΑ
 // =============================================================================
 
-/** Η υπόθεση της συμμετοχής — **μόνο** αν ανήκει στον μισθωτή **της συμμετοχής** (ξένη ≡ ανύπαρκτη). */
-async function readCaseOf(db: Firestore, engagement: ConveyanceEngagement): Promise<ConveyanceCase | null> {
+/**
+ * Η υπόθεση της συμμετοχής — **μόνο** αν ανήκει στον μισθωτή **της συμμετοχής** (ξένη ≡ ανύπαρκτη).
+ * Εξάγεται για τη γραμμή «Ανέλαβε» του οικοδεσπότη (`hostLine`, ADR-915 §40) — ο ΕΝΑΣ αναγνώστης, όχι δεύτερος.
+ */
+export async function readCaseOf(db: Firestore, engagement: ConveyanceEngagement): Promise<ConveyanceCase | null> {
   const record = parseConveyanceCase((await db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(engagement.subject.caseId).get()).data());
   if (!record || record.companyId !== engagement.hostCompanyId || record.subject.projectId !== engagement.projectId) return null;
   return record;

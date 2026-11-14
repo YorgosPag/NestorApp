@@ -17,6 +17,7 @@ import 'server-only';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import type { RegistryAuthorityId } from '@/constants/professional-registries';
+import type { EngagementHostLine } from '@/types/contact-professional-link';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import type { CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
 import type { Engagement, EngagementVerdict } from '@/types/engagement';
@@ -79,4 +80,11 @@ export interface EngagementHostAdapter<I extends EngagementInvitation, E extends
   listCards(db: Firestore, viewer: CasesViewer, history: readonly E[], nowMs: number): Promise<readonly MyEngagementCard[] | 'unknown'>;
   /** Ο χώρος μέσω της **δικής του** συμμετοχής — κρίση ανά αίτημα, θέση μετά την πρόσβαση. */
   view(db: Firestore, viewer: CasesViewer, engagement: E, nowMs: number): Promise<EngagedViewOutcome>;
+
+  // ── Η πλευρά του γραφείου ─────────────────────────────────────────────────
+  /**
+   * ADR-915 §40 — ποιο ακίνητο / ποιο έγγραφο, για τη γραμμή «Ανέλαβε» στην **επαφή** του γραφείου. Υπόθεση που δεν
+   * διαβάζεται ⇒ `null` πεδία, ποτέ σφάλμα (η γραμμή μένει με την ετυμηγορία της).
+   */
+  hostLine(db: Firestore, engagement: E): Promise<EngagementHostLine>;
 }

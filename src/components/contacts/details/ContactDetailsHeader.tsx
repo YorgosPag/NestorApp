@@ -21,6 +21,8 @@ import type { PersonaType } from '@/types/contacts/personas';
 import { ROLE_PERSONA_TYPES } from '@/config/persona-config';
 import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector';
 import { useContactEditFocus } from './contact-details/ContactEditFocusContext';
+import { ContactLinkSurfaces } from '@/components/contacts/contact-link-surfaces';
+import { useContactProfessionalLink } from './useContactProfessionalLink';
 
 const logger = createModuleLogger('ContactDetailsHeader');
 
@@ -62,6 +64,8 @@ export function ContactDetailsHeader({
   const { focus } = useContactEditFocus();
   const hasFocus = focus !== null;
   const type = contact.type as ContactType;
+  // ADR-915 §40 — ο λογαριασμός πίσω από την επαφή· `undefined` = «δεν ξέρω» ⇒ τίποτα.
+  const professionalLink = useContactProfessionalLink(contact.id ?? '');
 
   // 🔥 FORCE RE-RENDER: Key-based avatar invalidation
   const [avatarKey, setAvatarKey] = useState(0);
@@ -185,6 +189,11 @@ export function ContactDetailsHeader({
             disabled={false}
             className="px-6 pb-3 -mt-2"
           />
+        )}
+
+        {/* ADR-915 §40 — ο λογαριασμός πίσω από την επαφή (παραγόμενος από συμμετοχές· τίποτα αν δεν υπάρχει/δεν ξέρουμε). */}
+        {professionalLink && professionalLink.status !== 'none' && (
+          <ContactLinkSurfaces.ContactProfessionalLinkBadge link={professionalLink} />
         )}
       </div>
 

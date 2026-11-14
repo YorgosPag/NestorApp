@@ -183,6 +183,9 @@ const DEFAULTS = Object.freeze({
     // ADR-862 §5.3.11 · ADR-744 §27.4 — η ανάθεση έκδοσης στον χώρο συνεργασίας: μόνο όταν η υπόθεση είναι
     // `document_issuance`, με το λεξιλόγιο του μητρώου εγγράφων στο chunk (όχι στο slice της μεταβίβασης).
     'src/components/conveyance/issuance-surfaces.tsx',
+    // ADR-915 §40 — ο λογαριασμός πίσω από την επαφή: μόνο όταν η επαφή έχει σύνδεση, με το λεξιλόγιο της
+    // μεταβίβασης/του μητρώου εγγράφων στο chunk (όχι στο slice κάθε σελίδας επαφών).
+    'src/components/contacts/contact-link-surfaces.tsx',
   ],
 
   /**

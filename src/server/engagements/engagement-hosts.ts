@@ -18,6 +18,7 @@ import type { RegistryAuthorityId } from '@/constants/professional-registries';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import { CONVEYANCE_ENGAGEMENT_HOST } from '@/services/conveyance/conveyance-engagement-host-adapter';
 import type { CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
+import type { EngagementHostLine } from '@/types/contact-professional-link';
 import { ISSUANCE_ENGAGEMENT_HOST } from '@/services/document-registry/issuance-engagement-host-adapter';
 import {
   isConveyanceEngagement,
@@ -118,6 +119,17 @@ export function engagedViewFor(db: Firestore, viewer: CasesViewer, engagement: E
   return isIssuanceEngagement(engagement)
     ? engagementHosts().document_issuance.view(db, viewer, engagement, nowMs)
     : engagementHosts().conveyance_case.view(db, viewer, asConveyance(engagement), nowMs);
+}
+
+// =============================================================================
+// Η ΠΛΕΥΡΑ ΤΟΥ ΓΡΑΦΕΙΟΥ
+// =============================================================================
+
+/** ADR-915 §40 — ποιο ακίνητο / ποιο έγγραφο μιας συμμετοχής, από τον οικοδεσπότη του είδους της (επαφή του γραφείου). */
+export function hostLineOf(db: Firestore, engagement: Engagement): Promise<EngagementHostLine> {
+  return isIssuanceEngagement(engagement)
+    ? engagementHosts().document_issuance.hostLine(db, engagement)
+    : engagementHosts().conveyance_case.hostLine(db, asConveyance(engagement));
 }
 
 /** Ο δεύτερος κλάδος της ένωσης — ρητός φρουρός, ώστε τρίτο είδος να **σκάσει** εδώ και όχι σιωπηλά ως μεταβίβαση. */

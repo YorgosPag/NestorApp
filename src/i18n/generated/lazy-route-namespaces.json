@@ -679,6 +679,13 @@
     "toolbars",
     "uom"
   ],
+  "ContactProfessionalLinkBadge": [
+    "contacts-core",
+    "conveyance",
+    "document-registry",
+    "legality",
+    "property-market"
+  ],
   "Contacts": [
     "accounting",
     "accounting-setup",

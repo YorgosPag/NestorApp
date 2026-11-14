@@ -42,6 +42,15 @@
     "avatar": {
       "openPhoto": "Προβολή φωτογραφίας: {name}",
       "openLogo": "Προβολή λογότυπου: {name}"
+    },
+    "professionalLink": {
+      "region": "Λογαριασμός επαγγελματία",
+      "linked": "Συνδεδεμένος λογαριασμός",
+      "offered": "Πρόσκληση σε αναμονή",
+      "assignmentsLabel": "Ανέλαβε",
+      "declaredLabel": "Δηλωμένο από τον ίδιο",
+      "declaredValue": "{registry} {number}",
+      "actingForOffice": "Ανέλαβε για λογαριασμό του γραφείου του"
     }
   },
   "list": {

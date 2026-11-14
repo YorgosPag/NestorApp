@@ -88,3 +88,20 @@ export function engagementsOfUserQuery(db: Firestore, uid: string): Query {
   // είναι το `uid` από το υπογεγραμμένο token, και κάθε αποτέλεσμα ξανακρίνεται από τον `decideEngagement`.
   return db.collectionGroup(SUBCOLLECTIONS.PROJECT_ENGAGEMENTS).where('uid', '==', uid);
 }
+
+/**
+ * ADR-915 §40 — **«Ποιες συμμετοχές γέννησε ΑΥΤΗ η επαφή του βιβλίου μου;»** — η όψη του οικοδεσπότη πάνω στην επαφή.
+ *
+ * Ο δεσμός επαφή ↔ λογαριασμός **δεν** αποθηκεύεται πουθενά αλλού: ζει στη συμμετοχή (`origin.contactId` + `uid`), που
+ * τη γράφει ο ΕΝΑΣ γραφέας. Εδώ μόνο διαβάζεται — σε **όλα** τα έργα του χώρου (collection-group), επειδή η επαφή δεν
+ * ανήκει σε έργο. Μόνο ισότητες, με ρητά ονόματα πεδίων ⇒ ο σύνθετος δείκτης `hostCompanyId` + `origin.contactId`
+ * (COLLECTION_GROUP) στο `firestore.indexes.json` (CHECK 3.15 · 3.91).
+ */
+export function engagementsOfContactQuery(db: Firestore, hostCompanyId: string, contactId: string): Query {
+  // tenant-scope-exempt: ο μισθωτής της συμμετοχής ΕΙΝΑΙ το `hostCompanyId` (δεν υπάρχει επίπεδο `companyId`, βλ.
+  // `actingFor` στο types/engagement.ts) — το φίλτρο ισότητας από κάτω είναι ακριβώς η απομόνωση μισθωτή.
+  return db
+    .collectionGroup(SUBCOLLECTIONS.PROJECT_ENGAGEMENTS)
+    .where('hostCompanyId', '==', hostCompanyId)
+    .where('origin.contactId', '==', contactId);
+}

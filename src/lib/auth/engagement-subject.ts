@@ -32,3 +32,11 @@ function subjectIdOf(subject: EngagementSubject): string {
 export function isSameSubject(a: EngagementSubject, b: EngagementSubject): boolean {
   return a.kind === b.kind && subjectIdOf(a) === subjectIdOf(b);
 }
+
+/**
+ * Κλειδί ομαδοποίησης ανά υπόθεση (`είδος:id`) — ίσα κλειδιά ⇔ `isSameSubject`. Για όποιον ομαδοποιεί ιστορικό
+ * συμμετοχών πολλών υποθέσεων (ADR-915 §40: η επαφή του γραφείου), χωρίς δεύτερο `switch` ανά είδος.
+ */
+export function subjectKeyOf(subject: EngagementSubject): string {
+  return `${subject.kind}:${subjectIdOf(subject)}`;
+}

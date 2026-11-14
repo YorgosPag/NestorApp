@@ -38,6 +38,7 @@ import { actingViews, type ActingViews } from '@/services/conveyance/conveyance-
 import { placementRejectionOf, shownIn, type CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
 import { answerChanges, recordEngagementAudit } from '@/services/conveyance/conveyance-engagement-support';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
+import type { EngagementHostLine } from '@/types/contact-professional-link';
 import { SCOPE_OF_SUBJECT, type IssuanceEngagement } from '@/types/engagement';
 import type { IssuanceEngagementInvitation } from '@/types/engagement-invitation';
 import type { MyIssuanceCard } from '@/types/my-engagements';
@@ -213,6 +214,13 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
   };
 }
 
+/** ADR-915 §40 — η γραμμή «Ανέλαβε» στην επαφή του γραφείου: ποιο ακίνητο, ποιο έγγραφο. */
+async function hostLine(db: Firestore, engagement: IssuanceEngagement): Promise<EngagementHostLine> {
+  const assignment = await readAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId).catch(() => null);
+  if (!assignment) return { propertyName: null, documentKind: null };
+  return { propertyName: await propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId), documentKind: assignment.documentKind };
+}
+
 export const ISSUANCE_ENGAGEMENT_HOST: EngagementHostAdapter<IssuanceEngagementInvitation, IssuanceEngagement> = {
   invitationSignal: () => () => undefined,
   stillOpen,
@@ -223,4 +231,5 @@ export const ISSUANCE_ENGAGEMENT_HOST: EngagementHostAdapter<IssuanceEngagementI
   announceUnanswered: (db, invitation) => announceSpace(db, invitation, 'space-pending'),
   listCards,
   view,
+  hostLine,
 };

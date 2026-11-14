@@ -170,6 +170,14 @@
       ]
     },
     {
+      "collectionGroup": "engagements",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "hostCompanyId", "order": "ASCENDING" },
+        { "fieldPath": "origin.contactId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "tour_captures",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

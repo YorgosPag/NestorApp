@@ -1096,6 +1096,8 @@ export const API_ROUTES = {
     PERMANENT_DELETE: (id: string) => `/api/contacts/${id}/permanent-delete` as const,
     CHANNELS: (contactId: string) => `/api/contacts/${contactId}/channels` as const,
     LINK_CHANNEL: (contactId: string) => `/api/contacts/${contactId}/link-channel` as const,
+    /** ADR-915 §40 — ο λογαριασμός πίσω από την επαφή: τι ανέλαβε, τι δήλωσε ο ίδιος (παραγόμενο από συμμετοχές). */
+    PROFESSIONAL_LINK: (contactId: string) => `/api/contacts/${contactId}/professional-link` as const,
   },
 
   // ── Trash (SSOT Soft-Delete — ADR-281) ─────────────────────────────────

@@ -24,6 +24,7 @@ import type {
   InvitationAnswer,
   InvitationAnswerer,
 } from '@/server/engagements/engagement-host-adapter';
+import type { EngagementHostLine } from '@/types/contact-professional-link';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import { TEMPLATE_OF_SUBJECT, type ConveyanceEngagement } from '@/types/engagement';
 import type { ConveyanceEngagementInvitation, EngagementInvitationChecklist } from '@/types/engagement-invitation';
@@ -32,6 +33,7 @@ import {
   engagementChecklistViewer,
   getEngagedCaseView,
   listCaseCards,
+  readCaseOf,
 } from './conveyance-engagement-access.service';
 import {
   announceEngagementAnswered,
@@ -120,6 +122,13 @@ async function afterAnswer(
   await announceEngagementAnswered(engagement, invitation.propertyId, propertyName);
 }
 
+/** ADR-915 §40 — η γραμμή «Ανέλαβε» στην επαφή του γραφείου: ποιο ακίνητο (η μεταβίβαση δεν έχει είδος εγγράφου). */
+async function hostLine(db: Firestore, engagement: ConveyanceEngagement): Promise<EngagementHostLine> {
+  const record = await readCaseOf(db, engagement).catch(() => null);
+  const context = record ? await loadConveyanceSubject(db, record.companyId, record.subject.propertyId).catch(() => null) : null;
+  return { propertyName: context?.propertyName ?? null, documentKind: null };
+}
+
 export const CONVEYANCE_ENGAGEMENT_HOST: EngagementHostAdapter<ConveyanceEngagementInvitation, ConveyanceEngagement> = {
   invitationSignal: (db, invitation) => invitationHostSignal(db, invitation),
   stillOpen,
@@ -130,4 +139,5 @@ export const CONVEYANCE_ENGAGEMENT_HOST: EngagementHostAdapter<ConveyanceEngagem
   announceUnanswered: async (db, invitation) => announceInvitationUnanswered(invitation, await propertyNameOf(db, invitation)),
   listCards: (db, viewer, history, nowMs) => listCaseCards(db, viewer, history, nowMs),
   view: (db, viewer, engagement, nowMs) => getEngagedCaseView(db, viewer, engagement.id, nowMs),
+  hostLine,
 };

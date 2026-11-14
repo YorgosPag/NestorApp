@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "44f69c20f8e09eae1bc5fa424522077a54b3edbd31515d869afc774e863b68e2",
+    "src/i18n/generated/lazy-route-namespaces.json": "3cb5dc53c7b14a0ba6c90547ee6c82e1ad16e8263f89fe24a822a11b83e26de6",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -138,7 +138,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "ea809d3dd5036454f9723797b38acf84a96410a2cf8d926571c41a507acb0063",
-      "lazyRouteRegistries": "c685b85dd0474d56101292d5408f2b3fcb77de8bc6059497e51888c10a31854e",
+      "lazyRouteRegistries": "3b309292f1823c9cff4159d61d076c62dbc29f75ee9df45499590189270508b9",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "3463fd9666b61d2a3e504b0560c1e2c1bd9a491651a34eb68fd035adda7836af",
@@ -150,7 +150,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "098eb5ae28f1fddcdfc57bbaf6e4b2bc5601bf181c8e7a94e1a16b27bdd9a1ed",
+      "registries": "b42b0a317ac684b91327d2bf489ec75302dfc21ba198c220773844467eefa6c3",
       "supportedNamespaces": "b3dec606cde1f3d914e3206109aa7c4447c6c17882103a096a8fe306e756a38f"
     },
     "namespaceBundles": {
@@ -165,7 +165,7 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "4d7aea351f65ad8b1ecf40ed8e6c2d55991cb260154053bf8908319daad8c7c9",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "1ae1455655a9e2d9cd427e5818e1a488c060be2b4f846780c0ff5ee5a0df8003",
+      "scripts/lib/i18n-shell-slice/config.js": "32144a1cb3fe61b5ccb2b6e240eb3c754821b9488ecf9c63478bd0e9a1932cc7",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b1a89e5303097c97b3532ceed5c983cab349ad19e4958d3c8840035ab40174a8",
+  "inputsSha256": "8234d4f3d7bbc62db3e7e70884b6fbca485f8f1be04c32286d95d260623b152d",
   "languages": [
     "el"
   ],
