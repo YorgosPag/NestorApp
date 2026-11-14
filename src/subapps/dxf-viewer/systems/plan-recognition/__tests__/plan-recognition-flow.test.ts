@@ -300,7 +300,11 @@ describe('ADR-929 §6.17 — το αποτέλεσμα ανήκει στην ε�
     modelFromDrawingSession.open();
     const source = await planRecognitionSession.run(FLOOR);
     replaceBackground();
+    const armed = modelFromDrawingStore.get();
+    expect(source).not.toBeNull();
     if (source) modelFromDrawingSession.adoptRasterSegments(source, h.deps);
-    expect(modelFromDrawingStore.get()).toMatchObject({ phase: 'picking', proposal: null });
+    // Η πόρτα αρνείται ΠΡΙΝ από κάθε εγγραφή: ούτε πηγή, ούτε «χωρίς σκηνή» — το store μένει ίδιο αντικείμενο.
+    expect(modelFromDrawingStore.get()).toBe(armed);
+    expect(armed).toMatchObject({ phase: 'picking', proposal: null, lineSource: { kind: 'scene' }, notice: null });
   });
 });
