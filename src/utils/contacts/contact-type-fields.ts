@@ -35,7 +35,7 @@ const INDIVIDUAL_IDENTITY = [
   'birthDate', 'birthCountry', 'gender', 'amka',
   'documentType', 'documentNumber', 'documentIssuer', 'documentIssueDate', 'documentExpiryDate',
   'personas', 'employer', 'employerId', 'position', 'workAddress', 'workWebsite',
-  'escoUri', 'escoLabel', 'iscoCode', 'escoSkills',
+  'escoUri', 'escoLabel', 'iscoCode', 'escoSkills', 'licences',
 ] as const;
 
 /** Ταυτότητα δημόσιας υπηρεσίας. */

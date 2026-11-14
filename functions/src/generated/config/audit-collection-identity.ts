@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/config/audit-collection-identity.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:c8d53656348b9f67f5dd8b3675645c64ba7c3ef7dee4235ce84210f66481bcbd
+// sha256:6a9f3a6a15f8bf1b5166d9a20b176f459d89c31436c91aff15e963eecf112fc5
 
 /**
  * **Ποιο στοιχείο είναι ποιο, και ποιο πεδίο είναι κάτοπτρο ποιου** — οι συλλογές της επαφής στο Ιστορικό
@@ -46,6 +46,8 @@ export const CONTACT_COLLECTION_IDENTITY = {
   // Αποθηκεύεται `{uri, label}` (`types/contacts/contracts.ts`)· το `uri` είναι κενό για ελεύθερο κείμενο ⇒ σύνθετο.
   // ⚠️ Δήλωνε `['code']` — πεδίο που ΔΕΝ υπάρχει ⇒ κάθε δεξιότητα έπεφτε στο κλειδί ολόκληρου JSON.
   escoSkills: { keyBy: ['uri', 'label'], labelFields: ['label'] },
+  // ADR-915 §40.5 — μία ανά άδεια του λεξιλογίου (`PROFESSIONAL_LICENCES`)· το γράφουν η φόρμα και η υιοθέτηση.
+  licences: { keyBy: 'licence', labelFields: ['licence'] },
 } as const satisfies Readonly<Record<string, CollectionIdentity>>;
 
 export type ContactCollectionField = keyof typeof CONTACT_COLLECTION_IDENTITY;

@@ -18,6 +18,10 @@ import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { getPersonaFields } from '@/config/persona-config';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
+import { contactLicencesFromDrafts } from '@/lib/contacts/contact-licences';
+import type { ContactLicence } from '@/types/contacts/contact-licences';
+import type { LicenceDrafts } from '@/lib/professional/licence-drafts';
 const logger = createModuleLogger('MapIndividual');
 
 /** Mapped individual contact data (partial, without timestamps) */
@@ -51,6 +55,7 @@ interface MappedIndividualContactData {
   iscoCode?: string | null;
   // 🇪🇺 ESCO Skills (ADR-132)
   escoSkills?: Array<{ uri: string; label: string }>;
+  licences?: ContactLicence[];
   socialMedia?: SocialMediaInfo[];
   websites?: WebsiteInfo[];
   photoURL?: string;
@@ -154,6 +159,8 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     iscoCode: formData.iscoCode || null,
     // 🇪🇺 ESCO Skills (ADR-132)
     escoSkills: formData.escoSkills?.length ? formData.escoSkills : [],
+    // 🪪 Άδειες (ADR-915 §40.5) — μόνο όταν η φόρμα κουβαλά την κατάστασή τους· αλλιώς το πεδίο δεν αγγίζεται
+    ...(formData.licenceDrafts ? { licences: mapContactLicences(formData, formData.licenceDrafts) } : {}),
     socialMedia: enterpriseData.socialMedia,
     websites: enterpriseData.websites,
     photoURL,
@@ -174,4 +181,17 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
       ? { personas: mapActivePersonas(formData) }
       : {}),
   };
+}
+
+/**
+ * Οι άδειες από τη φόρμα (ADR-915 §40.5). Ο έλεγχος έγινε ήδη (`validateIndividualContact`)· αν παρ' όλα αυτά η φόρμα
+ * δεν σχηματίζεται, κρατιούνται οι **αποθηκευμένες** — ποτέ σιωπηλό σβήσιμο δεδομένων.
+ */
+function mapContactLicences(formData: ContactFormData, drafts: LicenceDrafts): ContactLicence[] {
+  const formed = contactLicencesFromDrafts(formData.licences ?? [], drafts, nowISO());
+  if ('reason' in formed) {
+    logger.warn('Licences did not form — keeping stored licences', { reason: formed.reason });
+    return [...(formData.licences ?? [])];
+  }
+  return [...formed.licences];
 }

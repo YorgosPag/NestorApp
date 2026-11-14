@@ -78,7 +78,8 @@ export const PROFESSIONAL_INFO_FIELD_LABELS = {
   POSITION: 'individual.fields.position',
   ESCO_URI: 'esco.escoLabel',
   ISCO_CODE: 'esco.iscoCode',
-  SKILLS: 'individual.fields.skills'
+  SKILLS: 'individual.fields.skills',
+  LICENCES: 'individual.fields.licences'
 } as const;
 
 export const ADDRESS_INFO_FIELD_LABELS = {

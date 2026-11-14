@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "3cb5dc53c7b14a0ba6c90547ee6c82e1ad16e8263f89fe24a822a11b83e26de6",
+    "src/i18n/generated/lazy-route-namespaces.json": "37e0a7605d6fa10373479950194c01d0d7b3336bd40bac3a8dd16239d2d4d3c4",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -86,7 +86,7 @@
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json": "9e6e28dce807af1b9362fbe47e1eafa1a191843e3a6c68c9d92644adb3ba4d73",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "833f1f75349ec3140684597ec67c5f6690725809f226b26eb378bb77f9358190",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "74c0575f0dd6d8f6ddf4909f811dddbde2694f4663c018658a77a38e1b522765",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
@@ -131,7 +131,7 @@
   "generator": "scripts/generate-i18n-shell-slice.js",
   "globalInputs": {
     "config": {
-      "dynamicKeyPolicy": "ca98bb7ca0bd14f29c640751f5e7687c1f26642372eb66234e47df478b808c92",
+      "dynamicKeyPolicy": "88e8dce6dbd8ffff3d558b5e5772a754dfd51996028562ee0ab263d011000256",
       "excludeConsumers": "ecebd6bc1406940ab137955fb5581ebf4cc378110974da937ae7bceffbf0c690",
       "extraShellRoots": "e896723bb8314edbc0e6b1d29139d801efa84e645aa08aaf56f673af45b291ad",
       "guaranteedNamespaces": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d",
@@ -150,7 +150,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "b42b0a317ac684b91327d2bf489ec75302dfc21ba198c220773844467eefa6c3",
+      "registries": "87413145da0447bd2e817a0341d1a8736b77849c31c4b9703ea9f6e56deacc78",
       "supportedNamespaces": "b3dec606cde1f3d914e3206109aa7c4447c6c17882103a096a8fe306e756a38f"
     },
     "namespaceBundles": {
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8234d4f3d7bbc62db3e7e70884b6fbca485f8f1be04c32286d95d260623b152d",
+  "inputsSha256": "f5e4dcce44e46cf01d3c83b3641978576e00afb86626a75256fb652e364b8503",
   "languages": [
     "el"
   ],
@@ -29902,6 +29902,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "list.allQuotes",
             "list.ariaLabel",
@@ -30300,6 +30301,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -30664,6 +30666,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -31181,6 +31184,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -31544,6 +31548,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -31907,6 +31912,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -32276,6 +32282,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -32640,6 +32647,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -33016,6 +33024,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -33379,6 +33388,7 @@
             "labels.clearSearch",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -33671,6 +33681,7 @@
             "label",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "lostReason",
             "lostReasonNote",
@@ -34156,6 +34167,7 @@
             "label",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "list.createPO",
             "list.searchPlaceholder",
@@ -34480,6 +34492,7 @@
             "label",
             "landowners",
             "layout",
+            "licences",
             "lifecycle",
             "list.allQuotes",
             "list.ariaLabel",
@@ -35714,6 +35727,16 @@
     "o__workspace__settings__agency-profile__licences": {
       "page": "src/app/(app)/o/[workspace]/settings/agency-profile/licences/page.tsx",
       "wants": {
+        "contacts-form": {
+          "keys": [
+            "licences.hint",
+            "licences.hold",
+            "licences.legend",
+            "licences.registryHint"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
             "licences.electricalInstaller.name",
@@ -40928,7 +40951,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1342914
+    "sliceBytes": 1343477
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -46538,6 +46561,7 @@
         "src/components/mandate/CredibilityStatement.tsx",
         "src/components/mandate/LicenceStatement.tsx",
         "src/components/mandate/OccupationSelect.tsx",
+        "src/components/mandate/RegistryLookupLink.tsx",
         "src/components/mandate/ShowcaseMarkView.tsx",
         "src/components/mandate/useOccupationFamilyChoices.ts",
         "src/components/private-space/PersonalSidebar.tsx",

@@ -245,6 +245,11 @@
       "missingPrimaryPhone": "One phone must be marked as primary.",
       "multiplePrimaryEmails": "Only one email can be marked as primary.",
       "multiplePrimaryPhones": "Only one phone can be marked as primary."
+    },
+    "licences": {
+      "licence-number-missing": "Enter the licence registration number.",
+      "licence-duplicate": "The same licence was declared twice.",
+      "licence-chapter-missing": "Enter the Regional Unit that issued the licence."
     }
   },
   "submission": {
@@ -285,5 +290,15 @@
       "searchHint": "Type to search...",
       "postalCodePlaceholder": "e.g. 10001"
     }
+  },
+  "licences": {
+    "legend": "Licences",
+    "hint": "Licences this person holds in addition to their occupation — e.g. energy inspector (YPEN) or electrical installer.",
+    "hold": "Holds licence: {licence}",
+    "registryHint": "The number as issued by the authority. It is declared, not checked — verify it in the public registry.",
+    "sourceOffice": "Recorded by the office",
+    "sourceSelfDeclared": "Declared by the person",
+    "provenanceLine": "{licence} — {source}, {date}",
+    "provenanceRegion": "Licence provenance"
   }
 }

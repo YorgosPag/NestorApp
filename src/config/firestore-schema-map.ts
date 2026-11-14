@@ -111,6 +111,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       escoLabel: 'string? (ESCO label επαγγέλματος — ελληνικό όνομα)',
       iscoCode: 'string? (ISCO-08 κωδικός επαγγέλματος, π.χ. "2611" για δικηγόρο)',
       escoSkills: 'array of { uri: string (ESCO URI δεξιότητας), label: string (ελληνικό όνομα) }? (δεξιότητες επαφής — ΔΙΑΒΑΣΕ και ΕΜΦΑΝΙΣΕ όταν ρωτηθεί)',
+      licences: 'array of { licence: 'energy-inspector'|'electrical-installer', attestation: { state: 'declared', registration: { authorityKind, authority, number, chapter? } }, provenance: { source: 'office'|'self-declared', recordedAt: ISO, engagementId: string|null } }? (άδειες επιπλέον του επαγγέλματος, ADR-915 §40.5 — δηλωμένες, ΟΧΙ επαληθευμένες)',
       fatherName: 'string? (πατρώνυμο)',
       motherName: 'string? (μητρώνυμο)',
       gender: "male|female|other|prefer_not_to_say (φύλο — ΑΚΡΙΒΩΣ αυτές οι τιμές, π.χ. 'male' για άντρα, 'female' για γυναίκα)",

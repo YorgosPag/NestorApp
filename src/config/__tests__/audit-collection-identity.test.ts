@@ -28,6 +28,7 @@ import type {
 } from '@/types/contacts/contracts';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { PersonaData } from '@/types/contacts/personas';
+import type { ContactLicence } from '@/types/contacts/contact-licences';
 
 type EscoSkill = { readonly uri: string; readonly label: string };
 
@@ -46,6 +47,7 @@ const ITEMS: Readonly<Partial<Record<ContactCollectionField, Readonly<Record<str
   responsiblePersons: { name: 'Νίκος', position: 'Διευθυντής', isPrimary: true } satisfies Pick<ResponsiblePerson, 'name' | 'position' | 'isPrimary'>,
   personas: { personaType: 'supplier', status: 'active' } satisfies Pick<PersonaData, 'personaType' | 'status'>,
   escoSkills: { uri: 'http://data.europa.eu/esco/skill/1', label: 'Java' } satisfies EscoSkill,
+  licences: { licence: 'energy-inspector' } satisfies Pick<ContactLicence, 'licence'>,
 };
 
 const FIELDS = Object.keys(CONTACT_COLLECTION_IDENTITY) as ContactCollectionField[];

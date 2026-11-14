@@ -15,7 +15,8 @@ import { CREDIBILITY_KEYS, DIRECTORY_KEYS } from '../agency-directory-labels';
 import { SHOWCASE_KEYS } from '../agency-showcase-labels';
 import { DocumentIssuerFilter } from '../DocumentIssuerFilter';
 import { LicenceStatement } from '../LicenceStatement';
-import { licenceDraftsOf, licenceWireOf, NO_LICENCE_DRAFTS, ShowcaseLicenceField } from '../ShowcaseLicenceField';
+import { licenceDraftsOf, licenceWireOf, NO_LICENCE_DRAFTS } from '@/lib/professional/licence-drafts';
+import { ShowcaseLicenceField } from '../ShowcaseLicenceField';
 import { ShowcaseLicencesDoor } from '../ShowcaseLicencesDoor';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({

@@ -679,6 +679,10 @@
     "toolbars",
     "uom"
   ],
+  "ContactLicencesField": [
+    "contacts-form",
+    "property-market"
+  ],
   "ContactProfessionalLinkBadge": [
     "contacts-core",
     "conveyance",

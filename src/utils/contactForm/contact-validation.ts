@@ -11,6 +11,8 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { validateDocumentDates, isDatePastOrToday } from '@/utils/validation';
 import { isValidGreekVat } from '@/lib/validation/vat-validation';
 import { validateCommunicationArrays } from '@/utils/contactForm/communication-array-validation';
+import { CONTACT_LICENCE_REJECTION_KEYS } from '@/components/contacts/contact-licence-labels';
+import { contactLicencesFromDrafts } from '@/lib/contacts/contact-licences';
 
 // ============================================================================
 // TYPES
@@ -187,7 +189,17 @@ export function validateIndividualContact(formData: ContactFormData): ContactVal
   const expiryDateError = validateIndividualField(formData, 'documentExpiryDate');
   if (expiryDateError) setFieldError(fieldErrors, 'documentExpiryDate', expiryDateError);
 
+  const licenceError = licenceErrorKeyOf(formData);
+  if (licenceError) setFieldError(fieldErrors, 'licences', licenceError);
+
   return finishValidation(formData, fieldErrors);
+}
+
+/** Οι άδειες (ADR-915 §40.5) — ο **ίδιος** σχηματισμός με την αποθήκευση· ονομασμένη άρνηση, ποτέ σιωπηλή παράλειψη. */
+function licenceErrorKeyOf(formData: ContactFormData): string | undefined {
+  if (!formData.licenceDrafts) return undefined;
+  const formed = contactLicencesFromDrafts(formData.licences ?? [], formData.licenceDrafts, '');
+  return 'reason' in formed ? CONTACT_LICENCE_REJECTION_KEYS[formed.reason] : undefined;
 }
 
 export function validateCompanyContact(formData: ContactFormData): ContactValidationResult {

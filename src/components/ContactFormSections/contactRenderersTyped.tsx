@@ -10,6 +10,7 @@ import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
 import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
+import { ContactLinkSurfaces } from '@/components/contacts/contact-link-surfaces';
 import { pickerRenderer, type RendererContext, type RendererFn } from './contactRenderersCore';
 import '@/lib/design-system';
 
@@ -67,6 +68,16 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
         onChange={(skills: EscoSkillValue[]) => {
           if (setFormData) setFormData({ ...formData, escoSkills: skills });
         }}
+      />
+    )),
+
+    // 🪪 ADR-915 §40.5 — οι άδειες, φωνή γραφείου· κάτω τους η προέλευση. Τεμπέλικα (CHECK 3.34: `property-market`).
+    licences: pickerRenderer((fieldDisabled) => (
+      <ContactLinkSurfaces.ContactLicencesField
+        disabled={fieldDisabled}
+        value={formData.licenceDrafts}
+        licences={formData.licences}
+        onChange={(licenceDrafts) => { if (setFormData) setFormData({ ...formData, licenceDrafts }); }}
       />
     )),
 

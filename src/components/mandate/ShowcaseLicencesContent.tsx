@@ -25,7 +25,8 @@ import type { PublicShowcase } from '@/types/agency-profile';
 
 import { SHOWCASE_CARD_KEYS, SHOWCASE_KEYS, SHOWCASE_LICENCE_REJECTION_KEYS, SHOWCASE_NS } from './agency-showcase-labels';
 import { ShowcaseBackLink } from './ShowcaseDoorLink';
-import { licenceDraftsOf, licenceWireOf, NO_LICENCE_DRAFTS, ShowcaseLicenceField } from './ShowcaseLicenceField';
+import { licenceDraftsOf, licenceWireOf, NO_LICENCE_DRAFTS } from '@/lib/professional/licence-drafts';
+import { ShowcaseLicenceField } from './ShowcaseLicenceField';
 
 // 🧩 ADR-744 §15 — PER-ROUTE SLICE, στο **client** component (όχι στο `page.tsx`): ξεχωριστοί γράφοι module (CHECK 3.51).
 import routeSlice from '@/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json';

@@ -156,6 +156,9 @@ export interface IndividualContact extends BaseContact, DeclaredOccupation {
     label: string;   // Cached skill label
   }>;
 
+  // 🪪 Άδειες επιπλέον του επαγγέλματος, με προέλευση (ADR-915 §40.5) — ΑΔΕΙΑ ≠ ΕΠΑΓΓΕΛΜΑ
+  licences?: import('./contact-licences').ContactLicence[];
+
   // Legacy professional fields (for backward compatibility)
   jobTitle?: string;         // Deprecated: use position
   company?: string;          // Deprecated: use employer

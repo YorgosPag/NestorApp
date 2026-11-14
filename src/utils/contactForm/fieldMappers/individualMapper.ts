@@ -9,6 +9,8 @@ import type { PersonaType, PersonaData } from '@/types/contacts/personas';
 import { getPersonaFields } from '@/config/persona-config';
 import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
 import { buildFlatFieldsFromAddressInfo } from '@/utils/contacts/address-info-builder';
+import { readContactLicences } from '@/lib/contacts/contact-licences';
+import { licenceDraftsOf } from '@/lib/professional/licence-drafts';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('IndividualMapper');
@@ -147,6 +149,8 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     iscoCode: getSafeFieldValue(individualContact, 'iscoCode'),
     // 🇪🇺 ESCO Skills (ADR-132)
     escoSkills: individualContact.escoSkills ?? [],
+    // 🪪 Άδειες (ADR-915 §40.5) — μέσα από τον φρουρό· η φόρμα επεξεργάζεται drafts, οι αποθηκευμένες κρατούν την προέλευση
+    ...licenceFormFieldsOf(individualContact.licences),
 
     // 📞 Επικοινωνία - ENTERPRISE Arrays Structure
     // Επίπεδα πεδία + διοικητική ιεραρχία από το `addresses[0]` — μία υλοποίηση
@@ -199,4 +203,10 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
 
 
   return formData;
+}
+
+/** Οι άδειες της επαφής για τη φόρμα: οι αποθηκευμένες (με προέλευση) και η κατάσταση επεξεργασίας τους. */
+function licenceFormFieldsOf(raw: unknown): Pick<ContactFormData, 'licences' | 'licenceDrafts'> {
+  const licences = [...readContactLicences(raw)];
+  return { licences, licenceDrafts: licenceDraftsOf(licences) };
 }

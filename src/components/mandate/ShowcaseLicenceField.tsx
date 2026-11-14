@@ -30,70 +30,67 @@ import {
   REGISTRY_AUTHORITY_PRESENTATION,
   isChapteredRegistry,
 } from '@/constants/professional-registries';
+import { CONTACT_LICENCE_KEYS } from '@/components/contacts/contact-licence-labels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { ShowcaseLicenceWire } from '@/lib/agency/showcase-wire';
+import type { LicenceDraft, LicenceDrafts } from '@/lib/professional/licence-drafts';
 import type { ShowcaseLicence } from '@/types/agency-profile';
 
-/** Μία δηλωμένη άδεια στη φόρμα — ο αριθμός και (σε αρχή με παραρτήματα) ο εκδότης, ίσως ακόμη κενά. */
-export interface ShowcaseLicenceDraft {
-  readonly number: string;
-  readonly chapter: string;
-}
-
-/** Ανά άδεια: `null` = δεν την έχω · draft = την έχω, με αυτά τα στοιχεία. */
-export type ShowcaseLicenceDrafts = Readonly<Record<ProfessionalLicence, ShowcaseLicenceDraft | null>>;
-
-/** `Record` ολικός ⇒ νέα άδεια χωρίς γραμμή εδώ = σφάλμα μεταγλώττισης, όχι σιωπηλή απουσία από τη φόρμα. */
-export const NO_LICENCE_DRAFTS: ShowcaseLicenceDrafts = { 'energy-inspector': null, 'electrical-installer': null };
-const EMPTY_DRAFT: ShowcaseLicenceDraft = { number: '', chapter: '' };
-
-/** Από τη δημοσιευμένη βιτρίνα στη φόρμα. */
-export function licenceDraftsOf(licences: readonly ShowcaseLicence[]): ShowcaseLicenceDrafts {
-  const drafts: Record<ProfessionalLicence, ShowcaseLicenceDraft | null> = { ...NO_LICENCE_DRAFTS };
-  for (const { licence, attestation } of licences) {
-    const { registration } = attestation;
-    drafts[licence] = {
-      number: registration.number,
-      chapter: registration.authorityKind === 'chapter' ? registration.chapter : '',
-    };
-  }
-  return drafts;
-}
+const EMPTY_DRAFT: LicenceDraft = { number: '', chapter: '' };
 
 /**
- * Από τη φόρμα στο σύρμα — μόνο όσες δηλώνει· ο εκδότης **μόνο** όπου η αρχή τον έχει. Τα κενά φτάνουν στον γραφέα,
- * που αρνείται **ονομαστικά**. Άδεια που δίνει ήδη η ειδικότητα **δεν** στέλνεται: μια παλιά ρητή δήλωση της ίδιας άδειας
- * (πριν δηλωθεί η εγγραφή στην ειδικότητα) **ενοποιείται** με την αποθήκευση — αλλιώς ο γραφέας θα αρνιόταν για πάντα.
+ * **Ποιος μιλά** (ADR-915 §40.5): `self` = ο ίδιος για τη βιτρίνα του («Έχω άδεια») · `office` = το γραφείο για την
+ * επαφή του («Έχει άδεια»). Ίδιο πεδίο, ίδιοι κανόνες — μόνο η φωνή αλλάζει. Πίνακας μελών (ADR-744 slice).
  */
-export function licenceWireOf(
-  drafts: ShowcaseLicenceDrafts,
-  heldThrough: readonly ShowcaseLicence[],
-): ShowcaseLicenceWire[] {
-  return PROFESSIONAL_LICENCES.flatMap((licence) => {
-    const draft = drafts[licence];
-    if (draft === null || heldThrough.some((held) => held.licence === licence)) return [];
-    const chaptered = isChapteredRegistry(PROFESSIONAL_LICENCE_SPECS[licence].authority);
-    return [
-      chaptered
-        ? { licence, registrationNumber: draft.number, registrationChapter: draft.chapter }
-        : { licence, registrationNumber: draft.number },
-    ];
-  });
+export type LicenceFieldVoice = 'self' | 'office';
+
+interface VoiceKeys {
+  readonly legend: string;
+  readonly hint: string;
+  readonly hold: string;
+  readonly registryHint: string;
 }
+
+/** ⚠️ Δηλωμένος τύπος, ΟΧΙ `as const satisfies`: ο εξαγωγέας του slice (`key-tables.js`) δεν διαβάζει το δεύτερο (ADR-744 §27.4). */
+const VOICE_KEYS: Readonly<Record<LicenceFieldVoice, VoiceKeys>> = {
+  self: {
+    legend: SHOWCASE_KEYS.licencesLabel,
+    hint: SHOWCASE_KEYS.licencesHint,
+    hold: SHOWCASE_KEYS.licenceHold,
+    registryHint: SHOWCASE_KEYS.registryHint,
+  },
+  office: {
+    legend: CONTACT_LICENCE_KEYS.legend,
+    hint: CONTACT_LICENCE_KEYS.hint,
+    hold: CONTACT_LICENCE_KEYS.hold,
+    registryHint: CONTACT_LICENCE_KEYS.registryHint,
+  },
+};
+
+const FIELD_NAMESPACES = [SHOWCASE_NS, 'contacts-form'];
 
 export interface ShowcaseLicenceFieldProps {
-  readonly value: ShowcaseLicenceDrafts;
-  readonly onChange: (next: ShowcaseLicenceDrafts) => void;
+  readonly value: LicenceDrafts;
+  readonly onChange: (next: LicenceDrafts) => void;
   /** Οι άδειες που η βιτρίνα **ήδη** έχει μέσα από τις ειδικότητές της (`licencesHeldThroughCredentials`). */
   readonly heldThrough: readonly ShowcaseLicence[];
+  /** Προεπιλογή `self` (βιτρίνα). */
+  readonly voice?: LicenceFieldVoice;
+  readonly disabled?: boolean;
 }
 
-export function ShowcaseLicenceField({ value, onChange, heldThrough }: ShowcaseLicenceFieldProps): React.ReactElement {
-  const { t } = useTranslation([SHOWCASE_NS]);
+export function ShowcaseLicenceField({
+  value,
+  onChange,
+  heldThrough,
+  voice = 'self',
+  disabled = false,
+}: ShowcaseLicenceFieldProps): React.ReactElement {
+  const { t } = useTranslation(FIELD_NAMESPACES);
   return (
-    <fieldset className="flex flex-col gap-3 border-0 p-0">
-      <legend className="text-sm font-medium text-foreground">{t(SHOWCASE_KEYS.licencesLabel)}</legend>
-      <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_KEYS.licencesHint)}</p>
+    <fieldset className="flex flex-col gap-3 border-0 p-0" disabled={disabled}>
+      {/* Στη φόρμα επαφής η ετικέτα πεδίου υπάρχει ήδη (`FormField`) — η λεζάντα μένει μόνο για τους αναγνώστες οθόνης. */}
+      <legend className={voice === 'office' ? 'sr-only' : 'text-sm font-medium text-foreground'}>{t(VOICE_KEYS[voice].legend)}</legend>
+      <p className="m-0 text-sm text-muted-foreground">{t(VOICE_KEYS[voice].hint)}</p>
       {PROFESSIONAL_LICENCES.map((licence) => {
         const held = heldThrough.find((h) => h.licence === licence);
         return held !== undefined ? (
@@ -102,6 +99,7 @@ export function ShowcaseLicenceField({ value, onChange, heldThrough }: ShowcaseL
           <LicenceRow
             key={licence}
             licence={licence}
+            voice={voice}
             draft={value[licence]}
             onChange={(draft) => onChange({ ...value, [licence]: draft })}
           />
@@ -127,14 +125,16 @@ function HeldThroughRow({ held }: { readonly held: ShowcaseLicence }): React.Rea
 
 function LicenceRow({
   licence,
+  voice,
   draft,
   onChange,
 }: {
   readonly licence: ProfessionalLicence;
-  readonly draft: ShowcaseLicenceDraft | null;
-  readonly onChange: (draft: ShowcaseLicenceDraft | null) => void;
+  readonly voice: LicenceFieldVoice;
+  readonly draft: LicenceDraft | null;
+  readonly onChange: (draft: LicenceDraft | null) => void;
 }): React.ReactElement {
-  const { t } = useTranslation([SHOWCASE_NS]);
+  const { t } = useTranslation(FIELD_NAMESPACES);
   // ⚠️ `spec.nameKey`, ΟΧΙ αποδόμηση: ο τεμαχιστής του CHECK 3.34 λύνει `t(TABLE[x].key)`, όχι `t(nameKey)`.
   const spec = PROFESSIONAL_LICENCE_SPECS[licence];
   const { authority } = spec;
@@ -142,13 +142,13 @@ function LicenceRow({
     <>
       <label className="flex items-center gap-2 text-sm text-foreground">
         <Checkbox checked={draft !== null} onCheckedChange={(checked) => onChange(checked === true ? EMPTY_DRAFT : null)} />
-        {t(SHOWCASE_KEYS.licenceHold, { licence: t(spec.nameKey) })}
+        {t(VOICE_KEYS[voice].hold, { licence: t(spec.nameKey) })}
       </label>
       {draft !== null && (
         <HintedField
           id={`showcase-licence-${licence}`}
           label={t(SHOWCASE_KEYS.registryLabel, { authority: t(REGISTRY_AUTHORITY_PRESENTATION[authority].nameKey) })}
-          hint={t(SHOWCASE_KEYS.registryHint)}
+          hint={t(VOICE_KEYS[voice].registryHint)}
           placeholder={t(SHOWCASE_KEYS.registryPlaceholder)}
           value={draft.number}
           onChange={(number) => onChange({ ...draft, number })}

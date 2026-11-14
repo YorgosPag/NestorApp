@@ -160,6 +160,7 @@ ADR-838). Ένας τρίτος, χειρόγραφος κατάλογος θα 
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-14 | **§40.5 — η επαφή κρατά άδειες, με προέλευση (Φ3β, μέρος 1).** Νέο `licences[]` στο `IndividualContact` (`types/contacts/contact-licences.ts`): **ίδιο σχήμα** με το `ShowcaseLicence` + `provenance { source: office \| self-declared, recordedAt, engagementId }`. Ένας σχηματισμός/αναγνώστης (`lib/contacts/contact-licences.ts` πάνω στα `formShowcaseLicences`/`readShowcaseLicences`)· η τιμή που δεν άλλαξε κρατά την προέλευσή της. Η κατάσταση φόρμας εξήχθη σε `lib/professional/licence-drafts.ts` (βιτρίνα + επαφή)· το `ShowcaseLicenceField` πήρε `voice: self \| office`. «Έλεγχος στο μητρώο» εξήχθη σε `RegistryLookupLink` (βιτρίνα + επαφή). Ίχνος: CDC + `licences: { keyBy: 'licence' }`. Το πεδίο φορτώνεται τεμπέλικα (`ContactLinkSurfaces.ContactLicencesField`, CHECK 3.34: απογραφή 102 → 103). |
 | 2026-11-14 | **§39.8 — η κάρτα του γραφείου δείχνει τη δήλωση του ίδιου του επαγγελματία.** Μετά την είσοδο: «… — δηλωμένο από τον ίδιο», και «(το γραφείο είχε δηλώσει: Χ)» μόνο όταν διαφέρει. `readSpaceDeclaration` (ένας αναγνώστης + ένας κριτής, μόνο η συμμετοχή της ίδιας πρόσκλησης) → `IssuanceSpaceStatus.entered.declared` (μόνο μητρώο + αριθμός) → `CredentialLine`. |
 | 2026-11-14 | **§39.7 — στάδιο και σειρά σε δεύτερο πρόσωπο στον χώρο του επαγγελματία.** «Σειρά: ο επαγγελματίας» → «Σειρά: δική σας»· το στάδιο από τη θέση του αναγνώστη. Νέοι ολικοί πίνακες `PROFESSIONAL_STAGE_KEYS` · `PROFESSIONAL_BALL_KEYS` (`my-cases/issuance-space-labels.ts`) στα `EngagedIssuanceContent` + `MyIssuanceCardView`· οι πίνακες του γραφείου αμετάβλητοι. |
 | 2026-11-14 | **§39.6 — ο σύνδεσμος μητρώου δείχνει τη ΔΗΜΟΣΙΑ αναζήτηση.** Ζωντανή επαλήθευση του `/case-invite` (λάθος λογαριασμός → σύνδεση `+arch1` → φόρμα ΥΠΕΝ → «Αποδοχή» → `/engagements/[id]` → κάρτα γραφείου «μπήκε»: όλα ✅). Εύρημα: το `https://www.buildingcert.gr` περνούσε από Taxisnet ⇒ `registryLookupUrl` = `…/inspectors/startValues.view` (επαληθευμένο δημόσιο). Ανοιχτά (handoff): η κάρτα γραφείου δείχνει τη δήλωση **του γραφείου**, όχι του επαγγελματία· η γραμμή «Έγγραφο» του `/case-invite` λείπει από το SSR HTML (`IssuanceSurfaces`, σκόπιμο, ADR-744 §27.4). |
@@ -3718,7 +3719,7 @@ namespaces της (`conveyance` · `document-registry` · `legality` · `propert
 καρέ). Σφράγιση `lazyRouteMountSeal` 98 → 102 με γραμμένο `why` (`.i18n-shell-slice.json`), εντολή Giorgio.
 
 ### 40.4 Δηλωμένα όρια — τι ΔΕΝ έγινε και γιατί
-- **«Υιοθέτηση στοιχείων» → όχι.** Η επαφή **δεν έχει** πεδίο για αριθμό ΥΠΕΝ ενεργειακού επιθεωρητή (η persona `engineer`
+- **«Υιοθέτηση στοιχείων» → όχι** *(το πεδίο υπάρχει πλέον: §40.5· η υιοθέτηση: §40.6)*. Η επαφή **δεν είχε** πεδίο για αριθμό ΥΠΕΝ ενεργειακού επιθεωρητή (η persona `engineer`
   έχει μόνο `teeRegistryNumber` — ΤΕΕ ≠ ΥΠΕΝ). Νέο πεδίο θέλει απόφαση Giorgio· μέχρι τότε μόνο εμφάνιση. Για
   δικηγόρο/συμβολαιογράφο τα πεδία υπάρχουν (`legal-professional-credentials.ts`) — υποψήφιο επόμενο βήμα.
 - **Νομικό πρόσωπο → μόνο ένδειξη**, ποτέ αυτόματη επαφή εταιρείας. Η ροή «Προσθήκη εταιρείας του επαγγελματία» θέλει
@@ -3727,3 +3728,28 @@ namespaces της (`conveyance` · `document-registry` · `legality` · `propert
   Χωρίς αυτόν: `FAILED_PRECONDITION` ⇒ 503 ⇒ η κεφαλίδα απλώς δεν δείχνει τίποτα (fail-closed, καμία ψευδής δήλωση).
 - tests / πύλες / γεννήτορες i18n (`src/types/i18n.ts`, slice) / browser **δεν** έτρεξαν — αναμένουν έγκριση.
 
+### 40.5 Η επαφή κρατά άδειες — με προέλευση (Φ3β μέρος 1, 2026-11-14)
+**Απόφαση Giorgio (2026-11-14):** δομημένη λίστα `licences[]` στην επαφή, πάνω στο `PROFESSIONAL_LICENCES` — **όχι** πεδίο
+στην persona `engineer`: ο επιθεωρητής είναι μηχανικός (ΤΕΕ) με **επιπλέον** άδεια ΥΠΕΝ (δόγμα «ΑΔΕΙΑ ≠ ΕΠΑΓΓΕΛΜΑ», §21).
+
+**Πρακτική μεγάλων (έρευνα 2026-11-14):** το Procore κρατά τις άδειες ως **συνημμένα αρχεία** (κανένα δομημένο πεδίο
+αριθμού)· το Salesforce Data.com Clean συγκρίνει δίπλα-δίπλα και ενημερώνει **πεδίο-πεδίο**, ποτέ αυτόματη αντικατάσταση
+γεμάτου πεδίου· το HubSpot κρατά ιστορικό ανά πεδίο. **Πιο έξυπνα εδώ:** προέλευση **ανά άδεια** («το έγραψε το
+γραφείο» ≠ «το δήλωσε ο ίδιος σε ανάθεση», με ώρα και συμμετοχή) **και** ο σύνδεσμος του δημόσιου μητρώου δίπλα.
+
+| Στοιχείο | Πού |
+|---|---|
+| Τύπος | `types/contacts/contact-licences.ts` — `ContactLicence = ShowcaseLicence + provenance` · `RegulatedAttestation` εξάγεται πλέον από `types/agency-profile.ts` |
+| Ανάγνωση / σχηματισμός | `lib/contacts/contact-licences.ts` — `readContactLicences` (φρουρός, μία ανά άδεια) · `contactLicencesFromDrafts` (αμετάβλητη τιμή ⇒ ίδια προέλευση· νέα/αλλαγμένη ⇒ `office`, τώρα) · κανένας δεύτερος validator |
+| Κατάσταση φόρμας | `lib/professional/licence-drafts.ts` — `LicenceDrafts` · `licenceDraftsOf` · `licenceWireOf` (μετακινήθηκαν από το component· βιτρίνα **και** επαφή) |
+| Πεδίο | `ShowcaseLicenceField` με `voice: 'office'` («Έχει άδεια») — ίδιο πεδίο, ίδιοι κανόνες, άλλη φωνή |
+| Φόρμα επαφής | `individual-config.ts` (πεδίο `licences`) · renderer στο `contactRenderersTyped.tsx` · mappers `individualMapper.ts` / `mappers/individual.ts` · επικύρωση `contact-validation.ts` |
+| Προέλευση | `ContactLicenceProvenanceList` + `RegistryLookupLink` (εξήχθη από το `LicenceStatement`) |
+| Φόρτωση | `ContactLicencesField` (πεδίο + προέλευση) **τεμπέλικα** μέσω `ContactLinkSurfaces` — αλλιώς κάθε σελίδα που ανοίγει φόρμα επαφής θα περίμενε το `property-market` (CHECK 3.34, ADR-744 §27.4) |
+| Ίχνος | CDC (`contact-audit-trigger`) · `audit-collection-identity.ts` `licences: { keyBy: 'licence' }` · ετικέτες `common-audit` |
+
+🔒 **Καμία σιωπηλή απώλεια:** ροή που φτιάχνει φόρμα **χωρίς** `licenceDrafts` δεν αγγίζει το πεδίο· σχηματισμός που
+αποτυγχάνει μετά την επικύρωση κρατά τις αποθηκευμένες.
+⚠️ **Δηλωμένα όρια:** οι κανόνες Firestore των επαφών δεν έχουν λίστα πεδίων (καμία αλλαγή)· ο πελάτης μπορεί τεχνικά
+να γράψει `source: 'self-declared'` — η αξιόπιστη προέλευση της υιοθέτησης έρχεται από τον server (§40.6).
+Tests: `lib/contacts/__tests__/contact-licences.test.ts` (προέλευση κρατιέται · αλλαγή ⇒ office · ονομασμένη άρνηση · διπλή γραμμή · σειρά) · `lib/professional/__tests__/licence-drafts.test.ts` (round-trip) · δείγμα `licences` στο `audit-collection-identity.test.ts`. Browser **δεν** έτρεξε ακόμη.

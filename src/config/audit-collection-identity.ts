@@ -42,6 +42,8 @@ export const CONTACT_COLLECTION_IDENTITY = {
   // Αποθηκεύεται `{uri, label}` (`types/contacts/contracts.ts`)· το `uri` είναι κενό για ελεύθερο κείμενο ⇒ σύνθετο.
   // ⚠️ Δήλωνε `['code']` — πεδίο που ΔΕΝ υπάρχει ⇒ κάθε δεξιότητα έπεφτε στο κλειδί ολόκληρου JSON.
   escoSkills: { keyBy: ['uri', 'label'], labelFields: ['label'] },
+  // ADR-915 §40.5 — μία ανά άδεια του λεξιλογίου (`PROFESSIONAL_LICENCES`)· το γράφουν η φόρμα και η υιοθέτηση.
+  licences: { keyBy: 'licence', labelFields: ['licence'] },
 } as const satisfies Readonly<Record<string, CollectionIdentity>>;
 
 export type ContactCollectionField = keyof typeof CONTACT_COLLECTION_IDENTITY;

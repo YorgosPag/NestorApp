@@ -19,4 +19,11 @@ export const ContactLinkSurfaces = defineLazySurfaces({
   ContactProfessionalLinkBadge: {
     load: () => import('@/components/contacts/details/ContactProfessionalLinkBadge').then(mod => ({ default: mod.ContactProfessionalLinkBadge })),
   },
+  /**
+   * ADR-915 §40.5 — οι άδειες της επαφής στη φόρμα φυσικού προσώπου. Το όνομα της άδειας και τα κείμενα του πεδίου
+   * ζουν στο `property-market`· με στατική εισαγωγή θα έμπαινε σε κάθε σελίδα που ανοίγει φόρμα επαφής.
+   */
+  ContactLicencesField: {
+    load: () => import('@/components/contacts/ContactLicencesField').then(mod => ({ default: mod.ContactLicencesField })),
+  },
 });

@@ -351,6 +351,7 @@ const CONTACT_TRACKED_FIELDS_RAW: Record<string, string> = {
   escoLabel: 'escoLabel',
   iscoCode: 'iscoCode',
   escoSkills: 'escoSkills',
+  licences: 'licences',
 
   // ── Individual — Family ──
   maritalStatus: 'maritalStatus',
@@ -456,7 +457,7 @@ const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
   'documentType', 'documentIssuer', 'documentNumber',
   'documentIssueDate', 'documentExpiryDate',
   'specialty', 'employer', 'employerId', 'position', 'department',
-  'workAddress', 'workWebsite', 'escoLabel', 'iscoCode', 'escoSkills',
+  'workAddress', 'workWebsite', 'escoLabel', 'iscoCode', 'escoSkills', 'licences',
   'maritalStatus', 'spouse', 'children',
 ]);
 
@@ -637,6 +638,11 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     kind: 'collection',
     ...CONTACT_COLLECTION_IDENTITY.escoSkills,
     label: 'escoSkills',
+  },
+  licences: {
+    kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.licences,
+    label: 'licences',
   },
 };
 

@@ -12,14 +12,14 @@
  */
 
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
 
 import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ShowcaseLicence } from '@/types/agency-profile';
 
-import { AGENCY_PUBLIC_NS, CREDIBILITY_KEYS } from './agency-directory-labels';
+import { AGENCY_PUBLIC_NS } from './agency-directory-labels';
 import { ClaimLines } from './CredibilityStatement';
+import { RegistryLookupLink } from './RegistryLookupLink';
 
 export interface LicenceStatementProps {
   readonly licence: ShowcaseLicence;
@@ -28,30 +28,11 @@ export interface LicenceStatementProps {
 export function LicenceStatement({ licence }: LicenceStatementProps): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const spec = PROFESSIONAL_LICENCE_SPECS[licence.licence];
-  // `useId`: η ίδια άδεια εμφανίζεται σε ΠΟΛΛΕΣ κάρτες της λίστας — σταθερό id θα συγκρουόταν.
-  const hintId = React.useId();
   return (
     <section className="flex flex-col gap-1">
       <p className="m-0 text-sm font-medium text-foreground">{t(spec.nameKey)}</p>
       <ClaimLines claim={licence.attestation} />
-      {/* Χωρίς δημόσιο μητρώο (ηλεκτρολόγος, ADR-915 §34) ⇒ κανένας σύνδεσμος — ποτέ σύνδεσμος που δεν απαντά. */}
-      {spec.registryLookupUrl !== null ? (
-        <>
-          <a
-            href={spec.registryLookupUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-describedby={hintId}
-            className="ml-5 inline-flex w-fit items-center gap-1 text-xs text-foreground underline underline-offset-2"
-          >
-            {t(CREDIBILITY_KEYS.licenceLookup)}
-            <ExternalLink className="size-3" aria-hidden="true" />
-          </a>
-          <span id={hintId} className="sr-only">
-            {t(CREDIBILITY_KEYS.licenceLookupHint)}
-          </span>
-        </>
-      ) : null}
+      <RegistryLookupLink licence={licence.licence} className="ml-5" />
     </section>
   );
 }

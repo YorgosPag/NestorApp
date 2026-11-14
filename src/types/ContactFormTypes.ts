@@ -10,6 +10,8 @@ import type { PersonaType } from '@/types/contacts/personas';
 import type { PhotoSlot } from '@/components/ui/multiple-photos/photo-slot-types';
 import type { ContactAddressType } from '@/types/contacts/address-types';
 import type { StoredAddressPosition } from '@/types/address-position';
+import type { ContactLicence } from '@/types/contacts/contact-licences';
+import { NO_LICENCE_DRAFTS, type LicenceDrafts } from '@/lib/professional/licence-drafts';
 
 export interface AddNewContactDialogProps {
   open: boolean;
@@ -247,6 +249,9 @@ export interface ContactFormData {
   iscoCode: string;
   // 🇪🇺 ESCO Skills (ADR-132)
   escoSkills: Array<{ uri: string; label: string }>;
+  // 🪪 Άδειες (ADR-915 §40.5): οι αποθηκευμένες (κρατούν την προέλευση) + η κατάσταση επεξεργασίας
+  licences: ContactLicence[];
+  licenceDrafts: LicenceDrafts;
   // Εταιρεία
   companyName: string;
   companyVatNumber: string;
@@ -499,6 +504,9 @@ export const initialFormData: ContactFormData = {
   iscoCode: '',
   // 🇪🇺 ESCO Skills (ADR-132)
   escoSkills: [],
+  // 🪪 Άδειες (ADR-915 §40.5)
+  licences: [],
+  licenceDrafts: NO_LICENCE_DRAFTS,
   // Εταιρεία
   companyName: '',
   companyVatNumber: '',

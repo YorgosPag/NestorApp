@@ -178,7 +178,7 @@ export type ShowcaseCredential =
  * ⚠️ **Παράγεται** με `Exclude`, ποτέ ξαναγραμμένο: μια δεύτερη απαρίθμηση των
  * καταστάσεων θα ξεχνούσε την επόμενη *(ADR-798 §7 — τρεις, ακέραιες)*.
  */
-type RegulatedAttestation = Exclude<ProfessionalAttestation, { state: 'unknown' }>;
+export type RegulatedAttestation = Exclude<ProfessionalAttestation, { state: 'unknown' }>;
 
 /**
  * **Μια άδεια ΕΠΙΠΛΕΟΝ του επαγγέλματος** *(ADR-915 §21 — π.χ. ενεργειακός επιθεωρητής ΥΠΕΝ)*.

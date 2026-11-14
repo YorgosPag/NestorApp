@@ -295,6 +295,12 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         tooltip: 'individual.tooltips.skills',
       },
+      {
+        // 🎯 DUMMY: ShowcaseLicenceField, φωνή γραφείου (ADR-915 §40.5) — ΑΔΕΙΑ ≠ ΕΠΑΓΓΕΛΜΑ
+        id: 'licences',
+        label: PROFESSIONAL_INFO_FIELD_LABELS.LICENCES,
+        type: 'input',
+      },
     ],
   },
 
