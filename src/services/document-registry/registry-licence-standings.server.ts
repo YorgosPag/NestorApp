@@ -17,13 +17,12 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { PROFESSIONAL_LICENCE_SPECS, type ProfessionalLicence } from '@/config/professional-licences';
 import { chunkArray } from '@/lib/array-utils';
 import { readContactLicences } from '@/lib/contacts/contact-licences';
-import { judgeRegistryCheck, licenceStandingOf } from '@/lib/professional/registry-check-judgment';
+import { judgeRegistryCheck, licenceStandingOf, registryCheckSubjectOf } from '@/lib/professional/registry-check-judgment';
 import {
   readRegistryCheckRecords,
   registryCheckDocId,
   type RegistryCheckKey,
 } from '@/services/professional-registry/registry-check-record.service';
-import { registryCheckSubjectOf } from '@/services/professional-registry/registry-check.service';
 import type { ContactLicence } from '@/types/contacts/contact-licences';
 import type { LicenceStanding, ProfessionalRegistryCheckRecord } from '@/types/professional-registry-check';
 import { REGISTRY_GET_ALL_CHUNK } from './document-registry.types';

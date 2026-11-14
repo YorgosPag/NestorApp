@@ -3,7 +3,12 @@
  */
 
 import { formShowcaseLicences } from '@/lib/agency/showcase-licence';
-import { judgeRegistryCheck, licenceStandingOf, sameSurname } from '@/lib/professional/registry-check-judgment';
+import {
+  judgeRegistryCheck,
+  licenceStandingOf,
+  registryCheckSubjectOf,
+  sameSurname,
+} from '@/lib/professional/registry-check-judgment';
 import type { ProfessionalRegistryCheckRecord } from '@/types/professional-registry-check';
 
 function inspector(number: string) {
@@ -74,5 +79,16 @@ describe('Τ — η τάξη που μετρά (§40.7 Φ3)', () => {
 
   it('Τ3 καμία δηλωμένη τάξη ⇒ κενές τάξεις (άγνοια, όχι «Όχι»)', () => {
     expect(licenceStandingOf(inspector('2600'), { state: 'not-checked' })).toEqual({ grades: {}, source: 'declared', checkedAt: null });
+  });
+});
+
+describe('Σ — το υποκείμενο από το ωμό έγγραφο επαφής', () => {
+  it('Σ1 η άδεια που κρατά η επαφή + το επώνυμο', () => {
+    expect(registryCheckSubjectOf({ lastName: 'Δοκιμαστικός', licences: [] }, 'energy-inspector'))
+      .toEqual({ licence: 'energy-inspector', held: null, lastName: 'Δοκιμαστικός' });
+  });
+
+  it('Σ2 επώνυμο που δεν είναι κείμενο ⇒ κενό (δεν αποδεικνύει τίποτα)', () => {
+    expect(registryCheckSubjectOf({ lastName: 42 }, 'energy-inspector').lastName).toBe('');
   });
 });

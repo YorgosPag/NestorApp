@@ -24,7 +24,6 @@ import type { DocumentReference, Firestore as AdminFirestore } from 'firebase-ad
 
 import type { ProfessionalLicence } from '@/config/professional-licences';
 import { nowISO } from '@/lib/date-local';
-import { readContactLicences } from '@/lib/contacts/contact-licences';
 import { judgeRegistryCheck, type RegistryCheckSubject } from '@/lib/professional/registry-check-judgment';
 import type {
   ProfessionalRegistryCheckRecord,
@@ -55,11 +54,6 @@ export interface RegistryCheckTarget {
   readonly licence: ProfessionalLicence;
 }
 
-/** Ό,τι χρειάζεται η κρίση από την **ήδη φορτωμένη** επαφή (ο καλών έχει ελέγξει ιδιοκτησία). */
-export function registryCheckSubjectOf(contact: Readonly<Record<string, unknown>>, licence: ProfessionalLicence): RegistryCheckSubject {
-  const held = readContactLicences(contact.licences).find((candidate) => candidate.licence === licence) ?? null;
-  return { licence, held, lastName: typeof contact.lastName === 'string' ? contact.lastName : '' };
-}
 
 function reportOf(
   subject: RegistryCheckSubject,

@@ -11,6 +11,7 @@
  */
 
 import type { ProfessionalLicence } from '@/config/professional-licences';
+import { readContactLicences } from '@/lib/contacts/contact-licences';
 import type { ShowcaseLicence } from '@/types/agency-profile';
 import type {
   LicenceStanding,
@@ -36,6 +37,15 @@ export interface RegistryCheckSubject {
   /** Η άδεια όπως την κρατά **τώρα** η επαφή — `null` αν δεν την έχει. */
   readonly held: ShowcaseLicence | null;
   readonly lastName: string;
+}
+
+/**
+ * Ό,τι χρειάζεται η κρίση από την **ήδη φορτωμένη** επαφή (ο καλών έχει ελέγξει ιδιοκτησία). Ζει εδώ, στο καθαρό leaf,
+ * ώστε ο αναγνώστης του μητρώου λήξεων να **μην** φορτώνει τον πελάτη του buildingcert.gr (ADR-915 §40.7 Φ3).
+ */
+export function registryCheckSubjectOf(contact: Readonly<Record<string, unknown>>, licence: ProfessionalLicence): RegistryCheckSubject {
+  const held = readContactLicences(contact.licences).find((candidate) => candidate.licence === licence) ?? null;
+  return { licence, held, lastName: typeof contact.lastName === 'string' ? contact.lastName : '' };
 }
 
 /** **Η κρίση.** Κανένας έλεγχος, ή έλεγχος άλλης άδειας ⇒ `not-checked`. */

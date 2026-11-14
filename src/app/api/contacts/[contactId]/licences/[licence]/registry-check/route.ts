@@ -37,10 +37,10 @@ import type { Contact } from '@/types/contacts';
 import {
   hasRegistryLookup,
   readRegistryCheckReport,
-  registryCheckSubjectOf,
   runRegistryCheck,
   type RegistryCheckTarget,
 } from '@/services/professional-registry/registry-check.service';
+import { registryCheckSubjectOf } from '@/lib/professional/registry-check-judgment';
 import type { ProfessionalRegistryCheckRecord, RegistryCheckReport } from '@/types/professional-registry-check';
 import { loadOwnedContact } from '../../../../_shared/contact-owned-doc';
 
