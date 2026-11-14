@@ -79,12 +79,12 @@ export function sole(contactId: string): ObligorLead {
   return { kind: 'designated', contactId, basis: 'sole', sharePct: null, staleContactId: null };
 }
 
-const NO_LEAD = { obligorLead: null, ownerShares: {}, propertyClass: null, phase: null } as const;
+const NO_LEAD = { obligorLead: null, ownerShares: {}, propertyClass: null, phase: null, areaEvidence: { gross: null, netSqm: null } } as const;
 
 const NAMES: Pick<DocumentRegistryResponse, 'properties' | 'files' | 'people'> = {
   properties: {
     // ADR-915 §24 — μόνο το p1 έχει αποδεδειγμένο δήμο: το κενό p6 δείχνει τον κατάλογο ΧΩΡΙΣ περιοχή.
-    p1: { name: 'Συνθετικό Α1', scope: 'property', areaId: FIXTURE_AREA_ID, ownerContactIds: ['cont_alpha'], obligorLead: sole('cont_alpha'), ownerShares: {}, propertyClass: 'residential', phase: 'ready' },
+    p1: { name: 'Συνθετικό Α1', scope: 'property', areaId: FIXTURE_AREA_ID, ownerContactIds: ['cont_alpha'], obligorLead: sole('cont_alpha'), ownerShares: {}, propertyClass: 'residential', phase: 'ready', areaEvidence: { gross: null, netSqm: null } },
     // ADR-915 §25 — p2: ρωτήθηκε, κανείς · p3/p4/p5: δεν ρωτήθηκε (μόνο ο ρόλος).
     p2: { name: 'Συνθετικό Β2', scope: 'property', areaId: null, ownerContactIds: [], ...NO_LEAD },
     p3: { name: null, scope: 'property', areaId: null, ownerContactIds: null, ...NO_LEAD },
@@ -96,8 +96,9 @@ const NAMES: Pick<DocumentRegistryResponse, 'properties' | 'files' | 'people'> =
       ownerContactIds: ['cont_gone', 'cont_unnamed', 'cont_alpha', 'cont_gamma', 'cont_delta'],
       // ADR-915 §26 — κανένα μερίδιο, κανένας κύριος πωλητής ⇒ κανείς υπεύθυνος (ποτέ «ο πρώτος της λίστας»).
       obligorLead: { kind: 'undesignated', reason: 'unknown-shares', staleContactId: null }, ownerShares: {}, propertyClass: null, phase: null,
+      areaEvidence: { gross: null, netSqm: null },
     },
-    ownp_7: { name: 'Συνθετική εντολή Η7', scope: 'owner-property', areaId: null, ownerContactIds: ['cont_client'], obligorLead: sole('cont_client'), ownerShares: {}, propertyClass: null, phase: null },
+    ownp_7: { name: 'Συνθετική εντολή Η7', scope: 'owner-property', areaId: null, ownerContactIds: ['cont_client'], obligorLead: sole('cont_client'), ownerShares: {}, propertyClass: null, phase: null, areaEvidence: { gross: null, netSqm: null } },
   },
   files: {
     'f-expired': { name: 'synthetic-expired.pdf', storagePath: null }, 'f-expiring': { name: 'synthetic-expiring.pdf', storagePath: null }, 'f-soon': { name: 'synthetic-soon.pdf', storagePath: null },

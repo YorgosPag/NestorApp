@@ -2,11 +2,11 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "metadata": {
-    "timestamp": "2026-11-06T16:52:19.507Z",
+    "timestamp": "2026-11-14T22:29:52.341Z",
     "properties": [
       {
         "name": "nestor:inputsFingerprint",
-        "value": "sha256:495e72212e49fe106609bc1f095de65ef92c2f75339d8162b537b53684ed9c34"
+        "value": "sha256:26ccce106f8b7f7e2cfdfd7a966645f49363a0e1191bc250199b720cdab826a3"
       }
     ]
   },
@@ -14563,6 +14563,31 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:npm/entities@6.0.1",
+      "name": "entities",
+      "version": "6.0.1",
+      "purl": "pkg:npm/entities@6.0.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:npm/es-define-property@1.0.1",
       "name": "es-define-property",
       "version": "1.0.1",
@@ -20847,6 +20872,31 @@
         {
           "license": {
             "id": "(MIT AND Zlib)"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/parse5@8.0.0",
+      "name": "parse5",
+      "version": "8.0.0",
+      "purl": "pkg:npm/parse5@8.0.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
           }
         }
       ],

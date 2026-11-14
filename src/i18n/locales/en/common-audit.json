@@ -43,6 +43,7 @@
       "iscoCode": "ISCO Code",
       "escoSkills": "ESCO Skills",
       "licences": "Licences",
+      "registryCheck": "Registry check",
       "maritalStatus": "Marital Status",
       "spouse": "Spouse",
       "children": "Children",
@@ -441,6 +442,10 @@
         "area": "Area",
         "number": "Spot Number",
         "objectiveValuePosition": "Objective-value position"
+      },
+      "licence": {
+        "grades": "Classes",
+        "attestation": "Registry entry"
       },
       "budgetLine": {
         "amount": "Amount (net)",

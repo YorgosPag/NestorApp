@@ -239,6 +239,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
       appointedBy: 'owner',
       statute: 'ν.4122/2013 (Μητρώο Ενεργειακών Επιθεωρητών)',
       verifiedAt: null,
+      // ADR-915 §40.7 Φ3 — η τάξη «Κτίρια» (ΦΕΚ Β΄ 1228/2025: Α΄ έως 250 τ.μ. κτιρίου ή κτιριακής μονάδας).
+      licenceGradeScope: 'buildings',
     },
     obligor: 'owner',
     publicLookup: null,
@@ -267,6 +269,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
       appointedBy: 'owner',
       statute: 'άρθρο 83 παρ. 1 Ν.4495/2017 · απόφαση Δ.Ε. ΤΕΕ',
       verifiedAt: null,
+      licenceGradeScope: null,
     },
     obligor: 'owner',
     publicLookup: null,
@@ -344,6 +347,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
       appointedBy: 'owner',
       statute: 'ν.3982/2011 · π.δ. 108/2013',
       verifiedAt: null,
+      // Οι ομάδες 1–4 του π.δ. 108/2013 δεν μοντελοποιούνται ακόμη (`gradeScheme: null`).
+      licenceGradeScope: null,
     },
     obligor: 'owner',
     // ΔΕΔΔΗΕ: «μπορεί να αναζητηθεί η καταληκτική ημερομηνία ισχύος μιας Υ.Δ.Ε.» με τα 11 πρώτα ψηφία του αριθμού παροχής.

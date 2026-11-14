@@ -249,7 +249,8 @@
     "licences": {
       "licence-number-missing": "Enter the licence registration number.",
       "licence-duplicate": "The same licence was declared twice.",
-      "licence-chapter-missing": "Enter the Regional Unit that issued the licence."
+      "licence-chapter-missing": "Enter the Regional Unit that issued the licence.",
+      "licence-grade-unknown": "The declared class does not exist in this licence's registry (only A and B apply)."
     }
   },
   "submission": {
@@ -298,6 +299,28 @@
     "registryHint": "The number as issued by the authority. It is declared, not checked — verify it in the public registry.",
     "sourceOffice": "Recorded by the office",
     "sourceSelfDeclared": "Declared by the person",
-    "provenanceLine": "{source}, {date}"
+    "provenanceLine": "{source}, {date}",
+    "registry": {
+      "region": "Registry check",
+      "check": "Check in registry",
+      "checking": "Checking…",
+      "recheck": "Check registry again",
+      "notChecked": "Not checked in the registry yet.",
+      "verified": "Verified in the Energy Inspectors Registry, {date}",
+      "gradeEntry": "{scope}: {grade}",
+      "differsFromDeclared": "The registry's classes differ from the declared ones — the registry's apply.",
+      "aged": "Checked {days, plural, one {# day} other {# days}} ago — worth checking again before a new assignment.",
+      "nameMismatch": "The number exists in the registry, but under a different surname ({date}). Check the contact's number or surname.",
+      "staleNumber": "The last check was for a different number — check again.",
+      "failed": "The registry check did not complete. Please try again.",
+      "attempt": {
+        "absent": "The number was not found in the Energy Inspectors Registry.",
+        "ambiguous": "The registry returned more than one inspector with this number — check manually.",
+        "layoutChanged": "The registry page changed format and could not be read — check manually via the link.",
+        "unavailableDisabled": "Automatic checking is not enabled — check manually via the link.",
+        "unavailableNetwork": "The registry did not respond. Try again shortly or check manually.",
+        "unavailableServer": "The registry returned an error. Try again shortly or check manually."
+      }
+    }
   }
 }

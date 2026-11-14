@@ -43,6 +43,7 @@ import {
   REGISTRY_NS,
 } from '@/components/document-registry/document-registry-labels';
 import { ISSUANCE_KEYS, PROPOSE_KEYS } from '@/components/document-registry/issuance-labels';
+import { InspectorFitLine } from '@/components/document-registry/RegistryInspectorFitLine';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
@@ -69,13 +70,16 @@ function reasonText(t: Translate, reason: CandidateReason): string {
 }
 
 interface CandidateListProps {
+  readonly kind: DocumentKind;
   readonly candidates: readonly IssuanceCandidate[];
+  /** §40.7 Φ3 — η καταλληλότητα κάθε υποψηφίου (`null` = το είδος δεν έχει όριο τάξης). */
+  readonly fit: RegistryIssuanceView['inspectorFit'];
   readonly names: Readonly<Record<string, string>>;
   readonly selected: string;
   readonly onSelect: (value: string) => void;
 }
 
-function CandidateList({ candidates, names, selected, onSelect }: CandidateListProps): React.ReactElement {
+function CandidateList({ kind, candidates, fit, names, selected, onSelect }: CandidateListProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   const legendId = useId();
   return (
@@ -91,6 +95,7 @@ function CandidateList({ candidates, names, selected, onSelect }: CandidateListP
               {candidate.reasons.map((reason) => (
                 <span key={reason.kind} className="text-xs text-muted-foreground">{reasonText(t, reason)}</span>
               ))}
+              <InspectorFitLine kind={kind} fit={fit?.[candidate.contactId]} />
             </span>
           </Label>
         ))}
@@ -176,7 +181,10 @@ export function ProposeForm({ view, names, close }: ProposeFormProps): React.Rea
   };
   return (
     <>
-      <CandidateList candidates={view.candidates} names={names} selected={state.selected} onSelect={state.choose} />
+      <CandidateList
+        kind={view.kind} candidates={view.candidates} fit={view.inspectorFit} names={names}
+        selected={state.selected} onSelect={state.choose}
+      />
       {state.selected === OTHER ? (
         <ContactSearchManager selectedContactId="" onContactSelect={state.setOther} placeholder={t(PROPOSE_KEYS.searchPlaceholder)} label="" />
       ) : null}

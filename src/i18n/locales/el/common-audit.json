@@ -43,6 +43,7 @@
       "iscoCode": "Κωδικός ISCO",
       "escoSkills": "Δεξιότητες ESCO",
       "licences": "Άδειες",
+      "registryCheck": "Έλεγχος στο μητρώο",
       "maritalStatus": "Οικογ. Κατάσταση",
       "spouse": "Σύζυγος",
       "children": "Τέκνα",
@@ -441,6 +442,10 @@
         "area": "Εμβαδόν",
         "number": "Αριθμός Θέσης",
         "objectiveValuePosition": "Θέση κατά την αντικειμενική"
+      },
+      "licence": {
+        "grades": "Τάξεις",
+        "attestation": "Εγγραφή στο μητρώο"
       },
       "budgetLine": {
         "amount": "Ποσό (καθαρό)",

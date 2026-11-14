@@ -26,6 +26,12 @@ import {
   type IssuanceState,
 } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceCandidate } from '@/lib/document-validity/issuance-candidates';
+import {
+  inspectorFitOf,
+  issuanceGradeRequirementOf,
+  NO_AREA_EVIDENCE,
+  type InspectorFit,
+} from '@/lib/document-validity/inspector-coverage';
 import type { IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import { issuanceActionOf, type IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
@@ -42,6 +48,32 @@ export interface RegistryIssuanceView {
   readonly lead: ObligorLead | null;
   /** §39 — ο χώρος της ανάθεσης (στάλθηκε · ανοίχτηκε · έληξε · μπήκε). `null` = δεν διαβάστηκε ⇒ κανένας ισχυρισμός. */
   readonly space: IssuanceSpaceStatus | null;
+  /**
+   * §40.7 Φ3 — επαφή → «καλύπτει η τάξη του αυτό το ακίνητο;» για τον επαγγελματία της ανάθεσης **και** κάθε υποψήφιο.
+   * `null` = καμία τάξη δεν περιορίζει την έκδοση αυτού του είδους ⇒ η κάρτα δεν λέει τίποτα.
+   */
+  readonly inspectorFit: Readonly<Record<string, InspectorFit>> | null;
+}
+
+/**
+ * §40.7 Φ3 — η καταλληλότητα κάθε ονομαζόμενης επαφής, από την **ίδια** απόκριση (τάξη στο `people`, εμβαδόν στο
+ * `properties`) και με το **ένα** ρολόι του μητρώου (`asOf`). Επαφή εκτός `people` (ξένη ≡ ανύπαρκτη) παραλείπεται.
+ */
+function inspectorFitsOf(
+  target: { readonly kind: DocumentKind; readonly propertyId: string },
+  contactIds: readonly string[],
+  registry: DocumentRegistryResponse,
+): Readonly<Record<string, InspectorFit>> | null {
+  const requirement = issuanceGradeRequirementOf(target.kind);
+  if (requirement === null) return null;
+  const area = registry.properties[target.propertyId]?.areaEvidence ?? NO_AREA_EVIDENCE;
+  const nowMs = Date.parse(registry.asOf);
+  return Object.fromEntries(contactIds.flatMap((contactId) => {
+    const person = registry.people[contactId];
+    if (person === undefined) return [];
+    const standing = person.licenceStandings?.[requirement.licence] ?? null;
+    return [[contactId, inspectorFitOf(requirement, standing, area, nowMs)] as const];
+  }));
 }
 
 /**
@@ -65,6 +97,10 @@ export function registryIssuanceOf(row: RegistryRow, registry: DocumentRegistryR
     lead: registry.properties[propertyId]?.obligorLead ?? null,
     // Διαβάστηκε και δεν υπάρχει πρόσκληση ⇒ «κανένας χώρος»· δεν διαβάστηκε ⇒ `null` (η κάρτα σωπαίνει).
     space: registry.issuanceSpaces === null ? null : registry.issuanceSpaces[key] ?? { kind: 'none' },
+    inspectorFit: inspectorFitsOf({ kind, propertyId }, [
+      ...(issuance.record === null ? [] : [issuance.record.professionalContactId]),
+      ...issuance.candidates.map((candidate) => candidate.contactId),
+    ], registry),
   };
 }
 

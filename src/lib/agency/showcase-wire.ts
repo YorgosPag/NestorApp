@@ -24,6 +24,7 @@
  * κοινό τους οφείλει να μην είναι καμία από τις δύο πλευρές.
  */
 
+import type { LicenceGrades } from '@/config/professional-licences';
 import type { DeclaredCoverage } from '@/types/agency-coverage';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { PublicNameChoice, SeatDisclosure } from '@/types/showcase-legal-identity';
@@ -59,6 +60,8 @@ export interface ShowcaseLicenceWire {
   readonly registrationNumber: string;
   /** Ο εκδότης (Περιφερειακή Ενότητα) — υποχρεωτικός **μόνο** σε άδεια αρχής με παραρτήματα (ADR-915 §34). */
   readonly registrationChapter?: string;
+  /** Οι δηλωμένες τάξεις ανά κατηγορία (ADR-915 §40.7) — μόνο σε άδεια με `gradeScheme`· αλλού ο γραφέας αρνείται. */
+  readonly grades?: LicenceGrades;
 }
 
 /** **Ό,τι στέλνει η υποσελίδα «Άδειες»** — ολόκληρη η λίστα· κενή = «δεν έχω καμία». */

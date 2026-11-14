@@ -86,6 +86,19 @@ export const PROPOSE_KEYS = {
   cancel: `${K}issuance.propose.cancel`,
 } as const;
 
+/** ADR-915 §40.7 Φ3 — η καταλληλότητα του επαγγελματία (τάξη απέναντι στο ακίνητο) και ποιος λέει την τάξη. */
+export const INSPECTOR_FIT_KEYS = {
+  covers: `${K}issuance.fit.covers`,
+  exceeds: `${K}issuance.fit.exceeds`,
+  areaUnknown: `${K}issuance.fit.areaUnknown`,
+  notGraded: `${K}issuance.fit.notGraded`,
+  gradeUnknown: `${K}issuance.fit.gradeUnknown`,
+  gradeOnly: `${K}issuance.fit.gradeOnly`,
+  sourceRegistry: `${K}issuance.fit.sourceRegistry`,
+  sourceDeclared: `${K}issuance.fit.sourceDeclared`,
+  recheck: `${K}issuance.fit.recheck`,
+} as const;
+
 export const DECISION_KEYS = {
   title: `${K}issuance.decision.title`,
   description: `${K}issuance.decision.description`,

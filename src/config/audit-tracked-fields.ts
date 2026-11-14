@@ -29,6 +29,8 @@ import {
   AUDIT_PHONE_TYPE_CATALOG,
   AUDIT_PROFESSIONAL_LICENCE_CATALOG,
   AUDIT_REGISTRY_AUTHORITY_CATALOG,
+  AUDIT_LICENCE_GRADE_ITEM_CATALOGS,
+  AUDIT_LICENCE_GRADE_SCOPE_CATALOG,
   AUDIT_PROPERTY_ATTRIBUTE_CATALOG,
   AUDIT_SOCIAL_MEDIA_TYPE_CATALOG,
   AUDIT_SOCIAL_PLATFORM_CATALOG,
@@ -646,9 +648,13 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     ...CONTACT_COLLECTION_IDENTITY.licences,
     label: 'licences',
     // ADR-915 §40.5 — «energy-inspector — ypen — 2600» → «Ενεργειακός επιθεωρητής — ΥΠΕΝ — 2600».
+    // ADR-915 §40.7 — το υπο-πεδίο `grades` ({"buildings":"B"}) → «Κτίρια: Β΄ τάξη»: λέξεις κλειδιών + τιμών από τη ρίζα.
+    subFieldLabelScope: 'licence',
+    nestedKeyCatalog: AUDIT_LICENCE_GRADE_SCOPE_CATALOG,
     itemCatalogs: {
       licence: AUDIT_PROFESSIONAL_LICENCE_CATALOG,
       'attestation.registration.authority': AUDIT_REGISTRY_AUTHORITY_CATALOG,
+      ...AUDIT_LICENCE_GRADE_ITEM_CATALOGS,
     },
   },
 };
@@ -1654,6 +1660,14 @@ const CONTACT_FIELD_DEFS: Record<string, TrackedFieldDef> = {
     kind: 'scalar',
     label: CONTACT_TRACKED_FIELDS_RAW['customFields.activityType'],
     enumCatalog: AUDIT_LEGACY_KAD_TYPE_CATALOG,
+  },
+  // ADR-915 §40.7 Φ2 — «Έλεγχος στο μητρώο»: ΔΕΝ είναι πεδίο του εγγράφου· τη γραμμή τη γράφει ο διακομιστής μετά από
+  // απάντηση της αρχής. Τιμή = οι τάξεις του μητρώου ({"buildings":"A","heating":"none",…}) ⇒ «Κτίρια: Α΄ τάξη, …».
+  registryCheck: {
+    kind: 'scalar',
+    label: 'registryCheck',
+    nestedKeyCatalog: AUDIT_LICENCE_GRADE_SCOPE_CATALOG,
+    itemCatalogs: AUDIT_LICENCE_GRADE_ITEM_CATALOGS,
   },
 };
 

@@ -21,7 +21,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ENERGY_CLASSES } from '@/constants/energy-classes';
 import { chunkArray } from '@/lib/array-utils';
+import type { PropertyAreaEvidence } from '@/lib/document-validity/inspector-coverage';
 import { readEnergyCertificate, type EnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
+import { measuredAreasOf, resolveGrossBasisArea, type DisplayAreaSource } from '@/lib/properties/property-display-area';
 import { trimmedStringOrNull } from '@/lib/type-guards';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import { REGISTRY_GET_ALL_CHUNK, type RegistryPropertyScope } from './document-registry.types';
@@ -62,6 +64,16 @@ function registryPropertyOf(id: string, data: DocData): RegistryProperty {
     mandateClientContactIds: [],
     data,
   };
+}
+
+/**
+ * ADR-915 §40.7 Φ3 — **το εμβαδόν του ακινήτου** για την καταλληλότητα του επιθεωρητή, από το ήδη διαβασμένο έγγραφο
+ * (καμία νέα ανάγνωση) και με τον **ΕΝΑ** αναγνώστη (`resolveGrossBasisArea` · `measuredAreasOf`). Ακίνητο ιδιώτη: το
+ * επίπεδο `areaSqm` **είναι** μικτό — η ίδια ερμηνεία με την προβολή του (`owner-property-projection.ts`, `areas.gross`).
+ */
+export function registryPropertyAreaEvidence(property: RegistryProperty): PropertyAreaEvidence {
+  const source: DisplayAreaSource = property.scope === 'owner-property' ? { areas: { gross: property.data.areaSqm } } : property.data;
+  return { gross: resolveGrossBasisArea(source), netSqm: measuredAreasOf(source).net };
 }
 
 /** Τα ακίνητα με αυτές τις ταυτότητες **που ανήκουν στην εταιρεία**. */

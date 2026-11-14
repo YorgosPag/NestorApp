@@ -1150,6 +1150,9 @@
     "document-registry",
     "legality"
   ],
+  "LicenceGradesField": [
+    "property-market"
+  ],
   "MyIssuanceCardView": [
     "conveyance",
     "document-registry",

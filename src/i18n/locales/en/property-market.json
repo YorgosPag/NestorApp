@@ -1724,7 +1724,8 @@
         "licence-duplicate": "The same licence was declared twice.",
         "licences-without-showcase": "Publish the showcase first — licences appear inside it.",
         "licence-chapter-missing": "Enter the regional unit that issued the licence.",
-        "licence-held-through-occupation": "You already hold this licence through your occupation."
+        "licence-held-through-occupation": "You already hold this licence through your occupation.",
+        "licence-grade-unknown": "The declared class does not exist in this licence's registry (only A and B apply)."
       }
     },
     "directory": {
@@ -2283,6 +2284,21 @@
     },
     "electricalInstaller": {
       "name": "Licensed electrical installer"
+    },
+    "grades": {
+      "legend": "Class per category",
+      "hint": "As shown in the Energy Inspectors Registry — separately for each category. Empty means not declared, not that it is not held.",
+      "notDeclared": "Not declared",
+      "scopes": {
+        "buildings": { "name": "Buildings" },
+        "heating": { "name": "Heating systems" },
+        "cooling": { "name": "Air-conditioning systems" }
+      },
+      "values": {
+        "A": { "name": "Class A" },
+        "B": { "name": "Class B" },
+        "none": { "name": "No" }
+      }
     }
   },
   "listing": {

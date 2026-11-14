@@ -1,0 +1,349 @@
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>ΥΠΕΚΑ - Μητρώο Ενεργειακών Επιθεωρητών</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META HTTP-EQUIV="Cache-Control" CONTENT="no-cache">
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <META HTTP-EQUIV="Expires" CONTENT="0">
+<link href="kenak.css" rel="stylesheet" type="text/css" />
+        <link href="kenak_prod.css" rel="stylesheet" type="text/css" />
+
+<script type="text/javascript">
+
+   function SendTo(id){
+        //shortening form elements
+
+        var myForm      = document.getElementById('form1');
+        var from_el = document.getElementById('from');
+        from_el.setAttribute("value", "results");
+	var act;    // this variable will hold the URL of the search engine to be used
+
+                        act = "./searchRequests.view?pid="+id;
+                        myForm.setAttribute("action", act);
+                        myForm.submit();
+       
+    }
+
+    function newSearch(){
+        //shortening form elements
+
+        var myForm      = document.getElementById('form1');
+        var from_el = document.getElementById('from');
+        from_el.setAttribute("value", "searchRequests");
+        var search_date = document.getElementById('search_date');
+        search_date.setAttribute("value", "");
+	var act;    // this variable will hold the URL of the search engine to be used
+
+                        act = "./searchRequests.view?pid=0";
+                        myForm.setAttribute("action", act);
+                        myForm.submit();
+                        
+    }
+
+
+</script>
+
+</head>
+
+    
+
+<body>
+<div align="center">
+  <table width="950" border="0" align="center" bordercolor="#681624">
+    <tr>
+      <td width="1069" bgcolor="#681624">        <table width="949" border="0" align="center" bgcolor="#FFFFFF">
+            <tr bgcolor="#FFFFFF">
+              <td width="1019" height="10" colspan="8" bgcolor="#FFFFFF"><table width="940" height="117" border="0" align="center" bgcolor="#FFFFFF">
+
+
+
+
+
+
+<script>
+function getAbsPosition1(e)
+{
+  var posx = 0;
+  var posy = 0;
+  if (!e) var e = window.event;
+  if (e.pageX || e.pageY)
+  {
+  	posx = e.pageX;
+  	posy = e.pageY;
+  }
+  else if (e.clientX || e.clientY)
+  {
+  	posx = e.clientX + document.body.scrollLeft
+  		+ document.documentElement.scrollLeft;
+  	posy = e.clientY + document.body.scrollTop
+  		+ document.documentElement.scrollTop;
+  }
+//  var tbl = document.getElementById('legendMenuTable');
+  return{x:posx, y:posy};
+}
+
+function openWindow1(event, s)
+{
+	if (document.getElementById)
+	{
+		var _docHeight =
+			(document.height !== undefined) ? document.height : document.body.offsetHeight;
+		var ee = document.getElementById("darkLayer");
+		ee.style.height = '' + _docHeight + 'px';
+
+		var e = document.getElementById(s);
+		var pos = getAbsPosition1(event);
+		var ll = (pos.x - e.clientWidth/2);
+		if (ll < 0) ll = 0;
+		var mm = (pos.y - e.clientHeight);
+//      if (mm < 0) mm = 0;
+        var st = document.body.scrollTop 
+                 + document.documentElement.scrollTop;
+        var sb = document.body.scrollBottom 
+                 + document.documentElement.scrollBottom;
+		if (mm < st) mm = st+10;
+//      alert('_document.height = ' + document.height + ' docHeight = ' + _docHeight + '\npos.y = ' + pos.y + ' mm = ' + mm + '\nst = ' + st + ' sb = ' + sb);
+		e.style.left='' + ll + 'px';
+		e.style.top ='' + mm + 'px';
+		e.style.zIndex=9;
+		e.style.visibility='visible';
+//      window.scrollBy(0,st);
+	}
+	else alert('getElementById NOT supported!');
+}
+
+function closeWindow1(s)
+{
+	if (document.getElementById)
+	{
+		var ee = document.getElementById("darkLayer");
+		ee.style.height = '0px';
+		var e = document.getElementById(s);
+		e.style.zIndex=-1;
+		e.style.visibility='hidden';
+	}
+	else alert('getElementById NOT supported!');
+}
+</script>
+
+
+                <tr>
+                  <td width="206" height="105" align="right" valign="middle"><div align="left">
+				  <a href="http://www.ypeka.gr/Default.aspx?tabid=229"
+                     target="_blank"><img src="logos/LogoInspection.jpg" width="92" height="91" border="0"><img src="logos/Logo1280.jpg" width="92" height="91" border="0"></a>
+				  </div></td>
+                  <td width="1" valign="middle"><div align="left"> </div></td>
+                  <td width="428"><div align="center">
+                    <p><span class="style18 "><font size="+1"><b>
+Υπουργείο Περιβάλλοντος &amp; Ενέργειας
+					</b></font></span></p>
+                    <p><b>Μητρώο Ενεργειακών Επιθεωρητών</b></p>
+<div id="darkLayer" class="darkClass"></div>
+
+                  </div></td>
+                  <td width="1"></td>
+                  <td width="206"><div align="right" class="style35">
+                    <p><span class="style18 "><img src="../logos/eyepen_logo.jpg" width="204" height="76" /></span></p>
+                  </div></td>
+                </tr>
+
+              </table></td>
+            </tr>
+            <tr bgcolor="#FFFFFF">
+              <td height="10" colspan="8" bgcolor="#681624"><TABLE width="940" height="15" border=0 align="center" cellPadding=0 cellSpacing=0 bordercolor="#000066">
+                <TBODY>
+
+
+
+    
+                  <TR bgcolor="#681624" valign="middle" style="height:40px" >
+                    <TD width=160 bgcolor="#681624"><div align="center" class="style19 style30">
+                      <div align="center" class="style19"><a href="../"><div class="linkLight">Αρχική Σελίδα</div></a></div>
+                    </div></TD>
+                    <TD width=3 bgcolor="#681624"><div align="center"><span class="style21"><span class="style19"><span class="style30"></span></span></span></div></TD>
+                    <TD width=160 bgcolor="#681624"><div align="center" class="style19 style30">
+
+                      <div align="center"><a href="../legislation.html"><div class="linkLight">Νομοθεσία</div></a></div>
+                    </div></TD>
+                    <TD width=3 bgcolor="#681624"><div align="center"><span class="style30"></span></div></TD>
+                    <TD width=160 bgcolor="#681624"><div align="center" class="style19 style30">
+                      <div align="center">
+                    <a href="../info.html"><div class="linkLight">Πληροφοριακό Υλικό</div></a>
+					  </div>
+                    </div></TD>
+                    <TD width=3 bgcolor="#681624"><div align="center"><span class="style30"></span></div></TD>
+
+                    <TD width=160 bgcolor="#681624"><div align="center" class="style21  style19">
+                      <div align="center">
+                          <a target="_blank" href="../files/epikoinonia.pdf"><div class="linkLight">Επικοινωνία</div></a>
+                        </div>
+                    </div></TD>
+                    <TD width=3 nowrap bgcolor="#681624"><div align="center"><span class="style30"></span></div></TD>
+                    <TD width=160 bgcolor="#681624"><div align="center" class="style21  style19">
+                      <div align="center">
+                          <a href="https://oauth2.gsis.gr/oauth2server/logout/LGIGXW14724/?url=https://www.buildingcert.gr/inspectors/logout">
+                              <div class="linkLight">Αποσύνδεση</div></a>
+                        </div>
+                    </div></TD>
+                    <TD width=3 nowrap bgcolor="#681624"><div align="center"><span class="style30"></span></div></TD>
+                    <TD width=160 bgcolor="#681624"><div align="center" class="style21  style19">
+                      <div align="center">
+                        <p class="style36"><span class="style30 style19">&nbsp;</span></p>
+                        </div>
+                    </div></TD>
+                    <TD width=3 nowrap bgcolor="#681624"><div align="center"><span class="style30"></span></div></TD>
+                  <TD width=160 align=center bgcolor="#681624"><div align="center" class="style19 style30">
+                    <div align="center">&nbsp;</div>
+                  </div> </TD>
+				  </TR>
+
+
+				</TBODY>
+              </TABLE></td>
+            </tr>
+            <tr>
+              <td height="278" colspan="8" valign="top">
+<!--
+Έδω πάει το κείμενο
+-->
+<form id="form1" method="POST">
+    <input type="hidden" name="nomos_id" value="">
+    <input type="hidden" name="dimos_id" value="">
+    <input type="hidden" name="search_last_name" id="search_last_name" value="">
+    <input type="hidden" name="search_ministry_code" id="search_ministry_code" value="2600">
+    <input type="hidden" name="type_str" value="0">
+    <input type="hidden" name="from" id="from" value="searchRequests">
+    <input type="hidden" name="search_date" id="search_date" value="15/11/2026 12:04:32">
+    <input type="hidden" name="search" id="search" value="inspector">
+    <input type="hidden" name="urlString" id="urlString" value="/KENAK_Inspectors_261021_1126/searchRequests.view?search=inspector&pid=0">
+    <input type="hidden" name="myObjectId" value="[1]">
+    
+    <div align="left" style="color:#FF0000"><B></B></div><BR>
+        
+        <BR>
+        
+        <div align="left" style="color:#FF0000"><B> Επιθεωρητές με βάση τα κριτήρια που εισάγατε  (1 επιθεωρητής  )</B></div><BR>
+        <TABLE  border="1" width="940">
+        <TR>
+        <TD class="tableHeader" align="center">Αρ. Μητρώου</TD>
+        <TD class="tableHeader" align="center">Ονοματεπώνυμο</TD>
+        <TD class="tableHeader" align="center">Διεύθυνση</TD>
+        <TD class="tableHeader" align="center">Τηλ. Επικοινωνίας</TD>
+        <TD class="tableHeader" align="center">e-mail</TD>
+        <TD class="tableHeader" colspan="3" align="center">
+			Δυνατότητα Διενέργειας Επιθεωρήσεων σε:
+		</TD>
+        
+        </TR>
+        <TR>
+        <TD class="tableHeader" align="center">&nbsp;</TD>
+        <TD class="tableHeader" align="center">&nbsp;</TD>
+        <TD class="tableHeader" align="center">&nbsp;</TD>
+        <TD class="tableHeader" align="center">&nbsp;</TD>
+        <TD class="tableHeader" align="center">&nbsp;</TD>
+        <TD class="tableHeader" align="center">Κτίρια</TD>
+        <TD class="tableHeader" align="center">Συστήματα Θέρμανσης</TD>
+        <TD class="tableHeader" align="center">Συστήματα Κλιματισμού</TD>
+        
+        </TR>
+        
+                <tr> <td>2600 </td>
+                     <td>ΔΟΚΙΜΑΣΤΙΚΟΣ                                       ΝΙΚΟΛΑΟΣ                       </td>
+                     <td>Οδός Δοκιμής 1, ΔΗΜΟΣ ΔΟΚΙΜΗΣ </td>
+                     <td>2100000000                                         </td>
+                     <td>test@example.invalid                                                                </td>
+                     <td>Α' Τάξη </td>
+                     <td>Οχι </td>
+                     <td>Οχι </td>
+
+                </tr>
+                
+        </TABLE>       
+        <BR><BR>
+        
+        
+        
+        
+        <BR>
+        
+<BR><BR>
+</form>
+
+        <!--
+        error: <input type="text" name="err_msg" value ="" />
+        <br>
+        <br>
+        -->
+        <br>
+
+			  </td>
+          </tr>
+              </table>                              </td>
+    </tr>
+            <tr>
+              <td height="29" colspan="8" bgcolor="#681624"><table width="949" height="20" align="center" cellpadding=0 cellspacing=0 bordercolor="#681624">
+                <tbody>
+
+
+
+                  <tr height="1" bgcolor="#681624">
+
+                    <td width=320 height="10" bgcolor="#681624"><div align="center" class="style19"><a href="./startValues.view"><div class="linkLight">Αναζήτηση στο Μητρώο Ενεργ. Επιθεωρητών</div></a></div></td>
+                    <td width=8><div align="center"></div></td>
+                    <td width=160 bgcolor="#681624"><div align="center"><a href="#"><div class="linkLight">&nbsp;</div></a></div></td>
+                    <td width=4 bgcolor="#681624"><div align="center"></div></td>
+                    <td width=160 bgcolor="#681624"><div align="center">&nbsp;</div></td>
+
+                    <td width=4 bgcolor="#681624"><div align="center"></div></td>
+                    <td width=160 bgcolor="#681624"><div align="center" class="style19"><a href="http://www.cres.gr" target="_blank"><div class="linkLight">ΚΑΠΕ</div></a></div></td>
+                    <td width=5 bgcolor="#681624"><div align="center"></div></td>
+                    <td width=160 align=right bgcolor="#681624"><div align="center"><a href="http://www.ypeka.gr" target="_blank"><div class="linkLight">ΥΠΕΚΑ</div></a></div>
+                    </tr>
+
+
+
+
+                </tbody>
+              </table></td>
+            </tr>
+  </table>
+	  </td></tr>
+  </table>
+  
+  <table width="955" border="0" align="center" bgcolor="#FFFFFF">
+    <tr>
+		<td align="left">
+		<img src="../YpependyseisANTAGONISTIKOTITAETPA.jpg" width="769" height="126" border="0" usemap="#Map">
+		<map name="Map">
+		  <area shape="rect" coords="0,0,150,126" href="https://www.espa.gr/el/pages/staticERDF.aspx" target="_blank">
+		  <area shape="rect" coords="151,0,356,126" href="https://espa-anthropinodynamiko.gr/i-evd/geniki-grammateia-diacheirisis-prog/" target="_blank">
+		  <area shape="rect" coords="357,0,600,126" href="http://www.antagonistikotita.gr/greek/secretariat1.asp/" target="blank">
+		  <area shape="rect" coords="601,0,769,126"  href="https://2014-2020.espa.gr/el/Pages/default.aspx" target="blank">
+		</map>
+		</td>
+		<td width="180" align="right" valign="top">
+                    <script type="text/javascript" src="https://seal.verisign.com/getseal?host_name=www.buildingcert.gr&amp;size=S&amp;use_flash=NO&amp;use_transparent=NO&amp;lang=en">
+                    </script>
+                    <br />
+                    <a href="http://www.verisign.com/ssl-certificate/" target="_blank"  style="color:#000000; text-decoration:none; font:bold 7px verdana,sans-serif; letter-spacing:.5px; text-align:center; margin:0px; padding:0px;">ABOUT SSL CERTIFICATES</a>
+                </td>
+    </tr>
+
+  </table>
+
+</div>
+</body>
+</html>
+

@@ -317,6 +317,18 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_COMPANY_REGISTRY_RECORDS_COLLECTION || 'company_registry_records',
 
   /**
+   * 🏆 ADR-915 §40.7 Φ2 — **ΤΙ ΑΠΑΝΤΗΣΕ ΤΟ ΜΗΤΡΩΟ ΓΙΑ ΤΗΝ ΑΔΕΙΑ ΜΙΑΣ ΕΠΑΦΗΣ** (π.χ. ενεργειακός επιθεωρητής ΕΥΕΠΕΝ).
+   * Κλειδί: `{contactId}__{licence}` — ένα έγγραφο ανά (επαφή, άδεια), ολική αντικατάσταση σε κάθε έλεγχο.
+   *
+   * 🔴 **Γιατί όχι μέσα στην επαφή**: την επαφή τη γράφει ο **πελάτης** — η απάντηση της αρχής εκεί θα ήταν
+   * αυτο-επαλήθευση (ίδιο σκεπτικό με το `COMPANY_REGISTRY_RECORDS`). `deny_all`: γράφει και διαβάζει μόνο ο διακομιστής.
+   * 🔒 Ελαχιστοποίηση **με τύπο** (`types/professional-registry-check.ts`): αριθμός · επώνυμο · τάξεις — κανένα τηλέφωνο,
+   * email ή διεύθυνση. Σβήνεται με την επαφή (`deletion-registry.ts`, καταρράκτης).
+   */
+  PROFESSIONAL_REGISTRY_CHECKS:
+    process.env.NEXT_PUBLIC_PROFESSIONAL_REGISTRY_CHECKS_COLLECTION || 'professional_registry_checks',
+
+  /**
    * 🎯 ADR-827 §8.7 — **ΤΟ ΑΙΤΗΜΑ ΑΝΑΘΕΣΗΣ**. IDs `mreq_*`.
    *
    * 🔴 **`read: false` ΚΑΙ `write: false` — και οι ΔΥΟ πλευρές περνούν από τον

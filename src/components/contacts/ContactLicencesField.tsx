@@ -17,6 +17,7 @@ import type { LicenceDrafts } from '@/lib/professional/licence-drafts';
 import type { ContactLicence } from '@/types/contacts/contact-licences';
 
 import { ContactLicenceProvenanceNote } from './ContactLicenceProvenanceNote';
+import { ContactLicenceRegistryCheck } from './ContactLicenceRegistryCheck';
 
 export interface ContactLicencesFieldProps {
   readonly value: LicenceDrafts;
@@ -24,9 +25,14 @@ export interface ContactLicencesFieldProps {
   /** Οι αποθηκευμένες άδειες — μόνο αυτές έχουν προέλευση. */
   readonly licences: readonly ContactLicence[] | undefined;
   readonly disabled: boolean;
+  /**
+   * ADR-915 §40.7 Φ2 — η **αποθηκευμένη** επαφή: μόνο τότε υπάρχει «Έλεγχος στο μητρώο» (ο server ελέγχει τον αριθμό
+   * της βάσης, όχι της φόρμας). Νέα επαφή ⇒ απόν.
+   */
+  readonly contactId?: string;
 }
 
-export function ContactLicencesField({ value, onChange, licences, disabled }: ContactLicencesFieldProps): React.JSX.Element {
+export function ContactLicencesField({ value, onChange, licences, disabled, contactId }: ContactLicencesFieldProps): React.JSX.Element {
   return (
     <ShowcaseLicenceField
       voice="office"
@@ -36,7 +42,13 @@ export function ContactLicencesField({ value, onChange, licences, disabled }: Co
       onChange={onChange}
       renderBelowLicence={(licence, draft) => {
         const held = storedLicenceShownBy(licences, licence, draft);
-        return held === null ? null : <ContactLicenceProvenanceNote held={held} />;
+        if (held === null) return null;
+        return (
+          <>
+            <ContactLicenceProvenanceNote held={held} />
+            {contactId && <ContactLicenceRegistryCheck contactId={contactId} held={held} />}
+          </>
+        );
       }}
     />
   );

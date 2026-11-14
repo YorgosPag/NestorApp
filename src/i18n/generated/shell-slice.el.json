@@ -3749,6 +3749,30 @@
       },
       "energyInspector": {
         "name": "Ενεργειακός επιθεωρητής"
+      },
+      "grades": {
+        "scopes": {
+          "buildings": {
+            "name": "Κτίρια"
+          },
+          "cooling": {
+            "name": "Συστήματα κλιματισμού"
+          },
+          "heating": {
+            "name": "Συστήματα θέρμανσης"
+          }
+        },
+        "values": {
+          "A": {
+            "name": "Α΄ τάξη"
+          },
+          "B": {
+            "name": "Β΄ τάξη"
+          },
+          "none": {
+            "name": "Όχι"
+          }
+        }
       }
     },
     "mandate": {

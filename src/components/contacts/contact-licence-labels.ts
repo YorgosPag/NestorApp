@@ -18,6 +18,32 @@ export const CONTACT_LICENCE_KEYS = {
   provenanceLine: 'contacts-form:licences.provenanceLine',
 } as const;
 
+/** ADR-915 §40.7 Φ2 — «Έλεγχος στο μητρώο»: η κρίση, η πράξη και ό,τι έμαθε η τελευταία ερώτηση. */
+export const CONTACT_LICENCE_REGISTRY_KEYS = {
+  region: 'contacts-form:licences.registry.region',
+  check: 'contacts-form:licences.registry.check',
+  checking: 'contacts-form:licences.registry.checking',
+  recheck: 'contacts-form:licences.registry.recheck',
+  notChecked: 'contacts-form:licences.registry.notChecked',
+  verified: 'contacts-form:licences.registry.verified',
+  gradeEntry: 'contacts-form:licences.registry.gradeEntry',
+  differsFromDeclared: 'contacts-form:licences.registry.differsFromDeclared',
+  aged: 'contacts-form:licences.registry.aged',
+  nameMismatch: 'contacts-form:licences.registry.nameMismatch',
+  staleNumber: 'contacts-form:licences.registry.staleNumber',
+  failed: 'contacts-form:licences.registry.failed',
+} as const;
+
+/** Τι έμαθε η τελευταία ερώτηση, όταν **δεν** έφερε γραμμή — ολικός πάνω στα είδη της (εκτός `asked`/`not-asked`). */
+export const CONTACT_LICENCE_REGISTRY_ATTEMPT_KEYS = {
+  absent: 'contacts-form:licences.registry.attempt.absent',
+  ambiguous: 'contacts-form:licences.registry.attempt.ambiguous',
+  'layout-changed': 'contacts-form:licences.registry.attempt.layoutChanged',
+  'unavailable-disabled': 'contacts-form:licences.registry.attempt.unavailableDisabled',
+  'unavailable-network': 'contacts-form:licences.registry.attempt.unavailableNetwork',
+  'unavailable-server': 'contacts-form:licences.registry.attempt.unavailableServer',
+} as const;
+
 /** Η προέλευση της τιμής — ολικός πάνω στο λεξιλόγιο. */
 export const CONTACT_LICENCE_SOURCE_KEYS: Readonly<Record<ContactLicenceSource, string>> = {
   office: 'contacts-form:licences.sourceOffice',
@@ -29,4 +55,5 @@ export const CONTACT_LICENCE_REJECTION_KEYS: Readonly<Record<ContactLicenceRejec
   'licence-number-missing': 'contacts-form:validation.licences.licence-number-missing',
   'licence-duplicate': 'contacts-form:validation.licences.licence-duplicate',
   'licence-chapter-missing': 'contacts-form:validation.licences.licence-chapter-missing',
+  'licence-grade-unknown': 'contacts-form:validation.licences.licence-grade-unknown',
 };

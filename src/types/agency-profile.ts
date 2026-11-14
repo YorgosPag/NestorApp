@@ -58,7 +58,7 @@ import type { DeclaredCoverage } from '@/types/agency-coverage';
 import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { EscoBilingualText } from '@/types/contacts/esco-types';
-import type { ProfessionalLicence } from '@/config/professional-licences';
+import type { LicenceGrades, ProfessionalLicence } from '@/config/professional-licences';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 import type { ListingImage } from '@/types/public-listing';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
@@ -191,6 +191,11 @@ export type RegulatedAttestation = Exclude<ProfessionalAttestation, { state: 'un
 export interface ShowcaseLicence {
   readonly licence: ProfessionalLicence;
   readonly attestation: RegulatedAttestation;
+  /**
+   * Οι **δηλωμένες** τάξεις ανά κατηγορία (ADR-915 §40.7) — μόνο για άδεια με `gradeScheme`. **Απόν = καμία δήλωση**
+   * (ποτέ κενό αντικείμενο στον δίσκο: το Firestore δεν δέχεται `undefined` και το ίχνος θα έβλεπε ψευδή αλλαγή).
+   */
+  readonly grades?: LicenceGrades;
 }
 
 /**

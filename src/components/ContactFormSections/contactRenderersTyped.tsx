@@ -77,6 +77,7 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
         disabled={fieldDisabled}
         value={formData.licenceDrafts}
         licences={formData.licences}
+        contactId={formData.id}
         onChange={(licenceDrafts) => { if (setFormData) setFormData({ ...formData, licenceDrafts }); }}
       />
     )),

@@ -264,6 +264,17 @@
       "email": "by email",
       "written": "in writing (signed)"
     },
+    "fit": {
+      "covers": "{scope}: {grade} — covers this property",
+      "exceeds": "{scope}: {grade}, up to {max} — this property is {area}. Check that they may issue this document.",
+      "areaUnknown": "{scope}: {grade}, up to {max} — the property's area is not recorded, so eligibility cannot be judged",
+      "notGraded": "{scope}: the register shows no class — check that they may issue this document.",
+      "gradeUnknown": "{scope}: no class declared — eligibility cannot be judged",
+      "gradeOnly": "{scope}: {grade}",
+      "sourceRegistry": "Per the register (checked {date})",
+      "sourceDeclared": "As declared — not checked against the register",
+      "recheck": "The check is older than {days, plural, one {# day} other {# days}} — a new check is recommended before assigning."
+    },
     "propose": {
       "title": "Issuance assignment: {document}",
       "description": "The owner appoints the professional. The office proposes — nothing is sent to anyone before the owner's decision is recorded.",

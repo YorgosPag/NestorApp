@@ -35,7 +35,8 @@ import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { subjectContextOf } from '@/services/conveyance/conveyance-subject.server';
 import type { ConveyanceCase, ConveyanceSellerParty } from '@/types/conveyance-case';
-import { REGISTRY_GET_ALL_CHUNK, type RegistryLabel } from './document-registry.types';
+import { REGISTRY_GET_ALL_CHUNK, type RegistryPersonLabel } from './document-registry.types';
+import { readLicenceStandings } from './registry-licence-standings.server';
 import { readObligorDesignations } from './obligor-designations.server';
 import type { RegistryProperty } from './registry-properties.server';
 
@@ -64,8 +65,8 @@ export interface RegistryOwners {
   readonly leads: ReadonlyMap<string, ObligorLead | null>;
   /** §26 — ακίνητο → (επαφή → μερίδιο %), **μόνο** όταν οι ιδιοκτήτες είναι αγοραστές με γνωστά μερίδια. */
   readonly shares: ReadonlyMap<string, Readonly<Record<string, number>>>;
-  /** Επαφή → όνομα, μόνο για επαφές του μισθωτή. */
-  readonly people: Readonly<Record<string, RegistryLabel>>;
+  /** Επαφή → όνομα (+ τάξη που μετρά, §40.7 Φ3), μόνο για επαφές του μισθωτή. */
+  readonly people: Readonly<Record<string, RegistryPersonLabel>>;
 }
 
 const NOBODY: RegistryOwners = { owners: new Map(), leads: new Map(), shares: new Map(), people: {} };
@@ -176,12 +177,21 @@ async function leadsOf(
   return { leads, designated: [...explicit.values()].map((designation) => designation.contactId) };
 }
 
-/** Τα ονόματα — μόνο επαφές του μισθωτή· κενό όνομα ⇒ `null` («επαφή χωρίς όνομα»). */
-async function readPeople(db: AdminFirestore, companyId: string, contactIds: readonly string[]): Promise<Record<string, RegistryLabel>> {
-  const people: Record<string, RegistryLabel> = {};
+/**
+ * Τα ονόματα — μόνο επαφές του μισθωτή· κενό όνομα ⇒ `null` («επαφή χωρίς όνομα»). ADR-915 §40.7 Φ3 — από τα **ίδια**
+ * έγγραφα, η τάξη που μετρά για όσες κρατούν άδεια με τάξεις (`licenceStandings` μόνο όταν υπάρχει).
+ */
+async function readPeople(db: AdminFirestore, companyId: string, contactIds: readonly string[]): Promise<Record<string, RegistryPersonLabel>> {
+  const contacts = new Map<string, DocData>();
   for (const group of chunkArray([...contactIds], REGISTRY_GET_ALL_CHUNK)) {
-    const contacts = await readOwnedContactDocs(db, companyId, group);
-    for (const [id, data] of contacts) people[id] = { name: trimmedStringOrNull(extractContactDisplayName(data)) };
+    for (const [id, data] of await readOwnedContactDocs(db, companyId, group)) contacts.set(id, data);
+  }
+  const standings = await readLicenceStandings(db, companyId, contacts);
+  const people: Record<string, RegistryPersonLabel> = {};
+  for (const [id, data] of contacts) {
+    const licenceStandings = standings.get(id);
+    const name = trimmedStringOrNull(extractContactDisplayName(data));
+    people[id] = licenceStandings === undefined ? { name } : { name, licenceStandings };
   }
   return people;
 }

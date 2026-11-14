@@ -36,6 +36,7 @@ function labelOf(scope: RegistryPropertyScope): RegistryPropertyLabel {
     ownerShares: {},
     propertyClass: null,
     phase: null,
+    areaEvidence: { gross: null, netSqm: null },
   };
 }
 

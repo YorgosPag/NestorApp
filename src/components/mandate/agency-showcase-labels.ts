@@ -275,6 +275,7 @@ export const SHOWCASE_LICENCE_REJECTION_KEYS: Record<ShowcaseLicenceRejection, s
   'licences-without-showcase': `${K}.licenceRejection.licences-without-showcase`,
   'licence-chapter-missing': `${K}.licenceRejection.licence-chapter-missing`,
   'licence-held-through-occupation': `${K}.licenceRejection.licence-held-through-occupation`,
+  'licence-grade-unknown': `${K}.licenceRejection.licence-grade-unknown`,
 };
 
 export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {

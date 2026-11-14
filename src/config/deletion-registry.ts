@@ -274,6 +274,13 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         label: 'Αρχεία επαφής',
         queryType: 'equals',
       },
+      {
+        // ADR-915 §40.7 Φ2 — η απάντηση του μητρώου για τις άδειες της επαφής δεν έχει λόγο ύπαρξης χωρίς την επαφή.
+        collection: COLLECTIONS.PROFESSIONAL_REGISTRY_CHECKS,
+        foreignKey: 'contactId',
+        label: 'Έλεγχοι στο μητρώο αδειών',
+        queryType: 'equals',
+      },
     ],
     // Blocking dependencies — DERIVED from unified ContactDependencyRegistry (ADR-145 SSoT)
     // Single source of truth: src/config/contact-dependency-registry.ts

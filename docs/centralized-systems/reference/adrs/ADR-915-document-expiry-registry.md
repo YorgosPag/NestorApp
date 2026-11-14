@@ -160,6 +160,9 @@ ADR-838). Ένας τρίτος, χειρόγραφος κατάλογος θα 
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-15 | **§40.7 Φ3 — προειδοποίηση καταλληλότητας ενεργειακού επιθεωρητή στην ανάθεση ΠΕΑ.** `DocumentIssuer.licenceGradeScope` (ΠΕΑ ⇒ `buildings`) · καθαρός κριτής `lib/document-validity/inspector-coverage.ts` (`covers` · `exceeds` με βάση · `area-unknown` · `not-graded` · `grade-unknown` · `not-judged`· όρια **μόνο** από `gradeScheme.entitlements`) · `licenceStandingOf` (αρχή όταν `verified`, αλλιώς δήλωση) · `RegistryPropertyLabel.areaEvidence` μέσω `resolveGrossBasisArea`/`measuredAreasOf` · `RegistryPersonLabel.licenceStandings` από την **ίδια** ανάγνωση επαφών + `readRegistryCheckRecords` (ένα `getAll`) · `RegistryIssuanceView.inspectorFit` · `RegistryInspectorFitLine` στην κάρτα ανάθεσης και στους υποψηφίους · i18n `document-registry:issuance.fit.*` el+en. Προειδοποίηση, ποτέ μπλοκ. Μικτό/ωφέλιμο στο όριο των 250 τ.μ.: **ανοιχτό** (δεν βρέθηκε ορισμός). Tests (`inspector-coverage` · `registry-check-judgment` Τ1–Τ3) + fixtures `areaEvidence` γραμμένα· tests/πύλες/γεννήτορες i18n **αναμένουν έγκριση**. |
+| 2026-11-15 | **§40.7 Φ2 — «Έλεγχος στο μητρώο» ενεργειακού επιθεωρητή (πρότυπο ΓΕΜΗ, ADR-841 §7 Α23).** `services/professional-registry/`: `buildingcert.client.ts` (POST της **δημόσιας** φόρμας, ένα ανά πάτημα, πίσω από τον διακόπτη `ENERGY_INSPECTOR_REGISTRY_LOOKUP` — **κλειστός** στο `config/feature-flags.ts` μέχρι την απάντηση του helpdesk) · `buildingcert-parse.ts` (parse5 8.0.0, MIT· πίνακας από τις **επικεφαλίδες**· «δεν βρέθηκε» μόνο με επιστροφή του αριθμού + μήνυμα· κάθε άλλο ⇒ `layout-changed` ονομαστικά· διαβάζει **μόνο** αριθμό/επώνυμο/τάξεις) · `registry-check-record.service.ts` (`professional_registry_checks/{contactId}__{licence}`, `deny_all`, εγγραφή **υπό συνθήκη** ότι η επαφή κρατά ακόμη τον αριθμό· `absent` σβήνει μόνο αυτού του αριθμού· καταρράκτης διαγραφής επαφής) · `registry-check.service.ts` (GET κρίνει τα αποθηκευμένα, POST ρωτά) · `lib/professional/registry-check-judgment.ts` (`verified` μόνο με ίδιο αριθμό **και** επώνυμο· `name-mismatch` · `stale-number` · `not-checked`) · route `/api/contacts/[contactId]/licences/[licence]/registry-check` (standard/sensitive rate limit, αριθμός από τη **βάση**) · UI `ContactLicenceRegistryCheck` μέσα στο μπλοκ της άδειας (τάξεις της αρχής, «διαφέρουν από τη δήλωση», ηλικία > `REGISTRY_CHECK_FRESH_DAYS`=180) · Ιστορικό `registryCheck` («Κτίρια: Α΄ τάξη, Συστήματα θέρμανσης: Όχι, …»). Fixtures = πραγματικές σελίδες (2026-11-15) με **συνθετικό** πρόσωπο. Tests/πύλες **αναμένουν έγκριση**. |
+| 2026-11-14 | **§40.7 Φ1 — τάξεις ενεργειακού επιθεωρητή ανά κατηγορία, ως δεδομένα.** 🔴 Διόρθωση έρευνας: ισχύει η **ΥΠΕΝ/ΣΕΝΕ/17806/1085 (ΦΕΚ Β΄ 1228/2025)** — **δύο** τάξεις (Α΄/Β΄), όχι τρεις· Κτίρια Α΄ ≤ 250 τ.μ. · Θέρμανση/Κλιματισμός Α΄ μόνο κατοικία < 150 kW · Β΄ χωρίς όριο. `gradeScheme` στο `PROFESSIONAL_LICENCE_SPECS` (ρίζες `LICENCE_GRADE_SCOPES` / `LICENCE_GRADES` + λέξεις) · `ShowcaseLicence.grades?` (απόν = «δεν δηλώθηκε») · `lib/professional/licence-grades.ts` (σχηματισμός/ανάγνωση/σύγκριση) μέσα στον **ένα** σχηματισμό `formShowcaseLicences` (+ άρνηση `licence-grade-unknown`) · `sameLicenceValue` συγκρίνει και τις τάξεις · `LicenceGradesField` (πάνω στο `ClearableSelect`) στο κοινό `ShowcaseLicenceField` (επαφή **και** βιτρίνα) · zod του `/api/agency-profile/licences` · Ιστορικό: `nestedKeyCatalog`/`itemCatalogs` **παραγόμενα** από τη ρίζα («Κτίρια: Β΄ τάξη»). Tests/πύλες **αναμένουν έγκριση**. |
 | 2026-11-14 | **§40.5 — η άδεια στο Ιστορικό μιλά με λέξεις: «Ενεργειακός επιθεωρητής — ΥΠΕΝ — 2600».** (α) `labelFields` δέχονται **φωλιασμένη διαδρομή** (`labelValueAt` στο `lib/audit/collection-item-identity.ts` — μόνο primitive, ποτέ «[object Object]»· προβλήθηκε στο Cloud Functions με `generate:functions-projection`)· `CONTACT_COLLECTION_IDENTITY.licences.labelFields` = άδεια · `attestation.registration.authority` · `.chapter` · `.number`. (β) `AuditCatalogRef.leafKey`: λέξη ένα επίπεδο κάτω από την τιμή (`licences.energyInspector.name`) — ο επιλυτής ρωτά `${path}.${τιμή}.${leafKey}`. (γ) `AUDIT_PROFESSIONAL_LICENCE_CATALOG` / `AUDIT_REGISTRY_AUTHORITY_CATALOG` **παράγονται** (`catalogOfLeafKeyTable`) από `PROFESSIONAL_LICENCE_SPECS[].nameKey` και `REGISTRY_AUTHORITY_PRESENTATION[].abbreviationKey` — καμία νέα λέξη· ασυνεπές σχήμα ⇒ σφάλμα φόρτωσης. Δηλωμένα στο `itemCatalogs` του `licences`. Άγκυρες: Ι1 με φωλιασμένη διαδρομή + πλήρες στοιχείο · Λ1 +2 ρίζες (el/en) · Λ6 +2 πραγματικές ετικέτες. Jest: 543 + 29 (CDC) πράσινα. ⏳ Ζωντανό μόνο μετά από **deploy functions** (εντολή Giorgio)· η ήδη γραμμένη γραμμή με κενή ετικέτα μένει «(άγνωστο)». Οι δύο γραμμές `service`+`cdc` μένουν (σκόπιμο dual-write· ο αναγνώστης κρατά το CDC). |
 | 2026-11-14 | **§40.5 — η προέλευση ζει ΜΕΣΑ στο μπλοκ της άδειας.** Εύρημα ζωντανής δοκιμής (Giorgio): η χωριστή λίστα `ContactLicenceProvenanceList` αποδιδόταν μετά το πεδίο, κάτω από τον αξετσεκάριστο «Ηλεκτρολόγο εγκαταστάτη», σαν να του ανήκε. Λύση (πρακτική Google Contacts/Figma — η πληροφορία δίπλα στην τιμή που αφορά): υποδοχή `renderBelowLicence(licence, draft)` στο κοινό `ShowcaseLicenceField` (η βιτρίνα δεν την περνά — αμετάβλητη) · `ContactLicenceProvenanceNote` για **μία** άδεια, χωρίς επανάληψη ονόματος (`provenanceLine` = «{source}, {date}», αφαιρέθηκε το `provenanceRegion`) · `storedLicenceShownBy` στο `lib/contacts/contact-licences.ts`: προέλευση **μόνο** όταν το draft σχηματίζει την ίδια τιμή με την αποθηκευμένη (ίδιος σχηματισμός + `sameLicenceValue`, κανένας δεύτερος validator) — ξετσεκαρισμένη/αλλαγμένη τιμή δεν δείχνει προέλευση. +3 tests. Διάγνωση ιστορικού (§Γ, ανοιχτό): οι δύο γραμμές `service`+`cdc` είναι το σκόπιμο dual-write (ο αναγνώστης κρατά μόνο το CDC, `dedup-dual-write.ts`)· το «(άγνωστο)» = η **ανεπτυγμένη** Cloud Function προηγείται του `5449eed8` (ευρετικό κλειδί `c:licence=…`, κενή ετικέτα)· για ανθρώπινη ετικέτα χρειάζονται `labelFields` με φωλιασμένη διαδρομή + λεξιλόγιο αδειών από τα `nameKey` του `PROFESSIONAL_LICENCE_SPECS`, και deploy functions. |
 | 2026-11-14 | **§40.5 fix — η επεξεργασία επαφής δεν έγραφε ΠΟΤΕ άδειες.** Ζωντανή επαλήθευση: ξετσεκάρισμα «Ενεργειακός επιθεωρητής» + Αποθήκευση ⇒ `updatedAt` άλλαξε, `licences` έμεινε ακέραιο. Αιτία: η καρτέλα επαφής στέλνει **dirty diff** (`{ licenceDrafts }`) στο `updateContactFromForm`, και το `convertToEnterpriseStructure` απλώς το αντιγράφει — η μετατροπή `licenceDrafts → licences` ζούσε **μόνο** στον mapper `mappers/individual.ts` (δημιουργία/φρουροί), όχι στη διαδρομή ενημέρωσης· ούτε προσθήκη ούτε αφαίρεση γράφονταν. Λύση: `resolveLicenceDraftsForUpdate` στο `lib/contacts/contact-licences.ts` (απέναντι στις **αποθηκευμένες**, κρατά προέλευση· `[]` ⇒ `deleteField()` από τον καθαριστή· αποτυχία σχηματισμού ⇒ μένουν οι αποθηκευμένες), κλήση στο `contacts.service.ts`. Ανοιχτό: το ίχνος της υιοθέτησης γράφεται δύο φορές (`service` + `cdc`), η ορατή γραμμή λέει «Άδειες: (άγνωστο)». |
@@ -3780,3 +3783,83 @@ Tests: `lib/contacts/__tests__/contact-licences.test.ts` (προέλευση κ�
 μόνη της «Ίδιο με τη δήλωση» και το κουμπί φεύγει.
 ⚠️ **Δηλωμένο όριο:** η persona χωρίς δήλωση εκδότη (ΤΕΕ/ΟΕΕ) κρατά μόνο αριθμό — ίδιο με τα υπάρχοντα πεδία. Νέα tests
 της σύγκρισης/εγγραφής/route και browser **αναμένουν έγκριση**.
+
+### 40.7 Τάξεις ενεργειακού επιθεωρητή ανά κατηγορία + «Έλεγχος στο μητρώο» (2026-11-14)
+
+**Το πρόβλημα:** η άδεια `energy-inspector` κρατούσε μόνο αριθμό. Ένα ΠΕΑ για μονάδα 400 τ.μ. από επιθεωρητή
+Α΄ τάξης Κτιρίων είναι ανάθεση που ο νόμος δεν επιτρέπει — και η εφαρμογή δεν μπορούσε να το δει.
+
+**Ο νόμος (έρευνα 2026-11-14, διορθώνει το handoff):** το ν.4409/2016 άρθ. 52 (Α΄/Β΄/Γ΄, 250/1.000 τ.μ.) έχει
+αντικατασταθεί από την **ΥΠΕΝ/ΣΕΝΕ/17806/1085 (ΦΕΚ Β΄ 1228/12.03.2025)** άρθ. 1 παρ. 4–5 και άρθ. 2 — ίδιο στις
+FAQ του buildingcert.gr (Γ1/Γ2, `faqs_261030.pdf`):
+
+| Κατηγορία | Α΄ Τάξη | Β΄ Τάξη |
+|---|---|---|
+| Κτιρίων | κτίρια **ή κτιριακές μονάδες**, κάθε χρήσης, συνολικής επιφάνειας **έως και 250 τ.μ.** | χωρίς περιορισμό |
+| Συστημάτων Θέρμανσης | **μόνο κατοικία**, θερμική ισχύς **κάτω των 150 kW** | χωρίς περιορισμό |
+| Συστημάτων Κλιματισμού | **μόνο κατοικία**, ψυκτική ισχύς **κάτω των 150 kW** | χωρίς περιορισμό |
+
+Οι τάξεις είναι **ανεξάρτητες** ανά κατηγορία (Γ5). Άρθ. 3 παρ. 5: οι κατάλογοι είναι «διαθέσιμοι στο κοινό ηλεκτρονικά».
+
+**Η απόφαση — όπως οι μεγάλοι (Angi · Houzz: «Verified license» από το κρατικό μητρώο, με ημερομηνία):**
+
+| Φάση | Τι | Πού |
+|---|---|---|
+| Φ1 ✅ | Τάξεις ως **δεδομένα** (όρια στο `gradeScheme.entitlements`, ποτέ αριθμός σε κριτή) · δηλωμένες τάξεις στη φόρμα επαφής **και** βιτρίνας · Ιστορικό με λέξεις | `config/professional-licences.ts` · `lib/professional/licence-grades.ts` · `components/mandate/LicenceGradesField.tsx` |
+| Φ2 ✅ | «Έλεγχος στο μητρώο»: server-only αίτημα στη δημόσια φόρμα του buildingcert.gr (ένα ανά πάτημα, διακόπτης `ENERGY_INSPECTOR_REGISTRY_LOOKUP` **κλειστός** μέχρι την απάντηση του helpdesk) · απάντηση σε **χωριστή** server-only αποθήκη · «επαληθευμένο» **κρίνεται στην ανάγνωση** (πρότυπο ΓΕΜΗ, ADR-841 §7 Α23) · μόνο Α.Μ./επώνυμο/τάξεις — ποτέ τηλέφωνο/email (GDPR 5(1)(γ)) | `services/professional-registry/*` · `lib/professional/registry-check-judgment.ts` · `api/contacts/[contactId]/licences/[licence]/registry-check` · `components/contacts/ContactLicenceRegistryCheck.tsx` |
+| Φ3 ✅ κώδικας | Προειδοποίηση στην ανάθεση ΠΕΑ όταν η τάξη Κτιρίων δεν καλύπτει το εμβαδόν· άγνωστο ⇒ ουδέτερο, ποτέ «ακατάλληλος»· προειδοποίηση, όχι μπλοκ (λεπτομέρειες κάτω, «Φ3 — η καταλληλότητα στην ανάθεση») | `lib/document-validity/inspector-coverage.ts` · `services/document-registry/registry-licence-standings.server.ts` · `components/document-registry/RegistryInspectorFitLine.tsx` |
+
+🔑 **«Δεν δηλώθηκε» ≠ «Όχι»** (ADR-798 §7): απούσα κατηγορία είναι σιωπή. Στον δίσκο **κανένα** `grades: {}` — δύο
+ορθογραφίες του «τίποτα» θα έδειχναν ψευδή αλλαγή στο Ιστορικό.
+🔑 **Ένας σχηματισμός:** οι τάξεις περνούν από το `formShowcaseLicences` (επαφή, βιτρίνα, υιοθέτηση)· κατηγορία που
+η άδεια δεν έχει ή τιμή εκτός λεξιλογίου (π.χ. «Γ΄») ⇒ `licence-grade-unknown`, ονομαστικά.
+🔑 **Η αλλαγμένη τάξη αλλάζει προέλευση:** `sameLicenceValue` συγκρίνει και τις τάξεις ⇒ νέα δήλωση = `office`.
+⚠️ **Δηλωμένο όριο:** οι ομάδες 1–4 του ηλεκτρολόγου εγκαταστάτη (π.δ. 108/2013) είναι κι αυτές τάξεις — `gradeScheme:
+null` μέχρι να τις ζητήσει απόφαση. Η δημόσια κάρτα της βιτρίνας **δεν** δείχνει ακόμη τις τάξεις.
+🔑 **Χωρίς deploy functions:** η ήδη ανεπτυγμένη `auditContactWrite` καταγράφει την αλλαγή του υπο-πεδίου `grades`
+(ρηχό `diffItemSubFields`, ως JSON)· το «Κτίρια: Β΄ τάξη» λύνεται **στην προβολή** (`nestedKeyCatalog` + `itemCatalogs`).
+
+**Φ2 — τι έμαθε η πρώτη ματιά στην αληθινή σελίδα (2026-11-15, δύο αιτήματα):**
+- Το μητρώο γράφει **ρητό «Οχι»** για κατηγορία που δεν έχει ο επιθεωρητής ⇒ η απάντηση της αρχής έχει **τρεις** τιμές
+  ανά κατηγορία (`A` · `B` · `none`), ενώ η δήλωση του ανθρώπου έχει τάξη **ή σιωπή**. Γι' αυτό `RegistryGrades` (ολικό) ≠
+  `LicenceGrades` (μερικό): το «Όχι» της αρχής δεν είναι ποτέ «δεν δηλώθηκε».
+- «Δε βρέθηκαν επιθεωρητές…» χωρίς πίνακα· ο αριθμός **επιστρέφει** στο κρυφό `search_ministry_code` ⇒ η απουσία
+  κρίνεται μόνο με αυτές τις δύο αποδείξεις.
+- Ο Α.Μ. της επαφής δοκιμής (2600) ανήκει στο μητρώο σε **άλλο** επώνυμο ⇒ η ζωντανή δοκιμή θα δείξει σωστά
+  `name-mismatch` — είναι το σενάριο που υπάρχει για να πιάνει.
+- ⚠️ Δηλωμένο όριο: η γραμμή Ιστορικού γράφεται μόνο στο `found` (νέα γνώση)· το `absent` σβήνει σιωπηλά το αντίγραφο
+  του αριθμού και το λέει μόνο η οθόνη.
+
+**Φ3 — η καταλληλότητα στην ανάθεση (2026-11-15):**
+
+Στην κάρτα ανάθεσης ΠΕΑ (τρέχων επαγγελματίας) **και** δίπλα σε κάθε υποψήφιο «Σε γνωστό», μία γραμμή λέει αν η τάξη
+Κτιρίων του καλύπτει **αυτό** το ακίνητο, **ποιος** το λέει («κατά το μητρώο (έλεγχος …)» · «κατά δήλωση») και, για
+έλεγχο παλαιότερο από `REGISTRY_CHECK_FRESH_DAYS`, προτείνει επανέλεγχο. **Καμία** επιλογή δεν κλειδώνει.
+
+| Κομμάτι | Πού | SSoT που ξαναχρησιμοποιήθηκε |
+|---|---|---|
+| Ποια κατηγορία κρίνει ποιο έγγραφο | `DocumentIssuer.licenceGradeScope` (ΠΕΑ ⇒ `buildings`· οι άλλοι εκδότες `null`) | τα όρια μένουν **μόνο** στο `gradeScheme.entitlements` |
+| Ο κριτής (καθαρός) | `lib/document-validity/inspector-coverage.ts`: `issuanceGradeRequirementOf` · `gradeCoverage` · `inspectorFitOf` | `PROFESSIONAL_LICENCE_SPECS` · `daysSinceOrNull` |
+| Η τάξη που μετρά | `licenceStandingOf` (`registry-check-judgment.ts`): αρχή όταν `verified`, αλλιώς δήλωση | `judgeRegistryCheck` |
+| Εμβαδόν ακινήτου | `registryPropertyAreaEvidence` → `RegistryPropertyLabel.areaEvidence` (μικτό-βάση + καθαρό χωριστά) | `resolveGrossBasisArea` · `measuredAreasOf` · ιδιώτης: `areaSqm` = μικτό (`owner-property-projection.ts`) |
+| Τάξη επαφής | `readLicenceStandings` μέσα στο `readPeople` → `RegistryPersonLabel.licenceStandings` (μόνο για επαφές με άδεια που έχει τάξεις) | η **ίδια** ανάγνωση επαφών· `readRegistryCheckRecords` = **ένα** `getAll` ανά ομάδα |
+| Οθόνη | `RegistryIssuanceView.inspectorFit` (`registry-issuance.ts`) · `RegistryInspectorFitLine.tsx` στο `RegistryIssuanceStep` και στο `CandidateList` | `displayAreaLabel` («312 m² μικτά») · λέξεις τάξεων/κατηγοριών από τη ρίζα |
+
+Οι κρίσεις: `covers` · `exceeds` (με **βάση**: μικτό · καθαρό · άγνωστη) · `area-unknown` · `not-graded` (ρητό «Όχι»
+της αρχής) · `grade-unknown` · `not-judged` (όριο σε kW, όχι εμβαδόν). Β΄ καλύπτει **και** με άγνωστο εμβαδόν.
+
+🔑 **Μικτό ως βάση, καθαρό ως βεβαιότητα.** Ο νόμος λέει «συνολικής επιφάνειας» χωρίς να ορίζει μικτή ή ωφέλιμη· η έρευνα
+2026-11-15 **δεν** βρήκε ορισμό (ούτε στο ν.4409/2016 άρθ. 52 ούτε στην ΥΠΕΝ/ΣΕΝΕ/17806/1085) ⇒ **ανοιχτό**. Αφού
+μικτό ≥ καθαρό: «καλύπτει» με μικτό είναι βέβαιο· «ξεπερνά» με μικτό είναι προειδοποίηση που **λέει** τη βάση· καθαρό
+πάνω από το όριο ξεπερνά με κάθε ανάγνωση ⇒ κρίνεται πρώτο. Το καθαρό **ποτέ** δεν γίνεται βάση του «καλύπτει» (ADR-777 §8.100).
+🔑 **Ένα ρολόι:** η ηλικία του ελέγχου μετριέται από το `asOf` της απόκρισης, ποτέ `Date.now()` μέσα στον κριτή.
+🔑 Το εμβαδόν υπολογίζεται για **κάθε** ακίνητο του μητρώου (καθαρή συνάρτηση πάνω στο ήδη διαβασμένο έγγραφο, δύο
+αριθμοί)· η απόκλιση από το σχέδιο («μόνο για ΠΕΑ με ανάθεση») είναι σκόπιμη: μηδέν I/O, μηδέν δεύτερη διαδρομή.
+
+**Απορρίφθηκαν:** μπλοκ της ανάθεσης (η ευθύνη είναι του επιθεωρητή, και το εμβαδόν της βάσης μπορεί να είναι λάθος) ·
+υποβιβασμός στη σειρά υποψηφίων (η κατάταξη διαβάζει ιστορικό, όχι ακίνητο — η προειδοποίηση φαίνεται, η σειρά μένει) ·
+αυτόματος επανέλεγχος στο μητρώο από την ανάθεση (ποτέ αυτόματα, Α1.6· ο διακόπτης μένει κλειστός).
+
+⚠️ **Δηλωμένα όρια Φ3:** (α) η «Άλλη επαφή» από την αναζήτηση δεν έχει γραμμή καταλληλότητας — δεν ανήκει στο `people`
+της απόκρισης· (β) `name-mismatch` πέφτει σιωπηλά στη δήλωση (το λέει η κάρτα της επαφής, όχι η ανάθεση)· (γ) Θέρμανση/
+Κλιματισμός (kW) δεν κρίνονται — κανένα έγγραφο του καταλόγου δεν τα ζητά ακόμη.

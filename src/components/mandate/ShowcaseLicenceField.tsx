@@ -23,6 +23,7 @@ import { SHOWCASE_KEYS, SHOWCASE_NS } from '@/components/mandate/agency-showcase
 import {
   PROFESSIONAL_LICENCES,
   PROFESSIONAL_LICENCE_SPECS,
+  type LicenceGrades,
   type ProfessionalLicence,
 } from '@/config/professional-licences';
 import {
@@ -31,6 +32,7 @@ import {
   isChapteredRegistry,
 } from '@/constants/professional-registries';
 import { CONTACT_LICENCE_KEYS } from '@/components/contacts/contact-licence-labels';
+import { LicenceGradeSurfaces } from '@/components/mandate/licence-grade-surfaces';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { LicenceDraft, LicenceDrafts } from '@/lib/professional/licence-drafts';
 import type { ShowcaseLicence } from '@/types/agency-profile';
@@ -162,6 +164,14 @@ function LicenceRow({
           placeholder={t(SHOWCASE_KEYS.registryPlaceholder)}
           value={draft.number}
           onChange={(number) => onChange({ ...draft, number })}
+        />
+      )}
+      {draft !== null && spec.gradeScheme !== null && (
+        // ADR-915 §40.7 — τεμπέλικη επιφάνεια: τα κείμενα των τάξεων εκτός κλειστότητας (CHECK 3.34 Κ2).
+        <LicenceGradeSurfaces.LicenceGradesField
+          licence={licence}
+          value={draft.grades}
+          onChange={(grades: LicenceGrades) => onChange({ ...draft, grades })}
         />
       )}
       {draft !== null && isChapteredRegistry(authority) && (

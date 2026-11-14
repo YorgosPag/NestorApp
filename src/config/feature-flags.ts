@@ -24,12 +24,21 @@ export interface AppFeatureFlags {
    *    Omnibus 2019/2161) και την ανεξάρτητη ανασκόπηση ασφαλείας. Κλειστός ⇒ η βιτρίνα είναι ακριβώς όπως πριν το Σ6.
    */
   readonly PUBLIC_SHOWCASE_PRICES: boolean;
+  /**
+   * **«Έλεγχος στο μητρώο» ενεργειακού επιθεωρητή** (ADR-915 §40.7 Φ2): ο διακομιστής ρωτά τη **δημόσια** αναζήτηση του
+   * buildingcert.gr (ΥΠΕΝ/ΣΕΝΕ/17806/1085 άρθ. 3 παρ. 5: «διαθέσιμοι στο κοινό ηλεκτρονικά») — ένα αίτημα ανά πάτημα.
+   *
+   * ⛔ **Κλειστός.** Ανοίγει με απόφαση Giorgio, **μετά** την απάντηση του helpdesk της ΕΥΕΠΕΝ (email 2026-11-14: επίσημο
+   *    API / άδεια αυτοματοποιημένης αναζήτησης / όροι χρήσης). Κλειστός ⇒ καμία κλήση· η οθόνη δείχνει τον σύνδεσμο.
+   */
+  readonly ENERGY_INSPECTOR_REGISTRY_LOOKUP: boolean;
 }
 
 export type AppFeatureFlag = keyof AppFeatureFlags;
 
 export const APP_FEATURE_FLAGS: Readonly<AppFeatureFlags> = Object.freeze({
   PUBLIC_SHOWCASE_PRICES: false,
+  ENERGY_INSPECTOR_REGISTRY_LOOKUP: false,
 });
 
 /** Η ΜΙΑ ερώτηση «είναι ανοιχτό;». */

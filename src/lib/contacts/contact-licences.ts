@@ -19,6 +19,7 @@ import {
   type LicenceDraft,
   type LicenceDrafts,
 } from '@/lib/professional/licence-drafts';
+import { sameLicenceGrades } from '@/lib/professional/licence-grades';
 import type { ShowcaseLicence } from '@/types/agency-profile';
 import {
   CONTACT_LICENCE_SOURCES,
@@ -30,7 +31,7 @@ import {
 /** Οι λόγοι άρνησης που φτάνουν από τη φόρμα επαφής (η επαφή δεν έχει βιτρίνα ούτε ειδικότητες να διπλοδηλώσει). */
 export type ContactLicenceRejection = Extract<
   ShowcaseLicenceRejection,
-  'licence-number-missing' | 'licence-duplicate' | 'licence-chapter-missing'
+  'licence-number-missing' | 'licence-duplicate' | 'licence-chapter-missing' | 'licence-grade-unknown'
 >;
 
 function isContactLicenceSource(value: unknown): value is ContactLicenceSource {
@@ -64,11 +65,15 @@ export function readContactLicences(raw: unknown): readonly ContactLicence[] {
   return read.filter((licence, index) => read.findIndex((other) => other.licence === licence.licence) === index);
 }
 
-/** Ίδιος αριθμός **και** ίδιος εκδότης — η μόνη ταυτότητα τιμής που μετρά για την προέλευση. */
+/**
+ * Ίδιος αριθμός, ίδιος εκδότης **και** ίδιες τάξεις (ADR-915 §40.7) — η ταυτότητα τιμής που μετρά για την προέλευση:
+ * αλλαγμένη τάξη είναι νέα δήλωση του γραφείου, όχι πια αυτό που δήλωσε ο ίδιος.
+ */
 export function sameLicenceValue(a: ShowcaseLicence, b: ShowcaseLicence): boolean {
   const ra = a.attestation.registration;
   const rb = b.attestation.registration;
   if (a.licence !== b.licence || ra.number !== rb.number) return false;
+  if (!sameLicenceGrades(a.grades, b.grades)) return false;
   const chapterA = ra.authorityKind === 'chapter' ? ra.chapter : null;
   const chapterB = rb.authorityKind === 'chapter' ? rb.chapter : null;
   return chapterA === chapterB;
@@ -129,7 +134,9 @@ export function storedLicenceShownBy(
 
 /** Τα δύο λεξιλόγια επικαλύπτονται· όσα η επαφή δομικά δεν παράγει (βιτρίνα/ειδικότητα) πέφτουν στο «λείπει αριθμός». */
 function narrowRejection(reason: ShowcaseLicenceRejection): ContactLicenceRejection {
-  return reason === 'licence-duplicate' || reason === 'licence-chapter-missing' ? reason : 'licence-number-missing';
+  return reason === 'licence-duplicate' || reason === 'licence-chapter-missing' || reason === 'licence-grade-unknown'
+    ? reason
+    : 'licence-number-missing';
 }
 
 /** Σταθερή σειρά (του λεξιλογίου) ⇒ καμία ψευδής αλλαγή στο ίχνος από αναδιάταξη. */

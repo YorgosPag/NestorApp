@@ -1100,6 +1100,9 @@ export const API_ROUTES = {
     PROFESSIONAL_LINK: (contactId: string) => `/api/contacts/${contactId}/professional-link` as const,
     /** ADR-915 §40.6 — υιοθέτηση της δήλωσης του ίδιου στην επαφή (CAS, η δήλωση ξαναδιαβάζεται στον server). */
     ADOPT_DECLARED_CREDENTIAL: (contactId: string) => `/api/contacts/${contactId}/adopt-declared-credential` as const,
+    /** ADR-915 §40.7 Φ2 — «Έλεγχος στο μητρώο» της άδειας (GET = κρίση από τα αποθηκευμένα · POST = ρωτά το μητρώο). */
+    LICENCE_REGISTRY_CHECK: (contactId: string, licence: string) =>
+      `/api/contacts/${contactId}/licences/${licence}/registry-check` as const,
   },
 
   // ── Trash (SSOT Soft-Delete — ADR-281) ─────────────────────────────────

@@ -22,7 +22,7 @@
  */
 
 import { PROJECT_ROLE_BRIDGE } from '@/config/profession-bridge.config';
-import { PROFESSIONAL_LICENCE_SPECS, type ProfessionalLicence } from '@/config/professional-licences';
+import { PROFESSIONAL_LICENCE_SPECS, type LicenceGradeScope, type ProfessionalLicence } from '@/config/professional-licences';
 import type { RegistryAuthorityId } from '@/constants/professional-registries';
 import { escoOccupationUri } from '@/lib/esco/esco-uri';
 
@@ -169,6 +169,12 @@ export type DocumentIssuer =
       readonly appointedBy: DocumentObligor;
       readonly statute: string;
       readonly verifiedAt: string | null;
+      /**
+       * ADR-915 §40.7 Φ3 — **ποια κατηγορία τάξης** της άδειας-προσόντος κρίνει αν ο επαγγελματίας **επιτρέπεται** να
+       * εκδώσει αυτό το έγγραφο για **αυτό** το ακίνητο (ΠΕΑ ⇒ «Κτίρια»: Α΄ έως 250 τ.μ.). Τα όρια ζουν **μόνο** στο
+       * `gradeScheme.entitlements` της άδειας. `null` = καμία τάξη δεν περιορίζει την έκδοση (ή δεν μοντελοποιείται).
+       */
+      readonly licenceGradeScope: LicenceGradeScope | null;
     }
   | { readonly kind: 'authority'; readonly service: AuthorityService };
 

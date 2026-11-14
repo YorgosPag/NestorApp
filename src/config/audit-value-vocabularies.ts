@@ -41,7 +41,13 @@ import {
   WEBSITE_TYPE_LABELS,
 } from '@/constants/domains/communication-labels';
 import { PERSONA_LABELS_NS, PERSONA_TYPE_LABELS } from '@/constants/domains/project-building-persona-labels';
-import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
+import {
+  LICENCE_GRADE_PRESENTATION,
+  LICENCE_GRADE_SCOPES,
+  LICENCE_GRADE_SCOPE_PRESENTATION,
+  PROFESSIONAL_LICENCE_SPECS,
+  REGISTRY_SCOPE_NONE_PRESENTATION,
+} from '@/config/professional-licences';
 import { REGISTRY_AUTHORITY_PRESENTATION } from '@/constants/professional-registries';
 
 /** Μία λέξη που δεν είναι τιμή λεξιλογίου (Ναι/Όχι, μονάδα, «εσωτ.») — `ns` + πλήρες κλειδί. */
@@ -190,4 +196,23 @@ export const AUDIT_PROFESSIONAL_LICENCE_CATALOG = catalogOfLeafKeyTable(
 /** Αρχή μητρώου (`attestation.registration.authority`) — η **συντομογραφία** της ρίζας: `ypen` → «ΥΠΕΝ». */
 export const AUDIT_REGISTRY_AUTHORITY_CATALOG = catalogOfLeafKeyTable(
   Object.values(REGISTRY_AUTHORITY_PRESENTATION).map((presentation) => presentation.abbreviationKey),
+);
+
+/** Κατηγορία τάξης άδειας (`licences[].grades` κλειδιά, ADR-915 §40.7): `buildings` → «Κτίρια». Από τη ρίζα. */
+export const AUDIT_LICENCE_GRADE_SCOPE_CATALOG = catalogOfLeafKeyTable(
+  Object.values(LICENCE_GRADE_SCOPE_PRESENTATION).map((presentation) => presentation.nameKey),
+);
+
+/** Τάξη άδειας (`licences[].grades.<κατηγορία>`): `B` → «Β΄ τάξη» · και το «Όχι» του μητρώου (`none`). Από τη ρίζα. */
+export const AUDIT_LICENCE_GRADE_CATALOG = catalogOfLeafKeyTable([
+  ...Object.values(LICENCE_GRADE_PRESENTATION).map((presentation) => presentation.nameKey),
+  REGISTRY_SCOPE_NONE_PRESENTATION.nameKey,
+]);
+
+/**
+ * Το λεξιλόγιο **κάθε κατηγορίας** μέσα στο `grades` — ίδιος κατάλογος τάξεων, ένα κλειδί ανά κατηγορία της ρίζας
+ * (ο μορφοποιητής φωλιασμένου αντικειμένου ψάχνει τον κατάλογο με το όνομα του κλειδιού).
+ */
+export const AUDIT_LICENCE_GRADE_ITEM_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = Object.fromEntries(
+  LICENCE_GRADE_SCOPES.map((scope) => [scope, AUDIT_LICENCE_GRADE_CATALOG]),
 );

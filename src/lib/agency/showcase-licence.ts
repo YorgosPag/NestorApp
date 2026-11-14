@@ -17,6 +17,7 @@ import {
   type ProfessionalLicence,
 } from '@/config/professional-licences';
 import { isChapteredRegistry } from '@/constants/professional-registries';
+import { formLicenceGrades, gradesField, readLicenceGrades } from '@/lib/professional/licence-grades';
 import { readProfessionalAttestation } from '@/lib/professional/professional-attestation';
 import type { PublicShowcase, ShowcaseCredential, ShowcaseLicence } from '@/types/agency-profile';
 
@@ -39,6 +40,8 @@ export const SHOWCASE_LICENCE_REJECTIONS = [
   'licence-chapter-missing',
   /** Η άδεια προκύπτει ΗΔΗ από δηλωμένη ειδικότητα (ηλεκτρολόγος + εγγραφή Περιφέρειας) — καμία διπλή δήλωση (§34 Λ5). */
   'licence-held-through-occupation',
+  /** Τάξη σε κατηγορία που η άδεια **δεν** έχει, ή τιμή εκτός λεξιλογίου (ADR-915 §40.7 — π.χ. «Γ΄», που καταργήθηκε). */
+  'licence-grade-unknown',
 ] as const;
 export type ShowcaseLicenceRejection = (typeof SHOWCASE_LICENCE_REJECTIONS)[number];
 
@@ -47,6 +50,7 @@ interface LicenceDeclaration {
   readonly licence: string;
   readonly registrationNumber: string;
   readonly registrationChapter?: string;
+  readonly grades?: Readonly<Record<string, unknown>>;
 }
 
 /**
@@ -73,16 +77,28 @@ export function formShowcaseLicences(
   declared: readonly LicenceDeclaration[],
 ): { readonly licences: readonly ShowcaseLicence[] } | { readonly reason: ShowcaseLicenceRejection } {
   const licences: ShowcaseLicence[] = [];
-  for (const { licence, registrationNumber, registrationChapter } of declared) {
-    if (!isProfessionalLicence(licence)) return { reason: 'licence-number-missing' };
-    const number = registrationNumber.trim();
-    if (number === '') return { reason: 'licence-number-missing' };
-    if (licences.some((held) => held.licence === licence)) return { reason: 'licence-duplicate' };
-    const formed = declaredLicence(licence, number, (registrationChapter ?? '').trim());
-    if (formed === null) return { reason: 'licence-chapter-missing' };
-    licences.push(formed);
+  for (const declaration of declared) {
+    const formed = formOneLicence(declaration, licences);
+    if ('reason' in formed) return formed;
+    licences.push(formed.licence);
   }
   return { licences };
+}
+
+/** Μία δήλωση ⇒ άδεια (με τις τάξεις της, αν δηλώθηκαν), ή ονομασμένη άρνηση. */
+function formOneLicence(
+  { licence, registrationNumber, registrationChapter, grades }: LicenceDeclaration,
+  formedSoFar: readonly ShowcaseLicence[],
+): { readonly licence: ShowcaseLicence } | { readonly reason: ShowcaseLicenceRejection } {
+  if (!isProfessionalLicence(licence)) return { reason: 'licence-number-missing' };
+  const number = registrationNumber.trim();
+  if (number === '') return { reason: 'licence-number-missing' };
+  if (formedSoFar.some((held) => held.licence === licence)) return { reason: 'licence-duplicate' };
+  const formed = declaredLicence(licence, number, (registrationChapter ?? '').trim());
+  if (formed === null) return { reason: 'licence-chapter-missing' };
+  const formedGrades = formLicenceGrades(licence, grades);
+  if (formedGrades === null) return { reason: 'licence-grade-unknown' };
+  return { licence: { ...formed, ...gradesField(formedGrades.grades) } };
 }
 
 /** Μία αποθηκευμένη γραμμή ⇒ άδεια, ή `null` αν δεν περνά τον φρουρό (παραλείπεται — ποτέ μαντεψιά). */
@@ -95,7 +111,7 @@ function readLicence(raw: unknown): ShowcaseLicence | null {
   if (attestation === null || attestation.state === 'unknown') return null;
   // Η αρχή πρέπει να είναι ΑΥΤΗ της άδειας — έγγραφο που λέει άλλη δεν το πιστεύουμε.
   if (attestation.registration.authority !== PROFESSIONAL_LICENCE_SPECS[row.licence].authority) return null;
-  return { licence: row.licence, attestation };
+  return { licence: row.licence, attestation, ...gradesField(readLicenceGrades(row.licence, row.grades)) };
 }
 
 /**

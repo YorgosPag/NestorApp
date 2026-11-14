@@ -459,6 +459,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-915 §40.7 Φ2 — ΤΙ ΑΠΑΝΤΗΣΕ ΤΟ ΜΗΤΡΩΟ ΓΙΑ ΤΗΝ ΑΔΕΙΑ ΜΙΑΣ ΕΠΑΦΗΣ. Ίδιος πειρασμός με το ΓΕΜΗ: το γραφείο να
+    // γράψει μόνο του «επαληθευμένο στο μητρώο ΕΥΕΠΕΝ». Η σουίτα σπέρνει έγγραφο του **ίδιου** μισθωτή.
+    collection: 'professional_registry_checks',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/professional-registry-checks.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. **Ίδιο ζεύγος με το `mandate_requests`
     // από πάνω, ΑΝΤΙΣΤΡΟΦΟΣ λόγος** — και η αντιστροφή είναι το πράγμα που πρέπει
     // να διαβαστεί, γιατί αλλιώς μοιάζει με αντιγραφή.

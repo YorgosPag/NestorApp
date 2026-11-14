@@ -60,6 +60,7 @@ import {
   readCompanyProperties,
   readCompanyPropertyPortfolio,
   readDeclaredCertificateProperties,
+  registryPropertyAreaEvidence,
   type RegistryProperty,
 } from './registry-properties.server';
 import { openCaseRequirements, readOpenCases } from './registry-requirements.server';
@@ -179,6 +180,7 @@ function propertyLabelsOf(
     ownerShares: owners.shares.get(p.id) ?? {},
     propertyClass: resolvedPropertyClassOf(p.data.type),
     phase: normalizeOperationalStatus(p.data.operationalStatus),
+    areaEvidence: registryPropertyAreaEvidence(p),
   }]));
 }
 

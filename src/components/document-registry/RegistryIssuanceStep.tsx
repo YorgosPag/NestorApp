@@ -40,6 +40,7 @@ import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/docume
 import { registryPersonOf } from '@/components/document-registry/registry-obligors';
 import { ObligorPerson } from '@/components/document-registry/RegistryObligorPeople';
 import { RegistryIssuanceSpaceLine } from '@/components/document-registry/RegistryIssuanceSpaceLine';
+import { InspectorFitLine } from '@/components/document-registry/RegistryInspectorFitLine';
 import {
   IssuanceCancelDialog,
   IssuanceDecisionDialog,
@@ -277,6 +278,8 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
         <ObligorPerson person={registryPersonOf(state.record.professionalContactId, registry)} />
       </p>
       <CredentialLine record={state.record} space={view.space} />
+      {/* §40.7 Φ3 — καλύπτει η τάξη του αυτό το ακίνητο; (προειδοποίηση, ποτέ μπλοκ) */}
+      <InspectorFitLine kind={view.kind} fit={view.inspectorFit?.[state.record.professionalContactId]} />
       <BallInCourtLine state={state} view={view} registry={registry} />
       {/* §39 — μετά το «Αναλαμβάνω»: μπήκε ο επαγγελματίας στον χώρο της ανάθεσης; */}
       {state.stage === 'accepted' ? <RegistryIssuanceSpaceLine view={view} /> : null}

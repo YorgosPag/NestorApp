@@ -153,8 +153,10 @@ const config = {
   // του TIN (ADR-920 Β4.8 Τ, `lib/terrain/tin-triangulate.ts` + `tin-breakline-resolve.ts`). Το
   // `@kninnug/constrainautor` ΔΕΝ χρειάζεται εγγραφή: η συνθήκη `require` δίνει `.cjs` **χωρίς κανένα `require`**
   // (τα κατηγορήματα είναι ενσωματωμένα — μετρημένο 2026-10-25).
+  // `parse5@8` και η εξάρτησή του `entities@6` είναι ESM-only (`"type": "module"`, κανένα CJS build) — ο αναλυτής της
+  // σελίδας του Μητρώου Ενεργειακών Επιθεωρητών (ADR-915 §40.7 Φ2, `services/professional-registry/buildingcert-parse.ts`).
   transformIgnorePatterns: [
-    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates)/)'
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates|parse5|entities)/)'
   ],
   moduleDirectories: ['node_modules', '<rootDir>'],
   // 🔴 ΟΡΙΟ ΠΟΡΩΝ ΤΟΠΙΚΑ (2026-07-31) — ΜΗΝ το αφαιρέσεις.

@@ -16,7 +16,7 @@ import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
-import { PROFESSIONAL_LICENCES } from '@/config/professional-licences';
+import { LICENCE_GRADES, LICENCE_GRADE_SCOPES, PROFESSIONAL_LICENCES } from '@/config/professional-licences';
 import { readJsonBody } from '@/lib/api/json-body';
 import { formShowcaseLicences, type ShowcaseLicenceRejection } from '@/lib/agency/showcase-licence';
 import type { ShowcaseLicencesWire } from '@/lib/agency/showcase-wire';
@@ -35,6 +35,8 @@ const licencesSchema: z.ZodType<ShowcaseLicencesWire> = z.object({
         licence: z.enum(PROFESSIONAL_LICENCES),
         registrationNumber: z.string().max(64),
         registrationChapter: z.string().max(80).optional(),
+        // ADR-915 §40.7 — κλειστά λεξιλόγια· «ποια κατηγορία έχει η άδεια» το κρίνει ο σχηματισμός (ονομασμένη άρνηση).
+        grades: z.record(z.enum(LICENCE_GRADE_SCOPES), z.enum(LICENCE_GRADES)).optional(),
       }),
     )
     .max(PROFESSIONAL_LICENCES.length * 2),

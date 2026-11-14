@@ -7,13 +7,16 @@
  * Κάθε πηγή που χτύπησε το όριό της **ονομάζεται** στο `truncatedSources`.
  */
 
+import type { ProfessionalLicence } from '@/config/professional-licences';
 import type { OperationalStatus } from '@/constants/operational-statuses';
 import type { PropertyClass } from '@/constants/property-types';
 import type { DocumentRegistry } from '@/lib/document-validity/document-registry';
 import type { RowIssuance } from '@/lib/document-validity/issuance-rows';
+import type { PropertyAreaEvidence } from '@/lib/document-validity/inspector-coverage';
 import type { IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
+import type { LicenceStanding } from '@/types/professional-registry-check';
 
 /**
  * Οι πηγές που διαβάζονται με ερώτημα — άρα έχουν όριο. Φ4δ: `owner-properties` (ακίνητα ιδιωτών υπό θεματοφυλακή του
@@ -59,6 +62,15 @@ export interface RegistryLabel {
 }
 
 /**
+ * ADR-915 §40.7 Φ3 — μια **επαφή** του μητρώου: το όνομα **και**, για όσες κρατούν άδεια με τάξεις, η τάξη που μετρά
+ * (`licenceStandingOf`: της αρχής πάνω από τη δήλωση). Βγαίνει από την **ίδια** ανάγνωση επαφών. Απόν πεδίο = η επαφή
+ * δεν κρατά καμία άδεια με τάξεις — η κάρτα ανάθεσης λέει τότε «δεν δηλώθηκε τάξη», ποτέ «ακατάλληλος».
+ */
+export interface RegistryPersonLabel extends RegistryLabel {
+  readonly licenceStandings?: Readonly<Partial<Record<ProfessionalLicence, LicenceStanding>>>;
+}
+
+/**
  * Το όνομα ενός αρχείου **και** το αντικείμενο που είδε η οθόνη (ADR-915 §33): η «Συμπλήρωση στοιχείων» το στέλνει πίσω
  * ως CAS — νέα έκδοση του αρχείου στο μεταξύ ⇒ άρνηση, ποτέ ημερομηνίες του παλιού πάνω στο νέο.
  */
@@ -97,6 +109,11 @@ export interface RegistryPropertyLabel extends RegistryLabel {
    * υποχρέωσης (`upkeepProposalOf`). `null` = ακίνητο ιδιώτη (δεν έχει φάση) ή άγνωστη τιμή.
    */
   readonly phase: OperationalStatus | null;
+  /**
+   * ADR-915 §40.7 Φ3 — το εμβαδόν-βάση (μικτό · παλιό) και το καθαρό χωριστά: απέναντί τους κρίνεται η τάξη «Κτίρια» του
+   * επιθεωρητή στην ανάθεση ΠΕΑ (`inspectorFitOf`). Από το ήδη διαβασμένο έγγραφο· άγνωστα ⇒ `null`, ποτέ `0`.
+   */
+  readonly areaEvidence: PropertyAreaEvidence;
 }
 
 export interface DocumentRegistryResponse extends DocumentRegistry {
@@ -120,7 +137,7 @@ export interface DocumentRegistryResponse extends DocumentRegistry {
    * ADR-915 §25 — ονόματα επαφών (`cont_*` → όνομα), διαβασμένα **ζωντανά** με έλεγχο μισθωτή. Μόνο όσες ονομάζει κάποια
    * γραμμή. Επαφή που λείπει από εδώ (ξένη ≡ ανύπαρκτη, ADR-742) **δεν** δείχνεται ως σύνδεσμος.
    */
-  readonly people: Readonly<Record<string, RegistryLabel>>;
+  readonly people: Readonly<Record<string, RegistryPersonLabel>>;
   /** §27 — ανάθεση ανά γραμμή «Ανάθεσης» (κλειδί `issuanceKeyOf(ακίνητο, είδος)`· μόνο όσες τη δείχνουν). */
   readonly issuance: Readonly<Record<string, RowIssuance>>;
   /**
