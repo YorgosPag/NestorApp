@@ -83,6 +83,18 @@ describe('buildDimensionBlockPrimitives — linear', () => {
     expect(count(prims, 'fill')).toBe(0);
   });
 
+  it('ADR-608 leader arrow (Tekton «Βέλος 2») → body + leader point INWARD, like the canvas renderer', () => {
+    const tekton: DimStyle = { ...ISO_129_TEMPLATE, dimblk: 'tektonArrow2', dimblk1: '', dimblk2: '' };
+    const prims = buildDimensionBlockPrimitives(linearDim(tekton.id), tekton);
+    const lines = prims.filter((p): p is Extract<DimBlockPrimitive, { kind: 'line' }> => p.kind === 'line');
+    // Feet at x=0 and x=100: every arrowhead line (triangle, tip tick, leader) stays inside the span.
+    const xs = lines.flatMap((l) => [l.a.x, l.b.x]);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(-1e-9);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(100 + 1e-9);
+    // …and the leaders actually reach inward (not a degenerate pass).
+    expect(xs.some((x) => x > 1e-6 && x < 50)).toBe(true);
+  });
+
   it('suppressExtLine1 drops one extension line', () => {
     const style: DimStyle = { ...ISO_129_TEMPLATE, suppressExtLine1: true };
     const prims = buildDimensionBlockPrimitives(linearDim(style.id), style);

@@ -36,6 +36,7 @@ import {
   type DimensionLookup,
 } from './dim-geometry-builder';
 import { resolveDimensionText } from './dim-text-formatter';
+import { hasLeaderArrows, resolveLeaderArrowDir } from '../../rendering/entities/dimension/dim-leader-arrow';
 
 const RAD_TO_DEG = 180 / Math.PI;
 /** A direction shorter than this is the geometry builder's "no arrow on this side" signal. */
@@ -116,10 +117,16 @@ export function buildDimensionBlockPrimitives(
   // renderers. This DXF-export path intentionally does NOT honor the per-side
   // `suppressArrow{1,2}` visibility gate (arrowhead visibility does not round-trip
   // through DXF — see `dxf-dimstyle-writer`), so it keeps its own `pushArrowhead`.
+  // ADR-608 — leader-carrying arrows (Tekton «Βέλος 2») point INWARD, with the SAME rule as the
+  // canvas renderer (`resolveLeaderArrowDir`): the exported picture must equal the on-screen one
+  // (before ADR-941 Φ2β this path stamped them outward ⇒ the leader stuck out of the dimension).
   const arrowSizeWorld = style.dimasz * style.dimscale;
   const { block1, block2 } = resolveArrowBlockNames(style);
-  pushArrowhead(out, block1, g.arrowAnchor1, g.arrowDirection1, arrowSizeWorld, 1);
-  pushArrowhead(out, block2, g.arrowAnchor2, g.arrowDirection2, arrowSizeWorld, 2);
+  const hasLeader = hasLeaderArrows(style);
+  const dir1 = resolveLeaderArrowDir(hasLeader, g.arrowDirection1, g.arrowDirection1);
+  const dir2 = resolveLeaderArrowDir(hasLeader, g.arrowDirection2, g.arrowDirection2);
+  pushArrowhead(out, block1, g.arrowAnchor1, dir1, arrowSizeWorld, 1);
+  pushArrowhead(out, block2, g.arrowAnchor2, dir2, arrowSizeWorld, 2);
 
   // 4) Measured text (centered on textAnchor, rotated to textRotation).
   const text = resolveDimensionText(g, style, entity.userText);
