@@ -21,6 +21,7 @@ import type { SceneModel } from '../../types/scene';
 // (scheduling) αντί να τον διαβάζει από refs στο Τ₀+2000ms (execution).
 import { executeSceneSave, type SceneSaveBlockReason } from './execute-scene-save';
 import { createSceneSaveTicket, ownedSaveContext, type SceneSaveTicket } from './scene-save-ticket';
+import { nextExplicitEmptying } from './explicit-emptying';
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🚀 Ribbon-cascade fix (profiler 2026-06-28): the volatile scene save-status is
 // mirrored into a dedicated zero-React store so the AutoSaveStatus widget can
@@ -102,6 +103,8 @@ export function useAutoSaveSceneManager(
   const levelFloorScopeRef = useRef<Map<string, string | null>>(new Map());
   // 🛡️ ADR-714 — fileId → DXF entity count όπως είναι ΑΠΟΘΗΚΕΥΜΕΝΟ. Baseline του `isDxfWipe`.
   const persistedDxfBaselineRef = useRef<Map<string, number>>(new Map());
+  // 🛡️ ADR-714 §2.8 — επίπεδα με ρητό άδειασμα που δεν έχει αναιρεθεί (`explicit-emptying.ts`).
+  const explicitEmptyingLevelsRef = useRef<Set<string>>(new Set());
   // 🛡️ ADR-714 — δέκτης ειδοποίησης ματαιωμένης εγγραφής (i18n toast στο LevelsSystem).
   const onSaveBlockedRef = useRef<((reason: SceneSaveBlockReason) => void) | null>(null);
   // 🏢 ENTERPRISE: Injected FileRecord ID (from wizard/upload) — ensures cadFiles uses the same ID
@@ -250,6 +253,7 @@ export function useAutoSaveSceneManager(
     // Αν επιβίωναν, ένα baseline του παλιού tenant θα έκρινε εγγραφή του νέου.
     levelFloorScopeRef.current.clear();
     persistedDxfBaselineRef.current.clear();
+    explicitEmptyingLevelsRef.current.clear();
     setSaveStatus('idle');
     requestAnimationFrame(() => {
       isLoadingFromFirestoreRef.current = false;
@@ -264,6 +268,16 @@ export function useAutoSaveSceneManager(
     scene: SceneModel,
     origin: SceneWriteOrigin = DEFAULT_SCENE_WRITE_ORIGIN,
   ) => {
+    // 🛡️ ADR-714 §2.8 — η μετάβαση previous → next κρίνεται ΠΡΙΝ γραφτεί η νέα σκηνή.
+    const explicitEmptying = nextExplicitEmptying(
+      explicitEmptyingLevelsRef.current.has(levelId),
+      sceneManagerRef.current.getLevelScene(levelId),
+      scene,
+      origin,
+    );
+    if (explicitEmptying) explicitEmptyingLevelsRef.current.add(levelId);
+    else explicitEmptyingLevelsRef.current.delete(levelId);
+
     // ALWAYS update in-memory + React state for EVERY origin — remote edits must be
     // visible in the UI even though they don't trigger our own auto-save.
     sceneManagerRef.current.setLevelScene(levelId, scene);
@@ -280,15 +294,15 @@ export function useAutoSaveSceneManager(
     // Storage and destroy it (observed: file_0df264da climbed to revision 96 @ 95 bytes
     // / 0 entities). An empty scene is never worth persisting, so skipping the write is
     // FAIL-SAFE — it can only prevent a destructive overwrite, never cause a bad save.
-    // A scene the user genuinely emptied simply isn't auto-persisted (rare edge case,
-    // far less harmful than silently wiping a populated floorplan).
+    // 🛡️ ADR-714 §2.8 — ΕΞΑΙΡΕΣΗ: το ρητό άδειασμα του χρήστη (Delete της τελευταίας
+    // γεωμετρίας, Ctrl+Z εισαγωγής σε άδειο όροφο) ΣΩΖΕΤΑΙ — αλλιώς γύριζε μετά το reload.
     //
     // 🛡️ ADR-714 — ΑΥΤΟΣ Ο ΦΡΟΥΡΟΣ ΔΕΝ ΑΡΚΕΙ. Ρωτά «είναι ΤΕΛΕΙΩΣ κενό;» και αστόχησε
     // στο περιστατικό 2026-07-26: η καταστροφική εγγραφή είχε 12 κολόνες (BIM) και ΜΗΔΕΝ
     // DXF, οπότε `12 > 0` → πέρασε και έγραψε 12 πάνω από 1181. Το δεύτερο στρώμα είναι
     // ο `isDxfWipe` μέσα στον executor, που ρωτά «μηδενίζεται η DXF γεωμετρία που ήδη
     // υπάρχει;». Αυτός εδώ μένει ως φθηνό πρώτο φίλτρο (καμία εγγραφή χωρίς περιεχόμενο).
-    const isEmptyScene = scene.entities.length === 0;
+    const isEmptyScene = scene.entities.length === 0 && !explicitEmptying;
 
     // 🏢 ADR-040 SSoT GATE (root-cause #2 — auto-save storm): ONLY a `local-edit`
     // origin schedules a save. `remote-echo` (Firestore snapshot reconciliation),
@@ -342,6 +356,7 @@ export function useAutoSaveSceneManager(
         saveContext,
         scene,
         birth: !!birthContext,
+        explicitEmptying,
       });
 
       // Clear existing timeout

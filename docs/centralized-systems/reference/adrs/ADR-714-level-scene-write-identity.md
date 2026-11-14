@@ -213,6 +213,40 @@ link, εκτός από την προστασία της σκηνής κάνει
 versioning + lifecycle 30 ημερών (`scripts/storage-lifecycle-30d.json`), το ισοδύναμο του
 Revit `.0001.rvt` backup και του Figma version history.
 
+### 2.8 Ρητό άδειασμα — ο χρήστης έσβησε, δεν χάσαμε (2026-11-14)
+
+**Εύρημα (ADR-941 §8.3, ζωντανά δύο φορές):** Delete της τελευταίας οντότητας ή Ctrl+Z
+εισαγωγής σε άδειο όροφο **δεν αποθηκευόταν ποτέ, σιωπηλά** ⇒ μετά την ανανέωση γύριζε το
+παλιό· όροφος δεν άδειαζε ποτέ. Μπλόκαραν **και τα δύο** στρώματα: `!isEmptyScene` στον hook
+(καμία προγραμματισμένη εγγραφή) και `isDxfWipe` στον executor (DXF → 0 με baseline > 0 — οι
+γραμμές/κείμενα της εισαγωγής PDF είναι DXF). Και τα δύο ρωτούν «πόσα έμειναν;», όχι «γιατί».
+
+**Απόφαση: πράξη, όχι αριθμός** (Google Docs / Figma: το «διέγραψα τα πάντα» είναι πράξη με
+πρόθεση και σώζεται· η άμυνα είναι ότι κατάσταση που **δεν** προήλθε από πράξη χρήστη δεν
+γράφεται). Στο `setLevelSceneWithAutoSave` η μετάβαση `previous → next` κρίνεται **πριν**
+γραφτεί η νέα σκηνή (`hooks/scene/explicit-emptying.ts`, καθαρό):
+
+```ts
+isExplicitDxfEmptying(prev, next, origin) :=
+  origin === 'local-edit' && countDxfEntities(prev) > 0 && countDxfEntities(next) === 0
+```
+
+Η πρόθεση **μένει ανά επίπεδο** (debounce: άδειασμα + κολόνα μέσα στα 2″ ⇒ το ticket κουβαλά
+ακόμη σκηνή χωρίς DXF) και σβήνει με `load` του επιπέδου, με επιστροφή γεωμετρίας ή με
+`resetSceneSession`. Το ticket τη φέρει ως `explicitEmptying` (ίδιο μοτίβο με το `birth`)·
+μόνο τότε περνούν ο `!isEmptyScene` και ο `isDxfWipe`.
+
+**Γιατί δεν ξανανοίγει τα περιστατικά:** 2026-06-08 (αποτυχημένη φόρτωση ⇒ άδεια σκηνή) — η
+μετάβαση είναι `load`, και ο loader ήδη μηδενίζει τον στόχο (`resetDxfAutoSaveTarget`) ·
+2026-07-26 / Ρίζα 5 (σκηνή μόνο-BIM, τα DXF δεν κατέβηκαν) — η προηγούμενη σκηνή είχε **ήδη**
+μηδέν DXF ⇒ καμία μετάβαση δεν τα αφαίρεσε ⇒ μπλοκάρει όπως πριν. Σημαία «φορτώθηκε» αντί για
+μετάβαση **απορρίφθηκε**: στη Ρίζα 5 ο όροφος είχε φορτωθεί, άρα θα άφηνε την εγγραφή.
+
+**Ανοιχτό (σκόπιμα εκτός):** όροφος **χωρίς** DXF όπου ο χρήστης σβήνει την τελευταία BIM
+οντότητα ⇒ ο `!isEmptyScene` εξακολουθεί να μην προγραμματίζει εγγραφή. Το BIM σώζεται από τα
+δικά του per-entity docs· μένει μόνο μπαγιάτικο BIM στο blob (το διαβάζει η 3Δ πολλών ορόφων,
+ADR-399). Δεν διευρύνθηκε χωρίς απόφαση.
+
 ---
 
 ## 3. Αρχεία
@@ -221,6 +255,7 @@ Revit `.0001.rvt` backup και του Figma version history.
 |---|---|
 | `hooks/scene/scene-save-ticket.ts` | **νέο** — pure· ticket + `countDxfEntities` + `isDxfWipe` |
 | `hooks/scene/execute-scene-save.ts` | **νέο** — async executor· μηδενική πρόσβαση σε refs |
+| `hooks/scene/explicit-emptying.ts` | **νέο (v1.3)** — pure· ρητό άδειασμα από τη μετάβαση previous → next (§2.8) |
 | `hooks/scene/useAutoSaveSceneManager.ts` | παγώνει το ticket στο Τ₀· floor-scoped cache key |
 | `systems/levels/hooks/useLevelSceneLoader.ts` | `setLevelFloorScope`· baseline· write guard· θεραπεία |
 | `services/dxf-firestore.service.ts` | `findFloorFloorplanFileRecord`· `getFileFloorScope` |
@@ -253,6 +288,7 @@ Revit `.0001.rvt` backup και του Figma version history.
 
 ## 5. Changelog
 
+- **2026-11-14 — v1.3 (§2.8 ρητό άδειασμα, Opus 5.5, κλαδί `agent/sketch-recognition`).** Ο χρήστης που αδειάζει όροφο (Delete της τελευταίας οντότητας, Ctrl+Z εισαγωγής σε άδειο όροφο) πλέον **σώζεται** — πριν το έκοβαν σιωπηλά και ο `!isEmptyScene` και ο `isDxfWipe`. Κριτήριο η **μετάβαση** `local-edit` από σκηνή με DXF σε σκηνή χωρίς DXF (`explicit-emptying.ts`), με μνήμη ανά επίπεδο για το debounce· `SceneSaveTicket.explicitEmptying`. Η Ρίζα 5 και η αποτυχημένη φόρτωση μπλοκάρουν όπως πριν. Tests: `explicit-emptying.test.ts` (νέο) · `useAutoSaveSceneManager-explicit-emptying.test.ts` (νέο, και οι δύο φρουροί με baseline) · +1 στο `execute-scene-save-floor-scope.test.ts` · `hooks/scene/__tests__` **9 σουίτες / 75 πράσινα** · μετάλλαξη «χωρίς παράκαμψη του `isDxfWipe`» ⇒ **4 κόκκινα**. Το `useAutoSaveSceneManager-birth-target.test.ts` («κενή σκηνή δεν γεννά αρχείο») απομονώθηκε με `clearAllScenes()`: το καθολικό `SceneStore` κρατούσε γραμμή από προηγούμενο test, άρα «γραμμή ⇒ κενό» ήταν πλέον σωστά ρητό άδειασμα. Ανοιχτό: όροφος χωρίς DXF που χάνει την τελευταία BIM οντότητα (§2.8).
 - **2026-10-11 — v1.2 (ADR-913 — το ticket κουβαλά και το context ΤΟΥ, Opus 5.5).** UNCOMMITTED. Δύο προσθήκες στο ticket, καμία αλλαγή στα πέντε στρώματα. **(α) `ownedSaveContext`:** το ambient `DxfSaveContext` γίνεται δεκτό στο Τ₀ **μόνο αν ανήκει στο `fileId` του ticket** (ρητό `fileRecordId` ή όνομα αρχείου `{fileId}.…` στο path). Αιτία: στη γρήγορη διαδρομή του loader ο στόχος ξαναδείχνεται (`fileId`, όνομα) αλλά το context **όχι** — το ticket έπαιρνε `fileId` του Α με `canonicalScenePath` του Β. Η v1.0 πάγωσε το context· δεν ρώτησε **ποιανού** είναι. ⚠️ Εύρημα ανάγνωσης κώδικα + test (`useAutoSaveSceneManager-birth-target.test.ts`, «ΚΟΛΛΗΜΕΝΟ CONTEXT»), **όχι** μετρημένο περιστατικό. **(β) `birth`:** εγγραφή γέννησης επιπέδου χωρίς αρχείο — ο executor διαβάζει «δεν υπάρχει έγγραφο» ως «δημιούργησε» μόνο με τη σημαία· ο cross-floor φρουρός ισχύει και εκεί. **Παρενέργεια στον executor:** οι δύο κλάδοι του `resolveKnownFileTarget` έγιναν ένας (ένα `getFileFloorScope`)· αρχείο άλλου ορόφου **χωρίς** `storagePath` απαντά πλέον `cross-floor` αντί για `orphaned` — αυστηρότερο, ποτέ χαλαρότερο. Λεπτομέρειες: ADR-913.
 - **2026-07-27 — v1.1 (🐛 ROOT-CAUSE — Ρίζα 5: γιατί η σκηνή έχανε τα DXF της, Opus 5).** UNCOMMITTED. Μετά την v1.0 ο φρουρός `isDxfWipe` **χτυπούσε στο runtime** — δηλαδή δούλευε, αλλά η αιτία έμενε ανοιχτή. **Root cause:** ο `useLevelSceneLoader` ρωτούσε `existingScene.entities.length > 0` («έχει κάτι;»). Επειδή το `reconcileLoadedSceneBim` (ADR-390 Φ4) πετά το BIM του snapshot και τα per-entity subscriptions το ξαναγεμίζουν **ασύγχρονα**, μια in-memory σκηνή μπορεί να είναι **μόνο-BIM** — φαίνεται «φορτωμένη» ενώ έχει **μηδέν** DXF → early return → **το DXF δεν κατέβαινε ποτέ** → το auto-save έγραφε τη μόνο-BIM σκηνή, δηλαδή **παρήγαγε** την εγγραφή που ο φρουρός μπλοκάρει. **Fix (1 γραμμή, μηδέν νέα αφαίρεση):** `countDxfEntities(existingScene) > 0` — το **ίδιο SSoT** που χρησιμοποιεί ο `isDxfWipe`, ώστε load και guard να μην μπορούν να αποκλίνουν στον ορισμό του «DXF». Ίδιο μοτίβο με ADR-469 («έχει κάτι;»→«έχει BIM;»), κατοπτρικά. Καμία re-fetch loop: το `loadedSceneLevelsRef` κρατά την προσπάθεια one-shot. **Tests:** +2 cases στο `scene-save-ticket.test.ts` που καρφώνουν ρητά την **απόκλιση** που προκάλεσε το bug (μόνο-BIM σκηνή: `entities.length > 0` **ΑΛΛΑ** `countDxfEntities === 0` **ΚΑΙ** `isDxfWipe === true`) — προστατεύουν **και τους δύο** καταναλωτές από μελλοντική «απλοποίηση» σε `entities.length`. `hooks/scene` + `systems/levels` → **18 suites / 198 tests** PASS. **Ειλικρινής επιφύλαξη:** η ίδια η γραμμή του loader **δεν** καλύπτεται από test (ο hook θα απαιτούσε βαρύ mocking Firestore/Storage)· καλύπτεται η **σύμβαση** που καταναλώνει, και το call site είναι μονογραμμική κλήση του SSoT. **ΟΧΙ tsc (N.17).** 🔴 browser-verify: άνοιξε όροφο με BIM **και** DXF → hard reload → το DXF εμφανίζεται· **καμία** εμφάνιση «[SceneSave] ADR-714 — αποτροπή εγγραφής».
 - **2026-07-26 — v1.0.** Αρχική υλοποίηση. Save Ticket· floor-scoped resolution + cache key·

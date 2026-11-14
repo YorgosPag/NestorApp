@@ -76,6 +76,12 @@ export interface SceneSaveTicket {
    * αντί για «ορφανό» (ADR-469). Απόν/`false` ⇒ η προϋπάρχουσα συμπεριφορά, αυτούσια.
    */
   readonly birth?: boolean;
+  /**
+   * ADR-714 §2.8 — **ρητό άδειασμα**: ο χρήστης αφαίρεσε με δική του ενέργεια την τελευταία
+   * γεωμετρία σχεδίου που έβλεπε (`explicit-emptying.ts`). Μόνο τότε μια σκηνή χωρίς DXF
+   * περνά τους φρουρούς άδειας σκηνής / `isDxfWipe`. Απόν/`false` ⇒ οι φρουροί αυτούσιοι.
+   */
+  readonly explicitEmptying?: boolean;
 }
 
 /** Πεδία του ticket χωρίς τη σκηνή — βολικό για logging χωρίς το ~950KB blob. */

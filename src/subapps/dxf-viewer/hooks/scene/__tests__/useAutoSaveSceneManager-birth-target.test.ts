@@ -87,6 +87,11 @@ describe('useAutoSaveSceneManager — στόχος γέννησης (ADR-913)', 
   it('κενή σκηνή δεν γεννά ποτέ αρχείο (ο φρουρός «ποτέ κενή σκηνή» μένει)', async () => {
     const { result } = renderHook(() => useAutoSaveSceneManager());
 
+    // Το `SceneStore` είναι καθολικό: τα προηγούμενα tests άφησαν γραμμή σε αυτό το επίπεδο, και
+    // «γραμμή ⇒ κενό» είναι πλέον ρητό άδειασμα που ΣΩΖΕΤΑΙ (ADR-714 §2.8). Εδώ: επίπεδο που δεν
+    // είχε ποτέ τίποτα.
+    act(() => { result.current.clearAllScenes(); });
+
     act(() => { openFileLessLevelTarget(result.current, BLANK, 'co1'); });
     act(() => { result.current.setLevelScene(BLANK.id, sceneWith(0), 'local-edit'); });
     await flushDebouncedSave();

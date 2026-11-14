@@ -193,7 +193,9 @@ export async function executeSceneSave(
     const sceneToPersist = stripForeignFloorBim(ticket.scene, ticket.floorId);
 
     const baselineDxf = deps.getBaselineDxfCount(fileId);
-    if (isDxfWipe(sceneToPersist, baselineDxf)) {
+    // ADR-714 §2.8 — το ρητό άδειασμα του χρήστη ΔΕΝ είναι απώλεια: εκεί τα DXF τα αφαίρεσε
+    // πράξη `local-edit` πάνω σε σκηνή που τα είχε, όχι σκηνή που δεν τα φόρτωσε ποτέ.
+    if (!ticket.explicitEmptying && isDxfWipe(sceneToPersist, baselineDxf)) {
       // Τα κρίσιμα πεδία μπαίνουν στο ΙΔΙΟ το μήνυμα: το structured object κόβεται σε `{}`
       // από το Next dev overlay, και ένα μπλοκάρισμα χωρίς «ποιος/πού/πόσα» δεν διαγιγνώσκεται.
       console.error(

@@ -138,6 +138,23 @@ describe('executeSceneSave — write identity', () => {
     expect(DxfFirestoreService.autoSaveV2).not.toHaveBeenCalled();
   });
 
+  it('ADR-714 §2.8 — ρητό άδειασμα του χρήστη ΠΕΡΝΑ τον isDxfWipe και γράφεται', async () => {
+    DxfFirestoreService.getFileFloorScope.mockResolvedValue({
+      storagePath: PATH_A,
+      entityType: 'floor',
+      entityId: FLOOR_A,
+    });
+    deps.getBaselineDxfCount.mockReturnValue(6);
+
+    const outcome = await executeSceneSave(
+      ticketFor({ scene: scene(), explicitEmptying: true }),
+      deps,
+    );
+
+    expect(outcome).toMatchObject({ status: 'saved', fileId: FILE_A, dxfCount: 0 });
+    expect(DxfFirestoreService.autoSaveV2).toHaveBeenCalledTimes(1);
+  });
+
   it('latch + skip όταν το backing doc λείπει (ADR-469 belt #2)', async () => {
     DxfFirestoreService.getFileFloorScope.mockResolvedValue(null);
 
