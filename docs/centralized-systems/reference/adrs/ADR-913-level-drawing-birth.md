@@ -182,7 +182,8 @@
 | `hooks/scene/useAutoSaveSceneManager.ts` (+types) | στόχοι γέννησης · εκκρεμείς εισαγωγές · context ανά ticket |
 | `systems/levels/hooks/useLevelSceneLoader.ts` | ανοίγει τον στόχο γέννησης· μήνυμα `retired-target` |
 | `hooks/scene/useSceneState.ts` | η εισαγωγή δηλώνει το επίπεδο-στόχο της |
-| `services/dxf-firestore.service.ts` | `getFileFloorScope` → `retired` |
+| `services/dxf-firestore.service.ts` | `getFileFloorScope` → `retired` · πηγή σκηνής από το `fileRecordSceneSource` (v1.3) |
+| `services/dxf-firestore.types.ts` | **v1.3** — SSoT `fileRecordSceneSource`: ο ΕΝΑΣ κανόνας «από πού παράγεται η σκηνή» για φόρτωση **και** εγγραφή |
 | `systems/levels/config.ts` · `useLevels.ts` | `Level.companyId` · υπογραφή `setFileRecordId` |
 | `i18n/locales/{el,en}/dxf-viewer.json` · `types/i18n.ts` | `scene.birthTargetRetired` |
 
@@ -194,6 +195,8 @@
 | `useAutoSaveSceneManager-birth-target.test.ts` (5) | **το πρόβλημα** (καμία εγγραφή) και **η λύση** μέσα από τον πραγματικό manager + executor· κενή σκηνή δεν γεννά αρχείο· **κολλημένο context** |
 | `execute-scene-save-floor-scope.test.ts` (+6) | γέννηση ≠ ορφανό· χωρίς σημαία μένει ορφανό· ποτέ ανάσταση· cross-floor και στη γέννηση |
 | `scene-save-ticket.test.ts` (+6) | `ownedSaveContext`, και το id-πρόθεμα που δεν ξεγελά |
+| `file-record-scene-source.test.ts` (14, v1.3) | προτεραιότητα `storagePath` · εφεδρεία `processedDataPath` · κενά/μη-string ⇒ `undefined` · **φόρτωση και εγγραφή δίνουν το ίδιο path** μέσα από το πραγματικό `getFileFloorScope` |
+| `execute-scene-save-floor-scope.test.ts` (+1, v1.3) | νέα συνεδρία, χωρίς `birth` και χωρίς cached path: γεννημένο αρχείο ⇒ **saved**, όχι ορφανό, στο ίδιο `.scene.json` |
 
 Επηρεαζόμενες σουίτες (`systems/levels`, `hooks/scene`, `api/dxf-levels`, `api/cad-files`):
 **32 suites / 369 tests πράσινα.** `jscpd:diff` καθαρό στα 9 αρχεία.
@@ -250,6 +253,7 @@
 
 ## 9. Changelog
 
+- **2026-11-15 — v1.3 (🐛 ROOT-CAUSE — το γεννημένο σχέδιο κρινόταν «ορφανό» στην εγγραφή, Opus 5.5, κλαδί `agent/pdf-import-persist`).** Commit διόρθωσης `7c7158b2`. **Σύμπτωμα:** στον όροφο δοκιμής χανόταν **κάθε** αλλαγή DXF μετά το reload (εισαγωγή PDF ADR-941, αλλά και χειρόγραφη γραμμή)· το `.scene.json` στο Storage έμενε αμετάβλητο. **Ρίζα:** το αρχείο που γεννιέται εδώ δεν έχει ποτέ `storagePath` — η διπλή εγγραφή (`dual-write-to-files.ts`) γράφει μόνο `processedData.processedDataPath`. Η **φόρτωση** (`mapFileRecordToDxfMetadata`) είχε εφεδρεία στο `processedDataPath`· η **εγγραφή** (`getFileFloorScope` → `resolveKnownFileTarget`) **όχι** ⇒ στη νέα συνεδρία (ticket χωρίς `birth`, χωρίς `canonicalScenePath`) ⇒ `'orphaned'` ⇒ latch ADR-469 ⇒ κλειστός στόχος, σιωπηλά. **Διόρθωση:** νέο SSoT `fileRecordSceneSource` (`dxf-firestore.types.ts`) — το καλούν **και οι δύο** πόρτες. `deriveScenePath('…/file_X.scene.json')` δίνει το ίδιο path ⇒ η εγγραφή πάει εκεί που διαβάζει η φόρτωση· διορθώνει και ήδη χαλασμένα αρχεία **χωρίς migration**. Ανεβασμένα DXF και cross-floor φρουρός: αμετάβλητα. **Tests:** νέο `file-record-scene-source.test.ts` (14) + 1 σενάριο στο `execute-scene-save-floor-scope.test.ts` · στοχευμένα **2 σουίτες / 30 πράσινα** · μετάλλαξη «χωρίς εφεδρεία» ⇒ **3 κόκκινα**. **ΟΧΙ tsc (N.17).** 🔴 **Ζωντανή επαλήθευση εκκρεμεί** (μετά το `wt:land`): reload ⇒ φαίνεται η κάρτα «Σχέδιο: …» · εισαγωγή PDF ⇒ reload ⇒ οι οντότητες μένουν.
 - **2026-10-11 — v1.2 (Opus 5.5).** UNCOMMITTED. 🔴 §3.6 — ο φρουρός φόρτωσης έμενε αναμμένος
   μετά από ακυρωμένη φόρτωση χωρίς διάδοχο ⇒ επίπεδο χωρίς αρχείο **δεν αποθήκευε τίποτα** μετά
   από F5. Βρέθηκε στην επαλήθευση του ADR-914 σε Chrome, όχι σε test. Διόρθωση:

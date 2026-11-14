@@ -273,6 +273,28 @@ describe('executeSceneSave — εγγραφή γέννησης (ADR-913)', () =>
     expect(DxfFirestoreService.autoSaveV2.mock.calls[0][0]).toBe(BIRTH_FILE);
   });
 
+  it('ΝΕΑ ΣΥΝΕΔΡΙΑ χωρίς σημαία γέννησης ούτε cached path: γεννημένο αρχείο ⇒ ΟΧΙ ορφανό (2026-11-15)', async () => {
+    // Το `getFileFloorScope` δίνει πλέον το `processedDataPath` ως πηγή σκηνής (`fileRecordSceneSource`) —
+    // πριν έλειπε το `storagePath` ⇒ 'orphaned' ⇒ latch ⇒ κάθε αλλαγή χανόταν σιωπηλά στο reload.
+    DxfFirestoreService.getFileFloorScope.mockResolvedValue({
+      storagePath: BIRTH_PATH,
+      entityType: 'floor',
+      entityId: FLOOR_A,
+    });
+
+    const outcome = await executeSceneSave(
+      ticketFor({ fileId: BIRTH_FILE, canonicalScenePath: null, birth: false }),
+      deps,
+    );
+
+    expect(outcome.status).toBe('saved');
+    expect(deps.markFileTargetOrphaned).not.toHaveBeenCalled();
+    const [fileId, , , ctx] = DxfFirestoreService.autoSaveV2.mock.calls[0];
+    expect(fileId).toBe(BIRTH_FILE);
+    // Γράφει ΕΚΕΙ που διαβάζει η φόρτωση — όχι σε `.scene.scene.json` ούτε σε νέο αρχείο.
+    expect(ctx.canonicalScenePath).toBe(BIRTH_PATH);
+  });
+
   it('ο cross-floor φρουρός ισχύει ΚΑΙ στη γέννηση', async () => {
     DxfFirestoreService.getFileFloorScope.mockResolvedValue({ entityType: 'floor', entityId: FLOOR_B });
 
