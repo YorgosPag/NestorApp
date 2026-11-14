@@ -13,24 +13,48 @@
  * **Layering**: leaf — καθαρές συναρτήσεις (μόνο `loginHref`, επίσης καθαρή).
  */
 
-import { loginHref } from '@/lib/routes/return-path';
+import { loginHref, type LoginEntry } from '@/lib/routes/return-path';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
+
+/**
+ * **ΤΟ ΒΗΜΑ ΛΟΓΑΡΙΑΣΜΟΥ** (ADR-915 §39, 2026-11-14) — «με ποιο email; έχω ήδη λογαριασμό;».
+ *
+ * Το κρίνει ο διακομιστής (`server/invitations/invitation-account-step.ts`) **μόνο** για κάτοχο έγκυρου συνδέσμου:
+ * ο σύνδεσμος έφτασε **στο κουτί** του παραλήπτη, άρα το «υπάρχει λογαριασμός;» για **αυτή** τη διεύθυνση δεν είναι
+ * μαντείο απαρίθμησης (πρότυπο Procore: ο υπάρχων χρήστης **δεν** καλείται να φτιάξει κωδικό). Η διεύθυνση ταξιδεύει
+ * **μόνο καλυμμένη**. Προαιρετικό: είδος που δεν το δίνει ακόμη αποδίδεται όπως πριν.
+ */
+export interface InvitationAccountStep {
+  /** `create` ⇒ κανένας λογαριασμός με τη διεύθυνση· `sign-in` ⇒ υπάρχει (ή δεν μάθαμε — ασφαλής προεπιλογή). */
+  readonly kind: 'create' | 'sign-in';
+  readonly maskedEmail: string;
+  /** Λογαριασμός Google (υπάρχων πάροχος ή διεύθυνση Gmail) ⇒ «Συνέχεια με Google» πρώτο. */
+  readonly googleSuggested: boolean;
+}
 
 export type InvitationRespond =
   | { readonly kind: 'ready' }
   /** `href` = `loginHref(...)` **από τον διακομιστή** — περνά από τον φρουρό `safeReturnPath`. */
-  | { readonly kind: 'sign-in'; readonly href: string }
-  /** `signedInAs` = το email του **θεατή** (δικό του) — του παραλήπτη δεν ταξιδεύει ποτέ. */
-  | { readonly kind: 'other-account'; readonly signedInAs: string };
+  | { readonly kind: 'sign-in'; readonly href: string; readonly account?: InvitationAccountStep }
+  /** `signedInAs` = το email του **θεατή** (δικό του) — του παραλήπτη ταξιδεύει μόνο καλυμμένο, στο `account`. */
+  | { readonly kind: 'other-account'; readonly signedInAs: string; readonly account?: InvitationAccountStep };
 
 export function invitationRespondOf(
   addressedToViewer: boolean | null,
   viewerEmail: string | null,
   signInHref: string,
+  account?: InvitationAccountStep,
 ): InvitationRespond {
-  if (viewerEmail === null) return { kind: 'sign-in', href: signInHref };
-  if (addressedToViewer === false) return { kind: 'other-account', signedInAs: viewerEmail };
+  const withAccount = account ? { account } : {};
+  if (viewerEmail === null) return { kind: 'sign-in', href: signInHref, ...withAccount };
+  if (addressedToViewer === false) return { kind: 'other-account', signedInAs: viewerEmail, ...withAccount };
   return { kind: 'ready' };
+}
+
+/** Η είσοδος που ταιριάζει στο βήμα: νέος ⇒ **Εγγραφή**, υπάρχων ⇒ **Σύνδεση** — πάντα με την καλυμμένη διεύθυνση. */
+function loginEntryOf(account: InvitationAccountStep | undefined): LoginEntry | undefined {
+  if (!account) return undefined;
+  return { mode: account.kind === 'create' ? 'signup' : 'signin', invitedAs: account.maskedEmail };
 }
 
 /** Η όψη «preview» κάθε σελίδας πρόσκλησης — το σχήμα που ζωγραφίζει το client component. */
@@ -54,13 +78,14 @@ export function invitationPreviewViewOf<P>(args: {
   readonly token: string;
   readonly viewerEmail: string | null;
   readonly invitationHref: string;
+  readonly account?: InvitationAccountStep;
 }): InvitationPreviewView<P> {
-  const returnHere = loginHref(args.invitationHref);
+  const returnHere = loginHref(args.invitationHref, loginEntryOf(args.account));
   return {
     kind: 'preview',
     preview: args.preview,
     token: args.token,
-    respond: invitationRespondOf(args.addressedToViewer, args.viewerEmail, returnHere),
+    respond: invitationRespondOf(args.addressedToViewer, args.viewerEmail, returnHere, args.account),
     switchAccountHref: returnHere,
   };
 }
@@ -83,7 +108,12 @@ export type InvitationPageView<P, R extends string> =
  */
 export function invitationPageViewOf<P, R extends string>(
   outcome: InvitationPageOutcome<P, R>,
-  page: { readonly token: string; readonly viewerEmail: string | null; readonly invitationHref: string },
+  page: {
+    readonly token: string;
+    readonly viewerEmail: string | null;
+    readonly invitationHref: string;
+    readonly account?: InvitationAccountStep;
+  },
 ): InvitationPageView<P, R> {
   switch (outcome.kind) {
     case 'preview':

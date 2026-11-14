@@ -6,6 +6,11 @@
  */
 
 jest.mock('server-only', () => ({}));
+// ADR-915 §39.6 — ο κριτής του βήματος λογαριασμού (Firebase Auth) αντικαθίσταται: εδώ κρίνεται η ΣΥΝΔΕΣΗ — ότι το
+// κλείσιμο της όψης ρωτά για τη διεύθυνση του ΠΑΡΑΛΗΠΤΗ και μόνο όταν κληθεί.
+jest.mock('@/server/invitations/invitation-account-step', () => ({
+  invitationAccountStepOf: jest.fn(async () => ({ kind: 'create', maskedEmail: 'masked', googleSuggested: false })),
+}));
 
 const mockOwnWorkspaces = jest.fn(async (_uid: string, _active: unknown): Promise<unknown> => ({ outcome: 'ok', reachable: [], belonging: ['comp-buyer'] }));
 jest.mock('@/lib/auth/workspace-membership', () => ({
@@ -42,6 +47,7 @@ import type { SupplyRelationship } from '@/subapps/catalog/types/supply-relation
 
 import { issueSupplyInvitation, revokeSupplyInvitation } from '../supply-invitation-issue.server';
 import { previewSupplyInvitation, respondToSupplyInvitation, type SupplyInvitationResponse } from '../supply-invitation-redeem.server';
+import { invitationAccountStepOf } from '@/server/invitations/invitation-account-step';
 import { supplyRelationshipId } from '../supply-relationship-store.server';
 import { approveSupplyRequest, declineSupplyRequest, endSupplyRelationship } from '../supply-relationship-writer.server';
 import { previewSupplyRequestLink, publishSupplyRequestLink, requestSupplyAccess, revokeSupplyRequestLink } from '../supply-request-link.server';
@@ -198,6 +204,16 @@ describe('πόρτα α: πρόσκληση από επαφή', () => {
     expect((await rejectionOf(revokeSupplyInvitation(RIVAL, invitation.id))).kind).toBe('notFound');
     await revokeSupplyInvitation(ARIES, invitation.id);
     expect(await accept(token)).toEqual({ kind: 'refused', reason: 'revoked' });
+  });
+
+  it('ADR-915 §39.6 — το βήμα λογαριασμού ρωτά για τη διεύθυνση του ΠΑΡΑΛΗΠΤΗ, και μόνο όταν κληθεί', async () => {
+    jest.mocked(invitationAccountStepOf).mockClear();
+    const { token } = await invite();
+    const outcome = await previewSupplyInvitation(db(), { token, viewerEmail: null });
+    if (outcome.kind !== 'preview') throw new Error(`αναμενόταν όψη, ήρθε ${outcome.kind}`);
+    expect(invitationAccountStepOf).not.toHaveBeenCalled();
+    await expect(outcome.accountStep()).resolves.toMatchObject({ kind: 'create' });
+    expect(invitationAccountStepOf).toHaveBeenCalledWith(EMAIL);
   });
 
   it('η όψη δείχνει μόνο τον προμηθευτή και δεν καταναλώνει', async () => {

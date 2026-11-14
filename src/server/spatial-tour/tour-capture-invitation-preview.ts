@@ -16,14 +16,12 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO } from '@/lib/date-local';
 import { tourCaptureInvitationFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
-import { markInvitationOpenedAt } from '@/server/invitations/invitation-lifecycle';
+import { addressedInvitationPreview, type AddressedInvitationPreviewOutcome } from '@/server/invitations/invitation-preview-outcome';
 import { readInvitationByToken } from '@/server/invitations/invitation-redeem';
-import type { InvitationCoreRefusal } from '@/types/invitation-core';
 import type { TourCaptureInvitation, TourCaptureInvitationPreview } from '@/types/spatial-tour';
 
 import { TOUR_CAPTURE_INVITATION_LOCATOR } from './tour-capture-invitation-redeem';
@@ -31,18 +29,7 @@ import { locateSpatialTour } from './tour-locate';
 
 const logger = createModuleLogger('tour-capture-invitation-preview');
 
-export type TourCaptureInvitationPreviewOutcome =
-  | {
-      readonly kind: 'preview';
-      readonly preview: TourCaptureInvitationPreview;
-      /** Απευθύνεται στον συνδεδεμένο; `null` ⇒ κανείς συνδεδεμένος. **Υπόδειξη**, όχι απόφαση. */
-      readonly addressedToViewer: boolean | null;
-      /** Η σήμανση «ανοίχτηκε» — για το `after()`· **δεν** ταξιδεύει στο σύρμα, ποτέ δεν πετά. */
-      readonly markOpened: () => Promise<void>;
-    }
-  | { readonly kind: 'refused'; readonly reason: InvitationCoreRefusal }
-  /** «Δεν μπόρεσα»: λείπει το μυστικό **μας**, ή το έγγραφο δεν διαβάζεται — ποτέ «πλαστός σύνδεσμος». */
-  | { readonly kind: 'unavailable' };
+export type TourCaptureInvitationPreviewOutcome = AddressedInvitationPreviewOutcome<TourCaptureInvitationPreview>;
 
 /**
  * **Ποιο ακίνητο, ποιο γραφείο** — η **μία** περιγραφή της πρόσκλησης, για την όψη **και** το email (ποτέ δύο
@@ -84,11 +71,8 @@ export async function previewTourCaptureInvitation(
     return { kind: 'unavailable' };
   }
   const described = await describeTourCaptureInvitation(db, invitation);
-  const { ref } = found.location;
-  return {
-    kind: 'preview',
-    addressedToViewer: input.viewerEmail ? sameChannelEmail(input.viewerEmail, invitation.inviteeEmail) : null,
-    markOpened: () => markInvitationOpenedAt(db, ref, nowISO()),
+  return addressedInvitationPreview(input, invitation, {
+    opened: { db, ref: found.location.ref },
     preview: {
       ...described,
       reason: invitation.reason,
@@ -96,5 +80,5 @@ export async function previewTourCaptureInvitation(
       expiresAt: invitation.expiresAt,
       identityAssurance: 'declared',
     },
-  };
+  });
 }

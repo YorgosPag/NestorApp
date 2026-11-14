@@ -14,11 +14,10 @@ import 'server-only';
 
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
-import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
-import { markInvitationOpenedAt } from '@/server/invitations/invitation-lifecycle';
+import { addressedInvitationPreview, type AddressedInvitationPreviewOutcome } from '@/server/invitations/invitation-preview-outcome';
 import {
   readInvitationByToken,
   redeemInvitation,
@@ -32,7 +31,7 @@ import {
 import { judgeInvitationAcceptance } from '@/subapps/catalog/pricing/supply-relationship-judge';
 import { supplyInvitationFromDocument } from '@/subapps/catalog/schema/zod/supply-relationship.schema';
 import type { SupplyBuyerRefusal, SupplyInvitation, SupplyInvitationPreview } from '@/subapps/catalog/types/supply-invitation';
-import type { InvitationCoreRefusal, InvitationDocumentCore } from '@/types/invitation-core';
+import type { InvitationDocumentCore } from '@/types/invitation-core';
 
 import { announceSupplyChange } from './supply-relationship-notifier.server';
 import { resolveBuyerOffice, type SupplyBuyerActing } from './supply-buyer-office.server';
@@ -134,15 +133,7 @@ export async function respondToSupplyInvitation(db: Firestore, input: SupplyInvi
   return outcome;
 }
 
-export type SupplyInvitationPreviewOutcome =
-  | {
-      readonly kind: 'preview';
-      readonly preview: SupplyInvitationPreview;
-      readonly addressedToViewer: boolean | null;
-      readonly markOpened: () => Promise<void>;
-    }
-  | { readonly kind: 'refused'; readonly reason: InvitationCoreRefusal }
-  | { readonly kind: 'unavailable' };
+export type SupplyInvitationPreviewOutcome = AddressedInvitationPreviewOutcome<SupplyInvitationPreview>;
 
 /** Η όψη, **χωρίς ταυτότητα και χωρίς κατανάλωση**: ο ίδιος δρόμος με την εξαργύρωση. Μόνο το όνομα του προμηθευτή. */
 export async function previewSupplyInvitation(
@@ -155,10 +146,8 @@ export async function previewSupplyInvitation(
   const invitation = supplyInvitationFromDocument(found.stored);
   if (invitation === null) return { kind: 'unavailable' };
   const supplierName = (await readWorkspaceName(invitation.companyId).catch(() => '')).trim();
-  return {
-    kind: 'preview',
-    addressedToViewer: input.viewerEmail ? sameChannelEmail(input.viewerEmail, invitation.inviteeEmail) : null,
-    markOpened: () => markInvitationOpenedAt(db, found.location.ref, nowISO()),
+  return addressedInvitationPreview(input, invitation, {
+    opened: { db, ref: found.location.ref },
     preview: { supplierName: supplierName === '' ? null : supplierName, expiresAt: invitation.expiresAt },
-  };
+  });
 }

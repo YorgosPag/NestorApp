@@ -37,7 +37,7 @@ import { WORKSPACE_INVITE_NS } from './workspace-invite-namespace';
 const logger = createModuleLogger('workspace-invite-switch-account');
 
 /** **Αποσύνδεση → σύνδεση με επιστροφή σε ΑΥΤΗ την πρόσκληση.** */
-export function SwitchAccountButton({ href }: { href: string }) {
+export function SwitchAccountButton({ href, label }: { href: string; /** Ήδη μεταφρασμένη (π.χ. «Αποσύνδεση και συνέχεια με το …»). */ label?: string }) {
   const { t } = useTranslation([WORKSPACE_INVITE_NS]);
   const auth = useAuthOptional();
   const [switching, setSwitching] = useState(false);
@@ -58,7 +58,7 @@ export function SwitchAccountButton({ href }: { href: string }) {
 
   return (
     <Button className="w-full" disabled={switching} aria-busy={switching} onClick={() => void onSwitch()}>
-      {switching ? t(INVITE_PAGE_KEYS.switchingAccount) : t(INVITE_PAGE_KEYS.switchAccount)}
+      {switching ? t(INVITE_PAGE_KEYS.switchingAccount) : (label ?? t(INVITE_PAGE_KEYS.switchAccount))}
     </Button>
   );
 }

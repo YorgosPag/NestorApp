@@ -29,9 +29,15 @@ export const CASE_INVITE_KEYS = {
   unnamedProperty: 'conveyance:engagement.invite.unnamedProperty',
   signIn: 'conveyance:engagement.invite.signIn',
   signInHint: 'conveyance:engagement.invite.signInHint',
+  /** ADR-915 §39 — τα βήματα μετά τον λογαριασμό (`InvitationSteps`): απάντηση με ιδιότητα → ο χώρος. */
+  stepAnswer: 'conveyance:engagement.invite.stepAnswer',
+  stepSpace: 'conveyance:engagement.invite.stepSpace',
   credentialTitle: 'conveyance:engagement.invite.credentialTitle',
   credentialHint: 'conveyance:engagement.invite.credentialHint',
   numberRequired: 'conveyance:engagement.invite.numberRequired',
+  /** ADR-915 §39.6 — «δεν θυμάστε τον αριθμό;» → η δημόσια αναζήτηση του μητρώου (μόνο όταν υπάρχει). */
+  registryLookup: 'conveyance:engagement.invite.registryLookup',
+  registryLookupHint: 'conveyance:engagement.invite.registryLookupHint',
   accept: 'conveyance:engagement.invite.accept',
   decline: 'conveyance:engagement.invite.decline',
   accepted: 'conveyance:engagement.invite.accepted',

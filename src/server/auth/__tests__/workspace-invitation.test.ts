@@ -25,6 +25,11 @@
  */
 
 jest.mock('server-only', () => ({}));
+// ADR-915 §39.6 — ο κριτής του βήματος λογαριασμού (Firebase Auth) αντικαθίσταται: εδώ κρίνεται η ΣΥΝΔΕΣΗ — ότι το
+// κλείσιμο της όψης ρωτά για τη διεύθυνση του ΠΑΡΑΛΗΠΤΗ και μόνο όταν κληθεί.
+jest.mock('@/server/invitations/invitation-account-step', () => ({
+  invitationAccountStepOf: jest.fn(async () => ({ kind: 'create', maskedEmail: 'masked', googleSuggested: false })),
+}));
 
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
@@ -83,6 +88,7 @@ import {
   markWorkspaceInvitationOpened,
 } from '../workspace-invitation-redeem';
 import { previewWorkspaceInvitation } from '../workspace-invitation-preview';
+import { invitationAccountStepOf } from '@/server/invitations/invitation-account-step';
 import type { WorkspaceInvitationDocument } from '@/types/workspace-invitation';
 import {
   describeOwnershipCallSites,
@@ -887,6 +893,16 @@ describe('Ω — η όψη ξέρει αν απευθύνεται στον συ�
 
     expect([same, other, anonymous].map((o) => (o.kind === 'preview' ? o.addressedToViewer : o.kind)))
       .toEqual([true, false, null]);
+  });
+
+  it('Ω3 — ADR-915 §39.6: το βήμα λογαριασμού ρωτά για τη διεύθυνση του ΠΑΡΑΛΗΠΤΗ, και μόνο όταν κληθεί', async () => {
+    jest.mocked(invitationAccountStepOf).mockClear();
+    const { token } = await issue();
+    const outcome = await previewWorkspaceInvitation({ token, viewerEmail: null, nowISOValue: NOW });
+    if (outcome.kind !== 'preview') throw new Error(`αναμενόταν όψη, ήρθε ${outcome.kind}`);
+    expect(invitationAccountStepOf).not.toHaveBeenCalled();
+    await expect(outcome.accountStep()).resolves.toMatchObject({ kind: 'create' });
+    expect(invitationAccountStepOf).toHaveBeenCalledWith(EMAIL);
   });
 
   it('🔒 Ω2 — η όψη ΔΕΝ κουβαλά το email του παραλήπτη, ούτε όταν ο θεατής είναι άλλος', async () => {

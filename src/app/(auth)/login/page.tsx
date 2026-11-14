@@ -29,7 +29,14 @@ import { StaticPageLoading } from '@/core/states';
 // bootstrap του i18next έχει τελειώσει όταν τρέξει η κλήση.
 import routeSlice from '@/i18n/generated/routes/login.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
-import { RETURN_PATH_PARAM, safeReturnPath } from '@/lib/routes/return-path';
+import {
+  AUTH_ENTRY_MODE_PARAM,
+  authEntryModeOf,
+  INVITED_AS_PARAM,
+  invitedAsOf,
+  RETURN_PATH_PARAM,
+  safeReturnPath,
+} from '@/lib/routes/return-path';
 
 registerRouteSlice(routeSlice);
 
@@ -46,7 +53,11 @@ registerRouteSlice(routeSlice);
 function SignInWithReturn() {
   const searchParams = useSearchParams();
   const redirectTo = safeReturnPath(searchParams.get(RETURN_PATH_PARAM)) ?? undefined;
-  return <AuthForm defaultMode="signin" redirectTo={redirectTo} />;
+  // ADR-915 §39 — η σελίδα πρόσκλησης ξέρει «νέος ή υπάρχων» και στέλνει τη σωστή λειτουργία· η διεύθυνση έρχεται
+  // ΜΟΝΟ καλυμμένη. Και τα δύο περνούν από φρουρό: άγνωστη τιμή ⇒ η παλιά συμπεριφορά.
+  const defaultMode = authEntryModeOf(searchParams.get(AUTH_ENTRY_MODE_PARAM)) ?? 'signin';
+  const invitedAs = invitedAsOf(searchParams.get(INVITED_AS_PARAM)) ?? undefined;
+  return <AuthForm defaultMode={defaultMode} redirectTo={redirectTo} invitedAs={invitedAs} />;
 }
 
 export default function LoginPage() {

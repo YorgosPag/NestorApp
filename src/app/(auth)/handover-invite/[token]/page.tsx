@@ -13,15 +13,13 @@ import 'server-only';
  */
 
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { after } from 'next/server';
 
 import { HandoverInviteContent } from '@/components/handover-invite/HandoverInviteContent';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { CORE_REFUSAL_IS_NOT_FOUND, invitationPageViewOf } from '@/lib/invitations/invitation-respond';
+import { invitationPageViewOf } from '@/lib/invitations/invitation-respond';
 import { handoverInvitationHref } from '@/lib/property-handover/handover-routes';
 import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
-import { readInvitationPageRequest } from '@/server/invitations/invitation-page-request';
+import { readInvitationPageRequest, settleInvitationPage } from '@/server/invitations/invitation-page-request';
 import { previewHandoverInvitation } from '@/server/property-handover-invitations/handover-invitation-preview';
 
 export const dynamic = 'force-dynamic';
@@ -33,13 +31,11 @@ export default async function HandoverInvitePage({ params }: { params: Promise<{
   const { token, viewerEmail } = await readInvitationPageRequest(params);
 
   const outcome = await previewHandoverInvitation(getAdminFirestore(), { token, viewerEmail });
-  // «Ανοίχτηκε» ΜΕΤΑ την απόκριση, μόνο την πρώτη φορά — ποτέ δεν πετά.
-  if (outcome.kind === 'preview') after(outcome.markOpened);
-  if (outcome.kind === 'refused' && CORE_REFUSAL_IS_NOT_FOUND[outcome.reason]) notFound();
-
+  // «Ανοίχτηκε» μετά την απόκριση · 404 · βήμα λογαριασμού (ADR-915 §39.6) — ο ΕΝΑΣ δρόμος όλων των σελίδων πρόσκλησης.
+  const account = await settleInvitationPage(outcome);
   return (
     <HandoverInviteContent
-      view={invitationPageViewOf(outcome, { token, viewerEmail, invitationHref: handoverInvitationHref(token) })}
+      view={invitationPageViewOf(outcome, { token, viewerEmail, account, invitationHref: handoverInvitationHref(token) })}
     />
   );
 }

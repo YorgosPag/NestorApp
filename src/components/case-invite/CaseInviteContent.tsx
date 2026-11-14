@@ -134,6 +134,7 @@ function RespondArea({ view, onOutcome }: { readonly view: PreviewView; readonly
       switchAccountHref={view.switchAccountHref}
       signInLabel={t(CASE_INVITE_KEYS.signIn)}
       signInHint={t(CASE_INVITE_KEYS.signInHint)}
+      stepsAfterAccount={[t(CASE_INVITE_KEYS.stepAnswer), t(CASE_INVITE_KEYS.stepSpace)]}
     >
       <Answer view={view} onOutcome={onOutcome} />
     </InvitationIdentityGate>

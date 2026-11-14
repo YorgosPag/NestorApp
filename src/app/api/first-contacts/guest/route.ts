@@ -45,7 +45,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
-import { normaliseChannelEmail } from '@/lib/contact/channel-email';
+import { maskEmail, normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { firstContactTargetHref } from '@/lib/contact/first-contact-target-href';
 import { issueFirstContactInvitation } from '@/services/contact/first-contact-invitation.service';
 import { buildFirstContactVerificationEmail } from '@/services/email-templates/first-contact-verification';
@@ -63,23 +63,6 @@ type GuestContactResponse =
   | { readonly error: 'EMAIL_REQUIRED' }
   /** Δεν στάλθηκε το email. **«Δεν μάθαμε» ≠ «δεν επιτρέπεσαι»** (N.12). */
   | { readonly error: 'INVITE_NOT_SENT' };
-
-/**
- * **Κρύβει το μεσαίο** — `μ***α@gmail.com`.
- *
- * 🔑 **Γιατί επιστρέφεται καν**: η οθόνη λέει *«στείλαμε σύνδεσμο στο μ***α@gmail.com»*,
- * ώστε ο άνθρωπος που **πληκτρολόγησε λάθος** να το δει **αμέσως** αντί να περιμένει
- * email που δεν θα έρθει ποτέ. Ταυτόχρονα, κάποιος που υποβάλλει με **ξένη** διεύθυνση
- * δεν μαθαίνει τίποτα που δεν ήξερε ήδη.
- */
-function maskEmail(email: string): string {
-  const at = email.indexOf('@');
-  if (at <= 0) return '***';
-  const local = email.slice(0, at);
-  const domain = email.slice(at);
-  if (local.length <= 2) return `${local.slice(0, 1)}***${domain}`;
-  return `${local.slice(0, 1)}***${local.slice(-1)}${domain}`;
-}
 
 /**
  * Ο σύνδεσμος επιβεβαίωσης — από το **ΕΝΑ** SSoT της δημόσιας διεύθυνσης (ADR-851 Φ5).

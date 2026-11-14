@@ -54,10 +54,11 @@ import {
   EXIT_BY_REFUSAL,
   REFUSAL_IS_NOT_FOUND,
 } from '@/components/workspace-invite/workspace-invite-labels';
-import { invitationPreviewViewOf } from '@/lib/invitations/invitation-respond';
+import { invitationPreviewViewOf, type InvitationAccountStep } from '@/lib/invitations/invitation-respond';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { workspaceInvitationHref } from '@/lib/workspace/workspace-routes';
 import { readPageIdentity } from '@/server/auth/page-identity';
+import { pageAccountStepOf } from '@/server/invitations/invitation-account-step';
 import {
   previewWorkspaceInvitation,
   type InvitationPreviewOutcome,
@@ -83,6 +84,7 @@ function viewOf(
   outcome: InvitationPreviewOutcome,
   token: string,
   viewerEmail: string | null,
+  account: InvitationAccountStep | undefined,
 ): WorkspaceInvitationLinkView {
   switch (outcome.kind) {
     case 'preview':
@@ -92,6 +94,7 @@ function viewOf(
         token,
         viewerEmail,
         invitationHref: workspaceInvitationHref(token),
+        account,
       });
     case 'refused':
       return { kind: 'refused', reason: outcome.reason, exit: EXIT_BY_REFUSAL[outcome.reason] };
@@ -146,5 +149,7 @@ export default async function WorkspaceInvitePage({
     notFound();
   }
 
-  return <WorkspaceInviteContent view={viewOf(outcome, token, viewerEmail)} />;
+  // ADR-915 §39.6 — το βήμα λογαριασμού: μόνο για θεατή που δεν είναι (ακόμη) ο παραλήπτης.
+  const account = await pageAccountStepOf(outcome.kind === 'preview' ? outcome : null);
+  return <WorkspaceInviteContent view={viewOf(outcome, token, viewerEmail, account)} />;
 }

@@ -76,3 +76,18 @@ export const PROFESSIONAL_LICENCE_SPECS: Readonly<Record<ProfessionalLicence, Pr
 export function isProfessionalLicence(value: unknown): value is ProfessionalLicence {
   return typeof value === 'string' && (PROFESSIONAL_LICENCES as readonly string[]).includes(value);
 }
+
+/**
+ * **Πού αναζητά κανείς έναν αριθμό αυτού του μητρώου;** (ADR-915 §39.6) — **παράγεται** από τις άδειες που κρατά η αρχή,
+ * ποτέ δεύτερος κατάλογος διευθύνσεων. Καμία ή **περισσότερες από μία** διαφορετικές σελίδες ⇒ `null`: σύνδεσμος που
+ * ίσως δεν απαντά στο ερώτημα δεν δίνεται (ίδιος κανόνας με το `registryLookupUrl`).
+ * Το ζητά η φόρμα δήλωσης ιδιότητας της πρόσκλησης: «δεν θυμάστε τον αριθμό; αναζήτηση στο μητρώο».
+ */
+export function registryAuthorityLookupUrl(authority: RegistryAuthorityId): string | null {
+  const urls = new Set<string>();
+  for (const licence of PROFESSIONAL_LICENCES) {
+    const spec = PROFESSIONAL_LICENCE_SPECS[licence];
+    if (spec.authority === authority && spec.registryLookupUrl !== null) urls.add(spec.registryLookupUrl);
+  }
+  return urls.size === 1 ? [...urls][0] : null;
+}

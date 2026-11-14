@@ -12,15 +12,13 @@ import 'server-only';
  */
 
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { after } from 'next/server';
 
 import { TourCaptureInviteContent, type TourCaptureInviteView } from '@/components/spatial-tour/TourCaptureInviteContent';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { CORE_REFUSAL_IS_NOT_FOUND, invitationPageViewOf } from '@/lib/invitations/invitation-respond';
+import { invitationPageViewOf, type InvitationAccountStep } from '@/lib/invitations/invitation-respond';
 import { tourCaptureInvitationHref } from '@/lib/spatial-tour/tour-routes';
 import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
-import { readInvitationPageRequest } from '@/server/invitations/invitation-page-request';
+import { readInvitationPageRequest, settleInvitationPage } from '@/server/invitations/invitation-page-request';
 import {
   previewTourCaptureInvitation,
   type TourCaptureInvitationPreviewOutcome,
@@ -31,17 +29,18 @@ export const dynamic = 'force-dynamic';
 // ADR-876 — noindex · no-referrer από το ΕΝΑ SSoT: ο σύνδεσμος φέρει διαπιστευτήριο στη διεύθυνση.
 export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
-function viewOf(outcome: TourCaptureInvitationPreviewOutcome, token: string, viewerEmail: string | null): TourCaptureInviteView {
-  return invitationPageViewOf(outcome, { token, viewerEmail, invitationHref: tourCaptureInvitationHref(token) });
+function viewOf(
+  outcome: TourCaptureInvitationPreviewOutcome,
+  page: { readonly token: string; readonly viewerEmail: string | null; readonly account: InvitationAccountStep | undefined },
+): TourCaptureInviteView {
+  return invitationPageViewOf(outcome, { ...page, invitationHref: tourCaptureInvitationHref(page.token) });
 }
 
 export default async function TourCaptureInvitePage({ params }: { params: Promise<{ token: string }> }): Promise<React.ReactElement> {
   const { token, viewerEmail } = await readInvitationPageRequest(params);
 
   const outcome = await previewTourCaptureInvitation(getAdminFirestore(), { token, viewerEmail });
-  // «Ανοίχτηκε» ΜΕΤΑ την απόκριση, μόνο την πρώτη φορά — ποτέ δεν πετά.
-  if (outcome.kind === 'preview') after(outcome.markOpened);
-  if (outcome.kind === 'refused' && CORE_REFUSAL_IS_NOT_FOUND[outcome.reason]) notFound();
-
-  return <TourCaptureInviteContent view={viewOf(outcome, token, viewerEmail)} />;
+  // «Ανοίχτηκε» μετά την απόκριση · 404 · βήμα λογαριασμού (ADR-915 §39.6) — ο ΕΝΑΣ δρόμος όλων των σελίδων πρόσκλησης.
+  const account = await settleInvitationPage(outcome);
+  return <TourCaptureInviteContent view={viewOf(outcome, { token, viewerEmail, account })} />;
 }

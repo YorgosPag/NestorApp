@@ -12,8 +12,10 @@ import 'server-only';
 import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO as clockNowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import type { InvitationAccountStep } from '@/lib/invitations/invitation-respond';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
+import { invitationAccountStepOf } from '@/server/invitations/invitation-account-step';
 import { readInvitationByToken } from '@/server/invitations/invitation-redeem';
 import {
   isInvitableRole,
@@ -50,6 +52,8 @@ export type InvitationPreviewOutcome =
        * ⚠️ **Υπόδειξη, ΟΧΙ απόφαση**: η δέσμευση κρίνεται ξανά στην εξαργύρωση (§7.5).
        */
       readonly addressedToViewer: boolean | null;
+      /** ADR-915 §39.6 — το βήμα λογαριασμού του παραλήπτη ως **κλείσιμο** (η διεύθυνση μένει εδώ· `pageAccountStepOf`). */
+      readonly accountStep: () => Promise<InvitationAccountStep>;
     }
   | { readonly kind: 'refused'; readonly reason: WorkspaceInvitationRefusal }
   | { readonly kind: 'unavailable' };
@@ -115,6 +119,7 @@ export async function previewWorkspaceInvitation(input: {
     kind: 'preview',
     invitationId,
     addressedToViewer: input.viewerEmail ? sameChannelEmail(input.viewerEmail, stored.inviteeEmail) : null,
+    accountStep: () => invitationAccountStepOf(stored.inviteeEmail),
     preview: {
       workspaceName: await readWorkspaceName(stored.companyId),
       role: stored.role,

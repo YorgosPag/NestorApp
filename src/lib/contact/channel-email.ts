@@ -60,3 +60,20 @@ export function sameChannelEmail(a: string | null | undefined, b: string | null 
   const right = normaliseChannelEmail(b ?? '');
   return left !== '' && left === right;
 }
+
+/**
+ * **Κρύβει το μεσαίο** — `μ***α@gmail.com`. Ο ΕΝΑΣ τρόπος να **δείξεις** διεύθυνση χωρίς να τη **δώσεις**.
+ *
+ * 🔑 **Γιατί δείχνεται καν**: ο άνθρωπος αναγνωρίζει **το δικό του** κουτί (πρώτο/τελευταίο γράμμα + domain) και
+ * καταλαβαίνει αμέσως αν κάτι πήγε σε λάθος διεύθυνση — ενώ όποιος κρατά ξένο σύνδεσμο δεν μαθαίνει τη διεύθυνση.
+ * Καταναλωτές: η επιβεβαίωση πρώτης επαφής (`/api/first-contacts/guest`, εκεί γεννήθηκε 2026-09) και το βήμα
+ * λογαριασμού των σελίδων πρόσκλησης (ADR-915 §39 · 2026-11-14) — δεύτερος καταναλωτής ⇒ ζει εδώ.
+ */
+export function maskEmail(email: string): string {
+  const at = email.indexOf('@');
+  if (at <= 0) return '***';
+  const local = email.slice(0, at);
+  const domain = email.slice(at);
+  if (local.length <= 2) return `${local.slice(0, 1)}***${domain}`;
+  return `${local.slice(0, 1)}***${local.slice(-1)}${domain}`;
+}

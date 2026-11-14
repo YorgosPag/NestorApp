@@ -14,6 +14,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { InvitationRedeemer } from '@/server/invitations/invitation-redeem';
 import { mintHandoverInvitation } from '@/server/property-handover-invitations/handover-invitation-kind';
 import { previewHandoverInvitation } from '@/server/property-handover-invitations/handover-invitation-preview';
+import { invitationAccountStepOf } from '@/server/invitations/invitation-account-step';
 import { respondToHandoverInvitation } from '@/server/property-handover-invitations/handover-invitation-redeem';
 import { syncPropertyHandovers } from '@/services/property-handover/property-handover-write.service';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
@@ -31,6 +32,11 @@ jest.mock('@/services/conveyance/conveyance-subject.server', () => ({
   })),
 }));
 jest.mock('@/server/invitations/invitation-notice', () => ({ deliverInvitationEmail: jest.fn() }));
+// ADR-915 §39.6 — ο κριτής του βήματος λογαριασμού (Firebase Auth) αντικαθίσταται: εδώ κρίνεται η ΣΥΝΔΕΣΗ — ότι το
+// κλείσιμο της όψης ρωτά για τη διεύθυνση του ΠΑΡΑΛΗΠΤΗ και μόνο όταν κληθεί.
+jest.mock('@/server/invitations/invitation-account-step', () => ({
+  invitationAccountStepOf: jest.fn(async () => ({ kind: 'create', maskedEmail: 'masked', googleSuggested: false })),
+}));
 // ADR-916 Φ-Δ.2 — ο αγωγός ειδοποιήσεων καταγράφει (ο ΚΑΛΩΝ ελέγχεται, όχι ο orchestrator)· οι διαχειριστές ως σταθερά.
 jest.mock('@/server/notifications/notification-orchestrator', () => ({
   ...jest.requireActual('@/server/notifications/notification-orchestrator'),
@@ -193,6 +199,16 @@ describe('Β23–Β25 — η όψη της σελίδας `/handover-invite/[tok
     // 🔒 Κανένα email παραλήπτη, κανένα όνομα μέρους στην όψη (ADR-742).
     expect(JSON.stringify(seen.kind === 'preview' ? seen.preview : null)).not.toContain(ANNA.email);
     expect((await accept(token)).kind).toBe('accepted');
+  });
+
+  it('Β23β — ADR-915 §39.6: το βήμα λογαριασμού ρωτά για τη διεύθυνση του ΑΓΟΡΑΣΤΗ, και μόνο όταν κληθεί', async () => {
+    jest.mocked(invitationAccountStepOf).mockClear();
+    await sync();
+    const seen = await preview(tokenOf(sent[0]));
+    if (seen.kind !== 'preview') throw new Error(`αναμενόταν όψη, ήρθε ${seen.kind}`);
+    expect(invitationAccountStepOf).not.toHaveBeenCalled();
+    await expect(seen.accountStep()).resolves.toMatchObject({ kind: 'create' });
+    expect(invitationAccountStepOf).toHaveBeenCalledWith(ANNA.email);
   });
 
   it('Β24 — «ανοίχτηκε» γράφεται ΜΙΑ φορά· ποτέ μετά την αποδοχή', async () => {

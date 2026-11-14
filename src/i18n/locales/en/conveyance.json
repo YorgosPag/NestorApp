@@ -347,6 +347,8 @@
       "unnamedProperty": "in the case",
       "signIn": "Sign in or sign up to answer",
       "signInHint": "Use the email address the invitation was sent to. Signing up takes about 2 minutes.",
+      "stepAnswer": "Credentials and acceptance",
+      "stepSpace": "The collaboration space",
       "credentialTitle": "Professional declaration",
       "credentialHint": "Your number is shown to the parties of the case as “declared”.",
       "numberLabel": {
@@ -373,6 +375,8 @@
         "open": "Open space"
       },
       "numberRequired": "Enter your registry number to take on the case.",
+      "registryLookup": "Can’t remember your number? Search the public registry",
+      "registryLookupHint": "The number appears on your licence and on every document you have signed with it. The registry page opens in a new tab.",
       "accept": "Accept and get access",
       "decline": "I decline",
       "accepted": "You took on the case",

@@ -76,6 +76,7 @@ jest.mock('@/auth', () => ({
 //    σουίτα της ΒΗΜΑ Α: ένα μισό σχήμα εκεί έριξε **17 από 26** άγκυρες, επειδή το
 //    `badge.tsx` καλεί το ίδιο άγκιστρο. Είναι `useMemo` πάνω σε σταθερές — τρέχουν.
 
+import { INVITATION_ACCOUNT_KEYS } from '@/components/invitations/invitation-account-labels';
 import { WorkspaceInviteContent } from '../WorkspaceInviteContent';
 import {
   EXIT_BY_REFUSAL,
@@ -179,6 +180,16 @@ describe('Β — η όψη πριν την απόφαση', () => {
     //    στον διακομιστή. Σκέτο `/login` εδώ θα σήμαινε ότι ο άνθρωπος συνδέεται και
     //    **χάνει** την πρόσκληση.
     expect(screen.getByRole('link', { name: INVITE_PAGE_KEYS.signInToAccept })).toHaveAttribute('href', href);
+  });
+
+  it('🔑 Β3β — ADR-915 §39.6: με βήμα λογαριασμού ο νέος καλείται σε ΕΓΓΡΑΦΗ με την καλυμμένη διεύθυνση, όχι σε «Σύνδεση»', () => {
+    const href = '/login?next=%2Finvite%2Ftok_1&mode=signup';
+    const account = { kind: 'create', maskedEmail: 'n***s@example.com', googleSuggested: false } as const;
+    render(<WorkspaceInviteContent view={previewView({ kind: 'sign-in', href, account })} />);
+
+    expect(screen.getByText(`${INVITATION_ACCOUNT_KEYS.createBody}|n***s@example.com`)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: INVITATION_ACCOUNT_KEYS.createAction })).toHaveAttribute('href', href);
+    expect(screen.queryByRole('link', { name: INVITE_PAGE_KEYS.signInToAccept })).toBeNull();
   });
 
   it('🔑 Β4 — ο ρόλος λέγεται με τη ΔΙΚΗ ΜΑΣ βάση, ποτέ ωμό `internal_user`', () => {

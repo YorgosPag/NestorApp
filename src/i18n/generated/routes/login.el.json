@@ -49,6 +49,11 @@
       "signInButton": "Συνδεση με Google",
       "success": "Επιτυχης συνδεση με Google!"
     },
+    "invitationAccount": {
+      "loginBanner": "Συνεχίζετε την πρόσκληση για το {email} — χρησιμοποιήστε αυτή τη διεύθυνση.",
+      "loginNoAccountAction": "Δημιουργία λογαριασμού",
+      "loginNoAccountHint": "Δεν έχετε λογαριασμό με αυτή τη διεύθυνση;"
+    },
     "loading": {
       "spinnerLabel": "Φόρτωση"
     },

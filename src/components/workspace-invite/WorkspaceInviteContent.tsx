@@ -26,6 +26,7 @@ import { useCallback, useRef, useState, useTransition } from 'react';
 
 import { useAuthOptional } from '@/auth';
 
+import { InvitationIdentityGate } from '@/components/invitations/InvitationIdentityGate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
@@ -58,7 +59,7 @@ import {
   REFUSAL_KEY,
 } from './workspace-invite-labels';
 import { WORKSPACE_INVITE_NS } from './workspace-invite-namespace';
-import { OtherAccountNotice, SwitchAccountButton } from './SwitchAccount';
+import { SwitchAccountButton } from './SwitchAccount';
 
 // 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE.
 //
@@ -364,17 +365,19 @@ function PreviewScreen({
   return (
     <InviteCard title={t(INVITE_PAGE_KEYS.title)}>
       <InvitationFacts preview={view.preview} />
-      {view.respond.kind === 'ready' && (
+      {/* 🔑 §13 ε.δ + ADR-915 §39.6 — ο ΚΟΙΝΟΣ φύλακας: ανώνυμος ⇒ βήμα λογαριασμού (νέος/υπάρχων, ποια διεύθυνση) ·
+          άλλος λογαριασμός ⇒ το λέμε ΠΡΙΝ το κλικ · έτοιμος ⇒ οι πράξεις. */}
+      <InvitationIdentityGate
+        respond={view.respond}
+        switchAccountHref={view.switchAccountHref}
+        signInLabel={t(INVITE_PAGE_KEYS.signInToAccept)}
+        signInHint={t(INVITE_PAGE_KEYS.signInHint)}
+      >
         <nav className="flex flex-col gap-2" aria-label={t(INVITE_PAGE_KEYS.title)}>
           <InviteActionButton action="accept" pendingAction={pendingAction} onRespond={onRespond} />
           <InviteActionButton action="decline" pendingAction={pendingAction} onRespond={onRespond} />
         </nav>
-      )}
-      {view.respond.kind === 'sign-in' && <SignInInvitation href={view.respond.href} />}
-      {/* 🔑 §13 ε.δ — άλλος λογαριασμός: το λέμε ΠΡΙΝ το κλικ, με τον δρόμο έτοιμο. */}
-      {view.respond.kind === 'other-account' && (
-        <OtherAccountNotice signedInAs={view.respond.signedInAs} href={view.switchAccountHref} />
-      )}
+      </InvitationIdentityGate>
     </InviteCard>
   );
 }
@@ -463,30 +466,5 @@ function InvitationFacts({ preview }: { preview: WorkspaceInvitationPreview }) {
         <CardDescription>{t(INVITE_PAGE_KEYS.identityDeclared)}</CardDescription>
       )}
     </article>
-  );
-}
-
-/**
- * **Ο ανώνυμος βλέπει ΠΡΩΤΑ ποιος τον καλεί, και μετά συνδέεται** (§5 #4, αντι-phishing).
- *
- * ⚠️ Ο σύνδεσμος έρχεται **έτοιμος από τον διακομιστή** (`loginHref`, που περνά από τον
- * φρουρό `safeReturnPath`) — η οθόνη **δεν** συναρμολογεί `?next=` μόνη της.
- */
-function SignInInvitation({ href }: { href: string }) {
-  const { t } = useTranslation([WORKSPACE_INVITE_NS]);
-  const colors = useSemanticColors();
-
-  return (
-    <section className="flex flex-col gap-2">
-      <p className={cn('text-sm', colors.text.muted)}>{t(INVITE_PAGE_KEYS.signInHint)}</p>
-      {/*
-        ⚠️ Ωμό `href` από τον διακομιστή: δεν είναι κυριολεκτική διαδρομή του καταλόγου
-        (κουβαλά `?next=`), γι' αυτό δεν περνά από τον γενικό `Link` του συνόρου αλλά
-        δηλώνεται ρητά ως πλοήγηση ανώτατου επιπέδου προς τη **δική μας** σελίδα σύνδεσης.
-      */}
-      <Button asChild>
-        <a href={href}>{t(INVITE_PAGE_KEYS.signInToAccept)}</a>
-      </Button>
-    </section>
   );
 }

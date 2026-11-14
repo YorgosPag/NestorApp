@@ -11,6 +11,11 @@
  */
 
 jest.mock('server-only', () => ({}));
+// ADR-915 §39.6 — ο κριτής του βήματος λογαριασμού (Firebase Auth) αντικαθίσταται: εδώ κρίνεται η ΣΥΝΔΕΣΗ — ότι το
+// κλείσιμο της όψης ρωτά για τη διεύθυνση του ΠΑΡΑΛΗΠΤΗ και μόνο όταν κληθεί.
+jest.mock('@/server/invitations/invitation-account-step', () => ({
+  invitationAccountStepOf: jest.fn(async () => ({ kind: 'create', maskedEmail: 'masked', googleSuggested: false })),
+}));
 jest.mock('@/lib/workspace/workspace-catalog', () => ({
   readWorkspaceName: async (companyId: string) => (companyId === 'comp_agency' ? 'Μεσιτικό Αιγαίου' : ''),
 }));
@@ -21,6 +26,7 @@ import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
+import { invitationAccountStepOf } from '@/server/invitations/invitation-account-step';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { issueTourCaptureInvitation, revokeTourCaptureInvitation } from '../tour-capture-invitation';
@@ -89,6 +95,16 @@ describe('Ο — η όψη', () => {
     expect(await previewTourCaptureInvitation(db, { token, viewerEmail: null })).toEqual({ kind: 'refused', reason: 'revoked' });
     expect(await previewTourCaptureInvitation(db, { token: `${token}x`, viewerEmail: null }))
       .toMatchObject({ kind: 'refused' });
+  });
+
+  it('Ο6 — ADR-915 §39.6: το βήμα λογαριασμού ρωτά για τη διεύθυνση του ΠΑΡΑΛΗΠΤΗ, και μόνο όταν κληθεί', async () => {
+    jest.mocked(invitationAccountStepOf).mockClear();
+    const { token } = await issue();
+    const outcome = await previewTourCaptureInvitation(db, { token, viewerEmail: null });
+    if (outcome.kind !== 'preview') throw new Error(`αναμενόταν όψη, ήρθε ${outcome.kind}`);
+    expect(invitationAccountStepOf).not.toHaveBeenCalled();
+    await expect(outcome.accountStep()).resolves.toMatchObject({ kind: 'create' });
+    expect(invitationAccountStepOf).toHaveBeenCalledWith(EMAIL);
   });
 
   it('Ο4 — addressedToViewer: σωστός (με άλλα κεφαλαία) · άλλος λογαριασμός · κανείς', async () => {

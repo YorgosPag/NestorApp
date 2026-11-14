@@ -6,7 +6,7 @@
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
-    "src/i18n/generated/routes/case-invite__token.el.json": "485cd81824c7189d5425d63927b8b85879f4b21c17d3642b7a6cdfed70adc03d",
+    "src/i18n/generated/routes/case-invite__token.el.json": "d9620693453fd5929aefcff15d6abf97c94f0cf2fd1ba7ddb017b53d2f211ce8",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
     "src/i18n/generated/routes/data-deletion.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -18,10 +18,10 @@
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
     "src/i18n/generated/routes/email__preferences__token.el.json": "45c4179d358aa4900494f31547bd1126905e23cae623d581d4c87d52ac62e516",
-    "src/i18n/generated/routes/engagements.el.json": "7960836cb42ff3ca2ba1ae9aea7484e21fe50e9c1162326d5fbda518cee06401",
+    "src/i18n/generated/routes/engagements.el.json": "2d2d9157630468ffc50de0cd897dcb6547138ec7f5146bcefbf8c42e71dbc653",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
-    "src/i18n/generated/routes/handover-invite__token.el.json": "77391ee1f926f45a51ba8ed20018681580e5c4e00f2ed34038ef2f5b56080515",
+    "src/i18n/generated/routes/handover-invite__token.el.json": "5f802bb153f7da3e1f25e91ec7ed91fb1acf50d1bfc8381b5c1661a996567d70",
     "src/i18n/generated/routes/handover-protocol.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/handover-protocol__verify.el.json": "bf46310bff0d59b1341fa8417b8e6b93a406aef159e5e0c2ff9d2152974233b3",
     "src/i18n/generated/routes/handover-protocol__verify__protocolId.el.json": "bf46310bff0d59b1341fa8417b8e6b93a406aef159e5e0c2ff9d2152974233b3",
@@ -29,16 +29,16 @@
     "src/i18n/generated/routes/handover-protocol__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
-    "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
+    "src/i18n/generated/routes/invite__token.el.json": "14d659a231e6bc8a89c08a3c83b19103a9c6c14cab339d7b9fe0e876d91528bf",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "5ac9b3387ec3fd1a520599d93f369a72de36a7655d79999feb53dbbea9ddba09",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "40faa0a4a561d7e7c6ea0aa7c630472ec585301f9b4b3c5a774aa2c0aaa17387",
     "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
-    "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
+    "src/i18n/generated/routes/login.el.json": "e1c3737dcc27e550c037d28aa9593d32efbebb8c5416df34268105eba65b4e77",
     "src/i18n/generated/routes/mandate__token.el.json": "8f964d1e521a28640ad5bee71fccf8e89541697902528a2db4bf3dca4dfea96a",
     "src/i18n/generated/routes/n__notificationId.el.json": "54c30325c22b7621417b7afaddaee9ae92de5fc24ee61a784ca6ecfc66d74da5",
-    "src/i18n/generated/routes/o__workspace__cases.el.json": "7960836cb42ff3ca2ba1ae9aea7484e21fe50e9c1162326d5fbda518cee06401",
+    "src/i18n/generated/routes/o__workspace__cases.el.json": "2d2d9157630468ffc50de0cd897dcb6547138ec7f5146bcefbf8c42e71dbc653",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__catalog__assets.el.json": "a87615d76e3d053b0b8e4607fe4bacef09d196de174c2ef93a71fd44731c80fd",
     "src/i18n/generated/routes/o__workspace__catalog__attributes.el.json": "51354342c54ce341bca5d524c343328301895b819c39f4b9d7e9572e91b0ed7b",
@@ -115,14 +115,14 @@
     "src/i18n/generated/routes/suppliers__alias__catalogs__edition.el.json": "348276818746de8b2898e2c717bc0dbb6d51e6244228343526678dac98f22147",
     "src/i18n/generated/routes/suppliers__alias__p__model.el.json": "7d8df0168b46b4917d1b6451238c2f95985880d24ba092d9efe70bb27e83d307",
     "src/i18n/generated/routes/suppliers__alias__w__project.el.json": "173cc0cebc8298b9e133043e67df548db03d8819f7f11bb497750ca475899852",
-    "src/i18n/generated/routes/supply-invite__token.el.json": "4de7e5a2e7be1e7a22c54c367ddf9b7a3d260b5c0326857fb0c69f936c70abd1",
-    "src/i18n/generated/routes/supply-request__token.el.json": "4de7e5a2e7be1e7a22c54c367ddf9b7a3d260b5c0326857fb0c69f936c70abd1",
+    "src/i18n/generated/routes/supply-invite__token.el.json": "a5a0674bc4b01583a087774610d446d142facf4dc74106ad57633524adf6cf98",
+    "src/i18n/generated/routes/supply-request__token.el.json": "a5a0674bc4b01583a087774610d446d142facf4dc74106ad57633524adf6cf98",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/terms__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/terms__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9036017e6d14329a4ea85770427485f029ad3dac258547896db87ba304b14b66",
     "src/i18n/generated/routes/tour-captures.el.json": "4366e1da68c438c0bf803afebc878504ac67e4f388a111f4f522f89141acdaa4",
-    "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
+    "src/i18n/generated/routes/tour-invite__token.el.json": "e45f06e8af44370d125a47684c157ad22a75322ee394c594ed7f31242e315a58",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
     "src/i18n/generated/shell-slice.el.json": "b04de6d9fea067f2b27a62cb06bd7a0e6aca6696a79ae8df8a7f56efdaa71a49",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "745ebd13cf4c12680b5e0ff2511f5aab04964ad22890c97b0052690143d5c188",
+  "inputsSha256": "d0625e08e571c6f69017f53c653a3ffffae3377055e3e2a4663c2bdf4588bef6",
   "languages": [
     "el"
   ],
@@ -1231,6 +1231,17 @@
       "wants": {
         "auth": {
           "keys": [
+            "invitationAccount.createAction",
+            "invitationAccount.createBody",
+            "invitationAccount.createTitle",
+            "invitationAccount.googleHint",
+            "invitationAccount.otherAccount",
+            "invitationAccount.signInAction",
+            "invitationAccount.signInBody",
+            "invitationAccount.signInTitle",
+            "invitationAccount.stepAccount",
+            "invitationAccount.stepsLabel",
+            "invitationAccount.switchAction",
             "workspaceInvite.otherAccount",
             "workspaceInvite.switchAccount",
             "workspaceInvite.switchingAccount"
@@ -1294,11 +1305,15 @@
             "engagement.invite.refusals.role-conflict",
             "engagement.invite.refusals.slot-occupied",
             "engagement.invite.refusals.wrong-recipient",
+            "engagement.invite.registryLookup",
+            "engagement.invite.registryLookupHint",
             "engagement.invite.retry",
             "engagement.invite.roleLabel",
             "engagement.invite.scope",
             "engagement.invite.signIn",
             "engagement.invite.signInHint",
+            "engagement.invite.stepAnswer",
+            "engagement.invite.stepSpace",
             "engagement.invite.title",
             "engagement.invite.unavailable",
             "engagement.invite.unnamedHost",
@@ -2852,6 +2867,8 @@
             "engagement.invite.numberLabel.tee",
             "engagement.invite.numberLabel.ypen",
             "engagement.invite.numberRequired",
+            "engagement.invite.registryLookup",
+            "engagement.invite.registryLookupHint",
             "engagement.myCases.accept",
             "engagement.myCases.acceptDialog.accepting",
             "engagement.myCases.acceptDialog.cancel",
@@ -3304,6 +3321,17 @@
       "wants": {
         "auth": {
           "keys": [
+            "invitationAccount.createAction",
+            "invitationAccount.createBody",
+            "invitationAccount.createTitle",
+            "invitationAccount.googleHint",
+            "invitationAccount.otherAccount",
+            "invitationAccount.signInAction",
+            "invitationAccount.signInBody",
+            "invitationAccount.signInTitle",
+            "invitationAccount.stepAccount",
+            "invitationAccount.stepsLabel",
+            "invitationAccount.switchAction",
             "workspaceInvite.otherAccount",
             "workspaceInvite.switchAccount",
             "workspaceInvite.switchingAccount"
@@ -3864,6 +3892,17 @@
       "wants": {
         "auth": {
           "keys": [
+            "invitationAccount.createAction",
+            "invitationAccount.createBody",
+            "invitationAccount.createTitle",
+            "invitationAccount.googleHint",
+            "invitationAccount.otherAccount",
+            "invitationAccount.signInAction",
+            "invitationAccount.signInBody",
+            "invitationAccount.signInTitle",
+            "invitationAccount.stepAccount",
+            "invitationAccount.stepsLabel",
+            "invitationAccount.switchAction",
             "workspaceInvite.accept",
             "workspaceInvite.accepted.activeNow",
             "workspaceInvite.accepted.notActive",
@@ -4642,6 +4681,9 @@
             "google.divider",
             "google.signInButton",
             "google.success",
+            "invitationAccount.loginBanner",
+            "invitationAccount.loginNoAccountAction",
+            "invitationAccount.loginNoAccountHint",
             "loading.spinnerLabel",
             "messages.resetEmailSent",
             "messages.signinSuccess",
@@ -5411,6 +5453,8 @@
             "engagement.invite.numberLabel.tee",
             "engagement.invite.numberLabel.ypen",
             "engagement.invite.numberRequired",
+            "engagement.invite.registryLookup",
+            "engagement.invite.registryLookupHint",
             "engagement.myCases.accept",
             "engagement.myCases.acceptDialog.accepting",
             "engagement.myCases.acceptDialog.cancel",
@@ -40001,6 +40045,17 @@
       "wants": {
         "auth": {
           "keys": [
+            "invitationAccount.createAction",
+            "invitationAccount.createBody",
+            "invitationAccount.createTitle",
+            "invitationAccount.googleHint",
+            "invitationAccount.otherAccount",
+            "invitationAccount.signInAction",
+            "invitationAccount.signInBody",
+            "invitationAccount.signInTitle",
+            "invitationAccount.stepAccount",
+            "invitationAccount.stepsLabel",
+            "invitationAccount.switchAction",
             "workspaceInvite.otherAccount",
             "workspaceInvite.switchAccount",
             "workspaceInvite.switchingAccount"
@@ -40093,6 +40148,17 @@
       "wants": {
         "auth": {
           "keys": [
+            "invitationAccount.createAction",
+            "invitationAccount.createBody",
+            "invitationAccount.createTitle",
+            "invitationAccount.googleHint",
+            "invitationAccount.otherAccount",
+            "invitationAccount.signInAction",
+            "invitationAccount.signInBody",
+            "invitationAccount.signInTitle",
+            "invitationAccount.stepAccount",
+            "invitationAccount.stepsLabel",
+            "invitationAccount.switchAction",
             "workspaceInvite.otherAccount",
             "workspaceInvite.switchAccount",
             "workspaceInvite.switchingAccount"
@@ -40582,6 +40648,17 @@
       "wants": {
         "auth": {
           "keys": [
+            "invitationAccount.createAction",
+            "invitationAccount.createBody",
+            "invitationAccount.createTitle",
+            "invitationAccount.googleHint",
+            "invitationAccount.otherAccount",
+            "invitationAccount.signInAction",
+            "invitationAccount.signInBody",
+            "invitationAccount.signInTitle",
+            "invitationAccount.stepAccount",
+            "invitationAccount.stepsLabel",
+            "invitationAccount.switchAction",
             "workspaceInvite.otherAccount",
             "workspaceInvite.switchAccount",
             "workspaceInvite.switchingAccount"
@@ -40837,7 +40914,7 @@
   ],
   "stats": {
     "matchedKeys": 274,
-    "sliceBytes": 1332657
+    "sliceBytes": 1342705
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

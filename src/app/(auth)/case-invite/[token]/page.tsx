@@ -13,17 +13,15 @@ import 'server-only';
  */
 
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { after } from 'next/server';
 
 import { CaseInviteContent, type CaseInviteView } from '@/components/case-invite/CaseInviteContent';
 import { activeWorkspaceOf } from '@/lib/auth/workspace-membership';
 import { caseInvitationHref } from '@/lib/conveyance/conveyance-routes';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { CORE_REFUSAL_IS_NOT_FOUND, invitationPageViewOf } from '@/lib/invitations/invitation-respond';
+import { invitationPageViewOf, type InvitationAccountStep } from '@/lib/invitations/invitation-respond';
 import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
 import type { PageIdentity } from '@/server/auth/page-identity';
-import { readInvitationPageRequest } from '@/server/invitations/invitation-page-request';
+import { readInvitationPageRequest, settleInvitationPage } from '@/server/invitations/invitation-page-request';
 import { actingViews } from '@/services/conveyance/conveyance-acting-workspace.server';
 import type { AcceptancePreview } from '@/types/conveyance-case';
 import {
@@ -40,10 +38,11 @@ function viewOf(
   outcome: EngagementInvitationPreviewOutcome,
   token: string,
   viewerEmail: string | null,
-  acceptance: AcceptancePreview | null,
+  answers: { readonly acceptance: AcceptancePreview | null; readonly account: InvitationAccountStep | undefined },
 ): CaseInviteView {
-  const view = invitationPageViewOf(outcome, { token, viewerEmail, invitationHref: caseInvitationHref(token) });
-  return view.kind === 'preview' ? { ...view, acceptance } : view;
+  const page = { token, viewerEmail, invitationHref: caseInvitationHref(token), account: answers.account };
+  const view = invitationPageViewOf(outcome, page);
+  return view.kind === 'preview' ? { ...view, acceptance: answers.acceptance } : view;
 }
 
 /**
@@ -60,9 +59,9 @@ export default async function CaseInvitePage({ params }: { params: Promise<{ tok
   const { token, viewerEmail, viewer } = await readInvitationPageRequest(params);
 
   const outcome = await previewEngagementInvitation(getAdminFirestore(), { token, viewerEmail });
-  // «Ανοίχτηκε» ΜΕΤΑ την απόκριση, μόνο την πρώτη φορά — ποτέ δεν πετά.
-  if (outcome.kind === 'preview') after(outcome.markOpened);
-  if (outcome.kind === 'refused' && CORE_REFUSAL_IS_NOT_FOUND[outcome.reason]) notFound();
-
-  return <CaseInviteContent view={viewOf(outcome, token, viewerEmail, await acceptanceFor(outcome, viewer))} />;
+  // «Ανοίχτηκε» μετά την απόκριση · 404 · βήμα λογαριασμού (ADR-915 §39.6) — ο ΕΝΑΣ δρόμος όλων των σελίδων πρόσκλησης.
+  // Βήμα και «για ποιο γραφείο» αποκλείονται αμοιβαία (μη-παραλήπτης vs παραλήπτης) ⇒ καμία σειριακή αναμονή.
+  const account = await settleInvitationPage(outcome);
+  const acceptance = await acceptanceFor(outcome, viewer);
+  return <CaseInviteContent view={viewOf(outcome, token, viewerEmail, { acceptance, account })} />;
 }

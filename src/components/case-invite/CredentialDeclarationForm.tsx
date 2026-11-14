@@ -11,10 +11,12 @@
  * ο άνθρωπος δεν βλέπει λίστα μητρώων να διαλέξει λάθος.
  */
 
+import { ExternalLink } from 'lucide-react';
 import { useId } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { registryAuthorityLookupUrl } from '@/config/professional-licences';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -38,6 +40,33 @@ export function credentialDraftOf(hint: CredentialHint | null): CredentialDraft 
 export function credentialFromDraft(draft: CredentialDraft): CredentialDeclarationInput | null {
   const number = draft.number.trim();
   return number.length === 0 ? null : { number, chapter: draft.chapter.trim() || null };
+}
+
+/**
+ * ADR-915 §39.6 — **«Δεν θυμάστε τον αριθμό;»**: ο δρόμος στη δημόσια αναζήτηση του μητρώου, **μόνο** όταν υπάρχει
+ * (`registryAuthorityLookupUrl` — παράγεται από τις άδειες, ποτέ μαντεμένος). Κανένα API· η ιδιότητα μένει **δηλωμένη**
+ * (ADR-798 §7). Εξωτερικός σύνδεσμος, νέα καρτέλα, χωρίς referrer: η σελίδα της πρόσκλησης φέρει διαπιστευτήριο (ADR-876).
+ */
+function RegistryLookupLink({ authority }: { readonly authority: RegistryAuthorityId }) {
+  const { t } = useTranslation(CASE_INVITE_NS);
+  const hintId = useId();
+  const url = registryAuthorityLookupUrl(authority);
+  if (url === null) return null;
+  return (
+    <>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-describedby={hintId}
+        className="inline-flex w-fit items-center gap-1 text-xs text-foreground underline underline-offset-2"
+      >
+        {t(CASE_INVITE_KEYS.registryLookup)}
+        <ExternalLink className="size-3" aria-hidden="true" />
+      </a>
+      <p id={hintId} className="text-xs text-muted-foreground">{t(CASE_INVITE_KEYS.registryLookupHint)}</p>
+    </>
+  );
 }
 
 interface CredentialDeclarationFormProps {
@@ -73,6 +102,7 @@ export function CredentialDeclarationForm({ authority, draft, onChange, showMiss
           onChange={(event) => onChange({ ...draft, number: event.target.value })}
         />
         {missing && <p id={errorId} role="alert" className={cn('text-xs', colors.text.error)}>{t(CASE_INVITE_KEYS.numberRequired)}</p>}
+        <RegistryLookupLink authority={authority} />
       </section>
       {/* Εθνικό μητρώο (π.χ. ΥΠΕΝ) ⇒ κανένας σύλλογος/περιφέρεια: ο αριθμός μόνος του αρκεί (`REGISTRY_AUTHORITY_SCOPE`). */}
       {isChapteredRegistry(authority) && (

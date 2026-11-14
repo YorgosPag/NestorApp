@@ -17,13 +17,11 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO } from '@/lib/date-local';
 import { propertyHandoverInvitationFromDocument } from '@/lib/property-handover/property-handover-invitation-schema';
 import { createModuleLogger } from '@/lib/telemetry';
-import { markInvitationOpenedAt } from '@/server/invitations/invitation-lifecycle';
+import { addressedInvitationPreview, type AddressedInvitationPreviewOutcome } from '@/server/invitations/invitation-preview-outcome';
 import { readInvitationByToken } from '@/server/invitations/invitation-redeem';
-import type { InvitationCoreRefusal } from '@/types/invitation-core';
 import type { PropertyHandoverInvitationPreview } from '@/types/property-handover-invitation';
 
 import { describeHandoverInvitation } from './handover-invitation-description';
@@ -31,17 +29,7 @@ import { PROPERTY_HANDOVER_INVITATION_LOCATOR } from './handover-invitation-kind
 
 const logger = createModuleLogger('handover-invitation-preview');
 
-export type HandoverInvitationPreviewOutcome =
-  | {
-      readonly kind: 'preview';
-      readonly preview: PropertyHandoverInvitationPreview;
-      /** Απευθύνεται στον συνδεδεμένο; `null` ⇒ κανείς συνδεδεμένος. **Υπόδειξη**, όχι απόφαση. */
-      readonly addressedToViewer: boolean | null;
-      /** Η σήμανση «ανοίχτηκε» — για το `after()`· **δεν** ταξιδεύει στο σύρμα, ποτέ δεν πετά. */
-      readonly markOpened: () => Promise<void>;
-    }
-  | { readonly kind: 'refused'; readonly reason: InvitationCoreRefusal }
-  | { readonly kind: 'unavailable' };
+export type HandoverInvitationPreviewOutcome = AddressedInvitationPreviewOutcome<PropertyHandoverInvitationPreview>;
 
 /** **Η όψη — ΧΩΡΙΣ ταυτότητα και ΧΩΡΙΣ κατανάλωση.** */
 export async function previewHandoverInvitation(
@@ -62,15 +50,12 @@ export async function previewHandoverInvitation(
     logger.error('Πρόσκληση αγοραστή που δεν διαβάζεται — δεν εμφανίζεται', { invitationId: found.invitationId });
     return { kind: 'unavailable' };
   }
-  const { ref } = found.location;
-  return {
-    kind: 'preview',
-    addressedToViewer: input.viewerEmail ? sameChannelEmail(input.viewerEmail, invitation.inviteeEmail) : null,
-    markOpened: () => markInvitationOpenedAt(db, ref, nowISO()),
+  return addressedInvitationPreview(input, invitation, {
+    opened: { db, ref: found.location.ref },
     preview: {
       ...(await describeHandoverInvitation(db, invitation)),
       occasion: invitation.occasion,
       expiresAt: invitation.expiresAt,
     },
-  };
+  });
 }

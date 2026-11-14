@@ -34,6 +34,7 @@ import { useAuthFormState } from '../hooks/useAuthFormState';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AuthBrandMark, AuthScreen } from './AuthScreenChrome';
 import { AuthField } from './AuthField';
+import { InvitationLoginBanner, InvitationNoAccountHint } from './InvitationLoginNotice';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -48,6 +49,7 @@ export function AuthForm({
   //    σε σελίδα που ζητά εταιρικά δεδομένα, με `AUTHORIZATION_ERROR` στην κονσόλα.
   //    Απόν ⇒ το `useAuthFormState` ρωτά τον ΕΝΑΝ επιλυτή (`landing.ts`).
   redirectTo,
+  invitedAs,
 }: AuthFormProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
@@ -144,11 +146,17 @@ export function AuthForm({
                 </Alert>
               )}
 
+              {/* ADR-915 §39 — η φόρμα θυμάται την πρόσκληση (καλυμμένη διεύθυνση) */}
+              {invitedAs && <InvitationLoginBanner invitedAs={invitedAs} />}
+
               {/* Error Message */}
               {state.displayError && (
                 <Alert variant="destructive">
                   <AlertDescription>{state.displayError}</AlertDescription>
                 </Alert>
+              )}
+              {invitedAs && state.displayError && state.mode === 'signin' && (
+                <InvitationNoAccountHint onCreate={() => state.setMode('signup')} />
               )}
 
               {/* Email Field */}

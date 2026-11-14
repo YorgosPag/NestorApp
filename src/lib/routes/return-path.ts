@@ -32,6 +32,8 @@
  * `/%09/evil.example` (tab που πετιέται) · `javascript:…` · `https://…`.
  */
 
+import type { AuthFormMode } from '@/auth/types/auth.types';
+
 import { AUTH_ROUTES } from './authRoutes';
 import { declaredHref, typedHref, withQuery, type WorkspaceHref } from '@/lib/workspace/route-worlds';
 
@@ -117,12 +119,49 @@ export function safeReturnPath(raw: unknown): WorkspaceHref | null {
  * ποτέ την ασφάλεια. **Ποτέ δεν πετά** — ένας φρουρός σύνδεσης που ρίχνει σελίδα
  * επειδή κάποιος έγραψε σκουπίδια στο URL θα ήταν χειρότερος από κανέναν.
  */
-export function loginHref(returnPath?: string | null): WorkspaceHref {
+export function loginHref(returnPath?: string | null, entry?: LoginEntry): WorkspaceHref {
   const safe = safeReturnPath(returnPath);
   if (safe === null) return typedHref(AUTH_ROUTES.login);
 
-  const query = new URLSearchParams({ [RETURN_PATH_PARAM]: safe }).toString();
-  return withQuery(AUTH_ROUTES.login, query);
+  const params = new URLSearchParams({ [RETURN_PATH_PARAM]: safe });
+  if (entry?.mode) params.set(AUTH_ENTRY_MODE_PARAM, entry.mode);
+  if (entry?.invitedAs && invitedAsOf(entry.invitedAs) !== null) params.set(INVITED_AS_PARAM, entry.invitedAs);
+  return withQuery(AUTH_ROUTES.login, params.toString());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔑 ΤΟ ΠΛΑΙΣΙΟ ΤΗΣ ΕΙΣΟΔΟΥ (ADR-915 §39 — «βήμα λογαριασμού», 2026-11-14)
+// ─────────────────────────────────────────────────────────────────────────────
+// Μια σελίδα πρόσκλησης **ξέρει** αν ο παραλήπτης έχει λογαριασμό· η φόρμα όχι. Χωρίς αυτό ο νέος επαγγελματίας
+// προσγειωνόταν στη «Σύνδεση», δοκίμαζε, και έπαιρνε «Μη έγκυρα στοιχεία» — χωρίς να μάθει ότι έπρεπε να κάνει
+// **Εγγραφή** και **με ποιο** email (μετρημένο ζωντανά). Ίδιο ζεύγος γραφέα/αναγνώστη με το `next`: **ένα** όνομα
+// παραμέτρου, **ένας** φρουρός. ⛔ Το `invitedAs` είναι **ΜΟΝΟ** καλυμμένη μορφή (`maskEmail`) — ποτέ πλήρης
+// διεύθυνση στο URL (ιστορικό, Referer, logs).
+
+/** Οι λειτουργίες της φόρμας — ίδιο κλειστό σύνολο με το `AuthFormMode`. */
+export const AUTH_ENTRY_MODES = ['signin', 'signup', 'reset'] as const satisfies readonly AuthFormMode[];
+export type AuthEntryMode = (typeof AUTH_ENTRY_MODES)[number];
+
+export const AUTH_ENTRY_MODE_PARAM = 'mode' as const;
+export const INVITED_AS_PARAM = 'invitedAs' as const;
+
+export interface LoginEntry {
+  readonly mode?: AuthEntryMode;
+  /** Καλυμμένη διεύθυνση του παραλήπτη (`g***1@gmail.com`) — για τη λωρίδα «συνεχίζετε την πρόσκληση για…». */
+  readonly invitedAs?: string;
+}
+
+/** Η καλυμμένη μορφή: `x***y@domain` ή `x***@domain` — τίποτε άλλο δεν περνά. */
+const MASKED_EMAIL_SHAPE = /^[^\s@*]{1}\*\*\*[^\s@*]?@[^\s@]{1,253}$/u;
+
+/** `?mode=` ⇒ λειτουργία της φόρμας, ή `null` (πίνακας/άγνωστο ⇒ η προεπιλογή της σελίδας). */
+export function authEntryModeOf(raw: unknown): AuthEntryMode | null {
+  return typeof raw === 'string' && (AUTH_ENTRY_MODES as readonly string[]).includes(raw) ? (raw as AuthEntryMode) : null;
+}
+
+/** `?invitedAs=` ⇒ η καλυμμένη διεύθυνση, ή `null` αν δεν έχει **ακριβώς** καλυμμένο σχήμα (πλήρες email ⇒ `null`). */
+export function invitedAsOf(raw: unknown): string | null {
+  return typeof raw === 'string' && raw.length <= 260 && MASKED_EMAIL_SHAPE.test(raw) ? raw : null;
 }
 
 /**
