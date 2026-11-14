@@ -9,9 +9,13 @@
  *
  * 📏 Η έξοδος του αναγνώστη PP-OCR είναι **ήδη** κατανομή πιθανότητας ανά βήμα (softmax μέσα στο γράφημα ONNX) — καμία
  *   δεύτερη κανονικοποίηση εδώ.
+ * 🔑 ADR-929 §6.18 — **μόνο χαρακτήρες κάτοψης**: σε κάθε βήμα κερδίζει η πιθανότερη κλάση της μάσκας `planTextClassMask`
+ *   (Λατινικά · Ελληνικά · ψηφία/στίξη/σύμβολα — ποτέ ιδεόγραμμα), με την αρχική της πιθανότητα (βλ. `ocr-charset.ts`).
  *
  * @module bim/plan-recognition/ocr/ocr-rec-decode
  */
+
+import { planTextClassMask } from './ocr-charset';
 
 /** Έξοδος αναγνώστη `[βήματα × κλάσεις]`, γραμμή-προς-γραμμή. */
 export interface RecognizerOutput {
@@ -26,12 +30,13 @@ export interface DecodedText {
   readonly score: number;
 }
 
-function argmaxAt(out: RecognizerOutput, step: number): { readonly index: number; readonly prob: number } {
+/** Η πιθανότερη **επιτρεπτή** κλάση ενός βήματος (η `0`, blank, είναι πάντα επιτρεπτή ⇒ υπάρχει πάντα νικητής). */
+function argmaxAt(out: RecognizerOutput, step: number, allowed: Uint8Array): { readonly index: number; readonly prob: number } {
   const base = step * out.classes;
   let index = 0;
   let prob = out.data[base];
   for (let c = 1; c < out.classes; c++) {
-    if (out.data[base + c] > prob) { prob = out.data[base + c]; index = c; }
+    if (allowed[c] === 1 && out.data[base + c] > prob) { prob = out.data[base + c]; index = c; }
   }
   return { index, prob };
 }
@@ -39,12 +44,13 @@ function argmaxAt(out: RecognizerOutput, step: number): { readonly index: number
 /** Κείμενο + βαθμολογία από την έξοδο του αναγνώστη, με τις κλάσεις του `recognitionClasses`. */
 export function decodeCtc(out: RecognizerOutput, classes: readonly string[]): DecodedText {
   if (classes.length !== out.classes) throw new RangeError(`ocr-rec-decode: ${classes.length} classes != ${out.classes}`);
+  const allowed = planTextClassMask(classes);
   let text = '';
   let sum = 0;
   let kept = 0;
   let last = -1;
   for (let t = 0; t < out.steps; t++) {
-    const { index, prob } = argmaxAt(out, t);
+    const { index, prob } = argmaxAt(out, t, allowed);
     if (index !== last && index !== 0) {
       text += classes[index];
       sum += prob;
