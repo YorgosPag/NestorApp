@@ -126,6 +126,29 @@ export interface DxfFileRecord {
 // DxfFileMetadata shape expected by dxf-firestore-storage.impl.ts.
 // =============================================================================
 
+/** Τα πεδία μιας εγγραφής `files` που λένε από πού παράγεται η σκηνή — δομικά, ώστε να δέχεται και ωμό `DocumentData`. */
+interface SceneSourceFields {
+  readonly storagePath?: unknown;
+  readonly processedData?: unknown;
+}
+
+/**
+ * Η **ΜΙΑ** απάντηση στο «από ποιο μονοπάτι παράγεται η σκηνή αυτής της εγγραφής;» — για την **ανάγνωση** (φόρτωση
+ * ορόφου) **ΚΑΙ** την **εγγραφή** (auto-save, `getFileFloorScope`). Το `storagePath` (πρωτότυπο που ανέβηκε) προηγείται·
+ * χωρίς αυτό, το `processedData.processedDataPath` — που για αρχείο **γεννημένο** στον viewer (ADR-913) είναι η ΜΟΝΗ
+ * διεύθυνση, αφού η διπλή εγγραφή επίτηδες δεν γράφει ποτέ `storagePath` (`dual-write-to-files.ts`).
+ *
+ * 🔴 Πριν (2026-11-15): η φόρτωση είχε αυτή την εφεδρεία, η εγγραφή **όχι** ⇒ ο όροφος φόρτωνε κανονικά, αλλά η πρώτη
+ *    αλλαγή της επόμενης συνεδρίας έκρινε τον ίδιο φάκελο «ορφανό» και κάθε αλλαγή DXF χανόταν σιωπηλά στο reload.
+ */
+export function fileRecordSceneSource(record: SceneSourceFields): string | undefined {
+  if (typeof record.storagePath === 'string' && record.storagePath) return record.storagePath;
+  const processed = record.processedData;
+  if (!processed || typeof processed !== 'object' || !('processedDataPath' in processed)) return undefined;
+  const path = processed.processedDataPath;
+  return typeof path === 'string' && path ? path : undefined;
+}
+
 /**
  * Map a FileRecord from the `files` collection to DxfFileMetadata.
  * Used by getFileMetadataImpl() after redirecting reads from cadFiles → files.
@@ -137,9 +160,9 @@ export function mapFileRecordToDxfMetadata(
     id: record.id,
     fileName: record.originalFilename || record.displayName || record.id,
     storageUrl: record.downloadUrl || '',
-    // Fall back to processedDataPath when storagePath is missing — legacy records
-    // created before ADR-293 enforcement may omit the top-level field.
-    storagePath: record.storagePath || record.processedData?.processedDataPath,
+    // Fall back to processedDataPath when storagePath is missing (legacy records + ADR-913
+    // born drawings) — ο ΙΔΙΟΣ κανόνας με την εγγραφή, βλ. `fileRecordSceneSource`.
+    storagePath: fileRecordSceneSource(record),
     // FileRecord.updatedAt can be Date, string, or Firestore Timestamp
     lastModified: toFirestoreTimestamp(record.updatedAt),
     version: record.revision ?? 1,

@@ -9,6 +9,7 @@ import {
 } from '../security/DxfSecurityValidator';
 import { dxfLogger, isExpectedError } from './dxf-firestore-logger';
 import type { DxfSaveContext, DxfFileMetadata, DxfFileRecord } from './dxf-firestore.types';
+import { fileRecordSceneSource } from './dxf-firestore.types';
 import { deriveScenePath } from './dxf-scene-path';
 import {
   saveToStorageImpl,
@@ -462,8 +463,11 @@ export class DxfFirestoreService {
       const data = snap.data();
       const lifecycle = data.lifecycleState;
       const retired = data.isDeleted === true || (typeof lifecycle === 'string' && lifecycle !== 'active');
+      // Ο ΙΔΙΟΣ κανόνας με τη φόρτωση (`fileRecordSceneSource`): αλλιώς ένα γεννημένο σχέδιο (ADR-913, χωρίς
+      // `storagePath`) φορτώνει κανονικά αλλά κρίνεται «ορφανό» στην πρώτη εγγραφή της επόμενης συνεδρίας.
+      const sceneSource = fileRecordSceneSource(data);
       return {
-        ...(typeof data.storagePath === 'string' ? { storagePath: data.storagePath } : {}),
+        ...(sceneSource ? { storagePath: sceneSource } : {}),
         ...(typeof data.entityType === 'string' ? { entityType: data.entityType } : {}),
         ...(typeof data.entityId === 'string' ? { entityId: data.entityId } : {}),
         ...(retired ? { retired: true } : {}),
