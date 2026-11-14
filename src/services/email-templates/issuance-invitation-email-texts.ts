@@ -10,6 +10,7 @@
  * 🔒 **Διαφάνεια (GDPR άρθρο 14)**: κάθε υποσημείωση λέει **γιατί** το λαμβάνει ο άνθρωπος και πώς λέει «όχι».
  */
 
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { HumanLanguage } from '@/i18n/languages';
 import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
 
@@ -77,6 +78,16 @@ export interface IssuanceEmailWording {
     readonly stopLabel: string;
     /** `button` = η ετικέτα του κουμπιού άρνησης **από το locale της σελίδας** — ό,τι διαβάζει, αυτό βλέπει. */
     readonly stop: (button: string) => string;
+  };
+  /**
+   * §39 — **ο χώρος της ανάθεσης** (πρόσκληση σε λογαριασμό μετά το «Αναλαμβάνω»): το ίδιο το email πρόσκλησης
+   * (επαναποστολή από το γραφείο) **και** η γραμμή «επόμενο βήμα» της απόδειξης. Ο σύνδεσμος είναι δεμένος στη
+   * διεύθυνση **και** σε λογαριασμό με επαληθευμένο email — η προώθηση δεν δίνει τίποτα σε τρίτον.
+   */
+  readonly space: LinkWording & {
+    readonly intro: (office: string, document: string, property: string) => string;
+    readonly nextLabel: string;
+    readonly next: string;
   };
   readonly noteLabel: string;
   readonly unnamedOffice: string;
@@ -165,6 +176,24 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       stopLabel: 'Δεν θέλετε άλλες υπενθυμίσεις;',
       stop: (button) => `Πατήστε «${button}» στον σύνδεσμο ή ενημερώστε το γραφείο — οι υπενθυμίσεις σταματούν αμέσως.`,
     },
+    space: {
+      subject: (document, property) => `Ο χώρος της ανάθεσης: ${document} — ${property}`,
+      heading: 'Ο χώρος της ανάθεσης σας περιμένει',
+      intro: (office, document, property) =>
+        `${office} σας άνοιξε χώρο συνεργασίας για την έκδοση του εγγράφου «${document}» του ακινήτου ${property}.`,
+      expiresLabel: 'Ο σύνδεσμος εισόδου λήγει στις',
+      nextLabel: 'Επόμενο βήμα',
+      next:
+        `Η συνεργασία γίνεται μέσα στο ${PRODUCT_NAME}: ανοίξτε τον χώρο της ανάθεσης με λογαριασμό σε αυτή τη διεύθυνση. `
+        + 'Η εγγραφή παίρνει περίπου 2 λεπτά· θα σας ζητηθεί ο αριθμός μητρώου σας.',
+      cta: 'Ανοίξτε τον χώρο της ανάθεσης',
+      onlyWord: 'μόνο',
+      boundToAddress: (onlyHtml) =>
+        `Ο σύνδεσμος ανοίγει ${onlyHtml} με λογαριασμό σε αυτή τη διεύθυνση email — προωθημένος δεν λειτουργεί για άλλον.`,
+      footnote:
+        'Ο χώρος δίνει πρόσβαση μόνο σε αυτή την ανάθεση, όχι στο γραφείο. Τα στοιχεία επικοινωνίας σας δεν φαίνονται '
+        + 'σε κανέναν χωρίς τη δική σας επιλογή.',
+    },
     noteLabel: 'Σημείωση του γραφείου',
     unnamedOffice: 'Το γραφείο',
     unnamedProperty: 'σας',
@@ -248,6 +277,24 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       accessCodeHowTo: 'Use the code the office gave you. If you lost it, ask the office to send the request again.',
       stopLabel: 'No more reminders?',
       stop: (button) => `Choose “${button}” on the link or tell the office — the reminders stop right away.`,
+    },
+    space: {
+      subject: (document, property) => `The assignment space: ${document} — ${property}`,
+      heading: 'Your assignment space is ready',
+      intro: (office, document, property) =>
+        `${office} opened a collaboration space for issuing the document “${document}” for the property ${property}.`,
+      expiresLabel: 'The entry link expires on',
+      nextLabel: 'Next step',
+      next:
+        `The collaboration happens inside ${PRODUCT_NAME}: open the assignment space with an account on this address. `
+        + 'Signing up takes about 2 minutes; you will be asked for your registry number.',
+      cta: 'Open the assignment space',
+      onlyWord: 'only',
+      boundToAddress: (onlyHtml) =>
+        `The link opens ${onlyHtml} with an account on this email address — forwarded, it will not work for anyone else.`,
+      footnote:
+        'The space gives access to this assignment only, not to the office. Your contact details are not shown '
+        + 'to anyone without your own choice.',
     },
     noteLabel: 'Note from the office',
     unnamedOffice: 'The office',

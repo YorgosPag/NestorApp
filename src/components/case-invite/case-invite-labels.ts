@@ -8,6 +8,8 @@
  * νέα άρνηση ή νέο μητρώο δεν μεταγλωττίζεται χωρίς τα λόγια του.
  */
 
+import type { ChapteredRegistryId, RegistryAuthorityId } from '@/constants/professional-registries';
+import type { EngagementSubjectKind } from '@/types/engagement';
 import type { EngagementInvitationRefusal } from '@/types/engagement-invitation';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
@@ -49,17 +51,58 @@ export const CASE_INVITE_ROLE_KEY: Readonly<Record<LegalProfessionalRole, string
   notary: 'conveyance:engagement.roles.notary',
 };
 
-/** Η ετικέτα του αριθμού — **ο ρόλος** διαλέγει μητρώο (`ROLE_REGISTRY_AUTHORITY`, Ε-4), όχι ο άνθρωπος. */
-export const CASE_INVITE_NUMBER_KEY: Readonly<Record<LegalProfessionalRole, string>> = {
-  seller_lawyer: 'conveyance:engagement.invite.numberLabel.bar-association',
-  buyer_lawyer: 'conveyance:engagement.invite.numberLabel.bar-association',
-  notary: 'conveyance:engagement.invite.numberLabel.notary-association',
+/**
+ * Η ετικέτα του αριθμού — ανά **μητρώο**, που το παράγει η υπόθεση (νομικός ρόλος ⇒ σύλλογος · ανάθεση έκδοσης ⇒
+ * προσόν → άδεια → αρχή, ADR-862 §5.3.11), ποτέ ο άνθρωπος (Ε-4). Ολικός πάνω στο λεξιλόγιο των αρχών.
+ */
+export const CASE_INVITE_NUMBER_KEY: Readonly<Record<RegistryAuthorityId, string>> = {
+  tee: 'conveyance:engagement.invite.numberLabel.tee',
+  gemi: 'conveyance:engagement.invite.numberLabel.gemi',
+  oee: 'conveyance:engagement.invite.numberLabel.oee',
+  'bar-association': 'conveyance:engagement.invite.numberLabel.bar-association',
+  'notary-association': 'conveyance:engagement.invite.numberLabel.notary-association',
+  'regional-authority': 'conveyance:engagement.invite.numberLabel.regional-authority',
+  ypen: 'conveyance:engagement.invite.numberLabel.ypen',
 };
 
-export const CASE_INVITE_CHAPTER_KEY: Readonly<Record<LegalProfessionalRole, string>> = {
-  seller_lawyer: 'conveyance:engagement.invite.chapterLabel.bar-association',
-  buyer_lawyer: 'conveyance:engagement.invite.chapterLabel.bar-association',
-  notary: 'conveyance:engagement.invite.chapterLabel.notary-association',
+/** Ο σύλλογος/περιφέρεια — **μόνο** σε αρχή με παραρτήματα (`REGISTRY_AUTHORITY_SCOPE`)· η εθνική δεν τον έχει. */
+export const CASE_INVITE_CHAPTER_KEY: Readonly<Record<ChapteredRegistryId, string>> = {
+  'bar-association': 'conveyance:engagement.invite.chapterLabel.bar-association',
+  'notary-association': 'conveyance:engagement.invite.chapterLabel.notary-association',
+  'regional-authority': 'conveyance:engagement.invite.chapterLabel.regional-authority',
+};
+
+interface CaseInviteSubjectKeys {
+  readonly title: string;
+  readonly intro: string;
+  readonly scope: string;
+  readonly accepted: string;
+  readonly acceptedBody: string;
+  readonly open: string;
+}
+
+/**
+ * Η εισαγωγή της πρόσκλησης — ανά είδος υπόθεσης (υπόθεση μεταβίβασης · χώρος ανάθεσης έκδοσης).
+ * ⚠️ Δηλωμένος τύπος, ΟΧΙ `as const satisfies`: ο γεννήτορας του slice (ADR-744, `key-tables.js`) ξεδιπλώνει μόνο `as` —
+ * με `satisfies` ο πίνακας δεν διαβάζεται και το `t(T[kind].scope)` λύνεται με το ΟΝΟΜΑ της ιδιότητας (ψευδή κλειδιά).
+ */
+export const CASE_INVITE_SUBJECT_KEYS: Readonly<Record<EngagementSubjectKind, CaseInviteSubjectKeys>> = {
+  conveyance_case: {
+    title: 'conveyance:engagement.invite.title',
+    intro: 'conveyance:engagement.invite.intro',
+    scope: 'conveyance:engagement.invite.scope',
+    accepted: 'conveyance:engagement.invite.accepted',
+    acceptedBody: 'conveyance:engagement.invite.acceptedBody',
+    open: 'conveyance:engagement.invite.openCase',
+  },
+  document_issuance: {
+    title: 'conveyance:engagement.invite.issuance.title',
+    intro: 'conveyance:engagement.invite.issuance.intro',
+    scope: 'conveyance:engagement.invite.issuance.scope',
+    accepted: 'conveyance:engagement.invite.issuance.accepted',
+    acceptedBody: 'conveyance:engagement.invite.issuance.acceptedBody',
+    open: 'conveyance:engagement.invite.issuance.open',
+  },
 };
 
 export const CASE_INVITE_REFUSAL_KEY: Readonly<Record<EngagementInvitationRefusal, string>> = {

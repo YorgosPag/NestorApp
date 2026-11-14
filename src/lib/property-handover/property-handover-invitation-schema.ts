@@ -1,6 +1,6 @@
 /**
  * @fileoverview **Το σχήμα της αποθηκευμένης πρόσκλησης αγοραστή** — η μία μετάφραση δίσκου → τύπου (ADR-916 Φ-Β).
- * @related lib/conveyance/engagement-invitation-schema.ts (το πρότυπο) · CHECK 3.74 (σύνορα ανάγνωσης)
+ * @related lib/auth/engagement-invitation-schema.ts (το πρότυπο) · CHECK 3.74 (σύνορα ανάγνωσης)
  * @module lib/property-handover/property-handover-invitation-schema
  *
  * Ό,τι δεν διαβάζεται ⇒ `null` ⇒ ο πυρήνας το λέει `invitation-corrupt` — **κανένας** λογαριασμός δεν δένεται και

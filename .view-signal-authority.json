@@ -34,25 +34,10 @@
       "min": 1,
       "why": "CDC (ADR-905 §6): αλλαγή αρχείου/ακινήτου/έργου που ΔΕΝ γράφει η υπόθεση"
     },
-    "src/server/engagement-invitations/engagement-invitation-redeem.ts": {
+    "src/services/conveyance/conveyance-engagement-host-adapter.ts": {
       "calls": ["caseRosterSignal", "invitationHostSignal"],
       "min": 2,
-      "why": "αποδοχή + άρνηση πρόσκλησης"
-    },
-    "src/server/engagement-invitations/engagement-invitation-issue.ts": {
-      "calls": ["invitationHostSignal"],
-      "min": 2,
-      "why": "έκδοση + ανάκληση πρόσκλησης"
-    },
-    "src/server/engagement-invitations/engagement-invitation-reminder.ts": {
-      "calls": ["invitationHostSignal"],
-      "min": 1,
-      "why": "υπενθύμιση / λήξη πρόσκλησης"
-    },
-    "src/server/engagement-invitations/engagement-invitation-preview.ts": {
-      "calls": ["invitationHostSignal"],
-      "min": 1,
-      "why": "«ανοίχτηκε» — ο οικοδεσπότης βλέπει ότι η πρόσκληση διαβάστηκε"
+      "why": "ADR-862 §5.3.11 — ο οικοδεσπότης της μεταβίβασης: σήμα αποδοχής πρόσκλησης (κατάλογος συμμετεχόντων) + σήμα κάθε αλλαγής πρόσκλησης (έκδοση · ανάκληση · «ανοίχτηκε» · υπενθύμιση · λήξη · άρνηση). Η μηχανή πρόσκλησης (`server/engagement-invitations/*`) ρωτά το μητρώο οικοδεσποτών και δεν γράφει πια σήματα μόνη της."
     }
   }
 }

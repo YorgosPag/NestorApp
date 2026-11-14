@@ -23,6 +23,7 @@
 
 import { PROJECT_ROLE_BRIDGE } from '@/config/profession-bridge.config';
 import { PROFESSIONAL_LICENCE_SPECS, type ProfessionalLicence } from '@/config/professional-licences';
+import type { RegistryAuthorityId } from '@/constants/professional-registries';
 import { escoOccupationUri } from '@/lib/esco/esco-uri';
 
 /**
@@ -95,6 +96,16 @@ export const ISSUER_QUALIFICATION_SPECS: Readonly<Record<IssuerQualification, Is
 export function qualificationLookupUrl(qualification: IssuerQualification): string | null {
   const spec = ISSUER_QUALIFICATION_SPECS[qualification];
   return spec.kind === 'licence' ? PROFESSIONAL_LICENCE_SPECS[spec.licence].registryLookupUrl : null;
+}
+
+/**
+ * **Σε ποιο μητρώο** δηλώνει τον αριθμό του ο κάτοχος ενός προσόντος (ADR-862 §5.3.11 · ADR-915 §39): άδεια ⇒ η αρχή
+ * της άδειας (ενεργειακός επιθεωρητής ⇒ ΥΠΕΝ)· ειδικότητα ⇒ `null` (καμία δηλωμένη αρχή στο λεξιλόγιο — δεν μαντεύεται).
+ * Ο **ένας** δρόμος «ποιότητα → άδεια → αρχή»: ο άνθρωπος **δεν** διαλέγει μητρώο, δηλώνει μόνο αριθμό.
+ */
+export function qualificationRegistryAuthority(qualification: IssuerQualification): RegistryAuthorityId | null {
+  const spec = ISSUER_QUALIFICATION_SPECS[qualification];
+  return spec.kind === 'licence' ? PROFESSIONAL_LICENCE_SPECS[spec.licence].authority : null;
 }
 
 /** Δημόσιες αρχές που εκδίδουν έγγραφα του μητρώου. */

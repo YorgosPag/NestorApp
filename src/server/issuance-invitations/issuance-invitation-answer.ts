@@ -45,12 +45,26 @@ import type { DocumentRegistryResponse, RegistryPropertyLabel } from '@/services
 import { stageIssuanceAction, type StagedIssuanceWrite } from '@/services/document-registry/issuance-assignments.server';
 import type { IssuanceEmailFacts } from '@/services/email-templates/issuance-invitation-email';
 import type { InvitationCoreRefusal, InvitationDocumentCore } from '@/types/invitation-core';
-import type { IssuanceInvitation, IssuanceLinkLanding, IssuanceLinkRefusal, IssuanceLinkView } from '@/types/issuance-invitation';
+import type {
+  IssuanceInvitation,
+  IssuanceLinkLanding,
+  IssuanceLinkRefusal,
+  IssuanceLinkView,
+  IssuanceSpaceView,
+} from '@/types/issuance-invitation';
 
 import { announceIssuanceAnswer, type IssuanceLinkEvent } from './issuance-answer-notifier';
 import { sendIssuanceAnswerReceipt } from './issuance-answer-receipt';
 import { ISSUANCE_INVITATION_LOCATOR, isIssuanceLinkLocked, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
 import { checkIssuanceAccessCode, issuanceGateViewOf, type IssuanceAccessCheck } from './issuance-link-access';
+import {
+  issuanceSpaceLinkOf,
+  issuanceSpaceViewOf,
+  planIssuanceSpace,
+  stageIssuanceSpace,
+  type IssuanceSpaceOutcome,
+  type IssuanceSpacePlan,
+} from './issuance-space-bridge';
 
 const logger = createModuleLogger('issuance-invitation-answer');
 
@@ -179,11 +193,33 @@ export async function issuanceEmailFactsOf(link: ResolvedLink, note: string | nu
   };
 }
 
-/** §30 — η απόδειξη στη διεύθυνση του συνδέσμου. Μετά το commit, ποτέ δεν πετά. */
-async function sendReceipt(link: ResolvedLink, answer: IssuanceLinkAnswerBody, verifiedBy: LinkVerification, answeredAt: string): Promise<void> {
+/** §30 — η απόδειξη στη διεύθυνση του συνδέσμου (§39: με τον σύνδεσμο εισόδου στον χώρο). Μετά το commit, ποτέ δεν πετά. */
+async function sendReceipt(link: ResolvedLink, answer: IssuanceLinkAnswerBody, verifiedBy: LinkVerification, answeredAt: string, space: IssuanceSpaceOutcome): Promise<void> {
   await sendIssuanceAnswerReceipt({
     invitation: link.invitation, facts: await issuanceEmailFactsOf(link, null), answer: answer.answer, comment: answer.note, verifiedBy, answeredAt,
+    space: issuanceSpaceLinkOf(space),
   });
+}
+
+/**
+ * §39 — το σχέδιο του χώρου, **μόνο** για το «Αναλαμβάνω» του επαγγελματία. Κάθε άλλη απάντηση (άρνηση · απόφαση
+ * ιδιοκτήτη) δεν ανοίγει χώρο. Οι αναγνώσεις γίνονται εδώ, **πριν** από τη συναλλαγή της σφράγισης.
+ */
+async function spacePlanOf(db: Firestore, link: ResolvedLink, answer: IssuanceLinkAnswerBody, now: Date): Promise<IssuanceSpacePlan | null> {
+  if (answer.answer !== 'accept') return null;
+  const { invitation, record } = link;
+  return planIssuanceSpace(db, {
+    companyId: invitation.companyId, propertyId: invitation.propertyId, assignmentId: invitation.assignmentId,
+    documentKind: invitation.documentKind, contactId: invitation.contactId, inviteeEmail: invitation.inviteeEmail,
+    qualification: record.credential.qualification, registryNumber: record.credential.registryNumber,
+    actorUid: invitation.invitedByUid,
+  }, now.getTime());
+}
+
+/** Ό,τι γράφει η σφράγιση: η απάντηση στην ανάθεση **και** (§39) ο χώρος — αδιαίρετα. */
+interface StagedAnswer {
+  readonly staged: StagedIssuanceWrite;
+  readonly space: IssuanceSpaceOutcome;
 }
 
 /** Ο κωδικός **για αυτή την πράξη** — άρνηση ⇒ λέγεται με τις προσπάθειες που μένουν· κλείδωμα ⇒ ειδοποίηση, μία φορά. */
@@ -211,7 +247,13 @@ export async function unlockIssuanceLink(db: Firestore, token: string, accessCod
 }
 
 /** Το είδος για την κλειδαριά: η απάντηση γράφεται με τον **ίδιο** γραφέα, μέσα στη **ίδια** συναλλαγή με τη σφράγιση. */
-function linkKind(db: Firestore, link: ResolvedLink, answer: IssuanceLinkAnswerBody, verifiedBy: LinkVerification, nowIso: string): InvitationLinkKind<InvitationDocumentCore, IssuanceInvitation, LinkRefusal, LinkUnavailable, StagedIssuanceWrite> {
+function linkKind(
+  db: Firestore,
+  link: ResolvedLink,
+  answer: IssuanceLinkAnswerBody,
+  verification: { readonly verifiedBy: LinkVerification; readonly nowIso: string; readonly space: IssuanceSpacePlan | null },
+): InvitationLinkKind<InvitationDocumentCore, IssuanceInvitation, LinkRefusal, LinkUnavailable, StagedAnswer> {
+  const { verifiedBy, nowIso } = verification;
   return {
     ...ISSUANCE_INVITATION_LOCATOR,
     secretMissing: 'secret-missing',
@@ -231,13 +273,17 @@ function linkKind(db: Firestore, link: ResolvedLink, answer: IssuanceLinkAnswerB
       });
       // Ο μειωτής αρνήθηκε (παλιός σύνδεσμος · άλλο στάδιο) ⇒ η πρόσκληση μένει `pending`, **καμία** γραφή.
       if (!staged.outcome.ok) return { kind: 'refused', reason: 'superseded' };
-      return { kind: 'commit', write: () => { staged.commit(); return staged; } };
+      // §39 — οι αναγνώσεις του χώρου (ζωντανές της θέσης) **πριν** από κάθε γραφή· γράφονται μαζί με την απάντηση.
+      const space = verification.space === null
+        ? { outcome: { kind: 'none' } as const, commit: () => undefined }
+        : await stageIssuanceSpace(db, tx, verification.space);
+      return { kind: 'commit', write: () => { staged.commit(); space.commit(); return { staged, space: space.outcome }; } };
     },
   };
 }
 
 export type LinkAnswerOutcome =
-  | { readonly kind: 'answered'; readonly answer: IssuanceLinkAnswerBody['answer'] }
+  | { readonly kind: 'answered'; readonly answer: IssuanceLinkAnswerBody['answer']; readonly space: IssuanceSpaceView }
   | LinkRefused
   | { readonly kind: 'unavailable' };
 
@@ -250,15 +296,20 @@ export async function answerIssuanceLink(db: Firestore, token: string, answer: I
   const check = await guardAccess(db, link, answer.accessCode, now.toISOString());
   if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
   const target = answer.answer === 'approve' || answer.answer === 'accept' ? 'accepted' : 'declined';
-  const kind = linkKind(db, link, answer, check.verifiedBy, now.toISOString());
+  const space = await spacePlanOf(db, link, answer, now);
+  const kind = linkKind(db, link, answer, { verifiedBy: check.verifiedBy, nowIso: now.toISOString(), space });
   const outcome = await redeemInvitationByLink(db, kind, { token, target, nowValue: now.toISOString() });
   if (outcome.kind === 'unavailable') {
     logger.error('Ο σύνδεσμος ανάθεσης δεν εξαργυρώθηκε', { invitationId: link.invitation.id, reason: outcome.reason });
     return { kind: 'unavailable' };
   }
   if (outcome.kind === 'refused') return outcome;
-  await outcome.effect.audit();
-  // Δύο αποδέκτες, μία πράξη: το γραφείο μαθαίνει την απάντηση· η διεύθυνση του συνδέσμου παίρνει την απόδειξη (§30).
-  await Promise.all([announceToOffice(link, answer.answer), sendReceipt(link, answer, check.verifiedBy, now.toISOString())]);
-  return { kind: 'answered', answer: answer.answer };
+  await outcome.effect.staged.audit();
+  // Δύο αποδέκτες, μία πράξη: το γραφείο μαθαίνει την απάντηση· η διεύθυνση του συνδέσμου παίρνει την απόδειξη (§30)
+  // — με τον σύνδεσμο εισόδου στον χώρο όταν το «Αναλαμβάνω» τον άνοιξε (§39).
+  await Promise.all([
+    announceToOffice(link, answer.answer),
+    sendReceipt(link, answer, check.verifiedBy, now.toISOString(), outcome.effect.space),
+  ]);
+  return { kind: 'answered', answer: answer.answer, space: issuanceSpaceViewOf(outcome.effect.space) };
 }

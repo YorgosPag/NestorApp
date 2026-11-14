@@ -26,7 +26,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ISSUANCE_NOTE_MAX } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
 import { formatDate } from '@/lib/intl-formatting';
-import type { IssuanceLinkView } from '@/types/issuance-invitation';
+import { Link } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
+import type { IssuanceLinkView, IssuanceSpaceView } from '@/types/issuance-invitation';
 
 import { DocumentRequestFailureState } from './DocumentRequestFailureState';
 import { answerDocumentRequest, type DocumentRequestFailure } from './document-request-api';
@@ -104,8 +106,35 @@ function RequestFacts({ view }: { readonly view: IssuanceLinkView }) {
   );
 }
 
-type Phase = { readonly kind: 'idle' } | { readonly kind: 'sending' } | { readonly kind: 'done'; readonly answer: IssuanceLinkAnswer } | { readonly kind: 'failed'; readonly failure: DocumentRequestFailure };
+type Phase =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'sending' }
+  | { readonly kind: 'done'; readonly answer: IssuanceLinkAnswer; readonly space: IssuanceSpaceView }
+  | { readonly kind: 'failed'; readonly failure: DocumentRequestFailure };
 
+/**
+ * §39 — **το επόμενο βήμα μετά το «Αναλαμβάνω»**: ο χώρος της ανάθεσης, με λογαριασμό στη διεύθυνση του συνδέσμου. Ο
+ * σύνδεσμος ήρθε **και** με email (η απόδειξη) — αν ο άνθρωπος κλείσει τη σελίδα, δεν χάνεται.
+ */
+function SpaceNextStep({ space }: { readonly space: IssuanceSpaceView }) {
+  const { t } = useTranslation(['document-request']);
+  if (space.kind === 'none') return null;
+  // Κυριολεκτικά κλειδιά (ADR-744): ο γεννήτορας του slice διαβάζει μόνο ό,τι λύνεται στατικά.
+  if (space.kind === 'no-project') return <p className="m-0 text-sm text-muted-foreground">{t('document-request:space.noProject')}</p>;
+  if (space.kind === 'no-authority') return <p className="m-0 text-sm text-muted-foreground">{t('document-request:space.noAuthority')}</p>;
+  return (
+    <section className="flex flex-col gap-2" aria-label={t('document-request:space.heading')}>
+      <h2 className="m-0 text-base font-semibold text-card-foreground">{t('document-request:space.heading')}</h2>
+      <p className="m-0 text-sm text-card-foreground">{t('document-request:space.body')}</p>
+      <Button asChild variant="outline" className={COLOR_BRIDGE.action.primary}>
+        <Link href={declaredHref('ADR-915 §39 — η σελίδα της πρόσκλησης στον χώρο, χτισμένη από τον server (`caseInvitationHref`)', space.href)}>{t('document-request:space.open')}</Link>
+      </Button>
+      <p className="m-0 text-xs text-muted-foreground">{t('document-request:space.emailed')}</p>
+    </section>
+  );
+}
+
+/** Γιατί δεν άνοιξε χώρος — ονομασμένο, ποτέ σιωπή. */
 /** `accessCode` (§29): ο κωδικός που ξεκλείδωσε την όψη — ξανακρίνεται με την απάντηση· `null` = ο σύνδεσμος αρκεί. */
 export function DocumentRequestCard({ token, view, accessCode }: { readonly token: string; readonly view: IssuanceLinkView; readonly accessCode: string | null }) {
   const { t } = useTranslation(['document-request']);
@@ -116,7 +145,7 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
   const answer = async (choice: IssuanceLinkAnswer) => {
     setPhase({ kind: 'sending' });
     const outcome = await answerDocumentRequest(token, { answer: choice, note: note.trim() || null, accessCode });
-    setPhase(outcome.ok ? { kind: 'done', answer: outcome.data.answer } : { kind: 'failed', failure: outcome.failure });
+    setPhase(outcome.ok ? { kind: 'done', answer: outcome.data.answer, space: outcome.data.space } : { kind: 'failed', failure: outcome.failure });
   };
   if (phase.kind === 'failed') return <DocumentRequestFailureState failure={phase.failure} />;
   if (phase.kind === 'done') {
@@ -124,6 +153,7 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
       <AuthCardSection gap={2} role="status">
         <h1 className="m-0 text-lg font-semibold text-card-foreground">{doneText(t, phase.answer)}</h1>
         <p className="m-0 text-sm text-muted-foreground">{t('document-request:done.officeTold')}</p>
+        <SpaceNextStep space={phase.space} />
       </AuthCardSection>
     );
   }

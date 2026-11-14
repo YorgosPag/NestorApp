@@ -38,6 +38,14 @@
     "declined": "We recorded that you decline.",
     "officeTold": "The office has been informed. You can close this page."
   },
+  "space": {
+    "heading": "Next step: the assignment space",
+    "body": "The collaboration with the office happens inside Nestor App. Open the space with an account on this email address — signing up takes about 2 minutes and you will be asked for your registry number.",
+    "open": "Open the assignment space",
+    "emailed": "We also sent you the same link by email, so you can find it later.",
+    "noProject": "The office will let you know about the next steps.",
+    "noAuthority": "The office will let you know about the next steps."
+  },
   "failure": {
     "invalid": {
       "title": "This link is not recognised",

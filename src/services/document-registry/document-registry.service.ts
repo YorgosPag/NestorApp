@@ -239,7 +239,7 @@ export async function readDocumentRegistry(db: AdminFirestore, companyId: string
   const registry = documentRegistry({ documents, requirements, asOf });
   const [areas, { owners, issuance }] = await Promise.all([
     readRegistryPropertyAreas(db, { wanted: professionalSearchPropertyIds(registry.rows), subjects, listings: allListings, now }),
-    readOwnersAndIssuance(db, companyId, registry.rows, { subjects, cases: sources.cases }),
+    readOwnersAndIssuance(db, companyId, registry.rows, { subjects, cases: sources.cases }, now),
   ]);
   const truncatedSources = issuance.truncated ? [...sources.truncatedSources, 'issuance-assignments' as const] : sources.truncatedSources;
   return {
@@ -254,6 +254,7 @@ export async function readDocumentRegistry(db: AdminFirestore, companyId: string
     people: owners.people,
     issuance: issuance.issuance,
     issuanceKnown: issuance.known,
+    issuanceSpaces: issuance.spaces,
     upkeep: upkeep.items,
   };
 }
@@ -267,8 +268,9 @@ async function readOwnersAndIssuance(
   companyId: string,
   rows: DocumentRegistry['rows'],
   known: Pick<RegistryOwnersQuestion, 'subjects' | 'cases'>,
+  now: Date,
 ): Promise<{ readonly owners: RegistryOwners; readonly issuance: RegistryIssuanceReading }> {
-  const issuance = await readRegistryIssuance(db, companyId, rows);
+  const issuance = await readRegistryIssuance(db, companyId, rows, now);
   const owners = await readRegistryOwners(db, companyId, {
     ...known,
     wanted: obligorPropertyIds(rows),

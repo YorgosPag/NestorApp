@@ -982,6 +982,12 @@
     "crm",
     "crm-inbox"
   ],
+  "EngagedIssuanceContent": [
+    "conveyance",
+    "document-registry",
+    "legality",
+    "property-market"
+  ],
   "FileManager": [
     "accounting",
     "accounting-setup",
@@ -1117,6 +1123,16 @@
     "dxf-viewer-settings",
     "dxf-viewer-shell",
     "dxf-viewer-wizard"
+  ],
+  "IssuanceSubjectFacts": [
+    "conveyance",
+    "document-registry",
+    "legality"
+  ],
+  "MyIssuanceCardView": [
+    "conveyance",
+    "document-registry",
+    "legality"
   ],
   "Navigation": [
     "common",

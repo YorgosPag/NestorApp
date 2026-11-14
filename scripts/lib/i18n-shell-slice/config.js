@@ -180,6 +180,9 @@ const DEFAULTS = Object.freeze({
     'src/components/catalog/interop/interop-surfaces.tsx',
     // ADR-ACC-018 §16 — η σελίδα πληρωμής τιμολογίου: μόνο όταν ο σύνδεσμος είναι τιμολόγιο, με τα κείμενά της στο chunk.
     'src/components/shared/pages/invoice-payment/invoice-payment-surfaces.tsx',
+    // ADR-862 §5.3.11 · ADR-744 §27.4 — η ανάθεση έκδοσης στον χώρο συνεργασίας: μόνο όταν η υπόθεση είναι
+    // `document_issuance`, με το λεξιλόγιο του μητρώου εγγράφων στο chunk (όχι στο slice της μεταβίβασης).
+    'src/components/conveyance/issuance-surfaces.tsx',
   ],
 
   /**

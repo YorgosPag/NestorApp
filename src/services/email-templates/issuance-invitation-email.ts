@@ -71,7 +71,17 @@ export type IssuanceEmailInput =
   | {
     readonly kind: 'receipt'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly answer: IssuanceLinkAnswer;
     readonly answeredAt: string; readonly verifiedBy: LinkVerification; readonly comment: string | null;
-  };
+    /** §39 — το «Αναλαμβάνω» άνοιξε **χώρο της ανάθεσης**: η απόδειξη φέρει τον σύνδεσμο εισόδου. `null` ⇒ καμία πρόσκληση. */
+    readonly space: IssuanceSpaceLink | null;
+  }
+  /** §39 — η πρόσκληση στον χώρο της ανάθεσης (επαναποστολή από το γραφείο). */
+  | { readonly kind: 'space'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly space: IssuanceSpaceLink };
+
+/** Ο σύνδεσμος εισόδου στον χώρο (απόλυτος, έτοιμος από τον καλούντα) και η λήξη του. */
+export interface IssuanceSpaceLink {
+  readonly link: string;
+  readonly expiresAt: string;
+}
 
 interface Named {
   readonly language: HumanLanguage;
@@ -152,19 +162,44 @@ function approvalDetails(named: Named, input: Extract<IssuanceEmailInput, { kind
   ];
 }
 
-/** §30 — η απόδειξη: χωρίς κουμπί και χωρίς σύνδεσμο (τίποτα να «πατηθεί» από όποιον κι αν τη διαβάσει). */
+/**
+ * §30 — η απόδειξη. Χωρίς χώρο: χωρίς κουμπί και χωρίς σύνδεσμο (τίποτα να «πατηθεί» από όποιον κι αν τη διαβάσει).
+ * §39 — με χώρο: **ένα** κουμπί, προς τον χώρο της ανάθεσης. Ο σύνδεσμος ανοίγει **μόνο** με λογαριασμό στη διεύθυνση
+ * της απόδειξης (φρουρός παραλήπτη + απόδειξη γραμματοκιβωτίου), άρα η άμυνα του §30 στην προώθηση μένει ακέραιη.
+ */
 function receiptEmail(named: Named, input: Extract<IssuanceEmailInput, { kind: 'receipt' }>): ConfirmationEmailResult {
   const { w, language, office, property, document, professional } = named;
-  return composeNoticeEmail({
-    language, subject: w.receipt.subject(document, property), heading: w.receipt.heading,
-    intro: lineOf(w.receipt.intro[input.answer], [document, property, professional]),
-    details: [
-      invitationDetailLine(w.receipt.recordedAtLabel, formatOperatorDateTime(input.answeredAt, language)),
-      invitationDetailLine(w.receipt.verifiedLabel, input.verifiedBy === 'access-code' ? w.receipt.verifiedByCode : w.receipt.verifiedByLink),
-      ...(input.comment === null ? [] : [invitationDetailLine(w.receipt.commentLabel, input.comment)]),
-      invitationDetailLine(w.receipt.notYouLabel, w.receipt.notYou(office)),
-    ],
-    footnote: w.receipt.footnote,
+  const details = [
+    invitationDetailLine(w.receipt.recordedAtLabel, formatOperatorDateTime(input.answeredAt, language)),
+    invitationDetailLine(w.receipt.verifiedLabel, input.verifiedBy === 'access-code' ? w.receipt.verifiedByCode : w.receipt.verifiedByLink),
+    ...(input.comment === null ? [] : [invitationDetailLine(w.receipt.commentLabel, input.comment)]),
+    invitationDetailLine(w.receipt.notYouLabel, w.receipt.notYou(office)),
+  ];
+  const framing = { language, subject: w.receipt.subject(document, property), heading: w.receipt.heading, intro: lineOf(w.receipt.intro[input.answer], [document, property, professional]) };
+  if (input.space === null) return composeNoticeEmail({ ...framing, details, footnote: w.receipt.footnote });
+  return composeInvitationEmail({
+    ...framing,
+    details: [...details, ...spaceLines(named, input.space)],
+    link: input.space.link,
+    core: w.space,
+  });
+}
+
+/** §39 — «επόμενο βήμα» + η λήξη του συνδέσμου εισόδου. */
+function spaceLines(named: Named, space: IssuanceSpaceLink): InvitationEmailLine[] {
+  return [
+    invitationDetailLine(named.w.space.nextLabel, named.w.space.next),
+    invitationDetailLine(named.w.space.expiresLabel, formatOperatorDate(space.expiresAt, named.language)),
+  ];
+}
+
+/** §39 — η πρόσκληση στον χώρο της ανάθεσης, μόνη της (επαναποστολή από το γραφείο). */
+function spaceEmail(named: Named, input: Extract<IssuanceEmailInput, { kind: 'space' }>): ConfirmationEmailResult {
+  const { w, language, office, property, document } = named;
+  return composeInvitationEmail({
+    language, subject: w.space.subject(document, property), heading: w.space.heading,
+    intro: lineOf(w.space.intro, [office, document, property]),
+    details: spaceLines(named, input.space), link: input.space.link, core: w.space,
   });
 }
 
@@ -173,6 +208,7 @@ export function buildIssuanceEmail(input: IssuanceEmailInput): ConfirmationEmail
   const named = namedOf(input);
   const { w, language, office, property, document, professional } = named;
   if (input.kind === 'receipt') return receiptEmail(named, input);
+  if (input.kind === 'space') return spaceEmail(named, input);
   if (input.kind === 'co-owner') {
     const lead = input.leadName?.trim() || w.unnamedPerson;
     return composeNoticeEmail({

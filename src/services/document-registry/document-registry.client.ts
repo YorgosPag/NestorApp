@@ -20,6 +20,8 @@ import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
 import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
 import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import type { IssuancePreview } from '@/types/issuance-invitation';
+import type { DocumentKind } from '@/config/document-validity/document-validity';
+import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 
 const logger = createModuleLogger('document-registry.client');
 
@@ -155,4 +157,18 @@ export function previewIssuanceMessage(body: IssuanceSendBody): Promise<Issuance
 /** Η αποστολή — **ένα** πάτημα του ανθρώπου, ποτέ αυτόματα (§18.5). */
 export function sendIssuanceMessage(body: IssuanceSendBody): Promise<IssuanceMessageResult<{ readonly stage: string; readonly delivery: IssuanceDelivery; readonly accessCode: string | null }>> {
   return postIssuanceMessage({ ...body, intent: 'send' });
+}
+
+/** ADR-915 §39 — «Νέος σύνδεσμος εισόδου» στον χώρο της ανάθεσης: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_SPACE_INVITATION_URL = `${ISSUANCE_ASSIGNMENTS_URL}/space-invitation`;
+
+/** **Ένα** πάτημα ⇒ νέος σύνδεσμος (ο παλιός ακυρώνεται)· ο κωδικός άρνησης είναι και το κλειδί του μηνύματος. */
+export async function sendIssuanceSpaceInvitation(
+  body: { readonly propertyId: string; readonly documentKind: DocumentKind },
+): Promise<IssuanceMessageResult<{ readonly delivery: InvitationNoticeOutcome; readonly expiresAt: string }>> {
+  try {
+    return { kind: 'ok', data: await apiClient.post(ISSUANCE_SPACE_INVITATION_URL, body) };
+  } catch (cause) {
+    return { kind: 'failed', code: logActionFailure('Ο νέος σύνδεσμος εισόδου δεν στάλθηκε', cause, { documentKind: body.documentKind }) };
+  }
 }

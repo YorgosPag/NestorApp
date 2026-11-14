@@ -12,7 +12,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { applyConveyanceCaseCommand, openConveyanceCase, type ConveyanceActor } from '../conveyance-case.service';
 import { endCaseEngagement, listCaseProfessionalSlots, offerCaseEngagement } from '../conveyance-engagement-host.service';
-import { getEngagedCaseView, listMyCases, respondToCaseEngagement } from '../conveyance-engagement-access.service';
+import { getEngagedCaseView, respondToCaseEngagement } from '../conveyance-engagement-access.service';
+import { listMyEngagements as listMyCases } from '@/server/engagements/my-engagements.server';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { openCaseFile } from '../conveyance-case-file-access.service';
@@ -83,7 +84,7 @@ async function openCase(): Promise<ConveyanceCase> {
 }
 
 async function engagementIdOf(record: ConveyanceCase, role: string): Promise<string> {
-  const slot = (await listCaseProfessionalSlots(db(), record)).find((s) => s.role === role);
+  const slot = (await listCaseProfessionalSlots(db(), record, NOW)).find((s) => s.role === role);
   if (!slot?.engagement) throw new Error(`no engagement for ${role}`);
   return slot.engagement.engagementId;
 }
@@ -162,7 +163,7 @@ describe('ADR-901 Φ2 — από τον ορισμό στην πρόσβαση',
     const record = await openCase();
     const outcome = await offerCaseEngagement(db(), host, record, { role: 'buyer_lawyer', attestedBasis: 'verbal_instruction', nowMs: NOW });
     expect(outcome).toMatchObject({ ok: true, created: true, invited: 'accepted' });
-    const slot = (await listCaseProfessionalSlots(db(), record)).find((s) => s.role === 'buyer_lawyer');
+    const slot = (await listCaseProfessionalSlots(db(), record, NOW)).find((s) => s.role === 'buyer_lawyer');
     expect(slot).toMatchObject({ appointment: 'needs-invitation', engagement: null, invitation: { state: 'pending', inviteeEmail: 'nobody@x.gr' } });
   });
 
@@ -189,7 +190,7 @@ describe('ADR-901 Φ4.1 — δήλωση με λογαριασμό · συμμε
   it('Α17 — «Αναλαμβάνω» με λογαριασμό ⇒ η δήλωση φτάνει στον οικοδεσπότη, με το μητρώο ΤΟΥ ΡΟΛΟΥ', async () => {
     const record = await openCase();
     await engage(record, 'seller_lawyer', 'u_sl', null);
-    const slot = (await listCaseProfessionalSlots(db(), record)).find((s) => s.role === 'seller_lawyer');
+    const slot = (await listCaseProfessionalSlots(db(), record, NOW)).find((s) => s.role === 'seller_lawyer');
     expect(slot?.engagement?.declaredCredential).toMatchObject({ authority: 'bar-association', number: '1234', chapter: 'ΔΣΑ', assurance: 'declared' });
   });
 

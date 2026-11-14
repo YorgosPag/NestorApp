@@ -1,7 +1,8 @@
 /**
  * ADR-901 Φ2 · §15 Γ2 · ADR-862 Φ1 — Η υπόθεση, μέσω της συμμετοχής του θεατή (ο ΕΠΑΓΓΕΛΜΑΤΙΑΣ).
  *
- * GET /api/engagements/{engagementId}/case?home=org|personal → `{ view: EngagedCaseView }`
+ * GET /api/engagements/{engagementId}/case?home=org|personal → `{ view: EngagedView }` (μεταβίβαση **ή** ανάθεση
+ *   έκδοσης, με `kind` — ο οικοδεσπότης του είδους κρίνει, ADR-862 §5.3.11)
  *   - **ΠΟΤΕ** το ωμό `conveyance_cases` έγγραφο: ο κατάλογος έρχεται φιλτραρισμένος ανά **ρόλο**
  *     (`visibleTo`) και ανά **εμβέλεια** (WIP μηχανικού ⛔ — `decideEngagedEvidenceReach`)
  *   - η κρίση `decideEngagement` τρέχει σε **κάθε** αίτημα — ανάκληση = άμεση, χωρίς cache
@@ -22,7 +23,7 @@ import { apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { myCaseHref } from '@/lib/conveyance/conveyance-routes';
 import { addressInWorkspace } from '@/lib/workspace/workspace-address';
 import { readCaseViewer } from '@/services/conveyance/conveyance-case-viewer.server';
-import { getEngagedCaseView } from '@/services/conveyance/conveyance-engagement-access.service';
+import { getEngagedView } from '@/server/engagements/my-engagements.server';
 
 type Segment = { params: Promise<{ engagementId: string }> };
 
@@ -30,7 +31,7 @@ async function handler(request: NextRequest, actor: ApiActor, segmentData?: Segm
   const { engagementId } = await segmentData!.params;
   const viewer = readCaseViewer(request, { uid: actor.ctx.uid, active: activeWorkspaceOf(actor) });
   if ('rejected' in viewer) return viewer.rejected;
-  const outcome = await getEngagedCaseView(requireAdminFirestore(), viewer, engagementId, Date.now());
+  const outcome = await getEngagedView(requireAdminFirestore(), viewer, engagementId, Date.now());
   if (outcome.ok) return apiSuccess({ view: outcome.view });
   if (outcome.rejection === 'denied') {
     return NextResponse.json({ success: false, error: 'ENGAGEMENT_NOT_ACTIVE', verdict: outcome.verdict }, { status: 403 });

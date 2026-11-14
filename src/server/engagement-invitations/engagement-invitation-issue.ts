@@ -14,23 +14,39 @@ import 'server-only';
  * ξαναδιαβάζεται τίποτα από το αίτημα.
  */
 
-import type { Firestore } from 'firebase-admin/firestore';
+import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
+import type { IssuerQualification } from '@/config/document-validity/document-issuers';
+import type { DocumentKind } from '@/config/document-validity/document-validity';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { engagementInvitationExpiryMs, engagementInvitationReminderDueAt } from '@/config/engagement-policy';
+import { engagementInvitationFromDocument, engagementInvitationToDocument } from '@/lib/auth/engagement-invitation-schema';
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
-import { engagementInvitationFromDocument } from '@/lib/conveyance/engagement-invitation-schema';
 import { createModuleLogger } from '@/lib/telemetry';
+import { invitationSignalOf } from '@/server/engagements/engagement-hosts';
 import {
   presentedInvitationState,
   revokeInvitationAt,
+  stageInvitationWithSupersede,
   writeInvitationWithSupersede,
 } from '@/server/invitations/invitation-lifecycle';
 import { mintInvitationToken } from '@/server/invitations/invitation-token';
 import { generateEngagementInvitationId } from '@/services/enterprise-id.service';
-import { invitationHostSignal } from '@/services/conveyance/conveyance-view-signal.server';
-import type { EngagementConsent } from '@/types/engagement';
-import type { CaseInvitationSummary, CredentialHint, EngagementInvitation } from '@/types/engagement-invitation';
+import type {
+  ConveyanceEngagementSubject,
+  EngagementConsent,
+  IssuanceEngagementRole,
+  IssuanceEngagementSubject,
+} from '@/types/engagement';
+import {
+  isConveyanceInvitation,
+  isIssuanceInvitation,
+  type CaseInvitationSummary,
+  type ConveyanceEngagementInvitation,
+  type IssuanceEngagementInvitation,
+  type CredentialHint,
+  type EngagementInvitation,
+} from '@/types/engagement-invitation';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
 const logger = createModuleLogger('engagement-invitation');
@@ -52,12 +68,11 @@ export function engagementInvitationsCollection(db: Firestore) {
 // 1. ΕΚΔΟΣΗ
 // =============================================================================
 
-export interface IssueEngagementInvitationInput {
+/** Τα κοινά της έκδοσης, όποιου είδους υπόθεσης. */
+interface IssueEngagementInvitationBase {
   readonly hostCompanyId: string;
   readonly projectId: string;
-  readonly caseId: string;
   readonly propertyId: string;
-  readonly role: LegalProfessionalRole;
   readonly contactId: string;
   readonly email: string;
   readonly consents: readonly EngagementConsent[];
@@ -66,11 +81,37 @@ export interface IssueEngagementInvitationInput {
   readonly nowMs: number;
 }
 
+/**
+ * Η θέση της πρόσκλησης — **ποια υπόθεση, ποιος ρόλος** (ADR-862 §5.3.11). Διακριτή ένωση: το ζεύγος υπόθεσης/ρόλου
+ * και ό,τι ζητά το είδος (η ανάθεση έκδοσης: είδος εγγράφου + προσόν) δεν μπορούν να αναμιχθούν.
+ */
+export type IssueEngagementInvitationInput = IssueEngagementInvitationBase & (
+  | { readonly subject: ConveyanceEngagementSubject; readonly role: LegalProfessionalRole }
+  | {
+      readonly subject: IssuanceEngagementSubject;
+      readonly role: IssuanceEngagementRole;
+      readonly documentKind: DocumentKind;
+      readonly qualification: IssuerQualification;
+    }
+);
+
 export interface IssuedEngagementInvitation {
   readonly invitation: EngagementInvitation;
   /** Ωμό **μόνο εδώ και στο email** — στη βάση ζει μόνο το `sha256` του nonce. */
   readonly token: string;
   readonly supersededCount: number;
+}
+
+/**
+ * Οι **ζωντανές** προσκλήσεις της ίδιας θέσης — αυτές που ανακαλεί η νέα έκδοση. Μόνο ισότητες ⇒ κανένας σύνθετος
+ * δείκτης (οι μονοπεδικοί συγχωνεύονται). Το πεδίο-κλειδί διαφέρει ανά είδος, όπως στη συμμετοχή (`engagement-ref.ts`).
+ */
+function liveSlotQuery(db: Firestore, input: Pick<IssueEngagementInvitationInput, 'subject' | 'role'>) {
+  const collection = engagementInvitationsCollection(db);
+  const bySubject = input.subject.kind === 'conveyance_case'
+    ? collection.where('caseId', '==', input.subject.caseId)
+    : collection.where('subject.assignmentId', '==', input.subject.assignmentId);
+  return bySubject.where('role', '==', input.role).where('state', '==', 'pending');
 }
 
 /** **Νέα πρόσκληση στη θέση** — γράφει το έγγραφο και ανακαλεί κάθε ζωντανή της ίδιας θέσης, ατομικά. */
@@ -79,18 +120,37 @@ export async function issueEngagementInvitation(
   input: IssueEngagementInvitationInput,
 ): Promise<IssuedEngagementInvitation> {
   const { invitation, token } = await mintEngagementInvitation(input);
-  const collection = engagementInvitationsCollection(db);
-  // Μόνο ισότητες ⇒ κανένας σύνθετος δείκτης (οι μονοπεδικοί συγχωνεύονται).
-  const liveQuery = collection
-    .where('caseId', '==', input.caseId)
-    .where('role', '==', input.role)
-    .where('state', '==', 'pending');
   const supersededCount = await writeInvitationWithSupersede(db, {
-    collection, invitation, liveQuery, actorUid: input.actorUid, nowValue: invitation.createdAt,
-    observe: invitationHostSignal(db, invitation),
+    collection: engagementInvitationsCollection(db), invitation: engagementInvitationToDocument(invitation),
+    liveQuery: liveSlotQuery(db, input), actorUid: input.actorUid, nowValue: invitation.createdAt,
+    observe: invitationSignalOf(db, invitation),
   });
-  logger.info('Εκδόθηκε πρόσκληση υπόθεσης', { invitationId: invitation.id, caseId: input.caseId, role: input.role, supersededCount });
+  logger.info('Εκδόθηκε πρόσκληση συμμετοχής', { invitationId: invitation.id, subject: input.subject.kind, role: input.role, supersededCount });
   return { invitation, token, supersededCount };
+}
+
+/**
+ * **Η ίδια έκδοση, ΜΕΣΑ σε συναλλαγή του καλούντα** (ADR-915 §39): το «Αναλαμβάνω» της ανάθεσης και η πρόσκληση σε
+ * λογαριασμό γράφονται **αδιαίρετα**. Οι αναγνώσεις (ζωντανές της θέσης) γίνονται **εδώ**· το `commit()` γράφει, και
+ * ο καλών το καλεί **μετά** από κάθε δική του ανάγνωση (κανόνας Firestore). Το token κόβεται **πριν** (καθαρή κρυπτογραφία).
+ */
+export async function stageEngagementInvitation(
+  db: Firestore,
+  tx: Transaction,
+  input: IssueEngagementInvitationInput,
+): Promise<{ readonly issued: Omit<IssuedEngagementInvitation, 'supersededCount'>; commit(): void }> {
+  const issued = await mintEngagementInvitation(input);
+  const staged = await stageInvitationWithSupersede(tx, {
+    collection: engagementInvitationsCollection(db), invitation: engagementInvitationToDocument(issued.invitation),
+    liveQuery: liveSlotQuery(db, input), actorUid: input.actorUid, nowValue: issued.invitation.createdAt,
+  });
+  return {
+    issued,
+    commit: () => {
+      staged.commit();
+      invitationSignalOf(db, issued.invitation)(tx);
+    },
+  };
 }
 
 async function mintEngagementInvitation(
@@ -101,7 +161,7 @@ async function mintEngagementInvitation(
   // Χωρίς locator: top-level συλλογή, το id αρκεί για τον εντοπισμό.
   const { token, nonceHash } = await mintInvitationToken(ENGAGEMENT_INVITE_SECRET_ENV, { id, expiresAtMs, locator: [] });
   const createdAt = new Date(input.nowMs).toISOString();
-  const invitation: EngagementInvitation = {
+  const base = {
     id,
     inviteeEmail: normaliseChannelEmail(input.email),
     invitedByUid: input.actorUid,
@@ -115,15 +175,17 @@ async function mintEngagementInvitation(
     mailboxProvenAt: null,
     hostCompanyId: input.hostCompanyId,
     projectId: input.projectId,
-    caseId: input.caseId,
     propertyId: input.propertyId,
-    role: input.role,
     contactId: input.contactId,
     consents: [...input.consents],
     credentialHint: input.credentialHint,
     reminderDueAt: engagementInvitationReminderDueAt(input.nowMs),
     reminderSentAt: null,
-  };
+  } as const;
+  // Η ένωση εισόδου στενεύει με το πεδίο που έχει **μόνο** η ανάθεση (`documentKind`) — κανένα `as`.
+  const invitation: EngagementInvitation = 'documentKind' in input
+    ? { ...base, subject: input.subject, role: input.role, documentKind: input.documentKind, qualification: input.qualification }
+    : { ...base, subject: input.subject, caseId: input.subject.caseId, role: input.role };
   return { invitation, token };
 }
 
@@ -132,7 +194,7 @@ async function mintEngagementInvitation(
 // =============================================================================
 
 /** Όλες οι αναγνώσιμες προσκλήσεις της υπόθεσης — **ξένη** υπόθεση (άλλος μισθωτής) ≡ καμία. */
-async function readCaseInvitations(db: Firestore, hostCompanyId: string, caseId: string): Promise<readonly EngagementInvitation[]> {
+async function readCaseInvitations(db: Firestore, hostCompanyId: string, caseId: string): Promise<readonly ConveyanceEngagementInvitation[]> {
   const snapshot = await engagementInvitationsCollection(db)
     .where('caseId', '==', caseId)
     .where('hostCompanyId', '==', hostCompanyId)
@@ -140,7 +202,7 @@ async function readCaseInvitations(db: Firestore, hostCompanyId: string, caseId:
     .get();
   return snapshot.docs
     .map((doc) => engagementInvitationFromDocument(doc.data(), doc.id))
-    .filter((invitation): invitation is EngagementInvitation => invitation !== null);
+    .filter((invitation): invitation is ConveyanceEngagementInvitation => invitation !== null && isConveyanceInvitation(invitation));
 }
 
 /** Η **πιο πρόσφατη** πρόσκληση κάθε θέσης, όπως τη βλέπει ο οικοδεσπότης (η ληγμένη `pending` ⇒ `expired`). */
@@ -150,7 +212,7 @@ export async function latestCaseInvitations(
   caseId: string,
   nowValue: string,
 ): Promise<ReadonlyMap<LegalProfessionalRole, CaseInvitationSummary>> {
-  const latest = new Map<LegalProfessionalRole, EngagementInvitation>();
+  const latest = new Map<LegalProfessionalRole, ConveyanceEngagementInvitation>();
   for (const invitation of await readCaseInvitations(db, hostCompanyId, caseId)) {
     const current = latest.get(invitation.role);
     if (!current || invitation.createdAt > current.createdAt) latest.set(invitation.role, invitation);
@@ -171,6 +233,47 @@ function summaryOf(invitation: EngagementInvitation, nowValue: string): CaseInvi
   };
 }
 
+/** Όσες προσκλήσεις χώρου αναθέσεων διαβάζει το μητρώο λήξεων ενός γραφείου — φραγμένο ρητά, ποτέ σιωπηλά. */
+const ISSUANCE_SPACE_SCAN_LIMIT = 500;
+
+/** Η πιο πρόσφατη πρόσκληση χώρου κάθε ανάθεσης, όπως τη βλέπει το γραφείο — με το κλειδί της γραμμής του μητρώου. */
+export interface IssuanceSpaceInvitationSummary extends CaseInvitationSummary {
+  readonly assignmentId: string;
+  readonly propertyId: string;
+  readonly documentKind: DocumentKind;
+}
+
+/**
+ * ADR-915 §39 — **οι προσκλήσεις χώρου των αναθέσεων του γραφείου**, η πιο πρόσφατη ανά ανάθεση (η ληγμένη `pending` ⇒
+ * `expired`). **Ένα** ερώτημα μόνο με ισότητες (`hostCompanyId` · `subject.kind`) ⇒ κανένας σύνθετος δείκτης. Ξένος
+ * μισθωτής ≡ καμία. `truncated` ⇒ το όριο χτυπήθηκε — ο καλών το λέει, ποτέ σιωπηλό «καμία».
+ */
+export async function latestIssuanceSpaceInvitations(
+  db: Firestore,
+  hostCompanyId: string,
+  nowValue: string,
+): Promise<{ readonly byAssignment: ReadonlyMap<string, IssuanceSpaceInvitationSummary>; readonly truncated: boolean }> {
+  const snapshot = await engagementInvitationsCollection(db)
+    .where('hostCompanyId', '==', hostCompanyId)
+    .where('subject.kind', '==', 'document_issuance')
+    .limit(ISSUANCE_SPACE_SCAN_LIMIT)
+    .get();
+  const latest = new Map<string, IssuanceEngagementInvitation>();
+  for (const doc of snapshot.docs) {
+    const invitation = engagementInvitationFromDocument(doc.data(), doc.id);
+    if (invitation === null || !isIssuanceInvitation(invitation) || invitation.hostCompanyId !== hostCompanyId) continue;
+    const current = latest.get(invitation.subject.assignmentId);
+    if (!current || invitation.createdAt > current.createdAt) latest.set(invitation.subject.assignmentId, invitation);
+  }
+  const byAssignment = new Map([...latest].map(([assignmentId, invitation]) => [assignmentId, {
+    ...summaryOf(invitation, nowValue),
+    assignmentId,
+    propertyId: invitation.propertyId,
+    documentKind: invitation.documentKind,
+  }]));
+  return { byAssignment, truncated: snapshot.size === ISSUANCE_SPACE_SCAN_LIMIT };
+}
+
 /**
  * **Ανάκληση κάθε εκκρεμούς πρόσκλησης** της υπόθεσης (ή μίας θέσης της) — απόσυρση θέσης ή κλείσιμο υπόθεσης.
  * Ιδεμποτής: δεύτερη κλήση βρίσκει μηδέν `pending`. Επιστρέφει πόσες ανακλήθηκαν.
@@ -185,7 +288,7 @@ export async function revokePendingCaseInvitations(
     isOwned: (stored) => engagementInvitationFromDocument(stored, invitation.id)?.hostCompanyId === input.hostCompanyId,
     revokedByUid: input.actorUid,
     nowValue: input.nowValue,
-    observe: invitationHostSignal(db, invitation),
+    observe: invitationSignalOf(db, invitation),
   })));
   return outcomes.filter((outcome) => outcome.kind === 'revoked').length;
 }

@@ -38,6 +38,7 @@ import type { EngagedCaseView } from '@/types/conveyance-case';
 import { EngagedCaseChecklist } from './EngagedCaseChecklist';
 import { EngagedCaseActivity } from './EngagedCaseActivity';
 import { EngagedCaseParticipants } from './EngagedCaseParticipants';
+import { IssuanceSurfaces } from '@/components/conveyance/issuance-surfaces';
 import { CasePartyLabelsProvider } from '@/components/conveyance/shared/CasePartyLabels';
 
 function CaseParticipantsTab({ view }: { readonly view: EngagedCaseView }) {
@@ -103,6 +104,9 @@ function CaseState({ engagementId, home }: { readonly engagementId: string; read
   }
   if (state.kind === 'denied') return <p className="text-sm text-foreground">{t(`engagement.verdicts.${state.verdict}`)}</p>;
   if (state.kind === 'failed' || state.kind === 'moved') return <p className={cn('text-sm', colors.text.error)}>{t('engagement.case.loadError')}</p>;
+  // ADR-862 §5.3.11 — ένα URL για κάθε είδος· η σελίδα διαλέγει περιεχόμενο **μόνο** από το `kind` της όψης.
+  // ADR-744 §27.4 — τεμπέλικη επιφάνεια: το λεξιλόγιο του μητρώου εγγράφων μόνο όταν η υπόθεση είναι ανάθεση έκδοσης.
+  if (state.view.kind === 'document_issuance') return <IssuanceSurfaces.EngagedIssuanceContent view={state.view} />;
   return <CaseView view={state.view} onChanged={reload} />;
 }
 

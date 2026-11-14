@@ -229,7 +229,7 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
 
   it('«Εγκρίνω» ⇒ απόφαση με βάση τον σύνδεσμο, σφραγισμένη πρόσκληση, ειδοποίηση στο γραφείο — δεύτερο κλικ ⇒ `already-used`', async () => {
     const token = await sendAndToken();
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'answered', answer: 'approve' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
     const [invitation] = invitations();
     expect(assignment()).toMatchObject({ decision: { basis: 'owner-link-approval', invitationId: invitation?.id, ownerContactId: 'cont_a', outcome: 'approved' } });
     expect(invitation).toMatchObject({ state: 'accepted', resolvedByUid: null });
@@ -280,7 +280,7 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
     const message = sent.find((candidate) => candidate.to === 'pro@example.test');
     if (message === undefined) throw new Error('not sent');
     const token = tokenIn(message);
-    expect(await answerIssuanceLink(db(), token, { answer: 'decline', note: 'Εκτός περιοχής.', accessCode: null }, LATER)).toEqual({ kind: 'answered', answer: 'decline' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'decline', note: 'Εκτός περιοχής.', accessCode: null }, LATER)).toEqual({ kind: 'answered', answer: 'decline', space: { kind: 'none' } });
     expect(assignment()).toMatchObject({ response: { basis: 'professional-link', outcome: 'declined', note: 'Εκτός περιοχής.' } });
   });
 });
@@ -328,7 +328,7 @@ describe('ADR-915 §29 — κωδικός πρόσβασης σε δεύτερο
     const { token, code } = await sendWithCode();
     expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'code-required', remaining: 5 });
     expect(assignment()).toMatchObject({ decision: null });
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER)).toEqual({ kind: 'answered', answer: 'approve' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
     expect(assignment()).toMatchObject({ decision: { basis: 'owner-link-approval', verifiedBy: 'access-code', outcome: 'approved' } });
   });
 

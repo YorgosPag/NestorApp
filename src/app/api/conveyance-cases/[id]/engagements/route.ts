@@ -77,7 +77,7 @@ export const GET = withStandardRateLimit(
   withAuth(async (_request: NextRequest, ctx: AuthContext, cache: PermissionCache, segmentData?: Segment) => {
     const { id } = await segmentData!.params;
     const record = await loadAuthorized(ctx, cache, id, CONVEYANCE_VIEW, 'read');
-    return apiSuccess({ slots: await listCaseProfessionalSlots(requireAdminFirestore(), record) });
+    return apiSuccess({ slots: await listCaseProfessionalSlots(requireAdminFirestore(), record, Date.now()) });
   }),
 );
 

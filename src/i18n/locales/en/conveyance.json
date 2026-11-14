@@ -350,12 +350,27 @@
       "credentialTitle": "Professional declaration",
       "credentialHint": "Your number is shown to the parties of the case as “declared”.",
       "numberLabel": {
+        "tee": "Technical Chamber (TEE) registry number",
+        "gemi": "GEMI number",
+        "oee": "Economic Chamber (OEE) registry number",
         "bar-association": "Bar association registry number",
-        "notary-association": "Notary registry number"
+        "notary-association": "Notary registry number",
+        "regional-authority": "Licence number (Regional Unit)",
+        "ypen": "Energy inspector registry number (YPEN)"
       },
       "chapterLabel": {
         "bar-association": "Bar association",
-        "notary-association": "Notaries' association"
+        "notary-association": "Notaries' association",
+        "regional-authority": "Regional Unit that issued the licence"
+      },
+      "issuance": {
+        "title": "The assignment space",
+        "intro": "{host} opened a collaboration space for the property {property}.",
+        "documentLabel": "Document",
+        "scope": "The space gives access to this assignment only — not to the office inviting you.",
+        "accepted": "You entered the assignment space",
+        "acceptedBody": "The assignment is now in “My cases”. The office has been told.",
+        "open": "Open space"
       },
       "numberRequired": "Enter your registry number to take on the case.",
       "accept": "Accept and get access",
@@ -406,9 +421,27 @@
       "unreadable": "The access history of this role cannot be read — please contact support.",
       "generic": "The action did not complete. Please try again."
     },
+    "issuance": {
+      "kindLabel": "Document assignment",
+      "fromOffice": "From: {office}",
+      "unnamedOffice": "Unnamed office",
+      "untitledProperty": "Unnamed property",
+      "unknownDocument": "Document could not be read",
+      "stageLabel": "Status",
+      "ballLabel": "Whose turn",
+      "ballLine": "Whose turn: {party}",
+      "open": "Open space",
+      "officeLabel": "Office",
+      "propertyLabel": "Property",
+      "documentLabel": "Document",
+      "credentialLabel": "Your capacity (declared)",
+      "credentialValue": "{registry} {number}",
+      "requestedLabel": "Requested on",
+      "scope": "The space gives access to this assignment only. Your contact details are not shown to anyone without your own choice."
+    },
     "myCases": {
       "title": "My cases",
-      "subtitle": "Conveyance cases where you were appointed as lawyer or notary.",
+      "subtitle": "Conveyance cases and document assignments you were appointed to.",
       "empty": "No case has been offered to you yet.",
       "loading": "Loading your cases…",
       "loadError": "Your cases could not be loaded. Please try again.",

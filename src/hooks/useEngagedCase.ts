@@ -26,13 +26,13 @@ import { isOlderEngagedView } from '@/lib/conveyance/case-view-freshness';
 import { useServerViewSignal, type ServerViewSignalSource } from '@/services/realtime/hooks/use-server-view-signal';
 import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
 import { caseRelocationOf, deniedVerdictOf, fetchEngagedCase } from '@/services/conveyance/conveyance-engagement-gateway';
-import type { EngagedCaseView } from '@/types/conveyance-case';
+import type { EngagedView } from '@/types/my-engagements';
 import type { EngagementVerdict } from '@/types/engagement';
 import type { ViewFreshness } from '@/types/server-view';
 
 export type EngagedCaseState =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'ready'; readonly view: EngagedCaseView }
+  | { readonly kind: 'ready'; readonly view: EngagedView }
   | { readonly kind: 'denied'; readonly verdict: EngagementVerdict }
   /** §15 Γ2 — η **δική μου** υπόθεση ζει σε **άλλο** χώρο· `to` = η διεύθυνση του σπιτιού της (από τον server). */
   | { readonly kind: 'moved'; readonly to: string }
@@ -54,7 +54,7 @@ export interface EngagedCaseHandle {
 }
 
 /** Η νέα όψη, εκτός αν είναι **παλιότερη** από αυτή που ήδη δείχνει η οθόνη (αργή ανάγνωση που έφτασε δεύτερη). */
-function nextState(current: EngagedCaseState, view: EngagedCaseView): EngagedCaseState {
+function nextState(current: EngagedCaseState, view: EngagedView): EngagedCaseState {
   return isOlderEngagedView(view, current.kind === 'ready' ? current.view : null) ? current : { kind: 'ready', view };
 }
 

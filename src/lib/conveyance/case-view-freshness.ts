@@ -12,6 +12,9 @@
 
 import type { ConveyanceCaseView, EngagedCaseView } from '@/types/conveyance-case';
 
+/** Ό,τι χρειάζεται η κρίση από **κάθε** όψη συμμετοχής, όποιου είδους υπόθεσης (ADR-862 §5.3.11). */
+type FreshView = Pick<EngagedCaseView, 'engagementId' | 'freshness'>;
+
 /** Όψη οικοδεσπότη της **ίδιας** υπόθεσης με μικρότερη αναθεώρηση σήματος **ή** μικρότερη έκδοση CAS. */
 export function isOlderHostView(next: ConveyanceCaseView | null, current: ConveyanceCaseView | null): boolean {
   if (!next || !current || next.conveyanceCase.id !== current.conveyanceCase.id) return false;
@@ -19,6 +22,6 @@ export function isOlderHostView(next: ConveyanceCaseView | null, current: Convey
 }
 
 /** Όψη συμμετοχής της **ίδιας** συμμετοχής με μικρότερη αναθεώρηση σήματος. */
-export function isOlderEngagedView(next: EngagedCaseView, current: EngagedCaseView | null): boolean {
+export function isOlderEngagedView(next: FreshView, current: FreshView | null): boolean {
   return current !== null && next.engagementId === current.engagementId && next.freshness.revision < current.freshness.revision;
 }

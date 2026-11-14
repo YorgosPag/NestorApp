@@ -406,6 +406,7 @@ export interface CaseParticipantView {
  * ανά ρόλο (`visibleTo`) και εμβέλεια (`decideEngagedEvidenceReach`).
  */
 export interface EngagedCaseView {
+  readonly kind: 'conveyance_case';
   readonly engagementId: string;
   readonly role: LegalProfessionalRole;
   readonly caseId: string;
@@ -482,6 +483,7 @@ export type ActingForView =
 
 /** Μία κάρτα στα «Οι υποθέσεις μου» (ADR-901 §5.4). */
 export interface MyCaseCard {
+  readonly kind: 'conveyance_case';
   readonly engagementId: string;
   readonly role: LegalProfessionalRole;
   readonly engagementState: EngagementState;

@@ -15,6 +15,7 @@
 
 import { z } from 'zod';
 
+import { isChapteredRegistry, type RegistryAuthorityId } from '@/constants/professional-registries';
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import { ROLE_REGISTRY_AUTHORITY, type DeclaredCredential, type Engagement } from '@/types/engagement';
 import type { CredentialHint } from '@/types/engagement-invitation';
@@ -39,9 +40,19 @@ export type CaseEngagementAnswer =
   | { readonly decision: 'accept'; readonly credential: CredentialDeclarationInput; readonly actingRequest?: ActingWorkspaceRequest }
   | { readonly decision: 'decline' };
 
-/** Η αποθηκευμένη μορφή — **πάντα** `declared`, με το μητρώο του ρόλου. */
-export function declaredCredentialOf(role: LegalProfessionalRole, input: CredentialDeclarationInput, declaredAt: string): DeclaredCredential {
-  return { authority: ROLE_REGISTRY_AUTHORITY[role], number: input.number, chapter: input.chapter, assurance: 'declared', declaredAt };
+/**
+ * Η αποθηκευμένη μορφή — **πάντα** `declared`, με το μητρώο που **παράγει** η υπόθεση (ADR-862 §5.3.11): νομικός
+ * ρόλος ⇒ `ROLE_REGISTRY_AUTHORITY` · ανάθεση έκδοσης ⇒ προσόν → άδεια → αρχή. Σε **εθνική** αρχή (ΥΠΕΝ) ο
+ * σύλλογος/περιφέρεια δεν υπάρχει ⇒ `null`, ό,τι κι αν πληκτρολογήθηκε (το σχήμα της συμμετοχής το απαιτεί).
+ */
+export function declaredCredentialOf(authority: RegistryAuthorityId, input: CredentialDeclarationInput, declaredAt: string): DeclaredCredential {
+  const chapter = isChapteredRegistry(authority) ? input.chapter : null;
+  return { authority, number: input.number, chapter, assurance: 'declared', declaredAt };
+}
+
+/** Το μητρώο ενός νομικού ρόλου — συντόμευση για τις πόρτες της μεταβίβασης. */
+export function legalRoleAuthority(role: LegalProfessionalRole): RegistryAuthorityId {
+  return ROLE_REGISTRY_AUTHORITY[role];
 }
 
 /**
@@ -50,10 +61,9 @@ export function declaredCredentialOf(role: LegalProfessionalRole, input: Credent
  * ακριβέστερη (την πληκτρολόγησε ο ίδιος) και δεν διαρρέει τίποτα (είναι δικά του δεδομένα).
  */
 export function latestOwnDeclaration(
-  history: readonly Pick<Engagement, 'role' | 'declaredCredential'>[],
-  role: LegalProfessionalRole,
+  history: readonly Pick<Engagement, 'declaredCredential'>[],
+  authority: RegistryAuthorityId,
 ): CredentialHint | null {
-  const authority = ROLE_REGISTRY_AUTHORITY[role];
   const latest = history
     .map((engagement) => engagement.declaredCredential)
     .filter((credential): credential is DeclaredCredential => credential?.authority === authority)

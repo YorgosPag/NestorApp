@@ -12,14 +12,15 @@ import 'server-only';
  *    ότι απάντησε κάποιος άλλος — όπως η ειδοποίηση «νέα σύνδεση» της Google.
  * 🔑 **Συναλλακτική επιβεβαίωση πράξης που έγινε**, ποτέ πρώτη αποστολή: φεύγει μόνο αφού η απάντηση γράφτηκε, και **μία**
  *    φορά (ο σύνδεσμος είναι μίας χρήσης · το `Idempotency-Key` της διαδρομής κρατά την επανάληψη του πελάτη).
- * 🔒 **Χωρίς κουμπί, χωρίς σύνδεσμο**: τίποτα να «πατηθεί» από όποιον κι αν τη διαβάσει.
+ * 🔒 **Χωρίς κουμπί, χωρίς σύνδεσμο** — εκτός από **ένα** (§39): τον σύνδεσμο εισόδου στον χώρο της ανάθεσης, που ανοίγει
+ *    **μόνο** με λογαριασμό σε αυτή τη διεύθυνση (φρουρός παραλήπτη + απόδειξη γραμματοκιβωτίου) — ο προωθημένος δεν κάνει τίποτα.
  * ⚠️ **Δεν πετά ποτέ** — η απάντηση έχει ήδη καταγραφεί.
  */
 
 import type { LinkVerification } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
 import { deliverInvitationEmail, type InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
-import { buildIssuanceEmail, type IssuanceEmailFacts } from '@/services/email-templates/issuance-invitation-email';
+import { buildIssuanceEmail, type IssuanceEmailFacts, type IssuanceSpaceLink } from '@/services/email-templates/issuance-invitation-email';
 import type { IssuanceInvitation } from '@/types/issuance-invitation';
 
 export interface IssuanceAnswerReceipt {
@@ -30,6 +31,8 @@ export interface IssuanceAnswerReceipt {
   readonly comment: string | null;
   readonly verifiedBy: LinkVerification;
   readonly answeredAt: string;
+  /** §39 — ο σύνδεσμος εισόδου στον χώρο, όταν το «Αναλαμβάνω» τον άνοιξε· αλλιώς `null`. */
+  readonly space: IssuanceSpaceLink | null;
 }
 
 /** **Στείλε την απόδειξη** στη διεύθυνση του συνδέσμου. Ποτέ δεν πετά. */
@@ -42,7 +45,7 @@ export function sendIssuanceAnswerReceipt(receipt: IssuanceAnswerReceipt): Promi
     inviterUid: invitation.invitedByUid,
     compose: async (language) => buildIssuanceEmail({
       kind: 'receipt', language, facts: receipt.facts, answer: receipt.answer,
-      answeredAt: receipt.answeredAt, verifiedBy: receipt.verifiedBy, comment: receipt.comment,
+      answeredAt: receipt.answeredAt, verifiedBy: receipt.verifiedBy, comment: receipt.comment, space: receipt.space,
     }),
   });
 }

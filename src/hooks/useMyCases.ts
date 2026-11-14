@@ -23,6 +23,7 @@ import { actingForAfterAccept } from '@/lib/conveyance/acting-acceptance';
 import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import type { MyCaseCard } from '@/types/conveyance-case';
+import type { MyEngagementCard } from '@/types/my-engagements';
 
 export type RespondOutcome = { readonly ok: true } | { readonly ok: false; readonly rejection: RespondRejection };
 
@@ -30,7 +31,7 @@ export type RespondOutcome = { readonly ok: true } | { readonly ok: false; reado
 export type MyCasesList =
   | { readonly state: 'loading' }
   | { readonly state: 'error' }
-  | { readonly state: 'ready'; readonly cards: readonly MyCaseCard[] };
+  | { readonly state: 'ready'; readonly cards: readonly MyEngagementCard[] };
 
 interface UseMyCasesReturn {
   readonly list: MyCasesList;
@@ -51,7 +52,7 @@ function optimisticCard(card: MyCaseCard, answer: CaseEngagementAnswer): MyCaseC
 
 /** @param home το είδος χώρου της σελίδας (§15 Γ2) — η λίστα έρχεται ήδη φιλτραρισμένη από τον server. */
 export function useMyCases(home: CaseHome): UseMyCasesReturn {
-  const [cards, setCards] = useState<readonly MyCaseCard[]>([]);
+  const [cards, setCards] = useState<readonly MyEngagementCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
@@ -71,7 +72,8 @@ export function useMyCases(home: CaseHome): UseMyCasesReturn {
   }, []);
 
   const respond = useCallback(async (engagementId: string, answer: CaseEngagementAnswer): Promise<RespondOutcome> => {
-    const before = cards.find((card) => card.engagementId === engagementId);
+    // Απάντηση σε **πρόταση** υπάρχει μόνο στη μεταβίβαση· η ανάθεση έκδοσης γεννιέται ήδη ενεργή (ADR-915 §39).
+    const before = cards.find((card): card is MyCaseCard => card.engagementId === engagementId && card.kind === 'conveyance_case');
     if (!before || inFlight.current.has(engagementId)) return { ok: true };
     inFlight.current.add(engagementId);
     setPending(new Set(inFlight.current));

@@ -140,7 +140,7 @@ describe('Π — ο παρονομαστής', () => {
     if (outcome.kind !== 'accepted') throw new Error('unreachable');
     expect(outcome.effect.declaredCredential).toMatchObject({ authority: 'notary-association', number: '1234', chapter: 'Αθηνών', assurance: 'declared' });
     expect(outcome.effect.origin).toMatchObject({ contactId: 'cont_n', invitationId: outcome.invitation.id });
-    const slot = (await listCaseProfessionalSlots(db(), record)).find((s) => s.role === 'notary');
+    const slot = (await listCaseProfessionalSlots(db(), record, Date.now())).find((s) => s.role === 'notary');
     expect(slot?.engagement).toMatchObject({ state: 'active', declaredCredential: { number: '1234' } });
     expect(announced.answered).toHaveBeenCalledTimes(1);
   });

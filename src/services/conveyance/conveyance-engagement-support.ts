@@ -104,7 +104,7 @@ export function toEngagementSummary(engagement: ConveyanceEngagement): CaseEngag
  * ανακλήθηκε — με τον **δρώντα** (οικοδεσπότης ή επαγγελματίας) ως `performedBy`.
  */
 export async function recordEngagementAudit(params: {
-  readonly engagement: ConveyanceEngagement;
+  readonly engagement: Engagement;
   readonly action: AuditAction;
   readonly changes: readonly AuditFieldChange[];
   readonly performedBy: string;
@@ -124,7 +124,7 @@ export async function recordEngagementAudit(params: {
 }
 
 /** Η αλλαγή κατάστασης ως πεδίο ίχνους. */
-export function stateChange(before: ConveyanceEngagement | null, after: ConveyanceEngagement): AuditFieldChange {
+export function stateChange(before: Engagement | null, after: Engagement): AuditFieldChange {
   return { field: 'state', oldValue: before?.state ?? null, newValue: after.state };
 }
 
@@ -133,7 +133,7 @@ export function stateChange(before: ConveyanceEngagement | null, after: Conveyan
  * δόθηκε μαζί της (Ε-4). Είναι **ένα** σημείο για τις δύο διαδρομές (πρόσκληση · πρόταση), ώστε το ίχνος να
  * μη διαφέρει ανάλογα με το πώς ήρθε ο επαγγελματίας.
  */
-export function answerChanges(before: ConveyanceEngagement | null, after: ConveyanceEngagement): AuditFieldChange[] {
+export function answerChanges(before: Engagement | null, after: Engagement): AuditFieldChange[] {
   const credential = after.declaredCredential;
   if (!credential || before?.declaredCredential === credential) return [stateChange(before, after)];
   const declared = credential.chapter ? `${credential.number} · ${credential.chapter}` : credential.number;
@@ -150,7 +150,7 @@ export function answerChanges(before: ConveyanceEngagement | null, after: Convey
  * `personal` για τον προσωπικό χώρο **του ίδιου** — σταθερή, ποτέ όνομα που θα πάλιωνε (το λύνει η οθόνη).
  * ⛔ Όχι `workspaceRefKey`: εκείνο είναι κλειδί προβολής και απαγορεύεται ρητά σε έγγραφο.
  */
-function actingForChange(after: ConveyanceEngagement): AuditFieldChange {
+function actingForChange(after: Engagement): AuditFieldChange {
   const workspace = actingWorkspaceOf(after);
   return { field: 'actingFor', oldValue: null, newValue: workspace.kind === 'org' ? workspace.companyId : workspace.kind };
 }

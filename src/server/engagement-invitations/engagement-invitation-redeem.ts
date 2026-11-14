@@ -18,16 +18,14 @@ import 'server-only';
 
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
+import { engagementInvitationFromDocument } from '@/lib/auth/engagement-invitation-schema';
 import { stageEngagementByInvitation } from '@/lib/auth/engagement-write';
 import type { ActiveWorkspace } from '@/lib/auth/workspace-membership';
-import { acceptsEngagements, effectiveCaseState } from '@/lib/conveyance/case-state';
-import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { declaredCredentialOf, type CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
-import { engagementInvitationFromDocument } from '@/lib/conveyance/engagement-invitation-schema';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
+import { invitationHost } from '@/server/engagements/engagement-hosts';
 import {
   redeemInvitation,
   type InvitationAcceptance,
@@ -38,17 +36,12 @@ import {
   type InvitationResolution,
 } from '@/server/invitations/invitation-redeem';
 import { resolveActingFor } from '@/services/conveyance/conveyance-acting-workspace.server';
-import { announceEngagementAnswered, announceInvitationDeclined } from '@/services/conveyance/conveyance-engagement-notifier';
+import type { Engagement } from '@/types/engagement';
 import {
-  asCaseEngagement,
-  caseSubject,
-  answerChanges,
-  recordEngagementAudit,
-} from '@/services/conveyance/conveyance-engagement-support';
-import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
-import { caseRosterSignal, invitationHostSignal } from '@/services/conveyance/conveyance-view-signal.server';
-import type { ConveyanceEngagement } from '@/types/engagement';
-import type { EngagementInvitation, EngagementInvitationKindRefusal } from '@/types/engagement-invitation';
+  isIssuanceInvitation,
+  type EngagementInvitation,
+  type EngagementInvitationKindRefusal,
+} from '@/types/engagement-invitation';
 import type { InvitationDocumentCore } from '@/types/invitation-core';
 import type { WorkspaceRef } from '@/types/workspace-membership';
 
@@ -60,7 +53,12 @@ const logger = createModuleLogger('engagement-invitation-redeem');
  * «Δεν μπόρεσα»: λείπει το μυστικό **μας**, οι συμμετοχές της υπόθεσης δεν διαβάζονται, ή **δεν μπόρεσα να ρωτήσω
  * τα γραφεία** του ανθρώπου (ADR-901 §15 Α43 — ποτέ σιωπηλά προσωπικός χώρος). Όλα fail-closed.
  */
-export type EngagementInvitationUnavailable = 'secret-missing' | 'engagements-unreadable' | 'offices-unknown';
+export type EngagementInvitationUnavailable =
+  | 'secret-missing'
+  | 'engagements-unreadable'
+  | 'offices-unknown'
+  /** ADR-862 §5.3.11 — η υπόθεση δεν ξέρει σε ποιο μητρώο δηλώνεται ο αριθμός (σφάλμα δεδομένων· ποτέ μαντεψιά μητρώου). */
+  | 'credential-authority-unknown';
 
 /** Ό,τι **δηλώνει** ο άνθρωπος στην αποδοχή: η ιδιότητά του (Ε-4) και ο χώρος για λογαριασμό του οποίου αναλαμβάνει (§15). */
 interface AcceptanceDeclaration {
@@ -72,7 +70,7 @@ export type EngagementRedeemOutcome = InvitationRedeemOutcome<
   EngagementInvitation,
   EngagementInvitationKindRefusal,
   EngagementInvitationUnavailable,
-  ConveyanceEngagement
+  Engagement
 >;
 
 /**
@@ -92,12 +90,11 @@ function recordOf(stored: InvitationDocumentCore, resolution: InvitationResoluti
   return record;
 }
 
-/** Ζει ακόμη η υπόθεση; — συμβουλευτικά πριν τη συναλλαγή (με τη **φάση** του ακινήτου), ξανά μέσα της. */
-async function caseStillOpen(db: Firestore, record: EngagementInvitation): Promise<boolean> {
-  const conveyanceCase = parseConveyanceCase((await db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(record.caseId).get()).data());
-  if (!conveyanceCase || conveyanceCase.companyId !== record.hostCompanyId) return false;
-  const context = await loadConveyanceSubject(db, record.hostCompanyId, record.propertyId);
-  return acceptsEngagements(effectiveCaseState(conveyanceCase.storedState, context?.legalPhase));
+/** Το ζεύγος υπόθεσης/ρόλου της πρόσκλησης — η διακριτή ένωση του γραφέα, χωρίς `as`. */
+function subjectAndRoleOf(record: EngagementInvitation) {
+  return isIssuanceInvitation(record)
+    ? { subject: record.subject, role: record.role }
+    : { subject: record.subject, role: record.role };
 }
 
 async function stageAcceptance(
@@ -105,24 +102,25 @@ async function stageAcceptance(
   tx: Transaction,
   accepted: { readonly record: EngagementInvitation; readonly identity: InvitationRedeemer },
   declaration: AcceptanceDeclaration,
-): Promise<InvitationAcceptance<EngagementInvitationKindRefusal, EngagementInvitationUnavailable, ConveyanceEngagement>> {
+): Promise<InvitationAcceptance<EngagementInvitationKindRefusal, EngagementInvitationUnavailable, Engagement>> {
   const { record, identity } = accepted;
-  // 🔴 Η αποθηκευμένη κατάσταση ξαναρωτιέται **μέσα** στη συναλλαγή: κλείσιμο/ακύρωση είναι ρητές πράξεις.
-  const conveyanceCase = parseConveyanceCase((await tx.get(db.collection(COLLECTIONS.CONVEYANCE_CASES).doc(record.caseId))).data());
-  if (!conveyanceCase || conveyanceCase.companyId !== record.hostCompanyId || !acceptsEngagements(conveyanceCase.storedState)) {
-    return { kind: 'refused', reason: 'case-closed' };
-  }
+  const host = invitationHost(record);
+  const authority = host.credentialAuthority();
+  if (authority === null) return { kind: 'unavailable', reason: 'credential-authority-unknown' };
+  // 🔴 Η αποθηκευμένη κατάσταση της υπόθεσης ξαναρωτιέται **μέσα** στη συναλλαγή: κλείσιμο/ακύρωση είναι ρητές πράξεις.
+  const signal = await host.stageOpen(db, tx);
+  if (signal === null) return { kind: 'refused', reason: 'case-closed' };
   // Η **ίδια** στιγμή με τη σφράγιση της πρόσκλησης (`resolvedAt` της επίλυσης) — ένα ρολόι ανά αποδοχή.
   const nowMs = Date.parse(record.resolvedAt ?? nowISO());
   const stage = await stageEngagementByInvitation(db, tx, {
     hostCompanyId: record.hostCompanyId, projectId: record.projectId, uid: identity.uid, email: identity.email,
-    role: record.role, subject: caseSubject(record.caseId),
+    ...subjectAndRoleOf(record),
     origin: { kind: 'professional_appointment', contactId: record.contactId },
     consents: record.consents, offeredBy: record.invitedByUid, nowMs,
-    invitationId: record.id, declaredCredential: declaredCredentialOf(record.role, declaration.credential, new Date(nowMs).toISOString()),
+    invitationId: record.id, declaredCredential: declaredCredentialOf(authority, declaration.credential, new Date(nowMs).toISOString()),
     actingFor: declaration.actingFor,
-  }, caseRosterSignal(db, conveyanceCase));
-  if (stage.outcome === 'commit') return { kind: 'commit', write: () => asCaseEngagement(stage.write()) };
+  }, signal);
+  if (stage.outcome === 'commit') return { kind: 'commit', write: () => stage.write() };
   return stage.reason === 'unreadable'
     ? { kind: 'unavailable', reason: 'engagements-unreadable' }
     : { kind: 'refused', reason: stage.reason };
@@ -132,14 +130,14 @@ async function stageAcceptance(
 function engagementInvitationKind(
   db: Firestore,
   declaration: AcceptanceDeclaration | null,
-): InvitationKind<InvitationDocumentCore, EngagementInvitation, InvitationRedeemer, EngagementInvitationKindRefusal, EngagementInvitationUnavailable, ConveyanceEngagement> {
+): InvitationKind<InvitationDocumentCore, EngagementInvitation, InvitationRedeemer, EngagementInvitationKindRefusal, EngagementInvitationUnavailable, Engagement> {
   return {
     ...ENGAGEMENT_INVITATION_LOCATOR,
     secretMissing: 'secret-missing',
     recordOf,
     prepareAcceptance: async (_identity, stored) => {
       const record = engagementInvitationFromDocument(stored, stored.id);
-      return record !== null && !(await caseStillOpen(db, record)) ? { kind: 'refused', reason: 'case-closed' } : null;
+      return record !== null && !(await invitationHost(record).stillOpen(db)) ? { kind: 'refused', reason: 'case-closed' } : null;
     },
     onAccept: async (tx, accepted) => {
       // Η άρνηση δεν φτάνει ποτέ εδώ· η αποδοχή χωρίς δήλωση την έχει ήδη κόψει το σύνορο HTTP (zod).
@@ -147,7 +145,7 @@ function engagementInvitationKind(
       return stageAcceptance(db, tx, accepted, declaration);
     },
     // Η αποδοχή ενημερώνει τις όψεις μέσω του γραφέα συμμετοχών· η άρνηση αλλάζει μόνο τη θέση του οικοδεσπότη (§14.8).
-    onDecline: (tx, record) => invitationHostSignal(db, record)(tx),
+    onDecline: (tx, record) => invitationHost(record).signal(db)(tx),
   };
 }
 
@@ -210,17 +208,11 @@ export async function respondToEngagementInvitation(
     : await declineEngagementInvitation(db, input);
   if (outcome.kind !== 'accepted' && outcome.kind !== 'declined') return outcome;
 
-  const invitation = outcome.invitation;
-  const propertyName = (await loadConveyanceSubject(db, invitation.hostCompanyId, invitation.propertyId).catch(() => null))?.propertyName ?? null;
-  if (outcome.kind === 'declined') {
-    await announceInvitationDeclined(invitation, propertyName);
-    return outcome;
-  }
-  const engagement = outcome.effect;
-  await recordEngagementAudit({
-    engagement, action: 'created', changes: answerChanges(null, engagement),
-    performedBy: input.identity.uid, performedByName: input.identity.email, entityName: propertyName,
-  });
-  await announceEngagementAnswered(engagement, invitation.propertyId, propertyName);
+  // Ίχνος + ειδοποίηση **του είδους** (υπόθεση μεταβίβασης · ανάθεση έκδοσης) — ο οικοδεσπότης ξέρει τι λέγεται.
+  await invitationHost(outcome.invitation).afterAnswer(
+    db,
+    outcome.kind === 'accepted' ? { kind: 'accepted', engagement: outcome.effect } : { kind: 'declined' },
+    { uid: input.identity.uid, email: input.identity.email },
+  );
   return outcome;
 }

@@ -13,7 +13,7 @@ import type { IssuanceLinkAnswerBody, IssuanceLinkUnlockBody } from '@/lib/docum
 import { isOneOf } from '@/lib/type-guards';
 import { generateIdempotencyKey } from '@/services/enterprise-id.service';
 import { CORE_INVITATION_REFUSALS } from '@/types/invitation-core';
-import { ISSUANCE_LINK_REFUSALS, type IssuanceLinkLanding, type IssuanceLinkView } from '@/types/issuance-invitation';
+import { ISSUANCE_LINK_REFUSALS, type IssuanceLinkLanding, type IssuanceLinkView, type IssuanceSpaceView } from '@/types/issuance-invitation';
 
 const VIEW_API = '/api/issuance-link';
 const ANSWER_API = '/api/issuance-link/answer';
@@ -61,7 +61,13 @@ function postWithLink<T>(url: string, token: string, body: object): Promise<ApiO
 }
 
 /** Η απάντηση — POST με ένα κλειδί ιδεμποτίας ανά πάτημα (και τον κωδικό, §29). */
-export function answerDocumentRequest(token: string, body: IssuanceLinkAnswerBody): Promise<ApiOutcome<{ readonly answer: IssuanceLinkAnswerBody['answer'] }>> {
+/** §39 — η απάντηση + ο χώρος της ανάθεσης (πρόσκληση σε λογαριασμό μετά το «Αναλαμβάνω»). */
+export interface DocumentRequestAnswer {
+  readonly answer: IssuanceLinkAnswerBody['answer'];
+  readonly space: IssuanceSpaceView;
+}
+
+export function answerDocumentRequest(token: string, body: IssuanceLinkAnswerBody): Promise<ApiOutcome<DocumentRequestAnswer>> {
   return postWithLink(ANSWER_API, token, body);
 }
 

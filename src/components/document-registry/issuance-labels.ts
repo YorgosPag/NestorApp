@@ -13,6 +13,7 @@ import type {
   IssuanceStage,
 } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceDeliveryOutcome } from '@/lib/document-validity/issuance-delivery';
+import type { IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
 
 const K = 'document-registry:';
 
@@ -218,4 +219,39 @@ export const DELIVERY_ALARM: Readonly<Record<IssuanceDeliveryOutcome, boolean>> 
 /** Έφτασε το μήνυμα σε άνθρωπο; — για το «ενημερώθηκαν Ν συνιδιοκτήτες». Το `complained` **σημαίνει** ότι το έλαβε. */
 export const DELIVERY_REACHED: Readonly<Record<IssuanceDeliveryOutcome, boolean>> = {
   accepted: true, delivered: true, complained: true, failed: false, unaddressable: false, bounced: false,
+};
+
+/**
+ * §39 — **ο χώρος της ανάθεσης** στην κάρτα του γραφείου: η κατάσταση (`IssuanceSpaceStatus`) και το «Νέος σύνδεσμος
+ * εισόδου». Ολικός πάνω στις καταστάσεις — νέα κατάσταση δεν μεταγλωττίζεται χωρίς λέξη.
+ */
+export const ISSUANCE_SPACE_STATUS_KEYS: Readonly<Record<IssuanceSpaceStatus['kind'], string>> = {
+  none: `${K}issuance.space.none`,
+  invited: `${K}issuance.space.invited`,
+  expired: `${K}issuance.space.expired`,
+  declined: `${K}issuance.space.declined`,
+  entered: `${K}issuance.space.entered`,
+};
+
+export const ISSUANCE_SPACE_KEYS = {
+  label: `${K}issuance.space.label`,
+  opened: `${K}issuance.space.opened`,
+  notOpened: `${K}issuance.space.notOpened`,
+  send: `${K}issuance.space.send`,
+  resend: `${K}issuance.space.resend`,
+  sending: `${K}issuance.space.sending`,
+  sent: `${K}issuance.space.sent`,
+  sentUndelivered: `${K}issuance.space.sentUndelivered`,
+} as const;
+
+/** Οι αρνήσεις της πόρτας (`SPACE_INVITE_REFUSAL_STATUS`) — ο κωδικός είναι και το κλειδί· άγνωστος ⇒ `generic`. */
+export const ISSUANCE_SPACE_REFUSAL_KEYS: Readonly<Record<string, string>> = {
+  NOT_FOUND: `${K}issuance.space.refusals.NOT_FOUND`,
+  NOT_ACCEPTED: `${K}issuance.space.refusals.NOT_ACCEPTED`,
+  ALREADY_ENTERED: `${K}issuance.space.refusals.ALREADY_ENTERED`,
+  NO_PROJECT: `${K}issuance.space.refusals.NO_PROJECT`,
+  NO_AUTHORITY: `${K}issuance.space.refusals.NO_AUTHORITY`,
+  NO_EMAIL: `${K}issuance.space.refusals.NO_EMAIL`,
+  SPACE_UNKNOWN: `${K}issuance.space.refusals.SPACE_UNKNOWN`,
+  generic: `${K}issuance.space.refusals.generic`,
 };

@@ -26,6 +26,7 @@ import {
   type IssuanceState,
 } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceCandidate } from '@/lib/document-validity/issuance-candidates';
+import type { IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import { issuanceActionOf, type IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
@@ -39,6 +40,8 @@ export interface RegistryIssuanceView {
   readonly candidates: readonly IssuanceCandidate[];
   /** Ο υπεύθυνος που **αποφασίζει** (§26) — `null` = κανείς ιδιοκτήτης / δεν ρωτήθηκε. */
   readonly lead: ObligorLead | null;
+  /** §39 — ο χώρος της ανάθεσης (στάλθηκε · ανοίχτηκε · έληξε · μπήκε). `null` = δεν διαβάστηκε ⇒ κανένας ισχυρισμός. */
+  readonly space: IssuanceSpaceStatus | null;
 }
 
 /**
@@ -60,6 +63,8 @@ export function registryIssuanceOf(row: RegistryRow, registry: DocumentRegistryR
     state: issuanceStateOf(issuance.record, issuance.latestIssuedOn),
     candidates: issuance.candidates,
     lead: registry.properties[propertyId]?.obligorLead ?? null,
+    // Διαβάστηκε και δεν υπάρχει πρόσκληση ⇒ «κανένας χώρος»· δεν διαβάστηκε ⇒ `null` (η κάρτα σωπαίνει).
+    space: registry.issuanceSpaces === null ? null : registry.issuanceSpaces[key] ?? { kind: 'none' },
   };
 }
 

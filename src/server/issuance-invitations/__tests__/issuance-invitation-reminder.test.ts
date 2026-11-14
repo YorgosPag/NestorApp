@@ -147,7 +147,7 @@ describe('ADR-915 §31 — η σάρωση', () => {
     expect(fresh).not.toBe(original);
     expect(await viewIssuanceLink(db(), original, FIRST_DUE)).toMatchObject({ kind: 'view' });
     expect(await viewIssuanceLink(db(), fresh, FIRST_DUE)).toMatchObject({ kind: 'view' });
-    expect(await answerIssuanceLink(db(), fresh, { answer: 'approve', note: null, accessCode: code }, FIRST_DUE)).toEqual({ kind: 'answered', answer: 'approve' });
+    expect(await answerIssuanceLink(db(), fresh, { answer: 'approve', note: null, accessCode: code }, FIRST_DUE)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
     expect(await answerIssuanceLink(db(), original, { answer: 'reject', note: null, accessCode: code }, FIRST_DUE)).toMatchObject({ kind: 'refused', reason: 'already-used' });
   });
 

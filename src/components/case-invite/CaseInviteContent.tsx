@@ -32,11 +32,19 @@ import {
   redeemCaseInvitationFromScreen,
   type CaseInvitationRedeemResult,
 } from '@/services/conveyance/conveyance-engagement-gateway';
+import { IssuanceSurfaces } from '@/components/conveyance/issuance-surfaces';
 import type { AcceptancePreview } from '@/types/conveyance-case';
-import type { EngagementInvitationPreview } from '@/types/engagement-invitation';
+import type { EngagementSubjectKind } from '@/types/engagement';
+import type { EngagementInvitationPreview, EngagementInvitationSubjectView } from '@/types/engagement-invitation';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
 
-import { CASE_INVITE_KEYS, CASE_INVITE_NS, CASE_INVITE_REFUSAL_KEY, CASE_INVITE_ROLE_KEY } from './case-invite-labels';
+import {
+  CASE_INVITE_KEYS,
+  CASE_INVITE_NS,
+  CASE_INVITE_REFUSAL_KEY,
+  CASE_INVITE_ROLE_KEY,
+  CASE_INVITE_SUBJECT_KEYS,
+} from './case-invite-labels';
 import { CredentialDeclarationForm, credentialDraftOf, credentialFromDraft, type CredentialDraft } from './CredentialDeclarationForm';
 
 // 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE (ποτέ `import()`, ποτέ σε Server Component).
@@ -62,20 +70,43 @@ const UNCHECKED: AcceptancePreview = { kind: 'unknown' };
 export function CaseInviteContent({ view }: { readonly view: CaseInviteView }) {
   const [outcome, setOutcome] = useState<CaseInvitationRedeemResult | null>(null);
   if (view.kind !== 'preview') return <Setback reason={view.kind === 'refused' ? view.reason : null} />;
-  if (outcome !== null) return <Outcome outcome={outcome} switchAccountHref={view.switchAccountHref} onRetry={() => setOutcome(null)} />;
+  if (outcome !== null) {
+    return <Outcome outcome={outcome} subject={view.preview.subject.kind} switchAccountHref={view.switchAccountHref} onRetry={() => setOutcome(null)} />;
+  }
   return <Preview view={view} onOutcome={setOutcome} />;
+}
+
+/** Ό,τι διαφέρει ανά είδος υπόθεσης: ρόλος + κατάλογος (μεταβίβαση) · έγγραφο (ανάθεση έκδοσης). */
+function SubjectFacts({ subject }: { readonly subject: EngagementInvitationSubjectView }) {
+  // ADR-744 §27.4 — η ανάθεση έκδοσης δανείζεται το λεξιλόγιο του μητρώου εγγράφων: τεμπέλικη επιφάνεια, ώστε τα
+  // `document-registry` / `legality` να μην μπαίνουν στο slice της σελίδας (που υπηρετεί και τη μεταβίβαση).
+  const { t } = useTranslation(CASE_INVITE_NS);
+  if (subject.kind === 'document_issuance') return <IssuanceSurfaces.IssuanceSubjectFacts subject={subject} />;
+  return (
+    <>
+      <dt className="text-muted-foreground">{t(CASE_INVITE_KEYS.roleLabel)}</dt>
+      <dd>{t(CASE_INVITE_ROLE_KEY[subject.role])}</dd>
+      {subject.checklist && (
+        <>
+          <dt className="text-muted-foreground">{t(CASE_INVITE_KEYS.findLabel)}</dt>
+          <dd>{t(CASE_INVITE_KEYS.find, { ...subject.checklist })}</dd>
+        </>
+      )}
+    </>
+  );
 }
 
 function Preview({ view, onOutcome }: { readonly view: PreviewView; readonly onOutcome: (outcome: CaseInvitationRedeemResult) => void }) {
   const { t } = useTranslation(CASE_INVITE_NS);
   const layout = useLayoutClasses();
   const { preview } = view;
+  const kind = preview.subject.kind;
   return (
     <Card className={layout.cardAuthWidth}>
       <CardHeader>
-        <CardTitle>{t(CASE_INVITE_KEYS.title)}</CardTitle>
+        <CardTitle>{t(CASE_INVITE_SUBJECT_KEYS[kind].title)}</CardTitle>
         <CardDescription>
-          {t(CASE_INVITE_KEYS.intro, {
+          {t(CASE_INVITE_SUBJECT_KEYS[kind].intro, {
             host: preview.hostName ?? t(CASE_INVITE_KEYS.unnamedHost),
             property: preview.propertyLabel ?? t(CASE_INVITE_KEYS.unnamedProperty),
           })}
@@ -83,18 +114,11 @@ function Preview({ view, onOutcome }: { readonly view: PreviewView; readonly onO
       </CardHeader>
       <CardContent className="space-y-4">
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-          <dt className="text-muted-foreground">{t(CASE_INVITE_KEYS.roleLabel)}</dt>
-          <dd>{t(CASE_INVITE_ROLE_KEY[preview.role])}</dd>
-          {preview.checklist && (
-            <>
-              <dt className="text-muted-foreground">{t(CASE_INVITE_KEYS.findLabel)}</dt>
-              <dd>{t(CASE_INVITE_KEYS.find, { ...preview.checklist })}</dd>
-            </>
-          )}
+          <SubjectFacts subject={preview.subject} />
           <dt className="text-muted-foreground">{t(CASE_INVITE_KEYS.linkExpires)}</dt>
           <dd>{formatDateTime(preview.expiresAt, { dateStyle: 'long', timeStyle: 'short' })}</dd>
         </dl>
-        <p className="text-sm">{t(CASE_INVITE_KEYS.scope)}</p>
+        <p className="text-sm">{t(CASE_INVITE_SUBJECT_KEYS[kind].scope)}</p>
         <p className="text-xs text-muted-foreground">{t(CASE_INVITE_KEYS.identityDeclared)}</p>
         <RespondArea view={view} onOutcome={onOutcome} />
       </CardContent>
@@ -146,7 +170,7 @@ function Answer({ view, onOutcome }: { readonly view: PreviewView; readonly onOu
   return (
     <section className="space-y-3">
       <ActingWorkspaceField preview={acceptance} selectedCompanyId={officeId} onSelect={setOfficeId} showMissing={showMissing} disabled={pending !== null} />
-      <CredentialDeclarationForm role={view.preview.role} draft={draft} onChange={setDraft} showMissing={showMissing} disabled={pending !== null} />
+      <CredentialDeclarationForm authority={view.preview.credentialAuthority} draft={draft} onChange={setDraft} showMissing={showMissing} disabled={pending !== null} />
       <section className="flex gap-2">
         <Button className="flex-1" disabled={pending !== null} aria-busy={pending === 'accept'} onClick={() => void answer('accept')}>
           {t(CASE_INVITE_KEYS.accept)}
@@ -159,17 +183,20 @@ function Answer({ view, onOutcome }: { readonly view: PreviewView; readonly onOu
   );
 }
 
-function Outcome({ outcome, switchAccountHref, onRetry }: {
+function Outcome({ outcome, subject, switchAccountHref, onRetry }: {
   readonly outcome: CaseInvitationRedeemResult;
+  readonly subject: EngagementSubjectKind;
   readonly switchAccountHref: string;
   readonly onRetry: () => void;
 }) {
   const { t } = useTranslation(CASE_INVITE_NS);
+  // `TABLE[x].prop` (όχι μεταβλητή `words`): ο γεννήτορας του slice λύνει τον πίνακα, όχι το όνομα της ιδιότητας (ADR-744).
   switch (outcome.kind) {
     case 'accepted':
+      // ADR-862 §5.3.11 — ένα URL για κάθε είδος: η σελίδα του χώρου διαλέγει περιεχόμενο από το `kind` της όψης.
       return (
-        <InvitationMessageCard title={t(CASE_INVITE_KEYS.accepted)} body={t(CASE_INVITE_KEYS.acceptedBody)}>
-          <Button asChild className="w-full"><Link href={myCaseHref(outcome.engagementId, outcome.home)}>{t(CASE_INVITE_KEYS.openCase)}</Link></Button>
+        <InvitationMessageCard title={t(CASE_INVITE_SUBJECT_KEYS[subject].accepted)} body={t(CASE_INVITE_SUBJECT_KEYS[subject].acceptedBody)}>
+          <Button asChild className="w-full"><Link href={myCaseHref(outcome.engagementId, outcome.home)}>{t(CASE_INVITE_SUBJECT_KEYS[subject].open)}</Link></Button>
         </InvitationMessageCard>
       );
     case 'declined':

@@ -77,6 +77,19 @@ export type IssuanceLinkLanding =
 export const ISSUANCE_LINK_REFUSALS = ['superseded', 'lead-changed', 'answer-mismatch', 'code-required', 'code-wrong', 'code-locked'] as const;
 export type IssuanceLinkRefusal = (typeof ISSUANCE_LINK_REFUSALS)[number];
 
+/**
+ * §39 — **ο χώρος της ανάθεσης** μετά το «Αναλαμβάνω», όπως τον βλέπει η σελίδα του συνδέσμου:
+ * - `invited`     — εκδόθηκε πρόσκληση σε λογαριασμό· `href` = η σελίδα της (`/case-invite/[token]`)
+ * - `no-project`  — το ακίνητο δεν ανήκει σε έργο ⇒ κανένας χώρος ακόμη (ίδια συμπεριφορά με τη μεταβίβαση)
+ * - `no-authority` — το προσόν της ανάθεσης δεν δηλώνει μητρώο ⇒ κανένας χώρος (ποτέ μαντεψιά μητρώου)
+ * - `none`        — η απάντηση δεν ανοίγει χώρο (άρνηση · έγκριση ιδιοκτήτη)
+ */
+export type IssuanceSpaceView =
+  | { readonly kind: 'invited'; readonly href: string }
+  | { readonly kind: 'no-project' }
+  | { readonly kind: 'no-authority' }
+  | { readonly kind: 'none' };
+
 /** Ό,τι βλέπει το γραφείο πριν πατήσει «Αποστολή» (§28 Η-Β7) — ο **ίδιος** συνθέτης με το μήνυμα που φεύγει. */
 export interface IssuancePreview {
   readonly audience: IssuanceAudience;

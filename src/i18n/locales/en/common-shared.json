@@ -1006,7 +1006,16 @@
     "lockedBodyUnnamed": "A wrong code was entered 5 times on the link. Send again from “Document expiry”.",
     "bounced": "Email bounced — “{title}”",
     "bouncedBody": "The email with the link to {name} was not delivered. Check the contact’s address and send again from “Document expiry”.",
-    "bouncedBodyUnnamed": "The email with the link was not delivered. Check the contact’s address and send again from “Document expiry”."
+    "bouncedBodyUnnamed": "The email with the link was not delivered. Check the contact’s address and send again from “Document expiry”.",
+    "spaceEntered": "The professional entered the assignment space — “{title}”",
+    "spaceEnteredBody": "{name} created an account and entered the assignment space. The collaboration continues inside Nestor App.",
+    "spaceEnteredBodyUnnamed": "The professional created an account and entered the assignment space. The collaboration continues inside Nestor App.",
+    "spaceDeclined": "The professional did not enter the assignment space — “{title}”",
+    "spaceDeclinedBody": "{name} declined the collaboration space. The assignment stays accepted; communication happens outside the app.",
+    "spaceDeclinedBodyUnnamed": "The professional declined the collaboration space. The assignment stays accepted; communication happens outside the app.",
+    "spacePending": "Waiting for entry to the assignment space — “{title}”",
+    "spacePendingBody": "{name} accepted, but has not entered the assignment space yet. You can send a new entry link from “Document expiry”.",
+    "spacePendingBodyUnnamed": "The professional accepted, but has not entered the assignment space yet. You can send a new entry link from “Document expiry”."
   },
   "handoverInvitationAnswered": {
     "accepted": "The buyer accepted the handover — “{title}”",

@@ -32,7 +32,6 @@ import { inviteCaseProfessional, revokeCaseInvitation } from './conveyance-invit
 import { latestCaseInvitations } from '@/server/engagement-invitations/engagement-invitation-issue';
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 import { announceEngagementChanged } from './conveyance-engagement-notifier';
-import { nowISO } from '@/lib/date-local';
 import type { ConveyanceActor } from './conveyance-case.service';
 import { caseRosterSignal } from './conveyance-view-signal.server';
 import {
@@ -60,11 +59,11 @@ async function engagementsByRole(db: Firestore, record: ConveyanceCase, projectI
 }
 
 /** Οι τρεις θέσεις της υπόθεσης — **μία** απάντηση για το UI του οικοδεσπότη. */
-export async function listCaseProfessionalSlots(db: Firestore, record: ConveyanceCase): Promise<readonly CaseProfessionalSlot[]> {
+export async function listCaseProfessionalSlots(db: Firestore, record: ConveyanceCase, nowMs: number): Promise<readonly CaseProfessionalSlot[]> {
   const projectId = caseProjectId(record);
   const [byRole, invitations] = await Promise.all([
     projectId ? engagementsByRole(db, record, projectId) : new Map<LegalProfessionalRole, ConveyanceEngagement[]>(),
-    latestCaseInvitations(db, record.companyId, record.id, nowISO()),
+    latestCaseInvitations(db, record.companyId, record.id, new Date(nowMs).toISOString()),
   ]);
   return Promise.all(LEGAL_ENGAGEMENT_ROLES.map(async (role): Promise<CaseProfessionalSlot> => {
     const professional = await resolveCaseProfessional(db, record.companyId, record.subject.propertyId, role);
@@ -130,7 +129,7 @@ export async function offerCaseEngagement(
       projectId: ready.projectId, role: input.role, contactId: professional.contactId, email: professional.email,
       credentialHint: professional.credentialHint, consents: consents.consents, propertyName: ready.propertyName, nowMs: input.nowMs,
     });
-    return { ok: true, created: true, invited, slots: await listCaseProfessionalSlots(db, record) };
+    return { ok: true, created: true, invited, slots: await listCaseProfessionalSlots(db, record, input.nowMs) };
   }
 
   const outcome = await offerEngagement(db, {
@@ -147,7 +146,7 @@ export async function offerCaseEngagement(
     await recordEngagementAudit({ engagement: offered, action: 'created', changes: [stateChange(null, offered)], performedBy: actor.uid, performedByName: actor.email, entityName: ready.propertyName });
     await announceEngagementChanged(offered, ready.propertyName);
   }
-  return { ok: true, created: outcome.outcome === 'offered', invited: null, slots: await listCaseProfessionalSlots(db, record) };
+  return { ok: true, created: outcome.outcome === 'offered', invited: null, slots: await listCaseProfessionalSlots(db, record, input.nowMs) };
 }
 
 // =============================================================================
@@ -180,7 +179,7 @@ export async function endCaseEngagement(
     await recordEngagementAudit({ engagement: after, action: 'status_changed', changes: [stateChange(before, after)], performedBy: actor.uid, performedByName: actor.email, entityName: name });
     await announceEngagementChanged(after, name);
   }
-  return { ok: true, slots: await listCaseProfessionalSlots(db, record) };
+  return { ok: true, slots: await listCaseProfessionalSlots(db, record, nowMs) };
 }
 
 /** **Ακύρωση της εκκρεμούς πρόσκλησης** μιας θέσης (ADR-901 Φ3) — ιδεμποτής: καμία εκκρεμής ⇒ ίδιες θέσεις. */
@@ -193,7 +192,7 @@ export async function cancelCaseInvitation(
 ): Promise<readonly CaseProfessionalSlot[]> {
   const context = await loadConveyanceSubject(db, actor.companyId, record.subject.propertyId);
   await revokeCaseInvitation(db, actor, record, { role, propertyName: context?.propertyName ?? null, nowMs });
-  return listCaseProfessionalSlots(db, record);
+  return listCaseProfessionalSlots(db, record, nowMs);
 }
 
 // =============================================================================

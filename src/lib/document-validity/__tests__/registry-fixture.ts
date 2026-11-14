@@ -122,7 +122,7 @@ export function fixtureResponse(
     ...core, asOf: FIXTURE_AS_OF, freshUntil: '2026-10-15T21:00:00.000Z',
     truncated: false, truncatedSources: [], unscopedListings: 0, ...NAMES,
     // §27 — οι αναθέσεις από τον ΑΛΗΘΙΝΟ συναρμολογητή (κενός κατάλογος ⇒ «καμία ανάθεση» σε κάθε γραμμή «Ανάθεσης»).
-    issuance: issuanceOfRows(core.rows, roster).issuance, issuanceKnown: true,
+    issuance: issuanceOfRows(core.rows, roster).issuance, issuanceKnown: true, issuanceSpaces: {},
     // §35 — καμία πρόταση/απόφαση: η ενότητα «Μόνιμες υποχρεώσεις» δεν ζωγραφίζεται (οι σουίτες της τη γεμίζουν).
     upkeep: [],
     ...overrides,

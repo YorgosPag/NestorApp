@@ -37,6 +37,7 @@ import { useIssuanceAssignmentActions } from '@/components/document-registry/iss
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { registryPersonOf } from '@/components/document-registry/registry-obligors';
 import { ObligorPerson } from '@/components/document-registry/RegistryObligorPeople';
+import { RegistryIssuanceSpaceLine } from '@/components/document-registry/RegistryIssuanceSpaceLine';
 import {
   IssuanceCancelDialog,
   IssuanceDecisionDialog,
@@ -249,6 +250,8 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
       </p>
       <CredentialLine record={state.record} />
       <BallInCourtLine state={state} view={view} registry={registry} />
+      {/* §39 — μετά το «Αναλαμβάνω»: μπήκε ο επαγγελματίας στον χώρο της ανάθεσης; */}
+      {state.stage === 'accepted' ? <RegistryIssuanceSpaceLine view={view} /> : null}
       <HistoryLines record={state.record} registry={registry} />
       {saving ? <span role="status" className="text-xs text-muted-foreground">{t(ISSUANCE_KEYS.saving)}</span> : null}
       {actions?.canAct && !saving ? <StageActions view={view} stage={state.stage} record={state.record} registry={registry} /> : null}

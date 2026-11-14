@@ -85,7 +85,7 @@ async function openCase(): Promise<ConveyanceCase> {
 
 async function engage(record: ConveyanceCase, role: Role): Promise<string> {
   await offerCaseEngagement(db(), host, record, { role, attestedBasis: BASIS[role], nowMs: NOW });
-  const slot = (await listCaseProfessionalSlots(db(), record)).find((s) => s.role === role);
+  const slot = (await listCaseProfessionalSlots(db(), record, NOW)).find((s) => s.role === role);
   if (!slot?.engagement) throw new Error(`no engagement for ${role}`);
   await respondToCaseEngagement(db(), { uid: UID[role], email: null, active: null }, slot.engagement.engagementId, ACCEPT, NOW);
   return slot.engagement.engagementId;

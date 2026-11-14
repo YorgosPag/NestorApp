@@ -11,6 +11,7 @@ import type { OperationalStatus } from '@/constants/operational-statuses';
 import type { PropertyClass } from '@/constants/property-types';
 import type { DocumentRegistry } from '@/lib/document-validity/document-registry';
 import type { RowIssuance } from '@/lib/document-validity/issuance-rows';
+import type { IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
 
@@ -127,6 +128,11 @@ export interface DocumentRegistryResponse extends DocumentRegistry {
    * ψεύτικο «δεν ανατέθηκε» θα έφερνε δεύτερο ΠΕΑ).
    */
   readonly issuanceKnown: boolean;
+  /**
+   * §39 — ο **χώρος** κάθε ανάθεσης (κλειδί `issuanceKeyOf`): στάλθηκε · ανοίχτηκε · έληξε · αρνήθηκε · μπήκε. Παράγεται
+   * από την πρόσκληση σε λογαριασμό, ποτέ αποθηκευμένο στην ανάθεση. `null` = δεν διαβάστηκε ⇒ η κάρτα δεν ισχυρίζεται τίποτα.
+   */
+  readonly issuanceSpaces: Readonly<Record<string, IssuanceSpaceStatus>> | null;
   /**
    * ADR-915 §35 — η ενότητα «Μόνιμες υποχρεώσεις»: ανά (ακίνητο, είδος) ό,τι **περιμένει** απόφαση (προτείνεται · η
    * εφαρμογή δεν ξέρει) **και** ό,τι αποφασίστηκε. Χωριστά από τις γραμμές: η πρόταση **δεν** είναι κατάσταση εγγράφου.

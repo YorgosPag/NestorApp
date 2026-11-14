@@ -39,7 +39,13 @@ const noticeT = createBundleTranslate({ 'common-shared': elShared }, 'common-sha
  * §30 — ή (`delivery-failed`) **το email επέστρεψε**: ο πάροχος δεν μπόρεσε να το παραδώσει (DocuSign «Envelope delivery to a
  * recipient fails»). Ο σύνδεσμος δεν θα απαντηθεί ποτέ — το γραφείο πρέπει να το μάθει χωρίς να κοιτάξει.
  */
-export type IssuanceLinkEvent = IssuanceLinkAnswer | 'code-locked' | 'delivery-failed';
+export type IssuanceLinkEvent = IssuanceLinkAnswer | 'code-locked' | 'delivery-failed' | IssuanceSpaceEvent;
+
+/**
+ * §39 — ο **χώρος της ανάθεσης** (πρόσκληση σε λογαριασμό μετά το «Αναλαμβάνω»): μπήκε · αρνήθηκε · δεν μπήκε ακόμη
+ * (υπενθύμιση 3 ημερών, ADR-901 Ε-5). Ίδιο γεγονός και ίδια προσγείωση με τις απαντήσεις — «κίνηση στην ανάθεση που έστειλα».
+ */
+export type IssuanceSpaceEvent = 'space-entered' | 'space-declined' | 'space-pending';
 
 const TITLE_KEYS: Readonly<Record<IssuanceLinkEvent, string>> = {
   approve: 'documentIssuanceAnswered.approved',
@@ -48,6 +54,9 @@ const TITLE_KEYS: Readonly<Record<IssuanceLinkEvent, string>> = {
   decline: 'documentIssuanceAnswered.declined',
   'code-locked': 'documentIssuanceAnswered.locked',
   'delivery-failed': 'documentIssuanceAnswered.bounced',
+  'space-entered': 'documentIssuanceAnswered.spaceEntered',
+  'space-declined': 'documentIssuanceAnswered.spaceDeclined',
+  'space-pending': 'documentIssuanceAnswered.spacePending',
 };
 
 /** Το σώμα κάθε γεγονότος — με όνομα του αποδέκτη, ή χωρίς (επαφή χωρίς όνομα). */
@@ -58,10 +67,22 @@ const BODY_KEYS: Readonly<Record<IssuanceLinkEvent, { readonly named: string; re
   decline: { named: 'documentIssuanceAnswered.body', unnamed: 'documentIssuanceAnswered.bodyUnnamed' },
   'code-locked': { named: 'documentIssuanceAnswered.lockedBody', unnamed: 'documentIssuanceAnswered.lockedBodyUnnamed' },
   'delivery-failed': { named: 'documentIssuanceAnswered.bouncedBody', unnamed: 'documentIssuanceAnswered.bouncedBodyUnnamed' },
+  'space-entered': { named: 'documentIssuanceAnswered.spaceEnteredBody', unnamed: 'documentIssuanceAnswered.spaceEnteredBodyUnnamed' },
+  'space-declined': { named: 'documentIssuanceAnswered.spaceDeclinedBody', unnamed: 'documentIssuanceAnswered.spaceDeclinedBodyUnnamed' },
+  'space-pending': { named: 'documentIssuanceAnswered.spacePendingBody', unnamed: 'documentIssuanceAnswered.spacePendingBodyUnnamed' },
 };
 
-/** Γεγονότα του ίδιου συνδέσμου που **δεν** είναι η απάντηση — δικό τους κλειδί, αλλιώς το ένα θα έσβηνε το άλλο ως διπλότυπο. */
-const EVENT_ID_SUFFIX: Readonly<Partial<Record<IssuanceLinkEvent, string>>> = { 'code-locked': ':locked', 'delivery-failed': ':bounced' };
+/**
+ * Γεγονότα του ίδιου συνδέσμου που **δεν** είναι η απάντηση — δικό τους κλειδί, αλλιώς το ένα θα έσβηνε το άλλο ως διπλότυπο.
+ * §39: τα γεγονότα του χώρου φέρουν το id της **πρόσκλησης σε λογαριασμό** (`einv_…`) — άλλος σύνδεσμος, άλλο κλειδί.
+ */
+const EVENT_ID_SUFFIX: Readonly<Partial<Record<IssuanceLinkEvent, string>>> = {
+  'code-locked': ':locked',
+  'delivery-failed': ':bounced',
+  'space-entered': ':space-entered',
+  'space-declined': ':space-declined',
+  'space-pending': ':space-pending',
+};
 
 export interface IssuanceAnswerNotice {
   readonly companyId: string;

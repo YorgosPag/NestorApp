@@ -36,7 +36,7 @@ import { placeEngagement } from './conveyance-acting-workspace.server';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import type { ConveyanceEngagement, EngagementState } from '@/types/engagement';
-import type { EngagementInvitation } from '@/types/engagement-invitation';
+import type { ConveyanceEngagementInvitation } from '@/types/engagement-invitation';
 import { orgWorkspace } from '@/types/workspace-membership';
 
 const logger = createModuleLogger('conveyance-engagement-notifier');
@@ -170,7 +170,7 @@ export async function announceEngagementAnswered(
  * ADR-901 Φ3 — ο επαγγελματίας **χωρίς λογαριασμό** πάτησε «Δεν αναλαμβάνω» στην πρόσκληση με email: δεν υπάρχει
  * συμμετοχή να πει «δεν ανέλαβε», άρα το λέει η **πρόσκληση** (Ε-5: «η άρνηση ειδοποιεί τον προσκαλούντα»).
  */
-export async function announceInvitationDeclined(invitation: EngagementInvitation, propertyName: string | null): Promise<void> {
+export async function announceInvitationDeclined(invitation: ConveyanceEngagementInvitation, propertyName: string | null): Promise<void> {
   await announceToInviter({
     recipientUid: invitation.invitedByUid,
     hostCompanyId: invitation.hostCompanyId,
@@ -182,7 +182,7 @@ export async function announceInvitationDeclined(invitation: EngagementInvitatio
 }
 
 /** ADR-901 Ε-5 — **3 ημέρες χωρίς απάντηση** ⇒ υπενθύμιση στον **προσκαλούντα** (μία φορά ανά πρόσκληση). */
-export async function announceInvitationUnanswered(invitation: EngagementInvitation, propertyName: string | null): Promise<void> {
+export async function announceInvitationUnanswered(invitation: ConveyanceEngagementInvitation, propertyName: string | null): Promise<void> {
   await announceToInviter({
     recipientUid: invitation.invitedByUid,
     hostCompanyId: invitation.hostCompanyId,

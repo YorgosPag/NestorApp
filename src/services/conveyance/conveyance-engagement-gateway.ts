@@ -16,7 +16,8 @@ import { invitationLinkRefusalOf } from '@/lib/invitations/invitation-link-refus
 import { CASE_HOME_PARAM, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
-import type { CaseActivityItem, CaseProfessionalSlot, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
+import type { CaseActivityItem, CaseProfessionalSlot, MyCaseCard } from '@/types/conveyance-case';
+import type { EngagedView, MyEngagementCard } from '@/types/my-engagements';
 import type { ContributionSummary } from '@/types/conveyance-contribution';
 import { isEngagementVerdict, type ConsentBasis, type EngagementVerdict } from '@/types/engagement';
 import { ENGAGEMENT_INVITATION_REFUSALS, type EngagementInvitationRefusal } from '@/types/engagement-invitation';
@@ -70,7 +71,7 @@ function fromHome(home: CaseHome) {
   return { params: { [CASE_HOME_PARAM]: home } };
 }
 
-export function fetchMyCases(home: CaseHome): Promise<{ readonly cards: readonly MyCaseCard[] }> {
+export function fetchMyCases(home: CaseHome): Promise<{ readonly cards: readonly MyEngagementCard[] }> {
   return apiClient.get(API_ROUTES.ENGAGEMENTS.MINE, fromHome(home));
 }
 
@@ -79,7 +80,7 @@ export function respondToEngagementRequest(engagementId: string, answer: CaseEng
   return apiClient.post(API_ROUTES.ENGAGEMENTS.RESPOND(engagementId), answer);
 }
 
-export function fetchEngagedCase(engagementId: string, home: CaseHome): Promise<{ readonly view: EngagedCaseView }> {
+export function fetchEngagedCase(engagementId: string, home: CaseHome): Promise<{ readonly view: EngagedView }> {
   return apiClient.get(API_ROUTES.ENGAGEMENTS.CASE(engagementId), fromHome(home));
 }
 

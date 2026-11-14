@@ -2,7 +2,7 @@ import 'server-only';
 
 /**
  * @fileoverview **«Ποιος σας δίνει ποιο σπίτι»** — η ΜΙΑ περιγραφή της πρόσκλησης αγοραστή, για email **και** όψη.
- * @related ADR-916 Φ-Β · `engagement-invitation-preview.ts` (`describeEngagementInvitation` — το πρότυπο)
+ * @related ADR-916 Φ-Β · `server/engagements/engagement-hosts.ts` (`describe` του οικοδεσπότη — το πρότυπο)
  * @module server/property-handover-invitations/handover-invitation-description
  *
  * 🔑 **Μία ανάγνωση, δύο επιφάνειες**: ποτέ δύο αναγνώσεις που μπορεί να διαφωνήσουν για το όνομα του σπιτιού ανάμεσα

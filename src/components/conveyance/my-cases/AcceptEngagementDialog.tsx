@@ -28,7 +28,7 @@ import {
 import { ActingWorkspaceField } from '@/components/conveyance/acting/ActingWorkspaceField';
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import { actingChoiceOf } from '@/lib/conveyance/acting-acceptance';
-import type { CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
+import { legalRoleAuthority, type CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import type { AcceptancePreview, MyCaseCard } from '@/types/conveyance-case';
 
 interface AcceptEngagementDialogProps {
@@ -60,7 +60,7 @@ function AcceptForm({ card, busy, onCancel, onConfirm }: AcceptEngagementDialogP
   return (
     <>
       <ActingWorkspaceField preview={acceptance} selectedCompanyId={officeId} onSelect={setOfficeId} showMissing={showMissing} disabled={busy} />
-      <CredentialDeclarationForm role={card.role} draft={draft} onChange={setDraft} showMissing={showMissing} disabled={busy} />
+      <CredentialDeclarationForm authority={legalRoleAuthority(card.role)} draft={draft} onChange={setDraft} showMissing={showMissing} disabled={busy} />
       <DialogActionFooter
         cancelLabel={t('engagement.myCases.acceptDialog.cancel')}
         confirmLabel={t('engagement.myCases.accept')}

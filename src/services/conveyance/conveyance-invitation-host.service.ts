@@ -31,6 +31,7 @@ import type { EngagementConsent } from '@/types/engagement';
 import type { CredentialHint } from '@/types/engagement-invitation';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import type { ConveyanceActor } from './conveyance-case.service';
+import { caseSubject } from './conveyance-engagement-support';
 
 /** Το ίχνος μιας πράξης πρόσκλησης στο βιβλίο της υπόθεσης — πεδίο ανά θέση, ώστε να διαβάζεται «ποια θέση». */
 async function recordInvitationAudit(params: {
@@ -77,7 +78,7 @@ export async function inviteCaseProfessional(
   request: CaseInvitationRequest,
 ): Promise<InvitationNoticeOutcome> {
   const issued = await issueEngagementInvitation(db, {
-    hostCompanyId: record.companyId, projectId: request.projectId, caseId: record.id,
+    hostCompanyId: record.companyId, projectId: request.projectId, subject: caseSubject(record.id),
     propertyId: record.subject.propertyId, role: request.role, contactId: request.contactId, email: request.email,
     consents: request.consents, credentialHint: request.credentialHint, actorUid: actor.uid, nowMs: request.nowMs,
   });

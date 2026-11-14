@@ -193,6 +193,31 @@
     }
   },
   "issuance": {
+    "space": {
+      "label": "Collaboration space:",
+      "none": "No invitation to the assignment space has been sent.",
+      "invited": "Waiting for entry — the invitation was sent on {date}, expires on {expires}",
+      "opened": "page opened on {date}",
+      "notOpened": "not opened yet",
+      "expired": "The entry link of {date} expired without entry.",
+      "declined": "The professional declined the space on {date}.",
+      "entered": "The professional entered the space on {date}.",
+      "send": "Invite to the space",
+      "resend": "New entry link",
+      "sending": "Sending…",
+      "sent": "A new entry link was sent. The previous one no longer works.",
+      "sentUndelivered": "The link was created, but the email was not sent. Please try again shortly.",
+      "refusals": {
+        "NOT_FOUND": "The assignment was not found.",
+        "NOT_ACCEPTED": "The assignment is no longer accepted — refresh the page.",
+        "ALREADY_ENTERED": "The professional has already entered the space.",
+        "NO_PROJECT": "The property does not belong to a project — the collaboration space is not available yet.",
+        "NO_AUTHORITY": "The assignment's qualification declares no registry — the collaboration space is not available.",
+        "NO_EMAIL": "The professional's contact has no email.",
+        "SPACE_UNKNOWN": "Could not check whether they have already entered. Please try again shortly.",
+        "generic": "The new link was not sent. Please try again."
+      }
+    },
     "heading": "Issuance assignment",
     "assign": "Assign to a professional",
     "assignHint": "To a professional the office already knows. The office proposes; the owner decides.",

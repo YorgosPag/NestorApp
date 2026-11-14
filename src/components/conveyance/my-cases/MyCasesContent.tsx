@@ -25,19 +25,22 @@ import { PrivatePageHeader } from '@/components/private-space/PrivatePageHeader'
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useMyCases } from '@/hooks/useMyCases';
 import type { MyCaseCard } from '@/types/conveyance-case';
+import type { MyEngagementCard } from '@/types/my-engagements';
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import { AcceptEngagementDialog } from './AcceptEngagementDialog';
 import { MyCaseCardView } from './MyCaseCardView';
+import { IssuanceSurfaces } from '@/components/conveyance/issuance-surfaces';
 
 interface CaseListProps {
   readonly home: CaseHome;
-  readonly cards: readonly MyCaseCard[];
+  readonly cards: readonly MyEngagementCard[];
   readonly pending: ReadonlySet<string>;
   readonly onRespond: (engagementId: string, decision: 'accept' | 'decline') => void;
 }
 
+/** ADR-862 §5.3.11 — **μία** λίστα για κάθε είδος συνεργασίας· η κάρτα διαλέγεται **μόνο** από το `kind`. */
 function CaseList({ home, cards, pending, onRespond }: CaseListProps) {
   const { t } = useTranslation(['conveyance']);
   if (cards.length === 0) return <p className="text-muted-foreground">{t('engagement.myCases.empty')}</p>;
@@ -45,7 +48,9 @@ function CaseList({ home, cards, pending, onRespond }: CaseListProps) {
     <ul className="grid gap-3">
       {cards.map((card) => (
         <li key={card.engagementId}>
-          <MyCaseCardView card={card} home={home} busy={pending.has(card.engagementId)} onRespond={onRespond} />
+          {card.kind === 'document_issuance'
+            ? <IssuanceSurfaces.MyIssuanceCardView card={card} home={home} />
+            : <MyCaseCardView card={card} home={home} busy={pending.has(card.engagementId)} onRespond={onRespond} />}
         </li>
       ))}
     </ul>
@@ -67,7 +72,9 @@ export function MyCasesContent({ home }: { readonly home: CaseHome }) {
 
   const onRespond = useCallback((engagementId: string, decision: 'accept' | 'decline') => {
     if (decision === 'decline') { send(engagementId, { decision }); return; }
-    const card = list.state === 'ready' ? list.cards.find((c) => c.engagementId === engagementId) ?? null : null;
+    const card = list.state === 'ready'
+      ? list.cards.find((c): c is MyCaseCard => c.engagementId === engagementId && c.kind === 'conveyance_case') ?? null
+      : null;
     setAccepting(card);
   }, [list, send]);
 

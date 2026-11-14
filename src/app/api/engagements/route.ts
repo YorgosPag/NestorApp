@@ -1,7 +1,8 @@
 /**
  * ADR-901 Φ2 §5.4 · §15 Γ2 · ADR-862 Φ1 — «Οι υποθέσεις μου»: οι συμμετοχές του ανθρώπου σε ξένες υποθέσεις.
  *
- * GET /api/engagements?home=org|personal → `{ cards: MyCaseCard[] }` — μία κάρτα ανά υπόθεση (η τρέχουσα συμμετοχή)
+ * GET /api/engagements?home=org|personal → `{ cards: MyEngagementCard[] }` — μία κάρτα ανά υπόθεση (η τρέχουσα
+ *   συμμετοχή), **κάθε είδους**: μεταβίβαση και ανάθεση έκδοσης στην ίδια λίστα (ADR-862 §5.3.11)
  *
  * 🔑 `withPersonalOrOrgAuth`: ο δικηγόρος μπορεί να είναι ιδιώτης **χωρίς** οργανισμό (ADR-817) ή μέλος
  *    του **δικού του** γραφείου — η λίστα είναι **του ανθρώπου** (`uid` από το token).
@@ -21,12 +22,12 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { readCaseViewer } from '@/services/conveyance/conveyance-case-viewer.server';
-import { listMyCases } from '@/services/conveyance/conveyance-engagement-access.service';
+import { listMyEngagements } from '@/server/engagements/my-engagements.server';
 
 async function handler(request: NextRequest, actor: ApiActor) {
   const viewer = readCaseViewer(request, { uid: actor.ctx.uid, active: activeWorkspaceOf(actor) });
   if ('rejected' in viewer) return viewer.rejected;
-  const outcome = await listMyCases(requireAdminFirestore(), viewer, Date.now());
+  const outcome = await listMyEngagements(requireAdminFirestore(), viewer, Date.now());
   if (!outcome.ok) return NextResponse.json({ success: false, error: 'ENGAGEMENTS_UNAVAILABLE' }, { status: 503 });
   return apiSuccess({ cards: outcome.cards });
 }

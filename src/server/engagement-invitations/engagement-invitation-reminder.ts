@@ -18,12 +18,10 @@ import 'server-only';
 
 import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
 
-import { engagementInvitationFromDocument } from '@/lib/conveyance/engagement-invitation-schema';
+import { engagementInvitationFromDocument } from '@/lib/auth/engagement-invitation-schema';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
-import { announceInvitationUnanswered } from '@/services/conveyance/conveyance-engagement-notifier';
-import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
-import { invitationHostSignal } from '@/services/conveyance/conveyance-view-signal.server';
+import { invitationHost } from '@/server/engagements/engagement-hosts';
 import type { EngagementInvitation } from '@/types/engagement-invitation';
 
 import { engagementInvitationsCollection } from './engagement-invitation-issue';
@@ -59,14 +57,14 @@ async function settle(db: Firestore, ref: DocumentReference, expected: Verdict, 
     if (fresh === null || reminderVerdict(fresh, nowValue) !== expected) return false;
     tx.update(ref, expected === 'expire' ? { state: 'expired', resolvedAt: nowValue } : { reminderSentAt: nowValue });
     // Οι θέσεις του οικοδεσπότη δείχνουν «υπενθύμιση στάλθηκε» / «έληξε» — §14.8.
-    invitationHostSignal(db, fresh)(tx);
+    invitationHost(fresh).signal(db)(tx);
     return true;
   });
 }
 
 async function remind(db: Firestore, invitation: EngagementInvitation, nowValue: string): Promise<boolean> {
-  const subject = await loadConveyanceSubject(db, invitation.hostCompanyId, invitation.propertyId).catch(() => null);
-  await announceInvitationUnanswered(invitation, subject?.propertyName ?? null);
+  // Ε-5 — η ειδοποίηση με τα λόγια **του είδους** (θέση υπόθεσης · χώρος ανάθεσης): ο οικοδεσπότης ξέρει τι λέγεται.
+  await invitationHost(invitation).announceUnanswered(db);
   return settle(db, engagementInvitationsCollection(db).doc(invitation.id), 'remind', nowValue);
 }
 
