@@ -21,6 +21,11 @@ export interface TextScale {
   readonly strokePx: number;
   /** Ζώνη γύρω από κάθε άκρο όπου ό,τι μοιάζει με γλύφο είναι πιθανότατα κομμάτι της απόληξης. */
   readonly endZonePx: number;
+  /**
+   * ADR-929 §6.19 — έχει το άκρο `which` του τμήματος `id` **ισχυρή** απόληξη (βέλος · παύλα · κουκκίδα); Ο ταξινομητής τις
+   * έχει ήδη κρίνει (`detectTerminator`)· εδώ μόνο ρωτιούνται. Λείπει ⇒ καμία (μόνο η διακοπή με κάλυψη).
+   */
+  readonly strongEnd?: (id: string, which: 'start' | 'end') => boolean;
 }
 
 /** Ένα ζεύγος συγγραμμικών κομματιών που ενώνει κείμενο: η μισή-μισή γραμμή μιας διάστασης με τον αριθμό στη μέση. */
@@ -76,6 +81,35 @@ function glyphsInGap(p: FramedSegment, gap: number, glyphs: readonly Glyph[], sc
   });
 }
 
+/** Το **εξωτερικό** άκρο του `q` (το μακρινό από το `p`), όταν το `q` είναι μετά το `p` στην ευθεία του `p`. */
+function outerEndOf(p: FramedSegment, q: FramedSegment): 'start' | 'end' {
+  return localOf(p, q.a).t >= localOf(p, q.b).t ? 'start' : 'end';
+}
+
+/**
+ * Κανένα **σχεδιαστικό** τμήμα στην ίδια ευθεία ανάμεσα στο `p` και το `q`: το `q` είναι ο πρώτος γείτονας του `p` (το
+ * «πρώτη απόληξη σε κάθε πλευρά» της εισαγωγής PDF, ADR-941). Οι πινελιές των ψηφίων (≤ ένα ύψος κειμένου) δεν μετρούν:
+ * είναι το ίδιο το κείμενο που διακόπτει.
+ */
+function isNearestAfter(p: FramedSegment, q: FramedSegment, segs: readonly FramedSegment[], tol: number, sc: TextScale): boolean {
+  const gap = collinearGap(p, q, tol, COLLINEAR_MAX_SIN)?.gap ?? 0;
+  return !segs.some((r) => {
+    if (r === p || r === q || r.length <= sc.textPx) return false;
+    const rel = collinearGap(p, r, tol, COLLINEAR_MAX_SIN);
+    return rel !== null && rel.qAfter && rel.gap >= 0 && rel.gap < gap;
+  });
+}
+
+/**
+ * ADR-929 §6.19 — **αγκυρωμένη** διακοπή: το κείμενο κάθεται στην ευθεία και τα δύο **εξωτερικά** άκρα έχουν ισχυρή
+ * απόληξη. Η απόληξη αποδεικνύει ήδη «διάσταση», άρα ούτε το μήκος του κενού ούτε η κάλυψή του χρειάζονται: σχέδια που
+ * ζωγραφίζουν μόνο **κοντά κομμάτια δίπλα στα βέλη** (ΤΕΣΤ2: κενό 12,6 ύψη, κάλυψη 23%) απορρίπτονταν. Μια πόρτα σε
+ * τοίχο δεν έχει βέλη στα μακρινά άκρα — το πρόβλημα που λύνει η κάλυψη δεν ξαναγεννιέται.
+ */
+function isAnchoredInterrupt(p: FramedSegment, q: FramedSegment, sc: TextScale): boolean {
+  return sc.strongEnd !== undefined && sc.strongEnd(p.id, 'start') && sc.strongEnd(q.id, outerEndOf(p, q));
+}
+
 /** Διακοπή από κείμενο: τα ζεύγη (p, q), με το `q` μετά το `p`, που ενώνει αριθμός. */
 function interruptLinks(segs: readonly FramedSegment[], glyphs: readonly Glyph[], sc: TextScale): TextLink[] {
   const links: TextLink[] = [];
@@ -85,9 +119,12 @@ function interruptLinks(segs: readonly FramedSegment[], glyphs: readonly Glyph[]
     for (const q of segs) {
       if (p === q) continue;
       const rel = collinearGap(p, q, tol, COLLINEAR_MAX_SIN);
-      if (rel === null || !rel.qAfter || rel.gap <= 0 || rel.gap > maxGap) continue;
+      if (rel === null || !rel.qAfter || rel.gap <= 0) continue;
       const inGap = glyphsInGap(p, rel.gap, glyphs, sc);
-      if (inGap.length >= MIN_GLYPHS && coverAlong(p, inGap) >= MIN_GAP_COVER * rel.gap) links.push({ a: p.id, b: q.id });
+      if (inGap.length < MIN_GLYPHS) continue;
+      const covered = rel.gap <= maxGap && coverAlong(p, inGap) >= MIN_GAP_COVER * rel.gap;
+      const anchored = !covered && isAnchoredInterrupt(p, q, sc) && isNearestAfter(p, q, segs, tol, sc);
+      if (covered || anchored) links.push({ a: p.id, b: q.id });
     }
   }
   return links;

@@ -600,6 +600,7 @@
           "thumbnailAlt": "Image excerpt: “{raw}”",
           "listLabel": "Values the machine read",
           "keys": "Keys: ↑/↓ row · Enter correct · Space “Correct” · N “Not a dimension”",
+          "absorbedMarks": "{count, plural, one {# dimension mark (arrow with extension line) was read as a letter and absorbed into its dimension} other {# dimension marks (arrows with extension lines) were read as letters and absorbed into their dimensions}} — they are not text.",
           "priority": {
             "suspect": "suspect",
             "checked": "checked",

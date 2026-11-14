@@ -147,6 +147,37 @@ describe('ADR-929 Φ5.4 — ρόλοι τμημάτων: διαστάσεις �
     expect(wallsFromCandidates(r).found).toBe(SAMPLE_HOUSE_WALLS.length);
   });
 
+  /**
+   * ADR-929 §6.19 — το στυλ του ΤΕΣΤ2: **κοντά κομμάτια μόνο δίπλα στα βέλη**, ο αριθμός στη μέση ενός κενού πολύ μεγαλύτερου
+   * από 8 ύψη (κάλυψη < 40%), και **στενό βέλος 1 : 3**. Πριν: τα κομμάτια `unknown`/`wall-face`, οι βοηθητικές τοίχοι.
+   * ⚠️ Όριο ανάλυσης: στα 0,06 px/mm (≈ 150 dpi) το **γεμάτο** βέλος 1 : 3 έχει μισό πλάτος 3 px ≈ μία πινελιά και δεν
+   * ξεχωρίζει από τη γραμμή (§6.19 «Τι δεν λύνει»)· γι' αυτό τα δείγματα είναι ≈ 230 και 300 dpi.
+   */
+  it.each([['0,09 px/mm', 0.09], ['0,12 px/mm', 0.12]])(
+    'κοντά κομμάτια + στενό βέλος 1:3 (%s) ⇒ διάσταση, βοηθητικές = επέκταση, κανένας τοίχος πάνω τους',
+    (_name, pxPerMm) => {
+      const stubs = outerDimensions('arrow', 'interrupt').map((d) => ({ ...d, stubMm: 6, arrowHalfWidthMm: 0.5 }));
+      const r = recognise({ ...BASE, pxPerMm, marginMm: 400, dimensions: stubs });
+      const dimSegments = onTruth(r, r.plan.dimensions.dimensionLines);
+      expect(dimSegments.length).toBeGreaterThanOrEqual(4);
+      for (const s of dimSegments) expect(r.roleOf.get(s.id)).toBe('dimension-line');
+      const extSegments = onTruth(r, r.plan.dimensions.extensionLines);
+      expect(extSegments.length).toBeGreaterThan(0);
+      for (const s of extSegments) expect(r.roleOf.get(s.id)).toBe('extension-line');
+      const walls = wallsFromCandidates(r);
+      expect(walls.found).toBe(SAMPLE_HOUSE_WALLS.length);
+      expect(walls.onDimensions).toBe(0);
+    },
+  );
+
+  it('κοντά κομμάτια ΧΩΡΙΣ απολήξεις και μεγάλο κενό ⇒ ΟΧΙ διάσταση από το κείμενο (η άγκυρα είναι η απόληξη)', () => {
+    const bare = outerDimensions('none', 'interrupt').map((d) => ({ ...d, stubMm: 6 }));
+    const r = recognise({ ...BASE, marginMm: 400, dimensions: bare });
+    for (const s of onTruth(r, r.plan.dimensions.dimensionLines)) {
+      expect(r.roleOf.get(s.id)).not.toBe('dimension-line');
+    }
+  });
+
   it('κάθε τμήμα έχει ακριβώς μία κρίση, με τις απολήξεις των δύο άκρων', () => {
     const r = recognise({ ...BASE, marginMm: 400, dimensions: outerDimensions('arrow', 'above') });
     expect(r.roleOf.size).toBe(r.segments.length);

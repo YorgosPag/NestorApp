@@ -16,6 +16,7 @@ import { isWallCandidateRole } from '../classify/segment-roles';
 import type { PlanExtensionAnchor, PlanReading, PlanSegmentRole } from '../plan-recognition-types';
 import { adjustNetwork, type BoundDimension, type NetworkOutcome } from './adjustment-network';
 import { dimensionTargets, selectBinding, type DimensionTarget } from './dimension-binding';
+import { dimensionMarkTextIds, withoutDimensionMarks } from './dimension-marks';
 import { dimensionSpans } from './dimension-spans';
 import { resolveDrawingKind, type KnownScaleConsensus } from './drawing-kind';
 import { buildFusionFrame, type FusionFrame } from './fusion-frame';
@@ -112,6 +113,18 @@ function spansOf(input: PlanFusionInput, roles: ReadonlyMap<string, PlanSegmentR
   return dimensionSpans({ segments: input.segments, roles, anchors, frame, originalToAligned: input.alignment.originalToAligned }, o);
 }
 
+/**
+ * §6.19 — η ανάγνωση που μετρά: απολήξεις που το OCR διάβασε ως «T»/«I»/«4» απορροφώνται στη διάσταση **πριν** από κάθε
+ * χρήση της (στόχοι διαστάσεων, κλίμακα, χώροι).
+ */
+function readingWithoutMarks(
+  input: PlanFusionInput, roles: ReadonlyMap<string, PlanSegmentRole>,
+): { readonly reading: PlanReading | null; readonly marks: ReadonlySet<string> } {
+  if (input.reading?.status !== 'read') return { reading: null, marks: new Set() };
+  const marks = dimensionMarkTextIds(input.reading.reading, input.segments, roles);
+  return { reading: withoutDimensionMarks(input.reading.reading, marks), marks };
+}
+
 /** Η σύντηξη μιας αναγνώρισης. Ντετερμινιστική: ίδια είσοδος ⇒ ίδιο αποτέλεσμα. */
 export function fusePlan(input: PlanFusionInput): PlanFusionResult {
   const o: PlanFusionOptions = { ...DEFAULT_PLAN_FUSION, ...input.options };
@@ -120,7 +133,7 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
   const faceSegments = input.segments.filter((s) => isWallCandidateRole(roles.get(s.id)));
   const frame = buildFusionFrame(faceSegments, input.alignment, o);
   const spans = spansOf(input, roles, frame, o);
-  const reading = input.reading?.status === 'read' ? input.reading.reading : null;
+  const { reading, marks } = readingWithoutMarks(input, roles);
   // Δ21 (0) · Δ7 Γ — το είδος (σκίτσο ή όχι) κρίνεται ΕΔΩ, μία φορά· ό,τι ακολουθεί τρέχει με αυτό.
   const { decision: drawingKind, targets, consensus } = resolveDrawingKind(input.kind, input.drawing, (kind) => (
     reading === null ? [] : dimensionTargets(reading, frame, input.alignment.originalToAligned, kind, o, spans)
@@ -147,6 +160,7 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
     segmentConfidence: segmentConfidence(input.segments, frame, network, dimensions, o),
     segmentRoles: roles,
     dimensionSpans: spans,
+    absorbedMarkTextIds: [...marks],
     adjustment: summary(network),
     drawingKind,
   };

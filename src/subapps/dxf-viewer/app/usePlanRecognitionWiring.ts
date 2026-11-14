@@ -38,7 +38,7 @@ import type { PlanDrawingKindActions, PlanDrawingKindView } from '../ui/panels/m
 import { isLocalOcrOutcome } from '../bim/plan-recognition/ocr/ocr-reading';
 import { applyReadingCorrectionsToOutcome } from '../bim/plan-recognition/reading/reading-corrections';
 import type { PlanReadingOutcome } from '../bim/plan-recognition/plan-recognition-types';
-import { planReadValueRows, type PlanReadValueRow } from '../systems/plan-recognition/plan-read-values';
+import { planAbsorbedMarkCount, planReadValueRows, type PlanReadValueRow } from '../systems/plan-recognition/plan-read-values';
 import { usePlanScaleWiring } from './usePlanScaleWiring';
 import { usePlanReadValueThumbnails } from './usePlanReadValueThumbnails';
 import { focusReviewTarget } from '../systems/coordination/review-focus';
@@ -164,6 +164,7 @@ function useImageSourceView(state: ModelFromDrawingState, scale: PlanScaleView):
     scale,
     ocr: ocrViewOf(recognition, effectiveReading),
     readValues,
+    absorbedMarks: planAbsorbedMarkCount(recognition.fusion),
     readValueThumbnails,
     drawingKind: drawingKindViewOf(recognition),
   };

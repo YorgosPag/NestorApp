@@ -27,6 +27,13 @@ export interface SyntheticDimension {
   /** Ψηφία και τελεία («3.50»). */
   readonly label: string;
   readonly text: 'interrupt' | 'above';
+  /**
+   * ADR-929 §6.19 — μόνο με `interrupt`: η γραμμή ζωγραφίζεται ως **δύο κοντά κομμάτια** τόσων mm χαρτιού δίπλα στις
+   * απολήξεις, με τον αριθμό στη μέση ενός μεγάλου κενού (το στυλ του ΤΕΣΤ2). Λείπει ⇒ η γραμμή φτάνει ως το κείμενο.
+   */
+  readonly stubMm?: number;
+  /** ADR-929 §6.19 — μισό πλάτος του βέλους σε mm χαρτιού (μήκος 3 mm). `0.5` ⇒ το συνηθισμένο 1 : 3. Λείπει ⇒ 0,9. */
+  readonly arrowHalfWidthMm?: number;
 }
 
 /** Ευθύγραμμο τμήμα αλήθειας σε mm κάτοψης. */
@@ -105,10 +112,13 @@ function labelShapes(label: string, centre: Point2D, along: Point2D, up: Point2D
   return shapes;
 }
 
-function terminatorShapes(end: Point2D, out: Point2D, nrm: Point2D, kind: SyntheticTerminator, k: number, r: number): Shape[] {
+function terminatorShapes(
+  end: Point2D, out: Point2D, nrm: Point2D, kind: SyntheticTerminator, k: number, r: number,
+  arrowHalfWidthMm: number = PAPER.arrowHalfWidth,
+): Shape[] {
   if (kind === 'arrow') {
     const base = add(end, out, -PAPER.arrowLength * k);
-    return [{ kind: 'triangle', p: [end, add(base, nrm, PAPER.arrowHalfWidth * k), add(base, nrm, -PAPER.arrowHalfWidth * k)] }];
+    return [{ kind: 'triangle', p: [end, add(base, nrm, arrowHalfWidthMm * k), add(base, nrm, -arrowHalfWidthMm * k)] }];
   }
   if (kind === 'tick') {
     const dg = { x: (out.x + nrm.x) / Math.SQRT2, y: (out.y + nrm.y) / Math.SQRT2 };
@@ -129,17 +139,18 @@ function oneDimension(dim: SyntheticDimension, k: number, r: number): DimensionI
   const h = PAPER.textHeight * k;
   const mid = add(A, d, len / 2);
   const halfGap = (labelWidth(dim.label) * h) / 2 + PAPER.interruptPad * k;
-  const lines: TruthSegment[] = dim.text === 'interrupt'
-    ? [{ a: A, b: add(mid, d, -halfGap) }, { a: add(mid, d, halfGap), b: B }]
-    : [{ a: A, b: B }];
+  const stub = dim.stubMm === undefined ? null : Math.min(dim.stubMm * k, len / 2 - halfGap);
+  const lines: TruthSegment[] = dim.text !== 'interrupt' ? [{ a: A, b: B }]
+    : stub !== null ? [{ a: A, b: add(A, d, stub) }, { a: add(B, d, -stub), b: B }]
+      : [{ a: A, b: add(mid, d, -halfGap) }, { a: add(mid, d, halfGap), b: B }];
   const extensions: TruthSegment[] = [dim.from, dim.to].map((p) => ({
     a: add(p, away, PAPER.extensionGap * k), b: add(add(p, nrm, dim.offsetMm), away, PAPER.extensionOvershoot * k),
   }));
   const textCentre = dim.text === 'interrupt' ? mid : add(mid, away, h / 2 + PAPER.textClearance * k);
   const shapes: Shape[] = [
     ...[...lines, ...extensions].map((s): Shape => ({ kind: 'capsule', a: s.a, b: s.b, r })),
-    ...terminatorShapes(A, { x: -d.x, y: -d.y }, nrm, dim.terminator, k, r),
-    ...terminatorShapes(B, d, nrm, dim.terminator, k, r),
+    ...terminatorShapes(A, { x: -d.x, y: -d.y }, nrm, dim.terminator, k, r, dim.arrowHalfWidthMm),
+    ...terminatorShapes(B, d, nrm, dim.terminator, k, r, dim.arrowHalfWidthMm),
     ...labelShapes(dim.label, textCentre, d, away, h, r),
   ];
   const extent = [A, B, ...extensions.flatMap((s) => [s.a, s.b]), add(textCentre, away, h)];

@@ -25,6 +25,7 @@ import type { RasterRectPx } from '../../types/coordinate-space';
 import {
   inferBareIntegerUnit, unknownUnitSuffix, unknownUnitSuggestion, writtenLike, type BareIntegerUnit,
 } from '../../bim/plan-recognition/reading/written-values';
+import { withoutDimensionMarks } from '../../bim/plan-recognition/fusion/dimension-marks';
 import { meetsConfidenceTier } from './plan-confidence';
 
 /** Βήμα 4 — η ετικέτα προτεραιότητας μιας γραμμής. */
@@ -203,11 +204,16 @@ function rowOf(text: PlanText, valueMm: number | null, fused: FusedDimension | u
   return { ...facts, priority: priorityOf(facts), ...rowSuggestion(text, unknownUnit, fused, ctx) };
 }
 
-/** Οι γραμμές της λίστας, η πιο ύποπτη πρώτη. `reading` = η ανάγνωση που ισχύει (με τις διορθώσεις). */
+/**
+ * Οι γραμμές της λίστας, η πιο ύποπτη πρώτη. `reading` = η ανάγνωση που ισχύει (με τις διορθώσεις).
+ * ADR-929 §6.19 — τα σημάδια διάστασης που απορρόφησε η σύντηξη (`absorbedMarkTextIds`) **δεν** γίνονται γραμμές: δεν
+ * είναι κείμενο. Το πλήθος τους το δίνει το {@link planAbsorbedMarkCount}, ώστε να μη χάνονται σιωπηλά.
+ */
 export function planReadValueRows(
-  reading: PlanReading,
-  fusion: Pick<PlanFusionResult, 'dimensions' | 'scale' | 'drawingKind'> | null,
+  effective: PlanReading,
+  fusion: (Pick<PlanFusionResult, 'dimensions' | 'scale' | 'drawingKind'> & Partial<Pick<PlanFusionResult, 'absorbedMarkTextIds'>>) | null,
 ): PlanReadValueRow[] {
+  const reading = withoutDimensionMarks(effective, new Set(fusion?.absorbedMarkTextIds ?? []));
   const valueById = new Map(reading.dimensions.map((d) => [d.textId, d.valueMm]));
   const fusedById = new Map((fusion?.dimensions ?? []).map((d) => [d.textId, d]));
   // Η μονάδα των σκέτων ακεραίων του σχεδίου: την ορίζουν τα κείμενα σε μέτρα, που έχουν πάντα τιμή ⇒ ίδια με του κανόνα.
@@ -225,6 +231,11 @@ export function planReadValueRows(
     || a.row.confidence - b.row.confidence
     || a.order - b.order);
   return rows.map((r) => r.row);
+}
+
+/** ADR-929 §6.19 — πόσα «κείμενα» ήταν σημάδια διάστασης και απορροφήθηκαν (για τη σημείωση της λίστας). */
+export function planAbsorbedMarkCount(fusion: Partial<Pick<PlanFusionResult, 'absorbedMarkTextIds'>> | null): number {
+  return fusion?.absorbedMarkTextIds?.length ?? 0;
 }
 
 /** Βήμα 3 — η γραμμή ελέγχθηκε από άνθρωπο: διορθώθηκε (και «δεν είναι διάσταση») ή επιβεβαιώθηκε. */

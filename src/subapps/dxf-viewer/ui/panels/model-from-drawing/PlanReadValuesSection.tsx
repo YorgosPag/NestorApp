@@ -441,9 +441,11 @@ function ReadValueList({ rows, thumbnails, actions, t }: {
 }
 
 /** Στον έλεγχο, όταν υπάρχει ανάγνωση: οι γραμμένες τιμές όπως τις διάβασε η μηχανή, με διόρθωση ενός κλικ. */
-export function PlanReadValuesSection({ rows, thumbnails, actions, t }: {
+export function PlanReadValuesSection({ rows, absorbedMarks = 0, thumbnails, actions, t }: {
   /** `null` = καμία ανάγνωση στη σύντηξη. */
   readonly rows: readonly PlanReadValueRow[] | null;
+  /** ADR-929 §6.19 — πόσα σημάδια διάστασης απορροφήθηκαν (δεν έγιναν γραμμές)· λέγεται, ποτέ σιωπηλά. */
+  readonly absorbedMarks?: number;
   /** Βήμα 1 — `textId → URL` μικρογραφίας· όσα λείπουν απλώς δεν δείχνουν εικόνα. */
   readonly thumbnails: ReadonlyMap<string, string>;
   readonly actions: PlanReadValuesActions;
@@ -463,6 +465,11 @@ export function PlanReadValuesSection({ rows, thumbnails, actions, t }: {
         {rows.length > 0 ? t('modelFromDrawing.image.ocr.values.hint') : t('modelFromDrawing.image.ocr.values.empty')}
       </p>
       {rows.length > 0 ? <p className={MUTED} data-testid="mfd-read-values-keys">{t('modelFromDrawing.image.ocr.values.keys')}</p> : null}
+      {absorbedMarks > 0 ? (
+        <p className={MUTED} role="note" data-testid="mfd-read-values-absorbed-marks">
+          {t('modelFromDrawing.image.ocr.values.absorbedMarks', { count: absorbedMarks })}
+        </p>
+      ) : null}
       {rows.length > 0 ? <ReadValueList rows={rows} thumbnails={thumbnails} actions={actions} t={t} /> : null}
     </section>
   );

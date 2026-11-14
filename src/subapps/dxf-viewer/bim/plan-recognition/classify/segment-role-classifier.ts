@@ -31,7 +31,7 @@ import type {
 import { detectTerminator, type TerminatorScale } from './dimension-terminators';
 import { textEvidence, type TextEvidence } from './dimension-text';
 import { extensionMatches, type ExtensionMatch } from './extension-lines';
-import { framedSegments, localOf, type FramedSegment } from './segment-frame';
+import { collinearGap, framedSegments, localOf, type FramedSegment } from './segment-frame';
 
 /** Λογάριθμοι λόγου πιθανοτήτων ανά τεκμήριο (μη βαθμονομημένοι, βλ. κεφαλίδα). */
 export const ROLE_WEIGHTS = {
@@ -56,6 +56,8 @@ const REACH_TEXT_HEIGHTS = 1.1;
 /** Κομμάτι απόληξης (π.χ. η βάση ή οι πλευρές ενός βέλους που έγιναν ζώνες): μήκος ≤ τόσες εμβέλειες. */
 const FRAGMENT_MAX_REACHES = 1.5;
 const FRAGMENT_HALF_WIDTH_REACHES = 0.6;
+/** Δίδυμη ζώνη: παράλληλη ως sin 3° (ίδια ανοχή με τη διακοπή από κείμενο). */
+const TWIN_MAX_SIN = Math.sin((3 * Math.PI) / 180);
 const STRONG: ReadonlySet<PlanTerminatorKind> = new Set<PlanTerminatorKind>(['arrow', 'tick', 'dot']);
 
 export interface SegmentRoleInput {
@@ -112,7 +114,10 @@ function gatherEvidence(input: SegmentRoleInput, framed: readonly FramedSegment[
     detectTerminator(input.ink, s, 'start', term).kind,
     detectTerminator(input.ink, s, 'end', term).kind,
   ] as const]));
-  const text = textEvidence(framed, glyphs, { textPx, strokePx, endZonePx: term.reachPx });
+  // §6.19 — οι ΙΔΙΕΣ κρίσεις απολήξεων αγκυρώνουν τη διακοπή από κείμενο· καμία δεύτερη ανίχνευση.
+  const strongEnd = (id: string, which: 'start' | 'end'): boolean =>
+    STRONG.has(terminators.get(id)?.[which === 'start' ? 0 : 1] ?? 'none');
+  const text = textEvidence(framed, glyphs, { textPx, strokePx, endZonePx: term.reachPx, strongEnd });
   const extension = extensionMatches(input.ink, strokes, framed, { strokePx, textPx });
   const annotation = new Set(strokes.filter((s) => isInsideGlyph(s, glyphs, strokePx)).map((s) => s.id));
   return { framed, terminators, text, extension, annotation, strokePx, reachPx: term.reachPx };
@@ -177,20 +182,37 @@ function isTerminatorFragment(s: FramedSegment, ends: readonly DimensionEnd[], r
   return ends.some((e) => e.dim !== s && inTerminatorCorridor(e, s.a, reachPx) && inTerminatorCorridor(e, s.b, reachPx));
 }
 
+/**
+ * ADR-929 §6.19 — **δίδυμη ζώνη** μιας βέβαιης διάστασης: παράλληλη, μέσα στην ανοχή της πινελιάς και **επικαλυπτόμενη**
+ * κατά μήκος. Η Φ2 σπάει κατά τόπους μια πινελιά σε δύο ζώνες 1 px η μία από την άλλη (§6.5)· είναι η **ίδια** σχεδιασμένη
+ * γραμμή. 🔴 Μετρημένο στο ΤΕΣΤ2 (300 dpi): ζώνη 42 px πάνω στη γραμμή διάστασης κρινόταν `wall-face` ⇒ ψεύτικος τοίχος.
+ */
+function isDimensionTwin(s: FramedSegment, dimSegs: readonly FramedSegment[], strokePx: number): boolean {
+  const tol = Math.max(1.5, strokePx);
+  return dimSegs.some((d) => {
+    if (d === s) return false;
+    const rel = collinearGap(d, s, tol, TWIN_MAX_SIN);
+    return rel !== null && rel.gap < 0;
+  });
+}
+
 function verdictsOf(ev: Evidence, factors: ReadonlyMap<string, Partial<Record<PlanRoleFactor, number>>>): PlanSegmentRoleVerdict[] {
   const dims = new Set([...factors].filter(([, f]) => scoreOf(f) >= DIMENSION_MIN).map(([id]) => id));
   const extensions = new Set([...dims].flatMap((id) => ev.extension.get(id)?.extensionIds ?? []).filter((id) => !dims.has(id)));
   const ends = strongDimensionEnds(ev, dims);
+  const dimSegs = ev.framed.filter((s) => dims.has(s.id));
   return ev.framed.map((s) => {
     const f = factors.get(s.id);
     if (f === undefined) return { segmentId: s.id, role: 'wall-face', dimensionScore: 0, factors: {}, terminators: ['none', 'none'] };
     const score = scoreOf(f);
     const base = roleOfScore(score);
-    // Σειρά: χαρακτήρας (μια γραμμή διάστασης δεν χωρά ποτέ μέσα σε γλύφο) → διάσταση → κομμάτι απόληξης → επέκταση.
+    // Σειρά: χαρακτήρας (μια γραμμή διάστασης δεν χωρά ποτέ μέσα σε γλύφο) → διάσταση → επέκταση → κομμάτι απόληξης →
+    // δίδυμη ζώνη. §6.19: η επέκταση ΠΡΙΝ το κομμάτι — σε χαμηλή ανάλυση η βοηθητική στη μύτη του βέλους χωρά ολόκληρη
+    // στον διάδρομο της απόληξης (ΤΕΣΤ2 150 dpi: 17 px < 23 px) και έχανε το όνομά της.
     const role: PlanSegmentRole = ev.annotation.has(s.id) ? 'annotation'
       : base === 'dimension-line' ? base
-        : isTerminatorFragment(s, ends, ev.reachPx) ? 'dimension-line'
-          : extensions.has(s.id) ? 'extension-line' : base;
+        : extensions.has(s.id) ? 'extension-line'
+          : isTerminatorFragment(s, ends, ev.reachPx) || isDimensionTwin(s, dimSegs, ev.strokePx) ? 'dimension-line' : base;
     const verdict: PlanSegmentRoleVerdict = { segmentId: s.id, role, dimensionScore: score, factors: f, terminators: ev.terminators.get(s.id) ?? ['none', 'none'] };
     return dims.has(s.id) && role === 'dimension-line' ? { ...verdict, extensionAnchors: anchorsOf(ev, s.id, dims) } : verdict;
   });

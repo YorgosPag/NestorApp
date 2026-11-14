@@ -355,6 +355,11 @@ export interface PlanFusionResult {
   readonly segmentRoles: ReadonlyMap<string, PlanSegmentRole>;
   /** ADR-929 Φ5.5 — ποιες δύο παρειές μετρά κάθε διάσταση, από τις γραμμές επέκτασης (υπάρχει και χωρίς ανάγνωση). */
   readonly dimensionSpans: readonly DimensionSpan[];
+  /**
+   * ADR-929 §6.19 — κείμενα της ανάγνωσης που ήταν **σημάδια διάστασης** (απόληξη + βοηθητική που το OCR διάβασε «T»/«I»)
+   * και απορροφήθηκαν στη διάσταση (`dimension-marks.ts`): καμία κάρτα, καμία τιμή. Με όνομα, ποτέ σιωπηλά.
+   */
+  readonly absorbedMarkTextIds: readonly string[];
   readonly adjustment: AdjustmentSummary | null;
   /** ADR-929 Δ21 (0) · Δ7 Γ — το είδος σχεδίου με το οποίο έτρεξε η σύντηξη, και ποιος το αποφάσισε. */
   readonly drawingKind: PlanDrawingKindDecision;

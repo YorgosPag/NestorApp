@@ -194,7 +194,7 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
         : <SceneSampleLine colorHex={state.wallColorHex} onResample={actions.onResample} t={t} />}
       {fromImage ? <PlanOcrSection view={imageSource.ocr} actions={actions.ocr} t={t} /> : null}
       {fromImage ? <PlanDrawingKindSection view={imageSource.drawingKind} actions={actions.drawingKind} t={t} /> : null}
-      {fromImage ? <PlanReadValuesSection rows={imageSource.readValues} thumbnails={imageSource.readValueThumbnails} actions={actions.readValues} t={t} /> : null}
+      {fromImage ? <PlanReadValuesSection rows={imageSource.readValues} absorbedMarks={imageSource.absorbedMarks} thumbnails={imageSource.readValueThumbnails} actions={actions.readValues} t={t} /> : null}
       {fromImage
         ? <PlanReadingSection available={imageSource.readingAvailable} readingAdopted={imageSource.readingAdopted} review={imageSource.review} actions={actions.reading} t={t} />
         : null}

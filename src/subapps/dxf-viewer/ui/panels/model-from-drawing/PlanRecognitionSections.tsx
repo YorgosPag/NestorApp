@@ -63,6 +63,8 @@ export interface ImageSourceView {
   readonly ocr: PlanOcrView;
   /** ADR-929 Δ21 (δ) — η λίστα «Τι διάβασα» (η πιο ύποπτη πρώτη)· `null` = καμία ανάγνωση στη σύντηξη. */
   readonly readValues: readonly PlanReadValueRow[] | null;
+  /** ADR-929 §6.19 — σημάδια διάστασης που απορροφήθηκαν αντί να γίνουν γραμμές της λίστας (λείπει ⇒ 0). */
+  readonly absorbedMarks?: number;
   /** ADR-929 Δ21 (δ) βήμα 1 — `textId → object URL` της μικρογραφίας (ο κάτοχος ανακαλεί). */
   readonly readValueThumbnails: ReadonlyMap<string, string>;
   /** ADR-929 Δ21 (0) · Δ7 Γ — το είδος σχεδίου με τον λόγο του· `null` = καμία σύντηξη ακόμη. */
