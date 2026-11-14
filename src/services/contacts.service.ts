@@ -30,6 +30,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DocumentData } from 'firebase/firestore';
 import { RealtimeService } from '@/services/realtime';
 import { mapActivePersonas } from '@/utils/contactForm/mappers/individual';
+import { resolveLicenceDraftsForUpdate } from '@/lib/contacts/contact-licences';
+import { nowISO } from '@/lib/date-local';
 import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
@@ -313,7 +315,9 @@ export class ContactsService {
 
     // Write only the diff. companyId is immutable per Firestore rules, so
     // skipping it in the diff is safe — existing doc keeps its value.
-    const enterpriseDiff = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
+    // ADR-915 §40.5: το diff φέρει `licenceDrafts`, όχι `licences` — γίνεται εδώ, απέναντι στις αποθηκευμένες.
+    const enterpriseDiff = EnterpriseContactSaver.convertToEnterpriseStructure(resolveLicenceDraftsForUpdate(
+      formData, (existingContact as unknown as Record<string, unknown>).licences, nowISO()));
     // ADR-332 D27 Β-ΙΙ: ο γραφέας θέσης αποφασίζει, και η απόφαση ταξιδεύει στην ΙΔΙΑ εγγραφή.
     await this.updateContact(id, await positionContactPayload(enterpriseDiff, id));
 

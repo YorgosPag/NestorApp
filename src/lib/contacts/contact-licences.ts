@@ -87,6 +87,24 @@ export function contactLicencesFromDrafts(
   return { licences: sortByVocabulary(licences) };
 }
 
+/**
+ * Η **επεξεργασία** στέλνει dirty diff με `licenceDrafts` (κατάσταση φόρμας) — ποτέ `licences`. Εδώ γίνεται το πεδίο
+ * που γράφεται, απέναντι στις **αποθηκευμένες** άδειες (κρατά την προέλευση των αμετάβλητων). Χωρίς `licenceDrafts` ⇒
+ * το diff μένει ως έχει (το πεδίο δεν αγγίζεται). Άδειο αποτέλεσμα ⇒ `[]`, που ο καθαριστής κάνει `deleteField()`.
+ * Η φόρμα δεν σχηματίζεται ⇒ μένουν οι αποθηκευμένες — ποτέ σιωπηλό σβήσιμο (ο έλεγχος έγινε ήδη στο validation).
+ */
+export function resolveLicenceDraftsForUpdate<T extends { readonly licenceDrafts?: LicenceDrafts }>(
+  diff: T,
+  storedRaw: unknown,
+  nowIso: string,
+): Omit<T, 'licenceDrafts'> & { licences?: ContactLicence[] } {
+  const { licenceDrafts, ...rest } = diff;
+  if (!licenceDrafts) return rest;
+  const stored = readContactLicences(storedRaw);
+  const formed = contactLicencesFromDrafts(stored, licenceDrafts, nowIso);
+  return { ...rest, licences: 'reason' in formed ? [...stored] : [...formed.licences] };
+}
+
 /** Τα δύο λεξιλόγια επικαλύπτονται· όσα η επαφή δομικά δεν παράγει (βιτρίνα/ειδικότητα) πέφτουν στο «λείπει αριθμός». */
 function narrowRejection(reason: ShowcaseLicenceRejection): ContactLicenceRejection {
   return reason === 'licence-duplicate' || reason === 'licence-chapter-missing' ? reason : 'licence-number-missing';
