@@ -102,6 +102,14 @@ function sourceBackground(source: RasterLineSourceRef) {
   return background && background.id === source.backgroundId ? background : null;
 }
 
+/**
+ * ADR-929 §6.17 — ο ΕΝΑΣ κριτής «ζει ακόμη η εικόνα αυτής της πηγής;». Τον ρωτούν η αναγνώριση (το αποτέλεσμά της) και ο
+ * βοηθός (η πρότασή του): ό,τι βγήκε από pixel μιας εικόνας ισχύει **μόνο** όσο ο όροφος έχει αυτήν την εικόνα.
+ */
+export function isRasterSourceCurrent(source: RasterLineSourceRef): boolean {
+  return sourceBackground(source) !== null;
+}
+
 /** Η τρέχουσα τοποθέτηση της εικόνας της πηγής, ή `null` αν ο όροφος δεν έχει (πια) αυτήν την εικόνα. */
 export function currentRasterPlacement(source: RasterLineSourceRef): RasterPlacement | null {
   const background = sourceBackground(source);

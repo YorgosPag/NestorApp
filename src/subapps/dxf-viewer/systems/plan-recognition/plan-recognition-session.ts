@@ -29,11 +29,14 @@ import type { PlanInputKind, PlanReadingOutcome, RasterSegment } from '../../bim
 import { getFloorBackground, getFloorProvider } from '../../floorplan-background/stores/floorplanBackgroundStore';
 import { resolveRasterPixelScale } from '../../floorplan-background/geometry/raster-pixel-scale';
 import type { FloorplanBackground } from '../../floorplan-background/providers/types';
-import type { ProposalLineSource, RasterDimensionSource } from '../model-from-drawing/proposal-line-source';
+import {
+  isRasterSourceCurrent, type ProposalLineSource, type RasterDimensionSource,
+} from '../model-from-drawing/proposal-line-source';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
 import { sha256Hex } from '@/lib/hash/sha256';
 import {
   NO_READ_REVIEW, OCR_IDLE, planRecognitionStore, type PlanRecognitionFailure, type PlanRecognitionRun,
+  type PlanRecognitionState,
 } from './plan-recognition-store';
 import { meetsConfidenceTier } from './plan-confidence';
 import { emptyRoleMarkCounts, planRoleMarkKind, type PlanRoleMarkKind } from './plan-role-marks';
@@ -291,13 +294,18 @@ let scaleDeps = DEFAULT_SCALE_DEPS;
 /** Η κάρτα κλίμακας — μέρος ΑΥΤΟΥ του ελεγκτή (ένας γραφέας). */
 const scaleController = createPlanScaleController<RasterLineSource>(() => scaleDeps);
 
-function fail(failure: PlanRecognitionFailure): null {
+/** Σβήνει το αποτέλεσμα και ό,τι κρέμεται από αυτό (όψη · τοίχοι της όψης · τοπική ανάγνωση) — η φάση την ορίζει ο καλών. */
+function clearResult(next: Partial<PlanRecognitionState>): void {
   readingReview.end();
   segmentMask.track(null, null);
   ocrController.reset();
   planRecognitionStore.patch({
-    phase: 'idle', run: null, fusion: null, reading: null, failure, scaleHoverTextId: null, ocr: OCR_IDLE, ...NO_READ_REVIEW,
+    run: null, fusion: null, reading: null, scaleHoverTextId: null, ocr: OCR_IDLE, ...NO_READ_REVIEW, ...next,
   });
+}
+
+function fail(failure: PlanRecognitionFailure): null {
+  clearResult({ phase: 'idle', failure });
   return null;
 }
 
@@ -323,6 +331,8 @@ export const planRecognitionSession = {
       provider.getSourceMedium(),
     ]);
     if (sequence !== runSequence || reply.kind === 'superseded') return null;
+    // §6.17 — η εικόνα άλλαξε όσο δούλευε ο Worker: τα pixel της παλιάς δεν γίνονται ποτέ αποτέλεσμα για τη νέα.
+    if (!isRasterSourceCurrent({ floorId, backgroundId: background.id })) return fail('background-replaced');
     if (reply.kind === 'failed') return fail('aligner-failed');
     const segments = reply.value.segments?.segments ?? [];
     if (segments.length === 0) return fail('no-segments');
@@ -386,6 +396,20 @@ export const planRecognitionSession = {
    * δρόμος με τις διορθώσεις: ξανατρέχει **μόνο** η σύντηξη και δίνει νέα πηγή γραμμών. Ιδεμπότης.
    */
   drawingKind: { set: setDrawingKind },
+
+  /**
+   * ADR-929 §6.17 — το αποτέλεσμα ανήκει στην **εικόνα** που αναγνωρίστηκε, όχι στον όροφο (ίδιος κριτής με την πρόταση
+   * του βοηθού, `isRasterSourceCurrent`). Αντικατάσταση ή αφαίρεση ⇒ σβήνει, **με όνομα** (`background-replaced`), ποτέ
+   * σιωπηλά και ποτέ πάνω στην ξένη εικόνα. Αναγνώριση σε εξέλιξη κρίνεται μόνη της στο τέλος της (`run`) — εδώ φεύγει
+   * μόνο το παλιό αποτέλεσμα, χωρίς να πειραχτεί η φάση της. Ιδεμπότης· `true` ⇔ ακυρώθηκε τώρα.
+   */
+  revalidateSource(): boolean {
+    const { run, phase } = planRecognitionStore.get();
+    if (!run || isRasterSourceCurrent(run)) return false;
+    if (phase === 'running') clearResult({});
+    else fail('background-replaced');
+    return true;
+  },
 
   /** Κλείσιμο: σβήνει το αποτέλεσμα, ακυρώνει ό,τι τρέχει, τερματίζει τους Workers. */
   close(): void {

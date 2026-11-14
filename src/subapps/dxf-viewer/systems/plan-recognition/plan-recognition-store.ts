@@ -38,8 +38,12 @@ import type { SourceMedium } from '../../floorplan-background/providers/types';
 /** `idle` — καμία αναγνώριση · `running` — ευθυγράμμιση/τμήματα σε εξέλιξη · `ready` — υπάρχει αποτέλεσμα. */
 export type PlanRecognitionPhase = 'idle' | 'running' | 'ready';
 
-/** Γιατί δεν βγήκε αποτέλεσμα — ΠΑΝΤΑ με όνομα (Δ16 #4). */
-export type PlanRecognitionFailure = 'no-background' | 'no-pixels' | 'aligner-failed' | 'no-segments';
+/**
+ * Γιατί δεν βγήκε (ή δεν ισχύει πια) αποτέλεσμα — ΠΑΝΤΑ με όνομα (Δ16 #4). `background-replaced` (§6.17): η εικόνα που
+ * αναγνωρίστηκε δεν είναι πια στον όροφο (Αντικατάσταση · αφαίρεση) ⇒ το αποτέλεσμά της ακυρώθηκε.
+ */
+export type PlanRecognitionFailure =
+  | 'no-background' | 'no-pixels' | 'aligner-failed' | 'no-segments' | 'background-replaced';
 
 /** Ό,τι έδωσαν οι Φ1/Φ2 για ΕΝΑ υπόβαθρο: η είσοδος κάθε επανάληψης της σύντηξης. */
 export interface PlanRecognitionRun {

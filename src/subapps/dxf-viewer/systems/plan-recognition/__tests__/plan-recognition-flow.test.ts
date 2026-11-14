@@ -229,3 +229,78 @@ describe('ADR-929 Δ21 (0) · Δ7 Γ — ο διακόπτης «Σκίτσο / 
     expect(planRecognitionStore.get().drawingKindChoice).toBeNull();
   });
 });
+
+/** Αντικατάσταση υποβάθρου (ADR-340 `confirmReplace`): ίδιος όροφος, ίδια pixel, **άλλη** ταυτότητα εικόνας. */
+function replaceBackground(): void {
+  const current = mockBackgrounds.get(FLOOR);
+  if (current) mockBackgrounds.set(FLOOR, { ...current, id: 'bg_replacement' });
+}
+
+describe('ADR-929 §6.17 — το αποτέλεσμα ανήκει στην εικόνα, όχι στον όροφο', () => {
+  it('Αντικατάσταση ⇒ η αναγνώριση σβήνει με όνομα και ο βοηθός ξαναοπλίζεται, κρατώντας τις Δ3', async () => {
+    installBackground(CALIBRATED);
+    const h = deps();
+    await recognise(h);
+    confirmAllGroups(h);
+    const confirmed = modelFromDrawingStore.get().categoryByThicknessMm.size;
+    expect(confirmed).toBeGreaterThan(0);
+    replaceBackground();
+    expect(planRecognitionSession.revalidateSource()).toBe(true);
+    expect(planRecognitionStore.get()).toMatchObject({
+      phase: 'idle', run: null, fusion: null, reading: null, failure: 'background-replaced',
+    });
+    expect(modelFromDrawingSession.withdrawStaleRasterSource()).toBe(true);
+    const state = modelFromDrawingStore.get();
+    expect(state).toMatchObject({ phase: 'picking', sampleRole: 'wall', proposal: null, preview: null });
+    expect(state.lineSource).toMatchObject({ kind: 'raster', floorId: FLOOR });
+    expect(state.categoryByThicknessMm.size).toBe(confirmed);
+    // Ιδεμπότης: δεύτερη ερώτηση ⇒ τίποτα.
+    expect(planRecognitionSession.revalidateSource()).toBe(false);
+    expect(modelFromDrawingSession.withdrawStaleRasterSource()).toBe(false);
+  });
+
+  it('νέα αναγνώριση μετά την Αντικατάσταση ⇒ οι Δ3 του ορόφου μένουν (§6.12 #4)', async () => {
+    installBackground(CALIBRATED);
+    const h = deps();
+    await recognise(h);
+    confirmAllGroups(h);
+    const confirmed = new Map(modelFromDrawingStore.get().categoryByThicknessMm);
+    replaceBackground();
+    planRecognitionSession.revalidateSource();
+    modelFromDrawingSession.withdrawStaleRasterSource();
+    const source = await planRecognitionSession.run(FLOOR);
+    expect(source?.backgroundId).toBe('bg_replacement');
+    if (source) modelFromDrawingSession.adoptRasterSegments(source, h.deps);
+    expect(modelFromDrawingStore.get()).toMatchObject({ phase: 'review', categoryByThicknessMm: confirmed });
+  });
+
+  it('ίδια εικόνα ⇒ καμία ακύρωση (καμία αλλαγή store)', async () => {
+    installBackground(CALIBRATED);
+    const h = deps();
+    await recognise(h);
+    const recognition = planRecognitionStore.get();
+    const assistant = modelFromDrawingStore.get();
+    expect(planRecognitionSession.revalidateSource()).toBe(false);
+    expect(modelFromDrawingSession.withdrawStaleRasterSource()).toBe(false);
+    expect(planRecognitionStore.get()).toBe(recognition);
+    expect(modelFromDrawingStore.get()).toBe(assistant);
+  });
+
+  it('Αντικατάσταση ΕΝΩ δουλεύει ο ευθυγραμμιστής ⇒ κανένα αποτέλεσμα από τα pixel της παλιάς, με όνομα', async () => {
+    installBackground(CALIBRATED);
+    const pending = planRecognitionSession.run(FLOOR);
+    replaceBackground();
+    expect(await pending).toBeNull();
+    expect(planRecognitionStore.get()).toMatchObject({ phase: 'idle', run: null, failure: 'background-replaced' });
+  });
+
+  it('πηγή αντικατεστημένης εικόνας που φτάνει αργά ⇒ ο βοηθός δεν την υιοθετεί', async () => {
+    installBackground(CALIBRATED);
+    const h = deps();
+    modelFromDrawingSession.open();
+    const source = await planRecognitionSession.run(FLOOR);
+    replaceBackground();
+    if (source) modelFromDrawingSession.adoptRasterSegments(source, h.deps);
+    expect(modelFromDrawingStore.get()).toMatchObject({ phase: 'picking', proposal: null });
+  });
+});

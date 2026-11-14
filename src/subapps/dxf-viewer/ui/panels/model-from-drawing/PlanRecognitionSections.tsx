@@ -75,6 +75,7 @@ const FAILURE_LABEL_KEY: Readonly<Record<PlanRecognitionFailure, string>> = {
   'no-pixels': 'modelFromDrawing.image.failure.no-pixels',
   'aligner-failed': 'modelFromDrawing.image.failure.aligner-failed',
   'no-segments': 'modelFromDrawing.image.failure.no-segments',
+  'background-replaced': 'modelFromDrawing.image.failure.background-replaced',
 };
 
 const TIER_LABEL_KEY: Readonly<Record<PlanConfidenceTier, string>> = {

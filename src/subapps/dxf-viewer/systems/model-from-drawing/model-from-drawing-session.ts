@@ -38,6 +38,7 @@ import {
 import { isSampleFailure, readLiveScene, readSceneBasis, sampleColorAt, type SceneBasis } from './model-from-drawing-live';
 import {
   isRasterPlacementCalibrated,
+  isRasterSourceCurrent,
   resolveProposalLines,
   SCENE_LINE_SOURCE,
   type ProposalLineSource,
@@ -154,6 +155,8 @@ export const modelFromDrawingSession = {
    * pixel (όπως η αντιστοίχιση τύπων του Revit επιβιώνει του Reload).
    */
   adoptRasterSegments(source: Extract<ProposalLineSource, { kind: 'raster' }>, deps: ModelFromDrawingDeps): void {
+    // §6.17 — πηγή εικόνας που δεν είναι πια στον όροφο (ασύγχρονη απάντηση που ήρθε μετά την Αντικατάσταση) ⇒ τίποτα.
+    if (!isRasterSourceCurrent(source)) return;
     const state = modelFromDrawingStore.get();
     const sameFloor = state.lineSource.kind === 'raster' && state.lineSource.floorId === source.floorId;
     recompute(
@@ -164,6 +167,22 @@ export const modelFromDrawingSession = {
       },
       deps,
     );
+  },
+
+  /**
+   * ADR-929 §6.17 — η εικόνα της πηγής δεν είναι πια στον όροφο (Αντικατάσταση · αφαίρεση): η πρόταση και η προεπισκόπηση
+   * που βγήκαν από τα pixel της φεύγουν και ο βοηθός ξαναοπλίζεται για δείγμα, όπου το πάνελ λέει γιατί και προσφέρει τις
+   * πηγές της νέας εικόνας. Οι αποφάσεις του ανθρώπου και η πηγή (ως ταυτότητα ορόφου) **μένουν**, ώστε νέα αναγνώριση
+   * στον ίδιο όροφο να κρατήσει τις Δ3 και να δείξει τις Δ7 ορφανές, όπως ορίζει η §6.12. Ιδεμπότης· `true` ⇔ αποσύρθηκε.
+   */
+  withdrawStaleRasterSource(): boolean {
+    const { lineSource, proposal } = modelFromDrawingStore.get();
+    if (lineSource.kind !== 'raster' || proposal === null || isRasterSourceCurrent(lineSource)) return false;
+    modelFromDrawingStore.patch({
+      phase: 'picking', sampleRole: 'wall', pendingSample: null, proposal: null, preview: null, dimensionSummary: null,
+      wallBasis: null, focusedKey: null, notice: null,
+    });
+    return true;
   },
 
   /** Δ3 — ο άνθρωπος επιβεβαιώνει τη λειτουργία ΜΙΑΣ ομάδας πάχους. */

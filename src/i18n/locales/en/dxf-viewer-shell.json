@@ -502,7 +502,8 @@
         "no-background": "This floor has no background image.",
         "no-pixels": "The background image has not loaded yet. Try again in a moment.",
         "aligner-failed": "Aligning the image failed. Try again.",
-        "no-segments": "No wall lines were found in the image."
+        "no-segments": "No wall lines were found in the image.",
+        "background-replaced": "The floor background changed, so the recognition of the previous image was closed. Start a new recognition for the current image."
       },
       "confidence": {
         "title": "Lines found, by confidence",

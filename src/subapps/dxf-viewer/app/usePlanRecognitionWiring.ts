@@ -7,7 +7,8 @@
  *   `modelFromDrawingSession.adoptRasterSegments` (η ΙΔΙΑ μηχανή, προεπισκόπηση, ομάδες πάχους, έγκριση).
  *
  * Υπολογίζει και την όψη του πάνελ (`ImageSourceView`) από δύο χαμηλόσυχνα stores (αναγνώριση · υπόβαθρο). Το
- * κλείσιμο του βοηθού ή «άλλο δείγμα» κλείνει και την αναγνώριση (και τους Workers της). Η τοπική ανάγνωση (Φ0.6) ξεκινά
+ * κλείσιμο του βοηθού ή «άλλο δείγμα» κλείνει και την αναγνώριση (και τους Workers της)· η αντικατάσταση της εικόνας
+ * ακυρώνει αποτέλεσμα και πρόταση με όνομα (§6.17). Η τοπική ανάγνωση (Φ0.6) ξεκινά
  * μόνη της· όταν τελειώσει, η νέα πηγή γραμμών έρχεται από το ίδιο κανάλι με την επανεξαγωγή (`onLineSource`).
  *
  * @see ./ModelFromDrawingHost.tsx
@@ -214,6 +215,13 @@ export function usePlanRecognitionWiring(
     if (closed) planRecognitionSession.close();
   }, [closed]);
   React.useEffect(() => () => planRecognitionSession.close(), []);
+
+  // ADR-929 §6.17 — ό,τι βγήκε από pixel ανήκει στην ΕΙΚΟΝΑ, όχι στον όροφο: σε κάθε αλλαγή υποβάθρων (Αντικατάσταση ·
+  // αφαίρεση) ρωτιούνται και οι δύο ελεγκτές τον ΙΔΙΟ κριτή. O(1), ιδεμπότες — καμία συνδρομή καμβά (ADR-040).
+  React.useEffect(() => useFloorplanBackgroundStore.subscribe(() => {
+    planRecognitionSession.revalidateSource();
+    modelFromDrawingSession.withdrawStaleRasterSource();
+  }), []);
 
   // ADR-929 §6.10 Α2 — οι τοίχοι ξαναβγήκαν από νέα όψη (ή αναίρεση): ο βοηθός υιοθετεί τη νέα πηγή (η ΙΔΙΑ μηχανή).
   React.useEffect(
