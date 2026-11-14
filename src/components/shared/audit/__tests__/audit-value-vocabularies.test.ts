@@ -25,6 +25,8 @@ import {
   AUDIT_KAD_TYPE_CATALOG,
   AUDIT_PERSONA_TYPE_CATALOG,
   AUDIT_PHONE_TYPE_CATALOG,
+  AUDIT_PROFESSIONAL_LICENCE_CATALOG,
+  AUDIT_REGISTRY_AUTHORITY_CATALOG,
   AUDIT_SOCIAL_MEDIA_TYPE_CATALOG,
   AUDIT_SOCIAL_PLATFORM_CATALOG,
   AUDIT_VALUE_WORDS,
@@ -53,6 +55,8 @@ import { resolveFieldLabel, resolveTrackedFieldDef } from '../audit-field-descri
 import { CONTACT_ADDRESS_TYPES } from '@/types/contacts/address-types';
 import { PROJECT_ADDRESS_TYPES } from '@/types/project/addresses';
 import { ALL_PERSONA_TYPES } from '@/types/contacts/personas';
+import { PROFESSIONAL_LICENCES } from '@/config/professional-licences';
+import { REGISTRY_AUTHORITY_PRESENTATION } from '@/constants/professional-registries';
 import type { TrackedFieldDef } from '@/lib/audit/tracked-field-def';
 
 import { formatCollectionItemLabel, formatFieldAwareValue, type AuditValueFormat } from '../activity-tab-helpers';
@@ -119,6 +123,9 @@ const ROOTS: ReadonlyArray<readonly [string, readonly string[], AuditCatalogRef]
   ['ProjectAddressType', PROJECT_ADDRESS_TYPES, AUDIT_ADDRESS_TYPE_CATALOG],
   // ADR-195 (η) — snake_case τιμές (`real_estate_agent`) σε camelCase κλειδιά: η γέφυρα του επιλυτή ΕΚΤΕΛΕΙΤΑΙ εδώ.
   ['PersonaType', ALL_PERSONA_TYPES, AUDIT_PERSONA_TYPE_CATALOG],
+  // ADR-915 §40.5 — λέξη ένα επίπεδο κάτω από την τιμή (`leafKey`): kebab → camel ΚΑΙ `.name` / `.abbreviation`.
+  ['ProfessionalLicence', PROFESSIONAL_LICENCES, AUDIT_PROFESSIONAL_LICENCE_CATALOG],
+  ['RegistryAuthorityId', Object.keys(REGISTRY_AUTHORITY_PRESENTATION), AUDIT_REGISTRY_AUTHORITY_CATALOG],
 ];
 
 describe('Λ1 — κάθε τιμή κάθε ρίζας έχει λέξη, σε el ΚΑΙ en', () => {
@@ -239,6 +246,9 @@ describe('Λ6 — η ετικέτα στοιχείου που γράφει η μ
     ['el', 'contact', 'emails', 'info@macon.gr — info', 'info@macon.gr — Πληροφορίες'],
     ['el', 'contact', 'addresses', 'headquarters — Απόλλωνος, Λαγκαδά Πυλαίας', 'Έδρα — Απόλλωνος, Λαγκαδά Πυλαίας'],
     ['en', 'contact', 'customFields.activities', 'secondary', 'Secondary'],
+    // ADR-915 §40.5 — η ετικέτα άδειας (φωλιασμένες διαδρομές): άδεια · αρχή (συντομογραφία) · εκδότης · αριθμός.
+    ['el', 'contact', 'licences', 'energy-inspector — ypen — 2600', 'Ενεργειακός επιθεωρητής — ΥΠΕΝ — 2600'],
+    ['el', 'contact', 'licences', 'electrical-installer — regional-authority — ΠΕ Θεσσαλονίκης — 4521', 'Ηλεκτρολόγος εγκαταστάτης — Π.Ε. — ΠΕ Θεσσαλονίκης — 4521'],
   ] as const)('%s · %s.%s · «%s»', (lang, entityType, field, raw, expected) =>
     inLang(lang, () => expect(formatCollectionItemLabel(raw, formatFor(entityType, field))).toBe(expected)),
   );

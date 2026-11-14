@@ -91,13 +91,15 @@ function lookupInCatalog(
   const opts = { ns: catalog.ns };
   value = canonicalCatalogValue(catalog, value);
   const camel = toCamelCase(value);
+  // Λέξη ένα επίπεδο κάτω από την τιμή (`licences.energyInspector.name`) — `leafKey` του καταλόγου.
+  const leaf = catalog.leafKey ? `.${catalog.leafKey}` : '';
 
   for (const path of [catalog.path, ...(catalog.fallbackPaths ?? [])]) {
-    const direct = tryTranslate(`${path}.${value}`, opts, t);
+    const direct = tryTranslate(`${path}.${value}${leaf}`, opts, t);
     if (direct) return direct;
 
     if (camel !== value) {
-      const normalized = tryTranslate(`${path}.${camel}`, opts, t);
+      const normalized = tryTranslate(`${path}.${camel}${leaf}`, opts, t);
       if (normalized) return normalized;
     }
   }

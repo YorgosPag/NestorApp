@@ -110,10 +110,25 @@ export function itemFieldUnion(
 }
 
 /**
+ * Η τιμή ενός `labelFields` — ιδιότητα (`'licence'`) **ή** φωλιασμένη διαδρομή με τελείες
+ * (`'attestation.registration.number'`, ADR-915 §40.5: ο αριθμός άδειας ζει μέσα στη βεβαίωση). Μόνο primitive τιμή
+ * γίνεται ετικέτα — ποτέ «[object Object]».
+ */
+function labelValueAt(rec: Readonly<Record<string, unknown>>, path: string): string | null {
+  let cursor: unknown = rec;
+  for (const segment of path.split('.')) {
+    if (!isPlainRecord(cursor) || !Object.prototype.hasOwnProperty.call(cursor, segment)) return null;
+    cursor = cursor[segment];
+  }
+  if (typeof cursor === 'string') return cursor === '' ? null : cursor;
+  if (typeof cursor === 'number' || typeof cursor === 'boolean') return String(cursor);
+  return null;
+}
+
+/**
  * Produce a human display label for a collection item by concatenating
- * `labelFields`. Primitive items return themselves as a string. Falls back
- * to the first non-empty string/number property when `labelFields` is
- * unhelpful.
+ * `labelFields` (ιδιότητες ή φωλιασμένες διαδρομές, `labelValueAt`). Primitive items return themselves as a string.
+ * Falls back to the first non-empty string/number property when `labelFields` is unhelpful.
  */
 export function collectionItemLabel(
   item: unknown,
@@ -127,8 +142,8 @@ export function collectionItemLabel(
   if (labelFields && labelFields.length > 0) {
     const parts: string[] = [];
     for (const field of labelFields) {
-      const v = rec[field];
-      if (v !== undefined && v !== null && v !== '') parts.push(String(v));
+      const v = labelValueAt(rec, field);
+      if (v !== null) parts.push(v);
     }
     if (parts.length > 0) return parts.join(sep);
   }

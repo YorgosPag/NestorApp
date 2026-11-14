@@ -43,6 +43,12 @@ export interface AuditCatalogRef {
    * Δηλώνεται ΜΟΝΟ από τη ρίζα του λεξιλογίου (π.χ. `LEGACY_KAD_ACTIVITY_TYPE_ALIASES`), ποτέ εδώ.
    */
   readonly valueAliases?: Readonly<Record<string, string>>;
+  /**
+   * ADR-915 §40.5 — λεξιλόγιο όπου η λέξη ζει **ένα επίπεδο βαθύτερα** από την τιμή (`licences.energyInspector.name`,
+   * `registries.ypen.abbreviation`): η λέξη είναι στο `${path}.${τιμή}.${leafKey}`. Παράγεται από τους πίνακες κλειδιών
+   * της ρίζας (`catalogOfLeafKeyTable`), ποτέ γραμμένο με το χέρι.
+   */
+  readonly leafKey?: string;
 }
 
 /**

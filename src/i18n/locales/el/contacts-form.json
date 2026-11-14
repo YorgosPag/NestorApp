@@ -298,7 +298,6 @@
     "registryHint": "Ο αριθμός όπως τον εξέδωσε η αρχή. Είναι δηλωμένος, όχι ελεγμένος — ελέγξτε τον στο δημόσιο μητρώο.",
     "sourceOffice": "Καταχωρίστηκε από το γραφείο",
     "sourceSelfDeclared": "Δηλωμένο από τον ίδιο",
-    "provenanceLine": "{licence} — {source}, {date}",
-    "provenanceRegion": "Προέλευση αδειών"
+    "provenanceLine": "{source}, {date}"
   }
 }

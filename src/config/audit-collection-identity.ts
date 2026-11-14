@@ -43,7 +43,17 @@ export const CONTACT_COLLECTION_IDENTITY = {
   // ⚠️ Δήλωνε `['code']` — πεδίο που ΔΕΝ υπάρχει ⇒ κάθε δεξιότητα έπεφτε στο κλειδί ολόκληρου JSON.
   escoSkills: { keyBy: ['uri', 'label'], labelFields: ['label'] },
   // ADR-915 §40.5 — μία ανά άδεια του λεξιλογίου (`PROFESSIONAL_LICENCES`)· το γράφουν η φόρμα και η υιοθέτηση.
-  licences: { keyBy: 'licence', labelFields: ['licence'] },
+  // Ετικέτα: άδεια — αρχή — εκδότης (όπου υπάρχει) — αριθμός. Φωλιασμένες διαδρομές (`labelValueAt`): ο αριθμός ζει στη
+  // βεβαίωση. Οι λέξεις (άδεια · αρχή) λύνονται στην προβολή (`itemCatalogs` του `licences` στο `audit-tracked-fields.ts`).
+  licences: {
+    keyBy: 'licence',
+    labelFields: [
+      'licence',
+      'attestation.registration.authority',
+      'attestation.registration.chapter',
+      'attestation.registration.number',
+    ],
+  },
 } as const satisfies Readonly<Record<string, CollectionIdentity>>;
 
 export type ContactCollectionField = keyof typeof CONTACT_COLLECTION_IDENTITY;

@@ -27,6 +27,8 @@ import {
   AUDIT_KAD_TYPE_CATALOG,
   AUDIT_PERSONA_TYPE_CATALOG,
   AUDIT_PHONE_TYPE_CATALOG,
+  AUDIT_PROFESSIONAL_LICENCE_CATALOG,
+  AUDIT_REGISTRY_AUTHORITY_CATALOG,
   AUDIT_PROPERTY_ATTRIBUTE_CATALOG,
   AUDIT_SOCIAL_MEDIA_TYPE_CATALOG,
   AUDIT_SOCIAL_PLATFORM_CATALOG,
@@ -643,6 +645,11 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     kind: 'collection',
     ...CONTACT_COLLECTION_IDENTITY.licences,
     label: 'licences',
+    // ADR-915 §40.5 — «energy-inspector — ypen — 2600» → «Ενεργειακός επιθεωρητής — ΥΠΕΝ — 2600».
+    itemCatalogs: {
+      licence: AUDIT_PROFESSIONAL_LICENCE_CATALOG,
+      'attestation.registration.authority': AUDIT_REGISTRY_AUTHORITY_CATALOG,
+    },
   },
 };
 

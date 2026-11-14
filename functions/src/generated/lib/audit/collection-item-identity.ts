@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/audit/collection-item-identity.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:c14984557f9fe28521a36bd412ce56045c36ee8368f85304aec4c5c4e02bd26c
+// sha256:64841ab5081acb58f76c131b3d332793d7d1e5c219ef375903f11b5e63bd3437
 
 /**
  * **Η ταυτότητα και η ετικέτα ενός στοιχείου συλλογής στο Ιστορικό** — ADR-195 Φ11 · (η)
@@ -114,10 +114,25 @@ export function itemFieldUnion(
 }
 
 /**
+ * Η τιμή ενός `labelFields` — ιδιότητα (`'licence'`) **ή** φωλιασμένη διαδρομή με τελείες
+ * (`'attestation.registration.number'`, ADR-915 §40.5: ο αριθμός άδειας ζει μέσα στη βεβαίωση). Μόνο primitive τιμή
+ * γίνεται ετικέτα — ποτέ «[object Object]».
+ */
+function labelValueAt(rec: Readonly<Record<string, unknown>>, path: string): string | null {
+  let cursor: unknown = rec;
+  for (const segment of path.split('.')) {
+    if (!isPlainRecord(cursor) || !Object.prototype.hasOwnProperty.call(cursor, segment)) return null;
+    cursor = cursor[segment];
+  }
+  if (typeof cursor === 'string') return cursor === '' ? null : cursor;
+  if (typeof cursor === 'number' || typeof cursor === 'boolean') return String(cursor);
+  return null;
+}
+
+/**
  * Produce a human display label for a collection item by concatenating
- * `labelFields`. Primitive items return themselves as a string. Falls back
- * to the first non-empty string/number property when `labelFields` is
- * unhelpful.
+ * `labelFields` (ιδιότητες ή φωλιασμένες διαδρομές, `labelValueAt`). Primitive items return themselves as a string.
+ * Falls back to the first non-empty string/number property when `labelFields` is unhelpful.
  */
 export function collectionItemLabel(
   item: unknown,
@@ -131,8 +146,8 @@ export function collectionItemLabel(
   if (labelFields && labelFields.length > 0) {
     const parts: string[] = [];
     for (const field of labelFields) {
-      const v = rec[field];
-      if (v !== undefined && v !== null && v !== '') parts.push(String(v));
+      const v = labelValueAt(rec, field);
+      if (v !== null) parts.push(v);
     }
     if (parts.length > 0) return parts.join(sep);
   }

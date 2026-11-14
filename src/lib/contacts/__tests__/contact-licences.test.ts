@@ -8,6 +8,7 @@ import {
   readContactLicences,
   sameLicenceValue,
   sortByVocabulary,
+  storedLicenceShownBy,
 } from '@/lib/contacts/contact-licences';
 import { NO_LICENCE_DRAFTS, type LicenceDrafts } from '@/lib/professional/licence-drafts';
 import type { ShowcaseLicence } from '@/types/agency-profile';
@@ -33,6 +34,31 @@ const ADOPTED_INSPECTOR: ContactLicence = {
 function drafts(overrides: Partial<Record<keyof LicenceDrafts, { number: string; chapter: string } | null>>): LicenceDrafts {
   return { ...NO_LICENCE_DRAFTS, ...overrides };
 }
+
+describe('storedLicenceShownBy — η προέλευση ανήκει στο μπλοκ της άδειας (§40.5, εύρημα 2026-11-14)', () => {
+  const OFFICE_INSTALLER: ContactLicence = {
+    ...INSTALLER,
+    provenance: { source: 'office', recordedAt: EARLIER, engagementId: null },
+  };
+  const STORED = [ADOPTED_INSPECTOR, OFFICE_INSTALLER];
+
+  it('ίδια τιμή με την αποθηκευμένη ⇒ ΑΥΤΗ η άδεια (όχι η γειτονική), και μετά από trim', () => {
+    expect(storedLicenceShownBy(STORED, 'energy-inspector', { number: ' 2600 ', chapter: '' })).toBe(ADOPTED_INSPECTOR);
+    expect(storedLicenceShownBy(STORED, 'electrical-installer', { number: '4521', chapter: 'ΠΕ Θεσσαλονίκης' })).toBe(OFFICE_INSTALLER);
+  });
+
+  it('ξετσεκαρισμένη · αλλαγμένος αριθμός · άλλος εκδότης · κενό ⇒ καμία προέλευση', () => {
+    expect(storedLicenceShownBy(STORED, 'energy-inspector', null)).toBeNull();
+    expect(storedLicenceShownBy(STORED, 'energy-inspector', { number: '2601', chapter: '' })).toBeNull();
+    expect(storedLicenceShownBy(STORED, 'electrical-installer', { number: '4521', chapter: 'ΠΕ Σερρών' })).toBeNull();
+    expect(storedLicenceShownBy(STORED, 'energy-inspector', { number: '  ', chapter: '' })).toBeNull();
+  });
+
+  it('καμία αποθηκευμένη ⇒ καμία προέλευση (νέα επαφή)', () => {
+    expect(storedLicenceShownBy(undefined, 'energy-inspector', { number: '2600', chapter: '' })).toBeNull();
+    expect(storedLicenceShownBy([OFFICE_INSTALLER], 'energy-inspector', { number: '2600', chapter: '' })).toBeNull();
+  });
+});
 
 describe('readContactLicences', () => {
   it('απόν ή μη-πίνακας ⇒ καμία άδεια', () => {

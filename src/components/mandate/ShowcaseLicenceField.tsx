@@ -76,6 +76,12 @@ export interface ShowcaseLicenceFieldProps {
   /** Προεπιλογή `self` (βιτρίνα). */
   readonly voice?: LicenceFieldVoice;
   readonly disabled?: boolean;
+  /**
+   * **Υποδοχή κάτω από τη δηλωμένη άδεια** (ADR-915 §40.5): ό,τι ανήκει σε ΑΥΤΗ την άδεια (π.χ. η προέλευση της τιμής
+   * στην επαφή) αποδίδεται **μέσα** στο μπλοκ της — ποτέ σε χωριστή λίστα που μοιάζει να ανήκει στη γειτονική γραμμή.
+   * Καλείται μόνο για τσεκαρισμένη άδεια. Η βιτρίνα δεν τη χρειάζεται.
+   */
+  readonly renderBelowLicence?: (licence: ProfessionalLicence, draft: LicenceDraft) => React.ReactNode;
 }
 
 export function ShowcaseLicenceField({
@@ -84,6 +90,7 @@ export function ShowcaseLicenceField({
   heldThrough,
   voice = 'self',
   disabled = false,
+  renderBelowLicence,
 }: ShowcaseLicenceFieldProps): React.ReactElement {
   const { t } = useTranslation(FIELD_NAMESPACES);
   return (
@@ -102,6 +109,7 @@ export function ShowcaseLicenceField({
             voice={voice}
             draft={value[licence]}
             onChange={(draft) => onChange({ ...value, [licence]: draft })}
+            renderBelow={renderBelowLicence}
           />
         );
       })}
@@ -128,11 +136,13 @@ function LicenceRow({
   voice,
   draft,
   onChange,
+  renderBelow,
 }: {
   readonly licence: ProfessionalLicence;
   readonly voice: LicenceFieldVoice;
   readonly draft: LicenceDraft | null;
   readonly onChange: (draft: LicenceDraft | null) => void;
+  readonly renderBelow: ShowcaseLicenceFieldProps['renderBelowLicence'];
 }): React.ReactElement {
   const { t } = useTranslation(FIELD_NAMESPACES);
   // ⚠️ `spec.nameKey`, ΟΧΙ αποδόμηση: ο τεμαχιστής του CHECK 3.34 λύνει `t(TABLE[x].key)`, όχι `t(nameKey)`.
@@ -164,6 +174,7 @@ function LicenceRow({
           onChange={(chapter) => onChange({ ...draft, chapter })}
         />
       )}
+      {draft !== null && renderBelow?.(licence, draft)}
     </>
   );
 }

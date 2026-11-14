@@ -16,7 +16,6 @@ export const CONTACT_LICENCE_KEYS = {
   hold: 'contacts-form:licences.hold',
   registryHint: 'contacts-form:licences.registryHint',
   provenanceLine: 'contacts-form:licences.provenanceLine',
-  provenanceRegion: 'contacts-form:licences.provenanceRegion',
 } as const;
 
 /** Η προέλευση της τιμής — ολικός πάνω στο λεξιλόγιο. */

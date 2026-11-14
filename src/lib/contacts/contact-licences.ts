@@ -11,9 +11,14 @@
  * Καθαρό leaf — καμία εισαγωγή SDK.
  */
 
-import { PROFESSIONAL_LICENCES } from '@/config/professional-licences';
+import { PROFESSIONAL_LICENCES, type ProfessionalLicence } from '@/config/professional-licences';
 import { formShowcaseLicences, readShowcaseLicences, type ShowcaseLicenceRejection } from '@/lib/agency/showcase-licence';
-import { licenceWireOf, type LicenceDrafts } from '@/lib/professional/licence-drafts';
+import {
+  NO_LICENCE_DRAFTS,
+  licenceWireOf,
+  type LicenceDraft,
+  type LicenceDrafts,
+} from '@/lib/professional/licence-drafts';
 import type { ShowcaseLicence } from '@/types/agency-profile';
 import {
   CONTACT_LICENCE_SOURCES,
@@ -103,6 +108,23 @@ export function resolveLicenceDraftsForUpdate<T extends { readonly licenceDrafts
   const stored = readContactLicences(storedRaw);
   const formed = contactLicencesFromDrafts(stored, licenceDrafts, nowIso);
   return { ...rest, licences: 'reason' in formed ? [...stored] : [...formed.licences] };
+}
+
+/**
+ * **Η αποθηκευμένη άδεια που δείχνει ΑΥΤΗ τη στιγμή η φόρμα** (ADR-915 §40.5 — προέλευση μέσα στο μπλοκ της άδειας).
+ * Μόνο όταν το draft σχηματίζει **την ίδια τιμή** με την αποθηκευμένη (`sameLicenceValue`, μετά τον ίδιο σχηματισμό που
+ * κάνει η αποθήκευση) — ξετσεκαρισμένη ή αλλαγμένη τιμή δεν έχει ακόμη προέλευση (θα γίνει `office` στην αποθήκευση).
+ */
+export function storedLicenceShownBy(
+  stored: readonly ContactLicence[] | undefined,
+  licence: ProfessionalLicence,
+  draft: LicenceDraft | null,
+): ContactLicence | null {
+  if (!stored || draft === null) return null;
+  const formed = formShowcaseLicences(licenceWireOf({ ...NO_LICENCE_DRAFTS, [licence]: draft }, []));
+  if ('reason' in formed || formed.licences.length !== 1) return null;
+  const [shown] = formed.licences;
+  return stored.find((held) => sameLicenceValue(held, shown)) ?? null;
 }
 
 /** Τα δύο λεξιλόγια επικαλύπτονται· όσα η επαφή δομικά δεν παράγει (βιτρίνα/ειδικότητα) πέφτουν στο «λείπει αριθμός». */

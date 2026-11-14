@@ -41,6 +41,8 @@ import {
   WEBSITE_TYPE_LABELS,
 } from '@/constants/domains/communication-labels';
 import { PERSONA_LABELS_NS, PERSONA_TYPE_LABELS } from '@/constants/domains/project-building-persona-labels';
+import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
+import { REGISTRY_AUTHORITY_PRESENTATION } from '@/constants/professional-registries';
 
 /** Μία λέξη που δεν είναι τιμή λεξιλογίου (Ναι/Όχι, μονάδα, «εσωτ.») — `ns` + πλήρες κλειδί. */
 export interface AuditWordRef {
@@ -71,6 +73,25 @@ function catalogOfNamespacedKeyTable(table: Readonly<Record<string, string>>): A
   const { namespace, bareKey } = getExplicitNamespace(Object.values(table)[0]);
   if (namespace === null) throw new Error(`audit-value-vocabularies: key without namespace "${bareKey}"`);
   return { ns: namespace, path: parentPath(bareKey) };
+}
+
+/**
+ * Κατάλογος από πίνακα πλήρων κλειδιών **ένα επίπεδο κάτω** από την τιμή (`ns:licences.energyInspector.name`): διαδρομή =
+ * ο παππούς, `leafKey` = το φύλλο. Κάθε κλειδί του πίνακα πρέπει να έχει ΙΔΙΟ namespace, παππού και φύλλο — αλλιώς ο
+ * κατάλογος θα έλυνε μερικές τιμές σιωπηλά λάθος, γι' αυτό σφάλμα φόρτωσης (ίδια στάση με το `catalogOfNamespacedKeyTable`).
+ */
+function catalogOfLeafKeyTable(keys: readonly string[]): AuditCatalogRef {
+  const shapes = keys.map((key) => {
+    const { namespace, bareKey } = getExplicitNamespace(key);
+    const segments = bareKey.split('.');
+    return { namespace, path: segments.slice(0, -2).join('.'), leafKey: segments[segments.length - 1] };
+  });
+  const [first] = shapes;
+  const consistent = shapes.every((s) => s.namespace === first.namespace && s.path === first.path && s.leafKey === first.leafKey);
+  if (first.namespace === null || first.path === '' || !consistent) {
+    throw new Error(`audit-value-vocabularies: leaf-key table is not one ns:path.<value>.leaf shape (${keys.join(', ')})`);
+  }
+  return { ns: first.namespace, path: first.path, leafKey: first.leafKey };
 }
 
 /** Τύπος τηλεφώνου — ιδιώτης → εταιρεία → υπηρεσία. */
@@ -157,3 +178,16 @@ export const AUDIT_VALUE_WORDS = {
 } as const satisfies Readonly<Record<string, AuditWordRef>>;
 
 export type AuditValueWord = keyof typeof AUDIT_VALUE_WORDS;
+
+/**
+ * Άδεια επαγγελματία (`licences[].licence`, ADR-915 §40.5) — οι λέξεις **παράγονται** από τα `nameKey` της ρίζας
+ * (`PROFESSIONAL_LICENCE_SPECS`): `energy-inspector` → «Ενεργειακός επιθεωρητής». Καμία δεύτερη λέξη.
+ */
+export const AUDIT_PROFESSIONAL_LICENCE_CATALOG = catalogOfLeafKeyTable(
+  Object.values(PROFESSIONAL_LICENCE_SPECS).map((spec) => spec.nameKey),
+);
+
+/** Αρχή μητρώου (`attestation.registration.authority`) — η **συντομογραφία** της ρίζας: `ypen` → «ΥΠΕΝ». */
+export const AUDIT_REGISTRY_AUTHORITY_CATALOG = catalogOfLeafKeyTable(
+  Object.values(REGISTRY_AUTHORITY_PRESENTATION).map((presentation) => presentation.abbreviationKey),
+);

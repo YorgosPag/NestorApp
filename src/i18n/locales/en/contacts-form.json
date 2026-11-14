@@ -298,7 +298,6 @@
     "registryHint": "The number as issued by the authority. It is declared, not checked — verify it in the public registry.",
     "sourceOffice": "Recorded by the office",
     "sourceSelfDeclared": "Declared by the person",
-    "provenanceLine": "{licence} — {source}, {date}",
-    "provenanceRegion": "Licence provenance"
+    "provenanceLine": "{source}, {date}"
   }
 }

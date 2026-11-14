@@ -3,7 +3,7 @@
 /**
  * @fileoverview **«Έλεγχος στο μητρώο»** — ο σύνδεσμος της δημόσιας αναζήτησης μιας άδειας (ADR-915 §21 · §40.5).
  * @related config/professional-licences.ts (`registryLookupUrl`) · LicenceStatement.tsx (βιτρίνα) ·
- *   components/contacts/ContactLicenceProvenanceList.tsx (επαφή)
+ *   components/contacts/ContactLicenceProvenanceNote.tsx (επαφή)
  * @module components/mandate/RegistryLookupLink
  *
  * 🔑 Χωρίς δημόσιο μητρώο (ηλεκτρολόγος, ADR-915 §34) ⇒ **τίποτα** — ποτέ σύνδεσμος που δεν απαντά στο ερώτημα.

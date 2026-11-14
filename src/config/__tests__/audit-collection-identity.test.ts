@@ -47,7 +47,15 @@ const ITEMS: Readonly<Partial<Record<ContactCollectionField, Readonly<Record<str
   responsiblePersons: { name: 'Νίκος', position: 'Διευθυντής', isPrimary: true } satisfies Pick<ResponsiblePerson, 'name' | 'position' | 'isPrimary'>,
   personas: { personaType: 'supplier', status: 'active' } satisfies Pick<PersonaData, 'personaType' | 'status'>,
   escoSkills: { uri: 'http://data.europa.eu/esco/skill/1', label: 'Java' } satisfies EscoSkill,
-  licences: { licence: 'energy-inspector' } satisfies Pick<ContactLicence, 'licence'>,
+  // Ολόκληρο στοιχείο: η ετικέτα διαβάζει φωλιασμένες διαδρομές (`attestation.registration.number`, ADR-915 §40.5).
+  licences: {
+    licence: 'electrical-installer',
+    attestation: {
+      state: 'declared',
+      registration: { authorityKind: 'chapter', authority: 'regional-authority', chapter: 'ΠΕ Θεσσαλονίκης', number: '4521' },
+    },
+    provenance: { source: 'office', recordedAt: '2026-11-14T10:00:00.000Z', engagementId: null },
+  } satisfies ContactLicence,
 };
 
 const FIELDS = Object.keys(CONTACT_COLLECTION_IDENTITY) as ContactCollectionField[];
@@ -63,12 +71,22 @@ function labelFields(field: ContactCollectionField): readonly string[] {
   return identity.labelFields ?? [];
 }
 
+function valueAtPath(item: Readonly<Record<string, unknown>>, path: string): unknown {
+  let cursor: unknown = item;
+  for (const segment of path.split('.')) {
+    if (cursor === null || typeof cursor !== 'object' || !Object.prototype.hasOwnProperty.call(cursor, segment)) return undefined;
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return cursor;
+}
+
 describe('Ι1 — κάθε keyBy / labelFields είναι πραγματική ιδιότητα του στοιχείου', () => {
   it.each(FIELDS.filter((f) => CONTACT_COLLECTION_IDENTITY[f].keyBy !== 'value'))('%s', (field) => {
     const item = ITEMS[field];
     expect(item).toBeDefined();
     for (const property of [...keyFields(field), ...labelFields(field)]) {
-      expect(Object.keys(item ?? {})).toContain(property);
+      // Φωλιασμένη διαδρομή (`a.b.c`) ⇒ κάθε τμήμα πρέπει να υπάρχει — ίδιο κριτήριο με το `labelValueAt`.
+      expect(valueAtPath(item ?? {}, property)).toBeDefined();
     }
   });
 });
