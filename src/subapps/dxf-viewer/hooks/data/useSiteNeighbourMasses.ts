@@ -32,8 +32,8 @@ import {
   useFloorSceneSnapshots,
   useUnvisitedFloorPredicate,
 } from './useFloorSceneSnapshots';
-import { isWallEntity } from '../../types/entities';
-import { computeEnvelopePerimeter } from '../../bim/geometry/envelope-perimeter';
+import { collectEnvelopeElements } from '../../bim/geometry/exterior-wall-ids';
+import { enclosedExteriorRings, resolveEnvelopeTopology } from '../../bim/geometry/envelope-topology';
 import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import {
@@ -56,12 +56,16 @@ interface NeighbourTarget {
 
 /** Footprint (τοπικό XY) + κλίμακα της σκηνής ενός κτιρίου, ή `null` αν λείπει envelope. */
 function sceneFootprint(scene: SceneModel): { footprint: { x: number; y: number }[]; sceneToM: number } | null {
-  const walls = scene.entities.filter(isWallEntity);
+  const { walls, columns, beams } = collectEnvelopeElements(scene.entities);
   if (walls.length === 0) return null;
   const sceneUnits = resolveSceneUnits(scene);
-  const { primaryChain } = computeEnvelopePerimeter(walls, 0, sceneUnits);
-  const pts = primaryChain?.exteriorFaceLoop.points;
-  if (!pts || pts.length < 3) return null;
+  // ADR-937 2026-11-13 — ένα SSoT κελύφους: αποτύπωμα = το μεγαλύτερο εξώτατο όριο που περικλείει χώρο
+  // (ένωση τοίχων + κολωνών + δοκαριών). Ανοιχτό κέλυφος ⇒ καμία μάζα (όπως πριν: καμία κλειστή αλυσίδα ⇒ null).
+  const rings = enclosedExteriorRings(resolveEnvelopeTopology(walls, columns, beams, [], { sceneUnits }));
+  if (rings.length === 0) return null;
+  const largest = rings.reduce((a, b) => (b.areaCanvas > a.areaCanvas ? b : a));
+  const pts = largest.points.points;
+  if (pts.length < 3) return null;
   return { footprint: projectVerticesTo2D(pts), sceneToM: sceneUnitsToMeters(sceneUnits) };
 }
 

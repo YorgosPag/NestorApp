@@ -3,7 +3,7 @@
  *
  * 3D κατακόρυφο κέλυφος μόνωσης (ETICS, ζώνη Z1). **Παράγωγο** floor-shell — ΟΧΙ
  * per-entity converter· καλείται από το `BimSceneLayer.syncEnvelope` με το ίδιο SSoT
- * `computeEnvelopePerimeter` (P3) που τροφοδοτεί και το 2D overlay (P4). 2D⟷3D parity.
+ * `computeEnvelopeShell` που τροφοδοτεί και το 2D overlay (P4). 2D⟷3D parity.
  *
  * Cross-section = band ανάμεσα στην εξωτ. όψη της μόνωσης (`insulationOuterLoop`) και
  * την εξωτ. παρειά των τοίχων (`exteriorFaceLoop`) — mirror του `buildWallShape`
@@ -16,13 +16,13 @@
  *
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3, §5, §7 (P5)
  * @see docs/centralized-systems/reference/adrs/ADR-370-bim-readonly-visualization.md (3D coverage parity)
- * @see ../../bim/geometry/envelope-perimeter (EnvelopeChain — geometry SSoT)
+ * @see ../../bim/geometry/envelope-types (EnvelopeChain)
  * @see ../materials/envelope-material-resolver (PBR material)
  */
 
 import * as THREE from 'three';
 import type { BimPoint } from '../../bim/types/bim-base';
-import type { EnvelopeChain } from '../../bim/geometry/envelope-perimeter';
+import type { EnvelopeChain } from '../../bim/geometry/envelope-types';
 import type { EnvelopeOpeningCut } from '../../bim/geometry/envelope-opening-cuts';
 import { envelopeFaceEdges, lerp } from '../../bim/geometry/envelope-opening-cuts';
 import type { EnvelopeEdgeTop } from '../../bim/geometry/envelope-wall-top';
@@ -254,7 +254,7 @@ function addEdge(
  * → μηδέν gap, καθαρές γωνίες. Τα `cuts` σπάνε κατακόρυφα τις ακμές ώστε τα
  * ανοίγματα να μένουν διαμπερή (ADR-396 — η μόνωση δεν σκεπάζει κουφώματα).
  *
- * @param chain                 το chain από `computeEnvelopePerimeter` (P3).
+ * @param chain                 το chain από `computeEnvelopeShell`.
  * @param heightM               ύψος ορόφου σε ΜΕΤΡΑ.
  * @param floorElevationMm      base elevation ορόφου σε mm (ίδιο με walls).
  * @param materialId            υλικό κελύφους από `ThermalEnvelopeSpec`.

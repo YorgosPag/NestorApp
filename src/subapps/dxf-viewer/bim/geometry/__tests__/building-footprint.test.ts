@@ -9,7 +9,7 @@ import {
   computeBuildingFootprint,
   type BeamForFootprint,
 } from '../building-footprint';
-import type { WallForEnvelope, ColumnForEnvelope } from '../envelope-perimeter';
+import type { WallForEnvelope, ColumnForEnvelope } from '../envelope-types';
 import type { BimPoint } from '../../types/bim-base';
 import type { WallParams } from '../../types/wall-types';
 import type { ColumnParams } from '../../types/column-types';

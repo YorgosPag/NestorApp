@@ -21,7 +21,7 @@
  * @see ./wall-base-profile (resolveWallBaseProfile + WallBaseProfile)
  */
 
-import type { EnvelopeChain } from './envelope-perimeter';
+import type { EnvelopeChain } from './envelope-types';
 import type { WallBaseProfile } from './wall-base-profile';
 import {
   chainEdgeAreaM2,

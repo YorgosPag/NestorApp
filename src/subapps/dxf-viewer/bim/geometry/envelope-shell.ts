@@ -9,9 +9,9 @@
  * (`envelopeFunction`, Φ4). Κολώνες/δοκάρια που προεξέχουν τυλίγονται αυτόματα
  * ως μέρος του ενιαίου κελύφους («ίδια με τοίχους»).
  *
- * Το μοντέλο είναι «ring → runs → offset», ΠΟΛΥ απλούστερο από το
- * `envelope-perimeter.ts`: το footprint pipeline έχει ήδη λύσει όλη την τοπολογία
- * (καμία adjacency graph / face-corner keys / selectExteriorFace / column arcs).
+ * Το μοντέλο είναι «ring → runs → offset»: η τοπολογία (`envelope-topology.ts`, το ΕΝΑ
+ * SSoT κελύφους) έχει ήδη λύσει ποιος δακτύλιος βλέπει έξω — καμία adjacency graph
+ * (ο παλιός γράφος τοίχων `envelope-perimeter.ts` αποσύρθηκε, ADR-937 2026-11-13).
  *
  * **Override σημασιολογία (απόφαση Giorgio, Φάση 5):**
  *   - `'interior'` = **αφαιρετικό**: η ακμή του στοιχείου εξαιρείται από το
@@ -50,13 +50,13 @@ import {
   type FootprintRing,
   type FootprintSourceType,
 } from './building-footprint';
-import {
-  classifyFootprintRegions,
-  type ClassifiedFootprintRing,
-  type FootprintClassificationResult,
-  type SlabRegionFootprint,
+import type {
+  ClassifiedFootprintRing,
+  FootprintClassificationResult,
+  SlabRegionFootprint,
 } from './footprint-region-classifier';
-import type { ColumnForEnvelope, EnvelopeChain, WallForEnvelope } from './envelope-perimeter';
+import type { ColumnForEnvelope, EnvelopeChain, WallForEnvelope } from './envelope-types';
+import { resolveEnvelopeTopology } from './envelope-topology';
 import { wallHasExteriorInsulation } from '../types/wall-dna-types';
 
 // ============================================================================
@@ -402,8 +402,9 @@ export function computeEnvelopeShell(
   const sceneScale = mmToSceneUnits(units);
   const thicknessCanvas = Math.max(0, spec.thickness_m) * 1000 * sceneScale;
 
-  const footprint = computeBuildingFootprint(walls, columns, beams, units);
-  const classification = classifyFootprintRegions(footprint, slabsAbove, {
+  // ADR-937 2026-11-13 — η ΙΔΙΑ τοπολογία που διαβάζουν προσανατολισμός + θερμικά (ένα SSoT κελύφους).
+  const { classification } = resolveEnvelopeTopology(walls, columns, beams, slabsAbove, {
+    sceneUnits: units,
     coverageThreshold: options?.coverageThreshold,
   });
 

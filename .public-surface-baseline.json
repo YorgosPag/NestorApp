@@ -1,7 +1,7 @@
 {
   "adr": "ADR-796 (CHECK 3.62)",
   "note": "Δημόσια επιφάνεια του dxf-viewer, ΑΝΑ ΣΥΜΒΟΛΟ. Ratchet κατά ΤΑΥΤΟΤΗΤΑ: η ανταλλαγή μπλοκάρει.",
-  "generated": "2026-11-07",
+  "generated": "2026-11-14",
   "violations": [],
   "declarations": [
     "src/subapps/dxf-viewer/ai-assistant/dxf-openai-call.ts#ChatCompletionMessage",
@@ -37,7 +37,8 @@
     "src/subapps/dxf-viewer/bim/furniture/furniture-firestore-service.ts#FurnitureDoc",
     "src/subapps/dxf-viewer/bim/geometry/beam-geometry.ts#computeBeamGeometry",
     "src/subapps/dxf-viewer/bim/geometry/column-geometry.ts#computeColumnGeometry",
-    "src/subapps/dxf-viewer/bim/geometry/envelope-perimeter.ts#computeEnvelopePerimeter",
+    "src/subapps/dxf-viewer/bim/geometry/envelope-shell.ts#collectEnvelopeOverrides",
+    "src/subapps/dxf-viewer/bim/geometry/envelope-shell.ts#computeEnvelopeShell",
     "src/subapps/dxf-viewer/bim/geometry/opening-geometry.ts#computeOpeningGeometry",
     "src/subapps/dxf-viewer/bim/geometry/slab-geometry.ts#computeSlabGeometry",
     "src/subapps/dxf-viewer/bim/geometry/slab-opening-geometry.ts#computeSlabOpeningGeometry",

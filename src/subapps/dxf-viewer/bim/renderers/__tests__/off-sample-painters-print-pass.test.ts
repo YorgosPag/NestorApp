@@ -27,7 +27,7 @@ import { LAYER_ID, built } from '../../../print/public-floorplan/pixel-gate/pixe
 import type { EntityModel, Point2D, Point3D, ViewTransform } from '../../../rendering/types/Types';
 import type { FloorFinishMaterialId } from '../../types/floor-finish-types';
 import type { EnvelopeOpeningCut } from '../../geometry/envelope-opening-cuts';
-import type { EnvelopeChain } from '../../geometry/envelope-perimeter';
+import type { EnvelopeChain } from '../../geometry/envelope-types';
 import type { CircuitWirePath } from '../../mep-systems/mep-wire-routing';
 import type { RebarPlanGeometry } from '../../structural/reinforcement/rebar-plan-geometry-types';
 import type { SlabReinforcement } from '../../types/slab-types';

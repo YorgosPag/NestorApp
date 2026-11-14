@@ -22,14 +22,14 @@
  *      είναι κάθετες στην παρειά → collinear με wall jamb/Z4.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3, §5
- * @see ./envelope-perimeter (EnvelopeChain — geometry SSoT)
+ * @see ./envelope-types (EnvelopeChain)
  */
 
 import type { BimPoint, BimPolyline } from '../types/bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { clamp01 } from '../../utils/scalar-math';
-import type { EnvelopeChain } from './envelope-perimeter';
+import type { EnvelopeChain } from './envelope-types';
 
 const MM_TO_M = 1 / 1000;
 /** Ελάχιστο μήκος span (param) για να μετράει — αποφεύγει degenerate τρύπες. */
@@ -236,7 +236,7 @@ function outwardNormal(a: BimPoint, b: BimPoint, ref: BimPoint): { nx: number; n
  * Υπολογίζει τα cutouts ανοιγμάτων για ένα envelope chain. Φιλτράρει εσωτερικά
  * μόνο τα ανοίγματα των τοίχων του chain (`chain.wallIds`).
  *
- * @param chain      το chain από `computeEnvelopePerimeter`.
+ * @param chain      το chain από `computeEnvelopeShell`.
  * @param openings   όλα τα ανοίγματα της σκηνής (φιλτράρονται κατά wallId).
  * @param sceneUnits μονάδες σκηνής (ίδιες με αυτές που έχτισαν το chain).
  */

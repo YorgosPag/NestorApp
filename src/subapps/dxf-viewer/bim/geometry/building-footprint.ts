@@ -3,7 +3,7 @@
  *
  * Παράγει το ΠΡΑΓΜΑΤΙΚΟ περίγραμμα κτιρίου από την **boolean union** των
  * αποτυπωμάτων (footprints) των δομικών στοιχείων του ορόφου: ΤΟΙΧΟΙ + ΚΟΛΩΝΕΣ +
- * ΔΟΚΑΡΙΑ. Σε αντίθεση με το `envelope-perimeter.ts` (Option 1 — σειριακή ένωση
+ * ΔΟΚΑΡΙΑ. Σε αντίθεση με τον αποσυρμένο γράφο τοίχων (Option 1 — σειριακή ένωση
  * εξωτ. παρειών), η γεωμετρική ένωση χειρίζεται σωστά τα στοιχεία που
  * **επικαλύπτονται** (π.χ. κολώνα μέσα σε τοίχο, δοκάρι πάνω σε τοίχο).
  *
@@ -15,9 +15,8 @@
  * `ColumnGeometry.footprint`, `BeamGeometry.outline`). Μηδέν globals / React /
  * Firestore. Library: `polygon-clipping` (MIT).
  *
- * ⚠️ Phase 2 = αυτόνομο module + tests· ΚΑΝΕΝΑ wiring στους consumers (Φάση 5).
- * Σχεδιασμένο με «συμβατό» σχήμα εξόδου ώστε η Φάση 5 να αντικαταστήσει σταδιακά
- * το `envelope-perimeter.ts` → ΕΝΑ σύστημα (SSoT).
+ * Πυρήνας του ΕΝΟΣ SSoT κελύφους (`envelope-topology.ts`, ADR-937 2026-11-13): ETICS,
+ * προσανατολισμός, θερμικά, IFC — ο παλιός γράφος τοίχων (`envelope-perimeter.ts`) αποσύρθηκε.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3.1
  */
@@ -35,7 +34,7 @@ import { pointToSegmentDistance } from '../../utils/segment-distance';
 import { computeWallGeometry } from './wall-geometry';
 import { computeBeamGeometry } from './beam-geometry';
 import { prepareColumns, type ColumnForEnvelope } from './envelope-column-bridge';
-import type { WallForEnvelope } from './envelope-perimeter';
+import type { WallForEnvelope } from './envelope-types';
 
 // ============================================================================
 // PUBLIC TYPES
@@ -304,7 +303,7 @@ export function computeBuildingFootprint(
 
   const units = sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
   const s = mmToSceneUnits(units);
-  const tol = 5.0 * s; // 5mm physical — mirror του snap στο envelope-perimeter.
+  const tol = 5.0 * s; // 5mm physical — ανοχή απόδοσης ακμής σε στοιχείο-πηγή.
 
   // polygon-clipping geom: κάθε στοιχείο = Polygon (ένα ring). union(first, ...rest).
   const geoms = polygons.map((poly): Ring[] => [poly.map((p): Pair => [p.x, p.y])]);

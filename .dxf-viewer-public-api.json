@@ -158,11 +158,12 @@
       "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή."
     },
     {
-      "file": "src/subapps/dxf-viewer/bim/geometry/envelope-perimeter.ts",
+      "file": "src/subapps/dxf-viewer/bim/geometry/envelope-shell.ts",
       "symbols": [
-        "computeEnvelopePerimeter"
+        "collectEnvelopeOverrides",
+        "computeEnvelopeShell"
       ],
-      "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή."
+      "reason": "ADR-937 2026-11-13 / ADR-396 P9 — ο IFC serializer γράφει IfcCovering = η μόνωση ETICS που φαίνεται σε 2D/3D/BOQ· τη ρωτά από τον ΕΝΑ υπολογισμό κελύφους (computeEnvelopeShell + οι ανά-στοιχείο παρακάμψεις του), όχι από δικό του αντίγραφο. Αντικατέστησε τη δήλωση του αποσυρμένου computeEnvelopePerimeter."
     },
     {
       "file": "src/subapps/dxf-viewer/bim/geometry/opening-geometry.ts",

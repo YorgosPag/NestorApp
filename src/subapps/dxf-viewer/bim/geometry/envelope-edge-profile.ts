@@ -22,7 +22,7 @@
  */
 
 import type { BimPoint } from '../types/bim-base';
-import type { EnvelopeChain } from './envelope-perimeter';
+import type { EnvelopeChain } from './envelope-types';
 import { envelopeFaceEdges } from './envelope-opening-cuts';
 import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
 

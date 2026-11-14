@@ -11,7 +11,7 @@ import {
   slabFlatLayerToMesh,
   revealLiningToMesh,
 } from '../EnvelopeToThree';
-import type { EnvelopeChain } from '../../../bim/geometry/envelope-perimeter';
+import type { EnvelopeChain } from '../../../bim/geometry/envelope-types';
 import type { BimPoint } from '../../../bim/types/bim-base';
 import { GRAPHITE_EPS_MATERIAL_ID } from '../../../bim/types/thermal-envelope-types';
 

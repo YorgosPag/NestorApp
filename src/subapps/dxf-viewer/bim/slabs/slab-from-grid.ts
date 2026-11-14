@@ -59,7 +59,7 @@ import { safeDifference } from '../geometry/shared/safe-polygon-boolean';
 // ADR-794 — ο ΤΥΠΟΣ του ορθογωνίου κάτοψης ζει ΜΙΑ φορά. (Ο τοπικός βρόχος μένει:
 // δέχεται πλειάδες `Pair`, και ο τοπικός έλεγχος επικάλυψης είναι ΑΝΟΙΧΤΟΣ — βλ. παρακάτω.)
 import type { Bbox } from '../geometry/shared/xy-bounds';
-import type { WallForEnvelope } from '../geometry/envelope-perimeter';
+import type { WallForEnvelope } from '../geometry/envelope-types';
 import type { ColumnForEnvelope } from '../geometry/envelope-column-bridge';
 
 export interface BuildSlabMatResult {

@@ -13,7 +13,7 @@ import {
   buildRevealJambPlans,
 } from '../EnvelopeRenderer';
 import type { BimPoint } from '../../types/bim-base';
-import type { EnvelopeChain } from '../../geometry/envelope-perimeter';
+import type { EnvelopeChain } from '../../geometry/envelope-types';
 import type { EnvelopeOpeningCut } from '../../geometry/envelope-opening-cuts';
 import type { ViewTransform } from '../../../rendering/types/Types';
 import { resolveIsEntityVisible } from '../../visibility/visibility-resolver';

@@ -13,7 +13,7 @@
  * συγκλίνει). ΚΑΜΙΑ Firestore/scene/render — pure (test-friendly, no globals).
  *
  * ΜΟΝΑΔΕΣ: τα vertex coords (footprint/axis/face loop) είναι σε canvas units —
- * ΙΔΙΟΣ χώρος με `WallGeometry.outerEdge` (το `computeEnvelopePerimeter` τα
+ * ΙΔΙΟΣ χώρος με `WallGeometry.outerEdge` (το `computeEnvelopeShell` τα
  * παράγει εκεί), άρα η σύγκριση απόστασης γίνεται winding/scale-consistent.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §7 (P7 Part B)
@@ -39,7 +39,7 @@ import type {
 import type { StoreyRef } from '../utils/bim-floor-utils';
 import type { SceneUnits } from '../../utils/scene-units';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../geometry/envelope-shell';
-import type { WallForEnvelope, ColumnForEnvelope } from '../geometry/envelope-perimeter';
+import type { WallForEnvelope, ColumnForEnvelope } from '../geometry/envelope-types';
 import type { BeamForFootprint } from '../geometry/building-footprint';
 import type { SlabRegionFootprint } from '../geometry/footprint-region-classifier';
 import { filterExposedSlabs, type SlabForZoneClassification } from '../geometry/exposed-slab-classifier';

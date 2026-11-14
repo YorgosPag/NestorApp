@@ -6,8 +6,8 @@
  * ΕΝΑ σημείο που μαζεύει ό,τι χρειάζεται ο `deriveSpaceHeatLoads`/engine από το
  * scene + το κτίριο του ενεργού ορόφου:
  *   - θερμικοί χώροι / τοίχοι / κουφώματα (filter BIM entities)
- *   - εξωτερικοί τοίχοι (`computeEnvelopePerimeter` — spec-free· μηδέν εξάρτηση
- *     από εφαρμοσμένο ETICS spec)
+ *   - εξωτερικοί τοίχοι (`resolveExteriorWallIds` — το ΕΝΑ SSoT κελύφους, ένωση τοίχων+κολωνών+δοκαριών,
+ *     spec-free· μηδέν εξάρτηση από εφαρμοσμένο ETICS spec)
  *   - `Te` από `Building.climateZone` (ΤΟΤΕΕ 20701-3· fallback ζώνη Β)
  *   - θέση ορόφου στη στοίβα (δάπεδο ground vs ενδιάμεσο, στέγη vs οροφή)
  *   - `sceneUnits` + ανοχή αντιστοίχισης σε scene units
@@ -21,7 +21,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md §3 (L1)
  */
 
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
@@ -38,7 +38,9 @@ import { useSiteNeighbourMasses } from './useSiteNeighbourMasses';
 import type { SlabEntity, SlabKind } from '../../bim/types/slab-types';
 import type { OverhangOutline } from '../../bim/thermal/heat-load/solar-overhang-geometry';
 import type { SlabMatchCandidate } from '../../bim/thermal/heat-load/slab-space-match';
-import { resolveExteriorWallIds } from '../../bim/geometry/exterior-wall-ids';
+import { collectEnvelopeElements, resolveExteriorWallIds } from '../../bim/geometry/exterior-wall-ids';
+import { resolveSlabsAboveForLevel } from '../../bim/geometry/footprint-region-classifier';
+import { getEnvelopeFloorSlabs, subscribeEnvelopeFloorSlabs } from '../../bim/stores/envelope-floor-slabs-store';
 import {
   resolveSceneUnits,
   sceneUnitsToMeters,
@@ -243,6 +245,12 @@ export function useHeatLoadInputs(
   const buildingFloorScenes = useBuildingFloorScenes(active);
   // L7.3 Slice E — cross-building horizon masses (γειτονικά κτίρια, ADR-369 placement).
   const horizonObstacleOutlines = useSiteNeighbourMasses(active);
+  // ADR-937 2026-11-13 — ένα SSoT κελύφους: ακάλυπτο αίθριο = έξω αέρας (ίδιες πλάκες-από-πάνω με το ETICS).
+  const envelopeFloorSlabs = useSyncExternalStore(
+    subscribeEnvelopeFloorSlabs,
+    getEnvelopeFloorSlabs,
+    getEnvelopeFloorSlabs,
+  );
 
   return useMemo<HeatLoadInputsBundle | null>(() => {
     if (!active || !scene) return null;
@@ -274,7 +282,13 @@ export function useHeatLoadInputs(
       openings,
       sceneUnits,
       climateZone,
-      exteriorWallIds: resolveExteriorWallIds(walls, sceneUnits),
+      // ADR-937 2026-11-13 — εξωτερικός = παρειά σε δακτύλιο προς έξω αέρα της ένωσης τοίχων+κολωνών+δοκαριών
+      // (όχι πια «κάθε τοίχος συνδεδεμένης αλυσίδας»: εσωτερικός τοίχος που ακουμπά το κέλυφος βλέπει δωμάτιο).
+      exteriorWallIds: resolveExteriorWallIds(
+        collectEnvelopeElements(entities),
+        sceneUnits,
+        resolveSlabsAboveForLevel(envelopeFloorSlabs.slabs, envelopeFloorSlabs.floors, envelopeFloorSlabs.activeFloorId),
+      ),
       outdoorTempC: getDesignOutdoorTempC(climateZone),
       storeyPosition: resolveStoreyPosition(floors, activeFloorId),
       tol: HEAT_LOAD_MATCH_TOL_M / sceneUnitsToMeters(sceneUnits),
@@ -293,5 +307,6 @@ export function useHeatLoadInputs(
     activeFloorId,
     buildingFloorScenes,
     horizonObstacleOutlines,
+    envelopeFloorSlabs,
   ]);
 }

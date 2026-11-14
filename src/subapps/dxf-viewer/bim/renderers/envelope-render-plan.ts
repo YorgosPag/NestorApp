@@ -9,14 +9,14 @@
  * poché → PAT catalog) — ΚΑΜΙΑ διπλασιασμένη hatch math.
  *
  * ΜΟΝΑΔΕΣ: τα vertices είναι σε **canvas units** (όπως βγαίνουν από το
- * `computeEnvelopePerimeter`). worldToScreen γίνεται στον renderer.
+ * `computeEnvelopeShell`). worldToScreen γίνεται στον renderer.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3, §5, §7 (P4)
  */
 
 import type { BimPoint } from '../types/bim-base';
 import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
-import type { EnvelopeChain } from '../geometry/envelope-perimeter';
+import type { EnvelopeChain } from '../geometry/envelope-types';
 import type { EnvelopeMaterialId } from '../types/thermal-envelope-types';
 // ADR-507 Φ7 — unified material poché· η ETICS μόνωση → INSUL batting pattern
 // (proper insulation, αναβάθμιση από το παλιό gypsum stand-in).

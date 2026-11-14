@@ -3,7 +3,7 @@
  *
  * Pure helpers που λένε «πόση επιφάνεια / ποιο πάχος δίνει κάθε δομικό
  * στοιχείο στο ενιαίο κέλυφος θερμοπρόσοψης (ETICS)». Δεν παράγουν γεωμετρία
- * (offset/union perimeter = Phase P3, `bim/geometry/envelope-perimeter.ts`) —
+ * (γεωμετρία κελύφους = `bim/geometry/envelope-shell.ts`) —
  * μόνο per-element measurement contributions για BOQ (D5) + accessors.
  *
  * ΜΟΝΑΔΕΣ: όλα meters-in / meters-out. Οι callers μετατρέπουν τα mm scalars

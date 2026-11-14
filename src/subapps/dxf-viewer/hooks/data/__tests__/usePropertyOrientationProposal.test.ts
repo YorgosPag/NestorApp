@@ -5,10 +5,10 @@
  *   Κ2  τοίχοι χωρίς αναγνωρισμένο εξωτερικό κέλυφος ⇒ `no-envelope`
  *   Κ3  κέλυφος + παράθυρο στη νότια ακμή ⇒ `derived` + ['south']· κέλυφος χωρίς ανοίγματα ⇒ `derived` + []
  *   Κ4  χωρίς σκηνή ή εκφυλισμένο πολύγωνο ⇒ `null` (η λωρίδα δεν αποδίδεται)
- *   Κ5  κάτοψη ακινήτου (`envelope`): όριο = εξωτερική παρειά κάθε ΚΛΕΙΣΤΗΣ αλυσίδας κελύφους· ανοιχτή αλυσίδα ⇒ καμία
+ *   Κ5  κάτοψη ακινήτου (`envelope`): όριο = κάθε εξώτατο όριο του κελύφους που ΠΕΡΙΚΛΕΙΕΙ χώρο· ανοιχτή δομή ⇒ καμία
  *       μαντεψιά, και το λέει: `open-envelope` + [] (live 2026-11-12: ανένωτες γωνίες έλεγαν «δεν βρέθηκαν ανοίγματα»)
  *
- * Το «ποιος τοίχος είναι εξωτερικός» έχει δικές του άγκυρες (envelope-perimeter) — εδώ ελέγχεται η ΔΙΑΚΛΑΔΩΣΗ.
+ * Το «ποιος τοίχος είναι εξωτερικός» έχει δικές του άγκυρες (envelope-topology) — εδώ ελέγχεται η ΔΙΑΚΛΑΔΩΣΗ.
  */
 
 // jest globals injected (no '@jest/globals' import) so @swc/jest hoists the mocks above the hook import.
@@ -29,17 +29,22 @@ interface MockEntity {
 
 let mockScene: { units: string; entities: MockEntity[] } | null = null;
 let mockExteriorWallIds = new Set<string>();
-let mockChains: Array<{
-  closed: boolean;
-  enclosesRegion: boolean;
-  exteriorFaceLoop: { points: Array<{ x: number; y: number }> };
-}> = [];
+let mockBoundaries: Array<Array<{ x: number; y: number }>> = [];
 
 jest.mock('../../../systems/levels/useCurrentLevelScene', () => ({
   useCurrentLevelScene: () => mockScene,
 }));
 jest.mock('../../../bim/geometry/exterior-wall-ids', () => ({
-  resolveExteriorEnvelope: () => ({ chains: mockChains, wallIds: mockExteriorWallIds }),
+  collectEnvelopeElements: (entities: readonly MockEntity[]) => ({
+    walls: entities.filter((e) => e.type === 'wall'),
+    columns: [],
+    beams: [],
+  }),
+  resolveExteriorEnvelope: () => ({
+    boundaries: mockBoundaries,
+    wallIds: mockExteriorWallIds,
+    hasOpenStructure: mockBoundaries.length === 0,
+  }),
 }));
 jest.mock('../../../systems/geo-referencing/geo-reference-store', () => ({
   getGeoReference: () => null,
@@ -58,8 +63,8 @@ const SOUTH_WINDOW: MockEntity = {
 };
 const DXF_LINE: MockEntity = { type: 'line', id: 'ln-1' };
 
-/** Η ίδια εξωτερική παρειά ως αλυσίδα κελύφους (σημεία σκηνής). */
-const LOOP = { points: POLYGON.map(([x, y]) => ({ x, y })) };
+/** Το ίδιο τετράγωνο ως εξώτατο όριο κελύφους που περικλείει χώρο (σημεία σκηνής). */
+const LOOP = POLYGON.map(([x, y]) => ({ x, y }));
 
 function runSource(source: PropertyBoundarySource | undefined) {
   return renderHook(() => usePropertyOrientationProposal(source)).result.current;
@@ -73,7 +78,7 @@ describe('usePropertyOrientationProposal — αιτία κενής πρότασ�
   beforeEach(() => {
     mockScene = null;
     mockExteriorWallIds = new Set<string>();
-    mockChains = [];
+    mockBoundaries = [];
   });
 
   it('Κ1 μόνο γραμμές DXF ⇒ no-model', () => {
@@ -101,15 +106,12 @@ describe('usePropertyOrientationProposal — αιτία κενής πρότασ�
     expect(run(undefined)).toBeNull();
   });
 
-  it('Κ5 κάτοψη ακινήτου: όριο = κλειστό κέλυφος· ανοιχτή αλυσίδα δεν μαντεύει', () => {
+  it('Κ5 κάτοψη ακινήτου: όριο = κέλυφος που περικλείει χώρο· ανοιχτή δομή δεν μαντεύει', () => {
     mockExteriorWallIds = new Set(['ext-s']);
     mockScene = { units: 'mm', entities: [WALL, SOUTH_WINDOW] };
-    mockChains = [{ closed: true, enclosesRegion: true, exteriorFaceLoop: LOOP }];
+    mockBoundaries = [LOOP];
     expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'derived', values: ['south'], northAssumed: true });
-    mockChains = [{ closed: false, enclosesRegion: false, exteriorFaceLoop: LOOP }];
+    mockBoundaries = [];
     expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'open-envelope', values: [], northAssumed: true });
-    // T-junction που περικλείει χώρο χωρίς να είναι κύκλος ⇒ μετρά ως όριο.
-    mockChains = [{ closed: false, enclosesRegion: true, exteriorFaceLoop: LOOP }];
-    expect(runSource(ENVELOPE_BOUNDARY)).toEqual({ status: 'derived', values: ['south'], northAssumed: true });
   });
 });

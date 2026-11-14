@@ -117,6 +117,25 @@ function makeWall(): WallEntity {
   } as unknown as WallEntity;
 }
 
+/** Τοίχος `id` από `start` σε `end` (ίδια DNA με το `makeWall`). */
+function makeWallAt(id: string, start: { x: number; y: number }, end: { x: number; y: number }): WallEntity {
+  const base = makeWall();
+  return { ...base, id, params: { ...base.params, start, end } } as unknown as WallEntity;
+}
+
+/**
+ * ADR-937 2026-11-13 — το IFC διαβάζει το `computeEnvelopeShell` (hole-gate): μόνωση παίρνει μόνο κέλυφος που
+ * ΠΕΡΙΚΛΕΙΕΙ χώρο. Κλειστό δωμάτιο 5×5 m· μόνο ο `wall-1` έχει IFC id στο ctx ⇒ ακριβώς ένα covering.
+ */
+function makeRoom(): WallEntity[] {
+  return [
+    makeWall(),
+    makeWallAt('wall-2', { x: 5000, y: 0 }, { x: 5000, y: 5000 }),
+    makeWallAt('wall-3', { x: 5000, y: 5000 }, { x: 0, y: 5000 }),
+    makeWallAt('wall-4', { x: 0, y: 5000 }, { x: 0, y: 0 }),
+  ];
+}
+
 function makeColumn(envelopeLayer?: EnvelopeLayer): ColumnEntity {
   return {
     id: 'col-1',
@@ -210,7 +229,7 @@ function find(graph: IfcGraph, type: string): IfcEntityRecord | undefined {
 
 describe('ADR-396 P9 — serializeEnvelopeCoverings', () => {
   it('(a) exterior wall + spec Z1 → covering + rel + material + layerSet + thermal Pset', () => {
-    const graph = run(makeScene([makeWall()]), { spec: spec('mat-eps-graphite') });
+    const graph = run(makeScene(makeRoom()), { spec: spec('mat-eps-graphite') });
 
     expect(count(graph, 'IFCCOVERING')).toBe(1);
     expect(count(graph, 'IFCRELCOVERSBLDGELEMENTS')).toBe(1);
@@ -233,7 +252,7 @@ describe('ADR-396 P9 — serializeEnvelopeCoverings', () => {
   });
 
   it('(a2) covering is semantic-only (placement + representation = $)', () => {
-    const graph = run(makeScene([makeWall()]), { spec: spec('mat-eps-graphite') });
+    const graph = run(makeScene(makeRoom()), { spec: spec('mat-eps-graphite') });
     const cov = find(graph, 'IFCCOVERING');
     // args: [GlobalId, $, Name, $, $, placement, representation, $, PredefinedType]
     expect(cov?.args[5]).toBeNull();
@@ -273,6 +292,11 @@ describe('ADR-396 P9 — serializeEnvelopeCoverings', () => {
     expect(count(graph, 'IFCCOVERING')).toBe(1);
     expect(count(graph, 'IFCMATERIAL')).toBe(1);
     expect(count(graph, 'IFCMATERIALPROPERTIES')).toBe(0);
+  });
+
+  it('(a3) lone wall that encloses nothing → no covering (hole-gate, same as 2D/3D/BOQ — ADR-937)', () => {
+    const graph = run(makeScene([makeWall()]), { spec: spec('mat-eps-graphite') });
+    expect(count(graph, 'IFCCOVERING')).toBe(0);
   });
 
   it('(g) spec.zones.Z1 = false → no wall covering', () => {

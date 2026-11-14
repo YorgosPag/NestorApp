@@ -59,6 +59,12 @@
 
 ## 4. Changelog
 
+### Εξωτερικοί τοίχοι + μάζες γειτόνων από το ΕΝΑ SSoT κελύφους (2026-11-13, ADR-937)
+
+- `useHeatLoadInputs` → `resolveExteriorWallIds(collectEnvelopeElements(entities), sceneUnits, slabsAbove)`: εξωτερικός = τοίχος με παρειά σε δακτύλιο προς έξω αέρα της **ένωσης τοίχων + κολωνών + δοκαριών** (`bim/geometry/envelope-topology.ts`)· ακάλυπτο αίθριο μετρά έξω αέρας (πλάκες-από-πάνω από το `envelope-floor-slabs-store`, ίδια πηγή με το ETICS).
+- ⚠️ **Αλλαγή αποτελεσμάτων**: ο αποσυρμένος γράφος τοίχων (`computeEnvelopePerimeter`) μετρούσε εξωτερικό **κάθε** τοίχο της συνδεδεμένης αλυσίδας — και εσωτερικούς που ακουμπούσαν το κέλυφος. Πλέον αυτοί βλέπουν δωμάτιο ⇒ `adjacent-heated` στο `space-boundary-resolver`. Κενό ≤0,3 m δίπλα σε κολώνα δεν γεφυρώνεται πια (κατάργηση `COLUMN_BRIDGE_TOL_M`).
+- `useSiteNeighbourMasses`: αποτύπωμα γείτονα = το μεγαλύτερο (κατά εμβαδόν) εξώτατο όριο που περικλείει χώρο (`enclosedExteriorRings`), αντί του `primaryChain` του γράφου.
+
 ### Αζιμούθιο ακμής + εξωτερικοί τοίχοι → κοινά (2026-11-11, ADR-937)
 
 - `directionAzimuthDeg` + `edgeOutwardAzimuthDeg` προωθήθηκαν στο `src/lib/geometry/polygon-azimuth.ts` (τα χρειάζεται ο διάλογος χάρτη της καρτέλας ακινήτου)· το `bim/geometry/shared/polygon-azimuth-utils.ts` τα **επανεξάγει**, το `nearestEdgeOutwardAzimuthDeg` έμεινε εκεί. Συμπεριφορά ταυτόσημη.

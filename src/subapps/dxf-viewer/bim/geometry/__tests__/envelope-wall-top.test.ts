@@ -15,7 +15,7 @@ import {
   projectTOnAxis,
   type WallTopRef,
 } from '../envelope-wall-top';
-import type { EnvelopeChain } from '../envelope-perimeter';
+import type { EnvelopeChain } from '../envelope-types';
 import type { WallTopProfile, WallTopSegment } from '../wall-top-profile';
 
 function prof(segments: WallTopSegment[]): WallTopProfile {

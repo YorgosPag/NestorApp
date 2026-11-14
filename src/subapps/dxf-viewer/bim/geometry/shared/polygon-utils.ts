@@ -241,7 +241,7 @@ export {
  * Μήκος μιας polyline σε ΜΕΤΡΑ. `points` σε canvas units· `sceneScale` =
  * `mmToSceneUnits(units)` (canvas ανά mm). `closed` → προσθέτει την ακμή
  * last→first. SSoT για το ETICS perimeter (ADR-396) — καταναλώνεται και από
- * `envelope-perimeter.ts` και από `envelope-shell.ts` (μηδέν duplication, N.12).
+ * `envelope-shell.ts` (μηδέν duplication, N.12).
  */
 export function polylinePerimeterMeters(
   points: readonly PlanarPoint[],

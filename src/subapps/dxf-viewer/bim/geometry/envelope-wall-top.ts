@@ -20,7 +20,7 @@
  * @see ./wall-top-profile (resolveWallTopProfile + WallTopProfile)
  */
 
-import type { EnvelopeChain } from './envelope-perimeter';
+import type { EnvelopeChain } from './envelope-types';
 import type { WallTopProfile } from './wall-top-profile';
 import {
   chainEdgeAreaM2,

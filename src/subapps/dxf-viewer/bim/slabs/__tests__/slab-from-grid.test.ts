@@ -9,7 +9,7 @@
 import { buildGroundBearingSlabs, buildSlabBaysFromGuides } from '../slab-from-grid';
 import { type AxisGuideReader } from '../../foundations/foundation-from-grid';
 import type { Guide } from '../../../systems/guides/guide-types';
-import type { WallForEnvelope } from '../../geometry/envelope-perimeter';
+import type { WallForEnvelope } from '../../geometry/envelope-types';
 import type { BeamForFootprint } from '../../geometry/building-footprint';
 import type { ColumnForEnvelope } from '../../geometry/envelope-column-bridge';
 import type { BimPoint } from '../../types/bim-base';

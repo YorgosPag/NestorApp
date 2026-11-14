@@ -14,7 +14,7 @@ import {
   chainBaseAreaM2,
   type WallBaseRef,
 } from '../envelope-wall-base';
-import type { EnvelopeChain } from '../envelope-perimeter';
+import type { EnvelopeChain } from '../envelope-types';
 import type { WallBaseProfile, WallBaseSegment } from '../wall-base-profile';
 
 function prof(segments: WallBaseSegment[]): WallBaseProfile {

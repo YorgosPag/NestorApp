@@ -18,7 +18,8 @@
  *
  * **Walls:** οι τοίχοι ΔΕΝ κουβαλούν per-element `envelopeLayer` — η Z1 facade
  * τους ορίζεται από το per-floor `ThermalEnvelopeSpec` (`params.envelopeSpecs`).
- * Εξωτ. τοίχοι = closed chains από `computeEnvelopePerimeter` (P3 SSoT).
+ * Εξωτ. τοίχοι = οι τοίχοι των τρεξιμάτων του `computeEnvelopeShell` — η ΙΔΙΑ μόνωση που δείχνουν 2D/3D/BOQ
+ * (ένα SSoT κελύφους, ADR-937 2026-11-13: ένωση τοίχων+κολωνών+δοκαριών, hole-gate, παρακάμψεις, ADR-447).
  *
  * Σειρά: μετά walls/columns/beams/slabs/openings (χρειάζεται γεμάτα τα id-maps
  * του `SerializerContext`), πριν το per-storey containment.
@@ -49,7 +50,10 @@ import {
 import {
   getFloorFinishLambda,
 } from '@/subapps/dxf-viewer/bim/floor-finishes/floor-finish-material-catalog';
-import { computeEnvelopePerimeter } from '@/subapps/dxf-viewer/bim/geometry/envelope-perimeter';
+import {
+  collectEnvelopeOverrides,
+  computeEnvelopeShell,
+} from '@/subapps/dxf-viewer/bim/geometry/envelope-shell';
 
 import {
   IfcGraph,
@@ -131,12 +135,21 @@ function writeWallCoverings(
 
   const walls = entities.filter(isWallEntity);
   if (walls.length === 0) return;
+  const columns = entities.filter(isColumnEntity);
+  const beams = entities.filter(isBeamEntity);
 
   const units = walls[0]?.params.sceneUnits ?? 'mm';
-  const { chains } = computeEnvelopePerimeter(walls, spec.thickness_m, units);
-  const closed = chains.filter((c) => c.closed);
-  const active = closed.length > 0 ? closed : chains;
-  const exteriorWallIds = new Set(active.flatMap((c) => c.wallIds));
+  // Χωρίς πλάκες ψηλότερων ορόφων εδώ ⇒ κάθε τρύπα = δωμάτιο (η ασφαλής προεπιλογή του classifier).
+  const { chains } = computeEnvelopeShell(
+    walls,
+    columns,
+    beams,
+    spec,
+    collectEnvelopeOverrides([...walls, ...columns, ...beams]),
+    [],
+    { sceneUnits: units },
+  );
+  const exteriorWallIds = new Set(chains.flatMap((c) => c.wallIds));
 
   const layer: EnvelopeLayer = {
     materialId: spec.materialId,

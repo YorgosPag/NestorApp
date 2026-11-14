@@ -47,7 +47,7 @@ import type { StoreyRef } from '../utils/bim-floor-utils';
 import type { EnvelopeZoneId, ThermalEnvelopeSpec } from '../types/thermal-envelope-types';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../geometry/envelope-shell';
 import type { SlabRegionFootprint } from '../geometry/footprint-region-classifier';
-import type { EnvelopeChain } from '../geometry/envelope-perimeter';
+import type { EnvelopeChain } from '../geometry/envelope-types';
 import { resolveWallTopProfile } from '../geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../geometry/wall-base-profile';
 import { buildWallHostInputs, makeWallTopContext, makeWallBaseContext } from '../geometry/wall-host-plan-builder';

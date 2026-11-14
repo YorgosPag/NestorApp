@@ -9,7 +9,7 @@ import {
   computeEnvelopeOpeningCuts,
   type OpeningForCut,
 } from '../envelope-opening-cuts';
-import type { EnvelopeChain } from '../envelope-perimeter';
+import type { EnvelopeChain } from '../envelope-types';
 
 // Τετράγωνο κτίριο 5000×5000 (mm = canvas, sceneUnits 'mm' → s=1). Face loop CCW
 // με closing duplicate· outer loop = 1:1 offset 100 προς τα έξω.

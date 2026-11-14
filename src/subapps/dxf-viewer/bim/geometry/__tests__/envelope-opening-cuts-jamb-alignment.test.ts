@@ -20,7 +20,7 @@ import {
   type OpeningForCut,
 } from '../envelope-opening-cuts';
 import { computeRevealJambQuads } from '../reveal-lining-geometry';
-import type { EnvelopeChain } from '../envelope-perimeter';
+import type { EnvelopeChain } from '../envelope-types';
 
 function pt(x: number, y: number) {
   return { x, y, z: 0 };

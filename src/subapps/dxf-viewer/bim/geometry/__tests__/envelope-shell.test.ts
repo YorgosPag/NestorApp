@@ -9,7 +9,7 @@
 
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../envelope-shell';
 import { computeEnvelopeOpeningCuts, type OpeningForCut } from '../envelope-opening-cuts';
-import type { WallForEnvelope, ColumnForEnvelope } from '../envelope-perimeter';
+import type { WallForEnvelope, ColumnForEnvelope } from '../envelope-types';
 import type { BeamForFootprint } from '../building-footprint';
 import type { SlabRegionFootprint } from '../footprint-region-classifier';
 import type { BimPoint, BimPolyline } from '../../types/bim-base';
