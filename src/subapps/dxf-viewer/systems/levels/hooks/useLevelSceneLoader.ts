@@ -10,6 +10,8 @@ import type { SceneSaveBlockReason } from '../../../hooks/scene/execute-scene-sa
 import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 import { isCrossFloorSceneLink } from '../cross-floor-link';
 import { buildLoadedLevelSaveContext } from '../level-loaded-save-context';
+import { settleMissingLevelScene } from '../level-missing-scene';
+import { loadSceneFromStorageWithReason } from '../../../services/dxf-scene-storage-load';
 import { openFileLessLevelTarget } from '../level-file-less-target';
 import { createSceneLoadGuard } from '../scene-load-guard';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -217,7 +219,7 @@ export function useLevelSceneLoader({
     if (!sceneFileId || isOrphaned) {
       // No DXF linked (or a known-orphaned/file-less floor) — create empty scene (target
       // already reset above). Short-circuiting on `isOrphaned` avoids a wasteful repeat
-      // loadFileV2 fetch on every `levels` snapshot for a floor we already know has no
+      // scene fetch on every `levels` snapshot for a floor we already know has no
       // backing file. BIM persists independently via floorId-keyed per-entity collections.
       if (!existingScene) {
         setEmptyScenePreservingBim();
@@ -246,10 +248,12 @@ export function useLevelSceneLoader({
     const loadScene = async () => {
 
       try {
-        const fileRecord = await DxfFirestoreService.loadFileV2(sceneFileId);
+        // ADR-913 §2 — η φόρτωση λέει και ΓΙΑΤΙ δεν βρήκε σκηνή (άδειο αρχείο ≠ ορφανό αρχείο).
+        const sceneLoad = await loadSceneFromStorageWithReason(sceneFileId);
 
         // Check if this load was cancelled (user switched to another level)
         if (abortController.signal.aborted) return;
+        const fileRecord = sceneLoad.kind === 'loaded' ? sceneLoad.record : null;
 
         // 🚨 ADR-399 — cross-floor link guard. A level must only load a scene file
         // that belongs to its OWN floor. A stale / cross-linked `sceneFileId` (left
@@ -340,20 +344,16 @@ export function useLevelSceneLoader({
           if (loadedContext) sceneManager.setSaveContext?.(loadedContext);
           loadedSceneLevelsRef.current.add(currentLevelId);
         } else {
-          // File record/scene missing (orphaned sceneFileId, corrupted, or deleted).
-          // 🛡️ FIX (Β v1.2 — ADR-469) — graceful suppress (incident 2026-06-17 ADR-293
-          // error spam): the level points at a `sceneFileId` whose `files`/`cadFiles` doc
-          // no longer exists, so `getFileStoragePath` returns null and every local edit
-          // threw "canonicalScenePath is required (ADR-293)". v1.1 only reset the target
-          // here, but each `levels` snapshot re-ran this effect and re-opened it (sync set
-          // above) before the async reset — leaving a window where an edit still threw.
-          // v1.2: LATCH the orphaned fileId in the auto-save SSoT so the sync set above
-          // never re-opens it and the gate hard-suppresses any save. Then reset + preserve
-          // in-memory BIM. BIM persists independently via floorId-keyed per-entity colls.
-          console.warn(`[LevelsSystem] Scene not found for fileId: ${sceneFileId} — latching orphaned target + suppressing DXF auto-save (missing file).`);
-          sceneManager.markFileTargetOrphaned?.(sceneFileId);
-          resetDxfAutoSaveTarget();
-          setEmptyScenePreservingBim();
+          // 🛡️ ADR-469 v1.2 latch ΜΟΝΟ για αρχείο που λείπει/δεν διαβάζεται· υπαρκτό ΑΔΕΙΟ αρχείο του ορόφου
+          // κρατά τον στόχο ανοιχτό με baseline 0 (ADR-913 §2). Η απόφαση: `level-missing-scene.ts`.
+          settleMissingLevelScene(sceneLoad, sceneManager, {
+            sceneFileId,
+            levelFloorId: level?.floorId,
+            levelFileName: level?.sceneFileName,
+            resetTarget: resetDxfAutoSaveTarget,
+            setEmptyScene: setEmptyScenePreservingBim,
+            markLevelLoaded: () => loadedSceneLevelsRef.current.add(currentLevelId),
+          });
         }
       } catch (err) {
         if (!abortController.signal.aborted) {

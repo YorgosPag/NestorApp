@@ -21,48 +21,76 @@ import type { SceneModel, SceneLayer } from '../types/entities';
 import { migrateLayersById, deriveLayersByIdFromEntities } from './dxf-scene-migration';
 
 /**
+ * ADR-913 §2 — τι είπε το κείμενο μιας σκηνής: σκηνή, **ρητά άδεια** σκηνή, ή κάτι που δεν διαβάζεται.
+ *
+ * Το «άδεια» και το «άκυρη» ήταν μέχρι τώρα το ΙΔΙΟ `null`, και ο loader του επιπέδου έκρινε και τα δύο
+ * «ορφανό αρχείο» ⇒ ένα αρχείο που άδειασε μία φορά δεν ξαναδεχόταν ποτέ εγγραφή. Τα χωρίζουμε εδώ, στην
+ * πηγή, ώστε μόνο το **αποδεδειγμένα** άδειο να μπορεί να ανοίξει τον στόχο (baseline 0).
+ */
+export type SceneJsonInspection =
+  | { readonly kind: 'scene'; readonly scene: SceneModel }
+  /** Έγκυρο JSON αντικείμενο με `entities: []` — ο δίσκος λέει ρητά «μηδέν οντότητες». */
+  | { readonly kind: 'empty' }
+  /** Κακό JSON, όχι αντικείμενο, ή χωρίς πίνακα `entities` (π.χ. placeholder `{}`) — άγνωστο περιεχόμενο. */
+  | { readonly kind: 'invalid' };
+
+/**
  * Parse scene JSON text into a validated SceneModel.
- * Returns null if JSON is invalid or scene is empty (placeholder `{}`).
+ * Returns null if JSON is invalid or scene is empty (placeholder `{}`) — βλ. {@link inspectSceneJson}
+ * για το ΓΙΑΤΙ (οι υπάρχοντες καλούντες κρατούν ακριβώς την ίδια σημασία).
  *
  * ADR-358 Phase 14: applies `migrateLayersById` so pre-ADR-358 scenes
  * (SceneLayer with only 4 legacy fields) are upgraded to the full shape at
  * load time — idempotent for already-migrated documents.
  */
 export function parseAndValidateScene(text: string): SceneModel | null {
+  const inspected = inspectSceneJson(text);
+  return inspected.kind === 'scene' ? inspected.scene : null;
+}
+
+/** ADR-913 §2 — ο ΕΝΑΣ αναλυτής κειμένου σκηνής· το `parseAndValidateScene` είναι λεπτό περιτύλιγμά του. */
+export function inspectSceneJson(text: string): SceneJsonInspection {
   try {
-    const parsed = JSON.parse(text) as Record<string, unknown>;
+    const raw: unknown = JSON.parse(text);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { kind: 'invalid' };
+    const parsed = raw as Record<string, unknown>;
     const entities = parsed.entities;
-    if (!Array.isArray(entities) || entities.length === 0) return null;
-
-    const rawLayers = (parsed.layersById ?? parsed.layers ?? {}) as Record<string, Partial<SceneLayer> & Record<string, unknown>>;
-    const migratedLayers = migrateLayersById(rawLayers);
-    // ADR-358 δίχτυ ασφαλείας — αποθηκευμένο scene χωρίς layer table (vintage/exploded
-    // DXF ή stale layerless blob): ανακατασκεύασε ελάχιστα layers από τα entities ώστε
-    // το «Επίπεδο» dropdown να μην είναι ποτέ κενό (πάντα ≥1, implicit «0» ως έσχατη λύση).
-    const layersById = Object.keys(migratedLayers).length > 0
-      ? migratedLayers
-      : deriveLayersByIdFromEntities(entities);
-
-    // ADR-650 §M10e — CARRY EVERY PERSISTED FIELD, then override only the four this loader
-    // validates/migrates. This was a hand-picked whitelist of exactly those four, so every
-    // OTHER SceneModel field was written correctly by `JSON.stringify(scene)` and vanished
-    // silently on reload — no type error, no warning, visible only to the user. It was
-    // already eating `dimStyles` (ADR-362), `headerDimscale` (ADR-362 R10), `linetypeScale`
-    // (ADR-510 Φ2H) and `version`, and it would have eaten `sourceOrigin` too, making the
-    // whole M10e Σκέλος Α decorative. Spread-then-override so no FUTURE field can regress
-    // this way either. Fenced by the round-trip test.
-    // (`layers` is the pre-ADR-358 legacy key — consumed into `layersById` above, so it is
-    // dropped here rather than carried as dead weight.)
-    const { layers: _legacyLayers, ...carried } = parsed;
-
-    return {
-      ...carried,
-      entities: entities as SceneModel['entities'],
-      layersById,
-      bounds: (parsed.bounds ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 }) as SceneModel['bounds'],
-      units: (parsed.units ?? 'mm') as SceneModel['units'],
-    } as SceneModel;
+    if (!Array.isArray(entities)) return { kind: 'invalid' };
+    if (entities.length === 0) return { kind: 'empty' };
+    return { kind: 'scene', scene: buildSceneFromParsed(parsed, entities) };
   } catch {
-    return null;
+    return { kind: 'invalid' };
   }
+}
+
+/** Μη-άδεια, ήδη επικυρωμένη σκηνή ⇒ `SceneModel` (μετανάστευση layers + μεταφορά κάθε αποθηκευμένου πεδίου). */
+function buildSceneFromParsed(parsed: Record<string, unknown>, entities: unknown[]): SceneModel {
+  const rawLayers = (parsed.layersById ?? parsed.layers ?? {}) as Record<string, Partial<SceneLayer> & Record<string, unknown>>;
+  const migratedLayers = migrateLayersById(rawLayers);
+  // ADR-358 δίχτυ ασφαλείας — αποθηκευμένο scene χωρίς layer table (vintage/exploded
+  // DXF ή stale layerless blob): ανακατασκεύασε ελάχιστα layers από τα entities ώστε
+  // το «Επίπεδο» dropdown να μην είναι ποτέ κενό (πάντα ≥1, implicit «0» ως έσχατη λύση).
+  const layersById = Object.keys(migratedLayers).length > 0
+    ? migratedLayers
+    : deriveLayersByIdFromEntities(entities);
+
+  // ADR-650 §M10e — CARRY EVERY PERSISTED FIELD, then override only the four this loader
+  // validates/migrates. This was a hand-picked whitelist of exactly those four, so every
+  // OTHER SceneModel field was written correctly by `JSON.stringify(scene)` and vanished
+  // silently on reload — no type error, no warning, visible only to the user. It was
+  // already eating `dimStyles` (ADR-362), `headerDimscale` (ADR-362 R10), `linetypeScale`
+  // (ADR-510 Φ2H) and `version`, and it would have eaten `sourceOrigin` too, making the
+  // whole M10e Σκέλος Α decorative. Spread-then-override so no FUTURE field can regress
+  // this way either. Fenced by the round-trip test.
+  // (`layers` is the pre-ADR-358 legacy key — consumed into `layersById` above, so it is
+  // dropped here rather than carried as dead weight.)
+  const { layers: _legacyLayers, ...carried } = parsed;
+
+  return {
+    ...carried,
+    entities: entities as SceneModel['entities'],
+    layersById,
+    bounds: (parsed.bounds ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 }) as SceneModel['bounds'],
+    units: (parsed.units ?? 'mm') as SceneModel['units'],
+  } as SceneModel;
 }

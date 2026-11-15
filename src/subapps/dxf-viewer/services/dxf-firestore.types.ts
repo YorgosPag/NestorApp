@@ -149,6 +149,22 @@ export function fileRecordSceneSource(record: SceneSourceFields): string | undef
   return typeof path === 'string' && path ? path : undefined;
 }
 
+/** Τα πεδία κύκλου ζωής μιας εγγραφής `files` — δομικά, ώστε να δέχεται και ωμό `DocumentData`. */
+interface RetirementFields {
+  readonly isDeleted?: unknown;
+  readonly lifecycleState?: unknown;
+}
+
+/**
+ * ADR-913 — ο **ΕΝΑΣ** κανόνας «είναι αποσυρμένο (κάδος/αρχείο) αυτό το αρχείο;», για την εγγραφή
+ * (`getFileFloorScope`) **ΚΑΙ** τη φόρτωση άδειας σκηνής (`level-missing-scene.ts`). Αποσυρμένο αρχείο δεν
+ * ξανανοίγει ποτέ ως στόχος εγγραφής.
+ */
+export function isFileRecordRetired(record: RetirementFields): boolean {
+  const lifecycle = record.lifecycleState;
+  return record.isDeleted === true || (typeof lifecycle === 'string' && lifecycle !== 'active');
+}
+
 /**
  * Map a FileRecord from the `files` collection to DxfFileMetadata.
  * Used by getFileMetadataImpl() after redirecting reads from cadFiles → files.

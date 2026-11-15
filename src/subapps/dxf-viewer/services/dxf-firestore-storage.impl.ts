@@ -1,9 +1,8 @@
 import { getErrorMessage } from '@/lib/error-utils';
 import { serializedByteLength } from '@/lib/serialized-size';
 import { storage } from '../../../lib/firebase';
-import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import pako from 'pako';
 import type { SceneModel } from '../types/scene';
 import {
   DxfSecurityValidator,
@@ -12,7 +11,7 @@ import {
 } from '../security/DxfSecurityValidator';
 import { generateFileId as enterpriseGenerateFileId } from '@/services/enterprise-id.service';
 import { upsertCadFileWithPolicy } from '@/services/cad-file-mutation-gateway';
-import { dxfLogger, isExpectedError } from './dxf-firestore-logger';
+import { dxfLogger } from './dxf-firestore-logger';
 import type { DxfSaveContext, DxfFileMetadata, DxfFileRecord } from './dxf-firestore.types';
 import { mapFileRecordToDxfMetadata } from './dxf-firestore.types';
 import type { FileRecord } from '@/types/file-record';
@@ -284,184 +283,11 @@ export async function saveToStorageImpl(
   }
 }
 
-/**
- * Outcome of a Storage download attempt.
- *  - `ok`        — bytes retrieved
- *  - `not-found` — object does not exist (expected; e.g. a file linked to a
- *                  floor whose scene was never saved/processed yet)
- *  - `error`     — permission/network/unknown failure (a real problem)
- */
-type StorageFetchResult =
-  | { status: 'ok'; bytes: ArrayBuffer }
-  | { status: 'not-found' }
-  | { status: 'error'; error: unknown };
-
-/**
- * Try downloading bytes from a Storage path. Distinguishes a benign
- * object-not-found from a real (permission/network) error so callers can log at
- * the right severity — see the `@enterprise` contract on `loadFromStorageImpl`.
- */
-async function tryGetBytes(path: string): Promise<StorageFetchResult> {
-  try {
-    const bytes = await getBytes(ref(storage, path));
-    return { status: 'ok', bytes };
-  } catch (error) {
-    const code = (error as { code?: string } | null)?.code;
-    if (code === 'storage/object-not-found') {
-      return { status: 'not-found' };
-    }
-    return { status: 'error', error };
-  }
-}
-
 // ADR-358 Phase 9E-6f — `parseAndValidateScene` lives in `./dxf-scene-json.ts`
 // as a Firebase-free pure helper so it can be unit-tested without the auth
 // harness; re-exported here for call-site stability.
 export { parseAndValidateScene } from './dxf-scene-json';
-import { parseAndValidateScene } from './dxf-scene-json';
 
-/**
- * Load scene from Firebase Storage + metadata from Firestore.
- *
- * 3-tier fallback:
- *  1. `.scene.json`      — client auto-save (plain JSON)
- *  2. `.processed.json`  — server wizard processing (gzip, ADR-033)
- *  3. raw storagePath     — legacy fallback (plain JSON)
- *
- * @enterprise Silent on expected failures (missing files), loud on real errors
- */
-export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord | null> {
-  try {
-    dxfLogger.debug('Loading from Storage', { fileId });
-
-    // 1. Get FULL record from Firestore (need processedData.processedDataPath)
-    const record = await firestoreQueryService.getById<FileRecord>('FILES', fileId);
-    if (!record) return null;
-
-    const metadata = mapFileRecordToDxfMetadata(record);
-
-    if (!metadata.storagePath) {
-      dxfLogger.error('DXF document missing storagePath (ADR-293)', { fileId });
-      return null;
-    }
-
-    const rawPath = metadata.storagePath;
-    const scenePath = rawPath.endsWith('.scene.json')
-      ? rawPath
-      : rawPath.replace(/\.[^/.]+$/, '.scene.json');
-    const processedPath = record.processedData?.processedDataPath;
-
-    let scene: SceneModel | null = null;
-    let source = '';
-    // Tracks a real (permission/network) failure across the 3 tiers so the
-    // final "no scene" branch can stay loud for real errors but quiet for the
-    // expected object-not-found case (file linked, scene never saved yet).
-    let realStorageError: unknown = null;
-
-    // ── Tier 1: .scene.json (client auto-save) ──
-    const sceneResult = await tryGetBytes(scenePath);
-    if (sceneResult.status === 'ok') {
-      const text = new TextDecoder().decode(sceneResult.bytes);
-      scene = parseAndValidateScene(text);
-      if (scene) source = 'scene.json';
-    } else if (sceneResult.status === 'error') {
-      realStorageError = sceneResult.error;
-    }
-
-    // ── Tier 2: processedDataPath — gzip (.processed.json) or plain JSON (.scene.json) ──
-    // .processed.json = server wizard output (gzip). .scene.json = auto-save (plain JSON).
-    // A bug (fixed 2026-05-14) could write a .scene.json path here → must handle plain JSON.
-    if (!scene && processedPath) {
-      const processedResult = await tryGetBytes(processedPath);
-      if (processedResult.status === 'ok') {
-        const processedBytes = processedResult.bytes;
-        if (processedPath.endsWith('.scene.json')) {
-          // Plain JSON — treat as Tier 1 equivalent
-          const text = new TextDecoder().decode(processedBytes);
-          scene = parseAndValidateScene(text);
-          if (scene) source = 'processed-scene.json';
-        } else {
-          try {
-            const text = pako.ungzip(new Uint8Array(processedBytes), { to: 'string' }) as unknown as string;
-            scene = parseAndValidateScene(text);
-            if (scene) source = 'processed.json';
-          } catch {
-            dxfLogger.warn('Failed to decompress processed scene', { fileId, processedPath });
-          }
-        }
-      } else if (processedResult.status === 'error') {
-        realStorageError = processedResult.error;
-      }
-    }
-
-    // ── Tier 3: raw storagePath (legacy — if it happens to be scene JSON) ──
-    if (!scene && scenePath !== rawPath) {
-      const rawResult = await tryGetBytes(rawPath);
-      if (rawResult.status === 'ok') {
-        const text = new TextDecoder().decode(rawResult.bytes);
-        scene = parseAndValidateScene(text);
-        if (scene) source = 'raw-path';
-      } else if (rawResult.status === 'error') {
-        realStorageError = rawResult.error;
-      }
-    }
-
-    if (!scene) {
-      const isNonDxfFile = /\.(pdf|png|jpg|jpeg|webp|gif|bmp|svg)$/i.test(rawPath);
-      if (isNonDxfFile) {
-        dxfLogger.debug('File is PDF/image, not a DXF scene — skipping', { fileId });
-      } else if (realStorageError) {
-        // Permission/network/unknown failure — a real problem worth surfacing loudly.
-        dxfLogger.error('Failed to load scene from Storage (permission/network error)', {
-          fileId, scenePath, processedPath: processedPath ?? 'none', rawPath,
-          error: realStorageError instanceof Error ? realStorageError.message : String(realStorageError),
-        });
-      } else {
-        // Every path returned object-not-found: the file is linked but its scene
-        // was never saved/processed yet. Expected — the level loader falls back to
-        // an empty scene. Honour the @enterprise "silent on expected failures" contract.
-        dxfLogger.debug('No scene blob in Storage yet (file linked, scene not saved)', {
-          fileId, scenePath, processedPath: processedPath ?? 'none', rawPath,
-        });
-      }
-      return null;
-    }
-
-    dxfLogger.debug('Storage load complete', {
-      fileId, source, entities: scene.entities.length,
-    });
-
-    return {
-      id: metadata.id,
-      fileName: metadata.fileName,
-      scene,
-      lastModified: metadata.lastModified,
-      version: metadata.version,
-      checksum: metadata.checksum,
-      storagePath: metadata.storagePath,
-      // ADR-358 Phase 9 — propagate scope fields from FileRecord so the
-      // resume path can rebuild the full DxfSaveContext (entityType/
-      // entityId/projectId/companyId) instead of leaving floorId undefined.
-      ...(record.companyId ? { companyId: record.companyId } : {}),
-      ...(record.projectId ? { projectId: record.projectId } : {}),
-      ...(record.entityType ? { entityType: record.entityType as string } : {}),
-      ...(record.entityId ? { entityId: record.entityId } : {}),
-    };
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      if (isExpectedError(error)) {
-        dxfLogger.debug('File not found in Storage (expected)', { fileId });
-        return null;
-      }
-      if (error.message.includes('network') || error.message.includes('fetch')) {
-        dxfLogger.warn('Network error during load - retry may help', { fileId });
-        return null;
-      }
-    }
-
-    dxfLogger.error('Unexpected storage load error', {
-      fileId, error: getErrorMessage(error),
-    });
-    return null;
-  }
-}
+// ADR-913 §2 — η φόρτωση σκηνής (με τον ΛΟΓΟ της απουσίας της) ζει στο `./dxf-scene-storage-load.ts`
+// (N.7.1 extract)· re-export εδώ για σταθερά call-sites (`DxfFirestoreService.loadFileV2`).
+export { loadFromStorageImpl } from './dxf-scene-storage-load';

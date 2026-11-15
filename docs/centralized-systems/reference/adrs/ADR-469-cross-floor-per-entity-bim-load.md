@@ -183,6 +183,7 @@ mep-fitting, mep-manifold, mep-radiator, mep-boiler, mep-water-heater, mep-under
 - `hooks/data/__tests__/useFloors{3DAggregator,2DUnderlay}.test.ts` — useAuth + loader mocks.
 
 ## 5. Changelog
+- **2026-11-15 — v1.4 (ADR-913 v1.4 — το latch στενεύει: ορφανό = λείπει/δεν διαβάζεται το αρχείο, ΟΧΙ «άδεια σκηνή», Opus 5.5).** Ο κλάδος «Scene not found» του loader έκανε latch κάθε `sceneFileId` χωρίς σκηνή, μαζί και **υπαρκτά άδεια** αρχεία (`entities: []` ή σκηνή που δεν σώθηκε ακόμη) ⇒ αυτο-διαιωνιζόμενο κλείσιμο του auto-save. Πλέον η απόφαση ζει στο `systems/levels/level-missing-scene.ts` και τροφοδοτείται από τον **λόγο** της απουσίας (`dxf-scene-storage-load.ts`): latch για `no-record` · `no-source` · `unreadable` · αποσυρμένο · cross-floor — **ακριβώς** όπως πριν· ανοιχτός στόχος με baseline 0 μόνο για υπαρκτό άδειο αρχείο του ορόφου. Belt #1 / belt #2 και το `orphanedFileTargetsRef` αμετάβλητα. Λεπτομέρειες: ADR-913 §9 v1.4.
 - **2026-10-11 (ADR-913 — διόρθωση τεκμηρίωσης §2.5 + η γέννηση δεν είναι ορφάνια, Opus 5.5)** — UNCOMMITTED.
   **Διόρθωση:** το §2.5 έγραφε ότι ο belt #2 δεν αγγίζει «the legit new-standalone path (`fileId` unknown →
   `generateFileId`), so a genuine first save is never suppressed». **Ο κώδικας διαφωνούσε:** εκείνο το μονοπάτι
