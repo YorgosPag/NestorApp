@@ -1,7 +1,10 @@
 'use client';
 
 /**
- * @fileoverview **Η κεφαλίδα κάθε γραμμής του μητρώου** — είδος εγγράφου + σήμα κατάστασης (ADR-915 Φ4γ · Φ4δ).
+ * @fileoverview **Η κεφαλίδα κάθε γραμμής του μητρώου** — το σήμα κατάστασης (ADR-915 Φ4γ · Φ4δ · §41.5).
+ *
+ * 🔑 §41.5 — η κάρτα ζει ΜΟΝΟ στο πλαϊνό πάνελ, που ήδη ονομάζει το είδος στον τίτλο του (`SheetTitle`): ο τίτλος
+ *    λέγεται **μία** φορά. Δεύτερος τίτλος ακριβώς από κάτω ήταν διπλότυπο (βρέθηκε στον browser, 2026-11-15).
  * @related RegistryRowItem.tsx (έγγραφο) · RegistryGapItem.tsx (κενό)
  * @module components/document-registry/RegistryRowHeader
  *
@@ -13,11 +16,9 @@ import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
 import {
   CONVEYANCE_NS,
-  DOCUMENT_KIND_LABEL_KEYS,
   LEGALITY_NS,
   REGISTRY_NS,
   REGISTRY_STATE_LABEL_KEYS,
@@ -37,11 +38,9 @@ export function RegistryStateBadge({ state }: { readonly state: RegistryRowState
   );
 }
 
-export function RegistryRowHeader({ kind, state }: { readonly kind: DocumentKind; readonly state: RegistryRowState }): React.ReactElement {
-  const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
+export function RegistryRowHeader({ state }: { readonly state: RegistryRowState }): React.ReactElement {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-2">
-      <h3 className="m-0 text-base font-semibold text-foreground">{t(DOCUMENT_KIND_LABEL_KEYS[kind])}</h3>
+    <header className="flex flex-wrap items-start gap-2">
       <RegistryStateBadge state={state} />
     </header>
   );

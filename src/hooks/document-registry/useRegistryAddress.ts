@@ -49,10 +49,14 @@ export interface RegistryAddress {
   readonly closeDoc: () => void;
 }
 
+/**
+ * Η καρτέλα στη διεύθυνση. Το φίλτρο `?view=` ζει **μόνο** στην «Όλα»: σε άλλη καρτέλα φεύγει — αλλιώς η διεύθυνση θα
+ * έλεγε «Λείπει» ενώ η οθόνη δεν το εφαρμόζει (`?view=missing&tab=action`, βρέθηκε στον browser 2026-11-15).
+ * Η προεπιλογή δεν γράφεται: μία διεύθυνση ανά περιεχόμενο.
+ */
 function writeTab(params: URLSearchParams, tab: RegistryTab): void {
-  // Η προεπιλογή δεν γράφεται — εκτός αν μια προβολή στη διεύθυνση θα την έκανε «Όλα».
-  const implied = registryTabOf(null, params.get(REGISTRY_VIEW_PARAM));
-  if (tab === implied && tab === REGISTRY_DEFAULT_TAB) params.delete(REGISTRY_TAB_PARAM);
+  if (tab !== 'all') params.delete(REGISTRY_VIEW_PARAM);
+  if (tab === REGISTRY_DEFAULT_TAB) params.delete(REGISTRY_TAB_PARAM);
   else params.set(REGISTRY_TAB_PARAM, tab);
 }
 
@@ -97,6 +101,11 @@ export function useRegistryAddress(): RegistryAddress {
   useEffect(() => {
     if (doc === null) openedHere.current = false;
   }, [doc]);
+  // Παλιός/χειρόγραφος σύνδεσμος με φίλτρο σε άλλη καρτέλα ⇒ η διεύθυνση θεραπεύεται, ώστε να λέει ό,τι δείχνει η οθόνη.
+  const staleView = params.has(REGISTRY_VIEW_PARAM) && registryTabOf(params.get(REGISTRY_TAB_PARAM), params.get(REGISTRY_VIEW_PARAM)) !== 'all';
+  useEffect(() => {
+    if (staleView) replaceUrlSearchParams((next) => next.delete(REGISTRY_VIEW_PARAM));
+  }, [staleView]);
   return useMemo(() => {
     const viewParam = params.get(REGISTRY_VIEW_PARAM);
     return {

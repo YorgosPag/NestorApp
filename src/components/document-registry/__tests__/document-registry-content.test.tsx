@@ -179,6 +179,19 @@ describe('§41.5 καρτέλες', () => {
     expect(urlParams().get('tab')).toBe('decisions');
   });
 
+  it('το φίλτρο ζει ΜΟΝΟ στην «Όλα»: αλλαγή καρτέλας ⇒ το `?view=` φεύγει (μία διεύθυνση = ένα νόημα)', () => {
+    renderReady(fixtureResponse(), { tab: 'all', view: 'missing' });
+    fireEvent.mouseDown(screen.getByRole('tab', { name: new RegExp(REGISTRY_TAB_LABEL_KEYS.action.replace('.', '\\.')) }));
+    expect(urlParams().has('view')).toBe(false);
+    expect(urlParams().has('tab')).toBe(false);
+  });
+
+  it('παλιός σύνδεσμος `?view=missing&tab=action` ⇒ η διεύθυνση θεραπεύεται (το φίλτρο φεύγει, η καρτέλα μένει)', () => {
+    renderReady(fixtureResponse(), { view: 'missing', tab: 'action' });
+    expect(urlParams().has('view')).toBe(false);
+    expect(urlParams().get('tab')).toBe('action');
+  });
+
   it('«Προς απόφαση» χωρίς προτάσεις ⇒ ρητή κενή κατάσταση', () => {
     renderReady(fixtureResponse(), { tab: 'decisions' });
     expect(screen.getByText(LAYOUT_KEYS.decisionsEmpty)).toBeTruthy();

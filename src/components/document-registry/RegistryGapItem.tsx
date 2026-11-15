@@ -43,7 +43,7 @@ export function RegistryGapItem({ row, registry }: RegistryGapItemProps): React.
   const { gap } = row;
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <RegistryRowHeader kind={gap.kind} state={row.state} />
+      <RegistryRowHeader state={row.state} />
       <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-[max-content_1fr]">
         <dt className="text-sm text-muted-foreground">{t(REGISTRY_KEYS.property)}</dt>
         <RegistryPropertyValue propertyId={gap.propertyId} names={registry} />
