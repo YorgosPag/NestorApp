@@ -59,6 +59,8 @@ import {
   ModelFromDrawingPanel,
   type ModelFromDrawingPanelActions,
 } from '../ui/panels/model-from-drawing/ModelFromDrawingPanel';
+import type { KeepRecognizedActions } from '../ui/panels/model-from-drawing/KeepRecognizedSection';
+import type { PlanConfidenceTier } from '../systems/plan-recognition/plan-confidence';
 
 export interface ModelFromDrawingHostProps {
   readonly levelManager: LevelsHookReturn;
@@ -209,7 +211,8 @@ export function ModelFromDrawingHost({ levelManager }: ModelFromDrawingHostProps
   useSceneSync(state.pendingSample, levelManager.currentLevelId, getDeps, getOpeningDeps);
 
   const { imageSource, recognizeImage, reading, scale, ocr, readValues, drawingKind } = usePlanRecognitionWiring(state, getDeps);
-  const actions = usePanelActions(start, getDeps, getOpeningDeps, recognizeImage, { reading, scale, ocr, readValues, drawingKind });
+  const keep = useKeepRecognizedActions(getDeps, getOpeningDeps, t('modelFromDrawing.keep.undoName'));
+  const actions = usePanelActions(start, getDeps, getOpeningDeps, recognizeImage, { reading, scale, ocr, readValues, drawingKind, ...keep });
   const pdfVectorImport = usePdfVectorImportWiring(getDeps);
 
   if (state.phase === 'closed') return null;
@@ -226,9 +229,9 @@ function usePanelActions(
   getDeps: () => ModelFromDrawingDeps,
   getOpeningDeps: () => OpeningSessionDeps,
   recognizeImage: () => void,
-  image: Pick<ModelFromDrawingPanelActions, 'reading' | 'scale' | 'ocr' | 'readValues' | 'drawingKind'>,
+  image: Pick<ModelFromDrawingPanelActions, 'reading' | 'scale' | 'ocr' | 'readValues' | 'drawingKind'> & KeepRecognizedActions,
 ): ModelFromDrawingPanelActions {
-  const { reading, scale, ocr, readValues, drawingKind } = image;
+  const { reading, scale, ocr, readValues, drawingKind, onKeepRecognized, onKeepTierChange } = image;
   return React.useMemo((): ModelFromDrawingPanelActions => ({
     onClose: () => modelFromDrawingSession.close(),
     onResample: start,
@@ -251,5 +254,26 @@ function usePanelActions(
     ocr,
     readValues,
     drawingKind,
-  }), [start, getDeps, getOpeningDeps, recognizeImage, reading, scale, ocr, readValues, drawingKind]);
+    onKeepRecognized,
+    onKeepTierChange,
+  }), [start, getDeps, getOpeningDeps, recognizeImage, reading, scale, ocr, readValues, drawingKind, onKeepRecognized, onKeepTierChange]);
+}
+
+/**
+ * ADR-929 §6.20 — «Κράτησε τα αναγνωρισμένα» και «με βεβαιότητα ≥ X». Η εγγραφή αλλάζει τη σκηνή του βήματος
+ * κουφωμάτων ⇒ εκείνο ξαναϋπολογίζει χωρίς να σβήσει την ειδοποίηση «κρατήθηκαν».
+ */
+function useKeepRecognizedActions(
+  getDeps: () => ModelFromDrawingDeps,
+  getOpeningDeps: () => OpeningSessionDeps,
+  undoName: string,
+): KeepRecognizedActions {
+  const onKeepRecognized = React.useCallback((): void => {
+    if (modelFromDrawingSession.keep(getDeps(), undoName)) modelFromDrawingOpeningsSession.refresh(getOpeningDeps(), true);
+  }, [getDeps, getOpeningDeps, undoName]);
+  const onKeepTierChange = React.useCallback(
+    (tier: PlanConfidenceTier): void => modelFromDrawingSession.setKeepMinTier(tier, getDeps()),
+    [getDeps],
+  );
+  return { onKeepRecognized, onKeepTierChange };
 }

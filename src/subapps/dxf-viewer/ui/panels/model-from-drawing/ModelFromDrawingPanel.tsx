@@ -37,6 +37,7 @@ import type {
 import { OPENING_REFUSAL_LABEL_KEY } from '../../../systems/model-from-drawing/opening-label-keys';
 import { DIMENSION_LAYER_REFUSAL_LABEL_KEY } from '../../../systems/model-from-drawing/dimension-label-keys';
 import { RecognizedDimensionsSection } from './RecognizedDimensionsSection';
+import { KeepRecognizedSection, type KeepRecognizedActions } from './KeepRecognizedSection';
 import { TopoReviewPanel } from '../topography/TopoReviewPanel';
 import {
   OpeningsSection,
@@ -61,7 +62,7 @@ import { PlanReadValuesSection, type PlanReadValuesActions } from './PlanReadVal
 import { PlanDrawingKindSection, type PlanDrawingKindActions } from './PlanDrawingKindSection';
 import { PlanScaleCardSection, type PlanScaleActions } from './PlanScaleCard';
 
-export interface ModelFromDrawingPanelActions extends OpeningReviewActions {
+export interface ModelFromDrawingPanelActions extends OpeningReviewActions, KeepRecognizedActions {
   readonly onClose: () => void;
   /** «Άλλο δείγμα»: νέα συνεδρία, οπλισμένη. */
   readonly onResample: () => void;
@@ -109,6 +110,26 @@ function writtenText(notice: Extract<ModelFromDrawingNotice, { kind: 'written' }
   return t('modelFromDrawing.notice.written', { count });
 }
 
+/**
+ * ADR-929 §6.20 — «κρατήθηκαν»: ολόκληρη πρόταση για τα πλήθη, και για κάθε στρώση που αρνήθηκε ΔΙΚΗ της ολόκληρη
+ * πρόταση με τον λόγο (καμία συναρμολογημένη φράση· τίποτα σιωπηλό).
+ */
+function keptText(notice: Extract<ModelFromDrawingNotice, { kind: 'kept' }>, t: Translate): string {
+  const written = (o: typeof notice.lines): number => (o?.kind === 'written' ? o.count : 0);
+  const dimensions = written(notice.dimensions);
+  const lines = written(notice.lines);
+  const parts = [dimensions + lines > 0
+    ? t('modelFromDrawing.notice.kept', { dimensions, lines })
+    : t('modelFromDrawing.notice.keptNothing')];
+  if (notice.dimensions?.kind === 'refused') {
+    parts.push(t('modelFromDrawing.notice.keptDimensionsRefused', { reason: t(DIMENSION_LAYER_REFUSAL_LABEL_KEY[notice.dimensions.reason]) }));
+  }
+  if (notice.lines?.kind === 'refused') {
+    parts.push(t('modelFromDrawing.notice.keptLinesRefused', { reason: t(DIMENSION_LAYER_REFUSAL_LABEL_KEY[notice.lines.reason]) }));
+  }
+  return parts.join(' ');
+}
+
 /** Κάθε ειδοποίηση με ΡΗΤΟ κλειδί (όχι συναρμολογημένο): το CHECK 3.8 βλέπει ότι υπάρχουν όλα. */
 function noticeText(notice: ModelFromDrawingNotice, role: ModelFromDrawingSampleRole, t: Translate): string {
   switch (notice.kind) {
@@ -119,6 +140,7 @@ function noticeText(notice: ModelFromDrawingNotice, role: ModelFromDrawingSample
     case 'stale': return t('modelFromDrawing.notice.stale');
     case 'uncalibrated': return t('modelFromDrawing.notice.uncalibrated');
     case 'written': return writtenText(notice, t);
+    case 'kept': return keptText(notice, t);
     case 'no-walls': return t('modelFromDrawing.notice.no-walls');
     case 'openings-written': return t('modelFromDrawing.notice.openings-written', { count: notice.count });
     case 'openings-refused': return t(OPENING_REFUSAL_LABEL_KEY[notice.refusal]);
@@ -182,6 +204,22 @@ function SceneSampleLine({ colorHex, onResample, t }: {
   );
 }
 
+/** Η πηγή «εικόνα υποβάθρου»: περίληψη, τοπικό OCR, είδος σχεδίου, «Τι διάβασα», ανάγνωση AI, κλίμακα. */
+function ImageSourceSections({ actions, imageSource, t }: Pick<ModelFromDrawingPanelProps, 'actions' | 'imageSource'> & {
+  readonly t: Translate;
+}): React.ReactElement {
+  return (
+    <>
+      <ImageSourceSummary view={imageSource} onResample={actions.onResample} t={t} />
+      <PlanOcrSection view={imageSource.ocr} actions={actions.ocr} t={t} />
+      <PlanDrawingKindSection view={imageSource.drawingKind} actions={actions.drawingKind} t={t} />
+      <PlanReadValuesSection rows={imageSource.readValues} absorbedMarks={imageSource.absorbedMarks} thumbnails={imageSource.readValueThumbnails} actions={actions.readValues} t={t} />
+      <PlanReadingSection available={imageSource.readingAvailable} readingAdopted={imageSource.readingAdopted} review={imageSource.review} actions={actions.reading} t={t} />
+      <PlanScaleCardSection view={imageSource.scale} actions={actions.scale} t={t} />
+    </>
+  );
+}
+
 function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProps & { readonly t: Translate }): React.ReactElement | null {
   const { proposal } = state;
   if (!proposal) return null;
@@ -190,15 +228,8 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
   return (
     <>
       {fromImage
-        ? <ImageSourceSummary view={imageSource} onResample={actions.onResample} t={t} />
+        ? <ImageSourceSections actions={actions} imageSource={imageSource} t={t} />
         : <SceneSampleLine colorHex={state.wallColorHex} onResample={actions.onResample} t={t} />}
-      {fromImage ? <PlanOcrSection view={imageSource.ocr} actions={actions.ocr} t={t} /> : null}
-      {fromImage ? <PlanDrawingKindSection view={imageSource.drawingKind} actions={actions.drawingKind} t={t} /> : null}
-      {fromImage ? <PlanReadValuesSection rows={imageSource.readValues} absorbedMarks={imageSource.absorbedMarks} thumbnails={imageSource.readValueThumbnails} actions={actions.readValues} t={t} /> : null}
-      {fromImage
-        ? <PlanReadingSection available={imageSource.readingAvailable} readingAdopted={imageSource.readingAdopted} review={imageSource.review} actions={actions.reading} t={t} />
-        : null}
-      {fromImage ? <PlanScaleCardSection view={imageSource.scale} actions={actions.scale} t={t} /> : null}
       <StatusLegend proposal={proposal} t={t} />
       <GroupsSection groups={proposal.groups} onConfirm={actions.onConfirmGroup} t={t} />
       <DecisionsSection
@@ -213,6 +244,12 @@ function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProp
         text={(count) => t('modelFromDrawing.leftOut', { count })} testId="mfd-left-out"
       />
       <RecognizedDimensionsSection summary={state.dimensionSummary} t={t} />
+      {fromImage ? (
+        <KeepRecognizedSection
+          dimensions={state.dimensionSummary} lines={state.lineSummary} tier={state.keepMinTier}
+          calibrated={imageSource.calibrated} actions={actions} t={t}
+        />
+      ) : null}
       <Button
         type="button" size="sm" disabled={locked} onClick={actions.onApprove}
         data-testid="mfd-approve"

@@ -701,6 +701,10 @@
       "uncalibrated": "The background image is not calibrated, so lengths and thicknesses would be wrong. Calibrate the background first.",
       "written": "{count, plural, one {# wall created} other {# walls created}}. Ctrl+Z to undo.",
       "writtenWithDimensions": "{count, plural, one {# wall} other {# walls}} and {dimensions, plural, one {# dimension} other {# dimensions}} created. Ctrl+Z to undo.",
+      "kept": "Kept {dimensions, plural, one {# dimension} other {# dimensions}} and {lines, plural, one {# line} other {# lines}}. Ctrl+Z to undo.",
+      "keptNothing": "There is nothing new to keep: everything is already in the drawing.",
+      "keptDimensionsRefused": "The dimensions were not written: {reason}",
+      "keptLinesRefused": "The lines were not written: {reason}",
       "writtenDimensionsRefused": "{count, plural, one {# wall created} other {# walls created}}, without dimensions: {reason} Ctrl+Z to undo.",
       "refused": {
         "overlap": "Nothing was written: {blocked} walls sit on an existing structural element.",
@@ -719,6 +723,25 @@
       "refusal": {
         "no-scene": "There is no active drawing.",
         "no-layer": "There is no current layer."
+      }
+    },
+    "keep": {
+      "button": "Keep {dimensions, plural, one {# dimension} other {# dimensions}} and {lines, plural, one {# line} other {# lines}}",
+      "hint": "The dimensions and lines read by recognition become drawing entities, each on its own layer, independently of the walls. One Ctrl+Z undoes them all together.",
+      "undoName": "Recognized from image",
+      "tier": {
+        "label": "Lines with confidence",
+        "high": "High only",
+        "medium": "High and medium",
+        "low": "All, including low"
+      },
+      "lines": {
+        "title": "Lines",
+        "layer": {
+          "existing": "On layer “{name}”.",
+          "create": "On layer “{name}” (will be created).",
+          "refused": "The lines will not be written: {reason}"
+        }
       }
     }
   },

@@ -79,6 +79,8 @@ function stateOf(patch: Partial<ModelFromDrawingState> = {}): ModelFromDrawingSt
     proposal: UNCONFIRMED,
     preview: null,
     dimensionSummary: null,
+    lineSummary: null,
+    keepMinTier: 'high',
     openingColorHex: null,
     openingDecisions: [],
     openingReview: NO_OPENING_REVIEW_DECISIONS,
@@ -96,6 +98,7 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
     onSetUndecided: jest.fn(), onDiscardOrphanedDecisions: jest.fn(), onFocus: jest.fn(), onApprove: jest.fn(),
     onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onApproveOpenings: jest.fn(), onDiscardOrphanedOpenings: jest.fn(),
     onRecognizeImage: jest.fn(),
+    onKeepRecognized: jest.fn(), onKeepTierChange: jest.fn(),
     reading: {
       onBegin: jest.fn(), onEnd: jest.fn(), onToggleAddRegion: jest.fn(),
       onReset: jest.fn(), onUndoReadingDrop: jest.fn(), onPrepare: jest.fn(), onSend: jest.fn(),

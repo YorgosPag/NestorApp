@@ -22,7 +22,9 @@
  * @see ../../services/named-layer.ts — η πόρτα του layer (εγγραφή + ανάγνωση)
  */
 
-import { planDimensionEntities } from '../../bim/plan-recognition/fusion/dimension-entities';
+import { planDimensionEntities, type PlanDimensionProposal } from '../../bim/plan-recognition/fusion/dimension-entities';
+import type { DimensionSpan } from '../../bim/plan-recognition/fusion/plan-fusion-types';
+import { recognizedMetadata } from './recognized-provenance';
 import { addDimensionsToScene } from '../../bim/scene/add-dimensions-to-scene';
 import type { WallSceneAccessor } from '../../bim/walls/add-wall-to-scene';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../config/tolerance-config';
@@ -45,13 +47,24 @@ export const PLAN_RECOGNITION_DIMENSION_TOOL = 'dim-plan-recognition';
 /** Το layer ορίζεται ΜΕΤΑ την ιδεμποτία (βήμα 3): δεν φτιάχνουμε layer για μηδέν νέες διαστάσεις. */
 const LAYER_RESOLVED_AFTER_DEDUPE = '';
 
-type RecognizedDimension = ReturnType<typeof planDimensionEntities>[number]['entity'];
+type RecognizedDimension = PlanDimensionProposal['entity'];
+
+/**
+ * ADR-929 §6.20 · ADR-941 Δ19 — ποια τμήματα της εικόνας **ζωγραφίζει** ήδη μια διάσταση (η γραμμή της και οι
+ * επεκτάσεις της): αυτά δεν ξαναγράφονται ως απλές γραμμές. Χωριστά οι νέες από τις υπάρχουσες, γιατί οι νέες
+ * απορροφούν μόνο αν γραφτούν (layer που αρνείται ⇒ οι γραμμές τους μένουν γραμμές, ποτέ χαμένες).
+ */
+export interface DimensionAbsorption {
+  readonly fresh: ReadonlySet<string>;
+  readonly existing: ReadonlySet<string>;
+}
 
 /** Βήματα 1–2: οι νέες διαστάσεις της πηγής απέναντι στη ζωντανή σκηνή, και το στυλ τους. */
-interface RecognizedDimensionProjection {
+export interface RecognizedDimensionProjection {
   readonly fresh: readonly RecognizedDimension[];
   readonly existing: number;
   readonly style: DimStyle;
+  readonly absorption: DimensionAbsorption;
 }
 
 /** ADR-929 Δ20 Σ1.3β — η προεπισκόπηση της στρώσης «Διαστάσεις» (ΧΑΜΗΛΟΣΥΧΝΗ, ζει στο store της συνεδρίας). */
@@ -71,8 +84,37 @@ export type DimensionWriteOutcome =
 
 const NOTHING_NEW: DimensionWriteOutcome = { kind: 'written', count: 0 };
 
-/** `null` ⇔ δεν υπάρχει στρώση διαστάσεων: πηγή-σκηνή, πηγή χωρίς διαστάσεις, χαμένο υπόβαθρο, χωρίς σκηνή. */
-function projectRecognizedDimensions(
+/** Δ9 — κάθε διάσταση φέρει την εικόνα και το άνοιγμα από το οποίο βγήκε. */
+function stamped(proposal: PlanDimensionProposal, backgroundId: string): RecognizedDimension {
+  const metadata = recognizedMetadata({ backgroundId, origin: 'dimension-span', sourceId: proposal.spanId });
+  return { ...proposal.entity, metadata: { ...proposal.entity.metadata, ...metadata } };
+}
+
+/** Τα τμήματα που ζωγραφίζει ένα άνοιγμα: η γραμμή διάστασης και οι δύο επεκτάσεις. */
+function spanSegmentIds(span: DimensionSpan): readonly string[] {
+  return [...span.segmentIds, span.ends[0].extensionId, span.ends[1].extensionId];
+}
+
+function absorptionOf(
+  proposals: readonly PlanDimensionProposal[],
+  freshIds: ReadonlySet<string>,
+  spans: readonly DimensionSpan[],
+): DimensionAbsorption {
+  const spanById = new Map(spans.map((s) => [s.id, s]));
+  const fresh = new Set<string>();
+  const existing = new Set<string>();
+  for (const { spanId, entity } of proposals) {
+    const span = spanById.get(spanId);
+    if (span) for (const id of spanSegmentIds(span)) (freshIds.has(entity.id) ? fresh : existing).add(id);
+  }
+  return { fresh, existing };
+}
+
+/**
+ * `null` ⇔ δεν υπάρχει στρώση διαστάσεων: πηγή-σκηνή, πηγή χωρίς διαστάσεις, χαμένο υπόβαθρο, χωρίς σκηνή. Ο ΕΝΑΣ
+ * υπολογισμός πίσω από την προεπισκόπηση, την έγκριση τοίχων και το «Κράτησε τα αναγνωρισμένα» (§6.20).
+ */
+export function projectRecognizedDimensions(
   source: ProposalLineSource,
   accessor: WallSceneAccessor,
 ): RecognizedDimensionProjection | null {
@@ -82,13 +124,15 @@ function projectRecognizedDimensions(
   if (!placement || !live) return null;
 
   const style = getDimStyleRegistry().getActiveStyle();
-  const proposed = planDimensionEntities(
+  const proposals = planDimensionEntities(
     { ...source.dimensions, placement },
     { styleId: style.id, layerId: LAYER_RESOLVED_AFTER_DEDUPE },
-  ).map((p) => p.entity);
+  ).map((p) => ({ spanId: p.spanId, entity: stamped(p, source.backgroundId) }));
   const tolerance = MODEL_FROM_DRAWING_LIMITS.NODE_MERGE_TOLERANCE_MM * mmToSceneUnits(live.sceneUnits);
-  const { fresh, existing } = partitionNewLinearDimensions(proposed, live.entities, tolerance);
-  return { fresh, existing, style };
+  const { fresh, existing } = partitionNewLinearDimensions(proposals.map((p) => p.entity), live.entities, tolerance);
+  const freshIds = new Set(fresh.map((d) => d.id));
+  const absorption = absorptionOf(proposals, freshIds, source.dimensions.fusion.dimensionSpans);
+  return { fresh, existing, style, absorption };
 }
 
 /** Σ1.3β — η προεπισκόπηση: ίδιος υπολογισμός με την εγγραφή, μηδέν εγγραφές. `null` ⇔ καμία στρώση διαστάσεων. */
@@ -117,7 +161,18 @@ export function writeRecognizedDimensions(
   undoName: string,
 ): DimensionWriteOutcome | null {
   const projection = projectRecognizedDimensions(source, accessor);
-  if (!projection) return null;
+  return projection ? writeDimensionProjection(projection, accessor, undoName) : null;
+}
+
+/**
+ * ADR-929 §6.20 — γράφει μια **ήδη υπολογισμένη** προβολή: ο καλών που μέτρησε τι απορροφούν οι διαστάσεις γράφει
+ * ακριβώς αυτές, όχι μια δεύτερη προβολή που θα μπορούσε να διαφωνεί.
+ */
+export function writeDimensionProjection(
+  projection: RecognizedDimensionProjection,
+  accessor: WallSceneAccessor,
+  undoName: string,
+): DimensionWriteOutcome {
   if (projection.fresh.length === 0) return NOTHING_NEW;
 
   const layer = ensureDimensionLayer(accessor, projection.style);

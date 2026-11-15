@@ -20,12 +20,19 @@
 import type { Entity, SceneLayer } from '../../types/entities';
 import type { RasterSegment } from '../../bim/plan-recognition/plan-recognition-types';
 import type { DimensionEntityInput } from '../../bim/plan-recognition/fusion/dimension-entities';
+import type { PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 
 /**
  * ADR-929 Δ20 Σ1.3 — ό,τι χρειάζεται η στρώση «Διαστάσεις» από την αναγνώριση, **χωρίς** την τοποθέτηση: εκείνη
  * διαβάζεται τη στιγμή της πράξης (`currentRasterPlacement`), όπως για τους τοίχους.
  */
 export type RasterDimensionSource = Omit<DimensionEntityInput, 'placement'>;
+
+/**
+ * ADR-929 §6.20 — ό,τι χρειάζεται η στρώση «Γραμμές» από την **ίδια** σύντηξη: όλα τα συνορθωμένα τμήματα (όχι μόνο
+ * όσα έγιναν είσοδος τοίχων), ο ρόλος και η βεβαιότητα του καθενός.
+ */
+export type RasterLineworkSource = Pick<PlanFusionResult, 'adjustedSegments' | 'segmentRoles' | 'segmentConfidence'>;
 import type { WallDetectionStrategy } from '../../bim/model-from-drawing/wall-detection-strategy';
 import type { EntityColorResolver } from '../../bim/walls/same-color-rects';
 import {
@@ -64,6 +71,8 @@ export type ProposalLineSource =
        * η ταύτιση είναι εκ κατασκευής, όχι έλεγχος. Απόν ⇒ η έγκριση γράφει μόνο τοίχους.
        */
       readonly dimensions?: RasterDimensionSource;
+      /** ADR-929 §6.20 — η στρώση «Γραμμές» της ίδιας σύντηξης. Απόν ⇒ καμία γραμμή να κρατηθεί. */
+      readonly linework?: RasterLineworkSource;
     };
 
 export const SCENE_LINE_SOURCE: ProposalLineSource = { kind: 'scene' };

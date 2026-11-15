@@ -43,6 +43,11 @@ import type { AddOpeningsRefusal } from '../../bim/model-from-drawing/add-openin
 import { SCENE_LINE_SOURCE, type ProposalLineSource } from './proposal-line-source';
 import type { SceneBasis } from './model-from-drawing-live';
 import type { DimensionWriteOutcome, RecognizedDimensionSummary } from './model-from-drawing-dimensions';
+import type { KeepRecognizedOutcome, RecognizedLinesSummary } from './keep-recognized';
+import type { PlanConfidenceTier } from '../plan-recognition/plan-confidence';
+
+/** ADR-929 §6.20 — η προεπιλογή του «κράτα γραμμές με βεβαιότητα ≥ X»: μόνο ό,τι είναι σίγουρο, ώσπου να πει ο άνθρωπος. */
+export const DEFAULT_KEEP_MIN_TIER: PlanConfidenceTier = 'high';
 
 /**
  * `closed`  — ο βοηθός δεν τρέχει.
@@ -74,7 +79,9 @@ export type ModelFromDrawingNotice =
   /** Φ4-3β — δεν υπάρχει τοίχος στο σχέδιο να φιλοξενήσει κούφωμα. */
   | { readonly kind: 'no-walls' }
   | { readonly kind: 'openings-refused'; readonly refusal: AddOpeningsRefusal }
-  | { readonly kind: 'openings-written'; readonly count: number };
+  | { readonly kind: 'openings-written'; readonly count: number }
+  /** ADR-929 §6.20 — «Κράτησε τα αναγνωρισμένα»: τι έγινε σε κάθε στρώση (διαστάσεις · γραμμές), με όνομα. */
+  | ({ readonly kind: 'kept' } & KeepRecognizedOutcome);
 
 export interface ModelFromDrawingState {
   readonly phase: ModelFromDrawingPhase;
@@ -101,6 +108,13 @@ export interface ModelFromDrawingState {
    * Γράφεται ΜΑΖΙ με την πρόταση (ίδιος υπολογισμός), ποτέ χωριστά. `null` ⇔ η πηγή δεν έχει διαστάσεις.
    */
   readonly dimensionSummary: RecognizedDimensionSummary | null;
+  /**
+   * ADR-929 §6.20 — η στρώση «Γραμμές» του «Κράτησε τα αναγνωρισμένα»: θα γραφτούν / υπάρχουν ήδη / σε ποιο επίπεδο.
+   * Γράφεται ΜΑΖΙ με την πρόταση (ίδιος υπολογισμός με την εγγραφή). `null` ⇔ η πηγή δεν έχει γραμμές.
+   */
+  readonly lineSummary: RecognizedLinesSummary | null;
+  /** ADR-929 §6.20 · Δ10 — «κράτα γραμμές με βεβαιότητα ≥ αυτού»: απόφαση του ανθρώπου, μένει σε κάθε επανυπολογισμό. */
+  readonly keepMinTier: PlanConfidenceTier;
   /** Η σκηνή πάνω στην οποία υπολογίστηκε η πρόταση τοίχων (ο συγχρονιστής σκηνής ξέρει έτσι αν είναι μπαγιάτικη). */
   readonly wallBasis: SceneBasis | null;
   /** Το ίδιο για την πρόταση ανοιγμάτων — δική της, γιατί οι δύο ελεγκτές ξαναϋπολογίζουν χωριστά. */
@@ -132,6 +146,8 @@ const CLOSED: ModelFromDrawingState = {
   proposal: null,
   preview: null,
   dimensionSummary: null,
+  lineSummary: null,
+  keepMinTier: DEFAULT_KEEP_MIN_TIER,
   wallBasis: null,
   openingBasis: null,
   openingColorHex: null,

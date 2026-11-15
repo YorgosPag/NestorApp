@@ -50,6 +50,13 @@ import {
   type RecognizedDimensionSummary,
 } from './model-from-drawing-dimensions';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
+import {
+  keepRecognized,
+  summarizeRecognizedLines,
+  type KeepRecognizedOutcome,
+  type RecognizedLinesSummary,
+} from './keep-recognized';
+import type { PlanConfidenceTier } from '../plan-recognition/plan-confidence';
 
 /** Ό,τι χρειάζεται ο ελεγκτής από τον κόσμο — διαβάζεται ΤΗ ΣΤΙΓΜΗ της πράξης, ποτέ νωρίτερα. */
 export interface ModelFromDrawingDeps {
@@ -66,7 +73,7 @@ export interface ModelFromDrawingDeps {
 /** Ό,τι αποφασίζει ο άνθρωπος και καθορίζει την πρόταση. */
 type ProposalInputs = Pick<
   ModelFromDrawingState,
-  'lineSource' | 'wallColorHex' | 'acceptedDecisions' | 'categoryByThicknessMm'
+  'lineSource' | 'wallColorHex' | 'acceptedDecisions' | 'categoryByThicknessMm' | 'keepMinTier'
 >;
 
 interface Computed {
@@ -76,6 +83,8 @@ interface Computed {
   readonly wallBasis: SceneBasis;
   /** ADR-929 Δ20 Σ1.3β — η στρώση «Διαστάσεις» της ίδιας έγκρισης, από τον ΙΔΙΟ υπολογισμό με την εγγραφή. */
   readonly dimensionSummary: RecognizedDimensionSummary | null;
+  /** ADR-929 §6.20 — η στρώση «Γραμμές» του «Κράτησε», από τον ΙΔΙΟ υπολογισμό με την εγγραφή. */
+  readonly lineSummary: RecognizedLinesSummary | null;
 }
 
 /**
@@ -100,6 +109,7 @@ function compute(inputs: ProposalInputs, deps: ModelFromDrawingDeps): Computed |
     preview: buildAssistantPreview(proposal, lines.entities),
     wallBasis: readSceneBasis(deps.accessor),
     dimensionSummary: summarizeRecognizedDimensions(inputs.lineSource, deps.accessor),
+    lineSummary: summarizeRecognizedLines(inputs.lineSource, deps.accessor, inputs.keepMinTier),
   };
 }
 
@@ -111,6 +121,7 @@ function recompute(inputs: Partial<ProposalInputs>, deps: ModelFromDrawingDeps):
     wallColorHex: inputs.wallColorHex ?? state.wallColorHex,
     acceptedDecisions: inputs.acceptedDecisions ?? state.acceptedDecisions,
     categoryByThicknessMm: inputs.categoryByThicknessMm ?? state.categoryByThicknessMm,
+    keepMinTier: inputs.keepMinTier ?? state.keepMinTier,
   };
   modelFromDrawingStore.publishRecomputed(merged, compute(merged, deps));
 }
@@ -180,7 +191,7 @@ export const modelFromDrawingSession = {
     if (lineSource.kind !== 'raster' || proposal === null || isRasterSourceCurrent(lineSource)) return false;
     modelFromDrawingStore.patch({
       phase: 'picking', sampleRole: 'wall', pendingSample: null, proposal: null, preview: null, dimensionSummary: null,
-      wallBasis: null, focusedKey: null, notice: null,
+      lineSummary: null, wallBasis: null, focusedKey: null, notice: null,
     });
     return true;
   },
@@ -251,7 +262,53 @@ export const modelFromDrawingSession = {
     }
     return writeApproved(fresh.proposal, state.lineSource, deps);
   },
+
+  /** ADR-929 §6.20 · Δ10 — «κράτα γραμμές με βεβαιότητα ≥ X»: νέα προεπισκόπηση, καμία εγγραφή. */
+  setKeepMinTier(tier: PlanConfidenceTier, deps: ModelFromDrawingDeps): void {
+    if (modelFromDrawingStore.get().phase !== 'review') return;
+    recompute({ keepMinTier: tier }, deps);
+  },
+
+  /**
+   * ADR-929 §6.20 · Δ22 — **«Κράτησε τα αναγνωρισμένα»**: διαστάσεις και γραμμές της εικόνας ως οντότητες, ανεξάρτητα
+   * από τους τοίχους. Ίδιες εγγυήσεις με την έγκριση: πηγή που ζει, βαθμονομημένη, και ό,τι γράφεται είναι ό,τι
+   * φάνηκε (αλλιώς νέα προεπισκόπηση και τίποτα γραμμένο). `undoName`: η ήδη μεταφρασμένη ετικέτα. `true` ⇔ γράφτηκε κάτι.
+   */
+  keep(deps: ModelFromDrawingDeps, undoName: string): boolean {
+    const state = modelFromDrawingStore.get();
+    const source = state.lineSource;
+    if (state.phase !== 'review' || source.kind !== 'raster') return false;
+    if (!isRasterPlacementCalibrated(source)) {
+      modelFromDrawingStore.patch({ notice: { kind: 'uncalibrated' } });
+      return false;
+    }
+    const fresh = compute(state, deps);
+    if (!fresh || !isRasterSourceCurrent(source)) {
+      modelFromDrawingStore.patch({ notice: { kind: 'no-scene' } });
+      return false;
+    }
+    if (keepSignature(fresh) !== keepSignature(state)) {
+      modelFromDrawingStore.patch({ ...fresh, notice: { kind: 'stale' } });
+      return false;
+    }
+    const outcome = keepRecognized(source, deps.accessor, state.keepMinTier, undoName);
+    recompute({}, deps);
+    modelFromDrawingStore.patch({ notice: { kind: 'kept', ...outcome } });
+    return writtenCount(outcome) > 0;
+  },
 };
+
+/** Το αποτύπωμα του «τι θα κρατηθεί»: πλήθη νέων/υπαρχόντων ανά στρώση. Διαφορά ⇒ ο άνθρωπος είδε άλλο πράγμα. */
+function keepSignature(s: Pick<Computed, 'dimensionSummary' | 'lineSummary'>): string {
+  const d = s.dimensionSummary;
+  const l = s.lineSummary;
+  return `${d?.fresh ?? '-'}/${d?.existing ?? '-'}|${l?.fresh ?? '-'}/${l?.existing ?? '-'}`;
+}
+
+function writtenCount(outcome: KeepRecognizedOutcome): number {
+  const count = (o: KeepRecognizedOutcome['lines']): number => (o?.kind === 'written' ? o.count : 0);
+  return count(outcome.dimensions) + count(outcome.lines);
+}
 
 /**
  * Η εγγραφή: τύποι → [τοίχοι (όλα ή τίποτα) → διαστάσεις] ως ΕΝΑ βήμα αναίρεσης → νέα πρόταση από τη σκηνή που

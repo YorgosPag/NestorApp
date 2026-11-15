@@ -60,14 +60,19 @@ export type EnsureNamedLayerResult =
   | { readonly ok: false; readonly reason: NamedLayerRefusal };
 
 /**
+ * ADR-929 §6.20 — πού **θα** γραφτεί κάτι σε ένα επώνυμο layer, **χωρίς** να γραφτεί τίποτα (προεπισκόπηση). Ίδια
+ * επίλυση με το {@link ensureNamedLayer}: ό,τι λέει εδώ το πάνελ, αυτό κάνει η εγγραφή.
+ */
+export type NamedLayerTarget =
+  | { readonly kind: 'existing'; readonly name: string }
+  | { readonly kind: 'create'; readonly name: string }
+  | { readonly kind: 'refused'; readonly reason: NamedLayerRefusal };
+
+/**
  * ADR-929 Δ20 Σ1.3β — πού **θα** γραφτούν οι διαστάσεις ενός στυλ, **χωρίς** να γραφτεί τίποτα (προεπισκόπηση).
  * Ίδια επίλυση με το {@link ensureDimensionLayer}: ό,τι λέει εδώ το πάνελ, αυτό κάνει η έγκριση.
  */
-export type DimensionLayerTarget =
-  | { readonly kind: 'existing'; readonly name: string }
-  | { readonly kind: 'create'; readonly name: string }
-  | { readonly kind: 'current' }
-  | { readonly kind: 'refused'; readonly reason: NamedLayerRefusal };
+export type DimensionLayerTarget = NamedLayerTarget | { readonly kind: 'current' };
 
 /**
  * Το layer των διαστάσεων ενός στυλ (`DimStyle.targetLayer`, ≡ `DIMLAYER`).
@@ -136,6 +141,14 @@ export function planDimensionLayer(
 ): DimensionLayerTarget {
   const spec = resolveDimensionLayerSpec(style);
   if (!spec) return currentDimensionLayerId() ? { kind: 'current' } : { kind: 'refused', reason: 'no-layer' };
+  return planNamedLayer(scene, spec);
+}
+
+/**
+ * ADR-929 §6.20 — η **ανάγνωση** του {@link ensureNamedLayer}: ίδιοι κλάδοι, ίδια σειρά (σκηνή → υπάρχον → φρουρός
+ * ονόματος → νέο), μηδέν εγγραφές. Ο ΕΝΑΣ τόπος της προεπισκόπησης layer — και για τις διαστάσεις και για τις γραμμές.
+ */
+export function planNamedLayer(scene: SceneModel | null, spec: NamedLayerSpec): NamedLayerTarget {
   if (!scene) return { kind: 'refused', reason: 'no-scene' };
   const existing = findSceneLayerByName(scene, spec.name);
   if (existing) return { kind: 'existing', name: existing.name };

@@ -466,6 +466,36 @@ ADR-911 commit: addWallsToScene / addOpeningsToScene (ένα undo)
 
 **Πηγές:** Sketch2BIM (https://arxiv.org/pdf/2510.20838) · Igarashi et al., Interactive Beautification, UIST 1997 (https://www-ui.is.s.u-tokyo.ac.jp/~takeo/papers/uist97.pdf) · Paulson & Hammond, PaleoSketch, IUI 2008 (https://psi.engr.tamu.edu/wp-content/uploads/2018/01/paulson2008no.pdf) · Tombre et al., Text/Graphics Separation Revisited, 2002 (https://link.springer.com/content/pdf/10.1007/3-540-45869-7_24.pdf) · SolveSpace (https://solvespace.com/tech.pl) · magicplan (https://help.magicplan.app/change-dimensions-of-your-floor-plan) · Koutamanis, Prolegomena to the Recognition of Floor Plan Sketches (https://repository.tudelft.nl/file/File_d7b63aff-b97c-41ba-ae30-87103342a70c).
 
+### Δ22 — «Κράτησε τα αναγνωρισμένα»: διαστάσεις και γραμμές ως οντότητες, ανεξάρτητα από τους τοίχους (απόφαση Giorgio, 2026-11-15)
+
+**Το κενό [Μ].** Ζωντανά, στον όροφο «ΔΟΚΙΜΗ Κτήριο Β · 2ος», το πάνελ έδειχνε τα εξής:
+- «Θα δημιουργηθούν 1» διάσταση, στο layer «ΔΙΑΣΤΑΣΕΙΣ».
+- 22 γραμμές διαστάσεων και 12 γραμμές μέσα σε κείμενο.
+
+Το **μόνο** κουμπί δέσμευσης ήταν το «Δημιουργία τοίχων (0)», και ήταν ανενεργό. Ο κώδικας (`writeApproved`) έγραφε διαστάσεις **μόνο αν** γράφτηκαν τοίχοι, κάτι που αντιστρέφει το Δ20 («κάθε στρώση γράφεται μόνη της»). Οι απλές γραμμές δεν γράφονταν από πουθενά. Ήταν κενό, όχι σκόπιμη επιλογή· το §6.16 το είχε ήδη σημειώσει ως «αναμένει απόφαση».
+
+**Τι κάνουν οι μεγάλοι [Π].** Η 2Δ γραμμική πληροφορία γίνεται κανονικές οντότητες:
+- **ανά κατηγορία layer**: AutoCAD `PDFIMPORT` με «Create object layers» → `PDF_Geometry` / `PDF_Text` / `PDF_Solid Fills` / `PDF_Images`· AutoCAD Raster Design VTools, όπου το layer ορίζεται από ρύθμιση, ακόμη και ανά πάχος γραμμής·
+- **με χωριστή πράξη από τη μοντελοποίηση**: το ArchiCAD «Explode into Current View» βγάζει γραμμές, γεμίσματα και κείμενα και ρητά **κανέναν** τοίχο·
+- **μόνο αφού οριστεί κλίμακα**: Plans2BIM/WiseBIM.
+
+Οι διαστάσεις πάνε στο layer του στυλ (`DIMLAYER`). Το Revit δεν μετατρέπει: έλκεται μόνο σε διανυσματικό PDF. Το `PDFIMPORT` φέρνει τις διαστάσεις ως γεωμετρία και κείμενο, όχι ως διαστάσεις, και το SHX ως γεωμετρία.
+
+**Απόφαση.**
+1. Νέα, **ανεξάρτητη** πράξη «Κράτησε N διαστάσεις και M γραμμές». Είναι ενεργή χωρίς τοίχους. Το «Δημιουργία τοίχων» μένει ως έχει, και οι δύο πράξεις γράφουν διαστάσεις από **τον ίδιο** γραφέα.
+2. **Layers**:
+   - διαστάσεις → layer του στυλ (`ensureDimensionLayer`)·
+   - γραμμές → `RECOGNIZED_Geometry`, ξεχωριστό από το `PDF_Geometry`, γιατί έχουν άλλη πηγή και άλλη ακρίβεια.
+
+   Τα ονόματα είναι δεδομένα, όχι μετάφραση (ADR-941 Δ5), και ζουν σε **ένα** μητρώο (`services/import-layer-names.ts`).
+3. **Ποιες γραμμές**:
+   - ποτέ οι `annotation` (πινελιές γραμμάτων)·
+   - γραμμή ή επέκταση διάστασης **μόνο αν δεν** τη ζωγραφίζει ήδη διάσταση (νέα που γράφεται ή υπάρχουσα), ώστε να μη διπλογράφεται και να μη χάνεται (ίδιο με ADR-941 Δ19)·
+   - τα υπόλοιπα με βεβαιότητα ≥ αυτής που διάλεξε ο άνθρωπος (Δ10). Προεπιλογή: **υψηλή**.
+4. **Δεύτερο πάτημα = μόνο τα νέα.** Η ιδεμποτία είναι γεωμετρική: ίδια άκρα με οποιαδήποτε φορά, εντός 2 px της εικόνας. **Δεν** σβήνεται τίποτα, άρα οι διορθώσεις του ανθρώπου μένουν. Στο ADR-941 αντίθετα η επανεισαγωγή αντικαθιστά, γιατί εκεί η πηγή είναι ακριβής και ντετερμινιστική.
+5. **Ένα** βήμα αναίρεσης (layers, διαστάσεις και γραμμές). Απαιτείται βαθμονόμηση. Ό,τι γράφεται είναι ό,τι φάνηκε: αν διαφέρει το αποτύπωμα, εμφανίζεται `stale` και δεν γράφεται τίποτα.
+6. **Πέρα από τους μεγάλους:** κάθε οντότητα φέρει **προέλευση** (Δ9) `metadata.planRecognition = { backgroundId, origin, sourceId, confidence }`. Το `PDFIMPORT` και το «Explode» την πετούν. Υλοποίηση: §6.20.
+
 ## 6. Φάσεις
 
 | Φάση | Περιεχόμενο | Παραδοτέο |
@@ -2437,7 +2467,7 @@ test δεν το έπιανε· ο Α απλώς το έκανε ορατό.
   **Επόμενο**: μέτρηση στην παραγωγή · Worker για τη σύντηξη = χωριστό σχέδιο (η αλυσίδα μένει ~600 ms > 100 ms).
 
 **Εκτός (προτάσεις, αναμένουν απόφαση).** Η κλίμακα από τις διαστάσεις αποτυγχάνει στην Παλαιολόγου: τέντωμα 467–497 %, πιθανώς ύψη
-κουφωμάτων ως διαστάσεις. Επίσης, οι διαστάσεις γράφονται μόνο μαζί με τοίχους (`writeApproved`), κάτι που αντιστρέφει το Δ20.
+κουφωμάτων ως διαστάσεις. ~~Επίσης, οι διαστάσεις γράφονται μόνο μαζί με τοίχους (`writeApproved`), κάτι που αντιστρέφει το Δ20.~~ **Λύθηκε στο Δ22 / §6.20 (2026-11-15):** «Κράτησε τα αναγνωρισμένα» γράφει διαστάσεις και γραμμές ανεξάρτητα από τους τοίχους.
 
 ### 6.17 Το αποτέλεσμα ανήκει στην εικόνα, όχι στον όροφο: ακύρωση με όνομα όταν αντικατασταθεί το υπόβαθρο (2026-11-14) [Υ]
 
@@ -2573,6 +2603,52 @@ Tesseract: `tessedit_char_whitelist`. Google Vision: `languageHints`. Κοινό
 `fusion/dimension-marks.ts` (νέο) · `fusion/plan-fusion.ts` · `fusion/plan-fusion-types.ts` · `testing/synthetic-dimensions.ts` ·
 `systems/plan-recognition/plan-read-values.ts` · `app/usePlanRecognitionWiring.ts` · `ui/panels/model-from-drawing/{PlanReadValuesSection,
 PlanRecognitionSections,ModelFromDrawingPanel}.tsx` · `i18n/locales/{el,en}/dxf-viewer-shell.json` · `types/i18n.ts` (παραγόμενο).
+
+### 6.20 «Κράτησε τα αναγνωρισμένα»: διαστάσεις και γραμμές ως οντότητες σχεδίου, ανεξάρτητα από τους τοίχους (2026-11-15) [Υ]
+
+Υλοποίηση του **Δ22**. Ανοίγει το §6.16 «Εκτός», όπου οι διαστάσεις γράφονταν μόνο μαζί με τοίχους.
+
+**Ροή.** `projectKeepRecognized` είναι **μία** προβολή με δύο αναγνώστες:
+- την προεπισκόπηση του πάνελ (`summarizeRecognizedLines` + το υπάρχον `summarizeRecognizedDimensions`, μέσα στο `compute()` του ελεγκτή, όπως το `dimensionSummary`)·
+- την εγγραφή (`keepRecognized`), μέσα σε **ένα** `runAsSingleUndo`.
+
+Η σειρά είναι διαστάσεις (`writeDimensionProjection`, ο ίδιος γραφέας με την έγκριση τοίχων) → layer γραμμών (`ensureNamedLayer`, **μόνο** όταν υπάρχουν νέες) → γραμμές (`appendEntitiesToScene`, ετικέτα `plan-recognition-lines`).
+
+Ο ελεγκτής (`modelFromDrawingSession.keep`) έχει τις ίδιες εγγυήσεις με το `approve`:
+- πηγή εικόνα που ζει·
+- βαθμονόμηση, αλλιώς `uncalibrated`·
+- αποτύπωμα «τι θα κρατηθεί» ίδιο με αυτό που φάνηκε, αλλιώς `stale` και τίποτα γραμμένο.
+
+**Απορρόφηση (ADR-941 Δ19).** Το `projectRecognizedDimensions` επιστρέφει πλέον τα τμήματα που ζωγραφίζει κάθε διάσταση (`span.segmentIds` + οι δύο επεκτάσεις), χωριστά για τις νέες και τις υπάρχουσες. Οι νέες απορροφούν **μόνο** όταν το layer διαστάσεων δεν αρνείται (`planDimensionLayer`). Αλλιώς οι γραμμές τους μένουν γραμμές.
+
+**Πηγή.** Το `ProposalLineSource` (raster) απέκτησε `linework` = **η ίδια** σύντηξη (`adjustedSegments` · `segmentRoles` · `segmentConfidence`), από το `lineSourceOf`. Είναι ίδια ταυτότητα με τα `segments` των τοίχων, όχι αντίγραφο ή δεύτερο store.
+
+**SSoT που προέκυψαν.**
+- `services/import-layer-names.ts`: το `PDF_IMPORT_LAYER_NAMES` του ADR-941 παράγεται πλέον από εδώ.
+- `planNamedLayer` στο `services/named-layer.ts`: η ανάγνωση του `ensureNamedLayer`. Το `planDimensionLayer` τη χρησιμοποιεί, και δεν υπάρχει πια δεύτερη αντιγραφή του «σκηνή → υπάρχον → φρουρός → νέο».
+- Το `DimensionLayerTarget` = `NamedLayerTarget` ∪ `current`.
+- `systems/model-from-drawing/recognized-provenance.ts`: ένα κλειδί και ένας κατασκευαστής για τη σφραγίδα Δ9. Μπαίνει και στις διαστάσεις της έγκρισης τοίχων, που μέχρι τώρα πετούσαν το `spanId`.
+
+**UI.**
+- `KeepRecognizedSection.tsx`: στρώση «Γραμμές» (θα δημιουργηθούν / υπάρχουν ήδη / layer, με άρνηση ως `alert`), επιλογή βεβαιότητας με Radix Select (ADR-001), το κουμπί και μια σημείωση.
+- Αποδίδεται μόνο για πηγή εικόνα, πάνω από το κουμπί των τοίχων και **χωρίς** την προϋπόθεση «υπάρχουν τοίχοι».
+- Ειδοποίηση `kept`: ολόκληρη πρόταση για τα πλήθη, και μία ολόκληρη πρόταση ανά στρώση που αρνήθηκε.
+- Το `WallsStep` έσπασε σε `ImageSourceSections` (όριο 40 γραμμών).
+- i18n `modelFromDrawing.keep.*` + `notice.kept*` (el + en)· το `types/i18n.ts` ξαναπαράχθηκε.
+
+**Εκτός (προτάσεις, αναμένουν απόφαση).**
+- Αφαίρεση γραμμών που καλύπτονται από γραμμένους τοίχους. Θέλει σφραγίδα `sourceIds` στους τοίχους, που σήμερα λείπει.
+- Κείμενα OCR ως οντότητες κειμένου (Δ20 Σ2, layer «Κείμενα»).
+- Επιλογή γραμμών ανά προέλευση μετά την εγγραφή («Select similar» κατά βεβαιότητα).
+
+**Tests.** Γράφτηκαν· **δεν** έτρεξαν (N.(-2): μόνο με έγκριση).
+
+**Αρχεία.** `services/{import-layer-names,named-layer}.ts` · `systems/model-from-drawing/{keep-recognized,recognized-lines,recognized-provenance,
+model-from-drawing-dimensions,model-from-drawing-session,model-from-drawing-store,proposal-line-source}.ts` ·
+`systems/plan-recognition/plan-recognition-session.ts` · `systems/pdf-vector-import/pdf-vector-import-commit.ts` ·
+`app/ModelFromDrawingHost.tsx` · `ui/panels/model-from-drawing/{KeepRecognizedSection,ModelFromDrawingPanel}.tsx` ·
+`i18n/locales/{el,en}/dxf-viewer-shell.json` · `types/i18n.ts` (παραγόμενο) · tests: `systems/model-from-drawing/__tests__/keep-recognized.test.ts`
+(νέο, 8 περιπτώσεις) · `ui/panels/model-from-drawing/__tests__/ModelFromDrawingPanel.test.tsx` (fixture: νέα πεδία/πράξεις).
 
 ## 7. Εναλλακτικές που απορρίφθηκαν
 
@@ -2757,3 +2833,4 @@ PlanRecognitionSections,ModelFromDrawingPanel}.tsx` · `i18n/locales/{el,en}/dxf
 | 2026-11-14 | **§6.17 — το αποτέλεσμα ανήκει στην εικόνα, όχι στον όροφο** (έγκριση Giorgio): «Αντικατάσταση» υποβάθρου ⇒ η αναγνώριση σβήνει με όνομα (`background-replaced`) και ο βοηθός αποσύρει την πρόταση και επιστρέφει σε δείγμα, κρατώντας τις αποφάσεις (Δ3 μένουν, Δ7 ορφανές, §6.12). Ένας κριτής `isRasterSourceCurrent`· φρουρός μετά τον Worker· απόρριψη αργής πηγής στο `adoptRasterSegments`· συνδρομή στο store υποβάθρων από το `usePlanRecognitionWiring`. 5 νέες περιπτώσεις στο `plan-recognition-flow.test.ts`: σουίτα 15/15 ✅, μεταλλάξεις 2/2. |
 | 2026-11-14 | **§6.18 — μάσκα γραφών στην αποκωδικοποίηση OCR** (εντολή Giorgio): ζωντανά στο ΤΕΣΤ2 τα άκρα διαστάσεων διαβάστηκαν «下»/«皇» (πολύγλωσσο λεξικό 18.708 του PP-OCRv6). Νέο `ocr-charset.ts` (`isPlanTextChar` κατά γραφή Unicode, `planTextClassMask`)· το `decodeCtc` διαλέγει την πιθανότερη **επιτρεπτή** κλάση με την **αρχική** πιθανότητα (χαμηλή ⇒ «ύποπτη»). Σουίτες `ocr-*` 63/63 ✅, μετάλλαξη 2 κόκκινα. Η ζωντανή επαλήθευση της §6.17 πέρασε (βήματα 1–4, παραγωγή `81f1425`). |
 | 2026-11-15 | **§6.19 — απολήξεις και βοηθητικές ανήκουν στη διάσταση** (εντολή Giorgio): μέτρηση στο ΤΕΣΤ2 (150/300 dpi) έδειξε παράγοντα «κείμενο» 0 παντού, κατακόρυφο βέλος 1 : 3 ως «cross», βοηθητικές και δίδυμη ζώνη ως τοίχους. Αγκυρωμένη διακοπή από κείμενο (ισχυρές απολήξεις στα εξωτερικά άκρα, πρώτος γείτονας) · μισές γωνίες βέλους από 7° · επέκταση πριν το κομμάτι απόληξης · δίδυμη ζώνη ⇒ διάσταση. Νέο `fusion/dimension-marks.ts`: «T»/«I» στη συνάντηση επέκτασης + διάστασης (≤ 2 χαρακτήρες, όχι ελεγμένα από άνθρωπο) απορροφώνται πριν από τη σύντηξη, `absorbedMarkTextIds`, σημείωση στο «Τι διάβασα». Τοίχοι στο ΤΕΣΤ2 = μόνο οι 4 παρειές. 49 σουίτες / 906 ✅, μεταλλάξεις 5/5. Ζωντανή επαλήθευση εκκρεμεί. |
+| 2026-11-15 | **Δ22 + §6.20 — «Κράτησε τα αναγνωρισμένα»** (εντολή Giorgio, σχέδιο εγκεκριμένο): διαστάσεις και γραμμές της αναγνώρισης εικόνας ως οντότητες, **ανεξάρτητα από τους τοίχους** — κλείνει το «Εκτός» του §6.16 (Δ20 αντιστρεφόταν). Έρευνα: PDFIMPORT «Create object layers» · Raster Design VTools · ArchiCAD «Explode into Current View» · Revit · Plans2BIM. Διαστάσεις → layer στυλ (ίδιος γραφέας `writeDimensionProjection`)· γραμμές → `RECOGNIZED_Geometry` (νέο μητρώο `services/import-layer-names.ts`, από όπου παράγεται και το `PDF_IMPORT_LAYER_NAMES`)· χωρίς πινελιές γραμμάτων, χωρίς γραμμές που ζωγραφίζει ήδη διάσταση (ADR-941 Δ19), βεβαιότητα ≥ επιλογής (προεπιλογή υψηλή)· ιδεμποτία γεωμετρική, καμία διαγραφή· ένα undo· `stale`/`uncalibrated` όπως το `approve`· προέλευση Δ9 σε κάθε οντότητα (και στις διαστάσεις της έγκρισης τοίχων). Νέο `planNamedLayer` (το `planDimensionLayer` το χρησιμοποιεί). i18n el + en, `types/i18n.ts` ξαναπαράχθηκε. Tests γράφτηκαν, **δεν** έτρεξαν (αναμένουν έγκριση). Ζωντανή επαλήθευση εκκρεμεί. |

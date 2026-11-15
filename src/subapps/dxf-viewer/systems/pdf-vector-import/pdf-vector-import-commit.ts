@@ -34,9 +34,16 @@ import {
 import { isPdfVectorImportOf, pdfVectorGeometry, pdfVectorTexts, type PdfVectorLayers } from './pdf-vector-entities';
 import { bindPdfDimensions, type PdfDimensionReading } from './pdf-vector-dimension-binding';
 import { pdfDimensionEntities } from './pdf-vector-dimension-entities';
+import { IMPORT_LAYER_NAMES } from '../../services/import-layer-names';
 
-/** Τα ονόματα layer του AutoCAD `PDFIMPORT` — δεδομένο που ταξιδεύει σε DWG/DXF, όχι ετικέτα οθόνης (Δ5). */
-export const PDF_IMPORT_LAYER_NAMES = { geometry: 'PDF_Geometry', text: 'PDF_Text' } as const;
+/**
+ * Τα ονόματα layer του AutoCAD `PDFIMPORT` — δεδομένο που ταξιδεύει σε DWG/DXF, όχι ετικέτα οθόνης (Δ5). Παράγωγο του
+ * ΕΝΟΣ μητρώου ονομάτων εισαγωγής (`services/import-layer-names.ts`, ADR-929 §6.20).
+ */
+export const PDF_IMPORT_LAYER_NAMES = {
+  geometry: IMPORT_LAYER_NAMES.pdfGeometry,
+  text: IMPORT_LAYER_NAMES.pdfText,
+} as const;
 
 const PDF_VECTOR_IMPORT_TOOL = 'pdf-vector-import';
 

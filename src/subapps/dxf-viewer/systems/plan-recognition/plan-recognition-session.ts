@@ -191,6 +191,8 @@ function lineSourceOf(run: PlanRecognitionRun, fusion: PlanFusionResult, version
   return {
     kind: 'raster', recognitionId: `${run.id}.${version}`, floorId: run.floorId, backgroundId: run.backgroundId, segments,
     dimensions: dimensionSourceOf(run, fusion),
+    // ADR-929 §6.20 — η ΙΔΙΑ σύντηξη, ολόκληρη: οι γραμμές που δεν έγιναν είσοδος τοίχων μπορούν ακόμη να κρατηθούν.
+    linework: fusion,
   };
 }
 
