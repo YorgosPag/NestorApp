@@ -27,7 +27,13 @@ import {
   REGISTRY_NUMBER_MAX,
   type IssuanceAction,
 } from './issuance-assignment';
-import { MYDATA_MARK_PATTERN, QUOTE_BASES, QUOTE_SCOPE_ITEMS, type QuoteTerms } from './issuance-quote';
+import {
+  MYDATA_MARK_PATTERN,
+  QUOTE_BASES,
+  QUOTE_DELIVERY_BUSINESS_DAYS,
+  QUOTE_SCOPE_ITEMS,
+  type QuoteTerms,
+} from './issuance-quote';
 
 const target = {
   propertyId: z.string().trim().min(1),
@@ -46,6 +52,8 @@ export const vatRatePercentSchema = z.number().refine(
   (rate): rate is GreekVatRatePercent => (GREEK_VAT_RATE_PERCENTS as readonly number[]).includes(rate),
 );
 const quoteRevision = z.number().int().min(1);
+/** §45 Φ2 — «παράδοση σε N εργάσιμες από την έγκριση» — κοινό με το σχήμα του δίσκου. */
+export const deliveryBusinessDaysSchema = z.number().int().min(QUOTE_DELIVERY_BUSINESS_DAYS.min).max(QUOTE_DELIVERY_BUSINESS_DAYS.max);
 const positiveMinor = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 
 /**
@@ -59,6 +67,8 @@ export const quoteTermsBody = z.object({
   vatIncluded: z.boolean(),
   validUntil: isoDay,
   scope: z.array(z.enum(QUOTE_SCOPE_ITEMS)).min(1).max(QUOTE_SCOPE_ITEMS.length).transform((items) => [...new Set(items)]),
+  /** §45 Φ2 — υποχρεωτικό σε κάθε νέα προσφορά: πρόσωπο + τιμή + **χρόνος** εγκρίνονται μαζί. */
+  deliveryBusinessDays: deliveryBusinessDaysSchema,
 });
 
 export type QuoteTermsBody = z.infer<typeof quoteTermsBody>;
@@ -98,6 +108,11 @@ export const issuanceAssignmentBody = z.discriminatedUnion('action', [
     issuedOn: isoDay,
     totalMinor: positiveMinor,
   }),
+  /**
+   * §45 Φ2 — ορισμός (χωρίς δέσμευση στην προσφορά) ή **αλλαγή** της προθεσμίας παράδοσης. Η αιτιολογία είναι
+   * υποχρεωτική στην αλλαγή — την κρίνει ο μειωτής, που ξέρει αν υπάρχει ήδη προθεσμία.
+   */
+  z.object({ action: z.literal('schedule-delivery'), ...target, dueOn: isoDay, reason: optionalText(ISSUANCE_NOTE_MAX) }),
   z.object({ action: z.literal('cancel'), ...target }),
 ]);
 
@@ -219,6 +234,7 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
     case 'respond': return { kind: 'respond', outcome: request.outcome, note: null };
     case 'record-quote': return { kind: 'quote', terms: quoteTermsOf(request.terms, request.note) };
     case 'record-receipt': return { kind: 'record-receipt', mark: request.mark, issuedOn: request.issuedOn, totalMinor: request.totalMinor };
+    case 'schedule-delivery': return { kind: 'schedule-delivery', dueOn: request.dueOn, reason: request.reason };
     case 'cancel': return { kind: 'cancel' };
   }
 }

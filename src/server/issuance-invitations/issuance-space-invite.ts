@@ -56,7 +56,8 @@ export type SpaceInviteOutcome =
   | { readonly ok: true; readonly delivery: InvitationNoticeOutcome; readonly expiresAt: string }
   | { readonly ok: false; readonly refusal: SpaceInviteRefusal };
 
-async function readOwnAssignment(db: Firestore, companyId: string, propertyId: string, kind: DocumentKind): Promise<DocumentIssuanceAssignment | null> {
+/** Η ανάθεση του γραφείου (ξένη ≡ ανύπαρκτη). §45 Φ3 — ο ίδιος αναγνώστης για τη χειροκίνητη υπενθύμιση παράδοσης. */
+export async function readOwnAssignment(db: Firestore, companyId: string, propertyId: string, kind: DocumentKind): Promise<DocumentIssuanceAssignment | null> {
   const id = issuanceAssignmentIdOf(companyId, propertyId, kind);
   const assignment = parseIssuanceAssignment((await db.collection(COLLECTIONS.DOCUMENT_ISSUANCE_ASSIGNMENTS).doc(id).get()).data());
   return assignment && assignment.companyId === companyId && assignment.id === id ? assignment : null;
@@ -68,8 +69,11 @@ function professionalLinkIdOf(assignment: DocumentIssuanceAssignment): string | 
   return assignment.response?.basis === 'professional-link' ? assignment.response.invitationId : null;
 }
 
-/** Η διεύθυνση: πρώτα όποια **απέδειξε** ο ίδιος στον σύνδεσμο της ανάθεσης, μετά η κύρια της επαφής του γραφείου. */
-async function inviteeEmailOf(db: Firestore, assignment: DocumentIssuanceAssignment): Promise<string | null> {
+/**
+ * Η διεύθυνση: πρώτα όποια **απέδειξε** ο ίδιος στον σύνδεσμο της ανάθεσης, μετά η κύρια της επαφής του γραφείου.
+ * §45 Φ3 — ο **ίδιος** κανόνας για την υπενθύμιση παράδοσης (ένας κανόνας «πού γράφουμε στον επαγγελματία»).
+ */
+export async function inviteeEmailOf(db: Firestore, assignment: DocumentIssuanceAssignment): Promise<string | null> {
   const linkId = professionalLinkIdOf(assignment);
   if (linkId !== null) {
     const link = parseIssuanceInvitation((await issuanceInvitationsCollection(db).doc(linkId).get()).data(), linkId);

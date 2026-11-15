@@ -259,6 +259,11 @@
       "cancelled": "Cancelled",
       "quoted": "Quote received — awaiting the owner's approval"
     },
+    "rowAction": {
+      "proposed": "Request a quote",
+      "ownerApproved": "Notify the professional",
+      "declined": "Propose someone else"
+    },
     "party": {
       "owner": "the owner",
       "office": "the office",
@@ -425,7 +430,57 @@
       },
       "totals": "Net {net} · VAT {vat} · Total {total}",
       "electronicPayment": "For a total of €500 or more, payment by a private individual must be made by card or another electronic payment method.",
-      "oneTruth": "The price you enter is the only agreement for this job, and it is the one shown on the receipt."
+      "oneTruth": "The price you enter is the only agreement for this job, and it is the one shown on the receipt.",
+      "deliveryDaysLabel": "Delivery within (business days from approval)",
+      "deliveryDaysHint": "A whole number from {min} to {max}. Saturdays, Sundays and public holidays do not count. The time is approved together with the price."
+    },
+    "delivery": {
+      "until": "· due {date}",
+      "line": "Delivery deadline: {date}",
+      "missesSigning": "Delivery ({due}) falls after the signing ({signing}).",
+      "missesSigningShort": "after the signing",
+      "scheduledLine": "Deadline {date} — set on {at}",
+      "rescheduledLine": "Deadline {date} — changed on {at}: {reason}",
+      "quoteDays": "{count, plural, one {Delivery within # business day of approval} other {Delivery within # business days of approval}}",
+      "ifApprovedToday": "{count, plural, one {Delivery within # business day} other {Delivery within # business days}} — by {date} if approved today.",
+      "setTrigger": "Set deadline",
+      "changeTrigger": "Change deadline",
+      "title": "Delivery deadline",
+      "descriptionSet": "You are recording the delivery date agreed with {name}.",
+      "descriptionChange": "You are changing the delivery deadline of {name}. The change is written to the history together with its reason.",
+      "dateLabel": "Delivery date",
+      "reasonLabel": "Reason",
+      "reasonRequired": "Required when an existing deadline changes.",
+      "submit": "Save",
+      "tier": {
+        "overdue": "{count, plural, one {# day overdue} other {# days overdue}}",
+        "due-today": "due today",
+        "due-soon": "{count, plural, one {due in # day} other {due in # days}}",
+        "on-track": "on track",
+        "no-due-date": "no deadline"
+      },
+      "source": {
+        "quote": "{count, plural, one {From the approved quote: # business day from approval.} other {From the approved quote: # business days from approval.}}",
+        "office": "Set by the office.",
+        "rescheduled": "Changed: {reason}"
+      },
+      "reminder": {
+        "button": "Remind",
+        "sending": "Sending…",
+        "sent": "The reminder was sent to the professional.",
+        "sentUndelivered": "The email service did not accept the reminder — please try again later.",
+        "last": "Last reminder: {date}",
+        "none": "No reminder yet",
+        "next": "Next automatic: {date}",
+        "refusals": {
+          "NOT_FOUND": "The assignment was not found.",
+          "NOT_ACCEPTED": "The assignment is no longer in progress — refresh the page.",
+          "NO_EMAIL": "The professional has no email address. Add one to their contact.",
+          "TOO_SOON": "A reminder was already sent today. The next one is possible tomorrow.",
+          "REMINDER_LIMIT": "Many reminders have already been sent for this assignment.",
+          "generic": "The reminder was not sent. Please try again."
+        }
+      }
     }
   },
   "factsDeclaration": {
@@ -511,7 +566,8 @@
       "label": "Registry sections",
       "action": "Needs action",
       "all": "All documents",
-      "decisions": "To decide"
+      "decisions": "To decide",
+      "late": "Overdue"
     },
     "grouping": {
       "label": "Group by",
@@ -542,7 +598,8 @@
     },
     "next": {
       "assign": "Assign to a professional",
-      "none": "—"
+      "none": "—",
+      "since": "· since {date}"
     },
     "noExpiry": "—",
     "sheet": {
@@ -553,6 +610,10 @@
     },
     "decisions": {
       "empty": "No standing-obligation proposals to decide."
+    },
+    "late": {
+      "empty": "No assignment has passed its delivery deadline.",
+      "emptyHint": "Issuance assignments that were not delivered by the date the professional committed to appear here."
     }
   }
 }

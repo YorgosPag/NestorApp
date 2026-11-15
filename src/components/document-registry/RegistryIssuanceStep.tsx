@@ -38,9 +38,10 @@ import type { DocumentRegistryResponse } from '@/services/document-registry/docu
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { registryPersonOf } from '@/components/document-registry/registry-obligors';
-import { ObligorPerson } from '@/components/document-registry/RegistryObligorPeople';
+import { ObligorPerson } from '@/components/document-registry/registry-links';
 import { RegistryIssuanceSpaceLine } from '@/components/document-registry/RegistryIssuanceSpaceLine';
 import { InspectorFitLine } from '@/components/document-registry/RegistryInspectorFitLine';
+import { RegistryIssuanceDelivery } from '@/components/document-registry/RegistryIssuanceDelivery';
 import {
   IssuanceCancelDialog,
   IssuanceDecisionDialog,
@@ -326,6 +327,13 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
       <BallInCourtLine state={state} view={view} registry={registry} />
       {/* §39 — μετά το «Αναλαμβάνω»: μπήκε ο επαγγελματίας στον χώρο της ανάθεσης; */}
       {state.stage === 'accepted' ? <RegistryIssuanceSpaceLine view={view} /> : null}
+      {/* §45 Φ2 — έως πότε · καθυστερεί · προλαβαίνει την υπογραφή · ορισμός/αλλαγή προθεσμίας. */}
+      {view.delivery === null ? null : (
+        <RegistryIssuanceDelivery
+          view={view} status={view.delivery} record={state.record}
+          professionalName={nameOf(t, state.record.professionalContactId, registry)} canAct={(actions?.canAct ?? false) && !saving}
+        />
+      )}
       <HistoryLines record={state.record} registry={registry} />
       {saving ? <span role="status" className="text-xs text-muted-foreground">{t(ISSUANCE_KEYS.saving)}</span> : null}
       {actions?.canAct && !saving ? <StageActions view={view} stage={state.stage} record={state.record} registry={registry} /> : null}

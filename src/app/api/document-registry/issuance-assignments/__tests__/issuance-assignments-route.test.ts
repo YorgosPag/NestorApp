@@ -98,7 +98,7 @@ describe('PUT /api/document-registry/issuance-assignments', () => {
 
   it('καταγραφή προσφοράς: όροι σε λεπτά περνούν· ποσό 0 ή ΜΑΡΚ 14 ψηφίων ⇒ 400', async () => {
     actOn.mockClear();
-    const terms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'] };
+    const terms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], deliveryBusinessDays: 5 };
     const quote = { action: 'record-quote', propertyId: 'prop_1', documentKind: 'energy-certificate', expectedStage: 'sent', terms, note: '  ' };
     expect((await put(quote)).status).toBe(200);
     expect(actOn.mock.calls[0][2]).toMatchObject({ action: 'record-quote', note: null, terms: { amountMinor: 10_000, scope: ['issuance'] } });

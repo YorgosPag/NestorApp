@@ -26,6 +26,8 @@ import {
   type IssuanceState,
 } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceCandidate } from '@/lib/document-validity/issuance-candidates';
+import { blockingDayOf } from '@/lib/document-validity/document-registry-view';
+import { issuanceDeliveryStatusOf, type IssuanceDeliveryStatus } from '@/lib/document-validity/issuance-delivery-due';
 import {
   inspectorFitOf,
   issuanceGradeRequirementOf,
@@ -53,6 +55,13 @@ export interface RegistryIssuanceView {
    * `null` = καμία τάξη δεν περιορίζει την έκδοση αυτού του είδους ⇒ η κάρτα δεν λέει τίποτα.
    */
   readonly inspectorFit: Readonly<Record<string, InspectorFit>> | null;
+  /**
+   * §45 Φ2 — η ημέρα που η συναλλαγή **χρειάζεται** το έγγραφο (`blockingDayOf`, §43)· `null` = δεν μπλοκάρει τίποτα.
+   * Τη διαβάζουν η προειδοποίηση «μετά την υπογραφή» στο κελί, στο πάνελ **και** στην έγκριση της προσφοράς.
+   */
+  readonly signingDay: string | null;
+  /** §45 Φ2 — προθεσμία · βαθμίδα · σύγκρουση με την υπογραφή· `null` εκτός `accepted` (κανένας ισχυρισμός). */
+  readonly delivery: IssuanceDeliveryStatus | null;
 }
 
 /**
@@ -88,11 +97,16 @@ export function registryIssuanceOf(row: RegistryRow, registry: DocumentRegistryR
   const key = issuanceKeyOf(propertyId, kind);
   const issuance = registry.issuance[key];
   if (!registry.issuanceKnown || issuance === undefined) return 'unavailable';
+  const state = issuanceStateOf(issuance.record, issuance.latestIssuedOn);
+  const signingDay = blockingDayOf(row, registry.asOf);
   return {
     key,
     propertyId,
     kind,
-    state: issuanceStateOf(issuance.record, issuance.latestIssuedOn),
+    state,
+    signingDay,
+    // Το ρολόι της ΑΠΟΚΡΙΣΗΣ (`asOf`), ποτέ του πελάτη — ίδιο με την καρτέλα «Καθυστερούν».
+    delivery: state.kind === 'open' ? issuanceDeliveryStatusOf(state.stage, state.record, registry.asOf, signingDay) : null,
     candidates: issuance.candidates,
     lead: registry.properties[propertyId]?.obligorLead ?? null,
     // Διαβάστηκε και δεν υπάρχει πρόσκληση ⇒ «κανένας χώρος»· δεν διαβάστηκε ⇒ `null` (η κάρτα σωπαίνει).

@@ -9,6 +9,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
+import { issuanceSigningDayOf } from '@/lib/document-validity/document-registry-view';
 import type { IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { isLegacyIssuance } from '@/lib/document-validity/issuance-stage';
 import { quoteTotalsOf, type IssuanceQuote } from '@/lib/document-validity/issuance-quote';
@@ -24,22 +25,28 @@ export function linkStepOf(audience: IssuanceAudience, record: IssuanceAssignmen
   return isLegacyIssuance(record) ? 'legacy-accept' : 'give-quote';
 }
 
-/** Η προσφορά για τον υπεύθυνο — οι όροι, η αναθεώρηση, και το σύνολο της αρχικής όταν αναθεωρήθηκε. */
-export function quoteViewOf(quote: IssuanceQuote): IssuanceQuoteView {
-  const { basis, amountMinor, vatRatePercent, vatIncluded, validUntil, scope, note, revision, previous } = quote;
+/**
+ * Η προσφορά για τον υπεύθυνο — οι όροι, η αναθεώρηση, το σύνολο της αρχικής όταν αναθεωρήθηκε, και (§45) η ημέρα
+ * υπογραφής, ώστε η σελίδα να πει «η παράδοση πέφτει μετά την υπογραφή» πριν από την έγκριση.
+ */
+export function quoteViewOf(quote: IssuanceQuote, signingDay: string | null): IssuanceQuoteView {
+  const { basis, amountMinor, vatRatePercent, vatIncluded, validUntil, scope, note, deliveryBusinessDays, revision, previous } = quote;
   return {
-    basis, amountMinor, vatRatePercent, vatIncluded, validUntil, scope, note, revision,
+    basis, amountMinor, vatRatePercent, vatIncluded, validUntil, scope, note, deliveryBusinessDays, revision,
     previousTotalMinor: previous === null ? null : quoteTotalsOf(previous).totalMinor,
+    signingDay,
   };
 }
 
 /** Τα §42 πεδία της όψης: βήμα · φάκελος (μόνο επαγγελματίας) · προσφορά (μόνο υπεύθυνος). */
 export async function quoteFacetsOf(db: Firestore, link: ResolvedLink) {
-  const { invitation, record, label } = link;
+  const { invitation, record, label, registry } = link;
   const step = linkStepOf(invitation.audience, record);
   const brief = step === 'give-quote'
     ? await readIssuanceQuoteBrief(db, { companyId: invitation.companyId, propertyId: invitation.propertyId, scope: label.scope, actorUid: invitation.invitedByUid })
     : null;
-  const quote = step === 'approve-quote' && record.quote !== null ? quoteViewOf(record.quote) : null;
+  // §45 — από το ΙΔΙΟ μητρώο που ήδη διαβάστηκε για τον σύνδεσμο (καμία δεύτερη ανάγνωση).
+  const signingDay = issuanceSigningDayOf(registry.rows, invitation.propertyId, invitation.documentKind, registry.asOf);
+  const quote = step === 'approve-quote' && record.quote !== null ? quoteViewOf(record.quote, signingDay) : null;
   return { step, brief, quote } as const;
 }

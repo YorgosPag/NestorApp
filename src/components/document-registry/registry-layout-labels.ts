@@ -16,6 +16,8 @@ export const LAYOUT_KEYS = {
   groupingLabel: `${K}grouping.label`,
   actionEmpty: `${K}action.empty`,
   actionEmptyHint: `${K}action.emptyHint`,
+  lateEmpty: `${K}late.empty`,
+  lateEmptyHint: `${K}late.emptyHint`,
   blocksNow: `${K}blocks.now`,
   blocksOn: `${K}blocks.on`,
   blocksNo: `${K}blocks.no`,
@@ -30,6 +32,7 @@ export const LAYOUT_KEYS = {
   decisionsEmpty: `${K}decisions.empty`,
   nextAssign: `${K}next.assign`,
   nextNone: `${K}next.none`,
+  nextSince: `${K}next.since`,
   noExpiry: `${K}noExpiry`,
   sheetDescription: `${K}sheet.description`,
   groupNoProperty: `${K}group.noProperty`,
@@ -37,6 +40,7 @@ export const LAYOUT_KEYS = {
 
 export const REGISTRY_TAB_LABEL_KEYS: Readonly<Record<RegistryTab, string>> = {
   action: `${K}tabs.action`,
+  late: `${K}tabs.late`,
   all: `${K}tabs.all`,
   decisions: `${K}tabs.decisions`,
 };

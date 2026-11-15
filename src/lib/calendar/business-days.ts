@@ -27,6 +27,24 @@ export function isBusinessDay(dateKey: string): boolean {
   return greekPublicHolidayOn(dateKey) === null;
 }
 
+/** Φρένο ασφαλείας του {@link addBusinessDays} — όχι κανόνας: καμία προθεσμία της εφαρμογής δεν ζητά περισσότερες. */
+const MAX_BUSINESS_DAYS = 366;
+
+/**
+ * **Η Ν-οστή εργάσιμη ΜΕΤΑ από την ημέρα** — η ίδια η ημέρα δεν μετρά («παράδοση σε 5 εργάσιμες» από Δευτέρα ⇒ την
+ * επόμενη Δευτέρα), σαββατοκύριακα και επίσημες αργίες δεν μετρούν (ADR-915 §45 Φ2). `n = 0` ⇒ η ίδια ημέρα.
+ * `null` για άκυρο κλειδί, αρνητικό ή μη ακέραιο `n`, ή `n` πάνω από το φρένο.
+ */
+export function addBusinessDays(dateKey: string, n: number): string | null {
+  if (!Number.isInteger(n) || n < 0 || n > MAX_BUSINESS_DAYS || isoWeekdayOfDateKey(dateKey) === null) return null;
+  let current: string | null = dateKey;
+  for (let counted = 0; current !== null && counted < n;) {
+    current = addDaysToDateKey(current, 1);
+    if (current !== null && isBusinessDay(current)) counted += 1;
+  }
+  return current;
+}
+
 /**
  * Η ημερομηνία μετά τον κανόνα αργιών: εργάσιμη ⇒ ίδια· αλλιώς η προηγούμενη/επόμενη εργάσιμη. `'none'` ⇒ ίδια.
  * `null` για άκυρο κλειδί.

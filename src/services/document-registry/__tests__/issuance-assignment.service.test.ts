@@ -48,6 +48,7 @@ const PROPOSE = {
 const NOTIFY = { action: 'notify', ...TARGET, expectedStage: 'proposed', channel: 'phone' } as const satisfies IssuanceAssignmentBody;
 const QUOTE_TERMS: QuoteTermsBody = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'],
+  deliveryBusinessDays: 5,
 };
 const RECORD_QUOTE = { action: 'record-quote', ...TARGET, expectedStage: 'sent', terms: QUOTE_TERMS, note: null } as const satisfies IssuanceAssignmentBody;
 const DECIDE = {
@@ -89,7 +90,7 @@ describe('actOnIssuanceAssignment — πρόταση', () => {
     expect(stored()).toMatchObject({
       companyId: COMPANY, propertyId: 'prop_1', scope: 'property', documentKind: 'energy-certificate',
       professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
-      proposedByUid: 'user_1', decision: null, quote: null, receipt: null,
+      proposedByUid: 'user_1', decision: null, quote: null, receipt: null, deliverySchedule: [], deliveryReminders: null,
     });
     const registry = await readDocumentRegistry(db(), COMPANY, NOW);
     expect(registry.issuanceKnown).toBe(true);
@@ -138,6 +139,16 @@ describe('actOnIssuanceAssignment — απόφαση του ΥΠΕΥΘΥΝΟΥ',
     expect(await act(DECIDE)).toMatchObject({ ok: true, outcome: 'changed', stage: 'accepted' });
     expect(stored()).toMatchObject({
       decision: { outcome: 'approved', ownerContactId: 'cont_a', basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'user_1', quoteRevision: 1 },
+    });
+  });
+
+  it('§45 Φ3 — η έγκριση γράφει ΣΤΗΝ ΙΔΙΑ εγγραφή το πρόγραμμα υπενθυμίσεων της προθεσμίας (proactive)', async () => {
+    await toQuoted();
+    expect(stored()).toMatchObject({ deliveryReminders: null });
+    await act(DECIDE);
+    // Έγκριση Σάββατο 17/10 + 5 εργάσιμες ⇒ Παρασκευή 23/10· παραμονή Πέμπτη 22/10, μεσάνυχτα Ελλάδας (θερινή ώρα, UTC+3).
+    expect(stored()).toMatchObject({
+      deliveryReminders: { forDueOn: '2026-10-23', dueAt: '2026-10-21T21:00:00.000Z', sentAt: [], manual: [] },
     });
   });
 

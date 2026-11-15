@@ -12,6 +12,7 @@
 
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { HumanLanguage } from '@/i18n/languages';
+import type { DeliveryReminderMoment } from '@/lib/document-validity/issuance-delivery-reminder';
 import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
 
 import type { InvitationEmailCoreWording } from './invitation-email-shared';
@@ -88,6 +89,21 @@ export interface IssuanceEmailWording {
     readonly intro: (office: string, document: string, property: string) => string;
     readonly nextLabel: string;
     readonly next: string;
+  };
+  /**
+   * §45 Φ3 — **η υπενθύμιση παράδοσης** στον επαγγελματία (Vanta «due-date reminder» · DocuSign «Remind»): η στιγμή
+   * (πριν · σήμερα · μετά · χωρίς προθεσμία) αλλάζει θέμα, επικεφαλίδα και εισαγωγή. Με χώρο ⇒ κουμπί «Άνοιγμα χώρου»
+   * (δεμένο σε λογαριασμό)· χωρίς ⇒ καμία διεύθυνση, μόνο «ενημερώστε το γραφείο». 🔒 Ποτέ τηλέφωνο/email του γραφείου
+   * (Ε-9′) και ποτέ η ημέρα της υπογραφής — είναι υπόθεση του ιδιοκτήτη, όχι του επαγγελματία.
+   */
+  readonly deliveryReminder: InvitationEmailCoreWording & {
+    readonly subject: Readonly<Record<DeliveryReminderMoment, (document: string, property: string) => string>>;
+    readonly heading: Readonly<Record<DeliveryReminderMoment, string>>;
+    readonly intro: Readonly<Record<DeliveryReminderMoment, (office: string, document: string, property: string) => string>>;
+    readonly dueLabel: string;
+    readonly nextLabel: string;
+    readonly nextInSpace: string;
+    readonly nextNoSpace: string;
   };
   readonly noteLabel: string;
   readonly unnamedOffice: string;
@@ -197,6 +213,41 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
         'Ο χώρος δίνει πρόσβαση μόνο σε αυτή την ανάθεση, όχι στο γραφείο. Τα στοιχεία επικοινωνίας σας δεν φαίνονται '
         + 'σε κανέναν χωρίς τη δική σας επιλογή.',
     },
+    deliveryReminder: {
+      subject: {
+        upcoming: (document, property) => `Υπενθύμιση: η παράδοση λήγει σύντομα — ${document} — ${property}`,
+        'due-today': (document, property) => `Υπενθύμιση: η παράδοση λήγει σήμερα — ${document} — ${property}`,
+        overdue: (document, property) => `Η παράδοση καθυστερεί — ${document} — ${property}`,
+        'no-due-date': (document, property) => `Υπενθύμιση για την παράδοση — ${document} — ${property}`,
+      },
+      heading: {
+        upcoming: 'Η προθεσμία παράδοσης πλησιάζει',
+        'due-today': 'Η προθεσμία παράδοσης λήγει σήμερα',
+        overdue: 'Η προθεσμία παράδοσης πέρασε',
+        'no-due-date': 'Πώς πάει η έκδοση;',
+      },
+      intro: {
+        upcoming: (office, document, property) =>
+          `${office} σας υπενθυμίζει ότι πλησιάζει η προθεσμία παράδοσης του εγγράφου «${document}» για το ακίνητο ${property}.`,
+        'due-today': (office, document, property) =>
+          `${office} σας υπενθυμίζει ότι σήμερα λήγει η προθεσμία παράδοσης του εγγράφου «${document}» για το ακίνητο ${property}.`,
+        overdue: (office, document, property) =>
+          `${office} σας ενημερώνει ότι η προθεσμία παράδοσης του εγγράφου «${document}» για το ακίνητο ${property} πέρασε.`,
+        'no-due-date': (office, document, property) =>
+          `${office} ρωτά για την πρόοδο της έκδοσης του εγγράφου «${document}» για το ακίνητο ${property}.`,
+      },
+      dueLabel: 'Προθεσμία παράδοσης',
+      nextLabel: 'Τι χρειάζεται',
+      nextInSpace: 'Ανεβάστε το έγγραφο ή ενημερώστε το γραφείο για νέα ημερομηνία, μέσα από τον χώρο της ανάθεσης.',
+      nextNoSpace: 'Παραδώστε το έγγραφο στο γραφείο ή ενημερώστε το για νέα ημερομηνία.',
+      cta: 'Άνοιγμα χώρου',
+      onlyWord: 'μόνο',
+      boundToAddress: (onlyHtml) =>
+        `Ο σύνδεσμος ανοίγει ${onlyHtml} με τον λογαριασμό σας — προωθημένος δεν λειτουργεί για άλλον.`,
+      footnote:
+        'Λαμβάνετε αυτό το μήνυμα επειδή αναλάβατε την έκδοση. Οι υπενθυμίσεις σταματούν μόλις το γραφείο καταχωρίσει '
+        + 'το έγγραφο ή αλλάξει την ανάθεση.',
+    },
     noteLabel: 'Σημείωση του γραφείου',
     unnamedOffice: 'Το γραφείο',
     unnamedProperty: 'σας',
@@ -301,6 +352,41 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       footnote:
         'The space gives access to this assignment only, not to the office. Your contact details are not shown '
         + 'to anyone without your own choice.',
+    },
+    deliveryReminder: {
+      subject: {
+        upcoming: (document, property) => `Reminder: delivery is due soon — ${document} — ${property}`,
+        'due-today': (document, property) => `Reminder: delivery is due today — ${document} — ${property}`,
+        overdue: (document, property) => `Delivery is overdue — ${document} — ${property}`,
+        'no-due-date': (document, property) => `Delivery reminder — ${document} — ${property}`,
+      },
+      heading: {
+        upcoming: 'The delivery deadline is approaching',
+        'due-today': 'The delivery deadline is today',
+        overdue: 'The delivery deadline has passed',
+        'no-due-date': 'How is the issuance going?',
+      },
+      intro: {
+        upcoming: (office, document, property) =>
+          `${office} reminds you that the delivery deadline for the document “${document}” of the property ${property} is approaching.`,
+        'due-today': (office, document, property) =>
+          `${office} reminds you that the delivery deadline for the document “${document}” of the property ${property} is today.`,
+        overdue: (office, document, property) =>
+          `${office} lets you know that the delivery deadline for the document “${document}” of the property ${property} has passed.`,
+        'no-due-date': (office, document, property) =>
+          `${office} asks about the progress of the document “${document}” for the property ${property}.`,
+      },
+      dueLabel: 'Delivery deadline',
+      nextLabel: 'What is needed',
+      nextInSpace: 'Upload the document, or tell the office about a new date, from the assignment space.',
+      nextNoSpace: 'Deliver the document to the office, or let them know about a new date.',
+      cta: 'Open the space',
+      onlyWord: 'only',
+      boundToAddress: (onlyHtml) =>
+        `The link opens ${onlyHtml} with your account — forwarded, it will not work for anyone else.`,
+      footnote:
+        'You receive this message because you took on the issuance. Reminders stop as soon as the office records '
+        + 'the document or changes the assignment.',
     },
     noteLabel: 'Note from the office',
     unnamedOffice: 'The office',

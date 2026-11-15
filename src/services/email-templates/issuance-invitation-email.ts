@@ -28,6 +28,7 @@ import enRequest from '@/i18n/locales/en/document-request.json';
 import enLegality from '@/i18n/locales/en/legality.json';
 import enMarket from '@/i18n/locales/en/property-market.json';
 import type { IssuanceCredential, LinkVerification } from '@/lib/document-validity/issuance-assignment';
+import type { DeliveryReminderMoment } from '@/lib/document-validity/issuance-delivery-reminder';
 import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
 import { formatOperatorDate, formatOperatorDateTime } from '@/lib/operator-time-format';
 
@@ -75,7 +76,15 @@ export type IssuanceEmailInput =
     readonly space: IssuanceSpaceLink | null;
   }
   /** §39 — η πρόσκληση στον χώρο της ανάθεσης (επαναποστολή από το γραφείο). */
-  | { readonly kind: 'space'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly space: IssuanceSpaceLink };
+  | { readonly kind: 'space'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly space: IssuanceSpaceLink }
+  /**
+   * §45 Φ3 — η υπενθύμιση παράδοσης στον επαγγελματία. `spaceLink` = ο χώρος του (μπήκε με λογαριασμό) ⇒ κουμπί·
+   * `null` ⇒ μήνυμα χωρίς σύνδεσμο. `dueOn` = η τρέχουσα προθεσμία (`null` = καμία).
+   */
+  | {
+    readonly kind: 'delivery-reminder'; readonly language: unknown; readonly facts: IssuanceEmailFacts;
+    readonly moment: DeliveryReminderMoment; readonly dueOn: string | null; readonly spaceLink: string | null;
+  };
 
 /** Ο σύνδεσμος εισόδου στον χώρο (απόλυτος, έτοιμος από τον καλούντα) και η λήξη του. */
 export interface IssuanceSpaceLink {
@@ -203,12 +212,34 @@ function spaceEmail(named: Named, input: Extract<IssuanceEmailInput, { kind: 'sp
   });
 }
 
+/**
+ * §45 Φ3 — η υπενθύμιση παράδοσης. Με χώρο: **ένα** κουμπί προς τον χώρο (ανοίγει μόνο με τον λογαριασμό του). Χωρίς:
+ * κανένας σύνδεσμος — μόνο «παραδώστε ή ενημερώστε το γραφείο».
+ */
+function deliveryReminderEmail(named: Named, input: Extract<IssuanceEmailInput, { kind: 'delivery-reminder' }>): ConfirmationEmailResult {
+  const { language, office, property, document } = named;
+  const w = named.w.deliveryReminder;
+  const details = [
+    ...(input.dueOn === null ? [] : [invitationDetailLine(w.dueLabel, formatOperatorDate(input.dueOn, language))]),
+    ...noteLine(named, input.facts.note),
+    invitationDetailLine(w.nextLabel, input.spaceLink === null ? w.nextNoSpace : w.nextInSpace),
+  ];
+  const framing = {
+    language, subject: w.subject[input.moment](document, property), heading: w.heading[input.moment],
+    intro: lineOf(w.intro[input.moment], [office, document, property]), details,
+  };
+  return input.spaceLink === null
+    ? composeNoticeEmail({ ...framing, footnote: w.footnote })
+    : composeInvitationEmail({ ...framing, link: input.spaceLink, core: w });
+}
+
 /** **Το μήνυμα, στη γλώσσα του παραλήπτη.** Ο σύνδεσμος έρχεται έτοιμος (απόλυτος) από τον καλούντα. */
 export function buildIssuanceEmail(input: IssuanceEmailInput): ConfirmationEmailResult {
   const named = namedOf(input);
   const { w, language, office, property, document, professional } = named;
   if (input.kind === 'receipt') return receiptEmail(named, input);
   if (input.kind === 'space') return spaceEmail(named, input);
+  if (input.kind === 'delivery-reminder') return deliveryReminderEmail(named, input);
   if (input.kind === 'co-owner') {
     const lead = input.leadName?.trim() || w.unnamedPerson;
     return composeNoticeEmail({

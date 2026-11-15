@@ -29,7 +29,7 @@ const LINK_DECLINE: IssuanceAction = { kind: 'respond', outcome: 'declined', not
 /** §42 — η προσφορά που ανοίγει το στάδιο `quoted`, όπου μόνο ζητείται έγκριση από τον υπεύθυνο. */
 const QUOTE: IssuanceAction = {
   kind: 'quote',
-  terms: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null },
+  terms: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5 },
 };
 /** Πρόταση → αίτημα προσφοράς (εκτός εφαρμογής) → προσφορά ⇒ στάδιο `quoted`. */
 const QUOTED: readonly (readonly [IssuanceAction, IssuanceActor?])[] = [[PROPOSE], [SEND(null)], [QUOTE]];

@@ -18,12 +18,15 @@
 import React from 'react';
 
 import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { mandateDetailHref } from '@/lib/mandate/mandate-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { Link } from '@/lib/workspace/navigation';
 import type { DocumentRequirement, RequirementProcessRef } from '@/lib/document-validity/document-requirement';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
+import type { RegistryObligorPerson } from '@/components/document-registry/registry-obligors';
+import { ISSUER_KEYS, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 
 type Names = Pick<DocumentRegistryResponse, 'properties'>;
 
@@ -58,6 +61,20 @@ export function RegistryPropertyLink({ propertyId, names, className, children }:
     return <Link href={mandateDetailHref(propertyId)} className={className}>{children}</Link>;
   }
   return <Link href={ENTITY_ROUTES.properties.withId(propertyId)} className={className}>{children}</Link>;
+}
+
+/**
+ * Μία επαφή του μητρώου ως σύνδεσμος προς την καρτέλα της — ξένη ή διαγραμμένη ⇒ κείμενο, ποτέ σύνδεσμος σε «δεν υπάρχει».
+ * Ζει εδώ (όχι στο `RegistryObligorPeople`) ώστε ο **πίνακας** (§45 Φ1) να μη σέρνει τον επιλογέα υπευθύνου (CHECK 3.34).
+ */
+export function ObligorPerson({ person }: { readonly person: RegistryObligorPerson }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  if (!person.reachable) return <span className="text-muted-foreground">{t(ISSUER_KEYS.obligorUnavailable)}</span>;
+  return (
+    <Link href={ENTITY_ROUTES.contacts.withId(person.contactId)} className="text-foreground underline underline-offset-4">
+      {person.name ?? t(ISSUER_KEYS.obligorUnnamed)}
+    </Link>
+  );
 }
 
 export interface RegistryProcessLinkProps extends LinkLookProps {

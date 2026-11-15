@@ -24,7 +24,11 @@ import {
   type InstructionChannel,
   type NoticeChannel,
 } from '@/lib/document-validity/issuance-assignment';
+import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
+import { deliveryDueFromApproval, deliveryMissesSigning } from '@/lib/document-validity/issuance-delivery-due';
+import { formatDate } from '@/lib/intl-formatting';
 import { ChoiceField } from '@/components/document-registry/IssuanceChoiceField';
+import { DELIVERY_KEYS } from '@/components/document-registry/issuance-delivery-labels';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
@@ -51,6 +55,30 @@ export interface DecisionFormProps extends IssuanceFormProps {
   readonly quoteRevision: number;
 }
 
+/**
+ * §45 Φ2 — **τι εγκρίνεται**: πρόσωπο + τιμή + **χρόνος**. «Παράδοση σε N εργάσιμες — έως <ημ.>, αν εγκριθεί σήμερα»,
+ * και 🏆 Α4: αν αυτή η ημέρα πέφτει μετά την υπογραφή, το λέει **πριν** δεσμευτεί κανείς. Ίδιος κριτής με το κελί.
+ */
+function ApprovalDeliveryNotice({ view }: { readonly view: IssuanceFormProps['view'] }): React.ReactElement | null {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const quote = view.state.kind === 'open' ? view.state.record.quote : null;
+  if (quote === null || quote.deliveryBusinessDays === null) return null;
+  const dueOn = deliveryDueFromApproval(conveyanceToday(), quote);
+  if (dueOn === null) return null;
+  return (
+    <section className="flex flex-col gap-1" aria-live="polite">
+      <p className="m-0 text-sm text-foreground">
+        {t(DELIVERY_KEYS.ifApprovedToday, { count: quote.deliveryBusinessDays, date: formatDate(dueOn) })}
+      </p>
+      {deliveryMissesSigning(dueOn, view.signingDay) && view.signingDay !== null ? (
+        <p role="alert" className="m-0 text-sm text-destructive">
+          {t(DELIVERY_KEYS.missesSigning, { due: formatDate(dueOn), signing: formatDate(view.signingDay) })}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export function DecisionForm({ view, close, professionalName, leadId, quoteRevision }: DecisionFormProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
@@ -65,6 +93,7 @@ export function DecisionForm({ view, close, professionalName, leadId, quoteRevis
   };
   return (
     <>
+      <ApprovalDeliveryNotice view={view} />
       <ChoiceField
         legend={t(DECISION_KEYS.outcomeLegend)} options={OUTCOMES} value={outcome} onChange={setOutcome}
         labelOf={(option) => (option === 'approved' ? t(DECISION_KEYS.approved, { name: professionalName }) : t(DECISION_KEYS.rejected))}

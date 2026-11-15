@@ -56,6 +56,22 @@ export const ISSUANCE_STAGE_KEYS: Readonly<Record<IssuanceStage, string>> = {
   cancelled: `${K}issuance.stage.cancelled`,
 };
 
+/**
+ * ADR-915 §45 Φ1 — **η ενέργεια της γραμμής** όταν η μπάλα είναι στο **γραφείο**: κουμπί που ανοίγει το πάνελ στο βήμα
+ * του. `null` = η μπάλα είναι σε τρίτον (ή το στάδιο έκλεισε) ⇒ το στάδιο ως κείμενο. Ολικός χάρτης: νέο στάδιο δεν
+ * μεταγλωττίζεται χωρίς απόφαση· η αντιστοιχία `≠ null ⇔ ballInCourtOf(stage) === 'office'` κλειδώνεται με test.
+ */
+export const ISSUANCE_ROW_ACTION_KEYS: Readonly<Record<IssuanceStage, string | null>> = {
+  proposed: `${K}issuance.rowAction.proposed`,
+  ownerApproved: `${K}issuance.rowAction.ownerApproved`,
+  declined: `${K}issuance.rowAction.declined`,
+  ownerRejected: null,
+  sent: null,
+  quoted: null,
+  accepted: null,
+  cancelled: null,
+};
+
 export const BALL_IN_COURT_KEYS: Readonly<Record<BallInCourtParty, string>> = {
   owner: `${K}issuance.party.owner`,
   office: `${K}issuance.party.office`,

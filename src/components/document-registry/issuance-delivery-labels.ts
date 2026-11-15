@@ -1,0 +1,82 @@
+/**
+ * @fileoverview ADR-915 §45 Φ2 — **οι λέξεις και η όψη της προθεσμίας παράδοσης**: βαθμίδα καθυστέρησης (εικονίδιο +
+ *   σήμα + λέξη — ποτέ μόνο χρώμα, CHECK 3.41) · προέλευση της προθεσμίας · διάλογος ορισμού/αλλαγής.
+ * @related lib/document-validity/issuance-delivery-due.ts (οι ρίζες) · RegistryIssuanceDelivery.tsx · RegistryRowAction.tsx
+ * @module components/document-registry/issuance-delivery-labels
+ *
+ * 🔑 **`Record<Ρίζα, …>`** (CHECK 3.73): νέα βαθμίδα ή προέλευση δεν μεταγλωττίζεται χωρίς λέξη και όψη.
+ * ⚠️ Κυριολεκτικά κλειδιά (template σε σταθερά module): ο γεννήτορας του route slice τα **λύνει** στατικά.
+ */
+
+import { CalendarCheck2, CalendarClock, CalendarX2, CalendarOff, type LucideIcon } from 'lucide-react';
+
+import type { BadgeVariantProps } from '@/components/ui/badge';
+import type { IssuanceDueSource, IssuanceLatenessTier } from '@/lib/document-validity/issuance-delivery-due';
+
+const K = 'document-registry:issuance.delivery.';
+
+export const DELIVERY_KEYS = {
+  until: `${K}until`,
+  line: `${K}line`,
+  missesSigning: `${K}missesSigning`,
+  missesSigningShort: `${K}missesSigningShort`,
+  scheduledLine: `${K}scheduledLine`,
+  rescheduledLine: `${K}rescheduledLine`,
+  quoteDays: `${K}quoteDays`,
+  ifApprovedToday: `${K}ifApprovedToday`,
+  setTrigger: `${K}setTrigger`,
+  changeTrigger: `${K}changeTrigger`,
+  title: `${K}title`,
+  descriptionSet: `${K}descriptionSet`,
+  descriptionChange: `${K}descriptionChange`,
+  dateLabel: `${K}dateLabel`,
+  reasonLabel: `${K}reasonLabel`,
+  reasonRequired: `${K}reasonRequired`,
+  submit: `${K}submit`,
+} as const;
+
+/** Η λέξη κάθε βαθμίδας — οι αριθμητικές παίρνουν `{count}` με πληθυντικό ICU. */
+export const DELIVERY_TIER_KEYS: Readonly<Record<IssuanceLatenessTier, string>> = {
+  overdue: `${K}tier.overdue`,
+  'due-today': `${K}tier.due-today`,
+  'due-soon': `${K}tier.due-soon`,
+  'on-track': `${K}tier.on-track`,
+  'no-due-date': `${K}tier.no-due-date`,
+};
+
+/** Η όψη κάθε βαθμίδας (Procore: Overdue κόκκινο · Due today/σύντομα κίτρινο · εντός γκρι). */
+export const DELIVERY_TIER_LOOK: Readonly<Record<IssuanceLatenessTier, { readonly icon: LucideIcon; readonly badge: NonNullable<BadgeVariantProps['variant']> }>> = {
+  overdue: { icon: CalendarX2, badge: 'error' },
+  'due-today': { icon: CalendarClock, badge: 'warning' },
+  'due-soon': { icon: CalendarClock, badge: 'warning' },
+  'on-track': { icon: CalendarCheck2, badge: 'muted' },
+  'no-due-date': { icon: CalendarOff, badge: 'outline' },
+};
+
+/** §45 Φ3 — το κουμπί «Υπενθύμιση» και η γραμμή «τελευταία / επόμενη». */
+export const DELIVERY_REMINDER_KEYS = {
+  button: `${K}reminder.button`,
+  sending: `${K}reminder.sending`,
+  sent: `${K}reminder.sent`,
+  sentUndelivered: `${K}reminder.sentUndelivered`,
+  last: `${K}reminder.last`,
+  none: `${K}reminder.none`,
+  next: `${K}reminder.next`,
+} as const;
+
+/** Κωδικός άρνησης της πόρτας (`DELIVERY_REMINDER_REFUSAL_STATUS`) → μήνυμα· άγνωστος ⇒ `generic`. */
+export const DELIVERY_REMINDER_REFUSAL_KEYS: Readonly<Record<string, string>> = {
+  NOT_FOUND: `${K}reminder.refusals.NOT_FOUND`,
+  NOT_ACCEPTED: `${K}reminder.refusals.NOT_ACCEPTED`,
+  NO_EMAIL: `${K}reminder.refusals.NO_EMAIL`,
+  TOO_SOON: `${K}reminder.refusals.TOO_SOON`,
+  REMINDER_LIMIT: `${K}reminder.refusals.REMINDER_LIMIT`,
+  generic: `${K}reminder.refusals.generic`,
+};
+
+/** Από πού ήρθε η τρέχουσα προθεσμία. */
+export const DELIVERY_SOURCE_KEYS: Readonly<Record<IssuanceDueSource, string>> = {
+  quote: `${K}source.quote`,
+  office: `${K}source.office`,
+  rescheduled: `${K}source.rescheduled`,
+};

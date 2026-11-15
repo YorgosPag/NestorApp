@@ -16,6 +16,7 @@ import { formatDate } from '@/lib/intl-formatting';
 import { formatMinor } from '@/lib/money/money';
 import { QUOTE_KEYS } from '@/components/document-registry/issuance-labels';
 import { basisText } from '@/components/document-registry/issuance-quote-labels';
+import { DELIVERY_KEYS } from '@/components/document-registry/issuance-delivery-labels';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
@@ -25,6 +26,7 @@ export function quoteLines(t: Translate, record: IssuanceAssignmentRecord): Reac
   const total = formatMinor(quoteTotalsOf(quote).totalMinor);
   return [
     <li key="quote">{t(QUOTE_KEYS.line, { total, basis: basisText(t, quote.basis), date: formatDate(quote.validUntil) })}</li>,
+    quote.deliveryBusinessDays === null ? null : <li key="quote-delivery">{t(DELIVERY_KEYS.quoteDays, { count: quote.deliveryBusinessDays })}</li>,
     quote.previous === null ? null : (
       <li key="quote-revised">{t(QUOTE_KEYS.revisedLine, { total, previous: formatMinor(quoteTotalsOf(quote.previous).totalMinor) })}</li>
     ),

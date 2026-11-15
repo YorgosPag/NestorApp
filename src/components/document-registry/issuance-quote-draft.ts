@@ -6,7 +6,12 @@
  */
 
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
-import { QUOTE_SCOPE_ITEMS, type QuoteBasis, type QuoteScopeItem } from '@/lib/document-validity/issuance-quote';
+import {
+  isQuoteDeliveryBusinessDays,
+  QUOTE_SCOPE_ITEMS,
+  type QuoteBasis,
+  type QuoteScopeItem,
+} from '@/lib/document-validity/issuance-quote';
 import type { QuoteTermsBody } from '@/lib/document-validity/issuance-request';
 import { majorFromMinor, minorFromMajor } from '@/lib/money/money';
 import { parseStrictDecimal } from '@/lib/number/locale-number';
@@ -20,6 +25,8 @@ export interface QuoteDraft {
   readonly basis: QuoteBasis | null;
   readonly validUntil: string;
   readonly scope: readonly QuoteScopeItem[];
+  /** §45 Φ2 — «παράδοση σε N εργάσιμες», ως κείμενο· **καμία** προεπιλογή: τον χρόνο τον δεσμεύει ο επαγγελματίας. */
+  readonly deliveryDays: string;
 }
 
 const DEFAULT_VALIDITY_DAYS = 30;
@@ -33,7 +40,16 @@ export function emptyQuoteDraft(now: Date = new Date()): QuoteDraft {
     basis: null,
     validUntil: conveyanceToday(new Date(now.getTime() + DEFAULT_VALIDITY_DAYS * DAY_MS)),
     scope: QUOTE_SCOPE_ITEMS,
+    deliveryDays: '',
   };
+}
+
+/** Οι εργάσιμες ως ακέραιος του επιτρεπτού εύρους — αλλιώς `null` (μόνο ψηφία: «5», όχι «5,5» ούτε «5 ημ.»). */
+export function deliveryDaysOf(text: string): number | null {
+  const trimmed = text.trim();
+  if (!/^\d{1,3}$/.test(trimmed)) return null;
+  const days = Number(trimmed);
+  return isQuoteDeliveryBusinessDays(days) ? days : null;
 }
 
 /**
@@ -50,7 +66,8 @@ function amountMinorOf(amount: string): number | null {
 /** Η φόρμα → οι όροι του σώματος· `null` όσο κάτι λείπει (το κουμπί μένει ανενεργό). */
 export function quoteTermsFromDraft(draft: QuoteDraft): QuoteTermsBody | null {
   const amountMinor = amountMinorOf(draft.amount);
-  if (amountMinor === null || draft.basis === null || draft.scope.length === 0 || draft.validUntil === '') return null;
+  const deliveryBusinessDays = deliveryDaysOf(draft.deliveryDays);
+  if (amountMinor === null || draft.basis === null || draft.scope.length === 0 || draft.validUntil === '' || deliveryBusinessDays === null) return null;
   return {
     basis: draft.basis,
     amountMinor,
@@ -59,5 +76,6 @@ export function quoteTermsFromDraft(draft: QuoteDraft): QuoteTermsBody | null {
     vatIncluded: draft.vatRatePercent === 0 ? false : draft.vatIncluded,
     validUntil: draft.validUntil,
     scope: [...draft.scope],
+    deliveryBusinessDays,
   };
 }

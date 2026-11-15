@@ -104,7 +104,7 @@ beforeEach(async () => {
   await actOnIssuanceAssignment(db(), OFFICE, { action: 'notify', ...TARGET, expectedStage: 'proposed', channel: 'phone' }, SENT_AT);
   await actOnIssuanceAssignment(db(), OFFICE, {
     action: 'record-quote', ...TARGET, expectedStage: 'sent', note: null,
-    terms: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'] },
+    terms: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], deliveryBusinessDays: 5 },
   }, SENT_AT);
 });
 

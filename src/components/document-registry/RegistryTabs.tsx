@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * @fileoverview ADR-915 §41.5 — **οι καρτέλες του μητρώου** (`?tab=`): «Χρειάζονται ενέργεια» · «Όλα τα έγγραφα» · «Προς απόφαση».
+ * @fileoverview ADR-915 §41.5 — **οι καρτέλες του μητρώου** (`?tab=`): «Χρειάζονται ενέργεια» · «Καθυστερούν» (§45 Φ2) ·
+ *   «Όλα τα έγγραφα» · «Προς απόφαση».
  * @related lib/document-validity/document-registry-view.ts (καρτέλες · `rowsOfActionTab`) · RegistryAllTab.tsx ·
  *   RegistryUpkeepPanel.tsx (αμετάβλητο — κοινό με την καρτέλα ακινήτου)
  * @module components/document-registry/RegistryTabs
@@ -22,6 +23,7 @@ import {
   REGISTRY_TABS,
   registryTabTally,
   rowsOfActionTab,
+  rowsOfLateTab,
 } from '@/lib/document-validity/document-registry-view';
 import type { UpkeepDeclarationSubmit } from '@/hooks/document-registry/useUpkeepDeclaration';
 import type { RegistryAddress } from '@/hooks/document-registry/useRegistryAddress';
@@ -46,6 +48,20 @@ function ActionTab({ registry, onOpen }: { readonly registry: DocumentRegistryRe
   return <RegistryTable rows={rows} registry={registry} onOpen={onOpen} />;
 }
 
+/** §45 Φ2 — οι αναθέσεις που πέρασαν την προθεσμία, η πιο καθυστερημένη πρώτη (Procore «Overdue»). */
+function LateTab({ rows, registry, onOpen }: { readonly rows: ReturnType<typeof rowsOfLateTab>; readonly registry: DocumentRegistryResponse; readonly onOpen: (id: string) => void }) {
+  const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
+  if (rows.length === 0) {
+    return (
+      <section className="flex flex-col gap-1">
+        <p className="m-0 font-medium text-foreground">{t(LAYOUT_KEYS.lateEmpty)}</p>
+        <p className="m-0 text-sm text-muted-foreground">{t(LAYOUT_KEYS.lateEmptyHint)}</p>
+      </section>
+    );
+  }
+  return <RegistryTable rows={rows} registry={registry} onOpen={onOpen} />;
+}
+
 export interface RegistryTabsProps {
   readonly registry: DocumentRegistryResponse;
   readonly address: RegistryAddress;
@@ -56,7 +72,9 @@ export interface RegistryTabsProps {
 export function RegistryTabs({ registry, address, upkeep, canDecide }: RegistryTabsProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   const pendingDecisions = useMemo(() => registry.upkeep.filter((item) => item.declaration === null).length, [registry.upkeep]);
-  const tally = useMemo(() => registryTabTally(registry.rows, pendingDecisions), [registry.rows, pendingDecisions]);
+  // Ένας κριτής για μετρητή ΚΑΙ περιεχόμενο: ο αριθμός είναι το μήκος των ίδιων γραμμών.
+  const lateRows = useMemo(() => rowsOfLateTab(registry.rows, registry.issuance, registry.asOf), [registry]);
+  const tally = useMemo(() => registryTabTally(registry.rows, pendingDecisions, lateRows.length), [registry.rows, pendingDecisions, lateRows]);
   return (
     <Tabs value={address.tab} onValueChange={(next) => { if (isRegistryTab(next)) address.selectTab(next); }} className="flex flex-col gap-4">
       <TabsList aria-label={t(LAYOUT_KEYS.tabsLabel)}>
@@ -64,12 +82,15 @@ export function RegistryTabs({ registry, address, upkeep, canDecide }: RegistryT
           <TabsTrigger key={tab} value={tab} className="gap-2">
             {t(REGISTRY_TAB_LABEL_KEYS[tab])}
             {/* Ο αριθμός είναι ΣΗΜΑ δίπλα στην ετικέτα (Drata · Linear), όχι μέρος του μηνύματος: κανένα «1 έγγραφα». */}
-            <Badge variant={tab === 'action' && tally[tab] > 0 ? 'error' : 'muted'}>{formatNumber(tally[tab])}</Badge>
+            <Badge variant={(tab === 'action' || tab === 'late') && tally[tab] > 0 ? 'error' : 'muted'}>{formatNumber(tally[tab])}</Badge>
           </TabsTrigger>
         ))}
       </TabsList>
       <TabsContent value="action">
         <ActionTab registry={registry} onOpen={address.openDoc} />
+      </TabsContent>
+      <TabsContent value="late">
+        <LateTab rows={lateRows} registry={registry} onOpen={address.openDoc} />
       </TabsContent>
       <TabsContent value="all">
         <RegistryAllTab

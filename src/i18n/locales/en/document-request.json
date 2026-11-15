@@ -41,7 +41,8 @@
     "quoteRevised": "Revised after the site visit — originally {previous}",
     "quoteValid": "Valid until",
     "quoteScope": "Includes",
-    "quoteNote": "Note from the professional"
+    "quoteNote": "Note from the professional",
+    "quoteDelivery": "Delivery"
   },
   "done": {
     "approved": "We recorded your approval.",

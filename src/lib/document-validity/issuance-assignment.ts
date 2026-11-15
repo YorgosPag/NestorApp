@@ -30,9 +30,15 @@ import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 
 import type { IssuanceDelivery } from './issuance-delivery';
 import {
+  scheduledDelivery,
+  type IssuanceDeliveryScheduleEntry,
+  type IssuanceScheduleDeliveryAction,
+} from './issuance-delivery-due';
+import {
   areQuoteTermsValid, canReviseQuote, nextQuoteOf, receiptMatchesQuote,
   type IssuanceQuote, type IssuanceReceipt, type QuoteSubmission, type QuoteTerms,
 } from './issuance-quote';
+import type { IssuanceDeliveryReminders } from './issuance-delivery-reminder';
 import type { IssuanceReminders } from './issuance-reminder';
 import { ballInCourtOf, isLegacyIssuance, issuanceStageOf, type BallInCourtParty, type IssuanceStage } from './issuance-stage';
 
@@ -147,6 +153,16 @@ export interface IssuanceAssignmentRecord {
   readonly quote: IssuanceQuote | null;
   /** §42 — το παραστατικό της εγκεκριμένης τιμής (ΜΑΡΚ), προαιρετικό. */
   readonly receipt: IssuanceReceipt | null;
+  /**
+   * §45 Φ2 — οι καταχωρίσεις προθεσμίας του γραφείου (πρώτη ή αλλαγή), με τη σειρά τους. Η **τρέχουσα** προθεσμία
+   * παράγεται (`issuanceDeliveryOf`): η νεότερη δέσμευση, προσφορά ή καταχώριση. Κενό = καμία καταχώριση.
+   */
+  readonly deliverySchedule: readonly IssuanceDeliveryScheduleEntry[];
+  /**
+   * §45 Φ3 — οι υπενθυμίσεις παράδοσης (αυτόματο πρόγραμμα της τρέχουσας προθεσμίας + χειροκίνητες του γραφείου).
+   * Τηλεμετρία, όπως οι `reminders` των μηνυμάτων: ο μειωτής **δεν** την κρίνει. `null` = καμία.
+   */
+  readonly deliveryReminders: IssuanceDeliveryReminders | null;
   readonly cancellation: { readonly at: string; readonly byUid: string } | null;
 }
 
@@ -213,6 +229,8 @@ export type IssuanceAction =
   | { readonly kind: 'quote'; readonly terms: QuoteTerms }
   /** §42 — το παραστατικό της εγκεκριμένης τιμής· μόνο το γραφείο, μόνο ίδιο σύνολο. */
   | { readonly kind: 'record-receipt'; readonly mark: string; readonly issuedOn: string; readonly totalMinor: number }
+  /** §45 Φ2 — ορισμός ή αλλαγή (με αιτιολογία) της προθεσμίας παράδοσης· μόνο το γραφείο, μόνο μετά την ανάθεση. */
+  | IssuanceScheduleDeliveryAction
   | { readonly kind: 'cancel' };
 
 export type IssuanceActionKind = IssuanceAction['kind'];
@@ -226,6 +244,7 @@ const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose'>, read
   respond: ['sent', 'quoted', 'accepted'],
   quote: ['sent', 'accepted'],
   'record-receipt': ['accepted'],
+  'schedule-delivery': ['accepted'],
   cancel: ['proposed', 'ownerApproved', 'sent', 'quoted', 'accepted', 'declined'],
 };
 
@@ -268,6 +287,8 @@ function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: str
     response: null,
     quote: null,
     receipt: null,
+    deliverySchedule: [],
+    deliveryReminders: null,
     cancellation: null,
   };
 }
@@ -309,7 +330,7 @@ function responseBasisOf(record: IssuanceAssignmentRecord, actor: IssuanceActor)
 }
 
 /** Οι πράξεις που κάνει **μόνο** το γραφείο — ο έλεγχος actor έγινε ήδη. */
-function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<AdvancingAction, { kind: 'decide' | 'respond' | 'quote' | 'record-receipt' }>, uid: string, at: string): IssuanceAssignmentRecord {
+function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<AdvancingAction, { kind: 'decide' | 'respond' | 'quote' | 'record-receipt' | 'schedule-delivery' }>, uid: string, at: string): IssuanceAssignmentRecord {
   switch (action.kind) {
     case 'request-approval': return {
       ...record,
@@ -386,6 +407,7 @@ function advanced(record: IssuanceAssignmentRecord, stage: IssuanceStage, action
   if (action.kind === 'notify' && stage === 'sent' && action.invitationId === null) return { ok: false, refusal: 'transition-refused' };
   if (actor.kind !== 'office') return { ok: false, refusal: 'actor-refused' };
   if (action.kind === 'record-receipt') return receipted(record, action, actor.uid, actor.nowIso);
+  if (action.kind === 'schedule-delivery') return scheduledDelivery(record, action, actor.uid, actor.nowIso);
   return { ok: true, record: officeAdvanced(record, action, actor.uid, actor.nowIso), changed: true };
 }
 

@@ -21,6 +21,7 @@ import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { formatMinor } from '@/lib/money/money';
 import {
   QUOTE_BASES,
+  QUOTE_DELIVERY_BUSINESS_DAYS,
   QUOTE_SCOPE_ITEMS,
   quoteTotalsOf,
   requiresElectronicPayment,
@@ -60,6 +61,8 @@ export function IssuanceQuoteFields({ draft, onChange, disabled = false }: Issua
   const amountId = useId();
   const validId = useId();
   const includedId = useId();
+  const deliveryId = useId();
+  const deliveryHintId = useId();
   const set = (patch: Partial<QuoteDraft>) => onChange({ ...draft, ...patch });
   const toggleScope = (item: QuoteScopeItem, on: boolean) =>
     set({ scope: QUOTE_SCOPE_ITEMS.filter((each) => (each === item ? on : draft.scope.includes(each))) });
@@ -82,6 +85,16 @@ export function IssuanceQuoteFields({ draft, onChange, disabled = false }: Issua
       />
       <Label htmlFor={validId} className="text-sm font-medium">{t('document-registry:issuance.quoteForm.validUntilLabel')}</Label>
       <Input id={validId} type="date" value={draft.validUntil} min={conveyanceToday()} onChange={(event) => set({ validUntil: event.target.value })} />
+      {/* §45 Φ2 — ο χρόνος είναι μέρος της προσφοράς: ο υπεύθυνος εγκρίνει πρόσωπο + τιμή + χρόνο μαζί. */}
+      <Label htmlFor={deliveryId} className="text-sm font-medium">{t('document-registry:issuance.quoteForm.deliveryDaysLabel')}</Label>
+      <Input
+        id={deliveryId} inputMode="numeric" autoComplete="off" aria-describedby={deliveryHintId}
+        min={QUOTE_DELIVERY_BUSINESS_DAYS.min} max={QUOTE_DELIVERY_BUSINESS_DAYS.max}
+        value={draft.deliveryDays} onChange={(event) => set({ deliveryDays: event.target.value })}
+      />
+      <p id={deliveryHintId} className="m-0 text-xs text-muted-foreground">
+        {t('document-registry:issuance.quoteForm.deliveryDaysHint', { min: String(QUOTE_DELIVERY_BUSINESS_DAYS.min), max: String(QUOTE_DELIVERY_BUSINESS_DAYS.max) })}
+      </p>
       <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
         <legend className="mb-1 text-sm font-medium text-foreground">{t('document-registry:issuance.quoteForm.scopeLegend')}</legend>
         {QUOTE_SCOPE_ITEMS.map((item) => (

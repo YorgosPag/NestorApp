@@ -81,6 +81,11 @@ export interface IssuanceQuoteBrief {
 export interface IssuanceQuoteView extends QuoteTerms {
   readonly revision: number;
   readonly previousTotalMinor: number | null;
+  /**
+   * §45 — η ημέρα που η συναλλαγή του ακινήτου **χρειάζεται** το έγγραφο (`issuanceSigningDayOf`, από το ΙΔΙΟ μητρώο με την
+   * οθόνη του γραφείου)· `null` = δεν μπλοκάρει τίποτα. Ο υπεύθυνος βλέπει «μετά την υπογραφή» **πριν** εγκρίνει.
+   */
+  readonly signingDay: string | null;
 }
 
 /**

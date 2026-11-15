@@ -25,7 +25,7 @@ const VIEW = {
   step: 'approve-quote', brief: null,
   quote: {
     basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31',
-    scope: ['issuance'], note: null, revision: 1, previousTotalMinor: null,
+    scope: ['issuance'], note: null, deliveryBusinessDays: 5, revision: 1, previousTotalMinor: null, signingDay: null,
   },
 };
 /** Ο φάκελος προσφοράς του επαγγελματία — κλειστή λίστα, ποτέ ιδιοκτήτης ή ακριβής διεύθυνση. */
@@ -98,6 +98,18 @@ describe('ADR-915 §28 — /document-request', () => {
     expect(JSON.parse(String(answer?.init.body))).toEqual({ answer: 'reject', note: null, accessCode: null, quoteRevision: 1 });
   });
 
+  it('§45 Φ3 — η παράδοση πέφτει ΜΕΤΑ την ημέρα υπογραφής ⇒ ο υπεύθυνος το βλέπει ΠΡΙΝ εγκρίνει· χωρίς ημέρα υπογραφής ⇒ τίποτα', async () => {
+    const signing = { ...OPEN, view: { ...VIEW, quote: { ...VIEW.quote, signingDay: '2000-01-03' } } };
+    mockNetwork(respond(200, { success: true, data: signing }));
+    const { unmount } = render(<DocumentRequestGate />);
+    expect(await screen.findByText(/^document-registry:issuance\.delivery\.missesSigning/)).toBeTruthy();
+    unmount();
+    mockNetwork(respond(200, { success: true, data: OPEN }));
+    render(<DocumentRequestGate />);
+    expect(await screen.findByText('document-request:facts.quoteDelivery')).toBeTruthy();
+    expect(screen.queryByText(/^document-registry:issuance\.delivery\.missesSigning/)).toBeNull();
+  });
+
   it('ο επαγγελματίας βλέπει τον φάκελο προσφοράς και «Στείλτε προσφορά» — και ΟΧΙ τα κουμπιά του ιδιοκτήτη', async () => {
     mockNetwork(respond(200, { success: true, data: { access: 'open', view: PROFESSIONAL_VIEW } }));
     render(<DocumentRequestGate />);
@@ -108,7 +120,7 @@ describe('ADR-915 §28 — /document-request', () => {
     expect(screen.queryByRole('button', { name: 'document-request:professional.accept' })).toBeNull();
   });
 
-  it('🔴 η προσφορά ανοίγει ΜΟΝΟ όταν είναι πλήρης (ποσό + είδος τιμής)· στέλνει όρους σε λεπτά — μία απάντηση, `quote`', async () => {
+  it('🔴 η προσφορά ανοίγει ΜΟΝΟ όταν είναι πλήρης (ποσό + είδος τιμής + χρόνος παράδοσης §45)· στέλνει όρους σε λεπτά — μία απάντηση, `quote`', async () => {
     mockNetwork(respond(200, { success: true, data: { access: 'open', view: PROFESSIONAL_VIEW } }), respond(200, { success: true, data: { answer: 'quote', space: { kind: 'none' } } }));
     const user = userEvent.setup();
     render(<DocumentRequestGate />);
@@ -116,6 +128,9 @@ describe('ADR-915 §28 — /document-request', () => {
     expect(submit.hasAttribute('disabled')).toBe(true);
     await user.type(screen.getByLabelText('document-registry:issuance.quoteForm.amountLabel'), '100,50');
     await user.click(screen.getByRole('radio', { name: 'document-registry:issuance.quoteForm.basis.firm' }));
+    // §45 Φ2 — χωρίς χρόνο παράδοσης η προσφορά ΔΕΝ φεύγει: πρόσωπο + τιμή + χρόνος εγκρίνονται μαζί.
+    expect(submit.hasAttribute('disabled')).toBe(true);
+    await user.type(screen.getByLabelText('document-registry:issuance.quoteForm.deliveryDaysLabel'), '7');
     expect(submit.hasAttribute('disabled')).toBe(false);
     await user.click(submit);
     expect(await screen.findByText('document-request:done.quoted')).toBeTruthy();
@@ -123,7 +138,7 @@ describe('ADR-915 §28 — /document-request', () => {
     expect(answers).toHaveLength(1);
     expect(JSON.parse(String(answers[0]?.init.body))).toEqual({
       answer: 'quote', note: null, accessCode: null,
-      terms: { basis: 'firm', amountMinor: 10_050, vatRatePercent: 24, vatIncluded: false, validUntil: expect.any(String), scope: ['site-visit', 'issuance', 'registration'] },
+      terms: { basis: 'firm', amountMinor: 10_050, vatRatePercent: 24, vatIncluded: false, validUntil: expect.any(String), scope: ['site-visit', 'issuance', 'registration'], deliveryBusinessDays: 7 },
     });
   });
 

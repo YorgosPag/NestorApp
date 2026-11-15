@@ -18,6 +18,7 @@
  * @module lib/document-validity/document-registry-view
  */
 
+import type { DocumentKind } from '@/config/document-validity/document-validity';
 import { withQuery, type WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { DOCUMENT_EXPIRY_ROUTE } from '@/lib/document-validity/document-registry-routes';
 import {
@@ -33,7 +34,10 @@ import {
   type RegistryRowState,
 } from '@/lib/document-validity/document-registry';
 import type { DocumentDependent } from '@/lib/document-validity/document-requirement';
-import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
+import { needsIssuanceAssignment } from '@/lib/document-validity/document-next-step';
+import { issuanceKeyOf, issuanceStateOf } from '@/lib/document-validity/issuance-assignment';
+import { issuanceDeliveryStatusOf } from '@/lib/document-validity/issuance-delivery-due';
+import type { RowIssuance } from '@/lib/document-validity/issuance-rows';
 
 /** Η προβολή χωρίς φίλτρο — δείχνει **και** τις αντικατεστημένες γραμμές, υποβαθμισμένες. */
 export const REGISTRY_VIEW_ALL = 'all' as const;
@@ -116,11 +120,13 @@ export function registryViewTally(rows: readonly RegistryRow[], asOf: string): R
 /**
  * Οι καρτέλες της σελίδας, στη σειρά εμφάνισης. Κλειστό σύνολο. Η πρώτη είναι η προεπιλογή.
  * - `action`    — ό,τι θέλει ενέργεια **τώρα** (έληξε · λήγει · λείπει-και-μπλοκάρει), κατά το **πότε μπλοκάρει**
+ * - `late`      — §45 Φ2: αναθέσεις έκδοσης που **πέρασαν την προθεσμία παράδοσης** (Procore «Overdue»), η πιο
+ *                 καθυστερημένη πρώτη — ο ΙΔΙΟΣ κριτής με το κελί (`issuanceDeliveryStatusOf`)
  * - `all`       — το πλήρες μητρώο σε πυκνό πίνακα, με τις προβολές `?view=` και ομαδοποίηση `?group=`
  * - `decisions` — οι προτάσεις μόνιμων υποχρεώσεων (§35): **απόφαση**, όχι κατάσταση εγγράφου — γι' αυτό χωριστά
  * (Η «Ανά ακίνητο» της §41.3 είναι Φάση Β.)
  */
-export const REGISTRY_TABS = ['action', 'all', 'decisions'] as const;
+export const REGISTRY_TABS = ['action', 'late', 'all', 'decisions'] as const;
 export type RegistryTab = (typeof REGISTRY_TABS)[number];
 export const REGISTRY_DEFAULT_TAB: RegistryTab = 'action';
 
@@ -227,6 +233,18 @@ export function blockingDayOf(row: RegistryRow, asOf: string): string | null {
 }
 
 /**
+ * §45 Φ3 — **η ημέρα υπογραφής μιας ανάθεσης** (ακίνητο, είδος): η νωρίτερη {@link blockingDayOf} των γραμμών του ακινήτου
+ * γι' αυτό το είδος (όχι προσώπων). Για επιφάνειες που ξέρουν την ανάθεση, όχι τη γραμμή — π.χ. η σελίδα-σύνδεσμος του
+ * ιδιοκτήτη, που διαβάζει το **ίδιο** μητρώο. `null` = δεν μπλοκάρει τίποτα.
+ */
+export function issuanceSigningDayOf(rows: readonly RegistryRow[], propertyId: string, kind: DocumentKind, asOf: string): string | null {
+  const days = rows
+    .filter((row) => registryRowPropertyIdOf(row) === propertyId && registryRowKindOf(row) === kind && registryRowPartyOf(row) === null)
+    .flatMap((row) => blockingDayOf(row, asOf) ?? []);
+  return days.sort()[0] ?? null;
+}
+
+/**
  * Οι γραμμές της καρτέλας «Χρειάζονται ενέργεια»: πρώτα όσες μπλοκάρουν, η νωρίτερη μέρα πρώτη· μετά οι υπόλοιπες.
  * Ισοπαλία ⇒ η σειρά του διακομιστή (σταθερή ταξινόμηση — επείγον πρώτα).
  */
@@ -241,12 +259,47 @@ export function rowsOfActionTab(rows: readonly RegistryRow[], asOf: string): rea
   return keyed.map(({ row }) => row);
 }
 
+/**
+ * §45 Φ2 — **πόσες ημέρες καθυστερεί** η ανάθεση έκδοσης της γραμμής· `null` = δεν καθυστερεί (ή δεν υπάρχει ανάθεση,
+ * ή ο κατάλογος αναθέσεων δεν διαβάστηκε). Μόνο γραμμή **ακινήτου** που ζητά νέο έγγραφο — όπως το κελί.
+ */
+export function issuanceOverdueDaysOf(
+  row: RegistryRow,
+  issuance: Readonly<Record<string, RowIssuance>>,
+  asOf: string,
+): number | null {
+  const propertyId = registryRowPropertyIdOf(row);
+  const kind = registryRowKindOf(row);
+  if (propertyId === null || registryRowPartyOf(row) !== null || !needsIssuanceAssignment(kind, row.state)) return null;
+  const entry = issuance[issuanceKeyOf(propertyId, kind)];
+  if (entry === undefined) return null;
+  const state = issuanceStateOf(entry.record, entry.latestIssuedOn);
+  if (state.kind !== 'open') return null;
+  const lateness = issuanceDeliveryStatusOf(state.stage, state.record, asOf, null)?.lateness;
+  return lateness?.tier === 'overdue' ? lateness.days : null;
+}
+
+/** Οι γραμμές της καρτέλας «Καθυστερούν» — η πιο καθυστερημένη πρώτη· ισοπαλία ⇒ η σειρά του διακομιστή. */
+export function rowsOfLateTab(
+  rows: readonly RegistryRow[],
+  issuance: Readonly<Record<string, RowIssuance>>,
+  asOf: string,
+): readonly RegistryRow[] {
+  const keyed = rows.flatMap((row) => {
+    const days = issuanceOverdueDaysOf(row, issuance, asOf);
+    return days === null ? [] : [{ row, days }];
+  });
+  keyed.sort((a, b) => b.days - a.days);
+  return keyed.map(({ row }) => row);
+}
+
 /** Ο αριθμός κάθε καρτέλας. «Προς απόφαση» = όσες προτάσεις **περιμένουν** απόφαση (ίδιο μέτρο με το «Εκκρεμούν»). */
 export function registryTabTally(
   rows: readonly RegistryRow[],
   pendingDecisions: number,
+  lateCount: number,
 ): Readonly<Record<RegistryTab, number>> {
-  return { action: rows.filter(needsRegistryAction).length, all: rows.length, decisions: pendingDecisions };
+  return { action: rows.filter(needsRegistryAction).length, late: lateCount, all: rows.length, decisions: pendingDecisions };
 }
 
 /**

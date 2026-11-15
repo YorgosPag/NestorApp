@@ -177,7 +177,7 @@ describe('§41.5 «Χρειάζονται ενέργεια» — κατά το �
   });
 
   it('μετρητής καρτελών από τις ΙΔΙΕΣ γραμμές', () => {
-    expect(registryTabTally(rows, 3)).toEqual({ action: rowsOfActionTab(rows, FIXTURE_AS_OF).length, all: rows.length, decisions: 3 });
+    expect(registryTabTally(rows, 3, 2)).toEqual({ action: rowsOfActionTab(rows, FIXTURE_AS_OF).length, late: 2, all: rows.length, decisions: 3 });
   });
 });
 

@@ -39,6 +39,7 @@ import {
   RECEIPT_KEYS,
   SEND_KEYS,
 } from '@/components/document-registry/issuance-labels';
+import { DELIVERY_KEYS } from '@/components/document-registry/issuance-delivery-labels';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
 import { formatMinor } from '@/lib/money/money';
 
@@ -48,6 +49,7 @@ const ProposeForm = dynamic(() => import('./RegistryIssuanceProposeForm').then((
 const SendForm = dynamic(() => import('./RegistryIssuanceSendForm').then((mod) => mod.SendForm), { ssr: false });
 const QuoteRecordForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.QuoteRecordForm), { ssr: false });
 const ReceiptForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.ReceiptForm), { ssr: false });
+const DeliveryScheduleForm = dynamic(() => import('./RegistryIssuanceDeliveryForm').then((mod) => mod.DeliveryScheduleForm), { ssr: false });
 
 export interface IssuanceDialogShellProps {
   readonly trigger: string;
@@ -139,6 +141,28 @@ export function IssuanceReceiptDialog({ view, totalMinor }: { readonly view: Reg
   return (
     <IssuanceDialogShell trigger={t(QUOTE_KEYS.recordReceipt)} title={t(RECEIPT_KEYS.title)} description={t(RECEIPT_KEYS.description, { total: formatMinor(totalMinor) })}>
       {(close) => <ReceiptForm view={view} close={close} totalMinor={totalMinor} />}
+    </IssuanceDialogShell>
+  );
+}
+
+/**
+ * §45 Φ2 — «Ορισμός προθεσμίας» (καμία δέσμευση ακόμη) ή «Αλλαγή προθεσμίας» (με αιτιολογία, γραμμένη στο ιστορικό).
+ * `currentDueOn === null` ⇔ ορισμός.
+ */
+export function IssuanceDeliveryDialog({ view, professionalName, currentDueOn }: {
+  readonly view: RegistryIssuanceView;
+  readonly professionalName: string;
+  readonly currentDueOn: string | null;
+}): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const change = currentDueOn !== null;
+  return (
+    <IssuanceDialogShell
+      trigger={change ? t(DELIVERY_KEYS.changeTrigger) : t(DELIVERY_KEYS.setTrigger)}
+      title={t(DELIVERY_KEYS.title)}
+      description={change ? t(DELIVERY_KEYS.descriptionChange, { name: professionalName }) : t(DELIVERY_KEYS.descriptionSet, { name: professionalName })}
+    >
+      {(close) => <DeliveryScheduleForm view={view} close={close} currentDueOn={currentDueOn} />}
     </IssuanceDialogShell>
   );
 }

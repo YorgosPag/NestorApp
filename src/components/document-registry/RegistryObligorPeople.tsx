@@ -15,10 +15,9 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatPercentage } from '@/lib/intl-formatting';
-import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
-import { Link } from '@/lib/workspace/navigation';
-import type { RegistryObligorLead, RegistryObligorPerson, RegistryObligors } from '@/components/document-registry/registry-obligors';
+import type { RegistryObligorLead, RegistryObligors } from '@/components/document-registry/registry-obligors';
 import { RegistryObligorLeadPicker } from '@/components/document-registry/RegistryObligorLeadPicker';
+import { ObligorPerson } from '@/components/document-registry/registry-links';
 import {
   ISSUER_KEYS,
   LEAD_BASIS_KEYS,
@@ -28,18 +27,6 @@ import {
 } from '@/components/document-registry/document-registry-labels';
 
 type PeopleObligors = Extract<RegistryObligors, { kind: 'people' }>;
-
-const LINK = 'underline underline-offset-4';
-
-export function ObligorPerson({ person }: { readonly person: RegistryObligorPerson }): React.ReactElement {
-  const { t } = useTranslation([REGISTRY_NS]);
-  if (!person.reachable) return <span className="text-muted-foreground">{t(ISSUER_KEYS.obligorUnavailable)}</span>;
-  return (
-    <Link href={ENTITY_ROUTES.contacts.withId(person.contactId)} className={`text-foreground ${LINK}`}>
-      {person.name ?? t(ISSUER_KEYS.obligorUnnamed)}
-    </Link>
-  );
-}
 
 /** Οι ονομαζόμενοι + «+N ακόμη». Κενή λίστα ⇒ τίποτα. */
 export function ObligorList({ obligors, label }: { readonly obligors: PeopleObligors; readonly label: string }): React.ReactElement | null {

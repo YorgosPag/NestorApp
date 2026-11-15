@@ -41,6 +41,13 @@ import {
   type ObservedDeliveryOutcome,
 } from '@/lib/document-validity/issuance-delivery';
 import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
+import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
+import {
+  withDeliveryReminderPlan,
+  withDeliveryReminderSent,
+  withDeliveryRemindersRetired,
+  withManualDeliveryReminder,
+} from '@/lib/document-validity/issuance-delivery-reminder';
 import {
   planIssuanceReminders,
   withIssuanceReminderSent,
@@ -72,14 +79,18 @@ export interface IssuanceAuditFields {
   readonly professional: string;
   /** §28 — σε ποιον υπεύθυνο στάλθηκε σύνδεσμος έγκρισης (επαφή + όνομα της στιγμής). */
   readonly approvalRequest: string;
+  /** §45 Φ2 — η προθεσμία παράδοσης (ISO ημέρα· ο αναγνώστης του ιστορικού τη μορφοποιεί ως ημερομηνία). */
+  readonly deliveryDue: string;
 }
 
 export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditFields | null>> = {
   'energy-certificate': {
     stage: 'energyCertificateIssuanceStage', professional: 'energyCertificateIssuer', approvalRequest: 'energyCertificateIssuanceApprovalRequest',
+    deliveryDue: 'energyCertificateIssuanceDeliveryDue',
   },
   'building-identity': {
     stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
+    deliveryDue: 'buildingIdentityIssuanceDeliveryDue',
   },
   'tax-clearance': null,
   'insurance-clearance': null,
@@ -88,6 +99,7 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     stage: 'electricalInstallationIssuanceStage',
     professional: 'electricalInstallationIssuer',
     approvalRequest: 'electricalInstallationIssuanceApprovalRequest',
+    deliveryDue: 'electricalInstallationIssuanceDeliveryDue',
   },
 };
 
@@ -170,6 +182,10 @@ function auditChangesOf(fields: IssuanceAuditFields, t: Transition, names: Issua
   if (request !== null && request.invitationId !== t.previous?.approvalRequest?.invitationId) {
     changes.push(contactChange(fields.approvalRequest, t.previous?.approvalRequest?.ownerContactId ?? null, request.ownerContactId, names));
   }
+  // §45 Φ2 — η προθεσμία είναι ΠΑΡΑΓΟΜΕΝΗ: γράφεται όταν αλλάζει η τρέχουσα (έγκριση προσφοράς · ορισμός · αλλαγή).
+  const dueBefore = t.previous === null ? null : issuanceDeliveryOf(t.previous)?.dueOn ?? null;
+  const dueAfter = issuanceDeliveryOf(t.next)?.dueOn ?? null;
+  if (dueBefore !== dueAfter) changes.push({ field: fields.deliveryDue, oldValue: dueBefore, newValue: dueAfter });
   return changes;
 }
 
@@ -249,14 +265,16 @@ export async function stageIssuanceAction(tx: Transaction, db: Firestore, write:
   if (!casHolds(write.writer, previousStage)) return { outcome: { ok: false, refusal: 'stale' }, ...NOTHING_TO_WRITE };
   const reduced = reduceIssuance(write.documentKind, previous, write.latestIssuedOn, write.action, actorOf(write.writer, write.nowIso));
   if (!reduced.ok) return { outcome: reduced, ...NOTHING_TO_WRITE };
+  // §45 Φ3 — νέα προθεσμία (έγκριση · ορισμός · αλλαγή) ⇒ νέο πρόγραμμα υπενθυμίσεων, στην ΙΔΙΑ εγγραφή (proactive).
+  const record = reduced.changed ? withDeliveryReminderPlan(reduced.record, write.nowIso) : reduced.record;
   // Το ΠΡΑΓΜΑΤΙΚΟ στάδιο (και κλειστό: `ownerRejected` · `cancelled`) — όχι το ορατό, που για κλειστό είναι `null`.
-  const nextStage = issuanceStageOf(reduced.record);
-  const outcome: IssuanceWriteOutcome = { ok: true, outcome: reduced.changed ? 'changed' : 'unchanged', stage: nextStage, record: reduced.record };
+  const nextStage = issuanceStageOf(record);
+  const outcome: IssuanceWriteOutcome = { ok: true, outcome: reduced.changed ? 'changed' : 'unchanged', stage: nextStage, record };
   if (!reduced.changed) return { outcome, ...NOTHING_TO_WRITE };
-  const transition: Transition = { previous, next: reduced.record, previousStage, nextStage };
+  const transition: Transition = { previous, next: record, previousStage, nextStage };
   return {
     outcome,
-    commit: () => { tx.set(ref, storedOf(write, ref.id, reduced.record)); },
+    commit: () => { tx.set(ref, storedOf(write, ref.id, record)); },
     audit: () => recordIssuanceAudit(write, transition),
   };
 }
@@ -275,11 +293,15 @@ export async function writeIssuanceAction(db: Firestore, write: IssuanceWrite): 
   return staged.outcome;
 }
 
-/** Ποιο μήνυμα — η ανάθεση (γραφείο, ακίνητο, είδος) και το `invitationId` που τη γέννησε. */
-export interface IssuanceMessageTarget {
+/** Ποια ανάθεση — (γραφείο, ακίνητο, είδος): η ΜΙΑ ταυτότητα. */
+export interface IssuanceAssignmentTarget {
   readonly companyId: string;
   readonly propertyId: string;
   readonly documentKind: DocumentKind;
+}
+
+/** Ποιο μήνυμα — η ανάθεση και το `invitationId` που τη γέννησε. */
+export interface IssuanceMessageTarget extends IssuanceAssignmentTarget {
   readonly invitationId: string;
 }
 
@@ -287,7 +309,7 @@ export interface IssuanceMessageTarget {
  * **Η τηλεμετρία ενός μηνύματος** (παράδοση §30 · υπενθυμίσεις §31), σε συναλλαγή — ο ΙΔΙΟΣ δρόμος για όλες. Δεν περνά από
  * τον μειωτή και **δεν** γράφει ιστορικό: δεν αλλάζει στάδιο ούτε μπάλα. `update` ⇒ `null` = τίποτα να γραφτεί. Πετά σε βλάβη.
  */
-async function updateMessageTelemetry(db: Firestore, target: IssuanceMessageTarget, update: (record: IssuanceAssignmentRecord) => IssuanceAssignmentRecord | null): Promise<boolean> {
+async function updateMessageTelemetry(db: Firestore, target: IssuanceAssignmentTarget, update: (record: IssuanceAssignmentRecord) => IssuanceAssignmentRecord | null): Promise<boolean> {
   const ref = assignmentRefOf(db, target.companyId, target.propertyId, target.documentKind);
   return db.runTransaction(async (tx) => {
     const stored = parseIssuanceAssignment((await tx.get(ref)).data());
@@ -340,15 +362,57 @@ export function recordIssuanceReminder(db: Firestore, target: IssuanceMessageTar
     : withIssuanceRemindersRetired(record, target.invitationId, change.dueAt)));
 }
 
-/** Τα πεδία ερωτήματος της σάρωσης — ένα ανά είδος μηνύματος· ένα πεδίο, εύρος ⇒ αυτόματος δείκτης, κανένας σύνθετος. */
-const REMINDER_DUE_FIELDS = ['approvalRequest.reminders.dueAt', 'notice.reminders.dueAt'] as const;
+/**
+ * §45 Φ3 — τι απέγινε μια υπενθύμιση παράδοσης: αυτόματη έφυγε (η επόμενη από το ίδιο πρόγραμμα) · το πρόγραμμα
+ * αποσύρεται · χειροκίνητη έφυγε (ποιος, πότε).
+ */
+export type DeliveryReminderChange =
+  | { readonly kind: 'sent'; readonly dueAt: string; readonly sentAt: string }
+  | { readonly kind: 'retired'; readonly dueAt: string }
+  | { readonly kind: 'manual'; readonly at: string; readonly byUid: string };
 
 /**
- * **Ποιες αναθέσεις οφείλουν υπενθύμιση** (§31) — σε **όλα** τα γραφεία: η σάρωση είναι του συστήματος, όχι χρήστη. Κάθε
- * έγγραφο κρίνεται ξανά με το **δικό** του `companyId` από τον καλούντα. Φραγμένο ανά πεδίο (`limit`)· `truncated` το λέει.
+ * **Μία υπενθύμιση παράδοσης καταγράφεται** — ο ΙΔΙΟΣ δρόμος τηλεμετρίας με τη §31, με CAS: η αυτόματη στο `dueAt` που
+ * κρίθηκε, η χειροκίνητη στην κρίση «όχι δύο την ίδια ημέρα» (ξανατρέχει στη συναλλαγή). `false` = τίποτα δεν γράφτηκε.
+ * ⚠️ **Πετά** σε βλάβη: η σάρωση το μετρά ως αποτυχία, η χειροκίνητη το λέει στον άνθρωπο.
  */
-export async function readDueIssuanceReminders(db: Firestore, nowIso: string, limit: number): Promise<{ readonly assignments: readonly DocumentIssuanceAssignment[]; readonly truncated: boolean }> {
-  const snapshots = await Promise.all(REMINDER_DUE_FIELDS.map((field) => assignmentsCollection(db).where(field, '<=', nowIso).limit(limit).get()));
+export function recordDeliveryReminder(db: Firestore, target: IssuanceAssignmentTarget, change: DeliveryReminderChange): Promise<boolean> {
+  return updateMessageTelemetry(db, target, (record) => {
+    switch (change.kind) {
+      case 'sent': return withDeliveryReminderSent(record, change);
+      case 'retired': return withDeliveryRemindersRetired(record, change.dueAt);
+      case 'manual': return withManualDeliveryReminder(record, { at: change.at, byUid: change.byUid });
+    }
+  });
+}
+
+/**
+ * Τα πεδία ερωτήματος των σαρώσεων — ένα ανά πρόγραμμα· ένα πεδίο, εύρος ⇒ αυτόματος δείκτης, κανένας σύνθετος. Ρητά
+ * ονόματα: οι πύλες δεικτών (CHECK 3.15 · 3.91) τα διαβάζουν στατικά.
+ */
+const REMINDER_DUE_FIELDS = ['approvalRequest.reminders.dueAt', 'notice.reminders.dueAt'] as const;
+const DELIVERY_REMINDER_DUE_FIELDS = ['deliveryReminders.dueAt'] as const;
+
+export interface DueAssignments {
+  readonly assignments: readonly DocumentIssuanceAssignment[];
+  readonly truncated: boolean;
+}
+
+/**
+ * **Ποιες αναθέσεις οφείλουν υπενθύμιση μηνύματος** (§31) — σε **όλα** τα γραφεία: η σάρωση είναι του συστήματος, όχι
+ * χρήστη. Κάθε έγγραφο κρίνεται ξανά με το **δικό** του `companyId` από τον καλούντα. Φραγμένο ανά πεδίο (`limit`).
+ */
+export function readDueIssuanceReminders(db: Firestore, nowIso: string, limit: number): Promise<DueAssignments> {
+  return readAssignmentsDueBy(db, REMINDER_DUE_FIELDS, nowIso, limit);
+}
+
+/** **Ποιες αναθέσεις οφείλουν υπενθύμιση παράδοσης** (§45 Φ3) — ίδιο σχήμα με τη §31. */
+export function readDueDeliveryReminders(db: Firestore, nowIso: string, limit: number): Promise<DueAssignments> {
+  return readAssignmentsDueBy(db, DELIVERY_REMINDER_DUE_FIELDS, nowIso, limit);
+}
+
+async function readAssignmentsDueBy(db: Firestore, fields: readonly string[], nowIso: string, limit: number): Promise<DueAssignments> {
+  const snapshots = await Promise.all(fields.map((field) => assignmentsCollection(db).where(field, '<=', nowIso).limit(limit).get()));
   const byId = new Map<string, DocumentIssuanceAssignment>();
   for (const doc of snapshots.flatMap((snapshot) => snapshot.docs)) {
     const assignment = parseIssuanceAssignment(doc.data());

@@ -7,7 +7,7 @@
  *    αναθέσεων (μέσα από το fixture)· ψεύτικα μόνο το δίκτυο, το δικαίωμα και τα μηνύματα.
  */
 
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -27,6 +27,9 @@ import {
   SEND_KEYS,
 } from '../issuance-labels';
 import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
+import { formatDate } from '@/lib/intl-formatting';
+import { DELIVERY_KEYS, DELIVERY_SOURCE_KEYS, DELIVERY_TIER_KEYS } from '../issuance-delivery-labels';
+import { LAYOUT_KEYS, REGISTRY_TAB_LABEL_KEYS } from '../registry-layout-labels';
 import { reduceIssuance, type IssuanceAction, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { withIssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import { planIssuanceReminders, withIssuanceReminderSent } from '@/lib/document-validity/issuance-reminder';
@@ -94,7 +97,7 @@ function recordOf(actions: readonly IssuanceAction[]): IssuanceAssignmentRecord 
 const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_client', credential: INSPECTOR };
 const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha', quoteRevision: 1 };
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null };
-const FIRM_TERMS: QuoteTerms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null };
+const FIRM_TERMS: QuoteTerms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5 };
 const QUOTE: IssuanceAction = { kind: 'quote', terms: FIRM_TERMS };
 const INDICATIVE_QUOTE: IssuanceAction = { kind: 'quote', terms: { ...FIRM_TERMS, basis: 'indicative' } };
 /** §42 — πρόταση → αίτημα προσφοράς → προσφορά ⇒ `quoted` (η μπάλα στον υπεύθυνο). */
@@ -528,5 +531,118 @@ describe('ADR-915 §31 — αυτόματες υπενθυμίσεις: ο δι�
     render(<DocumentRegistryContent />);
     expect(within(article()).getAllByText(startsWith(LINK_HISTORY_KEYS.reminderSent))).toHaveLength(1);
     expect(within(article()).queryByText(startsWith(LINK_HISTORY_KEYS.reminderNext))).toBeNull();
+  });
+});
+
+/**
+ * ADR-915 §45 Φ2 — η ΠΡΟΘΕΣΜΙΑ ΠΑΡΑΔΟΣΗΣ όπως τη βλέπει ο άνθρωπος. Ημερολόγιο του fixture: έγκριση το Σάββατο 10/10
+ * (`ACTOR`), «σήμερα» του μητρώου 15/10 (`asOf`), και το κενό p6 μπλοκάρει μεταβίβαση **σήμερα** (ημέρα υπογραφής 15/10).
+ *  - 5 εργάσιμες ⇒ έως Παρ. 16/10 ⇒ «λήγει σε 1 ημέρα» **και** μετά την υπογραφή
+ *  - 1 εργάσιμη ⇒ έως Δευ. 12/10 ⇒ «καθυστερεί 3 ημέρες»
+ */
+describe('ADR-915 §45 Φ2 — προθεσμία παράδοσης: κελί · πάνελ · «Καθυστερούν» · έγκριση', () => {
+  const ROW = 'missing:p6:energy-certificate';
+  const tableRow = () => window.document.querySelector(`tbody tr[data-row-id="${ROW}"]`) as HTMLElement;
+  const startsWith = (key: string) => (content: string) => content.startsWith(key);
+  const OVERDUE: IssuanceAction[] = [PROPOSE, NOTIFY, { kind: 'quote', terms: { ...FIRM_TERMS, deliveryBusinessDays: 1 } }, APPROVE];
+
+  const renderWith = (record: IssuanceAssignmentRecord, url = `/document-expiry?doc=${encodeURIComponent(ROW)}`) => {
+    window.history.replaceState(null, '', url);
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record }]);
+    render(<DocumentRegistryContent />);
+  };
+
+  /** Προσφορά πριν από τη Φ2 (χωρίς χρόνο), όπως τη διαβάζει ο δίσκος. */
+  const legacyAccepted = (): IssuanceAssignmentRecord => {
+    const record = recordOf(ACCEPTED);
+    return { ...record, quote: record.quote === null ? null : { ...record.quote, deliveryBusinessDays: null } };
+  };
+
+  it('κελί: «· έως 16/10» + «λήγει σε 1 ημέρα» + «μετά την υπογραφή» — σχήμα και λέξη, όχι μόνο χρώμα', () => {
+    renderWith(recordOf(ACCEPTED));
+    const row = tableRow();
+    expect(within(row).getByText(`${DELIVERY_KEYS.until} ${JSON.stringify({ date: formatDate('2026-10-16') })}`)).toBeTruthy();
+    expect(within(row).getByText(`${DELIVERY_TIER_KEYS['due-soon']} ${JSON.stringify({ count: 1 })}`)).toBeTruthy();
+    expect(within(row).getByText(DELIVERY_KEYS.missesSigningShort)).toBeTruthy();
+  });
+
+  it('κελί: πέρασε η προθεσμία ⇒ «καθυστερεί 3 ημέρες»', () => {
+    renderWith(recordOf(OVERDUE));
+    expect(within(tableRow()).getByText(`${DELIVERY_TIER_KEYS.overdue} ${JSON.stringify({ count: 3 })}`)).toBeTruthy();
+  });
+
+  it('πριν από την έγκριση (`quoted`) ⇒ ΚΑΜΙΑ προθεσμία στο κελί (υπόσχεση, όχι δέσμευση)', () => {
+    renderWith(recordOf(QUOTED));
+    expect(within(tableRow()).queryByText(startsWith(DELIVERY_KEYS.until))).toBeNull();
+    expect(within(tableRow()).queryByText(startsWith(DELIVERY_TIER_KEYS['no-due-date']))).toBeNull();
+  });
+
+  it('πάνελ: προθεσμία + «από την προσφορά (5 εργάσιμες)» + η σύγκρουση με ΤΙΣ ΔΥΟ ημερομηνίες + «Αλλαγή προθεσμίας»', () => {
+    renderWith(recordOf(ACCEPTED));
+    const card = article();
+    expect(within(card).getByText(`${DELIVERY_KEYS.line} ${JSON.stringify({ date: formatDate('2026-10-16') })}`)).toBeTruthy();
+    expect(within(card).getByText(`${DELIVERY_SOURCE_KEYS.quote} ${JSON.stringify({ count: 5 })}`)).toBeTruthy();
+    expect(within(card).getByText(
+      `${DELIVERY_KEYS.missesSigning} ${JSON.stringify({ due: formatDate('2026-10-16'), signing: formatDate('2026-10-15') })}`,
+    )).toBeTruthy();
+    expect(within(card).getByRole('button', { name: DELIVERY_KEYS.changeTrigger })).toBeTruthy();
+  });
+
+  it('🔴 αλλαγή προθεσμίας: νέα ημερομηνία ΧΩΡΙΣ αιτιολογία ⇒ το κουμπί μένει ανενεργό · με αιτιολογία ⇒ `schedule-delivery`', async () => {
+    renderWith(recordOf(ACCEPTED));
+    const user = userEvent.setup();
+    await user.click(within(article()).getByRole('button', { name: DELIVERY_KEYS.changeTrigger }));
+    const dialog = await screen.findByRole('dialog');
+    const date = await within(dialog).findByLabelText(DELIVERY_KEYS.dateLabel);
+    const submit = within(dialog).getByRole('button', { name: DELIVERY_KEYS.submit });
+    expect(submit.hasAttribute('disabled')).toBe(true); // ίδια ημερομηνία ⇒ τίποτα να σταλεί
+    fireEvent.change(date, { target: { value: '2026-10-30' } });
+    expect(submit.hasAttribute('disabled')).toBe(true); // αλλαγή χωρίς αιτιολογία ⇒ όχι
+    await user.type(within(dialog).getByLabelText(DELIVERY_KEYS.reasonLabel), 'αυτοψία μετατέθηκε');
+    expect(submit.hasAttribute('disabled')).toBe(false);
+    await user.click(submit);
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'schedule-delivery', propertyId: 'p6', documentKind: 'energy-certificate', expectedStage: 'accepted',
+      dueOn: '2026-10-30', reason: 'αυτοψία μετατέθηκε',
+    }));
+  });
+
+  it('προσφορά πριν από τη Φ2 ⇒ «χωρίς προθεσμία» + «Ορισμός προθεσμίας», που ΔΕΝ ζητά αιτιολογία', async () => {
+    renderWith(legacyAccepted());
+    expect(within(tableRow()).getByText(DELIVERY_TIER_KEYS['no-due-date'])).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(within(article()).getByRole('button', { name: DELIVERY_KEYS.setTrigger }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(await within(dialog).findByLabelText(DELIVERY_KEYS.dateLabel), { target: { value: '2026-10-30' } });
+    await user.click(within(dialog).getByRole('button', { name: DELIVERY_KEYS.submit }));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ action: 'schedule-delivery', dueOn: '2026-10-30', reason: null }));
+  });
+
+  it('χωρίς δικαίωμα ⇒ η προθεσμία φαίνεται, το κουμπί αλλαγής ΟΧΙ', () => {
+    verdict = 'denied-permission';
+    renderWith(recordOf(ACCEPTED));
+    expect(within(article()).getByText(startsWith(DELIVERY_KEYS.line))).toBeTruthy();
+    expect(within(article()).queryByRole('button', { name: DELIVERY_KEYS.changeTrigger })).toBeNull();
+  });
+
+  it('«Καθυστερούν»: ΜΟΝΟ η καθυστερημένη γραμμή, με μετρητή στην καρτέλα', () => {
+    renderWith(recordOf(OVERDUE), '/document-expiry?tab=late');
+    expect(screen.getByRole('tab', { selected: true }).textContent).toContain(REGISTRY_TAB_LABEL_KEYS.late);
+    const shown = Array.from(window.document.querySelectorAll('tbody tr[data-row-id]')).map((row) => row.getAttribute('data-row-id'));
+    expect(shown).toEqual([ROW]);
+  });
+
+  it('«Καθυστερούν» χωρίς καθυστέρηση ⇒ ρητή κενή κατάσταση (εντός προθεσμίας ≠ καθυστερεί)', () => {
+    renderWith(recordOf(ACCEPTED), '/document-expiry?tab=late');
+    expect(screen.getByText(LAYOUT_KEYS.lateEmpty)).toBeTruthy();
+  });
+
+  it('🏆 Α4 — στην έγκριση: «έως <ημ.>, αν εγκριθεί σήμερα» ΚΑΙ η προειδοποίηση «μετά την υπογραφή», πριν δεσμευτεί κανείς', async () => {
+    renderWith(recordOf(QUOTED));
+    await userEvent.setup().click(within(article()).getByRole('button', { name: ISSUANCE_KEYS.recordDecision }));
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText(startsWith(DELIVERY_KEYS.ifApprovedToday))).toBeTruthy();
+    // Η υπογραφή του p6 είναι «σήμερα» του μητρώου (15/10)· κάθε έγκριση από σήμερα και μετά πέφτει αργότερα.
+    expect(within(dialog).getByRole('alert').textContent?.startsWith(DELIVERY_KEYS.missesSigning)).toBe(true);
   });
 });

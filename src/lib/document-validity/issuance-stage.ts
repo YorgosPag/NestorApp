@@ -72,3 +72,23 @@ const BALL_IN_COURT: Readonly<Record<IssuanceStage, BallInCourtParty | null>> = 
 export function ballInCourtOf(stage: IssuanceStage): BallInCourtParty | null {
   return BALL_IN_COURT[stage];
 }
+
+/**
+ * **Από πότε** ισχύει το τρέχον στάδιο (ADR-915 §45 Φ1) — η στιγμή του γεγονότος που το **γέννησε**, όχι μια
+ * αποθηκευμένη σφραγίδα δίπλα του. Ίδια διάκριση νέας/παλιάς ροής με το {@link issuanceStageOf}: η επιλογή του
+ * γεγονότος περνά **από** το στάδιο, ώστε τα δύο να μη διαφωνούν ποτέ.
+ */
+export function issuanceStageSinceOf(record: IssuanceAssignmentRecord): string {
+  const stage = issuanceStageOf(record);
+  switch (stage) {
+    case 'cancelled': return record.cancellation?.at ?? record.proposedAt;
+    case 'proposed': return record.proposedAt;
+    case 'sent': return record.notice?.at ?? record.proposedAt;
+    case 'quoted': return record.quote?.at ?? record.proposedAt;
+    case 'ownerApproved':
+    case 'ownerRejected': return record.decision?.at ?? record.proposedAt;
+    case 'declined': return record.response?.at ?? record.proposedAt;
+    case 'accepted':
+      return (isLegacyIssuance(record) ? record.response?.at : record.decision?.at) ?? record.proposedAt;
+  }
+}

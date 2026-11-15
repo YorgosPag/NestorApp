@@ -10,9 +10,12 @@
  */
 
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 import { basisText, scopeText } from '@/components/document-registry/issuance-quote-labels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
+import { deliveryDueFromApproval, deliveryMissesSigning } from '@/lib/document-validity/issuance-delivery-due';
 import { quoteTotalsOf } from '@/lib/document-validity/issuance-quote';
 import { formatDate } from '@/lib/intl-formatting';
 import { formatMinor } from '@/lib/money/money';
@@ -47,6 +50,28 @@ export function QuoteBriefFacts({ brief }: { readonly brief: IssuanceQuoteBrief 
   );
 }
 
+/**
+ * §45 Φ2 — ο χρόνος είναι μέρος αυτού που εγκρίνεται: «Παράδοση σε N εργάσιμες — έως <ημ.>, αν εγκριθεί σήμερα».
+ * §45 Φ3 — και, αν η παράδοση πέφτει **μετά** την ημέρα που τη χρειάζεται η υπογραφή, το λέει πριν από την έγκριση (Α4).
+ */
+function QuoteDeliveryFact({ quote }: { readonly quote: IssuanceQuoteView }) {
+  const { t } = useTranslation(['document-request', 'document-registry']);
+  if (quote.deliveryBusinessDays === null) return null;
+  const dueOn = deliveryDueFromApproval(conveyanceToday(), quote);
+  if (dueOn === null) return null;
+  return (
+    <Fact term={t('document-request:facts.quoteDelivery')}>
+      <span>{t('document-registry:issuance.delivery.ifApprovedToday', { count: quote.deliveryBusinessDays, date: formatDate(dueOn) })}</span>
+      {quote.signingDay !== null && deliveryMissesSigning(dueOn, quote.signingDay) ? (
+        <span className="mt-1 flex items-center gap-1 text-xs text-destructive">
+          <AlertTriangle className="size-3" aria-hidden="true" />
+          {t('document-registry:issuance.delivery.missesSigning', { due: formatDate(dueOn), signing: formatDate(quote.signingDay) })}
+        </span>
+      ) : null}
+    </Fact>
+  );
+}
+
 /** Η προσφορά για τον υπεύθυνο: σύνολα · είδος · ισχύς · τι περιλαμβάνει · και η αρχική, αν αναθεωρήθηκε. */
 export function QuoteFacts({ quote }: { readonly quote: IssuanceQuoteView }) {
   const { t } = useTranslation(['document-request', 'document-registry']);
@@ -61,6 +86,7 @@ export function QuoteFacts({ quote }: { readonly quote: IssuanceQuoteView }) {
         <Fact term={t('document-request:facts.quote')}>{t('document-request:facts.quoteRevised', { previous: formatMinor(quote.previousTotalMinor) })}</Fact>
       )}
       <Fact term={t('document-request:facts.quoteValid')}>{formatDate(quote.validUntil)}</Fact>
+      <QuoteDeliveryFact quote={quote} />
       <Fact term={t('document-request:facts.quoteScope')}>{quote.scope.map((item) => scopeText(t, item)).join(' · ')}</Fact>
       {quote.note === null ? null : <Fact term={t('document-request:facts.quoteNote')}>{quote.note}</Fact>}
     </>

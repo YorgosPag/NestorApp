@@ -741,7 +741,10 @@
         "projectId": "Έργο",
         "description": "Περιγραφή",
         "notes": "Σημειώσεις"
-      }
+      },
+      "energyCertificateIssuanceDeliveryDue": "Ανάθεση έκδοσης ΠΕΑ — προθεσμία παράδοσης",
+      "buildingIdentityIssuanceDeliveryDue": "Ανάθεση ταυτότητας κτιρίου — προθεσμία παράδοσης",
+      "electricalInstallationIssuanceDeliveryDue": "Ανάθεση ΥΔΕ — προθεσμία παράδοσης"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

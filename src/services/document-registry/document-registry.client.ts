@@ -172,3 +172,17 @@ export async function sendIssuanceSpaceInvitation(
     return { kind: 'failed', code: logActionFailure('Ο νέος σύνδεσμος εισόδου δεν στάλθηκε', cause, { documentKind: body.documentKind }) };
   }
 }
+
+/** ADR-915 §45 Φ3 — «Υπενθύμιση» παράδοσης στον επαγγελματία: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_DELIVERY_REMINDER_URL = `${ISSUANCE_ASSIGNMENTS_URL}/delivery-reminder`;
+
+/** **Ένα** πάτημα ⇒ ένα email (ιδεμποτία στο σύνορο)· ο κωδικός άρνησης είναι και το κλειδί του μηνύματος. */
+export async function sendIssuanceDeliveryReminder(
+  body: { readonly propertyId: string; readonly documentKind: DocumentKind },
+): Promise<IssuanceMessageResult<{ readonly delivery: InvitationNoticeOutcome; readonly at: string }>> {
+  try {
+    return { kind: 'ok', data: await apiClient.post(ISSUANCE_DELIVERY_REMINDER_URL, body) };
+  } catch (cause) {
+    return { kind: 'failed', code: logActionFailure('Η υπενθύμιση παράδοσης δεν στάλθηκε', cause, { documentKind: body.documentKind }) };
+  }
+}

@@ -1,4 +1,22 @@
-import { isBusinessDay, shiftToBusinessDay } from '../business-days';
+import { addBusinessDays, isBusinessDay, shiftToBusinessDay } from '../business-days';
+
+describe('addBusinessDays (ADR-915 §45 Φ2)', () => {
+  it.each([
+    ['2026-11-16', 5, '2026-11-23'],  // Δευτέρα + 5 ⇒ την επόμενη Δευτέρα (η ίδια ημέρα δεν μετρά)
+    ['2026-11-20', 1, '2026-11-23'],  // Παρασκευή + 1 ⇒ Δευτέρα (σαββατοκύριακο)
+    ['2026-12-24', 1, '2026-12-28'],  // Πέμπτη + 1 ⇒ Χριστούγεννα · Σύναξη (Σάβ.) · Κυριακή ⇒ Δευτέρα
+    ['2027-04-29', 1, '2027-05-04'],  // Μ. Πέμπτη 2027 + 1 ⇒ Μ. Παρασκευή · Σάβ. · Πάσχα · Δευτέρα του Πάσχα ⇒ Τρίτη
+    ['2026-11-21', 0, '2026-11-21'],  // 0 ⇒ η ίδια ημέρα, ακόμη κι αν δεν είναι εργάσιμη
+  ] as const)('%s + %d εργάσιμες ⇒ %s', (day, n, expected) => {
+    expect(addBusinessDays(day, n)).toBe(expected);
+  });
+
+  it.each([
+    ['not-a-day', 1], ['2026-02-30', 1], ['2026-11-16', -1], ['2026-11-16', 1.5], ['2026-11-16', 367],
+  ] as const)('άκυρο (%s, %d) ⇒ null', (day, n) => {
+    expect(addBusinessDays(day, n)).toBeNull();
+  });
+});
 
 describe('isBusinessDay', () => {
   it.each([

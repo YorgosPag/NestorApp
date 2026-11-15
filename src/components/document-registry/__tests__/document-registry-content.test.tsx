@@ -43,9 +43,17 @@ import {
   registryRowPropertyIdOf,
 } from '@/lib/document-validity/document-registry';
 import { rowsOfActionTab } from '@/lib/document-validity/document-registry-view';
-import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
+import {
+  ISSUANCE_STAGES,
+  ballInCourtOf,
+  issuanceKeyOf,
+  reduceIssuance,
+  type IssuanceAction,
+  type IssuanceAssignmentRecord,
+} from '@/lib/document-validity/issuance-assignment';
 import type { DocumentRequirement } from '@/lib/document-validity/document-requirement';
-import { formatDateKey } from '@/lib/intl-formatting';
+import { formatDate, formatDateKey } from '@/lib/intl-formatting';
+import { ISSUANCE_ROW_ACTION_KEYS, ISSUANCE_STAGE_KEYS } from '../issuance-labels';
 import { mandateDetailHref } from '@/lib/mandate/mandate-routes';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
@@ -626,5 +634,55 @@ describe('ADR-915 §43 — ο πίνακας: σύνδεσμοι · ΤΙ μπλ�
     renderReady();
     fireEvent.click(within(tableRow('f-expired')).getByRole('button', { name: LAYOUT_KEYS.nextAssign }));
     expect(urlParams().get('doc')).toBe('f-expired');
+  });
+});
+
+describe('ADR-915 §45 Φ1 — η ανάθεση στη γραμμή: κουμπί όταν η σειρά είναι του γραφείου · «ποιος · από πότε»', () => {
+  const tableRow = (id: string) => window.document.querySelector(`tbody tr[data-row-id="${id}"]`) as HTMLElement;
+  const ROW = 'missing:p6:energy-certificate';
+  const PROPOSED_AT = '2026-11-03T09:00:00.000Z';
+  const PROPOSE: IssuanceAction = {
+    kind: 'propose', professionalContactId: 'cont_alpha',
+    credential: { qualification: 'energy-inspector-registered', registryNumber: null },
+  };
+  const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };
+
+  function assigned(actions: readonly IssuanceAction[]): DocumentRegistryResponse {
+    let record: IssuanceAssignmentRecord | null = null;
+    for (const action of actions) {
+      const reduced = reduceIssuance('energy-certificate', record, null, action, { kind: 'office', uid: 'uid_agent', nowIso: PROPOSED_AT });
+      if (!reduced.ok) throw new Error(reduced.refusal);
+      record = reduced.record;
+    }
+    if (record === null) throw new Error('no record');
+    return fixtureResponse({}, FIXTURE_DOCUMENTS, undefined, [{ propertyId: 'p6', documentKind: 'energy-certificate', record }]);
+  }
+
+  it('κουμπί ⇔ η μπάλα στο γραφείο — για ΚΑΘΕ στάδιο (ο χάρτης λέξεων δεν διαφωνεί με τον πυρήνα)', () => {
+    for (const stage of ISSUANCE_STAGES) {
+      expect(ISSUANCE_ROW_ACTION_KEYS[stage] !== null).toBe(ballInCourtOf(stage) === 'office');
+    }
+  });
+
+  it('επιλέχθηκε (σειρά του γραφείου) ⇒ «Ζητήστε προσφορά» είναι κουμπί που ανοίγει το πάνελ της γραμμής', () => {
+    renderReady(assigned([PROPOSE]));
+    const row = tableRow(ROW);
+    expect(within(row).queryByText(ISSUANCE_STAGE_KEYS.proposed)).toBeNull();
+    fireEvent.click(within(row).getByRole('button', { name: ISSUANCE_ROW_ACTION_KEYS.proposed ?? '' }));
+    expect(urlParams().get('doc')).toBe(ROW);
+  });
+
+  it('ζητήθηκε προσφορά (σειρά του επαγγελματία) ⇒ το στάδιο ως κείμενο, κανένα κουμπί του γραφείου', () => {
+    renderReady(assigned([PROPOSE, NOTIFY]));
+    const row = tableRow(ROW);
+    expect(within(row).getByText(ISSUANCE_STAGE_KEYS.sent)).toBeTruthy();
+    expect(within(row).queryByRole('button', { name: ISSUANCE_ROW_ACTION_KEYS.proposed ?? '' })).toBeNull();
+  });
+
+  it('δεύτερη γραμμή: ο επαγγελματίας ως σύνδεσμος στην επαφή + «από <ημέρα>»', () => {
+    renderReady(assigned([PROPOSE]));
+    const row = tableRow(ROW);
+    expect(within(row).getByRole('link', { name: 'Συνθετικός Άλφα' }).getAttribute('href')).toBe(ENTITY_ROUTES.contacts.withId('cont_alpha'));
+    expect(within(row).getByText(`${LAYOUT_KEYS.nextSince} ${JSON.stringify({ date: formatDate(PROPOSED_AT) })}`)).toBeTruthy();
   });
 });

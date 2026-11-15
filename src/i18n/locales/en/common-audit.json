@@ -741,7 +741,10 @@
         "projectId": "Project",
         "description": "Description",
         "notes": "Notes"
-      }
+      },
+      "energyCertificateIssuanceDeliveryDue": "Energy certificate issuance — delivery deadline",
+      "buildingIdentityIssuanceDeliveryDue": "Building identity issuance — delivery deadline",
+      "electricalInstallationIssuanceDeliveryDue": "Electrical installation issuance — delivery deadline"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

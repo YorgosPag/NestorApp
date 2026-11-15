@@ -32,6 +32,17 @@ export type QuoteScopeItem = (typeof QUOTE_SCOPE_ITEMS)[number];
 /** Η πρώτη προσφορά και η **μία** αναθεώρηση μετά την αυτοψία. */
 export const QUOTE_MAX_REVISION = 2;
 
+/**
+ * §45 Φ2 — «παράδοση σε N εργάσιμες από την έγκριση»: δέσμευση του επαγγελματία μέσα στην προσφορά. Τα όρια είναι
+ * αμυντικά (ακέραιος, όχι ανοιχτό πεδίο), **όχι** εκτίμηση του χρόνου έκδοσης — αυτόν τον δεσμεύει ο ίδιος.
+ */
+export const QUOTE_DELIVERY_BUSINESS_DAYS = { min: 1, max: 90 } as const;
+
+export function isQuoteDeliveryBusinessDays(value: number | null): value is number {
+  return value !== null && Number.isInteger(value)
+    && value >= QUOTE_DELIVERY_BUSINESS_DAYS.min && value <= QUOTE_DELIVERY_BUSINESS_DAYS.max;
+}
+
 /** Ο ΜΑΡΚ του myDATA: 15 ψηφία. */
 export const MYDATA_MARK_PATTERN = /^\d{15}$/;
 
@@ -52,6 +63,11 @@ export interface QuoteTerms {
   readonly validUntil: string;
   readonly scope: readonly QuoteScopeItem[];
   readonly note: string | null;
+  /**
+   * §45 Φ2 — παράδοση σε N εργάσιμες **από την έγκριση**. Υποχρεωτικό σε κάθε νέα προσφορά ({@link areQuoteTermsValid})·
+   * `null` = προσφορά πριν από τη Φ2 (καμία δέσμευση χρόνου — την ημερομηνία την ορίζει τότε το γραφείο, με ίχνος).
+   */
+  readonly deliveryBusinessDays: number | null;
 }
 
 export interface IssuanceQuote extends QuoteTerms {
@@ -93,12 +109,16 @@ export function quoteTotalsOf(terms: Pick<QuoteTerms, 'amountMinor' | 'vatRatePe
   return { netMinor: amountMinor, vatMinor, totalMinor: amountMinor + vatMinor };
 }
 
-/** Είναι οι όροι αποδεκτοί; — θετικό ποσό, συντελεστής του πίνακα, έστω ένα περιλαμβανόμενο, ισχύς από σήμερα. */
+/**
+ * Είναι οι όροι αποδεκτοί; — θετικό ποσό, συντελεστής του πίνακα, έστω ένα περιλαμβανόμενο, ισχύς από σήμερα, και
+ * (§45 Φ2) χρόνος παράδοσης: καμία **νέα** προσφορά χωρίς δέσμευση χρόνου.
+ */
 export function areQuoteTermsValid(terms: QuoteTerms, today: string): boolean {
   return isMinorAmount(terms.amountMinor) && terms.amountMinor > 0
     && GREEK_VAT_RATE_PERCENTS.includes(terms.vatRatePercent)
     && terms.scope.length > 0
-    && terms.validUntil >= today;
+    && terms.validUntil >= today
+    && isQuoteDeliveryBusinessDays(terms.deliveryBusinessDays);
 }
 
 /** Επιτρέπεται αναθεώρηση; — μόνο ενδεικτικής, μόνο μία φορά. */
@@ -112,7 +132,7 @@ export function nextQuoteOf(current: IssuanceQuote | null, terms: QuoteTerms, su
   const prior: Omit<IssuanceQuote, 'previous'> = {
     basis: current.basis, amountMinor: current.amountMinor, vatRatePercent: current.vatRatePercent,
     vatIncluded: current.vatIncluded, validUntil: current.validUntil, scope: current.scope, note: current.note,
-    revision: current.revision, at: current.at, submission: current.submission,
+    deliveryBusinessDays: current.deliveryBusinessDays, revision: current.revision, at: current.at, submission: current.submission,
   };
   return { ...terms, revision: current.revision + 1, at, submission, previous: prior };
 }

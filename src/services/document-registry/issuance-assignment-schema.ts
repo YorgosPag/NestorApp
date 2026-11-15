@@ -25,7 +25,9 @@ import {
 } from '@/lib/document-validity/issuance-assignment';
 import { ISSUANCE_DELIVERY_OUTCOMES } from '@/lib/document-validity/issuance-delivery';
 import { MYDATA_MARK_PATTERN, QUOTE_BASES, QUOTE_MAX_REVISION, QUOTE_SCOPE_ITEMS } from '@/lib/document-validity/issuance-quote';
-import { isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
+import { ISSUANCE_DELIVERY_POLICY } from '@/lib/document-validity/issuance-delivery-due';
+import { ISSUANCE_DELIVERY_REMINDER_POLICY } from '@/lib/document-validity/issuance-delivery-reminder';
+import { deliveryBusinessDaysSchema, isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
 import { generateDeterministicDocumentIssuanceAssignmentId } from '@/services/enterprise-id.service';
 import { REGISTRY_PROPERTY_SCOPES, type RegistryPropertyScope } from './document-registry.types';
 
@@ -72,6 +74,8 @@ const quoteRevisionSchema = z.object({
   validUntil: isoDay,
   scope: z.array(z.enum(QUOTE_SCOPE_ITEMS)).min(1),
   note,
+  /** §45 Φ2 — προσφορές πριν από τη Φ2 δεν είχαν χρόνο παράδοσης: «καμία δέσμευση», που ήταν και η αλήθεια τους. */
+  deliveryBusinessDays: deliveryBusinessDaysSchema.nullable().default(null),
   revision: z.number().int().min(1).max(QUOTE_MAX_REVISION),
   at: nonEmpty,
   submission: z.discriminatedUnion('by', [
@@ -84,6 +88,19 @@ const quoteRevisionSchema = z.object({
 const quoteSchema = quoteRevisionSchema.extend({ previous: quoteRevisionSchema.nullable() }).nullable().default(null);
 const receiptSchema = z.object({
   mark: z.string().regex(MYDATA_MARK_PATTERN), issuedOn: isoDay, totalMinor: minor, at: nonEmpty, recordedByUid: nonEmpty,
+}).nullable().default(null);
+
+/** §45 Φ2 — έγγραφα πριν από τη Φ2 δεν είχαν καταχωρίσεις προθεσμίας: «καμία», που ήταν και η αλήθεια τους. */
+const deliveryScheduleSchema = z.array(z.object({
+  dueOn: isoDay, reason: note, at: nonEmpty, byUid: nonEmpty,
+})).max(ISSUANCE_DELIVERY_POLICY.maxScheduleEntries).default([]);
+
+/** §45 Φ3 — έγγραφα πριν από τη Φ3 δεν είχαν υπενθυμίσεις παράδοσης: «καμία», που ήταν και η αλήθεια τους. */
+const deliveryRemindersSchema = z.object({
+  forDueOn: isoDay.nullable(),
+  dueAt: nonEmpty.nullable(),
+  sentAt: z.array(nonEmpty).max(ISSUANCE_DELIVERY_REMINDER_POLICY.maxAutomatic),
+  manual: z.array(z.object({ at: nonEmpty, byUid: nonEmpty })).max(ISSUANCE_DELIVERY_REMINDER_POLICY.maxManual),
 }).nullable().default(null);
 
 const responseSchema = z.discriminatedUnion('basis', [
@@ -117,6 +134,8 @@ const assignmentSchema = z.object({
   response: responseSchema.nullable(),
   quote: quoteSchema,
   receipt: receiptSchema,
+  deliverySchedule: deliveryScheduleSchema,
+  deliveryReminders: deliveryRemindersSchema,
   cancellation: z.object({ byUid: nonEmpty, at: nonEmpty }).nullable(),
   updatedAt: nonEmpty,
 });
@@ -130,10 +149,12 @@ export function parseIssuanceAssignment(raw: unknown): DocumentIssuanceAssignmen
 /** Τα γεγονότα μόνο — ό,τι κρίνει ο μειωτής, χωρίς την ταυτότητα. */
 export function issuanceRecordOf(assignment: DocumentIssuanceAssignment): IssuanceAssignmentRecord {
   const {
-    professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt, cancellation,
+    professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
+    deliverySchedule, deliveryReminders, cancellation,
   } = assignment;
   return {
-    professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt, cancellation,
+    professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
+    deliverySchedule, deliveryReminders, cancellation,
   };
 }
 

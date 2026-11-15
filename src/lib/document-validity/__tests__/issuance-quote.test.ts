@@ -18,7 +18,7 @@ import type { GreekVatRatePercent } from '@/subapps/accounting/services/config/v
 
 const TERMS: QuoteTerms = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false,
-  validUntil: '2026-12-31', scope: ['issuance', 'registration'], note: null,
+  validUntil: '2026-12-31', scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5,
 };
 const SUBMISSION: QuoteSubmission = { by: 'recorded', recordedByUid: 'uid_agent' };
 const NOW = '2026-10-17T09:00:00.000Z';
@@ -104,7 +104,7 @@ describe('ADR-915 §42 — nextQuoteOf', () => {
     expect(revised.at).toBe(later);
     expect(revised.previous).toEqual({
       basis: 'indicative', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31',
-      scope: ['issuance', 'registration'], note: null, revision: 1, at: NOW, submission: SUBMISSION,
+      scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5, revision: 1, at: NOW, submission: SUBMISSION,
     });
     expect(revised.previous).not.toHaveProperty('previous');
   });
