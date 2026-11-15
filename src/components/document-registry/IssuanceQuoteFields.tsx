@@ -70,15 +70,17 @@ export function IssuanceQuoteFields({ draft, onChange, disabled = false }: Issua
     <fieldset className="m-0 flex flex-col gap-3 border-0 p-0" disabled={disabled}>
       <Label htmlFor={amountId} className="text-sm font-medium">{t('document-registry:issuance.quoteForm.amountLabel')}</Label>
       <Input id={amountId} inputMode="decimal" autoComplete="off" value={draft.amount} onChange={(event) => set({ amount: event.target.value })} />
+      {/* §45.12 — ιδιότητα του ΠΟΣΟΥ, όχι συντελεστής: ζει κάτω από το ποσό (Stripe «Include tax in price» · Xero
+          «Amounts are»), έξω από την ομάδα ΦΠΑ, όπου διαβαζόταν σαν πέμπτη επιλογή. */}
+      <Label htmlFor={includedId} className="flex items-center gap-2 text-sm font-normal">
+        <Checkbox id={includedId} checked={draft.vatIncluded && draft.vatRatePercent !== 0} disabled={draft.vatRatePercent === 0} onCheckedChange={(checked) => set({ vatIncluded: checked === true })} />
+        <span>{t('document-registry:issuance.quoteForm.vatIncluded')}</span>
+      </Label>
       <ChoiceField
         legend={t('document-registry:issuance.quoteForm.vatLegend')} options={VAT_OPTIONS} value={String(draft.vatRatePercent)}
         onChange={(next) => set({ vatRatePercent: GREEK_VAT_RATE_PERCENTS.find((rate) => String(rate) === next) ?? GREEK_STANDARD_VAT_RATE })}
         labelOf={(option) => (option === '0' ? t('document-registry:issuance.quoteForm.vatNone') : t('document-registry:issuance.quoteForm.vatRate', { rate: option }))}
       />
-      <Label htmlFor={includedId} className="flex items-center gap-2 text-sm font-normal">
-        <Checkbox id={includedId} checked={draft.vatIncluded && draft.vatRatePercent !== 0} disabled={draft.vatRatePercent === 0} onCheckedChange={(checked) => set({ vatIncluded: checked === true })} />
-        <span>{t('document-registry:issuance.quoteForm.vatIncluded')}</span>
-      </Label>
       <ChoiceField
         legend={t('document-registry:issuance.quoteForm.basisLegend')} options={QUOTE_BASES} value={draft.basis} onChange={(basis) => set({ basis })}
         labelOf={(option) => (option === 'indicative' ? t('document-registry:issuance.quoteForm.basis.indicative') : t('document-registry:issuance.quoteForm.basis.firm'))}
