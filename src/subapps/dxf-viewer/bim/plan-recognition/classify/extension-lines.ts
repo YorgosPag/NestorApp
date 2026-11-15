@@ -75,7 +75,10 @@ function isArrowBase(d: FramedSegment, e: FramedSegment, arrowAt: ArrowBodyAt, s
   return (['start', 'end'] as const).some((which) => {
     const body = arrowAt(d.id, which);
     if (body === null || body.lengthPx <= tol) return false;
-    const { p, out } = endOf(d, which);
+    const end = endOf(d, which);
+    const out = end.out;
+    // §6.21.6 — η κορυφή εκεί που τη βρήκε ο ανιχνευτής, όχι στο κέντρο pixel του άκρου.
+    const p = { x: end.p.x + d.n.x * body.apexOffsetPx, y: end.p.y + d.n.y * body.apexOffsetPx };
     const at = (q: PlanePoint): { s: number; r: number } => {
       const rx = q.x - p.x;
       const ry = q.y - p.y;

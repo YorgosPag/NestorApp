@@ -68,6 +68,46 @@ describe('parseGoldenManifest', () => {
   });
 });
 
+/** ADR-929 §6.21.5 — περίπτωση με αλήθεια από το διανυσματικό περιεχόμενο της ίδιας της σελίδας. */
+function declaredCase(truthPatch: Case = {}, casePatch: Case = {}): Case {
+  return {
+    id: 'case-declared',
+    kind: 'multipage-pdf',
+    tier: 'A',
+    source: { root: 'scans', path: 'z/test.pdf', sha256: SHA_A, page: 1 },
+    truth: {
+      kind: 'declared-dimensions',
+      contentMatrix: [0.12, 0, 0, 0.12, 0, 0],
+      dimensions: [{ text: '2.05', measured: [[1796, 4372.67], [2763, 4372.67]], line: [[1796, 4589.67], [2763, 4589.67]] }],
+      ...truthPatch,
+    },
+    ...casePatch,
+  };
+}
+
+const withDeclared = (truthPatch: Case = {}, casePatch: Case = {}) =>
+  ({ ...validManifest(), cases: [declaredCase(truthPatch, casePatch)] });
+
+describe('parseGoldenManifest — δηλωμένες διαστάσεις (§6.21.5)', () => {
+  it('δέχεται δηλωμένες διαστάσεις ως βαθμίδα Α, με μόνο αρχείο την πηγή', () => {
+    const r = parseGoldenManifest(withDeclared());
+    if (!r.ok) throw new Error(r.errors.join('; '));
+    expect(r.manifest.cases[0].truth.kind).toBe('declared-dimensions');
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ['βαθμίδα Β με αλήθεια από διάνυσμα', withDeclared({}, { tier: 'B' })],
+    ['πίνακας περιεχομένου με 5 στοιχεία', withDeclared({ contentMatrix: [1, 0, 0, 1, 0] })],
+    ['καμία διάσταση', withDeclared({ dimensions: [] })],
+    ['σημείο με τρεις συντεταγμένες', withDeclared({ dimensions: [{ text: '1', measured: [[0, 0, 0], [1, 0]], line: [[0, 1], [1, 1]] }] })],
+    ['μη πεπερασμένη συντεταγμένη', withDeclared({ dimensions: [{ text: '1', measured: [[0, Infinity], [1, 0]], line: [[0, 1], [1, 1]] }] })],
+    ['διάσταση χωρίς κείμενο', withDeclared({ dimensions: [{ text: '', measured: [[0, 0], [1, 0]], line: [[0, 1], [1, 1]] }] })],
+    ['άγνωστο πεδίο σε διάσταση', withDeclared({ dimensions: [{ text: '1', measured: [[0, 0], [1, 0]], line: [[0, 1], [1, 1]], owner: 'Χ' }] })],
+  ])('απορρίπτει: %s', (_name, raw) => {
+    expect(parseGoldenManifest(raw).ok).toBe(false);
+  });
+});
+
 /** Σύστημα αρχείων στη μνήμη: διαδρομή → περιεχόμενο. Το sha256 είναι η ίδια η τιμή (ψεύτικο, ελεγχόμενο). */
 function memoryIo(files: Record<string, string>, dirs: readonly string[]): GoldenIo {
   const norm = (p: string) => path.resolve(p);

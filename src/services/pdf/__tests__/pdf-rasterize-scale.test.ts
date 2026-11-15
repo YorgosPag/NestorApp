@@ -28,6 +28,8 @@ jest.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
         getViewport: ({ scale }: { scale: number }) => ({
           width: PAGE_UNITS.width * scale,
           height: PAGE_UNITS.height * scale,
+          // Όπως το pdf.js: αναστροφή y, αρχή του PDF κάτω-αριστερά ⇒ κάτω-αριστερά της εικόνας.
+          transform: [scale, 0, 0, -scale, 0, PAGE_UNITS.height * scale],
           convertToViewportPoint: (x: number, y: number) => [x, y],
         }),
         render: () => ({ promise: Promise.resolve() }),
@@ -54,6 +56,14 @@ describe('rasterizePdfPageImages: η κλίμακα που πράγματι χρ
     expect(page.widthPx).toBe(1000);
     expect(page.dpi).toBeCloseTo((1000 / PAGE_UNITS.width) * (72 / USER_UNIT), 9);
     expect(page.dpi * (page.pageWidthMm / 25.4)).toBeCloseTo(page.widthPx, 6);
+  });
+
+  it('ADR-929 §6.21.5: ο πίνακας χώρος PDF → px είναι αυτός του viewport που ζωγράφισε (μαζί με το ταβάνι)', async () => {
+    const { rasterizePdfPageImages } = await import('../pdf-rasterize.service');
+    const [page] = await rasterizePdfPageImages(Buffer.from('%PDF-1.6'), { dpi: 200, maxWidthPx: 1000 });
+    const scale = 1000 / PAGE_UNITS.width;
+    const expected = { a: scale, b: 0, c: 0, d: -scale, e: 0, f: PAGE_UNITS.height * scale };
+    for (const key of Object.keys(expected) as (keyof typeof expected)[]) expect(page.userToPx[key]).toBeCloseTo(expected[key], 9);
   });
 
   it('το rasterizePdfPages δίνει τα ίδια PNG (οι καταναλωτές του δεν αλλάζουν)', async () => {

@@ -40,6 +40,11 @@ export interface ArrowBody {
   readonly lengthPx: number;
   /** Η κάθετη απόσταση κάθε βραχίονα από τη γραμμή στο τέλος του (px). */
   readonly halfWidthPx: number;
+  /**
+   * ADR-929 §6.21.6 — πού κάθεται η **πραγματική** κορυφή, κάθετα στη γραμμή (κατά `n` του τμήματος, px), ως προς το άκρο
+   * του τμήματος. Το σώμα μετριέται από εκεί, και όποιος ρωτά «είναι μέσα στο σώμα;» μετρά από το **ίδιο** σημείο.
+   */
+  readonly apexOffsetPx: number;
 }
 
 export interface Terminator {
@@ -59,6 +64,16 @@ export const TERMINATOR_MIN_SCORE = 0.75;
  *    300 dpi) κρινόταν «διασταύρωση» και η διάσταση έμενε `unknown` (ADR-929 §6.19).
  */
 const ARROW_HALF_ANGLES_DEG = [7, 9.5, 12, 15, 20, 25, 30] as const;
+/**
+ * ADR-929 §6.21.6 — κάθετες θέσεις της κορυφής που δοκιμάζονται (px, κατά `n`). Το άκρο του τμήματος κάθεται στο **κέντρο
+ * pixel** της ζώνης, ενώ ο άξονας συμμετρίας του βέλους μπορεί να πέφτει **ανάμεσα** σε δύο σειρές: μια πινελιά 1 px πάνω
+ * στο όριο αποδίδεται χωρίς εξομάλυνση μόνο στη μία ⇒ σφάλμα έως **½ px**. Η συμμετρία ΔΕΝ χαλαρώνει (ίδια γωνία και για
+ * τους δύο βραχίονες)· μετακινείται μόνο η κορυφή, μέσα στο σφάλμα κβάντισης. Το `0` πρώτο: σε ισοπαλία κρατιέται το άκρο.
+ * 🔴 Πριν: στα 0,06 px/mm η οριζόντια διάσταση με άξονα στο y = 332,00 (σχεδιασμένη στη σειρά 332 ⇒ άκρο 332,5) έδινε
+ *    βραχίονες 0,81 στις 9,5° και 0,87 στις 15° — κανένα κοινό 0,75 ⇒ «διασταύρωση», και με μετατόπιση ½ px χανόταν η
+ *    κατακόρυφη αντί για την οριζόντια (μετρημένο).
+ */
+const APEX_OFFSETS_PX = [0, -0.25, 0.25, -0.5, 0.5] as const;
 /**
  * Λόγοι ακτίνας κουκκίδας / πινελιάς που δοκιμάζονται. Από 1,6: ο γεμάτος πυρήνας (`0,75·ρ`) έχει τότε διάμετρο ≥ 2,4
  * πινελιές, σαφώς φαρδύτερος από τη γραμμή. Με 1,2 μια παρειά 2 px που μετά το ίσιωμα φουσκώνει τοπικά σε 3 px
@@ -100,15 +115,25 @@ function armsOf(out: PlanePoint, n: PlanePoint, deg: number, sc: TerminatorScale
 /**
  * Βέλος με κορυφή στο άκρο: δύο βραχίονες προς τα μέσα, σε μισή γωνία θ από τη γραμμή. Μετρά μόνο το κομμάτι κάθε
  * βραχίονα που έχει βγει από την ίδια τη γραμμή (απόσταση > πινελιά), αλλιώς κάθε χοντρή γραμμή θα έμοιαζε με βέλος.
- * Επιστρέφει και τη γωνία που νίκησε (για τη μέτρηση του σώματος).
+ * Η κορυφή δοκιμάζεται και σε μικρές κάθετες μετατοπίσεις (`APEX_OFFSETS_PX`, §6.21.6). Επιστρέφει τη γωνία και τη θέση
+ * της κορυφής που νίκησαν (για τη μέτρηση του σώματος).
  */
-function arrowScore(m: InkMask, p: PlanePoint, out: PlanePoint, n: PlanePoint, sc: TerminatorScale): { score: number; deg: number } {
-  let best = { score: 0, deg: 0 };
-  for (const deg of ARROW_HALF_ANGLES_DEG) {
-    const { t0, armA, armB } = armsOf(out, n, deg, sc);
-    if (sc.reachPx - t0 < 2) continue;
-    const score = Math.min(inkFractionAlong(m, p, armA, t0, sc.reachPx), inkFractionAlong(m, p, armB, t0, sc.reachPx));
-    if (score > best.score) best = { score, deg };
+interface ArrowFit {
+  readonly score: number;
+  readonly deg: number;
+  readonly apexOffsetPx: number;
+}
+
+function arrowScore(m: InkMask, p: PlanePoint, out: PlanePoint, n: PlanePoint, sc: TerminatorScale): ArrowFit {
+  let best: ArrowFit = { score: 0, deg: 0, apexOffsetPx: 0 };
+  for (const apexOffsetPx of APEX_OFFSETS_PX) {
+    const apex = add(p, n, apexOffsetPx);
+    for (const deg of ARROW_HALF_ANGLES_DEG) {
+      const { t0, armA, armB } = armsOf(out, n, deg, sc);
+      if (sc.reachPx - t0 < 2) continue;
+      const score = Math.min(inkFractionAlong(m, apex, armA, t0, sc.reachPx), inkFractionAlong(m, apex, armB, t0, sc.reachPx));
+      if (score > best.score) best = { score, deg, apexOffsetPx };
+    }
   }
   return best;
 }
@@ -116,12 +141,14 @@ function arrowScore(m: InkMask, p: PlanePoint, out: PlanePoint, n: PlanePoint, s
 /**
  * ADR-929 §6.21.2 — το σώμα του βέλους: ως πού φτάνει το συνεχές μελάνι **κάθε** βραχίονα (ο κοντύτερος ορίζει το σώμα).
  * Πέρα από την εμβέλεια (μέχρι `ARROW_BODY_MAX_REACHES`·R): ένα βέλος μπορεί να είναι μακρύτερο από έναν χαρακτήρα.
+ * §6.21.6: από την κορυφή που **νίκησε** στο `arrowScore`, όχι από το άκρο του τμήματος.
  */
-function arrowBodyOf(m: InkMask, p: PlanePoint, out: PlanePoint, n: PlanePoint, deg: number, sc: TerminatorScale): ArrowBody {
-  const { c, s, t0, armA, armB } = armsOf(out, n, deg, sc);
+function arrowBodyOf(m: InkMask, p: PlanePoint, out: PlanePoint, n: PlanePoint, fit: ArrowFit, sc: TerminatorScale): ArrowBody {
+  const { c, s, t0, armA, armB } = armsOf(out, n, fit.deg, sc);
+  const apex = add(p, n, fit.apexOffsetPx);
   const maxT = ARROW_BODY_MAX_REACHES * sc.reachPx;
-  const arm = Math.min(inkReachAlong(m, p, armA, t0, maxT, sc.strokePx), inkReachAlong(m, p, armB, t0, maxT, sc.strokePx));
-  return { lengthPx: arm * c, halfWidthPx: arm * s };
+  const arm = Math.min(inkReachAlong(m, apex, armA, t0, maxT, sc.strokePx), inkReachAlong(m, apex, armB, t0, maxT, sc.strokePx));
+  return { lengthPx: arm * c, halfWidthPx: arm * s, apexOffsetPx: fit.apexOffsetPx };
 }
 
 /** Πλάγια παύλα: πινελιά υπό 45° που διασχίζει το άκρο **και προς τις δύο** μεριές. */
@@ -200,7 +227,7 @@ export function detectTerminator(m: InkMask, s: FramedSegment, which: 'start' | 
   ];
   const best = strong.reduce((x, y) => (y.score > x.score ? y : x));
   if (best.score >= TERMINATOR_MIN_SCORE) {
-    return best.kind === 'arrow' ? { ...best, arrowBody: arrowBodyOf(m, p, out, s.n, arrow.deg, sc) } : best;
+    return best.kind === 'arrow' ? { ...best, arrowBody: arrowBodyOf(m, p, out, s.n, arrow, sc) } : best;
   }
   const cross = crossScore(m, p, out, s.n, sc);
   return cross >= TERMINATOR_MIN_SCORE ? { kind: 'cross', score: cross } : { kind: 'none', score: 0 };

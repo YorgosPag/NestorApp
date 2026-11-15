@@ -137,10 +137,10 @@ export async function handlePlanWorker(message: PlanWorkerMessage): Promise<Plan
 
 /**
  * Τα buffers του αιτήματος που μετακομίζουν στον Worker: η εικόνα (ο καλών δίνει **νέο** buffer ανά κλήση), ή, στην
- * επανεξαγωγή, το **αντίγραφο** της μάσκας μελανιού.
+ * επανεξαγωγή, τα **αντίγραφα** της μάσκας μελανιού και του καναλιού σκοτεινότητας.
  */
 export function planAlignRequestTransfer(message: PlanWorkerMessage): Transferable[] {
-  return message.kind === 'segments' ? [message.source.ink.buffer] : [message.raster.rgba.buffer];
+  return message.kind === 'segments' ? [message.source.ink.buffer, message.source.darkness.buffer] : [message.raster.rgba.buffer];
 }
 
 /**
@@ -152,11 +152,12 @@ export function planWorkerReplyTransfer(reply: PlanWorkerReply): Transferable[] 
 }
 
 /**
- * Τα buffers της απάντησης που μετακομίζουν πίσω: η ευθυγραμμισμένη εικόνα και η μάσκα μελανιού. Τα τμήματα είναι
- * λίγα μικρά αντικείμενα: αντιγράφονται (structured clone), χωρίς κανένα buffer.
+ * Τα buffers της απάντησης που μετακομίζουν πίσω: η ευθυγραμμισμένη εικόνα, η μάσκα μελανιού και το κανάλι
+ * σκοτεινότητας (κάθε buffer μία φορά). Τα τμήματα είναι λίγα μικρά αντικείμενα: αντιγράφονται (structured clone).
  */
 export function planAlignReplyTransfer(reply: PlanAlignReply): Transferable[] {
-  const image = reply.alignment.image.rgba.buffer;
-  const ink = reply.alignment.ink.buffer;
-  return image === ink ? [image] : [image, ink];
+  const { image, ink, darkness } = reply.alignment;
+  const buffers: Transferable[] = [];
+  for (const buffer of [image.rgba.buffer, ink.buffer, darkness.buffer]) if (!buffers.includes(buffer)) buffers.push(buffer);
+  return buffers;
 }

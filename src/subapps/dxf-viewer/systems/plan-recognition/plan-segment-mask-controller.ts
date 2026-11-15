@@ -90,9 +90,9 @@ export function createPlanSegmentMaskController<TSource>(depsOf: () => PlanSegme
   }
 
   async function extract(run: PlanRecognitionRun, view: PlanReadingView, root: OriginalExtraction): Promise<Extraction | null> {
-    const { image, ink, sheet, alignedToOriginal, originalToAligned, workingScale } = run.alignment;
+    const { image, ink, darkness, sheet, alignedToOriginal, originalToAligned, workingScale } = run.alignment;
     const reply = await depsOf().extractor().extractSegments({
-      source: { image: { width: image.width, height: image.height }, ink, sheet, alignedToOriginal, originalToAligned, workingScale },
+      source: { image: { width: image.width, height: image.height }, ink, darkness, sheet, alignedToOriginal, originalToAligned, workingScale },
       mask: { region: view.crop, excluded: view.redacted },
       request: { scale: root.scale },
     }).catch(() => null);

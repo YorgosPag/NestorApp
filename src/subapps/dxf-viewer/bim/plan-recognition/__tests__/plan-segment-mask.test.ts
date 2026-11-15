@@ -107,7 +107,7 @@ describe('ADR-929 §6.10 Α2 — μάσκα στην εξαγωγή τμημάτ
 
   it('το κατώφλι μήκους έρχεται ΠΑΝΤΑ από την περιοχή σχεδίου, όχι από τη μάσκα (εικόνα αρκετά μεγάλη για να διαφέρουν)', () => {
     // 3000 px ⇒ autoMinLength = 18· ένα crop 300 px θα έδινε το κάτω όριο 8. Κενό μελάνι: φτάνει μέχρι το κατώφλι.
-    const big = { image: { width: 3000, height: 3000 }, ink: new Uint8Array(3000 * 3000), sheet: null,
+    const big = { image: { width: 3000, height: 3000 }, ink: new Uint8Array(3000 * 3000), darkness: new Uint8Array(3000 * 3000).fill(255), sheet: null,
       alignedToOriginal: alignment.alignedToOriginal, originalToAligned: alignment.originalToAligned };
     const unmasked = extractPlanSegments(big, OPTIONS);
     const masked = extractPlanSegments(big, OPTIONS, { region: { minX: 0, minY: 0, maxX: 300, maxY: 300 }, excluded: [] });
@@ -123,8 +123,8 @@ describe('ADR-929 §6.10 Α2 — μάσκα στην εξαγωγή τμημάτ
   });
 
   it('η εξαγωγή διαβάζει ΜΟΝΟ τις διαστάσεις της εικόνας: χωρίς pixel δίνει τα ίδια', () => {
-    const { image, ink, sheet, alignedToOriginal, originalToAligned } = alignment;
-    const source = { image: { width: image.width, height: image.height }, ink, sheet, alignedToOriginal, originalToAligned };
+    const { image, ink, darkness, sheet, alignedToOriginal, originalToAligned } = alignment;
+    const source = { image: { width: image.width, height: image.height }, ink, darkness, sheet, alignedToOriginal, originalToAligned };
     expect(extractPlanSegments(source, OPTIONS)).toEqual(baseline);
   });
 });
@@ -133,10 +133,13 @@ describe('ADR-929 §6.10 Α2 — η ερώτηση `segments` στον Worker (�
   const MASK: PlanInkMask = { region: FULL, excluded: [{ ...FULL, minX: splitX() }] };
 
   function message(): PlanSegmentsMessage {
-    const { image, ink, sheet, alignedToOriginal, originalToAligned, workingScale } = alignment;
+    const { image, ink, darkness, sheet, alignedToOriginal, originalToAligned, workingScale } = alignment;
     return {
       kind: 'segments',
-      source: { image: { width: image.width, height: image.height }, ink: ink.slice(), sheet, alignedToOriginal, originalToAligned, workingScale },
+      source: {
+        image: { width: image.width, height: image.height }, ink: ink.slice(), darkness: darkness.slice(), sheet, alignedToOriginal, originalToAligned,
+        workingScale,
+      },
       mask: MASK,
       request: { scale: SCALE },
     };
@@ -148,9 +151,9 @@ describe('ADR-929 §6.10 Α2 — η ερώτηση `segments` στον Worker (�
     expect(await handlePlanWorker(message())).toEqual({ extraction: direct });
   });
 
-  it('μετακομίζει το αντίγραφο της μάσκας μελανιού· η απάντηση δεν μεταφέρει κανένα buffer', () => {
+  it('μετακομίζουν τα αντίγραφα της μάσκας μελανιού και του καναλιού σκοτεινότητας· η απάντηση δεν μεταφέρει κανένα buffer', () => {
     const msg = message();
-    expect(planAlignRequestTransfer(msg)).toEqual([msg.source.ink.buffer]);
+    expect(planAlignRequestTransfer(msg)).toEqual([msg.source.ink.buffer, msg.source.darkness.buffer]);
     expect(planWorkerReplyTransfer(handlePlanSegments(msg))).toEqual([]);
   });
 
@@ -159,15 +162,18 @@ describe('ADR-929 §6.10 Α2 — η ερώτηση `segments` στον Worker (�
     const fallback = jest.fn(async (m: PlanWorkerMessage): Promise<PlanWorkerReply> => { seen.push(m); return handlePlanWorker(m); });
     const aligner = createPlanAligner({ spawn: () => null, fallback });
     const before = Array.from(alignment.ink);
+    const darkBefore = Array.from(alignment.darkness);
     const { kind: _kind, ...request } = message();
-    const reply = await aligner.extractSegments({ ...request, source: { ...request.source, ink: alignment.ink } });
+    const reply = await aligner.extractSegments({ ...request, source: { ...request.source, ink: alignment.ink, darkness: alignment.darkness } });
     aligner.dispose();
     expect(reply.kind).toBe('ok');
     if (reply.kind === 'ok') expect(reply.value.extraction).toEqual(extractPlanSegments(alignment, OPTIONS, MASK));
     const sent = seen[0];
     expect(sent.kind).toBe('segments');
     if (sent.kind === 'segments') expect(sent.source.ink).not.toBe(alignment.ink);
+    if (sent.kind === 'segments') expect(sent.source.darkness).not.toBe(alignment.darkness);
     expect(Array.from(alignment.ink)).toEqual(before);
+    expect(Array.from(alignment.darkness)).toEqual(darkBefore);
   });
 
   it('απάντηση άλλου είδους ⇒ σφάλμα πρωτοκόλλου, ποτέ σιωπή', async () => {

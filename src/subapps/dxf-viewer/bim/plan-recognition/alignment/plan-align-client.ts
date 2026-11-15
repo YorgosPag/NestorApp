@@ -46,7 +46,7 @@ export interface PlanAlignRequest {
 /** ADR-929 Φ5.3β — ό,τι χρειάζεται η απόδοση της όψης (χωρίς `kind`: το βάζει ο πελάτης). */
 export type PlanViewRenderRequest = Omit<PlanViewRenderMessage, 'kind'>;
 
-/** ADR-929 §6.10 Α2 — η επανεξαγωγή τμημάτων (χωρίς `kind`). Το `source.ink` το αντιγράφει ο πελάτης πριν φύγει. */
+/** ADR-929 §6.10 Α2 — η επανεξαγωγή τμημάτων (χωρίς `kind`). Τα `source.ink` / `source.darkness` τα αντιγράφει ο πελάτης πριν φύγουν. */
 export type PlanSegmentsRequest = Omit<PlanSegmentsMessage, 'kind'>;
 
 export interface PlanAligner {
@@ -89,8 +89,8 @@ export function createPlanAligner(deps: PlanAlignerDeps = {}): PlanAligner {
     align: async (raster, request = {}) => narrowReply(await alignLatest({ kind: 'align', raster, ...request }), isPlanAlignReply),
     renderView: async (request) => narrowReply(await renderLatest({ kind: 'render-view', ...request }), isPlanViewRenderReply),
     extractSegments: async ({ source, mask, request }) => {
-      // Αντίγραφο: το buffer μετακομίζει (transfer) και το store κρατά το δικό του.
-      const message: PlanSegmentsMessage = { kind: 'segments', source: { ...source, ink: source.ink.slice() }, mask, request };
+      // Αντίγραφα: τα buffers μετακομίζουν (transfer) και το store κρατά τα δικά του.
+      const message: PlanSegmentsMessage = { kind: 'segments', source: { ...source, ink: source.ink.slice(), darkness: source.darkness.slice() }, mask, request };
       return narrowReply(await segmentsLatest(message), isPlanSegmentsReply);
     },
     dispose: client.dispose,

@@ -85,6 +85,11 @@ export interface PlanFusionOptions {
    */
   readonly collinearToleranceStroke: number;
   readonly minCollinearTolPx: number;
+  /**
+   * ADR-929 §6.21.8 — ελάχιστη γωνία (μοίρες) για να δεθούν δύο παρειές σε κόμβο. Κάτω από αυτήν η τομή είναι κακώς
+   * ορισμένη: μια μετατόπιση δ μετακινεί τον κόμβο κατά δ / sin θ (στις 20° ≈ 2,9 δ).
+   */
+  readonly junctionMinAngleDeg: number;
   /** Πόσο μακριά από το κείμενο (κλάσμα της μικρής πλευράς του σχεδίου) αναζητούνται οι παρειές μιας διάστασης. */
   readonly bindingReachFraction: number;
   /** Κατώτατη σχετική ανοχή δέσης/συναίνεσης (η πραγματική μεγαλώνει με τον θόρυβο του είδους εισόδου). */
@@ -140,6 +145,7 @@ export const DEFAULT_PLAN_FUSION: PlanFusionOptions = {
   familyToleranceDeg: 1.5,
   collinearToleranceStroke: 2,
   minCollinearTolPx: 1.5,
+  junctionMinAngleDeg: 20,
   bindingReachFraction: 0.25,
   bindingToleranceRel: 0.015,
   bindingNeighbours: 24,

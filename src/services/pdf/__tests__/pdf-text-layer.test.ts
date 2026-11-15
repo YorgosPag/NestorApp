@@ -42,7 +42,7 @@ jest.mock('pdfjs-dist/legacy/build/pdf.mjs', () => {
         promise: Promise.resolve({
           numPages: 90,
           getPage: () => Promise.resolve({
-            getViewport: ({ scale }: { scale: number }) => ({ width: 600 * scale, height: 800 * scale, convertToViewportPoint: (x: number, y: number) => [x, 800 - y] }),
+            getViewport: ({ scale }: { scale: number }) => ({ width: 600 * scale, height: 800 * scale, transform: [scale, 0, 0, -scale, 0, 800 * scale], convertToViewportPoint: (x: number, y: number) => [x, 800 - y] }),
             getTextContent: () => textOf(stopAtErrors === true),
             getOperatorList: () => Promise.resolve({ fnArray: mockScenario.operators, argsArray: mockScenario.operators.map(() => null) }),
             getStructTree: () => Promise.resolve(null),

@@ -103,6 +103,11 @@ export interface PlanAlignment {
   readonly image: PlanRaster;
   /** Μάσκα μελανιού της `image` (`1` = μελάνι), καθαρισμένη από κηλίδες: η είσοδος της Φ2. */
   readonly ink: Uint8Array;
+  /**
+   * Το κανάλι σκοτεινότητας 0–255 (0 = μαύρο) της `image`, από το οποίο βγήκε η μάσκα. Από αυτό μετριέται το πάχος των
+   * πινελιών σε υπο-pixel, ανεξάρτητα από τη φάση της εξομάλυνσης (ADR-929 §6.21.4).
+   */
+  readonly darkness: Uint8Array;
   readonly alignedToOriginal: Homography;
   readonly originalToAligned: Homography;
   /** Τα όρια της **αποκωδικοποιημένης** αρχικής εικόνας (§6.1 #2: ποτέ το `naturalBounds` του εγγράφου). */

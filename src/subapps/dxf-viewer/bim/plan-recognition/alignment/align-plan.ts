@@ -31,7 +31,7 @@ import type { PlanRaster } from '@/lib/geometry/raster/plan-raster';
 import { downscaleArea, straighteningRotation, warpHomography, workingScaleFor } from '@/lib/geometry/raster/raster-warp';
 import { estimateSkew } from '@/lib/geometry/raster/skew-estimate';
 import { DEFAULT_PLAN_ALIGN, type PlanAlignment, type PlanAlignOptions, type PlanBinarization, type SkewResult } from './plan-alignment-types';
-import { cleanPlanImage, planInkMask, resolveBinarization } from './plan-ink';
+import { cleanPlanImage, planDarkness, planInkMask, resolveBinarization } from './plan-ink';
 import { detectSheetLayout } from './sheet-layout';
 
 const scaling = (s: number): Homography => ({ a: s, b: 0, c: 0, d: 0, e: s, f: 0, g: 0, h: 0 });
@@ -64,20 +64,28 @@ function rectify(stage: Stage, quadOriginal: Quad, scale: number): Stage | null 
 
 interface Straightened extends Stage {
   readonly ink: Uint8Array;
+  /** Το κανάλι σκοτεινότητας της **ίδιας** εικόνας από το οποίο βγήκε η μάσκα (ADR-929 §6.21.4). */
+  readonly darkness: Uint8Array;
   readonly skew: SkewResult;
+}
+
+/** Μάσκα και κανάλι σκοτεινότητας από **ένα** πέρασμα πάνω στην ίδια εικόνα. */
+function inkOf(image: PlanRaster, mode: PlanBinarization): Pick<Straightened, 'ink' | 'darkness'> {
+  const darkness = planDarkness(image, mode);
+  return { ink: planInkMask(image, mode, undefined, darkness), darkness };
 }
 
 function straighten(stage: Stage, mode: PlanBinarization, o: PlanAlignOptions): Straightened {
   const clean = cleanPlanImage(stage.image, mode);
-  const ink = planInkMask(clean, mode);
-  if (!o.deskew) return { image: clean, toOriginal: stage.toOriginal, ink, skew: { angleDeg: 0, confidence: 0, applied: false } };
-  const measured = estimateSkew(ink, clean.width, clean.height);
+  const first = inkOf(clean, mode);
+  if (!o.deskew) return { image: clean, toOriginal: stage.toOriginal, ...first, skew: { angleDeg: 0, confidence: 0, applied: false } };
+  const measured = estimateSkew(first.ink, clean.width, clean.height);
   const apply = measured.confidence >= o.minSkewConfidence && Math.abs(measured.angleDeg) >= o.minSkewDeg;
   const skew: SkewResult = { angleDeg: measured.angleDeg, confidence: measured.confidence, applied: apply };
-  if (!apply) return { image: clean, toOriginal: stage.toOriginal, ink, skew };
+  if (!apply) return { image: clean, toOriginal: stage.toOriginal, ...first, skew };
   const rotation = straighteningRotation(clean.width, clean.height, measured.angleDeg);
   const image = warpHomography(clean, rotation.outputToInput, rotation.width, rotation.height);
-  return { image, toOriginal: compose(stage.toOriginal, rotation.outputToInput), ink: planInkMask(image, mode), skew };
+  return { image, toOriginal: compose(stage.toOriginal, rotation.outputToInput), ...inkOf(image, mode), skew };
 }
 
 /** **Ευθυγράμμισε** μια εικόνα κάτοψης. Η πηγή μένει ανέπαφη. */
@@ -97,6 +105,7 @@ export function alignPlan(source: PlanRaster, options: Partial<PlanAlignOptions>
   return {
     image: done.image,
     ink,
+    darkness: done.darkness,
     alignedToOriginal: done.toOriginal,
     originalToAligned,
     original: { width: source.width, height: source.height },

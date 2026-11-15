@@ -308,14 +308,15 @@ describe('διάταξη φύλλου — πλαίσιο και πινακίδα
 });
 
 describe('Worker: host + πελάτης', () => {
-  it('ο host δίνει ό,τι και η άμεση κλήση· η απάντηση μεταφέρει εικόνα και μελάνι', () => {
+  it('ο host δίνει ό,τι και η άμεση κλήση· η απάντηση μεταφέρει εικόνα, μελάνι και σκοτεινότητα', () => {
     const plan = renderSyntheticPlan({ ...BASE, rotationDeg: 1.2 });
     const direct = alignPlan(plan.image);
     const viaHost = handlePlanAlign({ kind: 'align', raster: plan.image });
     expect(viaHost.alignment.skew).toEqual(direct.skew);
     expect(Array.from(viaHost.alignment.ink)).toEqual(Array.from(direct.ink));
     expect(viaHost.segments).toBeNull(); // δεν ζητήθηκαν: η προεπισκόπηση δεν τα πληρώνει
-    expect(planAlignReplyTransfer(viaHost)).toHaveLength(2);
+    expect(Array.from(viaHost.alignment.darkness)).toEqual(Array.from(direct.darkness));
+    expect(planAlignReplyTransfer(viaHost)).toHaveLength(3);
   });
 
   it('τμήματα στο ΙΔΙΟ ταξίδι: ό,τι και η άμεση κλήση, με όριο γεμίσματος από την κλίμακα (SSoT)', () => {

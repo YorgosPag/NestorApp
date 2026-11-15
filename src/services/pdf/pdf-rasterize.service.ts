@@ -18,6 +18,7 @@
 
 import 'server-only';
 
+import type { Affine2x3 } from '@/lib/geometry/affine-2x3';
 import { readPageStructure, type PageStructureRule, type PageStructureTagTable, type PdfjsOperators, type StructurePage } from './pdf-page-structure';
 
 export interface RasterizeOptions {
@@ -85,6 +86,8 @@ interface PdfjsDoc {
 interface PdfjsViewport {
   width: number;
   height: number;
+  /** Χώρος χρήστη του PDF → px της όψης (`[a, b, c, d, e, f]`, σημασιολογία `ctx.transform`): περιστροφή, `/MediaBox`, αναστροφή y. */
+  transform: readonly number[];
   /** Σημείο PDF (αρχή κάτω-αριστερά) → σημείο όψης (αρχή πάνω-αριστερά), με περιστροφή και μετατόπιση της σελίδας. */
   convertToViewportPoint(x: number, y: number): [number, number];
 }
@@ -188,9 +191,18 @@ export interface RasterizedPdfPage {
   /** Φυσικό μέγεθος της (περιστραμμένης) σελίδας. */
   readonly pageWidthMm: number;
   readonly pageHeightMm: number;
+  /**
+   * Χώρος χρήστη του PDF → px **αυτής** της εικόνας (ADR-929 §6.21.5): ο πίνακας του ίδιου viewport που ζωγράφισε, ώστε
+   * σημεία του PDF (π.χ. δηλωμένες διαστάσεις του χρυσού συνόλου) να πέφτουν στο πλέγμα της εικόνας χωρίς δεύτερο υπολογισμό.
+   */
+  readonly userToPx: Affine2x3;
 }
 
 const MM_PER_INCH = 25.4;
+
+function affineOf([a, b, c, d, e, f]: readonly number[]): Affine2x3 {
+  return { a, b, c, d, e, f };
+}
 
 /** Ζωγραφίζει ΜΙΑ σελίδα σε PNG, με λευκό υπόβαθρο και ταβάνι πλάτους, και λέει σε ποια κλίμακα. */
 async function renderPage(
@@ -221,6 +233,7 @@ async function renderPage(
     dpi: scale / inchesPerUnit,
     pageWidthMm: (viewport.width / scale) * inchesPerUnit * MM_PER_INCH,
     pageHeightMm: (viewport.height / scale) * inchesPerUnit * MM_PER_INCH,
+    userToPx: affineOf(viewport.transform),
   };
 }
 

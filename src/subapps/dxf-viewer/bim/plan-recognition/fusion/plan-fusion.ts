@@ -153,7 +153,7 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
     families: frame.families,
     faceLines: frame.lines,
     adjustedOffsetPx: offsets,
-    adjustedSegments: adjustedSegments(input.segments, frame, offsets, input.alignment),
+    adjustedSegments: adjustedSegments(input.segments, frame, offsets, input.alignment, o.junctionMinAngleDeg),
     dimensions,
     scale,
     rooms,

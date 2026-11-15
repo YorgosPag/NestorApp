@@ -64,17 +64,31 @@ export interface BandFace {
 /** Ζώνη κοντύτερη από το πάχος της είναι η **κάθετη** τομή ενός παχιού σώματος, όχι γραμμή αυτού του άξονα. */
 export const isBandLine = (band: AxisBand): boolean => band.end - band.start >= band.thickness;
 
-/** Το εκατοστημόριο του πάχους, σταθμισμένο με το μήκος κάθε ζώνης. `null` ⇒ καμία ζώνη. */
-export function weightedThicknessPercentile(bands: readonly AxisBand[], fraction: number): number | null {
+/**
+ * ADR-929 §6.21.4 — το **φυσικό** πάχος μιας ζώνης (px του πλαισίου της), μετρημένο στην κάλυψη του γκρι
+ * (`lib/geometry/raster/coverage-width.ts`), όχι στη δυαδική μάσκα.
+ * 🔑 Κανόνας: **ό,τι είναι φυσική ποσότητα** (τυπική πινελιά, πινελιά ή γέμισμα, πάχος παρειάς) ρωτά **αυτό**. Η γεωμετρία
+ *   **της μάσκας** (`isBandLine`, `inset`, `meetingCentre`, θέση των παρειών γεμίσματος, σβήσιμο) μένει στο `band.thickness`.
+ *   Το δυαδικό πάχος αλλάζει με τη φάση της εξομάλυνσης (1,13 px ⇒ 1 ή 2), το φυσικό όχι.
+ */
+export type BandWidth = (band: AxisBand) => number;
+
+/** Η κεντρική γραμμή της ζώνης (άκρα = διάμεσοι των γραμμών σάρωσης), στο πλαίσιό της. */
+export function bandCentreline(band: AxisBand): readonly [Point2D, Point2D] {
+  return [bandPoint(band, band.start, band.center), bandPoint(band, band.end, band.center)];
+}
+
+/** Το εκατοστημόριο του φυσικού πάχους (`widthOf`), σταθμισμένο με το μήκος κάθε ζώνης. `null` ⇒ καμία ζώνη. */
+export function weightedThicknessPercentile(bands: readonly AxisBand[], fraction: number, widthOf: BandWidth): number | null {
   if (bands.length === 0) return null;
-  const sorted = [...bands].sort((a, b) => a.thickness - b.thickness);
-  const total = sorted.reduce((s, b) => s + (b.end - b.start), 0);
+  const sorted = bands.map((band) => ({ band, width: widthOf(band) })).sort((a, b) => a.width - b.width);
+  const total = sorted.reduce((s, b) => s + (b.band.end - b.band.start), 0);
   let acc = 0;
   for (const b of sorted) {
-    acc += b.end - b.start;
-    if (acc >= fraction * total) return b.thickness;
+    acc += b.band.end - b.band.start;
+    if (acc >= fraction * total) return b.width;
   }
-  return sorted[sorted.length - 1].thickness;
+  return sorted[sorted.length - 1].width;
 }
 
 /**
@@ -128,7 +142,7 @@ function meetingCentre(band: AxisBand, at: number, strokes: readonly AxisBand[])
  * από **υπόλοιπο** μελάνι): η σάρωση συνεχίζει πέρα από την περιβάλλουσα, πάνω στο πλήρες μελάνι του πλαισίου.
  */
 function strokeFace(
-  band: AxisBand, strokes: readonly AxisBand[], frame: BandFrame, minLength: number, reachPx: number,
+  band: AxisBand, strokes: readonly AxisBand[], frame: BandFrame, minLength: number, reachPx: number, width: number,
 ): BandFace {
   const span = strokeExtent(frame.mask, frame.cols, frame.rows, band, reachPx);
   const inset = Math.min(band.thickness / 2, (span.end - span.start) / 4);
@@ -140,7 +154,7 @@ function strokeFace(
   return {
     start: bandPoint(band, from, band.center),
     end: bandPoint(band, to, band.center),
-    width: band.thickness,
+    width,
     style: 'stroke',
     confidence: bandConfidence(band, minLength),
   };
@@ -168,18 +182,18 @@ function fillFaces(band: AxisBand, frame: BandFrame, minLength: number): BandFac
 }
 
 /**
- * Οι παρειές των ζωνών-γραμμών, με κατώφλι γεμίσματος `fillAbove` (από {@link fillThreshold}). `strokeReachPx`: πόσο
- * μπορεί να μακρύνει μια πινελιά πέρα από την περιβάλλουσά της, πάνω στο πλήρες μελάνι του `frame` (0 ⇒ οι ζώνες
- * βρέθηκαν ήδη στο πλήρες μελάνι).
+ * Οι παρειές των ζωνών-γραμμών, με κατώφλι γεμίσματος `fillAbove` (από {@link fillThreshold}, στο **φυσικό** πάχος
+ * `widthOf`). `strokeReachPx`: πόσο μπορεί να μακρύνει μια πινελιά πέρα από την περιβάλλουσά της, πάνω στο πλήρες
+ * μελάνι του `frame` (0 ⇒ οι ζώνες βρέθηκαν ήδη στο πλήρες μελάνι).
  */
 export function bandFaces(
   bands: readonly AxisBand[], frame: BandFrame, fillAbove: number, minLength: number, o: PlanFaceOptions,
-  strokeReachPx = 0,
+  widthOf: BandWidth, strokeReachPx = 0,
 ): BandFace[] {
   const lines = bands.filter(isBandLine);
-  const isFill = (band: AxisBand): boolean => band.thickness >= fillAbove && band.fill >= o.minFillSolidity;
+  const isFill = (band: AxisBand): boolean => widthOf(band) >= fillAbove && band.fill >= o.minFillSolidity;
   const strokes = lines.filter((band) => !isFill(band));
   return lines.flatMap((band) => (
-    isFill(band) ? fillFaces(band, frame, minLength) : [strokeFace(band, strokes, frame, minLength, strokeReachPx)]
+    isFill(band) ? fillFaces(band, frame, minLength) : [strokeFace(band, strokes, frame, minLength, strokeReachPx, widthOf(band))]
   ));
 }

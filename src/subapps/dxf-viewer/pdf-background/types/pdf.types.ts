@@ -93,6 +93,12 @@ export const PDF_RENDER_CONFIG = {
   MAX_RENDER_SCALE: 4,
   /** Minimum render scale */
   MIN_RENDER_SCALE: 0.5,
+  /**
+   * ADR-929 §6.21.5 — η κλίμακα της εικόνας μιας σελίδας-υποβάθρου (px ανά pt): η εικόνα της οθόνης **και** η εικόνα της
+   * αναγνώρισης κάτοψης για διανυσματική σελίδα (`PdfPageProvider`). Τη διαβάζει και ο χρυσός runner, ώστε η μέτρηση να
+   * γίνεται στο ίδιο πλέγμα με την παραγωγή — ποτέ δεύτερη σταθερά.
+   */
+  PLAN_RENDER_SCALE: 2,
   /** Padding factor for fit-to-view calculation (0.9 = 10% padding) */
   FIT_TO_VIEW_PADDING: 0.9,
   /**

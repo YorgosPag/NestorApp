@@ -155,8 +155,11 @@ const config = {
   // (τα κατηγορήματα είναι ενσωματωμένα — μετρημένο 2026-10-25).
   // `parse5@8` και η εξάρτησή του `entities@6` είναι ESM-only (`"type": "module"`, κανένα CJS build) — ο αναλυτής της
   // σελίδας του Μητρώου Ενεργειακών Επιθεωρητών (ADR-915 §40.7 Φ2, `services/professional-registry/buildingcert-parse.ts`).
+  // `pdfjs-dist` (το `legacy/build/pdf.mjs` + ο worker του, που φορτώνεται με `import(workerSrc)`) είναι ESM — ο χρυσός runner
+  // της αναγνώρισης κάτοψης (ADR-929 §6.21.5) αποδίδει **αληθινή** σελίδα με τον server-side SSoT (`pdf-rasterize.service`).
+  // Ως τότε κάθε σουίτα το έκανε mock. Μετρημένο: χωρίς `import.meta`, χωρίς top-level `await`.
   transformIgnorePatterns: [
-    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates|parse5|entities)/)'
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates|parse5|entities|pdfjs-dist)/)'
   ],
   moduleDirectories: ['node_modules', '<rootDir>'],
   // 🔴 ΟΡΙΟ ΠΟΡΩΝ ΤΟΠΙΚΑ (2026-07-31) — ΜΗΝ το αφαιρέσεις.

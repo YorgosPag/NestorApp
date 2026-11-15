@@ -19,7 +19,7 @@ import { readVectorContent, type PdfVectorContent } from '../../pdf-background/s
 import { PDF_RENDER_CONFIG } from '../../pdf-background/types/pdf.types';
 
 const SUPPORTED_MIME_TYPES = ['application/pdf'] as const;
-const RENDER_SCALE = 2;
+const RENDER_SCALE = PDF_RENDER_CONFIG.PLAN_RENDER_SCALE;
 const PAGE_NUMBER = 1;
 
 /**

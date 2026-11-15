@@ -51,7 +51,28 @@ const sourceRef = fileRef.extend({ page: z.number().int().min(1) }).strict();
  */
 export const GOLDEN_PAIR_RELATIONS = ['printed-from', 'scanned-from', 'unverified'] as const;
 
-/** Βαθμίδα Α: αλήθεια από το διανυσματικό ζεύγος. Βαθμίδα Β: αποτύπωση στη Nestor, εκκρεμεί (Δ13.1). */
+const finite = z.number().finite();
+/** Σημείο `[x, y]` στις μονάδες περιεχομένου του PDF, όπως γράφονται στο stream. */
+const contentPoint = z.tuple([finite, finite]);
+
+/**
+ * ADR-929 §6.21.5 — μία διάσταση **δηλωμένη από το διανυσματικό περιεχόμενο** της πηγής: η τιμή που γράφει το σχέδιο, τα
+ * δύο σημεία που μετρά (βάσεις των βοηθητικών) και η γραμμή της. Ίδιο λεξιλόγιο με το `CadTruthDimension`, ώστε να ελέγχεται
+ * από το **ίδιο** `checkSpans`.
+ */
+const declaredDimension = z
+  .object({
+    text: z.string().min(1),
+    measured: z.tuple([contentPoint, contentPoint]),
+    line: z.tuple([contentPoint, contentPoint]),
+  })
+  .strict();
+
+/**
+ * Βαθμίδα Α: η αλήθεια βγαίνει από **διανυσματικό** περιεχόμενο — ζεύγος CAD (`vector`) ή οι γραμμές της ίδιας της
+ * διανυσματικής σελίδας, μεταγραμμένες αυτούσιες από το stream (`declared-dimensions`). Βαθμίδα Β: αποτύπωση στη Nestor,
+ * εκκρεμεί (Δ13.1).
+ */
 const truth = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('vector'),
@@ -63,6 +84,15 @@ const truth = z.discriminatedUnion('kind', [
      * `_Image.dxf` του Παλαιολόγου Γ **δεν** είναι τέτοιο ζεύγος· είναι αυτόματη διανυσματοποίηση της σάρωσης.
      */
     alignment: fileRef.optional(),
+  }).strict(),
+  z.object({
+    kind: z.literal('declared-dimensions'),
+    /**
+     * Ο πίνακας `cm` του περιεχομένου (`[a, b, c, d, e, f]`): μονάδες περιεχομένου → χώρος χρήστη του PDF. Οι τιμές μένουν
+     * όπως στο stream (π.χ. 4589,67 με `0.12 0 0 0.12 0 0 cm`), ώστε να ελέγχονται με μια ματιά στο αρχείο.
+     */
+    contentMatrix: z.tuple([finite, finite, finite, finite, finite, finite]),
+    dimensions: z.array(declaredDimension).min(1),
   }).strict(),
   z.object({ kind: z.literal('manual-pending') }).strict(),
 ]);
@@ -76,7 +106,7 @@ const goldenCase = z
     truth,
   })
   .strict()
-  .refine((c) => (c.tier === 'A') === (c.truth.kind === 'vector'), 'tier A ⇔ vector truth');
+  .refine((c) => (c.tier === 'A') === (c.truth.kind !== 'manual-pending'), 'tier A ⇔ truth from vector content');
 
 const manifest = z
   .object({
@@ -89,6 +119,8 @@ const manifest = z
 
 export type GoldenFileRef = z.infer<typeof fileRef>;
 export type GoldenCase = z.infer<typeof goldenCase>;
+export type GoldenTruth = GoldenCase['truth'];
+export type GoldenDeclaredDimensions = Extract<GoldenTruth, { kind: 'declared-dimensions' }>;
 export type GoldenManifest = z.infer<typeof manifest>;
 
 export type GoldenManifestParse =

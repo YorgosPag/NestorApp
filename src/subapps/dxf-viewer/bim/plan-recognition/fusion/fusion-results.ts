@@ -15,6 +15,7 @@ import type { PlanConfidence, RasterSegment } from '../plan-recognition-types';
 import type { DimensionTarget } from './dimension-binding';
 import type { BoundDimension, NetworkOutcome } from './adjustment-network';
 import { familyNormal, type FusionFrame } from './fusion-frame';
+import { closeSegmentJunctions, type JunctionAlignment } from './segment-junctions';
 import { bindingFactor, composeConfidence, solverFactor } from './fusion-confidence';
 import type { DimensionBinding, FusedDimension, FusedDimensionStatus, PlanFusionOptions } from './plan-fusion-types';
 
@@ -34,12 +35,27 @@ function shiftSegment(segment: RasterSegment, delta: { x: number; y: number }, t
   return { ...segment, start: move(segment.start), end: move(segment.end) };
 }
 
-/** Τα τμήματα της Φ2 μετά τη συνόρθωση (όσα δεν άγγιξε ο λύτης μένουν ως είχαν). */
+/**
+ * Τα τμήματα της Φ2 μετά τη συνόρθωση (όσα δεν άγγιξε ο λύτης μένουν ως είχαν), με τους **κόμβους** των παρειών κλειστούς
+ * στην τομή των συνορθωμένων ευθειών (ADR-929 §6.21.8, `segment-junctions.ts`).
+ */
 export function adjustedSegments(
   segments: readonly RasterSegment[],
   frame: FusionFrame,
   offsets: ReadonlyMap<string, number>,
-  alignment: { readonly originalToAligned: Homography; readonly alignedToOriginal: Homography },
+  alignment: JunctionAlignment,
+  junctionMinAngleDeg: number,
+): RasterSegment[] {
+  const shifted = shiftedSegments(segments, frame, offsets, alignment);
+  return closeSegmentJunctions(segments, shifted, frame, offsets, alignment, junctionMinAngleDeg);
+}
+
+/** Κάθε τμήμα μετακινημένο κατά `δ·n` της ευθείας του (οι κόμβοι κλείνουν μετά). */
+function shiftedSegments(
+  segments: readonly RasterSegment[],
+  frame: FusionFrame,
+  offsets: ReadonlyMap<string, number>,
+  alignment: JunctionAlignment,
 ): RasterSegment[] {
   return segments.map((s) => {
     const line = frame.lineById.get(frame.lineOfSegment.get(s.id) ?? '');

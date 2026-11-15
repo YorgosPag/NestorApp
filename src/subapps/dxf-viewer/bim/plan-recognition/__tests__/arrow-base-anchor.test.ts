@@ -18,7 +18,7 @@ const COLS = 140;
 const ROWS = 100;
 const Y = 50;
 const APEX_X = 20;
-const ARROW: ArrowBody = { lengthPx: 14, halfWidthPx: 3 };
+const ARROW: ArrowBody = { lengthPx: 14, halfWidthPx: 3, apexOffsetPx: 0 };
 const SCALE = { strokePx: 1, textPx: 10 };
 
 function framed(id: string, a: PlanePoint, b: PlanePoint): FramedSegment {

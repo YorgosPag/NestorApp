@@ -31,6 +31,7 @@ import {
   type AxisBand,
   type AxisBandOptions,
 } from '@/lib/geometry/raster/axis-bands';
+import { coverageWidth, inkLevels, type CoverageRaster } from '@/lib/geometry/raster/coverage-width';
 import { bandsAtAngle, dominantObliqueDirection } from '@/lib/geometry/raster/oblique-bands';
 import { warpMask } from '@/lib/geometry/raster/raster-warp';
 import { MODEL_FROM_DRAWING_LIMITS } from '../../../config/tolerance-config';
@@ -40,11 +41,13 @@ import type { AlignedRectPx, PlanAlignment } from '../alignment/plan-alignment-t
 import { classifySegmentRoles, type PlanSegmentClassification } from '../classify/segment-role-classifier';
 import type { PlanConfidence, RasterSegment } from '../plan-recognition-types';
 import {
+  bandCentreline,
   bandFaces,
   fillThreshold,
   isBandLine,
   weightedThicknessPercentile,
   type BandFace,
+  type BandWidth,
   type PlanFaceOptions,
 } from './plan-faces';
 
@@ -90,7 +93,10 @@ export function minFillPxFor(alignment: Pick<PlanAlignment, 'workingScale'>, sca
 export interface PlanSegmentExtraction {
   /** Σε **αρχικά** px (`raster-px`), με σταθερά ids `ps0, ps1, …` μέσα στην αναγνώριση. */
   readonly segments: readonly RasterSegment[];
-  /** Η τυπική πινελιά του σχεδίου σε px εργασίας (`null` ⇒ καμία ζώνη). */
+  /**
+   * Η τυπική πινελιά του σχεδίου σε px εργασίας (`null` ⇒ καμία ζώνη). **Φυσικό** πάχος, από την κάλυψη του γκρι, σε
+   * υπο-pixel (ADR-929 §6.21.4): ίδιο σε κάθε φάση εξομάλυνσης (Chrome / Node).
+   */
   readonly strokeWidthPx: number | null;
   readonly minLengthPx: number;
   /** Οι λοξές διευθύνσεις που βρέθηκαν και έδωσαν γραμμές, σε μοίρες (raster-px). */
@@ -124,7 +130,7 @@ export interface PlanInkMask {
  * Ό,τι διαβάζει η εξαγωγή από μια ευθυγράμμιση: **χωρίς** τα pixel της εικόνας (μόνο οι διαστάσεις της). Έτσι μια
  * επανεξαγωγή στέλνει στον Worker μόνο τη μάσκα μελανιού, όχι ξανά την εικόνα.
  */
-export type PlanSegmentSource = Pick<PlanAlignment, 'ink' | 'sheet' | 'alignedToOriginal' | 'originalToAligned'> & {
+export type PlanSegmentSource = Pick<PlanAlignment, 'ink' | 'darkness' | 'sheet' | 'alignedToOriginal' | 'originalToAligned'> & {
   readonly image: Pick<PlanAlignment['image'], 'width' | 'height'>;
 };
 
@@ -184,8 +190,27 @@ function obliqueStrokeReach(angleDeg: number, stroke: number): number {
   return (2 * stroke + 2 * RESIDUAL_ERASE_MARGIN_PX) / Math.max(Math.sin(phi), 1e-3);
 }
 
+/**
+ * ADR-929 §6.21.4 — το φυσικό πάχος κάθε ζώνης, μετρημένο **στην ευθυγραμμισμένη εικόνα** (εκεί ζει το κανάλι
+ * σκοτεινότητας). `toAligned`: από το πλαίσιο των ζωνών στο ευθυγραμμισμένο (`null` ⇒ ίδιο). Ένας εκτιμητής για άξονες
+ * και λοξά. Μία μέτρηση ανά ζώνη (το ρωτούν το εκατοστημόριο, το «γέμισμα;» και η παρειά).
+ */
+function coverageWidthOf(raster: CoverageRaster, toAligned: Homography | null): BandWidth {
+  const measured = new Map<AxisBand, number>();
+  return (band) => {
+    const known = measured.get(band);
+    if (known !== undefined) return known;
+    const [a, b] = bandCentreline(band);
+    const ends = toAligned === null ? [a, b] : [applyHomography(toAligned, a.x, a.y), applyHomography(toAligned, b.x, b.y)];
+    const width = coverageWidth(raster, ends[0], ends[1], band.thickness);
+    measured.set(band, width);
+    return width;
+  };
+}
+
 interface PassContext {
   readonly stroke: number;
+  readonly coverage: CoverageRaster;
   readonly cols: number;
   readonly rows: number;
   readonly bandOptions: AxisBandOptions;
@@ -213,7 +238,8 @@ function obliquePass(residual: Uint8Array, full: Uint8Array, ctx: PassContext): 
     if (lines.length === 0 || toOriginal === null || back === null) break;
     const frame = { mask: warpMask(full, cols, rows, turned.toSource, turned.width, turned.height), cols: turned.width, rows: turned.height };
     const reach = obliqueStrokeReach(dir.angleDeg, ctx.stroke);
-    for (const face of bandFaces(lines, frame, ctx.fillAbove, ctx.bandOptions.minLength, options, reach)) {
+    const widthOf = coverageWidthOf(ctx.coverage, turned.toSource);
+    for (const face of bandFaces(lines, frame, ctx.fillAbove, ctx.bandOptions.minLength, options, widthOf, reach)) {
       faces.push({ face, toOriginal });
     }
     angles.push(dir.angleDeg);
@@ -270,14 +296,17 @@ export function extractPlanSegments(
     ...axisBands(ink, cols, rows, 'vertical', bandOptions),
   ];
   const lines = bands.filter(isBandLine);
-  const stroke = weightedThicknessPercentile(lines, options.strokePercentile);
+  const coverage: CoverageRaster = { gray: alignment.darkness, cols, rows, levels: inkLevels(alignment.darkness, ink) };
+  const axisWidth = coverageWidthOf(coverage, null);
+  const stroke = weightedThicknessPercentile(lines, options.strokePercentile, axisWidth);
   if (stroke === null) {
     return { segments: [], strokeWidthPx: null, minLengthPx: minLength, obliqueAnglesDeg: [], classification: EMPTY_CLASSIFICATION };
   }
   const ctx: PassContext = {
-    stroke, cols, rows, bandOptions, fillAbove: fillThreshold(stroke, options), options, alignedToOriginal: alignment.alignedToOriginal,
+    stroke, coverage, cols, rows, bandOptions, fillAbove: fillThreshold(stroke, options), options,
+    alignedToOriginal: alignment.alignedToOriginal,
   };
-  const axisFaces = bandFaces(lines, { mask: ink, cols, rows }, ctx.fillAbove, minLength, options)
+  const axisFaces = bandFaces(lines, { mask: ink, cols, rows }, ctx.fillAbove, minLength, options, axisWidth)
     .map((face) => ({ face, toOriginal: alignment.alignedToOriginal }));
   // Το κόστος του περιθωρίου στα άκρα των λοξών το επιστρέφει το `strokeExtent` (μέσω `obliqueStrokeReach`).
   const residual = Uint8Array.from(ink);

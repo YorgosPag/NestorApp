@@ -77,8 +77,11 @@ export function cleanPlanImage(src: PlanRaster, mode: PlanBinarization): Rgba {
   return mode === 'scan' ? normalizeBackground(src) : whiteBalance(src);
 }
 
-/** Το κανάλι «σκοτεινότητας» 0–255: γκρι για σάρωση, γκρι + βάρος χρώματος για αγγελία. */
-function darkness(clean: PlanRaster, mode: PlanBinarization): Uint8Array {
+/**
+ * Το κανάλι «σκοτεινότητας» 0–255 (0 = μαύρο): γκρι για σάρωση, γκρι + βάρος χρώματος για αγγελία. Από αυτό βγαίνει η
+ * μάσκα μελανιού, και από το **ίδιο** μετριέται το πάχος των πινελιών σε υπο-pixel (`coverage-width.ts`, ADR-929 §6.21.4).
+ */
+export function planDarkness(clean: PlanRaster, mode: PlanBinarization): Uint8Array {
   const n = clean.width * clean.height;
   const gray = rgbaToGray(clean.rgba, n);
   if (mode === 'scan') return gray;
@@ -97,10 +100,14 @@ function darkness(clean: PlanRaster, mode: PlanBinarization): Uint8Array {
  */
 const GLOBAL_INK_CEILING = 192;
 
-/** **Μάσκα μελανιού** (`1` = μελάνι) μιας καθαρής εικόνας: ολικό Otsu **ή** τοπικό Sauvola. */
-export function planInkMask(clean: PlanRaster, mode: PlanBinarization, local: AdaptiveThresholdOptions = DEFAULT_SAUVOLA): Uint8Array {
+/**
+ * **Μάσκα μελανιού** (`1` = μελάνι) μιας καθαρής εικόνας: ολικό Otsu **ή** τοπικό Sauvola. `dark` = το κανάλι του
+ * {@link planDarkness}, όταν ο καλών το κρατά (υπολογίζεται μία φορά).
+ */
+export function planInkMask(
+  clean: PlanRaster, mode: PlanBinarization, local: AdaptiveThresholdOptions = DEFAULT_SAUVOLA, dark = planDarkness(clean, mode),
+): Uint8Array {
   const { width, height } = clean;
-  const dark = darkness(clean, mode);
   const global = otsuThreshold(grayHistogram(dark));
   const ink = adaptiveInkMask(dark, width, height, local);
   if (global >= 0 && global <= GLOBAL_INK_CEILING) for (let i = 0; i < ink.length; i++) if (dark[i] <= global) ink[i] = 1;
