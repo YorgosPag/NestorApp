@@ -209,6 +209,56 @@ describe('Κ — καμία κρεμασμένη υπόσχεση', () => {
     expect(runTwo.settled()).toEqual(GUARD_COMPLETED);
   });
 
+  it('Κ4 — διπλό κλικ ΟΣΟ τρέχει το preview ⇒ μία πράξη, η δεύτερη κλήση `cancelled` (ADR-915 §41.4)', async () => {
+    const { result } = renderDecision();
+    const action = jest.fn().mockResolvedValue(undefined);
+    let answer!: (value: Preview) => void;
+    const fetchPreview = jest.fn(() => new Promise<Preview>((resolve) => { answer = resolve; }));
+    const request = { fetchPreview, unavailablePreview: () => UNAVAILABLE, action };
+
+    let one!: Promise<GuardResult>;
+    let two!: Promise<GuardResult>;
+    act(() => { one = result.current.guard(request); });
+    act(() => { two = result.current.guard(request); });
+    await expect(two).resolves.toEqual(GUARD_CANCELLED);
+
+    await act(async () => { answer(preview('allow')); });
+    await expect(one).resolves.toEqual(GUARD_COMPLETED);
+    expect(fetchPreview).toHaveBeenCalledTimes(1);
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it('Κ5 — κλικ ΟΣΟ τρέχει η πράξη ⇒ `cancelled`· μετά το τέλος της, η κλειδαριά ανοίγει', async () => {
+    const { result } = renderDecision();
+    const held = heldAction();
+    const runOne = await begin(result, 'allow', held.action);
+
+    const blocked = await begin(result, 'allow', jest.fn().mockResolvedValue(undefined));
+    expect(blocked.settled()).toEqual(GUARD_CANCELLED);
+
+    await act(async () => { held.release(); });
+    expect(runOne.settled()).toEqual(GUARD_COMPLETED);
+
+    const after = jest.fn().mockResolvedValue(undefined);
+    const runThree = await begin(result, 'allow', after);
+    expect(runThree.settled()).toEqual(GUARD_COMPLETED);
+    expect(after).toHaveBeenCalledTimes(1);
+  });
+
+  it('Κ6 — η πράξη μετά το «Συνέχεια» κρατά την κλειδαριά μέχρι να τελειώσει', async () => {
+    const { result } = renderDecision();
+    const held = heldAction();
+    const runOne = await begin(result, 'warn', held.action);
+
+    act(() => { result.current.dialogProps.onConfirm(); });
+    await act(async () => { jest.runAllTimers(); });
+    const blocked = await begin(result, 'allow', jest.fn().mockResolvedValue(undefined));
+    expect(blocked.settled()).toEqual(GUARD_CANCELLED);
+
+    await act(async () => { held.release(); });
+    expect(runOne.settled()).toEqual(GUARD_COMPLETED);
+  });
+
   it('Κ3 — reset ⇒ `cancelled`, και σταθερή ταυτότητα με inline options', async () => {
     const { result, rerender } = renderHook(() => useImpactDecision<Preview>('test', { onBlockDismiss: () => {} }));
     const firstReset = result.current.reset;

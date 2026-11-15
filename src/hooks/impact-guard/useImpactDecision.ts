@@ -39,6 +39,12 @@
  * μετά το κλείσιμο (`onOpenChange(false)`). Το `confirm` **παίρνει** την εκκρεμή απόφαση, άρα το
  * κλείσιμο που ακολουθεί βρίσκει κενό και **δεν** την ακυρώνει.
  *
+ * 🔒 **ΜΙΑ ΠΤΗΣΗ ΤΗ ΦΟΡΑ** (ADR-915 §41.4, ζωντανή μέτρηση 2026-11-15: δύο κλικ στο «Αποθήκευση» όσο
+ * έτρεχε το `POST …/impact-preview` ⇒ **δύο** `PATCH`). Όσο τρέχει το preview **ή** η ίδια η πράξη, νέα
+ * κλήση λύνεται αμέσως `cancelled` — σιωπή, καμία δεύτερη εγγραφή, για **κάθε** φύλακα (ακίνητα · έργα ·
+ * επαφές). Η κλειδαριά **ανοίγει** όσο ο διάλογος περιμένει τον άνθρωπο: εκεί ισχύει το «η νεότερη
+ * πρόθεση νικά» (Κ2) — ο άνθρωπος βλέπει τον διάλογο, δεν υπάρχει τυφλό διπλό κλικ.
+ *
  * @enterprise ADR-664 (impact-guard SSoT) · ADR-777 §8.69.13
  */
 
@@ -112,6 +118,8 @@ export function useImpactDecision<TPreview extends ImpactPreviewShape>(
   const [preview, setPreview] = useState<TPreview | null>(null);
   const [open, setOpen] = useState(false);
   const pendingRef = useRef<PendingDecision | null>(null);
+  // 🔒 Μία πτήση τη φορά: preview ή πράξη σε εξέλιξη (ref, όχι state — το διπλό κλικ προλαβαίνει το render).
+  const inFlightRef = useRef(false);
   const logger = useMemo(() => createModuleLogger(scope), [scope]);
 
   // Μέσω ref: ένα inline `{ onBlockDismiss }` δεν ξαναφτιάχνει το `reset` σε κάθε render.
@@ -142,8 +150,13 @@ export function useImpactDecision<TPreview extends ImpactPreviewShape>(
     setOpen(false);
     setPreview(null);
     // 🏢 INP: κλείσε πρώτα, άφησε τον browser να ζωγραφίσει, τρέξε την πράξη στο επόμενο task.
+    if (!pending) return;
+    inFlightRef.current = true;
     setTimeout(() => {
-      if (pending) void runGuardedAction(pending.action).then(pending.resolve);
+      void runGuardedAction(pending.action).then((result) => {
+        inFlightRef.current = false;
+        pending.resolve(result);
+      });
     }, 0);
   }, [dismiss, takePending]);
 
@@ -161,6 +174,8 @@ export function useImpactDecision<TPreview extends ImpactPreviewShape>(
 
   const guard = useCallback(
     async ({ fetchPreview, unavailablePreview, action }: ImpactGuardRequest<TPreview>): Promise<GuardResult> => {
+      if (inFlightRef.current) return GUARD_CANCELLED;
+      inFlightRef.current = true;
       setChecking(true);
       let next: TPreview;
       try {
@@ -168,11 +183,19 @@ export function useImpactDecision<TPreview extends ImpactPreviewShape>(
       } catch (error) {
         logPreviewFailure(logger, error);
         setChecking(false);
+        inFlightRef.current = false;
         return present(unavailablePreview(), action, true);
       }
       setChecking(false);
-      if (next.mode === 'allow') return runGuardedAction(action);
-      return present(next, action, next.mode === 'block');
+      if (next.mode !== 'allow') {
+        inFlightRef.current = false;
+        return present(next, action, next.mode === 'block');
+      }
+      try {
+        return await runGuardedAction(action);
+      } finally {
+        inFlightRef.current = false;
+      }
     },
     [logger, present],
   );

@@ -126,7 +126,7 @@ async function afterAnswer(
 async function hostLine(db: Firestore, engagement: ConveyanceEngagement): Promise<EngagementHostLine> {
   const record = await readCaseOf(db, engagement).catch(() => null);
   const context = record ? await loadConveyanceSubject(db, record.companyId, record.subject.propertyId).catch(() => null) : null;
-  return { propertyName: context?.propertyName ?? null, documentKind: null };
+  return { propertyId: record?.subject.propertyId ?? null, propertyName: context?.propertyName ?? null, documentKind: null };
 }
 
 export const CONVEYANCE_ENGAGEMENT_HOST: EngagementHostAdapter<ConveyanceEngagementInvitation, ConveyanceEngagement> = {

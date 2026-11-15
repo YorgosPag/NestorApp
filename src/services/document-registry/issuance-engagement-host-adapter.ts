@@ -217,8 +217,12 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
 /** ADR-915 §40 — η γραμμή «Ανέλαβε» στην επαφή του γραφείου: ποιο ακίνητο, ποιο έγγραφο. */
 async function hostLine(db: Firestore, engagement: IssuanceEngagement): Promise<EngagementHostLine> {
   const assignment = await readAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId).catch(() => null);
-  if (!assignment) return { propertyName: null, documentKind: null };
-  return { propertyName: await propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId), documentKind: assignment.documentKind };
+  if (!assignment) return { propertyId: null, propertyName: null, documentKind: null };
+  return {
+    propertyId: assignment.propertyId,
+    propertyName: await propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
+    documentKind: assignment.documentKind,
+  };
 }
 
 export const ISSUANCE_ENGAGEMENT_HOST: EngagementHostAdapter<IssuanceEngagementInvitation, IssuanceEngagement> = {

@@ -21,6 +21,7 @@ import React from 'react';
 import { RegistryLookupLink } from '@/components/mandate/RegistryLookupLink';
 import type { ProfessionalLicence } from '@/config/professional-licences';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { localDateOf } from '@/lib/date-local';
 import { formatDate } from '@/lib/intl-formatting';
 import type { ContactLicenceFieldProvenance, ContactLicenceProvenance } from '@/types/contacts/contact-licences';
 
@@ -28,9 +29,18 @@ import { CONTACT_LICENCE_KEYS, CONTACT_LICENCE_SOURCE_KEYS } from './contact-lic
 
 const NAMESPACES = ['contacts-form', 'property-market'];
 
-/** Ίδια προέλευση = ίδια πράξη: ίδια πηγή, ίδια ώρα, ίδια συμμετοχή. */
-function sameProvenance(a: ContactLicenceProvenance, b: ContactLicenceProvenance): boolean {
-  return a.source === b.source && a.recordedAt === b.recordedAt && a.engagementId === b.engagementId;
+/**
+ * Ίδια **όπως δείχνεται**: ίδια πηγή, ίδια **ημέρα**, ίδια συμμετοχή. Η γραμμή δείχνει ημερομηνία, όχι ώρα — δύο
+ * προελεύσεις που διαφέρουν **μόνο** στην ώρα θα έβγαιναν δύο πανομοιότυπες γραμμές («σαν διπλή», εύρημα ζωντανής
+ * δοκιμής 2026-11-15, ADR-915 §41.4). Η αποθηκευμένη προέλευση μένει ανά πεδίο και ακριβής· κρίνεται μόνο η όψη.
+ */
+function sameShownProvenance(a: ContactLicenceProvenance, b: ContactLicenceProvenance): boolean {
+  return a.source === b.source && a.engagementId === b.engagementId && dayOf(a.recordedAt) === dayOf(b.recordedAt);
+}
+
+/** Η τοπική ημέρα της στιγμής (`YYYY-MM-DD`) — ίδια βάση με το `formatDate` της γραμμής. */
+function dayOf(recordedAt: string): string {
+  return localDateOf(new Date(recordedAt));
 }
 
 interface ProvenanceLine {
@@ -40,7 +50,7 @@ interface ProvenanceLine {
 
 /** Οι γραμμές που δείχνονται: μία όταν τα πεδία μοιράζονται προέλευση, αλλιώς μία ανά αποθηκευμένο πεδίο. */
 function linesOf({ registration, grades }: ContactLicenceFieldProvenance): readonly ProvenanceLine[] {
-  if (registration !== null && (grades === null || sameProvenance(registration, grades))) {
+  if (registration !== null && (grades === null || sameShownProvenance(registration, grades))) {
     return [{ key: CONTACT_LICENCE_KEYS.provenanceLine, provenance: registration }];
   }
   const lines: ProvenanceLine[] = [];
@@ -60,8 +70,9 @@ export function ContactLicenceProvenanceNote({ licence, provenance }: ContactLic
   if (lines.length === 0) return null;
   return (
     <p className="m-0 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+      {/* Δύο πεδία ⇒ μία σειρά το καθένα (`basis-full`): ποτέ κολλημένα στην ίδια σειρά κειμένου. */}
       {lines.map((line) => (
-        <span key={line.key}>
+        <span key={line.key} className={lines.length > 1 ? 'basis-full' : undefined}>
           {t(line.key, {
             source: t(CONTACT_LICENCE_SOURCE_KEYS[line.provenance.source]),
             date: formatDate(line.provenance.recordedAt),

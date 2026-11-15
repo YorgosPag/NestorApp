@@ -14,6 +14,9 @@
 import React from 'react';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
+import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
+import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
+import { Link } from '@/lib/workspace/navigation';
 import { CASE_INVITE_ROLE_KEY } from '@/components/case-invite/case-invite-labels';
 import { ISSUANCE_SPACE_KEYS } from '@/components/conveyance/my-cases/issuance-space-labels';
 import { DOCUMENT_KIND_LABEL_KEYS } from '@/components/document-registry/document-registry-labels';
@@ -32,11 +35,24 @@ function subjectLabelOf(assignment: ContactProfessionalAssignment, t: Translate)
   return isLegalEngagementRole(assignment.role) ? t(CASE_INVITE_ROLE_KEY[assignment.role]) : '';
 }
 
+/**
+ * Το ακίνητο της ανάθεσης — **σύνδεσμος** στη σελίδα του όταν το ξέρουμε (ADR-915 §41.4, πρακτική Salesforce/HubSpot
+ * «related record»: κάθε όνομα εγγραφής ανοίγει την εγγραφή). Ίδιος προορισμός με το μητρώο (`RegistryPropertyValue`).
+ */
+function AssignmentProperty({ assignment, t }: { readonly assignment: ContactProfessionalAssignment; readonly t: Translate }) {
+  const name = assignment.propertyName ?? t(ISSUANCE_SPACE_KEYS.untitledProperty);
+  if (assignment.propertyId === null) return <>{name}</>;
+  return (
+    <Link href={ENTITY_ROUTES.properties.withId(assignment.propertyId)} className={`${TOUCH_TARGET_MIN} underline underline-offset-4`}>
+      {name}
+    </Link>
+  );
+}
+
 function AssignmentLine({ assignment, t }: { readonly assignment: ContactProfessionalAssignment; readonly t: Translate }) {
-  const property = assignment.propertyName ?? t(ISSUANCE_SPACE_KEYS.untitledProperty);
   return (
     <li>
-      {subjectLabelOf(assignment, t)} — {property}
+      {subjectLabelOf(assignment, t)} — <AssignmentProperty assignment={assignment} t={t} />
       <span className="text-muted-foreground"> · {t(ENGAGEMENT_STATE_KEYS[assignment.state])}</span>
     </li>
   );

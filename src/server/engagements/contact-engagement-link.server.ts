@@ -54,6 +54,7 @@ async function assignmentOf(db: Firestore, judged: JudgedEngagement): Promise<Co
     role: engagement.role,
     state: shownStateOf(judged),
     offeredAt: engagement.offeredAt,
+    propertyId: line.propertyId,
     propertyName: line.propertyName,
     documentKind: line.documentKind,
   };

@@ -16,6 +16,8 @@ import type { EngagementRole, EngagementState, EngagementSubjectKind } from '@/t
 
 /** Ποιο ακίνητο και (για ανάθεση έκδοσης) ποιο έγγραφο — η **μία** περιγραφή που δίνει ο οικοδεσπότης κάθε είδους. */
 export interface EngagementHostLine {
+  /** Το ακίνητο της υπόθεσης — για σύνδεσμο προς τη σελίδα του (ADR-915 §41.4)· `null` όταν η υπόθεση δεν διαβάζεται. */
+  readonly propertyId: string | null;
   readonly propertyName: string | null;
   /** Μόνο σε ανάθεση έκδοσης· `null` στη μεταβίβαση ή όταν η ανάθεση δεν διαβάζεται. */
   readonly documentKind: DocumentKind | null;
