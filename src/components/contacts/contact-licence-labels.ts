@@ -16,6 +16,9 @@ export const CONTACT_LICENCE_KEYS = {
   hold: 'contacts-form:licences.hold',
   registryHint: 'contacts-form:licences.registryHint',
   provenanceLine: 'contacts-form:licences.provenanceLine',
+  /** ADR-915 §40.5 — προέλευση ανά πεδίο, όταν η εγγραφή και οι τάξεις έχουν γραφτεί από άλλη πράξη. */
+  provenanceRegistrationLine: 'contacts-form:licences.provenanceRegistrationLine',
+  provenanceGradesLine: 'contacts-form:licences.provenanceGradesLine',
 } as const;
 
 /** ADR-915 §40.7 Φ2 — «Έλεγχος στο μητρώο»: η κρίση, η πράξη και ό,τι έμαθε η τελευταία ερώτηση. */

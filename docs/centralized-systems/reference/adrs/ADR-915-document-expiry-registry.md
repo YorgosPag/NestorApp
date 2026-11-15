@@ -160,6 +160,7 @@ ADR-838). Ένας τρίτος, χειρόγραφος κατάλογος θα 
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-15 | **§40.5.1 — προέλευση άδειας ανά ΠΕΔΙΟ (εγγραφή · τάξεις), πρακτική HubSpot property history.** Εύρημα ζωντανής δοκιμής: αλλαγή μόνο της τάξης έκανε τον αριθμό «Δηλωμένο από τον ίδιο» → «Καταχωρίστηκε από το γραφείο». Νέο `gradesProvenance?` (υπάρχει ⇔ `grades`)· παλιές γραμμές διαβάζονται χωρίς μετανάστευση (οι τάξεις παίρνουν της εγγραφής). `sameLicenceRegistration` · `mergeLicence` · `storedLicenceProvenanceShownBy` · `adoptLicenceRegistration` — η υιοθέτηση **δεν σβήνει πια** τις τάξεις του γραφείου. UI: μία γραμμή όταν συμπίπτουν, αλλιώς «Αριθμός μητρώου» + «Τάξεις». Νέο test `contact-licences-field-provenance.test.ts`. Hydration mismatch (handoff θέμα 1): το Select ήταν ο `JobSwitch` του συρταριού, όχι η φόρμα επαφής· **δεν αναπαράχθηκε** σε 3 φορτώσεις — καμία αλλαγή. |
 | 2026-11-15 | **§40.7 Φ3 fix — ο αναγνώστης του μητρώου λήξεων δεν φορτώνει πια τον πελάτη του buildingcert.gr.** Ζωντανή δοκιμή: `GET /api/document-registry` ⇒ 500 «Can't resolve 'parse5'» (το κύριο αντίγραφο δεν είχε συνδέσει το πακέτο — λύθηκε με `pnpm install --frozen-lockfile --offline`). Το σφάλμα αποκάλυψε περιττή εξάρτηση: το `registry-licence-standings.server.ts` εισήγαγε το `registryCheckSubjectOf` από το `registry-check.service.ts`, που φέρνει μαζί `buildingcert.client` + `parse5`. Η συνάρτηση μεταφέρθηκε στο καθαρό `lib/professional/registry-check-judgment.ts` (καλούντες: route ελέγχου μητρώου · μητρώο λήξεων)· +2 tests (Σ1–Σ2). |
 | 2026-11-15 | **§40.7 Φ3 — προειδοποίηση καταλληλότητας ενεργειακού επιθεωρητή στην ανάθεση ΠΕΑ.** `DocumentIssuer.licenceGradeScope` (ΠΕΑ ⇒ `buildings`) · καθαρός κριτής `lib/document-validity/inspector-coverage.ts` (`covers` · `exceeds` με βάση · `area-unknown` · `not-graded` · `grade-unknown` · `not-judged`· όρια **μόνο** από `gradeScheme.entitlements`) · `licenceStandingOf` (αρχή όταν `verified`, αλλιώς δήλωση) · `RegistryPropertyLabel.areaEvidence` μέσω `resolveGrossBasisArea`/`measuredAreasOf` · `RegistryPersonLabel.licenceStandings` από την **ίδια** ανάγνωση επαφών + `readRegistryCheckRecords` (ένα `getAll`) · `RegistryIssuanceView.inspectorFit` · `RegistryInspectorFitLine` στην κάρτα ανάθεσης και στους υποψηφίους · i18n `document-registry:issuance.fit.*` el+en. Προειδοποίηση, ποτέ μπλοκ. Μικτό/ωφέλιμο στο όριο των 250 τ.μ.: **ανοιχτό** (δεν βρέθηκε ορισμός). Tests (`inspector-coverage` · `registry-check-judgment` Τ1–Τ3) + fixtures `areaEvidence` γραμμένα· tests/πύλες/γεννήτορες i18n **αναμένουν έγκριση**. |
 | 2026-11-15 | **§40.7 Φ2 — «Έλεγχος στο μητρώο» ενεργειακού επιθεωρητή (πρότυπο ΓΕΜΗ, ADR-841 §7 Α23).** `services/professional-registry/`: `buildingcert.client.ts` (POST της **δημόσιας** φόρμας, ένα ανά πάτημα, πίσω από τον διακόπτη `ENERGY_INSPECTOR_REGISTRY_LOOKUP` — **κλειστός** στο `config/feature-flags.ts` μέχρι την απάντηση του helpdesk) · `buildingcert-parse.ts` (parse5 8.0.0, MIT· πίνακας από τις **επικεφαλίδες**· «δεν βρέθηκε» μόνο με επιστροφή του αριθμού + μήνυμα· κάθε άλλο ⇒ `layout-changed` ονομαστικά· διαβάζει **μόνο** αριθμό/επώνυμο/τάξεις) · `registry-check-record.service.ts` (`professional_registry_checks/{contactId}__{licence}`, `deny_all`, εγγραφή **υπό συνθήκη** ότι η επαφή κρατά ακόμη τον αριθμό· `absent` σβήνει μόνο αυτού του αριθμού· καταρράκτης διαγραφής επαφής) · `registry-check.service.ts` (GET κρίνει τα αποθηκευμένα, POST ρωτά) · `lib/professional/registry-check-judgment.ts` (`verified` μόνο με ίδιο αριθμό **και** επώνυμο· `name-mismatch` · `stale-number` · `not-checked`) · route `/api/contacts/[contactId]/licences/[licence]/registry-check` (standard/sensitive rate limit, αριθμός από τη **βάση**) · UI `ContactLicenceRegistryCheck` μέσα στο μπλοκ της άδειας (τάξεις της αρχής, «διαφέρουν από τη δήλωση», ηλικία > `REGISTRY_CHECK_FRESH_DAYS`=180) · Ιστορικό `registryCheck` («Κτίρια: Α΄ τάξη, Συστήματα θέρμανσης: Όχι, …»). Fixtures = πραγματικές σελίδες (2026-11-15) με **συνθετικό** πρόσωπο. Tests/πύλες **αναμένουν έγκριση**. |
@@ -3761,6 +3762,30 @@ namespaces της (`conveyance` · `document-registry` · `legality` · `propert
 ⚠️ **Δηλωμένα όρια:** οι κανόνες Firestore των επαφών δεν έχουν λίστα πεδίων (καμία αλλαγή)· ο πελάτης μπορεί τεχνικά
 να γράψει `source: 'self-declared'` — η αξιόπιστη προέλευση της υιοθέτησης έρχεται από τον server (§40.6).
 Tests: `lib/contacts/__tests__/contact-licences.test.ts` (προέλευση κρατιέται · αλλαγή ⇒ office · ονομασμένη άρνηση · διπλή γραμμή · σειρά) · `lib/professional/__tests__/licence-drafts.test.ts` (round-trip) · δείγμα `licences` στο `audit-collection-identity.test.ts`. Browser **δεν** έτρεξε ακόμη.
+
+#### 40.5.1 Προέλευση ανά ΠΕΔΙΟ, όχι ανά άδεια (2026-11-15)
+**Εύρημα ζωντανής δοκιμής §40.7 Φ3:** ο αριθμός ΥΠΕΝ του Μαυρίδη ήταν «Δηλωμένο από τον ίδιο, 14/11» και έγινε
+«Καταχωρίστηκε από το γραφείο, 15/11» επειδή το γραφείο άλλαξε **μόνο την τάξη**. Με μία προέλευση για όλη την άδεια,
+η αλλαγή ενός πεδίου έσβηνε την αλήθεια ενός άλλου που κανείς δεν άγγιξε. Δεν ήταν bug του `sameLicenceValue` (συγκρίνει
+σωστά και τις τάξεις)· ήταν **λάθος κοκκομετρία** του μοντέλου.
+
+**Πρακτική μεγάλων:** HubSpot property history / Salesforce Field History — κάθε **ιδιότητα** κρατά δική της πηγή και ώρα.
+Η άδεια έχει δύο ιδιότητες με χωριστή ζωή: την **εγγραφή** (αριθμός + εκδότης, μπορεί να τη δηλώσει ο ίδιος) και τις
+**τάξεις** (σήμερα μόνο το γραφείο).
+
+| Στοιχείο | Πού |
+|---|---|
+| Τύπος | `ContactLicence.provenance` = της **εγγραφής** · νέο `gradesProvenance?` = των τάξεων, υπάρχει **αν και μόνο αν** υπάρχουν `grades` · `ContactLicenceFieldProvenance { registration, grades }` |
+| Ανάγνωση | `readContactLicence`: γραμμή χωρίς `gradesProvenance` (πριν τη διάσπαση) ⇒ οι τάξεις παίρνουν της εγγραφής — τότε **όντως** μία πράξη είχε γράψει και τα δύο. Καμία μετανάστευση δεδομένων |
+| Αποθήκευση | `contactLicencesFromDrafts` → `mergeLicence`: `sameLicenceRegistration` κρίνει την εγγραφή, `sameLicenceGrades` τις τάξεις· αμετάβλητα και τα δύο ⇒ η **ίδια** γραμμή (καμία ψευδής αλλαγή στο ίχνος) |
+| Υιοθέτηση (§40.6) | `adoptLicenceRegistration`: γράφει **μόνο** την εγγραφή· οι τάξεις του γραφείου **μένουν** με τη δική τους προέλευση (πριν: η υιοθέτηση αντικαθιστούσε όλη τη γραμμή και **έσβηνε σιωπηλά** τις τάξεις) |
+| Φόρμα | `storedLicenceProvenanceShownBy` (ανά πεδίο) · ο «Έλεγχος στο μητρώο» μένει στο `storedLicenceShownBy` (όλη η τιμή) |
+| UI | `ContactLicenceProvenanceNote`: ίδια προέλευση ⇒ **μία** γραμμή όπως πριν· διαφορετική ⇒ «Αριθμός μητρώου: …» + «Τάξεις: …» (`provenanceRegistrationLine` · `provenanceGradesLine`, el+en) |
+
+⚠️ **Όριο:** η προέλευση των τάξεων είναι **μία για όλο το σύνολο** (Κτίρια · Θέρμανση · Κλιματισμός), όχι ανά
+κατηγορία — καμία ροή σήμερα δεν γράφει τάξεις από άλλη πηγή εκτός του γραφείου, άρα η λεπτότερη κοκκομετρία δεν θα
+έδειχνε ποτέ διαφορά. Αν η υιοθέτηση μάθει ποτέ τάξεις (π.χ. από το μητρώο, §40.7 Φ2), ανοίγει ξανά.
+Tests: `lib/contacts/__tests__/contact-licences-field-provenance.test.ts` (το εύρημα · πρώτη συμπλήρωση τάξεων · αλλαγή μόνο αριθμού · αμετάβλητο ⇒ ίδια γραμμή · σβησμένες τάξεις · φόρμα ανά πεδίο · υιοθέτηση κρατά τάξεις).
 
 ### 40.6 Υιοθέτηση της δήλωσης του ίδιου (Φ3β μέρος 2, 2026-11-14)
 **Τι βλέπει το γραφείο:** στο σήμα της επαφής, κάτω από «Δηλωμένο από τον ίδιο: ΥΠΕΝ 2600», η γραμμή **«Στην επαφή:

@@ -6,8 +6,9 @@
  *
  * 🔑 **Κανένας δεύτερος validator**: ο αριθμός, ο εκδότης και η αρχή κρίνονται από το `formShowcaseLicences` /
  *    `readShowcaseLicences` — εδώ προστίθεται **μόνο** η προέλευση.
- * 🔑 **Η τιμή που δεν άλλαξε κρατά την προέλευσή της**: ξανασώζοντας τη φόρμα, η άδεια που υιοθετήθηκε από τη δήλωση
- *    του ίδιου μένει `self-declared` με την αρχική ώρα. Νέα ή αλλαγμένη τιμή ⇒ `office`, τώρα.
+ * 🔑 **Το πεδίο που δεν άλλαξε κρατά την προέλευσή του** — **ανά πεδίο** (εγγραφή · τάξεις), όχι ανά άδεια (§40.5,
+ *    πρακτική HubSpot property history): το γραφείο που συμπληρώνει τάξεις **δεν** μετατρέπει τον αριθμό που δήλωσε ο
+ *    ίδιος σε «Καταχωρίστηκε από το γραφείο». Νέο ή αλλαγμένο πεδίο ⇒ `office`, τώρα.
  * Καθαρό leaf — καμία εισαγωγή SDK.
  */
 
@@ -24,6 +25,7 @@ import type { ShowcaseLicence } from '@/types/agency-profile';
 import {
   CONTACT_LICENCE_SOURCES,
   type ContactLicence,
+  type ContactLicenceFieldProvenance,
   type ContactLicenceProvenance,
   type ContactLicenceSource,
 } from '@/types/contacts/contact-licences';
@@ -47,12 +49,41 @@ function readProvenance(raw: unknown): ContactLicenceProvenance | null {
   return { source: row.source, recordedAt: row.recordedAt, engagementId: row.source === 'self-declared' ? engagementId : null };
 }
 
-/** Μία αποθηκευμένη γραμμή ⇒ άδεια με προέλευση, ή `null` (παραλείπεται — ποτέ μαντεψιά). */
+/**
+ * Μία αποθηκευμένη γραμμή ⇒ άδεια με προέλευση ανά πεδίο, ή `null` (παραλείπεται — ποτέ μαντεψιά).
+ * Οι τάξεις χωρίς δική τους (έγκυρη) προέλευση παίρνουν της εγγραφής: γραμμή πριν από τη διάσπαση (§40.5) είχε ΜΙΑ
+ * προέλευση που κάλυπτε όλη την άδεια — άρα αυτή **είναι** η προέλευση των τάξεών της, όχι εικασία.
+ */
 function readContactLicence(raw: unknown): ContactLicence | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const [held] = readShowcaseLicences([raw]);
-  const provenance = readProvenance((raw as Record<string, unknown>).provenance);
-  return held !== undefined && provenance !== null ? { ...held, provenance } : null;
+  const row = raw as Record<string, unknown>;
+  const provenance = readProvenance(row.provenance);
+  if (held === undefined || provenance === null) return null;
+  return withGradesProvenance({ ...held, provenance }, readProvenance(row.gradesProvenance) ?? provenance);
+}
+
+/** Η προέλευση των τάξεων **μόνο** όταν υπάρχουν τάξεις — ποτέ `gradesProvenance` χωρίς `grades`. */
+function withGradesProvenance(
+  licence: Omit<ContactLicence, 'gradesProvenance'>,
+  gradesProvenance: ContactLicenceProvenance,
+): ContactLicence {
+  return licence.grades === undefined ? licence : { ...licence, gradesProvenance };
+}
+
+/** Η προέλευση μιας τιμής που μόλις έγραψε το γραφείο. */
+function officeProvenance(nowIso: string): ContactLicenceProvenance {
+  return { source: 'office', recordedAt: nowIso, engagementId: null };
+}
+
+/** Ίδια **εγγραφή**: ίδια άδεια, ίδιος αριθμός, ίδιος εκδότης — οι τάξεις δεν μετρούν (άλλο πεδίο, §40.5). */
+export function sameLicenceRegistration(a: ShowcaseLicence, b: ShowcaseLicence): boolean {
+  const ra = a.attestation.registration;
+  const rb = b.attestation.registration;
+  if (a.licence !== b.licence || ra.number !== rb.number) return false;
+  const chapterA = ra.authorityKind === 'chapter' ? ra.chapter : null;
+  const chapterB = rb.authorityKind === 'chapter' ? rb.chapter : null;
+  return chapterA === chapterB;
 }
 
 /**
@@ -66,22 +97,33 @@ export function readContactLicences(raw: unknown): readonly ContactLicence[] {
 }
 
 /**
- * Ίδιος αριθμός, ίδιος εκδότης **και** ίδιες τάξεις (ADR-915 §40.7) — η ταυτότητα τιμής που μετρά για την προέλευση:
- * αλλαγμένη τάξη είναι νέα δήλωση του γραφείου, όχι πια αυτό που δήλωσε ο ίδιος.
+ * Ίδια εγγραφή **και** ίδιες τάξεις (ADR-915 §40.7) — ολόκληρη η τιμή της άδειας. Κρίνει πότε ο έλεγχος στο μητρώο
+ * αφορά ό,τι δείχνει η φόρμα· η προέλευση κρίνεται **ανά πεδίο** ({@link sameLicenceRegistration} · `sameLicenceGrades`).
  */
 export function sameLicenceValue(a: ShowcaseLicence, b: ShowcaseLicence): boolean {
-  const ra = a.attestation.registration;
-  const rb = b.attestation.registration;
-  if (a.licence !== b.licence || ra.number !== rb.number) return false;
-  if (!sameLicenceGrades(a.grades, b.grades)) return false;
-  const chapterA = ra.authorityKind === 'chapter' ? ra.chapter : null;
-  const chapterB = rb.authorityKind === 'chapter' ? rb.chapter : null;
-  return chapterA === chapterB;
+  return sameLicenceRegistration(a, b) && sameLicenceGrades(a.grades, b.grades);
 }
 
 /**
- * Από τη φόρμα στις άδειες της επαφής — με **ονομασμένη** άρνηση. Αμετάβλητη τιμή ⇒ κρατά την προέλευσή της· νέα ή
- * αλλαγμένη ⇒ `office`, `recordedAt = nowIso`.
+ * Η προέλευση των τάξεων μιας νέας τιμής: αμετάβλητες ⇒ κρατούν τη δική τους· νέες/αλλαγμένες ⇒ `office`, τώρα.
+ * Καμία τάξη ⇒ καμία προέλευση.
+ */
+function gradesProvenanceOf(held: ContactLicence | undefined, grades: ShowcaseLicence['grades'], nowIso: string): ContactLicenceProvenance {
+  return held?.grades !== undefined && held.gradesProvenance !== undefined && sameLicenceGrades(held.grades, grades)
+    ? held.gradesProvenance
+    : officeProvenance(nowIso);
+}
+
+/** Μία άδεια της φόρμας απέναντι στην αποθηκευμένη της ίδιας άδειας — κάθε πεδίο κρατά ή ανανεώνει τη δική του προέλευση. */
+function mergeLicence(held: ContactLicence | undefined, licence: ShowcaseLicence, nowIso: string): ContactLicence {
+  if (held !== undefined && sameLicenceValue(held, licence)) return held;
+  const provenance = held !== undefined && sameLicenceRegistration(held, licence) ? held.provenance : officeProvenance(nowIso);
+  return withGradesProvenance({ ...licence, provenance }, gradesProvenanceOf(held, licence.grades, nowIso));
+}
+
+/**
+ * Από τη φόρμα στις άδειες της επαφής — με **ονομασμένη** άρνηση. Η προέλευση κρίνεται **ανά πεδίο** (§40.5): αμετάβλητη
+ * εγγραφή κρατά την προέλευσή της ακόμη κι αν άλλαξαν οι τάξεις, και αντίστροφα· νέο ή αλλαγμένο πεδίο ⇒ `office`, τώρα.
  */
 export function contactLicencesFromDrafts(
   existing: readonly ContactLicence[],
@@ -90,11 +132,24 @@ export function contactLicencesFromDrafts(
 ): { readonly licences: readonly ContactLicence[] } | { readonly reason: ContactLicenceRejection } {
   const formed = formShowcaseLicences(licenceWireOf(drafts, []));
   if ('reason' in formed) return { reason: narrowRejection(formed.reason) };
-  const licences = formed.licences.map((licence): ContactLicence => {
-    const kept = existing.find((held) => sameLicenceValue(held, licence));
-    return kept ?? { ...licence, provenance: { source: 'office', recordedAt: nowIso, engagementId: null } };
-  });
+  const licences = formed.licences.map((licence) =>
+    mergeLicence(existing.find((held) => held.licence === licence.licence), licence, nowIso));
   return { licences: sortByVocabulary(licences) };
+}
+
+/**
+ * **Υιοθέτηση της δήλωσης του ίδιου** (ADR-915 §40.6) — γράφει **μόνο** το πεδίο που δηλώθηκε, την εγγραφή. Οι τάξεις
+ * που είχε ήδη καταχωρίσει το γραφείο **μένουν**, με τη δική τους προέλευση: η υιοθέτηση του αριθμού δεν είναι λόγος να
+ * σβηστεί ένα άλλο πεδίο που κανείς δεν ζήτησε να αλλάξει.
+ */
+export function adoptLicenceRegistration(
+  held: ContactLicence | undefined,
+  declared: ShowcaseLicence,
+  provenance: ContactLicenceProvenance,
+): ContactLicence {
+  const base = { licence: declared.licence, attestation: declared.attestation, provenance };
+  if (held?.grades === undefined || held.gradesProvenance === undefined) return base;
+  return { ...base, grades: held.grades, gradesProvenance: held.gradesProvenance };
 }
 
 /**
@@ -130,6 +185,28 @@ export function storedLicenceShownBy(
   if ('reason' in formed || formed.licences.length !== 1) return null;
   const [shown] = formed.licences;
   return stored.find((held) => sameLicenceValue(held, shown)) ?? null;
+}
+
+/**
+ * **Η προέλευση ΑΝΑ ΠΕΔΙΟ που δείχνει αυτή τη στιγμή η φόρμα** (ADR-915 §40.5). Κάθε πεδίο έχει προέλευση μόνο όταν το
+ * draft σχηματίζει **την ίδια** τιμή με την αποθηκευμένη — αλλαγμένη εγγραφή δεν σβήνει την προέλευση των αμετάβλητων
+ * τάξεων, και αντίστροφα. Ξετσεκαρισμένη ή μη σχηματίσιμη άδεια ⇒ καμία.
+ */
+export function storedLicenceProvenanceShownBy(
+  stored: readonly ContactLicence[] | undefined,
+  licence: ProfessionalLicence,
+  draft: LicenceDraft | null,
+): ContactLicenceFieldProvenance {
+  const none: ContactLicenceFieldProvenance = { registration: null, grades: null };
+  const held = stored?.find((row) => row.licence === licence);
+  if (held === undefined || draft === null) return none;
+  const formed = formShowcaseLicences(licenceWireOf({ ...NO_LICENCE_DRAFTS, [licence]: draft }, []));
+  if ('reason' in formed || formed.licences.length !== 1) return none;
+  const [shown] = formed.licences;
+  return {
+    registration: sameLicenceRegistration(held, shown) ? held.provenance : null,
+    grades: shown.grades !== undefined && sameLicenceGrades(held.grades, shown.grades) ? held.gradesProvenance ?? null : null,
+  };
 }
 
 /** Τα δύο λεξιλόγια επικαλύπτονται· όσα η επαφή δομικά δεν παράγει (βιτρίνα/ειδικότητα) πέφτουν στο «λείπει αριθμός». */

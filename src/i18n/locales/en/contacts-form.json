@@ -300,6 +300,8 @@
     "sourceOffice": "Recorded by the office",
     "sourceSelfDeclared": "Declared by the person",
     "provenanceLine": "{source}, {date}",
+    "provenanceRegistrationLine": "Registration number: {source}, {date}",
+    "provenanceGradesLine": "Classes: {source}, {date}",
     "registry": {
       "region": "Registry check",
       "check": "Check in registry",

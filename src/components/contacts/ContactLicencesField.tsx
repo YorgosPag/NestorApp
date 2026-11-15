@@ -12,7 +12,7 @@
 import React from 'react';
 
 import { ShowcaseLicenceField } from '@/components/mandate/ShowcaseLicenceField';
-import { storedLicenceShownBy } from '@/lib/contacts/contact-licences';
+import { storedLicenceProvenanceShownBy, storedLicenceShownBy } from '@/lib/contacts/contact-licences';
 import type { LicenceDrafts } from '@/lib/professional/licence-drafts';
 import type { ContactLicence } from '@/types/contacts/contact-licences';
 
@@ -41,12 +41,12 @@ export function ContactLicencesField({ value, onChange, licences, disabled, cont
       value={value}
       onChange={onChange}
       renderBelowLicence={(licence, draft) => {
+        // ADR-915 §40.5 — η προέλευση ανά πεδίο· ο έλεγχος στο μητρώο μόνο όταν η φόρμα δείχνει ΟΛΗ την αποθηκευμένη τιμή.
         const held = storedLicenceShownBy(licences, licence, draft);
-        if (held === null) return null;
         return (
           <>
-            <ContactLicenceProvenanceNote held={held} />
-            {contactId && <ContactLicenceRegistryCheck contactId={contactId} held={held} />}
+            <ContactLicenceProvenanceNote licence={licence} provenance={storedLicenceProvenanceShownBy(licences, licence, draft)} />
+            {contactId && held !== null && <ContactLicenceRegistryCheck contactId={contactId} held={held} />}
           </>
         );
       }}

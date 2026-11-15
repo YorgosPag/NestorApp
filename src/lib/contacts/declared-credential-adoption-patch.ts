@@ -5,14 +5,15 @@
  *
  * 🔑 **Κανένας δεύτερος validator**: η άδεια σχηματίζεται από το `formShowcaseLicences` (ίδιος κανόνας αριθμού/εκδότη με
  *    τη φόρμα)· η persona από το `createDefaultPersonaData` όταν λείπει.
- * 🔑 **Προέλευση**: άδεια ⇒ `self-declared` + ώρα + συμμετοχή. Persona: το ίχνος (CDC) κρατά ποιος και πότε.
+ * 🔑 **Προέλευση**: εγγραφή άδειας ⇒ `self-declared` + ώρα + συμμετοχή· οι τάξεις του γραφείου **μένουν** με τη δική
+ *    τους προέλευση (ανά πεδίο, §40.5). Persona: το ίχνος (CDC) κρατά ποιος και πότε.
  * 🔑 Persona που υπάρχει **ανενεργή** ενεργοποιείται — ποτέ δεύτερη persona του ίδιου τύπου.
  * Καθαρό leaf — καμία εισαγωγή SDK.
  */
 
 import type { AdoptionTarget, PersonaAdoptionTarget } from '@/config/declared-credential-adoption';
 import { formShowcaseLicences } from '@/lib/agency/showcase-licence';
-import { readContactLicences, sortByVocabulary } from '@/lib/contacts/contact-licences';
+import { adoptLicenceRegistration, readContactLicences, sortByVocabulary } from '@/lib/contacts/contact-licences';
 import type { CredentialValue } from '@/lib/contacts/declared-credential-comparison';
 import type { ContactLicence } from '@/types/contacts/contact-licences';
 import {
@@ -41,11 +42,13 @@ function licencePatch(target: Extract<AdoptionTarget, { kind: 'licence' }>, rawL
     { licence: target.licence, registrationNumber: source.value.number, registrationChapter: source.value.chapter ?? '' },
   ]);
   if ('reason' in formed || formed.licences[0] === undefined) return { field: null, reason: 'invalid-declaration' };
-  const adopted: ContactLicence = {
-    ...formed.licences[0],
-    provenance: { source: 'self-declared', recordedAt: source.nowIso, engagementId: source.engagementId },
-  };
-  const others = readContactLicences(rawLicences).filter((held) => held.licence !== target.licence);
+  const stored = readContactLicences(rawLicences);
+  const adopted: ContactLicence = adoptLicenceRegistration(
+    stored.find((held) => held.licence === target.licence),
+    formed.licences[0],
+    { source: 'self-declared', recordedAt: source.nowIso, engagementId: source.engagementId },
+  );
+  const others = stored.filter((held) => held.licence !== target.licence);
   return { field: 'licences', licences: sortByVocabulary([...others, adopted]) };
 }
 

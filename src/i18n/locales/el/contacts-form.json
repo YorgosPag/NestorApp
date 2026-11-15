@@ -300,6 +300,8 @@
     "sourceOffice": "Καταχωρίστηκε από το γραφείο",
     "sourceSelfDeclared": "Δηλωμένο από τον ίδιο",
     "provenanceLine": "{source}, {date}",
+    "provenanceRegistrationLine": "Αριθμός μητρώου: {source}, {date}",
+    "provenanceGradesLine": "Τάξεις: {source}, {date}",
     "registry": {
       "region": "Έλεγχος στο μητρώο",
       "check": "Έλεγχος στο μητρώο",
