@@ -26,6 +26,7 @@ import { escapeHtml } from './base-email-template';
 import type { ConfirmationEmailResult } from './confirmation-email-shared';
 import {
   composeInvitationEmail,
+  emphasizedInvitationLine,
   invitationDetailLine,
   type InvitationEmailCoreWording,
   type InvitationEmailLine,
@@ -143,10 +144,7 @@ export function buildEngagementInvitationEmail(input: EngagementInvitationEmailI
     language,
     subject: w.subject(role, property),
     heading: w.heading,
-    intro: {
-      html: w.intro(`<strong>${escapeHtml(host)}</strong>`, escapeHtml(role), `<strong>${escapeHtml(property)}</strong>`),
-      text: w.intro(host, role, property),
-    },
+    intro: emphasizedInvitationLine(w.intro, [host, { plain: role }, property]),
     details: detailsOf(input, w, language),
     link,
     core: w,

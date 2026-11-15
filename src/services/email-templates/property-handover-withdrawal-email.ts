@@ -19,9 +19,8 @@ import 'server-only';
 
 import { HUMAN_LANGUAGES, resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 
-import { escapeHtml } from './base-email-template';
 import type { ConfirmationEmailResult } from './confirmation-email-shared';
-import { composeNoticeEmail, invitationDetailLine } from './invitation-email-shared';
+import { composeNoticeEmail, emphasizedInvitationLine, invitationDetailLine } from './invitation-email-shared';
 
 interface HandoverWithdrawalWording {
   /** ⚠️ Το θέμα λέει **το σπίτι**: ο αγοραστής πρέπει να αναγνωρίσει το μήνυμα χωρίς να το ανοίξει. */
@@ -89,10 +88,7 @@ export function buildPropertyHandoverWithdrawalEmail(input: PropertyHandoverWith
     language,
     subject: w.subject(property),
     heading: w.heading,
-    intro: {
-      html: w.intro(`<strong>${escapeHtml(issuer)}</strong>`, `<strong>${escapeHtml(property)}</strong>`),
-      text: w.intro(issuer, property),
-    },
+    intro: emphasizedInvitationLine(w.intro, [issuer, property]),
     details: [
       invitationDetailLine(w.keptLabel, w.kept),
       invitationDetailLine(w.nextLabel, w.next),

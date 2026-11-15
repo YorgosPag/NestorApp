@@ -66,9 +66,17 @@ export function invitationDaysRemaining(expiresAt: string, nowValue: string): nu
   return deadlineDaysLeft(expiresAt, Date.parse(nowValue)) ?? 1;
 }
 
-/** «Ετικέτα: **τιμή**» — και στις δύο μορφές, από τις ωμές τιμές. */
+/** Ετικέτα που κλείνει ήδη με δική της στίξη (ερώτηση · άνω τελεία · τελεία · αποσιωπητικά) — δεν θέλει «:». */
+const LABEL_ENDS_PUNCTUATED = /[.:;?!;…]$/u;
+
+/**
+ * «Ετικέτα: **τιμή**» — και στις δύο μορφές, από τις ωμές τιμές. **Μία στίξη στο σύνορο**: ετικέτα που λήγει ήδη σε
+ * στίξη (π.χ. «Δεν ήσασταν εσείς;») δεν παίρνει και «:» — αλλιώς ο παραλήπτης διάβαζε «;:» (ADR-915 §45.11).
+ */
 export function invitationDetailLine(label: string, value: string): InvitationEmailLine {
-  return { html: `${escapeHtml(label)}: <strong>${escapeHtml(value)}</strong>`, text: `${label}: ${value}` };
+  const separator = LABEL_ENDS_PUNCTUATED.test(label.trimEnd()) ? ' ' : ': ';
+  const head = label.trimEnd();
+  return { html: `${escapeHtml(head)}${separator}<strong>${escapeHtml(value)}</strong>`, text: `${head}${separator}${value}` };
 }
 
 /** Θέσεις τιμών μέσα στη φράση — χαρακτήρες ιδιωτικής χρήσης Unicode, που κανένα κείμενο χρήστη δεν περιέχει. */
@@ -76,10 +84,15 @@ const SLOT_OPEN = '';
 const SLOT_CLOSE = '';
 const SLOT = new RegExp(`${SLOT_OPEN}(\\d+)${SLOT_CLOSE}(\\.?)`, 'g');
 
-function fillSlots(template: string, values: readonly string[], render: (value: string) => string): string {
+/** Τιμή της φράσης: σκέτο κείμενο ⇒ **τονισμένη**· `{ plain }` ⇒ χωρίς έμφαση (π.χ. ο ρόλος μέσα στην πρόταση). */
+export type InvitationPhraseValue = string | { readonly plain: string };
+
+const textOf = (value: InvitationPhraseValue | undefined): string => (value === undefined ? '' : typeof value === 'string' ? value : value.plain);
+
+function fillSlots(template: string, values: readonly InvitationPhraseValue[], render: (value: InvitationPhraseValue) => string): string {
   return template.replace(SLOT, (_match, index: string, dot: string) => {
-    const value = values[Number(index)] ?? '';
-    return render(value) + (dot !== '' && value.endsWith('.') ? '' : dot);
+    const value = values[Number(index)];
+    return (value === undefined ? '' : render(value)) + (dot !== '' && textOf(value).endsWith('.') ? '' : dot);
   });
 }
 
@@ -89,11 +102,14 @@ function fillSlots(template: string, values: readonly string[], render: (value: 
  * Η φράση καλείται **μία** φορά με θέσεις, ώστε η απόφαση να κρίνεται στο σημείο συνάντησης τιμής-φράσης και μόνο εκεί
  * (ποτέ αντικατάσταση «..» στο αποτέλεσμα: θα έτρωγε αποσιωπητικά που έγραψε ο άνθρωπος).
  */
-export function emphasizedInvitationLine(phrase: (...values: string[]) => string, values: readonly string[]): InvitationEmailLine {
+export function emphasizedInvitationLine(
+  phrase: (...values: string[]) => string,
+  values: readonly InvitationPhraseValue[],
+): InvitationEmailLine {
   const template = phrase(...values.map((_value, index) => `${SLOT_OPEN}${index}${SLOT_CLOSE}`));
   return {
-    html: fillSlots(template, values, (value) => `<strong>${escapeHtml(value)}</strong>`),
-    text: fillSlots(template, values, (value) => value),
+    html: fillSlots(template, values, (value) => (typeof value === 'string' ? `<strong>${escapeHtml(value)}</strong>` : escapeHtml(value.plain))),
+    text: fillSlots(template, values, textOf),
   };
 }
 

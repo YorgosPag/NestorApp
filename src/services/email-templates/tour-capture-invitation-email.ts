@@ -23,6 +23,7 @@ import type { ConfirmationEmailResult } from './confirmation-email-shared';
 import {
   composeInvitationEmail,
   invitationDaysRemaining,
+  emphasizedInvitationLine,
   invitationDetailLine,
   type InvitationEmailCoreWording,
 } from './invitation-email-shared';
@@ -111,10 +112,7 @@ export function buildTourCaptureInvitationEmail(input: TourCaptureInvitationEmai
     language,
     subject: wording.subject(host),
     heading: wording.heading,
-    intro: {
-      html: wording.intro(`<strong>${escapeHtml(host)}</strong>`, `<strong>${escapeHtml(property)}</strong>`),
-      text: wording.intro(host, property),
-    },
+    intro: emphasizedInvitationLine(wording.intro, [host, property]),
     details: [
       invitationDetailLine(wording.reasonLabel, input.reason),
       invitationDetailLine(wording.uploadUntilLabel, formatOperatorDate(input.grantExpiresAt, language)),

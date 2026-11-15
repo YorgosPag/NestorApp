@@ -24,6 +24,7 @@ import { escapeHtml } from './base-email-template';
 import type { ConfirmationEmailResult } from './confirmation-email-shared';
 import {
   composeInvitationEmail,
+  emphasizedInvitationLine,
   invitationDetailLine,
   type InvitationEmailCoreWording,
   type InvitationEmailLine,
@@ -145,10 +146,7 @@ export function buildPropertyHandoverInvitationEmail(input: PropertyHandoverInvi
     language,
     subject: input.reminder ? `${w.reminderPrefix}${subject}` : subject,
     heading: w.heading[input.occasion],
-    intro: {
-      html: w.intro[input.occasion](`<strong>${escapeHtml(issuer)}</strong>`, `<strong>${escapeHtml(property)}</strong>`),
-      text: w.intro[input.occasion](issuer, property),
-    },
+    intro: emphasizedInvitationLine(w.intro[input.occasion], [issuer, property]),
     details: detailsOf(input, w, language),
     link,
     core: w,
