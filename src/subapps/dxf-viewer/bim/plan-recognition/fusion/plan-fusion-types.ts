@@ -19,6 +19,7 @@ import type { RasterRectPx } from '../../../types/coordinate-space';
 import type { RasterPixelScale } from '../../../floorplan-background/geometry/raster-pixel-scale';
 import type { SourceMedium } from '../../../floorplan-background/providers/types';
 import type { PlanAlignment } from '../alignment/plan-alignment-types';
+import type { SegmentJunction } from './segment-junctions';
 import type {
   PlanConfidence,
   PlanExtensionAnchor,
@@ -357,6 +358,11 @@ export interface PlanFusionResult {
   readonly adjustedOffsetPx: ReadonlyMap<string, number>;
   /** Τα τμήματα της Φ2 μετά τη συνόρθωση, στα αρχικά px: η πρόταση προς τη Φ5. */
   readonly adjustedSegments: readonly RasterSegment[];
+  /**
+   * ADR-929 §6.21.9 — οι κόμβοι των παρειών (ποιο άκρο ακουμπά ποιο τμήμα, στην αρχική γεωμετρία), υπολογισμένοι **μία**
+   * φορά: κλείνουν τις γωνίες των `adjustedSegments` και ενώνουν τις γωνίες της επικάλυψης (`segmentCorners`).
+   */
+  readonly segmentJunctions: readonly SegmentJunction[];
   readonly dimensions: readonly FusedDimension[];
   readonly scale: PlanScaleSuggestion | null;
   readonly rooms: readonly FusedRoom[];

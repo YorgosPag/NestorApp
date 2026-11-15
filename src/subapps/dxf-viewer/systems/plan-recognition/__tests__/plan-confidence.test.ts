@@ -56,13 +56,17 @@ describe('ADR-929 Φ5 — η γεωμετρία της επικάλυψης', ()
   it('κάθε τμήμα πάει στο επίπεδο της ΣΥΝΤΗΞΗΣ (όχι της Φ2), στη σκηνή μέσω του SSoT', () => {
     const segments = [seg('a', 0, 0, 10, 0), seg('b', 5, 5, 5, 25)];
     const confidence = new Map([['a', { score: 0.9, factors: {} }], ['b', { score: 0.65, factors: {} }]]);
-    const out = scenePlanSegments(segments, confidence, new Map(), placement).byTier;
-    expect(out.high).toEqual([[rasterPixelToScene(segments[0].start, placement), rasterPixelToScene(segments[0].end, placement)]]);
+    const out = scenePlanSegments(segments, confidence, new Map(), [], placement).byTier;
+    expect(out.high).toEqual([{
+      points: [rasterPixelToScene(segments[0].start, placement), rasterPixelToScene(segments[0].end, placement)],
+      closed: false,
+      segmentCount: 1,
+    }]);
     expect(out.medium).toHaveLength(1);
     expect(out.low).toHaveLength(0);
   });
 
   it('τμήμα που η σύντηξη δεν βαθμολόγησε ⇒ χαμηλή', () => {
-    expect(scenePlanSegments([seg('x', 0, 0, 1, 1)], new Map(), new Map(), placement).byTier.low).toHaveLength(1);
+    expect(scenePlanSegments([seg('x', 0, 0, 1, 1)], new Map(), new Map(), [], placement).byTier.low).toHaveLength(1);
   });
 });

@@ -18,10 +18,11 @@
 
 import { applyHomography, type Homography, type PlanePoint } from '@/lib/geometry/homography';
 import { intersectLines } from '@/lib/geometry/planar-polygon';
+import type { SegmentEnd } from '@/lib/geometry/linked-segment-chains';
 import type { RasterSegment } from '../plan-recognition-types';
 import { familyNormal, type FusionFrame } from './fusion-frame';
 
-export type SegmentEnd = 'start' | 'end';
+export type { SegmentEnd };
 
 /** Το άκρο `end` του τμήματος `segmentId` ακουμπά (στην αρχική γεωμετρία) το τμήμα `neighbourId`. */
 export interface SegmentJunction {
@@ -124,7 +125,8 @@ function junctionPoint(a: AlignedFace, b: AlignedFace, toOriginal: Homography): 
 
 /**
  * Κλείνει τους κόμβους των ήδη μετακινημένων τμημάτων (`shifted`, ίδια σειρά και ids με τα `observed`). Οι κόμβοι
- * κρίνονται στα `observed`· όποιο άκρο δεν είναι κόμβος μένει όπως το άφησε η μετακίνηση.
+ * (`junctions`) είναι του `findSegmentJunctions` πάνω στα `observed`, υπολογισμένοι **μία** φορά από τον καλούντα
+ * (§6.21.9: η ίδια τοπολογία ταξιδεύει και στην επικάλυψη)· όποιο άκρο δεν είναι κόμβος μένει όπως το άφησε η μετακίνηση.
  */
 export function closeSegmentJunctions(
   observed: readonly RasterSegment[],
@@ -132,11 +134,11 @@ export function closeSegmentJunctions(
   frame: FusionFrame,
   offsets: ReadonlyMap<string, number>,
   alignment: JunctionAlignment,
-  minAngleDeg: number,
+  junctions: readonly SegmentJunction[],
 ): RasterSegment[] {
   const faces = new Map(alignedFaces(observed, frame, offsets, alignment.originalToAligned).map((f) => [f.id, f]));
   const moved = new Map<string, { start?: PlanePoint; end?: PlanePoint }>();
-  for (const j of findSegmentJunctions(observed, frame, alignment.originalToAligned, minAngleDeg)) {
+  for (const j of junctions) {
     const a = faces.get(j.segmentId);
     const b = faces.get(j.neighbourId);
     const p = a && b ? junctionPoint(a, b, alignment.alignedToOriginal) : null;
@@ -146,4 +148,27 @@ export function closeSegmentJunctions(
     const m = moved.get(s.id);
     return m === undefined ? s : { ...s, start: m.start ?? s.start, end: m.end ?? s.end };
   });
+}
+
+/** Μια γωνία L: δύο άκρα που δένονται **αμοιβαία** — μετά τη συνόρθωση είναι το ίδιο σημείο (η τομή των δύο ευθειών). */
+export interface SegmentCorner {
+  readonly a: { readonly segmentId: string; readonly end: SegmentEnd };
+  readonly b: { readonly segmentId: string; readonly end: SegmentEnd };
+}
+
+/**
+ * ADR-929 §6.21.9 (Ε2) — οι **γωνίες** ανάμεσα στους κόμβους: το `A.x→B` μαζί με το `B.y→A`. Μια διακλάδωση T δεν είναι
+ * γωνία (δένεται μόνο το ένα άκρο) και μένει απόληξη. Μία φορά ανά ζεύγος, κατά σειρά των `junctions`.
+ */
+export function segmentCorners(junctions: readonly SegmentJunction[]): SegmentCorner[] {
+  const endTowards = new Map<string, SegmentEnd>();
+  for (const j of junctions) endTowards.set(`${j.segmentId}→${j.neighbourId}`, j.end);
+  const out: SegmentCorner[] = [];
+  for (const j of junctions) {
+    const back = endTowards.get(`${j.neighbourId}→${j.segmentId}`);
+    if (back !== undefined && j.segmentId < j.neighbourId) {
+      out.push({ a: { segmentId: j.segmentId, end: j.end }, b: { segmentId: j.neighbourId, end: back } });
+    }
+  }
+  return out;
 }

@@ -22,6 +22,7 @@ import { resolveDrawingKind, type KnownScaleConsensus } from './drawing-kind';
 import { buildFusionFrame, type FusionFrame } from './fusion-frame';
 import { planQuestions } from './fusion-questions';
 import { adjustedOffsets, adjustedSegments, fuseDimensions, segmentConfidence } from './fusion-results';
+import { findSegmentJunctions } from './segment-junctions';
 import { createRoomAreaProbe, fusedRooms, measureRooms, type RoomMeasurement } from './room-areas';
 import { dimensionScaleConsensus } from './scale-consensus';
 import { chooseScale, knownScaleEvidence, metresPerOriginalPx, scaleConflicts, writtenScaleEvidence } from './scale-evidence';
@@ -126,6 +127,17 @@ function readingWithoutMarks(
   return { reading: withoutDimensionMarks(input.reading.reading, marks), marks };
 }
 
+/**
+ * §6.21.9 — τα συνορθωμένα τμήματα μαζί με την τοπολογία των κόμβων τους, υπολογισμένη ΜΙΑ φορά: κλείνει τις γωνίες
+ * ΚΑΙ ταξιδεύει στην επικάλυψη (`segmentCorners`).
+ */
+function adjustedGeometry(
+  input: PlanFusionInput, frame: FusionFrame, offsets: ReadonlyMap<string, number>, o: PlanFusionOptions,
+): Pick<PlanFusionResult, 'adjustedSegments' | 'segmentJunctions'> {
+  const junctions = findSegmentJunctions(input.segments, frame, input.alignment.originalToAligned, o.junctionMinAngleDeg);
+  return { adjustedSegments: adjustedSegments(input.segments, frame, offsets, input.alignment, junctions), segmentJunctions: junctions };
+}
+
 /** Η σύντηξη μιας αναγνώρισης. Ντετερμινιστική: ίδια είσοδος ⇒ ίδιο αποτέλεσμα. */
 export function fusePlan(input: PlanFusionInput): PlanFusionResult {
   const o: PlanFusionOptions = { ...DEFAULT_PLAN_FUSION, ...input.options };
@@ -153,7 +165,7 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
     families: frame.families,
     faceLines: frame.lines,
     adjustedOffsetPx: offsets,
-    adjustedSegments: adjustedSegments(input.segments, frame, offsets, input.alignment, o.junctionMinAngleDeg),
+    ...adjustedGeometry(input, frame, offsets, o),
     dimensions,
     scale,
     rooms,

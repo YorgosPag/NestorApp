@@ -28,6 +28,7 @@ import type { AssistantPreview, UnexplainedSegment } from '../../bim/model-from-
 import type { OpeningPreview, OpeningPreviewZone } from '../../bim/model-from-drawing/opening-preview';
 import { PreviewZoneShape } from './preview-zone/PreviewZoneShape';
 import { worldRingToSvgPath } from './preview-zone/world-ring-path';
+import { chainLinkedSegments, coincidentEndLinks } from '@/lib/geometry/linked-segment-chains';
 
 interface Props {
   readonly viewport: Viewport;
@@ -60,23 +61,31 @@ function inPaintOrder<Z extends { readonly key: string }>(
   return [...zones].sort((a, b) => rank(a) - rank(b));
 }
 
-/** Γραμμές του σχεδίου φωτισμένες αυτούσιες (ανεξήγητες · ένοικοι κενού · σύμβολα χωρίς λωρίδα). */
+/**
+ * Γραμμές του σχεδίου φωτισμένες αυτούσιες (ανεξήγητες · ένοικοι κενού · σύμβολα χωρίς λωρίδα). ADR-929 §6.21.9 (Ε2):
+ * όσες μοιράζονται **ακριβώς** ένα άκρο ενώνονται σε πολυγραμμή, ώστε η γωνία να είναι γωνία πινελιάς (`miter`) και όχι
+ * δύο απολήξεις που προεξέχουν· το ανοιχτό άκρο σταματά εκεί που τελειώνει η γραμμή (`butt`). Ένα `<path>` ανά πολυγραμμή.
+ */
 function SegmentStrokes(props: Projection & {
   readonly segments: readonly UnexplainedSegment[];
   readonly tone: PreviewZoneTone;
   readonly testId: string;
 }): React.ReactElement {
+  // Η αλυσίδα αλλάζει μόνο με τα τμήματα (χαμηλόσυχνο store)· ανά transform γίνεται μόνο η προβολή (ADR-040).
+  const chains = React.useMemo(() => chainLinkedSegments(props.segments, coincidentEndLinks(props.segments)), [props.segments]);
   return (
     <>
-      {props.segments.map((segment, i) => (
+      {chains.map((chain, i) => (
         <path
           key={`${props.testId}-${i}`}
           data-testid={props.testId}
-          d={worldRingToSvgPath([segment.start, segment.end], props.transform, props.viewport, false)}
+          data-count={chain.segmentIndices.length}
+          d={worldRingToSvgPath(chain.points, props.transform, props.viewport, chain.closed)}
           fill="none"
           stroke={PREVIEW_ZONE_STYLE[props.tone].stroke}
           strokeWidth={UNEXPLAINED_STROKE_PX}
-          strokeLinecap="round"
+          strokeLinecap="butt"
+          strokeLinejoin="miter"
         />
       ))}
     </>

@@ -13,6 +13,10 @@
  * κειμένου) ζωγραφίζονται **μόνο** με το σημάδι του ρόλου τους (`PLAN_SEGMENT_ROLE_MARKS`), όχι με επίπεδο βεβαιότητας:
  * η βεβαιότητα αφορά τους τοίχους. Κάθε τμήμα ζωγραφίζεται ακριβώς μία φορά.
  *
+ * ADR-929 §6.21.9 (Ε2) — η γεωμετρία είναι τα **συνορθωμένα** τμήματα της σύντηξης (`adjustedSegments`, ό,τι θα
+ * γραφτεί — η ίδια θέση με την προεπισκόπηση του ADR-911), όχι τα ακατέργαστα της Φ2. Οι γωνίες της σύντηξης
+ * (`segmentCorners`) ενώνουν τα τμήματα ενός σημαδιού σε πολυγραμμές: γωνία = `miter`, ανοιχτό άκρο = `butt`.
+ *
  * ADR-040: standalone leaf. ΕΝΑ υψίσυχνο hook (transform) + δύο ΧΑΜΗΛΟΣΥΧΝΑ (store αναγνώρισης · το υπόβαθρο του
  * ορόφου, για την τρέχουσα τοποθέτηση). Η γεωμετρία σκηνής υπολογίζεται μία φορά ανά αποτέλεσμα/τοποθέτηση
  * (`useMemo`)· ανά transform γίνεται μόνο η προβολή. Χωρίς αποτέλεσμα ⇒ `null` πριν από κάθε προβολή.
@@ -27,7 +31,8 @@ import {
   type PlanConfidenceMark,
 } from '../../systems/plan-recognition/plan-confidence';
 import { PLAN_ROLE_MARK_ORDER, planRoleMark } from '../../systems/plan-recognition/plan-role-marks';
-import { scenePlanSegments, type SceneSegment } from '../../systems/plan-recognition/plan-overlay-geometry';
+import { scenePlanSegments, type ScenePolyline } from '../../systems/plan-recognition/plan-overlay-geometry';
+import { segmentCorners } from '../../bim/plan-recognition/fusion/segment-junctions';
 import { useFloorplanBackgroundStore } from '../../floorplan-background/stores/floorplanBackgroundStore';
 // ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
 import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
@@ -38,10 +43,13 @@ interface Props {
   readonly viewport: Viewport;
 }
 
-/** Όλα τα τμήματα ενός επιπέδου σε ΕΝΑ path οθόνης (`M a L b` ανά τμήμα). */
-function segmentsPath(segments: readonly SceneSegment[], transform: ViewTransform, viewport: Viewport): string {
-  return segments.map((s) => worldRingToSvgPath(s, transform, viewport, false)).join(' ');
+/** Όλες οι πολυγραμμές ενός σημαδιού σε ΕΝΑ path οθόνης (μία υποδιαδρομή ανά πολυγραμμή, `Z` στους βρόχους). */
+function polylinesPath(polylines: readonly ScenePolyline[], transform: ViewTransform, viewport: Viewport): string {
+  return polylines.map((p) => worldRingToSvgPath(p.points, transform, viewport, p.closed)).join(' ');
 }
+
+/** Πόσα τμήματα ζωγραφίζει ένα σημάδι (κάθε τμήμα μετριέται μία φορά, όσο κι αν ενώθηκε σε πολυγραμμή). */
+const segmentCountOf = (polylines: readonly ScenePolyline[]): number => polylines.reduce((n, p) => n + p.segmentCount, 0);
 
 /** Ένα `<path>` για όλα τα τμήματα ενός σημαδιού· τίποτα όταν δεν υπάρχει τμήμα. */
 function MarkPath({ d, mark, count, dataAttr }: {
@@ -58,7 +66,8 @@ function MarkPath({ d, mark, count, dataAttr }: {
       stroke={mark.stroke}
       strokeWidth={mark.strokeWidth}
       strokeDasharray={mark.dash || undefined}
-      strokeLinecap="round"
+      strokeLinecap="butt"
+      strokeLinejoin="miter"
       data-count={count}
       {...dataAttr}
     />
@@ -74,7 +83,10 @@ export function PlanRecognitionOverlay({ viewport }: Props): React.ReactElement 
 
   const overlay = React.useMemo(
     () => (run && fusion && background
-      ? scenePlanSegments(run.segments, fusion.segmentConfidence, fusion.segmentRoles, background)
+      // §6.21.9 — τα ΣΥΝΟΡΘΩΜΕΝΑ τμήματα (ό,τι θα γραφτεί), με τις γωνίες της ΙΔΙΑΣ σύντηξης.
+      ? scenePlanSegments(
+        fusion.adjustedSegments, fusion.segmentConfidence, fusion.segmentRoles, segmentCorners(fusion.segmentJunctions), background,
+      )
       : null),
     [run, fusion, background],
   );
@@ -91,18 +103,18 @@ export function PlanRecognitionOverlay({ viewport }: Props): React.ReactElement 
       {PLAN_CONFIDENCE_ORDER.map((tier) => (
         <MarkPath
           key={tier}
-          d={segmentsPath(byTier[tier], transform, viewport)}
+          d={polylinesPath(byTier[tier], transform, viewport)}
           mark={planConfidenceMark(tier)}
-          count={byTier[tier].length}
+          count={segmentCountOf(byTier[tier])}
           dataAttr={{ 'data-tier': tier }}
         />
       ))}
       {PLAN_ROLE_MARK_ORDER.map((role) => (
         <MarkPath
           key={role}
-          d={segmentsPath(byRole[role], transform, viewport)}
+          d={polylinesPath(byRole[role], transform, viewport)}
           mark={planRoleMark(role)}
-          count={byRole[role].length}
+          count={segmentCountOf(byRole[role])}
           dataAttr={{ 'data-role': role }}
         />
       ))}

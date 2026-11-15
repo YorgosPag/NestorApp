@@ -53,7 +53,7 @@ describe('ADR-929 Φ5.4β — η επικάλυψη: κάθε τμήμα ΜΙΑ 
     const roles = new Map<string, PlanSegmentRole>([
       ['w', 'wall-face'], ['d', 'dimension-line'], ['e', 'extension-line'], ['a', 'annotation'], ['u', 'unknown'],
     ]);
-    const { byTier, byRole } = scenePlanSegments(segments, confidence, roles, placement);
+    const { byTier, byRole } = scenePlanSegments(segments, confidence, roles, [], placement);
     expect(byTier.high).toHaveLength(2);
     expect(byRole.dimension).toHaveLength(2);
     expect(byRole.annotation).toHaveLength(1);
@@ -62,7 +62,7 @@ describe('ADR-929 Φ5.4β — η επικάλυψη: κάθε τμήμα ΜΙΑ 
   });
 
   it('χωρίς κρίσεις ρόλου ⇒ όλα στα επίπεδα, όπως πριν τη Φ5.4', () => {
-    const { byTier, byRole } = scenePlanSegments([seg('x')], new Map(), new Map(), placement);
+    const { byTier, byRole } = scenePlanSegments([seg('x')], new Map(), new Map(), [], placement);
     expect(byTier.low).toHaveLength(1);
     expect(byRole).toEqual({ dimension: [], annotation: [] });
   });
@@ -93,5 +93,38 @@ describe('ADR-929 Φ5.4β — «εκτός τοίχων»: ο ρόλος κρί�
     const { byRole, lowConfidence } = wallEvidenceExclusions(fusion, segments);
     const rejected = segments.filter((s) => !isWallEvidence(fusion, s.id)).length;
     expect(byRole.dimension + byRole.annotation + lowConfidence).toBe(rejected);
+  });
+});
+
+describe('ADR-929 §6.21.9 (Ε2) — η επικάλυψη ενώνει τις γωνίες της σύντηξης, μόνο ΜΕΣΑ στο ίδιο σημάδι', () => {
+  const placement = {
+    transform: { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+    naturalBounds: { width: 100, height: 100 },
+  };
+  const seg = (id: string, x0: number, y0: number, x1: number, y1: number): RasterSegment => ({
+    id, start: { x: x0, y: y0 }, end: { x: x1, y: y1 }, style: 'stroke', strokeWidthPx: 2, confidence: { score: 0.5, factors: {} },
+  });
+  const rect = [seg('a', 0, 0, 20, 0), seg('b', 20, 0, 20, 10), seg('c', 20, 10, 0, 10), seg('d', 0, 10, 0, 0)];
+  const corners = [
+    { a: { segmentId: 'a', end: 'end' as const }, b: { segmentId: 'b', end: 'start' as const } },
+    { a: { segmentId: 'b', end: 'end' as const }, b: { segmentId: 'c', end: 'start' as const } },
+    { a: { segmentId: 'c', end: 'end' as const }, b: { segmentId: 'd', end: 'start' as const } },
+    { a: { segmentId: 'a', end: 'start' as const }, b: { segmentId: 'd', end: 'end' as const } },
+  ];
+  const high: PlanConfidence = { score: 0.95, factors: {} };
+
+  it('ορθογώνιο ενός επιπέδου ⇒ ΜΙΑ κλειστή πολυγραμμή τεσσάρων τμημάτων', () => {
+    const confidence = new Map(rect.map((s) => [s.id, high]));
+    const { byTier } = scenePlanSegments(rect, confidence, new Map(), corners, placement);
+    expect(byTier.high).toHaveLength(1);
+    expect(byTier.high[0]).toMatchObject({ closed: true, segmentCount: 4 });
+    expect(byTier.high[0].points).toHaveLength(4);
+  });
+
+  it('γωνία ανάμεσα σε δύο επίπεδα ⇒ δύο πινελιές (ένα path έχει ένα στυλ)· κάθε τμήμα μετριέται μία φορά', () => {
+    const confidence = new Map(rect.map((s) => [s.id, s.id === 'c' ? { score: 0.1, factors: {} } : high]));
+    const { byTier } = scenePlanSegments(rect, confidence, new Map(), corners, placement);
+    expect(byTier.high.map((p) => [p.closed, p.segmentCount])).toEqual([[false, 3]]);
+    expect(byTier.low.map((p) => p.segmentCount)).toEqual([1]);
   });
 });

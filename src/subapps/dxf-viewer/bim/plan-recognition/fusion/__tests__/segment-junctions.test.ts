@@ -9,7 +9,7 @@ import type { RasterSegment } from '../../plan-recognition-types';
 import { buildFusionFrame, familyNormal, type FusionFrame } from '../fusion-frame';
 import { adjustedSegments } from '../fusion-results';
 import { DEFAULT_PLAN_FUSION } from '../plan-fusion-types';
-import { findSegmentJunctions } from '../segment-junctions';
+import { findSegmentJunctions, segmentCorners } from '../segment-junctions';
 import { fusionInput, segment } from './fusion-fixture';
 
 const ALIGNMENT = fusionInput({ segments: [], reading: { status: 'unavailable', reason: 'ai-disabled-for-company' } }).alignment;
@@ -30,7 +30,8 @@ function offsetsMoving(frame: FusionFrame, moves: Readonly<Record<string, number
 
 function adjust(segments: readonly RasterSegment[], moves: Readonly<Record<string, number>> = {}, frameSegments = segments): RasterSegment[] {
   const frame = frameOf(frameSegments);
-  return adjustedSegments(segments, frame, offsetsMoving(frame, moves), ALIGNMENT, MIN_ANGLE);
+  const junctions = findSegmentJunctions(segments, frame, ALIGNMENT.originalToAligned, MIN_ANGLE);
+  return adjustedSegments(segments, frame, offsetsMoving(frame, moves), ALIGNMENT, junctions);
 }
 
 const byId = (segments: readonly RasterSegment[], id: string): RasterSegment => segments.find((s) => s.id === id)!;
@@ -115,6 +116,36 @@ describe('segment-junctions — ο κόμβος μετά τη συνόρθωση
       expect(t.start.y).toBeCloseTo(s.start.y, 9);
       expect(t.end.x).toBeCloseTo(s.end.x, 9);
       expect(t.end.y).toBeCloseTo(s.end.y, 9);
+    }
+  });
+});
+
+describe('segment-junctions — §6.21.9 (Ε2): οι ΓΩΝΙΕΣ της τοπολογίας, για την επικάλυψη', () => {
+  const cornersOf = (segments: readonly RasterSegment[]) =>
+    segmentCorners(findSegmentJunctions(segments, frameOf(segments), ALIGNMENT.originalToAligned, MIN_ANGLE))
+      .map((c) => `${c.a.segmentId}.${c.a.end}+${c.b.segmentId}.${c.b.end}`);
+
+  it('γωνία L: ΜΙΑ γωνία, από τα δύο αμοιβαία άκρα', () => {
+    expect(cornersOf(lCorner())).toEqual(['A.end+B.start']);
+  });
+
+  it('διακλάδωση T: ΚΑΜΙΑ γωνία — δένεται μόνο το ένα άκρο, και μένει απόληξη', () => {
+    expect(cornersOf([segment('A', 0, 0, 2000, 0), segment('C', 1000, 0, 1000, 1000)])).toEqual([]);
+  });
+
+  it('ορθογώνιο: τέσσερις γωνίες, μία ανά κορυφή', () => {
+    const rect = [
+      segment('A', 0, 0, 2000, 0), segment('B', 2000, 0, 2000, 1000),
+      segment('C', 2000, 1000, 0, 1000), segment('D', 0, 1000, 0, 0),
+    ];
+    expect(cornersOf(rect)).toHaveLength(4);
+  });
+
+  it('τα δύο άκρα κάθε γωνίας είναι ΤΟ ΙΔΙΟ σημείο μετά τη συνόρθωση (η επικάλυψη ενώνει ό,τι είναι ήδη κλειστό)', () => {
+    const out = adjust(lCorner(), { A: 1.5, B: -2 });
+    const frame = frameOf(lCorner());
+    for (const c of segmentCorners(findSegmentJunctions(lCorner(), frame, ALIGNMENT.originalToAligned, MIN_ANGLE))) {
+      expect(byId(out, c.a.segmentId)[c.a.end]).toEqual(byId(out, c.b.segmentId)[c.b.end]);
     }
   });
 });

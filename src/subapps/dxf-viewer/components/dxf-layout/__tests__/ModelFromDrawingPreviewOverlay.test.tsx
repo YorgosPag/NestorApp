@@ -104,6 +104,18 @@ describe('ModelFromDrawingPreviewOverlay', () => {
     expect(lines[0].getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
     expect(lines[0].getAttribute('d')?.endsWith('Z')).toBe(false);
   });
+
+  it('§6.21.9 (Ε2) — γραμμές με ΑΚΡΙΒΩΣ κοινό άκρο ⇒ ΜΙΑ πολυγραμμή με γωνία πινελιάς, όχι δύο απολήξεις', () => {
+    const { container } = renderOverlay();
+    const corner = [{ start: { x: 0, y: 300 }, end: { x: 100, y: 300 } }, { start: { x: 100, y: 400 }, end: { x: 100, y: 300 } }];
+    seed({ phase: 'review', preview: { ...PREVIEW, unexplained: corner } });
+    const lines = container.querySelectorAll('[data-testid="mfd-unexplained"]');
+    expect(lines).toHaveLength(1);
+    expect(lines[0].getAttribute('data-count')).toBe('2');
+    expect(lines[0].getAttribute('d')?.match(/[ML]/g)).toEqual(['M', 'L', 'L']);
+    expect(lines[0].getAttribute('stroke-linejoin')).toBe('miter');
+    expect(lines[0].getAttribute('stroke-linecap')).toBe('butt');
+  });
 });
 
 /**

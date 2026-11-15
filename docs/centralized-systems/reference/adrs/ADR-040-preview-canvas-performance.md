@@ -113,6 +113,12 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-11-16 — Επικαλύψεις αναγνώρισης/βοηθού: πολυγραμμές με ένωση γωνίας (ADR-929 §6.21.9, Ε2)
+
+- `PlanRecognitionOverlay.tsx`: η γεωμετρία σκηνής (τώρα από τα `fusion.adjustedSegments` + τις γωνίες της σύντηξης) μένει στο **ίδιο** `useMemo` ανά αποτέλεσμα/τοποθέτηση· ανά transform μόνο η προβολή. Ένα `<path>` ανά σημάδι, όπως πριν — με μία υποδιαδρομή ανά πολυγραμμή.
+- `ModelFromDrawingPreviewOverlay.tsx` `SegmentStrokes`: η αλυσίδα (`chainLinkedSegments` + `coincidentEndLinks`) σε `useMemo` πάνω στα τμήματα του χαμηλόσυχνου store· ανά transform μόνο η προβολή. Ένα `<path>` ανά πολυγραμμή (όχι ανά τμήμα) ⇒ λιγότερα στοιχεία DOM.
+- Καμία νέα συνδρομή, κανένα νέο υψίσυχνο hook· οι κανόνες του φύλλου αμετάβλητοι.
+
 ### 2026-11-12 — Νέο φύλλο: επισήμανση κειμένου της λίστας «Τι διάβασα» (ADR-929 Δ21 (δ))
 
 - `components/dxf-layout/PlanReadValueHoverOverlay.tsx`, mounted στο `canvas-layer-stack-2d-overlays-leaf.tsx` αμέσως **μετά** το `PlanScaleReferencesOverlay`. Πλαίσιο γύρω από το κείμενο της γραμμής της λίστας «Τι διάβασα» που δείχνει ο άνθρωπος (`readHoverTextId` στο χαμηλόσυχνο store αναγνώρισης, μία εγγραφή ανά αλλαγή γραμμής, ποτέ ανά καρέ).
