@@ -4,6 +4,7 @@
 
 import {
   ELECTRONIC_PAYMENT_THRESHOLD_MINOR,
+  agreedQuoteOf,
   areQuoteTermsValid,
   canReviseQuote,
   nextQuoteOf,
@@ -132,5 +133,22 @@ describe('ADR-915 §42 — requiresElectronicPayment', () => {
     expect(ELECTRONIC_PAYMENT_THRESHOLD_MINOR).toBe(50_000);
     expect(requiresElectronicPayment({ netMinor: 0, vatMinor: 0, totalMinor: 49_999 })).toBe(false);
     expect(requiresElectronicPayment({ netMinor: 0, vatMinor: 0, totalMinor: 50_000 })).toBe(true);
+  });
+});
+
+describe('ADR-915 §45.10 — agreedQuoteOf (η συμφωνημένη προσφορά)', () => {
+  const approved = (quoteRevision: number | null) => ({ outcome: 'approved' as const, quoteRevision });
+
+  it('έγκριση της τρέχουσας αναθεώρησης ⇒ η προσφορά', () => {
+    const current = quote({ revision: 2 });
+    expect(agreedQuoteOf({ decision: approved(2), quote: current })).toBe(current);
+  });
+
+  it('καμία συμφωνία ⇒ null: χωρίς απόφαση · απόρριψη · έγκριση παλιάς αναθεώρησης · παλιά ανάθεση · χωρίς προσφορά', () => {
+    expect(agreedQuoteOf({ decision: null, quote: quote() })).toBeNull();
+    expect(agreedQuoteOf({ decision: { outcome: 'rejected', quoteRevision: 1 }, quote: quote() })).toBeNull();
+    expect(agreedQuoteOf({ decision: approved(1), quote: quote({ revision: 2 }) })).toBeNull();
+    expect(agreedQuoteOf({ decision: approved(null), quote: quote() })).toBeNull();
+    expect(agreedQuoteOf({ decision: approved(1), quote: null })).toBeNull();
   });
 });

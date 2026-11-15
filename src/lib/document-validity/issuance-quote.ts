@@ -109,6 +109,22 @@ export function quoteTotalsOf(terms: Pick<QuoteTerms, 'amountMinor' | 'vatRatePe
   return { netMinor: amountMinor, vatMinor, totalMinor: amountMinor + vatMinor };
 }
 
+/** Τα δύο γεγονότα που κρίνουν «υπάρχει συμφωνία;» — δομικά, ώστε το φύλλο να μην εισάγει τον μειωτή. */
+export interface QuoteAgreementFacts {
+  readonly decision: { readonly outcome: 'approved' | 'rejected'; readonly quoteRevision: number | null } | null;
+  readonly quote: IssuanceQuote | null;
+}
+
+/**
+ * **Η συμφωνημένη προσφορά** (§42 Π-3/Π-4) — μόνο αν εγκρίθηκε **η τρέχουσα** αναθεώρηση· αλλιώς `null` (καμία
+ * προσφορά · απόρριψη · αναθεώρηση μετά την έγκριση · παλιά ανάθεση χωρίς `quoteRevision`).
+ */
+export function agreedQuoteOf(facts: QuoteAgreementFacts): IssuanceQuote | null {
+  const { decision, quote } = facts;
+  const agreed = decision !== null && decision.outcome === 'approved' && quote !== null && decision.quoteRevision === quote.revision;
+  return agreed ? quote : null;
+}
+
 /**
  * Είναι οι όροι αποδεκτοί; — θετικό ποσό, συντελεστής του πίνακα, έστω ένα περιλαμβανόμενο, ισχύς από σήμερα, και
  * (§45 Φ2) χρόνος παράδοσης: καμία **νέα** προσφορά χωρίς δέσμευση χρόνου.

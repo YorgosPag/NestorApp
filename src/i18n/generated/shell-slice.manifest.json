@@ -14,7 +14,7 @@
     "src/i18n/generated/routes/demands.el.json": "f15243c6529ea9be6b0a1a4d181ff19e7c5866fcc9953aa98635f63969f3d9e2",
     "src/i18n/generated/routes/demands__demandId.el.json": "4c206917e9429edff64b6d64d393521e17a6718fda664c1a7ca51d289f16a27a",
     "src/i18n/generated/routes/demands__new.el.json": "f85744543c4c75526818bd08771e4729c8a79fd26d564a081d9dc8eeb660a3ed",
-    "src/i18n/generated/routes/document-request.el.json": "08daec65f7ecc78f41946e662812bcb6160cbd79f8a4d46dc162bfa14c313407",
+    "src/i18n/generated/routes/document-request.el.json": "dc8c90eb935dac5eb166b39a49743c01a6c32056905bca3e35652b93edf74aa9",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
     "src/i18n/generated/routes/email__preferences__token.el.json": "45c4179d358aa4900494f31547bd1126905e23cae623d581d4c87d52ac62e516",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d91a77a157773287d315f0dd7326009e1cc6cc5faf6ea2b44713df59913bc422",
+  "inputsSha256": "0662dde584cc3dff56ad898a4e4a839b59e28188b8f7e7333122a7d377e65634",
   "languages": [
     "el"
   ],
@@ -40910,7 +40910,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1336571
+    "sliceBytes": 1336703
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

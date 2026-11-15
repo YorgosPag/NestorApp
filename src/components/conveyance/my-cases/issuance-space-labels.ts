@@ -48,5 +48,12 @@ export const ISSUANCE_SPACE_KEYS = {
   credentialLabel: 'conveyance:engagement.issuance.credentialLabel',
   credentialValue: 'conveyance:engagement.issuance.credentialValue',
   requestedLabel: 'conveyance:engagement.issuance.requestedLabel',
+  agreementTitle: 'conveyance:engagement.issuance.agreementTitle',
+  siteAddressLabel: 'conveyance:engagement.issuance.siteAddressLabel',
+  ownerLabel: 'conveyance:engagement.issuance.ownerLabel',
+  agreedPriceLabel: 'conveyance:engagement.issuance.agreedPriceLabel',
+  dueLabel: 'conveyance:engagement.issuance.dueLabel',
+  notDeclared: 'conveyance:engagement.issuance.notDeclared',
+  agreementContact: 'conveyance:engagement.issuance.agreementContact',
   scope: 'conveyance:engagement.issuance.scope',
 } as const;

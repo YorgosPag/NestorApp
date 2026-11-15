@@ -458,6 +458,13 @@
       "credentialLabel": "Your capacity (declared)",
       "credentialValue": "{registry} {number}",
       "requestedLabel": "Requested on",
+      "agreementTitle": "Engagement details",
+      "siteAddressLabel": "Address",
+      "ownerLabel": "Owner",
+      "agreedPriceLabel": "Agreed price",
+      "dueLabel": "Delivery deadline",
+      "notDeclared": "Not declared",
+      "agreementContact": "Contact for the site visit goes through the office.",
       "scope": "The space gives access to this assignment only. Your contact details are not shown to anyone without your own choice."
     },
     "myCases": {

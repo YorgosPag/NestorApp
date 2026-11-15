@@ -458,6 +458,13 @@
       "credentialLabel": "Η ιδιότητά σας (δηλωμένη)",
       "credentialValue": "{registry} {number}",
       "requestedLabel": "Ζητήθηκε στις",
+      "agreementTitle": "Στοιχεία εκτέλεσης",
+      "siteAddressLabel": "Διεύθυνση",
+      "ownerLabel": "Ιδιοκτήτης",
+      "agreedPriceLabel": "Συμφωνημένη τιμή",
+      "dueLabel": "Προθεσμία παράδοσης",
+      "notDeclared": "Δεν έχει δηλωθεί",
+      "agreementContact": "Η επικοινωνία για την αυτοψία γίνεται μέσω του γραφείου.",
       "scope": "Ο χώρος δίνει πρόσβαση μόνο σε αυτή την ανάθεση. Τα στοιχεία επικοινωνίας σας δεν φαίνονται σε κανέναν χωρίς τη δική σας επιλογή."
     },
     "myCases": {

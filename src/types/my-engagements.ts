@@ -13,6 +13,7 @@
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { BallInCourtParty, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import type { QuoteTotals } from '@/lib/document-validity/issuance-quote';
 import type { ActingForView, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
 import type { DeclaredCredential, EngagementState, EngagementVerdict } from '@/types/engagement';
 import type { ViewFreshness } from '@/types/server-view';
@@ -38,6 +39,21 @@ export interface MyIssuanceCard {
 export type MyEngagementCard = MyCaseCard | MyIssuanceCard;
 
 /**
+ * ADR-915 §45.10 — **τα στοιχεία της εκτέλεσης**, μόνο όσο η ανάθεση είναι αναληφθείσα (`accepted`, μετά την έγκριση):
+ * πού (η αυτοψία), για ποιον (ο ιδιοκτήτης που ενέκρινε — το όνομα μπαίνει και στο ΠΕΑ), πόσο (η συμφωνημένη
+ * αναθεώρηση) και ως πότε (η τρέχουσα προθεσμία). Κάθε πεδίο `null` = «δεν δηλώθηκε / δεν διαβάστηκε», ποτέ μαντεψιά.
+ * 🔒 Ε-9′: **κανένα** τηλέφωνο ή email — η πλατφόρμα δεν αποκαλύπτει ποτέ μόνη της κανάλι επικοινωνίας.
+ */
+export interface IssuanceAgreementView {
+  readonly siteAddress: string | null;
+  readonly ownerName: string | null;
+  /** `null` ⇒ παλιά ανάθεση χωρίς προσφορά (§42 Π-8). */
+  readonly totals: QuoteTotals | null;
+  /** ISO ημέρα — `null` ⇒ καμία δέσμευση χρόνου. */
+  readonly dueOn: string | null;
+}
+
+/**
  * Ο **χώρος της ανάθεσης** όπως τον βλέπει ο επαγγελματίας (ADR-915 §39). 🔒 Ε-9′: **κανένα** τηλέφωνο ή email —
  * μόνο ονόματα και γεγονότα. Η παράδοση (Φ-Γ) και τα μηνύματα (Φ-Δ) προστίθενται εδώ, πάνω στο ίδιο `kind`.
  */
@@ -53,6 +69,8 @@ export interface EngagedIssuanceView {
   readonly credential: DeclaredCredential | null;
   /** Πότε ζήτησε το γραφείο την έκδοση — η χρονογραμμή του χώρου ξεκινά εδώ. */
   readonly proposedAt: string;
+  /** ADR-915 §45.10 (Π-7) — ό,τι υποσχέθηκε η σελίδα προσφοράς «μετά την έγκριση»· `null` ⇒ ο χώρος δεν είναι σε εκτέλεση. */
+  readonly agreement: IssuanceAgreementView | null;
   /**
    * Το ίδιο συμβόλαιο φρεσκάδας με την όψη της μεταβίβασης (ADR-901 §14.8). Στη Φ-Β ο χώρος δεν έχει γραφέα σήματος
    * ⇒ `revision` μένει 0 και η όψη ξαναδιαβάζεται στην αλλαγή ημέρας ή στο άνοιγμα — ρητά, όχι ξεχασμένα (ADR-915 §39).

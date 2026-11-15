@@ -22,6 +22,8 @@ import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import { ballInCourtOf, issuanceStageOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
+import { agreedQuoteOf, quoteTotalsOf } from '@/lib/document-validity/issuance-quote';
 import { nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
 import { trimmedStringOrNull } from '@/lib/type-guards';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
@@ -34,6 +36,7 @@ import type {
 import { announceIssuanceAnswer, type IssuanceSpaceEvent } from '@/server/issuance-invitations/issuance-answer-notifier';
 import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
+import { readPropertySiteAddress } from '@/server/lib/property-site-address.server';
 import { actingViews, type ActingViews } from '@/services/conveyance/conveyance-acting-workspace.server';
 import { placementRejectionOf, shownIn, type CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
 import { answerChanges, recordEngagementAudit } from '@/services/conveyance/conveyance-engagement-support';
@@ -41,8 +44,8 @@ import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.
 import type { EngagementHostLine } from '@/types/contact-professional-link';
 import { SCOPE_OF_SUBJECT, type IssuanceEngagement } from '@/types/engagement';
 import type { IssuanceEngagementInvitation } from '@/types/engagement-invitation';
-import type { MyIssuanceCard } from '@/types/my-engagements';
-import { parseIssuanceAssignment, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
+import type { IssuanceAgreementView, MyIssuanceCard } from '@/types/my-engagements';
+import { issuanceRecordOf, parseIssuanceAssignment, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
 
 /** Το στάδιο όπου ο χώρος δέχεται είσοδο — μετά το «Αναλαμβάνω», πριν από ακύρωση/παράδοση. */
 const SPACE_OPEN_STAGE: IssuanceStage = 'accepted';
@@ -98,7 +101,10 @@ async function hostNameOf(hostCompanyId: string): Promise<string | null> {
   return readWorkspaceName(hostCompanyId).then(trimmedStringOrNull, () => null);
 }
 
-/** Το όνομα της επαφής **στο βιβλίο του γραφείου** — για τις ειδοποιήσεις του γραφείου, ποτέ για τον επαγγελματία. */
+/**
+ * Το όνομα της επαφής **στο βιβλίο του γραφείου** — για τις ειδοποιήσεις του γραφείου· στον επαγγελματία **μόνο** ο
+ * ιδιοκτήτης που ενέκρινε, και μόνο σε αναληφθείσα ανάθεση (§45.10, Π-7).
+ */
 export async function contactNameOf(db: Firestore, hostCompanyId: string, contactId: string): Promise<string | null> {
   const docs = await readOwnedContactDocs(db, hostCompanyId, [contactId]).catch(() => null);
   const data = docs?.get(contactId);
@@ -185,6 +191,21 @@ async function listCards(db: Firestore, viewer: CasesViewer, history: readonly I
   return Promise.all(current.map((e) => cardOf(db, e, viewer.uid, nowMs, acting)));
 }
 
+/**
+ * ADR-915 §45.10 — ό,τι υποσχέθηκε η σελίδα προσφοράς «μετά την έγκριση» (Π-7): **μόνο** σε αναληφθείσα ανάθεση.
+ * Πριν (προσφορά · απόφαση) ή μετά (ακύρωση) ⇒ `null`: ο φάκελος προσφοράς δεν διευρύνεται σιωπηλά.
+ */
+async function agreementOf(db: Firestore, assignment: DocumentIssuanceAssignment, stage: IssuanceStage): Promise<IssuanceAgreementView | null> {
+  if (stage !== SPACE_OPEN_STAGE || assignment.decision === null) return null;
+  const record = issuanceRecordOf(assignment);
+  const quote = agreedQuoteOf(record);
+  const [siteAddress, ownerName] = await Promise.all([
+    readPropertySiteAddress(db, assignment.companyId, assignment.propertyId),
+    contactNameOf(db, assignment.companyId, assignment.decision.ownerContactId),
+  ]);
+  return { siteAddress, ownerName, totals: quote ? quoteTotalsOf(quote) : null, dueOn: issuanceDeliveryOf(record)?.dueOn ?? null };
+}
+
 async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEngagement, nowMs: number): Promise<EngagedViewOutcome> {
   const decision = judge(engagement, viewer.uid, nowMs);
   if (!isEngaged(decision.verdict)) return { ok: false, rejection: 'denied', verdict: decision.verdict };
@@ -192,11 +213,12 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
   if (misplaced !== null) return misplaced;
   const assignment = await readAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId);
   if (!assignment) return { ok: false, rejection: 'not-found' };
-  const [propertyName, hostName] = await Promise.all([
+  const stage = issuanceStageOf(assignment);
+  const [propertyName, hostName, agreement] = await Promise.all([
     propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
     hostNameOf(engagement.hostCompanyId),
+    agreementOf(db, assignment, stage),
   ]);
-  const stage = issuanceStageOf(assignment);
   return {
     ok: true,
     view: {
@@ -209,6 +231,7 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
       ballInCourt: ballInCourtOf(stage),
       credential: engagement.declaredCredential ?? null,
       proposedAt: assignment.proposedAt,
+      agreement,
       freshness: { revision: NO_SIGNAL_REVISION, freshUntil: nextConveyanceDayStart(new Date(nowMs)).toISOString() },
     },
   };

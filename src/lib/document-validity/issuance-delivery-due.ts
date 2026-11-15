@@ -27,7 +27,7 @@ import { daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 
 import type { IssuanceAssignmentRecord, IssuanceReduction } from './issuance-assignment';
-import { isQuoteDeliveryBusinessDays, type QuoteTerms } from './issuance-quote';
+import { agreedQuoteOf, isQuoteDeliveryBusinessDays, type QuoteTerms } from './issuance-quote';
 import type { IssuanceStage } from './issuance-stage';
 
 /** Τα όρια — ΕΝΑ σημείο. `dueSoonDays`: ημερολογιακές ημέρες πριν από την προθεσμία που η γραμμή γίνεται κίτρινη. */
@@ -79,10 +79,10 @@ interface Commitment {
 
 /** Η δέσμευση της εγκεκριμένης προσφοράς — μόνο αν η απόφαση κάλυψε **την τρέχουσα** αναθεώρηση (§42 Π-3). */
 function quoteCommitmentOf(record: IssuanceAssignmentRecord): Commitment | null {
-  const { decision, quote } = record;
-  if (decision === null || decision.outcome !== 'approved' || quote === null || decision.quoteRevision !== quote.revision) return null;
-  const dueOn = deliveryDueFromApproval(conveyanceToday(new Date(decision.at)), quote);
-  return dueOn === null ? null : { dueOn, at: decision.at, fromQuote: true, reason: null };
+  const quote = agreedQuoteOf(record);
+  if (quote === null || record.decision === null) return null;
+  const dueOn = deliveryDueFromApproval(conveyanceToday(new Date(record.decision.at)), quote);
+  return dueOn === null ? null : { dueOn, at: record.decision.at, fromQuote: true, reason: null };
 }
 
 /** **Η τρέχουσα προθεσμία** — η νεότερη δέσμευση. `null` = καμία (ούτε στην προσφορά ούτε από το γραφείο). */
