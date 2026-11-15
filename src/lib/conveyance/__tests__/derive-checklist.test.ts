@@ -112,11 +112,35 @@ describe('deriveChecklist — καταστάσεις', () => {
     expect([row.status, row.notApplicableBy]).toEqual(['not_applicable', 'manual']);
   });
 
-  it('offline: επιβεβαίωση παραλαβής χωρίς αρχείο ⇒ accepted', () => {
+  it('ADR-915 §44 — offline: παραλαβή χωρίς ημερομηνία έκδοσης, είδος που ΛΗΓΕΙ (2 μήνες) ⇒ `expiry_unknown`', () => {
     const overrides = {
       building_identity: { review: { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: null, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
     };
-    expect(statusOf({ items: [item('building_identity')], overrides })).toBe('accepted');
+    expect(statusOf({ items: [item('building_identity')], overrides })).toBe('expiry_unknown');
+  });
+});
+
+describe('ADR-915 §44 — άγνωστη λήξη: θέλει προσοχή, δεν μπλοκάρει, δεν μετρά ως ολοκληρωμένη', () => {
+  const unknownEnergy = () => deriveChecklist(input({
+    items: [item('energy_certificate')],
+    evidence: [file()],
+    overrides: {
+      energy_certificate: { review: { verdict: 'accepted' as const, fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn: null, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
+    },
+  }));
+
+  it('εγκεκριμένο ΠΕΑ χωρίς έκδοση ⇒ `expiry_unknown`, χωρίς λήξη, χωρίς κρίση για την υπογραφή', () => {
+    const row = unknownEnergy().rows[0];
+    expect([row.status, row.expiresOn, row.validOnSigning]).toEqual(['expiry_unknown', null, null]);
+  });
+
+  it('η σύνοψη το μετρά στο `undetermined` και ΟΧΙ στο `complete`', () => {
+    const { summary } = unknownEnergy();
+    expect([summary.applicable, summary.complete, summary.undetermined]).toEqual([1, 0, 1]);
+  });
+
+  it('έγγραφο που ΔΕΝ λήγει (`none`) χωρίς έκδοση ⇒ μένει `accepted` (δεν έχει λήξη καθόλου)', () => {
+    expect(statusOf({ evidence: [file()], overrides: accepted() })).toBe('accepted');
   });
 });
 
@@ -258,7 +282,7 @@ describe('deriveChecklist — ορατότητα & σύνοψη', () => {
       evidence: [file()],
     }));
     expect(summary).toEqual({
-      applicable: 2, complete: 1, awaitingReview: 1, missing: 0, rejected: 0, expiring: 0, expired: 0,
+      applicable: 2, complete: 1, awaitingReview: 1, missing: 0, rejected: 0, expiring: 0, expired: 0, undetermined: 0,
       openQuestions: [{ factId: 'seller_by_proxy', partyKey: 'cont_seller' }, { factId: 'buyer_has_mortgage', partyKey: null }],
     });
   });

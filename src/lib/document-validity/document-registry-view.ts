@@ -180,7 +180,8 @@ export function documentExpiryHref(view: RegistryView = REGISTRY_VIEW_ALL, extra
 
 /**
  * ADR-915 §43 — **άγνωστη λήξη που τη ζητά διαδικασία `block`**: δεν αποδεικνύεται ότι ισχύει, άρα θέλει προσοχή — αλλά
- * **δεν** λέγεται «μπλοκάρει» (η μεταβίβαση τη δέχεται σήμερα· δύο κριτές δεν διαφωνούν). Οι διαδικασίες που περιμένουν.
+ * **δεν** λέγεται «μπλοκάρει»: η μεταβίβαση τη δείχνει «Άγνωστη λήξη» και προειδοποιεί χωρίς να μπλοκάρει (§44) — ένας
+ * κριτής, δύο όψεις που συμφωνούν. Οι διαδικασίες που περιμένουν.
  */
 export function undeterminedBlockersOf(row: RegistryRow): readonly DocumentDependent[] {
   if (row.state !== 'expiry-unknown') return [];

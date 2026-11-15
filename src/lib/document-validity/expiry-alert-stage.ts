@@ -7,6 +7,7 @@
  *
  * | Στάδιο | Πότε (η τελευταία μέρα είναι μέσα) |
  * |---|---|
+ * | `undetermined` | υπάρχει έγγραφο, αλλά **άγνωστη λήξη** (`expiry-unknown`) — ADR-915 §44 |
  * | `lead` | μπήκε στις `renewalLeadDays` του είδους — μόνο όταν αυτές είναι **περισσότερες** από 30 |
  * | `d30` · `d7` · `d0` | λήγει σε ≤ 30 · ≤ 7 ημέρες · σήμερα |
  * | `expired` | έληξε |
@@ -17,7 +18,9 @@
  * 🔑 **Η ανανέωση ξαναρχίζει**: άλλη `expiresOn` ⇒ άλλο έγγραφο για τον άνθρωπο, ακόμη κι αν η γραμμή είναι η ίδια.
  * 🔑 **Η κατάσταση ΔΕΝ ξαναϋπολογίζεται εδώ**: την παράγει ο ΕΝΑΣ πυρήνας (`documentRegistry`). Εδώ κόβεται μόνο η
  *    απόσταση από τη λήξη σε σκαλιά, και η προβολή-προσγείωση ρωτά τον ΕΝΑ ταξινομητή (`matchesRegistryView`).
- * ⚠️ `expiry-unknown` **δεν** ειδοποιείται: δεν έχει ημερομηνία για ακμή, και φαίνεται ήδη στη σελίδα (δηλωμένο, §12).
+ * 🔑 **Άγνωστη λήξη (§44)**: λέγεται **μία** φορά — η ακμή είναι (γραμμή, `expiresOn = null`). Μόλις δηλωθούν στοιχεία, η
+ *    `expiresOn` αποκτά τιμή και ο κανονικός κύκλος ξαναρχίζει όπως σε ανανέωση. Το λιγότερο επείγον στάδιο· καμία
+ *    κλιμάκωση (δεν είναι `expired`, δεν μπλοκάρει). Αναθεωρεί τη σιωπή της §12 (το Vanta σωπαίνει χωρίς ημερομηνία).
  *
  * Καθαρό (leaf): ασκείται χωρίς βάση.
  *
@@ -31,7 +34,7 @@ import { registryRowIdOf, type RegistryRow } from './document-registry';
 import { matchesRegistryView, REGISTRY_VIEW_ALL, type RegistryView } from './document-registry-view';
 
 /** Τα στάδια, από το λιγότερο προς το περισσότερο επείγον. Κλειστό σύνολο· η σειρά **είναι** η κατάταξη. */
-export const EXPIRY_ALERT_STAGES = ['lead', 'd30', 'd7', 'd0', 'expired', 'missing'] as const;
+export const EXPIRY_ALERT_STAGES = ['undetermined', 'lead', 'd30', 'd7', 'd0', 'expired', 'missing'] as const;
 export type ExpiryAlertStage = (typeof EXPIRY_ALERT_STAGES)[number];
 
 /** Τα σταθερά σκαλιά (ημέρες ως τη λήξη), από το στενότερο. Το `lead` προέρχεται από το είδος. */
@@ -39,7 +42,7 @@ const DAY_STEPS: readonly (readonly [ExpiryAlertStage, number])[] = [['d0', 0], 
 const WIDEST_STEP = 30;
 
 /** Οι προβολές-προσγείωσης, από την πιο στενή: η πρώτη που χωρά **όλες** τις γραμμές της ειδοποίησης. */
-const LANDING_VIEWS: readonly RegistryView[] = ['blocking', 'missing', 'renewal-due', 'within-window'];
+const LANDING_VIEWS: readonly RegistryView[] = ['blocking', 'missing', 'renewal-due', 'within-window', 'expiry-unknown'];
 
 const STAGE_RANK = new Map<ExpiryAlertStage, number>(EXPIRY_ALERT_STAGES.map((stage, index) => [stage, index]));
 
@@ -83,10 +86,11 @@ export function expiryStageOfDate(expiresOn: string, asOf: string, leadDays: num
   return until !== null && expiresOn <= until ? 'lead' : null;
 }
 
-/** Το στάδιο της γραμμής σήμερα· `null` = τίποτα να ειπωθεί (σε ισχύ μακριά · άγνωστη · αντικατεστημένη). */
+/** Το στάδιο της γραμμής σήμερα· `null` = τίποτα να ειπωθεί (σε ισχύ μακριά · αντικατεστημένη). */
 export function expiryAlertStageOf(row: RegistryRow, asOf: string): ExpiryAlertStage | null {
   if (row.kind === 'gap') return 'missing';
-  if (row.state === 'superseded' || row.expiry.expiresOn === null) return null;
+  if (row.state === 'superseded') return null;
+  if (row.expiry.expiresOn === null) return 'undetermined';
   return expiryStageOfDate(row.expiry.expiresOn, asOf, documentKindSpec(row.document.kind).renewalLeadDays);
 }
 

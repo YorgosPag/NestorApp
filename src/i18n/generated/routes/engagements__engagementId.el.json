@@ -277,6 +277,7 @@
       "delivered_sealed": "Παραδόθηκε εμπιστευτικά",
       "expired": "Έληξε",
       "expiring": "Λήγει σύντομα",
+      "expiry_unknown": "Άγνωστη λήξη",
       "missing": "Λείπει",
       "needs_answer": "Χρειάζεται απάντηση",
       "not_applicable": "Δεν εφαρμόζεται",

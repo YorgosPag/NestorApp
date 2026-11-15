@@ -17,6 +17,7 @@
     "rejected": "{count, plural, one {# returned} other {# returned}}",
     "expiring": "{count, plural, one {# expiring soon} other {# expiring soon}}",
     "expired": "{count, plural, one {# expired} other {# expired}}",
+    "undetermined": "{count, plural, one {# with unknown expiry} other {# with unknown expiry}}",
     "questions": "{count, plural, one {# question completes the checklist} other {# questions complete the checklist}}"
   },
   "signing": {
@@ -60,6 +61,7 @@
     "accepted": "Reviewed",
     "expiring": "Expiring soon",
     "expired": "Expired",
+    "expiry_unknown": "Unknown expiry",
     "notary_side": "From the notary",
     "delivered_sealed": "Delivered confidentially",
     "not_applicable": "Not applicable"

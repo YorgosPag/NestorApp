@@ -17,6 +17,7 @@
     "rejected": "{count, plural, one {# επιστράφηκε} other {# επιστράφηκαν}}",
     "expiring": "{count, plural, one {# λήγει σύντομα} other {# λήγουν σύντομα}}",
     "expired": "{count, plural, one {# έληξε} other {# έληξαν}}",
+    "undetermined": "{count, plural, one {# με άγνωστη λήξη} other {# με άγνωστη λήξη}}",
     "questions": "{count, plural, one {# ερώτηση συμπληρώνει τον κατάλογο} other {# ερωτήσεις συμπληρώνουν τον κατάλογο}}"
   },
   "signing": {
@@ -60,6 +61,7 @@
     "accepted": "Ελέγχθηκε",
     "expiring": "Λήγει σύντομα",
     "expired": "Έληξε",
+    "expiry_unknown": "Άγνωστη λήξη",
     "notary_side": "Από τον συμβολαιογράφο",
     "delivered_sealed": "Παραδόθηκε εμπιστευτικά",
     "not_applicable": "Δεν εφαρμόζεται"

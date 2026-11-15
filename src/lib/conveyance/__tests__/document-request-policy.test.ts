@@ -155,6 +155,11 @@ describe('Α29 — ο παραλήπτης παράγεται από τον πά
     expect(judge('contract_draft', 'host', ALL_ROLES, 'closed')).toEqual({ ok: false, refusal: 'case-closed' });
   });
 
+  it('ADR-915 §44 — άγνωστη λήξη ζητείται: έγγραφο με ορατή έκδοση/λήξη (μετάλλαξη: `expiry_unknown` εκτός REQUESTABLE)', () => {
+    expect(judgeDocumentRequest({ row: row('seller_enfia_certificate', 'expiry_unknown'), requester: 'notary', state: 'open', activeRoles: ALL_ROLES }))
+      .toEqual({ ok: true, recipient: 'host' });
+  });
+
   it('«από τον συμβολαιογράφο» (notary_side) ζητείται ΜΟΝΟ αν φτάνει μέσα από την πλατφόρμα (μετάλλαξη: notary_side πάντα / ποτέ)', () => {
     const ask = (itemId: string) => judgeDocumentRequest({ row: row(itemId, 'notary_side'), requester: 'host', state: 'open', activeRoles: ALL_ROLES });
     // σχέδιο συμβολαίου: στέλνεται με transmittal ⇒ «εκκρεμεί από τον συμβολαιογράφο» — το πιο συχνό αίτημα

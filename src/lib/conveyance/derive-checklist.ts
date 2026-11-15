@@ -16,7 +16,7 @@
  *     - το ελεγμένο αρχείο ΔΕΝ είναι πια το νεότερο / άλλαξε έκδοση ⇒ `stale` (accepted)
  *       ή `uploaded` (rejected — «revise & resubmit»)
  *     - `rejected` ⇒ `rejected`
- *     - `accepted` ⇒ ισχύς: `expired` · `expiring` (≤7 ημ. ή λήγει πριν την υπογραφή) · `accepted`
+ *     - `accepted` ⇒ ισχύς: `expired` · `expiring` (≤7 ημ. ή λήγει πριν την υπογραφή) · `expiry_unknown` (§44) · `accepted`
  *  4. χωρίς έλεγχο: αρχεία ⇒ `uploaded` · συμβολαιογράφος ⇒ `notary_side` · σφραγισμένη παράδοση (Π2) ⇒
  *     `delivered_sealed` · αλλιώς `missing`
  *
@@ -26,7 +26,7 @@
  */
 
 import { EXPIRING_WINDOW_DAYS } from '@/config/conveyance-checklist/catalog';
-import { ruleExpiresOn, type DocumentExpiry } from '@/lib/document-validity/document-expiry';
+import { ruleExpires, ruleExpiresOn, type DocumentExpiry } from '@/lib/document-validity/document-expiry';
 import { resolvedDocumentExpiry } from '@/lib/document-validity/document-facts';
 import { coveringIssueFrom } from '@/lib/document-validity/validity-bounds';
 import { documentStanding, type DocumentStandingState } from '@/lib/document-validity/document-requirement';
@@ -104,15 +104,15 @@ export function visibleRowFiles(
 }
 
 /**
- * Κατάσταση του κριτή → κατάσταση γραμμής. ⚠️ `expiry-unknown` → `accepted` **όπως πριν τη Φ2**: ο κατάλογος δεν έχει
- * ακόμη κατάσταση «άγνωστη λήξη» (π.χ. εγκεκριμένη γραμμή με κανόνα `unverified`). Νέα κατάσταση γραμμής αγγίζει
- * οθόνη, i18n και σύνοψη ⇒ απόφαση της ADR-915 Φ4, όχι παρενέργεια εδώ.
+ * Κατάσταση του κριτή → κατάσταση γραμμής. ADR-915 §44: `expiry-unknown` → `expiry_unknown` — «θέλει προσοχή», όχι
+ * «ελέγχθηκε» (Procore «Undecided», Vanta «OK» μόνο με αρχείο σε ισχύ). **Δεν** μπλοκάρει: ίδια κρίση με το μητρώο
+ * («Δεν κρίνεται — άγνωστη λήξη», `undeterminedBlockersOf`) — ένας κριτής, το `documentStanding`.
  */
 const ROW_STATUS_OF: Readonly<Record<DocumentStandingState, ChecklistRowStatus>> = {
   valid: 'accepted',
   expiring: 'expiring',
   expired: 'expired',
-  'expiry-unknown': 'accepted',
+  'expiry-unknown': 'expiry_unknown',
 };
 
 /**
@@ -130,6 +130,8 @@ function expiryOf(item: ChecklistItem, review: ChecklistItemReview, files: reado
  * υπολογισμό (Φ1) και η κρίση από τον ΕΝΑ κριτή (Φ2)· το `validOnSigning` είναι το `validAtNeed` της απαίτησης.
  */
 function validityOf(item: ChecklistItem, review: ChecklistItemReview, files: readonly EvidenceFile[], input: DeriveChecklistInput): Validity {
+  // §44 — έγγραφο που ΔΕΝ λήγει (`none` · `act_day`) δεν έχει «άγνωστη λήξη»: δεν έχει λήξη καθόλου (`ruleExpires`).
+  if (!ruleExpires(item.validity)) return { status: 'accepted', ...NO_VALIDITY };
   const expiry = expiryOf(item, review, files);
   const standing = documentStanding({
     expiresOn: expiry.expiresOn,
@@ -234,6 +236,7 @@ export function summarizeChecklist(rows: readonly ChecklistRow[]): ChecklistSumm
     rejected: countOf(rows, 'rejected'),
     expiring: countOf(rows, 'expiring'),
     expired: countOf(rows, 'expired'),
+    undetermined: countOf(rows, 'expiry_unknown'),
     openQuestions: openQuestionsOf(rows),
   };
 }

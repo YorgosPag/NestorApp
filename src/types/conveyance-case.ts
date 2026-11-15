@@ -264,6 +264,11 @@ const CHECKLIST_ROW_STATUSES = [
   'accepted',
   'expiring',
   'expired',
+  /**
+   * ADR-915 §44 — εγκεκριμένο, αλλά **δεν ξέρουμε ως πότε ισχύει** (λείπει η έκδοση ή η διάρκεια του είδους δεν έχει
+   * επαληθευτεί). Θέλει προσοχή, **δεν** μπλοκάρει, **δεν** μετρά ως ολοκληρωμένο (Procore «Undecided»).
+   */
+  'expiry_unknown',
   'notary_side',
   /** Π2 — παραδόθηκε σε ακροατήριο όπου ο θεατής δεν ανήκει (`SealedDelivery`): η υποχρέωση πέρασε, το περιεχόμενο όχι. */
   'delivered_sealed',
@@ -320,6 +325,8 @@ export interface ChecklistSummary {
   readonly rejected: number;
   readonly expiring: number;
   readonly expired: number;
+  /** ADR-915 §44 — `expiry_unknown`: εγκεκριμένα χωρίς γνωστή λήξη (εκτός `complete`). */
+  readonly undetermined: number;
   /** Γεγονότα που ΔΕΝ παράγονται από τα δεδομένα και δεν έχουν απαντηθεί — ένα ανά (γεγονός, πρόσωπο). */
   readonly openQuestions: readonly OpenQuestion[];
 }

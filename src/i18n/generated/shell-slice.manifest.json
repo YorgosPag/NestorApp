@@ -19,7 +19,7 @@
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
     "src/i18n/generated/routes/email__preferences__token.el.json": "45c4179d358aa4900494f31547bd1126905e23cae623d581d4c87d52ac62e516",
     "src/i18n/generated/routes/engagements.el.json": "2d2d9157630468ffc50de0cd897dcb6547138ec7f5146bcefbf8c42e71dbc653",
-    "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
+    "src/i18n/generated/routes/engagements__engagementId.el.json": "4c3cdc4cca05efa2f10fe817b7b27c39a1549e1f19bffa3c47a3946dacdc72aa",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/handover-invite__token.el.json": "5f802bb153f7da3e1f25e91ec7ed91fb1acf50d1bfc8381b5c1661a996567d70",
     "src/i18n/generated/routes/handover-protocol.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -39,7 +39,7 @@
     "src/i18n/generated/routes/mandate__token.el.json": "8f964d1e521a28640ad5bee71fccf8e89541697902528a2db4bf3dca4dfea96a",
     "src/i18n/generated/routes/n__notificationId.el.json": "54c30325c22b7621417b7afaddaee9ae92de5fc24ee61a784ca6ecfc66d74da5",
     "src/i18n/generated/routes/o__workspace__cases.el.json": "2d2d9157630468ffc50de0cd897dcb6547138ec7f5146bcefbf8c42e71dbc653",
-    "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
+    "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "4c3cdc4cca05efa2f10fe817b7b27c39a1549e1f19bffa3c47a3946dacdc72aa",
     "src/i18n/generated/routes/o__workspace__catalog__assets.el.json": "a87615d76e3d053b0b8e4607fe4bacef09d196de174c2ef93a71fd44731c80fd",
     "src/i18n/generated/routes/o__workspace__catalog__attributes.el.json": "51354342c54ce341bca5d524c343328301895b819c39f4b9d7e9572e91b0ed7b",
     "src/i18n/generated/routes/o__workspace__catalog__categories.el.json": "a41eadc7f6578887dc7604aad9eda9450b54378b1cf084c9eb72c1eae60efd43",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "dc0a1424598e7c7c6f55e2026089e9e9f1ec705566d3dd14d9b22fbe65c9d16d",
+  "inputsSha256": "23d50d53814b55aefd0247bfc0ea8fb25fa3bb91fd133d3ecc099e1042bf6cdc",
   "languages": [
     "el"
   ],
@@ -40886,7 +40886,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1334103
+    "sliceBytes": 1334205
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

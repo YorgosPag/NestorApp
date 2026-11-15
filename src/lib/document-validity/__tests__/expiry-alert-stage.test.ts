@@ -59,8 +59,8 @@ describe('expiryAlertStageOf — τα σκαλιά (η τελευταία μέρ
     expect(stageOf('2026-12-15')).toBeNull();
   });
 
-  it('άγνωστη λήξη ⇒ καμία ειδοποίηση (φαίνεται στη σελίδα, δεν έχει ακμή)', () => {
-    expect(stageOf(null)).toBeNull();
+  it('ADR-915 §44 — άγνωστη λήξη ⇒ `undetermined` (όχι πια σιωπή)', () => {
+    expect(stageOf(null)).toBe('undetermined');
   });
 
   it('αντικατεστημένη γραμμή ⇒ σιωπή, ακόμη κι αν έχει λήξει (την κουβαλά η τρέχουσα)', () => {
@@ -78,8 +78,36 @@ describe('expiryAlertStageOf — τα σκαλιά (η τελευταία μέρ
     expect(gap && expiryAlertStageOf(gap, AS_OF)).toBe('missing');
   });
 
-  it('η σειρά των σταδίων ΕΙΝΑΙ η κατάταξη — `missing` το πιο επείγον, `lead` το λιγότερο', () => {
-    expect(EXPIRY_ALERT_STAGES).toEqual(['lead', 'd30', 'd7', 'd0', 'expired', 'missing']);
+  it('η σειρά των σταδίων ΕΙΝΑΙ η κατάταξη — `missing` το πιο επείγον, `undetermined` το λιγότερο', () => {
+    expect(EXPIRY_ALERT_STAGES).toEqual(['undetermined', 'lead', 'd30', 'd7', 'd0', 'expired', 'missing']);
+  });
+});
+
+describe('ADR-915 §44 — άγνωστη λήξη: λέγεται ΜΙΑ φορά, και ξαναρχίζει με τη δήλωση', () => {
+  const unknown = () => currentExpiryAlerts(rowsOf([doc('u', null)]), AS_OF);
+
+  it('πρώτη φορά ⇒ ακμή `undetermined`, χωρίς λήξη, που δεν μπλοκάρει', () => {
+    expect(advancedExpiryAlerts(unknown(), {})).toEqual([{ rowId: 'u', stage: 'undetermined', expiresOn: null, blocking: false }]);
+  });
+
+  it('ειπώθηκε ⇒ αύριο σιωπή (καμία καθημερινή επανάληψη)', () => {
+    expect(advancedExpiryAlerts(unknown(), nextAlertLedger(unknown(), {}, true))).toEqual([]);
+  });
+
+  it('🔑 δηλώθηκαν στοιχεία (η λήξη απέκτησε τιμή) ⇒ ο κανονικός κύκλος ξαναρχίζει', () => {
+    const ledger = nextAlertLedger(unknown(), {}, true);
+    const declared = currentExpiryAlerts(rowsOf([doc('u', '2026-10-20')]), AS_OF);
+    expect(advancedExpiryAlerts(declared, ledger).map((a) => `${a.rowId}:${a.stage}`)).toEqual(['u:d7']);
+  });
+
+  it('δηλώθηκε λήξη μακριά (εκτός σκαλιών) ⇒ σιωπή, και η γραμμή φεύγει από το ημερολόγιο', () => {
+    const declared = currentExpiryAlerts(rowsOf([doc('u', '2030-01-01')]), AS_OF);
+    expect(declared).toEqual([]);
+    expect(nextAlertLedger(declared, nextAlertLedger(unknown(), {}, true), true)).toEqual({});
+  });
+
+  it('μόνο άγνωστες λήξεις ⇒ προσγείωση στην προβολή «Άγνωστη λήξη»', () => {
+    expect(expiryAlertLandingView(rowsOf([doc('u', null)]), AS_OF)).toBe('expiry-unknown');
   });
 });
 

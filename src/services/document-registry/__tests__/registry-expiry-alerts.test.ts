@@ -73,15 +73,15 @@ beforeEach(() => {
 });
 
 describe('sweepRegistryExpiryAlerts', () => {
-  it('πρώτη σάρωση ⇒ μία σύνοψη ανά διαχειριστή, με τις 5 γραμμές σε στάδιο, και το ημερολόγιο γράφεται', async () => {
+  it('πρώτη σάρωση ⇒ μία σύνοψη ανά διαχειριστή, με τις 6 γραμμές σε στάδιο (+ άγνωστη λήξη, §44), και το ημερολόγιο γράφεται', async () => {
     const report = await sweep();
     expect(announce.mock.calls.map(([n]) => n.recipientUid)).toEqual(['u_a1', 'u_a2']);
     expect(announce.mock.calls[0][0].alerts.map((a) => `${a.rowId}:${a.stage}`)).toEqual([
-      'f-expired:expired', 'f-expiring:lead', 'f-soon:d30',
+      'f-expired:expired', 'f-expiring:lead', 'f-soon:d30', 'f-unknown:undetermined',
       'missing:ownp_7:energy-certificate:missing', 'missing:p6:energy-certificate:missing',
     ]);
     expect(report).toMatchObject({ considered: 1, notified: 2, skipped: 0, failed: 0, truncated: false, incomplete: 0 });
-    expect(ledgerOf('comp_a')?.rows).toHaveLength(5);
+    expect(ledgerOf('comp_a')?.rows).toHaveLength(6);
   });
 
   it('🔑 δεύτερη σάρωση την ίδια μέρα ⇒ ΣΙΩΠΗ (ακμή, όχι στάθμη)', async () => {
@@ -119,7 +119,7 @@ describe('sweepRegistryExpiryAlerts', () => {
     delivery = 'skipped';
     const report = await sweep();
     expect(report.notified).toBe(0);
-    expect(ledgerOf('comp_a')?.rows).toHaveLength(5);
+    expect(ledgerOf('comp_a')?.rows).toHaveLength(6);
   });
 
   it('🔑 μόνο οι διαχειριστές ΤΟΥ ΙΔΙΟΥ γραφείου — κάθε σύνοψη φέρει το companyId του', async () => {
@@ -161,11 +161,11 @@ describe('sweepRegistryExpiryAlerts — αλυσίδα υπευθυνότητα�
     documentManagers = { comp_a: ['u_doc'] };
   });
 
-  it('🔑 ο καθένας παίρνει ΜΟΝΟ τις δικές του γραμμές· η διοίκηση μόνο ό,τι έληξε ή μπλοκάρει', async () => {
+  it('🔑 ο καθένας παίρνει ΜΟΝΟ τις δικές του γραμμές· η διοίκηση μόνο ό,τι έληξε ή μπλοκάρει (ΟΧΙ την άγνωστη λήξη, §44)', async () => {
     await sweep();
     expect(rowsByRecipient()).toEqual({
       u_resp: ['f-expired'],
-      u_doc: ['f-expiring', 'f-soon', 'missing:ownp_7:energy-certificate', 'missing:p6:energy-certificate'],
+      u_doc: ['f-expiring', 'f-soon', 'f-unknown', 'missing:ownp_7:energy-certificate', 'missing:p6:energy-certificate'],
       u_a1: ['f-expired', 'f-expiring', 'missing:p6:energy-certificate'],
       u_a2: ['f-expired', 'f-expiring', 'missing:p6:energy-certificate'],
     });

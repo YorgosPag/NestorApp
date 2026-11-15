@@ -8,6 +8,7 @@
 
 import {
   AlertTriangle,
+  CalendarSearch,
   CheckCircle2,
   CircleSlash,
   Clock,
@@ -47,6 +48,7 @@ export const STATUS_PRESENTATION: Readonly<Record<ChecklistRowStatus, StatusPres
   accepted: { icon: CheckCircle2, variant: 'success' },
   expiring: { icon: Clock, variant: 'warning' },
   expired: { icon: AlertTriangle, variant: 'error' },
+  expiry_unknown: { icon: CalendarSearch, variant: 'warning' },
   notary_side: { icon: Landmark, variant: 'muted' },
   delivered_sealed: { icon: Lock, variant: 'muted' },
   not_applicable: { icon: CircleSlash, variant: 'muted' },
@@ -54,7 +56,7 @@ export const STATUS_PRESENTATION: Readonly<Record<ChecklistRowStatus, StatusPres
 
 /** Σειρά προτεραιότητας μέσα σε ενότητα: ό,τι θέλει ενέργεια πρώτο (σχήμα «inbox»). */
 export const STATUS_ORDER: readonly ChecklistRowStatus[] = [
-  'expired', 'rejected', 'missing', 'stale', 'expiring', 'uploaded', 'needs_answer', 'notary_side', 'delivered_sealed', 'accepted', 'not_applicable',
+  'expired', 'rejected', 'missing', 'stale', 'expiring', 'expiry_unknown', 'uploaded', 'needs_answer', 'notary_side', 'delivered_sealed', 'accepted', 'not_applicable',
 ];
 
 /**

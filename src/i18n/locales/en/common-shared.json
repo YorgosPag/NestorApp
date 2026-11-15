@@ -942,7 +942,7 @@
   },
   "documentExpiry": {
     "title": "{count, plural, one {# document needs action} other {# documents need action}}",
-    "body": "Some documents are due for renewal, close to expiry, expired or missing. Open «Document expiry» to see which.",
+    "body": "Some documents are due for renewal, close to expiry, expired, missing or of unknown validity. Open «Document expiry» to see which.",
     "blockingBody": "{blocking, plural, one {# of them already blocks a conveyance or listing} other {# of them already block a conveyance or listing}}. Open «Document expiry» to see what stops."
   },
   "caseDocument": {

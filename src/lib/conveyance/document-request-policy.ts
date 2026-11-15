@@ -36,9 +36,9 @@ import { viewerSeesItem } from './derive-checklist';
 
 /**
  * Οι καταστάσεις όπου κάτι **οφείλεται**: λείπει · επιστράφηκε · έληξε · λήγει (ζήτα την ανανέωση **πριν**) · άλλαξε
- * μετά τον έλεγχο.
+ * μετά τον έλεγχο · άγνωστη λήξη (ADR-915 §44 — ζήτα έγγραφο με ορατή έκδοση/λήξη).
  */
-export const REQUESTABLE_STATUSES: readonly ChecklistRowStatus[] = ['missing', 'rejected', 'expired', 'expiring', 'stale'];
+export const REQUESTABLE_STATUSES: readonly ChecklistRowStatus[] = ['missing', 'rejected', 'expired', 'expiring', 'expiry_unknown', 'stale'];
 
 /**
  * **Οφείλεται κάτι σε αυτή τη γραμμή που μπορεί να ζητηθεί;**

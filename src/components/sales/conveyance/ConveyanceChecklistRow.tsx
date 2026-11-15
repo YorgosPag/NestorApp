@@ -68,7 +68,7 @@ interface ConveyanceChecklistRowProps extends ChecklistRowHandlers {
 }
 
 /** Καταστάσεις όπου χρειάζεται (νέα) έκδοση — εκεί έχει νόημα το «εκδώστε από X» (ADR-915 §14). */
-const NEEDS_ISSUE: ReadonlySet<ChecklistRow['status']> = new Set(['missing', 'rejected', 'expired', 'expiring', 'stale']);
+const NEEDS_ISSUE: ReadonlySet<ChecklistRow['status']> = new Set(['missing', 'rejected', 'expired', 'expiring', 'expiry_unknown', 'stale']);
 
 /**
  * ADR-915 §14 — «εκδώστε από X και μετά»: η νωρίτερη έκδοση που εγγυημένα καλύπτει την υπογραφή. Ποτέ σε γραμμή

@@ -30,7 +30,7 @@ interface ConveyanceCaseHeaderProps {
   readonly onCommand: (command: ConveyanceCommand) => void;
 }
 
-const SUMMARY_COUNTERS = ['awaitingReview', 'missing', 'rejected', 'expiring', 'expired'] as const;
+const SUMMARY_COUNTERS = ['awaitingReview', 'missing', 'rejected', 'expiring', 'expired', 'undetermined'] as const;
 
 function SummaryLine({ summary }: { readonly summary: ChecklistSummary }) {
   const { t } = useTranslation(['conveyance']);
