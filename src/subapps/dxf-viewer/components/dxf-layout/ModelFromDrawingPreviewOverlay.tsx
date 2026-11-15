@@ -19,6 +19,7 @@ import {
 import {
   PREVIEW_ZONE_PAINT_ORDER,
   PREVIEW_ZONE_STYLE,
+  type PreviewLineTone,
   type PreviewZoneTone,
 } from '../../systems/region-preview/preview-zone-style';
 // ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
@@ -42,8 +43,8 @@ interface Projection {
 
 type Translate = (key: string) => string;
 
-/** Πάχος (CSS px) της ανεξήγητης γραμμής — παχύτερη από κάθε ζώνη: είναι ό,τι ΔΕΝ θα χτιστεί. */
-const UNEXPLAINED_STROKE_PX = 3;
+/** Πάχος (CSS px) μιας φωτισμένης γραμμής του σχεδίου — παχύτερη από κάθε ζώνη, για να διαβάζεται το μοτίβο της. */
+const SEGMENT_STROKE_PX = 3;
 
 /** Η ετικέτα μιας ζώνης ανοίγματος: πόρτα και παράθυρο έχουν τον ίδιο τόνο, όχι το ίδιο όνομα. */
 function openingZoneLabelKey(status: OpeningPreviewZone['status']): string | null {
@@ -62,13 +63,15 @@ function inPaintOrder<Z extends { readonly key: string }>(
 }
 
 /**
- * Γραμμές του σχεδίου φωτισμένες αυτούσιες (ανεξήγητες · ένοικοι κενού · σύμβολα χωρίς λωρίδα). ADR-929 §6.21.9 (Ε2):
+ * Γραμμές του σχεδίου φωτισμένες αυτούσιες (μονές γραμμές · ένοικοι κενού · σύμβολα χωρίς λωρίδα), με το χρώμα **και**
+ * το μοτίβο του τόνου τους (ADR-929 §6.21.10: ως τις 2026-11-16 ήταν συμπαγείς — μόνο χρώμα, WCAG 1.4.1). ADR-929 §6.21.9 (Ε2):
  * όσες μοιράζονται **ακριβώς** ένα άκρο ενώνονται σε πολυγραμμή, ώστε η γωνία να είναι γωνία πινελιάς (`miter`) και όχι
  * δύο απολήξεις που προεξέχουν· το ανοιχτό άκρο σταματά εκεί που τελειώνει η γραμμή (`butt`). Ένα `<path>` ανά πολυγραμμή.
  */
 function SegmentStrokes(props: Projection & {
   readonly segments: readonly UnexplainedSegment[];
-  readonly tone: PreviewZoneTone;
+  /** Μόνο τόνος ΓΡΑΜΜΗΣ (`PREVIEW_LINE_TONES`): αυτούς κρίνει το CHECK 3.41 μαζί με τα σημάδια της αναγνώρισης. */
+  readonly tone: PreviewLineTone;
   readonly testId: string;
 }): React.ReactElement {
   // Η αλυσίδα αλλάζει μόνο με τα τμήματα (χαμηλόσυχνο store)· ανά transform γίνεται μόνο η προβολή (ADR-040).
@@ -83,7 +86,8 @@ function SegmentStrokes(props: Projection & {
           d={worldRingToSvgPath(chain.points, props.transform, props.viewport, chain.closed)}
           fill="none"
           stroke={PREVIEW_ZONE_STYLE[props.tone].stroke}
-          strokeWidth={UNEXPLAINED_STROKE_PX}
+          strokeWidth={SEGMENT_STROKE_PX}
+          strokeDasharray={PREVIEW_ZONE_STYLE[props.tone].dash ?? undefined}
           strokeLinecap="butt"
           strokeLinejoin="miter"
         />
@@ -112,7 +116,7 @@ function WallLayer(props: Projection & {
           viewport={viewport}
         />
       ))}
-      <SegmentStrokes segments={preview.unexplained} tone="reject" testId="mfd-unexplained" transform={transform} viewport={viewport} />
+      <SegmentStrokes segments={preview.unexplained} tone="unpaired" testId="mfd-unexplained" transform={transform} viewport={viewport} />
     </>
   );
 }
@@ -148,7 +152,7 @@ function OpeningLayer(props: Projection & {
       })}
       <SegmentStrokes segments={preview.occupants} tone="decide" testId="mfd-opening-occupant" transform={transform} viewport={viewport} />
       <SegmentStrokes segments={preview.loose} tone="decide" testId="mfd-opening-loose" transform={transform} viewport={viewport} />
-      <SegmentStrokes segments={preview.unexplained} tone="reject" testId="mfd-opening-unexplained" transform={transform} viewport={viewport} />
+      <SegmentStrokes segments={preview.unexplained} tone="unpaired" testId="mfd-opening-unexplained" transform={transform} viewport={viewport} />
     </>
   );
 }

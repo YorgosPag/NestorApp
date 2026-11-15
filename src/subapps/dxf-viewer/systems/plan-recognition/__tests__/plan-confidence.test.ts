@@ -26,10 +26,10 @@ describe('ADR-929 Φ5 — επίπεδα βεβαιότητας', () => {
     expect([null, undefined, Number.NaN].map(planConfidenceTier)).toEqual(['low', 'low', 'low']);
   });
 
-  it('κάθε επίπεδο έχει ΔΙΚΟ του μοτίβο γραμμής και ΔΙΚΟ του χρώμα (WCAG 1.4.1)', () => {
+  it('§6.21.10 — κάθε επίπεδο έχει ΔΙΚΟ του μοτίβο γραμμής, και ΟΛΑ την ΙΔΙΑ απόχρωση (η βεβαιότητα δεν είναι χρώμα)', () => {
     const marks = PLAN_CONFIDENCE_ORDER.map(planConfidenceMark);
     expect(new Set(marks.map((m) => m.dash)).size).toBe(PLAN_CONFIDENCE_ORDER.length);
-    expect(new Set(marks.map((m) => m.stroke)).size).toBe(PLAN_CONFIDENCE_ORDER.length);
+    expect(new Set(marks.map((m) => m.stroke))).toEqual(new Set([PLAN_CONFIDENCE_MARKS.hex]));
     expect(marks.every((m) => m.strokeWidth === PLAN_CONFIDENCE_MARKS.strokeWidthPx)).toBe(true);
   });
 

@@ -282,6 +282,10 @@ describe('ModelFromDrawingPanel — υπόμνημα, κάλυψη, ειδοπο
     const orphaned: WallProposal = { ...UNCONFIRMED, coverage: { ...UNCONFIRMED.coverage, unexplainedIds: ['line_1'] } };
     const warned = renderPanel({ proposal: orphaned }).q('mfd-coverage') as HTMLElement;
     expect(warned.querySelector('[role="status"]')?.textContent).toBe('modelFromDrawing.coverage.unexplainedHint');
+    // §6.21.10 (Ε3) — το δείγμα του υπομνήματος είναι ο ΙΔΙΟΣ τόνος με τον καμβά: «μονή γραμμή», όχι απόρριψη.
+    const swatch = warned.querySelector('[role="status"] line');
+    expect(swatch?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.unpaired.stroke);
+    expect(swatch?.getAttribute('stroke-dasharray')).toBe(PREVIEW_ZONE_STYLE.unpaired.dash);
   });
 
   const NOTICES: readonly (readonly [ModelFromDrawingNotice, string])[] = [

@@ -18,7 +18,9 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH } = require('../lib/contrast/state-marks');
+const {
+  readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH, PREVIEW_STYLE_PATH,
+} = require('../lib/contrast/state-marks');
 const { checkIdentity, checkColourPromise, CVD_TARGET } = require('../check-state-channel-distinctness');
 const { hexToRgb, worstCvdDeltaE } = require('../lib/contrast/cvd');
 
@@ -43,6 +45,8 @@ function miniRepo(configSource, overrides = {}) {
     [COLOR_CONFIG_PATH]: configSource,
     [REVIEW_MARKS_PATH]: overrides.reviewMarks ?? liveFile(REVIEW_MARKS_PATH),
     [GLOBALS_CSS_PATH]: overrides.globalsCss ?? liveFile(GLOBALS_CSS_PATH),
+    // ADR-929 §6.21.10: η οικογένεια `plan-surface` διαβάζει ΚΑΙ τους τόνους γραμμής του βοηθού.
+    [PREVIEW_STYLE_PATH]: overrides.previewStyle ?? liveFile(PREVIEW_STYLE_PATH),
   };
   for (const [rel, text] of Object.entries(files)) {
     const dest = path.join(root, rel);
@@ -358,27 +362,26 @@ describe('Μ6..Μ9 — basemap-correspondence', () => {
  * βεβαιότητας, άρα κρίνονται στην **ίδια** οικογένεια: ρόλος με το μοτίβο ενός επιπέδου, ή με χρώμα που η CVD
  * ενώνει με επίπεδο, είναι σύγχυση πάνω στο ίδιο σχέδιο.
  */
-describe('Μ11..Μ13 — plan-segment (επίπεδα βεβαιότητας + σημάδια ρόλου)', () => {
-  const runPlan = (configSource) => {
-    const family = readStateMarkFamilies(miniRepo(configSource)).find((f) => f.id === 'plan-segment');
+describe('Μ11..Μ13 — plan-surface (επίπεδα βεβαιότητας + σημάδια ρόλου)', () => {
+  const runPlan = (configSource, overrides = {}) => {
+    const family = readStateMarkFamilies(miniRepo(configSource, overrides)).find((f) => f.id === 'plan-surface');
     return {
       marks: family.marks,
       failures: [...checkIdentity(family.marks), ...checkColourPromise(family.marks, false)],
     };
   };
 
-  it('Μ0γ: το ζωντανό δέντρο — τρία επίπεδα ΚΑΙ δύο ρόλοι στην ίδια οικογένεια, καθαρά', () => {
+  it('Μ0γ: το ζωντανό δέντρο — επίπεδα, ρόλοι ΚΑΙ γραμμές του βοηθού στην ίδια οικογένεια, καθαρά', () => {
     const { marks, failures } = runPlan(liveConfigSource());
-    expect(marks.map((m) => m.id)).toEqual(['high', 'medium', 'low', 'role:dimension', 'role:annotation']);
+    expect(marks.map((m) => m.id)).toEqual([
+      'high', 'medium', 'low', 'role:dimension', 'role:annotation', 'preview:decide', 'preview:unpaired',
+    ]);
     expect(new Set(marks.map((m) => m.variant)).size).toBe(marks.length);
     expect(failures).toEqual([]);
   });
 
-  it('Μ11: η διάσταση παίρνει το μοτίβο της «μέτριας» ⇒ Κ1 μπλοκ', () => {
-    const mutated = liveConfigSource().replace(
-      "dimension: { hex: '#17BECF', dash: 'dash-dot' }",
-      "dimension: { hex: '#17BECF', dash: 'dashed' }",
-    );
+  it('Μ11: η διάσταση παίρνει το ΙΔΙΟ μοτίβο σε px με τη «μέτρια» (άλλο όνομα) ⇒ Κ1 μπλοκ', () => {
+    const mutated = liveConfigSource().replace("dashPx: { 'dash-dot': '8 3 1.5 3',", "dashPx: { 'dash-dot': '6  4',");
     expect(mutated).not.toBe(liveConfigSource());
     const { failures } = runPlan(mutated);
     expect(rulesOf(failures)).toContain('Κ1');
@@ -400,6 +403,42 @@ describe('Μ11..Μ13 — plan-segment (επίπεδα βεβαιότητας + �
     );
     expect(mutated).not.toBe(liveConfigSource());
     expect(() => runPlan(mutated)).toThrow(/PLAN_SEGMENT_ROLE_MARKS/);
+  });
+
+  // ─── ADR-929 §6.21.10 (Ε3) — οι γραμμές του βοηθού στην ΙΔΙΑ επιφάνεια ───
+  const livePreview = liveFile(PREVIEW_STYLE_PATH);
+
+  it('Μ18: η ιστορική σύγκρουση — η αναγνώριση ξαναπαίρνει κεχριμπαρί ⇒ Κ2 απέναντι στο «θέλει απόφαση» (ΔE 0,5)', () => {
+    const mutated = liveConfigSource().replace("  hex: '#1F77B4',\n  tiers: {", "  hex: '#E0A100',\n  tiers: {");
+    expect(mutated).not.toBe(liveConfigSource());
+    const { failures } = runPlan(mutated);
+    expect(rulesOf(failures)).toContain('Κ2');
+    expect(failures.map((f) => f.detail).join(' ')).toMatch(/preview:decide/);
+  });
+
+  it('Μ19: η ιστορική σύγκρουση — η μονή γραμμή ξανά ΣΥΜΠΑΓΗΣ ⇒ Κ1 απέναντι στην «υψηλή» (μόνο χρώμα)', () => {
+    const mutated = livePreview.replace("dash: '8 3 1.5 3 1.5 3'", 'dash: null');
+    expect(mutated).not.toBe(livePreview);
+    const { failures } = runPlan(liveConfigSource(), { previewStyle: mutated });
+    expect(rulesOf(failures)).toContain('Κ1');
+    expect(failures.map((f) => f.detail).join(' ')).toMatch(/preview:unpaired/);
+  });
+
+  it('Μ20: η μονή γραμμή σε σκούρο γκρι κοντά στο γκρι των κειμένων ⇒ Κ2 (το «ουδέτερο» που απορρίφθηκε, ΔE 5,0)', () => {
+    const mutated = liveConfigSource().replace("PREVIEW_ZONE_UNPAIRED: '#6d28d9'", "PREVIEW_ZONE_UNPAIRED: '#64748b'");
+    expect(mutated).not.toBe(liveConfigSource());
+    const { failures } = runPlan(mutated);
+    expect(rulesOf(failures)).toContain('Κ2');
+    expect(failures.map((f) => f.detail).join(' ')).toMatch(/preview:unpaired/);
+  });
+
+  it('Μ21: κατάλογος τόνων γραμμής που λείπει, ή τόνος χωρίς στυλ ⇒ σφάλμα, ΠΟΤΕ σιωπηλό πράσινο', () => {
+    const noList = livePreview.replace('export const PREVIEW_LINE_TONES', 'const PREVIEW_LINE_TONES_DISABLED');
+    expect(noList).not.toBe(livePreview);
+    expect(() => runPlan(liveConfigSource(), { previewStyle: noList })).toThrow(/PREVIEW_LINE_TONES/);
+    const ghost = livePreview.replace("= ['decide', 'unpaired'];", "= ['decide', 'ghost'];");
+    expect(ghost).not.toBe(livePreview);
+    expect(() => runPlan(liveConfigSource(), { previewStyle: ghost })).toThrow(/PREVIEW_ZONE_STYLE\.ghost/);
   });
 });
 

@@ -306,7 +306,7 @@ export function CoverageSection({ proposal, t }: { readonly proposal: WallPropos
       </p>
       {unexplainedIds.length > 0 && (
         <p className="m-0 flex items-start gap-1.5 text-[11px] text-foreground" role="status">
-          <ToneSwatch tone="reject" />
+          <ToneSwatch tone="unpaired" />
           {t('modelFromDrawing.coverage.unexplainedHint')}
         </p>
       )}

@@ -396,8 +396,8 @@
       "rareThickness": "Rare thickness in the image: not a wall type of this drawing — check the image"
     },
     "coverage": {
-      "summary": "Wall lines: {explained} explained, {unexplained} unexplained · {ignored} of another colour",
-      "unexplainedHint": "Unexplained lines are lit red in the drawing: they are wall that will not be built."
+      "summary": "Lines in the wall colour: {explained} in face pairs, {unexplained} single · {ignored} of another colour",
+      "unexplainedHint": "Single lines are lit in the drawing with this mark: they have no second face, so they are not a wall and will not be built as one."
     },
     "openings": {
       "title": "Doors and windows",
@@ -444,7 +444,7 @@
         "sparse-symbol": "Too few lines for a window",
         "no-symbol": "Gap in the wall with no symbol"
       },
-      "unexplained": "{count} lines of this colour are not explained by any opening — they are lit red in the drawing.",
+      "unexplained": "{count, plural, one {# line of this colour is not explained by any opening — it is lit in the drawing with this mark and will not become an opening.} other {# lines of this colour are not explained by any opening — they are lit in the drawing with this mark and will not become openings.}}",
       "planRefusal": {
         "overlap": "Nothing can be written: the new wall of an opening sits on an existing structural element.",
         "invalid-opening": "Nothing can be written: an opening does not fit its wall.",

@@ -227,6 +227,10 @@ export const UI_COLORS_BASE = {
   PREVIEW_ZONE_REJECT: '#ef4444',   // will NOT be created — the reason is shown
   PREVIEW_ZONE_DECIDE: '#f59e0b',   // needs a human decision — neither green nor red
   PREVIEW_ZONE_EXISTING: '#94a3b8', // already there — nothing will be written
+  // ADR-929 §6.21.10 (Ε3) — a single line of the drawing with no second face: NOT a wall, NOT an error.
+  // Violet = Atlassian «discovery» role (no error/warning meaning). Worst-CVD ΔE ≥ 10.0 against every
+  // line mark of the shared plan surface (CHECK 3.41 family `plan-surface`).
+  PREVIEW_ZONE_UNPAIRED: '#6d28d9',
   PREVIEW_ZONE_LABEL_CASING: '#0b0f19', // dark casing under a zone label (legible on any plan)
 
   // Selection colors
@@ -1817,11 +1821,15 @@ export const BASEMAP_CORRESPONDENCE_MARKS = {
 
 /**
  * Τα τρία επίπεδα βεβαιότητας ενός τμήματος της εικόνας (`segmentConfidence` της Φ4), όπως τα ζωγραφίζει η
- * επικάλυψη και τα δείχνει το υπόμνημα του πάνελ. **Δύο** ανεξάρτητα κανάλια: χρώμα **και** μοτίβο γραμμής
- * (WCAG 1.4.1), και τα δύο κρίνονται από το CHECK 3.41 (`scripts/lib/contrast/state-marks.js`).
+ * επικάλυψη και τα δείχνει το υπόμνημα του πάνελ. Κρίνονται από το CHECK 3.41 (`scripts/lib/contrast/state-marks.js`).
  *
- * Τα χρώματα είναι μπλε / κεχριμπαρί / κόκκινο και όχι πράσινο / κόκκινο: το ζεύγος πράσινο-κόκκινο είναι το
- * πρώτο που χάνεται στη δευτερανωπία. Το `minScore` είναι το κατώφλι του επιπέδου (το υψηλότερο που ικανοποιείται).
+ * 🔑 **ΜΙΑ απόχρωση για όλη την αναγνώριση, η βεβαιότητα στο ΜΟΤΙΒΟ** (ADR-929 §6.21.10, Ε3). Ως τις 2026-11-16 τα
+ * επίπεδα ήταν μπλε / κεχριμπαρί / κόκκινο — και πιάνανε, στην ίδια επιφάνεια, τα χρώματα του βοηθού: «μέτρια» ↔
+ * «θέλει απόφαση» worst-CVD ΔE **0,5**, «χαμηλή» ↔ «απόρριψη» ΔE **6,9** (μετρημένα). Ένα χρώμα, μία σημασία
+ * (Atlassian: κάθε σημασιολογικός ρόλος δικό του χρώμα)· η αβεβαιότητα σε **χαρακτηριστικό γραμμής**, όχι σε
+ * απόχρωση (Perception of Line Attributes, IEEE VIS 2023). Γι' αυτό το `hex` είναι **ένα**, εδώ, και όχι ανά επίπεδο:
+ * τρεις αποχρώσεις δεν ξαναγίνονται με μια αθώα αλλαγή τιμής. Το `minScore` είναι το κατώφλι του επιπέδου (το
+ * υψηλότερο που ικανοποιείται).
  *
  * @see src/subapps/dxf-viewer/systems/plan-recognition/plan-confidence.ts (ο ένας αναγνώστης των κατωφλίων)
  * @see docs/centralized-systems/reference/adrs/ADR-929-raster-plan-recognition.md §6.6
@@ -1829,10 +1837,12 @@ export const BASEMAP_CORRESPONDENCE_MARKS = {
 export const PLAN_CONFIDENCE_MARKS = {
   /** Πάχος πένας των τμημάτων, σε px οθόνης. */
   strokeWidthPx: 2,
+  /** Η ΜΙΑ απόχρωση της αναγνώρισης (όλα τα επίπεδα). */
+  hex: '#1F77B4',
   tiers: {
-    high: { hex: '#1F77B4', dash: 'solid', minScore: 0.8 },
-    medium: { hex: '#E0A100', dash: 'dashed', minScore: 0.6 },
-    low: { hex: '#D62728', dash: 'dotted', minScore: 0 },
+    high: { dash: 'solid', minScore: 0.8 },
+    medium: { dash: 'dashed', minScore: 0.6 },
+    low: { dash: 'dotted', minScore: 0 },
   },
   /** Το μοτίβο κάθε `dash`, σε px οθόνης (`strokeDasharray`). */
   dashPx: { solid: '', dashed: '6 4', dotted: '1.5 3' },

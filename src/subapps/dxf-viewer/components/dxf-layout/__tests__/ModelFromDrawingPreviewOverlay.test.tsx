@@ -96,12 +96,14 @@ describe('ModelFromDrawingPreviewOverlay', () => {
     expect(Number(focused?.getAttribute('stroke-width'))).toBeGreaterThan(PREVIEW_ZONE_STYLE.existing.strokeWidth);
   });
 
-  it('οι ανεξήγητες γραμμές φωτίζονται ως ανοιχτές γραμμές στο χρώμα της απόρριψης', () => {
+  it('§6.21.10 (Ε3) — οι μονές γραμμές: ανοιχτές, στον τόνο «μονή γραμμή» (όχι απόρριψη), με το ΜΟΤΙΒΟ του', () => {
     const { container } = renderOverlay();
     seed({ phase: 'review', preview: PREVIEW });
     const lines = container.querySelectorAll('[data-testid="mfd-unexplained"]');
     expect(lines).toHaveLength(1);
-    expect(lines[0].getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
+    expect(lines[0].getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.unpaired.stroke);
+    expect(lines[0].getAttribute('stroke')).not.toBe(PREVIEW_ZONE_STYLE.reject.stroke);
+    expect(lines[0].getAttribute('stroke-dasharray')).toBe(PREVIEW_ZONE_STYLE.unpaired.dash);
     expect(lines[0].getAttribute('d')?.endsWith('Z')).toBe(false);
   });
 
@@ -188,13 +190,15 @@ describe('ModelFromDrawingPreviewOverlay — ανοίγματα', () => {
     expect(pathOf(container, 'existing')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.existing.stroke);
   });
 
-  it('ένοικοι και σύμβολα χωρίς λωρίδα στο χρώμα της απόφασης· ανεξήγητες στο χρώμα της απόρριψης', () => {
+  it('ένοικοι και σύμβολα χωρίς λωρίδα στον τόνο της απόφασης· μονές γραμμές στον τόνο «μονή γραμμή»', () => {
     const { container } = renderOverlay();
     seed({ phase: 'review', openingPreview: OPENINGS });
     const strokes = (testId: string) => [...container.querySelectorAll(`[data-testid="${testId}"]`)].map((p) => p.getAttribute('stroke'));
     expect(strokes('mfd-opening-occupant')).toEqual([PREVIEW_ZONE_STYLE.decide.stroke]);
     expect(strokes('mfd-opening-loose')).toEqual([PREVIEW_ZONE_STYLE.decide.stroke, PREVIEW_ZONE_STYLE.decide.stroke]);
-    expect(strokes('mfd-opening-unexplained')).toEqual([PREVIEW_ZONE_STYLE.reject.stroke]);
+    expect(strokes('mfd-opening-unexplained')).toEqual([PREVIEW_ZONE_STYLE.unpaired.stroke]);
+    const dashes = (testId: string) => [...container.querySelectorAll(`[data-testid="${testId}"]`)].map((p) => p.getAttribute('stroke-dasharray'));
+    expect(dashes('mfd-opening-loose')).toEqual([PREVIEW_ZONE_STYLE.decide.dash, PREVIEW_ZONE_STYLE.decide.dash]);
   });
 
   it('τα ανοίγματα ζωγραφίζονται ΠΑΝΩ από τους τοίχους, και το εστιασμένο τελευταίο', () => {

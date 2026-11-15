@@ -32,8 +32,9 @@ export function meetsConfidenceTier(score: number | null | undefined, minTier: P
 }
 
 export function planConfidenceMark(tier: PlanConfidenceTier): PlanConfidenceMark {
-  const spec = PLAN_CONFIDENCE_MARKS.tiers[tier];
-  return { stroke: spec.hex, dash: PLAN_CONFIDENCE_MARKS.dashPx[spec.dash], strokeWidth: PLAN_CONFIDENCE_MARKS.strokeWidthPx };
+  // §6.21.10 — ΜΙΑ απόχρωση για κάθε επίπεδο· το επίπεδο το λέει το μοτίβο.
+  const { dash } = PLAN_CONFIDENCE_MARKS.tiers[tier];
+  return { stroke: PLAN_CONFIDENCE_MARKS.hex, dash: PLAN_CONFIDENCE_MARKS.dashPx[dash], strokeWidth: PLAN_CONFIDENCE_MARKS.strokeWidthPx };
 }
 
 /** Πλήθη ανά επίπεδο, για το υπόμνημα. */

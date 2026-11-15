@@ -30,10 +30,12 @@ describe('ADR-929 Φ5.4β — ρόλος ⇒ σημάδι', () => {
     for (const role of ALL_ROLES) expect(planRoleMarkKind(role) === null).toBe(isWallCandidateRole(role));
   });
 
-  it('κανένα σημάδι ρόλου δεν μοιάζει με επίπεδο βεβαιότητας: μοναδικό μοτίβο ΚΑΙ χρώμα σε όλη την επικάλυψη', () => {
-    const marks = [...PLAN_CONFIDENCE_ORDER.map(planConfidenceMark), ...PLAN_ROLE_MARK_ORDER.map(planRoleMark)];
-    expect(new Set(marks.map((m) => m.dash)).size).toBe(marks.length);
-    expect(new Set(marks.map((m) => m.stroke)).size).toBe(marks.length);
+  it('κανένα σημάδι ρόλου δεν μοιάζει με επίπεδο βεβαιότητας: μοναδικό μοτίβο σε όλη την επικάλυψη, και χρώμα ρόλου ≠ της αναγνώρισης', () => {
+    const tiers = PLAN_CONFIDENCE_ORDER.map(planConfidenceMark);
+    const roles = PLAN_ROLE_MARK_ORDER.map(planRoleMark);
+    expect(new Set([...tiers, ...roles].map((m) => m.dash)).size).toBe(tiers.length + roles.length);
+    // §6.21.10: τα επίπεδα μοιράζονται ΜΙΑ απόχρωση· κάθε ρόλος έχει δική του, διαφορετική από αυτή.
+    expect(new Set([tiers[0].stroke, ...roles.map((m) => m.stroke)]).size).toBe(1 + roles.length);
   });
 });
 

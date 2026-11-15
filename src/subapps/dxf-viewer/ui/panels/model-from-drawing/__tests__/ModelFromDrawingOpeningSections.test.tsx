@@ -22,6 +22,7 @@ import {
   OpeningsStart,
   type OpeningReviewActions,
 } from '../ModelFromDrawingOpeningSections';
+import { PREVIEW_ZONE_STYLE } from '../../../../systems/region-preview/preview-zone-style';
 
 const t = (key: string, params?: Record<string, unknown>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
@@ -250,5 +251,8 @@ describe('OpeningsSection — η ΜΙΑ έγκριση', () => {
     const orphaned: OpeningProposal = { ...PROPOSAL, unexplainedIds: ['line_1', 'line_2'] };
     expect(renderSection({ proposal: orphaned, preview: null }).q('mfd-openings-unexplained')!.textContent)
       .toBe('modelFromDrawing.openings.unexplained{"count":2}');
+    // §6.21.10 (Ε3) — το δείγμα = ο τόνος του καμβά για τις μονές γραμμές.
+    const swatch = renderSection({ proposal: orphaned, preview: null }).q('mfd-openings-unexplained')!.querySelector('line');
+    expect(swatch?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.unpaired.stroke);
   });
 });

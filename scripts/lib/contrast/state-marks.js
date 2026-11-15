@@ -30,6 +30,9 @@ const { parseHslToken, hslToRgb, toHex } = require('./wcag-contrast');
 /** ADR-923 §5.5.2 Β8 — το αρχείο που ΟΡΙΖΕΙ τα σημάδια κατάστασης πάνω στο PDF της αναθεώρησης εισαγωγής. */
 const REVIEW_MARKS_PATH = path.join('src', 'subapps', 'catalog', 'import', 'review-marks.ts');
 
+/** ADR-929 §6.21.10 — το αρχείο που ΟΡΙΖΕΙ τους τόνους της προεπισκόπησης (και τους τόνους γραμμής του βοηθού). */
+const PREVIEW_STYLE_PATH = path.join('src', 'subapps', 'dxf-viewer', 'systems', 'region-preview', 'preview-zone-style.ts');
+
 /** Το αρχείο που ΟΡΙΖΕΙ τα σημάδια κατάστασης του δεσμού. */
 const COLOR_CONFIG_PATH = path.join(
   'src', 'subapps', 'dxf-viewer', 'config', 'color-config.ts',
@@ -204,23 +207,41 @@ function readCorrespondenceMarks(source, primitives) {
 }
 
 /**
- * Τα επίπεδα βεβαιότητας των τμημάτων αναγνώρισης κάτοψης (`PLAN_CONFIDENCE_MARKS`, ADR-929 Φ5).
- * Το `variant` είναι το `dash` — ακριβώς το πεδίο που γίνεται `strokeDasharray` στην επικάλυψη.
+ * ADR-929 §6.21.10 — ο φορέας **όλων** των γραμμών της κοινής επιφάνειας της κάτοψης (τμήματα αναγνώρισης + γραμμές του
+ * βοηθού). Ένας φορέας ⇒ το Κ1 τις συγκρίνει **όλες** μεταξύ τους.
+ */
+const PLAN_LINE_CARRIER = 'plan-line';
+
+/**
+ * Το μοτίβο **όπως ζωγραφίζεται** (`strokeDasharray` σε px), κανονικοποιημένο: κενό/απόν ⇒ `solid` (ο browser τότε
+ * ζωγραφίζει συμπαγή). Συγκρίνεται το px και **όχι** το όνομα: οι πηγές ονομάζουν διαφορετικά («dashed» ↔ «6 4»), και
+ * δύο ίδια μοτίβα με άλλο όνομα πρέπει να συγκρουστούν στο Κ1.
+ */
+function dashPattern(px) {
+  return typeof px === 'string' && px.trim() !== '' ? px.trim().replace(/\s+/g, ' ') : 'solid';
+}
+
+/** Το `dashPx[όνομα]` ενός λεξιλογίου μοτίβων του `color-config` (όνομα που δεν υπάρχει ⇒ `undefined` ⇒ συμπαγής). */
+function namedDashPattern(spec, name) {
+  return dashPattern(resolveValue(propsOf(spec.get('dashPx') ?? null).get(name) ?? null, new Map()));
+}
+
+/**
+ * Τα επίπεδα βεβαιότητας των τμημάτων αναγνώρισης κάτοψης (`PLAN_CONFIDENCE_MARKS`, ADR-929 Φ5). Το `variant` είναι το
+ * `dashPx[dash]` — ακριβώς ό,τι γίνεται `strokeDasharray` στην επικάλυψη. Το `hex` είναι **ένα** για όλα τα επίπεδα
+ * (§6.21.10: η βεβαιότητα στο μοτίβο, όχι στην απόχρωση) ⇒ το Κ2 δεν έχει τίποτα να κρίνει **μεταξύ** τους, εκ κατασκευής.
  */
 function readPlanConfidenceMarks(source, primitives) {
   const spec = propsOf(findConstObject(source, 'PLAN_CONFIDENCE_MARKS'));
   if (spec.size === 0) {
     throw new Error(`PLAN_CONFIDENCE_MARKS δεν βρέθηκε στο ${COLOR_CONFIG_PATH}`);
   }
+  const hex = resolveValue(spec.get('hex') ?? null, primitives);
   const marks = [];
   for (const [id, node] of propsOf(spec.get('tiers') ?? null)) {
     const tier = propsOf(node);
-    marks.push({
-      id,
-      carrier: 'plan-segment',
-      variant: resolveValue(tier.get('dash') ?? null, primitives),
-      hex: resolveValue(tier.get('hex') ?? null, primitives),
-    });
+    const dash = resolveValue(tier.get('dash') ?? null, primitives);
+    marks.push({ id, carrier: PLAN_LINE_CARRIER, variant: namedDashPattern(spec, dash), hex });
   }
   if (marks.length === 0) {
     throw new Error(`PLAN_CONFIDENCE_MARKS.tiers είναι κενό στο ${COLOR_CONFIG_PATH}`);
@@ -230,8 +251,8 @@ function readPlanConfidenceMarks(source, primitives) {
 
 /**
  * Τα σημάδια **ρόλου** των τμημάτων εκτός τοίχων (`PLAN_SEGMENT_ROLE_MARKS`, ADR-929 Φ5.4β). Ζωγραφίζονται στην
- * **ίδια** επικάλυψη με τα επίπεδα βεβαιότητας, με τον ίδιο φορέα (`plan-segment`), άρα κρίνονται **στην ίδια
- * οικογένεια**: ένα `dash` ρόλου ίσο με `dash` επιπέδου θα ήταν σύγχυση που το Κ1 πρέπει να δει.
+ * **ίδια** επικάλυψη με τα επίπεδα βεβαιότητας, με τον ίδιο φορέα, άρα κρίνονται **στην ίδια οικογένεια**: ένα μοτίβο
+ * ρόλου ίσο με μοτίβο επιπέδου θα ήταν σύγχυση που το Κ1 πρέπει να δει.
  */
 function readPlanRoleMarks(source, primitives) {
   const spec = propsOf(findConstObject(source, 'PLAN_SEGMENT_ROLE_MARKS'));
@@ -243,8 +264,8 @@ function readPlanRoleMarks(source, primitives) {
     const role = propsOf(node);
     marks.push({
       id: `role:${id}`,
-      carrier: 'plan-segment',
-      variant: resolveValue(role.get('dash') ?? null, primitives),
+      carrier: PLAN_LINE_CARRIER,
+      variant: namedDashPattern(spec, resolveValue(role.get('dash') ?? null, primitives)),
       hex: resolveValue(role.get('hex') ?? null, primitives),
     });
   }
@@ -252,6 +273,32 @@ function readPlanRoleMarks(source, primitives) {
     throw new Error(`PLAN_SEGMENT_ROLE_MARKS.roles είναι κενό στο ${COLOR_CONFIG_PATH}`);
   }
   return marks;
+}
+
+/**
+ * ADR-929 §6.21.10 (Ε3) — οι **τόνοι γραμμής** του βοηθού «Μοντέλο από το σχέδιο» (`PREVIEW_LINE_TONES` · στυλ από το
+ * `PREVIEW_ZONE_STYLE`), που ζωγραφίζονται στην **ίδια** επιφάνεια με τα τμήματα της αναγνώρισης. Διαβάζονται από το
+ * **ίδιο** αρχείο και τα **ίδια** πεδία (`stroke` · `dash`) που διαβάζει ο ζωγράφος `SegmentStrokes`. Ο κατάλογος των
+ * τόνων γραμμής είναι **κλειστός** (πίνακας-literal)· τόνος χωρίς στυλ, ή κενός κατάλογος ⇒ σφάλμα, ποτέ σιωπηλό πράσινο.
+ */
+function readPreviewLineMarks(repoRoot, input, primitives) {
+  const text = input.readRequired(PREVIEW_STYLE_PATH);
+  const source = ts.createSourceFile(path.join(repoRoot, PREVIEW_STYLE_PATH), text, ts.ScriptTarget.Latest, true);
+  const tones = resolveValue(findConstObject(source, 'PREVIEW_LINE_TONES'), primitives);
+  const styles = propsOf(findConstObject(source, 'PREVIEW_ZONE_STYLE'));
+  if (!Array.isArray(tones) || tones.length === 0) {
+    throw new Error(`PREVIEW_LINE_TONES δεν βρέθηκε ή είναι κενό στο ${PREVIEW_STYLE_PATH}`);
+  }
+  return tones.map((tone) => {
+    const style = propsOf(styles.get(tone) ?? null);
+    if (style.size === 0) throw new Error(`PREVIEW_ZONE_STYLE.${tone} δεν βρέθηκε στο ${PREVIEW_STYLE_PATH}`);
+    return {
+      id: `preview:${tone}`,
+      carrier: PLAN_LINE_CARRIER,
+      variant: dashPattern(resolveValue(style.get('dash') ?? null, primitives)),
+      hex: resolveValue(style.get('stroke') ?? null, primitives),
+    };
+  });
 }
 
 /**
@@ -312,14 +359,20 @@ function readStateMarkFamilies(repoRoot = process.cwd(), input = undefined) {
   return [
     { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot, gateInput, parsed) },
     { id: 'basemap-correspondence', marks: readCorrespondenceMarks(source, primitives) },
-    // ADR-929 Φ5.4β — επίπεδα βεβαιότητας + σημάδια ρόλου: ΜΙΑ επιφάνεια, ΜΙΑ οικογένεια.
+    // ADR-929 Φ5.4β + §6.21.10 — ΜΙΑ επιφάνεια, ΜΙΑ οικογένεια: επίπεδα βεβαιότητας + σημάδια ρόλου της αναγνώρισης
+    // ΚΑΙ οι γραμμές του βοηθού που ζωγραφίζονται από πάνω τους (ως τις 2026-11-16 εκτός πύλης: «μέτρια» ↔ «απόφαση»
+    // ΔE 0,5, «χαμηλή» ↔ «απόρριψη» 6,9, και η «ανεξήγητη» συμπαγής όπως η «υψηλή»).
     {
-      id: 'plan-segment',
-      marks: [...readPlanConfidenceMarks(source, primitives), ...readPlanRoleMarks(source, primitives)],
+      id: 'plan-surface',
+      marks: [
+        ...readPlanConfidenceMarks(source, primitives),
+        ...readPlanRoleMarks(source, primitives),
+        ...readPreviewLineMarks(repoRoot, gateInput, primitives),
+      ],
     },
     // ADR-923 §5.5.2 Β8 — χάρτης κατάστασης πάνω στο PDF της αναθεώρησης: άλλο αρχείο, άλλη επιφάνεια, δική της οικογένεια.
     { id: 'import-review-overlay', marks: readImportReviewMarks(repoRoot, gateInput) },
   ];
 }
 
-module.exports = { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH };
+module.exports = { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH, PREVIEW_STYLE_PATH };

@@ -337,7 +337,7 @@ export function OpeningsSection(props: OpeningsSectionProps): React.ReactElement
       />
       {proposal.unexplainedIds.length > 0 ? (
         <p className="m-0 flex items-start gap-1.5 text-[11px] text-foreground" role="status" data-testid="mfd-openings-unexplained">
-          <ToneSwatch tone="reject" />
+          <ToneSwatch tone="unpaired" />
           {t('modelFromDrawing.openings.unexplained', { count: proposal.unexplainedIds.length })}
         </p>
       ) : null}
