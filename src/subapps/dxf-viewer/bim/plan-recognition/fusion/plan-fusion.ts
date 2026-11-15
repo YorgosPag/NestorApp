@@ -110,7 +110,8 @@ function suggestion(stage: ScaleStage, network: NetworkOutcome | null, frame: Fu
 /** Φ5.5: ποιες παρειές μετρά κάθε διάσταση, από τις γραμμές επέκτασης — και χωρίς ανάγνωση. */
 function spansOf(input: PlanFusionInput, roles: ReadonlyMap<string, PlanSegmentRole>, frame: FusionFrame, o: PlanFusionOptions): DimensionSpan[] {
   const anchors = input.extensionAnchors ?? new Map<string, readonly PlanExtensionAnchor[]>();
-  return dimensionSpans({ segments: input.segments, roles, anchors, frame, originalToAligned: input.alignment.originalToAligned }, o);
+  const textLinks = input.textLinks ?? new Map<string, readonly string[]>();
+  return dimensionSpans({ segments: input.segments, roles, anchors, textLinks, frame, originalToAligned: input.alignment.originalToAligned }, o);
 }
 
 /**

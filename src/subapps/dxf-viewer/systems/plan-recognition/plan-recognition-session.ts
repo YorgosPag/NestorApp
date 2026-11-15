@@ -40,7 +40,7 @@ import {
 } from './plan-recognition-store';
 import { meetsConfidenceTier } from './plan-confidence';
 import { emptyRoleMarkCounts, planRoleMarkKind, type PlanRoleMarkKind } from './plan-role-marks';
-import { extensionAnchorMap, isWallCandidateRole, segmentRoleMap } from '../../bim/plan-recognition/classify/segment-roles';
+import { extensionAnchorMap, isWallCandidateRole, segmentRoleMap, textLinkMap } from '../../bim/plan-recognition/classify/segment-roles';
 import { createPlanReadingReview, type PlanReadingReviewDeps } from './plan-reading-review';
 import { planReadingApi } from './plan-reading-api-client';
 import { createPlanScaleController, type PlanScaleControllerDeps } from './plan-scale-controller';
@@ -99,6 +99,7 @@ function fuseWith(
     sourceDpi: null,
     segmentRoles: segmentRoleMap(run.segmentRoles ?? []),
     extensionAnchors: extensionAnchorMap(run.segmentRoles ?? []),
+    textLinks: textLinkMap(run.segmentRoles ?? []),
   });
 }
 

@@ -32,3 +32,8 @@ export function segmentRoleMap(verdicts: readonly PlanSegmentRoleVerdict[]): Rea
 export function extensionAnchorMap(verdicts: readonly PlanSegmentRoleVerdict[]): ReadonlyMap<string, readonly PlanExtensionAnchor[]> {
   return new Map(verdicts.flatMap((v) => (v.extensionAnchors !== undefined && v.extensionAnchors.length > 0 ? [[v.segmentId, v.extensionAnchors] as const] : [])));
 }
+
+/** ADR-929 §6.21 — ο χάρτης «γραμμή διάστασης → τα κομμάτια που την ενώνει ο αριθμός», από τις ίδιες κρίσεις. */
+export function textLinkMap(verdicts: readonly PlanSegmentRoleVerdict[]): ReadonlyMap<string, readonly string[]> {
+  return new Map(verdicts.flatMap((v) => (v.textLinkedWith !== undefined && v.textLinkedWith.length > 0 ? [[v.segmentId, v.textLinkedWith] as const] : [])));
+}

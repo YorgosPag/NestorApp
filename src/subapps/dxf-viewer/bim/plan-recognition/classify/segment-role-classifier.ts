@@ -214,8 +214,20 @@ function verdictsOf(ev: Evidence, factors: ReadonlyMap<string, Partial<Record<Pl
         : extensions.has(s.id) ? 'extension-line'
           : isTerminatorFragment(s, ends, ev.reachPx) || isDimensionTwin(s, dimSegs, ev.strokePx) ? 'dimension-line' : base;
     const verdict: PlanSegmentRoleVerdict = { segmentId: s.id, role, dimensionScore: score, factors: f, terminators: ev.terminators.get(s.id) ?? ['none', 'none'] };
-    return dims.has(s.id) && role === 'dimension-line' ? { ...verdict, extensionAnchors: anchorsOf(ev, s.id, dims) } : verdict;
+    return dims.has(s.id) && role === 'dimension-line' ? dimensionVerdict(verdict, ev, dims) : verdict;
   });
+}
+
+/** Η κρίση μιας βέβαιης διάστασης: οι άγκυρές της (Φ5.5) και, αν υπάρχουν, τα κομμάτια που την ενώνει ο αριθμός (§6.21). */
+function dimensionVerdict(verdict: PlanSegmentRoleVerdict, ev: Evidence, dims: ReadonlySet<string>): PlanSegmentRoleVerdict {
+  const linked = textPartnersOf(ev, verdict.segmentId, dims);
+  return { ...verdict, extensionAnchors: anchorsOf(ev, verdict.segmentId, dims), ...(linked.length > 0 ? { textLinkedWith: linked } : {}) };
+}
+
+/** ADR-929 §6.21 — οι εταίροι διακοπής από κείμενο μιας βέβαιης διάστασης, που είναι κι αυτοί βέβαιη διάσταση. */
+function textPartnersOf(ev: Evidence, id: string, dims: ReadonlySet<string>): string[] {
+  const partners = ev.text.links.flatMap((l) => (l.a === id ? [l.b] : l.b === id ? [l.a] : []));
+  return [...new Set(partners)].filter((p) => dims.has(p));
 }
 
 /** ADR-929 Φ5.5 — οι άγκυρες μιας βέβαιης διάστασης: οι επεκτάσεις της που **δεν** είναι οι ίδιες διάσταση. */

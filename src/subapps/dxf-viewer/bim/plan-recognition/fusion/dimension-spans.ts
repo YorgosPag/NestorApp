@@ -28,6 +28,8 @@ export interface DimensionSpanInput {
   readonly segments: readonly RasterSegment[];
   readonly roles: ReadonlyMap<string, PlanSegmentRole>;
   readonly anchors: ReadonlyMap<string, readonly PlanExtensionAnchor[]>;
+  /** §6.21 — κομμάτια που ενώνει ο αριθμός (`textLinkMap`): το κενό τους είναι το κείμενο, μετρά ως καλυμμένο. */
+  readonly textLinks?: ReadonlyMap<string, readonly string[]>;
   readonly frame: FusionFrame;
   readonly originalToAligned: Homography;
 }
@@ -95,9 +97,25 @@ function runAnchors(pieces: readonly RunPiece[], input: DimensionSpanInput, byId
   return placed.filter((a, i) => i === 0 || a.t - placed[i - 1].t > input.frame.collinearTolPx);
 }
 
-/** Πόσο από το διάστημα `[t0, t1]` καλύπτει το μελάνι της γραμμής (ένωση των κομματιών της). */
-function coverage(pieces: readonly RunPiece[], t0: number, t1: number): number {
-  const clipped = pieces.map((p) => [Math.max(p.t0, t0), Math.min(p.t1, t1)] as const).filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
+type Interval = readonly [number, number];
+
+/**
+ * ADR-929 §6.21 — τα κενά που γεμίζει ο αριθμός: ανάμεσα σε δύο κομμάτια της ίδιας γραμμής που τα ενώνει κείμενο
+ * (`|◄—   2.05   —►|`). Ο ταξινομητής το έχει ήδη κρίνει από τους γλύφους (`TextEvidence.links`)· εδώ μόνο διαβάζεται.
+ */
+function textBridges(pieces: readonly RunPiece[], links: ReadonlyMap<string, readonly string[]>): Interval[] {
+  const byId = new Map(pieces.map((p) => [p.id, p]));
+  return pieces.flatMap((p) => (links.get(p.id) ?? []).flatMap((id): Interval[] => {
+    const q = byId.get(id);
+    if (q === undefined || q.t0 < p.t0) return [];
+    return q.t0 > p.t1 ? [[p.t1, q.t0]] : [];
+  }));
+}
+
+/** Πόσο από το διάστημα `[t0, t1]` καλύπτει το μελάνι της γραμμής (ένωση των κομματιών της), μαζί με τα κενά του αριθμού. */
+function coverage(pieces: readonly RunPiece[], t0: number, t1: number, bridges: readonly Interval[] = []): number {
+  const ink: Interval[] = [...pieces.map((p): Interval => [p.t0, p.t1]), ...bridges];
+  const clipped = ink.map(([a, b]) => [Math.max(a, t0), Math.min(b, t1)] as const).filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
   let covered = 0;
   let reached = t0;
   for (const [a, b] of clipped) {
@@ -124,7 +142,7 @@ function spanEnd(a: PlacedAnchor, familyId: number, frame: FusionFrame, o: PlanF
 
 /** Το άνοιγμα ανάμεσα σε δύο διαδοχικές επεκτάσεις, ή `null` όταν δεν είναι άνοιγμα (λίγο μελάνι, ίδια παρειά και στα δύο). */
 function spanBetween(pieces: readonly RunPiece[], p: PlacedAnchor, q: PlacedAnchor, input: DimensionSpanInput, o: PlanFusionOptions): Omit<DimensionSpan, 'id'> | null {
-  if (coverage(pieces, p.t, q.t) < o.spanCoverageMin) return null;
+  if (coverage(pieces, p.t, q.t, textBridges(pieces, input.textLinks ?? new Map())) < o.spanCoverageMin) return null;
   const { run, measured } = pieces[0];
   const [a, b] = [spanEnd(p, measured.id, input.frame, o), spanEnd(q, measured.id, input.frame, o)]
     .sort((x, y) => (x.line?.offsetPx ?? x.end.offsetPx) - (y.line?.offsetPx ?? y.end.offsetPx));

@@ -66,6 +66,11 @@ export interface PlanFusionInput {
    * παρειές** μετρά κάθε διάσταση, και χωρίς ανάγνωση. Χωρίς χάρτη ⇒ κανένα άνοιγμα, το δέσιμο μένει όπως στη Φ4.
    */
   readonly extensionAnchors?: ReadonlyMap<string, readonly PlanExtensionAnchor[]>;
+  /**
+   * ADR-929 §6.21 — τα κομμάτια γραμμής διάστασης που ενώνει ο αριθμός (`textLinkMap`): το κενό ανάμεσά τους μετρά ως
+   * καλυμμένο στο άνοιγμα. Χωρίς χάρτη ⇒ μόνο το μελάνι, όπως πριν.
+   */
+  readonly textLinks?: ReadonlyMap<string, readonly string[]>;
   readonly roomAreaProbe?: RoomAreaProbe;
   readonly options?: Partial<PlanFusionOptions>;
 }
